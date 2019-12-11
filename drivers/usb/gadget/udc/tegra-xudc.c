@@ -404,6 +404,7 @@ struct tegra_xudc_ep {
 	bool pcs;
 	bool ring_full;
 	bool stream_rejected;
+	bool wedged;
 
 	struct list_head queue;
 	const struct usb_endpoint_descriptor *desc;
@@ -1555,6 +1556,18 @@ static int __tegra_xudc_ep_set_halt(struct tegra_xudc_ep *ep, bool halt)
 		return -ENOTSUPP;
 	}
 
+	if (ep->wedged && !halt) {
+		dev_dbg(xudc->dev, "ep %u is wedged\n", ep->index);
+
+		/* Reset sequence number to 0 */
+		ep_ctx_write_state(ep->context, EP_STATE_DISABLED);
+		ep_reload(xudc, ep->index);
+		ep_ctx_write_state(ep->context, EP_STATE_RUNNING);
+		ep_ctx_write_seq_num(ep->context, 0);
+		ep_reload(xudc, ep->index);
+		return 0;
+	}
+
 	if (!!(xudc_readl(xudc, EP_HALT) & BIT(ep->index)) == halt) {
 		dev_dbg(xudc->dev, "EP %u already %s\n", ep->index,
 			halt ? "halted" : "not halted");
@@ -1584,7 +1597,8 @@ static int __tegra_xudc_ep_set_halt(struct tegra_xudc_ep *ep, bool halt)
 	return 0;
 }
 
-static int tegra_xudc_ep_set_halt(struct usb_ep *usb_ep, int value)
+static int tegra_xudc_ep_set_halt_wedge(struct usb_ep *usb_ep, int value,
+					bool wedge)
 {
 	struct tegra_xudc_ep *ep;
 	struct tegra_xudc *xudc;
@@ -1602,6 +1616,8 @@ static int tegra_xudc_ep_set_halt(struct usb_ep *usb_ep, int value)
 		ret = -ESHUTDOWN;
 		goto unlock;
 	}
+	if (!value)
+		ep->wedged = false;
 
 	if (value && usb_endpoint_dir_in(ep->desc) &&
 	    !list_empty(&ep->queue)) {
@@ -1611,10 +1627,24 @@ static int tegra_xudc_ep_set_halt(struct usb_ep *usb_ep, int value)
 	}
 
 	ret = __tegra_xudc_ep_set_halt(ep, value);
+	if (!ret) {
+		if (wedge)
+			ep->wedged = value;
+	}
 unlock:
 	spin_unlock_irqrestore(&xudc->lock, flags);
 
 	return ret;
+}
+
+static int tegra_xudc_ep_set_halt(struct usb_ep *usb_ep, int value)
+{
+	return tegra_xudc_ep_set_halt_wedge(usb_ep, value, false);
+}
+
+static int tegra_xudc_ep_set_wedge(struct usb_ep *usb_ep)
+{
+	return tegra_xudc_ep_set_halt_wedge(usb_ep, 1, true);
 }
 
 static void tegra_xudc_ep_context_setup(struct tegra_xudc_ep *ep)
@@ -1934,6 +1964,7 @@ static const struct usb_ep_ops tegra_xudc_ep_ops = {
 	.queue = tegra_xudc_ep_queue,
 	.dequeue = tegra_xudc_ep_dequeue,
 	.set_halt = tegra_xudc_ep_set_halt,
+	.set_wedge = tegra_xudc_ep_set_wedge,
 };
 
 static int tegra_xudc_ep0_enable(struct usb_ep *usb_ep,
