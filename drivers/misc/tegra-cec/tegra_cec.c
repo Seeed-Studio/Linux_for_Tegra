@@ -630,7 +630,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 		goto cec_error;
 	}
 
-	cec->cec_base = devm_ioremap_nocache(&pdev->dev, res->start,
+	cec->cec_base = devm_ioremap(&pdev->dev, res->start,
 		resource_size(res));
 
 	if (!cec->cec_base) {
