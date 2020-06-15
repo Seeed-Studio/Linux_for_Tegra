@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-cec/tegra_cec.c
  *
- * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -361,6 +361,18 @@ static int tegra_cec_get_rx_snoop(struct tegra_cec *cec, u32 *state)
 	return 0;
 }
 
+static int tegra_cec_access_ok(u8 access_type, unsigned long arg, size_t size)
+{
+	int err = 0;
+
+#if KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE
+	err = !access_ok(access_type, arg, size);
+#else
+	err = !access_ok((void *)arg, size);
+#endif
+
+	return err;
+}
 
 static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		 unsigned long arg)
@@ -383,7 +395,7 @@ static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		tegra_cec_dump_registers(cec);
 		break;
 	case TEGRA_CEC_IOCTL_SET_RX_SNOOP:
-		err = !access_ok(VERIFY_READ, arg, sizeof(u32));
+		err = tegra_cec_access_ok(VERIFY_READ, arg, sizeof(u32));
 		if (err)
 			return -EFAULT;
 		if (copy_from_user((u32 *) &state, (u32 *) arg, sizeof(u32)))
@@ -391,7 +403,7 @@ static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		tegra_cec_set_rx_snoop(cec, state);
 		break;
 	case TEGRA_CEC_IOCTL_GET_RX_SNOOP:
-		err = !access_ok(VERIFY_WRITE, arg, sizeof(u32));
+		err = tegra_cec_access_ok(VERIFY_READ, arg, sizeof(u32));
 		if (err)
 			return -EFAULT;
 		err = tegra_cec_get_rx_snoop(cec, &state);
@@ -401,7 +413,7 @@ static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		}
 		break;
 	case TEGRA_CEC_IOCTL_GET_POST_RECOVERY:
-		err = !access_ok(VERIFY_WRITE, arg, sizeof(u32));
+		err = tegra_cec_access_ok(VERIFY_READ, arg, sizeof(u32));
 		if (err)
 			return -EFAULT;
 		if (copy_to_user((bool *) arg, &post_recovery, sizeof(bool)))
