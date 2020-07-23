@@ -361,11 +361,12 @@ static int tegra_cec_get_rx_snoop(struct tegra_cec *cec, u32 *state)
 	return 0;
 }
 
-static int tegra_cec_access_ok(u8 access_type, unsigned long arg, size_t size)
+static int tegra_cec_access_ok(bool write, unsigned long arg, size_t size)
 {
 	int err = 0;
 
 #if KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE
+	u8 __maybe_unused access_type = write ? VERIFY_WRITE : VERIFY_READ;
 	err = !access_ok(access_type, arg, size);
 #else
 	err = !access_ok((void *)arg, size);
@@ -395,7 +396,7 @@ static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		tegra_cec_dump_registers(cec);
 		break;
 	case TEGRA_CEC_IOCTL_SET_RX_SNOOP:
-		err = tegra_cec_access_ok(VERIFY_READ, arg, sizeof(u32));
+		err = tegra_cec_access_ok(false, arg, sizeof(u32));
 		if (err)
 			return -EFAULT;
 		if (copy_from_user((u32 *) &state, (u32 *) arg, sizeof(u32)))
@@ -403,7 +404,7 @@ static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		tegra_cec_set_rx_snoop(cec, state);
 		break;
 	case TEGRA_CEC_IOCTL_GET_RX_SNOOP:
-		err = tegra_cec_access_ok(VERIFY_READ, arg, sizeof(u32));
+		err = tegra_cec_access_ok(true, arg, sizeof(u32));
 		if (err)
 			return -EFAULT;
 		err = tegra_cec_get_rx_snoop(cec, &state);
@@ -413,7 +414,7 @@ static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		}
 		break;
 	case TEGRA_CEC_IOCTL_GET_POST_RECOVERY:
-		err = tegra_cec_access_ok(VERIFY_READ, arg, sizeof(u32));
+		err = tegra_cec_access_ok(true, arg, sizeof(u32));
 		if (err)
 			return -EFAULT;
 		if (copy_to_user((bool *) arg, &post_recovery, sizeof(bool)))
