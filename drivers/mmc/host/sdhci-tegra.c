@@ -26,6 +26,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 
 #include <soc/tegra/common.h>
 #include <soc/tegra/fuse.h>
@@ -213,6 +215,7 @@ struct sdhci_tegra {
 	u32 stream_id;
 	bool skip_clk_rst;
 	struct tegra_prod *prod_list;
+	int volt_switch_gpio;
 };
 
 static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
@@ -548,8 +551,20 @@ static int tegra_sdhci_set_padctrl(struct sdhci_host *host, int voltage,
 			sdhci_writel(host, reg,
 					SDHCI_TEGRA_SDMEM_COMP_PADCTRL);
 		}
-
 	} else {
+		/* Toggle power gpio for switching voltage on FPGA */
+		if (gpio_is_valid(tegra_host->volt_switch_gpio)) {
+			if (voltage == MMC_SIGNAL_VOLTAGE_330) {
+				gpio_set_value(tegra_host->volt_switch_gpio, 1);
+				dev_info(mmc_dev(host->mmc),
+					 "3.3V set by voltage switch gpio\n");
+			} else {
+				gpio_set_value(tegra_host->volt_switch_gpio, 0);
+				dev_info(mmc_dev(host->mmc),
+					 "1.8V set by voltage switch gpio\n");
+			}
+			return 0;
+		}
 		/* Dual Voltage PADS Voltage selection */
 		if (!tegra_host->pad_control_available)
 			return 0;
@@ -1726,6 +1741,7 @@ static void sdhci_tegra_program_stream_id(struct sdhci_host *host)
 
 static int sdhci_tegra_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	const struct sdhci_tegra_soc_data *soc_data;
 	struct sdhci_host *host;
 	struct sdhci_pltfm_host *pltfm_host;
@@ -1872,6 +1888,20 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 			goto err_rst_assert;
 
 		usleep_range(2000, 4000);
+	}
+
+	tegra_host->volt_switch_gpio = of_get_named_gpio(np,
+			"nvidia,voltage-switch-gpio", 0);
+	if (gpio_is_valid(tegra_host->volt_switch_gpio)) {
+		rc = gpio_request(tegra_host->volt_switch_gpio, "sdhci_power");
+		if (rc)
+			dev_err(mmc_dev(host->mmc),
+				"failed to allocate gpio for voltage switch, "
+				"err: %d\n", rc);
+		gpio_direction_output(tegra_host->volt_switch_gpio, 1);
+		gpio_set_value(tegra_host->volt_switch_gpio, 1);
+		dev_info(mmc_dev(host->mmc),
+				"3.3V set initially by voltage switch gpio\n");
 	}
 
 	rc = sdhci_tegra_add_host(host);
