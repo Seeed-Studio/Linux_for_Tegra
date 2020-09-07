@@ -28,6 +28,7 @@
 #include <linux/reset.h>
 
 #include <soc/tegra/common.h>
+#include <soc/tegra/fuse.h>
 
 #include "sdhci-cqhci.h"
 #include "sdhci-pltfm.h"
@@ -192,6 +193,9 @@ static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
 
+	if ((tegra_get_platform() == TEGRA_PLATFORM_VSP) && (reg > SDHCI_HOST_VERSION))
+		return 0;
+
 	if (unlikely((soc_data->nvquirks & NVQUIRK_FORCE_SDHCI_SPEC_200) &&
 			(reg == SDHCI_HOST_VERSION))) {
 		/* Erratum: Version register is invalid in HW. */
@@ -204,6 +208,9 @@ static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
 static void tegra_sdhci_writew(struct sdhci_host *host, u16 val, int reg)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+
+	if ((tegra_get_platform() == TEGRA_PLATFORM_VSP) && (reg > SDHCI_HOST_VERSION))
+		return;
 
 	switch (reg) {
 	case SDHCI_TRANSFER_MODE:
@@ -228,6 +235,8 @@ static void tegra_sdhci_writel(struct sdhci_host *host, u32 val, int reg)
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
 
+	if ((tegra_get_platform() == TEGRA_PLATFORM_VSP) && (reg > SDHCI_HOST_VERSION))
+		return;
 	/* Seems like we're getting spurious timeout and crc errors, so
 	 * disable signalling of them. In case of real errors software
 	 * timers should take care of eventually detecting them.
@@ -534,6 +543,8 @@ static void tegra_sdhci_pad_autocalib(struct sdhci_host *host)
 	u32 reg;
 	int ret;
 
+	if (tegra_get_platform() == TEGRA_PLATFORM_VSP)
+		return;
 	switch (ios->timing) {
 	case MMC_TIMING_UHS_SDR104:
 		pdpu = offsets.pull_down_sdr104 << 8 | offsets.pull_up_sdr104;
@@ -1358,6 +1369,10 @@ static int tegra_sdhci_set_dma_mask(struct sdhci_host *host)
 	const struct sdhci_tegra_soc_data *soc = tegra->soc_data;
 	struct device *dev = mmc_dev(host->mmc);
 
+	if (host->quirks2 & SDHCI_QUIRK2_BROKEN_64_BIT_DMA) {
+		host->flags &= ~SDHCI_USE_64_BIT_DMA;
+		return dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
+	}
 	if (soc->dma_mask)
 		return dma_set_mask_and_coherent(dev, soc->dma_mask);
 
@@ -1761,7 +1776,8 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 
 		tegra_host->tmclk = clk;
 	}
-
+	if (tegra_get_platform() == TEGRA_PLATFORM_VSP)
+		host->quirks2 |= SDHCI_QUIRK2_BROKEN_64_BIT_DMA;
 	if (!tegra_host->skip_clk_rst) {
 		clk = devm_clk_get(mmc_dev(host->mmc), NULL);
 		if (IS_ERR(clk)) {
