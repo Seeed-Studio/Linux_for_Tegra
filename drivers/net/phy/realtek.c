@@ -6,6 +6,7 @@
  * Author: Johnson Leung <r58129@freescale.com>
  *
  * Copyright (c) 2004 Freescale Semiconductor, Inc.
+ * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
  */
 #include <linux/bitops.h>
 #include <linux/of.h>
@@ -72,6 +73,16 @@
 
 #define RTL_GENERIC_PHYID			0x001cc800
 #define RTL_8211FVD_PHYID			0x001cc878
+
+#define RTL8211F_LED_PAGE			0xd04
+
+#define RTL8211F_LED0_LINK_1000		0x8
+#define RTL8211F_LED1_LINK_1000		0x100
+#define RTL8211F_LED1_LINK_100			0x40
+#define RTL8211F_LED1_LINK_10			0x20
+#define RTL8211F_LED1_LINK_ACTIVE		0x200
+#define RTL8211F_PAGE_LCR_LED_CONTROL		0x10
+#define RTL8211F_PAGE_EEE_LED_CONTROL		0x11
 
 MODULE_DESCRIPTION("Realtek PHY driver");
 MODULE_AUTHOR("Johnson Leung");
@@ -429,7 +440,25 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		return genphy_soft_reset(phydev);
 	}
 
-	return 0;
+	/* Enable all speeds for activity indicator  and LED0 for GBE */
+	val = RTL8211F_LED0_LINK_1000 | RTL8211F_LED1_LINK_1000 |
+		RTL8211F_LED1_LINK_100 | RTL8211F_LED1_LINK_10 |
+		RTL8211F_LED1_LINK_ACTIVE;
+
+	ret = phy_modify_paged_changed(phydev, RTL8211F_LED_PAGE, RTL8211F_PAGE_LCR_LED_CONTROL, val,
+				       val);
+	if (ret < 0) {
+		dev_err(dev, "Failed to LED registers\n");
+		return ret;
+	}
+	/* disable EEE LED control */
+	ret = phy_modify_paged_changed(phydev, RTL8211F_LED_PAGE, RTL8211F_PAGE_EEE_LED_CONTROL, 0, 0);
+	if (ret < 0) {
+		dev_err(dev, "Failed to EEE LED registers\n");
+		return ret;
+	}
+
+	return genphy_soft_reset(phydev);
 }
 
 static int rtl821x_suspend(struct phy_device *phydev)
