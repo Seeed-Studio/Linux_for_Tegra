@@ -567,7 +567,8 @@ struct iommu_domain_ops {
 			   struct iommu_iotlb_gather *iotlb_gather);
 	int (*cache_invalidate_user)(struct iommu_domain *domain,
 				     struct iommu_user_data_array *array);
-
+	int (*dma_sync)(struct iommu_domain *domain, unsigned long iova,
+		     size_t size);
 	phys_addr_t (*iova_to_phys)(struct iommu_domain *domain,
 				    dma_addr_t iova);
 
