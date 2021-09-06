@@ -458,6 +458,11 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		return ret;
 	}
 
+	/* Advertise Flow Control */
+	linkmode_set_bit(SUPPORTED_Pause, phydev->supported);
+	linkmode_set_bit(SUPPORTED_Asym_Pause, phydev->supported);
+	linkmode_copy(phydev->advertising, phydev->supported);
+
 	return genphy_soft_reset(phydev);
 }
 
