@@ -100,6 +100,8 @@
 #define AQR107_OP_IN_PROG_SLEEP		1000
 #define AQR107_OP_IN_PROG_TIMEOUT	100000
 
+#define VEND1_SEC_INGRESS_CNTRL_REG1		0x7001
+
 struct aqr107_hw_stat {
 	const char *name;
 	int reg;
@@ -519,8 +521,18 @@ static int aqr107_config_init(struct phy_device *phydev)
 
 	/* Configure flow control */
 	ret = phy_read_mmd(phydev, MDIO_MMD_AN, 0x10);
+	if (ret < 0)
+		return ret;
 	ret |= MDIO_AN_PAUSE | MDIO_AN_ASYM_PAUSE;
-	phy_write_mmd(phydev, MDIO_MMD_AN, 0x10, ret);
+	err = phy_write_mmd(phydev, MDIO_MMD_AN, 0x10, ret);
+	if (err < 0)
+		return err;
+
+	/* Enable MAC Controlled EEE */
+	err = phy_write_mmd(phydev, MDIO_MMD_VEND1,
+			    VEND1_SEC_INGRESS_CNTRL_REG1, 0x1100);
+	if (err < 0)
+		return err;
 
 	/* Check that the PHY interface type is compatible */
 	if (phydev->interface != PHY_INTERFACE_MODE_SGMII &&
