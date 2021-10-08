@@ -800,8 +800,8 @@ static int aqr107_config_init(struct phy_device *phydev)
 		aqr107_chip_info(phydev);
 
 	/* Advertize flow control */
-	linkmode_set_bit(SUPPORTED_Pause, phydev->supported);
-	linkmode_set_bit(SUPPORTED_Asym_Pause, phydev->supported);
+	linkmode_set_bit(ETHTOOL_LINK_MODE_Pause_BIT, phydev->supported);
+	linkmode_set_bit(ETHTOOL_LINK_MODE_Asym_Pause_BIT, phydev->supported);
 	linkmode_copy(phydev->advertising, phydev->supported);
 
 	/* Configure flow control */
