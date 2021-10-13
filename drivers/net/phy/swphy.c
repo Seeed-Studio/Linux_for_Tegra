@@ -54,6 +54,10 @@ static const struct swmii_regs speed[] = {
 		.lpagb = LPA_1000FULL | LPA_1000HALF,
 		.estat = ESTATUS_1000_TFULL | ESTATUS_1000_THALF,
 	},
+	[SWMII_SPEED_5000] = {
+	},
+	[SWMII_SPEED_10000] = {
+	},
 };
 
 static const struct swmii_regs duplex[] = {
