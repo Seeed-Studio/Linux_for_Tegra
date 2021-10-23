@@ -5,6 +5,7 @@
  * Author: Shaohui Xie <Shaohui.Xie@freescale.com>
  *
  * Copyright 2015 Freescale Semiconductor, Inc.
+ * Copyright (c) 2021-2023, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -12,6 +13,7 @@
 #include <linux/delay.h>
 #include <linux/bitfield.h>
 #include <linux/phy.h>
+#include <linux/netdevice.h>
 
 #include "aquantia.h"
 
@@ -45,10 +47,12 @@
 #define MDIO_AN_VEND_PROV_1000BASET_HALF	BIT(14)
 #define MDIO_AN_VEND_PROV_5000BASET_FULL	BIT(11)
 #define MDIO_AN_VEND_PROV_2500BASET_FULL	BIT(10)
+#define MDIO_AN_VEND_PROV_AQRATE_DWN_SHFT_CAP	BIT(12)
 #define MDIO_AN_VEND_PROV_DOWNSHIFT_EN		BIT(4)
 #define MDIO_AN_VEND_PROV_DOWNSHIFT_MASK	GENMASK(3, 0)
 #define MDIO_AN_VEND_PROV_DOWNSHIFT_DFLT	4
 
+#define MDIO_AN_RSVD_VEND_PROV1			0xc410
 #define MDIO_AN_TX_VEND_STATUS1			0xc800
 #define MDIO_AN_TX_VEND_STATUS1_RATE_MASK	GENMASK(3, 1)
 #define MDIO_AN_TX_VEND_STATUS1_10BASET		0
@@ -82,7 +86,18 @@
 #define MDIO_AN_RX_VEND_STAT3			0xe832
 #define MDIO_AN_RX_VEND_STAT3_AFR		BIT(0)
 
+#define MDIO_AN_LD_LOOP_TIMING_ABILITY	BIT(0)
+#define MDIO_MMD_AN_WOL_ENABLE		BIT(6)
+#define MDIO_AN_VEND_MASK		0xF0FF
+
 /* MDIO_MMD_C22EXT */
+#define MDIO_C22EXT_MAGIC_PKT_PATTREN_0_2_15		0xc339
+#define MDIO_C22EXT_MAGIC_PKT_PATTREN_16_2_31		0xc33a
+#define MDIO_C22EXT_MAGIC_PKT_PATTREN_32_2_47		0xc33b
+#define MDIO_C22EXT_GBE_PHY_RSI1_CTRL6			0xc355
+#define MDIO_C22EXT_GBE_PHY_RSI1_CTRL7			0xc356
+#define MDIO_C22EXT_GBE_PHY_RSI1_CTRL8			0xc357
+#define MDIO_C22EXT_GBE_PHY_SGMII_TX_INT_MASK1		0xf420
 #define MDIO_C22EXT_STAT_SGMII_RX_GOOD_FRAMES		0xd292
 #define MDIO_C22EXT_STAT_SGMII_RX_BAD_FRAMES		0xd294
 #define MDIO_C22EXT_STAT_SGMII_RX_FALSE_CARRIER		0xd297
@@ -94,6 +109,67 @@
 #define MDIO_C22EXT_STAT_SGMII_TX_FRAME_ALIGN_ERR	0xd31a
 #define MDIO_C22EXT_STAT_SGMII_TX_RUNT_FRAMES		0xd31b
 
+#define	MDIO_C22EXT_RSI_WAKE_UP_FRAME_DETECTION		BIT(0)
+#define	MDIO_C22EXT_RSI_MAGIC_PKT_FRAME_DETECTION	BIT(0)
+#define MDIO_C22EXT_RSI_WOL_FCS_MONITOR_MODE		BIT(15)
+#define MDIO_C22EXT_SGMII0_WAKE_UP_FRAME_MASK		BIT(4)
+#define MDIO_C22EXT_SGMII0_MAGIC_PKT_FRAME_MASK		BIT(5)
+
+/* Vendor specific 1, MDIO_MMD_VEND1 */
+#define VEND1_GLOBAL_FW_ID			0x0020
+#define VEND1_GLOBAL_FW_ID_MAJOR		GENMASK(15, 8)
+#define VEND1_GLOBAL_FW_ID_MINOR		GENMASK(7, 0)
+
+#define VEND1_GLOBAL_GEN_STAT2			0xc831
+#define VEND1_GLOBAL_GEN_STAT2_OP_IN_PROG	BIT(15)
+
+/* The following registers all have similar layouts; first the registers... */
+#define VEND1_GLOBAL_CFG_10M			0x0310
+#define VEND1_GLOBAL_CFG_100M			0x031b
+#define VEND1_GLOBAL_CFG_1G			0x031c
+#define VEND1_GLOBAL_CFG_2_5G			0x031d
+#define VEND1_GLOBAL_CFG_5G			0x031e
+#define VEND1_GLOBAL_CFG_10G			0x031f
+/* ...and now the fields */
+#define VEND1_GLOBAL_CFG_RATE_ADAPT		GENMASK(8, 7)
+#define VEND1_GLOBAL_CFG_RATE_ADAPT_NONE	0
+#define VEND1_GLOBAL_CFG_RATE_ADAPT_USX		1
+#define VEND1_GLOBAL_CFG_RATE_ADAPT_PAUSE	2
+
+#define VEND1_GLOBAL_RSVD_STAT1			0xc885
+#define VEND1_GLOBAL_RSVD_STAT1_FW_BUILD_ID	GENMASK(7, 4)
+#define VEND1_GLOBAL_RSVD_STAT1_PROV_ID		GENMASK(3, 0)
+
+#define VEND1_GLOBAL_RSVD_STAT9			0xc88d
+#define VEND1_GLOBAL_RSVD_STAT9_MODE		GENMASK(7, 0)
+#define VEND1_GLOBAL_RSVD_STAT9_1000BT2		0x23
+
+#define VEND1_GLOBAL_INT_STD_STATUS		0xfc00
+#define VEND1_GLOBAL_INT_VEND_STATUS		0xfc01
+
+#define VEND1_GLOBAL_INT_STD_MASK		0xff00
+#define VEND1_GLOBAL_INT_STD_MASK_PMA1		BIT(15)
+#define VEND1_GLOBAL_INT_STD_MASK_PMA2		BIT(14)
+#define VEND1_GLOBAL_INT_STD_MASK_PCS1		BIT(13)
+#define VEND1_GLOBAL_INT_STD_MASK_PCS2		BIT(12)
+#define VEND1_GLOBAL_INT_STD_MASK_PCS3		BIT(11)
+#define VEND1_GLOBAL_INT_STD_MASK_PHY_XS1	BIT(10)
+#define VEND1_GLOBAL_INT_STD_MASK_PHY_XS2	BIT(9)
+#define VEND1_GLOBAL_INT_STD_MASK_AN1		BIT(8)
+#define VEND1_GLOBAL_INT_STD_MASK_AN2		BIT(7)
+#define VEND1_GLOBAL_INT_STD_MASK_GBE		BIT(6)
+#define VEND1_GLOBAL_INT_STD_MASK_ALL		BIT(0)
+
+#define VEND1_GLOBAL_INT_VEND_MASK		0xff01
+#define VEND1_GLOBAL_INT_VEND_MASK_PMA		BIT(15)
+#define VEND1_GLOBAL_INT_VEND_MASK_PCS		BIT(14)
+#define VEND1_GLOBAL_INT_VEND_MASK_PHY_XS	BIT(13)
+#define VEND1_GLOBAL_INT_VEND_MASK_AN		BIT(12)
+#define VEND1_GLOBAL_INT_VEND_MASK_GBE		BIT(11)
+#define VEND1_GLOBAL_INT_VEND_MASK_GLOBAL1	BIT(2)
+#define VEND1_GLOBAL_INT_VEND_MASK_GLOBAL2	BIT(1)
+#define VEND1_GLOBAL_INT_VEND_MASK_GLOBAL3	BIT(0)
+
 /* Sleep and timeout for checking if the Processor-Intensive
  * MDIO operation is finished
  */
@@ -101,6 +177,19 @@
 #define AQR107_OP_IN_PROG_TIMEOUT	100000
 
 #define VEND1_SEC_INGRESS_CNTRL_REG1		0x7001
+#define VEND1_GLOBAL_SYS_CONFIG_100M		0x31b
+#define VEND1_GLOBAL_SYS_CONFIG_1G		0x31c
+
+#define VEND1_GLOBAL_SYS_CONFIG_SGMII		(BIT(0) | BIT(1) | BIT(3))
+#define VEND1_GLOBAL_SYS_CONFIG_XFI		BIT(8)
+
+#define BIT_SHIFT_8 8
+#define MAC_ADDRESS_BYTE_0 0
+#define MAC_ADDRESS_BYTE_1 1
+#define MAC_ADDRESS_BYTE_2 2
+#define MAC_ADDRESS_BYTE_3 3
+#define MAC_ADDRESS_BYTE_4 4
+#define MAC_ADDRESS_BYTE_5 5
 
 struct aqr107_hw_stat {
 	const char *name;
@@ -512,7 +601,23 @@ static void aqr107_chip_info(struct phy_device *phydev)
 
 static int aqr107_config_init(struct phy_device *phydev)
 {
-	int ret;
+	int ret, err;
+
+	/* Check that the PHY interface type is compatible */
+	if (phydev->interface != PHY_INTERFACE_MODE_SGMII &&
+	    phydev->interface != PHY_INTERFACE_MODE_2500BASEX &&
+	    phydev->interface != PHY_INTERFACE_MODE_XGMII &&
+	    phydev->interface != PHY_INTERFACE_MODE_USXGMII &&
+	    phydev->interface != PHY_INTERFACE_MODE_10GKR &&
+	    phydev->interface != PHY_INTERFACE_MODE_10GBASER)
+		return -ENODEV;
+
+	WARN(phydev->interface == PHY_INTERFACE_MODE_XGMII,
+	     "Your devicetree is out of date, please update it. The AQR107 family doesn't support XGMII, maybe you mean USXGMII.\n");
+
+	ret = aqr107_wait_reset_complete(phydev);
+	if (!ret)
+		aqr107_chip_info(phydev);
 
 	/* Advertize flow control */
 	linkmode_set_bit(SUPPORTED_Pause, phydev->supported);
@@ -534,24 +639,30 @@ static int aqr107_config_init(struct phy_device *phydev)
 	if (err < 0)
 		return err;
 
-	/* Check that the PHY interface type is compatible */
-	if (phydev->interface != PHY_INTERFACE_MODE_SGMII &&
-	    phydev->interface != PHY_INTERFACE_MODE_1000BASEKX &&
-	    phydev->interface != PHY_INTERFACE_MODE_2500BASEX &&
-	    phydev->interface != PHY_INTERFACE_MODE_XGMII &&
-	    phydev->interface != PHY_INTERFACE_MODE_USXGMII &&
-	    phydev->interface != PHY_INTERFACE_MODE_10GKR &&
-	    phydev->interface != PHY_INTERFACE_MODE_10GBASER &&
-	    phydev->interface != PHY_INTERFACE_MODE_XAUI &&
-	    phydev->interface != PHY_INTERFACE_MODE_RXAUI)
-		return -ENODEV;
+	/* Configure Magic packet frame pattern (MAC address) */
+	err = phy_write_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_MAGIC_PKT_PATTREN_0_2_15,
+			    phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_0] |
+			    (phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_1] << BIT_SHIFT_8));
+	if (err < 0) {
+		phydev_err(phydev, "Error setting magic packet frame of 0/1st byte\n");
+		return err;
+	}
 
-	WARN(phydev->interface == PHY_INTERFACE_MODE_XGMII,
-	     "Your devicetree is out of date, please update it. The AQR107 family doesn't support XGMII, maybe you mean USXGMII.\n");
+	err = phy_write_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_MAGIC_PKT_PATTREN_16_2_31,
+			    phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_2] |
+			    (phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_3] << BIT_SHIFT_8));
+	if (err < 0) {
+		phydev_err(phydev, "Error setting magic packet frame of 2/3rd byte\n");
+		return err;
+	}
 
-	ret = aqr107_wait_reset_complete(phydev);
-	if (!ret)
-		aqr107_chip_info(phydev);
+	err = phy_write_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_MAGIC_PKT_PATTREN_32_2_47,
+			    phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_4] |
+			    (phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_5] << BIT_SHIFT_8));
+	if (err < 0) {
+		phydev_err(phydev, "Error setting magic packet frame of 4/5th byte\n");
+		return err;
+	}
 
 	return aqr107_set_downshift(phydev, MDIO_AN_VEND_PROV_DOWNSHIFT_DFLT);
 }
@@ -771,6 +882,132 @@ static int aqr107_probe(struct phy_device *phydev)
 	return aqr_hwmon_probe(phydev);
 }
 
+static int aqr113c_wol_settings(struct phy_device *phydev, bool enable)
+{
+	u16 val;
+	int ret = 0;
+
+	if (enable) {
+		/* Disables all advertised speeds except for the WoL
+		 * speed (100BASE-TX FD or 1000BASE-T)
+		 * This is set as per the APP note from Marvel
+		 */
+		val = phy_read_mmd(phydev, MDIO_MMD_AN, MDIO_AN_10GBT_CTRL);
+		val |= MDIO_AN_LD_LOOP_TIMING_ABILITY;
+		ret = phy_write_mmd(phydev, MDIO_MMD_AN, MDIO_AN_10GBT_CTRL, val);
+		if (ret < 0)
+			return ret;
+		val = phy_read_mmd(phydev, MDIO_MMD_AN, MDIO_AN_VEND_PROV);
+		val = (val & MDIO_AN_VEND_MASK) |
+		      (MDIO_AN_VEND_PROV_AQRATE_DWN_SHFT_CAP | MDIO_AN_VEND_PROV_1000BASET_FULL);
+		ret = phy_write_mmd(phydev, MDIO_MMD_AN, MDIO_AN_VEND_PROV, val);
+		if (ret < 0)
+			return ret;
+
+		/* Enable the magic frame and wake up frame detection for the PHY */
+		val = phy_read_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_RSI1_CTRL6);
+		val |= MDIO_C22EXT_RSI_WAKE_UP_FRAME_DETECTION;
+		ret = phy_write_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_RSI1_CTRL6, val);
+		if (ret < 0)
+			return ret;
+		val = phy_read_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_RSI1_CTRL7);
+		val |= MDIO_C22EXT_RSI_MAGIC_PKT_FRAME_DETECTION;
+		ret = phy_write_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_RSI1_CTRL7, val);
+		if (ret < 0)
+			return ret;
+
+		/* Set the WoL enable bit */
+		val = phy_read_mmd(phydev, MDIO_MMD_AN, MDIO_AN_RSVD_VEND_PROV1);
+		val |= MDIO_MMD_AN_WOL_ENABLE;
+		ret = phy_write_mmd(phydev, MDIO_MMD_AN, MDIO_AN_RSVD_VEND_PROV1, val);
+		if (ret < 0)
+			return ret;
+
+		/* Set the WoL INT_N trigger bit */
+		val = phy_read_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_RSI1_CTRL8);
+		val |= MDIO_C22EXT_RSI_WOL_FCS_MONITOR_MODE;
+		ret = phy_write_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_RSI1_CTRL8, val);
+		if (ret < 0)
+			return ret;
+
+		/* Enable Interrupt INT_N Generation at pin level */
+		val = phy_read_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_SGMII_TX_INT_MASK1);
+		val |= MDIO_C22EXT_SGMII0_WAKE_UP_FRAME_MASK |
+		       MDIO_C22EXT_SGMII0_MAGIC_PKT_FRAME_MASK;
+		ret = phy_write_mmd(phydev, MDIO_MMD_C22EXT,
+				    MDIO_C22EXT_GBE_PHY_SGMII_TX_INT_MASK1, val);
+		if (ret < 0)
+			return ret;
+		val = phy_read_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_INT_STD_MASK);
+		val |= VEND1_GLOBAL_INT_STD_MASK_ALL;
+		ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_INT_STD_MASK, val);
+		if (ret < 0)
+			return ret;
+		val = phy_read_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_INT_VEND_MASK);
+		val |= VEND1_GLOBAL_INT_VEND_MASK_GBE;
+		ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_INT_VEND_MASK, val);
+		if (ret < 0)
+			return ret;
+
+		/* Set the system interface to SGMII */
+		ret = phy_write_mmd(phydev, MDIO_MMD_VEND1,
+				    VEND1_GLOBAL_SYS_CONFIG_100M, VEND1_GLOBAL_SYS_CONFIG_SGMII);
+		if (ret < 0)
+			return ret;
+		ret = phy_write_mmd(phydev, MDIO_MMD_VEND1,
+				    VEND1_GLOBAL_SYS_CONFIG_1G, VEND1_GLOBAL_SYS_CONFIG_SGMII);
+		if (ret < 0)
+			return ret;
+
+		/* restart auto-negotiation */
+		genphy_c45_restart_aneg(phydev);
+	} else {
+		/* Disable the WoL enable bit */
+		val = phy_read_mmd(phydev, MDIO_MMD_AN, MDIO_AN_RSVD_VEND_PROV1);
+		val &= ~MDIO_MMD_AN_WOL_ENABLE;
+		ret = phy_write_mmd(phydev, MDIO_MMD_AN, MDIO_AN_RSVD_VEND_PROV1, val);
+		if (ret < 0)
+			return ret;
+
+		/* Restore the SERDES/System Interface back to the XFI mode */
+		ret = phy_write_mmd(phydev, MDIO_MMD_VEND1,
+				    VEND1_GLOBAL_SYS_CONFIG_100M, VEND1_GLOBAL_SYS_CONFIG_XFI);
+		if (ret < 0)
+			return ret;
+		ret = phy_write_mmd(phydev, MDIO_MMD_VEND1,
+				    VEND1_GLOBAL_SYS_CONFIG_1G, VEND1_GLOBAL_SYS_CONFIG_XFI);
+		if (ret < 0)
+			return ret;
+
+		/* restart auto-negotiation */
+		genphy_c45_restart_aneg(phydev);
+	}
+	return ret;
+}
+
+static void aqr113c_get_wol(struct phy_device *phydev, struct ethtool_wolinfo *wol)
+{
+	u16 val;
+
+	val = phy_read_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_RSI1_CTRL7);
+	if (val < 0)
+		return;
+
+	if (val & 0x1) {
+		wol->wolopts = WAKE_MAGIC;
+		wol->supported = WAKE_MAGIC;
+	}
+}
+
+static int aqr113c_set_wol(struct phy_device *phydev, struct ethtool_wolinfo *wol)
+{
+	if (wol->wolopts & WAKE_MAGIC)
+		return aqr113c_wol_settings(phydev, true);
+	else
+		return aqr113c_wol_settings(phydev, false);
+	return 0;
+}
+
 static struct phy_driver aqr_driver[] = {
 {
 	PHY_ID_MATCH_MODEL(PHY_ID_AQ1202),
@@ -843,6 +1080,8 @@ static struct phy_driver aqr_driver[] = {
 	.get_strings	= aqr107_get_strings,
 	.get_stats	= aqr107_get_stats,
 	.link_change_notify = aqr107_link_change_notify,
+	.get_wol	= &aqr113c_get_wol,
+	.set_wol	= &aqr113c_set_wol,
 },
 {
 	PHY_ID_MATCH_MODEL(PHY_ID_AQR405),
