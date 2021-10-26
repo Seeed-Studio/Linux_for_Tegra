@@ -52,8 +52,6 @@ s32 rtl8822ce_init_xmit_priv(_adapter *padapter)
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 	struct dvobj_priv *pdvobjpriv = adapter_to_dvobj(padapter);
 
-	_rtw_spinlock_init(&pdvobjpriv->irq_th_lock);
-
 #ifdef PLATFORM_LINUX
 	tasklet_init(&pxmitpriv->xmit_tasklet,
 		     rtl8822ce_xmit_tasklet,

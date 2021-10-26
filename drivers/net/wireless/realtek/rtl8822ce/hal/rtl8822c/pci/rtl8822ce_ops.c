@@ -1,6 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2015 - 2017 Realtek Corporation.
+ * Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -71,6 +72,7 @@ void rtl8822ce_reset_bd(_adapter *padapter)
 		}
 	}
 
+	_rtw_spinlock_init(&pdvobjpriv->irq_th_lock);
 	_enter_critical(&pdvobjpriv->irq_th_lock, &irqL);
 	for (i = 0; i < PCI_MAX_TX_QUEUE_COUNT; i++) {
 		if (t_priv->tx_ring[i].buf_desc) {
