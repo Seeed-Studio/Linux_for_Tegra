@@ -12,6 +12,7 @@
 
 #include "tegra_asoc_machine.h"
 #include "tegra_codecs.h"
+#include "../codecs/rt5640.h"
 #include "../codecs/rt5659.h"
 #include "../codecs/sgtl5000.h"
 
@@ -27,11 +28,15 @@ static int tegra_audio_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
+static int tegra_machine_rt56xx_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_component *cmpnt = rtd->dais[rtd->num_cpus]->component;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_jack *jack;
 	int err;
+
+	if (!cmpnt->driver->set_jack)
+		goto dai_init;
 
 	jack = devm_kzalloc(card->dev, sizeof(struct snd_soc_jack), GFP_KERNEL);
 	if (!jack)
@@ -50,9 +55,9 @@ static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	err = rt5659_set_jack_detect(rtd->dais[rtd->num_cpus]->component, jack);
+	err = cmpnt->driver->set_jack(cmpnt, jack, NULL);
 	if (err) {
-		dev_err(card->dev, "Failed to set jack for RT565x: %d\n", err);
+		dev_err(cmpnt->dev, "Failed to set jack: %d\n", err);
 		return err;
 	}
 
@@ -66,6 +71,8 @@ static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
 
 	snd_soc_dapm_sync(&card->dapm);
 
+
+dai_init:
 	return tegra_audio_dai_init(rtd);
 }
 
@@ -129,6 +136,18 @@ int tegra_codecs_runtime_setup(struct snd_soc_card *card,
 	if (rtd) {
 		err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus],
 					     RT5659_SCLK_S_MCLK,
+					     aud_mclk, SND_SOC_CLOCK_IN);
+		if (err < 0) {
+			dev_err(card->dev, "dais[%d] clock not set\n",
+				rtd->num_cpus);
+			return err;
+		}
+	}
+
+	rtd = get_pcm_runtime(card, "rt5640-playback");
+	if (rtd) {
+		err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus],
+					     RT5640_SCLK_S_MCLK,
 					     aud_mclk, SND_SOC_CLOCK_IN);
 		if (err < 0) {
 			dev_err(card->dev, "dais[%d] clock not set\n",
@@ -218,8 +237,9 @@ int tegra_codecs_init(struct snd_soc_card *card)
 
 	for (i = 0; i < card->num_links; i++) {
 		if (strstr(dai_links[i].name, "rt565x-playback") ||
+		    strstr(dai_links[i].name, "rt5640-playback") ||
 		    strstr(dai_links[i].name, "rt565x-codec-sysclk-bclk1"))
-			dai_links[i].init = tegra_machine_rt565x_init;
+			dai_links[i].init = tegra_machine_rt56xx_init;
 		else if (strstr(dai_links[i].name, "fe-pi-audio-z-v2"))
 			dai_links[i].init = tegra_machine_fepi_init;
 		else if (strstr(dai_links[i].name, "respeaker-4-mic-array"))
