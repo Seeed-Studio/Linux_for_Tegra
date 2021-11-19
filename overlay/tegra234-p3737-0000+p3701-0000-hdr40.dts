@@ -210,7 +210,7 @@
 					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin40 {
-					nvidia,pins = "soc_gpio41_ph7";
+					nvidia,pins = "soc_gpio42_pi0";
 					nvidia,function = "i2s2";
 					nvidia,pin-label = "i2s2_dout";
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
