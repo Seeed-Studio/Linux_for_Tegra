@@ -2,7 +2,7 @@
 //
 // tegra_codecs.c - External audio codec setup
 //
-// Copyright (c) 2021 NVIDIA CORPORATION.  All rights reserved.
+// Copyright (c) 2021-2022, NVIDIA CORPORATION.  All rights reserved.
 
 #include <dt-bindings/sound/tas2552.h>
 #include <linux/input.h>
@@ -123,12 +123,57 @@ static struct snd_soc_pcm_runtime *get_pcm_runtime(struct snd_soc_card *card,
 	return NULL;
 }
 
+static int set_pll_sysclk(struct device *dev, struct snd_soc_pcm_runtime *rtd,
+		int pll_src, int clk_id, unsigned int srate,
+		unsigned int channels)
+{
+	struct snd_soc_pcm_stream *dai_params;
+	unsigned int bclk_rate;
+	int err;
+
+	dai_params = (struct snd_soc_pcm_stream *)rtd->dai_link->params;
+
+	switch (dai_params->formats) {
+	case SNDRV_PCM_FMTBIT_S8:
+		bclk_rate = srate * channels * 8;
+		break;
+	case SNDRV_PCM_FMTBIT_S16_LE:
+		bclk_rate = srate * channels * 16;
+		break;
+	case SNDRV_PCM_FMTBIT_S24_LE:
+		bclk_rate = srate * channels * 24;
+		break;
+	case SNDRV_PCM_FMTBIT_S32_LE:
+		bclk_rate = srate * channels * 32;
+		break;
+	default:
+		dev_err(dev, "invalid format %llu\n",
+				dai_params->formats);
+		return -EINVAL;
+	}
+
+	err = snd_soc_dai_set_pll(rtd->dais[rtd->num_cpus], 0,
+			pll_src, bclk_rate, srate * 256);
+	if (err < 0) {
+		dev_err(dev, "failed to set codec pll\n");
+		return err;
+	}
+
+	err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus], clk_id,
+			srate * 256, SND_SOC_CLOCK_IN);
+	if (err < 0) {
+		dev_err(dev, "dais[%d] clock not set\n", rtd->num_cpus);
+		return err;
+	}
+
+	return 0;
+}
+
 int tegra_codecs_runtime_setup(struct snd_soc_card *card,
 			       unsigned int srate,
 			       unsigned int channels,
 			       unsigned int aud_mclk)
 {
-	struct snd_soc_pcm_stream *dai_params;
 	struct snd_soc_pcm_runtime *rtd;
 	int err;
 
@@ -158,41 +203,20 @@ int tegra_codecs_runtime_setup(struct snd_soc_card *card,
 
 	rtd = get_pcm_runtime(card, "rt565x-codec-sysclk-bclk1");
 	if (rtd) {
-		unsigned int bclk_rate;
-
-		dai_params = (struct snd_soc_pcm_stream *)rtd->dai_link->params;
-
-		switch (dai_params->formats) {
-		case SNDRV_PCM_FMTBIT_S8:
-			bclk_rate = srate * channels * 8;
-			break;
-		case SNDRV_PCM_FMTBIT_S16_LE:
-			bclk_rate = srate * channels * 16;
-			break;
-		case SNDRV_PCM_FMTBIT_S24_LE:
-			bclk_rate = srate * channels * 24;
-			break;
-		case SNDRV_PCM_FMTBIT_S32_LE:
-			bclk_rate = srate * channels * 32;
-			break;
-		default:
-			dev_err(card->dev, "invalid format %llu\n",
-				dai_params->formats);
-			return -EINVAL;
-		}
-
-		err = snd_soc_dai_set_pll(rtd->dais[rtd->num_cpus], 0,
-					  RT5659_PLL1_S_BCLK1,
-					  bclk_rate, srate * 256);
+		err = set_pll_sysclk(card->dev, rtd, RT5659_PLL1_S_BCLK1,
+				RT5659_SCLK_S_PLL1, srate, channels);
 		if (err < 0) {
-			dev_err(card->dev, "failed to set codec pll\n");
+			dev_err(card->dev, "failed to set pll clk\n");
 			return err;
 		}
+	}
 
-		err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus], RT5659_SCLK_S_PLL1,
-					     srate * 256, SND_SOC_CLOCK_IN);
+	rtd = get_pcm_runtime(card, "rt5640-codec-sysclk-bclk1");
+	if (rtd) {
+		err = set_pll_sysclk(card->dev, rtd, RT5640_PLL1_S_BCLK1,
+				RT5640_SCLK_S_PLL1, srate, channels);
 		if (err < 0) {
-			dev_err(card->dev, "dais[%d] clock not set\n", rtd->num_cpus);
+			dev_err(card->dev, "failed to set pll clk\n");
 			return err;
 		}
 	}
@@ -238,7 +262,8 @@ int tegra_codecs_init(struct snd_soc_card *card)
 	for (i = 0; i < card->num_links; i++) {
 		if (strstr(dai_links[i].name, "rt565x-playback") ||
 		    strstr(dai_links[i].name, "rt5640-playback") ||
-		    strstr(dai_links[i].name, "rt565x-codec-sysclk-bclk1"))
+		    strstr(dai_links[i].name, "rt565x-codec-sysclk-bclk1") ||
+		    strstr(dai_links[i].name, "rt5640-codec-sysclk-bclk1"))
 			dai_links[i].init = tegra_machine_rt56xx_init;
 		else if (strstr(dai_links[i].name, "fe-pi-audio-z-v2"))
 			dai_links[i].init = tegra_machine_fepi_init;
