@@ -108,6 +108,7 @@
 #define MDIO_C22EXT_STAT_SGMII_TX_LINE_COLLISIONS	0xd319
 #define MDIO_C22EXT_STAT_SGMII_TX_FRAME_ALIGN_ERR	0xd31a
 #define MDIO_C22EXT_STAT_SGMII_TX_RUNT_FRAMES		0xd31b
+#define MDIO_C22EXT_GBE_PHY_SGMII_TX_ALARM1		0xec20
 
 #define	MDIO_C22EXT_RSI_WAKE_UP_FRAME_DETECTION		BIT(0)
 #define	MDIO_C22EXT_RSI_MAGIC_PKT_FRAME_DETECTION	BIT(0)
@@ -362,7 +363,31 @@ static int aqr_config_intr(struct phy_device *phydev)
 
 static irqreturn_t aqr_handle_interrupt(struct phy_device *phydev)
 {
+	int reg, val, ret;
 	int irq_status;
+
+	reg = phy_read_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_SGMII_TX_ALARM1);
+	if ((reg & MDIO_C22EXT_SGMII0_MAGIC_PKT_FRAME_MASK) ==
+	    MDIO_C22EXT_SGMII0_MAGIC_PKT_FRAME_MASK) {
+		/* Disable the WoL enable bit */
+		val = phy_read_mmd(phydev, MDIO_MMD_AN, MDIO_AN_RSVD_VEND_PROV1);
+		val &= ~MDIO_MMD_AN_WOL_ENABLE;
+		ret = phy_write_mmd(phydev, MDIO_MMD_AN, MDIO_AN_RSVD_VEND_PROV1, val);
+		if (ret < 0)
+			return IRQ_NONE;
+
+		/* Restore the SERDES/System Interface back to the XFI mode */
+		ret = phy_write_mmd(phydev, MDIO_MMD_VEND1,
+				    VEND1_GLOBAL_SYS_CONFIG_100M, VEND1_GLOBAL_SYS_CONFIG_XFI);
+		if (ret < 0)
+			return IRQ_NONE;
+		ret = phy_write_mmd(phydev, MDIO_MMD_VEND1,
+				    VEND1_GLOBAL_SYS_CONFIG_1G, VEND1_GLOBAL_SYS_CONFIG_XFI);
+		if (ret < 0)
+			return IRQ_NONE;
+		/* restart auto-negotiation */
+		return genphy_c45_restart_aneg(phydev);
+	}
 
 	irq_status = phy_read_mmd(phydev, MDIO_MMD_AN,
 				  MDIO_AN_TX_VEND_INT_STATUS2);
