@@ -2124,6 +2124,33 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 
 static void tegra_pcie_deinit_controller(struct tegra_pcie_dw *pcie)
 {
+	struct dw_pcie *pci = &pcie->pci;
+	u32 val;
+	u16 val_w;
+
+	/*
+	 * Surprise down AER error and edma_deinit are racing. Disable
+	 * AER error reporting, since controller is going down anyway.
+	 */
+	val = appl_readl(pcie, APPL_INTR_EN_L1_8_0);
+	val &= ~APPL_INTR_EN_L1_8_AER_INT_EN;
+	appl_writel(pcie, val, APPL_INTR_EN_L1_8_0);
+
+	val = dw_pcie_readl_dbi(pci, PCI_COMMAND);
+	val &= ~PCI_COMMAND_SERR;
+	dw_pcie_writel_dbi(pci, PCI_COMMAND, val);
+
+	val_w = dw_pcie_readw_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL);
+	val_w &= ~(PCI_EXP_DEVCTL_CERE | PCI_EXP_DEVCTL_NFERE | PCI_EXP_DEVCTL_FERE |
+		   PCI_EXP_DEVCTL_URRE);
+	dw_pcie_writew_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL, val_w);
+
+	val_w = dw_pcie_find_ext_capability(pci, PCI_EXT_CAP_ID_ERR);
+	val = dw_pcie_readl_dbi(pci, val_w + PCI_ERR_ROOT_STATUS);
+	dw_pcie_writel_dbi(pci, val_w + PCI_ERR_ROOT_STATUS, val);
+
+	synchronize_irq(pcie->pci.pp.irq);
+
 	pcie->link_state = false;
 	clk_disable_unprepare(pcie->core_clk_m);
 	dw_pcie_host_deinit(&pcie->pci.pp);
