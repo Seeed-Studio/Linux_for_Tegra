@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-cec/tegra_cec.c
  *
- * Copyright (c) 2012-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -751,7 +751,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 		rst = devm_reset_control_get(&pdev->dev, "cec");
 		if (IS_ERR(rst)) {
 			/* BPMP reset mechanism not available, return and retry again */
-			dev_err(&pdev->dev, "reset control is not found, deferring probe to retry again.\n");
+			dev_info(&pdev->dev, "reset control is not found, deferring probe to retry again.\n");
 			devm_kfree(&pdev->dev, cec);
 			reset_retry_count--;
 			return -EPROBE_DEFER;
@@ -759,7 +759,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 
 		/* take CEC engine out of reset */
 		if (reset_control_reset(rst) != 0) {
-			dev_err(&pdev->dev, "reset control reset failed, deferring probe to retry again.\n");
+			dev_info(&pdev->dev, "reset control reset failed, deferring probe to retry again.\n");
 			devm_kfree(&pdev->dev, cec);
 			reset_retry_count--;
 			return -EPROBE_DEFER;
