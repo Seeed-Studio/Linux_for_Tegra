@@ -12,6 +12,7 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/bitfield.h>
+#include <linux/of.h>
 #include <linux/phy.h>
 #include <linux/netdevice.h>
 
@@ -215,6 +216,9 @@ static const struct aqr107_hw_stat aqr107_hw_stats[] = {
 
 struct aqr107_priv {
 	u64 sgmii_stats[AQR107_SGMII_STAT_SZ];
+	int led_mode0;
+	int led_mode1;
+	int led_mode2;
 };
 
 static int aqr107_get_sset_count(struct phy_device *phydev)
@@ -624,6 +628,73 @@ static void aqr107_chip_info(struct phy_device *phydev)
 		   fw_major, fw_minor, build_id, prov_id);
 }
 
+static void aqr_apply_led_mode_cfg(struct phy_device *phydev)
+{
+	struct aqr107_priv *priv = phydev->priv;
+
+	if (priv->led_mode0 > 0)
+		phy_write_mmd(phydev, MDIO_MMD_VEND1, 0xc430, priv->led_mode0);
+
+	if (priv->led_mode1 > 0)
+		phy_write_mmd(phydev, MDIO_MMD_VEND1, 0xc431, priv->led_mode1);
+
+	if (priv->led_mode2 > 0)
+		phy_write_mmd(phydev, MDIO_MMD_VEND1, 0xc432, priv->led_mode2);
+}
+
+static int aqr_read_led_mode_cfg(struct phy_device *phydev)
+{
+	struct device_node *node = phydev->mdio.dev.of_node;
+	struct aqr107_priv *priv = phydev->priv;
+	int err = 0;
+	int n = 0;
+
+	priv->led_mode0 = -1;
+	priv->led_mode1 = -1;
+	priv->led_mode2 = -1;
+
+	n = of_property_count_u32_elems(node, "aquantia,led-mode");
+
+	/* We expect from 1 to 3 pairs of LED modes ("0 led_0_value 1 led_1_value 2 led_2_value") */
+
+	if (n > 1) {
+		if (n > 6 || n % 2) {
+			phydev_info(phydev, "Aquantia: incorrect number of led-mode parameters\n");
+			return -EINVAL;
+		} else {
+			int i = 0;
+			u32 led_modes[6];
+
+			err = of_property_read_u32_array(node, "aquantia,led-mode",
+							 &led_modes[0], n);
+			if (err)
+				return err;
+
+			for (i = 0; i < n; i += 2) {
+				if (led_modes[i] > 2) {
+					phydev_info(phydev, "Aquantia: incorrect value of led-mode parameter\n");
+					return -EINVAL;
+				}
+
+				switch (led_modes[i]) {
+				case 0:
+					priv->led_mode0 = led_modes[i + 1];
+					break;
+				case 2:
+					priv->led_mode1 = led_modes[i + 1];
+					break;
+				case 4:
+					priv->led_mode2 = led_modes[i + 1];
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 static int aqr107_config_init(struct phy_device *phydev)
 {
 	int ret, err;
@@ -688,6 +759,8 @@ static int aqr107_config_init(struct phy_device *phydev)
 		phydev_err(phydev, "Error setting magic packet frame of 4/5th byte\n");
 		return err;
 	}
+
+	aqr_apply_led_mode_cfg(phydev);
 
 	return aqr107_set_downshift(phydev, MDIO_AN_VEND_PROV_DOWNSHIFT_DFLT);
 }
@@ -903,6 +976,7 @@ static int aqr107_probe(struct phy_device *phydev)
 	ret = aqr_firmware_load(phydev);
 	if (ret)
 		return ret;
+	aqr_read_led_mode_cfg(phydev);
 
 	return aqr_hwmon_probe(phydev);
 }
