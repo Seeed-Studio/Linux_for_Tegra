@@ -747,6 +747,12 @@ static int tegra_cec_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	cec->soc = of_device_get_match_data(&pdev->dev);
+	if (cec->soc == NULL) {
+		dev_err(&pdev->dev, "No cec dev table found\n");
+		devm_kfree(&pdev->dev, cec);
+		return -ENODEV;
+	}
+
 	if (cec->soc->cec_always_on && reset_retry_count != 0) {
 		rst = devm_reset_control_get(&pdev->dev, "cec");
 		if (IS_ERR(rst)) {
