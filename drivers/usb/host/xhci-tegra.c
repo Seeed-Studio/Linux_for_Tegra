@@ -2,7 +2,7 @@
 /*
  * NVIDIA Tegra xHCI host controller driver
  *
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (C) 2014 Google, Inc.
  */
 
@@ -312,6 +312,7 @@ struct tegra_xusb {
 	bool suspended;
 	struct tegra_xusb_context context;
 	u8 lp0_utmi_pad_mask;
+	atomic_t hub_ctrl_use_cnt;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -1949,10 +1950,22 @@ static void tegra_xusb_remove(struct platform_device *pdev)
 static void tegra_xusb_shutdown(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
+	unsigned long flags;
 
 	pm_runtime_get_sync(&pdev->dev);
 	disable_irq(tegra->xhci_irq);
 	xhci_shutdown(tegra->hcd);
+
+	/* avoid any further access to XHCI registers */
+	spin_lock_irqsave(&xhci->lock, flags);
+	xhci->xhc_state |= XHCI_STATE_DYING;
+	spin_unlock_irqrestore(&xhci->lock, flags);
+
+	/* wait until all current access are done if any */
+	while (atomic_read(&tegra->hub_ctrl_use_cnt) != 0)
+		msleep(20);
+
 	tegra_xusb_disable(tegra);
 }
 
@@ -2699,6 +2712,13 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req, u16 value, 
 	int ret;
 	struct phy *phy;
 
+	if (xhci->xhc_state & XHCI_STATE_DYING) {
+		dev_info(hcd->self.controller, "HCD shut down\n");
+		return -ENODEV;
+	}
+
+	atomic_inc(&tegra->hub_ctrl_use_cnt);
+
 	rhub = &xhci->usb2_rhub;
 	bus_state = &rhub->bus_state;
 	if (bus_state->resuming_ports && hcd->speed == HCD_USB2) {
@@ -2717,13 +2737,17 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req, u16 value, 
 	if (hcd->speed == HCD_USB2) {
 		phy = tegra_xusb_get_phy(tegra, "usb2", port);
 		if ((type_req == ClearPortFeature) && (value == USB_PORT_FEAT_SUSPEND)) {
-			if (!index || index > rhub->num_ports)
-				return -EPIPE;
+			if (!index || index > rhub->num_ports) {
+				ret = -EPIPE;
+				goto out;
+			}
 			tegra_phy_xusb_utmi_pad_power_on(phy);
 		}
 		if ((type_req == SetPortFeature) && (value == USB_PORT_FEAT_RESET)) {
-			if (!index || index > rhub->num_ports)
-				return -EPIPE;
+			if (!index || index > rhub->num_ports) {
+				ret = -EPIPE;
+				goto out;
+			}
 			ports = rhub->ports;
 			portsc = readl(ports[port]->addr);
 			if (portsc & PORT_CONNECT)
@@ -2733,7 +2757,7 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req, u16 value, 
 
 	ret = xhci_hub_control(hcd, type_req, value, index, buf, length);
 	if (ret < 0)
-		return ret;
+		goto out;
 
 	if (hcd->speed == HCD_USB2) {
 		/* Use phy where we set previously */
@@ -2756,6 +2780,9 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req, u16 value, 
 		if ((type_req == SetPortFeature) && (value == USB_PORT_FEAT_TEST))
 			tegra_phy_xusb_utmi_pad_power_on(phy);
 	}
+
+out:
+	atomic_dec(&tegra->hub_ctrl_use_cnt);
 
 	return ret;
 }
