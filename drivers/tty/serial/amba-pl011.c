@@ -1204,8 +1204,16 @@ skip_rx:
 
 static void pl011_dma_shutdown(struct uart_amba_port *uap)
 {
+	unsigned int cr;
 	if (!(uap->using_tx_dma || uap->using_rx_dma))
 		return;
+
+	/* Fix potential deadlock when UART loopback is enabled. */
+	cr = pl011_read(uap, REG_CR);
+	if (cr & UART011_CR_LBE) {
+		cr &= ~(UART011_CR_RTSEN | UART011_CR_CTSEN);
+		pl011_write(cr, uap, REG_CR);
+	}
 
 	/* Disable RX and TX DMA */
 	while (pl011_read(uap, REG_FR) & uap->vendor->fr_busy)
