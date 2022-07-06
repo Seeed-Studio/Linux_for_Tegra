@@ -128,24 +128,24 @@ static int rtl8211f_wol_settings(struct phy_device *phydev, bool enable)
 	/* Set WoL events and packet length */
 
 	if (enable) {
-		ret = phy_modify_paged_changed(phydev, RTL8211F_WOL_SETTING_PAGE, RTL8211F_WOL_REG_PACKET_LEN, 0x0,
+		ret = phy_write_paged(phydev, RTL8211F_WOL_SETTING_PAGE, RTL8211F_WOL_REG_PACKET_LEN,
 				(RTL8211F_WOL_PACKET_LEN |
 				RTL8211F_WOL_SET_PACKET_LEN));
-		if (ret)
+		if (ret < 0)
 			return ret;
 
-		ret = phy_modify_paged_changed(phydev, RTL8211F_WOL_SETTING_PAGE, RTL8211F_WOL_REG_FRAME_EVENT, 0x0,
+		ret = phy_write_paged(phydev, RTL8211F_WOL_SETTING_PAGE, RTL8211F_WOL_REG_FRAME_EVENT,
 				RTL8211F_WOL_ENABLE_MAGIC_PACKET);
-		if (ret)
+		if (ret < 0)
 			return ret;
 	} else {
-		ret = phy_modify_paged_changed(phydev, RTL8211F_WOL_SETTING_PAGE, RTL8211F_WOL_REG_PACKET_LEN, 0x0,
+		ret = phy_write_paged(phydev, RTL8211F_WOL_SETTING_PAGE, RTL8211F_WOL_REG_PACKET_LEN,
 				RTL8211F_WOL_PACKET_LEN);
-		if (ret)
+		if (ret < 0)
 			return ret;
 
-		ret = phy_modify_paged_changed(phydev, RTL8211F_WOL_SETTING_PAGE, RTL8211F_WOL_REG_FRAME_EVENT, 0x0, 0x0);
-		if (ret)
+		ret = phy_write_paged(phydev, RTL8211F_WOL_SETTING_PAGE, RTL8211F_WOL_REG_FRAME_EVENT, 0x0);
+		if (ret < 0)
 			return ret;
 	}
 	return 0;
@@ -221,9 +221,25 @@ static int rtl821x_ack_interrupt(struct phy_device *phydev)
 
 static int rtl8211f_ack_interrupt(struct phy_device *phydev)
 {
-	int err;
+	int err, ret;
 
 	err = phy_read_paged(phydev, 0xa43, RTL8211F_INSR);
+
+	/* ack the WOL interrupt and toggle the WOL specific registers
+	 * to enable PME pin for WOL trigger events for next time
+	 * until disabled from ethtool ioctl
+	 */
+	if (err & RTL8211F_WOL_ENABLE_PMEB_EVENT) {
+		ret = rtl8211f_wol_settings(phydev, false);
+		if (ret < 0)
+			return ret;
+
+		ret = rtl8211f_wol_settings(phydev, true);
+		if (ret < 0)
+			return ret;
+
+		return 0;
+	}
 
 	return (err < 0) ? err : 0;
 }
@@ -523,21 +539,21 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 			phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_0] |
 			(phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_1]
 			<< BIT_SHIFT_8));
-	if (ret)
+	if (ret < 0)
 		return ret;
 
 	ret = phy_modify_paged_changed(phydev, RTL8211F_WOL_MAC_PAGE, RTL8211F_WOL_REG_MAC_WORD_1, 0x0,
 			phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_2] |
 			(phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_3]
 			<< BIT_SHIFT_8));
-	if (ret)
+	if (ret < 0)
 		return ret;
 
 	ret = phy_modify_paged_changed(phydev, RTL8211F_WOL_MAC_PAGE, RTL8211F_WOL_REG_MAC_WORD_2, 0x0,
 			phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_4] |
 			(phydev->attached_dev->dev_addr[MAC_ADDRESS_BYTE_5]
 			<< BIT_SHIFT_8));
-	if (ret)
+	if (ret < 0)
 		return ret;
 
 	return genphy_soft_reset(phydev);
