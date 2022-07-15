@@ -101,6 +101,7 @@
 #define RTL8211F_WOL_SET_PACKET_LEN		BIT(15)
 #define RTL8211F_WOL_ENABLE_MAGIC_PACKET	BIT(12)
 #define RTL8211F_WOL_ENABLE_PMEB_EVENT		BIT(7)
+#define RTL8211F_VD_CG_WOL_ENABLE_PMEB_EVENT	BIT(12)
 
 #define BIT_SHIFT_8 8
 #define MAC_ADDRESS_BYTE_0 0
@@ -227,9 +228,11 @@ static int rtl8211f_ack_interrupt(struct phy_device *phydev)
 
 	/* ack the WOL interrupt and toggle the WOL specific registers
 	 * to enable PME pin for WOL trigger events for next time
-	 * until disabled from ethtool ioctl
+	 * until it is disabled from ethtool ioctl
 	 */
-	if (err & RTL8211F_WOL_ENABLE_PMEB_EVENT) {
+	if (((phydev->phy_id == 0x001cc878) &&
+	    (err & RTL8211F_VD_CG_WOL_ENABLE_PMEB_EVENT)) ||
+	    (err & RTL8211F_WOL_ENABLE_PMEB_EVENT)) {
 		ret = rtl8211f_wol_settings(phydev, false);
 		if (ret < 0)
 			return ret;
@@ -316,13 +319,19 @@ static int rtl8211f_config_intr(struct phy_device *phydev)
 {
 	u16 val;
 	int err;
+	u16 pmeb_event;
+
+	if(phydev->phy_id == 0x001cc878)
+                pmeb_event = RTL8211F_VD_CG_WOL_ENABLE_PMEB_EVENT;
+        else
+                pmeb_event = RTL8211F_WOL_ENABLE_PMEB_EVENT;
 
 	if (phydev->interrupts == PHY_INTERRUPT_ENABLED) {
 		err = rtl8211f_ack_interrupt(phydev);
 		if (err)
 			return err;
 
-		val = (RTL8211F_INER_LINK_STATUS | RTL8211F_WOL_ENABLE_PMEB_EVENT);
+		val = (RTL8211F_INER_LINK_STATUS | pmeb_event);
 		err = phy_write_paged(phydev, 0xa42, RTL821x_INER, val);
 	} else {
 		val = 0;
@@ -442,6 +451,9 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		return ret;
 	}
 
+	/* CLKOUT Enable bit is NA for RTL8211F_VD phy IC
+	 * keeping programming as it is, since no effect in new phy IC
+	 */
 	val = phy_read_paged(phydev, 0xa43, RTL8211F_PHYCR2);
 	phy_modify_paged_changed(phydev, 0xa43, RTL8211F_PHYCR2, 0, (val & ~BIT(0)));
 
@@ -1143,6 +1155,18 @@ static struct phy_driver realtek_drvs[] = {
 		.read_page	= rtl821x_read_page,
 		.write_page	= rtl821x_write_page,
 		.flags		= PHY_ALWAYS_CALL_SUSPEND,
+	}, {
+		PHY_ID_MATCH_EXACT(0x001cc878),
+		.name		= "RTL8211F VD-CG Gigabit Ethernet",
+		.config_init	= &rtl8211f_config_init,
+		.handle_interrupt = rtl8211f_handle_interrupt,
+		.config_intr	= &rtl8211f_config_intr,
+		.get_wol	= &rtl8211f_get_wol,
+		.set_wol	= &rtl8211f_set_wol,
+		.suspend	= genphy_suspend,
+		.resume		= rtl821x_resume,
+		.read_page	= rtl821x_read_page,
+		.write_page	= rtl821x_write_page,
 	}, {
 		.name		= "Generic FE-GE Realtek PHY",
 		.match_phy_device = rtlgen_match_phy_device,
