@@ -334,14 +334,59 @@ static int aqr_config_aneg(struct phy_device *phydev)
 	if (!err) {
 		if (phy_mode == 1) {
 			phydev_info(phydev, "Configuring AQR PHY to 5G Mode\n");
-			phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_CFG_2_5G, 0x0106);
-			phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_CFG_5G, 0x0106);
-			phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_CFG_10G, 0x0000);
+
+			ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_CFG_2_5G, 0x0106);
+			if (ret < 0) {
+				phydev_info(phydev, "Fail to configure VEND1_GLOBAL_CFG_2_5GT\n");
+				return ret;
+			}
+
+			ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_CFG_5G, 0x0106);
+			if (ret < 0) {
+				phydev_info(phydev, "Fail to configure VEND1_GLOBAL_CFG_5G\n");
+				return ret;
+			}
+
+			ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_SYS_CONFIG_1G,
+					    0x0106);
+			if (ret < 0) {
+				phydev_info(phydev, "Fail to configure VEND1_GLOBAL_SYS_CONFIG_1G\n");
+				return ret;
+			}
+
+			ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_SYS_CONFIG_100M,
+					    0x0106);
+			if (ret < 0) {
+				phydev_info(phydev, "Fail to configure VEND1_GLOBAL_SYS_CONFIG_100M\n");
+				return ret;
+			}
+
+			ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_CFG_10G, 0x0000);
+			if (ret < 0) {
+				phydev_info(phydev, "Fail to configure VEND1_GLOBAL_CFG_10G\n");
+				return ret;
+			}
+
 			/* Disable 10G advertizement and restart autoneg */
-			phy_write_mmd(phydev, MDIO_MMD_AN, MDIO_AN_10GBT_CTRL, 0x01E1);
+			ret = phy_write_mmd(phydev, MDIO_MMD_AN, MDIO_AN_10GBT_CTRL, 0x01E1);
+			if (ret < 0) {
+				phydev_info(phydev, "Fail to configure MDIO_AN_10GBT_CTRL\n");
+				return ret;
+			}
+
 			/* restart auto-negotiation */
-			genphy_c45_restart_aneg(phydev);
-			phy_write_mmd(phydev, MDIO_MMD_PHYXS, VEND1_GLOBAL_MDIO_PHYXS_PROV2, 0x8);
+			ret = genphy_c45_restart_aneg(phydev);
+			if (ret < 0) {
+				phydev_info(phydev, "Fail to restart auto neg\n");
+				return ret;
+			}
+
+			ret = phy_write_mmd(phydev, MDIO_MMD_PHYXS, VEND1_GLOBAL_MDIO_PHYXS_PROV2,
+					    0x8);
+			if (ret < 0) {
+				phydev_info(phydev, "Fail to configure VEND1_GLOBAL_MDIO_PHYXS_PROV2\n");
+				return ret;
+			}
 		}
 	} else {
 		phydev_info(phydev, "No AQR phy_mode setting in DT\n");
