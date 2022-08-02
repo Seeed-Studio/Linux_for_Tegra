@@ -7155,6 +7155,25 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DRM_FB_HELPER_STRUCT_HAS_INFO_ARG" "" "types"
         ;;
 
+        drm_fb_helper_unprepare)
+            #
+            # Determine if function drm_fb_helper_unprepare is present.
+            #
+            # Commit 4825797c36da ("drm/fb-helper: Introduce drm_fb_helper_unprepare()")
+            # added the function drm_fb_helper_unprepare() in Linux v6.2.
+            #
+            CODE="
+            #undef CONFIG_ACPI
+            #include <drm/drm_fb_helper.h>
+            void conftest_drm_fb_helper_unprepare(void)
+            {
+                    drm_fb_helper_unprepare();
+            }
+            "
+
+            compile_check_conftest "$CODE" "NV_DRM_FB_HELPER_UNPREPARE_PRESENT" "" "functions"
+        ;;
+
         drm_fb_helper_unregister_info)
             #
             # Determine if function drm_fb_helper_unregister_info is present.

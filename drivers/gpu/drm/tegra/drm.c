@@ -1347,6 +1347,8 @@ static int host1x_drm_probe(struct host1x_device *dev)
 	if (err < 0)
 		goto hub;
 
+	tegra_fbdev_setup(drm);
+
 	return 0;
 
 hub:
