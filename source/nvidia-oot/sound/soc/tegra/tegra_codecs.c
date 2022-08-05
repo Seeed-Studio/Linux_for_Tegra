@@ -12,9 +12,10 @@
 
 #include "tegra_asoc_machine.h"
 #include "tegra_codecs.h"
-#include "../codecs/rt5640.h"
-#include "../codecs/rt5659.h"
-#include "../codecs/sgtl5000.h"
+
+#include <drivers-private/sound/soc/codecs/rt5640.h>
+#include <drivers-private/sound/soc/codecs/rt5659.h>
+#include <drivers-private/sound/soc/codecs/sgtl5000.h>
 
 static int tegra_audio_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
