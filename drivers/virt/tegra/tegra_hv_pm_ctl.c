@@ -38,6 +38,8 @@
 #ifdef CONFIG_PM_SLEEP
 #define NETLINK_USERSPACE_PM	30
 #define MAX_USER_CLIENT		64
+#define USERSPACE_RESPONSE_TIMEOUT msecs_to_jiffies(5000)
+
 static struct sock *nl_sk;
 static struct completion netlink_complete;
 static spinlock_t netlink_lock;
@@ -1000,7 +1002,11 @@ static int netlink_pm_notify(struct notifier_block *nb,
 
 		/*Receive the message from userspace*/
 		if (user_client_count)
-			wait_for_completion(&netlink_complete);
+			if (wait_for_completion_timeout(&netlink_complete,
+							USERSPACE_RESPONSE_TIMEOUT) == 0) {
+				dev_err(data->dev, "%s target suspend failed\n", __func__);
+				return NOTIFY_BAD;
+		}
 		break;
 
 	case PM_POST_HIBERNATION:
@@ -1018,13 +1024,17 @@ static int netlink_pm_notify(struct notifier_block *nb,
 
 		/*Receive the message from userspace*/
 		if (user_client_count)
-			wait_for_completion(&netlink_complete);
+			if (wait_for_completion_timeout(&netlink_complete,
+						USERSPACE_RESPONSE_TIMEOUT) == 0) {
+				dev_err(data->dev, "%s target resume failed\n", __func__);
+				return NOTIFY_BAD;
+		}
 		break;
 
 	default:
 		break;
 	}
-	return 0;
+	return NOTIFY_OK;
 }
 
 static struct notifier_block netlink_pm_nb = {
