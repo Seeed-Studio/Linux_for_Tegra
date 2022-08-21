@@ -20,6 +20,7 @@ snd-soc-tegra186-arad-oot-objs		:= tegra186_arad.o
 snd-soc-tegra210-ope-oot-objs		:= tegra210_ope.o tegra210_peq.o \
 					   tegra210_mbdrc.o
 snd-soc-tegra-machine-driver-oot-objs	:= tegra_machine_driver.o
+snd-soc-tegra-controls-objs		:= tegra_mixer_control.o
 
 obj-m += snd-soc-tegra-utils-oot.o
 obj-m += snd-soc-tegra210-dmic-oot.o
@@ -38,3 +39,4 @@ obj-m += snd-soc-tegra210-ope-oot.o
 obj-m += snd-soc-tegra186-arad-oot.o
 obj-m += snd-soc-tegra186-asrc-oot.o
 obj-m += snd-soc-tegra-machine-driver-oot.o
+obj-m += snd-soc-tegra-controls.o
