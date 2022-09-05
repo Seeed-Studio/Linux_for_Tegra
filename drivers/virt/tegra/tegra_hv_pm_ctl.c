@@ -1008,7 +1008,7 @@ static int netlink_pm_notify(struct notifier_block *nb,
 		/*Send the message to userspace*/
 		msg_size = strlen(resume_req);
 
-		ret = notify_client(suspend_req, msg_size);
+		ret = notify_client(resume_req, msg_size);
 		if (ret != 0)
 			dev_err(data->dev, "Error while notifying clients %d\n", ret);
 		else
