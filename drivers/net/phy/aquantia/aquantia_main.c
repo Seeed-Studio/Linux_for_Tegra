@@ -45,6 +45,8 @@
 #define MDIO_PHYXS_VEND_IF_STATUS_TYPE_OCSGMII	10
 #define MDIO_PHYXS_VEND_IF_STATUS_TX_READY	BIT(12)
 
+#define MDIO_AN_RSVD_VEND_STATUS3		0xc812
+
 #define MDIO_AN_VEND_PROV			0xc400
 #define MDIO_AN_VEND_PROV_1000BASET_FULL	BIT(15)
 #define MDIO_AN_VEND_PROV_1000BASET_HALF	BIT(14)
@@ -1172,13 +1174,13 @@ static void aqr113c_get_wol(struct phy_device *phydev, struct ethtool_wolinfo *w
 {
 	u16 val;
 
-	val = phy_read_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_RSI1_CTRL7);
+	val = phy_read_mmd(phydev, MDIO_MMD_AN, MDIO_AN_RSVD_VEND_STATUS3);
 	if (val < 0)
 		return;
 
+	wol->supported = WAKE_MAGIC;
 	if (val & 0x1) {
 		wol->wolopts = WAKE_MAGIC;
-		wol->supported = WAKE_MAGIC;
 	}
 }
 
