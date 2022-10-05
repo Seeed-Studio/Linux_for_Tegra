@@ -7,7 +7,7 @@
 #include <linux/of_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
-#include <linux/tegra-ivc.h>
+#include <soc/tegra/ivc_ext.h>
 #include <linux/tegra-ivc-bus.h>
 #include <linux/tegra-camera-rtcpu.h>
 #include <linux/bitops.h>
@@ -33,14 +33,13 @@ struct tegra_ivc_bus {
 	struct tegra_ivc_region regions[];
 };
 
-static void tegra_ivc_channel_ring(struct ivc *ivc)
+static void tegra_ivc_channel_ring(struct tegra_ivc *ivc, void *data)
 {
 	struct tegra_ivc_channel *chan =
 		container_of(ivc, struct tegra_ivc_channel, ivc);
-	struct tegra_ivc_bus *bus =
-		container_of(chan->dev.parent, struct tegra_ivc_bus, dev);
+	struct camrtc_hsp *camhsp = (struct camrtc_hsp *) data;
 
-	tegra_camrtc_ivc_ring(bus->dev.parent, chan->group);
+	camrtc_hsp_group_ring(camhsp, chan->group);
 }
 
 struct device_type tegra_ivc_channel_type = {
@@ -75,7 +74,8 @@ static void tegra_ivc_channel_release(struct device *dev)
 
 static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		struct tegra_ivc_bus *bus, struct device_node *ch_node,
-		struct tegra_ivc_region *region)
+		struct tegra_ivc_region *region,
+		struct camrtc_hsp *camhsp)
 {
 	struct device *peer_device = bus->dev.parent;
 	struct camrtc_tlv_ivc_setup *tlv;
@@ -162,13 +162,15 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	end.tx = region->ivc_size;
 
 	/* Init IVC */
-	ret = tegra_ivc_init_with_dma_handle(&chan->ivc,
-			region->base + start.rx, region->iova + start.rx,
-			region->base + start.tx, region->iova + start.tx,
+	ret = tegra_ivc_init(&chan->ivc,
+			NULL,
+			(void *)(region->base + start.rx),
+			region->iova + start.rx,
+			(void *)(region->base + start.tx),
+			region->iova + start.tx,
 			nframes, frame_size,
-			/* Device used to allocate the shared memory for IVC */
-			peer_device,
-			tegra_ivc_channel_ring);
+			tegra_ivc_channel_ring,
+			(void *)camhsp);
 	if (ret) {
 		dev_err(&chan->dev, "IVC initialization error: %d\n", ret);
 		goto error;
@@ -290,7 +292,8 @@ static void tegra_ivc_bus_stop(struct tegra_ivc_bus *bus)
 	}
 }
 
-static int tegra_ivc_bus_start(struct tegra_ivc_bus *bus)
+static int tegra_ivc_bus_start(struct tegra_ivc_bus *bus,
+	struct camrtc_hsp *camhsp)
 {
 	struct device_node *dn = bus->dev.parent->of_node;
 	struct of_phandle_args reg_spec;
@@ -317,7 +320,8 @@ static int tegra_ivc_bus_start(struct tegra_ivc_bus *bus)
 			}
 
 			chan = tegra_ivc_channel_create(bus, ch_node,
-							&bus->regions[i]);
+							&bus->regions[i],
+							camhsp);
 			if (IS_ERR(chan)) {
 				ret = PTR_ERR(chan);
 				of_node_put(ch_node);
@@ -339,7 +343,8 @@ error:
  * This is called during RTCPU boot to synchronize
  * (or re-synchronize in the case of PM resume).
  */
-int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus)
+int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus,
+	int (*iovm_setup)(struct device*, dma_addr_t))
 {
 	int i;
 
@@ -347,7 +352,7 @@ int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus)
 		return 0;
 
 	for (i = 0; i < bus->num_regions; i++) {
-		int ret = tegra_camrtc_iovm_setup(bus->dev.parent,
+		int ret = (*iovm_setup)(bus->dev.parent,
 				bus->regions[i].iova);
 		if (ret != 0) {
 			dev_info(&bus->dev, "IOVM setup error: %d\n", ret);
@@ -531,7 +536,8 @@ static unsigned tegra_ivc_bus_count_regions(const struct device_node *dev_node)
 	return i;
 }
 
-struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev)
+struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev,
+	struct camrtc_hsp *camhsp)
 {
 	struct tegra_ivc_bus *bus;
 	unsigned num;
@@ -566,7 +572,7 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev)
 		goto error;
 	}
 
-	ret = tegra_ivc_bus_start(bus);
+	ret = tegra_ivc_bus_start(bus, camhsp);
 	if (ret) {
 		dev_err(&bus->dev, "bus start failed: %d\n", ret);
 		goto error;
