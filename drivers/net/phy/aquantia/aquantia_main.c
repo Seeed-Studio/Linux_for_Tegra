@@ -1144,7 +1144,7 @@ static int aqr113c_wol_settings(struct phy_device *phydev, bool enable)
 
 		/* restart auto-negotiation */
 		genphy_c45_restart_aneg(phydev);
-		priv->wol_status = 1;
+		priv->wol_status = WAKE_MAGIC;
 	} else {
 		/* Disable the WoL enable bit */
 		val = phy_read_mmd(phydev, MDIO_MMD_AN, MDIO_AN_RSVD_VEND_PROV1);
@@ -1186,6 +1186,12 @@ static void aqr113c_get_wol(struct phy_device *phydev, struct ethtool_wolinfo *w
 
 static int aqr113c_set_wol(struct phy_device *phydev, struct ethtool_wolinfo *wol)
 {
+	struct aqr107_priv *priv = phydev->priv;
+
+	/* Return success if WOL is already set. Don't entertain duplicate setting of WOL */
+	if (!(priv->wol_status ^ wol->wolopts))
+		return 0;
+
 	if (wol->wolopts & WAKE_MAGIC)
 		return aqr113c_wol_settings(phydev, true);
 	else
