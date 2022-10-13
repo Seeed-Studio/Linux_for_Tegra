@@ -2,7 +2,7 @@
 /*
  * NVIDIA Tegra Video Input Device
  *
- * Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/atomic.h>
@@ -45,6 +45,8 @@
 
 #define TPG_CSI_GROUP_ID	10
 #define HDMI_IN_RATE 550000000
+/* number of lanes per brick */
+#define NUM_LANES_PER_BRICK	4
 
 static s64 queue_init_ts;
 
@@ -1737,10 +1739,11 @@ static int map_to_sensor_type(u32 phy_mode)
 	}
 }
 
-static u64 tegra_channel_get_max_pixelclock(struct tegra_channel *chan)
+static void tegra_channel_get_sensor_peak_vals(struct tegra_channel *chan,
+						u64 *pixelclock, u32 *num_lanes)
 {
 	int i = 0;
-	u64 val = 0, pixelclock = 0;
+	u64 val = 0;
 
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	struct camera_common_data *s_data =
@@ -1748,7 +1751,7 @@ static u64 tegra_channel_get_max_pixelclock(struct tegra_channel *chan)
 	struct sensor_mode_properties *sensor_mode;
 
 	if (!s_data)
-		return 0;
+		return;
 
 	for (i = 0; i < s_data->sensor_props.num_modes; i++) {
 		sensor_mode = &s_data->sensor_props.sensor_modes[i];
@@ -1756,20 +1759,23 @@ static u64 tegra_channel_get_max_pixelclock(struct tegra_channel *chan)
 			val = sensor_mode->signal_properties.serdes_pixel_clock.val;
 		else
 			val = sensor_mode->signal_properties.pixel_clock.val;
-		/* Select the mode with largest pixel rate */
-		if (pixelclock < val)
-			pixelclock = val;
+
+		/* Select the value from the mode with largest pixel rate and lane numbers */
+		if (*pixelclock < val)
+			*pixelclock = val;
+
+		if (*num_lanes < sensor_mode->signal_properties.num_lanes)
+			*num_lanes = sensor_mode->signal_properties.num_lanes;
 	}
 	spec_bar();
-
-	return pixelclock;
 }
+
 
 static u32 tegra_channel_get_num_lanes(struct tegra_channel *chan)
 {
 	u32 num_lanes = 0;
-
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
+
 	struct camera_common_data *s_data =
 		to_camera_common_data(sd->dev);
 	struct sensor_mode_properties *sensor_mode;
@@ -1815,13 +1821,14 @@ static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
 			struct tegra_channel *chan)
 {
 	u64 pixelclock = 0;
+	u32 max_num_lanes = 0;
 	struct camera_common_data *s_data =
 			to_camera_common_data(chan->subdev_on_csi->dev);
 
 	if (s_data != NULL) {
 		/* camera sensors */
 		cdev->sensor_type = tegra_channel_get_sensor_type(chan);
-		pixelclock = tegra_channel_get_max_pixelclock(chan);
+		tegra_channel_get_sensor_peak_vals(chan, &pixelclock, &max_num_lanes);
 		/* Multiply by CPHY symbols to pixels factor. */
 		if (cdev->sensor_type == SENSORTYPE_CPHY)
 			pixelclock *= 16/7;
@@ -1840,8 +1847,14 @@ static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
 			return;
 		}
 	}
-
-	cdev->pixel_rate = pixelclock;
+	/*
+	 * VI clk scaling for gang mode usecase where 2 CSI bricks
+	 * stream through a single VI channel.
+	 */
+	if (max_num_lanes > NUM_LANES_PER_BRICK)
+		cdev->pixel_rate = pixelclock * (max_num_lanes / NUM_LANES_PER_BRICK);
+	else
+		cdev->pixel_rate = pixelclock;
 	cdev->pixel_bit_depth = chan->fmtinfo->width;
 	cdev->bpp = chan->fmtinfo->bpp.numerator;
 	/* BW in kBps */
