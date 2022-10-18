@@ -12,3 +12,4 @@ obj-m += nv_imx390.o
 obj-m += nv_ov5693.o
 obj-m += max96712.o
 obj-m += nv_ar0234.o
+obj-m += lt6911uxc.o
