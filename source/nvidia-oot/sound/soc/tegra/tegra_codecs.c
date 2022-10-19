@@ -185,7 +185,7 @@ int tegra_codecs_runtime_setup(struct snd_soc_card *card,
 			       unsigned int aud_mclk)
 {
 	struct snd_soc_pcm_runtime *rtd;
-	int err;
+	int i, err;
 
 	rtd = get_pcm_runtime(card, "rt565x-playback");
 	if (rtd) {
@@ -231,30 +231,21 @@ int tegra_codecs_runtime_setup(struct snd_soc_card *card,
 		}
 	}
 
-	rtd = get_pcm_runtime(card, "dspk-playback-r");
+	rtd = get_pcm_runtime(card, "dspk-playback-dual-tas2552");
 	if (rtd) {
-		if (!strcmp(rtd->dais[rtd->dai_link->num_cpus]->name, "tas2552-amplifier")) {
-			err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
-				TAS2552_PDM_CLK_IVCLKIN, aud_mclk,
-				SND_SOC_CLOCK_IN);
-			if (err < 0) {
-				dev_err(card->dev, "dais[%d] clock not set\n",
-					rtd->dai_link->num_cpus);
-				return err;
-			}
-		}
-	}
-
-	rtd = get_pcm_runtime(card, "dspk-playback-l");
-	if (rtd) {
-		if (!strcmp(rtd->dais[rtd->dai_link->num_cpus]->name, "tas2552-amplifier")) {
-			err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
-				TAS2552_PDM_CLK_IVCLKIN, aud_mclk,
-				SND_SOC_CLOCK_IN);
-			if (err < 0) {
-				dev_err(card->dev, "dais[%d] clock not set\n",
-					rtd->dai_link->num_cpus);
-				return err;
+		for (i = 0; i < rtd->num_codecs; i++) {
+			if (!strcmp(rtd->dais[rtd->num_cpus + i]->name,
+							"tas2552-amplifier")) {
+				err = snd_soc_dai_set_sysclk(
+					rtd->dais[rtd->num_cpus + i],
+					TAS2552_PDM_CLK_IVCLKIN, aud_mclk,
+					SND_SOC_CLOCK_IN);
+				if (err < 0) {
+					dev_err(card->dev,
+						"dais[%d] clock not set\n",
+						rtd->num_cpus + i);
+					return err;
+				}
 			}
 		}
 	}
