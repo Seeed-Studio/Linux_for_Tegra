@@ -32,11 +32,12 @@ static int tegra_audio_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 static int tegra_machine_rt56xx_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_component *cmpnt = rtd->dais[rtd->num_cpus]->component;
+	struct snd_soc_component *cmpnt;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_jack *jack;
 	int err;
 
+	cmpnt = rtd->dais[rtd->dai_link->num_cpus]->component;
 	if (!cmpnt->driver->set_jack)
 		goto dai_init;
 
@@ -88,7 +89,8 @@ static int tegra_machine_fepi_init(struct snd_soc_pcm_runtime *rtd)
 	struct device *dev = rtd->card->dev;
 	int err;
 
-	err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus], SGTL5000_SYSCLK, 12288000,
+	err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
+				     SGTL5000_SYSCLK, 12288000,
 				     SND_SOC_CLOCK_IN);
 	if (err) {
 		dev_err(dev, "failed to set sgtl5000 sysclk!\n");
@@ -107,8 +109,8 @@ static int tegra_machine_respeaker_init(struct snd_soc_pcm_runtime *rtd)
 	 * and source as PLL irrespective of args passed through
 	 * this callback
 	 */
-	err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus], 0, 24000000,
-				     SND_SOC_CLOCK_IN);
+	err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
+				     0, 24000000, SND_SOC_CLOCK_IN);
 	if (err) {
 		dev_err(dev, "failed to set ac108 sysclk!\n");
 		return err;
@@ -159,17 +161,18 @@ static int set_pll_sysclk(struct device *dev, struct snd_soc_pcm_runtime *rtd,
 		return -EINVAL;
 	}
 
-	err = snd_soc_dai_set_pll(rtd->dais[rtd->num_cpus], 0,
+	err = snd_soc_dai_set_pll(rtd->dais[rtd->dai_link->num_cpus], 0,
 			pll_src, bclk_rate, srate * 256);
 	if (err < 0) {
 		dev_err(dev, "failed to set codec pll\n");
 		return err;
 	}
 
-	err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus], clk_id,
+	err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus], clk_id,
 			srate * 256, SND_SOC_CLOCK_IN);
 	if (err < 0) {
-		dev_err(dev, "dais[%d] clock not set\n", rtd->num_cpus);
+		dev_err(dev, "dais[%d] clock not set\n",
+			rtd->dai_link->num_cpus);
 		return err;
 	}
 
@@ -186,24 +189,24 @@ int tegra_codecs_runtime_setup(struct snd_soc_card *card,
 
 	rtd = get_pcm_runtime(card, "rt565x-playback");
 	if (rtd) {
-		err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus],
+		err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
 					     RT5659_SCLK_S_MCLK,
 					     aud_mclk, SND_SOC_CLOCK_IN);
 		if (err < 0) {
 			dev_err(card->dev, "dais[%d] clock not set\n",
-				rtd->num_cpus);
+				rtd->dai_link->num_cpus);
 			return err;
 		}
 	}
 
 	rtd = get_pcm_runtime(card, "rt5640-playback");
 	if (rtd) {
-		err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus],
+		err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
 					     RT5640_SCLK_S_MCLK,
 					     aud_mclk, SND_SOC_CLOCK_IN);
 		if (err < 0) {
 			dev_err(card->dev, "dais[%d] clock not set\n",
-				rtd->num_cpus);
+				rtd->dai_link->num_cpus);
 			return err;
 		}
 	}
@@ -230,12 +233,13 @@ int tegra_codecs_runtime_setup(struct snd_soc_card *card,
 
 	rtd = get_pcm_runtime(card, "dspk-playback-r");
 	if (rtd) {
-		if (!strcmp(rtd->dais[rtd->num_cpus]->name, "tas2552-amplifier")) {
-			err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus],
+		if (!strcmp(rtd->dais[rtd->dai_link->num_cpus]->name, "tas2552-amplifier")) {
+			err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
 				TAS2552_PDM_CLK_IVCLKIN, aud_mclk,
 				SND_SOC_CLOCK_IN);
 			if (err < 0) {
-				dev_err(card->dev, "dais[%d] clock not set\n", rtd->num_cpus);
+				dev_err(card->dev, "dais[%d] clock not set\n",
+					rtd->dai_link->num_cpus);
 				return err;
 			}
 		}
@@ -243,12 +247,13 @@ int tegra_codecs_runtime_setup(struct snd_soc_card *card,
 
 	rtd = get_pcm_runtime(card, "dspk-playback-l");
 	if (rtd) {
-		if (!strcmp(rtd->dais[rtd->num_cpus]->name, "tas2552-amplifier")) {
-			err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus],
+		if (!strcmp(rtd->dais[rtd->dai_link->num_cpus]->name, "tas2552-amplifier")) {
+			err = snd_soc_dai_set_sysclk(rtd->dais[rtd->dai_link->num_cpus],
 				TAS2552_PDM_CLK_IVCLKIN, aud_mclk,
 				SND_SOC_CLOCK_IN);
 			if (err < 0) {
-				dev_err(card->dev, "dais[%d] clock not set\n", rtd->num_cpus);
+				dev_err(card->dev, "dais[%d] clock not set\n",
+					rtd->dai_link->num_cpus);
 				return err;
 			}
 		}
