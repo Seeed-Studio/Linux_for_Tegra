@@ -415,9 +415,11 @@ int dw_pcie_host_init(struct dw_pcie_rp *pp)
 		pp->cfg0_size = resource_size(res);
 		pp->cfg0_base = res->start;
 
-		pp->va_cfg0_base = devm_pci_remap_cfg_resource(dev, res);
-		if (IS_ERR(pp->va_cfg0_base))
-			return PTR_ERR(pp->va_cfg0_base);
+		if (!pp->va_cfg0_base) {
+			pp->va_cfg0_base = devm_pci_remap_cfg_resource(dev, res);
+			if (IS_ERR(pp->va_cfg0_base))
+				return PTR_ERR(pp->va_cfg0_base);
+		}
 	} else {
 		dev_err(dev, "Missing *config* reg space\n");
 		return -ENODEV;
@@ -533,6 +535,8 @@ EXPORT_SYMBOL_GPL(dw_pcie_host_init);
 void dw_pcie_host_deinit(struct dw_pcie_rp *pp)
 {
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct device *dev = pci->dev;
+	struct resource_entry *win, *tmp;
 
 	pci_stop_root_bus(pp->bridge->bus);
 	pci_remove_root_bus(pp->bridge->bus);
@@ -546,6 +550,21 @@ void dw_pcie_host_deinit(struct dw_pcie_rp *pp)
 
 	if (pp->ops->deinit)
 		pp->ops->deinit(pp);
+
+	resource_list_for_each_entry_safe(win, tmp, &pp->bridge->windows) {
+		switch (resource_type(win->res)) {
+		case IORESOURCE_IO:
+			pci_unmap_iospace(win->res);
+			devm_release_resource(dev, win->res);
+			break;
+		case IORESOURCE_MEM:
+			devm_release_resource(dev, win->res);
+			break;
+		default:
+			continue;
+		}
+	}
+	pci_free_host_bridge(pp->bridge);
 }
 EXPORT_SYMBOL_GPL(dw_pcie_host_deinit);
 
