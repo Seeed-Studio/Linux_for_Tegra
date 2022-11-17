@@ -21,6 +21,10 @@
 #define P2U_CONTROL_CMN_ENABLE_L2_EXIT_RATE_CHANGE		BIT(13)
 #define P2U_CONTROL_CMN_SKP_SIZE_PROTECTION_EN			BIT(20)
 
+#define P2U_CONTROL_GEN1	0x78U
+#define P2U_CONTROL_GEN1_ENABLE_RXIDLE_ENTRY_ON_LINK_STATUS	BIT(2)
+#define P2U_CONTROL_GEN1_ENABLE_RXIDLE_ENTRY_ON_EIOS		BIT(3)
+
 #define P2U_PERIODIC_EQ_CTRL_GEN3	0xc0
 #define P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN		BIT(0)
 #define P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN	BIT(1)
@@ -78,6 +82,7 @@
 struct tegra_p2u_of_data {
 	bool one_dir_search;
 	bool lane_margin;
+	bool eios_override;
 };
 
 struct tegra_p2u {
@@ -121,6 +126,14 @@ static int tegra_p2u_power_on(struct phy *x)
 		val |= P2U_CONTROL_CMN_SKP_SIZE_PROTECTION_EN;
 		p2u_writel(phy, val, P2U_CONTROL_CMN);
 	}
+
+	val = p2u_readl(phy, P2U_CONTROL_GEN1);
+
+	if (phy->of_data->eios_override)
+		val &= ~P2U_CONTROL_GEN1_ENABLE_RXIDLE_ENTRY_ON_EIOS;
+
+	val |= (P2U_CONTROL_GEN1_ENABLE_RXIDLE_ENTRY_ON_LINK_STATUS);
+	p2u_writel(phy, val, P2U_CONTROL_GEN1);
 
 	val = p2u_readl(phy, P2U_PERIODIC_EQ_CTRL_GEN3);
 	val &= ~P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN;
@@ -451,11 +464,13 @@ static int tegra_p2u_remove(struct platform_device *pdev)
 static const struct tegra_p2u_of_data tegra194_p2u_of_data = {
 	.one_dir_search = false,
 	.lane_margin = false,
+	.eios_override = true,
 };
 
 static const struct tegra_p2u_of_data tegra234_p2u_of_data = {
 	.one_dir_search = true,
 	.lane_margin = true,
+	.eios_override = false,
 };
 
 static const struct of_device_id tegra_p2u_id_table[] = {
