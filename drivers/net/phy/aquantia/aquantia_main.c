@@ -227,6 +227,7 @@ struct aqr107_priv {
 	int led_mode1;
 	int led_mode2;
 	int wol_status;
+	bool skip_lpm;	/* skip low power mode */
 };
 
 static int aqr107_get_sset_count(struct phy_device *phydev)
@@ -951,7 +952,11 @@ static int aqr107_get_rate_matching(struct phy_device *phydev,
 
 static int aqr107_suspend(struct phy_device *phydev)
 {
+	struct aqr107_priv *priv = phydev->priv;
 	int err;
+
+        if (priv->skip_lpm)
+                return 0;
 
 	err = phy_set_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
 			       MDIO_CTRL1_LPOWER);
@@ -963,7 +968,11 @@ static int aqr107_suspend(struct phy_device *phydev)
 
 static int aqr107_resume(struct phy_device *phydev)
 {
+	struct aqr107_priv *priv = phydev->priv;
 	int err;
+
+	if (priv->skip_lpm)
+                return 0;
 
 	err = phy_clear_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
 				 MDIO_CTRL1_LPOWER);
@@ -1049,6 +1058,8 @@ static int aqr113c_config_init(struct phy_device *phydev)
 
 static int aqr107_probe(struct phy_device *phydev)
 {
+	struct device_node *node = phydev->mdio.dev.of_node;
+	struct aqr107_priv *priv;
 	int ret;
 
 	phydev->priv = devm_kzalloc(&phydev->mdio.dev,
@@ -1059,6 +1070,13 @@ static int aqr107_probe(struct phy_device *phydev)
 	ret = aqr_firmware_load(phydev);
 	if (ret)
 		return ret;
+
+	priv = phydev->priv;
+	if (of_property_read_bool(node, "aquantia,skip-lpm"))
+		priv->skip_lpm = true;
+	else
+		priv->skip_lpm = false;
+
 	aqr_read_led_mode_cfg(phydev);
 
 	return aqr_hwmon_probe(phydev);
