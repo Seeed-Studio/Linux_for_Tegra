@@ -27,4 +27,13 @@ config TEGRA_EPL
 	  software detected via HSP mailbox. Access to MISC EC interface is
 	  limited to kernel space and is controlled via DT configuration.
 
+config TEGRA_HSIERRRPTINJ
+	bool "Enable Tegra HSI Error Report Injection client driver"
+	depends on MAILBOX && TEGRA_EPL && DEBUG_FS
+	default n
+	help
+	  The tegra-hsierrrptinj driver provides a
+	  mechanism for HSI error report transmission
+	  from T23x to the MCU communications interface.
+
 endif # TEGRA_PLATFORM_DEVICES
