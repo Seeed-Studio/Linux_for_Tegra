@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * sensor_common.c - utilities for tegra sensor drivers
  *
- * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <media/sensor_common.h>
@@ -144,6 +144,16 @@ static int sensor_common_parse_signal_props(
 		signal->cil_settletime = 0;
 	else
 		signal->cil_settletime = value;
+
+	err = read_property_u32(node, "lane_polarity", &value);
+	/*
+	 * absence of this value is not an error and default behaviour is
+	 * no polarity swap on any CSI lane
+	 */
+	if (err)
+		signal->lane_polarity = 0;
+	else
+		signal->lane_polarity = value;
 
 	/* initialize default if this prop not available */
 	err = of_property_read_string(node, "discontinuous_clk", &temp_str);
