@@ -28,6 +28,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/tegra-epl.h>
+#include <linux/tegra-hsierrrptinj.h>
 
 #define BYTES_PER_FIFO_WORD 4
 
@@ -1800,6 +1801,37 @@ static int tegra_i2c_init_hardware(struct tegra_i2c_dev *i2c_dev)
 	return ret;
 }
 
+/* Error report injection test support is included */
+static int i2c_inject_err_fsi(unsigned int inst_id, struct epl_error_report_frame err_rpt_frame,
+				void *data)
+{
+	int err = -EFAULT;
+	struct tegra_i2c_dev *i2c_dev = (struct tegra_i2c_dev *)data;
+
+	/* Sanity check inst_id */
+	if (inst_id != i2c_dev->adapter.nr) {
+		dev_err(i2c_dev->dev, "Invalid Input -> Instance ID = 0x%04x\n", inst_id);
+		return -EINVAL;
+	}
+
+	/* Sanity check reporter_id */
+	if (err_rpt_frame.reporter_id != i2c_dev->epl_reporter_id) {
+		dev_err(i2c_dev->dev, "Invalid Input -> Reporter ID = 0x%04x\n",
+						err_rpt_frame.reporter_id);
+		return -EINVAL;
+	}
+
+	/* Report error to FSI */
+	err = epl_report_error(err_rpt_frame);
+	if (err != 0) {
+		dev_err(i2c_dev->dev, "Error injection failed for err_id: %u",
+						err_rpt_frame.error_code);
+		return -EFAULT;
+	}
+
+	return err;
+}
+
 static int tegra_i2c_probe(struct platform_device *pdev)
 {
 	struct tegra_i2c_dev *i2c_dev;
@@ -1895,6 +1927,16 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	if (err)
 		goto release_rpm;
 
+	/* Register error reporting callback */
+	err = hsierrrpt_reg_cb(IP_I2C, i2c_dev->adapter.nr, i2c_inject_err_fsi, i2c_dev);
+
+	if (err != 0)
+		dev_info(i2c_dev->dev, "Err inj callback registration failed: %d", err);
+	/* Continue init despite err inj utility
+	 * registration failure, as the err inj support
+	 * is meant only for debug purposes.
+	 */
+
 	return 0;
 
 release_rpm:
@@ -1910,6 +1952,17 @@ release_clocks:
 static void tegra_i2c_remove(struct platform_device *pdev)
 {
 	struct tegra_i2c_dev *i2c_dev = platform_get_drvdata(pdev);
+	int err;
+
+	err = hsierrrpt_dereg_cb(IP_I2C, i2c_dev->adapter.nr);
+
+	if (err != 0)
+		dev_info(i2c_dev->dev, "Err inj callback de-registration failed: %d", err);
+
+	/* Continue remove despite err inj utility
+	 * de-registration failure, as the err inj support
+	 * is meant only for debug purposes.
+	 */
 
 	i2c_del_adapter(&i2c_dev->adapter);
 	pm_runtime_force_suspend(i2c_dev->dev);
