@@ -11,6 +11,7 @@
 #include <linux/tegra-ivc-bus.h>
 #include <linux/tegra-camera-rtcpu.h>
 #include <linux/bitops.h>
+#include <linux/version.h>
 #include "soc/tegra/camrtc-channels.h"
 #include "soc/tegra/camrtc-commands.h"
 
@@ -390,7 +391,11 @@ static int tegra_ivc_bus_probe(struct device *dev)
 	return ret;
 }
 
+#if (KERNEL_VERSION(5, 15, 0) <= LINUX_VERSION_CODE)
 static void tegra_ivc_bus_remove(struct device *dev)
+#else
+static int tegra_ivc_bus_remove(struct device *dev)
+#endif
 {
 	if (dev->type == &tegra_ivc_channel_type) {
 		struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
@@ -406,7 +411,9 @@ static void tegra_ivc_bus_remove(struct device *dev)
 
 	}
 
-	return;
+#if (KERNEL_VERSION(5, 15, 0) > LINUX_VERSION_CODE)
+	return 0;
+#endif
 }
 
 static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
