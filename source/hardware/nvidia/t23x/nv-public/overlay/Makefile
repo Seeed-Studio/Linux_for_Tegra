@@ -1,3 +1,5 @@
+DTC_FLAGS += -@
+
 old-dtb := $(dtb-y)
 old-dtbo := $(dtbo-y)
 dtb-y :=
