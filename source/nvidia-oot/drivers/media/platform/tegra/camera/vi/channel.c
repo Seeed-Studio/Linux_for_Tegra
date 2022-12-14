@@ -746,7 +746,7 @@ static int tegra_channel_buffer_prepare(struct vb2_buffer *vb)
 
 	buf->chan = chan;
 	vb2_set_plane_payload(&vbuf->vb2_buf, 0, chan->format.sizeimage);
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	buf->addr = vb2_dma_contig_plane_dma_addr(vb, 0);
 #endif
 
@@ -2562,7 +2562,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	/* Init bpl factor to 1, will be overidden based on interlace_type */
 	chan->interlace_bplfactor = 1;
 
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	/* get the buffers queue... */
 	ret = tegra_vb2_dma_init(vi_unit_dev, &chan->alloc_ctx,
 			SZ_64K, &vi->vb2_dma_alloc_refcnt);
@@ -2577,7 +2577,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->queue.drv_priv = chan;
 	chan->queue.buf_struct_size = sizeof(struct tegra_channel_buffer);
 	chan->queue.ops = &tegra_channel_queue_qops;
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	chan->queue.mem_ops = &vb2_dma_contig_memops;
 #endif
 	chan->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC
@@ -2602,7 +2602,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 deskew_ctx_err:
 	devm_kfree(vi->dev, chan->deskew_ctx);
 vb2_queue_error:
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	tegra_vb2_dma_cleanup(vi_unit_dev, chan->alloc_ctx,
 		&vi->vb2_dma_alloc_refcnt);
 vb2_init_error:
@@ -2638,7 +2638,7 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	mutex_lock(&chan->video_lock);
 	vb2_queue_release(&chan->queue);
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
+#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	tegra_vb2_dma_cleanup(vi_unit_dev, chan->alloc_ctx,
 		&chan->vi->vb2_dma_alloc_refcnt);
 #endif
