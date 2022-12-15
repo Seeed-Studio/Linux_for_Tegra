@@ -43,6 +43,7 @@
 /* Error code for reporting errors to FSI */
 #define HSM_ERROR 0x55
 #define FSI_SW_ERROR 0xAA
+#define SC7_ENTRY_ERROR 0xBB
 
 /* EC Index for reporting errors to FSI */
 #define EC_INDEX 0xFFFFFFFF
@@ -176,15 +177,25 @@ static int hsierrrpt_report_to_fsi(struct epl_error_report_frame err_rpt_frame, 
 		return -ENODEV;
 	}
 
-	if (ip_id == IP_HSM)
-		error_report.type = HSM_ERROR;
-	else if (ip_id == IP_FSI)
-		error_report.type = FSI_SW_ERROR;
-	else
-		return -EINVAL;
+
 	error_report.error_code = err_rpt_frame.error_code;
 	error_report.reporter_id = err_rpt_frame.reporter_id;
 	error_report.ec_index = EC_INDEX;
+
+	if (ip_id == IP_HSM || ip_id == IP_EC)
+		error_report.type = HSM_ERROR;
+	else if (ip_id == IP_FSI)
+		error_report.type = FSI_SW_ERROR;
+	else if (ip_id == IP_SC7)
+		error_report.type = SC7_ENTRY_ERROR;
+	else
+		return -EINVAL;
+
+	/* Special case where ec_index other than 0xFFFFFFFF,
+	 * then FSI SW ignore reporter_id and only uses error_code.
+	 */
+	if (ip_id == IP_EC)
+		error_report.ec_index = error_report.reporter_id;
 
 	ret = mbox_send_message(hsierrrptinj_tx.chan, (void *)&error_report);
 
