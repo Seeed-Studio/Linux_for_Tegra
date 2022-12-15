@@ -297,7 +297,7 @@ static int __init tpg_probe_t19x(void)
 		return -EINVAL;
 
 	mc_csi->get_tpg_settings = get_tpg_settings_t23x;
-	mc_csi->tpg_gain_ctrl = true;
+	mc_csi->tpg_gain_ctrl = false;
 	mc_csi->tpg_emb_data_config = emb_data;
 
 	dev_info(mc_csi->dev, "%s\n", __func__);
@@ -310,7 +310,7 @@ static int __init tpg_probe_t19x(void)
 
 	mc_csi->tpg_frmfmt_table_size = table_size;
 	memcpy(frmfmt_table, tegra19x_csi_tpg_frmfmt,
-		table_size * sizeof(struct tpg_frmfmt));
+			table_size * sizeof(struct tpg_frmfmt));
 
 	if (override_frmfmt) {
 		for (i = 0; i < table_size; i++)
