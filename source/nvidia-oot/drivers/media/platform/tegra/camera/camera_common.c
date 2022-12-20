@@ -940,7 +940,7 @@ int camera_common_get_mbus_config(struct v4l2_subdev *sd,
 	 *  then return an error
 	 */
 	cfg->type = V4L2_MBUS_CSI2_DPHY;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0)
 	cfg->flags = V4L2_MBUS_CSI2_4_LANE |
 		V4L2_MBUS_CSI2_CHANNEL_0 |
 		V4L2_MBUS_CSI2_CONTINUOUS_CLOCK;
