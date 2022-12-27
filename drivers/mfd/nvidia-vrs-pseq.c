@@ -228,6 +228,14 @@ static int nvvrs_pseq_probe(struct i2c_client *client,
 		return ret;
 	}
 
+	/* When battery mounted, the chip may have IRQ asserted. */
+	/* Clear it before IRQ requested. */
+	ret = nvvrs_pseq_irq_clear(nvvrs_chip);
+	if (ret < 0) {
+		dev_err(nvvrs_chip->dev, "Failed to clear IRQ: %d\n", ret);
+		return ret;
+	}
+
 	nvvrs_pseq_irq_chip.irq_drv_data = nvvrs_chip;
 	ret = devm_regmap_add_irq_chip(nvvrs_chip->dev, nvvrs_chip->rmap, client->irq,
 				       IRQF_ONESHOT | IRQF_SHARED, 0,
