@@ -2,7 +2,7 @@
 /*
  * NVIDIA Tegra Video Input Device
  *
- * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/atomic.h>
@@ -299,7 +299,9 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	struct v4l2_subdev_mbus_code_enum code = {
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
 	};
-	struct v4l2_subdev_state cfg = {};
+
+	struct v4l2_subdev_pad_config pad_cfg;
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
 	bitmap_zero(chan->fmts_bitmap, MAX_FORMAT_NUM);
 
 	/*
@@ -1042,7 +1044,8 @@ tegra_channel_enum_framesizes(struct file *file, void *fh,
 	struct tegra_channel *chan = video_drvdata(file);
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	struct v4l2_subdev_frame_size_enum fse;
-	struct v4l2_subdev_state cfg = {};
+	struct v4l2_subdev_pad_config pad_cfg;
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
 	int ret = 0;
 
 	/* Convert v4l2 pixel format (fourcc) into media bus format code */
@@ -1071,7 +1074,8 @@ tegra_channel_enum_frameintervals(struct file *file, void *fh,
 	struct tegra_channel *chan = video_drvdata(file);
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	struct v4l2_subdev_frame_interval_enum fie;
-	struct v4l2_subdev_state cfg = {};
+	struct v4l2_subdev_pad_config pad_cfg;
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
 	int ret = 0;
 
 	/* Convert v4l2 pixel format (fourcc) into media bus format code */
@@ -2017,7 +2021,8 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 	const struct tegra_video_format *vfmt;
 	struct v4l2_subdev_format fmt;
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
-	struct v4l2_subdev_state cfg = {};
+	struct v4l2_subdev_pad_config pad_cfg;
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
 	int ret = 0;
 
 	/* Use the channel format if pixformat is not supported */
@@ -2065,7 +2070,8 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 	const struct tegra_video_format *vfmt;
 	struct v4l2_subdev_format fmt;
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
-	struct v4l2_subdev_state cfg = {};
+	struct v4l2_subdev_pad_config pad_cfg;
+	struct v4l2_subdev_state cfg = {.pads = &pad_cfg};
 	int ret = 0;
 
 	vfmt = tegra_core_get_format_by_fourcc(chan, pix->pixelformat);

@@ -2,7 +2,7 @@
 /*
  * camera_common.c - utilities for tegra camera driver
  *
- * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved.
  */
 #include <linux/types.h>
 #include <media/tegra-v4l2-camera.h>
@@ -923,7 +923,18 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 			dev_err(s_data->dev, "%s: error power on\n", __func__);
 			return err;
 		}
+
+		err = camera_common_mclk_enable(s_data);
+		if (err) {
+			dev_err(s_data->dev, "%s: failed to enable mclk\n",
+				__func__);
+			call_s_op(s_data, power_off);
+			return err;
+		}
+		camera_common_dpd_disable(s_data);
 	} else {
+		camera_common_dpd_enable(s_data);
+		camera_common_mclk_disable(s_data);
 		call_s_op(s_data, power_off);
 	}
 
