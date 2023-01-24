@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.*/
+/* Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.*/
 
 /**
  * @file tegra-hsierrrptinj.c
@@ -74,8 +74,9 @@ struct hsm_error_report_frame {
  * TSEC  - 1
  * THERM - 1
  * SMMU  - 1
+ * DLA   - 2
  */
-static unsigned int ip_instances[NUM_IPS] = {1, 1, 1, 4, 11, 1, 10, 2, 2, 1, 1, 1};
+static unsigned int ip_instances[NUM_IPS] = {1, 1, 1, 4, 11, 1, 10, 2, 2, 1, 1, 1, 2};
 
 /* This directory entry will point to `/sys/kernel/debug/tegra_hsierrrptinj`. */
 static struct dentry *hsierrrptinj_debugfs_root;

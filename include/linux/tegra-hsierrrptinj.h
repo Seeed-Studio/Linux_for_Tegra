@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.*/
+/* Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.*/
 
 /**
  * @file  tegra-hsierrrptinj.h
@@ -18,7 +18,7 @@
 
 /* ==================[Type Definitions]===================================== */
 /* Number of registered IPs */
-#define NUM_IPS 12U
+#define NUM_IPS 13U
 
 /**
  * @brief IP IDs
@@ -38,6 +38,7 @@ IP_SDMMC = 0x0008,
 IP_TSEC  = 0x0009,
 IP_THERM = 0x000A,
 IP_SMMU  = 0x000B,
+IP_DLA   = 0x000C,
 
 IP_EC    = 0x00FC,
 IP_SC7   = 0x00FD,
