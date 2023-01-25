@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2017-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // Copyright (c) 2022, e-con Systems. All rights reserved.
 /*
- * ar1335.c - AR1335 sensor driver
+ * ar1335_common.c - AR1335 sensor driver
  */
 
 #include <nvidia/conftest.h>
@@ -52,11 +52,13 @@ static uint32_t u8arr_to_uint32(uint8_t *in_arr)
 		in_arr[3]);
 }
 
-static int mcu_send_ctrl_cmd(struct i2c_client *client, int cmd, uint32_t payload_len)
+static int mcu_send_ctrl_cmd(struct i2c_client *client,
+			     int cmd,
+			     uint32_t payload_len,
+			     uint16_t index)
 {
 	int err;
 	uint8_t orig_crc = 0, calc_crc = 0;
-	uint16_t index = 0xFFFF;
 
 	mc_data[0] = CMD_SIGNATURE;
 	mc_data[1] = cmd;
@@ -411,7 +413,7 @@ static int cam_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_state *cfg,
 			if ((priv->mcu_cam_frmfmt[ret].size.width ==
 				format->format.width) &&
 				(priv->mcu_cam_frmfmt[ret].size.height ==
-				format->format.height)) 
+				format->format.height))
 			{
 				priv->frmfmt_mode = priv->mcu_cam_frmfmt[ret].mode;
 				flag = 1;
@@ -986,7 +988,7 @@ static int mcu_get_ctrl(struct i2c_client *client, uint32_t arg_ctrl_id,
 
 	/* First Txn Payload length = 2 */
 	payload_len = 2;
-	ret = mcu_send_ctrl_cmd(client, CMD_ID_GET_CTRL, payload_len);
+	ret = mcu_send_ctrl_cmd(client, CMD_ID_GET_CTRL, payload_len, index);
 	if (ret) {
 		dev_err(&client->dev, "CMD_ID_GET_CTRL send failed\n");
 		goto exit;
@@ -1152,7 +1154,8 @@ static int mcu_list_fmts(struct i2c_client *client,ISP_STREAM_INFO *stream_info,
 		/* First Txn Payload length = 0 */
 		payload_len = 2;
 
-		ret = mcu_send_ctrl_cmd(client, CMD_ID_GET_STREAM_INFO, payload_len);
+		ret = mcu_send_ctrl_cmd(client, CMD_ID_GET_STREAM_INFO,
+					payload_len, index);
 		if (ret) {
 			dev_err(&client->dev, "CMD_ID_GET_STREAM_INFO send failed\n");
 			goto exit;
@@ -1274,7 +1277,8 @@ static int mcu_get_ctrl_ui(struct i2c_client *client,
 	/* First Txn Payload length = 0 */
 	payload_len = 2;
 
-	ret = mcu_send_ctrl_cmd(client, CMD_ID_GET_CTRL_UI_INFO, payload_len);
+	ret = mcu_send_ctrl_cmd(client, CMD_ID_GET_CTRL_UI_INFO,
+				payload_len, index);
 	if (ret) {
 		dev_err(&client->dev, "CMD_ID_GET_CTRL_UI_INFO send failed\n");
 		goto exit;
@@ -1404,7 +1408,8 @@ static int mcu_list_ctrls(struct i2c_client *client,
 		/* First Txn Payload length = 0 */
 		payload_len = 2;
 
-		ret = mcu_send_ctrl_cmd(client, CMD_ID_GET_CTRL_INFO, payload_len);
+		ret = mcu_send_ctrl_cmd(client, CMD_ID_GET_CTRL_INFO,
+					payload_len, index);
 		if (ret) {
 			dev_err(&client->dev, "CMD_ID_GET_CTRL_INFO send failed\n");
 			goto exit;
