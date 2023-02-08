@@ -470,9 +470,17 @@ static int of_irq_parse_pci(const struct pci_dev *pdev, struct of_phandle_args *
 	 */
 	dn = pci_device_to_OF_node(pdev);
 	if (dn) {
-		rc = of_irq_parse_one(dn, 0, out_irq);
-		if (!rc)
-			return rc;
+		int index;
+
+		index = of_property_match_string(dn, "interrupt-names", "pci");
+		if (index == -EINVAL)	/* Property doesn't exist */
+			index = 0;
+
+		if (index >= 0) {
+			rc = of_irq_parse_one(dn, index, out_irq);
+			if (!rc)
+				return rc;
+		}
 	}
 
 	/*
