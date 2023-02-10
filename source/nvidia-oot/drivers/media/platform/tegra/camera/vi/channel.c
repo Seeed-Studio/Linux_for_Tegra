@@ -1257,6 +1257,10 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 		}
 		break;
 	case TEGRA_CAMERA_CID_VI_BYPASS_MODE:
+		/* Prevent changing the bypass mode while the device is still streaming */
+		if (vb2_is_busy(&chan->queue))
+			return -EBUSY;
+
 		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON)
 			chan->bypass = true;
 		else if (chan->vi->bypass) {
