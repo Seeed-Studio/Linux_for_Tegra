@@ -57,6 +57,7 @@
 
 #define HSP_MBOX_TYPE_MASK	0xff
 
+struct tegra_hsp_mailbox;
 struct tegra_hsp_channel;
 struct tegra_hsp;
 
@@ -77,6 +78,8 @@ struct tegra_hsp_doorbell {
 struct tegra_hsp_sm_ops {
 	void (*send)(struct tegra_hsp_channel *channel, void *data);
 	void (*recv)(struct tegra_hsp_channel *channel);
+	void (*route_irq)(struct tegra_hsp_mailbox *mb, bool enable);
+	void (*set_irq)(struct tegra_hsp_mailbox *mb, bool enable);
 };
 
 struct tegra_hsp_shared_interrupt {
@@ -186,41 +189,6 @@ tegra_hsp_doorbell_get(struct tegra_hsp *hsp, unsigned int master)
 	return db;
 }
 
-/*
- * Enables or disables interrupt for a mailbox. Should be called with
- * hsp->lock held.
- */
-static void tegra_hsp_sm_set_irq(struct tegra_hsp_mailbox *mb, bool enable)
-{
-	struct tegra_hsp_shared_interrupt *si = mb->si;
-	struct tegra_hsp_channel *ch = &mb->channel;
-	struct tegra_hsp *hsp = mb->channel.hsp;
-	unsigned int shift;
-	unsigned int mask;
-
-	shift = mb->producer ? HSP_INT_EMPTY_SHIFT : HSP_INT_FULL_SHIFT;
-	mask = tegra_hsp_readl(hsp, HSP_INT_IE(si->index));
-
-	if (enable) {
-		mask |= BIT(shift + mb->index);
-		hsp->mask |= BIT(shift + mb->index);
-	} else {
-		mask &= ~BIT(shift + mb->index);
-		hsp->mask &= ~BIT(shift + mb->index);
-	}
-
-	tegra_hsp_writel(hsp, mask, HSP_INT_IE(si->index));
-
-	if (hsp->soc->has_per_mb_ie) {
-		unsigned int reg_ie;
-
-		reg_ie = mb->producer ? HSP_SM_SHRD_MBOX_EMPTY_INT_IE :
-					HSP_SM_SHRD_MBOX_FULL_INT_IE;
-
-		tegra_hsp_channel_writel(ch, enable ? 0x1 : 0x0, reg_ie);
-	}
-}
-
 static irqreturn_t tegra_hsp_doorbell_irq(int irq, void *data)
 {
 	struct tegra_hsp *hsp = data;
@@ -283,9 +251,7 @@ static irqreturn_t tegra_hsp_shared_irq(int irq, void *data)
 			 * the message.
 			 */
 			spin_lock(&hsp->lock);
-
-			tegra_hsp_sm_set_irq(mb, false);
-
+			mb->ops->set_irq(mb, false);
 			spin_unlock(&hsp->lock);
 
 			mbox_chan_txdone(mb->channel.chan, 0);
@@ -440,9 +406,86 @@ static void tegra_hsp_sm_recv32(struct tegra_hsp_channel *channel)
 	mbox_chan_received_data(channel->chan, msg);
 }
 
-static const struct tegra_hsp_sm_ops tegra_hsp_sm_32bit_ops = {
+static void tegra186_hsp_sm_route_irq(struct tegra_hsp_mailbox *mb,
+				      bool enable)
+{
+	/*
+	 * On Tegra186 IE register is used only for enabling/disabling shared
+	 * interrupts.
+	 */
+}
+
+static void tegra186_hsp_sm_set_irq(struct tegra_hsp_mailbox *mb, bool enable)
+{
+	struct tegra_hsp_shared_interrupt *si = mb->si;
+	struct tegra_hsp *hsp = mb->channel.hsp;
+	unsigned int shift;
+	unsigned int mask;
+
+	shift = mb->producer ? HSP_INT_EMPTY_SHIFT : HSP_INT_FULL_SHIFT;
+	mask = tegra_hsp_readl(hsp, HSP_INT_IE(si->index));
+
+	if (enable) {
+		mask |= BIT(shift + mb->index);
+		hsp->mask |= BIT(shift + mb->index);
+	} else {
+		mask &= ~BIT(shift + mb->index);
+		hsp->mask &= ~BIT(shift + mb->index);
+	}
+
+	tegra_hsp_writel(hsp, mask, HSP_INT_IE(si->index));
+}
+
+static const struct tegra_hsp_sm_ops tegra186_hsp_sm_32bit_ops = {
 	.send = tegra_hsp_sm_send32,
 	.recv = tegra_hsp_sm_recv32,
+	.route_irq = tegra186_hsp_sm_route_irq,
+	.set_irq = tegra186_hsp_sm_set_irq,
+};
+
+static void tegra194_hsp_sm_route_irq(struct tegra_hsp_mailbox *mb,
+				      bool enable)
+{
+	struct tegra_hsp_shared_interrupt *si = mb->si;
+	struct tegra_hsp *hsp = mb->channel.hsp;
+	unsigned int shift;
+	unsigned int mask;
+
+	shift = mb->producer ? HSP_INT_EMPTY_SHIFT : HSP_INT_FULL_SHIFT;
+	mask = tegra_hsp_readl(hsp, HSP_INT_IE(si->index));
+
+	if (enable)
+		mask |= BIT(shift + mb->index);
+	else
+		mask &= ~BIT(shift + mb->index);
+
+	tegra_hsp_writel(hsp, mask, HSP_INT_IE(si->index));
+}
+
+static void tegra194_hsp_sm_set_irq(struct tegra_hsp_mailbox *mb, bool enable)
+{
+	struct tegra_hsp_channel *ch = &mb->channel;
+	struct tegra_hsp *hsp = mb->channel.hsp;
+	unsigned int reg_ie;
+	unsigned int shift;
+
+	shift = mb->producer ? HSP_INT_EMPTY_SHIFT : HSP_INT_FULL_SHIFT;
+	reg_ie = mb->producer ? HSP_SM_SHRD_MBOX_EMPTY_INT_IE :
+				HSP_SM_SHRD_MBOX_FULL_INT_IE;
+
+	if (enable)
+		hsp->mask |= BIT(shift + mb->index);
+	else
+		hsp->mask &= ~BIT(shift + mb->index);
+
+	tegra_hsp_channel_writel(ch, enable ? 0x1 : 0x0, reg_ie);
+}
+
+static const struct tegra_hsp_sm_ops tegra194_hsp_sm_32bit_ops = {
+	.send = tegra_hsp_sm_send32,
+	.recv = tegra_hsp_sm_recv32,
+	.route_irq = tegra194_hsp_sm_route_irq,
+	.set_irq = tegra194_hsp_sm_set_irq,
 };
 
 static void tegra_hsp_sm_send128(struct tegra_hsp_channel *channel, void *data)
@@ -486,9 +529,11 @@ static void tegra_hsp_sm_recv128(struct tegra_hsp_channel *channel)
 	mbox_chan_received_data(channel->chan, msg);
 }
 
-static const struct tegra_hsp_sm_ops tegra_hsp_sm_128bit_ops = {
+static const struct tegra_hsp_sm_ops tegra234_hsp_sm_128bit_ops = {
 	.send = tegra_hsp_sm_send128,
 	.recv = tegra_hsp_sm_recv128,
+	.route_irq = tegra194_hsp_sm_route_irq,
+	.set_irq = tegra194_hsp_sm_set_irq,
 };
 
 static int tegra_hsp_mailbox_send_data(struct mbox_chan *chan, void *data)
@@ -504,7 +549,7 @@ static int tegra_hsp_mailbox_send_data(struct mbox_chan *chan, void *data)
 
 	/* enable EMPTY interrupt for the shared mailbox */
 	spin_lock_irqsave(&hsp->lock, flags);
-	tegra_hsp_sm_set_irq(mb, true);
+	mb->ops->set_irq(mb, true);
 	spin_unlock_irqrestore(&hsp->lock, flags);
 
 	return 0;
@@ -559,9 +604,11 @@ static int tegra_hsp_mailbox_startup(struct mbox_chan *chan)
 	spin_lock_irqsave(&hsp->lock, flags);
 
 	if (mb->producer)
-		tegra_hsp_sm_set_irq(mb, false);
+		mb->ops->set_irq(mb, false);
 	else
-		tegra_hsp_sm_set_irq(mb, true);
+		mb->ops->set_irq(mb, true);
+
+	mb->ops->route_irq(mb, true);
 
 	spin_unlock_irqrestore(&hsp->lock, flags);
 
@@ -571,21 +618,12 @@ static int tegra_hsp_mailbox_startup(struct mbox_chan *chan)
 static void tegra_hsp_mailbox_shutdown(struct mbox_chan *chan)
 {
 	struct tegra_hsp_mailbox *mb = chan->con_priv;
-	struct tegra_hsp_channel *ch = &mb->channel;
 	struct tegra_hsp *hsp = mb->channel.hsp;
 	unsigned long flags;
 
-	if (hsp->soc->has_per_mb_ie) {
-		if (mb->producer)
-			tegra_hsp_channel_writel(ch, 0x0,
-						 HSP_SM_SHRD_MBOX_EMPTY_INT_IE);
-		else
-			tegra_hsp_channel_writel(ch, 0x0,
-						 HSP_SM_SHRD_MBOX_FULL_INT_IE);
-	}
-
 	spin_lock_irqsave(&hsp->lock, flags);
-	tegra_hsp_sm_set_irq(mb, false);
+	mb->ops->route_irq(mb, false);
+	mb->ops->set_irq(mb, false);
 	spin_unlock_irqrestore(&hsp->lock, flags);
 }
 
@@ -654,9 +692,12 @@ static struct mbox_chan *tegra_hsp_sm_xlate(struct mbox_controller *mbox,
 		if (!hsp->soc->has_128_bit_mb)
 			return ERR_PTR(-ENODEV);
 
-		mb->ops = &tegra_hsp_sm_128bit_ops;
+		mb->ops = &tegra234_hsp_sm_128bit_ops;
 	} else {
-		mb->ops = &tegra_hsp_sm_32bit_ops;
+		if (hsp->soc->has_per_mb_ie)
+			mb->ops = &tegra194_hsp_sm_32bit_ops;
+		else
+			mb->ops = &tegra186_hsp_sm_32bit_ops;
 	}
 
 	if ((args->args[1] & TEGRA_HSP_SM_FLAG_TX) == 0)
@@ -1007,7 +1048,7 @@ static const struct tegra_hsp_soc tegra194_hsp_soc = {
 
 static const struct tegra_hsp_soc tegra234_hsp_soc = {
 	.map = tegra186_hsp_db_map,
-	.has_per_mb_ie = false,
+	.has_per_mb_ie = true,
 	.has_128_bit_mb = true,
 	.reg_stride = 0x100,
 };
