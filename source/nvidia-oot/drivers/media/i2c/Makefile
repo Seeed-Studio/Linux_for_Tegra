@@ -10,6 +10,7 @@ ifeq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)
 obj-m += ar1335_common.o
 obj-m += lt6911uxc.o
 obj-m += nv_imx185.o
+obj-m += nv_imx219.o
 obj-m += nv_imx274.o
 obj-m += nv_imx318.o
 obj-m += nv_imx390.o
