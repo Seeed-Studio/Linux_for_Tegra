@@ -286,7 +286,6 @@
 			};
 
 			ethernet@6800000 {
-				compatible = "nvidia,nvmgbe";
 				reg = <0x0 0x06800000 0x0 0x10000>, /* HV base */
 				      <0x0 0x06810000 0x0 0x10000>, /* MGBE base */
 				      <0x0 0x068a0000 0x0 0x10000>, /* XPCS base */
