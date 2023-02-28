@@ -14,6 +14,7 @@ obj-m += nv_imx219.o
 obj-m += nv_imx274.o
 obj-m += nv_imx318.o
 obj-m += nv_imx390.o
+obj-m += nv_imx477.o
 obj-m += nv_ov5693.o
 obj-m += nv_ar0234.o
 obj-m += pca9570.o
