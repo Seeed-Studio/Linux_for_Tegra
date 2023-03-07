@@ -49,13 +49,13 @@ struct tegra_cam_rtcpu_pdata {
 	int (*wait_for_idle)(struct device *);
 	const char * const *reset_names;
 	const char * const *reg_names;
+	u32 (*pm_r5_ctrl)(void);
+	u32 (*pm_pwr_status)(void);
 };
 
 /* Register specifics */
 #define TEGRA_APS_FRSC_SC_CTL_0			0x0
 #define TEGRA_APS_FRSC_SC_MODEIN_0		0x14
-#define TEGRA_PM_R5_CTRL_0			0x40
-#define TEGRA_PM_PWR_STATUS_0			0x20
 
 #define TEGRA_R5R_SC_DISABLE			0x5
 #define TEGRA_FN_MODEIN				0x29527
@@ -82,6 +82,16 @@ static const char * const rce_reg_names[] = {
 	NULL,
 };
 
+static u32 rce_pm_r5_ctrl(void)
+{
+	return 0x40;
+}
+
+static u32 rce_pm_pwr_status(void)
+{
+	return 0x20;
+}
+
 static const struct tegra_cam_rtcpu_pdata rce_pdata = {
 	.name = "rce",
 	.wait_for_idle = tegra_rce_cam_wait_for_idle,
@@ -89,6 +99,29 @@ static const struct tegra_cam_rtcpu_pdata rce_pdata = {
 	.deassert_resets = tegra_rce_cam_deassert_resets,
 	.reset_names = rce_reset_names,
 	.reg_names = rce_reg_names,
+	.pm_r5_ctrl = rce_pm_r5_ctrl,
+	.pm_pwr_status = rce_pm_pwr_status,
+};
+
+static u32 t264_rce_pm_r5_ctrl(void)
+{
+	return 0x3008;
+}
+
+static u32 t264_rce_pm_pwr_status(void)
+{
+	return 0x5004;
+}
+
+static const struct tegra_cam_rtcpu_pdata t264_rce_pdata = {
+	.name = "t264_rce",
+	.wait_for_idle = tegra_rce_cam_wait_for_idle,
+	.assert_resets = tegra_rce_cam_assert_resets,
+	.deassert_resets = tegra_rce_cam_deassert_resets,
+	.reset_names = rce_reset_names,
+	.reg_names = rce_reg_names,
+	.pm_r5_ctrl = t264_rce_pm_r5_ctrl,
+	.pm_pwr_status = t264_rce_pm_pwr_status,
 };
 
 #define NV(p) "nvidia," #p
@@ -372,14 +405,14 @@ static void tegra_camrtc_set_fwloaddone(struct device *dev, bool fwloaddone)
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 
 	if (rtcpu->pm_base != NULL) {
-		u32 val = readl(rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
+		u32 val = readl(rtcpu->pm_base + rtcpu->pdata->pm_r5_ctrl());
 
 		if (fwloaddone)
 			val |= TEGRA_PM_FWLOADDONE;
 		else
 			val &= ~TEGRA_PM_FWLOADDONE;
 
-		writel(val, rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
+		writel(val, rtcpu->pm_base + rtcpu->pdata->pm_r5_ctrl());
 	}
 }
 
@@ -394,7 +427,7 @@ static int tegra_rce_cam_wait_for_idle(struct device *dev)
 
 	/* Poll for WFI assert.*/
 	for (;;) {
-		u32 val = readl(rtcpu->pm_base + TEGRA_PM_PWR_STATUS_0);
+		u32 val = readl(rtcpu->pm_base + rtcpu->pdata->pm_pwr_status());
 
 		if ((val & TEGRA_PM_WFIPIPESTOPPED) == 0)
 			break;
@@ -1028,6 +1061,9 @@ static void tegra_cam_rtcpu_shutdown(struct platform_device *pdev)
 static const struct of_device_id tegra_cam_rtcpu_of_match[] = {
 	{
 		.compatible = NV(tegra194-rce), .data = &rce_pdata
+	},
+	{
+		.compatible = NV(tegra264-rce), .data = &t264_rce_pdata
 	},
 	{ },
 };
