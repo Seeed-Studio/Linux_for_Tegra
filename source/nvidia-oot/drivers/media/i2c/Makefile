@@ -7,3 +7,5 @@ obj-m += nv_imx185.o
 obj-m += nv_imx274.o
 obj-m += nv_imx318.o
 obj-m += nv_ov5693.o
+obj-m += max96712.o
+obj-m += nv_ar0234.o
