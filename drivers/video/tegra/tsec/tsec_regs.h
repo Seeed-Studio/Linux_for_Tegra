@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -43,229 +43,85 @@
 #ifndef TSEC_REGS_H
 #define TSEC_REGS_H
 
-#include "tsec_comms/tsec_comms_regs.h"
+#include <linux/types.h>
 
-static inline u32 tsec_thi_int_status_r(void)
-{
-	/* NV_PSEC_THI_INT_STATUS_0 */
-	return 0x78;
-}
-static inline u32 tsec_thi_int_status_clr_f(void)
-{
-	return 0x1;
-}
+struct tsec_reg_offsets_t {
+	u32 QUEUE_HEAD_0;
+	u32 QUEUE_TAIL_0;
+	u32 MSGQ_HEAD_0;
+	u32 MSGQ_TAIL_0;
+	u32 EMEMC_0;
+	u32 EMEMD_0;
+	u32 THI_INT_STATUS_0;
+	u32 THI_INT_STATUS_CLR_0;
+	u32 THI_STREAMID0_0;
+	u32 THI_STREAMID1_0;
+	u32 PRIV_BLOCKER_CTRL_CG1;
+	u32 RISCV_CG;
+	u32 RISCV_IRQSCLR_0;
+	u32 RISCV_IRQSTAT_0;
+	u32 RISCV_IRQMSET_0;
+	u32 RISCV_IRQMCLR_0;
+	u32 RISCV_IRQSCLR_SWGEN0_SET;
+	u32 RISCV_IRQMCLR_SWGEN0_SET;
+	u32 RISCV_IRQMCLR_SWGEN1_SET;
+	u32 RISCV_IRQSTAT_SWGEN0;
+	u32 RISCV_IRQSTAT_SWGEN1;
+	u32 RISCV_IRQMSET_SWGEN0_SET;
+	u32 THI_SEC_0;
+	u32 THI_SEC_CHLOCK;
+	u32 RISCV_BCR_CTRL;
+	u32 RISCV_BCR_CTRL_CORE_SELECT_RISCV;
+	u32 RISCV_BCR_DMAADDR_PKCPARAM_LO;
+	u32 RISCV_BCR_DMAADDR_PKCPARAM_HI;
+	u32 RISCV_BCR_DMAADDR_FMCCODE_LO;
+	u32 RISCV_BCR_DMAADDR_FMCCODE_HI;
+	u32 RISCV_BCR_DMAADDR_FMCDATA_LO;
+	u32 RISCV_BCR_DMAADDR_FMCDATA_HI;
+	u32 RISCV_BCR_DMACFG;
+	u32 RISCV_BCR_DMACFG_TARGET_LOCAL_FB;
+	u32 RISCV_BCR_DMACFG_LOCK_LOCKED;
+	u32 RISCV_BCR_DMACFG_SEC;
+	u32 RISCV_BCR_DMACFG_SEC_GSCID;
+	u32 FALCON_MAILBOX0;
+	u32 FALCON_MAILBOX1;
+	u32 RISCV_CPUCTL;
+	u32 RISCV_CPUCTL_STARTCPU_TRUE;
+	u32 RISCV_CPUCTL_ACTIVE_STAT;
+	u32 RISCV_CPUCTL_ACTIVE_STAT_ACTIVE;
+	u32 RISCV_BR_RETCODE;
+	u32 RISCV_BR_RETCODE_RESULT;
+	u32 RISCV_BR_RETCODE_RESULT_PASS;
+	u32 FALCON_DMEMC_0;
+	u32 FALCON_DMEMD_0;
+	u32 DMEM_LOGBUF_OFFSET;
+};
 
-static inline u32 tsec_thi_streamid0_r(void)
+static inline u32 tsec_riscv_bcr_dmacfg_sec_gscid_f(u32 v, u32 offset)
 {
-	/* NV_PSEC_THI_STREAMID0_0 */
-	return 0x30;
-}
-
-static inline u32 tsec_thi_streamid1_r(void)
-{
-	/* NV_PSEC_THI_STREAMID1_0 */
-	return 0x34;
-}
-
-static inline u32 tsec_priv_blocker_ctrl_cg1_r(void)
-{
-	/* NV_PSEC_PRIV_BLOCKER_CTRL_CG1 */
-	return 0x1e28;
-}
-
-static inline u32 tsec_riscv_cg_r(void)
-{
-	/* NV_PSEC_RISCV_CG */
-	return 0x2398;
-}
-
-static inline u32 tsec_irqsclr_r(void)
-{
-	/* NV_PSEC_FALCON_IRQSCLR_0 */
-	return 0x1004;
-}
-static inline u32 tsec_irqsclr_swgen0_set_f(void)
-{
-	return 0x40;
-}
-
-static inline u32 tsec_irqstat_r(void)
-{
-	/* NV_PSEC_FALCON_IRQSTAT_0 */
-	return 0x1008;
-}
-static inline u32 tsec_irqstat_swgen0(void)
-{
-	return 0x40;
-}
-static inline u32 tsec_irqstat_swgen1(void)
-{
-	return 0x80;
-}
-
-static inline u32 tsec_riscv_irqmset_r(void)
-{
-	/* NV_PSEC_RISCV_IRQMSET_0 */
-	return 0x2520;
-}
-static inline u32 tsec_riscv_irqmset_swgen0_set_f(void)
-{
-	return 0x40;
+	return ((v & offset) << 16);
 }
 
-static inline u32 tsec_riscv_irqmclr_r(void)
+
+static inline u32 tsec_riscv_cpuctl_active_stat_v(u32 r, u32 offset)
 {
-	/* NV_PSEC_RISCV_IRQMCLR_0 */
-	return 0x2524;
-}
-static inline u32 tsec_riscv_irqmclr_swgen0_set_f(void)
-{
-	return 0x40;
-}
-static inline u32 tsec_riscv_irqmclr_swgen1_set_f(void)
-{
-	return 0x80;
+	return ((r >> offset) & 0x1);
 }
 
-static inline u32 tsec_thi_sec_r(void)
+static inline u32 tsec_riscv_br_retcode_result_v(u32 r, u32 offset)
 {
-	/* NV_PSEC_THI_THI_SEC_0 */
-	return 0x38;
-}
-static inline u32 tsec_thi_sec_chlock_f(void)
-{
-	return 0x100;
+	return ((r >> offset) & 0x3);
 }
 
-static inline u32 tsec_riscv_bcr_ctrl_r(void)
+
+static inline u32 tsec_falcon_dmemc_r(u32 r, u32 offset)
 {
-	/* NV_PSEC_RISCV_BCR_CTRL */
-	return 0x2668;
-}
-static inline u32 tsec_riscv_bcr_ctrl_core_select_riscv_f(void)
-{
-	return 0x10;
+	return (offset + (r) * 8);
 }
 
-static inline u32 tsec_riscv_bcr_dmaaddr_pkcparam_lo_r(void)
+static inline u32 tsec_falcon_dmemd_r(u32 r, u32 offset)
 {
-	/* NV_PSEC_RISCV_BCR_DMAADDR_PKCPARAM_LO */
-	return 0x2670;
-}
-
-static inline u32 tsec_riscv_bcr_dmaaddr_pkcparam_hi_r(void)
-{
-	/* NV_PSEC_RISCV_BCR_DMAADDR_PKCPARAM_HI */
-	return 0x2674;
-}
-
-static inline u32 tsec_riscv_bcr_dmaaddr_fmccode_lo_r(void)
-{
-	/* NV_PSEC_RISCV_BCR_DMAADDR_FMCCODE_LO */
-	return 0x2678;
-}
-
-static inline u32 tsec_riscv_bcr_dmaaddr_fmccode_hi_r(void)
-{
-	/* NV_PSEC_RISCV_BCR_DMAADDR_FMCCODE_HI */
-	return 0x267c;
-}
-
-static inline u32 tsec_riscv_bcr_dmaaddr_fmcdata_lo_r(void)
-{
-	/* NV_PSEC_RISCV_BCR_DMAADDR_FMCDATA_LO */
-	return 0x2680;
-}
-
-static inline u32 tsec_riscv_bcr_dmaaddr_fmcdata_hi_r(void)
-{
-	/* NV_PSEC_RISCV_BCR_DMAADDR_FMCDATA_HI */
-	return 0x2684;
-}
-
-static inline u32 tsec_riscv_bcr_dmacfg_r(void)
-{
-	/* NV_PSEC_RISCV_BCR_DMACFG */
-	return 0x266c;
-}
-static inline u32 tsec_riscv_bcr_dmacfg_target_local_fb_f(void)
-{
-	return 0x0;
-}
-static inline u32 tsec_riscv_bcr_dmacfg_lock_locked_f(void)
-{
-	return 0x80000000;
-}
-
-static inline u32 tsec_riscv_bcr_dmacfg_sec_r(void)
-{
-	/* NV_PSEC_RISCV_BCR_DMACFG_SEC */
-	return 0x2694;
-}
-static inline u32 tsec_riscv_bcr_dmacfg_sec_gscid_f(u32 v)
-{
-	return (v & 0x1f) << 16;
-}
-
-static inline u32 tsec_falcon_mailbox0_r(void)
-{
-	/* NV_PSEC_FALCON_MAILBOX0 */
-	return 0x1040;
-}
-
-static inline u32 tsec_falcon_mailbox1_r(void)
-{
-	/* NV_PSEC_FALCON_MAILBOX1 */
-	return 0x1044;
-}
-
-static inline u32 tsec_riscv_cpuctl_r(void)
-{
-	/* NV_PSEC_RISCV_CPUCTL */
-	return 0x2388;
-}
-static inline u32 tsec_riscv_cpuctl_startcpu_true_f(void)
-{
-	return 0x1;
-}
-static inline u32 tsec_riscv_cpuctl_active_stat_v(u32 r)
-{
-	return (r >> 7) & 0x1;
-}
-static inline u32 tsec_riscv_cpuctl_active_stat_active_v(void)
-{
-	return 0x00000001;
-}
-
-static inline u32 tsec_riscv_br_retcode_r(void)
-{
-	/* NV_PSEC_RISCV_BR_RETCODE */
-	return 0x265c;
-}
-static inline u32 tsec_riscv_br_retcode_result_v(u32 r)
-{
-	return (r >> 0) & 0x3;
-}
-static inline u32 tsec_riscv_br_retcode_result_pass_v(void)
-{
-	return 0x00000003;
-}
-
-static inline u32 tsec_falcon_dmemc_r(u32 r)
-{
-	/* NV_PSEC_FALCON_DMEMC_0 */
-	return (0x11c0 + (r) * 8);
-}
-
-static inline u32 tsec_falcon_dmemd_r(u32 r)
-{
-	/* NV_PSEC_FALCON_DMEMD_0 */
-	return (0x11c4 + (r) * 8);
-}
-
-static inline u32 tsec_dmem_logbuf_offset_f(void)
-{
-	return 0x14000;
+	return (offset + (r) * 8);
 }
 
 #endif /* TSEC_REGS_H */

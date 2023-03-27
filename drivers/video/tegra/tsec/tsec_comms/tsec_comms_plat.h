@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -129,5 +129,12 @@ static inline void tsec_plat_poweroff(void)
 {
 	tsec_poweroff(&g_tsec->dev);
 }
+
+u32 tsec_plat_cmdq_head_r(u32 r);
+u32 tsec_plat_cmdq_tail_r(u32 r);
+u32 tsec_plat_msgq_head_r(u32 r);
+u32 tsec_plat_msgq_tail_r(u32 r);
+u32 tsec_plat_ememc_r(u32 r);
+u32 tsec_plat_ememd_r(u32 r);
 
 #endif /* TSEC_COMMS_PLAT_H */

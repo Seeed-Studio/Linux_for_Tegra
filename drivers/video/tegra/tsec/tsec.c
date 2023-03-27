@@ -12,6 +12,13 @@
 #include "tsec_boot.h"
 #include "tsec_regs.h"
 
+
+/*
+ * TSEC register offsets
+ */
+extern struct tsec_reg_offsets_t t23x_reg_offsets;
+extern struct tsec_reg_offsets_t t264_reg_offsets;
+
 /*
  * TSEC Device Data
  */
@@ -21,6 +28,8 @@ static struct tsec_device_data t23x_tsec_data = {
 	.riscv_desc_bin		= "tegra23x/nvhost_tsec_desc.fw",
 	.riscv_image_bin	= "tegra23x/nvhost_tsec_riscv.fw",
 	.dma_mask_bits		= 39,
+	.soc			= TSEC_ON_T23x,
+	.tsec_reg_offsets	= &t23x_reg_offsets
 };
 MODULE_FIRMWARE("tegra23x/nvhost_tsec_riscv.fw");
 MODULE_FIRMWARE("tegra23x/nvhost_tsec_desc.fw");
@@ -30,6 +39,8 @@ static struct tsec_device_data t239_tsec_data = {
 	.riscv_desc_bin		= "tegra239/nvhost_tsec_desc.fw",
 	.riscv_image_bin	= "tegra239/nvhost_tsec_riscv.fw",
 	.dma_mask_bits		= 39,
+	.soc			= TSEC_ON_T239,
+	.tsec_reg_offsets	= &t23x_reg_offsets
 };
 
 static struct tsec_device_data t264_tsec_data = {
@@ -37,6 +48,8 @@ static struct tsec_device_data t264_tsec_data = {
 	.riscv_desc_bin		= "tegra264/nvhost_tsec_desc.fw",
 	.riscv_image_bin	= "tegra264/nvhost_tsec_riscv.fw",
 	.dma_mask_bits		= 48,
+	.soc			= TSEC_ON_T26x,
+	.tsec_reg_offsets	= &t264_reg_offsets
 };
 
 /*
@@ -105,7 +118,7 @@ static void tsec_set_streamid_regs(struct device *dev,
 {
 	struct iommu_fwspec *fwspec;
 	int streamid;
-
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
 	/* Get the StreamID value */
 	fwspec = dev_iommu_fwspec_get(dev);
 	if (fwspec && fwspec->num_ids)
@@ -114,14 +127,16 @@ static void tsec_set_streamid_regs(struct device *dev,
 		streamid = 0x7F; /* bypass hwid */
 
 	/* Update the StreamID value */
-	tsec_writel(pdata, tsec_thi_streamid0_r(), streamid);
-	tsec_writel(pdata, tsec_thi_streamid1_r(), streamid);
+	tsec_writel(pdata, reg_off->THI_STREAMID0_0, streamid);
+	tsec_writel(pdata, reg_off->THI_STREAMID1_0, streamid);
 }
 
 static void tsec_set_cg_regs(struct tsec_device_data *pdata)
 {
-	tsec_writel(pdata, tsec_priv_blocker_ctrl_cg1_r(), 0x0);
-	tsec_writel(pdata, tsec_riscv_cg_r(), 0x3);
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
+
+	tsec_writel(pdata, reg_off->PRIV_BLOCKER_CTRL_CG1, 0x0);
+	tsec_writel(pdata, reg_off->RISCV_CG, 0x3);
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -146,14 +161,15 @@ static int tsec_debug_show(struct seq_file *s, void *unused)
 {
 	int info_len = 0;
 	struct tsec_device_data *pdata = (struct tsec_device_data *)s->private;
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
 
 	/* Do not attempt to read DMEM if TSEC is power-down */
 	if (pdata->power_on) {
 #define DMEM_PORT	(0)
 		/* Offset of Log Buffer in DMEM */
-		u32 log_bug_off  = tsec_dmem_logbuf_offset_f();
-		u32 dmemC        = tsec_falcon_dmemc_r(DMEM_PORT);
-		u32 dmemD        = tsec_falcon_dmemd_r(DMEM_PORT);
+		u32 log_bug_off  = reg_off->DMEM_LOGBUF_OFFSET;
+		u32 dmemC        = tsec_falcon_dmemc_r(DMEM_PORT, reg_off->FALCON_DMEMC_0);
+		u32 dmemD        = tsec_falcon_dmemd_r(DMEM_PORT, reg_off->FALCON_DMEMD_0);
 		struct nvriscv_log_buffer log_buf_info;
 
 		/* Auto Increment Read */

@@ -7,7 +7,6 @@
 
 #include "tsec_comms_plat.h"
 #include "tsec_comms.h"
-#include "tsec_comms_regs.h"
 #include "tsec_comms_cmds.h"
 #include "tsec_cmds.h"
 
@@ -222,8 +221,8 @@ static int ipc_txfr(u32 offset, u8 *buff, u32 size, bool read_msg)
 	return 0;
 #else
 	u32    *buff32 = (u32 *)buff;
-	u32     ememc_offset = tsec_ememc_r(TSEC_EMEM_PORT);
-	u32     ememd_offset = tsec_ememd_r(TSEC_EMEM_PORT);
+	u32     ememc_offset = tsec_plat_ememc_r(TSEC_EMEM_PORT);
+	u32     ememd_offset = tsec_plat_ememd_r(TSEC_EMEM_PORT);
 	u32     num_words, num_bytes, reg32, i;
 
 	if (offset < TSEC_QUEUE_OFFSET_MAGIC) {
@@ -370,8 +369,8 @@ void tsec_comms_drain_msg(bool invoke_cb)
 	u8 tsec_msg[TSEC_MAX_MSG_SIZE];
 	bool shutdown_tsec = false;
 
-	msgq_head_reg = tsec_msgq_head_r(TSEC_MSG_QUEUE_PORT);
-	msgq_tail_reg = tsec_msgq_tail_r(TSEC_MSG_QUEUE_PORT);
+	msgq_head_reg = tsec_plat_msgq_head_r(TSEC_MSG_QUEUE_PORT);
+	msgq_tail_reg = tsec_plat_msgq_tail_r(TSEC_MSG_QUEUE_PORT);
 	msg_hdr =  (struct RM_FLCN_QUEUE_HDR *)(tsec_msg);
 	init_msg_body = (struct RM_GSP_INIT_MSG_GSP_INIT *)
 		(tsec_msg + RM_FLCN_QUEUE_HDR_SIZE);
@@ -665,8 +664,8 @@ int tsec_comms_send_cmd(void *cmd, u32 queue_id,
 		sCmdq_start = 0x0;
 	}
 
-	cmdq_head_reg = tsec_cmdq_head_r(TSEC_CMD_QUEUE_PORT);
-	cmdq_tail_reg = tsec_cmdq_tail_r(TSEC_CMD_QUEUE_PORT);
+	cmdq_head_reg = tsec_plat_cmdq_head_r(TSEC_CMD_QUEUE_PORT);
+	cmdq_tail_reg = tsec_plat_cmdq_tail_r(TSEC_CMD_QUEUE_PORT);
 
 	for (i = 0; !sCmdq_start && i < TSEC_QUEUE_POLL_COUNT; i++) {
 		sCmdq_start = tsec_plat_reg_read(cmdq_tail_reg);

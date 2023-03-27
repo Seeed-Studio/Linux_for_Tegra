@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -33,5 +33,6 @@
 #include <linux/debugfs.h>                 /* for debugfs APIs */
 #endif
 #include <linux/sizes.h>                   /* for SZ_* size macros */
+#include <vdso/bits.h>                     /* for BIT(x) macro */
 
 #endif /* TSEC_LINUX_H */

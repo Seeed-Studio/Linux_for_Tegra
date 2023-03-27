@@ -8,6 +8,7 @@
 #ifndef TSEC_H
 #define TSEC_H
 
+#include "tsec_regs.h"
 /*
  * TSEC Device Data Structure
  */
@@ -19,6 +20,13 @@
 #define TSEC_PKA_CLK_NAME    "tsec_pka"
 #define TSEC_PKA_CLK_INDEX   (2)
 #define TSEC_NUM_OF_CLKS     (3)
+
+enum tsec_soc {
+	TSEC_ON_T23x = 0,
+	TSEC_ON_T239,
+	TSEC_ON_T26x,
+	TSEC_ON_INVALID,
+};
 
 struct tsec_device_data {
 	void __iomem *reg_aperture;
@@ -54,6 +62,11 @@ struct tsec_device_data {
 
 	/* Number of bits for DMA mask - IOVA/PA number of bits */
 	u8 dma_mask_bits;
+	/* Which SOC Tsec is running on */
+	enum tsec_soc soc;
+
+	/* store the register offsets */
+	struct tsec_reg_offsets_t *tsec_reg_offsets;
 };
 
 /*

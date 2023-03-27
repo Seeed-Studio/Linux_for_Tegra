@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -334,6 +334,7 @@ int tsec_finalize_poweron(struct platform_device *dev)
 	void __iomem *ipc_co_va = NULL;
 	dma_addr_t ipc_co_iova = 0;
 	dma_addr_t ipc_co_iova_with_streamid;
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
 
 	if (!pdata) {
 		dev_err(&dev->dev, "no platform data\n");
@@ -409,59 +410,59 @@ int tsec_finalize_poweron(struct platform_device *dev)
 	}
 
 	/* Lock channel so that non-TZ channel request can't write non-THI region */
-	tsec_writel(pdata, tsec_thi_sec_r(), tsec_thi_sec_chlock_f());
+	tsec_writel(pdata, reg_off->THI_SEC_0, reg_off->THI_SEC_CHLOCK);
 
 	/* Select RISC-V core */
-	tsec_writel(pdata, tsec_riscv_bcr_ctrl_r(),
-			tsec_riscv_bcr_ctrl_core_select_riscv_f());
+	tsec_writel(pdata, reg_off->RISCV_BCR_CTRL,
+			reg_off->RISCV_BCR_CTRL_CORE_SELECT_RISCV);
 
 	/* Program manifest start address */
 	pa = (img_pa + rv_data->desc.manifest_offset) >> 8;
-	tsec_writel(pdata, tsec_riscv_bcr_dmaaddr_pkcparam_lo_r(),
+	tsec_writel(pdata, reg_off->RISCV_BCR_DMAADDR_PKCPARAM_LO,
 			lower_32_bits(pa));
-	tsec_writel(pdata, tsec_riscv_bcr_dmaaddr_pkcparam_hi_r(),
+	tsec_writel(pdata, reg_off->RISCV_BCR_DMAADDR_PKCPARAM_HI,
 			upper_32_bits(pa));
 
 	/* Program FMC code start address */
 	pa = (img_pa + rv_data->desc.code_offset) >> 8;
-	tsec_writel(pdata, tsec_riscv_bcr_dmaaddr_fmccode_lo_r(),
+	tsec_writel(pdata, reg_off->RISCV_BCR_DMAADDR_FMCCODE_LO,
 			lower_32_bits(pa));
-	tsec_writel(pdata, tsec_riscv_bcr_dmaaddr_fmccode_hi_r(),
+	tsec_writel(pdata, reg_off->RISCV_BCR_DMAADDR_FMCCODE_HI,
 			upper_32_bits(pa));
 
 	/* Program FMC data start address */
 	pa = (img_pa + rv_data->desc.data_offset) >> 8;
-	tsec_writel(pdata, tsec_riscv_bcr_dmaaddr_fmcdata_lo_r(),
+	tsec_writel(pdata, reg_off->RISCV_BCR_DMAADDR_FMCDATA_LO,
 			lower_32_bits(pa));
-	tsec_writel(pdata, tsec_riscv_bcr_dmaaddr_fmcdata_hi_r(),
+	tsec_writel(pdata, reg_off->RISCV_BCR_DMAADDR_FMCDATA_HI,
 			upper_32_bits(pa));
 
 	/* Program DMA config registers */
-	tsec_writel(pdata, tsec_riscv_bcr_dmacfg_sec_r(),
-			tsec_riscv_bcr_dmacfg_sec_gscid_f(img_co_gscid));
-	tsec_writel(pdata, tsec_riscv_bcr_dmacfg_r(),
-			tsec_riscv_bcr_dmacfg_target_local_fb_f() |
-			tsec_riscv_bcr_dmacfg_lock_locked_f());
+	tsec_writel(pdata, reg_off->RISCV_BCR_DMACFG_SEC,
+			tsec_riscv_bcr_dmacfg_sec_gscid_f(img_co_gscid, reg_off->RISCV_BCR_DMACFG_SEC));
+	tsec_writel(pdata, reg_off->RISCV_BCR_DMACFG,
+			reg_off->RISCV_BCR_DMACFG_TARGET_LOCAL_FB |
+			reg_off->RISCV_BCR_DMACFG_LOCK_LOCKED);
 
 	/* Pass the address of ipc carveout via mailbox registers */
 	ipc_co_iova_with_streamid = (ipc_co_iova | TSEC_RISCV_SMMU_STREAMID1);
-	tsec_writel(pdata, tsec_falcon_mailbox0_r(),
+	tsec_writel(pdata, reg_off->FALCON_MAILBOX0,
 		lower_32_bits((unsigned long long)ipc_co_iova_with_streamid));
-	tsec_writel(pdata, tsec_falcon_mailbox1_r(),
+	tsec_writel(pdata, reg_off->FALCON_MAILBOX1,
 		upper_32_bits((unsigned long long)ipc_co_iova_with_streamid));
 
 	/* Kick start RISC-V and let BR take over */
-	tsec_writel(pdata, tsec_riscv_cpuctl_r(),
-			tsec_riscv_cpuctl_startcpu_true_f());
+	tsec_writel(pdata, reg_off->RISCV_CPUCTL,
+			reg_off->RISCV_CPUCTL_STARTCPU_TRUE);
 
-	cpuctl_addr = pdata->reg_aperture + tsec_riscv_cpuctl_r();
-	retcode_addr = pdata->reg_aperture + tsec_riscv_br_retcode_r();
-	mailbox0_addr = pdata->reg_aperture + tsec_falcon_mailbox0_r();
+	cpuctl_addr = pdata->reg_aperture + reg_off->RISCV_CPUCTL;
+	retcode_addr = pdata->reg_aperture + reg_off->RISCV_BR_RETCODE;
+	mailbox0_addr = pdata->reg_aperture + reg_off->FALCON_MAILBOX0;
 
 	/* Check BR return code */
 	err  = readl_poll_timeout(retcode_addr, val,
-		(tsec_riscv_br_retcode_result_v(val) ==
-		tsec_riscv_br_retcode_result_pass_v()),
+		(tsec_riscv_br_retcode_result_v(val, reg_off->RISCV_BR_RETCODE_RESULT) ==
+		reg_off->RISCV_BR_RETCODE_RESULT_PASS),
 		RISCV_IDLE_CHECK_PERIOD,
 		RISCV_IDLE_TIMEOUT_DEFAULT);
 	if (err) {
@@ -471,8 +472,8 @@ int tsec_finalize_poweron(struct platform_device *dev)
 
 	/* Check cpuctl active state */
 	err  = readl_poll_timeout(cpuctl_addr, val,
-		(tsec_riscv_cpuctl_active_stat_v(val) ==
-		tsec_riscv_cpuctl_active_stat_active_v()),
+		(tsec_riscv_cpuctl_active_stat_v(val, reg_off->RISCV_CPUCTL_ACTIVE_STAT) ==
+		reg_off->RISCV_CPUCTL_ACTIVE_STAT_ACTIVE),
 		RISCV_IDLE_CHECK_PERIOD,
 		RISCV_IDLE_TIMEOUT_DEFAULT);
 	if (err) {
@@ -500,15 +501,17 @@ int tsec_finalize_poweron(struct platform_device *dev)
 	 * Arm driver code.
 	 * nvriscv/drivers/src/debug/debug.c:164: irqFireSwGen(SYS_INTR_SWGEN1)
 	 */
-	tsec_writel(pdata, tsec_riscv_irqmclr_r(), tsec_riscv_irqmclr_swgen1_set_f());
+	tsec_writel(pdata, reg_off->RISCV_IRQMCLR_0,
+		reg_off->RISCV_IRQMCLR_SWGEN1_SET);
+
 	/* initialise the comms library before enabling msg interrupt */
 	tsec_comms_initialize((__force u64)ipc_co_va, ipc_co_info.size);
+
 	/* enable message interrupt from tsec to ccplex */
 	enable_irq(pdata->irq);
 
 	/* Booted-up successfully */
 	dev_info(&dev->dev, "RISC-V boot success\n");
-
 
 #if CMD_INTERFACE_TEST
 	pr_debug("cmd_size=%d, cmdDataSize=%d\n", cmd_size, cmdDataSize);
@@ -575,30 +578,31 @@ static irqreturn_t tsec_irq_top_half(int irq, void *dev_id)
 	struct tsec_device_data *pdata = platform_get_drvdata(pdev);
 	irqreturn_t irq_ret_val = IRQ_HANDLED;
 	u32 irq_status;
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
 
 	spin_lock_irqsave(&pdata->mirq_lock, flags);
 
 	/* Read the interrupt status */
-	irq_status = tsec_readl(pdata, tsec_irqstat_r());
+	irq_status = tsec_readl(pdata, reg_off->RISCV_IRQSTAT_0);
 
 	/* Clear the interrupt */
-	tsec_writel(pdata, tsec_thi_int_status_r(),
-			tsec_thi_int_status_clr_f());
+	tsec_writel(pdata, reg_off->THI_INT_STATUS_0,
+			reg_off->THI_INT_STATUS_CLR_0);
 
 	/* Wakeup threaded handler for SWGEN0 Irq */
-	if (irq_status & tsec_irqstat_swgen0()) {
+	if (irq_status & reg_off->RISCV_IRQSTAT_SWGEN0) {
 		/* Clear SWGEN0 Interrupt */
-		tsec_writel(pdata, tsec_irqsclr_r(),
-			tsec_irqsclr_swgen0_set_f());
+		tsec_writel(pdata, reg_off->RISCV_IRQSCLR_0,
+			reg_off->RISCV_IRQSCLR_SWGEN0_SET);
 		/* Mask the interrupt.
 		 * Clear RISCV Mask for SWGEN0, so that no more SWGEN0
 		 * interrupts will be routed to CCPLEX, it will be re-enabled
 		 * by the bottom half
 		 */
-		tsec_writel(pdata, tsec_riscv_irqmclr_r(),
-			tsec_riscv_irqmclr_swgen0_set_f());
+		tsec_writel(pdata, reg_off->RISCV_IRQMCLR_0,
+			reg_off->RISCV_IRQMCLR_SWGEN0_SET);
 		irq_ret_val = IRQ_WAKE_THREAD;
-		irq_status &= ~(tsec_irqstat_swgen0());
+		irq_status &= ~(reg_off->RISCV_IRQSTAT_SWGEN0);
 	}
 
 	/* RISCV FW is generating SWGEN1 when it logs something
@@ -608,10 +612,10 @@ static irqreturn_t tsec_irq_top_half(int irq, void *dev_id)
 	 * hence we just mask out SWGEN1 interrupt here so that it
 	 * is not received any further
 	 */
-	if (irq_status & tsec_irqstat_swgen1()) {
-		tsec_writel(pdata, tsec_riscv_irqmclr_r(),
-			tsec_riscv_irqmclr_swgen1_set_f());
-		irq_status &= ~(tsec_irqstat_swgen1());
+	if (irq_status & reg_off->RISCV_IRQSTAT_SWGEN1) {
+		tsec_writel(pdata, reg_off->RISCV_IRQMCLR_0,
+			reg_off->RISCV_IRQMCLR_SWGEN1_SET);
+		irq_status &= ~(reg_off->RISCV_IRQSTAT_SWGEN1);
 	}
 
 	spin_unlock_irqrestore(&pdata->mirq_lock, flags);
@@ -621,6 +625,11 @@ static irqreturn_t tsec_irq_top_half(int irq, void *dev_id)
 
 static irqreturn_t tsec_irq_bottom_half(int irq, void *args)
 {
+	struct tsec_device_data *pdata;
+	struct tsec_reg_offsets_t *reg_off;
+	pdata = platform_get_drvdata(g_tsec);
+	reg_off = pdata->tsec_reg_offsets;
+
 	/* Call into the comms lib API to drain the message */
 	tsec_comms_drain_msg(true);
 
@@ -629,8 +638,8 @@ static irqreturn_t tsec_irq_bottom_half(int irq, void *args)
 	 * and if it is pending the CCPLEX will be interrupted
 	 * by this the top half
 	 */
-	tsec_writel(platform_get_drvdata(g_tsec),
-		tsec_riscv_irqmset_r(), tsec_riscv_irqmset_swgen0_set_f());
+	tsec_writel(pdata, reg_off->RISCV_IRQMSET_0,
+		reg_off->RISCV_IRQMSET_SWGEN0_SET);
 	return IRQ_HANDLED;
 }
 
@@ -716,4 +725,82 @@ int tsec_kickoff_boot(struct platform_device *pdev)
 		msecs_to_jiffies(tsec_priv_data->fwreq_retry_interval_ms));
 
 	return 0;
+}
+
+u32 tsec_plat_cmdq_head_r(u32 r)
+{
+	u32 offset = U32_MAX;
+	struct tsec_device_data *pdata = platform_get_drvdata(g_tsec);
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
+
+	if (reg_off != NULL) {
+		offset = reg_off->QUEUE_HEAD_0 + (r) * 8;
+	}
+
+	return offset;
+}
+
+u32 tsec_plat_cmdq_tail_r(u32 r)
+{
+	u32 offset = U32_MAX;
+	struct tsec_device_data *pdata = platform_get_drvdata(g_tsec);
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
+
+	if (reg_off != NULL) {
+		offset = reg_off->QUEUE_TAIL_0 + (r) * 8;
+	}
+
+	return offset;
+}
+
+u32 tsec_plat_msgq_head_r(u32 r)
+{
+	u32 offset = U32_MAX;
+	struct tsec_device_data *pdata = platform_get_drvdata(g_tsec);
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
+
+	if (reg_off != NULL) {
+		offset = reg_off->MSGQ_HEAD_0 + (r) * 8;
+	}
+
+	return offset;
+}
+
+u32 tsec_plat_msgq_tail_r(u32 r)
+{
+	u32 offset = U32_MAX;
+	struct tsec_device_data *pdata = platform_get_drvdata(g_tsec);
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
+
+	if (reg_off != NULL) {
+		offset = reg_off->MSGQ_TAIL_0 + (r) * 8;
+	}
+
+	return offset;
+}
+
+u32 tsec_plat_ememc_r(u32 r)
+{
+	u32 offset = U32_MAX;
+	struct tsec_device_data *pdata = platform_get_drvdata(g_tsec);
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
+
+	if (reg_off != NULL) {
+		offset = reg_off->EMEMC_0 + (r) * 8;
+	}
+
+	return offset;
+}
+
+u32 tsec_plat_ememd_r(u32 r)
+{
+	u32 offset = U32_MAX;
+	struct tsec_device_data *pdata = platform_get_drvdata(g_tsec);
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
+
+	if (reg_off != NULL) {
+		offset = reg_off->EMEMD_0 + (r) * 8;
+	}
+
+	return offset;
 }
