@@ -909,6 +909,12 @@ static const struct flash_info spansion_nor_parts[] = {
 		.no_sfdp_flags = SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ,
 		.mfr_flags = USE_CLSR,
 	}, {
+		.id = SNOR_ID(0x01, 0x02, 0x20, 0x4d, 0x01, 0x81),
+		.name = "s25fs512s1",
+		.size = SZ_64M,
+		.no_sfdp_flags = SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ,
+		.mfr_flags = USE_CLSR,
+	}, {
 		.id = SNOR_ID(0x01, 0x20, 0x18, 0x4d, 0x01, 0x81),
 		.name = "s25fs128s1",
 		.size = SZ_16M,
