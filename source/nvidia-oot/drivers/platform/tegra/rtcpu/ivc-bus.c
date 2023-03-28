@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -78,7 +78,6 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		struct tegra_ivc_region *region,
 		struct camrtc_hsp *camhsp)
 {
-	struct device *peer_device = bus->dev.parent;
 	struct camrtc_tlv_ivc_setup *tlv;
 	struct {
 		u32 rx;
