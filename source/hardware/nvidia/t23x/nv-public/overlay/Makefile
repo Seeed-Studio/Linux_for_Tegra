@@ -9,6 +9,7 @@ makefile-path := platform/t23x/concord/dts/generic-dts/overlay
 dtbo-y += tegra234-p3737-0000+p3701-0000.dtbo
 dtbo-y += tegra234-jetson.dtbo
 dtbo-y += tegra234-carveouts.dtbo
+dtbo-y += tegra234-audio-overlay.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
