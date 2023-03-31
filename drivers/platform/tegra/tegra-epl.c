@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -26,6 +26,13 @@
 
 /* Error index offset in mission status register */
 #define ERROR_INDEX_OFFSET	24U
+
+/* signature code for HSP pm notify data */
+#define PM_STATE_UNI_CODE	0xFDEF
+
+/* State Management */
+#define PM_SUSPEND	6U
+#define PM_SHUTDOWN	PM_SUSPEND
 
 enum handshake_state {
 	HANDSHAKE_PENDING,
@@ -70,6 +77,8 @@ static enum handshake_state hs_state = HANDSHAKE_PENDING;
 static DEFINE_MUTEX(hs_state_mutex);
 
 static struct task_struct *fsi_handshake_thread;
+
+static bool enable_deinit_notify;
 
 static void tegra_hsp_tx_empty_notify(struct mbox_client *cl,
 					 void *data, int empty_value)
@@ -202,6 +211,26 @@ int epl_report_error(struct epl_error_report_frame error_report)
 }
 EXPORT_SYMBOL_GPL(epl_report_error);
 
+static int epl_client_fsi_pm_notify(u32 state)
+{
+	int ret;
+	u32 pdata[4];
+
+	pdata[0] = PM_STATE_UNI_CODE;
+	pdata[1] = state;
+	pdata[2] = state;
+	pdata[3] = PM_STATE_UNI_CODE;
+
+	mutex_lock(&hs_state_mutex);
+	if (hs_state == HANDSHAKE_DONE)
+		ret = mbox_send_message(epl_hsp_v->tx.chan, (void *) pdata);
+	else
+		ret = -ENODEV;
+	mutex_unlock(&hs_state_mutex);
+
+	return ret < 0 ? ret : 0;
+}
+
 static int epl_client_fsi_handshake(void *arg)
 {
 	mutex_lock(&hs_state_mutex);
@@ -238,13 +267,16 @@ static int epl_client_fsi_handshake(void *arg)
 
 static int __maybe_unused epl_client_suspend(struct device *dev)
 {
+	int ret = 0;
 	pr_debug("tegra-epl: suspend called\n");
 
+	if (enable_deinit_notify)
+		ret = epl_client_fsi_pm_notify(PM_SUSPEND);
 	mutex_lock(&hs_state_mutex);
 	hs_state = HANDSHAKE_PENDING;
 	mutex_unlock(&hs_state_mutex);
 
-	return 0;
+	return ret;
 }
 
 static int __maybe_unused epl_client_resume(struct device *dev)
@@ -352,6 +384,9 @@ static int epl_client_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (of_property_read_bool(np, "enable-deinit-notify"))
+		enable_deinit_notify = true;
+
 	mission_err_status_va = devm_platform_ioremap_resource(pdev, NUM_SW_GENERIC_ERR * 2);
 	if (IS_ERR(mission_err_status_va)) {
 		isAddrMappOk = false;
@@ -369,6 +404,21 @@ static int epl_client_probe(struct platform_device *pdev)
 	return ret;
 }
 
+static void epl_client_shutdown(struct platform_device *pdev)
+{
+	pr_debug("tegra-epl: shutdown called\n");
+
+	if (enable_deinit_notify)
+		if (epl_client_fsi_pm_notify(PM_SHUTDOWN) < 0)
+			pr_err("Unable to send notification to fsi\n");
+
+	mutex_lock(&hs_state_mutex);
+	hs_state = HANDSHAKE_PENDING;
+	mutex_unlock(&hs_state_mutex);
+
+	epl_unregister_device();
+}
+
 static int epl_client_remove(struct platform_device *pdev)
 {
 	epl_unregister_device();
@@ -382,8 +432,9 @@ static struct platform_driver epl_client = {
 		.of_match_table = of_match_ptr(epl_client_dt_match),
 		.pm = pm_ptr(&epl_client_pm),
 	},
-	.probe			= epl_client_probe,
-	.remove			= epl_client_remove,
+	.probe		= epl_client_probe,
+	.shutdown	= epl_client_shutdown,
+	.remove		= epl_client_remove,
 };
 
 module_platform_driver(epl_client);
