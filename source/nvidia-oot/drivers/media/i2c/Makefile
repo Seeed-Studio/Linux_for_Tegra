@@ -15,4 +15,5 @@ obj-m += nv_imx318.o
 obj-m += nv_imx390.o
 obj-m += nv_ov5693.o
 obj-m += nv_ar0234.o
+obj-m += pca9570.o
 endif
