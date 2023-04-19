@@ -4,7 +4,7 @@ old-dtb := $(dtb-y)
 old-dtbo := $(dtbo-y)
 dtb-y :=
 dtbo-y :=
-makefile-path := platform/t23x/concord/dts/generic-dts/base
+makefile-path := t23x/nv-public
 
 dtb-y += tegra234-p3737-0000+p3701-0000.dtb
 
