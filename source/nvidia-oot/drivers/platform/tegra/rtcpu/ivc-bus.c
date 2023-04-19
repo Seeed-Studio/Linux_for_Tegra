@@ -9,11 +9,9 @@
 #include <linux/slab.h>
 #include <soc/tegra/ivc_ext.h>
 #include <linux/tegra-ivc-bus.h>
-#include <linux/tegra-camera-rtcpu.h>
 #include <linux/bitops.h>
 #include <linux/version.h>
 #include "soc/tegra/camrtc-channels.h"
-#include "soc/tegra/camrtc-commands.h"
 
 #define NV(p) "nvidia," #p
 
