@@ -70,13 +70,13 @@ struct hsm_error_report_frame {
  * PSC   - 1
  * I2C   = 10
  * QSPI  - 2
- * SDMMC - 2
+ * SDMMC - 5
  * TSEC  - 1
  * THERM - 1
  * SMMU  - 1
  * DLA   - 2
  */
-static unsigned int ip_instances[NUM_IPS] = {1, 1, 5, 20, 11, 1, 10, 2, 2, 1, 1, 1, 2};
+static unsigned int ip_instances[NUM_IPS] = {1, 1, 5, 20, 11, 1, 10, 2, 5, 1, 1, 1, 2};
 
 /* This directory entry will point to `/sys/kernel/debug/tegra_hsierrrptinj`. */
 static struct dentry *hsierrrptinj_debugfs_root;
@@ -101,6 +101,14 @@ struct hsierrrptinj_hsp_sm {
 
 static struct hsierrrptinj_hsp_sm hsierrrptinj_tx;
 
+/* Buffer len to store HSI Err Rpt Inj status */
+#define ERR_INJ_STATUS_LEN 31U
+
+/* Store stayus of error report injection */
+static bool hsierrrptinj_status = true;
+
+/* Stores the timestamp value when error was injected */
+static uint32_t error_report_timestamp = 1U;
 
 /* Register Error callbacks from IP Drivers */
 int hsierrrpt_reg_cb(hsierrrpt_ipid_t ip_id, unsigned int instance_id,
@@ -219,16 +227,22 @@ static ssize_t hsierrrptinj_inject(struct file *file, const char __user *buf,
 	pr_debug("tegra-hsierrrptinj: Inject Error Report\n");
 	if (buf == NULL) {
 		pr_err("tegra-hsierrrptinj: Invalid null input.\n");
+		hsierrrptinj_status = false;
+		error_report_timestamp = 0;
 		return -EINVAL;
 	}
 
 	if (lbuf != ERR_RPT_LEN) {
 		pr_err("tegra-hsierrrptinj: Invalid input length.\n");
+		hsierrrptinj_status = false;
+		error_report_timestamp = 0;
 		return -EINVAL;
 	}
 
 	if (copy_from_user(&ubuf, buf, ERR_RPT_LEN)) {
 		pr_err("tegra-hsierrrptinj: Failed to copy from input buffer.\n");
+		hsierrrptinj_status = false;
+		error_report_timestamp = 0;
 		return -EFAULT;
 	}
 
@@ -240,12 +254,16 @@ static ssize_t hsierrrptinj_inject(struct file *file, const char __user *buf,
 		token = strsep(&cur, delim);
 		if (token == NULL) {
 			pr_err("tegra-hsierrrptinj: Failed to obtain token\n");
+			hsierrrptinj_status = false;
+			error_report_timestamp = 0;
 			return -EFAULT;
 		}
 
 		ret = kstrtoul(token, 16, &val);
 		if (ret < 0) {
 			pr_err("tegra-hsierrrptinj: Parsing failed. Error: %d\n", ret);
+			hsierrrptinj_status = false;
+			error_report_timestamp = 0;
 			return ret;
 		}
 
@@ -282,6 +300,8 @@ static ssize_t hsierrrptinj_inject(struct file *file, const char __user *buf,
 
 	if (count != NUM_INPUTS) {
 		pr_err("tegra-hsierrrptinj: Invalid Input format.\n");
+		hsierrrptinj_status = false;
+		error_report_timestamp = 0;
 		return -EINVAL;
 	}
 
@@ -300,6 +320,8 @@ static ssize_t hsierrrptinj_inject(struct file *file, const char __user *buf,
 
 	if (instance_id >= ip_instances[ip_id]) {
 		pr_err("tegra-hsierrrptinj: Invalid instance for IP Driver 0x%04x\n", ip_id);
+		hsierrrptinj_status = false;
+		error_report_timestamp = 0;
 		return -EINVAL;
 	}
 
@@ -345,11 +367,63 @@ done:
 	pr_err("tegra-hsierrrptinj: HSI Error ID: 0x%08x\n", error_report.error_code);
 	pr_err("tegra-hsierrrptinj: Timestamp: %u\n", error_report.timestamp);
 
+	if (ret != ERR_RPT_LEN) {
+		hsierrrptinj_status = false;
+		error_report_timestamp = 0;
+	} else {
+		hsierrrptinj_status = true;
+		error_report_timestamp = error_report.timestamp;
+	}
+
 	return ret;
 }
 
+/* Report the status of HSI error report injection to user */
+static ssize_t hsierrrptinj_result(struct file *file, char __user *buf, size_t lbuf, loff_t *ppos)
+{
+	char ubuf[ERR_INJ_STATUS_LEN] = {0};
+	size_t len = 0, space = 0;
+	loff_t zero_offset = 0;
+
+	pr_debug("tegra-hsierrrptinj: Error Report Injection status\n");
+
+	if (buf == NULL) {
+		pr_err("tegra-hsierrrptinj: Invalid null buffer.\n");
+		return -EINVAL;
+	}
+
+	space = max(ERR_INJ_STATUS_LEN - *ppos, zero_offset);
+	len = min(space, lbuf);
+	if (len <= 0)
+		return 0;
+
+	if (hsierrrptinj_status) {
+		if (snprintf(ubuf, ERR_INJ_STATUS_LEN, "Success. Timestamp: %u",
+								error_report_timestamp) <= 0)
+			return -EFAULT;
+	} else {
+		if (snprintf(ubuf, ERR_INJ_STATUS_LEN, "Failure. Timestamp: %u",
+								error_report_timestamp) <= 0)
+			return -EFAULT;
+	}
+
+	if (*ppos < 0) {
+		pr_err("tegra-hsierrrptinj: Invalid offset.\n");
+		return -EINVAL;
+	}
+
+	if (copy_to_user(buf, ubuf + *ppos, len)) {
+		pr_err("tegra-hsierrrptinj: Failed to report status to user\n");
+		return -EFAULT;
+	}
+
+	*ppos += len;
+
+	return len;
+}
+
 static const struct file_operations hsierrrptinj_fops = {
-		.read = NULL,
+		.read  = hsierrrptinj_result,
 		.write = hsierrrptinj_inject,
 };
 
