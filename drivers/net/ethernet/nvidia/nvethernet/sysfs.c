@@ -2,7 +2,9 @@
 /* Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved */
 
 #include "ether_linux.h"
+#ifdef MACSEC_SUPPORT
 #include "macsec.h"
+#endif
 
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 #include <linux/tegra-hsierrrptinj.h>

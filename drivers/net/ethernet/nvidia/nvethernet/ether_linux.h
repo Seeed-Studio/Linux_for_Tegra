@@ -186,6 +186,7 @@
 /**
  * @brief Max pending SKB count
  */
+ //TBD: does need change for T264?
 #define ETHER_MAX_PENDING_SKB_CNT	(64 * OSI_MGBE_MAX_NUM_CHANS)
 
 /**
@@ -348,7 +349,7 @@ struct ether_rx_napi {
  */
 struct ether_vm_irq_data {
 	/** List of DMA Tx/Rx channel mask */
-	unsigned int chan_mask;
+	unsigned int chan_mask[3];
 	/** OSD private data */
 	struct ether_priv_data *pdata;
 };
@@ -529,7 +530,7 @@ struct ether_priv_data {
 	/** MAC loopback mode */
 	unsigned int mac_loopback_mode;
 	/** Array of MTL queue TX priority */
-	unsigned int txq_prio[OSI_MGBE_MAX_NUM_CHANS];
+	unsigned int txq_prio[OSI_MGBE_MAX_NUM_PDMA_CHANS];
 	/** Spin lock for Tx/Rx interrupt enable registers */
 	raw_spinlock_t rlock;
 	/** max address register count, 2*mac_addr64_sel */
