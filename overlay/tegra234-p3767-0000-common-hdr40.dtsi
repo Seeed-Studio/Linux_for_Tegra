@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2021-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,7 +18,6 @@
 
 / {
 	overlay-name = "Jetson 40pin Header";
-	compatible = "nvidia,p3509-0000-a2+p3767-0000";
 
 	fragment@0 {
 		target = <&pinmux>;
@@ -27,12 +26,19 @@
 			pinctrl-0 = <&jetson_io_pinmux>;
 			jetson_io_pinmux: exp-header-pinmux {
 				hdr40-pin3 {
-					nvidia,pins = "gen8_i2c_scl_pdd1";
+					nvidia,pins = "gen8_i2c_sda_pdd2";
 					nvidia,pin-label = "i2c8";
 				};
 				hdr40-pin5 {
-					nvidia,pins = "gen8_i2c_sda_pdd2";
+					nvidia,pins = "gen8_i2c_scl_pdd1";
 					nvidia,pin-label = "i2c8";
+				};
+				hdr40-pin7 {
+					nvidia,pins = "soc_gpio59_pac6";
+					nvidia,function = "aud";
+					nvidia,pin-label = "aud_mclk";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 				};
 				hdr40-pin8 {
 					nvidia,pins = "uart1_tx_pr2";
@@ -69,16 +75,16 @@
 					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 				};
 				hdr40-pin16 {
-					nvidia,pins = "spi3_cs0_py3";
+					nvidia,pins = "spi3_cs1_py4";
 					nvidia,function = "spi3";
-					nvidia,pin-label = "spi3_cs0";
+					nvidia,pin-label = "spi3_cs1";
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
 					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin18 {
-					nvidia,pins = "spi3_cs0_py4";
+					nvidia,pins = "spi3_cs0_py3";
 					nvidia,function = "spi3";
-					nvidia,pin-label = "spi3_cs1";
+					nvidia,pin-label = "spi3_cs0";
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
 					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
