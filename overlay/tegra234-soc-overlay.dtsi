@@ -48,12 +48,7 @@
 					status = "disabled";
 				};
 
-				pinmux: tegra_pinctrl: pinmux@2430000 {
-					compatible = "nvidia,tegra234-pinmux";
-					reg = <0x0 0x2430000 0x0 0x19100>,
-						<0x0 0xc300000 0x0 0x4000>;
-					#gpio-range-cells = <3>;
-					status = "disabled";
+				pinmux@2430000 {
 					eqos_mii_rx_input_state_disable: eqos_rx_disable {
 						eqos {
 							nvidia,pins = "eqos_rd0_pe6","eqos_rd1_pe7",
