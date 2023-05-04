@@ -7,6 +7,7 @@ dtbo-y :=
 makefile-path := t23x/nv-public/overlay
 
 dtbo-y += tegra234-p3737-0000+p3701-0000.dtbo
+dtbo-y += tegra234-p3740-0002+p3701-0008.dtbo
 dtbo-y += tegra234-jetson.dtbo
 dtbo-y += tegra234-carveouts.dtbo
 dtbo-y += tegra234-audio-overlay.dtbo
