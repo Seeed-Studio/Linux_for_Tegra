@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+//
+// This file contains the DT nodes of T234 which are not in base/tegra234.dtsi
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment-t234-android@0 {
+		target-path = "/";
+		 __overlay__ {
+			firmware {
+				android {
+					compatible = "android,firmware";
+					first_stage_delay = "1";
+				};
+			};
+
+			chosen {
+				use_dts_cmdline;
+				bootargs ="androidboot.boot_devices=bus@0/3460000.mmc enforcing=0 androidboot.selinux=permissive console=ttyTCU0,115200 rootfstype=ext4 mminit_loglevel=4 androidboot.slot_suffix=_a androidboot.hardware=t234ref loop.max_part=7 firmware_class.path=/vendor/firmware";
+			};
+		};
+	};
+};
