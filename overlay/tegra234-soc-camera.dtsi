@@ -172,7 +172,7 @@
 
 				camdbg_reserved: camdbg_carveout {
 					compatible = "nvidia,camdbg_carveout";
-					size = <0 0x6400000>;
+					size = <0 0x3200000>;
 					alignment = <0 0x100000>;
 					alloc-ranges = <0x1 0 0x1 0>;
 					status = "disabled";
