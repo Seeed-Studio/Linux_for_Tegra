@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2017-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// Copyright (c) 2017-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "tegra234-camera-imx185-a00.dtsi"
 #include <dt-bindings/clock/tegra234-clock.h>
@@ -55,29 +55,6 @@
 						};
 					};
 				};
-			};
-		};
-	};
-	fragment-camera-imx185@0 {
-		target-path = "/";
-		__overlay__ {
-			eeprom-manager {
-				bus@1 {
-					i2c-bus = <&cam_i2c>;
-					eeprom@0 {
-						slave-address = <0x54>;
-						label = "sensor0";
-					};
-					eeprom@1 {
-						slave-address = <0x57>;
-						label = "sensor1";
-					};
-					eeprom@2 {
-						slave-address = <0x52>;
-						label = "sensor2";
-					};
-				};
-
 			};
 		};
 	};

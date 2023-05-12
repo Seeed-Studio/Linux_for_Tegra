@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "tegra234-camera-imx390-a00.dtsi"
 #include <dt-bindings/clock/tegra234-clock.h>
@@ -9,7 +9,7 @@
 
 /* camera control gpio definitions */
 / {
-	fragment-camera-imx318@0 {
+	fragment-camera-imx390@0 {
 		target-path = "/";
 		__overlay__ {
 			bus@0{
