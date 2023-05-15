@@ -22,6 +22,9 @@ ccflags-y += -DLINUX_OS -DNET30 -DNVPKCS_MACSEC -DLINUX_IVC \
 	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include
 endif
 
+#ccflags-y += -DOSI_DEBUG -DMACSEC_SUPPORT -DDEBUG_MACSEC -DMACSEC_KEY_PROGRAM
+ccflags-y += -DMACSEC_SUPPORT
+
 nvethernet-objs:= ether_linux.o \
 		  osd.o \
 		  ethtool.o \

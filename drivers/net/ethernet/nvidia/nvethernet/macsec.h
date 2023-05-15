@@ -7,8 +7,7 @@
 #include <osi_macsec.h>
 #include <linux/random.h>
 #include <net/genetlink.h>
-#include <linux/crypto.h>
-
+#include <crypto/internal/cipher.h>
 
 /**
  * @brief Expected number of inputs in BYP or SCI LUT sysfs config
@@ -243,6 +242,8 @@ struct macsec_priv_data {
 	unsigned short next_supp_idx;
 	/** macsec mutex lock */
 	struct mutex lock;
+        /** macsec hw instance id */
+        unsigned int id;
 	/** Macsec enable flag in DT */
 	unsigned int is_macsec_enabled_in_dt;
 	/** Context family name  */

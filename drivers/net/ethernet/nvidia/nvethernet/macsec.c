@@ -100,7 +100,7 @@ static int macsec_disable_car(struct macsec_priv_data *macsec_pdata)
 	struct ether_priv_data *pdata = macsec_pdata->ether_pdata;
 
 	PRINT_ENTRY();
-	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 		if (!IS_ERR_OR_NULL(macsec_pdata->mgbe_clk)) {
 			clk_disable_unprepare(macsec_pdata->mgbe_clk);
 		}
@@ -129,7 +129,7 @@ static int macsec_enable_car(struct macsec_priv_data *macsec_pdata)
 	int ret = 0;
 
 	PRINT_ENTRY();
-	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 		if (!IS_ERR_OR_NULL(macsec_pdata->mgbe_clk)) {
 			ret = clk_prepare_enable(macsec_pdata->mgbe_clk);
 			if (ret < 0) {
@@ -166,7 +166,7 @@ static int macsec_enable_car(struct macsec_priv_data *macsec_pdata)
 	goto exit;
 
 err_ns_rst:
-	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 		if (!IS_ERR_OR_NULL(macsec_pdata->mgbe_clk)) {
 			clk_disable_unprepare(macsec_pdata->mgbe_clk);
 		}
@@ -223,7 +223,7 @@ int macsec_open(struct macsec_priv_data *macsec_pdata,
 			       IRQF_TRIGGER_NONE, macsec_pdata->irq_name[0],
 			       macsec_pdata);
 	if (ret < 0) {
-		dev_err(dev, "failed to request irq %d\n", __LINE__);
+		dev_err(dev, "failed to request irq %d\n", ret);
 		goto exit;
 	}
 
@@ -246,7 +246,7 @@ int macsec_open(struct macsec_priv_data *macsec_pdata,
 			       macsec_pdata);
 #endif
 	if (ret < 0) {
-		dev_err(dev, "failed to request irq %d\n", __LINE__);
+		dev_err(dev, "failed to request irq %d\n", ret);
 		goto err_ns_irq;
 	}
 
@@ -297,7 +297,26 @@ static int macsec_get_platform_res(struct macsec_priv_data *macsec_pdata)
 	int ret = 0;
 
 	PRINT_ENTRY();
-	/* 1. Get resets */
+	/* Get irqs */
+	macsec_pdata->ns_irq = platform_get_irq_byname(pdev, "macsec-ns-irq");
+	if (macsec_pdata->ns_irq < 0) {
+		dev_err(dev, "failed to get macsec-ns-irq\n");
+		ret = macsec_pdata->ns_irq;
+		goto exit;
+	}
+
+	macsec_pdata->s_irq = platform_get_irq_byname(pdev, "macsec-s-irq");
+	if (macsec_pdata->s_irq < 0) {
+		dev_err(dev, "failed to get macsec-s-irq\n");
+		ret = macsec_pdata->s_irq;
+		goto exit;
+	}
+
+	if (pdata->osi_core->pre_sil == 0x1U) {
+		dev_warn(dev, "%s: Pre-silicon simulation, skipping reset/clk config\n", __func__);
+		goto exit;
+	}
+	/* Get resets */
 	macsec_pdata->ns_rst = devm_reset_control_get(dev, "macsec_ns_rst");
 	if (IS_ERR_OR_NULL(macsec_pdata->ns_rst)) {
 		dev_err(dev, "Failed to get macsec_ns_rst\n");
@@ -305,8 +324,8 @@ static int macsec_get_platform_res(struct macsec_priv_data *macsec_pdata)
 		goto exit;
 	}
 
-	/* 2. Get clks */
-	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE) {
+	/* Get clks */
+	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 		macsec_pdata->mgbe_clk = devm_clk_get(dev, "mgbe_macsec");
 		if (IS_ERR(macsec_pdata->mgbe_clk)) {
 			dev_err(dev, "failed to get macsec clk\n");
@@ -329,21 +348,6 @@ static int macsec_get_platform_res(struct macsec_priv_data *macsec_pdata)
 		}
 	}
 
-	/* 3. Get irqs */
-	macsec_pdata->ns_irq = platform_get_irq_byname(pdev, "macsec-ns-irq");
-	if (macsec_pdata->ns_irq < 0) {
-		dev_err(dev, "failed to get macsec-ns-irq\n");
-		ret = macsec_pdata->ns_irq;
-		goto exit;
-	}
-
-	macsec_pdata->s_irq = platform_get_irq_byname(pdev, "macsec-s-irq");
-	if (macsec_pdata->s_irq < 0) {
-		dev_err(dev, "failed to get macsec-s-irq\n");
-		ret = macsec_pdata->s_irq;
-		goto exit;
-	}
-
 exit:
 	PRINT_EXIT();
 	return ret;
@@ -355,7 +359,7 @@ static void macsec_release_platform_res(struct macsec_priv_data *macsec_pdata)
 	struct device *dev = pdata->dev;
 
 	PRINT_ENTRY();
-	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 		if (!IS_ERR_OR_NULL(macsec_pdata->mgbe_clk)) {
 			devm_clk_put(dev, macsec_pdata->mgbe_clk);
 		}
@@ -1374,6 +1378,15 @@ int macsec_probe(struct ether_priv_data *pdata)
 
 	mutex_init(&pdata->macsec_pdata->lock);
 
+	/* Read MAC instance id and used in TZ api's */
+	ret = of_property_read_u32(np, "nvidia,instance_id", &macsec_pdata->id);
+	if (ret != 0) {
+		dev_info(dev,
+			 "DT instance_id missing, setting default to MGBE0\n");
+		macsec_pdata->id = 0;
+	}
+
+	osi_core->instance_id = macsec_pdata->id;
 	/* Get OSI MACsec ops */
 	if (osi_init_macsec_ops(osi_core) != 0) {
 		dev_err(dev, "osi_init_macsec_ops failed\n");

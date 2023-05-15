@@ -6452,6 +6452,7 @@ exit:
 static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 					 unsigned int *num_dma_chans,
 					 unsigned int *mac,
+					 unsigned int *macsec,
 					 unsigned int *num_mtl_queues)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -6462,6 +6463,7 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	ret = of_device_is_compatible(np, "nvidia,nveqos");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_EQOS;
+		*macsec = OSI_MACSEC_T23X;
 		max_chans = OSI_EQOS_MAX_NUM_CHANS;
 	}
 
@@ -6469,11 +6471,13 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_MGBE;
 		max_chans = OSI_MGBE_T23X_MAX_NUM_CHANS;
+		*macsec = OSI_MACSEC_T23X;
 	}
 
 	ret = of_device_is_compatible(np, "nvidia,tegra234-eqos");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_EQOS;
+		*macsec = OSI_MACSEC_T23X;
 		max_chans = OSI_EQOS_MAX_NUM_CHANS;
 	}
 
@@ -6481,10 +6485,12 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_MGBE;
 		max_chans = OSI_MGBE_T23X_MAX_NUM_CHANS;
+		*macsec = OSI_MACSEC_T23X;
 	}
 
 	if (of_device_is_compatible(np, "nvidia,tegra264-mgbe")) {
 		*mac = OSI_MAC_HW_MGBE_T26X;
+		*macsec = OSI_MACSEC_T26X;
 		max_chans = OSI_MGBE_MAX_NUM_CHANS;
 	}
 
@@ -6721,7 +6727,7 @@ static void ether_init_rss(struct ether_priv_data *pdata,
 static int ether_probe(struct platform_device *pdev)
 {
 	struct ether_priv_data *pdata;
-	unsigned int num_dma_chans, mac, num_mtl_queues, chan;
+	unsigned int num_dma_chans, mac, macsec, num_mtl_queues, chan;
 	struct osi_core_priv_data *osi_core;
 	struct osi_dma_priv_data *osi_dma;
 	struct osi_ioctl *ioctl_data;
@@ -6735,7 +6741,7 @@ static int ether_probe(struct platform_device *pdev)
 	};
 
 	ether_get_num_dma_chan_mtl_q(pdev, &num_dma_chans,
-				     &mac, &num_mtl_queues);
+				     &mac, &macsec, &num_mtl_queues);
 
 	if (mac == OSI_MAC_HW_MGBE) {
 		ret = pinctrl_pm_select_default_state(&pdev->dev);
@@ -6789,6 +6795,7 @@ static int ether_probe(struct platform_device *pdev)
 	osi_dma->num_dma_chans = num_dma_chans;
 
 	osi_core->mac = mac;
+	osi_core->macsec = macsec;
 	osi_dma->mac = mac;
 
 	osi_core->mtu = ndev->mtu;
