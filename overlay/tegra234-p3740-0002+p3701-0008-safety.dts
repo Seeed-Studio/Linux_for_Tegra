@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: GPL-2.0
+// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+
+/dts-v1/;
+/plugin/;
+
+#include "tegra234-soc-safetyservice-fsicom.dtsi"
+
+/ {
+	compatible = "nvidia,p3740-0002+p3701-0008-safety";
+
+	fragment-t234-p3740-p3701-safety@0 {
+		target-path = "/";
+		__overlay__ {
+			bus@0 {
+				hsp_top2: hsp@1600000 {
+					status = "okay";
+				};
+				spi@3230000  {
+					compatible = "nvidia,tegra186-spi-slave";
+					status = "okay";
+					spi@0 {
+						compatible = "nvidia,tegra-spidev";
+						reg = <0>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,lsbyte-first;
+						};
+					};
+				};
+			};
+		};
+	};
+
+	fragment-t234-p3740-p3701-safety@1 {
+		target-path = "/";
+		__overlay__ {
+			fsicom_client {
+				status = "okay";
+			};
+
+			safetyservices_epl_client {
+				/* userspace app uses this driver to send error code */
+				status = "okay";
+			};
+
+			FsiComIvc {
+				status = "okay";
+			};
+
+			/* FSI<->CCPLEX Communication through DRAM Carveout demo app */
+			FsiComAppChConfApp1 {
+				compatible = "nvidia,tegra-fsicom-sampleApp1";
+				status = "okay";
+				channelid_list = <3>;
+			};
+		};
+	};
+};
