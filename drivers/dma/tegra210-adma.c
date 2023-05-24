@@ -2,7 +2,7 @@
 /*
  * ADMA driver for Nvidia's Tegra210 ADMA controller.
  *
- * Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -156,6 +156,12 @@ struct tegra_adma {
 	struct clk			*ahub_clk;
 	unsigned int			nr_channels;
 	unsigned long			*dma_chan_mask;
+	/* Used in virtualization case where individual
+	 * channel page could be assigned to indivudual
+	 * guest OS. Offset is used to skip channel pages
+	 * not assigned to current guest OS
+	 */
+	unsigned int			chan_page_offset;
 	unsigned long			rx_requests_reserved;
 	unsigned long			tx_requests_reserved;
 
@@ -225,8 +231,8 @@ static int tegra_adma_init(struct tegra_adma *tdma)
 	int ret;
 
 	/* Clear any interrupts */
-	tdma_write(tdma, tdma->cdata->ch_base_offset + tdma->cdata->global_int_clear, 0x1);
-
+	tdma_write(tdma, tdma->cdata->ch_base_offset + tdma->chan_page_offset
+					+ tdma->cdata->global_int_clear, 0x1);
 	if (tdma->cdata->is_virtualized) {
 		tdma->global_cmd = 1;
 		return 0;
@@ -915,6 +921,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	if (page_base)
 		chan_page_offset = (unsigned int) (page_base->start -
 				global_base->start - cdata->ch_base_offset);
+	tdma->chan_page_offset = chan_page_offset;
 
 	tdma->dma_chan_mask = devm_kzalloc(&pdev->dev,
 					   BITS_TO_LONGS(tdma->nr_channels) * sizeof(unsigned long),
