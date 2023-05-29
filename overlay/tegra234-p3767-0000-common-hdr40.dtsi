@@ -25,14 +25,6 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&jetson_io_pinmux>;
 			jetson_io_pinmux: exp-header-pinmux {
-				hdr40-pin3 {
-					nvidia,pins = "gen8_i2c_sda_pdd2";
-					nvidia,pin-label = "i2c8";
-				};
-				hdr40-pin5 {
-					nvidia,pins = "gen8_i2c_scl_pdd1";
-					nvidia,pin-label = "i2c8";
-				};
 				hdr40-pin7 {
 					nvidia,pins = "soc_gpio59_pac6";
 					nvidia,function = "aud";
@@ -130,12 +122,6 @@
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
 					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
-				hdr40-pin27 {
-					nvidia,pins = "gen2_i2c_sda_pdd0";
-				};
-				hdr40-pin28 {
-					nvidia,pins = "gen2_i2c_scl_pcc7";
-				};
 				hdr40-pin29 {
 					nvidia,pins = "soc_gpio32_pq5";
 					nvidia,function = "extperiph3";
@@ -204,6 +190,30 @@
 					nvidia,pin-label = "i2s2_dout";
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
 					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&pinmux_aon>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux_aon>;
+			jetson_io_pinmux_aon: exp-header-pinmux {
+				hdr40-pin3 {
+					nvidia,pins = "gen8_i2c_sda_pdd2";
+					nvidia,pin-label = "i2c8";
+				};
+				hdr40-pin5 {
+					nvidia,pins = "gen8_i2c_scl_pdd1";
+					nvidia,pin-label = "i2c8";
+				};
+				hdr40-pin27 {
+					nvidia,pins = "gen2_i2c_sda_pdd0";
+				};
+				hdr40-pin28 {
+					nvidia,pins = "gen2_i2c_scl_pcc7";
 				};
 			};
 		};
