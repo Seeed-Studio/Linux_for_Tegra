@@ -18,26 +18,18 @@
 #include <soc/tegra/virt/hv-ivc.h>
 
 #define BYTES_PER_CLK_PER_CH	4
+#define CH_32			32
 #define CH_16			16
 #define CH_8			8
 #define CH_4			4
+#define CH_32_BYTES_PER_CLK	(BYTES_PER_CLK_PER_CH * CH_32)
 #define CH_16_BYTES_PER_CLK	(BYTES_PER_CLK_PER_CH * CH_16)
 #define CH_8_BYTES_PER_CLK	(BYTES_PER_CLK_PER_CH * CH_8)
 #define CH_4_BYTES_PER_CLK	(BYTES_PER_CLK_PER_CH * CH_4)
 
-/* EMC regs */
-#define MC_BASE 0x02c10000
-#define EMC_BASE 0x02c60000
-
-#define MCB_BASE 0x02c10000
-#define MCB_SIZE 0x10000
-
-#define EMC_FBIO_CFG5_0 0x100C
-#define MC_EMEM_ADR_CFG_CHANNEL_ENABLE_0 0xdf8
 #define MC_EMEM_ADR_CFG_0 0x54
 #define MC_ECC_CONTROL_0 0x1880
 
-#define CH_MASK 0xFFFF /* Change bit counting if this mask changes */
 #define CH4 0xf
 #define CH2 0x3
 
@@ -86,6 +78,9 @@ static struct mc_utils_ops *ops;
 
 static unsigned long freq_to_bw(unsigned long freq)
 {
+	if (ch_num == CH_32)
+		return freq * CH_32_BYTES_PER_CLK;
+
 	if (ch_num == CH_16)
 		return freq * CH_16_BYTES_PER_CLK;
 
@@ -98,6 +93,9 @@ static unsigned long freq_to_bw(unsigned long freq)
 
 static unsigned long bw_to_freq(unsigned long bw)
 {
+	if (ch_num == CH_32)
+		return (bw + CH_32_BYTES_PER_CLK - 1) / CH_32_BYTES_PER_CLK;
+
 	if (ch_num == CH_16)
 		return (bw + CH_16_BYTES_PER_CLK - 1) / CH_16_BYTES_PER_CLK;
 
@@ -134,6 +132,12 @@ EXPORT_SYMBOL(emc_bw_to_freq);
 static u8 get_dram_num_channels_t23x(void)
 {
 	return ch_num;
+}
+
+static u8 get_dram_num_channels_t26X(void)
+{
+	pr_err("mc_utils: %s is not supported\n", __func__);
+	return 0;
 }
 
 u8 get_dram_num_channels(void)
@@ -288,6 +292,12 @@ static enum dram_types tegra_dram_types_t23x(void)
 	return dram_type;
 }
 
+static enum dram_types tegra_dram_types_t26x(void)
+{
+	pr_err("mc_utils: %s is not supported\n", __func__);
+	return 0;
+}
+
 enum dram_types tegra_dram_types(void)
 {
 	return ops->tegra_dram_types();
@@ -335,24 +345,77 @@ static struct mc_utils_ops mc_utils_t23x_ops = {
 	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_t23x,
 };
 
+static struct mc_utils_ops mc_utils_t26x_ops = {
+	.emc_freq_to_bw = emc_freq_to_bw_t23x,
+	.emc_bw_to_freq = emc_bw_to_freq_t23x,
+	.tegra_dram_types = tegra_dram_types_t26x,
+	.get_dram_num_channels = get_dram_num_channels_t26X,
+	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_t23x,
+};
+
+static int __init tegra_mc_utils_init_t26x(void)
+{
+	u32 ch;
+	void __iomem *mcb_base;
+	u64 mcb_base_reg = 0x8108020000;
+	u64 mcb_size_reg = 0x20000;
+	u32 mc_emem_adr_cfg_channel_enable_0_reg = 0xbe04;
+	u32 channel_mask = 0xffffffff;
+
+	if (!is_tegra_hypervisor_mode()) {
+		mcb_base = ioremap(mcb_base_reg, mcb_size_reg);
+		if (!mcb_base) {
+			pr_err("Failed to ioremap\n");
+			return -ENOMEM;
+		}
+
+		ch = readl(mcb_base + mc_emem_adr_cfg_channel_enable_0_reg);
+		ch &= channel_mask;
+		iounmap(mcb_base);
+
+		while (ch) {
+			if (ch & 1)
+				ch_num++;
+			ch >>= 1;
+		}
+	} else {
+		struct device_node *np = of_find_compatible_node(NULL, NULL,
+						"nvidia,tegra-t26x-mc");
+
+		if (!np) {
+			pr_err("mc-utils: nvidia,tegra26x-mc node not found\n");
+			return -ENODEV;
+		}
+
+		ch_num = get_dram_dt_prop(np, "dram_channels");
+	}
+
+	return 0;
+}
 
 static int __init tegra_mc_utils_init_t23x(void)
 {
 	u32 dram, ch, ecc, rank;
 	void __iomem *emc_base;
 	void __iomem *mcb_base;
+	u32 emc_base_reg = 0x02c60000;
+	u32 emc_fbio_cfg5_0 = 0x100C;
+	u32 mcb_base_reg = 0x02c10000;
+	u32 mc_size_reg = 0x10000;
+	u32 mc_emem_adr_cfg_channel_enable_0_reg = 0xdf8;
+	u32 channel_mask = 0xffff;
 
 	if (!is_tegra_hypervisor_mode()) {
-		emc_base = ioremap(EMC_BASE, 0x00010000);
-		dram = readl(emc_base + EMC_FBIO_CFG5_0) & DRAM_MASK;
-		mcb_base = ioremap(MCB_BASE, MCB_SIZE);
+		emc_base = ioremap(emc_base_reg, 0x00010000);
+		dram = readl(emc_base + emc_fbio_cfg5_0) & DRAM_MASK;
+		mcb_base = ioremap(mcb_base_reg, mc_size_reg);
 		if (!mcb_base) {
 			pr_err("Failed to ioremap\n");
 			return -ENOMEM;
 		}
 
-		ch = readl(mcb_base + MC_EMEM_ADR_CFG_CHANNEL_ENABLE_0);
-		ch &= CH_MASK;
+		ch = readl(mcb_base + mc_emem_adr_cfg_channel_enable_0_reg);
+		ch &= channel_mask;
 		ecc = readl(mcb_base + MC_ECC_CONTROL_0) & ECC_MASK;
 
 		rank = readl(mcb_base + MC_EMEM_ADR_CFG_0) & RANK_MASK;
@@ -369,7 +432,7 @@ static int __init tegra_mc_utils_init_t23x(void)
 		struct device_node *np = of_find_compatible_node(NULL, NULL, "nvidia,tegra234-mc");
 
 		if (!np) {
-			pr_err("mc-utils: Not able to find MC DT node\n");
+			pr_err("mc-utils: nvidia,tegra234-mc node not found \n");
 			return -ENODEV;
 		}
 
@@ -396,6 +459,11 @@ static int __init tegra_mc_utils_init(void)
 	if (of_machine_is_compatible("nvidia,tegra234")) {
 		ops = &mc_utils_t23x_ops;
 		return tegra_mc_utils_init_t23x();
+	}
+
+	if (of_machine_is_compatible("nvidia,tegra264")) {
+		ops = &mc_utils_t26x_ops;
+		return tegra_mc_utils_init_t26x();
 	}
 	pr_err("mc-utils: Not able to find SOC DT node\n");
 	return -ENODEV;
