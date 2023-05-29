@@ -22,14 +22,6 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&jetson_io_pinmux>;
 			jetson_io_pinmux: exp-header-pinmux {
-				hdr40-pin3 {
-					nvidia,pins = "gen8_i2c_scl_pdd1";
-					nvidia,pin-label = "i2c8";
-				};
-				hdr40-pin5 {
-					nvidia,pins = "gen8_i2c_sda_pdd2";
-					nvidia,pin-label = "i2c8";
-				};
 				hdr40-pin7 {
 					nvidia,pins = "soc_gpio33_pq6";
 					nvidia,function = "extperiph4";
@@ -70,20 +62,6 @@
 					nvidia,pin-group = "pwm1";
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
 					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-				hdr40-pin16a {
-					nvidia,pins = "can1_en_pbb1";
-					nvidia,function = "dmic3";
-					nvidia,pin-label = "dmic3_dat";
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				};
-				hdr40-pin16b {
-					nvidia,pins = "can1_en_pbb1";
-					nvidia,function = "dmic5";
-					nvidia,pin-label = "dmic5_dat";
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin18 {
 					nvidia,pins = "soc_gpio21_ph0";
@@ -127,6 +105,66 @@
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
 					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
+				hdr40-pin35 {
+					nvidia,pins = "soc_gpio44_pi2";
+					nvidia,function = "i2s2";
+					nvidia,pin-label = "i2s2_fs";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+				hdr40-pin36 {
+					nvidia,pins = "uart1_cts_pr5";
+					nvidia,function = "uarta";
+					nvidia,pin-group = "uarta-cts/rts";
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+				hdr40-pin38 {
+					nvidia,pins = "soc_gpio43_pi1";
+					nvidia,function = "i2s2";
+					nvidia,pin-label = "i2s2_din";
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+				hdr40-pin40 {
+					nvidia,pins = "soc_gpio42_pi0";
+					nvidia,function = "i2s2";
+					nvidia,pin-label = "i2s2_dout";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&pinmux_aon>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux_aon>;
+			jetson_io_pinmux_aon: exp-header-pinmux {
+				hdr40-pin3 {
+					nvidia,pins = "gen8_i2c_scl_pdd1";
+					nvidia,pin-label = "i2c8";
+				};
+				hdr40-pin5 {
+					nvidia,pins = "gen8_i2c_sda_pdd2";
+					nvidia,pin-label = "i2c8";
+				};
+				hdr40-pin16a {
+					nvidia,pins = "can1_en_pbb1";
+					nvidia,function = "dmic3";
+					nvidia,pin-label = "dmic3_dat";
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+				hdr40-pin16b {
+					nvidia,pins = "can1_en_pbb1";
+					nvidia,function = "dmic5";
+					nvidia,pin-label = "dmic5_dat";
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
 				hdr40-pin27 {
 					nvidia,pins = "gen2_i2c_sda_pdd0";
 				};
@@ -168,40 +206,12 @@
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
 					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 				};
-				hdr40-pin35 {
-					nvidia,pins = "soc_gpio44_pi2";
-					nvidia,function = "i2s2";
-					nvidia,pin-label = "i2s2_fs";
-					nvidia,tristate = <TEGRA_PIN_DISABLE>;
-					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				};
-				hdr40-pin36 {
-					nvidia,pins = "uart1_cts_pr5";
-					nvidia,function = "uarta";
-					nvidia,pin-group = "uarta-cts/rts";
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				};
 				hdr40-pin37 {
 					nvidia,pins = "can1_din_paa3";
 					nvidia,function = "can1";
 					nvidia,pin-label = "can1_din";
 					nvidia,tristate = <TEGRA_PIN_ENABLE>;
 					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				};
-				hdr40-pin38 {
-					nvidia,pins = "soc_gpio43_pi1";
-					nvidia,function = "i2s2";
-					nvidia,pin-label = "i2s2_din";
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				};
-				hdr40-pin40 {
-					nvidia,pins = "soc_gpio42_pi0";
-					nvidia,function = "i2s2";
-					nvidia,pin-label = "i2s2_dout";
-					nvidia,tristate = <TEGRA_PIN_DISABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 				};
 			};
 		};
