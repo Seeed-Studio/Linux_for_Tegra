@@ -60,6 +60,10 @@
 				nvidia,trace = <&rtcpu_trace 4 0x70100000 0x100000>;
 				nvidia,ivc-channels = <&camera_ivc_channels 2 0x90000000 0x10000>;
 
+				interconnects = <&mc TEGRA234_MEMORY_CLIENT_RCER &emc>,
+						<&mc TEGRA234_MEMORY_CLIENT_RCEW &emc>;
+				interconnect-names = "dma-mem", "write";
+
 				nvidia,autosuspend-delay-ms = <5000>;
 				status = "okay";
 
