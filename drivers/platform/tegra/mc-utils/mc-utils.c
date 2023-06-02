@@ -161,6 +161,32 @@ static unsigned long dram_clk_to_mc_clk_t23x(unsigned long dram_clk)
 	return mc_clk;
 }
 
+static unsigned long dram_clk_to_mc_clk_t26x(unsigned long dram_clk)
+{
+	u64 top_car_base_reg = 0x8102000000;
+	u64 top_car_size_reg = 0x8103ffffff;
+	void __iomem *clk_rst_base = NULL;
+	u32 clk_rst_clk_source_emcsa_0 = 0x102000;
+	u32 mc_emc_freq_same = 4, clk_info = 0;
+	unsigned long mc_clk;
+
+	clk_rst_base = ioremap(top_car_base_reg, top_car_size_reg);
+	if (!clk_rst_base) {
+		pr_err("Failed to ioremap clk rst\n");
+		return 0;
+	}
+
+	clk_info = readl(clk_rst_base + clk_rst_clk_source_emcsa_0);
+	mc_emc_freq_same = clk_info >> 16 & 0x1;
+	if (mc_emc_freq_same == 1)
+		mc_clk = dram_clk / 4;
+	else
+		mc_clk = dram_clk / 8;
+
+	iounmap(clk_rst_base);
+	return mc_clk;
+}
+
 unsigned long dram_clk_to_mc_clk(unsigned long dram_clk)
 {
 	return ops->dram_clk_to_mc_clk(dram_clk);
@@ -350,7 +376,7 @@ static struct mc_utils_ops mc_utils_t26x_ops = {
 	.emc_bw_to_freq = emc_bw_to_freq_t23x,
 	.tegra_dram_types = tegra_dram_types_t26x,
 	.get_dram_num_channels = get_dram_num_channels_t26X,
-	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_t23x,
+	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_t26x,
 };
 
 static int __init tegra_mc_utils_init_t26x(void)
