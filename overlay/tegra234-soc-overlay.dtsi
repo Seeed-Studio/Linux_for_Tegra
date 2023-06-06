@@ -150,15 +150,11 @@
 				};
 
 				serial@3110000 {
-					compatible = "nvidia,tegra194-hsuart";
+					compatible = "nvidia,tegra234-uart", "nvidia,tegra20-uart";
 					reg = <0x0 0x03110000 0x0 0x10000>;
-					reg-shift = <2>;
-					interrupts = <0 113 0x04>;
-					clocks = <&bpmp TEGRA234_CLK_UARTB>,
-						 <&bpmp TEGRA234_CLK_PLLP_OUT0>;
-					clock-names = "serial", "parent";
+					interrupts = <GIC_SPI TEGRA234_IRQ_UARTB IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&bpmp TEGRA234_CLK_UARTB>;
 					resets = <&bpmp TEGRA234_RESET_UARTB>;
-					reset-names = "serial";
 					status = "disabled";
 				};
 

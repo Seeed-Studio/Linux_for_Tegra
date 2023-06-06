@@ -83,6 +83,8 @@
 				};
 
 				serial@3110000 {
+					compatible = "nvidia,tegra194-hsuart";
+					reset-names = "serial";
 					status = "okay";
 				};
 
