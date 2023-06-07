@@ -590,6 +590,7 @@ static int macsec_dis_rx_sa(struct sk_buff *skb, struct genl_info *info)
 		rx_sa.curr_an, rx_sa.next_pn);
 	dev_info(dev, "\tkey: " KEYSTR, KEY2STR(rx_sa.sak));
 
+	rx_sa.vlan_in_clear = macsec_pdata->vlan_in_clear;
 	mutex_lock(&macsec_pdata->lock);
 	ret = osi_macsec_config(pdata->osi_core, &rx_sa, OSI_DISABLE,
 				OSI_CTLR_SEL_RX, &kt_idx);
@@ -696,6 +697,7 @@ static int macsec_create_rx_sa(struct sk_buff *skb, struct genl_info *info)
 	}
 
 	rx_sa.pn_window = macsec_pdata->pn_window;
+	rx_sa.vlan_in_clear = macsec_pdata->vlan_in_clear;
 	dev_info(dev, "%s:\n"
 		"\tsci: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n"
 		"\tan: %u\n"
@@ -788,6 +790,7 @@ static int macsec_en_rx_sa(struct sk_buff *skb, struct genl_info *info)
 	}
 
 	rx_sa.pn_window = macsec_pdata->pn_window;
+	rx_sa.vlan_in_clear = macsec_pdata->vlan_in_clear;
 	rx_sa.flags = OSI_ENABLE_SA;
 	mutex_lock(&macsec_pdata->lock);
 	ret = osi_macsec_config(pdata->osi_core, &rx_sa, OSI_ENABLE,
@@ -854,6 +857,7 @@ static int macsec_dis_tx_sa(struct sk_buff *skb, struct genl_info *info)
 		tx_sa.curr_an, tx_sa.next_pn);
 	dev_info(dev, "\tkey: " KEYSTR, KEY2STR(tx_sa.sak));
 
+	tx_sa.vlan_in_clear = macsec_pdata->vlan_in_clear;
 	mutex_lock(&macsec_pdata->lock);
 	ret = osi_macsec_config(pdata->osi_core, &tx_sa, OSI_DISABLE,
 				OSI_CTLR_SEL_TX, &kt_idx);
@@ -927,6 +931,7 @@ static int macsec_create_tx_sa(struct sk_buff *skb, struct genl_info *info)
 	}
 
 	tx_sa.pn_window = macsec_pdata->pn_window;
+	tx_sa.vlan_in_clear = macsec_pdata->vlan_in_clear;
 	dev_info(dev, "%s:\n"
 		"\tsci: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n"
 		"\tan: %u\n"
@@ -1018,6 +1023,7 @@ static int macsec_en_tx_sa(struct sk_buff *skb, struct genl_info *info)
 
 	tx_sa.pn_window = macsec_pdata->pn_window;
 	tx_sa.flags = OSI_ENABLE_SA;
+	tx_sa.vlan_in_clear = macsec_pdata->vlan_in_clear;
 	mutex_lock(&macsec_pdata->lock);
 	ret = osi_macsec_config(pdata->osi_core, &tx_sa, OSI_ENABLE,
 				OSI_CTLR_SEL_TX, &kt_idx);
@@ -1399,6 +1405,14 @@ int macsec_probe(struct ether_priv_data *pdata)
 			 "macsec parameter is missing or disabled\n");
 		ret = 1;
 		goto init_err;
+	}
+
+	ret = of_property_read_u32(np, "nvidia,macsec_vlan_in_clear",
+				   &macsec_pdata->vlan_in_clear);
+	if (ret != 0) {
+		dev_info(dev,
+			 "DT info about vlan in clear is missing setting default-disabled\n");
+		macsec_pdata->vlan_in_clear = OSI_DISABLE;
 	}
 
 	mutex_init(&pdata->macsec_pdata->lock);

@@ -257,6 +257,8 @@ struct macsec_priv_data {
         unsigned int id;
 	/** Macsec enable flag in DT */
 	unsigned int is_macsec_enabled_in_dt;
+	/** Macsec vlan in clear is enabled in DT */
+	unsigned int vlan_in_clear;
 	/** Context family name  */
 	struct genl_family nv_macsec_fam;
 	/** Flag to check if nv macsec nl registered */
