@@ -19,6 +19,11 @@
 	fragment-t234-soc@0 {
 		target-path = "/";
 		 __overlay__ {
+			aliases {
+				nvdla0 = "/bus@0/host1x@13e00000/nvdla0@15880000";
+				nvdla1 = "/bus@0/host1x@13e00000/nvdla1@158c0000";
+			};
+
 			bus@0 {
 				actmon@d230000 {
 					compatible = "nvidia,tegra234-cactmon-mc-all";
