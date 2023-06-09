@@ -61,4 +61,43 @@
 			};
 		};
 	};
+
+	/* For Orin Nano SKUs, reduce PCIe speed to Gen3 */
+	p3767-sku-handling-fragment@5 {
+		target-path = "/bus@0";
+		board_config {
+			ids = "3767-0003-*", "3767-0004-*", "3767-0005-*";
+		};
+		__overlay__ {
+			/* C1 */
+			pcie@14100000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C4 */
+			pcie@14160000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C4 End Point */
+			pcie_ep@14160000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C7 */
+			pcie@141e0000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C8 */
+			pcie@140a0000 {
+				max-link-speed = <0x3>;
+			};
+
+			/* C9 */
+			pcie@140c0000 {
+				max-link-speed = <0x3>;
+			};
+		};
+	};
 };
