@@ -11,6 +11,7 @@
 #include "tegra234-soc-audio-dai-links.dtsi"
 #include "tegra234-soc-camera.dtsi"
 #include "tegra234-p3737-0000.dtsi"
+#include "tegra234-p3737-0000-camera-imx274-dual.dtsi"
 #include "tegra234-p3701-0000.dtsi"
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 
