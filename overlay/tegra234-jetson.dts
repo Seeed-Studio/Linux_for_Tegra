@@ -21,17 +21,17 @@
 	fragment@0 {
 		target-path = "/bus@0/host1x@13e00000";
 		__overlay__ {
-			#address-cells = <1>;
-			#size-cells = <1>;
+			#address-cells = <2>;
+			#size-cells = <2>;
 
 			interrupt-parent = <&gic>;
 
-			ranges = <0x14800000 0x14800000 0x02000000>,
-				 <0x24700000 0x24700000 0x00080000>;
+			ranges = <0x0 0x14800000 0x0 0x14800000 0x0 0x02000000>,
+				 <0x0 0x24700000 0x0 0x24700000 0x0 0x00080000>;
 
 			nvjpg@15380000 {
 				compatible = "nvidia,tegra234-nvjpg";
-				reg = <0x15380000 0x00040000>;
+				reg = <0x0 0x15380000 0x0 0x00040000>;
 				clocks = <&bpmp TEGRA234_CLK_NVJPG>;
 				clock-names = "nvjpg";
 				resets = <&bpmp TEGRA234_RESET_NVJPG>;
@@ -49,7 +49,7 @@
 
 			nvdec@15480000 {
 				compatible = "nvidia,tegra234-nvdec";
-				reg = <0x15480000 0x00040000>;
+				reg = <0x0 0x15480000 0x0 0x00040000>;
 				clocks = <&bpmp TEGRA234_CLK_NVDEC>,
 				         <&bpmp TEGRA234_CLK_FUSE>,
 				         <&bpmp TEGRA234_CLK_TSEC_PKA>;
@@ -69,7 +69,7 @@
 
 			nvenc@154c0000 {
 				compatible = "nvidia,tegra234-nvenc";
-				reg = <0x154c0000 0x00040000>;
+				reg = <0x0 0x154c0000 0x0 0x00040000>;
 				clocks = <&bpmp TEGRA234_CLK_NVENC>;
 				clock-names = "nvenc";
 				resets = <&bpmp TEGRA234_RESET_NVENC>;
@@ -85,7 +85,7 @@
 
 			nvjpg@15540000 {
 				compatible = "nvidia,tegra234-nvjpg";
-				reg = <0x15540000 0x00040000>;
+				reg = <0x0 0x15540000 0x0 0x00040000>;
 				clocks = <&bpmp TEGRA234_CLK_NVJPG1>;
 				clock-names = "nvjpg";
 				resets = <&bpmp TEGRA234_RESET_NVJPG1>;
@@ -104,7 +104,7 @@
 			nvdla0: nvdla0@15880000 {
 				compatible = "nvidia,tegra234-nvdla";
 				power-domains = <&bpmp TEGRA234_POWER_DOMAIN_DLAA>;
-				reg = <0x15880000 0x00040000>;
+				reg = <0x0 0x15880000 0x0 0x00040000>;
 				interrupts = <GIC_SPI 236 IRQ_TYPE_LEVEL_HIGH>;
 
 				resets = <&bpmp TEGRA234_RESET_DLA0>;
@@ -125,7 +125,7 @@
 			nvdla1: nvdla1@158c0000 {
 				compatible = "nvidia,tegra234-nvdla";
 				power-domains = <&bpmp TEGRA234_POWER_DOMAIN_DLAB>;
-				reg = <0x158c0000 0x00040000>;
+				reg = <0x0 0x158c0000 0x0 0x00040000>;
 				interrupts = <GIC_SPI 237 IRQ_TYPE_LEVEL_HIGH>;
 
 				resets = <&bpmp TEGRA234_RESET_DLA1>;
@@ -145,7 +145,7 @@
 
 			ofa@15a50000 {
 				compatible = "nvidia,tegra234-ofa";
-				reg = <0x15a50000 0x00040000>;
+				reg = <0x0 0x15a50000 0x0 0x00040000>;
 				clocks = <&bpmp TEGRA234_CLK_OFA>;
 				clock-names = "ofa";
 				resets = <&bpmp TEGRA234_RESET_OFA>;
@@ -162,8 +162,8 @@
 			pva0: pva0@16000000 {
 				compatible = "nvidia,tegra234-pva";
 				power-domains = <&bpmp TEGRA234_POWER_DOMAIN_PVA>;
-				reg = <0x16000000 0x800000>,
-				      <0x24700000 0x080000>;
+				reg = <0x0 0x16000000 0x0 0x800000>,
+				      <0x0 0x24700000 0x0 0x080000>;
 				interrupts = <0 234 0x04>,
 					<0 432 0x04>,
 					<0 433 0x04>,
@@ -245,14 +245,11 @@
 	fragment@1 {
 		target-path = "/bus@0";
 		__overlay__ {
-			#address-cells = <1>;
-			#size-cells = <1>;
-
 			gpu@17000000 {
 				compatible = "nvidia,ga10b";
-				reg = <0x17000000 0x01000000>,
-				      <0x18000000 0x01000000>,
-				      <0x03b41000 0x00001000>;
+				reg = <0x0 0x17000000 0x0 0x01000000>,
+				      <0x0 0x18000000 0x0 0x01000000>,
+				      <0x0 0x03b41000 0x0 0x00001000>;
 				interrupt-parent = <&gic>;
 				interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>,
 					     <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>,
@@ -274,7 +271,7 @@
 
 			tachometer@39c0000 {
 				compatible = "nvidia,pwm-tegra234-tachometer";
-				reg = <0x039c0000 0x10>;
+				reg = <0x0 0x039c0000 0x0 0x10>;
 				interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>;
 				#pwm-cells = <2>;
 				clocks = <&bpmp TEGRA234_CLK_TACH0>;
