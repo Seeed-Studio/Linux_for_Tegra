@@ -92,6 +92,10 @@
 						spi-rx-bus-width = <1>;
 					};
 				};
+
+				gpu@17000000 {
+					status = "okay";
+				};
 			};
 
 			bpmp {
