@@ -140,6 +140,27 @@
 				};
 			};
 
+			opp-table-cluster0 {
+				opp-1971200000 {
+					opp-hz = /bits/ 64 <1971200000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+
+			opp-table-cluster1 {
+				opp-1971200000 {
+					opp-hz = /bits/ 64 <1971200000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+
+			opp-table-cluster2 {
+				opp-1971200000 {
+					opp-hz = /bits/ 64 <1971200000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+
 			thermal-zones {
 				tboard-thermal {
 					polling-delay = <1000>;

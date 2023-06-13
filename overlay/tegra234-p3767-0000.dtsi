@@ -28,6 +28,27 @@
 				nvidia,tegra-joint_xpu_rail;
 			};
 
+			opp-table-cluster0 {
+				opp-1984000000 {
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+
+			opp-table-cluster1 {
+				opp-1984000000 {
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+
+			opp-table-cluster2 {
+				opp-1984000000 {
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+
 			reserved-memory {
 				linux,cma { /* Needed for nvgpu comptags */
 					compatible = "shared-dma-pool";
