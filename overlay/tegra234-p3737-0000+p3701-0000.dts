@@ -340,3 +340,11 @@
 		};
 	};
 };
+
+/*
+ * Include this file last in the device tree.  It manages run-time
+ * pruning of peripherals that are not available across the various
+ * SKUs of p3701.  For example PVA can be enabled in the device tree
+ * and it will automatically be disabled for SKUs without PVA support.
+ */
+#include "tegra234-p3701-sku-handling.dtsi"

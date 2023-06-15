@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/ {
+	p3701-sku-handling-fragment@0 {
+		target-path = "/";
+		board_config {
+			ids = "3701-0004-*";
+		};
+		__overlay__ {
+			compatible = "nvidia,p3737-0000+p3701-0004", "nvidia,p3701-0004", "nvidia,tegra234", "nvidia,tegra23x";
+		};
+	};
+
+	p3701-sku-handling-fragment@1 {
+		target-path = "/";
+		board_config {
+			ids = "3701-0005-*";
+		};
+		__overlay__ {
+			compatible = "nvidia,p3737-0000+p3701-0005", "nvidia,p3701-0005", "nvidia,tegra234", "nvidia,tegra23x";
+		};
+	};
+};
