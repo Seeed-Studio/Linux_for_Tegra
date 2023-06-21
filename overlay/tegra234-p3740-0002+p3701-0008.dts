@@ -31,6 +31,10 @@
 				};
 			};
 
+			nvpmodel {
+				status = "okay";
+			};
+
 			soctherm-oc-event {
 				status = "okay";
 			};
