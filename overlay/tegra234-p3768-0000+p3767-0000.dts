@@ -181,6 +181,10 @@
 				status = "okay";
 			};
 
+			soctherm-oc-event {
+				status = "okay";
+			};
+
 			bpmp {
 				thermal {
 					status = "okay";
