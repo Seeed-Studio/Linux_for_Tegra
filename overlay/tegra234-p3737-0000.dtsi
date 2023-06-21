@@ -6,6 +6,32 @@
 		target-path = "/";
 		__overlay__ {
 			bus@0 {
+				spi@3210000{ /* SPI1 in 40 pin conn */
+					spi@0 { /* chip select 0 */
+						compatible = "tegra-spidev";
+						reg = <0x0>;
+						spi-max-frequency = <50000000>;
+					};
+					spi@1 { /* chips select 1 */
+						compatible = "tegra-spidev";
+						reg = <0x1>;
+						spi-max-frequency = <50000000>;
+					};
+				};
+
+				spi@3230000{ /* SPI3 in 40 pin conn */
+					spi@0 { /* chip select 0 */
+						compatible = "tegra-spidev";
+						reg = <0x0>;
+						spi-max-frequency = <50000000>;
+					};
+					spi@1 { /* chips select 1 */
+						compatible = "tegra-spidev";
+						reg = <0x1>;
+						spi-max-frequency = <50000000>;
+					};
+				};
+
 				padctl@3520000 {
 					ports {
 						usb2-0 {
