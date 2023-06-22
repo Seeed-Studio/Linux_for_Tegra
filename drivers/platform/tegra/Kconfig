@@ -37,3 +37,9 @@ config TEGRA_HSIERRRPTINJ
 	  from T23x to the MCU communications interface.
 
 endif # TEGRA_PLATFORM_DEVICES
+
+config TEGRA_PROD_LEGACY
+	def_bool y
+	help
+	  This config helps client driver to identify whether prod
+	  framework is implemented as legacy method or not.
