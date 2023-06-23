@@ -16,8 +16,6 @@
 #define GYRO1_IRQ_GPIO  TEGRA234_AON_GPIO(CC, 1)
 #define ACCE1_IRQ_GPIO  TEGRA234_AON_GPIO(CC, 0)
 
-#define CAMERA_I2C_MUX_BUS(x) (0x1E + x)
-
 /* camera control gpio definitions */
 / {
 	overlay-name = "Jetson Camera Hawk-Owl p3783 module";

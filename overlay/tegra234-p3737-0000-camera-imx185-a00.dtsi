@@ -6,7 +6,6 @@
 #include <dt-bindings/gpio/tegra234-gpio.h>
 
 #define CAM0_RST_L	TEGRA234_MAIN_GPIO(H, 3)
-#define CAMERA_I2C_MUX_BUS(x) (0x1E + x)
 
 /* camera control gpio definitions */
 
@@ -30,7 +29,6 @@
 					#address-cells = <1>;
 					#size-cells = <0>;
 					skip_mux_detect = "yes";
-					force_bus_start = <CAMERA_I2C_MUX_BUS(0)>;
 
 					i2c@0 {
 						reg = <0>;
