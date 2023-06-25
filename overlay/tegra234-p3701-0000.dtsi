@@ -39,7 +39,7 @@
 						#io-channel-cells = <1>;
 						channel@0 {
 							reg = <0x0>;
-							label = "NC";
+							status = "disabled";
 						};
 						channel@1 {
 							reg = <0x1>;
@@ -48,7 +48,7 @@
 						};
 						channel@2 {
 							reg = <0x2>;
-							label = "NC";
+							status = "disabled";
 						};
 					};
 				};
