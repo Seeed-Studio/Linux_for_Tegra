@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -12,6 +12,7 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/slab.h>
+#include <linux/tegra_prod.h>
 
 #include <soc/tegra/fuse.h>
 
@@ -237,6 +238,24 @@
 #define   DATA0_VAL_PD				BIT(1)
 #define   USE_XUSB_AO				BIT(4)
 
+/* Prod fields */
+#define USB2_OTG_PADX_CTL0_LS_RSLEW_FIELD_START		17
+#define USB2_OTG_PADX_CTL0_LS_RSLEW_FIELD_WIDTH		4
+#define USB2_OTG_PADX_CTL0_LS_FSLEW_FIELD_START		21
+#define USB2_OTG_PADX_CTL0_LS_FSLEW_FIELD_WIDTH		4
+
+#define USB2_OTG_PADX_CTL3_HS_TXEQ_FIELD_START		1
+#define USB2_OTG_PADX_CTL3_HS_TXEQ_FIELD_WIDTH		3
+
+#define USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_FIELD_START		3
+#define USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_FIELD_WIDTH		3
+#define USB2_BIAS_PAD_CTL1_TRK_START_TIMER_FIELD_START		12
+#define USB2_BIAS_PAD_CTL1_TRK_START_TIMER_FIELD_WIDTH		7
+#define USB2_BIAS_PAD_CTL1_TRK_DONE_RESET_TIMER_FIELD_START	19
+#define USB2_BIAS_PAD_CTL1_TRK_DONE_RESET_TIMER_FIELD_WIDTH	7
+
+#define XUSB_PADCTL_USB2_OTG_PADX_CTL3(x)		(0x94 + (x) * 0x40)
+
 #define TEGRA186_LANE(_name, _offset, _shift, _mask, _type)		\
 	{								\
 		.name = _name,						\
@@ -265,6 +284,8 @@ struct tegra186_xusb_padctl {
 	struct tegra_xusb_padctl base;
 	void __iomem *ao_regs;
 
+	/* prod settings */
+	struct tegra_prod *prod_list;
 	struct tegra_xusb_fuse_calibration calib;
 
 	/* UTMI bias and tracking */
@@ -864,6 +885,14 @@ static int tegra186_utmi_phy_set_mode(struct phy *phy, enum phy_mode mode,
 	return err;
 }
 
+static int tegra186_utmi_write_prod_settings(struct tegra_xusb_padctl *padctl,
+					     const char *prod_name)
+{
+	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
+
+	return tegra_prod_set_by_name(&padctl->regs, prod_name, priv->prod_list);
+}
+
 static int tegra186_utmi_phy_power_on(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
@@ -879,6 +908,12 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	if (!port) {
 		dev_err(dev, "no port found for USB2 lane %u\n", index);
 		return -ENODEV;
+	}
+
+	if (priv->prod_list) {
+		int err = tegra186_utmi_write_prod_settings(padctl, "prod");
+		if (err)
+			dev_dbg(dev, "failed to apply prod settings\n");
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
@@ -1521,6 +1556,12 @@ tegra186_xusb_padctl_probe(struct device *dev,
 		err = tegra186_xusb_read_fuse_calibration(priv);
 		if (err < 0)
 			return ERR_PTR(err);
+	}
+
+	priv->prod_list = devm_tegra_prod_get(dev);
+	if (IS_ERR_OR_NULL(priv->prod_list)) {
+		dev_dbg(dev, "Prod-settings is not available\n");
+		priv->prod_list = NULL;
 	}
 
 	return &priv->base;

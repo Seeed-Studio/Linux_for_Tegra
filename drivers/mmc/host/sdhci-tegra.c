@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2010 Google, Inc.
+ * Copyright (C) 2013 Google, Inc.
  */
 
 #include <linux/bitfield.h>
@@ -29,6 +29,7 @@
 
 #include <soc/tegra/common.h>
 #include <soc/tegra/fuse.h>
+#include <linux/tegra_prod.h>
 
 #include "sdhci-cqhci.h"
 #include "sdhci-pltfm.h"
@@ -38,21 +39,28 @@
 #define SDHCI_TEGRA_VENDOR_CLOCK_CTRL			0x100
 #define SDHCI_CLOCK_CTRL_TAP_MASK			0x00ff0000
 #define SDHCI_CLOCK_CTRL_TAP_SHIFT			16
+#define SDHCI_CLOCK_CTRL_TAP_WIDTH			8
 #define SDHCI_CLOCK_CTRL_TRIM_MASK			0x1f000000
 #define SDHCI_CLOCK_CTRL_TRIM_SHIFT			24
+#define SDHCI_CLOCK_CTRL_TRIM_WIDTH			5
 #define SDHCI_CLOCK_CTRL_SDR50_TUNING_OVERRIDE		BIT(5)
 #define SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE		BIT(3)
 #define SDHCI_CLOCK_CTRL_SPI_MODE_CLKEN_OVERRIDE	BIT(2)
 
 #define SDHCI_TEGRA_VENDOR_SYS_SW_CTRL			0x104
 #define SDHCI_TEGRA_SYS_SW_CTRL_ENHANCED_STROBE		BIT(31)
+#define SDHCI_TEGRA_SYS_SW_CTRL_ENHANCED_STROBE_SHIFT	31
+#define SDHCI_TEGRA_SYS_SW_CTRL_ENHANCED_STROBE_WIDTH	1
 
 #define SDHCI_TEGRA_VENDOR_CAP_OVERRIDES		0x10c
 #define SDHCI_TEGRA_CAP_OVERRIDES_DQS_TRIM_MASK		0x00003f00
 #define SDHCI_TEGRA_CAP_OVERRIDES_DQS_TRIM_SHIFT	8
+#define SDHCI_TEGRA_CAP_OVERRIDES_DQS_TRIM_WIDTH	6
 
 #define SDHCI_TEGRA_VENDOR_MISC_CTRL			0x120
 #define SDHCI_MISC_CTRL_ERASE_TIMEOUT_LIMIT		BIT(0)
+#define SDHCI_MISC_CTRL_ERASE_TIMEOUT_LIMIT_SHIFT	0
+#define SDHCI_MISC_CTRL_ERASE_TIMEOUT_LIMIT_WIDTH	1
 #define SDHCI_MISC_CTRL_ENABLE_SDR104			0x8
 #define SDHCI_MISC_CTRL_ENABLE_SDR50			0x10
 #define SDHCI_MISC_CTRL_ENABLE_SDHCI_SPEC_300		0x20
@@ -65,6 +73,8 @@
 #define SDHCI_TEGRA_DLLCAL_STA_ACTIVE			BIT(31)
 
 #define SDHCI_VNDR_TUN_CTRL0_0				0x1c0
+#define SDHCI_VNDR_TUN_CTRL0_CMD_CRC_ERR_EN_SHIFT	28
+#define SDHCI_VNDR_TUN_CTRL0_CMD_CRC_ERR_EN_WIDTH	1
 #define SDHCI_VNDR_TUN_CTRL0_TUN_HW_TAP			0x20000
 #define SDHCI_VNDR_TUN_CTRL0_START_TAP_VAL_MASK		0x03fc0000
 #define SDHCI_VNDR_TUN_CTRL0_START_TAP_VAL_SHIFT	18
@@ -72,9 +82,12 @@
 #define SDHCI_VNDR_TUN_CTRL0_MUL_M_SHIFT		6
 #define SDHCI_VNDR_TUN_CTRL0_TUN_ITER_MASK		0x000e000
 #define SDHCI_VNDR_TUN_CTRL0_TUN_ITER_SHIFT		13
+#define SDHCI_VNDR_TUN_CTRL0_TUN_ITER_WIDTH		3
 #define TRIES_128					2
 #define TRIES_256					4
 #define SDHCI_VNDR_TUN_CTRL0_TUN_WORD_SEL_MASK		0x7
+#define SDHCI_VNDR_TUN_CTRL0_DIV_N_SHIFT		3
+#define SDHCI_VNDR_TUN_CTRL0_DIV_N_WIDTH		3
 
 #define SDHCI_TEGRA_VNDR_TUN_CTRL1_0			0x1c4
 #define SDHCI_TEGRA_VNDR_TUN_STATUS0			0x1C8
@@ -135,6 +148,20 @@
 					 SDHCI_TRNS_BLK_CNT_EN | \
 					 SDHCI_TRNS_DMA)
 
+static char prod_device_states[MMC_TIMING_COUNTER][20] = {
+	"prod_c_ds", /* MMC_TIMING_LEGACY */
+	"prod_c_hs", /* MMC_TIMING_MMC_HS */
+	"prod_c_hs", /* MMC_TIMING_SD_HS */
+	"prod_c_sdr12", /* MMC_TIMING_UHS_SDR12 */
+	"prod_c_sdr25", /* MMC_TIMING_UHS_SDR25 */
+	"prod_c_sdr50", /* MMC_TIMING_UHS_SDR50 */
+	"prod_c_sdr104", /* MMC_TIMING_UHS_SDR104 */
+	"prod_c_ddr52", /* MMC_TIMING_UHS_DDR50 */
+	"prod_c_ddr52", /* MMC_TIMING_MMC_DDR52 */
+	"prod_c_hs200", /* MMC_TIMING_MMC_HS200 */
+	"prod_c_hs400", /* MMC_TIMING_MMC_HS400 */
+};
+
 struct sdhci_tegra_soc_data {
 	const struct sdhci_pltfm_data *pdata;
 	u64 dma_mask;
@@ -185,6 +212,7 @@ struct sdhci_tegra {
 	u8 tuned_tap_delay;
 	u32 stream_id;
 	bool skip_clk_rst;
+	struct tegra_prod *prod_list;
 };
 
 static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
@@ -372,6 +400,19 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap)
 	}
 }
 
+static void tegra_sdhci_write_prod_settings(struct sdhci_host *host,
+					    const char *prod_name)
+{
+	int err;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+
+	err = tegra_prod_set_by_name(&host->ioaddr, prod_name, tegra_host->prod_list);
+	if (err < 0)
+		dev_dbg_once(mmc_dev(host->mmc),
+			     "Prod config not found for SDHCI: %d\n", err);
+}
+
 static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
@@ -383,6 +424,9 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 
 	if (!(mask & SDHCI_RESET_ALL))
 		return;
+
+	if (tegra_get_platform() == TEGRA_PLATFORM_SILICON)
+		tegra_sdhci_write_prod_settings(host, "prod");
 
 	tegra_sdhci_set_tap(host, tegra_host->default_tap);
 
@@ -1028,6 +1072,7 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 	bool set_default_tap = false;
 	bool set_dqs_trim = false;
 	bool do_hs400_dll_cal = false;
+	bool set_padpipe_clk_override = false;
 	u8 iter = TRIES_256;
 	u32 val;
 
@@ -1044,6 +1089,7 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 		set_dqs_trim = true;
 		do_hs400_dll_cal = true;
 		iter = TRIES_128;
+		set_padpipe_clk_override = true;
 		break;
 	case MMC_TIMING_MMC_DDR52:
 	case MMC_TIMING_UHS_DDR50:
@@ -1076,6 +1122,11 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 	else
 		tegra_sdhci_set_tap(host, tegra_host->default_tap);
 
+	/*set padpipe_clk_override*/
+	if (set_padpipe_clk_override) {
+		tegra_sdhci_write_prod_settings(host,
+						prod_device_states[timing]);
+	}
 	if (set_dqs_trim)
 		tegra_sdhci_set_dqs_trim(host, tegra_host->dqs_trim);
 
@@ -1146,6 +1197,15 @@ static int sdhci_tegra_start_signal_voltage_switch(struct mmc_host *mmc,
 static int tegra_sdhci_init_pinctrl_info(struct device *dev,
 					 struct sdhci_tegra *tegra_host)
 {
+	if (!(tegra_get_platform() == TEGRA_PLATFORM_SILICON))
+		return 0;
+
+	tegra_host->prod_list = devm_tegra_prod_get(dev);
+	if (IS_ERR_OR_NULL(tegra_host->prod_list)) {
+		dev_dbg(dev, "Prod-setting not available\n");
+		tegra_host->prod_list = NULL;
+	}
+
 	tegra_host->pinctrl_sdmmc = devm_pinctrl_get(dev);
 	if (IS_ERR(tegra_host->pinctrl_sdmmc)) {
 		dev_dbg(dev, "No pinctrl info, err: %ld\n",

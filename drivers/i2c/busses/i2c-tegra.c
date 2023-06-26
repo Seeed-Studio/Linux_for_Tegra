@@ -29,6 +29,7 @@
 #include <linux/reset.h>
 #include <linux/tegra-epl.h>
 #include <linux/tegra-hsierrrptinj.h>
+#include <linux/tegra_prod.h>
 
 #define BYTES_PER_FIFO_WORD 4
 
@@ -66,6 +67,10 @@
 #define I2C_CLK_DIVISOR				0x06c
 #define I2C_CLK_DIVISOR_STD_FAST_MODE		GENMASK(31, 16)
 #define I2C_CLK_DIVISOR_HSMODE			GENMASK(15, 0)
+#define I2C_CLK_DIVISOR_STD_FAST_MODE_START	16
+#define I2C_CLK_DIVISOR_STD_FAST_MODE_WIDTH	16
+#define I2C_CLK_DIVISOR_HSMODE_START		0
+#define I2C_CLK_DIVISOR_HSMODE_WIDTH		16
 
 #define DVC_CTRL_REG1				0x000
 #define DVC_CTRL_REG1_INTR_EN			BIT(10)
@@ -110,21 +115,45 @@
 #define I2C_MST_CORE_CLKEN_OVR			BIT(0)
 
 #define I2C_INTERFACE_TIMING_0			0x094
-#define  I2C_INTERFACE_TIMING_THIGH		GENMASK(13, 8)
-#define  I2C_INTERFACE_TIMING_TLOW		GENMASK(5, 0)
+#define  I2C_INTERFACE_TIMING_THIGH		GENMASK(15, 8)
+#define  I2C_INTERFACE_TIMING_TLOW		GENMASK(7, 0)
+#define I2C_INTERFACE_TIMING_THIGH_START	8
+#define I2C_INTERFACE_TIMING_THIGH_WIDTH	8
+#define I2C_INTERFACE_TIMING_TLOW_START		0
+#define I2C_INTERFACE_TIMING_TLOW_WIDTH		8
+
 #define I2C_INTERFACE_TIMING_1			0x098
 #define  I2C_INTERFACE_TIMING_TBUF		GENMASK(29, 24)
 #define  I2C_INTERFACE_TIMING_TSU_STO		GENMASK(21, 16)
 #define  I2C_INTERFACE_TIMING_THD_STA		GENMASK(13, 8)
 #define  I2C_INTERFACE_TIMING_TSU_STA		GENMASK(5, 0)
+#define I2C_INTERFACE_TIMING_TBUF_START		24
+#define I2C_INTERFACE_TIMING_TBUF_WIDTH		6
+#define I2C_INTERFACE_TIMING_TSU_STO_START	16
+#define I2C_INTERFACE_TIMING_TSU_STO_WIDTH	6
+#define I2C_INTERFACE_TIMING_THD_STA_START	8
+#define I2C_INTERFACE_TIMING_THD_STA_WIDTH	6
+#define I2C_INTERFACE_TIMING_TSU_STA_START	0
+#define I2C_INTERFACE_TIMING_TSU_STA_WIDTH	6
 
 #define I2C_HS_INTERFACE_TIMING_0		0x09c
-#define  I2C_HS_INTERFACE_TIMING_THIGH		GENMASK(13, 8)
-#define  I2C_HS_INTERFACE_TIMING_TLOW		GENMASK(5, 0)
+#define  I2C_HS_INTERFACE_TIMING_THIGH		GENMASK(15, 8)
+#define  I2C_HS_INTERFACE_TIMING_TLOW		GENMASK(7, 0)
+#define I2C_HS_INTERFACE_TIMING_THIGH_START	8
+#define I2C_HS_INTERFACE_TIMING_THIGH_WIDTH	8
+#define I2C_HS_INTERFACE_TIMING_TLOW_START	0
+#define I2C_HS_INTERFACE_TIMING_TLOW_WIDTH	8
+
 #define I2C_HS_INTERFACE_TIMING_1		0x0a0
 #define  I2C_HS_INTERFACE_TIMING_TSU_STO	GENMASK(21, 16)
 #define  I2C_HS_INTERFACE_TIMING_THD_STA	GENMASK(13, 8)
 #define  I2C_HS_INTERFACE_TIMING_TSU_STA	GENMASK(5, 0)
+#define I2C_HS_INTERFACE_TIMING_TSU_STO_START	16
+#define I2C_HS_INTERFACE_TIMING_TSU_STO_WIDTH	6
+#define I2C_HS_INTERFACE_TIMING_THD_STA_START	8
+#define I2C_HS_INTERFACE_TIMING_THD_STA_WIDTH	6
+#define I2C_HS_INTERFACE_TIMING_TSU_STA_START	0
+#define I2C_HS_INTERFACE_TIMING_TSU_STA_WIDTH	6
 
 #define I2C_MST_FIFO_CONTROL			0x0b4
 #define I2C_MST_FIFO_CONTROL_RX_FLUSH		BIT(0)
@@ -290,6 +319,8 @@ struct tegra_i2c_dev {
 	unsigned int dma_buf_size;
 	dma_addr_t dma_phys;
 	void *dma_buf;
+
+	struct tegra_prod *prod_list;
 
 	bool multimaster_mode;
 	bool atomic_mode;
@@ -609,42 +640,46 @@ static int tegra_i2c_wait_for_config_load(struct tegra_i2c_dev *i2c_dev)
 	return 0;
 }
 
-static int tegra_i2c_init(struct tegra_i2c_dev *i2c_dev)
+static void tegra_i2c_write_prod_settings(struct tegra_i2c_dev *i2c_dev,
+					  const char *prod_name)
 {
-	u32 val, clk_divisor, clk_multiplier, tsu_thd, tlow, thigh, non_hs_mode;
-	acpi_handle handle = ACPI_HANDLE(i2c_dev->dev);
-	struct i2c_timings *t = &i2c_dev->timings;
 	int err;
 
-	/*
-	 * The reset shouldn't ever fail in practice. The failure will be a
-	 * sign of a severe problem that needs to be resolved. Still we don't
-	 * want to fail the initialization completely because this may break
-	 * kernel boot up since voltage regulators use I2C. Hence, we will
-	 * emit a noisy warning on error, which won't stay unnoticed and
-	 * won't hose machine entirely.
-	 */
-	if (handle)
-		err = acpi_evaluate_object(handle, "_RST", NULL, NULL);
-	else
-		err = reset_control_reset(i2c_dev->rst);
+	err = tegra_prod_set_by_name(&i2c_dev->base, prod_name, i2c_dev->prod_list);
+	if (err < 0)
+		dev_dbg_once(i2c_dev->dev,
+			     "Prod config not found for I2C: %d\n", err);
+}
 
-	WARN_ON_ONCE(err);
+static void tegra_i2c_config_prod_settings(struct tegra_i2c_dev *i2c_dev)
+{
+	struct i2c_timings *t = &i2c_dev->timings;
+	char *prod_name;
 
-	if (IS_DVC(i2c_dev))
-		tegra_dvc_init(i2c_dev);
+	switch (t->bus_freq_hz) {
+	case I2C_MAX_FAST_MODE_PLUS_FREQ + 1 ... I2C_MAX_HIGH_SPEED_MODE_FREQ:
+		prod_name = "prod_c_hs";
+		break;
+	case I2C_MAX_FAST_MODE_FREQ + 1 ... I2C_MAX_FAST_MODE_PLUS_FREQ:
+		prod_name = "prod_c_fmplus";
+		break;
+	case I2C_MAX_STANDARD_MODE_FREQ + 1 ... I2C_MAX_FAST_MODE_FREQ:
+		prod_name = "prod_c_fm";
+		break;
+	case 0 ... I2C_MAX_STANDARD_MODE_FREQ:
+	default:
+		prod_name = "prod_c_sm";
+		break;
+	}
 
-	val = I2C_CNFG_NEW_MASTER_FSM | I2C_CNFG_PACKET_MODE_EN |
-	      FIELD_PREP(I2C_CNFG_DEBOUNCE_CNT, 2);
+	tegra_i2c_write_prod_settings(i2c_dev, "prod");
+	tegra_i2c_write_prod_settings(i2c_dev, prod_name);
+}
 
-	if (i2c_dev->hw->has_multi_master_mode)
-		val |= I2C_CNFG_MULTI_MASTER_MODE;
-
-	i2c_writel(i2c_dev, val, I2C_CNFG);
-	i2c_writel(i2c_dev, 0, I2C_INT_MASK);
-
-	if (IS_VI(i2c_dev))
-		tegra_i2c_vi_init(i2c_dev);
+static void tegra_i2c_set_clk_params(struct tegra_i2c_dev *i2c_dev)
+{
+	u32 val, clk_divisor, tsu_thd, tlow, thigh, non_hs_mode;
+	struct i2c_timings *t = &i2c_dev->timings;
 
 	switch (t->bus_freq_hz) {
 	case I2C_MAX_STANDARD_MODE_FREQ + 1 ... I2C_MAX_FAST_MODE_PLUS_FREQ:
@@ -685,6 +720,23 @@ static int tegra_i2c_init(struct tegra_i2c_dev *i2c_dev)
 	 */
 	if (i2c_dev->hw->has_interface_timing_reg && tsu_thd)
 		i2c_writel(i2c_dev, tsu_thd, I2C_INTERFACE_TIMING_1);
+}
+
+static int tegra_i2c_set_div_clk(struct tegra_i2c_dev *i2c_dev)
+{
+	u32 clk_multiplier, tlow, thigh, non_hs_mode;
+	struct i2c_timings *t = &i2c_dev->timings;
+	u32 timing, clk_divisor;
+	int err;
+
+	timing = i2c_readl(i2c_dev, I2C_INTERFACE_TIMING_0);
+
+	tlow = FIELD_GET(I2C_INTERFACE_TIMING_TLOW, timing);
+	thigh = FIELD_GET(I2C_INTERFACE_TIMING_THIGH, timing);
+
+	clk_divisor = i2c_readl(i2c_dev, I2C_CLK_DIVISOR);
+
+	non_hs_mode = FIELD_GET(I2C_CLK_DIVISOR_STD_FAST_MODE, clk_divisor);
 
 	clk_multiplier = (tlow + thigh + 2) * (non_hs_mode + 1);
 
@@ -694,6 +746,54 @@ static int tegra_i2c_init(struct tegra_i2c_dev *i2c_dev)
 		dev_err(i2c_dev->dev, "failed to set div-clk rate: %d\n", err);
 		return err;
 	}
+
+	return 0;
+}
+
+static int tegra_i2c_init(struct tegra_i2c_dev *i2c_dev)
+{
+	acpi_handle handle = ACPI_HANDLE(i2c_dev->dev);
+	u32 val;
+	int err;
+
+	/*
+	 * The reset shouldn't ever fail in practice. The failure will be a
+	 * sign of a severe problem that needs to be resolved. Still we don't
+	 * want to fail the initialization completely because this may break
+	 * kernel boot up since voltage regulators use I2C. Hence, we will
+	 * emit a noisy warning on error, which won't stay unnoticed and
+	 * won't hose machine entirely.
+	 */
+	if (handle)
+		err = acpi_evaluate_object(handle, "_RST", NULL, NULL);
+	else
+		err = reset_control_reset(i2c_dev->rst);
+
+	WARN_ON_ONCE(err);
+
+	if (IS_DVC(i2c_dev))
+		tegra_dvc_init(i2c_dev);
+
+	val = I2C_CNFG_NEW_MASTER_FSM | I2C_CNFG_PACKET_MODE_EN |
+	      FIELD_PREP(I2C_CNFG_DEBOUNCE_CNT, 2);
+
+	if (i2c_dev->hw->has_multi_master_mode)
+		val |= I2C_CNFG_MULTI_MASTER_MODE;
+
+	i2c_writel(i2c_dev, val, I2C_CNFG);
+	i2c_writel(i2c_dev, 0, I2C_INT_MASK);
+
+	if (IS_VI(i2c_dev))
+		tegra_i2c_vi_init(i2c_dev);
+
+	if (i2c_dev->prod_list)
+		tegra_i2c_config_prod_settings(i2c_dev);
+	else
+		tegra_i2c_set_clk_params(i2c_dev);
+
+	err = tegra_i2c_set_div_clk(i2c_dev);
+	if (err)
+		return err;
 
 	if (!IS_DVC(i2c_dev) && !IS_VI(i2c_dev)) {
 		u32 sl_cfg = i2c_readl(i2c_dev, I2C_SL_CNFG);
@@ -1882,6 +1982,12 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 					dev_name(i2c_dev->dev), i2c_dev);
 	if (err)
 		return err;
+
+	i2c_dev->prod_list = devm_tegra_prod_get(i2c_dev->dev);
+	if (IS_ERR_OR_NULL(i2c_dev->prod_list)) {
+		dev_dbg(&pdev->dev, "Prod-setting not available\n");
+		i2c_dev->prod_list = NULL;
+	}
 
 	tegra_i2c_parse_dt(i2c_dev);
 
