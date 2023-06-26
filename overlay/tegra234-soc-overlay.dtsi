@@ -256,7 +256,7 @@
 						tegra_arad: arad@290e400 {
 							status = "disabled";
 
-							compatible = "nvidia,tegra186-arad-oot";
+							compatible = "nvidia,tegra186-arad";
 							reg = <0x0 0x290e400 0x0 0x400>;
 							#address-cells = <1>;
 							#size-cells = <1>;
@@ -266,8 +266,8 @@
 						tegra_afc1: afc@2907000 {
 							status = "disabled";
 
-							compatible = "nvidia,tegra234-afc-oot",
-								     "nvidia,tegra186-afc-oot";
+							compatible = "nvidia,tegra234-afc",
+								     "nvidia,tegra186-afc";
 							reg = <0x0 0x2907000 0x0 0x100>;
 							#address-cells = <1>;
 							#size-cells = <1>;
@@ -278,8 +278,8 @@
 						tegra_afc2: afc@2907100 {
 							status = "disabled";
 
-							compatible = "nvidia,tegra234-afc-oot",
-								     "nvidia,tegra186-afc-oot";
+							compatible = "nvidia,tegra234-afc",
+								     "nvidia,tegra186-afc";
 							reg = <0x0 0x2907100 0x0 0x100>;
 							#address-cells = <1>;
 							#size-cells = <1>;
@@ -290,8 +290,8 @@
 						tegra_afc3: afc@2907200 {
 							status = "disabled";
 
-							compatible = "nvidia,tegra234-afc-oot",
-								     "nvidia,tegra186-afc-oot";
+							compatible = "nvidia,tegra234-afc",
+								     "nvidia,tegra186-afc";
 							reg = <0x0 0x2907200 0x0 0x100>;
 							#address-cells = <1>;
 							#size-cells = <1>;
@@ -302,8 +302,8 @@
 						tegra_afc4: afc@2907300 {
 							status = "disabled";
 
-							compatible = "nvidia,tegra234-afc-oot",
-								     "nvidia,tegra186-afc-oot";
+							compatible = "nvidia,tegra234-afc",
+								     "nvidia,tegra186-afc";
 							reg = <0x0 0x2907300 0x0 0x100>;
 							#address-cells = <1>;
 							#size-cells = <1>;
@@ -314,8 +314,8 @@
 						tegra_afc5: afc@2907400 {
 							status = "disabled";
 
-							compatible = "nvidia,tegra234-afc-oot",
-								     "nvidia,tegra186-afc-oot";
+							compatible = "nvidia,tegra234-afc",
+								     "nvidia,tegra186-afc";
 							reg = <0x0 0x2907400 0x0 0x100>;
 							#address-cells = <1>;
 							#size-cells = <1>;
@@ -326,8 +326,8 @@
 						tegra_afc6: afc@2907500 {
 							status = "disabled";
 
-							compatible = "nvidia,tegra234-afc-oot",
-								     "nvidia,tegra186-afc-oot";
+							compatible = "nvidia,tegra234-afc",
+								     "nvidia,tegra186-afc";
 							reg = <0x0 0x2907500 0x0 0x100>;
 							#address-cells = <1>;
 							#size-cells = <1>;
