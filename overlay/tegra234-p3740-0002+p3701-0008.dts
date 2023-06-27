@@ -78,10 +78,6 @@
 			};
 
 			bus@0 {
-				watchdog@2190000 {
-					status = "okay";
-				};
-
 				pinmux@2430000 {
 					status = "okay";
 				};
