@@ -93,6 +93,24 @@
 						};
 					};
 				};
+
+				serial@3100000 {
+					dma-coherent;
+					dmas = <&gpcdma 8>, <&gpcdma 8>;
+					dma-names = "rx", "tx";
+				};
+
+				serial@3110000 {
+					dma-coherent;
+					dmas = <&gpcdma 8>, <&gpcdma 8>;
+					dma-names = "rx", "tx";
+				};
+
+				serial@3140000 {
+					dma-coherent;
+					dmas = <&gpcdma 8>, <&gpcdma 8>;
+					dma-names = "rx", "tx";
+				};
 			};
 		};
 	};
