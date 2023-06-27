@@ -3,6 +3,7 @@
 
 #include "tegra234-base-overlay.dtsi"
 #include "tegra234-soc-overlay.dtsi"
+#include "tegra234-soc-prod-overlay.dtsi"
 #include "tegra234-soc-display-overlay.dtsi"
 
 / {

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
+#include "tegra234-p3701-0000-prod-overlay.dtsi"
+
 / {
 	fragment-t234-p3701-0000@0 {
 		target-path = "/";
