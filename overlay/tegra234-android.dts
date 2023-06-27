@@ -114,4 +114,9 @@
 			};
 		};
 	};
+
+	fragment-t234-android@1 {
+		target-path = "/bus@0/mmc@3400000";
+		delete_prop = "sd-uhs-ddr50";
+	};
 };
