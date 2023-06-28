@@ -9,13 +9,13 @@
 /plugin/;
 
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
-#include <dt-common/jetson/tegra234-p3767-0000-common.h>
+#include <dt-bindings/tegra234-p3767-0000-common.h>
 
 / {
 	overlay-name = "Jetson M.2 Key E Slot";
 	compatible = JETSON_COMPATIBLE;
 
-	fragment@0 {
+	p3767-0000_p3509-a02-m2ke@0 {
 		target = <&pinmux>;
 		__overlay__ {
 			pinctrl-names = "default";

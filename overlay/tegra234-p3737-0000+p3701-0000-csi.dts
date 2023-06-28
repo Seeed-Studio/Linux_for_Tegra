@@ -9,13 +9,13 @@
 /plugin/;
 
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
-#include <dt-common/jetson/tegra234-p3737-0000-p3701-0000.h>
+#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
 
 / {
 	overlay-name = "Jetson AGX CSI Connector";
 	compatible = JETSON_COMPATIBLE;
 
-	fragment@0 {
+	p3737-0000_p3701-0000-csi@0 {
 		target = <&pinmux>;
 		__overlay__ {
 			pinctrl-names = "default";

@@ -8,5 +8,5 @@
 
 /dts-v1/;
 /plugin/;
-#include <dt-common/jetson/tegra234-p3767-0000-common.h>
-#include <overlays/jetson-respeaker-4-mic-lin-array.dts>
+#include <dt-bindings/tegra234-p3767-0000-common.h>
+#include <overlay/jetson-audio-respeaker-4-mic-lin-array.dtsi>

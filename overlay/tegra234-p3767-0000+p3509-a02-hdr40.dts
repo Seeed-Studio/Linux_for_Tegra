@@ -8,7 +8,7 @@
 /dts-v1/;
 /plugin/;
 
-#include <dt-common/jetson/tegra234-p3767-0000-common.h>
+#include <dt-bindings/tegra234-p3767-0000-common.h>
 #include "tegra234-p3767-0000-common-hdr40.dtsi"
 
 / {
