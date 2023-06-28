@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * Device-tree overlay for tegra234-p3767-0000-p3509-a02 CSI Camera Connector.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
+#include <dt-common/jetson/tegra234-p3767-0000-common.h>
+
+/ {
+	overlay-name = "Jetson Nano CSI Connector";
+	compatible = JETSON_COMPATIBLE_P3509;
+
+	fragment@0 {
+		target = <&pinmux>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux>;
+			jetson_io_pinmux: exp-header-pinmux {
+				csi-pin25 {
+					nvidia,pins = "cam_i2c_scl_pp2";
+				};
+				csi-pin27 {
+					nvidia,pins = "cam_i2c_sda_pp3";
+				};
+			};
+		};
+	};
+};
