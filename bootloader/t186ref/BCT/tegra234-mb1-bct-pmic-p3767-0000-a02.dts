@@ -1,0 +1,148 @@
+/*
+# CFG Version 1.0
+# This File contains the configuration of multiple rails.
+*/
+/dts-v1/;
+
+/ {
+	pmic {
+		core {
+			block@0 {
+				pwm;
+				controller-id = <3>; /* PWM4, SOC rail */
+				source-frq-hz = <204000000>;
+				period-ns = <1255>; /* 800 KHz */
+				min-microvolts = <511000>;
+				max-microvolts = <1145000>;
+				init-microvolts = <869000>;
+				pwm-clock-enable;
+				enable;
+			};
+			block@1 {
+				mmio;
+				block-delay = <3>;
+				commands {
+					/* SW Regulators POWER_SAVE_N */
+					command@0 {
+						reg-addr = <0x0c2f1a70>;
+						mask = <0x1>;
+						value = <0x0>;
+					};
+					command@1 {
+						reg-addr = <0x0c302000>;
+						mask = <0x30>;
+						value = <0x0>;
+					};
+				};
+			};
+			block@2 {
+				i2c-controller;
+				controller-id = <0x4>;
+				slave-addr = <0x78>;
+				reg-data-size = <16>;
+				reg-addr-size = <8>;
+				block-delay = <3>;
+				commands {
+					command@1 {
+						reg-addr = <0x28>;
+						mask = <0xFFFF>;
+						/* Format: <PEC><VALUE>
+						 * PEC = CRC8(<slave-addr><reg-addr><VAL>)
+						 */
+						value = <0x3000>;
+					};
+					command@2 {
+						reg-addr = <0x55>;
+						mask = <0xFFFF>;
+						/* Format: <PEC><VALUE>
+						 * PEC = CRC8(<slave-addr><reg-addr><VAL>)
+						 */
+						value = <0x7b00>;
+					};
+					command@3 {
+						reg-addr = <0x5d>;
+						mask = <0xFFFF>;
+						/* Format: <PEC><VALUE>
+						 * PEC = CRC8(<slave-addr><reg-addr><VAL>)
+						 */
+						value = <0xd300>;
+					};
+				};
+			};
+		};
+		cpu@0 {
+			block@0 {
+				pwm;
+				controller-id = <5>; /* PWM6, CPU/GPU/CV rail */
+				source-frq-hz = <204000000>;
+				period-ns = <1255>; /* 800 KHz */
+				min-microvolts = <499000>;
+				max-microvolts = <1166000>;
+				init-microvolts = <858000>;
+				pwm-clock-enable;
+				enable;
+			};
+			block@1 {
+				mmio;
+				block-delay = <3>; /* 3us */
+				commands {
+					/* Remove tristate for GP_PWM6 pads */
+					command@0 {
+						reg-addr = <0x024340b0>; /* PADCTL_G4_SOC_GPIO07_0 */
+						mask = <0x10>; /* tristate bit */
+						value = <0x0>;
+					};
+				};
+			};
+			block@2 {
+				mmio;
+				block-delay = <3>; /* 3us */
+				commands {
+					/* Configure SF_PWR_CPU_EN pin as GPIO I.5 and remove tristate */
+					command@0 {
+						reg-addr = <0x02434000>;
+						mask = <0x410>;
+						value = <0x00000000>;
+					};
+					/* Configure GPIO_PI5 as output pin */
+					command@1 {
+						reg-addr = <0x022144a0>;
+						mask = <0x2>;
+						value = <0x2>;
+					};
+					/* Configure GPIO_PI5 output control to driven state */
+					command@2 {
+						reg-addr = <0x022144ac>;
+						mask = <0x1>;
+						value = <0x00000000>;
+					};
+					/* Set GPIO_PI5 output state to high */
+					command@3 {
+						reg-addr = <0x022144b0>;
+						mask = <0x1>;
+						value = <0x00000001>;
+					};
+					/* Enable GPIO_PI5 */
+					command@4 {
+						reg-addr = <0x022144a0>;
+						mask = <0x1>;
+						value = <0x00000001>;
+					};
+				};
+			};
+		};
+		thermal {
+			block@0 {
+				pwm;
+				controller-id = <2>; /* PWM3 for Fan */
+				source-frq-hz = <19200000>;
+				period-ns = <45334>; /* 22 KHz */
+				min-microvolts = <0>;
+				max-microvolts = <5000000>;
+				init-microvolts = <2500000>;
+				pwm-clock-enable;
+				enable;
+			};
+		};
+	};
+};

@@ -1,0 +1,193 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Contributor License Agreement (CLA):
+# https://github.com/NVIDIA/DALI_extra/blob/main/NVIDIA_CLA_v1.0.1.docx
+
+
+
+network_prerequisite ()
+{
+	local networkargs=$1
+	local bsp_dir=$2
+	local nfs_rootfs=$3
+	if ! command -v exportfs &> /dev/null
+	then
+		echo "ERROR nfs-kernel-server not found! To install - please run: " \
+				"\"sudo apt-get install nfs-kernel-server\""
+		exit 1
+	fi
+
+	validateNetworkArgs "${networkargs}"
+
+	service nfs-kernel-server restart
+
+	enable_nfs_for_folder "${nfs_rootfs}" "${networkargs}"
+	enable_nfs_for_folder "${bsp_dir}/tools/kernel_flash" "${networkargs}"
+
+	if ! nfs_check "${bsp_dir}" "${nfs_rootfs}"; then
+		echo "${nfs_rootfs} and ${bsp_dir}/tools/kernel_flash are not exported"
+		echo "You can export them by adding entries into /etc/exports"
+		echo "For examples:"
+		echo "${bsp_dir}/tools/kernel_flash *(${PERMISSION_STR})"
+		echo "${nfs_rootfs} *(${PERMISSION_STR})"
+		echo "Note that these entries exposes the folders to requests from any IPs"
+	fi
+
+
+}
+
+nfs_check()
+{
+	showmount -e | grep -q "${2}" \
+	&& showmount -e | grep -q "${1}/tools/kernel_flash"
+}
+
+enable_nfs_for_folder ()
+{
+	set +e
+	rpcbind > /dev/null 2>&1
+	set -e
+
+	local nfs_dir=$1
+	local networkargs=$2
+
+	local arr=
+	IFS=':' read -r -a arr <<< "${networkargs}"
+
+	local target_ip=${arr[1]:-fc00:1:1::/48}
+
+	chmod 755 "${nfs_dir}"
+	chown root.root "${nfs_dir}"
+	if [[ "${target_ip}" =~ : ]]; then
+		target_ip="[${target_ip}]"
+	fi
+	exportfs -o "${PERMISSION_STR}" "${target_ip}:${nfs_dir}"
+}
+
+validateNetworkArgs ()
+{
+	local arr=
+	IFS=':' read -r -a arr <<< "${1}"
+
+	if [ "${arr[0]}" == "usb0" ]; then
+		return
+	fi
+
+	if ! ip route get "${arr[1]%%/*}" > /dev/null 2>&1; then
+		echo "Invalid target ip ${arr[1]}"
+		exit 1
+	fi
+
+	if ! ip route get "${arr[2]}" > /dev/null 2>&1; then
+		echo "Invalid host ip ${arr[2]}"
+		exit 1
+	fi
+}
+
+run_flash_commmand_on_target()
+{
+	echo "Run command: flash on ${1}"
+	local OLD_LC_ALL="${LC_ALL}"
+	local OLD_LANG="${LANG}"
+	local OLD_LANGUAGE="${LANGUAGE}"
+	export LC_ALL="" LANG="en_US.UTF-8" LANGUAGE=""
+	local cmd=()
+
+	if [ -n "${target_partname}" ]; then
+		cmd+=("-k" "${target_partname}")
+	fi
+
+	if [ -n "${external_only}" ]; then
+		cmd+=("${external_only}")
+	fi
+	count=0
+	maxcount=10
+	while ! sshpass -p root ssh "root@${1}" "${SSH_OPT[@]}" "echo SSH ready"
+	do
+		count=$((count + 1))
+		if [ "${count}" -ge "${maxcount}" ]; then
+			echo "SSH is not ready"
+			exit 1
+		fi
+		sleep 1
+	done
+	if [ -e "${L4T_INITRD_FLASH_DIR}/bin/aarch64/simg2img" ]; then
+		cp "${L4T_INITRD_FLASH_DIR}/bin/aarch64/simg2img" "${NFS_IMAGES_DIR}"
+	fi
+	if ! sshpass -p root ssh "root@${1}" "${SSH_OPT[@]}" "NFS_ROOTFS_DIR=\"${NFS_ROOTFS_DIR}\" NFS_IMAGES_DIR=\"${NFS_IMAGES_DIR}\" /bin/${FLASH_FROM_NETWORK_SCRIPT} ${cmd[*]}"; then
+		echo "Flash failure"
+		exit 1
+	fi
+	if ! sshpass -p root ssh "root@${1}" "${SSH_OPT[@]}" "nohup reboot &>/dev/null & exit"; then
+		echo "Reboot failure"
+		exit 1
+	fi
+
+	export LC_ALL="${OLD_LC_ALL}" LANG="${OLD_LANG}" LANGUAGE="${OLD_LANGUAGE}"
+}
+
+flash_through_ssh()
+{
+	wait_for_flash_ssh "${1}"
+	if [ -n "${initrd_only}" ]; then
+		echo "Device has booted into initrd. You can ssh to the target by the command:"
+		echo "$ ssh root@${1}"
+		exit
+	fi
+	run_flash_commmand_on_target "${1}"
+	exit 0
+}
+
+ping_flash_device()
+{
+	if [[ "${1}" =~ : ]]; then
+		ping6 -c 1 "$1" > /dev/null 2>&1;
+	else
+		ping -c 1 "$1" > /dev/null 2>&1;
+	fi
+}
+
+wait_for_flash_ssh()
+{
+	maxcount=${timeout:-60}
+	printf "%s" "Waiting for device to expose ssh ..."
+	count=0
+	while ! ping_flash_device "${1}"
+	do
+		printf "..."
+		count=$((count + 1))
+		if [ "${count}" -ge "${maxcount}" ]; then
+			echo "Timeout"
+			exit 1
+		fi
+		sleep 1
+	done
+}

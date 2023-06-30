@@ -1,0 +1,11 @@
+/dts-v1/;
+
+
+/ {
+    uphy-lane {
+            lane-owner-map = <0 4 1>, /* lane 4 assigned to UFS */
+                             <0 5 1>, /* lane 5 assigned to UFS */
+                             <0 6 1>, /* lane 6 assigned to UFS */
+                             <0 7 1>; /* lane 7 assigned to UFS */
+    };
+};

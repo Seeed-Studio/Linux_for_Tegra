@@ -1,0 +1,10 @@
+if ARCH_TEGRA
+
+config PVA_CO_DISABLED
+        bool "Tegra PVA FW CO disabled"
+        depends on TEGRA_GRHOST
+        default y
+        help
+          Allow PVA FW to be booted from file
+          Say n here if not sure.
+endif

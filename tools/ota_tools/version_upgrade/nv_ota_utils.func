@@ -1,0 +1,102 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# shellcheck disable=SC1091
+source /bin/nv_ota_internals.sh
+
+get_base_version_in_recovery()
+{
+	local _ret_base_version="${1}"
+	local _base_version=
+
+	if [ ! -f "${OTA_WORK_DIR}/base_version" ]; then
+		ota_log "The base version file is not found at ${OTA_WORK_DIR}/base_version"
+		return 1
+	else
+		_base_version="$(cat "${OTA_WORK_DIR}/base_version")"
+		if [ -z "${_base_version}" ]; then
+			ota_log "The base version file ${OTA_WORK_DIR}/base_version is corrupted"
+			return 1
+		fi
+	fi
+
+	eval "${_ret_base_version}=${_base_version}"
+}
+
+get_target_board_in_recovery()
+{
+	local _ret_target_board="${1}"
+	local _target_board=
+
+	if [ ! -f "${OTA_WORK_DIR}/board_name" ]; then
+		ota_log "The board name file is not found at ${OTA_WORK_DIR}/board_name"
+		return 1
+	else
+		_target_board="$(cat "${OTA_WORK_DIR}/board_name")"
+		if [ -z "${_target_board}" ]; then
+			ota_log "The board name file ${OTA_WORK_DIR}/board_name is corrupted"
+			exit 1
+		fi
+	fi
+
+	eval "${_ret_target_board}=${_target_board}"
+}
+
+get_layout_change_in_recovery()
+{
+	local _ret_layout_change="${1}"
+	local _layout_change=
+
+	if [ ! -f "${OTA_WORK_DIR}/layout_change" ]; then
+		ota_log "The layout change file is not found at ${OTA_WORK_DIR}/layout_change"
+		return 1
+	else
+		_layout_change="$(cat "${OTA_WORK_DIR}/layout_change")"
+		if [ -z "${_layout_change}" ]; then
+			ota_log "The layout change file ${OTA_WORK_DIR}/layout_change is corrupted"
+			return 1
+		fi
+	fi
+
+	eval "${_ret_layout_change}=${_layout_change}"
+}
+
+store_variable()
+{
+	local _var="${1}"
+	declare -p "${_var}" >> "${OTA_DECLARE_TMPFILE}"
+}
+
+load_variable()
+{
+	local var="${1}"
+	local _ret_var="${2}"
+
+	if [ ! -f "${OTA_DECLARE_TMPFILE}" ]; then
+		ota_log "The declare temp file is not found at ${OTA_DECLARE_TMPFILE}"
+		return 1
+	fi
+	eval $(grep " ${var}=" "${OTA_DECLARE_TMPFILE}" | sed "s/ ${var}=/ __${var}=/")
+	local _var="__${var}"
+	eval "${_ret_var}=${!_var}"
+}
