@@ -4,43 +4,36 @@ stages:
 recomputer-xavier-nx-industrial-16g:
     stage: xavier-nx-industrial-16g
     when: on_success
-    image: ubuntu:22.04
     tags:
-      - arm64
+      - arm64-shell
+    variables:
+      USER: root
 
-
-    before_script:
-        - echo 'Acquire::http::Proxy "http://192.168.1.77:3142";' >> /etc/apt/apt.conf
-        - echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-        - apt-get update > /dev/null 2>&1
-        - apt-get -y install python3-pip ssh git rsync qemu-user-static binfmt-support udev sudo sshpass abootimg  binutils cpp device-tree-compiler dosfstools lbzip2 libxml2-utils nfs-kernel-server python3-yaml uuid-runtime whois openssl cpio > /dev/null 2>&1
-        - ln -s /usr/bin/python3 /usr/bin/python
-        - uname -a
 
     script:
-        - id
-        - wget  http://192.168.1.77/jetson/Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -q
-        - tar xpf Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -C rootfs
-        - ./apply_binaries.sh
-        - ./tools/l4t_flash_prerequisites.sh
-        - sed -i "s/<SOC>/t194/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
-        - mount --bind /sys ./rootfs/sys
-        - mount --bind /dev ./rootfs/dev
-        - mount --bind /dev/pts ./rootfs/dev/pts
-        - mount --bind /proc ./rootfs/proc
-        - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
-        - cp extra_scripts/rootfs_magic.sh rootfs
-        - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
-        - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
-        - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
-        - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
-        - chroot rootfs /rootfs_magic.sh
-        - umount ./rootfs/sys
-        - umount ./rootfs/dev/pts
-        - umount ./rootfs/dev
-        - umount ./rootfs/proc
-        - rm rootfs/rootfs_magic.sh
-        - rm rootfs/usr/bin/qemu-aarch64-static
-        - ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=F.0 ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml   -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial external
+         - id
+         - wget  http://192.168.1.77/jetson/Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -q
+         - tar xpf Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -C rootfs
+         - ./apply_binaries.sh
+         - ./tools/l4t_flash_prerequisites.sh
+         - sed -i "s/<SOC>/t194/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+         - mount --bind /sys ./rootfs/sys
+         - mount --bind /dev ./rootfs/dev
+         - mount --bind /dev/pts ./rootfs/dev/pts
+         - mount --bind /proc ./rootfs/proc
+         - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
+         - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
+         - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
+         - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
+         - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
+         - chroot rootfs /rootfs_magic.sh
+         - umount ./rootfs/sys
+         - umount ./rootfs/dev/pts
+         - umount ./rootfs/dev
+         - umount ./rootfs/proc
+         - rm rootfs/rootfs_magic.sh
+         - rm rootfs/usr/bin/qemu-aarch64-static
+         - ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=F.0 ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml   -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial external
 
 
