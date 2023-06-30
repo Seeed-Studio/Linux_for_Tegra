@@ -1,0 +1,270 @@
+/*
+ # Device specific informations.
+ # This file is manual edited file and have list of controller specific
+ # prod configruations.
+ */
+/dts-v1/;
+
+/ {
+    gpio-intmap {
+        major = <1>;
+        minor = <0>;
+        port@A {
+            pin-0-int-line = <0>; // GPIO A0 to INT0
+            pin-1-int-line = <0>; // GPIO A1 to INT0
+            pin-2-int-line = <0>; // GPIO A2 to INT0
+            pin-3-int-line = <0>; // GPIO A3 to INT0
+            pin-4-int-line = <0>; // GPIO A4 to INT0
+            pin-5-int-line = <0>; // GPIO A5 to INT0
+            pin-6-int-line = <0>; // GPIO A6 to INT0
+            pin-7-int-line = <0>; // GPIO A7 to INT0
+        };
+        port@B {
+            pin-0-int-line = <0>; // GPIO B0 to INT0
+        };
+        port@C {
+            pin-0-int-line = <0>; // GPIO C0 to INT0
+            pin-1-int-line = <0>; // GPIO C1 to INT0
+            pin-2-int-line = <0>; // GPIO C2 to INT0
+            pin-3-int-line = <0>; // GPIO C3 to INT0
+            pin-4-int-line = <0>; // GPIO C4 to INT0
+            pin-5-int-line = <0>; // GPIO C5 to INT0
+            pin-6-int-line = <0>; // GPIO C6 to INT0
+            pin-7-int-line = <0>; // GPIO C7 to INT0
+        };
+        port@D {
+            pin-0-int-line = <0>; // GPIO D0 to INT0
+            pin-1-int-line = <0>; // GPIO D1 to INT0
+            pin-2-int-line = <0>; // GPIO D2 to INT0
+            pin-3-int-line = <0>; // GPIO D3 to INT0
+        };
+        port@E {
+            pin-0-int-line = <0>; // GPIO D0 to INT0
+            pin-1-int-line = <0>; // GPIO D1 to INT0
+            pin-2-int-line = <0>; // GPIO D2 to INT0
+            pin-3-int-line = <0>; // GPIO D3 to INT0
+            pin-4-int-line = <0>; // GPIO D4 to INT0
+            pin-5-int-line = <0>; // GPIO D5 to INT0
+            pin-6-int-line = <0>; // GPIO D6 to INT0
+            pin-7-int-line = <0>; // GPIO D7 to INT0
+        };
+        port@F {
+            pin-0-int-line = <0>; // GPIO F0 to INT0
+            pin-1-int-line = <0>; // GPIO F1 to INT0
+            pin-2-int-line = <0>; // GPIO F2 to INT0
+            pin-3-int-line = <0>; // GPIO F3 to INT0
+            pin-4-int-line = <0>; // GPIO F4 to INT0
+            pin-5-int-line = <0>; // GPIO F5 to INT0
+        };
+        port@G {
+            pin-0-int-line = <0>; // GPIO G0 to INT0
+            pin-1-int-line = <0>; // GPIO G1 to INT0
+            pin-2-int-line = <0>; // GPIO G2 to INT0
+            pin-3-int-line = <0>; // GPIO G3 to INT0
+            pin-4-int-line = <0>; // GPIO G4 to INT0
+            pin-5-int-line = <0>; // GPIO G5 to INT0
+            pin-6-int-line = <0>; // GPIO G6 to INT0
+            pin-7-int-line = <0>; // GPIO G7 to INT0
+        };
+        port@H {
+            pin-0-int-line = <0>; // GPIO H0 to INT0
+            pin-1-int-line = <0>; // GPIO H1 to INT0
+            pin-2-int-line = <0>; // GPIO H2 to INT0
+            pin-3-int-line = <0>; // GPIO H3 to INT0
+            pin-4-int-line = <0>; // GPIO H4 to INT0
+            pin-5-int-line = <0>; // GPIO H5 to INT0
+            pin-6-int-line = <0>; // GPIO H6 to INT0
+            pin-7-int-line = <0>; // GPIO H7 to INT0
+        };
+        port@I {
+            pin-0-int-line = <0>; // GPIO I0 to INT0
+            pin-1-int-line = <0>; // GPIO I1 to INT0
+            pin-2-int-line = <0>; // GPIO I2 to INT0
+            pin-3-int-line = <0>; // GPIO I3 to INT0
+            pin-4-int-line = <0>; // GPIO I4 to INT0
+            pin-5-int-line = <0>; // GPIO I5 to INT0
+            pin-6-int-line = <0>; // GPIO I6 to INT0
+        };
+        port@J {
+            pin-0-int-line = <0>; // GPIO J0 to INT0
+            pin-1-int-line = <0>; // GPIO J1 to INT0
+            pin-2-int-line = <0>; // GPIO J2 to INT0
+            pin-3-int-line = <0>; // GPIO J3 to INT0
+            pin-4-int-line = <0>; // GPIO J4 to INT0
+            pin-5-int-line = <0>; // GPIO J5 to INT0
+        };
+        port@K {
+            pin-0-int-line = <0>; // GPIO K0 to INT0
+            pin-1-int-line = <0>; // GPIO K1 to INT0
+            pin-2-int-line = <0>; // GPIO K2 to INT0
+            pin-3-int-line = <0>; // GPIO K3 to INT0
+            pin-4-int-line = <0>; // GPIO K4 to INT0
+            pin-5-int-line = <0>; // GPIO K5 to INT0
+            pin-6-int-line = <0>; // GPIO K6 to INT0
+            pin-7-int-line = <0>; // GPIO K7 to INT0
+        };
+        port@L {
+            pin-0-int-line = <0>; // GPIO L0 to INT0
+            pin-1-int-line = <0>; // GPIO L1 to INT0
+            pin-2-int-line = <0>; // GPIO L2 to INT0
+            pin-3-int-line = <0>; // GPIO L3 to INT0
+        };
+        port@M {
+            pin-0-int-line = <0>; // GPIO M0 to INT0
+            pin-1-int-line = <0>; // GPIO M1 to INT0
+            pin-2-int-line = <0>; // GPIO M2 to INT0
+            pin-3-int-line = <0>; // GPIO M3 to INT0
+            pin-4-int-line = <0>; // GPIO M4 to INT0
+            pin-5-int-line = <0>; // GPIO M5 to INT0
+            pin-6-int-line = <0>; // GPIO M6 to INT0
+            pin-7-int-line = <0>; // GPIO M7 to INT0
+        };
+        port@N {
+            pin-0-int-line = <0>; // GPIO N0 to INT0
+            pin-1-int-line = <0>; // GPIO N1 to INT0
+            pin-2-int-line = <0>; // GPIO N2 to INT0
+            pin-3-int-line = <0>; // GPIO N3 to INT0
+            pin-4-int-line = <0>; // GPIO N4 to INT0
+            pin-5-int-line = <0>; // GPIO N5 to INT0
+            pin-6-int-line = <0>; // GPIO N6 to INT0
+            pin-7-int-line = <0>; // GPIO N7 to INT0
+        };
+        port@P {
+            pin-0-int-line = <0>; // GPIO P0 to INT0
+            pin-1-int-line = <0>; // GPIO P1 to INT0
+            pin-2-int-line = <0>; // GPIO P2 to INT0
+            pin-3-int-line = <0>; // GPIO P3 to INT0
+            pin-4-int-line = <0>; // GPIO P4 to INT0
+            pin-5-int-line = <0>; // GPIO P5 to INT0
+            pin-6-int-line = <0>; // GPIO P6 to INT0
+            pin-7-int-line = <0>; // GPIO P7 to INT0
+        };
+        port@Q {
+            pin-0-int-line = <0>; // GPIO Q0 to INT0
+            pin-1-int-line = <0>; // GPIO Q1 to INT0
+            pin-2-int-line = <0>; // GPIO Q2 to INT0
+            pin-3-int-line = <0>; // GPIO Q3 to INT0
+            pin-4-int-line = <0>; // GPIO Q4 to INT0
+            pin-5-int-line = <0>; // GPIO Q5 to INT0
+            pin-6-int-line = <0>; // GPIO Q6 to INT0
+            pin-7-int-line = <0>; // GPIO Q7 to INT0
+        };
+        port@R {
+            pin-0-int-line = <0>; // GPIO R0 to INT0
+            pin-1-int-line = <0>; // GPIO R1 to INT0
+            pin-2-int-line = <0>; // GPIO R2 to INT0
+            pin-3-int-line = <0>; // GPIO R3 to INT0
+            pin-4-int-line = <0>; // GPIO R4 to INT0
+            pin-5-int-line = <0>; // GPIO R5 to INT0
+        };
+        port@X {
+            pin-0-int-line = <0>; // GPIO X0 to INT0
+            pin-1-int-line = <0>; // GPIO X1 to INT0
+            pin-2-int-line = <0>; // GPIO X2 to INT0
+            pin-3-int-line = <0>; // GPIO X3 to INT0
+            pin-4-int-line = <0>; // GPIO X4 to INT0
+            pin-5-int-line = <0>; // GPIO X5 to INT0
+            pin-6-int-line = <0>; // GPIO X6 to INT0
+            pin-7-int-line = <0>; // GPIO X7 to INT0
+        };
+        port@Y {
+            pin-0-int-line = <0>; // GPIO Y0 to INT0
+            pin-1-int-line = <0>; // GPIO Y1 to INT0
+            pin-2-int-line = <0>; // GPIO Y2 to INT0
+            pin-3-int-line = <0>; // GPIO Y3 to INT0
+            pin-4-int-line = <0>; // GPIO Y4 to INT0
+            pin-5-int-line = <0>; // GPIO Y5 to INT0
+            pin-6-int-line = <0>; // GPIO Y6 to INT0
+            pin-7-int-line = <0>; // GPIO Y7 to INT0
+        };
+        port@Z {
+            pin-0-int-line = <0>; // GPIO Z0 to INT0
+            pin-1-int-line = <0>; // GPIO Z1 to INT0
+            pin-2-int-line = <0>; // GPIO Z2 to INT0
+            pin-3-int-line = <0>; // GPIO Z3 to INT0
+            pin-4-int-line = <0>; // GPIO Z4 to INT0
+            pin-5-int-line = <0>; // GPIO Z5 to INT0
+            pin-6-int-line = <0>; // GPIO Z6 to INT0
+            pin-7-int-line = <0>; // GPIO Z7 to INT0
+        };
+        port@AC {
+            pin-0-int-line = <0>; // GPIO AC0 to INT0
+            pin-1-int-line = <0>; // GPIO AC1 to INT0
+            pin-2-int-line = <0>; // GPIO AC2 to INT0
+            pin-3-int-line = <0>; // GPIO AC3 to INT0
+            pin-4-int-line = <0>; // GPIO AC4 to INT0
+            pin-5-int-line = <0>; // GPIO AC5 to INT0
+            pin-6-int-line = <0>; // GPIO AC6 to INT0
+            pin-7-int-line = <0>; // GPIO AC7 to INT0
+        };
+        port@AD {
+            pin-0-int-line = <0>; // GPIO AD0 to INT0
+            pin-1-int-line = <0>; // GPIO AD1 to INT0
+            pin-2-int-line = <0>; // GPIO AD2 to INT0
+            pin-3-int-line = <0>; // GPIO AD3 to INT0
+        };
+        port@AE {
+            pin-0-int-line = <0>; // GPIO AE0 to INT0
+            pin-1-int-line = <0>; // GPIO AE1 to INT0
+        };
+        port@AF {
+            pin-0-int-line = <0>; // GPIO AF0 to INT0
+            pin-1-int-line = <0>; // GPIO AF1 to INT0
+            pin-2-int-line = <0>; // GPIO AF2 to INT0
+            pin-3-int-line = <0>; // GPIO AF3 to INT0
+        };
+        port@AG {
+            pin-0-int-line = <0>; // GPIO AG0 to INT0
+            pin-1-int-line = <0>; // GPIO AG1 to INT0
+            pin-2-int-line = <0>; // GPIO AG2 to INT0
+            pin-3-int-line = <0>; // GPIO AG3 to INT0
+            pin-4-int-line = <0>; // GPIO AG4 to INT0
+            pin-5-int-line = <0>; // GPIO AG5 to INT0
+            pin-6-int-line = <0>; // GPIO AG6 to INT0
+            pin-7-int-line = <0>; // GPIO AG7 to INT0
+        };
+        port@AA {
+            pin-0-int-line = <4>; // GPIO AA0 to INT0
+            pin-1-int-line = <4>; // GPIO AA1 to INT0
+            pin-2-int-line = <4>; // GPIO AA2 to INT0
+            pin-3-int-line = <4>; // GPIO AA3 to INT0
+            pin-4-int-line = <4>; // GPIO AA4 to INT0
+            pin-5-int-line = <4>; // GPIO AA5 to INT0
+            pin-6-int-line = <4>; // GPIO AA6 to INT0
+            pin-7-int-line = <4>; // GPIO AA7 to INT0
+        };
+        port@BB {
+            pin-0-int-line = <4>; // GPIO BB0 to INT0
+            pin-1-int-line = <4>; // GPIO BB1 to INT0
+            pin-2-int-line = <4>; // GPIO BB2 to INT0
+            pin-3-int-line = <4>; // GPIO BB3 to INT0
+        };
+        port@CC {
+            pin-0-int-line = <4>; // GPIO CC0 to INT0
+            pin-1-int-line = <4>; // GPIO CC1 to INT0
+            pin-2-int-line = <4>; // GPIO CC2 to INT0
+            pin-3-int-line = <4>; // GPIO CC3 to INT0
+            pin-4-int-line = <4>; // GPIO CC4 to INT0
+            pin-5-int-line = <4>; // GPIO CC5 to INT0
+            pin-6-int-line = <4>; // GPIO CC6 to INT0
+            pin-7-int-line = <4>; // GPIO CC7 to INT0
+        };
+        port@DD {
+            pin-0-int-line = <4>; // GPIO DD0 to INT0
+            pin-1-int-line = <4>; // GPIO DD1 to INT0
+            pin-2-int-line = <4>; // GPIO DD2 to INT0
+        };
+        port@EE {
+            pin-0-int-line = <4>; // GPIO EE0 to INT0
+            pin-1-int-line = <4>; // GPIO EE1 to INT0
+            pin-3-int-line = <4>; // GPIO EE3 to INT0
+            pin-4-int-line = <4>; // GPIO EE4 to INT0
+            pin-5-int-line = <4>; // GPIO EE5 to INT0
+            pin-6-int-line = <4>; // GPIO EE6 to INT0
+            pin-7-int-line = <4>; // GPIO EE7 to INT0
+         };
+       port@GG {
+             pin-0-int-line = <4>; // GPIO GG0 to INT0
+        };
+    };
+};

@@ -1,0 +1,89 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/*
+# CFG Version 1.0
+# This File contains the configuration of multiple rails.
+*/
+/dts-v1/;
+
+/ {
+/* Placeholder currently. Data must be populated once available */
+    prod {
+        major = <1>;
+        minor = <0>;
+        addr-mask-data =     <0x02430014 0x0001f000 0x0000f000>,
+			     <0x0243001C 0x0001f000 0x0000f000>,
+			     <0x0243003C 0x0001f000 0x00000000>,
+			     <0x02430044 0x0001f000 0x00000000>,
+			     <0x0243402C 0x0001f000 0x0001f000>,
+			     <0x02434034 0x0001f000 0x0001f000>,
+			     <0x02440054 0x0001f000 0x0001f000>,
+			     <0x0244005C 0x0001f000 0x0001f000>,
+			     <0x02440064 0x0001f000 0x0001f000>,
+			     <0x0244006C 0x0001f000 0x0001f000>,
+			     <0x02440074 0x0001f000 0x0001f000>,
+			     <0x0244007C 0x0001f000 0x0001f000>,
+			     <0x0C30201C 0x0001f000 0x00000000>,
+			     <0x0C302024 0x0001f000 0x00000000>,
+			     <0x0C302034 0x0001f000 0x00008000>,
+			     <0x0C302044 0x0001f000 0x00008000>,
+			     /* I2S1 */
+			     <0x02448000 0x00001000 0x00001000>,
+			     <0x02448010 0x00001000 0x00001000>,
+			     <0x02448018 0x00001000 0x00001000>,
+			     <0x02448004 0x01f1f000 0x01f1f000>,
+			     <0x0244800C 0x01f1f000 0x01f1f000>,
+			     <0x02448014 0x01f1f000 0x01f1f000>,
+			     <0x0244801C 0x01f1f000 0x01f1f000>,
+			     /* I2S2 */
+			     <0x02434088 0x00001000 0x00001000>,
+			     <0x02434098 0x00001000 0x00001000>,
+			     <0x024340a0 0x00001000 0x00001000>,
+			     <0x0243408C 0x01f1f000 0x01f1f000>,
+			     <0x02434094 0x01f1f000 0x01f1f000>,
+			     <0x0243409C 0x01f1f000 0x01f1f000>,
+			     <0x024340A4 0x01f1f000 0x01f1f000>,
+			     /* I2S4 */
+			     <0x02432000 0x00001000 0x00001000>,
+			     <0x02432010 0x00001000 0x00001000>,
+			     <0x02432018 0x00001000 0x00001000>,
+			     <0x02432004 0x01f1f000 0x01f1f000>,
+			     <0x0243200C 0x01f1f000 0x01f1f000>,
+			     <0x02432014 0x01f1f000 0x01f1f000>,
+			     <0x0243201C 0x01f1f000 0x01f1f000>,
+			     /* DMIC3 */
+			     <0x0C303048 0x00001000 0x00001000>,
+			     <0x0C303044 0xf0000000 0xf0000000>,
+			     <0x0C30304C 0xf0000000 0xf0000000>,
+			     /* AUD_MCLK */
+			     <0x02448034 0x01f1f000 0x01f1f000>;
+    };
+};
+

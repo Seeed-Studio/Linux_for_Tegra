@@ -1,0 +1,807 @@
+# Copyright (c) 2017-2023, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+#
+# Generate BL update payload (BUP) for Jetson-TX2/Jetson-Xavier and
+# Jetson-TX1/Jetson-Nano platforms
+#
+# This script is sourced by flash.sh. The entry function being called is
+# l4t_bup_gen()
+#
+
+set -e
+
+#
+# Global variables
+#
+BSP_VER=""
+
+declare -A ENTRY_LIST
+ENTRY_LIST[bl]=""
+ENTRY_LIST[kernel]=""
+
+PART_NAME=""
+IMAGE_SIGNED=0
+BOARD_SPECIFIC=0
+OP_MODE_SPECIFIC=0
+SKIP=0
+
+SIGNED_DIR="signed"
+ODM_SIGN=""
+CMN_SPEC_STR="common"
+
+FLASH_INDEX=""
+
+#
+# payload table:
+#
+# 1. PART_NAME: partition name
+#
+# 2. IMAGE_SIGNED:
+#     0 - use unsigned image.
+#     1 - use signed image.
+#
+# 3. BOARD_SPECIFIC:
+#     0 - common for all boards.
+#     1 - board specific, i.e. multi-spec.
+#
+# 4. OP_MODE_SPECIFIC:
+#     0 - common for all fuselevels.
+#     1 - specific for different fuselevels.
+#
+# 5. SKIP: 0 - built in BUP, 1 - not built in BUP
+#
+t19x_bl_table=(
+	#PART_NAME       IMAGE_SIGNED BOARD_SPECIFIC OP_MODE_SPECIFIC SKIP
+	'BCT             1            1              1                0'
+	'BCT_A           1            1              1                0'
+	'BCT_B           1            1              1                0'
+	'BCT-boot-chain_backup 1      1              1                0'
+	'mb1             1            1              1                0'
+	'mb1_b           1            1              1                0'
+	'MB1_BCT         1            1              0                0'
+	'MEM_BCT         1            1              0                0'
+	'spe-fw          1            0              0                0'
+	'mb2             1            0              0                0'
+	'mts-preboot     1            0              1                0'
+	'mts-mce         1            0              1                0'
+	'mts-proper      1            0              1                0'
+	'VER             0            1              0                0'
+	'cpu-bootloader  1            0              0                0'
+	'bootloader-dtb  1            1              0                0'
+	'secure-os       1            0              0                0'
+	'eks             1            0              0                0'
+	'bpmp-fw         1            0              0                0'
+	'bpmp-fw-dtb     1            1              0                0'
+	'rce-fw          1            0              0                0'
+	'adsp-fw         1            0              0                0'
+	'sce-fw          1            1              0                0'
+	'sc7             1            0              1                0'
+	'xusb-fw         0            0              0                0'
+	'secondary_gpt   1            1              0                0'
+	'secondary_gpt_backup 1       1              0                0'
+)
+
+t19x_kernel_table=(
+	#PART_NAME       IMAGE_SIGNED BOARD_SPECIFIC OP_MODE_SPECIFIC SKIP
+	'kernel          0            0              0                0'
+	'kernel-dtb      0            1              0                0'
+)
+
+t19x_table=(
+	#type   #payload table
+	'bl     t19x_bl_table'
+	'kernel t19x_kernel_table'
+)
+
+t19x_single_bl_table=(
+	#type   #payload table
+	'bl     t19x_bl_table'
+)
+
+t23x_bl_table=(
+	#PART_NAME        IMAGE_SIGNED BOARD_SPECIFIC OP_MODE_SPECIFIC SKIP
+	'BCT              1            1              1                0'
+	'BCT_A            1            1              1                0'
+	'BCT_B            1            1              1                0'
+	'BCT-boot-chain_backup 1       1              1                0'
+	'A_mb1            1            1              1                0'
+	'A_psc_bl1        1            0              1                0'
+	'A_MB1_BCT        1            1              0                0'
+	'A_MEM_BCT        1            1              0                0'
+	'A_tsec-fw        1            0              0                0'
+	'A_nvdec          1            0              1                0'
+	'A_mb2            1            1              0                0'
+	'A_bpmp-fw        1            1              1                0'
+	'A_bpmp-fw-dtb    1            1              0                0'
+	'A_psc-fw         1            0              1                0'
+	'A_mts-mce        1            0              1                0'
+	'A_sc7            1            0              1                0'
+	'A_pscrf          1            0              1                0'
+	'A_mb2rf          1            0              0                0'
+	'A_cpu-bootloader 1            1              0                0'
+	'A_secure-os      1            0              0                0'
+	'A_smm-fw         1            0              0                1'
+	'A_eks            1            0              0                0'
+	'A_dce-fw         1            1              0                0'
+	'A_spe-fw         1            0              0                0'
+	'A_rce-fw         1            0              0                0'
+	'A_adsp-fw        1            0              0                0'
+	'uefi_variables   1            0              0                1'
+	'uefi_ftw         1            0              0                1'
+	'mb2-applet       0            0              0                0'
+	'A_VER            0            1              0                0'
+	'esp              1            0              0                1'
+	'A_xusb-fw        1            0              1                0'
+	'secondary_gpt    1            1              0                0'
+	'secondary_gpt_backup 1        1              0                0'
+)
+
+t23x_kernel_table=(
+	#PART_NAME        IMAGE_SIGNED BOARD_SPECIFIC OP_MODE_SPECIFIC SKIP
+	'A_kernel         0            0              0                0'
+	'A_kernel-dtb     0            1              0                0'
+)
+
+t23x_table=(
+	#type   #payload table
+	'bl     t23x_bl_table'
+	'kernel t23x_kernel_table'
+)
+
+t23x_single_bl_table=(
+	#type   #payload table
+	'bl     t23x_bl_table'
+)
+
+#
+# parse entry of the config table
+#
+# $1: entry
+#
+_parse_table()
+{
+	local _entry="${1}"
+
+	PART_NAME=$( echo "${_entry}" | awk '{print $1}' )
+	IMAGE_SIGNED=$( echo "${_entry}" | awk '{print $2}' )
+	BOARD_SPECIFIC=$( echo "${_entry}" | awk '{print $3}' )
+	OP_MODE_SPECIFIC=$( echo "${_entry}" | awk '{print $4}' )
+	SKIP=$( echo "${_entry}" | awk '{print $5}' )
+
+	if [[ "${single_bup_blob}" == 1 ]]; then
+		if [[ "${single_bup_name}" == "${PART_NAME}" ]]; then
+			if [[ "${SKIP}" == 1 ]]; then
+				echo ""
+				echo "Unsupported single image ${single_bup_name}"
+				echo "Exiting..."
+				exit 1
+			else
+				SKIP=0
+			fi
+		else
+			SKIP=1
+		fi
+	fi
+}
+
+#
+# parse rollback config and generate a binary
+#
+# $1: tegra_soc (t19x, t23x)
+#
+_parse_rollback_info()
+{
+	local tegra_soc="${1}";
+	local _rollback_bin=rollback.bin
+	local _rollback_cfg="${OUT}"/rollback/"${tegra_soc}"/rollback.cfg
+	if [ -f "${_rollback_bin}" ]; then
+		rm "${_rollback_bin}"
+	fi
+	"${OUT}"/rollback/rollback_parser.py "${PRODUCT_NAME}" "${_rollback_cfg}"
+}
+
+#
+# Get op_mode
+# $1 image name
+# $2 op mode spec
+# $3 return op_mode
+#
+_get_op_mode()
+{
+	local _image="${1}"
+	local _mode_spec="${2}"
+	local _ret_op_mode="${3}"
+	local _op_mode=0
+
+	# Common for all fuselevel: op_mode = 0
+	# For preproduction mode special binary(_dev): op_mode = 1
+	# For production mode special binary(_prod): op_mode = 2
+	if [ $_mode_spec -ne 0 ];then
+		if [[ -n "$(echo $_image | grep "prod")" ]];then
+			_op_mode=2
+		else
+			_op_mode=1
+		fi
+	fi
+
+	eval "${_ret_op_mode}=${_op_mode}"
+}
+
+#
+# add multiple files into blob generating cmd
+# $1: partition name
+# $2: binary list
+# $3: payload type
+# $4: mode specific
+#
+_add_multi_bins()
+{
+	local e=
+	local partition="${1}"
+	local bin_list="${2}"
+	local type="${3}"
+	local _mode_spec="${4}"
+
+	if [ -z "${bin_list}" ];then
+		echo "ERROR: Failed to find image for $partition"
+		exit 1
+	fi
+
+	for e in ${bin_list}
+	do
+		local spec
+		spec=${e#*/}
+		spec=${spec%/*/*}
+		local bin_op_mode
+
+		_get_op_mode "${e}" "${_mode_spec}" bin_op_mode
+
+		if [ -z "${type}" ]; then
+			type="bl"
+		fi
+
+		ENTRY_LIST["${type}"]+="\
+			$e $partition ${BSP_VER} $bin_op_mode $spec;"
+	done
+}
+
+#
+# add multiple op-mode files into blob generating cmd
+# $1: partition name
+# $2: binary list
+# $3: payload type
+# $4: mode specific
+#
+_add_multi_mode_bins()
+{
+	local _e=
+	local _partition="${1}"
+	local _bin_list="${2}"
+	local _type="${3}"
+	local _mode_spec="${4}"
+	local _bin_op_mode
+
+	if [ -z "${_bin_list}" ];then
+		echo "ERROR: Failed to find image for $partition"
+		exit 1
+	fi
+
+	for _e in ${_bin_list}
+	do
+		_get_op_mode "${_e}" "${_mode_spec}" _bin_op_mode
+
+		if [ -z "${_type}" ]; then
+			type="bl"
+		fi
+
+		ENTRY_LIST["${_type}"]+="\
+			${_e} ${_partition} ${BSP_VER} ${_bin_op_mode} ${CMN_SPEC_STR};"
+	done
+}
+
+#
+# Get the image name by partition name
+# $1 partition name
+# $2 return image name
+#
+_get_image_by_part_name()
+{
+	local _part_name="${1}"
+	local _ret_image="${2}"
+	local _part_image
+
+	_part_image=$(grep ":${_part_name}," < "${FLASH_INDEX}" | \
+			cut -d, -f 5 | sed 's/^ //g' | sed -n "1p")
+
+	# BCT_A, BCT_B aren't the real partitions, they are used to
+	# store the boot chain A and B BCT images, so the flash.idx
+	# doesn't have these partitions' information.
+	# Set the image names for them directly.
+	if [[ "${PART_NAME}" == "BCT_A" ]]; then
+		_part_image="br_bct_BR.bct"
+	elif [[ "${PART_NAME}" == "BCT_B" ]]; then
+		_part_image="br_bct_b_BR.bct"
+	fi
+
+	eval "${_ret_image}=${_part_image}"
+}
+
+# Revmoe the prefix "A_" from the partition name
+# $1 partition name
+# $2 retrun the partition name without prefix "A_"
+_remove_partition_name_prefix()
+{
+	local _part_name="${1}"
+	local _ret_name="${2}"
+	local _name
+
+	_name=$(echo ${_part_name:0:2})
+	if [[ "${_name}" == "A_" ]]; then
+		_name=$(echo ${_part_name#*_})
+	else
+		_name="${_part_name}"
+	fi
+
+	 eval "${_ret_name}=${_name}"
+}
+
+#
+# Generate payload from table
+# $1 payload type (bl, kernel)
+# $2 image config table
+#
+_generate_payload_from_table()
+{
+	local _payload_type="${1}"
+	local _confs=("${!2}")
+	local _image
+	local _part_name_in_bup
+
+	for i in "${!_confs[@]}"; do
+		_parse_table "${_confs[$i]}"
+
+		if [[ "${SKIP}" == 1 ]]; then
+			continue
+		fi
+
+		# Some partitions may only exist or be flashed on certain platforms.
+		# For example, sce-fw is flashed on Xavier-industrial but not on
+		# Xavier and NX. So if an image can't be found in the flash.idx,
+		# just skip it.
+		_remove_partition_name_prefix "${PART_NAME}" _part_name_in_bup
+		if [[ "${BOARD_SPECIFIC}" == 0 ]]; then
+			if [[ "${OP_MODE_SPECIFIC}" == 0 ]]; then
+				_get_image_by_part_name "${PART_NAME}" _image
+				if [[ "${_image}" == "" ]]; then
+					echo "Warning: No ${PART_NAME} image for the commong spec."
+					continue
+				fi
+
+				if [[ "${IMAGE_SIGNED}" == 1 ]]; then
+					_image="${SIGNED_DIR}/${_image}"
+				fi
+				ENTRY_LIST["${_payload_type}"]+="\
+					${_image} ${_part_name_in_bup} ${BSP_VER} 0 $CMN_SPEC_STR;"
+			elif [[ "${OP_MODE_SPECIFIC}" == 1 ]]; then
+				local _dir="multi_signed/${PART_NAME}_*/*"
+				local _bins=$( ls ${_dir} 2> /dev/null | wc -l )
+				if [[ "${_bins}" == 0 ]]; then
+					continue
+				fi
+				_add_multi_mode_bins "${_part_name_in_bup}" "$(ls ${_dir})" \
+					"${_payload_type}" "${OP_MODE_SPECIFIC}"
+			fi
+		else
+			local _dir="multi_signed/*/${PART_NAME}/*"
+			local _bins=$( ls ${_dir} 2> /dev/null | wc -l )
+			if [[ "${_bins}" == 0 ]]; then
+				continue
+			fi
+			_add_multi_bins "${_part_name_in_bup}" "$(ls ${_dir})" \
+					"${_payload_type}" "${OP_MODE_SPECIFIC}"
+		fi
+	done
+}
+
+#
+# Generate payloads
+# $1: soc config table
+#
+_generate_payload()
+{
+	local _confs=("${!1}")
+	local _item
+	local _pd_type
+	local _pd_table
+
+	for i in "${!_confs[@]}"; do
+		_item="${_confs[$i]}"
+		_pd_type=$( echo "${_item}" | awk '{print $1}' )
+		_pd_table=$( echo "${_item}" | awk '{print $2}' )
+
+		if [[ "${bup_type}" != "" ]]; then
+			if [[ "${bup_type}" == "${_pd_type}" ]]; then
+				_generate_payload_from_table "${_pd_type}" "${_pd_table}"[@]
+				break
+			else
+				continue
+			fi
+		fi
+		_generate_payload_from_table "${_pd_type}" "${_pd_table}"[@]
+	done
+}
+
+#
+# generate bootloader update payload
+# $1: spec
+# $2: tegra soc (t19x, t23x)
+#
+_generate_bl_update_payload()
+{
+	local _sw_spec="${1}"
+	local tegra_soc="${2}"
+	local BUP_GENERATOR="${OUT}"/BUP_generator.py
+
+	echo ""
+	echo "Creating update payloads for Jetson-${_sw_spec} board ..."
+
+	if [ "${tegra_soc}" == "t19x" ]; then
+		if [ "${single_bup_blob}" == 1 ]; then
+			_generate_payload t19x_single_bl_table[@]
+		else
+			_generate_payload t19x_table[@]
+		fi
+	elif [ "${tegra_soc}" == "t23x" ]; then
+		if [ "${single_bup_blob}" == 1 ]; then
+			_generate_payload t23x_single_bl_table[@]
+		else
+			_generate_payload t23x_table[@]
+		fi
+	else
+		echo "Unsupported tegra soc: ${tegra_soc}"
+		echo "bootloader update payload creation failed"
+		exit 1
+	fi
+
+	# Remove the extra ';' from the end of each entry list
+	for list_name in "${!ENTRY_LIST[@]}"; do
+		ENTRY_LIST["${list_name}"]="${ENTRY_LIST["${list_name}"]%;}"
+	done
+
+	if [ "${single_bup_blob}" == 1 ] && [ "${ENTRY_LIST[bl]}" == "" ]; then
+		result="FAILURE: No ${single_bup_name} bootloader partition, payload not created"
+
+		echo ""
+		echo "${result}"
+		echo ""
+		echo "Exiting..."
+		exit 1
+	fi
+
+	local rollback_opt=""
+	local rollback_bin="rollback.bin"
+
+	if [ -f "${rollback_bin}" ]; then
+		rollback_opt="-r ${rollback_bin}"
+	fi
+
+	for list_name in "${!ENTRY_LIST[@]}"; do
+		if [ "${ENTRY_LIST["${list_name}"]}" == "" ]; then
+			continue
+		fi
+
+		local cmd="${BUP_GENERATOR} -t update ${rollback_opt} -e \"${ENTRY_LIST["${list_name}"]}\""
+		local payload_name="${list_name}_only_payload"
+
+		if [ "${single_bup_blob}" == 1 ]; then
+			payload_name="${single_bup_name}_only_payload"
+		fi
+
+		echo "creating ${list_name} payload"
+		echo ""
+
+		eval "${cmd}"
+
+		if [ $? -eq 0 ]; then
+			mv ota.blob "${PAYLOAD_PATH}/${payload_name}"
+			result="SUCCESS: ${payload_name} created"
+		else
+			result="FAILURE: ${payload_name} not created"
+		fi
+
+		echo ""
+		echo "${result}"
+		echo ""
+
+		if [[ "${result}" == "FAILURE"* ]]; then
+			echo "Exiting..."
+			exit 1
+		fi
+	done
+}
+
+#
+# Copy multi spec/op-mode images to the multi directories
+# $1: image config table
+# $2: SEPC
+# $3: fuselevel
+#
+_copy_multi_images_from_table()
+{
+	local _confs=("${!1}")
+	local _sw_spec="${2}"
+	local _fuselevel="${3}"
+	local _image
+
+	for i in "${!_confs[@]}"; do
+		local _src_img
+		local _tgt_dir
+		local _tgt_img
+
+		_parse_table "${_confs[$i]}"
+
+		if [[ "${SKIP}" == 1 ]]; then
+			continue
+		fi
+
+		if [[ "${BOARD_SPECIFIC}" == 0 ]] && [[ "${OP_MODE_SPECIFIC}" == 0 ]]; then
+			# Common spec and none op-mode
+			# Don't move images to the multi-signed/
+			continue
+		fi
+
+		_get_image_by_part_name "${PART_NAME}" _image
+		if [[ "${_image}" == "" ]]; then
+			continue
+		fi
+
+		_src_img="${OUT}/${_image}"
+		if [[ "${IMAGE_SIGNED}" == 1 ]]; then
+			_src_img="${OUT}/${SIGNED_DIR}/${_image}"
+		fi
+
+		_tgt_dir="${OUT}/multi_signed/${_sw_spec}/${PART_NAME}"
+		if [[ "${BOARD_SPECIFIC}" == 0 ]] && [[ "${OP_MODE_SPECIFIC}" == 1 ]]; then
+			# Some images are common spec but have different op-mode
+			_tgt_dir="${OUT}/multi_signed/${PART_NAME}_${_fuselevel}"
+		fi
+		mkdir -p "${_tgt_dir}"
+
+		_tgt_img="$(basename ${_src_img})"
+
+		# BCT is a special image:
+		# It is always a signed and mode specific image,
+		# but the image name doesn't have the "dev" or "prod" term.
+		# Check fuselevel to add suffix ".dev" or ".prod" to the BCT image name.
+		case "${PART_NAME}" in
+		BCT | BCT_A | BCT_B | BCT-boot-chain_backup )
+			if [ "${_fuselevel}" = "fuselevel_nofuse" ]; then
+				_tgt_img="${_tgt_img}.dev"
+			else
+				_tgt_img="${_tgt_img}.prod"
+			fi;
+			;;
+		esac
+
+		cp "${_src_img}" "${_tgt_dir}"/"${_tgt_img}"
+	done
+}
+
+#
+# Copy images to the multi directories
+# $1: soc config table
+# $2: SEPC
+# $3: fuselevel
+#
+_copy_multi_images()
+{
+	local _confs=("${!1}")
+	local _sw_spec="${2}"
+	local _fuselevel="${3}"
+	local _item
+	local _pd_table
+	local _pd_type
+
+	for i in "${!_confs[@]}"; do
+		_item="${_confs[$i]}"
+		_pd_type=$( echo "${_item}" | awk '{print $1}' )
+		_pd_table=$( echo "${_item}" | awk '{print $2}' )
+
+		if [[ "${bup_type}" == "" ]] || [[ "${bup_type}" == "${_pd_type}" ]]; then
+			_copy_multi_images_from_table \
+				"${_pd_table}"[@] "${_sw_spec}" "${_fuselevel}"
+		fi
+	done
+}
+
+#
+# Sign partition images
+#
+# $1: signing cmd with all required parameters
+# $2: spec
+# $3: fuselevel
+# $4: tegra soc (t19x, t23x)
+#
+_sign_multi_images()
+{
+	local cmd="${1}"
+	local _sw_spec="${2}"
+	local fuselevel="${3}"
+	local tegra_soc="${4}"
+
+	if [ $support_multi_spec -ne 0 ]; then
+		mkdir -p multi_signed
+	else
+		[ -d "${OUT}"/multi_signed ] && { rm multi_signed -rI -f; }
+		mkdir multi_signed
+	fi;
+
+	if [ "${ODM_SIGN}" == "" ]; then
+		echo ""
+		echo "Generating signed binaries for $_sw_spec ..."
+		echo ${cmd}
+		eval ${cmd}
+		if [ $? -ne 0 ];then
+			exit 1
+		fi;
+	fi
+
+	echo ""
+	echo "signing images succeeded"
+	echo ""
+
+	if [ $support_multi_spec -ne 0 ]; then
+		mkdir -p "${OUT}"/multi_signed/"${_sw_spec}"
+	else
+		mkdir "${OUT}"/multi_signed/"${_sw_spec}"
+		[ -d "${OUT}"/multi_signed/"${_sw_spec}" ] || { exit 0; }
+	fi;
+
+	FLASH_INDEX=""${OUT}"/"${SIGNED_DIR}"/flash.idx"
+	if [ ! -f "${FLASH_INDEX}" ]; then
+		echo "The index file ${FLASH_INDEX} is not found."
+		exit 1
+	fi
+	cp "${FLASH_INDEX}" "${OUT}"/multi_signed/"${_sw_spec}"
+
+	if [ "${tegra_soc}" == "t19x" ]; then
+		_copy_multi_images t19x_table[@] "${_sw_spec}" "${fuselevel}"
+	elif [ "${tegra_soc}" == "t23x" ]; then
+		_copy_multi_images t23x_table[@] "${_sw_spec}" "${fuselevel}"
+	fi
+}
+
+#
+# generate multiple Bootloader Update Payload
+# $1: signing cmd with all required parameters
+# $2: spec
+# $3: fuselevel
+# $4: target_board
+# $5: keyfile (optional)
+# $6: chipid (0x19, 0x23)
+#
+function l4t_bup_gen()
+{
+	local cmd="${1}"
+	local spec="${2}"
+	local fuselevel="${3}"
+
+	# set up environment variables for l4t_bup_gen
+	PRODUCT_NAME="${4}"
+	local keyfile="${5}"
+	local sbk_keyfile="${6}"
+	local chipid="${7}";
+	local tegra_soc=t${chipid:2:2}x # t19x or t23x
+
+	export TOP=$(pwd);
+	export OUT=$(pwd);
+
+	# get the bsp version to fill the entry list version.
+	if [ -f "${LDK_DIR}/nv_tegra/bsp_version" ]; then
+		source "${LDK_DIR}/nv_tegra/bsp_version"
+		BSP_VER="${BSP_BRANCH}"
+		BSP_VER+="${BSP_MAJOR}"
+		BSP_VER+="${BSP_MINOR}"
+	else
+		echo "# Unknow release"
+		echo "bootloader update payload creation failed"
+		exit 1
+	fi
+
+	PAYLOAD_PATH="${OUT}/payloads_${tegra_soc}"
+
+	if [ ! -d "${PAYLOAD_PATH}" ]; then
+		mkdir -p "${PAYLOAD_PATH}"
+	fi
+
+	# parse supported products
+	case ${PRODUCT_NAME} in
+		t186ref | t186ref_int)
+			;;
+		t194ref)
+			;;
+		generic)
+			;;
+		# add future supported product here
+		# future_p)
+		#	;;
+		*)
+			echo "Unsupported product: ${PRODUCT_NAME}"
+			echo "bootloader update payload creation failed"
+			exit 1
+			;;
+	esac
+
+	# clean up signed buffers
+	if [ ${clean_up} -ne 0 ]; then
+		rm signed -rIf;
+		rm multi_signed -rIf;
+		rm encrypted_signed -rIf;
+		rm encrypted_signed_t19x -rIf;
+		rm -f "${OUT}"/rollback.bin
+		exit 0;
+	fi;
+
+
+	# check PKC and SBK keys:
+	# No PKC: the images are in signed/, file extention is .encrypt
+	# PKC: the images are in signed/, file extention is .signed
+	# PKC+SBK: the images are in encrypted_signed*/, file extention is encrypt.signed
+	if [ ! -z "${keyfile}" ]; then
+		if [ ! -f "${keyfile}" ]; then
+			echo "Error: No such file: '${OUT}/${keyfile}'."
+			exit 1
+		fi
+		if [ "${fuselevel}" = "fuselevel_nofuse" ]; then
+			echo "Warning: Sign images for '${fuselevel}' board."
+		fi
+
+		if [ ! -z "${sbk_keyfile}" ]; then
+			# PKC+SBK
+			if [ ! -f "${sbk_keyfile}" ]; then
+				echo "Error: No such file: '${OUT}/${sbk_keyfile}'."
+				exit 1
+			fi
+
+			if [ "${tegra_soc}" == "t19x" ]; then
+				SIGNED_DIR="encrypted_signed_t19x"
+			else
+				SIGNED_DIR="encrypted_signed"
+			fi
+
+			echo "Encrypting with ${sbk_keyfile} ..."
+			echo "Signing with ${keyfile} ..."
+		else
+			# PKC
+			SIGNED_DIR="signed"
+
+			echo "Signing with ${keyfile} ..."
+		fi
+
+		if [ -f odmsign.func ]; then
+			# already signed by odmsign.func
+			# doesn't need to run ${cmd} again
+			ODM_SIGN="signed"
+		fi
+
+	else
+		# No PKC
+		SIGNED_DIR="signed"
+
+		echo "Signing with zerosbk ..."
+	fi
+
+	_parse_rollback_info ${tegra_soc}
+
+	_sign_multi_images "${cmd}" ${spec} ${fuselevel} ${tegra_soc}
+	_generate_bl_update_payload ${spec} ${tegra_soc}
+
+	echo "Payloads saved to \"${PAYLOAD_PATH}/\""
+	echo ""
+}

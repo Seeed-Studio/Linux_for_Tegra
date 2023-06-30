@@ -1,0 +1,94 @@
+#! /usr/bin/env python2
+# Copyright (c) 2013-2016, NVIDIA CORPORATION.  All Rights Reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+import os
+import sys
+from optparse import OptionParser
+try:
+    from supported_targets_all import supported_targets
+except:
+    from supported_targets import supported_targets
+
+if __name__ == "__main__":
+    pm342_targets = supported_targets["pm342"]
+    pm292_targets = supported_targets["pm292"]
+    e2379_targets = supported_targets["e2379"]
+    nv_topo_targets = supported_targets["nv_topo"]
+
+    parser = OptionParser()
+    parser.set_defaults()
+    parser.add_option("--target", "-t", action="store", type="string",
+                      dest="target", help="Target board [%s]" % " | ".join(pm342_targets + pm292_targets + e2379_targets + nv_topo_targets))
+    parser.add_option("--serial", "-s", action="store", type="string",
+                      dest="serial", help="Serial of debug board. Defaults to the value of PMXXX_SERIAL environment variable.")
+    parser.add_option("--variant", "-v", action="store", type="string",
+                      dest="variant", help="Target board variant [A00 | A01 | A02 | A03 | ...]")
+    parser.add_option("--delay", "-d", action="store", type="int",
+                      dest="delay", help="onkey press time in seconds",
+                      default=0.25)
+    parser.add_option("--index", "-i", action="store", type="int",
+                      dest="index", help="Instance of debug board if there are more than one, starts with 0.",
+                      default=0)
+
+    (options, args) = parser.parse_args()
+
+    if options.serial is None and "PMXXX_SERIAL" in os.environ:
+        options.serial = os.environ["PMXXX_SERIAL"]
+        print >>sys.stderr, "NOTE: Using --serial=%s from environment." % options.serial
+
+    if options.target in pm342_targets:
+        from pm342 import pm342
+        pmxxx = pm342(serial = options.serial, target = options.target, variant = options.variant)
+    elif options.target in pm292_targets:
+        from pm292 import pm292
+        pmxxx = pm292(serial = options.serial, target = options.target, variant = options.variant)
+    elif options.target in e2379_targets:
+        from e2379 import e2379
+        pmxxx = e2379(serial = options.serial, target = options.target, variant = options.variant, index = options.index)
+    elif options.target in nv_topo_targets:
+        from nvtopo import nv_topo
+        pmxxx = nv_topo(options.target, options.serial, options.index)
+    else:
+        print ("'%s' is not a supported target board\nUse one of following: [%s]" %
+               (options.target, " | ".join(pm342_targets + pm292_targets + nv_topo_targets)))
+        exit(1)
+
+    if len(args) != 1:
+        print >>sys.stderr, "Must give a board control command: reset | recovery | usb_{on,off} | recovery_{up,down} | onkey | onkey_{up,down} | power_{on,off} | status"
+        sys.exit(1)
+
+    if args[0] == "reset":
+        pmxxx.target_reset()
+    elif args[0] == "recovery":
+        pmxxx.target_recovery_mode()
+    elif args[0] == "usb_on":
+        pmxxx.enable_USB()
+    elif args[0] == "usb_off":
+        pmxxx.disable_USB()
+    elif args[0] == "recovery_down":
+        pmxxx.hold_button("FORCE_RECOVERY")
+    elif args[0] == "recovery_up":
+        pmxxx.release_button("FORCE_RECOVERY")
+    elif args[0] == "onkey":
+        pmxxx.push_button("ONKEY", options.delay)
+    elif args[0] == "onkey_down":
+        pmxxx.hold_button("ONKEY")
+    elif args[0] == "onkey_up":
+        pmxxx.release_button("ONKEY")
+    elif args[0] == "power_on":
+        pmxxx.target_power_on()
+    elif args[0] == "power_off":
+        pmxxx.target_power_off()
+    elif args[0] == "status":
+        print("VDD_CORE is %s" % ("on" if pmxxx.is_VDD_CORE_on() else "off"))
+        print("VDD_CPU is %s" % ("on" if pmxxx.is_VDD_CPU_on() else "off"))
+        for gpio in sorted([x for x in pmxxx.get_IO_names() if "GPIO" in x]):
+            print(gpio + " is %d" % pmxxx.get_IO(gpio))
+    else:
+        print >>sys.stderr, "Must give a board control command: reset | recovery | usb_{on,off} | recovery_{up,down} | onkey | power_{on,off} | status"

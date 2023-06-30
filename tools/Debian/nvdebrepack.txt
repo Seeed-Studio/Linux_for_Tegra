@@ -1,0 +1,164 @@
+This README provides instructions to repackage the existing L4T Debian packages with the helper
+script `nvdebrepack.sh`.
+
+
+Basic usage
+===========
+
+You can repackage an existing package via:
+
+```
+./nvdebrepack.sh -n <maintainer> <package>
+```
+
+The script suffixes the package version number with a custom version string, updating the Debian
+changelog and recalculating the md5 checksums and the installed size according to the update.
+
+You must specify the maintainer info via the option `-n` as it is needed to update the Debian
+changelog. The format of the maintainer information is `full name <email-address>`.
+
+You can use the option `-v` to specify a custom version string. The script appends the string to the
+original L4T package version string with a "+". Bydefault, the custom version string is `default0`
+and the resulting updated package version is `<original_version>+default0`.
+
+You can use the option `-m` to specify a comment line, which the script inserts in the Debian
+changelog. The default comment is `Custom version.`.
+
+
+Injecting files
+---------------
+
+If you need to inject files into an existing package, you can use the option `-f` to specify an
+injection file. Each line in the injection file represents a file to be injected, and must conform
+to the format: `<source>:<destination>[:<permission>]`.
+
+`<source>` is the path to the file to be injected. `<destination>` must be an absolute path in the
+filesystem tree of the package. `<permission>` is used to set the permission of the injected file.
+It’s required if the file is newly added. The injection file must end with a newline.
+
+Alternatively, you use the option `-i` to specify a particular file to be injected. The file must be
+specified in the format mentioned above. Multiple files can be specified with multiple `-i` options.
+
+
+Updating dependencies
+---------------------
+
+If a package has been updated, and thus its version number has been incremented, any other
+packages that depend on a previous version of this package must also be updated. You can use the
+option `-d` to update the version number of a particular dependent package in the format
+`-d <pkg>=<version>`. You can update multiple packages by separating their descriptions with commas.
+Note that <pkg> must be one of the existing dependent packages.
+
+
+Example: repackaging nvidia-l4t-kernel
+======================================
+
+The following example shows how to repackage `nvidia-l4t-kernel` and replace the kernel image in
+`/boot` directory.
+
+You can do it either by:
+
+```
+./nvdebrepack.sh \
+        -v "example0" \
+        -i </path/to/new/Image>:/boot/Image \
+        -m "Replace kernel image." \
+        -n "NVIDIA Corporation <linux-tegra-bugs@nvidia.com>" \
+        nvidia-l4t-kernel_<original>_arm64.deb
+```
+
+or
+
+```
+./nvdebrepack.sh \
+        -v "example0" \
+        -f inject-files \
+        -m "Replace kernel image." \
+        -n "NVIDIA Corporation <linux-tegra-bugs@nvidia.com>" \
+        nvidia-l4t-kernel_<original>_arm64.deb
+```
+
+where the injection file `inject-files` contains
+
+```
+</path/to/new/Image>:/boot/Image
+```
+
+The scripts generates a new package `nvidia-l4t-kernel_<original>+example0_arm64.deb` in the current
+directory and the package version is set to `<original>+example0`.
+
+Next we must repackage other packages that depend on `nvidia-l4t-kernel`. You can do this by
+iterating over all L4T packages and checking whether `nvidia-l4t-kernel` is in the dependencies by:
+
+```
+dpkg -f package.deb Depends
+```
+
+Or running the following command on target to get the reverse dependency:
+
+```
+apt rdepends nvidia-l4t-kernel
+```
+
+In our case, there are three packages depends on `nvidia-l4t-kernel`: `nvidia-l4t-kernel-dtbs`,
+`nvidia-l4t-kernel-headers` and `nvidia-l4t-jetson-io`.
+
+However, a ranged dependency is used in `nvidia-l4t-jetson-io`:
+
+```
+nvidia-l4t-kernel (>> 4.9.140-tegra-32.4-0), nvidia-l4t-kernel (<< 4.9.140-tegra-32.5-0)
+```
+
+In this case we don't need to update `nvidia-l4t-jetson-io` as the updated package version of
+`nvidia-l4t-kernel` still meets the dependency requirement.
+
+For the rest two packages, we could update the dependencies by:
+
+```
+./nvdebrepack.sh \
+        -d nvidia-l4t-kernel=<original>+example0 \
+        -v example0 \
+        -n "NVIDIA Corporation <linux-tegra-bugs@nvidia.com>" \
+        nvidia-l4t-kernel-dtbs_<original>_arm64.deb
+./nvdebrepack.sh \
+        -d nvidia-l4t-kernel=<original>+example0 \
+        -v example0 \
+        -n "NVIDIA Corporation <linux-tegra-bugs@nvidia.com>" \
+        nvidia-l4t-kernel-headers_<original>_arm64.deb
+```
+And we need to continue to update all the other packages that depend on these two packages. But no
+further update is needed here as no packages depend on these two packages.
+
+
+Example: automatic version increment
+====================================
+
+You can modify a package a second time based on a previous update.  And as mentioned above, the
+script uses a default custom version string, `default0`, if you don't specify one with the `-v`
+switch.
+
+
+For example, the following command generates `nvidia-l4t-kernel_<original>+default0_arm64.deb` and
+sets its package version to `<original>+default0`:
+
+```
+./nvdebrepack.sh \
+        -n "NVIDIA Corporation <linux-tegra-bugs@nvidia.com>" \
+        nvidia-l4t-kernel_<original>_arm64.deb
+```
+
+If you make another update based on the new generated package:
+
+```
+./nvdebrepack.sh \
+        -n "NVIDIA Corporation <linux-tegra-bugs@nvidia.com>" \
+        nvidia-l4t-kernel_<original>+default0_arm64.deb
+```
+
+The script generates `nvidia-l4t-kernel_<original>+default1_arm64.deb` and sets its package version
+to `<original>+default1`. The numeric part of the default custom version string is automatically
+incremented from 0 to 1.
+
+Note that the automatic version increment only applies to the custom version string, specified as a
+string followed by a digit, e.g., `example0`. If you use your own custom version string, you must
+increment the package version yourself.

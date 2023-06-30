@@ -1,0 +1,32 @@
+/dts-v1/;
+
+#include "tegra234-chip.dtsi"
+
+/ {
+    tfc {
+        reg@5441 { /* CBB_CENTRAL_CBB_FIREWALL_TACH_1_BLF, READ_CTL */
+            exclusion-info = <0>;
+            value = <0x00100008>;
+        };
+
+        reg@5442 { /* CBB_CENTRAL_CBB_FIREWALL_TACH_1_BLF, WRITE_CTL */
+            exclusion-info = <0>;
+            value = <0x00100008>;
+        };
+
+        reg@5443 { /* CBB_CENTRAL_CBB_FIREWALL_TACH_1_BLF, CTL_SETTING */
+            exclusion-info = <0>;
+            value = <0x80030000>;
+        };
+
+        reg@5138 { /* CBB_CENTRAL_CBB_FIREWALL_QSPI0_BLF, READ_CTL */
+            exclusion-info = <2>;
+            value = <0x00100009>;
+        };
+
+        reg@5139 { /* CBB_CENTRAL_CBB_FIREWALL_QSPI0_BLF, WRITE_CTL */
+            exclusion-info = <2>;
+            value = <0x00100009>;
+        };
+    };
+};

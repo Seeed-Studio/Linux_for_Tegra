@@ -1,0 +1,4 @@
+DISTRO="ubuntu"
+VERSION="focal"
+EABI="aarch64"
+BASE_URL="http://ftp.jaist.ac.jp/pub/Linux/ubuntu-cdimage/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.4-base-arm64.tar.gz"

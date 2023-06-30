@@ -1,0 +1,110 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+/dts-v1/;
+
+#include "tegra234-p3701-0000-as-Nano-sdram.dtsi"
+
+&mem_cfg_0 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_1 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_2 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_3 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_4 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_5 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_6 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_7 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_8 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_9 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_10 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_11 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_12 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_13 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_14 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};
+
+&mem_cfg_15 {
+#include "tegra234-mem-bct-sw-override-carveout-common.dtsi"
+#include "tegra234-mem-bct-sw-override-carveout-l4t.dtsi"
+#include "tegra234-mem-bct-sw-override-non-carveout-common.dtsi"
+};

@@ -1,0 +1,183 @@
+#!/bin/bash
+
+# Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+initrd_dir=/mnt/initrd;
+dhclient_flag="true";
+count=0;
+
+echo "Starting L4T initial RAM disk" > /dev/kmsg;
+
+#Mount procfs, devfs, sysfs and debugfs
+mount -t proc proc /proc
+if [ $? -ne 0 ]; then
+	echo "ERROR: mounting proc fail..." > /dev/kmsg;
+	exec /bin/bash;
+fi;
+mount -t devtmpfs none /dev
+if [ $? -ne 0 ]; then
+	echo "ERROR: mounting dev fail..." > /dev/kmsg;
+	exec /bin/bash;
+fi;
+mount -t sysfs sysfs /sys
+if [ $? -ne 0 ]; then
+	echo "ERROR: mounting sys fail..." > /dev/kmsg;
+	exec /bin/bash;
+fi;
+mount -t debugfs none /sys/kernel/debug/
+if [ $? -ne 0 ]; then
+	echo "ERROR: mounting debugfs fail..." > /dev/kmsg;
+	exec /bin/bash;
+fi;
+
+# create reboot command based on sysrq-trigger
+if [ -e "/proc/sysrq-trigger" ]; then
+	echo -e "#!/bin/bash \necho b > /proc/sysrq-trigger;" > /sbin/reboot;
+	chmod 755 /sbin/reboot;
+fi;
+
+dev_regex='root=\/dev\/[abcdefiklmnprstv0-9]*'
+uuid_regex='root=PARTUUID=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+rootdev="$(cat /proc/cmdline | grep -oE "\<${dev_regex}|${uuid_regex}\>" | tail -1)"
+if [ "${rootdev}" != "" ]; then
+	if [[ "${rootdev}" =~ "PARTUUID" ]]; then
+		rootdev=$(echo "${rootdev}" | sed -ne "s/root=\(.*\)/\1/p")
+	else
+		rootdev=$(echo "${rootdev}" | sed -ne "s/root=\/dev\/\(.*\)/\1/p")
+	fi
+	echo "Root device found: ${rootdev}" > /dev/kmsg;
+fi
+
+if [[ "${rootdev}" == PARTUUID* ]]; then
+	count=0;
+	while [ ${count} -lt 50 ]; do
+		sleep 0.2;
+		count="$(expr ${count} + 1)"
+
+		mount "${rootdev}" /mnt/;
+		if [ $? -eq 0 ]; then
+			break;
+		fi
+	done
+	mountpoint /mnt/;
+	if [ $? -ne 0 ]; then
+		echo "ERROR: ${rootdev} mount fail..." > /dev/kmsg;
+		exec /bin/bash;
+	fi;
+elif [[ "${rootdev}" == mmcblk* || "${rootdev}" == nvme* ]]; then
+	if [ ! -e "/dev/${rootdev}" ]; then
+		count=0;
+		while [ ${count} -lt 50 ]
+		do
+			sleep 0.2;
+			count=`expr $count + 1`;
+			if [ -e "/dev/${rootdev}" ]; then
+				break;
+			fi
+		done
+	fi
+	if [ -e "/dev/${rootdev}" ]; then
+			echo "Found dev node: /dev/${rootdev}" > /dev/kmsg;
+	else
+		echo "ERROR: ${rootdev} not found" > /dev/kmsg;
+		exec /bin/bash;
+	fi
+	mount /dev/${rootdev} /mnt/;
+	if [ $? -ne 0 ]; then
+		echo "ERROR: ${rootdev} mount fail..." > /dev/kmsg;
+		exec /bin/bash;
+	fi;
+elif [[ "${rootdev}" == sd* ]]; then
+	if [ ! -e "/dev/${rootdev}" ]; then
+		while [ ${count} -lt 50 ]
+		do
+			sleep 0.2;
+			count=`expr $count + 1`;
+			if [ -e "/dev/${rootdev}" ]; then
+				break;
+			fi
+		done
+	fi
+	if [ -e "/dev/${rootdev}" ]; then
+			echo "Found dev node: /dev/${rootdev}" > /dev/kmsg;
+	else
+		echo "ERROR: ${rootdev} not found" > /dev/kmsg;
+		exec /bin/bash;
+	fi
+	mount /dev/${rootdev} /mnt/;
+	if [ $? -ne 0 ]; then
+		echo "ERROR: ${rootdev} mount fail..." > /dev/kmsg;
+		exec /bin/bash;
+	fi;
+elif [[ "${rootdev}" == "nfs" ]]; then
+	eth=`cat /proc/cmdline | sed 's/.* ip=\([a-z0-9.:]*\) .*/\1/' | awk -F ":" '{print $6}'`;
+	echo "Ethernet interface: $eth" > /dev/kmsg;
+	ipaddr=`ifconfig "$eth" | grep -A1 "$eth" | grep "inet addr" | sed 's/.*addr:\([0-9\.]*\) .*/\1/'`;
+	if [[ "$ipaddr" =~ [0-9]*.[0-9]*.[0-9]*.[0-9]* ]]; then
+		echo "IP Address: $ipaddr" > /dev/kmsg;
+		dhclient_flag="false";
+	else
+		while [ ${count} -lt 50 ]
+		do
+			sleep 0.2;
+			ipaddr=`ifconfig "$eth" | grep -A1 "$eth" | grep "inet addr" | sed 's/.*addr:\([0-9\.]*\) .*/\1/'`;
+			if [[ "$ipaddr" =~ [0-9]*.[0-9]*.[0-9]*.[0-9]* ]]; then
+				echo "IP Address: $ipaddr" > /dev/kmsg;
+				dhclient_flag="false";
+				break;
+			fi
+			count=`expr $count + 1`;
+		done
+	fi
+	if [ "$dhclient_flag" == "true" ]; then
+		timeout 8s /sbin/dhclient $eth;
+		if [ $? -ne 0 ]; then
+			echo "ERROR: dhclient fail..." > /dev/kmsg;
+			exec /bin/bash;
+		fi;
+	fi;
+	nfsroot_path="`cat /proc/cmdline | sed -e 's/.*nfsroot=\([^ ,]*\)[ ,].*/\1 /'`";
+	nfsroot_opts="`cat /proc/cmdline | sed -ne 's/.*nfsroot=\([^ ,]*\),\([^ ]*\).*/\2 /p'`";
+	if [[ "${nfsroot_opts}" == "" ]]; then
+		nfsroot_opts="nolock"
+	fi
+	mount -t nfs -o ${nfsroot_opts} ${nfsroot_path} /mnt/ &>/dev/kmsg;
+	if [ $? -ne 0 ]; then
+		echo "ERROR: NFS mount fail..." > /dev/kmsg;
+		exec /bin/bash;
+	fi;
+elif [[ "${rootdev}" == "initrd" ]]; then
+	echo "Mount initrd as rootfs and enter recovery mode" > /dev/kmsg;
+	exec /bin/bash /bin/nv_recovery.sh
+else
+	echo "No root-device: Mount failed" > /dev/kmsg;
+	exec /bin/bash;
+fi
+
+echo "Rootfs mounted over ${rootdev}" > /dev/kmsg;
+mount -o bind /proc /mnt/proc;
+mount -o bind /sys /mnt/sys;
+mount -o bind /dev/ /mnt/dev;
+cd /mnt;
+cp /etc/resolv.conf etc/resolv.conf
+
+echo "Switching from initrd to actual rootfs" > /dev/kmsg;
+mount --move . /
+exec chroot . /sbin/init 2;

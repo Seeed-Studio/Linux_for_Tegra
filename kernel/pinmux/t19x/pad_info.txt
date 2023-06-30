@@ -1,0 +1,10 @@
+ufs,1,1
+dbg,1,4
+debug,1,4
+spi,1,5
+qspi,1,5
+eqos,1,6
+ao_hv,2,0
+audio_hv,2,1
+sdmmc1_hv,2,4
+sdmmc3_hv,2,6

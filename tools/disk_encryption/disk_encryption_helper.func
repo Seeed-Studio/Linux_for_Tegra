@@ -1,0 +1,765 @@
+# Copyright (c) 2020-2022, NVIDIA CORPORATION. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+bootpartuuid="";
+bootpartuuid_ext=""
+bootpartuuid_b_ext=""
+bootpartuuidfile="${BL_DIR}/l4t-bootpart-uuid.txt";
+uuidfile="${BL_DIR}/l4t-datafs-uuid.txt"
+enc_user_disk_list=();
+if [ ${rootfs_ab} -eq 1 ]; then
+	bootpartuuid_b="";
+fi;
+
+#
+# Generate the partition UUID of the boot partition
+#
+function bootpartuuid_gen() {
+	local __boot_id="${1}";
+	local __uuid="";
+	local __uuidgen_installed="$(which uuidgen || true)";
+
+	if [ "${__uuidgen_installed}" == "" ]; then
+		echo "Error: uuidgen not installed! Please provide the UUID or install"
+		echo "uuidgen. For example, to install uuidgen for Ubuntu distributions,"
+		echo "execute the command 'sudo apt install uuid-runtime'. Otherwise a"
+		echo "UUID can be provided by storing a UUID to the file"
+		echo "${bootpartuuidfile}."
+		usage allunknown 1;
+	fi;
+
+	__uuid="$(uuidgen)";
+	setval "bootpartuuid${__boot_id}" __uuid;
+
+	echo "${__uuid}" > "${bootpartuuidfile}${__boot_id}"
+	echo "Generated UUID ${__uuid} for mounting boot APP${__boot_id} partition."
+}
+
+#
+# Check the partition UUID of the boot partition
+#
+function bootpartuuid_chk_and_gen() {
+	local __boot_id="${1}";
+	local __uuid="";
+	local __uuid_regex="([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})";
+
+	# read UUID which stored in the file ${bootpartuuidfile} if the file exist
+	if [ -f "${bootpartuuidfile}${__boot_id}" ]; then
+		__uuid="$(sed -nr "s/^${__uuid_regex}$/\1/p" "${bootpartuuidfile}${__boot_id}")";
+
+		if [ "${#__uuid}" != "36" ]; then
+			echo "File ${bootpartuuidfile}${__boot_id} contains invalid UUID!"
+			usage allunknown 1;
+		fi;
+
+		setval "bootpartuuid${__boot_id}" __uuid;
+		echo "Using UUID ${__uuid} for mounting boot APP${__boot_id} partition."
+	fi;
+
+	# generate UUID if ${bootpartuuidfile} isn't present
+	eval __uuid='$'{"bootpartuuid${__boot_id}"};
+	if [ "${__uuid}" == "" ]; then
+		bootpartuuid_gen "${__boot_id}";
+	fi;
+}
+
+#
+# Restore the partition UUID of the boot partition
+#
+function bootpartuuid_restore() {
+	local ext="${1}"
+	local _bootpartuuid="bootpartuuid${ext}"
+	local _bootpartuuid_b
+
+	bootpartuuid_chk_and_gen "${ext}";
+
+	if [[ "${rootfs_ab}" == 1 ]]; then
+		# get UUID for APP_b
+		_bootpartuuid_b="bootpartuuid_b${ext}"
+		bootpartuuid_chk_and_gen "_b${ext}";
+	fi
+
+	if [[ "${!_bootpartuuid}" == "" ]] || \
+	   [[ "${rootfs_ab}" == 1 && "${!_bootpartuuid_b}" == "" ]]; then
+		echo "No UUID found for boot partition! If the boot partition"
+		echo "is not currently being mounted using a partition UUID,"
+		echo "then flash the device by specifying the boot device that"
+		echo "was specified when previously flashing the entire system"
+		echo "(eg. /dev/mmcblk0p1). Otherwise, to mount the boot"
+		echo "partition using a partition UUID please either:"
+		echo "1. If you know the UUID for the root partition save it"
+		echo "   to the file ${bootpartuuidfile},"
+		echo "   or for boot B partition save it"
+		echo "   to the file  ${bootpartuuidfile}_b"
+		echo "2. Re-flash entire system to generate a new UUID."
+		usage allunknown 1;
+	fi;
+}
+
+#
+# Common UUID gen function
+#
+function uuid_gen() {
+	local __name="${1}";
+	local __ret_uuid="${2}";
+	local __uuid="";
+	local uuidgen_installed="$(which uuidgen || true)";
+
+	if [ "${uuidgen_installed}" == "" ]; then
+		echo "Error: uuidgen not installed! Please provide the UUID or install"
+		echo "uuidgen. For example, to install uuidgen for Ubuntu distributions,"
+		echo "execute the command 'sudo apt install uuid-runtime'. Otherwise a"
+		echo "UUID can be provided by storing a UUID to the file"
+		echo "${uuidfile}."
+		usage allunknown 1;
+	fi
+
+	__uuid="$(uuidgen)";
+	setval "${__ret_uuid}" __uuid;
+
+	echo "${__uuid}" > "${uuidfile}_${__name}";
+	echo "Generated UUID ${__uuid} for mounting ${__name} partition.";
+}
+
+#
+# Common UUID chk and gen function
+#
+function uuid_chk_and_gen() {
+	local __name="${1}";
+	local __ret_uuid="${2}";
+	local __uuid="";
+	local __uuid_regex="([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})";
+
+	# Read UUID which stored in the file ${uuidfile} if the file exist.
+	if [ -f "${uuidfile}_${__name}" ]; then
+		__uuid="$(sed -nr "s/^${__uuid_regex}$/\1/p" "${uuidfile}_${__name}")";
+
+		if [ "${#__uuid}" != "36" ]; then
+			echo "File ${uuidfile}_${__name} contains invalid UUID!";
+			usage allunknown 1;
+		fi
+
+		setval "${__ret_uuid}" __uuid;
+		echo "Using UUID ${__uuid} for mounting ${__name} partition."
+	else
+		# Generate UUID if ${uuidfile} isn't present.
+		uuid_gen "${__name}" "${__ret_uuid}";
+	fi;
+}
+
+#
+# Common UUID restore function
+#
+function uuid_restore {
+	local __name="${1}";
+	local __ret_uuid="${2}";
+
+	uuid_chk_and_gen "${__name}" "${__ret_uuid}";
+}
+
+#
+# Get attribuate from partition table
+#
+function get_attr_from_PT_table() {
+	# Usage:
+	#	get_attr_from_PT_table {__pt_name} \
+	#	{__pt_attr} \
+	#	{__pt_file} \
+	#	{__ret_value}
+	local __XMLLINT_BIN="";
+	local __pt_name="${1}";
+	local __pt_attr="${2}";
+	local __pt_file="${3}";
+	local __ret_value="${4}";
+	local __attr_val="";
+
+	# Check xmllint
+	if [ -f "/usr/bin/xmllint" ]; then
+		__XMLLINT_BIN="/usr/bin/xmllint";
+	else
+		if [ -z "${__XMLLINT_BIN}" ]; then
+			echo "ERROR xmllint not found! To install - please run: " \
+				"\"sudo apt-get install libxml2-utils\""
+			exit 1
+		fi;
+	fi;
+
+	# Get attr value
+	__attr_val="$(${__XMLLINT_BIN} --xpath "string(/partition_layout/device/partition[@name='${__pt_name}']/@${__pt_attr})" ${__pt_file})";
+
+	eval "${__ret_value}=\"${__attr_val}\"";
+}
+
+#
+# Prepare dependent binary list for LUKS disk encrytption suport
+#
+function prepare_luks_bin_list() {
+	# Usage:
+	#	prepare_luks_bin_list {__ldk_path} \
+	#		{__rootfs_path} \
+	#		{__bin_list}
+	#
+	# This will set up the dependent binaries into {__bin_list}.
+	local __ldk_path="${1}";
+	local __rootfs_path="${2}";
+	local __bin_list="${3}";
+	local __QEMU_BIN="";
+	local __libs_str="";
+	local __libs_list=();
+
+	# Check qemu
+	if [ -f "${__ldk_path}/../qemu-aarch64-static" ]; then
+		__QEMU_BIN="${__ldk_path}/../qemu-aarch64-static";
+	elif [ -f "/usr/bin/qemu-aarch64-static" ]; then
+		__QEMU_BIN="/usr/bin/qemu-aarch64-static";
+	else
+		if [ -z "${__QEMU_BIN}" ]; then
+			echo "ERROR qemu not found! To install - please run: " \
+				"\"sudo apt-get install qemu-user-static\""
+			exit 1
+		fi;
+	fi;
+
+	# Check rootfs
+	if [ ! -e "${__rootfs_path}/etc/lsb-release" ]; then
+		echo "rootfs has not been extracted."
+		exit 1
+	fi;
+
+	# Install QEMU to rootfs
+	install --owner=root --group=root "${__QEMU_BIN}" "${__rootfs_path}/usr/bin/"
+
+	# Get the dependent binary list
+	pushd "${__rootfs_path}" > /dev/null 2>&1;
+	__libs_str="$(LC_ALL=C chroot . ldd /usr/sbin/cryptsetup)";
+	popd > /dev/null 2>&1;
+
+	__libs_str="$(echo "${__libs_str}" | awk '{print $(NF-1)}')";
+	__libs_list=(${__libs_str// /});
+
+	eval "${__bin_list}=("${__libs_list[@]}")";
+
+	# Clean up
+	rm -f "${__rootfs_path}/usr/bin/qemu-aarch64-static";
+}
+
+#
+# Update the initrd for LUKS support
+#
+function prepare_luks_initrd() {
+	# Usage:
+	#	prepare_luks_initrd {__kernelinitrd} \
+	#	{__rootfs_path} \
+	#	{__rootfsuuid} \
+	#	{__bin_list}
+	#
+	# This script assume that it is in the folder where the initrd is extracted.
+	# This script modify the content of initrd.
+	local __params=("${@}");
+	local __kernelinitrd="${__params[0]}";
+	local __rootfs_path="${__params[1]}";
+	local __rootfsuuid="${__params[2]}";
+	local __rootfsuuid_other="${__params[3]}";
+	local __params_len=${#__params[@]};
+	local __bin_list=();
+	local script_name=prepare_luks_initrd;
+
+	echo "${script_name}: Begin to copy binaries into initrd"
+
+	for ((i=4; i<${__params_len}; i++)); do
+		__bin_list+=("${__params[${i}]}")
+	done
+
+	if [ ! -e "${__kernelinitrd}" ]; then
+		echo "${script_name}: initrd doesn't exist? "
+		return 1
+	fi
+
+	if [ ! -e "${__rootfs_path}/etc/lsb-release" ]; then
+		echo "${script_name}: rootfs has not been extracted"
+		return 1
+	fi
+
+	# Extract the initrd
+	gunzip -c "${__kernelinitrd}" | cpio -i
+	if [ $? -ne 0 ]; then return 1; fi
+
+	local src;
+	local dst;
+
+	# Copy all the binaries
+	install -o 0 -g 0 -m 0755 -d "lib/cryptsetup"
+	for bin in "${__bin_list[@]}"
+	do
+		src="${__rootfs_path}${bin}"
+		if [[ ${bin} == *"lib"* ]]; then
+			dst="lib/cryptsetup/";
+		elif [[ ${bin} == *"sbin"* ]]; then
+			dst="sbin/";
+		fi;
+		install -o 0 -g 0 -D "${src}" "${dst}"
+	done
+
+	# Add /etc/crypttab
+	echo "crypt_root UUID=${__rootfsuuid}" > etc/crypttab
+
+	if [ -n "${__rootfsuuid_other}" ]; then
+		echo "crypt_root_other UUID=${__rootfsuuid_other}" >> etc/crypttab
+	fi
+	for enc_usr_disk in "${enc_user_disk_list[@]}"
+	do
+		local __dm_name;
+		local __fsuuid;
+		__dm_name="$(echo "${enc_usr_disk}" | awk -F " " '{print $1}')";
+		__fsuuid="$(echo "${enc_usr_disk}" | awk -F " " '{print $2}')";
+		echo "${__dm_name} UUID=${__fsuuid}" >> etc/crypttab;
+	done
+
+	# Add locking path /run/cryptsetup
+	install -o 0 -g 0 -m 0755 -d "run/cryptsetup"
+
+	# Package the initrd
+	find . | cpio -H newc -o | gzip -9 -n > "${__kernelinitrd}"
+	if [ $? -ne 0 ]; then return 1; fi
+
+	echo "${script_name}: Finish copying binaries into initrd"
+}
+
+#
+# Validate FS size
+#
+function validate_fs_size () {
+	local __fssize="${1}";
+	local __bcnt=$(( ${__fssize} / 512 ));
+	local __bcntdiv=$(( ${__fssize} % 512 ));
+	if [ ${__bcnt} -eq 0 ] || [ ${__bcntdiv} -ne 0 ]; then
+		echo "Error: file system size has to be 512 bytes allign.";
+		exit 1;
+	fi;
+}
+
+#
+# Create disk image with specific pattern
+#
+function create_disk_image_with_pattern () {
+	local __pattern="${1}";
+	local __imgfile="${2}";
+	local __fssize="${3}";
+
+	if [ -f "${__imgfile}" ]; then
+		rm -f "${__imgfile}";
+	fi;
+
+	if [ "${__pattern}" != "" ] && [ "${__pattern}" != "0" ]; then
+		local __fc=$(printf '%d' ${__pattern});
+		local __fillc=$(printf \\\\$(printf '%02o' ${__fc}));
+		< /dev/zero head -c ${__fssize} | tr '\000' ${__fillc} > ${__imgfile};
+		chkerr "making ${__imgfile} with fillpattern($__fillc}) failed.";
+	else
+		truncate --size ${__fssize} ${__imgfile};
+		chkerr "making ${__imgfile} with zero fillpattern failed.";
+	fi;
+}
+
+#
+# Convert to sparse image
+#
+function convert_to_sparse_image () {
+	local __pattern="${1}";
+	local __imgfile="${2}";
+
+	if [ "${__pattern}" != "" ] && [ -x mksparse ]; then
+		echo -e -n "\tConverting RAW image to Sparse image... ";
+		mv -f "${__imgfile}" "${__imgfile}.raw";
+		if [ "${BLBlockSize}" != "" ]; then
+			blblksizeoption="-b $BLBlockSize";
+		fi;
+		./mksparse ${blblksizeoption} --fillpattern=${__pattern} ${__imgfile}.raw ${__imgfile}; chkerr;
+	fi;
+}
+
+#
+# Building the boot file system image for boot partition (APP)
+#
+function build_boot_fsimg () {
+	local __localsysfile="${1}";
+	local __fillpat="${2}";
+	local __bootfssize="${3}";
+	local __bootfs_type="${4}";
+	local __bootfs_dir="${5}";
+	local __cmdline="${6}";
+	local __do_sign="${7}";
+	local _extlinux_conf="extlinux/extlinux.conf"
+
+	echo "Making ${__localsysfile}... ";
+
+	validate_fs_size "${__bootfssize}";
+
+	if [ ! -f "${__bootfs_dir}/${_extlinux_conf}" ]; then
+		echo "${__bootfs_dir}/${_extlinux_conf} is not found, exiting...";
+		exit 1
+	fi;
+
+	create_disk_image_with_pattern "${__fillpat}" "${__localsysfile}" "${__bootfssize}";
+
+	loop_dev="$(losetup --show -f "${__localsysfile}")";
+	chkerr "mapping ${__localsysfile} to loop device failed.";
+	mkfs -t ${__bootfs_type} "${loop_dev}" > /dev/null 2>&1;
+	chkerr "formating ${__bootfs_type} filesystem on ${__localsysfile} failed.";
+	mkdir -p mnt/boot;
+	chkerr "make ${__localsysfile} mount point failed.";
+	mount "${loop_dev}" mnt;
+	chkerr "mount ${__localsysfile} failed.";
+
+	# Processing partition data.
+	mkdir -p "mnt/boot/dtb";	chkerr "make ${__localsysfile}/dtb failed.";
+	cp -f "${kernel_fs}" "mnt/boot";
+	chkerr "Copying ${kernel_fs} failed.";
+	if [ -f "${dtbfilename}" ]; then
+		cp -f "${dtbfilename}" "mnt/boot/dtb/${dtbfilename}";
+		chkerr "populating ${dtbfilename} to ${__localsysfile}/dtb failed.";
+
+		# Update FDT line into extlinux.conf if DTB file is specified
+		update_fdt_line "${__bootfs_dir}/${_extlinux_conf}" "${dtbfilename}"; chkerr;
+	fi;
+
+	pushd mnt/boot > /dev/null 2>&1;
+	echo -n -e "\tpopulating bootfs from ${__bootfs_dir} ... ";
+	(cd ${__bootfs_dir}; tar cf - *) | tar xf - ; chkerr;
+
+	# Populate extlinux.conf if "${__cmdline}" exists
+	if [ "${__cmdline}" != "" ]; then
+		# Add the "${__cmdline}" at the APPEND line if it does not exist.
+		echo -n -e "\tpopulating ${_extlinux_conf} ... ";
+		rootfs_found=$(grep -cE "${__cmdline}" "./${_extlinux_conf}");
+		if [ "${rootfs_found}" == "0" ];then
+			sed -i "/^[ \t]*APPEND/s|\$| ${__cmdline}|" "./${_extlinux_conf}";
+			chkerr;
+		fi;
+	fi;
+	if [ "${__do_sign}" = "True" ]; then
+		local kernel_fs_basename;
+		kernel_fs_basename=$(basename "${kernel_fs}");
+		echo -n -e "\tgenerating sig file of ${kernel_fs_basename} ... ";
+		signimage "./${kernel_fs_basename}" "True" "kernel" "${minratchet_configname}"; chkerr;
+		echo -n -e "\tgenerating sig file of ${dtbfilename} ... ";
+		signimage "./dtb/${dtbfilename}" "True" "kernel_dtb" "${minratchet_configname}"; chkerr;
+		echo -n -e "\tgenerating sig file of initrd ... ";
+		signimage "./initrd" "True" "data"; chkerr;
+		echo -n -e "\tgenerating sig file of ${_extlinux_conf} ... ";
+		# Signing tool will pad extlinux.conf with 0x80 to be 16-byte aligned.
+		# This pad byte of 0x80 may cause some utilities fail to read the entire
+		# extlinux.conf.
+		# So, pad extlinux.conf to 16-byte aligned with linefeed.
+		pad_file_aligned "${_extlinux_conf}" 16 "\x0a";
+		signimage "${_extlinux_conf}" "True" "data"; chkerr;
+	fi
+	# Create a symbolic link of boot dir, so bootloader can find binaries
+	# in /boot under boot partition
+	shopt -s globstar
+	cd ../
+	ln -s ./boot/** ./
+	shopt -u globstar
+	popd > /dev/null 2>&1;
+	echo -e -n "\tSync'ing ${__localsysfile} ... ";
+	sync; sync; sleep 5;	# Give FileBrowser time to terminate gracefully.
+	echo "done.";
+
+	umount mnt > /dev/null 2>&1;
+	losetup -d "${loop_dev}" > /dev/null 2>&1;
+	rmdir mnt > /dev/null 2>&1;
+
+	convert_to_sparse_image "${__fillpat}" "${__localsysfile}";
+	echo "${__localsysfile} built successfully. ";
+}
+
+#
+# Building the encrypted root file system image for APP_ENC partition
+#
+function build_enc_root_fsimg () {
+	local __localsysfile="${1}";
+	local __fillpat="${2}";
+	local __rootfssize="${3}";
+	local __rootfs_type="${4}";
+	local __rootfs_dir="${5}";
+	local __rootfsuuid="${6}";
+	local __bootpartuuid="${7}";
+	local __ecid="${8}";
+	local __rootfsuuid_other="${9}";
+
+	echo "Making ${__localsysfile}... ";
+
+	local CRYPTSETUP_BIN="";
+	local GEN_LUKS_PASS_CMD="";
+	# Check cryptsetup
+	if [ -f "/sbin/cryptsetup" ]; then
+		CRYPTSETUP_BIN="/sbin/cryptsetup";
+	else
+		if [ -z "${CRYPTSETUP_BIN}" ]; then
+			echo "ERROR cryptsetup not found! To install - please run: " \
+				"\"sudo apt-get install cryptsetup\""
+			exit 1
+		fi;
+	fi;
+
+	# Check ECID
+	if [ "${__ecid}" == "" ]; then
+		echo "ERROR: build_enc_root_fsimg: ECID is null ."
+		exit 1
+	fi;
+
+	# Check gen_luks_passphrase.py
+	local genpass_dir="${LDK_DIR}/tools/disk_encryption";
+	local genpass_opt="";
+	GEN_LUKS_PASS_CMD="${genpass_dir}/gen_luks_passphrase.py";
+	if [ ! -f "${GEN_LUKS_PASS_CMD}" ]; then
+		echo "ERROR ${GEN_LUKS_PASS_CMD} is not found."
+		exit 1
+	fi;
+	if [ "${enc_rfs_keyfile}" != "" ]; then
+		genpass_opt+="-k \"${enc_rfs_keyfile}\" ";
+	fi;
+	genpass_opt+="-u -e '${__ecid}' "
+	genpass_opt+="-c '${__rootfsuuid}'";
+	GEN_LUKS_PASS_CMD+=" ${genpass_opt}";
+
+	validate_fs_size "${__rootfssize}";
+	create_disk_image_with_pattern "${__fillpat}" "${__localsysfile}" "${__rootfssize}";
+
+	loop_dev="$(losetup --show -f "${__localsysfile}")";
+	chkerr "mapping ${__localsysfile} to loop device failed.";
+	local __l4t_enc_root_dm="l4t_enc_root";
+	local __l4t_enc_root_dm_dev="/dev/mapper/${__l4t_enc_root_dm}"
+	# Add the LUKS header
+	eval ${GEN_LUKS_PASS_CMD} | ${CRYPTSETUP_BIN} \
+		--type luks2 \
+		-c aes-xts-plain64 \
+		-s 256 \
+		--uuid "${__rootfsuuid}" \
+		luksFormat \
+		${loop_dev};
+	chkerr "Add LUKS header on ${__localsysfile} failed.";
+
+	# Unlock the encrypted root image
+	if [ -e "${__l4t_enc_root_dm_dev}" ]; then
+		umount "${__l4t_enc_root_dm_dev}"
+		${CRYPTSETUP_BIN} luksClose ${__l4t_enc_root_dm}
+	fi
+	eval ${GEN_LUKS_PASS_CMD} | ${CRYPTSETUP_BIN} \
+		luksOpen ${loop_dev} ${__l4t_enc_root_dm};
+	chkerr "Unlock ${__localsysfile} failed.";
+
+	mkfs -t ${__rootfs_type} ${__l4t_enc_root_dm_dev} > /dev/null 2>&1;
+	chkerr "formating ${__rootfs_type} filesystem on ${__localsysfile} failed.";
+	mkdir -p mnt;
+	chkerr "make ${__localsysfile} mount point failed.";
+	mount ${__l4t_enc_root_dm_dev} mnt;
+	chkerr "mount ${__localsysfile} failed.";
+
+	# Processing partition data.
+	pushd mnt > /dev/null 2>&1;
+	echo -n -e "\tpopulating rootfs from ${__rootfs_dir} ... ";
+	(cd ${__rootfs_dir}; tar --exclude=boot -cf - *) | tar xf - ; chkerr;
+
+	# Update root in /etc/fstab
+	cp etc/fstab etc/fstab.tmp;
+	head -n -1 etc/fstab.tmp > etc/fstab;
+	echo "/dev/mapper/crypt_root / ext4 defaults 0 1" >> etc/fstab;
+	rm etc/fstab.tmp;
+
+	# Update /etc/fstab if "${__bootpartuuid}" exists
+	if [ "${__bootpartuuid}" != "" ]; then
+		echo "PARTUUID=${__bootpartuuid} /boot ext4 defaults 0 1" >> etc/fstab;
+	fi;
+
+	if [ -n "${__rootfsuuid_other}" ]; then
+		mkdir -p mnt/crypt_root_other
+		echo "/dev/mapper/crypt_root_other /mnt/crypt_root_other ext4 defaults 0 2" >> etc/fstab;
+	fi
+
+
+	# Update /etc/fstab and add mount point if ${enc_user_disk_list} is not empty
+	for enc_usr_disk in "${enc_user_disk_list[@]}"
+	do
+		local __dm_name;
+		__dm_name="$(echo "${enc_usr_disk}" | awk -F " " '{print $1}')";
+		mkdir -p "mnt/${__dm_name}";
+		echo "/dev/mapper/${__dm_name} /mnt/${__dm_name} ext4 defaults 0 2" >> etc/fstab;
+	done
+	popd > /dev/null 2>&1;
+
+	echo -e -n "\tSync'ing ${__localsysfile} ... ";
+	sync; sync; sleep 5;	# Give FileBrowser time to terminate gracefully.
+	echo "done.";
+
+	umount mnt > /dev/null 2>&1;
+	${CRYPTSETUP_BIN} luksClose ${__l4t_enc_root_dm};
+	losetup -d "${loop_dev}" > /dev/null 2>&1;
+	rmdir mnt > /dev/null 2>&1;
+
+	convert_to_sparse_image "${__fillpat}" "${__localsysfile}";
+	echo "${__localsysfile} built successfully. ";
+}
+
+#
+# Building a common encrypted file system image
+#
+function build_enc_fsimg () {
+	local __localsysfile="${1}";
+	local __fillpat="${2}";
+	local __fssize="${3}";
+	local __fs_type="${4}";
+	local __fsuuid="${5}";
+	local __ecid="${6}";
+	local __src_dir="${7}";
+
+	echo "Making ${__localsysfile}... ";
+
+	local CRYPTSETUP_BIN="";
+	local GEN_LUKS_PASS_CMD="";
+	# Check cryptsetup
+	if [ -f "/sbin/cryptsetup" ]; then
+		CRYPTSETUP_BIN="/sbin/cryptsetup";
+	else
+		if [ -z "${CRYPTSETUP_BIN}" ]; then
+			echo "ERROR cryptsetup not found! To install - please run: " \
+				"\"sudo apt-get install cryptsetup\"";
+			exit 1;
+		fi;
+	fi;
+
+	# Check ECID
+	if [ "${__ecid}" == "" ]; then
+		echo "ERROR: build_enc_fsimg: ECID is null .";
+		exit 1;
+	fi;
+
+	# Check gen_luks_passphrase.py
+	local genpass_dir="${LDK_DIR}/tools/disk_encryption";
+	local genpass_opt="";
+	GEN_LUKS_PASS_CMD="${genpass_dir}/gen_luks_passphrase.py";
+	if [ ! -f "${GEN_LUKS_PASS_CMD}" ]; then
+		echo "ERROR ${GEN_LUKS_PASS_CMD} is not found.";
+		exit 1;
+	fi;
+	if [ "${enc_rfs_keyfile}" != "" ]; then
+		genpass_opt+="-k \"${enc_rfs_keyfile}\" ";
+	fi;
+	genpass_opt+="-u -e '${__ecid}' ";
+	genpass_opt+="-c '${__fsuuid}'";
+	GEN_LUKS_PASS_CMD+=" ${genpass_opt}";
+
+	validate_fs_size "${__fssize}";
+	create_disk_image_with_pattern "${__fillpat}" "${__localsysfile}" "${__fssize}";
+
+	loop_dev="$(losetup --show -f "${__localsysfile}")";
+	chkerr "mapping ${__localsysfile} to loop device failed.";
+	local __l4t_enc_disk_dm="l4t_enc_disk";
+	local __l4t_enc_disk_dm_dev="/dev/mapper/${__l4t_enc_disk_dm}"
+	# Add the LUKS header.
+	eval ${GEN_LUKS_PASS_CMD} | ${CRYPTSETUP_BIN} \
+		--type luks2 \
+		-c aes-cbc-essiv:sha256 \
+		-s 128 \
+		--uuid "${__fsuuid}" \
+		luksFormat \
+		${loop_dev};
+	chkerr "Add LUKS header on ${__localsysfile} failed.";
+
+	# Unlock the encrypted filesystem image.
+	if [ -e "${__l4t_enc_disk_dm_dev}" ]; then
+		umount ${__l4t_enc_disk_dm_dev}
+		${CRYPTSETUP_BIN} luksClose ${__l4t_enc_disk_dm}
+	fi
+	eval ${GEN_LUKS_PASS_CMD} | ${CRYPTSETUP_BIN} \
+		luksOpen ${loop_dev} ${__l4t_enc_disk_dm};
+	chkerr "Unlock ${__localsysfile} failed.";
+
+	mkfs -t ${__fs_type} ${__l4t_enc_disk_dm_dev} > /dev/null 2>&1;
+	chkerr "formating ${__fs_type} filesystem on ${__localsysfile} failed.";
+	mkdir -p mnt;
+	chkerr "make ${__localsysfile} mount point failed.";
+	mount ${__l4t_enc_disk_dm_dev} mnt;
+	chkerr "mount ${__localsysfile} failed.";
+
+	# Processing partition data.
+	if [ "${__src_dir}" != "" ]; then
+		pushd mnt > /dev/null 2>&1;
+		echo -n -e "\tpopulating fs from ${__src_dir} ... ";
+		(cd ${__src_dir}; tar -cf - *) | tar xf - ; chkerr;
+		popd > /dev/null 2>&1;
+	fi;
+
+	echo -e -n "\tSync'ing ${__localsysfile} ... ";
+	sync; sync; sleep 5;	# Give FileBrowser time to terminate gracefully.
+	echo "done.";
+
+	umount mnt > /dev/null 2>&1;
+	${CRYPTSETUP_BIN} luksClose ${__l4t_enc_disk_dm};
+	losetup -d "${loop_dev}" > /dev/null 2>&1;
+	rmdir mnt > /dev/null 2>&1;
+
+	convert_to_sparse_image "${__fillpat}" "${__localsysfile}";
+	echo "${__localsysfile} built successfully. ";
+}
+
+#
+# Create a encrypted user disk image if the attribuate "encrypted" is true.
+#
+function create_enc_user_disk() {
+	local __disk_name="${1}";
+	local __cfg_file="${2}";
+	local __fillpat="${3}";
+	local __fs_type="${4}";
+	local __ecid="${5}";
+	local __src_dir="${6}"
+	local __disk_ext="${7}"
+	local __disk_enc_enabled="false";
+
+	get_attr_from_PT_table "${__disk_name}" "encrypted" "${__cfg_file}" __disk_enc_enabled;
+
+	if [ "${__disk_enc_enabled}" == "true" ]; then
+		local __disk_size;
+		local __img_name;
+		local __fs_uuid;
+
+		# Prepare parameters for UDA disk encryption.
+		uuid_restore "${__disk_name}${__disk_ext}" __fs_uuid;
+		get_value_from_PT_table "${__disk_name}" "size" "${__cfg_file}" __disk_size;
+		get_value_from_PT_table "${__disk_name}" "filename" "${__cfg_file}" __img_name;
+
+		# Store disk name and UUID in the list.
+		enc_user_disk_list+=("crypt_${__disk_name} ${__fs_uuid}");
+
+		# Build encrypted UDA disk image.
+		if [ "${target_partname}" = "" ]; then
+			build_enc_fsimg "${__img_name}" "${__fillpat}" "${__disk_size}" \
+					"${__fs_type}" "${__fs_uuid}" "${__ecid}" \
+					"${__src_dir}";
+		fi;
+	fi;
+}

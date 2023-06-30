@@ -1,0 +1,47 @@
+/*
+ * T234Pre_L4T_Concord.dtsi
+ *
+ * Copyright (c) 2017 - 2022, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property
+ * and proprietary rights in and to this software and related documentation
+ * and any modifications thereto.  Any use, reproduction, disclosure or
+ * distribution of this software and related documentation without an express
+ * license agreement from NVIDIA Corporation is strictly prohibited.
+ */
+/* Chip version = 176; */
+/* Platform version = 0; */
+/* Project version = 3; */
+/ {
+    tfc {
+        reg@401 { /* GPIO_G_SCR_07_0 */
+            exclusion-info = <2>;
+            value = <0x18000606>;
+        };
+
+        reg@419 { /* GPIO_CTL4_SCR_0 */
+            exclusion-info = <2>;
+            value = <0x18000606>;
+        };
+
+        reg@5114 { /* CBB_CENTRAL_CBB_FIREWALL_PWM5_BLF, READ_CTL */
+            exclusion-info = <2>;
+            value = <0x0010000a>;
+        };
+
+        reg@5115 { /* CBB_CENTRAL_CBB_FIREWALL_PWM5_BLF, WRITE_CTL */
+            exclusion-info = <2>;
+            value = <0x0010000a>;
+        };
+
+        reg@5402 { /* CBB_CENTRAL_CBB_FIREWALL_SPI3_BLF, READ_CTL */
+            exclusion-info = <2>;
+            value = <0x0f000042>;
+        };
+
+        reg@5403 { /* CBB_CENTRAL_CBB_FIREWALL_SPI3_BLF, WRITE_CTL */
+            exclusion-info = <2>;
+            value = <0x0f000042>;
+        };
+    };
+};

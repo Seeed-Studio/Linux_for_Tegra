@@ -1,0 +1,208 @@
+# Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# This file contains a list of binaries to be injected into initrd to build
+# recovery image for OTA
+# There are couple of variables, those are replaced by the packaging script.
+# They are:
+# <ARCH>: the name of the folder containing the appropriate libraries.
+# <OTA_DIR>: the path of the ota directory
+# <ROOTFS>: the path of the rootfs
+# <KERNEL_VERSION>: the version of kernel
+
+# Line format:
+# <UBUNTU_CODENAME>:<SOURCE>:<DESTINATION>
+# NOTE: This list assumes that the destination root folder is where the initrd
+# is extracted
+
+all:<OTA_DIR>/init:/init
+all:<OTA_DIR>/nv_recovery.sh:/bin/nv_recovery.sh
+all:<OTA_DIR>/nv_ota_common.func:/bin/nv_ota_common.func
+all:<OTA_DIR>/nv_ota_exception_handler.sh:/bin/nv_ota_exception_handler.sh
+all:<OTA_DIR>/nv_ota_internals.sh:/bin/nv_ota_internals.sh
+all:<OTA_DIR>/nv_ota_log.sh:/bin/nv_ota_log.sh
+all:<OTA_DIR>/nv_ota_utils.func:/bin/nv_ota_utils.func
+
+# Files for making Ubuntu bionic recovery image for R32
+bionic:<ROOTFS>/bin/mv:/bin/mv
+bionic:<ROOTFS>/bin/sync:/bin/sync
+bionic:<ROOTFS>/sbin/blockdev:/bin/blockdev
+bionic:<ROOTFS>/usr/bin/cut:/bin/cut
+bionic:<ROOTFS>/usr/bin/cksum:/bin/cksum
+bionic:<ROOTFS>/usr/bin/sha1sum:/bin/sha1sum
+bionic:<ROOTFS>/usr/bin/seq:/bin/seq
+bionic:<ROOTFS>/usr/bin/dirname:/bin/dirname
+bionic:<ROOTFS>/usr/bin/tr:/bin/tr
+bionic:<ROOTFS>/usr/bin/du:/bin/du
+bionic:<ROOTFS>/lib/<ARCH>/ld-2.27.so:/lib/<ARCH>/ld-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libc-2.27.so:/lib/<ARCH>/libc-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libdl-2.27.so:/lib/<ARCH>/libdl-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libm-2.27.so:/lib/<ARCH>/libm-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libnsl-2.27.so:/lib/<ARCH>/libnsl-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libnss_files-2.27.so:/lib/<ARCH>/libnss_files-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libnss_nis-2.27.so:/lib/<ARCH>/libnss_nis-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libpthread-2.27.so:/lib/<ARCH>/libpthread-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libresolv-2.27.so:/lib/<ARCH>/libresolv-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/librt-2.27.so:/lib/<ARCH>/librt-2.27.so
+bionic:<ROOTFS>/lib/<ARCH>/libwrap.so.0:/lib/<ARCH>/libwrap.so.0
+bionic:<ROOTFS>/lib/<ARCH>/libaudit.so.1:/lib/<ARCH>/libaudit.so.1
+bionic:<ROOTFS>/lib/<ARCH>/libpam.so.0:/lib/<ARCH>/libpam.so.0
+bionic:<ROOTFS>/lib/<ARCH>/libpam_misc.so.0:/lib/<ARCH>/libpam_misc.so.0
+bionic:<ROOTFS>/lib/<ARCH>/libsystemd.so.0:/lib/<ARCH>/libsystemd.so.0
+bionic:<ROOTFS>/lib/<ARCH>/liblzma.so.5:/lib/<ARCH>/liblzma.so.5
+bionic:<ROOTFS>/lib/<ARCH>/libgcrypt.so.20:/lib/<ARCH>/libgcrypt.so.20
+bionic:<ROOTFS>/lib/<ARCH>/libgpg-error.so.0:/lib/<ARCH>/libgpg-error.so.0
+bionic:<ROOTFS>/lib/<ARCH>/libutil.so.1:/lib/<ARCH>/libutil.so.1
+bionic:<ROOTFS>/lib/<ARCH>/libcrypt.so.1:/lib/<ARCH>/libcrypt.so.1
+bionic:<ROOTFS>/lib/<ARCH>/libz.so.1:/lib/<ARCH>/libz.so.1
+bionic:<ROOTFS>/lib/<ARCH>/libcap.so.2:/lib/<ARCH>/libcap.so.2
+bionic:<ROOTFS>/lib/<ARCH>/libcap-ng.so.0:/lib/<ARCH>/libcap-ng.so.0
+bionic:<ROOTFS>/lib/<ARCH>/libprocps.so.6:/lib/<ARCH>/libprocps.so.6
+bionic:<ROOTFS>/lib/<ARCH>/libnss_compat.so.2:/lib/<ARCH>/libnss_compat.so.2
+bionic:<ROOTFS>/lib/<ARCH>/libmnl.so.0:/lib/<ARCH>/libmnl.so.0
+#bionic:<ROOTFS>/lib/<ARCH>/libnl-3.so.200:/lib/libnl-3.so.200
+#bionic:<ROOTFS>/lib/<ARCH>/libnl-genl-3.so.200:/lib/libnl-genl-3.so.200
+bionic:<ROOTFS>/lib/<ARCH>/libdbus-1.so.3:/lib/libdbus-1.so.3
+bionic:<ROOTFS>/lib/<ARCH>/libreadline.so.7:/lib/libreadline.so.7
+bionic:<ROOTFS>/lib/<ARCH>/libtinfo.so.5:/lib/libtinfo.so.5
+bionic:<ROOTFS>/lib/<ARCH>/libdevmapper.so.1.02.1:/lib/libdevmapper.so.1.02.1
+bionic:<ROOTFS>/lib/<ARCH>/libblkid.so.1:/lib/libblkid.so.1
+bionic:<ROOTFS>/lib/<ARCH>/libuuid.so.1:/lib/libuuid.so.1
+bionic:<ROOTFS>/lib/<ARCH>/libudev.so.1:/lib/libudev.so.1
+bionic:<ROOTFS>/lib/<ARCH>/libselinux.so.1:/lib/libselinux.so.1
+bionic:<ROOTFS>/lib/<ARCH>/libpcre.so.3:/lib/libpcre.so.3
+#bionic:<ROOTFS>/usr/lib/<ARCH>/libpcsclite.so.1:/lib/libpcsclite.so.1
+bionic:<ROOTFS>/usr/lib/<ARCH>/libssl.so.1.1:/lib/libssl.so.1.1
+bionic:<ROOTFS>/usr/lib/<ARCH>/libgssapi_krb5.so.2:/lib/<ARCH>/libgssapi_krb5.so.2
+bionic:<ROOTFS>/usr/lib/<ARCH>/libkrb5.so.3:/lib/<ARCH>/libkrb5.so.3
+bionic:<ROOTFS>/usr/lib/<ARCH>/libk5crypto.so.3:/lib/<ARCH>/libk5crypto.so.3
+bionic:<ROOTFS>/usr/lib/<ARCH>/libkrb5support.so.0:/lib/<ARCH>/libkrb5support.so.0
+bionic:<ROOTFS>/usr/lib/<ARCH>/libcrypto.so.1.1:/lib/<ARCH>/libcrypto.so.1.1
+bionic:<ROOTFS>/usr/lib/<ARCH>/libcrypto.so.1.0.0:/lib/<ARCH>/libcrypto.so.1.0.0
+bionic:<ROOTFS>/usr/lib/<ARCH>/liblz4.so.1:/lib/<ARCH>/liblz4.so.1
+bionic:<ROOTFS>/usr/lib/<ARCH>/libelf.so.1:/lib/<ARCH>/libelf.so.1
+bionic:<ROOTFS>/usr/sbin/mtd_debug:/bin/mtd_debug
+
+# Files for making Ubuntu focal recovery image
+focal:<ROOTFS>/bin/mv:/bin/mv
+focal:<ROOTFS>/bin/sync:/bin/sync
+focal:<ROOTFS>/sbin/blockdev:/bin/blockdev
+focal:<ROOTFS>/usr/bin/cut:/bin/cut
+focal:<ROOTFS>/usr/bin/cksum:/bin/cksum
+focal:<ROOTFS>/usr/bin/sha1sum:/bin/sha1sum
+focal:<ROOTFS>/usr/bin/seq:/bin/seq
+focal:<ROOTFS>/usr/bin/dirname:/bin/dirname
+focal:<ROOTFS>/usr/bin/tr:/bin/tr
+focal:<ROOTFS>/usr/bin/du:/bin/du
+focal:<ROOTFS>/usr/bin/chattr:/bin/chattr
+focal:<ROOTFS>/usr/sbin/mtd_debug:/bin/mtd_debug
+focal:<ROOTFS>/lib/<ARCH>/ld-2.31.so:/lib/<ARCH>/ld-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libc-2.31.so:/lib/<ARCH>/libc-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libdl-2.31.so:/lib/<ARCH>/libdl-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libm-2.31.so:/lib/<ARCH>/libm-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libnsl-2.31.so:/lib/<ARCH>/libnsl-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libnss_files-2.31.so:/lib/<ARCH>/libnss_files-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libnss_nis-2.31.so:/lib/<ARCH>/libnss_nis-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libpthread-2.31.so:/lib/<ARCH>/libpthread-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libresolv-2.31.so:/lib/<ARCH>/libresolv-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/librt-2.31.so:/lib/<ARCH>/librt-2.31.so
+focal:<ROOTFS>/lib/<ARCH>/libwrap.so.0:/lib/<ARCH>/libwrap.so.0
+focal:<ROOTFS>/lib/<ARCH>/libaudit.so.1:/lib/<ARCH>/libaudit.so.1
+focal:<ROOTFS>/lib/<ARCH>/libpam.so.0:/lib/<ARCH>/libpam.so.0
+focal:<ROOTFS>/lib/<ARCH>/libpam_misc.so.0:/lib/<ARCH>/libpam_misc.so.0
+focal:<ROOTFS>/lib/<ARCH>/libsystemd.so.0:/lib/<ARCH>/libsystemd.so.0
+focal:<ROOTFS>/lib/<ARCH>/liblzma.so.5:/lib/<ARCH>/liblzma.so.5
+focal:<ROOTFS>/lib/<ARCH>/libgcrypt.so.20:/lib/<ARCH>/libgcrypt.so.20
+focal:<ROOTFS>/lib/<ARCH>/libgpg-error.so.0:/lib/<ARCH>/libgpg-error.so.0
+focal:<ROOTFS>/lib/<ARCH>/libutil.so.1:/lib/<ARCH>/libutil.so.1
+focal:<ROOTFS>/lib/<ARCH>/libcrypt.so.1:/lib/<ARCH>/libcrypt.so.1
+focal:<ROOTFS>/lib/<ARCH>/libz.so.1:/lib/<ARCH>/libz.so.1
+focal:<ROOTFS>/lib/<ARCH>/libcap.so.2:/lib/<ARCH>/libcap.so.2
+focal:<ROOTFS>/lib/<ARCH>/libcap-ng.so.0:/lib/<ARCH>/libcap-ng.so.0
+focal:<ROOTFS>/lib/<ARCH>/libprocps.so.8:/lib/<ARCH>/libprocps.so.8
+focal:<ROOTFS>/lib/<ARCH>/libnss_compat.so.2:/lib/<ARCH>/libnss_compat.so.2
+focal:<ROOTFS>/lib/<ARCH>/libmnl.so.0:/lib/<ARCH>/libmnl.so.0
+focal:<ROOTFS>/lib/<ARCH>/libdbus-1.so.3:/lib/libdbus-1.so.3
+focal:<ROOTFS>/lib/<ARCH>/libreadline.so.8:/lib/libreadline.so.8
+focal:<ROOTFS>/lib/<ARCH>/libtinfo.so.6:/lib/libtinfo.so.6
+focal:<ROOTFS>/lib/<ARCH>/libdevmapper.so.1.02.1:/lib/libdevmapper.so.1.02.1
+focal:<ROOTFS>/lib/<ARCH>/libblkid.so.1:/lib/libblkid.so.1
+focal:<ROOTFS>/lib/<ARCH>/libuuid.so.1:/lib/libuuid.so.1
+focal:<ROOTFS>/lib/<ARCH>/libudev.so.1:/lib/libudev.so.1
+focal:<ROOTFS>/lib/<ARCH>/libselinux.so.1:/lib/libselinux.so.1
+focal:<ROOTFS>/lib/<ARCH>/libpcre.so.3:/lib/libpcre.so.3
+focal:<ROOTFS>/usr/lib/<ARCH>/libssl.so.1.1:/lib/libssl.so.1.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libgssapi_krb5.so.2:/lib/<ARCH>/libgssapi_krb5.so.2
+focal:<ROOTFS>/usr/lib/<ARCH>/libkrb5.so.3:/lib/<ARCH>/libkrb5.so.3
+focal:<ROOTFS>/usr/lib/<ARCH>/libk5crypto.so.3:/lib/<ARCH>/libk5crypto.so.3
+focal:<ROOTFS>/usr/lib/<ARCH>/libkrb5support.so.0:/lib/<ARCH>/libkrb5support.so.0
+focal:<ROOTFS>/usr/lib/<ARCH>/libcrypto.so.1.1:/lib/<ARCH>/libcrypto.so.1.1
+focal:<ROOTFS>/usr/lib/<ARCH>/liblz4.so.1:/lib/<ARCH>/liblz4.so.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libelf.so.1:/lib/<ARCH>/libelf.so.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libbsd.so.0:/lib/<ARCH>/libbsd.so.0
+focal:<ROOTFS>/usr/lib/<ARCH>/libzstd.so.1:/lib/<ARCH>/libzstd.so.1
+focal:<ROOTFS>/usr/lib/<ARCH>/libe2p.so.2:/lib/<ARCH>/libe2p.so.2
+focal:<ROOTFS>/usr/lib/<ARCH>/libcom_err.so.2:/lib/<ARCH>/libcom_err.so.2
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtd.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtd.ko
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtdblock.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtdblock.ko
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtd_blkdevs.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/mtd_blkdevs.ko
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/devices/qspi_mtd.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/mtd/devices/qspi_mtd.ko
+focal:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/spi/spi-tegra210-qspi.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/spi/spi-tegra210-qspi.ko
+
+# For enabling sshd
+all:<ROOTFS>/etc/ssh/sshd_config:/etc/ssh/sshd_config
+#all:<ROOTFS>/etc/ssh/ssh_import_id:/etc/ssh/ssh_import_id
+all:<ROOTFS>/usr/sbin/sshd:/bin/sshd
+all:<ROOTFS>/bin/su:/bin/su
+all:<ROOTFS>/usr/bin/whoami:/bin/whoami
+all:<ROOTFS>/usr/bin/passwd:/bin/passwd
+all:<ROOTFS>/bin/which:/bin/which
+all:<ROOTFS>/bin/ps:/bin/ps
+all:<ROOTFS>/bin/ping:/bin/ping
+all:<ROOTFS>/sbin/dhclient-script:/sbin/dhclient-script
+all:<ROOTFS>/bin/ip:/bin/ip
+all:<ROOTFS>/bin/run-parts:/bin/run-parts
+all:<ROOTFS>/usr/bin/w.procps:/bin/w
+all:<ROOTFS>/usr/bin/scp:/bin/scp
+all:<ROOTFS>/usr/bin/find:/bin/find
+all:<ROOTFS>/usr/bin/xxd:/bin/xxd
+all:<ROOTFS>/usr/bin/head:/bin/head
+
+# For enabling wpa_supplicant
+all:<ROOTFS>/bin/kmod:/bin/kmod
+#all:<ROOTFS>/sbin/wpa_supplicant:/sbin/wpa_supplicant
+#all:<ROOTFS>/etc/wpa_supplicant.conf:/etc/wpa_supplicant.conf
+#all:<ROOTFS>/etc/wpa_supplicant/action_wpa.sh:/etc/wpa_supplicant/action_wpa.sh
+#all:<ROOTFS>/etc/wpa_supplicant/functions.sh:/etc/wpa_supplicant/functions.sh
+#all:<ROOTFS>/etc/wpa_supplicant/ifupdown.sh:/etc/wpa_supplicant/ifupdown.sh
+#all:<ROOTFS>/lib/firmware/brcm/fw_bcmdhd.bin:/lib/firmware/brcm/fw_bcmdhd.bin
+#all:<ROOTFS>/lib/firmware/brcm/nvram.txt:/lib/firmware/brcm/nvram.txt
+xenial:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/wireless/bcmdhd/bcmdhd.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/wireless/bcmdhd/bcmdhd.ko
+#bionic:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/wireless/bcmdhd/bcmdhd.ko:/lib/modules/<KERNEL_VERSION>/kernel/drivers/net/wireless/bcmdhd/bcmdhd.ko
+#bionic:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/net/wireless/lib80211.ko:/lib/modules/<KERNEL_VERSION>/kernel/net/wireless/lib80211.ko
+#bionic:<ROOTFS>/lib/modules/<KERNEL_VERSION>/kernel/net/wireless/cfg80211.ko:/lib/modules/<KERNEL_VERSION>/kernel/net/wireless/cfg80211.ko
+
+# For adding parted
+#all:<ROOTFS>/sbin/parted:/bin/parted
+#all:<ROOTFS>/lib/<ARCH>/libparted.so.2:/lib/libparted.so.2
+
+# For adding nv_update_engine and nvbootctrl
+bionic:<ROOTFS>/usr/bin/diff:/bin/diff
+focal:<ROOTFS>/usr/bin/diff:/bin/diff

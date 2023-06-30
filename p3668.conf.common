@@ -1,0 +1,178 @@
+# Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# p3668.conf.common: configuration for "P3668"
+
+sub_var_token()
+{
+	local var="$1";
+	local from="$2";
+	local to="$3";
+	if [ "${var}" != "" -a "${!var}" != "" ]; then
+		if [[ "${!var}" =~ "${from}" ]]; then
+			local val=`echo "${!var}" | sed -e s/${from}/${to}/`;
+			eval "${var}=${val}";
+		fi;
+	fi;
+}
+
+# Process_board_version:
+# Trigger to read the board id and board version from EEPROM on main board.
+# undef for non eeprom boards.
+process_board_version()
+{
+	local board_id="${1}";
+	local board_version="${2}";
+	local board_sku="${3}";
+	local board_revision="${4}";
+	local chiprev="${5}";
+
+	echo "Board ID(${board_id}) version(${board_version}) sku(${board_sku}) revision(${board_revision})"
+}
+
+# Process fuse version:
+#
+# Non-fused BS vs Production Fused BD
+#
+# mts_c10_dev_cr.bin     vs. mts_c10_prod_cr.bin
+# mce_c10_dev_cr.bin     vs. mce_c10_prod_cr.bin
+# mb1_t194_dev.bin       vs. mb1_t194_prod.bin
+# warmboot_t194_dev.bin  vs. warmboot_t194_prod.bin
+#
+process_fuse_level()
+{
+	local fuselevel="${1}";
+	local srctoken="_dev";
+	local trgtoken="_prod";
+
+	# fuselevel:
+	#	"fuselevel_unknown"
+	#	"fuselevel_nofuse"
+	#	"fuselevel_production"
+	#
+	case ${fuselevel} in
+	fuselevel_unknown)
+		return;
+		;;
+	fuselevel_nofuse)
+		srctoken="_prod";
+		trgtoken="_dev";
+		;;
+	*)
+		sub_var_token "MTSPREBOOT" "preboot_c10_cr.bin" "preboot_c10_prod_cr.bin";
+		sub_var_token "MTS_MCE"    "mce_c10_cr.bin" "mce_c10_prod_cr.bin";
+		sub_var_token "MTSPROPER"  "mts_c10_cr.bin" "mts_c10_prod_cr.bin";
+		;;
+	esac;
+	sub_var_token "MB1FILE"    "${srctoken}" "${trgtoken}";
+	sub_var_token "SOSFILE"    "${srctoken}" "${trgtoken}";
+	sub_var_token "WB0BOOT"    "${srctoken}" "${trgtoken}";
+}
+
+# Common values and/or defaults across P3668:
+
+OVERLAY_DTB_FILE="L4TConfiguration.dtbo,tegra194-p3668-p3509-overlay.dtbo";
+ODMDATA=0xB8190000;
+CHIPID=0x19;
+ITS_FILE=;
+BPFDTB_FILE=tegra194-a02-bpmp-p3668-a00.dtb;
+DTB_FILE=tegra194-p3668-all-p3509-0000.dtb;
+TBCDTB_FILE=tegra194-p3668-all-p3509-0000.dtb;
+CMDLINE_ADD="console=ttyTCU0,115200n8 console=tty0 fbcon=map:0 net.ifnames=0 video=efifb:off";
+target_board="t186ref";
+ROOTFSSIZE=14GiB;
+ROOT_DEV="mmcblk0p1 ------------ internal eMMC.
+        sda1 ----------------- external USB devices. (USB memory stick, HDD)
+        eth0 ----------------- nfsroot via RJ45 Ethernet port.
+        eth1 ----------------- nfsroot via USB Ethernet interface.";
+TEGRABOOT="bootloader/nvtboot_t194.bin";
+WB0BOOT="bootloader/warmboot_t194_dev.bin";
+FLASHER="bootloader/nvtboot_recovery_cpu_t194.bin";
+BOOTLOADER="bootloader/nvtboot_cpu_t194.bin";
+TBCFILE="bootloader/nvdisp-init.bin";
+UEFIFILE="bootloader/uefi_jetson.bin";
+BPFFILE="bootloader/bpmp-2_t194.bin";
+TOSFILE="bootloader/tos_t194.img";
+EKSFILE="bootloader/eks_t194.img";
+MTSPREBOOT="bootloader/preboot_c10_cr.bin";
+MTSPROPER="bootloader/mts_c10_cr.bin";
+MTS_MCE="bootloader/mce_c10_cr.bin";
+MB1FILE="bootloader/mb1_t194_dev.bin";
+SOSFILE="bootloader/mb1_t194_dev.bin";
+MB2BLFILE="bootloader/nvtboot_recovery_t194.bin";
+SPEFILE="bootloader/spe_t194.bin";
+CAMERAFW="bootloader/camera-rtcpu-t194-rce.img";
+MB2APPLET="nvtboot_applet_t194.bin"
+FBFILE="fuse_bypass_t194.xml";
+CBOOTOPTION_FILE="bootloader/cbo.dtb";
+UEFI_OS_LAUNCHER=1;
+
+# BCT args:
+#
+BCT="--sdram_config";
+BINSARGS="--bin \"";
+EMMC_BCT="tegra194-mb1-bct-memcfg-p3668-0001-a00.cfg";
+EMMC_BCT1="tegra194-memcfg-sw-override.cfg";
+MISC_CONFIG="tegra194-mb1-bct-misc-flash.cfg";
+MISC_COLD_BOOT_CONFIG="tegra194-mb1-bct-misc-l4t.cfg";
+BOOTROM_CONFIG="tegra194-mb1-bct-reset-p3668-0001-a00.cfg";
+DEV_PARAMS="tegra194-br-bct-qspi-l4t.cfg";
+# Booting from chain B
+DEV_PARAMS_B="tegra194-br-bct_b-qspi-l4t.cfg";
+SCR_COLD_BOOT_CONFIG="tegra194-mb1-bct-scr-cbb-mini-p3668.cfg";
+SCR_CONFIG="tegra194-mb1-bct-scr-cbb-mini-p3668.cfg";
+PINMUX_CONFIG="tegra19x-mb1-pinmux-p3668-a01.cfg";
+PMIC_CONFIG="tegra194-mb1-bct-pmic-p3668-0001-a00.cfg";
+PMC_CONFIG="tegra19x-mb1-padvoltage-p3668-a01.cfg";
+PROD_CONFIG="tegra19x-mb1-prod-p3668-0001-a00.cfg";
+BR_CMD_CONFIG="tegra194-mb1-bct-reset-p3668-0001-a00.cfg";
+DEVICE_CONFIG="tegra19x-mb1-bct-device-qspi-p3668.cfg";
+GPIOINT_CONFIG="tegra194-mb1-bct-gpioint-p3668-0001-a00.cfg";
+SOFT_FUSES="tegra194-mb1-soft-fuses-l4t.cfg";
+NVKEY_FILE="t194_rsa_dev.key";
+NVENCRYPTKEY_FILE="t194_sbk_dev.key";
+INITRD_IN_BOOTIMG="yes";
+INITRD="bootloader/l4t_initrd.img";
+
+# Default FAB: Force P3668 boards without properly programmed EEPROM.
+# Values: A00 ->
+#
+DEFAULT_FAB="A00";
+VERFILENAME="qspi_bootblob_ver.txt";
+OTA_BOOT_DEVICE="/dev/mtdblock0";
+OTA_GPT_DEVICE="/dev/mtdblock0";
+
+# Rollback protection
+MINRATCHET_CONFIG="tegra194-mb1-bct-ratchet-p3668.cfg";
+
+# Rootfs A/B:
+if [ "${ROOTFS_AB}" == 1 ]; then
+	rootfs_ab=1
+	ROOTFSSIZE=7GiB;
+fi;
+
+# Enable bpmp-fw-dtb compression
+COMP_BPMP_FW_DTB=1;

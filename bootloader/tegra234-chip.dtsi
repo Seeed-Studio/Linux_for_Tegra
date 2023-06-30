@@ -1,0 +1,522 @@
+#include "tegra234-firewall-config-base.dtsi"
+
+/ {
+    tfc {
+
+        reg@1791 { /* SCRATCH_SCR_RSV109_SCR_0 */
+            exclusion-info = <0>;
+            value = <0x38000101>;
+        };
+
+        reg@3779 { /* CBB_CENTRAL_CBB_FIREWALL_EMCB_CFG_BLF, READ_CTL */
+            exclusion-info = <0>;
+            value = <0x00180009>;
+        };
+
+        reg@3780 { /* CBB_CENTRAL_CBB_FIREWALL_EMCB_CFG_BLF, WRITE_CTL */
+            exclusion-info = <0>;
+            value = <0x00180000>;
+        };
+
+        reg@3781 { /* CBB_CENTRAL_CBB_FIREWALL_EMCB_CFG_BLF, CTL_SETTING */
+            exclusion-info = <0>;
+            value = <0x80030000>;
+        };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        reg@179 { /* MSSNVLINK_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@180 { /* MSSNVLINK_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@181 { /* MSSNVLINK_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@182 { /* MSSNVLINK_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@183 { /* MSSNVLINK_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@184 { /* MSSNVLINK_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@185 { /* MSSNVLINK_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@186 { /* MSSNVLINK_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@689 { /* APS_AST_SCR_AST_GBL_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000101>;
+        };
+
+        reg@690 { /* APS_AST_SCR_AST_HYP_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000000>;
+        };
+
+        reg@691 { /* APS_AST_SCR_AST_REG_0_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@692 { /* APS_AST_SCR_AST_REG_1_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@693 { /* APS_AST_SCR_AST_REG_2_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@694 { /* APS_AST_SCR_AST_REG_3_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@695 { /* APS_AST_SCR_AST_REG_4_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@696 { /* APS_AST_SCR_AST_REG_5_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@697 { /* APS_AST_SCR_AST_REG_6_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@698 { /* APS_AST_SCR_AST_REG_7_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@699 { /* APS_AST_SCR_AST_GBL_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000101>;
+        };
+
+        reg@700 { /* APS_AST_SCR_AST_HYP_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000000>;
+        };
+
+        reg@701 { /* APS_AST_SCR_AST_REG_0_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@702 { /* APS_AST_SCR_AST_REG_1_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@703 { /* APS_AST_SCR_AST_REG_2_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@704 { /* APS_AST_SCR_AST_REG_3_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@705 { /* APS_AST_SCR_AST_REG_4_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@706 { /* APS_AST_SCR_AST_REG_5_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@707 { /* APS_AST_SCR_AST_REG_6_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@708 { /* APS_AST_SCR_AST_REG_7_SEC_CONTROL_0 : Auto boot, Timeout error in MB2*/
+            exclusion-info = <2>;
+            value = <0x38000001>;
+        };
+
+        reg@1208 { /* APS_AST_SCR_AST_HYP_SEC_CONTROL_0 : Slave Error in MB2, RCE*/
+            exclusion-info = <0>;
+            value = <0x38000202>;
+        };
+
+        reg@1218 { /* APS_AST_SCR_AST_HYP_SEC_CONTROL_0 : Slave Error in MB2, RCE*/
+            exclusion-info = <0>;
+            value = <0x38000202>;
+        };
+
+        reg@1306 { /* APS_AST_SCR_AST_HYP_SEC_CONTROL_0 : AXI Slave Err in SPE*/
+            exclusion-info = <0>;
+            value = <0x38000202>;
+        };
+
+        reg@1316 { /* APS_AST_SCR_AST_HYP_SEC_CONTROL_0 : AXI Slave Err in SPE*/
+            exclusion-info = <0>;
+            value = <0x38000202>;
+        };
+
+        reg@1907 { /* APS_AST_SCR_AST_HYP_SEC_CONTROL_0 : Slave Error in MB2, DCE*/
+            exclusion-info = <0>;
+            value = <0x38000202>;
+        };
+
+        reg@1917 { /* APS_AST_SCR_AST_HYP_SEC_CONTROL_0 : Slave Error in MB2, DCE*/
+            exclusion-info = <0>;
+            value = <0x38000202>;
+        };
+
+        reg@2027 { /* PVA_EVP_SCR_EVP_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x19000202>;
+        };
+
+        reg@2028 { /* PVA_SEC_ERROR_COLLATOR_SCR_EC_SCR_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x1d002020>;
+        };
+
+        reg@2030 { /* PVA_SEC_SCR_SECEXT_INTR_EVENT_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x19008282>;
+        };
+
+        reg@2031 { /* PVA_PROC_SCR_PROC_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x19000282>;
+        };
+
+        reg@2107 { /* PVA_CFG_SCR_CCQ_CNTL_0 : Timeout Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x19000280>;
+        };
+
+        reg@2187 { /* CLK_RST_CONTROLLER_ERR_COLLATOR_6_SCR_EC_SCR_0 : Power down error in MB2*/
+            exclusion-info = <0>;
+            value = <0x20000000>;
+        };
+
+        reg@2188 { /* CLK_RST_CONTROLLER_ERR_COLLATOR_7_SCR_EC_SCR_0 : Power down error in MB2*/
+            exclusion-info = <0>;
+            value = <0x20000000>;
+        };
+
+        reg@2223 { /* CLK_RST_CONTROLLER_ERR_COLLATOR_42_SCR_EC_SCR_0 : Power down error in MB2*/
+            exclusion-info = <0>;
+            value = <0x20000000>;
+        };
+
+        reg@2609 { /* AON_FIREWALL_AON_CAR_BLF, READ_CTL */
+            exclusion-info = <2>;
+            value = <0x00024a3f>;
+        };
+
+        reg@2610 { /* AON_FIREWALL_AON_CAR_BLF, WRITE_CTL */
+            exclusion-info = <2>;
+            value = <0x00024a3f>;
+        };
+
+        reg@2611 { /* AON_FIREWALL_AON_CAR_BLF, CTL_SETTING */
+            exclusion-info = <2>;
+            value = <0x00030000>;
+        };
+
+        reg@1148 { /* HSP_INT_SCR_SCR_C0_REG_0 : Auto Boot failure in HV*/
+            exclusion-info = <0>;
+            value = <0x38002020>;
+        };
+
+        reg@4619 { /* CBB_CENTRAL_CBB_FIREWALL_MIPI_CAL_BLF, READ_CTL */
+            exclusion-info = <0>;
+            value = <0x00000000>;
+        };
+
+        reg@4620 { /* CBB_CENTRAL_CBB_FIREWALL_MIPI_CAL_BLF, WRITE_CTL */
+            exclusion-info = <0>;
+            value = <0x0000400a>;
+        };
+
+        reg@4621 { /* CBB_CENTRAL_CBB_FIREWALL_MIPI_CAL_BLF, CTL_SETTING */
+            exclusion-info = <0>;
+            value = <0x80020000>;
+        };
+
+        reg@1965 { /* SCEPM_SCR_SCR_PRIVATE_0 : SLAVE Error seen in MB2, DCE*/
+            exclusion-info = <0>;
+            value = <0x38008080>;
+        };
+
+        reg@2179 { /* CLK_RST_CONTROLLER_DCE_SCR_SHARED_0 : Slave Error in MB2*/
+            exclusion-info = <0>;
+            value = <0x30000400>;
+        };
+
+        reg@5369 { /* CBB_CENTRAL_CBB_FIREWALL_SEU1SFTY_BLF, READ_CTL : CBB Error in MB2, Prod fuse part*/
+            exclusion-info = <0>;
+            value = <0x0f000000>;
+        };
+
+        reg@5370 { /* CBB_CENTRAL_CBB_FIREWALL_SEU1SFTY_BLF, WRITE_CTL : CBB Error in MB2, Prod fused part */
+            exclusion-info = <0>;
+            value = <0x0f000000>;
+        };
+
+        reg@5371 { /* CBB_CENTRAL_CBB_FIREWALL_SEU1SFTY_BLF, CTL_SETTING : CBB Error in MB2, Prod fused part*/
+            exclusion-info = <0>;
+            value = <0x80030000>;
+        };
+
+        reg@2609 { /* AON_FIREWALL_AON_CAR_BLF, READ_CTL : MB2 does not boot at comb uart*/
+            exclusion-info = <0>;
+            value = <0x00000000>;
+        };
+
+        reg@2610 { /* AON_FIREWALL_AON_CAR_BLF, WRITE_CTL : MB2 does not boot at comb uart*/
+            exclusion-info = <0>;
+            value = <0x00000008>;
+        };
+
+        reg@2611 { /* AON_FIREWALL_AON_CAR_BLF, CTL_SETTING : MB2 does not boot at comb uart*/
+            exclusion-info = <0>;
+            value = <0x80020000>;
+        };
+
+        reg@4175 { /* CBB_CENTRAL_CBB_FIREWALL_HOST1X_7_BLF, READ_CTL : Auto Integration test failure*/
+            exclusion-info = <0>;
+            value = <0x00004800>;
+        };
+
+        reg@4176 { /* CBB_CENTRAL_CBB_FIREWALL_HOST1X_7_BLF, WRITE_CTL : Auto Integration test failure*/
+            exclusion-info = <0>;
+            value = <0x00004800>;
+        };
+
+        reg@4177 { /* CBB_CENTRAL_CBB_FIREWALL_HOST1X_7_BLF, CTL_SETTING : Auto Integration test failure*/
+            exclusion-info = <0>;
+            value = <0x80030000>;
+        };
+
+        reg@4385 { /* CBB_CENTRAL_CBB_FIREWALL_MCB_BLF, READ_CTL : Firewall error in MB2 from DCE*/
+            exclusion-info = <0>;
+            value = <0x0f19480f>;
+        };
+
+        reg@4386 { /* CBB_CENTRAL_CBB_FIREWALL_MCB_BLF, WRITE_CTL : Firewall error in MB2 from DCE */
+            exclusion-info = <0>;
+            value = <0x0f18000b>;
+        };
+
+        reg@4387 { /* CBB_CENTRAL_CBB_FIREWALL_MCB_BLF, CTL_SETTING : Firewall error in MB2 from DCE*/
+            exclusion-info = <0>;
+            value = <0x80030000>;
+        };
+
+		/* FSI Firewalls */
+        reg@7187 { /* DCE_FABRIC, DCE_FIREWALL_ARF_9, ARF_SIZE */
+            exclusion-info = <0>;
+            value = <0x00040000>;
+        };
+
+        reg@7188 { /* DCE_FABRIC, DCE_FIREWALL_ARF_9, ADDR_LOW */
+            exclusion-info = <0>;
+            value = <0x0d9f0000>;
+        };
+
+        reg@7189 { /* DCE_FABRIC, DCE_FIREWALL_ARF_9, ADDR_HIGH */
+            exclusion-info = <0>;
+            value = <0x00000000>;
+        };
+
+        reg@7190 { /* DCE_FABRIC, DCE_FIREWALL_ARF_9, READ_CTL */
+            exclusion-info = <0>;
+            value = <0x00008000>;
+        };
+
+        reg@7191 { /* DCE_FABRIC, DCE_FIREWALL_ARF_9, WRITE_CTL */
+            exclusion-info = <0>;
+            value = <0x00008000>;
+        };
+
+        reg@7192 { /* DCE_FABRIC, DCE_FIREWALL_ARF_9, CTL_SETTING */
+            exclusion-info = <0>;
+            value = <0xc0030000>;
+        };
+
+        reg@7235 { /* DCE_FABRIC, DCE_FIREWALL_ARF_17, ARF_SIZE */
+            exclusion-info = <0>;
+            value = <0x00005000>;
+        };
+
+        reg@7236 { /* DCE_FABRIC, DCE_FIREWALL_ARF_17, ADDR_LOW */
+            exclusion-info = <0>;
+            value = <0x0de11000>;
+        };
+
+        reg@7237 { /* DCE_FABRIC, DCE_FIREWALL_ARF_17, ADDR_HIGH */
+            exclusion-info = <0>;
+            value = <0x00000000>;
+        };
+
+        reg@7238 { /* DCE_FABRIC, DCE_FIREWALL_ARF_17, READ_CTL */
+            exclusion-info = <0>;
+            value = <0x00008000>;
+        };
+
+        reg@7239 { /* DCE_FABRIC, DCE_FIREWALL_ARF_17, WRITE_CTL */
+            exclusion-info = <0>;
+            value = <0x00008000>;
+        };
+
+        reg@7240 { /* DCE_FABRIC, DCE_FIREWALL_ARF_17, CTL_SETTING */
+            exclusion-info = <0>;
+            value = <0xc0030000>;
+        };
+
+        reg@6845 { /* RCE_FABRIC, RCE_FIREWALL_ARF_20, ARF_SIZE */
+            exclusion-info = <0>;
+            value = <0x00001000>;
+        };
+
+        reg@6846 { /* RCE_FABRIC, RCE_FIREWALL_ARF_20, ADDR_LOW */
+            exclusion-info = <0>;
+            value = <0x0be19000>;
+        };
+
+        reg@6847 { /* RCE_FABRIC, RCE_FIREWALL_ARF_20, ADDR_HIGH */
+            exclusion-info = <0>;
+            value = <0x00000000>;
+        };
+
+        reg@6848 { /* RCE_FABRIC, RCE_FIREWALL_ARF_20, READ_CTL */
+            exclusion-info = <0>;
+            value = <0x00004000>;
+        };
+
+        reg@6849 { /* RCE_FABRIC, RCE_FIREWALL_ARF_20, WRITE_CTL */
+            exclusion-info = <0>;
+            value = <0x00004000>;
+        };
+
+        reg@6850 { /* RCE_FABRIC, RCE_FIREWALL_ARF_20, CTL_SETTING */
+            exclusion-info = <0>;
+            value = <0xc0030000>;
+        };
+
+        reg@7253 { /* DCE_FABRIC, DCE_FIREWALL_ARF_20, ARF_SIZE */
+            exclusion-info = <0>;
+            value = <0x00001000>;
+        };
+
+        reg@7254 { /* DCE_FABRIC, DCE_FIREWALL_ARF_20, ADDR_LOW */
+            exclusion-info = <0>;
+            value = <0x0de19000>;
+        };
+
+        reg@7255 { /* DCE_FABRIC, DCE_FIREWALL_ARF_20, ADDR_HIGH */
+            exclusion-info = <0>;
+            value = <0x00000000>;
+        };
+
+        reg@7256 { /* DCE_FABRIC, DCE_FIREWALL_ARF_20, READ_CTL */
+            exclusion-info = <0>;
+            value = <0x00008000>;
+        };
+
+        reg@7257 { /* DCE_FABRIC, DCE_FIREWALL_ARF_20, WRITE_CTL */
+            exclusion-info = <0>;
+            value = <0x00008000>;
+        };
+
+        reg@7258 { /* DCE_FABRIC, DCE_FIREWALL_ARF_20, CTL_SETTING */
+            exclusion-info = <0>;
+            value = <0xc0030000>;
+        };
+
+        reg@1343 { /* HSP_SHRD_MBOX_AON_SCR_SM_0_REG_0 */
+            exclusion-info = <0>;
+            value = <0x38001414>;
+        };
+
+        reg@1344 { /* HSP_SHRD_MBOX_AON_SCR_SM_1_REG_0 */
+            exclusion-info = <0>;
+            value = <0x38001212>;
+        };
+
+        reg@1345 { /* HSP_SHRD_MBOX_AON_SCR_SM_2_REG_0 */
+            exclusion-info = <0>;
+            value = <0x38005050>;
+        };
+
+        reg@1346 { /* HSP_SHRD_MBOX_AON_SCR_SM_3_REG_0 */
+            exclusion-info = <0>;
+            value = <0x38009090>;
+        };
+
+        reg@1347 { /* HSP_SHRD_MBOX_AON_SCR_SM_4_REG_0 */
+            exclusion-info = <0>;
+            value = <0x38003030>;
+        };
+
+        reg@1348 { /* HSP_SHRD_MBOX_AON_SCR_SM_5_REG_0 */
+            exclusion-info = <0>;
+            value = <0x38009090>;
+        };
+
+        reg@1349 { /* HSP_SHRD_MBOX_AON_SCR_SM_6_REG_0 */
+            exclusion-info = <0>;
+            value = <0x38001414>;
+        };
+
+        reg@1350 { /* HSP_SHRD_MBOX_AON_SCR_SM_7_REG_0 */
+            exclusion-info = <0>;
+            value = <0x38001111>;
+        };
+
+    };
+};

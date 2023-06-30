@@ -1,0 +1,1125 @@
+#!/bin/bash
+
+# Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+FUSE_READ_OUTPUT="fuse_info.txt";
+FUSES_KEYS=("PublicKeyHash" "SecureBootKey" "Kek0" "Kek1" "Kek2" "Kek256");
+FUSES_KEYS_T234=("PublicKeyHash");
+FUSES_MANUFACTURING=("BootSecurityInfo" "JtagDisable" "SecurityMode" "SwReserved" "DebugAuthentication" "OdmId");
+FUSES_ODM_RESERVED=("OdmLock" "ReservedOdm0" "ReservedOdm1" "ReservedOdm2" "ReservedOdm3"
+					"ReservedOdm4" "ReservedOdm5" "ReservedOdm6" "ReservedOdm7");
+FUSES_MANUFACTURING_T234=("BootSecurityInfo" "ArmJtagDisable" "SecurityMode" "SwReserved" "DebugAuthentication" "OdmId");
+FUSES_T19X_EXTRA_ODM=("ReservedOdm8" "ReservedOdm9" "ReservedOdm10" "ReservedOdm11");
+
+# shellcheck disable=SC2034
+MODE_ONLINE="ONLINE";
+# shellcheck disable=SC2034
+MODE_OFFLINE="OFFLINE";
+# shellcheck disable=SC2034
+MODE_HYBRID="HYBRID";
+
+# variables being used in common functions
+tid=""
+usb_instance=""
+CHIPMAJOR=""
+BL_DIR=""
+TARGET_DIR=""
+LDK_DIR=""
+SBKFILE=""
+KEYFILE=""
+
+odmfuse_init()
+{
+	tid="${1}"
+	usb_instance="${2}"
+	CHIPMAJOR="${3}"
+	BL_DIR="${4}"
+	TARGET_DIR="${5}"
+	LDK_DIR="${6}"
+	SBKFILE="${7}"
+	KEYFILE="${8}"
+}
+
+chkerr ()
+{
+	# shellcheck disable=SC2181
+	if [ $? -ne 0 ]; then
+		if [ "$1" != "" ]; then
+			echo "$1";
+		else
+			echo "failed.";
+		fi;
+		exit 1;
+	fi;
+	if [ "$1" = "" ]; then
+		echo "done.";
+	fi;
+}
+
+chsuffix ()
+{
+	local var;
+	local fname;
+	local OIFS;
+
+	var="$1";
+	fname=$(basename "$2");
+	OIFS=${IFS};
+	IFS='.';
+	# shellcheck disable=SC2206
+	na=($fname);
+	IFS=${OIFS};
+	eval "${var}=${na[0]}.${3}";
+}
+
+cp2local ()
+{
+	local src=$1;
+	local sum1;
+	local sum2;
+	if [ "${!src}" = "" ]; then return 1; fi;
+	if [ ! -f "${!src}" ]; then return 1; fi;
+	if [ "$2" = "" ];      then return 1; fi;
+	if [ -f "$2" ] && [ "${!src}" = "$2" ]; then
+		sum1=$(sum "${!src}");
+		sum2=$(sum "$2");
+		if [ "$sum1" = "$sum2" ]; then
+			echo "Existing ${src}($2) reused.";
+			return 0;
+		fi;
+	fi;
+	echo -n "copying ${src}(${!src})... ";
+	cp -f "${!src}" "$2";
+	chkerr;
+	return 0;
+}
+
+mkarg ()
+{
+	local var="$1";
+	local varname="$1name";
+
+	eval "${var}=$2";
+	if [ -f "${!var}" ]; then
+		eval "${var}=$(readlink -f "${!var}")";
+		eval "${varname}=$(basename "${!var}")";
+		if ! cp2local "${var}" "${BL_DIR}/${!varname}"; then
+			return 1;
+		fi;
+	else
+		eval "${varname}=$2";
+	fi;
+	if [ "$3" != "" ]; then
+		if [ "$3" = "BINSARGS" ]; then
+			eval "${3}+=\"${var} ${!varname}; \"";
+		else
+			eval "${3}+=\"--${var} ${!varname} \";";
+		fi;
+	fi;
+	return 0;
+}
+
+getsize ()
+{
+	local var="$1";
+	local val="$2";
+	if [[ ${!val} != *[!0-9]* ]]; then
+		eval "${var}=${!val}";
+	elif [[ (${!val} == *KiB) && (${!val} != *[!0-9]*KiB) ]]; then
+		eval "${var}=$(( ${!val%KiB} * 1024 ))";
+	elif [[ (${!val} == *MiB) && (${!val} != *[!0-9]*MiB) ]]; then
+		eval "${var}=$(( ${!val%MiB} * 1024 * 1024 ))";
+	elif [[ (${!val} == *GiB) && (${!val} != *[!0-9]*GiB) ]]; then
+		eval "${var}=$(( ${!val%GiB} * 1024 * 1024 * 1024))";
+	else
+		echo "Error: Invalid $1: ${!val}";
+		exit 1;
+	fi;
+}
+
+cpcfg ()
+{
+	local CFGCONV="";
+
+	# BCT: nothing to do.
+
+	# MB1_TAG:
+	mkarg mb1file "${MB1FILE}" "";
+	CFGCONV+="-e s/MB1NAME/mb1/ ";
+	CFGCONV+="-e s/MB1TYPE/mb1_bootloader/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/MB1FILE/${mb1filename}/ ";
+
+	# SPE_TAG:
+	if [ "${SPEFILE}" = "" ]; then
+		SPEFILE="${BL_DIR}/spe.bin"
+	fi;
+	mkarg spefile "${SPEFILE}" "";
+	CFGCONV+="-e s/SPENAME/spe-fw/ ";
+	CFGCONV+="-e s/SPETYPE/spe_fw/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/SPEFILE/${spefilename}/ ";
+
+	# NVC_TAG:
+	mkarg tegraboot "${TEGRABOOT}" "";
+	CFGCONV+="-e s/MB2NAME/mb2/ ";
+	CFGCONV+="-e s/MB2TYPE/mb2_bootloader/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/MB2FILE/${tegrabootname}/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/TEGRABOOT/${tegrabootname}/ ";
+
+	# MPB_TAG:
+	CFGCONV+="-e s/MPBNAME/mts-preboot/ ";
+	CFGCONV+="-e s/MPBTYPE/mts_preboot/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/MPBFILE/${mts_prebootname}/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/MTSPREBOOT/${mts_prebootname}/ ";
+
+	# GPT_TAG:
+	CFGCONV+="-e s/PPTSIZE/16896/ ";
+
+	# APP_TAG:
+	getsize    rootfssize	ROOTFSSIZE;
+	localsysfile=system.img;
+	echo "This is dummy RootFS" > "${BL_DIR}/${localsysfile}";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/APPSIZE/${rootfssize}/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/APPFILE/${localsysfile}/ ";
+
+	# MBP_TAG:
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/MTS_MCE/${mts_mcename}/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/MTSPROPER/${mts_propername}/ ";
+
+	# TBC_TAG:
+	mkarg tbcfile "${TBCFILE}" "";
+	CFGCONV+="-e s/TBCNAME/cpu-bootloader/ ";
+	CFGCONV+="-e s/TBCTYPE/bootloader/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/TBCFILE/${tbcfilename}/ ";
+
+	# TBCDTB_TAG:
+	CFGCONV+="-e s/TBCDTB-NAME/bootloader-dtb/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/TBCDTB-FILE/${bootloader_dtbname}/ ";
+
+	# TOS_TAG:
+	CFGCONV+="-e s/TOSNAME/secure-os/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/TOSFILE/${tlkname}/ ";
+
+	# EKS_TAG:
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/EKSFILE/${eksname}/ ";
+
+	# BPF_TAG:
+	CFGCONV+="-e s/BPFNAME/bpmp-fw/ ";
+	CFGCONV+="-e s/BPFSIGN/true/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/BPFFILE/${bpmp_fwname}/ ";
+
+	# BPFDTB_TAG:
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/BPFDTB_FILE/${bpmp_fw_dtbname}/ ";
+
+	# SCE_TAG:
+	if [ "${SCEFILE}" = "" ] || [ ! -f "${SCEFILE}" ]; then
+		SCEFILE="${BL_DIR}/camera-rtcpu-sce.img";
+	fi;
+	mkarg scefile "${SCEFILE}" "";
+	CFGCONV+="-e s/SCENAME/sce-fw/ ";
+	CFGCONV+="-e s/SCESIGN/true/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/SCEFILE/${scefilename}/ ";
+	if [ "${CAMERAFW}" != "" ] && [ -f "${CAMERAFW}" ]; then
+		mkarg camerafw "${CAMERAFW}" "";
+		# shellcheck disable=SC2154
+		CFGCONV+="-e s/CAMERAFW/${camerafwname}/ ";
+	else
+		CFGCONV+="-e /CAMERAFW/d ";
+	fi;
+
+	# SPE_TAG:
+	# shellcheck disable=SC2154
+	if [ "${spe_fwname}" != "" ]; then
+		CFGCONV+="-e s/SPENAME/spe-fw/ ";
+		CFGCONV+="-e s/SPETYPE/spe_fw/ ";
+		CFGCONV+="-e s/SPEFILE/${spe_fwname}/ ";
+		CFGCONV+="-e s/spe.bin/${spe_fwname}/ ";
+	else
+		CFGCONF+="-e s/SPETYPE/data/ ";
+		CFGCONF+="-e /SPEFILE/d ";
+	fi;
+
+	# WB0_TAG:
+	mkarg wb0boot "${WB0BOOT}" "";
+	CFGCONV+="-e s/SC7NAME/sc7/ ";
+	CFGCONV+="-e s/WB0TYPE/WB0/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/WB0FILE/${wb0bootname}/ ";
+	CFGCONV+="-e s/WB0BOOT/${wb0bootname}/ ";
+
+	# FB_TAG:
+	CFGCONV+="-e s/FBTYPE/data/ ";
+	CFGCONV+="-e s/FBSIGN/false/ ";
+	CFGCONV+="-e /FBFILE/d ";
+
+	# SOS_TAG:
+	CFGCONV+="-e /SOSFILE/d ";
+
+	# LNX_TAG:
+	localbootfile=boot.img;
+	echo "This is dummy Kernel" > "${BL_DIR}/${localbootfile}";
+	CFGCONV+="-e s/LNXNAME/kernel/ ";
+	CFGCONV+="-e s/LNXSIZE/67108864/ ";
+	CFGCONV+="-e s/LNXFILE/${localbootfile}/ ";
+
+	# DTB_TAG:
+	mkarg kernel_dtbfile "${DTB_FILE}" "";
+	CFGCONV+="-e s/KERNELDTB-NAME/kernel-dtb/ ";
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/KERNELDTB-FILE/${kernel_dtbfilename}/ ";
+	CFGCONV+="-e s/DTB_FILE/${kernel_dtbfilename}/ ";
+
+	# DRAMECC_TAG:
+	if [ "${DRAMECCFILE}" != "" ] && [ -f "${DRAMECCFILE}" ]; then
+		mkarg drameccfile "${DRAMECCFILE}" "";
+		CFGCONV+="-e s/DRAMECCNAME/dram-ecc-fw/ ";
+		CFGCONV+="-e s/DRAMECCTYPE/dram_ecc/ ";
+		# shellcheck disable=SC2154
+		CFGCONV+="-e s/DRAMECCFILE/${drameccfilename}/ ";
+		CFGCONV+="-e s/dram-ecc.bin/${drameccfilename}/ ";
+	else
+		CFGCONV+="-e s/DRAMECCTYPE/data/ ";
+		CFGCONV+="-e /DRAMECCFILE/d ";
+	fi;
+
+	# BADPAGE_TAG:
+	if [ "${BADPAGEFILE}" != "" ] && [ -f "${BADPAGEFILE}" ]; then
+		mkarg badpagefile "${BADPAGEFILE}" "";
+		CFGCONV+="-e s/BADPAGENAME/badpage-fw/ ";
+		CFGCONV+="-e s/BADPAGETYPE/black_list_info/ ";
+		# shellcheck disable=SC2154
+		CFGCONV+="-e s/BADPAGEFILE/${badpagefilename}/ ";
+	else
+		CFGCONV+="-e s/BADPAGETYPE/data/ ";
+		CFGCONV+="-e /BADPAGEFILE/d ";
+	fi;
+
+	# CBOOTOPTION_TAG:
+	if [ "${CBOOTOPTION_FILE}" != "" ] && [ -f "${CBOOTOPTION_FILE}" ]; then
+		mkarg cbootoptionfile "${CBOOTOPTION_FILE}" "";
+		# shellcheck disable=SC2154
+		CFGCONV+="-e s/CBOOTOPTION_FILE/${cbootoptionfilename}/ ";
+	else
+		CFGCONV+="-e /CBOOTOPTION_FILE/d ";
+	fi;
+
+	# NCT_TAG:
+	CFGCONV+="-e /NCTFILE/d ";
+	CFGCONV+="-e s/NCTTYPE/data/ ";
+
+	# EBT_TAG: nothing to do.
+
+	# VER_TAG:
+	CFGCONV+="-e /VERFILE/d ";
+
+	# MB2BL_TAG: nothing to do.
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/MB2BLFILE/${mb2_bootloadername}/ "
+
+	# EFI_TAG:
+	CFGCONV+="-e s/EFISIZE/4096/ ";
+	CFGCONV+="-e /EFIFILE/d ";
+
+	# REC_TAG:
+	CFGCONV+="-e s/RECSIZE/4096/ "
+	CFGCONV+="-e /RECFILE/d ";
+
+	# RECDTB_TAG:
+	CFGCONV+="-e /RECDTB-FILE/d ";
+
+	# BOOTCTRL_TAG:
+	CFGCONV+="-e /BOOTCTRL-FILE/d ";
+
+	# RECROOTFS_TAG:
+	CFGCONV+="-e s/RECROOTFSSIZE/4096/ ";
+
+	# PSCBL1FILE
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/PSCBL1FILE/${pscbl1filename}/ "
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/TSECFW/${tsec_fwname}/ "
+	CFGCONV+="-e /NVHOSTNVDEC/d "
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/XUSB_FW/${xusb_fwname}/ "
+	# shellcheck disable=SC2154
+	CFGCONV+="-e s/PSCFW/${psc_fwname}/ "
+	CFGCONV+="-e s/MCE_IMAGE/${mts_mcename}/ "
+	CFGCONV+="-e /PSCRF_IMAGE/d "
+	CFGCONV+="-e /MB2RF_IMAGE/d "
+	CFGCONV+="-e /DCE/d "
+	CFGCONV+="-e /ESP_FILE/d "
+	# shellcheck disable=SC2086
+	# shellcheck disable=SC2002
+	cat "${1}" | sed ${CFGCONV} > "${2}"; chkerr;
+}
+
+mkfuseargs ()
+{
+	local bldtb;
+	local out_fuseargs="${1}";
+	local read="${2}";
+	BCTARGS=""
+	BINSARGS=""
+	# BCTARGS:
+	local BD="${TARGET_DIR}/BCT";
+	if [ "${tid}" = "0x19" ]; then
+		mkarg sdram_config	"${BD}/${EMMC_BCT}"		"";
+		mkarg sdram_config1	"${BD}/${EMMC_BCT1}"		"";
+		# shellcheck disable=SC2154
+		BCTARGS+="--sdram_config ${sdram_configname},";
+		# shellcheck disable=SC2154
+		BCTARGS+="${sdram_config1name} ";
+		mkarg scr_cold_boot_config	"${BD}/${SCR_COLD_BOOT_CONFIG}"	BCTARGS;
+	elif [ "${tid}" = "0x23" ]; then
+		mkarg sdram_config	"${BD}/${EMMC_BCT}"		BCTARGS;
+		# shellcheck disable=SC2153
+		mkarg dev_params	"${EMC_FUSE_DEV_PARAMS}"	BCTARGS;
+		# shellcheck disable=SC2154
+		# shellcheck disable=SC2153
+		if [ "${__fuselevel}" = "fuselevel_production" ] || \
+			[ "${FUSELEVEL}" = "fuselevel_production" ]; then
+			sed -i "s/preprod_dev_sign = <1>/preprod_dev_sign = <0>/" "${BL_DIR}/${EMC_FUSE_DEV_PARAMS}";
+		fi;
+		mkarg 	mb2_dev_params 	"${BD}/${DEV_PARAMS}"		""
+		if [ "${__fuselevel}" = "fuselevel_production" ] || \
+			[ "${FUSELEVEL}" = "fuselevel_production" ]; then
+			# shellcheck disable=SC2154
+			sed -i "s/preprod_dev_sign = <1>/preprod_dev_sign = <0>/" "${BL_DIR}/${mb2_dev_paramsname}";
+		fi;
+		mkarg mb2bct_cfg "${TARGET_DIR}/BCT/${MB2_BCT}" BCTARGS;
+		mkarg deviceprod_config		"${TARGET_DIR}/BCT/${DEVICEPROD_CONFIG}" BCTARGS;
+		mkarg wb0sdram			"${TARGET_DIR}/BCT/${WB0SDRAM_BCT}"  BCTARGS;
+	fi;
+	# shellcheck disable=SC2153
+	mkarg misc_config		"${BD}/${MISC_CONFIG}"		BCTARGS;
+	mkarg pinmux_config		"${BD}/${PINMUX_CONFIG}"	BCTARGS;
+	mkarg scr_config		"${BD}/${SCR_CONFIG}"		BCTARGS;
+	mkarg pmc_config		"${BD}/${PMC_CONFIG}"		BCTARGS;
+	mkarg pmic_config		"${BD}/${PMIC_CONFIG}"		BCTARGS;
+	mkarg br_cmd_config		"${BD}/${BOOTROM_CONFIG}"	BCTARGS;
+	mkarg prod_config		"${BD}/${PROD_CONFIG}"		BCTARGS;
+	# shellcheck disable=SC2153
+	mkarg device_config	"${BD}/${DEVICE_CONFIG}"	BCTARGS;
+	mkarg gpioint_config	"${BD}/${GPIOINT_CONFIG}"	BCTARGS;
+	if [ "${tid}" = "0x19" ]; then
+		mkarg misc_cold_boot_config "${BD}/${MISC_COLD_BOOT_CONFIG}" BCTARGS;
+		mkarg dev_params 		"${BD}/${DEV_PARAMS}"		BCTARGS;
+		if [ "${UPHY_CONFIG}" != "" ]; then
+			mkarg uphy_config	"${BD}/${UPHY_CONFIG}"	BCTARGS;
+		fi;
+		if [ "${MINRATCHET_CONFIG}" != "" ]; then
+			mkarg minratchet_config	"${BD}/${MINRATCHET_CONFIG}"	BCTARGS;
+		fi;
+		mkarg soft_fuses	"${BD}/${SOFT_FUSES}"		BCTARGS;
+	fi;
+
+	# Close BINSARGS before get used for the first time.
+	BINSARGS="--bins \"";
+	mkarg mb2_bootloader	"${MB2BLFILE}"		BINSARGS;
+	if [ "${TBCDTB_FILE}" != "" ] && \
+		[ -f "${TARGET_DIR}/${TBCDTB_FILE}" ]; then
+		bldtb="${TARGET_DIR}/${TBCDTB_FILE}";
+	elif [ "${DTB_FILE}" != "" ] && [  -f "${DTB_DIR}/${DTB_FILE}" ]; then
+		bldtb="${DTB_DIR}/${DTB_FILE}";
+	else
+		echo "*** Error: bootloader DTB not found.";
+		exit 1;
+	fi;
+	if [ "${tid}" = "0x19" ]; then
+		mkarg mts_preboot	"${MTSPREBOOT}"		BINSARGS;
+		mkarg mts_mce           "${MTS_MCE}"            BINSARGS;
+		mkarg mts_proper	"${MTSPROPER}"		BINSARGS;
+		mkarg bootloader_dtb	"${bldtb}"		BINSARGS;
+		mkarg tlk		"${TOSFILE}"		BINSARGS;
+	elif [ "${tid}" = 0x23 ]; then
+		mkarg mts_mce		"${MTSMCEFILE}"		BINSARGS;
+		mkarg pscbl1file	"${PSCBL1FILE}"		"";
+		mkarg mb2_applet	"$(basename "${APPLET}")" BINSARGS;
+		mkarg bldtb		"${bldtb}"		  BCTARGS;
+		mkarg dce_fw	"${DCE}"	BINSARGS;
+		mkarg xusb_fw	"${XUSBFILE}"	BINSARGS;
+		mkarg nvdec	"${NVHOSTNVDEC}"	BINSARGS;
+		mkarg sce_fw	"${BL_DIR}/camera-rtcpu-sce.img"		BINSARGS;
+		if [ "${TSECFW}" != "" ] && [ -f "${TSECFW}" ]; then
+			mkarg tsec_fw	"${TSECFW}"		BINSARGS;
+		fi
+		mkarg psc_fw	"${PSCFW}"		BINSARGS;
+		mkarg rce_fw	"${CAMERAFW}"		BINSARGS;
+		# shellcheck disable=SC2153
+		mkarg ape_fw	"${APEFILE}"		BINSARGS;
+		mkarg tos	"${TOSFILE}"		BINSARGS;
+	fi;
+	mkarg bpmp_fw		"${BPFFILE}"			BINSARGS;
+	mkarg bpmp_fw_dtb	"${TARGET_DIR}/${BPFDTB_FILE}"	BINSARGS;
+	mkarg eks		"${EKSFILE}"			BINSARGS;
+	localbootfile="boot.img";
+	echo "This is dummy Kernel" > "${BL_DIR}/${localbootfile}";
+	mkarg kernel		"${localbootfile}"	BINSARGS;
+	mkarg kernel_dtb	"${DTB_FILE}"		BINSARGS;
+	mkarg spe_fw		"${SPEFILE}"		BINSARGS;
+
+	BINSARGS+="\"";
+	BINSCONV+="-e s/\"[[:space:]]*/\"/ ";
+	# shellcheck disable=SC2089
+	BINSCONV+="-e s/\;[[:space:]]*\"/\"/ ";
+	# shellcheck disable=SC2086
+	# shellcheck disable=SC2090
+	BINSARGS=$(echo "${BINSARGS}" | sed ${BINSCONV});
+
+	# shellcheck disable=SC2034
+	__fuseargs="${BCTARGS} ${BINSARGS} ";
+	localcfg="flash.xml";
+	cpcfg "${TARGET_DIR}/cfg/${EMMC_CFG}" "${BL_DIR}/${localcfg}";
+	if [ -n "${read}" ] && [ "${tid}" = "0x23" ]; then
+		mkarg cfg	"${BL_DIR}/readinfo_t234_min_prod.xml"	__fuseargs;
+	else
+		mkarg cfg	"${BL_DIR}/${localcfg}"	__fuseargs;
+	fi;
+	mkarg odmdata	"${ODMDATA}"		__fuseargs;
+	mkarg chip	"${tid}"		__fuseargs;
+	mkarg applet	"${SOSFILE}"		__fuseargs;
+	if [ "${tid}" = "0x19" ]; then
+		mkarg bl	"${FLASHER}"		__fuseargs;
+	else
+		__fuseargs+=" --concat_cpubl_bldtb ";
+		mkarg bl	"${UEFIBL}"		__fuseargs;
+		mkarg cpubl	"${TBCFILE}"		__fuseargs;
+	fi;
+	# __fuseargs contains whitespaces, using \$ to let it expand when doing "eval"
+	eval "${out_fuseargs}=\${__fuseargs}";
+}
+
+get_fuse_level ()
+{
+	local ECID;
+	local rcmcmd;
+	local inst_args="";
+	local extra_args="";
+	local idval_1="";
+	local idval_2="";
+	local flval="";
+	local baval="None";
+	local hwchiprev="";
+	local flvar="$1";
+	local hivar="$2";
+	local hrvar="$3";
+	local bavar="$4";
+	local skuid="$5";
+
+	if [ -f "${BL_DIR}/tegrarcm_v2" ]; then
+		rcmcmd="tegrarcm_v2";
+	elif [ -f "${BL_DIR}/tegrarcm" ]; then
+		rcmcmd="tegrarcm";
+	else
+		echo "Error: tegrarcm is missing.";
+		exit 1;
+	fi;
+	if [ "${CHIPID}" = "0x23" ]; then
+		extra_args="--new_session --chip 0x23";
+	fi;
+	if [ -n "${usb_instance}" ]; then
+		inst_args="--instance ${usb_instance}";
+	fi;
+	# shellcheck disable=SC2164
+	pushd "${BL_DIR}" > /dev/null 2>&1;
+	# shellcheck disable=SC2086
+	ECID=$(./${rcmcmd} ${extra_args} ${inst_args} --uid | grep BR_CID | cut -d' ' -f2);
+	# shellcheck disable=SC2164
+	popd > /dev/null 2>&1;
+	if [ "${ECID}" != "" ]; then
+		idval_1="0x${ECID:3:2}";
+		eval "${hivar}=\"${idval_1}\"";
+		idval_2="0x${ECID:6:2}";
+
+		flval="${ECID:2:1}";
+		# By default the board doesn't have secure boot enabled
+		baval="NS";
+		if [ "${idval_2}" = "0x23" ]; then
+			local tmp_1;
+			flval="0x${ECID:2:1}";
+			flval=$(printf %x "$((flval & 0x8))");
+			tmp_1=$(printf %2.2x "$((idval_1 & 0xf0))");
+			flval="${flval}${tmp_1}";
+			case ${flval} in
+			000) flval="fuselevel_nofuse"; ;;
+			800) flval="fuselevel_production"; baval="NS"; ;;
+			# 810 - 3K RSA
+			# 820 - ECDSA P-256
+			# 830 - ECDSA P-512
+			# 840 - ED25519
+			# 850 - XMSS
+			810|820|830|840|850)
+				flval="fuselevel_production"; baval="PKC"; ;;
+			# 890 - SBK + 3K RSA
+			# 8a0 - SBK + ECDSA P-256
+			# 8b0 - SBK + ECDSA P-512
+			# 8c0 - SBK + ED25519
+			# 8d0 - SBK + XMSS
+			890|8a0|8b0|8c0|8d0)
+				flval="fuselevel_production"; baval="SBKPKC"; ;;
+			*) echo "Error: Invalid fuse configuration 0x${flval}";
+				exit 1;
+			esac;
+			eval "${hivar}=\"${idval_2}\"";
+			hwchiprev="${ECID:5:1}";
+		elif [ "${idval_1}" = "0x21" ] || [ "${idval_1}" = "0x12" ] || \
+			[ "${idval_1}" = "0x00" ] && [ "${idval_2}" = "0x21" ]; then
+			case ${flval} in
+			0|1|2) flval="fuselevel_nofuse"; ;;
+			3)     flval="fuselevel_production"; ;;
+			4)     flval="fuselevel_production"; baval="NS"; ;;
+			5)     flval="fuselevel_production"; baval="SBK"; ;;
+			6)     flval="fuselevel_production"; baval="PKC"; ;;
+			*)     flval="fuselevel_unknown"; ;;
+			esac;
+			if [ "${idval_1}" = "0x00" ]; then
+				eval "${hivar}=\"${idval_2}\"";
+			fi;
+		elif [ "${idval_1}" = "0x80" ]; then
+			if [ "${idval_2}" = "0x19" ]; then
+				case ${flval} in
+				0|1|2) flval="fuselevel_nofuse"; ;;
+				8)     flval="fuselevel_production"; baval="NS"; ;;
+				# 9: 2K RSA, a: 3K RSA
+				9|a)   flval="fuselevel_production"; baval="PKC"; ;;
+				# d: 2K RSA + SBK, e: 3K RSA + SBK
+				d|e)   flval="fuselevel_production"; baval="SBKPKC"; ;;
+				esac;
+				eval "${hivar}=\"${idval_2}\"";
+				hwchiprev="${ECID:5:1}";
+			fi
+		else
+			case ${flval} in
+			0|1|2) flval="fuselevel_nofuse"; ;;
+			8)     flval="fuselevel_production"; ;;
+			9|d)   flval="fuselevel_production"; baval="SBK"; ;;
+			a|e)   flval="fuselevel_production"; baval="PKC"; ;;
+			b|f)   flval="fuselevel_production"; baval="SBKPKC"; ;;
+			c)     flval="fuselevel_production"; baval="NS"; ;;
+			*)     flval="fuselevel_unknown"; ;;
+			esac;
+		fi;
+		eval "${flvar}=\"${flval}\"";
+		eval "${bavar}=\"${baval}\"";
+		eval "${hrvar}=\"${hwchiprev}\"";
+		eval "${skuid}=\"--skipuid\"";
+	else
+		echo "Error: ECID read failed.";
+		echo "The target board must be attached in RCM mode.";
+		exit 1;
+	fi;
+}
+
+# The function that does the "dump eeprom" to retrieve the board info, including:
+# FAB, BOARDID, BOARDSKU and BOARDREV. With these info, we can
+# finally choose the various config files (sdram,  pinmux, pmic... and etc.)
+# Note that this function will only be called in ONLINE and HYBRID modes
+get_board_version ()
+{
+	local args="";
+	# skipuid input
+	local skuid=$1;
+	local auth=$2;
+	local __board_id=$3;
+	local __board_version=$4;
+	local __board_sku=$5;
+	local __board_revision=$6;
+	# skipuid output
+	local __skuid=$7;
+	local fuselevel=$8;
+	local __emcfuse_bin=$9;
+	local command="dump eeprom boardinfo cvm.bin"
+	local boardid;
+	local boardversion;
+	local boardsku;
+	local boardrevision;
+	if [ -n "${usb_instance}" ]; then
+		args+="--instance ${usb_instance} ";
+	fi;
+	if [ "${CHIPMAJOR}" != "" ]; then
+		args+="--chip \"${tid} ${CHIPMAJOR}\" ";
+	else
+		args+="--chip ${tid} ";
+	fi;
+	args+="--applet \"${LDK_DIR}/${SOSFILE}\" ";
+	args+="${skuid} ";
+	if [ "${tid}" = "0x19" ]; then
+		mkarg soft_fuses     "${TARGET_DIR}/BCT/${SOFT_FUSES}" "";
+		# shellcheck disable=SC2154
+		cp2local soft_fuses "${BL_DIR}/${soft_fusesname}";
+		args+="--soft_fuses ${soft_fusesname} "
+		# shellcheck disable=SC2153
+		args+="--bins \"mb2_applet ${MB2APPLET}\" ";
+		command+=";reboot recovery"
+		# board is rebooted so skipuid is not needed anymore
+		skuid=""
+	elif [ "${CHIPID}" = "0x23" ]; then
+		command=""
+		if [ "${EMCFUSE}" != "" ] && [ -f "${BL_DIR}/${EMCFUSE}" ]; then
+			mkarg emcfuse "${BL_DIR}/${EMCFUSE}"	"";
+		fi
+		# shellcheck disable=SC2154
+		if [ "${emcfuse}" != "" ]; then
+			# shellcheck disable=SC2154
+			chsuffix emcfusebin "${emcfusename}" "bin";
+			cp2local emcfuse "${BL_DIR}/${emcfusename}";
+			# shellcheck disable=SC2154
+			command+="readfuses ${emcfusebin} ${emcfusename}; ";
+		fi;
+		emc_fuse_dev_params="${EMC_FUSE_DEV_PARAMS}";
+		cp -f "${TARGET_DIR}/BCT/${emc_fuse_dev_params}" "${BL_DIR}/${emc_fuse_dev_params}";
+		if [ "${fuselevel}" = "fuselevel_production" ]; then
+			 sed -i "s/preprod_dev_sign = <1>/preprod_dev_sign = <0>/" "${BL_DIR}/${emc_fuse_dev_params}";
+		fi
+		# shellcheck disable=SC2154
+		args+="--cfg readinfo_t234_min_prod.xml "
+		command+="dump eeprom cvm cvm.bin;"
+		command+=" dump custinfo custinfo_out.bin;"
+		command+=" reboot recovery"
+		args+="--dev_params ${emc_fuse_dev_params} ";
+		device_config="${DEVICE_CONFIG}"
+		misc_config="${MISC_CONFIG}"
+		cp -f "${TARGET_DIR}/BCT/${device_config}" "${BL_DIR}/${device_config}"
+		cp -f "${TARGET_DIR}/BCT/${misc_config}" "${BL_DIR}/${misc_config}"
+		args+="--device_config ${device_config} --misc_config ${misc_config} "
+		mb2applet="$(basename "${APPLET}")"
+		args+="--bins \"mb2_applet ${mb2applet}\" ";
+		skuid=""
+	fi
+	args+="--cmd \"${command}\" ";
+
+	local cmd="./tegraflash.py ${args}";
+	pushd "${BL_DIR}" > /dev/null 2>&1 || exit;
+	if [ "${auth}" = "PKC" ]; then
+		cmd+="--key \"${KEYFILE}\" ";
+	fi;
+	if [ "${auth}" = "SBKPKC" ]; then
+		cmd+="--encrypt_key \"${SBKFILE}\" ";
+		cmd+="--key \"${KEYFILE}\" ";
+	fi;
+	rm -f rcm_state
+	echo "${cmd}";
+	eval "${cmd}";
+
+	chkerr "Reading board information failed.";
+	if [ "${SKIP_EEPROM_CHECK}" = "" ]; then
+		boardid=$(./chkbdinfo -i cvm.bin);
+		boardversion=$(./chkbdinfo -f cvm.bin);
+		boardsku=$(./chkbdinfo -k cvm.bin);
+		boardrevision=$(./chkbdinfo -r cvm.bin);
+		chkerr "Parsing board information failed.";
+	fi;
+	popd > /dev/null 2>&1 || exit;
+	# shellcheck disable=SC2086
+	eval ${__board_id}="${boardid}";
+	# shellcheck disable=SC2086
+	eval ${__board_version}="${boardversion}";
+	# shellcheck disable=SC2086
+	eval ${__board_sku}="${boardsku}";
+	# shellcheck disable=SC2086
+	eval ${__board_revision}="${boardrevision}";
+	# shellcheck disable=SC2086
+	eval ${__skuid}="${skuid}";
+	if [ "${CHIPID}" = "0x23" ]; then
+		# shellcheck disable=SC2086
+		eval "${__emcfuse_bin}"="${emcfusebin}";
+	fi
+}
+
+#
+# XXX: Read chip specifc details
+#
+get_chip_info_details ()
+{
+        local args="";
+        local __chip_SKU=$1;
+        local __chip_minor_revision_ID=$2;
+        local __bootrom_revision_ID=$3;
+        local __ramcode_ID=$4;
+        local chipSKU;
+        local chipminorrevisionID;
+        local bootromrevisionID;
+        local ramcodeID;
+
+        pushd "${BL_DIR}" > /dev/null 2>&1 || return;
+        chipSKU=$(./chkbdinfo -C chip_info.bin_bak);
+        chipminorrevisionID=$(./chkbdinfo -M chip_info.bin_bak);
+        bootromrevisionID=$(./chkbdinfo -O chip_info.bin_bak);
+        ramcodeID=$(./chkbdinfo -R chip_info.bin_bak);
+        chkerr "Parsing chip_info.bin information failed.";
+
+        popd > /dev/null 2>&1 || return;
+
+        eval "${__chip_SKU}"="${chipSKU}";
+        eval "${__chip_minor_revision_ID}"="${chipminorrevisionID}";
+        eval "${__bootrom_revision_ID}"="${bootromrevisionID}";
+        eval "${__ramcode_ID}"="${ramcodeID}";
+}
+
+check_sbk_pkc()
+{
+	local __auth=$1;
+	local __pkc=$2;
+	local __sbk=$3;
+
+	case ${__auth} in
+	PKC)	if [ "${__pkc}" = "" ]; then
+			echo -n "Error: PKC key file is not provided for PKC protected target board.";
+			exit 1;
+		fi;
+		if [ "${__sbk}" != "" ]; then
+			echo -n "Error: SBK key file is provided for PKC protected target board.";
+			exit 1;
+		fi;
+		;;
+	SBKPKC)	if [ "${__pkc}" = "" ] || [ "${__sbk}" = "" ]; then
+			echo "Error: Either PKC or SBK key is not provided for SBK+PKC protected target board.";
+			exit 1;
+		fi;
+		;;
+	SBK)	echo "Error: L4T does not support SBK individually, please use SBK+PKC instead.";
+		exit 1;
+		;;
+	NS)	if [ "${__sbk}" != "" ] && [ "${__pkc}" = "" ]; then
+			echo "Error: L4T does not support SBK individually, please use SBK+PKC instead.";
+			exit 1;
+		fi;
+		;;
+	esac;
+}
+
+# Called by the function sigbins, this function changes the filename
+# E.g: preboot_c10_prod_cr.bin -> preboot_c10_prod_cr_sigheader.bin.encrypt.signed
+extsig ()
+{
+	local var;
+	local fname;
+	local OIFS;
+
+	var="$1";
+	fname=$(basename "$2");
+	OIFS=${IFS};
+	IFS='.';
+	# shellcheck disable=SC2206
+	na=($fname);
+	IFS=${OIFS};
+	eval "${var}=${na[0]}${3}.${na[1]}.${4}";
+}
+
+# For doing the fuse operations on SBKPKC boards, we need to encrypt and sign
+# the binaries first, so the name and path of these binaries are changed.
+# So this function changes the filename and the path of all binaries
+# which are set by "--bins"
+sigbins ()
+{
+	local var;
+	local OIFS;
+	local str;
+	local ba;
+	local i;
+	local NBIN;
+	local NEWBINS;
+
+	var="$1";
+	OIFS=${IFS};
+	str=$(echo "${!var}" | sed -e s/\;//g -e s/\"//g);
+	IFS=' ';
+	# shellcheck disable=SC2206
+	ba=($str);
+	IFS=${OIFS};
+	NEWBINS="";
+	if [ "${ba[0]}" != "--bins" ] && [ "${ba[0]}" != "--bin" ]; then
+		echo "Error: bad BINSARGS format: Q${ba[0]}Q";
+		exit 1;
+	fi;
+	local basize=${#ba[@]};
+	for (( i=1; i < basize; )); do
+		if [[ ${ba[$((i+1))]} =~ "/" ]]; then
+			echo "Error: full path is not allowed in BINSARGS:";
+			echo "       ${ba[$((i+1))]}";
+			exit 1;
+		fi;
+		extsig NBIN "${ba[$((i+1))]}" "${2}" "${3}";
+		NEWBINS+="${ba[$i]} ${5}/${NBIN}";
+		i=$((i+2));
+		# shellcheck disable=SC2086
+		if [ ${i} -lt ${basize} ]; then
+			NEWBINS+="; ";
+		fi;
+	done;
+	eval "${4}='${NEWBINS}'";
+}
+
+do_prepare_cmdargs ()
+{
+	local auth="${1}";
+	local prefix="${2}";
+	local suffix="${3}";
+	local out_ans="${4}";
+	local answer;
+
+	extsig flashername "${FLASHER}" "_sigheader" "${suffix}";
+	BCT="--bct";
+	bctfilename="${prefix}/br_bct_BR.bct";
+
+	# remove kernel and kernel-dtb from --bins
+	# shellcheck disable=SC2001
+	BINSARGS=$(echo "${BINSARGS}" | sed "s|kernel boot.img; ||")
+	# shellcheck disable=SC2001
+	BINSARGS=$(echo "${BINSARGS}" | sed "s|kernel_dtb ${DTB_FILE}; ||")
+	# convert ext to signed
+	sigbins BINSARGS "_sigheader" "${suffix}" SIGNEDBINSARGS "${prefix}";
+	if [ "${tid}" = "0x19" ]; then
+		if [ "${auth}" = "SBKPKC" ]; then
+			# shellcheck disable=SC2001
+			flashername=$(echo "${flashername}" | \
+				sed "s|_sigheader.bin|.bin_sigheader|")
+			# shellcheck disable=SC2001
+			SIGNEDBINSARGS=$(echo "${SIGNEDBINSARGS}" | \
+				sed "s|_recovery_t194_sigheader.bin|_recovery_t194.bin_sigheader|")
+			BCTARGS="--mb1_bct ${prefix}/mb1_bct_MB1.bct_sigheader.${suffix} ";
+			BCTARGS+="--mem_bct ${prefix}/mem_rcm.bct_sigheader.${suffix} ";
+			BCTARGS+="--mb1_cold_boot_bct ${prefix}/mb1_cold_boot_bct_MB1.bct_sigheader.${suffix} ";
+		else
+			BCTARGS="--mb1_bct ${prefix}/mb1_bct_MB1_sigheader.bct.${suffix} ";
+			BCTARGS+="--mem_bct ${prefix}/mem_rcm_sigheader.bct.${suffix} ";
+			BCTARGS+="--mb1_cold_boot_bct ${prefix}/mb1_cold_boot_bct_MB1_sigheader.bct.${suffix} ";
+		fi;
+		BCTARGS+="--mem_bct_cold_boot ${prefix}/mem_coldboot_sigheader.bct.signed";
+		SOSARGS="--applet ${prefix}/rcm_2_signed.rcm --applet_softfuse ${prefix}/rcm_1_signed.rcm";
+	fi;
+
+	answer="--securedev --bins \"${SIGNEDBINSARGS}\" ";
+	answer+="--bl ${prefix}/${flashername} ${BCT} ${bctfilename} ${BCTARGS} ${SOSARGS} ";
+	answer+="--odmdata ${ODMDATA} --chip ${tid} ";
+	eval "${out_ans}=\${answer}";
+}
+
+prepare_cmdargs ()
+{
+	local auth=${1};
+	local out_cmdargs=${2};
+	local sign_cmd;
+
+	mkfuseargs __RAW_CMDARGS "${3}";
+	if [ "${auth}" = "NS" ]; then
+		eval "${out_cmdargs}=\${__RAW_CMDARGS}";
+	fi;
+
+	pushd "${BL_DIR}" >& /dev/null || exit;
+	sign_cmd="./tegraflash.py ${__RAW_CMDARGS} ";
+	# RAMCODE comes from the board file
+	# Like mkfuseargs, we use the variables coming from the board file directly
+	if [ "${RAMCODE}" != "" ]; then
+		sign_cmd+="--ramcode ${RAMCODE} ";
+	fi;
+
+	if [ "${auth}" = "PKC" ]; then
+		if [ "${tid}" != "0x23" ]; then
+			# "--cmd sign" is called at first, to generate all signed binaries
+			# Then "--cmd readfuses/burnfuses" with "--securedev" command option will be called
+			# to do the fuse reading or burning
+			sign_cmd+="--key \"${KEYFILE}\" --cmd \"sign\" ";
+			echo "${sign_cmd}";
+			eval "${sign_cmd}";
+			# shellcheck disable=SC2181
+			if [ $? -ne 0 ]; then
+				echo "Error: Sign images failed.";
+				exit 1;
+			fi;
+
+			do_prepare_cmdargs "${auth}" "signed" "signed" "${out_cmdargs}";
+		else
+			__RAW_CMDARGS+=" --key \"${KEYFILE}\" ";
+			eval "${out_cmdargs}=\${__RAW_CMDARGS}";
+		fi;
+	fi;
+
+	if [ "${auth}" = "SBKPKC" ]; then
+		# "--cmd sign" is called at first, to generate all encrypted/signed binaries
+		# Then "--cmd readfuses/burnfuses" with "--securedev" command option will be called
+		# to do the fuse reading or burning
+		sign_cmd+="--key \"${KEYFILE}\" --encrypt_key \"${SBKFILE}\" --cmd \"sign\" ";
+		echo "${sign_cmd}";
+		eval "${sign_cmd}";
+		# shellcheck disable=SC2181
+		if [ $? -ne 0 ]; then
+			echo "Error: Encrypt and sign images failed.";
+			exit 1;
+		fi;
+
+		prefix="";
+		if [ "${tid}" = "0x19" ]; then
+			prefix="encrypted_signed_t19x";
+		fi;
+		suffix="encrypt.signed";
+		do_prepare_cmdargs "${auth}" "${prefix}" "${suffix}" "${out_cmdargs}";
+	fi;
+	popd >& /dev/null || exit;
+}
+
+read_fuse_values ()
+{
+	local READ_CMD="";
+	local out_bootauth=${1};
+	local out_fuseargs=${2};
+
+	get_fuse_level __fuselevel __hwchipid __hwchiprev __bootauth skipuid;
+	# shellcheck disable=SC2154
+	check_sbk_pkc "${__bootauth}" "${KEYFILE}" "${SBKFILE}";
+	if declare -F -f process_fuse_level > /dev/null 2>&1; then
+		process_fuse_level "${__fuselevel}";
+	fi;
+
+	# get the board version and update the data accordingly
+	if declare -F -f process_board_version > /dev/null 2>&1; then
+		# shellcheck disable=SC2154
+		get_board_version "${skipuid}" "${__bootauth}" __bd_id __bd_ver __bd_sku __bd_rev skipuid "${__fuselevel}" emcfuse_bin;
+		# shellcheck disable=SC2154
+		process_board_version "${__bd_id}" "${__bd_ver}" "${__bd_sku}" "${__bd_rev}" "${__hwchiprev}";
+	fi;
+	if declare -F -f process_chip_sku_version > /dev/null 2>&1; then
+		get_chip_info_details chip_SKU chip_minor_revision_ID bootrom_revision_ID ramcode_ID;
+		# shellcheck disable=SC2154
+		process_chip_sku_version "${chip_SKU}" "${chip_minor_revision_ID}" "${bootrom_revision_ID}" "${ramcode_ID}" "${__fuselevel}" "${__bd_ver}";
+	fi;
+	if declare -F -f update_flash_args > /dev/null 2>&1; then
+		#shellcheck disable=SC2154
+		#this variable is defined in get_board_version function
+		update_flash_args "${emcfuse_bin}" ""
+	fi
+	prepare_cmdargs "${__bootauth}" __CMDARGS "read";
+
+	pushd "${BL_DIR}" >& /dev/null || exit;
+	READ_CMD="./tegraflash.py ${__CMDARGS} ${skipuid} ";
+
+	FUSE_XML="fuses_to_read.xml";
+	magicid="0x45535546";	# BigEndian format
+
+	echo "<genericfuse MagicId=\"${magicid}\" version=\"1.0.0\">" > "${FUSE_XML}";
+	if [ "${tid}" = "0x19" ]; then
+		for f in "${FUSES_KEYS[@]}"; do
+			echo "<fuse name=\"${f}\" />" >> "${FUSE_XML}";
+		done;
+		for f in "${FUSES_MANUFACTURING[@]}"; do
+			echo "<fuse name=\"${f}\" />" >> "${FUSE_XML}";
+		done;
+	elif [ "${tid}" = "0x23" ]; then
+		for f in "${FUSES_KEYS_T234[@]}"; do
+			echo "<fuse name=\"${f}\" />" >> "${FUSE_XML}";
+		done;
+		for f in "${FUSES_MANUFACTURING_T234[@]}"; do
+			echo "<fuse name=\"${f}\" />" >> "${FUSE_XML}";
+		done;
+	fi
+	for f in "${FUSES_ODM_RESERVED[@]}"; do
+		echo "<fuse name=\"${f}\" />" >> "${FUSE_XML}";
+	done;
+	if [ "${tid}" = "0x19" ]; then
+		for f in "${FUSES_T19X_EXTRA_ODM[@]}"; do
+			echo "<fuse name=\"${f}\" />" >> "${FUSE_XML}";
+		done;
+	fi;
+
+	echo "</genericfuse>" >> "${FUSE_XML}";
+	READ_CMD+="--cmd \"readfuses ${FUSE_READ_OUTPUT} ${FUSE_XML}; reboot recovery\"";
+
+	echo "${READ_CMD}";
+	eval "${READ_CMD}";
+	# shellcheck disable=SC2181
+	if [ $? -ne 0 ]; then
+		echo "Error: read fuse info failed.";
+		exit 1;
+	fi;
+	echo "Fuse reading is done. The fuse values have been saved in: ${BL_DIR}/${FUSE_READ_OUTPUT}"
+	cat "${BL_DIR}"/"${FUSE_READ_OUTPUT}"
+	popd >& /dev/null || exit;
+
+	if [ -z "${out_bootauth}" ] && [ -z "${out_fuseargs}" ]; then
+		return 0;
+	fi;
+
+	# Reading fuses finish. Preparing for fusing operation.
+	prepare_cmdargs "${__bootauth}" __CMDARGS;
+
+	if [ "${tid}" = "0x23" ]; then
+		__CMDARGS="${__CMDARGS/${dev_paramsname}/${mb2_dev_paramsname}}"
+	fi
+	if [ -n "${out_bootauth}" ]; then
+		eval "${out_bootauth}=\"${__bootauth}\"";
+	fi;
+	if [ -n "${out_fuseargs}" ]; then
+		# __CMDARGS contains whitespaces, using \$ to let it expand when doing "eval"
+		eval "${out_fuseargs}=\${__CMDARGS}";
+	fi;
+
+}
+
+generate_fskp_blob()
+{
+	local fusecfgfile="${1}"
+	local cmdarg="${2}"
+	local newcmdline
+	local fskp_utility="fskp_t234"
+	local fskp_bin="${fskp_utility}.bin"
+	local fskp_updated_bin="${fskp_utility}_updated.bin"
+	local fuse_blob="fuse_info_t234.blob"
+	local test_fuse_blob="$(mktemp)"
+	pushd "${BL_DIR}" > /dev/null 2>&1;
+	if [ "${testmode}" -eq 1 ]; then
+		echo "For test mode, set magic ID to 0x54534554 (\"TEST\")."
+		# Substitute the magic ID for testing
+		sed -i "s/0x45535546/0x54534554/" "${fusecfgfile}"
+	fi
+
+	rm -f "${fuse_blob}" "${fskp_updated_bin}" "${test_fuse_blob}"
+	./tegraparser_v2 --chip 0x23 --fuse_info "${fusecfgfile}" "${fuse_blob}"
+	chkerr
+
+	./tegraparser_v2 --chip 0x23 --fskp_info "${fskp_bin}" "${fuse_blob}"
+	chkerr
+
+	newcmdline=$(echo "${!cmdarg}" | sed -e "s/mb2_bootloader [a-zA-Z0-9._\-]*/mb2_bootloader ${fskp_updated_bin}/g");
+	declare -g ${cmdarg}="${newcmdline}"
+	popd > /dev/null 2>&1;
+}

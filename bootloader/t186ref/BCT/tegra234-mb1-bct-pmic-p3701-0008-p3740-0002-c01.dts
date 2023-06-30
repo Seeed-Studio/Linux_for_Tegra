@@ -1,0 +1,258 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/*
+# CFG Version 1.0
+# This File contains the configuration of multiple rails.
+*/
+/dts-v1/;
+
+/ {
+    pmic {
+	core {
+		block@0 {
+			pwm;
+			controller-id = <3>; /* PWM4 */
+			source-frq-hz = <136000000>;
+			period-ns = <1883>; /* 531.25 KHz */
+			min-microvolts = <200000>;
+			max-microvolts = <1475000>;
+			init-microvolts = <850000>;
+			pwm-clock-enable;
+			enable;
+		};
+		block@1 {
+			mmio;
+			block-delay = <10>;
+			commands {
+				command@0 {
+					reg-addr = <0x0c302000>;
+					mask = <0x30>;
+					value = <0x0>;
+				};
+			};
+		};
+		block@2 {
+			pwm;
+			controller-id = <3>; /* PWM4 */
+			source-frq-hz = <136000000>;
+			period-ns = <1883>; /* 531.25 KHz */
+			min-microvolts = <200000>;
+			max-microvolts = <1475000>;
+			init-microvolts = <950000>;
+		};
+		block@3 {
+			i2c-controller;
+			controller-id = <0x4>;
+			slave-addr = <0x78>;
+			reg-data-size = <16>;
+			reg-addr-size = <8>;
+			block-delay = <3>;
+			commands {
+				command@1 {
+					reg-addr = <0x28>;
+					mask = <0xFFFF>;
+					value = <0x3000>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+				};
+				command@2 {
+					reg-addr = <0x55>;
+					mask = <0xFFFF>;
+					value = <0x7b00>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+				};
+				command@3 {
+					reg-addr = <0x5d>;
+					mask = <0xFFFF>;
+					value = <0xd300>; //Format: <PEC><VALUE> where PEC = CRC8(<slave-addr><reg-addr><VALUE>)
+				};
+			};
+		};
+	};
+	cpu@0 {
+		block@0 {
+			pwm;
+			controller-id = <5>; /* PWM6 */
+			source-frq-hz = <136000000>;
+			period-ns = <1883>; /* 531.25 KHz */
+			min-microvolts = <200000>;
+			max-microvolts = <1475000>;
+			init-microvolts = <850000>;
+			pwm-clock-enable;
+			enable;
+		};
+		block@1 {
+			mmio;
+			block-delay = <3>; /* 3us */
+			commands {
+				/* Remove tristate for GP_PWM6 pads */
+				command@0 {
+					reg-addr = <0x024340b0>; /* PADCTL_G4_SOC_GPIO07_0 */
+					mask = <0x10>; /* tristate bit */
+					value = <0x0>;
+				};
+			};
+		};
+		block@2 {
+			mmio;
+			block-delay = <3>; /* 3us */
+			commands {
+				/* Configure CPU_PWR_REQ pin as GPIO and remove tristate */
+				command@0 {
+					reg-addr = <0x02434000>;
+					mask = <0x410>;
+					value = <0x00000000>;
+				};
+				/* Configure GPIO_PI5 as output pin */
+				command@1 {
+					reg-addr = <0x022144a0>;
+					mask = <0x2>;
+					value = <0x2>;
+				};
+				/* Configure GPIO_PI5 output control to driven state */
+				command@2 {
+					reg-addr = <0x022144ac>;
+					mask = <0x1>;
+					value = <0x00000000>;
+				};
+				/* Set GPIO_PI5 output state to high */
+				command@3 {
+					reg-addr = <0x022144b0>;
+					mask = <0x1>;
+					value = <0x00000001>;
+				};
+				/* Enable GPIO_PI5 */
+				command@4 {
+					reg-addr = <0x022144a0>;
+					mask = <0x1>;
+					value = <0x00000001>;
+				};
+			};
+		};
+	};
+	gpu {
+		block@0 {
+			mmio;
+			block-delay = <3>; /* 3us */
+			commands {
+				/* Remove tristate for GP_PWM2 pads */
+				command@0 {
+					reg-addr = <0x0243d0a0>; /* PADCTL_G2_GP_PWM2_0 */
+					mask = <0x30>; /* tristate bit */
+					value = <0x0>;
+				};
+			};
+		};
+		block@1 {
+			mmio;
+			block-delay = <3>; /* 3us */
+			commands {
+				/* Configure GPU_PWR_REQ pin as GPIO and remove tristate */
+				command@0 {
+					reg-addr = <0x0243d094>;
+					mask = <0x410>;
+					value = <0x00000000>;
+				};
+				/* Configure GPIO_PX0 as output pin */
+				command@1 {
+					reg-addr = <0x02211000>;
+					mask = <0x2>;
+					value = <0x00000002>;
+				};
+				/* Configure GPIO_PX0 output control to driven state */
+				command@2 {
+					reg-addr = <0x0221100c>;
+					mask = <0x1>;
+					value = <0x00000000>;
+				};
+				/* Set GPIO_PX0 output state to low */
+				command@3 {
+					reg-addr = <0x02211010>;
+					mask = <0x1>;
+					value = <0x00000000>;
+				};
+				/* Enable GPIO_PX0 */
+				command@4 {
+					reg-addr = <0x02211000>;
+					mask = <0x1>;
+					value = <0x00000001>;
+				};
+			};
+		};
+	};
+	cv {
+		block@0 {
+			mmio;
+			block-delay = <3>; /* 3us */
+			commands {
+				/* Remove tristate for GP_PWM7 pads */
+				command@0 {
+					reg-addr = <0x02434080>; /* PADCTL_G4_SOC_GPIO19_0 */
+					mask = <0x30>; /* tristate bit */
+					value = <0x0>;
+				};
+			};
+		};
+		block@1 {
+			mmio;
+			block-delay = <3>; /* 3us */
+			commands {
+				/* Configure CV_PWR_REQ pin as GPIO and remove tristate */
+				command@0 {
+					reg-addr = <0x0243d0a8>;
+					mask = <0x410>;
+					value = <0x00000000>;
+				};
+				/* Configure GPIO_PX1 as output pin */
+				command@1 {
+					reg-addr = <0x02211020>;
+					mask = <0x2>;
+					value = <0x00000002>;
+				};
+				/* Configure GPIO_PX1 output control to driven state */
+				command@2 {
+					reg-addr = <0x0221102c>;
+					mask = <0x1>;
+					value = <0x00000000>;
+				};
+				/* Set GPIO_PX1 output state to low */
+				command@3 {
+					reg-addr = <0x02211030>;
+					mask = <0x1>;
+					value = <0x00000000>;
+				};
+				/* Enable GPIO_PX1 */
+				command@4 {
+					reg-addr = <0x02211020>;
+					mask = <0x1>;
+					value = <0x00000001>;
+				};
+			};
+		};
+	};
+    };
+};
