@@ -1,5 +1,5 @@
 <partition_layout version="01.00.0000">
-    <device type="external" instance="0" sector_size="512" num_sectors="121208832">
+    <device type="external" instance="0" sector_size="512" num_sectors="200000000">
         <partition name="master_boot_record" type="protective_master_boot_record">
             <allocation_policy> sequential </allocation_policy>
             <filesystem_type> basic </filesystem_type>
