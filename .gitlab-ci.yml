@@ -13,12 +13,12 @@ recomputer-xavier-nx-industrial-16g:
         - echo 'Acquire::http::Proxy "http://192.168.1.77:3142";' >> /etc/apt/apt.conf
         - echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
         - apt-get update > /dev/null 2>&1
-        - apt-get -y install python3-pip ssh git rsync qemu-user-static binfmt-support udev sudo > /dev/null 2>&1
-        - dpkg-reconfigure qemu-user-static
+        - apt-get -y install python3-pip ssh git rsync qemu-user-static binfmt-support udev sudo sshpass abootimg  binutils cpp device-tree-compiler dosfstools lbzip2 libxml2-utils nfs-kernel-server python3-yaml uuid-runtime whois openssl cpio > /dev/null 2>&1
         - ln -s /usr/bin/python3 /usr/bin/python
         - uname -a
 
     script:
+        - id
         - wget  http://192.168.1.77/jetson/Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -q
         - tar xpf Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -C rootfs
         - ./apply_binaries.sh
@@ -30,6 +30,10 @@ recomputer-xavier-nx-industrial-16g:
         - mount --bind /proc ./rootfs/proc
         - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
         - cp extra_scripts/rootfs_magic.sh rootfs
+        - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
+        - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
+        - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
+        - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
         - chroot rootfs /rootfs_magic.sh
         - umount ./rootfs/sys
         - umount ./rootfs/dev/pts
