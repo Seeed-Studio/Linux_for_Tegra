@@ -35,5 +35,9 @@ recomputer-xavier-nx-industrial-16g:
          - rm rootfs/rootfs_magic.sh
          - rm rootfs/usr/bin/qemu-aarch64-static
          - ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=F.0 ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml   -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial external
+         - mkdir deploy
+         - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
+         - cp  recomputer-xavier-nx-industrial.tar.gz  deploy
+         - umount deploy
 
 
