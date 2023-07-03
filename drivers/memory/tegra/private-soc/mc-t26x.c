@@ -24,6 +24,7 @@ static inline u32 mc_readl(unsigned long offset)
 int tegra264_mc_get_carveout_info(unsigned int id, phys_addr_t *base, u64 *size)
 {
 	u32 offset;
+
 	if (id < 1 || id > 42)
 		return -EINVAL;
 	if (id < 32)
@@ -35,7 +36,7 @@ int tegra264_mc_get_carveout_info(unsigned int id, phys_addr_t *base, u64 *size)
 	*base |= (phys_addr_t)mc_readl(offset + MC_CARVEOUT_BASE_HI) << 32;
 #endif
 	if (size)
-		*size = mc_readl(offset + MC_SECURITY_CARVEOUT_SIZE_128KB) << 17;
+		*size = (u64)mc_readl(offset + MC_SECURITY_CARVEOUT_SIZE_128KB) << 17;
 	return 0;
 }
 EXPORT_SYMBOL(tegra264_mc_get_carveout_info);
