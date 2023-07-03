@@ -226,6 +226,17 @@
 					status = "disabled";
 				};
 
+				nvrng@3ae0000 {
+					compatible = "nvidia,tegra234-se-nvrng";
+					reg-names = "rng1", "sap";
+					reg = <0x0 0x3ae0000 0x0 0x10000>,
+					      <0x0 0x3ac0000 0x0 0x10000>;
+					interrupts = <0x0 284 0x4>;
+					clocks = <&bpmp TEGRA234_CLK_SE>;
+					clock-names = "se";
+					status = "disabled";
+				};
+
 				gpu@17000000 {
 					compatible = "nvidia,ga10b";
 					reg = <0x0 0x17000000 0x0 0x01000000>,

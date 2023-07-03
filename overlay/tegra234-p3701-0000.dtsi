@@ -60,6 +60,10 @@
 						spi-rx-bus-width = <1>;
 					};
 				};
+
+				nvrng@3ae0000 {
+					status = "okay";
+				};
 			};
 
 			hdr40_vdd_3v3: regulator@3 {

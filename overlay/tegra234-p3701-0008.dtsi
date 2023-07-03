@@ -93,6 +93,10 @@
 					};
 				};
 
+				nvrng@3ae0000 {
+					status = "okay";
+				};
+
 				gpu@17000000 {
 					status = "okay";
 				};

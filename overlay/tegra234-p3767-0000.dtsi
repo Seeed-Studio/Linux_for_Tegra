@@ -19,6 +19,10 @@
 					cd-gpios = <&gpio TEGRA234_MAIN_GPIO(G, 7) GPIO_ACTIVE_LOW>;
 				};
 
+				nvrng@3ae0000 {
+					status = "okay";
+				};
+
 				gpu@17000000 {
 					status = "okay";
 				};
