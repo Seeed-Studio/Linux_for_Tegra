@@ -19,7 +19,7 @@
 
 			chosen {
 				use_dts_cmdline;
-				bootargs ="androidboot.boot_devices=bus@0/3460000.mmc enforcing=0 androidboot.selinux=permissive console=ttyTCU0,115200 rootfstype=ext4 mminit_loglevel=4 androidboot.slot_suffix=_a androidboot.hypervisor=disabled androidboot.hardware=t234ref loop.max_part=7 firmware_class.path=/vendor/firmware";
+				bootargs ="androidboot.boot_devices=bus@0/3460000.mmc enforcing=0 androidboot.selinux=permissive console=ttyTCU0,115200 rootfstype=ext4 mminit_loglevel=4 androidboot.slot_suffix=_a androidboot.hypervisor=disabled androidboot.verifiedbootstate=orange androidboot.hardware=t234ref loop.max_part=7 firmware_class.path=/vendor/firmware";
 			};
 
 			bus@0 {
