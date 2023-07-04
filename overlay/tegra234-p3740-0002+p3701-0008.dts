@@ -7,6 +7,7 @@
 #include "tegra234-overlay.dtsi"
 #include "tegra234-soc-thermal.dtsi"
 #include "tegra234-soc-thermal-shutdown.dtsi"
+#include "tegra234-soc-camera.dtsi"
 #include "tegra234-p3740-0002.dtsi"
 #include "tegra234-p3701-0008.dtsi"
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
