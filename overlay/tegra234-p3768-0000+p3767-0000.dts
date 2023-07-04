@@ -252,50 +252,6 @@
 			};
 		};
 	};
-
-	fragment-t234-p3768-p3767@1 {
-		target-path = "/";
-		board_config {
-			ids = "3767-0001-*";
-		};
-		__overlay__ {
-			compatible = "nvidia,p3768-0000+p3767-0001", "nvidia,p3767-0001",
-					"nvidia,tegra234";
-		};
-	};
-
-	fragment-t234-p3768-p3767@2 {
-		target-path = "/";
-		board_config {
-			ids = "3767-0003-*";
-		};
-		__overlay__ {
-			compatible = "nvidia,p3768-0000+p3767-0003", "nvidia,p3767-0003",
-					"nvidia,tegra234";
-		};
-	};
-
-	fragment-t234-p3768-p3767@3 {
-		target-path = "/";
-		board_config {
-			ids = "3767-0004-*";
-		};
-		__overlay__ {
-			compatible = "nvidia,p3768-0000+p3767-0004", "nvidia,p3767-0004",
-					"nvidia,tegra234";
-		};
-	};
-
-	fragment-t234-p3768-p3767@4 {
-		target-path = "/";
-		board_config {
-			ids = "3767-0005-*";
-		};
-		__overlay__ {
-			compatible = "nvidia,p3768-0000+p3767-0005", "nvidia,p3767-0005",
-					"nvidia,tegra234";
-		};
-	};
 };
 
 /*
