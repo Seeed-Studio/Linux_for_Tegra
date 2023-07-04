@@ -53,9 +53,9 @@ job-xavier-nx-industrial-16g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-xavier-nx-industrial.tar.gz  deploy/test/mfi_recomputer-xavier-nx-16g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-xavier-nx-industrial.tar.gz  deploy/test/mfi_recomputer-xavier-nx-16g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial  external
-         - cp  mfi_recomputer-xavier-nx-industrial.tar.gz  deploy/test/mfi_recomputer-xavier-nx-16g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-xavier-nx-industrial.tar.gz  deploy/test/mfi_recomputer-xavier-nx-16g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 
@@ -97,9 +97,9 @@ job-xavier-nx-industrial-8g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-xavier-nx-industrial.tar.gz  deploy/test/mfi_recomputer-xavier-nx-8g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-xavier-nx-industrial.tar.gz  deploy/test/mfi_recomputer-xavier-nx-8g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0003 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial  external
-         - cp  mfi_recomputer-xavier-nx-industrial.tar.gz  deploy/test/mfi_recomputer-xavier-nx-8g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-xavier-nx-industrial.tar.gz  deploy/test/mfi_recomputer-xavier-nx-8g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 
@@ -135,9 +135,9 @@ job-xavier-nx-devkit-16g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-xavier-nx-devkit.tar.gz  deploy/test/mfi_recomputer-xavier-nx-16g-devkit-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-xavier-nx-devkit.tar.gz  deploy/test/mfi_recomputer-xavier-nx-16g-devkit-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-devkit  external
-         - cp  mfi_recomputer-xavier-nx-devkit.tar.gz  deploy/test/mfi_recomputer-xavier-nx-16g-devkit-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-xavier-nx-devkit.tar.gz  deploy/test/mfi_recomputer-xavier-nx-16g-devkit-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 
@@ -173,9 +173,9 @@ job-xavier-nx-devkit-8g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-xavier-nx-devkit.tar.gz  deploy/test/mfi_recomputer-xavier-nx-8g-devkit-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-xavier-nx-devkit.tar.gz  deploy/test/mfi_recomputer-xavier-nx-8g-devkit-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0003 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-devkit  external
-         - cp  mfi_recomputer-xavier-nx-devkit.tar.gz  deploy/test/mfi_recomputer-xavier-nx-8g-devkit-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-xavier-nx-devkit.tar.gz  deploy/test/mfi_recomputer-xavier-nx-8g-devkit-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 
@@ -218,9 +218,9 @@ job-orin-nx-industrial-8g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nx-8g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nx-8g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
-         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nx-8g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nx-8g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 job-orin-nx-reserver-8g:
@@ -261,9 +261,9 @@ job-orin-nx-reserver-8g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nx-8g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nx-8g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nx-8g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nx-8g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 job-orin-nx-devkit-8g:
@@ -299,9 +299,9 @@ job-orin-nx-devkit-8g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nx-8g-devkit-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nx-8g-devkit-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
-         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nx-8g-devkit-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nx-8g-devkit-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 
@@ -344,9 +344,9 @@ job-orin-nx-industrial-16g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nx-16g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nx-16g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
-         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nx-16g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nx-16g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 job-orin-nx-reserver-16g:
@@ -387,9 +387,9 @@ job-orin-nx-reserver-16g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nx-16g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nx-16g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nx-16g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nx-16g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 job-orin-nx-devkit-16g:
@@ -425,9 +425,9 @@ job-orin-nx-devkit-16g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nx-16g-devkit-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nx-16g-devkit-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
-         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nx-16g-devkit-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nx-16g-devkit-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 
@@ -470,9 +470,9 @@ job-orin-nano-industrial-8g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nano-8g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nano-8g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
-         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nano-8g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nano-8g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 job-orin-nano-reserver-8g:
@@ -513,9 +513,9 @@ job-orin-nano-reserver-8g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nano-8g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nano-8g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6   ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nano-8g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nano-8g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 job-orin-nano-devkit-8g:
@@ -551,9 +551,9 @@ job-orin-nano-devkit-8g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nano-8g-devkit-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nano-8g-devkit-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6   ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
-         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nano-8g-devkit-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nano-8g-devkit-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 
@@ -595,9 +595,9 @@ job-orin-nano-industrial-4g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nano-4g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nano-4g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
-         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nano-4g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/test/mfi_recomputer-orin-nano-4g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 job-orin-nano-reserver-4g:
@@ -638,9 +638,9 @@ job-orin-nano-reserver-4g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nano-4g-industrial-$DATE_STR.tar.gz 
+         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nano-4g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2   ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nano-4g-industrial-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/test/mfi_reserver-orin-nano-4g-industrial-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
 
 job-orin-nano-devkit-4g:
@@ -676,7 +676,7 @@ job-orin-nano-devkit-4g:
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
          - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
-         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nano-4g-devkit-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nano-4g-devkit-5.1-35.3.1-$DATE_STR.tar.gz 
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2   ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
-         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nano-4g-devkit-qspiflash-$DATE_STR.tar.gz 
+         - cp  mfi_recomputer-orin.tar.gz  deploy/test/mfi_recomputer-orin-nano-4g-devkit-qspiflash-5.1-35.3.1-$DATE_STR.tar.gz 
          - umount deploy
