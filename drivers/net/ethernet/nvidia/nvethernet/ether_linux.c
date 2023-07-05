@@ -332,8 +332,9 @@ static inline void ether_hsi_work_func(struct work_struct *work)
 		mutex_unlock(&pdata->hsi_lock);
 	}
 
-	if (osi_core->hsi.report_err == OSI_ENABLE ||
-	    osi_core->hsi.macsec_report_err == OSI_ENABLE)
+	if (osi_core->hsi.enabled == OSI_ENABLE &&
+	    (osi_core->hsi.report_err == OSI_ENABLE ||
+	     osi_core->hsi.macsec_report_err == OSI_ENABLE))
 		ether_common_isr_thread(0, (void *)pdata);
 
 	schedule_delayed_work(&pdata->ether_hsi_work,
