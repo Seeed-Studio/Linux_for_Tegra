@@ -118,7 +118,7 @@
 						assigned-clocks = <&bpmp TEGRA234_CLK_PLLA>,
 								  <&bpmp TEGRA234_CLK_PLLA_OUT0>,
 								  <&bpmp TEGRA234_CLK_AHUB>;
-						assigned-parent-clocks = <0>,
+						assigned-clock-parents = <0>,
 								<&bpmp TEGRA234_CLK_PLLA>,
 								<&bpmp TEGRA234_CLK_PLLP_OUT0>;
 						assigned-clock-rates = <294912000>,
