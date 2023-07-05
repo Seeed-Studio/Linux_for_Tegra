@@ -15,6 +15,12 @@
 #define LUT_INPUTS_LEN			39
 
 /**
+ * @brief Maximum entries per 1 sysfs node
+ */
+#define MAX_ENTRIES_PER_SYSFS_NODE	24
+#define MAX_SA_ENTRIES_PER_SYSFS_NODE	33U
+
+/**
  * @brief Expected number of extra inputs in BYP LUT sysfs config
  */
 #define BYP_LUT_INPUTS			1
