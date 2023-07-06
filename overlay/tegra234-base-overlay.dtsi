@@ -651,6 +651,15 @@
 
 					nvidia,bpmp = <&bpmp TEGRA234_P2U_LANE_ID23>;
 				};
+
+				mmc@3460000 {
+					mmc-ddr-1_8v;
+					mmc-hs200-1_8v;
+					mmc-hs400-1_8v;
+					mmc-hs400-enhanced-strobe;
+					cap-sd-highspeed;
+					cap-mmc-highspeed;
+				};
 			};
 
 			cpus {
