@@ -1,0 +1,263 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include <dt-bindings/thermal/thermal.h>
+
+#define TEGRA234_THERMAL_SLOWDOWN_TEMP 99000
+
+/ {
+	fragment-t234-thermal-slowdown-corepair@0 {
+		target-path = "/";
+		__overlay__ {
+			bus@0 {
+				gpu@17000000 {
+					#cooling-cells = <2>;
+				};
+			};
+
+			cpus{
+				cpu@0 {
+					#cooling-cells = <2>;
+				};
+
+				cpu@200 {
+					#cooling-cells = <2>;
+				};
+
+				cpu@10000 {
+					#cooling-cells = <2>;
+				};
+
+				cpu@10200 {
+					#cooling-cells = <2>;
+				};
+
+				cpu@20000 {
+					#cooling-cells = <2>;
+				};
+
+				cpu@20200 {
+					#cooling-cells = <2>;
+				};
+			};
+
+			thermal-zones {
+				cpu-thermal {
+					trips {
+						cpu_sw_slowdown: cpu-sw-slowdown {
+							temperature = <TEGRA234_THERMAL_SLOWDOWN_TEMP>;
+							hysteresis = <0>;
+							type = "passive";
+						};
+					};
+
+					cooling-maps {
+						map-cpufreq {
+							trip = <&cpu_sw_slowdown>;
+							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+
+						map-devfreq {
+							trip = <&cpu_sw_slowdown>;
+							cooling-device = <&ga10b THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+					};
+				};
+
+				gpu-thermal {
+					trips {
+						gpu_sw_slowdown: gpu-sw-slowdown {
+							temperature = <TEGRA234_THERMAL_SLOWDOWN_TEMP>;
+							hysteresis = <0>;
+							type = "passive";
+						};
+					};
+
+					cooling-maps {
+						map-cpufreq {
+							trip = <&gpu_sw_slowdown>;
+							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+
+						map-devfreq {
+							trip = <&gpu_sw_slowdown>;
+							cooling-device = <&ga10b THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+					};
+				};
+
+				cv0-thermal {
+					trips {
+						cv0_sw_slowdown: cv0-sw-slowdown {
+							temperature = <TEGRA234_THERMAL_SLOWDOWN_TEMP>;
+							hysteresis = <0>;
+							type = "passive";
+						};
+					};
+
+					cooling-maps {
+						map-cpufreq {
+							trip = <&cv0_sw_slowdown>;
+							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+
+						map-devfreq {
+							trip = <&cv0_sw_slowdown>;
+							cooling-device = <&ga10b THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+					};
+				};
+
+				cv1-thermal {
+					trips {
+						cv1_sw_slowdown: cv1-sw-slowdown {
+							temperature = <TEGRA234_THERMAL_SLOWDOWN_TEMP>;
+							hysteresis = <0>;
+							type = "passive";
+						};
+					};
+
+					cooling-maps {
+						map-cpufreq {
+							trip = <&cv1_sw_slowdown>;
+							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+
+						map-devfreq {
+							trip = <&cv1_sw_slowdown>;
+							cooling-device = <&ga10b THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+					};
+				};
+
+				cv2-thermal {
+					trips {
+						cv2_sw_slowdown: cv2-sw-slowdown {
+							temperature = <TEGRA234_THERMAL_SLOWDOWN_TEMP>;
+							hysteresis = <0>;
+							type = "passive";
+						};
+					};
+
+					cooling-maps {
+						map-cpufreq {
+							trip = <&cv2_sw_slowdown>;
+							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+
+						map-devfreq {
+							trip = <&cv2_sw_slowdown>;
+							cooling-device = <&ga10b THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+					};
+				};
+
+				soc0-thermal {
+					trips {
+						soc0_sw_slowdown: soc0-sw-slowdown {
+							temperature = <TEGRA234_THERMAL_SLOWDOWN_TEMP>;
+							hysteresis = <0>;
+							type = "passive";
+						};
+					};
+
+					cooling-maps {
+						map-cpufreq {
+							trip = <&soc0_sw_slowdown>;
+							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+
+						map-devfreq {
+							trip = <&soc0_sw_slowdown>;
+							cooling-device = <&ga10b THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+					};
+				};
+
+				soc1-thermal {
+					trips {
+						soc1_sw_slowdown: soc1-sw-slowdown {
+							temperature = <TEGRA234_THERMAL_SLOWDOWN_TEMP>;
+							hysteresis = <0>;
+							type = "passive";
+						};
+					};
+
+					cooling-maps {
+						map-cpufreq {
+							trip = <&soc1_sw_slowdown>;
+							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+
+						map-devfreq {
+							trip = <&soc1_sw_slowdown>;
+							cooling-device = <&ga10b THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+					};
+				};
+
+				soc2-thermal {
+					trips {
+						soc2_sw_slowdown: soc2-sw-slowdown {
+							temperature = <TEGRA234_THERMAL_SLOWDOWN_TEMP>;
+							hysteresis = <0>;
+							type = "passive";
+						};
+					};
+
+					cooling-maps {
+						map-cpufreq {
+							trip = <&soc2_sw_slowdown>;
+							cooling-device = <&cpu0_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu0_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu1_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+									 <&cpu2_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+
+						map-devfreq {
+							trip = <&soc2_sw_slowdown>;
+							cooling-device = <&ga10b THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+						};
+					};
+				};
+			};
+		};
+	};
+};

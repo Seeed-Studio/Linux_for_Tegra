@@ -172,6 +172,10 @@
 			thermal-zones {
 				cpu-thermal {
 					trips {
+						cpu-sw-slowdown {
+							temperature = <112000>;
+						};
+
 						cpu-sw-shutdown {
 							temperature = <117500>;
 						};
@@ -180,6 +184,10 @@
 
 				cv0-thermal {
 					trips {
+						cv0-sw-slowdown {
+							temperature = <112000>;
+						};
+
 						cv0-sw-shutdown {
 							temperature = <117500>;
 						};
@@ -188,6 +196,10 @@
 
 				cv1-thermal {
 					trips {
+						cv1-sw-slowdown {
+							temperature = <112000>;
+						};
+
 						cv1-sw-shutdown {
 							temperature = <117500>;
 						};
@@ -196,6 +208,10 @@
 
 				cv2-thermal {
 					trips {
+						cv2-sw-slowdown {
+							temperature = <112000>;
+						};
+
 						cv2-sw-shutdown {
 							temperature = <117500>;
 						};
@@ -204,6 +220,10 @@
 
 				gpu-thermal {
 					trips {
+						gpu-sw-slowdown {
+							temperature = <112000>;
+						};
+
 						gpu-sw-shutdown {
 							temperature = <117500>;
 						};
@@ -212,6 +232,10 @@
 
 				soc0-thermal {
 					trips {
+						soc0-sw-slowdown {
+							temperature = <112000>;
+						};
+
 						soc0-sw-shutdown {
 							temperature = <117500>;
 						};
@@ -220,6 +244,10 @@
 
 				soc1-thermal {
 					trips {
+						soc1-sw-slowdown {
+							temperature = <112000>;
+						};
+
 						soc1-sw-shutdown {
 							temperature = <117500>;
 						};
@@ -228,6 +256,10 @@
 
 				soc2-thermal {
 					trips {
+						soc2-sw-slowdown {
+							temperature = <112000>;
+						};
+
 						soc2-sw-shutdown {
 							temperature = <117500>;
 						};

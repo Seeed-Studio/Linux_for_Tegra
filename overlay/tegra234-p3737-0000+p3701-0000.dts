@@ -7,6 +7,7 @@
 
 #include "tegra234-overlay.dtsi"
 #include "tegra234-soc-thermal.dtsi"
+#include "tegra234-soc-thermal-slowdown-cluster.dtsi"
 #include "tegra234-soc-thermal-shutdown.dtsi"
 #include "tegra234-soc-audio-dai-links.dtsi"
 #include "tegra234-soc-camera.dtsi"

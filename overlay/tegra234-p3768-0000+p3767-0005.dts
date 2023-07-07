@@ -6,6 +6,7 @@
 
 #include "tegra234-overlay.dtsi"
 #include "tegra234-soc-thermal.dtsi"
+#include "tegra234-soc-thermal-slowdown-corepair.dtsi"
 #include "tegra234-soc-thermal-shutdown.dtsi"
 #include "tegra234-p3767-0000.dtsi"
 

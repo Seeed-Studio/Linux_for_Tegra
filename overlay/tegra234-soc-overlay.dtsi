@@ -232,7 +232,7 @@
 					status = "disabled";
 				};
 
-				gpu@17000000 {
+				ga10b: gpu@17000000 {
 					compatible = "nvidia,ga10b";
 					reg = <0x0 0x17000000 0x0 0x01000000>,
 					      <0x0 0x18000000 0x0 0x01000000>,
