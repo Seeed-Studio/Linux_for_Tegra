@@ -487,7 +487,8 @@ static int __init tegra_mc_utils_init(void)
 		return tegra_mc_utils_init_t23x();
 	}
 
-	if (of_machine_is_compatible("nvidia,tegra264")) {
+	if (of_machine_is_compatible("nvidia,tegra264") ||
+		of_machine_is_compatible("nvidia,t264sim")) {
 		ops = &mc_utils_t26x_ops;
 		return tegra_mc_utils_init_t26x();
 	}
