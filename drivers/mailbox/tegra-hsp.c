@@ -107,6 +107,7 @@ struct tegra_hsp_soc {
 	bool has_per_mb_ie;
 	bool has_128_bit_mb;
 	unsigned int reg_stride;
+	bool virtualized;
 };
 
 struct tegra_hsp {
@@ -410,8 +411,7 @@ static void tegra186_hsp_sm_route_irq(struct tegra_hsp_mailbox *mb,
 				      bool enable)
 {
 	/*
-	 * On Tegra186 IE register is used only for enabling/disabling shared
-	 * interrupts.
+	 * Dummy operation, routing not required on current platform.
 	 */
 }
 
@@ -488,6 +488,13 @@ static const struct tegra_hsp_sm_ops tegra194_hsp_sm_32bit_ops = {
 	.set_irq = tegra194_hsp_sm_set_irq,
 };
 
+static const struct tegra_hsp_sm_ops tegra194_hv_hsp_sm_32bit_ops = {
+	.send = tegra_hsp_sm_send32,
+	.recv = tegra_hsp_sm_recv32,
+	.route_irq = tegra186_hsp_sm_route_irq,
+	.set_irq = tegra194_hsp_sm_set_irq,
+};
+
 static void tegra_hsp_sm_send128(struct tegra_hsp_channel *channel, void *data)
 {
 	u32 value[4];
@@ -533,6 +540,13 @@ static const struct tegra_hsp_sm_ops tegra234_hsp_sm_128bit_ops = {
 	.send = tegra_hsp_sm_send128,
 	.recv = tegra_hsp_sm_recv128,
 	.route_irq = tegra194_hsp_sm_route_irq,
+	.set_irq = tegra194_hsp_sm_set_irq,
+};
+
+static const struct tegra_hsp_sm_ops tegra234_hv_hsp_sm_128bit_ops = {
+	.send = tegra_hsp_sm_send128,
+	.recv = tegra_hsp_sm_recv128,
+	.route_irq = tegra186_hsp_sm_route_irq,
 	.set_irq = tegra194_hsp_sm_set_irq,
 };
 
@@ -692,10 +706,14 @@ static struct mbox_chan *tegra_hsp_sm_xlate(struct mbox_controller *mbox,
 		if (!hsp->soc->has_128_bit_mb)
 			return ERR_PTR(-ENODEV);
 
-		mb->ops = &tegra234_hsp_sm_128bit_ops;
+		mb->ops = hsp->soc->virtualized ?
+				&tegra234_hv_hsp_sm_128bit_ops :
+				&tegra234_hsp_sm_128bit_ops;
 	} else {
 		if (hsp->soc->has_per_mb_ie)
-			mb->ops = &tegra194_hsp_sm_32bit_ops;
+			mb->ops = hsp->soc->virtualized ?
+					&tegra194_hv_hsp_sm_32bit_ops :
+					&tegra194_hsp_sm_32bit_ops;
 		else
 			mb->ops = &tegra186_hsp_sm_32bit_ops;
 	}
@@ -828,7 +846,7 @@ static int tegra_hsp_request_shared_irq(struct tegra_hsp *hsp)
 		hsp->shared_irqs[i].enabled = true;
 
 		value = tegra_hsp_readl(hsp, HSP_INT_IE(i));
-		if (value) {
+		if (value && !hsp->soc->virtualized) {
 			dev_warn(hsp->dev,
 				 "disabling interrupts for si: %d\n", i);
 			tegra_hsp_writel(hsp, 0, HSP_INT_IE(i));
@@ -1037,6 +1055,7 @@ static const struct tegra_hsp_soc tegra186_hsp_soc = {
 	.has_per_mb_ie = false,
 	.has_128_bit_mb = false,
 	.reg_stride = 0x100,
+	.virtualized = false,
 };
 
 static const struct tegra_hsp_soc tegra194_hsp_soc = {
@@ -1044,6 +1063,7 @@ static const struct tegra_hsp_soc tegra194_hsp_soc = {
 	.has_per_mb_ie = true,
 	.has_128_bit_mb = false,
 	.reg_stride = 0x100,
+	.virtualized = false,
 };
 
 static const struct tegra_hsp_soc tegra234_hsp_soc = {
@@ -1051,6 +1071,7 @@ static const struct tegra_hsp_soc tegra234_hsp_soc = {
 	.has_per_mb_ie = true,
 	.has_128_bit_mb = true,
 	.reg_stride = 0x100,
+	.virtualized = false,
 };
 
 static const struct tegra_hsp_soc tegra264_hsp_soc = {
@@ -1058,6 +1079,15 @@ static const struct tegra_hsp_soc tegra264_hsp_soc = {
 	.has_per_mb_ie = false,
 	.has_128_bit_mb = true,
 	.reg_stride = 0x1000,
+	.virtualized = false,
+};
+
+static const struct tegra_hsp_soc tegra234_hv_hsp_soc = {
+	.map = tegra186_hsp_db_map,
+	.has_per_mb_ie = true,
+	.has_128_bit_mb = true,
+	.reg_stride = 0x100,
+	.virtualized = true,
 };
 
 static const struct of_device_id tegra_hsp_match[] = {
@@ -1065,6 +1095,7 @@ static const struct of_device_id tegra_hsp_match[] = {
 	{ .compatible = "nvidia,tegra194-hsp", .data = &tegra194_hsp_soc },
 	{ .compatible = "nvidia,tegra234-hsp", .data = &tegra234_hsp_soc },
 	{ .compatible = "nvidia,tegra264-hsp", .data = &tegra264_hsp_soc },
+	{ .compatible = "nvidia,tegra234-hsp-hv", .data = &tegra234_hv_hsp_soc },
 	{ }
 };
 
