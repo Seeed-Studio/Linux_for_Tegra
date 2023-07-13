@@ -60,6 +60,8 @@ enum nv_macsec_sa_attrs {
 	NV_MACSEC_SA_ATTR_AN,
 	NV_MACSEC_SA_ATTR_PN,
 	NV_MACSEC_SA_ATTR_LOWEST_PN,
+	NV_MACSEC_SA_ATTR_CONF_OFFSET,
+	NV_MACSEC_SA_ATTR_ENCRYPT,
 #ifdef NVPKCS_MACSEC
 	NV_MACSEC_SA_PKCS_KEY_WRAP,
 	NV_MACSEC_SA_PKCS_KEK_HANDLE,
@@ -118,6 +120,8 @@ static const struct nla_policy nv_macsec_sa_genl_policy[NUM_NV_MACSEC_SA_ATTR] =
 	[NV_MACSEC_SA_ATTR_AN] = { .type = NLA_U8 },
 	[NV_MACSEC_SA_ATTR_PN] = { .type = NLA_U32 },
 	[NV_MACSEC_SA_ATTR_LOWEST_PN] = { .type = NLA_U32 },
+	[NV_MACSEC_SA_ATTR_CONF_OFFSET] = { .type = NLA_U8 },
+	[NV_MACSEC_SA_ATTR_ENCRYPT] = { .type = NLA_U8 },
 #ifdef NVPKCS_MACSEC
 	[NV_MACSEC_SA_PKCS_KEY_WRAP] = { .type = NLA_BINARY,
 					 .len = NV_SAK_WRAPPED_LEN,},
@@ -134,9 +138,9 @@ static const struct nla_policy nv_macsec_tz_genl_policy[NUM_NV_MACSEC_TZ_ATTR] =
 	[NV_MACSEC_TZ_ATTR_RW] = { .type = NLA_U8 },
 	[NV_MACSEC_TZ_ATTR_INDEX] = { .type = NLA_U8 },
 #ifdef NVPKCS_MACSEC
-	[NV_MACSEC_SA_PKCS_KEY_WRAP] = { .type = NLA_BINARY,
+	[NV_MACSEC_TZ_PKCS_KEY_WRAP] = { .type = NLA_BINARY,
 					 .len = NV_SAK_WRAPPED_LEN,},
-	[NV_MACSEC_SA_PKCS_KEK_HANDLE] = { .type = NLA_U64 },
+	[NV_MACSEC_TZ_PKCS_KEK_HANDLE] = { .type = NLA_U64 },
 #else
 	[NV_MACSEC_TZ_ATTR_KEY] = { .type = NLA_BINARY,
 				    .len = OSI_KEY_LEN_256 },

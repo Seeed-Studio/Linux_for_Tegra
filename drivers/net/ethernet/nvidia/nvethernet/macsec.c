@@ -504,6 +504,12 @@ static int parse_sa_config(struct nlattr **attrs, struct nlattr **tb_sa,
 	if (tb_sa[NV_MACSEC_SA_ATTR_LOWEST_PN]) {
 		sc_info->lowest_pn = nla_get_u32(tb_sa[NV_MACSEC_SA_ATTR_LOWEST_PN]);
 	}
+	if (tb_sa[NV_MACSEC_SA_ATTR_CONF_OFFSET]) {
+		sc_info->conf_offset = nla_get_u8(tb_sa[NV_MACSEC_SA_ATTR_CONF_OFFSET]);
+	}
+	if (tb_sa[NV_MACSEC_SA_ATTR_ENCRYPT]) {
+		sc_info->encrypt = nla_get_u8(tb_sa[NV_MACSEC_SA_ATTR_ENCRYPT]);
+	}
 #ifdef NVPKCS_MACSEC
 	if (pkcs) {
 		if (tb_sa[NV_MACSEC_SA_PKCS_KEY_WRAP]) {
