@@ -33,21 +33,36 @@
 			};
 
 			opp-table-cluster0 {
-				opp-1984000000 {
+				opp-1510400000 { /* Max CPU freq for Orin Nano */
+					opp-hz = /bits/ 64 <1510400000>;
+					opp-peak-kBps = <3200000>;
+				};
+
+				opp-1984000000 { /* Max CPU freq for ONX */
 					opp-hz = /bits/ 64 <1984000000>;
 					opp-peak-kBps = <3200000>;
 				};
 			};
 
 			opp-table-cluster1 {
-				opp-1984000000 {
+				opp-1510400000 { /* Max CPU freq for Orin Nano */
+					opp-hz = /bits/ 64 <1510400000>;
+					opp-peak-kBps = <3200000>;
+				};
+
+				opp-1984000000 { /* Max CPU freq for ONX */
 					opp-hz = /bits/ 64 <1984000000>;
 					opp-peak-kBps = <3200000>;
 				};
 			};
 
 			opp-table-cluster2 {
-				opp-1984000000 {
+				opp-1510400000 { /* Max CPU freq for Orin Nano */
+					opp-hz = /bits/ 64 <1510400000>;
+					opp-peak-kBps = <3200000>;
+				};
+
+				opp-1984000000 { /* Max CPU freq for ONX */
 					opp-hz = /bits/ 64 <1984000000>;
 					opp-peak-kBps = <3200000>;
 				};
