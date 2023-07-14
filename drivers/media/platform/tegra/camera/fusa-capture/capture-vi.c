@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2017-2023 NVIDIA Corporation.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-vi.c
  *
- * @brief VI channel operations for the T186/T194 Camera RTCPU platform.
+ * @brief VI channel operations for the T234 Camera RTCPU platform.
  */
 
 #include <linux/completion.h>
@@ -448,10 +448,7 @@ int vi_capture_init(
 	struct platform_device *rtc_pdev;
 	struct device *dev;
 
-	if (chan->drv->use_legacy_path)
-		dev = chan->dev;
-	else
-		dev = &chan->vi_capture_pdev->dev;
+	dev = &chan->vi_capture_pdev->dev;
 
 	dev_dbg(dev, "%s++\n", __func__);
 	dn = of_find_node_by_path("tegra-camera-rtcpu");
@@ -595,10 +592,7 @@ int vi_capture_setup(
 	uint32_t vi_inst = 0;
 	struct device *dev;
 
-	if (chan->drv->use_legacy_path)
-		dev = chan->dev;
-	else
-		dev = &chan->vi_capture_pdev->dev;
+	dev = &chan->vi_capture_pdev->dev;
 
 	if (setup->csi_stream_id >= MAX_NVCSI_STREAM_IDS ||
 		setup->virtual_channel_id >= MAX_VIRTUAL_CHANNEL_PER_STREAM) {
@@ -1664,7 +1658,7 @@ static int capture_vi_probe(struct platform_device *pdev)
 
 	err = vi_channel_drv_register(pdev, info->max_vi_channels);
 	if (err) {
-		vi_channel_drv_exit();	
+		vi_channel_drv_exit();
 		goto cleanup;
 	}
 
@@ -1702,7 +1696,10 @@ static int capture_vi_remove(struct platform_device *pdev)
 	for (ii = 0; ii < info->num_vi_devices; ii++)
 		put_device(&info->vi_pdevices[ii]->dev);
 
-	vi_channel_drv_exit();	
+	vi_channel_drv_unregister(&pdev->dev);
+	tegra_vi_media_controller_cleanup(&info->vi_common.mc_vi);
+	vi_channel_drv_exit();
+
 	return 0;
 }
 

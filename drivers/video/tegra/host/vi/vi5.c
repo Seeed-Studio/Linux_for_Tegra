@@ -285,24 +285,15 @@ error:
 	return err;
 }
 
-struct t194_vi5_file_private {
-	struct platform_device *pdev;
-	struct tegra_mc_vi mc_vi;
-	unsigned int vi_bypass_bw;
-};
-
 static int vi5_remove(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct host_vi5 *vi5 = pdata->private_data;
 
 	tegra_camera_device_unregister(vi5);
-	vi_channel_drv_unregister(&pdev->dev);
-	tegra_vi_media_controller_cleanup(&vi5->vi_common.mc_vi);
 
 	vi5_remove_debugfs(vi5);
 	platform_device_put(vi5->vi_thi);
-
 	return 0;
 }
 

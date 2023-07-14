@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2017-2023 NVIDIA Corporation.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-vi-channel.c
  *
- * @brief VI channel character device driver for the T186/T194 Camera RTCPU
+ * @brief VI channel character device driver for the T234 Camera RTCPU
  * platform.
  */
 
@@ -204,11 +204,7 @@ struct tegra_vi_channel *vi_channel_open_ex(
 		return ERR_PTR(-ENOMEM);
 
 	chan->drv = chan_drv;
-	if (chan_drv->use_legacy_path) {
-		chan->dev = chan_drv->dev;
-		chan->ndev = chan_drv->ndev;
-	} else
-		chan->vi_capture_pdev = chan_drv->vi_capture_pdev;
+	chan->vi_capture_pdev = chan_drv->vi_capture_pdev;
 
 	chan->ops = chan_drv->ops;
 
@@ -390,16 +386,13 @@ static long vi_channel_ioctl(
 		if (copy_from_user(&setup, ptr, sizeof(setup)))
 			break;
 
-		if (chan->drv->use_legacy_path == false) {
-			vi_get_nvhost_device(chan, &setup);
-			if (chan->dev == NULL) {
-				dev_err(&chan->vi_capture_pdev->dev,
-					"%s: channel device is NULL",
-					__func__);
-				return -EINVAL;
-			}
+		vi_get_nvhost_device(chan, &setup);
+		if (chan->dev == NULL) {
+			dev_err(&chan->vi_capture_pdev->dev,
+				"%s: channel device is NULL",
+				__func__);
+			return -EINVAL;
 		}
-
 
 		if (setup.request_size < sizeof(struct capture_descriptor)) {
 			dev_err(chan->dev,
@@ -650,17 +643,11 @@ int vi_channel_drv_register(
 	if (unlikely(chan_drv == NULL))
 		return -ENOMEM;
 
-	if (strstr(ndev->name, "tegra-capture-vi") == NULL) {
-		chan_drv->use_legacy_path = true;
-		chan_drv->dev = &ndev->dev;
-		chan_drv->ndev = ndev;
-	} else {
-		chan_drv->use_legacy_path = false;
-		chan_drv->dev = NULL;
-		chan_drv->ndev = NULL;
-		chan_drv->vi_capture_pdev = ndev;
-	}
+	chan_drv->dev = NULL;
+	chan_drv->ndev = NULL;
+	chan_drv->vi_capture_pdev = ndev;
 	chan_drv->num_channels = max_vi_channels;
+
 	mutex_init(&chan_drv->lock);
 
 	mutex_lock(&chdrv_lock);
@@ -676,9 +663,7 @@ int vi_channel_drv_register(
 	for (i = 0; i < chan_drv->num_channels; i++) {
 		dev_t devt = MKDEV(vi_channel_major, i);
 
-		struct device *dev =
-			(chan_drv->use_legacy_path)?chan_drv->dev :
-			&chan_drv->vi_capture_pdev->dev;
+		struct device *dev = &chan_drv->vi_capture_pdev->dev;
 		device_create(vi_channel_class, dev, devt, NULL,
 				"capture-vi-channel%u", i);
 	}
@@ -725,7 +710,8 @@ void vi_channel_drv_unregister(
 	mutex_lock(&chdrv_lock);
 	chan_drv = chdrv_;
 	chdrv_ = NULL;
-	WARN_ON(chan_drv->dev != dev);
+
+	WARN_ON(&chan_drv->vi_capture_pdev->dev != dev);
 	mutex_unlock(&chdrv_lock);
 
 	for (i = 0; i < chan_drv->num_channels; i++) {
@@ -734,7 +720,7 @@ void vi_channel_drv_unregister(
 		device_destroy(vi_channel_class, devt);
 	}
 
-	devm_kfree(chan_drv->dev, chan_drv);
+	devm_kfree(&chan_drv->vi_capture_pdev->dev, chan_drv);
 }
 EXPORT_SYMBOL(vi_channel_drv_unregister);
 

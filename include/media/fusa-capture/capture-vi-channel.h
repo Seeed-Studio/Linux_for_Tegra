@@ -1,12 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2017-2022, NVIDIA Corporation.  All rights reserved.
- */
-
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 /**
  * @file include/media/fusa-capture/capture-vi-channel.h
  *
- * @brief VI channel character device driver header for the T186/T194 Camera
+ * @brief VI channel character device driver header for the T234 Camera
  * RTCPU platform.
  */
 
@@ -84,8 +81,6 @@ struct vi_channel_drv_ops {
 struct vi_channel_drv {
 	struct platform_device *vi_capture_pdev;
 		/**< Capture VI driver platform device */
-	bool use_legacy_path;
-		/**< Flag to maintain backward-compatibility for T186 */
 	struct device *dev; /**< VI kernel @em device */
 	struct platform_device *ndev; /**< VI kernel @em platform_device */
 	struct mutex lock; /**< VI channel driver context lock */
