@@ -1,6 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
-
+// SPDX-License-Identifier: GPL-2.0
 /dts-v1/;
 
 #include <dt-bindings/input/linux-event-codes.h>
@@ -11,6 +9,15 @@
 / {
 	model = "NVIDIA IGX Orin Development Kit";
 	compatible = "nvidia,p3740-0002+p3701-0008", "nvidia,p3701-0008", "nvidia,tegra234";
+
+	aliases {
+		serial0 = &tcu;
+	};
+
+	chosen {
+		bootargs = "console=ttyTCU0,115200n8";
+		stdout-path = "serial0:115200n8";
+	};
 
 	bus@0 {
 		host1x@13e00000 {
@@ -112,15 +119,6 @@
 		i2c@c250000 {
 			status = "okay";
 		};
-	};
-
-	aliases {
-		serial0 = &tcu;
-	};
-
-	chosen {
-		bootargs = "console=ttyTCU0,115200n8";
-		stdout-path = "serial0:115200n8";
 	};
 
 	gpio-keys {
