@@ -6,6 +6,7 @@
 
 #include <dt-bindings/clock/tegra234-clock.h>
 #include <dt-bindings/gpio/tegra234-gpio.h>
+#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
 
 #define CAM0_RST_L	TEGRA234_MAIN_GPIO(H, 3)
 #define CAM0_PWDN	TEGRA234_MAIN_GPIO(H, 6)
@@ -15,7 +16,7 @@
 / {
 	overlay-name = "Jetson Camera E3333 module";
 	jetson-header-name = "Jetson AGX CSI Connector";
-	compatible = "nvidia,p3737-0000+p3701-0000", "nvidia,p3737-0000+p3701-0004", "nvidia,p3737-0000+p3701-0005";
+	compatible = JETSON_COMPATIBLE;
 
 	fragment@0 {
 		target-path = "/";

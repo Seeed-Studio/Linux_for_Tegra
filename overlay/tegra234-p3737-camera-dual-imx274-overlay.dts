@@ -9,10 +9,12 @@
 /dts-v1/;
 /plugin/;
 
+#include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
+
 / {
 	overlay-name = "Jetson Camera Dual-IMX274";
 	jetson-header-name = "Jetson AGX CSI Connector";
-	compatible = "nvidia,p3737-0000+p3701-0000", "nvidia,p3737-0000+p3701-0004", "nvidia,p3737-0000+p3701-0005";
+	compatible = JETSON_COMPATIBLE;
 
 	fragment@0 {
 		target-path = "/bus@0/i2c@3180000/tca9546@70/i2c@0/imx274_a@1a";
