@@ -460,8 +460,6 @@
 					assigned-clocks = <&bpmp TEGRA234_CLK_HOST1X>;
 					assigned-clock-rates = <204000000>;
 
-					dma-coherent;
-
 					reg = <0x0 0x13e00000 0x0 0x10000>,
 					      <0x0 0x13e10000 0x0 0x10000>,
 					      <0x0 0x13e40000 0x0 0x10000>,
