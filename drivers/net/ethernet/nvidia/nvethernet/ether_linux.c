@@ -1829,8 +1829,13 @@ static void free_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned long rx_desc_size = sizeof(struct osi_rx_desc) * osi_dma->rx_ring_sz;
 	struct osi_rx_ring *rx_ring = NULL;
 	unsigned int i, chan;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
 		rx_ring = osi_dma->rx_ring[i];
 		chan = osi_dma->dma_chans[i];
 
@@ -2048,8 +2053,13 @@ static int ether_allocate_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned int chan;
 	unsigned int i;
 	int ret = 0;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
 		chan = osi_dma->dma_chans[i];
 
 		if (chan != ETHER_INVALID_CHAN_NUM) {
@@ -2097,8 +2107,13 @@ static void free_tx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned long tx_desc_size = sizeof(struct osi_tx_desc) * osi_dma->tx_ring_sz;
 	struct osi_tx_ring *tx_ring = NULL;
 	unsigned int i;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i <  max_dma_chan[osi_dma->mac]; i++) {
 		tx_ring = osi_dma->tx_ring[i];
 
 		if (tx_ring != NULL) {
@@ -2200,8 +2215,13 @@ static int ether_allocate_tx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned int chan;
 	unsigned int i;
 	int ret = 0;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
 		chan = osi_dma->dma_chans[i];
 
 		if (chan != ETHER_INVALID_CHAN_NUM) {
@@ -2237,13 +2257,18 @@ exit:
 static void ether_init_invalid_chan_ring(struct osi_dma_priv_data *osi_dma)
 {
 	unsigned int i;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
 		osi_dma->tx_ring[i] = NULL;
 		osi_dma->rx_ring[i] = NULL;
 	}
 
-	for (i = osi_dma->num_dma_chans; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = osi_dma->num_dma_chans; i < max_dma_chan[osi_dma->mac]; i++) {
 		osi_dma->dma_chans[i] = ETHER_INVALID_CHAN_NUM;
 	}
 }
@@ -3404,11 +3429,15 @@ static unsigned short ether_select_queue(struct net_device *dev,
 		priority = skb_vlan_tag_get_prio(skb);
 	}
 
-	for (i = 0; i < osi_core->num_mtl_queues; i++) {
-		mtlq = osi_core->mtl_queues[i];
-		if (pdata->txq_prio[mtlq] == priority) {
-			txqueue_select = (unsigned short)i;
-			break;
+	if ((osi_core->pre_sil == OSI_ENABLE) && (pdata->tx_queue_select != 0U)) {
+		txqueue_select = pdata->tx_queue_select;
+	} else {
+		for (i = 0; i < osi_core->num_mtl_queues; i++) {
+			mtlq = osi_core->mtl_queues[i];
+			if (pdata->txq_prio[mtlq] == priority) {
+				txqueue_select = (unsigned short)i;
+				break;
+			}
 		}
 	}
 
@@ -5987,9 +6016,28 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		}
 	}
 
-	if (osi_dma->num_dma_chans != osi_core->num_mtl_queues) {
-		dev_err(dev, "mismatch in numbers of DMA channel and MTL Q\n");
-		return -EINVAL;
+	if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
+		if (osi_dma->num_dma_chans != osi_core->num_mtl_queues) {
+			dev_err(dev, "mismatch in numbers of DMA channel and MTL Q\n");
+			return -EINVAL;
+		}
+
+		for (i = 0; i < osi_dma->num_dma_chans; i++) {
+			if (osi_dma->dma_chans[i] != osi_core->mtl_queues[i]) {
+				dev_err(dev,
+					"mismatch in DMA channel and MTL Q number at index %d\n",
+					i);
+				return -EINVAL;
+			}
+			if (osi_dma->dma_chans[i] == 0) {
+				ret = 0;
+			}
+		}
+
+		if (ret != 0) {
+			dev_err(dev, "Q0 Must be enabled for rx path\n");
+			return -EINVAL;
+		}
 	}
 
 	/* Allow to set non zero DMA channel for virtualization */
@@ -5998,23 +6046,6 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		dev_info(dev, "Virtualization is enabled\n");
 	} else {
 		ret = -1;
-	}
-
-	for (i = 0; i < osi_dma->num_dma_chans; i++) {
-		if (osi_dma->dma_chans[i] != osi_core->mtl_queues[i]) {
-			dev_err(dev,
-				"mismatch in DMA channel and MTL Q number at index %d\n",
-				i);
-			return -EINVAL;
-		}
-		if (osi_dma->dma_chans[i] == 0) {
-			ret = 0;
-		}
-	}
-
-	if (ret != 0) {
-		dev_err(dev, "Q0 Must be enabled for rx path\n");
-		return -EINVAL;
 	}
 
 	ret = of_property_read_u32_array(np, "nvidia,rxq_enable_ctrl",
@@ -6440,7 +6471,7 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	ret = of_device_is_compatible(np, "nvidia,nvmgbe");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_MGBE;
-		max_chans = OSI_MGBE_MAX_NUM_CHANS;
+		max_chans = OSI_MGBE_T23X_MAX_NUM_CHANS;
 	}
 
 	ret = of_device_is_compatible(np, "nvidia,tegra234-eqos");
@@ -6452,7 +6483,7 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	ret = of_device_is_compatible(np, "nvidia,tegra234-mgbe");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_MGBE;
-		max_chans = OSI_MGBE_MAX_NUM_PDMA_CHANS;
+		max_chans = OSI_MGBE_T23X_MAX_NUM_CHANS;
 	}
 
 	if (of_device_is_compatible(np, "nvidia,tegra264-mgbe")) {
@@ -6700,6 +6731,11 @@ static int ether_probe(struct platform_device *pdev)
 	struct net_device *ndev;
 	int ret = 0, i;
 	const char *if_name;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
 	ether_get_num_dma_chan_mtl_q(pdev, &num_dma_chans,
 				     &mac, &num_mtl_queues);
@@ -6852,7 +6888,7 @@ static int ether_probe(struct platform_device *pdev)
 	/* store enabled dma channels into osi_core */
 	osi_core->num_dma_chans = osi_dma->num_dma_chans;
 	memcpy(osi_core->dma_chans, osi_dma->dma_chans,
-	      (sizeof(nveu32_t) * OSI_MGBE_MAX_NUM_CHANS));
+	      (sizeof(nveu32_t) * max_dma_chan[mac]));
 	ndev->netdev_ops = &ether_netdev_ops;
 	ether_set_ethtool_ops(ndev);
 

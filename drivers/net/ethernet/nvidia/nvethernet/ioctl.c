@@ -562,9 +562,11 @@ static int ether_config_l2_filters(struct net_device *dev,
 		return ret;
 	}
 
-	if (osi_core->use_virtualization == OSI_DISABLE) {
-		dev_err(pdata->dev, "%s Ethernet virualization is not enabled\n", __func__);
-		return ret;
+	if (osi_core->pre_sil != OSI_ENABLE) {
+		if (osi_core->use_virtualization == OSI_DISABLE) {
+			dev_err(pdata->dev, "%s Ethernet virualization is not enabled\n", __func__);
+			return ret;
+		}
 	}
 	if (copy_from_user(&u_l2_filter, (void __user *)ifdata->ptr,
 			   sizeof(struct ether_l2_filter)) != 0U) {

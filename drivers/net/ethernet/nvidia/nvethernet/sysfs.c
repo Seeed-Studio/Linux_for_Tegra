@@ -76,6 +76,84 @@ static ssize_t ether_desc_dump_store(struct device *dev,
 static DEVICE_ATTR(desc_dump_enable, (S_IRUGO | S_IWUSR),
 		   ether_desc_dump_show,
 		   ether_desc_dump_store);
+
+/**
+ * @brief Shows current configured tx queue
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current Tx Q configuration
+ */
+static ssize_t ether_mac_tx_q_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+
+	if (osi_core->pre_sil != OSI_ENABLE) {
+		dev_err(pdata->dev, "Not Allowed. Not pre-sil platform\n");
+		return 0;
+	}
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Current Tx queue: %d\n",
+			 pdata->tx_queue_select);
+	return (buf - start);
+}
+
+/**
+ * @brief Choose dma channel for Tx traffic or Tx queue select when non-zero
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer which contains dma channel number or Tx Q
+ * @param[in] size: size of buffer
+ *
+ * @return size of buffer.
+ */
+static ssize_t ether_mac_tx_q_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	int ret, bufp = 0, dma_chanel = 0;
+
+	if (osi_core->pre_sil != OSI_ENABLE) {
+		dev_err(pdata->dev, "Not Allowed. Not pre-sil platform\n");
+		return 0;
+	}
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return size;
+	}
+
+	ret = sscanf(buf + bufp, "%d", &dma_chanel);
+	if (ret != 1 || dma_chanel >= OSI_MGBE_MAX_NUM_CHANS) {
+		dev_err(pdata->dev, "Failed to parse args or invalid dma chan");
+		goto exit;
+	}
+	pdata->tx_queue_select = dma_chanel;
+
+exit:
+	return size;
+}
+
+/**
+ * @brief Sysfs attribute for MAC Tx Q
+ *
+ */
+static DEVICE_ATTR(mac_tx_q, (S_IRUGO | S_IWUSR),
+		   ether_mac_tx_q_show,
+		   ether_mac_tx_q_store);
 #endif /* OSI_DEBUG */
 
 /**
@@ -2752,6 +2830,7 @@ static struct attribute *ether_sysfs_attrs_without_macsec[] = {
 #if defined HSI_SUPPORT && defined(NV_VLTEST_BUILD) && (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 	&dev_attr_hsi_enable.attr,
 #endif
+	&dev_attr_mac_tx_q.attr,
 #endif /* OSI_STRIPPED_LIB */
 	NULL
 };

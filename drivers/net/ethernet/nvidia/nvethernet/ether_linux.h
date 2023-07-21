@@ -673,6 +673,8 @@ struct ether_priv_data {
 	struct hwtstamp_config ptp_config;
 	/** Flag to hold DT config to disable Rx csum in HW */
 	uint32_t disable_rx_csum;
+	/** select Tx queue/dma channel for testing */
+	unsigned int tx_queue_select;
 };
 
 /**
