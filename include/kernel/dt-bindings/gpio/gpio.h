@@ -1,5 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause) */
 /*
  * This header provides constants for most GPIO bindings.
  *
