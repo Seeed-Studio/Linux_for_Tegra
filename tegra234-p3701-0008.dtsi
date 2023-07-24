@@ -2,6 +2,7 @@
 // Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "tegra234.dtsi"
+#include "tegra234-p3701.dtsi"
 
 / {
 	compatible = "nvidia,p3701-0008", "nvidia,tegra234";
