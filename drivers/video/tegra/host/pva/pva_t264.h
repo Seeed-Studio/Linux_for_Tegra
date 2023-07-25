@@ -58,7 +58,7 @@ struct nvhost_device_data t264_pva0_info = {
 	.can_powergate		= true,
 };
 
-#ifdef CONFIG_PVA_CO_DISABLED
+#if (defined(CONFIG_PVA_CO_DISABLED) || defined(CONFIG_TEGRA_T26X_GRHOST_PVA))
 static u32 vm_regs_sid_idx_t264[] = {1, 2, 3, 4, 5, 6, 7, 7,
 				     8, 8, 8, 8, 8, 0, 0, 0};
 #else
