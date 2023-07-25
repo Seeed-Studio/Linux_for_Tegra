@@ -257,6 +257,9 @@
 					     <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "stall0", "stall1", "stall2", "nonstall";
 				power-domains = <&bpmp TEGRA234_POWER_DOMAIN_GPU>;
+				interconnects = <&mc TEGRA234_MEMORY_CLIENT_NVL1R &emc>,
+						<&mc TEGRA234_MEMORY_CLIENT_NVL1W &emc>;
+				interconnect-names = "dma-mem", "write";
 				clocks = <&bpmp TEGRA234_CLK_GPUSYS>,
 					 <&bpmp TEGRA234_CLK_GPC0CLK>,
 					 <&bpmp TEGRA234_CLK_GPC1CLK>;
