@@ -8,11 +8,11 @@
 #include "tegra234-soc-safetyservice-fsicom.dtsi"
 
 / {
-	compatible = "nvidia,p3740-0002+p3701-0008-safety";
-
 	fragment-t234-p3740-p3701-safety@0 {
 		target-path = "/";
 		__overlay__ {
+			compatible = "nvidia,p3740-0002+p3701-0008", "safety", "nvidia,p3701-0008", "nvidia,tegra234";
+
 			bus@0 {
 				hsp_top2: hsp@1600000 {
 					status = "okay";
