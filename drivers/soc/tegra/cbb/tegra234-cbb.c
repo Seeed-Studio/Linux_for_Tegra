@@ -187,7 +187,10 @@ static void tegra234_cbb_error_clear(struct tegra_cbb *cbb)
 {
 	struct tegra234_cbb *priv = to_tegra234_cbb(cbb);
 
+	writel(0, priv->mon + FABRIC_MN_MASTER_ERR_FORCE_0);
+
 	writel(priv->fabric->err_status_clr, priv->mon + FABRIC_MN_MASTER_ERR_STATUS_0);
+
 	dsb(sy);
 }
 
