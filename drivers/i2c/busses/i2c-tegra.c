@@ -166,6 +166,11 @@
 #define I2C_MST_FIFO_STATUS_TX			GENMASK(23, 16)
 #define I2C_MST_FIFO_STATUS_RX			GENMASK(7, 0)
 
+#define I2C_SW_MUTEX				0x0ec
+#define I2C_SW_MUTEX_REQUEST			GENMASK(3,0)
+#define I2C_SW_MUTEX_GRANT			GENMASK(7,4)
+#define I2C_SW_MUTEX_ID				9
+
 /* configuration load timeout in microseconds */
 #define I2C_CONFIG_LOAD_TIMEOUT			1000000
 
@@ -233,6 +238,7 @@ enum msg_end_type {
  *		in HS mode.
  * @has_interface_timing_reg: Has interface timing register to program the tuned
  *		timing settings.
+ * @has_mutex: Has Mutex register for mutual exclusion with other firmwares or VM.
  */
 struct tegra_i2c_hw_feature {
 	bool has_continue_xfer_support;
@@ -259,6 +265,7 @@ struct tegra_i2c_hw_feature {
 	u32 setup_hold_time_hs_mode;
 	bool has_interface_timing_reg;
 	bool has_hs_mode_support;
+	bool has_mutex;
 };
 
 /**
@@ -407,6 +414,115 @@ static void i2c_readsl(struct tegra_i2c_dev *i2c_dev, void *data,
 {
 	readsl(i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg), data, len);
 }
+
+static int tegra_i2c_poll_register(struct tegra_i2c_dev *i2c_dev,
+				   u32 reg, u32 mask, u32 delay_us,
+				   u32 timeout_us)
+{
+	void __iomem *addr = i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg);
+	u32 val;
+
+	if (!i2c_dev->atomic_mode)
+		return readl_relaxed_poll_timeout(addr, val, !(val & mask),
+						  delay_us, timeout_us);
+
+	return readl_relaxed_poll_timeout_atomic(addr, val, !(val & mask),
+						 delay_us, timeout_us);
+}
+
+static void tegra_i2c_mutex_lock(struct tegra_i2c_dev *i2c_dev)
+{
+	u32 val, id;
+
+	do {
+		tegra_i2c_poll_register(i2c_dev, I2C_SW_MUTEX,
+					FIELD_PREP(I2C_SW_MUTEX_GRANT, 0),
+					20, 0);
+
+		val = FIELD_PREP(I2C_SW_MUTEX_REQUEST, I2C_SW_MUTEX_ID);
+		i2c_writel(i2c_dev, val, I2C_SW_MUTEX);
+
+		/* Ensure that the mutex is written */
+		mb();
+
+		val = i2c_readl(i2c_dev, I2C_SW_MUTEX);
+		id = FIELD_GET(I2C_SW_MUTEX_GRANT, val);
+	} while (id != I2C_SW_MUTEX_ID);
+}
+
+static int tegra_i2c_mutex_trylock(struct tegra_i2c_dev *i2c_dev)
+{
+	u32 val, id;
+
+	val = i2c_readl(i2c_dev, I2C_SW_MUTEX);
+	id = FIELD_GET(I2C_SW_MUTEX_GRANT, val);
+	if (id != 0)
+		return 0;
+
+	val = FIELD_PREP(I2C_SW_MUTEX_REQUEST, I2C_SW_MUTEX_ID);
+	i2c_writel(i2c_dev, val, I2C_SW_MUTEX);
+
+	/* Ensure that the mutex is written */
+	mb();
+
+	val = i2c_readl(i2c_dev, I2C_SW_MUTEX);
+	id = FIELD_GET(I2C_SW_MUTEX_GRANT, val);
+
+	if (id != I2C_SW_MUTEX_ID)
+		return 0;
+
+	return 1;
+}
+
+static void tegra_i2c_mutex_unlock(struct tegra_i2c_dev *i2c_dev)
+{
+	u32 val, id;
+
+	val = i2c_readl(i2c_dev, I2C_SW_MUTEX);
+	id = FIELD_GET(I2C_SW_MUTEX_GRANT, val);
+
+	if (id != I2C_SW_MUTEX_ID)
+		return;
+
+	i2c_writel(i2c_dev, 0, I2C_SW_MUTEX);
+}
+
+static void tegra_i2c_bus_lock(struct i2c_adapter *adapter,
+			       unsigned int flags)
+{
+	struct tegra_i2c_dev *i2c_dev = i2c_get_adapdata(adapter);
+
+	rt_mutex_lock_nested(&adapter->bus_lock, i2c_adapter_depth(adapter));
+	tegra_i2c_mutex_lock(i2c_dev);
+}
+
+static int tegra_i2c_bus_trylock(struct i2c_adapter *adapter,
+				  unsigned int flags)
+{
+	struct tegra_i2c_dev *i2c_dev = i2c_get_adapdata(adapter);
+	int ret;
+
+	ret = rt_mutex_trylock(&adapter->bus_lock);
+	if (ret)
+		ret = tegra_i2c_mutex_trylock(i2c_dev);
+
+	return ret;
+}
+
+static void tegra_i2c_bus_unlock(struct i2c_adapter *adapter,
+				 unsigned int flags)
+{
+	struct tegra_i2c_dev *i2c_dev = i2c_get_adapdata(adapter);
+
+	rt_mutex_unlock(&adapter->bus_lock);
+	tegra_i2c_mutex_unlock(i2c_dev);
+}
+
+static const struct i2c_lock_operations tegra_i2c_lock_ops = {
+	.lock_bus = tegra_i2c_bus_lock,
+	.trylock_bus = tegra_i2c_bus_trylock,
+	.unlock_bus = tegra_i2c_bus_unlock,
+};
 
 static void tegra_i2c_mask_irq(struct tegra_i2c_dev *i2c_dev, u32 mask)
 {
@@ -580,21 +696,6 @@ static void tegra_i2c_vi_init(struct tegra_i2c_dev *i2c_dev)
 	i2c_writel(i2c_dev, value, I2C_BUS_CLEAR_CNFG);
 
 	i2c_writel(i2c_dev, 0x0, I2C_TLOW_SEXT);
-}
-
-static int tegra_i2c_poll_register(struct tegra_i2c_dev *i2c_dev,
-				   u32 reg, u32 mask, u32 delay_us,
-				   u32 timeout_us)
-{
-	void __iomem *addr = i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg);
-	u32 val;
-
-	if (!i2c_dev->atomic_mode)
-		return readl_relaxed_poll_timeout(addr, val, !(val & mask),
-						  delay_us, timeout_us);
-
-	return readl_relaxed_poll_timeout_atomic(addr, val, !(val & mask),
-						 delay_us, timeout_us);
 }
 
 static int tegra_i2c_flush_fifos(struct tegra_i2c_dev *i2c_dev)
@@ -1663,6 +1764,7 @@ static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.setup_hold_time_fast_fast_plus_mode = 0x0,
 	.setup_hold_time_hs_mode = 0x0,
 	.has_interface_timing_reg = false,
+	.has_mutex = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
@@ -1687,6 +1789,7 @@ static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
 	.setup_hold_time_fast_fast_plus_mode = 0x0,
 	.setup_hold_time_hs_mode = 0x0,
 	.has_interface_timing_reg = false,
+	.has_mutex = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
@@ -1711,6 +1814,7 @@ static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
 	.setup_hold_time_fast_fast_plus_mode = 0x0,
 	.setup_hold_time_hs_mode = 0x0,
 	.has_interface_timing_reg = false,
+	.has_mutex = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
@@ -1735,6 +1839,7 @@ static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
 	.setup_hold_time_fast_fast_plus_mode = 0x0,
 	.setup_hold_time_hs_mode = 0x0,
 	.has_interface_timing_reg = true,
+	.has_mutex = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
@@ -1759,6 +1864,7 @@ static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
 	.setup_hold_time_fast_fast_plus_mode = 0,
 	.setup_hold_time_hs_mode = 0,
 	.has_interface_timing_reg = true,
+	.has_mutex = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
@@ -1783,6 +1889,7 @@ static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
 	.setup_hold_time_fast_fast_plus_mode = 0,
 	.setup_hold_time_hs_mode = 0,
 	.has_interface_timing_reg = true,
+	.has_mutex = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra194_i2c_hw = {
@@ -1810,6 +1917,7 @@ static const struct tegra_i2c_hw_feature tegra194_i2c_hw = {
 	.setup_hold_time_hs_mode = 0x090909,
 	.has_interface_timing_reg = true,
 	.has_hs_mode_support = true,
+	.has_mutex = false,
 };
 
 static const struct of_device_id tegra_i2c_of_match[] = {
@@ -2054,6 +2162,9 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	i2c_dev->adapter.algo = &tegra_i2c_algo;
 	i2c_dev->adapter.nr = pdev->id;
 	ACPI_COMPANION_SET(&i2c_dev->adapter.dev, ACPI_COMPANION(&pdev->dev));
+
+	if (i2c_dev->hw->has_mutex)
+		i2c_dev->adapter.lock_ops = &tegra_i2c_lock_ops;
 
 	if (i2c_dev->hw->supports_bus_clear)
 		i2c_dev->adapter.bus_recovery_info = &tegra_i2c_recovery_info;
