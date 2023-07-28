@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
-#include <dt-bindings/thermal/tegra234-bpmp-thermal-oot.h>
-
 #define TEGRA234_THERMAL_POLLING_DELAY 1000
 
 / {
@@ -10,76 +8,50 @@
 	fragment-t234-thermal@0 {
 		target-path = "/";
 		__overlay__ {
-			bpmp {
-				bpmp_thermal: thermal {
-					compatible = "nvidia,tegra186-bpmp-thermal";
-					#thermal-sensor-cells = <1>;
-					status = "disabled";
-				};
-			};
-
 			thermal-zones {
 				cpu-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_CPU>;
-					status = "disabled";
 				};
 
 				gpu-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_GPU>;
-					status = "disabled";
 				};
 
 				cv0-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_CV0>;
-					status = "disabled";
 				};
 
 				cv1-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_CV1>;
-					status = "disabled";
 				};
 
 				cv2-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_CV2>;
-					status = "disabled";
 				};
 
 				soc0-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_SOC0>;
-					status = "disabled";
 				};
 
 				soc1-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_SOC1>;
-					status = "disabled";
 				};
 
 				soc2-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_SOC2>;
-					status = "disabled";
 				};
 
 				tj-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
-					thermal-sensors = <&bpmp_thermal TEGRA234_THERMAL_ZONE_TJ_MAX>;
-					status = "disabled";
 				};
 			};
 		};

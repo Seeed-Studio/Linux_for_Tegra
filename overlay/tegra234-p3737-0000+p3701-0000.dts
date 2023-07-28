@@ -21,12 +21,6 @@
 	fragment-t234-p3737-p3701@0 {
 		target-path = "/";
 		__overlay__ {
-			bpmp {
-				thermal {
-					status = "okay";
-				};
-			};
-
 			cpus {
 				idle-states {
 					c7 {
@@ -77,10 +71,6 @@
 				};
 
 				soc2-thermal {
-					status = "okay";
-				};
-
-				tj-thermal {
 					status = "okay";
 				};
 			};
