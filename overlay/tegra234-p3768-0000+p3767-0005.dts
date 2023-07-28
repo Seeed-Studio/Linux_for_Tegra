@@ -1,0 +1,248 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+#include "tegra234-overlay.dtsi"
+#include "tegra234-soc-thermal.dtsi"
+#include "tegra234-soc-thermal-shutdown.dtsi"
+#include "tegra234-p3767-0000.dtsi"
+
+/ {
+	overlay-name = "Tegra234 P3768-0000+P3767-0005 Overlay";
+
+	fragment-t234-p3768-0000-p3767-0005@0 {
+		target-path = "/";
+		__overlay__ {
+			bus@0 {
+				pinmux@2430000 {
+					status = "okay";
+				};
+
+				/* UARTA, 40 pin header, Pin 8(TX), Pin 10(RX) */
+				serial@3100000 {
+					compatible = "nvidia,tegra194-hsuart";
+					status = "okay";
+				};
+
+				/* UARTE, M2.E connector */
+				serial@3140000 {
+					compatible = "nvidia,tegra194-hsuart";
+					status = "okay";
+				};
+
+				/* SPI1, 40pin header, Pin 19(MOSI), Pin 21(MISO), Pin 23(CLK), Pin 24(CS) */
+				spi@3210000{
+					status = "okay";
+					spi@0 {
+						compatible = "tegra-spidev";
+						reg = <0x0>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,enable-hw-based-cs;
+							nvidia,rx-clk-tap-delay = <0x10>;
+							nvidia,tx-clk-tap-delay = <0x0>;
+						};
+					};
+					spi@1 {
+						compatible = "tegra-spidev";
+						reg = <0x1>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,enable-hw-based-cs;
+							nvidia,rx-clk-tap-delay = <0x10>;
+							nvidia,tx-clk-tap-delay = <0x0>;
+						};
+					};
+
+				};
+
+				/* SPI3, 40pin header, Pin 37(MOSI), Pin 22(MISO), Pin 13(CLK), Pin 18(CS) */
+				spi@3230000{
+					status = "okay";
+					spi@0 {
+						compatible = "tegra-spidev";
+						reg = <0x0>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,enable-hw-based-cs;
+							nvidia,rx-clk-tap-delay = <0x10>;
+							nvidia,tx-clk-tap-delay = <0x0>;
+						};
+					};
+					spi@1 {
+						compatible = "tegra-spidev";
+						reg = <0x1>;
+						spi-max-frequency = <50000000>;
+						controller-data {
+							nvidia,enable-hw-based-cs;
+							nvidia,rx-clk-tap-delay = <0x10>;
+							nvidia,tx-clk-tap-delay = <0x0>;
+						};
+					};
+				};
+
+				i2c@c240000 {
+					status = "okay";
+					ina32211_1_40: ina3221@40 {
+						compatible = "ti,ina3221";
+						reg = <0x40>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						#io-channel-cells = <1>;
+						channel@0 {
+							reg = <0x0>;
+							label = "VDD_IN";
+							shunt-resistor-micro-ohms = <5000>;
+						};
+						channel@1 {
+							reg = <0x1>;
+							label = "VDD_CPU_GPU_CV";
+							shunt-resistor-micro-ohms = <5000>;
+						};
+						channel@2 {
+							reg = <0x2>;
+							label = "VDD_SOC";
+							shunt-resistor-micro-ohms = <5000>;
+						};
+					};
+				};
+
+				/* PWM1, 40pin header, pin 15 */
+				pwm@3280000 {
+					status = "okay";
+				};
+
+				/* PWM5, 40pin header, pin 33 */
+				pwm@32c0000 {
+					status = "okay";
+				};
+
+				/* PWM7, 40pin header, pin 32 */
+				pwm@32e0000 {
+					status = "okay";
+				};
+
+				tachometer@39c0000 {
+					status = "okay";
+					upper-threshold = <0xfffff>;
+					lower-threshold = <0x0>;
+				};
+
+				hsp@3d00000 {
+					status = "okay";
+				};
+
+				aon@c000000 {
+					status = "okay";
+				};
+
+				mttcan@c310000 {
+					status = "okay";
+				};
+
+				host1x@13e00000 {
+					tegra_soc_hwpm {
+						status = "okay";
+					};
+
+					nvdla0@15880000 {
+						status = "okay";
+					};
+
+					nvdla1@158c0000 {
+						status = "okay";
+					};
+
+					pva0@16000000 {
+						status = "okay";
+
+						pva0_niso1_ctx0 {
+							status = "okay";
+						};
+
+						pva0_niso1_ctx1 {
+							status = "okay";
+						};
+
+						pva0_niso1_ctx2 {
+							status = "okay";
+						};
+
+						pva0_niso1_ctx3 {
+							status = "okay";
+						};
+
+						pva0_niso1_ctx4 {
+							status = "okay";
+						};
+
+						pva0_niso1_ctx5 {
+							status = "okay";
+						};
+
+						pva0_niso1_ctx6 {
+							status = "okay";
+						};
+
+						pva0_niso1_ctx7 {
+							status = "okay";
+						};
+					};
+
+				};
+			};
+
+			nvpmodel {
+				status = "okay";
+			};
+
+			soctherm-oc-event {
+				status = "okay";
+			};
+
+			thermal-zones {
+				cpu-thermal {
+					status = "okay";
+				};
+
+				gpu-thermal {
+					status = "okay";
+				};
+
+				cv0-thermal {
+					status = "okay";
+				};
+
+				cv1-thermal {
+					status = "okay";
+				};
+
+				cv2-thermal {
+					status = "okay";
+				};
+
+				soc0-thermal {
+					status = "okay";
+				};
+
+				soc1-thermal {
+					status = "okay";
+				};
+
+				soc2-thermal {
+					status = "okay";
+				};
+			};
+		};
+	};
+};
+
+/*
+ * Include this file last in the device tree.  It manages run-time
+ * pruning of peripherals that are not available across the various
+ * SKUs of p3767.  For example PVA can be enabled in the device tree
+ * and it will automatically be disabled for SKUs without PVA support.
+ */
+#include "tegra234-p3767-sku-handling.dtsi"
