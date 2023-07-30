@@ -15,7 +15,7 @@
 
 #include <uapi/linux/tegra-soc-hwpm-uapi.h>
 
-#define MAX_MC_CHANNELS 33	// Broadcast Channel + 32 MC Channels
+#define MAX_MC_CHANNELS 17	// Broadcast Channel + 16 MC Channels
 
 static struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
 
@@ -31,7 +31,7 @@ struct tegra_mc_hwpm {
  * ch_no == 2 = MC1
  * .
  * .
- * ch_no == 32 = MC31
+ * ch_no == 16 = MC15
  */
 static u32 mc_readl(struct tegra_mc_hwpm *mc, u32 ch_no, u32 reg)
 {
