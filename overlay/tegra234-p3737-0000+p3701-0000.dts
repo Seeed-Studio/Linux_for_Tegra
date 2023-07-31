@@ -191,10 +191,6 @@
 					status = "okay";
 				};
 
-				usb@3550000 {
-					status = "okay";
-				};
-
 				tachometer@39c0000 {
 					status = "okay";
 				};

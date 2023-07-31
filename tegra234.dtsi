@@ -1003,25 +1003,25 @@
 					clock-names = "trk";
 
 					lanes {
-						xpads_usb2_lanes_usb2_0: usb2-0 {
+						usb2-0 {
 							nvidia,function = "xusb";
 							status = "disabled";
 							#phy-cells = <0>;
 						};
 
-						xpads_usb2_lanes_usb2_1: usb2-1 {
+						usb2-1 {
 							nvidia,function = "xusb";
 							status = "disabled";
 							#phy-cells = <0>;
 						};
 
-						xpads_usb2_lanes_usb2_2: usb2-2 {
+						usb2-2 {
 							nvidia,function = "xusb";
 							status = "disabled";
 							#phy-cells = <0>;
 						};
 
-						xpads_usb2_lanes_usb2_3: usb2-3 {
+						usb2-3 {
 							nvidia,function = "xusb";
 							status = "disabled";
 							#phy-cells = <0>;
@@ -1031,25 +1031,25 @@
 
 				usb3 {
 					lanes {
-						xpads_usb3_lanes_usb3_0: usb3-0 {
+						usb3-0 {
 							nvidia,function = "xusb";
 							status = "disabled";
 							#phy-cells = <0>;
 						};
 
-						xpads_usb3_lanes_usb3_1: usb3-1 {
+						usb3-1 {
 							nvidia,function = "xusb";
 							status = "disabled";
 							#phy-cells = <0>;
 						};
 
-						xpads_usb3_lanes_usb3_2: usb3-2 {
+						usb3-2 {
 							nvidia,function = "xusb";
 							status = "disabled";
 							#phy-cells = <0>;
 						};
 
-						xpads_usb3_lanes_usb3_3: usb3-3 {
+						usb3-3 {
 							nvidia,function = "xusb";
 							status = "disabled";
 							#phy-cells = <0>;

@@ -41,12 +41,6 @@
 					};
 				};
 
-				usb@3550000 {
-					phys = <&xpads_usb2_lanes_usb2_0>,
-						<&xpads_usb3_lanes_usb3_1>;
-					phy-names = "usb2-0", "usb3-1";
-				};
-
 				aconnect@2900000 {
 					ahub@2900800 {
 						i2s@2901100 {
