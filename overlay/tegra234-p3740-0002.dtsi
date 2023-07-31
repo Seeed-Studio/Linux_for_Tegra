@@ -14,7 +14,7 @@
 						compatible = "st,stusb1600";
 						reg = <0x28>;
 						vdd-supply = <&p3740_vdd_5v_sys>;
-						vsys-supply = <&p3740_vdd_3v3_sys>;
+						vsys-supply = <&vdd_3v3_sys>;
 						interrupt-parent = <&gpio>;
 						interrupts = <TEGRA234_MAIN_GPIO(K, 6) IRQ_TYPE_LEVEL_LOW>;
 						typec_con: connector {
@@ -218,22 +218,6 @@
 				regulator-min-microvolt = <3300000>;
 				regulator-max-microvolt = <3300000>;
 			};
-			p3740_vdd_3v3_dp: regulator-vdd-3v3-dp {
-				compatible = "regulator-fixed";
-				regulator-name = "vdd-3v3-dp";
-				regulator-min-microvolt = <3300000>;
-				regulator-max-microvolt = <3300000>;
-				vin-supply = <&p3740_vdd_3v3_sys>;
-				gpio = <&gpio TEGRA234_MAIN_GPIO(H, 6) 0>;
-				enable-active-high;
-				regulator-always-on;
-			};
-			p3740_vdd_3v3_sys: regulator-vdd-3v3-sys {
-				compatible = "regulator-fixed";
-				regulator-name = "vdd-3v3-sys";
-				regulator-min-microvolt = <3300000>;
-				regulator-max-microvolt = <3300000>;
-			};
 			p3740_vdd_3v7_AO: regulator-vdd-3v7-AO {
 				compatible = "regulator-fixed";
 				regulator-name = "vdd-3v7-AO";
@@ -245,15 +229,6 @@
 				regulator-name = "vdd-5v-sys";
 				regulator-min-microvolt = <5000000>;
 				regulator-max-microvolt = <5000000>;
-			};
-			p3740_vdd_wifi_3v3: regulator-vdd-wifi-3v3 {
-				compatible = "regulator-fixed";
-				regulator-name = "vdd-wifi-3v3";
-				regulator-min-microvolt = <3300000>;
-				regulator-max-microvolt = <3300000>;
-				gpio = <&gpio TEGRA234_MAIN_GPIO(G, 3) GPIO_ACTIVE_HIGH>;
-				regulator-boot-on;
-				enable-active-high;
 			};
 		};
 	};
