@@ -428,9 +428,14 @@
 				};
 
 				spi@3270000 {
+					reset-names = "qspi";
 					dma-names = "rx", "tx";
 					dma-coherent;
 					iommus = <&smmu_niso1 TEGRA234_SID_QSPI0>;
+				};
+
+				spi@3300000 {
+					reset-names = "qspi";
 				};
 
 				i2c@3160000 {
@@ -654,6 +659,11 @@
 					mmc-hs400-enhanced-strobe;
 					cap-sd-highspeed;
 					cap-mmc-highspeed;
+				};
+
+				serial@3100000 {
+					clock-names = "serial";
+					reset-names = "serial";
 				};
 			};
 
