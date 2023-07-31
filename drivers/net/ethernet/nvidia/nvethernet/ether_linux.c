@@ -25,6 +25,24 @@
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/virt/hv-ivc.h>
+#include <linux/time.h>
+
+#ifdef CONFIG_DEBUG_FS
+static u64 ether_get_systime_us(void)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
+	return ktime_to_us(ktime_get_boottime());
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
+	struct timespec ts;
+	get_monotonic_boottime(&ts);
+	return ((u64)ts.tv_sec * 1000000) + ts.tv_nsec / 1000;
+#else
+	struct timeval tv;
+	do_gettimeofday(&tv);
+	return ((u64)tv.tv_sec * 1000000) + tv.tv_usec;
+#endif
+}
+#endif
 
 /**
  * @brief ether_get_free_timestamp_node - get free node for timestmap info for SKB
@@ -7821,9 +7839,16 @@ int ether_suspend_noirq(struct device *dev)
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
 	struct osi_ioctl ioctl_data = {};
 	unsigned int i = 0, chan = 0;
+#ifdef CONFIG_DEBUG_FS
+	u64 t0, t1;
+#endif
 
 	if (!netif_running(ndev))
 		return 0;
+
+#ifdef CONFIG_DEBUG_FS
+	t0 = ether_get_systime_us();
+#endif
 
 	tasklet_kill(&pdata->lane_restart_task);
 
@@ -7873,6 +7898,10 @@ int ether_suspend_noirq(struct device *dev)
 		pm_runtime_put_sync(pdata->dev);
 	memset(&pdata->ptp_config, 0, sizeof(sizeof(struct hwtstamp_config)));
 
+#ifdef CONFIG_DEBUG_FS
+	t1 = ether_get_systime_us();
+	pdata->suspend_profile_time = (t1 - t0);
+#endif
 	return 0;
 }
 
@@ -7881,9 +7910,15 @@ int ether_resume_noirq(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	int ret = 0;
+#ifdef CONFIG_DEBUG_FS
+	u64 t0, t1;
+#endif
 
 	if (!netif_running(ndev))
 		return 0;
+#ifdef CONFIG_DEBUG_FS
+	t0 = ether_get_systime_us();
+#endif
 
 	if (!device_may_wakeup(&ndev->dev) &&
 	    gpio_is_valid(pdata->phy_reset) &&
@@ -7898,6 +7933,10 @@ int ether_resume_noirq(struct device *dev)
 		return ret;
 	}
 
+#ifdef CONFIG_DEBUG_FS
+	t1 = ether_get_systime_us();
+	pdata->resume_profile_time = (t1 - t0);
+#endif
 	return 0;
 }
 

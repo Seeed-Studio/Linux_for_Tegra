@@ -653,6 +653,10 @@ struct ether_priv_data {
 	struct dentry *dbgfs_desc_dump;
 	/** Register dump debug fs pointer */
 	struct dentry *dbgfs_reg_dump;
+	/** Holds the time in usec for suspend routine completion */
+	u64 suspend_profile_time;
+	/** Holds the time in usec for resume routine completion */
+	u64 resume_profile_time;
 #endif
 #ifdef MACSEC_SUPPORT
 	/** MACsec priv data */

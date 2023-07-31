@@ -4137,6 +4137,10 @@ static int ether_create_debugfs(struct ether_priv_data *pdata)
 		goto exit;
 	}
 
+	debugfs_create_u64("suspend_profile_time", 0644, pdata->dbgfs_dir,
+			   &pdata->suspend_profile_time);
+	debugfs_create_u64("resume_profile_time", 0644, pdata->dbgfs_dir,
+			   &pdata->resume_profile_time);
 exit:
 	kfree(buf);
 	return ret;
