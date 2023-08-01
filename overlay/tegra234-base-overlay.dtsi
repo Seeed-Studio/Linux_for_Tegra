@@ -438,6 +438,14 @@
 					reset-names = "qspi";
 				};
 
+				hardware-timestamp@3aa0000 {
+					status = "disabled";
+				};
+
+				hardware-timestamp@c1e0000 {
+					status = "disabled";
+				};
+
 				i2c@3160000 {
 					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
 					dma-coherent;
