@@ -173,6 +173,10 @@
 					status = "okay";
 				};
 
+				serial@31d0000 {
+					current-speed = <115200>;
+				};
+
 				tachometer@39c0000 {
 					status = "okay";
 					upper-threshold = <0xfffff>;
