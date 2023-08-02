@@ -30,6 +30,19 @@
 					};
 				};
 			};
+
+			chosen {
+				/*
+				 * The ideal approach for disabling rail-gating
+				 * for GPU should be deleting the power-domains
+				 * property in GPU node. But /delete-property/
+				 * is not a valid syntax in the device tree
+				 * overlay, the nvidia,tegra-joint_xpu_rail is
+				 * specified to achieve the same as an
+				 * alternative.
+				 */
+				nvidia,tegra-joint_xpu_rail;
+			};
 		};
 	};
 
