@@ -2,7 +2,7 @@
 //
 // tegra_codecs.c - External audio codec setup
 //
-// Copyright (c) 2021-2022, NVIDIA CORPORATION.  All rights reserved.
+// Copyright (c) 2021-2023, NVIDIA CORPORATION.  All rights reserved.
 
 #include <dt-bindings/sound/tas2552.h>
 #include <linux/input.h>
@@ -20,11 +20,8 @@
 
 static int tegra_audio_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct device_node *node = rtd->card->dev->of_node;
-
 	/* Used for audio graph based sound cards only */
-	if (of_device_is_compatible(node, "nvidia,tegra186-audio-graph-card") ||
-	    of_device_is_compatible(node, "nvidia,tegra210-audio-graph-card"))
+	if (rtd->card->component_chaining)
 		return asoc_simple_dai_init(rtd);
 
 	return 0;
