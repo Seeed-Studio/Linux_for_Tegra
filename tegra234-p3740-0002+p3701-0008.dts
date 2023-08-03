@@ -16,7 +16,6 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyTCU0,115200n8";
 		stdout-path = "serial0:115200n8";
 	};
 
