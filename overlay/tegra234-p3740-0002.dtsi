@@ -85,11 +85,12 @@
 
 
 			sound {
-				compatible = "nvidia,tegra186-ape";
+				compatible = "nvidia,tegra186-audio-graph-card",
+					     "nvidia,tegra186-ape";
 				clocks = <&bpmp TEGRA234_CLK_PLLA>,
 					 <&bpmp TEGRA234_CLK_PLLA_OUT0>,
 					 <&bpmp TEGRA234_CLK_AUD_MCLK>;
-				clock-names = "pll_a", "pll_a_out0", "extern1";
+				clock-names = "pll_a", "plla_out0", "extern1";
 				assigned-clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
 				assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLA_OUT0>;
 
