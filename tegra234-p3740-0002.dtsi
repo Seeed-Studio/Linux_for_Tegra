@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
+
 #include <dt-bindings/sound/rt5640.h>
 
 / {
@@ -10,7 +11,7 @@
 				i2s@2901300 {
 					ports {
 						port@1 {
-							i2s4_dap_ep: endpoint {
+							endpoint {
 								dai-format = "i2s";
 								remote-endpoint = <&rt5640_ep>;
 							};
@@ -22,8 +23,8 @@
 					ports {
 						port@1 {
 							endpoint {
-							       bitclock-master;
-							       frame-master;
+								bitclock-master;
+								frame-master;
 							};
 						};
 					};
@@ -54,7 +55,7 @@
 
 				port {
 					rt5640_ep: endpoint {
-						remote-endpoint = <&i2s4_dap_ep>;
+						remote-endpoint = <&i2s4_dap>;
 						mclk-fs = <256>;
 					};
 				};
@@ -72,7 +73,6 @@
 				size = <256>;
 				read-only;
 			};
-
 		};
 
 		padctl@3520000 {
