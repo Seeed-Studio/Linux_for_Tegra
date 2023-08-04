@@ -21,10 +21,6 @@
 	fragment-t234-p3737-p3701@0 {
 		target-path = "/";
 		__overlay__ {
-			chosen {
-				bootargs = "console=ttyTCU0,115200n8";
-			};
-
 			cpus {
 				idle-states {
 					c7 {
