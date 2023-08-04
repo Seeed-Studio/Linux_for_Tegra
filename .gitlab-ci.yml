@@ -43,6 +43,7 @@ job-xavier-nx-industrial-16g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/recomputer_industrial/Image kernel/
          - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
          - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
          - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -87,6 +88,7 @@ job-xavier-nx-industrial-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/recomputer_industrial/Image kernel/
          - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
          - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
          - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -208,6 +210,7 @@ job-orin-nx-industrial-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/recomputer_industrial/Image kernel/
          - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
          - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
          - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -334,6 +337,7 @@ job-orin-nx-industrial-16g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/recomputer_industrial/Image kernel/
          - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
          - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
          - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -460,6 +464,7 @@ job-orin-nano-industrial-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/recomputer_industrial/Image kernel/
          - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
          - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
          - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -585,6 +590,7 @@ job-orin-nano-industrial-4g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/recomputer_industrial/Image kernel/
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
          - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
