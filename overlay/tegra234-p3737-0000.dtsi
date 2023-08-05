@@ -71,7 +71,7 @@
 						#address-cells = <1>;
 						#size-cells = <0>;
 
-						mgbe0_aqr113c_phy: ethernet_phy@0 {
+						mgbe0_aqr113c_phy: phy@0 {
 							compatible = "ethernet-phy-ieee802.3-c45";
 							reg = <0x0>;
 							nvidia,phy-rst-pdelay-msec = <150>; /* msec */
