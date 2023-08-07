@@ -168,11 +168,9 @@
 					"mipi_cal_reset";
 				status = "disabled";
 				nvidia,disp-sw-soc-chip-id = <0x2350>;
-#if TEGRA_IOMMU_DT_VERSION >= DT_VERSION_2
-				interconnects = <&mc TEGRA234_MEMORY_CLIENT_NVDISPLAYR>,
-					      <&mc TEGRA234_MEMORY_CLIENT_NVDISPLAYR1>;
+				interconnects = <&mc TEGRA234_MEMORY_CLIENT_NVDISPLAYR &emc>,
+					      <&mc TEGRA234_MEMORY_CLIENT_NVDISPLAYR1 &emc>;
 				interconnect-names = "dma-mem", "read-1";
-#endif
 				iommus = <&smmu_iso TEGRA234_SID_ISO_NVDISPLAY>;
 				non-coherent;
 				nvdisplay-niso {
