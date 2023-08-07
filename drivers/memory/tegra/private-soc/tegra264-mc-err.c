@@ -773,6 +773,9 @@ void log_fault(struct tegra_mcerr *mc_err, u32 channel, unsigned long mcf_ch_int
 				status_reg = MC_ERR_ROUTE_SANITY_STATUS_0;
 				addr_reg = MC_ERR_ROUTE_SANITY_ADR_0;
 				break;
+			default:
+				dev_err_ratelimited(mc_err->dev, "Incorrect MC interrupt mask\n");
+				return;
 		}
 
 		value = mc_ch_readl(mc_err, channel, status_reg);
