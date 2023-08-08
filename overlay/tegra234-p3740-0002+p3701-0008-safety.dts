@@ -70,4 +70,123 @@
 			};
 		};
 	};
+
+	fragment-t234-p3740-p3701-safety@2 {
+		target-path = "/";
+		__overlay__ {
+			thermal-zones {
+				cpu-thermal {
+					cooling-maps {
+						map-cpufreq {
+							cooling-device = <&cpu0_0 0 0>,
+									 <&cpu1_0 0 0>,
+									 <&cpu2_0 0 0>;
+						};
+
+						map-devfreq {
+							cooling-device = <&ga10b 0 0>;
+						};
+					};
+				};
+
+				gpu-thermal {
+					cooling-maps {
+						map-cpufreq {
+							cooling-device = <&cpu0_0 0 0>,
+									 <&cpu1_0 0 0>,
+									 <&cpu2_0 0 0>;
+						};
+
+						map-devfreq {
+							cooling-device = <&ga10b 0 0>;
+						};
+					};
+				};
+
+				cv0-thermal {
+					cooling-maps {
+						map-cpufreq {
+							cooling-device = <&cpu0_0 0 0>,
+									 <&cpu1_0 0 0>,
+									 <&cpu2_0 0 0>;
+						};
+
+						map-devfreq {
+							cooling-device = <&ga10b 0 0>;
+						};
+					};
+				};
+
+				cv1-thermal {
+					cooling-maps {
+						map-cpufreq {
+							cooling-device = <&cpu0_0 0 0>,
+									 <&cpu1_0 0 0>,
+									 <&cpu2_0 0 0>;
+						};
+
+						map-devfreq {
+							cooling-device = <&ga10b 0 0>;
+						};
+					};
+				};
+
+				cv2-thermal {
+					cooling-maps {
+						map-cpufreq {
+							cooling-device = <&cpu0_0 0 0>,
+									 <&cpu1_0 0 0>,
+									 <&cpu2_0 0 0>;
+						};
+
+						map-devfreq {
+							cooling-device = <&ga10b 0 0>;
+						};
+					};
+				};
+
+				soc0-thermal {
+					cooling-maps {
+						map-cpufreq {
+							cooling-device = <&cpu0_0 0 0>,
+									 <&cpu1_0 0 0>,
+									 <&cpu2_0 0 0>;
+						};
+
+						map-devfreq {
+							cooling-device = <&ga10b 0 0>;
+						};
+					};
+				};
+
+				soc1-thermal {
+					cooling-maps {
+						map-cpufreq {
+							cooling-device = <&cpu0_0 0 0>,
+									 <&cpu1_0 0 0>,
+									 <&cpu2_0 0 0>;
+						};
+
+						map-devfreq {
+							cooling-device = <&ga10b 0 0>;
+						};
+					};
+				};
+
+				soc2-thermal {
+					cooling-maps {
+						map-cpufreq {
+							cooling-device = <&cpu0_0 0 0>,
+									 <&cpu1_0 0 0>,
+									 <&cpu2_0 0 0>;
+						};
+
+						map-devfreq {
+							cooling-device = <&ga10b 0 0>;
+						};
+					};
+				};
+			};
+		};
+	};
 };
