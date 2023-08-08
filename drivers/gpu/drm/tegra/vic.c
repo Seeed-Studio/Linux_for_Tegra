@@ -12,6 +12,7 @@
 #include <linux/host1x-next.h>
 #include <linux/interconnect.h>
 #include <linux/iommu.h>
+#include <linux/iopoll.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -30,11 +31,22 @@
 
 #include "drm.h"
 #include "falcon.h"
+#include "riscv.h"
 #include "util.h"
 #include "vic.h"
 #include "hwpm.h"
 
 #define VIC_SEC_INTF_CRC_CTRL               	0xe000
+
+#define VIC_RISCV_BCR_CTRL			0x1a68
+#define VIC_RISCV_BCR_CTRL_CORE_SELECT_RISCV	(1 << 4)
+#define VIC_FALCON_DEBUGINFO			0x1094
+#define VIC_DEBUGINFO_DUMMY			0xabcd1234
+#define VIC_DEBUGINFO_CLEAR			0x0
+#define VIC_RISCV_CPUCTL			0x1788
+#define VIC_RISCV_CPUCTL_STARTCPU_TRUE		(1 << 0)
+#define VIC_RISCV_CPUCTL_ACTIVE_STATE_V(x)	((x >> 7) & 0x1)
+#define VIC_RISCV_CPUCTL_ACTIVE_STATE_ACTIVE_V	0x1
 
 struct vic_config {
 	const char *firmware;
@@ -42,6 +54,12 @@ struct vic_config {
 	bool supports_sid;
 	bool supports_timestamping;
 	bool has_crc_enable;
+	bool has_riscv;
+	u32 transcfg_addr;
+	u32 actmon_active_mask;
+	u32 actmon_active_borps;
+	u32 actmon_active_weight;
+	bool skip_bl_swizzling;
 };
 
 struct vic {
@@ -63,6 +81,9 @@ struct vic {
 
 	/* Platform configuration */
 	const struct vic_config *config;
+
+	/* RISC-V specific data */
+	struct tegra_drm_riscv riscv;
 };
 
 static bool blf_write_allowed(u32 offset)
@@ -94,14 +115,11 @@ static void vic_writel(struct vic *vic, u32 value, unsigned int offset)
 	writel(value, vic->regs + offset);
 }
 
-static int vic_boot(struct vic *vic)
+static int vic_falcon_boot(struct vic *vic)
 {
 	u32 fce_ucode_size, fce_bin_data_offset;
 	void *hdr;
 	int err = 0;
-
-	if (vic->config->supports_sid)
-		tegra_drm_program_iommu_regs(vic->dev, vic->regs, VIC_TFBIF_TRANSCFG);
 
 	/* setup clockgating registers */
 	vic_writel(vic, CG_IDLE_CG_DLY_CNT(4) |
@@ -138,6 +156,46 @@ static int vic_boot(struct vic *vic)
 
 	return 0;
 }
+
+static int vic_riscv_boot(struct vic *vic)
+{
+	int err;
+	u32 val;
+
+	vic_writel(vic, VIC_RISCV_BCR_CTRL_CORE_SELECT_RISCV, VIC_RISCV_BCR_CTRL);
+
+	/* Write a known pattern into DEBUGINFO register */
+	vic_writel(vic, VIC_DEBUGINFO_DUMMY, VIC_FALCON_DEBUGINFO);
+
+	err = tegra_drm_riscv_boot_external(&vic->riscv);
+	if (err < 0)
+		return err;
+
+	/* Kick start RISC-V */
+	vic_writel(vic, VIC_RISCV_CPUCTL_STARTCPU_TRUE, VIC_RISCV_CPUCTL);
+
+	err = readl_poll_timeout(
+		vic->regs + VIC_RISCV_CPUCTL, val,
+		VIC_RISCV_CPUCTL_ACTIVE_STATE_V(val) == VIC_RISCV_CPUCTL_ACTIVE_STATE_ACTIVE_V,
+		10, 100000);
+	if (err) {
+		dev_err(vic->dev, "cpuctl active state timeout! val=0x%x", val);
+		return err;
+	}
+
+	/* Check vic has reached a proper initialized state */
+	err  = readl_poll_timeout(
+		vic->regs + VIC_FALCON_DEBUGINFO, val,
+		(val == VIC_DEBUGINFO_CLEAR),
+		1000, 2000000);
+	if (err) {
+		dev_err(vic->dev, "not reached initialized state, timeout! val=0x%x", val);
+		return err;
+	}
+
+	return 0;
+}
+
 
 static int vic_set_rate(struct vic *vic, unsigned long rate)
 {
@@ -231,10 +289,14 @@ static int vic_devfreq_init(struct vic *vic)
 	struct devfreq_dev_profile *devfreq_profile;
 	struct devfreq *devfreq;
 
-	while (rate <= max_rate) {
+	margin = max(margin, 9000000UL);
+	do {
 		dev_pm_opp_add(vic->dev, rate, 0);
+		/* Overflow check */
+		if (margin > ULONG_MAX - rate)
+			break;
 		rate += margin;
-	}
+	} while (rate <= max_rate);
 
 	data = devm_kzalloc(vic->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
@@ -346,16 +408,22 @@ static int vic_exit(struct host1x_client *client)
 
 	vic->channel = NULL;
 
-	if (client->group) {
-		dma_unmap_single(vic->dev, vic->falcon.firmware.phys,
-				 vic->falcon.firmware.size, DMA_TO_DEVICE);
-		tegra_drm_free(tegra, vic->falcon.firmware.size,
-			       vic->falcon.firmware.virt,
-			       vic->falcon.firmware.iova);
+	if (vic->config->has_riscv) {
+		dma_free_coherent(vic->dev, vic->riscv.firmware.size,
+				  vic->riscv.firmware.virt,
+				  vic->riscv.firmware.iova);
 	} else {
-		dma_free_coherent(vic->dev, vic->falcon.firmware.size,
-				  vic->falcon.firmware.virt,
-				  vic->falcon.firmware.iova);
+		if (client->group) {
+			dma_unmap_single(vic->dev, vic->falcon.firmware.phys,
+					 vic->falcon.firmware.size, DMA_TO_DEVICE);
+			tegra_drm_free(tegra, vic->falcon.firmware.size,
+				       vic->falcon.firmware.virt,
+				       vic->falcon.firmware.iova);
+		} else {
+			dma_free_coherent(vic->dev, vic->falcon.firmware.size,
+					  vic->falcon.firmware.virt,
+					  vic->falcon.firmware.iova);
+		}
 	}
 
 	return 0;
@@ -411,7 +479,7 @@ static const struct host1x_client_ops vic_client_ops = {
 	.actmon_event = vic_actmon_event,
 };
 
-static int vic_load_firmware(struct vic *vic)
+static int vic_load_falcon_firmware(struct vic *vic)
 {
 	struct host1x_client *client = &vic->client.base;
 	struct tegra_drm *tegra = vic->client.drm;
@@ -506,29 +574,71 @@ cleanup:
 	return err;
 }
 
+static int vic_load_riscv_firmware(struct vic *vic)
+{
+	dma_addr_t iova;
+	size_t size;
+	void *virt;
+	int err;
+
+	if (vic->riscv.firmware.virt)
+		return 0;
+
+	err = tegra_drm_riscv_read_firmware(&vic->riscv, vic->config->firmware);
+	if (err < 0)
+		return err;
+
+	size = vic->riscv.firmware.size;
+
+	virt = dma_alloc_coherent(vic->dev, size, &iova, GFP_KERNEL);
+
+	err = dma_mapping_error(vic->dev, iova);
+	if (err < 0)
+		return err;
+
+	vic->riscv.firmware.virt = virt;
+	vic->riscv.firmware.iova = iova;
+
+	err = tegra_drm_riscv_load_firmware(&vic->riscv);
+	if (err < 0)
+		goto cleanup;
+
+	vic->can_use_context = true;
+
+	return 0;
+
+cleanup:
+	dma_free_coherent(vic->dev, size, virt, iova);
+
+	return err;
+}
 
 static void vic_actmon_reg_init(struct vic *vic)
 {
-	vic_writel(vic,
-		   VIC_TFBIF_ACTMON_ACTIVE_MASK_STARVED |
-		   VIC_TFBIF_ACTMON_ACTIVE_MASK_STALLED |
-		   VIC_TFBIF_ACTMON_ACTIVE_MASK_DELAYED,
-		   NV_PVIC_TFBIF_ACTMON_ACTIVE_MASK);
+	if (vic->config->actmon_active_mask)
+		vic_writel(vic,
+			VIC_TFBIF_ACTMON_ACTIVE_MASK_STARVED |
+			VIC_TFBIF_ACTMON_ACTIVE_MASK_STALLED |
+			VIC_TFBIF_ACTMON_ACTIVE_MASK_DELAYED,
+			vic->config->actmon_active_mask);
 
-	vic_writel(vic,
-		   VIC_TFBIF_ACTMON_ACTIVE_BORPS_ACTIVE,
-		   NV_PVIC_TFBIF_ACTMON_ACTIVE_BORPS);
+	if (vic->config->actmon_active_borps)
+		vic_writel(vic,
+			VIC_TFBIF_ACTMON_ACTIVE_BORPS_ACTIVE,
+			vic->config->actmon_active_borps);
 }
 
 static void vic_count_weight_init(struct vic *vic, unsigned long rate)
 {
+	const struct vic_config *config = vic->config;
 	struct host1x_client *client = &vic->client.base;
 	u32 weight = 0;
 
 	host1x_actmon_update_client_rate(client, rate, &weight);
 
-	if (weight)
-		vic_writel(vic, weight, NV_PVIC_TFBIF_ACTMON_ACTIVE_WEIGHT);
+	if (config->actmon_active_weight && weight)
+		vic_writel(vic, weight, config->actmon_active_weight);
+
 }
 
 static int __maybe_unused vic_runtime_resume(struct device *dev)
@@ -548,13 +658,26 @@ static int __maybe_unused vic_runtime_resume(struct device *dev)
 
 	usleep_range(10, 20);
 
-	err = vic_load_firmware(vic);
-	if (err < 0)
-		goto assert;
+	if (vic->config->supports_sid)
+		tegra_drm_program_iommu_regs(vic->dev, vic->regs, vic->config->transcfg_addr);
 
-	err = vic_boot(vic);
-	if (err < 0)
-		goto assert;
+	if (vic->config->has_riscv) {
+		err = vic_load_riscv_firmware(vic);
+		if (err < 0)
+			goto assert;
+
+		err = vic_riscv_boot(vic);
+		if (err < 0)
+			goto assert;
+	} else {
+		err = vic_load_falcon_firmware(vic);
+		if (err < 0)
+			goto assert;
+
+		err = vic_falcon_boot(vic);
+		if (err < 0)
+			goto assert;
+	}
 
 	/* Forcely set frequency as Fmax when device is resumed back */
 	vic->devfreq->resume_freq = vic->devfreq->scaling_max_freq;
@@ -638,12 +761,16 @@ static int vic_can_use_memory_ctx(struct tegra_drm_client *client, bool *support
 	struct vic *vic = to_vic(client);
 	int err;
 
-	/* This doesn't access HW so it's safe to call without powering up. */
-	err = vic_load_firmware(vic);
-	if (err < 0)
-		return err;
+	if (vic->config->has_riscv) {
+		*supported = true;
+	} else {
+		/* This doesn't access HW so it's safe to call without powering up. */
+		err = vic_load_falcon_firmware(vic);
+		if (err < 0)
+			return err;
 
-	*supported = vic->can_use_context;
+		*supported = vic->can_use_context;
+	}
 
 	return 0;
 }
@@ -657,6 +784,15 @@ static int vic_has_job_timestamping(struct tegra_drm_client *client, bool *suppo
 	return 0;
 }
 
+static int vic_skip_bl_swizzling(struct tegra_drm_client *client, bool *skip)
+{
+	struct vic *vic = to_vic(client);
+
+	*skip = vic->config->skip_bl_swizzling;
+
+	return 0;
+}
+
 static const struct tegra_drm_client_ops vic_ops = {
 	.open_channel = vic_open_channel,
 	.close_channel = vic_close_channel,
@@ -664,6 +800,7 @@ static const struct tegra_drm_client_ops vic_ops = {
 	.get_streamid_offset = tegra_drm_get_streamid_offset_thi,
 	.can_use_memory_ctx = vic_can_use_memory_ctx,
 	.has_job_timestamping = vic_has_job_timestamping,
+	.skip_bl_swizzling = vic_skip_bl_swizzling,
 };
 
 #define NVIDIA_TEGRA_124_VIC_FIRMWARE "nvidia/tegra124/vic03_ucode.bin"
@@ -688,6 +825,10 @@ static const struct vic_config vic_t186_config = {
 	.firmware = NVIDIA_TEGRA_186_VIC_FIRMWARE,
 	.version = 0x18,
 	.supports_sid = true,
+	.transcfg_addr = 0x2044,
+	.actmon_active_mask = 0x204c,
+	.actmon_active_borps = 0x2050,
+	.actmon_active_weight = 0x2054,
 };
 
 #define NVIDIA_TEGRA_194_VIC_FIRMWARE "nvidia/tegra194/vic.bin"
@@ -697,6 +838,10 @@ static const struct vic_config vic_t194_config = {
 	.version = 0x19,
 	.supports_sid = true,
 	.supports_timestamping = true,
+	.transcfg_addr = 0x2044,
+	.actmon_active_mask = 0x204c,
+	.actmon_active_borps = 0x2050,
+	.actmon_active_weight = 0x2054,
 };
 
 #define NVIDIA_TEGRA_234_VIC_FIRMWARE "nvidia/tegra234/vic.bin"
@@ -707,6 +852,25 @@ static const struct vic_config vic_t234_config = {
 	.supports_sid = true,
 	.supports_timestamping = true,
 	.has_crc_enable = true,
+	.transcfg_addr = 0x2044,
+	.actmon_active_mask = 0x204c,
+	.actmon_active_borps = 0x2050,
+	.actmon_active_weight = 0x2054,
+};
+
+#define NVIDIA_TEGRA_264_VIC_FIRMWARE "nvidia/tegra264/vic.bin"
+
+static const struct vic_config vic_t264_config = {
+	.firmware = NVIDIA_TEGRA_264_VIC_FIRMWARE,
+	.version = 0x26,
+	.supports_sid = true,
+	.supports_timestamping = true,
+	.has_riscv = true,
+	.transcfg_addr = 0x2244,
+	.actmon_active_mask = 0x224c,
+	.actmon_active_borps = 0x2250,
+	.actmon_active_weight = 0x2254,
+	.skip_bl_swizzling = true,
 };
 
 static const struct of_device_id tegra_vic_of_match[] = {
@@ -715,6 +879,7 @@ static const struct of_device_id tegra_vic_of_match[] = {
 	{ .compatible = "nvidia,tegra186-vic", .data = &vic_t186_config },
 	{ .compatible = "nvidia,tegra194-vic", .data = &vic_t194_config },
 	{ .compatible = "nvidia,tegra234-vic", .data = &vic_t234_config },
+	{ .compatible = "nvidia,tegra264-vic", .data = &vic_t264_config },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_vic_of_match);
@@ -766,12 +931,26 @@ static int vic_probe(struct platform_device *pdev)
 		}
 	}
 
-	vic->falcon.dev = dev;
-	vic->falcon.regs = vic->regs;
+	if (vic->config->has_riscv) {
+		vic->riscv.dev = dev;
+		vic->riscv.regs = vic->regs;
 
-	err = falcon_init(&vic->falcon);
-	if (err < 0)
-		return err;
+		vic->riscv.os_desc.code_offset = 0x0;
+		vic->riscv.os_desc.code_size = 0x1200;
+		vic->riscv.os_desc.data_offset = 0x1200;
+		vic->riscv.os_desc.data_size = 0xa00;
+
+		err = tegra_drm_riscv_init(&vic->riscv);
+		if (err < 0)
+			return err;
+	} else {
+		vic->falcon.dev = dev;
+		vic->falcon.regs = vic->regs;
+
+		err = falcon_init(&vic->falcon);
+		if (err < 0)
+			return err;
+	}
 
 	platform_set_drvdata(pdev, vic);
 
@@ -790,7 +969,7 @@ static int vic_probe(struct platform_device *pdev)
 	err = host1x_client_register(&vic->client.base);
 	if (err < 0) {
 		dev_err(dev, "failed to register host1x client: %d\n", err);
-		goto exit_falcon;
+		goto exit_probe;
 	}
 
 	err = host1x_actmon_register(&vic->client.base);
@@ -801,13 +980,13 @@ static int vic_probe(struct platform_device *pdev)
 	err = clk_set_rate(vic->clk, ULONG_MAX);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to set clock rate: %d\n", err);
-		goto exit_actmon;
+		goto exit_probe;
 	}
 
 	err = vic_devfreq_init(vic);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to init devfreq: %d\n", err);
-		goto exit_actmon;
+		goto exit_probe;
 	}
 
 	if (vic->config->has_crc_enable) {
@@ -827,12 +1006,11 @@ static int vic_probe(struct platform_device *pdev)
 
 	return 0;
 
-exit_actmon:
-	host1x_actmon_unregister(&vic->client.base);
-	host1x_client_unregister(&vic->client.base);
-
-exit_falcon:
-	falcon_exit(&vic->falcon);
+exit_probe:
+	if (vic->config->has_riscv)
+		tegra_drm_riscv_exit(&vic->riscv);
+	else
+		falcon_exit(&vic->falcon);
 
 	return err;
 }
@@ -852,7 +1030,10 @@ static int vic_remove(struct platform_device *pdev)
 
 	host1x_client_unregister(&vic->client.base);
 
-	falcon_exit(&vic->falcon);
+	if (vic->config->has_riscv)
+		tegra_drm_riscv_exit(&vic->riscv);
+	else
+		falcon_exit(&vic->falcon);
 
 	return 0;
 }
@@ -904,4 +1085,7 @@ MODULE_FIRMWARE(NVIDIA_TEGRA_194_VIC_FIRMWARE);
 #endif
 #if IS_ENABLED(CONFIG_ARCH_TEGRA_234_SOC)
 MODULE_FIRMWARE(NVIDIA_TEGRA_234_VIC_FIRMWARE);
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_264_SOC)
+MODULE_FIRMWARE(NVIDIA_TEGRA_264_VIC_FIRMWARE);
 #endif

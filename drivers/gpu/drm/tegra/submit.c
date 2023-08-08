@@ -242,6 +242,11 @@ static int submit_write_reloc(struct tegra_drm_context *context, struct gather_b
 	/* TODO check that target_offset is within bounds */
 	dma_addr_t iova = buf->reloc.target_offset;
 	u32 written_ptr;
+	bool skip_bl_swizzling = false;
+
+	if (context->client->ops->skip_bl_swizzling &&
+	    context->client->ops->skip_bl_swizzling(context->client, &skip_bl_swizzling))
+		skip_bl_swizzling = false;
 
 	if (mapping->bo_map)
 		iova += mapping->iova;
@@ -249,7 +254,7 @@ static int submit_write_reloc(struct tegra_drm_context *context, struct gather_b
 		iova += mapping->ctx_map->mapping->phys;
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	if (buf->flags & DRM_TEGRA_SUBMIT_RELOC_SECTOR_LAYOUT)
+	if ((buf->flags & DRM_TEGRA_SUBMIT_RELOC_SECTOR_LAYOUT) && !skip_bl_swizzling)
 		iova |= BIT_ULL(39);
 #endif
 
