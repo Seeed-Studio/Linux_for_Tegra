@@ -24,6 +24,15 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 
+			reg = <0x0 0x13e00000 0x0 0x10000>,
+			      <0x0 0x13e10000 0x0 0x10000>,
+			      <0x0 0x13e40000 0x0 0x10000>,
+			      <0x0 0x13ef0000 0x0 0x60000>;
+			reg-names = "common", "hypervisor", "vm", "actmon";
+			clocks = <&bpmp TEGRA234_CLK_HOST1X>,
+				 <&bpmp TEGRA234_CLK_ACTMON>;
+			clock-names = "host1x", "actmon";
+
 			interrupt-parent = <&gic>;
 
 			ranges = <0x0 0x14800000 0x0 0x14800000 0x0 0x02000000>,
