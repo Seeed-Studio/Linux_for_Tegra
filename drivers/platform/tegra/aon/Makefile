@@ -10,6 +10,7 @@ LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/platform/tegra/aon/include
 ccflags-y += -Werror
 
 obj-m += tegra234-aon.o
+obj-m += tegra-aon-ivc-echo.o
 
 tegra234-aon-objs += \
     tegra-aon-hsp.o \
