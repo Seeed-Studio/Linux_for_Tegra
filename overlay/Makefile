@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 DTC_FLAGS += -@
 
@@ -58,6 +58,9 @@ dtbo-y += tegra234-p3767-camera-p3768-imx219-cam1.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-imx477.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-cam0.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-cam1.dtbo
+dtbo-y += tegra234-p3740-0002+p3701-0008-hdr20.dtbo
+dtbo-y += tegra234-p3740-0002+p3701-0008-m2ke.dtbo
+dtbo-y += tegra234-p3740-0002+p3701-0008-m2kb.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
