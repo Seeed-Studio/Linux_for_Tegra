@@ -27,6 +27,12 @@
 	};
 
 	bus@0 {
+		aon_echo {
+			compatible = "nvidia,tegra186-aon-ivc-echo";
+			mboxes = <&aon TEGRA_HSP_MBOX_TYPE_SM>;
+			status = "disabled";
+		};
+
 		actmon@d230000 {
 			compatible = "nvidia,tegra234-cactmon-mc-all";
 			reg = <0x0 0xd230000 0x0 0x1000>;
