@@ -1,29 +1,39 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
-#include "tegra234-camera-rbpcv3-imx477.dtsi"
+/dts-v1/;
+/plugin/;
+
+#define CAM0_RST        TEGRA234_MAIN_GPIO(H, 3)
 #define CAM0_PWDN	TEGRA234_MAIN_GPIO(H, 6)
 #define CAM1_PWDN	TEGRA234_MAIN_GPIO(AC, 0)
 #define CAM_I2C_MUX 	TEGRA234_AON_GPIO(CC, 3)
 
+#include <dt-bindings/tegra234-p3767-0000-common.h>
+#include "tegra234-camera-rbpcv2-imx219.dtsi"
+
 / {
-	fragment-camera-imx477@0 {
+	overlay-name = "Camera IMX219 Dual";
+	jetson-header-name = "Jetson 24pin CSI Connector";
+	compatible = JETSON_COMPATIBLE_P3768;
+
+	fragment-camera-imx219@0 {
 		target-path = "/";
 		__overlay__ {
 			bus@0 {
-				cam_i2cmux {
+				cam_i2cmux{
 					status = "okay";
 					compatible = "i2c-mux-gpio";
 					#address-cells = <1>;
 					#size-cells = <0>;
-					mux-gpios = <&gpio_aon CAM_I2C_MUX GPIO_ACTIVE_HIGH>;
 					i2c-parent = <&cam_i2c>;
+					mux-gpios = <&gpio_aon CAM_I2C_MUX GPIO_ACTIVE_HIGH>;
 					i2c@0 {
 						status = "okay";
 						reg = <0>;
 						#address-cells = <1>;
 						#size-cells = <0>;
-						rbpcv3_imx477_a@1a {
+						rbpcv2_imx219_a@10 {
 							reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 						};
 					};
@@ -32,17 +42,17 @@
 						reg = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
-						rbpcv3_imx477_c@1a {
+						rbpcv2_imx219_c@10 {
 							reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 						};
 					};
 				};
-				gpio@6000d000 {
+				gpio@2200000 {
 					camera-control-output-low {
 						gpio-hog;
 						output-low;
-						gpios = < CAM1_PWDN 0  CAM0_PWDN 0>;
-						label = "cam1-pwdn", "cam0-pwdn";
+						gpios = <CAM0_RST 0>;
+						label = "cam0-rst";
 					};
 				};
 			};

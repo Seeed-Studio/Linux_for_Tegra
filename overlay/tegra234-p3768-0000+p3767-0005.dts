@@ -10,11 +10,11 @@
 #include "tegra234-soc-thermal-shutdown.dtsi"
 #include "tegra234-p3767-0000.dtsi"
 #include "tegra234-soc-camera.dtsi"
-#include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
-/ {
-	overlay-name = "Tegra234 P3768-0000+P3767-0000 Overlay";
 
-	fragment-t234-p3768-p3767@0 {
+/ {
+	overlay-name = "Tegra234 P3768-0000+P3767-0005 Overlay";
+
+	fragment-t234-p3768-0000-p3767-0005@0 {
 		target-path = "/";
 		__overlay__ {
 			bus@0 {
@@ -89,18 +89,6 @@
 					};
 				};
 
-				padctl@3520000 {
-					ports {
-						usb2-0 {
-							port {
-								typec_p0: endpoint {
-									remote-endpoint = <&fusb_p0>;
-								};
-							};
-						};
-					};
-				};
-
 				i2c@c240000 {
 					status = "okay";
 					ina32211_1_40: ina3221@40 {
@@ -125,75 +113,10 @@
 							shunt-resistor-micro-ohms = <5000>;
 						};
 					};
-					fusb301@25 {
-						compatible = "onsemi,fusb301";
-						reg = <0x25>;
-						status = "okay";
-						#address-cells = <1>;
-						#size-cells = <0>;
-						interrupt-parent = <&gpio>;
-						interrupts = <TEGRA234_MAIN_GPIO(Z, 1) IRQ_TYPE_LEVEL_LOW>;
-						connector@0 {
-							port@0 {
-								fusb_p0: endpoint {
-									remote-endpoint = <&typec_p0>;
-								};
-							};
-						};
-					};
-				};
-
-				/* C1 - M.2 Key-E */
-				pcie@14100000 {
-					status = "okay";
-
-					vddio-pex-ctl-supply = <&vdd_1v8_ao>;
-
-					phys = <&p2u_hsio_3>;
-					phy-names = "p2u-0";
-				};
-
-				/* C4 - M.2 Key-M */
-				pcie@14160000 {
-					status = "okay";
-
-					vddio-pex-ctl-supply = <&vdd_1v8_ao>;
-
-					phys = <&p2u_hsio_4>, <&p2u_hsio_5>, <&p2u_hsio_6>,
-					       <&p2u_hsio_7>;
-					phy-names = "p2u-0", "p2u-1", "p2u-2", "p2u-3";
-				};
-
-				/* C8 - Ethernet */
-				pcie@140a0000 {
-					status = "okay";
-
-					num-lanes = <2>;
-
-					phys = <&p2u_gbe_2>, <&p2u_gbe_3>;
-					phy-names = "p2u-0", "p2u-1";
-
-					vddio-pex-ctl-supply = <&vdd_1v8_ao>;
-					vpcie3v3-supply = <&vdd_3v3_pcie>;
-				};
-
-				/* C7 - M.2 Key-M */
-				pcie@141e0000 {
-					status = "okay";
-
-					vddio-pex-ctl-supply = <&vdd_1v8_ao>;
-
-					phys = <&p2u_gbe_0>, <&p2u_gbe_1>;
-					phy-names = "p2u-0", "p2u-1";
 				};
 
 				/* PWM1, 40pin header, pin 15 */
 				pwm@3280000 {
-					status = "okay";
-				};
-
-				/* PWM3, FAN */
-				pwm@32a0000 {
 					status = "okay";
 				};
 
@@ -205,10 +128,6 @@
 				/* PWM7, 40pin header, pin 32 */
 				pwm@32e0000 {
 					status = "okay";
-				};
-
-				serial@31d0000 {
-					current-speed = <115200>;
 				};
 
 				tachometer@39c0000 {
@@ -335,14 +254,6 @@
 			};
 
 			tegra-hsp@b950000 {
-				status = "okay";
-			};
-
-			dce@d800000 {
-				status = "okay";
-			};
-
-			display@13800000 {
 				status = "okay";
 			};
 		};
