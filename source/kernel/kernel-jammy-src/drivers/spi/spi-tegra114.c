@@ -59,6 +59,7 @@
 #define SPI_CONTROL_MODE_3			(3 << 28)
 #define SPI_CONTROL_MODE_MASK			(3 << 28)
 #define SPI_MODE_SEL(x)				(((x) & 0x3) << 28)
+#define SPI_MODE_VAL(x)				(((x) >> 28) & 0x3)
 #define SPI_M_S					(1 << 30)
 #define SPI_PIO					(1 << 31)
 
@@ -207,6 +208,7 @@ struct tegra_spi_data {
 	u32					spi_cs_timing1;
 	u32					spi_cs_timing2;
 	u8					last_used_cs;
+	u8					def_chip_select;
 
 	struct completion			xfer_completion;
 	struct spi_transfer			*curr_xfer;
@@ -849,7 +851,9 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 				tegra_spi_writel(tspi, command1, SPI_COMMAND1);
 			tspi->cs_control = NULL;
 		} else
-			tegra_spi_writel(tspi, command1, SPI_COMMAND1);
+			if (SPI_MODE_VAL(command1) !=
+				SPI_MODE_VAL(tspi->def_command1_reg))
+				tegra_spi_writel(tspi, command1, SPI_COMMAND1);
 
 		/* GPIO based chip select control */
 		if (spi->cs_gpiod)
@@ -1014,6 +1018,8 @@ static int tegra_spi_setup(struct spi_device *spi)
 		val &= ~SPI_CS_POL_INACTIVE(spi->chip_select);
 	else
 		val |= SPI_CS_POL_INACTIVE(spi->chip_select);
+	if (tspi->def_chip_select == spi->chip_select)
+		val |= SPI_MODE_SEL(spi->mode & 0x3);
 	tspi->def_command1_reg = val;
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 	spin_unlock_irqrestore(&tspi->lock, flags);
@@ -1380,6 +1386,8 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		goto exit_free_master;
 	}
 
+	tspi->def_chip_select = 0;
+
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	tspi->base = devm_ioremap_resource(&pdev->dev, r);
 	if (IS_ERR(tspi->base)) {
@@ -1444,6 +1452,9 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	tspi->last_used_cs = master->num_chipselect + 1;
 	/* initialize CS with 0 in probe */
 	tegra_spi_set_prod(tspi, 0);
+	tspi->def_command1_reg  = tegra_spi_readl(tspi, SPI_COMMAND1);
+	tspi->def_command1_reg |= SPI_CS_SEL(tspi->def_chip_select);
+	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 	tspi->def_command1_reg  = SPI_M_S;
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 	tspi->spi_cs_timing1 = tegra_spi_readl(tspi, SPI_CS_TIMING1);
