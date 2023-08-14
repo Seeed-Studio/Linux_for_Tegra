@@ -115,12 +115,11 @@
 						orientation = "1";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ov5693 30-0036";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9548@77/i2c@0/ov5693_a@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@0/ov5693_a@36";
 						};
 						drivernode1 {
 							pcl_id = "v4l2_lens";
-							proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module1 {
@@ -129,12 +128,11 @@
 						orientation = "1";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ov5693 31-0036";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9548@77/i2c@1/ov5693_b@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@1/ov5693_b@36";
 						};
 						drivernode1 {
 							pcl_id = "v4l2_lens";
-							proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module2 {
@@ -143,12 +141,11 @@
 						orientation = "1";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ov5693 32-0036";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9548@77/i2c@2/ov5693_c@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@2/ov5693_c@36";
 						};
 						drivernode1 {
 							pcl_id = "v4l2_lens";
-							proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module3 {
@@ -157,12 +154,11 @@
 						orientation = "1";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ov5693 33-0036";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9548@77/i2c@3/ov5693_d@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@3/ov5693_d@36";
 						};
 						drivernode1 {
 							pcl_id = "v4l2_lens";
-							proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module4 {
@@ -171,12 +167,11 @@
 						orientation = "1";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ov5693 34-0036";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9548@77/i2c@4/ov5693_e@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@4/ov5693_e@36";
 						};
 						drivernode1 {
 							pcl_id = "v4l2_lens";
-							proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module5 {
@@ -185,12 +180,11 @@
 						orientation = "1";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ov5693 35-0036";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9548@77/i2c@5/ov5693_g@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@5/ov5693_g@36";
 						};
 						drivernode1 {
 							pcl_id = "v4l2_lens";
-							proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 				};

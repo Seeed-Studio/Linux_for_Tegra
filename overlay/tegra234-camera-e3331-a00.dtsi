@@ -193,7 +193,6 @@
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
-
 									port@0 {
 										reg = <0>;
 										e3331_imx318_out0: endpoint {
@@ -263,8 +262,7 @@
 						orientation = "1";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "imx318 30-0010";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@0/imx318_a@10";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx318_a@10";
 						};
 					};
 				};

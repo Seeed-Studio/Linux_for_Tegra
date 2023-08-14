@@ -463,10 +463,8 @@
 						drivernode0 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_sensor";
-							/* Driver v4l2 device name */
-							devname = "imx390 30-001b";
 							/* Declare the device-tree hierarchy to driver instance */
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@0/imx390_a@1b";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx390_a@1b";
 						};
 					};
 					module1 {
@@ -476,10 +474,8 @@
 						drivernode0 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_sensor";
-							/* Driver v4l2 device name */
-							devname = "imx390 30-001c";
 							/* Declare the device-tree hierarchy to driver instance */
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@0/imx390_b@1c";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx390_b@1c";
 						};
 					};
 				};

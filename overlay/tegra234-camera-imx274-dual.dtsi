@@ -763,15 +763,13 @@
 						drivernode0 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_sensor";
-							/* Driver v4l2 device name */
-							devname = "imx274 30-001a";
 							/* Declare the device-tree hierarchy to driver instance */
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@0/imx274_a@1a";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx274_a@1a";
 						};
 						drivernode1 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_lens";
-							proc-device-tree = "/proc/device-tree/bus@0/lens_imx274@A6V26/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx274@A6V26/";
 						};
 					};
 					module1 {
@@ -781,15 +779,13 @@
 						drivernode0 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_sensor";
-							/* Driver v4l2 device name */
-							devname = "imx274 31-001a";
 							/* Declare the device-tree hierarchy to driver instance */
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a";
 						};
 						drivernode1 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_lens";
-							proc-device-tree = "/proc/device-tree/bus@0/lens_imx274@A6V26/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx274@A6V26/";
 						};
 					};
 				};

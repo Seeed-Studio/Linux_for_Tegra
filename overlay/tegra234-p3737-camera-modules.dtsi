@@ -3,10 +3,11 @@
  * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
-#include "tegra234-p3737-0000-camera-e3331-a00.dtsi"
-#include "tegra234-p3737-0000-camera-e3333-a00.dtsi"
+#include "tegra234-camera-e3331-a00.dtsi"
+#include "tegra234-camera-e3333-a00.dtsi"
+#include "tegra234-camera-imx390-a00.dtsi"
+#include "tegra234-camera-ar0234-a00.dtsi"
 #include "tegra234-p3737-0000-camera-imx185-a00.dtsi"
-#include "tegra234-p3737-0000-camera-imx390-a00.dtsi"
 #include "tegra234-p3737-0000-camera-imx274-dual.dtsi"
 
 #define CAM0_RST_L	TEGRA234_MAIN_GPIO(H, 3)
@@ -260,46 +261,62 @@
 						};
 					};
 				};
-
 				i2c@3180000 {
-					e3326_cam0: ov5693_c@36 {
-						status = "disabled";
-					};
-					e2832_cam0: e2832@2b {
-						status = "disabled";
-					};
 					tca6408@21 {
 						status = "disabled";
 					};
 					tca9548@77 {
 						status = "disabled";
 						i2c@0 {
-							e3333_cam0: ov5693_a@36 {
+							ov5693_a@36 {
 								status = "disabled";
 							};
 						};
 						i2c@1 {
-							e3333_cam1: ov5693_b@36 {
+							ov5693_b@36 {
 								status = "disabled";
 							};
 						};
 						i2c@2 {
-							e3333_cam2: ov5693_c@36 {
+							ov5693_c@36 {
 								status = "disabled";
 							};
 						};
 						i2c@3 {
-							e3333_cam3: ov5693_d@36 {
+							ov5693_d@36 {
 								status = "disabled";
 							};
 						};
 						i2c@4 {
-							e3333_cam4: ov5693_e@36 {
+							ov5693_e@36 {
 								status = "disabled";
 							};
 						};
 						i2c@5 {
-							e3333_cam5: ov5693_g@36 {
+							ov5693_g@36 {
+								status = "disabled";
+							};
+						};
+					};
+					tca9548@70 {
+						status = "disabled";
+						i2c@0 {
+							ar1335_a@42 {
+								status = "disabled";
+							};
+						};
+						i2c@2 {
+							ar1335_c@42 {
+								status = "disabled";
+							};
+						};
+						i2c@4 {
+							ar1335_e@42 {
+								status = "disabled";
+							};
+						};
+						i2c@5 {
+							ar1335_g@42 {	
 								status = "disabled";
 							};
 						};
@@ -307,39 +324,54 @@
 					tca9546@70 {
 						status = "disabled";
 						i2c@0 {
-							pca9570_a_24: pca9570_a@24 {
+							dual_hawk0: dual_hawk_a@18 {
 								status = "disabled";
 							};
-							imx274_cam0: imx274_a@1a {
+							dual_hawk1: dual_hawk_b@10 {
 								status = "disabled";
 							};
-							imx185_cam0: imx185_a@1a {
+							max96712_dser: single_max96712_a@62 {
 								status = "disabled";
 							};
-							e3331_cam0: imx318_a@10 {
-								status = "disable";
-							};
-							max9296_dser: max9296@48 {
+							pca9570_a@24 {
 								status = "disabled";
 							};
-							max9295_prim: max9295_prim@62 {
+							imx274_a@1a {
 								status = "disabled";
 							};
-							max9295_ser0: max9295_a@40 {
+							imx185_a@1a {
 								status = "disabled";
 							};
-							max9295_ser1: max9295_b@60 {
+							imx318_a@10 {
 								status = "disabled";
 							};
-							imx390_cam0: imx390_a@1b {
+							max9296@48 {
 								status = "disabled";
 							};
-							imx390_cam1: imx390_b@1c {
+							max9295_prim@62 {
+								status = "disabled";
+							};
+							max9295_a@40 {
+								status = "disabled";
+							};
+							max9295_b@60 {
+								status = "disabled";
+							};
+							imx390_a@1b {
+								status = "disabled";
+							};
+							imx390_b@1c {
 								status = "disabled";
 							};
 						};
 						i2c@1 {
-							imx274_cam1: imx274_c@1a {
+							dual_hawk2: dual_hawk_c@18 {
+								status = "disabled";
+							};
+							dual_hawk3: dual_hawk_d@10 {
+								status = "disabled";
+							};
+							imx274_c@1a {
 								status = "disabled";
 							};
 						};

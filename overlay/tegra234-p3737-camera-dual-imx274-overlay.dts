@@ -57,8 +57,7 @@
 		__overlay__ {
 			status = "okay";
 			pcl_id = "v4l2_sensor";
-			devname = "imx274 30-001a";
-			proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@0/imx274_a@1a";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx274_a@1a";
 		};
 	};
 	fragment@4 {
@@ -70,7 +69,7 @@
 		__overlay__ {
 			status = "okay";
 			pcl_id = "v4l2_lens";
-			proc-device-tree = "/proc/device-tree/bus@0/lens_imx274@A6V26/";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx274@A6V26/";
 		};
 	};
 	fragment@5 {
@@ -116,8 +115,7 @@
 		__overlay__ {
 			status = "okay";
 			pcl_id = "v4l2_sensor";
-			devname = "imx274 31-001a";
-			proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a";
 		};
 	};
 	fragment@9 {
@@ -129,7 +127,7 @@
 		__overlay__ {
 			status = "okay";
 			pcl_id = "v4l2_lens";
-			proc-device-tree = "/proc/device-tree/bus@0/lens_imx274@A6V26/";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx274@A6V26/";
 		};
 	};
 	/* Enable VI ports - capture_vi_base, */

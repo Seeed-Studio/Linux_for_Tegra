@@ -453,10 +453,8 @@
 						drivernode0 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_sensor";
-							/* Driver v4l2 device name */
-							devname = "imx185 30-001a";
 							/* Declare the device-tree hierarchy to driver instance */
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@0/imx185_a@1a";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx185_a@1a";
 						};
 					};
 				};

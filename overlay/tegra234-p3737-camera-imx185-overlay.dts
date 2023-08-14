@@ -57,8 +57,7 @@
 		__overlay__ {
 			status = "okay";
 			pcl_id = "v4l2_sensor";
-			devname = "imx185 30-001a";
-			proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/tca9546@70/i2c@0/imx185_a@1a";
+			sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9546@70/i2c@0/imx185_a@1a";
 		};
 	};
 	fragment@5 {
