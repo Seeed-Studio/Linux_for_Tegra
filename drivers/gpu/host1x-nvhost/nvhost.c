@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/nvhost.h>
 #include <linux/nvhost_t194.h>
+#include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
@@ -28,6 +29,10 @@
 #define TEGRA234_SYNCPT_PAGE_SIZE 0x10000
 #define TEGRA234_SYNCPT_SHIM_BASE 0x60000000
 #define TEGRA234_SYNCPT_SHIM_SIZE 0x04000000
+#define TEGRA264_SYNCPT_PAGE_SIZE 0x10000
+#define TEGRA264_SYNCPT_SHIM_0_BASE 0x81C0000000
+#define TEGRA264_SYNCPT_SHIM_1_BASE 0x181C0000000
+#define TEGRA264_SYNCPT_SHIM_SIZE 0x04000000
 
 #define THI_STREAMID0	0x00000030
 #define THI_STREAMID1	0x00000034
@@ -61,6 +66,7 @@ EXPORT_SYMBOL(host1x_writel);
 static const struct of_device_id host1x_match[] = {
 	{ .compatible = "nvidia,tegra194-host1x", },
 	{ .compatible = "nvidia,tegra234-host1x", },
+	{ .compatible = "nvidia,tegra264-host1x", },
 	{},
 };
 
@@ -396,6 +402,9 @@ EXPORT_SYMBOL(nvhost_syncpt_incr_max_ext);
 static int nvhost_syncpt_get_aperture(struct device_node *np, u64 *base,
 				      size_t *size)
 {
+	struct platform_device *pdev;
+	int numa_node;
+
 	if (of_device_is_compatible(np, "nvidia,tegra194-host1x")) {
 		*base = TEGRA194_SYNCPT_SHIM_BASE;
 		*size = TEGRA194_SYNCPT_SHIM_SIZE;
@@ -405,6 +414,24 @@ static int nvhost_syncpt_get_aperture(struct device_node *np, u64 *base,
 	if (of_device_is_compatible(np, "nvidia,tegra234-host1x")) {
 		*base = TEGRA234_SYNCPT_SHIM_BASE;
 		*size = TEGRA234_SYNCPT_SHIM_SIZE;
+		return 0;
+	}
+
+	if (of_device_is_compatible(np, "nvidia,tegra264-host1x")) {
+		pdev = of_find_device_by_node(np);
+		if (pdev) {
+			numa_node = dev_to_node(&pdev->dev);
+			if (numa_node == NUMA_NO_NODE || numa_node == 0)
+				*base = TEGRA264_SYNCPT_SHIM_0_BASE;
+			else if (numa_node == 1)
+				*base = TEGRA264_SYNCPT_SHIM_1_BASE;
+			else
+				return -ENODEV;
+		} else {
+			return -ENODEV;
+		}
+
+		*size = TEGRA264_SYNCPT_SHIM_SIZE;
 		return 0;
 	}
 
@@ -420,6 +447,11 @@ static int nvhost_syncpt_get_page_size(struct device_node *np, uint32_t *size)
 
 	if (of_device_is_compatible(np, "nvidia,tegra234-host1x")) {
 		*size = TEGRA234_SYNCPT_PAGE_SIZE;
+		return 0;
+	}
+
+	if (of_device_is_compatible(np, "nvidia,tegra264-host1x")) {
+		*size = TEGRA264_SYNCPT_PAGE_SIZE;
 		return 0;
 	}
 
