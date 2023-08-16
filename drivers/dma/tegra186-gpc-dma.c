@@ -2,7 +2,7 @@
 /*
  * DMA driver for NVIDIA Tegra GPC DMA controller.
  *
- * Copyright (c) 2014-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2023, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/bitfield.h>
@@ -16,7 +16,6 @@
 #include <linux/of.h>
 #include <linux/of_dma.h>
 #include <linux/platform_device.h>
-#include <linux/reset.h>
 #include <linux/slab.h>
 #include <dt-bindings/memory/tegra186-mc.h>
 #include "virt-dma.h"
@@ -247,7 +246,6 @@ struct tegra_dma {
 	void __iomem *base_addr;
 	struct device *dev;
 	struct dma_device dma_dev;
-	struct reset_control *rst;
 	const struct tegra_dma_chip_data *chip_data;
 	struct tegra_dma_channel channels[];
 };
@@ -1487,13 +1485,6 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	if (IS_ERR(tdma->base_addr))
 		return PTR_ERR(tdma->base_addr);
 
-	tdma->rst = devm_reset_control_get_exclusive(&pdev->dev, "gpcdma");
-	if (IS_ERR(tdma->rst)) {
-		return dev_err_probe(&pdev->dev, PTR_ERR(tdma->rst),
-			      "Missing controller reset\n");
-	}
-	reset_control_reset(tdma->rst);
-
 	tdma->dma_dev.dev = &pdev->dev;
 
 	if (!tegra_dev_iommu_get_stream_id(&pdev->dev, &stream_id)) {
@@ -1622,8 +1613,6 @@ static int __maybe_unused tegra_dma_pm_resume(struct device *dev)
 {
 	struct tegra_dma *tdma = dev_get_drvdata(dev);
 	unsigned int i;
-
-	reset_control_reset(tdma->rst);
 
 	for (i = 0; i < tdma->chip_data->nr_channels; i++) {
 		struct tegra_dma_channel *tdc = &tdma->channels[i];
