@@ -216,6 +216,10 @@
 					status = "okay";
 				};
 
+				mc-hwpm@2c10000 {
+					status = "okay";
+				};
+
 				host1x@13e00000 {
 					nvjpg@15380000 {
 						status = "okay";
