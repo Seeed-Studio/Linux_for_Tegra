@@ -1036,6 +1036,7 @@ static void ether_adjust_link(struct net_device *dev)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	nveu32_t iface_mode = pdata->osi_core->phy_iface_mode;
+	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
 	struct phy_device *phydev = pdata->phydev;
 	int new_state = 0, speed_changed = 0, speed;
 	unsigned long val;
@@ -1154,6 +1155,12 @@ static void ether_adjust_link(struct net_device *dev)
 					netdev_err(dev, "Failed to set speed\n");
 					return;
 				}
+			}
+
+			if (pdata->osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+				osi_dma->ioctl_data.cmd = OSI_DMA_IOCTL_CMD_RX_RIIT_CONFIG;
+				osi_dma->ioctl_data.arg_u32 = speed;
+				osi_dma_ioctl(osi_dma);
 			}
 
 			ether_en_dis_monitor_clks(pdata, OSI_ENABLE);
@@ -4601,6 +4608,89 @@ static void ether_set_vm_irq_chan_mask(struct ether_vm_irq_data *vm_irq_data,
 }
 
 /**
+ * @brief ether_get_rx_riit - Get the rx_riit value for speed.
+ *
+ * Algorimthm: Parse DT to get rx_riit value
+ *
+ * @param[in] pdev: Platform device instance.
+ * @param[in] pdata: OSD private data.
+ *
+ * @retval 0 on success
+ * @retval "negative value" on failure
+ */
+static int ether_get_rx_riit(struct platform_device *pdev,
+				 struct ether_priv_data *pdata)
+{
+	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
+	struct device_node *speed_node, *temp;
+	unsigned int node = 0;
+	int ret = 0;
+
+	speed_node = of_parse_phandle(pdev->dev.of_node,
+				   "nvidia,mgbe-riit-config", 0);
+	if (speed_node == NULL) {
+		dev_warn(pdata->dev, "failed to find rx riit configuration, default disabled\n");
+		osi_dma->use_riit = OSI_DISABLE;
+		return ret;
+	}
+	/* parse the number of riit configs */
+	ret = of_property_read_u32(speed_node, "nvidia,speeds-num",
+				   &osi_dma->num_of_riit);
+	if (ret != 0) {
+		dev_err(&pdev->dev, "failed to get number of rx riit (%d)\n",
+			ret);
+		return -EINVAL;
+	}
+	if (osi_dma->num_of_riit > OSI_MGBE_MAX_NUM_RIIT) {
+		dev_err(&pdev->dev, "Invalid Num. of RIIT's\n");
+		return -EINVAL;
+	}
+	ret = of_get_child_count(speed_node);
+	if (ret != osi_dma->num_of_riit) {
+		dev_err(&pdev->dev,
+			"Mismatch in num_of_riit and riit config DT nodes\n");
+		return -EINVAL;
+	}
+	for_each_child_of_node(speed_node, temp) {
+		if (node == osi_dma->num_of_riit)
+			break;
+
+		ret = of_property_read_u32(temp, "nvidia,speed",
+					  &osi_dma->rx_riit[node].speed);
+		if (ret != 0) {
+			dev_err(&pdev->dev, "failed to read riit speed\n");
+			return -EINVAL;
+		}
+		if ((osi_dma->rx_riit[node].speed > OSI_SPEED_25000) &&
+			(osi_dma->rx_riit[node].speed < OSI_SPEED_2500)) {
+			dev_err(&pdev->dev, "Invalid speed Number\n");
+			return -EINVAL;
+		}
+
+		ret = of_property_read_u32(temp, "nvidia,riit",
+			&osi_dma->rx_riit[node].riit);
+		if (ret != 0) {
+			dev_err(&pdev->dev,
+				"failed to read riit vaue\n");
+			return -EINVAL;
+		}
+		if ((osi_dma->rx_riit[node].riit  > OSI_MGBE_MAX_RX_RIIT_NSEC) ||
+		    (osi_dma->rx_riit[node].riit  < OSI_MGBE_MIN_RX_RIIT_NSEC)) {
+			dev_err(&pdev->dev,
+				"invalid rx_riit, must be in ns range %d to %d\n",
+				OSI_MGBE_MIN_RX_RIIT_NSEC,
+				OSI_MGBE_MAX_RX_RIIT_NSEC);
+			return -EINVAL;
+		}
+		node++;
+	}
+
+	osi_dma->use_riit = OSI_ENABLE;
+	return ret;
+}
+
+
+/**
  * @brief ether_get_vdma_mapping - Get vDMA mapping data from DT.
  *
  * Algorimthm: Parse DT for vDMA mapping data and get vDMA to pDMA mapping
@@ -6253,6 +6343,15 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 
 		osi_dma->use_riwt = OSI_ENABLE;
 	}
+
+	if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+		ret = ether_get_rx_riit(pdev, pdata);
+		if (ret < 0) {
+			dev_err(pdata->dev, "failed to get riit info\n");
+			return ret;
+		}
+	}
+
 	/* rx_frames value to be set */
 	ret = of_property_read_u32(np, "nvidia,rx_frames",
 				   &osi_dma->rx_frames);
