@@ -563,18 +563,16 @@ pva_task_write_vpu_parameter(struct pva_submit_task *task,
 	u32 tail_count = 0U;
 	struct pva_vpu_parameters_s *hw_task_param_list;
 
-	if (task->num_symbols == 0U)
-		goto out;
-
 	if ((task->exe_id1 == NVPVA_NOOP_EXE_ID) && (task->exe_id2 == NVPVA_NOOP_EXE_ID))
 		goto out;
 
-	tail_index = ((u32)task->num_symbols - 1U);
-
 	if (task->exe_id1 != NVPVA_NOOP_EXE_ID) {
 		elf = get_elf_image(&task->client->elf_ctx, task->exe_id1);
-	} else if (task->exe_id2 != NVPVA_NOOP_EXE_ID)
+	} else
 		elf = get_elf_image(&task->client->elf_ctx, task->exe_id2);
+
+	if ((task->num_symbols == 0U) && (elf->num_sys_symbols == 0))
+		goto out;
 
 	if (task->num_symbols > elf->num_symbols) {
 		task_err(task, "invalid number of symbols");
@@ -582,17 +580,21 @@ pva_task_write_vpu_parameter(struct pva_submit_task *task,
 		goto out;
 	}
 
+	symbol_payload = task->aux_dma_addr;
+	hw_task_param_list = hw_task->dma_info_and_params_list.param_list;
+
+	if (task->num_symbols == 0U)
+		goto update_sys_symbols;
+
 	if (task->symbol_payload_size == 0U) {
 		task_err(task, "Empty Symbol payload");
 		err = -EINVAL;
 		goto out;
 	}
 
-	symbol_payload = task->aux_dma_addr;
-
 	headPtr = (u8 *)(task->aux_va);
 	tailPtr = (u8 *)(task->aux_va + task->symbol_payload_size);
-	hw_task_param_list = hw_task->dma_info_and_params_list.param_list;
+	tail_index = ((u32)task->num_symbols - 1U);
 
 	for (i = 0U; i < task->num_symbols; i++) {
 		symbolId = task->symbols[i].symbol.id;
@@ -684,6 +686,7 @@ pva_task_write_vpu_parameter(struct pva_submit_task *task,
 		}
 	}
 
+update_sys_symbols:
 	/* Write info for VPU instance data parameter, if available in elf */
 	for (i = 0U; i < elf->num_symbols; i++) {
 		if (elf->sym[i].is_sys) {
