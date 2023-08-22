@@ -11,6 +11,8 @@
 #include "tegra234-p3767-0000.dtsi"
 #include "tegra234-soc-camera.dtsi"
 #include "tegra234-p3768-camera-rbpcv2-imx219.dtsi"
+#include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
+
 / {
 	overlay-name = "Tegra234 P3768-0000+P3767-0000 Overlay";
 
@@ -335,6 +337,14 @@
 			};
 
 			tegra-hsp@b950000 {
+				status = "okay";
+			};
+
+			dce@d800000 {
+				status = "okay";
+			};
+
+			display@13800000 {
 				status = "okay";
 			};
 		};
