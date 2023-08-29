@@ -81,9 +81,11 @@
 					vrs@3c {
 						compatible = "nvidia,vrs-pseq";
 						reg = <0x3c>;
-						interrupts = <GIC_SPI 209 IRQ_TYPE_LEVEL_HIGH>;
+						interrupt-parent = <&pmc>;
+						/* VRS Wake ID is 24 */
+						interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
 						interrupt-controller;
-						#interrupt-cells = <3>;
+						#interrupt-cells = <2>;
 						status = "okay";
 					};
 
