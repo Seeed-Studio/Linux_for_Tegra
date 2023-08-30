@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * camera_common.h - utilities for tegra camera driver
+ * Copyright (c) 2015-2023, NVIDIA Corporation.  All rights reserved.
  *
- * Copyright (c) 2015-2022, NVIDIA Corporation.  All rights reserved.
+ * camera_common.h - utilities for tegra camera driver
  */
 
 #ifndef __camera_common__
@@ -81,6 +81,7 @@ struct camera_common_pdata {
 	bool h_mirror;
 	unsigned int fuse_id_addr;
 	unsigned int avdd_latency;
+	unsigned int eeprom_id_addr;
 };
 
 struct camera_common_eeprom_data {
