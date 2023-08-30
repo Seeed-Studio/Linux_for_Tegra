@@ -2,10 +2,12 @@
 /*
  * Tegra host1x Syncpoints
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2023, NVIDIA Corporation.
  */
 
 #include <linux/io.h>
+
+#include <soc/tegra/fuse-helper.h>
 
 #include "../dev.h"
 #include "../syncpt.h"
@@ -109,6 +111,11 @@ static void syncpt_assign_to_channel(struct host1x_syncpt *sp,
 	host1x_sync_writel(host,
 			   HOST1X_SYNC_SYNCPT_CH_APP_CH(ch ? ch->id : 0xff),
 			   HOST1X_SYNC_SYNCPT_CH_APP(sp->id));
+
+#if HOST1X_HW >= 9
+	if (tegra_platform_is_vdk() && host->hv_regs)
+		host1x_hypervisor_writel(host, 0x1, HOST1X_HV_SYNCPT_VM(sp->id));
+#endif
 #endif
 }
 

@@ -246,7 +246,7 @@ static void timeout_release_mlock(struct host1x_cdma *cdma)
 	 * so it turns out that if we don't /actually/ need MLOCKs, we can just
 	 * ignore them.
 	 *
-	 * As such, for now just implement this on Tegra234 where things are
+	 * As such, for now just implement this on Tegra234 and above where things are
 	 * stricter but also easy to implement.
 	 */
 	struct host1x_channel *ch = cdma_to_channel(cdma);
@@ -264,6 +264,7 @@ static void timeout_release_mlock(struct host1x_cdma *cdma)
 	case HOST1X_CLASS_VIC:
 		offset = HOST1X_COMMON_VIC_MLOCK;
 		break;
+#if HOST1X_HW != 9
 	case HOST1X_CLASS_NVDEC:
 		offset = HOST1X_COMMON_NVDEC_MLOCK;
 		break;
@@ -276,6 +277,7 @@ static void timeout_release_mlock(struct host1x_cdma *cdma)
 	case HOST1X_CLASS_NVJPG1:
 		offset = HOST1X_COMMON_NVJPG1_MLOCK;
 		break;
+#endif
 	default:
 		WARN(1, "%s was not updated for class %u", __func__, ch->client->class);
 		return;

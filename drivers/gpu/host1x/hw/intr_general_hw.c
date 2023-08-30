@@ -16,12 +16,15 @@ static irqreturn_t host1x_general_isr(int irq, void *dev_id)
 
 	status = host1x_common_readl(host, HOST1X_COMMON_THOST_INTRSTATUS);
 
+#if HOST1X_HW != 9
 	if (status & HOST1X_COMMON_THOST_INTRSTATUS_NVENC_ACTMON_INTR)
 		host1x_actmon_handle_interrupt(host, HOST1X_CLASS_NVENC);
+#endif
 
 	if (status & HOST1X_COMMON_THOST_INTRSTATUS_VIC_ACTMON_INTR)
 		host1x_actmon_handle_interrupt(host, HOST1X_CLASS_VIC);
 
+#if HOST1X_HW != 9
 	if (status & HOST1X_COMMON_THOST_INTRSTATUS_NVDEC_ACTMON_INTR)
 		host1x_actmon_handle_interrupt(host, HOST1X_CLASS_NVDEC);
 
@@ -33,6 +36,7 @@ static irqreturn_t host1x_general_isr(int irq, void *dev_id)
 
 	if (status & HOST1X_COMMON_THOST_INTRSTATUS_OFA_ACTMON_INTR)
 		host1x_actmon_handle_interrupt(host, HOST1X_CLASS_OFA);
+#endif
 
 	host1x_common_writel(host, status, HOST1X_COMMON_THOST_INTRSTATUS);
 
@@ -69,6 +73,7 @@ static void host1x_intr_enable_general_intrs(struct host1x *host)
 	/* Allow host1x general interrupts go to CPU0 only */
 	host1x_common_writel(host, 0x1, HOST1X_COMMON_THOST_GLOBAL_INTRMASK);
 
+#if HOST1X_HW != 9
 	/* Enable host1x general interrupts */
 	host1x_common_writel(host,
 		HOST1X_COMMON_THOST_INTRMASK_NVENC_ACTMON(1) |
@@ -78,6 +83,12 @@ static void host1x_intr_enable_general_intrs(struct host1x *host)
 		HOST1X_COMMON_THOST_INTRMASK_NVJPG1_ACTMON(1)|
 		HOST1X_COMMON_THOST_INTRMASK_OFA_ACTMON(1),
 		HOST1X_COMMON_THOST_INTRMASK);
+#else
+	/* Enable host1x general interrupts */
+	host1x_common_writel(host,
+		HOST1X_COMMON_THOST_INTRMASK_VIC_ACTMON(1),
+		HOST1X_COMMON_THOST_INTRMASK);
+#endif
 }
 
 static void host1x_intr_disable_all_general_intrs(struct host1x *host)

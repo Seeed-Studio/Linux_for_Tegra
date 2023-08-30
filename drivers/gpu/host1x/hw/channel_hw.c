@@ -271,10 +271,14 @@ prefences_done:
 
 	/* Before releasing MLOCK, ensure engine is idle again. */
 	fence = host1x_syncpt_incr_max(sp, 1);
+	/*
+	 * SYNCPT_COND_F(1) is a simulator WAR here,
+	 * (though, it may be better to have OP_DONE == 1 on Silicon always as well)
+	 */
 	host1x_cdma_push(&job->channel->cdma,
 		host1x_opcode_nonincr(HOST1X_UCLASS_INCR_SYNCPT, 1),
 		HOST1X_UCLASS_INCR_SYNCPT_INDX_F(job->syncpt->id) |
-			HOST1X_UCLASS_INCR_SYNCPT_COND_F(4));
+			HOST1X_UCLASS_INCR_SYNCPT_COND_F(1));
 	submit_wait(job, job->syncpt->id, fence);
 
 	/* Release MLOCK. */
