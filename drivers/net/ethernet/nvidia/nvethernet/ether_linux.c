@@ -2425,10 +2425,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 		       __func__, en_dis, uc_bc);
 		return -1;
 	}
-	//TBD: T264 Use Rx DMA channel 1 for NET05 WAR
-	if (osi_core->pre_sil == 0x1U) {
-		dma_channel = osi_dma->dma_chans[1];
-	}
+
 	memset(&ioctl_data->l2_filter, 0x0, sizeof(struct osi_filter));
 	/* Set MAC address with DCS set to route all legacy Rx
 	 * packets from RxQ0 to default DMA at index 0.
