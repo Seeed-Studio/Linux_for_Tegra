@@ -48,6 +48,38 @@
 					status = "disabled";
 				};
 
+				i2c@3160000 {
+					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+				};
+
+				i2c@3180000 {
+					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+				};
+
+				i2c@3190000 {
+					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+				};
+
+				i2c@31b0000 {
+					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+				};
+
+				i2c@31c0000 {
+					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+				};
+
+				i2c@31e0000 {
+					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+				};
+
+				i2c@c240000 {
+					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+				};
+
+				i2c@c250000 {
+					iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
+				};
+
 				pinmux@2430000 {
 					eqos_mii_rx_input_state_disable: eqos_rx_disable {
 						eqos {
