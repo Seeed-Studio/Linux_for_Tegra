@@ -417,8 +417,9 @@ static void vi5_setup_surface(struct tegra_channel *chan,
 		desc->ch_cfg.atomp.surface_stride[VI_ATOMP_SURFACE_EMBEDDED]
 			= chan->embedded_data_width * BPP_MEM;
 	}
-
-	chan->capture_descr_sequence += 1;
+	//capture sequence should increment for each vi channel
+	if ((chan->valid_ports - vi_port) == 1)
+		chan->capture_descr_sequence += 1;
 }
 
 static void vi5_release_buffer(struct tegra_channel *chan,
