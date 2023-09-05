@@ -209,6 +209,14 @@
 					status = "okay";
 				};
 
+				mttcan@c310000 {
+					status = "okay";
+				};
+
+				mttcan@c320000 {
+					status = "okay";
+				};
+
 				actmon@d230000 {
 					status = "okay";
 				};
