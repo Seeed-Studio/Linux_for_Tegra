@@ -739,7 +739,7 @@
 						};
 						cam_module0_drivernode1: drivernode1 {
 							pcl_id = "v4l2_lens";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/lens_imx219@RBPCV2/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx219@RBPCV2";
 						};
 					};
 					cam_module1: module1 {
@@ -752,7 +752,7 @@
 						};
 						cam_module1_drivernode1: drivernode1 {
 							pcl_id = "v4l2_lens";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/lens_imx219@RBPCV2/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx219@RBPCV2/";
 						};
 					};
 				};
