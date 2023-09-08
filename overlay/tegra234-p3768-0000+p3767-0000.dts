@@ -17,6 +17,21 @@
 	fragment-t234-p3768-p3767@0 {
 		target-path = "/";
 		__overlay__ {
+			bpmp {
+				i2c {
+					vrs@3c {
+						compatible = "nvidia,vrs-pseq";
+						reg = <0x3c>;
+						interrupt-parent = <&pmc>;
+						/* VRS Wake ID is 24 */
+						interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
+						interrupt-controller;
+						#interrupt-cells = <2>;
+						status = "okay";
+					};
+				};
+			};
+
 			bus@0 {
 				actmon@d230000 {
 					status = "okay";
