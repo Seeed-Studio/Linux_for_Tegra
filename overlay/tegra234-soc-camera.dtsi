@@ -193,6 +193,8 @@
 					resets = <&bpmp TEGRA234_RESET_VI>;
 					reset-names = "vi0";
 					iommus = <&smmu_iso TEGRA234_SID_ISO_VI>;
+					interconnects = <&mc TEGRA234_MEMORY_CLIENT_VIW &emc>;
+					interconnect-names = "write";
 					non-coherent;
 					status = "okay";
 				};
@@ -201,6 +203,9 @@
 					compatible = "nvidia,tegra234-vi-thi";
 					resets = <&bpmp TEGRA234_RESET_VI>;
 					reset-names = "vi0_thi";
+					interconnects = <&mc TEGRA234_MEMORY_CLIENT_VI2FALR &emc>,
+							<&mc TEGRA234_MEMORY_CLIENT_VI2FALW &emc>;
+					interconnect-names = "dma-mem", "write";
 					status = "okay";
 				};
 
@@ -212,6 +217,8 @@
 					resets = <&bpmp TEGRA234_RESET_VI2>;
 					reset-names = "vi1";
 					iommus = <&smmu_iso TEGRA234_SID_ISO_VI2>;
+					interconnects = <&mc TEGRA234_MEMORY_CLIENT_VI2W &emc>;
+					interconnect-names = "write";
 					non-coherent;
 					status = "okay";
 				};
@@ -220,6 +227,9 @@
 					compatible = "nvidia,tegra234-vi-thi";
 					resets = <&bpmp TEGRA234_RESET_VI2>;
 					reset-names = "vi1_thi";
+					interconnects = <&mc TEGRA234_MEMORY_CLIENT_VIFALR &emc>,
+							<&mc TEGRA234_MEMORY_CLIENT_VIFALW &emc>;
+					interconnect-names = "dma-mem", "write";
 					status = "okay";
 				};
 
