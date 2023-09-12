@@ -282,7 +282,6 @@
 			clock-names = "sysclk", "gpc0clk", "gpc1clk";
 			resets = <&bpmp TEGRA234_RESET_GPU>;
 			dma-coherent;
-			devfreq-timer = "delayed";
 			nvidia,bpmp = <&bpmp>;
 
 			status = "disabled";
