@@ -149,63 +149,11 @@
 				};
 
 				host1x@13e00000 {
+					nvdec@15480000 {
+						status = "okay";
+					};
+
 					tegra_soc_hwpm {
-						status = "okay";
-					};
-
-					nvdla0@15880000 {
-						status = "okay";
-					};
-
-					nvdla1@158c0000 {
-						status = "okay";
-					};
-
-					pva0@16000000 {
-						status = "okay";
-
-						pva0_niso1_ctx0 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx1 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx2 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx3 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx4 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx5 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx6 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx7 {
-							status = "okay";
-						};
-					};
-
-					nvjpg@15380000 {
-						status = "okay";
-					};
-
-					nvjpg1@15540000 {
-						status = "okay";
-					};
-
-					nvjpg@15540000 {
 						status = "okay";
 					};
 				};
