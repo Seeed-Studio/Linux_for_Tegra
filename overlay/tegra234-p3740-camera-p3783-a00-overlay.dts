@@ -285,4 +285,15 @@
 			};
 		};
 	};
+	fragment-cam-cdi-tsc@0 {
+		target-path = "/";
+		__overlay__ {
+			tsc_sig_gen@c6a0000 {
+				status = "okay";
+				generator@380 {
+					status = "okay";
+				};
+			};
+		};
+	};
 };

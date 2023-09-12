@@ -992,7 +992,7 @@
 				reg = <0x0 0xc6a0000 0x0 0x18>;
 				#address-cells = <1>;
 				#size-cells = <1>;
-				status = "okay";
+				status = "disabled";
 				/* EDGE_OUT #0 */
 				generator@380 {
 					reg = <0x380 0x80>;
@@ -1000,7 +1000,7 @@
 					duty_cycle = <25>;
 					offset_ms = <0>;
 					gpio_pinmux = <&gpio_aon TEGRA234_AON_GPIO(BB, 2) GPIO_ACTIVE_LOW>;
-					status = "okay";
+					status = "disabled";
 				};
 				/* EDGE_OUT #1 */
 				generator@400 {
