@@ -159,6 +159,14 @@
 				};
 			};
 
+			cpus {
+				idle-states {
+					c7 {
+						status = "okay";
+					};
+				};
+			};
+
 			nvpmodel {
 				status = "okay";
 			};
