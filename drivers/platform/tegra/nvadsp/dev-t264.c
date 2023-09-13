@@ -3,7 +3,7 @@
  * Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
  */
 
-#include <dev.h>
+#include "dev.h"
 #include "dev-t264.h"
 
 #define AMISC_ADSP_CPU_CONFIG_STRIDE    (0x1000)
