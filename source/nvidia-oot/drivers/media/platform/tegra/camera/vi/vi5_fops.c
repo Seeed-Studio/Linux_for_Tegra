@@ -5,22 +5,24 @@
  * Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
-#include <linux/syscalls.h>
-#include <linux/fs.h>
+#include <linux/errno.h>
 #include <linux/freezer.h>
+#include <linux/fs.h>
 #include <linux/kthread.h>
 #include <linux/nvhost.h>
-#include <linux/errno.h>
+#include <linux/pm_runtime.h>
 #include <linux/semaphore.h>
-#include <media/tegra_camera_platform.h>
-#include <media/mc_common.h>
-#include <media/tegra-v4l2-camera.h>
+#include <linux/syscalls.h>
 #include <media/fusa-capture/capture-vi-channel.h>
 #include <media/fusa-capture/capture-vi.h>
+#include <media/mc_common.h>
+#include <media/tegra-v4l2-camera.h>
+#include <media/tegra_camera_platform.h>
 #include <soc/tegra/camrtc-capture.h>
-#include "vi5_formats.h"
-#include "vi5_fops.h"
 #include <trace/events/camera_common.h>
+
+#include "vi5_fops.h"
+#include "vi5_formats.h"
 
 #define DEFAULT_FRAMERATE	30
 #define BPP_MEM			2
@@ -998,11 +1000,21 @@ void tegra_vi5_disable(struct tegra_mc_vi *vi)
 static int vi5_power_on(struct tegra_channel *chan)
 {
 	int ret = 0;
+	struct device *dev;
 	struct tegra_mc_vi *vi;
 	struct tegra_csi_device *csi;
 
 	vi = chan->vi;
 	csi = vi->csi;
+	vi5_unit_get_device_handle(vi->ndev, chan->port[0], &dev);
+
+	/* Resume VI5 to set ICC bandwidth with maximum value */
+	if (pm_runtime_enabled(dev)) {
+		ret = pm_runtime_resume_and_get(dev);
+		if (ret < 0) {
+			return ret;
+		}
+	}
 
 	ret = tegra_vi5_enable(vi);
 	if (ret < 0)
@@ -1020,17 +1032,25 @@ static int vi5_power_on(struct tegra_channel *chan)
 static void vi5_power_off(struct tegra_channel *chan)
 {
 	int ret = 0;
+	struct device *dev;
 	struct tegra_mc_vi *vi;
 	struct tegra_csi_device *csi;
 
 	vi = chan->vi;
 	csi = vi->csi;
+	vi5_unit_get_device_handle(vi->ndev, chan->port[0], &dev);
 
 	ret = tegra_channel_set_power(chan, 0);
 	if (ret < 0)
 		dev_err(vi->dev, "Failed to power off subdevices\n");
 
 	tegra_vi5_disable(vi);
+
+	/* Suspend VI5 to reset ICC bandwidth request */
+	if (pm_runtime_enabled(dev)) {
+		pm_runtime_mark_last_busy(dev);
+		pm_runtime_put_autosuspend(dev);
+	}
 }
 
 struct tegra_vi_fops vi5_fops = {
