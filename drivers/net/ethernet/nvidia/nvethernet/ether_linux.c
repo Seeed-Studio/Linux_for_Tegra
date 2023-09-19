@@ -6685,10 +6685,7 @@ static void ether_init_rss(struct ether_priv_data *pdata,
 		osi_core->rss.enable = 0;
 		return;
 	}
-	//TBD:diable rss for T264
-	if (osi_core->pre_sil == 0x1U) {
-		osi_core->rss.enable = 0;
-	}
+
 	/* generate random key */
 	netdev_rss_key_fill(osi_core->rss.key, sizeof(osi_core->rss.key));
 
