@@ -6656,6 +6656,9 @@ static void init_filter_values(struct ether_priv_data *pdata)
 	} else if (pdata->hw_feat.mac_addr32_sel == OSI_ENABLE) {
 		pdata->num_mac_addr_regs = ETHER_ADDR_REG_CNT_64;
 	} else if (pdata->hw_feat.mac_addr_sel ==
+		   (ETHER_ADDR_REG_CNT_48 - 1U)) {
+		pdata->num_mac_addr_regs = ETHER_ADDR_REG_CNT_48;
+	} else if (pdata->hw_feat.mac_addr_sel ==
 		   (ETHER_ADDR_REG_CNT_32 - 1U)) {
 		pdata->num_mac_addr_regs = ETHER_ADDR_REG_CNT_32;
 	} else {

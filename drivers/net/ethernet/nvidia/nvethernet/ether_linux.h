@@ -167,6 +167,7 @@
  */
 #define ETHER_ADDR_REG_CNT_128		128
 #define ETHER_ADDR_REG_CNT_64		64
+#define ETHER_ADDR_REG_CNT_48		48
 #define ETHER_ADDR_REG_CNT_32		32
 #define ETHER_ADDR_REG_CNT_1		1
 /** @} */
