@@ -1148,10 +1148,10 @@ static const struct tegra234_cbb_fabric tegra264_top0_cbb_fabric = {
 	.err_intr_enbl = 0x7,
 	.err_status_clr = 0x1ff007f,
 	.notifier_offset = 0x90000,
-	.off_mask_erd    = 0x49004,
+	.off_mask_erd    = 0x52004,
 	.firewall_base   = 0x350000,
-	.firewall_ctl    = 0x410,
-	.firewall_wr_ctl = 0x408,
+	.firewall_ctl    = 0x3f0,
+	.firewall_wr_ctl = 0x3e8,
 };
 
 /* To be filled later when address map is more stabilized */
@@ -1170,8 +1170,8 @@ static const struct tegra234_cbb_fabric tegra264_sys_cbb_fabric = {
 	.err_status_clr = 0x1ff007f,
 	.notifier_offset = 0x40000,
 	.firewall_base   = 0x240000,
-	.firewall_ctl    = 0x210,
-	.firewall_wr_ctl = 0x208,
+	.firewall_ctl    = 0x1d0,
+	.firewall_wr_ctl = 0x1c8,
 };
 
 /* To be filled later when address map is more stabilized */
@@ -1190,8 +1190,8 @@ static const struct tegra234_cbb_fabric tegra264_uphy0_cbb_fabric = {
 	.err_status_clr = 0x1ff007f,
 	.notifier_offset = 0x80000,
 	.firewall_base   = 0x360000,
-	.firewall_ctl    = 0x470,
-	.firewall_wr_ctl = 0x468,
+	.firewall_ctl    = 0x410,
+	.firewall_wr_ctl = 0x408,
 };
 
 /* To be filled later when address map is more stabilized */
