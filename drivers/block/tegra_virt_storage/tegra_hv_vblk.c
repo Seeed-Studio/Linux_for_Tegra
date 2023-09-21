@@ -18,6 +18,9 @@
 #include <linux/vmalloc.h>
 #include <linux/interrupt.h>
 #include <linux/version.h>
+#include <linux/kthread.h>
+#include <linux/sched.h>
+#include <uapi/linux/sched/types.h>
 #include <soc/tegra/fuse.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
@@ -43,6 +46,14 @@
 
 #define FFU_PASS_THROUGH_CMDS_GID  2089
 #define REST_OF_PASS_THROUGH_CMDS_GID 2090
+#define VBLK_DEV_BASE_PRIORITY		25U
+#define VBLK_DEV_THREAD_NAME_LEN	25U
+
+#define MPIDR_AFFLVL_MASK		0xFFULL
+#define MPIDR_AFF1_SHIFT		8U
+#define MPIDR_AFF2_SHIFT		16U
+#define MAX_NUM_CLUSTERS		3U
+#define CPUS_PER_CLUSTER		4U
 
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 #define HSI_SDMMC4_REPORT_ID		0x805EU
@@ -84,6 +95,63 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 
 exit:
 	return req;
+}
+
+static uint64_t read_mpidr(void)
+{
+	uint64_t mpidr;
+	__asm volatile("MRS %0, MPIDR_EL1 " : "=r"(mpidr) :: "memory");
+	return mpidr;
+}
+
+static uint64_t read_mpidr_cluster(uint64_t mpidr)
+{
+	return (mpidr >> MPIDR_AFF2_SHIFT) & MPIDR_AFFLVL_MASK;
+}
+
+static uint64_t read_mpidr_core(uint64_t mpidr)
+{
+	return (mpidr >> MPIDR_AFF1_SHIFT) & MPIDR_AFFLVL_MASK;
+}
+
+static long get_cpu_info(void *data)
+{
+	struct vblk_dev *vblkdev = (struct vblk_dev *)data;
+
+	vblkdev->g_mpidr = read_mpidr();
+	vblkdev->g_cluster = read_mpidr_cluster(vblkdev->g_mpidr);
+	vblkdev->g_core = read_mpidr_core(vblkdev->g_mpidr);
+
+	up(&vblkdev->mpidr_sem);
+
+	return 0;
+}
+
+static uint32_t convert_lcpu_to_vcpu(struct vblk_dev *vblkdev, uint32_t lcpu)
+{
+	uint32_t num_cores = num_present_cpus();
+	uint32_t l_cluster, l_core;
+	uint32_t cnt, vcpu;
+
+	/* get cluster and core in cluster from lcpu */
+	l_cluster = lcpu / MAX_NUM_CLUSTERS;
+	l_core = lcpu % CPUS_PER_CLUSTER;
+
+	for (cnt = 0; cnt < num_cores; cnt++) {
+		down(&vblkdev->mpidr_sem);
+		work_on_cpu(cnt, get_cpu_info, vblkdev);
+		down(&vblkdev->mpidr_sem);
+
+		if (vblkdev->g_cluster == l_cluster && vblkdev->g_core == l_core) {
+			vcpu = cnt;
+			up(&vblkdev->mpidr_sem);
+			break;
+		}
+
+		up(&vblkdev->mpidr_sem);
+	}
+
+	return vcpu;
 }
 
 static struct vsc_request *vblk_get_req_by_sr_num(struct vblk_dev *vblkdev,
@@ -686,27 +754,33 @@ bio_exit:
 	return false;
 }
 
-static void vblk_request_work(struct work_struct *ws)
+static int vblk_request_worker(void *data)
 {
-	struct vblk_dev *vblkdev =
-		container_of(ws, struct vblk_dev, work);
+	struct vblk_dev *vblkdev = (struct vblk_dev *)data;
 	bool req_submitted, req_completed;
 
-	/* Taking ivc lock before performing IVC read/write */
-	mutex_lock(&vblkdev->ivc_lock);
-	if (tegra_hv_ivc_channel_notified(vblkdev->ivck) != 0) {
+	while (true) {
+retry:
+		wait_for_completion_io(&vblkdev->complete);
+
+		/* Taking ivc lock before performing IVC read/write */
+		mutex_lock(&vblkdev->ivc_lock);
+		if (tegra_hv_ivc_channel_notified(vblkdev->ivck) != 0) {
+			mutex_unlock(&vblkdev->ivc_lock);
+			goto retry;
+		}
+
+		req_submitted = true;
+		req_completed = true;
+		while (req_submitted || req_completed) {
+			req_completed = complete_bio_req(vblkdev);
+
+			req_submitted = submit_bio_req(vblkdev);
+		}
 		mutex_unlock(&vblkdev->ivc_lock);
-		return;
 	}
 
-	req_submitted = true;
-	req_completed = true;
-	while (req_submitted || req_completed) {
-		req_completed = complete_bio_req(vblkdev);
-
-		req_submitted = submit_bio_req(vblkdev);
-	}
-	mutex_unlock(&vblkdev->ivc_lock);
+	return 0;
 }
 
 /* The simple form of the request function. */
@@ -735,8 +809,8 @@ static blk_status_t vblk_request(struct blk_mq_hw_ctx *hctx,
 	list_add_tail(&entry->list_entry, &vblkdev->req_list);
 	spin_unlock(&vblkdev->queue_lock);
 
-	/* Now invoke the queue to handle data inserted in queue */
-	queue_work_on(WORK_CPU_UNBOUND, vblkdev->wq, &vblkdev->work);
+	/* wakeup worker thread */
+	complete(&vblkdev->complete);
 
 	return BLK_STS_OK;
 }
@@ -1504,6 +1578,10 @@ static void setup_device(struct vblk_dev *vblkdev)
 static void vblk_init_device(struct work_struct *ws)
 {
 	struct vblk_dev *vblkdev = container_of(ws, struct vblk_dev, init);
+	struct sched_attr attr = {0};
+	char vblk_comm[VBLK_DEV_THREAD_NAME_LEN];
+	uint32_t lcpu_affinity;
+	int ret = 0;
 
 	mutex_lock(&vblkdev->ivc_lock);
 	/* wait for ivc channel reset to finish */
@@ -1520,6 +1598,38 @@ static void vblk_init_device(struct work_struct *ws)
 
 		mutex_unlock(&vblkdev->ivc_lock);
 		vblkdev->initialized = true;
+		/* read lcpu_affinity from dts */
+		if (of_property_read_u32_index(vblkdev->device->of_node, "lcpu_affinity", 0,
+			&lcpu_affinity)) {
+			dev_err(vblkdev->device, "Failed to read lcpu_affinity property\n");
+			return;
+		}
+
+		/* convert lcpu to vcpu */
+		vblkdev->vcpu_affinity = convert_lcpu_to_vcpu(vblkdev, lcpu_affinity);
+		ret = snprintf(vblk_comm, VBLK_DEV_THREAD_NAME_LEN - 4, "vblkdev%d:%d",
+							vblkdev->devnum, vblkdev->config.priority);
+		if (ret < 0) {
+			dev_err(vblkdev->device, "snprint API failed\n");
+			return;
+		}
+		strncat(vblk_comm, ":%u", 3);
+
+		/* create partition specific worker thread */
+		vblkdev->vblk_kthread = kthread_create_on_cpu(&vblk_request_worker, vblkdev,
+					vblkdev->vcpu_affinity, vblk_comm);
+		if (IS_ERR(vblkdev->vblk_kthread)) {
+			dev_err(vblkdev->device, "Cannot allocate vblk worker thread\n");
+			return;
+		}
+
+		/* set thread priority */
+		attr.sched_policy = SCHED_RR;
+		attr.sched_priority = VBLK_DEV_BASE_PRIORITY - vblkdev->config.priority;
+		WARN_ON_ONCE(sched_setattr_nocheck(vblkdev->vblk_kthread, &attr) != 0);
+		init_completion(&vblkdev->complete);
+		wake_up_process(vblkdev->vblk_kthread);
+
 		setup_device(vblkdev);
 		return;
 	}
@@ -1531,7 +1641,8 @@ static irqreturn_t ivc_irq_handler(int irq, void *data)
 	struct vblk_dev *vblkdev = (struct vblk_dev *)data;
 
 	if (vblkdev->initialized)
-		queue_work_on(WORK_CPU_UNBOUND, vblkdev->wq, &vblkdev->work);
+		/* wakeup worker thread */
+		complete(&vblkdev->complete);
 	else
 		schedule_work(&vblkdev->init);
 
@@ -1612,15 +1723,6 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	tegra_hv_ivc_channel_reset(vblkdev->ivck);
 	vblkdev->initialized = false;
 
-	vblkdev->wq = alloc_workqueue("vblk_req_wq%d",
-		WQ_UNBOUND | WQ_MEM_RECLAIM,
-		1, vblkdev->devnum);
-	if (vblkdev->wq == NULL) {
-		dev_err(dev, "Failed to allocate workqueue\n");
-		ret = -ENOMEM;
-		goto free_ivc;
-	}
-
 	init_completion(&vblkdev->req_queue_empty);
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 	init_completion(&vblkdev->hsierror_handle);
@@ -1631,9 +1733,10 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	spin_lock_init(&vblkdev->queue_lock);
 	mutex_init(&vblkdev->ioctl_lock);
 	mutex_init(&vblkdev->ivc_lock);
+	sema_init(&vblkdev->mpidr_sem, 1);
 
 	INIT_WORK(&vblkdev->init, vblk_init_device);
-	INIT_WORK(&vblkdev->work, vblk_request_work);
+
 	/* creating and initializing the an internal request list */
 	INIT_LIST_HEAD(&vblkdev->req_list);
 
@@ -1644,7 +1747,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		ivc_irq_handler, 0, "vblk", vblkdev)) {
 		dev_err(dev, "Failed to request irq %d\n", vblkdev->ivck->irq);
 		ret = -EINVAL;
-		goto free_wq;
+		goto free_ivc;
 	}
 
 	mutex_lock(&vblkdev->ivc_lock);
@@ -1652,14 +1755,11 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to send config cmd\n");
 		ret = -EACCES;
 		mutex_unlock(&vblkdev->ivc_lock);
-		goto free_wq;
+		goto free_ivc;
 	}
 	mutex_unlock(&vblkdev->ivc_lock);
 
 	return 0;
-
-free_wq:
-	destroy_workqueue(vblkdev->wq);
 
 free_ivc:
 	tegra_hv_ivc_unreserve(vblkdev->ivck);
@@ -1686,7 +1786,6 @@ static int tegra_hv_vblk_remove(struct platform_device *pdev)
 		blk_cleanup_queue(vblkdev->ioctl_queue);
 #endif
 
-	destroy_workqueue(vblkdev->wq);
 	tegra_hv_ivc_unreserve(vblkdev->ivck);
 
 	if ((vblkdev->config.blk_config.use_vm_address == 1U
@@ -1724,8 +1823,6 @@ static int tegra_hv_vblk_suspend(struct device *dev)
 
 		wait_for_completion(&vblkdev->req_queue_empty);
 		disable_irq(vblkdev->ivck->irq);
-
-		flush_workqueue(vblkdev->wq);
 	}
 
 	if (vblkdev->ioctl_queue) {
@@ -1754,7 +1851,8 @@ static int tegra_hv_vblk_resume(struct device *dev)
 		blk_mq_start_hw_queues(vblkdev->queue);
 		spin_unlock_irqrestore(&vblkdev->queue->queue_lock, flags);
 
-		queue_work_on(WORK_CPU_UNBOUND, vblkdev->wq, &vblkdev->work);
+		/* wakeup worker thread */
+		complete(&vblkdev->complete);
 	}
 
 	if (vblkdev->ioctl_queue) {

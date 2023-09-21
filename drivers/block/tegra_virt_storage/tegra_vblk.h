@@ -96,13 +96,19 @@ struct vblk_dev {
 	struct list_head req_list;	/* List containing req */
 	uint32_t ivc_id;
 	uint32_t ivm_id;
+	uint32_t vcpu_affinity;
+
+	/* members for converting lcpu to vcpu */
+	struct semaphore mpidr_sem;
+	uint64_t g_mpidr;
+	uint64_t g_cluster;
+	uint64_t g_core;
+
 	struct tegra_hv_ivc_cookie *ivck;
 	struct tegra_hv_ivm_cookie *ivmk;
 	uint32_t devnum;
 	bool initialized;
 	struct work_struct init;
-	struct work_struct work;
-	struct workqueue_struct *wq;
 	struct device *device;
 	void *shared_buffer;
 	struct mutex ioctl_lock;
@@ -125,6 +131,10 @@ struct vblk_dev {
 	struct completion req_queue_empty;
 	bool allow_ffu_passthrough_cmds;
 	bool allow_rest_of_passthrough_cmds;
+
+	/* partition specific task struct */
+	struct task_struct *vblk_kthread;
+	struct completion complete;
 };
 
 int vblk_complete_ioctl_req(struct vblk_dev *vblkdev,
