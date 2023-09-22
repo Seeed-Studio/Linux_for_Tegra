@@ -8,7 +8,6 @@
 	fragment-fsicom@0 {
 		target-path = "/";
 		__overlay__ {
-#if LINUX_VERSION >= 515
         	reserved-memory {
         		#address-cells = <2>;
         		#size-cells = <2>;
@@ -23,7 +22,6 @@
         				<&fsicom_client_inst1 0x0 0xf1000000 0xffffffff 0x0effffff>;
         		};
         	};
-#endif
 
         	fsicom_client: fsicom_client {
         		compatible = "nvidia,tegra234-fsicom-client";
@@ -42,11 +40,7 @@
 #endif
         		mbox-names = "fsi-tx-cpu0", "fsi-rx-cpu0", "fsi-tx-cpu1", "fsi-rx-cpu1";
         		iommus = <&smmu_niso1 TEGRA234_SID_NISO1_FSI_CPU0>;
-#if LINUX_VERSION < 515
-		        iommu-resv-regions = <0x0 0x0 0x0 0xF0000000 0x0 0xF1000000 0xffffffff 0xffffffff>;
-#else
 		        memory-region = <&fsicom_resv>;
-#endif
         		dma-coherent;
 #if defined(ENABLE_FSI) && !defined(ENABLE_MODS_CONFIG)
         		enable-deinit-notify;
@@ -58,11 +52,7 @@
         	fsicom_client_inst1: fsicom_client_inst1 {
         		compatible = "nvidia,tegra234-fsicom-client";
         		iommus = <&smmu_niso1 TEGRA234_SID_NISO1_FSI_CPU1>;
-#if LINUX_VERSION < 515
-		        iommu-resv-regions = <0x0 0x0 0x0 0xF0000000 0x0 0xF1000000 0xffffffff 0xffffffff>;
-#else
         		memory-region = <&fsicom_resv_inst1>;
-#endif
         		dma-coherent;
         		smmu_inst = <1>;
         		status = "okay";
