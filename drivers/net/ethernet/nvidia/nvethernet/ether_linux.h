@@ -112,6 +112,7 @@
  * @brief Ethernet default PTP clock frequency
  */
 #define ETHER_DFLT_PTP_CLK		312500000U
+#define ETHER_DFLT_PTP_CLK_UFPGA	78125000U
 
 /**
  * @brief Ethernet default PTP default RxQ
@@ -391,6 +392,8 @@ struct ether_tx_ts_skb_list {
 	struct sk_buff *skb;
 	/** packet id to identify timestamp */
 	unsigned int pktid;
+	/** vdmaid to identify timestamp */
+	unsigned int vdmaid;
 	/** SKB jiffies to find time */
 	unsigned long pkt_jiffies;
 };

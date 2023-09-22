@@ -27,7 +27,7 @@ static inline unsigned int ether_get_free_tx_ts_node(struct ether_priv_data *pda
 }
 
 static inline void add_skb_node(struct ether_priv_data *pdata, struct sk_buff *skb,
-				unsigned int pktid) {
+				unsigned int pktid, unsigned int vdmaid) {
 	struct list_head *head_node, *temp_head_node;
 	struct ether_tx_ts_skb_list *pnode = NULL;
 	unsigned int idx;
@@ -72,6 +72,7 @@ empty:
 	pnode = &pdata->tx_ts_skb[idx];
 	pnode->skb = skb;
 	pnode->pktid = pktid;
+	pnode->vdmaid = vdmaid;
 	pnode->pkt_jiffies = now_jiffies;
 
 	dev_dbg(pdata->dev, "%s() SKB %p added for pktid = %x time=%lu\n",
@@ -790,7 +791,7 @@ static void osd_transmit_complete(void *priv, const struct osi_tx_swcx *swcx,
 		ndev->stats.tx_packets++;
 		if ((txdone_pkt_cx->flags & OSI_TXDONE_CX_TS_DELAYED) ==
 		    OSI_TXDONE_CX_TS_DELAYED) {
-			add_skb_node(pdata, skb, txdone_pkt_cx->pktid);
+			add_skb_node(pdata, skb, txdone_pkt_cx->pktid, txdone_pkt_cx->vdmaid);
 			/* Consume the timestamp immediately if already available */
 			if (ether_get_tx_ts(pdata) < 0)
 				schedule_delayed_work(&pdata->tx_ts_work,

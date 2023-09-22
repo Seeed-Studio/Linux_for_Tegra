@@ -68,11 +68,12 @@ int ether_get_tx_ts(struct ether_priv_data *pdata)
 
 		ioctl_data.cmd = OSI_CMD_GET_TX_TS;
 		ioctl_data.tx_ts.pkt_id = pnode->pktid;
+		ioctl_data.tx_ts.vdma_id = pnode->vdmaid;
 		ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
 		if (ret == 0) {
 			/* get time stamp form ethernet server */
-			dev_dbg(pdata->dev, "%s() pktid = %x, skb = %p\n",
-				__func__, pnode->pktid, pnode->skb);
+			dev_dbg(pdata->dev,"%s() pktid = %x, skb = %p\n, vdmaid=%x",
+				__func__, pnode->pktid, pnode->skb, pnode->vdmaid);
 
 			if ((ioctl_data.tx_ts.nsec & OSI_MAC_TCR_TXTSSMIS) ==
 			    OSI_MAC_TCR_TXTSSMIS) {
@@ -5910,6 +5911,11 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		dev_info(dev, "setting default PTP clk rate as 312.5MHz\n");
 		pdata->ptp_ref_clock_speed = ETHER_DFLT_PTP_CLK;
 	}
+
+	if (osi_core->pre_sil == 0x1U) {
+		pdata->ptp_ref_clock_speed = ETHER_DFLT_PTP_CLK_UFPGA;
+	}
+
 	/* read promiscuous mode supported or not */
 	ret = of_property_read_u32(np, "nvidia,promisc_mode",
 				   &pdata->promisc_mode);
