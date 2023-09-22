@@ -2302,8 +2302,10 @@ static int tegra_xudc_ep0_set_feature(struct tegra_xudc *xudc,
 			val = xudc_readl(xudc, PORTPM);
 			if ((feature == USB_DEVICE_U1_ENABLE) &&
 			     xudc->soc->u1_enable) {
-				if (set)
+				if (set) {
 					val |= PORTPM_U1E;
+					val |= PORTPM_U1TIMEOUT_MASK;
+				}
 				else
 					val &= ~PORTPM_U1E;
 			}
