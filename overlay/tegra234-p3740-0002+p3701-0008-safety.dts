@@ -14,6 +14,38 @@
 			compatible = "nvidia,p3740-0002+p3701-0008", "safety", "nvidia,p3701-0008", "nvidia,tegra234";
 
 			bus@0 {
+				i2c@3160000 {
+					nvidia,epl-reporter-id = <0x8050>;
+				};
+
+				i2c@c240000 {
+					nvidia,epl-reporter-id = <0x8051>;
+				};
+
+				i2c@3180000 {
+					nvidia,epl-reporter-id = <0x8052>;
+                                };
+
+				i2c@3190000 {
+					nvidia,epl-reporter-id = <0x8053>;
+				};
+
+				i2c@31b0000 {
+					nvidia,epl-reporter-id = <0x8054>;
+				};
+
+				i2c@31c0000 {
+					nvidia,epl-reporter-id = <0x8056>;
+				};
+
+				i2c@c250000 {
+					nvidia,epl-reporter-id = <0x8057>;
+				};
+
+				i2c@31e0000 {
+					nvidia,epl-reporter-id = <0x8058>;
+				};
+
 				hsp_top2: hsp@1600000 {
 					status = "okay";
 				};
