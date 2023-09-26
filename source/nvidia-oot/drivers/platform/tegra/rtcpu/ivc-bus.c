@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -388,10 +390,10 @@ static int tegra_ivc_bus_probe(struct device *dev)
 	return ret;
 }
 
-#if (KERNEL_VERSION(5, 15, 0) <= LINUX_VERSION_CODE)
-static void tegra_ivc_bus_remove(struct device *dev)
-#else
+#if defined(NV_BUS_TYPE_STRUCT_REMOVE_HAS_INT_RETURN_TYPE) /* Linux v5.15 */
 static int tegra_ivc_bus_remove(struct device *dev)
+#else
+static void tegra_ivc_bus_remove(struct device *dev)
 #endif
 {
 	if (dev->type == &tegra_ivc_channel_type) {
@@ -408,7 +410,7 @@ static int tegra_ivc_bus_remove(struct device *dev)
 
 	}
 
-#if (KERNEL_VERSION(5, 15, 0) > LINUX_VERSION_CODE)
+#if defined(NV_BUS_TYPE_STRUCT_REMOVE_HAS_INT_RETURN_TYPE) /* Linux v5.15 */
 	return 0;
 #endif
 }
