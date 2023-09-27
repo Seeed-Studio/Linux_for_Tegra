@@ -74,6 +74,14 @@
 	fragment-t234-p3740-p3701-safety@2 {
 		target-path = "/";
 		__overlay__ {
+			cpus {
+				idle-states {
+					c7 {
+						status = "disabled";
+					};
+				};
+			};
+
 			thermal-zones {
 				cpu-thermal {
 					cooling-maps {
