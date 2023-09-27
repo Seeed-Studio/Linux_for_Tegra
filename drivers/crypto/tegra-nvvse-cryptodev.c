@@ -45,15 +45,7 @@
 #define TEGRA_CRYPTO_KEY_128_SIZE	16
 #define AES_KEYSLOT_NAME_SIZE		32
 
-#define NVVSE_MAX_CHUNKS		33
-#define NVVSE_CHUNK_SIZE		(1024*1024) /* 1MB */
-#define GCM_PT_MAX_LEN			(16*1024*1024 - 1) /* 16MB */
-#define GCM_AAD_MAX_LEN			(16*1024*1024 - 1) /* 16MB */
-#define GMAC_MAX_LEN			(16*1024*1024 - 1) /* 16MB */
-#define TSEC_MAX_LEN			(8U * 1024U)	/* 8KB */
-#define AES_PT_MAX_LEN			(16*1024*1024 - 1) /* 16MB */
-#define AES_CMAC_MAX_LEN		(16*1024*1024 - 1) /* 16MB */
-#define SHA_MAX_LEN		        (16*1024*1024 - 1) /* 16MB */
+#define NVVSE_CHUNK_SIZE               (1024*1024) /* 1MB */
 
 /** Defines the Maximum Random Number length supported */
 #define NVVSE_MAX_RANDOM_NUMBER_LEN_SUPPORTED		512U
@@ -98,8 +90,7 @@ struct crypto_sha_state {
 	uint32_t			digest_size;
 	uint64_t			total_bytes;
 	uint64_t			remaining_bytes;
-	struct sg_table			in_sgt;
-	uint8_t				*in_buf[NVVSE_MAX_CHUNKS];
+	uint8_t				*in_buf;
 	struct tnvvse_crypto_completion	sha_complete;
 	struct ahash_request		*req;
 	struct crypto_ahash		*tfm;
@@ -160,140 +151,6 @@ static void tnvvse_crypto_complete(struct crypto_async_request *req, int err)
 		done->req_err = err;
 		complete(&done->restart);
 	}
-}
-
-static int tnvvse_crypt_alloc_buf(struct sg_table *sgt, uint8_t *buf[], uint32_t size)
-{
-	uint32_t nents;
-	int32_t ret = 0, i;
-
-	if (sgt == NULL) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	nents = (size/NVVSE_CHUNK_SIZE + 1);
-	if (nents > NVVSE_MAX_CHUNKS) {
-		ret = -ENOMEM;
-		pr_err("%s error: nents greater than NVVSE_MAX_CHUNKS ret = %d", __func__, ret);
-		goto out;
-	}
-
-	ret = sg_alloc_table(sgt, nents, GFP_KERNEL);
-	if (ret) {
-		pr_err("%s sg_alloc_table() failed. ret = %d", __func__, ret);
-		goto out;
-	}
-
-	for (i = 0; i < nents; i++) {
-		buf[i] = kcalloc(NVVSE_CHUNK_SIZE, sizeof(uint8_t), GFP_KERNEL);
-		if (buf[i] == NULL) {
-			ret = -ENOMEM;
-			goto free_sg;
-		}
-
-		sg_set_buf(sgt->sgl+i, buf[i], NVVSE_CHUNK_SIZE);
-		if (i == nents - 1)
-			sg_set_buf(sgt->sgl+i, buf[i], size % NVVSE_CHUNK_SIZE);
-	}
-
-	return ret;
-
-free_sg:
-	i--;
-	while (i >= 0) {
-		kfree(buf[i]);
-		buf[i] = NULL;
-		i--;
-	}
-
-	sg_free_table(sgt);
-out:
-	return ret;
-}
-
-static void tnvvse_crypt_free_buf(struct sg_table *sgt, uint8_t *buf[])
-{
-	uint32_t nents = sgt->orig_nents;
-	uint32_t i;
-
-	sg_free_table(sgt);
-
-	for (i = 0 ; i < nents; i++) {
-		kfree(buf[i]);
-		buf[i] = NULL;
-	}
-}
-
-static int tnvvse_crypt_copy_user_buf(uint32_t kern_buf_sz, uint8_t **kern_buf,
-		uint32_t user_buf_sz, char *user_buf)
-{
-	uint32_t i, idx = 0;
-
-	if (user_buf_sz > kern_buf_sz) {
-		pr_err("%s(): user_buf is (data = %d) is too big\n",
-				__func__, user_buf_sz);
-		return -EINVAL;
-	}
-
-	/* copy input of size NVVSE_CHUNK_SIZE */
-	for (i = 0; i < (user_buf_sz/NVVSE_CHUNK_SIZE); i++) {
-		if (copy_from_user((void *)kern_buf[idx],
-				(void __user *)(user_buf + i*NVVSE_CHUNK_SIZE),
-				NVVSE_CHUNK_SIZE)) {
-			pr_err("%s(): Failed to copy_from_user input data\n", __func__);
-			return -EFAULT;
-		}
-
-		idx++;
-	}
-
-	/* copy residual input */
-	if (user_buf_sz % NVVSE_CHUNK_SIZE) {
-		if (copy_from_user((void *)kern_buf[idx],
-				(void __user *)(user_buf + i*NVVSE_CHUNK_SIZE),
-				user_buf_sz % NVVSE_CHUNK_SIZE)) {
-			pr_err("%s(): Failed copy_from_user residual input\n", __func__);
-			return -EFAULT;
-		}
-	}
-
-	return 0;
-}
-
-static int tnvvse_crypt_copy_kern_buf(uint32_t user_buf_sz, uint8_t *user_buf,
-		uint32_t kern_buf_sz, uint8_t **kern_buf)
-{
-	uint32_t i, idx = 0;
-
-	if (kern_buf_sz > user_buf_sz) {
-		pr_err("%s(): user_buf is (data = %d) is too small\n",
-				__func__, user_buf_sz);
-		return -EINVAL;
-	}
-
-	for (i = 0; i < (kern_buf_sz/NVVSE_CHUNK_SIZE); i++) {
-		if (copy_to_user((void __user *)(user_buf + i*NVVSE_CHUNK_SIZE),
-					(const void *)kern_buf[idx],
-					NVVSE_CHUNK_SIZE)) {
-			pr_err("%s(): Failed to copy_to_user output\n", __func__);
-			return -EFAULT;
-		}
-
-		idx++;
-	}
-
-	/* copy residual output */
-	if (kern_buf_sz % NVVSE_CHUNK_SIZE) {
-		if (copy_to_user((void __user *)(user_buf + i*NVVSE_CHUNK_SIZE),
-					(const void *)kern_buf[idx],
-					kern_buf_sz % NVVSE_CHUNK_SIZE)) {
-			pr_err("%s(): Failed copy_to__user residual output\n", __func__);
-			return -EFAULT;
-		}
-	}
-
-	return 0;
 }
 
 static int wait_async_op(struct tnvvse_crypto_completion *tr, int ret)
@@ -402,12 +259,6 @@ static int tnvvse_crypto_sha_init(struct tnvvse_crypto_ctx *ctx,
 	init_completion(&sha_state->sha_complete.restart);
 	sha_state->sha_complete.req_err = 0;
 
-	ret = tnvvse_crypt_alloc_buf(&sha_state->in_sgt, sha_state->in_buf, SHA_MAX_LEN);
-	if (ret < 0) {
-		pr_err("%s(): Failed to allocate in_buffer: %d\n", __func__, ret);
-		goto free_req;
-	}
-
 	/* Shake128/Shake256 have variable digest size */
 	if ((init_ctl->sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE128) ||
 	     (init_ctl->sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE256)) {
@@ -416,7 +267,7 @@ static int tnvvse_crypto_sha_init(struct tnvvse_crypto_ctx *ctx,
 			result_buff = kzalloc(init_ctl->digest_size, GFP_KERNEL);
 			if (!result_buff) {
 				ret = -ENOMEM;
-				goto free_buf;
+				goto free_req;
 			}
 		}
 	}
@@ -445,8 +296,6 @@ static int tnvvse_crypto_sha_init(struct tnvvse_crypto_ctx *ctx,
 
 free_result_buf:
 	kfree(result_buff);
-free_buf:
-	tnvvse_crypt_free_buf(&sha_state->in_sgt, sha_state->in_buf);
 free_req:
 	ahash_request_free(req);
 free_tfm:
@@ -462,6 +311,7 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	char *result_buff;
 	struct ahash_request *req;
 	char *input_buffer = update_ctl->in_buff;
+	struct scatterlist sg;
 	int ret;
 
 	if (update_ctl->input_buffer_size > ivc_database.max_buffer_size[ctx->node_id]) {
@@ -473,16 +323,20 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	result_buff = sha_state->result_buff;
 	req = sha_state->req;
 
-	/* copy input buffer */
-	ret = tnvvse_crypt_copy_user_buf(SHA_MAX_LEN, sha_state->in_buf,
-			update_ctl->input_buffer_size, input_buffer);
-	if (ret) {
-		pr_err("%s(): Failed to copy user input data: %d\n", __func__, ret);
+	sha_state->in_buf = kzalloc(update_ctl->input_buffer_size, GFP_KERNEL);
+	if (sha_state->in_buf == NULL) {
+		ret = -ENOMEM;
 		goto stop_sha;
 	}
 
-	ahash_request_set_crypt(req, sha_state->in_sgt.sgl, result_buff,
-			update_ctl->input_buffer_size);
+	/* copy input buffer */
+	if (copy_from_user((void *)sha_state->in_buf, input_buffer, update_ctl->input_buffer_size)) {
+		pr_err("%s(): Failed to copy_from_user input data\n", __func__);
+		goto stop_sha;
+	}
+
+	sg_init_one(&sg, sha_state->in_buf, update_ctl->input_buffer_size);
+	ahash_request_set_crypt(req, &sg, result_buff, update_ctl->input_buffer_size);
 	ret = wait_async_op(&sha_state->sha_complete, crypto_ahash_update(req));
 	if (ret) {
 		pr_err("%s(): Failed to ahash_update for %s: %d\n",
@@ -503,14 +357,18 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	goto done;
 
 stop_sha:
-	tnvvse_crypt_free_buf(&sha_state->in_sgt, sha_state->in_buf);
+	if (sha_state->in_buf) {
+		kfree(sha_state->in_buf);
+		sha_state->in_buf = NULL;
+	}
 	ahash_request_free(sha_state->req);
 	crypto_free_ahash(sha_state->tfm);
-
 	sha_state->req = NULL;
 	sha_state->tfm = NULL;
-	if (sha_state->result_buff != ctx->sha_result)
+	if (sha_state->result_buff != ctx->sha_result) {
 		kfree(sha_state->result_buff);
+		sha_state->result_buff = NULL;
+	}
 	sha_state->result_buff = NULL;
 	sha_state->total_bytes = 0;
 	sha_state->digest_size = 0;
@@ -525,6 +383,7 @@ static int tnvvse_crypto_sha_final(struct tnvvse_crypto_ctx *ctx,
 {
 	struct crypto_sha_state *sha_state = &ctx->sha_state;
 	struct crypto_ahash *tfm = sha_state->tfm;
+	struct scatterlist sg;
 	struct ahash_request *req;
 	unsigned long size = 0;
 	char *result_buff;
@@ -534,7 +393,8 @@ static int tnvvse_crypto_sha_final(struct tnvvse_crypto_ctx *ctx,
 		result_buff = sha_state->result_buff;
 		req = sha_state->req;
 
-		ahash_request_set_crypt(req, sha_state->in_sgt.sgl, result_buff, size);
+		sg_init_one(&sg, sha_state->in_buf, size);
+		ahash_request_set_crypt(req, &sg, result_buff, size);
 
 		ret = wait_async_op(&sha_state->sha_complete, crypto_ahash_final(req));
 		if (ret) {
@@ -578,15 +438,19 @@ static int tnvvse_crypto_sha_final(struct tnvvse_crypto_ctx *ctx,
 	}
 
 stop_sha:
-	tnvvse_crypt_free_buf(&sha_state->in_sgt, sha_state->in_buf);
+	if (sha_state->in_buf) {
+		kfree(sha_state->in_buf);
+		sha_state->in_buf = NULL;
+	}
 	ahash_request_free(sha_state->req);
 	crypto_free_ahash(sha_state->tfm);
 
 	sha_state->req = NULL;
 	sha_state->tfm = NULL;
-	if (sha_state->result_buff != ctx->sha_result)
+	if (sha_state->result_buff != ctx->sha_result) {
 		kfree(sha_state->result_buff);
-	sha_state->result_buff = NULL;
+		sha_state->result_buff = NULL;
+	}
 	sha_state->total_bytes = 0;
 	sha_state->digest_size = 0;
 	sha_state->remaining_bytes = 0;
@@ -614,9 +478,15 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
 	struct tnvvse_cmac_req_data priv_data;
 	int ret = -ENOMEM;
-	struct scatterlist sg[1];
+	struct scatterlist sg;
 	uint32_t total = 0;
 	uint8_t *hash_buff;
+
+	if (aes_cmac_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
+		pr_err("%s(): Input size is (data = %d) is not supported\n",
+					__func__, aes_cmac_ctl->data_length);
+		return -EINVAL;
+	}
 
 	result = kzalloc(64, GFP_KERNEL);
 	if (!result)
@@ -679,8 +549,7 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 
 	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_VERIFY) {
 		/* Copy digest */
-		ret = copy_from_user((void *)result,
-				(void __user *)aes_cmac_ctl->cmac_buffer,
+		ret = copy_from_user((void *)result, (void __user *)aes_cmac_ctl->cmac_buffer,
 						TEGRA_NVVSE_AES_CMAC_LEN);
 		if (ret) {
 			pr_err("%s(): Failed to copy_from_user: %d\n", __func__, ret);
@@ -692,7 +561,7 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	total = aes_cmac_ctl->data_length;
 	src_buffer = aes_cmac_ctl->src_buffer;
 
-	if (total > TSEC_MAX_LEN) {
+	if (total > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s(): Unsupported buffer size: %u\n", __func__, total);
 		ret = -EINVAL;
 		goto free_req;
@@ -710,8 +579,8 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		goto free_xbuf;
 	}
 
-	sg_init_one(&sg[0], hash_buff, total);
-	ahash_request_set_crypt(req, sg, result, total);
+	sg_init_one(&sg, hash_buff, total);
+	ahash_request_set_crypt(req, &sg, result, total);
 
 	ret = wait_async_op(&sha_complete, crypto_ahash_finup(req));
 	if (ret) {
@@ -751,12 +620,12 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	struct tegra_virtual_se_aes_cmac_context *cmac_ctx;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
 	struct tnvvse_cmac_req_data priv_data;
+	struct scatterlist sg;
 	int ret = -ENOMEM;
 	uint32_t in_sz;
-	uint8_t *in_buf[NVVSE_MAX_CHUNKS];
-	struct sg_table in_sgt;
+	uint8_t *in_buf;
 
-	if (aes_cmac_ctl->data_length > AES_CMAC_MAX_LEN) {
+	if (aes_cmac_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s(): Input size is (data = %d) is not supported\n",
 					__func__, aes_cmac_ctl->data_length);
 		return -EINVAL;
@@ -792,9 +661,9 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 				   tnvvse_crypto_complete, &sha_complete);
 
 	in_sz = aes_cmac_ctl->data_length;
-	ret = tnvvse_crypt_alloc_buf(&in_sgt, in_buf, in_sz);
-	if (ret < 0) {
-		pr_err("%s(): Failed to allocate in_buffer: %d\n", __func__, ret);
+	in_buf = kzalloc(in_sz, GFP_KERNEL);
+	if (in_buf == NULL) {
+		ret = -ENOMEM;
 		goto free_req;
 	}
 
@@ -839,14 +708,14 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	src_buffer = aes_cmac_ctl->src_buffer;
 
 	/* copy input buffer */
-	ret = tnvvse_crypt_copy_user_buf(in_sz, in_buf,
-			aes_cmac_ctl->data_length, src_buffer);
+	ret = copy_from_user(in_buf, src_buffer, aes_cmac_ctl->data_length);
 	if (ret) {
 		pr_err("%s(): Failed to copy user input data: %d\n", __func__, ret);
 		goto free_buf;
 	}
 
-	ahash_request_set_crypt(req, in_sgt.sgl, result, aes_cmac_ctl->data_length);
+	sg_init_one(&sg, in_buf, aes_cmac_ctl->data_length);
+	ahash_request_set_crypt(req, &sg, result, aes_cmac_ctl->data_length);
 
 	ret = wait_async_op(&sha_complete, crypto_ahash_finup(req));
 	if (ret) {
@@ -864,7 +733,7 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	}
 
 free_buf:
-	tnvvse_crypt_free_buf(&in_sgt, in_buf);
+	kfree(in_buf);
 free_req:
 	ahash_request_free(req);
 free_tfm:
@@ -988,10 +857,9 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 				   tnvvse_crypto_complete, &sha_state->sha_complete);
 
-	ret = tnvvse_crypt_alloc_buf(&sha_state->in_sgt, sha_state->in_buf,
-			gmac_sign_verify_ctl->data_length);
-	if (ret < 0) {
-		pr_err("%s(): Failed to allocate in_buffer: %d\n", __func__, ret);
+	sha_state->in_buf = kzalloc(gmac_sign_verify_ctl->data_length, GFP_KERNEL);
+	if (sha_state->in_buf == NULL) {
+		ret = -ENOMEM;
 		goto free_req;
 	}
 
@@ -1032,7 +900,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	goto out;
 
 free_buf:
-	tnvvse_crypt_free_buf(&sha_state->in_sgt, sha_state->in_buf);
+	kfree(sha_state->in_buf);
 free_req:
 	ahash_request_free(req);
 free_tfm:
@@ -1050,9 +918,10 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	struct ahash_request *req;
 	char *src_buffer = gmac_sign_verify_ctl->src_buffer;
 	struct tnvvse_gmac_req_data priv_data;
+	struct scatterlist sg;
 	int ret = -EINVAL;
 
-	if (gmac_sign_verify_ctl->data_length > GMAC_MAX_LEN ||
+	if (gmac_sign_verify_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id] ||
 			gmac_sign_verify_ctl->data_length == 0) {
 		pr_err("%s(): Failed due to invalid input size: %d\n", __func__, ret);
 		goto done;
@@ -1083,14 +952,14 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	req->priv = &priv_data;
 
 	/* copy input buffer */
-	ret = tnvvse_crypt_copy_user_buf(gmac_sign_verify_ctl->data_length, sha_state->in_buf,
-			gmac_sign_verify_ctl->data_length, src_buffer);
+	ret = copy_from_user(sha_state->in_buf, src_buffer, gmac_sign_verify_ctl->data_length);
 	if (ret) {
 		pr_err("%s(): Failed to copy user input data: %d\n", __func__, ret);
 		goto stop_sha;
 	}
 
-	ahash_request_set_crypt(req, sha_state->in_sgt.sgl, result_buff,
+	sg_init_one(&sg, sha_state->in_buf, gmac_sign_verify_ctl->data_length);
+	ahash_request_set_crypt(req, &sg, result_buff,
 			gmac_sign_verify_ctl->data_length);
 	if (gmac_sign_verify_ctl->is_last == 0) {
 		ret = wait_async_op(&sha_state->sha_complete,
@@ -1139,7 +1008,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	}
 
 stop_sha:
-	tnvvse_crypt_free_buf(&sha_state->in_sgt, sha_state->in_buf);
+	kfree(sha_state->in_buf);
 	if (sha_state->req)
 		ahash_request_free(sha_state->req);
 	if (sha_state->tfm)
@@ -1158,8 +1027,9 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 {
 	struct crypto_skcipher *tfm;
 	struct skcipher_request *req = NULL;
-	struct sg_table in_sgt, out_sgt;
-	uint8_t *in_buf[NVVSE_MAX_CHUNKS], *out_buf[NVVSE_MAX_CHUNKS];
+	struct scatterlist in_sg;
+	struct scatterlist out_sg;
+	uint8_t *in_buf, *out_buf;
 	int ret = 0;
 	struct tnvvse_crypto_completion tcrypt_complete;
 	struct tegra_virtual_se_aes_context *aes_ctx;
@@ -1176,7 +1046,7 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		goto out;
 	}
 
-	if (aes_enc_dec_ctl->data_length > AES_PT_MAX_LEN) {
+	if (aes_enc_dec_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s(): Input size is (data = %d) is not supported\n",
 					__func__, aes_enc_dec_ctl->data_length);
 		ret = -EINVAL;
@@ -1248,15 +1118,15 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 
 	in_sz = aes_enc_dec_ctl->data_length;
 	out_sz = aes_enc_dec_ctl->data_length;
-	ret = tnvvse_crypt_alloc_buf(&in_sgt, in_buf, in_sz);
-	if (ret < 0) {
-		pr_err("%s(): Failed to allocate in_buffer: %d\n", __func__, ret);
+	in_buf = kzalloc(in_sz, GFP_KERNEL);
+	if (in_buf == NULL) {
+		ret = -ENOMEM;
 		goto free_req;
 	}
 
-	ret = tnvvse_crypt_alloc_buf(&out_sgt, out_buf, out_sz);
-	if (ret < 0) {
-		pr_err("%s(): Failed to allocate out_buffer: %d\n", __func__, ret);
+	out_buf = kzalloc(out_sz, GFP_KERNEL);
+	if (out_buf == NULL) {
+		ret = -ENOMEM;
 		goto free_in_buf;
 	}
 
@@ -1284,14 +1154,15 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 
 
 	/* copy input buffer */
-	ret = tnvvse_crypt_copy_user_buf(in_sz, in_buf,
-			in_sz, aes_enc_dec_ctl->src_buffer);
+	ret = copy_from_user(in_buf, aes_enc_dec_ctl->src_buffer, in_sz);
 	if (ret) {
 		pr_err("%s(): Failed to copy_from_user input data: %d\n", __func__, ret);
 		goto free_out_buf;
 	}
 
-	skcipher_request_set_crypt(req, in_sgt.sgl, out_sgt.sgl, in_sz, next_block_iv);
+	sg_init_one(&in_sg, in_buf, in_sz);
+	sg_init_one(&out_sg, out_buf, out_sz);
+	skcipher_request_set_crypt(req, &in_sg, &out_sg, in_sz, next_block_iv);
 
 	reinit_completion(&tcrypt_complete.restart);
 	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
@@ -1327,8 +1198,8 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		goto free_out_buf;
 	}
 
-	/* copy output of size NVVSE_CHUNK_SIZE */
-	ret = tnvvse_crypt_copy_kern_buf(out_sz, aes_enc_dec_ctl->dest_buffer, out_sz, out_buf);
+	/* copy output buffer to userspace */
+	ret = copy_to_user(aes_enc_dec_ctl->dest_buffer, out_buf, out_sz);
 	if (ret) {
 		pr_err("%s(): Failed to copy_to_user output: %d\n", __func__, ret);
 		goto free_out_buf;
@@ -1358,10 +1229,10 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	}
 
 free_out_buf:
-	tnvvse_crypt_free_buf(&out_sgt, out_buf);
+	kfree(out_buf);
 
 free_in_buf:
-	tnvvse_crypt_free_buf(&in_sgt, in_buf);
+	kfree(in_buf);
 
 free_req:
 	skcipher_request_free(req);
@@ -1378,11 +1249,11 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 {
 	struct crypto_aead *tfm;
 	struct aead_request *req = NULL;
-	struct sg_table in_sgt, out_sgt;
-	uint8_t *in_buf[NVVSE_MAX_CHUNKS], *out_buf[NVVSE_MAX_CHUNKS];
-	int32_t ret = 0, nents;
+	struct scatterlist in_sg;
+	struct scatterlist out_sg;
+	uint8_t *in_buf, *out_buf;
+	int32_t ret = 0;
 	uint32_t in_sz, out_sz, aad_length, data_length, tag_length;
-	uint32_t i, idx, offset, data_length_copied, data_length_remaining, tag_length_copied;
 	struct tnvvse_crypto_completion tcrypt_complete;
 	struct tegra_virtual_se_aes_context *aes_ctx;
 	const char *driver_name;
@@ -1397,8 +1268,8 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 		goto out;
 	}
 
-	if (aes_enc_dec_ctl->data_length > GCM_PT_MAX_LEN
-				|| aes_enc_dec_ctl->aad_length > GCM_AAD_MAX_LEN) {
+	if (aes_enc_dec_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]
+			|| aes_enc_dec_ctl->aad_length > ivc_database.max_buffer_size[ctx->node_id] ) {
 		pr_err("%s(): Input size is (data = %d, aad = %d) is not supported\n",
 					__func__, aes_enc_dec_ctl->data_length,
 					aes_enc_dec_ctl->aad_length);
@@ -1495,127 +1366,47 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 	 */
 	in_sz = enc ? aad_length + data_length :
 			aad_length + data_length + tag_length;
-	ret = tnvvse_crypt_alloc_buf(&in_sgt, in_buf, in_sz);
-	if (ret < 0)
+	in_buf = kzalloc(in_sz, GFP_KERNEL);
+	if (in_buf == NULL) {
+		ret = -ENOMEM;
 		goto free_req;
+	}
 
 	out_sz = enc ? aad_length + data_length + tag_length :
 			aad_length + data_length;
-	ret = tnvvse_crypt_alloc_buf(&out_sgt, out_buf, out_sz);
-	if (ret < 0)
+	out_buf = kzalloc(out_sz, GFP_KERNEL);
+	if (out_buf == NULL) {
+		ret = -ENOMEM;
 		goto free_in_buf;
+	}
 
 	/* copy AAD buffer */
-	nents = (in_sz / NVVSE_CHUNK_SIZE + 1);
-	idx = 0;
-	offset = 0;
-
-	/* copy AAD of size NVVSE_CHUNK_SIZE */
-	for (i = 0; i < (aad_length/NVVSE_CHUNK_SIZE); i++) {
-		ret = copy_from_user((void *)in_buf[idx],
-			(void __user *)(aes_enc_dec_ctl->aad_buffer + i*NVVSE_CHUNK_SIZE),
-			NVVSE_CHUNK_SIZE);
-		if (ret) {
-			pr_err("%s(): Failed to copy_from_user assoc data: %d\n", __func__, ret);
-			goto free_buf;
-		}
-		idx++;
+	ret = copy_from_user((void *)in_buf, (void __user *)(aes_enc_dec_ctl->aad_buffer), aad_length);
+	if (ret) {
+		pr_err("%s(): Failed to copy_from_user assoc data: %d\n", __func__, ret);
+		goto free_buf;
 	}
 
-	/* copy residual AAD */
-	if (aad_length % NVVSE_CHUNK_SIZE) {
-		ret = copy_from_user((void *)in_buf[idx],
-			(void __user *)(aes_enc_dec_ctl->aad_buffer + i*NVVSE_CHUNK_SIZE),
-			aad_length % NVVSE_CHUNK_SIZE);
-		if (ret) {
-			pr_err("%s(): Failed copy_from_user residual aad data:%d\n", __func__, ret);
-			goto free_buf;
-		}
-		offset = aad_length % NVVSE_CHUNK_SIZE;
-	}
-
-	data_length_copied = 0;
-	data_length_remaining = data_length;
 	/* copy data buffer */
-	/* if in_buf chunk filled with partial aad */
-	if (offset && data_length) {
-		data_length_copied = min(NVVSE_CHUNK_SIZE - offset, data_length);
-		ret = copy_from_user((void *)(in_buf[idx]+offset),
-			(void __user *)(aes_enc_dec_ctl->src_buffer),
-			data_length_copied);
-		if (ret) {
-			pr_err("%s(): Failed to copy_from_user src data: %d\n", __func__, ret);
-			goto free_buf;
-		}
-		/* Check if src data is completely copied */
-		if (data_length_copied == data_length) {
-			offset = offset + data_length_copied;
-		} else {
-			offset = 0;
-			idx++;
-		}
-		data_length_remaining = data_length - data_length_copied;
-	}
-
-	/* copy data of size NVVSE_CHUNK_SIZE */
-	for (i = 0; data_length_remaining &&
-			(i < (data_length_remaining/NVVSE_CHUNK_SIZE)); i++) {
-		ret = copy_from_user((void *)in_buf[idx],
-			(void __user *)(aes_enc_dec_ctl->src_buffer
-			 + data_length_copied + i*NVVSE_CHUNK_SIZE),
-			NVVSE_CHUNK_SIZE);
-		if (ret) {
-			pr_err("%s(): Failed to copy_from_user src data: %d\n", __func__, ret);
-			goto free_buf;
-		}
-		idx++;
-	}
-
-	/* copy residual of data */
-	if (data_length_remaining % NVVSE_CHUNK_SIZE) {
-		ret = copy_from_user((void *)in_buf[idx],
-			(void __user *)(aes_enc_dec_ctl->src_buffer
-			 + data_length_copied + i*NVVSE_CHUNK_SIZE),
-			data_length_remaining % NVVSE_CHUNK_SIZE);
-		if (ret) {
-			pr_err("%s(): Failed copy_from_user residual src data:%d\n", __func__, ret);
-			goto free_buf;
-		}
-		offset = (data_length_remaining % NVVSE_CHUNK_SIZE);
+	ret = copy_from_user((void *)in_buf + aad_length, (void __user *)(aes_enc_dec_ctl->src_buffer), data_length);
+	if (ret) {
+		pr_err("%s(): Failed to copy_from_user src data: %d\n", __func__, ret);
+		goto free_buf;
 	}
 
 	/* copy TAG buffer in case of decryption */
 	if (!enc) {
-		/* Check if tag fits in last buffer */
-		if (NVVSE_CHUNK_SIZE - offset > TEGRA_NVVSE_AES_GCM_TAG_SIZE) {
-			ret = copy_from_user((void *)(in_buf[idx] + offset),
-					(void __user *)aes_enc_dec_ctl->tag_buffer, tag_length);
-			if (ret) {
-				pr_err("%s(): Failed copy_from_user tag data: %d\n", __func__, ret);
-				goto free_buf;
-			}
-		} else {
-			ret = copy_from_user((void *)(in_buf[idx] + offset),
-					(void __user *)aes_enc_dec_ctl->tag_buffer,
-					NVVSE_CHUNK_SIZE - offset);
-			if (ret) {
-				pr_err("%s(): Failed copy_from_user tag data: %d\n", __func__, ret);
-				goto free_buf;
-			}
-			tag_length_copied = NVVSE_CHUNK_SIZE - offset;
-
-			ret = copy_from_user((void *)(in_buf[idx+1]),
-					(void __user *)(aes_enc_dec_ctl->tag_buffer
-					+ tag_length_copied),
-					TEGRA_NVVSE_AES_GCM_TAG_SIZE - tag_length_copied);
-			if (ret) {
-				pr_err("%s(): Failed copy_from_user tag data: %d\n", __func__, ret);
-				goto free_buf;
-			}
+		ret = copy_from_user((void *)in_buf + aad_length + data_length,
+				(void __user *)aes_enc_dec_ctl->tag_buffer, tag_length);
+		if (ret) {
+			pr_err("%s(): Failed copy_from_user tag data: %d\n", __func__, ret);
+			goto free_buf;
 		}
 	}
 
-	aead_request_set_crypt(req, in_sgt.sgl, out_sgt.sgl,
+	sg_init_one(&in_sg, in_buf, in_sz);
+	sg_init_one(&out_sg, out_buf, out_sz);
+	aead_request_set_crypt(req, &in_sg, &out_sg,
 				enc ? data_length : data_length + tag_length,
 				iv);
 
@@ -1637,100 +1428,30 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 		goto free_buf;
 	}
 
-	/* copy to output data buffer */
-	/* skip aad part from out_buf */
-	idx = aad_length / NVVSE_CHUNK_SIZE;
-	offset = aad_length % NVVSE_CHUNK_SIZE;
-
-	/* if out_buf chunk filled with partial aad */
-	data_length_copied = 0;
-	data_length_remaining = data_length;
-	if (offset && data_length) {
-		data_length_copied = min(NVVSE_CHUNK_SIZE - offset, data_length);
-		ret = copy_to_user((void __user *)aes_enc_dec_ctl->dest_buffer,
-					(const void *)(out_buf[idx] + offset),
-					data_length_copied);
-		if (ret) {
-			ret = -EFAULT;
-			pr_err("%s(): Failed to copy_to_user dst data: %d\n", __func__, ret);
-			goto free_buf;
-		}
-
-		if (data_length_copied == data_length) {
-			offset = offset + data_length_copied;
-		} else {
-			offset = 0;
-			idx++;
-		}
-		data_length_remaining = data_length - data_length_copied;
-	}
-
-	/* copy data of size NVVSE_CHUNK_SIZE */
-	for (i = 0; data_length_remaining &&
-			(i < (data_length_remaining/NVVSE_CHUNK_SIZE)); i++) {
-		ret = copy_to_user((void __user *)aes_enc_dec_ctl->dest_buffer
-					+ data_length_copied + i*NVVSE_CHUNK_SIZE,
-					(const void *)(out_buf[idx]),
-					NVVSE_CHUNK_SIZE);
-		if (ret) {
-			pr_err("%s(): Failed to copy_to_user dst data: %d\n", __func__, ret);
-			goto free_buf;
-		}
-		idx++;
-	}
-
-	/* copy residual of data */
-	if (data_length_remaining % NVVSE_CHUNK_SIZE) {
-		ret = copy_to_user((void __user *)aes_enc_dec_ctl->dest_buffer
-					+ data_length_copied + i*NVVSE_CHUNK_SIZE,
-					(const void *)(out_buf[idx]),
-					data_length_remaining % NVVSE_CHUNK_SIZE);
-		if (ret) {
-			pr_err("%s(): Failed copy_from_user residual dst data:%d\n", __func__, ret);
-			goto free_buf;
-		}
-		offset = (data_length_remaining % NVVSE_CHUNK_SIZE);
+	/* copy data buffer */
+	ret = copy_to_user((void __user *)aes_enc_dec_ctl->dest_buffer, (const void *)out_buf + aad_length, data_length);
+	if (ret) {
+		pr_err("%s(): Failed to copy_from_user assoc data: %d\n", __func__, ret);
+		goto free_buf;
 	}
 
 	if (enc) {
-		/* Check if tag fits in last buffer */
-		if (NVVSE_CHUNK_SIZE - offset > TEGRA_NVVSE_AES_GCM_TAG_SIZE) {
-			ret = copy_to_user(
-					(void __user *)aes_enc_dec_ctl->tag_buffer,
-					(const void *)(out_buf[idx] + offset), tag_length);
-			if (ret) {
-				pr_err("%s(): Failed copy_to_user tag data: %d\n", __func__, ret);
-				goto free_buf;
-			}
-		} else {
-			ret = copy_to_user(
-					(void __user *)aes_enc_dec_ctl->tag_buffer,
-					(const void *)(out_buf[idx] + offset),
-					NVVSE_CHUNK_SIZE - offset);
-			if (ret) {
-				pr_err("%s(): Failed copy_to_user tag data: %d\n", __func__, ret);
-				goto free_buf;
-			}
-			tag_length_copied = NVVSE_CHUNK_SIZE - offset;
-
-			ret = copy_to_user((void __user *)aes_enc_dec_ctl->tag_buffer
-					+ tag_length_copied,
-					(const void *)(out_buf[idx+1]),
-					TEGRA_NVVSE_AES_GCM_TAG_SIZE - tag_length_copied);
-			if (ret) {
-				pr_err("%s(): Failed copy_to_user tag data: %d\n", __func__, ret);
-				goto free_buf;
-			}
+		ret = copy_to_user((void __user *)aes_enc_dec_ctl->tag_buffer,
+				(const void *)out_buf + aad_length + data_length, tag_length);
+		if (ret) {
+			pr_err("%s(): Failed copy_from_user tag data: %d\n", __func__, ret);
+			goto free_buf;
 		}
+
 		if (aes_enc_dec_ctl->user_nonce == 0U)
 			memcpy(aes_enc_dec_ctl->initial_vector, req->iv,
 					TEGRA_NVVSE_AES_GCM_IV_LEN);
 	}
 
 free_buf:
-	tnvvse_crypt_free_buf(&out_sgt, out_buf);
+	kfree(out_buf);
 free_in_buf:
-	tnvvse_crypt_free_buf(&in_sgt, in_buf);
+	kfree(in_buf);
 free_req:
 	aead_request_free(req);
 free_tfm:
