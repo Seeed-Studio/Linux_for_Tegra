@@ -543,6 +543,7 @@ unregister_chrdev_region:
 
 static const struct of_device_id host1x_fence_of_match[] = {
 	{ .compatible = "nvidia,tegra234-host1x" },
+	{ .compatible = "nvidia,tegra264-host1x" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, host1x_fence_of_match);
