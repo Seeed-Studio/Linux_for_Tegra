@@ -269,6 +269,10 @@
 						status = "okay";
 					};
 
+					ofa@15a50000 {
+						status = "okay";
+					};
+
 					pva0@16000000 {
 						status = "okay";
 
