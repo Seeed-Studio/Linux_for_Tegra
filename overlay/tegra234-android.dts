@@ -107,16 +107,6 @@
 					dmas = <&gpcdma 8>, <&gpcdma 8>;
 					dma-names = "rx", "tx";
 				};
-				host1x@13e00000 {
-					se@15810000 {
-						compatible = "nvidia,tegra234-se1-nvhost";
-						status = "disabled";
-					};
-					se@15820000 {
-						compatible = "nvidia,tegra234-se2-nvhost";
-						status = "disabled";
-					};
-				};
 			};
 		};
 	};
