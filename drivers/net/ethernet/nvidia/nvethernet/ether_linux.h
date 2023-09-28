@@ -208,8 +208,10 @@
 /**
  * @brief Broadcast and MAC address macros
  */
-#define ETHER_MAC_ADDRESS_INDEX		1U
-#define ETHER_BC_ADDRESS_INDEX		0
+#define ETHER_MAC_ADDRESS_INDEX	1U
+#define ETHER_BC_ADDRESS_INDEX		0U
+#define ETHER_MAC_ADDRESS_INDEX_T26X	0U
+#define ETHER_BC_ADDRESS_INDEX_T26X	1U
 #define ETHER_ADDRESS_MAC		1
 #define ETHER_ADDRESS_BC		0
 

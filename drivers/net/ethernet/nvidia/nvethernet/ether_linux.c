@@ -2418,6 +2418,16 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
 	nveu32_t dma_channel = osi_dma->dma_chans[0];
 	unsigned char bc_addr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	unsigned int MAC_index[OSI_MAX_MAC_IP_TYPES] = {
+		ETHER_MAC_ADDRESS_INDEX,
+		ETHER_MAC_ADDRESS_INDEX,
+		ETHER_MAC_ADDRESS_INDEX_T26X
+	};
+	unsigned int BC_index[OSI_MAX_MAC_IP_TYPES] = {
+		ETHER_BC_ADDRESS_INDEX,
+		ETHER_BC_ADDRESS_INDEX,
+		ETHER_BC_ADDRESS_INDEX_T26X
+	};
 
 	if ((en_dis > OSI_ENABLE) || (uc_bc > ETHER_ADDRESS_MAC)) {
 		dev_err(pdata->dev,
@@ -2440,7 +2450,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 	}
 
 	if (uc_bc == ETHER_ADDRESS_MAC) {
-		ioctl_data->l2_filter.index = ETHER_MAC_ADDRESS_INDEX;
+		ioctl_data->l2_filter.index = MAC_index[osi_core->mac];
 		memcpy(ioctl_data->l2_filter.mac_addr, osi_core->mac_addr,
 		       ETH_ALEN);
 	} else {
@@ -2449,7 +2459,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 		} else {
 			dma_channel = osi_dma->dma_chans[0];
 		}
-		ioctl_data->l2_filter.index = ETHER_BC_ADDRESS_INDEX;
+		ioctl_data->l2_filter.index = BC_index[osi_core->mac];
 		memcpy(ioctl_data->l2_filter.mac_addr, bc_addr, ETH_ALEN);
 	}
 	ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
