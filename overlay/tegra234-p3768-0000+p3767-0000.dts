@@ -244,6 +244,11 @@
 					status = "okay";
 				};
 
+				hardware-timestamp@c1e0000 {
+					status = "okay";
+					nvidia,num-slices = <3>;
+				};
+
 				mttcan@c310000 {
 					status = "okay";
 				};
