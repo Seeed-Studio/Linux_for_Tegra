@@ -56,6 +56,14 @@ static inline bool is_rra_mode(u16 id)
 	return (id == PVA_HWSEQ_RRA_ADDR);
 }
 
+static inline void set_hwseq_mode_rra(struct pva_submit_task *task, u8 desc_id)
+{
+	u8 idx = desc_id / 64U;
+	u8 shift = desc_id % 64U;
+
+	task->desc_hwseq_t26x[idx] |= (1ULL << shift);
+}
+
 static inline u32 nvpva_get_hwseq_start_idx_t26x(
 			struct nvpva_dma_channel *user_ch)
 {
@@ -81,6 +89,7 @@ static int validate_rra_mode(struct pva_hw_sweq_blob_s *blob,
 	const u8 *desc_entry = NULL;
 	const u8 *column = 0U;
 	uint32_t i = 0U;
+	uint32_t f = 0U;
 	uint32_t num_columns = 0U;
 	u32 end = nvpva_get_hwseq_end_idx_t26x(dma_ch) * 4U;
 	u8 *blob_end = &((uint8_t *)blob)[end + 4];
@@ -98,36 +107,47 @@ static int validate_rra_mode(struct pva_hw_sweq_blob_s *blob,
 		return -EINVAL;
 	}
 
-	if (blob->f_header.no_cr > PVA_HWSEQ_RRA_MAX_NOCR) {
-		pr_err("Invalid HWSEQ column count");
-		return -EINVAL;
-	}
-
-	if (blob->f_header.fr != 0) {
-		pr_err("Invalid HWSEQ repetition factor");
-		return -EINVAL;
-	}
-
-	num_columns = blob->f_header.no_cr + 1U;
-	column = (u8 *)&blob->cr_header;
-	desc_entry = (u8 *)&blob->desc_header;
-
-	// Ensure there are sufficient CRO and Desc ID entries in the HWSEQ blob
-	if (((blob_end - column) / column_entry_size) < num_columns) {
-		pr_err("HWSEQ Program does not have enough columns");
-		return -EINVAL;
-	}
-
-	for (i = 0U; i < num_columns; i++) {
-		// In RRA mode, each HWSEQ column has only 1 descriptor
-		// Hence, we validate the first descriptor and ignore the second
-		// descriptor in each column
-		if ((*desc_entry == 0U) ||
-		    (*desc_entry > (NVPVA_TASK_MAX_DMA_DESCRIPTOR_ID_T26X))) {
-			pr_err("Invalid Descritor ID found in HW Sequencer");
+	// Validate each frame contained in the HW Seq blob
+	for (f = 0; f < dma_ch->hwseqFrameCount + 1; f++)
+	{
+		if (blob->f_header.no_cr > PVA_HWSEQ_RRA_MAX_NOCR) {
+			pr_err("Invalid HWSEQ column count. NOCR = %u",
+				blob->f_header.no_cr);
 			return -EINVAL;
 		}
-		desc_entry += column_entry_size;
+
+		if (blob->f_header.fr != 0) {
+			pr_err("Invalid HWSEQ repetition factor");
+			return -EINVAL;
+		}
+
+		num_columns = blob->f_header.no_cr + 1U;
+		column = (u8 *)&blob->cr_header;
+		desc_entry = (u8 *)&blob->desc_header;
+
+		// Ensure there are sufficient CRO and Desc ID entries
+		// in the HWSEQ blob
+		if (((blob_end - column) / column_entry_size) < num_columns) {
+			pr_err("HWSEQ Program does not have enough columns.");
+			return -EINVAL;
+		}
+
+		for (i = 0U; i < num_columns; i++) {
+			// In RRA mode, each HWSEQ column has only 1 descriptor
+			// Hence, we validate the first descriptor and ignore
+			// the second descriptor in each column
+			if ((*desc_entry == 0U) || (*desc_entry >
+				(NVPVA_TASK_MAX_DMA_DESCRIPTOR_ID_T26X))) {
+				return -EINVAL;
+			}
+			set_hwseq_mode_rra(task, *desc_entry -1U);
+			desc_entry += column_entry_size;
+		}
+
+		// Move blob pointer to the start of next frame
+		blob = (struct pva_hw_sweq_blob_s *)((u8 *)blob
+			+ sizeof(struct pva_hw_sweq_blob_s)
+			+ ((num_columns - 1U) * column_entry_size));
 	}
 
 	return 0;
