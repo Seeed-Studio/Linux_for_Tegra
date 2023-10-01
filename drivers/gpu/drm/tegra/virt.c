@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2023, NVIDIA Corporation.
+ * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
-#include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/host1x-next.h>
 #include <linux/module.h>
@@ -15,6 +14,7 @@
 #include <linux/seq_file.h>
 #include <linux/version.h>
 
+#include <soc/tegra/bpmp.h>
 #include <soc/tegra/virt/hv-ivc.h>
 
 #include "drm.h"
@@ -48,7 +48,8 @@ struct virt_engine {
 	struct tegra_drm_client client;
 
 	struct dentry *actmon_debugfs_dir;
-	struct clk *clk;
+	const char *name;
+	unsigned long rate;
 };
 
 static DEFINE_MUTEX(ivc_cookie_lock);
@@ -270,6 +271,210 @@ static int virt_engine_resume(struct device *dev)
 	return virt_engine_transfer(&msg, sizeof(msg));
 }
 
+static int mrq_debug_open(struct tegra_bpmp *bpmp, const char *name,
+			  u32 *fd, u32 *len, bool write)
+{
+	struct mrq_debug_request req = {
+		.cmd = cpu_to_le32(write ? CMD_DEBUG_OPEN_WO : CMD_DEBUG_OPEN_RO),
+	};
+	struct mrq_debug_response resp;
+	struct tegra_bpmp_message msg = {
+		.mrq = MRQ_DEBUG,
+		.tx = {
+			.data = &req,
+			.size = sizeof(req),
+		},
+		.rx = {
+			.data = &resp,
+			.size = sizeof(resp),
+		},
+	};
+	ssize_t sz_name;
+	int err = 0;
+
+	sz_name = strscpy(req.fop.name, name, sizeof(req.fop.name));
+	if (sz_name < 0) {
+		pr_err("File name too large: %s\n", name);
+		return -EINVAL;
+	}
+
+	err = tegra_bpmp_transfer(bpmp, &msg);
+	if (err < 0)
+		return err;
+	else if (msg.rx.ret < 0)
+		return -EINVAL;
+
+	*len = resp.fop.datalen;
+	*fd = resp.fop.fd;
+
+	return 0;
+}
+
+static int mrq_debug_close(struct tegra_bpmp *bpmp, u32 fd)
+{
+	struct mrq_debug_request req = {
+		.cmd = cpu_to_le32(CMD_DEBUG_CLOSE),
+		.frd = {
+			.fd = fd,
+		},
+	};
+	struct mrq_debug_response resp;
+	struct tegra_bpmp_message msg = {
+		.mrq = MRQ_DEBUG,
+		.tx = {
+			.data = &req,
+			.size = sizeof(req),
+		},
+		.rx = {
+			.data = &resp,
+			.size = sizeof(resp),
+		},
+	};
+	int err = 0;
+
+	err = tegra_bpmp_transfer(bpmp, &msg);
+	if (err < 0)
+		return err;
+	else if (msg.rx.ret < 0)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int mrq_debug_read(struct tegra_bpmp *bpmp, const char *name,
+			  char *data, size_t sz_data, u32 *nbytes)
+{
+	struct mrq_debug_request req = {
+		.cmd = cpu_to_le32(CMD_DEBUG_READ),
+	};
+	struct mrq_debug_response resp;
+	struct tegra_bpmp_message msg = {
+		.mrq = MRQ_DEBUG,
+		.tx = {
+			.data = &req,
+			.size = sizeof(req),
+		},
+		.rx = {
+			.data = &resp,
+			.size = sizeof(resp),
+		},
+	};
+	u32 fd = 0, len = 0;
+	int remaining, err, close_err;
+
+	err = mrq_debug_open(bpmp, name, &fd, &len, 0);
+	if (err)
+		goto out;
+
+	if (len > sz_data) {
+		err = -EFBIG;
+		goto close;
+	}
+
+	req.frd.fd = fd;
+	remaining = len;
+
+	while (remaining > 0) {
+		err = tegra_bpmp_transfer(bpmp, &msg);
+		if (err < 0) {
+			goto close;
+		} else if (msg.rx.ret < 0) {
+			err = -EINVAL;
+			goto close;
+		}
+
+		if (resp.frd.readlen > remaining) {
+			pr_err("%s: read data length invalid\n", __func__);
+			err = -EINVAL;
+			goto close;
+		}
+
+		memcpy(data, resp.frd.data, resp.frd.readlen);
+		data += resp.frd.readlen;
+		remaining -= resp.frd.readlen;
+	}
+
+	*nbytes = len;
+
+close:
+	close_err = mrq_debug_close(bpmp, fd);
+	if (!err)
+		err = close_err;
+out:
+	return err;
+}
+
+static const struct of_device_id tegra_bpmp_hv_match[] = {
+	{ .compatible = "nvidia,tegra186-bpmp-hv" },
+	{ .compatible = "nvidia,tegra194-safe-bpmp-hv" },
+	{ }
+};
+
+static struct tegra_bpmp *get_bpmp(void)
+{
+	struct platform_device *pdev;
+	struct device_node *bpmp_dev;
+	struct tegra_bpmp *bpmp;
+
+	/* Check for bpmp device status in DT */
+	bpmp_dev = of_find_matching_node_and_match(NULL, tegra_bpmp_hv_match, NULL);
+	if (!bpmp_dev) {
+		bpmp = ERR_PTR(-ENODEV);
+		goto err_out;
+	}
+	if (!of_device_is_available(bpmp_dev)) {
+		bpmp = ERR_PTR(-ENODEV);
+		goto err_put;
+	}
+
+	pdev = of_find_device_by_node(bpmp_dev);
+	if (!pdev) {
+		bpmp = ERR_PTR(-ENODEV);
+		goto err_put;
+	}
+
+	bpmp = platform_get_drvdata(pdev);
+	if (!bpmp) {
+		bpmp = ERR_PTR(-EPROBE_DEFER);
+		put_device(&pdev->dev);
+		goto err_put;
+	}
+
+	return bpmp;
+err_put:
+	of_node_put(bpmp_dev);
+err_out:
+	return bpmp;
+}
+
+static unsigned long get_clk_rate(const char *name)
+{
+	char path[50], data[50] = {0};
+	struct tegra_bpmp *bpmp;
+	unsigned long rate;
+	uint32_t len;
+	int err;
+
+	bpmp = get_bpmp();
+	if (IS_ERR(bpmp))
+		return PTR_ERR(bpmp);
+
+	sprintf(path, "clk/%s/rate", name);
+	err = mrq_debug_read(bpmp, path, data, ARRAY_SIZE(data)-1, &len);
+	if (err < 0)
+		goto put_bpmp;
+
+	err = kstrtoul(data, 10, &rate);
+	if (err < 0)
+		goto put_bpmp;
+
+	return rate;
+
+put_bpmp:
+	tegra_bpmp_put(bpmp);
+	return 0;
+}
+
 static int actmon_debugfs_usage_show(struct seq_file *s, void *unused)
 {
 	struct virt_engine *virt = s->private;
@@ -277,10 +482,15 @@ static int actmon_debugfs_usage_show(struct seq_file *s, void *unused)
 	int cycles_per_actmon_sample;
 	int count;
 
-	rate = clk_get_rate(virt->clk);
-	if (rate == 0) {
-		seq_printf(s, "0\n");
-		return 0;
+	if (virt->rate) {
+		rate = virt->rate;
+	} else {
+		rate = get_clk_rate(virt->name);
+		if (rate == 0) {
+			seq_printf(s, "0\n");
+			return 0;
+		}
+		virt->rate = rate;
 	}
 
 	count = host1x_actmon_read_avg_count(&virt->client.base);
@@ -300,23 +510,21 @@ DEFINE_SHOW_ATTRIBUTE(actmon_debugfs_usage);
 
 static void virt_engine_setup_actmon_debugfs(struct virt_engine *virt)
 {
-	const char *name;
-
 	switch (virt->client.base.class) {
 	case HOST1X_CLASS_VIC:
-		name = "vic";
+		virt->name = "vic";
 		break;
 	case HOST1X_CLASS_NVENC:
-		name = "msenc";
+		virt->name = "msenc";
 		break;
 	case HOST1X_CLASS_NVDEC:
-		name = "nvdec";
+		virt->name = "nvdec";
 		break;
 	default:
 		return;
 	}
 
-	virt->actmon_debugfs_dir = debugfs_create_dir(name, NULL);
+	virt->actmon_debugfs_dir = debugfs_create_dir(virt->name, NULL);
 	debugfs_create_file("usage", S_IRUGO, virt->actmon_debugfs_dir, virt, &actmon_debugfs_usage_fops);
 }
 
@@ -461,12 +669,6 @@ static int virt_engine_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	platform_set_drvdata(pdev, virt);
-
-	virt->clk = devm_clk_get_optional(&pdev->dev, NULL);
-	if (IS_ERR(virt->clk)) {
-		dev_err(dev, "could not get clock: %ld\n", PTR_ERR(virt->clk));
-		return PTR_ERR(virt->clk);
-	}
 
 	INIT_LIST_HEAD(&virt->client.base.list);
 	virt->client.base.ops = &virt_engine_client_ops;
