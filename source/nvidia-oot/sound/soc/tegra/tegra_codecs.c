@@ -4,6 +4,8 @@
 //
 // Copyright (c) 2021-2023, NVIDIA CORPORATION.  All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <dt-bindings/sound/tas2552.h>
 #include <linux/input.h>
 #include <linux/version.h>
@@ -137,7 +139,11 @@ static int set_pll_sysclk(struct device *dev, struct snd_soc_pcm_runtime *rtd,
 	unsigned int bclk_rate;
 	int err;
 
+#if defined(NV_SND_SOC_DAI_LINK_STRUCT_HAS_C2C_PARAMS_ARG) /* Linux v6.4 */
+	dai_params = (struct snd_soc_pcm_stream *)rtd->dai_link->c2c_params;
+#else
 	dai_params = (struct snd_soc_pcm_stream *)rtd->dai_link->params;
+#endif
 
 	switch (dai_params->formats) {
 	case SNDRV_PCM_FMTBIT_S8:
