@@ -412,13 +412,13 @@ struct ether_timestamp_skb_list {
  */
 struct ether_xtra_stat_counters {
 	/** rx skb allocation failure count */
-	nveu64_t re_alloc_rxbuf_failed[OSI_MGBE_MAX_NUM_QUEUES];
+	nveu64_t re_alloc_rxbuf_failed[OSI_MGBE_MAX_NUM_CHANS];
 	/** TX per channel interrupt count */
-	nveu64_t tx_normal_irq_n[OSI_MGBE_MAX_NUM_QUEUES];
+	nveu64_t tx_normal_irq_n[OSI_MGBE_MAX_NUM_CHANS];
 	/** TX per channel SW timer callback count */
-	nveu64_t tx_usecs_swtimer_n[OSI_MGBE_MAX_NUM_QUEUES];
+	nveu64_t tx_usecs_swtimer_n[OSI_MGBE_MAX_NUM_CHANS];
 	/** RX per channel interrupt count */
-	nveu64_t rx_normal_irq_n[OSI_MGBE_MAX_NUM_QUEUES];
+	nveu64_t rx_normal_irq_n[OSI_MGBE_MAX_NUM_CHANS];
 	/** link connect count */
 	nveu64_t link_connect_count;
 	/** link disconnect count */
