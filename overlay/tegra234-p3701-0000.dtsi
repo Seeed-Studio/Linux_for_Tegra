@@ -151,18 +151,4 @@
 			};
 		};
 	};
-
-	fragment-t234-p3701-0000@1 {
-		target-path = "/";
-		board_config {
-			ids = "3701-0005-*","3701-0008-*";
-		};
-		__overlay__ {
-			reserved-memory {
-				linux,cma { /* Needed for nvgpu comptags */
-					size = <0x0 0x20000000>; /* 512MB */
-				};
-			};
-		};
-	};
 };

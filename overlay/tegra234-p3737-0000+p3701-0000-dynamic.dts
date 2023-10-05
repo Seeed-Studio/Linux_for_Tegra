@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/tegra234-gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	fragment-t234-p3737-0000-p3701-0000@0 {
+		target-path = "/";
+		board_config {
+			ids = "3701-0005-*","3701-0008-*";
+		};
+		__overlay__ {
+			reserved-memory {
+				linux,cma { /* Needed for nvgpu comptags */
+					size = <0x0 0x20000000>; /* 512MB */
+				};
+			};
+		};
+	};
+
+	fragment-t234-p3737-0000-p3701-0000@1 {
+		target-path = "/";
+		board_config {
+			ids = ">=3737-0000-TS4", ">=3737-0000-RC1", ">=3737-0000-300";
+		};
+		__overlay__ {
+			bus@0 {
+				i2c@31e0000 {
+					rt5640: audio-codec@1c {
+						#sound-dai-cells = <1>;
+						status = "okay";
+					};
+				};
+			};
+
+			sound {
+				nvidia-audio-card,widgets =
+					"Headphone",	"CVB-RT Headphone Jack",
+					"Microphone",	"CVB-RT Mic Jack",
+					"Speaker",	"CVB-RT Int Spk",
+					"Microphone",	"CVB-RT Int Mic";
+
+				nvidia-audio-card,routing =
+					"CVB-RT Headphone Jack",     "CVB-RT HPOL",
+					"CVB-RT Headphone Jack",     "CVB-RT HPOR",
+					"CVB-RT IN1P",		     "CVB-RT Mic Jack",
+					"CVB-RT IN2P",		     "CVB-RT Mic Jack",
+					"CVB-RT Int Spk",	     "CVB-RT SPOLP",
+					"CVB-RT Int Spk",	     "CVB-RT SPORP",
+					"CVB-RT DMIC1",		     "CVB-RT Int Mic",
+					"CVB-RT DMIC2",		     "CVB-RT Int Mic";
+
+				nvidia-audio-card,dai-link@76 {
+					link-name = "rt5640-playback";
+					codec {
+						sound-dai = <&rt5640 0>;
+						prefix = "CVB-RT";
+					};
+				};
+			};
+		};
+	};
+
+	fragment-t234-p3737-0000-p3701-0000@2 {
+		target-path = "/";
+		board_config {
+			ids = "3737-0000-TS1","3737-0000-TS2","3737-0000-TS3","3737-0000-EB1","3737-0000-EB2","3737-0000-EB3","3737-0000-000","3737-0000-100","3737-0000-200";
+		};
+		__overlay__ {
+			bus@0{
+				i2c@c240000 {
+					typec@8 {
+						interrupt-parent = <&gpio_aon>;
+						interrupts = <TEGRA234_AON_GPIO(BB, 2) IRQ_TYPE_LEVEL_LOW>;
+					};
+				};
+			};
+		};
+	};
+};

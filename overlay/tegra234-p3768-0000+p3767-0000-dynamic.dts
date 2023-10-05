@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+/*
+ * Include this file last in the device tree.  It manages run-time
+ * pruning of peripherals that are not available across the various
+ * SKUs of p3767.  For example PVA can be enabled in the device tree
+ * and it will automatically be disabled for SKUs without PVA support.
+ */
+#include "tegra234-p3767-sku-handling.dtsi"
