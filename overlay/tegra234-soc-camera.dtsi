@@ -20,6 +20,89 @@
 				tegra-camera-rtcpu = "/rtcpu@bc00000";
 			};
 
+			bus@0 {
+				host1x@13e00000 {
+					vi0: vi0@15c00000 {
+						compatible = "nvidia,tegra234-vi";
+						clocks = <&bpmp TEGRA234_CLK_VI>;
+						clock-names = "vi";
+						nvidia,vi-falcon-device = <&vi0_thi>;
+						resets = <&bpmp TEGRA234_RESET_VI>;
+						reset-names = "vi0";
+						iommus = <&smmu_iso TEGRA234_SID_ISO_VI>;
+						interconnects = <&mc TEGRA234_MEMORY_CLIENT_VIW &emc>;
+						interconnect-names = "write";
+						non-coherent;
+						status = "okay";
+					};
+
+					vi0_thi: vi0-thi@15f00000 {
+						compatible = "nvidia,tegra234-vi-thi";
+						resets = <&bpmp TEGRA234_RESET_VI>;
+						reset-names = "vi0_thi";
+						interconnects = <&mc TEGRA234_MEMORY_CLIENT_VI2FALR &emc>,
+								<&mc TEGRA234_MEMORY_CLIENT_VI2FALW &emc>;
+						interconnect-names = "dma-mem", "write";
+						status = "okay";
+					};
+
+					vi1: vi1@14c00000 {
+						compatible = "nvidia,tegra234-vi";
+						clocks = <&bpmp TEGRA234_CLK_VI>;
+						clock-names = "vi";
+						nvidia,vi-falcon-device = <&vi1_thi>;
+						resets = <&bpmp TEGRA234_RESET_VI2>;
+						reset-names = "vi1";
+						iommus = <&smmu_iso TEGRA234_SID_ISO_VI2>;
+						interconnects = <&mc TEGRA234_MEMORY_CLIENT_VI2W &emc>;
+						interconnect-names = "write";
+						non-coherent;
+						status = "okay";
+					};
+
+					vi1_thi: vi1-thi@14f00000 {
+						compatible = "nvidia,tegra234-vi-thi";
+						resets = <&bpmp TEGRA234_RESET_VI2>;
+						reset-names = "vi1_thi";
+						interconnects = <&mc TEGRA234_MEMORY_CLIENT_VIFALR &emc>,
+								<&mc TEGRA234_MEMORY_CLIENT_VIFALW &emc>;
+						interconnect-names = "dma-mem", "write";
+						status = "okay";
+					};
+
+					isp: isp@14800000 {
+						compatible = "nvidia,tegra194-isp";
+						reg = <0x0 0x14800000 0x0 0x00010000>;
+
+						resets = <&bpmp TEGRA234_RESET_ISP>;
+						reset-names = "isp";
+						clocks = <&bpmp TEGRA234_CLK_ISP>;
+						clock-names = "isp";
+						power-domains = <&bpmp TEGRA234_POWER_DOMAIN_ISPA>;
+						nvidia,isp-falcon-device = <&isp_thi>;
+
+						iommus = <&smmu_niso1 TEGRA234_SID_ISP>;
+						dma-coherent;
+						status = "okay";
+					};
+
+					isp_thi: isp-thi@14b00000 {
+						compatible = "nvidia,tegra194-isp-thi";
+						resets = <&bpmp TEGRA234_RESET_ISP>;
+						status = "okay";
+					};
+
+					nvcsi: nvcsi@15a00000 {
+						compatible = "nvidia,tegra194-nvcsi";
+						resets = <&bpmp TEGRA234_RESET_NVCSI>;
+						reset-names = "nvcsi";
+						clocks = <&bpmp TEGRA234_CLK_NVCSI>;
+						clock-names = "nvcsi";
+						status = "okay";
+					};
+				};
+			};
+
 			tegra_rce: rtcpu@bc00000 {
 				compatible = "nvidia,tegra194-rce";
 
@@ -180,92 +263,6 @@
 					alignment = <0 0x100000>;
 					alloc-ranges = <0x1 0 0x1 0>;
 					status = "disabled";
-				};
-			};
-		};
-	};
-
-	fragment-camera@1 {
-		target-path = "/bus@0";
-		__overlay__ {
-			host1x@13e00000 {
-				vi0: vi0@15c00000 {
-					compatible = "nvidia,tegra234-vi";
-					clocks = <&bpmp TEGRA234_CLK_VI>;
-					clock-names = "vi";
-					nvidia,vi-falcon-device = <&vi0_thi>;
-					resets = <&bpmp TEGRA234_RESET_VI>;
-					reset-names = "vi0";
-					iommus = <&smmu_iso TEGRA234_SID_ISO_VI>;
-					interconnects = <&mc TEGRA234_MEMORY_CLIENT_VIW &emc>;
-					interconnect-names = "write";
-					non-coherent;
-					status = "okay";
-				};
-
-				vi0_thi: vi0-thi@15f00000 {
-					compatible = "nvidia,tegra234-vi-thi";
-					resets = <&bpmp TEGRA234_RESET_VI>;
-					reset-names = "vi0_thi";
-					interconnects = <&mc TEGRA234_MEMORY_CLIENT_VI2FALR &emc>,
-							<&mc TEGRA234_MEMORY_CLIENT_VI2FALW &emc>;
-					interconnect-names = "dma-mem", "write";
-					status = "okay";
-				};
-
-				vi1: vi1@14c00000 {
-					compatible = "nvidia,tegra234-vi";
-					clocks = <&bpmp TEGRA234_CLK_VI>;
-					clock-names = "vi";
-					nvidia,vi-falcon-device = <&vi1_thi>;
-					resets = <&bpmp TEGRA234_RESET_VI2>;
-					reset-names = "vi1";
-					iommus = <&smmu_iso TEGRA234_SID_ISO_VI2>;
-					interconnects = <&mc TEGRA234_MEMORY_CLIENT_VI2W &emc>;
-					interconnect-names = "write";
-					non-coherent;
-					status = "okay";
-				};
-
-				vi1_thi: vi1-thi@14f00000 {
-					compatible = "nvidia,tegra234-vi-thi";
-					resets = <&bpmp TEGRA234_RESET_VI2>;
-					reset-names = "vi1_thi";
-					interconnects = <&mc TEGRA234_MEMORY_CLIENT_VIFALR &emc>,
-							<&mc TEGRA234_MEMORY_CLIENT_VIFALW &emc>;
-					interconnect-names = "dma-mem", "write";
-					status = "okay";
-				};
-
-				isp: isp@14800000 {
-					compatible = "nvidia,tegra194-isp";
-					reg = <0x0 0x14800000 0x0 0x00010000>;
-
-					resets = <&bpmp TEGRA234_RESET_ISP>;
-					reset-names = "isp";
-					clocks = <&bpmp TEGRA234_CLK_ISP>;
-					clock-names = "isp";
-					power-domains = <&bpmp TEGRA234_POWER_DOMAIN_ISPA>;
-					nvidia,isp-falcon-device = <&isp_thi>;
-
-					iommus = <&smmu_niso1 TEGRA234_SID_ISP>;
-					dma-coherent;
-					status = "okay";
-				};
-
-				isp_thi: isp-thi@14b00000 {
-					compatible = "nvidia,tegra194-isp-thi";
-					resets = <&bpmp TEGRA234_RESET_ISP>;
-					status = "okay";
-				};
-
-				nvcsi: nvcsi@15a00000 {
-					compatible = "nvidia,tegra194-nvcsi";
-					resets = <&bpmp TEGRA234_RESET_NVCSI>;
-					reset-names = "nvcsi";
-					clocks = <&bpmp TEGRA234_CLK_NVCSI>;
-					clock-names = "nvcsi";
-					status = "okay";
 				};
 			};
 		};

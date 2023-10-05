@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 // SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
-
 /dts-v1/;
 /plugin/;
 
@@ -75,18 +74,16 @@
 				 */
 				nvidia,tegra-joint_xpu_rail;
 			};
-		};
-	};
 
-	fragment-t234-p3740-p3701-safety@1 {
-		target-path = "/";
-		__overlay__ {
-			fsicom_client {
-				status = "okay";
+			cpus {
+				idle-states {
+					c7 {
+						status = "disabled";
+					};
+				};
 			};
 
-			safetyservices_epl_client {
-				/* userspace app uses this driver to send error code */
+			fsicom_client {
 				status = "okay";
 			};
 
@@ -107,18 +104,10 @@
 				mbox-names = "hsierrrptinj-tx";
 				status = "okay";
 			};
-		};
-	};
 
-	fragment-t234-p3740-p3701-safety@2 {
-		target-path = "/";
-		__overlay__ {
-			cpus {
-				idle-states {
-					c7 {
-						status = "disabled";
-					};
-				};
+			safetyservices_epl_client {
+				/* userspace app uses this driver to send error code */
+				status = "okay";
 			};
 
 			thermal-zones {
