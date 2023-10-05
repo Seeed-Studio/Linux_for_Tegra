@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
  */
+
 
 #ifndef WCH_COMMON
 #define WCH_COMMON
@@ -221,7 +221,7 @@ enum {
 #define PORTFLAG_CH384_28_PORTS 0x0020
 
 // board info
-#define WCH_BOARDS_MAX       0x08
+#define WCH_BOARDS_MAX       0x04
 #define WCH_PORT_ONBOARD_MAX 0x20
 #define WCH_SER_TOTAL_MAX    0x100
 

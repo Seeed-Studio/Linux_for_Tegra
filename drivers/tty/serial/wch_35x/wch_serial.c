@@ -1,14 +1,13 @@
 /*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
  */
 
 #include <nvidia/conftest.h>
@@ -545,7 +544,7 @@ static int ser_startup(struct ser_state *state, int init_hw)
     retval = wch_ser_startup(port);
 
     if (retval == 0) {
-        if (init_hw) {
+	if (init_hw && info->tty) {
             ser_change_speed(state, NULL);
             if (info->tty->termios.c_cflag & CBAUD)
             {
@@ -555,7 +554,8 @@ static int ser_startup(struct ser_state *state, int init_hw)
 
         info->flags |= WCH_UIF_INITIALIZED;
 
-        clear_bit(TTY_IO_ERROR, &info->tty->flags);
+	if (info->tty)
+	    clear_bit(TTY_IO_ERROR, &info->tty->flags);
     }
 
     if (retval && capable(CAP_SYS_ADMIN)) {
@@ -1106,26 +1106,28 @@ static int ser_wait_modem_status(struct ser_state *state, unsigned long arg)
 
 static int ser_get_count(struct ser_state *state, struct serial_icounter_struct *icnt)
 {
-    struct serial_icounter_struct icount;
+    struct serial_icounter_struct *icount;
     struct ser_icount cnow;
     struct ser_port *port = state->port;
     spin_lock_irq(&port->lock);
     memcpy(&cnow, &port->icount, sizeof(struct ser_icount));
     spin_unlock_irq(&port->lock);
 
-    icount.cts = cnow.cts;
-    icount.dsr = cnow.dsr;
-    icount.rng = cnow.rng;
-    icount.dcd = cnow.dcd;
-    icount.rx = cnow.rx;
-    icount.tx = cnow.tx;
-    icount.frame = cnow.frame;
-    icount.overrun = cnow.overrun;
-    icount.parity = cnow.parity;
-    icount.brk = cnow.brk;
-    icount.buf_overrun = cnow.buf_overrun;
+    icount = kzalloc(sizeof(*icount), GFP_KERNEL);
 
-    return copy_to_user(icnt, &icount, sizeof(icount)) ? -EFAULT : 0;
+    icount->cts = cnow.cts;
+    icount->dsr = cnow.dsr;
+    icount->rng = cnow.rng;
+    icount->dcd = cnow.dcd;
+    icount->rx = cnow.rx;
+    icount->tx = cnow.tx;
+    icount->frame = cnow.frame;
+    icount->overrun = cnow.overrun;
+    icount->parity = cnow.parity;
+    icount->brk = cnow.brk;
+    icount->buf_overrun = cnow.buf_overrun;
+
+    return copy_to_user(icnt, icount, sizeof(*icount)) ? -EFAULT : 0;
 }
 
 static void ser_config_rs485(struct ser_state *state, struct serial_rs485 *rs485)

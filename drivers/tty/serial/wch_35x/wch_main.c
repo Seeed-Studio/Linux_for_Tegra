@@ -1,4 +1,16 @@
 /*
+ * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
+/*
  * PCI/PCIE to serial driver for ch351/352/353/355/356/357/358/359/382/384, etc.
  *
  * Copyright (C) 2023 Nanjing Qinheng Microelectronics Co., Ltd.
@@ -30,20 +42,6 @@
  * V1.23 - added supports for kernel version beyond 5.14.x
  * V1.24 - fixed ch351/2/3 uart0 setting bug, merged pre-load driver
  */
-
-/*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- */
-
 
 #include "wch_common.h"
 
@@ -112,6 +110,9 @@ static irqreturn_t wch_interrupt(int irq, void *dev_id)
     int status = 0;
     int handled = IRQ_NONE;
 
+    if (!dev_id)
+	return handled;
+
     for (i = 0; i < WCH_BOARDS_MAX; i++) {
         if (dev_id == &(wch_board_table[i])) {
             sb = dev_id;
@@ -159,7 +160,7 @@ static int wch_pci_board_probe(void)
     struct pci_dev *pdev = NULL;
     struct pci_dev *pdev_array[4] = {NULL, NULL, NULL, NULL};
 
-    int wch_pci_board_id_cnt;
+    size_t wch_pci_board_id_cnt;
     int table_cnt;
     int board_cnt;
     int i;
@@ -234,7 +235,7 @@ static int wch_pci_board_probe(void)
         }
 
         board_cnt++;
-        if (board_cnt > WCH_BOARDS_MAX) {
+	if (board_cnt > WCH_BOARDS_MAX) {
             printk("\n");
             printk("WCH Error: WCH Driver Module Support Four Boards In Maximum !\n\n");
             status = -ENOSPC;
@@ -248,7 +249,7 @@ static int wch_pci_board_probe(void)
         sb->bus_number = pdev->bus->number;
         sb->dev_number = PCI_SLOT(pdev->devfn);
 
-        sb->board_enum = (int)wch_pci_board_id[table_cnt].driver_data;
+	sb->board_enum = (unsigned int)wch_pci_board_id[table_cnt].driver_data;
         sb->pb_info = wch_pci_board_conf[sb->board_enum];
 
         sb->board_flag = sb->pb_info.board_flag;
@@ -367,9 +368,9 @@ static int wch_assign_resource(void)
                     return status;
                 }
 
-                for (j = 0; j < sb->ser_ports; j++, ser_n++, sp++) {
-                    sp->port.chip_flag = sb->pb_info.port[j].chip_flag;
-                    sp->port.iobase = sb->bar_addr[sb->pb_info.port[j].bar1] + sb->pb_info.port[j].offset1;
+		for (j = 0; j < sb->ser_ports && j < WCH_PORT_ONBOARD_MAX ; j++, ser_n++, sp++) {
+			sp->port.chip_flag = sb->pb_info.port[j].chip_flag;
+			sp->port.iobase = sb->bar_addr[sb->pb_info.port[j].bar1] + sb->pb_info.port[j].offset1;
 
                     /* use scr reg to test io space */
                     outb(0x55, sp->port.iobase + UART_SCR);
