@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 //
 // This file contains the DT nodes of T234 which are not in base/tegra234.dtsi
 
@@ -16,9 +16,11 @@
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	fragment-t234-soc@0 {
 		target-path = "/";
 		 __overlay__ {
+#endif
 			aliases {
 				nvdla0 = "/bus@0/host1x@13e00000/nvdla0@15880000";
 				nvdla1 = "/bus@0/host1x@13e00000/nvdla1@158c0000";
@@ -1004,6 +1006,8 @@
 					status = "disabled";
 				};
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

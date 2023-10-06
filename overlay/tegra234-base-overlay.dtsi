@@ -21,12 +21,14 @@
 #define TEGRA234_POWER_DOMAIN_DLAB		33U
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	overlay-name = "Add nvidia,t234 Overlay Support";
 	compatible = "nvidia,tegra234";
 
 	fragment-t234-base@0 {
 		target-path = "/";
 		 __overlay__ {
+#endif
 			aliases {
 				serial0 = "/bus@0/serial@3100000";
 				serial1 = "/bus@0/serial@3110000";
@@ -799,6 +801,8 @@
 					nvidia,vm-irq-id = <3>;
 				};
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

@@ -14,11 +14,13 @@
 #include "tegra234-soc-camera.dtsi"
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	overlay-name = "Tegra234 P3768-0000+P3767-0000 Overlay";
 
 	fragment-t234-p3768-p3767@0 {
 		target-path = "/";
 		__overlay__ {
+#endif
 			bpmp {
 				i2c {
 					vrs@3c {
@@ -455,6 +457,8 @@
 			display@13800000 {
 				status = "okay";
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

@@ -7,9 +7,11 @@
 #include "tegra234-soc-safetyservice-fsicom.dtsi"
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	fragment-t234-p3740-p3701-safety@0 {
 		target-path = "/";
 		__overlay__ {
+#endif
 			compatible = "nvidia,p3740-0002+p3701-0008", "safety", "nvidia,p3701-0008", "nvidia,tegra234";
 
 			bus@0 {
@@ -223,6 +225,8 @@
 					};
 				};
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

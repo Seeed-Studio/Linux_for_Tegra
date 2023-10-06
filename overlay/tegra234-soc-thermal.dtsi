@@ -4,10 +4,11 @@
 #define TEGRA234_THERMAL_POLLING_DELAY 1000
 
 / {
-
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	fragment-t234-thermal@0 {
 		target-path = "/";
 		__overlay__ {
+#endif
 			thermal-zones {
 				cpu-thermal {
 					polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
@@ -54,6 +55,8 @@
 					polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 				};
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

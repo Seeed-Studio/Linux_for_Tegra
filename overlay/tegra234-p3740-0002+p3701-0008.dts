@@ -15,11 +15,13 @@
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	compatible = "nvidia,p3740-0002+p3701-0008";
 
 	fragment-t234-p3740-p3701@0 {
 		target-path = "/";
 		__overlay__ {
+#endif
 			chosen {
 				bootargs = "console=ttyTCU0,115200n8";
 			};
@@ -292,6 +294,8 @@
 			display@13800000 {
 				status = "okay";
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

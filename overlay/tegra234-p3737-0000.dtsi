@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	fragment-t234-p3737-0000@0 {
 		target-path = "/";
 		__overlay__ {
+#endif
 			bus@0 {
 				spi@3210000{ /* SPI1 in 40 pin conn */
 					spi@0 { /* chip select 0 */
@@ -125,6 +127,8 @@
 					};
 				};
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

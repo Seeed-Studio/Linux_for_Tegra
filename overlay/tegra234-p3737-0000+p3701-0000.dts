@@ -16,11 +16,12 @@
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	compatible = "nvidia,p3737-0000+p3701-0000";
-
 	fragment-t234-p3737-p3701@0 {
 		target-path = "/";
 		__overlay__ {
+#endif
 			cpus {
 				idle-states {
 					c7 {
@@ -336,6 +337,8 @@
 			display@13800000 {
 				status = "okay";
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

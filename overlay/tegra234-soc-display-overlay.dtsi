@@ -5,8 +5,10 @@
 
 / {
 	fragment-t234-display@0 {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		target-path = "/";
 		__overlay__ {
+#endif
 
 			dce@d800000 {
 				compatible = "nvidia,tegra234-dce";
@@ -179,6 +181,8 @@
 					dma-coherent;
 				};
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	fragment-t234-dcb@0 {
 		target-path = "/";
 		__overlay__ {
-
+#endif
 			display@13800000 {
 				nvidia,dcb-image = [
 					55 aa 16 00 00 37 34 30 30 e9 4c 19 77 cc 56 49
@@ -535,6 +536,8 @@
 					40 00 00 00 00 00 00 06 00 00 00 00 00 05 05 00
 					00 00 00 00 00 00 00 ];
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

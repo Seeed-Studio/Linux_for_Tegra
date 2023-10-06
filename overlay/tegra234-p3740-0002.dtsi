@@ -4,9 +4,11 @@
 #include "tegra234-soc-audio-dai-links.dtsi"
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	fragment-t234-p3740-0002@0 {
 		target-path = "/";
 		__overlay__ {
+#endif
 			bus@0 {
 				i2c@31c0000 {
 					typec: stusb1600@28 {
@@ -231,6 +233,8 @@
 				regulator-min-microvolt = <5000000>;
 				regulator-max-microvolt = <5000000>;
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };

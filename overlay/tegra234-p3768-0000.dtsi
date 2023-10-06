@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
+#ifndef REMOVE_FRAGMENT_SYNTAX
 	fragment-t234-p3768-0000@0 {
 		target-path = "/";
 		__overlay__ {
+#endif
 			bus@0 {
 
 				aconnect@2900000 {
@@ -36,6 +38,8 @@
 
 				hdr40_snd_link_i2s: nvidia-audio-card,dai-link@77 { };
 			};
+#ifndef REMOVE_FRAGMENT_SYNTAX
 		};
 	};
+#endif
 };
