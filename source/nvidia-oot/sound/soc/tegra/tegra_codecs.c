@@ -8,7 +8,6 @@
 
 #include <dt-bindings/sound/tas2552.h>
 #include <linux/input.h>
-#include <linux/version.h>
 #include <sound/jack.h>
 #include <sound/soc.h>
 #include <sound/simple_card_utils.h>
@@ -44,12 +43,12 @@ static int tegra_machine_rt56xx_init(struct snd_soc_pcm_runtime *rtd)
 	if (!jack)
 		return -ENOMEM;
 
-#if (KERNEL_VERSION(5, 19, 0) > LINUX_VERSION_CODE)
-	err = snd_soc_card_jack_new(card, "Headset Jack", SND_JACK_HEADSET,
-				    jack, NULL, 0);
-#else
+#if defined(NV_SND_SOC_CARD_JACK_NEW_HAS_NO_SND_SOC_JACK_PINS) /* Linux v5.19 */
 	err = snd_soc_card_jack_new(card, "Headset Jack", SND_JACK_HEADSET,
 				    jack);
+#else
+	err = snd_soc_card_jack_new(card, "Headset Jack", SND_JACK_HEADSET,
+				    jack, NULL, 0);
 #endif
 	if (err) {
 		dev_err(card->dev, "Headset Jack creation failed %d\n", err);
