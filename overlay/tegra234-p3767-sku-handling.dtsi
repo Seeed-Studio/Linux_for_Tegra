@@ -100,4 +100,33 @@
 			};
 		};
 	};
+
+	/*
+	 * If ODMDATA contains gbe-uphy-config-9, then:
+	 * 1. C7x1
+	 * 2. C9x1
+	 */
+	p3767-sku-handling-fragment@6 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "gbe-uphy-config-9";
+		};
+		__overlay__ {
+			/* C7 */
+			pcie@141e0000 {
+				phys = <&p2u_gbe_0>;
+				phy-names = "p2u-0";
+				num-lanes = <1>;
+			};
+
+			/* C9 */
+			pcie@140c0000 {
+				status = "okay";
+				vddio-pex-ctl-supply = <&vdd_1v8_ao>;
+				phys = <&p2u_gbe_1>;
+				phy-names = "p2u-0";
+				num-lanes = <1>;
+			};
+		};
+	};
 };
