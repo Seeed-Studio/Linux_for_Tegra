@@ -1148,10 +1148,10 @@ static const struct tegra234_cbb_fabric tegra264_top0_cbb_fabric = {
 	.err_intr_enbl = 0x7,
 	.err_status_clr = 0x1ff007f,
 	.notifier_offset = 0x90000,
-	.off_mask_erd    = 0x52004,
-	.firewall_base   = 0x350000,
-	.firewall_ctl    = 0x3f0,
-	.firewall_wr_ctl = 0x3e8,
+	.off_mask_erd    = 0x4a004,
+	.firewall_base   = 0x3c0000,
+	.firewall_ctl    = 0x610,
+	.firewall_wr_ctl = 0x608,
 };
 
 /* To be filled later when address map is more stabilized */
@@ -1169,9 +1169,9 @@ static const struct tegra234_cbb_fabric tegra264_sys_cbb_fabric = {
 	.err_intr_enbl = 0xf,
 	.err_status_clr = 0x1ff007f,
 	.notifier_offset = 0x40000,
-	.firewall_base   = 0x240000,
-	.firewall_ctl    = 0x1d0,
-	.firewall_wr_ctl = 0x1c8,
+	.firewall_base   = 0x29c000,
+	.firewall_ctl    = 0x170,
+	.firewall_wr_ctl = 0x168,
 };
 
 /* To be filled later when address map is more stabilized */
@@ -1190,8 +1190,8 @@ static const struct tegra234_cbb_fabric tegra264_uphy0_cbb_fabric = {
 	.err_status_clr = 0x1ff007f,
 	.notifier_offset = 0x80000,
 	.firewall_base   = 0x360000,
-	.firewall_ctl    = 0x410,
-	.firewall_wr_ctl = 0x408,
+	.firewall_ctl    = 0x590,
+	.firewall_wr_ctl = 0x588,
 };
 
 /* To be filled later when address map is more stabilized */
@@ -1210,8 +1210,8 @@ static const struct tegra234_cbb_fabric tegra264_vision_cbb_fabric = {
 	.err_status_clr = 0x1ff007f,
 	.notifier_offset = 0x80000,
 	.firewall_base   = 0x290000,
-	.firewall_ctl    = 0x510,
-	.firewall_wr_ctl = 0x508,
+	.firewall_ctl    = 0x630,
+	.firewall_wr_ctl = 0x628,
 };
 
 static const struct of_device_id tegra234_cbb_dt_ids[] = {
