@@ -18,6 +18,9 @@
 #include <crypto/sm3.h>
 #include <crypto/skcipher.h>
 #include <nvidia/conftest.h>
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+#include <crypto/engine.h>
+#endif
 
 #define SE_MAX_INSTANCES				3
 #define SE_OWNERSHIP					0x14
@@ -359,6 +362,21 @@
 #define SHA_UPDATE	BIT(1)
 #define SHA_FINAL	BIT(2)
 
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+#define CRYPTO_REGISTER(alg, x) \
+		crypto_engine_register_##alg(x)
+#else
+#define CRYPTO_REGISTER(alg, x) \
+		crypto_register_##alg(x)
+#endif
+
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+#define CRYPTO_UNREGISTER(alg, x) \
+		crypto_engine_unregister_##alg(x)
+#else
+#define CRYPTO_UNREGISTER(alg, x) \
+		crypto_unregister_##alg(x)
+#endif
 
 /* Security Engine operation modes */
 enum se_aes_alg {
@@ -398,9 +416,15 @@ struct tegra_se_alg {
 	const char *alg_base;
 
 	union {
+#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 		struct skcipher_alg	skcipher;
 		struct aead_alg		aead;
 		struct ahash_alg	ahash;
+#else
+		struct skcipher_engine_alg	skcipher;
+		struct aead_engine_alg		aead;
+		struct ahash_engine_alg	ahash;
+#endif
 	} alg;
 };
 

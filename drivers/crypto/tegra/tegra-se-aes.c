@@ -4,6 +4,8 @@
  * Crypto driver to handle block cipher algorithms using NVIDIA Security Engine.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/clk.h>
 #include <linux/dma-mapping.h>
 #include <linux/host1x-next.h>
@@ -23,7 +25,9 @@
 #include "tegra-se.h"
 
 struct tegra_aes_ctx {
+#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	struct crypto_engine_ctx enginectx;
+#endif
 	struct tegra_se *se;
 	u32 alg;
 	u32 keylen;
@@ -41,7 +45,9 @@ struct tegra_aes_reqctx {
 };
 
 struct tegra_aead_ctx {
+#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	struct crypto_engine_ctx enginectx;
+#endif
 	struct tegra_se *se;
 	unsigned int authsize;
 	u32 alg;
@@ -66,7 +72,9 @@ struct tegra_aead_reqctx {
 };
 
 struct tegra_cmac_ctx {
+#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	struct crypto_engine_ctx enginectx;
+#endif
 	struct crypto_shash *fallback_tfm;
 	struct tegra_se *se;
 	unsigned int alg;
@@ -302,6 +310,12 @@ static int tegra_aes_do_one_req(struct crypto_engine *engine, void *areq)
 	struct tegra_se *se;
 	int ret;
 
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	ret = tegra_aes_prep_req(engine, areq);
+	if (ret != 0)
+		return ret;
+#endif
+
 	req = container_of(areq, struct skcipher_request, base);
 	rctx = skcipher_request_ctx(req);
 	ctx = crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
@@ -336,6 +350,12 @@ static int tegra_aes_do_one_req(struct crypto_engine *engine, void *areq)
 
 	crypto_finalize_skcipher_request(se->engine, req, ret);
 
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	if (ret != 0)
+		return ret;
+
+	ret = tegra_aes_unprep_req(engine, areq);
+#endif
 	return ret;
 }
 
@@ -347,7 +367,11 @@ static int tegra_aes_cra_init(struct crypto_skcipher *tfm)
 	const char *algname;
 	int ret;
 
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	se_alg = container_of(alg, struct tegra_se_alg, alg.skcipher.base);
+#else
 	se_alg = container_of(alg, struct tegra_se_alg, alg.skcipher);
+#endif
 
 	crypto_skcipher_set_reqsize(tfm, sizeof(struct tegra_aes_reqctx));
 
@@ -364,9 +388,11 @@ static int tegra_aes_cra_init(struct crypto_skcipher *tfm)
 	}
 
 	ctx->alg = ret;
+#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	ctx->enginectx.op.prepare_request = tegra_aes_prep_req;
 	ctx->enginectx.op.do_one_request = tegra_aes_do_one_req;
 	ctx->enginectx.op.unprepare_request = tegra_aes_unprep_req;
+#endif
 
 	return 0;
 }
@@ -494,6 +520,9 @@ static int tegra_aes_decrypt(struct skcipher_request *req)
 static struct tegra_se_alg tegra_aes_algs[] = {
 	{
 		.alg.skcipher = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
 			.init			= tegra_aes_cra_init,
 			.exit			= tegra_aes_cra_exit,
 			.setkey			= tegra_xts_setkey,
@@ -514,9 +543,16 @@ static struct tegra_se_alg tegra_aes_algs[] = {
 				.cra_alignmask	   = 0,
 				.cra_module	   = THIS_MODULE,
 			},
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_aes_do_one_req,
+#endif
 		}
 	}, {
 		.alg.skcipher = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
 			.init			= tegra_aes_cra_init,
 			.exit			= tegra_aes_cra_exit,
 			.setkey			= tegra_aes_setkey,
@@ -537,9 +573,16 @@ static struct tegra_se_alg tegra_aes_algs[] = {
 				.cra_alignmask	   = 0,
 				.cra_module	   = THIS_MODULE,
 			},
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_aes_do_one_req,
+#endif
 		}
 	}, {
 		.alg.skcipher = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
 			.init			= tegra_aes_cra_init,
 			.exit			= tegra_aes_cra_exit,
 			.setkey			= tegra_aes_setkey,
@@ -560,9 +603,16 @@ static struct tegra_se_alg tegra_aes_algs[] = {
 				.cra_alignmask	   = 0,
 				.cra_module	   = THIS_MODULE,
 			},
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_aes_do_one_req,
+#endif
 		}
 	}, {
 		.alg.skcipher = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
 			.init			= tegra_aes_cra_init,
 			.exit			= tegra_aes_cra_exit,
 			.setkey			= tegra_aes_setkey,
@@ -583,9 +633,16 @@ static struct tegra_se_alg tegra_aes_algs[] = {
 				.cra_alignmask	   = 0,
 				.cra_module	   = THIS_MODULE,
 			},
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_aes_do_one_req,
+#endif
 		}
 	}, {
 		.alg.skcipher = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
 			.init			= tegra_aes_cra_init,
 			.exit			= tegra_aes_cra_exit,
 			.setkey			= tegra_aes_setkey,
@@ -606,6 +663,10 @@ static struct tegra_se_alg tegra_aes_algs[] = {
 				.cra_alignmask	   = 0,
 				.cra_module	   = THIS_MODULE,
 			},
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_aes_do_one_req,
+#endif
 		}
 	},
 };
@@ -1189,6 +1250,11 @@ static int tegra_ccm_crypt_init(struct aead_request *req, struct tegra_se *se,
 	return 0;
 }
 
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+static int tegra_aead_prep_req(struct crypto_engine *engine, void *areq);
+static int tegra_aead_unprep_req(struct crypto_engine *engine, void *areq);
+#endif
+
 static int tegra_ccm_do_one_req(struct crypto_engine *engine, void *areq)
 {
 	struct aead_request *req = container_of(areq, struct aead_request, base);
@@ -1197,6 +1263,12 @@ static int tegra_ccm_do_one_req(struct crypto_engine *engine, void *areq)
 	struct tegra_aead_ctx *ctx = crypto_aead_ctx(tfm);
 	struct tegra_se *se = ctx->se;
 	int ret;
+
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	ret = tegra_aead_prep_req(engine, areq);
+	if (ret != 0)
+		return ret;
+#endif
 
 	ret = tegra_ccm_crypt_init(req, se, rctx);
 	if (ret)
@@ -1231,6 +1303,11 @@ static int tegra_ccm_do_one_req(struct crypto_engine *engine, void *areq)
 out:
 	crypto_finalize_aead_request(se->engine, req, ret);
 
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	ret = tegra_aead_unprep_req(engine, areq);
+	if (ret != 0)
+		return ret;
+#endif
 	return 0;
 }
 
@@ -1241,6 +1318,12 @@ static int tegra_gcm_do_one_req(struct crypto_engine *engine, void *areq)
 	struct tegra_aead_ctx *ctx = crypto_aead_ctx(tfm);
 	struct tegra_aead_reqctx *rctx = aead_request_ctx(req);
 	int ret;
+
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	ret = tegra_aead_prep_req(engine, areq);
+	if (ret != 0)
+		return ret;
+#endif
 
 	req = container_of(areq, struct aead_request, base);
 
@@ -1281,6 +1364,11 @@ static int tegra_gcm_do_one_req(struct crypto_engine *engine, void *areq)
 
 out:
 	crypto_finalize_aead_request(ctx->se->engine, req, ret);
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	ret = tegra_aead_unprep_req(engine, areq);
+	if (ret != 0)
+		return ret;
+#endif
 	return 0;
 }
 
@@ -1338,7 +1426,11 @@ static int tegra_ccm_cra_init(struct crypto_aead *tfm)
 
 	algname = crypto_tfm_alg_name(&tfm->base);
 
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	se_alg = container_of(alg, struct tegra_se_alg, alg.aead.base);
+#else
 	se_alg = container_of(alg, struct tegra_se_alg, alg.aead);
+#endif
 
 	crypto_aead_set_reqsize(tfm, sizeof(struct tegra_aead_reqctx));
 
@@ -1346,9 +1438,11 @@ static int tegra_ccm_cra_init(struct crypto_aead *tfm)
 	ctx->key_id = 0;
 	ctx->alg = se_algname_to_algid(algname);
 
+#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	ctx->enginectx.op.prepare_request = tegra_aead_prep_req;
 	ctx->enginectx.op.do_one_request = tegra_ccm_do_one_req;
 	ctx->enginectx.op.unprepare_request = tegra_aead_unprep_req;
+#endif
 
 	return 0;
 }
@@ -1383,7 +1477,11 @@ static int tegra_gcm_cra_init(struct crypto_aead *tfm)
 	const char *algname;
 
 	algname = crypto_tfm_alg_name(&tfm->base);
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	se_alg = container_of(alg, struct tegra_se_alg, alg.aead.base);
+#else
 	se_alg = container_of(alg, struct tegra_se_alg, alg.aead);
+#endif
 
 	crypto_aead_set_reqsize(tfm, sizeof(struct tegra_aead_reqctx));
 
@@ -1391,9 +1489,11 @@ static int tegra_gcm_cra_init(struct crypto_aead *tfm)
 	ctx->key_id = 0;
 	ctx->alg = se_algname_to_algid(algname);
 
+#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	ctx->enginectx.op.prepare_request = tegra_aead_prep_req;
 	ctx->enginectx.op.do_one_request = tegra_gcm_do_one_req;
 	ctx->enginectx.op.unprepare_request = tegra_aead_unprep_req;
+#endif
 
 	return 0;
 }
@@ -1637,7 +1737,11 @@ static int tegra_cmac_cra_init(struct crypto_tfm *tfm)
 	const char *algname;
 
 	algname = crypto_tfm_alg_name(tfm);
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+	se_alg = container_of(alg, struct tegra_se_alg, alg.ahash.base);
+#else
 	se_alg = container_of(alg, struct tegra_se_alg, alg.ahash);
+#endif
 
 	crypto_ahash_set_reqsize(__crypto_ahash_cast(tfm),
 				 sizeof(struct tegra_cmac_reqctx));
@@ -1645,9 +1749,11 @@ static int tegra_cmac_cra_init(struct crypto_tfm *tfm)
 	ctx->se = se_alg->se_dev;
 	ctx->key_id = 0;
 	ctx->alg = se_algname_to_algid(algname);
+#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	ctx->enginectx.op.prepare_request = NULL;
 	ctx->enginectx.op.do_one_request = tegra_cmac_do_one_req;
 	ctx->enginectx.op.unprepare_request = NULL;
+#endif
 
 	ctx->fallback_tfm = crypto_alloc_shash(algname, 0,
 				    CRYPTO_ALG_NEED_FALLBACK);
@@ -1792,6 +1898,9 @@ static int tegra_cmac_import(struct ahash_request *req, const void *in)
 static struct tegra_se_alg tegra_aead_algs[] = {
 	{
 		.alg.aead = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
 			.init			= tegra_gcm_cra_init,
 			.exit			= tegra_aead_cra_exit,
 			.setkey			= tegra_aead_setkey,
@@ -1809,9 +1918,16 @@ static struct tegra_se_alg tegra_aead_algs[] = {
 				.cra_alignmask	   = 0,
 				.cra_module	   = THIS_MODULE,
 			},
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_gcm_do_one_req,
+#endif
 		}
 	}, {
 		.alg.aead = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
 			.init			= tegra_ccm_cra_init,
 			.exit			= tegra_aead_cra_exit,
 			.setkey			= tegra_aead_setkey,
@@ -1830,6 +1946,10 @@ static struct tegra_se_alg tegra_aead_algs[] = {
 				.cra_alignmask	   = 0,
 				.cra_module	   = THIS_MODULE,
 			},
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_ccm_do_one_req,
+#endif
 		}
 	}
 };
@@ -1837,6 +1957,9 @@ static struct tegra_se_alg tegra_aead_algs[] = {
 static struct tegra_se_alg tegra_cmac_algs[] = {
 	{
 		.alg.ahash = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
 			.init = tegra_cmac_init,
 			.setkey	= tegra_cmac_setkey,
 			.update = tegra_cmac_update,
@@ -1859,7 +1982,11 @@ static struct tegra_se_alg tegra_cmac_algs[] = {
 				.cra_module = THIS_MODULE,
 				.cra_init = tegra_cmac_cra_init,
 				.cra_exit = tegra_cmac_cra_exit,
-			}
+			},
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_cmac_do_one_req,
+#endif
 		}
 	}
 };
@@ -1872,30 +1999,45 @@ int tegra_init_aes(struct tegra_se *se)
 
 	for (i = 0; i < ARRAY_SIZE(tegra_aes_algs); i++) {
 		tegra_aes_algs[i].se_dev = se;
-		ret = crypto_register_skcipher(&tegra_aes_algs[i].alg.skcipher);
+		ret = CRYPTO_REGISTER(skcipher, &tegra_aes_algs[i].alg.skcipher);
 		if (ret) {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			dev_err(se->dev, "failed to register %s\n",
+				tegra_aes_algs[i].alg.skcipher.base.base.cra_name);
+#else
 			dev_err(se->dev, "failed to register %s\n",
 				tegra_aes_algs[i].alg.skcipher.base.cra_name);
+#endif
 			goto err_aes;
 		}
 	}
 
 	for (i = 0; i < ARRAY_SIZE(tegra_aead_algs); i++) {
 		tegra_aead_algs[i].se_dev = se;
-		ret = crypto_register_aead(&tegra_aead_algs[i].alg.aead);
+		ret = CRYPTO_REGISTER(aead, &tegra_aead_algs[i].alg.aead);
 		if (ret) {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			dev_err(se->dev, "failed to register %s\n",
+				tegra_aead_algs[i].alg.aead.base.base.cra_name);
+#else
 			dev_err(se->dev, "failed to register %s\n",
 				tegra_aead_algs[i].alg.aead.base.cra_name);
+#endif
 			goto err_aead;
 		}
 	}
 
 	for (i = 0; i < ARRAY_SIZE(tegra_cmac_algs); i++) {
 		tegra_cmac_algs[i].se_dev = se;
-		ret = crypto_register_ahash(&tegra_cmac_algs[i].alg.ahash);
+		ret = CRYPTO_REGISTER(ahash, &tegra_cmac_algs[i].alg.ahash);
 		if (ret) {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 			dev_err(se->dev, "failed to register %s\n",
-			tegra_cmac_algs[i].alg.ahash.halg.base.cra_name);
+				tegra_cmac_algs[i].alg.ahash.base.halg.base.cra_name);
+#else
+			dev_err(se->dev, "failed to register %s\n",
+				tegra_cmac_algs[i].alg.ahash.halg.base.cra_name);
+#endif
 			goto err_cmac;
 		}
 	}
@@ -1906,17 +2048,17 @@ int tegra_init_aes(struct tegra_se *se)
 
 err_cmac:
 	for (--i; i >= 0; i--)
-		crypto_unregister_ahash(&tegra_cmac_algs[i].alg.ahash);
+		CRYPTO_UNREGISTER(ahash, &tegra_cmac_algs[i].alg.ahash);
 
 	i = ARRAY_SIZE(tegra_aead_algs);
 err_aead:
 	for (--i; i >= 0; i--)
-		crypto_unregister_aead(&tegra_aead_algs[i].alg.aead);
+		CRYPTO_UNREGISTER(aead, &tegra_aead_algs[i].alg.aead);
 
 	i = ARRAY_SIZE(tegra_aes_algs);
 err_aes:
 	for (--i; i >= 0; i--)
-		crypto_unregister_skcipher(&tegra_aes_algs[i].alg.skcipher);
+		CRYPTO_UNREGISTER(skcipher, &tegra_aes_algs[i].alg.skcipher);
 
 	return ret;
 }
@@ -1926,12 +2068,12 @@ void tegra_deinit_aes(void)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(tegra_aes_algs); i++)
-		crypto_unregister_skcipher(&tegra_aes_algs[i].alg.skcipher);
+		CRYPTO_UNREGISTER(skcipher, &tegra_aes_algs[i].alg.skcipher);
 
 	for (i = 0; i < ARRAY_SIZE(tegra_aead_algs); i++)
-		crypto_unregister_aead(&tegra_aead_algs[i].alg.aead);
+		CRYPTO_UNREGISTER(aead, &tegra_aead_algs[i].alg.aead);
 
 	for (i = 0; i < ARRAY_SIZE(tegra_cmac_algs); i++)
-		crypto_unregister_ahash(&tegra_cmac_algs[i].alg.ahash);
+		CRYPTO_UNREGISTER(ahash, &tegra_cmac_algs[i].alg.ahash);
 
 }
