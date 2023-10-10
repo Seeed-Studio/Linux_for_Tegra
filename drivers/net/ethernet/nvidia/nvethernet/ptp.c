@@ -423,6 +423,10 @@ int ether_handle_hwtstamp_ioctl(struct ether_priv_data *pdata,
 		return -EINVAL;
 	}
 
+	if (memcmp(&config, &pdata->ptp_config, sizeof(struct hwtstamp_config)) == 0) {
+		goto skip;
+	}
+
 	switch (config.tx_type) {
 	case HWTSTAMP_TX_OFF:
 		pdata->hwts_tx_en = OSI_DISABLE;
@@ -607,6 +611,8 @@ int ether_handle_hwtstamp_ioctl(struct ether_priv_data *pdata,
 #endif /* !OSI_STRIPPED_LIB */
 	}
 
+	memcpy(&pdata->ptp_config, &config, sizeof(struct hwtstamp_config));
+skip:
 	return (copy_to_user(ifr->ifr_data, &config,
 			     sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
 }

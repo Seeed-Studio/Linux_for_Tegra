@@ -666,6 +666,8 @@ struct ether_priv_data {
 	struct tasklet_struct lane_restart_task;
 	/** xtra sw error counters */
 	struct ether_xtra_stat_counters xstats;
+	/** PTP configuration passed by aplication */
+	struct hwtstamp_config ptp_config;
 };
 
 /**

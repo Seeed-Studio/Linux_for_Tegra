@@ -3035,6 +3035,8 @@ static int ether_close(struct net_device *ndev)
 	/* Reset MAC loopback variable */
 	pdata->mac_loopback_mode = OSI_DISABLE;
 
+	memset(&pdata->ptp_config, 0, sizeof(sizeof(struct hwtstamp_config)));
+
 	return 0;
 }
 
@@ -6973,6 +6975,7 @@ static int ether_suspend_noirq(struct device *dev)
 
 	if (osi_core->mac == OSI_MAC_HW_MGBE)
 		pm_runtime_put_sync(pdata->dev);
+	memset(&pdata->ptp_config, 0, sizeof(sizeof(struct hwtstamp_config)));
 
 	return 0;
 }
