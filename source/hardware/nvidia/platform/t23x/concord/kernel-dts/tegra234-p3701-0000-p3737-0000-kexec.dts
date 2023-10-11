@@ -1,0 +1,101 @@
+/*
+ * Top level DTS file for CVM:P3701-0000 and CVB:P3737-0000.
+ *
+ * Copyright (c) 2021-2022, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/dts-v1/;
+#include "tegra234-p3701-0000-p3737-0000.dts"
+
+/ {
+	reserved-memory {
+		grid-of-semaphores {
+			status = "disabled";
+		};
+
+		ramoops_carveout {
+			status = "disabled";
+		};
+
+		fsi-carveout {
+			status = "disabled";
+		};
+
+		linux,cma {
+			status = "disabled";
+		};
+	};
+
+	tegra-carveouts {
+		status = "disabled";
+	};
+
+	pcie@14100000 {
+		status = "disabled";
+	};
+
+	pcie@14160000 {
+		status = "disabled";
+	};
+
+	pcie@141a0000 {
+		status = "disabled";
+	};
+
+	sound {
+		status = "disabled";
+	};
+
+	actmon@d230000 {
+		status = "disabled";
+	};
+
+	aon@c000000 {
+		status = "disabled";
+	};
+
+	ethernet@6810000 {
+		status = "disabled";
+	};
+
+	combined-uart {
+		status = "disabled";
+	};
+
+	sdhci@3400000 {
+		status = "disabled";
+	};
+
+	aconnect@2a41000 {
+		status = "disabled";
+	};
+
+	rtcpu@bc00000 {
+		status = "disabled";
+	};
+
+	tegra-hsp@c150000 {
+		status = "disabled";
+	};
+
+	xudc@3550000 {
+		status = "disabled";
+	};
+
+	cbb-fabric@1300000 {
+		status = "disabled";
+	};
+
+	chosen {
+		board-has-eeprom;
+	};
+};
