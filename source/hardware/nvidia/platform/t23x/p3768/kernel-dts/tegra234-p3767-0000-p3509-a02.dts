@@ -29,3 +29,30 @@
 	compatible = "nvidia,p3509-0000+p3767-0000", "nvidia,p3767-0000", "nvidia,tegra234", "nvidia,tegra23x";
 	model = "NVIDIA Orin NX Developer Kit";
 };
+
+
+&xusb_padctl {
+                        pads {
+                                usb3 {
+                                        lanes {
+                                                usb3-2 {
+                                                        nvidia,function = "xusb";
+                                                        status = "okay";
+                                                };
+                                        };
+                                };
+                        };
+                        ports {
+                                usb3-2 {
+                                        nvidia,usb2-companion = <2>;
+                                        status = "okay";
+                                };
+                        };
+};
+
+&tegra_xudc {
+                        phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
+                               <&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-2}>;
+                        phy-names = "usb2-0", "usb3-2";
+};
+
