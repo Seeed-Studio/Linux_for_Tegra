@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
- *
  * Device-tree overlay for tegra234-p3767-0000-p3509-a02 CSI Camera Connector.
  */
 

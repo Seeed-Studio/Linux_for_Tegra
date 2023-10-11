@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
 /*
  * Jetson Device-tree overlay to enable Camera IMX477 rbpcv3 on portA along with
  * camera IMX219 on portB, for dual cam connector baseboards
- *
- * Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
  *
  */
 

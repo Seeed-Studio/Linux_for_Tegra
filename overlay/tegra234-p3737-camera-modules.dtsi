@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "tegra234-camera-e3331-a00.dtsi"
 #include "tegra234-camera-e3333-a00.dtsi"
@@ -316,7 +314,7 @@
 							};
 						};
 						i2c@5 {
-							ar1335_g@42 {	
+							ar1335_g@42 {
 								status = "disabled";
 							};
 						};
