@@ -56,3 +56,30 @@
                         phy-names = "usb2-0", "usb3-2";
 };
 
+
+&pinmux {
+
+
+                       cam_i2c_scl_pp2 {
+                               nvidia,pins = "cam_i2c_scl_pp2";
+                               nvidia,function = "i2c3";
+                               nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+                               nvidia,tristate = <TEGRA_PIN_DISABLE>;
+                               nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+                               nvidia,open-drain = <TEGRA_PIN_ENABLE>;
+                               nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+                               nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+                       };
+
+                       cam_i2c_sda_pp3 {
+                               nvidia,pins = "cam_i2c_sda_pp3";
+                               nvidia,function = "i2c3";
+                               nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+                               nvidia,tristate = <TEGRA_PIN_DISABLE>;
+                               nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+                               nvidia,open-drain = <TEGRA_PIN_ENABLE>;
+                               nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+                               nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+                       };
+};
+
