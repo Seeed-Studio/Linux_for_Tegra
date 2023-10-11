@@ -489,7 +489,8 @@ static void vi5_capture_dequeue(struct tegra_channel *chan,
 	struct tegra_channel_buffer *buf)
 {
 	int err = 0;
-	unsigned int vi_port = 0;
+	bool frame_err = false;
+	int vi_port = 0;
 	int gang_prev_frame_id = 0;
 	unsigned long flags;
 	struct tegra_mc_vi *vi = chan->vi;
@@ -526,8 +527,7 @@ static void vi5_capture_dequeue(struct tegra_channel *chan,
 					"err_data %d\n",
 					descr->status.frame_id, descr->status.flags,
 					descr->status.err_data);
-				buf->vb2_state = VB2_BUF_STATE_ERROR;
-				goto done;
+				frame_err = true;
 			}
 		} else if (!vi_port) {
 			gang_prev_frame_id = descr->status.frame_id;
@@ -551,12 +551,14 @@ static void vi5_capture_dequeue(struct tegra_channel *chan,
 	trace_tegra_channel_capture_frame("sof", &ts);
 	vb->vb2_buf.timestamp = descr->status.sof_timestamp;
 
-	buf->vb2_state = VB2_BUF_STATE_DONE;
+	if (frame_err)
+		buf->vb2_state = VB2_BUF_STATE_ERROR;
+	else
+		buf->vb2_state = VB2_BUF_STATE_DONE;
 	/* Read EOF from capture descriptor */
 	ts = ns_to_timespec64((s64)descr->status.eof_timestamp);
 	trace_tegra_channel_capture_frame("eof", &ts);
 
-done:
 	goto rel_buf;
 
 uncorr_err:
