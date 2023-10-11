@@ -1863,7 +1863,8 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	tspi = spi_controller_get_devdata(ctrl);
 
 	/* the spi->mode bits understood by this driver: */
-	ctrl->use_gpio_descriptors = true;
+	dev_err(&pdev->dev, "use_gpio_descriptors false, is right\n");
+	ctrl->use_gpio_descriptors = false;
 	ctrl->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH | SPI_LSB_FIRST |
 			    SPI_TX_DUAL | SPI_RX_DUAL | SPI_3WIRE;
 	ctrl->bits_per_word_mask = SPI_BPW_RANGE_MASK(4, 32);
