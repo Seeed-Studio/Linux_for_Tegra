@@ -197,11 +197,12 @@ static int dw_pcie_irq_domain_alloc(struct irq_domain *domain,
 	bit = bitmap_find_free_region(pp->msi_irq_in_use, pp->num_vectors,
 				      order_base_2(nr_irqs));
 
+
 	raw_spin_unlock_irqrestore(&pp->lock, flags);
 
 	if (bit < 0)
 		return -ENOSPC;
-
+	
 	for (i = 0; i < nr_irqs; i++)
 		irq_domain_set_info(domain, virq + i, bit + i,
 				    pp->msi_irq_chip,
@@ -322,6 +323,7 @@ int dw_pcie_host_init(struct pcie_port *pp)
 	bridge->dev.parent = dev;
 	pp->bridge = bridge;
 
+
 	/* Get the I/O and memory ranges from DT */
 	resource_list_for_each_entry(win, &bridge->windows) {
 		switch (resource_type(win->res)) {
@@ -406,7 +408,9 @@ int dw_pcie_host_init(struct pcie_port *pp)
 						      sizeof(pp->msi_msg),
 						      DMA_FROM_DEVICE,
 						      DMA_ATTR_SKIP_CPU_SYNC);
-			if (dma_mapping_error(pci->dev, pp->msi_data)) {
+			// if (dma_mapping_error(pci->dev, pp->msi_data)) {
+			ret = dma_mapping_error(pci->dev, pp->msi_data);
+			if (ret) {
 				dev_err(pci->dev, "Failed to map MSI data\n");
 				pp->msi_data = 0;
 				goto err_free_msi;
