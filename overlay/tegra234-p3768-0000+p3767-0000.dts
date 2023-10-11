@@ -57,6 +57,10 @@
 					status = "okay";
 				};
 
+				i2c@31b0000 {
+					status = "okay";
+				};
+
 				/* SPI1, 40pin header, Pin 19(MOSI), Pin 21(MISO), Pin 23(CLK), Pin 24(CS) */
 				spi@3210000{
 					status = "okay";
