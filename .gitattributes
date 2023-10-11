@@ -1,0 +1,5 @@
+nv_tegra/l4t_deb_packages/nvidia-l4t-3d-core_35.3.1-20230319081403_arm64.deb filter=lfs diff=lfs merge=lfs -text
+extra_kernel_modules/8723du.ko filter=lfs diff=lfs merge=lfs -text
+nv_tegra/nvidia_drivers.tbz2 filter=lfs diff=lfs merge=lfs -text
+bootloader/nvidia-l4t-bootloader_35.3.1-20230319081403_arm64.deb filter=lfs diff=lfs merge=lfs -text
+kernel/nvidia-l4t-kernel_5.10.104-tegra-35.3.1-20230319081403_arm64.deb filter=lfs diff=lfs merge=lfs -text
