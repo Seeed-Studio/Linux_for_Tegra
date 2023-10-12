@@ -1,37 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
-/dts-v1/;
-/plugin/;
-
-#include "tegra234-overlay.dtsi"
-#include "tegra234-soc-thermal.dtsi"
-#include "tegra234-soc-thermal-slowdown-cluster.dtsi"
-#include "tegra234-soc-thermal-shutdown.dtsi"
-#include "tegra234-soc-camera.dtsi"
-#include "tegra234-camera-p3785.dtsi"
-#include "tegra234-p3740-0002.dtsi"
-#include "tegra234-p3701-0008.dtsi"
+#include "nv-soc/tegra234-overlay.dtsi"
+#include "nv-soc/tegra234-soc-thermal.dtsi"
+#include "nv-soc/tegra234-soc-thermal-slowdown-cluster.dtsi"
+#include "nv-soc/tegra234-soc-thermal-shutdown.dtsi"
+#include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
+#include "nv-soc/tegra234-soc-camera.dtsi"
+#include "tegra234-p3737-0000.dtsi"
+#include "tegra234-p3701-0000.dtsi"
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 
 / {
 #ifndef REMOVE_FRAGMENT_SYNTAX
-	compatible = "nvidia,p3740-0002+p3701-0008";
-
-	fragment-t234-p3740-p3701@0 {
+	compatible = "nvidia,p3737-0000+p3701-0000";
+	fragment-t234-p3737-p3701@0 {
 		target-path = "/";
 		__overlay__ {
 #endif
-			chosen {
-				bootargs = "console=ttyTCU0,115200n8";
-			};
-
-			bpmp {
-				thermal {
-					status = "okay";
-				};
-			};
-
 			cpus {
 				idle-states {
 					c7 {
@@ -41,6 +27,10 @@
 			};
 
 			nvpmodel {
+				status = "okay";
+			};
+
+			scf-pmu {
 				status = "okay";
 			};
 
@@ -80,10 +70,6 @@
 				soc2-thermal {
 					status = "okay";
 				};
-
-				tj-thermal {
-					status = "okay";
-				};
 			};
 
 			bus@0 {
@@ -97,41 +83,7 @@
 					status = "okay";
 				};
 
-				serial@3110000 {
-					compatible = "nvidia,tegra194-hsuart";
-					reset-names = "serial";
-					status = "okay";
-				};
-
-				serial@31d0000 {
-					status = "okay";
-				};
-
-				tachometer@39c0000 {
-					status = "okay";
-				};
-
-				hsp@3c00000 {
-					status = "okay";
-				};
-
-				hsp@c150000 {
-					status = "okay";
-				};
-
-				mttcan@c310000 {
-					status = "okay";
-				};
-
-				mttcan@c320000 {
-					status = "okay";
-				};
-
-				actmon@d230000 {
-					status = "okay";
-				};
-
-				hwpm@f100000 {
+				ufshci@2500000 {
 					status = "okay";
 				};
 
@@ -153,7 +105,6 @@
 							status = "okay";
 						};
 
-
 						dmic@2904300 {
 							status = "okay";
 						};
@@ -163,10 +114,6 @@
 						};
 
 						dspk@2905100 {
-							status = "okay";
-						};
-
-						arad@290e400 {
 							status = "okay";
 						};
 
@@ -193,11 +140,103 @@
 						afc@2907500 {
 							status = "okay";
 						};
+
+						arad@290e400 {
+							status = "okay";
+						};
 					};
+				};
+
+				serial@3110000 {
+					compatible = "nvidia,tegra194-hsuart";
+					reset-names = "serial";
+					status = "okay";
+				};
+
+				i2c@3180000 {
+					status = "okay";
+				};
+
+				i2c@3190000 {
+					status = "okay";
+				};
+
+				i2c@31b0000 {
+					nvidia,hw-instance-id = <0x5>;
+					status = "okay";
+				};
+
+				i2c@31c0000 {
+					status = "okay";
+				};
+
+				serial@31d0000 {
+					current-speed = <115200>;
+				};
+
+				i2c@31e0000 {
+					status = "okay";
+				};
+
+				tachometer@39c0000 {
+					status = "okay";
+				};
+
+				hsp@3d00000 {
+					status = "okay";
+				};
+
+				ethernet@6800000 {
+					status = "okay";
+				};
+
+				aon@c000000 {
+					status = "okay";
+				};
+
+				hardware-timestamp@c1e0000 {
+					status = "okay";
+					nvidia,num-slices = <3>;
+				};
+
+				i2c@c240000 {
+					status = "okay";
+				};
+
+				hdr40_i2c1: i2c@c250000 {
+					status = "okay";
+				};
+
+				rtc@c2a0000 {
+					status = "okay";
+				};
+
+				mttcan@c310000 {
+					status = "okay";
+				};
+
+				mttcan@c320000 {
+					status = "okay";
+				};
+
+				actmon@d230000 {
+					status = "okay";
+				};
+
+				hwpm@f100000 {
+					status = "okay";
+				};
+
+				mc-hwpm@2c10000 {
+					status = "okay";
 				};
 
 				host1x@13e00000 {
 					nvjpg@15380000 {
+						status = "okay";
+					};
+
+					nvdec@15480000 {
 						status = "okay";
 					};
 

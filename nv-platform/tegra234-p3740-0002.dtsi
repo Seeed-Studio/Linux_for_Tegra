@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
-#include "tegra234-soc-audio-dai-links.dtsi"
+#include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
 
 / {
 #ifndef REMOVE_FRAGMENT_SYNTAX

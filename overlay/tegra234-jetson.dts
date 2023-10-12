@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -11,8 +11,8 @@
 #include <dt-bindings/memory/tegra234-mc.h>
 #include <dt-bindings/power/tegra234-powergate.h>
 #include <dt-bindings/reset/tegra234-reset.h>
-#include "tegra234-soc-display-overlay.dtsi"
-#include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
+#include "nv-soc/tegra234-soc-display-overlay.dtsi"
+#include "nv-platform/tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 
 / {
 	overlay-name = "Tegra234 Jetson Overlay";
