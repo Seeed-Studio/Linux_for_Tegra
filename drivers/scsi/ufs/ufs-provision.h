@@ -7,13 +7,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
-#include <drivers-private/scsi/ufs/k515/ufshcd.h>
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
-#include <drivers-private/scsi/ufs/k516/ufshcd.h>
-#else
-#include <drivers-private/scsi/ufs/k61/ufshcd.h>
-#endif
+#include <drivers-private/scsi/ufs/ufshcd.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
