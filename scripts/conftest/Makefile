@@ -146,6 +146,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += tc_taprio_qopt_offload_struct_has_cmd
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra_dev_iommu_get_stream_id
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra_ivc_struct_has_iosys_map
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tty_operations_struct_write_has_u8_ptr_arg
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += ufs_hba_variant_ops_suspend_has_status_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += v4l2_async_connection_struct_present
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += v4l2_async_match_type_enum_present
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += v4l2_async_subdev_nf_init
@@ -181,7 +182,8 @@ NV_HEADER_PRESENCE_TESTS = \
   linux/iosys-map.h \
   net/gso.h \
   net/page_pool.h \
-  soc/tegra/tegra-prod.h
+  soc/tegra/tegra-prod.h \
+  ufs/ufshcd.h
 
 # Filename to store the define for the header in $(1); this is only consumed by
 # the rule below that concatenates all of these together.

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2015-2023 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/time.h>
@@ -965,11 +967,11 @@ static void ufs_tegra_context_restore(struct ufs_tegra_host *ufs_tegra)
 	}
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
-static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
-#else
+#if defined(NV_UFS_HBA_VARIANT_OPS_SUSPEND_HAS_STATUS_ARG)
 static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op,
 		enum ufs_notify_change_status status)
+#else
+static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 #endif
 {
 	struct ufs_tegra_host *ufs_tegra = hba->priv;

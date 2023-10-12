@@ -7399,6 +7399,31 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TTY_OPERATIONS_STRUCT_WRITE_HAS_U8_PTR_ARG" "" "functions"
         ;;
 
+        ufs_hba_variant_ops_suspend_has_status_arg)
+            #
+            # Determine if the 'suspend' function for the
+            # 'struct ufs_hba_variant_ops' has a 'status' argument.
+            #
+            # In Linux v5.16, commit 9561f58442e4 ("scsi: ufs:
+            # mediatek: Support vops pre suspend to disable auto-hibern8")
+            # updated the arguments to the 'suspend' function of the
+            # 'struct ufs_hba_variant_ops'.
+            #
+            CODE="
+            #if defined(NV_UFS_UFSHCD_H_PRESENT)
+            #include <ufs/ufshcd.h>
+            #else
+            #include \"../drivers/scsi/ufs/ufshcd.h\"
+            #endif
+            void conftest_ufs_hba_variant_ops_suspend_has_status_arg(
+                struct ufs_hba_variant_ops *ops) {
+                    int (*fn)(struct ufs_hba *, enum ufs_pm_op,
+                    enum ufs_notify_change_status) = ops->suspend;
+            }"
+
+            compile_check_conftest "$CODE" "NV_UFS_HBA_VARIANT_OPS_SUSPEND_HAS_STATUS_ARG" "" "types"
+        ;;
+
         v4l2_async_connection_struct_present)
             #
             # Determine if the 'struct v4l2_async_connection' present or not.
