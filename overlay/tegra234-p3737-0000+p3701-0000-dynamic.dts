@@ -6,6 +6,7 @@
 
 #include <dt-bindings/gpio/tegra234-gpio.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include "tegra234-p3737-camera-modules.dtsi"
 
 / {
 	overlay-name = "Tegra234 p3737-0000+p3701-xxxx Dynamic Overlay";
