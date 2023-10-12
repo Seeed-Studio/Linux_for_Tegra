@@ -41,7 +41,6 @@
 
 2. Enter the following commands to untar the files and assemble the rootfs:
 ```
-$ tar xf ${L4T_RELEASE_PACKAGE}
 $ sudo tar xpf ${SAMPLE_FS_PACKAGE} -C Linux_for_Tegra/rootfs/
 $ cd Linux_for_Tegra/
 $ sudo ./apply_binaries.sh
@@ -123,32 +122,32 @@ job-orin-nano-reserver-8g:
 	- 应用对应的BSP二进制文件
 	- 清理工作文件夹
 ```
-         - sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
-         - mount --bind /sys ./rootfs/sys
-         - mount --bind /dev ./rootfs/dev
-         - mount --bind /dev/pts ./rootfs/dev/pts
-         - mount --bind /proc ./rootfs/proc
-         - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
-         - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/reserver_industrial/Image kernel/
-         - cp extra_scripts/reserver_industrial/tegra234-p3767-0003-p3509-a02.dtb kernel/dtb/
-         - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
-         - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
-         - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
-         - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
-         - chroot rootfs /rootfs_magic.sh
-         - umount ./rootfs/sys
-         - umount ./rootfs/dev/pts
-         - umount ./rootfs/dev
-         - umount ./rootfs/proc
-         - rm rootfs/rootfs_magic.sh
-         - rm rootfs/usr/bin/qemu-aarch64-static
+- sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+- mount --bind /sys ./rootfs/sys
+- mount --bind /dev ./rootfs/dev
+- mount --bind /dev/pts ./rootfs/dev/pts
+- mount --bind /proc ./rootfs/proc
+- cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
+- cp extra_scripts/rootfs_magic.sh rootfs
+- cp extra_scripts/reserver_industrial/Image kernel/
+- cp extra_scripts/reserver_industrial/tegra234-p3767-0003-p3509-a02.dtb kernel/dtb/
+- cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
+- cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
+- cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
+- cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
+- chroot rootfs /rootfs_magic.sh
+- umount ./rootfs/sys
+- umount ./rootfs/dev/pts
+- umount ./rootfs/dev
+- umount ./rootfs/proc
+- rm rootfs/rootfs_magic.sh
+- rm rootfs/usr/bin/qemu-aarch64-static
 ```
 5. 生成量产需要mfi固件。Jetson Jetpack 5.x以后生成量产固件需要的参数非常多，这里的参数可以帮助后续对相关衍生产品。
 ```
-         - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6   ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial  external 
-         - cp  mfi_reserver-orin-industrial.tar.gz  deploy/mfi_reserver-orin-nano-8g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
-         - umount deploy
+- sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6   ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial  external 
+- cp  mfi_reserver-orin-industrial.tar.gz  deploy/mfi_reserver-orin-nano-8g-industrial-5.1-35.3.1-$DATE_STR.tar.gz 
+- umount deploy
 ```
 
 请注意，这里**192.168.1.77**是Seeed内部的服务器，它具备Samba和Http文件服务器的功能。
