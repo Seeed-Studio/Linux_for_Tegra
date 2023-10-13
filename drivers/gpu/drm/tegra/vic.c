@@ -129,7 +129,7 @@ static int vic_set_rate(struct vic *vic, unsigned long rate)
 
 	if (vic->icc_write) {
 		emc_kbps = dev_rate * VIC_AXI_RW_BANDWIDTH / 1024;
-		err = icc_set_bw(vic->icc_write, kbps_to_icc(emc_kbps), 0);
+		err = icc_set_bw(vic->icc_write, 0, kbps_to_icc(emc_kbps));
 		if (err)
 			dev_warn(vic->dev, "failed to set icc bw: %d\n", err);
 	}
