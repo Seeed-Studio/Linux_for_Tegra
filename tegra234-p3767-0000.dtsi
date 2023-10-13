@@ -6,6 +6,10 @@
 	compatible = "nvidia,p3767-0000", "nvidia,tegra234";
 	model = "NVIDIA Jetson Orin NX";
 
+	sound {
+		label = "NVIDIA Jetson Orin NX APE";
+	};
+
 	bus@0 {
 		hda@3510000 {
 			nvidia,model = "NVIDIA Jetson Orin NX HDA";

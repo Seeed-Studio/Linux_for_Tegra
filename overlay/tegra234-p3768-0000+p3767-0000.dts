@@ -8,6 +8,8 @@
 #include "tegra234-soc-thermal.dtsi"
 #include "tegra234-soc-thermal-slowdown-corepair.dtsi"
 #include "tegra234-soc-thermal-shutdown.dtsi"
+#include "tegra234-soc-audio-dai-links.dtsi"
+#include "tegra234-p3768-0000.dtsi"
 #include "tegra234-p3767-0000.dtsi"
 #include "tegra234-soc-camera.dtsi"
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
@@ -45,6 +47,66 @@
 					status = "okay";
 				};
 
+				aconnect@2900000 {
+					ahub@2900800 {
+						i2s@2901200 {
+							status = "okay";
+						};
+
+						i2s@2901400 {
+							status = "okay";
+						};
+
+						dmic@2904000 {
+							status = "okay";
+						};
+
+						dmic@2904100 {
+							status = "okay";
+						};
+
+						dmic@2904300 {
+							status = "okay";
+						};
+
+						dspk@2905000 {
+							status = "okay";
+						};
+
+						dspk@2905100 {
+							status = "okay";
+						};
+
+						afc@2907000 {
+							status = "okay";
+						};
+
+						afc@2907100 {
+							status = "okay";
+						};
+
+						afc@2907200 {
+							status = "okay";
+						};
+
+						afc@2907300 {
+							status = "okay";
+						};
+
+						afc@2907400 {
+							status = "okay";
+						};
+
+						afc@2907500 {
+							status = "okay";
+						};
+
+						arad@290e400 {
+							status = "okay";
+						};
+					};
+				};
+
 				/* UARTA, 40 pin header, Pin 8(TX), Pin 10(RX) */
 				serial@3100000 {
 					compatible = "nvidia,tegra194-hsuart";
@@ -58,6 +120,10 @@
 				};
 
 				i2c@31b0000 {
+					status = "okay";
+				};
+
+				hdr40_i2c1: i2c@c250000 {
 					status = "okay";
 				};
 
