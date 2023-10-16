@@ -293,10 +293,21 @@
 					};
 				};
 
-				xusb_padctl@3520000 {
+				padctl@3520000 {
 					prod-settings {
 						#prod-cells = <4>;
 						prod {
+							nvidia,xusb-pad0-ls-rise-slew = <0x6>;
+							nvidia,xusb-pad0-ls-fall-slew = <0x6>;
+							nvidia,xusb-pad0-hs-txeq = <0x2>;
+							nvidia,xusb-pad1-ls-rise-slew = <0x6>;
+							nvidia,xusb-pad1-ls-fall-slew = <0x6>;
+							nvidia,xusb-pad1-hs-txeq = <0x2>;
+							nvidia,xusb-pad2-ls-rise-slew = <0x6>;
+							nvidia,xusb-pad2-ls-fall-slew = <0x6>;
+							nvidia,xusb-pad2-hs-txeq = <0x0>;
+							nvidia,xusb-pad3-ls-rise-slew = <0x6>;
+							nvidia,xusb-pad3-ls-fall-slew = <0x6>;
 							board {
 								prod = <
 									0 0x00000088 0x01fe0000 0x00cc0000              //XUSB_PADCTL_USB2_OTG_PAD0_CTL_0_0

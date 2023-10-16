@@ -816,10 +816,13 @@
 					};
 				};
 
-				xusb_padctl@3520000 {
+				padctl@3520000 {
 					prod-settings {
 						#prod-cells = <4>;
 						prod {
+							nvidia,xusb-pad-hs-discon-level = <0x7>;
+							nvidia,xusb-pad-trk-start-timer = <0x1e>;
+							nvidia,xusb-pad-trk-reset-timer = <0xa>;
 							prod = <
 								0 0x00000284 0x00000038 0x00000038              //XUSB_PADCTL_USB2_BIAS_PAD_CTL_0_0
 								0 0x00000288 0x03fff000 0x0051e000>;            //XUSB_PADCTL_USB2_BIAS_PAD_CTL_1_0
