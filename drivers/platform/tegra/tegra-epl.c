@@ -12,8 +12,6 @@
 #include <linux/mailbox_client.h>
 #include <linux/tegra-epl.h>
 #include <linux/pm.h>
-#include <linux/kthread.h>
-#include <linux/mutex.h>
 
 /* Timeout in milliseconds */
 #define TIMEOUT		5U
@@ -74,9 +72,6 @@ static struct epl_misc_sw_err_cfg miscerr_cfg[NUM_SW_GENERIC_ERR];
 
 /* State of FSI handshake */
 static enum handshake_state hs_state = HANDSHAKE_PENDING;
-static DEFINE_MUTEX(hs_state_mutex);
-
-static struct task_struct *fsi_handshake_thread;
 
 static bool enable_deinit_notify;
 
@@ -123,12 +118,10 @@ static ssize_t device_file_ioctl(
 	switch (cmd) {
 
 	case EPL_REPORT_ERROR_CMD:
-		mutex_lock(&hs_state_mutex);
 		if (hs_state == HANDSHAKE_DONE)
 			ret = mbox_send_message(epl_hsp_v->tx.chan, (void *) lData);
 		else
 			ret = -ENODEV;
-		mutex_unlock(&hs_state_mutex);
 
 		break;
 	default:
@@ -198,12 +191,9 @@ int epl_report_error(struct epl_error_report_frame error_report)
 {
 	int ret = -EINVAL;
 
-	mutex_lock(&hs_state_mutex);
 	if (epl_hsp_v == NULL || hs_state != HANDSHAKE_DONE) {
-		mutex_unlock(&hs_state_mutex);
 		return -ENODEV;
 	}
-	mutex_unlock(&hs_state_mutex);
 
 	ret = mbox_send_message(epl_hsp_v->tx.chan, (void *)&error_report);
 
@@ -221,26 +211,23 @@ static int epl_client_fsi_pm_notify(u32 state)
 	pdata[2] = state;
 	pdata[3] = PM_STATE_UNI_CODE;
 
-	mutex_lock(&hs_state_mutex);
 	if (hs_state == HANDSHAKE_DONE)
 		ret = mbox_send_message(epl_hsp_v->tx.chan, (void *) pdata);
 	else
 		ret = -ENODEV;
-	mutex_unlock(&hs_state_mutex);
 
 	return ret < 0 ? ret : 0;
 }
 
 static int epl_client_fsi_handshake(void *arg)
 {
-	mutex_lock(&hs_state_mutex);
+	uint8_t count = 0;
 
 	if (epl_hsp_v) {
 		int ret;
 		const uint32_t handshake_data[] = {0x45504C48, 0x414E4453, 0x48414B45,
 			0x44415441};
-		const uint8_t max_retries = 3;
-		uint8_t count = 0;
+		const uint8_t max_retries = 20;
 
 		do {
 			ret = mbox_send_message(epl_hsp_v->tx.chan, (void *) handshake_data);
@@ -252,15 +239,13 @@ static int epl_client_fsi_handshake(void *arg)
 				hs_state = HANDSHAKE_DONE;
 				break;
 			}
-		} while (count < max_retries || kthread_should_stop());
+		} while (count < max_retries);
 	}
 
 	if (hs_state == HANDSHAKE_FAILED)
 		pr_warn("epl_client: handshake with FSI failed\n");
 	else
-		pr_info("epl_client: handshake done with FSI\n");
-
-	mutex_unlock(&hs_state_mutex);
+		pr_info("epl_client: handshake done with FSI, try %u\n", count);
 
 	return 0;
 }
@@ -272,9 +257,7 @@ static int __maybe_unused epl_client_suspend(struct device *dev)
 
 	if (enable_deinit_notify)
 		ret = epl_client_fsi_pm_notify(PM_SUSPEND);
-	mutex_lock(&hs_state_mutex);
 	hs_state = HANDSHAKE_PENDING;
-	mutex_unlock(&hs_state_mutex);
 
 	return ret;
 }
@@ -283,12 +266,7 @@ static int __maybe_unused epl_client_resume(struct device *dev)
 {
 	pr_debug("tegra-epl: resume called\n");
 
-	fsi_handshake_thread = kthread_run(epl_client_fsi_handshake, NULL, "fsi-hs");
-
-	if (IS_ERR(fsi_handshake_thread))
-		return PTR_ERR(fsi_handshake_thread);
-
-	return 0;
+	return epl_client_fsi_handshake(NULL);
 }
 static SIMPLE_DEV_PM_OPS(epl_client_pm, epl_client_suspend, epl_client_resume);
 
@@ -351,9 +329,7 @@ static int epl_client_probe(struct platform_device *pdev)
 	int iterator = 0;
 	char name[32] = "client-misc-sw-generic-err";
 
-	mutex_lock(&hs_state_mutex);
 	hs_state = HANDSHAKE_PENDING;
-	mutex_unlock(&hs_state_mutex);
 
 	epl_register_device();
 	ret = tegra_hsp_mb_init(dev);
@@ -395,10 +371,7 @@ static int epl_client_probe(struct platform_device *pdev)
 	}
 
 	if (ret == 0) {
-		fsi_handshake_thread = kthread_run(epl_client_fsi_handshake, NULL, "fsi-hs");
-
-		if (IS_ERR(fsi_handshake_thread))
-			return PTR_ERR(fsi_handshake_thread);
+		return epl_client_fsi_handshake(NULL);
 	}
 
 	return ret;
@@ -412,9 +385,7 @@ static void epl_client_shutdown(struct platform_device *pdev)
 		if (epl_client_fsi_pm_notify(PM_SHUTDOWN) < 0)
 			pr_err("Unable to send notification to fsi\n");
 
-	mutex_lock(&hs_state_mutex);
 	hs_state = HANDSHAKE_PENDING;
-	mutex_unlock(&hs_state_mutex);
 
 	epl_unregister_device();
 }
