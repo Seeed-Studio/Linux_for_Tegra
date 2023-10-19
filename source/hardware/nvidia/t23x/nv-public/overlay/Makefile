@@ -16,6 +16,7 @@ dtbo-y += tegra234-dcb-p3767-0000-hdmi.dtbo
 dtbo-y += tegra234-jetson.dtbo
 dtbo-y += tegra234-p3737-0000+p3701-0000-as-p3701-0004.dtbo
 dtbo-y += tegra234-p3737-0000+p3701-0000-as-p3767-0000.dtbo
+dtbo-y += tegra234-p3737-0000+p3701-0000-as-p3767-0001.dtbo
 dtbo-y += tegra234-p3737-0000+p3701-0000-dynamic.dtbo
 dtbo-y += tegra234-p3768-0000+p3767-0000-dynamic.dtbo
 dtbo-y += tegra234-p3737-0000+p3701-0000-audio-adafruit-uda1334a.dtbo
