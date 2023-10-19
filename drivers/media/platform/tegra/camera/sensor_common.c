@@ -1,8 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * sensor_common.c - utilities for tegra sensor drivers
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
- * Copyright (c) 2017-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <media/sensor_common.h>
@@ -243,6 +254,14 @@ static int extract_pixel_format(
 		*format = V4L2_PIX_FMT_SGBRG12;
 	else if (strncmp(pixel_t, "bayer_grbg12", size) == 0)
 		*format = V4L2_PIX_FMT_SGRBG12;
+	else if (strncmp(pixel_t, "bayer_bggr14", size) == 0)
+		*format = V4L2_PIX_FMT_SBGGR14;
+	else if (strncmp(pixel_t, "bayer_rggb14", size) == 0)
+		*format = V4L2_PIX_FMT_SRGGB14;
+	else if (strncmp(pixel_t, "bayer_gbrg14", size) == 0)
+		*format = V4L2_PIX_FMT_SGBRG14;
+	else if (strncmp(pixel_t, "bayer_grbg14", size) == 0)
+		*format = V4L2_PIX_FMT_SGRBG14;
 	else if (strncmp(pixel_t, "rgb_rgb88824", size) == 0)
 		*format = V4L2_PIX_FMT_RGB24;
 	else if (strncmp(pixel_t, "bayer_wdr_pwl_rggb12", size) == 0)
