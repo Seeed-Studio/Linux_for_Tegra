@@ -35,38 +35,72 @@ Please pay attention to keywords such as **reComputer**, **Industrial**, **reSer
 
 ## Getting Started
 
-1. Download the latest Jetson Linux release package and sample file system for your Jetson device from https://developer.nvidia.com/linux-tegra
-
-2. Enter the following commands to untar the files and assemble the rootfs:
+1. Install git lfs and clone this repo
 
 ```
-$ sudo tar xpf ${SAMPLE_FS_PACKAGE} -C Linux_for_Tegra/rootfs/
-$ cd Linux_for_Tegra/
-$ sudo ./apply_binaries.sh
-$ sudo ./tools/l4t_flash_prerequisites.sh
+sudo apt update
+sudo apt install git-lfs
+git clone https://github.com/Seeed-Studio/Linux_for_Tegra
 ```
 
-3. Copy BSP file. for other products, please refer to [CI/CD](#cicd).
+2. Download and prepare sample root file system
+
+```
+wget https://developer.nvidia.com/downloads/embedded/l4t/r35_release_v3.1/release/tegra_linux_sample-root-filesystem_r35.3.1_aarch64.tbz2
+sudo tar xpf Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -C Linux_for_Tegra/rootfs/
+cd Linux_for_Tegra
+sudo ./apply_binaries.sh
+sudo ./tools/l4t_flash_prerequisites.sh
+```
+
+3. Copy the necessary BSP files according to your board
+
+### reComputer/ reServer Industrial J4012/ J4011, J3011 (Orin NX 16GB/ 8GB, Orin Nano 8GB)
 
 ```
 cp extra_scripts/reserver_industrial/Image kernel/
-cp extra_scripts/reserver_industrial/tegra234-p3767-0003-p3509-a02.dtb kernel/dtb/
 cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
 cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
-cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/
+cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
+cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
 ```
 
-4. Ensure that your Jetson device is configured and connected to your Linux host.
-
-5. Confirm that the Jetson device is in Force Recovery Mode.
-
-6. Enter this command on your Linux host to install (flash) the Jetson release onto the Jetson device.
+### reComputer and reServer Industrial J3010 (Orin Nano 4GB)
 
 ```
-sudo ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --network usb0  reserver-orin-industrial external 
+cp extra_scripts/recomputer_industrial/Image kernel/
+cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
+cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
+cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
+cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
+cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
+```
+
+4. Connect the Jetson device to the host PC and enter Force Recovery Mode. For reference, you can check [reComputer](https://wiki.seeedstudio.com/reComputer_J4012_Flash_Jetpack/#enter-force-recovery-mode), [reComputer Industrial](https://wiki.seeedstudio.com/reComputer_Industrial_Getting_Started/#enter-force-recovery-mode), and [reServer Industrial](https://wiki.seeedstudio.com/reServer_Industrial_Getting_Started/#enter-force-recovery-mode)
+
+5. Enter this command on your Linux host to install (flash) the Jetson release onto the Jetson device.
+
+### reComputer Industrial J4012/ J4011, J3011/ J3010 (Orin NX 16GB/ 8GB, Orin Nano 8GB/ 4GB)
+
+```
+sudo ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --network usb0 recomputer-orin-industrial external
+```
+
+### reComputer Industrial J2012/ J2011 (Xavier NX 16GB/ 8GB)
+
+```
+sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo" ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg" --network usb0 recomputer-xavier-nx-industrial external
+```
+
+### reServer Industrial J4012/ J4011, J3011/ J3010 (Orin NX 16GB/ 8GB, Orin Nano 8GB/ 4GB)
+
+```
+sudo ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --network usb0 reserver-orin-industrial external
 ```
 
 7. The Jetson device automatically reboots when the installation process is complete. At this point your Jetson device is operational. Follow the prompts on the display to set up a user account and log in.
+
+**Note:** For more flashing methods, please follow our [reComputer Industrial](https://wiki.seeedstudio.com/reComputer_Industrial_Getting_Started/#different-methods-of-flashing) and [reServer Industrial](https://wiki.seeedstudio.com/reServer_Industrial_Getting_Started/#different-methods-of-flashing) wiki documents.
 
 ## Introduction to the software
 
