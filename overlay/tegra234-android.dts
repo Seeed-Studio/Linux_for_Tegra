@@ -107,6 +107,11 @@
 					dmas = <&gpcdma 8>, <&gpcdma 8>;
 					dma-names = "rx", "tx";
 				};
+				host1x@13e00000 {
+					se@15820000 {
+						status = "disabled";
+					};
+				};
 			};
 		};
 	};
