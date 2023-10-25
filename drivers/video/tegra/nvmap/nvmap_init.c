@@ -108,6 +108,7 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 #ifdef NVMAP_CONFIG_VPR_RESIZE
 		.dma_info	= &generic_dma_info,
 #endif
+		.numa_node_id = 0,
 	},
 	[1] = {
 		.name		= "vpr",
@@ -120,6 +121,7 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.dma_info	= &vpr_dma_info,
 #endif
 		.enable_static_dma_map = true,
+		.numa_node_id = 0,
 	},
 	[2] = {
 		.name		= "vidmem",
@@ -128,41 +130,55 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.size		= 0,
 		.disable_dynamic_dma_map = true,
 		.no_cpu_access = true,
+		.numa_node_id = 0,
 	},
 	[3] = {
 		.name		= "fsi",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_FSI,
 		.base		= 0,
 		.size		= 0,
+		.numa_node_id = 0,
 	},
 	[4] = {
-		.name		= "gpu",
+		.name		= "gpu0",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_GPU,
 		.base		= 0,
 		.size		= 0,
+		.numa_node_id = 0,
+	},
+	[5] = {
+		.name		= "gpu1",
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_GPU,
+		.base		= 0,
+		.size		= 0,
+		.numa_node_id = 1,
 	},
 	/* Need uninitialized entries for IVM carveouts */
-	[5] = {
-		.name		= NULL,
-		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
-	},
 	[6] = {
 		.name		= NULL,
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+		.numa_node_id = 0,
 	},
 	[7] = {
 		.name		= NULL,
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+		.numa_node_id = 0,
 	},
 	[8] = {
 		.name		= NULL,
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+		.numa_node_id = 0,
+	},
+	[9] = {
+		.name		= NULL,
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+		.numa_node_id = 0,
 	},
 };
 
 static struct nvmap_platform_data nvmap_data = {
 	.carveouts	= nvmap_carveouts,
-	.nr_carveouts	= 5,
+	.nr_carveouts	= 6,
 };
 
 static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name)
@@ -944,8 +960,10 @@ int __init nvmap_init(struct platform_device *pdev)
 			if (of_device_is_available(it.node) &&
 			    !of_device_is_compatible(it.node, "nvidia,ivm_carveout")) {
 				/* Read granule size in case of gpu carveout */
-				if (of_device_is_compatible(it.node, "nvidia,gpu_carveout")
-				    && of_property_read_u32(it.node, "granule-size", &granule_size)) {
+				if ((of_device_is_compatible(it.node, "nvidia,gpu0_carveout") ||
+					of_device_is_compatible(it.node, "nvidia,gpu1_carveout")) &&
+					of_property_read_u32(it.node, "granule-size", &granule_size
+						)) {
 					pr_err("granule-size property is missing\n");
 					return -EINVAL;
 				}

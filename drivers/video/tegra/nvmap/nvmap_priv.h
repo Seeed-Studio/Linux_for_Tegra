@@ -915,7 +915,7 @@ static inline struct dma_buf *nvmap_id_array_id_release(struct xarray *xarr, u32
 #endif
 void *nvmap_dmabuf_get_drv_data(struct dma_buf *dmabuf,
 		struct device *dev);
-bool is_nvmap_memory_available(size_t size, uint32_t heap);
+bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid);
 int system_heap_free_mem(unsigned long *mem_val);
 
 #ifdef NVMAP_CONFIG_DEBUG_MAPS

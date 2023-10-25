@@ -227,7 +227,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 		page_sz = granule_size;
 	}
 
-	if (!is_nvmap_memory_available(handle->size, op.heap_mask)) {
+	if (!is_nvmap_memory_available(handle->size, op.heap_mask, op.numa_nid)) {
 		nvmap_handle_put(handle);
 		return -ENOMEM;
 	}

@@ -506,6 +506,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->can_alloc = !!co->can_alloc;
 	h->is_ivm = co->is_ivm;
 	h->is_gpu_co = co->is_gpu_co;
+	h->numa_node_id = co->numa_node_id;
 	h->granule_size = co->granule_size;
 	h->len = len;
 	h->free_size = len;
@@ -517,6 +518,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	if (co->pm_ops.idle)
 		h->pm_ops.idle = co->pm_ops.idle;
 
+	h->carevout_debugfs_info = kmalloc(sizeof(struct debugfs_info), GFP_KERNEL);
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
@@ -546,6 +548,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 		co->name, (void *)(uintptr_t)base, len/1024);
 	return h;
 fail:
+	kfree(h->carevout_debugfs_info);
 	if (h->dma_dev->kobj.name)
 		kfree_const(h->dma_dev->kobj.name);
 	kfree(h);
@@ -562,6 +565,7 @@ void nvmap_heap_destroy(struct nvmap_heap *heap)
 	if (heap->is_ivm)
 		kfree(heap->name);
 
+	kfree(heap->carevout_debugfs_info);
 #ifdef NVMAP_LOADABLE_MODULE
 	nvmap_dma_release_coherent_memory((struct dma_coherent_mem_replica *)
 					  heap->dma_dev->dma_mem);

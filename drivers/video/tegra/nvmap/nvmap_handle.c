@@ -185,7 +185,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 		size = vma->vm_end - vaddr;
 
 	/* Don't allow exuberantly large sizes. */
-	if (!is_nvmap_memory_available(size, NVMAP_HEAP_IOVMM)) {
+	if (!is_nvmap_memory_available(size, NVMAP_HEAP_IOVMM, NUMA_NO_NODE)) {
 		pr_debug("Cannot allocate %zu bytes.\n", size);
 		nvmap_release_mmap_read_lock(mm);
 		return ERR_PTR(-ENOMEM);

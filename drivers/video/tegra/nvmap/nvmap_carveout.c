@@ -56,7 +56,8 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 	}
 
 	for (i = 0; i < nvmap_dev->nr_heaps; i++)
-		if ((co->usage_mask != NVMAP_HEAP_CARVEOUT_IVM) &&
+		if ((co->usage_mask != NVMAP_HEAP_CARVEOUT_IVM &&
+			co->usage_mask != NVMAP_HEAP_CARVEOUT_GPU) &&
 		    (nvmap_dev->heaps[i].heap_bit & co->usage_mask)) {
 			pr_err("carveout %s already exists\n", co->name);
 			err = -EEXIST;
@@ -87,33 +88,38 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 	if (!IS_ERR_OR_NULL(nvmap_dev->debug_root)) {
 		struct dentry *heap_root =
 			debugfs_create_dir(co->name, nvmap_dev->debug_root);
+		struct debugfs_info *carevout_debugfs_info = node->carveout->carevout_debugfs_info;
+
+		carevout_debugfs_info->heap_bit = node->heap_bit;
+		carevout_debugfs_info->numa_id = node->carveout->numa_node_id;
+
 		if (!IS_ERR_OR_NULL(heap_root)) {
 			debugfs_create_file("clients", S_IRUGO,
 				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
+				(void *)carevout_debugfs_info,
 				&debug_clients_fops);
 			debugfs_create_file("allocations", S_IRUGO,
 				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
+				(void *)carevout_debugfs_info,
 				&debug_allocations_fops);
 			debugfs_create_file("all_allocations", S_IRUGO,
 				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
+				(void *)carevout_debugfs_info,
 				&debug_all_allocations_fops);
 			debugfs_create_file("orphan_handles", S_IRUGO,
 				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
+				(void *)carevout_debugfs_info,
 				&debug_orphan_handles_fops);
 			debugfs_create_file("maps", S_IRUGO,
 				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
+				(void *)carevout_debugfs_info,
 				&debug_maps_fops);
 			debugfs_create_bool("no_cpu_access", S_IRUGO,
 				heap_root, (bool *)&co->no_cpu_access);
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 			debugfs_create_file("device_list", S_IRUGO,
 				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
+				(void *)carevout_debugfs_info,
 				&debug_device_list_fops);
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
 			nvmap_heap_debugfs_init(heap_root,
@@ -232,10 +238,10 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 {
 	struct nvmap_carveout_node *co_heap;
 	struct nvmap_device *dev = nvmap_dev;
+	struct nvmap_heap_block *block = NULL;
 	int i;
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
-		struct nvmap_heap_block *block;
 		co_heap = &dev->heaps[i];
 
 		if (!(co_heap->heap_bit & type))
@@ -244,11 +250,26 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 		if (type & NVMAP_HEAP_CARVEOUT_IVM)
 			handle->size = ALIGN(handle->size, NVMAP_IVM_ALIGNMENT);
 
-		block = nvmap_heap_alloc(co_heap->carveout, handle, start);
-		if (block)
-			return block;
+		/*
+		 * When NUMA_NO_NODE is specified, iterate all carveouts with same heap_bit
+		 * and different numa nid. Else, specific numa nid is specified, then allocate
+		 * only from that particular carveout on given numa node.
+		 */
+		if (handle->numa_id == NUMA_NO_NODE) {
+			block = nvmap_heap_alloc(co_heap->carveout, handle, start);
+			if (!block)
+				continue;
+			goto exit;
+		} else {
+			if (handle->numa_id != co_heap->carveout->numa_node_id)
+				continue;
+			block = nvmap_heap_alloc(co_heap->carveout, handle, start);
+			goto exit;
+		}
 	}
-	return NULL;
+
+exit:
+	return block;
 }
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *client,

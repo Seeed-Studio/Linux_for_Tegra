@@ -18,6 +18,15 @@ struct nvmap_heap_block {
 	struct nvmap_handle *handle;
 };
 
+/*
+ * Info to be passed to debugfs nodes, so as to provide heap type and
+ * numa node id.
+ */
+struct debugfs_info {
+	unsigned int heap_bit;
+	int numa_id;
+};
+
 struct nvmap_heap {
 	struct list_head all_list;
 	struct mutex lock;
@@ -33,6 +42,7 @@ struct nvmap_heap {
 	bool is_ivm;
 	bool is_gpu_co;
 	u32 granule_size;
+	int numa_node_id;
 	bool can_alloc; /* Used only if is_ivm == true */
 	unsigned int peer; /* Used only if is_ivm == true */
 	unsigned int vm_id; /* Used only if is_ivm == true */
@@ -40,6 +50,7 @@ struct nvmap_heap {
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 	struct rb_root device_names;
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
+	struct debugfs_info *carevout_debugfs_info; /* Used for storing debugfs info */
 };
 
 struct list_block {

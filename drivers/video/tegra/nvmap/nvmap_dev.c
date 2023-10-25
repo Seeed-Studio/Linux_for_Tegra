@@ -70,6 +70,7 @@ static struct device_dma_parameters nvmap_dma_parameters = {
 	.max_segment_size = UINT_MAX,
 };
 
+static struct debugfs_info iovmm_debugfs_info;
 static int nvmap_open(struct inode *inode, struct file *filp);
 static int nvmap_release(struct inode *inode, struct file *filp);
 static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
@@ -592,13 +593,13 @@ next_page:
 	nvmap_ref_unlock(client);
 }
 
-bool is_nvmap_memory_available(size_t size, uint32_t heap)
+bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid)
 {
 	unsigned long total_num_pages;
 	unsigned int carveout_mask = NVMAP_HEAP_CARVEOUT_MASK;
 	unsigned int iovmm_mask = NVMAP_HEAP_IOVMM;
 	struct nvmap_device *dev = nvmap_dev;
-	bool heap_present = false;
+	bool memory_available = false;
 	int i;
 
 	if (!heap)
@@ -637,17 +638,33 @@ bool is_nvmap_memory_available(size_t size, uint32_t heap)
 		if (!(co_heap->heap_bit & heap))
 			continue;
 
-		heap_present = true;
 		h = co_heap->carveout;
-		if (size > h->free_size) {
-			pr_debug("Requested size is more than available memory");
-			pr_debug("Requested size : %lu B, Available memory : %lu B\n", size,
-					h->free_size);
-                        return false;
-                }
+		/*
+		 * When user does not specify numa node i.e. in default NUMA_NO_NODE case,
+		 * do not consider numa node id. So check for heap instances on all numa
+		 * nodes. When numa node is provided by user, then check heap instance only
+		 * on that numa node.
+		 */
+		if (numa_nid == NUMA_NO_NODE) {
+			if (size > h->free_size)
+				continue;
+			memory_available = true;
+			goto exit;
+		} else {
+			if (h->numa_node_id != numa_nid)
+				continue;
+			else if (size > h->free_size)
+				memory_available = false;
+			else
+				memory_available = true;
+
+			goto exit;
+		}
 		break;
 	}
-	return heap_present;
+
+exit:
+	return memory_available;
 }
 
 /* compute the total amount of handle physical memory that is mapped
@@ -750,7 +767,7 @@ next_page:
 }
 
 static void nvmap_get_client_mss(struct nvmap_client *client,
-				 u64 *total, u32 heap_type)
+				 u64 *total, u32 heap_type, int numa_id)
 {
 	struct rb_node *n;
 
@@ -761,15 +778,21 @@ static void nvmap_get_client_mss(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref =
 			rb_entry(n, struct nvmap_handle_ref, node);
 		struct nvmap_handle *handle = ref->handle;
-		if (handle->alloc && handle->heap_type == heap_type)
+		if (handle->alloc && handle->heap_type == heap_type) {
+			if (heap_type != NVMAP_HEAP_IOVMM &&
+				(nvmap_block_to_heap(handle->carveout)->numa_node_id !=
+				 numa_id))
+				continue;
+
 			*total += handle->size /
 				  atomic_read(&handle->share_count);
+		}
 	}
 	nvmap_ref_unlock(client);
 }
 
 #define PSS_SHIFT 12
-static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type)
+static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id)
 {
 	int i;
 	struct rb_node *n;
@@ -787,6 +810,11 @@ static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type)
 			rb_entry(n, struct nvmap_handle, node);
 
 		if (!h || !h->alloc || h->heap_type != heap_type)
+			continue;
+
+		if (heap_type != NVMAP_HEAP_IOVMM &&
+			(nvmap_block_to_heap(h->carveout)->numa_node_id !=
+			numa_id))
 			continue;
 
 		*total += h->size;
@@ -807,7 +835,9 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 {
 	u64 total;
 	struct nvmap_client *client;
-	u32 heap_type = (u32)(uintptr_t)s->private;
+	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
+	u32 heap_type = debugfs_information->heap_bit;
+	int numa_id = debugfs_information->numa_id;
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -818,13 +848,13 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	list_for_each_entry(client, &nvmap_dev->clients, list) {
 		u64 client_total;
 		client_stringify(client, s);
-		nvmap_get_client_mss(client, &client_total, heap_type);
+		nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
 		seq_printf(s, " %10lluK\n", K(client_total));
 		allocations_stringify(client, s, heap_type);
 		seq_printf(s, "\n");
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
-	nvmap_get_total_mss(NULL, &total, heap_type);
+	nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -846,7 +876,9 @@ DEBUGFS_OPEN_FOPS(free_size);
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 static int nvmap_debug_device_list_show(struct seq_file *s, void *unused)
 {
-	u32 heap_type = (u32)(uintptr_t)s->private;
+	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
+	u32 heap_type = debugfs_information->heap_bit;
+	int numa_id = debugfs_information->numa_id;
 	struct rb_node *n = NULL;
 	struct nvmap_device_list *dl = NULL;
 	int i;
@@ -857,7 +889,9 @@ static int nvmap_debug_device_list_show(struct seq_file *s, void *unused)
 		/* Iterate over all heaps to find the matching heap */
 		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
 			if (heap_type & nvmap_dev->heaps[i].heap_bit) {
-				if (nvmap_dev->heaps[i].carveout) {
+				if (nvmap_dev->heaps[i].carveout && (nvmap_block_to_heap
+					(nvmap_dev->heaps[i].carveout)->numa_node_id
+					 != numa_id)) {
 					n = rb_first(&nvmap_dev->heaps[i].carveout->device_names);
 					break;
 				}
@@ -878,9 +912,10 @@ DEBUGFS_OPEN_FOPS(device_list);
 
 static int nvmap_debug_all_allocations_show(struct seq_file *s, void *unused)
 {
-	u32 heap_type = (u32)(uintptr_t)s->private;
+	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
+	u32 heap_type = debugfs_information->heap_bit;
+	int numa_id = debugfs_information->numa_id;
 	struct rb_node *n;
-
 
 	spin_lock(&nvmap_dev->handle_lock);
 	seq_printf(s, "%8s %11s %9s %6s %6s %6s %6s %8s\n",
@@ -894,11 +929,15 @@ static int nvmap_debug_all_allocations_show(struct seq_file *s, void *unused)
 			rb_entry(n, struct nvmap_handle, node);
 		int i = 0;
 
-		if (handle->alloc && handle->heap_type == heap_type) {
+		if (handle->alloc && handle->heap_type == debugfs_information->heap_bit) {
 			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   handle->heap_pgalloc ? 0 :
 					   (handle->carveout->base);
 			size_t size = K(handle->size);
+
+			if (heap_type != NVMAP_HEAP_IOVMM &&
+			    (nvmap_block_to_heap(handle->carveout)->numa_node_id != numa_id))
+				continue;
 
 next_page:
 			if ((heap_type == NVMAP_HEAP_CARVEOUT_VPR) && handle->heap_pgalloc) {
@@ -933,7 +972,9 @@ DEBUGFS_OPEN_FOPS(all_allocations);
 
 static int nvmap_debug_orphan_handles_show(struct seq_file *s, void *unused)
 {
-	u32 heap_type = (u32)(uintptr_t)s->private;
+	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
+	u32 heap_type = debugfs_information->heap_bit;
+	int numa_id = debugfs_information->numa_id;
 	struct rb_node *n;
 
 
@@ -955,6 +996,11 @@ static int nvmap_debug_orphan_handles_show(struct seq_file *s, void *unused)
 					   handle->heap_pgalloc ? 0 :
 					   (handle->carveout->base);
 			size_t size = K(handle->size);
+
+			if (heap_type != NVMAP_HEAP_IOVMM &&
+				(nvmap_block_to_heap(handle->carveout)->numa_node_id !=
+					numa_id))
+				continue;
 
 next_page:
 			if ((heap_type == NVMAP_HEAP_CARVEOUT_VPR) && handle->heap_pgalloc) {
@@ -990,7 +1036,9 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 {
 	u64 total;
 	struct nvmap_client *client;
-	u32 heap_type = (u32)(uintptr_t)s->private;
+	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
+	u32 heap_type = debugfs_information->heap_bit;
+	int numa_id = debugfs_information->numa_id;
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -1002,14 +1050,14 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 	list_for_each_entry(client, &nvmap_dev->clients, list) {
 		u64 client_total;
 		client_stringify(client, s);
-		nvmap_get_client_mss(client, &client_total, heap_type);
+		nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
 		seq_printf(s, " %10lluK\n", K(client_total));
 		maps_stringify(client, s, heap_type);
 		seq_printf(s, "\n");
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
 
-	nvmap_get_total_mss(NULL, &total, heap_type);
+	nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -1020,7 +1068,9 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 {
 	u64 total;
 	struct nvmap_client *client;
-	ulong heap_type = (ulong)s->private;
+	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
+	u32 heap_type = debugfs_information->heap_bit;
+	int numa_id = debugfs_information->numa_id;
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -1028,11 +1078,11 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 	list_for_each_entry(client, &nvmap_dev->clients, list) {
 		u64 client_total;
 		client_stringify(client, s);
-		nvmap_get_client_mss(client, &client_total, heap_type);
+		nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
 		seq_printf(s, " %10lluK\n", K(client_total));
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
-	nvmap_get_total_mss(NULL, &total, heap_type);
+	nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
 	seq_printf(s, "%-18s %18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -1291,7 +1341,7 @@ static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 	}
 	mutex_unlock(&dev->clients_lock);
 
-	nvmap_get_total_mss(&total_pss, &total_memory, NVMAP_HEAP_IOVMM);
+	nvmap_get_total_mss(&total_pss, &total_memory, NVMAP_HEAP_IOVMM, NUMA_NO_NODE);
 	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK\n",
 		"total", "", "", K(total_pss), K(total_memory));
 	return 0;
@@ -1305,7 +1355,7 @@ ulong nvmap_iovmm_get_used_pages(void)
 {
 	u64 total;
 
-	nvmap_get_total_mss(NULL, &total, NVMAP_HEAP_IOVMM);
+	nvmap_get_total_mss(NULL, &total, NVMAP_HEAP_IOVMM, NUMA_NO_NODE);
 	return total >> PAGE_SHIFT;
 }
 #endif
@@ -1315,28 +1365,32 @@ static void nvmap_iovmm_debugfs_init(void)
 	if (!IS_ERR_OR_NULL(nvmap_dev->debug_root)) {
 		struct dentry *iovmm_root =
 			debugfs_create_dir("iovmm", nvmap_dev->debug_root);
+
+		iovmm_debugfs_info.heap_bit = NVMAP_HEAP_IOVMM;
+		iovmm_debugfs_info.numa_id = NUMA_NO_NODE;
+
 		if (!IS_ERR_OR_NULL(iovmm_root)) {
 			debugfs_create_file("clients", S_IRUGO, iovmm_root,
-				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				(void *)&iovmm_debugfs_info,
 				&debug_clients_fops);
 			debugfs_create_file("allocations", S_IRUGO, iovmm_root,
-				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				(void *)&iovmm_debugfs_info,
 				&debug_allocations_fops);
 			debugfs_create_file("all_allocations", S_IRUGO,
-				iovmm_root, (void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				iovmm_root, (void *)&iovmm_debugfs_info,
 				&debug_all_allocations_fops);
 			debugfs_create_file("orphan_handles", S_IRUGO,
-				iovmm_root, (void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				iovmm_root, (void *)&iovmm_debugfs_info,
 				&debug_orphan_handles_fops);
 			debugfs_create_file("maps", S_IRUGO, iovmm_root,
-				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				(void *)&iovmm_debugfs_info,
 				&debug_maps_fops);
 			debugfs_create_file("free_size", S_IRUGO, iovmm_root,
-				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				(void *)&iovmm_debugfs_info,
 				&debug_free_size_fops);
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 			debugfs_create_file("device_list", S_IRUGO, iovmm_root,
-				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				(void *)&iovmm_debugfs_info,
 				&debug_device_list_fops);
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
 
