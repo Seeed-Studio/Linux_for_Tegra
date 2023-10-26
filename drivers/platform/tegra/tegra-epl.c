@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -29,8 +29,11 @@
 #define PM_STATE_UNI_CODE	0xFDEF
 
 /* State Management */
-#define PM_SUSPEND	6U
-#define PM_SHUTDOWN	PM_SUSPEND
+#define EPS_DOS_INIT                0U
+#define EPS_DOS_SUSPEND             3U
+#define EPS_DOS_RESUME              4U
+#define EPS_DOS_DEINIT              5U
+#define EPS_DOS_UNKNOWN             255U
 
 enum handshake_state {
 	HANDSHAKE_PENDING,
@@ -256,7 +259,7 @@ static int __maybe_unused epl_client_suspend(struct device *dev)
 	pr_debug("tegra-epl: suspend called\n");
 
 	if (enable_deinit_notify)
-		ret = epl_client_fsi_pm_notify(PM_SUSPEND);
+		ret = epl_client_fsi_pm_notify(EPS_DOS_SUSPEND);
 	hs_state = HANDSHAKE_PENDING;
 
 	return ret;
@@ -266,7 +269,8 @@ static int __maybe_unused epl_client_resume(struct device *dev)
 {
 	pr_debug("tegra-epl: resume called\n");
 
-	return epl_client_fsi_handshake(NULL);
+	(void)epl_client_fsi_handshake(NULL);
+	return epl_client_fsi_pm_notify(EPS_DOS_RESUME);
 }
 static SIMPLE_DEV_PM_OPS(epl_client_pm, epl_client_suspend, epl_client_resume);
 
@@ -371,7 +375,8 @@ static int epl_client_probe(struct platform_device *pdev)
 	}
 
 	if (ret == 0) {
-		return epl_client_fsi_handshake(NULL);
+		(void) epl_client_fsi_handshake(NULL);
+		return epl_client_fsi_pm_notify(EPS_DOS_INIT);
 	}
 
 	return ret;
@@ -382,7 +387,7 @@ static void epl_client_shutdown(struct platform_device *pdev)
 	pr_debug("tegra-epl: shutdown called\n");
 
 	if (enable_deinit_notify)
-		if (epl_client_fsi_pm_notify(PM_SHUTDOWN) < 0)
+		if (epl_client_fsi_pm_notify(EPS_DOS_DEINIT) < 0)
 			pr_err("Unable to send notification to fsi\n");
 
 	hs_state = HANDSHAKE_PENDING;
