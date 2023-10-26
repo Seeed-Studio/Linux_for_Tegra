@@ -2803,7 +2803,7 @@ static ssize_t ether_mac_frp_show(struct device *dev,
 		entry = &osi_core->frp_table[i];
 		data = &entry->data;
 		j += scnprintf((buf + j), (PAGE_SIZE - j),
-			       "[%d] ID:%d MD:0x%x ME:0x%x AF:%d RF:%d IM:%d NIC:%d FO:%d OKI:%d DCH:x%x\n",
+			       "[%d] ID:%d MD:0x%x ME:0x%x AF:%d RF:%d IM:%d NIC:%d FO:%d OKI:%d DCH:x%lx\n",
 			       i, entry->frp_id, data->match_data,
 			       data->match_en, data->accept_frame,
 			       data->reject_frame, data->inverse_match,
