@@ -5,8 +5,8 @@
 #include <dt-bindings/memory/tegra234-mc.h>
 
 / {
-	fragment-fsicom@0 {
 #ifndef REMOVE_FRAGMENT_SYNTAX
+	fragment-fsicom@0 {
 		target-path = "/";
 		__overlay__ {
 #endif

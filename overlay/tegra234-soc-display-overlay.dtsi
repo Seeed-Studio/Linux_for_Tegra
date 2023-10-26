@@ -4,8 +4,8 @@
 #include <dt-bindings/power/tegra234-powergate.h>
 
 / {
-	fragment-t234-display@0 {
 #ifndef REMOVE_FRAGMENT_SYNTAX
+	fragment-t234-display@0 {
 		target-path = "/";
 		__overlay__ {
 #endif
