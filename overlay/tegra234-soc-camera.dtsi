@@ -188,7 +188,7 @@
 					nvidia,version = <0>;
 					nvidia,group = <1>;
 					nvidia,frame-count = <1>;
-					nvidia,frame-size = <448>;
+					nvidia,frame-size = <512>;
 				};
 				dbg@2 {
 					/* This is exposed in debugfs */
