@@ -11,7 +11,6 @@
 				reg = <0x40>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				#io-channel-cells = <1>;
 				channel@0 {
 					reg = <0x0>;
 					label = "VDD_GPU_SOC";
@@ -26,7 +25,7 @@
 					reg = <0x2>;
 					label = "VIN_SYS_5V0";
 					shunt-resistor-micro-ohms = <2000>;
-					summation-bypass;
+					ti,summation-disable;
 				};
 			};
 
@@ -35,7 +34,6 @@
 				reg = <0x41>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				#io-channel-cells = <1>;
 				channel@0 {
 					reg = <0x0>;
 					status = "disabled";
