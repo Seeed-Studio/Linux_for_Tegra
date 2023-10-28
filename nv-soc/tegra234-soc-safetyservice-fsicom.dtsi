@@ -5,11 +5,6 @@
 #include <dt-bindings/memory/tegra234-mc.h>
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-fsicom@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
         	reserved-memory {
         		#address-cells = <2>;
         		#size-cells = <2>;
@@ -149,8 +144,4 @@
         		status = "disabled";
         		channelid_list = <0>;
         	};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-        };
-    };
-#endif
 };

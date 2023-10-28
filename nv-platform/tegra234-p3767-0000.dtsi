@@ -6,12 +6,6 @@
 #include <dt-bindings/interrupt/tegra234-irq.h>
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	p3767-0000-fragment@0 {
-		target-path = "/";
-
-		__overlay__ {
-#endif
 			bus@0 {
 				mmc@3400000 {
 					no-sdio;
@@ -80,8 +74,4 @@
 					status = "okay";
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };

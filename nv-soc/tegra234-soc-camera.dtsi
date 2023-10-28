@@ -12,11 +12,6 @@
 #include <dt-bindings/memory/tegra234-mc.h>
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-camera@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
 			aliases { /* RCE is the Camera RTCPU */
 				tegra-camera-rtcpu = "/rtcpu@bc00000";
 			};
@@ -266,8 +261,4 @@
 					status = "disabled";
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };

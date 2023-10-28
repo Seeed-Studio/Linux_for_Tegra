@@ -6,11 +6,6 @@
 #define CAM0_PWDN	TEGRA234_AON_GPIO(AA, 4)
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-camera@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
 			gpio@c2f0000 {
 				camera-control-output-high {
 					gpio-hog;
@@ -404,8 +399,4 @@
 					};
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };

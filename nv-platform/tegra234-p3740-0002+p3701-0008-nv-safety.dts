@@ -3,7 +3,6 @@
 
 /dts-v1/;
 
-#define REMOVE_FRAGMENT_SYNTAX 1
 #include "tegra234-p3740-0002+p3701-0008.dts"
 #include "tegra234-p3740-0002+p3701-0008-nv-common.dtsi"
 #include "tegra234-p3740-0002+p3701-0008-safety.dtsi"

@@ -4,11 +4,6 @@
 #include "tegra234-p3701-0000-prod-overlay.dtsi"
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-t234-p3701-0000@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
 			bus@0 {
 				i2c@c240000 {
 					ina3221@40 {
@@ -151,8 +146,4 @@
 					status = "okay";
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };

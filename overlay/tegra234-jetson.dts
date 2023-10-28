@@ -11,8 +11,6 @@
 #include <dt-bindings/memory/tegra234-mc.h>
 #include <dt-bindings/power/tegra234-powergate.h>
 #include <dt-bindings/reset/tegra234-reset.h>
-#include "nv-soc/tegra234-soc-display-overlay.dtsi"
-#include "nv-platform/tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 
 / {
 	overlay-name = "Tegra234 Jetson Overlay";

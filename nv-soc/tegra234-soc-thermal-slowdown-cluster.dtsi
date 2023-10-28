@@ -6,11 +6,6 @@
 #define TEGRA234_THERMAL_SLOWDOWN_TEMP 99000
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-t234-thermal-slowdown-cluster@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
 			bus@0 {
 				gpu@17000000 {
 					#cooling-cells = <2>;
@@ -224,8 +219,4 @@
 					};
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };

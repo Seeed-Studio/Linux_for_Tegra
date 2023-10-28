@@ -2,11 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-t234-soc-prod@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
 			bus@0 {
 				i2c@3160000 {
 					prod-settings {
@@ -832,8 +827,4 @@
 					};
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };

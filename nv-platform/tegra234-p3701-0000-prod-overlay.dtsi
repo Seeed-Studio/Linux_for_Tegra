@@ -2,11 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-p3701-prod@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
 			bus@0 {
 				aon@c000000 {
 					prod-settings {
@@ -324,8 +319,4 @@
 					};
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };

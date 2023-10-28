@@ -4,11 +4,6 @@
 #define TEGRA234_THERMAL_SHUTDOWN_TEMP 104500
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-t234-thermal-shutdown@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
 			thermal-zones {
 				cpu-thermal {
 					trips {
@@ -100,8 +95,4 @@
 					};
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };

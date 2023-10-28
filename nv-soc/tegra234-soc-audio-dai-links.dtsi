@@ -7,11 +7,6 @@
 #define ADMAIF_CIF(i)	(TEGRA186_ADMAIF_CIF_OFFSET  + i - 1)
 
 / {
-#ifndef REMOVE_FRAGMENT_SYNTAX
-	fragment-audio-links@0 {
-		target-path = "/";
-		__overlay__ {
-#endif
 			sound {
 				/* ADMAIF <--> XBAR PCM links */
 				admaif1_pcm_link: nvidia-audio-card,dai-link@0 {
@@ -2278,8 +2273,4 @@
 					};
 				};
 			};
-#ifndef REMOVE_FRAGMENT_SYNTAX
-		};
-	};
-#endif
 };
