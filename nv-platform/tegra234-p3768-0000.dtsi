@@ -2,35 +2,35 @@
 // SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
-			bus@0 {
+	bus@0 {
 
-				aconnect@2900000 {
-					ahub@2900800 {
-						i2s@2901100 {
-							ports {
-								port@1 {
-									hdr40_snd_i2s_dap_ep: endpoint {
-									};
-								};
+		aconnect@2900000 {
+			ahub@2900800 {
+				i2s@2901100 {
+					ports {
+						port@1 {
+							hdr40_snd_i2s_dap_ep: endpoint {
 							};
 						};
 					};
 				};
-
 			};
+		};
 
-			tegra_sound_graph: tegra_sound: sound {
-				compatible = "nvidia,tegra186-audio-graph-card",
-					     "nvidia,tegra186-ape";
-				clocks = <&bpmp TEGRA234_CLK_PLLA>,
-					 <&bpmp TEGRA234_CLK_PLLA_OUT0>,
-					 <&bpmp TEGRA234_CLK_AUD_MCLK>;
-				clock-names = "pll_a", "plla_out0", "extern1";
-				assigned-clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
-				assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLA_OUT0>;
+	};
 
-				nvidia-audio-card,name = "NVIDIA Jetson Orin NX APE";
+	tegra_sound_graph: tegra_sound: sound {
+		compatible = "nvidia,tegra186-audio-graph-card",
+			     "nvidia,tegra186-ape";
+		clocks = <&bpmp TEGRA234_CLK_PLLA>,
+			 <&bpmp TEGRA234_CLK_PLLA_OUT0>,
+			 <&bpmp TEGRA234_CLK_AUD_MCLK>;
+		clock-names = "pll_a", "plla_out0", "extern1";
+		assigned-clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
+		assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLA_OUT0>;
 
-				hdr40_snd_link_i2s: nvidia-audio-card,dai-link@77 { };
-			};
+		nvidia-audio-card,name = "NVIDIA Jetson Orin NX APE";
+
+		hdr40_snd_link_i2s: nvidia-audio-card,dai-link@77 { };
+	};
 };

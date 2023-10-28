@@ -12,319 +12,319 @@
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 
 / {
-			cpus {
-				idle-states {
-					c7 {
-						status = "okay";
-					};
+	cpus {
+		idle-states {
+			c7 {
+				status = "okay";
+			};
+		};
+	};
+
+	nvpmodel {
+		status = "okay";
+	};
+
+	scf-pmu {
+		status = "okay";
+	};
+
+	soctherm-oc-event {
+		status = "okay";
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			status = "okay";
+		};
+
+		cv0-thermal {
+			status = "okay";
+		};
+
+		cv1-thermal {
+			status = "okay";
+		};
+
+		cv2-thermal {
+			status = "okay";
+		};
+
+		gpu-thermal {
+			status = "okay";
+		};
+
+		soc0-thermal {
+			status = "okay";
+		};
+
+		soc1-thermal {
+			status = "okay";
+		};
+
+		soc2-thermal {
+			status = "okay";
+		};
+	};
+
+	bus@0 {
+		smmu_test {
+			compatible = "nvidia,smmu_test";
+			iommus = <&smmu_niso0 TEGRA234_SID_SMMU_TEST>;
+			status = "okay";
+		};
+
+		pinmux@2430000 {
+			status = "okay";
+		};
+
+		ufshci@2500000 {
+			status = "okay";
+		};
+
+		aconnect@2900000 {
+			ahub@2900800 {
+				i2s@2901200 {
+					status = "okay";
+				};
+
+				i2s@2901400 {
+					status = "okay";
+				};
+
+				dmic@2904000 {
+					status = "okay";
+				};
+
+				dmic@2904100 {
+					status = "okay";
+				};
+
+				dmic@2904300 {
+					status = "okay";
+				};
+
+				dspk@2905000 {
+					status = "okay";
+				};
+
+				dspk@2905100 {
+					status = "okay";
+				};
+
+				afc@2907000 {
+					status = "okay";
+				};
+
+				afc@2907100 {
+					status = "okay";
+				};
+
+				afc@2907200 {
+					status = "okay";
+				};
+
+				afc@2907300 {
+					status = "okay";
+				};
+
+				afc@2907400 {
+					status = "okay";
+				};
+
+				afc@2907500 {
+					status = "okay";
+				};
+
+				arad@290e400 {
+					status = "okay";
 				};
 			};
+		};
 
-			nvpmodel {
+		serial@3110000 {
+			compatible = "nvidia,tegra194-hsuart";
+			reset-names = "serial";
+			status = "okay";
+		};
+
+		i2c@3180000 {
+			status = "okay";
+		};
+
+		i2c@3190000 {
+			status = "okay";
+		};
+
+		i2c@31b0000 {
+			nvidia,hw-instance-id = <0x5>;
+			status = "okay";
+		};
+
+		i2c@31c0000 {
+			status = "okay";
+		};
+
+		serial@31d0000 {
+			current-speed = <115200>;
+		};
+
+		i2c@31e0000 {
+			status = "okay";
+		};
+
+		tachometer@39c0000 {
+			status = "okay";
+		};
+
+		hsp@3d00000 {
+			status = "okay";
+		};
+
+		ethernet@6800000 {
+			status = "okay";
+		};
+
+		aon@c000000 {
+			status = "okay";
+		};
+
+		hardware-timestamp@c1e0000 {
+			status = "okay";
+			nvidia,num-slices = <3>;
+		};
+
+		i2c@c240000 {
+			status = "okay";
+		};
+
+		hdr40_i2c1: i2c@c250000 {
+			status = "okay";
+		};
+
+		rtc@c2a0000 {
+			status = "okay";
+		};
+
+		mttcan@c310000 {
+			status = "okay";
+		};
+
+		mttcan@c320000 {
+			status = "okay";
+		};
+
+		actmon@d230000 {
+			status = "okay";
+		};
+
+		hwpm@f100000 {
+			status = "okay";
+		};
+
+		mc-hwpm@2c10000 {
+			status = "okay";
+		};
+
+		host1x@13e00000 {
+			nvjpg@15380000 {
 				status = "okay";
 			};
 
-			scf-pmu {
+			nvdec@15480000 {
 				status = "okay";
 			};
 
-			soctherm-oc-event {
+			nvenc@154c0000 {
 				status = "okay";
 			};
 
-			thermal-zones {
-				cpu-thermal {
-					status = "okay";
-				};
-
-				cv0-thermal {
-					status = "okay";
-				};
-
-				cv1-thermal {
-					status = "okay";
-				};
-
-				cv2-thermal {
-					status = "okay";
-				};
-
-				gpu-thermal {
-					status = "okay";
-				};
-
-				soc0-thermal {
-					status = "okay";
-				};
-
-				soc1-thermal {
-					status = "okay";
-				};
-
-				soc2-thermal {
-					status = "okay";
-				};
-			};
-
-			bus@0 {
-				smmu_test {
-					compatible = "nvidia,smmu_test";
-					iommus = <&smmu_niso0 TEGRA234_SID_SMMU_TEST>;
-					status = "okay";
-				};
-
-				pinmux@2430000 {
-					status = "okay";
-				};
-
-				ufshci@2500000 {
-					status = "okay";
-				};
-
-				aconnect@2900000 {
-					ahub@2900800 {
-						i2s@2901200 {
-							status = "okay";
-						};
-
-						i2s@2901400 {
-							status = "okay";
-						};
-
-						dmic@2904000 {
-							status = "okay";
-						};
-
-						dmic@2904100 {
-							status = "okay";
-						};
-
-						dmic@2904300 {
-							status = "okay";
-						};
-
-						dspk@2905000 {
-							status = "okay";
-						};
-
-						dspk@2905100 {
-							status = "okay";
-						};
-
-						afc@2907000 {
-							status = "okay";
-						};
-
-						afc@2907100 {
-							status = "okay";
-						};
-
-						afc@2907200 {
-							status = "okay";
-						};
-
-						afc@2907300 {
-							status = "okay";
-						};
-
-						afc@2907400 {
-							status = "okay";
-						};
-
-						afc@2907500 {
-							status = "okay";
-						};
-
-						arad@290e400 {
-							status = "okay";
-						};
-					};
-				};
-
-				serial@3110000 {
-					compatible = "nvidia,tegra194-hsuart";
-					reset-names = "serial";
-					status = "okay";
-				};
-
-				i2c@3180000 {
-					status = "okay";
-				};
-
-				i2c@3190000 {
-					status = "okay";
-				};
-
-				i2c@31b0000 {
-					nvidia,hw-instance-id = <0x5>;
-					status = "okay";
-				};
-
-				i2c@31c0000 {
-					status = "okay";
-				};
-
-				serial@31d0000 {
-					current-speed = <115200>;
-				};
-
-				i2c@31e0000 {
-					status = "okay";
-				};
-
-				tachometer@39c0000 {
-					status = "okay";
-				};
-
-				hsp@3d00000 {
-					status = "okay";
-				};
-
-				ethernet@6800000 {
-					status = "okay";
-				};
-
-				aon@c000000 {
-					status = "okay";
-				};
-
-				hardware-timestamp@c1e0000 {
-					status = "okay";
-					nvidia,num-slices = <3>;
-				};
-
-				i2c@c240000 {
-					status = "okay";
-				};
-
-				hdr40_i2c1: i2c@c250000 {
-					status = "okay";
-				};
-
-				rtc@c2a0000 {
-					status = "okay";
-				};
-
-				mttcan@c310000 {
-					status = "okay";
-				};
-
-				mttcan@c320000 {
-					status = "okay";
-				};
-
-				actmon@d230000 {
-					status = "okay";
-				};
-
-				hwpm@f100000 {
-					status = "okay";
-				};
-
-				mc-hwpm@2c10000 {
-					status = "okay";
-				};
-
-				host1x@13e00000 {
-					nvjpg@15380000 {
-						status = "okay";
-					};
-
-					nvdec@15480000 {
-						status = "okay";
-					};
-
-					nvenc@154c0000 {
-						status = "okay";
-					};
-
-					tsec@15500000 {
-						status = "okay";
-					};
-
-					nvjpg@15540000 {
-						status = "okay";
-					};
-
-					se@15810000 {
-						status = "okay";
-					};
-
-					se@15820000 {
-						status = "okay";
-					};
-
-					se@15840000 {
-						status = "okay";
-					};
-
-					nvdla0@15880000 {
-						status = "okay";
-					};
-
-					nvdla1@158c0000 {
-						status = "okay";
-					};
-
-					ofa@15a50000 {
-						status = "okay";
-					};
-
-					pva0@16000000 {
-						status = "okay";
-
-						pva0_niso1_ctx0 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx1 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx2 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx3 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx4 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx5 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx6 {
-							status = "okay";
-						};
-
-						pva0_niso1_ctx7 {
-							status = "okay";
-						};
-					};
-				};
-
-				gpu@17000000 {
-					status = "okay";
-				};
-			};
-
-			tegra-hsp@b950000 {
+			tsec@15500000 {
 				status = "okay";
 			};
 
-			dce@d800000 {
+			nvjpg@15540000 {
 				status = "okay";
 			};
 
-			tegra_mce@e100000 {
+			se@15810000 {
 				status = "okay";
 			};
 
-			display@13800000 {
+			se@15820000 {
 				status = "okay";
 			};
+
+			se@15840000 {
+				status = "okay";
+			};
+
+			nvdla0@15880000 {
+				status = "okay";
+			};
+
+			nvdla1@158c0000 {
+				status = "okay";
+			};
+
+			ofa@15a50000 {
+				status = "okay";
+			};
+
+			pva0@16000000 {
+				status = "okay";
+
+				pva0_niso1_ctx0 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx1 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx2 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx3 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx4 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx5 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx6 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx7 {
+					status = "okay";
+				};
+			};
+		};
+
+		gpu@17000000 {
+			status = "okay";
+		};
+	};
+
+	tegra-hsp@b950000 {
+		status = "okay";
+	};
+
+	dce@d800000 {
+		status = "okay";
+	};
+
+	tegra_mce@e100000 {
+		status = "okay";
+	};
+
+	display@13800000 {
+		status = "okay";
+	};
 };

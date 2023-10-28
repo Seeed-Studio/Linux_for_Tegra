@@ -4,146 +4,146 @@
 #include "tegra234-p3701-0000-prod-overlay.dtsi"
 
 / {
-			bus@0 {
-				i2c@c240000 {
-					ina3221@40 {
-						compatible = "ti,ina3221";
-						reg = <0x40>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-						#io-channel-cells = <1>;
-						channel@0 {
-							reg = <0x0>;
-							label = "VDD_GPU_SOC";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-						channel@1 {
-							reg = <0x1>;
-							label = "VDD_CPU_CV";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-						channel@2 {
-							reg = <0x2>;
-							label = "VIN_SYS_5V0";
-							shunt-resistor-micro-ohms = <2000>;
-							summation-bypass;
-						};
-					};
-
-					ina3221@41 {
-						compatible = "ti,ina3221";
-						reg = <0x41>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-						#io-channel-cells = <1>;
-						channel@0 {
-							reg = <0x0>;
-							status = "disabled";
-						};
-						channel@1 {
-							reg = <0x1>;
-							label = "VDDQ_VDD2_1V8AO";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-						channel@2 {
-							reg = <0x2>;
-							status = "disabled";
-						};
-					};
+	bus@0 {
+		i2c@c240000 {
+			ina3221@40 {
+				compatible = "ti,ina3221";
+				reg = <0x40>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				#io-channel-cells = <1>;
+				channel@0 {
+					reg = <0x0>;
+					label = "VDD_GPU_SOC";
+					shunt-resistor-micro-ohms = <2000>;
 				};
-
-				spi@3270000 {
-					flash@0 {
-						spi-max-frequency = <51000000>;
-						spi-tx-bus-width = <1>;
-						spi-rx-bus-width = <1>;
-					};
+				channel@1 {
+					reg = <0x1>;
+					label = "VDD_CPU_CV";
+					shunt-resistor-micro-ohms = <2000>;
 				};
-
-				nvrng@3ae0000 {
-					status = "okay";
+				channel@2 {
+					reg = <0x2>;
+					label = "VIN_SYS_5V0";
+					shunt-resistor-micro-ohms = <2000>;
+					summation-bypass;
 				};
 			};
 
-			hdr40_vdd_3v3: regulator@3 {
-				compatible = "regulator-fixed";
-				reg = <3>;
-				regulator-name = "vdd-3v3-sys";
-				regulator-min-microvolt = <3300000>;
-				regulator-max-microvolt = <3300000>;
-			};
-
-			bpmp {
-				i2c {
-					vrs@3c {
-						compatible = "nvidia,vrs-pseq";
-						reg = <0x3c>;
-						interrupt-parent = <&pmc>;
-						/* VRS Wake ID is 24 */
-						interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
-						interrupt-controller;
-						#interrupt-cells = <2>;
-						status = "okay";
-					};
-
-					tegra_tmp451: thermal-sensor@4c {
-						compatible = "ti,tmp451";
-						reg = <0x4c>;
-						vcc-supply = <&vdd_1v8_ao>;
-						#thermal-sensor-cells = <1>;
-						status = "okay";
-					};
-
-					vrs11_1@20 {
-						compatible = "nvidia,vrs11";
-						reg = <0x20>;
-						rail-name-loopA = "GPU";
-						rail-name-loopB = "CPU";
-					};
-
-					vrs11_2@22 {
-						compatible = "nvidia,vrs11";
-						reg = <0x22>;
-						rail-name-loopA = "SOC";
-						rail-name-loopB = "CV";
-					};
+			ina3221@41 {
+				compatible = "ti,ina3221";
+				reg = <0x41>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				#io-channel-cells = <1>;
+				channel@0 {
+					reg = <0x0>;
+					status = "disabled";
+				};
+				channel@1 {
+					reg = <0x1>;
+					label = "VDDQ_VDD2_1V8AO";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@2 {
+					reg = <0x2>;
+					status = "disabled";
 				};
 			};
+		};
 
-			thermal-zones {
-				tboard-thermal {
-					polling-delay = <1000>;
-					polling-delay-passive = <1000>;
-					thermal-sensors = <&tegra_tmp451 0>;
-					status = "okay";
-				};
+		spi@3270000 {
+			flash@0 {
+				spi-max-frequency = <51000000>;
+				spi-tx-bus-width = <1>;
+				spi-rx-bus-width = <1>;
+			};
+		};
 
-				tdiode-thermal {
-					polling-delay = <1000>;
-					polling-delay-passive = <1000>;
-					thermal-sensors = <&tegra_tmp451 1>;
-					status = "okay";
-				};
+		nvrng@3ae0000 {
+			status = "okay";
+		};
+	};
+
+	hdr40_vdd_3v3: regulator@3 {
+		compatible = "regulator-fixed";
+		reg = <3>;
+		regulator-name = "vdd-3v3-sys";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	bpmp {
+		i2c {
+			vrs@3c {
+				compatible = "nvidia,vrs-pseq";
+				reg = <0x3c>;
+				interrupt-parent = <&pmc>;
+				/* VRS Wake ID is 24 */
+				interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				status = "okay";
 			};
 
-			eeprom-manager {
-				bus@0 {
-					i2c-bus = <&gen1_i2c>;
-					eeprom@0 {
-						slave-address = <0x50>;
-						label = "cvm";
-					};
-				};
+			tegra_tmp451: thermal-sensor@4c {
+				compatible = "ti,tmp451";
+				reg = <0x4c>;
+				vcc-supply = <&vdd_1v8_ao>;
+				#thermal-sensor-cells = <1>;
+				status = "okay";
 			};
 
-			reserved-memory {
-				linux,cma { /* Needed for nvgpu comptags */
-					compatible = "shared-dma-pool";
-					reusable;
-					size = <0x0 0x10000000>; /* 256MB */
-					alignment = <0x0 0x10000>;
-					linux,cma-default;
-					status = "okay";
-				};
+			vrs11_1@20 {
+				compatible = "nvidia,vrs11";
+				reg = <0x20>;
+				rail-name-loopA = "GPU";
+				rail-name-loopB = "CPU";
 			};
+
+			vrs11_2@22 {
+				compatible = "nvidia,vrs11";
+				reg = <0x22>;
+				rail-name-loopA = "SOC";
+				rail-name-loopB = "CV";
+			};
+		};
+	};
+
+	thermal-zones {
+		tboard-thermal {
+			polling-delay = <1000>;
+			polling-delay-passive = <1000>;
+			thermal-sensors = <&tegra_tmp451 0>;
+			status = "okay";
+		};
+
+		tdiode-thermal {
+			polling-delay = <1000>;
+			polling-delay-passive = <1000>;
+			thermal-sensors = <&tegra_tmp451 1>;
+			status = "okay";
+		};
+	};
+
+	eeprom-manager {
+		bus@0 {
+			i2c-bus = <&gen1_i2c>;
+			eeprom@0 {
+				slave-address = <0x50>;
+				label = "cvm";
+			};
+		};
+	};
+
+	reserved-memory {
+		linux,cma { /* Needed for nvgpu comptags */
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x10000000>; /* 256MB */
+			alignment = <0x0 0x10000>;
+			linux,cma-default;
+			status = "okay";
+		};
+	};
 };

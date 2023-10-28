@@ -6,72 +6,72 @@
 #include <dt-bindings/interrupt/tegra234-irq.h>
 
 / {
-			bus@0 {
-				mmc@3400000 {
-					no-sdio;
-					no-mmc;
-					nvidia,cd-wakeup-capable;
-					nvidia,boot-detect-delay = <1000>;
-					cd-gpios = <&gpio TEGRA234_MAIN_GPIO(G, 7) GPIO_ACTIVE_LOW>;
-				};
+	bus@0 {
+		mmc@3400000 {
+			no-sdio;
+			no-mmc;
+			nvidia,cd-wakeup-capable;
+			nvidia,boot-detect-delay = <1000>;
+			cd-gpios = <&gpio TEGRA234_MAIN_GPIO(G, 7) GPIO_ACTIVE_LOW>;
+		};
 
-				nvrng@3ae0000 {
-					status = "okay";
-				};
+		nvrng@3ae0000 {
+			status = "okay";
+		};
 
-				gpu@17000000 {
-					status = "okay";
-				};
-			};
+		gpu@17000000 {
+			status = "okay";
+		};
+	};
 
-			chosen {
-				nvidia,tegra-joint_xpu_rail;
-			};
+	chosen {
+		nvidia,tegra-joint_xpu_rail;
+	};
 
-			opp-table-cluster0 {
-				opp-1510400000 { /* Max CPU freq for Orin Nano */
-					opp-hz = /bits/ 64 <1510400000>;
-					opp-peak-kBps = <3200000>;
-				};
+	opp-table-cluster0 {
+		opp-1510400000 { /* Max CPU freq for Orin Nano */
+			opp-hz = /bits/ 64 <1510400000>;
+			opp-peak-kBps = <3200000>;
+		};
 
-				opp-1984000000 { /* Max CPU freq for ONX */
-					opp-hz = /bits/ 64 <1984000000>;
-					opp-peak-kBps = <3200000>;
-				};
-			};
+		opp-1984000000 { /* Max CPU freq for ONX */
+			opp-hz = /bits/ 64 <1984000000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
 
-			opp-table-cluster1 {
-				opp-1510400000 { /* Max CPU freq for Orin Nano */
-					opp-hz = /bits/ 64 <1510400000>;
-					opp-peak-kBps = <3200000>;
-				};
+	opp-table-cluster1 {
+		opp-1510400000 { /* Max CPU freq for Orin Nano */
+			opp-hz = /bits/ 64 <1510400000>;
+			opp-peak-kBps = <3200000>;
+		};
 
-				opp-1984000000 { /* Max CPU freq for ONX */
-					opp-hz = /bits/ 64 <1984000000>;
-					opp-peak-kBps = <3200000>;
-				};
-			};
+		opp-1984000000 { /* Max CPU freq for ONX */
+			opp-hz = /bits/ 64 <1984000000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
 
-			opp-table-cluster2 {
-				opp-1510400000 { /* Max CPU freq for Orin Nano */
-					opp-hz = /bits/ 64 <1510400000>;
-					opp-peak-kBps = <3200000>;
-				};
+	opp-table-cluster2 {
+		opp-1510400000 { /* Max CPU freq for Orin Nano */
+			opp-hz = /bits/ 64 <1510400000>;
+			opp-peak-kBps = <3200000>;
+		};
 
-				opp-1984000000 { /* Max CPU freq for ONX */
-					opp-hz = /bits/ 64 <1984000000>;
-					opp-peak-kBps = <3200000>;
-				};
-			};
+		opp-1984000000 { /* Max CPU freq for ONX */
+			opp-hz = /bits/ 64 <1984000000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
 
-			reserved-memory {
-				linux,cma { /* Needed for nvgpu comptags */
-					compatible = "shared-dma-pool";
-					reusable;
-					size = <0x0 0x10000000>; /* 256MB */
-					alignment = <0x0 0x10000>;
-					linux,cma-default;
-					status = "okay";
-				};
-			};
+	reserved-memory {
+		linux,cma { /* Needed for nvgpu comptags */
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x10000000>; /* 256MB */
+			alignment = <0x0 0x10000>;
+			linux,cma-default;
+			status = "okay";
+		};
+	};
 };

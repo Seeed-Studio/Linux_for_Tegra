@@ -2,289 +2,289 @@
 // SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
-			bus@0 {
-				i2c@c240000 {
-					ina3221@40 {
-						compatible = "ti,ina3221";
-						reg = <0x40>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-						#io-channel-cells = <1>;
-						channel@0 {
-							reg = <0x0>;
-							label = "VDD_GPU_SOC";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-						channel@1 {
-							reg = <0x1>;
-							label = "VDD_CPU_CV";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-						channel@2 {
-							reg = <0x2>;
-							label = "VIN_SYS_5V0";
-							shunt-resistor-micro-ohms = <2000>;
-							summation-bypass;
-						};
-					};
-
-					ina3221@41 {
-						compatible = "ti,ina3221";
-						reg = <0x41>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-						#io-channel-cells = <1>;
-						channel@0 {
-							reg = <0x0>;
-							status = "disabled";
-						};
-						channel@1 {
-							reg = <0x1>;
-							label = "VDDQ_VDD2_1V8AO";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-						channel@2 {
-							reg = <0x2>;
-							status = "disabled";
-						};
-					};
+	bus@0 {
+		i2c@c240000 {
+			ina3221@40 {
+				compatible = "ti,ina3221";
+				reg = <0x40>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				#io-channel-cells = <1>;
+				channel@0 {
+					reg = <0x0>;
+					label = "VDD_GPU_SOC";
+					shunt-resistor-micro-ohms = <2000>;
 				};
-
-				i2c@c250000 {
-					ina3221@41 {
-						compatible = "ti,ina3221";
-						reg = <0x41>;
-						#address-cells = <1>;
-						#size-cells = <0>;
-						#io-channel-cells = <1>;
-						channel@0 {
-							reg = <0x0>;
-							label = "CVB_ATX_12V";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-						channel@1 {
-							reg = <0x1>;
-							label = "CVB_ATX_3V3";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-						channel@2 {
-							reg = <0x2>;
-							label = "CVB_ATX_5V";
-							shunt-resistor-micro-ohms = <2000>;
-						};
-					};
-
-					 ina219@44 {
-						compatible = "ti,ina219";
-						reg = <0x44>;
-						shunt-resistor = <2000>;
-						label = "CVB_ATX_12V_8P";
-					};
+				channel@1 {
+					reg = <0x1>;
+					label = "VDD_CPU_CV";
+					shunt-resistor-micro-ohms = <2000>;
 				};
-
-				spi@3270000 {
-					flash@0 {
-						spi-max-frequency = <51000000>;
-						spi-tx-bus-width = <1>;
-						spi-rx-bus-width = <1>;
-					};
-				};
-
-				nvrng@3ae0000 {
-					status = "okay";
-				};
-
-				gpu@17000000 {
-					status = "okay";
+				channel@2 {
+					reg = <0x2>;
+					label = "VIN_SYS_5V0";
+					shunt-resistor-micro-ohms = <2000>;
+					summation-bypass;
 				};
 			};
 
-			bpmp {
-				i2c {
-					vrs@3c {
-						compatible = "nvidia,vrs-pseq";
-						reg = <0x3c>;
-						interrupt-parent = <&pmc>;
-						/* VRS Wake ID is 24 */
-						interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
-						interrupt-controller;
-						#interrupt-cells = <2>;
-						status = "okay";
-					};
+			ina3221@41 {
+				compatible = "ti,ina3221";
+				reg = <0x41>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				#io-channel-cells = <1>;
+				channel@0 {
+					reg = <0x0>;
+					status = "disabled";
+				};
+				channel@1 {
+					reg = <0x1>;
+					label = "VDDQ_VDD2_1V8AO";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@2 {
+					reg = <0x2>;
+					status = "disabled";
+				};
+			};
+		};
 
-					vrs11_1@20 {
-						compatible = "nvidia,vrs11";
-						reg = <0x20>;
-						rail-name-loopA = "GPU";
-						rail-name-loopB = "CPU";
-					};
-
-					vrs11_2@22 {
-						compatible = "nvidia,vrs11";
-						reg = <0x22>;
-						rail-name-loopA = "SOC";
-						rail-name-loopB = "CV";
-					};
-
-					tegra_tmp451: thermal-sensor@4c {
-						compatible = "ti,tmp451";
-						reg = <0x4c>;
-						vcc-supply = <&vdd_1v8_ao>;
-						#thermal-sensor-cells = <1>;
-						status = "okay";
-					};
-
+		i2c@c250000 {
+			ina3221@41 {
+				compatible = "ti,ina3221";
+				reg = <0x41>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				#io-channel-cells = <1>;
+				channel@0 {
+					reg = <0x0>;
+					label = "CVB_ATX_12V";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@1 {
+					reg = <0x1>;
+					label = "CVB_ATX_3V3";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@2 {
+					reg = <0x2>;
+					label = "CVB_ATX_5V";
+					shunt-resistor-micro-ohms = <2000>;
 				};
 			};
 
-			eeprom-manager {
-				bus@0 {
-					i2c-bus = <&gen1_i2c>;
-					eeprom@0 {
-						slave-address = <0x50>;
-						label = "cvm";
-					};
-				};
+			 ina219@44 {
+				compatible = "ti,ina219";
+				reg = <0x44>;
+				shunt-resistor = <2000>;
+				label = "CVB_ATX_12V_8P";
+			};
+		};
+
+		spi@3270000 {
+			flash@0 {
+				spi-max-frequency = <51000000>;
+				spi-tx-bus-width = <1>;
+				spi-rx-bus-width = <1>;
+			};
+		};
+
+		nvrng@3ae0000 {
+			status = "okay";
+		};
+
+		gpu@17000000 {
+			status = "okay";
+		};
+	};
+
+	bpmp {
+		i2c {
+			vrs@3c {
+				compatible = "nvidia,vrs-pseq";
+				reg = <0x3c>;
+				interrupt-parent = <&pmc>;
+				/* VRS Wake ID is 24 */
+				interrupts = <24 IRQ_TYPE_LEVEL_LOW>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				status = "okay";
 			};
 
-			opp-table-cluster0 {
-				opp-1971200000 {
-					opp-hz = /bits/ 64 <1971200000>;
-					opp-peak-kBps = <3200000>;
-				};
+			vrs11_1@20 {
+				compatible = "nvidia,vrs11";
+				reg = <0x20>;
+				rail-name-loopA = "GPU";
+				rail-name-loopB = "CPU";
 			};
 
-			opp-table-cluster1 {
-				opp-1971200000 {
-					opp-hz = /bits/ 64 <1971200000>;
-					opp-peak-kBps = <3200000>;
-				};
+			vrs11_2@22 {
+				compatible = "nvidia,vrs11";
+				reg = <0x22>;
+				rail-name-loopA = "SOC";
+				rail-name-loopB = "CV";
 			};
 
-			opp-table-cluster2 {
-				opp-1971200000 {
-					opp-hz = /bits/ 64 <1971200000>;
-					opp-peak-kBps = <3200000>;
-				};
+			tegra_tmp451: thermal-sensor@4c {
+				compatible = "ti,tmp451";
+				reg = <0x4c>;
+				vcc-supply = <&vdd_1v8_ao>;
+				#thermal-sensor-cells = <1>;
+				status = "okay";
 			};
 
-			thermal-zones {
-				cpu-thermal {
-					trips {
-						cpu-sw-slowdown {
-							temperature = <112000>;
-						};
+		};
+	};
 
-						cpu-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
+	eeprom-manager {
+		bus@0 {
+			i2c-bus = <&gen1_i2c>;
+			eeprom@0 {
+				slave-address = <0x50>;
+				label = "cvm";
+			};
+		};
+	};
+
+	opp-table-cluster0 {
+		opp-1971200000 {
+			opp-hz = /bits/ 64 <1971200000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	opp-table-cluster1 {
+		opp-1971200000 {
+			opp-hz = /bits/ 64 <1971200000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	opp-table-cluster2 {
+		opp-1971200000 {
+			opp-hz = /bits/ 64 <1971200000>;
+			opp-peak-kBps = <3200000>;
+		};
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			trips {
+				cpu-sw-slowdown {
+					temperature = <112000>;
 				};
 
-				cv0-thermal {
-					trips {
-						cv0-sw-slowdown {
-							temperature = <112000>;
-						};
-
-						cv0-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
-				};
-
-				cv1-thermal {
-					trips {
-						cv1-sw-slowdown {
-							temperature = <112000>;
-						};
-
-						cv1-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
-				};
-
-				cv2-thermal {
-					trips {
-						cv2-sw-slowdown {
-							temperature = <112000>;
-						};
-
-						cv2-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
-				};
-
-				gpu-thermal {
-					trips {
-						gpu-sw-slowdown {
-							temperature = <112000>;
-						};
-
-						gpu-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
-				};
-
-				soc0-thermal {
-					trips {
-						soc0-sw-slowdown {
-							temperature = <112000>;
-						};
-
-						soc0-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
-				};
-
-				soc1-thermal {
-					trips {
-						soc1-sw-slowdown {
-							temperature = <112000>;
-						};
-
-						soc1-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
-				};
-
-				soc2-thermal {
-					trips {
-						soc2-sw-slowdown {
-							temperature = <112000>;
-						};
-
-						soc2-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
-				};
-
-				tj-thermal {
-					trips {
-						tj-sw-shutdown {
-							temperature = <117500>;
-						};
-					};
-				};
-
-				tboard-thermal {
-					polling-delay = <1000>;
-					polling-delay-passive = <1000>;
-					thermal-sensors = <&tegra_tmp451 0>;
-					status = "okay";
-				};
-
-				tdiode-thermal {
-					polling-delay = <1000>;
-					polling-delay-passive = <1000>;
-					thermal-sensors = <&tegra_tmp451 1>;
-					status = "okay";
+				cpu-sw-shutdown {
+					temperature = <117500>;
 				};
 			};
+		};
+
+		cv0-thermal {
+			trips {
+				cv0-sw-slowdown {
+					temperature = <112000>;
+				};
+
+				cv0-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+
+		cv1-thermal {
+			trips {
+				cv1-sw-slowdown {
+					temperature = <112000>;
+				};
+
+				cv1-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+
+		cv2-thermal {
+			trips {
+				cv2-sw-slowdown {
+					temperature = <112000>;
+				};
+
+				cv2-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+
+		gpu-thermal {
+			trips {
+				gpu-sw-slowdown {
+					temperature = <112000>;
+				};
+
+				gpu-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+
+		soc0-thermal {
+			trips {
+				soc0-sw-slowdown {
+					temperature = <112000>;
+				};
+
+				soc0-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+
+		soc1-thermal {
+			trips {
+				soc1-sw-slowdown {
+					temperature = <112000>;
+				};
+
+				soc1-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+
+		soc2-thermal {
+			trips {
+				soc2-sw-slowdown {
+					temperature = <112000>;
+				};
+
+				soc2-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+
+		tj-thermal {
+			trips {
+				tj-sw-shutdown {
+					temperature = <117500>;
+				};
+			};
+		};
+
+		tboard-thermal {
+			polling-delay = <1000>;
+			polling-delay-passive = <1000>;
+			thermal-sensors = <&tegra_tmp451 0>;
+			status = "okay";
+		};
+
+		tdiode-thermal {
+			polling-delay = <1000>;
+			polling-delay-passive = <1000>;
+			thermal-sensors = <&tegra_tmp451 1>;
+			status = "okay";
+		};
+	};
 };
