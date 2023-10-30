@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Tegra234 p3701-0000-as-p3767-0001 Emulation Overlay";
+
+	fragment-t234-p3701-0000-as-p3767-0001@0 {
+		target-path = "/";
+		board_config {
+			ids = "3701-0000-*", "3701-0005-*";
+		};
+		__overlay__ {
+			compatible = "nvidia,p3737-0000+p3701-0000-as-p3767-0001", "nvidia,tegra234";
+			model = "Jetson AGX Orin as NX-8GB";
+			bus@0 {
+				host1x@13e00000 {
+					nvdla1@158c0000 {
+						status = "disabled";
+					};
+				};
+			};
+		};
+	};
+};
