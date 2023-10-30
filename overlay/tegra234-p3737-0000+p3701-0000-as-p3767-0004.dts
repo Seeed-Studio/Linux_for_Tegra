@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Tegra234 p3701-0000-as-p3767-0004 Emulation Overlay";
+
+	fragment-t234-p3701-0000-as-p3767-0004@0 {
+		target-path = "/";
+		board_config {
+			ids = "3701-0000-*", "3701-0005-*";
+		};
+		__overlay__ {
+			compatible = "nvidia,p3737-0000+p3701-0000-as-p3767-0004", "nvidia,tegra234";
+			model = "Jetson AGX Orin as Nano 4GB";
+			bus@0 {
+				host1x@13e00000 {
+					nvdla0@15880000 {
+						status = "disabled";
+					};
+					nvdla1@158c0000 {
+						status = "disabled";
+					};
+					pva0@16000000 {
+						status = "disabled";
+					};
+					nvenc@154c0000 {
+						status = "disabled";
+					};
+				};
+				/* C1 */
+				pcie@14100000 {
+					max-link-speed = <0x3>;
+				};
+				/* C4 */
+				pcie@14160000 {
+					max-link-speed = <0x3>;
+				};
+				/* C4 End Point */
+				pcie_ep@14160000 {
+					max-link-speed = <0x3>;
+				};
+				/* C7 */
+				pcie@141e0000 {
+					max-link-speed = <0x3>;
+				};
+				/* C8 */
+				pcie@140a0000 {
+					max-link-speed = <0x3>;
+				};
+				/* C9 */
+				pcie@140c0000 {
+					max-link-speed = <0x3>;
+				};
+			};
+		};
+	};
+};
