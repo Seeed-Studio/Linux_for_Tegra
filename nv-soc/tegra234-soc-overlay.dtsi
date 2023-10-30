@@ -288,6 +288,13 @@
 			status = "disabled";
 		};
 
+		reserved-memory {
+			adsp_resv: reservation-adsp {
+				iommu-addresses = <&adsp 0x0 0x00000000 0x0 0x40000000>,
+						<&adsp 0x0 0x60000000 0xffffffff 0xffffffff>;
+			};
+		};
+
 		aconnect@2900000 {
 			ahub@2900800 {
 				/* Below AHUB modules are not yet upstreamed */
@@ -372,6 +379,40 @@
 					sound-name-prefix = "AFC6";
 					#sound-dai-cells = <1>;
 				};
+			};
+
+			adsp: adsp@2993000 {
+				compatible = "nvidia,tegra18x-adsp";
+				interrupt-parent = <&agic>;
+				nvidia,adsp_os_secload;
+				reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
+					<0x0 0x02990000 0x0 0x2000>, /* AMISC */
+					<0x0 0x029B0000 0x0 0x90000>; /* AHSP */
+				nvidia,dram_map =
+					    <0x0 0x40000000 0x0 0xC0000000>;
+				nvidia,adsp_mem = <0x5EF00000 0x01000000>, /* ADSP OS */
+					<0x5F700000 0x00800000>, /* ADSP APP */
+					<0x3F813000 0x5000>, /* ARAM ALIAS 0 */
+					<0x5FD00000 0x200000>; /* ACSR */
+				nvidia,adsp-evp-base = <0x02993700 0x00000040>;
+				interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>, /* MBOX SEND */
+					   <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>,  /* MBOX RECV */
+					   <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>, /* ATKE Watchdog */
+					   <GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>, /* WFI */
+					   <GIC_SPI 57 IRQ_TYPE_LEVEL_HIGH>, /* AMC ERR IRQ */
+					   <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>; /* ADSP ACTMON IRQ */
+				clocks = <&bpmp TEGRA234_CLK_APE>,
+				       <&bpmp TEGRA234_CLK_APB2APE>,
+				       <&bpmp TEGRA234_CLK_ADSPNEON>,
+				       <&bpmp TEGRA234_CLK_ADSP>,
+				       <&bpmp TEGRA234_CLK_ACLK>;
+				clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
+					"adsp", "aclk";
+				resets = <&bpmp TEGRA234_RESET_ADSP_ALL>;
+				reset-names = "adspall";
+				iommus = <&smmu_niso0 TEGRA234_SID_APE>;
+				memory-region = <&adsp_resv>;
+				status = "disabled";
 			};
 		};
 

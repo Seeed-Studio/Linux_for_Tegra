@@ -139,6 +139,10 @@
 					status = "okay";
 				};
 			};
+
+			adsp@2993000 {
+				status = "okay";
+			};
 		};
 
 		serial@3110000 {

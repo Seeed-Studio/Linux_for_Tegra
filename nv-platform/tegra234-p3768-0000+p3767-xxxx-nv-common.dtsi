@@ -97,6 +97,10 @@
 					status = "okay";
 				};
 			};
+
+			adsp@2993000 {
+				status = "okay";
+			};
 		};
 
 		/* UARTA, 40 pin header, Pin 8(TX), Pin 10(RX) */

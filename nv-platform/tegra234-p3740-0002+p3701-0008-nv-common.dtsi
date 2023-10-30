@@ -184,6 +184,10 @@
 					status = "okay";
 				};
 			};
+
+			adsp@2993000 {
+				status = "okay";
+			};
 		};
 
 		host1x@13e00000 {
