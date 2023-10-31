@@ -715,6 +715,7 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
+					nvidia,spi-misc-clk-override = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -725,6 +726,7 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
+					nvidia,spi-misc-clk-override = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -735,6 +737,7 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
+					nvidia,spi-misc-clk-override = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -745,6 +748,7 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
+					nvidia,spi-misc-clk-override = <0x1>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -819,6 +823,7 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
+					nvidia,spi-misc-clk-override = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};

@@ -244,6 +244,7 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
+					nvidia,spi-cmd2-rx-tap-delay = <0x30>;
 					board {
 						prod = <
 							0 0x00000004 0x0000003f 0x00000030>;            //SPI_COMMAND2_0
@@ -256,6 +257,7 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
+					nvidia,spi-cmd2-rx-tap-delay = <0x20>;
 					board {
 						prod = <
 							0 0x00000004 0x0000003f 0x00000020>;            //SPI_COMMAND2_0
