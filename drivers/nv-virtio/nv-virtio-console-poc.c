@@ -42,7 +42,7 @@ static bool nvvc_received_rxdataavaiable = false;
 /* RD/WR timeout */
 #define NVVC_RD_WR_WAIT_TIMEOUT		(10 * HZ)
 /* 32GB - Android IPA Start */
-#define NVVC_SHARED_BUF_OFFSET			((32ULL * 1024ULL * 1024ULL * 1024ULL) - 0x80000000)
+#define NVVC_SHARED_BUF_OFFSET			((32ULL * 1024ULL * 1024ULL * 1024ULL) - 0xc0000000)
 #define NVVC_SHARED_BOUNCE_BUF_OFFSET	(8ULL * 1024ULL * 1024ULL * 1024ULL) /* 8GB */
 #define NVVC_SHARED_BUF_SIZE		PAGE_SIZE
 
