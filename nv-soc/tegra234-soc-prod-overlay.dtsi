@@ -759,12 +759,18 @@
 						0 0x0000f000 0x0000003f 0x00000012>;            //qspi_secure_axi_ctl_0
 				};
 				prod_c_nopwrsave {
+					nvidia,qspi-clk-override = <0x0>;
+					nvidia,qspi-comp-pad-e-input = <0x0>;
+					nvidia,qspi-sel-vreg = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x80000000              //qspi_misc_0
 						0 0x000001ec 0x00000002 0x00000000              //qspi_qspi_comp_control_0
 						0 0x000001fc 0x00000002 0x00000000>;            //qspi_io_trim_cntrl_0
 				};
 				prod_c_pwrsave {
+					nvidia,qspi-clk-override = <0x0>;
+					nvidia,qspi-comp-pad-e-input = <0x2>;
+					nvidia,qspi-sel-vreg = <0x2>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000              //qspi_misc_0
 						0 0x000001ec 0x00000002 0x00000002              //qspi_qspi_comp_control_0
@@ -785,12 +791,18 @@
 						0 0x0000f000 0x0000003f 0x00000012>;            //qspi_secure_axi_ctl_0
 				};
 				prod_c_nopwrsave {
+					nvidia,qspi-clk-override = <0x0>;
+					nvidia,qspi-comp-pad-e-input = <0x0>;
+					nvidia,qspi-sel-vreg = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x80000000              //qspi_misc_0
 						0 0x000001ec 0x00000002 0x00000000              //qspi_qspi_comp_control_0
 						0 0x000001fc 0x00000002 0x00000000>;            //qspi_io_trim_cntrl_0
 				};
 				prod_c_pwrsave {
+					nvidia,qspi-clk-override = <0x0>;
+					nvidia,qspi-comp-pad-e-input = <0x2>;
+					nvidia,qspi-sel-vreg = <0x2>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000              //qspi_misc_0
 						0 0x000001ec 0x00000002 0x00000002              //qspi_qspi_comp_control_0
