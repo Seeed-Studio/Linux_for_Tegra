@@ -94,7 +94,8 @@
 		};
 
 		serial@31d0000 {
-			status = "okay";
+			current-speed = <115200>;
+			status = "okay";                        
 		};
 
 		tachometer@39c0000 {
