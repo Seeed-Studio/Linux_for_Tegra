@@ -85,6 +85,12 @@ struct tnvvse_crypto_completion {
 	int req_err;
 };
 
+typedef enum {
+	SHA_OP_INIT = 1,
+	SHA_OP_SUCCESS = 2,
+	SHA_OP_FAIL = 3,
+} sha_op_state;
+
 struct crypto_sha_state {
 	uint32_t			sha_type;
 	uint32_t			digest_size;
@@ -95,7 +101,7 @@ struct crypto_sha_state {
 	struct ahash_request		*req;
 	struct crypto_ahash		*tfm;
 	char				*result_buff;
-	bool				sha_done_success;
+	sha_op_state			sha_done_success;
 };
 
 /* Tegra NVVSE crypt context */
@@ -286,7 +292,7 @@ static int tnvvse_crypto_sha_init(struct tnvvse_crypto_ctx *ctx,
 	sha_state->total_bytes = init_ctl->total_msg_size;
 	sha_state->digest_size = init_ctl->digest_size;
 	sha_state->remaining_bytes = init_ctl->total_msg_size;
-	sha_state->sha_done_success = false;
+	sha_state->sha_done_success = SHA_OP_INIT;
 	nvvse_devnode[ctx->node_id].sha_init_done = true;
 
 	memset(sha_state->result_buff , 0, 64);
@@ -312,12 +318,13 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	struct ahash_request *req;
 	char *input_buffer = update_ctl->in_buff;
 	struct scatterlist sg;
-	int ret;
+	int ret = 0;
 
 	if (update_ctl->input_buffer_size > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s: Msg size is greater than supported size of %d Bytes\n", __func__,
 						ivc_database.max_buffer_size[ctx->node_id]);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto stop_sha;
 	}
 
 	result_buff = sha_state->result_buff;
@@ -332,6 +339,7 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	/* copy input buffer */
 	if (copy_from_user((void *)sha_state->in_buf, input_buffer, update_ctl->input_buffer_size)) {
 		pr_err("%s(): Failed to copy_from_user input data\n", __func__);
+		ret = -EFAULT;
 		goto stop_sha;
 	}
 
@@ -351,28 +359,13 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 					__func__, sha_alg_names[sha_state->sha_type], ret);
 			goto stop_sha;
 		}
-		sha_state->sha_done_success = true;
+		sha_state->sha_done_success = SHA_OP_SUCCESS;
 	}
 
 	goto done;
 
 stop_sha:
-	if (sha_state->in_buf) {
-		kfree(sha_state->in_buf);
-		sha_state->in_buf = NULL;
-	}
-	ahash_request_free(sha_state->req);
-	crypto_free_ahash(sha_state->tfm);
-	sha_state->req = NULL;
-	sha_state->tfm = NULL;
-	if (sha_state->result_buff != ctx->sha_result) {
-		kfree(sha_state->result_buff);
-		sha_state->result_buff = NULL;
-	}
-	sha_state->result_buff = NULL;
-	sha_state->total_bytes = 0;
-	sha_state->digest_size = 0;
-	sha_state->remaining_bytes = 0;
+	sha_state->sha_done_success = SHA_OP_FAIL;
 
 done:
 	return ret;
@@ -389,7 +382,7 @@ static int tnvvse_crypto_sha_final(struct tnvvse_crypto_ctx *ctx,
 	char *result_buff;
 	int ret = -ENOMEM;
 
-	if (!sha_state->sha_done_success) {
+	if (sha_state->sha_done_success == SHA_OP_INIT) {
 		result_buff = sha_state->result_buff;
 		req = sha_state->req;
 
@@ -407,7 +400,7 @@ static int tnvvse_crypto_sha_final(struct tnvvse_crypto_ctx *ctx,
 		goto stop_sha;
 	}
 
-	if (sha_state->result_buff == NULL) {
+	if (sha_state->sha_done_success == SHA_OP_FAIL) {
 		pr_err("%s(): SHA is either aborted or not initialized\n", __func__);
 		ret = -EFAULT;
 		goto stop_sha;
