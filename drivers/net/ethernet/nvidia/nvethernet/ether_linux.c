@@ -6367,7 +6367,7 @@ static void ether_set_ndev_features(struct net_device *ndev,
 	/* GRO is independent of HW features */
 	features |= NETIF_F_GRO;
 
-	if (pdata->hw_feat.sa_vlan_ins) {
+	if ((pdata->hw_feat.sa_vlan_ins) && (pdata->osi_core->mac != OSI_MAC_HW_EQOS)) {
 		features |= NETIF_F_HW_VLAN_CTAG_TX;
 	}
 
