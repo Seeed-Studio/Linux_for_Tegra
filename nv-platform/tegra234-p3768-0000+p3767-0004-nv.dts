@@ -5,3 +5,21 @@
 
 #include "staging/tegra234-p3768-0000+p3767-0004.dts"
 #include "tegra234-p3768-0000+p3767-xxxx-nv-common.dtsi"
+
+/ {
+	bus@0 {
+		host1x@13e00000 {
+			nvdla0@15880000 {
+				status = "disabled";
+			};
+
+			nvdla1@158c0000 {
+				status = "disabled";
+			};
+
+			pva0@16000000 {
+				status = "disabled";
+			};
+		};
+	};
+};
