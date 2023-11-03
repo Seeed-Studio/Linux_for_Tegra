@@ -57,6 +57,11 @@
 #define PMCFGR						0xE00
 #define PMCR						0xE04
 #define PMIIDR						0xE08
+#define PMPIDR0						0xFE0
+#define PMPIDR1						0xFE4
+#define PMPIDR2						0xFE8
+#define PMPIDR3						0xFEC
+#define PMPIDR4						0xFD0
 
 /* PMCFGR register field */
 #define PMCFGR_NCG					GENMASK(31, 28)
@@ -84,6 +89,25 @@
 #define PMCR_C						BIT(2)
 #define PMCR_P						BIT(1)
 #define PMCR_E						BIT(0)
+
+/* PMPIDR0 register field */
+#define PMPIDR0_PART_0					GENMASK(7, 0)
+
+/* PMPIDR1 register field */
+#define PMPIDR1_DES_0					GENMASK(7, 4)
+#define PMPIDR1_PART_1					GENMASK(3, 0)
+
+/* PMPIDR2 register field */
+#define PMPIDR2_REVISION				GENMASK(7, 4)
+#define PMPIDR2_DES_1					GENMASK(2, 0)
+
+/* PMPIDR3 register field */
+#define PMPIDR3_REVAND					GENMASK(7, 4)
+#define PMPIDR3_CMOD					GENMASK(3, 0)
+
+/* PMPIDR4 register field */
+#define PMPIDR4_SIZE					GENMASK(7, 4)
+#define PMPIDR4_DES_2					GENMASK(3, 0)
 
 /* Each SET/CLR register supports up to 32 counters. */
 #define ARM_CSPMU_SET_CLR_COUNTER_SHIFT		5
@@ -408,6 +432,44 @@ static struct arm_cspmu_impl_match *arm_cspmu_impl_match_get(u32 pmiidr)
 	return NULL;
 }
 
+static u32 arm_cspmu_get_pmiidr(struct arm_cspmu *cspmu)
+{
+	u32 pmiidr, pmpidr;
+
+	pmiidr = readl(cspmu->base0 + PMIIDR);
+
+	if (pmiidr != 0)
+		return pmiidr;
+
+	/* Construct PMIIDR value from PMPIDRs. */
+
+	pmpidr = readl(cspmu->base0 + PMPIDR0);
+	pmiidr |= FIELD_PREP(ARM_CSPMU_PMIIDR_PRODUCTID_PART_0,
+				FIELD_GET(PMPIDR0_PART_0, pmpidr));
+
+	pmpidr = readl(cspmu->base0 + PMPIDR1);
+	pmiidr |= FIELD_PREP(ARM_CSPMU_PMIIDR_PRODUCTID_PART_1,
+				FIELD_GET(PMPIDR1_PART_1, pmpidr));
+	pmiidr |= FIELD_PREP(ARM_CSPMU_PMIIDR_IMPLEMENTER_DES_0,
+				FIELD_GET(PMPIDR1_DES_0, pmpidr));
+
+	pmpidr = readl(cspmu->base0 + PMPIDR2);
+	pmiidr |= FIELD_PREP(ARM_CSPMU_PMIIDR_VARIANT,
+				FIELD_GET(PMPIDR2_REVISION, pmpidr));
+	pmiidr |= FIELD_PREP(ARM_CSPMU_PMIIDR_IMPLEMENTER_DES_1,
+				FIELD_GET(PMPIDR2_DES_1, pmpidr));
+
+	pmpidr = readl(cspmu->base0 + PMPIDR3);
+	pmiidr |= FIELD_PREP(ARM_CSPMU_PMIIDR_REVISION,
+				FIELD_GET(PMPIDR3_REVAND, pmpidr));
+
+	pmpidr = readl(cspmu->base0 + PMPIDR4);
+	pmiidr |= FIELD_PREP(ARM_CSPMU_PMIIDR_IMPLEMENTER_DES_2,
+				FIELD_GET(PMPIDR4_DES_2, pmpidr));
+
+	return pmiidr;
+}
+
 #define DEFAULT_IMPL_OP(name)	.name = arm_cspmu_##name
 
 static int arm_cspmu_init_impl_ops(struct arm_cspmu *cspmu)
@@ -418,7 +480,7 @@ static int arm_cspmu_init_impl_ops(struct arm_cspmu *cspmu)
 
 	/* Start with a default PMU implementation */
 	cspmu->impl.module = THIS_MODULE;
-	cspmu->impl.pmiidr = readl(cspmu->base0 + PMIIDR);
+	cspmu->impl.pmiidr = arm_cspmu_get_pmiidr(cspmu);
 	cspmu->impl.ops = (struct arm_cspmu_impl_ops) {
 		DEFAULT_IMPL_OP(get_event_attrs),
 		DEFAULT_IMPL_OP(get_format_attrs),
