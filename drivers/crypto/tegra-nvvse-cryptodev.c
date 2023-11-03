@@ -318,7 +318,13 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	struct ahash_request *req;
 	char *input_buffer = update_ctl->in_buff;
 	struct scatterlist sg;
-	int ret = 0;
+	int ret = 0, buffer_size;
+
+	if (update_ctl->input_buffer_size < 0) {
+		pr_err("%s: Invalid Msg size of %d Bytes\n", __func__, update_ctl->input_buffer_size);
+		ret = -EINVAL;
+		goto stop_sha;
+	}
 
 	if (update_ctl->input_buffer_size > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s: Msg size is greater than supported size of %d Bytes\n", __func__,
@@ -330,7 +336,15 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	result_buff = sha_state->result_buff;
 	req = sha_state->req;
 
-	sha_state->in_buf = kzalloc(update_ctl->input_buffer_size, GFP_KERNEL);
+	/* allocate buffer size as 1 to perform SHA operation
+	 * if SHA buffer size passed is zero
+	 */
+	if (update_ctl->input_buffer_size == 0)
+		buffer_size = 1;
+	else
+		buffer_size = update_ctl->input_buffer_size;
+
+	sha_state->in_buf = kzalloc(buffer_size, GFP_KERNEL);
 	if (sha_state->in_buf == NULL) {
 		ret = -ENOMEM;
 		goto stop_sha;
