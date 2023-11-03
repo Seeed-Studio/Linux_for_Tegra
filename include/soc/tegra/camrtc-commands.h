@@ -124,8 +124,8 @@
  *
  * If no IVC group bits are set (sender likely does not support the
  * optimization) or the receiver itself does not support the
- * optimization, it must always check all IVC channels for incoming
- * messages after receiving a HSP message.
+ * optimization, the receiver must always inspect all IVC channels for
+ * state changes and incoming messages after receiving a HSP message.
  *
  * Other bits in the 32-bit @ref HspSsReg "shared semaphore register"
  * are reserved for additional signalling between CCPLEX VM and RCE.
@@ -310,7 +310,9 @@
 /**
  * @brief CH_SETUP message
  *
- * The CAMRTC_CH_SETUP message is sent when VM wants to
+ * The CAMRTC_CH_SETUP message is sent when VM wants to set
+ * up shared memory areas for IVC channels, debug trace, or
+ * other purposes.
  *
  * @pre @ref CAMRTC_HSP_HELLO exchange has been completed.
  *      @ref CAMRTC_HSP_PROTOCOL exchange is recommended to
@@ -428,7 +430,7 @@
  *
  * The CAMRTC_HSP_PROTOCOL message is used to exchange HSP-VM
  * protocol versions between client and RCE FW. While the message
- * is optional, it is recommended to use it after the HELLOW
+ * is optional, it is recommended to use it after the HELLO
  * exchange in order to enable all supported protocol features.
  *
  * @pre @ref CAMRTC_HSP_HELLO exchange has been completed.
