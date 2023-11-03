@@ -1596,12 +1596,11 @@ static void vblk_init_device(struct work_struct *ws)
 			return;
 		}
 
-		mutex_unlock(&vblkdev->ivc_lock);
-		vblkdev->initialized = true;
 		/* read lcpu_affinity from dts */
 		if (of_property_read_u32_index(vblkdev->device->of_node, "lcpu_affinity", 0,
 			&lcpu_affinity)) {
 			dev_err(vblkdev->device, "Failed to read lcpu_affinity property\n");
+			mutex_unlock(&vblkdev->ivc_lock);
 			return;
 		}
 
@@ -1611,6 +1610,7 @@ static void vblk_init_device(struct work_struct *ws)
 							vblkdev->devnum, vblkdev->config.priority);
 		if (ret < 0) {
 			dev_err(vblkdev->device, "snprint API failed\n");
+			mutex_unlock(&vblkdev->ivc_lock);
 			return;
 		}
 		strncat(vblk_comm, ":%u", 3);
@@ -1620,6 +1620,7 @@ static void vblk_init_device(struct work_struct *ws)
 					vblkdev->vcpu_affinity, vblk_comm);
 		if (IS_ERR(vblkdev->vblk_kthread)) {
 			dev_err(vblkdev->device, "Cannot allocate vblk worker thread\n");
+			mutex_unlock(&vblkdev->ivc_lock);
 			return;
 		}
 
@@ -1629,6 +1630,9 @@ static void vblk_init_device(struct work_struct *ws)
 		WARN_ON_ONCE(sched_setattr_nocheck(vblkdev->vblk_kthread, &attr) != 0);
 		init_completion(&vblkdev->complete);
 		wake_up_process(vblkdev->vblk_kthread);
+
+		vblkdev->initialized = true;
+		mutex_unlock(&vblkdev->ivc_lock);
 
 		setup_device(vblkdev);
 		return;
