@@ -344,11 +344,12 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	else
 		buffer_size = update_ctl->input_buffer_size;
 
-	sha_state->in_buf = kzalloc(buffer_size, GFP_KERNEL);
+	sha_state->in_buf = krealloc(sha_state->in_buf, buffer_size, GFP_KERNEL);
 	if (sha_state->in_buf == NULL) {
 		ret = -ENOMEM;
 		goto stop_sha;
 	}
+	memset(sha_state->in_buf, 0, buffer_size);
 
 	/* copy input buffer */
 	if (copy_from_user((void *)sha_state->in_buf, input_buffer, update_ctl->input_buffer_size)) {
