@@ -71,7 +71,7 @@
 			p3785@56 {
 				compatible = "nvidia,lt6911uxc";
 				/* I2C device address */
-				reg = <0x56>;
+				reg = <0x2b>;
 
 				/* V4L2 device node location */
 				devnode = "video0";
