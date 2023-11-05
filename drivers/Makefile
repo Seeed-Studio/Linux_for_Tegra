@@ -17,9 +17,7 @@ endif
 obj-m += c2c/
 obj-m += clink/
 obj-m += cpuidle/
-ifeq ($(CONFIG_SKIP_CRYPTO),)
 obj-m += crypto/
-endif
 ifdef CONFIG_PM_DEVFREQ
 obj-m += devfreq/
 endif
