@@ -21,7 +21,7 @@
 	jetson-header-name = "Jetson 24pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
 
-	/* IMX77 sensor module on CSI PORT A and IMX219 sensor module on CSI PORT B  */
+	/* IMX477 sensor module on CSI PORT A and IMX219 sensor module on CSI PORT B  */
 	fragment@0 {
 		target-path = "/";
 		__overlay__ {
@@ -113,7 +113,7 @@
 						};
 						cam_module1_drivernode1: drivernode1 {
 							pcl_id = "v4l2_lens";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/lens_imx219@RBPCV2/";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx219@RBPCV2";
 						};
 					};
 				};
@@ -377,7 +377,7 @@
 						reg = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
-						rbpcv3_imx219_c@10 {
+						rbpcv2_imx219_c@10 {
 							reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 							compatible = "sony,imx219";
 							/* I2C device address */
@@ -670,13 +670,13 @@
 							};
 						};
 					};
-					lens_imx219@RBPCV2 {
-						min_focus_distance = "0.0";
-						hyper_focal = "0.0";
-						focal_length = "3.04";
-						f_number = "2.0";
-						aperture = "0.0";
-					};
+				};
+				lens_imx219@RBPCV2 {
+					min_focus_distance = "0.0";
+					hyper_focal = "0.0";
+					focal_length = "3.04";
+					f_number = "2.0";
+					aperture = "0.0";
 				};
 				gpio@2200000 {
 					camera-control-output-low {
