@@ -9,8 +9,6 @@ subdir-ccflags-y += -Werror
 LINUX_VERSION := $(shell expr $(VERSION) \* 256 + $(PATCHLEVEL))
 LINUX_VERSION_6_2 := $(shell expr 6 \* 256 + 2)
 LINUX_VERSION_6_3 := $(shell expr 6 \* 256 + 3)
-LINUX_VERSION_6_6 := $(shell expr 6 \* 256 + 6)
-LINUX_VERSION_6_7 := $(shell expr 6 \* 256 + 7)
 
 # The Tegra IVC driver was updated to support iosys-map in Linux v6.2.
 # For Linux v6.2 kernels, don't build any drivers that requires this.
@@ -25,12 +23,6 @@ endif
 # Legacy GPIO support is removed in Linux v6.3
 ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_3); echo $$?),0)
 export CONFIG_TEGRA_GPIO_LEGACY_DISABLE=y
-endif
-
-# Changes done in Linux 6.6 onwards
-ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_6); echo $$?),0)
-# Crypto driver has major change in it ops, skip it
-export CONFIG_SKIP_CRYPTO=y
 endif
 
 ifeq ($(CONFIG_TEGRA_VIRTUALIZATION),y)
