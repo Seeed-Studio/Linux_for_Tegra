@@ -64,6 +64,8 @@ int nvmap_ioctl_handle_from_sci_ipc_id(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_query_heap_params(struct file *filp, void __user *arg);
 
+int nvmap_ioctl_query_heap_params_numa(struct file *filp, void __user *arg);
+
 int nvmap_ioctl_dup_handle(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_get_fd_from_list(struct file *filp, void __user *arg);

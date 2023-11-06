@@ -241,6 +241,7 @@ struct nvmap_query_heap_params {
 	__u64 free;
 	__u64 largest_free_block;
 	__u32 granule_size;
+	__s32 numa_id;
 };
 
 /**
@@ -369,6 +370,10 @@ struct nvmap_fd_for_range_from_list {
 #define NVMAP_IOC_GET_FD_FOR_RANGE_FROM_LIST _IOR(NVMAP_IOC_MAGIC, 107, \
 		struct nvmap_fd_for_range_from_list)
 
-#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_GET_FD_FOR_RANGE_FROM_LIST))
+/* NUMA aware query heap params */
+#define NVMAP_IOC_QUERY_HEAP_PARAMS_NUMA _IOR(NVMAP_IOC_MAGIC, 108, \
+		struct nvmap_query_heap_params)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_QUERY_HEAP_PARAMS_NUMA))
 
 #endif /* __UAPI_LINUX_NVMAP_H */

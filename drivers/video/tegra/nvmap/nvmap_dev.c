@@ -488,6 +488,11 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case NVMAP_IOC_QUERY_HEAP_PARAMS:
 		err = nvmap_ioctl_query_heap_params(filp, uarg);
 		break;
+
+	case NVMAP_IOC_QUERY_HEAP_PARAMS_NUMA:
+		err = nvmap_ioctl_query_heap_params_numa(filp, uarg);
+		break;
+
 	case NVMAP_IOC_GET_FD_FOR_RANGE_FROM_LIST:
 		err = nvmap_ioctl_get_fd_from_list(filp, uarg);
 		break;

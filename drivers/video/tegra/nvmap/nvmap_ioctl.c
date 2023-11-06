@@ -1365,7 +1365,7 @@ static unsigned long system_heap_total_mem(void)
 	return sys_heap.totalram << PAGE_SHIFT;
 }
 
-int nvmap_ioctl_query_heap_params(struct file *filp, void __user *arg)
+static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 {
 	unsigned int carveout_mask = NVMAP_HEAP_CARVEOUT_MASK;
 	unsigned int iovmm_mask = NVMAP_HEAP_IOVMM;
@@ -1374,6 +1374,7 @@ int nvmap_ioctl_query_heap_params(struct file *filp, void __user *arg)
 	unsigned int type;
 	int ret = 0;
 	int i;
+	int numa_id;
 	unsigned long free_mem = 0;
 
 	memset(&op, 0, sizeof(op));
@@ -1384,6 +1385,8 @@ int nvmap_ioctl_query_heap_params(struct file *filp, void __user *arg)
 
 	type = op.heap_mask;
 	WARN_ON(type & (type - 1));
+	if (is_numa_aware)
+		numa_id = op.numa_id;
 
 	if (nvmap_convert_carveout_to_iovmm) {
 		carveout_mask &= ~NVMAP_HEAP_CARVEOUT_GENERIC;
@@ -1400,12 +1403,16 @@ int nvmap_ioctl_query_heap_params(struct file *filp, void __user *arg)
 
 	if (type & NVMAP_HEAP_CARVEOUT_MASK) {
 		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
-			if (type & nvmap_dev->heaps[i].heap_bit) {
+			if ((type & nvmap_dev->heaps[i].heap_bit) &&
+				(is_numa_aware ?
+				(numa_id == nvmap_dev->heaps[i].carveout->numa_node_id) : true)) {
 				heap = nvmap_dev->heaps[i].carveout;
 				op.total = nvmap_query_heap_size(heap);
 				op.free = heap->free_size;
-				if (nvmap_dev->heaps[i].carveout->is_gpu_co)
-					op.granule_size = nvmap_dev->heaps[i].carveout->granule_size;
+				if (nvmap_dev->heaps[i].carveout->is_gpu_co) {
+					op.granule_size =
+						nvmap_dev->heaps[i].carveout->granule_size;
+				}
 				break;
 			}
 		}
@@ -1426,6 +1433,16 @@ int nvmap_ioctl_query_heap_params(struct file *filp, void __user *arg)
 		ret = -EFAULT;
 exit:
 	return ret;
+}
+
+int nvmap_ioctl_query_heap_params(struct file *filp, void __user *arg)
+{
+	return nvmap_query_heap_params(arg, false);
+}
+
+int nvmap_ioctl_query_heap_params_numa(struct file *filp, void __user *arg)
+{
+	return nvmap_query_heap_params(arg, true);
 }
 
 int nvmap_ioctl_dup_handle(struct file *filp, void __user *arg)
