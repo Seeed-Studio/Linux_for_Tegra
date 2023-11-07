@@ -20,6 +20,16 @@
 #define NV_CNVL_PORT_COUNT           4ULL
 #define NV_CNVL_FILTER_ID_MASK       GENMASK_ULL(NV_CNVL_PORT_COUNT - 1, 0)
 
+#define NV_UCF_FILTER_ID_MASK        GENMASK_ULL(4, 0)
+
+#define NV_UPHY_FILTER_ID_MASK       GENMASK_ULL(16, 0)
+
+#define NV_VISION_FILTER_ID_MASK     GENMASK_ULL(19, 0)
+
+#define NV_DISPLAY_FILTER_ID_MASK    BIT(0)
+
+#define NV_UCF_GPU_FILTER_ID_MASK    BIT(0)
+
 #define NV_GENERIC_FILTER_ID_MASK    GENMASK_ULL(31, 0)
 
 #define NV_PRODID_MASK		(ARM_CSPMU_PMIIDR_PRODUCTID |	\
@@ -178,6 +188,72 @@ static struct attribute *mcf_pmu_event_attrs[] = {
 	NULL,
 };
 
+static struct attribute *ucf_pmu_event_attrs[] = {
+	ARM_CSPMU_EVENT_ATTR(slc_allocate,			0xf0),
+	ARM_CSPMU_EVENT_ATTR(slc_refill,			0xf1),
+	ARM_CSPMU_EVENT_ATTR(slc_access,			0xf2),
+	ARM_CSPMU_EVENT_ATTR(slc_wb,				0xf3),
+	ARM_CSPMU_EVENT_ATTR(slc_hit,				0x118),
+	ARM_CSPMU_EVENT_ATTR(slc_access_wr,			0x112),
+	ARM_CSPMU_EVENT_ATTR(slc_access_rd,			0x111),
+	ARM_CSPMU_EVENT_ATTR(slc_refill_wr,			0x10a),
+	ARM_CSPMU_EVENT_ATTR(slc_refill_rd,			0x109),
+	ARM_CSPMU_EVENT_ATTR(slc_hit_wr,			0x11a),
+	ARM_CSPMU_EVENT_ATTR(slc_hit_rd,			0x119),
+	ARM_CSPMU_EVENT_ATTR(slc_access_dataless,		0x183),
+	ARM_CSPMU_EVENT_ATTR(slc_access_atomic,			0x184),
+	ARM_CSPMU_EVENT_ATTR(local_snoop,			0x180),
+	ARM_CSPMU_EVENT_ATTR(ext_snp_access,			0x181),
+	ARM_CSPMU_EVENT_ATTR(ext_snp_evict,			0x182),
+
+	ARM_CSPMU_EVENT_ATTR(ucf_bus_cycles,			0x1d),
+
+	ARM_CSPMU_EVENT_ATTR(any_access_wr,			0x112),
+	ARM_CSPMU_EVENT_ATTR(any_access_rd,			0x111),
+	ARM_CSPMU_EVENT_ATTR(any_byte_wr,			0x114),
+	ARM_CSPMU_EVENT_ATTR(any_byte_rd,			0x113),
+	ARM_CSPMU_EVENT_ATTR(any_outstanding_rd,		0x115),
+
+	ARM_CSPMU_EVENT_ATTR(local_dram_access_wr,		0x122),
+	ARM_CSPMU_EVENT_ATTR(local_dram_access_rd,		0x121),
+	ARM_CSPMU_EVENT_ATTR(local_dram_byte_wr,		0x124),
+	ARM_CSPMU_EVENT_ATTR(local_dram_byte_rd,		0x123),
+
+	ARM_CSPMU_EVENT_ATTR(mmio_access_wr,			0x132),
+	ARM_CSPMU_EVENT_ATTR(mmio_access_rd,			0x131),
+	ARM_CSPMU_EVENT_ATTR(mmio_byte_wr,			0x134),
+	ARM_CSPMU_EVENT_ATTR(mmio_byte_rd,			0x133),
+	ARM_CSPMU_EVENT_ATTR(mmio_outstanding_rd,		0x135),
+
+	ARM_CSPMU_EVENT_ATTR(cycles, ARM_CSPMU_EVT_CYCLES_DEFAULT),
+
+	NULL,
+};
+
+static struct attribute *display_pmu_event_attrs[] = {
+	ARM_CSPMU_EVENT_ATTR(rd_bytes_loc,			0x0),
+	ARM_CSPMU_EVENT_ATTR(rd_req_loc,			0x6),
+	ARM_CSPMU_EVENT_ATTR(rd_cum_outs_loc,			0xc),
+
+	ARM_CSPMU_EVENT_ATTR(cycles, ARM_CSPMU_EVT_CYCLES_DEFAULT),
+
+	NULL,
+};
+
+static struct attribute *ucf_gpu_pmu_event_attrs[] = {
+	ARM_CSPMU_EVENT_ATTR(rd_bytes_loc_rem,			0x0),
+	ARM_CSPMU_EVENT_ATTR(wr_bytes_loc,			0x2),
+	ARM_CSPMU_EVENT_ATTR(wr_bytes_rem,			0x3),
+	ARM_CSPMU_EVENT_ATTR(rd_req_loc_rem,			0x6),
+	ARM_CSPMU_EVENT_ATTR(wr_req_loc,			0x8),
+	ARM_CSPMU_EVENT_ATTR(wr_req_rem,			0x9),
+	ARM_CSPMU_EVENT_ATTR(rd_cum_outs_loc_rem,		0xc),
+
+	ARM_CSPMU_EVENT_ATTR(cycles, ARM_CSPMU_EVT_CYCLES_DEFAULT),
+
+	NULL,
+};
+
 static struct attribute *generic_pmu_event_attrs[] = {
 	ARM_CSPMU_EVENT_ATTR(cycles, ARM_CSPMU_EVT_CYCLES_DEFAULT),
 	NULL,
@@ -202,6 +278,54 @@ static struct attribute *nvlink_c2c_pmu_format_attrs[] = {
 static struct attribute *cnvlink_pmu_format_attrs[] = {
 	ARM_CSPMU_FORMAT_EVENT_ATTR,
 	ARM_CSPMU_FORMAT_ATTR(rem_socket, "config1:0-3"),
+	NULL,
+};
+
+static struct attribute *ucf_pmu_format_attrs[] = {
+	ARM_CSPMU_FORMAT_EVENT_ATTR,
+	ARM_CSPMU_FORMAT_ATTR(src_loc_noncpu, "config1:0"),
+	ARM_CSPMU_FORMAT_ATTR(src_loc_cpu, "config1:1"),
+	ARM_CSPMU_FORMAT_ATTR(src_rem, "config1:2"),
+	ARM_CSPMU_FORMAT_ATTR(dst_loc, "config1:3"),
+	ARM_CSPMU_FORMAT_ATTR(dst_rem, "config1:4"),
+	NULL,
+};
+
+static struct attribute *display_pmu_format_attrs[] = {
+	ARM_CSPMU_FORMAT_EVENT_ATTR,
+	NULL,
+};
+
+static struct attribute *ucf_gpu_pmu_format_attrs[] = {
+	ARM_CSPMU_FORMAT_EVENT_ATTR,
+	NULL,
+};
+
+static struct attribute *uphy_pmu_format_attrs[] = {
+	ARM_CSPMU_FORMAT_EVENT_ATTR,
+	ARM_CSPMU_FORMAT_ATTR(pcie_rp_1, "config1:0"),
+	ARM_CSPMU_FORMAT_ATTR(pcie_rp_2, "config1:1"),
+	ARM_CSPMU_FORMAT_ATTR(pcie_rp_3, "config1:2"),
+	ARM_CSPMU_FORMAT_ATTR(pcie_rp_4, "config1:3"),
+	ARM_CSPMU_FORMAT_ATTR(pcie_rp_5, "config1:4"),
+	ARM_CSPMU_FORMAT_ATTR(xusb, "config1:5-10"),
+	ARM_CSPMU_FORMAT_ATTR(mgbe_0, "config1:11"),
+	ARM_CSPMU_FORMAT_ATTR(mgbe_1, "config1:12"),
+	ARM_CSPMU_FORMAT_ATTR(mgbe_2, "config1:13"),
+	ARM_CSPMU_FORMAT_ATTR(mgbe_3, "config1:14"),
+	ARM_CSPMU_FORMAT_ATTR(eqos, "config1:15"),
+	ARM_CSPMU_FORMAT_ATTR(ufs, "config1:16"),
+	NULL,
+};
+
+static struct attribute *vision_pmu_format_attrs[] = {
+	ARM_CSPMU_FORMAT_EVENT_ATTR,
+	ARM_CSPMU_FORMAT_ATTR(vi_0, "config1:0-1"),
+	ARM_CSPMU_FORMAT_ATTR(vi_1, "config1:2-3"),
+	ARM_CSPMU_FORMAT_ATTR(isp_0, "config1:4-7"),
+	ARM_CSPMU_FORMAT_ATTR(isp_1, "config1:8-11"),
+	ARM_CSPMU_FORMAT_ATTR(vic, "config1:12-13"),
+	ARM_CSPMU_FORMAT_ATTR(pva, "config1:14-19"),
 	NULL,
 };
 
@@ -312,6 +436,56 @@ static const struct nv_cspmu_match nv_cspmu_match[] = {
 	  .name_fmt = NAME_FMT_SOCKET,
 	  .event_attr = scf_pmu_event_attrs,
 	  .format_attr = scf_pmu_format_attrs
+	},
+	{
+	  .prodid = 0x2CF10000,
+	  .prodid_mask = NV_PRODID_MASK,
+	  .filter_mask = NV_UCF_FILTER_ID_MASK,
+	  .filter_default_val = NV_UCF_FILTER_ID_MASK,
+	  .name_pattern = "nvidia_ucf_pmu_%u",
+	  .name_fmt = NAME_FMT_SOCKET,
+	  .event_attr = ucf_pmu_event_attrs,
+	  .format_attr = ucf_pmu_format_attrs
+	},
+	{
+	  .prodid = 0x10800000,
+	  .prodid_mask = NV_PRODID_MASK,
+	  .filter_mask = NV_UPHY_FILTER_ID_MASK,
+	  .filter_default_val = NV_UPHY_FILTER_ID_MASK,
+	  .name_pattern = "nvidia_uphy_pmu_%u",
+	  .name_fmt = NAME_FMT_SOCKET,
+	  .event_attr = mcf_pmu_event_attrs,
+	  .format_attr = uphy_pmu_format_attrs
+	},
+	{
+	  .prodid = 0x10a00000,
+	  .prodid_mask = NV_PRODID_MASK,
+	  .filter_mask = 0,
+	  .filter_default_val = NV_UCF_GPU_FILTER_ID_MASK,
+	  .name_pattern = "nvidia_ucf_gpu_pmu_%u",
+	  .name_fmt = NAME_FMT_SOCKET,
+	  .event_attr = ucf_gpu_pmu_event_attrs,
+	  .format_attr = ucf_gpu_pmu_format_attrs
+	},
+	{
+	  .prodid = 0x10d00000,
+	  .prodid_mask = NV_PRODID_MASK,
+	  .filter_mask = 0,
+	  .filter_default_val = NV_DISPLAY_FILTER_ID_MASK,
+	  .name_pattern = "nvidia_display_pmu_%u",
+	  .name_fmt = NAME_FMT_SOCKET,
+	  .event_attr = display_pmu_event_attrs,
+	  .format_attr = display_pmu_format_attrs
+	},
+	{
+	  .prodid = 0x10e00000,
+	  .prodid_mask = NV_PRODID_MASK,
+	  .filter_mask = NV_VISION_FILTER_ID_MASK,
+	  .filter_default_val = NV_VISION_FILTER_ID_MASK,
+	  .name_pattern = "nvidia_vision_pmu_%u",
+	  .name_fmt = NAME_FMT_SOCKET,
+	  .event_attr = mcf_pmu_event_attrs,
+	  .format_attr = vision_pmu_format_attrs
 	},
 	{
 	  .prodid = 0,
