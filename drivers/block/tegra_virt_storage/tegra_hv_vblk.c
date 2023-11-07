@@ -1599,9 +1599,8 @@ static void vblk_init_device(struct work_struct *ws)
 		/* read lcpu_affinity from dts */
 		if (of_property_read_u32_index(vblkdev->device->of_node, "lcpu_affinity", 0,
 			&lcpu_affinity)) {
-			dev_err(vblkdev->device, "Failed to read lcpu_affinity property\n");
-			mutex_unlock(&vblkdev->ivc_lock);
-			return;
+			/* pin thread to logical core 2 if dts property is missing */
+			lcpu_affinity = 2;
 		}
 
 		/* convert lcpu to vcpu */
