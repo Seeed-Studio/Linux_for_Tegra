@@ -240,7 +240,7 @@ static u32 nv_cspmu_event_filter(const struct perf_event *event)
 	const struct nv_cspmu_ctx *ctx =
 		to_nv_cspmu_ctx(to_arm_cspmu(event->pmu));
 
-	if (ctx->filter_mask == 0)
+	if (ctx->filter_mask == 0 || event->attr.config1 == 0)
 		return ctx->filter_default_val;
 
 	return event->attr.config1 & ctx->filter_mask;
