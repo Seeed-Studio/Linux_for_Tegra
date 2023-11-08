@@ -80,7 +80,7 @@
 			};
 
 			/* C4 End Point */
-			pcie_ep@14160000 {
+			pcie-ep@14160000 {
 				max-link-speed = <0x3>;
 			};
 
@@ -126,6 +126,50 @@
 				phys = <&p2u_gbe_1>;
 				phy-names = "p2u-0";
 				num-lanes = <1>;
+			};
+		};
+	};
+
+	/*
+	 * If ODMDATA contains hsio-uphy-config-40, then:
+	 * 1. Disable PCIE C4
+	 * 2. Enable PCIE C4 EP
+	 * 3. Reduce PCIE C1 to Gen2
+	 */
+	p3767-sku-handling-fragment@7 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "hsio-uphy-config-40";
+		};
+		__overlay__ {
+			pcie@14160000 {
+				status = "disabled";
+			};
+			pcie-ep@14160000 {
+				status = "okay";
+			};
+			pcie@14100000 {
+				max-link-speed = <2>;
+			};
+		};
+	};
+
+	/*
+	 * If ODMDATA contains hsio-uphy-config-41, then:
+	 * 1. Disable PCIE C4
+	 * 2. Enable PCIE C4 EP
+	 */
+	p3767-sku-handling-fragment@8 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "hsio-uphy-config-41";
+		};
+		__overlay__ {
+			pcie@14160000 {
+				status = "disabled";
+			};
+			pcie-ep@14160000 {
+				status = "okay";
 			};
 		};
 	};

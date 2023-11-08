@@ -39,7 +39,7 @@
 					max-link-speed = <0x3>;
 				};
 				/* C4 End Point */
-				pcie_ep@14160000 {
+				pcie-ep@14160000 {
 					max-link-speed = <0x3>;
 				};
 				/* C7 */
