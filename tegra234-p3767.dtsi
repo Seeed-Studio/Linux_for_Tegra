@@ -5,6 +5,10 @@
 / {
 	compatible = "nvidia,p3767", "nvidia,tegra234";
 
+	aliases {
+		mmc0 = "/bus@0/mmc@3400000";
+	};
+
 	sound {
 		compatible = "nvidia,tegra186-audio-graph-card";
 		status = "okay";
