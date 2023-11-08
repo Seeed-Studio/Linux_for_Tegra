@@ -812,7 +812,11 @@ int tegra_hv_ivc_tx_empty(struct tegra_hv_ivc_cookie *ivck)
 {
 	struct hv_ivc *ivc = cookie_to_ivc_dev(ivck);
 
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	return tegra_ivc_empty(&ivc->ivc, &ivc->ivc.tx.map);
+#else
 	return tegra_ivc_empty(&ivc->ivc, ivc->ivc.tx.channel);
+#endif
 }
 EXPORT_SYMBOL(tegra_hv_ivc_tx_empty);
 
@@ -820,7 +824,11 @@ uint32_t tegra_hv_ivc_tx_frames_available(struct tegra_hv_ivc_cookie *ivck)
 {
 	struct hv_ivc *ivc = cookie_to_ivc_dev(ivck);
 
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	return tegra_ivc_frames_available(&ivc->ivc, &ivc->ivc.tx.map);
+#else
 	return tegra_ivc_frames_available(&ivc->ivc, ivc->ivc.tx.channel);
+#endif
 }
 EXPORT_SYMBOL(tegra_hv_ivc_tx_frames_available);
 
@@ -834,16 +842,35 @@ EXPORT_SYMBOL(tegra_hv_ivc_dump);
 void *tegra_hv_ivc_read_get_next_frame(struct tegra_hv_ivc_cookie *ivck)
 {
 	struct hv_ivc *ivc = cookie_to_ivc_dev(ivck);
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	struct iosys_map map;
+	int err;
 
+	err = tegra_ivc_read_get_next_frame(&ivc->ivc, &map);
+	if (err)
+		return ERR_PTR(err);
+	return map.vaddr;
+#else
 	return tegra_ivc_read_get_next_frame(&ivc->ivc);
+#endif
 }
 EXPORT_SYMBOL(tegra_hv_ivc_read_get_next_frame);
 
 void *tegra_hv_ivc_write_get_next_frame(struct tegra_hv_ivc_cookie *ivck)
 {
 	struct hv_ivc *ivc = cookie_to_ivc_dev(ivck);
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	struct iosys_map map;
+	int err;
 
+	err = tegra_ivc_write_get_next_frame(&ivc->ivc, &map);
+	if (err)
+		return ERR_PTR(err);
+
+	return map.vaddr;
+#else
 	return tegra_ivc_write_get_next_frame(&ivc->ivc);
+#endif
 }
 EXPORT_SYMBOL(tegra_hv_ivc_write_get_next_frame);
 
