@@ -29,6 +29,10 @@
 			};
 		};
 
+		mmc@3400000 {
+			vmmc-supply = <&vdd_3v3_sd>;
+		};
+
 		padctl@3520000 {
 			ports {
 				usb2-0 {
@@ -121,5 +125,14 @@
 				label = "sensor2";
 			};
 		};
+	};
+
+	vdd_3v3_sd: regulator-vdd-3v3-sd {
+			compatible = "regulator-fixed";
+			regulator-name = "VDD_3V3_SD";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio TEGRA234_MAIN_GPIO(A, 0) GPIO_ACTIVE_HIGH>;
+			enable-active-high;
 	};
 };
