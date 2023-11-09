@@ -291,7 +291,7 @@ inline u32 ttcan_read_ecr(struct ttcan_controller *ttcan)
 	return ttcan_read32(ttcan, ADR_MTTCAN_ECR);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
+#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
 static void tegra_mttcan_config_prod_settings(struct mttcan_priv *priv)
 {
 	struct ttcan_controller *ttcan = priv->ttcan;

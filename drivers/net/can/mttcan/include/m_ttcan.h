@@ -287,7 +287,7 @@ struct ttcan_controller {
 	struct list_head rx_q1;
 	struct list_head rx_b;
 	struct list_head tx_evt;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
+#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
 	struct tegra_prod *prod_list;
 #else
 	struct tegra_prod_cfg_list *prod_list;

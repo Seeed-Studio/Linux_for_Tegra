@@ -12,7 +12,7 @@
 #define CAN_MSG_FLUSH_TIMEOUT	100
 static void mttcan_start(struct net_device *dev);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
 #define MTTCAN_PROD_FIELD(name, rindex, roffset, fname)  \
 {							\
 	.field_name = name,				\
@@ -1877,7 +1877,7 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (ret)
 		goto exit_free_device;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
+#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
 	priv->ttcan->prod_list = devm_tegra_prod_get(&pdev->dev);
 #else
 	priv->ttcan->prod_list = devm_tegra_prod_get_list(&pdev->dev, &mttcan_prod_dev_info);
