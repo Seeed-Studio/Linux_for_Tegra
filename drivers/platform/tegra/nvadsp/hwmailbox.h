@@ -1,7 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #ifndef __HWMAILBOX_H
 #define __HWMAILBOX_H
@@ -79,6 +77,10 @@
 					 SET_HWMBOX_SMSG_MSG(data))
 /* Prepare empty mailbox value */
 #define PREPARE_HWMBOX_EMPTY_MSG()	(HWMBOX_TAG_INVALID | 0x0)
+
+/* Enable and Disable macros for interrupt */
+#define INT_ENABLE  0x1
+#define INT_DISABLE 0x0
 
 /*
  * Queue size must be power of 2 as '&' op

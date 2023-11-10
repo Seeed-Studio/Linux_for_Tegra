@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/atomic.h>
 #include <linux/irq.h>
@@ -121,6 +119,7 @@ static status_t hwmboxq_enqueue(struct hwmbox_queue *queue,
 status_t nvadsp_hwmbox_send_data(uint16_t mid, uint32_t data, uint32_t flags)
 {
 	spinlock_t *lock = &nvadsp_drv_data->hwmbox_send_queue.lock;
+	u32 empty_int_ie = nvadsp_drv_data->chip_data->hwmb.empty_int_ie;
 	unsigned long lockflags;
 	int ret = 0;
 
@@ -140,6 +139,8 @@ status_t nvadsp_hwmbox_send_data(uint16_t mid, uint32_t data, uint32_t flags)
 		hwmbox_last_msg = data;
 #endif
 		hwmbox_writel(data, send_hwmbox());
+		if (empty_int_ie)
+			hwmbox_writel(INT_ENABLE, send_hwmbox() + empty_int_ie);
 	} else {
 		pr_debug("nvadsp_mbox_send: enqueue data\n");
 		ret = hwmboxq_enqueue(&nvadsp_drv_data->hwmbox_send_queue,
@@ -175,6 +176,7 @@ static irqreturn_t hwmbox_send_empty_int_handler(int irq, void *devid)
 {
 	spinlock_t *lock = &nvadsp_drv_data->hwmbox_send_queue.lock;
 	struct device *dev = &nvadsp_pdev->dev;
+	u32 empty_int_ie = nvadsp_drv_data->chip_data->hwmb.empty_int_ie;
 	unsigned long lockflags;
 	uint32_t data;
 	int ret;
@@ -214,6 +216,9 @@ static irqreturn_t hwmbox_send_empty_int_handler(int irq, void *devid)
 		dev_dbg(dev, "Writing 0x%x to SEND_HWMBOX\n", data);
 	} else {
 		is_hwmbox_busy = false;
+		if (empty_int_ie)
+			hwmbox_writel(INT_DISABLE,
+					send_hwmbox() + empty_int_ie);
 	}
 	spin_unlock_irqrestore(lock, lockflags);
 
@@ -281,6 +286,12 @@ int nvadsp_setup_hwmbox_interrupts(struct platform_device *pdev)
 	int recv_virq, send_virq;
 	int ret;
 
+	if (drv->map_hwmbox_interrupts) {
+		ret = drv->map_hwmbox_interrupts(drv);
+		if (ret)
+			goto err;
+	}
+
 	recv_virq = drv->agic_irqs[MBOX_RECV_VIRQ];
 	send_virq = drv->agic_irqs[MBOX_SEND_VIRQ];
 
@@ -290,12 +301,11 @@ int nvadsp_setup_hwmbox_interrupts(struct platform_device *pdev)
 		goto err;
 
 	if (empty_int_ie)
-		hwmbox_writel(0x0, send_hwmbox() + empty_int_ie);
+		hwmbox_writel(INT_DISABLE,
+				send_hwmbox() + empty_int_ie);
 	ret = devm_request_irq(dev, send_virq, hwmbox_send_empty_int_handler,
 			  IRQF_TRIGGER_RISING,
 			  "hwmbox1_send_empty", pdev);
-	if (empty_int_ie)
-		hwmbox_writel(0x1, send_hwmbox() + empty_int_ie);
 	if (ret)
 		goto free_interrupts;
 

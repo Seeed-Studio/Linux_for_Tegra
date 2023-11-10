@@ -1,7 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/**
- * Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #ifndef __TEGRA_NVADSP_DEV_H
 #define __TEGRA_NVADSP_DEV_H
@@ -32,6 +30,11 @@ enum {
 	APE_MAX_REG
 };
 
+enum {
+	AO_MISC,
+	AON_HSP,
+	AON_MAX_REG,
+};
 /*
  * Note: These enums should be aligned to the adsp_mem node mentioned in the
  * device tree
@@ -90,6 +93,7 @@ enum nvadsp_virqs {
 	WDT_VIRQ,
 	WFI_VIRQ,
 	AMC_ERR_VIRQ,
+	NVAON_VIRQ_MAX = AMC_ERR_VIRQ,
 	ACTMON_VIRQ,
 	NVADSP_VIRQ_MAX,
 };
@@ -149,11 +153,14 @@ struct nvadsp_chipdata {
 	int			start_irq;
 	int			end_irq;
 
+	bool                    amc_not_avlbl;
 	bool			amc_err_war;
 	bool			chipid_ext;
 
 	u32			adsp_prid;
 	char			*adsp_elf;
+	size_t                  num_irqs;
+	size_t                  num_regs;
 };
 
 struct nvadsp_drv_data {
@@ -191,6 +198,8 @@ struct nvadsp_drv_data {
 	struct reset_control *ape_tke_rst;
 	int (*set_boot_vec)(struct nvadsp_drv_data *drv_data);
 	int (*set_boot_freqs)(struct nvadsp_drv_data *drv_data);
+	bool (*check_wfi_status)(struct nvadsp_drv_data *drv_data);
+	int (*map_hwmbox_interrupts)(struct nvadsp_drv_data *drv_data);
 
 	struct nvadsp_pm_state state;
 	bool adsp_os_running;

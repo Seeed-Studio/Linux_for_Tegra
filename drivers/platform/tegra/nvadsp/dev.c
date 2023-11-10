@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/platform_device.h>
 #include <linux/fs.h>
@@ -394,7 +392,7 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-	for (iter = 0; iter < APE_MAX_REG; iter++) {
+	for (iter = 0; iter < drv_data->chip_data->num_regs ; iter++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, iter);
 		if (!res) {
 			dev_err(dev,
@@ -418,7 +416,7 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 
 	drv_data->base_regs_saved = drv_data->base_regs;
 
-	for (irq_iter = 0; irq_iter < NVADSP_VIRQ_MAX; irq_iter++) {
+	for (irq_iter = 0; irq_iter < drv_data->chip_data->num_irqs; irq_iter++) {
 		irq_num = platform_get_irq(pdev, irq_iter);
 		if (irq_num < 0) {
 			dev_err(dev, "Failed to get irq number for index %d\n",
@@ -495,14 +493,16 @@ out:
 static int nvadsp_remove(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	uint32_t aram_size =  drv_data->adsp_mem[ARAM_ALIAS_0_SIZE];
 
 	nvadsp_bw_unregister(drv_data);
 
-	nvadsp_aram_exit();
-
-	pm_runtime_disable(&pdev->dev);
+	if (aram_size)
+		nvadsp_aram_exit();
 
 #ifdef CONFIG_PM
+	pm_runtime_disable(&pdev->dev);
+
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		nvadsp_runtime_suspend(&pdev->dev);
 #endif
@@ -537,6 +537,8 @@ static struct nvadsp_chipdata tegrat18x_adsp_chipdata = {
 #endif
 
 	.amc_err_war = true,
+	.num_irqs = NVADSP_VIRQ_MAX,
+	.num_regs = APE_MAX_REG,
 };
 
 static struct nvadsp_chipdata tegra239_adsp_chipdata = {
@@ -568,6 +570,8 @@ static struct nvadsp_chipdata tegra239_adsp_chipdata = {
 
 	/* Populate Chip ID Major Revision as well */
 	.chipid_ext  = true,
+	.num_irqs    = NVADSP_VIRQ_MAX,
+	.num_regs    = APE_MAX_REG,
 };
 
 static const struct of_device_id nvadsp_of_match[] = {

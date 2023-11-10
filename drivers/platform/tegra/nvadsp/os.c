@@ -2205,12 +2205,44 @@ end:
 }
 EXPORT_SYMBOL(nvadsp_os_start);
 
+static bool nvadsp_check_wfi_status(struct nvadsp_drv_data *drv_data)
+{
+	int cnt = 0;
+	bool wfi_status = true;
+	u32 adsp_status;
+
+	if (drv_data->check_wfi_status)
+		wfi_status = drv_data->check_wfi_status(drv_data);
+	else {
+		/*
+		 * Check L2_IDLE and L2_CLKSTOPPED in ADSP_STATUS
+		 * NOTE: Standby mode in ADSP L2CC Power Control
+		 *       register should be enabled for this
+		 */
+		do {
+			adsp_status = amisc_readl(drv_data, AMISC_ADSP_STATUS);
+			if ((adsp_status & AMISC_ADSP_L2_IDLE) &&
+			    (adsp_status & AMISC_ADSP_L2_CLKSTOPPED))
+				break;
+			cnt++;
+			mdelay(1);
+		} while (cnt < 5);
+
+		if (cnt >= 5) {
+			pr_err("ADSP L2C clock not halted: 0x%x\n", adsp_status);
+			wfi_status = false;
+		}
+	}
+
+	return wfi_status;
+}
+
 static int __nvadsp_os_suspend(void)
 {
 	struct device *dev = &priv.pdev->dev;
 	struct nvadsp_drv_data *drv_data;
-	int ret, cnt = 0;
-	u32 adsp_status;
+	int ret;
+	bool status = false;
 
 	drv_data = platform_get_drvdata(priv.pdev);
 
@@ -2242,21 +2274,8 @@ static int __nvadsp_os_suspend(void)
 		goto out;
 	}
 
-	/*
-	 * Check L2_IDLE and L2_CLKSTOPPED in ADSP_STATUS
-	 * NOTE: Standby mode in ADSP L2CC Power Control
-	 *       register should be enabled for this
-	 */
-	do {
-		adsp_status = amisc_readl(drv_data, AMISC_ADSP_STATUS);
-		if ((adsp_status & AMISC_ADSP_L2_IDLE) &&
-		    (adsp_status & AMISC_ADSP_L2_CLKSTOPPED))
-			break;
-		cnt++;
-		mdelay(1);
-	} while (cnt < 5);
-	if (cnt >= 5) {
-		dev_err(dev, "ADSP L2C clock not halted: 0x%x\n", adsp_status);
+	status = nvadsp_check_wfi_status(drv_data);
+	if (!status) {
 		ret = -EDEADLK;
 		goto out;
 	}
@@ -2655,7 +2674,7 @@ int __init nvadsp_os_probe(struct platform_device *pdev)
 
 #endif /* CONFIG_DEBUG_FS */
 
-	devm_tegrafw_register(dev, "APE", TFW_DONT_CACHE,
+	devm_tegrafw_register(dev, NULL, TFW_DONT_CACHE,
 			tegrafw_read_adsp, NULL);
 end:
 	return ret;

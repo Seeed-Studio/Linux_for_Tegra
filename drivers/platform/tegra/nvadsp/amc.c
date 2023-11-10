@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/tegra_nvadsp.h>
 #include <linux/interrupt.h>
@@ -158,6 +156,9 @@ void nvadsp_free_amc_interrupts(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device_node *node;
 
+	if (drv->chip_data->amc_not_avlbl)
+		return;
+
 	node = dev->of_node;
 
 	if (!is_tegra_hypervisor_mode())
@@ -170,6 +171,9 @@ int nvadsp_setup_amc_interrupts(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device_node *node;
 	int ret = 0;
+
+	if (drv->chip_data->amc_not_avlbl)
+		return ret;
 
 	node = dev->of_node;
 	nvadsp_pdev = pdev;
