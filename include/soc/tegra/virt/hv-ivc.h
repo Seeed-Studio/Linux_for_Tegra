@@ -32,7 +32,7 @@ struct tegra_hv_ivm_cookie {
 	void *reserved;
 };
 
-#if (KERNEL_VERSION(6, 2, 0) > LINUX_VERSION_CODE) && defined(CONFIG_TEGRA_VIRTUALIZATION)
+#if defined(CONFIG_TEGRA_VIRTUALIZATION)
 bool is_tegra_hypervisor_mode(void);
 
 /**
@@ -451,8 +451,6 @@ static inline struct tegra_ivc *tegra_hv_ivc_convert_cookie(
 {
 	return ERR_PTR(-ENOTSUPP);
 };
-#endif /* (KERNEL_VERSION(6, 2, 0) > LINUX_VERSION_CODE) &&
-	* defined(CONFIG_TEGRA_VIRTUALIZATION)
-	*/
+#endif /* defined(CONFIG_TEGRA_VIRTUALIZATION) */
 
 #endif /* __TEGRA_HV_IVC_H */
