@@ -270,7 +270,11 @@ static const struct pci_epc_event_ops pci_epf_dma_test_event_ops = {
 #endif
 };
 
+#if defined(NV_PCIE_EFP_DRIVER_PROBE_HAS_ID_ARG)
+static int pcie_dma_epf_probe(struct pci_epf *epf, const struct pci_epf_device_id *id)
+#else
 static int pcie_dma_epf_probe(struct pci_epf *epf)
+#endif
 {
 	struct device *dev = &epf->dev;
 	struct pcie_epf_dma *epfnv;
