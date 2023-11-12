@@ -761,7 +761,7 @@ pci_client_get_drv_mode(void *pci_client_h)
 		return DRV_MODE_INVALID;
 	drv_ctx = pci_client_ctx->drv_ctx;
 	if (WARN_ON(!drv_ctx))
-		return NVCPU_MAXIMUM;
+		return DRV_MODE_MAXIMUM;
 	return drv_ctx->drv_mode;
 }
 
