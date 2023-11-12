@@ -164,6 +164,7 @@ static int pcie_dma_epf_core_init(struct pci_epf *epf)
 	return 0;
 }
 
+#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
 static int pcie_dma_epf_core_deinit(struct pci_epf *epf)
 {
 	struct pcie_epf_dma *epfnv = epf_get_drvdata(epf);
@@ -179,6 +180,7 @@ static int pcie_dma_epf_core_deinit(struct pci_epf *epf)
 
 	return 0;
 }
+#endif
 
 static void pcie_dma_epf_unbind(struct pci_epf *epf)
 {
@@ -263,7 +265,9 @@ static const struct pci_epf_device_id pcie_dma_epf_ids[] = {
 
 static const struct pci_epc_event_ops pci_epf_dma_test_event_ops = {
 	.core_init = pcie_dma_epf_core_init,
+#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
 	.core_deinit = pcie_dma_epf_core_deinit,
+#endif
 };
 
 static int pcie_dma_epf_probe(struct pci_epf *epf)

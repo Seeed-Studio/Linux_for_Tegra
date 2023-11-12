@@ -169,6 +169,7 @@ allocate_outbound_area(struct pci_epf *epf, size_t win_size,
 	return ret;
 }
 
+#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
 static void
 clear_inbound_translation(struct pci_epf *epf)
 {
@@ -178,6 +179,7 @@ clear_inbound_translation(struct pci_epf *epf)
 
 	/* no api to clear epf header.*/
 }
+#endif
 
 static int
 set_inbound_translation(struct pci_epf *epf)
@@ -490,6 +492,7 @@ deinit_work(struct work_struct *work)
  * @DRV_MODE_EPC would have already gone then by the time
  * struct pci_epc_event_ops.core_deinit is called.
  */
+#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
 static int
 nvscic2c_pcie_epf_core_deinit(struct pci_epf *epf)
 {
@@ -517,6 +520,7 @@ nvscic2c_pcie_epf_core_deinit(struct pci_epf *epf)
 
 	return 0;
 }
+#endif
 
 /* Handle link message from @DRV_MODE_EPC. */
 static void
@@ -729,7 +733,9 @@ get_driverdata(const struct pci_epf_device_id *id,
 
 static const struct pci_epc_event_ops nvscic2c_event_ops = {
 	.core_init = nvscic2c_pcie_epf_core_init,
+#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
 	.core_deinit = nvscic2c_pcie_epf_core_deinit,
+#endif
 };
 
 static int
