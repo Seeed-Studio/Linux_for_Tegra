@@ -25,6 +25,9 @@ endif
 # Legacy GPIO support is removed in Linux v6.3
 ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_3); echo $$?),0)
 export CONFIG_TEGRA_GPIO_LEGACY_DISABLE=y
+
+# Setting VM flag via API vm_flags_set
+subdir-ccflags-y += -DNV_VM_FLAG_SET_API_AVAILABLE
 endif
 
 # Changes done in Linux 6.4 onwards

@@ -294,7 +294,7 @@ fops_mmap(struct file *filep, struct vm_area_struct *vma)
 	memaddr = stream_obj->aper;
 
 	vma->vm_pgoff  = 0;
-#if defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK) && (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#if defined(NV_VM_FLAG_SET_API_AVAILABLE) || (defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK) && (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)))
 	vm_flags_set(vma, VM_DONTCOPY);
 #else
 	vma->vm_flags |= (VM_DONTCOPY);
