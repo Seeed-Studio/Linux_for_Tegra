@@ -290,7 +290,9 @@ deinit:
 
 	pci_release_region(pdev, 0);
 	pci_clear_master(pdev);
+#if !defined(NV_PCIE_DIABLE_PCIE_ERROR_REPORTING_DROP)
 	pci_disable_pcie_error_reporting(pdev);
+#endif
 	pci_disable_device(pdev);
 
 	dt_release(&drv_ctx->drv_param);

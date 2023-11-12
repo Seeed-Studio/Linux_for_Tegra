@@ -66,6 +66,9 @@ subdir-ccflags-y += -DNV_UNEXPORT_FD_HANDLE_CONVERSION
 # FB Deferred IO helpers name alignment
 subdir-ccflags-y += -DNV_FB_DEFERRED_IO_OPS_RENAME
 
+# Drop the API for pcie_disable_pcie_error_reporting
+subdir-ccflags-y += -DNV_PCIE_DIABLE_PCIE_ERROR_REPORTING_DROP
+
 # Crypto driver has major change in it ops, skip it
 export CONFIG_SKIP_CRYPTO=y
 endif
