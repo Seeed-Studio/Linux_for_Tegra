@@ -434,10 +434,12 @@ int tegra_asoc_utils_init(struct tegra_asoc_utils_data *data,
 	 * and suspend-resume functionality on Tegra30, although audio mclk is
 	 * only needed for audio.
 	 */
-	ret = clk_prepare_enable(data->clk_cdev1);
-	if (ret) {
-		dev_err(data->dev, "Can't enable cdev1: %d\n", ret);
-		return ret;
+	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA30) {
+		ret = clk_prepare_enable(data->clk_cdev1);
+		if (ret) {
+			dev_err(data->dev, "Can't enable cdev1: %d\n", ret);
+			return ret;
+		}
 	}
 
 	return 0;
