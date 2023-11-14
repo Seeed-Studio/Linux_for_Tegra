@@ -12,7 +12,6 @@
 			no-mmc;
 			nvidia,cd-wakeup-capable;
 			nvidia,boot-detect-delay = <1000>;
-			cd-gpios = <&gpio TEGRA234_MAIN_GPIO(G, 7) GPIO_ACTIVE_LOW>;
 			vmmc-supply = <&vdd_3v3_sd>;
 		};
 
