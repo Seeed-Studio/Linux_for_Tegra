@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "nv-soc/tegra234-soc-safetyservice-fsicom.dtsi"
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt/tegra234-irq.h>
 
 / {
 	compatible = "nvidia,p3740-0002+p3701-0008", "safety", "nvidia,p3701-0008", "nvidia,tegra234";
@@ -40,8 +42,11 @@
 		};
 
 		hsp_top2: hsp@1600000 {
+			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 267 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "shared1", "shared2";
 			status = "okay";
 		};
+
 		spi@3230000  {
 			compatible = "nvidia,tegra186-spi-slave";
 			status = "okay";
@@ -99,7 +104,7 @@
 		status = "okay";
 	};
 
-	safetyservices_epl_client {
+	safetyservices_epl_client@110000 {
 		/* userspace app uses this driver to send error code */
 		status = "okay";
 	};
