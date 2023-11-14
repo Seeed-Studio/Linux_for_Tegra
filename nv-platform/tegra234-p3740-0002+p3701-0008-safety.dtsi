@@ -116,6 +116,14 @@
 				map-devfreq {
 					cooling-device = <&ga10b 0 0>;
 				};
+
+				map-hot-surface-alert {
+					cooling-device = <&hot_surface_alert 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&cpu_throttle_alert 0 0>;
+				};
 			};
 		};
 
@@ -129,6 +137,14 @@
 
 				map-devfreq {
 					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-hot-surface-alert {
+					cooling-device = <&hot_surface_alert 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&gpu_throttle_alert 0 0>;
 				};
 			};
 		};
@@ -144,6 +160,14 @@
 				map-devfreq {
 					cooling-device = <&ga10b 0 0>;
 				};
+
+				map-hot-surface-alert {
+					cooling-device = <&hot_surface_alert 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&cv0_throttle_alert 0 0>;
+				};
 			};
 		};
 
@@ -157,6 +181,14 @@
 
 				map-devfreq {
 					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-hot-surface-alert {
+					cooling-device = <&hot_surface_alert 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&cv1_throttle_alert 0 0>;
 				};
 			};
 		};
@@ -172,6 +204,14 @@
 				map-devfreq {
 					cooling-device = <&ga10b 0 0>;
 				};
+
+				map-hot-surface-alert {
+					cooling-device = <&hot_surface_alert 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&cv2_throttle_alert 0 0>;
+				};
 			};
 		};
 
@@ -185,6 +225,14 @@
 
 				map-devfreq {
 					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-hot-surface-alert {
+					cooling-device = <&hot_surface_alert 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&soc0_throttle_alert 0 0>;
 				};
 			};
 		};
@@ -200,6 +248,14 @@
 				map-devfreq {
 					cooling-device = <&ga10b 0 0>;
 				};
+
+				map-hot-surface-alert {
+					cooling-device = <&hot_surface_alert 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&soc1_throttle_alert 0 0>;
+				};
 			};
 		};
 
@@ -213,6 +269,14 @@
 
 				map-devfreq {
 					cooling-device = <&ga10b 0 0>;
+				};
+
+				map-hot-surface-alert {
+					cooling-device = <&hot_surface_alert 0 0>;
+				};
+
+				map-throttle-alert {
+					cooling-device = <&soc2_throttle_alert 0 0>;
 				};
 			};
 		};

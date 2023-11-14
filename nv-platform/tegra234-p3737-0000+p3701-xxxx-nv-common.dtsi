@@ -5,6 +5,7 @@
 #include "nv-soc/tegra234-soc-thermal.dtsi"
 #include "nv-soc/tegra234-soc-thermal-slowdown-cluster.dtsi"
 #include "nv-soc/tegra234-soc-thermal-shutdown.dtsi"
+#include "nv-soc/tegra234-soc-thermal-trip-event.dtsi"
 #include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
 #include "nv-soc/tegra234-soc-camera.dtsi"
 #include "tegra234-p3737-0000.dtsi"
