@@ -891,8 +891,10 @@ static const struct drm_driver tegra_drm_driver = {
 	.debugfs_init = tegra_debugfs_init,
 #endif
 
-#if !defined(NV_UNEXPORT_FD_HANDLE_CONVERSION)
+#if NV_IS_EXPORT_SYMBOL_PRESENT_drm_gem_prime_handle_to_fd
 	.prime_handle_to_fd = drm_gem_prime_handle_to_fd,
+#endif
+#if NV_IS_EXPORT_SYMBOL_PRESENT_drm_gem_prime_fd_to_handle
 	.prime_fd_to_handle = drm_gem_prime_fd_to_handle,
 #endif
 	.gem_prime_import = tegra_gem_prime_import,
