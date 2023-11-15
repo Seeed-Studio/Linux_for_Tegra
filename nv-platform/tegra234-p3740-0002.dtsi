@@ -31,6 +31,35 @@
 		};
 
 		i2c@c250000 {
+			ina3221@41 {
+				compatible = "ti,ina3221";
+				reg = <0x41>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				channel@0 {
+					reg = <0x0>;
+					label = "CVB_ATX_12V";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@1 {
+					reg = <0x1>;
+					label = "CVB_ATX_3V3";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@2 {
+					reg = <0x2>;
+					label = "CVB_ATX_5V";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+			};
+
+			ina219@44 {
+				compatible = "ti,ina219";
+				reg = <0x44>;
+				shunt-resistor = <2000>;
+				label = "CVB_ATX_12V_8P";
+			};
+
 			f75308@4d {
 				compatible = "fintek,f75308";
 				reg = <0x4d>;
@@ -138,21 +167,6 @@
 				slave-address = <0x55>;
 				label = "cvb";
 			};
-		};
-	};
-
-	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
-
-		linux,cma { /* Needed for nvgpu comptags */
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0x0 0x20000000>; /* 512MB */
-			alignment = <0x0 0x10000>;
-			linux,cma-default;
-			status = "okay";
 		};
 	};
 
