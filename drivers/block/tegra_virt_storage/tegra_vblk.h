@@ -97,13 +97,6 @@ struct vblk_dev {
 	uint32_t ivc_id;
 	uint32_t ivm_id;
 	uint32_t vcpu_affinity;
-
-	/* members for converting lcpu to vcpu */
-	struct semaphore mpidr_sem;
-	uint64_t g_mpidr;
-	uint64_t g_cluster;
-	uint64_t g_core;
-
 	struct tegra_hv_ivc_cookie *ivck;
 	struct tegra_hv_ivm_cookie *ivmk;
 	uint32_t devnum;

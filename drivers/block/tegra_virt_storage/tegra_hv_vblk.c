@@ -6,6 +6,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
+#include <linux/limits.h>
 #include <linux/sched.h>
 #include <linux/kernel.h> /* printk() */
 #include <linux/pm.h>
@@ -64,6 +65,11 @@ static uint32_t total_instance_id;
 
 static int vblk_major;
 
+static uint32_t lcpu_to_vcpus[CPUS_PER_CLUSTER * MAX_NUM_CLUSTERS];
+atomic_t vcpu_init_info;
+static DEFINE_MUTEX(vcpu_lock);
+static struct semaphore mpidr_sem;
+
 static inline uint64_t _arch_counter_get_cntvct(void)
 {
 	uint64_t cval;
@@ -97,58 +103,22 @@ exit:
 	return req;
 }
 
-static uint64_t read_mpidr(void)
+static uint32_t convert_lcpu_to_vcpu(struct vblk_dev *vblkdev, uint32_t lcpu_affinity)
 {
-	uint64_t mpidr;
-	__asm volatile("MRS %0, MPIDR_EL1 " : "=r"(mpidr) :: "memory");
-	return mpidr;
-}
+	uint32_t cnt, vcpu = U32_MAX;
+	int adj_lcpu = -1;
 
-static uint64_t read_mpidr_cluster(uint64_t mpidr)
-{
-	return (mpidr >> MPIDR_AFF2_SHIFT) & MPIDR_AFFLVL_MASK;
-}
+	/* search for vcpu corresponding to lcpu_affinity */
+	for (cnt = 0; cnt < MAX_NUM_CLUSTERS * CPUS_PER_CLUSTER; cnt++) {
+		if (lcpu_to_vcpus[cnt] != U32_MAX) {
+			/* calculating adjusted lcpu */
+			adj_lcpu++;
 
-static uint64_t read_mpidr_core(uint64_t mpidr)
-{
-	return (mpidr >> MPIDR_AFF1_SHIFT) & MPIDR_AFFLVL_MASK;
-}
-
-static long get_cpu_info(void *data)
-{
-	struct vblk_dev *vblkdev = (struct vblk_dev *)data;
-
-	vblkdev->g_mpidr = read_mpidr();
-	vblkdev->g_cluster = read_mpidr_cluster(vblkdev->g_mpidr);
-	vblkdev->g_core = read_mpidr_core(vblkdev->g_mpidr);
-
-	up(&vblkdev->mpidr_sem);
-
-	return 0;
-}
-
-static uint32_t convert_lcpu_to_vcpu(struct vblk_dev *vblkdev, uint32_t lcpu)
-{
-	uint32_t num_cores = num_present_cpus();
-	uint32_t l_cluster, l_core;
-	uint32_t cnt, vcpu;
-
-	/* get cluster and core in cluster from lcpu */
-	l_cluster = lcpu / MAX_NUM_CLUSTERS;
-	l_core = lcpu % CPUS_PER_CLUSTER;
-
-	for (cnt = 0; cnt < num_cores; cnt++) {
-		down(&vblkdev->mpidr_sem);
-		work_on_cpu(cnt, get_cpu_info, vblkdev);
-		down(&vblkdev->mpidr_sem);
-
-		if (vblkdev->g_cluster == l_cluster && vblkdev->g_core == l_core) {
-			vcpu = cnt;
-			up(&vblkdev->mpidr_sem);
-			break;
+			if (adj_lcpu == lcpu_affinity) {
+				vcpu = lcpu_to_vcpus[cnt];
+				break;
+			}
 		}
-
-		up(&vblkdev->mpidr_sem);
 	}
 
 	return vcpu;
@@ -1603,8 +1573,6 @@ static void vblk_init_device(struct work_struct *ws)
 			lcpu_affinity = 2;
 		}
 
-		/* convert lcpu to vcpu */
-		vblkdev->vcpu_affinity = convert_lcpu_to_vcpu(vblkdev, lcpu_affinity);
 		ret = snprintf(vblk_comm, VBLK_DEV_THREAD_NAME_LEN - 4, "vblkdev%d:%d",
 							vblkdev->devnum, vblkdev->config.priority);
 		if (ret < 0) {
@@ -1612,11 +1580,23 @@ static void vblk_init_device(struct work_struct *ws)
 			mutex_unlock(&vblkdev->ivc_lock);
 			return;
 		}
-		strncat(vblk_comm, ":%u", 3);
 
-		/* create partition specific worker thread */
-		vblkdev->vblk_kthread = kthread_create_on_cpu(&vblk_request_worker, vblkdev,
-					vblkdev->vcpu_affinity, vblk_comm);
+		/* convert lcpu to vcpu */
+		vblkdev->vcpu_affinity = convert_lcpu_to_vcpu(vblkdev, lcpu_affinity);
+		if (vblkdev->vcpu_affinity != U32_MAX) {
+			strncat(vblk_comm, ":%u", 3);
+
+			/* create partition specific worker thread */
+			vblkdev->vblk_kthread = kthread_create_on_cpu(&vblk_request_worker, vblkdev,
+						vblkdev->vcpu_affinity, vblk_comm);
+		} else {
+			/* create partition specific worker thread.
+			 * If the conversion is not successful
+			 * do not bound kthread to any cpu
+			 */
+			dev_info(vblkdev->device, "vsc kthread not bound to any cpu\n");
+			vblkdev->vblk_kthread = kthread_create(&vblk_request_worker, vblkdev, vblk_comm);
+		}
 		if (IS_ERR(vblkdev->vblk_kthread)) {
 			dev_err(vblkdev->device, "Cannot allocate vblk worker thread\n");
 			mutex_unlock(&vblkdev->ivc_lock);
@@ -1668,6 +1648,66 @@ static void tegra_create_timers(struct vblk_dev *vblkdev)
 	for (i = 0; i < MAX_VSC_REQS; i++)
 		timer_setup(&vblkdev->reqs[i].timer, bio_request_timeout_callback, 0);
 
+}
+
+static uint64_t read_mpidr(void)
+{
+	uint64_t mpidr;
+	__asm volatile("MRS %0, MPIDR_EL1 " : "=r"(mpidr) :: "memory");
+	return mpidr;
+}
+
+static uint64_t read_mpidr_cluster(uint64_t mpidr)
+{
+	return (mpidr >> MPIDR_AFF2_SHIFT) & MPIDR_AFFLVL_MASK;
+}
+
+static uint64_t read_mpidr_core(uint64_t mpidr)
+{
+	return (mpidr >> MPIDR_AFF1_SHIFT) & MPIDR_AFFLVL_MASK;
+}
+
+static long get_cpu_info(void *data)
+{
+	uint64_t l_mpidr, l_cluster, l_core;
+	uint32_t lcpu;
+
+	l_mpidr = read_mpidr();
+	l_cluster = read_mpidr_cluster(l_mpidr);
+	l_core = read_mpidr_core(l_mpidr);
+
+	lcpu = l_cluster * CPUS_PER_CLUSTER + l_core;
+	lcpu_to_vcpus[lcpu] = smp_processor_id();
+
+	up(&mpidr_sem);
+
+	return 0;
+}
+
+static void populate_lcpu_to_vcpu_info(struct vblk_dev *vblkdev)
+{
+	uint32_t num_vcpus = num_present_cpus();
+	uint32_t cnt, lcpu;
+
+	/* initialize all clusters including holes */
+	for (lcpu = 0; lcpu < MAX_NUM_CLUSTERS * CPUS_PER_CLUSTER; lcpu++)
+		lcpu_to_vcpus[lcpu] = U32_MAX;
+
+	/* queuing API on each present vcpus serially
+	 * by down and up semaphore operation
+	 */
+	for (cnt = 0; cnt < num_vcpus; cnt++) {
+		down(&mpidr_sem);
+		work_on_cpu(cnt, get_cpu_info, vblkdev);
+	}
+
+	/* down and up operation to make sure get_cpu_info API
+	 * gets exuected on last vcpu successfully before exiting function
+	 */
+	down(&mpidr_sem);
+	up(&mpidr_sem);
+
+	atomic_inc(&vcpu_init_info);
 }
 
 static int tegra_hv_vblk_probe(struct platform_device *pdev)
@@ -1736,7 +1776,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	spin_lock_init(&vblkdev->queue_lock);
 	mutex_init(&vblkdev->ioctl_lock);
 	mutex_init(&vblkdev->ivc_lock);
-	sema_init(&vblkdev->mpidr_sem, 1);
+	sema_init(&mpidr_sem, 1);
 
 	INIT_WORK(&vblkdev->init, vblk_init_device);
 
@@ -1745,6 +1785,11 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 
 	/* Create timers for each request going to storage server*/
 	tegra_create_timers(vblkdev);
+
+	mutex_lock(&vcpu_lock);
+	if (atomic_read(&vcpu_init_info) == 0)
+		populate_lcpu_to_vcpu_info(vblkdev);
+	mutex_unlock(&vcpu_lock);
 
 	if (devm_request_irq(vblkdev->device, vblkdev->ivck->irq,
 		ivc_irq_handler, 0, "vblk", vblkdev)) {
