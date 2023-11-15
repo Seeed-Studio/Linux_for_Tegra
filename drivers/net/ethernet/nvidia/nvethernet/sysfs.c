@@ -1139,6 +1139,11 @@ static ssize_t macsec_dbg_buffer_show(struct device *dev,
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
 		return 0;
 	}
+	if (osi_core->macsec == OSI_MACSEC_T26X) {
+		dev_err(pdata->dev, "T264 Doesn't support MACSEC debug buffer feature\n");
+		return 0;
+	}
+
 	buf += scnprintf(buf, PAGE_SIZE, "Tx Dbg Buffers:\n");
 	dump_dbg_buffers(&buf, OSI_CTLR_SEL_TX, osi_core);
 
@@ -1182,6 +1187,10 @@ static ssize_t macsec_dbg_events_store(struct device *dev,
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return size;
+	}
+	if (osi_core->macsec == OSI_MACSEC_T26X) {
+		dev_err(pdata->dev, "T264 Doesn't support MACSEC debug buffer feature\n");
 		return size;
 	}
 
