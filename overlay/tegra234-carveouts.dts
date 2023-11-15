@@ -5,6 +5,8 @@
 /plugin/;
 
 / {
+	overlay-name = "Tegra234 Carveouts Overlay";
+
 	fragment@0 {
 		target-path = "/";
 		__overlay__ {
