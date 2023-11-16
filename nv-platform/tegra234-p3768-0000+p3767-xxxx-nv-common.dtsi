@@ -319,16 +319,20 @@
 			status = "okay";
 		};
 
+		hwpm@f100000 {
+			status = "okay";
+		};
+
+		mc-hwpm@2c10000 {
+			status = "okay";
+		};
+
 		host1x@13e00000 {
 			nvdec@15480000 {
 				status = "okay";
 			};
 
 			nvenc@154c0000 {
-				status = "okay";
-			};
-
-			tegra_soc_hwpm {
 				status = "okay";
 			};
 
