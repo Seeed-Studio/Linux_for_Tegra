@@ -2477,12 +2477,14 @@ static int ether_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 				(unsigned int)phyreg);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+#if defined(NV_MII_BUS_STRUCT_HAS_WRITE_C45) /* Linux v6.3 */
 static int ether_mdio_write_c45(struct mii_bus *bus, int phyaddr, int devad, int regnum, u16 val)
 {
 	return ether_mdio_write(bus, phyaddr, ether_mdio_c45_addr(devad, regnum), val);
 }
+#endif
 
+#if defined(NV_MII_BUS_STRUCT_HAS_READ_C45) /* Linux v6.3 */
 static int ether_mdio_read_c45(struct mii_bus *bus, int phyaddr, int devad, int regnum)
 {
 	return ether_mdio_read(bus, phyaddr, ether_mdio_c45_addr(devad, regnum));
@@ -2521,8 +2523,10 @@ static int ether_mdio_register(struct ether_priv_data *pdata)
 	new_bus->name = "nvethernet_mdio_bus";
 	new_bus->read = ether_mdio_read;
 	new_bus->write = ether_mdio_write;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+#if defined(NV_MII_BUS_STRUCT_HAS_READ_C45) /* Linux v6.3 */
 	new_bus->read_c45 = ether_mdio_read_c45;
+#endif
+#if defined(NV_MII_BUS_STRUCT_HAS_WRITE_C45) /* Linux v6.3 */
 	new_bus->write_c45 = ether_mdio_write_c45;
 #endif
 	ret = snprintf(new_bus->id, MII_BUS_ID_SIZE, "%s", dev_name(dev));

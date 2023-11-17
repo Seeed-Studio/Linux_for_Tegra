@@ -6916,6 +6916,40 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_KTHREAD_COMPLETE_AND_EXIT_PRESENT" "" "functions"
         ;;
 
+        mii_bus_struct_has_read_c45)
+            #
+            # Determine if the 'mii_bus' structure has 'read_c45' field.
+            #
+            # Added in commit 4e4aafcddbbf ("net: mdio: Add dedicated C45 API to
+            # MDIO bus drivers") in Linux v6.3.
+            #
+
+            CODE="
+            #include <linux/phy.h>
+            int conftest_mii_bus_struct_has_read_c45(void) {
+                return offsetof(struct mii_bus, read_c45);
+            }"
+
+            compile_check_conftest "$CODE" "NV_MII_BUS_STRUCT_HAS_READ_C45" "" "types"
+        ;;
+
+        mii_bus_struct_has_write_c45)
+            #
+            # Determine if the 'mii_bus' structure has 'write_c45' field.
+            #
+            # Added in commit 4e4aafcddbbf ("net: mdio: Add dedicated C45 API to
+            # MDIO bus drivers") in Linux v6.3.
+            #
+
+            CODE="
+            #include <linux/phy.h>
+            int conftest_mii_bus_struct_has_read_c45(void) {
+                return offsetof(struct mii_bus, write_c45);
+            }"
+
+            compile_check_conftest "$CODE" "NV_MII_BUS_STRUCT_HAS_WRITE_C45" "" "types"
+        ;;
+
         register_shrinker_has_fmt_arg)
             #
             # Determine if the 'register_shrinker' function
