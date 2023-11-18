@@ -216,7 +216,11 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	struct hv_ivc *ivc;
 	int ret;
 	int rx_first;
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	struct iosys_map rx_map, tx_map;
+#else
 	uintptr_t rx_base, tx_base;
+#endif
 	uint32_t i;
 	struct irq_data *d;
 	uint64_t va_offset;
@@ -264,6 +268,17 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	BUG_ON(qd->offset >= ivc->givci->length);
 	BUG_ON(qd->offset + qd->size * 2 > ivc->givci->length);
 
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	rx_map.is_iomem = false;
+	tx_map.is_iomem = false;
+	if (rx_first) {
+		rx_map.vaddr = (void *)ivc->givci->shmem + qd->offset;
+		tx_map.vaddr = (void *)ivc->givci->shmem + qd->offset + qd->size;
+	} else {
+		tx_map.vaddr = (void *)ivc->givci->shmem + qd->offset;
+		rx_map.vaddr = (void *)ivc->givci->shmem + qd->offset + qd->size;
+	}
+#else
 	if (rx_first) {
 		rx_base = ivc->givci->shmem + qd->offset;
 		tx_base = ivc->givci->shmem + qd->offset + qd->size;
@@ -271,6 +286,7 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 		tx_base = ivc->givci->shmem + qd->offset;
 		rx_base = ivc->givci->shmem + qd->offset + qd->size;
 	}
+#endif
 
 	ret = snprintf(ivc->name, sizeof(ivc->name), "ivc%u", qd->id);
 	if (ret < 0) {
@@ -316,10 +332,17 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 			return -EINVAL;
 	}
 
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	INFO("adding ivc%u: rx_base=%lx tx_base = %lx size=%x irq = %d (%lu)\n",
+			qd->id, (uintptr_t)rx_map.vaddr, (uintptr_t)tx_map.vaddr, qd->size, ivc->irq, d->hwirq);
+	ret = tegra_ivc_init(&ivc->ivc, NULL, &rx_map, 0, &tx_map, 0, qd->nframes,
+				qd->frame_size, ivc_raise_irq, ivc);
+#else
 	INFO("adding ivc%u: rx_base=%lx tx_base = %lx size=%x irq = %d (%lu)\n",
 			qd->id, rx_base, tx_base, qd->size, ivc->irq, d->hwirq);
 	ret = tegra_ivc_init(&ivc->ivc, NULL, (void *)rx_base, 0, (void *)tx_base, 0, qd->nframes,
 				qd->frame_size, ivc_raise_irq, ivc);
+#endif
 	if (ret != 0) {
 		ERR("failed to init ivc queue #%u\n", qd->id);
 		return  ret;
