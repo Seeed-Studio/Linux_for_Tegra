@@ -75,6 +75,8 @@ static struct epl_misc_sw_err_cfg miscerr_cfg[NUM_SW_GENERIC_ERR];
 
 /* State of FSI handshake */
 static enum handshake_state hs_state = HANDSHAKE_PENDING;
+static const int default_handshake_retry_count = 25;
+static uint32_t handshake_retry_count;
 
 static bool enable_deinit_notify;
 
@@ -230,7 +232,6 @@ static int epl_client_fsi_handshake(void *arg)
 		int ret;
 		const uint32_t handshake_data[] = {0x45504C48, 0x414E4453, 0x48414B45,
 			0x44415441};
-		const uint8_t max_retries = 20;
 
 		do {
 			ret = mbox_send_message(epl_hsp_v->tx.chan, (void *) handshake_data);
@@ -242,7 +243,7 @@ static int epl_client_fsi_handshake(void *arg)
 				hs_state = HANDSHAKE_DONE;
 				break;
 			}
-		} while (count < max_retries);
+		} while (count < handshake_retry_count);
 	}
 
 	if (hs_state == HANDSHAKE_FAILED)
@@ -366,6 +367,12 @@ static int epl_client_probe(struct platform_device *pdev)
 
 	if (of_property_read_bool(np, "enable-deinit-notify"))
 		enable_deinit_notify = true;
+
+	if (of_property_read_u32(np, "handshake-retry-count", &handshake_retry_count) < 0) {
+		handshake_retry_count = default_handshake_retry_count;
+	}
+
+	dev_info(dev, "handshake-retry-count %u\n", handshake_retry_count);
 
 	mission_err_status_va = devm_platform_ioremap_resource(pdev, NUM_SW_GENERIC_ERR * 2);
 	if (IS_ERR(mission_err_status_va)) {
