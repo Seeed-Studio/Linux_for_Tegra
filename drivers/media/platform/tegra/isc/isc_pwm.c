@@ -130,7 +130,9 @@ static const struct pwm_ops isc_pwm_ops = {
 	.enable = isc_pwm_enable,
 	.disable = isc_pwm_disable,
 #endif
+#if !defined(NV_PWM_OPS_HAS_NO_OWNER)
 	.owner = THIS_MODULE,
+#endif
 };
 
 static int isc_pwm_probe(struct platform_device *pdev)

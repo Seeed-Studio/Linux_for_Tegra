@@ -130,7 +130,9 @@ static const struct pwm_ops cdi_pwm_ops = {
 	.enable = cdi_pwm_enable,
 	.disable = cdi_pwm_disable,
 #endif
+#if !defined(NV_PWM_OPS_HAS_NO_OWNER)
 	.owner = THIS_MODULE,
+#endif
 };
 
 static int cdi_pwm_probe(struct platform_device *pdev)

@@ -316,7 +316,9 @@ static const struct pwm_ops pwm_tegra_tach_ops = {
 	.apply = tegra_pwm_apply,
 #endif
 	.capture = pwm_tegra_tacho_capture,
+#if !defined(NV_PWM_OPS_HAS_NO_OWNER)
 	.owner = THIS_MODULE,
+#endif
 };
 
 static void pwm_tegra_tach_read_platform_data(struct pwm_tegra_tach *ptt)
