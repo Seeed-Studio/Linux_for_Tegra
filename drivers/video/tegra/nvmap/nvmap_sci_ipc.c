@@ -249,7 +249,11 @@ int nvmap_get_handle_from_sci_ipc_id(struct nvmap_client *client, u32 flags,
 				goto unlock;
 			}
 		} else {
+#if defined(NV_GET_FILE_RCU_HAS_PTR_FILE_ARGS)
+			if (!get_file_rcu(&h->dmabuf_ro->file)) {
+#else
 			if (!get_file_rcu(h->dmabuf_ro->file)) {
+#endif
 				mutex_unlock(&h->lock);
 				remain = wait_event_interruptible_timeout(h->waitq,
 						!h->dmabuf_ro, (long)msecs_to_jiffies(100U));

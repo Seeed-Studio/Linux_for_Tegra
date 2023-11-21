@@ -92,6 +92,9 @@ subdir-ccflags-y += -DNV_DRM_DEBUGFS_REMOVE_HAS_ROOT_ARGS
 
 # pwm ops has dropped the .owner member
 subdir-ccflags-y += -DNV_PWM_OPS_HAS_NO_OWNER
+
+# get_file_rcu() have change the argument
+subdir-ccflags-y += -DNV_GET_FILE_RCU_HAS_PTR_FILE_ARGS
 endif
 
 ifeq ($(CONFIG_TEGRA_VIRTUALIZATION),y)
