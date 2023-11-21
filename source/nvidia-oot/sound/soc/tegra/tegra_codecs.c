@@ -22,8 +22,13 @@
 static int tegra_audio_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	/* Used for audio graph based sound cards only */
+#if defined(NV_ASOC_XXX_DROP)
+	if (rtd->card->component_chaining)
+		return simple_util_dai_init(rtd);
+#else
 	if (rtd->card->component_chaining)
 		return asoc_simple_dai_init(rtd);
+#endif
 
 	return 0;
 }
