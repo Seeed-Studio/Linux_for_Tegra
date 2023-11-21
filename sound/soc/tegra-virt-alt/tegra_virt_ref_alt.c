@@ -203,9 +203,14 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 	}
 
 	list_for_each_entry(rtd, &card->rtd_list, list) {
+#if defined(NV_ASOC_XXX_DROP)
+		struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
+		struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
+#else
 		struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
-		struct snd_soc_dai_driver *codec_drv = codec_dai->driver;
 		struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
+#endif
+		struct snd_soc_dai_driver *codec_drv = codec_dai->driver;
 		struct snd_soc_dai_driver *cpu_drv = cpu_dai->driver;
 
 		cpu_drv->playback.rates = SNDRV_PCM_RATE_KNOT;

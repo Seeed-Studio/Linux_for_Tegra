@@ -498,18 +498,32 @@ static int parse_dt_dai_links(struct snd_soc_card *card,
 		if (of_property_read_string(link_node,
 					    "link-name",
 					    &dai_link->name)) {
+#if defined(NV_ASOC_XXX_DROP)
+			ret = simple_util_set_dailink_name(
+				&pdev->dev, dai_link, "%s-%d",
+				"tegra-dlink", link_count);
+#else
 			ret = asoc_simple_set_dailink_name(
 				&pdev->dev, dai_link, "%s-%d",
 				"tegra-dlink", link_count);
+#endif
 			if (ret < 0)
 				goto cleanup;
 		}
 
+#if defined(NV_ASOC_XXX_DROP)
+		simple_util_parse_daifmt(&pdev->dev, link_node, codec,
+					 NULL, &dai_link->dai_fmt);
+
+		simple_util_canonicalize_platform(dai_link->platforms,
+						  dai_link->cpus);
+#else
 		asoc_simple_parse_daifmt(&pdev->dev, link_node, codec,
 					 NULL, &dai_link->dai_fmt);
 
 		asoc_simple_canonicalize_platform(dai_link->platforms,
 						  dai_link->cpus);
+#endif
 
 		of_property_read_u32(link_node, "link-type",
 				     &link_type);
@@ -582,7 +596,11 @@ int parse_card_info(struct snd_soc_card *card, struct snd_soc_ops *pcm_ops,
 	struct device_node *node = card->dev->of_node;
 	int ret;
 
+#if defined(NV_ASOC_XXX_DROP)
+	ret = simple_util_parse_card_name(card, PREFIX);
+#else
 	ret = asoc_simple_parse_card_name(card, PREFIX);
+#endif
 	if (ret < 0)
 		return ret;
 

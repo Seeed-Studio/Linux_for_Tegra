@@ -37,13 +37,21 @@ static int tegra_alt_pcm_open(struct snd_soc_component *component,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct tegra_alt_pcm_dma_params *dmap;
 	struct dma_chan *chan;
+#if defined(NV_ASOC_XXX_DROP)
+	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
+#else
 	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
+#endif
 	int ret;
 
 	if (rtd->dai_link->no_pcm)
 		return 0;
 
+#if defined(NV_ASOC_XXX_DROP)
+	dmap = snd_soc_dai_get_dma_data(snd_soc_rtd_to_cpu(rtd, 0), substream);
+#else
 	dmap = snd_soc_dai_get_dma_data(asoc_rtd_to_cpu(rtd, 0), substream);
+#endif
 
 	/* Set HW params now that initialization is complete */
 	snd_soc_set_runtime_hwparams(substream, &tegra_alt_pcm_hardware);
@@ -106,7 +114,11 @@ static int tegra_alt_pcm_hw_params(struct snd_soc_component *component,
 	if (rtd->dai_link->no_pcm)
 		return 0;
 
+#if defined(NV_ASOC_XXX_DROP)
+	dmap = snd_soc_dai_get_dma_data(snd_soc_rtd_to_cpu(rtd, 0), substream);
+#else
 	dmap = snd_soc_dai_get_dma_data(asoc_rtd_to_cpu(rtd, 0), substream);
+#endif
 	if (!dmap)
 		return 0;
 
@@ -249,8 +261,13 @@ static int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd,
 	if (ret)
 		return ret;
 
+#if defined(NV_ASOC_XXX_DROP)
+	dmap = snd_soc_dai_get_dma_data(snd_soc_rtd_to_cpu(rtd, 0),
+			pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream);
+#else
 	dmap = snd_soc_dai_get_dma_data(asoc_rtd_to_cpu(rtd, 0),
 			pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream);
+#endif
 	if (dmap->buffer_size > size)
 		buffer_size = dmap->buffer_size;
 	if (pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream) {
@@ -261,8 +278,13 @@ static int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd,
 			goto err;
 	}
 
+#if defined(NV_ASOC_XXX_DROP)
+	dmap = snd_soc_dai_get_dma_data(snd_soc_rtd_to_cpu(rtd, 0),
+			pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream);
+#else
 	dmap = snd_soc_dai_get_dma_data(asoc_rtd_to_cpu(rtd, 0),
 			pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream);
+#endif
 	if (dmap->buffer_size > size)
 		buffer_size = dmap->buffer_size;
 	if (pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream) {
