@@ -4,6 +4,8 @@
  * Copyright (C) 2012-2013, NVIDIA Corporation
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
 #include <linux/host1x-next.h>
@@ -11,7 +13,6 @@
 #include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/of_device.h>
-#include <linux/version.h>
 
 #include "bus.h"
 #include "dev.h"
@@ -339,7 +340,7 @@ static int host1x_device_match(struct device *dev, struct device_driver *drv)
 	return strcmp(dev_name(dev), drv->name) == 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+#if defined(NV_BUS_TYPE_STRUCT_UEVENT_HAS_CONST_DEV_ARG) /* Linux v6.3 */
 static int host1x_device_uevent(const struct device *dev,
 #else
 static int host1x_device_uevent(struct device *dev,

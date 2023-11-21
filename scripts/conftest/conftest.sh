@@ -6461,6 +6461,26 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_BUS_TYPE_STRUCT_REMOVE_HAS_INT_RETURN_TYPE" "" "types"
         ;;
 
+        bus_type_struct_uevent_has_const_dev_arg)
+            #
+            # Determine if the 'uevent' callback from the 'bus_type' structure
+            # has a const 'struct dev' argument.
+            #
+            # Commit 2a81ada32f0e ("driver core: make struct bus_type.uevent()
+            # take a const *") updated the arguments to the uevent callback
+            # function in Linux v6.3.
+            #
+            CODE="
+            #include <linux/device/bus.h>
+            int conftest_bus_type_struct_remove_has_int_return_type(const struct device *dev,
+                                                                    struct kobj_uevent_env *env,
+                                                                    struct bus_type *bus) {
+                    return bus->uevent(dev, env);
+            }"
+
+            compile_check_conftest "$CODE" "NV_BUS_TYPE_STRUCT_UEVENT_HAS_CONST_DEV_ARG" "" "types"
+        ;;
+
         class_create_has_no_owner_arg)
             #
             # Determine if the class_create() function has the 'owner' argument.
