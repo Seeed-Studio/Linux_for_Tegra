@@ -1159,9 +1159,7 @@ static int pva_probe(struct platform_device *pdev)
 	struct pva *pva;
 	int err = 0;
 	size_t i;
-#ifndef CONFIG_TEGRA_T26X_GRHOST_PVA
-	u32 offset;
-#endif
+	u64 offset;
 
 #if !IS_ENABLED(CONFIG_TEGRA_GRHOST)
 	struct kobj_attribute *attr = NULL;
@@ -1406,10 +1404,9 @@ static int pva_probe(struct platform_device *pdev)
 
 	++(pva->sid_count);
 
-#ifndef CONFIG_TEGRA_T26X_GRHOST_PVA
-	offset = hwpm_get_offset();
+	offset = (u64) hwpm_get_offset();
 
-	if ((UINT_MAX - offset) < pdev->resource[0].start) {
+	if ((U64_MAX - offset) < pdev->resource[0].start) {
 		err = -ENODEV;
 		goto err_mss_init;
 	}
@@ -1421,7 +1418,6 @@ static int pva_probe(struct platform_device *pdev)
 	pva->hwpm_ip_ops.hwpm_ip_pm = &pva_hwpm_ip_pm;
 	pva->hwpm_ip_ops.hwpm_ip_reg_op = &pva_hwpm_ip_reg_op;
 	tegra_soc_hwpm_ip_register(&pva->hwpm_ip_ops);
-#endif
 
 #if !IS_ENABLED(CONFIG_TEGRA_GRHOST)
 	if (pdata->num_clks > 0) {
