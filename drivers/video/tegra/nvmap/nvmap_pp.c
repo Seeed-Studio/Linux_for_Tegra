@@ -581,11 +581,15 @@ static unsigned long nvmap_page_pool_scan_objects(struct shrinker *shrinker,
 			   SHRINK_STOP : (sc->nr_to_scan - remaining);
 }
 
+#if defined(NV_NVMAP_DYNAMIC_SHRINKER_ALLOC_SUPPORT)
+static struct shrinker *nvmap_page_pool_shrinker;
+#else
 static struct shrinker nvmap_page_pool_shrinker = {
 	.count_objects = nvmap_page_pool_count_objects,
 	.scan_objects = nvmap_page_pool_scan_objects,
 	.seeks = 1,
 };
+#endif
 
 static void shrink_page_pools(unsigned long *total_pages, unsigned long *available_pages)
 {
@@ -771,10 +775,23 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 					    NULL, "nvmap-bz");
 	if (IS_ERR(background_allocator))
 		goto fail;
+#if defined(NV_NVMAP_DYNAMIC_SHRINKER_ALLOC_SUPPORT)
+	nvmap_page_pool_shrinker = shrinker_alloc(0, "nvmap_pp_shrinker");
+	if (!nvmap_page_pool_shrinker) {
+		goto fail;
+	}
+
+	nvmap_page_pool_shrinker->count_objects = nvmap_page_pool_count_objects;
+	nvmap_page_pool_shrinker->scan_objects = nvmap_page_pool_scan_objects;
+	nvmap_page_pool_shrinker->seeks = 1;
+
+	shrinker_register(nvmap_page_pool_shrinker);
+#else
 #if defined(NV_REGISTER_SHRINKER_HAS_FMT_ARG) /* Linux v6.0 */
 	register_shrinker(&nvmap_page_pool_shrinker, "nvmap_pp_shrinker");
 #else
 	register_shrinker(&nvmap_page_pool_shrinker);
+#endif
 #endif
 
 	return 0;
@@ -793,7 +810,12 @@ int nvmap_page_pool_fini(struct nvmap_device *dev)
 	 * registered
 	 */
 	if (!IS_ERR_OR_NULL(background_allocator)) {
+#if defined(NV_NVMAP_DYNAMIC_SHRINKER_ALLOC_SUPPORT)
+		shrinker_free(nvmap_page_pool_shrinker);
+		nvmap_page_pool_shrinker = NULL;
+#else
 		unregister_shrinker(&nvmap_page_pool_shrinker);
+#endif
 		kthread_stop(background_allocator);
 		background_allocator = NULL;
 	}
