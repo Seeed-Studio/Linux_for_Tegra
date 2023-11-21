@@ -1746,8 +1746,19 @@ static void tegra_dc_early_unregister(struct drm_crtc *crtc)
 	unsigned int count = ARRAY_SIZE(debugfs_files);
 	struct drm_minor *minor = crtc->dev->primary;
 	struct tegra_dc *dc = to_tegra_dc(crtc);
+#if defined(NV_DRM_DEBUGFS_REMOVE_HAS_ROOT_ARGS)
+	struct dentry *root;
 
+#ifdef CONFIG_DEBUG_FS
+	root = crtc->debugfs_entry;
+#else
+	root = NULL;
+#endif
+
+	drm_debugfs_remove_files(dc->debugfs_files, count, root, minor);
+#else
 	drm_debugfs_remove_files(dc->debugfs_files, count, minor);
+#endif
 	kfree(dc->debugfs_files);
 	dc->debugfs_files = NULL;
 }

@@ -254,9 +254,21 @@ static void tegra_dsi_early_unregister(struct drm_connector *connector)
 	struct tegra_output *output = connector_to_output(connector);
 	unsigned int count = ARRAY_SIZE(debugfs_files);
 	struct tegra_dsi *dsi = to_dsi(output);
+#if defined(NV_DRM_DEBUGFS_REMOVE_HAS_ROOT_ARGS)
+	struct dentry *root;
+
+#ifdef CONFIG_DEBUG_FS
+	root = connector->debugfs_entry;
+#else
+	root = NULL;
+#endif
 
 	drm_debugfs_remove_files(dsi->debugfs_files, count,
+				 root, connector->dev->primary);
+#else
+	drm_debugfs_remove_files(dsi->debugfs_files, count,
 				 connector->dev->primary);
+#endif
 	kfree(dsi->debugfs_files);
 	dsi->debugfs_files = NULL;
 }
