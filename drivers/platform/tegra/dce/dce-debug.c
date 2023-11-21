@@ -131,7 +131,7 @@ static ssize_t dbg_dce_load_fw_write(struct file *file,
 	if (copy_from_user(buf, user_buf, buf_size))
 		return -EFAULT;
 
-	if (strtobool(buf, &bv) == 0) {
+	if (kstrtobool(buf, &bv) == 0) {
 		if (bv == true) {
 			ret = dbg_dce_load_fw(d);
 			if (ret)
@@ -176,7 +176,7 @@ static ssize_t dbg_dce_config_ast_write(struct file *file,
 	if (copy_from_user(buf, user_buf, buf_size))
 		return -EFAULT;
 
-	if (strtobool(buf, &bv) == 0) {
+	if (kstrtobool(buf, &bv) == 0) {
 		if (bv == true)
 			dbg_dce_config_ast(d);
 	}
@@ -219,7 +219,7 @@ static ssize_t dbg_dce_reset_dce_fops_write(struct file *file,
 	if (copy_from_user(buf, user_buf, buf_size))
 		return -EFAULT;
 
-	if (strtobool(buf, &bv) == 0) {
+	if (kstrtobool(buf, &bv) == 0) {
 		if (bv == true) {
 			ret = dbg_dce_reset_dce(d);
 			if (ret)
@@ -455,7 +455,7 @@ static ssize_t dbg_dce_boot_dce_fops_write(struct file *file,
 	if (copy_from_user(buf, user_buf, buf_size))
 		return -EFAULT;
 
-	if (strtobool(buf, &bv) == 0) {
+	if (kstrtobool(buf, &bv) == 0) {
 		if (bv == true) {
 			ret = dbg_dce_boot_dce(d);
 			if (ret)
