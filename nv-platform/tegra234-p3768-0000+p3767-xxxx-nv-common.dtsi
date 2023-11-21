@@ -103,18 +103,6 @@
 			};
 		};
 
-		/* UARTA, 40 pin header, Pin 8(TX), Pin 10(RX) */
-		serial@3100000 {
-			compatible = "nvidia,tegra194-hsuart";
-			status = "okay";
-		};
-
-		/* UARTE, M2.E connector */
-		serial@3140000 {
-			compatible = "nvidia,tegra194-hsuart";
-			status = "okay";
-		};
-
 		i2c@31b0000 {
 			status = "okay";
 		};
