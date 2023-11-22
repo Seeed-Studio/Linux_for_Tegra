@@ -49,7 +49,7 @@ struct maxim_gmsl_hdmi_ser_priv {
 	struct regmap *regmap;
 	int ser_errb;
 	int ser_pwrdn;
-	unsigned int ser_irq;
+	int ser_irq;
 	bool enable_rclkout;
 };
 
@@ -208,8 +208,8 @@ static int maxim_gmsl_hdmi_ser_parse_dt(struct maxim_gmsl_hdmi_ser_priv *priv)
 	priv->enable_rclkout = of_property_read_bool(ser, "enable_rclkout");
 	priv->ser_errb = of_get_named_gpio(ser, "ser-errb", 0);
 
-	if (priv->ser_irq < 0) {
-		err = priv->ser_irq;
+	if (priv->ser_errb < 0) {
+		err = priv->ser_errb;
 		dev_err(dev, "%s: ser_errb is not present in the DT: %d\n",
 			__func__, err);
 		return err;
