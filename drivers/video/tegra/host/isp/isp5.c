@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * ISP5 driver
- *
- * Copyright (c) 2017-2023, NVIDIA Corporation.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (C) 2017-2023 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <asm/ioctls.h>
+#include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
-#include <linux/dma-mapping.h>
 #include <linux/dma-buf.h>
+#include <linux/dma-mapping.h>
 #include <linux/export.h>
 #include <linux/fs.h>
 #include <linux/module.h>
@@ -43,6 +42,7 @@
 struct host_isp5 {
 	struct platform_device *pdev;
 	struct platform_device *isp_thi;
+	struct clk *clk;
 };
 
 static int isp5_alloc_syncpt(struct platform_device *pdev,
@@ -156,6 +156,18 @@ error:
 	return err;
 }
 
+static int isp5_set_rate(struct tegra_camera_dev_info *cdev_info, unsigned long rate)
+{
+	struct nvhost_device_data *info = platform_get_drvdata(cdev_info->pdev);
+	struct host_isp5 *isp5 = info->private_data;
+
+	return clk_set_rate(isp5->clk, rate);
+}
+
+static struct tegra_camera_dev_ops isp5_cdev_ops = {
+	.set_rate = isp5_set_rate,
+};
+
 int isp5_priv_late_probe(struct platform_device *pdev)
 {
 	struct tegra_camera_dev_info isp_info;
@@ -168,6 +180,8 @@ int isp5_priv_late_probe(struct platform_device *pdev)
 	isp_info.ppc = ISP_PPC;
 	isp_info.hw_type = HWTYPE_ISPA;
 	isp_info.pdev = pdev;
+	isp_info.ops = &isp5_cdev_ops;
+
 	err = tegra_camera_device_register(&isp_info, isp5);
 	if (err)
 		goto device_release;
@@ -186,6 +200,7 @@ device_release:
 
 static int isp5_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *pdata;
 	struct host_isp5 *isp5;
 	int err = 0;
@@ -196,6 +211,12 @@ static int isp5_probe(struct platform_device *pdev)
 
 	pdata = platform_get_drvdata(pdev);
 	isp5 = pdata->private_data;
+
+	isp5->clk = devm_clk_get(dev, NULL);
+	if (IS_ERR(isp5->clk)) {
+		dev_err(&pdev->dev, "failed to get clock\n");
+		return PTR_ERR(isp5->clk);
+	}
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
