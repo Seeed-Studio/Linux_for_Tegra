@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2015-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (C) 2015-2023 NVIDIA CORPORATION.  All rights reserved.
+ */
 
 #include <linux/fs.h>
 #include <linux/platform_device.h>
@@ -656,7 +658,6 @@ EXPORT_SYMBOL(tegra_camera_get_device_list_stats);
 static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 		struct tegra_camera_dev_info *cdev)
 {
-	int ret = 0;
 	u64 active_pr = info->active_pixel_rate;
 	u64 phy_pr = info->phy_pixel_rate;
 	u32 overhead = cdev->overhead + 100;
@@ -674,6 +675,9 @@ static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 
 	if (cdev->hw_type == HWTYPE_NONE)
 		return 0;
+
+	if (!cdev->ops->set_rate)
+		return -EOPNOTSUPP;
 
 	switch (cdev->hw_type) {
 	case HWTYPE_CSI:
@@ -720,24 +724,7 @@ static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 	if (info->num_active_streams == 0)
 		clk_rate = 0;
 
-	if (clk_rate != cdev->clk_rate)
-		cdev->clk_rate = clk_rate;
-	/*TODO OOT nvhost_module_set_rate, nvhost_module_get_rate
-	else
-		set_clk = false;
-
-	if (set_clk) {
-		ret = nvhost_module_set_rate(cdev->pdev, &cdev->hw_type,
-				cdev->clk_rate, 0, NVHOST_CLOCK);
-		if (ret)
-			return ret;
-
-		// save the actual rate set by nvhost
-		ret = nvhost_module_get_rate(cdev->pdev,
-				&cdev->actual_clk_rate, 0);
-	}*/
-
-	return ret;
+	return cdev->ops->set_rate(cdev, clk_rate);
 }
 
 int tegra_camera_update_clknbw(void *priv, bool stream_on)

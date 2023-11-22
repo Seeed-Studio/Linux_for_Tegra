@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (C) 2015-2023 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #ifndef _TEGRA_CAMERA_PLATFORM_H_
@@ -38,6 +38,16 @@ enum tegra_camera_sensor_type {
 	SENSORTYPE_MAX,
 };
 
+struct tegra_camera_dev_info;
+
+/**
+ * struct tegra_camera_dev_ops - camera device operations
+ * @set_rate: set the device clock rate
+ */
+struct tegra_camera_dev_ops {
+	int (*set_rate)(struct tegra_camera_dev_info *cdev_info, unsigned long rate);
+};
+
 /**
  * struct tegra_camera_dev_info - camera devices information
  * @priv: a unique identifier assigned during registration
@@ -45,8 +55,6 @@ enum tegra_camera_sensor_type {
  * @bus_width: csi bus width for clock calculation
  * @overhead: hw/ sw overhead considered while calculations
  * @ppc: HW capability, pixels per clock
- * @clk_rate: calculated clk rate for this node
- * @actual_clk_rate: clk rate set by nvhost
  * @bw: calculated bw for this node
  * @use_max: populated by hw engine to decide it's clocking policy
  * @memory_latency: latency allowed for memory freq scaling
@@ -57,6 +65,7 @@ enum tegra_camera_sensor_type {
  * @bpp: bytes per pixel
  * @stream_on: stream enabled on the channel
  * @device_node: list node
+ * @ops: operation callbacks of the camera device
  */
 struct tegra_camera_dev_info {
 	void *priv;
@@ -66,9 +75,7 @@ struct tegra_camera_dev_info {
 	u64 lane_speed;
 	u32 lane_num;
 	u32 ppc;
-	u64 clk_rate;
 	u64 pg_clk_rate;
-	unsigned long actual_clk_rate;
 	u64 bw;
 	bool use_max;
 	u32 memory_latency;
@@ -79,6 +86,7 @@ struct tegra_camera_dev_info {
 	u32 bpp;
 	bool stream_on;
 	struct list_head device_node;
+	const struct tegra_camera_dev_ops *ops;
 };
 
 int tegra_camera_update_isobw(void);
