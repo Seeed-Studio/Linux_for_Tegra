@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * NVCSI driver for T194
- *
- * Copyright (c) 2017-2022, NVIDIA Corporation.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (C) 2017-2023 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include "nvcsi-t194.h"
@@ -50,6 +48,7 @@ struct t194_nvcsi {
 	struct platform_device *pdev;
 	struct tegra_csi_device csi;
 	struct dentry *dir;
+	struct clk *clk;
 };
 
 struct nvhost_device_data t19_nvcsi_info = {
@@ -145,6 +144,18 @@ int t194_nvcsi_early_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static int t194_nvcsi_set_rate(struct tegra_camera_dev_info *cdev_info, unsigned long rate)
+{
+	struct nvhost_device_data *info = platform_get_drvdata(cdev_info->pdev);
+	struct t194_nvcsi *nvcsi = info->private_data;
+
+	return clk_set_rate(nvcsi->clk, rate);
+}
+
+static struct tegra_camera_dev_ops t194_nvcsi_cdev_ops = {
+	.set_rate = t194_nvcsi_set_rate,
+};
+
 int t194_nvcsi_late_probe(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
@@ -159,6 +170,8 @@ int t194_nvcsi_late_probe(struct platform_device *pdev)
 	csi_info.bus_width = CSI_BUS_WIDTH;
 	csi_info.lane_num = NUM_LANES;
 	csi_info.pg_clk_rate = PG_CLK_RATE;
+	csi_info.ops = &t194_nvcsi_cdev_ops;
+
 	err = tegra_camera_device_register(&csi_info, nvcsi);
 	if (err)
 		return err;
@@ -172,9 +185,10 @@ int t194_nvcsi_late_probe(struct platform_device *pdev)
 
 static int t194_nvcsi_probe(struct platform_device *pdev)
 {
-	int err;
+	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *pdata;
 	struct t194_nvcsi *nvcsi;
+	int err;
 
 	err = t194_nvcsi_early_probe(pdev);
 	if (err)
@@ -183,6 +197,12 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 	pdata = platform_get_drvdata(pdev);
 
 	nvcsi = pdata->private_data;
+
+	nvcsi->clk = devm_clk_get(dev, NULL);
+	if (IS_ERR(nvcsi->clk)) {
+		dev_err(&pdev->dev, "failed to get clock\n");
+		return PTR_ERR(nvcsi->clk);
+	}
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
