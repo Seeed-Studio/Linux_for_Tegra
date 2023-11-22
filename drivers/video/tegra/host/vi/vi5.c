@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * VI5 driver
- *
- * Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (C) 2017-2023 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <asm/ioctls.h>
@@ -52,6 +50,7 @@ struct host_vi5 {
 	struct platform_device *vi_thi;
 	struct vi vi_common;
 	struct icc_path *icc_write;
+	struct clk *clk;
 
 	/* Debugfs */
 	struct vi5_debug {
@@ -205,6 +204,18 @@ put_vi:
 	return err;
 }
 
+static int vi5_set_rate(struct tegra_camera_dev_info *cdev_info, unsigned long rate)
+{
+	struct nvhost_device_data *info = platform_get_drvdata(cdev_info->pdev);
+	struct host_vi5 *vi5 = info->private_data;
+
+	return clk_set_rate(vi5->clk, rate);
+}
+
+static struct tegra_camera_dev_ops vi5_cdev_ops = {
+	.set_rate = vi5_set_rate,
+};
+
 int vi5_priv_late_probe(struct platform_device *pdev)
 {
 	struct tegra_camera_dev_info vi_info;
@@ -217,6 +228,7 @@ int vi5_priv_late_probe(struct platform_device *pdev)
 	vi_info.hw_type = HWTYPE_VI;
 	vi_info.ppc = NUM_PPC;
 	vi_info.overhead = VI_OVERHEAD;
+	vi_info.ops = &vi5_cdev_ops;
 
 	err = tegra_camera_device_register(&vi_info, vi5);
 	if (err)
@@ -247,6 +259,12 @@ static int vi5_probe(struct platform_device *pdev)
 
 	pdata = platform_get_drvdata(pdev);
 	vi5 = pdata->private_data;
+
+	vi5->clk = devm_clk_get(dev, NULL);
+	if (IS_ERR(vi5->clk)) {
+		dev_err(&pdev->dev, "failed to get clock\n");
+		return PTR_ERR(vi5->clk);
+	}
 
 	vi5->icc_write = devm_of_icc_get(dev, "write");
 	if (IS_ERR(vi5->icc_write)) {
