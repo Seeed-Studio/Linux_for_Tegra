@@ -1179,6 +1179,7 @@ fail:
 	pr_err("Handle RO check failed\n");
 	return -EINVAL;
 }
+
 void nvmap_free_handle_from_fd(struct nvmap_client *client,
 			       int id)
 {
@@ -1202,9 +1203,15 @@ void nvmap_free_handle_from_fd(struct nvmap_client *client,
 
 	nvmap_free_handle(client, handle, is_ro);
 	if (handle) {
+		mutex_lock(&handle->lock);
 		dmabuf = is_ro ? handle->dmabuf_ro : handle->dmabuf;
+		if (dmabuf && dmabuf->file) {
+			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+		} else {
+			dmabuf_ref = 0;
+		}
+		mutex_unlock(&handle->lock);
 		handle_ref = atomic_read(&handle->ref);
-		dmabuf_ref = dmabuf ? atomic_long_read(&dmabuf->file->f_count) : 0;
 	}
 
 	trace_refcount_free_handle(handle, dmabuf, handle_ref, dmabuf_ref,
