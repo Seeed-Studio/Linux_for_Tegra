@@ -286,7 +286,7 @@
 								pixel_phase = "rggb";
 								csi_pixel_bit_depth = "10";
 								readout_orientation = "90";
-								line_length = "11200";
+								line_length = "3000";
 								inherent_gain = "1";
 								mclk_multiplier = "80";
 								pix_clk_hz = "300000000";
@@ -324,7 +324,7 @@
 								pixel_phase = "rggb";
 								csi_pixel_bit_depth = "10";
 								readout_orientation = "90";
-								line_length = "7000";
+								line_length = "3000";
 								inherent_gain = "1";
 								mclk_multiplier = "80";
 								pix_clk_hz = "300000000";
@@ -393,7 +393,7 @@
 								pixel_phase = "rggb";
 								csi_pixel_bit_depth = "10";
 								readout_orientation = "90";
-								line_length = "11200";
+								line_length = "3000";
 								inherent_gain = "1";
 								mclk_multiplier = "80";
 								pix_clk_hz = "300000000";
@@ -431,7 +431,7 @@
 								pixel_phase = "rggb";
 								csi_pixel_bit_depth = "10";
 								readout_orientation = "90";
-								line_length = "7000";
+								line_length = "3000";
 								inherent_gain = "1";
 								mclk_multiplier = "80";
 								pix_clk_hz = "300000000";
