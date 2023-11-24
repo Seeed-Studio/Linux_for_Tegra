@@ -28,8 +28,10 @@
 
 #include <asm/io.h>
 
-/* flag to enable read-write loopback in this driver */
-static bool nvvc_enable_driver_loopback = false;
+/* flag to enable read-write loopback to host userspace */
+static bool nvvc_enable_host_user_loopback;
+/* flag to enable read-write loopback to android vm */
+static bool nvvc_enable_android_loopback = true;
 /* flag to enable mempool and ivc */
 static bool nvvc_enable_mempool_ivc = true;
 /* flag to enable mempool and ivc */
@@ -168,7 +170,7 @@ static ssize_t nvvc_write(struct file *f, const char *buf, size_t buf_size, loff
 
 	pr_debug("Write nvvc\n");
 
-	if (nvvc_enable_driver_loopback) {
+	if (nvvc_enable_host_user_loopback) {
 		if (kfifo_is_full(&nvvcdev->nvvc_rx_fifo)) {
 			err = wait_event_interruptible_timeout(nvvcdev->write_wait,
 												!kfifo_is_full(&nvvcdev->nvvc_rx_fifo),
@@ -417,9 +419,16 @@ static int nvvc_read_send_virtqueue(void)
 		pr_debug("Tx Data: 0x%x\n", *(((char*)iospace) + i));
 	}
 
-	/* copy to nvvc_rx_fifo */
-	copied = kfifo_in(&nvvcdev->nvvc_rx_fifo, iospace, tx_avail_len);
-	pr_debug("nvvc: tx data copied : %llu\n", copied);
+	if (nvvc_enable_android_loopback) {
+		/* copy to nvvc_tx_fifo */
+		copied = kfifo_in(&nvvcdev->nvvc_tx_fifo, iospace, tx_avail_len);
+		pr_debug("nvvc: tx data copied : %llu\n", copied);
+
+	} else {
+		/* copy to nvvc_rx_fifo */
+		copied = kfifo_in(&nvvcdev->nvvc_rx_fifo, iospace, tx_avail_len);
+		pr_debug("nvvc: rx data copied : %llu\n", copied);
+	}
 
 	/* update virtio used */
 	used_idx = tx_vring_used->idx % MAXVIRTIOQUEUESIZE;
