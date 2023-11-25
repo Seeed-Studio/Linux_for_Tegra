@@ -55,7 +55,11 @@ dtbo-y += tegra234-p3737-camera-dual-hawk-ar0234-e3653-overlay.dtbo
 dtbo-y += tegra234-p3737-camera-imx390-overlay.dtbo
 dtbo-y += tegra234-p3737-camera-p3762-a00-overlay.dtbo
 dtbo-y += tegra234-p3740-camera-p3783-a00-overlay.dtbo
-
+dtbo-y += tegra234-p3767-camera-p3768-imx219-cam0.dtbo
+dtbo-y += tegra234-p3767-camera-p3768-imx219-cam1.dtbo
+dtbo-y += tegra234-p3767-camera-p3768-imx219-imx477.dtbo
+dtbo-y += tegra234-p3767-camera-p3768-imx477-cam0.dtbo
+dtbo-y += tegra234-p3767-camera-p3768-imx477-cam1.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
