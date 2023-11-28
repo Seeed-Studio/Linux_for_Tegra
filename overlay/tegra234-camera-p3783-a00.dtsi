@@ -1440,10 +1440,7 @@
 						drivernode0 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_sensor";
-							/* Driver v4l2 device name */
-							devname = "ar0234 2-0030";
-							/* Declare the device-tree hierarchy to driver instance */
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/ar0234_i@30";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/ar0234_i@30";
 							status = "okay";
 						};
 					};
@@ -1455,10 +1452,7 @@
 						drivernode0 {
 							/* Declare PCL support driver (classically known as guid)  */
 							pcl_id = "v4l2_sensor";
-							/* Driver v4l2 device name */
-							devname = "ar0234 2-0032";
-							/* Declare the device-tree hierarchy to driver instance */
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/ar0234_j@32";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/ar0234_j@32";
 							status = "okay";
 						};
 					};
@@ -1469,8 +1463,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 2-0034";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/ar0234_k@34";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/ar0234_k@34";
 							status = "okay";
 						};
 					};
@@ -1481,8 +1474,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 2-0036";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@3180000/ar0234_l@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/ar0234_l@36";
 							status = "okay";
 						};
 					};
@@ -1493,8 +1485,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 9-0030";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@0/ar0234_a@30";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@0/ar0234_a@30";
 							status = "okay";
 						};
 					};
@@ -1505,8 +1496,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 9-0031";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@0/ar0234_b@31";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@0/ar0234_b@31";
 							status = "okay";
 						};
 					};
@@ -1517,8 +1507,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 10-0032";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_c@32";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_c@32";
 							status = "okay";
 						};
 					};
@@ -1529,8 +1518,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 10-0033";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_d@33";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_d@33";
 							status = "okay";
 						};
 					};
@@ -1541,8 +1529,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 10-0034";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_e@34";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_e@34";
 							status = "okay";
 						};
 					};
@@ -1553,8 +1540,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 10-0035";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_f@35";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_f@35";
 							status = "okay";
 						};
 					};
@@ -1565,8 +1551,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 10-0036";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_g@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_g@36";
 							status = "okay";
 						};
 					};
@@ -1577,8 +1562,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							devname = "ar0234 10-0037";
-							proc-device-tree = "/proc/device-tree/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_h@37";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_h@37";
 							status = "okay";
 						};
 					};
