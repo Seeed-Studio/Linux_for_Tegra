@@ -4,6 +4,7 @@
 / {
 	bus@0 {
 		spi@3210000{ /* SPI1 in 40 pin conn */
+			status = "okay";
 			spi@0 { /* chip select 0 */
 				compatible = "tegra-spidev";
 				reg = <0x0>;
@@ -17,6 +18,7 @@
 		};
 
 		spi@3230000{ /* SPI3 in 40 pin conn */
+			status = "okay";
 			spi@0 { /* chip select 0 */
 				compatible = "tegra-spidev";
 				reg = <0x0>;
