@@ -118,6 +118,11 @@
 					};
 				};
 			};
+
+			display@13800000 {
+				hdcp_enabled;
+				status = "okay";
+			};
 		};
 	};
 
