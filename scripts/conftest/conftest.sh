@@ -7474,6 +7474,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_V4L2_ASYNC_SUBDEV_NF_INIT_PRESENT" "" "functions"
         ;;
 
+        crypto_engine_ctx_struct_removed_test)
+            #
+            # Determine if struct 'crypto_engine_ctx' is removed in linux kernel.
+            #
+            # Commit 5ce0bc68e0ee ("crypto: engine - Remove crypto_engine_ctx")
+            # Linux v6.6 removed struct crypto_engine_ctx
+            #
+            CODE="
+            #include <crypto/engine.h>
+            void conftest_crypto_engine_ctx_struct_removed_test(void) {
+                    struct crypto_engine_ctx *ptr = NULL;
+                    struct crypto_engine_ctx enginectx;
+                    ptr = &enginectx;
+            }"
+
+            compile_check_conftest "$CODE" "NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX" "" "functions"
+        ;;
+
         # When adding a new conftest entry, please use the correct format for
         # specifying the relevant upstream Linux kernel commit.
         #
