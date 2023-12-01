@@ -197,7 +197,7 @@ static inline int tegra_ivc_check_read(struct tegra_ivc *ivc)
 	tegra_ivc_invalidate(ivc, ivc->rx.phys + offset);
 
 #if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
-	if (!tegra_ivc_empty(ivc, &ivc->rx.map))
+	if (tegra_ivc_empty(ivc, &ivc->rx.map))
 #else
 	if (tegra_ivc_empty(ivc, ivc->rx.channel))
 #endif
@@ -229,7 +229,7 @@ static inline int tegra_ivc_check_write(struct tegra_ivc *ivc)
 	tegra_ivc_invalidate(ivc, ivc->tx.phys + offset);
 
 #if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
-	if (!tegra_ivc_full(ivc, &ivc->tx.map))
+	if (tegra_ivc_full(ivc, &ivc->tx.map))
 #else
 	if (tegra_ivc_full(ivc, ivc->tx.channel))
 #endif
