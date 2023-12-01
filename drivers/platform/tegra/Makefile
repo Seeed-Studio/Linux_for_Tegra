@@ -21,6 +21,6 @@ endif
 obj-m += aon/
 obj-m += tegra-uss-io-proxy.o
 
-ifneq ($(filter oot,$(patsubst -,$(space),$(NV_BUILD_KERNEL_OPTIONS))),)
+ifneq ($(filter noble oot,$(patsubst -,$(space),$(NV_BUILD_KERNEL_OPTIONS))),)
 obj-m += nvadsp/
 endif
