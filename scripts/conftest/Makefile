@@ -159,7 +159,8 @@ NV_HEADER_PRESENCE_TESTS = \
   generated/autoconf.h \
   linux/kconfig.h \
   linux/iosys-map.h \
-  net/gso.h
+  net/gso.h \
+  net/page_pool.h
 
 # Filename to store the define for the header in $(1); this is only consumed by
 # the rule below that concatenates all of these together.

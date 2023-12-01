@@ -4,6 +4,8 @@
 #ifndef ETHER_LINUX_H
 #define ETHER_LINUX_H
 
+#include <nvidia/conftest.h>
+
 #include <linux/platform/tegra/ptp-notifier.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/pinctrl/consumer.h>
@@ -37,11 +39,11 @@
 #include <soc/tegra/virt/hv-ivc.h>
 #include <soc/tegra/fuse.h>
 #if IS_ENABLED(CONFIG_PAGE_POOL)
-#if defined(NV_SPLIT_PAGE_POOL_HEADER)
+#if defined(NV_NET_PAGE_POOL_H_PRESENT)
+#include <net/page_pool.h>
+#else
 #include <net/page_pool/types.h>
 #include <net/page_pool/helpers.h>
-#else
-#include <net/page_pool.h>
 #endif
 #define ETHER_PAGE_POOL
 #endif

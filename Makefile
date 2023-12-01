@@ -61,9 +61,6 @@ subdir-ccflags-y += -DNV_V4L2_ASYNC_NF_SUBDEVICE_INIT_RENAME
 # Deprecate PCIED Error reporting pci_enable_pcie_error_reporting
 subdir-ccflags-y += -DNV_DROP_PCIE_ERROR_REPORTING
 
-# Split types and declaration of net/page_pool.h
-subdir-ccflags-y += -DNV_SPLIT_PAGE_POOL_HEADER
-
 # FB Deferred IO helpers name alignment
 subdir-ccflags-y += -DNV_FB_DEFERRED_IO_OPS_RENAME
 
