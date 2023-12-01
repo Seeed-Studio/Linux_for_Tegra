@@ -2,6 +2,7 @@
 /**
  * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
  */
+#include <nvidia/conftest.h>
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -769,7 +770,11 @@ static void *nvadsp_dma_alloc_and_map_at(struct platform_device *pdev,
 
 		/* Remap the contiguous physical addresses together */
 		ret = iommu_map(domain, iova + offset, pa, mp_size,
+#if defined(NV_IOMMU_MAP_HAS_GFP_ARG)
+				IOMMU_READ | IOMMU_WRITE, GFP_KERNEL);
+#else
 				IOMMU_READ | IOMMU_WRITE);
+#endif
 		if (ret) {
 			dev_err(dev, "failed to map pa %llx va %llx size %lx\n",
 				pa, iova + offset, mp_size);
