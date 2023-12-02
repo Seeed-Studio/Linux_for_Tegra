@@ -1879,7 +1879,7 @@ static int tegra_hdmi_probe(struct platform_device *pdev)
 	if (err)
 		return err;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+#if defined(NV_DEVM_TEGRA_CORE_DEV_INIT_OPP_TABLE_COMMON_PRESENT) /* Linux v5.17 */
 	err = devm_tegra_core_dev_init_opp_table_common(&pdev->dev);
 	if (err)
 		return err;

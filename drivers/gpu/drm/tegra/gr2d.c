@@ -10,7 +10,6 @@
 #include <linux/of_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
-#include <linux/version.h>
 
 #include <soc/tegra/common.h>
 
@@ -272,7 +271,7 @@ static int gr2d_probe(struct platform_device *pdev)
 	gr2d->client.version = gr2d->soc->version;
 	gr2d->client.ops = &gr2d_ops;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+#if defined(NV_DEVM_TEGRA_CORE_DEV_INIT_OPP_TABLE_COMMON_PRESENT) /* Linux v5.17 */
 	err = devm_tegra_core_dev_init_opp_table_common(dev);
 	if (err)
 		return err;

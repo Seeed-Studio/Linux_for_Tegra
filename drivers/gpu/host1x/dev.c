@@ -5,6 +5,8 @@
  * Copyright (c) 2010-2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -15,7 +17,6 @@
 #include <linux/of.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
-#include <linux/version.h>
 
 #include <soc/tegra/common.h>
 
@@ -950,7 +951,7 @@ static int host1x_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(&pdev->dev);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+#if defined(NV_DEVM_TEGRA_CORE_DEV_INIT_OPP_TABLE_COMMON_PRESENT) /* Linux v5.17 */
 	err = devm_tegra_core_dev_init_opp_table_common(&pdev->dev);
 	if (err)
 		goto pm_disable;

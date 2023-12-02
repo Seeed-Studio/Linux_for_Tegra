@@ -530,7 +530,7 @@ static int gr3d_probe(struct platform_device *pdev)
 	gr3d->client.version = gr3d->soc->version;
 	gr3d->client.ops = &gr3d_ops;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+#if defined(NV_DEVM_TEGRA_CORE_DEV_INIT_OPP_TABLE_COMMON_PRESENT) /* Linux v5.17 */
 	err = devm_tegra_core_dev_init_opp_table_common(&pdev->dev);
 	if (err)
 		return err;

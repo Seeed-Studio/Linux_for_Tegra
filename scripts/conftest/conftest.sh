@@ -6553,6 +6553,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DEVICE_ADD_DISK_HAS_INT_RETURN_TYPE" "" "types"
         ;;
 
+        devm_tegra_core_dev_init_opp_table_common)
+            #
+            # Determine whether devm_tegra_core_dev_init_opp_table_common is
+            # present.
+            #
+            # devm_tegra_core_dev_init_opp_table_common was added in commit
+            # 9131c6331726 ("soc/tegra: Add devm_tegra_core_dev_init_opp_table_common()")
+            # in Linux v5.17.
+            #
+            CODE="
+            #include <linux/thermal.h>
+            void conftest_devm_tegra_core_dev_init_opp_table_common(void) {
+                devm_tegra_core_dev_init_opp_table_common();
+            }"
+
+            compile_check_conftest "$CODE" "NV_DEVM_TEGRA_CORE_DEV_INIT_OPP_TABLE_COMMON_PRESENT" "" "functions"
+        ;;
+
         devm_thermal_of_zone_register)
             #
             # Determine whether devm_thermal_of_zone_register is present.
