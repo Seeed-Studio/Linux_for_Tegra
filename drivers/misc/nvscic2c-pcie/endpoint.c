@@ -17,7 +17,6 @@
 #include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/types.h>
-#include <linux/version.h>
 #include <linux/wait.h>
 
 #include <uapi/misc/nvscic2c-pcie-ioctl.h>
@@ -345,7 +344,7 @@ endpoint_fops_mmap(struct file *filp, struct vm_area_struct *vma)
 	}
 
 	vma->vm_pgoff  = 0;
-#if defined(NV_VM_FLAG_SET_API_AVAILABLE) || (defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK) && (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)))
+#if defined(NV_VM_AREA_STRUCT_HAS_CONST_VM_FLAGS) /* Linux v6.3 */
 	vm_flags_set(vma, VM_DONTCOPY);
 #else
 	vma->vm_flags |= (VM_DONTCOPY); // fork() not supported.
