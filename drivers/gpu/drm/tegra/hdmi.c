@@ -1875,16 +1875,14 @@ static int tegra_hdmi_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, hdmi);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	err = devm_pm_runtime_enable(&pdev->dev);
 	if (err)
 		return err;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	err = devm_tegra_core_dev_init_opp_table_common(&pdev->dev);
 	if (err)
 		return err;
-#else
-	pm_runtime_enable(&pdev->dev);
 #endif
 
 	INIT_LIST_HEAD(&hdmi->client.list);
@@ -1904,10 +1902,6 @@ static int tegra_hdmi_probe(struct platform_device *pdev)
 static int tegra_hdmi_remove(struct platform_device *pdev)
 {
 	struct tegra_hdmi *hdmi = platform_get_drvdata(pdev);
-
-#if !(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
-	pm_runtime_disable(&pdev->dev);
-#endif
 
 	host1x_client_unregister(&hdmi->client);
 
