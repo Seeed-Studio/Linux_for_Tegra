@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -162,7 +162,9 @@ static int cdi_pwm_probe(struct platform_device *pdev)
 
 	info->chip.dev = &pdev->dev;
 	info->chip.ops = &cdi_pwm_ops;
+#if defined(NV_PWM_CHIP_STRUCT_HAS_BASE_ARG)
 	info->chip.base = -1;
+#endif
 	info->chip.npwm = npwm;
 	info->chip.of_xlate = of_cdi_pwm_xlate;
 	info->chip.of_pwm_n_cells = 2;

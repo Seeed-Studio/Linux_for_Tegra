@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -429,7 +429,9 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 
 	ptt->chip.dev = &pdev->dev;
 	ptt->chip.ops = &pwm_tegra_tach_ops;
+#if defined(NV_PWM_CHIP_STRUCT_HAS_BASE_ARG)
 	ptt->chip.base = -1;
+#endif
 	ptt->chip.npwm = 1;
 
 	ret = pwmchip_add(&ptt->chip);

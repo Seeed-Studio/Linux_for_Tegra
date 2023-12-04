@@ -7163,6 +7163,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MII_BUS_STRUCT_HAS_WRITE_C45" "" "types"
         ;;
 
+        pwm_chip_struct_has_base_arg)
+            #
+            # Determine if 'struct pwm_chip' has the 'base' field.
+            #
+            # Commit 54c86dd20bba ("pwm: Replace PWM chip unique base by unique ID")
+            # removed the 'base' field of the 'pwm_chip' structure replacing it with
+            # an 'id' field.
+            #
+            CODE="
+            #include <sound/soc.h>
+            int conftest_pwm_chip_struct_has_base_arg(void) {
+                return offsetof(struct pwm_chip, base);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PWM_CHIP_STRUCT_HAS_BASE_ARG" "" "types"
+        ;;
+
         pwm_ops_struct_has_owner)
             #
             # Determine if the pwm_ops struct has an owner member.

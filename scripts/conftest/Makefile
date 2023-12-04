@@ -135,6 +135,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += of_get_named_gpio_flags
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_chip_struct_has_of_node_present
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpiochip_find
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pde_data
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += pwm_chip_struct_has_base_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pwm_ops_struct_has_owner
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pwm_ops_struct_has_config
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pci_epc_event_ops_struct_has_core_deinit
