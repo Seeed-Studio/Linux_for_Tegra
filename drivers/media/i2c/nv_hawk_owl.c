@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * nv_hawk_owl.c.c - ar0234 sensor driver
  */
@@ -17,6 +17,7 @@
 #include <linux/of_gpio.h>
 #include <media/max9295.h>
 #include <media/max9296.h>
+#include <media/nv_hawk_owl.h>
 #include <media/tegracam_core.h>
 #include "hawk_owl_mode_tbls.h"
 #include <linux/ktime.h>

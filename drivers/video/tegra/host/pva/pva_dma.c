@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/kernel.h>
 #include <linux/seq_file.h>
@@ -37,7 +35,7 @@ static const u8 max_desc_id[4] = {
 	[PVA_HW_GEN3] = NVPVA_TASK_MAX_DMA_DESCRIPTOR_ID_T26X
 };
 
-int
+static int
 pitch_linear_eq_offset(struct nvpva_dma_descriptor const *dma_desc,
 		       s64 *frame_buf_offset,
 		       const int64_t surf_bl_offset,

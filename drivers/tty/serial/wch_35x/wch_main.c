@@ -735,7 +735,7 @@ void ch365_32s_test(void)
 }
 #endif
 
-int wch_register_irq(void)
+static int wch_register_irq(void)
 {
     struct wch_board *sb = NULL;
     int status = 0;
@@ -785,7 +785,7 @@ int wch_register_irq(void)
     return status;
 }
 
-void wch_iounmap(void)
+static void wch_iounmap(void)
 {
     struct wch_board *sb = NULL;
     int i;
@@ -803,7 +803,7 @@ void wch_iounmap(void)
     }
 }
 
-void wch_release_irq(void)
+static void wch_release_irq(void)
 {
     struct wch_board *sb = NULL;
     int i;

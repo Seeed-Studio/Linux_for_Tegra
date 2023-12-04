@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
- * Copyright (c) 2017-2023, NVIDIA CORPORATION.  All rights reserved.
- *
  * PVA Command Queue Interface handling
  */
 
@@ -104,7 +103,7 @@ void pva_ccq_isr_handler(struct pva *pva, unsigned int queue_id)
 	wake_up(&pva->cmd_waitqueue[cmd_status_index]);
 }
 
-int pva_ccq_wait_event(struct pva *pva, unsigned int queue_id, int wait_time)
+static int pva_ccq_wait_event(struct pva *pva, unsigned int queue_id, int wait_time)
 {
 	int timeout = 1;
 	int err;

@@ -496,7 +496,7 @@ resume:
 	host1x_hw_cdma_resume(host1x, cdma, restart_addr);
 }
 
-void cdma_update_work(struct work_struct *work)
+static void cdma_update_work(struct work_struct *work)
 {
 	struct host1x_cdma *cdma = container_of(work, struct host1x_cdma, update_work);
 

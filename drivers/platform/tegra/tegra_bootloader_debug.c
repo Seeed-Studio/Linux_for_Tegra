@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -18,6 +18,8 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+
+#include "tegra_bootloader_debug.h"
 
 static phys_addr_t tegra_bl_debug_data_start;
 static phys_addr_t tegra_bl_debug_data_size;

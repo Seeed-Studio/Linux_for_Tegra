@@ -501,7 +501,7 @@ digbuf_fail:
 	return -ENOMEM;
 }
 
-int tegra_hmac_fallback_setkey(struct tegra_sha_ctx *ctx, const u8 *key,
+static int tegra_hmac_fallback_setkey(struct tegra_sha_ctx *ctx, const u8 *key,
 				      unsigned int keylen)
 {
 	if (!ctx->fallback_tfm) {

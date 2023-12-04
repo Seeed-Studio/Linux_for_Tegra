@@ -2113,7 +2113,7 @@ static u32 rtl8168_mdio_real_read_phy_ocp(struct rtl8168_private *tp,
         return mdio_real_direct_read_phy_ocp(tp, ocp_addr);
 }
 
-u32 mdio_real_read(struct rtl8168_private *tp,
+static u32 mdio_real_read(struct rtl8168_private *tp,
                    u32 RegAddr)
 {
         int i, value = 0;

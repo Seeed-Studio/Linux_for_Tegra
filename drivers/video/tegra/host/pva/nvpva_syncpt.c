@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/kernel.h>
 #include <linux/nvhost.h>
@@ -11,6 +9,7 @@
 #include <linux/iommu.h>
 #include <linux/dma-mapping.h>
 #include "pva.h"
+#include "nvpva_syncpt.h"
 
 int nvpva_map_region(struct device *dev,
 		     phys_addr_t start,

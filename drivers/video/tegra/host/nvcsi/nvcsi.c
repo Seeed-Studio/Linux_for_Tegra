@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2014-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVCSI driver
- *
- * Copyright (c) 2014-2022, NVIDIA Corporation.  All rights reserved.
  */
 #include <linux/device.h>
 #include <linux/export.h>
@@ -28,6 +27,7 @@
 //#include "camera/nvcsi/csi5_fops.h"
 
 #include "deskew.h"
+#include "nvcsi.h"
 
 #define PG_CLK_RATE	102000000
 /* width of interface between VI and CSI */

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/errno.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <dce.h>
+#include <dce-debug-perf.h>
 #include <dce-log.h>
 #include <dce-util-common.h>
 #include <interface/dce-interface.h>

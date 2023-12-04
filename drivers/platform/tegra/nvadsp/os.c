@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2014-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include <nvidia/conftest.h>
 
 #include <linux/init.h>
@@ -324,7 +323,7 @@ bool is_adsp_dram_addr(u64 addr)
 	return false;
 }
 
-int is_cluster_mem_addr(u64 addr)
+static int is_cluster_mem_addr(u64 addr)
 {
 	int clust_id;
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);

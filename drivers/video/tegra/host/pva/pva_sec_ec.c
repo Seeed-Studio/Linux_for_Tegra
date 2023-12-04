@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2023, NVIDIA Corporation.  All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/nvhost.h>
 #include "pva_regs.h"
 #include "pva.h"
+#include "pva_sec_ec.h"
 
 static u32 pva_get_sec_ec_addrs(u32 index)
 {

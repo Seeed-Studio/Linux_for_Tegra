@@ -5,6 +5,7 @@ LINUXINCLUDE += -I$(srctree.nvconftest)
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
 
 subdir-ccflags-y += -Werror
+subdir-ccflags-y += -Wmissing-prototypes
 
 LINUX_VERSION := $(shell expr $(VERSION) \* 256 + $(PATCHLEVEL))
 LINUX_VERSION_6_2 := $(shell expr 6 \* 256 + 2)

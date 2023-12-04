@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2021-2023, NVIDIA Corporation.  All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/kernel.h>
 #include <linux/types.h>
@@ -21,7 +19,7 @@ struct pva_buff_s {
 	uint32_t	size;
 };
 
-s32 read_buff(struct pva_buff_s *src_buf, void *dst, u32 size)
+static s32 read_buff(struct pva_buff_s *src_buf, void *dst, u32 size)
 {
 	u32  pos = src_buf->pos + size;
 
