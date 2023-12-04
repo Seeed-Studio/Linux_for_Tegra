@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2023 NVIDIA CORPORATION.  All rights reserved.
 
 #include <linux/clk.h>
 #include <linux/reset.h>
@@ -22,6 +22,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/spi/spi.h>
+#include <linux/spi/spi-tegra124-slave.h>
 #include <linux/clk/tegra.h>
 #include <linux/version.h>
 
@@ -276,12 +277,6 @@ struct tegra_spi_controller_data {
 	int clk_delay_between_packets;
 	int cs_gpio;
 };
-
-typedef int (*spi_callback)(void *client_data);
-int tegra_spi_slave_register_callback(struct spi_device *spi,
-				      spi_callback func_ready,
-				      spi_callback func_isr,
-				      void *client_data);
 
 struct tegra_spi_data {
 	struct device				*dev;
