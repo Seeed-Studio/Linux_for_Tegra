@@ -172,6 +172,12 @@
 				pages-count = <0x10>;
 				attributes = <0x3>; /* read-write */
 			};
+
+			scratch-t234 {
+				base-address = <0x00000000 0x0c390000>;
+				pages-count = <0x2>;
+				attributes = <0x3>; /* read-write */
+			};
 		};
 	};
 };
