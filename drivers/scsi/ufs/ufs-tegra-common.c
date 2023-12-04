@@ -594,8 +594,13 @@ static void ufs_tegra_disable_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 		return;
 
 	clk_disable_unprepare(ufs_tegra->ufshc_clk);
+
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
+		goto end;
+
 	clk_disable_unprepare(ufs_tegra->ufsdev_ref_clk);
 
+end:
 	ufs_tegra->hba->clk_gating.state = CLKS_OFF;
 }
 
@@ -1036,16 +1041,28 @@ static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op,
 		ufshcd_set_link_off(hba);
 	}
 
+	/* Clocks are not present on VDK */
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VDK)
+		goto end;
+
 	/*
 	 * Disable ufs, mphy tx/rx lane clocks if they are on
 	 * and assert the reset
 	 */
 
+	/* MPHY is not present on FPGA */
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
+		goto disable_ufs_clks;
+
 	ufs_tegra_disable_mphylane_clks(ufs_tegra);
 	ufs_tegra_mphy_assert_reset(ufs_tegra);
-	ufs_tegra_disable_ufs_clks(ufs_tegra);
-	reset_control_assert(ufs_tegra->ufs_axi_m_rst);
 
+disable_ufs_clks:
+	ufs_tegra_disable_ufs_clks(ufs_tegra);
+	goto end;
+
+	reset_control_assert(ufs_tegra->ufs_axi_m_rst);
+end:
 	return ret;
 }
 
@@ -1065,14 +1082,19 @@ static int ufs_tegra_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	if (ret)
 		return ret;
 
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
+		goto deassert_ufs_clk;
+
 	ret = ufs_tegra_enable_mphylane_clks(ufs_tegra);
 	if (ret)
 		goto out_disable_ufs_clks;
 	ufs_tegra_mphy_deassert_reset(ufs_tegra);
+
+deassert_ufs_clk:
 	ufs_tegra_ufs_deassert_reset(ufs_tegra);
 	ufs_tegra_ufs_aux_prog(ufs_tegra);
 
-	if (ufs_tegra->soc->chip_id <= TEGRA234) {
+	if (ufs_tegra->soc->chip_id < TEGRA234) {
 		if (ufs_tegra->ufs_pinctrl &&
 			!IS_ERR_OR_NULL(ufs_tegra->dpd_disable)) {
 			ret = pinctrl_select_state(ufs_tegra->ufs_pinctrl,
@@ -1087,13 +1109,18 @@ static int ufs_tegra_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		 */
 		ufs_tegra_context_restore(ufs_tegra);
 	} else {
-		writel(UFS_AUX_ADDR_VIRT_CTRL_EN,
-			ufs_tegra->ufs_virtualization_base +
-			UFS_AUX_ADDR_VIRT_CTRL_0);
-		writel(ufs_tegra->streamid,
-			ufs_tegra->ufs_virtualization_base +
-			UFS_AUX_ADDR_VIRT_REG_0);
+		if (dev_iommu_fwspec_get(dev) != NULL) {
+			writel(UFS_AUX_ADDR_VIRT_CTRL_EN,
+				ufs_tegra->ufs_virtualization_base +
+				UFS_AUX_ADDR_VIRT_CTRL_0);
+			writel(ufs_tegra->streamid,
+				ufs_tegra->ufs_virtualization_base +
+				UFS_AUX_ADDR_VIRT_REG_0);
+		}
 	}
+
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
+		goto end;
 
 	ufs_tegra_set_clk_div(hba);
 
@@ -1109,6 +1136,7 @@ static int ufs_tegra_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	if (ret < 0)
 		goto out_disable_mphylane_clks;
 
+end:
 	pm_runtime_disable(dev);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
@@ -1822,9 +1850,7 @@ end:
 	if (ufs_tegra->soc->chip_id >= TEGRA234) {
 		fwspec = dev_iommu_fwspec_get(dev);
 		if (fwspec == NULL) {
-			err = -ENODEV;
-			dev_err(dev, "Failed to get MC streamidd\n");
-			goto out_disable_mphylane_clks;
+			dev_err(dev, "Failed to get MC streamid. Continuing\n");
 		} else {
 			ufs_tegra->streamid = fwspec->ids[0] & 0xffff;
 			writel(virt_ctrl_en,
