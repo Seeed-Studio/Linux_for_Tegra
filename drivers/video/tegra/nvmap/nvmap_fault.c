@@ -202,7 +202,7 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 
 		BUG_ON(priv->handle->carveout->base & ~PAGE_MASK);
 		pfn = ((priv->handle->carveout->base + offs) >> PAGE_SHIFT);
-		if (!pfn_valid(pfn)) {
+		if (!pfn_is_map_memory(pfn)) {
 			vm_insert_pfn(vma,
 				(unsigned long)vmf_address, pfn);
 			return VM_FAULT_NOPAGE;
@@ -217,7 +217,7 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 			offs >>= PAGE_SHIFT;
 			page = priv->handle->pgalloc.pages[offs];
 			pfn = page_to_pfn(page);
-			if (!pfn_valid(pfn)) {
+			if (!pfn_is_map_memory(pfn)) {
 				vm_insert_pfn(vma,
 					(unsigned long)vmf_address, pfn);
 				return VM_FAULT_NOPAGE;
