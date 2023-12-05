@@ -5,6 +5,8 @@
  * Copyright (C) 2021-2023 NVIDIA Corporation. All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/crc32.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
@@ -164,7 +166,7 @@ static int pcie_dma_epf_core_init(struct pci_epf *epf)
 	return 0;
 }
 
-#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
 static int pcie_dma_epf_core_deinit(struct pci_epf *epf)
 {
 	struct pcie_epf_dma *epfnv = epf_get_drvdata(epf);
@@ -265,7 +267,7 @@ static const struct pci_epf_device_id pcie_dma_epf_ids[] = {
 
 static const struct pci_epc_event_ops pci_epf_dma_test_event_ops = {
 	.core_init = pcie_dma_epf_core_init,
-#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
 	.core_deinit = pcie_dma_epf_core_deinit,
 #endif
 };

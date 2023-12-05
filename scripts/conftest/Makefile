@@ -126,6 +126,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += netif_set_tso_max_size
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += netif_napi_add_weight
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pde_data
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pwm_ops_struct_has_owner
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += pci_epc_event_ops_struct_has_core_deinit
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += register_shrinker_has_fmt_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += shrinker_alloc
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += snd_soc_card_jack_new_has_no_snd_soc_jack_pins

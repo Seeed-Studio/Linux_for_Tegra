@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #define pr_fmt(fmt)	"nvscic2c-pcie: epf: " fmt
 
 #include <linux/init.h>
@@ -169,7 +171,7 @@ allocate_outbound_area(struct pci_epf *epf, size_t win_size,
 	return ret;
 }
 
-#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
 static void
 clear_inbound_translation(struct pci_epf *epf)
 {
@@ -492,7 +494,7 @@ deinit_work(struct work_struct *work)
  * @DRV_MODE_EPC would have already gone then by the time
  * struct pci_epc_event_ops.core_deinit is called.
  */
-#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
 static int
 nvscic2c_pcie_epf_core_deinit(struct pci_epf *epf)
 {
@@ -733,7 +735,7 @@ get_driverdata(const struct pci_epf_device_id *id,
 
 static const struct pci_epc_event_ops nvscic2c_event_ops = {
 	.core_init = nvscic2c_pcie_epf_core_init,
-#if !defined(NV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE)
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
 	.core_deinit = nvscic2c_pcie_epf_core_deinit,
 #endif
 };

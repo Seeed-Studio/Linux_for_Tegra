@@ -55,9 +55,6 @@ subdir-ccflags-y += -DNV_DROP_PCIE_ERROR_REPORTING
 # Drop the API for pcie_disable_pcie_error_reporting
 subdir-ccflags-y += -DNV_PCIE_DIABLE_PCIE_ERROR_REPORTING_DROP
 
-# PCIE DMA EPF core deinit not implemented in core kernel
-subdir-ccflags-y += -DNV_PCIE_DMA_EPF_CORE_DEINIT_NOT_AVAILABLE
-
 # PCIE EPF driver probe has additional argument as ID
 subdir-ccflags-y += -DNV_PCIE_EFP_DRIVER_PROBE_HAS_ID_ARG
 
