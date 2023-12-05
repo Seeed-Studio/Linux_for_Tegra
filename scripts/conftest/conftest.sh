@@ -7033,6 +7033,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT" "" "types"
         ;;
 
+        pci_disable_pcie_error_reporting)
+            #
+            # Determine if the pci_disable_pcie_error_reporting() API available or not.
+            #
+            # API pci_disable_pcie_error_reporting() is dropped from Linux 6.5
+            # with commit 69b264df8a4128 ("PCI/AER: Drop unused
+            # pci_disable_pcie_error_reporting()")
+            #
+            CODE="
+            #include <linux/aer.h>
+            void conftest_pci_disable_pcie_error_reporting(void) {
+                pci_disable_pcie_error_reporting();
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_DISABLE_PCIE_ERROR_REPORTING_PRESENT" "" "functions"
+        ;;
+
         register_shrinker_has_fmt_arg)
             #
             # Determine if the 'register_shrinker' function

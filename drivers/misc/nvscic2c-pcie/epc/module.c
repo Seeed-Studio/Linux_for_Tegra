@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #define pr_fmt(fmt)	"nvscic2c-pcie: epc: " fmt
 
 #include <linux/aer.h>
@@ -290,7 +292,7 @@ deinit:
 
 	pci_release_region(pdev, 0);
 	pci_clear_master(pdev);
-#if !defined(NV_PCIE_DIABLE_PCIE_ERROR_REPORTING_DROP)
+#if defined(NV_PCI_DISABLE_PCIE_ERROR_REPORTING_PRESENT) /* Linux 6.5 */
 	pci_disable_pcie_error_reporting(pdev);
 #endif
 	pci_disable_device(pdev);

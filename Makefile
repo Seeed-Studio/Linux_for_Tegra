@@ -52,9 +52,6 @@ subdir-ccflags-y += -DNV_V4L2_ASYNC_NF_SUBDEVICE_INIT_RENAME
 # Deprecate PCIED Error reporting pci_enable_pcie_error_reporting
 subdir-ccflags-y += -DNV_DROP_PCIE_ERROR_REPORTING
 
-# Drop the API for pcie_disable_pcie_error_reporting
-subdir-ccflags-y += -DNV_PCIE_DIABLE_PCIE_ERROR_REPORTING_DROP
-
 # PCIE EPF driver probe has additional argument as ID
 subdir-ccflags-y += -DNV_PCIE_EFP_DRIVER_PROBE_HAS_ID_ARG
 
