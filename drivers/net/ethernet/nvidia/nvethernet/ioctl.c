@@ -591,8 +591,13 @@ static int ether_config_l2_filters(struct net_device *dev,
 	       u_l2_filter.mac_addr, ETH_ALEN);
 	ioctl_data.l2_filter.dma_routing = OSI_ENABLE;
 	ioctl_data.l2_filter.addr_mask = OSI_DISABLE;
-	ioctl_data.l2_filter.dma_chan = osi_dma->dma_chans[0];
-	ioctl_data.l2_filter.dma_chansel = OSI_BIT(osi_dma->dma_chans[0]);
+	ioctl_data.l2_filter.pkt_dup = u_l2_filter.pkt_dup;
+	if (ioctl_data.l2_filter.pkt_dup) {
+		ioctl_data.l2_filter.dma_chan = u_l2_filter.dma_chan;
+	} else {
+		ioctl_data.l2_filter.dma_chan = osi_dma->dma_chans[0];
+	}
+	ioctl_data.l2_filter.dma_chansel = OSI_BIT_64(ioctl_data.l2_filter.dma_chan);
 	ioctl_data.cmd = OSI_CMD_L2_FILTER;
 	return osi_handle_ioctl(osi_core, &ioctl_data);
 }
