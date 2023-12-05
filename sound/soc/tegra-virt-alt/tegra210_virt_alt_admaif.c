@@ -3,6 +3,8 @@
  * Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
@@ -237,7 +239,7 @@ static int tegra210_admaif_dai_probe(struct snd_soc_dai *dai)
 }
 
 static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
-#if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_ARG)
+#if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_PRESENT) /* Linux 6.5 */
 	.probe = tegra210_admaif_dai_probe,
 #endif
 	.hw_params	= tegra210_admaif_hw_params,
@@ -245,7 +247,7 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 	.startup	= tegra210_admaif_startup,
 };
 
-#if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_ARG)
+#if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_PRESENT) /* Linux 6.5 */
 #define ADMAIF_DAI(id)							\
 	{							\
 		.name = "ADMAIF" #id,				\

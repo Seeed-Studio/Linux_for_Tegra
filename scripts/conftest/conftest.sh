@@ -7181,6 +7181,23 @@ compile_test() {
                     "NV_SND_SOC_DAI_LINK_STRUCT_HAS_C2C_PARAMS_ARG" "" "types"
         ;;
 
+        snd_soc_dai_ops_struct_has_probe)
+            #
+            # Determine if 'struct snd_soc_dai_ops' has the 'probe' member.
+            #
+            # In Linux v6.5, commits 516ee7009ff20 ("ASoC: tegra: merge DAI
+            # call back functions into ops") added probe() callback into the
+            # struct snd_soc_dai_ops.
+            #
+            CODE="
+            #include <sound/soc.h>
+            int conftest_snd_soc_dai_ops_struct_has_probe(void) {
+                return offsetof(struct snd_soc_dai_ops, probe);
+            }"
+
+            compile_check_conftest "$CODE" "NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_PRESENT" "" "types"
+        ;;
+
         snd_soc_of_get_dai_name_has_index_arg)
             #
             # Determine if the function 'snd_soc_of_get_dai_name()' has an index argument.

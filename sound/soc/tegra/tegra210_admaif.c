@@ -4,6 +4,8 @@
 //
 // Copyright (c) 2020-2023 NVIDIA CORPORATION.  All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/module.h>
@@ -791,7 +793,7 @@ static int tegra_admaif_dai_probe(struct snd_soc_dai *dai)
 }
 
 static const struct snd_soc_dai_ops tegra_admaif_dai_ops = {
-#if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_ARG)
+#if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_PRESENT) /* Linux 6.5 */
 	.probe = tegra_admaif_dai_probe,
 #endif
 	.hw_params	= tegra_admaif_hw_params,
@@ -800,7 +802,7 @@ static const struct snd_soc_dai_ops tegra_admaif_dai_ops = {
 	.prepare	= tegra_admaif_prepare,
 };
 
-#if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_ARG)
+#if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_PRESENT) /* Linux 6.5 */
 #define DAI(dai_name)					\
 	{							\
 		.name = dai_name,				\

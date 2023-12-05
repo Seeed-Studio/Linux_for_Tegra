@@ -36,10 +36,6 @@ endif
 
 # Changes done in Linux 6.6 onwards
 ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_6); echo $$?),0)
-# Move probe to DAI Ops.
-export CONFIG_SND_SOC_MOVE_DAI_PROBE_TO_OPS=y
-subdir-ccflags-y += -DNV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_ARG
-
 # v4l2_async_subdev is renamed to v4l2_async_connection.
 subdir-ccflags-y += -DNV_V4L2_ASYNC_SUBDEV_RENAME
 
