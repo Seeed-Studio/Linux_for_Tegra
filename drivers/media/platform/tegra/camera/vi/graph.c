@@ -480,7 +480,7 @@ static int tegra_vi_graph_parse_one(struct tegra_channel *chan,
 		}
 
 		entity->node = remote;
-#if defined(NV_V4L2_ASYNC_MATCH_FWNODE_RENAME)
+#if defined(NV_V4L2_ASYNC_MATCH_TYPE_ENUM_PRESENT) /* Linux 6.5 */
 		entity->asd.match.type = V4L2_ASYNC_MATCH_TYPE_FWNODE;
 #else
 		entity->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
@@ -641,7 +641,7 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 
 		/* Add the remote entity of this endpoint */
 		entity->node = remote;
-#if defined(NV_V4L2_ASYNC_MATCH_FWNODE_RENAME)
+#if defined(NV_V4L2_ASYNC_MATCH_TYPE_ENUM_PRESENT) /* Linux 6.5 */
 		entity->asd.match.type = V4L2_ASYNC_MATCH_TYPE_FWNODE;
 #else
 		entity->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;

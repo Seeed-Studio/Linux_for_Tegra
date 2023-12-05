@@ -7342,6 +7342,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_V4L2_ASYNC_CONNECTION_STRUCT_PRESENT" "" "types"
         ;;
 
+        v4l2_async_match_type_enum_present)
+            #
+            # Determine if the 'enum v4l2_async_match_type' has the "TYPE" in its name.
+            #
+            # In Linux 6.5, with change commit 7a2259fc5182b ("media: v4l: async:
+            # Rename V4L2_ASYNC_MATCH_ macros, add TYPE_"), the enum names has "TYPE" also.
+            #
+            CODE="
+            #include <media/v4l2-async.h>
+            int conftest_v4l2_async_match_type_enum_present(void) {
+                return V4L2_ASYNC_MATCH_TYPE_I2C;
+            }"
+
+            compile_check_conftest "$CODE" "NV_V4L2_ASYNC_MATCH_TYPE_ENUM_PRESENT" "" "types"
+        ;;
+
         # When adding a new conftest entry, please use the correct format for
         # specifying the relevant upstream Linux kernel commit.
         #
