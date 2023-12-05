@@ -7021,6 +7021,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_REQUEST_STRUCT_HAS_COMPLETION_DATA_ARG" "" "types"
         ;;
 
+        shrinker_alloc)
+            #
+            # Determine if the shrinker alloc present or not.
+            #
+            # In Linux v6.7, commit c42d50aefd17 ("mm: shrinker: add infrastructure for
+            # dynamically allocating shrinker")
+            #
+            CODE="
+            #include <linux/atomic.h>
+            #include <linux/compiler_attributes.h>
+            #include <linux/shrinker.h>
+            void conftest_shrinker_alloc(void) {
+                shrinker_alloc();
+            }"
+
+            compile_check_conftest "$CODE" "NV_SHRINKER_ALLOC_PRESENT" "" "functions"
+        ;;
+
         snd_soc_card_jack_new_has_no_snd_soc_jack_pins)
             #
             # Determine if the function snd_soc_card_jack_new() has 'pins' and
