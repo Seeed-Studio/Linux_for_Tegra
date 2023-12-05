@@ -53,7 +53,7 @@ static void ser_tasklet_action(unsigned long);
 static int ser_startup(struct ser_state *, int);
 static void ser_shutdown(struct ser_state *);
 static _INLINE_ void _ser_put_char(struct ser_port *, struct circ_buf *, unsigned char);
-#if defined(NV_TTY_SERIAL_TYPE_U8_CHANGE)
+#if defined(NV_TTY_OPERATIONS_STRUCT_WRITE_HAS_U8_PTR_ARG) /* Linux 6.5 */
 static int ser_put_char(struct tty_struct *, u8);
 #else
 static int ser_put_char(struct tty_struct *, unsigned char);
@@ -67,7 +67,7 @@ static void ser_unthrottle(struct tty_struct *);
 static int ser_get_info(struct ser_state *, struct serial_struct *);
 static int ser_set_info(struct ser_state *, struct serial_struct *);
 static unsigned int ser_write_room(struct tty_struct *tty);
-#if defined(NV_TTY_SERIAL_TYPE_U8_CHANGE)
+#if defined(NV_TTY_OPERATIONS_STRUCT_WRITE_HAS_U8_PTR_ARG) /* Linux 6.5 */
 static ssize_t ser_write(struct tty_struct *, const u8 *, size_t);
 #else
 static int ser_write(struct tty_struct *, const unsigned char *, int);
@@ -622,7 +622,7 @@ static _INLINE_ void _ser_put_char(struct ser_port *port, struct circ_buf *circ,
     spin_unlock_irqrestore(&port->lock, flags);
 }
 
-#if defined(NV_TTY_SERIAL_TYPE_U8_CHANGE)
+#if defined(NV_TTY_OPERATIONS_STRUCT_WRITE_HAS_U8_PTR_ARG) /* Linux 6.5 */
 static int ser_put_char(struct tty_struct *tty, u8 ch)
 #else
 static int ser_put_char(struct tty_struct *tty, unsigned char ch)
@@ -921,7 +921,7 @@ static unsigned int ser_write_room(struct tty_struct *tty)
     return status;
 }
 
-#if defined(NV_TTY_SERIAL_TYPE_U8_CHANGE)
+#if defined(NV_TTY_OPERATIONS_STRUCT_WRITE_HAS_U8_PTR_ARG) /* Linux 6.5 */
 static ssize_t ser_write(struct tty_struct *tty, const u8 *buf, size_t count)
 #else
 static int ser_write(struct tty_struct *tty, const unsigned char *buf, int count)

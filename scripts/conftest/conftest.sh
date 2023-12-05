@@ -7237,6 +7237,27 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TEGRA_DEV_IOMMU_GET_STREAM_ID_PRESENT" "" "functions"
         ;;
 
+        tty_operations_struct_write_has_u8_ptr_arg)
+            #
+            # Determine if the function write() of tty_operations has u8 type pointer argument.
+            #
+            # The data type of function write() of struct tty_operation has changed
+            # to u8 data type from Linux 6.5 with change
+            # commit 69851e4ab8feeb3 ("tty: propagate u8 data to tty_operations::write()")
+            #
+            CODE="
+            #include <linux/tty.h>
+            #include <linux/tty_driver.h>
+            static inline int ser_write(struct tty_struct *ttys, const unsigned char *buf, int l) {
+                 return l;
+            }
+            static struct tty_operations tty_ops = {
+                  .write = ser_write,
+            };"
+
+            compile_check_conftest "$CODE" "NV_TTY_OPERATIONS_STRUCT_WRITE_HAS_U8_PTR_ARG" "" "functions"
+        ;;
+
         # When adding a new conftest entry, please use the correct format for
         # specifying the relevant upstream Linux kernel commit.
         #
