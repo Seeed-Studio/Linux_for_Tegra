@@ -203,7 +203,7 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 	}
 
 	list_for_each_entry(rtd, &card->rtd_list, list) {
-#if defined(NV_ASOC_XXX_DROP)
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
 		struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
 		struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 #else

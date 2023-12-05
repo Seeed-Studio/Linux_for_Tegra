@@ -3,6 +3,8 @@
  * Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/version.h>
@@ -37,7 +39,7 @@ static int tegra_alt_pcm_open(struct snd_soc_component *component,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct tegra_alt_pcm_dma_params *dmap;
 	struct dma_chan *chan;
-#if defined(NV_ASOC_XXX_DROP)
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
 	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 #else
 	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
@@ -47,7 +49,7 @@ static int tegra_alt_pcm_open(struct snd_soc_component *component,
 	if (rtd->dai_link->no_pcm)
 		return 0;
 
-#if defined(NV_ASOC_XXX_DROP)
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
 	dmap = snd_soc_dai_get_dma_data(snd_soc_rtd_to_cpu(rtd, 0), substream);
 #else
 	dmap = snd_soc_dai_get_dma_data(asoc_rtd_to_cpu(rtd, 0), substream);
@@ -114,7 +116,7 @@ static int tegra_alt_pcm_hw_params(struct snd_soc_component *component,
 	if (rtd->dai_link->no_pcm)
 		return 0;
 
-#if defined(NV_ASOC_XXX_DROP)
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
 	dmap = snd_soc_dai_get_dma_data(snd_soc_rtd_to_cpu(rtd, 0), substream);
 #else
 	dmap = snd_soc_dai_get_dma_data(asoc_rtd_to_cpu(rtd, 0), substream);
@@ -261,7 +263,7 @@ static int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd,
 	if (ret)
 		return ret;
 
-#if defined(NV_ASOC_XXX_DROP)
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
 	dmap = snd_soc_dai_get_dma_data(snd_soc_rtd_to_cpu(rtd, 0),
 			pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream);
 #else
@@ -278,7 +280,7 @@ static int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd,
 			goto err;
 	}
 
-#if defined(NV_ASOC_XXX_DROP)
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
 	dmap = snd_soc_dai_get_dma_data(snd_soc_rtd_to_cpu(rtd, 0),
 			pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream);
 #else
