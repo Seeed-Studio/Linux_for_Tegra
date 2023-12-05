@@ -7358,6 +7358,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_V4L2_ASYNC_MATCH_TYPE_ENUM_PRESENT" "" "types"
         ;;
 
+        v4l2_async_subdev_nf_init)
+            #
+            # Determine if the function v4l2_async_subdev_nf_init() present or not.
+            #
+            # In Linux 6.5, with change commit bda8953e8c3e7e ("media: v4l: async:
+            # Drop v4l2_async_nf_parse_fwnode_endpoints()"), added the function
+            # v4l2_async_subdev_nf_init() and dropped v4l2_async_nf_init().
+            #
+            CODE="
+            #include <media/v4l2-async.h>
+            void conftest_v4l2_async_subdev_nf_init(void) {
+                v4l2_async_subdev_nf_init();
+            }"
+
+            compile_check_conftest "$CODE" "NV_V4L2_ASYNC_SUBDEV_NF_INIT_PRESENT" "" "functions"
+        ;;
+
         # When adding a new conftest entry, please use the correct format for
         # specifying the relevant upstream Linux kernel commit.
         #

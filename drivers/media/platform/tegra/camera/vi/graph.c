@@ -672,7 +672,7 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 		list_for_each_entry(entity, &chan->entities, list)
 			__v4l2_async_notifier_add_subdev(&chan->notifier, &entity->asd);
 #else
-#if defined (NV_V4L2_ASYNC_NF_SUBDEVICE_INIT_RENAME)
+#if defined (NV_V4L2_ASYNC_SUBDEV_NF_INIT_PRESENT) /* Linux 6.5 */
 		v4l2_async_subdev_nf_init(&chan->notifier, tegra_channel_find_linked_csi_subdev(chan));
 		list_for_each_entry(entity, &chan->entities, list) {
 			struct v4l2_async_connection *asd;
@@ -698,7 +698,7 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 		ret = v4l2_async_notifier_register(&vi->v4l2_dev,
 					&chan->notifier);
 #else
-#if defined (NV_V4L2_ASYNC_NF_SUBDEVICE_INIT_RENAME)
+#if defined (NV_V4L2_ASYNC_SUBDEV_NF_INIT_PRESENT) /* Linux 6.5 */
 		ret = v4l2_async_nf_register(&chan->notifier);
 #else
 		ret = v4l2_async_nf_register(&vi->v4l2_dev,
