@@ -76,8 +76,6 @@ endif
 
 # Changes done in Linux 6.7 onwards
 ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_7); echo $$?),0)
-subdir-ccflags-y += -DNV_ASOC_XXX_DROP
-
 # drm_debugfs_remove_files has root argument
 subdir-ccflags-y += -DNV_DRM_DEBUGFS_REMOVE_HAS_ROOT_ARGS
 endif
