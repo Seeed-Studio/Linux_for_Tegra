@@ -7050,6 +7050,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_DISABLE_PCIE_ERROR_REPORTING_PRESENT" "" "functions"
         ;;
 
+        pci_enable_pcie_error_reporting)
+            #
+            # Determine if the pci_enable_pcie_error_reporting() API available.
+            #
+            # API pci_enable_pcie_error_reporting() is dropped from Linux 6.5
+            # with commit 7ec4b34be42345 ("PCI/AER: Unexport
+            # pci_disable_pcie_error_reporting()")
+            #
+            CODE="
+            #include <linux/aer.h>
+            void conftest_pci_enable_pcie_error_reporting(void) {
+                pci_enable_pcie_error_reporting();
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_ENABLE_PCIE_ERROR_REPORTING_PRESENT" "" "functions"
+        ;;
+
         register_shrinker_has_fmt_arg)
             #
             # Determine if the 'register_shrinker' function

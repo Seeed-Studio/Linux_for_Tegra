@@ -354,7 +354,7 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 	ret = pcim_enable_device(pdev);
 	if (ret)
 		goto err_enable_device;
-#if !defined(NV_DROP_PCIE_ERROR_REPORTING)
+#if defined(NV_PCI_ENABLE_PCIE_ERROR_REPORTING_PRESENT) /* Linux 6.5 */
 	pci_enable_pcie_error_reporting(pdev);
 #endif
 	pci_set_master(pdev);

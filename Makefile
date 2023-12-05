@@ -49,9 +49,6 @@ subdir-ccflags-y += -DNV_V4L2_ASYNC_MATCH_FWNODE_RENAME
 # Rename async_nf_init and v4l2_async_subdev_nf_register
 subdir-ccflags-y += -DNV_V4L2_ASYNC_NF_SUBDEVICE_INIT_RENAME
 
-# Deprecate PCIED Error reporting pci_enable_pcie_error_reporting
-subdir-ccflags-y += -DNV_DROP_PCIE_ERROR_REPORTING
-
 # PCIE EPF driver probe has additional argument as ID
 subdir-ccflags-y += -DNV_PCIE_EFP_DRIVER_PROBE_HAS_ID_ARG
 
