@@ -7325,6 +7325,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TTY_OPERATIONS_STRUCT_WRITE_HAS_U8_PTR_ARG" "" "functions"
         ;;
 
+        v4l2_async_connection_struct_present)
+            #
+            # Determine if the 'struct v4l2_async_connection' present or not.
+            #
+            # The struct v4l2_async_subdev is renamed to v4l2_async_connection with change
+            # commit adb2dcd5f2d49d3 ("media: v4l: async: Rename v4l2_async_subdev
+            # as v4l2_async_connection") in Linux 6.5
+            #
+            CODE="
+            #include <media/v4l2-async.h>
+            int conftest_v4l2_async_connection_struct_present(void) {
+                return offsetof(struct v4l2_async_connection, match);
+            }"
+
+            compile_check_conftest "$CODE" "NV_V4L2_ASYNC_CONNECTION_STRUCT_PRESENT" "" "types"
+        ;;
+
         # When adding a new conftest entry, please use the correct format for
         # specifying the relevant upstream Linux kernel commit.
         #

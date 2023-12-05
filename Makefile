@@ -36,9 +36,6 @@ endif
 
 # Changes done in Linux 6.6 onwards
 ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_6); echo $$?),0)
-# v4l2_async_subdev is renamed to v4l2_async_connection.
-subdir-ccflags-y += -DNV_V4L2_ASYNC_SUBDEV_RENAME
-
 # Rename V4L2_ASYNC_MATCH_FWNODE to V4L2_ASYNC_MATCH_TYPE_FWNODE
 subdir-ccflags-y += -DNV_V4L2_ASYNC_MATCH_FWNODE_RENAME
 

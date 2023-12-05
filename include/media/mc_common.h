@@ -8,6 +8,8 @@
 #ifndef __CAMERA_MC_COMMON_H__
 #define __CAMERA_MC_COMMON_H__
 
+#include <nvidia/conftest.h>
+
 #include <media/media-device.h>
 #include <media/media-entity.h>
 #include <media/sensor_common.h>
@@ -94,7 +96,7 @@ struct tegra_vi_graph_entity {
 	struct device_node *node;
 	struct media_entity *entity;
 
-#if defined(NV_V4L2_ASYNC_SUBDEV_RENAME)
+#if defined(NV_V4L2_ASYNC_CONNECTION_STRUCT_PRESENT) /* Linux 6.5 */
 	struct v4l2_async_connection asd;
 #else
 	struct v4l2_async_subdev asd;

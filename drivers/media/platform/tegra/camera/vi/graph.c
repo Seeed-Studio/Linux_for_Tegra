@@ -4,6 +4,9 @@
  *
  * Copyright (c) 2015-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
+
 #include <linux/clk.h>
 #include <linux/list.h>
 #include <linux/of.h>
@@ -341,7 +344,7 @@ register_device_error:
 	return ret;
 }
 
-#if defined(NV_V4L2_ASYNC_SUBDEV_RENAME)
+#if defined(NV_V4L2_ASYNC_CONNECTION_STRUCT_PRESENT) /* Linux 6.5 */
 static int tegra_vi_graph_notify_bound(struct v4l2_async_notifier *notifier,
 				   struct v4l2_subdev *subdev,
 				   struct v4l2_async_connection *asd)
@@ -380,7 +383,7 @@ static int tegra_vi_graph_notify_bound(struct v4l2_async_notifier *notifier,
 	return -EINVAL;
 }
 
-#if defined(NV_V4L2_ASYNC_SUBDEV_RENAME)
+#if defined(NV_V4L2_ASYNC_CONNECTION_STRUCT_PRESENT) /* Linux 6.5 */
 static void tegra_vi_graph_notify_unbind(struct v4l2_async_notifier *notifier,
 				   struct v4l2_subdev *subdev,
 				   struct v4l2_async_connection *asd)
