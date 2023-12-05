@@ -1717,17 +1717,11 @@ static void tegra_sor_early_unregister(struct drm_connector *connector)
 	struct tegra_output *output = connector_to_output(connector);
 	unsigned int count = ARRAY_SIZE(debugfs_files);
 	struct tegra_sor *sor = to_sor(output);
-#if defined(NV_DRM_DEBUGFS_REMOVE_HAS_ROOT_ARGS)
-	struct dentry *root;
 
-#ifdef CONFIG_DEBUG_FS
-	root = connector->debugfs_entry;
-#else
-	root = NULL;
-#endif
-
+#if defined(NV_DRM_DEBUGFS_REMOVE_FILES_HAS_ROOT_ARG) /* Linux v6.7 */
 	drm_debugfs_remove_files(sor->debugfs_files, count,
-				 root, connector->dev->primary);
+				 connector->debugfs_entry,
+				 connector->dev->primary);
 #else
 
 	drm_debugfs_remove_files(sor->debugfs_files, count,

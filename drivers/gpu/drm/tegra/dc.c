@@ -4,6 +4,8 @@
  * Copyright (C) 2012 NVIDIA CORPORATION.  All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
@@ -1746,7 +1748,8 @@ static void tegra_dc_early_unregister(struct drm_crtc *crtc)
 	unsigned int count = ARRAY_SIZE(debugfs_files);
 	struct drm_minor *minor = crtc->dev->primary;
 	struct tegra_dc *dc = to_tegra_dc(crtc);
-#if defined(NV_DRM_DEBUGFS_REMOVE_HAS_ROOT_ARGS)
+
+#if defined(NV_DRM_DEBUGFS_REMOVE_FILES_HAS_ROOT_ARG) /* Linux v6.7 */
 	struct dentry *root;
 
 #ifdef CONFIG_DEBUG_FS

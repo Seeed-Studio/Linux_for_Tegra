@@ -6688,6 +6688,25 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DRM_APERTURE_REMOVE_FRAMEBUFFERS_HAS_NO_PRIMARY_ARG" "" "types"
         ;;
 
+        drm_debugfs_remove_files_has_root_arg)
+            #
+            # Determine if the function drm_debugfs_remove_files() has the 'root' argument.
+            #
+            # Commit 8e455145d8f1 ("drm/debugfs: rework drm_debugfs_create_files
+            # implementation v2") added a 'root' argument to the function
+            # drm_debugfs_remove_files() in Linux v6.7.
+            #
+            CODE="
+            #include <drm/drm_debugfs.h>
+            int conftest_drm_debugfs_remove_files_has_root_arg(const struct drm_info_list *files,
+                                                               int count, struct dentry *root,
+                                                               struct drm_minor *minor) {
+                return drm_debugfs_remove_files(files, count, root, minor);
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_DEBUGFS_REMOVE_FILES_HAS_ROOT_ARG" "" "types"
+        ;;
+
         drm_driver_struct_has_irq_enabled_arg)
             #
             # Determine if the 'drm_driver' structure
