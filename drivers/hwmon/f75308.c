@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <linux/hwmon-sysfs.h>
 #include <linux/hwmon.h>
 #include <linux/i2c.h>
@@ -1256,10 +1258,10 @@ static struct i2c_driver f75308_driver = {
 		.of_match_table = of_match_ptr(f75308_match_table),
 	},
 	.detect = f75308_detect,
-#if defined(NV_I2C_LEGACY_PROBE_NEW_REMOVED)
-	.probe     = f75308_probe,
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_HAS_PROBE_NEW) /* Dropped on Linux 6.6 */
 	.probe_new = f75308_probe,
+#else
+	.probe     = f75308_probe,
 #endif
 	.remove = f75308_remove,
 	.address_list = f75308_addr,

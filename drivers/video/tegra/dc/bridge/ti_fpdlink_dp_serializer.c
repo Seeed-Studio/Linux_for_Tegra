@@ -5,6 +5,8 @@
  * DS90UH983-Q1 DP to FPD-Link Serializer driver
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/device.h>
 #include <linux/fwnode.h>
 #include <linux/gpio/consumer.h>
@@ -1039,10 +1041,10 @@ static struct i2c_driver ti_fpdlink_dp_ser_i2c_driver = {
 		.name		= "ti_fpdlink_dp_ser",
 		.of_match_table	= of_match_ptr(ti_fpdlink_dp_ser_dt_ids),
 	},
-#if defined(NV_I2C_LEGACY_PROBE_NEW_REMOVED)
-	.probe		= ti_fpdlink_dp_ser_probe,
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_HAS_PROBE_NEW) /* Dropped on Linux 6.6 */
 	.probe_new	= ti_fpdlink_dp_ser_probe,
+#else
+	.probe		= ti_fpdlink_dp_ser_probe,
 #endif
 	.remove		= ti_fpdlink_dp_ser_remove,
 };

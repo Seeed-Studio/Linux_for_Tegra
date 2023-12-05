@@ -5,6 +5,8 @@
  * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/device.h>
 #include <linux/fwnode.h>
 #include <linux/gpio/driver.h>
@@ -366,10 +368,10 @@ static struct i2c_driver maxim_gmsl_hdmi_ser_i2c_driver = {
 		.pm	= &maxim_gmsl_hdmi_ser_pm_ops,
 #endif
 	},
-#if defined(NV_I2C_LEGACY_PROBE_NEW_REMOVED)
-	.probe		= maxim_gmsl_hdmi_ser_probe,
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_HAS_PROBE_NEW) /* Dropped on Linux 6.6 */
 	.probe_new	= maxim_gmsl_hdmi_ser_probe,
+#else
+	.probe		= maxim_gmsl_hdmi_ser_probe,
 #endif
 	.remove		= maxim_gmsl_hdmi_ser_remove,
 };

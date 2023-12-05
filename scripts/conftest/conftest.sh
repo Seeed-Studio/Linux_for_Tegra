@@ -5400,6 +5400,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_I2C_UNREGISTER_DEVICE_PRESENT" "" "functions"
         ;;
 
+        i2c_driver_struct_has_probe_new)
+            #
+            # Determine if struct i2c_driver has probe_new() present
+            #
+            # Added by commit 5eb1e6e459cf ("i2c: Drop legacy callback .probe_new()")
+            #
+            CODE="
+            #define _LINUX_EFI_H
+            #include <linux/i2c.h>
+            int conftest_i2c_driver_struct_has_probe_new(void) {
+                return offsetof(struct i2c_driver, probe_new);
+            }"
+
+            compile_check_conftest "$CODE" "NV_I2C_DRIVER_STRUCT_HAS_PROBE_NEW" "" "types"
+        ;;
+
         of_get_named_gpio)
             #
             # Determine if of_get_named_gpio() function is present
