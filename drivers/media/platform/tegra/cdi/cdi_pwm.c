@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2016-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/of.h>
@@ -130,7 +132,7 @@ static const struct pwm_ops cdi_pwm_ops = {
 	.enable = cdi_pwm_enable,
 	.disable = cdi_pwm_disable,
 #endif
-#if !defined(NV_PWM_OPS_HAS_NO_OWNER)
+#if defined(NV_PWM_OPS_STRUCT_HAS_OWNER) /* Linux 6.7 */
 	.owner = THIS_MODULE,
 #endif
 };

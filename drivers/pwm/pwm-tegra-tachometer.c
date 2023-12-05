@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+// Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/of.h>
@@ -316,7 +318,7 @@ static const struct pwm_ops pwm_tegra_tach_ops = {
 	.apply = tegra_pwm_apply,
 #endif
 	.capture = pwm_tegra_tacho_capture,
-#if !defined(NV_PWM_OPS_HAS_NO_OWNER)
+#if defined(NV_PWM_OPS_STRUCT_HAS_OWNER) /* Linux 6.7 */
 	.owner = THIS_MODULE,
 #endif
 };

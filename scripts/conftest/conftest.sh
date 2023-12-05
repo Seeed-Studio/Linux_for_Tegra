@@ -6968,6 +6968,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MII_BUS_STRUCT_HAS_WRITE_C45" "" "types"
         ;;
 
+        pwm_ops_struct_has_owner)
+            #
+            # Determine if the pwm_ops struct has an owner member.
+            #
+            # Added by commit 384461abcab6 ("pwm: Manage owner assignment implicitly
+            # for drivers") in Linux 6.7.
+            #
+            CODE="
+            #include <linux/pwm.h>
+            int conftest_pwm_ops_struct_has_owner(void) {
+                return offsetof(struct pwm_ops, owner);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PWM_OPS_STRUCT_HAS_OWNER" "" "types"
+        ;;
+
         register_shrinker_has_fmt_arg)
             #
             # Determine if the 'register_shrinker' function
