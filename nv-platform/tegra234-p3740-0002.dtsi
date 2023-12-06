@@ -69,6 +69,18 @@
 					5seg = <100 80 60 40 20>;
 				};
 			};
+
+			tca9539@74 {
+				compatible = "ti,tca9539";
+				reg = <0x74>;
+
+				status = "okay";
+				interrupt-parent = <&gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(G, 5) IRQ_TYPE_LEVEL_LOW>;
+				vcc-supply = <&vdd_3v3_ao>;
+				#gpio-cells = <2>;
+				gpio-controller;
+			};
 		};
 
 		padctl@3520000 {
