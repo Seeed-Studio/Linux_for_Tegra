@@ -2448,6 +2448,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_DEV_HAS_ATS_ENABLED" "" "types"
         ;;
 
+        get_file_rcu_has_double_ptr_file_arg)
+            #
+            # Determine if the function 'get_file_rcu()' has pointer to pointer of file
+            # type argument or not.
+            #
+            # In Linux v6.7, commit 0ede61d8589cc2 ("file: convert to SLAB_TYPESAFE_BY_RCU")
+            # changed the argument of file handle to pointer type.
+            #
+            CODE="
+            #include <linux/fs.h>
+            struct file *conftest_get_file_rcu_has_double_ptr_file_arg(struct file __rcu *f) {
+                    return get_file_rcu(&f);
+            }"
+
+            compile_check_conftest "$CODE" "NV_GET_FILE_RCU_HAS_DOUBLE_PTR_FILE_ARG" "" "types"
+        ;;
+
         get_user_pages)
             #
             # Conftest for get_user_pages()

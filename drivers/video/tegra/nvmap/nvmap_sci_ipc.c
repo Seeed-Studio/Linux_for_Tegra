@@ -5,6 +5,8 @@
  * mapping between nvmap_hnadle and sci_ipc entery
  */
 
+#include <nvidia/conftest.h>
+
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
 #include <linux/slab.h>
@@ -249,7 +251,7 @@ int nvmap_get_handle_from_sci_ipc_id(struct nvmap_client *client, u32 flags,
 				goto unlock;
 			}
 		} else {
-#if defined(NV_GET_FILE_RCU_HAS_PTR_FILE_ARGS)
+#if defined(NV_GET_FILE_RCU_HAS_DOUBLE_PTR_FILE_ARG) /* Linux 6.7 */
 			if (!get_file_rcu(&h->dmabuf_ro->file)) {
 #else
 			if (!get_file_rcu(h->dmabuf_ro->file)) {

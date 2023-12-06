@@ -5,6 +5,8 @@
  * Handle allocation and freeing routines for nvmap
  */
 
+#include <nvidia/conftest.h>
+
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
 #include <linux/err.h>
@@ -515,7 +517,7 @@ struct nvmap_handle_ref *nvmap_dup_handle_ro(struct nvmap_client *client,
 			return ERR_CAST(h->dmabuf_ro);
 		}
 	} else {
-#if defined(NV_GET_FILE_RCU_HAS_PTR_FILE_ARGS)
+#if defined(NV_GET_FILE_RCU_HAS_DOUBLE_PTR_FILE_ARG) /* Linux 6.7 */
 		if (!get_file_rcu(&h->dmabuf_ro->file)) {
 #else
 		if (!get_file_rcu(h->dmabuf_ro->file)) {

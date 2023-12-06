@@ -80,9 +80,6 @@ subdir-ccflags-y += -DNV_ASOC_XXX_DROP
 
 # drm_debugfs_remove_files has root argument
 subdir-ccflags-y += -DNV_DRM_DEBUGFS_REMOVE_HAS_ROOT_ARGS
-
-# get_file_rcu() have change the argument
-subdir-ccflags-y += -DNV_GET_FILE_RCU_HAS_PTR_FILE_ARGS
 endif
 
 ifeq ($(CONFIG_TEGRA_VIRTUALIZATION),y)
