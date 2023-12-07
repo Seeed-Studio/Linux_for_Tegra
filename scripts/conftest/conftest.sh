@@ -7067,6 +7067,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_ENABLE_PCIE_ERROR_REPORTING_PRESENT" "" "functions"
         ;;
 
+        pci_epf_driver_struct_probe_has_id_arg)
+            #
+            # Determine if the struct pci_epf_driver probe API has ID argument or not.
+            #
+            # The additional argument as ID is added in probe() of the struct pci_epf_driver
+            # with change 081c715dfd5054 ("PCI: endpoint: Pass EPF device ID to the probe function")
+            # in Linux 6.4.
+            #
+            CODE="
+            #include <linux/pci-epf.h>
+            void conftest_pci_epf_driver_struct_probe_has_id_arg(struct pci_epf_driver *epfd) {
+                epfd->probe(NULL);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_EPF_DRIVER_STRUCT_PROBE_HAS_ID_ARG" "" "functions"
+        ;;
+
         register_shrinker_has_fmt_arg)
             #
             # Determine if the 'register_shrinker' function

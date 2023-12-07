@@ -741,7 +741,7 @@ static const struct pci_epc_event_ops nvscic2c_event_ops = {
 };
 
 static int
-#if defined(NV_PCIE_EFP_DRIVER_PROBE_HAS_ID_ARG)
+#if defined(NV_PCI_EPF_DRIVER_STRUCT_PROBE_HAS_ID_ARG) /* Linux 6.4 */
 nvscic2c_pcie_epf_probe(struct pci_epf *epf, const struct pci_epf_device_id *id)
 #else
 nvscic2c_pcie_epf_probe(struct pci_epf *epf)

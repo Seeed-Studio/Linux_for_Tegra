@@ -36,9 +36,6 @@ endif
 
 # Changes done in Linux 6.6 onwards
 ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_6); echo $$?),0)
-# PCIE EPF driver probe has additional argument as ID
-subdir-ccflags-y += -DNV_PCIE_EFP_DRIVER_PROBE_HAS_ID_ARG
-
 # Crypto driver has major change in it ops, skip it
 export CONFIG_SKIP_CRYPTO=y
 endif
