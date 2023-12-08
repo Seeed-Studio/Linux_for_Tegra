@@ -185,7 +185,7 @@ static bool is_pex9749(struct i2c_client *client)
 	}
 }
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int pex9749_probe(struct i2c_client *client)
 #else
 static int pex9749_probe(struct i2c_client *client, const struct i2c_device_id *id)

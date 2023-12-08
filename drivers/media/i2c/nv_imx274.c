@@ -5,6 +5,8 @@
  * Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/gpio.h>
@@ -1260,7 +1262,7 @@ static const struct v4l2_subdev_internal_ops imx274_subdev_internal_ops = {
 	.open = imx274_open,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int imx274_probe(struct i2c_client *client)
 #else
 static int imx274_probe(struct i2c_client *client,

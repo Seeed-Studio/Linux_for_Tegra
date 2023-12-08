@@ -5,6 +5,8 @@
  * ar1335.c - AR1335 sensor driver
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/gpio.h>
@@ -2361,7 +2363,7 @@ exit:
 	return ret;
 }
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int cam_probe(struct i2c_client *client)
 #else
 static int cam_probe(struct i2c_client *client,

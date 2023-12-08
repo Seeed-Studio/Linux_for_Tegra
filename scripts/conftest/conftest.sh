@@ -5400,6 +5400,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_I2C_UNREGISTER_DEVICE_PRESENT" "" "functions"
         ;;
 
+        i2c_driver_struct_probe_without_i2c_device_id_arg)
+            #
+            # Determine if function probe() of struct i2c_driver has
+            # struct i2c_device_id as argument or not.
+            #
+            # Removed by commit 03c835f498b54 ("i2c: Switch .probe() to not take an id parameter")
+            # Linux 6.3
+            #
+            CODE="
+            #define _LINUX_EFI_H
+            #include <linux/i2c.h>
+            void conftest_i2c_driver_struct_probe_without_i2c_device_id_arg(struct i2c_driver *i2cd) {
+                i2cd->probe(NULL);
+            }"
+
+            compile_check_conftest "$CODE" "NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG" "" "types"
+        ;;
+
         i2c_driver_struct_has_probe_new)
             #
             # Determine if struct i2c_driver has probe_new() present

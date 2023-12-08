@@ -7,6 +7,8 @@
 
 /* #define DEBUG */
 
+#include <nvidia/conftest.h>
+
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
 #include <media/camera_common.h>
@@ -226,7 +228,7 @@ static  struct regmap_config max96712_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int max96712_probe(struct i2c_client *client)
 #else
 static int max96712_probe(struct i2c_client *client,

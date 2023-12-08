@@ -4,6 +4,8 @@
  * Maxim MAX77851 MFD Driver
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
 #include <linux/mfd/core.h>
@@ -14,7 +16,6 @@
 #include <linux/of_device.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
-#include <linux/version.h>
 
 #define IS_MX_MASTER23(fps) ((fps == MX_FPS_MASTER2) || (fps == MX_FPS_MASTER3))
 #define IS_MX_MASTER01(fps) ((fps == MX_FPS_MASTER0) || (fps == MX_FPS_MASTER1))
@@ -503,7 +504,7 @@ static void max77851_pm_power_off(void)
 			   FPS_SW_COLD_RST, FPS_SW_COLD_RST);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int max77851_probe(struct i2c_client *client)
 #else
 static int max77851_probe(struct i2c_client *client,

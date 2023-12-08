@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright (c) 2015-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/fs.h>
@@ -564,7 +566,7 @@ static void cdi_dev_get_cim_ver(struct device_node *np, struct cdi_dev_info *inf
 	}
 }
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int cdi_dev_probe(struct i2c_client *client)
 #else
 static int cdi_dev_probe(struct i2c_client *client,

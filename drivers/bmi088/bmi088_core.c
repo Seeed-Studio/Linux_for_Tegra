@@ -14,6 +14,8 @@
  * };
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/device.h>
 #include <linux/version.h>
 #include <linux/i2c.h>
@@ -1627,7 +1629,7 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 }
 
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int bmi_probe(struct i2c_client *client)
 #else
 static int bmi_probe(struct i2c_client *client, const struct i2c_device_id *id)

@@ -17,6 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
@@ -1378,7 +1381,7 @@ static int fusb301_pm_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(fusb301_dev_pm_ops,
 			fusb301_pm_suspend, fusb301_pm_resume);
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int fusb301_probe(struct i2c_client *client)
 #else
 static int fusb301_probe(struct i2c_client *client,

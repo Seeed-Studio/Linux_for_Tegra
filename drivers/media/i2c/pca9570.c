@@ -5,6 +5,8 @@
  * Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
 #include <linux/i2c.h>
@@ -258,7 +260,7 @@ static  struct regmap_config pca9570_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int pca9570_probe(struct i2c_client *client)
 #else
 static int pca9570_probe(struct i2c_client *client,

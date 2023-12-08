@@ -4,6 +4,8 @@
  * virtual_i2c_mux.c - virtual i2c mux driver for P3762 & P3783 GMSL boards.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/i2c.h>
 #include <linux/i2c-mux.h>
 #include <linux/module.h>
@@ -47,7 +49,7 @@ static int virtual_i2c_mux_deselect(struct i2c_mux_core *muxc, u32 chan)
 	return ret;
 }
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int virtual_i2c_mux_probe(struct i2c_client *client)
 #else
 static int virtual_i2c_mux_probe(struct i2c_client *client,

@@ -4,6 +4,8 @@
  * ar0234.c - ar0234 sensor driver
  */
 
+#include <nvidia/conftest.h>
+
 #define DEBUG 1
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -1044,7 +1046,7 @@ static int ar0234_board_setup(struct ar0234 *priv)
 
 
 
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int ar0234_probe(struct i2c_client *client)
 #else
 static int ar0234_probe(struct i2c_client *client,
