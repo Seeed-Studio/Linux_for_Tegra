@@ -585,6 +585,7 @@ job-orin-nano-industrial-4g:
          - tar xpf Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - ./tools/l4t_flash_prerequisites.sh
+         - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
@@ -630,6 +631,7 @@ job-orin-nano-reserver-4g:
          - tar xpf Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - ./tools/l4t_flash_prerequisites.sh
+         - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2   ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
@@ -675,6 +677,7 @@ job-orin-nano-devkit-4g:
          - tar xpf Tegra_Linux_Sample-Root-Filesystem_R35.3.1_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - ./tools/l4t_flash_prerequisites.sh
+         - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2   ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
          - mkdir deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
