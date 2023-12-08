@@ -9,7 +9,6 @@ subdir-ccflags-y += -Werror
 LINUX_VERSION := $(shell expr $(VERSION) \* 256 + $(PATCHLEVEL))
 LINUX_VERSION_6_2 := $(shell expr 6 \* 256 + 2)
 LINUX_VERSION_6_3 := $(shell expr 6 \* 256 + 3)
-LINUX_VERSION_6_4 := $(shell expr 6 \* 256 + 4)
 LINUX_VERSION_6_6 := $(shell expr 6 \* 256 + 6)
 LINUX_VERSION_6_7 := $(shell expr 6 \* 256 + 7)
 
@@ -26,12 +25,6 @@ endif
 # Legacy GPIO support is removed in Linux v6.3
 ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_3); echo $$?),0)
 export CONFIG_TEGRA_GPIO_LEGACY_DISABLE=y
-endif
-
-# Changes done in Linux 6.4 onwards
-ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_4); echo $$?),0)
-# Argument on class attribute callback changed to constant type
-subdir-ccflags-y += -DNV_CLASS_ATTRIBUTE_STRUCT_HAS_CONST_STRUCT_CLASS_ARG
 endif
 
 # Changes done in Linux 6.6 onwards

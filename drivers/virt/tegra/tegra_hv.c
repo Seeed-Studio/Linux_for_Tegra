@@ -416,7 +416,7 @@ static void tegra_hv_cleanup(struct tegra_hv_data *hvd)
 	}
 }
 
-#if defined(NV_CLASS_ATTRIBUTE_STRUCT_HAS_CONST_STRUCT_CLASS_ARG)
+#if defined(NV_CLASS_ATTRIBUTE_STRUCT_HAS_CONST_STRUCT_CLASS_ATTRIBUTE_ARG)
 static ssize_t vmid_show(const struct class *class,
 	const struct class_attribute *attr, char *buf)
 #else

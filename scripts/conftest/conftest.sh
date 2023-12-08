@@ -6514,6 +6514,26 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_BUS_TYPE_STRUCT_UEVENT_HAS_CONST_DEV_ARG" "" "types"
         ;;
 
+        class_attribute_struct_has_const_struct_class_attribute)
+            #
+            # Determine if struct class_attribute function has const type "struct class_attribute"
+            # argument or not.
+            #
+            # Modified the argument by change commit 75a2d4226b5371 ("driver core: class: mark
+            # the struct class for sysfs callbacks as constant") for Linux 6.3
+            #
+            CODE="
+            #include <linux/device/class.h>
+            static ssize_t show_cb(struct class *class, struct class_attribute *attr, char *buf) {
+                 return 0;
+            }
+            static struct class_attribute ca = {
+                 .show = show_cb,
+            };"
+
+            compile_check_conftest "$CODE" "NV_CLASS_ATTRIBUTE_STRUCT_HAS_CONST_STRUCT_CLASS_ATTRIBUTE_ARG" "" "functions"
+        ;;
+
         class_create_has_no_owner_arg)
             #
             # Determine if the class_create() function has the 'owner' argument.
