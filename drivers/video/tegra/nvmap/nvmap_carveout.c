@@ -264,6 +264,12 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 			if (handle->numa_id != co_heap->carveout->numa_node_id)
 				continue;
 			block = nvmap_heap_alloc(co_heap->carveout, handle, start);
+			/* Currently, all IVM carveouts are on numa node 0 and having same
+			 * usage_mask, hence if allocation fails from one IVM carveout, it
+			 * should try on next carveout.
+			 */
+			if (!block && (type & NVMAP_HEAP_CARVEOUT_IVM))
+				continue;
 			goto exit;
 		}
 	}
