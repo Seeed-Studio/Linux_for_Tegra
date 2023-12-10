@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright (c) 2017-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -40,6 +42,9 @@ static struct gpio_chip *cdi_gpio_get_chip(struct platform_device *pdev,
 						struct cdi_gpio_plat_data *pd)
 {
 	struct gpio_chip *gc = NULL;
+#if !defined(NV_GPIOCHIP_FIND_PRESENT) /* Linux 6.7 */
+	struct gpio_device *gdev;
+#endif
 	char name[MAX_STR_SIZE];
 
 	if (strlen(pd->gpio_prnt_chip) > MAX_STR_SIZE) {
@@ -49,7 +54,15 @@ static struct gpio_chip *cdi_gpio_get_chip(struct platform_device *pdev,
 	}
 	strcpy(name, pd->gpio_prnt_chip);
 
+#if defined(NV_GPIOCHIP_FIND_PRESENT) /* Linux 6.7 */
 	gc = gpiochip_find(name, cdi_gpio_chip_match);
+#else
+	gdev = gpio_device_find(name, cdi_gpio_chip_match);
+	if (gdev) {
+		gc = gpio_device_get_chip(gdev);
+		gpio_device_put(gdev);
+	}
+#endif
 	if (!gc) {
 		dev_err(&pdev->dev, "%s: unable to find gpio parent chip %s\n",
 			__func__, pd->gpio_prnt_chip);
@@ -275,7 +288,9 @@ static int cdi_gpio_probe(struct platform_device *pdev)
 	gc->base = -1;
 	gc->ngpio = pd->max_gpio;
 	gc->label = "cdi-gpio";
+#if defined(NV_GPIO_CHIP_STRUCT_HAS_OF_NODE_PRESENT) /* Linux 6.2 */
 	gc->of_node = pdev->dev.of_node;
+#endif
 	gc->owner = THIS_MODULE;
 
 	err = gpiochip_add_data(gc, cdi_gpio);
