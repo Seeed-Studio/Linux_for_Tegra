@@ -5463,9 +5463,7 @@ compile_test() {
             # in Linux 6.2.
             #
             CODE="
-            #if defined(NV_LINUX_OF_GPIO_H_PRESENT)
             #include <linux/of_gpio.h>
-            #endif
             void conftest_of_get_named_gpio_flags(void)
             {
                 of_get_named_gpio_flags();

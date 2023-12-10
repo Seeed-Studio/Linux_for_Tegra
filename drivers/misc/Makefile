@@ -8,8 +8,6 @@ obj-m += nvsciipc/
 ifdef CONFIG_PCI
 obj-m += tegra-pcie-dma-test.o
 endif
-ifneq ($(CONFIG_TEGRA_GPIO_LEGACY_DISABLE),y)
 obj-m += bluedroid_pm.o
-endif
 obj-m += nvscic2c-pcie/
 obj-m += ioctl_example.o

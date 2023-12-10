@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
+#include <nvidia/conftest.h>
+
 #include <linux/uaccess.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
@@ -341,7 +343,9 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 	int ret;
 	bool enable = false;  /* off */
 	struct device_node *node;
+#if defined(NV_OF_GET_NAMED_GPIO_FLAGS_PRESENT) /* Linux 6.2 */
 	enum of_gpio_flags of_flags;
+#endif
 	unsigned long flags;
 
 	bluedroid_pm = devm_kzalloc(&pdev->dev, sizeof(*bluedroid_pm), GFP_KERNEL);
@@ -365,9 +369,14 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 		}
 	}
 
+#if defined(NV_OF_GET_NAMED_GPIO_FLAGS_PRESENT) /* Linux 6.2 */
 	bluedroid_pm->gpio_reset =
 		of_get_named_gpio_flags(node, "bluedroid_pm,reset-gpio",
 								 0, &of_flags);
+#else
+	bluedroid_pm->gpio_reset =
+		of_get_named_gpio(node, "bluedroid_pm,reset-gpio", 0);
+#endif
 	bluedroid_pm->gpio_shutdown =
 		of_get_named_gpio(node, "bluedroid_pm,shutdown-gpio", 0);
 	bluedroid_pm->host_wake =
@@ -380,7 +389,11 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 			     &bluedroid_pm->resume_min_frequency);
 
 	if (gpio_is_valid(bluedroid_pm->gpio_reset)) {
+#if defined(NV_OF_GET_NAMED_GPIO_FLAGS_PRESENT) /* Linux 6.2 */
 		flags = (of_flags == OF_GPIO_ACTIVE_LOW) ? GPIOF_ACTIVE_LOW : 0;
+#else
+		flags = 0;
+#endif
 		ret = gpio_request_one(bluedroid_pm->gpio_reset, flags,
 								 "reset_gpio");
 		if (ret) {
