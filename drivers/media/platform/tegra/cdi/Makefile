@@ -3,8 +3,8 @@
 
 ifneq ($(CONFIG_TEGRA_GPIO_LEGACY_DISABLE),y)
 obj-m	+= cdi_gpio.o
-obj-m	+= cdi_mgr.o
 endif
+obj-m	+= cdi_mgr.o
 obj-m	+= cdi_dev.o
 obj-m	+= cdi_pwm.o
 ifeq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)

@@ -14,6 +14,7 @@
 #include <linux/platform_device.h>
 #include <linux/device.h>
 #include <linux/of_irq.h>
+#include <linux/of.h>
 #include <linux/interrupt.h>
 #include <asm/siginfo.h>
 #include <linux/rcupdate.h>
@@ -1330,13 +1331,22 @@ static int cdi_mgr_of_get_grp_gpio(
 {
 	int num, i;
 
+#if defined(NV_OF_GPIO_NAMED_COUNT_PRESENT) /* Linux 6.2 */
 	num = of_gpio_named_count(np, name);
+#else
+	num = of_count_phandle_with_args(np, name, "#gpio-cells");
+#endif
 	dev_dbg(dev, "    num gpios of %s: %d\n", name, num);
 	if (num < 0)
 		return 0;
 
 	for (i = 0; (i < num) && (i < size); i++) {
+#if defined(NV_OF_GET_NAMED_GPIO_FLAGS_PRESENT) /* Linux 6.2 */
 		grp[i] = of_get_named_gpio_flags(np, name, i, &flags[i]);
+#else
+		grp[i] = of_get_named_gpio(np, name, i);
+		flags[i] = 0;
+#endif
 		if ((int)grp[i] < 0) {
 			dev_err(dev, "%s: gpio[%d] invalid\n", __func__, i);
 			return -EINVAL;
