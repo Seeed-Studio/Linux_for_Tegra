@@ -5496,6 +5496,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_OF_GPIO_NAMED_COUNT_PRESENT" "" "functions"
         ;;
 
+        gpio_chip_struct_has_of_node_present)
+            #
+            # Determine if struct gpio_chip has the of_node member or not.
+            #
+            # The of_node from struct gpio_chip is removed from commit 70d0fc4288dab
+            # ("gpiolib: Get rid of not used of_node member") in Linux 6.2
+            #
+            CODE="
+            #include <linux/gpio/driver.h>
+            int conftest_gpio_chip_struct_has_of_node_present(void)
+            {
+                return offsetof(struct gpio_chip, of_node);
+            }
+            "
+
+            compile_check_conftest "$CODE" "NV_GPIO_CHIP_STRUCT_HAS_OF_NODE_PRESENT" "" "types"
+        ;;
+
         devm_gpio_request_one)
             #
             # Determine if devm_gpio_request_one() function is present
