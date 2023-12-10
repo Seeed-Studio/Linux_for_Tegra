@@ -5475,6 +5475,27 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_OF_GET_NAMED_GPIO_FLAGS_PRESENT" "" "functions"
         ;;
 
+        of_gpio_named_count)
+            #
+            # Determine if of_gpio_named_count() function is present
+            #
+            # This APIS is removed in commit c7835652a85 ("gpiolib: of: stop
+            # exporting of_gpio_named_count()")
+            # in Linux 6.2.
+            #
+            CODE="
+            #if defined(NV_LINUX_OF_GPIO_H_PRESENT)
+            #include <linux/of_gpio.h>
+            #endif
+            void conftest_of_gpio_named_count(void)
+            {
+                of_gpio_named_count();
+            }
+            "
+
+            compile_check_conftest "$CODE" "NV_OF_GPIO_NAMED_COUNT_PRESENT" "" "functions"
+        ;;
+
         devm_gpio_request_one)
             #
             # Determine if devm_gpio_request_one() function is present
