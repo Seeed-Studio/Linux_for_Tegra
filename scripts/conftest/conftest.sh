@@ -5514,6 +5514,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_GPIO_CHIP_STRUCT_HAS_OF_NODE_PRESENT" "" "types"
         ;;
 
+        gpiochip_find)
+            #
+            # Determine if function gpiochip_find() present or not.
+            #
+            # The function gpiochip_find() is removed from commit 2654521d774f9
+            # ("gpiolib: remove gpiochip_find()" in Linux 6.7
+            #
+            CODE="
+            #include <linux/gpio/driver.h>
+            void conftest_gpiochip_find_present(void)
+            {
+                gpiochip_find();
+            }
+            "
+
+            compile_check_conftest "$CODE" "NV_GPIOCHIP_FIND_PRESENT" "" "functions"
+        ;;
+
         devm_gpio_request_one)
             #
             # Determine if devm_gpio_request_one() function is present
