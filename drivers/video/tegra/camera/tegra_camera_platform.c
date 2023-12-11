@@ -671,18 +671,23 @@ static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 	u64 dr = 0;
 	u64 clk_rate = 0;
 	u64 final_pr = (cdev->use_max) ? phy_pr : active_pr;
-	bool set_clk = true;
 
 	if (cdev->hw_type == HWTYPE_NONE)
 		return 0;
 
-	if (!cdev->ops->set_rate)
-		return -EOPNOTSUPP;
+	if ((cdev->hw_type == HWTYPE_CSI)
+	    && (info->sensor_type == SENSORTYPE_SLVSEC))
+		return 0;
+
+	if ((cdev->hw_type == HWTYPE_SLVSEC)
+	    && (info->sensor_type != SENSORTYPE_SLVSEC))
+		return 0;
+
+	if (!cdev->ops || !cdev->ops->set_rate)
+		return 0;
 
 	switch (cdev->hw_type) {
 	case HWTYPE_CSI:
-		if (info->sensor_type == SENSORTYPE_SLVSEC)
-			set_clk = false;
 		nr = max_depth * final_pr * overhead;
 		dr = bus_width * 100;
 		if (dr == 0)
@@ -698,8 +703,6 @@ static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 		dr = 100 * ppc;
 		break;
 	case HWTYPE_SLVSEC:
-		if (info->sensor_type != SENSORTYPE_SLVSEC)
-			set_clk = false;
 		nr = lane_speed * lane_num * overhead;
 		dr = bus_width * 100;
 		if (dr == 0)
