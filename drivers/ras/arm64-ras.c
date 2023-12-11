@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
 
 #include <linux/module.h>
 #include <linux/interrupt.h>
+#include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/arm64-ras.h>
-#include <linux/of_irq.h>
 #include <linux/cpuhotplug.h>
 
 static int fhi_irq[CONFIG_NR_CPUS];

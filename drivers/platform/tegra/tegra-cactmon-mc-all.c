@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2023 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -9,7 +9,8 @@
 #include <linux/fs.h>
 #include <linux/io.h>
 #include <linux/module.h>
-#include <linux/of_device.h>
+#include <linux/of.h>
+#include <linux/platform_device.h>
 #include <linux/types.h>
 
 #define	CENTRAL_ACTMON_CTRL_REG			0x0

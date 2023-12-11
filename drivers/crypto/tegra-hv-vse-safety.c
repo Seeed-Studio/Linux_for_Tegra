@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2019-2024, NVIDIA Corporation. All Rights Reserved.
  *
  * Cryptographic API.
  */
@@ -15,8 +15,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/hw_random.h>
 #include <linux/io.h>
-#include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_platform.h>
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/errno.h>

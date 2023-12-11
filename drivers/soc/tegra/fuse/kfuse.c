@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (C) 2022 NVIDIA CORPORATION. All rights reserved.
+// Copyright (C) 2022-2024 NVIDIA CORPORATION. All rights reserved.
 
 /* The kfuse block stores downstream and upstream HDCP keys for use by HDMI
  * module.
@@ -14,6 +14,7 @@
 #include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
 #include <linux/of_device.h>
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/kfuse.h>

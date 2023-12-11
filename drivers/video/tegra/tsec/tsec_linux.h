@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -10,7 +10,7 @@
 
 #include <linux/types.h>                   /* for types like u8, u32 etc */
 #include <linux/platform_device.h>         /* for platform_device */
-#include <linux/of_platform.h>             /* for of_match_device etc */
+#include <linux/of_device.h>               /* for of_match_device etc */
 #include <linux/slab.h>                    /* for kzalloc */
 #include <linux/delay.h>                   /* for udelay */
 #include <linux/clk.h>                     /* for clk_prepare_enable */

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/ioctl.h>
 #include <linux/types.h>
-#include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/mailbox_client.h>
 #include <linux/debugfs.h>
 #include <linux/fs.h>

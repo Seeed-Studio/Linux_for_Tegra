@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021, NVIDIA Corporation.
+ * Copyright (c) 2021-2024, NVIDIA Corporation.
  */
 
 #include <linux/device.h>
 #include <linux/kref.h>
 #include <linux/of.h>
-#include <linux/of_platform.h>
+#include <linux/of_device.h>
 #include <linux/pid.h>
 #include <linux/slab.h>
 

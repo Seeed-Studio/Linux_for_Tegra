@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
 
 #include <nvidia/conftest.h>
 
 #include <linux/kthread.h>
 #include <linux/module.h>
-#include <linux/of_device.h>
+#include <linux/of.h>
 #include <linux/spi/spi.h>
 //#include <soc/tegra/virt/tegra_hv_pm_ctl.h>
 #include <linux/sched/signal.h>

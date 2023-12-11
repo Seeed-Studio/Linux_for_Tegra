@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #define pr_fmt(fmt) "%s: " fmt, __func__
 
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/of_fdt.h>
-#include <linux/of_platform.h>
+#include <linux/of_device.h>
 #include <linux/nvmap.h>
 #include <linux/version.h>
 #include <linux/kmemleak.h>

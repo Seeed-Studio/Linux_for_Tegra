@@ -2,7 +2,7 @@
 /*
  * Host1x fence UAPI
  *
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -14,7 +14,8 @@
 #include <linux/host1x-next.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/of_device.h>
+#include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/poll.h>
 #include <linux/slab.h>
 #include <linux/sync_file.h>
