@@ -59,7 +59,11 @@ static int ser_put_char(struct tty_struct *, unsigned char);
 static void ser_flush_chars(struct tty_struct *);
 static unsigned int ser_chars_in_buffer(struct tty_struct *tty);
 static void ser_flush_buffer(struct tty_struct *);
+#if defined(NV_TTY_OPERATIONS_STRUCT_SEND_XCHAR_HAS_U8_ARG) /* Linux 6.8 */
+static void ser_send_xchar(struct tty_struct *, u8);
+#else
 static void ser_send_xchar(struct tty_struct *, char);
+#endif
 static void ser_throttle(struct tty_struct *);
 static void ser_unthrottle(struct tty_struct *);
 static int ser_get_info(struct ser_state *, struct serial_struct *);
@@ -692,7 +696,11 @@ static void ser_flush_buffer(struct tty_struct *tty)
     }
 }
 
+#if defined(NV_TTY_OPERATIONS_STRUCT_SEND_XCHAR_HAS_U8_ARG) /* Linux 6.8 */
+static void ser_send_xchar(struct tty_struct *tty, u8 ch)
+#else
 static void ser_send_xchar(struct tty_struct *tty, char ch)
+#endif
 {
     struct ser_state *state = NULL;
     struct ser_port *port = NULL;

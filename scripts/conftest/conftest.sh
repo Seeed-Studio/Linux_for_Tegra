@@ -7577,6 +7577,25 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TEGRA_DEV_IOMMU_GET_STREAM_ID_PRESENT" "" "functions"
         ;;
 
+        tty_operations_struct_send_xchar_has_u8_arg)
+            #
+            # Determine if the struct tty_operations::send_xchar argument is of type u8.
+            #
+            # Commit 3a00da027946 ("tty: make tty_operations::send_xchar accept u8 char")
+            # updated the argument for tty_operations::send_xchar from char to u8 in Linux
+            # v6.8.
+            #
+            CODE="
+            #include <linux/tty.h>
+            #include <linux/tty_driver.h>
+            static inline void conftest_send_xchar(struct tty_struct *ttys, u8 ch) {}
+            static struct tty_operations tty_ops = {
+                  .send_xchar = conftest_send_xchar,
+            };"
+
+            compile_check_conftest "$CODE" "NV_TTY_OPERATIONS_STRUCT_SEND_XCHAR_HAS_U8_ARG" "" "types"
+        ;;
+
         tty_operations_struct_write_has_u8_ptr_arg)
             #
             # Determine if the function write() of tty_operations has u8 type pointer argument.
