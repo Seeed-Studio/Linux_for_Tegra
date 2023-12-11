@@ -719,7 +719,7 @@ static inline void mc_ch_writel(const struct tegra_mcerr *mc_err, int ch,
 		writel_relaxed(value, mc_err->ch_regs[ch] + offset);
 }
 
-void log_fault(struct tegra_mcerr *mc_err, u32 channel, unsigned long mcf_ch_intstatus)
+static void log_fault(struct tegra_mcerr *mc_err, u32 channel, unsigned long mcf_ch_intstatus)
 {
 	unsigned int bit;
 
@@ -818,7 +818,7 @@ void log_fault(struct tegra_mcerr *mc_err, u32 channel, unsigned long mcf_ch_int
 }
 
 /* Currently this function only handle MCF interrupts, will extend for other components */
-irqreturn_t handle_irq(int irq, void *data)
+static irqreturn_t handle_irq(int irq, void *data)
 {
 	struct tegra_mcerr *mc_err = data;
 	unsigned long mcf_intstatus, mcf_ch_intstatus;

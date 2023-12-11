@@ -6,6 +6,7 @@
 #include <linux/export.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
+#include <soc/tegra/mc-t26x.h>
 
 #define MC_SECURITY_CARVEOUT_BASE 0x9404
 #define MC_CARVEOUT_NEXT 0xa0
