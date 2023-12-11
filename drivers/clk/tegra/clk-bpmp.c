@@ -3,6 +3,8 @@
  * Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/clk-provider.h>
 #include <linux/device.h>
 #include <linux/seq_buf.h>
@@ -284,6 +286,9 @@ static const struct clk_ops tegra_bpmp_clk_gate_ops = {
 static const struct clk_ops tegra_bpmp_clk_mux_ops = {
 	.prepare = tegra_bpmp_clk_prepare,
 	.unprepare = tegra_bpmp_clk_unprepare,
+#if defined(NV_CLK_HW_DETERMINE_RATE_NO_REPARENT_PRESENT) /* Linux 6.4 */
+	.determine_rate = clk_hw_determine_rate_no_reparent,
+#endif
 	.is_prepared = tegra_bpmp_clk_is_prepared,
 	.recalc_rate = tegra_bpmp_clk_recalc_rate,
 	.set_parent = tegra_bpmp_clk_set_parent,

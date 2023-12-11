@@ -6668,6 +6668,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_CLASS_STRUCT_DEVNODE_HAS_CONST_DEV_ARG" "" "types"
         ;;
 
+        clk_hw_determine_rate_no_reparent)
+            #
+            # Determine if the function clk_hw_determine_rate_no_reparent() is present or not.
+            #
+            # commit 33b70fbc4f815f("clk: Introduce clk_hw_determine_rate_no_reparent()")
+            # added the API clk_hw_determine_rate_no_reparent() to implement the clk_set_parent()
+            # in Linux 6.4
+            #
+            CODE="
+            #include <linux/clk-provider.h>
+            void conftest_clk_hw_determine_rate_no_reparent(void) {
+		clk_hw_determine_rate_no_reparent();
+            }"
+
+            compile_check_conftest "$CODE" "NV_CLK_HW_DETERMINE_RATE_NO_REPARENT_PRESENT" "" "functions"
+        ;;
+
         define_semaphore_has_number_arg)
             #
             # Determine if the macro DEFINE_SEMAPHORE has a number argument.
