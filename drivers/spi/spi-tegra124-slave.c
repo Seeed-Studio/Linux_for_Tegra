@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (C) 2023 NVIDIA CORPORATION.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (C) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/reset.h>
@@ -1357,7 +1359,11 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 		command1 |= SPI_TX_EN;
 		tspi->cur_direction |= DATA_DIR_TX;
 	}
+#if defined(NV_SPI_GET_CHIPSELECT_PRESENT)
+	command1 |= SPI_CS_SEL(spi_get_chipselect(spi, 0));
+#else
 	command1 |= SPI_CS_SEL(spi->chip_select);
+#endif
 	tegra_spi_writel(tspi, command1, SPI_COMMAND1);
 	tspi->command1_reg = command1;
 
@@ -1398,7 +1404,11 @@ static struct tegra_spi_controller_data
 		return NULL;
 	}
 
+#if defined(NV_SPI_GET_CHIPSELECT_PRESENT)
+	cdata = &tspi->cdata[spi_get_chipselect(spi, 0)];
+#else
 	cdata = &tspi->cdata[spi->chip_select];
+#endif
 	memset(cdata, 0, sizeof(*cdata));
 
 	ret = of_property_read_bool(data_np, "nvidia,variable-length-transfer");
@@ -1448,10 +1458,17 @@ static int tegra_spi_setup(struct spi_device *spi)
 
 	spin_lock_irqsave(&tspi->lock, flags);
 	val = tspi->def_command1_reg;
+#if defined(NV_SPI_GET_CHIPSELECT_PRESENT)
+	if (spi->mode & SPI_CS_HIGH)
+		val &= ~cs_pol_bit[spi_get_chipselect(spi, 0)];
+	else
+		val |= cs_pol_bit[spi_get_chipselect(spi, 0)];
+#else
 	if (spi->mode & SPI_CS_HIGH)
 		val &= ~cs_pol_bit[spi->chip_select];
 	else
 		val |= cs_pol_bit[spi->chip_select];
+#endif
 
 	if (tspi->lsbyte_first)
 		val |= SPI_LSBYTE_FE;

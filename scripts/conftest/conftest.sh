@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 PATH="${PATH}:/bin:/sbin:/usr/bin"
 
@@ -7461,6 +7461,28 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_SPI_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT" "" "types"
+        ;;
+
+        spi_get_chipselect)
+            #
+            # Determine if the function 'spi_get_chip_select()' is present.
+            #
+            # In Linux v6.3, commit 303feb3cc06a ("spi: Add APIs in spi core to set/get
+            # spi->chip_select and spi->cs_gpiod") added a helper function,
+            # spi_get_chipselect(), so drivers did not need to access the
+            # 'spi_device->chip_select' directly. This Linux v6.8, commit 4d8ff6b0991d
+            # ("spi: Add multi-cs memories support in SPI core") updated the
+            # 'spi_device->chip_select' to be an array and so using spi_get_chipselect
+            # to retrieve the chipselect is required for Linux v6.8.
+            #
+            CODE="
+            #undef CONFIG_ACPI
+            #include <linux/spi/spi.h>
+            void conftest_spi_get_chipselect(void) {
+                spi_get_chipselect();
+            }"
+
+            compile_check_conftest "$CODE" "NV_SPI_GET_CHIPSELECT_PRESENT" "" "functions"
         ;;
 
         tc_taprio_qopt_offload_struct_has_cmd)

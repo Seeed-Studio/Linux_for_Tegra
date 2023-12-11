@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-//
-// Copyright (C) 2023 NVIDIA CORPORATION.
+// SPDX-FileCopyrightText: Copyright (C) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/completion.h>
@@ -925,7 +926,11 @@ static u32 tegra_qspi_setup_transfer_one(struct spi_device *spi, struct spi_tran
 		tegra_qspi_mask_clear_irq(tqspi);
 
 		command1 = tqspi->def_command1_reg;
+#if defined(NV_SPI_GET_CHIPSELECT_PRESENT)
+		command1 |= QSPI_CS_SEL(spi_get_chipselect(spi, 0));
+#else
 		command1 |= QSPI_CS_SEL(spi->chip_select);
+#endif
 		command1 |= QSPI_BIT_LENGTH(bits_per_word - 1);
 
 		command1 &= ~QSPI_CONTROL_MODE_MASK;
@@ -1109,11 +1114,21 @@ static int tegra_qspi_setup(struct spi_device *spi)
 
 	/* keep default cs state to inactive */
 	val = tqspi->def_command1_reg;
+#if defined(NV_SPI_GET_CHIPSELECT_PRESENT)
+	val |= QSPI_CS_SEL(spi_get_chipselect(spi, 0));
+
+	if (spi->mode & SPI_CS_HIGH)
+		val &= ~QSPI_CS_POL_INACTIVE(spi_get_chipselect(spi, 0));
+	else
+		val |= QSPI_CS_POL_INACTIVE(spi_get_chipselect(spi, 0));
+#else
 	val |= QSPI_CS_SEL(spi->chip_select);
+
 	if (spi->mode & SPI_CS_HIGH)
 		val &= ~QSPI_CS_POL_INACTIVE(spi->chip_select);
 	else
 		val |= QSPI_CS_POL_INACTIVE(spi->chip_select);
+#endif
 
 	tqspi->def_command1_reg = val;
 	tegra_qspi_writel(tqspi, tqspi->def_command1_reg, QSPI_COMMAND1);
