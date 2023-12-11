@@ -3,6 +3,8 @@
  * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -82,7 +84,11 @@ static void tegra_bpmp_handle_mrq(struct tegra_bpmp *bpmp,
 
 static void tegra_bpmp_channel_signal(struct tegra_bpmp_channel *channel)
 {
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	unsigned long flags = tegra_bpmp_mb_read_field(&channel->ob, flags);
+#else
 	unsigned long flags = channel->ob->flags;
+#endif
 
 	if ((flags & MSG_RING) == 0)
 		return;
@@ -116,8 +122,15 @@ void tegra_bpmp_handle_rx(struct tegra_bpmp *bpmp)
 
 	/* If supported incoming channel */
 	if (bpmp->soc->channels.cpu_rx.count == MAX_POSSIBLE_RX_CHANNEL) {
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+		if (tegra_bpmp_is_request_ready(channel)) {
+			unsigned int mrq = tegra_bpmp_mb_read_field(&channel->ib, code);
+			tegra_bpmp_handle_mrq(bpmp, mrq, channel);
+		}
+#else
 		if (tegra_bpmp_is_request_ready(channel))
 			tegra_bpmp_handle_mrq(bpmp, channel->ib->code, channel);
+#endif
         }
 
 	spin_lock(&bpmp->lock);
@@ -198,12 +211,20 @@ static bool tegra186_bpmp_hv_is_message_ready(struct tegra_bpmp_channel *channel
 	void *frame;
 
 	frame = tegra_hv_ivc_read_get_next_frame(hv_ivc);
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	if (IS_ERR(frame)) {
+		iosys_map_clear(&channel->ib);
+		return false;
+	}
+	iosys_map_set_vaddr(&channel->ib, frame);
+#else
 	if (IS_ERR(frame)) {
 		channel->ib = NULL;
 		return false;
 	}
 
 	channel->ib = frame;
+#endif
 
 	return true;
 }
@@ -221,12 +242,20 @@ static bool tegra186_hv_bpmp_is_channel_free(struct tegra_bpmp_channel *channel)
 	void *frame;
 
 	frame = tegra_hv_ivc_write_get_next_frame(hv_ivc);
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	if (IS_ERR(frame)) {
+		iosys_map_clear(&channel->ob);
+		return false;
+	}
+	iosys_map_set_vaddr(&channel->ob, frame);
+#else
 	if (IS_ERR(frame)) {
 		channel->ob = NULL;
 		return false;
 	}
 
 	channel->ob = frame;
+#endif
 
 	return true;
 }
@@ -432,13 +461,23 @@ static void tegra_bpmp_mrq_handle_ping(unsigned int mrq,
 				       struct tegra_bpmp_channel *channel,
 				       void *data)
 {
-	struct mrq_ping_request *request;
 	struct mrq_ping_response response;
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	struct mrq_ping_request request;
+
+	tegra_bpmp_mb_read(&request, &channel->ib, sizeof(request));
+
+	memset(&response, 0, sizeof(response));
+	response.reply = request.challenge << 1;
+#else
+	struct mrq_ping_request *request;
 
 	request = (struct mrq_ping_request *)channel->ib->data;
 
 	memset(&response, 0, sizeof(response));
 	response.reply = request->challenge << 1;
+#endif
+
 
 	tegra_bpmp_mrq_return(channel, 0, &response, sizeof(response));
 }
