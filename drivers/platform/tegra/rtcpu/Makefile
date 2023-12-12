@@ -3,9 +3,7 @@
 
 ccflags-y += -Wframe-larger-than=2048
 
-ifneq ($(CONFIG_TEGRA_IVC_LEGACY_DISABLE),y)
 obj-m += capture-ivc.o
-endif
 obj-m += ivc-bus.o
 obj-m += camchar.o
 obj-m += camera-diagnostics.o

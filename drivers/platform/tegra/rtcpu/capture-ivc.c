@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <linux/tegra-capture-ivc.h>
 
 #include <linux/completion.h>
@@ -357,11 +359,25 @@ static inline void tegra_capture_ivc_recv(struct tegra_capture_ivc *civc)
 {
 	struct tegra_ivc *ivc = &civc->chan->ivc;
 	struct device *dev = &civc->chan->dev;
+	const void *msg;
+	const struct tegra_capture_ivc_msg_header *hdr;
+	uint32_t id;
 
 	while (tegra_ivc_can_read(ivc)) {
-		const void *msg = tegra_ivc_read_get_next_frame(ivc);
-		const struct tegra_capture_ivc_msg_header *hdr = msg;
-		uint32_t id = hdr->channel_id;
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP) /* Linux 6.2 */
+		struct iosys_map map;
+		int err;
+		err = tegra_ivc_read_get_next_frame(ivc, &map);
+		if (err) {
+			dev_err(dev, "Failed to get next frame for read\n");
+			return;
+		}
+		msg = map.vaddr;
+#else
+		msg = tegra_ivc_read_get_next_frame(ivc);
+#endif
+		hdr = msg;
+		id = hdr->channel_id;
 
 		trace_capture_ivc_recv(dev_name(dev), hdr->msg_id, id);
 

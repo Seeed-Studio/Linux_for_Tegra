@@ -9,7 +9,6 @@
 #include <linux/types.h>
 #include <linux/version.h>
 
-#if !defined(CONFIG_TEGRA_IVC_LEGACY_DISABLE)
 /**
  * @brief Submit the control message binary blob to capture-IVC driver,
  *	which is to be transferred over control IVC channel to RTCPU.
@@ -134,59 +133,4 @@ int tegra_capture_ivc_unregister_control_cb(
  */
 int tegra_capture_ivc_unregister_capture_cb(
 	uint32_t chan_id);
-#else
-typedef void (*tegra_capture_ivc_cb_func)(
-	const void *resp_desc,
-	const void *priv_context);
-
-static inline int tegra_capture_ivc_control_submit(
-	const void *control_desc,
-	size_t len)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_capture_ivc_capture_submit(
-	const void *capture_desc,
-	size_t len)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_capture_ivc_register_control_cb(
-	tegra_capture_ivc_cb_func control_resp_cb,
-	uint32_t *trans_id,
-	const void *priv_context)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_capture_ivc_notify_chan_id(
-	uint32_t chan_id,
-	uint32_t trans_id)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_capture_ivc_register_capture_cb(
-	tegra_capture_ivc_cb_func capture_status_ind_cb,
-	uint32_t chan_id,
-	const void *priv_context)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_capture_ivc_unregister_control_cb(
-	uint32_t id)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_capture_ivc_unregister_capture_cb(
-	uint32_t chan_id)
-{
-	return -ENOTSUPP;
-};
-#endif /* !defined(CONFIG_TEGRA_IVC_LEGACY_DISABLE) */
-
 #endif /* INCLUDE_CAPTURE_IVC_H */
