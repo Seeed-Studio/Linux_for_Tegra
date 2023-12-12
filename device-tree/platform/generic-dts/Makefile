@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only
 
-objtree = $(srctree)
+objtree ?= $(srctree)
 
 # Redefine the fixdep command
 cmd_and_fixdep =                                                             \
