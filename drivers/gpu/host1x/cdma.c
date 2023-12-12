@@ -35,14 +35,14 @@
 /*
  * Typically the commands written into the push buffer are a pair of words. We
  * use slots to represent each of these pairs and to simplify things. Note the
- * strange number of slots allocated here. 512 slots will fit exactly within a
- * single memory page. We also need one additional word at the end of the push
+ * strange number of slots allocated here. 1024 slots will fit exactly within a
+ * two memory pages. We also need one additional word at the end of the push
  * buffer for the RESTART opcode that will instruct the CDMA to jump back to
- * the beginning of the push buffer. With 512 slots, this means that we'll use
- * 2 memory pages and waste 4092 bytes of the second page that will never be
+ * the beginning of the push buffer. With 1024 slots, this means that we'll use
+ * 3 memory pages and waste 4092 bytes of the third page that will never be
  * used.
  */
-#define HOST1X_PUSHBUFFER_SLOTS	511
+#define HOST1X_PUSHBUFFER_SLOTS	1023
 
 /*
  * Clean up push buffer resources
