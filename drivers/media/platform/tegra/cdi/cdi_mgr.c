@@ -31,7 +31,6 @@
 #include <media/cdi-mgr.h>
 #include <linux/gpio/consumer.h>
 #include <linux/semaphore.h>
-#include <linux/version.h>
 
 #include <asm/barrier.h>
 
@@ -1662,13 +1661,8 @@ static int cdi_mgr_configure_gpios(struct device *dev, struct cdi_mgr_priv *cdi_
 					}
 				}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
-				cdi_mgr->gpios[i].desc = devm_fwnode_get_gpiod_from_child(dev,
-					"devblk", &child->fwnode, GPIOD_ASIS, NULL);
-#else
 				cdi_mgr->gpios[i].desc = devm_fwnode_gpiod_get_index(dev,
 					&child->fwnode, "devblk", 0, GPIOD_ASIS, NULL);
-#endif
 				if (IS_ERR(cdi_mgr->gpios[i].desc)) {
 					ret = PTR_ERR(cdi_mgr->gpios[i].desc);
 					if (ret < 0)
