@@ -15,7 +15,7 @@ obj-m += mc-hwpm.o
 obj-m += mc-utils/
 obj-m += dce/
 obj-m += psc/
-ifeq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)
+ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 obj-m += rtcpu/
 endif
 obj-m += aon/

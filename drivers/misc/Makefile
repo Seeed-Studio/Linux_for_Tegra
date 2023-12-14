@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
 
-ifeq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)
+ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 obj-m += mods/
 endif
 obj-m += nvsciipc/

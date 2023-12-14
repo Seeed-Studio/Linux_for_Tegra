@@ -5,7 +5,7 @@ subdir-ccflags-y += -Werror
 
 obj-m += max9295.o
 obj-m += max9296.o
-ifeq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)
+ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 obj-m += max96712.o
 obj-m += ar1335_common.o
 obj-m += lt6911uxc.o

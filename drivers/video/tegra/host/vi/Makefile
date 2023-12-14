@@ -4,6 +4,6 @@
 LINUXINCLUDE += -DCONFIG_TEGRA_HOST1X
 
 nvhost-vi5-objs := vi5.o
-ifeq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)
+ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 obj-m += nvhost-vi5.o
 endif
