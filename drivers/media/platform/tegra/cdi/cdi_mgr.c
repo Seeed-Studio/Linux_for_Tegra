@@ -1498,10 +1498,10 @@ static struct cdi_mgr_platform_data *of_cdi_mgr_pdata(struct platform_device
 	return pd;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
-static char *cdi_mgr_devnode(struct device *dev, umode_t *mode)
-#else
+#if defined(NV_CLASS_STRUCT_DEVNODE_HAS_CONST_DEV_ARG) /* Linux v6.2 */
 static char *cdi_mgr_devnode(const struct device *dev, umode_t *mode)
+#else
+static char *cdi_mgr_devnode(struct device *dev, umode_t *mode)
 #endif
 {
 	if (!mode)

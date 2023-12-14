@@ -19,7 +19,6 @@
 #include <asm/siginfo.h>
 #include <linux/rcupdate.h>
 #include <linux/sched.h>
-#include <linux/version.h>
 #include <linux/sched/signal.h>
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
@@ -967,10 +966,10 @@ static struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device
 	return pd;
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0))
-static char *isc_mgr_devnode(struct device *dev, umode_t *mode)
-#else
+#if defined(NV_CLASS_STRUCT_DEVNODE_HAS_CONST_DEV_ARG) /* Linux v6.2 */
 static char *isc_mgr_devnode(const struct device *dev, umode_t *mode)
+#else
+static char *isc_mgr_devnode(struct device *dev, umode_t *mode)
 #endif
 {
 	if (!mode)

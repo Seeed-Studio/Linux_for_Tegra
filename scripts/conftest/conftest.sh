@@ -6651,7 +6651,7 @@ compile_test() {
             # Determine if the 'class' structure devnode function pointer
             # has const 'struct dev' argument.
             #
-            # Commit 43a7206b0963 ("driver core: class: make class_register()
+            # Commit ff62b8e6588f ("driver core: make struct class.devnode()
             # take a const *") updated the class_register function to take a
             # const class structure in Linux v6.2.
             #
