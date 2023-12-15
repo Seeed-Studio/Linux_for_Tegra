@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+// SPDX-FileCopyrightText: Copyright (C) 2019-2023 NVIDIA CORPORATION.  All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <nvidia/conftest.h>
 
@@ -15,7 +17,6 @@
 #include <linux/delay.h>
 #include <linux/timer.h>
 #include <linux/of_gpio.h>
-#include <linux/version.h>
 #include "bluedroid_pm.h"
 
 #define PROC_DIR	"bluetooth/sleep"
@@ -211,7 +212,7 @@ static ssize_t lpm_read_proc(struct file *file, char __user *buf, size_t size,
 					loff_t *ppos)
 {
 	char msg[50];
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+#if defined(NV_PDE_DATA_LOWER_CASE_PRESENT) /* Linux v5.17 */
 	struct bluedroid_pm_data *bluedroid_pm = pde_data(file_inode(file));
 #else
 	struct bluedroid_pm_data *bluedroid_pm = PDE_DATA(file_inode(file));
@@ -227,7 +228,7 @@ static ssize_t lpm_write_proc(struct file *file, const char __user *buffer,
 					size_t count, loff_t *ppos)
 {
 	char *buf;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+#if defined(NV_PDE_DATA_LOWER_CASE_PRESENT) /* Linux v5.17 */
 	struct bluedroid_pm_data *bluedroid_pm = pde_data(file_inode(file));
 #else
 	struct bluedroid_pm_data *bluedroid_pm = PDE_DATA(file_inode(file));
