@@ -813,22 +813,21 @@ static int isc_mgr_of_get_grp_gpio(
 	struct device *dev, struct device_node *np,
 	const char *name, int size, u32 *grp, u32 *flags)
 {
+	char prop_name[32]; /* 32 is max size of property name */
 	int num, i;
 
-#if defined(NV_OF_GPIO_NAMED_COUNT_PRESENT) /* Linux 6.2 */
-	num = of_gpio_named_count(np, name);
-#else
-	num = of_count_phandle_with_args(np, name, "#gpio-cells");
-#endif
-	dev_dbg(dev, "    num gpios of %s: %d\n", name, num);
+	snprintf(prop_name, sizeof(prop_name), "%s-gpios", name);
+
+	num = gpiod_count(dev, name);
+	dev_dbg(dev, "    num gpios of %s: %d\n", prop_name, num);
 	if (num < 0)
 		return 0;
 
 	for (i = 0; (i < num) && (i < size); i++) {
 #if defined(NV_OF_GET_NAMED_GPIO_FLAGS_PRESENT) /* Linux 6.2 */
-		grp[i] = of_get_named_gpio_flags(np, name, i, &flags[i]);
+		grp[i] = of_get_named_gpio_flags(np, prop_name, i, &flags[i]);
 #else
-		grp[i] = of_get_named_gpio(np, name, i);
+		grp[i] = of_get_named_gpio(np, prop_name, i);
 		flags[i] = 0;
 #endif
 		if ((int)grp[i] < 0) {
@@ -933,13 +932,13 @@ static struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device
 	dev_dbg(&pdev->dev, "    csiport: %d\n", pd->csi_port);
 
 	pd->num_pwr_gpios = isc_mgr_of_get_grp_gpio(
-		&pdev->dev, np, "pwdn-gpios",
+		&pdev->dev, np, "pwdn",
 		ARRAY_SIZE(pd->pwr_gpios), pd->pwr_gpios, pd->pwr_flags);
 	if (pd->num_pwr_gpios < 0)
 		return ERR_PTR(pd->num_pwr_gpios);
 
 	pd->num_misc_gpios = isc_mgr_of_get_grp_gpio(
-		&pdev->dev, np, "misc-gpios",
+		&pdev->dev, np, "misc",
 		ARRAY_SIZE(pd->misc_gpios), pd->misc_gpios, pd->misc_flags);
 	if (pd->num_misc_gpios < 0)
 		return ERR_PTR(pd->num_misc_gpios);
