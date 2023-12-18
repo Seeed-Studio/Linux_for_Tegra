@@ -7163,6 +7163,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PWM_OPS_STRUCT_HAS_OWNER" "" "types"
         ;;
 
+        pwm_ops_struct_has_config)
+            #
+            # Determine if the pwm_ops struct has config callback or not
+            #
+            # Removed from commit 0829c35dc534 ("pwm: Drop support for legacy drivers")
+            # in Linux 6.0
+            #
+            CODE="
+            #include <linux/pwm.h>
+            int conftest_pwm_ops_struct_has_owner(void) {
+                return offsetof(struct pwm_ops, config);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PWM_OPS_STRUCT_HAS_CONFIG" "" "types"
+        ;;
+
         pci_epc_event_ops_struct_has_core_deinit)
             #
             # Determine if the pci_epc_event_ops struct has the core_deinit function.

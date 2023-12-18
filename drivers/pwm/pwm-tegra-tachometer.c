@@ -16,7 +16,6 @@
 #include <linux/io.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
-#include <linux/version.h>
 
 #define DRIVER_NAME "pwm_tach"
 
@@ -144,7 +143,7 @@ static inline void tachometer_writel(struct pwm_tegra_tach *ptt, u32 val,
 	writel(val, ptt->regs + reg);
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0))
+#if defined(NV_PWM_OPS_STRUCT_HAS_CONFIG) /* Linux 6.0 */
 static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 			    int duty_ns, int period_ns)
 {
@@ -310,7 +309,7 @@ static irqreturn_t tegra_pwm_tach_irq(int irq, void *dev)
 }
 
 static const struct pwm_ops pwm_tegra_tach_ops = {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0))
+#if defined(NV_PWM_OPS_STRUCT_HAS_CONFIG) /* Linux 6.0 */
 	.config = tegra_pwm_config,
 	.enable = tegra_pwm_enable,
 	.disable = tegra_pwm_disable,
