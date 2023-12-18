@@ -8,7 +8,6 @@
 #include <linux/of_device.h>
 #include <linux/spi/spi.h>
 //#include <soc/tegra/virt/tegra_hv_pm_ctl.h>
-#include <linux/version.h>
 #include <linux/sched/signal.h>
 
 #define AURIX			0x3
@@ -372,7 +371,7 @@ static int aurix_tegra_start_kthread(struct device *dev)
 /*
  * remove, shutdown, suspend, resume functions
  */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0)
+#if defined(NV_SPI_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 5.18 */
 static int aurix_tegra_spi_remove(struct spi_device *spi)
 {
 	return aurix_tegra_stop_kthread(&spi->dev);

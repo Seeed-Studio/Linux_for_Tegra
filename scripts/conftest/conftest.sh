@@ -7414,6 +7414,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_ASOC_SIMPLE_RENAMED_SIMPLE" "" "functions"
         ;;
 
+        spi_driver_struct_remove_return_type_int)
+            #
+            # Determine if return type of .remove function of struct spi_driver is int or void.
+            #
+            # The return type of .remove is changed with commit a0386bba7093 ("spi: make remove
+            # callback a void function") in Linux 5.18.
+            #
+            CODE="
+            #define _LINUX_EFI_H
+            #include <linux/spi/spi.h>
+            int conftest_spi_driver_struct_remove_return_type_int(struct spi_driver *spid) {
+                return spid->remove(NULL);
+            }"
+
+            compile_check_conftest "$CODE" "NV_SPI_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT" "" "types"
+        ;;
+
         tc_taprio_qopt_offload_struct_has_cmd)
             #
             # Determine if struct tc_taprio_qopt_offload has a member named cmd
