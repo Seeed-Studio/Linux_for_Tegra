@@ -4,13 +4,14 @@
  * Maxim MAX77851 GPIO driver
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/gpio/driver.h>
 #include <linux/interrupt.h>
 #include <linux/mfd/max77851.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
-#include <linux/version.h>
 
 #define GPIO_CNFG_OFFSET (5)
 #define GPIO_CNFG0_REG_ADDR(offset) (GPIO0_CFG0_REG + (offset * GPIO_CNFG_OFFSET))
@@ -277,7 +278,7 @@ static int max77851_gpio_probe(struct platform_device *pdev)
 	mgpio->gpio_chip.can_sleep = 1;
 	mgpio->gpio_chip.base = -1;
 #ifdef CONFIG_OF_GPIO
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
+#if defined(NV_GPIO_CHIP_STRUCT_HAS_OF_NODE_PRESENT) /* Linux 6.2 */
 	mgpio->gpio_chip.of_node = pdev->dev.parent->of_node;
 #endif
 #endif
