@@ -7521,6 +7521,25 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TTY_OPERATIONS_STRUCT_WRITE_HAS_U8_PTR_ARG" "" "functions"
         ;;
 
+        tty_operations_struct_set_termios_has_const_ktermios_arg)
+            #
+            # Determine if the function set_termios of tty_operations struct has the const type argument or not.
+            #
+            # The callback function of tty_operations has the const type argument from the commit bec5b814d46c
+            # ("serial: Make ->set_termios() old ktermios const") in Linux 6.1.
+            #
+            CODE="
+            #include <linux/tty.h>
+            #include <linux/tty_driver.h>
+            static inline void test_set_termios(struct tty_struct *tty, const struct ktermios *old) {
+            }
+            static struct tty_operations tty_ops = {
+                  .set_termios = test_set_termios,
+            };"
+
+            compile_check_conftest "$CODE" "NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG" "" "types"
+        ;;
+
         ufs_hba_variant_ops_suspend_has_status_arg)
             #
             # Determine if the 'suspend' function for the

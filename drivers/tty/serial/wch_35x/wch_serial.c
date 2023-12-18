@@ -12,8 +12,6 @@
 
 #include <nvidia/conftest.h>
 
-#include <linux/version.h>
-
 #include "wch_common.h"
 
 #if defined(NV_DEFINE_SEMAPHORE_HAS_NUMBER_ARG)
@@ -82,7 +80,7 @@ static int ser_get_count(struct ser_state *, struct serial_icounter_struct *);
 static int ser_ioctl(struct tty_struct *, unsigned int, unsigned long);
 static void ser_hangup(struct tty_struct *);
 unsigned int ser_get_divisor(struct ser_port *, unsigned int, bool);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#if defined(NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG) /* Linux 6.1 */
 unsigned int ser_get_baud_rate(struct ser_port *, struct WCHTERMIOS *, const struct WCHTERMIOS *, unsigned int, unsigned int);
 static void ser_change_speed(struct ser_state *state, const struct WCHTERMIOS *old_termios);
 #else
@@ -108,7 +106,7 @@ static void wch_ser_break_ctl(struct ser_port *, int);
 static int wch_ser_startup(struct ser_port *);
 static void wch_ser_shutdown(struct ser_port *);
 static unsigned int wch_ser_get_divisor(struct ser_port *, unsigned int, bool);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#if defined(NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG) /* Linux 6.1 */
 static void wch_ser_set_termios(struct ser_port *port, struct WCHTERMIOS *termios, const struct WCHTERMIOS *old);
 #else
 static void wch_ser_set_termios(struct ser_port *port, struct WCHTERMIOS *termios, struct WCHTERMIOS *old);
@@ -1285,7 +1283,7 @@ unsigned int ser_get_divisor(struct ser_port *port, unsigned int baud, bool btwi
     return quot;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#if defined(NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG) /* Linux 6.1 */
 unsigned int ser_get_baud_rate(struct ser_port *port, struct WCHTERMIOS *termios,
 			       const struct WCHTERMIOS *old, unsigned int min, unsigned int max)
 #else
@@ -1356,7 +1354,7 @@ unsigned int ser_get_baud_rate(struct ser_port *port, struct WCHTERMIOS *termios
     return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#if defined(NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG) /* Linux 6.1 */
 static void ser_change_speed(struct ser_state *state, const struct WCHTERMIOS *old_termios)
 #else
 static void ser_change_speed(struct ser_state *state, struct WCHTERMIOS *old_termios)
@@ -1384,7 +1382,7 @@ static void ser_change_speed(struct ser_state *state, struct WCHTERMIOS *old_ter
     wch_ser_set_termios(port, &termios, old_termios);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#if defined(NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG) /* Linux 6.1 */
 static void ser_set_termios(struct tty_struct *tty, const struct WCHTERMIOS *old_termios)
 #else
 static void ser_set_termios(struct tty_struct *tty, struct WCHTERMIOS *old_termios)
@@ -1965,7 +1963,7 @@ static unsigned int wch_ser_get_divisor(struct ser_port *port, unsigned int baud
     return quot;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#if defined(NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG) /* Linux 6.1 */
 static void wch_ser_set_termios(struct ser_port *port, struct WCHTERMIOS *termios, const struct WCHTERMIOS *old)
 #else
 static void wch_ser_set_termios(struct ser_port *port, struct WCHTERMIOS *termios, struct WCHTERMIOS *old)
