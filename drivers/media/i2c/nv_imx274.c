@@ -1335,20 +1335,20 @@ static int imx274_probe(struct i2c_client *client,
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-static void imx274_remove(struct i2c_client *client)
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int imx274_remove(struct i2c_client *client)
+#else
+static void imx274_remove(struct i2c_client *client)
 #endif
 {
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx274 *priv;
 
 	if (!s_data)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-		return;
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -EINVAL;
+#else
+		return;
 #endif
 
 	priv = (struct imx274 *)s_data->priv;
@@ -1360,7 +1360,7 @@ static int imx274_remove(struct i2c_client *client)
 	imx274_eeprom_device_release(priv);
 
 	mutex_destroy(&priv->streaming_lock);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

@@ -300,10 +300,10 @@ static int maxim_gmsl_hdmi_ser_probe(struct i2c_client *client)
 	return 0;
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void maxim_gmsl_hdmi_ser_remove(struct i2c_client *client)
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int maxim_gmsl_hdmi_ser_remove(struct i2c_client *client)
+#else
+static void maxim_gmsl_hdmi_ser_remove(struct i2c_client *client)
 #endif
 {
 	struct maxim_gmsl_hdmi_ser_priv *priv = i2c_get_clientdata(client);
@@ -311,7 +311,7 @@ static int maxim_gmsl_hdmi_ser_remove(struct i2c_client *client)
 	i2c_unregister_device(client);
 	gpio_set_value(priv->ser_pwrdn, 0);
 
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

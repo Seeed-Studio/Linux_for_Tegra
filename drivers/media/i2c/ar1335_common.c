@@ -2785,7 +2785,7 @@ exit:
 		devm_kfree(dev, ptr); \
 	}
 
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int cam_remove(struct i2c_client *client)
 #else
 static void cam_remove(struct i2c_client *client)
@@ -2799,7 +2799,7 @@ static void cam_remove(struct i2c_client *client)
 
 	if (!s_data) {
 		dev_err(&client->dev, "camera common data is NULL\n");
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -EINVAL;
 #else
 		return;
@@ -2811,7 +2811,7 @@ static void cam_remove(struct i2c_client *client)
 	reset_gpio = of_get_named_gpio(node, "reset-gpios", 0);
 	if (reset_gpio < 0) {
 		dev_err(&client->dev, "Unable to get reset GPIO\n");
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -EINVAL;
 #else
 		return;

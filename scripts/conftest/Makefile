@@ -121,6 +121,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += get_file_rcu_has_double_ptr_file_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += get_user_pages
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += i2c_driver_struct_probe_without_i2c_device_id_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += i2c_driver_struct_has_probe_new
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += i2c_driver_struct_remove_return_type_int
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += iio_dev_opaque_has_mlock
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += iommu_map_has_gfp_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += kthread_complete_and_exit

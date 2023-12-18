@@ -1310,10 +1310,10 @@ static int max_gmsl_dp_ser_probe(struct i2c_client *client)
 	return ret;
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void max_gmsl_dp_ser_remove(struct i2c_client *client)
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int max_gmsl_dp_ser_remove(struct i2c_client *client)
+#else
+static void max_gmsl_dp_ser_remove(struct i2c_client *client)
 #endif
 {
 	struct max_gmsl_dp_ser_priv *priv = i2c_get_clientdata(client);
@@ -1321,7 +1321,7 @@ static int max_gmsl_dp_ser_remove(struct i2c_client *client)
 	i2c_unregister_device(client);
 	gpiod_set_value_cansleep(priv->gpiod_pwrdn, 0);
 
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

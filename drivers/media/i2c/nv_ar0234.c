@@ -1151,7 +1151,7 @@ static int ar0234_probe(struct i2c_client *client,
 	return 0;
 }
 
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int ar0234_remove(struct i2c_client *client)
 #else
 static void ar0234_remove(struct i2c_client *client)
@@ -1161,7 +1161,7 @@ static void ar0234_remove(struct i2c_client *client)
 	struct ar0234 *priv;
 
 	if (!s_data)
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -EINVAL;
 #else
 		return;
@@ -1171,7 +1171,7 @@ static void ar0234_remove(struct i2c_client *client)
 	tegracam_v4l2subdev_unregister(priv->tc_dev);
 	tegracam_device_unregister(priv->tc_dev);
 	ar0234_eeprom_device_release(priv);
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

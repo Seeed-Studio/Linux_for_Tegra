@@ -5434,6 +5434,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_I2C_DRIVER_STRUCT_HAS_PROBE_NEW" "" "types"
         ;;
 
+        i2c_driver_struct_remove_return_type_int)
+            #
+            # Determine if return type of .remove function of struct i2c_driver is int or void.
+            #
+            # The return type of .remove is changed with commit ed5c2f5fd10dda ("i2c: Make
+            # remove callback return void") in Linux 6.1.
+            #
+            CODE="
+            #define _LINUX_EFI_H
+            #include <linux/i2c.h>
+            int conftest_i2c_i2c_driver_struct_remove_return_type_int(struct i2c_driver *i2cd) {
+                return i2cd->remove(NULL);
+            }"
+
+            compile_check_conftest "$CODE" "NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT" "" "types"
+        ;;
+
         of_get_named_gpio)
             #
             # Determine if of_get_named_gpio() function is present

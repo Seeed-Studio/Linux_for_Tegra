@@ -756,10 +756,10 @@ static int imx219_probe(struct i2c_client *client,
 	return 0;
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void imx219_remove(struct i2c_client *client)
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int imx219_remove(struct i2c_client *client)
+#else
+static void imx219_remove(struct i2c_client *client)
 #endif
 {
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
@@ -767,7 +767,7 @@ static int imx219_remove(struct i2c_client *client)
 
 	if (!s_data) {
 		dev_err(&client->dev, "camera common data is NULL\n");
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -EINVAL;
 #else
 		return;
@@ -778,7 +778,7 @@ static int imx219_remove(struct i2c_client *client)
 	tegracam_v4l2subdev_unregister(priv->tc_dev);
 	tegracam_device_unregister(priv->tc_dev);
 
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

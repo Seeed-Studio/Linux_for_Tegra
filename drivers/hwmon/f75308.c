@@ -1216,7 +1216,7 @@ destroy_lock:
 	return status;
 }
 
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int f75308_remove(struct i2c_client *client)
 #else
 static void f75308_remove(struct i2c_client *client)
@@ -1225,7 +1225,7 @@ static void f75308_remove(struct i2c_client *client)
 	struct f75308_priv *priv = dev_get_drvdata(&client->dev);
 
 	mutex_destroy(&priv->locker);
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

@@ -514,7 +514,7 @@ static int isc_dev_probe(struct i2c_client *client,
 	return 0;
 }
 
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int isc_dev_remove(struct i2c_client *client)
 #else
 static void isc_dev_remove(struct i2c_client *client)
@@ -535,7 +535,7 @@ static void isc_dev_remove(struct i2c_client *client)
 	if (info->cdev.dev)
 		cdev_del(&info->cdev);
 
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

@@ -856,7 +856,7 @@ static int imx390_probe(struct i2c_client *client,
 	return 0;
 }
 
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int imx390_remove(struct i2c_client *client)
 #else
 static void imx390_remove(struct i2c_client *client)
@@ -866,7 +866,7 @@ static void imx390_remove(struct i2c_client *client)
 	struct imx390 *priv;
 
 	if (!s_data)
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -EINVAL;
 #else
 		return;
@@ -880,7 +880,7 @@ static void imx390_remove(struct i2c_client *client)
 	tegracam_v4l2subdev_unregister(priv->tc_dev);
 	tegracam_device_unregister(priv->tc_dev);
 
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

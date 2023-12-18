@@ -1238,7 +1238,7 @@ fail:
 	return err;
 }
 
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int
 ov5693_remove(struct i2c_client *client)
 #else
@@ -1250,7 +1250,7 @@ ov5693_remove(struct i2c_client *client)
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 
 	if (!s_data)
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -EINVAL;
 #else
 		return;
@@ -1266,7 +1266,7 @@ ov5693_remove(struct i2c_client *client)
 	ov5693_eeprom_device_release(priv);
 
 	mutex_destroy(&priv->streaming_lock);
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

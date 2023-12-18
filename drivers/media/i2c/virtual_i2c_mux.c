@@ -106,7 +106,7 @@ err_parent:
 	return ret;
 }
 
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int virtual_i2c_mux_remove(struct i2c_client *client)
 #else
 static void virtual_i2c_mux_remove(struct i2c_client *client)
@@ -116,7 +116,7 @@ static void virtual_i2c_mux_remove(struct i2c_client *client)
 
 	i2c_mux_del_adapters(muxc);
 	i2c_put_adapter(muxc->parent);
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

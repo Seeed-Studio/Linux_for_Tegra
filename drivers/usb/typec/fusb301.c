@@ -1476,27 +1476,27 @@ destroy_workqueue:
 	return ret;
 }
 
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-static void fusb301_remove(struct i2c_client *client)
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int fusb301_remove(struct i2c_client *client)
+#else
+static void fusb301_remove(struct i2c_client *client)
 #endif
 {
 	struct fusb301_chip *chip = i2c_get_clientdata(client);
 	struct device *cdev = &client->dev;
 
 	if (!chip)
-#if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
-		return;
-#else
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -ENODEV;
+#else
+		return;
 #endif
 
 	sysfs_remove_group(&cdev->kobj, &fusb_sysfs_group);
 	destroy_workqueue(chip->cc_wq);
 	mutex_destroy(&chip->mlock);
 	wakeup_source_unregister(chip->wlock);
-#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }

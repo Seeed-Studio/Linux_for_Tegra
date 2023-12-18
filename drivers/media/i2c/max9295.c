@@ -514,7 +514,7 @@ static int max9295_probe(struct i2c_client *client,
 	return err;
 }
 
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 static int max9295_remove(struct i2c_client *client)
 #else
 static void max9295_remove(struct i2c_client *client)
@@ -528,7 +528,7 @@ static void max9295_remove(struct i2c_client *client)
 		i2c_unregister_device(client);
 		client = NULL;
 	}
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #endif
 }
