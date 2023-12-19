@@ -7035,6 +7035,28 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_ETHTOOL_OPS_GET_SET_RINGPARAM_HAS_RINGPARAM_AND_EXTACT_ARGS" "" "types"
         ;;
 
+        ethtool_ops_get_set_rxfh_has_rxfh_param_args)
+            #
+            # Determine if the 'get_rxfh' and 'set_rxfh' ethtool_ops functions
+            # support the 'ethtool_rxfh_param' argument.
+            #
+            # Added by commit fb6e30a72539 ("net: ethtool: pass a pointer to
+            # parameters to get/set_rxfh ethtool ops") in Linux v6.8.
+            #
+            CODE="
+            #include <linux/ethtool.h>
+            #include <linux/netdevice.h>
+            #include <linux/netlink.h>
+            #include <uapi/linux/ethtool.h>
+            void conftest_ethtool_ops_get_set_rxfh_has_rxfh_param_args(struct ethtool_ops *ops) {
+                    int (*fn)(struct net_device *,
+                    struct ethtool_rxfh_param *rxfh) = ops->get_rxfh;
+            }"
+
+            compile_check_conftest "$CODE" \
+                    "NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS" "" "types"
+        ;;
+
         netif_set_tso_max_size)
             #
             # Determine if netif_set_tso_max_size() function is present

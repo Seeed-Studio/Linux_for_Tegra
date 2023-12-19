@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1455,11 +1455,21 @@ static u32 ether_get_rxfh_indir_size(struct net_device *ndev)
  *
  * @retval 0 on success
  */
+#if defined(NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS)
+static int ether_get_rxfh(struct net_device *ndev,
+			  struct ethtool_rxfh_param *rxfh)
+#else
 static int ether_get_rxfh(struct net_device *ndev, u32 *indir, u8 *key,
 			  u8 *hfunc)
+#endif
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
+#if defined(NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS)
+	u32 *indir = rxfh->indir;
+	u8 *hfunc = &rxfh->hfunc;
+	u8 *key = rxfh->key;
+#endif
 	int i;
 
 	if (indir) {
@@ -1487,12 +1497,23 @@ static int ether_get_rxfh(struct net_device *ndev, u32 *indir, u8 *key,
  * @retval 0 on success
  * @retval -1 on failure.
  */
+#if defined(NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS)
+static int ether_set_rxfh(struct net_device *ndev,
+			  struct ethtool_rxfh_param *rxfh,
+			  struct netlink_ext_ack *extack)
+#else
 static int ether_set_rxfh(struct net_device *ndev, const u32 *indir,
 			  const u8 *key, const u8 hfunc)
+#endif
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_ioctl ioctl_data = {};
+#if defined(NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS)
+	u32 *indir = rxfh->indir;
+	u8 hfunc = rxfh->hfunc;
+	u8 *key = rxfh->key;
+#endif
 	int i;
 
 	if (!netif_running(ndev)) {
