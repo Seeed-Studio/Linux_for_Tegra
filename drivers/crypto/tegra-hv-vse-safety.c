@@ -554,9 +554,8 @@ enum tegra_virtual_se_op_mode {
 };
 
 enum tegra_virtual_se_aes_op_mode {
-	AES_CBC,
-	AES_ECB,
-	AES_CTR,
+	AES_CBC = 0U,
+	AES_CTR = 2U,
 };
 
 /* Security Engine request context */
@@ -1865,8 +1864,6 @@ static void tegra_hv_vse_safety_prepare_cmd(struct tegra_virtual_se_dev *se_dev,
 			else
 				aes->op.ivsel = AES_IV_REG;
 		}
-		else
-			aes->op.ivsel = AES_ORIGINAL_IV;
 	}
 }
 
@@ -2135,54 +2132,6 @@ static int tegra_hv_vse_safety_aes_cbc_decrypt(struct skcipher_request *req)
 
 	req_ctx->encrypt = false;
 	req_ctx->op_mode = AES_CBC;
-	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].se_engine;
-	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].se_engine];
-	err = tegra_hv_vse_safety_process_aes_req(req_ctx->se_dev, req);
-	if (err)
-		dev_err(req_ctx->se_dev->dev,
-				"%s failed with error %d\n", __func__, err);
-	return err;
-}
-
-static int tegra_hv_vse_safety_aes_ecb_encrypt(struct skcipher_request *req)
-{
-	int err = 0;
-	struct tegra_virtual_se_aes_req_context *req_ctx = NULL;
-	struct tegra_virtual_se_aes_context *aes_ctx;
-
-	if (!req) {
-		pr_err("NULL req received by %s", __func__);
-		return -EINVAL;
-	}
-	aes_ctx = crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
-	req_ctx = skcipher_request_ctx(req);
-
-	req_ctx->encrypt = true;
-	req_ctx->op_mode = AES_ECB;
-	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].se_engine;
-	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].se_engine];
-	err = tegra_hv_vse_safety_process_aes_req(req_ctx->se_dev, req);
-	if (err)
-		dev_err(req_ctx->se_dev->dev,
-				"%s failed with error %d\n", __func__, err);
-	return err;
-}
-
-static int tegra_hv_vse_safety_aes_ecb_decrypt(struct skcipher_request *req)
-{
-	int err = 0;
-	struct tegra_virtual_se_aes_req_context *req_ctx = NULL;
-	struct tegra_virtual_se_aes_context *aes_ctx;
-
-	if (!req) {
-		pr_err("NULL req received by %s", __func__);
-		return -EINVAL;
-	}
-	aes_ctx	= crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
-	req_ctx = skcipher_request_ctx(req);
-
-	req_ctx->encrypt = false;
-	req_ctx->op_mode = AES_ECB;
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].se_engine;
 	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].se_engine];
 	err = tegra_hv_vse_safety_process_aes_req(req_ctx->se_dev, req);
@@ -4260,25 +4209,6 @@ static struct skcipher_alg aes_algs[] = {
 		.setkey			= tegra_hv_vse_safety_aes_setkey,
 		.encrypt		= tegra_hv_vse_safety_aes_cbc_encrypt,
 		.decrypt		= tegra_hv_vse_safety_aes_cbc_decrypt,
-		.min_keysize		= TEGRA_VIRTUAL_SE_AES_MIN_KEY_SIZE,
-		.max_keysize		= TEGRA_VIRTUAL_SE_AES_MAX_KEY_SIZE,
-		.ivsize			= TEGRA_VIRTUAL_SE_AES_IV_SIZE,
-	},
-	{
-		.base.cra_name		= "ecb-vse(aes)",
-		.base.cra_driver_name	= "ecb-aes-tegra",
-		.base.cra_priority	= 400,
-		.base.cra_flags		= CRYPTO_ALG_TYPE_SKCIPHER |
-					  CRYPTO_ALG_ASYNC,
-		.base.cra_blocksize	= TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE,
-		.base.cra_ctxsize	= HV_SAFETY_AES_CTX_SIZE,
-		.base.cra_alignmask	= 0,
-		.base.cra_module	= THIS_MODULE,
-		.init			= tegra_hv_vse_safety_aes_cra_init,
-		.exit			= tegra_hv_vse_safety_aes_cra_exit,
-		.setkey			= tegra_hv_vse_safety_aes_setkey,
-		.encrypt		= tegra_hv_vse_safety_aes_ecb_encrypt,
-		.decrypt		= tegra_hv_vse_safety_aes_ecb_decrypt,
 		.min_keysize		= TEGRA_VIRTUAL_SE_AES_MIN_KEY_SIZE,
 		.max_keysize		= TEGRA_VIRTUAL_SE_AES_MAX_KEY_SIZE,
 		.ivsize			= TEGRA_VIRTUAL_SE_AES_IV_SIZE,

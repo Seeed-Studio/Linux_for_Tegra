@@ -1041,7 +1041,7 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	int ret = 0;
 	struct tnvvse_crypto_completion tcrypt_complete;
 	struct tegra_virtual_se_aes_context *aes_ctx;
-	char aes_algo[5][15] = {"cbc-vse(aes)", "ecb-vse(aes)", "ctr-vse(aes)"};
+	char aes_algo[5][15] = {"cbc-vse(aes)", "ctr-vse(aes)"};
 	const char *driver_name;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
 	uint8_t next_block_iv[TEGRA_NVVSE_AES_IV_LEN];
@@ -1155,7 +1155,7 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	} else {
 		if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR)
 			memcpy(next_block_iv, ctx->intermediate_counter, TEGRA_NVVSE_AES_CTR_LEN);
-		else		//As ecb does not need IV, and CBC uses IV stored in SE server
+		else		//As CBC uses IV stored in SE server
 			memset(next_block_iv, 0, TEGRA_NVVSE_AES_IV_LEN);
 	}
 	pr_debug("%s(): %scryption\n", __func__, (aes_enc_dec_ctl->is_encryption ? "en" : "de"));

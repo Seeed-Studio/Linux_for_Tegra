@@ -71,8 +71,6 @@ enum tegra_nvvse_sha_type {
 enum tegra_nvvse_aes_mode {
 	/** Defines AES MODE CBC */
 	TEGRA_NVVSE_AES_MODE_CBC = 0u,
-	/** Defines AES MODE ECB */
-	TEGRA_NVVSE_AES_MODE_ECB,
 	/** Defines AES MODE CTR */
 	TEGRA_NVVSE_AES_MODE_CTR,
 	/** Defines AES MODE GCM */
