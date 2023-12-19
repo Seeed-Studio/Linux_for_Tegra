@@ -2822,7 +2822,7 @@ static void cam_remove(struct i2c_client *client)
 	if (pwdn_gpio < 0) {
 		dev_err(&client->dev, "Unable to get power GPIO\n");
 		gpio_free(reset_gpio);
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -EINVAL;
 #else
 		return;
@@ -2833,7 +2833,7 @@ static void cam_remove(struct i2c_client *client)
 	gpio_free(pwdn_gpio);
 
 	if (!priv || !priv->pdata)
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 		return -1;
 #else
 		return;
@@ -2876,7 +2876,7 @@ static void cam_remove(struct i2c_client *client)
 	FREE_SAFE(&client->dev, priv->s_data);
 	FREE_SAFE(&client->dev, priv);
 
-#if (KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE)
+#if defined(NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT) /* Linux 6.1 */
 	return 0;
 #else
 	return;
