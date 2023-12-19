@@ -61,6 +61,7 @@ struct device __weak tegra_generic_dev;
 
 struct device __weak tegra_vpr_dev;
 EXPORT_SYMBOL(tegra_vpr_dev);
+struct device tegra_vpr1_dev;
 
 struct device __weak tegra_generic_cma_dev;
 struct device __weak tegra_vpr_cma_dev;
@@ -120,6 +121,15 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.numa_node_id = 0,
 	},
 	[2] = {
+		.name		= "vpr1",
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_VPR,
+		.base		= 0,
+		.size		= 0,
+		.dma_dev	= &tegra_vpr1_dev,
+		.enable_static_dma_map = true,
+		.numa_node_id = 1,
+	},
+	[3] = {
 		.name		= "vidmem",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_VIDMEM,
 		.base		= 0,
@@ -128,21 +138,21 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.no_cpu_access = true,
 		.numa_node_id = 0,
 	},
-	[3] = {
+	[4] = {
 		.name		= "fsi",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_FSI,
 		.base		= 0,
 		.size		= 0,
 		.numa_node_id = 0,
 	},
-	[4] = {
+	[5] = {
 		.name		= "gpu0",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_GPU,
 		.base		= 0,
 		.size		= 0,
 		.numa_node_id = 0,
 	},
-	[5] = {
+	[6] = {
 		.name		= "gpu1",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_GPU,
 		.base		= 0,
@@ -150,11 +160,6 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.numa_node_id = 1,
 	},
 	/* Need uninitialized entries for IVM carveouts */
-	[6] = {
-		.name		= NULL,
-		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
-		.numa_node_id = 0,
-	},
 	[7] = {
 		.name		= NULL,
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
@@ -170,11 +175,16 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
 		.numa_node_id = 0,
 	},
+	[10] = {
+		.name		= NULL,
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+		.numa_node_id = 0,
+	},
 };
 
 static struct nvmap_platform_data nvmap_data = {
 	.carveouts	= nvmap_carveouts,
-	.nr_carveouts	= 6,
+	.nr_carveouts	= 7,
 };
 
 static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name)

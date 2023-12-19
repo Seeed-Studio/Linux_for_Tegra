@@ -57,7 +57,8 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 
 	for (i = 0; i < nvmap_dev->nr_heaps; i++)
 		if ((co->usage_mask != NVMAP_HEAP_CARVEOUT_IVM &&
-			co->usage_mask != NVMAP_HEAP_CARVEOUT_GPU) &&
+			co->usage_mask != NVMAP_HEAP_CARVEOUT_GPU &&
+			co->usage_mask != NVMAP_HEAP_CARVEOUT_VPR) &&
 		    (nvmap_dev->heaps[i].heap_bit & co->usage_mask)) {
 			pr_err("carveout %s already exists\n", co->name);
 			err = -EEXIST;
