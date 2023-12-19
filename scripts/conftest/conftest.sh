@@ -945,6 +945,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MDEV_GET_TYPE_GROUP_ID_PRESENT" "" "functions"
         ;;
 
+        media_entity_remote_pad)
+            #
+            # Determine if media_entity_remote_pad() function is present or not
+            #
+            # Removed by commit b2e44430b634 ("media: mc-entity: Rename
+            # media_entity_remote_pad() to media_pad_remote_pad_first()") in Linux 6.0
+            #
+            CODE="
+            #include <media/media-entity.h>
+            void conftest_media_entity_remote_pad(void) {
+                media_entity_remote_pad();
+            }"
+
+            compile_check_conftest "$CODE" "NV_MEDIA_ENTITY_REMOTE_PAD_PRESENT" "" "functions"
+        ;;
+
         vfio_device_mig_state)
             #
             # Determine if vfio_device_mig_state enum is present or not
