@@ -9,7 +9,6 @@
 #include <linux/of_device.h>
 #include <linux/pwm.h>
 #include <linux/atomic.h>
-#include <linux/version.h>
 
 #include "cdi-pwm-priv.h"
 
@@ -33,7 +32,7 @@ static inline struct cdi_pwm_info *to_cdi_pwm_info(struct pwm_chip *chip)
 	return container_of(chip, struct cdi_pwm_info, chip);
 }
 
-#if KERNEL_VERSION(6, 0, 0) > LINUX_VERSION_CODE
+#if defined(NV_PWM_OPS_STRUCT_HAS_CONFIG) /* Linux 6.0 */
 static int cdi_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	struct cdi_pwm_info *info = to_cdi_pwm_info(chip);
@@ -127,7 +126,7 @@ static struct pwm_device *of_cdi_pwm_xlate(struct pwm_chip *pc,
 }
 
 static const struct pwm_ops cdi_pwm_ops = {
-#if KERNEL_VERSION(6, 0, 0) > LINUX_VERSION_CODE
+#if defined(NV_PWM_OPS_STRUCT_HAS_CONFIG) /* Linux 6.0 */
 	.config = cdi_pwm_config,
 	.enable = cdi_pwm_enable,
 	.disable = cdi_pwm_disable,
