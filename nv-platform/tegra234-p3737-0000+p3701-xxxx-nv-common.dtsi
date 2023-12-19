@@ -168,10 +168,6 @@
 			status = "okay";
 		};
 
-		serial@31d0000 {
-			current-speed = <115200>;
-		};
-
 		i2c@31e0000 {
 			status = "okay";
 		};
