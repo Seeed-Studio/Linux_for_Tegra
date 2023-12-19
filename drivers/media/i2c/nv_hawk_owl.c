@@ -1032,11 +1032,11 @@ static int ar0234_eeprom_device_init(struct ar0234 *priv)
 
 		/* assign the EEPROM addrs which is read from DT */
 		priv->eeprom[i].brd.addr = pdata->eeprom_id_addr + i;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-		priv->eeprom[i].i2c_client = i2c_new_device(
+#if defined(NV_I2C_NEW_CLIENT_DEVICE_PRESENT) /* Linux 5.10 */
+		priv->eeprom[i].i2c_client = i2c_new_client_device(
 				priv->eeprom[i].adap, &priv->eeprom[i].brd);
 #else
-		priv->eeprom[i].i2c_client = i2c_new_client_device(
+		priv->eeprom[i].i2c_client = i2c_new_device(
 				priv->eeprom[i].adap, &priv->eeprom[i].brd);
 #endif
 		if (!priv->eeprom[i].i2c_client) {
