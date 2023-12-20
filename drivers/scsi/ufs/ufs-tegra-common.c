@@ -25,10 +25,17 @@
 
 #include <linux/debugfs.h>
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
 #include <drivers-private/scsi/ufs/ufshcd-pltfrm.h>
 #include <drivers-private/scsi/ufs/ufshcd.h>
 #include <drivers-private/scsi/ufs/unipro.h>
 #include <drivers-private/scsi/ufs/ufshci.h>
+#else
+#include <drivers-private/scsi/ufs/ufshcd-pltfrm.h>
+#include <ufs/ufshcd.h>
+#include <ufs/unipro.h>
+#include <ufs/ufshci.h>
+#endif
 
 #include "ufs-tegra.h"
 #include "ufs-provision.h"
@@ -1449,8 +1456,13 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	ufs_tegra->enable_scramble =
 		of_property_read_bool(np, "nvidia,enable-scramble");
 
+#if defined(NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS) /* Linux 6.0 */
+	if (ufs_tegra->soc->chip_id >= TEGRA234)
+		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS;
+#else
 	if (ufs_tegra->soc->chip_id >= TEGRA234)
 		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_ENABLE_STREAM_ID;
+#endif
 }
 
 static void ufs_tegra_eq_timeout(struct ufs_tegra_host *ufs_tegra)

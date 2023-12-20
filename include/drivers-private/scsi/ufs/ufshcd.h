@@ -10,5 +10,5 @@
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
 #include <drivers-private/scsi/ufs/k61/ufshcd.h>
 #else
-#include <drivers-private/scsi/ufs/k67/ufshcd.h>
+#error "Use headers from core kernel"
 #endif

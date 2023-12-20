@@ -7581,6 +7581,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_UFS_HBA_VARIANT_OPS_SUSPEND_HAS_STATUS_ARG" "" "types"
         ;;
 
+        ufshcd_quirks_enum_has_ufshcd_quirk_broken_64bit_address)
+            #
+            # Determine if the 'UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS' is defined in the
+            # enum ufshcd_quirks.
+            #
+            # In Linux v6.0, the enum UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS is added as
+            # commit 6554400d6f66 ("scsi: ufs: core: Add UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS")
+            #
+            CODE="
+            #include <ufs/ufshcd.h>
+            enum ufshcd_quirks quirk = UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS;
+            "
+
+            compile_check_conftest "$CODE" "NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS" "" "types"
+        ;;
+
         v4l2_async_connection_struct_present)
             #
             # Determine if the 'struct v4l2_async_connection' present or not.

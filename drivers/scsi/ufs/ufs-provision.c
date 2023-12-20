@@ -6,7 +6,12 @@
 #include "ufs-tegra.h"
 #ifdef CONFIG_DEBUG_FS
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
 #include <drivers-private/scsi/ufs/ufshcd.h>
+#else
+#include <ufs/ufshcd.h>
+#include <drivers-private/scsi/ufs/ufshcd-priv.h>
+#endif
 
 #define CHECK_NULL(expr) \
 	{ \

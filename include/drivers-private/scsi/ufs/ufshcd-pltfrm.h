@@ -5,7 +5,13 @@
 #ifndef UFSHCD_PLTFRM_H_
 #define UFSHCD_PLTFRM_H_
 
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
 #include "ufshcd.h"
+#else
+#include <ufs/ufshcd.h>
+#endif
 
 #define UFS_PWM_MODE 1
 #define UFS_HS_MODE  2
