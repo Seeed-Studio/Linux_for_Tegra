@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2017-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #include <linux/device.h>
 #include <linux/dmaengine.h>
@@ -279,9 +279,6 @@ int esc_mods_dma_set_config(struct mods_client *client,
 	config.src_maxburst = p_config->src_maxburst;
 	config.dst_maxburst = p_config->dst_maxburst;
 	config.device_fc = (p_config->device_fc == 0) ? false : true;
-#if KERNEL_VERSION(5, 17, 0) > MODS_KERNEL_VERSION
-	config.slave_id = p_config->slave_id;
-#endif
 
 	cl_debug(DEBUG_TEGRADMA,
 		"ch: %d dir [%d], addr[%p -> %p], burst [%d %d] width [%d %d]\n",
@@ -290,12 +287,6 @@ int esc_mods_dma_set_config(struct mods_client *client,
 		(void *)config.src_addr, (void *)config.dst_addr,
 		config.src_maxburst, config.dst_maxburst,
 		config.src_addr_width, config.dst_addr_width);
-
-#if KERNEL_VERSION(5, 17, 0) > MODS_KERNEL_VERSION
-	cl_debug(DEBUG_TEGRADMA,
-		"slave id %d\n",
-		config.slave_id);
-#endif
 
 	write_lock(&(p_mods_chan->lock));
 	err = dmaengine_slave_config(p_mods_chan->pch, &config);
