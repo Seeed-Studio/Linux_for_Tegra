@@ -670,7 +670,7 @@ int esc_mods_send_trustzone_msg(struct mods_client         *client,
 	struct MODS_TZ_PARAMS      *p);
 #endif
 
-#ifdef CONFIG_OPTEE
+#if IS_ENABLED(CONFIG_OPTEE)
 /* OP-TEE TA call */
 int esc_mods_invoke_optee_ta(struct mods_client *client,
 	struct MODS_OPTEE_PARAMS *p);
