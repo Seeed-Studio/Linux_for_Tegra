@@ -15,6 +15,10 @@
 #include <linux/version.h>
 #include "soc/tegra/camrtc-channels.h"
 
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+#include <linux/iosys-map.h>
+#endif
+
 #define NV(p) "nvidia," #p
 
 #define CAMRTC_IVC_CONFIG_SIZE	4096
@@ -79,6 +83,9 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		struct camrtc_hsp *camhsp)
 {
 	struct camrtc_tlv_ivc_setup *tlv;
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	struct iosys_map rx_map, tx_map;
+#endif
 	struct {
 		u32 rx;
 		u32 tx;
@@ -161,6 +168,21 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	region->ivc_size += queue_size;
 	end.tx = region->ivc_size;
 
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
+	iosys_map_set_vaddr(&rx_map, (void *)(region->base + start.rx));
+	iosys_map_set_vaddr(&tx_map, (void *)(region->base + start.tx));
+
+	/* Init IVC */
+	ret = tegra_ivc_init(&chan->ivc,
+			NULL,
+			&rx_map,
+			region->iova + start.rx,
+			&tx_map,
+			region->iova + start.tx,
+			nframes, frame_size,
+			tegra_ivc_channel_ring,
+			(void *)camhsp);
+#else
 	/* Init IVC */
 	ret = tegra_ivc_init(&chan->ivc,
 			NULL,
@@ -171,6 +193,7 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 			nframes, frame_size,
 			tegra_ivc_channel_ring,
 			(void *)camhsp);
+#endif
 	if (ret) {
 		dev_err(&chan->dev, "IVC initialization error: %d\n", ret);
 		goto error;
