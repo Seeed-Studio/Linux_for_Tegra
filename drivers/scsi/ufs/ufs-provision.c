@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2015-2023 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
-#include <linux/version.h>
+#include <nvidia/conftest.h>
+
 #include "ufs-provision.h"
 #include "ufs-tegra.h"
 #ifdef CONFIG_DEBUG_FS
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
-#include <drivers-private/scsi/ufs/ufshcd.h>
-#else
+#if defined(NV_UFS_UFSHCD_H_PRESENT)
 #include <ufs/ufshcd.h>
 #include <drivers-private/scsi/ufs/ufshcd-priv.h>
+#else
+#include <drivers-private/scsi/ufs/ufshcd.h>
 #endif
 
 #define CHECK_NULL(expr) \

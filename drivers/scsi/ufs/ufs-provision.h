@@ -5,14 +5,15 @@
 #ifndef _UFS_PROVISION_H
 #define _UFS_PROVISION_H
 
+#include <nvidia/conftest.h>
+
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0)
-#include <drivers-private/scsi/ufs/ufshcd.h>
-#else
+#if defined(NV_UFS_UFSHCD_H_PRESENT)
 #include <ufs/ufshcd.h>
+#else
+#include <drivers-private/scsi/ufs/ufshcd.h>
 #endif
 
 #ifdef CONFIG_DEBUG_FS
