@@ -30,11 +30,7 @@
 #include <linux/sched.h>
 #include <linux/mutex.h>
 #endif
-#if KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE
-#include <linux/tegra-ivc.h>
-#else
 #include <soc/tegra/virt/hv-ivc.h>
-#endif
 #include <dt-bindings/interconnect/tegra_icc_id.h>
 #if KERNEL_VERSION(4, 15, 0) > LINUX_VERSION_CODE
 #include <soc/tegra/chip-id.h>
