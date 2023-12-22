@@ -2007,6 +2007,9 @@ struct v4l2_subdev *tegra_channel_find_linked_csi_subdev(
 	struct tegra_csi_channel *csi_it;
 	int i = 0;
 
+	if (!csi)
+		return NULL;
+
 	list_for_each_entry(csi_it, &csi->csi_chans, list) {
 		for (i = 0; i < chan->num_subdevs; i++)
 			if (chan->subdev[i] == &csi_it->subdev)
