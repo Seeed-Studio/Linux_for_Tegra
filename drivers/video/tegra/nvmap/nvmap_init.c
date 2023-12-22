@@ -37,11 +37,7 @@
 #include "nvmap_priv.h"
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 14, 0)
-#include <linux/tegra-ivc.h>
-#else
 #include <soc/tegra/virt/hv-ivc.h>
-#endif
 #include <soc/tegra/virt/syscalls.h>
 #endif
 
