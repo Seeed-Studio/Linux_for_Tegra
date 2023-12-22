@@ -9,13 +9,14 @@
 #include <linux/of_address.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
-#include <linux/tegra-ivc.h>
-#include <linux/tegra-ivc-instance.h>
 #include <linux/tegra-aon.h>
 #include <linux/cache.h>
 
 #include <aon-hsp-combo.h>
 #include <aon.h>
+
+#include "tegra-ivc.h"
+#include "tegra-ivc-instance.h"
 
 #define IVC_INIT_TIMEOUT_US (200000)
 

@@ -14,7 +14,7 @@ obj-m += tegra-aon-ivc-echo.o
 
 tegra234-aon-objs += \
     tegra-aon-hsp.o \
-    ../tegra-ivc.o \
+    tegra-ivc.o \
     tegra-aon-mail.o \
     tegra-aon-module.o \
     aon-hsp-mbox-client.o

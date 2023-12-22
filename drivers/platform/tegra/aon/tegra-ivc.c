@@ -5,12 +5,13 @@
  * Copyright (c) 2014-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
-#include <linux/tegra-ivc.h>
-#include <linux/tegra-ivc-instance.h>
 #include <linux/module.h>
 #include <linux/uaccess.h>
 #include <linux/err.h>
 #include <asm/compiler.h>
+
+#include "tegra-ivc.h"
+#include "tegra-ivc-instance.h"
 
 #ifdef CONFIG_SMP
 
@@ -299,13 +300,11 @@ int tegra_ivc_can_read(struct ivc *ivc)
 {
 	return ivc_check_read(ivc) == 0;
 }
-EXPORT_SYMBOL(tegra_ivc_can_read);
 
 int tegra_ivc_can_write(struct ivc *ivc)
 {
 	return ivc_check_write(ivc) == 0;
 }
-EXPORT_SYMBOL(tegra_ivc_can_write);
 
 int tegra_ivc_tx_empty(struct ivc *ivc)
 {
@@ -314,7 +313,6 @@ int tegra_ivc_tx_empty(struct ivc *ivc)
 			offsetof(struct ivc_channel_header, r_count)));
 	return ivc_channel_empty(ivc, ivc->tx_channel);
 }
-EXPORT_SYMBOL(tegra_ivc_tx_empty);
 
 uint32_t tegra_ivc_tx_frames_available(struct ivc *ivc)
 {
@@ -325,7 +323,6 @@ uint32_t tegra_ivc_tx_frames_available(struct ivc *ivc)
 			safe_subtract_u32(READ_ONCE(ivc->tx_channel->w_count),
 				READ_ONCE(ivc->tx_channel->r_count)));
 }
-EXPORT_SYMBOL(tegra_ivc_tx_frames_available);
 
 static void *ivc_frame_pointer(struct ivc *ivc, struct ivc_channel_header *ch,
 		uint32_t frame)
@@ -430,13 +427,11 @@ int tegra_ivc_read(struct ivc *ivc, void *buf, size_t max_read)
 {
 	return ivc_read_frame(ivc, buf, NULL, max_read);
 }
-EXPORT_SYMBOL(tegra_ivc_read);
 
 int tegra_ivc_read_user(struct ivc *ivc, void __user *buf, size_t max_read)
 {
 	return ivc_read_frame(ivc, NULL, buf, max_read);
 }
-EXPORT_SYMBOL(tegra_ivc_read_user);
 
 /* peek in the next rx buffer at offset off, the count bytes */
 int tegra_ivc_read_peek(struct ivc *ivc, void *buf, size_t off, size_t count)
@@ -469,7 +464,6 @@ int tegra_ivc_read_peek(struct ivc *ivc, void *buf, size_t off, size_t count)
 
 	return (int)count;
 }
-EXPORT_SYMBOL(tegra_ivc_read_peek);
 
 /* directly peek at the next frame rx'ed */
 void *tegra_ivc_read_get_next_frame(struct ivc *ivc)
@@ -488,7 +482,6 @@ void *tegra_ivc_read_get_next_frame(struct ivc *ivc)
 			ivc->frame_size);
 	return ivc_frame_pointer(ivc, ivc->rx_channel, ivc->r_pos);
 }
-EXPORT_SYMBOL(tegra_ivc_read_get_next_frame);
 
 int tegra_ivc_read_advance(struct ivc *ivc)
 {
@@ -531,7 +524,6 @@ int tegra_ivc_read_advance(struct ivc *ivc)
 
 	return 0;
 }
-EXPORT_SYMBOL(tegra_ivc_read_advance);
 
 static int ivc_write_frame(struct ivc *ivc, const void *buf,
 		const void __user *user_buf, size_t size)
@@ -600,14 +592,12 @@ int tegra_ivc_write(struct ivc *ivc, const void *buf, size_t size)
 {
 	return ivc_write_frame(ivc, buf, NULL, size);
 }
-EXPORT_SYMBOL(tegra_ivc_write);
 
 int tegra_ivc_write_user(struct ivc *ivc, const void __user *user_buf,
 		size_t size)
 {
 	return ivc_write_frame(ivc, NULL, user_buf, size);
 }
-EXPORT_SYMBOL(tegra_ivc_write_user);
 
 /* poke in the next tx buffer at offset off, the count bytes */
 int tegra_ivc_write_poke(struct ivc *ivc, const void *buf, size_t off,
@@ -636,7 +626,6 @@ int tegra_ivc_write_poke(struct ivc *ivc, const void *buf, size_t off,
 
 	return (int)count;
 }
-EXPORT_SYMBOL(tegra_ivc_write_poke);
 
 /* directly poke at the next frame to be tx'ed */
 void *tegra_ivc_write_get_next_frame(struct ivc *ivc)
@@ -647,7 +636,6 @@ void *tegra_ivc_write_get_next_frame(struct ivc *ivc)
 
 	return ivc_frame_pointer(ivc, ivc->tx_channel, ivc->w_pos);
 }
-EXPORT_SYMBOL(tegra_ivc_write_get_next_frame);
 
 /* advance the tx buffer */
 int tegra_ivc_write_advance(struct ivc *ivc)
@@ -691,7 +679,6 @@ int tegra_ivc_write_advance(struct ivc *ivc)
 
 	return 0;
 }
-EXPORT_SYMBOL(tegra_ivc_write_advance);
 
 void tegra_ivc_channel_reset(struct ivc *ivc)
 {
@@ -700,7 +687,6 @@ void tegra_ivc_channel_reset(struct ivc *ivc)
 			offsetof(struct ivc_channel_header, w_count));
 	ivc->notify(ivc);
 }
-EXPORT_SYMBOL(tegra_ivc_channel_reset);
 
 /*
  * ===============================================================
@@ -841,7 +827,6 @@ int tegra_ivc_channel_notified(struct ivc *ivc)
 
 	return ivc->tx_channel->state == ivc_state_established ? 0 : -EAGAIN;
 }
-EXPORT_SYMBOL(tegra_ivc_channel_notified);
 
 /*
  * Temporary routine for re-synchronizing the channel across a reboot.
@@ -856,13 +841,11 @@ int tegra_ivc_channel_sync(struct ivc *ivc)
 	}
 	return 0;
 }
-EXPORT_SYMBOL(tegra_ivc_channel_sync);
 
 size_t tegra_ivc_align(size_t size)
 {
 	return (safe_add_u64(size, IVC_ALIGN - 1ULL)) & ~(IVC_ALIGN - 1ULL);
 }
-EXPORT_SYMBOL(tegra_ivc_align);
 
 unsigned int tegra_ivc_total_queue_size(unsigned int queue_size)
 {
@@ -874,7 +857,6 @@ unsigned int tegra_ivc_total_queue_size(unsigned int queue_size)
 	}
 	return safe_add_u32(queue_size, sizeof(struct ivc_channel_header));
 }
-EXPORT_SYMBOL(tegra_ivc_total_queue_size);
 
 static int check_ivc_params(uintptr_t queue_base1, uintptr_t queue_base2,
 		unsigned int nframes, unsigned int frame_size)
@@ -996,7 +978,6 @@ int tegra_ivc_init(struct ivc *ivc, uintptr_t rx_base, uintptr_t tx_base,
 	return tegra_ivc_init_body(ivc, rx_base, 0, tx_base,
 		0, nframes, frame_size, peer_device, notify);
 }
-EXPORT_SYMBOL(tegra_ivc_init);
 
 int tegra_ivc_init_with_dma_handle(struct ivc *ivc, uintptr_t rx_base,
 		dma_addr_t rx_handle, uintptr_t tx_base, dma_addr_t tx_handle,
@@ -1006,4 +987,3 @@ int tegra_ivc_init_with_dma_handle(struct ivc *ivc, uintptr_t rx_base,
 	return tegra_ivc_init_body(ivc, rx_base, rx_handle, tx_base,
 		tx_handle, nframes, frame_size, peer_device, notify);
 }
-EXPORT_SYMBOL(tegra_ivc_init_with_dma_handle);
