@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "nv-soc/tegra234-overlay.dtsi"
 #include "nv-soc/tegra234-soc-thermal.dtsi"
@@ -305,6 +305,12 @@
 
 		gpu@17000000 {
 			status = "okay";
+		};
+
+		pcie-ep@141a0000 {
+			nvidia,refclk-select-gpios = <&gpio
+							TEGRA234_MAIN_GPIO(Q, 4)
+							GPIO_ACTIVE_HIGH>;
 		};
 	};
 

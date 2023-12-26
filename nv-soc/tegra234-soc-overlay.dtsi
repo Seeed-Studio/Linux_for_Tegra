@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 //
 // This file contains the DT nodes of T234 which are not in base/tegra234.dtsi
 
@@ -99,7 +99,49 @@
 					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
 				};
 			};
-
+			pex_rst_c5_in_state: pex_rst_c5_in {
+				pex_rst {
+					nvidia,pins = "pex_l5_rst_n_paf1";
+					nvidia,function = "rsvd1";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+				};
+			};
+			pex_rst_c6_in_state: pex_rst_c6_in {
+				pex_rst {
+					nvidia,pins = "pex_l6_rst_n_paf3";
+					nvidia,function = "rsvd1";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+				};
+			};
+			pex_rst_c7_in_state: pex_rst_c7_in {
+				pex_rst {
+					nvidia,pins = "pex_l7_rst_n_pag1";
+					nvidia,function = "rsvd1";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+				};
+			};
+			pex_rst_c10_in_state: pex_rst_c10_in {
+				pex_rst {
+					nvidia,pins = "pex_l10_rst_n_pag7";
+					nvidia,function = "rsvd1";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+				};
+			};
 			eqos_mii_rx_input_state_disable: eqos_rx_disable {
 				eqos {
 					nvidia,pins = "eqos_rd0_pe6","eqos_rd1_pe7",
@@ -866,6 +908,38 @@
 			iommus = <&smmu_niso0 TEGRA234_SID_PCIE4>;
 			dma-coherent;
 			status = "disabled";
+		};
+
+		pcie-ep@141a0000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&pex_rst_c5_in_state>;
+
+			num-ib-windows = <2>;
+			num-ob-windows = <8>;
+		};
+
+		pcie-ep@141c0000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&pex_rst_c6_in_state>;
+
+			num-ib-windows = <2>;
+			num-ob-windows = <8>;
+		};
+
+		pcie-ep@141e0000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&pex_rst_c7_in_state>;
+
+			num-ib-windows = <2>;
+			num-ob-windows = <8>;
+		};
+
+		pcie-ep@140e0000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&pex_rst_c10_in_state>;
+
+			num-ib-windows = <2>;
+			num-ob-windows = <8>;
 		};
 
 		hsp_top2: hsp@1600000 {

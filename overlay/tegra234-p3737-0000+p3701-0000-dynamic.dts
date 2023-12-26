@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -67,6 +67,57 @@
 						interrupts = <TEGRA234_AON_GPIO(BB, 2) IRQ_TYPE_LEVEL_LOW>;
 					};
 				};
+				 pcie-ep@141a0000 {
+						nvidia,refclk-select-gpios = <&gpio_aon
+										TEGRA234_AON_GPIO(AA, 4)
+										GPIO_ACTIVE_HIGH>;
+				};
+			};
+			regulator-vdd-3v3-pcie {
+				gpio = <&gpio TEGRA234_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH>;
+			};
+		};
+	};
+
+	/* PCIe 12V supply through NCP for TS3 */
+ 	fragment-t234-p3737-0000-p3701-0000@2 {
+ 		target-path = "/";
+ 		board_config {
+ 			ids = "3737-0000-TS3","3737-0000-200","3737-0000-300","3737-0000-EB3";
+ 		};
+ 		 __overlay__ {
+			bus@0{
+				i2c@c240000 {
+					ncp_12v_pcie_supply: ncp81599@74 {
+						compatible = "nvidia,ncp81599";
+						reg = <0x74>;
+						regulator-name = "ncp81599";
+						ncp81599-supply = <&vdd_5v0_sys>;
+						status = "okay";
+					};
+				};
+				pcie@141a0000 {
+					vpcie12v-supply = <&ncp_12v_pcie_supply>;
+				};
+				pcie-ep@141a0000 {
+					vpcie12v-supply = <&ncp_12v_pcie_supply>;
+				};
+			};
+ 		};
+ 	};
+
+	/* PCIe C5 endpoint */
+	fragment-t234-p3737-0000-p3701-0000-pcie-c5-ep@0 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "nvhs-uphy-config-1";
+		};
+		__overlay__ {
+			pcie@141a0000 {
+				status = "disabled";
+			};
+			pcie-ep@141a0000 {
+				status = "okay";
 			};
 		};
 	};
