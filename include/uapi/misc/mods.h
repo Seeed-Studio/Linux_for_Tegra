@@ -8,7 +8,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 4
-#define MODS_DRIVER_VERSION_MINOR 22
+#define MODS_DRIVER_VERSION_MINOR 23
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR / 10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR % 10))
@@ -1947,6 +1947,38 @@ struct MODS_IDLE {
 	__u32 num_loops;
 };
 
+/* Used by MODS_ESC_RESERVE_ALLOCATION, MODS_ESC_GET_RESERVED_ALLOCATION,
+ * and MODS_ESC_RELEASE_RESERVED_ALLOCATION ioctls.
+ *
+ * MODS_ESC_RESERVE_ALLOCATION permits the reservation of a memory allocation
+ * specified by 'memory_handle' with the tag 'tag'. The 'tag' can take on
+ * values between 1 and MODS_MEM_MAX_RESERVATIONS and is used to index
+ * reservations.
+ *
+ * MODS_ESC_GET_RESERVED_ALLOCATION is used to claim ownership of a reservation
+ * specified by 'tag'. If an unclaimed reservation is found using 'tag',
+ * 'memory_handle' will be populated with the allocation handle.
+ *
+ * MODS_ESC_RELEASE_RESERVED_ALLOCATION is used to completely free and stop the
+ * usage of a memory reservation made through MODS_ESC_RESERVE_ALLOCATION or
+ * obtained through MODS_ESC_GET_RESERVED_ALLOCATION. The 'tag' is accepted as
+ * an input to identify the reservation to release. For this ioctl,
+ * 'memory_handle' is unused.
+ *
+ * Limitations include:
+ *  - Only one client may own a reservation at any given time
+ *  - The client reserving the allocation automatically owns the reservation
+ *  - There are two ways to "unclaim" a reservation without freeing the memory:
+ *	1. Calling MODS_ESC_FREE_PAGES with the associated handle
+ *	2. Closing a client
+ */
+struct MODS_RESERVE_ALLOCATION {
+	/* IN */
+	__u64 tag;
+	/* IN/OUT */
+	__u64 memory_handle;
+};
+
 #pragma pack(pop)
 
 #define MODS_IOC_MAGIC 'x'
@@ -2157,12 +2189,15 @@ struct MODS_IDLE {
 #define MODS_ESC_SEND_TZ_MSG MODSIO(WR, 139, MODS_TZ_PARAMS)
 #define MODS_ESC_OIST_STATUS MODSIO(WR, 140, MODS_TEGRA_OIST_STATUS)
 #define MODS_ESC_INVOKE_OPTEE_TA MODSIO(WR, 141, MODS_OPTEE_PARAMS)
-#define MODS_ESC_READ_DEV_PROPERTY MODSIO(WR, 142, MODS_READ_DEV_PROPERTY)
+#define MODS_ESC_READ_DEV_PROPERTY MODSIO(WR_BAD, 142, MODS_READ_DEV_PROPERTY)
 #define MODS_ESC_PROXIMITY_TO_NUMA_NODE MODSIO(WR, 143, MODS_PROXIMITY_TO_NUMA_NODE)
 #define MODS_ESC_MODS_SEND_IPI MODSIO(W, 144, MODS_SEND_IPI)
 #define MODS_ESC_FFA_CMD MODSIO(WR, 145, MODS_FFA_PARAMS)
 #define MODS_ESC_BPMP_UPHY_LANE_EOM_SCAN MODSIO(WR, 146, \
 						MODS_BPMP_UPHY_LANE_EOM_SCAN_PARAMS)
 #define MODS_ESC_IDLE MODSIO(W, 147, MODS_IDLE)
+#define MODS_ESC_RESERVE_ALLOCATION MODSIO(W, 148, MODS_RESERVE_ALLOCATION)
+#define MODS_ESC_GET_RESERVED_ALLOCATION MODSIO(WR, 149, MODS_RESERVE_ALLOCATION)
+#define MODS_ESC_RELEASE_RESERVED_ALLOCATION MODSIO(W, 150, MODS_RESERVE_ALLOCATION)
 
 #endif /* _UAPI_MODS_H_  */

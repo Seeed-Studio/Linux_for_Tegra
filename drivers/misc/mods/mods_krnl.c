@@ -596,6 +596,7 @@ static void __exit mods_exit_module(void)
 #if defined(MODS_HAS_ARM_FFA)
 	mods_ffa_abi_unregister();
 #endif
+	mods_free_mem_reservations();
 	mods_info_printk("driver unloaded\n");
 	LOG_EXT();
 }
@@ -2286,6 +2287,24 @@ static long mods_krnl_ioctl(struct file  *fp,
 			   esc_mods_merge_pages, MODS_MERGE_PAGES);
 		break;
 
+	case MODS_ESC_RESERVE_ALLOCATION:
+		MODS_IOCTL(MODS_ESC_RESERVE_ALLOCATION,
+			   esc_mods_reserve_allocation,
+			   MODS_RESERVE_ALLOCATION);
+		break;
+
+	case MODS_ESC_GET_RESERVED_ALLOCATION:
+		MODS_IOCTL(MODS_ESC_GET_RESERVED_ALLOCATION,
+			   esc_mods_get_reserved_allocation,
+			   MODS_RESERVE_ALLOCATION);
+		break;
+
+	case MODS_ESC_RELEASE_RESERVED_ALLOCATION:
+		MODS_IOCTL(MODS_ESC_RELEASE_RESERVED_ALLOCATION,
+			   esc_mods_release_reserved_allocation,
+			   MODS_RESERVE_ALLOCATION);
+		break;
+
 	case MODS_ESC_GET_PHYSICAL_ADDRESS:
 		MODS_IOCTL(MODS_ESC_GET_PHYSICAL_ADDRESS,
 			   esc_mods_get_phys_addr,
@@ -2780,7 +2799,6 @@ static long mods_krnl_ioctl(struct file  *fp,
 		MODS_IOCTL(MODS_ESC_MODS_SEND_IPI,
 			   esc_mods_send_ipi, MODS_SEND_IPI);
 		break;
-
 #endif
 
 	case MODS_ESC_FFA_CMD:

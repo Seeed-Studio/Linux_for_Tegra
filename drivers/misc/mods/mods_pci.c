@@ -1121,7 +1121,7 @@ int esc_mods_read_dev_property(struct mods_client            *client,
 	err = device_property_read_u64_array(&dev->dev, p->prop_name,
 					     (u64 *)p->output, p->array_size);
 	if (unlikely(err))
-		cl_error("failed to read property %s\n", p->prop_name);
+		cl_info("failed to read property %s\n", p->prop_name);
 
 error:
 	pci_dev_put(dev);

@@ -4,6 +4,7 @@
 #include "mods_internal.h"
 
 #include <linux/bitops.h>
+#include <linux/mutex.h>
 #include <linux/pagemap.h>
 #include <linux/sched.h>
 
@@ -16,6 +17,16 @@
 #include <linux/cache.h>
 #endif
 
+#define MODS_MEM_MAX_RESERVATIONS 16
+
+/* Structure used by this module to track existing reservations */
+struct MODS_MEM_RESERVATION {
+	struct MODS_MEM_INFO *p_mem_info;
+	u8                   client_id;
+};
+static struct MODS_MEM_RESERVATION mem_reservations[MODS_MEM_MAX_RESERVATIONS];
+DEFINE_MUTEX(mem_reservation_mtx);
+
 static struct MODS_MEM_INFO *get_mem_handle(struct mods_client *client,
 					    u64                 handle)
 {
@@ -24,8 +35,7 @@ static struct MODS_MEM_INFO *get_mem_handle(struct mods_client *client,
 	 * accounting.
 	 */
 	if (unlikely((handle + PAGE_SIZE) < (2 * PAGE_SIZE))) {
-		cl_error("invalid memory handle 0x%llx\n",
-			 (unsigned long long)handle);
+		cl_error("invalid memory handle 0x%llx\n", (unsigned long long)handle);
 		return NULL;
 	}
 
@@ -42,8 +52,7 @@ static bool validate_mem_handle(struct mods_client   *client,
 		return false;
 
 	list_for_each(iter, head) {
-		struct MODS_MEM_INFO *p_mem =
-			list_entry(iter, struct MODS_MEM_INFO, list);
+		struct MODS_MEM_INFO *p_mem = list_entry(iter, struct MODS_MEM_INFO, list);
 
 		if (p_mem == p_mem_info)
 			return true;
@@ -957,14 +966,22 @@ static int unregister_and_free_alloc(struct mods_client   *client,
 
 	if (likely(p_mem_info)) {
 		dma_unmap_all(client, p_mem_info, NULL);
-		save_non_wb_chunks(client, p_mem_info);
-		release_chunks(client, p_mem_info);
+		if (likely(!p_mem_info->reservation_tag)) {
+			save_non_wb_chunks(client, p_mem_info);
+			release_chunks(client, p_mem_info);
 
-		pci_dev_put(p_mem_info->dev);
+			pci_dev_put(p_mem_info->dev);
 
-		kfree(p_mem_info);
-		atomic_dec(&client->num_allocs);
-
+			kfree(p_mem_info);
+		} else {
+			/* Decrement client num_pages manually if not releasing chunks */
+			atomic_sub((int)p_mem_info->num_pages, &client->num_pages);
+			mutex_lock(&mem_reservation_mtx);
+			/* Clear the client_id in the associated reservation */
+			mem_reservations[p_mem_info->reservation_tag-1].client_id = 0;
+			mutex_unlock(&mem_reservation_mtx);
+		}
+		atomic_dec(&client->num_allocs); /* always decrement to avoid leak */
 		err = OK;
 	} else {
 		cl_error("failed to unregister allocation %p\n", p_del_mem);
@@ -1384,16 +1401,17 @@ int esc_mods_alloc_pages_2(struct mods_client        *client,
 
 	init_mem_info(p_mem_info, num_chunks, cache_type);
 
-	p_mem_info->num_pages  = num_pages;
-	p_mem_info->dma32      = (p->flags & MODS_ALLOC_DMA32) ? true : false;
-	p_mem_info->force_numa = (p->flags & MODS_ALLOC_FORCE_NUMA)
-				 ? true : false;
+	p_mem_info->num_pages       = num_pages;
+	p_mem_info->dma32           = (p->flags & MODS_ALLOC_DMA32) ? true : false;
+	p_mem_info->force_numa      = (p->flags & MODS_ALLOC_FORCE_NUMA)
+				      ? true : false;
+	p_mem_info->reservation_tag = 0;
 #ifdef MODS_HASNT_NUMA_NO_NODE
-	p_mem_info->numa_node  = numa_node_id();
+	p_mem_info->numa_node       = numa_node_id();
 #else
-	p_mem_info->numa_node  = NUMA_NO_NODE;
+	p_mem_info->numa_node       = NUMA_NO_NODE;
 #endif
-	p_mem_info->dev        = NULL;
+	p_mem_info->dev             = NULL;
 
 	if ((p->flags & MODS_ALLOC_USE_NUMA) &&
 	    p->numa_node != MODS_ANY_NUMA_NODE)
@@ -2450,6 +2468,190 @@ failed:
 }
 #endif /* MODS_HAS_TEGRA */
 
+int esc_mods_reserve_allocation(struct mods_client             *client,
+				struct MODS_RESERVE_ALLOCATION *p)
+{
+	struct MODS_MEM_INFO        *p_mem_info;
+	struct MODS_MEM_INFO        *p_existing_mem_info = NULL;
+	struct MODS_MEM_RESERVATION *p_reservation = NULL;
+	struct list_head            *head = &client->mem_alloc_list;
+	struct list_head            *iter;
+	int                         err = -EINVAL;
+
+	LOG_ENT();
+
+	if (!(p->tag) || (p->tag > MODS_MEM_MAX_RESERVATIONS)) {
+		cl_error("invalid tag 0x%llx for memory reservations\n",
+			 (unsigned long long)p->tag);
+		LOG_EXT();
+		return -EINVAL;
+	}
+
+	/* Get passed mem_info */
+	p_mem_info = get_mem_handle(client, p->memory_handle);
+	if (unlikely(!p_mem_info)) {
+		cl_error("failed to get memory handle\n");
+		LOG_EXT();
+		return -EINVAL;
+	}
+
+	/* Lock mutexes */
+	err = mutex_lock_interruptible(&mem_reservation_mtx);
+	if (unlikely(err)) {
+		LOG_EXT();
+		return err;
+	}
+	err = mutex_lock_interruptible(&client->mtx);
+	if (unlikely(err)) {
+		mutex_unlock(&mem_reservation_mtx);
+		LOG_EXT();
+		return err;
+	}
+
+	/* Check for existing reservation */
+	p_reservation = &mem_reservations[p->tag - 1];
+	if (unlikely(p_reservation->p_mem_info)) {
+		cl_error("reservation 0x%llX already exists\n",
+			 (unsigned long long)p->tag);
+		err = -ENOMEM;
+		goto failed;
+	}
+
+	/* Find existing handle in client and mark as reserved */
+	list_for_each(iter, head) {
+		p_existing_mem_info = list_entry(iter, struct MODS_MEM_INFO, list);
+
+		if (p_existing_mem_info == p_mem_info)
+			break;
+		p_existing_mem_info = NULL;
+	}
+	if (unlikely(!p_existing_mem_info)) {
+		cl_error("failed to find mem info requested by reservation\n");
+		err = -EINVAL;
+		goto failed;
+	}
+	p_existing_mem_info->reservation_tag = p->tag; /* Set tag to avoid free */
+
+	/* Add memory handle to new reservation */
+	p_reservation->p_mem_info = p_existing_mem_info;
+	p_reservation->client_id = client->client_id;
+
+failed:
+	mutex_unlock(&client->mtx);
+	mutex_unlock(&mem_reservation_mtx);
+	LOG_EXT();
+	return err;
+}
+
+int esc_mods_get_reserved_allocation(struct mods_client             *client,
+				     struct MODS_RESERVE_ALLOCATION *p)
+{
+	struct MODS_MEM_RESERVATION *p_reservation = NULL;
+	int                         err = -EINVAL;
+
+	LOG_ENT();
+
+	if (!(p->tag) || (p->tag > MODS_MEM_MAX_RESERVATIONS)) {
+		cl_error("invalid tag 0x%llx for memory reservations\n",
+			 (unsigned long long)p->tag);
+		LOG_EXT();
+		return -EINVAL;
+	}
+
+	err = mutex_lock_interruptible(&mem_reservation_mtx);
+	if (unlikely(err)) {
+		LOG_EXT();
+		return err;
+	}
+
+	/* Locate existing reservation */
+	p_reservation = &mem_reservations[p->tag - 1];
+	if (unlikely(!p_reservation->p_mem_info)) {
+		cl_error("no mem reservation for tag 0x%llX\n",
+			 (unsigned long long)p->tag);
+		p->memory_handle = 0;
+		err = -EINVAL;
+		goto failed;
+	}
+	if ((p_reservation->client_id != client->client_id) &&
+		(p_reservation->client_id)) {
+		cl_error("reservation 0x%llX is claimed by client_id %d\n",
+			 (unsigned long long)p->tag, p_reservation->client_id);
+		err = -EBUSY;
+		p->memory_handle = 0;
+		goto failed;
+	}
+
+	/* Claim reservation and return handle */
+	if (p_reservation->client_id != client->client_id) {
+		p_reservation->client_id = client->client_id;
+		register_alloc(client, p_reservation->p_mem_info);
+		atomic_inc(&client->num_allocs); /* Increment allocations */
+		atomic_add((int)p_reservation->p_mem_info->num_pages,
+			   &client->num_pages); /* Increment pages */
+	}
+	p->memory_handle = (u64)(size_t)p_reservation->p_mem_info;
+
+failed:
+	mutex_unlock(&mem_reservation_mtx);
+	LOG_EXT();
+	return err;
+}
+
+int esc_mods_release_reserved_allocation(struct mods_client             *client,
+					 struct MODS_RESERVE_ALLOCATION *p)
+{
+	struct MODS_MEM_RESERVATION *p_reservation = NULL;
+	int                         err = -EINVAL;
+
+	LOG_ENT();
+
+	if (!(p->tag) || (p->tag > MODS_MEM_MAX_RESERVATIONS)) {
+		cl_error("invalid tag 0x%llx for memory reservations\n",
+			 (unsigned long long)p->tag);
+		LOG_EXT();
+		return -EINVAL;
+	}
+
+	err = mutex_lock_interruptible(&mem_reservation_mtx);
+	if (unlikely(err)) {
+		LOG_EXT();
+		return err;
+	}
+
+	/* Locate existing reservation */
+	p_reservation = &mem_reservations[p->tag - 1];
+	if (unlikely(!p_reservation->p_mem_info)) {
+		cl_error("no mem reservation for tag 0x%llX\n",
+			 (unsigned long long)p->tag);
+		err = -EINVAL;
+		goto failed;
+	}
+	if (!p_reservation->client_id) {
+		cl_error("Reservation with tag 0x%llX not claimed by calling client id\n",
+			 (unsigned long long)p->tag);
+		err = -EINVAL;
+		goto failed;
+	}
+	if (p_reservation->client_id != client->client_id) {
+		cl_error("reservation with tag 0x%llX not claimed by any client\n",
+			 (unsigned long long)p->tag);
+		err = -EBUSY;
+		goto failed;
+	}
+
+	if (likely(p_reservation->p_mem_info)) {
+		/* Unregister and clear reservation_tag field */
+		p_reservation->p_mem_info->reservation_tag = 0;
+		memset(p_reservation, 0, sizeof(*p_reservation));
+	}
+
+failed:
+	mutex_unlock(&mem_reservation_mtx);
+	LOG_EXT();
+	return err;
+}
+
 #ifdef CONFIG_ARM64
 static void clear_contiguous_cache(struct mods_client *client,
 				   u64                 virt_start,
@@ -2553,3 +2755,28 @@ int esc_mods_flush_cpu_cache_range(struct mods_client                *client,
 	return err;
 }
 #endif /* CONFIG_ARM64 */
+
+/***************************
+ * RESERVATION INIT / EXIT *
+ ***************************/
+void mods_free_mem_reservations(void)
+{
+	int i;
+	struct mods_client client;
+
+	/* Dummy client used to ensure ensuing functions do not crash */
+	memset(&client, 0, sizeof(client));
+
+	/* Clear reserved on claimed reservations and free unclaimed ones */
+	for (i = 0; i < MODS_MEM_MAX_RESERVATIONS; i++) {
+		struct MODS_MEM_RESERVATION *p_reservation = &mem_reservations[i];
+
+		/* Existing reservation */
+		if (p_reservation->p_mem_info) {
+			release_chunks(&client, p_reservation->p_mem_info);
+			pci_dev_put(p_reservation->p_mem_info->dev);
+			kfree(p_reservation->p_mem_info);
+			memset(p_reservation, 0, sizeof(*p_reservation));
+		}
+	}
+}
