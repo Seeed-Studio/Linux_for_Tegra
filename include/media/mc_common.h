@@ -97,7 +97,7 @@ struct tegra_vi_graph_entity {
 	struct media_entity *entity;
 
 #if defined(NV_V4L2_ASYNC_CONNECTION_STRUCT_PRESENT) /* Linux 6.5 */
-	struct v4l2_async_connection asd;
+	struct v4l2_async_connection *asc;
 #else
 	struct v4l2_async_subdev asd;
 #endif

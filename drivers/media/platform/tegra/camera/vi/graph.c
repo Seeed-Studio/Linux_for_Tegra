@@ -479,12 +479,14 @@ static int tegra_vi_graph_parse_one(struct tegra_channel *chan,
 		}
 
 		entity->node = remote;
+#if !defined(NV_V4L2_ASYNC_CONNECTION_STRUCT_PRESENT) /* Linux 6.5 */
 #if defined(NV_V4L2_ASYNC_MATCH_TYPE_ENUM_PRESENT) /* Linux 6.5 */
 		entity->asd.match.type = V4L2_ASYNC_MATCH_TYPE_FWNODE;
 #else
 		entity->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
 #endif
 		entity->asd.match.fwnode = of_fwnode_handle(remote);
+#endif
 
 		list_add_tail(&entity->list, &chan->entities);
 		chan->num_subdevs++;
@@ -640,12 +642,14 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 
 		/* Add the remote entity of this endpoint */
 		entity->node = remote;
+#if !defined(NV_V4L2_ASYNC_CONNECTION_STRUCT_PRESENT) /* Linux 6.5 */
 #if defined(NV_V4L2_ASYNC_MATCH_TYPE_ENUM_PRESENT) /* Linux 6.5 */
 		entity->asd.match.type = V4L2_ASYNC_MATCH_TYPE_FWNODE;
 #else
 		entity->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
 #endif
 		entity->asd.match.fwnode = of_fwnode_handle(remote);
+#endif
 		list_add_tail(&entity->list, &chan->entities);
 		chan->num_subdevs++;
 		chan->notifier.ops = chan->notifier.ops ? chan->notifier.ops : &vi_chan_notify_ops;
@@ -671,23 +675,26 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 		list_for_each_entry(entity, &chan->entities, list)
 			__v4l2_async_notifier_add_subdev(&chan->notifier, &entity->asd);
 #else
-#if defined (NV_V4L2_ASYNC_SUBDEV_NF_INIT_PRESENT) /* Linux 6.5 */
-		v4l2_async_subdev_nf_init(&chan->notifier, tegra_channel_find_linked_csi_subdev(chan));
-		list_for_each_entry(entity, &chan->entities, list) {
-			struct v4l2_async_connection *asd;
-			asd = v4l2_async_nf_add_fwnode_remote(&chan->notifier, of_fwnode_handle(remote),
-				struct v4l2_async_connection);
-			if (IS_ERR(asd)) {
-				ret = PTR_ERR(asd);
-				goto done;
-			}
-		}
+#if defined(NV_V4L2_ASYNC_NF_INIT_HAS_V4L2_DEV_ARG) /* Linux 6.6 */
+		v4l2_async_nf_init(&chan->notifier, &vi->v4l2_dev);
 #else
 		v4l2_async_nf_init(&chan->notifier);
+#endif
+
+#if defined(NV_V4L2_ASYNC_NF_ADD_SUBDEV_PRESENT) /* Linux 6.6 */
 		list_for_each_entry(entity, &chan->entities, list)
 			__v4l2_async_nf_add_subdev(&chan->notifier, &entity->asd);
-#endif
-#endif
+#else
+		list_for_each_entry(entity, &chan->entities, list) {
+			struct v4l2_async_connection *asc;
+			asc = v4l2_async_nf_add_fwnode(&chan->notifier, of_fwnode_handle(entity->node),
+					struct v4l2_async_connection);
+			if (IS_ERR(asc))
+				asc = NULL;
+			entity->asc = asc;
+		}
+#endif /* NV_V4L2_ASYNC_NF_ADD_SUBDEV_PRESENT */
+#endif /* NV_V4L2_ASYNC_NOTIFIER_INIT_PRESENT */
 
 		chan->link_status = 0;
 		chan->subdevs_bound = 0;
@@ -697,8 +704,10 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 		ret = v4l2_async_notifier_register(&vi->v4l2_dev,
 					&chan->notifier);
 #else
-#if defined (NV_V4L2_ASYNC_SUBDEV_NF_INIT_PRESENT) /* Linux 6.5 */
+#if defined (NV_V4L2_ASYNC_NF_INIT_HAS_V4L2_DEV_ARG) /* Linux 6.6 */
 		ret = v4l2_async_nf_register(&chan->notifier);
+		if (ret < 0)
+			v4l2_async_nf_cleanup(&chan->notifier);
 #else
 		ret = v4l2_async_nf_register(&vi->v4l2_dev,
 					&chan->notifier);
@@ -707,9 +716,9 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 #else
 		dev_err(vi->dev, "CONFIG_V4L2_ASYNC is not enabled!\n");
 		ret = -ENOTSUPP;
-#endif
+#endif /* CONFIG_V4L2_ASYNC */
 		if (ret < 0) {
-			dev_err(vi->dev, "notifier registration failed\n");
+			dev_err(vi->dev, "notifier registration failed %d\n", ret);
 			goto done;
 		}
 
