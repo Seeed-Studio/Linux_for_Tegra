@@ -2,7 +2,7 @@
 /*
  * PCIe EDMA Library Framework
  *
- * Copyright (C) 2021-2023 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2021-2024 NVIDIA Corporation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -751,6 +751,7 @@ static void edma_stop(struct edma_prv *prv, edma_xfer_status_t st)
 	struct edma_chan *chan[2], *ch;
 	int i, j;
 	u32 mode_cnt[2] = {DMA_WR_CHNL_NUM, DMA_RD_CHNL_NUM};
+	bool sync_irq = false;
 
 	chan[0] = &prv->tx[0];
 	chan[1] = &prv->rx[0];
@@ -767,13 +768,16 @@ static void edma_stop(struct edma_prv *prv, edma_xfer_status_t st)
 			/** wait until exisitng xfer submit completed */
 			mutex_lock(&ch->lock);
 			mutex_unlock(&ch->lock);
+			if (ch->w_idx != ch->r_idx)
+				sync_irq = true;
 		}
 	}
 
 	edma_hw_deinit(prv, false);
 	edma_hw_deinit(prv, true);
 
-	synchronize_irq(prv->irq);
+	if (sync_irq)
+		synchronize_irq(prv->irq);
 
 	for (j = 0; j < 2; j++) {
 		for (i = 0; i < mode_cnt[j]; i++) {
