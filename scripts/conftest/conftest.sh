@@ -7663,6 +7663,39 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_V4L2_ASYNC_NOTIFIER_INIT_PRESENT" "" "functions"
         ;;
 
+        v4l2_async_nf_init_has_v4l2_dev_arg)
+            #
+            # Determine if the function v4l2_async_nf_init() has v4l2_dev argument or not.
+            #
+            # The device argument is added in the API v4l2_async_nf_init() with commit
+            # b8ec754ae4c5 ("media: v4l: async: Set v4l2_device and subdev in async notifier init")
+            # in Linux 6.6.
+            #
+            CODE="
+            #include <media/v4l2-async.h>
+            void conftest_v4l2_async_nf_init_has_v4l2_dev_arg(void) {
+                v4l2_async_nf_init(NULL, NULL);
+            }"
+
+            compile_check_conftest "$CODE" "NV_V4L2_ASYNC_NF_INIT_HAS_V4L2_DEV_ARG" "" "types"
+        ;;
+
+        __v4l2_async_nf_add_subdev)
+            #
+            # Determine if the function __v4l2_async_nf_add_subdev() present or not.
+            #
+            # The API is removed with commit bda8953e8c3e ("media: v4l: async: Drop
+            # v4l2_async_nf_parse_fwnode_endpoints()") in Linux 6.6
+            #
+            CODE="
+            #include <media/v4l2-async.h>
+            void conftest_v4l2_async_nf_add_subdev_present(void) {
+                __v4l2_async_nf_add_subdev();
+            }"
+
+            compile_check_conftest "$CODE" "NV_V4L2_ASYNC_NF_ADD_SUBDEV_PRESENT" "" "functions"
+        ;;
+
         crypto_engine_ctx_struct_removed_test)
             #
             # Determine if struct 'crypto_engine_ctx' is removed in linux kernel.
