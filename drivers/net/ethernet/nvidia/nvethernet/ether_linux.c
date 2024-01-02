@@ -5774,6 +5774,13 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		}
 	}
 
+	/* Read MAC instance id */
+	ret = of_property_read_u32(np, "nvidia,instance_id", &osi_core->instance_id);
+	if (ret != 0) {
+		dev_info(dev, "DT instance_id missing\n");
+		return -EINVAL;
+	}
+
 	if (osi_dma->num_dma_chans != osi_core->num_mtl_queues) {
 		dev_err(dev, "mismatch in numbers of DMA channel and MTL Q\n");
 		return -EINVAL;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved */
 
 #include "ether_linux.h"
 #include "macsec.h"
@@ -2736,11 +2736,46 @@ static struct attribute *ether_sysfs_attrs[] = {
 };
 
 /**
+ * @brief Attributes for nvethernet sysfs without MACSEC
+ */
+static struct attribute *ether_sysfs_attrs_without_macsec[] = {
+#ifndef OSI_STRIPPED_LIB
+#ifdef OSI_DEBUG
+	&dev_attr_desc_dump_enable.attr,
+#endif /* OSI_DEBUG */
+	&dev_attr_mac_loopback.attr,
+	&dev_attr_ptp_mode.attr,
+	&dev_attr_ptp_sync.attr,
+	&dev_attr_frp.attr,
+	&dev_attr_uphy_gbe_mode.attr,
+	&dev_attr_phy_iface_mode.attr,
+#ifdef ETHER_NVGRO
+	&dev_attr_nvgro_pkt_age_msec.attr,
+	&dev_attr_nvgro_timer_interval.attr,
+	&dev_attr_nvgro_stats.attr,
+	&dev_attr_nvgro_dump.attr,
+#endif
+#endif /* OSI_STRIPPED_LIB */
+#ifdef HSI_SUPPORT
+	&dev_attr_hsi_enable.attr,
+#endif
+	NULL
+};
+
+/**
  * @brief Ethernet sysfs attribute group
  */
 static struct attribute_group ether_attribute_group = {
 	.name = "nvethernet",
 	.attrs = ether_sysfs_attrs,
+};
+
+/**
+ * @brief Ethernet sysfs attribute group without macsec
+ */
+static struct attribute_group ether_attribute_group_wo_macsec = {
+	.name = "nvethernet",
+	.attrs = ether_sysfs_attrs_without_macsec,
 };
 
 #ifndef OSI_STRIPPED_LIB
@@ -3331,7 +3366,12 @@ int ether_sysfs_register(struct ether_priv_data *pdata)
 #endif /* OSI_STRIPPED_LIB */
 
 	/* Create nvethernet sysfs group under /sys/devices/<ether_device>/ */
-	return sysfs_create_group(&dev->kobj, &ether_attribute_group);
+	if (pdata->macsec_pdata != NULL) {
+		ret = sysfs_create_group(&dev->kobj, &ether_attribute_group);
+	} else {
+		ret = sysfs_create_group(&dev->kobj, &ether_attribute_group_wo_macsec);
+	}
+	return ret;
 }
 
 void ether_sysfs_unregister(struct ether_priv_data *pdata)
@@ -3343,5 +3383,9 @@ void ether_sysfs_unregister(struct ether_priv_data *pdata)
 #endif
 #endif /* OSI_STRIPPED_LIB */
 	/* Remove nvethernet sysfs group under /sys/devices/<ether_device>/ */
-	sysfs_remove_group(&dev->kobj, &ether_attribute_group);
+	if (pdata->macsec_pdata != NULL) {
+		sysfs_remove_group(&dev->kobj, &ether_attribute_group);
+	} else {
+		sysfs_remove_group(&dev->kobj, &ether_attribute_group_wo_macsec);
+	}
 }
