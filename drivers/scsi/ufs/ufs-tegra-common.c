@@ -1419,7 +1419,7 @@ static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,
 	return err;
 }
 
-static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
+static int ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 {
 	struct device *dev = ufs_tegra->hba->dev;
 	struct device_node *np = dev->of_node;
@@ -1456,13 +1456,16 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	ufs_tegra->enable_scramble =
 		of_property_read_bool(np, "nvidia,enable-scramble");
 
+	if (ufs_tegra->soc->chip_id >= TEGRA234) {
 #if defined(NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS) /* Linux 6.0 */
-	if (ufs_tegra->soc->chip_id >= TEGRA234)
 		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS;
 #else
-	if (ufs_tegra->soc->chip_id >= TEGRA234)
-		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_ENABLE_STREAM_ID;
+		dev_err(dev, "UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS not supported!\n");
+		return -ENOTSUPP;
 #endif
+	}
+
+	return 0;
 }
 
 static void ufs_tegra_eq_timeout(struct ufs_tegra_host *ufs_tegra)
@@ -1714,7 +1717,10 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	ufs_tegra->hba = hba;
 	hba->priv = (void *)ufs_tegra;
 
-	ufs_tegra_config_soc_data(ufs_tegra);
+	err = ufs_tegra_config_soc_data(ufs_tegra);
+	if (err)
+		return err;
+
 	hba->spm_lvl = UFS_PM_LVL_3;
 	hba->rpm_lvl = UFS_PM_LVL_1;
 	hba->caps |= UFSHCD_CAP_INTR_AGGR;

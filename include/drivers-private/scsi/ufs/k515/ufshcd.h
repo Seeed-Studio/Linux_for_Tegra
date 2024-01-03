@@ -588,11 +588,6 @@ enum ufshcd_quirks {
 	 * This quirk allows only sg entries aligned with page size.
 	 */
 	UFSHCD_QUIRK_ALIGN_SG_WITH_PAGE_SIZE		= 1 << 14,
-
-	/*
-	 * Enable this quirk to support Stream-ID programming
-	 */
-	UFSHCD_QUIRK_ENABLE_STREAM_ID			= 1 << 15,
 };
 
 enum ufshcd_caps {

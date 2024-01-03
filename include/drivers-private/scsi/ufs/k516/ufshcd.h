@@ -602,11 +602,6 @@ enum ufshcd_quirks {
 	 * support physical host configuration.
 	 */
 	UFSHCD_QUIRK_SKIP_PH_CONFIGURATION		= 1 << 16,
-
-	/*
-	 * Enable this quirk to support Stream-ID programming
-	 */
-	UFSHCD_QUIRK_ENABLE_STREAM_ID			= 1 << 17,
 };
 
 enum ufshcd_caps {
