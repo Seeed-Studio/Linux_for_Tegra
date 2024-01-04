@@ -310,6 +310,15 @@ int nvdla_send_cmd(struct platform_device *pdev,
 
 	mutex_lock(&nvdla_dev->cmd_lock);
 
+	/**
+	 * If device is unavailable, then error out to retry after some time.
+	 **/
+	if (!nvdla_dev->available) {
+		nvdla_dbg_err(pdev, "Command failed: device unavailable\n");
+		mutex_unlock(&nvdla_dev->cmd_lock);
+		return -EAGAIN;
+	}
+
 	/*
 	 * enable notification for command completion or error if
 	 * wait if required
@@ -650,6 +659,13 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 
 	nvdla_dev->fw_version = fw_ver_read_bin;
 
+	/**
+	 * At this point, the falcon & hardware is available to use.
+	 **/
+	mutex_lock(&nvdla_dev->cmd_lock);
+	nvdla_dev->available = true;
+	mutex_unlock(&nvdla_dev->cmd_lock);
+
 	ret = nvdla_alloc_dump_region(pdev);
 	if (ret) {
 		nvdla_dbg_err(pdev, "fail alloc dump region\n");
@@ -676,7 +692,15 @@ int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 {
 	int ret;
 
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+
 	nvdla_dbg_fn(pdev, "");
+
+	/* Mark the device to be unavailable. */
+	mutex_lock(&nvdla_dev->cmd_lock);
+	nvdla_dev->available = false;
+	mutex_unlock(&nvdla_dev->cmd_lock);
 
 	ret = nvhost_flcn_prepare_poweroff(pdev);
 	if (ret) {

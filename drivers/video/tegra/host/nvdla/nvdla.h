@@ -1,6 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2016-2023 NVIDIA Corporation.  All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary */
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Tegra Graphics Host NVDLA
  */
@@ -279,6 +278,7 @@ enum nvdla_submit_mode {
  * @window_mem_va       virtual address of window size buffer
  * @is_suspended	flag to check if module is in suspend state.
  * @ping_lock	lock to synchronize the ping operation requests.
+ * @avaiable		flag to check if device is available to use.
  */
 struct nvdla_device {
 	struct device *dev;
@@ -312,6 +312,7 @@ struct nvdla_device {
 	bool is_suspended;
 #endif
 	struct mutex ping_lock;
+	bool available;
 };
 
 /**
