@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 
@@ -453,8 +453,15 @@ static int dce_admin_send_cmd_ver(struct tegra_dce *d,
 		dce_err(d, "Error sending get version info : [%d]", ret);
 		goto out;
 	}
-	dce_info(d, "version : [0x%x] err : [0x%x]", ver_info->version,
-						     resp_msg->error);
+
+	if (resp_msg->error != DCE_ERR_CORE_SUCCESS) {
+		dce_err(d, "Error in handling DCE_ADMIN_CMD_VERSION on DCE\n");
+		ret = resp_msg->error;
+		goto out;
+	}
+
+	dce_info(d, "version : dcefw:[0x%x] dcekmd:[0x%x] err : [0x%x]",
+		 ver_info->version, DCE_ADMIN_VERSION, resp_msg->error);
 
 out:
 	/**
