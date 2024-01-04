@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved */
 
 #include <nvidia/conftest.h>
-
 #include <linux/version.h>
 #include <linux/iommu.h>
 #ifdef HSI_SUPPORT
@@ -2390,7 +2389,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 
 	if (uc_bc == ETHER_ADDRESS_MAC) {
 		ioctl_data->l2_filter.index = ETHER_MAC_ADDRESS_INDEX;
-		memcpy(ioctl_data->l2_filter.mac_address, osi_core->mac_addr,
+		memcpy(ioctl_data->l2_filter.mac_addr, osi_core->mac_addr,
 		       ETH_ALEN);
 	} else {
 		if (osi_dma->num_dma_chans > 1) {
@@ -2399,7 +2398,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 			dma_channel = osi_dma->dma_chans[0];
 		}
 		ioctl_data->l2_filter.index = ETHER_BC_ADDRESS_INDEX;
-		memcpy(ioctl_data->l2_filter.mac_address, bc_addr, ETH_ALEN);
+		memcpy(ioctl_data->l2_filter.mac_addr, bc_addr, ETH_ALEN);
 	}
 	ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
 	ioctl_data->l2_filter.dma_chan = dma_channel;
@@ -2864,7 +2863,7 @@ static inline void ether_delete_l2_filter(struct ether_priv_data *pdata)
 		ioctl_data.l2_filter.oper_mode = OSI_OPER_ADDR_DEL;
 		ioctl_data.l2_filter.index = i;
 		ioctl_data.l2_filter.dma_routing = OSI_ENABLE;
-		memcpy(ioctl_data.l2_filter.mac_address,
+		memcpy(ioctl_data.l2_filter.mac_addr,
 		       pdata->mac_addr[i].addr, ETH_ALEN);
 		ioctl_data.l2_filter.dma_chan = pdata->mac_addr[i].dma_chan;
 		ioctl_data.l2_filter.addr_mask = OSI_AMASK_DISABLE;
@@ -3511,7 +3510,7 @@ static int ether_prepare_mc_list(struct net_device *dev,
 				i, ha->addr[0], ha->addr[1], ha->addr[2],
 				ha->addr[3], ha->addr[4], ha->addr[5]);
 			ioctl_data->l2_filter.index = i;
-			memcpy(ioctl_data->l2_filter.mac_address, ha->addr,
+			memcpy(ioctl_data->l2_filter.mac_addr, ha->addr,
 			       ETH_ALEN);
 			ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
 			if (osi_dma->num_dma_chans > 1) {
@@ -3614,7 +3613,7 @@ static int ether_prepare_uc_list(struct net_device *dev,
 				i, ha->addr[0], ha->addr[1], ha->addr[2],
 				ha->addr[3], ha->addr[4], ha->addr[5]);
 			ioctl_data->l2_filter.index = i;
-			memcpy(ioctl_data->l2_filter.mac_address, ha->addr,
+			memcpy(ioctl_data->l2_filter.mac_addr, ha->addr,
 			       ETH_ALEN);
 			ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
 			if (osi_dma->num_dma_chans > 1) {
@@ -3722,7 +3721,7 @@ void ether_set_rx_mode(struct net_device *dev)
 			ioctl_data.l2_filter.oper_mode = OSI_OPER_ADDR_DEL;
 			ioctl_data.l2_filter.index = i;
 			ioctl_data.l2_filter.dma_routing = OSI_ENABLE;
-			memcpy(ioctl_data.l2_filter.mac_address,
+			memcpy(ioctl_data.l2_filter.mac_addr,
 			       pdata->mac_addr[i].addr, ETH_ALEN);
 			ioctl_data.l2_filter.dma_chan = pdata->mac_addr[i].dma_chan;
 			ioctl_data.l2_filter.addr_mask = OSI_AMASK_DISABLE;

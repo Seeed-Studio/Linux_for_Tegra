@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #include "ether_linux.h"
 
@@ -587,8 +585,8 @@ static int ether_config_l2_filters(struct net_device *dev,
 		ioctl_data.l2_filter.oper_mode |= OSI_OPER_ADDR_DEL;
 	}
 
-	memcpy(ioctl_data.l2_filter.mac_address,
-	       u_l2_filter.mac_address, ETH_ALEN);
+	memcpy(ioctl_data.l2_filter.mac_addr,
+	       u_l2_filter.mac_addr, ETH_ALEN);
 	ioctl_data.l2_filter.dma_routing = OSI_ENABLE;
 	ioctl_data.l2_filter.addr_mask = OSI_DISABLE;
 	ioctl_data.l2_filter.dma_chan = osi_dma->dma_chans[0];

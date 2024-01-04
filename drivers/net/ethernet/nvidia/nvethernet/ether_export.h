@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #ifndef ETHER_EXPORT_H
 #define ETHER_EXPORT_H
@@ -38,7 +38,7 @@ struct ether_l2_filter {
 	 * Filter index must be between 0 - 31 */
 	nveu32_t index;
 	/** Ethernet MAC address to be added */
-	nveu8_t mac_address[OSI_ETH_ALEN];
+	nveu8_t mac_addr[OSI_ETH_ALEN];
 };
 
 /**
