@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/kernel.h>
 #include <linux/seq_file.h>
@@ -195,15 +195,19 @@ static int32_t check_address_range(struct nvpva_dma_descriptor const *desc,
 		/* 2nd destination dim */
 		s[1] = (int64_t)desc->dstLinePitch * last_ty;
 		if (desc->dstCbEnable == 1U) {
+			int64_t excursion = (s[1] + last_tx + 1) * bppSize;
+
 			/* ((DLP_ADV * (Ty-1)) + Tx) * BPP <= DB_SIZE */
-			if (((s[1] + last_tx + 1) * bppSize) <=
-			    (int64_t)desc->dstCbSize)
-				return 0;
+			if (((uint64_t)desc->dstCbSize > max_size)
+			|| (dst2 && ((uint64_t)desc->dstCbSize > max_size2))
+			|| (excursion > (int64_t)desc->dstCbSize)
+			|| (desc->dstFormat == 1)) {
+				pr_err("invalid dst cb");
+				return -EINVAL;
+			}
 
-			pr_err("invalid dst cb advance");
-			return -EINVAL;
+			return 0;
 		}
-
 
 		err = pitch_linear_eq_offset(desc,  &offset, desc->surfBLOffset,
 			block_height_log2, desc->bytePerPixel, true, false);
@@ -225,12 +229,18 @@ static int32_t check_address_range(struct nvpva_dma_descriptor const *desc,
 		/* 2nd source dim */
 		s[1] = (int64_t)desc->srcLinePitch * last_ty;
 		if (desc->srcCbEnable == 1U) {
+			int64_t excursion = (s[1] + last_tx + 1) * bppSize;
+
 			/* ((SLP_ADV * (Ty-1)) + Tx) * BPP <= SB_SIZE */
-			if (((s[1] + last_tx + 1) * bppSize) <=
-			    (int64_t)desc->srcCbSize)
-				return 0;
-			pr_err("invalid src cb");
+			if (((uint64_t)desc->srcCbSize > max_size)
+			|| (dst2 && ((uint64_t)desc->srcCbSize > max_size2))
+			|| (excursion > (int64_t)desc->srcCbSize)
+			|| (desc->srcFormat == 1)) {
+				pr_err("invalid src cb");
 				return -EINVAL;
+			}
+
+			return 0;
 		}
 
 		err = pitch_linear_eq_offset(desc, &offset, desc->surfBLOffset,
