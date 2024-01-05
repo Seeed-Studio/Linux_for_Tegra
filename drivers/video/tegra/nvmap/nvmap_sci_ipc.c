@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * mapping between nvmap_hnadle and sci_ipc entery
  */
@@ -222,6 +222,7 @@ int nvmap_get_handle_from_sci_ipc_id(struct nvmap_client *client, u32 flags,
 	long remain;
 	int ret = 0;
 	int fd;
+	long dmabuf_ref = 0;
 
 	mutex_lock(&nvmapsciipc->mlock);
 
@@ -346,10 +347,18 @@ unlock:
 	mutex_unlock(&nvmapsciipc->mlock);
 
 	if (!ret) {
+		mutex_lock(&h->lock);
+		if (dmabuf && dmabuf->file) {
+			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+		} else {
+			dmabuf_ref = 0;
+		}
+		mutex_unlock(&h->lock);
+
 		if (!client->ida)
 			trace_refcount_create_handle_from_sci_ipc_id(h, dmabuf,
 				atomic_read(&h->ref),
-				atomic_long_read(&dmabuf->file->f_count),
+				dmabuf_ref,
 				is_ro ? "RO" : "RW");
 		else
 			trace_refcount_get_handle_from_sci_ipc_id(h, dmabuf,

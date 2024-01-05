@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * User-space interface to nvmap
  */
@@ -144,6 +144,7 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 	struct dma_buf *dmabuf;
 	int ret = 0;
 	bool is_ro = false;
+	long dmabuf_ref = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -173,11 +174,19 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 	ret = nvmap_install_fd(client, handle,
 				op.fd, arg, &op, sizeof(op), 0, dmabuf);
 
-	if (!ret && !IS_ERR_OR_NULL(handle))
+	if (!ret && !IS_ERR_OR_NULL(handle)) {
+		mutex_lock(&handle->lock);
+		if (dmabuf && dmabuf->file) {
+			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+		} else {
+			dmabuf_ref = 0;
+		}
+		mutex_unlock(&handle->lock);
 		trace_refcount_getfd(handle, dmabuf,
 				atomic_read(&handle->ref),
-				atomic_long_read(&dmabuf->file->f_count),
+				dmabuf_ref,
 				is_ro ? "RO" : "RW");
+	}
 
 fail:
 	if (!IS_ERR_OR_NULL(handle))
@@ -195,6 +204,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	bool is_ro = false;
 	int err, i;
 	unsigned int page_sz = PAGE_SIZE;
+	long dmabuf_ref = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -243,10 +253,17 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 				  NVMAP_IVM_INVALID_PEER);
 
 	if (!err && !is_nvmap_id_ro(client, op.handle, &is_ro)) {
+		mutex_lock(&handle->lock);
 		dmabuf = is_ro ? handle->dmabuf_ro : handle->dmabuf;
+		if (dmabuf && dmabuf->file) {
+			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+		} else {
+			dmabuf_ref = 0;
+		}
+		mutex_unlock(&handle->lock);
 		trace_refcount_alloc(handle, dmabuf,
 				atomic_read(&handle->ref),
-				atomic_long_read(&dmabuf->file->f_count),
+				dmabuf_ref,
 				is_ro ? "RO" : "RW");
 	}
 	nvmap_handle_put(handle);
@@ -305,6 +322,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	int fd = -1, ret = 0;
 	u32 id = 0;
 	bool is_ro = false;
+	long dmabuf_ref = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -385,15 +403,23 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 
 out:
 	if (!ret && !IS_ERR_OR_NULL(handle)) {
+		mutex_lock(&handle->lock);
+		if (dmabuf && dmabuf->file) {
+			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+		} else {
+			dmabuf_ref = 0;
+		}
+		mutex_unlock(&handle->lock);
+
 		if (cmd == NVMAP_IOC_FROM_FD)
 			trace_refcount_create_handle_from_fd(handle, dmabuf,
 				atomic_read(&handle->ref),
-				atomic_long_read(&dmabuf->file->f_count),
+				dmabuf_ref,
 				is_ro ? "RO" : "RW");
 		else
 			trace_refcount_create_handle(handle, dmabuf,
 				atomic_read(&handle->ref),
-				atomic_long_read(&dmabuf->file->f_count),
+				dmabuf_ref,
 				is_ro ? "RO" : "RW");
 	}
 
@@ -413,6 +439,7 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 	struct dma_buf *dmabuf = NULL;
 	struct nvmap_handle *handle = NULL;
 	bool is_ro = false;
+	long dmabuf_ref = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -473,11 +500,19 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 				arg, &op, sizeof(op), 1, dmabuf);
 
 out:
-	if (!err)
+	if (!err) {
+		mutex_lock(&handle->lock);
+		if (dmabuf && dmabuf->file) {
+			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+		} else {
+			dmabuf_ref = 0;
+		}
+		mutex_unlock(&handle->lock);
 		trace_refcount_create_handle_from_va(handle, dmabuf,
 				atomic_read(&handle->ref),
-				atomic_long_read(&dmabuf->file->f_count),
+				dmabuf_ref,
 				is_ro ? "RO" : "RW");
+	}
 	atomic_dec(&ref->dupes);
 	return err;
 }
@@ -1232,6 +1267,7 @@ int nvmap_ioctl_get_sci_ipc_id(struct file *filp, void __user *arg)
 	struct dma_buf *dmabuf = NULL;
 	bool is_ro = false;
 	int ret = 0;
+	long dmabuf_ref = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -1269,10 +1305,17 @@ int nvmap_ioctl_get_sci_ipc_id(struct file *filp, void __user *arg)
 
 exit:
 	if (!ret) {
+		mutex_lock(&handle->lock);
 		dmabuf = is_ro ? handle->dmabuf_ro : handle->dmabuf;
+		if (dmabuf && dmabuf->file) {
+			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+		} else {
+			dmabuf_ref = 0;
+		}
+		mutex_unlock(&handle->lock);
 		trace_refcount_get_sci_ipc_id(handle, dmabuf,
 				atomic_read(&handle->ref),
-				atomic_long_read(&dmabuf->file->f_count),
+				dmabuf_ref,
 				is_ro ? "RO" : "RW");
 	}
 

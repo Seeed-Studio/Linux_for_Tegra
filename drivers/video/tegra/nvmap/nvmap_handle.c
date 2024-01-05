@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2009-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Handle allocation and freeing routines for nvmap
  */
@@ -160,6 +160,19 @@ static void add_handle_ref(struct nvmap_client *client,
 	if (client->handle_count > nvmap_max_handle_count)
 		nvmap_max_handle_count = client->handle_count;
 	atomic_inc(&ref->handle->share_count);
+	nvmap_ref_unlock(client);
+}
+
+/*
+ * Remove handle ref from client's handle_ref rb tree.
+ */
+static void remove_handle_ref(struct nvmap_client *client,
+			   struct nvmap_handle_ref *ref)
+{
+	nvmap_ref_lock(client);
+	atomic_dec(&ref->handle->share_count);
+	client->handle_count--;
+	rb_erase(&ref->node, &client->handle_refs);
 	nvmap_ref_unlock(client);
 }
 
@@ -421,6 +434,7 @@ out:
 	return ref;
 
 exit:
+	remove_handle_ref(client, ref);
 	pr_err("dmabuf is NULL\n");
 	kfree(ref);
 	return ERR_PTR(-EINVAL);
