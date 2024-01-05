@@ -312,10 +312,17 @@ static nvadsp_app_handle_t app_load(const char *appfile,
 
 		/*load the module in to memory */
 		ser->mod = dynamic ?
+#ifdef CONFIG_ADSP_DYNAMIC_APP
 			load_adsp_dynamic_module(appfile, appfile, dev) :
+#else
+			NULL :
+#endif
 			load_adsp_static_module(appfile, shared_app, dev);
-		if (IS_ERR_OR_NULL(ser->mod))
+		if (IS_ERR_OR_NULL(ser->mod)) {
+			dev_err(dev, "failed to load app %s %s\n",
+					appfile, appname);
 			goto err_free_service;
+		}
 		ser->mem_size = &ser->mod->mem_size;
 
 		mutex_init(&ser->lock);
@@ -878,6 +885,7 @@ void nvadsp_app_unload(nvadsp_app_handle_t handle)
 	if (!ser->mod->dynamic)
 		return;
 
+#ifdef CONFIG_ADSP_DYNAMIC_APP
 	mutex_lock(&priv.service_lock_list);
 	if (ser->instance) {
 		dev_err(dev, "cannot unload app %s, has instances %d\n",
@@ -892,6 +900,7 @@ void nvadsp_app_unload(nvadsp_app_handle_t handle)
 	unload_adsp_module(ser->mod);
 	devm_kfree(dev, ser);
 	mutex_unlock(&priv.service_lock_list);
+#endif // CONFIG_ADSP_DYNAMIC_APP
 }
 EXPORT_SYMBOL(nvadsp_app_unload);
 

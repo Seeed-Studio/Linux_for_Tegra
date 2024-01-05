@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
+
+#include <linux/device.h>
+#include "os.h"
+#include "dram_app_mem_manager.h"
+#include "adsp_shared_struct.h"
+
+#ifdef CONFIG_ADSP_DYNAMIC_APP
 
 #include <linux/tegra_nvadsp.h>
 #include <linux/elf.h>
@@ -12,10 +17,6 @@
 #include <linux/firmware.h>
 #include <linux/kernel.h>
 #include <asm/hwcap.h>
-
-#include "os.h"
-#include "dram_app_mem_manager.h"
-#include "adsp_shared_struct.h"
 
 #ifdef CONFIG_DEBUG_SET_MODULE_RONX
 # define debug_align(X) ALIGN(X, PAGE_SIZE)
@@ -680,7 +681,7 @@ static struct adsp_module *setup_load_info(struct load_info *info)
 	}
 
 	/* This is temporary: point mod into copy of data. */
-	mod = kzalloc(sizeof(struct adsp_module), GFP_KERNEL);
+	mod = devm_kzalloc(dev, sizeof(struct adsp_module), GFP_KERNEL);
 	if (!mod) {
 		dev_err(dev, "Unable to create module\n");
 		return ERR_PTR(-ENOMEM);
@@ -689,7 +690,7 @@ static struct adsp_module *setup_load_info(struct load_info *info)
 	if (info->index.sym == 0) {
 		dev_warn(dev, "%s: module has no symbols (stripped?)\n",
 								info->name);
-		kfree(mod);
+		devm_kfree(dev, mod);
 		return ERR_PTR(-ENOEXEC);
 	}
 
@@ -743,6 +744,7 @@ static struct adsp_module *layout_and_allocate(struct load_info *info)
 	/* Module within temporary copy. */
 	struct adsp_module *mod;
 	int err;
+	struct device *dev = info->dev;
 
 	mod = setup_load_info(info);
 	if (IS_ERR(mod))
@@ -760,7 +762,7 @@ static struct adsp_module *layout_and_allocate(struct load_info *info)
 	err = move_module(mod, info);
 	if (err) {
 		/* TODO: need to handle error path more genericly */
-		kfree(mod);
+		devm_kfree(dev, mod);
 		return ERR_PTR(err);
 	}
 
@@ -818,25 +820,6 @@ static int elf_header_check(struct load_info *info)
 	return 0;
 }
 
-struct adsp_module *load_adsp_static_module(const char *appname,
-	struct adsp_shared_app *shared_app, struct device *dev)
-{
-	struct adsp_module *mod = NULL;
-
-	mod = kzalloc(sizeof(struct adsp_module), GFP_KERNEL);
-	if (!mod)
-		return NULL;
-
-	memcpy((struct app_mem_size *)&mod->mem_size,
-		&shared_app->mem_size, sizeof(shared_app->mem_size));
-
-	mod->adsp_module_ptr = shared_app->mod_ptr;
-	mod->dynamic = false;
-	memcpy(mod->version, shared_app->version, sizeof(shared_app->version));
-
-	return mod;
-}
-
 struct adsp_module *load_adsp_dynamic_module(const char *appname,
 	const char *appfile, struct device *dev)
 {
@@ -860,7 +843,7 @@ struct adsp_module *load_adsp_dynamic_module(const char *appname,
 		return ERR_PTR(ret);
 	}
 
-	buf = kzalloc(fw->size, GFP_KERNEL);
+	buf = devm_kzalloc(dev, fw->size, GFP_KERNEL);
 	if (!buf)
 		goto release_firmware;
 
@@ -940,13 +923,13 @@ struct adsp_module *load_adsp_dynamic_module(const char *appname,
 	mod->dynamic = true;
 
  error_free_memory:
-	kfree(buf);
+	devm_kfree(dev, buf);
  release_firmware:
 	release_firmware(fw);
 	return ret ? ERR_PTR(ret) : mod;
 
  unload_module:
-	kfree(buf);
+	devm_kfree(dev, buf);
 	unload_adsp_module(mod);
 	release_firmware(fw);
 	return ERR_PTR(ret);
@@ -954,6 +937,29 @@ struct adsp_module *load_adsp_dynamic_module(const char *appname,
 
 void unload_adsp_module(struct adsp_module *mod)
 {
+	struct device *dev = info->dev;
+
 	dram_app_mem_release(mod->handle);
-	kfree(mod);
+	devm_kfree(dev, mod);
+}
+
+#endif // CONFIG_ADSP_DYNAMIC_APP
+
+struct adsp_module *load_adsp_static_module(const char *appname,
+	struct adsp_shared_app *shared_app, struct device *dev)
+{
+	struct adsp_module *mod = NULL;
+
+	mod = devm_kzalloc(dev, sizeof(struct adsp_module), GFP_KERNEL);
+	if (!mod)
+		return NULL;
+
+	memcpy((struct app_mem_size *)&mod->mem_size,
+		&shared_app->mem_size, sizeof(shared_app->mem_size));
+
+	mod->adsp_module_ptr = shared_app->mod_ptr;
+	mod->dynamic = false;
+	memcpy(mod->version, shared_app->version, sizeof(shared_app->version));
+
+	return mod;
 }
