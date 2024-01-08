@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -18,6 +18,9 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/notifier.h>
+#include <linux/pm.h>
+#include <linux/suspend.h>
 
 #include "tegra_bootloader_debug.h"
 
@@ -336,11 +339,44 @@ static int dbg_golden_register_open_cpu_bl( __attribute((unused))struct inode *i
 }
 #endif /* CONFIG_DEBUG_FS */
 
+/*
+ * Notifier for capturing Linux Resume done stage timestamp.
+ * Note that this notifier will get called for both suspend and resume cases. But we currently do
+ * not have a way to measure Linux Suspend time because we cannot print the profiler stats anyways
+ * when the device goes to suspend. And so there is no check added in the notifier function to check
+ * if this is for suspend or resume.
+ */
+static int profiler_resume_notifier(struct notifier_block *nb, unsigned long event, void *data)
+{
+	tegra_bl_add_profiler_entry("Guest Linux Resume Notifier", 27);
+	return NOTIFY_OK;
+}
+
+static struct notifier_block profiler_notifier = {
+	.notifier_call = profiler_resume_notifier,
+};
+
+/*
+ * Handler for SC7 Resume to profile the start of driver resume.
+ * Since this driver is loaded after all drivers are loaded, it
+ * is expected that this driver's resume handler will get called first.
+ */
+static int profiler_resume_noirq_handler(struct device *dev)
+{
+	tegra_bl_add_profiler_entry("Profiler Driver Resume Start", 28);
+	return 0;
+}
+
+static struct dev_pm_ops profiler_pm_ops = {
+	.resume_noirq = profiler_resume_noirq_handler,
+};
+
 static int __init tegra_bootloader_debuginit(void)
 {
 	void __iomem *ptr_bl_prof_ro_carveout = NULL;
 	void __iomem *ptr_bl_prof_carveout = NULL;
 	int bl_debug_verify_file_entry;
+	int ret;
 #ifdef CONFIG_DEBUG_FS
 	void __iomem *ptr_bl_debug_data_start = NULL;
 	void __iomem *ptr_bl_boot_cfg_start = NULL;
@@ -350,6 +386,13 @@ static int __init tegra_bootloader_debuginit(void)
 		pr_err("%s: command line parameter bl_prof_dataptr not initialized\n",
 			module_name);
 		return -ENODEV;
+	}
+
+	/* Register SC7 resume notifier to profile SC7 Resume done */
+	ret = register_pm_notifier(&profiler_notifier);
+	if (ret) {
+		pr_err("%s: Failed to register resume notifier: %d\n", __func__, ret);
+		/* continue even if this fails */
 	}
 
 #ifdef CONFIG_DEBUG_FS
@@ -698,6 +741,7 @@ static struct platform_driver tegra_bl_debug_driver = {
 	.remove = tegra_bl_debug_remove,
 	.driver = {
 		.name = "tegra_bl_debug",
+		.pm = &profiler_pm_ops,
 		.of_match_table = tegra_bl_debug_of_match,
 	},
 };
@@ -774,6 +818,7 @@ static void __exit tegra_bl_debuginit_module_exit(void)
 		iounmap(usc);
 
 	platform_driver_unregister(&tegra_bl_debug_driver);
+	unregister_pm_notifier(&profiler_notifier);
 }
 
 module_param(bl_debug_data, charp, 0400);
