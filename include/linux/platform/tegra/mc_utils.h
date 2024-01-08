@@ -1,43 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 
 #ifndef __TEGRA_MC_UTILS_H
 #define __TEGRA_MC_UTILS_H
 
-enum dram_types {
-	DRAM_TYPE_INVAL,
-	DRAM_TYPE_LPDDR5_16CH_ECC_1RANK,
-	DRAM_TYPE_LPDDR5_16CH_ECC_2RANK,
-	DRAM_TYPE_LPDDR5_8CH_ECC_1RANK,
-	DRAM_TYPE_LPDDR5_8CH_ECC_2RANK,
-	DRAM_TYPE_LPDDR5_4CH_ECC_1RANK,
-	DRAM_TYPE_LPDDR5_4CH_ECC_2RANK,
-	DRAM_TYPE_LPDDR5_16CH_1RANK,
-	DRAM_TYPE_LPDDR5_16CH_2RANK,
-	DRAM_TYPE_LPDDR5_8CH_1RANK,
-	DRAM_TYPE_LPDDR5_8CH_2RANK,
-	DRAM_TYPE_LPDDR5_4CH_1RANK,
-	DRAM_TYPE_LPDDR5_4CH_2RANK,
-	DRAM_TYPE_LPDDR4_16CH_ECC_1RANK,
-	DRAM_TYPE_LPDDR4_16CH_ECC_2RANK,
-	DRAM_TYPE_LPDDR4_8CH_ECC_1RANK,
-	DRAM_TYPE_LPDDR4_8CH_ECC_2RANK,
-	DRAM_TYPE_LPDDR4_4CH_ECC_1RANK,
-	DRAM_TYPE_LPDDR4_4CH_ECC_2RANK,
-	DRAM_TYPE_LPDDR4_16CH_1RANK,
-	DRAM_TYPE_LPDDR4_16CH_2RANK,
-	DRAM_TYPE_LPDDR4_8CH_1RANK,
-	DRAM_TYPE_LPDDR4_8CH_2RANK,
-	DRAM_TYPE_LPDDR4_4CH_1RANK,
-	DRAM_TYPE_LPDDR4_4CH_2RANK,
-};
-
 struct mc_utils_ops {
 	unsigned long (*emc_freq_to_bw)(unsigned long freq);
 	unsigned long (*emc_bw_to_freq)(unsigned long bw);
-	enum dram_types (*tegra_dram_types)(void);
 	u8 (*get_dram_num_channels)(void);
-	unsigned long (*dram_clk_to_mc_clk)(unsigned long dram_clk);
 };
 
 /*
@@ -70,15 +40,6 @@ unsigned long emc_freq_to_bw(unsigned long freq);
 unsigned long emc_bw_to_freq(unsigned long bw);
 
 /*
- * Return dram types or dram configuration.
- *
- * Return dram configuration based upon ecc/channel/Rank
- *
- * Return: dram type.
- */
-enum dram_types tegra_dram_types(void);
-
-/*
  * Return Number of channels of dram.
  *
  * Return number of dram channels
@@ -86,14 +47,4 @@ enum dram_types tegra_dram_types(void);
  * Return: dram channels.
  */
 u8 get_dram_num_channels(void);
-
-/*
- * Return mc_clk from dram_clk.
- *
- * Return DRAM clock in MHZ to MC clk in MHz.
- *
- * dram_clk: dram clk in MHz
- * Return: mc clk in MHz.
- */
-unsigned long dram_clk_to_mc_clk(unsigned long dram_clk);
 #endif /* __TEGRA_MC_UTILS_H */

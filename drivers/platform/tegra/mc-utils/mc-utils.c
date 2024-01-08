@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -41,8 +41,6 @@
 #define DRAM_LPDDR4 0
 #define DRAM_LPDDR5 1
 #define DRAM_DDR3 2
-#define BR4_MODE 4
-#define BR8_MODE 8
 
 /* BANDWIDTH LATENCY COMPONENTS */
 #define SMMU_DISRUPTION_DRAM_CLK_LP4 6003
@@ -73,7 +71,6 @@ struct emc_params {
 static struct emc_params emc_param;
 static u32 ch_num;
 
-static enum dram_types dram_type;
 static struct mc_utils_ops *ops;
 
 static unsigned long freq_to_bw(unsigned long freq)
@@ -136,8 +133,7 @@ static u8 get_dram_num_channels_t23x(void)
 
 static u8 get_dram_num_channels_t26X(void)
 {
-	pr_err("mc_utils: %s is not supported\n", __func__);
-	return 0;
+	return ch_num;
 }
 
 u8 get_dram_num_channels(void)
@@ -145,190 +141,6 @@ u8 get_dram_num_channels(void)
 	return ops->get_dram_num_channels();
 }
 EXPORT_SYMBOL(get_dram_num_channels);
-
-/* DRAM clock in MHz
- *
- * Return: MC clock in MHz
-*/
-static unsigned long dram_clk_to_mc_clk_t23x(unsigned long dram_clk)
-{
-	unsigned long mc_clk;
-
-	if (dram_clk <= 1600)
-		mc_clk = (dram_clk + BR4_MODE - 1) / BR4_MODE;
-	else
-		mc_clk = (dram_clk + BR8_MODE - 1) / BR8_MODE;
-	return mc_clk;
-}
-
-static unsigned long dram_clk_to_mc_clk_t26x(unsigned long dram_clk)
-{
-	u64 top_car_base_reg = 0x8102000000;
-	u64 top_car_size_reg = 0x8103ffffff;
-	void __iomem *clk_rst_base = NULL;
-	u32 clk_rst_clk_source_emcsa_0 = 0x102000;
-	u32 mc_emc_freq_same = 4, clk_info = 0;
-	unsigned long mc_clk;
-
-	clk_rst_base = ioremap(top_car_base_reg, top_car_size_reg);
-	if (!clk_rst_base) {
-		pr_err("Failed to ioremap clk rst\n");
-		return 0;
-	}
-
-	clk_info = readl(clk_rst_base + clk_rst_clk_source_emcsa_0);
-	mc_emc_freq_same = clk_info >> 16 & 0x1;
-	if (mc_emc_freq_same == 1)
-		mc_clk = dram_clk / 4;
-	else
-		mc_clk = dram_clk / 8;
-
-	iounmap(clk_rst_base);
-	return mc_clk;
-}
-
-unsigned long dram_clk_to_mc_clk(unsigned long dram_clk)
-{
-	return ops->dram_clk_to_mc_clk(dram_clk);
-}
-EXPORT_SYMBOL(dram_clk_to_mc_clk);
-
-static void set_dram_type(void)
-{
-	dram_type = DRAM_TYPE_INVAL;
-
-	switch (emc_param.dram) {
-	case DRAM_LPDDR5:
-		if (emc_param.ecc) {
-			if (ch_num == 16) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR5_16CH_ECC_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR5_16CH_ECC_1RANK;
-			} else if (ch_num == 8) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR5_8CH_ECC_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR5_8CH_ECC_1RANK;
-			} else if (ch_num == 4) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR5_4CH_ECC_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR5_4CH_ECC_1RANK;
-			}
-		} else {
-			if (ch_num == 16) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR5_16CH_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR5_16CH_1RANK;
-			} else if (ch_num == 8) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR5_8CH_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR5_8CH_1RANK;
-			} else if (ch_num == 4) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR5_4CH_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR5_4CH_1RANK;
-			}
-		}
-
-		if (ch_num < 4) {
-			pr_err("DRAM_LPDDR5: Unknown memory channel configuration\n");
-			WARN_ON(true);
-		}
-
-		break;
-	case DRAM_LPDDR4:
-		if (emc_param.ecc) {
-			if (ch_num == 16) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR4_16CH_ECC_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR4_16CH_ECC_1RANK;
-			} else if (ch_num == 8) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR4_8CH_ECC_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR4_8CH_ECC_1RANK;
-			} else if (ch_num == 4) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR4_4CH_ECC_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR4_4CH_ECC_1RANK;
-			}
-		} else {
-			if (ch_num == 16) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR4_16CH_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR4_16CH_1RANK;
-			} else if (ch_num == 8) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR4_8CH_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR4_8CH_1RANK;
-			} else if (ch_num == 4) {
-				if (emc_param.rank)
-					dram_type =
-					DRAM_TYPE_LPDDR5_4CH_2RANK;
-				else
-					dram_type =
-					DRAM_TYPE_LPDDR5_4CH_1RANK;
-			}
-		}
-
-		if (ch_num < 4) {
-			pr_err("DRAM_LPDDR4: Unknown memory channel configuration\n");
-			WARN_ON(true);
-		}
-		break;
-	default:
-		pr_err("mc_util: ddr config not supported\n");
-		WARN_ON(true);
-	}
-}
-
-static enum dram_types tegra_dram_types_t23x(void)
-{
-	return dram_type;
-}
-
-static enum dram_types tegra_dram_types_t26x(void)
-{
-	pr_err("mc_utils: %s is not supported\n", __func__);
-	return 0;
-}
-
-enum dram_types tegra_dram_types(void)
-{
-	return ops->tegra_dram_types();
-}
-EXPORT_SYMBOL(tegra_dram_types);
 
 #if defined(CONFIG_DEBUG_FS)
 static void tegra_mc_utils_debugfs_init(void)
@@ -340,9 +152,6 @@ static void tegra_mc_utils_debugfs_init(void)
 		pr_err("tegra_mc: Unable to create debugfs dir\n");
 		return;
 	}
-
-	debugfs_create_u32("dram_type", 0444, tegra_mc_debug_root,
-			&dram_type);
 
 	debugfs_create_u32("num_channel", 0444, tegra_mc_debug_root,
 			&ch_num);
@@ -366,17 +175,13 @@ static u32 get_dram_dt_prop(struct device_node *np, const char *prop)
 static struct mc_utils_ops mc_utils_t23x_ops = {
 	.emc_freq_to_bw = emc_freq_to_bw_t23x,
 	.emc_bw_to_freq = emc_bw_to_freq_t23x,
-	.tegra_dram_types = tegra_dram_types_t23x,
 	.get_dram_num_channels = get_dram_num_channels_t23x,
-	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_t23x,
 };
 
 static struct mc_utils_ops mc_utils_t26x_ops = {
 	.emc_freq_to_bw = emc_freq_to_bw_t23x,
 	.emc_bw_to_freq = emc_bw_to_freq_t23x,
-	.tegra_dram_types = tegra_dram_types_t26x,
 	.get_dram_num_channels = get_dram_num_channels_t26X,
-	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_t26x,
 };
 
 static int __init tegra_mc_utils_init_t26x(void)
@@ -471,8 +276,6 @@ static int __init tegra_mc_utils_init_t23x(void)
 	emc_param.ecc = ecc;
 	emc_param.rank = rank;
 	emc_param.dram = dram;
-
-	set_dram_type();
 
 #if defined(CONFIG_DEBUG_FS)
 	tegra_mc_utils_debugfs_init();
