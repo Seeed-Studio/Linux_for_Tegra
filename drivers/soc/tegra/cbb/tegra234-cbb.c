@@ -1150,8 +1150,8 @@ static const struct tegra234_cbb_fabric tegra264_top0_cbb_fabric = {
 	.notifier_offset = 0x90000,
 	.off_mask_erd    = 0x4a004,
 	.firewall_base   = 0x3c0000,
-	.firewall_ctl    = 0x610,
-	.firewall_wr_ctl = 0x608,
+	.firewall_ctl    = 0x5b0,
+	.firewall_wr_ctl = 0x5a8,
 };
 
 /* To be filled later when address map is more stabilized */
@@ -1210,8 +1210,8 @@ static const struct tegra234_cbb_fabric tegra264_vision_cbb_fabric = {
 	.err_status_clr = 0x1ff007f,
 	.notifier_offset = 0x80000,
 	.firewall_base   = 0x290000,
-	.firewall_ctl    = 0x630,
-	.firewall_wr_ctl = 0x628,
+	.firewall_ctl    = 0x5d0,
+	.firewall_wr_ctl = 0x5c8,
 };
 
 static const struct of_device_id tegra234_cbb_dt_ids[] = {
