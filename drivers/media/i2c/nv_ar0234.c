@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * ar0234.c - ar0234 sensor driver
  */
@@ -64,7 +64,6 @@ static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_ALTERNATING_EXPOSURE,
 };
 
-const u16 alternating_exposure_cfg_size = sizeof(struct alternating_exposure_cfg);
 
 // Coefficients as per distortion model (wide FOV) being used
 struct fisheye_lens_distortion_coeff {
@@ -794,7 +793,7 @@ static struct tegracam_ctrl_ops ar0234_ctrl_ops = {
 	.numctrls = ARRAY_SIZE(ctrl_cid_list),
 	.ctrl_cid_list = ctrl_cid_list,
 	.string_ctrl_size = {AR0234_EEPROM_STR_SIZE},
-	.compound_ctrl_size = {sizeof(struct NvCamSyncSensorCalibData), alternating_exposure_cfg_size},
+	.compound_ctrl_size = {sizeof(struct NvCamSyncSensorCalibData), sizeof(struct alternating_exposure_cfg)},
 	.set_gain = ar0234_set_gain,
 	.set_exposure = ar0234_set_exposure,
 	.set_exposure_short = ar0234_set_exposure,
