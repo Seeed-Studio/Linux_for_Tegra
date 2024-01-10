@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
 
+ifdef CONFIG_MEDIA_SUPPORT
 ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/video/tegra/camera
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/media/platform/tegra
@@ -31,4 +32,5 @@ tegra-camera-objs += fusa-capture/capture-isp-channel.o
 tegra-camera-objs += fusa-capture/capture-isp.o
 obj-m += tegra-camera.o
 obj-m += tests/
+endif
 endif
