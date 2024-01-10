@@ -663,14 +663,10 @@ static int read_and_validate_valid_msg(
 	int read_size = -1, err = 0;
 	size_t size_ivc_msg = sizeof(struct tegra_virtual_se_ivc_msg_t);
 
-	mutex_lock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 	irq_state = &(g_crypto_to_ivc_map[node_id].wait_interrupt);
-	mutex_unlock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 
 	if (!tegra_hv_ivc_can_read(pivck)) {
-		mutex_lock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 		*irq_state = INTERMEDIATE_REQ_INTERRUPT;
-		mutex_unlock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 		dev_info(se_dev->dev, "%s(): no valid message, await interrupt.\n", __func__);
 		return -EAGAIN;
 	}
@@ -805,7 +801,7 @@ static int tegra_hv_vse_safety_send_ivc_wait(
 	int err;
 	bool is_dummy = false;
 	u64 time_left;
-	enum ivc_irq_state *irq_state, local_irq_state;
+	enum ivc_irq_state *irq_state;
 
 	mutex_lock(&g_crypto_to_ivc_map[node_id].se_ivc_lock);
 
@@ -836,23 +832,24 @@ static int tegra_hv_vse_safety_send_ivc_wait(
 
 	mutex_lock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 	irq_state = &(se_dev->crypto_to_ivc_map[node_id].wait_interrupt);
-	local_irq_state = *irq_state;
-	mutex_unlock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
-	if (local_irq_state == NO_INTERRUPT) {
+	if (*irq_state == NO_INTERRUPT) {
 		err = read_and_validate_dummy_msg(se_dev, pivck, node_id, &is_dummy);
 		if (err != 0) {
 			dev_err(se_dev->dev, "Failed to read and validate dummy message.\n");
+			mutex_unlock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 			goto exit;
 		}
 		if (is_dummy) {
 			err = read_and_validate_valid_msg(se_dev, pivck, node_id, &is_dummy, false);
 			if (err != 0 && err != -EAGAIN) {
 				dev_err(se_dev->dev, "Failed to read & validate valid message.\n");
+				mutex_unlock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 				goto exit;
 			}
+			mutex_unlock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 			if (err == -EAGAIN) {
 				err = 0;
-				pr_debug("%s(): wait_interrupt = %u", __func__, local_irq_state);
+				pr_debug("%s(): wait_interrupt = %u", __func__, *irq_state);
 				time_left = wait_for_completion_timeout(&priv->alg_complete,
 						TEGRA_HV_VSE_TIMEOUT);
 				if (time_left == 0) {
@@ -861,14 +858,16 @@ static int tegra_hv_vse_safety_send_ivc_wait(
 					goto exit;
 				}
 			}
-			pr_debug("%s(): wait_interrupt = %u", __func__, local_irq_state);
+			pr_debug("%s(): wait_interrupt = %u", __func__, *irq_state);
 		} else {
 			dev_err(se_dev->dev,
 				"%s(): Invalid resonse sequence, expected dummy message.\n",
 				__func__);
+			mutex_unlock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 			goto exit;
 		}
 	} else {
+		mutex_unlock(&(g_crypto_to_ivc_map[node_id].irq_state_lock));
 		time_left = wait_for_completion_timeout(&priv->alg_complete, TEGRA_HV_VSE_TIMEOUT);
 		if (time_left == 0) {
 			dev_err(se_dev->dev, "%s timeout\n", __func__);
@@ -4574,7 +4573,7 @@ static int tegra_vse_kthread(void *data)
 	int ret;
 	bool is_dummy = false;
 	size_t size_ivc_msg = sizeof(struct tegra_virtual_se_ivc_msg_t);
-	enum ivc_irq_state *irq_state, local_irq_state;
+	enum ivc_irq_state *irq_state;
 
 	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[node_id].se_engine];
 
@@ -4617,11 +4616,9 @@ static int tegra_vse_kthread(void *data)
 
 		mutex_lock(&(se_dev->crypto_to_ivc_map[node_id].irq_state_lock));
 		irq_state = &(se_dev->crypto_to_ivc_map[node_id].wait_interrupt);
-		local_irq_state = *irq_state;
-		mutex_unlock(&(se_dev->crypto_to_ivc_map[node_id].irq_state_lock));
-		while (tegra_hv_ivc_can_read(pivck) && local_irq_state != NO_INTERRUPT) {
-			pr_debug("%s(): wait_interrupt = %u", __func__, local_irq_state);
-			if (local_irq_state == INTERMEDIATE_REQ_INTERRUPT) {
+		while (tegra_hv_ivc_can_read(pivck) && *irq_state != NO_INTERRUPT) {
+			pr_debug("%s(): wait_interrupt = %u", __func__, *irq_state);
+			if (*irq_state == INTERMEDIATE_REQ_INTERRUPT) {
 				err = read_and_validate_valid_msg(se_dev, pivck, node_id,
 					&is_dummy, true);
 				if (err != 0) {
@@ -4629,15 +4626,12 @@ static int tegra_vse_kthread(void *data)
 						"%s(): Unable to read validate message",
 						__func__);
 				}
-				mutex_lock(&(se_dev->crypto_to_ivc_map[node_id].irq_state_lock));
 				*irq_state = NO_INTERRUPT;
-				local_irq_state = *irq_state;
-				mutex_unlock(&(se_dev->crypto_to_ivc_map[node_id].irq_state_lock));
 				pr_debug("%s():%d wait_interrupt = %u\n",
-						__func__, __LINE__, local_irq_state);
+						__func__, __LINE__, *irq_state);
 				break;
 
-			} else if (local_irq_state == FIRST_REQ_INTERRUPT) {
+			} else if (*irq_state == FIRST_REQ_INTERRUPT) {
 				err = read_and_validate_dummy_msg(se_dev, pivck, node_id,
 					&is_dummy);
 				if (err != 0) {
@@ -4647,12 +4641,7 @@ static int tegra_vse_kthread(void *data)
 					continue;
 				}
 				if (is_dummy == true) {
-					mutex_lock(
-					    &(se_dev->crypto_to_ivc_map[node_id].irq_state_lock));
 					*irq_state = INTERMEDIATE_REQ_INTERRUPT;
-					local_irq_state = *irq_state;
-					mutex_unlock(
-					    &(se_dev->crypto_to_ivc_map[node_id].irq_state_lock));
 					pr_debug("%s():%d Dummy message read. Read valid message.",
 						__func__, __LINE__);
 					continue;
@@ -4661,10 +4650,11 @@ static int tegra_vse_kthread(void *data)
 					break;
 				}
 			} else {
-				dev_err(se_dev->dev, "Invalid irq state - %u", local_irq_state);
+				dev_err(se_dev->dev, "Invalid irq state - %u", *irq_state);
 				return -EINVAL;
 			}
 		}
+		mutex_unlock(&(se_dev->crypto_to_ivc_map[node_id].irq_state_lock));
 	}
 
 	devm_kfree(se_dev->dev, ivc_msg);
