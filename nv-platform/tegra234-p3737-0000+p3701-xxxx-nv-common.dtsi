@@ -77,10 +77,6 @@
 			status = "okay";
 		};
 
-		ufshci@2500000 {
-			status = "okay";
-		};
-
 		aconnect@2900000 {
 			ahub@2900800 {
 				i2s@2901200 {
