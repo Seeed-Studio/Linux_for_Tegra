@@ -473,7 +473,7 @@ static void print_errlog_err(struct seq_file *file, struct tegra234_cbb *cbb)
 	tegra_cbb_print_err(file, "\t  GRPSEC\t\t: %#x\n", grpsec);
 	tegra_cbb_print_err(file, "\t  FALCONSEC\t\t: %#x\n", falconsec);
 
-	if (cbb->fabric->fab_list[fab_id].is_skip)
+	if (cbb->fabric->fab_list[fab_id].is_skip || !cbb->fabric->max_slaves)
 		return;
 
 	if (slave_id >= cbb->fabric->max_slaves) {
@@ -1212,17 +1212,10 @@ static const char * const tegra264_master_id[] = {
 	[0x3f] = "CBB_RSVD"
 };
 
-/* To be filled later when address map is more stabilized */
-static const struct tegra234_slave_lookup tegra264_top0_cbb_slave_map[] = {
-	{ "DUMMY", 0x0 },
-};
-
 static const struct tegra234_cbb_fabric tegra264_top0_cbb_fabric = {
 	.fab_id = T264_TOP_CBB_FABRIC_ID,
 	.fab_list = tegra264_cbb_fabrics,
 	.master_id = tegra264_master_id,
-	.slave_map = tegra264_top0_cbb_slave_map,
-	.max_slaves = ARRAY_SIZE(tegra264_top0_cbb_slave_map),
 	.errors = tegra241_cbb_errors,
 	.max_errors = ARRAY_SIZE(tegra241_cbb_errors),
 	.err_intr_enbl = 0x7,
@@ -1234,17 +1227,10 @@ static const struct tegra234_cbb_fabric tegra264_top0_cbb_fabric = {
 	.firewall_wr_ctl = 0x5a8,
 };
 
-/* To be filled later when address map is more stabilized */
-static const struct tegra234_slave_lookup tegra264_sys_cbb_slave_map[] = {
-	{ "DUMMY", 0x0 },
-};
-
 static const struct tegra234_cbb_fabric tegra264_sys_cbb_fabric = {
 	.fab_id = T264_SYSTEM_CBB_FABRIC_ID,
 	.fab_list = tegra264_cbb_fabrics,
 	.master_id = tegra264_master_id,
-	.slave_map = tegra264_sys_cbb_slave_map,
-	.max_slaves = ARRAY_SIZE(tegra264_sys_cbb_slave_map),
 	.errors = tegra241_cbb_errors,
 	.max_errors = ARRAY_SIZE(tegra241_cbb_errors),
 	.err_intr_enbl = 0xf,
@@ -1255,17 +1241,10 @@ static const struct tegra234_cbb_fabric tegra264_sys_cbb_fabric = {
 	.firewall_wr_ctl = 0x168,
 };
 
-/* To be filled later when address map is more stabilized */
-static const struct tegra234_slave_lookup tegra264_uphy0_cbb_slave_map[] = {
-	{ "DUMMY", 0x0 },
-};
-
 static const struct tegra234_cbb_fabric tegra264_uphy0_cbb_fabric = {
 	.fab_id = T264_UPHY0_CBB_FABRIC_ID,
 	.fab_list = tegra264_cbb_fabrics,
 	.master_id = tegra264_master_id,
-	.slave_map = tegra264_uphy0_cbb_slave_map,
-	.max_slaves = ARRAY_SIZE(tegra264_uphy0_cbb_slave_map),
 	.errors = tegra241_cbb_errors,
 	.max_errors = ARRAY_SIZE(tegra241_cbb_errors),
 	.err_intr_enbl = 0x1,
@@ -1276,17 +1255,10 @@ static const struct tegra234_cbb_fabric tegra264_uphy0_cbb_fabric = {
 	.firewall_wr_ctl = 0x588,
 };
 
-/* To be filled later when address map is more stabilized */
-static const struct tegra234_slave_lookup tegra264_vision_cbb_slave_map[] = {
-	{ "DUMMY", 0x0 },
-};
-
 static const struct tegra234_cbb_fabric tegra264_vision_cbb_fabric = {
 	.fab_id = T264_VISION_CBB_FABRIC_ID,
 	.fab_list = tegra264_cbb_fabrics,
 	.master_id = tegra264_master_id,
-	.slave_map = tegra264_vision_cbb_slave_map,
-	.max_slaves = ARRAY_SIZE(tegra264_vision_cbb_slave_map),
 	.errors = tegra241_cbb_errors,
 	.max_errors = ARRAY_SIZE(tegra241_cbb_errors),
 	.err_intr_enbl = 0x1,
