@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include "pva_mailbox.h"
@@ -1368,13 +1368,8 @@ static int pva_probe(struct platform_device *pdev)
 
 	mutex_init(&pva->pva_auth.allow_list_lock);
 	mutex_init(&pva->pva_auth_sys.allow_list_lock);
-	if (pdata->version <= PVA_HW_GEN2) {
-		pva->pva_auth.pva_auth_enable = true;
-		pva->pva_auth_sys.pva_auth_enable = true;
-	} else {
-		pva->pva_auth.pva_auth_enable = false;
-		pva->pva_auth_sys.pva_auth_enable = false;
-	}
+	pva->pva_auth.pva_auth_enable = true;
+	pva->pva_auth_sys.pva_auth_enable = true;
 
 #ifdef CONFIG_DEBUG_FS
 	pva_debugfs_init(pdev);
