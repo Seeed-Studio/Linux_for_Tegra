@@ -288,6 +288,7 @@ static int isc_gpio_probe(struct platform_device *pdev)
 	gc->base = -1;
 	gc->ngpio = pd->max_gpio;
 	gc->label = "isc-gpio";
+	gc->parent = &pdev->dev;
 #if defined(NV_GPIO_CHIP_STRUCT_HAS_OF_NODE_PRESENT) /* Linux 6.2 */
 	gc->of_node = pdev->dev.of_node;
 #endif
