@@ -2062,7 +2062,6 @@ int nvadsp_os_start(void)
 	struct device *dev;
 	int ret = 0;
 	static int cold_start = 1;
-	u8 chip_id;
 
 	if (!priv.pdev) {
 		pr_err("ADSP Driver is not initialized\n");
@@ -2129,23 +2128,18 @@ int nvadsp_os_start(void)
 		cold_start = 0;
 	}
 
-	if (drv_data->chip_data->hwmb.hwmbox1_reg != 0) {
-		chip_id = tegra_get_chip_id();
-		/* Write chip id info to HWMBOX1 to enable ast config
-		 * later for t186/t196
+	if (drv_data->chip_data->adsp_boot_config_hwmbox != 0) {
+		/*
+		 * Pass boot config to ADSP, so firmware can do any
+		 * specifc setings. E.g. firmware may set up AST in
+		 * case booting is in non-secure mode.
+		 * Presently this MBOX register encodes just the
+		 * adsp_os_secload flag. It could be extended in
+		 * future to pass more information.
 		 */
-		if (chip_id != 0) {
-			hwmbox_writel((uint32_t)chip_id,
-				drv_data->chip_data->hwmb.hwmbox1_reg);
-		} else {
-			dev_err(dev, "chip id is NULL\n");
-			ret = -EINVAL;
-			free_interrupts(&priv);
-#ifdef CONFIG_PM
-			pm_runtime_put_sync(&priv.pdev->dev);
-#endif
-			goto unlock;
-		}
+		hwmbox_writel(
+			(uint32_t)drv_data->adsp_os_secload,
+			drv_data->chip_data->adsp_boot_config_hwmbox);
 	}
 
 	ret = __nvadsp_os_start();

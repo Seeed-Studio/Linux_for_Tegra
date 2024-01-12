@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef __TEGRA_NVADSP_DEV_H
@@ -138,6 +138,7 @@ struct nvadsp_chipdata {
 	u32			adsp_irq_hwmbox;
 	u32			adsp_shared_mem_hwmbox;
 	u32			adsp_os_config_hwmbox;
+	u32			adsp_boot_config_hwmbox;
 	acast_init		acast_init;
 	reset_init		reset_init;
 	os_init			os_init;
