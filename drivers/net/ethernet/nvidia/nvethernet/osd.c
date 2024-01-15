@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #include "ether_linux.h"
 
@@ -226,8 +226,7 @@ static inline int ether_alloc_skb(struct ether_priv_data *pdata,
 		rx_swcx->buf_phy_addr = pdata->resv_buf_phy_addr;
 		rx_swcx->flags |= OSI_RX_SWCX_BUF_VALID;
 		val = pdata->xstats.re_alloc_rxbuf_failed[chan];
-		pdata->xstats.re_alloc_rxbuf_failed[chan] =
-			osi_update_stats_counter(val, 1UL);
+		pdata->xstats.re_alloc_rxbuf_failed[chan] = update_stats_counter(val, 1UL);
 		return 0;
 	}
 
@@ -248,8 +247,7 @@ static inline int ether_alloc_skb(struct ether_priv_data *pdata,
 		rx_swcx->buf_phy_addr = pdata->resv_buf_phy_addr;
 		rx_swcx->flags |= OSI_RX_SWCX_BUF_VALID;
 		val = pdata->xstats.re_alloc_rxbuf_failed[chan];
-		pdata->xstats.re_alloc_rxbuf_failed[chan] =
-			osi_update_stats_counter(val, 1UL);
+		pdata->xstats.re_alloc_rxbuf_failed[chan] = update_stats_counter(val, 1UL);
 		return 0;
 	}
 
@@ -682,8 +680,7 @@ static void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 
 		if ((rx_pkt_cx->flags & OSI_PKT_CX_VLAN) == OSI_PKT_CX_VLAN) {
 			val = pdata->osi_dma->dstats.rx_vlan_pkt_n;
-			pdata->osi_dma->dstats.rx_vlan_pkt_n =
-				osi_update_stats_counter(val, 1UL);
+			pdata->osi_dma->dstats.rx_vlan_pkt_n = update_stats_counter(val, 1UL);
 		}
 #endif /* !OSI_STRIPPED_LIB */
 

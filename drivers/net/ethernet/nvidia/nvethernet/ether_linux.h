@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #ifndef ETHER_LINUX_H
 #define ETHER_LINUX_H
@@ -857,6 +857,17 @@ int ether_tc_setup_cbs(struct ether_priv_data *pdata,
  */
 int ether_get_tx_ts(struct ether_priv_data *pdata);
 void ether_restart_lane_bringup_task(struct tasklet_struct *t);
+static inline nveu64_t update_stats_counter(nveu64_t last_value, nveu64_t incr)
+{
+	nveu64_t temp = last_value + incr;
+
+	if (temp < last_value) {
+		/* Stats overflow, so reset it to zero */
+		temp = 0UL;
+	}
+
+	return temp;
+}
 #ifdef ETHER_NVGRO
 void ether_nvgro_purge_timer(struct timer_list *t);
 #endif /* ETHER_NVGRO */

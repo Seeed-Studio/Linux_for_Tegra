@@ -1144,8 +1144,7 @@ static void ether_adjust_link(struct net_device *dev)
 			new_state = 1;
 			pdata->oldlink = 1;
 			val = pdata->xstats.link_connect_count;
-			pdata->xstats.link_connect_count =
-				osi_update_stats_counter(val, 1UL);
+			pdata->xstats.link_connect_count = update_stats_counter(val, 1UL);
 		}
 	} else if (pdata->oldlink) {
 		new_state = 1;
@@ -1153,8 +1152,7 @@ static void ether_adjust_link(struct net_device *dev)
 		pdata->speed = 0;
 		pdata->oldduplex = -1;
 		val = pdata->xstats.link_disconnect_count;
-		pdata->xstats.link_disconnect_count =
-			osi_update_stats_counter(val, 1UL);
+		pdata->xstats.link_disconnect_count = update_stats_counter(val, 1UL);
 		ether_en_dis_monitor_clks(pdata, OSI_DISABLE);
 	} else {
 		/* Nothing here */
@@ -1351,8 +1349,7 @@ static irqreturn_t ether_tx_chan_isr(int irq, void *data)
 	raw_spin_unlock_irqrestore(&pdata->rlock, flags);
 
 	val = pdata->xstats.tx_normal_irq_n[chan];
-	pdata->xstats.tx_normal_irq_n[chan] =
-		osi_update_stats_counter(val, 1U);
+	pdata->xstats.tx_normal_irq_n[chan] = update_stats_counter(val, 1U);
 
 	if (likely(napi_schedule_prep(&tx_napi->napi))) {
 		__napi_schedule_irqoff(&tx_napi->napi);
@@ -1398,8 +1395,7 @@ static irqreturn_t ether_rx_chan_isr(int irq, void *data)
 	raw_spin_unlock_irqrestore(&pdata->rlock, flags);
 
 	val = pdata->xstats.rx_normal_irq_n[chan];
-	pdata->xstats.rx_normal_irq_n[chan] =
-		osi_update_stats_counter(val, 1U);
+	pdata->xstats.rx_normal_irq_n[chan] = update_stats_counter(val, 1U);
 
 	if (likely(napi_schedule_prep(&rx_napi->napi))) {
 		__napi_schedule_irqoff(&rx_napi->napi);
@@ -4373,8 +4369,7 @@ static enum hrtimer_restart ether_tx_usecs_hrtimer(struct hrtimer *data)
 	unsigned long val;
 
 	val = pdata->xstats.tx_usecs_swtimer_n[tx_napi->chan];
-	pdata->xstats.tx_usecs_swtimer_n[tx_napi->chan] =
-		osi_update_stats_counter(val, 1U);
+	pdata->xstats.tx_usecs_swtimer_n[tx_napi->chan] = update_stats_counter(val, 1U);
 
 	atomic_set(&pdata->tx_napi[tx_napi->chan]->tx_usecs_timer_armed,
 		   OSI_DISABLE);
