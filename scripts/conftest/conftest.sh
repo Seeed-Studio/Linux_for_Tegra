@@ -7757,6 +7757,25 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_V4L2_ASYNC_NF_ADD_SUBDEV_PRESENT" "" "functions"
         ;;
 
+        v4l2_subdev_pad_ops_struct_has_get_frame_interval)
+            #
+            # Determine if struct v4l2_subdev_pad_ops has the 'get_frame_interval'
+            # function pointer.
+            #
+            # Added by commit 287fe160834a ("media: v4l2-subdev: Turn
+            # .[gs]_frame_interval into pad operations") in Linux v6.8.
+            #
+            CODE="
+            #define _LINUX_EFI_H
+            #include <media/v4l2-subdev.h>
+            int conftest_v4l2_subdev_pad_ops_struct_has_get_set_frame_interval(void) {
+                return offsetof(struct v4l2_subdev_pad_ops, get_frame_interval);
+            }
+            "
+            compile_check_conftest "$CODE" \
+                    "NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_FRAME_INTERVAL" "" "types"
+        ;;
+
         crypto_engine_ctx_struct_removed_test)
             #
             # Determine if struct 'crypto_engine_ctx' is removed in linux kernel.
