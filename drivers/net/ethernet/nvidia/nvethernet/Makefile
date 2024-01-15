@@ -16,12 +16,10 @@ endif
 ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 # These CFLAGS must not be shared/used in OSI. These are local to Linux
 ccflags-y += -DLINUX_OS -DNET30 -DNVPKCS_MACSEC -DLINUX_IVC -mno-outline-atomics -Werror=frame-larger-than=2048 \
-	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include \
-	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/include
+	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include
 else
 ccflags-y += -DLINUX_OS -DNET30 -DNVPKCS_MACSEC -DLINUX_IVC \
-	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include \
-	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/osi/common/include
+	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include
 endif
 
 nvethernet-objs:= ether_linux.o \
@@ -36,9 +34,6 @@ nvethernet-objs:= ether_linux.o \
 		  $(OSI_CORE)/osi_core.o \
 		  $(OSI_CORE)/osi_hal.o \
 		  $(OSI_CORE)/macsec.o \
-		  $(OSI_COMMON)/osi_common.o \
-		  $(OSI_COMMON)/eqos_common.o \
-		  $(OSI_COMMON)/mgbe_common.o \
 		  $(OSI_DMA)/osi_dma.o \
 		  $(OSI_DMA)/osi_dma_txrx.o \
 		  $(OSI_CORE)/eqos_core.o \
