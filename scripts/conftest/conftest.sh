@@ -7541,6 +7541,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TC_TAPRIO_QOPT_OFFLOAD_STRUCT_HAS_CMD" "" "types"
         ;;
 
+        tegra264_chip_id)
+            #
+            # Determine if the 'TEGRA264' definition is present.
+            #
+            # Added by commit d94436465152 ("soc/tegra: fuse: Add support for
+            # Tegra264") in Linux v6.5.
+            #
+            CODE="
+            #include <soc/tegra/fuse.h>
+            u8 conftest_tegra264_chip_id(void) {
+                    return TEGRA264;
+            }"
+
+            compile_check_conftest "$CODE" "NV_TEGRA264_CHIP_ID_PRESENT" "" "types"
+        ;;
+
         tegra_ivc_struct_has_iosys_map)
             #
             # Determine if the 'tegra_ivc' structure has the 'map' argument.

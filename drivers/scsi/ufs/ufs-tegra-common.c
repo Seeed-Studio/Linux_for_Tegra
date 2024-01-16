@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2015-2023 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <nvidia/conftest.h>
 
@@ -1947,7 +1949,7 @@ static struct ufs_tegra_soc_data tegra234_soc_data = {
 	.chip_id = TEGRA234,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#if defined(NV_TEGRA264_CHIP_ID_PRESENT) /* Linux v6.5 */
 static struct ufs_tegra_soc_data tegra264_soc_data = {
 	.chip_id = TEGRA264,
 };
@@ -1960,7 +1962,7 @@ static const struct of_device_id ufs_tegra_of_match[] = {
 	}, {
 		.compatible = "tegra234,ufs_variant",
 		.data = &tegra234_soc_data,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#if defined(NV_TEGRA264_CHIP_ID_PRESENT) /* Linux v6.5 */
 	}, {
 		.compatible = "tegra264,ufs_variant",
 		.data = &tegra264_soc_data,
