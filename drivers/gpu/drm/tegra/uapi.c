@@ -17,7 +17,11 @@ static void tegra_drm_mapping_release(struct kref *ref)
 	struct tegra_drm_mapping *mapping =
 		container_of(ref, struct tegra_drm_mapping, ref);
 
-	host1x_bo_unpin(mapping->map);
+	if (mapping->ctx_map)
+		host1x_memory_context_unmap(mapping->ctx_map);
+	else
+		host1x_bo_unpin(mapping->bo_map);
+
 	host1x_bo_put(mapping->bo);
 
 	kfree(mapping);
@@ -33,11 +37,11 @@ static void tegra_drm_channel_context_close(struct tegra_drm_context *context)
 	struct tegra_drm_mapping *mapping;
 	unsigned long id;
 
-	if (context->memory_context)
-		host1x_memory_context_put(context->memory_context);
-
 	xa_for_each(&context->mappings, id, mapping)
 		tegra_drm_mapping_put(mapping);
+
+	if (context->memory_context)
+		host1x_memory_context_put(context->memory_context);
 
 	xa_destroy(&context->mappings);
 
@@ -234,15 +238,26 @@ int tegra_drm_ioctl_channel_map(struct drm_device *drm, void *data, struct drm_f
 		goto put_gem;
 	}
 
-	mapping->map = host1x_bo_pin(tegra_drm_context_get_memory_device(context),
-				     mapping->bo, direction, NULL);
-	if (IS_ERR(mapping->map)) {
-		err = PTR_ERR(mapping->map);
-		goto put_gem;
-	}
+	if (context->memory_context) {
+		mapping->ctx_map = host1x_memory_context_map(
+			context->memory_context, mapping->bo, direction);
 
-	mapping->iova = mapping->map->phys;
-	mapping->iova_end = mapping->iova + host1x_to_tegra_bo(mapping->bo)->gem.size;
+		if (IS_ERR(mapping->ctx_map)) {
+			err = PTR_ERR(mapping->ctx_map);
+			goto put_gem;
+		}
+	} else {
+		mapping->bo_map = host1x_bo_pin(context->client->base.dev,
+				mapping->bo, direction, NULL);
+
+		if (IS_ERR(mapping->bo_map)) {
+			err = PTR_ERR(mapping->bo_map);
+			goto put_gem;
+		}
+
+		mapping->iova = mapping->bo_map->phys;
+		mapping->iova_end = mapping->iova + host1x_to_tegra_bo(mapping->bo)->gem.size;
+	}
 
 	err = xa_alloc(&context->mappings, &args->mapping, mapping, XA_LIMIT(1, U32_MAX),
 		       GFP_KERNEL);
@@ -254,7 +269,10 @@ int tegra_drm_ioctl_channel_map(struct drm_device *drm, void *data, struct drm_f
 	return 0;
 
 unpin:
-	host1x_bo_unpin(mapping->map);
+	if (mapping->ctx_map)
+		host1x_memory_context_unmap(mapping->ctx_map);
+	else
+		host1x_bo_unpin(mapping->bo_map);
 put_gem:
 	host1x_bo_put(mapping->bo);
 free:

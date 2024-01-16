@@ -17,7 +17,7 @@ int host1x_memory_context_list_init(struct host1x *host1x)
 {
 	struct host1x_memory_context_list *cdl = &host1x->context_list;
 	struct device_node *node = host1x->dev->of_node;
-	struct host1x_memory_context *ctx;
+	struct host1x_hw_memory_context *ctx;
 	unsigned int i;
 	int err;
 
@@ -103,62 +103,241 @@ void host1x_memory_context_list_free(struct host1x_memory_context_list *cdl)
 	cdl->len = 0;
 }
 
-struct host1x_memory_context *host1x_memory_context_alloc(struct host1x *host1x,
+static struct host1x_hw_memory_context *host1x_memory_context_alloc_hw_locked(struct host1x *host1x,
 							  struct device *dev,
 							  struct pid *pid)
 {
 	struct host1x_memory_context_list *cdl = &host1x->context_list;
-	struct host1x_memory_context *free = NULL;
+	struct host1x_hw_memory_context *free = NULL, *can_steal = NULL;
+	struct host1x_memory_context *ctx;
 	int i;
 
 	if (!cdl->len)
 		return ERR_PTR(-EOPNOTSUPP);
 
-	mutex_lock(&cdl->lock);
-
 	for (i = 0; i < cdl->len; i++) {
-		struct host1x_memory_context *cd = &cdl->devs[i];
+		struct host1x_hw_memory_context *cd = &cdl->devs[i];
 
 		if (cd->dev.iommu->iommu_dev != dev->iommu->iommu_dev)
 			continue;
 
 		if (cd->owner == pid) {
 			refcount_inc(&cd->ref);
-			mutex_unlock(&cdl->lock);
 			return cd;
 		} else if (!cd->owner && !free) {
 			free = cd;
+		} else if (!cd->active) {
+			can_steal = cd;
 		}
 	}
 
-	if (!free) {
-		mutex_unlock(&cdl->lock);
+	if (free)
+		goto found;
+
+	/* Steal */
+
+	if (!can_steal) {
+		dev_warn(dev, "all context devices are busy\n");
 		return ERR_PTR(-EBUSY);
 	}
 
+	list_for_each_entry(ctx, &can_steal->owners, entry) {
+		struct host1x_context_mapping *mapping;
+
+		ctx->hw = NULL;
+		ctx->context_dev = NULL;
+
+		list_for_each_entry(mapping, &ctx->mappings, entry) {
+			host1x_bo_unpin(mapping->mapping);
+			mapping->mapping = NULL;
+		}
+	}
+
+	put_pid(can_steal->owner);
+
+	free = can_steal;
+
+found:
 	refcount_set(&free->ref, 1);
 	free->owner = get_pid(pid);
-
-	mutex_unlock(&cdl->lock);
+	INIT_LIST_HEAD(&free->owners);
 
 	return free;
 }
+
+static void host1x_memory_context_hw_put(struct host1x_hw_memory_context *cd)
+{
+	if (refcount_dec_and_test(&cd->ref)) {
+		put_pid(cd->owner);
+		cd->owner = NULL;
+	}
+}
+
+struct host1x_memory_context *host1x_memory_context_alloc(
+	struct host1x *host1x, struct device *dev, struct pid *pid)
+{
+	struct host1x_memory_context_list *cdl = &host1x->context_list;
+	struct host1x_memory_context *ctx;
+
+	if (!cdl->len)
+		return ERR_PTR(-EOPNOTSUPP);
+
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
+		return ERR_PTR(-ENOMEM);
+
+	ctx->host = host1x;
+	ctx->dev = dev;
+	ctx->pid = get_pid(pid);
+
+	refcount_set(&ctx->ref, 1);
+	INIT_LIST_HEAD(&ctx->mappings);
+
+	return ctx;
+}
 EXPORT_SYMBOL_GPL(host1x_memory_context_alloc);
 
-void host1x_memory_context_get(struct host1x_memory_context *cd)
+int host1x_memory_context_active(struct host1x_memory_context *ctx)
 {
-	refcount_inc(&cd->ref);
+	struct host1x_memory_context_list *cdl = &ctx->host->context_list;
+	struct host1x_context_mapping *mapping;
+	struct host1x_hw_memory_context *hw;
+	int err = 0;
+
+	mutex_lock(&cdl->lock);
+
+	if (!ctx->hw) {
+		hw = host1x_memory_context_alloc_hw_locked(ctx->host, ctx->dev, ctx->pid);
+		if (IS_ERR(hw)) {
+			err = PTR_ERR(hw);
+			goto unlock;
+		}
+
+		ctx->hw = hw;
+		ctx->context_dev = &hw->dev;
+		list_add(&ctx->entry, &hw->owners);
+
+		list_for_each_entry(mapping, &ctx->mappings, entry) {
+			mapping->mapping = host1x_bo_pin(
+				&hw->dev, mapping->bo, mapping->direction, NULL);
+			if (IS_ERR(mapping->mapping)) {
+				err = PTR_ERR(mapping->mapping);
+				mapping->mapping = NULL;
+				goto unpin;
+			}
+		}
+	}
+
+	ctx->hw->active++;
+
+	mutex_unlock(&cdl->lock);
+
+	return 0;
+
+unpin:
+	list_for_each_entry(mapping, &ctx->mappings, entry) {
+		if (mapping->mapping)
+			host1x_bo_unpin(mapping->mapping);
+	}
+
+	host1x_memory_context_hw_put(ctx->hw);
+	list_del(&ctx->entry);
+	ctx->hw = NULL;
+unlock:
+	mutex_unlock(&cdl->lock);
+	return err;
+}
+EXPORT_SYMBOL_GPL(host1x_memory_context_active);
+
+struct host1x_context_mapping *host1x_memory_context_map(
+	struct host1x_memory_context *ctx, struct host1x_bo *bo, enum dma_data_direction direction)
+{
+	struct host1x_memory_context_list *cdl = &ctx->host->context_list;
+	struct host1x_context_mapping *m;
+	struct host1x_bo_mapping *bo_m;
+
+	m = kzalloc(sizeof(*m), GFP_KERNEL);
+	if (!m)
+		return ERR_PTR(-ENOMEM);
+
+	m->host = ctx->host;
+	m->bo = bo;
+	m->direction = direction;
+
+	mutex_lock(&cdl->lock);
+
+	if (ctx->hw) {
+		bo_m = host1x_bo_pin(&ctx->hw->dev, bo, direction, NULL);
+		if (IS_ERR(bo_m)) {
+			mutex_unlock(&cdl->lock);
+			kfree(m);
+
+			return ERR_CAST(bo_m);
+		}
+
+		m->mapping = bo_m;
+	}
+
+	list_add(&m->entry, &ctx->mappings);
+
+	mutex_unlock(&cdl->lock);
+
+	return m;
+}
+EXPORT_SYMBOL_GPL(host1x_memory_context_map);
+
+void host1x_memory_context_unmap(struct host1x_context_mapping *m)
+{
+	struct host1x_memory_context_list *cdl = &m->host->context_list;
+
+	mutex_lock(&cdl->lock);
+
+	list_del(&m->entry);
+
+	mutex_unlock(&cdl->lock);
+
+	if (m->mapping)
+		host1x_bo_unpin(m->mapping);
+
+	kfree(m);
+}
+EXPORT_SYMBOL_GPL(host1x_memory_context_unmap);
+
+void host1x_memory_context_inactive(struct host1x_memory_context *ctx)
+{
+	struct host1x_memory_context_list *cdl = &ctx->host->context_list;
+
+	mutex_lock(&cdl->lock);
+
+	ctx->hw->active--;
+
+	mutex_unlock(&cdl->lock);
+}
+EXPORT_SYMBOL_GPL(host1x_memory_context_inactive);
+
+void host1x_memory_context_get(struct host1x_memory_context *ctx)
+{
+	refcount_inc(&ctx->ref);
 }
 EXPORT_SYMBOL_GPL(host1x_memory_context_get);
 
-void host1x_memory_context_put(struct host1x_memory_context *cd)
+void host1x_memory_context_put(struct host1x_memory_context *ctx)
 {
-	struct host1x_memory_context_list *cdl = &cd->host->context_list;
+	struct host1x_memory_context_list *cdl = &ctx->host->context_list;
 
-	if (refcount_dec_and_mutex_lock(&cd->ref, &cdl->lock)) {
-		put_pid(cd->owner);
-		cd->owner = NULL;
+	if (refcount_dec_and_mutex_lock(&ctx->ref, &cdl->lock)) {
+		if (ctx->hw) {
+			list_del(&ctx->entry);
+
+			host1x_memory_context_hw_put(ctx->hw);
+			ctx->hw = NULL;
+
+			WARN_ON(!list_empty(&ctx->mappings));
+		}
+
+		put_pid(ctx->pid);
 		mutex_unlock(&cdl->lock);
+		kfree(ctx);
 	}
 }
 EXPORT_SYMBOL_GPL(host1x_memory_context_put);

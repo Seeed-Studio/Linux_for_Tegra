@@ -130,7 +130,7 @@ static inline struct device *
 tegra_drm_context_get_memory_device(struct tegra_drm_context *context)
 {
 	if (context->memory_context)
-		return &context->memory_context->dev;
+		return context->memory_context->context_dev;
 	else
 		return context->client->base.dev;
 }
