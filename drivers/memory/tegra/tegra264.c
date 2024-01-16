@@ -24,6 +24,152 @@ static const struct tegra_mc_client tegra264_mc_clients[] = {
 		.name = "hdar",
 		.bpmp_id = TEGRA264_BWMGR_HDA,
 		.type = TEGRA_ICC_ISO_AUDIO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_HDAW,
+		.name = "hdaw",
+		.bpmp_id = TEGRA264_BWMGR_HDA,
+		.type = TEGRA_ICC_ISO_AUDIO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_MGBE0R,
+		.name = "mgbe0r",
+		.bpmp_id = TEGRA264_BWMGR_EQOS,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_MGBE0W,
+		.name = "mgbe0w",
+		.bpmp_id = TEGRA264_BWMGR_EQOS,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_MGBE1R,
+		.name = "mgbe1r",
+		.bpmp_id = TEGRA264_BWMGR_EQOS,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_MGBE1W,
+		.name = "mgbe1w",
+		.bpmp_id = TEGRA264_BWMGR_EQOS,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_SDMMC0R,
+		.name = "sdmmc0r",
+		.bpmp_id = TEGRA264_BWMGR_SDMMC_1,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_SDMMC0W,
+		.name = "sdmmc0w",
+		.bpmp_id = TEGRA264_BWMGR_SDMMC_1,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_VICR,
+		.name = "vicr",
+		.bpmp_id = TEGRA264_BWMGR_VIC,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_VICW,
+		.name = "vicw",
+		.bpmp_id = TEGRA264_BWMGR_VIC,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_APER,
+		.name = "aper",
+		.bpmp_id = TEGRA264_BWMGR_APE,
+		.type = TEGRA_ICC_ISO_AUDIO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_APEW,
+		.name = "apew",
+		.bpmp_id = TEGRA264_BWMGR_APE,
+		.type = TEGRA_ICC_ISO_AUDIO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_BPMPR,
+		.name = "bpmpr",
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_BPMPW,
+		.name = "bpmpw",
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_APEDMAR,
+		.name = "apedmar",
+		.bpmp_id = TEGRA264_BWMGR_APEDMA,
+		.type = TEGRA_ICC_ISO_AUDIO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_APEDMAW,
+		.name = "apedmaw",
+		.bpmp_id = TEGRA264_BWMGR_APEDMA,
+		.type = TEGRA_ICC_ISO_AUDIO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_VIFALCONR,
+		.name = "vifalconr",
+		.bpmp_id = TEGRA264_BWMGR_VIFAL,
+		.type = TEGRA_ICC_ISO_VIFAL,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_VIFALCONW,
+		.name = "vifalconw",
+		.bpmp_id = TEGRA264_BWMGR_VIFAL,
+		.type = TEGRA_ICC_ISO_VIFAL,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_RCER,
+		.name = "rcer",
+		.bpmp_id = TEGRA264_BWMGR_RCE,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_RCEW,
+		.name = "rcew",
+		.bpmp_id = TEGRA264_BWMGR_RCE,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE0W,
+		.name = "pcie0w",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_0,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE1R,
+		.name = "pcie1r",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_1,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE1W,
+		.name = "pcie1w",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_1,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE2AR,
+		.name = "pcie2ar",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_2,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE2AW,
+		.name = "pcie2aw",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_2,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE3R,
+		.name = "pcie3r",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_3,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE3W,
+		.name = "pcie3w",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_3,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE4R,
+		.name = "pcie4r",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_4,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE4W,
+		.name = "pcie4w",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_4,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE5R,
+		.name = "pcie5r",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_5,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_PCIE5W,
+		.name = "pcie5w",
+		.bpmp_id = TEGRA264_BWMGR_PCIE_5,
+		.type = TEGRA_ICC_NISO,
 	},
 };
 
