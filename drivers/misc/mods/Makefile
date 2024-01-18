@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# SPDX-FileCopyrightText: Copyright (c) 2017-2023, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA CORPORATION.  All rights reserved.
 
 ifeq ($(origin srctree.nvidia), undefined)
 srctree.nvidia := $(srctree.nvidia-oot)
@@ -28,7 +28,7 @@ mods-y                             += mods_krnl.o
 mods-y                             += mods_mem.o
 
 mods-$(CONFIG_ACPI)                += mods_acpi.o
-mods-$(CONFIG_TEGRA_NVADSP)        += mods_adsp.o
+mods-$(CONFIG_ARCH_TEGRA)          += mods_adsp.o
 mods-$(HAVE_ARM_FFA)               += mods_arm_ffa.o
 mods-$(CONFIG_TEGRA_IVC)           += mods_bpmpipc.o
 mods-$(CONFIG_COMMON_CLK)          += mods_clock.o

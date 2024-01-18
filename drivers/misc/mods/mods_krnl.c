@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #include "mods_internal.h"
 
@@ -2721,20 +2721,23 @@ static long mods_krnl_ioctl(struct file  *fp,
 			   MODS_DMABUF_GET_PHYSICAL_ADDRESS);
 		break;
 #endif
-#ifdef CONFIG_TEGRA_NVADSP
+#ifdef MODS_HAS_TEGRA
 	case MODS_ESC_ADSP_LOAD:
-		MODS_IOCTL_VOID(MODS_ESC_ADSP_LOAD,
-				esc_mods_adsp_load);
+		MODS_IOCTL_NORETVAL(MODS_ESC_ADSP_LOAD,
+				esc_mods_adsp_load,
+				MODS_ADSP_INIT_INFO);
 		break;
 
 	case MODS_ESC_ADSP_START:
-		MODS_IOCTL_VOID(MODS_ESC_ADSP_START,
-				esc_mods_adsp_start);
+		MODS_IOCTL_NORETVAL(MODS_ESC_ADSP_START,
+				esc_mods_adsp_start,
+				MODS_ADSP_INIT_INFO);
 		break;
 
 	case MODS_ESC_ADSP_STOP:
-		MODS_IOCTL_VOID(MODS_ESC_ADSP_STOP,
-				esc_mods_adsp_stop);
+		MODS_IOCTL_NORETVAL(MODS_ESC_ADSP_STOP,
+				esc_mods_adsp_stop,
+				MODS_ADSP_INIT_INFO);
 		break;
 
 	case MODS_ESC_ADSP_RUN_APP:

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #ifndef _MODS_INTERNAL_H_
 #define _MODS_INTERNAL_H_
@@ -664,12 +664,15 @@ static inline int esc_mods_dmabuf_get_phys_addr(struct mods_client *client,
 				  { return -EINVAL; }
 #endif
 
-#ifdef CONFIG_TEGRA_NVADSP
-int esc_mods_adsp_load(struct mods_client *client);
-int esc_mods_adsp_start(struct mods_client *client);
-int esc_mods_adsp_stop(struct mods_client *client);
+#ifdef MODS_HAS_TEGRA
+int esc_mods_adsp_load(struct mods_client               *client,
+				struct MODS_ADSP_INIT_INFO *p);
+int esc_mods_adsp_start(struct mods_client              *client,
+				struct MODS_ADSP_INIT_INFO *p);
+int esc_mods_adsp_stop(struct mods_client               *client,
+				struct MODS_ADSP_INIT_INFO *p);
 int esc_mods_adsp_run_app(struct mods_client            *client,
-			  struct MODS_ADSP_RUN_APP_INFO *p);
+				struct MODS_ADSP_RUN_APP_INFO *p);
 #endif
 
 #ifdef CONFIG_TRUSTY
