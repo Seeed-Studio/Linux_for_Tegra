@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,6 +38,13 @@
  * R5 FW reserves one DMA channel for internal use.
  */
 #define NVPVA_TASK_MAX_DMA_CHANNELS_T26X (15U)
+
+/**
+ * Maximum number of frames allowed in hwseq mode
+ * on T26x is 64.
+ */
+#define NVPVA_TASK_MAX_HWSEQ_FRAME_COUNT_T26X	(64U)
+
 /* NOTE: This is a re-definition of nvpva_dma_channel that
  * contains T26x specific changes. Once T26x is public,
  * this definition may be merged nvpva_dma_channel.
