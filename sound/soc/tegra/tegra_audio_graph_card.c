@@ -13,6 +13,8 @@
 #include <sound/soc-dai.h>
 #include <sound/soc-link.h>
 
+#include "tegra_codecs.h"
+
 #define MAX_PLLA_OUT0_DIV 128
 
 #define simple_to_tegra_priv(simple) \
@@ -194,7 +196,11 @@ static int tegra_audio_graph_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
-	return simple_util_hw_params(substream, params);
+	err = simple_util_hw_params(substream, params);
+	if (err < 0)
+		return err;
+
+	return tegra_codecs_runtime_setup(rtd, params);
 }
 
 static const struct snd_soc_ops tegra_audio_graph_ops = {
@@ -207,6 +213,7 @@ static int tegra_audio_graph_card_probe(struct snd_soc_card *card)
 {
 	struct simple_util_priv *simple = snd_soc_card_get_drvdata(card);
 	struct tegra_audio_priv *priv = simple_to_tegra_priv(simple);
+	int ret;
 
 	priv->clk_plla = devm_clk_get(card->dev, "pll_a");
 	if (IS_ERR(priv->clk_plla)) {
@@ -220,7 +227,11 @@ static int tegra_audio_graph_card_probe(struct snd_soc_card *card)
 		return PTR_ERR(priv->clk_plla_out0);
 	}
 
-	return graph_util_card_probe(card);
+	ret = graph_util_card_probe(card);
+	if (ret < 0)
+		return ret;
+
+	return tegra_codecs_init(card);
 }
 
 static struct snd_soc_dai_driver tegra_dummy_dai = {

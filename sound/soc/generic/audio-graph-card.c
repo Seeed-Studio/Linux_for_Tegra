@@ -250,6 +250,9 @@ static int graph_dai_link_of_dpcm(struct simple_util_priv *priv,
 
 	ret = graph_link_init(priv, cpu_ep, codec_ep, li, dai_name);
 
+	if (ep && !of_property_read_string(ep, "link-name", &dai_link->name))
+		dev_dbg(dev, "(%pOF) DAI link name = %s\n", ep, dai_link->name);
+
 	li->link++;
 
 	return ret;
@@ -293,6 +296,9 @@ static int graph_dai_link_of(struct simple_util_priv *priv,
 	ret = graph_link_init(priv, cpu_ep, codec_ep, li, dai_name);
 	if (ret < 0)
 		return ret;
+
+	if (codec_ep && !of_property_read_string(codec_ep, "link-name", &dai_link->name))
+		dev_dbg(dev, "(%pOF) DAI link name = %s\n", codec_ep, dai_link->name);
 
 	li->link++;
 
