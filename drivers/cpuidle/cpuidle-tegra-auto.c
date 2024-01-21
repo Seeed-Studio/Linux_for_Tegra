@@ -105,6 +105,7 @@ static int tegra_auto_enter_s2idle_state(struct cpuidle_device *dev,
 		pr_debug("%s: after HVC: GUEST_PAUSE_CMD, %d\n", __func__, boot_cpu_id);
 		s2idle_sc7_state = CPUIDLE_TEGRA_AUTO_SC7_RESUME_START;
 		cpumask_clear(&cpumask);
+		pm_system_wakeup();
 	} else {
 		cpumask_test_and_set_cpu(cpu_id, &cpumask);
 
