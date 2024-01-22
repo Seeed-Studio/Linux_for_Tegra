@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef _PVA_REGS_H_
@@ -19,6 +19,24 @@
 #include "pva-interface.h"
 #include "pva_mailbox.h"
 #include "pva-ucode-header.h"
+
+/**
+ * @defgroup PVA_SCR_VALUES
+ *
+ * @brief Following macros specify SCR firewall values that are expected to be
+ * programmed by PVA driver.
+ * @{
+ */
+/**
+ * @brief SEC EXT EVENT SCR firewall to enable only CCPLEX and R5 read/write access.
+ */
+#define PVA_SEC_SCR_SECEXT_INTR_EVENT_0_VAL (0x39008282U)
+
+/**
+ * @brief PROC SCR firewall to enable only CCPLEX read/write and R5 read access.
+ */
+#define PVA_PROC_SCR_PROC_0_VAL             (0x39000282U)
+/** @} */
 
 /* Definition for LIC_INTR_ENABLE bits */
 #define SEC_LIC_INTR_HSP1	0x1
@@ -190,5 +208,15 @@ static inline u32 sec_ec_errslice2_latenterr_enable_r(void)
 static inline u32 sec_ec_errslice3_latenterr_enable_r(void)
 {
 	return (SEC_BASE_COMMON + 0xD0U);
+}
+
+static inline u32 scr_secext_intr_event_0_r(void)
+{
+	return (SEC_BASE_COMMON + 0x8804U);
+}
+
+static inline u32 scr_proc_0_r(void)
+{
+	return (SEC_BASE_COMMON + 0x10800U);
 }
 #endif

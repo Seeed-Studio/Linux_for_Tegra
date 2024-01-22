@@ -352,6 +352,9 @@ static int pva_init_fw(struct platform_device *pdev)
 	for (i = 0; i < EVP_REG_NUM; i++)
 		host1x_writel(pdev, pva_get_evp_reg(i), evp_reg_val[i]);
 
+	host1x_writel(pdev, scr_secext_intr_event_0_r(), PVA_SEC_SCR_SECEXT_INTR_EVENT_0_VAL);
+	host1x_writel(pdev, scr_proc_0_r(), PVA_PROC_SCR_PROC_0_VAL);
+
 	host1x_writel(pdev,
 		      cfg_priv_ar1_start_r(pva->version),
 		      FW_CODE_DATA_START_ADDR);
