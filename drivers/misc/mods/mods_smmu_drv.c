@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #include <linux/kernel.h>
 #include <linux/device.h>
@@ -12,8 +12,8 @@
 #include <linux/version.h>
 #include <linux/dma-buf.h>
 
-#include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/acpi.h>
 #include "mods_internal.h"
 

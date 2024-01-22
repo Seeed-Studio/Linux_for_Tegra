@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #include "mods_internal.h"
 
@@ -8,11 +8,10 @@
 #include <linux/interrupt.h>
 #include <linux/pci_regs.h>
 #if defined(MODS_HAS_TEGRA) && defined(CONFIG_OF) && defined(CONFIG_OF_IRQ)
-#include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
-#include <linux/of_device.h>
+#include <linux/of_platform.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #endif
