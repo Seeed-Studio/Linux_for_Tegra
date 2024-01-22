@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
 
 #include <linux/platform_device.h>
 #include <linux/tegra_nvadsp.h>
@@ -310,7 +308,7 @@ static nvadsp_app_handle_t app_load(const char *appfile,
 		ser = devm_kzalloc(dev, sizeof(*ser), GFP_KERNEL);
 		if (!ser)
 			goto err;
-		strlcpy(ser->name, appname, NVADSP_NAME_SZ);
+		strscpy(ser->name, appname, NVADSP_NAME_SZ);
 
 		/*load the module in to memory */
 		ser->mod = dynamic ?

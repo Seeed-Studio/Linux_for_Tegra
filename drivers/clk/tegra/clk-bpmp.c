@@ -1,7 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -371,7 +369,7 @@ static int tegra_bpmp_clk_get_info(struct tegra_bpmp *bpmp, unsigned int id,
 	if (err < 0)
 		return err;
 
-	strlcpy(info->name, response.name, MRQ_CLK_NAME_MAXLEN);
+	strscpy(info->name, response.name, MRQ_CLK_NAME_MAXLEN);
 	info->num_parents = response.num_parents;
 
 	for (i = 0; i < info->num_parents; i++)

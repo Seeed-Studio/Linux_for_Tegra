@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #undef TRACE_SYSTEM
@@ -27,7 +27,7 @@ DECLARE_EVENT_CLASS(capture__msg,
 		__field(u32, ch_id)
 	),
 	TP_fast_assign(
-		strlcpy(__entry->ivc_name, ivc_name, sizeof(__entry->ivc_name));
+		strscpy(__entry->ivc_name, ivc_name, sizeof(__entry->ivc_name));
 		__entry->msg_id = msg_id;
 		__entry->ch_id = ch_id;
 	),
@@ -47,7 +47,7 @@ TRACE_EVENT(capture_ivc_notify,
 		__array(char, ivc_name, IVC_NAME_LEN)
 	),
 	TP_fast_assign(
-		strlcpy(__entry->ivc_name, ivc_name, sizeof(__entry->ivc_name));
+		strscpy(__entry->ivc_name, ivc_name, sizeof(__entry->ivc_name));
 	),
 	TP_printk("ivc:\"%s\"", __entry->ivc_name)
 );
@@ -72,7 +72,7 @@ TRACE_EVENT(capture_ivc_send_error,
 		__field(int, err)
 	),
 	TP_fast_assign(
-		strlcpy(__entry->ivc_name, ivc_name, sizeof(__entry->ivc_name));
+		strscpy(__entry->ivc_name, ivc_name, sizeof(__entry->ivc_name));
 		__entry->msg_id = msg_id;
 		__entry->ch_id = ch_id;
 		__entry->err = err;

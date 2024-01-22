@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Tegra Video Input device common APIs
- *
- * Copyright (c) 2015-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -116,11 +115,15 @@ static void tegra_vi_notify(struct v4l2_subdev *sd,
 
 int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 {
+	ssize_t len;
 	int ret;
 
 	vi->media_dev.dev = vi->dev;
-	strlcpy(vi->media_dev.model, "NVIDIA Tegra Video Input Device",
+	len = strscpy(vi->media_dev.model, "NVIDIA Tegra Video Input Device",
 		sizeof(vi->media_dev.model));
+	if (len < 0)
+		return -ENAMETOOLONG;
+
 	vi->media_dev.hw_revision = 3;
 
 	media_device_init(&vi->media_dev);

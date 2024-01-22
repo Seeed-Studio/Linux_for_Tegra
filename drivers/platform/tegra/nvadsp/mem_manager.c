@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
 
 #define pr_fmt(fmt) "%s : %d, " fmt, __func__, __LINE__
 
@@ -56,14 +54,14 @@ void *mem_request(void *mem_handle, const char *name, size_t size)
 			if (best_match_chunk->address < mc_iterator->address) {
 				list_add_tail(&best_match_chunk->node,
 						&mc_iterator->node);
-				strlcpy(best_match_chunk->name, name,
+				strscpy(best_match_chunk->name, name,
 						NAME_SIZE);
 				spin_unlock_irqrestore(&mm_info->lock, flags);
 				return best_match_chunk;
 			}
 		}
 		list_add(&best_match_chunk->node, mm_info->alloc_list);
-		strlcpy(best_match_chunk->name, name, NAME_SIZE);
+		strscpy(best_match_chunk->name, name, NAME_SIZE);
 		spin_unlock_irqrestore(&mm_info->lock, flags);
 		return best_match_chunk;
 	} else {
@@ -76,7 +74,7 @@ void *mem_request(void *mem_handle, const char *name, size_t size)
 		}
 		new_mc->address = best_match_chunk->address;
 		new_mc->size = size;
-		strlcpy(new_mc->name, name, NAME_SIZE);
+		strscpy(new_mc->name, name, NAME_SIZE);
 		best_match_chunk->address += size;
 		best_match_chunk->size -= size;
 		list_for_each_entry(mc_iterator, mm_info->alloc_list, node) {
@@ -112,7 +110,7 @@ bool mem_release(void *mem_handle, void *handle)
 	list_for_each_entry(mc_curr, mm_info->free_list, node) {
 		if (mc_free->address < mc_curr->address) {
 
-			strlcpy(mc_free->name, "FREE", NAME_SIZE);
+			strscpy(mc_free->name, "FREE", NAME_SIZE);
 
 			/* adjacent next free node */
 			if (mc_curr->address ==
@@ -235,7 +233,7 @@ void *create_mem_manager(const char *name, unsigned long start_address,
 		return ERR_PTR(-ENOMEM);
 	}
 
-	strlcpy(mm_info->name, name, NAME_SIZE);
+	strscpy(mm_info->name, name, NAME_SIZE);
 
 	mm_info->alloc_list = kzalloc(sizeof(struct list_head), GFP_KERNEL);
 	if (unlikely(!mm_info->alloc_list)) {
@@ -267,7 +265,7 @@ void *create_mem_manager(const char *name, unsigned long start_address,
 
 	mc->address = mm_info->start_address;
 	mc->size = mm_info->size;
-	strlcpy(mc->name, "FREE", NAME_SIZE);
+	strscpy(mc->name, "FREE", NAME_SIZE);
 	list_add(&mc->node, mm_info->free_list);
 	spin_lock_init(&mm_info->lock);
 

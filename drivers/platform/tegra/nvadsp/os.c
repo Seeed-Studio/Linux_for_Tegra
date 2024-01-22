@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2014-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -498,7 +498,7 @@ __maybe_unused create_global_symbol_table(const struct firmware *fw)
 		((type == STT_OBJECT) || (type == STT_FUNC))) {
 			char *name = priv.adsp_glo_sym_tbl[i].name;
 
-			strlcpy(name, name_table + sym->st_name, SYM_NAME_SZ);
+			strscpy(name, name_table + sym->st_name, SYM_NAME_SZ);
 			priv.adsp_glo_sym_tbl[i].addr = sym->st_value;
 			priv.adsp_glo_sym_tbl[i].info = info;
 			i++;
@@ -2519,9 +2519,9 @@ void nvadsp_get_os_version(char *buf, int buf_size)
 	shared_mem = drv_data->shared_adsp_os_data;
 	if (shared_mem) {
 		os_info = &shared_mem->os_info;
-		strlcpy(buf, os_info->version, buf_size);
+		strscpy(buf, os_info->version, buf_size);
 	} else {
-		strlcpy(buf, "unavailable", buf_size);
+		strscpy(buf, "unavailable", buf_size);
 	}
 }
 EXPORT_SYMBOL(nvadsp_get_os_version);
