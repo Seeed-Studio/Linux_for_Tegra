@@ -366,6 +366,11 @@ static int pva_init_fw(struct platform_device *pdev)
 		host1x_writel(pdev,
 			      cfg_priv_ar1_usegreg_r(pva->version),
 			      0xFFFFFFFF);
+
+		host1x_writel(pdev, evp_scr_r(), PVA_EVP_SCR_VAL);
+		host1x_writel(pdev, cfg_scr_status_ctrl_r(), PVA_STATUS_CTL_SCR_VAL);
+		host1x_writel(pdev, cfg_scr_priv_0_r(), PVA_PRIV_SCR_VAL);
+		host1x_writel(pdev, cfg_scr_ccq_ctrl_r(), PVA_CCQ_SCR_VAL);
 	} else {
 		host1x_writel(pdev,
 			      cfg_priv_ar1_lsegreg_r(pva->version),

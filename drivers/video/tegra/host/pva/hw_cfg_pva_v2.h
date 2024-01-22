@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
- *
+ * Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved.
+ */
+
+/*
  * Function naming determines intended use:
  *
  *     <x>_r(void) : Returns the offset for register <x>.
@@ -105,6 +107,21 @@ static inline u32 v2_cfg_priv_ar2_start_r(void)
 static inline u32 v2_cfg_priv_ar2_end_r(void)
 {
 	return V2_ADDRESS_CONTROL_BASE + 0x34U;
+}
+
+static inline u32 cfg_scr_status_ctrl_r(void)
+{
+	return (V2_ADDRESS_CONTROL_BASE + 0x8000U);
+}
+
+static inline u32 cfg_scr_priv_0_r(void)
+{
+	return (V2_ADDRESS_CONTROL_BASE + 0x8008U);
+}
+
+static inline u32 cfg_scr_ccq_ctrl_r(void)
+{
+	return (V2_ADDRESS_CONTROL_BASE + 0x8010U);
 }
 
 #define V2_CFG_CCQ_BASE 0x260000U

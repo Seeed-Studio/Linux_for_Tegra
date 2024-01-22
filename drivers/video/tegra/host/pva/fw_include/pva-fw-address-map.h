@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA Corporation.  All rights reserved.
  */
 
 #ifndef PVA_FW_ADDRESS_MAP_H
@@ -114,4 +114,31 @@
  */
 #define FW_SHARED_MEMORY_START                 2147483648 //0x80000000
 
+/**
+ * @defgroup PVA_HYP_SCR_VALUES
+ *
+ * @brief Following macros specify SCR firewall values that are expected to be
+ * programmed by Hypervisor.
+ * @{
+ */
+/**
+ * @brief EVP SCR firewall to enable only CCPLEX read/write access.
+ */
+#define PVA_EVP_SCR_VAL 0x19000202
+
+/**
+ * @brief PRIV SCR firewall to enable only CCPLEX and R5 read/write access.
+ */
+#define PVA_PRIV_SCR_VAL 0x1F008282
+
+/**
+ * @brief CCQ SCR firewall to enable only CCPLEX write access and R5 read access.
+ */
+#define PVA_CCQ_SCR_VAL 0x19000280
+
+/**
+ * @brief CCQ SCR firewall to enable only CCPLEX read access and R5 read/write access.
+ */
+#define PVA_STATUS_CTL_SCR_VAL 0x1F008082
+/** @} */
 #endif

@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION. All rights reserved.
- *
+ * Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
+ */
+
+/*
  * Function naming determines intended use:
  *
  *     <x>_r(void) : Returns the offset for register <x>.
@@ -69,5 +71,9 @@ static inline u32 evp_irq_addr_r(void)
 static inline u32 evp_fiq_addr_r(void)
 {
 	return 0x3c;
+}
+static inline u32 evp_scr_r(void)
+{
+	return 0x40U;
 }
 #endif
