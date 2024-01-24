@@ -14,6 +14,7 @@
 #include <linux/host1x-next.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/syscalls.h>
 #include <linux/tegra-pcie-edma.h>
