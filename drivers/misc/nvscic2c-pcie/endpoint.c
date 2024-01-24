@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: endpoint: " fmt
 
@@ -501,8 +501,13 @@ ioctl_notify_remote_impl(struct endpoint_t *endpoint)
 		return -ENOLINK;
 
 	if (peer_cpu == NVCPU_X86_64) {
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 		ret = pci_client_raise_irq(endpoint->pci_client_h, PCI_EPC_IRQ_MSI,
 					   endpoint->msi_irq);
+#else
+		ret = pci_client_raise_irq(endpoint->pci_client_h, PCI_IRQ_MSI,
+					   endpoint->msi_irq);
+#endif
 	} else {
 		/*
 		 * Ordering between message/data and host1x syncpoints is not

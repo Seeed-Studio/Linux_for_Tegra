@@ -7300,7 +7300,20 @@ compile_test() {
 
             compile_check_conftest "$CODE" "NV_PCI_EPF_DRIVER_STRUCT_PROBE_HAS_ID_ARG" "" "functions"
         ;;
+        pci_epc_irq_type_enum_present)
+            #
+            # Determine if the pci_epc_irq_type enum present or not.
+            #
+            # In Linux v6.8, the enum pci_epc_irq_type is dropped from
+            # commit 74955cb8ccc385 ("PCI: endpoint: Drop PCI_EPC_IRQ_XXX definitions")
+            #
+            CODE="
+            #include <linux/pci-epc.h>
+            enum pci_epc_irq_type irq_type;
+            "
 
+            compile_check_conftest "$CODE" "PCI_EPC_IRQ_TYPE_ENUM_PRESENT" "" "types"
+        ;;
         register_shrinker_has_fmt_arg)
             #
             # Determine if the 'register_shrinker' function

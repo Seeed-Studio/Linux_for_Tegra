@@ -2,7 +2,7 @@
 /*
  * PCIe DMA EPF test framework for Tegra PCIe
  *
- * Copyright (C) 2021-2023 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2021-2024 NVIDIA Corporation. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -73,7 +73,11 @@ static void edma_lib_test_raise_irq(void *p)
 {
 	struct pcie_epf_dma *epfnv = (struct pcie_epf_dma *)p;
 
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 	lpci_epc_raise_irq(epfnv->epc, epfnv->epf->func_no, PCI_EPC_IRQ_MSI, 1);
+#else
+	lpci_epc_raise_irq(epfnv->epc, epfnv->epf->func_no, PCI_IRQ_MSI, 1);
+#endif
 }
 
 /* debugfs to perform eDMA lib transfers and do CRC check */

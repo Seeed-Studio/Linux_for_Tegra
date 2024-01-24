@@ -810,7 +810,11 @@ pci_client_get_edma_rx_desc_iova(void *pci_client_h)
 }
 
 int
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 pci_client_raise_irq(void *pci_client_h, enum pci_epc_irq_type type, u16 num)
+#else
+pci_client_raise_irq(void *pci_client_h, int type, u16 num)
+#endif
 {
 	int ret = 0;
 	struct pci_client_t *pci_client_ctx = (struct pci_client_t *)pci_client_h;

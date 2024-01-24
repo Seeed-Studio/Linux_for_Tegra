@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: comm-channel: " fmt
+
+#include <nvidia/conftest.h>
 
 #include <linux/atomic.h>
 #include <linux/dma-fence.h>
@@ -215,7 +217,11 @@ send_msg(struct comm_channel_ctx_t *comm_ctx, struct comm_msg *msg)
 
 	if (peer_cpu == NVCPU_X86_64) {
 	/* comm-channel irq verctor always take from index 0 */
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 		ret = pci_client_raise_irq(comm_ctx->pci_client_h, PCI_EPC_IRQ_MSI, 0);
+#else
+		ret = pci_client_raise_irq(comm_ctx->pci_client_h, PCI_IRQ_MSI, 0);
+#endif
 	} else {
 	/* notify peer for each write.*/
 		writel(0x1, syncpt->peer_mem.pva);

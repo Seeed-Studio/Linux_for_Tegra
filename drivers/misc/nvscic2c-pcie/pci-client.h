@@ -4,6 +4,8 @@
 #ifndef __PCI_CLIENT_H__
 #define __PCI_CLIENT_H__
 
+#include <nvidia/conftest.h>
+
 #include <uapi/misc/nvscic2c-pcie-ioctl.h>
 
 #include "common.h"
@@ -133,5 +135,9 @@ pci_client_get_edma_rx_desc_iova(void *pci_client_h);
 
 /* pci client raise irq to rp */
 int
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 pci_client_raise_irq(void *pci_client_h, enum pci_epc_irq_type type, u16 num);
+#else
+pci_client_raise_irq(void *pci_client_h, int type, u16 num);
+#endif
 #endif // __PCI_CLIENT_H__
