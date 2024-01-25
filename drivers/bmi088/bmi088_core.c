@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /* Device tree example:
  *
@@ -7,8 +7,8 @@
  *   compatible = "bmi,bmi088";
  *   reg = <0x69>; // <-- Must be gyroscope I2C address
  *   accel_i2c_addr = <0x19>; // Must be specified
- *   accel_irq_gpio = <&tegra_gpio TEGRA_GPIO(BB, 0) GPIO_ACTIVE_HIGH>;
- *   gyro_irq_gpio = <&tegra_gpio TEGRA_GPIO(BB, 1) GPIO_ACTIVE_HIGH>;
+ *   accel_irq-gpios = <&tegra_gpio TEGRA_GPIO(BB, 0) GPIO_ACTIVE_HIGH>;
+ *   gyro_irq-gpios = <&tegra_gpio TEGRA_GPIO(BB, 1) GPIO_ACTIVE_HIGH>;
  *   accel_matrix    = [01 00 00 00 01 00 00 00 01];
  *   gyro_matrix        = [01 00 00 00 01 00 00 00 01];
  * };
@@ -27,8 +27,8 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/of.h>
-#include <linux/tegra-gte.h>
 #include <linux/bitops.h>
+#include <linux/hte.h>
 #include "bmi_iio.h"
 
 #define BMI_NAME			"bmi088"
@@ -109,22 +109,17 @@
 
 #define BMI_PART_BMI088			(0)
 
+#define HTE_TIMEOUT			(msecs_to_jiffies(100))
+
 static const struct i2c_device_id bmi_i2c_device_ids[] = {
 	{ BMI_NAME, BMI_PART_BMI088 },
 	{},
 };
 
-static char *gte_hw_str_t194 = "nvidia,tegra194-gte-aon";
-static char *gte_hw_str_t234 = "nvidia,tegra234-gte-aon";
-static struct device_node *gte_nd;
-
-struct bmi_gte_irq {
-	struct tegra_gte_ev_desc *gte;
+struct bmi_gpio_irq {
+	struct gpio_desc *gpio_in;
 	const char *dev_name;
-	int gpio;
 	int irq;
-	u64 irq_ts;
-	u64 irq_ts_old;
 };
 
 struct bmi_reg_rd {
@@ -413,18 +408,21 @@ struct bmi_snsr {
 	struct sensor_cfg cfg;
 	unsigned int usr_cfg;
 	unsigned int period_us;
+	u64 irq_ts;
+	u64 irq_ts_old;
+	u64 seq;
+	struct completion hte_ts_cmpl;
+	struct bmi_gpio_irq gis;
+	struct bmi_state *st;
 };
 
 struct bmi_state {
 	struct i2c_client *i2c;
 	struct bmi_snsr snsrs[BMI_HW_N];
-	struct bmi_gte_irq gis[BMI_HW_N];
 	bool iio_init_done[BMI_HW_N];
 	unsigned int part;
 	unsigned int sts;
 	unsigned int errs_bus[BMI_HW_N];
-	unsigned int err_ts_thread[BMI_HW_N];
-	unsigned int sam_dropped[BMI_HW_N];
 	unsigned int enabled;
 	unsigned int suspend_en_st;
 	unsigned int hw_n;
@@ -539,141 +537,36 @@ static int bmi_i2c_wr(struct bmi_state *st, unsigned int hw, u8 reg, u8 val)
 	return ret;
 }
 
-static void bmi_gte_exit_gpio(struct bmi_gte_irq *ngi, unsigned int n)
-{
-	unsigned int i;
-
-	for (i = 0; i < n; i++) {
-		if (ngi[i].gpio >= 0)
-			gpio_free(ngi[i].gpio);
-	}
-}
-
-static int bmi_gte_init_gpio2irq(struct device *dev, struct bmi_gte_irq *ngi,
-				 unsigned int n)
-{
-	unsigned int i;
-	unsigned int prev;
-	int ret;
-
-	for (i = 0; i < n; i++) {
-		if (!gpio_is_valid(ngi[i].gpio) ||
-		    gpio_request(ngi[i].gpio, ngi[i].dev_name)) {
-			ret = -EPROBE_DEFER;
-			if (!i) {
-				goto out_no_prev;
-			} else {
-				prev = i - 1;
-				goto out;
-			}
-		}
-
-		ret = gpio_direction_input(ngi[i].gpio);
-		if (ret < 0) {
-			dev_err(dev, "%s gpio_dir_input(%d) ERR:%d\n",
-				ngi[i].dev_name, ngi[i].gpio, ret);
-			ret = -ENODEV;
-			if (!i)
-				prev = i;
-			else
-				prev = i - 1;
-
-			goto out;
-		}
-
-		ret = gpio_to_irq(ngi[i].gpio);
-		if (ret <= 0) {
-			dev_err(dev, "%s gpio_to_irq(%d) ERR:%d\n",
-				ngi[i].dev_name, ngi[i].gpio, ret);
-			ret = -ENODEV;
-			if (!i)
-				prev = i;
-			else
-				prev = i - 1;
-
-			goto out;
-		}
-
-		ngi[i].irq = ret;
-		ret = 0;
-	}
-
-	return ret;
-
-out:
-	bmi_gte_exit_gpio(ngi, prev);
-
-out_no_prev:
-
-	return ret;
-}
-
-static int bmi_gte_ts(struct bmi_gte_irq *ngi)
-{
-	struct tegra_gte_ev_desc *desc = (struct tegra_gte_ev_desc *)ngi->gte;
-	struct tegra_gte_ev_detail dtl;
-	int ret;
-
-	ret = tegra_gte_retrieve_event(desc, &dtl);
-	if (!ret)
-		ngi->irq_ts = dtl.ts_ns;
-
-	return ret;
-}
-
-static inline int bmi_gte_deinit(struct bmi_gte_irq *ngi)
-{
-	int ret = 0;
-
-	if (ngi->gte) {
-		ret = tegra_gte_unregister_event(ngi->gte);
-		ngi->gte = NULL;
-	}
-
-	return ret;
-}
-
-static void bmi_gte_gpio_exit(struct bmi_state *st, unsigned int n)
-{
-	unsigned int i;
-	struct bmi_gte_irq *ngi = st->gis;
-
-	if (gte_nd) {
-		of_node_put(gte_nd);
-		gte_nd = NULL;
-	}
-
-	for (i = 0; i < n; i++) {
-		bmi_gte_deinit(&ngi[i]);
-		if (ngi[i].gpio >= 0)
-			gpio_free(ngi[i].gpio);
-	}
-}
-
-static int bmi_gte_init(struct bmi_state *st, unsigned int id)
-{
-	int ret = 0;
-	struct bmi_gte_irq *ngi = st->gis;
-
-	if (!ngi[id].gte) {
-		ngi[id].gte = tegra_gte_register_event(gte_nd, ngi[id].gpio);
-		if (!ngi[id].gte)
-			ret = -ENODEV;
-	}
-
-	return ret;
-}
-
 static int bmi_setup_gpio(struct device *dev, struct bmi_state *st,
 			  unsigned int n)
 {
 	unsigned int i;
-	struct bmi_gte_irq *ngi = st->gis;
+	struct bmi_snsr *snsrs = st->snsrs;
+	int ret;
 
-	for (i = 0; i < n; i++)
-		ngi[i].irq = -1;
+	for (i = 0; i < n; i++) {
+		snsrs[i].gis.irq = -1;
+		if ((snsrs[i].gis.gpio_in)) {
+			ret = gpiod_direction_input(snsrs[i].gis.gpio_in);
 
-	return bmi_gte_init_gpio2irq(dev, ngi, n);
+			if (ret < 0) {
+				dev_err(dev, "%s gpio_dir_input ERR:%d\n",
+						snsrs[i].gis.dev_name, ret);
+				return ret;
+			}
+
+			ret = gpiod_to_irq(snsrs[i].gis.gpio_in);
+			if (ret < 0) {
+				dev_err(dev, "%s gpio_to_irq ERR:%d\n",
+						snsrs[i].gis.dev_name, ret);
+				return ret;
+			}
+
+			snsrs[i].gis.irq = ret;
+		}
+	}
+
+	return 0;
 }
 
 static int bmi_pm(struct bmi_state *st, int snsr_id, bool en)
@@ -969,17 +862,32 @@ static unsigned long bmi_gyr_irqflags(struct bmi_state *st)
 	return irqflags;
 }
 
+static enum hte_return process_hw_ts(struct hte_ts_data *ts, void *p)
+{
+	struct bmi_snsr *sensor = (struct bmi_snsr *)p;
+	struct bmi_state *st = sensor->st;
+
+	sensor->irq_ts = ts->tsc;
+	sensor->seq = ts->seq;
+
+	complete(&sensor->hte_ts_cmpl);
+
+	dev_dbg_ratelimited(&st->i2c->dev, "%s: seq %llu, ts:%llu\n",
+			    __func__, sensor->seq, sensor->irq_ts);
+
+	return HTE_CB_HANDLED;
+}
+
 static irqreturn_t bmi_irq_thread(int irq, void *dev_id)
 {
-	struct bmi_state *st = (struct bmi_state *)dev_id;
+	struct bmi_snsr *sensor = (struct bmi_snsr *)dev_id;
+	struct bmi_state *st = sensor->st;
 	unsigned int hw;
 	int ret;
 	u8 reg;
 	u8 sample[BMI_IMU_DATA];
-	int cnt = 0;
-	u64 ts_old;
 
-	if (irq == st->gis[BMI_HW_GYR].irq) {
+	if (irq == st->snsrs[BMI_HW_GYR].gis.irq) {
 		hw = BMI_HW_GYR;
 		reg = BMI_REG_GYR_DATA;
 	} else {
@@ -987,7 +895,7 @@ static irqreturn_t bmi_irq_thread(int irq, void *dev_id)
 		reg = BMI_REG_ACC_DATA;
 	}
 
-	/* Disbale data ready interrupt before we read out data */
+	/* Disable data ready interrupt before we read out data */
 	ret = bmi_hws[hw].fn_able(st, 0, true);
 	if (unlikely(ret)) {
 		dev_err_ratelimited(&st->i2c->dev,
@@ -995,71 +903,31 @@ static irqreturn_t bmi_irq_thread(int irq, void *dev_id)
 		goto err;
 	}
 
-	ts_old = st->gis[hw].irq_ts_old;
-
-	/*
-	 * There is a possibility that data ready IRQ may have caused GTE to
-	 * store the timestamps by the time this thread got a chance to run
-	 * and disable IRQ especially for the high data rate, in that case,
-	 * drain the GTE till it returns error and use last timestamp to
-	 * associate the data to be read.
-	 */
-	while (bmi_gte_ts(&st->gis[hw]) == 0)
-		cnt++;
-
-	/* Means we failed to get the ts in the first go */
-	if (!st->gis[hw].irq_ts && !cnt) {
-		dev_dbg(&st->i2c->dev, "sample dropped, gte get ts failed\n");
-		st->sam_dropped[hw]++;
-		goto out;
-	}
-
-	/*
-	 * If ts is same as old or 0, something is seriously wrong,
-	 * re-register with gte
-	 */
-	if ((st->gis[hw].irq_ts_old == st->gis[hw].irq_ts) ||
-	    (!st->gis[hw].irq_ts && cnt)) {
-		dev_dbg(&st->i2c->dev,
-			"ts issue for: %d, ts old: %llu, new: %llu\n",
-			hw, st->gis[hw].irq_ts_old, st->gis[hw].irq_ts);
-
-		st->err_ts_thread[hw]++;
-		st->sam_dropped[hw]++;
-		dev_dbg(&st->i2c->dev, "sample dropped due to ts issues\n");
-
-		/* Re-register with GTE */
-		bmi_gte_deinit(&st->gis[hw]);
-		ret = bmi_gte_init(st, hw);
-		if (ret) {
-			dev_err_ratelimited(&st->i2c->dev,
-					    "GTE re-registration failed: %d\n",
-					    hw);
-			goto err;
-		}
-
-		goto out;
+	/* Wait for HTE IRQ to fetch the latest timestamp */
+	ret = wait_for_completion_interruptible_timeout(&sensor->hte_ts_cmpl, HTE_TIMEOUT);
+	if (!ret) {
+		dev_dbg_ratelimited(&st->i2c->dev,
+				    "sample dropped due to timeout");
+		goto err;
 	}
 
 	mutex_lock(BMI_MUTEX(st->snsrs[hw].bmi_iio));
 
 	ret = bmi_i2c_rd(st, hw, reg, sizeof(sample), sample);
 
-	mutex_unlock(BMI_MUTEX(st->snsrs[hw].bmi_iio));
-
 	if (!ret) {
 		bmi_iio_push_buf(st->snsrs[hw].bmi_iio, sample,
-				 st->gis[hw].irq_ts);
-		st->gis[hw].irq_ts_old = st->gis[hw].irq_ts;
+				 sensor->irq_ts);
+		dev_dbg(&st->i2c->dev, "%d, ts= %lld ts_old= %lld\n",
+			hw, sensor->irq_ts, sensor->irq_ts_old);
+
+		sensor->irq_ts_old = sensor->irq_ts;
 	}
 
-	dev_dbg(&st->i2c->dev, "%d, ts= %lld, ts_old=%lld\n",
-		hw, st->gis[hw].irq_ts, ts_old);
+	mutex_unlock(BMI_MUTEX(st->snsrs[hw].bmi_iio));
 
-out:
-	st->gis[hw].irq_ts = 0;
+	/* Enable data ready interrupt */
 	bmi_hws[hw].fn_able(st, 1, true);
-
 err:
 	return IRQ_HANDLED;
 }
@@ -1074,7 +942,7 @@ static int bmi_period(struct bmi_state *st, int snsr_id, bool range)
 					 range);
 }
 
-static int bmi_enable(void *client, int snsr_id, int enable, bool is_gte)
+static int bmi_enable(void *client, int snsr_id, int enable)
 {
 	struct bmi_state *st = (struct bmi_state *)client;
 	int ret;
@@ -1086,20 +954,10 @@ static int bmi_enable(void *client, int snsr_id, int enable, bool is_gte)
 		return (st->enabled & (1 << snsr_id));
 
 	if (enable) {
-		if (is_gte) {
-			ret = bmi_gte_init(st, snsr_id);
-			if (ret)
-				return ret;
-		}
-
 		enable = st->enabled | (1 << snsr_id);
 		ret = bmi_pm(st, snsr_id, true);
-		if (ret < 0) {
-			if (is_gte)
-				bmi_gte_deinit(&st->gis[snsr_id]);
-
+		if (ret < 0)
 			return ret;
-		}
 
 		ret = bmi_period(st, snsr_id, true);
 		ret |= bmi_hws[snsr_id].fn_able(st, 1, false);
@@ -1108,9 +966,6 @@ static int bmi_enable(void *client, int snsr_id, int enable, bool is_gte)
 			return ret;
 		}
 	}
-
-	if (is_gte)
-		bmi_gte_deinit(&st->gis[snsr_id]);
 
 	ret = bmi_hws[snsr_id].fn_able(st, 0, false);
 	ret |= bmi_pm(st, snsr_id, false);
@@ -1304,11 +1159,6 @@ static int bmi_read_err(void *client, int snsr_id, char *buf)
 	t += snprintf(buf, PAGE_SIZE, "%s:\n", st->snsrs[snsr_id].cfg.name);
 	t += snprintf(buf + t, PAGE_SIZE - t,
 		      "I2C Bus Errors:%u\n", st->errs_bus[snsr_id]);
-	t += snprintf(buf + t, PAGE_SIZE - t,
-		      "GTE Timestamp Errors:%u\n", st->err_ts_thread[snsr_id]);
-	t += snprintf(buf + t, PAGE_SIZE - t,
-		      "Sample dropped:%u\n", st->sam_dropped[snsr_id]);
-
 	return t;
 }
 
@@ -1391,11 +1241,9 @@ static int __maybe_unused bmi_suspend(struct device *dev)
 	for (i = 0; i < st->hw_n; i++) {
 		mutex_lock(BMI_MUTEX(st->snsrs[i].bmi_iio));
 		/* check if sensor is enabled to begin with */
-		old_en_st = bmi_enable(st, st->snsrs[i].cfg.snsr_id, -1,
-				       false);
+		old_en_st = bmi_enable(st, st->snsrs[i].cfg.snsr_id, -1);
 		if (old_en_st) {
-			temp_ret = bmi_enable(st, st->snsrs[i].cfg.snsr_id, 0,
-					      false);
+			temp_ret = bmi_enable(st, st->snsrs[i].cfg.snsr_id, 0);
 			if (!temp_ret)
 				st->suspend_en_st |= old_en_st;
 
@@ -1417,8 +1265,7 @@ static int __maybe_unused bmi_resume(struct device *dev)
 	for (i = 0; i < st->hw_n; i++) {
 		mutex_lock(BMI_MUTEX(st->snsrs[i].bmi_iio));
 		if (st->suspend_en_st & (1 << st->snsrs[i].cfg.snsr_id))
-			ret |=  bmi_enable(st, st->snsrs[i].cfg.snsr_id, 1,
-					   false);
+			ret |= bmi_enable(st, st->snsrs[i].cfg.snsr_id, 1);
 		mutex_unlock(BMI_MUTEX(st->snsrs[i].bmi_iio));
 	}
 
@@ -1439,8 +1286,8 @@ static void bmi_shutdown(struct i2c_client *client)
 		if (st->iio_init_done[i])
 			mutex_lock(BMI_MUTEX(st->snsrs[i].bmi_iio));
 
-		if (bmi_enable(st, st->snsrs[i].cfg.snsr_id, -1, false))
-			bmi_enable(st, st->snsrs[i].cfg.snsr_id, 0, false);
+		if (bmi_enable(st, st->snsrs[i].cfg.snsr_id, -1))
+			bmi_enable(st, st->snsrs[i].cfg.snsr_id, 0);
 
 		if (st->iio_init_done[i]) {
 			mutex_unlock(BMI_MUTEX(st->snsrs[i].bmi_iio));
@@ -1456,7 +1303,6 @@ static void bmi_remove(void *data)
 
 	if (st != NULL) {
 		bmi_shutdown(client);
-		bmi_gte_gpio_exit(st, BMI_HW_N);
 		for (i = 0; i < st->hw_n; i++) {
 			if (st->iio_init_done[i])
 				bmi_iio_remove(st->snsrs[i].bmi_iio);
@@ -1482,8 +1328,18 @@ static int bmi_of_dt(struct bmi_state *st, struct device_node *dn)
 			return -ENODEV;
 	}
 
-	st->gis[BMI_HW_ACC].gpio = of_get_named_gpio(dn, "accel_irq_gpio", 0);
-	st->gis[BMI_HW_GYR].gpio = of_get_named_gpio(dn, "gyro_irq_gpio", 0);
+
+	st->snsrs[BMI_HW_ACC].gis.gpio_in = devm_gpiod_get(&st->i2c->dev, "accel_irq", 0);
+	if (IS_ERR(st->snsrs[BMI_HW_ACC].gis.gpio_in)) {
+		dev_err(&st->i2c->dev, "accel_irq is not set in DT\n");
+		return PTR_ERR(st->snsrs[BMI_HW_ACC].gis.gpio_in);
+	}
+
+	st->snsrs[BMI_HW_GYR].gis.gpio_in = devm_gpiod_get(&st->i2c->dev, "gyro_irq", 0);
+	if (IS_ERR(st->snsrs[BMI_HW_GYR].gis.gpio_in)) {
+		dev_err(&st->i2c->dev, "gyro_irq is not set in DT\n");
+		return PTR_ERR(st->snsrs[BMI_HW_GYR].gis.gpio_in);
+	}
 
 	if (!of_property_read_u32(dn, "accel_reg_0x53", &val32))
 		st->ra_0x53 = (u8)val32;
@@ -1523,13 +1379,10 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 	unsigned long irqflags;
 	unsigned int i;
 	int ret;
+	struct hte_ts_desc *desc;
 
 	if (id == NULL)
 		return -EINVAL;
-
-	/* driver specific defaults */
-	for (i = 0; i < BMI_HW_N; i++)
-		st->gis[i].gpio = -1;
 
 	st->ra_0x53 = BMI_INT1_OUT_ACTIVE_HIGH;
 	st->ra_0x54 = 0x00;
@@ -1546,13 +1399,6 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 		dev_err(&st->i2c->dev, "of_dt ERR\n");
 		return ret;
 	}
-
-	/*
-	 * Only interrupt mode is supported as we want hardware timestamps
-	 * from GTE.
-	 */
-	if (st->gis[BMI_HW_ACC].gpio < 0 || st->gis[BMI_HW_GYR].gpio < 0)
-		return -EINVAL;
 
 	st->part = id->driver_data;
 	st->i2c_addrs[BMI_HW_GYR] = st->i2c->addr;
@@ -1582,30 +1428,62 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 		st->snsrs[i].cfg.part = bmi_i2c_device_ids[st->part].name;
 		st->snsrs[i].rrs = &bmi_hws[i].rrs[st->part];
 		bmi_max_range(st, i, st->snsrs[i].cfg.max_range.ival);
-		st->gis[i].dev_name = st->snsrs[i].cfg.name;
-		st->gis[i].gte = NULL;
+		st->snsrs[i].gis.dev_name = st->snsrs[i].cfg.name;
 		st->iio_init_done[i] = true;
+		st->snsrs[i].st = st;
+		init_completion(&st->snsrs[i].hte_ts_cmpl);
 	}
 
 	ret = bmi_setup_gpio(&st->i2c->dev, st, st->hw_n);
 	if (ret < 0)
 		return ret;
 
-	for (i = 0; i < st->hw_n; i++) {
+
+	desc = devm_kzalloc(&st->i2c->dev, sizeof(*desc)*BMI_HW_N, GFP_KERNEL);
+	if (!desc)
+		return -ENOMEM;
+
+	for (i = 0; i < BMI_HW_N; i++) {
 		if (bmi_hws[i].fn_irqflags) {
 			irqflags = bmi_hws[i].fn_irqflags(st);
 			ret = devm_request_threaded_irq(&st->i2c->dev,
-							st->gis[i].irq,
+							st->snsrs[i].gis.irq,
 							NULL,
 							bmi_irq_thread,
 							irqflags,
-							st->gis[i].dev_name,
-							st);
+							st->snsrs[i].gis.dev_name,
+							&st->snsrs[i]);
 			if (ret) {
 				dev_err(&st->i2c->dev,
 					"req_threaded_irq ERR %d\n", ret);
 				return ret;
 			}
+		}
+
+		ret = hte_init_line_attr(&desc[i], 0, 0, NULL,
+				st->snsrs[i].gis.gpio_in);
+		if (ret) {
+			dev_err(&st->i2c->dev,
+					"hte_init_line_attr ERR %d\n", ret);
+			return ret;
+		}
+
+		ret = hte_ts_get(&st->i2c->dev, &desc[i], i);
+
+		if (ret) {
+			dev_err(&st->i2c->dev,
+					"hte_ts_get ERR %d\n", ret);
+			return ret;
+		}
+
+		ret = devm_hte_request_ts_ns(&st->i2c->dev, &desc[i],
+						process_hw_ts, NULL,
+						&st->snsrs[i]);
+
+		if (ret) {
+			dev_err(&st->i2c->dev,
+					"devm_hte_request_ts_ns ERR %d\n", ret);
+			return ret;
 		}
 	}
 
@@ -1615,15 +1493,6 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 	 */
 	for (i = 0; i < st->hw_n; i++)
 		st->snsrs[i].period_us = st->snsrs[i].cfg.delay_us_max;
-
-	gte_nd = of_find_compatible_node(NULL, NULL, gte_hw_str_t194);
-	if (!gte_nd)
-		gte_nd = of_find_compatible_node(NULL, NULL, gte_hw_str_t234);
-
-	if (!gte_nd) {
-		dev_err(&st->i2c->dev, "Failed to find GTE node\n");
-		return -ENODEV;
-	}
 
 	return ret;
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 
 #ifndef _BMI_IIO_H_
@@ -39,7 +39,7 @@ struct sensor_cfg {
 
 struct iio_fn_dev {
 	unsigned int *sts;
-	int (*enable)(void *client, int snsr_id, int enable, bool is_gte);
+	int (*enable)(void *client, int snsr_id, int enable);
 	int (*freq_read)(void *client, int snsr_id, int *val, int *val2);
 	int (*freq_write)(void *client, int snsr_id, int val, int val2);
 	int (*scale_write)(void *client, int snsr_id, int val, int val2);

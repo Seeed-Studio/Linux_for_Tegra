@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -164,6 +164,9 @@ int bmi_iio_push_buf(struct iio_dev *indio_dev, unsigned char *data, u64 ts)
 	if (!indio_dev || !data)
 		return -EINVAL;
 
+	if (!indio_dev->active_scan_mask)
+		return -EINVAL;
+
 	st = iio_priv(indio_dev);
 	if (!st)
 		return -EINVAL;
@@ -201,8 +204,7 @@ static int bmi_iio_enable(struct iio_dev *indio_dev, bool en)
 	int bit;
 
 	if (!en)
-		return st->fn_dev->enable(st->client, st->cfg->snsr_id,
-					  0, true);
+		return st->fn_dev->enable(st->client, st->cfg->snsr_id, 0);
 
 	if (indio_dev->num_channels > 1) {
 		for_each_set_bit(bit, indio_dev->active_scan_mask,
@@ -213,7 +215,7 @@ static int bmi_iio_enable(struct iio_dev *indio_dev, bool en)
 	}
 
 
-	return st->fn_dev->enable(st->client, st->cfg->snsr_id, enable, true);
+	return st->fn_dev->enable(st->client, st->cfg->snsr_id, enable);
 }
 
 static ssize_t bmi_iio_attr_store(struct device *dev,
@@ -350,7 +352,7 @@ static inline int bmi_iio_check_enable(struct bmi_iio_state *st)
 	if (!st->fn_dev->enable)
 		return -EINVAL;
 
-	return st->fn_dev->enable(st->client, st->cfg->snsr_id, -1, false);
+	return st->fn_dev->enable(st->client, st->cfg->snsr_id, -1);
 }
 
 static int bmi_iio_read_raw(struct iio_dev *indio_dev,
