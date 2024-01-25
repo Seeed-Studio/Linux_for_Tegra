@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #ifndef __DT_TEGRA_ASOC_DAIS_H
 #define __DT_TEGRA_ASOC_DAIS_H
@@ -53,42 +53,17 @@
 #define XBAR_DSPK1			30
 #define XBAR_DSPK2			31
 #define XBAR_SFC1_RX			32
-
-/*
- * TODO As per downstream kernel code there will be routing issue
- * if DAI names are updated for SFC, MVC and OPE input and
- * output. Due to that using single DAI with same name as downstream
- * kernel for input and output and added output DAIs just to keep
- * similar to upstream kernel, so that it will be easy to upstream
- * later.
- *
- * Once the routing changes are done for above mentioned modules,
- * use the commented output dai index and define output dai
- * links in tegra186-audio-graph.dtsi
- */
-#if 0
 #define XBAR_SFC1_TX			33
-#define XBAR_SFC2_TX			35
-#define XBAR_SFC3_TX			37
-#define XBAR_SFC4_TX			39
-#define XBAR_MVC1_TX			41
-#define XBAR_MVC2_TX			43
-#define XBAR_OPE1_TX			113
-#else
-#define XBAR_SFC1_TX			XBAR_SFC1_RX
-#define XBAR_SFC2_TX			XBAR_SFC2_RX
-#define XBAR_SFC3_TX			XBAR_SFC3_RX
-#define XBAR_SFC4_TX			XBAR_SFC4_RX
-#define XBAR_MVC1_TX			XBAR_MVC1_RX
-#define XBAR_MVC2_TX			XBAR_MVC2_RX
-#define XBAR_OPE1_TX			XBAR_OPE1_RX
-#endif
-
 #define XBAR_SFC2_RX			34
+#define XBAR_SFC2_TX			35
 #define XBAR_SFC3_RX			36
+#define XBAR_SFC3_TX			37
 #define XBAR_SFC4_RX			38
+#define XBAR_SFC4_TX			39
 #define XBAR_MVC1_RX			40
+#define XBAR_MVC1_TX			41
 #define XBAR_MVC2_RX			42
+#define XBAR_MVC2_TX			43
 #define XBAR_AMX1_IN1			44
 #define XBAR_AMX1_IN2			45
 #define XBAR_AMX1_IN3			46
@@ -158,6 +133,7 @@
 #define XBAR_ASRC_OUT6			110
 #define XBAR_ASRC_IN7			111
 #define XBAR_OPE1_RX			112
+#define XBAR_OPE1_TX			113
 #define XBAR_AFC1			114
 #define XBAR_AFC2			115
 #define XBAR_AFC3			116
@@ -263,11 +239,11 @@
 #define AMX_OUT		4
 
 /* ADX */
-#define ADX_OUT1	0
-#define ADX_OUT2	1
-#define ADX_OUT3	2
-#define ADX_OUT4	3
-#define ADX_IN		4
+#define ADX_IN		0
+#define ADX_OUT1	1
+#define ADX_OUT2	2
+#define ADX_OUT3	3
+#define ADX_OUT4	4
 
 /* ASRC */
 #define ASRC_IN1	0
