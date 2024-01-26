@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
 
 ccflags-$(CONFIG_DRM_TEGRA_DEBUG) += -DDEBUG
 ccflags-y += -I$(srctree.nvidia-oot)/drivers/gpu/drm/tegra/include
 ccflags-y += -I$(srctree.hwpm)/include
 
-tegra-drm-next-y := \
+tegra-drm-y := \
 	drm.o \
 	uapi.o \
 	submit.o \
@@ -37,6 +37,6 @@ tegra-drm-next-y := \
 	ofa.o \
 	virt.o
 
-tegra-drm-next-y += trace.o
+tegra-drm-y += trace.o
 
-obj-m := tegra-drm-next.o
+obj-m := tegra-drm.o

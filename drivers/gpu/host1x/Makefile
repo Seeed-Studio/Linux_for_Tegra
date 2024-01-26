@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
 
-host1x-next-y = \
+host1x-y = \
 	bus.o \
 	syncpt.o \
 	dev.o \
@@ -21,7 +21,7 @@ host1x-next-y = \
 	hw/host1x07.o \
 	hw/host1x08.o
 
-host1x-next-$(CONFIG_IOMMU_API) += \
+host1x-$(CONFIG_IOMMU_API) += \
 	context.o
 
-obj-m := host1x-next.o
+obj-m := host1x.o
