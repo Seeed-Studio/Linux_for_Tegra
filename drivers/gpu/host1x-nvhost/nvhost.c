@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
 
 #include <nvidia/conftest.h>
 
@@ -545,7 +543,6 @@ int flcn_intr_init(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
-	spin_lock_init(&pdata->mirq_lock);
 	ret = devm_request_irq(&pdev->dev, pdata->irq, flcn_isr, 0,
 			       dev_name(&pdev->dev), pdev);
 	if (ret) {
