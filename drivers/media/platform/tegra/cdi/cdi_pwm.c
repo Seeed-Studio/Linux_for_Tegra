@@ -167,7 +167,6 @@ static int cdi_pwm_probe(struct platform_device *pdev)
 #endif
 	info->chip.npwm = npwm;
 	info->chip.of_xlate = of_cdi_pwm_xlate;
-	info->chip.of_pwm_n_cells = 2;
 	info->force_on = force_on;
 
 	err = pwmchip_add(&info->chip);
