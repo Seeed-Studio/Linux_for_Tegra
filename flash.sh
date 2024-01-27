@@ -3613,6 +3613,11 @@ fi;
 # For now, though, disable SC2086.
 cat "${cfgfile}" | limit_boot_chains | sed ${CFGCONV} > ${localcfgfile}; chkerr;
 
+# Update localcfgfile
+if declare -F -f update_local_cfgfile > /dev/null 2>&1; then
+	update_local_cfgfile "${localcfgfile}"
+fi
+
 # FLASH:
 #
 cp2local flasher	"${BL_DIR}/${flashername}";
