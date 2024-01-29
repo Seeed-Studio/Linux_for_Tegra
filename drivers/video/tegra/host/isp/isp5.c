@@ -21,7 +21,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
-#include "nvhost.h"
+#include <linux/nvhost.h>
 #include <media/fusa-capture/capture-isp-channel.h>
 #include <media/tegra_camera_platform.h>
 #include <soc/tegra/camrtc-capture.h>
