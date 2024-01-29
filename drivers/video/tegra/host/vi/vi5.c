@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * VI5 driver
- *
- * Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <asm/ioctls.h>
@@ -71,7 +70,8 @@ static int vi5_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
 			uint32_t *syncpt_id)
 {
-	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_vi5 *vi5 = info->private_data;
 
 	return capture_alloc_syncpt(vi5->vi_thi, name, syncpt_id);
 }
@@ -101,7 +101,8 @@ int nvhost_vi5_aggregate_constraints(struct platform_device *dev,
 
 static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
 {
-	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_vi5 *vi5 = info->private_data;
 
 	capture_release_syncpt(vi5->vi_thi, id);
 }
@@ -109,7 +110,8 @@ static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
 static void vi5_get_gos_table(struct platform_device *pdev, int *count,
 			const dma_addr_t **table)
 {
-	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_vi5 *vi5 = info->private_data;
 
 	capture_get_gos_table(vi5->vi_thi, count, table);
 }
@@ -120,7 +122,8 @@ static int vi5_get_syncpt_gos_backing(struct platform_device *pdev,
 			uint32_t *gos_index,
 			uint32_t *gos_offset)
 {
-	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_vi5 *vi5 = info->private_data;
 
 	return capture_get_syncpt_gos_backing(vi5->vi_thi, id,
 				syncpt_addr, gos_index, gos_offset);
@@ -368,7 +371,8 @@ MODULE_DEVICE_TABLE(of, tegra_vi5_of_match);
 static int vi_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_vi5 *vi5 = info->private_data;
 	int err;
 
 	if (nvhost_module_pm_ops.runtime_suspend != NULL) {
@@ -389,7 +393,8 @@ static int vi_runtime_suspend(struct device *dev)
 static int vi_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct host_vi5 *vi5 = pdata->private_data;
 	int err;
 
 	if (nvhost_module_pm_ops.runtime_resume != NULL) {

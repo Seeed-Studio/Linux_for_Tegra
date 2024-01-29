@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * SPDX-FileCopyrightText: Copyright (C) 2017-2023 NVIDIA CORPORATION.  All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <asm/ioctls.h>
 #include <linux/clk.h>
@@ -49,14 +47,16 @@ static int isp5_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
 			uint32_t *syncpt_id)
 {
-	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_isp5 *isp5 = info->private_data;
 
 	return capture_alloc_syncpt(isp5->isp_thi, name, syncpt_id);
 }
 
 static void isp5_release_syncpt(struct platform_device *pdev, uint32_t id)
 {
-	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_isp5 *isp5 = info->private_data;
 
 	capture_release_syncpt(isp5->isp_thi, id);
 }
@@ -67,7 +67,8 @@ static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
 			uint32_t *gos_index,
 			uint32_t *gos_offset)
 {
-	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_isp5 *isp5 = info->private_data;
 
 	return capture_get_syncpt_gos_backing(isp5->isp_thi, id,
 				syncpt_addr, gos_index, gos_offset);
@@ -77,7 +78,8 @@ static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
 static uint32_t isp5_get_gos_table(struct platform_device *pdev,
 			const dma_addr_t **table)
 {
-	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_isp5 *isp5 = info->private_data;
 	uint32_t count;
 
 	capture_get_gos_table(isp5->isp_thi, &count, table);
