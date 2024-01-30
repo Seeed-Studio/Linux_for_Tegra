@@ -66,7 +66,7 @@ test_header_presence() {
     TEST_CFLAGS="-E -M $CFLAGS"
 
     file="$1"
-    file_define=NV_`echo $file | tr '/.\-a-z' '___A-Z'`_PRESENT
+    file_define=NV_`echo $file | tr '/.-' '___' | tr 'a-z' 'A-Z'`_PRESENT
 
     CODE="#include <$file>"
 

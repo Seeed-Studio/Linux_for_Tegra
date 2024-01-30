@@ -4,8 +4,14 @@
 GCOV_PROFILE := y
 
 subdir-ccflags-y += -Werror
+
+ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 ccflags-y += -I$(overlay)/$(src)/../tegra-virt-alt/include/
 ccflags-y += -I$(overlay)/$(src)/../codecs
+else
+ccflags-y += -I$(srctree.nvidia-oot)/sound/soc/tegra-virt-alt/include/
+endif
+
 ccflags-y += -I$(srctree.nvidia-oot)/sound/soc/tegra-virt-alt/nvaudio_ivc/
 
 # Tegra platform Support

@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
 
+ifeq ($(CONFIG_TEGRA_KLEAF_BUILD),y)
+include $(abspath $(shell dirname $(lastword $(MAKEFILE_LIST))))/Makefile.kleaf
+endif
+
 LINUXINCLUDE += -I$(srctree.nvconftest)
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
 
