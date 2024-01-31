@@ -190,7 +190,6 @@
 
 		hardware-timestamp@c1e0000 {
 			status = "okay";
-			nvidia,num-slices = <3>;
 		};
 
 		i2c@c240000 {

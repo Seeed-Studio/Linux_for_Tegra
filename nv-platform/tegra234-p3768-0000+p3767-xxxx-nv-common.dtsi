@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "nv-soc/tegra234-overlay.dtsi"
 #include "nv-soc/tegra234-soc-thermal.dtsi"
@@ -287,7 +287,6 @@
 
 		hardware-timestamp@c1e0000 {
 			status = "okay";
-			nvidia,num-slices = <3>;
 		};
 
 		mttcan@c310000 {
