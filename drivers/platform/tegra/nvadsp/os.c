@@ -8,9 +8,6 @@
 #include <linux/errno.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
-#ifdef CONFIG_IOMMU_DMA
-#include <linux/iommu.h>
-#endif
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
@@ -113,13 +110,6 @@ struct nvadsp_mappings {
 	void *va;
 	int len;
 };
-
-#ifdef CONFIG_IOMMU_DMA
-extern dma_addr_t iommu_dma_alloc_iova(struct iommu_domain *domain,
-		size_t size, u64 dma_limit, struct device *dev);
-extern void iommu_dma_free_iova(struct iommu_dma_cookie *cookie,
-		dma_addr_t iova, size_t size, struct iommu_iotlb_gather *gather);
-#endif
 
 extern u8 tegra_get_major_rev(void);
 extern u8 tegra_get_minor_rev(void);
@@ -702,7 +692,7 @@ end:
 	return ret;
 }
 
-#ifdef CONFIG_IOMMU_DMA
+#ifdef CONFIG_IOMMU_API_EXPORTED
 /**
  * Allocate a dma buffer and map it to a specified iova
  * Return valid cpu virtual address on success or NULL on failure
@@ -811,7 +801,7 @@ static int allocate_memory_for_adsp_os(void)
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 	struct resource *co_mem = &drv_data->co_mem;
-#ifdef CONFIG_IOMMU_DMA
+#ifdef CONFIG_IOMMU_API_EXPORTED
 	dma_addr_t addr;
 #else
 	phys_addr_t addr;
@@ -838,7 +828,7 @@ static int allocate_memory_for_adsp_os(void)
 		goto map_and_end;
 	}
 
-#ifdef CONFIG_IOMMU_DMA
+#ifdef CONFIG_IOMMU_API_EXPORTED
 	dram_va = nvadsp_dma_alloc_and_map_at(pdev, size, addr, GFP_KERNEL);
 	if (!dram_va) {
 		dev_err(dev, "unable to allocate SMMU pages\n");
@@ -878,7 +868,7 @@ static void deallocate_memory_for_adsp_os(void)
 		return;
 	}
 
-#ifdef CONFIG_IOMMU_DMA
+#ifdef CONFIG_IOMMU_API_EXPORTED
 	dma_free_coherent(dev, priv.adsp_os_size, va, priv.adsp_os_addr);
 #endif
 }
@@ -939,7 +929,7 @@ static int __nvadsp_os_secload(struct platform_device *pdev)
 			return -ENOMEM;
 		}
 	} else {
-#ifdef CONFIG_IOMMU_DMA
+#ifdef CONFIG_IOMMU_API_EXPORTED
 		dram_va = nvadsp_dma_alloc_and_map_at(pdev, size, addr,
 								GFP_KERNEL);
 		if (dram_va == NULL) {
@@ -965,6 +955,8 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 {
 	struct nvadsp_shared_mem *shared_mem;
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	dma_addr_t shrd_mem_iova = 0;
+	size_t acsr_size = drv_data->adsp_mem[ACSR_SIZE];
 	struct device *dev = &pdev->dev;
 	const struct firmware *fw;
 	int ret = 0;
@@ -997,19 +989,29 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 	}
 
 	shared_mem = get_mailbox_shared_region(fw);
-	if (IS_ERR_OR_NULL(shared_mem) && drv_data->adsp_mem[ACSR_SIZE]) {
-		/*
-		 * If FW is not explicitly defining a shared memory
-		 * region then assume it to be placed at the start
-		 * of OS memory and communicate the same via MBX
-		 */
-		drv_data->shared_adsp_os_data_iova = priv.adsp_os_addr;
-		shared_mem = nvadsp_da_to_va_mappings(
-				priv.adsp_os_addr, priv.adsp_os_size);
-		if (!shared_mem) {
-			dev_err(dev, "Failed to get VA for ADSP OS\n");
-			ret = -ENOMEM;
-			goto deallocate_os_memory;
+	if (IS_ERR_OR_NULL(shared_mem) && acsr_size) {
+		if (drv_data->adsp_mem[ACSR_ADDR] == 0) {
+			shared_mem = nvadsp_alloc_coherent(
+					acsr_size, &shrd_mem_iova, GFP_KERNEL);
+			if (!shared_mem) {
+				dev_err(dev, "unable to allocate shared region\n");
+				ret = -ENOMEM;
+				goto deallocate_os_memory;
+			}
+			drv_data->shared_adsp_os_data_iova = shrd_mem_iova;
+		} else {
+			/*
+			 * If not dynamic memory allocation then assume shared
+			 * memory to be placed at the start of OS memory
+			 */
+			shared_mem = nvadsp_da_to_va_mappings(
+					priv.adsp_os_addr, priv.adsp_os_size);
+			if (!shared_mem) {
+				dev_err(dev, "Failed to get VA for ADSP OS\n");
+				ret = -ENOMEM;
+				goto deallocate_os_memory;
+			}
+			drv_data->shared_adsp_os_data_iova = priv.adsp_os_addr;
 		}
 	}
 	if (!IS_ERR_OR_NULL(shared_mem))
@@ -1030,6 +1032,8 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 	return 0;
 
 deallocate_os_memory:
+	if (shrd_mem_iova)
+		nvadsp_free_coherent(acsr_size, shared_mem, shrd_mem_iova);
 	deallocate_memory_for_adsp_os();
 release_firmware:
 	release_firmware(fw);
@@ -1051,6 +1055,7 @@ static int nvadsp_load_multi_fw(struct platform_device *pdev)
 	int i, j, ret;
 	void *dram_va, *hsp_va;
 	dma_addr_t shrd_mem_iova;
+	size_t acsr_size = drv_data->adsp_mem[ACSR_SIZE];
 	struct device_node *hsp_node;
 	struct resource hsp_inst;
 	u32 hsp_int, hsp_int_targ;
@@ -1072,10 +1077,8 @@ static int nvadsp_load_multi_fw(struct platform_device *pdev)
 			 * the FW for all the cores; only shared
 			 * memory neeeds to be allocated and set
 			 */
-			size_t size = drv_data->adsp_mem[ACSR_SIZE];
-
 			dram_va = nvadsp_alloc_coherent(
-					size, &shrd_mem_iova, GFP_KERNEL);
+					acsr_size, &shrd_mem_iova, GFP_KERNEL);
 			if (!dram_va) {
 				dev_err(dev,
 					"mem alloc failed for adsp %d\n", i);
@@ -1109,7 +1112,7 @@ static int nvadsp_load_multi_fw(struct platform_device *pdev)
 			os_mem  = drv_data->adsp_mem[ADSP_OS_ADDR] +
 						((i + 1) * os_size);
 
-#ifdef CONFIG_IOMMU_DMA
+#ifdef CONFIG_IOMMU_API_EXPORTED
 			dram_va = nvadsp_dma_alloc_and_map_at(pdev,
 					(size_t)os_size, (dma_addr_t)os_mem,
 					GFP_KERNEL);
@@ -1137,8 +1140,18 @@ static int nvadsp_load_multi_fw(struct platform_device *pdev)
 				continue;
 			}
 
-			/* Shared mem is at the start of OS memory */
-			shrd_mem_iova = (dma_addr_t)os_mem;
+			if (drv_data->adsp_mem[ACSR_ADDR] == 0) {
+				dram_va = nvadsp_alloc_coherent(
+					acsr_size, &shrd_mem_iova, GFP_KERNEL);
+				if (!dram_va) {
+					dev_err(dev,
+						"mem alloc failed for adsp %d\n", i);
+					continue;
+				}
+			} else {
+				/* Shared mem is at the start of OS memory */
+				shrd_mem_iova = (dma_addr_t)os_mem;
+			}
 		}
 
 		nvadsp_set_shared_mem(pdev, dram_va, 0);
