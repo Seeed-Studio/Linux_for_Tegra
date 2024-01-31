@@ -1419,9 +1419,6 @@ static int nvdla_module_resume(struct device *dev)
 {
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
-	struct clk *clk = pdata->clks[0].clk;
-	unsigned long rate;
-	u32 emc_kbps;
 	int err;
 
 	/* Confirm if module is in suspend state. */
@@ -1442,15 +1439,6 @@ static int nvdla_module_resume(struct device *dev)
 			dev_err(dev, "(FAIL) PM resume\n");
 			goto fail_nvhost_module_resume;
 		}
-	}
-
-	if (nvdla_dev->icc_write) {
-		rate = clk_get_rate(clk);
-		emc_kbps = rate * NVDLA_AXI_DBB_BW_BPC / 1024;
-		err = icc_set_bw(nvdla_dev->icc_write, kbps_to_icc(emc_kbps), 0);
-		if (err)
-			dev_warn(&nvdla_dev->pdev->dev,
-				 "failed to set icc_write bw: %d\n", err);
 	}
 
 	return 0;
