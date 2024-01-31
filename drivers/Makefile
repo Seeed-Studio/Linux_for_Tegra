@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x/hw/
@@ -79,7 +79,5 @@ obj-m += virt/tegra/
 ifdef CONFIG_TEGRA_HOST1X
 obj-m += media/
 endif
-obj-m += staging/platform/tegra/gte/
-obj-m += staging/platform/tegra/gte_test/
 obj-m += nv-virtio/
 obj-m += usb/
