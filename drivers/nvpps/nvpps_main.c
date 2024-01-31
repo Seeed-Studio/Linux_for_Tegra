@@ -1,16 +1,5 @@
-/*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -31,13 +20,13 @@
 #include <linux/time.h>
 #include <linux/version.h>
 #include <uapi/linux/nvpps_ioctl.h>
-#include <linux/tegra-gte.h>
+#include <linux/hte.h>
 #include <linux/nvpps.h>
 
 
 
-/* the following contrl flags are for
- * debugging pirpose only
+/* the following control flags are for
+ * debugging purpose only
  */
 /* #define NVPPS_ARM_COUNTER_PROFILING */
 /* #define NVPPS_EQOS_REG_PROFILING */
@@ -66,8 +55,7 @@ struct nvpps_device_data {
 	unsigned int		gpio_pin;
 	int			irq;
 	bool			irq_registered;
-	bool			use_gpio_int_timesatmp;
-
+	bool			use_gpio_int_timestamp;
 	bool			pps_event_id_valid;
 	unsigned int		pps_event_id;
 	u32			actual_evt_mode;
@@ -89,7 +77,6 @@ struct nvpps_device_data {
 
 	wait_queue_head_t	pps_event_queue;
 	struct fasync_struct	*pps_event_async_queue;
-	struct tegra_gte_ev_desc *gte_ev_desc;
 
 	bool		memmap_phc_regs;
 	char		*iface_nm;
@@ -105,6 +92,8 @@ struct nvpps_device_data {
 	bool 		sec_ptp_failed;
 	uint8_t		k_int_val;
 	uint16_t	lock_threshold_val;
+	struct hte_ts_desc	desc;
+	struct gpio_desc	*gpio_in;
 };
 
 
@@ -237,55 +226,17 @@ static inline u64 get_systime(struct nvpps_device_data *pdev_data, u64 *tsc)
 	return ns;
 }
 
-
-
 /*
  * Report the PPS event
  */
-static void nvpps_get_ts(struct nvpps_device_data *pdev_data, bool in_isr)
+static void nvpps_get_ts(struct nvpps_device_data *pdev_data, u64 irq_tsc)
 {
 	u64		tsc = 0;
-	u64		irq_tsc = 0;
 	u64		phc = 0;
 	u64		secondary_phc = 0;
 	u64		irq_latency = 0;
 	unsigned long	flags;
 	struct ptp_tsc_data ptp_tsc_ts = {0}, sec_ptp_tsc_ts = {0};
-
-	if (in_isr) {
-		/* initialize irq_tsc to the current TSC just in case the
-		 * gpio_timestamp_read call failed so the irq_tsc can be
-		 * closer to when the interrupt actually occured
-		 */
-		irq_tsc = __arch_counter_get_cntvct();
-		if (pdev_data->use_gpio_int_timesatmp) {
-			int	err;
-			int	gte_event_found = 0;
-			int	safety = 33; /* GTE driver fifo depth is 32, plus one for margin */
-			struct tegra_gte_ev_detail hts;
-
-			/* 1PPS TSC timestamp is isochronous in nature
-			 * we only need the last event
-			 */
-			do {
-				err = tegra_gte_retrieve_event(pdev_data->gte_ev_desc, &hts);
-				if (!err) {
-					irq_tsc = hts.ts_raw;
-					gte_event_found = 1;
-				}
-				/* decrement the count so we don't risk looping
-				 * here forever
-				 */
-				safety--;
-			} while (!err && (safety >= 0));
-			if (gte_event_found == 0) {
-				dev_err(pdev_data->dev, "failed to read timestamp data err(%d)\n", err);
-			}
-			if (safety < 0) {
-				dev_err(pdev_data->dev, "tegra_gte_retrieve_event succeed beyond its fifo size err(%d)!)\n", err);
-			}
-		}
-	}
 
 	/* get the PTP timestamp */
 	if (pdev_data->memmap_phc_regs) {
@@ -365,7 +316,7 @@ static void nvpps_get_ts(struct nvpps_device_data *pdev_data, bool in_isr)
 	pdev_data->phc = phc ? phc - irq_latency : phc;
 #endif /* NVPPS_ARM_COUNTER_PROFILING || NVPPS_EQOS_REG_PROFILING */
 	pdev_data->irq_latency = irq_latency;
-	pdev_data->actual_evt_mode = in_isr ? NVPPS_MODE_GPIO : NVPPS_MODE_TIMER;
+	pdev_data->actual_evt_mode = irq_tsc ? NVPPS_MODE_GPIO : NVPPS_MODE_TIMER;
 	/* Re-adjust secondary iface's PTP TS to irq_tsc TS,
 	 * irq_latency will be 0 if TIMER mode,  >0 if GPIO mode
 	 */
@@ -377,18 +328,17 @@ static void nvpps_get_ts(struct nvpps_device_data *pdev_data, bool in_isr)
 	kill_fasync(&pdev_data->pps_event_async_queue, SIGIO, POLL_IN);
 }
 
-
 static irqreturn_t nvpps_gpio_isr(int irq, void *data)
 {
-	struct nvpps_device_data	*pdev_data = (struct nvpps_device_data *)data;
+	struct nvpps_device_data        *pdev_data = (struct nvpps_device_data *)data;
 
-	/* Incase, if an interrupt is generated
-	 * then check current mode in use. Ignore the
-	 * interrupt if current mode is TIMER mode
+	/* If the current mode is TIMER mode, ignore the interrupt.
+	 * If HTE is not enabled, use TSC and process the interrupt.
+	 * If HTE is enabled, ignore the interrupt and process it in HTE callback
 	 */
 	if (!pdev_data->timer_inited) {
-		/* get timestamps for this event */
-		nvpps_get_ts(pdev_data, true);
+		if (!(pdev_data->use_gpio_int_timestamp))
+			nvpps_get_ts(pdev_data, __arch_counter_get_cntvct());
 	}
 
 	return IRQ_HANDLED;
@@ -438,7 +388,7 @@ static void nvpps_timer_callback(struct timer_list *t)
         struct nvpps_device_data        *pdev_data = (struct nvpps_device_data *)from_timer(pdev_data, t, timer);
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0) */
 	/* get timestamps for this event */
-	nvpps_get_ts(pdev_data, false);
+	nvpps_get_ts(pdev_data, 0);
 
 	/* set the next expire time */
 	if (pdev_data->timer_inited) {
@@ -462,6 +412,23 @@ static int set_mode_tsc(struct nvpps_device_data *pdev_data)
 	mod_timer(&pdev_data->tsc_timer, jiffies + msecs_to_jiffies(1000));
 
 	return 0;
+}
+
+/*
+ * Store hardware timestamp
+ */
+static enum hte_return process_hw_ts(struct hte_ts_data *ts, void *p)
+{
+	struct nvpps_device_data *pdev_data = (struct nvpps_device_data *)p;
+
+	/* If an callback is generated then check
+	 * current mode in use. Ignore the callback
+	 * if current mode is TIMER mode
+	 */
+	if (!pdev_data->timer_inited)
+		nvpps_get_ts(pdev_data, ts->tsc);
+
+	return HTE_CB_HANDLED;
 }
 
 static int set_mode(struct nvpps_device_data *pdev_data, u32 mode)
@@ -645,7 +612,8 @@ static long nvpps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			time_event.secondary_ptp = pdev_data->secondary_phc;
 			time_event.irq_latency = pdev_data->irq_latency;
 			raw_spin_unlock_irqrestore(&pdev_data->lock, flags);
-			if (NVPPS_TSC_NSEC == pdev_data->tsc_mode) {
+			if (pdev_data->tsc_mode == NVPPS_TSC_NSEC &&
+				       !pdev_data->use_gpio_int_timestamp) {
 				time_event.tsc *= pdev_data->tsc_res_ns;
 			}
 			time_event.tsc_res_ns = pdev_data->tsc_res_ns;
@@ -899,6 +867,64 @@ static void nvpps_fill_default_mac_phc_info(struct platform_device *pdev,
 	interface_name = devm_kstrdup(&pdev->dev, pdev_data->iface_nm, GFP_KERNEL);
 }
 
+static int nvpps_gpio_hte_setup(struct nvpps_device_data *pdev_data)
+{
+	int err;
+	struct platform_device  *pdev = pdev_data->pdev;
+
+	pdev_data->use_gpio_int_timestamp = false;
+	pdev_data->gpio_in = devm_gpiod_get_optional(&pdev->dev, "nvpps", 0);
+	if (!pdev_data->gpio_in) {
+		dev_warn(&pdev->dev, "PPS GPIO not provided in DT, only Timer mode available\n");
+		pdev_data->only_timer_mode = true;
+		return 0;
+	}
+
+	err = gpiod_direction_input(pdev_data->gpio_in);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to set pin direction\n");
+		return err;
+	}
+
+	/* IRQ setup */
+	err = gpiod_to_irq(pdev_data->gpio_in);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to map GPIO to IRQ: %d\n", err);
+		return err;
+	}
+
+	pdev_data->irq = err;
+	dev_info(&pdev->dev, "gpio_to_irq(%d)\n", pdev_data->irq);
+
+	/*
+	 * Setup HTE. Note that HTE support is optional and so if it fails,
+	 * still allow the driver to operate without it.
+	 */
+	err = hte_init_line_attr(&pdev_data->desc, 0, 0, NULL, pdev_data->gpio_in);
+	if (err < 0) {
+		dev_warn(&pdev->dev, "hte_init_line_attr failed\n");
+		return 0;
+	}
+
+	err = hte_ts_get(&pdev->dev, &pdev_data->desc, 0);
+	if (err < 0) {
+		dev_warn(&pdev->dev, "hte_ts_get failed\n");
+		return 0;
+	}
+
+	err = devm_hte_request_ts_ns(&pdev->dev, &pdev_data->desc,
+			process_hw_ts, NULL, pdev_data);
+	if (err < 0) {
+		dev_warn(&pdev->dev, "devm_hte_request_ts_ns failed\n");
+		return 0;
+	}
+
+	pdev_data->use_gpio_int_timestamp = true;
+	dev_info(&pdev->dev, "HTE request timestamp succeed\n");
+
+	return 0;
+}
+
 static void nvpps_ptp_tsc_sync_config(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -972,7 +998,6 @@ static int nvpps_probe(struct platform_device *pdev)
 	struct device_node		*np = pdev->dev.of_node;
 	dev_t				devt;
 	int				err;
-	struct device_node              *np_gte;
 
 	dev_info(&pdev->dev, "%s\n", __FUNCTION__);
 
@@ -984,42 +1009,6 @@ static int nvpps_probe(struct platform_device *pdev)
 	pdev_data = devm_kzalloc(&pdev->dev, sizeof(struct nvpps_device_data), GFP_KERNEL);
 	if (!pdev_data) {
 		return -ENOMEM;
-	}
-
-	err = of_get_named_gpio(np, "gpios", 0);
-	if (err == -EPROBE_DEFER) {
-		return err;
-	} else if (err < 0) {
-		dev_warn(&pdev->dev, "PPS GPIO not provided in DT, only Timer mode available\n");
-		pdev_data->only_timer_mode = true;
-	} else {
-		pdev_data->gpio_pin = (unsigned int)err;
-		dev_info(&pdev->dev, "gpio_pin(%d)\n", pdev_data->gpio_pin);
-
-		/* GPIO setup */
-		if (gpio_is_valid(pdev_data->gpio_pin)) {
-			err = devm_gpio_request(&pdev->dev, pdev_data->gpio_pin, "gpio_pps");
-			if (err) {
-				dev_err(&pdev->dev, "failed to request GPIO %u\n",
-					pdev_data->gpio_pin);
-				return err;
-			}
-
-			err = gpio_direction_input(pdev_data->gpio_pin);
-			if (err) {
-				dev_err(&pdev->dev, "failed to set pin direction\n");
-				return -EINVAL;
-			}
-
-			/* IRQ setup */
-			err = gpio_to_irq(pdev_data->gpio_pin);
-			if (err < 0) {
-				dev_err(&pdev->dev, "failed to map GPIO to IRQ: %d\n", err);
-				return -EINVAL;
-			}
-			pdev_data->irq = err;
-			dev_info(&pdev->dev, "gpio_to_irq(%d)\n", pdev_data->irq);
-		}
 	}
 
 	nvpps_fill_default_mac_phc_info(pdev, pdev_data);
@@ -1034,6 +1023,11 @@ static int nvpps_probe(struct platform_device *pdev)
 	pdev_data->tsc_res_ns = (_PICO_SECS / (u64)arch_timer_get_cntfrq()) / 1000;
 	#undef _PICO_SECS
 	dev_info(&pdev->dev, "tsc_res_ns(%llu)\n", pdev_data->tsc_res_ns);
+
+	/* Set up GPIO and HTE */
+	err = nvpps_gpio_hte_setup(pdev_data);
+	if (err < 0)
+		return err;
 
 	/* character device setup */
 #ifndef NVPPS_NO_DT
@@ -1096,24 +1090,6 @@ static int nvpps_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "nvpps cdev(%d:%d)\n", MAJOR(s_nvpps_devt), pdev_data->id);
 	platform_set_drvdata(pdev, pdev_data);
 
-	np_gte = of_find_compatible_node(NULL, NULL, "nvidia,tegra234-gte-aon");
-	if (!np_gte) {
-		np_gte = of_find_compatible_node(NULL, NULL, "nvidia,tegra194-gte-aon");
-	}
-	if (!np_gte) {
-		pdev_data->use_gpio_int_timesatmp = false;
-		dev_err(&pdev->dev, "of_find_compatible_node failed\n");
-	} else {
-		pdev_data->gte_ev_desc = tegra_gte_register_event(np_gte, pdev_data->gpio_pin);
-		if (IS_ERR(pdev_data->gte_ev_desc)) {
-			pdev_data->use_gpio_int_timesatmp = false;
-			dev_err(&pdev->dev, "tegra_gte_register_event err = %d\n", (int)PTR_ERR(pdev_data->gte_ev_desc));
-		} else {
-			pdev_data->use_gpio_int_timesatmp = true;
-			dev_info(pdev_data->dev, "tegra_gte_register_event succeed\n");
-		}
-	}
-
 	/* setup PPS event hndler */
 	err = set_mode(pdev_data,
 				   (pdev_data->only_timer_mode) ? NVPPS_MODE_TIMER : NVPPS_MODE_GPIO);
@@ -1172,12 +1148,6 @@ static int nvpps_remove(struct platform_device *pdev)
 		if (pdev_data->timer_inited) {
 			pdev_data->timer_inited = false;
 			del_timer_sync(&pdev_data->timer);
-		}
-		if (pdev_data->use_gpio_int_timesatmp) {
-			if (!IS_ERR_OR_NULL(pdev_data->gte_ev_desc)) {
-				tegra_gte_unregister_event(pdev_data->gte_ev_desc);
-			}
-			pdev_data->use_gpio_int_timesatmp = false;
 		}
 		if (pdev_data->memmap_phc_regs) {
 			devm_iounmap(&pdev->dev, pdev_data->mac_base_addr);
