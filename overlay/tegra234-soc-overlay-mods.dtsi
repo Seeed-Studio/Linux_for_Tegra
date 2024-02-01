@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/clock/tegra234-clock.h>
 #include <dt-bindings/reset/tegra234-reset.h>
@@ -1343,6 +1343,30 @@
 				iommus = <&smmu_niso1 TEGRA234_SID_QSPI1>;
 				dma-coherent;
 				dev-names = "mods_qspi1_dma";
+				status = "disabled";
+			};
+
+			mods_xhci: mods_xhci {
+				compatible = "nvidia,mods_smmu";
+				iommus = <&smmu_niso1 TEGRA234_SID_XUSB_HOST>;
+				dma-coherent;
+				dev-names = "mods_xhci";
+				status = "disabled";
+			};
+
+			mods_ufs: mods_ufs {
+				compatible = "nvidia,mods_smmu";
+				iommus = <&smmu_niso0 TEGRA234_SID_UFSHC>;
+				dma-coherent;
+				dev-names = "mods_ufs";
+				status = "disabled";
+			};
+
+			mods_sdmmc1: mods_sdmmc1 {
+				compatible = "nvidia,mods_smmu";
+				iommus = <&smmu_niso1 TEGRA234_SID_SDMMC1A>;
+				dma-coherent;
+				dev-names = "mods_sdmmc1";
 				status = "disabled";
 			};
 		};
