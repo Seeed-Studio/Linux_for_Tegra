@@ -1,0 +1,3 @@
+mst_pciconf.ko external
+mst_pci.ko external
+mst_ppc_pci_reset.ko external
