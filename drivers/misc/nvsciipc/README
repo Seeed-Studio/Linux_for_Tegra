@@ -19,7 +19,7 @@ make -C /lib/modules/`uname -r`/build M=${PWD} modules
 sudo make -C /lib/modules/`uname -r`/build M=${PWD} modules_install
 sudo depmod -a
 
-nvsciipc.ko will be installed in /lib/modules/`uname -r`/extra/nvsciipc.ko
+nvsciipc.ko will be installed in /lib/modules/`uname -r`/updates/nvsciipc.ko
 
 [NOTE] If kernel module installation is failed by missing signing key, follow steps below
 
