@@ -38,6 +38,11 @@
 #define PVA_PROC_SCR_PROC_0_VAL             (0x39000282U)
 /** @} */
 
+/**
+ * @brief Macro to set lock bit of SCR firewall register.
+ */
+#define PVA_LOCK_SCR (0x20000000U)
+
 /* Definition for LIC_INTR_ENABLE bits */
 #define SEC_LIC_INTR_HSP1	0x1
 #define SEC_LIC_INTR_HSP2	0x2

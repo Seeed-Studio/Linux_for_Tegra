@@ -381,6 +381,19 @@ static int pva_init_fw(struct platform_device *pdev)
 		host1x_writel(pdev,
 			      cfg_priv_ar1_usegreg_r(pva->version),
 			      PVA_EXTRACT64((useg_addr), 39, 32, u32));
+
+		if (pdata->version != PVA_HW_GEN1) {
+			host1x_writel(pdev, evp_scr_r(), PVA_EVP_SCR_VAL | PVA_LOCK_SCR);
+			host1x_writel(pdev, cfg_scr_priv_0_r(), PVA_PRIV_SCR_VAL | PVA_LOCK_SCR);
+			host1x_writel(pdev, cfg_scr_ccq_ctrl_r(), PVA_CCQ_SCR_VAL | PVA_LOCK_SCR);
+		}
+
+		/* WAR: Bypass configuring status strl reg due to failure in gen 3 sim test */
+		if (pdata->version == PVA_HW_GEN2) {
+			host1x_writel(pdev, cfg_scr_status_ctrl_r(),
+					PVA_STATUS_CTL_SCR_VAL | PVA_LOCK_SCR);
+		}
+
 	}
 
 	/* Indicate the OS is waiting for PVA ready Interrupt */
