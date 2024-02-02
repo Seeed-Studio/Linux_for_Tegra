@@ -2,7 +2,7 @@
 /*
  * Tegra Video Input 5 device common APIs
  *
- * Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/errno.h>
@@ -319,6 +319,8 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, unsigned int 
 	chan->request[vi_port] = dma_alloc_coherent(chan->tegra_vi_channel[vi_port]->rtcpu_dev,
 					setup.queue_depth * setup.request_size,
 					&setup.iova, GFP_KERNEL);
+	chan->request_iova[vi_port] = setup.iova;
+
 	if (chan->request[vi_port] == NULL) {
 		dev_err(chan->vi->dev, "dma_alloc_coherent failed\n");
 		return -ENOMEM;
@@ -967,6 +969,24 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 				dev_err(&chan->video->dev,
 					"vi capture release failed\n");
 
+			/* Release capture requests */
+			if (chan->request[vi_port] != NULL) {
+				dma_free_coherent(chan->tegra_vi_channel[vi_port]->rtcpu_dev,
+				chan->capture_queue_depth * sizeof(struct capture_descriptor),
+				chan->request[vi_port], chan->request_iova[vi_port]);
+			}
+			chan->request[vi_port] = NULL;
+
+			/* Release emd data buffers */
+			if (chan->emb_buf_size > 0) {
+				struct device *vi_unit_dev;
+				vi5_unit_get_device_handle(chan->vi->ndev, chan->port[0],\
+										&vi_unit_dev);
+				dma_free_coherent(vi_unit_dev, chan->emb_buf_size,
+								chan->emb_buf_addr, chan->emb_buf);
+				chan->emb_buf_size = 0;
+			}
+
 			vi_channel_close_ex(chan->vi_channel_id[vi_port],
 						chan->tegra_vi_channel[vi_port]);
 			chan->tegra_vi_channel[vi_port] = NULL;
@@ -974,6 +994,7 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 
 		/* release all remaining buffers to v4l2 */
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR, false);
+
 	}
 
 	return 0;
