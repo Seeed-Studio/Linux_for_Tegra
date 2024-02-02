@@ -2,7 +2,7 @@
 /*
  * Tegra Media controller common APIs
  *
- * Copyright (c) 2012-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2012-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef __CAMERA_MC_COMMON_H__
@@ -251,6 +251,8 @@ struct tegra_channel {
 	struct nvcsi_deskew_context *deskew_ctx;
 	struct tegra_vi_channel *tegra_vi_channel[TEGRA_CSI_BLOCKS];
 	struct capture_descriptor *request[TEGRA_CSI_BLOCKS];
+	dma_addr_t request_iova[TEGRA_CSI_BLOCKS];
+
 	bool is_slvsec;
 	int is_interlaced;
 	enum interlaced_type interlace_type;
