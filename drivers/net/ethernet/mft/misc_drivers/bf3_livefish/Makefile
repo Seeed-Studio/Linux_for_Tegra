@@ -1,11 +1,4 @@
-KPVER ?= $(shell uname -r)
-KSRC ?= /lib/modules/$(KPVER)/build
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
 
 obj-m += bf3_livefish.o
-
-all:
-	make -C $(KSRC) M=$(PWD) CONFIG_CTF= CONFIG_CC_STACKPROTECTOR_STRONG= $(WITH_MAKE_PARAMS) modules
-
-clean:
-	make -C $(KSRC) M=$(PWD) clean
-
