@@ -122,17 +122,7 @@ static int virt_engine_can_use_memory_ctx(struct tegra_drm_client *client, bool 
 
 static int virt_engine_has_job_timestamping(struct tegra_drm_client *client, bool *supported)
 {
-	struct virt_engine *virt = to_virt_engine(client);
-
-	switch (virt->client.base.class) {
-	case HOST1X_CLASS_NVJPG:
-	case HOST1X_CLASS_NVJPG1:
-		*supported = false;
-		break;
-	default:
-		*supported = true;
-		break;
-	}
+	*supported = true;
 
 	return 0;
 }

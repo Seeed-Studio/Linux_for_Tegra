@@ -43,6 +43,7 @@ struct nvjpg_config {
 	unsigned int version;
 	bool supports_sid;
 	unsigned int num_instances;
+	bool supports_timestamping;
 };
 
 struct nvjpg {
@@ -554,12 +555,22 @@ static int nvjpg_can_use_memory_ctx(struct tegra_drm_client *client, bool *suppo
 	return 0;
 }
 
+static int nvjpg_has_job_timestamping(struct tegra_drm_client *client, bool *supported)
+{
+	struct nvjpg *nvjpg = to_nvjpg(client);
+
+	*supported = nvjpg->config->supports_timestamping;
+
+	return 0;
+}
+
 static const struct tegra_drm_client_ops nvjpg_ops = {
 	.open_channel = nvjpg_open_channel,
 	.close_channel = nvjpg_close_channel,
 	.submit = tegra_drm_submit,
 	.get_streamid_offset = tegra_drm_get_streamid_offset_thi,
 	.can_use_memory_ctx = nvjpg_can_use_memory_ctx,
+	.has_job_timestamping = nvjpg_has_job_timestamping,
 };
 
 #define NVIDIA_TEGRA_210_NVJPG_FIRMWARE "nvidia/tegra210/nvjpg.bin"
@@ -596,6 +607,7 @@ static const struct nvjpg_config nvjpg_t234_config = {
 	.version = 0x23,
 	.supports_sid = true,
 	.num_instances = 2,
+	.supports_timestamping = true,
 };
 
 static const struct of_device_id tegra_nvjpg_of_match[] = {
