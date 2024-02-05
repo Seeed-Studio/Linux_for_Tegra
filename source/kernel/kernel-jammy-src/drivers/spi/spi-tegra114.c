@@ -1301,10 +1301,6 @@ static irqreturn_t tegra_spi_isr(int irq, void *context_data)
 	return IRQ_WAKE_THREAD;
 }
 
-static struct tegra_spi_soc_data tegra234_spi_soc_data = {
-	.has_intr_mask_reg = true,
-};
-
 static struct tegra_spi_soc_data tegra114_spi_soc_data = {
 	.has_intr_mask_reg = false,
 };
@@ -1319,9 +1315,6 @@ static struct tegra_spi_soc_data tegra210_spi_soc_data = {
 
 static const struct of_device_id tegra_spi_of_match[] = {
 	{
-		.compatible = "nvidia,tegra234-spi",
-		.data	    = &tegra234_spi_soc_data,
-	}, {
 		.compatible = "nvidia,tegra114-spi",
 		.data	    = &tegra114_spi_soc_data,
 	}, {
