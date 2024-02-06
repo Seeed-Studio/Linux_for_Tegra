@@ -1148,12 +1148,31 @@ static const struct tegra_hsp_soc tegra234_hv_hsp_soc = {
 	.sm_mask = 0xf,
 };
 
+static const struct tegra_hsp_soc tegra264_hv_hsp_soc = {
+	.map = tegra186_hsp_db_map,
+	.has_per_mb_ie = true,
+	.has_128_bit_mb = true,
+	.reg_stride = 0x1000,
+	.virtualized = true,
+	.si_shift = 17,
+	.db_shift = 12,
+	.as_shift = 8,
+	.ss_shift = 4,
+	.sm_shift = 0,
+	.si_mask = 0x1f,
+	.db_mask = 0x1f,
+	.as_mask = 0xf,
+	.ss_mask = 0xf,
+	.sm_mask = 0xf,
+};
+
 static const struct of_device_id tegra_hsp_match[] = {
 	{ .compatible = "nvidia,tegra186-hsp", .data = &tegra186_hsp_soc },
 	{ .compatible = "nvidia,tegra194-hsp", .data = &tegra194_hsp_soc },
 	{ .compatible = "nvidia,tegra234-hsp", .data = &tegra234_hsp_soc },
 	{ .compatible = "nvidia,tegra264-hsp", .data = &tegra264_hsp_soc },
 	{ .compatible = "nvidia,tegra234-hsp-hv", .data = &tegra234_hv_hsp_soc },
+	{ .compatible = "nvidia,tegra264-hsp-hv", .data = &tegra264_hv_hsp_soc },
 	{ }
 };
 
