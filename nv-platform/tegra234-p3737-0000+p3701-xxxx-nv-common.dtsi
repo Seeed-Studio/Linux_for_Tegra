@@ -12,6 +12,10 @@
 #include "tegra234-dcb-p3737-0000-p3701-0000.dtsi"
 
 / {
+	aliases {
+		serial2 = "/bus@0/serial@3110000";
+	};
+
 	cpus {
 		idle-states {
 			c7 {
