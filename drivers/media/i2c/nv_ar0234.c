@@ -28,6 +28,7 @@
 #define MAX_TANGENTIAL_COEFFICIENTS     2
 #define MAX_FISHEYE_COEFFICIENTS        6
 #define CAMERA_MAX_SN_LENGTH 32
+#define LEOP_CAMERA_MAX_SN_LENGTH 10
 #define MAX_RLS_COLOR_CHANNELS 4
 #define MAX_RLS_BREAKPOINTS 6
 
@@ -126,7 +127,13 @@ struct camera_extrinsics {
 	float tx, ty, tz;
 };
 
-struct imu_params {
+/*
+ * IMU parameters used by HAWK 1.0. HAWK 1.0 did not have IMU noise model parameters
+ * in EEPROM. To preserve backward compatibility with HAWK 1.0, the EEPROM data is arranged
+ * in a certain way which requires tracking the imu noise model parameters in a
+ * separate structure.
+ */
+struct imu_params_v1 {
 	// 3D vector to add to accelerometer readings
 	float linear_acceleration_bias[3];
 	// 3D vector to add to gyroscope readings
@@ -135,12 +142,25 @@ struct imu_params {
 	float gravity_acceleration[3];
 	// Extrinsic structure for IMU device
 	struct camera_extrinsics extr;
-	// Noise model parameters
+};
+
+struct imu_params_noise_m {
+	/*
+	 * Noise model parameters
+	 */
 	float update_rate;
 	float linear_acceleration_noise_density;
 	float linear_acceleration_random_walk;
 	float angular_velocity_noise_density;
 	float angular_velocity_random_walk;
+};
+
+/*
+ * Combined IMU calibration data structure
+ */
+struct imu_params_v2 {
+	struct imu_params_v1 imu_data_v1;
+	struct imu_params_noise_m nm;
 };
 
 struct radial_lsc_params {
@@ -185,7 +205,7 @@ struct NvCamSyncSensorCalibData {
 	u8 imu_present;
 
 	// Intrinsic structure for IMU
-	struct imu_params imu;
+	struct imu_params_v2 imu;
 
 	// HAWK module serial number
 	u8 serial_number[CAMERA_MAX_SN_LENGTH];
@@ -220,10 +240,14 @@ struct LiEeprom_Content_Struct {
 	/**
 	 * Intrinsic structure for IMU
 	 */
-	struct imu_params imu;
+	struct imu_params_v1 imu;
+
+	u8 tmp[16];
 
 	// HAWK module serial number
-	u8 serial_number[CAMERA_MAX_SN_LENGTH];
+	u8 serial_number[LEOP_CAMERA_MAX_SN_LENGTH];
+
+	struct imu_params_noise_m nm;
 
 	// Radial Lens Shading Correction parameters
 	struct radial_lsc_params left_rls;
@@ -677,9 +701,10 @@ static int ar0234_fill_eeprom(struct tegracam_device *tc_dev,
 
 		priv->EepromCalib.cam_extr = tmp->cam_extr;
 		priv->EepromCalib.imu_present = tmp->imu_present;
-		priv->EepromCalib.imu = tmp->imu;
+		priv->EepromCalib.imu.imu_data_v1 = tmp->imu;
+		priv->EepromCalib.imu.nm = tmp->nm;
 		memcpy(priv->EepromCalib.serial_number, tmp->serial_number,
-			CAMERA_MAX_SN_LENGTH);
+			8);
 
 		if (priv->sync_sensor_index == 1)
 			priv->EepromCalib.rls = tmp->left_rls;
