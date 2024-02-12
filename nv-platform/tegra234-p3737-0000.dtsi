@@ -57,7 +57,7 @@
 			};
 		};
 
-		ethernet@6800000 {
+		mgbe0: ethernet@6800000 {
 			nvidia,mac-addr-idx = <0>;
 			nvidia,max-platform-mtu = <16383>;
 			/* 1=enable, 0=disable */
@@ -82,6 +82,14 @@
 					interrupts = <TEGRA234_MAIN_GPIO(Y, 3) IRQ_TYPE_LEVEL_LOW>;
 				};
 			};
+		};
+
+		nvpps {
+			status = "okay";
+			compatible = "nvidia,tegra234-nvpps";
+			primary-emac = <&mgbe0>;
+			sec-emac = <&mgbe0>;
+			reg = <0x0 0xc6a0000 0x0 0x1000>;
 		};
 	};
 
