@@ -5,19 +5,24 @@ correlation feature.
 
 Required properties:
 
-- compatibles: should be "nvpps,tegra194-nvpps"
+- compatible: This should be nvidia,tegra194-nvpps for Xavier and nvidia,tegra234-nvpps for Orin.
 
 Optional properties:
-- gpios: GPIO number and active level for the PPS input signal
+- primary-emac: specifies ethernet emac device DT. This is the primary ethernet MAC device utilized
+		to calculate PTP time. For example, if MGBE0 is used to calculate the PTP time,
+		then phandle of the device tree node corresponding to MGBE0 needs to be passed.
+
+                For Example for Orin:
+                        mgbe0: ethernet@6800000
+                        eqos: ethernet@2310000
+
+                For Example for Xavier:
+                        eqos: ethernet@2490000
+
+- sec-emac: specifies secondary ethernet MAC device DT node to be used to calculate PTP time.
 - memmap_phc_regs: boolean flag to indicate MAC PHC regs to be memory mapped
 				   for getting PTP time. If not defined ptp notifer method will
 				   be used with selected interface
-- interface: NW interface name to be used for MAC PHC regs. This field can be
-			 set to 'eqos_0', 'mgbe0_0', 'mgbe1_0', 'mgbe2_0' or 'mgbe3_0' for Orin.
-			 For Xavier, it shoud be set to 'eqos_0'. If undef, default to 'eqos_0'
-- sec_interface: NW interface name to be used to calculate PTP Time offset.
-				 set to 'eqos_0', 'mgbe0_0', 'mgbe1_0', 'mgbe2_0' or 'mgbe3_0' for Orin.
-				 For Xavier, Leave this undefined. For Orin, If undef default to 'eqos_0'
 - ptp_tsc_k_int: Specifies the integer part of the factor used to calculate the delta to
 				 apply to NUM when the fast convergence algorithm is enabled when syncing
 				 or locking TSC time with PTP time domain.
@@ -31,42 +36,78 @@ Optional properties:
 				 If unspecified, NvPPS driver uses 0x26C(corresponding to 20us) by default
 - ptp_tsc_sync_dis: boolean flag to indicate if nvpps should disable PTP TSC sync logic.
 					The default behaviour is to keep PTP TSC sync logic enabled.
+- reg: specifies start address and registers count details of TSC module. It is only applicable for Orin.
+- nvpps-gpios: specifies GPIO number for PPS input signal.
+- timestamps: specifies timestamp for the GPIO provided by HTE.
+- timestamp-names: specifies name for GPIO timestamp.
 
-Example:
+Example: Timer mode on Orin.
 
-nvpps {
-	compatible = "nvidia,tegrat194-nvpps";
-	status = "okay";
-	gpios = <&tegra_aon_gpio TEGRA194_AON_GPIO(BB, 2) GPIO_ACTIVE_HIGH>;
+mgbe0: ethernet@6800000{
 };
 
-Example:
+nvpps {
+	status = "okay";
+	compatible = "nvidia,tegra234-nvpps";
+	primary-emac = <&mgbe0>;
+	sec-emac = <&mgbe0>;
+	reg = <0x0 0xc6a0000 0x0 0x1000>;
+};
+
+Example: Timer mode on Xavier
+
+eqos: ethernet@2490000{
+};
 
 nvpps {
-	compatible = "nvidia,tegra194-nvpps";
 	status = "okay";
-	gpios = <&tegra_aon_gpio TEGRA234_AON_GPIO(EE, 6) GPIO_ACTIVE_HIGH>;
+	compatible = "nvidia,tegra194-nvpps";
+	primary-emac = <&eqos>;
+	sec-emac = <&eqos>;
+};
+
+Example: MAC PHC regs to be memory mapped on Orin
+
+mgbe0: ethernet@6800000{
+};
+
+nvpps {
+	status = "okay";
+	compatible = "nvidia,tegra234-nvpps";
+	primary-emac = <&mgbe0>
+	sec-emac = <&mgbe0>;
 	memmap_phc_regs;
-	interface = "mgbe2_0";
+	reg = <0x0 0xc6a0000 0x0 0x1000>;
 };
 
-Example:
+
+Example: GPIO mode on Orin
+
+mgbe0: ethernet@6800000{
+};
 
 nvpps {
-	compatible = "nvidia,tegra194-nvpps";
 	status = "okay";
-	gpios = <&tegra_aon_gpio TEGRA234_AON_GPIO(EE, 6) GPIO_ACTIVE_HIGH>;
-	interface = "mgbe2_0";
-	sec_interface = "eqos_0";
+	compatible = "nvidia,tegra234-nvpps";
+	reg = <0x0 0xc6a0000 0x0 0x1000>;
+	nvpps-gpios = <&gpio_aon TEGRA234_AON_GPIO(BB, 0) GPIO_ACTIVE_HIGH>;
+	timestamps = <&hte_aon TEGRA234_AON_GPIO(BB, 0)>;
+	timestamp-names = "nvpps_gpio";
+};
+
+
+Example: Timer mode on Orin with additional properties.
+
+mgbe0: ethernet@6800000{
+};
+
+nvpps {
+	status = "okay";
+	compatible = "nvidia,tegra234-nvpps";
+	primary-emac = <&mgbe0>;
+	sec-emac = <&mgbe0>;
+	reg = <0x0 0xc6a0000 0x0 0x1000>;
 	ptp_tsc_k_int = /bits/ 8 <0x70>;
 	ptp_tsc_lock_threshold = /bits/ 16 <0x26C>;
 	ptp_tsc_sync_dis;
-};
-
-Example: GPIO as optional
-
-nvpps {
-	compatible = "nvidia,tegra194-nvpps";
-	status = "okay";
-	interface = "mgbe2_0";
 };
