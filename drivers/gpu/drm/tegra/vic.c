@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (C) 2015-2023 NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (C) 2015-2024 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/bitops.h>
@@ -723,10 +723,9 @@ static int vic_probe(struct platform_device *pdev)
 	}
 
 	vic->icc_write = devm_of_icc_get(dev, "write");
-	if (IS_ERR(vic->icc_write)) {
-		dev_err(&pdev->dev, "failed to get icc write handle\n");
-		return PTR_ERR(vic->icc_write);
-	}
+	if (IS_ERR(vic->icc_write))
+		return dev_err_probe(&pdev->dev, PTR_ERR(vic->icc_write),
+				     "failed to get icc write handle\n");
 
 	if (!dev->pm_domain) {
 		vic->rst = devm_reset_control_get(dev, "vic");

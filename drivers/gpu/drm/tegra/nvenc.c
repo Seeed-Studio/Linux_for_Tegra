@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
  */
 
 #include <linux/bitops.h>
@@ -670,10 +670,9 @@ static int nvenc_probe(struct platform_device *pdev)
 		return err;
 
 	nvenc->icc_write = devm_of_icc_get(dev, "write");
-	if (IS_ERR(nvenc->icc_write)) {
-		dev_err(&pdev->dev, "failed to get icc write handle\n");
-		return PTR_ERR(nvenc->icc_write);
-	}
+	if (IS_ERR(nvenc->icc_write))
+		return dev_err_probe(&pdev->dev, PTR_ERR(nvenc->icc_write),
+				     "failed to get icc write handle\n");
 
 	platform_set_drvdata(pdev, nvenc);
 
