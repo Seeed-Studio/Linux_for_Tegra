@@ -114,35 +114,6 @@ static int ufs_tegra_host_clk_enable(struct device *dev,
 	return err;
 }
 
-static int __ufs_tegra_mphy_receiver_calibration(
-		struct ufs_tegra_host *ufs_tegra,
-		void __iomem *mphy_base)
-{
-	struct device *dev = ufs_tegra->hba->dev;
-	u32 mphy_rx_vendor, mphy_rx_vendor2_reg;
-	int timeout = 100;
-
-	if (ufs_tegra->soc->chip_id >= TEGRA234)
-		mphy_rx_vendor2_reg = MPHY_RX_APB_VENDOR2_0_T234;
-	else
-		mphy_rx_vendor2_reg = MPHY_RX_APB_VENDOR2_0;
-
-	mphy_update(mphy_base, MPHY_GO_BIT, mphy_rx_vendor2_reg);
-
-	while (timeout--) {
-		udelay(1);
-		mphy_rx_vendor = mphy_readl(mphy_base, mphy_rx_vendor2_reg);
-		if (mphy_rx_vendor & MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE) {
-			dev_info(dev, "MPhy Receiver Calibration passed\n");
-			return 0;
-		}
-	}
-
-	dev_err(dev, "MPhy Receiver Calibration failed\n");
-	return -ETIMEDOUT;
-
-}
-
 /**
  * ufs_tegra_mphy_receiver_calibration
  * @ufs_tegra: ufs_tegra_host controller instance
@@ -156,11 +127,13 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
 					       void __iomem *mphy_base)
 {
 	int err = 0;
+	struct device *dev = ufs_tegra->hba->dev;
 	u32 mphy_rx_vendor2_reg;
+	u32 mphy_rx_vendor2;
+	unsigned int timeout;
 
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_VDK)
 		return 0;
-
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		return 0;
 
@@ -170,22 +143,167 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
 	if (ufs_tegra->enable_mphy_rx_calib)
 		return 0;
 
-	if (ufs_tegra->soc->chip_id >= TEGRA234)
-		mphy_rx_vendor2_reg = MPHY_RX_APB_VENDOR2_0_T234;
-	else
-		mphy_rx_vendor2_reg = MPHY_RX_APB_VENDOR2_0;
+        if (ufs_tegra->soc->chip_id >= TEGRA234) {
+                mphy_rx_vendor2_reg = MPHY_RX_APB_VENDOR2_0_T234;
+        } else {
+                mphy_rx_vendor2_reg = MPHY_RX_APB_VENDOR2_0;
+        }
 
-	mphy_update(mphy_base, MPHY_RX_APB_VENDOR2_0_RX_CAL_EN,
-		    mphy_rx_vendor2_reg);
-	err = __ufs_tegra_mphy_receiver_calibration(ufs_tegra, mphy_base);
-	if (err)
-		return err;
+        if (ufs_tegra->soc->chip_id >= TEGRA234) {
+                /* Set RX lane calibration */
+                mphy_update(ufs_tegra->mphy_l0_base,
+                    MPHY_RX_APB_VENDOR2_0_RX_CAL_EN, mphy_rx_vendor2_reg);
 
-	mphy_clear_bits(mphy_base, MPHY_RX_APB_VENDOR2_0_RX_CAL_EN,
-			mphy_rx_vendor2_reg);
-	err = __ufs_tegra_mphy_receiver_calibration(ufs_tegra, mphy_base);
+                if (ufs_tegra->x2config == true) {
+                        dev_err(dev, "%s:x2config is true so invoking mphy_update\n",
+                                __func__);
+                        mphy_update(ufs_tegra->mphy_l1_base,
+                                MPHY_RX_APB_VENDOR2_0_RX_CAL_EN,
+                                mphy_rx_vendor2_reg);
+                }
 
-	return err;
+                /* TODO: GO bit has to be read back after updating it */
+                mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
+                        mphy_rx_vendor2_reg);
+
+                if (ufs_tegra->x2config == true) {
+                        /* TODO: GO bit has to be read back after updating it */
+                        mphy_update(ufs_tegra->mphy_l1_base,
+                                MPHY_GO_BIT, mphy_rx_vendor2_reg);
+                }
+
+
+               if (ufs_tegra->x2config == true) {
+                        /* Wait till lane calibration is done */
+                        timeout = 100U; /* Number of iterations */
+                        while (timeout != 0U) {
+                                mphy_rx_vendor2 = mphy_readl(ufs_tegra->mphy_l1_base,
+                                        mphy_rx_vendor2_reg);
+
+                                if ((mphy_rx_vendor2 & MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE) != 0U) {
+                                        dev_err(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
+                                        break;
+                                } else {
+                                        udelay(1);
+                                }
+                                timeout--;
+                        }
+                        if (timeout == 0U) {
+                                dev_err(dev, "%s: MPhy Receiver Calibration failed\n", __func__);
+                                err = -ETIMEDOUT;
+                                goto fail;
+                        }
+
+                        /* Clear RX lane calibration */
+                        mphy_clear_bits(ufs_tegra->mphy_l1_base,
+                                MPHY_RX_APB_VENDOR2_0_RX_CAL_EN,
+                                mphy_rx_vendor2_reg);
+                        mphy_update(ufs_tegra->mphy_l1_base,
+                                MPHY_GO_BIT, mphy_rx_vendor2_reg);
+
+                        /* Wait till lane calibration is done */
+                        timeout = 100U; /* Number of iterations */
+                        while (timeout != 0U) {
+                                mphy_rx_vendor2 = mphy_readl(ufs_tegra->mphy_l1_base,
+                                        mphy_rx_vendor2_reg);
+
+                                if ((mphy_rx_vendor2 & MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE) == 0U) {
+                                        dev_err(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
+                                        break;
+                                } else {
+                                        udelay(1);
+                                }
+                                timeout--;
+                        }
+                        if (timeout == 0U) {
+                               dev_err(dev, "%s: MPhy Receiver Calibration failed\n", __func__);
+                                err = -ETIMEDOUT;
+                                goto fail;
+                        }
+                }
+                timeout = 100U; /* Number of iterations */
+                while (timeout != 0U) {
+                        mphy_rx_vendor2 = mphy_readl(ufs_tegra->mphy_l0_base,
+                                mphy_rx_vendor2_reg);
+
+                        if ((mphy_rx_vendor2 & MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE) != 0U) {
+                                dev_err(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
+                                break;
+                        } else {
+                                udelay(1);
+                        }
+                        timeout--;
+                }
+                if (timeout == 0U) {
+                        dev_err(dev, "%s: MPhy Receiver Calibration failed\n", __func__);
+                        err = -ETIMEDOUT;
+                        goto fail;
+                }
+
+                /* Clear RX lane calibration */
+                mphy_clear_bits(ufs_tegra->mphy_l0_base,
+                                MPHY_RX_APB_VENDOR2_0_RX_CAL_EN,
+                                mphy_rx_vendor2_reg);
+                mphy_update(ufs_tegra->mphy_l0_base,
+                                MPHY_GO_BIT, mphy_rx_vendor2_reg);
+                timeout = 100U; /* Number of iterations */
+                while (timeout != 0U) {
+                        mphy_rx_vendor2 = mphy_readl(ufs_tegra->mphy_l0_base,
+                                mphy_rx_vendor2_reg);
+
+                        if ((mphy_rx_vendor2 & MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE) == 0U) {
+                                dev_dbg(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
+                                break;
+                        } else {
+				udelay(1);
+                        }
+                        timeout--;
+                }
+                if (timeout == 0U) {
+                        dev_err(dev, "%s: MPhy Receiver Calibration failed\n", __func__);
+                        err = -ETIMEDOUT;
+                }
+        } else {
+                if (ufs_tegra->x2config == true) {
+                        dev_dbg(dev, "%s:x2config is true so invoking mphy_update\n",
+                                __func__);
+                        mphy_update(ufs_tegra->mphy_l1_base,
+                                MPHY_RX_APB_VENDOR2_0_RX_CAL_EN,
+                                mphy_rx_vendor2_reg);
+                }
+
+                mphy_update(ufs_tegra->mphy_l0_base,
+                    MPHY_RX_APB_VENDOR2_0_RX_CAL_EN, mphy_rx_vendor2_reg);
+
+                if (ufs_tegra->x2config == true) {
+                        /* TODO: GO bit has to be read back after updating it */
+                        mphy_update(ufs_tegra->mphy_l1_base,
+                                MPHY_GO_BIT, mphy_rx_vendor2_reg);
+                }
+                /* TODO: GO bit has to be read back after updating it */
+                mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
+                        mphy_rx_vendor2_reg);
+                timeout = 10U; /* Number of iterations */
+                while (timeout != 0U) {
+			udelay(1000);
+
+                        mphy_rx_vendor2 = mphy_readl(ufs_tegra->mphy_l0_base,
+                                mphy_rx_vendor2_reg);
+
+                        if ((mphy_rx_vendor2 & MPHY_RX_APB_VENDOR2_0_RX_CAL_EN) == 0U) {
+                                dev_dbg(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
+                                break;
+                        }
+                        timeout--;
+                }
+                if (timeout == 0U) {
+                        dev_err(dev, "%s: MPhy Receiver Calibration failed\n", __func__);
+                        err = -ETIMEDOUT;
+                }
+        }
+
+fail:
+        return err;
 }
 
 static void ufs_tegra_mphy_war(struct ufs_tegra_host *ufs_tegra)
@@ -1141,13 +1259,6 @@ deassert_ufs_clk:
 
 	ufs_tegra_set_clk_div(hba);
 
-	if (ufs_tegra->x2config) {
-		ret = ufs_tegra_mphy_receiver_calibration(ufs_tegra,
-				ufs_tegra->mphy_l1_base);
-		if (ret < 0)
-			goto out_disable_mphylane_clks;
-	}
-
 	ret = ufs_tegra_mphy_receiver_calibration(ufs_tegra,
 			ufs_tegra->mphy_l0_base);
 	if (ret < 0)
@@ -1419,12 +1530,6 @@ static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,
 		/*POST_CHANGE case is called on success of link start-up*/
 		dev_info(hba->dev, "dme-link-startup Successful\n");
 		ufs_tegra_unipro_post_linkup(hba);
-		if (ufs_tegra->x2config) {
-			err = ufs_tegra_mphy_receiver_calibration(ufs_tegra,
-					ufs_tegra->mphy_l1_base);
-			if (err)
-				return err;
-		}
 
 		err = ufs_tegra_mphy_receiver_calibration(ufs_tegra,
 				ufs_tegra->mphy_l0_base);
