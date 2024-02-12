@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "soc/tegra/camrtc-dbg-messages.h"
 
@@ -1882,11 +1882,9 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	}
 
 	crd->icc_path = devm_of_icc_get(crd->mem_devices[0], "write");
-	if (IS_ERR(crd->icc_path)) {
-		dev_err(dev, "failed to get icc path for rtcpu, err: %ld\n",
-				PTR_ERR(crd->icc_path));
-		crd->icc_path = NULL;
-	}
+	if (IS_ERR(crd->icc_path))
+		return dev_err_probe(dev, PTR_ERR(crd->icc_path),
+				     "failed to get icc write handle\n");
 
 	if (camrtc_debug_populate(ch))
 		return -ENOMEM;

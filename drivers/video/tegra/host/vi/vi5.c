@@ -252,10 +252,9 @@ static int vi5_probe(struct platform_device *pdev)
 	vi5 = pdata->private_data;
 
 	vi5->icc_write = devm_of_icc_get(dev, "write");
-	if (IS_ERR(vi5->icc_write)) {
-		dev_err(dev, "failed to get icc write handle\n");
-		return PTR_ERR(vi5->icc_write);
-	}
+	if (IS_ERR(vi5->icc_write))
+		return dev_err_probe(&pdev->dev, PTR_ERR(vi5->icc_write),
+				     "failed to get icc write handle\n");
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
