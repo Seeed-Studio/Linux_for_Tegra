@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
- * Copyright (c) 2016-2023, NVIDIA Corporation.  All rights reserved.
- *
  * NVDLA driver for T194/T23x
  */
 
@@ -1106,10 +1105,9 @@ static int nvdla_probe(struct platform_device *pdev)
 	}
 
 	nvdla_dev->icc_write = devm_of_icc_get(dev, "write");
-	if (IS_ERR(nvdla_dev->icc_write)) {
-		dev_info(dev, "failed to get icc write handle\n");
-		nvdla_dev->icc_write = NULL;
-	}
+	if (IS_ERR(nvdla_dev->icc_write))
+		return dev_err_probe(&pdev->dev, PTR_ERR(nvdla_dev->icc_write),
+				     "failed to get icc write handle\n");
 
 	nvdla_dev->dev = dev;
 	nvdla_dev->pdev = pdev;
