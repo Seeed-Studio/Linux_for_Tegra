@@ -12,7 +12,6 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include "tegra210_ahub.h"
 #include "tegra_asoc_machine.h"
 #include "tegra_codecs.h"
 
