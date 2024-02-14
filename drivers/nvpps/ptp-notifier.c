@@ -1,10 +1,10 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/notifier.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
+#include <linux/of.h>
 #include <linux/platform/tegra/ptp-notifier.h>
 
 static int (*get_systime[MAX_MAC_INSTANCES])(struct net_device *, void *, int);
@@ -91,47 +91,65 @@ void tegra_unregister_hwtime_source(struct net_device *dev)
 }
 EXPORT_SYMBOL(tegra_unregister_hwtime_source);
 
-int tegra_get_hwtime(const char *intf_name, void *ts, int ts_type)
+int tegra_get_hwtime(const struct device_node *emac_node, void *ts, int ts_type)
 {
 	unsigned long flags;
 	int ret = 0, index = 0;
-	struct net_device *dev;
+	struct net_device *dev = NULL;
+	struct net_device *intf_dev = NULL;
+	const char *intf_name = "eth0";
+
+	if (!ts) {
+		pr_err("%s: time-stamp ptr is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (emac_node == NULL) {
+		pr_debug("EMAC node is invalid, using default interface %s\n", intf_name);
+		intf_dev = dev_get_by_name(&init_net, intf_name);
+		if (!intf_dev || !(intf_dev->flags & IFF_UP)) {
+			pr_debug("Network interface %s is not %s", intf_name,
+									!intf_dev ? "found":"up");
+			ret = -EINVAL;
+			goto out;
+		}
+	}
 
 	raw_spin_lock_irqsave(&ptp_notifier_lock, flags);
-	if (!intf_name || !ts) {
-		pr_err("passed Interface_name or time-stamp ptr is NULL");
-		raw_spin_unlock_irqrestore(&ptp_notifier_lock, flags);
-		return -1;
-	}
-	dev = dev_get_by_name(&init_net, intf_name);
-
-	if (!dev || !(dev->flags & IFF_UP)) {
-		pr_debug("dev is NULL or intf is not up for %s\n", intf_name);
-		ret = -EINVAL;
-		goto out;
-	}
 	for (index = 0; index < MAX_MAC_INSTANCES; index++) {
-		if (dev == registered_ndev[index])
+		dev = registered_ndev[index];
+		if (dev == NULL) {
+			pr_debug("No registered net device for index %d\n", index);
+			continue;
+		}
+		if (emac_node == dev->dev.parent->of_node) {
+			pr_debug("found emac name (%s)\n", emac_node->full_name);
 			break;
+		} else if (intf_dev && intf_dev == dev) {
+			pr_debug("found ethenet interface (%s)\n", intf_name);
+			break;
+		}
+
 	}
 	if (index == MAX_MAC_INSTANCES) {
-		pr_debug("Interface: %s is not registered to get HW time", intf_name);
+		pr_debug("%s: ethernet device %s is not registered!\n", __func__,
+						!emac_node ? intf_name : emac_node->full_name);
 		ret = -EINVAL;
-		goto out;
+		goto unlock;
 	}
 
 	if (get_systime[index])
 		ret = (get_systime[index])(dev, ts, ts_type);
 	else
 		ret = -EINVAL;
-
-out:
-	if (dev)
-		dev_put(dev);
+unlock:
 	raw_spin_unlock_irqrestore(&ptp_notifier_lock, flags);
+out:
+	if (intf_dev)
+		dev_put(intf_dev);
 
 	return ret;
 }
 EXPORT_SYMBOL(tegra_get_hwtime);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");

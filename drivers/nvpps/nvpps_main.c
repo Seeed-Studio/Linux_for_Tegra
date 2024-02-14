@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -22,7 +22,7 @@
 #include <uapi/linux/nvpps_ioctl.h>
 #include <linux/hte.h>
 #include <linux/nvpps.h>
-
+#include <linux/of_address.h>
 
 
 /* the following control flags are for
@@ -41,7 +41,6 @@ static dev_t		s_nvpps_devt;
 static DEFINE_MUTEX(s_nvpps_lock);
 static DEFINE_IDR(s_nvpps_idr);
 
-static char *interface_name = "eth0";
 bool print_pri_ptp_failed = true;
 bool print_sec_ptp_failed = true;
 
@@ -78,18 +77,18 @@ struct nvpps_device_data {
 	wait_queue_head_t	pps_event_queue;
 	struct fasync_struct	*pps_event_async_queue;
 
-	bool		memmap_phc_regs;
-	char		*iface_nm;
-	char		*sec_iface_nm;
+	struct device_node	*pri_emac_node;
+	struct device_node	*sec_emac_node;
+	resource_size_t		pri_emac_base_addr;
 	void __iomem *mac_base_addr;
 	u32			sts_offset;
 	u32			stns_offset;
 	void __iomem 		*tsc_reg_map_base;
-	bool		platform_is_orin;
 	u32			tsc_ptp_src;
 	bool		only_timer_mode;
 	bool		pri_ptp_failed;
 	bool 		sec_ptp_failed;
+	bool		support_tsc;
 	uint8_t		k_int_val;
 	uint16_t	lock_threshold_val;
 	struct hte_ts_desc	desc;
@@ -103,44 +102,45 @@ struct nvpps_file_data {
 	unsigned int			pps_event_id_rd;
 };
 
-
-/* MAC Base addrs */
-#define T194_EQOS_BASE_ADDR		0x2490000
-#define T234_EQOS_BASE_ADDR		0x2310000
 #define EQOS_STSR_OFFSET		0xb08
 #define EQOS_STNSR_OFFSET		0xb0c
-#define T234_MGBE0_BASE_ADDR	0x6810000
-#define T234_MGBE1_BASE_ADDR	0x6910000
-#define T234_MGBE2_BASE_ADDR	0x6a10000
-#define T234_MGBE3_BASE_ADDR	0x6b10000
 #define MGBE_STSR_OFFSET		0xd08
 #define MGBE_STNSR_OFFSET		0xd0c
+
+#define T234_MGBE0_BASE_ADDR		0x6810000
+#define T234_MGBE1_BASE_ADDR		0x6910000
+#define T234_MGBE2_BASE_ADDR		0x6a10000
+#define T234_MGBE3_BASE_ADDR		0x6b10000
+#define T234_EQOS_BASE_ADDR		0x2310000
+#define T194_EQOS_BASE_ADDR		0x2490000
+
+#define	TSC_PTP_SRC_EQOS		0
+#define	TSC_PTP_SRC_MGBE0		1
+#define TSC_PTP_SRC_MGBE1		2
+#define TSC_PTP_SRC_MGBE2		3
+#define TSC_PTP_SRC_MGBE3		4
+#define TSC_PTP_SRC_INVALID		5
 
 /* Below are the tsc register offset from ioremapped
  * virtual base region stored in tsc_reg_map_base.
  */
-#define TSC_STSCRSR_OFFSET								0x0
-#define TSC_CAPTURE_CONFIGURATION_PTX_OFFSET			0x58
-#define TSC_CAPTURE_CONTROL_PTX_OFFSET					0x5c
-#define TSC_LOCKING_CONFIGURATION_OFFSET				0xe4
-#define TSC_LOCKING_CONTROL_OFFSET						0xe8
-#define TSC_LOCKING_STATUS_OFFSET						0xec
-#define TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET	0xf0
-#define TSC_LOCKING_DIFF_CONFIGURATION_OFFSET			0xf4
-#define TSC_LOCKING_ADJUST_CONFIGURATION_OFFSET			0x108
-#define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET	0x10c
-#define TSC_LOCKING_ADJUST_NUM_CONTROL_OFFSET			0x110
-#define TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET			0x114
+#define TSC_STSCRSR_OFFSET								      0x104
+#define TSC_CAPTURE_CONFIGURATION_PTX_OFFSET				(TSC_STSCRSR_OFFSET + 0x58)
+#define TSC_CAPTURE_CONTROL_PTX_OFFSET					(TSC_STSCRSR_OFFSET + 0x5c)
+#define TSC_LOCKING_CONFIGURATION_OFFSET				(TSC_STSCRSR_OFFSET + 0xe4)
+#define TSC_LOCKING_CONTROL_OFFSET					(TSC_STSCRSR_OFFSET + 0xe8)
+#define TSC_LOCKING_STATUS_OFFSET					(TSC_STSCRSR_OFFSET + 0xec)
+#define TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET			(TSC_STSCRSR_OFFSET + 0xf0)
+#define TSC_LOCKING_DIFF_CONFIGURATION_OFFSET				(TSC_STSCRSR_OFFSET + 0xf4)
+#define TSC_LOCKING_ADJUST_CONFIGURATION_OFFSET				(TSC_STSCRSR_OFFSET + 0x108)
+#define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET			(TSC_STSCRSR_OFFSET + 0x10c)
+#define TSC_LOCKING_ADJUST_NUM_CONTROL_OFFSET				(TSC_STSCRSR_OFFSET + 0x110)
+#define TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET				(TSC_STSCRSR_OFFSET + 0x114)
+
 #define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT	8
 
 #define SRC_SELECT_BIT_OFFSET	8
 #define SRC_SELECT_BITS	0xff
-
-#define	TSC_PTP_SRC_EQOS	0
-#define	TSC_PTP_SRC_MGBE0	1
-#define TSC_PTP_SRC_MGBE1	2
-#define TSC_PTP_SRC_MGBE2	3
-#define TSC_PTP_SRC_MGBE3	4
 
 #define TSC_LOCKED_STATUS_BIT_OFFSET 1
 #define TSC_ALIGNED_STATUS_BIT_OFFSET 0
@@ -152,6 +152,8 @@ struct nvpps_file_data {
 #define MAC_STNSR_TSSS_LPOS 0
 #define MAC_STNSR_TSSS_HPOS 30
 
+static struct device_node *emac_node;
+
 #define GET_VALUE(data, lbit, hbit) ((data >> lbit) & (~(~0<<(hbit-lbit+1))))
 #define MAC_STNSR_OFFSET (BASE_ADDRESS + pdev_data->stns_offset)
 #define MAC_STNSR_RD(data) do {\
@@ -162,6 +164,13 @@ struct nvpps_file_data {
 	(data) = ioread32(MAC_STSR_OFFSET);\
 } while (0)
 
+/*
+ * tegra_chip_data Tegra chip specific data
+ * @support_tsc: Supported TSC sync by chip
+ */
+struct tegra_chip_data {
+	bool support_tsc;
+};
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
 static inline u64 __arch_counter_get_cntvct(void)
@@ -181,12 +190,12 @@ static inline u64 __arch_counter_get_cntvct(void)
  *
  * This API is available irrespective of nvpps dt availablity
  * When nvpps dt node is not present, interface name will
- * default to "eth0".
+ * default to "eth0"
  */
 int nvpps_get_ptp_ts(void *ts)
 {
 	//TODO : should we support this API with memmapped method
-	return tegra_get_hwtime(interface_name, ts, PTP_HWTIME);
+	return tegra_get_hwtime(emac_node, ts, PTP_HWTIME);
 }
 EXPORT_SYMBOL(nvpps_get_ptp_ts);
 
@@ -239,13 +248,13 @@ static void nvpps_get_ts(struct nvpps_device_data *pdev_data, u64 irq_tsc)
 	struct ptp_tsc_data ptp_tsc_ts = {0}, sec_ptp_tsc_ts = {0};
 
 	/* get the PTP timestamp */
-	if (pdev_data->memmap_phc_regs) {
+	if (pdev_data->mac_base_addr) {
 		/* get both the phc(using memmap reg) and tsc */
 		phc = get_systime(pdev_data, &tsc);
 		/*TODO : support fetching ptp offset using memmap method */
 	} else {
 		/* get PTP_TSC concurrent timestamp(using ptp notifier) from MAC driver */
-		if (tegra_get_hwtime(pdev_data->iface_nm, &ptp_tsc_ts, PTP_TSC_HWTIME)) {
+		if (tegra_get_hwtime(pdev_data->pri_emac_node, &ptp_tsc_ts, PTP_TSC_HWTIME)) {
 			pdev_data->pri_ptp_failed = true;
 		} else {
 			pdev_data->pri_ptp_failed = false;
@@ -254,15 +263,15 @@ static void nvpps_get_ts(struct nvpps_device_data *pdev_data, u64 irq_tsc)
 			tsc = ptp_tsc_ts.tsc_ts / pdev_data->tsc_res_ns;
 		}
 
-
-		if ((pdev_data->platform_is_orin) &&
+		if ((pdev_data->support_tsc) &&
 			/* primary & secondary ptp interface are not same */
-			(strncmp(pdev_data->iface_nm, pdev_data->sec_iface_nm, strlen(pdev_data->iface_nm)))) {
+			(pdev_data->pri_emac_node != pdev_data->sec_emac_node)) {
 
 			/* get PTP_TSC concurrent timestamp(using ptp notifier) from MAC
 			 * driver for secondary interface
 			 */
-			if (tegra_get_hwtime(pdev_data->sec_iface_nm, &sec_ptp_tsc_ts, PTP_TSC_HWTIME)) {
+			if (tegra_get_hwtime(pdev_data->sec_emac_node, &sec_ptp_tsc_ts,
+										PTP_TSC_HWTIME)) {
 				pdev_data->sec_ptp_failed = true;
 			} else {
 				pdev_data->sec_ptp_failed = false;
@@ -590,16 +599,16 @@ static long nvpps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			/* check flag to print ptp failure msg */
 			if ((pdev_data->pri_ptp_failed) && (print_pri_ptp_failed)) {
 				dev_warn_ratelimited(pdev_data->dev,
-					"failed to get PTP_TSC concurrent timestamp from interface(%s)\nMake sure ptp is running\n",
-					pdev_data->iface_nm);
+					"failed to get PTP_TSC timestamp from emac instance\n");
+				dev_warn_ratelimited(pdev_data->dev, "Make sure PTP is running\n");
 				print_pri_ptp_failed = false;
 			}
 
 			/* check flag to print ptp failure msg */
 			if ((pdev_data->sec_ptp_failed) && (print_sec_ptp_failed)) {
 				dev_warn_ratelimited(pdev_data->dev,
-					"failed to get PTP_TSC concurrent timestamp from interface(%s)\nMake sure ptp is running\n",
-					pdev_data->iface_nm);
+					"failed to get PTP_TSC timestamp from emac instance\n");
+				dev_warn_ratelimited(pdev_data->dev, "Make sure PTP is running\n");
 				print_sec_ptp_failed = false;
 			}
 
@@ -667,7 +676,7 @@ static long nvpps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 					"ioctl: Unsupported clockid\n");
 			}
 
-			err = tegra_get_hwtime(pdev_data->iface_nm, &ns, PTP_HWTIME);
+			err = tegra_get_hwtime(pdev_data->pri_emac_node, &ns, PTP_HWTIME);
 			mutex_unlock(&pdev_data->ts_lock);
 			if (err) {
 				dev_dbg(pdev_data->dev,
@@ -758,113 +767,62 @@ static void nvpps_dev_release(struct device *dev)
 }
 
 static void nvpps_fill_default_mac_phc_info(struct platform_device *pdev,
-											struct nvpps_device_data *pdev_data)
+						struct nvpps_device_data *pdev_data)
 {
-	bool use_eqos_mac = false;
 	struct device_node *np = pdev->dev.of_node;
+	bool memmap_phc_regs;
 
-	pdev_data->platform_is_orin = false;
-
-	/* Get default params from dt */
-	pdev_data->iface_nm = (char *)of_get_property(np, "interface", NULL);
-	pdev_data->sec_iface_nm = (char *)of_get_property(np, "sec_interface", NULL);
-	pdev_data->memmap_phc_regs = of_property_read_bool(np, "memmap_phc_regs");
-
-	/* For orin */
-	if (of_machine_is_compatible("nvidia,tegra234")) {
-		pdev_data->platform_is_orin = true;
-
-		/* set default seconday interface for ptp timestamp */
-		if (pdev_data->sec_iface_nm == NULL) {
-			pdev_data->sec_iface_nm = devm_kstrdup(&pdev->dev, "eqos_0", GFP_KERNEL);
-		}
-
-		if (pdev_data->memmap_phc_regs) {
-			/* TODO: Add support to map secondary interfaces PHC registers */
-			dev_info(&pdev->dev, "using mem mapped MAC PHC reg method\n");
-			if (pdev_data->iface_nm == NULL) {
-				pdev_data->iface_nm = devm_kstrdup(&pdev->dev, "eqos_0", GFP_KERNEL);
-				dev_warn(&pdev->dev, "interface property not provided. Using default interface(%s)\n", pdev_data->iface_nm);
-				use_eqos_mac = true;
-			} else {
-				if (!strncmp(pdev_data->iface_nm, "eqos_0", sizeof("eqos_0"))) {
-					use_eqos_mac = true;
-				} else if (!strncmp(pdev_data->iface_nm, "mgbe0_0", sizeof("mgbe0_0"))) {
-					/* remap base address for mgbe0_0 */
-					pdev_data->mac_base_addr = devm_ioremap(&pdev->dev, T234_MGBE0_BASE_ADDR, SZ_4K);
-					dev_info(&pdev->dev, "map MGBE0_0 to (%p)\n", pdev_data->mac_base_addr);
-					pdev_data->sts_offset = MGBE_STSR_OFFSET;
-					pdev_data->stns_offset = MGBE_STNSR_OFFSET;
-				} else if (!strncmp(pdev_data->iface_nm, "mgbe1_0", sizeof("mgbe1_0"))) {
-					/* remap base address for mgbe1_0 */
-					pdev_data->mac_base_addr = devm_ioremap(&pdev->dev, T234_MGBE1_BASE_ADDR, SZ_4K);
-					dev_info(&pdev->dev, "map MGBE1_0 to (%p)\n", pdev_data->mac_base_addr);
-					pdev_data->sts_offset = MGBE_STSR_OFFSET;
-					pdev_data->stns_offset = MGBE_STNSR_OFFSET;
-				} else if (!strncmp(pdev_data->iface_nm, "mgbe2_0", sizeof("mgbe2_0"))) {
-					/* remap base address for mgbe2_0 */
-					pdev_data->mac_base_addr = devm_ioremap(&pdev->dev, T234_MGBE2_BASE_ADDR, SZ_4K);
-					dev_info(&pdev->dev, "map MGBE2_0 to (%p)\n", pdev_data->mac_base_addr);
-					pdev_data->sts_offset = MGBE_STSR_OFFSET;
-					pdev_data->stns_offset = MGBE_STNSR_OFFSET;
-				} else if (!strncmp(pdev_data->iface_nm, "mgbe3_0", sizeof("mgbe3_0"))) {
-					/* remap base address for mgbe3_0 */
-					pdev_data->mac_base_addr = devm_ioremap(&pdev->dev, T234_MGBE3_BASE_ADDR, SZ_4K);
-					dev_info(&pdev->dev, "map MGBE3_0 to (%p)\n", pdev_data->mac_base_addr);
-					pdev_data->sts_offset = MGBE_STSR_OFFSET;
-					pdev_data->stns_offset = MGBE_STNSR_OFFSET;
-				} else {
-					dev_warn(&pdev->dev, "Invalid interface(%s). Using default interface(eqos_0)\n", pdev_data->iface_nm);
-					pdev_data->iface_nm = devm_kstrdup(&pdev->dev, "eqos_0", GFP_KERNEL);
-					use_eqos_mac = true;
-				}
-			}
-
-			if (use_eqos_mac) {
-				/* remap base address for eqos */
-				pdev_data->mac_base_addr = devm_ioremap(&pdev->dev, T234_EQOS_BASE_ADDR, SZ_4K);
-				dev_info(&pdev->dev, "map EQOS to (%p)\n", pdev_data->mac_base_addr);
-				pdev_data->sts_offset = EQOS_STSR_OFFSET;
-				pdev_data->stns_offset = EQOS_STNSR_OFFSET;
-			}
-		} else {
-			/* Using ptp-notifier method */
-			if (pdev_data->iface_nm) {
-				if ((!strncmp(pdev_data->iface_nm, "eqos_0", sizeof("eqos_0"))) ||
-					(!strncmp(pdev_data->iface_nm, "mgbe0_0", sizeof("mgbe0_0"))) ||
-					(!strncmp(pdev_data->iface_nm, "mgbe1_0", sizeof("mgbe1_0"))) ||
-					(!strncmp(pdev_data->iface_nm, "mgbe2_0", sizeof("mgbe2_0"))) ||
-					(!strncmp(pdev_data->iface_nm, "mgbe3_0", sizeof("mgbe3_0")))) {
-					dev_info(&pdev->dev, "using ptp notifier method with interface(%s)\n", pdev_data->iface_nm);
-				} else {
-					dev_warn(&pdev->dev, "Invalid interface(%s). Using default interface(eqos_0)\n", pdev_data->iface_nm);
-					pdev_data->iface_nm = devm_kstrdup(&pdev->dev, "eqos_0", GFP_KERNEL);
-				}
-			} else {
-				pdev_data->iface_nm = devm_kstrdup(&pdev->dev, "eqos_0", GFP_KERNEL);
-				dev_info(&pdev->dev, "using ptp notifier method with interface(%s)\n", pdev_data->iface_nm);
-			}
-		}
+	/* identify the tsc_ptp_src  and sts_offset */
+	if (pdev_data->pri_emac_base_addr == T234_MGBE0_BASE_ADDR) {
+		pdev_data->sts_offset = MGBE_STSR_OFFSET;
+		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
+		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE0;
+	} else if (pdev_data->pri_emac_base_addr == T234_MGBE1_BASE_ADDR) {
+		pdev_data->sts_offset = MGBE_STSR_OFFSET;
+		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
+		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE1;
+	} else if (pdev_data->pri_emac_base_addr == T234_MGBE2_BASE_ADDR) {
+		pdev_data->sts_offset = MGBE_STSR_OFFSET;
+		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
+		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE2;
+	} else if (pdev_data->pri_emac_base_addr == T234_MGBE3_BASE_ADDR) {
+		pdev_data->sts_offset = MGBE_STSR_OFFSET;
+		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
+		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE3;
+	} else if (pdev_data->pri_emac_base_addr == T234_EQOS_BASE_ADDR) {
+		pdev_data->sts_offset = EQOS_STSR_OFFSET;
+		pdev_data->stns_offset = EQOS_STNSR_OFFSET;
+		pdev_data->tsc_ptp_src = TSC_PTP_SRC_EQOS;
+	} else if (pdev_data->pri_emac_base_addr == T194_EQOS_BASE_ADDR) {
+		pdev_data->sts_offset = EQOS_STSR_OFFSET;
+		pdev_data->stns_offset = EQOS_STNSR_OFFSET;
+		pdev_data->tsc_ptp_src = TSC_PTP_SRC_EQOS;
 	} else {
-		if (pdev_data->memmap_phc_regs) {
-			if (!(pdev_data->iface_nm && (strncmp(pdev_data->iface_nm, "eqos_0", sizeof("eqos_0")) == 0))) {
-				dev_warn(&pdev->dev, "Invalid interface(%s). Using default interface(eqos_0)\n", pdev_data->iface_nm);
-				pdev_data->iface_nm = devm_kstrdup(&pdev->dev, "eqos_0", GFP_KERNEL);
-			}
-
-			dev_info(&pdev->dev, "using mem mapped MAC PHC reg method with %s MAC\n", pdev_data->iface_nm);
-			/* remap base address for eqos */
-			pdev_data->mac_base_addr = devm_ioremap(&pdev->dev, T194_EQOS_BASE_ADDR, SZ_4K);
-			dev_info(&pdev->dev, "map EQOS to (%p)\n", pdev_data->mac_base_addr);
-			pdev_data->sts_offset = EQOS_STSR_OFFSET;
-			pdev_data->stns_offset = EQOS_STNSR_OFFSET;
-		} else {
-			pdev_data->iface_nm = devm_kstrdup(&pdev->dev, "eqos_0", GFP_KERNEL);
-			dev_info(&pdev->dev, "using ptp notifier method with default interface(%s)\n", pdev_data->iface_nm);
-		}
+		pdev_data->tsc_ptp_src = TSC_PTP_SRC_INVALID;
+		dev_err(&pdev->dev, "Invalid EMAC base address\n");
+		return;
 	}
 
-	interface_name = devm_kstrdup(&pdev->dev, pdev_data->iface_nm, GFP_KERNEL);
+	/* Get default params from dt */
+	memmap_phc_regs = of_property_read_bool(np, "memmap_phc_regs");
+
+	if (memmap_phc_regs) {
+		/* TODO: Add support to map secondary interfaces PHC registers */
+		pdev_data->mac_base_addr = devm_ioremap(&pdev->dev, pdev_data->pri_emac_base_addr,
+											SZ_4K);
+		if (pdev_data->mac_base_addr == NULL) {
+			dev_err(&pdev->dev, "failed to ioremap emac base address 0x%llx\n",
+								pdev_data->pri_emac_base_addr);
+			return;
+		}
+		dev_info(&pdev->dev, "using mem mapped MAC PHC reg method with emac %s\n",
+				pdev_data->pri_emac_node->full_name);
+	} else {
+		if (pdev_data->pri_emac_node != NULL)
+			dev_info(&pdev->dev, "using ptp notifier method on emac %s\n",
+					pdev_data->pri_emac_node->full_name);
+	}
+
 }
 
 static int nvpps_gpio_hte_setup(struct nvpps_device_data *pdev_data)
@@ -875,7 +833,7 @@ static int nvpps_gpio_hte_setup(struct nvpps_device_data *pdev_data)
 	pdev_data->use_gpio_int_timestamp = false;
 	pdev_data->gpio_in = devm_gpiod_get_optional(&pdev->dev, "nvpps", 0);
 	if (!pdev_data->gpio_in) {
-		dev_warn(&pdev->dev, "PPS GPIO not provided in DT, only Timer mode available\n");
+		dev_info(&pdev->dev, "PPS GPIO not provided in DT, only Timer mode available\n");
 		pdev_data->only_timer_mode = true;
 		return 0;
 	}
@@ -963,26 +921,15 @@ static void nvpps_ptp_tsc_sync_config(struct platform_device *pdev)
 	writel(0x313, pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 	writel(0x1, pdev_data->tsc_reg_map_base + TSC_STSCRSR_OFFSET);
 
-	//Select PTP src for TSC to lock on based on nw interface
-	if (!strncmp(pdev_data->iface_nm, "mgbe0_0", sizeof("mgbe0_0"))) {
-		pdev_data->tsc_ptp_src = (TSC_PTP_SRC_MGBE0 << SRC_SELECT_BIT_OFFSET);
-	} else if (!strncmp(pdev_data->iface_nm, "mgbe1_0", sizeof("mgbe1_0"))) {
-		pdev_data->tsc_ptp_src = (TSC_PTP_SRC_MGBE1 << SRC_SELECT_BIT_OFFSET);
-	} else if (!strncmp(pdev_data->iface_nm, "mgbe2_0", sizeof("mgbe2_0"))) {
-		pdev_data->tsc_ptp_src = (TSC_PTP_SRC_MGBE2 << SRC_SELECT_BIT_OFFSET);
-	} else if (!strncmp(pdev_data->iface_nm, "mgbe3_0", sizeof("mgbe3_0"))) {
-		pdev_data->tsc_ptp_src = (TSC_PTP_SRC_MGBE3 << SRC_SELECT_BIT_OFFSET);
-	} else {
-		pdev_data->tsc_ptp_src = (TSC_PTP_SRC_EQOS << SRC_SELECT_BIT_OFFSET);
-	}
-
 	tsc_config_ptx_0 = readl(pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 	/* clear and set the ptp src based on ethernet interface passed
 	 * from dt for tsc to lock onto.
 	 */
 	tsc_config_ptx_0 = tsc_config_ptx_0 &
 		~(SRC_SELECT_BITS << SRC_SELECT_BIT_OFFSET);
-	tsc_config_ptx_0 = tsc_config_ptx_0 | pdev_data->tsc_ptp_src;
+	if (pdev_data->tsc_ptp_src != TSC_PTP_SRC_INVALID)
+		tsc_config_ptx_0 = tsc_config_ptx_0 |
+						(pdev_data->tsc_ptp_src << SRC_SELECT_BIT_OFFSET);
 	writel(tsc_config_ptx_0, pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 	tsc_config_ptx_0 = readl(pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 	dev_info(&pdev->dev, "TSC config ptx 0x%x\n", tsc_config_ptx_0);
@@ -998,6 +945,9 @@ static int nvpps_probe(struct platform_device *pdev)
 	struct device_node		*np = pdev->dev.of_node;
 	dev_t				devt;
 	int				err;
+	const struct tegra_chip_data    *cdata = NULL;
+	struct resource			res;
+	int				index;
 
 	dev_info(&pdev->dev, "%s\n", __FUNCTION__);
 
@@ -1010,6 +960,37 @@ static int nvpps_probe(struct platform_device *pdev)
 	if (!pdev_data) {
 		return -ENOMEM;
 	}
+
+	emac_node = NULL;
+
+	pdev_data->pri_emac_node = of_parse_phandle(np, "primary-emac", 0);
+	if (pdev_data->pri_emac_node == NULL) {
+		dev_info(&pdev->dev, "primary-emac node not found\n");
+	} else {
+		dev_info(&pdev->dev, "primary-emac found %s", pdev_data->pri_emac_node->full_name);
+		index = of_property_match_string(pdev_data->pri_emac_node, "reg-names", "mac");
+		if (index >= 0) {
+			if (of_address_to_resource(pdev_data->pri_emac_node, index, &res)) {
+				dev_err(&pdev->dev, "failed to parse primary emac reg property\n");
+			} else {
+				pdev_data->pri_emac_base_addr = res.start;
+				dev_info(&pdev->dev, "primary emac base address 0x%llx\n",
+						pdev_data->pri_emac_base_addr);
+			}
+		} else {
+			dev_info(&pdev->dev, "failed to find ethernet mac registers\n");
+		}
+	}
+
+	emac_node = pdev_data->pri_emac_node;
+	pdev_data->sec_emac_node = of_parse_phandle(np, "sec-emac", 0);
+	if (pdev_data->sec_emac_node == NULL) {
+		dev_info(&pdev->dev, "sec-emac node not found\n");
+		pdev_data->sec_emac_node = pdev_data->pri_emac_node;
+	}
+
+	cdata = of_device_get_match_data(&pdev->dev);
+	pdev_data->support_tsc = cdata->support_tsc;
 
 	nvpps_fill_default_mac_phc_info(pdev, pdev_data);
 
@@ -1100,7 +1081,7 @@ static int nvpps_probe(struct platform_device *pdev)
 	}
 	pdev_data->evt_mode = (pdev_data->only_timer_mode) ? NVPPS_MODE_TIMER : NVPPS_MODE_GPIO;
 
-	if (pdev_data->platform_is_orin) {
+	if (pdev_data->support_tsc) {
 		struct resource *tsc_mem;
 
 		tsc_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1130,6 +1111,8 @@ static int nvpps_probe(struct platform_device *pdev)
 	return 0;
 
 error_ret:
+	of_node_put(pdev_data->pri_emac_node);
+	of_node_put(pdev_data->sec_emac_node);
 	cdev_del(&pdev_data->cdev);
 	mutex_lock(&s_nvpps_lock);
 	idr_remove(&s_nvpps_idr, pdev_data->id);
@@ -1149,17 +1132,20 @@ static int nvpps_remove(struct platform_device *pdev)
 			pdev_data->timer_inited = false;
 			del_timer_sync(&pdev_data->timer);
 		}
-		if (pdev_data->memmap_phc_regs) {
+		if (pdev_data->mac_base_addr) {
 			devm_iounmap(&pdev->dev, pdev_data->mac_base_addr);
 			dev_info(&pdev->dev, "unmap MAC reg space %p for nvpps\n",
 				pdev_data->mac_base_addr);
 		}
-		if (pdev_data->platform_is_orin) {
+		if (pdev_data->support_tsc) {
 			del_timer_sync(&pdev_data->tsc_timer);
 			iounmap(pdev_data->tsc_reg_map_base);
 		}
 		device_destroy(s_nvpps_class, pdev_data->dev->devt);
 	}
+
+	of_node_put(pdev_data->pri_emac_node);
+	of_node_put(pdev_data->sec_emac_node);
 
 #ifndef NVPPS_NO_DT
 	class_unregister(s_nvpps_class);
@@ -1188,8 +1174,15 @@ static int nvpps_resume(struct platform_device *pdev)
 
 
 #ifndef NVPPS_NO_DT
+static const struct tegra_chip_data tegra234_chip_data = {
+	.support_tsc = true,
+};
+static const struct tegra_chip_data tegra194_chip_data = {
+	.support_tsc = false,
+};
 static const struct of_device_id nvpps_of_table[] = {
-	{ .compatible = "nvidia,tegra194-nvpps", },
+	{ .compatible = "nvidia,tegra194-nvpps", .data = &tegra194_chip_data },
+	{ .compatible = "nvidia,tegra234-nvpps", .data = &tegra234_chip_data },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, nvpps_of_table);
@@ -1269,4 +1262,4 @@ module_platform_driver(nvpps_plat_driver);
 
 MODULE_DESCRIPTION("NVidia Tegra PPS Driver");
 MODULE_AUTHOR("David Tao tehyut@nvidia.com");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");

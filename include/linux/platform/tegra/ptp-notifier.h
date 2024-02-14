@@ -1,7 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #ifndef __PTP_NOTIFIER_H
 #define __PTP_NOTIFIER_H
@@ -45,6 +43,7 @@ int tegra_hwtime_notifier_call_chain(unsigned int val, void *v);
  * Clients may call the API every anytime PTP/TSC time is needed.
  * If HW time source is not registered, returns -EINVAL
  */
-int tegra_get_hwtime(const char *intf_name, void *ts, int ts_type);
+int tegra_get_hwtime(const struct device_node *emac_node, void *ts, int ts_type);
+
 
 #endif /* __PTP_NOTIFIER_H */
