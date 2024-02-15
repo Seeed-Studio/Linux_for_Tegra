@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * User-space interface to nvmap
  */
@@ -31,21 +31,9 @@
 #include <linux/of.h>
 #include <linux/iommu.h>
 #include <linux/version.h>
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
-#include <soc/tegra/chip-id.h>
-#else
 #include <soc/tegra/fuse.h>
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 #include <linux/sched/clock.h>
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/sched/mm.h>
-#endif
-
 #include <linux/backing-dev.h>
 #include <asm/cputype.h>
 
@@ -55,10 +43,7 @@
 #include "nvmap_priv.h"
 #include "nvmap_heap.h"
 #include "nvmap_ioctl.h"
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 #include <linux/pagewalk.h>
-#endif
 
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
 
@@ -621,11 +606,7 @@ bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid)
 	}
 
 	if (heap & iovmm_mask) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 		total_num_pages = totalram_pages();
-#else
-		total_num_pages = totalram_pages;
-#endif
 		if ((size >> PAGE_SHIFT) > total_num_pages) {
 			pr_debug("Requested size is more than available memory\n");
 			pr_debug("Requested size : %lu B, Available memory : %lu B\n", size,
@@ -1220,58 +1201,6 @@ static int procrank_pte_entry(pte_t *pte, unsigned long addr, unsigned long end,
 #define PTRACE_MODE_READ_FSCREDS PTRACE_MODE_READ
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
-				   u64 *total)
-{
-	struct rb_node *n;
-	struct nvmap_vma_list *tmp;
-	struct procrank_stats mss;
-	struct mm_walk procrank_walk = {
-		.pte_entry = procrank_pte_entry,
-		.private = &mss,
-	};
-	struct mm_struct *mm;
-
-	memset(&mss, 0, sizeof(mss));
-	*pss = *total = 0;
-
-	mm = mm_access(client->task,
-			PTRACE_MODE_READ_FSCREDS);
-	if (!mm || IS_ERR(mm)) return;
-
-	nvmap_acquire_mmap_read_lock(mm);
-	procrank_walk.mm = mm;
-
-	nvmap_ref_lock(client);
-	n = rb_first(&client->handle_refs);
-	for (; n != NULL; n = rb_next(n)) {
-		struct nvmap_handle_ref *ref =
-			rb_entry(n, struct nvmap_handle_ref, node);
-		struct nvmap_handle *h = ref->handle;
-
-		if (!h || !h->alloc || !h->heap_pgalloc)
-			continue;
-
-		mutex_lock(&h->lock);
-		list_for_each_entry(tmp, &h->vmas, list) {
-			if (client->task->pid == tmp->pid) {
-				mss.vma = tmp->vma;
-				walk_page_range(tmp->vma->vm_start,
-						tmp->vma->vm_end,
-						&procrank_walk);
-			}
-		}
-		mutex_unlock(&h->lock);
-		*total += h->size / atomic_read(&h->share_count);
-	}
-
-	nvmap_release_mmap_read_lock(mm);
-	mmput(mm);
-	*pss = (mss.pss >> PSS_SHIFT);
-	nvmap_ref_unlock(client);
-}
-#else
 static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 				   u64 *total)
 {
@@ -1327,7 +1256,7 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 	*pss = (mss.pss >> PSS_SHIFT);
 	nvmap_ref_unlock(client);
 }
-#endif
+
 
 static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 {
@@ -1354,16 +1283,6 @@ static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 
 DEBUGFS_OPEN_FOPS(iovmm_procrank);
 #endif /* NVMAP_CONFIG_PROCRANK */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
-ulong nvmap_iovmm_get_used_pages(void)
-{
-	u64 total;
-
-	nvmap_get_total_mss(NULL, &total, NVMAP_HEAP_IOVMM, NUMA_NO_NODE);
-	return total >> PAGE_SHIFT;
-}
-#endif
 
 static void nvmap_iovmm_debugfs_init(void)
 {
