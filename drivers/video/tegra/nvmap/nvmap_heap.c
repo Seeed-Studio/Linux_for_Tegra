@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2023, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2024, NVIDIA Corporation. All rights reserved.
  *
  * GPU heap allocator.
  */
@@ -21,25 +21,13 @@
 #include <linux/io.h>
 #include <linux/version.h>
 #include <linux/limits.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/sched/clock.h>
-#endif
-
 #include <linux/nvmap.h>
 #include <linux/dma-mapping.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #include <linux/dma-map-ops.h>
-#else
-#include <linux/dma-contiguous.h>
-#endif
-
 #include "nvmap_priv.h"
 #include "nvmap_heap.h"
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #include "include/linux/nvmap_exports.h"
-#endif
 
 /*
  * "carveouts" are platform-defined regions of physically contiguous memory
@@ -109,15 +97,9 @@ void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
 static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 				   phys_addr_t *start, struct nvmap_handle *handle)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-	phys_addr_t pa = DMA_ERROR_CODE;
-#else
 	phys_addr_t pa = DMA_MAPPING_ERROR;
-#endif
 	struct device *dev = h->dma_dev;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	void *err = NULL;
-#endif
 
 	if (len > UINT_MAX) {
 		dev_err(dev, "%s: %d alloc size is out of range\n",
@@ -129,12 +111,7 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 	if (start && h->is_ivm) {
 		void *ret;
 		pa = h->base + (*start);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-		ret = dma_mark_declared_memory_occupied(dev, pa, len,
-					DMA_ATTR_ALLOC_EXACT_SIZE);
-#else
 		ret = nvmap_dma_mark_declared_memory_occupied(dev, pa, len);
-#endif
 		if (IS_ERR(ret)) {
 			dev_err(dev, "Failed to reserve (%pa) len(%zu)\n",
 					&pa, len);
@@ -143,10 +120,6 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 	} else
 #endif
 	{
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-		(void)dma_alloc_attrs(dev, len, &pa,
-				GFP_KERNEL, DMA_ATTR_ALLOC_EXACT_SIZE);
-#else
 		err = nvmap_dma_alloc_attrs(dev, len, &pa,
 				GFP_KERNEL, DMA_ATTR_ALLOC_EXACT_SIZE);
 		/*
@@ -167,7 +140,6 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 				handle->pgalloc.pages = (struct page **)err;
 			}
 		}
-#endif
 		if (!dma_mapping_error(dev, pa)) {
 #ifdef NVMAP_CONFIG_VPR_RESIZE
 			int ret;
@@ -208,20 +180,10 @@ static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (h->is_ivm && !h->can_alloc) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-		dma_mark_declared_memory_unoccupied(dev, base, len,
-						    DMA_ATTR_ALLOC_EXACT_SIZE);
-#else
 		nvmap_dma_mark_declared_memory_unoccupied(dev, base, len);
-#endif
 	} else
 #endif
 	{
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-		dma_free_attrs(dev, len,
-			        (void *)(uintptr_t)base,
-			        (dma_addr_t)base, DMA_ATTR_ALLOC_EXACT_SIZE);
-#else
 		if (h->is_gpu_co && handle->pgalloc.pages) {
 			/* In case of pages, we need to pass pointer to array of pages */
 			nvmap_dma_free_attrs(dev, len,
@@ -234,7 +196,6 @@ static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 				     (dma_addr_t)base,
 				     DMA_ATTR_ALLOC_EXACT_SIZE);
 		}
-#endif
 	}
 }
 
@@ -477,18 +438,9 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 		int err;
 
 		/* declare Non-CMA heap */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
-		err = dma_declare_coherent_memory(h->dma_dev, 0, base, len,
-				DMA_MEMORY_NOMAP);
-#else
 		err = nvmap_dma_declare_coherent_memory(h->dma_dev, 0, base, len,
 				DMA_MEMORY_NOMAP, co->is_gpu_co, co->granule_size);
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 		if (!err) {
-#else
-		if (err & DMA_MEMORY_NOMAP) {
-#endif
 			pr_info("%s :dma coherent mem declare %pa,%zu\n",
 				co->name, &base, len);
 		} else {
