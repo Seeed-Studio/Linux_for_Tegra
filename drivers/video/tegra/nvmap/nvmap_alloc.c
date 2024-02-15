@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Handle allocation and freeing routines for nvmap
  */
@@ -11,17 +11,11 @@
 #include <linux/random.h>
 #include <linux/version.h>
 #include <linux/io.h>
-#if KERNEL_VERSION(4, 15, 0) > LINUX_VERSION_CODE
-#include <soc/tegra/chip-id.h>
-#else
 #include <soc/tegra/fuse.h>
-#endif
 #include <trace/events/nvmap.h>
 
 #ifndef NVMAP_LOADABLE_MODULE
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 #include <linux/dma-map-ops.h>
-#endif
 #endif /* !NVMAP_LOADABLE_MODULE */
 
 #ifdef NVMAP_UPSTREAM_KERNEL
@@ -489,19 +483,11 @@ static int handle_page_alloc(struct nvmap_client *client,
 	int pages_per_big_pg = 0;
 #endif
 #endif /* CONFIG_ARM64_4K_PAGES */
-#if KERNEL_VERSION(4, 15, 0) > LINUX_VERSION_CODE
-	static u32 chipid;
-#else
 	static u8 chipid;
-#endif
 
 	if (!chipid) {
 #ifdef NVMAP_CONFIG_COLOR_PAGES
-#if KERNEL_VERSION(4, 15, 0) > LINUX_VERSION_CODE
-		chipid = tegra_hidrev_get_chipid(tegra_read_chipid());
-#else
 		chipid = tegra_get_chip_id();
-#endif
 		if (chipid == TEGRA194)
 			s_nr_colors = 16;
 #endif
@@ -559,14 +545,12 @@ static int handle_page_alloc(struct nvmap_client *client,
 				      nr_page - page_index, true, h->numa_id);
 #endif
 			allocated = page_index;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 13, 0)
 			if (page_index < nr_page) {
 				int nid = h->numa_id == NUMA_NO_NODE ? numa_mem_id() : h->numa_id;
 
 				allocated = __alloc_pages_bulk(gfp, nid, NULL,
 						nr_page, NULL, pages);
 			}
-#endif
 			for (i = allocated; i < nr_page; i++) {
 				pages[i] = nvmap_alloc_pages_exact(gfp, PAGE_SIZE,
 								   true, h->numa_id);
@@ -632,11 +616,7 @@ static int nvmap_heap_pgalloc(struct nvmap_client *client,
 	size_t size = h->size;
 	struct page **pages;
 	struct device *dma_dev;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-	dma_addr_t pa = DMA_ERROR_CODE;
-#else
 	dma_addr_t pa = DMA_MAPPING_ERROR;
-#endif
 
 	dma_dev = nvmap_heap_pgalloc_dev(type);
 	if (IS_ERR(dma_dev))
@@ -1017,11 +997,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	list_for_each_entry_safe(curr, next, &h->dmabuf_priv, list) {
 		curr->priv_release(curr->priv);
 		list_del(&curr->list);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-		kzfree(curr);
-#else
 		kfree_sensitive(curr);
-#endif
 	}
 
 	if (nvmap_handle_remove(nvmap_dev, h) != 0)

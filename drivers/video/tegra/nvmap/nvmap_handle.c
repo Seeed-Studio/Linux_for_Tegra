@@ -20,12 +20,7 @@
 #include <linux/nvmap.h>
 #include <linux/version.h>
 #include <linux/wait.h>
-#if KERNEL_VERSION(4, 15, 0) > LINUX_VERSION_CODE
-#include <soc/tegra/chip-id.h>
-#else
 #include <soc/tegra/fuse.h>
-#endif
-
 #include <asm/pgtable.h>
 
 #include <trace/events/nvmap.h>

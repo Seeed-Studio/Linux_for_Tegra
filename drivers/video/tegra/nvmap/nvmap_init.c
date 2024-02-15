@@ -17,21 +17,10 @@
 #include <linux/nvmap_t19x.h>
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/sched/clock.h>
-#endif
-
 #include <linux/cma.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #include <linux/dma-map-ops.h>
-#else
-#include <linux/dma-contiguous.h>
-#include <asm/dma-contiguous.h>
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #include "include/linux/nvmap_exports.h"
-#endif
 
 #include "nvmap_priv.h"
 
@@ -40,13 +29,11 @@
 #include <soc/tegra/virt/syscalls.h>
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #ifdef CONFIG_ARM_DMA_IOMMU_ALIGNMENT
 #define DMA_BUF_ALIGNMENT CONFIG_ARM_DMA_IOMMU_ALIGNMENT
 #else
 #define DMA_BUF_ALIGNMENT 8
 #endif
-#endif /* LINUX_VERSION_CODE */
 
 #ifndef NVMAP_UPSTREAM_KERNEL
 #ifndef NVMAP_CONFIG_VPR_RESIZE
@@ -362,7 +349,6 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 static inline struct page **nvmap_kvzalloc_pages(u32 count)
 {
 	if (count * sizeof(struct page *) <= PAGE_SIZE)
@@ -774,7 +760,6 @@ int nvmap_dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
 		nvmap_dma_release_coherent_memory(mem);
 	return ret;
 }
-#endif /* LINUX_VERSION_CODE */
 
 static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 					struct device *dev)
@@ -790,21 +775,11 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 		return 0;
 
 	if (!co->cma_dev) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
-		err = dma_declare_coherent_memory(co->dma_dev, 0,
-				co->base, co->size,
-				DMA_MEMORY_NOMAP);
-#else
 		err = nvmap_dma_declare_coherent_memory(co->dma_dev, 0,
 				co->base, co->size,
 				DMA_MEMORY_NOMAP, co->is_gpu_co,
 				co->granule_size);
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 		if (!err) {
-#else
-		if (err & DMA_MEMORY_NOMAP) {
-#endif
 			pr_info("%s :dma coherent mem declare %pa,%zu\n",
 				 co->name, &co->base, co->size);
 			co->init_done = true;
@@ -814,17 +789,6 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 				co->name, &co->base, co->size, err);
 	} else {
 #ifdef NVMAP_CONFIG_VPR_RESIZE
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-		/*
-		 * When vpr memory is reserved, kmemleak tries to scan vpr
-		 * memory for pointers. vpr memory should not be accessed
-		 * from cpu so avoid scanning it. When vpr memory is removed,
-		 * the memblock_remove() API ensures that kmemleak won't scan
-		 * a removed block.
-		 */
-		if (!strncmp(co->name, "vpr", 3))
-			kmemleak_no_scan(__va(co->base));
-#endif
 
 		co->dma_info->cma_dev = co->cma_dev;
 		err = dma_declare_coherent_resizable_cma_memory(
@@ -879,25 +843,16 @@ int __init nvmap_co_setup(struct reserved_mem *rmem)
 		pr_info("cma area initialed in legacy way already\n");
 		goto finish;
 	}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 	ret = cma_init_reserved_mem(rmem->base, rmem->size, 0,
 					rmem->name, &cma);
-#else
-	ret = cma_init_reserved_mem(rmem->base, rmem->size, 0, &cma);
-#endif
 	if (ret) {
 		pr_info("cma_init_reserved_mem fails for %s\n", rmem->name);
 		goto finish;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	dma_contiguous_early_fixup_vpr(rmem->base, rmem->size);
 	if (co->cma_dev)
 		co->cma_dev->cma_area = cma;
-#else
-	dma_contiguous_early_fixup(rmem->base, rmem->size);
-	dev_set_cma_area(co->cma_dev, cma);
-#endif
 	pr_debug("tegra-carveouts carveout=%s %pa@%pa\n",
 		 rmem->name, &rmem->size, &rmem->base);
 	goto finish;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2009-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Memory manager for Tegra GPU
  */
@@ -33,98 +33,6 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
 		BUG();
 	return h->carveout->base;
 }
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
-{
-	phys_addr_t paddr;
-	unsigned long kaddr;
-	void __iomem *addr;
-	pgprot_t prot;
-
-	if (!virt_addr_valid(h))
-		return NULL;
-
-	h = nvmap_handle_get(h);
-	if (!h)
-		return NULL;
-	/*
-	 * If the handle is RO and virtual mapping is requested in
-	 * kernel address space, return error.
-	 */
-	if (h->from_va && h->is_ro)
-		goto put_handle;
-
-	if (!h->alloc)
-		goto put_handle;
-
-	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
-		goto put_handle;
-
-	nvmap_kmaps_inc(h);
-	if (pagenum >= h->size >> PAGE_SHIFT)
-		goto out;
-
-	if (h->vaddr) {
-		kaddr = (unsigned long)h->vaddr + pagenum * PAGE_SIZE;
-	} else {
-		prot = nvmap_pgprot(h, PG_PROT_KERNEL);
-		if (h->heap_pgalloc)
-			paddr = page_to_phys(nvmap_to_page(
-						h->pgalloc.pages[pagenum]));
-		else
-			paddr = h->carveout->base + pagenum * PAGE_SIZE;
-
-		addr = __ioremap(paddr, PAGE_SIZE, prot);
-		if (addr == NULL)
-			goto out;
-		kaddr = (unsigned long)addr;
-	}
-	return (void *)kaddr;
-out:
-	nvmap_kmaps_dec(h);
-put_handle:
-	nvmap_handle_put(h);
-	return NULL;
-}
-
-void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
-		  void *addr)
-{
-	phys_addr_t paddr;
-
-	if (!h || !h->alloc ||
-	    WARN_ON(!virt_addr_valid(h)) ||
-	    WARN_ON(!addr) ||
-	    !(h->heap_type & nvmap_dev->cpu_access_mask))
-		return;
-
-	if (WARN_ON(pagenum >= h->size >> PAGE_SHIFT))
-		return;
-
-	if (h->vaddr && (h->vaddr == (addr - pagenum * PAGE_SIZE)))
-		goto out;
-
-	if (h->heap_pgalloc)
-		paddr = page_to_phys(nvmap_to_page(h->pgalloc.pages[pagenum]));
-	else
-		paddr = h->carveout->base + pagenum * PAGE_SIZE;
-
-	if (h->flags != NVMAP_HANDLE_UNCACHEABLE &&
-	    h->flags != NVMAP_HANDLE_WRITE_COMBINE) {
-#ifdef NVMAP_UPSTREAM_KERNEL
-		arch_invalidate_pmem(addr, PAGE_SIZE);
-#else
-		__dma_flush_area(addr, PAGE_SIZE);
-#endif
-		outer_flush_range(paddr, paddr + PAGE_SIZE); /* FIXME */
-	}
-	iounmap((void __iomem *)addr);
-out:
-	nvmap_kmaps_dec(h);
-	nvmap_handle_put(h);
-}
-#endif
 
 void *__nvmap_mmap(struct nvmap_handle *h)
 {
