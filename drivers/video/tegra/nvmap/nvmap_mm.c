@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2013-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Some MM related functionality specific to nvmap.
  */
@@ -51,18 +51,10 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u64 offset, u64 size)
 			 * FIXME: optimze zapping.
 			 */
 			zap_page_range(vma, vma->vm_start,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 				vma->vm_end - vma->vm_start);
-#else
-				vma->vm_end - vma->vm_start, NULL);
-#endif
 		else
 			zap_page_range(vma, vma->vm_start + offset,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 				vm_size);
-#else
-				vm_size, NULL);
-#endif
 	}
 	mutex_unlock(&handle->lock);
 }

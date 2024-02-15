@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2024, NVIDIA CORPORATION.  All rights reserved.
  *
  * dma_buf exporter for nvmap
  */
@@ -33,11 +33,7 @@
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 #define NVMAP_DMABUF_ATTACH  nvmap_dmabuf_attach
-#else
-#define NVMAP_DMABUF_ATTACH  __nvmap_dmabuf_attach
-#endif
 
 struct nvmap_handle_sgt {
 	enum dma_data_direction dir;
@@ -79,13 +75,11 @@ static int __nvmap_dmabuf_attach(struct dma_buf *dmabuf, struct device *dev,
 	return 0;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 static int nvmap_dmabuf_attach(struct dma_buf *dmabuf,
 			       struct dma_buf_attachment *attach)
 {
 	return __nvmap_dmabuf_attach(dmabuf, attach->dev, attach);
 }
-#endif
 
 static void nvmap_dmabuf_detach(struct dma_buf *dmabuf,
 				struct dma_buf_attachment *attach)
@@ -338,7 +332,6 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	kfree(info);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 static int __nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
 				       enum dma_data_direction dir)
 {
@@ -361,58 +354,6 @@ static int __nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
 }
 #define NVMAP_DMABUF_BEGIN_CPU_ACCESS           __nvmap_dmabuf_begin_cpu_access
 #define NVMAP_DMABUF_END_CPU_ACCESS 		__nvmap_dmabuf_end_cpu_access
-#else
-static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
-					  size_t start, size_t len,
-					  enum dma_data_direction dir)
-{
-	struct nvmap_handle_info *info = dmabuf->priv;
-
-	trace_nvmap_dmabuf_begin_cpu_access(dmabuf, start, len);
-	return __nvmap_do_cache_maint(NULL, info->handle, start, start + len,
-				      NVMAP_CACHE_OP_WB_INV, false);
-}
-
-static void nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
-				       size_t start, size_t len,
-				       enum dma_data_direction dir)
-{
-	struct nvmap_handle_info *info = dmabuf->priv;
-
-	trace_nvmap_dmabuf_end_cpu_access(dmabuf, start, len);
-	__nvmap_do_cache_maint(NULL, info->handle,
-				   start, start + len,
-				   NVMAP_CACHE_OP_WB, false);
-}
-#define NVMAP_DMABUF_BEGIN_CPU_ACCESS           nvmap_dmabuf_begin_cpu_access
-#define NVMAP_DMABUF_END_CPU_ACCESS 		nvmap_dmabuf_end_cpu_access
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-static void *nvmap_dmabuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
-{
-	struct nvmap_handle_info *info = dmabuf->priv;
-
-	trace_nvmap_dmabuf_kmap(dmabuf);
-	return __nvmap_kmap(info->handle, page_num);
-}
-
-static void nvmap_dmabuf_kunmap(struct dma_buf *dmabuf,
-		unsigned long page_num, void *addr)
-{
-	struct nvmap_handle_info *info = dmabuf->priv;
-
-	trace_nvmap_dmabuf_kunmap(dmabuf);
-	__nvmap_kunmap(info->handle, page_num, addr);
-}
-
-static void *nvmap_dmabuf_kmap_atomic(struct dma_buf *dmabuf,
-				      unsigned long page_num)
-{
-	WARN(1, "%s() can't be called from atomic\n", __func__);
-	return NULL;
-}
-#endif
 
 int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 {
@@ -478,28 +419,6 @@ static int nvmap_dmabuf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 	return __nvmap_map(info->handle, vma);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
-static void *nvmap_dmabuf_vmap(struct dma_buf *dmabuf)
-{
-	struct nvmap_handle_info *info = dmabuf->priv;
-
-	trace_nvmap_dmabuf_vmap(dmabuf);
-
-	/* Don't allow vmap on RO buffers */
-	if (info->is_ro)
-		return ERR_PTR(-EPERM);
-
-	return __nvmap_mmap(info->handle);
-}
-
-static void nvmap_dmabuf_vunmap(struct dma_buf *dmabuf, void *vaddr)
-{
-	struct nvmap_handle_info *info = dmabuf->priv;
-
-	trace_nvmap_dmabuf_vunmap(dmabuf);
-	__nvmap_munmap(info->handle, vaddr);
-}
-#else
 #if defined(NV_LINUX_IOSYS_MAP_H_PRESENT)
 static int nvmap_dmabuf_vmap(struct dma_buf *dmabuf, struct iosys_map *map)
 #else
@@ -538,7 +457,6 @@ static void nvmap_dmabuf_vunmap(struct dma_buf *dmabuf, struct dma_buf_map *map)
        trace_nvmap_dmabuf_vunmap(dmabuf);
        __nvmap_munmap(info->handle, info->handle->vaddr);
 }
-#endif
 
 static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.attach		= NVMAP_DMABUF_ATTACH,
@@ -548,21 +466,10 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.release	= nvmap_dmabuf_release,
 	.begin_cpu_access = NVMAP_DMABUF_BEGIN_CPU_ACCESS,
 	.end_cpu_access = NVMAP_DMABUF_END_CPU_ACCESS,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
-	.kmap_atomic	= nvmap_dmabuf_kmap_atomic,
-	.kmap		= nvmap_dmabuf_kmap,
-	.kunmap		= nvmap_dmabuf_kunmap,
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-	.map_atomic	= nvmap_dmabuf_kmap_atomic,
-	.map		= nvmap_dmabuf_kmap,
-	.unmap		= nvmap_dmabuf_kunmap,
-#endif
 	.mmap		= nvmap_dmabuf_mmap,
 	.vmap		= nvmap_dmabuf_vmap,
 	.vunmap		= nvmap_dmabuf_vunmap,
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 4, 0)
 	.cache_sgt_mapping = true,
-#endif
 
 };
 

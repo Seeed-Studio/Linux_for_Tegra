@@ -37,12 +37,10 @@
 #include "nvmap_priv.h"
 #include "nvmap_heap.h"
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 #include <linux/syscalls.h>
 #ifndef NVMAP_LOADABLE_MODULE
 #include <linux/dma-map-ops.h>
 #endif /* !NVMAP_LOADABLE_MODULE */
-#endif
 
 #if defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
@@ -1382,11 +1380,7 @@ int system_heap_free_mem(unsigned long *mem_val)
 		return 0;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 	cma_free = global_zone_page_state(NR_FREE_CMA_PAGES) << PAGE_SHIFT;
-#else
-	cma_free = global_page_state(NR_FREE_CMA_PAGES) << PAGE_SHIFT;
-#endif
 	if ((available_mem << PAGE_SHIFT) < cma_free) {
 		*mem_val = 0;
 		return 0;
