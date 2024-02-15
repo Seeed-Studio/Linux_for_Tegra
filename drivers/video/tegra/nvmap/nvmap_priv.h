@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2009-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * GPU memory management driver for Tegra
  */
@@ -95,8 +95,6 @@ do {                                                    \
 
 #define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN)
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
-
 /*
  * DMA_ATTR_ALLOC_EXACT_SIZE: This tells the DMA-mapping
  * subsystem to allocate the exact number of pages
@@ -104,8 +102,6 @@ do {                                                    \
 #define DMA_ATTR_ALLOC_EXACT_SIZE	(DMA_ATTR_PRIVILEGED << 2)
 
 #define DMA_MEMORY_NOMAP		0x02
-
-#endif /* LINUX_VERSION_CODE */
 
 #ifdef NVMAP_LOADABLE_MODULE
 
@@ -127,16 +123,8 @@ do {                                                    \
 #endif /* NVMAP_LOADABLE_MODULE */
 
 #define DMA_ALLOC_FREE_ATTR	DMA_ATTR_ALLOC_SINGLE_PAGES
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-#define ACCESS_OK(type, addr, size)	access_ok(type, addr, size)
-#define SYS_CLOSE(arg)	sys_close(arg)
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
-#define ACCESS_OK(type, addr, size)    access_ok(addr, size)
-#define SYS_CLOSE(arg)	ksys_close(arg)
-#else
 #define ACCESS_OK(type, addr, size)    access_ok(addr, size)
 #define SYS_CLOSE(arg) close_fd(arg)
-#endif
 
 struct page;
 struct nvmap_device;
@@ -351,12 +339,6 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root);
 
 #define NVMAP_IVM_INVALID_PEER		(-1)
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-#ifndef NVMAP_CONFIG_HANDLE_AS_ID
-struct xarray {};
-#endif /* !NVMAP_CONFIG_HANDLE_AS_ID */
-#endif /* KERNEL_VERSION < 5.10 */
-
 struct nvmap_client {
 	const char			*name;
 	struct rb_root			handle_refs;
@@ -433,20 +415,12 @@ static inline void nvmap_ref_unlock(struct nvmap_client *priv)
 
 static inline void nvmap_acquire_mmap_read_lock(struct mm_struct *mm)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-	down_read(&mm->mmap_sem);
-#else
 	down_read(&mm->mmap_lock);
-#endif
 }
 
 static inline void nvmap_release_mmap_read_lock(struct mm_struct *mm)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-	up_read(&mm->mmap_sem);
-#else
 	up_read(&mm->mmap_lock);
-#endif
 }
 
 static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
@@ -473,16 +447,11 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 	return prot;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 struct dma_coherent_mem_replica {
 	void		*virt_base;
 	dma_addr_t	device_base;
 	unsigned long	pfn_base;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-	size_t		size;
-#else
 	int		size;
-#endif
 	int		flags;
 	unsigned long	*bitmap;
 	spinlock_t	spinlock;
@@ -492,7 +461,6 @@ struct dma_coherent_mem_replica {
 int nvmap_dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
 			dma_addr_t device_addr, size_t size, int flags, bool is_gpu,
 			u32 granule_size);
-#endif
 int nvmap_probe(struct platform_device *pdev);
 int nvmap_remove(struct platform_device *pdev);
 int nvmap_init(struct platform_device *pdev);
@@ -607,10 +575,6 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 				  struct nvmap_handle *h);
 void __nvmap_free_sg_table(struct nvmap_client *client,
 			   struct nvmap_handle *h, struct sg_table *sgt);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum);
-void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum, void *addr);
-#endif
 void *__nvmap_mmap(struct nvmap_handle *h);
 void __nvmap_munmap(struct nvmap_handle *h, void *addr);
 int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"%s: " fmt, __func__
@@ -12,14 +12,8 @@
 
 static void nvmap_vma_close(struct vm_area_struct *vma);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 #define __atomic_add_unless atomic_fetch_add_unless
 static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
-static int nvmap_vma_fault(struct vm_fault *vmf);
-#else
-static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf);
-#endif
 
 struct vm_operations_struct nvmap_vma_ops = {
 	.open		= nvmap_vma_open,
@@ -165,24 +159,14 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 	}
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf)
 #define vm_insert_pfn vmf_insert_pfn
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
-static int nvmap_vma_fault(struct vm_fault *vmf)
-#else
-static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
-#endif
 {
 	struct page *page;
 	struct nvmap_vma_priv *priv;
 	unsigned long offs;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 	struct vm_area_struct *vma = vmf->vma;
 	unsigned long vmf_address = vmf->address;
-#else
-	void __user *vmf_address = vmf->virtual_address;
-#endif
 
 	offs = (unsigned long)(vmf_address - vma->vm_start);
 	priv = vma->vm_private_data;
