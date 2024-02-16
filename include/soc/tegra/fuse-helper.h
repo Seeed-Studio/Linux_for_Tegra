@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/version.h>
@@ -59,4 +59,32 @@ static inline bool tegra_platform_is_vdk(void)
 		return true;
 
 	return false;
+}
+
+/* OOT implementation of upstream API tegra_get_chip_id() */
+static inline u8 __tegra_get_chip_id(void)
+{
+	const struct soc_device_attribute tegra194_soc_attrs[] = {
+		{ .soc_id = "25" }, /* 0x19 */
+		{/* sentinel */}
+	};
+	const struct soc_device_attribute tegra234_soc_attrs[] = {
+		{ .soc_id = "35" }, /* 0x23 */
+		{/* sentinel */}
+	};
+	const struct soc_device_attribute tegra264_soc_attrs[] = {
+		{ .soc_id = "38" }, /* 0x26 */
+		{/* sentinel */}
+	};
+
+	if (soc_device_match(tegra194_soc_attrs))
+		return TEGRA194;
+
+	if (soc_device_match(tegra234_soc_attrs))
+		return TEGRA234;
+
+	if (soc_device_match(tegra264_soc_attrs))
+		return TEGRA264;
+
+	return 0;
 }
