@@ -13,7 +13,7 @@
 #include <linux/firmware.h>
 #include <linux/tegra_nvadsp.h>
 #include <linux/version.h>
-#include <soc/tegra/fuse.h>
+#include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/virt/hv-ivc.h>
 #include <linux/elf.h>
 #include <linux/device.h>
@@ -110,9 +110,6 @@ struct nvadsp_mappings {
 	void *va;
 	int len;
 };
-
-extern u8 tegra_get_major_rev(void);
-extern u8 tegra_get_minor_rev(void);
 
 static struct nvadsp_mappings adsp_map[NM_LOAD_MAPPINGS];
 static int map_idx;
@@ -889,9 +886,9 @@ static void nvadsp_set_shared_mem(struct platform_device *pdev,
 	priv.logger.dev = dev;
 	priv.adsp_os_fw_loaded = true;
 
-	chip_id = (u32)tegra_get_chip_id();
+	chip_id = (u32)__tegra_get_chip_id();
 	if (drv_data->chip_data->chipid_ext)
-		chip_id = (chip_id << 4) | tegra_get_major_rev();
+		chip_id = (chip_id << 4) | drv_data->chip_data->chipid_ext;
 
 	os_args = &shared_mem->os_args;
 	/* Chip id info is communicated twice to ADSP

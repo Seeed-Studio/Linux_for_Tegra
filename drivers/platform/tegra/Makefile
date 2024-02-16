@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 tegra-bootloader-debug-objs := tegra_bootloader_debug.o
 obj-m += tegra-bootloader-debug.o
@@ -20,7 +20,4 @@ obj-m += rtcpu/
 endif
 obj-m += aon/
 obj-m += tegra-uss-io-proxy.o
-
-ifneq ($(filter noble oot,$(patsubst -,$(space),$(NV_BUILD_KERNEL_OPTIONS))),)
 obj-m += nvadsp/
-endif

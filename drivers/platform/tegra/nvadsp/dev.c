@@ -13,7 +13,7 @@
 #include <linux/io.h>
 #include <linux/tegra_nvadsp.h>
 #include <linux/version.h>
-#include <soc/tegra/fuse.h>
+#include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/virt/hv-ivc.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk/tegra.h>
@@ -130,9 +130,7 @@ static void nvadsp_bw_register(struct nvadsp_drv_data *drv_data)
 {
 	struct device *dev = &drv_data->pdev->dev;
 
-	switch (tegra_get_chip_id()) {
-	case TEGRA210:
-	case TEGRA186:
+	switch (__tegra_get_chip_id()) {
 	case TEGRA194:
 		drv_data->bwmgr = tegra_bwmgr_register(
 				TEGRA_BWMGR_CLIENT_APE_ADSP);
@@ -569,7 +567,7 @@ static struct nvadsp_chipdata tegra239_adsp_chipdata = {
 	.amc_err_war = false,
 
 	/* Populate Chip ID Major Revision as well */
-	.chipid_ext  = true,
+	.chipid_ext  = 0x9,
 	.num_irqs    = NVADSP_VIRQ_MAX,
 	.num_regs    = APE_MAX_REG,
 };

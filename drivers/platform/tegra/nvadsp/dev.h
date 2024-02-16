@@ -155,7 +155,7 @@ struct nvadsp_chipdata {
 
 	bool                    amc_not_avlbl;
 	bool			amc_err_war;
-	bool			chipid_ext;
+	u32			chipid_ext;
 
 	u32			adsp_prid;
 	char			*adsp_elf;
