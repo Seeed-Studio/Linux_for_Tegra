@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0-only
  */
-// Copyright (c) 2015-2023 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #ifndef _UFS_TEGRA_H
 #define _UFS_TEGRA_H
 
 #include <linux/io.h>
+#include <soc/tegra/fuse.h>
 
 #define NV_ADDRESS_MAP_MPHY_L0_BASE		0x02470000
 #define NV_ADDRESS_MAP_MPHY_L1_BASE		0x02480000
@@ -412,12 +413,17 @@ static inline u32 mphy_readl(void __iomem *mphy_base, u32 offset)
 {
 	u32 val;
 
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
+		return 0;
+
 	val = readl(mphy_base + offset);
 	return val;
 }
 
 static inline void mphy_writel(void __iomem *mphy_base, u32 val, u32 offset)
 {
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
+		return;
 	writel(val, mphy_base + offset);
 }
 

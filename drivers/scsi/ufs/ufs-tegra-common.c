@@ -59,6 +59,9 @@ static void ufs_tegra_init_debugfs(struct ufs_hba *hba)
 
 static void ufs_tegra_set_clk_div(struct ufs_hba *hba)
 {
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
+		return;
+
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		ufshcd_writel(hba, UFS_VNDR_HCLKDIV_1US_TICK_FPGA, REG_UFS_VNDR_HCLKDIV);
 	else
@@ -69,6 +72,9 @@ static void ufs_tegra_ufs_mmio_axi(struct ufs_hba *hba)
 {
 	u32 mask = GENMASK(15, 13);
 
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
+		return;
+
 	ufshcd_rmwl(hba, mask, VS_BURSTMBLCONFIG, VS_BURSTMBLREGISTER);
 
 }
@@ -78,6 +84,9 @@ static int ufs_tegra_host_clk_get(struct device *dev,
 {
 	struct clk *clk;
 	int err = 0;
+
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
+		return 0;
 
 	clk = devm_clk_get(dev, name);
 	if (IS_ERR(clk)) {
@@ -153,6 +162,9 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
 		return 0;
 
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
+		return 0;
+
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
 		return 0;
 
 	if (ufs_tegra->enable_mphy_rx_calib)
@@ -608,6 +620,9 @@ static int ufs_tegra_ufs_reset_init(struct ufs_tegra_host *ufs_tegra)
 	struct device *dev = ufs_tegra->hba->dev;
 	int ret = 0;
 
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
+		return 0;
+
 	ufs_tegra->ufs_rst = devm_reset_control_get(dev, "ufs-rst");
 	if (IS_ERR(ufs_tegra->ufs_rst)) {
 		ret = PTR_ERR(ufs_tegra->ufs_rst);
@@ -1042,6 +1057,9 @@ static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 
 	/* Clocks are not present on VDK */
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_VDK)
+		goto end;
+
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
 		goto end;
 
 	/*
@@ -1794,6 +1812,9 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	 */
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_VDK)
 		goto aux_init;
+
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
+		goto out;
 
 	err = ufs_tegra_init_ufs_clks(ufs_tegra);
 	if (err)
