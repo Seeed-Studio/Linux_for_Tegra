@@ -54,5 +54,9 @@ nvethernet-objs:= ether_linux.o \
 
 include $(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include/config.tmk
 
+ifeq ($(NV_BUILD_CONFIGURATION_IS_VLTEST),1)
+ccflags-y += -DNV_VLTEST_BUILD
+endif
+
 # Undefine HSI_SUPPORT if CONFIG_TEGRA_EPL is not defined.
 ccflags-y += $(if $(CONFIG_TEGRA_EPL),,-UHSI_SUPPORT)

@@ -2543,8 +2543,7 @@ static DEVICE_ATTR(nvgro_dump, 0644,
 		   ether_nvgro_dump_show, NULL);
 #endif
 
-#ifdef HSI_SUPPORT
-#if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
+#if defined HSI_SUPPORT && defined(NV_VLTEST_BUILD) && (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 static int hsi_inject_err_fsi(unsigned int inst_id,
 			      struct epl_error_report_frame error_report,
 			      void *data)
@@ -2562,7 +2561,6 @@ static int hsi_inject_err_fsi(unsigned int inst_id,
 
 	return ret;
 }
-#endif
 
 /**
  * @brief Shows HSI feature enabled status
@@ -2611,10 +2609,8 @@ static ssize_t hsi_enable_store(struct device *dev,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_ioctl ioctl_data = {};
 	int ret = 0;
-#if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 	u32 inst_id = osi_core->instance_id;
 	u32 ip_type[2] = {IP_EQOS, IP_MGBE};
-#endif
 
 	if (osi_core->use_virtualization == OSI_ENABLE) {
 		dev_err(pdata->dev, "Not supported with Ethernet virtualization enabled\n");
@@ -2636,7 +2632,6 @@ static ssize_t hsi_enable_store(struct device *dev,
 		} else {
 			osi_core->hsi.enabled = OSI_ENABLE;
 			dev_info(pdata->dev, "HSI Enabled\n");
-#if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 			if (osi_core->instance_id == OSI_INSTANCE_ID_EQOS)
 				inst_id = 0;
 
@@ -2646,7 +2641,6 @@ static ssize_t hsi_enable_store(struct device *dev,
 				dev_err(pdata->dev, "Err inj callback registration failed: %d",
 					ret);
 			}
-#endif
 		}
 	} else if (strncmp(buf, "disable", 7) == OSI_NONE) {
 		ioctl_data.arg1_u32 = OSI_DISABLE;
@@ -2657,7 +2651,6 @@ static ssize_t hsi_enable_store(struct device *dev,
 		} else {
 			osi_core->hsi.enabled = OSI_DISABLE;
 			dev_info(pdata->dev, "HSI Disabled\n");
-#if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 			if (osi_core->instance_id == OSI_INSTANCE_ID_EQOS)
 				inst_id = 0;
 
@@ -2666,7 +2659,6 @@ static ssize_t hsi_enable_store(struct device *dev,
 				dev_err(pdata->dev, "Err inj callback deregistration failed: %d",
 					ret);
 			}
-#endif
 		}
 	} else {
 		dev_err(pdata->dev,
@@ -2728,7 +2720,7 @@ static struct attribute *ether_sysfs_attrs[] = {
 	&dev_attr_nvgro_stats.attr,
 	&dev_attr_nvgro_dump.attr,
 #endif
-#ifdef HSI_SUPPORT
+#if defined HSI_SUPPORT && defined(NV_VLTEST_BUILD) && (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 	&dev_attr_hsi_enable.attr,
 #endif
 #endif /* OSI_STRIPPED_LIB */
@@ -2755,7 +2747,7 @@ static struct attribute *ether_sysfs_attrs_without_macsec[] = {
 	&dev_attr_nvgro_stats.attr,
 	&dev_attr_nvgro_dump.attr,
 #endif
-#ifdef HSI_SUPPORT
+#if defined HSI_SUPPORT && defined(NV_VLTEST_BUILD) && (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 	&dev_attr_hsi_enable.attr,
 #endif
 #endif /* OSI_STRIPPED_LIB */
