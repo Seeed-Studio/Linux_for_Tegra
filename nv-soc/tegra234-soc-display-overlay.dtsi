@@ -162,6 +162,7 @@
 			"dpaux0_reset",
 			"dsi_core_reset",
 			"mipi_cal_reset";
+		hdcp_enabled;
 		status = "disabled";
 		nvidia,disp-sw-soc-chip-id = <0x2350>;
 		interconnects = <&mc TEGRA234_MEMORY_CLIENT_NVDISPLAYR &emc>,
