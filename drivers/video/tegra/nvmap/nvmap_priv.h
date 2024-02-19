@@ -103,9 +103,6 @@ do {                                                    \
 
 #define DMA_MEMORY_NOMAP		0x02
 
-#ifdef NVMAP_LOADABLE_MODULE
-
-#ifdef NVMAP_UPSTREAM_KERNEL
 /*
  * DMA_ATTR_READ_ONLY: for DMA memory allocations, attempt to map
  * memory as read-only for the device. CPU access will still be
@@ -118,9 +115,6 @@ do {                                                    \
  * to map as write-only
  */
 #define DMA_ATTR_WRITE_ONLY	(DMA_ATTR_PRIVILEGED << 13)
-
-#endif /* NVMAP_UPSTREAM_KERNEL */
-#endif /* NVMAP_LOADABLE_MODULE */
 
 #define DMA_ALLOC_FREE_ATTR	DMA_ATTR_ALLOC_SINGLE_PAGES
 #define ACCESS_OK(type, addr, size)    access_ok(addr, size)
@@ -467,11 +461,7 @@ int nvmap_init(struct platform_device *pdev);
 
 int nvmap_create_carveout(const struct nvmap_platform_carveout *co);
 
-#ifdef NVMAP_LOADABLE_MODULE
 int nvmap_co_setup(struct reserved_mem *rmem, u32 granule_size);
-#else
-int nvmap_co_setup(struct reserved_mem *rmem);
-#endif
 
 struct device *dma_dev_from_handle(unsigned long type);
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
@@ -903,7 +893,5 @@ int nvmap_assign_pages_to_handle(struct nvmap_client *client,
 		struct nvmap_handle **hs, struct nvmap_handle *h,
 		struct handles_range *rng);
 
-#ifdef NVMAP_LOADABLE_MODULE
 void nvmap_dma_release_coherent_memory(struct dma_coherent_mem_replica *mem);
-#endif /* NVMAP_LOADABLE_MODULE */
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */
