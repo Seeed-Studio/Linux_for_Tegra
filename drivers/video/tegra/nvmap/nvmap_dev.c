@@ -1371,13 +1371,6 @@ int __init nvmap_probe(struct platform_device *pdev)
 	nvmap_init(pdev);
 
 	plat = pdev->dev.platform_data;
-#ifndef NVMAP_LOADABLE_MODULE
-	if (!plat) {
-		dev_err(&pdev->dev, "no platform data?\n");
-		e = -ENODEV;
-		goto finish;
-	}
-#endif /* !NVMAP_LOADABLE_MODULE */
 
 	nvmap_dev = dev;
 	nvmap_dev->plat = plat;

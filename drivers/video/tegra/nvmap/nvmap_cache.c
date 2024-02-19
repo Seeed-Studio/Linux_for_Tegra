@@ -11,14 +11,10 @@
 #include <linux/version.h>
 #include <soc/tegra/fuse.h>
 
-#ifdef NVMAP_UPSTREAM_KERNEL
 #include <linux/libnvdimm.h>
-#endif /* NVMAP_UPSTREAM_KERNEL */
 
 #include <linux/sys_soc.h>
-#ifdef NVMAP_LOADABLE_MODULE
 __weak struct arm64_ftr_reg arm64_ftr_reg_ctrel0;
-#endif /*NVMAP_LOADABLE_MODULE */
 
 #include <trace/events/nvmap.h>
 
@@ -53,11 +49,7 @@ void nvmap_clean_cache(struct page **pages, int numpages)
 void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 {
 	if (op == NVMAP_CACHE_OP_WB_INV)
-#ifdef NVMAP_UPSTREAM_KERNEL
 		arch_invalidate_pmem(vaddr, size);
-#else
-		__dma_flush_area(vaddr, size);
-#endif
 	else if (op == NVMAP_CACHE_OP_INV)
 		__dma_map_area(vaddr, size, DMA_FROM_DEVICE);
 	else

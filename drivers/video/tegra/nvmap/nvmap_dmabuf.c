@@ -548,9 +548,6 @@ err_nomem:
 int __nvmap_dmabuf_fd(struct nvmap_client *client,
 		      struct dma_buf *dmabuf, int flags)
 {
-#if !defined(NVMAP_CONFIG_HANDLE_AS_ID) && !defined(NVMAP_LOADABLE_MODULE)
-	int start_fd = NVMAP_CONFIG_FD_START;
-#endif
 	int ret;
 
 #ifdef NVMAP_CONFIG_DEFER_FD_RECYCLE
@@ -566,11 +563,7 @@ int __nvmap_dmabuf_fd(struct nvmap_client *client,
 	 * __FD_SETSIZE limitation issue for select(),
 	 * pselect() syscalls.
 	 */
-#if defined(NVMAP_LOADABLE_MODULE) || defined(NVMAP_CONFIG_HANDLE_AS_ID)
 	ret = get_unused_fd_flags(flags);
-#else
-	ret =  __alloc_fd(current->files, start_fd, sysctl_nr_open, flags);
-#endif
 	if (ret == -EMFILE)
 		pr_err_ratelimited("NvMap: FD limit is crossed for uid %d\n",
 				   from_kuid(current_user_ns(), current_uid()));

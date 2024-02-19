@@ -518,10 +518,8 @@ void nvmap_heap_destroy(struct nvmap_heap *heap)
 		kfree(heap->name);
 
 	kfree(heap->carevout_debugfs_info);
-#ifdef NVMAP_LOADABLE_MODULE
 	nvmap_dma_release_coherent_memory((struct dma_coherent_mem_replica *)
 					  heap->dma_dev->dma_mem);
-#endif /* NVMAP_LOADABLE_MODULE */
 
 	while (!list_empty(&heap->all_list)) {
 		struct list_block *l;

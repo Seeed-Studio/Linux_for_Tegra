@@ -38,9 +38,6 @@
 #include "nvmap_heap.h"
 
 #include <linux/syscalls.h>
-#ifndef NVMAP_LOADABLE_MODULE
-#include <linux/dma-map-ops.h>
-#endif /* !NVMAP_LOADABLE_MODULE */
 
 #if defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
