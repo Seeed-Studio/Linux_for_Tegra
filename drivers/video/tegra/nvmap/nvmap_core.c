@@ -21,9 +21,7 @@
 
 #include <linux/nvmap.h>
 #include <trace/events/nvmap.h>
-#ifdef NVMAP_UPSTREAM_KERNEL
 #include <linux/libnvdimm.h>
-#endif /* NVMAP_UPSTREAM_KERNEL */
 
 #include "nvmap_priv.h"
 

@@ -13,9 +13,7 @@
 #include <linux/kmemleak.h>
 #include <linux/io.h>
 
-#if defined(NVMAP_LOADABLE_MODULE)
 #include <linux/nvmap_t19x.h>
-#endif
 
 #include <linux/sched/clock.h>
 #include <linux/cma.h>
@@ -35,14 +33,6 @@
 #define DMA_BUF_ALIGNMENT 8
 #endif
 
-#ifndef NVMAP_UPSTREAM_KERNEL
-#ifndef NVMAP_CONFIG_VPR_RESIZE
-extern phys_addr_t tegra_vpr_start;
-extern phys_addr_t tegra_vpr_size;
-extern bool tegra_vpr_resize;
-#endif /* NVMAP_CONFIG_VPR_RESIZE */
-#endif /* !NVMAP_UPSTREAM_KERNEL */
-
 struct device __weak tegra_generic_dev;
 
 struct device __weak tegra_vpr_dev;
@@ -52,9 +42,7 @@ struct device tegra_vpr1_dev;
 struct device __weak tegra_generic_cma_dev;
 struct device __weak tegra_vpr_cma_dev;
 
-#ifdef NVMAP_LOADABLE_MODULE
 static struct platform_device *pdev;
-#endif /* NVMAP_LOADABLE_MODULE */
 
 #ifdef NVMAP_CONFIG_VPR_RESIZE
 struct dma_resize_notifier_ops __weak vpr_dev_ops;
@@ -316,21 +304,6 @@ err:
 /*
  * This requires proper kernel arguments to have been passed.
  */
-#ifndef NVMAP_UPSTREAM_KERNEL
-static int __nvmap_init_legacy(struct device *dev)
-{
-#ifndef NVMAP_CONFIG_VPR_RESIZE
-	/* VPR */
-	if (!nvmap_carveouts[1].base) {
-		nvmap_carveouts[1].base = tegra_vpr_start;
-		nvmap_carveouts[1].size = tegra_vpr_size;
-		nvmap_carveouts[1].cma_dev = NULL;
-	}
-#endif /* NVMAP_CONFIG_VPR_RESIZE */
-
-	return 0;
-}
-#endif /* !NVMAP_UPSTREAM_KERNEL */
 
 static int __nvmap_init_dt(struct platform_device *pdev)
 {
@@ -338,11 +311,6 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 		pr_err("Missing DT entry!\n");
 		return -EINVAL;
 	}
-
-#ifndef NVMAP_UPSTREAM_KERNEL
-	/* For VM_2 we need carveout. So, enabling it here */
-	__nvmap_init_legacy(&pdev->dev);
-#endif /* !NVMAP_UPSTREAM_KERNEL */
 
 	pdev->dev.platform_data = &nvmap_data;
 
@@ -813,60 +781,6 @@ static const struct reserved_mem_ops nvmap_co_ops = {
 	.device_release	= nvmap_co_device_release,
 };
 
-#ifndef NVMAP_LOADABLE_MODULE
-int __init nvmap_co_setup(struct reserved_mem *rmem)
-{
-	struct nvmap_platform_carveout *co;
-	int ret = 0;
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-	struct cma *cma;
-#endif
-	ulong start = sched_clock();
-
-	co = nvmap_get_carveout_pdata(rmem->name);
-	if (!co)
-		return ret;
-
-	rmem->ops = &nvmap_co_ops;
-	rmem->priv = co;
-
-	co->base = rmem->base;
-	co->size = rmem->size;
-
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-	if (!of_get_flat_dt_prop(rmem->fdt_node, "reusable", NULL) ||
-	    of_get_flat_dt_prop(rmem->fdt_node, "no-map", NULL))
-		goto skip_cma;
-
-	WARN_ON(!rmem->base);
-	if (dev_get_cma_area(co->cma_dev)) {
-		pr_info("cma area initialed in legacy way already\n");
-		goto finish;
-	}
-	ret = cma_init_reserved_mem(rmem->base, rmem->size, 0,
-					rmem->name, &cma);
-	if (ret) {
-		pr_info("cma_init_reserved_mem fails for %s\n", rmem->name);
-		goto finish;
-	}
-
-	dma_contiguous_early_fixup_vpr(rmem->base, rmem->size);
-	if (co->cma_dev)
-		co->cma_dev->cma_area = cma;
-	pr_debug("tegra-carveouts carveout=%s %pa@%pa\n",
-		 rmem->name, &rmem->size, &rmem->base);
-	goto finish;
-
-skip_cma:
-#endif
-	co->cma_dev = NULL;
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-finish:
-#endif
-	nvmap_init_time += sched_clock() - start;
-	return ret;
-}
-#else
 int __init nvmap_co_setup(struct reserved_mem *rmem, u32 granule_size)
 {
 	struct nvmap_platform_carveout *co;
@@ -891,13 +805,6 @@ int __init nvmap_co_setup(struct reserved_mem *rmem, u32 granule_size)
 	nvmap_init_time += sched_clock() - start;
 	return ret;
 }
-#endif /* !NVMAP_LOADABLE_MODULE */
-
-#ifndef NVMAP_LOADABLE_MODULE
-RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,generic_carveout", nvmap_co_setup);
-RESERVEDMEM_OF_DECLARE(nvmap_vpr_co, "nvidia,vpr-carveout", nvmap_co_setup);
-RESERVEDMEM_OF_DECLARE(nvmap_fsi_co, "nvidia,fsi-carveout", nvmap_co_setup);
-#endif /* !NVMAP_LOADABLE_MODULE */
 
 /*
  * Fills in the platform data either from the device tree or with the
@@ -908,7 +815,6 @@ int __init nvmap_init(struct platform_device *pdev)
 	int err;
 	struct reserved_mem rmem;
 
-#ifdef NVMAP_LOADABLE_MODULE
 	u32 granule_size = 0;
 	struct reserved_mem *rmem2;
 	struct device_node *np = pdev->dev.of_node;
@@ -938,7 +844,6 @@ int __init nvmap_init(struct platform_device *pdev)
 			}
 		}
 	}
-#endif /* NVMAP_LOADABLE_MODULE */
 
 	if (pdev->dev.of_node) {
 		err = __nvmap_init_dt(pdev);
@@ -973,7 +878,6 @@ end:
 	return err;
 }
 
-#ifdef NVMAP_LOADABLE_MODULE
 static bool nvmap_is_carveout_node_present(void)
 {
 	struct device_node *np;
@@ -986,7 +890,6 @@ static bool nvmap_is_carveout_node_present(void)
 	of_node_put(np);
 	return false;
 }
-#endif /* NVMAP_LOADABLE_MODULE */
 
 static struct platform_driver __refdata nvmap_driver = {
 	.probe		= nvmap_probe,
@@ -1018,18 +921,12 @@ fail:
 	return e;
 }
 
-#ifdef NVMAP_LOADABLE_MODULE
 module_init(nvmap_init_driver);
-#else
-fs_initcall(nvmap_init_driver);
-#endif /* NVMAP_LOADABLE_MODULE */
 
 static void __exit nvmap_exit_driver(void)
 {
-#ifdef NVMAP_LOADABLE_MODULE
 	if (!nvmap_is_carveout_node_present())
 		platform_device_unregister(pdev);
-#endif /* NVMAP_LOADABLE_MODULE */
 	platform_driver_unregister(&nvmap_driver);
 	nvmap_heap_deinit();
 	nvmap_dev = NULL;
