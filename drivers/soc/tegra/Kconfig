@@ -133,6 +133,11 @@ config ARCH_TEGRA_234_SOC
 	help
 	  Enable support for the NVIDIA Tegra234 SoC.
 
+config ARCH_TEGRA_264_SOC
+	bool "NVIDIA Tegra264 SoC"
+	help
+	  Enable support for the NVIDIA Tegra264 SoC.
+
 endif
 endif
 
