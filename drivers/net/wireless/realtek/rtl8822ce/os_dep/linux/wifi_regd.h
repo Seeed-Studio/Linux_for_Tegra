@@ -13,22 +13,18 @@
  *
  *****************************************************************************/
 
-#ifndef __RTW_WIFI_REGD_H__
-#define __RTW_WIFI_REGD_H__
+#ifndef __WIFI_REGD_H__
+#define __WIFI_REGD_H__
 
-struct country_code_to_enum_rd {
-	u16 countrycode;
-	const char *iso_name;
-};
-
-enum country_code_type_t {
-	COUNTRY_CODE_USER = 0,
-
-	/*add new channel plan above this line */
-	COUNTRY_CODE_MAX
-};
-
-void rtw_regd_apply_flags(struct wiphy *wiphy);
+void rtw_chset_hook_os_channels(struct rf_ctl_t *rfctl);
+void rtw_regd_change_complete_sync(struct wiphy *wiphy, struct get_chplan_resp *chplan, bool rtnl_lock_needed);
+int rtw_regd_change_complete_async(struct wiphy *wiphy, struct get_chplan_resp *chplan);
+#ifdef CONFIG_REGD_SRC_FROM_OS
+struct _RT_CHANNEL_INFO;
+u8 rtw_os_init_channel_set(_adapter *padapter, struct _RT_CHANNEL_INFO *channel_set);
+s16 rtw_os_get_total_txpwr_regd_lmt_mbm(_adapter *adapter, u8 cch, enum channel_width bw);
+#endif
 int rtw_regd_init(struct wiphy *wiphy);
+void rtw_regd_deinit(struct wiphy *wiphy);
 
-#endif /* __RTW_WIFI_REGD_H__ */
+#endif /* __WIFI_REGD_H__ */

@@ -120,6 +120,6 @@ static inline u32 rotr(u32 val, int bits)
 #define AES_PRIV_SIZE (4 * 4 * 15 + 4)
 #define AES_PRIV_NR_POS (4 * 15)
 
-int rijndaelKeySetupEnc(u32 rk[], const u8 cipherKey[], int key_bytes);
+int rijndaelKeySetupEnc(u32 rk[], const u8 cipherKey[], int keyBits);
 
 #endif /* AES_I_H */

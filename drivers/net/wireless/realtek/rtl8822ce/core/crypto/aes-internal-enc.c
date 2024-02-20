@@ -104,7 +104,7 @@ void * aes_encrypt_init(const u8 *key, size_t len)
 	rk = os_malloc(AES_PRIV_SIZE);
 	if (rk == NULL)
 		return NULL;
-	res = rijndaelKeySetupEnc(rk, key, len);
+	res = rijndaelKeySetupEnc(rk, key, len * 8);
 	if (res < 0) {
 		rtw_mfree(rk, AES_PRIV_SIZE);
 		return NULL;
@@ -114,7 +114,7 @@ void * aes_encrypt_init(const u8 *key, size_t len)
 }
 
 
-int aes_encrypt(void *ctx, const u8 *plain, u8 *crypt)
+int _aes_encrypt(void *ctx, const u8 *plain, u8 *crypt)
 {
 	u32 *rk = ctx;
 	rijndaelEncrypt(ctx, rk[AES_PRIV_NR_POS], plain, crypt);

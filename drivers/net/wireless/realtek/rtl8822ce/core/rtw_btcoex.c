@@ -19,9 +19,7 @@
 
 void rtw_btcoex_Initialize(PADAPTER padapter)
 {
-	RTW_INFO(" ====> %s\n", __func__);
 	hal_btcoex_Initialize(padapter);
-	RTW_INFO(" %s <====\n", __func__);
 }
 
 void rtw_btcoex_PowerOnSetting(PADAPTER padapter)
@@ -78,6 +76,7 @@ void rtw_btcoex_ScanNotify(PADAPTER padapter, u8 type)
 	struct bt_coex_info *pcoex_info = &padapter->coex_info;
 	PBT_MGNT	pBtMgnt = &pcoex_info->BtMgnt;
 #endif /* CONFIG_BT_COEXIST_SOCKET_TRX */
+	u8 scan_type = type;
 
 	pHalData = GET_HAL_DATA(padapter);
 	if (_FALSE == pHalData->EEPROMBluetoothCoexist)
@@ -92,14 +91,19 @@ void rtw_btcoex_ScanNotify(PADAPTER padapter, u8 type)
 		if (DEV_MGMT_TX_NUM(adapter_to_dvobj(padapter))
 			|| DEV_ROCH_NUM(adapter_to_dvobj(padapter)))
 			return;
+	} else {
+		if (pHalData->current_band_type == BAND_ON_2_4G)
+			scan_type = 2; /* BTC_SCAN_START_2G */
+		else
+			scan_type = 3; /* BTC_SCAN_START_5G */
 	}
 
 #ifdef CONFIG_BT_COEXIST_SOCKET_TRX
 	if (pBtMgnt->ExtConfig.bEnableWifiScanNotify)
-		rtw_btcoex_SendScanNotify(padapter, type);
+		rtw_btcoex_SendScanNotify(padapter, scan_type);
 #endif /* CONFIG_BT_COEXIST_SOCKET_TRX	 */
 
-	hal_btcoex_ScanNotify(padapter, type);
+	hal_btcoex_ScanNotify(padapter, scan_type);
 }
 
 static void _rtw_btcoex_connect_notify(PADAPTER padapter, u8 action)
@@ -178,6 +182,17 @@ void rtw_btcoex_IQKNotify(PADAPTER padapter, u8 state)
 		return;
 
 	hal_btcoex_IQKNotify(padapter, state);
+}
+
+void rtw_btcoex_WLRFKNotify(PADAPTER padapter, u8 path, u8 type, u8 state)
+{
+	PHAL_DATA_TYPE	pHalData;
+
+	pHalData = GET_HAL_DATA(padapter);
+	if (_FALSE == pHalData->EEPROMBluetoothCoexist)
+		return;
+
+	hal_btcoex_WLRFKNotify(padapter, path, type, state);
 }
 
 void rtw_btcoex_BtInfoNotify(PADAPTER padapter, u8 length, u8 *tmpBuf)

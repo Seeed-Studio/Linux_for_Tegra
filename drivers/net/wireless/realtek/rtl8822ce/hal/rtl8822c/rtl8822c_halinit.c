@@ -33,6 +33,7 @@ void rtl8822c_init_hal_spec(PADAPTER adapter)
 	/* hal_spec->sec_cam_ent_num follow halmac setting */
 	hal_spec->sec_cap = SEC_CAP_CHK_BMC | SEC_CAP_CHK_EXTRA_SEC;
 	hal_spec->wow_cap = WOW_CAP_TKIP_OL;
+	hal_spec->macid_cap = MACID_DROP;
 
 	hal_spec->rfpath_num_2g = 2;
 	hal_spec->rfpath_num_5g = 2;
@@ -56,9 +57,7 @@ void rtl8822c_init_hal_spec(PADAPTER adapter)
 			    | WL_FUNC_TDLS
 			    ;
 
-#if CONFIG_TX_AC_LIFETIME
 	hal_spec->tx_aclt_unit_factor = 8;
-#endif
 
 	hal_spec->rx_tsf_filter = 1;
 
@@ -72,6 +71,13 @@ void rtl8822c_init_hal_spec(PADAPTER adapter)
 		, REG_MACID_SLEEP1_8822C
 		, REG_MACID_SLEEP2_8822C
 		, REG_MACID_SLEEP3_8822C);
+	
+	rtw_macid_ctl_init_drop_reg(adapter_to_macidctl(adapter)
+		, REG_MACID_DROP0_8822C
+		, REG_MACID_DROP1_8822C
+		, REG_MACID_DROP2_8822C
+		, REG_MACID_DROP3_8822C);
+
 }
 
 u32 rtl8822c_power_on(PADAPTER adapter)
@@ -99,10 +105,6 @@ u32 rtl8822c_power_on(PADAPTER adapter)
 
 	bMacPwrCtrlOn = _TRUE;
 	rtw_hal_set_hwreg(adapter, HW_VAR_APFM_ON_MAC, &bMacPwrCtrlOn);
-
-#ifdef CONFIG_RTW_DISABLE_HW_PDN
-	rtw_write8(adapter, REG_SYS_PW_CTRL + 1, (rtw_read8(adapter, REG_SYS_PW_CTRL + 1) & (~BIT(7))));
-#endif
 
 out:
 	return ret;
@@ -150,8 +152,6 @@ u8 rtl8822c_hal_init(PADAPTER adapter)
 	hal->bFWReady = _FALSE;
 	hal->fw_ractrl = _FALSE;
 
-	RTW_INFO(" ====> %s\n", __func__);
-
 #ifdef CONFIG_NO_FW
 	err = rtw_halmac_init_hal(d);
 	if(!err) {
@@ -195,7 +195,6 @@ u8 rtl8822c_hal_init(PADAPTER adapter)
 	hal->bFWReady = _TRUE;
 	hal->fw_ractrl = _TRUE;
 
-	RTW_INFO(" %s <====\n", __func__);
 	return _TRUE;
 }
 
@@ -223,7 +222,6 @@ void rtl8822c_init_misc(PADAPTER adapter)
 	u8 v8 = 0;
 	u32 v32 = 0;
 
-	RTW_INFO(" ====> %s\n", __func__);
 
 	hal = GET_HAL_DATA(adapter);
 
@@ -249,7 +247,6 @@ void rtl8822c_init_misc(PADAPTER adapter)
 #ifdef CONFIG_TCP_CSUM_OFFLOAD_RX
 	rtw_hal_rcr_add(adapter, BIT_TCPOFLD_EN_8822C);
 #endif /* CONFIG_TCP_CSUM_OFFLOAD_RX*/
-	RTW_INFO(" %s <====\n", __func__);
 }
 
 u32 rtl8822c_init(PADAPTER adapter)
@@ -319,9 +316,6 @@ void rtl8822c_init_default_value(PADAPTER adapter)
 
 	/* init default value */
 	hal->fw_ractrl = _FALSE;
-
-	if (!adapter_to_pwrctl(adapter)->bkeepfwalive)
-		hal->LastHMEBoxNum = 0;
 
 	/* init phydm default value */
 	hal->bIQKInitialized = _FALSE;

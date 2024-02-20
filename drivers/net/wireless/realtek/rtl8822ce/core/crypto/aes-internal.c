@@ -774,7 +774,7 @@ const u8 rcons[] = {
  *
  * @return	the number of rounds for the given cipher key size.
  */
-int rijndaelKeySetupEnc(u32 rk[], const u8 cipherKey[], int key_bytes)
+int rijndaelKeySetupEnc(u32 rk[], const u8 cipherKey[], int keyBits)
 {
 	int i;
 	u32 temp;
@@ -784,7 +784,7 @@ int rijndaelKeySetupEnc(u32 rk[], const u8 cipherKey[], int key_bytes)
 	rk[2] = GETU32(cipherKey +  8);
 	rk[3] = GETU32(cipherKey + 12);
 
-	if (key_bytes == 16) {
+	if (keyBits == 128) {
 		for (i = 0; i < 10; i++) {
 			temp  = rk[3];
 			rk[4] = rk[0] ^ TE421(temp) ^ TE432(temp) ^
@@ -800,7 +800,7 @@ int rijndaelKeySetupEnc(u32 rk[], const u8 cipherKey[], int key_bytes)
 	rk[4] = GETU32(cipherKey + 16);
 	rk[5] = GETU32(cipherKey + 20);
 
-	if (key_bytes == 24) {
+	if (keyBits == 192) {
 		for (i = 0; i < 8; i++) {
 			temp  = rk[5];
 			rk[6] = rk[0] ^ TE421(temp) ^ TE432(temp) ^
@@ -819,7 +819,7 @@ int rijndaelKeySetupEnc(u32 rk[], const u8 cipherKey[], int key_bytes)
 	rk[6] = GETU32(cipherKey + 24);
 	rk[7] = GETU32(cipherKey + 28);
 
-	if (key_bytes == 32) {
+	if (keyBits == 256) {
 		for (i = 0; i < 7; i++) {
 			temp  = rk[7];
 			rk[8] = rk[0] ^ TE421(temp) ^ TE432(temp) ^
