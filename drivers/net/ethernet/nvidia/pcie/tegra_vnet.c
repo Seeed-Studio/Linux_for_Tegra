@@ -1,6 +1,18 @@
-// SPDX-License-Identifier: GPL-2.0+
-/*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0
+/* SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <nvidia/conftest.h>
@@ -865,7 +877,22 @@ fail:
 
 static void tvnet_host_remove(struct pci_dev *pdev)
 {
+	int ret = -1;
 	struct tvnet_priv *tvnet = pci_get_drvdata(pdev);
+
+	if (tvnet->rx_link_state == DIR_LINK_STATE_UP)
+		tvnet_host_user_link_down_req(tvnet);
+
+	ret = wait_event_interruptible_timeout(tvnet->link_state_wq,
+					       (tvnet->rx_link_state ==
+						DIR_LINK_STATE_DOWN),
+						msecs_to_jiffies(LINK_TIMEOUT));
+	ret = (ret > 0) ? 0 : -ETIMEDOUT;
+	if (ret < 0) {
+		pr_err("%s: failed: tx_state: %d rx_state: %d err: %d", __func__,
+		       tvnet->tx_link_state, tvnet->rx_link_state, ret);
+		tvnet->rx_link_state = DIR_LINK_STATE_UP;
+	}
 
 	free_irq(pci_irq_vector(pdev, 0), tvnet->ndev);
 	free_irq(pci_irq_vector(pdev, 1), tvnet->ndev);
