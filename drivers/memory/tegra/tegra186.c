@@ -27,11 +27,21 @@
 static int tegra186_mc_probe(struct tegra_mc *mc)
 {
 	struct platform_device *pdev = to_platform_device(mc->dev);
+	struct resource *res;
 	unsigned int i;
 	char name[8];
 	int err;
 
-	mc->bcast_ch_regs = devm_platform_ioremap_resource_byname(pdev, "broadcast");
+	/*
+	 * If the first entry in DT has SID then look for BROADCAST.
+	 * Otherwise, treat the first entry read in mc probe as the BROADCAST.
+	 */
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "sid");
+	if (res)
+		mc->bcast_ch_regs = devm_platform_ioremap_resource_byname(pdev, "broadcast");
+	else
+		mc->bcast_ch_regs = mc->regs;
+
 	if (IS_ERR(mc->bcast_ch_regs)) {
 		if (PTR_ERR(mc->bcast_ch_regs) == -EINVAL) {
 			dev_warn(&pdev->dev,
