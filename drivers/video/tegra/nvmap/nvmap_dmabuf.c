@@ -180,8 +180,10 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(struct dma_buf_attachment *atta
 	if (sgt)
 		goto cache_hit;
 
+	get_device(attach->dev);
 	sgt = __nvmap_sg_table(NULL, info->handle);
 	if (IS_ERR(sgt)) {
+		put_device(attach->dev);
 		atomic_dec(&info->handle->pin);
 		mutex_unlock(&info->maps_lock);
 		return sgt;
@@ -224,6 +226,7 @@ cache_hit:
 
 err_map:
 	__nvmap_free_sg_table(NULL, info->handle, sgt);
+	put_device(attach->dev);
 	atomic_dec(&info->handle->pin);
 	mutex_unlock(&info->maps_lock);
 	return ERR_PTR(-ENOMEM);
@@ -247,6 +250,7 @@ static void __nvmap_dmabuf_unmap_dma_buf(struct nvmap_handle_sgt *nvmap_sgt)
 				   dir, DMA_ATTR_SKIP_CPU_SYNC);
 	}
 	__nvmap_free_sg_table(NULL, info->handle, sgt);
+	put_device(dev);
 }
 
 static void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
