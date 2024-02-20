@@ -144,13 +144,13 @@ sint	_rtw_init_mlme_priv(_adapter *padapter)
 #endif
 
 #ifdef CONFIG_LAYER2_ROAMING
-#define RTW_ROAM_SCAN_RESULT_EXP_MS (5*1000)
+#define RTW_ROAM_SCAN_RESULT_EXP_MS (10*1000)
 #define RTW_ROAM_IDLE_RSSI_DIFF_TH 5
 #define RTW_ROAM_BUSY_RSSI_DIFF_TH 10
-#define RTW_ROAM_SCAN_INTERVAL (5)    /* 5*(2 second)*/
-#define RTW_ROAM_IDLE_RSSI_THRESHOLD 35
-#define RTW_ROAM_BUSY_RSSI_THRESHOLD 30
-#define RTW_ROAM_DICONNECT_DELAY	50
+#define RTW_ROAM_SCAN_INTERVAL (2)    /* 5*(2 second)*/
+#define RTW_ROAM_IDLE_RSSI_THRESHOLD 40
+#define RTW_ROAM_BUSY_RSSI_THRESHOLD 40
+#define RTW_ROAM_DICONNECT_DELAY	20
 	_rtw_spinlock_init(&pmlmepriv->clnt_auth_lock);
 	pmlmepriv->roam_flags = CONFIG_ROAMING_FLAG;
 
