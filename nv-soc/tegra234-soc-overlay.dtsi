@@ -560,7 +560,7 @@
 			status = "disabled";
 		};
 
-		host1x@13e00000 {
+		host1x: host1x@13e00000 {
 			assigned-clocks = <&bpmp TEGRA234_CLK_HOST1X>;
 			assigned-clock-rates = <204000000>;
 
@@ -900,6 +900,7 @@
 			nvidia,aspm-pwr-on-t-us = <20>;
 			nvidia,aspm-l0s-entrance-latency-us = <3>;
 
+			nvidia,host1x = <&host1x>;
 			num-ib-windows = <2>;
 			num-ob-windows = <8>;
 			interconnects = <&mc TEGRA234_MEMORY_CLIENT_PCIE4R &emc>,
@@ -914,6 +915,7 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pex_rst_c5_in_state>;
 
+			nvidia,host1x = <&host1x>;
 			num-ib-windows = <2>;
 			num-ob-windows = <8>;
 		};
@@ -922,6 +924,7 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pex_rst_c6_in_state>;
 
+			nvidia,host1x = <&host1x>;
 			num-ib-windows = <2>;
 			num-ob-windows = <8>;
 		};
@@ -930,6 +933,7 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pex_rst_c7_in_state>;
 
+			nvidia,host1x = <&host1x>;
 			num-ib-windows = <2>;
 			num-ob-windows = <8>;
 		};
@@ -938,6 +942,7 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pex_rst_c10_in_state>;
 
+			nvidia,host1x = <&host1x>;
 			num-ib-windows = <2>;
 			num-ob-windows = <8>;
 		};
