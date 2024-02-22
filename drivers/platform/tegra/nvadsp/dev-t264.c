@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
- * Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
+#include <linux/reset.h>
 #include "dev.h"
 #include "dev-t264.h"
 
@@ -91,10 +92,11 @@ static int __set_boot_freqs_t264(struct nvadsp_drv_data *d)
 
 static int __assert_t264_adsp(struct nvadsp_drv_data *d)
 {
+	struct platform_device *pdev = d->pdev;
+	struct device *dev = &pdev->dev;
 	void __iomem *cpu_config_base;
 	u32 cpu_config;
-
-	/* TBD: CAR assert */
+	int ret = 0;
 
 	/* Assert RUNSTALL */
 	cpu_config_base = d->base_regs[AMISC] +
@@ -103,15 +105,28 @@ static int __assert_t264_adsp(struct nvadsp_drv_data *d)
 	cpu_config |= AMISC_ADSP_RUNSTALL;
 	writel(cpu_config, cpu_config_base + AMISC_ADSP_CPU_CONFIG);
 
-	return 0;
+	/* CAR assert */
+	ret = reset_control_assert(d->adspall_rst);
+	if (ret)
+		dev_err(dev, "failed to assert adsp: %d\n", ret);
+
+	return ret;
 }
 
 static int __deassert_t264_adsp(struct nvadsp_drv_data *d)
 {
+	struct platform_device *pdev = d->pdev;
+	struct device *dev = &pdev->dev;
 	void __iomem *cpu_config_base;
 	u32 cpu_config;
+	int ret = 0;
 
-	/* TBD: CAR deassert */
+	/* CAR deassert */
+	ret = reset_control_deassert(d->adspall_rst);
+	if (ret) {
+		dev_err(dev, "failed to deassert adsp: %d\n", ret);
+		goto end;
+	}
 
 	/* Deassert RUNSTALL */
 	cpu_config_base = d->base_regs[AMISC] +
@@ -120,20 +135,27 @@ static int __deassert_t264_adsp(struct nvadsp_drv_data *d)
 	cpu_config &= (~AMISC_ADSP_RUNSTALL);
 	writel(cpu_config, cpu_config_base + AMISC_ADSP_CPU_CONFIG);
 
-	return 0;
+end:
+	return ret;
 }
 
 int nvadsp_reset_t264_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
 	int ret = 0;
 
 	d->assert_adsp   = __assert_t264_adsp;
 	d->deassert_adsp = __deassert_t264_adsp;
-	d->adspall_rst   = NULL; //TBD
 
 	d->set_boot_vec    = __set_boot_vec_t264;
 	d->set_boot_freqs  = __set_boot_freqs_t264;
+
+	d->adspall_rst = devm_reset_control_get(dev, "adsp");
+	if (IS_ERR(d->adspall_rst)) {
+		dev_err(dev, "cannot get adsp reset\n");
+		ret = PTR_ERR(d->adspall_rst);
+	}
 
 	return ret;
 }
