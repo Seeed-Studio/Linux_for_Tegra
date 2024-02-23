@@ -7,13 +7,6 @@
 #define ADMAIF_CIF(i)	(TEGRA186_ADMAIF_CIF_OFFSET  + i - 1)
 
 / {
-	/* mixer-controls node provide controls to override PCM params */
-	mixer-controls {
-		compatible = "nvidia,tegra234-mixer-control";
-		nvidia,tegra-ape-link = <&tegra_sound>;
-		status = "okay";
-	};
-
 	tegra_sound: sound {
 		#sound-dai-cells = <0>;
 
