@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/gpio/tegra234-gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
@@ -82,5 +82,14 @@
 			regulator-max-microvolt = <3300000>;
 			gpio = <&gpio TEGRA234_MAIN_GPIO(A, 0) GPIO_ACTIVE_HIGH>;
 			enable-active-high;
+	};
+
+        hdr40_vdd_3v3: regulator-vdd-3v3-sys {
+		/* BUCK_3V3_EN enable is driven by button MCU */
+		compatible = "regulator-fixed";
+		regulator-name = "VDD-3V3-SYS";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
 	};
 };
