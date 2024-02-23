@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
 	bus@0 {
@@ -63,7 +63,6 @@
 			/* 1=enable, 0=disable */
 			nvidia,pause_frames = <1>;
 			phy-handle = <&mgbe0_aqr113c_phy>;
-			phy-mode = "10gbase-r";
 			/* 0:XFI 10G, 1:XFI 5G, 2:USXGMII 10G, 3:USXGMII 5G */
 			nvidia,phy-iface-mode = <0>;
 			nvidia,phy-reset-gpio = <&gpio TEGRA234_MAIN_GPIO(Y, 1) 0>;
