@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra210_iqc.c - Tegra210 IQC driver
+//
+// Copyright (c) 2014-2021 NVIDIA CORPORATION.  All rights reserved.
 
 #include <linux/clk.h>
 #include <linux/device.h>
@@ -19,6 +20,7 @@
 
 #include <drivers-private/sound/soc/tegra/tegra_cif.h>
 
+#include "tegra210_ahub.h"
 #include "tegra210_iqc.h"
 
 static const struct reg_default tegra210_iqc_reg_defaults[] = {

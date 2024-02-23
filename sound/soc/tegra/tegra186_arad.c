@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra186_arad.c - Tegra186 ARAD driver
+//
+// Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -26,10 +27,7 @@
 #include <drivers-private/sound/soc/tegra/tegra_cif.h>
 
 #include "tegra186_arad.h"
-
-#ifdef CONFIG_SND_SOC_TEGRA186_ASRC_WAR
 #include "tegra186_asrc.h"
-#endif
 
 static struct device *arad_dev;
 

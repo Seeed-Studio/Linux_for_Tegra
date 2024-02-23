@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra210_afc.c - Tegra210 AFC driver
+//
+// Copyright (c) 2014-2023 NVIDIA CORPORATION.  All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -22,6 +23,7 @@
 #include <drivers-private/sound/soc/tegra/tegra_cif.h>
 
 #include "tegra210_afc.h"
+#include "tegra210_ahub.h"
 
 static const struct reg_default tegra210_afc_reg_defaults[] = {
 	{ TEGRA210_AFC_AXBAR_RX_CIF_CTRL, 0x00007700},
