@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2017-2023 NVIDIA CORPORATION. All rights reserved.
- *
- * Tegra ASoC Machine driver
- */
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION. All rights reserved.
+//
+// tegra_machine_driver.c - Tegra ASoC Machine driver
 
 #include <nvidia/conftest.h>
 
@@ -114,7 +112,8 @@ static int tegra_machine_codec_put_format(struct snd_kcontrol *kcontrol,
 
 static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 				  unsigned int rate, unsigned int channels,
-				  u64 formats)
+				  u64 formats,
+				  struct snd_pcm_hw_params *pcm_params)
 {
 	unsigned int mask = (1 << channels) - 1;
 	struct snd_soc_card *card = runtime->card;
@@ -167,6 +166,22 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		 machine->audio_clock.set_pll_out, aud_mclk, srate);
 
 	list_for_each_entry(rtd, &card->rtd_list, list) {
+		/* fixup PCM params */
+		if (pcm_params && rtd->dai_link->be_hw_params_fixup) {
+			struct snd_pcm_hw_params new_params = *pcm_params;
+
+			err = rtd->dai_link->be_hw_params_fixup(rtd, &new_params);
+			if (err) {
+				dev_err(rtd->card->dev, "fixup failed for link %s\n",
+					rtd->dai_link->name);
+				return err;
+			}
+
+			srate = params_rate(&new_params);
+			channels = params_channels(&new_params);
+			format_k = 1 << params_format(&new_params);
+		}
+
 #if defined(NV_SND_SOC_DAI_LINK_STRUCT_HAS_C2C_PARAMS_ARG) /* Linux v6.4 */
 		if (!rtd->dai_link->c2c_params)
 			continue;
@@ -208,7 +223,8 @@ static int tegra_machine_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	err = tegra_machine_dai_init(rtd, params_rate(params),
 				     params_channels(params),
-				     params_format(params));
+				     params_format(params),
+				     params);
 	if (err < 0) {
 		dev_err(card->dev, "Failed dai init\n");
 		return err;
@@ -275,7 +291,8 @@ static int tegra_machine_compr_set_params(struct snd_compr_stream *cstream)
 
 	err = tegra_machine_dai_init(rtd, codec_params.sample_rate,
 				     codec_params.ch_out,
-				     SNDRV_PCM_FORMAT_S16_LE);
+				     SNDRV_PCM_FORMAT_S16_LE,
+				     NULL);
 	if (err < 0) {
 		dev_err(card->dev, "Failed dai init\n");
 		return err;
@@ -327,6 +344,46 @@ static struct snd_soc_card snd_soc_tegra_card = {
 	.driver_name = "tegra-ape",
 };
 
+static struct snd_soc_dai_driver tegra_dummy_dai = {
+	.name = "tegra-snd-dummy-dai",
+	.playback = {
+		.stream_name	= "Dummy Playback",
+		.channels_min	= 1,
+		.channels_max	= 32,
+		.rates		= SNDRV_PCM_RATE_8000_192000,
+		.formats	= SNDRV_PCM_FMTBIT_S8 |
+				  SNDRV_PCM_FMTBIT_S16_LE |
+				  SNDRV_PCM_FMTBIT_S32_LE,
+	},
+	.capture = {
+		.stream_name	= "Dummy Capture",
+		.channels_min	= 1,
+		.channels_max	= 32,
+		.rates		= SNDRV_PCM_RATE_8000_192000,
+		.formats	= SNDRV_PCM_FMTBIT_S8 |
+				  SNDRV_PCM_FMTBIT_S16_LE |
+				  SNDRV_PCM_FMTBIT_S32_LE,
+	 },
+};
+
+static const struct snd_soc_dapm_widget tegra_dummy_widgets[] = {
+	SND_SOC_DAPM_MIC("Dummy MIC", NULL),
+	SND_SOC_DAPM_SPK("Dummy SPK", NULL),
+};
+
+static const struct snd_soc_dapm_route tegra_dummy_routes[] = {
+	{"Dummy SPK",		NULL,	"Dummy Playback"},
+	{"Dummy Capture",	NULL,	"Dummy MIC"},
+};
+
+static const struct snd_soc_component_driver tegra_dummy_component = {
+	.dapm_widgets		= tegra_dummy_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(tegra_dummy_widgets),
+	.dapm_routes		= tegra_dummy_routes,
+	.num_dapm_routes	= ARRAY_SIZE(tegra_dummy_routes),
+	.endianness		= 1,
+};
+
 /* structure to match device tree node */
 static const struct of_device_id tegra_machine_of_match[] = {
 	{ .compatible = "nvidia,tegra186-ape" },
@@ -359,6 +416,13 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	ret = tegra_asoc_utils_init(&machine->audio_clock, &pdev->dev);
 	if (ret < 0)
 		return ret;
+
+	ret = devm_snd_soc_register_component(&pdev->dev, &tegra_dummy_component,
+					      &tegra_dummy_dai, 1);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Tegra dummy component registration fails\n");
+		return ret;
+	}
 
 	ret = add_dai_links(card);
 	if (ret < 0)

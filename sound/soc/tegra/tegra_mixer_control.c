@@ -21,6 +21,8 @@
  *   later by storing all DAI settings in the driver.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
@@ -417,8 +419,16 @@ static int tegra_mixer_control_probe(struct platform_device *pdev)
 
 	/* Fixup callback for BE codec2codec links */
 	for_each_card_rtds(card, rtd) {
-		/* Skip FE links */
-		if (!rtd->dai_link->no_pcm)
+		/* Skip FE links for sound card with DPCM routes for AHUB */
+		if (rtd->card->component_chaining && !rtd->dai_link->no_pcm)
+			continue;
+
+		/* Skip FE links for sound card with codec2codc routes for AHUB  */
+#if defined(NV_SND_SOC_DAI_LINK_STRUCT_HAS_C2C_PARAMS_ARG) /* Linux v6.4 */
+		if (!rtd->card->component_chaining && !rtd->dai_link->c2c_params)
+#else
+		if (!rtd->card->component_chaining && !rtd->dai_link->params)
+#endif
 			continue;
 
 		rtd->dai_link->be_hw_params_fixup = tegra_hw_params_fixup;
