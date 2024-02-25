@@ -349,35 +349,20 @@ static int tegra_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 
 static int tegra_mixer_control_probe(struct platform_device *pdev)
 {
-	struct platform_device *sound_pdev;
-	struct device_node *sound_node;
 	struct device *dev = &pdev->dev;
 	struct snd_soc_card *card;
 	struct snd_soc_component *component;
 	struct snd_soc_pcm_runtime *rtd;
 
-	sound_node = of_parse_phandle(dev->of_node, "nvidia,tegra-ape-link", 0);
-	if (!sound_node) {
-		dev_err(dev, "Failed to get phandle to sound device\n");
+	dev_info(dev, "Begin probe of override control device\n");
+
+	card = dev_get_drvdata(dev->parent);
+	if (!card) {
+		dev_err(dev, "Failed to get APE card reference\n");
 		return -EINVAL;
 	}
-
-	/* Device not instantiated yet */
-	sound_pdev = of_find_device_by_node(sound_node);
-	if (!sound_pdev)
-		return -EPROBE_DEFER;
-
-	/* Sound card not registered yet */
-	card = dev_get_drvdata(&sound_pdev->dev);
-	if (!card)
-		return -EPROBE_DEFER;
 
 	dev_set_drvdata(dev, card);
-
-	if (!device_link_add(dev, &sound_pdev->dev, 0)) {
-		dev_err(dev, "Failed to add device link to sound\n");
-		return -EINVAL;
-	}
 
 	for_each_card_components(card, component) {
 		if (!component->name_prefix)
@@ -433,6 +418,8 @@ static int tegra_mixer_control_probe(struct platform_device *pdev)
 
 		rtd->dai_link->be_hw_params_fixup = tegra_hw_params_fixup;
 	}
+
+	dev_info(dev, "Registered override controls for APE sound card\n");
 
 	return 0;
 }

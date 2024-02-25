@@ -436,6 +436,10 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	tegra_machine_add_i2s_codec_controls(card);
 
+	of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
+
+	dev_info(&pdev->dev, "Registered legacy APE sound card\n");
+
 	return 0;
 cleanup_asoc:
 	release_asoc_phandles(machine);
