@@ -344,11 +344,11 @@
 
 		ethernet@6800000 {
 			compatible = "nvidia,tegra234-mgbe";
-			reg = <0x0 0x06810000 0x0 0x10000>, /* MGBE base */
+			reg = <0x0 0x06800000 0x0 0x10000>, /* HV base */
+			      <0x0 0x06810000 0x0 0x10000>, /* MGBE base */
 			      <0x0 0x068A0000 0x0 0x10000>, /* XPCS base */
-			      <0x0 0x068D0000 0x0 0x10000>, /* MACsec RM base */
-			      <0x0 0x06800000 0x0 0x10000>; /* HV base */
-			reg-names = "mac", "xpcs", "macsec-base", "hypervisor";
+			      <0x0 0x068D0000 0x0 0x10000>; /* MACsec RM base */
+			reg-names = "hypervisor", "mac", "xpcs", "macsec-base";
 			interrupts =    <0 384 0x4>,    /* common */
 					<0 385 0x4>,    /* vm0 */
 					<0 386 0x4>,    /* vm1 */
