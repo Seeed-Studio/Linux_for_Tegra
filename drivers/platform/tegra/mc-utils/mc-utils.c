@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -353,7 +353,11 @@ static int __init tegra_mc_utils_init_t23x(void)
 
 		ch = readl(mcb_base + MC_EMEM_ADR_CFG_CHANNEL_ENABLE_0);
 		ch &= CH_MASK;
-		ecc = readl(mcb_base + MC_ECC_CONTROL_0) & ECC_MASK;
+
+		if (of_machine_is_compatible("nvidia,tegra234"))
+			ecc = readl(mcb_base + MC_ECC_CONTROL_0) & ECC_MASK;
+		else
+			ecc = 0;
 
 		rank = readl(mcb_base + MC_EMEM_ADR_CFG_0) & RANK_MASK;
 
@@ -366,7 +370,12 @@ static int __init tegra_mc_utils_init_t23x(void)
 			ch >>= 1;
 		}
 	} else {
-		struct device_node *np = of_find_compatible_node(NULL, NULL, "nvidia,tegra234-mc");
+		struct device_node *np;
+
+		if (of_machine_is_compatible("nvidia,tegra234"))
+			np = of_find_compatible_node(NULL, NULL, "nvidia,tegra234-mc");
+		else
+			np = of_find_compatible_node(NULL, NULL, "nvidia,tegra239-mc");
 
 		if (!np) {
 			pr_err("mc-utils: Not able to find MC DT node\n");
@@ -393,7 +402,8 @@ static int __init tegra_mc_utils_init_t23x(void)
 
 static int __init tegra_mc_utils_init(void)
 {
-	if (of_machine_is_compatible("nvidia,tegra234")) {
+	if (of_machine_is_compatible("nvidia,tegra234") ||
+		of_machine_is_compatible("nvidia,tegra239")) {
 		ops = &mc_utils_t23x_ops;
 		return tegra_mc_utils_init_t23x();
 	}
