@@ -68,6 +68,8 @@ struct psc_debug_dev {
 };
 
 static struct psc_debug_dev psc_debug;
+static struct psc_debug_dev oesp_debug;
+static struct psc_debug_dev sb_debug;
 static struct dentry *debugfs_root;
 
 #define NV(x) "nvidia," #x
@@ -224,6 +226,7 @@ static long xfer_data(struct file *file, char __user *data)
 	struct psc_debug_dev *dbg = file->private_data;
 	struct platform_device *pdev = dbg->pdev;
 	struct device *dev = &pdev->dev;
+	const char *psc_name = NULL;
 	void *tx_virt = NULL;
 	void *rx_virt = NULL;
 	dma_addr_t tx_phys = 0;
@@ -232,6 +235,12 @@ static long xfer_data(struct file *file, char __user *data)
 	union mbox_msg msg = {};
 	struct xfer_info info;
 	struct xfer_info __user *ptr_xfer = (struct xfer_info __user *)data;
+
+	/* Get the cpu name from dtb and use for debug node*/
+	if (device_property_read_string(dev, "nvidia,cpu-name", &psc_name) != 0) {
+		dev_err(dev, "Could not find property nvidia,cpu-name in device tree\n");
+		return -ENODEV;
+	}
 
 	if (copy_from_user(&info, data, sizeof(struct xfer_info))) {
 		dev_err(&pdev->dev, "failed to copy data.\n");
@@ -275,12 +284,21 @@ static long xfer_data(struct file *file, char __user *data)
 	dev_dbg(dev, "tx_virt:%p, tx_phys: %p\n", tx_virt, (void *)tx_phys);
 	dev_dbg(dev, "rx_virt:%p, rx_phys: %p\n", rx_virt, (void *)rx_phys);
 
-	msg.opcode[0] = info.opcode[0];
-	msg.opcode[1] = info.opcode[1];
-	msg.tx_iova = tx_phys;
-	msg.rx_iova = rx_phys;
-	msg.tx_size = info.tx_size;
-	msg.rx_size = info.rx_size;
+	/* For OESP/SB */
+	if (strcmp(psc_name, "oesp") == 0 || strcmp(psc_name, "sb") == 0) {
+		msg.data[0] = info.opcode[0];
+		msg.data[1] = info.opcode[1];
+		if (info.tx_buf && info.tx_size > 0 && info.tx_size <= 56)
+			memcpy(&msg.data[2], tx_virt, info.tx_size);
+	} else if (strcmp(psc_name, "psc") == 0) {
+		/* For PSC */
+		msg.opcode[0] = info.opcode[0];
+		msg.opcode[1] = info.opcode[1];
+		msg.tx_iova = tx_phys;
+		msg.rx_iova = rx_phys;
+		msg.tx_size = info.tx_size;
+		msg.rx_size = info.rx_size;
+	}
 
 	ret = send_msg_block(dbg, &msg);
 	if (ret != 0)
@@ -358,13 +376,26 @@ int psc_debugfs_create(struct platform_device *pdev, struct mbox_controller *mbo
 {
 	struct psc_debug_dev *dbg = &psc_debug;
 	struct device *dev = &pdev->dev;
+	const char *psc_name = NULL;
+
+	/* Get the cpu name from dtb and use for debug node*/
+	if (device_property_read_string(dev, "nvidia,cpu-name", &psc_name) != 0) {
+		dev_err(dev, "Could not find property nvidia,cpu-name in device tree\n");
+		return -ENODEV;
+	}
+
+	if (strcmp(psc_name, "oesp") == 0)
+		dbg = &oesp_debug;
+	else if (strcmp(psc_name, "sb") == 0)
+		dbg = &sb_debug;
 
 	if (!debugfs_initialized()) {
 		dev_err(dev, "debugfs is not initialized\n");
 		return -ENODEV;
 	}
 
-	debugfs_root = debugfs_create_dir("psc", NULL);
+	debugfs_root = debugfs_create_dir(psc_name, NULL);
+
 	if (debugfs_root == NULL) {
 		dev_err(dev, "failed to create psc debugfs\n");
 		return -EINVAL;
