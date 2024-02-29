@@ -598,6 +598,7 @@ allocate_fence(struct syncpt_t *syncpt)
 	mutex_lock(&syncpt->lock);
 	ret = dma_fence_add_callback(fence, &syncpt->fence_cb, host1x_cb_func);
 	if (ret != 0) {
+		/* If already expired. */
 		if (ret == -ENOENT) {
 			ret = 0;
 			schedule_work(&syncpt->work);
@@ -626,8 +627,10 @@ fence_do_work(struct work_struct *work)
 
 	mutex_lock(&syncpt->lock);
 	/* If deinit triggered, no need to proceed. */
-	if (syncpt->fence_release)
+	if (syncpt->fence_release) {
+		mutex_unlock(&syncpt->lock);
 		return;
+	}
 	if (syncpt->fence) {
 		dma_fence_put(syncpt->fence);
 		syncpt->fence = NULL;
@@ -636,7 +639,6 @@ fence_do_work(struct work_struct *work)
 
 	ret = allocate_fence(syncpt);
 	if (ret != 0) {
-		mutex_unlock(&syncpt->lock);
 		pr_err("allocate_fence failed with: %d\n", ret);
 		return;
 	}

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -491,6 +491,7 @@ err_enable_device:
 
 err_dt_parse:
 	pci_set_drvdata(pdev, NULL);
+	kfree(drv_ctx->epc_ctx);
 	kfree_const(drv_ctx->drv_name);
 	kfree(drv_ctx);
 	return ret;
