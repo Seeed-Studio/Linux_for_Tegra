@@ -991,14 +991,15 @@ allocate_fence(struct syncpt_t *syncpt)
 	int ret = 0;
 	struct dma_fence *fence = NULL;
 
+	mutex_lock(&syncpt->lock);
 	fence = host1x_fence_create(syncpt->sp, ++syncpt->threshold, false);
 	if (IS_ERR_OR_NULL(fence)) {
 		ret = PTR_ERR(fence);
 		pr_err("host1x_fence_create failed with: %d\n", ret);
+		mutex_unlock(&syncpt->lock);
 		return ret;
 	}
 
-	mutex_lock(&syncpt->lock);
 	ret = dma_fence_add_callback(fence, &syncpt->fence_cb, host1x_cb_func);
 	if (ret != 0) {
 		/* If already expired. */
@@ -1030,8 +1031,10 @@ fence_do_work(struct syncpt_t *syncpt)
 
 	mutex_lock(&syncpt->lock);
 	/* If deinit triggered, no need to proceed. */
-	if (syncpt->fence_release)
+	if (syncpt->fence_release) {
+		mutex_unlock(&syncpt->lock);
 		return;
+	}
 
 	if (syncpt->fence) {
 		dma_fence_put(syncpt->fence);
@@ -1041,7 +1044,6 @@ fence_do_work(struct syncpt_t *syncpt)
 
 	ret = allocate_fence(syncpt);
 	if (ret != 0) {
-		mutex_unlock(&syncpt->lock);
 		pr_err("allocate_fence failed with: %d\n", ret);
 		return;
 	}
@@ -1119,15 +1121,15 @@ static int tvnet_ep_poll(struct napi_struct *napi, int budget)
 {
 	struct pci_epf_tvnet *tvnet = container_of(napi, struct pci_epf_tvnet,
 						   napi);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0))
 	struct irqsp_data *data_irqsp = tvnet->data_irqsp;
+#endif
 	int work_done;
 
 	work_done = tvnet_ep_process_h2ep_msg(tvnet);
 	if (work_done < budget) {
 		napi_complete(napi);
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 14, 0))
-		schedule_work(&data_irqsp->syncpt.work);
-#else
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0))
 		schedule_work(&data_irqsp->reprime_work);
 #endif
 	}
@@ -1281,8 +1283,8 @@ static int tvnet_ep_pci_epf_setup_irqsp(struct pci_epf_tvnet *tvnet)
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 14, 0))
 	syncpt_addr = get_syncpt_shim_offset(data_irqsp->syncpt.id);
-	ctrl_irqsp->syncpt.phy_addr = syncpt_addr;
-	ctrl_irqsp->syncpt.size = PAGE_SIZE;
+	data_irqsp->syncpt.phy_addr = syncpt_addr;
+	data_irqsp->syncpt.size = PAGE_SIZE;
 #else
 	syncpt_addr = nvhost_interrupt_syncpt_get_syncpt_addr(data_irqsp->is);
 #endif
