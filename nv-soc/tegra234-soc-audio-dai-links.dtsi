@@ -10,6 +10,12 @@
 	tegra_sound: sound {
 		#sound-dai-cells = <0>;
 
+		/* mixer-controls node provide controls to override PCM params */
+		mixer-controls {
+			compatible = "nvidia,tegra234-mixer-control";
+			status = "okay";
+		};
+
 		/* ADMAIF <--> XBAR PCM links */
 		admaif1_pcm_link: nvidia-audio-card,dai-link@0 {
 			status = "okay";
