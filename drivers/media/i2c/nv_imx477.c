@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Copyright (c) 2020, RidgeRun. All rights reserved.
- * Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Contact us: support@ridgerun.com
  *
@@ -25,6 +25,8 @@
 
 #include "../platform/tegra/camera/camera_gpio.h"
 #include "imx477_mode_tbls.h"
+
+#define IMX477_SENSOR_INTERNAL_CLK_FREQ   840000000
 
 static const struct of_device_id imx477_of_match[] = {
 	{.compatible = "ridgerun,imx477",},
@@ -228,7 +230,7 @@ static int imx477_set_frame_rate(struct tegracam_device *tc_dev, s64 val)
 	if (val == 0 || mode->image_properties.line_length == 0)
 		return -EINVAL;
 
-	frame_length = (u32) (mode->signal_properties.pixel_clock.val *
+	frame_length = (u32) (IMX477_SENSOR_INTERNAL_CLK_FREQ *
 			      (u64) mode->control_properties.framerate_factor /
 			      mode->image_properties.line_length / val);
 
@@ -279,12 +281,12 @@ static int imx477_set_exposure(struct tegracam_device *tc_dev, s64 val)
 
 	fine_integ_time_factor = priv->fine_integ_time *
 		mode->control_properties.exposure_factor /
-		mode->signal_properties.pixel_clock.val;
+		IMX477_SENSOR_INTERNAL_CLK_FREQ;
 
 	dev_dbg(dev, "%s: Setting exposure control to: %lld\n", __func__, val);
 
 	coarse_time = (val - fine_integ_time_factor)
-	    * mode->signal_properties.pixel_clock.val
+	    * IMX477_SENSOR_INTERNAL_CLK_FREQ
 	    / mode->control_properties.exposure_factor
 	    / mode->image_properties.line_length;
 
