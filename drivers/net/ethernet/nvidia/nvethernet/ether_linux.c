@@ -1131,9 +1131,19 @@ static void ether_adjust_link(struct net_device *dev)
 					schedule_delayed_work(&pdata->set_speed_work,
 							      msecs_to_jiffies(10));
 					return;
+				} else if (pdata->osi_core->mac == OSI_MAC_HW_EQOS) {
+					netdev_dbg(dev, "Retry set speed single time for EQOS\n");
+					msleep(10);
+					ioctl_data.arg6_32 = speed;
+					ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
+					if (ret < 0) {
+						netdev_err(dev, "Failed to set speed\n");
+						return;
+					}
+				} else {
+					netdev_err(dev, "Failed to set speed\n");
+					return;
 				}
-				netdev_err(dev, "Failed to set speed\n");
-				return;
 			}
 
 			ether_en_dis_monitor_clks(pdata, OSI_ENABLE);
