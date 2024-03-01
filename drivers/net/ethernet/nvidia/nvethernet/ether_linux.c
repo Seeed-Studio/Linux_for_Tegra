@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved */
+// SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 #include <linux/version.h>
@@ -1645,7 +1645,8 @@ static int ether_request_irqs(struct ether_priv_data *pdata)
 			snprintf(pdata->irq_names[j], ETHER_IRQ_NAME_SZ, "%s.vm%d",
 				 netdev_name(pdata->ndev), i);
 			ret = devm_request_irq(pdata->dev, pdata->vm_irqs[i],
-					       ether_vm_isr, IRQF_TRIGGER_NONE,
+					       ether_vm_isr,
+					       IRQF_TRIGGER_NONE | IRQF_NOBALANCING,
 					       pdata->irq_names[j++],
 					       &pdata->vm_irq_data[i]);
 			if (unlikely(ret < 0)) {
