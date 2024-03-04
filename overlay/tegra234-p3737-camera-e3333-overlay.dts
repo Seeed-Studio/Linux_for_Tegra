@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2015-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -91,79 +91,97 @@
 				compatible = "nvidia, tegra-camera-platform";
 				modules {
 					module0 {
+						status = "okay";
 						badge = "e3333_bottomleft_P5V27C";
 						position = "bottomleft";
 						orientation = "1";
 						drivernode0 {
+							status = "okay";
 							pcl_id = "v4l2_sensor";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@0/ov5693_a@36";
 						};
 						drivernode1 {
+							status = "okay";
 							pcl_id = "v4l2_lens";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module1 {
+						status = "okay";
 						badge = "e3333_centerleft_P5V27C";
 						position = "centerleft";
 						orientation = "1";
 						drivernode0 {
+							status = "okay";
 							pcl_id = "v4l2_sensor";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@1/ov5693_b@36";
 						};
 						drivernode1 {
+							status = "okay";
 							pcl_id = "v4l2_lens";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module2 {
+						status = "okay";
 						badge = "e3333_centerright_P5V27C";
 						position = "centerright";
 						orientation = "1";
 						drivernode0 {
+							status = "okay";
 							pcl_id = "v4l2_sensor";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@2/ov5693_c@36";
 						};
 						drivernode1 {
+							status = "okay";
 							pcl_id = "v4l2_lens";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module3 {
+						status = "okay";
 						badge = "e3333_topleft_P5V27C";
 						position = "topleft";
 						orientation = "1";
 						drivernode0 {
+							status = "okay";
 							pcl_id = "v4l2_sensor";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@3/ov5693_d@36";
 						};
 						drivernode1 {
+							status = "okay";
 							pcl_id = "v4l2_lens";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module4 {
+						status = "okay";
 						badge = "e3333_bottomright_P5V27C";
 						position = "bottomright";
 						orientation = "1";
 						drivernode0 {
+							status = "okay";
 							pcl_id = "v4l2_sensor";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@4/ov5693_e@36";
 						};
 						drivernode1 {
+							status = "okay";
 							pcl_id = "v4l2_lens";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
 					};
 					module5 {
+						status = "okay";
 						badge = "e3333_topright_P5V27C";
 						position = "topright";
 						orientation = "1";
 						drivernode0 {
+							status = "okay";
 							pcl_id = "v4l2_sensor";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/tca9548@77/i2c@5/ov5693_g@36";
 						};
 						drivernode1 {
+							status = "okay";
 							pcl_id = "v4l2_lens";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/e3333_lens_ov5693@P5V27C/";
 						};
