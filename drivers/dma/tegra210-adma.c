@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * ADMA driver for Nvidia's Tegra210 ADMA controller.
- *
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// tegra210-adma.c - ADMA driver for Nvidia's Tegra210 ADMA controller.
 
 #include <linux/clk.h>
 #include <linux/iopoll.h>
@@ -886,7 +884,6 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	struct resource	*global_base, *page_base;
 	struct tegra_adma *tdma;
 	int ret, i;
-	unsigned int dma_chan_mask = 0xFFFFFFFF;
 	unsigned int chan_page_offset = 0;
 
 	cdata = of_device_get_match_data(&pdev->dev);
@@ -943,7 +940,6 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&tdma->dma_dev.channels);
 	for (i = 0; i < tdma->nr_channels; i++) {
 		struct tegra_adma_chan *tdc = &tdma->channels[i];
-		int bit_pos = ffs(dma_chan_mask) - 1;
 
 		/* skip for reserved channels */
 		if (!test_bit(i, tdma->dma_chan_mask))
@@ -951,11 +947,9 @@ static int tegra_adma_probe(struct platform_device *pdev)
 
 		tdc->chan_addr = tdma->base_addr + cdata->ch_base_offset
 				 + chan_page_offset
-				 + (cdata->ch_reg_size * bit_pos);
+				 + (cdata->ch_reg_size * i);
 
-		dma_chan_mask &= ~(1 << bit_pos);
-
-		tdc->irq = of_irq_get(pdev->dev.of_node, bit_pos);
+		tdc->irq = of_irq_get(pdev->dev.of_node, i);
 		if (tdc->irq <= 0) {
 			ret = tdc->irq ?: -ENXIO;
 			goto irq_dispose;
