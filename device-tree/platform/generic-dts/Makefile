@@ -13,7 +13,7 @@ include $(oottree)/scripts/Makefile.lib
 
 DTC_CPP_FLAGS += $(EXTRA_CPP_FLAGS)
 
-DTC_CPP_FLAGS += -DLINUX_VERSION=600 -DTEGRA_HOST1X_DT_VERSION=2
+DTC_CPP_FLAGS += -DLINUX_VERSION=600 -DTEGRA_HOST1X_DT_VERSION=2 -DOS_LINUX
 
 ifneq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)
 ifneq ($(TOP),)
