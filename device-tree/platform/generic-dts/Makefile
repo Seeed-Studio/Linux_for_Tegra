@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only
 
 objtree ?= $(srctree)
@@ -46,12 +46,15 @@ tegra-rel-dtstree := $(rel-top-path)/hardware/nvidia
 DTC_INCLUDE :=
 # SOC independent common include
 DTC_INCLUDE += $(tegra-dtstree)/tegra/nv-public
+DTC_INCLUDE += $(tegra-dtstree)/tegra/nv-public/include/kernel
 
 # SOC T23X specific common include
 DTC_INCLUDE += $(tegra-dtstree)/t23x/nv-public/include/kernel
 DTC_INCLUDE += $(tegra-dtstree)/t23x/nv-public/include/nvidia-oot
 DTC_INCLUDE += $(tegra-dtstree)/t23x/nv-public/include/platforms
 DTC_INCLUDE += $(tegra-dtstree)/t23x/nv-public
+DTC_INCLUDE += $(tegra-dtstree)/t264/nv-public/include/kernel-t264
+DTC_INCLUDE += $(tegra-dtstree)/t264/nv-public
 
 dtb-y :=
 dtbo-y :=
@@ -60,6 +63,7 @@ DTB_LIST := $(dtb-y)
 DTBO_LIST := $(dtbo-y)
 dtb-y :=
 fdts := $(tegra-dtstree)/t23x
+fdts += $(tegra-dtstree)/t264
 
 # Add internal SOCs to scan the DT makefiles
 ifneq ($(internal_soc_list),)
