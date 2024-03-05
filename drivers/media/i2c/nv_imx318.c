@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
+// All rights reserved.
+//
+// nv_imx318.c - imx318 sensor driver
+//
 
 #include <nvidia/conftest.h>
 
@@ -130,6 +134,11 @@ static int imx318_set_frame_rate_ex(struct tegracam_device *tc_dev,
 	u32 frame_length;
 	u8 fl_arr[2];
 	int err = 0;
+
+	if (val < mode->control_properties.min_framerate)
+		val = mode->control_properties.min_framerate;
+	else if (val > mode->control_properties.max_framerate)
+		val = mode->control_properties.max_framerate;
 
 	if (mode->image_properties.line_length == 0 ||
 	    val == 0) {
