@@ -29,6 +29,8 @@ int lan743x_gpio_init(struct lan743x_adapter *adapter)
 {
 	struct lan743x_gpio *gpio = &adapter->gpio;
 
+	uint32_t val = 0;
+
 	spin_lock_init(&gpio->gpio_lock);
 
 	gpio->gpio_cfg0 = 0; /* set all direction to input, data = 0 */
@@ -39,6 +41,16 @@ int lan743x_gpio_init(struct lan743x_adapter *adapter)
 	lan743x_csr_write(adapter, GPIO_CFG1, gpio->gpio_cfg1);
 	lan743x_csr_write(adapter, GPIO_CFG2, gpio->gpio_cfg2);
 	lan743x_csr_write(adapter, GPIO_CFG3, gpio->gpio_cfg3);
+
+	//configure LED
+	val = lan743x_csr_read(adapter, 0x0010);
+	val |= 0x00300004;
+	lan743x_csr_write(adapter, 0x0010, val);
+
+	val = lan743x_csr_read(adapter, 0x0018);
+	val &= 0xFFFFFF00;
+	val |= 0x00000018;
+	lan743x_csr_write(adapter, 0x0018, val);
 
 	return 0;
 }
