@@ -223,6 +223,7 @@ int nvmap_get_handle_from_sci_ipc_id(struct nvmap_client *client, u32 flags,
 	int ret = 0;
 	int fd;
 	long dmabuf_ref = 0;
+	u32 id = 0;
 
 	mutex_lock(&nvmapsciipc->mlock);
 
@@ -278,6 +279,11 @@ int nvmap_get_handle_from_sci_ipc_id(struct nvmap_client *client, u32 flags,
 	mutex_unlock(&h->lock);
 
 	ref = nvmap_duplicate_handle(client, h, false, is_ro);
+	if (IS_ERR(ref)) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
 	/*
 	 * When new RO dmabuf created or duplicated, one extra dma_buf refcount is taken so to
 	 * avoid getting it freed by another process, until duplication completes. Decrement that
@@ -286,48 +292,40 @@ int nvmap_get_handle_from_sci_ipc_id(struct nvmap_client *client, u32 flags,
 	if (is_ro)
 		dma_buf_put(h->dmabuf_ro);
 
-	if (IS_ERR(ref)) {
-		ret = -EINVAL;
-		goto unlock;
-	}
 	nvmap_handle_put(h);
-
-	if (!IS_ERR(ref)) {
-		u32 id = 0;
-
-		/*
-		 * Increase reference dup count, so that handle is not freed accidentally
-		 * due to other thread calling NvRmMemHandleFree
-		 */
-		atomic_inc(&ref->dupes);
-		dmabuf = is_ro ? h->dmabuf_ro : h->dmabuf;
-		if (client->ida) {
-			if (nvmap_id_array_id_alloc(client->ida, &id, dmabuf) < 0) {
-				atomic_dec(&ref->dupes);
-				if (dmabuf)
-					dma_buf_put(dmabuf);
-				nvmap_free_handle(client, h, is_ro);
-				ret = -ENOMEM;
-				goto unlock;
-			}
-			if (!id)
-				*handle = 0;
-			else
-				*handle = id;
-		} else {
-			fd = nvmap_get_dmabuf_fd(client, h, is_ro);
-			if (IS_ERR_VALUE((uintptr_t)fd)) {
-				atomic_dec(&ref->dupes);
-				if (dmabuf)
-					dma_buf_put(dmabuf);
-				nvmap_free_handle(client, h, is_ro);
-				ret = -EINVAL;
-				goto unlock;
-			}
-			*handle = fd;
-			fd_install(fd, dmabuf->file);
+	/*
+	 * Increase reference dup count, so that handle is not freed accidentally
+	 * due to other thread calling NvRmMemHandleFree
+	 */
+	atomic_inc(&ref->dupes);
+	dmabuf = is_ro ? h->dmabuf_ro : h->dmabuf;
+	if (client->ida) {
+		if (nvmap_id_array_id_alloc(client->ida, &id, dmabuf) < 0) {
+			atomic_dec(&ref->dupes);
+			if (dmabuf)
+				dma_buf_put(dmabuf);
+			nvmap_free_handle(client, h, is_ro);
+			ret = -ENOMEM;
+			goto unlock;
 		}
+		if (!id)
+			*handle = 0;
+		else
+			*handle = id;
+	} else {
+		fd = nvmap_get_dmabuf_fd(client, h, is_ro);
+		if (IS_ERR_VALUE((uintptr_t)fd)) {
+			atomic_dec(&ref->dupes);
+			if (dmabuf)
+				dma_buf_put(dmabuf);
+			nvmap_free_handle(client, h, is_ro);
+			ret = -EINVAL;
+			goto unlock;
+		}
+		*handle = fd;
+		fd_install(fd, dmabuf->file);
 	}
+
 	entry->refcount--;
 	if (entry->refcount == 0U) {
 		struct free_sid_node *free_node;
