@@ -77,8 +77,8 @@ static struct host1x_bo_mapping *tegra_bo_pin(struct device *dev, struct host1x_
 	/*
 	 * Imported buffers need special treatment to satisfy the semantics of DMA-BUF.
 	 */
-	if (gem->import_attach) {
-		struct dma_buf *buf = gem->import_attach->dmabuf;
+	if (obj->dma_buf) {
+		struct dma_buf *buf = obj->dma_buf;
 
 		map->attach = dma_buf_attach(buf, dev);
 		if (IS_ERR(map->attach)) {
@@ -186,8 +186,8 @@ static void *tegra_bo_mmap(struct host1x_bo *bo)
 
 	if (obj->vaddr) {
 		return obj->vaddr;
-	} else if (obj->gem.import_attach) {
-		ret = dma_buf_vmap(obj->gem.import_attach->dmabuf, &map);
+	} else if (obj->dma_buf) {
+		ret = dma_buf_vmap(obj->dma_buf, &map);
 		return ret ? NULL : map.vaddr;
 	} else {
 		return vmap(obj->pages, obj->num_pages, VM_MAP,
@@ -206,8 +206,8 @@ static void tegra_bo_munmap(struct host1x_bo *bo, void *addr)
 
 	if (obj->vaddr)
 		return;
-	else if (obj->gem.import_attach)
-		dma_buf_vunmap(obj->gem.import_attach->dmabuf, &map);
+	else if (obj->dma_buf)
+		dma_buf_vunmap(obj->dma_buf, &map);
 	else
 		vunmap(addr);
 }
@@ -463,27 +463,32 @@ static struct tegra_bo *tegra_bo_import(struct drm_device *drm,
 	if (IS_ERR(bo))
 		return bo;
 
-	attach = dma_buf_attach(buf, drm->dev);
-	if (IS_ERR(attach)) {
-		err = PTR_ERR(attach);
-		goto free;
-	}
-
-	get_dma_buf(buf);
-
-	bo->sgt = dma_buf_map_attachment(attach, DMA_TO_DEVICE);
-	if (IS_ERR(bo->sgt)) {
-		err = PTR_ERR(bo->sgt);
-		goto detach;
-	}
-
+	/*
+	 * If we need to use IOMMU API to map the dma-buf into the internally managed
+	 * domain, map it first to the DRM device to get an sgt.
+	 */
 	if (tegra->domain) {
+		attach = dma_buf_attach(buf, drm->dev);
+		if (IS_ERR(attach)) {
+			err = PTR_ERR(attach);
+			goto free;
+		}
+
+		bo->sgt = dma_buf_map_attachment(attach, DMA_TO_DEVICE);
+		if (IS_ERR(bo->sgt)) {
+			err = PTR_ERR(bo->sgt);
+			goto detach;
+		}
+
 		err = tegra_bo_iommu_map(tegra, bo);
 		if (err < 0)
 			goto detach;
+
+		bo->gem.import_attach = attach;
 	}
 
-	bo->gem.import_attach = attach;
+	get_dma_buf(buf);
+	bo->dma_buf = buf;
 
 	return bo;
 
@@ -514,19 +519,20 @@ void tegra_bo_free_object(struct drm_gem_object *gem)
 				dev_name(mapping->dev));
 	}
 
-	if (tegra->domain)
+	if (tegra->domain) {
 		tegra_bo_iommu_unmap(tegra, bo);
 
-	if (gem->import_attach) {
-		struct dma_buf *dmabuf = gem->import_attach->dmabuf;
-
-		dma_buf_unmap_attachment(gem->import_attach, bo->sgt,
-					 DMA_TO_DEVICE);
-		dma_buf_detach(dmabuf, gem->import_attach);
-		dma_buf_put(dmabuf);
-	} else {
-		tegra_bo_free(gem->dev, bo);
+		if (gem->import_attach) {
+			dma_buf_unmap_attachment(gem->import_attach, bo->sgt,
+						 DMA_TO_DEVICE);
+			dma_buf_detach(gem->import_attach->dmabuf, gem->import_attach);
+		}
 	}
+
+	tegra_bo_free(gem->dev, bo);
+
+	if (bo->dma_buf)
+		dma_buf_put(bo->dma_buf);
 
 	drm_gem_object_release(gem);
 	kfree(bo);
