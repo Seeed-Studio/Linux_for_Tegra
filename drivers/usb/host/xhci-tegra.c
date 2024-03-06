@@ -273,6 +273,8 @@ struct tegra_xusb_soc {
 	bool has_ipfs;
 	bool lpm_support;
 	bool otg_reset_sspi;
+	bool is_xhci_vf;
+	u8 vf_id;
 
 	bool has_bar2;
 	bool has_pg_support;
@@ -373,6 +375,8 @@ struct tegra_xusb {
 	struct tegra_xusb_context context;
 	u8 lp0_utmi_pad_mask;
 	atomic_t hub_ctrl_use_cnt;
+
+	struct notifier_block padctl_nb;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -1271,6 +1275,9 @@ static void tegra_xusb_config(struct tegra_xusb *tegra)
 	u32 regs = tegra->hcd->rsrc_start;
 	u32 value;
 
+	if (tegra->soc->is_xhci_vf)
+		return;
+
 	if (tegra->soc->has_ipfs) {
 		value = ipfs_readl(tegra, IPFS_XUSB_HOST_CONFIGURATION_0);
 		value |= IPFS_EN_FPCI;
@@ -1315,6 +1322,9 @@ static void tegra_xusb_config(struct tegra_xusb *tegra)
 static int tegra_xusb_clk_enable(struct tegra_xusb *tegra)
 {
 	int err;
+
+	if (tegra->soc->is_xhci_vf)
+		return 0;
 
 	err = clk_prepare_enable(tegra->pll_e);
 	if (err < 0)
@@ -1365,6 +1375,9 @@ disable_plle:
 
 static void tegra_xusb_clk_disable(struct tegra_xusb *tegra)
 {
+	if (tegra->soc->is_xhci_vf)
+		return;
+
 	clk_disable_unprepare(tegra->pll_e);
 	clk_disable_unprepare(tegra->host_clk);
 	clk_disable_unprepare(tegra->ss_clk);
@@ -1415,6 +1428,9 @@ static void tegra_xusb_phy_disable(struct tegra_xusb *tegra)
 static int tegra_xusb_init_context(struct tegra_xusb *tegra)
 {
 	const struct tegra_xusb_context_soc *soc = tegra->soc->context;
+
+	if (tegra->soc->is_xhci_vf)
+		return 0;
 
 	tegra->context.ipfs = devm_kcalloc(tegra->dev, soc->ipfs.num_offsets,
 					   sizeof(u32), GFP_KERNEL);
@@ -1654,6 +1670,9 @@ static int tegra_xusb_init_ifr_firmware(struct tegra_xusb *tegra)
 
 static int tegra_xusb_load_firmware(struct tegra_xusb *tegra)
 {
+	if (tegra->soc->is_xhci_vf)
+		return 0;
+
 	if (!tegra->soc->firmware)
 		return tegra_xusb_init_ifr_firmware(tegra);
 	else
@@ -1663,7 +1682,7 @@ static int tegra_xusb_load_firmware(struct tegra_xusb *tegra)
 static void tegra_xusb_powerdomain_remove(struct device *dev,
 					  struct tegra_xusb *tegra)
 {
-	if (!tegra->use_genpd)
+	if (!tegra->use_genpd || tegra->soc->is_xhci_vf)
 		return;
 
 	if (!IS_ERR_OR_NULL(tegra->genpd_dev_ss))
@@ -1676,6 +1695,9 @@ static int tegra_xusb_powerdomain_init(struct device *dev,
 				       struct tegra_xusb *tegra)
 {
 	int err;
+
+	if (tegra->soc->is_xhci_vf)
+		return 0;
 
 	tegra->genpd_dev_host = dev_pm_domain_attach_by_name(dev, "xusb_host");
 	if (IS_ERR(tegra->genpd_dev_host)) {
@@ -1700,6 +1722,9 @@ static int tegra_xusb_unpowergate_partitions(struct tegra_xusb *tegra)
 {
 	struct device *dev = tegra->dev;
 	int rc;
+
+	if (tegra->soc->is_xhci_vf)
+		return 0;
 
 	if (tegra->use_genpd) {
 		rc = pm_runtime_resume_and_get(tegra->genpd_dev_ss);
@@ -1741,6 +1766,9 @@ static int tegra_xusb_powergate_partitions(struct tegra_xusb *tegra)
 	struct device *dev = tegra->dev;
 	int rc;
 
+	if (tegra->soc->is_xhci_vf)
+		return 0;
+
 	if (tegra->use_genpd) {
 		rc = pm_runtime_put_sync(tegra->genpd_dev_host);
 		if (rc < 0) {
@@ -1779,6 +1807,9 @@ static int tegra_xusb_reset_assert(struct tegra_xusb *tegra)
 	struct device *dev = tegra->dev;
 	int rc;
 
+	if (tegra->soc->is_xhci_vf)
+		return 0;
+
 	rc = reset_control_assert(tegra->host_rst);
 	if (rc < 0) {
 		dev_err(dev, "failed to assert xusb_host reset: %d\n", rc);
@@ -1799,6 +1830,9 @@ static int tegra_xusb_reset_deassert(struct tegra_xusb *tegra)
 	struct device *dev = tegra->dev;
 	int rc;
 
+	if (tegra->soc->is_xhci_vf)
+		return 0;
+
 	rc = reset_control_deassert(tegra->host_rst);
 	if (rc < 0) {
 		dev_err(dev, "failed to deassert xusb_host reset: %d\n", rc);
@@ -1818,6 +1852,9 @@ static int __tegra_xusb_enable_firmware_messages(struct tegra_xusb *tegra)
 {
 	struct tegra_xusb_mbox_msg msg;
 	int err;
+
+	if (tegra->soc->is_xhci_vf)
+		return 0;
 
 	/* Enable firmware messages from controller. */
 	msg.cmd = MBOX_CMD_MSG_ENABLED;
@@ -2105,6 +2142,24 @@ static void tegra_xusb_deinit_usb_phy(struct tegra_xusb *tegra)
 			otg_set_host(tegra->usbphy[i]->otg, NULL);
 }
 
+static int tegra_xhci_padctl_notify(struct notifier_block *nb,
+					 unsigned long event, void *data)
+{
+	struct tegra_xusb *tegra = container_of(nb, struct tegra_xusb,
+						    padctl_nb);
+	u8 vf_id;
+
+	vf_id = (event >> XUSB_EVENT_VF_OFFSET) & XUSB_EVENT_VF_MASK;
+	if (vf_id != tegra->soc->vf_id)
+		return NOTIFY_OK;
+
+	dev_dbg(tegra->dev, "%s(): event %lx\n", __func__, event);
+
+	tegra_xusb_padctl_irq(0, tegra);
+
+	return NOTIFY_OK;
+}
+
 static int tegra_xusb_probe(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra;
@@ -2133,27 +2188,32 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	if (IS_ERR(tegra->regs))
 		return PTR_ERR(tegra->regs);
 
-	tegra->fpci_base = devm_platform_ioremap_resource(pdev, 1);
-	if (IS_ERR(tegra->fpci_base))
-		return PTR_ERR(tegra->fpci_base);
+	if (!tegra->soc->is_xhci_vf) {
+		tegra->fpci_base = devm_platform_ioremap_resource(pdev, 1);
+		if (IS_ERR(tegra->fpci_base))
+			return PTR_ERR(tegra->fpci_base);
 
-	if (tegra->soc->has_ipfs) {
-		tegra->ipfs_base = devm_platform_ioremap_resource(pdev, 2);
-		if (IS_ERR(tegra->ipfs_base))
-			return PTR_ERR(tegra->ipfs_base);
-	} else if (tegra->soc->has_bar2) {
-		tegra->bar2_base = devm_platform_get_and_ioremap_resource(pdev, 2, &tegra->bar2);
-		if (IS_ERR(tegra->bar2_base))
-			return PTR_ERR(tegra->bar2_base);
+		if (tegra->soc->has_ipfs) {
+			tegra->ipfs_base = devm_platform_ioremap_resource(pdev, 2);
+			if (IS_ERR(tegra->ipfs_base))
+				return PTR_ERR(tegra->ipfs_base);
+		} else if (tegra->soc->has_bar2) {
+			tegra->bar2_base = devm_platform_get_and_ioremap_resource(
+						pdev, 2, &tegra->bar2);
+			if (IS_ERR(tegra->bar2_base))
+				return PTR_ERR(tegra->bar2_base);
+		}
 	}
 
 	tegra->xhci_irq = platform_get_irq(pdev, 0);
 	if (tegra->xhci_irq < 0)
 		return tegra->xhci_irq;
 
-	tegra->mbox_irq = platform_get_irq(pdev, 1);
-	if (tegra->mbox_irq < 0)
-		return tegra->mbox_irq;
+	if (!tegra->soc->is_xhci_vf) {
+		tegra->mbox_irq = platform_get_irq(pdev, 1);
+		if (tegra->mbox_irq < 0)
+			return tegra->mbox_irq;
+	}
 
 	tegra->padctl = tegra_xusb_padctl_get(&pdev->dev);
 	if (IS_ERR(tegra->padctl))
@@ -2164,6 +2224,9 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 		err = -ENODEV;
 		goto put_padctl;
 	}
+
+	if (tegra->soc->is_xhci_vf)
+		goto skip_clock_and_reg;
 
 	tegra->padctl_irq = of_irq_get(np, 0);
 	if (tegra->padctl_irq == -EPROBE_DEFER) {
@@ -2280,6 +2343,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 		goto put_powerdomains;
 	}
 
+skip_clock_and_reg:
 	for (i = 0; i < tegra->soc->num_types; i++) {
 		if (!strncmp(tegra->soc->phy_types[i].name, "usb2", 4))
 			tegra->num_usb_phys = tegra->soc->phy_types[i].num;
@@ -2414,13 +2478,15 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 		goto put_usb3;
 	}
 
-	err = devm_request_threaded_irq(&pdev->dev, tegra->mbox_irq,
-					tegra_xusb_mbox_irq,
-					tegra_xusb_mbox_thread, 0,
-					dev_name(&pdev->dev), tegra);
-	if (err < 0) {
-		dev_err(&pdev->dev, "failed to request IRQ: %d\n", err);
-		goto remove_usb3;
+	if (tegra->mbox_irq) {
+		err = devm_request_threaded_irq(&pdev->dev, tegra->mbox_irq,
+						tegra_xusb_mbox_irq,
+						tegra_xusb_mbox_thread, 0,
+						dev_name(&pdev->dev), tegra);
+		if (err < 0) {
+			dev_err(&pdev->dev, "failed to request IRQ: %d\n", err);
+			goto remove_usb3;
+		}
 	}
 
 	if (tegra->padctl_irq) {
@@ -2432,6 +2498,11 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "failed to request padctl IRQ: %d\n", err);
 			goto remove_usb3;
 		}
+	}
+
+	if (tegra->soc->is_xhci_vf) {
+		tegra->padctl_nb.notifier_call = tegra_xhci_padctl_notify;
+		tegra_xusb_padctl_event_register(tegra->padctl, &tegra->padctl_nb);
 	}
 
 	err = tegra_xusb_enable_firmware_messages(tegra);
@@ -2474,8 +2545,9 @@ powergate:
 	else
 		tegra_xusb_reset_assert(tegra);
 free_firmware:
-	dma_free_coherent(&pdev->dev, tegra->fw.size, tegra->fw.virt,
-			  tegra->fw.phys);
+	if (tegra->fw.virt)
+		dma_free_coherent(&pdev->dev, tegra->fw.size, tegra->fw.virt,
+				  tegra->fw.phys);
 disable_phy:
 	tegra_xusb_phy_disable(tegra);
 disable_regulator:
@@ -2518,7 +2590,8 @@ static void tegra_xusb_remove(struct platform_device *pdev)
 	usb_remove_hcd(tegra->hcd);
 	usb_put_hcd(tegra->hcd);
 
-	dma_free_coherent(&pdev->dev, tegra->fw.size, tegra->fw.virt,
+	if (tegra->fw.virt)
+		dma_free_coherent(&pdev->dev, tegra->fw.size, tegra->fw.virt,
 			  tegra->fw.phys);
 
 	fw_log_deinit(tegra);
@@ -2609,6 +2682,9 @@ static void tegra_xusb_save_context(struct tegra_xusb *tegra)
 	struct tegra_xusb_context *ctx = &tegra->context;
 	unsigned int i;
 
+	if (tegra->soc->is_xhci_vf)
+		return;
+
 	if (soc->ipfs.num_offsets > 0) {
 		for (i = 0; i < soc->ipfs.num_offsets; i++)
 			ctx->ipfs[i] = ipfs_readl(tegra, soc->ipfs.offsets[i]);
@@ -2625,6 +2701,9 @@ static void tegra_xusb_restore_context(struct tegra_xusb *tegra)
 	const struct tegra_xusb_context_soc *soc = tegra->soc->context;
 	struct tegra_xusb_context *ctx = &tegra->context;
 	unsigned int i;
+
+	if (tegra->soc->is_xhci_vf)
+		return;
 
 	if (soc->fpci.num_offsets > 0) {
 		for (i = 0; i < soc->fpci.num_offsets; i++)
@@ -2951,7 +3030,8 @@ static __maybe_unused int tegra_xusb_suspend(struct device *dev)
 	struct tegra_xusb *tegra = dev_get_drvdata(dev);
 	int err;
 
-	synchronize_irq(tegra->mbox_irq);
+	if (tegra->mbox_irq)
+		synchronize_irq(tegra->mbox_irq);
 
 	mutex_lock(&tegra->lock);
 
@@ -2977,7 +3057,7 @@ out:
 		tegra->suspended = true;
 		pm_runtime_disable(dev);
 
-		if (device_may_wakeup(dev)) {
+		if (tegra->padctl_irq && device_may_wakeup(dev)) {
 			if (enable_irq_wake(tegra->padctl_irq))
 				dev_err(dev, "failed to enable padctl wakes\n");
 		}
@@ -3006,7 +3086,7 @@ static __maybe_unused int tegra_xusb_resume(struct device *dev)
 		return err;
 	}
 
-	if (device_may_wakeup(dev)) {
+	if (tegra->padctl_irq && device_may_wakeup(dev)) {
 		if (disable_irq_wake(tegra->padctl_irq))
 			dev_err(dev, "failed to disable padctl wakes\n");
 	}
@@ -3024,7 +3104,8 @@ static __maybe_unused int tegra_xusb_runtime_suspend(struct device *dev)
 	struct tegra_xusb *tegra = dev_get_drvdata(dev);
 	int ret;
 
-	synchronize_irq(tegra->mbox_irq);
+	if (tegra->mbox_irq)
+		synchronize_irq(tegra->mbox_irq);
 	mutex_lock(&tegra->lock);
 	ret = tegra_xusb_enter_elpg(tegra, true);
 	mutex_unlock(&tegra->lock);
@@ -3284,12 +3365,64 @@ static const struct tegra_xusb_soc tegra234_soc = {
 	.has_pg_support = true,
 };
 
+static const struct tegra_xusb_soc tegra234_vf1_soc = {
+	.vf_id = 1,
+	.is_xhci_vf = true,
+	.phy_types = tegra194_phy_types,
+	.num_types = ARRAY_SIZE(tegra194_phy_types),
+	.ports = {
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+	},
+	.lpm_support = true,
+};
+
+static const struct tegra_xusb_soc tegra234_vf2_soc = {
+	.vf_id = 2,
+	.is_xhci_vf = true,
+	.phy_types = tegra194_phy_types,
+	.num_types = ARRAY_SIZE(tegra194_phy_types),
+	.ports = {
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+	},
+	.lpm_support = true,
+};
+
+static const struct tegra_xusb_soc tegra234_vf3_soc = {
+	.vf_id = 3,
+	.is_xhci_vf = true,
+	.phy_types = tegra194_phy_types,
+	.num_types = ARRAY_SIZE(tegra194_phy_types),
+	.ports = {
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+	},
+	.lpm_support = true,
+};
+
+static const struct tegra_xusb_soc tegra234_vf4_soc = {
+	.vf_id = 4,
+	.is_xhci_vf = true,
+	.phy_types = tegra194_phy_types,
+	.num_types = ARRAY_SIZE(tegra194_phy_types),
+	.ports = {
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+	},
+	.lpm_support = true,
+};
+
 static const struct of_device_id tegra_xusb_of_match[] = {
 	{ .compatible = "nvidia,tegra124-xusb", .data = &tegra124_soc },
 	{ .compatible = "nvidia,tegra210-xusb", .data = &tegra210_soc },
 	{ .compatible = "nvidia,tegra186-xusb", .data = &tegra186_soc },
 	{ .compatible = "nvidia,tegra194-xusb", .data = &tegra194_soc },
 	{ .compatible = "nvidia,tegra234-xusb", .data = &tegra234_soc },
+	{ .compatible = "nvidia,tegra234-xusb-vf1", .data = &tegra234_vf1_soc },
+	{ .compatible = "nvidia,tegra234-xusb-vf2", .data = &tegra234_vf2_soc },
+	{ .compatible = "nvidia,tegra234-xusb-vf3", .data = &tegra234_vf3_soc },
+	{ .compatible = "nvidia,tegra234-xusb-vf4", .data = &tegra234_vf4_soc },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_xusb_of_match);
