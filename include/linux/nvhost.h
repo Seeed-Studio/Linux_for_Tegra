@@ -12,7 +12,6 @@
 
 struct nvhost_ctrl_sync_fence_info;
 struct nvhost_fence;
-struct nvhost_job;
 
 #define NVHOST_MODULE_MAX_CLOCKS		8
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM	5
@@ -213,7 +212,6 @@ u32 nvhost_get_syncpt_gpu_managed(struct platform_device *pdev,
 				  const char *syncpt_name);
 void nvhost_syncpt_put_ref_ext(struct platform_device *pdev, u32 id);
 bool nvhost_syncpt_is_valid_pt_ext(struct platform_device *dev, u32 id);
-void nvhost_syncpt_set_minval(struct platform_device *dev, u32 id, u32 val);
 void nvhost_syncpt_set_min_update(struct platform_device *pdev, u32 id, u32 val);
 int nvhost_syncpt_read_ext_check(struct platform_device *dev, u32 id, u32 *val);
 u32 nvhost_syncpt_read_maxval(struct platform_device *dev, u32 id);
@@ -268,8 +266,6 @@ static inline int nvhost_fence_foreach_pt(
 {
 	return -EOPNOTSUPP;
 }
-
-static inline void nvhost_job_put(struct nvhost_job *job) {}
 
 static inline struct nvhost_fence *nvhost_fence_get(int fd)
 {

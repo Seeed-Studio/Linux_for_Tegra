@@ -307,23 +307,6 @@ int nvhost_syncpt_is_expired_ext(struct platform_device *pdev, u32 id,
 }
 EXPORT_SYMBOL(nvhost_syncpt_is_expired_ext);
 
-void nvhost_syncpt_set_minval(struct platform_device *pdev, u32 id, u32 val)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct host1x_syncpt *sp;
-	u32 cur;
-
-	sp = host1x_syncpt_get_by_id_noref(pdata->host1x, id);
-	if (WARN_ON(!sp))
-		return;
-
-	cur = host1x_syncpt_read(sp);
-
-	while (cur++ != val)
-		host1x_syncpt_incr(sp);
-}
-EXPORT_SYMBOL(nvhost_syncpt_set_minval);
-
 void nvhost_syncpt_set_min_update(struct platform_device *pdev, u32 id, u32 val)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
