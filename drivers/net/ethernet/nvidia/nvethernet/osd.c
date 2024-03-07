@@ -239,7 +239,7 @@ static inline int ether_alloc_skb(struct ether_priv_data *pdata,
 	}
 
 #else
-	rx_swcx->buf_virt_addr = page_pool_dev_alloc_pages(pdata->page_pool);
+	rx_swcx->buf_virt_addr = page_pool_dev_alloc_pages(pdata->page_pool[chan]);
 	if (!rx_swcx->buf_virt_addr) {
 		dev_err(pdata->dev,
 			"page pool allocation failed using resv_buf\n");
@@ -652,7 +652,7 @@ static void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 			dev_err(pdata->dev,
 				"%s(): Error in allocating the skb\n",
 			        __func__);
-			page_pool_recycle_direct(pdata->page_pool, page);
+			page_pool_recycle_direct(pdata->page_pool[chan], page);
 			return;
 		}
 
@@ -661,7 +661,7 @@ static void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 		skb_copy_to_linear_data(skb, page_address(page),
 					rx_pkt_cx->pkt_len);
 		skb_put(skb, rx_pkt_cx->pkt_len);
-		page_pool_recycle_direct(pdata->page_pool, page);
+		page_pool_recycle_direct(pdata->page_pool[chan], page);
 #else
 		skb_put(skb, rx_pkt_cx->pkt_len);
 #endif
@@ -714,7 +714,7 @@ static void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 		ndev->stats.rx_fifo_errors = osi_core->mmc.mmc_rx_fifo_overflow;
 		ndev->stats.rx_errors++;
 #ifdef ETHER_PAGE_POOL
-		page_pool_recycle_direct(pdata->page_pool, page);
+		page_pool_recycle_direct(pdata->page_pool[chan], page);
 #endif
 		dev_kfree_skb_any(skb);
 	}

@@ -1646,7 +1646,7 @@ static int ether_request_irqs(struct ether_priv_data *pdata)
 				 netdev_name(pdata->ndev), i);
 			ret = devm_request_irq(pdata->dev, pdata->vm_irqs[i],
 					       ether_vm_isr,
-					       IRQF_TRIGGER_NONE | IRQF_NOBALANCING,
+					       IRQF_TRIGGER_NONE,
 					       pdata->irq_names[j++],
 					       &pdata->vm_irq_data[i]);
 			if (unlikely(ret < 0)) {
@@ -1765,7 +1765,8 @@ static void ether_napi_enable(struct ether_priv_data *pdata)
 static void ether_free_rx_skbs(struct osi_rx_swcx *rx_swcx,
 			       struct ether_priv_data *pdata,
 			       unsigned int rx_buf_len,
-			       void *resv_buf_virt_addr)
+			       void *resv_buf_virt_addr,
+			       unsigned int chan)
 {
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
 	struct osi_rx_swcx *prx_swcx = NULL;
@@ -1777,9 +1778,10 @@ static void ether_free_rx_skbs(struct osi_rx_swcx *rx_swcx,
 		if (prx_swcx->buf_virt_addr != NULL) {
 			if (resv_buf_virt_addr != prx_swcx->buf_virt_addr) {
 #ifdef ETHER_PAGE_POOL
-				page_pool_put_full_page(pdata->page_pool,
-							prx_swcx->buf_virt_addr,
-							false);
+				if (chan != ETHER_INVALID_CHAN_NUM)
+					page_pool_put_full_page(pdata->page_pool[chan],
+								prx_swcx->buf_virt_addr,
+								false);
 #else
 				dma_unmap_single(pdata->dev,
 						 prx_swcx->buf_phy_addr,
@@ -1806,16 +1808,18 @@ static void free_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 {
 	unsigned long rx_desc_size = sizeof(struct osi_rx_desc) * osi_dma->rx_ring_sz;
 	struct osi_rx_ring *rx_ring = NULL;
-	unsigned int i;
+	unsigned int i, chan;
 
 	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
 		rx_ring = osi_dma->rx_ring[i];
+		chan = osi_dma->dma_chans[i];
 
 		if (rx_ring != NULL) {
 			if (rx_ring->rx_swcx != NULL) {
 				ether_free_rx_skbs(rx_ring->rx_swcx, pdata,
 						   osi_dma->rx_buf_len,
-						   pdata->resv_buf_virt_addr);
+						   pdata->resv_buf_virt_addr,
+						   chan);
 				kfree(rx_ring->rx_swcx);
 			}
 
@@ -1827,13 +1831,13 @@ static void free_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 			kfree(rx_ring);
 			osi_dma->rx_ring[i] = NULL;
 		}
-	}
 #ifdef ETHER_PAGE_POOL
-	if (pdata->page_pool) {
-		page_pool_destroy(pdata->page_pool);
-		pdata->page_pool = NULL;
-	}
+		if (chan != ETHER_INVALID_CHAN_NUM && pdata->page_pool[chan]) {
+			page_pool_destroy(pdata->page_pool[chan]);
+			pdata->page_pool[chan] = NULL;
+		}
 #endif
+	}
 }
 
 /**
@@ -1910,7 +1914,8 @@ err_rx_desc:
  * @retval "negative value" on failure.
  */
 static int ether_allocate_rx_buffers(struct ether_priv_data *pdata,
-				     struct osi_rx_ring *rx_ring)
+				     struct osi_rx_ring *rx_ring,
+				     unsigned int chan)
 {
 #ifndef ETHER_PAGE_POOL
 	unsigned int rx_buf_len = pdata->osi_dma->rx_buf_len;
@@ -1929,15 +1934,17 @@ static int ether_allocate_rx_buffers(struct ether_priv_data *pdata,
 		rx_swcx = rx_ring->rx_swcx + i;
 
 #ifdef ETHER_PAGE_POOL
-		page = page_pool_dev_alloc_pages(pdata->page_pool);
-		if (!page) {
-			dev_err(pdata->dev,
-				"failed to allocate page pool buffer");
-			return -ENOMEM;
-		}
+		if (chan != ETHER_INVALID_CHAN_NUM) {
+			page = page_pool_dev_alloc_pages(pdata->page_pool[chan]);
+			if (!page) {
+				dev_err(pdata->dev,
+					"failed to allocate page pool buffer");
+				return -ENOMEM;
+			}
 
-		dma_addr = page_pool_get_dma_addr(page);
-		rx_swcx->buf_virt_addr = page;
+			dma_addr = page_pool_get_dma_addr(page);
+			rx_swcx->buf_virt_addr = page;
+		}
 #else
 		skb = __netdev_alloc_skb_ip_align(pdata->ndev, rx_buf_len,
 						  GFP_KERNEL);
@@ -1964,34 +1971,36 @@ static int ether_allocate_rx_buffers(struct ether_priv_data *pdata,
 
 #ifdef ETHER_PAGE_POOL
 /**
- * @brief Create Rx buffer page pool
+ * @brief Create Rx buffer page pool per channel
  *
  * Algorithm: Invokes page pool API to create Rx buffer pool.
  *
  * @param[in] pdata: OSD private data.
+ * @param[chan] chan: Rx DMA channel number.
  *
  * @retval 0 on success
  * @retval "negative value" on failure.
  */
-static int ether_page_pool_create(struct ether_priv_data *pdata)
+static int ether_page_pool_create_per_chan(struct ether_priv_data *pdata,
+					   unsigned int chan)
 {
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
 	struct page_pool_params pp_params = { 0 };
-	unsigned int num_pages;
+	unsigned int num_pages, pool_size = 1024;
 	int ret = 0;
 
 	pp_params.flags = PP_FLAG_DMA_MAP;
-	pp_params.pool_size = osi_dma->rx_buf_len;
+	pp_params.pool_size = pool_size;
 	num_pages = DIV_ROUND_UP(osi_dma->rx_buf_len, PAGE_SIZE);
 	pp_params.order = ilog2(roundup_pow_of_two(num_pages));
 	pp_params.nid = dev_to_node(pdata->dev);
 	pp_params.dev = pdata->dev;
 	pp_params.dma_dir = DMA_FROM_DEVICE;
 
-	pdata->page_pool = page_pool_create(&pp_params);
-	if (IS_ERR(pdata->page_pool)) {
-		ret = PTR_ERR(pdata->page_pool);
-		pdata->page_pool = NULL;
+	pdata->page_pool[chan] = page_pool_create(&pp_params);
+	if (IS_ERR(pdata->page_pool[chan])) {
+		ret = PTR_ERR(pdata->page_pool[chan]);
+		pdata->page_pool[chan] = NULL;
 		return ret;
 	}
 
@@ -2020,18 +2029,18 @@ static int ether_allocate_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned int i;
 	int ret = 0;
 
-#ifdef ETHER_PAGE_POOL
-	ret = ether_page_pool_create(pdata);
-	if (ret < 0) {
-		pr_err("%s(): failed to create page pool\n",
-		       __func__);
-		goto exit;
-	}
-#endif
 	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
 		chan = osi_dma->dma_chans[i];
 
 		if (chan != ETHER_INVALID_CHAN_NUM) {
+#ifdef ETHER_PAGE_POOL
+			ret = ether_page_pool_create_per_chan(pdata, chan);
+			if (ret < 0) {
+				pr_err("%s(): failed to create page pool\n",
+				       __func__);
+				goto exit;
+			}
+#endif
 			ret = allocate_rx_dma_resource(osi_dma, pdata->dev,
 						       chan);
 			if (ret != 0) {
@@ -2039,7 +2048,8 @@ static int ether_allocate_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 			}
 
 			ret = ether_allocate_rx_buffers(pdata,
-							osi_dma->rx_ring[chan]);
+							osi_dma->rx_ring[chan],
+							chan);
 			if (ret < 0) {
 				goto exit;
 			}
