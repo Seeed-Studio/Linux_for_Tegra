@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2021-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 /dts-v1/;
@@ -83,7 +83,7 @@
 		/* MB2 will fill the address and size. */
 		tpm-event-log@0 {
 			compatible = "arm,tpm_event_log";
-			tpm_event_log_sm_addr = <0x0 0x0>;
+			tpm_event_log_addr = <0x0 0x0>;
 			tpm_event_log_size = <0x0>;
 		};
 	};
