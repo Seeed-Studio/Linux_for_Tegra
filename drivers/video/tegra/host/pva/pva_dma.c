@@ -857,7 +857,7 @@ static int32_t nvpva_task_dma_desc_mapping(struct pva_submit_task *task,
 		++(*num_dma_desc_processed);
 		if (desc_num == resv_desc_start_idx) {
 			desc_num = resv_desc_end_idx;
-			i += (resv_desc_end_idx - resv_desc_start_idx + 1);
+			i += (resv_desc_end_idx - resv_desc_start_idx);
 			continue;
 		}
 
@@ -1046,9 +1046,9 @@ verify_dma_desc_hwseq(struct pva_submit_task *task,
 					   + NVPVA_NUM_RESERVED_DESCRIPTORS - 1);
 
 	if ((did == 0U)
-	|| (did >= max_desc_id[task->pva->version])
+	|| (did > max_desc_id[task->pva->version])
 	|| (((did - 1) >= resv_desc_start_idx) && ((did - 1) <= resv_desc_end_idx))) {
-		pr_err("invalid Descritor ID");
+		pr_err("invalid Descriptor ID");
 		err = -EINVAL;
 		goto out;
 	}
