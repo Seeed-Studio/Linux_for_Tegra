@@ -2,7 +2,7 @@
 /*
  * NVIDIA Tegra XUSB device mode controller
  *
- * Copyright (c) 2013-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2013-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (c) 2015, Google Inc.
  */
 
@@ -559,6 +559,7 @@ struct tegra_xudc_soc {
 	bool port_speed_quirk;
 	bool has_ipfs;
 	bool has_pg_support;
+	bool is_hv_guest;
 };
 
 static inline u32 fpci_readl(struct tegra_xudc *xudc, unsigned int offset)
@@ -3697,6 +3698,19 @@ static struct tegra_xudc_soc tegra234_xudc_soc_data = {
 	.has_pg_support = true,
 };
 
+static struct tegra_xudc_soc tegra234_hv_xudc_soc_data = {
+	.num_phys = 4,
+	.u1_enable = true,
+	.u2_enable = true,
+	.lpm_enable = true,
+	.invalid_seq_num = false,
+	.pls_quirk = false,
+	.port_reset_quirk = false,
+	.has_ipfs = false,
+	.has_pg_support = true,
+	.is_hv_guest = true,
+};
+
 static const struct of_device_id tegra_xudc_of_match[] = {
 	{
 		.compatible = "nvidia,tegra210-xudc",
@@ -3714,12 +3728,19 @@ static const struct of_device_id tegra_xudc_of_match[] = {
 		.compatible = "nvidia,tegra234-xudc",
 		.data = &tegra234_xudc_soc_data
 	},
+	{
+		.compatible = "nvidia,tegra234-hv-xudc",
+		.data = &tegra234_hv_xudc_soc_data
+	},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, tegra_xudc_of_match);
 
 static void tegra_xudc_powerdomain_remove(struct tegra_xudc *xudc)
 {
+	if (xudc->soc->is_hv_guest)
+		return;
+
 	if (xudc->genpd_dl_ss)
 		device_link_del(xudc->genpd_dl_ss);
 	if (xudc->genpd_dl_device)
@@ -3734,6 +3755,9 @@ static int tegra_xudc_powerdomain_init(struct tegra_xudc *xudc)
 {
 	struct device *dev = xudc->dev;
 	int err;
+
+	if (xudc->soc->is_hv_guest)
+		return 0;
 
 	xudc->genpd_dev_device = dev_pm_domain_attach_by_name(dev, "dev");
 	if (IS_ERR(xudc->genpd_dev_device)) {
