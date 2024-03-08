@@ -245,10 +245,6 @@ static inline int nvhost_module_add_client(struct platform_device *dev, void *pr
 
 static inline void nvhost_module_remove_client(struct platform_device *dev, void *priv) { }
 
-static inline void nvhost_debug_dump_device(struct platform_device *pdev)
-{
-}
-
 static inline int nvhost_fence_create_fd(
 		struct platform_device *pdev,
 		struct nvhost_ctrl_sync_fence_info *pts,

@@ -869,8 +869,6 @@ int pva_aisr_handler(void *arg)
 		nvpva_warn(&pva->pdev->dev, "PVA AISR received");
 
 		recover = false;
-		/* Dump nvhost state to show the pending jobs */
-		nvhost_debug_dump_device(pdev);
 
 		status5 = pva->version_config->read_mailbox(pdev, PVA_MBOX_AISR);
 		if (status5 & PVA_AISR_INT_PENDING) {

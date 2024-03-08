@@ -1019,7 +1019,6 @@ err_device_busy:
 err_alloc_queue:
 	nvpva_client_context_put(priv->client);
 err_alloc_context:
-	nvhost_module_remove_client(pdev, priv);
 	kfree(priv);
 err_alloc_priv:
 	return err;

@@ -16,10 +16,6 @@ static void pva_abort_handler(struct work_struct *work)
 	struct platform_device *pdev = pva->pdev;
 	int i;
 
-	/* Dump nvhost state to show the pending jobs */
-	nvhost_debug_dump_device(pdev);
-
-
 	/*wake up sync cmd waiters*/
         for (i = 0; i < pva->version_config->irq_count; i++) {
 		if (pva->cmd_status[i] == PVA_CMD_STATUS_WFI) {
