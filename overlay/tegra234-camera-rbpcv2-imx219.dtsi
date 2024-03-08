@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <dt-bindings/clock/tegra234-clock.h>
 #include <dt-bindings/gpio/tegra234-gpio.h>
@@ -664,7 +664,6 @@
 								port@0 {
 									reg = <0>;
 									rbpcv2_imx219_out1: endpoint {
-										status = "okay";
 										port-index = <2>;
 										bus-width = <2>;
 										remote-endpoint = <&rbpcv2_imx219_csi_in1>;

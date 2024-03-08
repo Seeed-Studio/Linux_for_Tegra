@@ -11,9 +11,10 @@
 #include <dt-bindings/tegra234-p3767-0000-common.h>
 
 / {
-	overlay-name = "Camera IMX477-cam1";
+	overlay-name = "Camera IMX477-C";
 	jetson-header-name = "Jetson 24pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
+	/*IMX477 connected on cam0 port */
 
 	fragment@0 {
 		target-path = "/";
@@ -25,10 +26,10 @@
 					#size-cells = <0>;
 					port@0 {
 						reg = <0>;
-						rbpcv3_imx477_vi_in0: endpoint {
-							port-index = <1>;
+						rbpcv3_imx477_vi_in1: endpoint {
+							port-index = <2>;
 							bus-width = <2>;
-							remote-endpoint = <&rbpcv3_imx477_csi_out0>;
+							remote-endpoint = <&rbpcv3_imx477_csi_out1>;
 						};
 					};
 				};
@@ -79,13 +80,13 @@
 				 * in the module's specsheet from the vendor.
 				 */
 				modules {
-					module0 {
-						badge = "jakku_front_RBPCV3";
-						position = "front";
+					module1 {
+						badge = "jakku_rear_RBPCV3";
+						position = "rear";
 						orientation = "1";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/cam_i2cmux/i2c@0/rbpcv3_imx477_a@1a";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/cam_i2cmux/i2c@1/rbpcv3_imx477_c@1a";
 						};
 					};
 				};
@@ -103,16 +104,16 @@
 								#size-cells = <0>;
 								port@0 {
 									reg = <0>;
-									rbpcv3_imx477_csi_in0: endpoint@0 {
-										port-index = <1>;
+									rbpcv3_imx477_csi_in1: endpoint@0 {
+										port-index = <2>;
 										bus-width = <2>;
-										remote-endpoint = <&rbpcv3_imx477_out0>;
+										remote-endpoint = <&rbpcv3_imx477_out1>;
 									};
 								};
 								port@1 {
 									reg = <1>;
-									rbpcv3_imx477_csi_out0: endpoint@1 {
-										remote-endpoint = <&rbpcv3_imx477_vi_in0>;
+									rbpcv3_imx477_csi_out1: endpoint@1 {
+										remote-endpoint = <&rbpcv3_imx477_vi_in1>;
 									};
 								};
 							};
@@ -127,12 +128,20 @@
 					mux-gpios = <&gpio_aon CAM_I2C_MUX GPIO_ACTIVE_HIGH>;
 					i2c-parent = <&cam_i2c>;
 					i2c@0 {
+						rbpcv2_imx219_a@10 {
+							status = "disabled";
+						};
+					};
+					i2c@1 {
 						status = "okay";
-						reg = <0>;
+						reg = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
-						rbpcv3_imx477_a@1a {
-							reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+						rbpcv2_imx219_c@10 {
+							status = "disabled";
+						};
+						rbpcv3_imx477_c@1a {
+							reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 							compatible = "ridgerun,imx477";
 							/* I2C device address */
 							reg = <0x1a>;
@@ -143,105 +152,15 @@
 							physical_h = "2.760";
 							sensor_model = "imx477";
 							use_sensor_mode_id = "true";
-							/**
-							* ==== Modes ====
-							* A modeX node is required to support v4l2 driver
-							* implementation with NVIDIA camera software stack
-							*
-							* == Signal properties ==
-							*
-							* phy_mode = "";
-							* PHY mode used by the MIPI lanes for this device
-							*
-							* tegra_sinterface = "";
-							* CSI Serial interface connected to tegra
-							* Incase of virtual HW devices, use virtual
-							* For SW emulated devices, use host
-							*
-							* pix_clk_hz = "";
-							* Sensor pixel clock used for calculations like exposure and framerate
-							*
-							* readout_orientation = "0";
-							* Based on camera module orientation.
-							* Only change readout_orientation if you specifically
-							* Program a different readout order for this mode
-							*
-							* lane_polarity
-							* Based on the camera connector pin.
-							* CSIx_D0 | CSIx_D1 | CSI(X+1)_D0 | CSI(X+1)CSIx_D1
-							*    LSB  |   BIT1  |     BIT2    |      MSB
-							* if there is a polarity swap on any lane, the bit corrsponding
-							* to the lane should be set
-							* e.g. polarity swap on CSIx_D0 only -> lane_polarity = "1"; 0001
-							* e.g. polarity swap on CSIx_D1 and CSI(X+1)_D0 -> lane_polarity = "6"; 0110
-							*
-							* == Image format Properties ==
-							*
-							* active_w = "";
-							* Pixel active region width
-							*
-							* active_h = "";
-							* Pixel active region height
-							*
-							* pixel_t = "";
-							* The sensor readout pixel pattern
-							*
-							* line_length = "";
-							* Pixel line length (width) for sensor mode.
-							*
-							* == Source Control Settings ==
-							*
-							* Gain factor used to convert fixed point integer to float
-							* Gain range [min_gain/gain_factor, max_gain/gain_factor]
-							* Gain step [step_gain/gain_factor is the smallest step that can be configured]
-							* Default gain [Default gain to be initialized for the control.
-							*     use min_gain_val as default for optimal results]
-							* Framerate factor used to convert fixed point integer to float
-							* Framerate range [min_framerate/framerate_factor, max_framerate/framerate_factor]
-							* Framerate step [step_framerate/framerate_factor is the smallest step that can be configured]
-							* Default Framerate [Default framerate to be initialized for the control.
-							*     use max_framerate to get required performance]
-							* Exposure factor used to convert fixed point integer to float
-							* For convenience use 1 sec = 1000000us as conversion factor
-							* Exposure range [min_exp_time/exposure_factor, max_exp_time/exposure_factor]
-							* Exposure step [step_exp_time/exposure_factor is the smallest step that can be configured]
-							* Default Exposure Time [Default exposure to be initialized for the control.
-							*     Set default exposure based on the default_framerate for optimal exposure settings]
-							*
-							* gain_factor = ""; (integer factor used for floating to fixed point conversion)
-							* min_gain_val = ""; (ceil to integer)
-							* max_gain_val = ""; (ceil to integer)
-							* step_gain_val = ""; (ceil to integer)
-							* default_gain = ""; (ceil to integer)
-							* Gain limits for mode
-							*
-							* exposure_factor = ""; (integer factor used for floating to fixed point conversion)
-							* min_exp_time = ""; (ceil to integer)
-							* max_exp_time = ""; (ceil to integer)
-							* step_exp_time = ""; (ceil to integer)
-							* default_exp_time = ""; (ceil to integer)
-							* Exposure Time limits for mode (sec)
-							*
-							* framerate_factor = ""; (integer factor used for floating to fixed point conversion)
-							* min_framerate = ""; (ceil to integer)
-							* max_framerate = ""; (ceil to integer)
-							* step_framerate = ""; (ceil to integer)
-							* default_framerate = ""; (ceil to integer)
-							* Framerate limits for mode (fps)
-							*
-							* embedded_metadata_height = "";
-							* Sensor embedded metadata height in units of rows.
-							* If sensor does not support embedded metadata value should be 0.
-							*/
 							mode0 { /* IMX477_MODE_3840x2160 */
 								mclk_khz = "24000";
 								num_lanes = "2";
-								tegra_sinterface = "serial_b";
+								tegra_sinterface = "serial_c";
 								phy_mode = "DPHY";
 								discontinuous_clk = "no";
 								dpcm_enable = "false";
 								cil_settletime = "0";
-								lane_polarity = "6";
+								lane_polarity = "0";
 								active_w = "3840";
 								active_h = "2160";
 								mode_type = "bayer";
@@ -274,12 +193,12 @@
 							mode1 { /* IMX477_MODE_1920X1080 */
 								mclk_khz = "24000";
 								num_lanes = "2";
-								tegra_sinterface = "serial_b";
+								tegra_sinterface = "serial_c";
 								phy_mode = "DPHY";
 								discontinuous_clk = "no";
 								dpcm_enable = "false";
 								cil_settletime = "0";
-								lane_polarity = "6";
+								lane_polarity = "0";
 								active_w = "1920";
 								active_h = "1080";
 								mode_type = "bayer";
@@ -314,16 +233,17 @@
 								#size-cells = <0>;
 								port@0 {
 									reg = <0>;
-									rbpcv3_imx477_out0: endpoint {
-										port-index = <1>;
+									rbpcv3_imx477_out1: endpoint {
+										port-index = <2>;
 										bus-width = <2>;
-										remote-endpoint = <&rbpcv3_imx477_csi_in0>;
+										remote-endpoint = <&rbpcv3_imx477_csi_in1>;
 									};
 								};
 							};
 						};
 					};
 				};
+
 				gpio@6000d000 {
 					camera-control-output-low {
 						gpio-hog;

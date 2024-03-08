@@ -139,7 +139,7 @@
 							ports {
 								#address-cells = <1>;
 								#size-cells = <0>;
-								port@2 {
+								port@0 {
 									reg = <0>;
 									rbpcv3_imx477_csi_in1: endpoint@2 {
 										port-index = <2>;
@@ -147,7 +147,7 @@
 										remote-endpoint = <&rbpcv3_imx477_out1>;
 									};
 								};
-								port@3 {
+								port@1 {
 									reg = <1>;
 									rbpcv3_imx477_csi_out1: endpoint@3 {
 										remote-endpoint = <&rbpcv3_imx477_vi_in1>;
@@ -169,6 +169,9 @@
 						reg = <0>;
 						#address-cells = <1>;
 						#size-cells = <0>;
+						rbpcv2_imx219_a@10 {
+							status = "disabled";
+						};
 						rbpcv3_imx477_a@1a {
 							reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 							compatible = "ridgerun,imx477";
@@ -353,6 +356,7 @@
 								port@0 {
 									reg = <0>;
 									rbpcv3_imx477_out0: endpoint {
+										status = "okay";
 										port-index = <1>;
 										bus-width = <2>;
 										remote-endpoint = <&rbpcv3_imx477_csi_in0>;
@@ -366,6 +370,9 @@
 						reg = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
+						rbpcv2_imx219_c@10 {
+							status = "disabled";
+						};
 						rbpcv3_imx477_c@1a {
 							reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 							compatible = "ridgerun,imx477";
@@ -460,6 +467,7 @@
 								port@0 {
 									reg = <0>;
 									rbpcv3_imx477_out1: endpoint {
+										status = "okay";
 										port-index = <2>;
 										bus-width = <2>;
 										remote-endpoint = <&rbpcv3_imx477_csi_in1>;

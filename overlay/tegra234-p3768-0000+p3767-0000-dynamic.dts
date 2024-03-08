@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /dts-v1/;
 /plugin/;
+
+#include "tegra234-p3768-camera-rbpcv2-imx219.dtsi"
 
 / {
 	overlay-name = "Tegra234 p3768-0000+p3767-xxxx Dynamic Overlay";

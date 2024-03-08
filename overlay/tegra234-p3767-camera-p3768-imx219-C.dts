@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -12,11 +12,11 @@
 #include <dt-bindings/tegra234-p3767-0000-common.h>
 
 / {
-	overlay-name = "Camera IMX219-cam1";
+	overlay-name = "Camera IMX219-C";
 	jetson-header-name = "Jetson 24pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
 
-	/* IMX219 sensor module on CSI PORT A */
+	/* IMX219 sensor module on CSI PORT B / cam0 */
 	fragment@0 {
 		target-path = "/";
 		__overlay__ {
@@ -25,12 +25,12 @@
 				ports {
 					#address-cells = <1>;
 					#size-cells = <0>;
-					vi_port0: port@0 {
+					vi_port1: port@1 {
 						reg = <0>;
-						rbpcv2_imx219_vi_in0: endpoint {
-							port-index = <1>;
+						rbpcv2_imx219_vi_in1: endpoint {
+							port-index = <2>;
 							bus-width = <2>;
-							remote-endpoint = <&rbpcv2_imx219_csi_out0>;
+							remote-endpoint = <&rbpcv2_imx219_csi_out1>;
 						};
 					};
 				};
@@ -81,15 +81,15 @@
 				 * in the module's specsheet from the vendor.
 				 */
 				modules {
-					cam_module0: module0 {
-						badge = "jakku_front_RBP194";
-						position = "front";
+					cam_module1: module1 {
+						badge = "jakku_rear_RBP194";
+						position = "rear";
 						orientation = "1";
-						cam_module0_drivernode0: drivernode0 {
+						cam_module1_drivernode0: drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/cam_i2cmux/i2c@0/rbpcv2_imx219_a@10";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/cam_i2cmux/i2c@1/rbpcv2_imx219_c@10";
 						};
-						cam_module0_drivernode1: drivernode1 {
+						cam_module1_drivernode1: drivernode1 {
 							pcl_id = "v4l2_lens";
 							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/lens_imx219@RBPCV2";
 						};
@@ -102,23 +102,23 @@
 						num-channels = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
-						csi_chan0: channel@0 {
+						csi_chan1: channel@1 {
 							reg = <0>;
 							ports {
 								#address-cells = <1>;
 								#size-cells = <0>;
-								csi_chan0_port0: port@0 {
+								csi_chan1_port0: port@0 {
 									reg = <0>;
-									rbpcv2_imx219_csi_in0: endpoint@0 {
-										port-index = <1>;
+									rbpcv2_imx219_csi_in1: endpoint@2 {
+										port-index = <2>;
 										bus-width = <2>;
-										remote-endpoint = <&rbpcv2_imx219_out0>;
+										remote-endpoint = <&rbpcv2_imx219_out1>;
 									};
 								};
-								csi_chan0_port1: port@1 {
+								csi_chan1_port1: port@1 {
 									reg = <1>;
-									rbpcv2_imx219_csi_out0: endpoint@1 {
-										remote-endpoint = <&rbpcv2_imx219_vi_in0>;
+									rbpcv2_imx219_csi_out1: endpoint@3 {
+										remote-endpoint = <&rbpcv2_imx219_vi_in1>;
 									};
 								};
 							};
@@ -133,11 +133,17 @@
 					mux-gpios = <&gpio_aon CAM_I2C_MUX GPIO_ACTIVE_HIGH>;
 					i2c-parent = <&cam_i2c>;
 					i2c@0 {
+						rbpcv2_imx219_a@10 {
+							status = "disabled";
+						};
+					};
+					i2c@1 {
 						status = "okay";
-						reg = <0>;
+						reg = <1>;
 						#address-cells = <1>;
 						#size-cells = <0>;
-						rbpcv2_imx219_a@10 {
+						rbpcv2_imx219_c@10 {
+							reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 							compatible = "sony,imx219";
 							/* I2C device address */
 							reg = <0x10>;
@@ -148,7 +154,6 @@
 							physical_h = "2.760";
 							sensor_model = "imx219";
 							use_sensor_mode_id = "true";
-							reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 							/**
 							* ==== Modes ====
 							* A modeX node is required to support v4l2 driver
@@ -233,8 +238,7 @@
 							mode0 { /* IMX219_MODE_3280x2464_21FPS */
 								mclk_khz = "24000";
 								num_lanes = "2";
-								tegra_sinterface = "serial_b";
-								lane_polarity = "6";
+								tegra_sinterface = "serial_c";
 								phy_mode = "DPHY";
 								discontinuous_clk = "yes";
 								dpcm_enable = "false";
@@ -271,8 +275,7 @@
 							mode1 { /* IMX219_MODE_3280x1848_28FPS */
 								mclk_khz = "24000";
 								num_lanes = "2";
-								tegra_sinterface = "serial_b";
-								lane_polarity = "6";
+								tegra_sinterface = "serial_c";
 								phy_mode = "DPHY";
 								discontinuous_clk = "yes";
 								dpcm_enable = "false";
@@ -309,8 +312,7 @@
 							mode2 { /* IMX219_MODE_1920x1080_30FPS */
 								mclk_khz = "24000";
 								num_lanes = "2";
-								tegra_sinterface = "serial_b";
-								lane_polarity = "6";
+								tegra_sinterface = "serial_c";
 								phy_mode = "DPHY";
 								discontinuous_clk = "yes";
 								dpcm_enable = "false";
@@ -347,8 +349,7 @@
 							mode3 { /* IMX219_MODE_1640x1232_30FPS */
 								mclk_khz = "24000";
 								num_lanes = "2";
-								tegra_sinterface = "serial_b";
-								lane_polarity = "6";
+								tegra_sinterface = "serial_c";
 								phy_mode = "DPHY";
 								discontinuous_clk = "yes";
 								dpcm_enable = "false";
@@ -385,8 +386,7 @@
 							mode4 { /* IMX219_MODE_1280x720_60FPS */
 								mclk_khz = "24000";
 								num_lanes = "2";
-								tegra_sinterface = "serial_b";
-								lane_polarity = "6";
+								tegra_sinterface = "serial_c";
 								phy_mode = "DPHY";
 								discontinuous_clk = "yes";
 								dpcm_enable = "false";
@@ -425,11 +425,11 @@
 								#size-cells = <0>;
 								port@0 {
 									reg = <0>;
-									rbpcv2_imx219_out0: endpoint {
+									rbpcv2_imx219_out1: endpoint {
 										status = "okay";
-										port-index = <1>;
+										port-index = <2>;
 										bus-width = <2>;
-										remote-endpoint = <&rbpcv2_imx219_csi_in0>;
+										remote-endpoint = <&rbpcv2_imx219_csi_in1>;
 									};
 								};
 							};

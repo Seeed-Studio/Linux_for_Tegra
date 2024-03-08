@@ -180,6 +180,9 @@
 						reg = <0>;
 						#address-cells = <1>;
 						#size-cells = <0>;
+						rbpcv2_imx219_a@10 {
+							status = "disabled";
+						};
 						rbpcv3_imx477_a@1a {
 							reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 							compatible = "ridgerun,imx477";
@@ -364,6 +367,7 @@
 								port@0 {
 									reg = <0>;
 									rbpcv3_imx477_out0: endpoint {
+										status = "okay";
 										port-index = <1>;
 										bus-width = <2>;
 										remote-endpoint = <&rbpcv3_imx477_csi_in0>;
