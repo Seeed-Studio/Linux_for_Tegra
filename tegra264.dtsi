@@ -4,6 +4,7 @@
 #include <dt-bindings/gpio/tegra264-gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/mailbox/tegra186-hsp.h>
+#include <dt-bindings/memory/tegra264-smmu-streamid.h>
 #include <dt-bindings/memory/tegra264-mc.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra-io-pad.h>
 #include <dt-bindings/reset/tegra264-reset.h>
@@ -85,6 +86,29 @@
 			nvidia,start-dma-channel-index = <1>;
 			dma-channels = <31>;
 			dma-channel-mask = <0xfffffffe>;
+		};
+
+		aon: aon@c100000 {
+			compatible = "nvidia,tegra264-aon",
+				     "nvidia,tegra234-aon";
+			status = "disabled";
+
+			nvidia,adsp_os_secload;
+			reg = <0x0 0x0c100000 0x0 0x20000>, /* AO_MISC */
+			      <0x0 0x0c410000 0x0 0x40000>; /* AON_HSP */
+			nvidia,dram_map = <0x0 0x20000000 0x0 0x20000000>;
+			nvidia,adsp_mem = <0x0 0x0>, /* ADSP OS */
+					  <0x0 0x0>, /* ADSP APP */
+					  <0x0 0x0>, /* ARAM ALIAS 0 */
+					  <0x0 0x200000>; /* ACSR */
+			interrupts = <GIC_SPI 0x00000229 IRQ_TYPE_LEVEL_HIGH>, /* MBOX SEND */
+				     <GIC_SPI 0x0000022a IRQ_TYPE_LEVEL_HIGH>, /* MBOX RECV */
+				     <GIC_SPI 0x00000236 IRQ_TYPE_LEVEL_HIGH>, /* WDT */
+				     <GIC_SPI 0x000002d8 IRQ_TYPE_LEVEL_HIGH>; /* WFI */
+			iommus = <&smmu1_mmu TEGRA_SID_AON>;
+			memory-region = <&aon_resv>;
+			nvidia,cluster_mem = <0x0 0x0c040000 0x0 0x40000 0x0 0xa0000>, /* TCM */
+					     <0x0 0x0ce00000 0x0 0x200000 0x0 0x80000>; /* SRAM */
 		};
 
 		rtc: rtc@c2c0000 {
@@ -722,6 +746,22 @@
 				<0xa8 0x082e2000 0x0 0x1000>,
 				<0xa8 0x082e3000 0x0 0x1000>;
 		};
+
+		tachometer@810c5c0000 {
+			compatible = "nvidia,pwm-tegra264-tachometer",
+				     "nvidia,pwm-tegra234-tachometer";
+			status = "disabled";
+
+			reg = <0x81 0x0c5c0000 0x0 0x10>;
+			#pwm-cells = <2>;
+			//clocks = <&bpmp TEGRA264_CLK_TACH0>;
+			resets = <&bpmp TEGRA264_RESET_TACH0>;
+			clock-names = "tach";
+			reset-names = "tach";
+			pulse-per-rev = <2>;
+			capture-window-length = <2>;
+			disable-clk-gate;
+		};
 	};
 
 	bpmp: bpmp {
@@ -791,15 +831,13 @@
 		};
 	};
 
-	reserved-memory {
-		dram_cpu_bpmp_mail: bpmp-shmem@0  {
-			status = "disabled";
+	nvpmodel {
+		compatible = "nvidia,nvpmodel";
+		status = "disabled";
 
-			compatible = "nvidia,tegra264-bpmp-shmem",
-				     "nvidia,tegra234-bpmp-shmem";
-			reg = <0x0 0x86070000 0x0 0x2000>;
-			no-map;
-		};
+		nvidia,bpmp = <&bpmp>;
+		clocks = <&bpmp TEGRA264_CLK_EMC>;
+		clock-names = "emc";
 	};
 
 	psci {
@@ -807,6 +845,81 @@
 		status = "disabled";
 
 		method = "smc";
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		generic_reserved: generic_carveout {
+			compatible = "nvidia,generic_carveout";
+			status = "disabled";
+
+			size = <0 0x20000000>;
+			alignment = <0 0x200000>;
+			alloc-ranges = <0 0 0x1 0>;
+			no-map;
+		};
+
+		vpr: vpr-carveout {
+			compatible = "nvidia,vpr-carveout";
+			status = "disabled";
+		};
+
+		fsi_reserved: fsi-carveout {
+			compatible = "nvidia,fsi-carveout";
+			status = "disabled";
+
+			size = <0 0x2000000>;
+			alignment = <0 0x1000>;
+			no-map;
+			alloc-ranges = <0x0 0x0 0x1 0x0>;
+		};
+
+		linux,cma {
+			compatible = "shared-dma-pool";
+			status = "disabled";
+
+			reusable;
+			size = <0x0 0x4000000>;
+			alignment = <0x0 0x10000>;
+			linux,cma-default;
+		};
+
+		ramoops_reserved: ramoops_carveout {
+			compatible = "ramoops";
+			status = "disabled";
+
+			size = <0x0 0x200000>;
+			record-size = <0x00010000>;
+			console-size = <0x00080000>;
+			alignment = <0x0 0x10000>;
+			alloc-ranges = <0x0 0x0 0x1 0x0>;
+			no-map;
+		};
+
+		dram_cpu_bpmp_mail: bpmp-shmem@0 {
+			compatible = "nvidia,tegra264-bpmp-shmem",
+				     "nvidia,tegra234-bpmp-shmem";
+			status = "disabled";
+
+			reg = <0x0 0x86070000 0x0 0x2000>;
+			no-map;
+		};
+
+		aon_resv: reservation-aon {
+			iommu-addresses = <&aon 0x0 0x00000000 0x0 0x20000000>,
+					  <&aon 0x0 0x40000000 0xffffffff 0xffffffff>;
+		};
+	};
+
+	soctherm-oc-event {
+		compatible = "nvidia,tegra264-oc-event",
+			     "nvidia,tegra234-oc-event";
+		status = "disabled";
+
+		nvidia,bpmp = <&bpmp>;
 	};
 
 	timer {
