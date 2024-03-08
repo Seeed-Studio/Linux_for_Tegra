@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include "dev.h"
+#include "hwmailbox.h"
 #include <linux/nospec.h>
 #include <asm/barrier.h>
 
 #define NVADSP_MAILBOX_START	512
-#define NVADSP_MAILBOX_MAX	1024
-#define NVADSP_MAILBOX_OS_MAX	16
-
-static struct nvadsp_mbox *nvadsp_mboxes[NVADSP_MAILBOX_MAX];
-static DECLARE_BITMAP(nvadsp_mbox_ids, NVADSP_MAILBOX_MAX);
-static struct nvadsp_drv_data *nvadsp_drv_data;
 
 static inline bool is_mboxq_empty(struct nvadsp_mbox_queue *queue)
 {
@@ -123,7 +118,8 @@ static void mboxq_dump(struct nvadsp_mbox_queue *queue)
 	spin_unlock_irqrestore(&queue->lock, flags);
 }
 
-static uint16_t nvadsp_mbox_alloc_mboxid(void)
+static uint16_t nvadsp_mbox_alloc_mboxid(
+			struct nvadsp_drv_data *nvadsp_drv_data)
 {
 	unsigned long start = NVADSP_MAILBOX_START;
 	unsigned int nr = 1;
@@ -138,20 +134,31 @@ static uint16_t nvadsp_mbox_alloc_mboxid(void)
 	return mid;
 }
 
-static status_t nvadsp_mbox_free_mboxid(uint16_t mid)
+static status_t nvadsp_mbox_free_mboxid(
+			struct nvadsp_drv_data *nvadsp_drv_data, uint16_t mid)
 {
 	bitmap_clear(nvadsp_drv_data->mbox_ids, mid, 1);
 	return 0;
 }
 
-status_t nvadsp_mbox_open(struct nvadsp_mbox *mbox, uint16_t *mid,
-			  const char *name, nvadsp_mbox_handler_t handler,
-			  void *hdata)
+static void _nvadsp_mbox_set_ack_handler(struct nvadsp_handle *nvadsp_handle,
+				struct nvadsp_mbox *mbox,
+				nvadsp_mbox_handler_t handler)
 {
+	mbox->ack_handler = handler;
+}
+
+static status_t _nvadsp_mbox_open(struct nvadsp_handle *nvadsp_handle,
+				struct nvadsp_mbox *mbox,
+				uint16_t *mid, const char *name,
+				nvadsp_mbox_handler_t handler, void *hdata)
+{
+	struct nvadsp_drv_data *nvadsp_drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
 	unsigned long flags;
 	int ret = 0;
 
-	if (!nvadsp_drv_data) {
+	if (!nvadsp_drv_data || !nvadsp_drv_data->pdev) {
 		ret = -ENOSYS;
 		goto err;
 	}
@@ -164,7 +171,7 @@ status_t nvadsp_mbox_open(struct nvadsp_mbox *mbox, uint16_t *mid,
 	}
 
 	if (*mid == 0) {
-		mbox->id = nvadsp_mbox_alloc_mboxid();
+		mbox->id = nvadsp_mbox_alloc_mboxid(nvadsp_drv_data);
 		if (mbox->id >= NVADSP_MAILBOX_MAX) {
 			ret = -ENOMEM;
 			mbox->id = 0;
@@ -201,14 +208,18 @@ status_t nvadsp_mbox_open(struct nvadsp_mbox *mbox, uint16_t *mid,
  err:
 	return ret;
 }
-EXPORT_SYMBOL(nvadsp_mbox_open);
 
-status_t nvadsp_mbox_send(struct nvadsp_mbox *mbox, uint32_t data,
-			  uint32_t flags, bool block, unsigned int timeout)
+static status_t _nvadsp_mbox_send(struct nvadsp_handle *nvadsp_handle,
+				struct nvadsp_mbox *mbox, uint32_t data,
+				uint32_t flags, bool block, unsigned int timeout)
 {
+	struct nvadsp_drv_data *nvadsp_drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct hwmbox_queue *hwmbox_send_queue;
 	int ret = 0;
 
-	if (!nvadsp_drv_data) {
+	if (!nvadsp_drv_data || !nvadsp_drv_data->pdev ||
+			!nvadsp_drv_data->hwmbox_send_queue) {
 		pr_err("ADSP drv_data is NULL\n");
 		ret = -ENOSYS;
 		goto out;
@@ -220,16 +231,18 @@ status_t nvadsp_mbox_send(struct nvadsp_mbox *mbox, uint32_t data,
 		goto out;
 	}
 
+	hwmbox_send_queue = nvadsp_drv_data->hwmbox_send_queue;
+
  retry:
-	ret = nvadsp_hwmbox_send_data(mbox->id, data, flags);
+	ret = nvadsp_hwmbox_send_data(nvadsp_drv_data, mbox->id, data, flags);
 	if (!ret)
 		goto out;
 
 	if (ret == -EBUSY) {
 		if (block) {
 			ret = wait_for_completion_timeout(
-				 &nvadsp_drv_data->hwmbox_send_queue.comp,
-				 msecs_to_jiffies(timeout));
+				&hwmbox_send_queue->comp,
+				msecs_to_jiffies(timeout));
 			if (ret) {
 				pr_warn("ADSP HWMBOX send retry\n");
 				block = false;
@@ -250,14 +263,16 @@ status_t nvadsp_mbox_send(struct nvadsp_mbox *mbox, uint32_t data,
  out:
 	return ret;
 }
-EXPORT_SYMBOL(nvadsp_mbox_send);
 
-status_t nvadsp_mbox_recv(struct nvadsp_mbox *mbox, uint32_t *data, bool block,
-			  unsigned int timeout)
+static status_t _nvadsp_mbox_recv(struct nvadsp_handle *nvadsp_handle,
+				struct nvadsp_mbox *mbox, uint32_t *data,
+				bool block, unsigned int timeout)
 {
+	struct nvadsp_drv_data *nvadsp_drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
 	int ret = 0;
 
-	if (!nvadsp_drv_data) {
+	if (!nvadsp_drv_data || !nvadsp_drv_data->pdev) {
 		ret = -ENOSYS;
 		goto out;
 	}
@@ -294,14 +309,16 @@ status_t nvadsp_mbox_recv(struct nvadsp_mbox *mbox, uint32_t *data, bool block,
  out:
 	return ret;
 }
-EXPORT_SYMBOL(nvadsp_mbox_recv);
 
-status_t nvadsp_mbox_close(struct nvadsp_mbox *mbox)
+static status_t _nvadsp_mbox_close(struct nvadsp_handle *nvadsp_handle,
+				struct nvadsp_mbox *mbox)
 {
+	struct nvadsp_drv_data *nvadsp_drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
 	unsigned long flags;
 	int ret = 0;
 
-	if (!nvadsp_drv_data) {
+	if (!nvadsp_drv_data || !nvadsp_drv_data->pdev) {
 		ret = -ENOSYS;
 		goto err;
 	}
@@ -318,7 +335,7 @@ status_t nvadsp_mbox_close(struct nvadsp_mbox *mbox)
 		goto out;
 	}
 
-	nvadsp_mbox_free_mboxid(mbox->id);
+	nvadsp_mbox_free_mboxid(nvadsp_drv_data, mbox->id);
 	mboxq_destroy(&mbox->recv_queue);
 	nvadsp_drv_data->mboxes[mbox->id] = NULL;
  out:
@@ -326,18 +343,22 @@ status_t nvadsp_mbox_close(struct nvadsp_mbox *mbox)
  err:
 	return ret;
 }
-EXPORT_SYMBOL(nvadsp_mbox_close);
 
 status_t __init nvadsp_mbox_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
+	struct nvadsp_handle *nvadsp_handle = &drv->nvadsp_handle;
 
-	drv->mboxes = nvadsp_mboxes;
-	drv->mbox_ids = nvadsp_mbox_ids;
+	memset(drv->mboxes, 0, sizeof(drv->mboxes));
+	memset(drv->mbox_ids, 0, sizeof(drv->mbox_ids));
 
 	spin_lock_init(&drv->mbox_lock);
 
-	nvadsp_drv_data = drv;
+	nvadsp_handle->mbox_open   = _nvadsp_mbox_open;
+	nvadsp_handle->mbox_close  = _nvadsp_mbox_close;
+	nvadsp_handle->mbox_send   = _nvadsp_mbox_send;
+	nvadsp_handle->mbox_recv   = _nvadsp_mbox_recv;
+	nvadsp_handle->mbox_set_ack_handler = _nvadsp_mbox_set_ack_handler;
 
 	return 0;
 }

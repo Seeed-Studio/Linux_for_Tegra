@@ -168,11 +168,12 @@ static inline int nvadsp_os_init(struct platform_device *pdev)
 
 int nvadsp_os_probe(struct platform_device *);
 int nvadsp_app_module_probe(struct platform_device *);
-void *nvadsp_da_to_va_mappings(u64 da, int len);
-int nvadsp_add_load_mappings(phys_addr_t pa, void *mapping, int len);
+void *nvadsp_da_to_va_mappings(struct nvadsp_drv_data *, u64 da, int len);
+int nvadsp_add_load_mappings(struct nvadsp_drv_data *,
+	phys_addr_t pa, void *mapping, int len);
 struct elf32_shdr *nvadsp_get_section(const struct firmware *, char *);
-struct global_sym_info *find_global_symbol(const char *);
-void update_nvadsp_app_shared_ptr(void *);
+struct global_sym_info *find_global_symbol(struct nvadsp_drv_data *,
+	const char *);
 
 struct adsp_module *load_adsp_dynamic_module(const char *, const char *,
 	struct device *);
@@ -180,7 +181,6 @@ struct adsp_module *load_adsp_static_module(const char *,
 	struct adsp_shared_app *, struct device *);
 void unload_adsp_module(struct adsp_module *);
 
-int allocate_memory_from_adsp(void **, unsigned int);
-bool is_adsp_dram_addr(u64);
-int load_adsp_static_apps(void);
+int load_adsp_static_apps(struct nvadsp_drv_data *);
+
 #endif /* __TEGRA_NVADSP_OS_H */

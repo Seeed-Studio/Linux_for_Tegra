@@ -10,22 +10,17 @@
 
 #include "aram_manager.h"
 
-static void *aram_handle;
-
-static LIST_HEAD(aram_alloc_list);
-static LIST_HEAD(aram_free_list);
-
-void nvadsp_aram_print(void)
+void nvadsp_aram_print(void *aram_handle)
 {
 	mem_print(aram_handle);
 }
 
-void *nvadsp_aram_request(const char *name, size_t size)
+void *nvadsp_aram_request(void *aram_handle, const char *name, size_t size)
 {
 	return mem_request(aram_handle, name, size);
 }
 
-bool nvadsp_aram_release(void *handle)
+bool nvadsp_aram_release(void *aram_handle, void *handle)
 {
 	return mem_release(aram_handle, handle);
 }
@@ -35,11 +30,11 @@ unsigned long nvadsp_aram_get_address(void *handle)
 	return mem_get_address(handle);
 }
 
-static struct dentry *aram_dump_debugfs_file;
-
 static int nvadsp_aram_dump(struct seq_file *s, void *data)
 {
-	mem_dump(aram_handle, s);
+	struct nvadsp_drv_data *drv_data = data;
+
+	mem_dump(drv_data->aram_handle, s);
 	return 0;
 }
 
@@ -55,29 +50,31 @@ static const struct file_operations aram_dump_fops = {
 	.release	= single_release,
 };
 
-int nvadsp_aram_init(unsigned long addr, unsigned long size)
+int nvadsp_aram_init(struct nvadsp_drv_data *drv_data,
+		unsigned long addr, unsigned long size)
 {
-	aram_handle = create_mem_manager("ARAM", addr, size);
-	if (IS_ERR(aram_handle)) {
+	drv_data->aram_handle = create_mem_manager("ARAM", addr, size);
+	if (IS_ERR(drv_data->aram_handle)) {
 		pr_err("ERROR: failed to create aram memory_manager");
-		return PTR_ERR(aram_handle);
+		return PTR_ERR(drv_data->aram_handle);
 	}
 
 	if (debugfs_initialized()) {
-		aram_dump_debugfs_file = debugfs_create_file("aram_dump",
-			S_IRUSR, NULL, NULL, &aram_dump_fops);
-		if (!aram_dump_debugfs_file) {
+		drv_data->aram_dump_debugfs_file = debugfs_create_file("aram_dump",
+			S_IRUSR, drv_data->adsp_debugfs_root,
+			drv_data, &aram_dump_fops);
+		if (!drv_data->aram_dump_debugfs_file) {
 			pr_err("ERROR: failed to create aram_dump debugfs");
-			destroy_mem_manager(aram_handle);
+			destroy_mem_manager(drv_data->aram_handle);
 			return -ENOMEM;
 		}
 	}
 	return 0;
 }
 
-void nvadsp_aram_exit(void)
+void nvadsp_aram_exit(struct nvadsp_drv_data *drv_data)
 {
-	debugfs_remove(aram_dump_debugfs_file);
-	destroy_mem_manager(aram_handle);
+	debugfs_remove(drv_data->aram_dump_debugfs_file);
+	destroy_mem_manager(drv_data->aram_handle);
 }
 

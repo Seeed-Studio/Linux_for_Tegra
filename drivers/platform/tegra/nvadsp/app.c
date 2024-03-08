@@ -50,9 +50,8 @@ struct nvadsp_app_priv_struct {
 #endif
 };
 
-static struct nvadsp_app_priv_struct priv;
-
-static void delete_app_instance(nvadsp_app_info_t *);
+static void delete_app_instance(struct nvadsp_app_priv_struct *,
+				nvadsp_app_info_t *);
 
 #ifdef CONFIG_DEBUG_FS
 static int dump_binary_in_2bytes_app_file_node(struct seq_file *s, void *data)
@@ -219,17 +218,18 @@ ADSP_APP_FILE_OPERATION(dram_shared_wc);
 ADSP_APP_FILE_OPERATION(aram);
 ADSP_APP_FILE_OPERATION(aram_exclusive);
 
-static int create_adsp_app_debugfs(struct nvadsp_app_service *ser)
+static int create_adsp_app_debugfs(struct nvadsp_app_priv_struct *priv,
+				struct nvadsp_app_service *ser)
 {
 
 	struct app_mem_size *mem_size = (struct app_mem_size *)ser->mem_size;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	struct dentry *instance_mem_sizes;
 	struct dentry *root;
 	int ret = 0;
 
 	root = debugfs_create_dir(ser->name,
-			priv.adsp_app_debugfs_root);
+			priv->adsp_app_debugfs_root);
 	if (IS_ERR_OR_NULL(root)) {
 		ret = -EINVAL;
 		goto err_out;
@@ -256,19 +256,27 @@ err_out:
 	return ret;
 }
 
-static int __init adsp_app_debug_init(struct dentry *root)
+static int __init adsp_app_debug_init(struct nvadsp_app_priv_struct *priv,
+				struct dentry *root)
 {
-	priv.adsp_app_debugfs_root = debugfs_create_dir("adsp_apps", root);
-	return IS_ERR_OR_NULL(priv.adsp_app_debugfs_root) ? -ENOMEM : 0;
+	priv->adsp_app_debugfs_root = debugfs_create_dir("adsp_apps", root);
+	return IS_ERR_OR_NULL(priv->adsp_app_debugfs_root) ? -ENOMEM : 0;
 }
 #endif /* CONFIG_DEBUG_FS */
 
-static struct nvadsp_app_service *get_loaded_service(const char *appfile)
+static void _nvadsp_set_app_complete_cb(struct nvadsp_handle *nvadsp_handle,
+		nvadsp_app_info_t *info, app_complete_status_notifier notifier)
 {
-	struct device *dev = &priv.pdev->dev;
+	info->complete_status_notifier = notifier;
+}
+
+static struct nvadsp_app_service *get_loaded_service(
+		struct nvadsp_app_priv_struct *priv, const char *appfile)
+{
+	struct device *dev = &priv->pdev->dev;
 	struct nvadsp_app_service *ser;
 
-	list_for_each_entry(ser, &priv.service_list, node) {
+	list_for_each_entry(ser, &priv->service_list, node) {
 		if (!strcmp(appfile, ser->name)) {
 			dev_dbg(dev, "module %s already loaded\n", appfile);
 			return ser;
@@ -287,18 +295,18 @@ static inline void extract_appname(char *appname, const char *appfile)
 	appname[len] = '\0';
 }
 
-static nvadsp_app_handle_t app_load(const char *appfile,
-	struct adsp_shared_app *shared_app, bool dynamic)
+static nvadsp_app_handle_t app_load(struct nvadsp_app_priv_struct *priv,
+	const char *appfile, struct adsp_shared_app *shared_app, bool dynamic)
 {
 	struct nvadsp_drv_data *drv_data;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	char appname[NVADSP_NAME_SZ] = { };
 	struct nvadsp_app_service *ser;
 
-	drv_data = platform_get_drvdata(priv.pdev);
+	drv_data = platform_get_drvdata(priv->pdev);
 	extract_appname(appname, appfile);
-	mutex_lock(&priv.service_lock_list);
-	ser = get_loaded_service(appname);
+	mutex_lock(&priv->service_lock_list);
+	ser = get_loaded_service(priv, appname);
 	if (!ser) {
 
 		/* dynamic loading is disabled when running in secure mode */
@@ -329,78 +337,85 @@ static nvadsp_app_handle_t app_load(const char *appfile,
 		INIT_LIST_HEAD(&ser->app_head);
 
 		/* add the app instance service to the list */
-		list_add_tail(&ser->node, &priv.service_list);
+		list_add_tail(&ser->node, &priv->service_list);
 #ifdef CONFIG_DEBUG_FS
-		create_adsp_app_debugfs(ser);
+		create_adsp_app_debugfs(priv, ser);
 #endif
 		dev_dbg(dev, "loaded app %s\n", ser->name);
 	}
-	mutex_unlock(&priv.service_lock_list);
+	mutex_unlock(&priv->service_lock_list);
 
 	return ser;
 
 err_free_service:
 	devm_kfree(dev, ser);
 err:
-	mutex_unlock(&priv.service_lock_list);
+	mutex_unlock(&priv->service_lock_list);
 	return NULL;
 }
 
-
-nvadsp_app_handle_t nvadsp_app_load(const char *appname, const char *appfile)
+static nvadsp_app_handle_t _nvadsp_app_load(struct nvadsp_handle *nvadsp_handle,
+			const char *appname, const char *appfile)
 {
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
 
-	if (IS_ERR_OR_NULL(priv.pdev)) {
+	if (!drv_data || !drv_data->pdev || !drv_data->app_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		return NULL;
 	}
 
-	drv_data = platform_get_drvdata(priv.pdev);
-
 	if (!drv_data->adsp_os_running)
 		return NULL;
 
-	return app_load(appfile, NULL, true);
+	return app_load(drv_data->app_priv, appfile, NULL, true);
 }
-EXPORT_SYMBOL(nvadsp_app_load);
 
-static void free_instance_memory(nvadsp_app_info_t *app,
-		const struct app_mem_size *sz)
+static void free_instance_memory(struct nvadsp_app_priv_struct *priv,
+		nvadsp_app_info_t *app, const struct app_mem_size *sz)
 {
 	adsp_app_mem_t *mem = &app->mem;
 	adsp_app_iova_mem_t *iova_mem = &app->iova_mem;
+	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_handle *nvadsp_handle;
+
+	drv_data = platform_get_drvdata(priv->pdev);
+	nvadsp_handle = &drv_data->nvadsp_handle;
 
 	if (mem->dram) {
-		nvadsp_free_coherent(sz->dram, mem->dram, iova_mem->dram);
+		nvadsp_handle->free_coherent(nvadsp_handle,
+				sz->dram, mem->dram, iova_mem->dram);
 		mem->dram = NULL;
 		iova_mem->dram = 0;
 	}
 
 	if (mem->shared) {
-		nvadsp_free_coherent(sz->dram_shared, mem->shared,
+		nvadsp_handle->free_coherent(nvadsp_handle,
+				sz->dram_shared, mem->shared,
 				iova_mem->shared);
 		mem->shared = NULL;
 		iova_mem->shared = 0;
 	}
 
 	if (mem->shared_wc) {
-		nvadsp_free_coherent(sz->dram_shared_wc, mem->shared_wc,
+		nvadsp_handle->free_coherent(nvadsp_handle,
+				sz->dram_shared_wc, mem->shared_wc,
 				iova_mem->shared_wc);
 		mem->shared_wc = NULL;
 		iova_mem->shared_wc = 0;
 	}
 
 	if (mem->aram_flag)
-		nvadsp_aram_release(mem->aram);
+		nvadsp_aram_release(drv_data->aram_handle, mem->aram);
 	else if (mem->aram)
-		nvadsp_free_coherent(sz->aram, mem->aram, iova_mem->aram);
+		nvadsp_handle->free_coherent(nvadsp_handle,
+				sz->aram, mem->aram, iova_mem->aram);
 	mem->aram = NULL;
 	iova_mem->aram = 0;
 	mem->aram_flag = 0;
 
 	if (mem->aram_x_flag) {
-		nvadsp_aram_release(mem->aram_x);
+		nvadsp_aram_release(drv_data->aram_handle, mem->aram_x);
 		mem->aram_x = NULL;
 		iova_mem->aram_x = 0;
 		mem->aram_flag = 0;
@@ -408,12 +423,14 @@ static void free_instance_memory(nvadsp_app_info_t *app,
 
 }
 
-static int create_instance_memory(nvadsp_app_info_t *app,
-		const struct app_mem_size *sz)
+static int create_instance_memory(struct nvadsp_app_priv_struct *priv,
+		nvadsp_app_info_t *app, const struct app_mem_size *sz)
 {
 	adsp_app_iova_mem_t *iova_mem = &app->iova_mem;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	adsp_app_mem_t *mem = &app->mem;
+	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_handle *nvadsp_handle;
 	char name[NVADSP_NAME_SZ];
 	void *aram_handle;
 	dma_addr_t da;
@@ -425,8 +442,12 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 		return -EINVAL;
 	}
 
+	drv_data = platform_get_drvdata(priv->pdev);
+	nvadsp_handle = &drv_data->nvadsp_handle;
+
 	if (sz->dram) {
-		mem->dram = nvadsp_alloc_coherent(sz->dram, &da, GFP_KERNEL);
+		mem->dram = nvadsp_handle->alloc_coherent(nvadsp_handle,
+					sz->dram, &da, GFP_KERNEL);
 		iova_mem->dram = (uint32_t)da;
 		if (!mem->dram) {
 			dev_err(dev, "app %s dram alloc failed\n",
@@ -438,8 +459,8 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 	}
 
 	if (sz->dram_shared) {
-		mem->shared = nvadsp_alloc_coherent(sz->dram_shared,
-				&da, GFP_KERNEL);
+		mem->shared = nvadsp_handle->alloc_coherent(nvadsp_handle,
+					sz->dram_shared, &da, GFP_KERNEL);
 		if (!mem->shared) {
 			dev_err(dev, "app %s shared dram alloc failed\n",
 				name);
@@ -451,8 +472,8 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 	}
 
 	if (sz->dram_shared_wc) {
-		mem->shared_wc = nvadsp_alloc_coherent(sz->dram_shared_wc,
-					&da, GFP_KERNEL);
+		mem->shared_wc = nvadsp_handle->alloc_coherent(nvadsp_handle,
+					sz->dram_shared_wc, &da, GFP_KERNEL);
 		if (!mem->shared_wc) {
 			dev_err(dev, "app %s shared dram wc alloc failed\n",
 				name);
@@ -464,7 +485,8 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 	}
 
 	if (sz->aram) {
-		aram_handle = nvadsp_aram_request(name, sz->aram);
+		aram_handle = nvadsp_aram_request(drv_data->aram_handle,
+							name, sz->aram);
 		if (!IS_ERR_OR_NULL(aram_handle)) {
 			iova_mem->aram = nvadsp_aram_get_address(aram_handle);
 			mem->aram = aram_handle;
@@ -473,8 +495,9 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 		} else {
 			dev_dbg(dev, "app %s no ARAM memory ! using DRAM\n",
 				name);
-			mem->aram = nvadsp_alloc_coherent(sz->aram,
-					&da, GFP_KERNEL);
+			mem->aram = nvadsp_handle->alloc_coherent(
+						nvadsp_handle, sz->aram,
+						&da, GFP_KERNEL);
 			if (!mem->aram) {
 				iova_mem->aram_flag = mem->aram_flag = 0;
 				dev_err(dev,
@@ -489,7 +512,8 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 	}
 
 	if (sz->aram_x) {
-		aram_handle = nvadsp_aram_request(name, sz->aram);
+		aram_handle = nvadsp_aram_request(drv_data->aram_handle,
+							name, sz->aram);
 		if (!IS_ERR_OR_NULL(aram_handle)) {
 			iova_mem->aram_x = nvadsp_aram_get_address(aram_handle);
 			mem->aram_x = aram_handle;
@@ -505,7 +529,7 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 	return 0;
 
 end:
-	free_instance_memory(app, sz);
+	free_instance_memory(priv, app, sz);
 	return -ENOMEM;
 }
 
@@ -538,14 +562,17 @@ static void fill_app_instance_data(nvadsp_app_info_t *app,
 	memcpy(&data->mem_size, ser->mem_size, sizeof(struct app_mem_size));
 }
 
-static nvadsp_app_info_t *create_app_instance(nvadsp_app_handle_t handle,
+static nvadsp_app_info_t *create_app_instance(
+	struct nvadsp_app_priv_struct *priv, nvadsp_app_handle_t handle,
 	nvadsp_app_args_t *app_args, struct run_app_instance_data *data,
 	app_complete_status_notifier notifier, uint32_t stack_size,
 	uint32_t core_id)
 {
 	struct nvadsp_app_service *ser = (void *)handle;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	nvadsp_app_info_t *app;
+	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_handle *nvadsp_handle;
 	int *state;
 	int *id;
 
@@ -565,8 +592,11 @@ static nvadsp_app_info_t *create_app_instance(nvadsp_app_handle_t handle,
 	 */
 	app->handle = ser;
 
+	drv_data = platform_get_drvdata(priv->pdev);
+	nvadsp_handle = &drv_data->nvadsp_handle;
+
 	/* create the instance memory required by the app instance */
-	if (create_instance_memory(app, ser->mem_size)) {
+	if (create_instance_memory(priv, app, ser->mem_size)) {
 		dev_err(dev, "instance creation failed for app %s:%d\n",
 				app->name, app->instance_id);
 		goto free_app;
@@ -591,7 +621,7 @@ static nvadsp_app_info_t *create_app_instance(nvadsp_app_handle_t handle,
 
 	init_completion(&app->wait_for_app_start);
 	init_completion(&app->wait_for_app_complete);
-	set_app_complete_notifier(app, notifier);
+	_nvadsp_set_app_complete_cb(nvadsp_handle, app, notifier);
 
 	dev_dbg(dev, "app %s instance %d initilized\n",
 			app->name, app->instance_id);
@@ -606,25 +636,27 @@ end:
 	return app;
 }
 
-nvadsp_app_info_t __must_check *nvadsp_app_init(nvadsp_app_handle_t handle,
-	nvadsp_app_args_t *args)
+static nvadsp_app_info_t *_nvadsp_app_init(struct nvadsp_handle *nvadsp_handle,
+			nvadsp_app_handle_t handle, nvadsp_app_args_t *args)
 {
 	struct nvadsp_app_shared_msg_pool *msg_pool;
 	struct nvadsp_shared_mem *shared_mem;
 	union app_loader_message *message;
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_app_priv_struct *priv;
 	struct app_loader_data *data;
 	nvadsp_app_info_t *app;
 	msgq_t *msgq_send;
 	int *state;
 	unsigned long flags, ret = 0;
 
-	if (IS_ERR_OR_NULL(priv.pdev)) {
+	if (!drv_data || !drv_data->pdev || !drv_data->app_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		goto err;
 	}
 
-	drv_data = platform_get_drvdata(priv.pdev);
+	priv = drv_data->app_priv;
 
 	if (!drv_data->adsp_os_running) {
 		pr_err("ADSP is not running\n");
@@ -648,7 +680,8 @@ nvadsp_app_info_t __must_check *nvadsp_app_init(nvadsp_app_handle_t handle,
 	data = &message->data;
 
 	/* Pinning app to core 0 by default */
-	app = create_app_instance(handle, args, &data->app_init, NULL, 0, 0);
+	app = create_app_instance(drv_data->app_priv, handle,
+				args, &data->app_init, NULL, 0, 0);
 	if (IS_ERR_OR_NULL(app)) {
 		pr_err("Failed to create APP instance\n");
 		kfree(message);
@@ -668,12 +701,13 @@ nvadsp_app_info_t __must_check *nvadsp_app_init(nvadsp_app_handle_t handle,
 		*state = NVADSP_APP_STATE_STARTED;
 	}
 
-	nvadsp_mbox_send(&priv.mbox, 0, NVADSP_MBOX_SMSG, false, 0);
+	nvadsp_handle->mbox_send(nvadsp_handle, &priv->mbox,
+				0, NVADSP_MBOX_SMSG, false, 0);
 
 	ret = wait_for_completion_timeout(&app->wait_for_app_start,
 			msecs_to_jiffies(ADSP_APP_INIT_TIMEOUT));
 	if (!ret) {
-		delete_app_instance(app);
+		delete_app_instance(drv_data->app_priv, app);
 		return NULL;
 	}
 	init_completion(&app->wait_for_app_start);
@@ -681,20 +715,23 @@ nvadsp_app_info_t __must_check *nvadsp_app_init(nvadsp_app_handle_t handle,
 err:
 	return ERR_PTR(-ENOMEM);
 }
-EXPORT_SYMBOL(nvadsp_app_init);
 
-static int start_app_on_adsp(nvadsp_app_info_t *app,
-	union app_loader_message *message, bool block)
+static int start_app_on_adsp(struct nvadsp_app_priv_struct *priv,
+		nvadsp_app_info_t *app,
+		union app_loader_message *message, bool block)
 {
 	struct nvadsp_app_shared_msg_pool *msg_pool;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	struct nvadsp_shared_mem *shared_mem;
-	struct nvadsp_drv_data *drv_data;
 	msgq_t *msgq_send;
+	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_handle *nvadsp_handle;
 	int *state;
 	unsigned long flags;
 
-	drv_data = platform_get_drvdata(priv.pdev);
+	drv_data = platform_get_drvdata(priv->pdev);
+	nvadsp_handle = &drv_data->nvadsp_handle;
+
 	shared_mem = drv_data->shared_adsp_os_data;
 	msg_pool = &shared_mem->app_shared_msg_pool;
 	msgq_send = &msg_pool->app_loader_send_message.msgq;
@@ -708,7 +745,8 @@ static int start_app_on_adsp(nvadsp_app_info_t *app,
 	state = (int *)&app->state;
 	*state = NVADSP_APP_STATE_STARTED;
 
-	nvadsp_mbox_send(&priv.mbox, 0, NVADSP_MBOX_SMSG, false, 0);
+	nvadsp_handle->mbox_send(nvadsp_handle, &priv->mbox,
+				0, NVADSP_MBOX_SMSG, false, 0);
 
 	if (block) {
 		wait_for_completion(&app->wait_for_app_start);
@@ -723,22 +761,22 @@ static int start_app_on_adsp(nvadsp_app_info_t *app,
 	return app->return_status;
 }
 
-int nvadsp_app_start(nvadsp_app_info_t *app)
+static int _nvadsp_app_start(struct nvadsp_handle *nvadsp_handle,
+		nvadsp_app_info_t *app)
 {
 	union app_loader_message *message = app->priv;
 	struct app_loader_data *data = &message->data;
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
 	int ret = -EINVAL;
 
 	if (IS_ERR_OR_NULL(app))
 		return -EINVAL;
 
-	if (IS_ERR_OR_NULL(priv.pdev)) {
+	if (!drv_data || !drv_data->pdev || !drv_data->app_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		goto err;
 	}
-
-	drv_data = platform_get_drvdata(priv.pdev);
 
 	if (!drv_data->adsp_os_running)
 		goto err;
@@ -746,33 +784,35 @@ int nvadsp_app_start(nvadsp_app_info_t *app)
 	data->app_init.message = ADSP_APP_START;
 	data->app_init.adsp_ref = app->token;
 	data->app_init.stack_size = app->stack_size;
-	ret = start_app_on_adsp(app, app->priv, true);
+	ret = start_app_on_adsp(drv_data->app_priv, app, app->priv, true);
 err:
 	return ret;
 }
-EXPORT_SYMBOL(nvadsp_app_start);
 
-nvadsp_app_info_t *nvadsp_run_app(nvadsp_os_handle_t os_handle,
-	const char *appfile, nvadsp_app_args_t *app_args,
-	app_complete_status_notifier notifier, uint32_t stack_sz,
-	uint32_t core_id, bool block)
+static nvadsp_app_info_t *_nvadsp_run_app(struct nvadsp_handle *nvadsp_handle,
+		nvadsp_os_handle_t os_handle,
+		const char *appfile, nvadsp_app_args_t *app_args,
+		app_complete_status_notifier notifier, uint32_t stack_sz,
+		uint32_t core_id, bool block)
 {
 	union app_loader_message message = {};
 	nvadsp_app_handle_t service_handle;
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_app_priv_struct *priv;
 	nvadsp_app_info_t *info =  NULL;
 	struct app_loader_data *data;
 	struct device *dev;
 	int ret;
 
-	if (IS_ERR_OR_NULL(priv.pdev)) {
+	if (!drv_data || !drv_data->pdev || !drv_data->app_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		info = ERR_PTR(-EINVAL);
 		goto end;
 	}
 
-	drv_data = platform_get_drvdata(priv.pdev);
-	dev = &priv.pdev->dev;
+	priv = drv_data->app_priv;
+	dev = &priv->pdev->dev;
 
 	if (!drv_data->adsp_os_running)
 		goto end;
@@ -781,13 +821,13 @@ nvadsp_app_info_t *nvadsp_run_app(nvadsp_os_handle_t os_handle,
 		goto end;
 
 	data = &message.data;
-	service_handle = app_load(appfile, NULL, true);
+	service_handle = app_load(priv, appfile, NULL, true);
 	if (!service_handle) {
 		dev_err(dev, "unable to load the app %s\n", appfile);
 		goto end;
 	}
 
-	info = create_app_instance(service_handle, app_args,
+	info = create_app_instance(priv, service_handle, app_args,
 		&data->app_init, notifier, stack_sz, core_id);
 	if (IS_ERR_OR_NULL(info)) {
 		dev_err(dev, "unable to create instance for app %s\n", appfile);
@@ -795,21 +835,21 @@ nvadsp_app_info_t *nvadsp_run_app(nvadsp_os_handle_t os_handle,
 	}
 	data->app_init.message = RUN_ADSP_APP;
 
-	ret = start_app_on_adsp(info, &message, block);
+	ret = start_app_on_adsp(priv, info, &message, block);
 	if (ret) {
-		delete_app_instance(info);
+		delete_app_instance(priv, info);
 		info = NULL;
 	}
 end:
 	return info;
 }
-EXPORT_SYMBOL(nvadsp_run_app);
 
-static void delete_app_instance(nvadsp_app_info_t *app)
+static void delete_app_instance(struct nvadsp_app_priv_struct *priv,
+				nvadsp_app_info_t *app)
 {
 	struct nvadsp_app_service *ser =
 		(struct nvadsp_app_service *)app->handle;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 
 	dev_dbg(dev, "%s:freeing app %s:%d\n",
 		__func__, app->name, app->instance_id);
@@ -821,16 +861,19 @@ static void delete_app_instance(nvadsp_app_info_t *app)
 	mutex_unlock(&ser->lock);
 
 	/* free instance memory */
-	free_instance_memory(app, ser->mem_size);
+	free_instance_memory(priv, app, ser->mem_size);
 	kfree(app->priv);
 	kfree(app);
 }
 
-void nvadsp_exit_app(nvadsp_app_info_t *app, bool terminate)
+static void _nvadsp_exit_app(struct nvadsp_handle *nvadsp_handle,
+				nvadsp_app_info_t *app, bool terminate)
 {
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
 	int *state;
 
-	if (IS_ERR_OR_NULL(priv.pdev)) {
+	if (!drv_data || !drv_data->pdev || !drv_data->app_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		return;
 	}
@@ -844,36 +887,38 @@ void nvadsp_exit_app(nvadsp_app_info_t *app, bool terminate)
 		state = (int *)&app->state;
 		*state = NVADSP_APP_STATE_INITIALIZED;
 	}
-	delete_app_instance(app);
+	delete_app_instance(drv_data->app_priv, app);
 }
-EXPORT_SYMBOL(nvadsp_exit_app);
 
-int nvadsp_app_deinit(nvadsp_app_info_t *app)
+static int _nvadsp_app_deinit(struct nvadsp_handle *nvadsp_handle,
+				nvadsp_app_info_t *app)
 {
-	nvadsp_exit_app(app, false);
+	_nvadsp_exit_app(nvadsp_handle, app, false);
 	return 0;
 }
-EXPORT_SYMBOL(nvadsp_app_deinit);
 
-int nvadsp_app_stop(nvadsp_app_info_t *app)
+static int _nvadsp_app_stop(struct nvadsp_handle *nvadsp_handle,
+				nvadsp_app_info_t *app)
 {
 	return -ENOENT;
 }
-EXPORT_SYMBOL(nvadsp_app_stop);
 
-void nvadsp_app_unload(nvadsp_app_handle_t handle)
+static void _nvadsp_app_unload(struct nvadsp_handle *nvadsp_handle,
+				nvadsp_app_handle_t handle)
 {
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_app_priv_struct *priv;
 	struct nvadsp_app_service *ser;
 	struct device *dev;
 
-	if (!priv.pdev) {
+	if (!drv_data || !drv_data->pdev || !drv_data->app_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		return;
 	}
 
-	drv_data = platform_get_drvdata(priv.pdev);
-	dev = &priv.pdev->dev;
+	priv = drv_data->app_priv;
+	dev = &priv->pdev->dev;
 
 	if (!drv_data->adsp_os_running)
 		return;
@@ -886,7 +931,7 @@ void nvadsp_app_unload(nvadsp_app_handle_t handle)
 		return;
 
 #ifdef CONFIG_ADSP_DYNAMIC_APP
-	mutex_lock(&priv.service_lock_list);
+	mutex_lock(&priv->service_lock_list);
 	if (ser->instance) {
 		dev_err(dev, "cannot unload app %s, has instances %d\n",
 				ser->name, ser->instance);
@@ -899,10 +944,9 @@ void nvadsp_app_unload(nvadsp_app_handle_t handle)
 #endif
 	unload_adsp_module(ser->mod);
 	devm_kfree(dev, ser);
-	mutex_unlock(&priv.service_lock_list);
+	mutex_unlock(&priv->service_lock_list);
 #endif // CONFIG_ADSP_DYNAMIC_APP
 }
-EXPORT_SYMBOL(nvadsp_app_unload);
 
 static status_t nvadsp_app_receive_handler(uint32_t msg, void *hdata)
 {
@@ -954,18 +998,12 @@ static status_t nvadsp_app_receive_handler(uint32_t msg, void *hdata)
 	return 0;
 }
 
-int load_adsp_static_apps(void)
+int load_adsp_static_apps(struct nvadsp_drv_data *drv_data)
 {
 	struct nvadsp_app_shared_msg_pool *msg_pool;
 	struct nvadsp_shared_mem *shared_mem;
-	struct nvadsp_drv_data *drv_data;
-	struct platform_device *pdev;
-	struct device *dev;
+	struct device *dev = &drv_data->pdev->dev;
 	msgq_t *msgq_recv;
-
-	pdev = priv.pdev;
-	dev = &pdev->dev;
-	drv_data = platform_get_drvdata(pdev);
 
 	shared_mem = drv_data->shared_adsp_os_data;
 	if (!shared_mem)
@@ -993,37 +1031,88 @@ int load_adsp_static_apps(void)
 		/* Skip Start on boot apps */
 		if (shared_app->flags & ADSP_APP_FLAG_START_ON_BOOT)
 			continue;
-		app_load(name, shared_app, false);
+		app_load(drv_data->app_priv, name, shared_app, false);
 	}
 	return 0;
 }
 
+static void _nvadsp_wait_for_app_complete(struct nvadsp_handle *nvadsp_handle,
+				nvadsp_app_info_t *info)
+{
+	/*
+	 * wait_for_complete must be called only after app has started
+	 */
+	if (info->state == NVADSP_APP_STATE_STARTED)
+		wait_for_completion(&info->wait_for_app_complete);
+}
+
+static long _nvadsp_wait_for_app_complete_timeout(
+		struct nvadsp_handle *nvadsp_handle,
+		nvadsp_app_info_t *info, unsigned long timeout)
+{
+	int ret = -EINVAL;
+	/*
+	 * wait_for_complete must be called only after app has started
+	 */
+	if (info->state == NVADSP_APP_STATE_STARTED)
+		ret = wait_for_completion_interruptible_timeout(
+			&info->wait_for_app_complete, timeout);
+
+	return ret;
+}
+
 int __init nvadsp_app_module_probe(struct platform_device *pdev)
 {
-#ifdef CONFIG_DEBUG_FS
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
-#endif
+	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
 	uint16_t mbox_id = APP_LOADER_MBOX_ID;
 	struct device *dev = &pdev->dev;
+	struct nvadsp_app_priv_struct *priv;
 	int ret;
 
 	dev_info(dev, "%s\n", __func__);
 
-	ret = nvadsp_mbox_open(&priv.mbox, &mbox_id,
+	priv = devm_kzalloc(dev,
+			sizeof(struct nvadsp_app_priv_struct), GFP_KERNEL);
+	if (!priv) {
+		dev_err(dev, "Failed to allocate app_priv\n");
+		ret = -ENOMEM;
+		goto end;
+	}
+	drv_data->app_priv = priv;
+
+	ret = nvadsp_handle->mbox_open(nvadsp_handle, &priv->mbox, &mbox_id,
 		"app_service", nvadsp_app_receive_handler, pdev);
 	if (ret) {
 		dev_err(dev, "unable to open mailbox\n");
 		goto end;
 	}
-	priv.pdev = pdev;
-	INIT_LIST_HEAD(&priv.service_list);
-	init_completion(&priv.os_load_complete);
-	mutex_init(&priv.service_lock_list);
+	priv->pdev = pdev;
+	INIT_LIST_HEAD(&priv->service_list);
+	init_completion(&priv->os_load_complete);
+	mutex_init(&priv->service_lock_list);
 
 #ifdef CONFIG_DEBUG_FS
-	if (adsp_app_debug_init(drv_data->adsp_debugfs_root))
-		dev_err(&pdev->dev, "unable to create adsp apps debugfs\n");
+	if (adsp_app_debug_init(priv, drv_data->adsp_debugfs_root))
+		dev_err(dev, "unable to create adsp apps debugfs\n");
 #endif
 end:
+	if (ret == 0) {
+		nvadsp_handle->app_load   = _nvadsp_app_load;
+		nvadsp_handle->app_init   = _nvadsp_app_init;
+		nvadsp_handle->app_start  = _nvadsp_app_start;
+		nvadsp_handle->run_app    = _nvadsp_run_app;
+		nvadsp_handle->app_stop   = _nvadsp_app_stop;
+		nvadsp_handle->app_deinit = _nvadsp_app_deinit;
+		nvadsp_handle->exit_app   = _nvadsp_exit_app;
+		nvadsp_handle->app_unload = _nvadsp_app_unload;
+		nvadsp_handle->set_app_complete_cb =
+					_nvadsp_set_app_complete_cb;
+		nvadsp_handle->wait_for_app_complete =
+					_nvadsp_wait_for_app_complete;
+		nvadsp_handle->wait_for_app_complete_timeout =
+					_nvadsp_wait_for_app_complete_timeout;
+	}
+
 	return ret;
 }

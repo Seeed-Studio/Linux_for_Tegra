@@ -16,7 +16,6 @@
 #endif
 #include <linux/interconnect.h>
 
-#include "hwmailbox.h"
 #include "amc.h"
 
 /*
@@ -119,6 +118,9 @@ struct nvadsp_hwmb {
 	u32 empty_int_ie;
 };
 
+/* Max SW mailboxes */
+#define NVADSP_MAILBOX_MAX 1024
+
 /* Max no. of entries in "nvidia,cluster_mem" */
 #define MAX_CLUSTER_MEM    3
 
@@ -163,14 +165,33 @@ struct nvadsp_chipdata {
 	size_t                  num_regs;
 };
 
+/* Maximum number of LOAD MAPPINGS supported */
+#define NM_LOAD_MAPPINGS 20
+
+struct nvadsp_mappings {
+	phys_addr_t da;
+	void *va;
+	int len;
+};
+
 struct nvadsp_drv_data {
+	/**
+	 * API handle exposed to caller
+	 * MUST BE THE FIRST FIELD IN THIS STRUCTURE
+	 */
+	struct nvadsp_handle nvadsp_handle;
+
 	void __iomem **base_regs;
 	void __iomem **base_regs_saved;
 	struct platform_device *pdev;
-	struct hwmbox_queue hwmbox_send_queue;
 
-	struct nvadsp_mbox **mboxes;
-	unsigned long *mbox_ids;
+	/* Memories allocated by subsidiary modules */
+	void *hwmbox_send_queue; /* struct hwmbox_queue */
+	void *os_priv;           /* struct nvadsp_os_data */
+	void *app_priv;          /* struct nvadsp_app_priv_struct */
+
+	struct nvadsp_mbox *mboxes[NVADSP_MAILBOX_MAX];
+	unsigned long mbox_ids[BITS_TO_LONGS(NVADSP_MAILBOX_MAX)];
 	spinlock_t mbox_lock;
 
 #ifdef CONFIG_DEBUG_FS
@@ -259,6 +280,13 @@ struct nvadsp_drv_data {
 
 	/* "nvidia,dram_map" */
 	struct nvadsp_reg_map dram_map[MAX_DRAM_MAP];
+
+	struct nvadsp_mappings  adsp_map[NM_LOAD_MAPPINGS];
+	int                     map_idx;
+
+	/* ARAM manager */
+	void *aram_handle;
+	struct dentry *aram_dump_debugfs_file;
 };
 
 #define ADSP_CONFIG	0x04

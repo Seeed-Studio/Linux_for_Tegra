@@ -40,9 +40,6 @@
 #define MAILBOX_REGION		".mbox_shared_data"
 #define DEBUG_RAM_REGION	".debug_mem_logs"
 
-/* Maximum number of LOAD MAPPINGS supported */
-#define NM_LOAD_MAPPINGS 20
-
 #define EOT	0x04 /* End of Transmission */
 #define SOH	0x01 /* Start of Header */
 #define BELL	0x07 /* Bell character */
@@ -87,7 +84,6 @@ struct nvadsp_os_data {
 	const struct firmware	*os_firmware;
 	struct platform_device	*pdev;
 	struct global_sym_info	*adsp_glo_sym_tbl;
-	void __iomem		*hwmailbox_base;
 	struct nvadsp_debug_log	logger;
 	struct nvadsp_cnsl   console;
 	struct work_struct	restart_os_work;
@@ -101,46 +97,31 @@ struct nvadsp_os_data {
 	dma_addr_t		app_alloc_addr;
 	size_t			app_size;
 	int			num_start; /* registers number of time start called */
+	bool			cold_start;
+	struct nvadsp_mbox	adsp_com_mbox;
+	struct completion	entered_wfi;
+	void			(*adma_dump_ch_reg)(void);
 };
 
-static struct nvadsp_os_data priv;
-
-struct nvadsp_mappings {
-	phys_addr_t da;
-	void *va;
-	int len;
-};
-
-static struct nvadsp_mappings adsp_map[NM_LOAD_MAPPINGS];
-static int map_idx;
-static struct nvadsp_mbox adsp_com_mbox;
-
-static DECLARE_COMPLETION(entered_wfi);
-
-static void __nvadsp_os_stop(bool);
+static void __nvadsp_os_stop(struct nvadsp_os_data *, bool);
 static irqreturn_t adsp_wdt_handler(int irq, void *arg);
 static irqreturn_t adsp_wfi_handler(int irq, void *arg);
-
-/*
- * set by adsp audio driver through exported api nvadsp_set_adma_dump_reg
- * used to dump adma registers incase of failures for debug
- */
-static void (*nvadsp_tegra_adma_dump_ch_reg)(void);
 
 #ifdef CONFIG_DEBUG_FS
 static int adsp_logger_open(struct inode *inode, struct file *file)
 {
-	struct nvadsp_debug_log *logger = inode->i_private;
+	struct nvadsp_os_data *priv = inode->i_private;
+	struct nvadsp_debug_log *logger = &priv->logger;
 	int ret = -EBUSY;
 	char *start;
 	int i;
 
-	mutex_lock(&priv.os_run_lock);
-	if (!priv.num_start) {
-		mutex_unlock(&priv.os_run_lock);
+	mutex_lock(&priv->os_run_lock);
+	if (!priv->num_start) {
+		mutex_unlock(&priv->os_run_lock);
 		goto err_ret;
 	}
-	mutex_unlock(&priv.os_run_lock);
+	mutex_unlock(&priv->os_run_lock);
 
 	/*
 	 * checks if is_opened is 0, if yes, set 1 and proceed,
@@ -265,10 +246,10 @@ static const struct file_operations adsp_logger_operations = {
 	.flush		= adsp_logger_flush,
 };
 
-static int adsp_create_debug_logger(struct dentry *adsp_debugfs_root)
+static int adsp_create_debug_logger(struct nvadsp_os_data *priv,
+				struct dentry *adsp_debugfs_root)
 {
-	struct nvadsp_debug_log *logger = &priv.logger;
-	struct device *dev = &priv.pdev->dev;
+	struct nvadsp_debug_log *logger = &priv->logger;
 	int ret = 0;
 
 	if (IS_ERR_OR_NULL(adsp_debugfs_root)) {
@@ -280,9 +261,9 @@ static int adsp_create_debug_logger(struct dentry *adsp_debugfs_root)
 	init_waitqueue_head(&logger->wait_queue);
 	init_completion(&logger->complete);
 	if (!debugfs_create_file("adsp_logger", S_IRUGO,
-					adsp_debugfs_root, logger,
+					adsp_debugfs_root, priv,
 					&adsp_logger_operations)) {
-		dev_err(dev, "unable to create adsp logger debug fs file\n");
+		pr_err("unable to create adsp logger debug fs file\n");
 		ret = -ENOENT;
 	}
 
@@ -291,10 +272,9 @@ err_out:
 }
 #endif
 
-bool is_adsp_dram_addr(u64 addr)
+static bool is_adsp_dram_addr(struct nvadsp_drv_data *drv_data, u64 addr)
 {
 	int i;
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
 
 	for (i = 0; i < MAX_DRAM_MAP; i++) {
 		struct nvadsp_reg_map *dram = &drv_data->dram_map[i];
@@ -310,10 +290,9 @@ bool is_adsp_dram_addr(u64 addr)
 	return false;
 }
 
-static int is_cluster_mem_addr(u64 addr)
+static int is_cluster_mem_addr(struct nvadsp_drv_data *drv_data, u64 addr)
 {
 	int clust_id;
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
 
 	for (clust_id = 0; clust_id < MAX_CLUSTER_MEM; clust_id++) {
 		struct nvadsp_cluster_mem *cluster_mem;
@@ -331,82 +310,96 @@ static int is_cluster_mem_addr(u64 addr)
 	return -1;
 }
 
-int nvadsp_add_load_mappings(phys_addr_t pa, void *mapping, int len)
+int nvadsp_add_load_mappings(struct nvadsp_drv_data *drv_data,
+			phys_addr_t pa, void *mapping, int len)
 {
+	int map_idx = drv_data->map_idx;
+
 	if (map_idx < 0 || map_idx >= NM_LOAD_MAPPINGS)
 		return -EINVAL;
 
-	adsp_map[map_idx].da = pa;
-	adsp_map[map_idx].va = mapping;
-	adsp_map[map_idx].len = len;
-	map_idx++;
+	drv_data->adsp_map[map_idx].da = pa;
+	drv_data->adsp_map[map_idx].va = mapping;
+	drv_data->adsp_map[map_idx].len = len;
+	drv_data->map_idx++;
 	return 0;
 }
 
-void *nvadsp_da_to_va_mappings(u64 da, int len)
+void *nvadsp_da_to_va_mappings(struct nvadsp_drv_data *drv_data,
+				u64 da, int len)
 {
 	void *ptr = NULL;
 	int i;
 
-	for (i = 0; i < map_idx; i++) {
-		int offset = da - adsp_map[i].da;
+	for (i = 0; i < drv_data->map_idx; i++) {
+		int offset = da - drv_data->adsp_map[i].da;
 
 		/* try next carveout if da is too small */
 		if (offset < 0)
 			continue;
 
 		/* try next carveout if da is too large */
-		if (offset + len > adsp_map[i].len)
+		if (offset + len > drv_data->adsp_map[i].len)
 			continue;
 
-		ptr = adsp_map[i].va + offset;
+		ptr = drv_data->adsp_map[i].va + offset;
 		break;
 	}
 	return ptr;
 }
 
-void *nvadsp_alloc_coherent(size_t size, dma_addr_t *da, gfp_t flags)
+static void *_nvadsp_alloc_coherent(struct nvadsp_handle *nvadsp_handle,
+			size_t size, dma_addr_t *da, gfp_t flags)
 {
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_os_data *priv;
 	struct device *dev;
 	void *va = NULL;
 
-	if (!priv.pdev) {
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		goto end;
 	}
 
-	dev = &priv.pdev->dev;
+	priv = drv_data->os_priv;
+	dev = &priv->pdev->dev;
+
 	va = dma_alloc_coherent(dev, size, da, flags);
 	if (!va) {
 		dev_err(dev, "unable to allocate the memory for size %lu\n",
 				size);
 		goto end;
 	}
-	WARN(!is_adsp_dram_addr(*da), "bus addr %llx beyond %x\n",
+	WARN(!is_adsp_dram_addr(drv_data, *da), "bus addr %llx beyond %x\n",
 				*da, UINT_MAX);
 end:
 	return va;
 }
-EXPORT_SYMBOL(nvadsp_alloc_coherent);
 
-void nvadsp_free_coherent(size_t size, void *va, dma_addr_t da)
+static void _nvadsp_free_coherent(struct nvadsp_handle *nvadsp_handle,
+			size_t size, void *va, dma_addr_t da)
 {
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_os_data *priv;
 	struct device *dev;
 
-	if (!priv.pdev) {
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		return;
 	}
-	dev = &priv.pdev->dev;
+
+	priv = drv_data->os_priv;
+	dev = &priv->pdev->dev;
+
 	dma_free_coherent(dev, size, va, da);
 }
-EXPORT_SYMBOL(nvadsp_free_coherent);
 
 struct elf32_shdr *
 nvadsp_get_section(const struct firmware *fw, char *sec_name)
 {
 	int i;
-	struct device *dev = &priv.pdev->dev;
 	const u8 *elf_data = fw->data;
 	struct elf32_hdr *ehdr = (struct elf32_hdr *)elf_data;
 	struct elf32_shdr *shdr;
@@ -418,17 +411,18 @@ nvadsp_get_section(const struct firmware *fw, char *sec_name)
 
 	for (i = 0; i < ehdr->e_shnum; i++, shdr++)
 		if (!strcmp(name_table + shdr->sh_name, sec_name)) {
-			dev_dbg(dev, "found the section %s\n",
+			pr_debug("found the section %s\n",
 					name_table + shdr->sh_name);
 			return shdr;
 		}
 	return NULL;
 }
 
-static inline void __maybe_unused dump_global_symbol_table(void)
+static inline void __maybe_unused dump_global_symbol_table(
+					struct nvadsp_os_data *priv)
 {
-	struct device *dev = &priv.pdev->dev;
-	struct global_sym_info *table = priv.adsp_glo_sym_tbl;
+	struct device *dev = &priv->pdev->dev;
+	struct global_sym_info *table = priv->adsp_glo_sym_tbl;
 	int num_ent;
 	int i;
 
@@ -449,10 +443,11 @@ static inline void __maybe_unused dump_global_symbol_table(void)
 
 #ifdef CONFIG_ANDROID
 static int
-__maybe_unused create_global_symbol_table(const struct firmware *fw)
+__maybe_unused create_global_symbol_table(struct nvadsp_os_data *priv,
+					const struct firmware *fw)
 {
 	int i;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	struct elf32_shdr *sym_shdr = nvadsp_get_section(fw, ".symtab");
 	struct elf32_shdr *str_shdr = nvadsp_get_section(fw, ".strtab");
 	const u8 *elf_data = fw->data;
@@ -471,9 +466,9 @@ __maybe_unused create_global_symbol_table(const struct firmware *fw)
 	name_table = elf_data + str_shdr->sh_offset;
 
 	num_ent += sym_shdr->sh_size / sizeof(struct elf32_sym);
-	priv.adsp_glo_sym_tbl = devm_kzalloc(dev,
+	priv->adsp_glo_sym_tbl = devm_kzalloc(dev,
 		sizeof(struct global_sym_info) * num_ent, GFP_KERNEL);
-	if (!priv.adsp_glo_sym_tbl)
+	if (!priv->adsp_glo_sym_tbl)
 		return -ENOMEM;
 
 	last_sym = sym + num_ent;
@@ -483,23 +478,26 @@ __maybe_unused create_global_symbol_table(const struct firmware *fw)
 		unsigned char type = ELF32_ST_TYPE(info);
 		if ((ELF32_ST_BIND(sym->st_info) == STB_GLOBAL) &&
 		((type == STT_OBJECT) || (type == STT_FUNC))) {
-			char *name = priv.adsp_glo_sym_tbl[i].name;
+			char *name = priv->adsp_glo_sym_tbl[i].name;
 
 			strscpy(name, name_table + sym->st_name, SYM_NAME_SZ);
-			priv.adsp_glo_sym_tbl[i].addr = sym->st_value;
-			priv.adsp_glo_sym_tbl[i].info = info;
+			priv->adsp_glo_sym_tbl[i].addr = sym->st_value;
+			priv->adsp_glo_sym_tbl[i].info = info;
 			i++;
 		}
 	}
-	priv.adsp_glo_sym_tbl[0].addr = i;
+	priv->adsp_glo_sym_tbl[0].addr = i;
 	return 0;
 }
 #endif /* CONFIG_ANDROID */
 
-struct global_sym_info * __maybe_unused find_global_symbol(const char *sym_name)
+struct global_sym_info * __maybe_unused find_global_symbol(
+					struct nvadsp_drv_data *drv_data,
+					const char *sym_name)
 {
-	struct device *dev = &priv.pdev->dev;
-	struct global_sym_info *table = priv.adsp_glo_sym_tbl;
+	struct nvadsp_os_data *priv = drv_data->os_priv;
+	struct device *dev = &priv->pdev->dev;
+	struct global_sym_info *table = priv->adsp_glo_sym_tbl;
 	int num_ent;
 	int i;
 
@@ -516,20 +514,21 @@ struct global_sym_info * __maybe_unused find_global_symbol(const char *sym_name)
 	return NULL;
 }
 
-static void *get_mailbox_shared_region(const struct firmware *fw)
+static void *get_mailbox_shared_region(struct nvadsp_os_data *priv,
+					const struct firmware *fw)
 {
 	struct device *dev;
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
 	struct elf32_shdr *shdr;
 	int addr;
 	int size;
 
-	if (!priv.pdev) {
+	if (!priv->pdev) {
 		pr_err("ADSP Driver is not initialized\n");
 		return ERR_PTR(-EINVAL);
 	}
 
-	dev = &priv.pdev->dev;
+	dev = &priv->pdev->dev;
 
 	shdr = nvadsp_get_section(fw, MAILBOX_REGION);
 	if (!shdr) {
@@ -541,7 +540,7 @@ static void *get_mailbox_shared_region(const struct firmware *fw)
 	addr = shdr->sh_addr;
 	size = shdr->sh_size;
 	drv_data->shared_adsp_os_data_iova  = addr;
-	return nvadsp_da_to_va_mappings(addr, size);
+	return nvadsp_da_to_va_mappings(drv_data, addr, size);
 }
 
 static void copy_io_in_l(void *to, const void *from, int sz)
@@ -553,10 +552,11 @@ static void copy_io_in_l(void *to, const void *from, int sz)
 	}
 }
 
-static int nvadsp_os_elf_load(const struct firmware *fw)
+static int nvadsp_os_elf_load(struct nvadsp_os_data *priv,
+				const struct firmware *fw)
 {
-	struct device *dev = &priv.pdev->dev;
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
+	struct device *dev = &priv->pdev->dev;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
 	struct elf32_hdr *ehdr;
 	struct elf32_phdr *phdr;
 	int i, ret = 0, clust_id;
@@ -597,8 +597,9 @@ static int nvadsp_os_elf_load(const struct firmware *fw)
 			goto end;
 		}
 
-		nvadsp_add_load_mappings((phys_addr_t)cluster_mem->dsp_addr,
-					shadow_buf[i], (int)cluster_mem->size);
+		nvadsp_add_load_mappings(drv_data,
+				(phys_addr_t)cluster_mem->dsp_addr,
+				shadow_buf[i], (int)cluster_mem->size);
 	}
 
 	ehdr = (struct elf32_hdr *)elf_data;
@@ -618,7 +619,7 @@ static int nvadsp_os_elf_load(const struct firmware *fw)
 		dev_dbg(dev, "phdr: type %d da 0x%x memsz 0x%x filesz 0x%x\n",
 				phdr->p_type, da, memsz, filesz);
 
-		va = nvadsp_da_to_va_mappings(da, filesz);
+		va = nvadsp_da_to_va_mappings(drv_data, da, filesz);
 		if (!va) {
 			dev_err(dev, "no va for da 0x%x filesz 0x%x\n",
 					da, filesz);
@@ -642,11 +643,11 @@ static int nvadsp_os_elf_load(const struct firmware *fw)
 
 		/* put the segment where the remote processor expects it */
 		if (filesz) {
-			clust_id = is_cluster_mem_addr(da);
+			clust_id = is_cluster_mem_addr(drv_data, da);
 			if (clust_id != -1) {
 				cluster_mem_active[clust_id] = true;
 				memcpy(va, elf_data + offset, filesz);
-			} else if (is_adsp_dram_addr(da)) {
+			} else if (is_adsp_dram_addr(drv_data, da)) {
 				memcpy(va, elf_data + offset, filesz);
 			} else if ((da == drv_data->evp_base[ADSP_EVP_BASE]) &&
 				(filesz == drv_data->evp_base[ADSP_EVP_SIZE])) {
@@ -792,11 +793,10 @@ fail_dma_alloc:
 }
 #endif
 
-static int allocate_memory_for_adsp_os(void)
+static int allocate_memory_for_adsp_os(struct nvadsp_os_data *priv)
 {
-	struct platform_device *pdev = priv.pdev;
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
-	struct device *dev = &pdev->dev;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	struct device *dev = &priv->pdev->dev;
 	struct resource *co_mem = &drv_data->co_mem;
 #ifdef CONFIG_IOMMU_API_EXPORTED
 	dma_addr_t addr;
@@ -807,8 +807,8 @@ static int allocate_memory_for_adsp_os(void)
 	size_t size;
 	int ret = 0;
 
-	addr = priv.adsp_os_addr;
-	size = priv.adsp_os_size;
+	addr = priv->adsp_os_addr;
+	size = priv->adsp_os_size;
 
 	if (size == 0)
 		return 0;
@@ -826,7 +826,8 @@ static int allocate_memory_for_adsp_os(void)
 	}
 
 #ifdef CONFIG_IOMMU_API_EXPORTED
-	dram_va = nvadsp_dma_alloc_and_map_at(pdev, size, addr, GFP_KERNEL);
+	dram_va = nvadsp_dma_alloc_and_map_at(priv->pdev, size, addr,
+							GFP_KERNEL);
 	if (!dram_va) {
 		dev_err(dev, "unable to allocate SMMU pages\n");
 		ret = -ENOMEM;
@@ -842,23 +843,22 @@ static int allocate_memory_for_adsp_os(void)
 #endif
 
 map_and_end:
-	nvadsp_add_load_mappings(addr, dram_va, size);
+	nvadsp_add_load_mappings(drv_data, addr, dram_va, size);
 end:
 	return ret;
 }
 
-static void deallocate_memory_for_adsp_os(void)
+static void deallocate_memory_for_adsp_os(struct nvadsp_os_data *priv)
 {
-	struct platform_device *pdev = priv.pdev;
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
-	struct device *dev = &pdev->dev;
-	size_t size = priv.adsp_os_size;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	struct device *dev = &priv->pdev->dev;
+	size_t size = priv->adsp_os_size;
 	void *va;
 
 	if (size == 0)
 		return;
 
-	va = nvadsp_da_to_va_mappings(priv.adsp_os_addr, size);
+	va = nvadsp_da_to_va_mappings(drv_data, priv->adsp_os_addr, size);
 
 	if (drv_data->co_mem.start) {
 		devm_memunmap(dev, va);
@@ -866,25 +866,25 @@ static void deallocate_memory_for_adsp_os(void)
 	}
 
 #ifdef CONFIG_IOMMU_API_EXPORTED
-	dma_free_coherent(dev, priv.adsp_os_size, va, priv.adsp_os_addr);
+	dma_free_coherent(dev, priv->adsp_os_size, va, priv->adsp_os_addr);
 #endif
 }
 
-static void nvadsp_set_shared_mem(struct platform_device *pdev,
+static void nvadsp_set_shared_mem(struct nvadsp_os_data *priv,
 				  struct nvadsp_shared_mem *shared_mem,
 				  uint32_t dynamic_app_support)
 {
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
-	struct device *dev = &pdev->dev;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	struct device *dev = &priv->pdev->dev;
 	struct nvadsp_os_args *os_args;
 	u32 chip_id;
 
 	shared_mem->os_args.dynamic_app_support = dynamic_app_support;
 	/* set logger strcuture with required properties */
-	priv.logger.debug_ram_rdr = shared_mem->os_args.logger;
-	priv.logger.debug_ram_sz = sizeof(shared_mem->os_args.logger);
-	priv.logger.dev = dev;
-	priv.adsp_os_fw_loaded = true;
+	priv->logger.debug_ram_rdr = shared_mem->os_args.logger;
+	priv->logger.debug_ram_sz = sizeof(shared_mem->os_args.logger);
+	priv->logger.dev = dev;
+	priv->adsp_os_fw_loaded = true;
 
 	chip_id = (u32)__tegra_get_chip_id();
 	if (drv_data->chip_data->chipid_ext)
@@ -906,12 +906,13 @@ static void nvadsp_set_shared_mem(struct platform_device *pdev,
 	drv_data->shared_adsp_os_data = shared_mem;
 }
 
-static int __nvadsp_os_secload(struct platform_device *pdev)
+static int __nvadsp_os_secload(struct nvadsp_os_data *priv)
 {
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
 	dma_addr_t addr = drv_data->adsp_mem[ACSR_ADDR];
 	size_t size = drv_data->adsp_mem[ACSR_SIZE];
-	struct device *dev = &pdev->dev;
+	struct device *dev = &priv->pdev->dev;
+	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
 	void *dram_va;
 
 	if (size == 0) {
@@ -920,14 +921,15 @@ static int __nvadsp_os_secload(struct platform_device *pdev)
 	}
 
 	if (drv_data->chip_data->adsp_shared_mem_hwmbox != 0) {
-		dram_va = nvadsp_alloc_coherent(size, &addr, GFP_KERNEL);
+		dram_va = _nvadsp_alloc_coherent(nvadsp_handle,
+						size, &addr, GFP_KERNEL);
 		if (dram_va == NULL) {
 			dev_err(dev, "unable to allocate shared region\n");
 			return -ENOMEM;
 		}
 	} else {
 #ifdef CONFIG_IOMMU_API_EXPORTED
-		dram_va = nvadsp_dma_alloc_and_map_at(pdev, size, addr,
+		dram_va = nvadsp_dma_alloc_and_map_at(priv->pdev, size, addr,
 								GFP_KERNEL);
 		if (dram_va == NULL) {
 			dev_err(dev, "unable to allocate shared region\n");
@@ -943,18 +945,19 @@ static int __nvadsp_os_secload(struct platform_device *pdev)
 	}
 
 	drv_data->shared_adsp_os_data_iova = addr;
-	nvadsp_set_shared_mem(pdev, dram_va, 0);
+	nvadsp_set_shared_mem(priv, dram_va, 0);
 
 	return 0;
 }
 
-static int nvadsp_firmware_load(struct platform_device *pdev)
+static int __nvadsp_firmware_load(struct nvadsp_os_data *priv)
 {
 	struct nvadsp_shared_mem *shared_mem;
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
 	dma_addr_t shrd_mem_iova = 0;
 	size_t acsr_size = drv_data->adsp_mem[ACSR_SIZE];
-	struct device *dev = &pdev->dev;
+	struct device *dev = &priv->pdev->dev;
+	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
 	const struct firmware *fw;
 	int ret = 0;
 
@@ -965,13 +968,13 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 		goto end;
 	}
 #ifdef CONFIG_ANDROID
-	ret = create_global_symbol_table(fw);
+	ret = create_global_symbol_table(priv, fw);
 	if (ret) {
 		dev_err(dev, "unable to create global symbol table\n");
 		goto release_firmware;
 	}
 #endif
-	ret = allocate_memory_for_adsp_os();
+	ret = allocate_memory_for_adsp_os(priv);
 	if (ret) {
 		dev_err(dev, "unable to allocate memory for adsp os\n");
 		goto release_firmware;
@@ -979,16 +982,16 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 
 	dev_info(dev, "Loading ADSP OS firmware %s\n", drv_data->adsp_elf);
 
-	ret = nvadsp_os_elf_load(fw);
+	ret = nvadsp_os_elf_load(priv, fw);
 	if (ret) {
 		dev_err(dev, "failed to load %s\n", drv_data->adsp_elf);
 		goto deallocate_os_memory;
 	}
 
-	shared_mem = get_mailbox_shared_region(fw);
+	shared_mem = get_mailbox_shared_region(priv, fw);
 	if (IS_ERR_OR_NULL(shared_mem) && acsr_size) {
 		if (drv_data->adsp_mem[ACSR_ADDR] == 0) {
-			shared_mem = nvadsp_alloc_coherent(
+			shared_mem = _nvadsp_alloc_coherent(nvadsp_handle,
 					acsr_size, &shrd_mem_iova, GFP_KERNEL);
 			if (!shared_mem) {
 				dev_err(dev, "unable to allocate shared region\n");
@@ -1001,37 +1004,40 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 			 * If not dynamic memory allocation then assume shared
 			 * memory to be placed at the start of OS memory
 			 */
-			shared_mem = nvadsp_da_to_va_mappings(
-					priv.adsp_os_addr, priv.adsp_os_size);
+			shared_mem = nvadsp_da_to_va_mappings(drv_data,
+					priv->adsp_os_addr, priv->adsp_os_size);
 			if (!shared_mem) {
 				dev_err(dev, "Failed to get VA for ADSP OS\n");
 				ret = -ENOMEM;
 				goto deallocate_os_memory;
 			}
-			drv_data->shared_adsp_os_data_iova = priv.adsp_os_addr;
+			drv_data->shared_adsp_os_data_iova = priv->adsp_os_addr;
 		}
 	}
 	if (!IS_ERR_OR_NULL(shared_mem))
-		nvadsp_set_shared_mem(pdev, shared_mem, 1);
+		nvadsp_set_shared_mem(priv, shared_mem, 1);
 	else
 		dev_warn(dev, "no shared mem requested\n");
 
-	if (priv.app_size) {
-		ret = dram_app_mem_init(priv.app_alloc_addr, priv.app_size);
+#ifdef CONFIG_ADSP_DYNAMIC_APP
+	if (priv->app_size) {
+		ret = dram_app_mem_init(priv->app_alloc_addr, priv->app_size);
 		if (ret) {
 			dev_err(dev, "Memory allocation dynamic apps failed\n");
 			goto deallocate_os_memory;
 		}
 	}
+#endif /* CONFIG_ADSP_DYNAMIC_APP */
 
-	priv.os_firmware = fw;
+	priv->os_firmware = fw;
 
 	return 0;
 
 deallocate_os_memory:
 	if (shrd_mem_iova)
-		nvadsp_free_coherent(acsr_size, shared_mem, shrd_mem_iova);
-	deallocate_memory_for_adsp_os();
+		_nvadsp_free_coherent(nvadsp_handle,
+				acsr_size, shared_mem, shrd_mem_iova);
+	deallocate_memory_for_adsp_os(priv);
 release_firmware:
 	release_firmware(fw);
 end:
@@ -1045,10 +1051,11 @@ end:
 dma_addr_t mfw_smem_iova[MFW_MAX_OTHER_CORES];
 void *mfw_hsp_va[MFW_MAX_OTHER_CORES];
 
-static int nvadsp_load_multi_fw(struct platform_device *pdev)
+static int nvadsp_load_multi_fw(struct nvadsp_os_data *priv)
 {
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
-	struct device *dev = &pdev->dev;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	struct device *dev = &priv->pdev->dev;
+	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
 	int i, j, ret;
 	void *dram_va, *hsp_va;
 	dma_addr_t shrd_mem_iova;
@@ -1074,7 +1081,7 @@ static int nvadsp_load_multi_fw(struct platform_device *pdev)
 			 * the FW for all the cores; only shared
 			 * memory neeeds to be allocated and set
 			 */
-			dram_va = nvadsp_alloc_coherent(
+			dram_va = _nvadsp_alloc_coherent(nvadsp_handle,
 					acsr_size, &shrd_mem_iova, GFP_KERNEL);
 			if (!dram_va) {
 				dev_err(dev,
@@ -1127,18 +1134,18 @@ static int nvadsp_load_multi_fw(struct platform_device *pdev)
 			}
 #endif
 
-			nvadsp_add_load_mappings((phys_addr_t)os_mem,
+			nvadsp_add_load_mappings(drv_data, (phys_addr_t)os_mem,
 						dram_va, (size_t)os_size);
 
 			dev_info(dev, "Loading ADSP OS firmware %s\n", adsp_elf);
-			ret = nvadsp_os_elf_load(fw);
+			ret = nvadsp_os_elf_load(priv, fw);
 			if (ret) {
 				dev_err(dev, "failed to load %s\n", adsp_elf);
 				continue;
 			}
 
 			if (drv_data->adsp_mem[ACSR_ADDR] == 0) {
-				dram_va = nvadsp_alloc_coherent(
+				dram_va = _nvadsp_alloc_coherent(nvadsp_handle,
 					acsr_size, &shrd_mem_iova, GFP_KERNEL);
 				if (!dram_va) {
 					dev_err(dev,
@@ -1151,7 +1158,7 @@ static int nvadsp_load_multi_fw(struct platform_device *pdev)
 			}
 		}
 
-		nvadsp_set_shared_mem(pdev, dram_va, 0);
+		nvadsp_set_shared_mem(priv, dram_va, 0);
 
 		/* Store shared mem IOVA for writing into MBOX (for ADSP) */
 		hsp_va = devm_ioremap_resource(dev, &hsp_inst);
@@ -1211,47 +1218,48 @@ static int nvadsp_load_multi_fw(struct platform_device *pdev)
 }
 #endif // CONFIG_TEGRA_ADSP_MULTIPLE_FW
 
-int nvadsp_os_load(void)
+static int _nvadsp_os_load(struct nvadsp_handle *nvadsp_handle)
 {
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_os_data *priv;
 	struct device *dev;
 	int ret = 0;
 
-	if (!priv.pdev) {
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		return -EINVAL;
 	}
 
-	mutex_lock(&priv.fw_load_lock);
-	if (priv.adsp_os_fw_loaded)
-		goto end;
+	priv = drv_data->os_priv;
+	dev = &priv->pdev->dev;
 
-	drv_data = platform_get_drvdata(priv.pdev);
-	dev = &priv.pdev->dev;
+	mutex_lock(&priv->fw_load_lock);
+	if (priv->adsp_os_fw_loaded)
+		goto end;
 
 #ifdef CONFIG_TEGRA_ADSP_MULTIPLE_FW
 	dev_info(dev, "Loading multiple ADSP FW....\n");
-	nvadsp_load_multi_fw(priv.pdev);
+	nvadsp_load_multi_fw(priv);
 #endif // CONFIG_TEGRA_ADSP_MULTIPLE_FW
 
 	if (drv_data->adsp_os_secload) {
 		dev_info(dev, "ADSP OS firmware already loaded\n");
-		ret = __nvadsp_os_secload(priv.pdev);
+		ret = __nvadsp_os_secload(priv);
 	} else {
-		ret = nvadsp_firmware_load(priv.pdev);
+		ret = __nvadsp_firmware_load(priv);
 	}
 
 	if (ret == 0) {
-		priv.adsp_os_fw_loaded = true;
+		priv->adsp_os_fw_loaded = true;
 #ifdef CONFIG_DEBUG_FS
-		wake_up(&priv.logger.wait_queue);
+		wake_up(&priv->logger.wait_queue);
 #endif
 	}
 end:
-	mutex_unlock(&priv.fw_load_lock);
+	mutex_unlock(&priv->fw_load_lock);
 	return ret;
 }
-EXPORT_SYMBOL(nvadsp_os_load);
 
 /*
  * Static adsp freq to emc freq lookup table
@@ -1279,7 +1287,7 @@ u32 adsp_to_emc_freq(u32 adspfreq)
 static int nvadsp_set_ape_emc_freq(struct nvadsp_drv_data *drv_data)
 {
 	unsigned long ape_emc_freq;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &drv_data->pdev->dev;
 	int ret;
 
 #ifdef CONFIG_TEGRA_ADSP_DFS
@@ -1310,7 +1318,7 @@ static int nvadsp_set_ape_emc_freq(struct nvadsp_drv_data *drv_data)
 static int nvadsp_set_ape_freq(struct nvadsp_drv_data *drv_data)
 {
 	unsigned long ape_freq = drv_data->ape_freq * 1000; /* in Hz*/
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &drv_data->pdev->dev;
 	int ret;
 
 #ifdef CONFIG_TEGRA_ADSP_ACTMON
@@ -1330,9 +1338,10 @@ static int nvadsp_set_ape_freq(struct nvadsp_drv_data *drv_data)
 
 static int nvadsp_t210_set_clks_and_prescalar(struct nvadsp_drv_data *drv_data)
 {
+	struct nvadsp_os_data *priv = drv_data->os_priv;
 	struct nvadsp_shared_mem *shared_mem = drv_data->shared_adsp_os_data;
 	struct nvadsp_os_args *os_args = &shared_mem->os_args;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	unsigned long max_adsp_freq;
 	unsigned long adsp_freq;
 	u32 max_index;
@@ -1504,7 +1513,8 @@ static int nvadsp_set_boot_vec(struct nvadsp_drv_data *drv_data)
 
 static int nvadsp_set_boot_freqs(struct nvadsp_drv_data *drv_data)
 {
-	struct device *dev = &priv.pdev->dev;
+	struct nvadsp_os_data *priv = drv_data->os_priv;
+	struct device *dev = &priv->pdev->dev;
 	struct device_node *node = dev->of_node;
 	int ret = 0;
 
@@ -1549,10 +1559,11 @@ end:
 	return ret;
 }
 
-static int wait_for_adsp_os_load_complete(void)
+static int wait_for_adsp_os_load_complete(struct nvadsp_os_data *priv)
 {
-	struct device *dev = &priv.pdev->dev;
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
+	struct device *dev = &priv->pdev->dev;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
 	uint32_t timeout, data;
 	status_t ret;
 
@@ -1560,8 +1571,8 @@ static int wait_for_adsp_os_load_complete(void)
 	if (!timeout)
 		timeout = ADSP_OS_LOAD_TIMEOUT;
 
-	ret = nvadsp_mbox_recv(&adsp_com_mbox, &data,
-			true, timeout);
+	ret = nvadsp_handle->mbox_recv(nvadsp_handle, &priv->adsp_com_mbox,
+					&data, true, timeout);
 	if (ret) {
 		dev_err(dev, "ADSP OS loading timed out\n");
 		goto end;
@@ -1571,7 +1582,7 @@ static int wait_for_adsp_os_load_complete(void)
 
 	switch (data) {
 	case ADSP_OS_BOOT_COMPLETE:
-		ret = load_adsp_static_apps();
+		ret = load_adsp_static_apps(drv_data);
 		break;
 	case ADSP_OS_RESUME:
 	default:
@@ -1581,15 +1592,11 @@ end:
 	return ret;
 }
 
-static int __nvadsp_os_start(void)
+static int __nvadsp_os_start(struct nvadsp_os_data *priv)
 {
-	struct nvadsp_drv_data *drv_data;
-	struct device *dev;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	struct device *dev = &priv->pdev->dev;
 	int ret = 0;
-
-	dev = &priv.pdev->dev;
-	drv_data = platform_get_drvdata(priv.pdev);
-
 
 	dev_dbg(dev, "ADSP is booting on %s\n",
 		drv_data->adsp_unit_fpga ? "UNIT-FPGA" : "SILICON");
@@ -1620,7 +1627,7 @@ static int __nvadsp_os_start(void)
 
 	dev_dbg(dev, "Waiting for ADSP OS to boot up...\n");
 
-	ret = wait_for_adsp_os_load_complete();
+	ret = wait_for_adsp_os_load_complete(priv);
 	if (ret) {
 		dev_err(dev, "Unable to start ADSP OS\n");
 		goto end;
@@ -1628,7 +1635,7 @@ static int __nvadsp_os_start(void)
 	dev_dbg(dev, "ADSP OS boot up... Done!\n");
 
 #ifdef CONFIG_TEGRA_ADSP_DFS
-	ret = adsp_dfs_core_init(priv.pdev);
+	ret = adsp_dfs_core_init(priv->pdev);
 	if (ret) {
 		dev_err(dev, "adsp dfs initialization failed\n");
 		goto err;
@@ -1636,7 +1643,7 @@ static int __nvadsp_os_start(void)
 #endif
 
 #ifdef CONFIG_TEGRA_ADSP_ACTMON
-	ret = ape_actmon_init(priv.pdev);
+	ret = ape_actmon_init(priv->pdev);
 	if (ret) {
 		dev_err(dev, "ape actmon initialization failed\n");
 		goto err;
@@ -1644,7 +1651,7 @@ static int __nvadsp_os_start(void)
 #endif
 
 #ifdef CONFIG_TEGRA_ADSP_CPUSTAT
-	ret = adsp_cpustat_init(priv.pdev);
+	ret = adsp_cpustat_init(priv->pdev);
 	if (ret) {
 		dev_err(dev, "adsp cpustat initialisation failed\n");
 		goto err;
@@ -1655,19 +1662,19 @@ end:
 
 #if defined(CONFIG_TEGRA_ADSP_DFS) || defined(CONFIG_TEGRA_ADSP_CPUSTAT)
 err:
-	__nvadsp_os_stop(true);
+	__nvadsp_os_stop(priv, true);
 	return ret;
 #endif
 }
 
-static void dump_adsp_logs(void)
+static void dump_adsp_logs(struct nvadsp_os_data *priv)
 {
 	int i = 0;
 	char buff[DUMP_BUFF] = { };
 	int buff_iter = 0;
 	char last_char;
-	struct nvadsp_debug_log *logger = &priv.logger;
-	struct device *dev = &priv.pdev->dev;
+	struct nvadsp_debug_log *logger = &priv->logger;
+	struct device *dev = &priv->pdev->dev;
 	char *ptr = logger->debug_ram_rdr;
 
 	dev_err(dev, "Dumping ADSP logs ........\n");
@@ -1688,13 +1695,13 @@ static void dump_adsp_logs(void)
 	dev_err(dev, "End of ADSP log dump  .....\n");
 }
 
-static void print_agic_irq_states(void)
+static void print_agic_irq_states(struct nvadsp_os_data *priv)
 {
 #ifdef CONFIG_AGIC_EXT_API
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
 	int start_irq = drv_data->chip_data->start_irq;
 	int end_irq = drv_data->chip_data->end_irq;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	int i;
 
 	for (i = start_irq; i < end_irq; i++) {
@@ -1707,16 +1714,16 @@ static void print_agic_irq_states(void)
 #endif // CONFIG_AGIC_EXT_APIS
 }
 
-static void print_arm_mode_regs(void)
+static void print_arm_mode_regs(struct nvadsp_os_data *priv)
 {
 	struct nvadsp_exception_context *excep_context;
 	struct arm_fault_frame_shared *shared_frame;
 	struct arm_mode_regs_shared *shared_regs;
 	struct nvadsp_shared_mem *shared_mem;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	struct nvadsp_drv_data *drv_data;
 
-	drv_data = platform_get_drvdata(priv.pdev);
+	drv_data = platform_get_drvdata(priv->pdev);
 	shared_mem = drv_data->shared_adsp_os_data;
 	excep_context = &shared_mem->exception_context;
 	shared_frame = &excep_context->frame;
@@ -1743,15 +1750,15 @@ static void print_arm_mode_regs(void)
 		shared_regs->abt_r13, shared_regs->abt_r14);
 }
 
-static void print_arm_fault_frame(void)
+static void print_arm_fault_frame(struct nvadsp_os_data *priv)
 {
 	struct nvadsp_exception_context *excep_context;
 	struct arm_fault_frame_shared *shared_frame;
 	struct nvadsp_shared_mem *shared_mem;
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	struct nvadsp_drv_data *drv_data;
 
-	drv_data = platform_get_drvdata(priv.pdev);
+	drv_data = platform_get_drvdata(priv->pdev);
 	shared_mem = drv_data->shared_adsp_os_data;
 	excep_context = &shared_mem->exception_context;
 	shared_frame = &excep_context->frame;
@@ -1787,27 +1794,27 @@ static void dump_irq_num(struct platform_device *pdev, u32 val)
 		 __func__, val);
 }
 
-static void get_adsp_state(void)
+static void get_adsp_state(struct nvadsp_os_data *priv)
 {
 	struct nvadsp_drv_data *drv_data;
 	struct device *dev;
 	uint32_t val;
 	const char *msg;
 
-	if (!priv.pdev) {
+	if (!priv->pdev) {
 		pr_err("ADSP Driver is not initialized\n");
 		return;
 	}
 
-	drv_data = platform_get_drvdata(priv.pdev);
-	dev = &priv.pdev->dev;
+	drv_data = platform_get_drvdata(priv->pdev);
+	dev = &priv->pdev->dev;
 
 	if (drv_data->chip_data->adsp_state_hwmbox == 0) {
 		dev_info(dev, "%s: No state hwmbox available\n", __func__);
 		return;
 	}
 
-	val = hwmbox_readl(drv_data->chip_data->adsp_state_hwmbox);
+	val = hwmbox_readl(drv_data, drv_data->chip_data->adsp_state_hwmbox);
 	dev_info(dev, "%s: adsp state hwmbox value: 0x%X\n", __func__, val);
 
 	switch (val) {
@@ -1958,31 +1965,35 @@ static void get_adsp_state(void)
 
 	dev_info(dev, "%s: %s\n", __func__, msg);
 
-	val = hwmbox_readl(drv_data->chip_data->adsp_thread_hwmbox);
-	dump_thread_name(priv.pdev, val);
+	val = hwmbox_readl(drv_data, drv_data->chip_data->adsp_thread_hwmbox);
+	dump_thread_name(priv->pdev, val);
 
-	val = hwmbox_readl(drv_data->chip_data->adsp_irq_hwmbox);
-	dump_irq_num(priv.pdev, val);
+	val = hwmbox_readl(drv_data, drv_data->chip_data->adsp_irq_hwmbox);
+	dump_irq_num(priv->pdev, val);
 }
 
-
-void dump_adsp_sys(void)
+static void _nvadsp_dump_adsp_sys(struct nvadsp_handle *nvadsp_handle)
 {
-	if (!priv.pdev) {
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_os_data *priv;
+
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		return;
 	}
 
-	dump_adsp_logs();
-	dump_mailbox_regs();
-	print_arm_fault_frame();
-	print_arm_mode_regs();
-	get_adsp_state();
-	if (nvadsp_tegra_adma_dump_ch_reg)
-		(*nvadsp_tegra_adma_dump_ch_reg)();
-	print_agic_irq_states();
+	priv = drv_data->os_priv;
+
+	dump_adsp_logs(priv);
+	dump_mailbox_regs(drv_data);
+	print_arm_fault_frame(priv);
+	print_arm_mode_regs(priv);
+	get_adsp_state(priv);
+	if (priv->adma_dump_ch_reg)
+		(*priv->adma_dump_ch_reg)();
+	print_agic_irq_states(priv);
 }
-EXPORT_SYMBOL(dump_adsp_sys);
 
 static void nvadsp_free_os_interrupts(struct nvadsp_os_data *priv)
 {
@@ -2058,52 +2069,64 @@ static int setup_interrupts(struct nvadsp_os_data *priv)
 	return ret;
 }
 
-void nvadsp_set_adma_dump_reg(void (*cb_adma_regdump)(void))
+static void _nvadsp_set_adma_dump_reg(struct nvadsp_handle *nvadsp_handle,
+					void (*cb_adma_regdump)(void))
 {
-	nvadsp_tegra_adma_dump_ch_reg = cb_adma_regdump;
-	pr_info("%s: callback for adma reg dump is sent to %p\n",
-		__func__, nvadsp_tegra_adma_dump_ch_reg);
-}
-EXPORT_SYMBOL(nvadsp_set_adma_dump_reg);
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_os_data *priv;
 
-int nvadsp_os_start(void)
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv) {
+		pr_err("ADSP Driver is not initialized\n");
+		return;
+	}
+
+	priv = drv_data->os_priv;
+
+	priv->adma_dump_ch_reg = cb_adma_regdump;
+	pr_info("%s: callback for adma reg dump is sent to %p\n",
+		__func__, priv->adma_dump_ch_reg);
+}
+
+static int _nvadsp_os_start(struct nvadsp_handle *nvadsp_handle)
 {
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_os_data *priv;
 	struct device *dev;
 	int ret = 0;
-	static int cold_start = 1;
 
-	if (!priv.pdev) {
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		ret = -EINVAL;
 		goto end;
 	}
 
-	drv_data = platform_get_drvdata(priv.pdev);
-	dev = &priv.pdev->dev;
+	priv = drv_data->os_priv;
+	dev = &priv->pdev->dev;
 
 	/* check if fw is loaded then start the adsp os */
-	if (!priv.adsp_os_fw_loaded) {
+	if (!priv->adsp_os_fw_loaded) {
 		dev_err(dev, "Call to nvadsp_os_load not made\n");
 		ret = -EINVAL;
 		goto end;
 	}
 
-	mutex_lock(&priv.os_run_lock);
+	mutex_lock(&priv->os_run_lock);
 	/* if adsp is started/running exit gracefully */
-	if (priv.os_running)
+	if (priv->os_running)
 		goto unlock;
 
 #ifdef CONFIG_PM
-	ret = pm_runtime_get_sync(&priv.pdev->dev);
+	ret = pm_runtime_get_sync(dev);
 	if (ret < 0)
 		goto unlock;
 #endif
-	ret = setup_interrupts(&priv);
+	ret = setup_interrupts(priv);
 	if (ret < 0)
 		goto unlock;
 
-	if (cold_start) {
+	if (priv->cold_start) {
 		if (drv_data->chip_data->adsp_shared_mem_hwmbox != 0) {
 #ifdef CONFIG_TEGRA_ADSP_MULTIPLE_FW
 			int i;
@@ -2118,7 +2141,7 @@ int nvadsp_os_start(void)
 			}
 #endif // CONFIG_TEGRA_ADSP_MULTIPLE_FW
 
-			hwmbox_writel(
+			hwmbox_writel(drv_data,
 				(uint32_t)drv_data->shared_adsp_os_data_iova,
 				drv_data->chip_data->adsp_shared_mem_hwmbox);
 		}
@@ -2130,12 +2153,12 @@ int nvadsp_os_start(void)
 						ADSP_CONFIG_DECOMPRESS_SHIFT);
 
 			/* Write to HWMBOX5 */
-			hwmbox_writel(val,
+			hwmbox_writel(drv_data, val,
 				drv_data->chip_data->adsp_os_config_hwmbox);
 		}
 
 		/* Write ACSR base address and decompr enable flag only once */
-		cold_start = 0;
+		priv->cold_start = false;
 	}
 
 	if (drv_data->chip_data->adsp_boot_config_hwmbox != 0) {
@@ -2147,40 +2170,40 @@ int nvadsp_os_start(void)
 		 * adsp_os_secload flag. It could be extended in
 		 * future to pass more information.
 		 */
-		hwmbox_writel(
+		hwmbox_writel(drv_data,
 			(uint32_t)drv_data->adsp_os_secload,
 			drv_data->chip_data->adsp_boot_config_hwmbox);
 	}
 
-	ret = __nvadsp_os_start();
+	ret = __nvadsp_os_start(priv);
 	if (ret) {
-		priv.os_running = drv_data->adsp_os_running = false;
+		priv->os_running = drv_data->adsp_os_running = false;
 		/* if start fails call pm suspend of adsp driver */
 		dev_err(dev, "adsp failed to boot with ret = %d\n", ret);
-		dump_adsp_sys();
-		free_interrupts(&priv);
+		_nvadsp_dump_adsp_sys(nvadsp_handle);
+		free_interrupts(priv);
 #ifdef CONFIG_PM
-		pm_runtime_put_sync(&priv.pdev->dev);
+		pm_runtime_put_sync(dev);
 #endif
 		goto unlock;
 
 	}
-	priv.os_running = drv_data->adsp_os_running = true;
-	priv.num_start++;
+	priv->os_running = drv_data->adsp_os_running = true;
+	priv->num_start++;
 #if defined(CONFIG_TEGRA_ADSP_FILEIO)
 	if ((drv_data->adsp_os_secload) && (!drv_data->adspff_init)) {
-		int adspff_status = adspff_init(priv.pdev);
+		int adspff_status = adspff_init(priv->pdev);
 
 		if (adspff_status) {
 			if (adspff_status != -ENOENT) {
-				priv.os_running = drv_data->adsp_os_running = false;
+				priv->os_running = drv_data->adsp_os_running = false;
 				dev_err(dev,
 					"adsp boot failed at adspff init with ret = %d",
 					adspff_status);
-				dump_adsp_sys();
-				free_interrupts(&priv);
+				_nvadsp_dump_adsp_sys(nvadsp_handle);
+				free_interrupts(priv);
 #ifdef CONFIG_PM
-				pm_runtime_put_sync(&priv.pdev->dev);
+				pm_runtime_put_sync(dev);
 #endif
 				ret = adspff_status;
 				goto unlock;
@@ -2192,7 +2215,7 @@ int nvadsp_os_start(void)
 
 #ifdef CONFIG_TEGRA_ADSP_LPTHREAD
 	if (!drv_data->lpthread_initialized) {
-		ret = adsp_lpthread_entry(priv.pdev);
+		ret = adsp_lpthread_entry(priv->pdev);
 		if (ret)
 			dev_err(dev, "adsp_lpthread_entry failed ret = %d\n",
 					ret);
@@ -2201,7 +2224,7 @@ int nvadsp_os_start(void)
 
 	drv_data->adsp_os_suspended = false;
 #ifdef CONFIG_DEBUG_FS
-	wake_up(&priv.logger.wait_queue);
+	wake_up(&priv->logger.wait_queue);
 #endif
 
 #ifdef CONFIG_TEGRA_ADSP_LPTHREAD
@@ -2209,11 +2232,10 @@ int nvadsp_os_start(void)
 #endif
 
 unlock:
-	mutex_unlock(&priv.os_run_lock);
+	mutex_unlock(&priv->os_run_lock);
 end:
 	return ret;
 }
-EXPORT_SYMBOL(nvadsp_os_start);
 
 static bool nvadsp_check_wfi_status(struct nvadsp_drv_data *drv_data)
 {
@@ -2247,36 +2269,36 @@ static bool nvadsp_check_wfi_status(struct nvadsp_drv_data *drv_data)
 	return wfi_status;
 }
 
-static int __nvadsp_os_suspend(void)
+static int __nvadsp_os_suspend(struct nvadsp_os_data *priv)
 {
-	struct device *dev = &priv.pdev->dev;
-	struct nvadsp_drv_data *drv_data;
+	struct device *dev = &priv->pdev->dev;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
 	int ret;
 	bool status = false;
 
-	drv_data = platform_get_drvdata(priv.pdev);
-
 #ifdef CONFIG_TEGRA_ADSP_ACTMON
-	ape_actmon_exit(priv.pdev);
+	ape_actmon_exit(priv->pdev);
 #endif
 
 #ifdef CONFIG_TEGRA_ADSP_DFS
-	adsp_dfs_core_exit(priv.pdev);
+	adsp_dfs_core_exit(priv->pdev);
 #endif
 
 #ifdef CONFIG_TEGRA_ADSP_CPUSTAT
-	adsp_cpustat_exit(priv.pdev);
+	adsp_cpustat_exit(priv->pdev);
 #endif
 
-	ret = nvadsp_mbox_send(&adsp_com_mbox, ADSP_OS_SUSPEND,
-			       NVADSP_MBOX_SMSG, true, UINT_MAX);
+	ret = nvadsp_handle->mbox_send(nvadsp_handle, &priv->adsp_com_mbox,
+				ADSP_OS_SUSPEND,
+				NVADSP_MBOX_SMSG, true, UINT_MAX);
 	if (ret) {
 		dev_err(dev, "failed to send with adsp com mbox\n");
 		goto out;
 	}
 
 	dev_dbg(dev, "Waiting for ADSP OS suspend...\n");
-	ret = wait_for_completion_timeout(&entered_wfi,
+	ret = wait_for_completion_timeout(&priv->entered_wfi,
 		msecs_to_jiffies(ADSP_WFI_TIMEOUT));
 	if (WARN_ON(ret <= 0)) {
 		dev_err(dev, "Unable to suspend ADSP OS err = %d\n", ret);
@@ -2305,26 +2327,24 @@ static int __nvadsp_os_suspend(void)
 	return ret;
 }
 
-static void __nvadsp_os_stop(bool reload)
+static void __nvadsp_os_stop(struct nvadsp_os_data *priv, bool reload)
 {
-	const struct firmware *fw = priv.os_firmware;
-	struct nvadsp_drv_data *drv_data;
-	struct device *dev;
+	const struct firmware *fw = priv->os_firmware;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	struct device *dev = &priv->pdev->dev;
+	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
 	int err = 0;
 
-	dev = &priv.pdev->dev;
-	drv_data = platform_get_drvdata(priv.pdev);
-
 #ifdef CONFIG_TEGRA_ADSP_ACTMON
-	ape_actmon_exit(priv.pdev);
+	ape_actmon_exit(priv->pdev);
 #endif
 
 #ifdef CONFIG_TEGRA_ADSP_DFS
-	adsp_dfs_core_exit(priv.pdev);
+	adsp_dfs_core_exit(priv->pdev);
 #endif
 
 #ifdef CONFIG_TEGRA_ADSP_CPUSTAT
-	adsp_cpustat_exit(priv.pdev);
+	adsp_cpustat_exit(priv->pdev);
 #endif
 #if defined(CONFIG_TEGRA_ADSP_FILEIO)
 	if (drv_data->adspff_init) {
@@ -2333,12 +2353,12 @@ static void __nvadsp_os_stop(bool reload)
 	}
 #endif
 
-	err = nvadsp_mbox_send(&adsp_com_mbox,
+	err = nvadsp_handle->mbox_send(nvadsp_handle, &priv->adsp_com_mbox,
 				ADSP_OS_STOP,
 				NVADSP_MBOX_SMSG, true, UINT_MAX);
 	if (err)
 		dev_err(dev, "failed to send stop msg to adsp\n");
-	err = wait_for_completion_timeout(&entered_wfi,
+	err = wait_for_completion_timeout(&priv->entered_wfi,
 		msecs_to_jiffies(ADSP_WFI_TIMEOUT));
 
 	/*
@@ -2358,7 +2378,7 @@ static void __nvadsp_os_stop(bool reload)
 	}
 
 	if (reload && !drv_data->adsp_os_secload) {
-		struct nvadsp_debug_log *logger = &priv.logger;
+		struct nvadsp_debug_log *logger = &priv->logger;
 
 #ifdef CONFIG_DEBUG_FS
 		wake_up(&logger->wait_queue);
@@ -2373,7 +2393,7 @@ static void __nvadsp_os_stop(bool reload)
 		logger->debug_ram_rdr[0] = EOT;
 		logger->ram_iter = 0;
 		/* load a fresh copy of adsp.elf */
-		if (nvadsp_os_elf_load(fw))
+		if (nvadsp_os_elf_load(priv, fw))
 			dev_err(dev, "failed to reload %s\n",
 				drv_data->adsp_elf);
 	}
@@ -2382,78 +2402,79 @@ static void __nvadsp_os_stop(bool reload)
 	return;
 }
 
-
-void nvadsp_os_stop(void)
+static void _nvadsp_os_stop(struct nvadsp_handle *nvadsp_handle)
 {
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_os_data *priv;
 	struct device *dev;
 
-	if (!priv.pdev) {
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		return;
 	}
 
-	dev = &priv.pdev->dev;
-	drv_data = platform_get_drvdata(priv.pdev);
+	priv = drv_data->os_priv;
+	dev = &priv->pdev->dev;
 
-	mutex_lock(&priv.os_run_lock);
+	mutex_lock(&priv->os_run_lock);
 	/* check if os is running else exit */
-	if (!priv.os_running)
+	if (!priv->os_running)
 		goto end;
 
-	__nvadsp_os_stop(true);
+	__nvadsp_os_stop(priv, true);
 
-	priv.os_running = drv_data->adsp_os_running = false;
+	priv->os_running = drv_data->adsp_os_running = false;
 
-	free_interrupts(&priv);
+	free_interrupts(priv);
 #ifdef CONFIG_PM
 	if (pm_runtime_put_sync(dev) < 0)
 		dev_err(dev, "failed in pm_runtime_put_sync\n");
 #endif
 end:
-	mutex_unlock(&priv.os_run_lock);
+	mutex_unlock(&priv->os_run_lock);
 }
-EXPORT_SYMBOL(nvadsp_os_stop);
 
-int nvadsp_os_suspend(void)
+static int _nvadsp_os_suspend(struct nvadsp_handle *nvadsp_handle)
 {
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
+	struct nvadsp_os_data *priv;
+	struct device *dev;
 	int ret = -EINVAL;
 
-	if (!priv.pdev) {
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv) {
 		pr_err("ADSP Driver is not initialized\n");
 		goto end;
 	}
 
-	drv_data = platform_get_drvdata(priv.pdev);
+	priv = drv_data->os_priv;
+	dev = &priv->pdev->dev;
 
-	mutex_lock(&priv.os_run_lock);
+	mutex_lock(&priv->os_run_lock);
 	/* check if os is running else exit */
-	if (!priv.os_running) {
+	if (!priv->os_running) {
 		ret = 0;
 		goto unlock;
 	}
-	ret = __nvadsp_os_suspend();
+	ret = __nvadsp_os_suspend(priv);
 	if (!ret) {
 #ifdef CONFIG_PM
-		struct device *dev = &priv.pdev->dev;
-
-		free_interrupts(&priv);
-		ret = pm_runtime_put_sync(&priv.pdev->dev);
+		free_interrupts(priv);
+		ret = pm_runtime_put_sync(dev);
 		if (ret < 0)
 			dev_err(dev, "failed in pm_runtime_put_sync\n");
 #endif
-		priv.os_running = drv_data->adsp_os_running = false;
+		priv->os_running = drv_data->adsp_os_running = false;
 	} else {
-		dev_err(&priv.pdev->dev, "suspend failed with %d\n", ret);
-		dump_adsp_sys();
+		dev_err(dev, "suspend failed with %d\n", ret);
+		_nvadsp_dump_adsp_sys(nvadsp_handle);
 	}
 unlock:
-	mutex_unlock(&priv.os_run_lock);
+	mutex_unlock(&priv->os_run_lock);
 end:
 	return ret;
 }
-EXPORT_SYMBOL(nvadsp_os_suspend);
 
 static void nvadsp_os_restart(struct work_struct *work)
 {
@@ -2485,7 +2506,7 @@ static void nvadsp_os_restart(struct work_struct *work)
 	data->adsp_num_crashes++;
 	if (data->adsp_num_crashes >= ALLOWED_CRASHES) {
 		/* making pdev NULL so that externally start is not called */
-		priv.pdev = NULL;
+		data->pdev = NULL;
 		dev_crit(dev, "ADSP has crashed too many times(%d)\n",
 			 data->adsp_num_crashes);
 		return;
@@ -2502,7 +2523,7 @@ static irqreturn_t adsp_wfi_handler(int irq, void *arg)
 	struct device *dev = &data->pdev->dev;
 
 	dev_dbg(dev, "%s\n", __func__);
-	complete(&entered_wfi);
+	complete(&data->entered_wfi);
 
 	return IRQ_HANDLED;
 }
@@ -2527,18 +2548,19 @@ static irqreturn_t adsp_wdt_handler(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
-void nvadsp_get_os_version(char *buf, int buf_size)
+static void _nvadsp_get_os_version(struct nvadsp_handle *nvadsp_handle,
+				char *buf, int buf_size)
 {
-	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_drv_data *drv_data =
+				(struct nvadsp_drv_data *)nvadsp_handle;
 	struct nvadsp_shared_mem *shared_mem;
 	struct nvadsp_os_info *os_info;
 
 	memset(buf, 0, buf_size);
 
-	if (!priv.pdev)
+	if (!drv_data || !drv_data->pdev || !drv_data->os_priv)
 		return;
 
-	drv_data = platform_get_drvdata(priv.pdev);
 	shared_mem = drv_data->shared_adsp_os_data;
 	if (shared_mem) {
 		os_info = &shared_mem->os_info;
@@ -2547,14 +2569,19 @@ void nvadsp_get_os_version(char *buf, int buf_size)
 		strscpy(buf, "unavailable", buf_size);
 	}
 }
-EXPORT_SYMBOL(nvadsp_get_os_version);
 
 #ifdef CONFIG_DEBUG_FS
 static int show_os_version(struct seq_file *s, void *data)
 {
+	struct nvadsp_os_data *priv = data;
+	struct nvadsp_drv_data *drv_data;
+	struct nvadsp_handle *nvadsp_handle;
 	char ver_buf[MAX_OS_VERSION_BUF] = "";
 
-	nvadsp_get_os_version(ver_buf, MAX_OS_VERSION_BUF);
+	drv_data = platform_get_drvdata(priv->pdev);
+	nvadsp_handle = &drv_data->nvadsp_handle;
+
+	_nvadsp_get_os_version(nvadsp_handle, ver_buf, MAX_OS_VERSION_BUF);
 	seq_printf(s, "version=\"%s\"\n", ver_buf);
 
 	return 0;
@@ -2574,13 +2601,14 @@ static const struct file_operations version_fops = {
 
 #define RO_MODE S_IRUSR
 
-static int adsp_create_os_version(struct dentry *adsp_debugfs_root)
+static int adsp_create_os_version(struct nvadsp_os_data *priv,
+				struct dentry *adsp_debugfs_root)
 {
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	struct dentry *d;
 
 	d = debugfs_create_file("adspos_version", RO_MODE, adsp_debugfs_root,
-				NULL, &version_fops);
+				priv, &version_fops);
 	if (!d) {
 		dev_err(dev, "failed to create adsp_version\n");
 		return -EINVAL;
@@ -2588,10 +2616,17 @@ static int adsp_create_os_version(struct dentry *adsp_debugfs_root)
 	return 0;
 }
 
+static int adsp_health_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
 static __poll_t adsp_health_poll(struct file *file,
 			poll_table *wait)
 {
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
+	struct nvadsp_os_data *priv = file->private_data;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
 
 	poll_wait(file, &drv_data->adsp_health_waitq, wait);
 
@@ -2602,16 +2637,18 @@ static __poll_t adsp_health_poll(struct file *file,
 }
 
 static const struct file_operations adsp_health_fops = {
+	.open = adsp_health_open,
 	.poll = adsp_health_poll,
 };
 
-static int adsp_create_adsp_health(struct dentry *adsp_debugfs_root)
+static int adsp_create_adsp_health(struct nvadsp_os_data *priv,
+				struct dentry *adsp_debugfs_root)
 {
-	struct device *dev = &priv.pdev->dev;
+	struct device *dev = &priv->pdev->dev;
 	struct dentry *d;
 
 	d = debugfs_create_file("adsp_health", RO_MODE, adsp_debugfs_root,
-				NULL, &adsp_health_fops);
+				priv, &adsp_health_fops);
 	if (!d) {
 		dev_err(dev, "failed to create adsp_health\n");
 		return -EINVAL;
@@ -2623,23 +2660,36 @@ static int adsp_create_adsp_health(struct dentry *adsp_debugfs_root)
 static ssize_t tegrafw_read_adsp(struct device *dev,
 				char *data, size_t size)
 {
-	nvadsp_get_os_version(data, size);
+	/* TBD - address the NULL below */
+	_nvadsp_get_os_version(NULL, data, size);
 	return strlen(data);
 }
 
 int __init nvadsp_os_probe(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
-	uint16_t com_mid = ADSP_COM_MBOX_ID;
+	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
 	struct device *dev = &pdev->dev;
+	struct nvadsp_os_data *priv;
+	uint16_t com_mid = ADSP_COM_MBOX_ID;
 	int ret = 0;
 
-	priv.hwmailbox_base = drv_data->base_regs[hwmb_reg_idx()];
+	priv = devm_kzalloc(dev,
+			sizeof(struct nvadsp_os_data), GFP_KERNEL);
+	if (!priv) {
+		dev_err(dev, "Failed to allocate os_priv\n");
+		ret = -ENOMEM;
+		goto end;
+	}
+	drv_data->os_priv = priv;
 
-	priv.adsp_os_addr = drv_data->adsp_mem[ADSP_OS_ADDR];
-	priv.adsp_os_size = drv_data->adsp_mem[ADSP_OS_SIZE];
-	priv.app_alloc_addr = drv_data->adsp_mem[ADSP_APP_ADDR];
-	priv.app_size = drv_data->adsp_mem[ADSP_APP_SIZE];
+	priv->adsp_os_addr = drv_data->adsp_mem[ADSP_OS_ADDR];
+	priv->adsp_os_size = drv_data->adsp_mem[ADSP_OS_SIZE];
+	priv->app_alloc_addr = drv_data->adsp_mem[ADSP_APP_ADDR];
+	priv->app_size = drv_data->adsp_mem[ADSP_APP_SIZE];
+
+	priv->cold_start = true;
+	init_completion(&priv->entered_wfi);
 
 	if (of_device_is_compatible(dev->of_node, "nvidia,tegra210-adsp")) {
 		drv_data->assert_adsp = __assert_adsp;
@@ -2652,31 +2702,31 @@ int __init nvadsp_os_probe(struct platform_device *pdev)
 		goto end;
 	}
 
-	ret = nvadsp_mbox_open(&adsp_com_mbox, &com_mid, "adsp_com_mbox",
-			       NULL, NULL);
+	ret = nvadsp_handle->mbox_open(nvadsp_handle, &priv->adsp_com_mbox,
+				&com_mid, "adsp_com_mbox", NULL, NULL);
 	if (ret) {
 		dev_err(dev, "failed to open adsp com mbox\n");
 		goto end;
 	}
 
-	INIT_WORK(&priv.restart_os_work, nvadsp_os_restart);
-	mutex_init(&priv.fw_load_lock);
-	mutex_init(&priv.os_run_lock);
+	INIT_WORK(&priv->restart_os_work, nvadsp_os_restart);
+	mutex_init(&priv->fw_load_lock);
+	mutex_init(&priv->os_run_lock);
 
-	priv.pdev = pdev;
+	priv->pdev = pdev;
 #ifdef CONFIG_DEBUG_FS
-	priv.logger.dev = &pdev->dev;
-	if (adsp_create_debug_logger(drv_data->adsp_debugfs_root))
+	priv->logger.dev = &pdev->dev;
+	if (adsp_create_debug_logger(priv, drv_data->adsp_debugfs_root))
 		dev_err(dev, "unable to create adsp debug logger file\n");
 
-	priv.console.dev = &pdev->dev;
-	if (adsp_create_cnsl(drv_data->adsp_debugfs_root, &priv.console))
+	priv->console.dev = &pdev->dev;
+	if (adsp_create_cnsl(drv_data->adsp_debugfs_root, &priv->console))
 		dev_err(dev, "unable to create adsp console file\n");
 
-	if (adsp_create_os_version(drv_data->adsp_debugfs_root))
+	if (adsp_create_os_version(priv, drv_data->adsp_debugfs_root))
 		dev_err(dev, "unable to create adsp_version file\n");
 
-	if (adsp_create_adsp_health(drv_data->adsp_debugfs_root))
+	if (adsp_create_adsp_health(priv, drv_data->adsp_debugfs_root))
 		dev_err(dev, "unable to create adsp_health file\n");
 
 	drv_data->adsp_crashed = false;
@@ -2687,5 +2737,17 @@ int __init nvadsp_os_probe(struct platform_device *pdev)
 	devm_tegrafw_register(dev, NULL, TFW_DONT_CACHE,
 			tegrafw_read_adsp, NULL);
 end:
+	if (ret == 0) {
+		nvadsp_handle->get_os_version     = _nvadsp_get_os_version;
+		nvadsp_handle->os_load            = _nvadsp_os_load;
+		nvadsp_handle->os_start           = _nvadsp_os_start;
+		nvadsp_handle->os_suspend         = _nvadsp_os_suspend;
+		nvadsp_handle->os_stop            = _nvadsp_os_stop;
+		nvadsp_handle->set_adma_dump_reg  = _nvadsp_set_adma_dump_reg;
+		nvadsp_handle->dump_adsp_sys      = _nvadsp_dump_adsp_sys;
+		nvadsp_handle->alloc_coherent     = _nvadsp_alloc_coherent;
+		nvadsp_handle->free_coherent      = _nvadsp_free_coherent;
+	}
+
 	return ret;
 }

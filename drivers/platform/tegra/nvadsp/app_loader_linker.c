@@ -3,7 +3,6 @@
 
 #include <linux/device.h>
 #include "os.h"
-#include "dram_app_mem_manager.h"
 #include "adsp_shared_struct.h"
 
 #ifdef CONFIG_ADSP_DYNAMIC_APP
@@ -17,6 +16,7 @@
 #include <linux/firmware.h>
 #include <linux/kernel.h>
 #include <asm/hwcap.h>
+#include "dram_app_mem_manager.h"
 
 #ifdef CONFIG_DEBUG_SET_MODULE_RONX
 # define debug_align(X) ALIGN(X, PAGE_SIZE)

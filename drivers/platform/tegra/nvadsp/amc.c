@@ -10,19 +10,17 @@
 #include "dev.h"
 #include "amc.h"
 
-static struct platform_device *nvadsp_pdev;
-static struct nvadsp_drv_data *nvadsp_drv_data;
-
-static inline u32 amc_readl(u32 reg)
+static inline u32 amc_readl(struct nvadsp_drv_data *drv, u32 reg)
 {
-	return readl(nvadsp_drv_data->base_regs[AMC] + reg);
+	return readl(drv->base_regs[AMC] + reg);
 }
 
-static inline void amc_writel(u32 val, u32 reg)
+static inline void amc_writel(struct nvadsp_drv_data *drv, u32 val, u32 reg)
 {
-	writel(val, nvadsp_drv_data->base_regs[AMC] + reg);
+	writel(val, drv->base_regs[AMC] + reg);
 }
 
+#ifdef CONFIG_AMC_SAVE_RESTORE
 static void wmemcpy_to_aram(u32 to_aram, const u32 *from_mem, size_t wlen)
 {
 	u32 base, offset;
@@ -116,20 +114,23 @@ int nvadsp_amc_restore(struct platform_device *pdev)
 
 	return 0;
 }
+#endif /* CONFIG_AMC_SAVE_RESTORE */
 
 static irqreturn_t nvadsp_amc_error_int_handler(int irq, void *devid)
 {
+	struct platform_device *pdev = devid;
+	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	u32 val, addr, status, intr = 0;
 
-	status = amc_readl(AMC_INT_STATUS);
-	addr = amc_readl(AMC_ERROR_ADDR);
+	status = amc_readl(drv, AMC_INT_STATUS);
+	addr = amc_readl(drv, AMC_ERROR_ADDR);
 
 	if (status & AMC_INT_STATUS_ARAM) {
 		/*
 		 * Ignore addresses lesser than AMC_ERROR_ADDR_IGNORE (4k)
 		 * as those are spurious ones due a hardware issue.
 		 */
-		if (!(nvadsp_drv_data->chip_data->amc_err_war) ||
+		if (!(drv->chip_data->amc_err_war) ||
 				(addr > AMC_ERROR_ADDR_IGNORE))
 			pr_info("nvadsp: invalid ARAM access. address: 0x%x\n",
 				addr);
@@ -143,9 +144,9 @@ static irqreturn_t nvadsp_amc_error_int_handler(int irq, void *devid)
 		intr |= AMC_INT_INVALID_REG_ACCESS;
 	}
 
-	val = amc_readl(AMC_INT_CLR);
+	val = amc_readl(drv, AMC_INT_CLR);
 	val |= intr;
-	amc_writel(val, AMC_INT_CLR);
+	amc_writel(drv, val, AMC_INT_CLR);
 
 	return IRQ_HANDLED;
 }
@@ -154,12 +155,9 @@ void nvadsp_free_amc_interrupts(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
-	struct device_node *node;
 
 	if (drv->chip_data->amc_not_avlbl)
 		return;
-
-	node = dev->of_node;
 
 	if (!is_tegra_hypervisor_mode())
 		devm_free_irq(dev, drv->agic_irqs[AMC_ERR_VIRQ], pdev);
@@ -169,15 +167,10 @@ int nvadsp_setup_amc_interrupts(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
-	struct device_node *node;
 	int ret = 0;
 
 	if (drv->chip_data->amc_not_avlbl)
 		return ret;
-
-	node = dev->of_node;
-	nvadsp_pdev = pdev;
-	nvadsp_drv_data = drv;
 
 	if (!is_tegra_hypervisor_mode())
 		ret = devm_request_irq(dev, drv->agic_irqs[AMC_ERR_VIRQ],

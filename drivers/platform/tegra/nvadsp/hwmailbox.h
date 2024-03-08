@@ -95,15 +95,17 @@ struct hwmbox_queue {
 	uint16_t count;
 	struct completion comp;
 	spinlock_t lock;
+	bool is_hwmbox_busy;
+	uint32_t hwmbox_last_msg;
 };
 
-u32 hwmb_reg_idx(void);
-u32 hwmbox_readl(u32 reg);
-void hwmbox_writel(u32 val, u32 reg);
-int nvadsp_hwmbox_init(struct platform_device *);
-status_t nvadsp_hwmbox_send_data(uint16_t, uint32_t, uint32_t);
-void dump_mailbox_regs(void);
+u32 hwmbox_readl(struct nvadsp_drv_data *, u32 reg);
+void hwmbox_writel(struct nvadsp_drv_data *, u32 val, u32 reg);
+status_t nvadsp_hwmbox_send_data(struct nvadsp_drv_data *,
+				uint16_t, uint32_t, uint32_t);
+void dump_mailbox_regs(struct nvadsp_drv_data *);
 
+int nvadsp_hwmbox_init(struct platform_device *);
 int nvadsp_setup_hwmbox_interrupts(struct platform_device *pdev);
 void nvadsp_free_hwmbox_interrupts(struct platform_device *pdev);
 

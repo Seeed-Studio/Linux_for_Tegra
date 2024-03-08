@@ -9,7 +9,7 @@ obj-m := nvadsp.o
 nvadsp-objs += dev.o os.o app.o app_loader_linker.o\
 	 amc.o nvadsp_shared_sema.o \
 	 hwmailbox.o mailbox.o msgq.o \
-	 mem_manager.o aram_manager.o dram_app_mem_manager.o \
+	 mem_manager.o aram_manager.o \
 	 acast.o adsp_console_dbfs.o
 
 # T234/T239/T194/T186

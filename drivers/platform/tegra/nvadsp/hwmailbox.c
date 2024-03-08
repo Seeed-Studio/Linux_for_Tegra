@@ -9,63 +9,50 @@
 #include <linux/tegra_nvadsp.h>
 
 #include "dev.h"
-
-
-static struct platform_device *nvadsp_pdev;
-static struct nvadsp_drv_data *nvadsp_drv_data;
-/* Initialized to false by default */
-static bool is_hwmbox_busy;
-#ifdef CONFIG_MBOX_ACK_HANDLER
-static int hwmbox_last_msg;
-#endif
+#include "hwmailbox.h"
 
 /*
  * Mailbox 0 is for receiving messages
  * from ADSP i.e. CPU <-- ADSP.
  */
-#define INT_RECV_HWMBOX	INT_AMISC_MBOX_FULL0
-
-static inline u32 recv_hwmbox(void)
+static inline u32 recv_hwmbox(struct nvadsp_drv_data *drv)
 {
-	return nvadsp_drv_data->chip_data->hwmb.hwmbox0_reg;
+	return drv->chip_data->hwmb.hwmbox0_reg;
 }
 
 /*
  * Mailbox 1 is for sending messages
  * to ADSP i.e. CPU --> ADSP
  */
-#define INT_SEND_HWMBOX	INT_AMISC_MBOX_EMPTY1
-
-static inline u32 send_hwmbox(void)
+static inline u32 send_hwmbox(struct nvadsp_drv_data *drv)
 {
-	return nvadsp_drv_data->chip_data->hwmb.hwmbox1_reg;
+	return drv->chip_data->hwmb.hwmbox1_reg;
+}
+
+static u32 hwmb_reg_idx(struct nvadsp_drv_data *drv)
+{
+	return drv->chip_data->hwmb.reg_idx;
+}
+
+u32 hwmbox_readl(struct nvadsp_drv_data *drv, u32 reg)
+{
+	return readl(drv->base_regs[hwmb_reg_idx(drv)] + reg);
+}
+
+void hwmbox_writel(struct nvadsp_drv_data *drv, u32 val, u32 reg)
+{
+	writel(val, drv->base_regs[hwmb_reg_idx(drv)] + reg);
 }
 
 
-u32 hwmb_reg_idx(void)
+#define PRINT_HWMBOX(d, x) \
+	pr_err("%s: 0x%x\n", #x, hwmbox_readl(d, x))
+
+void dump_mailbox_regs(struct nvadsp_drv_data *drv)
 {
-	return nvadsp_drv_data->chip_data->hwmb.reg_idx;
-}
-
-u32 hwmbox_readl(u32 reg)
-{
-	return readl(nvadsp_drv_data->base_regs[hwmb_reg_idx()] + reg);
-}
-
-void hwmbox_writel(u32 val, u32 reg)
-{
-	writel(val, nvadsp_drv_data->base_regs[hwmb_reg_idx()] + reg);
-}
-
-
-#define PRINT_HWMBOX(x) \
-	dev_info(&nvadsp_pdev->dev, "%s: 0x%x\n", #x, hwmbox_readl(x))
-
-void dump_mailbox_regs(void)
-{
-	dev_info(&nvadsp_pdev->dev, "dumping hwmailbox registers ...\n");
-	PRINT_HWMBOX(recv_hwmbox());
-	PRINT_HWMBOX(send_hwmbox());
+	pr_err("dumping hwmailbox registers ...\n");
+	PRINT_HWMBOX(drv, recv_hwmbox(drv));
+	PRINT_HWMBOX(drv, send_hwmbox(drv));
 }
 
 static void hwmboxq_init(struct hwmbox_queue *queue)
@@ -75,6 +62,8 @@ static void hwmboxq_init(struct hwmbox_queue *queue)
 	queue->count = 0;
 	init_completion(&queue->comp);
 	spin_lock_init(&queue->lock);
+	queue->is_hwmbox_busy = false;
+	queue->hwmbox_last_msg = 0;
 }
 
 /* Must be called with queue lock held in non-interrupt context */
@@ -116,10 +105,12 @@ static status_t hwmboxq_enqueue(struct hwmbox_queue *queue,
 	return ret;
 }
 
-status_t nvadsp_hwmbox_send_data(uint16_t mid, uint32_t data, uint32_t flags)
+status_t nvadsp_hwmbox_send_data(struct nvadsp_drv_data *drv,
+				uint16_t mid, uint32_t data, uint32_t flags)
 {
-	spinlock_t *lock = &nvadsp_drv_data->hwmbox_send_queue.lock;
-	u32 empty_int_ie = nvadsp_drv_data->chip_data->hwmb.empty_int_ie;
+	struct hwmbox_queue *hwmbox_send_queue = drv->hwmbox_send_queue;
+	spinlock_t *lock = &hwmbox_send_queue->lock;
+	u32 empty_int_ie = drv->chip_data->hwmb.empty_int_ie;
 	unsigned long lockflags;
 	int ret = 0;
 
@@ -132,19 +123,18 @@ status_t nvadsp_hwmbox_send_data(uint16_t mid, uint32_t data, uint32_t flags)
 
 	spin_lock_irqsave(lock, lockflags);
 
-	if (!is_hwmbox_busy) {
-		is_hwmbox_busy = true;
+	if (!hwmbox_send_queue->is_hwmbox_busy) {
+		hwmbox_send_queue->is_hwmbox_busy = true;
 		pr_debug("nvadsp_mbox_send: empty mailbox. write to mailbox.\n");
-#ifdef CONFIG_MBOX_ACK_HANDLER
-		hwmbox_last_msg = data;
-#endif
-		hwmbox_writel(data, send_hwmbox());
-		if (empty_int_ie)
-			hwmbox_writel(INT_ENABLE, send_hwmbox() + empty_int_ie);
+		hwmbox_send_queue->hwmbox_last_msg = data;
+		hwmbox_writel(drv, data, send_hwmbox(drv));
+		if (empty_int_ie) {
+			hwmbox_writel(drv, INT_ENABLE,
+					send_hwmbox(drv) + empty_int_ie);
+		}
 	} else {
 		pr_debug("nvadsp_mbox_send: enqueue data\n");
-		ret = hwmboxq_enqueue(&nvadsp_drv_data->hwmbox_send_queue,
-				      data);
+		ret = hwmboxq_enqueue(hwmbox_send_queue, data);
 	}
 	spin_unlock_irqrestore(lock, lockflags);
 	return ret;
@@ -162,7 +152,7 @@ static status_t hwmboxq_dequeue(struct hwmbox_queue *queue,
 	}
 
 	if (is_hwmboxq_full(queue))
-		complete_all(&nvadsp_drv_data->hwmbox_send_queue.comp);
+		complete_all(&queue->comp);
 
 	*data = queue->array[queue->head];
 	queue->head = (queue->head + 1) & HWMBOX_QUEUE_SIZE_MASK;
@@ -174,51 +164,51 @@ static status_t hwmboxq_dequeue(struct hwmbox_queue *queue,
 
 static irqreturn_t hwmbox_send_empty_int_handler(int irq, void *devid)
 {
-	spinlock_t *lock = &nvadsp_drv_data->hwmbox_send_queue.lock;
-	struct device *dev = &nvadsp_pdev->dev;
-	u32 empty_int_ie = nvadsp_drv_data->chip_data->hwmb.empty_int_ie;
+	struct platform_device *pdev = devid;
+	struct device *dev = &pdev->dev;
+	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
+	struct hwmbox_queue *hwmbox_send_queue = drv->hwmbox_send_queue;
+	spinlock_t *lock = &hwmbox_send_queue->lock;
+	u32 empty_int_ie = drv->chip_data->hwmb.empty_int_ie;
 	unsigned long lockflags;
-	uint32_t data;
+	uint32_t data, hwmbox_last_msg;
+	uint16_t last_mboxid;
+	struct nvadsp_mbox *mbox;
 	int ret;
 
-	if (!is_hwmbox_busy)
+	if (!hwmbox_send_queue->is_hwmbox_busy)
 		return IRQ_HANDLED;
 
 	spin_lock_irqsave(lock, lockflags);
 
-	data = hwmbox_readl(send_hwmbox());
+	data = hwmbox_readl(drv, send_hwmbox(drv));
 	if (data != PREPARE_HWMBOX_EMPTY_MSG())
 		dev_err(dev, "last mailbox sent failed with 0x%x\n", data);
 
-#ifdef CONFIG_MBOX_ACK_HANDLER
-	{
-		uint16_t last_mboxid = HWMBOX_SMSG_MID(hwmbox_last_msg);
-		struct nvadsp_mbox *mbox = nvadsp_drv_data->mboxes[last_mboxid];
+	hwmbox_last_msg = hwmbox_send_queue->hwmbox_last_msg;
+	last_mboxid = HWMBOX_SMSG_MID(hwmbox_last_msg);
+	mbox = drv->mboxes[last_mboxid];
 
-		if (mbox) {
-			nvadsp_mbox_handler_t ack_handler = mbox->ack_handler;
+	if (mbox) {
+		nvadsp_mbox_handler_t ack_handler = mbox->ack_handler;
 
-			if (ack_handler) {
-				uint32_t msg = HWMBOX_SMSG_MSG(hwmbox_last_msg);
+		if (ack_handler) {
+			uint32_t msg = HWMBOX_SMSG_MSG(hwmbox_last_msg);
 
-				ack_handler(msg, mbox->hdata);
-			}
+			ack_handler(msg, mbox->hdata);
 		}
 	}
-#endif
-	ret = hwmboxq_dequeue(&nvadsp_drv_data->hwmbox_send_queue,
-			      &data);
+
+	ret = hwmboxq_dequeue(hwmbox_send_queue, &data);
 	if (ret == 0) {
-#ifdef CONFIG_MBOX_ACK_HANDLER
-		hwmbox_last_msg = data;
-#endif
-		hwmbox_writel(data, send_hwmbox());
+		hwmbox_send_queue->hwmbox_last_msg = data;
+		hwmbox_writel(drv, data, send_hwmbox(drv));
 		dev_dbg(dev, "Writing 0x%x to SEND_HWMBOX\n", data);
 	} else {
-		is_hwmbox_busy = false;
+		hwmbox_send_queue->is_hwmbox_busy = false;
 		if (empty_int_ie)
-			hwmbox_writel(INT_DISABLE,
-					send_hwmbox() + empty_int_ie);
+			hwmbox_writel(drv, INT_DISABLE,
+					send_hwmbox(drv) + empty_int_ie);
 	}
 	spin_unlock_irqrestore(lock, lockflags);
 
@@ -227,18 +217,21 @@ static irqreturn_t hwmbox_send_empty_int_handler(int irq, void *devid)
 
 static irqreturn_t hwmbox_recv_full_int_handler(int irq, void *devid)
 {
+	struct platform_device *pdev = devid;
+	struct device *dev = &pdev->dev;
+	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	uint32_t data;
 	int ret;
 
-	data = hwmbox_readl(recv_hwmbox());
-	hwmbox_writel(PREPARE_HWMBOX_EMPTY_MSG(), recv_hwmbox());
+	data = hwmbox_readl(drv, recv_hwmbox(drv));
+	hwmbox_writel(drv, PREPARE_HWMBOX_EMPTY_MSG(), recv_hwmbox(drv));
 
 	if (IS_HWMBOX_MSG_SMSG(data)) {
 		uint16_t mboxid = HWMBOX_SMSG_MID(data);
-		struct nvadsp_mbox *mbox = nvadsp_drv_data->mboxes[mboxid];
+		struct nvadsp_mbox *mbox = drv->mboxes[mboxid];
 
 		if (!mbox) {
-			dev_info(&nvadsp_pdev->dev,
+			dev_info(dev,
 				 "Failed to get mbox for mboxid: %u\n",
 				 mboxid);
 			goto out;
@@ -250,7 +243,7 @@ static irqreturn_t hwmbox_recv_full_int_handler(int irq, void *devid)
 			ret = nvadsp_mboxq_enqueue(&mbox->recv_queue,
 						   HWMBOX_SMSG_MSG(data));
 			if (ret) {
-				dev_info(&nvadsp_pdev->dev,
+				dev_info(dev,
 					 "Failed to deliver msg 0x%x to"
 					 " mbox id %u\n",
 					 HWMBOX_SMSG_MSG(data), mboxid);
@@ -266,7 +259,6 @@ static irqreturn_t hwmbox_recv_full_int_handler(int irq, void *devid)
 
 void nvadsp_free_hwmbox_interrupts(struct platform_device *pdev)
 {
-
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 	int recv_virq, send_virq;
@@ -301,8 +293,8 @@ int nvadsp_setup_hwmbox_interrupts(struct platform_device *pdev)
 		goto err;
 
 	if (empty_int_ie)
-		hwmbox_writel(INT_DISABLE,
-				send_hwmbox() + empty_int_ie);
+		hwmbox_writel(drv, INT_DISABLE,
+				send_hwmbox(drv) + empty_int_ie);
 	ret = devm_request_irq(dev, send_virq, hwmbox_send_empty_int_handler,
 			  IRQF_TRIGGER_RISING,
 			  "hwmbox1_send_empty", pdev);
@@ -320,12 +312,19 @@ int nvadsp_setup_hwmbox_interrupts(struct platform_device *pdev)
 int __init nvadsp_hwmbox_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
 	int ret = 0;
 
-	nvadsp_pdev = pdev;
-	nvadsp_drv_data = drv;
+	drv->hwmbox_send_queue = devm_kzalloc(dev,
+				sizeof(struct hwmbox_queue), GFP_KERNEL);
+	if (!drv->hwmbox_send_queue) {
+		dev_err(dev, "Failed to allocate hwmbox_send_queue\n");
+		ret = -ENOMEM;
+		goto exit;
+	}
 
-	hwmboxq_init(&drv->hwmbox_send_queue);
+	hwmboxq_init(drv->hwmbox_send_queue);
 
+exit:
 	return ret;
 }

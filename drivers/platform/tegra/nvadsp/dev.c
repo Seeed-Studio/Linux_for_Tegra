@@ -3,7 +3,6 @@
 
 #include <linux/platform_device.h>
 #include <linux/fs.h>
-#include <linux/platform_device.h>
 #include <linux/miscdevice.h>
 #include <linux/pm.h>
 #include <linux/of.h>
@@ -13,6 +12,7 @@
 #include <linux/io.h>
 #include <linux/tegra_nvadsp.h>
 #include <linux/version.h>
+#include <linux/slab.h>
 #include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/virt/hv-ivc.h>
 #include <linux/pm_runtime.h>
@@ -21,6 +21,7 @@
 #include <asm/arch_timer.h>
 
 #include "dev.h"
+#include "hwmailbox.h"
 #include "os.h"
 #include "amc.h"
 #include "ape_actmon.h"
@@ -28,12 +29,69 @@
 
 #include "dev-t18x.h"
 
-static struct nvadsp_drv_data *nvadsp_drv_data;
+#define MAX_DEV_STR_LEN    (20)
+
+struct nvadsp_handle_node {
+	char dev_str[MAX_DEV_STR_LEN];
+	struct nvadsp_handle *nvadsp_handle;
+	struct list_head list;
+};
+
+/* Global list of driver instance handles */
+static LIST_HEAD(nvadsp_handle_list);
+static DEFINE_MUTEX(nvadsp_handle_mutex);
+
+/**
+ * nvadsp_get_handle: Fetch driver instance using unique identfier
+ *
+ * @dev_str : Unique identifier string for the driver instance
+ *             (trailing unique identifer in compatible DT property,
+ *             e.g. "adsp", "adsp1", etc.)
+ *
+ * Return : Driver instance handle on success, else NULL
+ */
+struct nvadsp_handle *nvadsp_get_handle(const char *dev_str)
+{
+	struct nvadsp_handle_node *handle_node;
+	struct nvadsp_handle *nvadsp_handle = NULL;
+	uint32_t num_devs = 0;
+
+	mutex_lock(&nvadsp_handle_mutex);
+
+	if (list_empty(&nvadsp_handle_list))
+		goto out;
+
+	list_for_each_entry(handle_node, &nvadsp_handle_list, list) {
+		num_devs++;
+
+		if (!strcmp(dev_str, handle_node->dev_str)) {
+			nvadsp_handle = handle_node->nvadsp_handle;
+			goto out;
+		}
+	}
+
+	if ((num_devs == 1) && !strcmp(dev_str, "")) {
+		handle_node = list_first_entry(
+					&nvadsp_handle_list,
+					struct nvadsp_handle_node, list);
+		nvadsp_handle = handle_node->nvadsp_handle;
+	}
+
+out:
+	mutex_unlock(&nvadsp_handle_mutex);
+
+	if (!nvadsp_handle)
+		pr_err("Unable to find device %s in list\n", dev_str);
+
+	return nvadsp_handle;
+}
+EXPORT_SYMBOL(nvadsp_get_handle);
 
 #ifdef CONFIG_DEBUG_FS
-static int __init adsp_debug_init(struct nvadsp_drv_data *drv_data)
+static int __init adsp_debug_init(struct nvadsp_drv_data *drv_data,
+				const char *dev_str)
 {
-	drv_data->adsp_debugfs_root = debugfs_create_dir("tegra_ape", NULL);
+	drv_data->adsp_debugfs_root = debugfs_create_dir(dev_str, NULL);
 	if (!drv_data->adsp_debugfs_root)
 		return -ENOMEM;
 	return 0;
@@ -107,7 +165,6 @@ uint64_t nvadsp_get_timestamp_counter(void)
 {
 	return __arch_counter_get_cntvct_stable();
 }
-EXPORT_SYMBOL(nvadsp_get_timestamp_counter);
 
 int nvadsp_set_bw(struct nvadsp_drv_data *drv_data, u32 efreq)
 {
@@ -343,13 +400,45 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct resource *res = NULL;
 	void __iomem *base = NULL;
-	uint32_t aram_addr;
-	uint32_t aram_size;
-	int irq_iter, iter;
-	int irq_num;
+	uint32_t aram_addr, aram_size;
+	int irq_iter, iter, irq_num;
+	const char *compat, *dev_str;
+	struct nvadsp_handle_node *handle_node;
 	int ret = 0;
 
-	dev_info(dev, "in probe()...\n");
+	mutex_lock(&nvadsp_handle_mutex);
+
+	ret = of_property_read_string(dev->of_node, "compatible", &compat);
+	if (ret)
+		goto out;
+
+	/**
+	 * Trailing part of compatible string after the
+	 * last '-' is taken as unique device string
+	 */
+	dev_str = strrchr(compat, '-');
+	if (strlen(dev_str) < 2) {
+		dev_err(dev, "Unable to extract device string\n");
+		ret = -EINVAL;
+		goto out;
+	}
+	dev_str += 1;
+
+	if (strlen(dev_str) >= MAX_DEV_STR_LEN) {
+		dev_err(dev, "Device string %s out of bound\n", dev_str);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	list_for_each_entry(handle_node, &nvadsp_handle_list, list) {
+		if (!strcmp(dev_str, handle_node->dev_str)) {
+			dev_err(dev, "Device %s already probed\n", dev_str);
+			ret = -EEXIST;
+			goto out;
+		}
+	}
+
+	dev_info(dev, "in probe()...%s\n", dev_str);
 
 	drv_data = devm_kzalloc(dev, sizeof(*drv_data),
 				GFP_KERNEL);
@@ -376,9 +465,9 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 #endif
 
 #ifdef CONFIG_DEBUG_FS
-	if (adsp_debug_init(drv_data))
+	if (adsp_debug_init(drv_data, dev_str))
 		dev_err(dev,
-			"unable to create tegra_ape debug fs directory\n");
+			"unable to create %s debug fs directory\n", dev_str);
 #endif
 
 	drv_data->base_regs =
@@ -408,8 +497,9 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 			goto out;
 		}
 		drv_data->base_regs[iter] = base;
-		nvadsp_add_load_mappings(res->start, (void __force *)base,
-						resource_size(res));
+		nvadsp_add_load_mappings(drv_data,
+					res->start, (void __force *)base,
+					resource_size(res));
 	}
 
 	drv_data->base_regs_saved = drv_data->base_regs;
@@ -424,8 +514,6 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 		}
 		drv_data->agic_irqs[irq_iter] = irq_num;
 	}
-
-	nvadsp_drv_data = drv_data;
 
 #ifdef CONFIG_PM
 	pm_runtime_enable(dev);
@@ -465,7 +553,7 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 	aram_addr = drv_data->adsp_mem[ARAM_ALIAS_0_ADDR];
 	aram_size = drv_data->adsp_mem[ARAM_ALIAS_0_SIZE];
 	if (aram_size) {
-		ret = nvadsp_aram_init(aram_addr, aram_size);
+		ret = nvadsp_aram_init(drv_data, aram_addr, aram_size);
 		if (ret)
 			dev_err(dev, "Failed to init aram\n");
 	}
@@ -478,6 +566,20 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 			goto err;
 	}
 
+	handle_node = kzalloc(sizeof(struct nvadsp_handle_node),
+				GFP_KERNEL);
+	if (!handle_node) {
+		dev_err(dev, "Failed to allocate node mem for %s\n", dev_str);
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	/* Add probed device into list of handles */
+	strcpy(handle_node->dev_str, dev_str);
+	handle_node->nvadsp_handle = (struct nvadsp_handle *)drv_data;
+	INIT_LIST_HEAD(&handle_node->list);
+	list_add_tail(&handle_node->list, &nvadsp_handle_list);
+
 err:
 #ifdef CONFIG_PM
 	ret = pm_runtime_put_sync(dev);
@@ -485,6 +587,8 @@ err:
 		dev_err(dev, "pm_runtime_put_sync failed\n");
 #endif
 out:
+	mutex_unlock(&nvadsp_handle_mutex);
+
 	return ret;
 }
 
@@ -492,11 +596,12 @@ static int nvadsp_remove(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	uint32_t aram_size =  drv_data->adsp_mem[ARAM_ALIAS_0_SIZE];
+	struct nvadsp_handle_node *handle_node;
 
 	nvadsp_bw_unregister(drv_data);
 
 	if (aram_size)
-		nvadsp_aram_exit();
+		nvadsp_aram_exit(drv_data);
 
 #ifdef CONFIG_PM
 	pm_runtime_disable(&pdev->dev);
@@ -504,6 +609,18 @@ static int nvadsp_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		nvadsp_runtime_suspend(&pdev->dev);
 #endif
+
+	mutex_lock(&nvadsp_handle_mutex);
+
+	list_for_each_entry(handle_node, &nvadsp_handle_list, list) {
+		if (handle_node->nvadsp_handle ==
+				(struct nvadsp_handle *)drv_data) {
+			list_del(&handle_node->list);
+			kfree(handle_node);
+		}
+	}
+
+	mutex_unlock(&nvadsp_handle_mutex);
 
 	return 0;
 }

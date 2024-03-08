@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
- * Copyright (c) 2015-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include <linux/version.h>
@@ -11,6 +11,7 @@
 #include <linux/tegra-hsp.h>
 
 #include "dev.h"
+#include "hwmailbox.h"
 #include "os.h"
 #include "dev-t18x.h"
 
@@ -78,10 +79,12 @@ int nvadsp_os_t18x_init(struct platform_device *pdev)
 		val = val | (adma_ch_page << ADSP_CONFIG_DMA_PAGE_SHIFT);
 
 		/* Write to HWMBOX5 */
-		hwmbox_writel(val, drv_data->chip_data->adsp_os_config_hwmbox);
+		hwmbox_writel(drv_data, val,
+			drv_data->chip_data->adsp_os_config_hwmbox);
 
 		/* Clear HWMBOX0 for ADSP Guest reset handling */
-		hwmbox_writel(0, drv_data->chip_data->hwmb.hwmbox0_reg);
+		hwmbox_writel(drv_data, 0,
+			drv_data->chip_data->hwmb.hwmbox0_reg);
 
 		return 0;
 	}
