@@ -22,6 +22,16 @@
 		#size-cells = <2>;
 		ranges = <0x0 0x0 0x0 0x0 0x100 0x0>;
 
+		efuse@1000000 {
+			compatible = "nvidia,tegra264-efuse",
+				     "nvidia,tegra234-efuse";
+			status = "disabled";
+
+			reg = <0x0 0x01000000 0x0 0x10000>;
+			clocks = <&bpmp TEGRA264_CLK_FUSE>;
+			clock-names = "fuse";
+		};
+
 		misc@100000 {
 			compatible = "nvidia,tegra264-misc",
 				     "nvidia,tegra234-misc";
@@ -75,6 +85,64 @@
 			nvidia,start-dma-channel-index = <1>;
 			dma-channels = <31>;
 			dma-channel-mask = <0xfffffffe>;
+		};
+
+		rtc: rtc@c2c0000 {
+			compatible = "nvidia,tegra264-rtc",
+				     "nvidia,tegra234-rtc",
+				     "nvidia,tegra20-rtc";
+			status = "disabled";
+
+			reg = <0x0 0x0c2c0000 0x0 0x10000>;
+			interrupt-parent = <&pmc>;
+			interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&bpmp TEGRA264_CLK_CLK_S>;
+			clock-names = "rtc";
+		};
+
+		tegra-utc@c5a0000 {
+			compatible = "nvidia,tegra264-utc";
+			status = "disabled";
+
+			reg = <0x0 0x0c5a8000 0x0 0x8000>,
+			      <0x0 0x0c5b0000 0x0 0x8000>;
+			reg-names = "rx", "tx";
+			interrupts = <GIC_SPI 527 IRQ_TYPE_LEVEL_HIGH>;
+			current-speed = <115200>;
+		};
+
+		pwm4: pwm@c6a0000 {
+			compatible = "nvidia,tegra264-pwm";
+			status = "disabled";
+
+			reg = <0x0 0xc6a0000 0x0 0x10000>;
+			nvidia,hw-instance-id = <0x4>;
+			clocks = <&bpmp TEGRA264_CLK_PWM4>,
+				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "pwm", "parent";
+			#pwm-cells = <2>;
+			resets = <&bpmp TEGRA264_RESET_PWM4>;
+			reset-names = "pwm";
+		};
+
+		pmc: pmc@c800000 {
+			compatible = "nvidia,tegra264-pmc",
+				     "nvidia,tegra234-pmc";
+			status = "disabled";
+
+			reg = <0x0 0x0c800000 0x0 0x100000>,
+			      <0x0 0x0c990000 0x0 0x10000>,
+			      <0x0 0x0c980000 0x0 0x10000>,
+			      <0x0 0x0c9c0000 0x0 0x40000>;
+			reg-names = "pmc", "wake", "scratch", "misc";
+			#interrupt-cells = <2>;
+			interrupt-controller;
+			#padcontroller-cells = <1>;
+			nvidia,restrict-voltage-switch;
+			pinctrl-names = "default";
+			pinctrl-0 = <&iopad_defaults>;
+			iopad_defaults: iopad-defaults {
+			};
 		};
 
 		gpio_aon: gpio@cf00000 {
@@ -213,6 +281,81 @@
 			interrupt-names = "eventq","gerror";
 			dma-coherent;
 			#iommu-cells = <1>;
+		};
+
+		pwm2: pwm@810c5e0000 {
+			compatible = "nvidia,tegra264-pwm";
+			status = "disabled";
+
+			reg = <0x81 0x0c5e0000 0x0 0x10000>;
+			nvidia,hw-instance-id = <0x2>;
+			clocks = <&bpmp TEGRA264_CLK_PWM2>;
+			clock-names = "pwm";
+			#pwm-cells = <2>;
+			resets = <&bpmp TEGRA264_RESET_PWM2>;
+			reset-names = "pwm";
+		};
+
+		pwm3: pwm@810c5f0000 {
+			compatible = "nvidia,tegra264-pwm";
+			status = "disabled";
+			reg = <0x81 0x0c5f0000 0x0 0x10000>;
+			nvidia,hw-instance-id = <0x3>;
+			clocks = <&bpmp TEGRA264_CLK_PWM3>,
+				 <&bpmp TEGRA264_CLK_PLLAON>;
+			clock-names = "pwm", "pll_aon";
+			#pwm-cells = <2>;
+			resets = <&bpmp TEGRA264_RESET_PWM3>;
+			reset-names = "pwm";
+		};
+
+		pwm5: pwm@810c600000 {
+			compatible = "nvidia,tegra264-pwm";
+			status = "disabled";
+
+			reg = <0x81 0x0c600000 0x0 0x10000>;
+			nvidia,hw-instance-id = <0x5>;
+			clocks = <&bpmp TEGRA264_CLK_PWM5>;
+			clock-names = "pwm";
+			#pwm-cells = <2>;
+			resets = <&bpmp TEGRA264_RESET_PWM5>;
+			reset-names = "pwm";
+		};
+
+		pwm9: pwm@810c610000 {
+			compatible = "nvidia,tegra264-pwm";
+			status = "disabled";
+
+			reg = <0x81 0x0c610000 0x0 0x10000>;
+			nvidia,hw-instance-id = <0x9>;
+			clocks = <&bpmp TEGRA264_CLK_PWM9>;
+			clock-names = "pwm";
+			#pwm-cells = <2>;
+			resets = <&bpmp TEGRA264_RESET_PWM9>;
+			reset-names = "pwm";
+		};
+
+		pwm10: pwm@810c620000 {
+			compatible = "nvidia,tegra264-pwm";
+			status = "disabled";
+
+			reg = <0x81 0x0c620000 0x0 0x10000>;
+			nvidia,hw-instance-id = <0xa>;
+			clocks = <&bpmp TEGRA264_CLK_PWM10>,
+			         <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "pwm", "parent";
+			#pwm-cells = <2>;
+			resets = <&bpmp TEGRA264_RESET_PWM10>;
+			reset-names = "pwm";
+		};
+
+		ccplex@8120000000 {
+			compatible = "nvidia,tegra264-ccplex-cluster",
+				     "nvidia,tegra234-ccplex-cluster";
+			status = "disabled";
+
+			nvidia,bpmp = <&bpmp>;
+			reg = <0x81 0x30000000 0x0 0xcf0000>;
 		};
 
 		smmu3_mmu: iommu@8806000000 {
@@ -657,6 +800,13 @@
 			reg = <0x0 0x86070000 0x0 0x2000>;
 			no-map;
 		};
+	};
+
+	psci {
+		compatible = "arm,psci-1.0";
+		status = "disabled";
+
+		method = "smc";
 	};
 
 	timer {
