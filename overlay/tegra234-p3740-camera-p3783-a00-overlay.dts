@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -136,11 +136,13 @@
 								compatible = "bmi,bmi088";
 								reg = <0x69>;
 								accel_i2c_addr = <0x19>;
-								accel_irq_gpio = <&gpio_aon ACCE1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
-								gyro_irq_gpio = <&gpio_aon GYRO1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
+								accel_irq-gpios = <&gpio_aon ACCE1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
+								gyro_irq-gpios = <&gpio_aon GYRO1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
 								accel_matrix = [01 00 00 00 01 00 00 00 01];
 								gyro_matrix = [01 00 00 00 01 00 00 00 01];
 								gyro_reg_0x18 = <0x81>;
+								timestamps = <&hte_aon ACCE1_IRQ_GPIO>, <&hte_aon GYRO1_IRQ_GPIO>;
+								timestamp-names = "accelerometer", "gyroscope";
 								status = "okay";
 							};
 							ar0234_a@30 {
