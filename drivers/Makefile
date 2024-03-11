@@ -32,8 +32,10 @@ endif
 ifdef CONFIG_I2C
 obj-m += i2c/busses/
 obj-m += mfd/
+ifdef CONFIG_HTE
 ifdef CONFIG_IIO
 obj-m += bmi088/
+endif
 endif
 endif
 ifdef CONFIG_MEMORY
