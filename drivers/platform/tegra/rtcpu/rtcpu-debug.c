@@ -29,7 +29,7 @@
 #include <linux/platform/tegra/common.h>
 #include <soc/tegra/fuse.h>
 
-#define CAMRTC_TEST_CAM_DEVICES 4
+#define CAMRTC_TEST_CAM_DEVICES 5
 
 struct camrtc_test_device {
 	/* device handle */
@@ -941,11 +941,14 @@ static int camrtc_run_mem_test(struct seq_file *file,
 	struct device *vi2_dev = crd->mem_devices[3];
 	struct sg_table vi2_sgt[ARRAY_SIZE(crd->mem)];
 	struct camrtc_test_mem *mem0 = &crd->mem[0];
+	struct device *isp1_dev = crd->mem_devices[4];
+	struct sg_table isp1_sgt[ARRAY_SIZE(crd->mem)];
 
 	memset(rce_sgt, 0, sizeof(rce_sgt));
 	memset(vi_sgt, 0, sizeof(vi_sgt));
 	memset(isp_sgt, 0, sizeof(isp_sgt));
 	memset(vi2_sgt, 0, sizeof(vi2_sgt));
+	memset(isp1_sgt, 0, sizeof(isp1_sgt));
 
 	req->req_type = CAMRTC_REQ_RUN_MEM_TEST;
 
@@ -1037,6 +1040,11 @@ static int camrtc_run_mem_test(struct seq_file *file,
 		if (ret < 0)
 			goto unmap;
 
+		ret = camrtc_run_mem_map(ch, mem_dev, isp1_dev, &isp1_sgt[i], mem,
+			&testmem->isp1_iova);
+		if (ret < 0)
+			goto unmap;
+
 	}
 
 	BUILD_BUG_ON_MISMATCH(
@@ -1105,6 +1113,11 @@ unmap:
 			dma_unmap_sg(vi2_dev, vi2_sgt[i].sgl,
 				vi2_sgt[i].orig_nents, DMA_BIDIRECTIONAL);
 			sg_free_table(&vi2_sgt[i]);
+		}
+		if (isp1_sgt[i].sgl) {
+			dma_unmap_sg(isp1_dev, isp1_sgt[i].sgl,
+				isp1_sgt[i].orig_nents, DMA_BIDIRECTIONAL);
+			sg_free_table(&isp1_sgt[i]);
 		}
 	}
 
@@ -1841,6 +1854,7 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	struct device *dev = &ch->dev;
 	struct camrtc_debug *crd;
 	uint32_t bw;
+	uint32_t i;
 
 	BUG_ON(ch->ivc.frame_size < sizeof(struct camrtc_dbg_request));
 	BUG_ON(ch->ivc.frame_size < sizeof(struct camrtc_dbg_response));
@@ -1870,10 +1884,8 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 
 	tegra_ivc_channel_set_drvdata(ch, crd);
 
-	crd->mem_devices[0] = camrtc_get_linked_device(dev, NV(mem-map), 0);
-	crd->mem_devices[1] = camrtc_get_linked_device(dev, NV(mem-map), 1);
-	crd->mem_devices[2] = camrtc_get_linked_device(dev, NV(mem-map), 2);
-	crd->mem_devices[3] = camrtc_get_linked_device(dev, NV(mem-map), 3);
+	for (i = 0; i < CAMRTC_TEST_CAM_DEVICES; i++)
+		crd->mem_devices[i] = camrtc_get_linked_device(dev, NV(mem-map), i);
 
 	crd->vi_falc_coverage.id = CAMRTC_DBG_FALCON_ID_VI;
 	crd->vi_falc_coverage.mem_dev = camrtc_dbgfs_memory_dev(crd);
@@ -1926,10 +1938,10 @@ static void camrtc_debug_remove(struct tegra_ivc_channel *ch)
 		memset(mem, 0, sizeof(*mem));
 	}
 
-	put_device(crd->mem_devices[0]);
-	put_device(crd->mem_devices[1]);
-	put_device(crd->mem_devices[2]);
-	put_device(crd->mem_devices[3]);
+	for (i = 0; i < CAMRTC_TEST_CAM_DEVICES; i++) {
+		if (crd->mem_devices[i] != NULL)
+			put_device(crd->mem_devices[i]);
+	}
 
 	debugfs_remove_recursive(crd->root);
 }
