@@ -2026,7 +2026,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 				"Slave Ready GPIO is unusable as it can sleep\n");
 			ret = -EINVAL;
-			goto exit_free_master;
+			return ret;
 		}
 
 	tspi->slave_ready_active_high = pdata->slave_ready_active_high;
@@ -2044,7 +2044,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	if (!r) {
 		dev_err(&pdev->dev, "No IO memory resource\n");
 		ret = -ENODEV;
-		goto exit_free_master;
+		return ret;
 	}
 	tspi->phys = r->start;
 	tspi->base = devm_ioremap_resource(&pdev->dev, r);
@@ -2052,7 +2052,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Cannot request memregion/iomap dma address\n");
 		ret = PTR_ERR(tspi->base);
-		goto exit_free_master;
+		return ret;
 	}
 
 	tspi->rstc = devm_reset_control_get(&pdev->dev, "spi");
@@ -2069,7 +2069,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to register ISR for IRQ %d\n",
 					tspi->irq);
-		goto exit_free_master;
+		return ret;
 	}
 
 	tspi->clk = devm_clk_get(&pdev->dev, "spi");
@@ -2172,8 +2172,6 @@ exit_rx_dma_free:
 	tegra_spi_deinit_dma_param(tspi, true);
 exit_free_irq:
 	free_irq(spi_irq, tspi);
-exit_free_master:
-	spi_master_put(controller);
 	return ret;
 }
 
