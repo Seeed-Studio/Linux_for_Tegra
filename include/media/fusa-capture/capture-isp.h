@@ -47,7 +47,9 @@ struct isp_capture_setup {
 		/**<
 		 * Bitmask for channel flags, see @ref CAPTURE_ISP_CHANNEL_FLAGS
 		 */
-	uint32_t __pad_flags;
+	/* ISP unit index */
+	uint8_t isp_unit;
+	uint8_t __pad[3];
 
 	/* ISP process capture descriptor queue (ring buffer) */
 	uint32_t queue_depth;
@@ -185,6 +187,20 @@ int isp_capture_init(
  */
 void isp_capture_shutdown(
 	struct tegra_isp_channel *chan);
+
+/**
+ * @brief Select the NvHost ISP client instance platform driver to be
+ * associated with the channel.
+ * Only used in the case where ISP standalone driver is used
+ * to enumerate the ISP channel character drivers
+ *
+ * @param[in/out]	chan	ISP channel context
+ * @param[in]	setup	ISP channel setup config
+ *
+ */
+void isp_get_nvhost_device(
+	struct tegra_isp_channel *chan,
+	struct isp_capture_setup *setup);
 
 /**
  * @brief Open an ISP channel in RCE, sending channel configuration to request a

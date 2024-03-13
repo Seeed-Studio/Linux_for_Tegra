@@ -81,7 +81,9 @@ struct isp_channel_drv_ops {
  */
 struct tegra_isp_channel {
 	struct device *isp_dev; /**< ISP device */
-	struct platform_device *ndev; /**< ISP platform_device */
+	struct platform_device *ndev; /**< ISP nvhost platform_device */
+	struct platform_device *isp_capture_pdev;
+		/**< Capture ISP driver platform device */
 	struct isp_channel_drv *drv; /**< ISP channel driver context */
 	void *priv; /**< ISP channel private context */
 	struct isp_capture *capture_data; /**< ISP channel capture context */
@@ -90,19 +92,19 @@ struct tegra_isp_channel {
 
 /**
  * @brief Create the ISP channels driver contexts, and instantiate
- * MAX_ISP_CHANNELS many channel character device nodes.
+ * channel character device nodes as specified in the device tree.
  *
  * ISP channel nodes appear in the filesystem as:
- * /dev/capture-isp-channel{0..MAX_ISP_CHANNELS-1}
+ * /dev/capture-isp-channel{0..max_isp_channels-1}
  *
  * @param[in]	ndev	ISP platform_device context
- * @param[in]	ops	isp_channel_drv_ops fops
+ * @param[in]	max_isp_channels	Maximum number of ISP channels
  *
  * @returns	0 (success), neg. errno (failure)
  */
 int isp_channel_drv_register(
 	struct platform_device *pdev,
-	const struct isp_channel_drv_ops *ops);
+	unsigned int max_isp_channels);
 
 /**
  * @brief Destroy the ISP channels driver and all character device nodes.
@@ -114,6 +116,15 @@ int isp_channel_drv_register(
  */
 void isp_channel_drv_unregister(
 	struct device *dev);
+
+/**
+ * @brief Register the chip specific syncpt/gos related function table
+ *
+ * @param[in]	ops	isp_channel_drv_ops fops
+ * @returns	0 (success), neg. errno (failure)
+ */
+int isp_channel_drv_fops_register(
+	const struct isp_channel_drv_ops *ops);
 
 int isp_channel_drv_init(void);
 void isp_channel_drv_exit(void);

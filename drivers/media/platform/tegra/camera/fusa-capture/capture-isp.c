@@ -988,6 +988,19 @@ void isp_capture_shutdown(
 	chan->capture_data = NULL;
 }
 
+void isp_get_nvhost_device(
+	struct tegra_isp_channel *chan,
+	struct isp_capture_setup *setup)
+{
+	uint32_t isp_inst = setup->isp_unit;
+
+	struct tegra_capture_isp_data *info =
+		platform_get_drvdata(chan->isp_capture_pdev);
+
+	chan->isp_dev = &info->isp_pdevices[isp_inst]->dev;
+	chan->ndev = info->isp_pdevices[isp_inst];
+}
+
 int isp_capture_setup(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_setup *setup)
@@ -1003,6 +1016,9 @@ int isp_capture_setup(
 #ifdef HAVE_ISP_GOS_TABLES
 	int i;
 #endif
+
+	struct tegra_capture_isp_data *info =
+			platform_get_drvdata(chan->isp_capture_pdev);
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
@@ -1023,10 +1039,12 @@ int isp_capture_setup(
 	dev_dbg(chan->isp_dev, "chan flags %u\n", setup->channel_flags);
 	dev_dbg(chan->isp_dev, "queue depth %u\n", setup->queue_depth);
 	dev_dbg(chan->isp_dev, "request size %u\n", setup->request_size);
+	dev_dbg(chan->isp_dev, "isp unit %u\n", setup->isp_unit);
 
 	if (setup->channel_flags == 0 ||
 			setup->queue_depth == 0 ||
-			setup->request_size == 0)
+			setup->request_size == 0 ||
+			setup->isp_unit >= info->num_isp_devices)
 		return -EINVAL;
 
 	buffer_ctx = create_buffer_table(chan->isp_dev);
@@ -1157,6 +1175,8 @@ int isp_capture_setup(
 	control_msg.header.transaction = transaction;
 
 	config->channel_flags = setup->channel_flags;
+
+	config->isp_unit_id = setup->isp_unit;
 
 	config->request_queue_depth = setup->queue_depth;
 	config->request_size = setup->request_size;
@@ -2062,6 +2082,10 @@ static int capture_isp_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, info);
 
+	err = isp_channel_drv_register(pdev, info->max_isp_channels);
+	if (err)
+		goto cleanup;
+
 	return 0;
 
 cleanup:
@@ -2103,4 +2127,29 @@ static struct platform_driver capture_isp_driver = {
 	}
 };
 
-module_platform_driver(capture_isp_driver);
+static int __init capture_isp_init(void)
+{
+	int err;
+	err = isp_channel_drv_init();
+	if (err)
+		return err;
+
+	err = platform_driver_register(&capture_isp_driver);
+	if (err) {
+		isp_channel_drv_exit();
+		return err;
+	}
+	return 0;
+}
+static void __exit capture_isp_exit(void)
+{
+	isp_channel_drv_exit();
+	platform_driver_unregister(&capture_isp_driver);
+}
+
+module_init(capture_isp_init);
+module_exit(capture_isp_exit);
+
+MODULE_IMPORT_NS(DMA_BUF);
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("tegra capture-isp driver");

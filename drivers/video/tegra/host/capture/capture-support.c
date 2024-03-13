@@ -2,7 +2,7 @@
 /*
  * Capture support for syncpoint and GoS management
  *
- * Copyright (c) 2017-2022, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2024, NVIDIA Corporation.  All rights reserved.
  */
 
 #include "capture-support.h"
@@ -19,6 +19,7 @@
 #include <linux/version.h>
 #include <soc/tegra/fuse.h>
 #include <linux/nvhost.h>
+#include <uapi/linux/nvhost_ioctl.h>
 
 int capture_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
@@ -164,6 +165,17 @@ struct nvhost_device_data t23x_vi1_thi_info = {
 	.moduleid		= 3, //NVHOST_MODULE_VI2,
 };
 
+struct nvhost_device_data t264_isp_thi_info = {
+	.devfs_name             = "isp-thi",
+	.moduleid               = 4, //NVHOST_MODULE_ISP
+};
+
+struct nvhost_device_data t264_isp1_thi_info = {
+	.devfs_name             = "isp1-thi",
+	.moduleid               = 5, //NVHOST_MODULE_ISPB
+};
+
+
 static const struct of_device_id capture_support_match[] = {
 	{
 		.compatible = "nvidia,tegra194-isp-thi",
@@ -182,6 +194,16 @@ static const struct of_device_id capture_support_match[] = {
 		.name = "vi1-thi",
 		.compatible = "nvidia,tegra234-vi-thi",
 		.data = &t23x_vi1_thi_info,
+	},
+	{
+		.name = "isp-thi",
+		.compatible = "nvidia,tegra264-isp-thi",
+		.data = &t264_isp_thi_info,
+	},
+	{
+		.name = "isp1-thi",
+		.compatible = "nvidia,tegra264-isp-thi",
+		.data = &t264_isp1_thi_info,
 	},
 	{ },
 };

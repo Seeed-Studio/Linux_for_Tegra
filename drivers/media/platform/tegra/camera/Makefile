@@ -28,9 +28,11 @@ tegra-camera-objs += nvcsi/csi5_fops.o
 tegra-camera-objs += fusa-capture/capture-vi.o
 tegra-camera-objs += fusa-capture/capture-common.o
 tegra-camera-objs += fusa-capture/capture-vi-channel.o
-tegra-camera-objs += fusa-capture/capture-isp-channel.o
-tegra-camera-objs += fusa-capture/capture-isp.o
 obj-m += tegra-camera.o
 obj-m += tests/
+
+tegra-capture-isp-objs += fusa-capture/capture-isp-channel.o
+tegra-capture-isp-objs += fusa-capture/capture-isp.o
+obj-m += tegra-capture-isp.o
 endif
 endif

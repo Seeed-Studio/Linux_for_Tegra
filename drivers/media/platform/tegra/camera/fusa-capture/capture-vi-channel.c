@@ -691,7 +691,7 @@ int vi_channel_drv_fops_register(
 	if (chan_drv->ops == NULL)
 		chan_drv->ops = ops;
 	else
-		dev_warn(chan_drv->dev, "fops function table already registered\n");
+		dev_dbg(chan_drv->dev, "vi fops function table already registered\n");
 	mutex_unlock(&chdrv_lock);
 
 	return 0;

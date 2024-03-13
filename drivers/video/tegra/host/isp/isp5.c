@@ -30,6 +30,7 @@
 #include "isp5.h"
 #include "capture/capture-support.h"
 #include <uapi/linux/nvhost_isp_ioctl.h>
+#include <uapi/linux/nvhost_ioctl.h>
 
 #define ISP_PPC		2
 /* 20% overhead */
@@ -125,6 +126,11 @@ int isp5_priv_early_probe(struct platform_device *pdev)
 		goto error;
 	}
 
+	err = isp_channel_drv_fops_register(&isp5_channel_drv_ops);
+	if (err) {
+		goto error;
+	}
+
 	if (thi->dev.driver == NULL) {
 		platform_device_put(thi);
 		return -EPROBE_DEFER;
@@ -185,10 +191,6 @@ int isp5_priv_late_probe(struct platform_device *pdev)
 	isp_info.ops = &isp5_cdev_ops;
 
 	err = tegra_camera_device_register(&isp_info, isp5);
-	if (err)
-		goto device_release;
-
-	err = isp_channel_drv_register(pdev, &isp5_channel_drv_ops);
 	if (err)
 		goto device_release;
 
@@ -335,7 +337,41 @@ struct nvhost_device_data t19_isp5_info = {
 	.class			= ISP_CLASS_ID,
 };
 
+struct nvhost_device_data t264_isp_info = {
+	.devfs_name             = "isp",
+	.moduleid               = NVHOST_MODULE_ISP,
+	.clocks                 = {
+		{"isp", UINT_MAX},
+	},
+	.pre_virt_init          = isp5_priv_early_probe,
+	.post_virt_init         = isp5_priv_late_probe,
+	.can_powergate = false,
+	.class                  = ISP_CLASS_ID,
+};
+
+struct nvhost_device_data t264_isp1_info = {
+	.devfs_name             = "isp1",
+	.moduleid               = NVHOST_MODULE_ISPB,
+	.clocks                 = {
+		{"isp1", UINT_MAX},
+	},
+	.pre_virt_init          = isp5_priv_early_probe,
+	.post_virt_init         = isp5_priv_late_probe,
+	.can_powergate = false,
+	.class                  = ISP_CLASS_ID,
+};
+
 static const struct of_device_id tegra_isp5_of_match[] = {
+	{
+		.name = "isp",
+		.compatible = "nvidia,tegra264-isp",
+		.data = &t264_isp_info,
+	},
+	{
+		.name = "isp1",
+		.compatible = "nvidia,tegra264-isp",
+		.data = &t264_isp1_info,
+	},
 	{
 		.compatible = "nvidia,tegra194-isp",
 		.data = &t19_isp5_info,
@@ -359,28 +395,6 @@ static struct platform_driver isp5_driver = {
 	},
 };
 
-static int __init capture_isp_init(void)
-{
-	int err;
+module_platform_driver(isp5_driver);
 
-	err = isp_channel_drv_init();
-	if (err)
-		return err;
-
-	err = platform_driver_register(&isp5_driver);
-	if (err) {
-		isp_channel_drv_exit();
-		return err;
-	}
-
-	return 0;
-}
-static void __exit capture_isp_exit(void)
-{
-	isp_channel_drv_exit();
-	platform_driver_unregister(&isp5_driver);
-}
-
-module_init(capture_isp_init);
-module_exit(capture_isp_exit);
 MODULE_LICENSE("GPL");

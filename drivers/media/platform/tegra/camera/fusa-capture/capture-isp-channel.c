@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2017-2023 NVIDIA Corporation.  All rights reserved.
+// Copyright (c) 2017-2023 NVIDIA Corporation.	All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-isp-channel.c
@@ -24,16 +24,12 @@
 #include <media/fusa-capture/capture-isp-channel.h>
 
 /**
- * @todo This parameter is platform-dependent and should be retrieved from the
- * Device Tree.
- */
-#define MAX_ISP_CHANNELS	64
-
-/**
  * @brief ISP channel character device driver context.
  */
 struct isp_channel_drv {
 	struct device *dev; /**< ISP kernel @em device */
+	struct platform_device *isp_capture_pdev;
+		/**< Capture ISP driver platform device */
 	u8 num_channels; /**< No. of ISP channel character devices */
 	struct mutex lock; /**< ISP channel driver context lock. */
 	struct platform_device *ndev; /**< ISP kernel @em platform_device */
@@ -198,49 +194,6 @@ struct isp_channel_drv {
 
 /** @} */
 
-/**
- * @brief Power on ISP via Host1x. The ISP channel is registered as an NvHost
- * ISP client and the reference count is incremented by one.
- *
- * @param[in]	chan	ISP channel context
- * @returns	0 (success), neg. errno (failure)
- */
-static int isp_channel_power_on(
-	struct tegra_isp_channel *chan)
-{
-	int ret = 0;
-
-	dev_dbg(chan->isp_dev, "isp_channel_power_on\n");
-	ret = nvhost_module_add_client(chan->ndev, chan->priv);
-	if (ret < 0) {
-		dev_err(chan->isp_dev,
-			"%s: failed to add isp client\n", __func__);
-		return ret;
-	}
-
-	ret = nvhost_module_busy(chan->ndev);
-	if (ret < 0) {
-		dev_err(chan->isp_dev,
-			"%s: failed to power on isp\n", __func__);
-		return ret;
-	}
-	return 0;
-}
-
-/**
- * @brief Power off ISP via Host1x. The NvHost module reference count is
- * decreased by one and the ISP channel is unregistered as a client.
- *
- * @param[in]	chan	ISP channel context
- */
-static void isp_channel_power_off(
-	struct tegra_isp_channel *chan)
-{
-	dev_dbg(chan->isp_dev, "isp_channel_power_off\n");
-	nvhost_module_idle(chan->ndev);
-	nvhost_module_remove_client(chan->ndev, chan->priv);
-}
-
 static struct isp_channel_drv *chdrv_;
 static DEFINE_MUTEX(chdrv_lock);
 
@@ -287,11 +240,8 @@ static int isp_channel_open(
 	chan->isp_dev = chan_drv->dev;
 	chan->ndev = chan_drv->ndev;
 	chan->ops = chan_drv->ops;
+	chan->isp_capture_pdev = chan_drv->isp_capture_pdev;
 	chan->priv = file;
-
-	err = isp_channel_power_on(chan);
-	if (err < 0)
-		goto error;
 
 	err = isp_capture_init(chan);
 	if (err < 0)
@@ -314,8 +264,6 @@ static int isp_channel_open(
 chan_err:
 	isp_capture_shutdown(chan);
 init_err:
-	isp_channel_power_off(chan);
-error:
 	kfree(chan);
 	return err;
 }
@@ -343,7 +291,6 @@ static int isp_channel_release(
 	struct isp_channel_drv *chan_drv = chan->drv;
 
 	isp_capture_shutdown(chan);
-	isp_channel_power_off(chan);
 
 	mutex_lock(&chan_drv->lock);
 
@@ -392,6 +339,13 @@ static long isp_channel_ioctl(
 
 		if (copy_from_user(&setup, ptr, sizeof(setup)))
 			break;
+		isp_get_nvhost_device(chan, &setup);
+		if (chan->isp_dev == NULL) {
+			dev_err(&chan->isp_capture_pdev->dev,
+				"%s: channel device is NULL",
+				__func__);
+			return -EINVAL;
+		}
 		err = isp_capture_setup(chan, &setup);
 		if (err)
 			dev_err(chan->isp_dev, "isp capture setup failed\n");
@@ -534,24 +488,24 @@ static const struct file_operations isp_channel_fops = {
 
 /* Character device */
 static struct class *isp_channel_class;
-static int isp_channel_major;
+static int isp_channel_major = -1;
 
 int isp_channel_drv_register(
 	struct platform_device *ndev,
-	const struct isp_channel_drv_ops *ops)
+	unsigned int max_isp_channels)
 {
 	struct isp_channel_drv *chan_drv;
 	unsigned int i;
 
 	chan_drv = kzalloc(offsetof(struct isp_channel_drv,
-			channels[MAX_ISP_CHANNELS]), GFP_KERNEL);
+			channels[max_isp_channels]), GFP_KERNEL);
 	if (unlikely(chan_drv == NULL))
 		return -ENOMEM;
 
-	chan_drv->dev = &ndev->dev;
-	chan_drv->ndev = ndev;
-	chan_drv->ops = ops;
-	chan_drv->num_channels = MAX_ISP_CHANNELS;
+	chan_drv->dev  = NULL;
+	chan_drv->ndev = NULL;
+	chan_drv->isp_capture_pdev = ndev;
+	chan_drv->num_channels = max_isp_channels;
 	mutex_init(&chan_drv->lock);
 
 	mutex_lock(&chdrv_lock);
@@ -566,13 +520,39 @@ int isp_channel_drv_register(
 	for (i = 0; i < chan_drv->num_channels; i++) {
 		dev_t devt = MKDEV(isp_channel_major, i);
 
-		device_create(isp_channel_class, chan_drv->dev, devt, NULL,
+		device_create(isp_channel_class, &chan_drv->isp_capture_pdev->dev, devt, NULL,
 				"capture-isp-channel%u", i);
 	}
 
 	return 0;
 }
 EXPORT_SYMBOL(isp_channel_drv_register);
+
+int isp_channel_drv_fops_register(
+	const struct isp_channel_drv_ops *ops)
+{
+	int err = 0;
+	struct isp_channel_drv *chan_drv;
+
+	chan_drv = chdrv_;
+	if (chan_drv == NULL) {
+		err = -EPROBE_DEFER;
+		goto error;
+	}
+
+	mutex_lock(&chdrv_lock);
+	if (chan_drv->ops == NULL)
+		chan_drv->ops = ops;
+	else
+		dev_dbg(chan_drv->dev, "isp fops function table already registered\n");
+	mutex_unlock(&chdrv_lock);
+
+	return 0;
+
+error:
+	return err;
+}
+EXPORT_SYMBOL(isp_channel_drv_fops_register);
 
 void isp_channel_drv_unregister(
 	struct device *dev)
