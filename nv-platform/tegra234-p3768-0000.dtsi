@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
 	bus@0 {
@@ -20,8 +20,6 @@
 	};
 
 	tegra_sound_graph: tegra_sound: sound {
-		compatible = "nvidia,tegra186-audio-graph-card",
-			     "nvidia,tegra186-ape";
 		clocks = <&bpmp TEGRA234_CLK_PLLA>,
 			 <&bpmp TEGRA234_CLK_PLLA_OUT0>,
 			 <&bpmp TEGRA234_CLK_AUD_MCLK>;

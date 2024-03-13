@@ -18,22 +18,43 @@
 		};
 		__overlay__ {
 			bus@0 {
+				aconnect@2900000 {
+					ahub@2900800 {
+						i2s@2901000 {
+							ports {
+								port@1 {
+									endpoint {
+										remote-endpoint = <&rt5640_ep>;
+									};
+								};
+							};
+						};
+					};
+				};
+
 				i2c@31e0000 {
 					rt5640: audio-codec@1c {
 						#sound-dai-cells = <1>;
 						status = "okay";
+
+						port {
+							endpoint {
+								remote-endpoint = <&i2s1_dap>;
+								link-name = "rt5640-playback";
+							};
+						};
 					};
 				};
 			};
 
 			sound {
-				nvidia-audio-card,widgets =
+				widgets =
 					"Headphone",	"CVB-RT Headphone Jack",
 					"Microphone",	"CVB-RT Mic Jack",
 					"Speaker",	"CVB-RT Int Spk",
 					"Microphone",	"CVB-RT Int Mic";
 
-				nvidia-audio-card,routing =
+				routing =
 					"CVB-RT Headphone Jack",     "CVB-RT HPOL",
 					"CVB-RT Headphone Jack",     "CVB-RT HPOR",
 					"CVB-RT IN1P",		     "CVB-RT Mic Jack",
