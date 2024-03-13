@@ -456,6 +456,7 @@ static const struct snd_soc_component_driver tegra210_amx_cmpnt = {
 	.num_dapm_widgets	= ARRAY_SIZE(tegra210_amx_widgets),
 	.controls		= tegra210_amx_controls,
 	.num_controls		= ARRAY_SIZE(tegra210_amx_controls),
+	.endianness		= 1,
 };
 
 static bool tegra210_amx_wr_reg(struct device *dev, unsigned int reg)

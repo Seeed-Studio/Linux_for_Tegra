@@ -446,6 +446,7 @@ static const struct snd_soc_component_driver tegra186_dspk_cmpnt = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra186_dspk_widgets),
 	.controls = tegrat186_dspk_controls,
 	.num_controls = ARRAY_SIZE(tegrat186_dspk_controls),
+	.endianness = 1,
 };
 
 static bool tegra186_dspk_wr_reg(struct device *dev, unsigned int reg)

@@ -836,6 +836,7 @@ static const struct snd_soc_component_driver tegra210_i2s_cmpnt = {
 	.num_dapm_widgets	= ARRAY_SIZE(tegra210_i2s_widgets),
 	.controls		= tegra210_i2s_controls,
 	.num_controls		= ARRAY_SIZE(tegra210_i2s_controls),
+	.endianness		= 1,
 };
 
 static bool tegra210_i2s_wr_reg(struct device *dev, unsigned int reg)

@@ -577,6 +577,7 @@ static const struct snd_soc_component_driver tegra210_mixer_cmpnt = {
 	.num_dapm_widgets	= ARRAY_SIZE(tegra210_mixer_widgets),
 	.controls		= tegra210_mixer_gain_ctls,
 	.num_controls		= ARRAY_SIZE(tegra210_mixer_gain_ctls),
+	.endianness		= 1,
 };
 
 static bool tegra210_mixer_wr_reg(struct device *dev,
