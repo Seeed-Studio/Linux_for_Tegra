@@ -4,7 +4,7 @@
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-isp.c
  *
- * @brief ISP channel operations for the T186/T194 Camera RTCPU platform.
+ * @brief ISP channel operations for the T186/T194/T234/T264 Camera RTCPU platform.
  */
 
 #include <nvidia/conftest.h>
@@ -33,6 +33,27 @@
  * @brief Invalid ISP channel ID; the channel is not initialized.
  */
 #define CAPTURE_CHANNEL_ISP_INVALID_ID	U16_C(0xFFFF)
+
+/**
+ * @brief The default number of ISP channels to be used if not specified in
+ * the device tree.
+ */
+#define DEFAULT_ISP_CHANNELS    U32_C(16)
+
+/**
+ * @brief Maximum number of ISP devices supported.
+ */
+#define MAX_ISP_UNITS   U32_C(0x2)
+
+/**
+ * @brief The Capture-ISP standalone driver context.
+ */
+struct tegra_capture_isp_data {
+	uint32_t num_isp_devices;/**< Number of available ISP devices */
+	struct platform_device *isp_pdevices[MAX_ISP_UNITS];
+	uint32_t max_isp_channels;
+		/**< Maximum number of ISP capture channel devices */
+};
 
 /**
  * @brief ISP channel process descriptor queue context.
@@ -905,16 +926,16 @@ int isp_capture_init(
 	struct tegra_isp_channel *chan)
 {
 	struct isp_capture *capture;
-	struct device_node *dn;
+	struct device_node *node;
 	struct platform_device *rtc_pdev;
 
 	dev_dbg(chan->isp_dev, "%s++\n", __func__);
-	dn = of_find_node_by_path("tegra-camera-rtcpu");
-	if (of_device_is_available(dn) == 0) {
+	node = of_find_node_by_path("tegra-camera-rtcpu");
+	if (of_device_is_available(node) == 0) {
 		dev_err(chan->isp_dev, "failed to find rtcpu device node\n");
 		return -ENODEV;
 	}
-	rtc_pdev = of_find_device_by_node(dn);
+	rtc_pdev = of_find_device_by_node(node);
 	if (rtc_pdev == NULL) {
 		dev_err(chan->isp_dev, "failed to find rtcpu platform\n");
 		return -ENODEV;
@@ -1988,3 +2009,98 @@ int isp_capture_buffer_request(
 		capture->buffer_ctx, req->mem, req->flag);
 	return err;
 }
+
+static int capture_isp_probe(struct platform_device *pdev)
+{
+	uint32_t i;
+	int err = 0;
+	struct tegra_capture_isp_data *info;
+	struct device *dev = &pdev->dev;
+
+	dev_dbg(dev, "%s:tegra-camrtc-capture-isp probe\n", __func__);
+
+	info = devm_kzalloc(dev, sizeof(*info), GFP_KERNEL);
+	if (info == NULL)
+		return -ENOMEM;
+
+	info->num_isp_devices = 0;
+
+	(void)of_property_read_u32(dev->of_node, "nvidia,isp-max-channels",
+			&info->max_isp_channels);
+	if (info->max_isp_channels == 0)
+		info->max_isp_channels = DEFAULT_ISP_CHANNELS;
+
+	for (i = 0; ; i++) {
+		struct device_node *node;
+		struct platform_device *ispdev;
+
+		node = of_parse_phandle(dev->of_node, "nvidia,isp-devices", i);
+		if (node == NULL)
+			break;
+
+		if (info->num_isp_devices >= ARRAY_SIZE(info->isp_pdevices)) {
+			of_node_put(node);
+			err = -EINVAL;
+			goto cleanup;
+		}
+
+		ispdev = of_find_device_by_node(node);
+		of_node_put(node);
+
+		if (ispdev == NULL) {
+			dev_WARN(dev, "isp node %u has no device\n", i);
+			err = -ENODEV;
+			goto cleanup;
+		}
+
+		info->isp_pdevices[i] = ispdev;
+		info->num_isp_devices++;
+	}
+
+	if (info->num_isp_devices < 1)
+		return -EINVAL;
+
+	platform_set_drvdata(pdev, info);
+
+	return 0;
+
+cleanup:
+	for (i = 0; i < info->num_isp_devices; i++)
+		put_device(&info->isp_pdevices[i]->dev);
+
+	dev_err(dev, "%s:tegra-camrtc-capture-isp probe failed\n", __func__);
+	return err;
+}
+
+static int capture_isp_remove(struct platform_device *pdev)
+{
+	struct tegra_capture_isp_data *info;
+	uint32_t i;
+	struct device *dev = &pdev->dev;
+
+	dev_dbg(dev, "%s:tegra-camrtc-capture-isp remove\n", __func__);
+
+	info = platform_get_drvdata(pdev);
+
+	for (i = 0; i < info->num_isp_devices; i++)
+		put_device(&info->isp_pdevices[i]->dev);
+
+	return 0;
+}
+
+static const struct of_device_id capture_isp_of_match[] = {
+	{ .compatible = "nvidia,tegra-camrtc-capture-isp" },
+	{ },
+};
+
+static struct platform_driver capture_isp_driver = {
+	.probe = capture_isp_probe,
+	.remove = capture_isp_remove,
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "tegra-camrtc-capture-isp",
+		.of_match_table = capture_isp_of_match
+	}
+};
+
+module_platform_driver(capture_isp_driver);
