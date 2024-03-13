@@ -1,7 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -997,7 +995,11 @@ static void setup_device(struct vblk_dev *vblkdev)
 	if (ret)
 		return;
 
+#if defined(NV_BLK_MQ_ALLOC_QUEUE_PRESENT)
+	vblkdev->queue = blk_mq_alloc_queue(&vblkdev->tag_set, NULL, NULL);
+#else
 	vblkdev->queue = blk_mq_init_queue(&vblkdev->tag_set);
+#endif
 	if (IS_ERR(vblkdev->queue)) {
 		dev_err(vblkdev->device, "failed to init blk queue\n");
 		blk_mq_free_tag_set(&vblkdev->tag_set);

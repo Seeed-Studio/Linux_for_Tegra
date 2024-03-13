@@ -91,6 +91,7 @@ endef
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += __alloc_disk_node_has_lkclass_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_execute_rq_has_no_gendisk_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_mq_alloc_disk_for_queue
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_mq_alloc_queue
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_mq_destroy_queue
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += block_device_operations_open_has_gendisk_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += block_device_operations_release_has_no_mode_arg

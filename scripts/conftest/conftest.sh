@@ -6523,6 +6523,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_BLK_MQ_ALLOC_DISK_FOR_QUEUE_PRESENT" "" "functions"
         ;;
 
+        blk_mq_alloc_queue)
+            #
+            # Determine if function blk_mq_alloc_queue() is present.
+            #
+            # In Linux next-20240308, commit 9ac4dd8c47d5 ("block: pass a
+            # queue_limits argument to blk_mq_init_queue") renames the function
+            # blk_mq_init_queue() to blk_mq_alloc_queue() and updates the
+            # arguments passed.
+            #
+            CODE="
+            #include <linux/blk-mq.h>
+            void conftest_blk_mq_alloc_queue(void) {
+                blk_mq_alloc_queue();
+            }"
+
+            compile_check_conftest "$CODE" "NV_BLK_MQ_ALLOC_QUEUE_PRESENT" "" "functions"
+        ;;
+
         blk_mq_destroy_queue)
             #
             # Determine whether function blk_mq_destroy_queue() is present.
