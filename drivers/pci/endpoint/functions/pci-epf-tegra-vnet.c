@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/etherdevice.h>
 #include <linux/module.h>
 #include <linux/netdevice.h>
@@ -1881,8 +1883,11 @@ static int tvnet_ep_pci_epf_bind(struct pci_epf *epf)
 	tvnet->ndev = ndev;
 	SET_NETDEV_DEV(ndev, fdev);
 	ndev->netdev_ops = &tvnet_netdev_ops;
+#if defined(NV_NETIF_NAPI_ADD_WEIGHT_PRESENT) /* Linux v6.1 */
+	netif_napi_add_weight(ndev, &tvnet->napi, tvnet_ep_poll, TVNET_NAPI_WEIGHT);
+#else
 	netif_napi_add(ndev, &tvnet->napi, tvnet_ep_poll, TVNET_NAPI_WEIGHT);
-
+#endif
 	ndev->mtu = TVNET_DEFAULT_MTU;
 
 	ret = register_netdev(ndev);
