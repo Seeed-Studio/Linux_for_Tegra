@@ -32,6 +32,8 @@
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 
+#include "tegra_asoc_machine.h"
+
 static int dai_get_rate(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
@@ -325,20 +327,20 @@ static int tegra_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_dai *dai;
 
 	/* Fixup CPU DAI */
-#if KERNEL_VERSION(6, 7, 0) > LINUX_VERSION_CODE
-	dai = asoc_rtd_to_cpu(rtd, 0);
-#else
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
 	dai = snd_soc_rtd_to_cpu(rtd, 0);
+#else
+	dai = asoc_rtd_to_cpu(rtd, 0);
 #endif
 
 	if (!dai_is_dummy(dai))
 		tegra_dai_fixup(dai, params);
 
 	/* Fixup Codec DAI */
-#if KERNEL_VERSION(6, 7, 0) > LINUX_VERSION_CODE
-	dai = asoc_rtd_to_codec(rtd, 0);
-#else
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
 	dai = snd_soc_rtd_to_codec(rtd, 0);
+#else
+	dai = asoc_rtd_to_codec(rtd, 0);
 #endif
 
 	if (!dai_is_dummy(dai))
@@ -401,6 +403,8 @@ static int tegra_mixer_control_probe(struct platform_device *pdev)
 				tegra210_mixer_ctls,
 				ARRAY_SIZE(tegra210_mixer_ctls));
 	}
+
+	tegra_machine_add_i2s_codec_controls(card);
 
 	/* Fixup callback for BE codec2codec links */
 	for_each_card_rtds(card, rtd) {

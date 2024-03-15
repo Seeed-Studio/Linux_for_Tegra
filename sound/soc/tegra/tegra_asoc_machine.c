@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * tegra_asoc_machine.c - Tegra DAI links parser
- *
- * Copyright (c) 2014-2023 NVIDIA CORPORATION.  All rights reserved.
- *
- */
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION. All rights reserved.
+//
+// tegra_asoc_machine.c - Tegra DAI links parser
 
 #include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/version.h>
 #include <sound/simple_card_utils.h>
 #include <sound/jack.h>
 #include <sound/soc.h>
@@ -649,11 +647,74 @@ struct tegra_machine_control_data {
 	unsigned int master_mode;
 };
 
+static struct snd_soc_pcm_runtime *tegra_get_be(struct snd_soc_card *card,
+						struct snd_soc_dapm_widget *widget,
+						int stream)
+{
+	struct snd_soc_pcm_runtime *be;
+	struct snd_soc_dapm_widget *w;
+	struct snd_soc_dai *dai;
+	int i;
+
+	for_each_card_rtds(card, be) {
+		for_each_rtd_dais(be, i, dai) {
+			w = snd_soc_dai_get_widget(dai, stream);
+			if (w == widget)
+				return be;
+		}
+	}
+
+	return NULL;
+}
+
+/*
+ * In case of DPCM DAI link for i2s<->codec, note that the DAIs are
+ * not directly mapped. The 'rtd' for codec is different in case of
+ * a DPCM DAI link.
+ */
+static int dpcm_runtime_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
+				    unsigned int fmt)
+{
+#if defined(NV_SND_SOC_RTD_TO_CODEC_PRESENT) /* Linux 6.7*/
+	struct snd_soc_dai *dai = snd_soc_rtd_to_cpu(rtd, 0);
+#else
+	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
+#endif
+	struct snd_soc_dapm_widget_list *list;
+	int stream = SNDRV_PCM_STREAM_PLAYBACK;
+	struct snd_soc_pcm_runtime *be;
+	struct snd_soc_dapm_widget *widget;
+	int i, ret;
+
+	/* nothing to be done if it is a normal sound card */
+	if (!rtd->card->component_chaining)
+		return 0;
+
+	snd_soc_dapm_dai_get_connected_widgets(dai, stream, &list, NULL);
+
+	for_each_dapm_widgets(list, i, widget) {
+		if (widget->id != snd_soc_dapm_dai_in &&
+		    widget->id != snd_soc_dapm_dai_out)
+			continue;
+
+		be = tegra_get_be(rtd->card, widget, stream);
+		if (!be)
+			continue;
+
+		ret = snd_soc_runtime_set_dai_fmt(be, fmt);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int tegra_machine_codec_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
 					   unsigned int frame_mode,
 					   unsigned int master_mode)
 {
 	unsigned int fmt = rtd->dai_link->dai_fmt;
+	int ret;
 
 	if (frame_mode) {
 		fmt &= ~SND_SOC_DAIFMT_FORMAT_MASK;
@@ -670,7 +731,11 @@ static int tegra_machine_codec_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
 			fmt |= SND_SOC_DAIFMT_CBS_CFS;
 	}
 
-	return snd_soc_runtime_set_dai_fmt(rtd, fmt);
+	ret = snd_soc_runtime_set_dai_fmt(rtd, fmt);
+	if (ret < 0)
+		return ret;
+
+	return dpcm_runtime_set_dai_fmt(rtd, fmt);
 }
 
 /*
