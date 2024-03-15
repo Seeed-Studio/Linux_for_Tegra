@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Tegra CSI5 device common APIs
  */
@@ -213,6 +213,7 @@ static int csi5_stream_set_config(struct tegra_csi_channel *chan, u32 stream_id,
 	struct CAPTURE_CONTROL_MSG msg;
 	struct nvcsi_brick_config brick_config;
 	struct nvcsi_cil_config cil_config;
+	struct nvcsi_error_config err_config;
 	u32 phy_mode = read_phy_mode_from_dt(chan);
 	bool is_cphy = (phy_mode == CSI_PHY_MODE_CPHY);
 	dev_dbg(csi->dev, "%s: stream_id=%u, csi_port=%u\n",
@@ -285,6 +286,7 @@ static int csi5_stream_set_config(struct tegra_csi_channel *chan, u32 stream_id,
 	else
 		cil_config.mipi_clock_rate = csi->clk_freq / 1000;
 
+	memset(&err_config, 0, sizeof(err_config));
 	/* Set NVCSI stream config */
 	memset(&msg, 0, sizeof(msg));
 	msg.header.msg_id = CAPTURE_CSI_STREAM_SET_CONFIG_REQ;
@@ -293,6 +295,9 @@ static int csi5_stream_set_config(struct tegra_csi_channel *chan, u32 stream_id,
 	msg.csi_stream_set_config_req.csi_port = csi_port;
 	msg.csi_stream_set_config_req.brick_config = brick_config;
 	msg.csi_stream_set_config_req.cil_config = cil_config;
+	msg.csi_stream_set_config_req.error_config = err_config;
+	msg.csi_stream_set_config_req.config_flags = NVCSI_CONFIG_FLAG_BRICK |
+						NVCSI_CONFIG_FLAG_CIL | NVCSI_CONFIG_FLAG_ERROR;
 
 	if (tegra_chan->valid_ports > 1)
 		vi_port = (stream_id > 0) ? 1 : 0;
