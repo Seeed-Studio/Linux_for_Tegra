@@ -166,6 +166,8 @@ struct tegra_adma {
 	/* Used to store global command register state when suspending */
 	unsigned int			global_cmd;
 
+	bool is_virtualized;
+
 	const struct tegra_adma_chip_data *cdata;
 
 	/* Last member of the structure */
@@ -228,10 +230,12 @@ static int tegra_adma_init(struct tegra_adma *tdma)
 	u32 status;
 	int ret;
 
-	/* Clear any interrupts */
-	tdma_write(tdma, tdma->cdata->ch_base_offset + tdma->chan_page_offset
-					+ tdma->cdata->global_int_clear, 0x1);
-	if (tdma->cdata->is_virtualized) {
+	if (!tdma->is_virtualized) {
+		/* Clear any interrupts */
+		tdma_write(tdma, tdma->cdata->ch_base_offset + tdma->cdata->global_int_clear, 0x1);
+	} else {
+		/* For virtualized mode, ADMA global registers are not accessed */
+		tdma_write(tdma, tdma->cdata->global_int_clear, 0x1);
 		tdma->global_cmd = 1;
 		return 0;
 	}
@@ -680,7 +684,7 @@ static int tegra_adma_alloc_chan_resources(struct dma_chan *dc)
 	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
 	int ret, flags;
 
-	flags = (tdc->tdma->cdata->is_virtualized) ? IRQF_NO_THREAD : 0;
+	flags = (tdc->tdma->is_virtualized) ? IRQF_NO_THREAD : 0;
 
 	ret = request_irq(tdc->irq, tegra_adma_isr, flags,
 						dma_chan_name(dc), tdc);
@@ -750,11 +754,11 @@ static int __maybe_unused tegra_adma_runtime_suspend(struct device *dev)
 	struct tegra_adma_chan *tdc;
 	int i;
 
-	if (!tdma->cdata->is_virtualized) {
+	if (!tdma->is_virtualized)
 		tdma->global_cmd = tdma_read(tdma, ADMA_GLOBAL_CMD);
-		if (!tdma->global_cmd)
-			goto clk_disable;
-	}
+
+	if (!tdma->global_cmd)
+		goto clk_disable;
 
 	for (i = 0; i < tdma->nr_channels; i++) {
 		tdc = &tdma->channels[i];
@@ -793,7 +797,7 @@ static int __maybe_unused tegra_adma_runtime_resume(struct device *dev)
 		dev_err(dev, "ahub clk_enable failed: %d\n", ret);
 		return ret;
 	}
-	if (!tdma->cdata->is_virtualized)
+	if (!tdma->is_virtualized)
 		tdma_write(tdma, ADMA_GLOBAL_CMD, tdma->global_cmd);
 
 	if (!tdma->global_cmd)
@@ -881,8 +885,9 @@ MODULE_DEVICE_TABLE(of, tegra_adma_of_match);
 static int tegra_adma_probe(struct platform_device *pdev)
 {
 	const struct tegra_adma_chip_data *cdata;
-	struct resource	*global_base, *page_base;
 	struct tegra_adma *tdma;
+	unsigned int ch_base_offset;
+	struct resource *res;
 	int ret, i;
 	unsigned int chan_page_offset = 0;
 
@@ -903,10 +908,22 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	tdma->nr_channels = cdata->nr_channels;
 	platform_set_drvdata(pdev, tdma);
 
-	global_base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	tdma->base_addr = devm_ioremap_resource(&pdev->dev, global_base);
-	if (IS_ERR(tdma->base_addr))
-		return PTR_ERR(tdma->base_addr);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "vm");
+	if (res) {
+		tdma->base_addr = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(tdma->base_addr))
+			return PTR_ERR(tdma->base_addr);
+
+		tdma->is_virtualized = true;
+		ch_base_offset = 0;
+	} else {
+		tdma->base_addr = devm_platform_ioremap_resource(pdev, 0);
+		if (IS_ERR(tdma->base_addr))
+			return PTR_ERR(tdma->base_addr);
+
+		tdma->is_virtualized = false;
+		ch_base_offset = cdata->ch_base_offset;
+	}
 
 	tdma->ahub_clk = devm_clk_get(&pdev->dev, "d_audio");
 	if (IS_ERR(tdma->ahub_clk)) {
@@ -945,9 +962,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 		if (!test_bit(i, tdma->dma_chan_mask))
 			continue;
 
-		tdc->chan_addr = tdma->base_addr + cdata->ch_base_offset
-				 + chan_page_offset
-				 + (cdata->ch_reg_size * i);
+		tdc->chan_addr = tdma->base_addr + ch_base_offset + (cdata->ch_reg_size * i);
 
 		tdc->irq = of_irq_get(pdev->dev.of_node, i);
 		if (tdc->irq <= 0) {
