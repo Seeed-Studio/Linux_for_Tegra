@@ -2,7 +2,7 @@
 /*
  * camera_common.c - utilities for tegra camera driver
  *
- * Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 #include <linux/types.h>
 #include <media/tegra-v4l2-camera.h>
@@ -13,6 +13,7 @@
 #include <soc/tegra/pmc.h>
 #include <trace/events/camera_common.h>
 #include <soc/tegra/fuse.h>
+#include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/tegra-i2c-rtcpu.h>
 #include <linux/arm64-barrier.h>
 #include <linux/nospec.h>
@@ -873,8 +874,14 @@ void camera_common_dpd_disable(struct camera_common_data *s_data)
 			return;
 		}
 		if (atomic_inc_return(
-			&camera_common_csi_io_pads[io_idx].ref) == 1)
-			tegra_io_pad_power_enable(TEGRA_IO_PAD_CSIA + io_idx);
+			&camera_common_csi_io_pads[io_idx].ref) == 1) {
+			if (__tegra_get_chip_id() == TEGRA264)
+				tegra264_io_pad_power_enable(s_data->dev,
+						TEGRA_IO_PAD_CSIA + io_idx);
+			else
+				tegra_io_pad_power_enable(
+						TEGRA_IO_PAD_CSIA + io_idx);
+		}
 
 		dev_dbg(s_data->dev,
 			 "%s: csi %d\n", __func__, io_idx);
@@ -898,8 +905,14 @@ void camera_common_dpd_enable(struct camera_common_data *s_data)
 			return;
 		}
 		if (atomic_dec_return(
-			&camera_common_csi_io_pads[io_idx].ref) == 0)
-			tegra_io_pad_power_disable(TEGRA_IO_PAD_CSIA + io_idx);
+			&camera_common_csi_io_pads[io_idx].ref) == 0) {
+			if (__tegra_get_chip_id() == TEGRA264)
+				tegra264_io_pad_power_disable(s_data->dev,
+						TEGRA_IO_PAD_CSIA + io_idx);
+			else
+				tegra_io_pad_power_disable(
+						TEGRA_IO_PAD_CSIA + io_idx);
+		}
 
 		dev_dbg(s_data->dev,
 			 "%s: csi %d\n", __func__, io_idx);
