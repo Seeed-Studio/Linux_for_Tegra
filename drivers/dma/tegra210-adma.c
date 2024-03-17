@@ -78,7 +78,6 @@ struct tegra_adma;
  * @ch_fifo_size_mask: Mask for FIFO size field.
  * @sreq_index_offset: Slave channel index offset.
  * @has_outstanding_reqs: If DMA channel can have outstanding requests.
- * @is_virtualized: Is DMA virtualized, if yes, it does not write to global PAGE
  */
 struct tegra_adma_chip_data {
 	unsigned int (*adma_get_burst_config)(unsigned int burst_size);
@@ -95,7 +94,6 @@ struct tegra_adma_chip_data {
 	unsigned int ch_fifo_size_mask;
 	unsigned int sreq_index_offset;
 	bool has_outstanding_reqs;
-	bool is_virtualized;
 };
 
 /*
@@ -154,12 +152,6 @@ struct tegra_adma {
 	struct clk			*ahub_clk;
 	unsigned int			nr_channels;
 	unsigned long			*dma_chan_mask;
-	/* Used in virtualization case where individual
-	 * channel page could be assigned to indivudual
-	 * guest OS. Offset is used to skip channel pages
-	 * not assigned to current guest OS
-	 */
-	unsigned int			chan_page_offset;
 	unsigned long			rx_requests_reserved;
 	unsigned long			tx_requests_reserved;
 
@@ -856,28 +848,9 @@ static const struct tegra_adma_chip_data tegra186_chip_data = {
 	.has_outstanding_reqs	= true,
 };
 
-static const struct tegra_adma_chip_data tegra234_virt_chip_data = {
-	.adma_get_burst_config  = tegra186_adma_get_burst_config,
-	.global_reg_offset	= 0,
-	.global_int_clear	= 0x402c,
-	.ch_req_tx_shift	= 27,
-	.ch_req_rx_shift	= 22,
-	.ch_base_offset		= 0x10000,
-	.ch_req_mask		= 0x1f,
-	.ch_req_max		= 20,
-	.ch_reg_size		= 0x100,
-	.nr_channels		= 32,
-	.ch_fifo_size_mask	= 0x1f,
-	.sreq_index_offset	= 4,
-	.has_outstanding_reqs	= true,
-	.is_virtualized		= true,
-};
-
 static const struct of_device_id tegra_adma_of_match[] = {
 	{ .compatible = "nvidia,tegra210-adma", .data = &tegra210_chip_data },
 	{ .compatible = "nvidia,tegra186-adma", .data = &tegra186_chip_data },
-	{ .compatible = "nvidia,tegra234-adma-virt",
-					.data = &tegra234_virt_chip_data },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_adma_of_match);
@@ -889,7 +862,6 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	unsigned int ch_base_offset;
 	struct resource *res;
 	int ret, i;
-	unsigned int chan_page_offset = 0;
 
 	cdata = of_device_get_match_data(&pdev->dev);
 	if (!cdata) {
@@ -930,12 +902,6 @@ static int tegra_adma_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Error: Missing ahub controller clock\n");
 		return PTR_ERR(tdma->ahub_clk);
 	}
-
-	page_base = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (page_base)
-		chan_page_offset = (unsigned int) (page_base->start -
-				global_base->start - cdata->ch_base_offset);
-	tdma->chan_page_offset = chan_page_offset;
 
 	tdma->dma_chan_mask = devm_kzalloc(&pdev->dev,
 					   BITS_TO_LONGS(tdma->nr_channels) * sizeof(unsigned long),
