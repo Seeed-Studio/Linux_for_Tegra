@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
-
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -731,7 +730,7 @@ static int vblk_request_worker(void *data)
 
 	while (true) {
 retry:
-		wait_for_completion_io(&vblkdev->complete);
+		wait_for_completion(&vblkdev->complete);
 
 		/* Taking ivc lock before performing IVC read/write */
 		mutex_lock(&vblkdev->ivc_lock);
