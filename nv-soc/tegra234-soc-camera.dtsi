@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /*
  * tegra234-soc-camera.dtsi: Camera RTCPU DTSI file.
@@ -36,6 +36,8 @@
 				compatible = "nvidia,tegra234-vi-thi";
 				resets = <&bpmp TEGRA234_RESET_VI>;
 				reset-names = "vi0_thi";
+				iommus = <&smmu_iso TEGRA234_SID_ISO_VI>;
+				non-coherent;
 				interconnects = <&mc TEGRA234_MEMORY_CLIENT_VI2FALR &emc>,
 						<&mc TEGRA234_MEMORY_CLIENT_VI2FALW &emc>;
 				interconnect-names = "dma-mem", "write";
@@ -60,6 +62,8 @@
 				compatible = "nvidia,tegra234-vi-thi";
 				resets = <&bpmp TEGRA234_RESET_VI2>;
 				reset-names = "vi1_thi";
+				iommus = <&smmu_iso TEGRA234_SID_ISO_VI2>;
+				non-coherent;
 				interconnects = <&mc TEGRA234_MEMORY_CLIENT_VIFALR &emc>,
 						<&mc TEGRA234_MEMORY_CLIENT_VIFALW &emc>;
 				interconnect-names = "dma-mem", "write";
@@ -85,6 +89,8 @@
 			isp_thi: isp-thi@14b00000 {
 				compatible = "nvidia,tegra194-isp-thi";
 				resets = <&bpmp TEGRA234_RESET_ISP>;
+				iommus = <&smmu_niso1 TEGRA234_SID_ISP>;
+				dma-coherent;
 				status = "okay";
 			};
 
