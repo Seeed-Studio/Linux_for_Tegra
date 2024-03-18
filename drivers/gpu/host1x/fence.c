@@ -11,6 +11,10 @@
 #include <linux/slab.h>
 #include <linux/sync_file.h>
 
+#include <soc/tegra/fuse.h>
+#include <soc/tegra/fuse-helper.h>
+
+#include "dev.h"
 #include "fence.h"
 #include "intr.h"
 #include "syncpt.h"
@@ -134,6 +138,12 @@ struct dma_fence *host1x_fence_create(struct host1x_syncpt *sp, u32 threshold,
 				      bool timeout)
 {
 	struct host1x_syncpt_fence *fence;
+
+	if (!tegra_platform_is_silicon() /*!tegra_is_silicon()*/) {
+		dev_info_once(sp->host->dev,
+			"fence timeout disabled due to pre-silicon platform\n");
+		timeout = false;
+	}
 
 	fence = kzalloc(sizeof(*fence), GFP_KERNEL);
 	if (!fence)
