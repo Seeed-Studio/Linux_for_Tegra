@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2021-2024, NVIDIA CORPORATION. All rights reserved.
 
 # This file consists of 4 sections
 # Section 1: This section is for doing prerequisite check.
@@ -55,14 +55,6 @@ NVMAP_CONFIG_PAGE_POOL_DEBUG := n
 
 # Config for page pool size in pages
 NVMAP_CONFIG_PAGE_POOL_SIZE := 0x0
-
-# Config to enable page coloring
-# Page coloring rearranges the pages allocated based on the color
-# of the page. It can improve memory access performance.
-# The coloring option enable can optionally overallocate a portion of
-# reqeusted allcoation size to improve the probabilty of better
-# page coloring. If unsure, say Y.
-NVMAP_CONFIG_COLOR_PAGES := y
 
 # Config for FD number to start allocation from
 # NvMap handles are represented with FD's in the user processes.
@@ -140,7 +132,6 @@ endif
 NVMAP_CONFIG_SCIIPC := y
 # For OOT build
 NVMAP_CONFIG_UPSTREAM_KERNEL := y
-NVMAP_CONFIG_COLOR_PAGES := n
 endif
 ifeq ($(CONFIG_DMABUF_DEFERRED_UNMAPPING),y)
 NVMAP_CONFIG_DMABUF_DEFERRED_UNMAPPING := y
@@ -169,13 +160,6 @@ ifdef NVMAP_CONFIG_PAGE_POOL_SIZE
 ccflags-y += -DNVMAP_CONFIG_PAGE_POOL_SIZE=${NVMAP_CONFIG_PAGE_POOL_SIZE}
 endif #NVMAP_CONFIG_PAGE_POOL_SIZE
 endif #NVMAP_CONFIG_PAGE_POOLS
-
-# NVMAP_CONFIG_COLOR_PAGES depends upon CONFIG_ARM64_4K_PAGES
-ifeq ($(CONFIG_ARM64_4K_PAGES),y)
-ifeq ($(NVMAP_CONFIG_COLOR_PAGES),y)
-ccflags-y += -DNVMAP_CONFIG_COLOR_PAGES
-endif #CONFIG_ARM64_4K_PAGES
-endif #NVMAP_CONFIG_COLOR_PAGES
 
 ifdef NVMAP_CONFIG_FD_START
 ccflags-y += -DNVMAP_CONFIG_FD_START=${NVMAP_CONFIG_FD_START}

@@ -1360,10 +1360,9 @@ int nvmap_ioctl_handle_from_sci_ipc_id(struct file *filp, void __user *arg)
 
 /*
  * This function calculates allocatable free memory using following formula:
- * free_mem = avail mem - cma free - (avail mem - cma free) / 16
+ * free_mem = avail mem - cma free
  * The CMA memory is not allocatable by NvMap for regular allocations and it
  * is part of Available memory reported, so subtract it from available memory.
- * NvMap allocates 1/16 extra memory in page coloring, so subtract it as well.
  */
 int system_heap_free_mem(unsigned long *mem_val)
 {
@@ -1383,9 +1382,6 @@ int system_heap_free_mem(unsigned long *mem_val)
 		return 0;
 	}
 	free_mem = (available_mem << PAGE_SHIFT) - cma_free;
-#ifdef NVMAP_CONFIG_COLOR_PAGES
-	free_mem = free_mem - (free_mem >> 4);
-#endif /* NVMAP_CONFIG_COLOR_PAGES */
 	*mem_val = free_mem;
 	return 0;
 }
