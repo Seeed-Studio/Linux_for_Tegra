@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved. */
+/* Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved. */
 /*
  * hawk_owl_mode_tbls.h - ar0234 sensor mode tables
  */
@@ -530,6 +530,7 @@ static struct index_reg_8 ar0234_Hawk_TripleLink_Dser_Ser[] = {
 	{0x98, 0x0311, 0x21}, // Pipe X pulls data from port A, pipe Y from port B
 	{0x98, 0x0316, 0x6b}, // RAW10 to pipe Y
 	{0x98, 0x0314, 0x6b}, // RAW10 to pipe Y
+	{0x52, 0x00F4, 0x3f}, // Enable video pipe 0,1,2,3,4,5
 
 	/*Tuned params to fix streaming issues */
 	{0x52, 0x00F0, 0x10}, // Link A ID 0 to pipe 0 // Link A ID 1 to pipe 1
