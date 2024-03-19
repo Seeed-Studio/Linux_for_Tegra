@@ -2921,11 +2921,16 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 		if (IS_ERR(pmc->wake))
 			return PTR_ERR(pmc->wake);
 
+		/* "aotag" is an optional aperture */
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"aotag");
-		pmc->aotag = devm_ioremap_resource(&pdev->dev, res);
-		if (IS_ERR(pmc->aotag))
-			return PTR_ERR(pmc->aotag);
+		if (res) {
+			pmc->aotag = devm_ioremap_resource(&pdev->dev, res);
+			if (IS_ERR(pmc->aotag))
+				return PTR_ERR(pmc->aotag);
+		} else {
+			pmc->aotag = NULL;
+		}
 
 		/* "scratch" is an optional aperture */
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
