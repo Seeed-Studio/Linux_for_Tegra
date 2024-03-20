@@ -370,7 +370,7 @@ static void tsc_timer_callback(struct timer_list *t)
 	 */
 	if (!(tsc_lock_status & BIT(TSC_LOCKED_STATUS_BIT_OFFSET))) {
 		uint32_t lock_control;
-		dev_info(pdev_data->dev, "tsc_lock_stat:%x\n", tsc_lock_status);
+		dev_dbg(pdev_data->dev, "tsc_lock_stat:0x%x\n", tsc_lock_status);
 		/* Write 1 to TSC_LOCKING_STATUS_0.ALIGNED to clear it */
 		writel(tsc_lock_status | BIT(TSC_ALIGNED_STATUS_BIT_OFFSET),
 			pdev_data->tsc_reg_map_base + TSC_LOCKING_STATUS_OFFSET);
