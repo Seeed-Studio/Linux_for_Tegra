@@ -42,6 +42,43 @@
 			      <0x0 0x0010f000 0x0 0x1000>;
 		};
 
+		tegra_ufs: ufshci@a80b8d0000 {
+			compatible = "tegra264,ufs_variant",
+				     "tegra234,ufs_variant";
+			status = "disabled";
+
+			reg = <0xa8 0x0b8d0000 0x0 0x10000>,
+			      <0xa8 0x0b8e0000 0x0 0x8000>,
+			      <0xa8 0x0b8e8000 0x0 0x8000>,
+			      <0xa8 0x0b8f0000 0x0 0x10000>,
+			      <0xa8 0x0b910000 0x0 0x10000>,
+			      <0xa8 0x0b920000 0x0 0x10000>;
+			interrupts = <GIC_SPI 951 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu1_mmu TEGRA_SID_UFS>;
+			dma-coherent;
+			clocks = <&bpmp TEGRA264_CLK_UFSHC_CG_SYS>;
+			clock-names = "ufshc";
+			resets = <&bpmp TEGRA264_RESET_UFSHC>,
+				 <&bpmp TEGRA264_RESET_UFSHC_AXI_M>,
+				 <&bpmp TEGRA264_RESET_UFSHC_LP_SEQ>;
+			reset-names = "ufs-rst", "ufs-axi-m-rst",
+				      "ufshc-lp-rst";
+			nvidia,enable-x2-config;
+			nvidia,mask-fast-auto-mode;
+			nvidia,enable-hs-mode;
+			nvidia,max-hs-gear = <4>;
+			nvidia,max-pwm-gear = <0>;
+			vcc-max-microamp = <0>;
+			vccq-max-microamp = <0>;
+			vccq2-max-microamp = <0>;
+			nvidia,configure-uphy-pll3;
+
+			ufs_variant {
+				compatible = "tegra264,ufs_variant",
+					     "tegra234,ufs_variant";
+			};
+		};
+
 		gpcdma: dma-controller@8400000 {
 			compatible = "nvidia,tegra264-gpcdma",
 				     "nvidia,tegra234-gpcdma";
@@ -86,6 +123,48 @@
 			nvidia,start-dma-channel-index = <1>;
 			dma-channels = <31>;
 			dma-channel-mask = <0xfffffffe>;
+		};
+
+		top_hsp0: tegra-hsp@8800000 {
+			compatible = "nvidia,tegra264-hsp",
+				     "nvidia,tegra234-hsp",
+				     "nvidia,tegra186-hsp";
+			status = "disabled";
+
+			reg = <0x0 0x08800000 0x0 0xd0000>;
+			interrupts =	<GIC_SPI 620 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 622 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 623 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 624 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 625 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 626 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 627 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 628 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 629 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "doorbell", "shared0", "shared1", "shared2",
+					  "shared3","shared4", "shared5", "shared6", "shared7";
+			#mbox-cells = <2>;
+			nvidia,mbox-ie;
+		};
+
+		top_hsp2: tegra-hsp@8c00000 {
+			compatible = "nvidia,tegra264-hsp",
+				     "nvidia,tegra234-hsp",
+				     "nvidia,tegra186-hsp";
+			status = "disabled";
+
+			reg = <0x0 0x08c00000 0x0 0xc0000>;
+			interrupts =	<GIC_SPI 654 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 655 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 656 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 657 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 658 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 659 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 660 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 661 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "shared0", "shared1", "shared2", "shared3",
+					  "shared4", "shared5", "shared6", "shared7";
+			#mbox-cells = <2>;
 		};
 
 		aon: aon@c100000 {
@@ -762,6 +841,38 @@
 			capture-window-length = <2>;
 			disable-clk-gate;
 		};
+
+		rce_hsp0: tegra-hsp@8189100000 {
+			compatible = "nvidia,tegra264-hsp",
+				     "nvidia,tegra234-hsp",
+				     "nvidia,tegra186-hsp";
+			status = "disabled";
+
+			reg = <0x81 0x89100000 0x0 0xc0000>;
+			interrupts =	<GIC_SPI 415 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 417 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 418 IRQ_TYPE_LEVEL_HIGH>;
+			nvidia,mbox-ie;
+			#mbox-cells = <2>;
+			interrupt-names = "shared1", "shared2", "shared3", "shared4";
+		};
+
+		rce_hsp1: tegra-hsp@8189200000 {
+			compatible = "nvidia,tegra264-hsp",
+				     "nvidia,tegra234-hsp",
+				     "nvidia,tegra186-hsp";
+			status = "disabled";
+
+			reg = <0x81 0x89200000 0x0 0xc0000>;
+			interrupts =	<GIC_SPI 419 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 420 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 421 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>;
+			nvidia,mbox-ie;
+			#mbox-cells = <2>;
+			interrupt-names = "shared1", "shared2", "shared3", "shared4";
+		};
 	};
 
 	cpus {
@@ -1291,9 +1402,7 @@
 			     "nvidia,tegra186-bpmp";
 		status = "disabled";
 
-		/* FIX mbox references and enable below */
-		//mboxes = <&SOC_TOP0_HSP_LABEL TEGRA_HSP_MBOX_TYPE_DB
-		//		   TEGRA_HSP_DB_MASTER_BPMP>;
+		mboxes = <&top_hsp0 TEGRA_HSP_MBOX_TYPE_DB TEGRA_HSP_DB_MASTER_BPMP>;
 		memory-region = <&dram_cpu_bpmp_mail>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
