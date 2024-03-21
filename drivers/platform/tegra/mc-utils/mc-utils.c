@@ -190,7 +190,7 @@ static int __init tegra_mc_utils_init_t26x(void)
 	void __iomem *mcb_base;
 	u64 mcb_base_reg = 0x8108020000;
 	u64 mcb_size_reg = 0x20000;
-	u32 mc_emem_adr_cfg_channel_enable_0_reg = 0xbe04;
+	u32 mc_emem_adr_cfg_channel_enable_0_reg = 0x8870;
 	u32 channel_mask = 0xffffffff;
 
 	if (!is_tegra_hypervisor_mode()) {
