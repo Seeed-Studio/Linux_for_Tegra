@@ -764,6 +764,527 @@
 		};
 	};
 
+	cpus {
+		#address-cells = <2>;
+	        #size-cells = <2>;
+
+		cpu_0: cpu@0 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x0>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd0>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_0>;
+		};
+
+		cpu_1: cpu@1 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x10000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd1>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_1>;
+		};
+
+		cpu_2: cpu@2 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x20000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd2>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_2>;
+		};
+
+		cpu_3: cpu@3 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x30000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd3>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_3>;
+		};
+
+		cpu_4: cpu@4 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x40000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd4>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_4>;
+		};
+
+		cpu_5: cpu@5 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x50000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd5>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_5>;
+		};
+
+		cpu_6: cpu@6 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x60000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd6>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_6>;
+		};
+
+		cpu_7: cpu@7 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x70000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd7>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_7>;
+		};
+
+		cpu_8: cpu@8 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x80000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd8>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_8>;
+		};
+
+		cpu_9: cpu@9 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0x90000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd9>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_9>;
+		};
+
+		cpu_10: cpu@10 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0xa0000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd10>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_10>;
+		};
+
+		cpu_11: cpu@11 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0xb0000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd11>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_11>;
+		};
+
+		cpu_12: cpu@12 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0xc0000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd12>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_12>;
+		};
+
+		cpu_13: cpu@13 {
+			compatible = "arm,armv8",
+				     "arm,cortex-a78";
+			status = "disabled";
+
+			device_type = "cpu";
+			reg = <0x0 0xd0000>;
+
+			enable-method = "psci";
+			power-domains = <&cluster_pd13>;
+			power-domain-names = "psci";
+			i-cache-size = <65536>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			next-level-cache = <&l2c_13>;
+		};
+
+		l2c_0: l2-cache-0 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_1: l2-cache-1 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_2: l2-cache-2 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_3: l2-cache-3 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_4: l2-cache-4 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_5: l2-cache-5 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_6: l2-cache-6 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_7: l2-cache-7 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_8: l2-cache-8 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_9: l2-cache-9 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_10: l2-cache-10 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_11: l2-cache-11 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_12: l2-cache-12 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+		l2c_13: l2-cache-13 {
+			compatible = "cache";
+			cache-level = <2>;
+			cache-size = <1048576>;
+			cache-line-size = <64>;
+			cache-sets = <2048>;
+			cache-unified;
+		};
+
+	        idle-states {
+	            cc7: cc7 {
+	                compatible = "arm,idle-state";
+	                state-name = "Cluster Powergate";
+	                entry-latency-us = <5000>;
+			exit-latency-us = <5000>;
+			min-residency-us = <25000>;
+			arm,psci-suspend-param= <0x40000007>;
+			status = "disabled";
+	            };
+	        };
+
+	        domain-idle-states {
+			cr7: cr7 {
+				compatible = "domain-idle-state";
+				state-name = "SoC Railgate";
+				entry-latency-us = <0xFFFFFFFF>;
+				exit-latency-us = <0xFFFFFFFF>;
+				min-residency-us = <0xFFFFFFFF>;
+				arm,psci-suspend-param= <0x40000008>;
+				status = "disabled";
+			};
+		};
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&cpu_0>;
+				};
+			};
+
+			cluster1 {
+				core0 {
+					cpu = <&cpu_1>;
+				};
+			};
+
+			cluster2 {
+				core0 {
+					cpu = <&cpu_2>;
+				};
+			};
+
+			cluster3 {
+				core0 {
+					cpu = <&cpu_3>;
+				};
+			};
+
+			cluster4 {
+				core0 {
+					cpu = <&cpu_4>;
+				};
+			};
+
+			cluster5 {
+				core0 {
+					cpu = <&cpu_5>;
+				};
+			};
+
+			cluster6 {
+				core0 {
+					cpu = <&cpu_6>;
+				};
+			};
+
+			cluster7 {
+				core0 {
+					cpu = <&cpu_7>;
+				};
+			};
+
+			cluster8 {
+				core0 {
+					cpu = <&cpu_8>;
+				};
+			};
+
+			cluster9 {
+				core0 {
+					cpu = <&cpu_9>;
+				};
+			};
+
+			cluster10 {
+				core0 {
+					cpu = <&cpu_10>;
+				};
+			};
+
+			cluster11 {
+				core0 {
+					cpu = <&cpu_11>;
+				};
+			};
+
+			cluster12 {
+				core0 {
+					cpu = <&cpu_12>;
+				};
+			};
+
+			cluster13 {
+				core0 {
+					cpu = <&cpu_13>;
+				};
+			};
+		};
+	};
+
 	bpmp: bpmp {
 		compatible = "nvidia,tegra264-bpmp",
 			     "nvidia,tegra234-bpmp",
@@ -845,6 +1366,95 @@
 		status = "disabled";
 
 		method = "smc";
+
+		cluster_pd0: power-domain-cluster0 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd1: power-domain-cluster1 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd2: power-domain-cluster2 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd3: power-domain-cluster3 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd4: power-domain-cluster4 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd5: power-domain-cluster5 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd6: power-domain-cluster6 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd7: power-domain-cluster7 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd8: power-domain-cluster8 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd9: power-domain-cluster9 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd10: power-domain-cluster10 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd11: power-domain-cluster11 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd12: power-domain-cluster12 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		cluster_pd13: power-domain-cluster13 {
+			#power-domain-cells = <0>;
+			power-domains = <&ccplex_pd0>;
+			domain-idle-states = <&cc7>;
+		};
+
+		ccplex_pd0: power-domain-cpu-complex0 {
+			#power-domain-cells = <0>;
+			domain-idle-states = <&cr7>;
+		};
 	};
 
 	reserved-memory {
