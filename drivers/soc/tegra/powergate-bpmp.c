@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -305,7 +305,11 @@ static void tegra_bpmp_remove_powergates(struct tegra_bpmp *bpmp)
 }
 
 static struct generic_pm_domain *
+#if defined(NV_GENDPD_XLATE_T_HAS_CONST_OF_PHANDLE_ARGS)
+tegra_powergate_xlate(const struct of_phandle_args *spec, void *data)
+#else
 tegra_powergate_xlate(struct of_phandle_args *spec, void *data)
+#endif
 {
 	struct generic_pm_domain *domain = ERR_PTR(-ENOENT);
 	struct genpd_onecell_data *genpd = data;

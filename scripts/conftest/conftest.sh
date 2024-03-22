@@ -7075,6 +7075,26 @@ compile_test() {
                     "NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS" "" "types"
         ;;
 
+        genpd_xlate_t_has_const_of_phandle_args)
+            #
+            # Determine if genpd_xlate_t function pointer has a
+            # 'const struct of_phandle_args' argument.
+            #
+            # Commit 4d0824608a63 ("pmdomain: core: constify of_phandle_args in xlate")
+            # updated the typedef of genpd_xlate_t to make of_phandle_args argument const.
+            #
+            CODE="
+            #include <linux/pm_domain.h>
+            void conftest_genpd_xlate_t_has_const_of_phandle_args(struct genpd_onecell_data *gpd,
+                                                                 const struct of_phandle_args *args,
+                                                                 void *data)
+            {
+                gpd->xlate(args, data);
+            }"
+
+            compile_check_conftest "$CODE" "NV_GENDPD_XLATE_T_HAS_CONST_OF_PHANDLE_ARGS" "" "types"
+        ;;
+
         netif_set_tso_max_size)
             #
             # Determine if netif_set_tso_max_size() function is present
