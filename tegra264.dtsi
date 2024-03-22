@@ -214,6 +214,16 @@
 			current-speed = <115200>;
 		};
 
+		uart0: serial@c5f0000 {
+		       compatible = "arm,sbsa-uart","arm,pl011";
+		       status = "disabled";
+
+		       reg = <0x0 0xc5f0000 0x0 0x10000>;
+		       reg-io-width = <0x4>;
+		       interrupts = <GIC_SPI 514 IRQ_TYPE_LEVEL_HIGH>;
+		       current-speed = <0x1c200>;
+		};
+
 		pwm4: pwm@c6a0000 {
 			compatible = "nvidia,tegra264-pwm";
 			status = "disabled";
@@ -824,6 +834,38 @@
 				<0xa8 0x082e0000 0x0 0x1000>,
 				<0xa8 0x082e2000 0x0 0x1000>,
 				<0xa8 0x082e3000 0x0 0x1000>;
+		};
+
+		sdmmc1: sdhci@810c570000 {
+			compatible = "nvidia,tegra264-sdhci", "nvidia,tegra194-sdhci";
+			status = "disabled";
+
+			reg = <0x81 0xc570000 0x00 0x10000>;
+			interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
+			sd-uhs-sdr104;
+			sd-uhs-sdr50;
+			sd-uhs-sdr25;
+			sd-uhs-sdr12;
+			mmc-hs200-1_8v;
+			iommus= <&smmu2_mmu TEGRA_SID_SDMMC0>;
+			dma-coherent;
+			nvidia,pad-autocal-pull-up-offset-3v3-timeout = <0x07>;
+			nvidia,pad-autocal-pull-down-offset-3v3-timeout = <0x07>;
+			nvidia,pad-autocal-pull-up-offset-1v8-timeout = <0x06>;
+			nvidia,pad-autocal-pull-down-offset-1v8-timeout = <0x07>;
+			nvidia,pad-autocal-pull-up-offset-sdr104 = <0x00>;
+			nvidia,pad-autocal-pull-down-offset-sdr104 = <0x00>;
+			nvidia,default-tap = <14>;
+			nvidia,default-trim = <0x8>;
+			assigned-clocks = <&bpmp TEGRA264_CLK_SDMMC1>,
+					  <&bpmp TEGRA264_CLK_PLLC4_MUXED>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLC4_MUXED>,
+						 <&bpmp TEGRA264_CLK_PLLC4_OUT0>;
+			resets = <&bpmp TEGRA264_RESET_SDMMC1>;
+			reset-names = "sdhci";
+			clocks = <&bpmp TEGRA264_CLK_SDMMC1>,
+				<&bpmp TEGRA264_CLK_SDMMC_LEGACY_TM>;
+			clock-names = "sdhci", "tmclk";
 		};
 
 		tachometer@810c5c0000 {
