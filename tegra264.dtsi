@@ -462,6 +462,62 @@
 			reset-names = "pwm";
 		};
 
+		spi@810c590000 {
+			compatible = "nvidia,tegra210-spi";
+			status = "disabled";
+			reg = <0x81 0x0c590000 0x0 0x10000>;
+			interrupts = <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>;
+			dma-coherent;
+			dma-names = "rx", "tx";
+			dmas = <&gpcdma 9>, <&gpcdma 9>;
+			iommus = <&smmu1_mmu TEGRA_SID_GPCDMA>;
+			clocks = <&bpmp TEGRA264_CLK_SPI1>,
+				<&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "spi";
+			assigned-clocks = <&bpmp TEGRA264_CLK_SPI1>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			resets = <&bpmp TEGRA264_RESET_SPI1>;
+			reset-names = "spi";
+		};
+
+		spi@810c440000 {
+			compatible = "nvidia,tegra210-spi";
+			status = "disabled";
+			reg = <0x81 0x0c440000 0x0 0x10000>;
+			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
+			dma-coherent;
+			dma-names = "rx", "tx";
+			dmas = <&gpcdma 14>, <&gpcdma 14>;
+			iommus = <&smmu1_mmu TEGRA_SID_GPCDMA>;
+			clocks = <&bpmp TEGRA264_CLK_SPI3>,
+				  <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "spi";
+			assigned-clocks = <&bpmp TEGRA264_CLK_SPI3>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			resets = <&bpmp TEGRA264_RESET_SPI3>;
+			reset-names = "spi";
+		};
+
+		spi@810c5b0000 {
+			compatible = "nvidia,tegra234-qspi";
+			status = "disabled";
+			reg = <0x81 0x0c5b0000 0x0 0x10000>;
+			interrupts = <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu2_mmu TEGRA_SID_XSPI0>;
+			dma-coherent;
+			dma-names = "rx", "tx";
+			nvidia,clk-parents = "pllc0", "pll_p";
+			clocks = <&bpmp TEGRA264_CLK_QSPI0_2X_PM>,
+				  <&bpmp TEGRA264_CLK_QSPI0>,
+				  <&bpmp TEGRA264_CLK_PLLC0>,
+				  <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "qspi", "qspi_out", "pllc0", "pll_p";
+			resets = <&bpmp TEGRA264_RESET_QSPI0>;
+			assigned-clocks = <&bpmp  TEGRA264_CLK_QSPI0>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLC0>;
+			reset-names = "qspi";
+		};
+
 		ccplex@8120000000 {
 			compatible = "nvidia,tegra264-ccplex-cluster",
 				     "nvidia,tegra234-ccplex-cluster";
