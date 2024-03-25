@@ -3305,10 +3305,10 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 			}
 
 			size = min(len, max_data_len_per_txd);
-			page_idx = (frag->bv_offset + offset) >> PAGE_SHIFT;
-			page_offset = (frag->bv_offset + offset) & ~PAGE_MASK;
+			page_idx = (skb_frag_off(frag) + offset) >> PAGE_SHIFT;
+			page_offset = (skb_frag_off(frag) + offset) & ~PAGE_MASK;
 			tx_swcx->buf_phy_addr = dma_map_page(dev,
-						(frag->bv_page + page_idx),
+						(skb_frag_page(frag) + page_idx),
 						page_offset, size,
 						DMA_TO_DEVICE);
 			if (unlikely(dma_mapping_error(dev,
