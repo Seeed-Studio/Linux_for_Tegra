@@ -881,10 +881,13 @@ void nvmap_remove_device_name(char *device_name, u32 heap_type);
 bool dmabuf_is_nvmap(struct dma_buf *dmabuf);
 struct nvmap_handle *nvmap_handle_get_from_id(struct nvmap_client *client,
 		u32 id);
+
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
 void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 					dma_addr_t device_addr, size_t size);
 void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
 					 dma_addr_t device_addr, size_t size);
+#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 extern void __dma_flush_area(const void *cpu_va, size_t size);
 extern void __dma_map_area(const void *cpu_va, size_t size, int dir);

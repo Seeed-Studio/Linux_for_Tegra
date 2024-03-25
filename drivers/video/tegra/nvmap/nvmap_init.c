@@ -580,6 +580,7 @@ void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 }
 EXPORT_SYMBOL(nvmap_dma_free_attrs);
 
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
 void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 					dma_addr_t device_addr, size_t size)
 {
@@ -631,6 +632,7 @@ void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
 	bitmap_clear(mem->bitmap, pos, alloc_size);
 	spin_unlock_irqrestore(&mem->spinlock, flags);
 }
+#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 void nvmap_dma_release_coherent_memory(struct dma_coherent_mem_replica *mem)
 {
