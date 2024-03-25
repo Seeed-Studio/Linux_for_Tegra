@@ -1419,9 +1419,6 @@ int __init nvmap_probe(struct platform_device *pdev)
 	}
 	nvmap_dev->dynamic_dma_map_mask = ~0U;
 	nvmap_dev->cpu_access_mask = ~0U;
-#ifdef NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC
-	nvmap_dev->co_cache_flush_at_alloc = true;
-#endif /* NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */
 	if (plat)
 		for (i = 0; i < plat->nr_carveouts; i++)
 			nvmap_create_carveout(&plat->carveouts[i]);

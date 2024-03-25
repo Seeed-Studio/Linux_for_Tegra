@@ -279,47 +279,44 @@ static void alloc_handle(struct nvmap_client *client,
 			mb();
 			h->alloc = true;
 
-			if (nvmap_dev->co_cache_flush_at_alloc) {
-				/* Clear the allocated buffer */
-				if (nvmap_cpu_map_is_allowed(h)) {
-					void *cpu_addr;
-
-					if (h->pgalloc.pages &&
-					    h->heap_type == NVMAP_HEAP_CARVEOUT_GPU) {
-						unsigned long page_count;
-						u32 granule_size = 0;
-						int i;
-						struct list_block *lb;
-
-						lb = container_of(b, struct list_block, block);
-						granule_size = lb->heap->granule_size;
-						page_count = h->size >> PAGE_SHIFT;
-						/* Iterate over granules */
-						for (i = 0; i < page_count;
-							i += PAGES_PER_GRANULE(granule_size)) {
-							cpu_addr = memremap(page_to_phys(
-									    h->pgalloc.pages[i]),
-									    granule_size,
-									    MEMREMAP_WB);
-							if (cpu_addr != NULL) {
-								memset(cpu_addr, 0, granule_size);
-								arch_invalidate_pmem(cpu_addr,
-										     granule_size);
-								memunmap(cpu_addr);
-							}
-
-						}
-					} else {
-						cpu_addr = memremap(b->base, h->size,
-								MEMREMAP_WB);
+#ifdef NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC
+			/* Clear the allocated buffer */
+			if (nvmap_cpu_map_is_allowed(h)) {
+				void *cpu_addr;
+				if (h->pgalloc.pages &&
+				    h->heap_type == NVMAP_HEAP_CARVEOUT_GPU) {
+					unsigned long page_count;
+					u32 granule_size = 0;
+					int i;
+					struct list_block *lb;
+					lb = container_of(b, struct list_block, block);
+					granule_size = lb->heap->granule_size;
+					page_count = h->size >> PAGE_SHIFT;
+					/* Iterate over granules */
+					for (i = 0; i < page_count;
+						i += PAGES_PER_GRANULE(granule_size)) {
+						cpu_addr = memremap(page_to_phys(
+								    h->pgalloc.pages[i]),
+								    granule_size,
+								    MEMREMAP_WB);
 						if (cpu_addr != NULL) {
-							memset(cpu_addr, 0, h->size);
-							arch_invalidate_pmem(cpu_addr, h->size);
+							memset(cpu_addr, 0, granule_size);
+							arch_invalidate_pmem(cpu_addr,
+									     granule_size);
 							memunmap(cpu_addr);
 						}
 					}
+				} else {
+					cpu_addr = memremap(b->base, h->size,
+							MEMREMAP_WB);
+					if (cpu_addr != NULL) {
+						memset(cpu_addr, 0, h->size);
+						arch_invalidate_pmem(cpu_addr, h->size);
+						memunmap(cpu_addr);
+					}
 				}
 			}
+#endif /* NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */
 			return;
 		}
 		ret = nvmap_heap_pgalloc(client, h, type);

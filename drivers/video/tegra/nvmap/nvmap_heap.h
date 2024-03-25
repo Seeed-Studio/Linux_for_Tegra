@@ -82,8 +82,10 @@ int __init nvmap_heap_init(void);
 
 void nvmap_heap_deinit(void);
 
+#ifndef NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC
 int nvmap_flush_heap_block(struct nvmap_client *client,
 	struct nvmap_heap_block *block, size_t len, unsigned int prot);
+#endif /* !NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */
 
 void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap);
 

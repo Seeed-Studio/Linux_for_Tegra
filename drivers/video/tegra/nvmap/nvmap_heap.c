@@ -381,13 +381,13 @@ void nvmap_heap_free(struct nvmap_heap_block *b)
 	mutex_lock(&h->lock);
 
 	lb = container_of(b, struct list_block, block);
-	if (!nvmap_dev->co_cache_flush_at_alloc) {
-		/*
-		 * For carveouts, if cache flush is done at buffer allocation time
-		 * then no need to do it during buffer release time.
-		 */
-		nvmap_flush_heap_block(NULL, b, lb->size, lb->mem_prot);
-	}
+#ifndef NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC
+	/*
+	 * For carveouts, if cache flush is done at buffer allocation time
+	 * then no need to do it during buffer release time.
+	 */
+	nvmap_flush_heap_block(NULL, b, lb->size, lb->mem_prot);
+#endif /* !NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */
 	do_heap_free(b);
 	/*
 	 * If this HEAP has pm_ops defined and powering off the
@@ -476,18 +476,18 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 	h->device_names = RB_ROOT;
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
-	if (!nvmap_dev->co_cache_flush_at_alloc) {
-		/*
-		 * For carveouts, if cache flush is done at buffer allocation time
-		 * then no need to do it during carveout creation time.
-		 */
-		if (!co->no_cpu_access && co->usage_mask != NVMAP_HEAP_CARVEOUT_VPR
-			&& nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
-					base, base + len, true, true)) {
-			pr_err("cache flush failed\n");
-			goto fail;
-		}
+#ifndef NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC
+	/*
+	 * For carveouts, if cache flush is done at buffer allocation time
+	 * then no need to do it during carveout creation time.
+	 */
+	if (!co->no_cpu_access && co->usage_mask != NVMAP_HEAP_CARVEOUT_VPR
+		&& nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
+				base, base + len, true, true)) {
+		pr_err("cache flush failed\n");
+		goto fail;
 	}
+#endif /* !NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */
 	wmb();
 
 	if (co->disable_dynamic_dma_map)
@@ -552,7 +552,7 @@ void nvmap_heap_deinit(void)
 
 	heap_block_cache = NULL;
 }
-
+#ifndef NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC
 /*
  * This routine is used to flush the carveout memory from cache.
  * Why cache flush is needed for carveout? Consider the case, where a piece of
@@ -575,7 +575,7 @@ void nvmap_heap_deinit(void)
  * if they were allocated as uncached/writecombined, no cache flush is needed.
  * Just draining store buffers is enough.
  */
-int nvmap_flush_heap_block(struct nvmap_client *client,
+static int nvmap_flush_heap_block(struct nvmap_client *client,
 	struct nvmap_heap_block *block, size_t len, unsigned int prot)
 {
 	phys_addr_t phys = block->base;
@@ -614,3 +614,4 @@ out:
 	wmb();
 	return ret;
 }
+#endif /* !NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */

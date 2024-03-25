@@ -381,8 +381,6 @@ struct nvmap_device {
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 	struct rb_root device_names;
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
-	/* Perform cache flush at buffer allocation from carveout */
-	bool co_cache_flush_at_alloc;
 	u64 serial_id_counter; /* This is global counter common across different client processes */
 };
 
