@@ -75,11 +75,14 @@ static int ofa_boot(struct ofa *ofa)
 	int err;
 	u32 val;
 
-	ofa_writel(ofa, 0x1, OFA_SAFETY_RAM_INIT_REQ);
-	err = readl_poll_timeout(ofa->regs + OFA_SAFETY_RAM_INIT_DONE, val, (val == 1), 100000, 10);
-	if (err < 0) {
-		dev_err(ofa->dev, "timeout while initializing safety RAM\n");
-		return err;
+	if (ofa->config->has_safety_ram) {
+		ofa_writel(ofa, 0x1, OFA_SAFETY_RAM_INIT_REQ);
+		err = readl_poll_timeout(ofa->regs + OFA_SAFETY_RAM_INIT_DONE, val, (val == 1),
+					 100000, 10);
+		if (err < 0) {
+			dev_err(ofa->dev, "timeout while initializing safety RAM\n");
+			return err;
+		}
 	}
 
 	tegra_drm_program_iommu_regs(ofa->dev, ofa->regs, OFA_TFBIF_TRANSCFG);
