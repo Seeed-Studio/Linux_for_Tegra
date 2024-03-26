@@ -7079,22 +7079,50 @@ compile_test() {
 
         gpio_device_find)
             #
-            # Determine if function gpio_device_find() present.
+            # Determine if function gpio_device_find() present and if it is
+            # present, then determine if the function pointer passed to this
+            # has a const data argument.
             #
             # The function gpio_device_find() was add by commit cfe102f63308
             # ("gpiolib: provide gpio_device_find()") in Linux v6.7 replacing
             # the legacy and broken gpiochip_find(), which has since been
             # removed.
             #
-            CODE="
+            # Commit faf6efd2e5e2 ("gpio: constify opaque pointer in
+            # gpio_device_find() match function") updated the data argument in
+            # the match function pointer to be const in Linux v6.9.
+            #
+            echo "$CONFTEST_PREAMBLE
             #include <linux/gpio/driver.h>
             void conftest_gpio_device_find(void)
             {
                 gpio_device_find();
-            }
-            "
+            }" > conftest$$.c
 
-            compile_check_conftest "$CODE" "NV_GPIO_DEVICE_FIND_PRESENT" "" "functions"
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                # gpio_find_device() is not present
+                echo "#undef NV_GPIO_DEVICE_FIND_PRESENT" | append_conftest "functions"
+                echo "#undef NV_GPIO_DEVICE_FIND_HAS_CONST_DATA_ARG" | append_conftest "types"
+                rm -f conftest$$.o
+            else
+                # gpio_find_device() is present and now check
+                # the type for the function pointer data argument
+                echo "#define NV_GPIO_DEVICE_FIND_PRESENT" | append_conftest "functions"
+
+                CODE="
+                #include <linux/gpio/driver.h>
+                void conftest_gpio_device_find(void *data,
+                                           int (*match)(struct gpio_chip *gc,
+                                           const void *data))
+                {
+                    gpio_device_find(data, match);
+                }"
+
+                compile_check_conftest "$CODE" "NV_GPIO_DEVICE_FIND_HAS_CONST_DATA_ARG" "" "types"
+            fi
         ;;
 
         netif_set_tso_max_size)

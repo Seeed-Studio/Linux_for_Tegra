@@ -33,7 +33,11 @@ static int of_isc_gpio_pdata(struct platform_device *pdev,
 	return err;
 }
 
+#if defined(NV_GPIO_DEVICE_FIND_HAS_CONST_DATA_ARG) /* Linux v6.9 */
+static int isc_gpio_chip_match(struct gpio_chip *chip, const void *data)
+#else
 static int isc_gpio_chip_match(struct gpio_chip *chip, void *data)
+#endif
 {
 	return !strcmp(chip->label, data);
 }
