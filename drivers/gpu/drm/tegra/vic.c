@@ -22,7 +22,11 @@
 #include <linux/reset.h>
 #include <linux/version.h>
 
+#include <nvidia/conftest.h>
+
+#include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/pmc.h>
+#include <soc/tegra/tegra-cbb.h>
 
 #include "drm.h"
 #include "falcon.h"
@@ -30,11 +34,14 @@
 #include "vic.h"
 #include "hwpm.h"
 
+#define VIC_SEC_INTF_CRC_CTRL               	0xe000
+
 struct vic_config {
 	const char *firmware;
 	unsigned int version;
 	bool supports_sid;
 	bool supports_timestamping;
+	bool has_crc_enable;
 };
 
 struct vic {
@@ -52,10 +59,30 @@ struct vic {
 	struct icc_path *icc_write;
 
 	bool can_use_context;
+	bool can_enable_crc;
 
 	/* Platform configuration */
 	const struct vic_config *config;
 };
+
+static bool blf_write_allowed(u32 offset)
+{
+	void __iomem *regs = ioremap(0x13a10000 + offset, 12);
+	u32 val;
+
+	val = readl(regs + 0x8);
+	if (!(val & 0x20000)) {
+		iounmap(regs);
+		return true;
+	}
+
+	val = readl(regs + 0x4);
+	iounmap(regs);
+	if (val & BIT(1))
+		return true;
+
+	return false;
+}
 
 static inline struct vic *to_vic(struct tegra_drm_client *client)
 {
@@ -541,6 +568,9 @@ static int __maybe_unused vic_runtime_resume(struct device *dev)
 
 	host1x_actmon_enable(&vic->client.base);
 
+	if (vic->can_enable_crc)
+		vic_writel(vic, 0x1, VIC_SEC_INTF_CRC_CTRL);
+
 	return 0;
 
 assert:
@@ -676,6 +706,7 @@ static const struct vic_config vic_t234_config = {
 	.version = 0x23,
 	.supports_sid = true,
 	.supports_timestamping = true,
+	.has_crc_enable = true,
 };
 
 static const struct of_device_id tegra_vic_of_match[] = {
@@ -777,6 +808,12 @@ static int vic_probe(struct platform_device *pdev)
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to init devfreq: %d\n", err);
 		goto exit_actmon;
+	}
+
+	if (vic->config->has_crc_enable) {
+		vic->can_enable_crc =
+			!tegra_platform_is_silicon() ||
+			blf_write_allowed(0x9500);
 	}
 
 	vic->hwpm.dev = dev;

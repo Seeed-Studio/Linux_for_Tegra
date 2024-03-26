@@ -18,7 +18,11 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 
+#include <nvidia/conftest.h>
+
+#include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/pmc.h>
+#include <soc/tegra/tegra-cbb.h>
 
 #include "drm.h"
 #include "falcon.h"
@@ -32,6 +36,7 @@
 #define OFA_TFBIF_ACTMON_ACTIVE_WEIGHT	0x1454
 #define OFA_SAFETY_RAM_INIT_REQ		0x3320
 #define OFA_SAFETY_RAM_INIT_DONE	0x3324
+#define OFA_SEC_INTF_CRC_CTRL           0xe000
 
 #define OFA_TFBIF_ACTMON_ACTIVE_MASK_STARVED	BIT(0)
 #define OFA_TFBIF_ACTMON_ACTIVE_MASK_STALLED	BIT(1)
@@ -56,9 +61,30 @@ struct ofa {
 	struct devfreq *devfreq;
 	struct devfreq_dev_profile *devfreq_profile;
 
+	bool can_enable_crc;
+
 	/* Platform configuration */
 	const struct ofa_config *config;
 };
+
+static bool blf_write_allowed(u32 offset)
+{
+	void __iomem *regs = ioremap(0x13a10000 + offset, 12);
+	u32 val;
+
+	val = readl(regs + 0x8);
+	if (!(val & 0x20000)) {
+		iounmap(regs);
+		return true;
+	}
+
+	val = readl(regs + 0x4);
+	iounmap(regs);
+	if (val & BIT(1))
+		return true;
+
+	return false;
+}
 
 static inline struct ofa *to_ofa(struct tegra_drm_client *client)
 {
@@ -421,6 +447,9 @@ static __maybe_unused int ofa_runtime_resume(struct device *dev)
 
 	host1x_actmon_enable(&ofa->client.base);
 
+	if (ofa->can_enable_crc)
+		ofa_writel(ofa, 0x1, OFA_SEC_INTF_CRC_CTRL);
+
 	return 0;
 
 disable:
@@ -588,6 +617,10 @@ static int ofa_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to init devfreq: %d\n", err);
 		goto exit_actmon;
 	}
+
+	ofa->can_enable_crc =
+		!tegra_platform_is_silicon() ||
+		(ofa->config == &ofa_t234_config && blf_write_allowed(0x6960));
 
 	ofa->hwpm.dev = dev;
 	ofa->hwpm.regs = ofa->regs;

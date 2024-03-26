@@ -21,7 +21,11 @@
 #include <linux/reset.h>
 #include <linux/version.h>
 
+#include <nvidia/conftest.h>
+
+#include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/pmc.h>
+#include <soc/tegra/tegra-cbb.h>
 
 #include "drm.h"
 #include "falcon.h"
@@ -33,6 +37,7 @@
 #define NVENC_TFBIF_ACTMON_ACTIVE_BORPS		0x1850
 #define NVENC_TFBIF_ACTMON_ACTIVE_WEIGHT	0x1854
 #define NVENC_AXI_RW_BANDWIDTH			512
+#define NVENC_SEC_INTF_CRC_CTRL           	0xe000
 
 #define NVENC_TFBIF_ACTMON_ACTIVE_MASK_STARVED	BIT(0)
 #define NVENC_TFBIF_ACTMON_ACTIVE_MASK_STALLED	BIT(1)
@@ -44,6 +49,7 @@ struct nvenc_config {
 	unsigned int version;
 	bool supports_sid;
 	bool supports_timestamping;
+	bool has_crc_enable;
 	unsigned int num_instances;
 };
 
@@ -60,9 +66,30 @@ struct nvenc {
 	struct devfreq_dev_profile *devfreq_profile;
 	struct icc_path *icc_write;
 
+	bool can_enable_crc;
+
 	/* Platform configuration */
 	const struct nvenc_config *config;
 };
+
+static bool blf_write_allowed(u32 offset)
+{
+	void __iomem *regs = ioremap(0x13a10000 + offset, 12);
+	u32 val;
+
+	val = readl(regs + 0x8);
+	if (!(val & 0x20000)) {
+		iounmap(regs);
+		return true;
+	}
+
+	val = readl(regs + 0x4);
+	iounmap(regs);
+	if (val & BIT(1))
+		return true;
+
+	return false;
+}
 
 static inline struct nvenc *to_nvenc(struct tegra_drm_client *client)
 {
@@ -484,6 +511,9 @@ static __maybe_unused int nvenc_runtime_resume(struct device *dev)
 
 	host1x_actmon_enable(&nvenc->client.base);
 
+	if (nvenc->can_enable_crc)
+		nvenc_writel(nvenc, 0x1, NVENC_SEC_INTF_CRC_CTRL);
+
 	return 0;
 
 disable:
@@ -611,6 +641,7 @@ static const struct nvenc_config nvenc_t234_config = {
 	.supports_sid = true,
 	.supports_timestamping = true,
 	.num_instances = 1,
+	.has_crc_enable = true,
 };
 
 static const struct of_device_id tegra_nvenc_of_match[] = {
@@ -709,6 +740,12 @@ static int nvenc_probe(struct platform_device *pdev)
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to init devfreq: %d\n", err);
 		goto exit_actmon;
+	}
+
+	if (nvenc->config->has_crc_enable) {
+		nvenc->can_enable_crc =
+			!tegra_platform_is_silicon() ||
+			blf_write_allowed(0x67a0);
 	}
 
 	nvenc->hwpm.dev = dev;
