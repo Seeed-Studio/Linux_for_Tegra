@@ -346,8 +346,7 @@
 
 		gpio_aon: gpio@cf00000 {
 			reg-names = "security", "gpio";
-			compatible = "nvidia,tegra264-gpio-aon",
-				     "nvidia,tegra234-gpio-aon";
+			compatible = "nvidia,tegra264-gpio-aon";
 			status = "disabled";
 
 			reg = <0x0 0x0cf00000 0x0 0x10000>,
@@ -362,24 +361,13 @@
 			#interrupt-cells = <2>;
 		};
 
-		gpio_main: gpio@810c300000 {
+		gpio_uphy: gpio@a808300000 {
 			reg-names = "security", "gpio";
-			compatible = "nvidia,tegra264-gpio",
-				     "nvidia,tegra234-gpio";
+			compatible = "nvidia,tegra264-gpio-uphy";
 			status = "disabled";
 
-			reg =   <0x81 0x0c300000 0x0 0x1000>,  /* CTRL3 */
-				<0x81 0x0c310000 0x0 0x1000>,
-				<0x81 0x0c301000 0x0 0x1000>,  /* CTRL4 */
-				<0x81 0x0c311000 0x0 0x1000>,
-				<0x81 0x0c302000 0x0 0x1000>,  /* CTRL5 */
-				<0x81 0x0c312000 0x0 0x1000>,
-				<0x81 0x0c303000 0x0 0x1000>,  /* CTRL0 */
-				<0x81 0x0c313000 0x0 0x1000>,
-				<0xa8 0x08300000 0x0 0x1000>,  /* CTRL1 */
-				<0xa8 0x08310000 0x0 0x1000>,
-				<0xa8 0x08301000 0x0 0x1000>,  /* CTRL2 */
-				<0xa8 0x08311000 0x0 0x1000>;
+			reg = <0xa8 0x08300000 0x0 0x2000>,
+			      <0xa8 0x08310000 0x0 0x2000>;
 			interrupts = <GIC_SPI 91 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 93 IRQ_TYPE_LEVEL_HIGH>,
@@ -388,7 +376,28 @@
 				     <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 843 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 844 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 845 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 846 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 847 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 848 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 849 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 850 IRQ_TYPE_LEVEL_HIGH>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		gpio_main: gpio@810c300000 {
+			reg-names = "security", "gpio";
+			compatible = "nvidia,tegra264-gpio-main";
+			status = "disabled";
+
+			reg =   <0x81 0x0c300000 0x0 0x4000>,
+				<0x81 0x0c310000 0x0 0x4000>;
+			interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>,
@@ -412,14 +421,6 @@
 				     <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 843 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 844 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 845 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 846 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 847 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 848 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 849 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 850 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 851 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 852 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 853 IRQ_TYPE_LEVEL_HIGH>,
