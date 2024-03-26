@@ -113,6 +113,9 @@ NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC := y
 
 # Config for enabling the dma-buf deferred unmapping
 NVMAP_CONFIG_DMABUF_DEFERRED_UNMAPPING := n
+
+#Config for enabling nvmap_register_vidmem_carveout
+NVMAP_CONFIG_VIDMEM_CARVEOUT := n
 ################################################################################
 # Section 3
 # Enable/Disable configs based upon the kernel version

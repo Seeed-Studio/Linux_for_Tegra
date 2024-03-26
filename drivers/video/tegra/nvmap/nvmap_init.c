@@ -181,6 +181,7 @@ found:
 	return NULL;
 }
 
+#ifdef NVMAP_CONFIG_VIDMEM_CARVEOUT
 int nvmap_register_vidmem_carveout(struct device *dma_dev,
 				phys_addr_t base, size_t size)
 {
@@ -204,6 +205,7 @@ int nvmap_register_vidmem_carveout(struct device *dma_dev,
 	return nvmap_create_carveout(vidmem_co);
 }
 EXPORT_SYMBOL(nvmap_register_vidmem_carveout);
+#endif /* NVMAP_CONFIG_VIDMEM_CARVEOUT */
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 static int __init nvmap_populate_ivm_carveout(struct device *dev)
