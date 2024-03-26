@@ -1435,7 +1435,7 @@
 				 */
 				modules {
 					module0 {
-						badge = "owl_bottomleft";
+						badge = "ar0234_bottomleft_NOVA0";
 						position = "bottomleft";
 						orientation = "1";
 						status = "okay";
@@ -1448,7 +1448,7 @@
 						};
 					};
 					module1 {
-						badge = "owl_centerleft";
+						badge = "ar0234_centerleft_NOVA0";
 						position = "centerleft";
 						orientation = "1";
 						status = "okay";
@@ -1461,7 +1461,7 @@
 						};
 					};
 					module2 {
-						badge = "owl_centerright";
+						badge = "ar0234_centerright_NOVA0";
 						position = "centerright";
 						orientation = "1";
 						status = "okay";
@@ -1472,7 +1472,7 @@
 						};
 					};
 					module3 {
-						badge = "owl_topleft";
+						badge = "ar0234_topleft_NOVA0";
 						position = "topleft";
 						orientation = "1";
 						status = "okay";
@@ -1483,7 +1483,7 @@
 						};
 					};
 					module4 {
-						badge = "hawk_bottomright";
+						badge = "ar0234_bottomright_NOVA0";
 						position = "bottomright";
 						orientation = "1";
 						status = "okay";
@@ -1494,7 +1494,7 @@
 						};
 					};
 					module5 {
-						badge = "hawk_topright";
+						badge = "ar0234_topright_NOVA0";
 						position = "topright";
 						orientation = "1";
 						status = "okay";
@@ -1505,7 +1505,7 @@
 						};
 					};
 					module6 {
-						badge = "hawk_bottomcenter";
+						badge = "ar0234_bottomcenter_NOVA0";
 						position = "bottomcenter";
 						orientation = "1";
 						status = "okay";
@@ -1516,7 +1516,7 @@
 						};
 					};
 					module7 {
-						badge = "hawk_topcenter";
+						badge = "ar0234_topcenter_NOVA0";
 						position = "topcenter";
 						orientation = "1";
 						status = "okay";
@@ -1527,7 +1527,7 @@
 						};
 					};
 					module8 {
-						badge = "hawk_frontcenter";
+						badge = "ar0234_frontcenter_NOVA0";
 						position = "frontcenter";
 						orientation = "1";
 						status = "okay";
@@ -1538,7 +1538,7 @@
 						};
 					};
 					module9 {
-						badge = "hawk_rearcenter";
+						badge = "ar0234_rearcenter_NOVA0";
 						position = "rearcenter";
 						orientation = "1";
 						status = "okay";
@@ -1549,7 +1549,7 @@
 						};
 					};
 					module10 {
-						badge = "hawk_leftcenter";
+						badge = "ar0234_leftcenter_NOVA0";
 						position = "leftcenter";
 						orientation = "1";
 						status = "okay";
@@ -1560,7 +1560,7 @@
 						};
 					};
 					module11 {
-						badge = "hawk_rightcenter";
+						badge = "ar0234_rightcenter_NOVA0";
 						position = "rightcenter";
 						orientation = "1";
 						status = "okay";
