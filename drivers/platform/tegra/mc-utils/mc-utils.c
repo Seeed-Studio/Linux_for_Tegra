@@ -221,6 +221,9 @@ static int __init tegra_mc_utils_init_t26x(void)
 		ch_num = get_dram_dt_prop(np, "dram_channels");
 	}
 
+#if defined(CONFIG_DEBUG_FS)
+	tegra_mc_utils_debugfs_init();
+#endif
 	return 0;
 }
 
