@@ -7407,6 +7407,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_SHRINKER_ALLOC_PRESENT" "" "functions"
         ;;
 
+        slab_mem_spread)
+            #
+            # Determine if SLAB_MEM_SPREAD is defined.
+            #
+            # Commit f88c3fb81c4b ("mm, slab: remove last vestiges of
+            # SLAB_MEM_SPREAD") removed the definition SLAB_MEM_SPREAD in
+            # Linux v6.9. This definition is no longer supported and can
+            # be removed for v6.9+ kernels.
+            CODE="
+            #include <linux/slab.h>
+            void conftest_slab_mem_spread(void) {
+                slab_flags_t flags = SLAB_MEM_SPREAD;
+            }"
+
+            compile_check_conftest "$CODE" "NV_SLAB_MEM_SPREAD" "" "functions"
+        ;;
+
         snd_soc_card_jack_new_has_no_snd_soc_jack_pins)
             #
             # Determine if the function snd_soc_card_jack_new() has 'pins' and

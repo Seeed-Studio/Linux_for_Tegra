@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2013-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 /*
- * Copyright (c) 2013-2023, NVIDIA Corporation. All rights reserved.
- *
  * Tegra Graphics Virtualization Communication Framework
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/mutex.h>
 #include <linux/semaphore.h>
@@ -361,7 +363,11 @@ int tegra_gr_comm_init(struct device *dev, struct device_node *dn, u32 elems,
 		queue->element_cache =
 			kmem_cache_create(name,
 				sizeof(struct gr_comm_element) + size, 0,
+#if defined(NV_SLAB_MEM_SPREAD)
 				SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD, NULL);
+#else
+				SLAB_RECLAIM_ACCOUNT, NULL);
+#endif
 
 		if (!queue->element_cache) {
 			ret = -ENOMEM;
