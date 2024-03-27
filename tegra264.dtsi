@@ -1057,7 +1057,375 @@
 			#mbox-cells = <2>;
 			interrupt-names = "shared1", "shared2", "shared3", "shared4";
 		};
-	};
+
+		mgbe_riit_config: mgbe-riit-config {
+			nvidia,speeds-num = <4>;
+			speed_25g {
+				nvidia,speed = <25000>;
+				nvidia,riit = <1100>;
+			};
+			speed_10g {
+				nvidia,speed = <10000>;
+				nvidia,riit = <1100>;
+			};
+			speed_5g {
+				nvidia,speed = <5000>;
+				nvidia,riit = <1100>;
+			};
+			speed_2_5g {
+				nvidia,speed = <2500>;
+				nvidia,riit = <1100>;
+			};
+		};
+
+		mgbe_vm_vdma_config: mgbe-vm-vdma-config {
+			nvidia,pdma-num = <8>;
+			pdma_a {
+				nvidia,pdma-chan = <0>;
+				nvidia,num-vdma-channels = <2>;
+				nvidia,vdma-channels = <0 1>;
+			};
+			pdma_b {
+				nvidia,pdma-chan = <1>;
+				nvidia,num-vdma-channels = <2>;
+				nvidia,vdma-channels = <2 3>;
+			};
+			pdma_c {
+				nvidia,pdma-chan = <2>;
+				nvidia,num-vdma-channels = <2>;
+				nvidia,vdma-channels = <4 5>;
+			};
+			pdma_d {
+				nvidia,pdma-chan = <3>;
+				nvidia,num-vdma-channels = <2>;
+				nvidia,vdma-channels = <6 7>;
+			};
+			pdma_e {
+				nvidia,pdma-chan = <4>;
+				nvidia,num-vdma-channels = <2>;
+				nvidia,vdma-channels = <8 9>;
+			};
+			pdma_f {
+				nvidia,pdma-chan = <5>;
+				nvidia,num-vdma-channels = <2>;
+				nvidia,vdma-channels = <10 11>;
+			};
+			pdma_g {
+				nvidia,pdma-chan = <6>;
+				nvidia,num-vdma-channels = <2>;
+				nvidia,vdma-channels = <12 13>;
+			};
+			pdma_h {
+				nvidia,pdma-chan = <7>;
+				nvidia,num-vdma-channels = <6>;
+				nvidia,vdma-channels = <14 15 16 17 18 19>;
+			};
+		};
+
+
+	        mgbe_vm_irq_config: mgbe-vm-irq-config {
+			nvidia,num-vm-irqs = <5>;
+			vm_irq1 {
+				nvidia,num-vm-channels = <4>;
+				nvidia,vm-channels = <0 1 2 3>;
+				nvidia,vm-num = <0>;
+			};
+			vm_irq2 {
+				nvidia,num-vm-channels = <4>;
+				nvidia,vm-channels = <4 5 6 7>;
+				nvidia,vm-num = <1>;
+			};
+			vm_irq3 {
+				nvidia,num-vm-channels = <4>;
+				nvidia,vm-channels = <8 9 10 11>;
+				nvidia,vm-num = <2>;
+			};
+			vm_irq4 {
+				nvidia,num-vm-channels = <4>;
+				nvidia,vm-channels = <12 13 14 15>;
+				nvidia,vm-num = <3>;
+			};
+			vm_irq5 {
+				nvidia,num-vm-channels = <4>;
+				nvidia,vm-channels = <16 17 18 19>;
+				nvidia,vm-num = <4>;
+			};
+		};
+
+		eqos_vm_irq_config: vm-irq-config {
+			nvidia,num-vm-irqs = <4>;
+			vm_irq1 {
+				nvidia,num-vm-channels = <2>;
+				nvidia,vm-channels = <0 1>;
+				nvidia,vm-num = <0>;
+			};
+			vm_irq2 {
+				nvidia,num-vm-channels = <2>;
+				nvidia,vm-channels = <2 3>;
+				nvidia,vm-num = <1>;
+			};
+			vm_irq3 {
+				nvidia,num-vm-channels = <2>;
+				nvidia,vm-channels = <4 5>;
+				nvidia,vm-num = <2>;
+			};
+			vm_irq4 {
+				nvidia,num-vm-channels = <2>;
+				nvidia,vm-channels = <6 7>;
+				nvidia,vm-num = <3>;
+			};
+	       };
+
+		ethernet@A808910000 {
+			compatible = "nvidia,nveqos";
+			status = "disabled";
+
+			/*
+			 * FIXME: Use SOC_* macros from address map
+			 * FIXME: SOCKET EQOS macros are mssing from address map
+			 */
+			reg = <0xa8 0x08910000 0x0 0x10000>,    /* EQOS Base Register */
+			      <0xa8 0x089a0000 0x0 0x10000>,    /* XPCS Base Register */
+			      <0xa8 0x089c0000 0x0 0x10000>,    /* MACSEC Base Register */
+			      <0xa8 0x08900000 0x0 0x10000>;    /* HV Base Register */
+			reg-names = "mac", "xpcs", "macsec-base", "hypervisor";
+			interrupts = <0 836 IRQ_TYPE_LEVEL_HIGH>,
+					 <0 839 IRQ_TYPE_LEVEL_HIGH>,
+					 <0 840 IRQ_TYPE_LEVEL_HIGH>,
+					 <0 841 IRQ_TYPE_LEVEL_HIGH>,
+					 <0 842 IRQ_TYPE_LEVEL_HIGH>,
+					 <0 838 IRQ_TYPE_LEVEL_HIGH>,
+					 <0 837 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3",
+					  "macsec-ns-irq", "macsec-s-irq";
+			iommus = <&smmu1_mmu TEGRA_SID_EQOS_VF0>;
+			nvidia,num-dma-chans = <8>;
+			nvidia,num-mtl-queues = <8>;
+			nvidia,mtl-queues = <0 1 2 3 4 5 6 7>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
+			nvidia,tc-mapping = <0 1 2 3 4 5 6 7>;
+			/* Residual Queue can be any valid queue except RxQ0 */
+			nvidia,residual-queue = <1>;
+			nvidia,rx-queue-prio = <0x2 0x1 0x30 0x48 0x0 0x0 0x0 0x0>;
+			nvidia,tx-queue-prio = <0x0 0x7 0x2 0x3 0x0 0x0 0x0 0x0>;
+			nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2>;
+			nvidia,vm-irq-config = <&eqos_vm_irq_config>;
+			nvidia,dcs-enable = <0x1>;
+			nvidia,macsec-enable = <0x1>;
+			nvidia,rx_riwt = <512>;
+			nvidia,rx_frames = <64>;
+			nvidia,tx_usecs = <256>;
+			nvidia,tx_frames = <5>;
+			nvidia,promisc_mode = <1>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,ptp_ref_clock_speed = <208333334>;
+			nvidia,instance_id = <4>; /* EQOS instance */
+			nvidia,ptp-rx-queue = <3>;
+			pinctrl-names = "mii_rx_disable", "mii_rx_enable";
+			nvidia,dma_rx_ring_sz = <1024>;
+			nvidia,dma_tx_ring_sz = <1024>;
+			dma-coherent;
+		};
+
+		ethernet@a808a10000 {
+			compatible = "nvidia,tegra264-mgbe";
+			status = "disabled";
+
+			reg = <0xa8 0x8a10000 0x00 0x10000>,
+			      <0xa8 0x8aa0000 0x00 0x10000>,
+			      <0xa8 0x8ad0000 0x00 0x10000>,
+			      <0xa8 0x8a00000 0x00 0x10000>;
+			reg-names = "mac", "xpcs", "macsec-base", "hypervisor";
+			interrupts = <0 870 4>,	/* common */
+				     <0 873 4>,	/* vm0 */
+				     <0 874 4>,	/* vm1 */
+				     <0 875 4>,	/* vm2 */
+				     <0 876 4>,	/* vm3 */
+				     <0 877 4>,	/* vm4 */
+				     <0 872 4>,	/* MACsec non-secure intr */
+				     <0 871 4>;	/* MACsec secure intr */
+			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
+					  "macsec-ns-irq", "macsec-s-irq";
+			nvidia,num-dma-chans = <20>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19>;
+			iommus = <&smmu0_mmu TEGRA_SID_MGBE0_VF0>;
+			nvidia,num-mtl-queues = <10>;
+			nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
+			nvidia,tc-mapping = <0 1 2 3 4 5 6 7 0 1>;
+			/* Residual Queue can be any valid queue except RxQ0 */
+			nvidia,residual-queue = <1>;
+			nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2 2 2>;
+			nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
+			nvidia,vm-vdma-config = <&mgbe_vm_vdma_config>;
+			nvidia,tx-queue-prio = <0 1 2 3 4 5 6 7 0 0>;
+			nvidia,rx-queue-prio = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80 0x0 0x0>;
+			nvidia,dcs-enable = <0x1>;
+			nvidia,macsec-enable = <0x1>;
+			nvidia,mgbe-riit-config = <&mgbe_riit_config>;
+			nvidia,rx_riwt = <512>;
+			nvidia,rx_frames = <64>;
+			nvidia,tx_usecs = <256>;
+			nvidia,tx_frames = <16>;
+			nvidia,phy-iface-mode = <2>; /* Use fixed 10G USXGMII mode */
+			nvidia,promisc_mode = <1>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,ptp_ref_clock_speed = <312500000>;
+			nvidia,instance_id = <0>; /* MGBE0 instance */
+			nvidia,ptp-rx-queue = <3>;
+			nvidia,dma_rx_ring_sz = <4096>;
+			nvidia,dma_tx_ring_sz = <4096>;
+			dma-coherent;
+		};
+
+		ethernet@a808b10000 {
+			compatible = "nvidia,tegra264-mgbe";
+			status = "disabled";
+
+			reg = <0xa8 0x8b10000 0x00 0x10000>,
+			      <0xa8 0x8ba0000 0x00 0x10000>,
+			      <0xa8 0x8bd0000 0x00 0x10000>,
+			      <0xa8 0x8b00000 0x00 0x10000>;
+			reg-names = "mac", "xpcs", "macsec-base", "hypervisor";
+			interrupts = <0 878 IRQ_TYPE_LEVEL_HIGH>,	/* common */
+				     <0 881 IRQ_TYPE_LEVEL_HIGH>,	/* vm0 */
+				     <0 882 IRQ_TYPE_LEVEL_HIGH>,	/* vm1 */
+				     <0 883 IRQ_TYPE_LEVEL_HIGH>,	/* vm2 */
+				     <0 884 IRQ_TYPE_LEVEL_HIGH>,	/* vm3 */
+				     <0 885 IRQ_TYPE_LEVEL_HIGH>,	/* vm4 */
+				     <0 880 IRQ_TYPE_LEVEL_HIGH>,	/* MACsec non-secure intr */
+				     <0 879 IRQ_TYPE_LEVEL_HIGH>;	/* MACsec secure intr */
+			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
+					  "macsec-ns-irq", "macsec-s-irq";
+			iommus = <&smmu0_mmu TEGRA_SID_MGBE1_VF0>;
+			nvidia,num-dma-chans = <10>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8 9>;
+			nvidia,num-mtl-queues = <10>;
+			nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
+			nvidia,tc-mapping = <0 1 2 3 4 5 6 7 0 1>;
+			/* Residual Queue can be any valid queue except RxQ0 */
+			nvidia,residual-queue = <1>;
+			nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2 2 2>;
+			nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
+			nvidia,tx-queue-prio = <0 1 2 3 4 5 6 7 0 0>;
+			nvidia,rx-queue-prio = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80 0x0 0x0>;
+			nvidia,dcs-enable = <0x1>;
+			nvidia,macsec-enable = <0x1>;
+			nvidia,mgbe-riit-config = <&mgbe_riit_config>;
+			nvidia,rx_riwt = <512>;
+			nvidia,rx_frames = <64>;
+			nvidia,tx_usecs = <256>;
+			nvidia,tx_frames = <16>;
+			nvidia,promisc_mode = <1>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,ptp_ref_clock_speed = <312500000>;
+			nvidia,instance_id = <1>; /* MGBE1 instance */
+			nvidia,ptp-rx-queue = <3>;
+			nvidia,dma_rx_ring_sz = <4096>;
+			nvidia,dma_tx_ring_sz = <4096>;
+			dma-coherent;
+		};
+
+		ethernet@a808d10000 {
+			compatible = "nvidia,tegra264-mgbe";
+				status = "disabled";
+
+			reg = <0xa8 0x8d10000 0x00 0x10000>,
+			      <0xa8 0x8da0000 0x00 0x10000>,
+			      <0xa8 0x8dd0000 0x00 0x10000>,
+			      <0xa8 0x8d00000 0x00 0x10000>;
+			reg-names = "mac", "xpcs", "macsec-base", "hypervisor";
+			interrupts = <0 886 IRQ_TYPE_LEVEL_HIGH>,	/* common */
+				     <0 889 IRQ_TYPE_LEVEL_HIGH>,	/* vm0 */
+			             <0 890 IRQ_TYPE_LEVEL_HIGH>,	/* vm1 */
+				     <0 891 IRQ_TYPE_LEVEL_HIGH>,	/* vm2 */
+			             <0 892 IRQ_TYPE_LEVEL_HIGH>,	/* vm3 */
+				     <0 893 IRQ_TYPE_LEVEL_HIGH>,	/* vm4 */
+				     <0 888 IRQ_TYPE_LEVEL_HIGH>,	/* MACsec non-secure intr */
+				     <0 887 IRQ_TYPE_LEVEL_HIGH>;	/* MACsec secure intr */
+			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
+					  "macsec-ns-irq", "macsec-s-irq";
+			iommus = <&smmu0_mmu TEGRA_SID_MGBE2_VF0>;
+			nvidia,num-dma-chans = <10>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8 9>;
+			nvidia,num-mtl-queues = <10>;
+			nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
+			nvidia,tc-mapping = <0 1 2 3 4 5 6 7 0 1>;
+			/* Residual Queue can be any valid queue except RxQ0 */
+			nvidia,residual-queue = <1>;
+			nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2 2 2>;
+			nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
+			nvidia,tx-queue-prio = <0 1 2 3 4 5 6 7 0 0>;
+			nvidia,rx-queue-prio = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80 0x0 0x0>;
+			nvidia,dcs-enable = <0x1>;
+			nvidia,macsec-enable = <0x1>;
+			nvidia,mgbe-riit-config = <&mgbe_riit_config>;
+			nvidia,rx_riwt = <512>;
+			nvidia,rx_frames = <64>;
+			nvidia,tx_usecs = <256>;
+			nvidia,tx_frames = <16>;
+			nvidia,promisc_mode = <1>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,ptp_ref_clock_speed = <312500000>;
+			nvidia,instance_id = <2>; /* MGBE2 instance */
+			nvidia,ptp-rx-queue = <3>;
+			nvidia,dma_rx_ring_sz = <4096>;
+			nvidia,dma_tx_ring_sz = <4096>;
+			dma-coherent;
+		};
+
+		ethernet@a808e10000 {
+			compatible = "nvidia,tegra264-mgbe";
+			status = "disabled";
+
+			reg = <0xa8 0x8e10000 0x00 0x10000>,
+			      <0xa8 0x8ea0000 0x00 0x10000>,
+			      <0xa8 0x8ed0000 0x00 0x10000>,
+			      <0xa8 0x8e00000 0x00 0x10000>;
+			reg-names = "mac", "xpcs", "macsec-base", "hypervisor";
+			interrupts = <0 894 IRQ_TYPE_LEVEL_HIGH>,	/* common */
+				     <0 897 IRQ_TYPE_LEVEL_HIGH>,	/* vm0 */
+				     <0 898 IRQ_TYPE_LEVEL_HIGH>,	/* vm1 */
+				     <0 899 IRQ_TYPE_LEVEL_HIGH>,	/* vm2 */
+				     <0 900 IRQ_TYPE_LEVEL_HIGH>,	/* vm3 */
+				     <0 901 IRQ_TYPE_LEVEL_HIGH>,	/* vm4 */
+				     <0 896 IRQ_TYPE_LEVEL_HIGH>,	/* MACsec non-secure intr */
+				     <0 895 IRQ_TYPE_LEVEL_HIGH>;	/* MACsec secure intr */
+			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
+					  "macsec-ns-irq", "macsec-s-irq";
+			iommus = <&smmu0_mmu TEGRA_SID_MGBE3_VF0>;
+			nvidia,num-dma-chans = <10>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8 9>;
+			nvidia,num-mtl-queues = <10>;
+			nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
+			nvidia,tc-mapping = <0 1 2 3 4 5 6 7 0 1>;
+			/* Residual Queue can be any valid queue except RxQ0 */
+			nvidia,residual-queue = <1>;
+			nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2 2 2>;
+			nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
+			nvidia,tx-queue-prio = <0 1 2 3 4 5 6 7 0 0>;
+			nvidia,rx-queue-prio = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80 0x0 0x0>;
+			nvidia,dcs-enable = <0x1>;
+			nvidia,macsec-enable = <0x1>;
+			nvidia,mgbe-riit-config = <&mgbe_riit_config>;
+			nvidia,rx_riwt = <512>;
+			nvidia,rx_frames = <64>;
+			nvidia,tx_usecs = <256>;
+			nvidia,tx_frames = <16>;
+			nvidia,promisc_mode = <1>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,ptp_ref_clock_speed = <312500000>;
+			nvidia,instance_id = <3>; /* MGBE3 instance */
+			nvidia,ptp-rx-queue = <3>;
+			nvidia,dma_rx_ring_sz = <4096>;
+			nvidia,dma_tx_ring_sz = <4096>;
+			dma-coherent;
+		};
+};
 
 	cpus {
 		#address-cells = <2>;
