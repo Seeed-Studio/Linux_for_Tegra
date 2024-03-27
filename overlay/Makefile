@@ -56,6 +56,7 @@ dtbo-y += tegra234-p3767-camera-p3768-imx477-dual-4lane.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-imx219.dtbo
 dtbo-y += tegra234-p3737-camera-eCAM130A-overlay.dtbo
 dtbo-y += tegra234-p3737-camera-dual-hawk-ar0234-e3653-overlay.dtbo
+dtbo-y += tegra234-p3737-camera-imx390-addr-0x21-overlay.dtbo
 dtbo-y += tegra234-p3737-camera-imx390-overlay.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-C.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-A.dtbo

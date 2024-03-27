@@ -12,7 +12,7 @@
 
 /* camera control gpio definitions */
 / {
-	overlay-name = "Jetson Camera IMX390";
+	overlay-name = "Jetson Camera IMX390 sensor 0x21";
 	jetson-header-name = "Jetson AGX CSI Connector";
 	compatible = JETSON_COMPATIBLE;
 
@@ -111,7 +111,7 @@
 								mclk = "extperiph1";
 								channel = "a";
 								status = "okay";
-								reg = <0x1a>;
+								reg = <0x21>;
 								nvidia,gmsl-dser-device = <&dser>;
 								ports {
 									status = "okay";
