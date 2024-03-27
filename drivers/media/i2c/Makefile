@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
 
 subdir-ccflags-y += -Werror
 
@@ -20,6 +21,7 @@ obj-m += nv_imx477.o
 obj-m += nv_ov5693.o
 obj-m += nv_ar0234.o
 obj-m += nv_hawk_owl.o
+obj-m += max929x.o
 endif
 
 obj-m += pca9570.o
