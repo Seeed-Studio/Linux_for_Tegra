@@ -16,6 +16,13 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	aliases {
+		serial0 = &uart0;
+		serial4 = &uart4;
+		serial5 = &uart5;
+		serial9 = &uart9;
+	};
+
 	bus@0 {
 		compatible = "simple-bus";
 
@@ -222,6 +229,57 @@
 		       reg-io-width = <0x4>;
 		       interrupts = <GIC_SPI 514 IRQ_TYPE_LEVEL_HIGH>;
 		       current-speed = <0x1c200>;
+		};
+
+		uart4: serial@810c500000 {
+			compatible = "arm,pl011", "arm,primecell";
+			reg = <0x81 0x0c500000 0x0 0x10000>;
+			interrupts = <GIC_SPI 170 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&bpmp TEGRA264_CLK_UART4>,
+				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "uartclk", "apb_pclk";
+			assigned-clocks = <&bpmp TEGRA264_CLK_UART4>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			iommus = <&smmu1_mmu 0x801>;
+			dmas = <&gpcdma 13>, <&gpcdma 13>;
+			dma-names = "rx", "tx";
+			dma-coherent;
+			arm,primecell-periphid = <0x00051011>;
+			status = "disabled";
+		};
+
+		uart5: serial@810c510000 {
+			compatible = "arm,pl011", "arm,primecell";
+			reg = <0x81 0x0c510000 0x0 0x10000>;
+			interrupts = <GIC_SPI 171 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&bpmp TEGRA264_CLK_UART5>,
+				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "uartclk", "apb_pclk";
+			assigned-clocks = <&bpmp TEGRA264_CLK_UART5>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			iommus = <&smmu1_mmu 0x802>;
+			dmas = <&gpcdma 11>, <&gpcdma 11>;
+			dma-names = "rx", "tx";
+			dma-coherent;
+			arm,primecell-periphid = <0x00051011>;
+			status = "disabled";
+		};
+
+		uart9: serial@810c530000 {
+			compatible = "arm,pl011", "arm,primecell";
+			reg = <0x81 0x0c530000 0x0 0x10000>;
+			interrupts = <GIC_SPI 172 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&bpmp TEGRA264_CLK_UART9>,
+				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "uartclk", "apb_pclk";
+			assigned-clocks = <&bpmp TEGRA264_CLK_UART9>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			iommus = <&smmu1_mmu 0x803>;
+			dmas = <&gpcdma 10>, <&gpcdma 10>;
+			dma-names = "rx", "tx";
+			dma-coherent;
+			arm,primecell-periphid = <0x00051011>;
+			status = "disabled";
 		};
 
 		pwm4: pwm@c6a0000 {
