@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef __TEGRA210_VIRT_ALT_ADMAIF_H__
@@ -36,6 +36,16 @@
 #define TEGRA210_AUDIOCIF_CTRL_REPLICATE_SHIFT		3
 #define TEGRA210_AUDIOCIF_CTRL_TRUNCATE_SHIFT		1
 #define TEGRA210_AUDIOCIF_CTRL_MONO_CONV_SHIFT		0
+
+#define TEGRA264_ADMAIF_BASE				0x09610000
+#define TEGRA264_ADMAIF_XBAR_RX_FIFO_READ		0x2c
+#define TEGRA264_ADMAIF_XBAR_TX_FIFO_WRITE		0x102c
+#define TEGRA264_ADMAIF_CHANNEL_REG_STRIDE		0x40
+#define TEGRA_32CH_ACIF_CTRL_AUDIO_BITS_SHIFT		11
+#define TEGRA_32CH_ACIF_CTRL_CLIENT_CH_SHIFT		14
+#define TEGRA_32CH_ACIF_CTRL_AUDIO_CH_SHIFT		19
+
+#define TEGRA264_MAX_CHANNELS				32
 
 /* ADMAIF ids */
 enum {
@@ -89,6 +99,7 @@ struct tegra210_admaif {
 	struct tegra_alt_pcm_dma_params *capture_dma_data;
 	struct tegra_alt_pcm_dma_params *playback_dma_data;
 	struct tegra210_virt_admaif_client_data client_data;
+	unsigned int num_ch;
 };
 
 struct tegra_virt_admaif_soc_data {

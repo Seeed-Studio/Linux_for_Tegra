@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -44,6 +44,9 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_virt_audio_cif cif_conf;
 	struct nvaudio_ivc_msg	msg;
 	unsigned int value;
+	unsigned int audio_bits_shift;
+	unsigned int audio_ch_shift;
+	unsigned int client_ch_shift;
 	int err;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_virt_audio_cif));
@@ -73,14 +76,20 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	}
 	cif_conf.direction = substream->stream;
 
+	audio_bits_shift = (admaif->num_ch == TEGRA264_MAX_CHANNELS) ?
+		TEGRA_32CH_ACIF_CTRL_AUDIO_BITS_SHIFT : TEGRA210_AUDIOCIF_CTRL_AUDIO_BITS_SHIFT;
+
+	audio_ch_shift = (admaif->num_ch == TEGRA264_MAX_CHANNELS) ?
+		TEGRA_32CH_ACIF_CTRL_AUDIO_CH_SHIFT : TEGRA210_AUDIOCIF_CTRL_AUDIO_CHANNELS_SHIFT;
+
+	client_ch_shift = (admaif->num_ch == TEGRA264_MAX_CHANNELS) ?
+		TEGRA_32CH_ACIF_CTRL_CLIENT_CH_SHIFT : TEGRA210_AUDIOCIF_CTRL_CLIENT_CHANNELS_SHIFT;
+
 	value = (cif_conf.threshold <<
 			TEGRA210_AUDIOCIF_CTRL_FIFO_THRESHOLD_SHIFT) |
-		((cif_conf.audio_channels - 1) <<
-			TEGRA210_AUDIOCIF_CTRL_AUDIO_CHANNELS_SHIFT) |
-		((cif_conf.client_channels - 1) <<
-			TEGRA210_AUDIOCIF_CTRL_CLIENT_CHANNELS_SHIFT) |
-		(cif_conf.audio_bits <<
-			TEGRA210_AUDIOCIF_CTRL_AUDIO_BITS_SHIFT) |
+		((cif_conf.audio_channels - 1) << audio_ch_shift) |
+		((cif_conf.client_channels - 1) << client_ch_shift) |
+		(cif_conf.audio_bits << audio_bits_shift) |
 		(cif_conf.client_bits <<
 			TEGRA210_AUDIOCIF_CTRL_CLIENT_BITS_SHIFT) |
 		(cif_conf.expand <<
@@ -882,6 +891,16 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev,
 			admaif->capture_dma_data[i].addr = TEGRA210_ADMAIF_BASE +
 					TEGRA210_ADMAIF_XBAR_RX_FIFO_READ +
 					(i * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
+		} else if (of_device_is_compatible(pdev->dev.of_node,
+			"nvidia,tegra264-virt-pcm-oot")) {
+			admaif->playback_dma_data[i].addr = TEGRA264_ADMAIF_BASE +
+					TEGRA264_ADMAIF_XBAR_TX_FIFO_WRITE +
+					(i * TEGRA264_ADMAIF_CHANNEL_REG_STRIDE);
+			admaif->capture_dma_data[i].addr = TEGRA264_ADMAIF_BASE +
+					TEGRA264_ADMAIF_XBAR_RX_FIFO_READ +
+					(i * TEGRA264_ADMAIF_CHANNEL_REG_STRIDE);
+			/* TODO: Should get from soc_data during full Thor changes */
+			admaif->num_ch = TEGRA264_MAX_CHANNELS;
 		} else {
 			dev_err(&pdev->dev,
 				"Uncompatible device driver\n");

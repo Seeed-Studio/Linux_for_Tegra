@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -1105,6 +1105,13 @@ int tegra_virt_xbar_register_codec(struct platform_device *pdev)
 
 	if (of_device_is_compatible(pdev->dev.of_node,
 		"nvidia,tegra234-virt-pcm-oot")) {
+		ret = tegra_register_component(&pdev->dev,
+				&tegra234_virt_xbar_codec,
+				tegra186_virt_xbar_dais,
+				ARRAY_SIZE(tegra186_virt_xbar_dais), "xbar");
+	} else if (of_device_is_compatible(pdev->dev.of_node,
+		"nvidia,tegra264-virt-pcm-oot")) {
+		/* TODO: Update it when add full Thor support */
 		ret = tegra_register_component(&pdev->dev,
 				&tegra234_virt_xbar_codec,
 				tegra186_virt_xbar_dais,

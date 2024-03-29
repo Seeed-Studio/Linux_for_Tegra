@@ -54,6 +54,9 @@ static const struct of_device_id tegra_virt_machine_of_match[] = {
 		.data = &soc_data_tegra186},
 	{ .compatible = "nvidia,tegra234-virt-pcm-oot",
 		.data = &soc_data_tegra186},
+	{ .compatible = "nvidia,tegra264-virt-pcm-oot",
+		/* TODO: Update soc_data for t264 while adding full Thor support */
+		.data = &soc_data_tegra186},
 	{},
 };
 
