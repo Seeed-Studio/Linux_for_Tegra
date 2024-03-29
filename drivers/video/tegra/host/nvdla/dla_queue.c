@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-/*
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
  * NVDLA queue management
  */
 
@@ -38,8 +38,6 @@
  * alloc_table		Keep track of the index being assigned
  *			and freed for a task
  * max_task_cnt	Maximum task count that can be supported.
- * cleanup_done	Completion status of cleanup wait.
- * cleanup_wait	Records wait for cleanup action.
  */
 
 struct nvdla_queue_task_pool {
@@ -50,9 +48,6 @@ struct nvdla_queue_task_pool {
 
 	unsigned long alloc_table;
 	unsigned long max_task_cnt;
-
-	struct completion cleanup_done;
-	int cleanup_wait;
 };
 
 static int nvdla_queue_task_pool_alloc(struct platform_device *pdev,
@@ -90,9 +85,6 @@ static int nvdla_queue_task_pool_alloc(struct platform_device *pdev,
 	task_pool->max_task_cnt = num_tasks;
 
 	mutex_init(&task_pool->lock);
-
-	init_completion(&task_pool->cleanup_done);
-	task_pool->cleanup_wait = 0;
 
 	return err;
 
@@ -233,6 +225,24 @@ void nvdla_queue_deinit(struct nvdla_queue_pool *pool)
 	pool = NULL;
 }
 
+static void nvdla_queue_cleanup(struct nvdla_queue *queue)
+{
+	struct nvdla_queue_pool *pool = queue->pool;
+
+	if (pool->ops && pool->ops->cleanup)
+		pool->ops->cleanup(queue);
+}
+
+static void nvdla_queue_cleanup_all(struct nvdla_queue_pool *pool)
+{
+	u32 id;
+
+	mutex_lock(&pool->queue_lock);
+	for_each_set_bit(id, &pool->alloc_table, pool->max_queue_cnt)
+		nvdla_queue_cleanup(&pool->queues[id]);
+	mutex_unlock(&pool->queue_lock);
+}
+
 #ifdef CONFIG_PM
 int nvdla_queue_pool_prepare_suspend(struct nvdla_queue_pool *qpool)
 {
@@ -246,6 +256,9 @@ int nvdla_queue_pool_prepare_suspend(struct nvdla_queue_pool *qpool)
 		struct nvdla_queue *queue = &qpool->queues[queue_id];
 		struct nvdla_queue_task_pool *tpool = queue->task_pool;
 		bool nvdla_queue_is_idle;
+
+		/* Cleanup the queue before checking the idleness. */
+		nvdla_queue_cleanup(queue);
 
 		mutex_lock(&tpool->lock);
 		nvdla_queue_is_idle = (tpool->alloc_table == 0ULL);
@@ -324,11 +337,22 @@ struct nvdla_queue *nvdla_queue_alloc(struct nvdla_queue_pool *pool,
 	index = find_first_zero_bit(&pool->alloc_table,
 				    pool->max_queue_cnt);
 
-	/* quit if we found a queue */
+	/* Queue not found on first attempt. */
 	if (index >= pool->max_queue_cnt) {
-		dev_err(&pdev->dev, "failed to get free Queue\n");
-		err = -ENOMEM;
-		goto err_alloc_queue;
+
+		mutex_unlock(&pool->queue_lock);
+
+		/* Cleanup and retry one more time before erroring out */
+		nvdla_queue_cleanup_all(pool);
+
+		mutex_lock(&pool->queue_lock);
+		index = find_first_zero_bit(&pool->alloc_table,
+				    pool->max_queue_cnt);
+		if (index >= pool->max_queue_cnt) {
+			dev_err(&pdev->dev, "failed to get free Queue\n");
+			err = -ENOMEM;
+			goto err_alloc_queue;
+		}
 	}
 	spec_bar(); /* break_spec_p#1 */
 
@@ -578,18 +602,6 @@ int nvdla_queue_alloc_task_memory(
 	struct nvdla_queue_task_pool *task_pool =
 		(struct nvdla_queue_task_pool *)queue->task_pool;
 
-	if (task_pool->cleanup_wait == 1) {
-		unsigned long timeout =
-			msecs_to_jiffies(NVDLA_TASK_MEM_AVAIL_RETRY_PERIOD);
-
-		/**
-		 * Error intentionally ignored to be catpured as part of
-		 * out-of-range index during allocation.
-		 **/
-		(void) wait_for_completion_timeout(&task_pool->cleanup_done,
-				timeout);
-	}
-
 	mutex_lock(&task_pool->lock);
 
 	index = find_first_zero_bit(&task_pool->alloc_table,
@@ -597,8 +609,7 @@ int nvdla_queue_alloc_task_memory(
 
 	/* quit if pre-allocated task array is not free */
 	if (index >= task_pool->max_task_cnt) {
-		dev_warn(&pdev->dev, "failed to get Task Pool Memory\n");
-		task_pool->cleanup_wait = 1; // wait for cleanup
+		dev_err(&pdev->dev, "failed to get Task Pool Memory\n");
 		err = -EAGAIN;
 		goto err_alloc_task_mem;
 	}
@@ -638,9 +649,5 @@ void nvdla_queue_free_task_memory(struct nvdla_queue *queue, int index)
 	mutex_lock(&task_pool->lock);
 	clear_bit(index, &task_pool->alloc_table);
 
-	if (task_pool->cleanup_wait == 1) {
-		task_pool->cleanup_wait = 0;
-		complete(&task_pool->cleanup_done);
-	}
 	mutex_unlock(&task_pool->lock);
 }

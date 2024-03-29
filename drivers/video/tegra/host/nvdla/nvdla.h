@@ -463,6 +463,17 @@ int nvdla_send_cmd(struct platform_device *pdev,
 void nvdla_task_put(struct nvdla_task *task);
 
 /**
+ * nvdla_task_init()	initializes task reference count to 1
+ *
+ * @task		Pointer to task in operation
+ *
+ * Return		void
+ *
+ * This function initializes task reference count
+ */
+void nvdla_task_init(struct nvdla_task *task);
+
+/**
  * nvdla_task_get()	increase task reference count
  *
  * @task		Pointer to task in operation
@@ -474,17 +485,27 @@ void nvdla_task_put(struct nvdla_task *task);
 void nvdla_task_get(struct nvdla_task *task);
 
 /**
- * nvdla_task_alloc()	allocate task for a give queue
+ * nvdla_fill_task_desc()	fills the task descriptor
  *
  * @task		Pointer to nvdla_task.
  * @bypass_exec		Task is marked to bypass its execution.
  *
- * Return		allocated task in success, otherwise pointer to err
+ * Return		zero on success, non-zero otherwise.
  *
- * This function allocates task desc and fills up initial task descriptor as
- * task parameter detais
+ * This function fills up initial task descriptor using the task parameters.
  */
 int nvdla_fill_task_desc(struct nvdla_task *task, bool bypass_exec);
+
+/**
+ * nvdla_unmap_task_memory()	unmaps the task memory
+ *
+ * @task		Pointer to nvdla_task.
+ *
+ * Return		zero on success, non-zero otherwise.
+ *
+ * This function unmaps the task memory, mapped with nvdla_fill_task_desc.
+ */
+int nvdla_unmap_task_memory(struct nvdla_task *task);
 
 /**
  * nvdla_send_postfences()	send back fences to UMD

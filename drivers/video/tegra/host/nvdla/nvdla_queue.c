@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2016-2023, NVIDIA Corporation.  All rights reserved.
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
- * NVDLA queue and task management for T194
+ * NVDLA queue and task management.
  */
 
 #include <linux/arm64-barrier.h>
@@ -27,6 +26,12 @@
 
 #define NVDLA_QUEUE_ABORT_TIMEOUT	10000	/* 10 sec */
 #define NVDLA_QUEUE_ABORT_RETRY_PERIOD	500	/* 500 ms */
+
+/* Limit on maximum number of DLA tasks to cleanup during submit. */
+#define NVDLA_QUEUE_SUBMIT_CLEANUP_LIMIT 2U
+
+/* Limit to cleanup all DLA and/or EMU tasks in queue */
+#define NVDLA_QUEUE_CLEANUP_LIMIT (MAX_NVDLA_TASK_COUNT + 1U)
 
 /* struct to hold information required for nvdla_add_fence_action_cb */
 struct nvdla_add_fence_action_cb_args {
@@ -79,6 +84,9 @@ static void nvdla_queue_dump_op(struct nvdla_queue *queue, struct seq_file *s)
 	mutex_unlock(&queue->list_lock);
 }
 
+static void nvdla_queue_task_cleanup(struct nvdla_queue *queue,
+	uint32_t max_dla_cleanup_depth);
+
 int nvdla_get_task_mem(struct nvdla_queue *queue,
 			struct nvdla_task **ptask)
 {
@@ -86,16 +94,16 @@ int nvdla_get_task_mem(struct nvdla_queue *queue,
 	struct nvdla_task *task = NULL;
 	struct nvdla_queue_task_mem_info task_mem_info;
 	struct platform_device *pdev = queue->pool->pdev;
-	int n_retries = (NVDLA_TASK_MEM_AVAIL_TIMEOUT_MS /
-					NVDLA_TASK_MEM_AVAIL_RETRY_PERIOD);
 
 	nvdla_dbg_fn(pdev, "");
 
+	/* Cleanup at most 2 completed tasks. */
+	nvdla_dbg_info(pdev, "on-demand cleanup prior to submission.");
+	nvdla_queue_task_cleanup(queue, NVDLA_QUEUE_SUBMIT_CLEANUP_LIMIT);
+
 	/* get mem task descriptor and task mem from task_mem_pool */
-	do {
-		n_retries = n_retries - 1;
-		err = nvdla_queue_alloc_task_memory(queue, &task_mem_info);
-	} while ((n_retries > 0) && (err == -EAGAIN));
+	task_mem_info.pool_index = -1;
+	err = nvdla_queue_alloc_task_memory(queue, &task_mem_info);
 
 	task = task_mem_info.kmem_addr;
 	if ((err < 0) || !task)
@@ -107,13 +115,18 @@ int nvdla_get_task_mem(struct nvdla_queue *queue,
 		goto fail_to_aligned_dma;
 	}
 
+	task->queue = queue;
 	task->task_desc = task_mem_info.va;
 	task->task_desc_pa = task_mem_info.dma_addr;
 	task->pool_index = task_mem_info.pool_index;
 
 	*ptask = task;
 
+	return 0;
+
 fail_to_aligned_dma:
+	if (task_mem_info.pool_index != -1)
+		nvdla_queue_free_task_memory(queue, task_mem_info.pool_index);
 fail_to_assign_pool:
 	return err;
 }
@@ -149,6 +162,18 @@ void nvdla_task_put(struct nvdla_task *task)
 	nvdla_queue_put(queue);
 }
 
+void nvdla_task_init(struct nvdla_task *task)
+{
+	struct nvdla_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	nvdla_dbg_fn(pdev, "task:[%p]", task);
+
+	/* update queue refcnt */
+	nvdla_queue_get(task->queue);
+	kref_init(&task->ref);
+}
+
 void nvdla_task_get(struct nvdla_task *task)
 {
 	struct nvdla_queue *queue = task->queue;
@@ -158,11 +183,10 @@ void nvdla_task_get(struct nvdla_task *task)
 
 	/* update queue refcnt */
 	nvdla_queue_get(task->queue);
-
 	kref_get(&task->ref);
 }
 
-static int nvdla_unmap_task_memory(struct nvdla_task *task)
+int nvdla_unmap_task_memory(struct nvdla_task *task)
 {
 	int ii;
 	struct nvdla_queue *queue = task->queue;
@@ -320,35 +344,44 @@ static inline size_t nvdla_profile_status_offset(struct nvdla_task *task)
 	return offset;
 }
 
-
-#if IS_ENABLED(CONFIG_TEGRA_GRHOST)
-/*
- * This function definition can be removed once support
- * for the NVIDIA Linux v5.10 kernel is removed.
+/**
+ * Description:
+ *
+ * Clean up the completed tasks.
+ *
+ * This function cleans up atmost max_dla_cleanup_depth completed dla tasks
+ * from the task list.
+ *
+ * @param[in] queue Pointer to the queue
+ * @param[in] max_dla_cleanup_depth limit on number of DLA completed tasks
+ *                  that can be cleaned up
+ *
  */
-static void nvdla_queue_update(void *priv, int unused)
-#else
-static void nvdla_queue_update(void *priv)
-#endif
+static void nvdla_queue_task_cleanup(struct nvdla_queue *queue,
+	uint32_t max_dla_cleanup_depth)
 {
 	int task_complete;
 	struct nvdla_task *task, *safe;
-	struct nvdla_queue *queue = priv;
 	struct platform_device *pdev = queue->pool->pdev;
 	struct nvhost_notification *tsp_notifier;
 	u64 timestamp_start, timestamp_end;
 	u64 *timestamp_ptr;
-	int n_tasks_completed = 0;
+	uint32_t dla_cleanup_depth = 0U;
 	uint32_t task_id;
 	int i;
+
 	mutex_lock(&queue->list_lock);
 
 	nvdla_dbg_fn(pdev, "");
 
 	/* check which task(s) finished */
 	list_for_each_entry_safe(task, safe, &queue->tasklist, list) {
+		if (dla_cleanup_depth >= max_dla_cleanup_depth)
+			break;
+
 		task_id = nvdla_compute_task_id(task->task_desc->sequence,
 				task->task_desc->queue_id);
+
 		task_complete = nvhost_syncpt_is_expired_ext(pdev,
 					queue->syncpt_id, task->fence);
 
@@ -376,14 +409,24 @@ static void nvdla_queue_update(void *priv)
 			}
 		}
 			nvdla_task_free_locked(task);
-			n_tasks_completed++;
+
+			/* Stay at UINT_MAX, once reached the UINT_MAX. */
+			if (unlikely(dla_cleanup_depth >= (UINT_MAX - 1U)))
+				dla_cleanup_depth = UINT_MAX - 1U;
+
+			dla_cleanup_depth = dla_cleanup_depth + 1U;
 		}
 	}
 
 	/* put pm refcount */
-	nvhost_module_idle_mult(pdev, n_tasks_completed);
+	nvhost_module_idle_mult(pdev, dla_cleanup_depth);
 
 	mutex_unlock(&queue->list_lock);
+}
+
+static void nvdla_queue_cleanup_op(struct nvdla_queue *queue)
+{
+	nvdla_queue_task_cleanup(queue, NVDLA_QUEUE_CLEANUP_LIMIT);
 }
 
 static size_t nvdla_get_task_desc_size(void)
@@ -1061,9 +1104,10 @@ int nvdla_fill_task_desc(struct nvdla_task *task, bool bypass_exec)
 	}
 
 	/* update current task sequeue, make sure wrap around condition */
-	queue->sequence = queue->sequence + 1;
-	if (unlikely(queue->sequence >= (UINT_MAX - 1)))
-		queue->sequence = 0;
+	if (likely(queue->sequence < UINT_MAX))
+		queue->sequence = queue->sequence + 1U;
+	else
+		queue->sequence = 0U;
 
 	task_desc->sequence = queue->sequence;
 
@@ -1119,6 +1163,11 @@ int nvdla_fill_task_desc(struct nvdla_task *task, bool bypass_exec)
 	return 0;
 
 fail_to_map_mem:
+	if (likely(queue->sequence > 0U))
+		queue->sequence = queue->sequence - 1U;
+	else
+		queue->sequence = UINT_MAX;
+
 	(void) nvdla_unmap_task_memory(task);
 	return err;
 }
@@ -1300,34 +1349,21 @@ static int nvdla_queue_submit_op(struct nvdla_queue *queue, void *in_task)
 
 	mutex_lock(&queue->list_lock);
 
-	/* Get a reference before registration or submission */
+	/* Get a reference before submission to the firmware */
 	nvdla_task_get(task);
 
 	task_id = nvdla_compute_task_id(task->task_desc->sequence, task->task_desc->queue_id);
-
-	/* get fence from nvhost for MMIO mode*/
-	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_MMIO) {
-		task->fence = nvhost_syncpt_incr_max_ext(pdev,
-						queue->syncpt_id,
-						task->fence_counter);
-	}
 
 	/* update last task desc's next */
 	if (!list_empty(&queue->tasklist)) {
 		last_task = list_last_entry(&queue->tasklist,
 						struct nvdla_task, list);
-		last_task->task_desc->next = (uint64_t)task->task_desc_pa;
 
-		nvdla_dbg_info(pdev, "last task[%p] last_task_desc_pa[%llu]",
-				last_task, task->task_desc_pa);
+		/* Hold the last task reference until task chaining. */
+		nvdla_task_get(last_task);
 	}
-	list_add_tail(&task->list, &queue->tasklist);
 
-	nvdla_dbg_info(pdev, "task[%p] added to list", task);
-
-	nvdla_dbg_fn(pdev, "syncpt[%d] fence[%d] task[%p] fence_counter[%u]",
-				queue->syncpt_id, task->fence,
-				task, task->fence_counter);
+	mutex_unlock(&queue->list_lock);
 
 	/* enable INT_ON_COMPLETE and INT_ON_ERROR falcon interrupts */
 	method_id = (DLA_CMD_SUBMIT_TASK & DLA_METHOD_ID_CMD_MASK) |
@@ -1342,41 +1378,32 @@ static int nvdla_queue_submit_op(struct nvdla_queue *queue, void *in_task)
 	if (nvhost_module_busy(pdev))
 		goto fail_to_poweron;
 
-	/* prepare command for channel submit */
-	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL) {
+	/* prepare command for submit */
+	cmd_data.method_id = method_id;
+	cmd_data.method_data = method_data;
+	cmd_data.wait = true;
 
-		cmd_data.method_id = method_id;
-		cmd_data.method_data = method_data;
-		cmd_data.wait = true;
-
-		/* submit task to engine */
+	if (unlikely(nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL)) {
 		err = nvdla_send_cmd_channel(pdev, queue, &cmd_data, task);
 		if (err) {
 			nvdla_dbg_err(pdev, "task[%p] submit failed", task);
-			goto fail_to_channel_submit;
+			goto fail_to_submit;
 		}
 	}
 
-	/* register notifier with fence */
-	err = nvhost_intr_register_notifier(pdev, queue->syncpt_id,
-		task->fence, nvdla_queue_update, queue);
-	if (err)
-		goto fail_to_register;
-
-	/* prepare command for MMIO submit */
-	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_MMIO) {
-		cmd_data.method_id = method_id;
-		cmd_data.method_data = method_data;
-		cmd_data.wait = true;
-
-		/* submit task to engine */
+	if (likely(nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_MMIO)) {
 		err = nvdla_send_cmd(pdev, &cmd_data);
 		if (err) {
 			nvdla_dbg_err(pdev, "task[%p] submit failed", task);
-			/* deletes invalid task from queue, puts refs */
-			nvhost_syncpt_set_min_update(pdev, queue->syncpt_id,
-							 task->fence);
+			goto fail_to_submit;
 		}
+
+		task->fence = nvhost_syncpt_incr_max_ext(pdev,
+						queue->syncpt_id,
+						task->fence_counter);
+		nvdla_dbg_fn(pdev, "syncpt[%d] fence[%d] task[%p] fence_counter[%u]",
+				queue->syncpt_id, task->fence,
+				task, task->fence_counter);
 	}
 
 	if (IS_ENABLED(CONFIG_TRACING)) {
@@ -1392,14 +1419,35 @@ static int nvdla_queue_submit_op(struct nvdla_queue *queue, void *in_task)
 		}
 	}
 
-	mutex_unlock(&queue->list_lock);
-	return err;
+	mutex_lock(&queue->list_lock);
 
-fail_to_register:
-fail_to_channel_submit:
+	/* Chain the successfully submited task if last task available. */
+	if (last_task != NULL) {
+		last_task->task_desc->next = (uint64_t)task->task_desc_pa;
+
+		nvdla_dbg_info(pdev, "last task[%p] last_task_desc_pa[%llu]",
+				last_task, task->task_desc_pa);
+
+		nvdla_task_put(last_task);
+	}
+
+	/* Add a queue entry upon successful submission. */
+	list_add_tail(&task->list, &queue->tasklist);
+	nvdla_dbg_info(pdev, "task[%p] added to list", task);
+
+	mutex_unlock(&queue->list_lock);
+
+	return 0;
+
+fail_to_submit:
 	nvhost_module_idle(pdev);
 fail_to_poweron:
-	nvdla_task_free_locked(task);
+	mutex_lock(&queue->list_lock);
+	if (last_task != NULL)
+		nvdla_task_put(last_task);
+
+	/* Put back the task reference if failure. */
+	nvdla_task_put(task);
 	mutex_unlock(&queue->list_lock);
 
 	return err;
@@ -1446,22 +1494,24 @@ fail_to_poweron:
 static int nvdla_queue_abort_op(struct nvdla_queue *queue)
 {
 	int err = 0, fence;
-	struct nvdla_task *t;
 	struct nvdla_cmd_data cmd_data;
 	struct platform_device *pdev = queue->pool->pdev;
 	int retry = NVDLA_QUEUE_ABORT_TIMEOUT / NVDLA_QUEUE_ABORT_RETRY_PERIOD;
+	bool queue_empty;
 
 	nvdla_dbg_fn(pdev, "");
 
 	mutex_lock(&queue->list_lock);
-	if (list_empty(&queue->tasklist))
-		goto list_empty;
+	queue_empty = list_empty(&queue->tasklist);
+	mutex_unlock(&queue->list_lock);
+	if (queue_empty)
+		goto done;
 
 	/* get pm refcount */
 	err = nvhost_module_busy(pdev);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to poweron, err: %d", err);
-		goto fail_to_poweron;
+		goto done;
 	}
 
 	/* prepare command */
@@ -1482,29 +1532,24 @@ static int nvdla_queue_abort_op(struct nvdla_queue *queue)
 		nvdla_dbg_err(pdev,
 		"Q %d abort fail. err:%d, retry:%d",
 			queue->id, err, retry);
-		goto done;
+		goto poweroff;
 	}
 
 	nvdla_dbg_info(pdev, "Engine Q[%d] flush done", queue->id);
 
-	/* if task present free them by reset syncpoint */
-	if (!list_empty(&queue->tasklist)) {
-		t = list_last_entry(&queue->tasklist, struct nvdla_task, list);
+	/* reset syncpoint to release all tasks */
+	fence = nvhost_syncpt_read_maxval(pdev, queue->syncpt_id);
+	nvhost_syncpt_set_min_update(pdev, queue->syncpt_id, fence);
 
-		/* reset syncpoint to release all tasks */
-		fence = nvhost_syncpt_read_maxval(pdev, queue->syncpt_id);
-		nvhost_syncpt_set_min_update(pdev, queue->syncpt_id, fence);
-
-		/* dump details */
-		nvdla_dbg_info(pdev, "Q id %d reset syncpt[%d] done",
+	/* dump details */
+	nvdla_dbg_info(pdev, "Q id %d reset syncpt[%d] done",
 			queue->id, queue->syncpt_id);
-	}
 
-done:
+	nvdla_queue_cleanup_op(queue);
+
+poweroff:
 	nvhost_module_idle(pdev);
-fail_to_poweron:
-list_empty:
-	mutex_unlock(&queue->list_lock);
+done:
 	return err;
 }
 
@@ -1513,4 +1558,5 @@ struct nvdla_queue_ops nvdla_queue_ops = {
 	.submit = nvdla_queue_submit_op,
 	.get_task_size =  nvdla_get_task_desc_memsize_op,
 	.dump = nvdla_queue_dump_op,
+	.cleanup = nvdla_queue_cleanup_op,
 };

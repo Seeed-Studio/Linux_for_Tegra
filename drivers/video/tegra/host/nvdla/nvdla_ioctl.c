@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-/*
- * NVDLA IOCTL for T194
+// SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
+ * NVDLA IOCTL
  */
 
 #include <nvidia/conftest.h>
@@ -1080,7 +1080,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 		nvdla_dbg_info(pdev, "task[%d] mem allocate done", i + 1);
 
 		/* Initialize ref for task submit preparation */
-		kref_init(&task->ref);
+		nvdla_task_init(task);
 
 		/* fill local task param from user args */
 		err = nvdla_fill_task(queue, buffers, &local_task, task);
@@ -1130,7 +1130,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 			goto fail_to_submit_task;
 		}
 		nvdla_dbg_info(pdev, "task[%d] submitted", i + 1);
-		kref_put(&task->ref, task_free);
+		nvdla_task_put(task);
 	}
 	nvdla_dbg_fn(pdev, "Task submitted, done!");
 
@@ -1146,12 +1146,18 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 fail_to_submit_task:
 fail_to_update_postfences:
 fail_to_get_fences:
+	/* Restore to the last successful sequence. */
+	if (likely(queue->sequence > 0U))
+		queue->sequence = queue->sequence - 1U;
+	else
+		queue->sequence = UINT_MAX;
+
+	/* Unmap the memory mapped when populating task descriptor. */
+	nvdla_unmap_task_memory(task);
 fail_to_fill_task_desc:
 fail_to_fill_task:
 	/* Remove ref corresponding task submit preparation */
-	kref_put(&task->ref, task_free);
-
-	/*TODO: traverse list in reverse and delete jobs */
+	nvdla_task_put(task);
 fail_to_get_task_mem:
 fail_to_copy_task:
 	return err;

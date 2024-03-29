@@ -1,17 +1,13 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2016-2023, NVIDIA Corporation.  All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary */
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
- * NVHOST Queue management header for T194/T23x
+ * NVDLA queue management header
  */
 
 #ifndef __NVHOST_NVDLA_QUEUE_H__
 #define __NVHOST_NVDLA_QUEUE_H__
 
 #include <linux/kref.h>
-
-#define NVDLA_TASK_MEM_AVAIL_TIMEOUT_MS 10  /* 10 ms */
-#define NVDLA_TASK_MEM_AVAIL_RETRY_PERIOD 1 /* 1 ms */
 
 struct nvdla_queue_task_pool;
 
@@ -82,7 +78,7 @@ struct nvdla_queue {
  * submit		submit the given list of tasks to hardware
  * get_task_size	get the dma size needed for the task in hw
  *			and the kernel memory size needed for task.
- *
+ * cleanup		cleans expired tasks from the tasklist.
  */
 struct nvdla_queue_ops {
 	void (*dump)(struct nvdla_queue *queue, struct seq_file *s);
@@ -90,6 +86,7 @@ struct nvdla_queue_ops {
 	int (*submit)(struct nvdla_queue *queue, void *task_arg);
 	void (*get_task_size)(size_t *dma_size, size_t *kmem_size);
 	int (*set_attribute)(struct nvdla_queue *queue, void *arg);
+	void (*cleanup)(struct nvdla_queue *queue);
 };
 
 /**
