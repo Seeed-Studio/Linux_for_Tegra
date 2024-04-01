@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -24,6 +24,7 @@
 #include <linux/pm.h>
 #include <linux/cdev.h>
 #include <linux/fs.h>
+#include <linux/gcd.h>
 
 #include <uapi/media/cam_fsync.h>
 
@@ -314,10 +315,65 @@ static int cam_fsync_add_generator(struct fsync_generator_group *group, struct d
 	return err;
 }
 
+struct cam_fsync_extra_ticks_and_period {
+	u32 extra_ticks;
+	u32 num_periods;
+};
+
+/**
+ * @brief Get the Extra Ticks And Period For 30 Hz object
+ *
+ * This function does the following:
+ * - Calculate the extra ticks and number of periods for a 30Hz signal using the
+ *   fractional part of the division between TSC_TICKS_PER_HZ and the frequency.
+ * - The smallest fraction is calculated by dividing with the @ref GCD of the
+ *   frequency and the remainder.
+ *
+ * @param[out] extra  Extra ticks and number of periods
+ */
+static void cam_fsync_get_extra_ticks_and_period_for_30hz(
+			struct cam_fsync_extra_ticks_and_period *extra)
+{
+	u32 const frequency = 30U;
+	u32 const remainder = TSC_TICKS_PER_HZ % frequency;
+	u32 const hcf = gcd(frequency, remainder);
+
+	extra->extra_ticks = remainder / hcf;
+	extra->num_periods = frequency / hcf;
+}
+
+/**
+ * @brief Function to check if precise signal can be generated
+ *
+ * This function does the following:
+ *  - Check if all generators in the group are 30hz.
+ *
+ * @param group		Pointer to the fsync generator group
+ *
+ * @return bool		True if all generators are 30hz, false otherwise
+ */
+static bool cam_fsync_can_generate_precise_freq(
+			struct fsync_generator_group *group)
+{
+	struct cam_fsync_generator *generator;
+	bool is_30hz = true;
+
+	list_for_each_entry(generator, &group->generators, list) {
+		if (generator->config.freq_hz != 30) {
+			is_30hz = false;
+			break;
+		}
+	}
+
+	return is_30hz;
+}
+
 static int cam_fsync_program_group_generator_edges(struct fsync_generator_group *group)
 {
 	struct cam_fsync_generator *generator;
 	u32 max_freq_hz_lcm = 0;
+	struct cam_fsync_extra_ticks_and_period extra = {0, 1};
+	bool const can_generate_precise_freq = cam_fsync_can_generate_precise_freq(group);
 
 	/*
 	 * If rational locking is enforced (e.g. a 30Hz & 60Hz signal must align every two periods
@@ -338,10 +394,23 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 		}
 	}
 
+	/**
+	 * Generating a freq with period that is not multiple of TSC unit will
+	 * cause the signal to drift over time. To avoid this, if precise signal
+	 * is supported, calculate the extra ticks over the number of periods
+	 * using @ref getextra_ticksAndPeriodFor30Hz() for accurate phase alignment.
+	 * If the signal is not precise, set the extra ticks to 0 and number of
+	 * periods to 1 which is the default case.
+	 */
+	if (can_generate_precise_freq)
+		cam_fsync_get_extra_ticks_and_period_for_30hz(&extra);
+
 	list_for_each_entry(generator, &group->generators, list) {
 		u32 ticks_in_period = 0;
 		u32 ticks_active = 0;
 		u32 ticks_inactive = 0;
+		u32 const edge_reg_offset = 8U;
+		u32 i = 0;
 
 		if (group->features->rational_locking.enforced) {
 			ticks_in_period = DIV_ROUND_CLOSEST(TSC_TICKS_PER_HZ, max_freq_hz_lcm);
@@ -350,18 +419,43 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 			ticks_in_period = DIV_ROUND_CLOSEST(TSC_TICKS_PER_HZ,
 				generator->config.freq_hz);
 		}
-
 		ticks_active = mult_frac(ticks_in_period, generator->config.duty_cycle, 100);
 		ticks_inactive = ticks_in_period - ticks_active;
 
-		cam_fsync_generator_writel(generator, TSC_GENX_EDGE0,
-			TSC_GENX_EDGEX_TOGGLE |
-			FIELD_PREP(TSC_GENX_EDGEX_OFFSET, ticks_active));
+		/**
+		 * Program the edge registers for the generator. There are 8 edge registers
+		 * available for each generator. For each period, program the active and
+		 * inactive ticks. If extra ticks are available, apply them over the
+		 * inactive ticks across the number of periods.
+		 * For each period, 2 edge registers are programmed, one for active and one
+		 * for inactive ticks based on the duty cycle.
+		 */
+		for (i = 0; i < extra.num_periods; i++) {
+			u32 flags = TSC_GENX_EDGEX_TOGGLE;
+			u32 extra_ticks = 0;
 
-		cam_fsync_generator_writel(generator, TSC_GENX_EDGE1,
-			TSC_GENX_EDGEX_TOGGLE |
-			TSC_GENX_EDGEX_LOOP |
-			FIELD_PREP(TSC_GENX_EDGEX_OFFSET, ticks_inactive));
+			cam_fsync_generator_writel(generator,
+				TSC_GENX_EDGE0 + (i * edge_reg_offset),
+				flags |
+				FIELD_PREP(TSC_GENX_EDGEX_OFFSET, ticks_active));
+
+			/**
+			 * If it is the last period, set the loop flag for the last edge register
+			 * to loop back to the first edge register.
+			 */
+			if (i == extra.num_periods - 1)
+				flags |= TSC_GENX_EDGEX_LOOP;
+
+			if (extra.extra_ticks) {
+				extra_ticks = 1;
+				extra.extra_ticks--;
+			}
+
+			cam_fsync_generator_writel(generator,
+				TSC_GENX_EDGE1 + (i * edge_reg_offset),
+				flags |
+				FIELD_PREP(TSC_GENX_EDGEX_OFFSET, ticks_inactive + extra_ticks));
+		}
 	}
 
 	return 0;
