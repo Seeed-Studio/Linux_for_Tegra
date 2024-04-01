@@ -49,6 +49,34 @@
 			      <0x0 0x0010f000 0x0 0x1000>;
 		};
 
+		sys-cbb-fabric@800000 {
+			compatible = "nvidia,tegra264-sys-cbb-fabric";
+			reg = <0x0 0x800000 0x0 0x800000>;
+			interrupts = <GIC_SPI 581 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		top0-cbb-fabric@8100800000 {
+			compatible = "nvidia,tegra264-top0-cbb-fabric";
+			reg = <0x81 0x800000 0x0 0x800000>;
+			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		vision-cbb-fabric@8180800000 {
+			compatible = "nvidia,tegra264-vision-cbb-fabric";
+			reg = <0x81 0x80800000 0x0 0x800000>;
+			interrupts = <GIC_SPI 324 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		uphy0-cbb-fabric@a800800000 {
+			compatible = "nvidia,tegra264-uphy0-cbb-fabric";
+			reg = <0xa8 0x800000 0x0 0x800000>;
+			interrupts = <GIC_SPI 835 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
 		tegra_ufs: ufshci@a80b8d0000 {
 			compatible = "tegra264,ufs_variant",
 				     "tegra234,ufs_variant";
