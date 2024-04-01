@@ -479,7 +479,10 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-	for (iter = 0; iter < drv_data->chip_data->num_regs ; iter++) {
+	for (iter = 0; iter < APE_MAX_REG; iter++) {
+		if ((iter == AMC) && drv_data->chip_data->amc_not_avlbl)
+			continue;
+
 		res = platform_get_resource(pdev, IORESOURCE_MEM, iter);
 		if (!res) {
 			dev_err(dev,
@@ -653,7 +656,6 @@ static struct nvadsp_chipdata tegrat18x_adsp_chipdata = {
 
 	.amc_err_war = true,
 	.num_irqs = NVADSP_VIRQ_MAX,
-	.num_regs = APE_MAX_REG,
 };
 
 static struct nvadsp_chipdata tegra239_adsp_chipdata = {
@@ -686,7 +688,6 @@ static struct nvadsp_chipdata tegra239_adsp_chipdata = {
 	/* Populate Chip ID Major Revision as well */
 	.chipid_ext  = 0x9,
 	.num_irqs    = NVADSP_VIRQ_MAX,
-	.num_regs    = APE_MAX_REG,
 };
 
 static const struct of_device_id nvadsp_of_match[] = {

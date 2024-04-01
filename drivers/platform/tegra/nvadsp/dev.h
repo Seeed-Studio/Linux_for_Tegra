@@ -25,15 +25,12 @@
 enum {
 	AMC,
 	AMISC,
+	AO_MISC = AMISC,
 	AHSP,
+	AON_HSP = AHSP,
 	APE_MAX_REG
 };
 
-enum {
-	AO_MISC,
-	AON_HSP,
-	AON_MAX_REG,
-};
 /*
  * Note: These enums should be aligned to the adsp_mem node mentioned in the
  * device tree
@@ -159,10 +156,8 @@ struct nvadsp_chipdata {
 	bool			amc_err_war;
 	u32			chipid_ext;
 
-	u32			adsp_prid;
 	char			*adsp_elf;
 	size_t                  num_irqs;
-	size_t                  num_regs;
 };
 
 /* Maximum number of LOAD MAPPINGS supported */
