@@ -2,7 +2,7 @@
 /*
  * PCIe host controller driver for Tegra264 SoC
  *
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Manikanta Maddireddy <mmaddireddy@nvidia.com>
  */
@@ -10,6 +10,7 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/iopoll.h>
 #include <linux/of_address.h>
 #include <linux/of_pci.h>
 #include <linux/of_platform.h>
@@ -24,6 +25,9 @@
 #else
 #include <drivers-private/pci/k619/pci.h>
 #endif
+
+#define PCIE_LINK_UP_DELAY	10000	/* 10 msec */
+#define PCIE_LINK_UP_TIMEOUT	1000000	/* 1 s */
 
 /* XAL registers */
 #define XAL_RC_MEM_32BIT_BASE_HI		0x1c
@@ -95,6 +99,20 @@ static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 	val  = readl(pcie->xtl_pri_base + XTL_RC_MGMT_PERST_CONTROL);
 	val |= XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
 	writel(val, pcie->xtl_pri_base + XTL_RC_MGMT_PERST_CONTROL);
+
+	/* Poll every 10 msec for 1 sec to link up */
+	readl_poll_timeout(pcie->ecam_base + XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS, val,
+			   val & XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE,
+			   PCIE_LINK_UP_DELAY, PCIE_LINK_UP_TIMEOUT);
+
+	if (val & XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE) {
+		/* Per PCIe r5.0, 6.6.1 wait for 100ms after DLL up */
+		msleep(100);
+		dev_info(pcie->dev, "PCIe Controller-%d Link is UP (Speed: %d)\n",
+			 pcie->ctl_id, (val & 0xf0000) >> 16);
+	} else {
+		dev_info(pcie->dev, "PCIe Controller-%d Link is DOWN\r\n", pcie->ctl_id);
+	}
 }
 
 static int tegra264_pcie_probe(struct platform_device *pdev)
@@ -105,7 +123,6 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 	struct resource_entry *bus;
 	struct resource_entry *entry;
 	struct resource *res;
-	u32 val, count;
 	int ret = 0;
 
 	bridge = devm_pci_alloc_host_bridge(dev, sizeof(struct tegra264_pcie));
@@ -133,7 +150,7 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = of_get_pci_domain_nr(pcie->dev->of_node);
+	ret = of_get_pci_domain_nr(dev->of_node);
 	if (ret < 0) {
 		dev_err(dev, "failed to get domain number: %d\n", ret);
 		return ret;
@@ -174,28 +191,9 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 
 	bridge->ops = (struct pci_ops *)&pci_generic_ecam_ops.pci_ops;
 	bridge->sysdata = pcie->cfg;
-        pcie->ecam_base = pcie->cfg->win;
+	pcie->ecam_base = pcie->cfg->win;
 
 	tegra264_pcie_init(pcie);
-
-	msleep(100);
-
-	/* Wait for link up */
-	count = 0;
-	do {
-		usleep_range(10, 20);
-		val = readl(pcie->ecam_base + XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS);
-		if (val & XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE) {
-			dev_info(dev, "PCIe Controller-%d Link is UP (Speed: %d)\n",
-				 pcie->ctl_id, (val & 0xf0000) >> 16);
-			break;
-		}
-
-		count++;
-	} while (count < 10000);
-
-	if (!(val & XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE))
-		dev_info(dev, "PCIe Controller-%d Link is DOWN\r\n", pcie->ctl_id);
 
 	ret = pci_host_probe(bridge);
 	if (ret < 0) {
@@ -207,6 +205,19 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 	return ret;
 }
 
+static int tegra264_pcie_resume_noirq(struct device *dev)
+{
+	struct tegra264_pcie *pcie = dev_get_drvdata(dev);
+
+	tegra264_pcie_init(pcie);
+
+	return 0;
+}
+
+static const struct dev_pm_ops tegra264_pcie_pm_ops = {
+	.resume_noirq = tegra264_pcie_resume_noirq,
+};
+
 static const struct of_device_id tegra264_pcie_of_match[] = {
 	{
 		.compatible = "nvidia,tegra264-pcie",
@@ -217,7 +228,8 @@ static const struct of_device_id tegra264_pcie_of_match[] = {
 static struct platform_driver tegra264_pcie_driver = {
 	.probe = tegra264_pcie_probe,
 	.driver = {
-		.name   = "tegra264-pcie",
+		.name = "tegra264-pcie",
+		.pm = &tegra264_pcie_pm_ops,
 		.of_match_table = tegra264_pcie_of_match,
 	},
 };
