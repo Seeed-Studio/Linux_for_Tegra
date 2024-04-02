@@ -14,3 +14,9 @@ nvadsp-objs += dev.o os.o app.o app_loader_linker.o\
 
 # T234/T239/T194/T186
 nvadsp-objs += dev-t18x.o os-t18x.o
+
+# T264
+nvadsp-objs += dev-t264.o
+
+# T264 AON
+nvadsp-objs += dev-t264-aon.o

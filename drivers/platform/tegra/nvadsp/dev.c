@@ -638,6 +638,9 @@ static int nvadsp_remove(struct platform_device *pdev)
  */
 extern struct nvadsp_chipdata tegrat18x_adsp_chipdata;
 extern struct nvadsp_chipdata tegra239_adsp_chipdata;
+extern struct nvadsp_chipdata tegra264_adsp0_chipdata;
+extern struct nvadsp_chipdata tegra264_adsp1_chipdata;
+extern struct nvadsp_chipdata tegra264_aon_chipdata;
 static const struct of_device_id nvadsp_of_match[] = {
 	{
 		.compatible = "nvidia,tegra18x-adsp",
@@ -645,6 +648,15 @@ static const struct of_device_id nvadsp_of_match[] = {
 	}, {
 		.compatible = "nvidia,tegra239-adsp",
 		.data = &tegra239_adsp_chipdata,
+	}, {
+		.compatible = "nvidia,tegra264-adsp",
+		.data = &tegra264_adsp0_chipdata,
+	}, {
+		.compatible = "nvidia,tegra264-adsp1",
+		.data = &tegra264_adsp1_chipdata,
+	}, {
+		.compatible = "nvidia,tegra264-aon",
+		.data = &tegra264_aon_chipdata,
 	}, {
 	},
 };
