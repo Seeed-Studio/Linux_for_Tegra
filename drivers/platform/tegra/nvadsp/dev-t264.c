@@ -5,15 +5,13 @@
 
 #include <linux/reset.h>
 #include "dev.h"
-#include "dev-t264.h"
 
-#define AMISC_ADSP_CPU_CONFIG_STRIDE    (0x1000)
 #define AMISC_ADSP_CPU_CONFIG           (0x0)
 #define   AMISC_ADSP_STATVECTORSEL      (1 << 4)
 #define   AMISC_ADSP_RUNSTALL           (1 << 0)
 #define AMISC_ADSP_CPU_RESETVEC         0x4
 
-int nvadsp_os_t264_init(struct platform_device *pdev)
+static int nvadsp_os_t264_init(struct platform_device *pdev)
 {
 	/* TBD */
 	return 0;
@@ -63,7 +61,7 @@ static int __nvadsp_t264_runtime_idle(struct device *dev)
 	return 0;
 }
 
-int nvadsp_pm_t264_init(struct platform_device *pdev)
+static int nvadsp_pm_t264_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -77,6 +75,11 @@ int nvadsp_pm_t264_init(struct platform_device *pdev)
 	return 0;
 }
 #endif /* CONFIG_PM */
+
+static void __dump_core_state_t264(struct nvadsp_drv_data *d)
+{
+	/* TBD */
+}
 
 static int __set_boot_vec_t264(struct nvadsp_drv_data *d)
 {
@@ -99,8 +102,7 @@ static int __assert_t264_adsp(struct nvadsp_drv_data *d)
 	int ret = 0;
 
 	/* Assert RUNSTALL */
-	cpu_config_base = d->base_regs[AMISC] +
-		(d->chip_data->adsp_prid * AMISC_ADSP_CPU_CONFIG_STRIDE);
+	cpu_config_base = d->base_regs[AMISC];
 	cpu_config = readl(cpu_config_base + AMISC_ADSP_CPU_CONFIG);
 	cpu_config |= AMISC_ADSP_RUNSTALL;
 	writel(cpu_config, cpu_config_base + AMISC_ADSP_CPU_CONFIG);
@@ -129,8 +131,7 @@ static int __deassert_t264_adsp(struct nvadsp_drv_data *d)
 	}
 
 	/* Deassert RUNSTALL */
-	cpu_config_base = d->base_regs[AMISC] +
-		(d->chip_data->adsp_prid * AMISC_ADSP_CPU_CONFIG_STRIDE);
+	cpu_config_base = d->base_regs[AMISC];
 	cpu_config = readl(cpu_config_base + AMISC_ADSP_CPU_CONFIG);
 	cpu_config &= (~AMISC_ADSP_RUNSTALL);
 	writel(cpu_config, cpu_config_base + AMISC_ADSP_CPU_CONFIG);
@@ -139,7 +140,13 @@ end:
 	return ret;
 }
 
-int nvadsp_reset_t264_init(struct platform_device *pdev)
+static bool __check_wfi_status_t264(struct nvadsp_drv_data *d)
+{
+	/* TBD */
+	return true;
+}
+
+static int nvadsp_dev_t264_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -151,6 +158,9 @@ int nvadsp_reset_t264_init(struct platform_device *pdev)
 	d->set_boot_vec    = __set_boot_vec_t264;
 	d->set_boot_freqs  = __set_boot_freqs_t264;
 
+	d->check_wfi_status = __check_wfi_status_t264;
+	d->dump_core_state  = __dump_core_state_t264;
+
 	d->adspall_rst = devm_reset_control_get(dev, "adsp");
 	if (IS_ERR(d->adspall_rst)) {
 		dev_err(dev, "cannot get adsp reset\n");
@@ -159,3 +169,52 @@ int nvadsp_reset_t264_init(struct platform_device *pdev)
 
 	return ret;
 }
+
+struct nvadsp_chipdata tegra264_adsp0_chipdata = {
+	.hwmb = {
+		.reg_idx = AHSP,
+		.hwmbox0_reg = 0x00000,
+		.hwmbox1_reg = 0X08000,
+		.hwmbox2_reg = 0X10000,
+		.hwmbox3_reg = 0X18000,
+		.hwmbox4_reg = 0X20000,
+		.hwmbox5_reg = 0X28000,
+		.hwmbox6_reg = 0X30000,
+		.hwmbox7_reg = 0X38000,
+		.empty_int_ie = 0x8,
+	},
+	.adsp_shared_mem_hwmbox    = 0x08048, /* HWMBOX1 TYPE1_DATA0 */
+	.adsp_boot_config_hwmbox   = 0x0804C, /* HWMBOX1 TYPE1_DATA1 */
+	.dev_init = nvadsp_dev_t264_init,
+	.os_init = nvadsp_os_t264_init,
+#ifdef CONFIG_PM
+	.pm_init = nvadsp_pm_t264_init,
+#endif
+	.adsp_elf = "adsp0_t264.elf",
+	.num_irqs = NVADSP_VIRQ_MAX,
+};
+
+struct nvadsp_chipdata tegra264_adsp1_chipdata = {
+	.hwmb = {
+		.reg_idx = AHSP,
+		.hwmbox0_reg = 0x00000,
+		.hwmbox1_reg = 0X08000,
+		.hwmbox2_reg = 0X10000,
+		.hwmbox3_reg = 0X18000,
+		.hwmbox4_reg = 0X20000,
+		.hwmbox5_reg = 0X28000,
+		.hwmbox6_reg = 0X30000,
+		.hwmbox7_reg = 0X38000,
+		.empty_int_ie = 0x8,
+	},
+	.adsp_shared_mem_hwmbox    = 0x08048, /* HWMBOX1 TYPE1_DATA0 */
+	.adsp_boot_config_hwmbox   = 0x0804C, /* HWMBOX1 TYPE1_DATA1 */
+	.dev_init = nvadsp_dev_t264_init,
+	.os_init = nvadsp_os_t264_init,
+#ifdef CONFIG_PM
+	.pm_init = nvadsp_pm_t264_init,
+#endif
+	.adsp_elf = "adsp1_t264.elf",
+	.num_irqs = NVADSP_VIRQ_MAX,
+	.amc_not_avlbl = true,
+};

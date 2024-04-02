@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "dev.h"
-#include "dev-t264-aon.h"
 
 /* Defining offsets */
 #define AO_MISC_CPU_RESET_VECTOR_0 0x0
@@ -13,7 +12,7 @@
 #define AO_MISC_CPU_SET_RUNSTALL_0 0x1
 #define AO_MISC_CPU_CLEAR_RUNSTALL_0 0x0
 
-int nvaon_os_t264_init(struct platform_device *pdev)
+static int nvaon_os_t264_init(struct platform_device *pdev)
 {
 	/* TBD */
 	return 0;
@@ -65,7 +64,7 @@ static int __nvaon_t264_runtime_idle(struct device *dev)
 	return 0;
 }
 
-int nvaon_pm_t264_init(struct platform_device *pdev)
+static int nvaon_pm_t264_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -79,6 +78,11 @@ int nvaon_pm_t264_init(struct platform_device *pdev)
 	return 0;
 }
 #endif /* CONFIG_PM */
+
+static void __dump_core_state_t264_aon(struct nvadsp_drv_data *d)
+{
+	/* TBD */
+}
 
 static int __set_boot_vec_t264(struct nvadsp_drv_data *d)
 {
@@ -129,7 +133,7 @@ static int __map_hwmbox_interrupts(struct nvadsp_drv_data *d)
 	return 0;
 }
 
-static bool __check_wfi_status(struct nvadsp_drv_data *d)
+static bool __check_wfi_status_t264_aon(struct nvadsp_drv_data *d)
 {
 	void __iomem *cpu_config_base;
 	bool wfi_status = false;
@@ -148,7 +152,7 @@ static bool __check_wfi_status(struct nvadsp_drv_data *d)
 	return wfi_status;
 }
 
-int nvaon_reset_t264_init(struct platform_device *pdev)
+static int nvaon_dev_t264_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
 	int ret = 0;
@@ -161,6 +165,33 @@ int nvaon_reset_t264_init(struct platform_device *pdev)
 	d->set_boot_freqs  = __set_boot_freqs_t264;
 
 	d->map_hwmbox_interrupts = __map_hwmbox_interrupts;
-	d->check_wfi_status = __check_wfi_status;
+	d->check_wfi_status = __check_wfi_status_t264_aon;
+	d->dump_core_state  = __dump_core_state_t264_aon;
+
 	return ret;
 }
+
+struct nvadsp_chipdata tegra264_aon_chipdata = {
+	.hwmb = {
+		.reg_idx = AON_HSP,
+		.hwmbox0_reg = 0x00000,
+		.hwmbox1_reg = 0X08000,
+		.hwmbox2_reg = 0X10000,
+		.hwmbox3_reg = 0X18000,
+		.hwmbox4_reg = 0X20000,
+		.hwmbox5_reg = 0X28000,
+		.hwmbox6_reg = 0X30000,
+		.hwmbox7_reg = 0X38000,
+		.empty_int_ie = 0x8,
+	},
+	.adsp_shared_mem_hwmbox    = 0x08048, /* HWMBOX1 TYPE1_DATA0 */
+	.adsp_boot_config_hwmbox   = 0x0804C, /* HWMBOX1 TYPE1_DATA1 */
+	.dev_init = nvaon_dev_t264_init,
+	.os_init = nvaon_os_t264_init,
+#ifdef CONFIG_PM
+	.pm_init = nvaon_pm_t264_init,
+#endif
+	.adsp_elf = "aon_t264.elf",
+	.num_irqs = NVAON_VIRQ_MAX,
+	.amc_not_avlbl = true,
+};
