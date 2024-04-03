@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2017-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -42,7 +42,7 @@ static struct gpio_chip *cdi_gpio_get_chip(struct platform_device *pdev,
 						struct cdi_gpio_plat_data *pd)
 {
 	struct gpio_chip *gc = NULL;
-#if !defined(NV_GPIOCHIP_FIND_PRESENT) /* Linux 6.7 */
+#if defined(NV_GPIO_DEVICE_FIND_PRESENT) /* Linux 6.7 */
 	struct gpio_device *gdev;
 #endif
 	char name[MAX_STR_SIZE];
@@ -54,14 +54,14 @@ static struct gpio_chip *cdi_gpio_get_chip(struct platform_device *pdev,
 	}
 	strcpy(name, pd->gpio_prnt_chip);
 
-#if defined(NV_GPIOCHIP_FIND_PRESENT) /* Linux 6.7 */
-	gc = gpiochip_find(name, cdi_gpio_chip_match);
-#else
+#if defined(NV_GPIO_DEVICE_FIND_PRESENT) /* Linux 6.7 */
 	gdev = gpio_device_find(name, cdi_gpio_chip_match);
 	if (gdev) {
 		gc = gpio_device_get_chip(gdev);
 		gpio_device_put(gdev);
 	}
+#else
+	gc = gpiochip_find(name, cdi_gpio_chip_match);
 #endif
 	if (!gc) {
 		dev_err(&pdev->dev, "%s: unable to find gpio parent chip %s\n",
