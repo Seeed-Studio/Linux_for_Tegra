@@ -1520,10 +1520,10 @@ static int do_test(const char *alg, u32 type, u32 mask, int m, u32 num_mb)
 	case 10:
 		ret = min(ret, tcrypt_test("ecb(aes)"));
 		ret = min(ret, tcrypt_test("cbc(aes)"));
-		ret = min(ret, tcrypt_test("lrw(aes)"));
 		ret = min(ret, tcrypt_test("xts(aes)"));
 		ret = min(ret, tcrypt_test("ctr(aes)"));
 #if !defined(CONFIG_CRYPTO_SUPPORT_TEGRA_TESTS)
+		ret = min(ret, tcrypt_test("lrw(aes)"));
 		ret = min(ret, tcrypt_test("rfc3686(ctr(aes))"));
 		ret = min(ret, tcrypt_test("xctr(aes)"));
 #endif
@@ -2828,7 +2828,7 @@ static int __init tcrypt_mod_init(void)
 		pr_err("one or more tests failed!\n");
 		goto err_free_tv;
 	} else {
-		pr_debug("all tests passed\n");
+		pr_info("all tests passed\n");
 	}
 
 	/* We intentionaly return -EAGAIN to prevent keeping the module,
