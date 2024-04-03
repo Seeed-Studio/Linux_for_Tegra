@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/version.h>
@@ -29,6 +29,7 @@
 #include <linux/version.h>
 #include <linux/kmsg_dump.h>
 #include <linux/pstore_zone.h>
+#include <linux/dma-mapping.h>
 #include "tegra_vblk_oops.h"
 
 static struct vblk_dev *vblkdev_oops;
@@ -50,6 +51,15 @@ do { \
 	x.blkdev_req.blk_req.blk_offset = opr_offset; \
 	x.blkdev_req.blk_req.num_blks = num_of_blk; \
 	x.blkdev_req.blk_req.data_offset = opr_data_offset; \
+} while (0)
+
+#define POPULATE_BLK_REQ_IOVA(x, req_type, req_opr, opr_offset, num_of_blk, opr_iova) \
+do { \
+	x.type = req_type;\
+	x.blkdev_req.req_op = req_opr; \
+	x.blkdev_req.blk_req.blk_offset = opr_offset; \
+	x.blkdev_req.blk_req.num_blks = num_of_blk; \
+	x.blkdev_req.blk_req.iova_addr = opr_iova; \
 } while (0)
 
 static int32_t wait_for_fops_completion(struct vblk_dev *vblkdev_oops, bool is_read)
@@ -159,8 +169,12 @@ static ssize_t vblk_oops_read(char *buf, size_t bytes, loff_t pos)
 	if (bytes & (block_size - 1))
 		blocks += 1;
 
-	POPULATE_BLK_REQ(req_in, VS_DATA_REQ, VS_BLK_READ, block_pos, blocks,
-			vsc_req->mempool_offset);
+	if (vblkdev_oops->use_vm_address)
+		POPULATE_BLK_REQ_IOVA(req_in, VS_DATA_REQ, VS_BLK_READ, block_pos, blocks,
+				vblkdev_oops->ufs_iova);
+	else
+		POPULATE_BLK_REQ(req_in, VS_DATA_REQ, VS_BLK_READ, block_pos, blocks,
+				vsc_req->mempool_offset);
 
 	if (!tegra_hv_ivc_write(vblkdev_oops->ivck, &req_in,
 				sizeof(struct vs_request))) {
@@ -189,7 +203,13 @@ static ssize_t vblk_oops_read(char *buf, size_t bytes, loff_t pos)
 				__func__, req_out.status);
 	}
 
-	memcpy(buf, vsc_req->mempool_virt, bytes);
+	if (vblkdev_oops->use_vm_address) {
+		dma_sync_single_for_cpu(vblkdev_oops->device, vblkdev_oops->ufs_iova,
+				bytes, DMA_FROM_DEVICE);
+		memcpy(buf, vblkdev_oops->ufs_buf, bytes);
+	} else {
+		memcpy(buf, vsc_req->mempool_virt, bytes);
+	}
 
 	mutex_unlock(&vblkdev_oops->ivc_lock);
 	return bytes;
@@ -241,7 +261,6 @@ static ssize_t vblk_oops_write(const char *buf, size_t bytes,
 		return -ENOMSG;
 
 	mutex_lock(&vblkdev_oops->ivc_lock);
-	vsc_req = &vblkdev_oops->reqs[VSC_REQ_RW];
 
 	block_pos = pos/block_size;
 	blocks = bytes/block_size;
@@ -254,10 +273,19 @@ static ssize_t vblk_oops_write(const char *buf, size_t bytes,
 	if (bytes & (block_size - 1))
 		blocks += 1;
 
-	POPULATE_BLK_REQ(req_in, VS_DATA_REQ, VS_BLK_WRITE, block_pos, blocks,
-			vsc_req->mempool_offset);
+	if (vblkdev_oops->use_vm_address) {
+		POPULATE_BLK_REQ_IOVA(req_in, VS_DATA_REQ, VS_BLK_WRITE, block_pos, blocks,
+				vblkdev_oops->ufs_iova);
+		memcpy(vblkdev_oops->ufs_buf, buf, bytes);
+		dma_sync_single_for_device(vblkdev_oops->device, vblkdev_oops->ufs_iova,
+				bytes, DMA_TO_DEVICE);
+	} else {
+		vsc_req = &vblkdev_oops->reqs[VSC_REQ_RW];
+		POPULATE_BLK_REQ(req_in, VS_DATA_REQ, VS_BLK_WRITE, block_pos, blocks,
+				vsc_req->mempool_offset);
 
-	memcpy(vsc_req->mempool_virt, buf, bytes);
+		memcpy(vsc_req->mempool_virt, buf, bytes);
+	}
 
 	if (!tegra_hv_ivc_write(vblkdev_oops->ivck, &req_in,
 				sizeof(struct vs_request))) {
@@ -312,7 +340,7 @@ static ssize_t vblk_oops_panic_write(const char *buf, size_t bytes,
 	uint32_t blocks, block_pos;
 	uint32_t block_size = vblkdev_oops->config.blk_config.hardblk_size;
 
-	dev_dbg(vblkdev_oops->device, "%s> pos:%lld, bytes:%lu\n", __func__,
+	dev_err(vblkdev_oops->device, "%s> pos:%lld, bytes:%lu\n", __func__,
 		pos, bytes);
 
 	/* Not expected to happen for KMSG */
@@ -324,7 +352,6 @@ static ssize_t vblk_oops_panic_write(const char *buf, size_t bytes,
 	if (!bytes)
 		return -ENOMSG;
 
-	vsc_req = &vblkdev_oops->reqs[VSC_REQ_PANIC];
 
 	block_pos = pos/block_size;
 	blocks = bytes/block_size;
@@ -340,10 +367,19 @@ static ssize_t vblk_oops_panic_write(const char *buf, size_t bytes,
 	if (bytes & (block_size-1))
 		blocks += 1;
 
-	POPULATE_BLK_REQ(req_in, VS_DATA_REQ, VS_BLK_WRITE, block_pos, blocks,
-			vsc_req->mempool_offset);
+	if (vblkdev_oops->use_vm_address) {
+		POPULATE_BLK_REQ_IOVA(req_in, VS_DATA_REQ, VS_BLK_WRITE, block_pos, blocks,
+				vblkdev_oops->ufs_iova);
+		memcpy(vblkdev_oops->ufs_buf, buf, bytes);
+		dma_sync_single_for_device(vblkdev_oops->device, vblkdev_oops->ufs_iova,
+			bytes, DMA_TO_DEVICE);
+	} else {
+		vsc_req = &vblkdev_oops->reqs[VSC_REQ_PANIC];
+		POPULATE_BLK_REQ(req_in, VS_DATA_REQ, VS_BLK_WRITE, block_pos, blocks,
+				vsc_req->mempool_offset);
 
-	memcpy(vsc_req->mempool_virt, buf, bytes);
+		memcpy(vsc_req->mempool_virt, buf, bytes);
+	}
 
 	/*
 	 * We are avoiding ivc_lock usage in this path since the assumption is
@@ -385,6 +421,7 @@ static void setup_device(struct vblk_dev *vblkdev)
 	uint32_t req_id;
 	uint32_t max_requests;
 	struct vsc_request *req;
+	struct tegra_hv_ivm_cookie *ivmk;
 
 	vblkdev->size =
 		vblkdev->config.blk_config.num_blks *
@@ -410,61 +447,82 @@ static void setup_device(struct vblk_dev *vblkdev)
 		return;
 	}
 
-	max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
+	if (vblkdev->use_vm_address) {
+		max_requests = vblkdev->ivck->nframes;
+	} else {
+		ivmk = tegra_hv_mempool_reserve(vblkdev->ivm_id);
+		if (IS_ERR_OR_NULL(ivmk)) {
+			dev_err(vblkdev->device, "Failed to reserve IVM channel %d\n",
+				vblkdev->ivm_id);
+			return;
+		}
+		vblkdev->ivmk = ivmk;
 
-	if (max_requests < MAX_OOPS_VSC_REQS) {
-		dev_err(vblkdev->device,
-			"Device needs to support %d concurrent requests\n",
-			MAX_OOPS_VSC_REQS);
-		return;
-	} else if (max_requests > MAX_OOPS_VSC_REQS) {
-		dev_warn(vblkdev->device,
-			"Only %d concurrent requests can be filed, consider reducing mempool size\n",
-			MAX_OOPS_VSC_REQS);
-		max_requests = MAX_OOPS_VSC_REQS;
-	}
+		vblkdev->shared_buffer = devm_memremap(vblkdev->device,
+				ivmk->ipa, ivmk->size, MEMREMAP_WB);
+		if (IS_ERR_OR_NULL(vblkdev->shared_buffer)) {
+			dev_err(vblkdev->device, "Failed to map mempool area %d\n",
+					vblkdev->ivm_id);
+			tegra_hv_mempool_unreserve(vblkdev->ivmk);
+			return;
+		}
 
-	/* if the number of ivc frames is lesser than th  maximum requests that
-	 * can be supported(calculated based on mempool size above), treat this
-	 * as critical error and panic.
-	 *
-	 *if (num_of_ivc_frames < max_supported_requests)
-	 *   PANIC
-	 * Ideally, these 2 should be equal for below reasons
-	 *   1. Each ivc frame is a request should have a backing data memory
-	 *      for transfers. So, number of requests supported by message
-	 *      request memory should be <= number of frames in
-	 *      IVC queue. The read/write logic depends on this.
-	 *   2. If number of requests supported by message request memory is
-	 *	more than IVC frame count, then thats a wastage of memory space
-	 *      and it introduces a race condition in submit_bio_req().
-	 *      The race condition happens when there is only one empty slot in
-	 *      IVC write queue and 2 threads enter submit_bio_req(). Both will
-	 *      compete for IVC write(After calling ivc_can_write) and one of
-	 *      the write will fail. But with vblk_get_req() this race can be
-	 *      avoided if num_of_ivc_frames >= max_supported_requests
-	 *      holds true.
-	 *
-	 *  In short, the optimal setting is when both of these are equal
-	 */
-	if (vblkdev->ivck->nframes < max_requests) {
-		/* Error if the virtual storage device supports
-		 * read, write and ioctl operations
-		 */
-		panic("hv_vblk: IVC Channel:%u IVC frames %d less than possible max requests %d!\n",
-			vblkdev->ivc_id, vblkdev->ivck->nframes,
-			max_requests);
-		return;
-	}
+		max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
 
-	for (req_id = 0; req_id < max_requests; req_id++) {
-		req = &vblkdev->reqs[req_id];
-		req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +
-			(uintptr_t)(req_id * max_io_bytes));
-		req->mempool_offset = (req_id * max_io_bytes);
-		req->mempool_len = max_io_bytes;
-		req->id = req_id;
-		req->vblkdev = vblkdev;
+		if (max_requests < MAX_OOPS_VSC_REQS) {
+			dev_err(vblkdev->device,
+				"Device needs to support %d concurrent requests\n",
+				MAX_OOPS_VSC_REQS);
+			return;
+		} else if (max_requests > MAX_OOPS_VSC_REQS) {
+			dev_warn(vblkdev->device,
+				"Only %d concurrent requests can be filed, consider reducing mempool size\n",
+				MAX_OOPS_VSC_REQS);
+			max_requests = MAX_OOPS_VSC_REQS;
+		}
+
+		/* if the number of ivc frames is lesser than th  maximum requests that
+		* can be supported(calculated based on mempool size above), treat this
+		* as critical error and panic.
+		*
+		*if (num_of_ivc_frames < max_supported_requests)
+		*   PANIC
+		* Ideally, these 2 should be equal for below reasons
+		*   1. Each ivc frame is a request should have a backing data memory
+		*      for transfers. So, number of requests supported by message
+		*      request memory should be <= number of frames in
+		*      IVC queue. The read/write logic depends on this.
+		*   2. If number of requests supported by message request memory is
+		*	more than IVC frame count, then thats a wastage of memory space
+		*      and it introduces a race condition in submit_bio_req().
+		*      The race condition happens when there is only one empty slot in
+		*      IVC write queue and 2 threads enter submit_bio_req(). Both will
+		*      compete for IVC write(After calling ivc_can_write) and one of
+		*      the write will fail. But with vblk_get_req() this race can be
+		*      avoided if num_of_ivc_frames >= max_supported_requests
+		*      holds true.
+		*
+		*  In short, the optimal setting is when both of these are equal
+		*/
+		if (vblkdev->ivck->nframes < max_requests) {
+			/* Error if the virtual storage device supports
+			 * read, write and ioctl operations
+			 */
+			panic("hv_vblk: IVC Channel:%u IVC frames %d less than possible max requests %d!\n",
+				vblkdev->ivc_id, vblkdev->ivck->nframes,
+				max_requests);
+			return;
+		}
+
+		for (req_id = 0; req_id < max_requests; req_id++) {
+			req = &vblkdev->reqs[req_id];
+			req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +
+				(uintptr_t)(req_id * max_io_bytes));
+			req->mempool_offset = (req_id * max_io_bytes);
+			req->mempool_len = max_io_bytes;
+			req->id = req_id;
+			req->vblkdev = vblkdev;
+		}
 	}
 
 	if (max_requests == 0) {
@@ -602,6 +660,22 @@ static int vblk_oops_get_configinfo(struct vblk_dev *vblkdev)
 		return -EINVAL;
 	}
 
+	vblkdev->use_vm_address = vblkdev->config.blk_config.use_vm_address;
+	if (vblkdev->use_vm_address) {
+		vblkdev->ufs_buf = (void *)__get_free_pages(GFP_KERNEL,
+				get_order(vblkdev_oops->pstore_kmsg_size));
+		if (!vblkdev->ufs_buf) {
+			dev_err(vblkdev->device, "allocate buffer failed\n");
+			return -ENOMEM;
+		}
+		vblkdev->ufs_iova = dma_map_single(vblkdev->device, vblkdev->ufs_buf,
+				vblkdev_oops->pstore_kmsg_size, DMA_BIDIRECTIONAL);
+		if (dma_mapping_error(vblkdev->device, vblkdev->ufs_iova)) {
+			dev_err(vblkdev->device, "map buffer failed\n");
+			return -ENOMEM;
+		}
+	}
+
 	return 0;
 }
 
@@ -636,7 +710,6 @@ static int tegra_hv_vblk_oops_probe(struct platform_device *pdev)
 	static struct device_node *vblk_node;
 	struct device *dev = &pdev->dev;
 	int ret;
-	struct tegra_hv_ivm_cookie *ivmk;
 
 	if (!is_tegra_hypervisor_mode()) {
 		dev_err(dev, "Hypervisor is not present\n");
@@ -706,25 +779,6 @@ static int tegra_hv_vblk_oops_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	ivmk = tegra_hv_mempool_reserve(vblkdev_oops->ivm_id);
-	if (IS_ERR_OR_NULL(ivmk)) {
-		dev_err(dev, "Failed to reserve IVM channel %d\n",
-			vblkdev_oops->ivm_id);
-		ivmk = NULL;
-		ret = -ENODEV;
-		goto free_ivc;
-	}
-	vblkdev_oops->ivmk = ivmk;
-
-	vblkdev_oops->shared_buffer = devm_memremap(vblkdev_oops->device,
-			ivmk->ipa, ivmk->size, MEMREMAP_WB);
-	if (IS_ERR_OR_NULL(vblkdev_oops->shared_buffer)) {
-		dev_err(dev, "Failed to map mempool area %d\n",
-				vblkdev_oops->ivm_id);
-		ret = -ENOMEM;
-		goto free_mempool;
-	}
-
 	vblkdev_oops->initialized = false;
 
 	INIT_DELAYED_WORK(&vblkdev_oops->init, vblk_oops_init_device);
@@ -733,7 +787,7 @@ static int tegra_hv_vblk_oops_probe(struct platform_device *pdev)
 	if (vblk_oops_send_config_cmd(vblkdev_oops)) {
 		dev_err(dev, "Failed to send config cmd\n");
 		ret = -EACCES;
-		goto free_mempool;
+		goto fail;
 	}
 
 	/* postpone init work that needs response */
@@ -741,12 +795,6 @@ static int tegra_hv_vblk_oops_probe(struct platform_device *pdev)
 				msecs_to_jiffies(VSC_RESPONSE_WAIT_MS));
 
 	return 0;
-
-free_mempool:
-	tegra_hv_mempool_unreserve(vblkdev_oops->ivmk);
-
-free_ivc:
-	tegra_hv_ivc_unreserve(vblkdev_oops->ivck);
 
 fail:
 	return ret;
@@ -757,7 +805,8 @@ static int tegra_hv_vblk_oops_remove(struct platform_device *pdev)
 	struct vblk_dev *vblkdev = platform_get_drvdata(pdev);
 
 	tegra_hv_ivc_unreserve(vblkdev->ivck);
-	tegra_hv_mempool_unreserve(vblkdev->ivmk);
+	if (!vblkdev->use_vm_address)
+		tegra_hv_mempool_unreserve(vblkdev->ivmk);
 
 	return 0;
 }

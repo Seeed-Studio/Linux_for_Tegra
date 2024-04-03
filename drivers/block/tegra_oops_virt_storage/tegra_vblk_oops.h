@@ -68,6 +68,9 @@ struct vblk_dev {
 	struct mutex ivc_lock;
 	int pstore_max_reason;		/* pstore max_reason */
 	uint32_t pstore_kmsg_size;	/* pstore kmsg record size */
+	bool use_vm_address; /* whether it's on UFS */
+	void *ufs_buf; /* buffer used for UFS DMA, size equals pstore_kmsg_size */
+	dma_addr_t ufs_iova; /* IOVA of ufs_buf */
 };
 
 #endif
