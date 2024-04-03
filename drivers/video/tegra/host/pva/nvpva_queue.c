@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021-2023, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2021-2024, NVIDIA Corporation.  All rights reserved.
  *
  * NVHOST queue management for T194
  */
@@ -71,8 +71,8 @@ static int nvpva_queue_task_pool_alloc(struct platform_device *pdev,
 	if (queue->task_kmem_size) {
 		for (i = 0; i < num_segments; i++) {
 			task_pool->kmem_addr[i] =
-				kcalloc(MAX_PVA_TASK_COUNT_PER_QUEUE_SEG,
-					queue->task_kmem_size, GFP_KERNEL);
+				kvzalloc(MAX_PVA_TASK_COUNT_PER_QUEUE_SEG *\
+						 queue->task_kmem_size, GFP_KERNEL);
 			if (!task_pool->kmem_addr[i]) {
 				nvpva_err(&pdev->dev,
 					   "failed to allocate " \
@@ -140,7 +140,7 @@ err_alloc_task_pool:
 		if (task_pool->kmem_addr[i] == NULL)
 			continue;
 
-		kfree(task_pool->kmem_addr[i]);
+		kvfree(task_pool->kmem_addr[i]);
 		task_pool->kmem_addr[i] = NULL;
 	}
 
@@ -180,7 +180,7 @@ static void nvpva_queue_task_free_pool(struct platform_device *pdev,
 			task_pool->aux_va, task_pool->aux_dma_addr,
 			0);
 	for (i = 0; i < segments; i++)
-		kfree(task_pool->kmem_addr[i]);
+		kvfree(task_pool->kmem_addr[i]);
 
 	memset(task_pool->alloc_table, 0, sizeof(task_pool->alloc_table));
 	task_pool->max_task_cnt = 0U;
