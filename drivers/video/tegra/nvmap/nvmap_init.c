@@ -337,6 +337,10 @@ static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
 
 		is_gpu = true;
 		co = nvmap_get_carveout_pdata("gpu");
+		if (!co) {
+			pr_err("Could not get carveout\n");
+			return NULL;
+		}
 		granule_size = co->granule_size;
 	}
 
@@ -500,6 +504,10 @@ void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 
 		is_gpu = true;
 		co = nvmap_get_carveout_pdata("gpu");
+		if (!co) {
+			pr_err("Could not get carveout\n");
+			return;
+		}
 		granule_size = co->granule_size;
 	}
 
