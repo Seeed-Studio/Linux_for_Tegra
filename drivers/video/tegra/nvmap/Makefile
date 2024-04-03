@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
 
 GCOV_PROFILE := y
 
@@ -37,10 +37,6 @@ nvmap-$(NVMAP_CONFIG_SCIIPC) += nvmap_sci_ipc.o
 ifeq ($(NVMAP_CONFIG_PAGE_POOLS), y)
 nvmap-y += nvmap_pp.o
 endif #NVMAP_CONFIG_PAGE_POOLS
-
-ifneq ($(filter y,$(CONFIG_ARCH_TEGRA_19x_SOC) $(CONFIG_ARCH_TEGRA_194_SOC)),)
-nvmap-y += nvmap_init_t19x.o
-endif #CONFIG_ARCH_TEGRA_19x_SOC or CONFIG_ARCH_TEGRA_194_SOC
 
 KASAN_SANITIZE_nvmap_kasan_wrapper.o := n
 
