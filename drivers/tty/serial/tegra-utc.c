@@ -62,6 +62,10 @@ struct tegra_utc_port {
 
 	bool			tx_enabled;
 	bool			rx_enabled;
+
+	bool			polling_enabled;
+	struct task_struct	*rx_thread;
+	struct work_struct	rx_poll_stop;
 };
 
 static struct tegra_utc_port *utc_ports[UART_NR];
@@ -149,13 +153,25 @@ static bool tegra_utc_tx_char(struct tegra_utc_port *tup, unsigned char c)
 	return true;
 }
 
+static void tegra_utc_tx_char_poll(struct tegra_utc_port *tup, unsigned char c)
+{
+	while (tegra_utc_tx_readl(tup, TEGRA_UTC_FIFO_STATUS) & TEGRA_UTC_FIFO_FULL)
+		cpu_relax();
+
+	tegra_utc_tx_writel(c, tup, TEGRA_UTC_DATA);
+}
+
 static bool tegra_utc_tx_chars(struct tegra_utc_port *tup)
 {
 	struct circ_buf *xmit = &tup->port.state->xmit;
 
 	if (tup->port.x_char) {
-		if (!tegra_utc_tx_char(tup, tup->port.x_char))
-			return true;
+		if (tup->polling_enabled) {
+			tegra_utc_tx_char_poll(tup, tup->port.x_char);
+		} else {
+			if (!tegra_utc_tx_char(tup, tup->port.x_char))
+				return true;
+		}
 
 		tup->port.x_char = 0;
 	}
@@ -166,8 +182,12 @@ static bool tegra_utc_tx_chars(struct tegra_utc_port *tup)
 	}
 
 	do {
-		if (!tegra_utc_tx_char(tup, xmit->buf[xmit->tail]))
-			break;
+		if (tup->polling_enabled) {
+			tegra_utc_tx_char_poll(tup, xmit->buf[xmit->tail]);
+		} else {
+			if (!tegra_utc_tx_char(tup, xmit->buf[xmit->tail]))
+				break;
+		}
 
 		uart_xmit_advance(&tup->port, 1);
 	} while (!uart_circ_empty(xmit));
@@ -266,8 +286,8 @@ static void tegra_utc_start_tx(struct uart_port *port)
 {
 	struct tegra_utc_port *tup = container_of(port, struct tegra_utc_port, port);
 
-	if (tegra_utc_tx_chars(tup))
-		tegra_utc_set_tx_irq(tup, true);
+	if (tegra_utc_tx_chars(tup) && !tup->polling_enabled)
+			tegra_utc_set_tx_irq(tup, true);
 }
 
 static void tegra_utc_stop_rx(struct uart_port *port)
@@ -279,6 +299,9 @@ static void tegra_utc_stop_rx(struct uart_port *port)
 	tegra_utc_rx_writel(tup->rx_irqmask, tup, TEGRA_UTC_INTR_SET);
 
 	tup->rx_enabled = false;
+
+	if (tup->polling_enabled)
+		schedule_work(&tup->rx_poll_stop);
 }
 
 static void tegra_utc_hw_init(struct tegra_utc_port *tup)
@@ -290,17 +313,70 @@ static void tegra_utc_hw_init(struct tegra_utc_port *tup)
 		tegra_utc_reset_rx(tup);
 }
 
+static int tegra_utc_rx_poll_thread(void *data)
+{
+	struct tegra_utc_port *tup = data;
+	unsigned int status;
+
+	dev_dbg(tup->port.dev, "Tegra-UTC RX poll thread initialized\n");
+
+	/* We are polling now disable interrupts. */
+	tup->rx_irqmask = 0x0;
+	tegra_utc_rx_writel(tup->rx_irqmask, tup, TEGRA_UTC_INTR_SET);
+
+	/* Continously poll FIFO status and read data if available. */
+	while (!kthread_should_stop()) {
+		status = tegra_utc_rx_readl(tup, TEGRA_UTC_FIFO_STATUS);
+
+		/* Wait for one character time and continue. */
+		if (status & TEGRA_UTC_FIFO_EMPTY) {
+			msleep(5);
+			continue;
+		}
+		spin_lock(&tup->port.lock);
+		tegra_utc_rx_chars(tup);
+		spin_unlock(&tup->port.lock);
+	}
+
+	return 0;
+}
+
+static void tegra_utc_stop_rx_poll_thread(struct work_struct *work)
+{
+	struct tegra_utc_port *tup = container_of(work, struct tegra_utc_port, rx_poll_stop);
+
+	if (tup->rx_thread != NULL) {
+		kthread_stop(tup->rx_thread);
+		tup->rx_thread = NULL;
+	}
+}
+
 static int tegra_utc_startup(struct uart_port *port)
 {
 	struct tegra_utc_port *tup = container_of(port, struct tegra_utc_port, port);
-	int ret;
 
 	tegra_utc_hw_init(tup);
 
-	ret = request_irq(tup->irq, tegra_utc_isr, 0, dev_name(port->dev), tup);
-	if (ret < 0) {
-		dev_err(port->dev, "failed to register interrupt handler\n");
-		return ret;
+	if (tup->polling_enabled) {
+		struct task_struct *rx_thread;
+
+		rx_thread = kthread_create(tegra_utc_rx_poll_thread, (void *) tup,
+						"tegra_utc_rx_poll_thread");
+		if (IS_ERR(rx_thread)) {
+			dev_err(port->dev, "unable to start rx poll thread\n");
+			return PTR_ERR(rx_thread);
+		}
+
+		tup->rx_thread = rx_thread;
+		wake_up_process(rx_thread);
+	} else {
+		int ret;
+
+		ret = request_irq(tup->irq, tegra_utc_isr, 0, dev_name(port->dev), tup);
+		if (ret < 0) {
+			dev_err(port->dev, "failed to register interrupt handler\n");
+			return ret;
+		}
 	}
 
 	return 0;
@@ -313,7 +389,8 @@ static void tegra_utc_shutdown(struct uart_port *port)
 	tegra_utc_rx_writel(0x0, tup, TEGRA_UTC_ENABLE);
 	tup->rx_enabled = false;
 
-	free_irq(tup->irq, tup);
+	if (!tup->polling_enabled)
+		free_irq(tup->irq, tup);
 }
 
 static void tegra_utc_set_termios(struct uart_port *port, struct ktermios *termios,
@@ -553,16 +630,6 @@ static int tegra_utc_probe(struct platform_device *pdev)
 	int ret;
 	int i;
 
-	if (pdev->dev.of_node) {
-		struct device_node *np = pdev->dev.of_node;
-
-		ret = of_property_read_u32(np, "current-speed", &baudrate);
-		if (ret)
-			return ret;
-	} else {
-		baudrate = 115200;
-	}
-
 	portnr = tegra_utc_find_free_port();
 	if (portnr < 0)
 		return portnr;
@@ -570,6 +637,21 @@ static int tegra_utc_probe(struct platform_device *pdev)
 	tup = devm_kzalloc(&pdev->dev, sizeof(struct tegra_utc_port), GFP_KERNEL);
 	if (!tup)
 		return -ENOMEM;
+
+	if (pdev->dev.of_node) {
+		struct device_node *np = pdev->dev.of_node;
+
+		ret = of_property_read_u32(np, "current-speed", &baudrate);
+		if (ret)
+			return ret;
+
+		if (of_property_read_bool(np, "nvidia,utc-polling-enabled")) {
+			tup->polling_enabled = true;
+			INIT_WORK(&tup->rx_poll_stop, tegra_utc_stop_rx_poll_thread);
+		}
+	} else {
+		baudrate = 115200;
+	}
 
 	tup->irq = platform_get_irq(pdev, i);
 	if (tup->irq < 0) {
