@@ -7451,7 +7451,7 @@ compile_test() {
                 slab_flags_t flags = SLAB_MEM_SPREAD;
             }"
 
-            compile_check_conftest "$CODE" "NV_SLAB_MEM_SPREAD" "" "functions"
+            compile_check_conftest "$CODE" "NV_SLAB_MEM_SPREAD" "" "types"
         ;;
 
         snd_soc_card_jack_new_has_no_snd_soc_jack_pins)
