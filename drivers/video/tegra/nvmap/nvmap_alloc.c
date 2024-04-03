@@ -177,66 +177,6 @@ fail:
 	return -ENOMEM;
 }
 
-static struct device *nvmap_heap_pgalloc_dev(unsigned long type)
-{
-	int ret = -EINVAL;
-	struct device *dma_dev;
-
-	ret = 0;
-
-	if (ret || (type != NVMAP_HEAP_CARVEOUT_VPR))
-		return ERR_PTR(-EINVAL);
-
-	dma_dev = dma_dev_from_handle(type);
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-	if (!IS_ERR(dma_dev)) {
-		ret = dma_set_resizable_heap_floor_size(dma_dev, 0);
-		if (ret)
-			return ERR_PTR(ret);
-	}
-#endif
-	return dma_dev;
-}
-
-static int nvmap_heap_pgalloc(struct nvmap_client *client,
-			struct nvmap_handle *h, unsigned long type)
-{
-	size_t size = h->size;
-	struct page **pages;
-	struct device *dma_dev;
-	dma_addr_t pa = DMA_MAPPING_ERROR;
-
-	dma_dev = nvmap_heap_pgalloc_dev(type);
-	if (IS_ERR(dma_dev))
-		return PTR_ERR(dma_dev);
-
-	pages = dma_alloc_attrs(dma_dev, size, &pa,
-			GFP_KERNEL, DMA_ALLOC_FREE_ATTR);
-	if (dma_mapping_error(dma_dev, pa))
-		return -ENOMEM;
-
-	h->pgalloc.pages = pages;
-	h->pgalloc.contig = 0;
-	atomic_set(&h->pgalloc.ndirty, 0);
-	return 0;
-}
-
-static int nvmap_heap_pgfree(struct nvmap_handle *h)
-{
-	size_t size = h->size;
-	struct device *dma_dev;
-	dma_addr_t pa = ~(dma_addr_t)0;
-
-	dma_dev = nvmap_heap_pgalloc_dev(h->heap_type);
-	if (IS_ERR(dma_dev))
-		return PTR_ERR(dma_dev);
-
-	dma_free_attrs(dma_dev, size, h->pgalloc.pages, pa,
-		       DMA_ALLOC_FREE_ATTR);
-	h->pgalloc.pages = NULL;
-	return 0;
-}
-
 static bool nvmap_cpu_map_is_allowed(struct nvmap_handle *handle)
 {
 	if (handle->heap_type & NVMAP_HEAP_CARVEOUT_VPR)
@@ -319,13 +259,6 @@ static void alloc_handle(struct nvmap_client *client,
 #endif /* NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */
 			return;
 		}
-		ret = nvmap_heap_pgalloc(client, h, type);
-		if (ret)
-			return;
-		h->heap_type = NVMAP_HEAP_CARVEOUT_VPR;
-		h->heap_pgalloc = true;
-		mb();
-		h->alloc = true;
 	} else if (type & iovmm_mask) {
 		ret = handle_page_alloc(client, h,
 			h->userflags & NVMAP_HANDLE_PHYS_CONTIG);
@@ -602,10 +535,6 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 		h->vaddr = NULL;
 		h->pgalloc.pages = NULL;
 		goto out;
-	} else {
-		int ret = nvmap_heap_pgfree(h);
-		if (!ret)
-			goto out;
 	}
 
 	nr_page = DIV_ROUND_UP(h->size, PAGE_SIZE);
