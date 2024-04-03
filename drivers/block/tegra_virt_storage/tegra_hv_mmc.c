@@ -1,10 +1,8 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/kernel.h> /* printk() */
-#include <linux/slab.h>   /* kmalloc() */
+#include <linux/vmalloc.h>   /* kmalloc() */
 #include <linux/fs.h>   /* everything... */
 #include <linux/errno.h> /* error codes */
 #include <linux/fcntl.h> /* O_ACCMODE */

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
- * Copyright (c) 2019-2023, NVIDIA Corporation.  All rights reserved.
- *
  * NVDLA queue management
  */
 
@@ -10,6 +9,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
 #include <linux/debugfs.h>
 

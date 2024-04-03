@@ -12,7 +12,7 @@
 #include <linux/nvhost.h>
 #include <linux/of_platform.h>
 #include <linux/printk.h>
-#include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/tegra-capture-ivc.h>
 #include <linux/tegra-camera-rtcpu.h>
 

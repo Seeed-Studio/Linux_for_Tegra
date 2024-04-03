@@ -1,9 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
-#include <linux/slab.h>   /* kmalloc() */
+#include <linux/vmalloc.h>   /* kmalloc() */
 #include <linux/errno.h> /* error codes */
 #include <linux/delay.h> /* For msleep and usleep_range */
 #include <uapi/scsi/ufs/ioctl.h>

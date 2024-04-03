@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2017-2023 NVIDIA Corporation.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-isp.c
@@ -14,7 +14,7 @@
 #include <linux/nvhost.h>
 #include <linux/of_platform.h>
 #include <linux/printk.h>
-#include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/tegra-capture-ivc.h>
 #include <asm/arch_timer.h>
 #include <soc/tegra/fuse.h>

@@ -17,7 +17,7 @@
 #include <linux/of_platform.h>
 #include <linux/nvhost.h>
 #include <linux/sched.h>
-#include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/uaccess.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>

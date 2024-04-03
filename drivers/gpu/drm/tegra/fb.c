@@ -12,6 +12,7 @@
 #include <linux/console.h>
 #include <linux/version.h>
 #include <linux/fb.h>
+#include <linux/vmalloc.h>
 
 #include <drm/drm_fourcc.h>
 #include <drm/drm_framebuffer.h>
