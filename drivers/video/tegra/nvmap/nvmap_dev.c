@@ -432,10 +432,6 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			sizeof(struct nvmap_cache_op_64));
 		break;
 
-	case NVMAP_IOC_CACHE_LIST:
-		err = nvmap_ioctl_cache_maint_list(filp, uarg);
-		break;
-
 	case NVMAP_IOC_GUP_TEST:
 		err = nvmap_ioctl_gup_test(filp, uarg);
 		break;
