@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * tegra210_adsp.c - Tegra ADSP audio driver
- *
- * Author: Sumit Bhattacharya <sumitb@nvidia.com>
- * Copyright (c) 2014-2024 NVIDIA CORPORATION.  All rights reserved.
- *
- */
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION. All rights reserved.
+//
+// tegra210_adsp.c - Tegra ADSP audio driver
 
 #include <linux/module.h>
 #include <linux/clk.h>
@@ -42,7 +38,6 @@
 #include <sound/tegra_nvfx_plugin.h>
 #include "tegra_isomgr_bw.h"
 
-#include "tegra_asoc_utils.h"
 #include "tegra210_adsp.h"
 
 #define DRV_NAME "tegra210-adsp"
