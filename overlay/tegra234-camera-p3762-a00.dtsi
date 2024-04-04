@@ -24,89 +24,89 @@
 						reg = <0>;
 						status = "okay";
 						ar0234_vi_in0: endpoint {
-						       vc-id = <0>;
-						       port-index = <0>;
-						       bus-width = <2>;
-						       remote-endpoint = <&ar0234_csi_out0>;
+							vc-id = <0>;
+							port-index = <0>;
+							bus-width = <2>;
+							remote-endpoint = <&ar0234_csi_out0>;
 							status = "okay";
-					       };
+						};
 					};
 					port@1 {
 						reg = <1>;
 						status = "okay";
 						ar0234_vi_in1: endpoint {
-						       vc-id = <1>;
-						       port-index = <0>;
-						       bus-width = <2>;
-						       remote-endpoint = <&ar0234_csi_out1>;
+							vc-id = <1>;
+							port-index = <0>;
+							bus-width = <2>;
+							remote-endpoint = <&ar0234_csi_out1>;
 							status = "okay";
-	       					};
+						};
 					};
 					port@2 {
 						reg = <2>;
 						status = "okay";
 						ar0234_vi_in2: endpoint {
-						       vc-id = <0>;
-						       port-index = <1>;
-						       bus-width = <2>;
-						       remote-endpoint = <&ar0234_csi_out2>;
+							vc-id = <0>;
+							port-index = <1>;
+							bus-width = <2>;
+							remote-endpoint = <&ar0234_csi_out2>;
 							status = "okay";
-					       };
+						};
 					};
 					port@3 {
 						reg = <3>;
 						status = "okay";
 						ar0234_vi_in3: endpoint {
-						       vc-id = <1>;
-						       port-index = <1>;
-						       bus-width = <2>;
-						       remote-endpoint = <&ar0234_csi_out3>;
+							vc-id = <1>;
+							port-index = <1>;
+							bus-width = <2>;
+							remote-endpoint = <&ar0234_csi_out3>;
 							status = "okay";
-					       };
+						};
 					};
 					port@4 {
 						reg = <4>;
 						status = "okay";
 						ar0234_vi_in4: endpoint {
-						       vc-id = <0>;
-						       port-index = <2>;
-						       bus-width = <2>;
-						       remote-endpoint = <&ar0234_csi_out4>;
+							vc-id = <0>;
+							port-index = <2>;
+							bus-width = <2>;
+							remote-endpoint = <&ar0234_csi_out4>;
 							status = "okay";
-					       };
+						};
 					};
 					port@5 {
 						reg = <5>;
 						status = "okay";
 						ar0234_vi_in5: endpoint {
-						       vc-id = <1>;
-						       port-index = <2>;
-						       bus-width = <2>;
-						       remote-endpoint = <&ar0234_csi_out5>;
+							vc-id = <1>;
+							port-index = <2>;
+							bus-width = <2>;
+							remote-endpoint = <&ar0234_csi_out5>;
 							status = "okay";
-					       };
+						};
 					};
 					port@6 {
 						reg = <6>;
 						status = "okay";
 						ar0234_vi_in6: endpoint {
-						       vc-id = <0>;
-						       port-index = <3>;
-						       bus-width = <2>;
-						       remote-endpoint = <&ar0234_csi_out6>;
+							vc-id = <0>;
+							port-index = <3>;
+							bus-width = <2>;
+							remote-endpoint = <&ar0234_csi_out6>;
 							status = "okay";
-	       					};
+						};
 					};
 					port@7 {
 						reg = <7>;
 						status = "okay";
 						ar0234_vi_in7: endpoint {
-							vc-id = <1>;
+						vc-id = <1>;
 							port-index = <3>;
 							bus-width = <2>;
 							remote-endpoint = <&ar0234_csi_out7>;
 							status = "okay";
-	       					};
+						};
 					};
 					port@8 {
 						reg = <8>;
@@ -180,9 +180,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out0: endpoint@1 {
-										 remote-endpoint = <&ar0234_vi_in0>;
+										remote-endpoint = <&ar0234_vi_in0>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -206,9 +206,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out1: endpoint@3 {
-										 remote-endpoint = <&ar0234_vi_in1>;
+										remote-endpoint = <&ar0234_vi_in1>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -232,9 +232,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out2: endpoint@5 {
-										 remote-endpoint = <&ar0234_vi_in2>;
+										remote-endpoint = <&ar0234_vi_in2>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -258,9 +258,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out3: endpoint@7 {
-										 remote-endpoint = <&ar0234_vi_in3>;
+										remote-endpoint = <&ar0234_vi_in3>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -284,9 +284,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out4: endpoint@9 {
-										 remote-endpoint = <&ar0234_vi_in4>;
+										remote-endpoint = <&ar0234_vi_in4>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -310,9 +310,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out5: endpoint@11 {
-										 remote-endpoint = <&ar0234_vi_in5>;
+										remote-endpoint = <&ar0234_vi_in5>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -336,9 +336,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out6: endpoint@13 {
-									 	remote-endpoint = <&ar0234_vi_in6>;
+										remote-endpoint = <&ar0234_vi_in6>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -362,9 +362,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out7: endpoint@15 {
-										 remote-endpoint = <&ar0234_vi_in7>;
+										remote-endpoint = <&ar0234_vi_in7>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -388,9 +388,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out8: endpoint@17 {
-										 remote-endpoint = <&ar0234_vi_in8>;
+										remote-endpoint = <&ar0234_vi_in8>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -414,9 +414,9 @@
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out9: endpoint@19 {
-										 remote-endpoint = <&ar0234_vi_in9>;
+										remote-endpoint = <&ar0234_vi_in9>;
 										status = "okay";
-									 };
+									};
 								};
 							};
 						};
@@ -430,19 +430,19 @@
 									reg = <0>;
 									status = "okay";
 									ar0234_csi_in10: endpoint@20 {
-										 port-index = <4>;
-										 bus-width = <2>;
-										 remote-endpoint = <&ar0234_ar0234_out10>;
+										port-index = <4>;
+										bus-width = <2>;
+										remote-endpoint = <&ar0234_ar0234_out10>;
 										status = "okay";
-									 };
+									};
 								};
 								port@1 {
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out10: endpoint@21 {
-										  remote-endpoint = <&ar0234_vi_in10>;
+										remote-endpoint = <&ar0234_vi_in10>;
 										status = "okay";
-									  };
+									};
 								};
 							};
 						};
@@ -456,19 +456,19 @@
 									reg = <0>;
 									status = "okay";
 									ar0234_csi_in11: endpoint@22 {
-										 port-index = <4>;
-										 bus-width = <2>;
-										 remote-endpoint = <&ar0234_ar0234_out11>;
+										port-index = <4>;
+										bus-width = <2>;
+										remote-endpoint = <&ar0234_ar0234_out11>;
 										status = "okay";
-									 };
+									};
 								};
 								port@1 {
 									reg = <1>;
 									status = "okay";
 									ar0234_csi_out11: endpoint@23 {
-										  remote-endpoint = <&ar0234_vi_in11>;
+										remote-endpoint = <&ar0234_vi_in11>;
 										status = "okay";
-									  };
+									};
 								};
 							};
 						};
@@ -535,10 +535,10 @@
 							port@0 {
 								reg = <0>;
 								ar0234_ar0234_out8: endpoint {
-									    vc-id = <0>;
-									    port-index = <4>;
-									    bus-width = <2>;
-									    remote-endpoint = <&ar0234_csi_in8>;
+									vc-id = <0>;
+									port-index = <4>;
+									bus-width = <2>;
+									remote-endpoint = <&ar0234_csi_in8>;
 								};
 							};
 						};
@@ -603,10 +603,10 @@
 							port@0 {
 								reg = <0>;
 								ar0234_ar0234_out9: endpoint {
-									    vc-id = <1>;
-									    port-index = <4>;
-									    bus-width = <2>;
-									    remote-endpoint = <&ar0234_csi_in9>;
+									vc-id = <1>;
+									port-index = <4>;
+									bus-width = <2>;
+									remote-endpoint = <&ar0234_csi_in9>;
 								};
 							};
 						};
@@ -671,10 +671,10 @@
 							port@0 {
 								reg = <0>;
 								ar0234_ar0234_out10: endpoint {
-									    vc-id = <2>;
-									    port-index = <4>;
-									    bus-width = <2>;
-									    remote-endpoint = <&ar0234_csi_in10>;
+									vc-id = <2>;
+									port-index = <4>;
+									bus-width = <2>;
+									remote-endpoint = <&ar0234_csi_in10>;
 								};
 							};
 						};
@@ -739,10 +739,10 @@
 							port@0 {
 								reg = <0>;
 								ar0234_ar0234_out11: endpoint {
-									    vc-id = <3>;
-									    port-index = <4>;
-									    bus-width = <2>;
-									    remote-endpoint = <&ar0234_csi_in11>;
+									vc-id = <3>;
+									port-index = <4>;
+									bus-width = <2>;
+									remote-endpoint = <&ar0234_csi_in11>;
 								};
 							};
 						};
@@ -899,10 +899,10 @@
 									port@0 {
 										reg = <0>;
 										ar0234_ar0234_out0: endpoint {
-											    vc-id = <0>;
-											    port-index = <0>;
-											    bus-width = <2>;
-											    remote-endpoint = <&ar0234_csi_in0>;
+											vc-id = <0>;
+											port-index = <0>;
+											bus-width = <2>;
+											remote-endpoint = <&ar0234_csi_in0>;
 										};
 									};
 								};
@@ -967,10 +967,10 @@
 									port@0 {
 										reg = <0>;
 										ar0234_ar0234_out1: endpoint {
-											    vc-id = <1>;
-											    port-index = <0>;
-											    bus-width = <2>;
-											    remote-endpoint = <&ar0234_csi_in1>;
+											vc-id = <1>;
+											port-index = <0>;
+											bus-width = <2>;
+											remote-endpoint = <&ar0234_csi_in1>;
 										};
 									};
 								};
@@ -1037,10 +1037,10 @@
 									port@0 {
 										reg = <0>;
 										ar0234_ar0234_out2: endpoint {
-											    vc-id = <0>;
-											    port-index = <1>;
-											    bus-width = <2>;
-											    remote-endpoint = <&ar0234_csi_in2>;
+											vc-id = <0>;
+											port-index = <1>;
+											bus-width = <2>;
+											remote-endpoint = <&ar0234_csi_in2>;
 										};
 									};
 								};
@@ -1105,10 +1105,10 @@
 									port@0 {
 										reg = <0>;
 										ar0234_ar0234_out3: endpoint {
-											    vc-id = <1>;
-											    port-index = <1>;
-											    bus-width = <2>;
-											    remote-endpoint = <&ar0234_csi_in3>;
+											vc-id = <1>;
+											port-index = <1>;
+											bus-width = <2>;
+											remote-endpoint = <&ar0234_csi_in3>;
 										};
 									};
 								};
@@ -1173,10 +1173,10 @@
 									port@0 {
 										reg = <0>;
 										ar0234_ar0234_out4: endpoint {
-											    vc-id = <0>;
-											    port-index = <2>;
-											    bus-width = <2>;
-											    remote-endpoint = <&ar0234_csi_in4>;
+											vc-id = <0>;
+											port-index = <2>;
+											bus-width = <2>;
+											remote-endpoint = <&ar0234_csi_in4>;
 										};
 									};
 								};
@@ -1241,10 +1241,10 @@
 									port@0 {
 										reg = <0>;
 										ar0234_ar0234_out5: endpoint {
-											    vc-id = <1>;
-											    port-index = <2>;
-											    bus-width = <2>;
-											    remote-endpoint = <&ar0234_csi_in5>;
+											vc-id = <1>;
+											port-index = <2>;
+											bus-width = <2>;
+											remote-endpoint = <&ar0234_csi_in5>;
 										};
 									};
 								};
@@ -1309,10 +1309,10 @@
 									port@0 {
 										reg = <0>;
 										ar0234_ar0234_out6: endpoint {
-											    vc-id = <0>;
-											    port-index = <3>;
-											    bus-width = <2>;
-											    remote-endpoint = <&ar0234_csi_in6>;
+											vc-id = <0>;
+											port-index = <3>;
+											bus-width = <2>;
+											remote-endpoint = <&ar0234_csi_in6>;
 										};
 									};
 								};
@@ -1377,10 +1377,10 @@
 									port@0 {
 										reg = <0>;
 										ar0234_ar0234_out7: endpoint {
-											    vc-id = <1>;
-											    port-index = <3>;
-											    bus-width = <2>;
-											    remote-endpoint = <&ar0234_csi_in7>;
+											vc-id = <1>;
+											port-index = <3>;
+											bus-width = <2>;
+											remote-endpoint = <&ar0234_csi_in7>;
 										};
 									};
 								};
