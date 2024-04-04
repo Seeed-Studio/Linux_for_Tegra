@@ -372,7 +372,7 @@ static ssize_t force_unpacked_mode_set(struct device *dev,
 	struct spi_controller *controller = dev_get_drvdata(dev);
 
 	if (controller) {
-		tspi = spi_master_get_devdata(controller);
+		tspi = spi_controller_get_devdata(controller);
 		if (tspi && count) {
 			tspi->force_unpacked_mode = ((buf[0] - '0')  > 0);
 			return count;
@@ -389,7 +389,7 @@ static ssize_t force_unpacked_mode_show(struct device *dev,
 	struct spi_controller *controller = dev_get_drvdata(dev);
 
 	if (controller) {
-		tspi = spi_master_get_devdata(controller);
+		tspi = spi_controller_get_devdata(controller);
 		return sprintf(buf, "%d", tspi->force_unpacked_mode);
 	}
 	return -ENODEV;
@@ -426,7 +426,7 @@ static inline void tegra_spi_fence(struct tegra_spi_data *tspi)
 int tegra124_spi_slave_register_callback(struct spi_device *spi,
 	spi_callback func_ready, spi_callback func_isr, void *client_data)
 {
-	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(spi->controller);
 
 	/* Expect atleast one callback function. */
 	if (!tspi || (!func_ready && !func_isr))
@@ -1184,7 +1184,7 @@ static void set_best_clk_source(struct spi_device *spi,
 	const char *pclk_name, *fpclk_name = NULL;
 	struct device_node *node;
 	struct property *prop;
-	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(spi->controller);
 
 	node = spi->controller->dev.of_node;
 	if (!of_property_count_strings(node, "nvidia,clk-parents"))
@@ -1255,7 +1255,7 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 		struct spi_transfer *t, bool is_first_of_msg,
 		bool is_single_xfer)
 {
-	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(spi->controller);
 	struct tegra_spi_controller_data *cdata = spi->controller_data;
 	u32 speed;
 	u32 core_speed;
@@ -1424,7 +1424,7 @@ static struct tegra_spi_controller_data
 
 static int tegra_spi_setup(struct spi_device *spi)
 {
-	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(spi->controller);
 	struct tegra_spi_controller_data *cdata = spi->controller_data;
 	unsigned long val;
 	unsigned long flags;
@@ -1763,7 +1763,7 @@ static int tegra_spi_transfer_one_message(struct spi_controller *controller,
 {
 	bool is_first_msg = true;
 	int single_xfer;
-	struct tegra_spi_data *tspi = spi_master_get_devdata(controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(controller);
 	struct spi_transfer *xfer;
 	struct spi_device *spi = msg->spi;
 	int ret;
@@ -2004,7 +2004,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	controller->bus_num = bus_num;
 
 	dev_set_drvdata(&pdev->dev, controller);
-	tspi = spi_master_get_devdata(controller);
+	tspi = spi_controller_get_devdata(controller);
 	tspi->controller = controller;
 	tspi->clock_always_on = pdata->is_clkon_always;
 	tspi->rx_trig_words = pdata->rx_trig_words;
@@ -2141,7 +2141,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	pm_runtime_put(&pdev->dev);
 
 	controller->dev.of_node = pdev->dev.of_node;
-	ret = spi_register_master(controller);
+	ret = spi_register_controller(controller);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "cannot register to ctrlr err %d\n", ret);
 		goto exit_pm_disable;
@@ -2150,12 +2150,12 @@ static int tegra_spi_probe(struct platform_device *pdev)
 #ifdef TEGRA_SPI_SLAVE_DEBUG
 	ret = device_create_file(&pdev->dev, &dev_attr_force_unpacked_mode);
 	if (ret != 0)
-		goto exit_unregister_master;
+		goto exit_unregister_controller;
 
 	return ret;
 
-exit_unregister_master:
-	spi_unregister_master(controller);
+exit_unregister_controller:
+	spi_unregister_controller(controller);
 
 #endif
 	return ret;
@@ -2178,13 +2178,13 @@ exit_free_irq:
 static int tegra_spi_remove(struct platform_device *pdev)
 {
 	struct spi_controller *controller = dev_get_drvdata(&pdev->dev);
-	struct tegra_spi_data	*tspi = spi_master_get_devdata(controller);
+	struct tegra_spi_data	*tspi = spi_controller_get_devdata(controller);
 
 #ifdef TEGRA_SPI_SLAVE_DEBUG
 	device_remove_file(&pdev->dev, &dev_attr_force_unpacked_mode);
 #endif
 	free_irq(tspi->irq, tspi);
-	spi_unregister_master(controller);
+	spi_unregister_controller(controller);
 
 	if (tspi->tx_dma_chan)
 		tegra_spi_deinit_dma_param(tspi, false);
@@ -2206,10 +2206,10 @@ static int tegra_spi_remove(struct platform_device *pdev)
 static int tegra_spi_suspend(struct device *dev)
 {
 	struct spi_controller *controller = dev_get_drvdata(dev);
-	struct tegra_spi_data *tspi = spi_master_get_devdata(controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(controller);
 	int ret;
 
-	ret = spi_master_suspend(controller);
+	ret = spi_controller_suspend(controller);
 
 	if (tspi->clock_always_on)
 		clk_disable_unprepare(tspi->clk);
@@ -2220,7 +2220,7 @@ static int tegra_spi_suspend(struct device *dev)
 static int tegra_spi_resume(struct device *dev)
 {
 	struct spi_controller *controller = dev_get_drvdata(dev);
-	struct tegra_spi_data *tspi = spi_master_get_devdata(controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(controller);
 	int ret;
 
 	if (tspi->clock_always_on) {
@@ -2239,14 +2239,14 @@ static int tegra_spi_resume(struct device *dev)
 	tegra_spi_writel(tspi, tspi->command1_reg, SPI_COMMAND1);
 	pm_runtime_put(dev);
 
-	return spi_master_resume(controller);
+	return spi_controller_resume(controller);
 }
 #endif
 
 static int tegra_spi_runtime_suspend(struct device *dev)
 {
 	struct spi_controller *controller = dev_get_drvdata(dev);
-	struct tegra_spi_data *tspi = spi_master_get_devdata(controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(controller);
 
 	/* Flush all write which are in PPSB queue by reading back */
 	tegra_spi_readl(tspi, SPI_COMMAND1);
@@ -2258,7 +2258,7 @@ static int tegra_spi_runtime_suspend(struct device *dev)
 static int tegra_spi_runtime_resume(struct device *dev)
 {
 	struct spi_controller *controller = dev_get_drvdata(dev);
-	struct tegra_spi_data *tspi = spi_master_get_devdata(controller);
+	struct tegra_spi_data *tspi = spi_controller_get_devdata(controller);
 	int ret;
 
 	ret = clk_prepare_enable(tspi->clk);
