@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2009-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  */
@@ -204,11 +204,6 @@ struct nvmap_available_heaps {
 	__u64 heaps;		/* heaps bitmask */
 };
 
-struct nvmap_heap_size {
-	__u32 heap;
-	__u64 size;
-};
-
 struct nvmap_sciipc_map {
 	__u64 auth_token;    /* AuthToken */
 	__u32 flags;       /* Exporter permission flags */
@@ -336,9 +331,6 @@ struct nvmap_fd_for_range_from_list {
 
 #define NVMAP_IOC_GET_AVAILABLE_HEAPS \
 	_IOR(NVMAP_IOC_MAGIC, 25, struct nvmap_available_heaps)
-
-#define NVMAP_IOC_GET_HEAP_SIZE \
-	_IOR(NVMAP_IOC_MAGIC, 26, struct nvmap_heap_size)
 
 #define NVMAP_IOC_PARAMETERS \
 	_IOR(NVMAP_IOC_MAGIC, 27, struct nvmap_handle_parameters)

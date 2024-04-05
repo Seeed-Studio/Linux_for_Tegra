@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2010-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * ioctl declarations for nvmap
  */
@@ -50,7 +50,6 @@ int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg);
 
-int nvmap_ioctl_get_heap_size(struct file *filp, void __user *arg);
 void kasan_memcpy_toio(void __iomem *to, const void *from,
 			size_t count);
 
