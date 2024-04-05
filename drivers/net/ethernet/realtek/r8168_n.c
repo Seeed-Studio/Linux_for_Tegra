@@ -6747,7 +6747,11 @@ static int rtl_nway_reset(struct net_device *dev)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
 static int
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+rtl_ethtool_get_eee(struct net_device *net, struct ethtool_keee *eee)
+#else
 rtl_ethtool_get_eee(struct net_device *net, struct ethtool_eee *eee)
+#endif
 {
         struct rtl8168_private *tp = netdev_priv(net);
         u32 lp, adv, supported = 0;
@@ -6770,14 +6774,26 @@ rtl_ethtool_get_eee(struct net_device *net, struct ethtool_eee *eee)
 
         rtl8168_mdio_write(tp, 0x1F, 0x0A5C);
         val = rtl8168_mdio_read(tp, 0x12);
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+        supported = val;
+#else
         supported = mmd_eee_cap_to_ethtool_sup_t(val);
+#endif
 
         rtl8168_mdio_write(tp, 0x1F, 0x0A5D);
         val = rtl8168_mdio_read(tp, 0x10);
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+        adv = val;
+#else
         adv = mmd_eee_adv_to_ethtool_adv_t(val);
+#endif
 
         val = rtl8168_mdio_read(tp, 0x11);
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+        lp = val;
+#else
         lp = mmd_eee_adv_to_ethtool_adv_t(val);
+#endif
 
         val = rtl8168_eri_read(tp, 0x1B0, 2, ERIAR_ExGMAC);
         val &= BIT_1 | BIT_0;
@@ -6788,15 +6804,25 @@ rtl_ethtool_get_eee(struct net_device *net, struct ethtool_eee *eee)
 
         eee->eee_enabled = !!val;
         eee->eee_active = !!(supported & adv & lp);
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+        mii_eee_cap1_mod_linkmode_t(eee->supported, supported);
+        mii_eee_cap1_mod_linkmode_t(eee->advertised, adv);
+        mii_eee_cap1_mod_linkmode_t(eee->lp_advertised, lp);
+#else
         eee->supported = supported;
         eee->advertised = adv;
         eee->lp_advertised = lp;
+#endif
 
         return 0;
 }
 
 static int
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+rtl_ethtool_set_eee(struct net_device *net, struct ethtool_keee *eee)
+#else
 rtl_ethtool_set_eee(struct net_device *net, struct ethtool_eee *eee)
+#endif
 {
         struct rtl8168_private *tp = netdev_priv(net);
         unsigned long flags;
@@ -6821,7 +6847,11 @@ rtl_ethtool_set_eee(struct net_device *net, struct ethtool_eee *eee)
         }
 
         tp->eee_enabled = eee->eee_enabled;
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+        tp->eee_adv_t = linkmode_to_mii_eee_cap1_t(eee->advertised);
+#else
         tp->eee_adv_t = ethtool_adv_to_mmd_eee_adv_t(eee->advertised);
+#endif
 
         if (tp->eee_enabled)
                 rtl8168_enable_EEE(tp);
