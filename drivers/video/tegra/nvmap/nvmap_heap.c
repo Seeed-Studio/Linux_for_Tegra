@@ -40,22 +40,6 @@
 
 static struct kmem_cache *heap_block_cache;
 
-struct device *dma_dev_from_handle(unsigned long type)
-{
-	int i;
-	struct nvmap_carveout_node *co_heap;
-
-	for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
-		co_heap = &nvmap_dev->heaps[i];
-
-		if (!(co_heap->heap_bit & type))
-			continue;
-
-		return co_heap->carveout->dma_dev;
-	}
-	return ERR_PTR(-ENODEV);
-}
-
 int nvmap_query_heap_peer(struct nvmap_heap *heap, unsigned int *peer)
 {
 	if (!heap || !heap->is_ivm)
