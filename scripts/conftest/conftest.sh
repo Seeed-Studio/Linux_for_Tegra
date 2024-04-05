@@ -6987,6 +6987,23 @@ compile_test() {
                     "NV_DRM_SCDC_GET_SET_HAS_STRUCT_DRM_CONNECTOR_ARG" "" "types"
         ;;
 
+        ethtool_keee_struct_present)
+            #
+            # Determine if the 'struct ethtool_keee' is present.
+            #
+            # Commit d80a52335374 ("ethtool: replace struct ethtool_eee with a
+            # new struct ethtool_keee on kernel side") replaced struct
+            # ethtool_eee with ethtool_keee in Linux v6.9.
+            #
+            CODE="
+            #include <linux/ethtool.h>
+            int conftest_ethtool_keee_struct_present(struct ethtool_keee *keee) {
+                return 0;
+            }"
+
+            compile_check_conftest "$CODE" "NV_ETHTOOL_KEEE_STRUCT_PRESENT" "" "types"
+        ;;
+
         ethtool_ops_get_set_coalesce_has_coal_and_extack_args)
             #
             # Determine if the 'get_coalesce' and 'set_coalesce' ethtool_ops

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1095,7 +1095,11 @@ static int ether_get_coalesce(struct net_device *dev,
  * @retval -ve on Failure
  */
 static int ether_get_eee(struct net_device *ndev,
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+			 struct ethtool_keee *cur_eee)
+#else
 			 struct ethtool_eee *cur_eee)
+#endif
 {
 	int ret;
 	struct ether_priv_data *pdata = netdev_priv(ndev);
@@ -1136,8 +1140,13 @@ static int ether_get_eee(struct net_device *ndev,
  * @retval none
  */
 static inline void validate_eee_conf(struct net_device *ndev,
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+				     struct ethtool_keee *eee_req,
+				     struct ethtool_keee cur_eee)
+#else
 				     struct ethtool_eee *eee_req,
 				     struct ethtool_eee cur_eee)
+#endif
 {
 	/* These are the invalid combinations that can be requested.
 	 * EEE | Tx LPI | Rx LPI
@@ -1155,7 +1164,11 @@ static inline void validate_eee_conf(struct net_device *ndev,
 	    eee_req->advertised) {
 		if (eee_req->eee_enabled != cur_eee.eee_enabled) {
 			netdev_warn(ndev, "EEE off. Set Rx LPI off\n");
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+			linkmode_zero(eee_req->advertised);
+#else
 			eee_req->advertised = OSI_DISABLE;
+#endif
 		} else {
 			netdev_warn(ndev, "Rx LPI on. Set EEE on\n");
 			eee_req->eee_enabled = OSI_ENABLE;
@@ -1174,7 +1187,11 @@ static inline void validate_eee_conf(struct net_device *ndev,
 			 */
 			netdev_warn(ndev, "Tx LPI on. Set EEE & Rx LPI on\n");
 			eee_req->eee_enabled = OSI_ENABLE;
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+			linkmode_copy(eee_req->advertised, eee_req->supported);
+#else
 			eee_req->advertised = eee_req->supported;
+#endif
 		}
 	}
 
@@ -1183,7 +1200,11 @@ static inline void validate_eee_conf(struct net_device *ndev,
 		if (eee_req->eee_enabled != cur_eee.eee_enabled) {
 			netdev_warn(ndev, "EEE off. Set Tx & Rx LPI off\n");
 			eee_req->tx_lpi_enabled = OSI_DISABLE;
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+			linkmode_zero(eee_req->advertised);
+#else
 			eee_req->advertised = OSI_DISABLE;
+#endif
 		} else {
 			netdev_warn(ndev, "Tx & Rx LPI on. Set EEE on\n");
 			eee_req->eee_enabled = OSI_ENABLE;
@@ -1195,7 +1216,11 @@ static inline void validate_eee_conf(struct net_device *ndev,
 		if (eee_req->eee_enabled != cur_eee.eee_enabled) {
 			netdev_warn(ndev, "EEE on. Set Tx & Rx LPI on\n");
 			eee_req->tx_lpi_enabled = OSI_ENABLE;
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+			linkmode_copy(eee_req->advertised, eee_req->supported);
+#else
 			eee_req->advertised = eee_req->supported;
+#endif
 		} else {
 			netdev_warn(ndev, "Tx,Rx LPI off. Set EEE off\n");
 			eee_req->eee_enabled = OSI_DISABLE;
@@ -1218,11 +1243,19 @@ static inline void validate_eee_conf(struct net_device *ndev,
  * @retval -ve on Failure
  */
 static int ether_set_eee(struct net_device *ndev,
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+			 struct ethtool_keee *eee_req)
+#else
 			 struct ethtool_eee *eee_req)
+#endif
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct phy_device *phydev = pdata->phydev;
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+	struct ethtool_keee cur_eee;
+#else
 	struct ethtool_eee cur_eee;
+#endif
 
 	if (!pdata->hw_feat.eee_sel) {
 		return -EOPNOTSUPP;
