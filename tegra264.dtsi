@@ -41,12 +41,11 @@
 		};
 
 		misc@100000 {
-			compatible = "nvidia,tegra264-misc",
-				     "nvidia,tegra234-misc";
+			compatible = "nvidia,tegra234-misc";
 			status = "disabled";
 
 			reg = <0x0 0x00100000 0x0 0xf000>,
-			      <0x0 0x0010f000 0x0 0x1000>;
+			      <0x0 0x0c140000 0x0 0x10000>;
 		};
 
 		sys-cbb-fabric@800000 {
