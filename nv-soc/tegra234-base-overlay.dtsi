@@ -113,144 +113,33 @@
 						       <49152000>,
 						       <81600000>;
 
-				#sound-dai-cells = <1>;
-
 				/*
 				 * Below modules are upstreamed and present in v5.15,
 				 * but not yet feature complete. Thus use OOT driver
 				 * versions for now.
 				 */
 				i2s@2901000 {
-					#sound-dai-cells = <1>;
 					nvidia,ahub-i2s-id = <0>;
 				};
 
 				i2s@2901100 {
-					#sound-dai-cells = <1>;
 					nvidia,ahub-i2s-id = <1>;
 				};
 
 				i2s@2901200 {
-					#sound-dai-cells = <1>;
 					nvidia,ahub-i2s-id = <2>;
 				};
 
 				i2s@2901300 {
-					#sound-dai-cells = <1>;
 					nvidia,ahub-i2s-id = <3>;
 				};
 
 				i2s@2901400 {
-					#sound-dai-cells = <1>;
 					nvidia,ahub-i2s-id = <4>;
 				};
 
 				i2s@2901500 {
-					#sound-dai-cells = <1>;
 					nvidia,ahub-i2s-id = <5>;
-				};
-
-				dmic@2904000 {
-					#sound-dai-cells = <1>;
-				};
-
-				dmic@2904100 {
-					#sound-dai-cells = <1>;
-				};
-
-				dmic@2904200 {
-					#sound-dai-cells = <1>;
-				};
-
-				dmic@2904300 {
-					#sound-dai-cells = <1>;
-				};
-
-				dspk@2905000 {
-					#sound-dai-cells = <1>;
-				};
-
-				dspk@2905100 {
-					#sound-dai-cells = <1>;
-				};
-
-				admaif@290f000 {
-					#sound-dai-cells = <1>;
-				};
-
-				/*
-				 * Below modules are upstreamed. DT device nodes
-				 * are backported. But drivers are not in v5.15.
-				 * Thus use existing downstream drivers and add
-				 * '#sound-dai-cells' property needed for downstream
-				 * machine driver.
-				 */
-				sfc@2902000 {
-					#sound-dai-cells = <1>;
-				};
-
-				sfc@2902200 {
-					#sound-dai-cells = <1>;
-				};
-
-				sfc@2902400 {
-					#sound-dai-cells = <1>;
-				};
-
-				sfc@2902600 {
-					#sound-dai-cells = <1>;
-				};
-
-				amx@2903000 {
-					#sound-dai-cells = <1>;
-				};
-
-				amx@2903100 {
-					#sound-dai-cells = <1>;
-				};
-
-				amx@2903200 {
-					#sound-dai-cells = <1>;
-				};
-
-				amx@2903300 {
-					#sound-dai-cells = <1>;
-				};
-
-				adx@2903800 {
-					#sound-dai-cells = <1>;
-				};
-
-				adx@2903900 {
-					#sound-dai-cells = <1>;
-				};
-
-				adx@2903a00 {
-					#sound-dai-cells = <1>;
-				};
-
-				adx@2903b00 {
-					#sound-dai-cells = <1>;
-				};
-
-				mvc@290a000 {
-					#sound-dai-cells = <1>;
-				};
-
-				mvc@290a200 {
-					#sound-dai-cells = <1>;
-				};
-
-				amixer@290bb00 {
-					#sound-dai-cells = <1>;
-				};
-
-				processing-engine@2908000 {
-					#sound-dai-cells = <1>;
-				};
-
-				asrc@2910000 {
-					#sound-dai-cells = <1>;
 				};
 			};
 
@@ -260,7 +149,6 @@
 			 * enabled as and when needed.
 			 */
 			tegra_adsp_audio: adsp_audio {
-				#sound-dai-cells = <1>;
 				status = "disabled";
 			};
 		};

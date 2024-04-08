@@ -113,8 +113,6 @@
 		assigned-clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
 		assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLA_OUT0>;
 
-		nvidia-audio-card,name = "NVIDIA Jetson IGX Orin APE";
-
 		mclk-fs = <256>;
 
 		widgets =
@@ -136,21 +134,6 @@
 			"CVB-RT Int Spk",            "CVB-RT LOUTR",
 			"CVB-RT DMIC1",              "CVB-RT Int Mic",
 			"CVB-RT DMIC2",              "CVB-RT Int Mic";
-
-		/* I2S4 dai node */
-		nvidia-audio-card,dai-link@79 {
-			link-name = "rt5640-playback";
-			codec {
-				sound-dai = <&rt5640 0>;
-				prefix = "CVB-RT";
-			};
-		};
-
-		/* I2S6 dai node */
-		nvidia-audio-card,dai-link@81 {
-		       bitclock-master;
-		       frame-master;
-		};
 	};
 
 	eeprom-manager {

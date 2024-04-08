@@ -121,7 +121,7 @@
 		regulator-max-microvolt = <3300000>;
 	};
 
-	tegra_sound_graph: tegra_sound: sound {
+	tegra_sound: sound {
 		clocks = <&bpmp TEGRA234_CLK_PLLA>,
 			 <&bpmp TEGRA234_CLK_PLLA_OUT0>,
 			 <&bpmp TEGRA234_CLK_AUD_MCLK>;
@@ -129,14 +129,10 @@
 		assigned-clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
 		assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLA_OUT0>;
 
-		nvidia-audio-card,name = "NVIDIA Jetson AGX Orin APE";
-
 		mclk-fs = <256>;
 
 		/delete-property/ widgets;
 		/delete-property/ routing;
-
-		hdr40_snd_link_i2s: nvidia-audio-card,dai-link@77 { };
 	};
 
 	eeprom-manager {

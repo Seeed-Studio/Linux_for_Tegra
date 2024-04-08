@@ -34,7 +34,6 @@
 
 				i2c@31e0000 {
 					rt5640: audio-codec@1c {
-						#sound-dai-cells = <1>;
 						status = "okay";
 
 						port {
@@ -63,14 +62,6 @@
 					"CVB-RT Int Spk",	     "CVB-RT SPORP",
 					"CVB-RT DMIC1",		     "CVB-RT Int Mic",
 					"CVB-RT DMIC2",		     "CVB-RT Int Mic";
-
-				nvidia-audio-card,dai-link@76 {
-					link-name = "rt5640-playback";
-					codec {
-						sound-dai = <&rt5640 0>;
-						prefix = "CVB-RT";
-					};
-				};
 			};
 		};
 	};
