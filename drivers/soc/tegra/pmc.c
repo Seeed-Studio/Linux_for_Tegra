@@ -175,21 +175,8 @@
 #define PMC_UTMIP_UHSIC_SLEEP_CFG1	0x4d0
 #define PMC_UTMIP_SLEEPWALK_P3		0x4e0
 /* Tegra186 and later */
-#define WAKE_AOWAKE_CNTRL(x) (0x000 + ((x) << 2))
 #define WAKE_AOWAKE_CNTRL_LEVEL (1 << 3)
 #define WAKE_AOWAKE_CNTRL_SR_CAPTURE_EN (1 << 1)
-#define WAKE_AOWAKE_MASK_W(x) (0x180 + ((x) << 2))
-#define WAKE_AOWAKE_MASK_R(x) (0x300 + ((x) << 2))
-#define WAKE_AOWAKE_STATUS_W(x) (0x30c + ((x) << 2))
-#define WAKE_AOWAKE_STATUS_R(x) (0x48c + ((x) << 2))
-#define WAKE_AOWAKE_TIER0_ROUTING(x) (0x4b4 + ((x) << 2))
-#define WAKE_AOWAKE_TIER1_ROUTING(x) (0x4c0 + ((x) << 2))
-#define WAKE_AOWAKE_TIER2_ROUTING(x) (0x4cc + ((x) << 2))
-#define WAKE_AOWAKE_SW_STATUS_W_0	0x49c
-#define WAKE_AOWAKE_SW_STATUS(x)	(0x4a0 + ((x) << 2))
-#define WAKE_LATCH_SW			0x498
-
-#define WAKE_AOWAKE_CTRL 0x4f4
 #define  WAKE_AOWAKE_CTRL_INTR_POLARITY BIT(0)
 
 #define SW_WAKE_ID		83 /* wake83 */
@@ -474,6 +461,42 @@ static struct tegra_pmc *pmc = &(struct tegra_pmc) {
 	.base = NULL,
 	.suspend_mode = TEGRA_SUSPEND_NOT_READY,
 };
+
+static inline unsigned int get_offset_aowake_cntrl(struct tegra_pmc *pmc,
+						int id)
+{
+	return pmc->soc->regs->aowake_cntrl + (id << 2);
+}
+
+static inline unsigned int get_offset_aowake_mask_w(struct tegra_pmc *pmc,
+						int id)
+{
+	return pmc->soc->regs->aowake_mask_w + (id << 2);
+}
+
+static inline unsigned int get_offset_aowake_status_w(struct tegra_pmc *pmc,
+						int id)
+{
+	return pmc->soc->regs->aowake_status_w + (id << 2);
+}
+
+static inline unsigned int get_offset_aowake_status_r(struct tegra_pmc *pmc,
+						int id)
+{
+	return pmc->soc->regs->aowake_status_r + (id << 2);
+}
+
+static inline unsigned int get_offset_aowake_tier2_routing(
+						struct tegra_pmc *pmc, int id)
+{
+	return pmc->soc->regs->aowake_tier2_routing + (id << 2);
+}
+
+static inline unsigned int get_offset_aowake_sw_status(struct tegra_pmc *pmc,
+						int id)
+{
+	return pmc->soc->regs->aowake_sw_status + (id << 2);
+}
 
 static inline struct tegra_powergate *
 to_powergate(struct generic_pm_domain *domain)
@@ -1723,14 +1746,14 @@ static int tegra_io_pad_set_voltage(struct tegra_pmc *pmc, enum tegra_io_pad id,
 	mutex_lock(&pmc->powergates_lock);
 
 	if (pmc->soc->has_impl_33v_pwr) {
-		value = tegra_pmc_readl(pmc, PMC_IMPL_E_33V_PWR);
+		value = tegra_pmc_readl(pmc, pad->e_33v_ctl);
 
 		if (voltage == TEGRA_IO_PAD_VOLTAGE_1V8)
 			value &= ~BIT(pad->voltage);
 		else
 			value |= BIT(pad->voltage);
 
-		tegra_pmc_writel(pmc, value, PMC_IMPL_E_33V_PWR);
+		tegra_pmc_writel(pmc, value, pad->e_33v_ctl);
 	} else {
 		/* write-enable PMC_PWR_DET_VALUE[pad->voltage] */
 		value = tegra_pmc_readl(pmc, PMC_PWR_DET);
@@ -1768,7 +1791,7 @@ static int tegra_io_pad_get_voltage(struct tegra_pmc *pmc, enum tegra_io_pad id)
 		return -ENOTSUPP;
 
 	if (pmc->soc->has_impl_33v_pwr)
-		value = tegra_pmc_readl(pmc, PMC_IMPL_E_33V_PWR);
+		value = tegra_pmc_readl(pmc, pad->e_33v_ctl);
 	else
 		value = tegra_pmc_readl(pmc, PMC_PWR_DET_VALUE);
 
@@ -2406,9 +2429,9 @@ static void tegra186_pmc_set_wake_filters(struct tegra_pmc *pmc)
 	u32 value;
 
 	/* SW Wake (wake83) needs SR_CAPTURE filter to be enabled */
-	value = readl(pmc->wake + WAKE_AOWAKE_CNTRL(SW_WAKE_ID));
+	value = readl(pmc->wake + get_offset_aowake_cntrl(pmc, SW_WAKE_ID));
 	value |= WAKE_AOWAKE_CNTRL_SR_CAPTURE_EN;
-	writel(value, pmc->wake + WAKE_AOWAKE_CNTRL(SW_WAKE_ID));
+	writel(value, pmc->wake + get_offset_aowake_cntrl(pmc, SW_WAKE_ID));
 	dev_dbg(pmc->dev, "WAKE_AOWAKE_CNTRL_83 = 0x%x\n", value);
 }
 
@@ -2422,20 +2445,20 @@ static int tegra186_pmc_irq_set_wake(struct irq_data *data, unsigned int on)
 	bit = data->hwirq % 32;
 
 	/* clear wake status */
-	writel(0x1, pmc->wake + WAKE_AOWAKE_STATUS_W(data->hwirq));
+	writel(0x1, pmc->wake + get_offset_aowake_status_w(pmc, data->hwirq));
 
 	/* route wake to tier 2 */
-	value = readl(pmc->wake + WAKE_AOWAKE_TIER2_ROUTING(offset));
+	value = readl(pmc->wake + get_offset_aowake_tier2_routing(pmc, offset));
 
 	if (!on)
 		value &= ~(1 << bit);
 	else
 		value |= 1 << bit;
 
-	writel(value, pmc->wake + WAKE_AOWAKE_TIER2_ROUTING(offset));
+	writel(value, pmc->wake + get_offset_aowake_tier2_routing(pmc, offset));
 
 	/* enable wakeup event */
-	writel(!!on, pmc->wake + WAKE_AOWAKE_MASK_W(data->hwirq));
+	writel(!!on, pmc->wake + get_offset_aowake_mask_w(pmc, data->hwirq));
 
 	return 0;
 }
@@ -2445,7 +2468,7 @@ static int tegra186_pmc_irq_set_type(struct irq_data *data, unsigned int type)
 	struct tegra_pmc *pmc = irq_data_get_irq_chip_data(data);
 	u32 value;
 
-	value = readl(pmc->wake + WAKE_AOWAKE_CNTRL(data->hwirq));
+	value = readl(pmc->wake + get_offset_aowake_cntrl(pmc, data->hwirq));
 
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
@@ -2472,7 +2495,7 @@ static int tegra186_pmc_irq_set_type(struct irq_data *data, unsigned int type)
 		return -EINVAL;
 	}
 
-	writel(value, pmc->wake + WAKE_AOWAKE_CNTRL(data->hwirq));
+	writel(value, pmc->wake + get_offset_aowake_cntrl(pmc, data->hwirq));
 
 	return 0;
 }
@@ -3072,7 +3095,7 @@ static void wke_32kwritel(struct tegra_pmc *pmc, u32 value, unsigned int offset)
 
 static void wke_write_wake_level(struct tegra_pmc *pmc, int wake, int level)
 {
-	unsigned int offset = WAKE_AOWAKE_CNTRL(wake);
+	unsigned int offset = get_offset_aowake_cntrl(pmc, wake);
 	u32 value;
 
 	value = readl(pmc->wake + offset);
@@ -3094,7 +3117,7 @@ static void wke_write_wake_levels(struct tegra_pmc *pmc)
 
 static void wke_clear_sw_wake_status(struct tegra_pmc *pmc)
 {
-	wke_32kwritel(pmc, 1, WAKE_AOWAKE_SW_STATUS_W_0);
+	wke_32kwritel(pmc, 1, pmc->soc->regs->aowake_sw_status_w);
 }
 
 static void wke_read_sw_wake_status(struct tegra_pmc *pmc)
@@ -3107,7 +3130,7 @@ static void wke_read_sw_wake_status(struct tegra_pmc *pmc)
 
 	wke_clear_sw_wake_status(pmc);
 
-	wke_32kwritel(pmc, 1, WAKE_LATCH_SW);
+	wke_32kwritel(pmc, 1, pmc->soc->regs->aowake_latch_sw);
 
 	/*
 	 * WAKE_AOWAKE_SW_STATUS is edge triggered, so in order to
@@ -3125,12 +3148,12 @@ static void wke_read_sw_wake_status(struct tegra_pmc *pmc)
 	 */
 	udelay(300);
 
-	wke_32kwritel(pmc, 0, WAKE_LATCH_SW);
+	wke_32kwritel(pmc, 0, pmc->soc->regs->aowake_latch_sw);
 
 	bitmap_zero(pmc->wake_sw_status_map, pmc->soc->max_wake_events);
 
 	for (i = 0; i < pmc->soc->max_wake_vectors; i++) {
-		status = readl(pmc->wake + WAKE_AOWAKE_SW_STATUS(i));
+		status = readl(pmc->wake + get_offset_aowake_sw_status(pmc, i));
 
 		for_each_set_bit(wake, &status, 32)
 			set_bit(wake + (i * 32), pmc->wake_sw_status_map);
@@ -3144,11 +3167,14 @@ static void wke_clear_wake_status(struct tegra_pmc *pmc)
 	u32 mask;
 
 	for (i = 0; i < pmc->soc->max_wake_vectors; i++) {
-		mask = readl(pmc->wake + WAKE_AOWAKE_TIER2_ROUTING(i));
-		status = readl(pmc->wake + WAKE_AOWAKE_STATUS_R(i)) & mask;
+		mask = readl(pmc->wake +
+			get_offset_aowake_tier2_routing(pmc, i));
+		status = readl(pmc->wake +
+			get_offset_aowake_status_r(pmc, i)) & mask;
 
 		for_each_set_bit(wake, &status, 32)
-			wke_32kwritel(pmc, 0x1, WAKE_AOWAKE_STATUS_W((i * 32) + wake));
+			wke_32kwritel(pmc, 0x1, get_offset_aowake_status_w(pmc,
+							(i * 32) + wake));
 	}
 }
 
@@ -3184,8 +3210,10 @@ static void tegra186_pmc_wake_syscore_resume(void)
 	unsigned int i;
 
 	for (i = 0; i < pmc->soc->max_wake_vectors; i++) {
-		mask = readl(pmc->wake + WAKE_AOWAKE_TIER2_ROUTING(i));
-		status = readl(pmc->wake + WAKE_AOWAKE_STATUS_R(i)) & mask;
+		mask = readl(pmc->wake +
+				get_offset_aowake_tier2_routing(pmc, i));
+		status = readl(pmc->wake +
+				get_offset_aowake_status_r(pmc, i)) & mask;
 
 		tegra186_pmc_process_wake_events(pmc, i, status);
 	}
@@ -3498,6 +3526,7 @@ static const u8 tegra124_cpu_powergates[] = {
 		.request	= (_request),				\
 		.status		= (_status),				\
 		.voltage	= (_voltage),				\
+		.e_33v_ctl	= (PMC_IMPL_E_33V_PWR),			\
 		.name		= (_name),				\
 	})
 
@@ -3856,6 +3885,15 @@ static const struct tegra_pmc_regs tegra186_pmc_regs = {
 	.rst_source_mask = 0x3c,
 	.rst_level_shift = 0x0,
 	.rst_level_mask = 0x3,
+	.aowake_cntrl = 0x0,
+	.aowake_mask_w = 0x180,
+	.aowake_status_w = 0x30c,
+	.aowake_status_r = 0x48c,
+	.aowake_tier2_routing = 0x4cc,
+	.aowake_sw_status_w = 0x49c,
+	.aowake_sw_status = 0x4a0,
+	.aowake_latch_sw = 0x498,
+	.aowake_ctrl = 0x4f4,
 };
 
 static void tegra186_pmc_init(struct tegra_pmc *pmc)
@@ -3889,14 +3927,14 @@ static void tegra186_pmc_setup_irq_polarity(struct tegra_pmc *pmc,
 		return;
 	}
 
-	value = readl(wake + WAKE_AOWAKE_CTRL);
+	value = readl(wake + pmc->soc->regs->aowake_ctrl);
 
 	if (invert)
 		value |= WAKE_AOWAKE_CTRL_INTR_POLARITY;
 	else
 		value &= ~WAKE_AOWAKE_CTRL_INTR_POLARITY;
 
-	writel(value, wake + WAKE_AOWAKE_CTRL);
+	writel(value, wake + pmc->soc->regs->aowake_ctrl);
 
 	iounmap(wake);
 }
@@ -4076,6 +4114,15 @@ static const struct tegra_pmc_regs tegra194_pmc_regs = {
 	.rst_source_mask = 0x7c,
 	.rst_level_shift = 0x0,
 	.rst_level_mask = 0x3,
+	.aowake_cntrl = 0x0,
+	.aowake_mask_w = 0x180,
+	.aowake_status_w = 0x30c,
+	.aowake_status_r = 0x48c,
+	.aowake_tier2_routing = 0x4cc,
+	.aowake_sw_status_w = 0x49c,
+	.aowake_sw_status = 0x4a0,
+	.aowake_latch_sw = 0x498,
+	.aowake_ctrl = 0x4f4,
 };
 
 static const char * const tegra194_reset_sources[] = {
@@ -4195,6 +4242,15 @@ static const struct tegra_pmc_regs tegra234_pmc_regs = {
 	.rst_source_mask = 0xfc,
 	.rst_level_shift = 0x0,
 	.rst_level_mask = 0x3,
+	.aowake_cntrl = 0x0,
+	.aowake_mask_w = 0x180,
+	.aowake_status_w = 0x30c,
+	.aowake_status_r = 0x48c,
+	.aowake_tier2_routing = 0x4cc,
+	.aowake_sw_status_w = 0x49c,
+	.aowake_sw_status = 0x4a0,
+	.aowake_latch_sw = 0x498,
+	.aowake_ctrl = 0x4f4,
 };
 
 static const char * const tegra234_reset_sources[] = {
