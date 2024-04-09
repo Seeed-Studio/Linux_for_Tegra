@@ -261,202 +261,6 @@ struct tegra_powergate {
 	struct reset_control *reset;
 };
 
-struct tegra_io_pad_soc {
-	enum tegra_io_pad id;
-	unsigned int dpd;
-	unsigned int request;
-	unsigned int status;
-	unsigned int voltage;
-	const char *name;
-};
-
-struct tegra_pmc_regs {
-	unsigned int scratch0;
-	unsigned int rst_status;
-	unsigned int rst_source_shift;
-	unsigned int rst_source_mask;
-	unsigned int rst_level_shift;
-	unsigned int rst_level_mask;
-};
-
-struct tegra_wake_event {
-	const char *name;
-	unsigned int id;
-	unsigned int irq;
-	struct {
-		unsigned int instance;
-		unsigned int pin;
-	} gpio;
-};
-
-#define TEGRA_WAKE_SIMPLE(_name, _id)			\
-	{						\
-		.name = _name,				\
-		.id = _id,				\
-		.irq = 0,				\
-		.gpio = {				\
-			.instance = UINT_MAX,		\
-			.pin = UINT_MAX,		\
-		},					\
-	}
-
-#define TEGRA_WAKE_IRQ(_name, _id, _irq)		\
-	{						\
-		.name = _name,				\
-		.id = _id,				\
-		.irq = _irq,				\
-		.gpio = {				\
-			.instance = UINT_MAX,		\
-			.pin = UINT_MAX,		\
-		},					\
-	}
-
-#define TEGRA_WAKE_GPIO(_name, _id, _instance, _pin)	\
-	{						\
-		.name = _name,				\
-		.id = _id,				\
-		.irq = 0,				\
-		.gpio = {				\
-			.instance = _instance,		\
-			.pin = _pin,			\
-		},					\
-	}
-
-struct tegra_pmc_soc {
-	unsigned int num_powergates;
-	const char *const *powergates;
-	unsigned int num_cpu_powergates;
-	const u8 *cpu_powergates;
-
-	bool has_tsense_reset;
-	bool has_gpu_clamps;
-	bool needs_mbist_war;
-	bool has_impl_33v_pwr;
-	bool maybe_tz_only;
-
-	const struct tegra_io_pad_soc *io_pads;
-	unsigned int num_io_pads;
-
-	const struct pinctrl_pin_desc *pin_descs;
-	unsigned int num_pin_descs;
-
-	const struct tegra_pmc_regs *regs;
-	void (*init)(struct tegra_pmc *pmc);
-	void (*setup_irq_polarity)(struct tegra_pmc *pmc,
-				   struct device_node *np,
-				   bool invert);
-	void (*set_wake_filters)(struct tegra_pmc *pmc);
-	int (*irq_set_wake)(struct irq_data *data, unsigned int on);
-	int (*irq_set_type)(struct irq_data *data, unsigned int type);
-	int (*powergate_set)(struct tegra_pmc *pmc, unsigned int id,
-			     bool new_state);
-
-	const char * const *reset_sources;
-	unsigned int num_reset_sources;
-	const char * const *reset_levels;
-	unsigned int num_reset_levels;
-
-	/*
-	 * These describe events that can wake the system from sleep (i.e.
-	 * LP0 or SC7). Wakeup from other sleep states (such as LP1 or LP2)
-	 * are dealt with in the LIC.
-	 */
-	const struct tegra_wake_event *wake_events;
-	unsigned int num_wake_events;
-	unsigned int max_wake_events;
-	unsigned int max_wake_vectors;
-
-	const struct pmc_clk_init_data *pmc_clks_data;
-	unsigned int num_pmc_clks;
-	bool has_blink_output;
-	bool has_usb_sleepwalk;
-	bool supports_core_domain;
-	bool has_single_mmio_aperture;
-};
-
-/**
- * struct tegra_pmc - NVIDIA Tegra PMC
- * @dev: pointer to PMC device structure
- * @base: pointer to I/O remapped register region
- * @wake: pointer to I/O remapped region for WAKE registers
- * @aotag: pointer to I/O remapped region for AOTAG registers
- * @scratch: pointer to I/O remapped region for scratch registers
- * @clk: pointer to pclk clock
- * @soc: pointer to SoC data structure
- * @tz_only: flag specifying if the PMC can only be accessed via TrustZone
- * @rate: currently configured rate of pclk
- * @suspend_mode: lowest suspend mode available
- * @cpu_good_time: CPU power good time (in microseconds)
- * @cpu_off_time: CPU power off time (in microsecends)
- * @core_osc_time: core power good OSC time (in microseconds)
- * @core_pmu_time: core power good PMU time (in microseconds)
- * @core_off_time: core power off time (in microseconds)
- * @corereq_high: core power request is active-high
- * @sysclkreq_high: system clock request is active-high
- * @combined_req: combined power request for CPU & core
- * @cpu_pwr_good_en: CPU power good signal is enabled
- * @lp0_vec_phys: physical base address of the LP0 warm boot code
- * @lp0_vec_size: size of the LP0 warm boot code
- * @powergates_available: Bitmap of available power gates
- * @powergates_lock: mutex for power gate register access
- * @pctl_dev: pin controller exposed by the PMC
- * @domain: IRQ domain provided by the PMC
- * @irq: chip implementation for the IRQ domain
- * @clk_nb: pclk clock changes handler
- * @core_domain_state_synced: flag marking the core domain's state as synced
- * @core_domain_registered: flag marking the core domain as registered
- * @wake_type_level_map: Bitmap indicating level type for non-dual edge wakes
- * @wake_type_dual_edge_map: Bitmap indicating if a wake is dual-edge or not
- * @wake_sw_status_map: Bitmap to hold raw status of wakes without mask
- * @wake_cntrl_level_map: Bitmap to hold wake levels to be programmed in
- *     cntrl register associated with each wake during system suspend.
- */
-struct tegra_pmc {
-	struct device *dev;
-	void __iomem *base;
-	void __iomem *wake;
-	void __iomem *aotag;
-	void __iomem *scratch;
-	struct clk *clk;
-
-	const struct tegra_pmc_soc *soc;
-	bool tz_only;
-
-	unsigned long rate;
-
-	enum tegra_suspend_mode suspend_mode;
-	u32 cpu_good_time;
-	u32 cpu_off_time;
-	u32 core_osc_time;
-	u32 core_pmu_time;
-	u32 core_off_time;
-	bool corereq_high;
-	bool sysclkreq_high;
-	bool combined_req;
-	bool cpu_pwr_good_en;
-	u32 lp0_vec_phys;
-	u32 lp0_vec_size;
-	DECLARE_BITMAP(powergates_available, TEGRA_POWERGATE_MAX);
-
-	struct mutex powergates_lock;
-
-	struct pinctrl_dev *pctl_dev;
-
-	struct irq_domain *domain;
-	struct irq_chip irq;
-
-	struct notifier_block clk_nb;
-
-	bool core_domain_state_synced;
-	bool core_domain_registered;
-
-	unsigned long *wake_type_level_map;
-	unsigned long *wake_type_dual_edge_map;
-	unsigned long *wake_sw_status_map;
-	unsigned long *wake_cntrl_level_map;
-	struct syscore_ops syscore;
-};
-
 static struct tegra_pmc *pmc = &(struct tegra_pmc) {
 	.base = NULL,
 	.suspend_mode = TEGRA_SUSPEND_NOT_READY,
@@ -1122,7 +926,7 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid)
 	return tegra_powergate_remove_clamping(id);
 }
 
-static void tegra_pmc_program_reboot_reason(const char *cmd)
+void tegra_pmc_program_reboot_reason(struct tegra_pmc *pmc, const char *cmd)
 {
 	u32 value;
 
@@ -1147,7 +951,7 @@ static int tegra_pmc_reboot_notify(struct notifier_block *this,
 				   unsigned long action, void *data)
 {
 	if (action == SYS_RESTART)
-		tegra_pmc_program_reboot_reason(data);
+		tegra_pmc_program_reboot_reason(pmc, data);
 
 	return NOTIFY_DONE;
 }
@@ -1621,13 +1425,7 @@ static void tegra_io_pad_unprepare(struct tegra_pmc *pmc)
 		tegra_pmc_writel(pmc, DPD_SAMPLE_DISABLE, DPD_SAMPLE);
 }
 
-/**
- * tegra_io_pad_power_enable() - enable power to I/O pad
- * @id: Tegra I/O pad ID for which to enable power
- *
- * Returns: 0 on success or a negative error code on failure.
- */
-int tegra_io_pad_power_enable(enum tegra_io_pad id)
+int tegra186_io_pad_power_enable(struct tegra_pmc *pmc, enum tegra_io_pad id)
 {
 	const struct tegra_io_pad_soc *pad;
 	unsigned long request, status;
@@ -1662,15 +1460,8 @@ unlock:
 	mutex_unlock(&pmc->powergates_lock);
 	return err;
 }
-EXPORT_SYMBOL(tegra_io_pad_power_enable);
 
-/**
- * tegra_io_pad_power_disable() - disable power to I/O pad
- * @id: Tegra I/O pad ID for which to disable power
- *
- * Returns: 0 on success or a negative error code on failure.
- */
-int tegra_io_pad_power_disable(enum tegra_io_pad id)
+int tegra186_io_pad_power_disable(struct tegra_pmc *pmc, enum tegra_io_pad id)
 {
 	const struct tegra_io_pad_soc *pad;
 	unsigned long request, status;
@@ -1704,6 +1495,29 @@ int tegra_io_pad_power_disable(enum tegra_io_pad id)
 unlock:
 	mutex_unlock(&pmc->powergates_lock);
 	return err;
+}
+
+/**
+ * tegra_io_pad_power_enable() - enable power to I/O pad
+ * @id: Tegra I/O pad ID for which to enable power
+ *
+ * Returns: 0 on success or a negative error code on failure.
+ */
+int tegra_io_pad_power_enable(enum tegra_io_pad id)
+{
+	return tegra186_io_pad_power_enable(pmc, id);
+}
+EXPORT_SYMBOL(tegra_io_pad_power_enable);
+
+/**
+ * tegra_io_pad_power_disable() - disable power to I/O pad
+ * @id: Tegra I/O pad ID for which to disable power
+ *
+ * Returns: 0 on success or a negative error code on failure.
+ */
+int tegra_io_pad_power_disable(enum tegra_io_pad id)
+{
+	return tegra186_io_pad_power_disable(pmc, id);
 }
 EXPORT_SYMBOL(tegra_io_pad_power_disable);
 
@@ -1949,7 +1763,7 @@ static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 	return 0;
 }
 
-static int tegra_pmc_init(struct tegra_pmc *pmc)
+int tegra_pmc_init(struct tegra_pmc *pmc)
 {
 	if (pmc->soc->max_wake_events > 0) {
 		pmc->wake_type_level_map = bitmap_zalloc(pmc->soc->max_wake_events, GFP_KERNEL);
@@ -2148,9 +1962,11 @@ static int tegra_io_pad_pinconf_set(struct pinctrl_dev *pctl_dev,
 		switch (param) {
 		case PIN_CONFIG_MODE_LOW_POWER:
 			if (arg)
-				err = tegra_io_pad_power_disable(pad->id);
+				err = tegra186_io_pad_power_disable(pmc,
+								pad->id);
 			else
-				err = tegra_io_pad_power_enable(pad->id);
+				err = tegra186_io_pad_power_enable(pmc,
+								pad->id);
 			if (err)
 				return err;
 			break;
@@ -2181,7 +1997,7 @@ static struct pinctrl_desc tegra_pmc_pctl_desc = {
 	.confops = &tegra_io_pad_pinconf_ops,
 };
 
-static int tegra_pmc_pinctrl_init(struct tegra_pmc *pmc)
+int tegra_pmc_pinctrl_init(struct tegra_pmc *pmc)
 {
 	int err;
 
@@ -2207,6 +2023,7 @@ static int tegra_pmc_pinctrl_init(struct tegra_pmc *pmc)
 static ssize_t reset_reason_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
+	struct tegra_pmc *pmc = dev_get_drvdata(dev);
 	u32 value;
 
 	value = tegra_pmc_readl(pmc, pmc->soc->regs->rst_status);
@@ -2224,6 +2041,7 @@ static DEVICE_ATTR_RO(reset_reason);
 static ssize_t reset_level_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
+	struct tegra_pmc *pmc = dev_get_drvdata(dev);
 	u32 value;
 
 	value = tegra_pmc_readl(pmc, pmc->soc->regs->rst_status);
@@ -2238,7 +2056,7 @@ static ssize_t reset_level_show(struct device *dev,
 
 static DEVICE_ATTR_RO(reset_level);
 
-static void tegra_pmc_reset_sysfs_init(struct tegra_pmc *pmc)
+void tegra_pmc_reset_sysfs_init(struct tegra_pmc *pmc)
 {
 	struct device *dev = pmc->dev;
 	int err = 0;
@@ -2258,6 +2076,14 @@ static void tegra_pmc_reset_sysfs_init(struct tegra_pmc *pmc)
 				 "failed to create attr \"reset_level\": %d\n",
 				 err);
 	}
+}
+
+void tegra_pmc_reset_sysfs_remove(struct tegra_pmc *pmc)
+{
+	struct device *dev = pmc->dev;
+
+	device_remove_file(dev, &dev_attr_reset_reason);
+	device_remove_file(dev, &dev_attr_reset_level);
 }
 
 static int tegra_pmc_irq_translate(struct irq_domain *domain,
@@ -2424,7 +2250,7 @@ static int tegra210_pmc_irq_set_type(struct irq_data *data, unsigned int type)
 	return 0;
 }
 
-static void tegra186_pmc_set_wake_filters(struct tegra_pmc *pmc)
+void tegra186_pmc_set_wake_filters(struct tegra_pmc *pmc)
 {
 	u32 value;
 
@@ -2435,7 +2261,7 @@ static void tegra186_pmc_set_wake_filters(struct tegra_pmc *pmc)
 	dev_dbg(pmc->dev, "WAKE_AOWAKE_CNTRL_83 = 0x%x\n", value);
 }
 
-static int tegra186_pmc_irq_set_wake(struct irq_data *data, unsigned int on)
+int tegra186_pmc_irq_set_wake(struct irq_data *data, unsigned int on)
 {
 	struct tegra_pmc *pmc = irq_data_get_irq_chip_data(data);
 	unsigned int offset, bit;
@@ -2463,7 +2289,7 @@ static int tegra186_pmc_irq_set_wake(struct irq_data *data, unsigned int on)
 	return 0;
 }
 
-static int tegra186_pmc_irq_set_type(struct irq_data *data, unsigned int type)
+int tegra186_pmc_irq_set_type(struct irq_data *data, unsigned int type)
 {
 	struct tegra_pmc *pmc = irq_data_get_irq_chip_data(data);
 	u32 value;
@@ -2528,7 +2354,7 @@ static int tegra_irq_set_affinity_parent(struct irq_data *data,
 	return -EINVAL;
 }
 
-static int tegra_pmc_irq_init(struct tegra_pmc *pmc)
+int tegra_pmc_irq_init(struct tegra_pmc *pmc)
 {
 	struct irq_domain *parent = NULL;
 	struct device_node *np;
@@ -2550,8 +2376,8 @@ static int tegra_pmc_irq_init(struct tegra_pmc *pmc)
 	pmc->irq.irq_set_type = pmc->soc->irq_set_type;
 	pmc->irq.irq_set_wake = pmc->soc->irq_set_wake;
 
-	pmc->domain = irq_domain_add_hierarchy(parent, 0, 96, pmc->dev->of_node,
-					       &tegra_pmc_irq_domain_ops, pmc);
+	pmc->domain = irq_domain_add_hierarchy(parent, 0, pmc->soc->max_wake_events,
+				pmc->dev->of_node, &tegra_pmc_irq_domain_ops, pmc);
 	if (!pmc->domain) {
 		dev_err(pmc->dev, "failed to allocate domain\n");
 		return -ENOMEM;
@@ -3077,8 +2903,7 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 cleanup_powergates:
 	tegra_powergate_remove_all(pdev->dev.of_node);
 cleanup_sysfs:
-	device_remove_file(&pdev->dev, &dev_attr_reset_reason);
-	device_remove_file(&pdev->dev, &dev_attr_reset_level);
+	tegra_pmc_reset_sysfs_remove(pmc);
 
 	return err;
 }
@@ -3204,7 +3029,7 @@ static void tegra186_pmc_process_wake_events(struct tegra_pmc *pmc, unsigned int
 	}
 }
 
-static void tegra186_pmc_wake_syscore_resume(void)
+void tegra186_pmc_resume(struct tegra_pmc *pmc)
 {
 	u32 status, mask;
 	unsigned int i;
@@ -3219,7 +3044,7 @@ static void tegra186_pmc_wake_syscore_resume(void)
 	}
 }
 
-static int tegra186_pmc_wake_syscore_suspend(void)
+int tegra186_pmc_suspend(struct tegra_pmc *pmc)
 {
 	wke_read_sw_wake_status(pmc);
 
@@ -3236,6 +3061,16 @@ static int tegra186_pmc_wake_syscore_suspend(void)
 	wke_write_wake_levels(pmc);
 
 	return 0;
+}
+
+static void tegra186_pmc_wake_syscore_resume(void)
+{
+	tegra186_pmc_resume(pmc);
+}
+
+static int tegra186_pmc_wake_syscore_suspend(void)
+{
+	return tegra186_pmc_suspend(pmc);
 }
 
 #if defined(CONFIG_PM_SLEEP) && defined(CONFIG_ARM)
@@ -3904,9 +3739,8 @@ static void tegra186_pmc_init(struct tegra_pmc *pmc)
 	register_syscore_ops(&pmc->syscore);
 }
 
-static void tegra186_pmc_setup_irq_polarity(struct tegra_pmc *pmc,
-					    struct device_node *np,
-					    bool invert)
+void tegra186_pmc_setup_irq_polarity(struct tegra_pmc *pmc,
+				struct device_node *np, bool invert)
 {
 	struct resource regs;
 	void __iomem *wake;
