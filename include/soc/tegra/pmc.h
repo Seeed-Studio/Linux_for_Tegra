@@ -378,6 +378,8 @@ int tegra_powergate_sequence_power_up(unsigned int id, struct clk *clk,
 
 int tegra_io_pad_power_enable(enum tegra_io_pad id);
 int tegra_io_pad_power_disable(enum tegra_io_pad id);
+int tegra264_io_pad_power_enable(struct device *dev, enum tegra_io_pad id);
+int tegra264_io_pad_power_disable(struct device *dev, enum tegra_io_pad id);
 
 /* deprecated, use tegra_io_pad_power_{enable,disable}() instead */
 int tegra_io_rail_power_on(unsigned int id);
@@ -437,6 +439,18 @@ static inline int tegra_io_pad_power_enable(enum tegra_io_pad id)
 }
 
 static inline int tegra_io_pad_power_disable(enum tegra_io_pad id)
+{
+	return -ENOSYS;
+}
+
+static inline int tegra264_io_pad_power_enable(struct device *dev,
+					enum tegra_io_pad id)
+{
+	return -ENOSYS;
+}
+
+static inline int tegra264_io_pad_power_disable(struct device *dev,
+					enum tegra_io_pad id)
 {
 	return -ENOSYS;
 }
