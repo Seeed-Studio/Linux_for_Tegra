@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2009-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  */
@@ -84,7 +84,6 @@ struct nvmap_platform_carveout {
 	bool resize;
 	struct device *dma_dev;
 	struct device dev;
-	struct dma_declare_info *dma_info;
 	bool is_ivm;
 	unsigned int peer;
 	unsigned int vmid;

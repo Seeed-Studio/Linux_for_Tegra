@@ -294,19 +294,6 @@ int nvmap_ioctl_alloc_ivm(struct file *filp, void __user *arg)
 	return err;
 }
 
-int nvmap_ioctl_vpr_floor_size(struct file *filp, void __user *arg)
-{
-	int err=0;
-	u32 floor_size;
-
-	if (copy_from_user(&floor_size, arg, sizeof(floor_size)))
-		return -EFAULT;
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-	err = dma_set_resizable_heap_floor_size(&tegra_vpr_dev, floor_size);
-#endif
-	return err;
-}
-
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 {
 	struct nvmap_create_handle op;

@@ -390,7 +390,7 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case NVMAP_IOC_VPR_FLOOR_SIZE:
-		err = nvmap_ioctl_vpr_floor_size(filp, uarg);
+		err = 0;
 		break;
 
 	case NVMAP_IOC_FREE:

@@ -91,9 +91,6 @@ NVMAP_CONFIG_LOADABLE_MODULE := n
 # Config for enabling PROCRANK functionality
 NVMAP_CONFIG_PROCRANK := y
 
-# Config for enabling VPR resize functionality
-NVMAP_CONFIG_VPR_RESIZE := n
-
 # Config for enabling few debugfs which would impact the NvMap performance
 # There are few debugfs which would impact NvMap performance.
 # Disable this when perf regression is observed.
@@ -121,10 +118,6 @@ NVMAP_CONFIG_VIDMEM_CARVEOUT := n
 # Enable/Disable configs based upon the kernel version
 # Specify the values which are different from the default values
 
-ifdef CONFIG_TEGRA_VPR
-# For 4.9
-NVMAP_CONFIG_VPR_RESIZE := y
-else
 # For 5.10+
 NVMAP_CONFIG_LOADABLE_MODULE := y
 NVMAP_CONFIG_PROCRANK := n
@@ -135,7 +128,6 @@ endif
 NVMAP_CONFIG_SCIIPC := y
 # For OOT build
 NVMAP_CONFIG_UPSTREAM_KERNEL := y
-endif
 ifeq ($(CONFIG_DMABUF_DEFERRED_UNMAPPING),y)
 NVMAP_CONFIG_DMABUF_DEFERRED_UNMAPPING := y
 endif
@@ -179,10 +171,6 @@ endif #NVMAP_CONFIG_DEFER_FD_RECYCLE
 ifeq ($(NVMAP_CONFIG_SCIIPC),y)
 ccflags-y += -DNVMAP_CONFIG_SCIIPC
 endif #NVMAP_CONFIG_SCIIPC
-
-ifeq ($(NVMAP_CONFIG_VPR_RESIZE),y)
-ccflags-y += -DNVMAP_CONFIG_VPR_RESIZE
-endif #NVMAP_CONFIG_VPR_RESIZE
 
 ifeq ($(NVMAP_CONFIG_LOADABLE_MODULE),y)
 ccflags-y += -DNVMAP_LOADABLE_MODULE

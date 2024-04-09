@@ -125,22 +125,6 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 			}
 		}
 		if (!dma_mapping_error(dev, pa)) {
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-			int ret;
-
-			dev_dbg(dev, "Allocated addr (%pa) len(%zu)\n",
-					&pa, len);
-			if (!dma_is_coherent_dev(dev) && h->cma_dev) {
-				ret = nvmap_cache_maint_phys_range(
-					NVMAP_CACHE_OP_WB, pa, pa + len,
-					true, true);
-				if (!ret)
-					return pa;
-
-				dev_err(dev, "cache WB on (%pa, %zu) failed\n",
-					&pa, len);
-			}
-#endif
 			dev_dbg(dev, "Allocated addr (%pa) len(%zu)\n",
 					&pa, len);
 		}
@@ -223,15 +207,6 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 	if (dma_mapping_error(dev, dev_base)) {
 		dev_err(dev, "failed to alloc mem of size (%zu)\n",
 			len);
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-		if (dma_is_coherent_dev(dev)) {
-			struct dma_coherent_stats stats;
-
-			dma_get_coherent_stats(dev, &stats);
-			dev_err(dev, "used:%zu,curr_size:%zu max:%zu\n",
-				stats.used, stats.size, stats.max);
-		}
-#endif
 		goto fail_dma_alloc;
 	}
 
@@ -402,18 +377,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 
 	h->dma_dev = co->dma_dev;
 	if (co->cma_dev) {
-#ifdef CONFIG_DMA_CMA
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-		struct dma_contiguous_stats stats;
-
-		if (dma_get_contiguous_stats(co->cma_dev, &stats))
-			goto fail;
-
-		base = stats.base;
-		len = stats.size;
-		h->cma_dev = co->cma_dev;
-#endif
-#else
+#ifndef CONFIG_DMA_CMA
 		pr_err("invalid resize config for carveout %s\n",
 				co->name);
 		goto fail;

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef __MACH_TEGRA_COMMON_H
@@ -29,9 +29,6 @@ extern int tegra_with_secure_firmware;
 
 extern struct device tegra_generic_dev;
 extern struct device tegra_vpr_dev;
-#ifdef CONFIG_TEGRA_VPR
-extern struct dma_resize_notifier_ops vpr_dev_ops;
-#endif
 
 u32 tegra_get_bct_strapping(void);
 u32 tegra_get_fuse_opt_subrevision(void);

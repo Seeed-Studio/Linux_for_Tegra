@@ -44,22 +44,6 @@ struct device __weak tegra_vpr_cma_dev;
 
 static struct platform_device *pdev;
 
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-struct dma_resize_notifier_ops __weak vpr_dev_ops;
-
-static struct dma_declare_info generic_dma_info = {
-        .name = "generic",
-        .size = 0,
-        .notifier.ops = NULL,
-};
-
-static struct dma_declare_info vpr_dma_info = {
-	.name = "vpr",
-	.size = SZ_32M,
-	.notifier.ops = &vpr_dev_ops,
-};
-#endif
-
 const struct of_device_id nvmap_of_ids[] = {
 	{ .compatible = "nvidia,carveouts" },
 	{ .compatible = "nvidia,carveouts-t18x" },
@@ -76,9 +60,6 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.size		= 0,
 		.dma_dev	= &tegra_generic_dev,
 		.cma_dev	= &tegra_generic_cma_dev,
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-		.dma_info	= &generic_dma_info,
-#endif
 		.numa_node_id = 0,
 	},
 	[1] = {
@@ -88,9 +69,6 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.size		= 0,
 		.dma_dev	= &tegra_vpr_dev,
 		.cma_dev	= &tegra_vpr_cma_dev,
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-		.dma_info	= &vpr_dma_info,
-#endif
 		.enable_static_dma_map = true,
 		.numa_node_id = 0,
 	},
@@ -760,16 +738,6 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 			pr_err("%s :dma coherent mem declare fail %pa,%zu,err:%d\n",
 				co->name, &co->base, co->size, err);
 	} else {
-#ifdef NVMAP_CONFIG_VPR_RESIZE
-
-		co->dma_info->cma_dev = co->cma_dev;
-		err = dma_declare_coherent_resizable_cma_memory(
-				co->dma_dev, co->dma_info);
-		if (err)
-			pr_err("%s coherent memory declaration failed\n",
-				     co->name);
-		else
-#endif
 			co->init_done = true;
 	}
 	return err;
