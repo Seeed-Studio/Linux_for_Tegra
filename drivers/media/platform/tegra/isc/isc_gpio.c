@@ -47,7 +47,8 @@ static struct gpio_chip *isc_gpio_get_chip(struct platform_device *pdev,
 {
 	struct gpio_chip *gc = NULL;
 	char name[MAX_STR_SIZE];
-#if defined(NV_GPIO_DEVICE_FIND_PRESENT) /* Linux 6.7 */
+#if defined(NV_GPIO_DEVICE_FIND_PRESENT) && \
+    defined(NV_GPIO_DEVICE_GET_CHIP_PRESENT) /* Linux 6.7 */
 	struct gpio_device *gdev;
 #endif
 
@@ -58,7 +59,8 @@ static struct gpio_chip *isc_gpio_get_chip(struct platform_device *pdev,
 	}
 	strcpy(name, pd->gpio_prnt_chip);
 
-#if defined(NV_GPIO_DEVICE_FIND_PRESENT) /* Linux 6.7 */
+#if defined(NV_GPIO_DEVICE_FIND_PRESENT) && \
+    defined(NV_GPIO_DEVICE_GET_CHIP_PRESENT) /* Linux 6.7 */
 	gdev = gpio_device_find(name, isc_gpio_chip_match);
 	if (gdev) {
 		gc = gpio_device_get_chip(gdev);

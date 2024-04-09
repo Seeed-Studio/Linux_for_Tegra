@@ -7125,6 +7125,23 @@ compile_test() {
             fi
         ;;
 
+        gpio_device_get_chip)
+            #
+            # Determine if function gpio_device_get_chip() is present.
+            #
+            # Added by commit 9b418780844c ("gpiolib: reluctantly provide
+            # gpio_device_get_chip()") in Linux v6.7.
+            #
+            CODE="
+            #include <linux/gpio/driver.h>
+            void conftest_gpio_device_get_chip(void)
+            {
+                gpio_device_get_chip();
+            }"
+
+            compile_check_conftest "$CODE" "NV_GPIO_DEVICE_GET_CHIP_PRESENT" "" "functions"
+        ;;
+
         netif_set_tso_max_size)
             #
             # Determine if netif_set_tso_max_size() function is present
