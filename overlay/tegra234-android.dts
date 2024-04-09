@@ -26,7 +26,8 @@
 
 			chosen {
 				use_dts_cmdline;
-				bootargs=ANDROID_BOOTARGS;
+				bootargs   = ANDROID_BOOTARGS;
+				bootconfig = ANDROID_BOOTCONFIG;
 			};
 
 			bus@0 {
