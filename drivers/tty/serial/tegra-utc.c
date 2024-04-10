@@ -406,6 +406,47 @@ static void tegra_utc_setup_port(struct device *dev, struct tegra_utc_port *tup,
 }
 
 #if IS_ENABLED(CONFIG_SERIAL_TEGRA_UTC_CONSOLE)
+static void tegra_utc_putc(struct uart_port *port, unsigned char c)
+{
+	writel(c, port->membase + TEGRA_UTC_DATA);
+}
+
+static void tegra_utc_early_write(struct console *con, const char *s, unsigned int n)
+{
+	struct earlycon_device *dev = con->data;
+
+	while (n) {
+		unsigned int burst_size = TEGRA_UTC_CLIENT_FIFO_SIZE;
+
+		burst_size -= readl(dev->port.membase + TEGRA_UTC_FIFO_OCCUPANCY);
+		if (n < burst_size)
+			burst_size = n;
+
+		uart_console_write(&dev->port, s, burst_size, tegra_utc_putc);
+
+		n -= burst_size;
+		s += burst_size;
+	}
+}
+
+static int __init tegra_utc_early_console_setup(struct earlycon_device *device, const char *opt)
+{
+	if (!device->port.membase)
+		return -ENODEV;
+
+	writel(0x11, device->port.membase + TEGRA_UTC_COMMAND);
+	writel(0x4, device->port.membase + TEGRA_UTC_FIFO_THRESHOLD);
+	writel(0xf, device->port.membase + TEGRA_UTC_INTR_CLEAR);
+	writel(0x0, device->port.membase + TEGRA_UTC_INTR_MASK);
+	writel(0x0, device->port.membase + TEGRA_UTC_INTR_SET);
+	writel(0x1, device->port.membase + TEGRA_UTC_ENABLE);
+
+	device->con->write = tegra_utc_early_write;
+
+	return 0;
+}
+OF_EARLYCON_DECLARE(tegra_utc, "nvidia,tegra-utc", tegra_utc_early_console_setup);
+
 static void tegra_utc_console_putchar(struct uart_port *port, unsigned char ch)
 {
 	struct tegra_utc_port *tup = container_of(port, struct tegra_utc_port, port);
