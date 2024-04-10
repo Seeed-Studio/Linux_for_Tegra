@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef __TEGRA_NVADSP_OS_H
@@ -17,41 +17,8 @@
 
 #define SYM_NAME_SZ 128
 
-#define AMC_EVP_RESET_VEC_0		0x700
-#define AMC_EVP_UNDEF_VEC_0		0x704
-#define AMC_EVP_SWI_VEC_0		0x708
-#define AMC_EVP_PREFETCH_ABORT_VEC_0	0x70c
-#define AMC_EVP_DATA_ABORT_VEC_0	0x710
-#define AMC_EVP_RSVD_VEC_0		0x714
-#define AMC_EVP_IRQ_VEC_0		0x718
-#define AMC_EVP_FIQ_VEC_0		0x71c
-#define AMC_EVP_RESET_ADDR_0		0x720
-#define AMC_EVP_UNDEF_ADDR_0		0x724
-#define AMC_EVP_SWI_ADDR_0		0x728
-#define AMC_EVP_PREFETCH_ABORT_ADDR_0	0x72c
-#define AMC_EVP_DATA_ABORT_ADDR_0	0x730
-#define AMC_EVP_RSVD_ADDR_0		0x734
-#define AMC_EVP_IRQ_ADDR_0		0x738
-#define AMC_EVP_FIQ_ADDR_0		0x73c
-
-#define AMC_EVP_SIZE (AMC_EVP_FIQ_ADDR_0 - AMC_EVP_RESET_VEC_0 + 4)
-#define AMC_EVP_WSIZE (AMC_EVP_SIZE >> 2)
-
 #define OS_LOAD_TIMEOUT		5000 /* ms */
 #define ADSP_COM_MBOX_ID	2
-
-#define MIN_ADSP_FREQ 38400000lu /* in Hz */
-
-/* macros used to find the current mode of ADSP */
-#define MODE_MASK 0x1f
-#define MODE_USR 0x10
-#define MODE_FIQ 0x11
-#define MODE_IRQ 0x12
-#define MODE_SVC 0x13
-#define MODE_MON 0x16
-#define MODE_ABT 0x17
-#define MODE_UND 0x1b
-#define MODE_SYS 0x1f
 
 /*
  * ADSP OS Config

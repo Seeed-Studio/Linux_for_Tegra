@@ -128,7 +128,7 @@ struct nvadsp_cluster_mem {
 };
 
 typedef int (*acast_init) (struct platform_device *pdev);
-typedef int (*reset_init) (struct platform_device *pdev);
+typedef int (*dev_init) (struct platform_device *pdev);
 typedef int (*os_init) (struct platform_device *pdev);
 #ifdef CONFIG_PM
 typedef int (*pm_init) (struct platform_device *pdev);
@@ -143,7 +143,7 @@ struct nvadsp_chipdata {
 	u32			adsp_os_config_hwmbox;
 	u32			adsp_boot_config_hwmbox;
 	acast_init		acast_init;
-	reset_init		reset_init;
+	dev_init		dev_init;
 	os_init			os_init;
 #ifdef CONFIG_PM
 	pm_init			pm_init;
@@ -216,6 +216,7 @@ struct nvadsp_drv_data {
 	int (*set_boot_freqs)(struct nvadsp_drv_data *drv_data);
 	bool (*check_wfi_status)(struct nvadsp_drv_data *drv_data);
 	int (*map_hwmbox_interrupts)(struct nvadsp_drv_data *drv_data);
+	void (*dump_core_state)(struct nvadsp_drv_data *drv_data);
 
 	struct nvadsp_pm_state state;
 	bool adsp_os_running;
@@ -331,12 +332,12 @@ static inline int __init nvadsp_pm_init(struct platform_device *pdev)
 	return -EINVAL;
 }
 #endif
-static inline int __init nvadsp_reset_init(struct platform_device *pdev)
+static inline int __init nvadsp_dev_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 
-	if (drv_data->chip_data->reset_init)
-		return drv_data->chip_data->reset_init(pdev);
+	if (drv_data->chip_data->dev_init)
+		return drv_data->chip_data->dev_init(pdev);
 
 	return -EINVAL;
 }
