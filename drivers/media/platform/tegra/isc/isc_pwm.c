@@ -29,7 +29,11 @@ static const struct of_device_id isc_pwm_of_match[] = {
 
 static inline struct isc_pwm_info *to_isc_pwm_info(struct pwm_chip *chip)
 {
+#if defined(NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE)
+	return pwmchip_get_drvdata(chip);
+#else
 	return container_of(chip, struct isc_pwm_info, chip);
+#endif
 }
 
 #if defined(NV_PWM_OPS_STRUCT_HAS_CONFIG) /* Linux 6.0 */
@@ -94,30 +98,35 @@ static struct pwm_device *of_isc_pwm_xlate(struct pwm_chip *pc,
 {
 	struct pwm_device *pwm;
 	struct isc_pwm_info *info = to_isc_pwm_info(pc);
+#if defined(NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE)
+	struct device *dev = &pc->dev;
+#else
+	struct device *dev = pc->dev;
+#endif
 	int err = 0;
 
 	pwm = pwm_request_from_chip(pc, args->args[0], NULL);
 	if (!args->args[1]) {
-		dev_err(pc->dev, "Period should be larger than 0\n");
+		dev_err(dev, "Period should be larger than 0\n");
 		return NULL;
 	}
 
 	if (info->force_on) {
 		err = pwm_config(info->pwm, args->args[1]/4, args->args[1]);
 		if (err) {
-			dev_err(pc->dev, "can't config PWM: %d\n", err);
+			dev_err(dev, "can't config PWM: %d\n", err);
 			return NULL;
 		}
 
 		err = pwm_enable(info->pwm);
 		if (err) {
-			dev_err(pc->dev, "can't enable PWM: %d\n", err);
+			dev_err(dev, "can't enable PWM: %d\n", err);
 			return NULL;
 		}
 	} else {
 		err = pwm_config(pwm, args->args[1]/4, args->args[1]);
 		if (err) {
-			dev_err(pc->dev, "can't config PWM: %d\n", err);
+			dev_err(dev, "can't config PWM: %d\n", err);
 			return NULL;
 		}
 	}
@@ -139,18 +148,11 @@ static const struct pwm_ops isc_pwm_ops = {
 static int isc_pwm_probe(struct platform_device *pdev)
 {
 	struct isc_pwm_info *info = NULL;
+	struct pwm_chip *chip;
 	int err = 0, npwm;
 	bool force_on = false;
 
 	dev_info(&pdev->dev, "%sing...\n", __func__);
-
-	info = devm_kzalloc(
-		&pdev->dev, sizeof(struct isc_pwm_info), GFP_KERNEL);
-	if (!info)
-		return -ENOMEM;
-
-	atomic_set(&info->in_use, 0);
-	mutex_init(&info->mutex);
 
 	err = of_property_read_u32(pdev->dev.of_node, "npwm", &npwm);
 	if (err < 0) {
@@ -158,31 +160,48 @@ static int isc_pwm_probe(struct platform_device *pdev)
 		return err;
 	}
 
+#if defined(NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE)
+	chip = devm_pwmchip_alloc(&pdev->dev, npwm, sizeof(*info));
+	if (IS_ERR(chip))
+		return PTR_ERR(chip);
+	info = to_isc_pwm_info(chip);
+#else
+	info = devm_kzalloc(
+		&pdev->dev, sizeof(struct isc_pwm_info), GFP_KERNEL);
+	if (!info)
+		return -ENOMEM;
+
+	chip = &info->chip;
+	chip->dev = &pdev->dev;
+	chip->npwm = npwm;
+#endif
+
+	atomic_set(&info->in_use, 0);
+	mutex_init(&info->mutex);
+
 	force_on = of_property_read_bool(pdev->dev.of_node, "force_on");
 
-	info->chip.dev = &pdev->dev;
-	info->chip.ops = &isc_pwm_ops;
+	chip->ops = &isc_pwm_ops;
 #if defined(NV_PWM_CHIP_STRUCT_HAS_BASE_ARG)
-	info->chip.base = -1;
+	chip->base = -1;
 #endif
-	info->chip.npwm = npwm;
-	info->chip.of_xlate = of_isc_pwm_xlate;
+	chip->of_xlate = of_isc_pwm_xlate;
 	info->force_on = force_on;
 
-	err = pwmchip_add(&info->chip);
+	err = pwmchip_add(chip);
 	if (err < 0) {
 		dev_err(&pdev->dev, "pwmchip_add() failed: %d\n", err);
 		return err;
 	}
 
-	platform_set_drvdata(pdev, info);
+	platform_set_drvdata(pdev, chip);
 
 	info->pwm = devm_pwm_get(&pdev->dev, NULL);
 	if (!IS_ERR(info->pwm)) {
 		pwm_disable(info->pwm);
 		dev_info(&pdev->dev, "%s success to get PWM\n", __func__);
 	} else {
-		pwmchip_remove(&info->chip);
+		pwmchip_remove(chip);
 		err = PTR_ERR(info->pwm);
 		if (err != -EPROBE_DEFER)
 			dev_err(&pdev->dev,
@@ -194,24 +213,24 @@ static int isc_pwm_probe(struct platform_device *pdev)
 
 static int isc_pwm_remove(struct platform_device *pdev)
 {
-	struct isc_pwm_info *info = platform_get_drvdata(pdev);
+	struct pwm_chip *chip = platform_get_drvdata(pdev);
 
-	pwmchip_remove(&info->chip);
+	pwmchip_remove(chip);
 
 	return 0;
 }
 
 static int isc_pwm_suspend(struct device *dev)
 {
-	int err = 0;
-	struct isc_pwm_info *info = dev_get_drvdata(dev);
+	struct pwm_chip *chip = dev_get_drvdata(dev);
+	struct isc_pwm_info *info = to_isc_pwm_info(chip);
 
 	if (info == NULL) {
 		dev_err(dev, "%s: fail to get info\n", __func__);
 	} else {
 		if (!IS_ERR(info->pwm)) {
 			pwm_disable(info->pwm);
-			err = pwm_config(info->pwm, PWM_SUSPEND_DUTY_RATIO,
+			pwm_config(info->pwm, PWM_SUSPEND_DUTY_RATIO,
 					PWM_SUSPEND_PERIOD);
 		}
 	}
