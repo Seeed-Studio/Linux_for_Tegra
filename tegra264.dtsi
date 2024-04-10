@@ -3752,6 +3752,44 @@
 				dma-coherent;
 				status = "disabled";
 			};
+
+			crypto@8188110000 {
+				compatible = "nvidia,tegra264-se-sm4";
+				reg = <0x81 0x88110000 0x0 0x10000>;
+				clocks = <&bpmp TEGRA264_CLK_SE>;
+				clock-names = "se";
+				iommus = <&smmu1_mmu TEGRA_SID_SE_SE1>;
+				dma-coherent;
+				status = "disabled";
+			};
+
+			crypto@8188120000 {
+				compatible = "nvidia,tegra264-se-aes";
+				reg = <0x81 0x88120000 0x0 0x10000>;
+				clocks = <&bpmp TEGRA264_CLK_SE>;
+				clock-names = "se";
+				iommus = <&smmu1_mmu TEGRA_SID_SE_SE2>;
+				dma-coherent;
+				status = "disabled";
+			};
+
+			crypto@8188140000 {
+				compatible = "nvidia,tegra264-se-hash";
+				reg = <0x81 0x88140000 0x0 0x10000>;
+				clocks = <&bpmp TEGRA264_CLK_SE>;
+				clock-names = "se";
+				iommus = <&smmu1_mmu TEGRA_SID_SE_SE4>;
+				dma-coherent;
+				status = "disabled";
+			};
+
+			kds: crypto@8189880000 {
+				compatible = "nvidia,tegra264-kds";
+				reg = <0x81 0x89880000 0x0 0x10000>;
+				clocks = <&bpmp TEGRA264_CLK_SE>;
+				clock-names = "se";
+				status = "disabled";
+			};
 		};
 
 		gpio_uphy: gpio@a808300000 {

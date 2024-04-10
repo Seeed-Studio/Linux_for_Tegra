@@ -135,6 +135,11 @@
 /* Display stream IDs */
 #define TEGRA_SID_DISP_NISO    (TEGRA_SID_DISP | 0x1U)
 
+/* SE stream IDs */
+#define TEGRA_SID_SE_SE1 (TEGRA_SID_SE | 0x1U)
+#define TEGRA_SID_SE_SE2 (TEGRA_SID_SE | 0x2U)
+#define TEGRA_SID_SE_SE4 (TEGRA_SID_SE | 0x4U)
+
 /*
  * memory client IDs
  */
