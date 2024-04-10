@@ -107,7 +107,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 		vaddr = vmap(pages, nr_pages, VM_MAP, prot);
 	} else {
 #if defined(CONFIG_GENERIC_IOREMAP)
-		vaddr = ioremap_prot(h->carveout->base, adj_size, pgprot_val(prot));
+		vaddr = (__force void *)ioremap_prot(h->carveout->base, adj_size, pgprot_val(prot));
 #else
 		vaddr = (__force void *)__ioremap(h->carveout->base, adj_size,
 			 prot);
