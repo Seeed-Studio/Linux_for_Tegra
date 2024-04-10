@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include <linux/err.h>
@@ -618,7 +618,7 @@ static int pva_register_vpu_exec(struct pva_private *priv, void *arg)
 	int			err = 0;
 
 	data_size = reg_in->exe_data.size;
-	exec_data = kmalloc(data_size, GFP_KERNEL);
+	exec_data = kvmalloc(data_size, GFP_KERNEL);
 	if (exec_data == NULL) {
 		nvpva_err(&priv->pva->pdev->dev,
 				"failed to allocate memory for elf");
@@ -671,7 +671,7 @@ static int pva_register_vpu_exec(struct pva_private *priv, void *arg)
 free_mem:
 
 	if (exec_data != NULL)
-		kfree(exec_data);
+		kvfree(exec_data);
 out:
 	return err;
 }
