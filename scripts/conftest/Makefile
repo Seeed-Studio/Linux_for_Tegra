@@ -144,6 +144,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += pde_data
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += platform_msi_domain_alloc_irqs
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += platform_msi_domain_free_irqs
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pwm_chip_struct_has_base_arg
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += pwm_chip_struct_has_struct_device
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pwm_ops_struct_has_owner
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pwm_ops_struct_has_config
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pci_epc_event_ops_struct_has_core_deinit

@@ -6746,6 +6746,27 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DEVICE_ADD_DISK_HAS_INT_RETURN_TYPE" "" "types"
         ;;
 
+        pwm_chip_struct_has_struct_device)
+            #
+            # Determine whether the pwm_chip structure has a 'struct device'
+            # member and not a pointer to a dynamically allocated
+            # 'struct device'.
+            #
+            # Commit 4c56b1434b81 ("pwm: Add a struct device to struct
+            # pwm_chip") replaced a pointer to a dynamically allocated
+            # 'struct device' with a statically allocated 'struct device'.
+            # Note that this is part of a large re-work of the PWM core to
+            # move the allocation of the pwm_chip structure into the PWM core.
+            #
+            CODE="
+            #include <linux/pwm.h>
+            void conftest_pwm_chip_struct_has_struct_device(struct pwm_chip *chip) {
+                struct device *dev = &chip->dev;
+            }"
+
+            compile_check_conftest "$CODE" "NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE" "" "types"
+        ;;
+
         devm_tegra_core_dev_init_opp_table_common)
             #
             # Determine whether devm_tegra_core_dev_init_opp_table_common is

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -92,22 +92,33 @@ struct pwm_tegra_tach {
 	unsigned int		capture_win_len;
 	unsigned int		upper_threshold;
 	unsigned int		lower_threshold;
+#if !defined(NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE)
 	struct pwm_chip		chip;
+#endif
 	const struct pwm_tegra_tach_soc_data	*soc_data;
 };
+
+static struct pwm_tegra_tach *to_tegra_pwm_chip(struct pwm_chip *chip)
+{
+#if defined(NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE)
+	return pwmchip_get_drvdata(chip);
+#else
+	return container_of(chip, struct pwm_tegra_tach, chip);
+#endif
+}
 
 static ssize_t rpm_show(struct device *dev, struct device_attribute *attr,
 			char *buf)
 {
-	struct pwm_tegra_tach *ptt = dev_get_drvdata(dev);
-	struct pwm_device *pwm = &ptt->chip.pwms[0];
+	struct pwm_chip *chip = dev_get_drvdata(dev);
+	struct pwm_device *pwm = &chip->pwms[0];
 	struct pwm_capture result;
 	unsigned int rpm = 0;
 	int ret;
 
 	ret = pwm_capture(pwm, &result, 0);
 	if (ret < 0) {
-		dev_err(ptt->dev, "Failed to capture PWM: %d\n", ret);
+		dev_err(dev, "Failed to capture PWM: %d\n", ret);
 		return ret;
 	}
 
@@ -126,11 +137,6 @@ static struct attribute *pwm_tach_attrs[] = {
 };
 
 ATTRIBUTE_GROUPS(pwm_tach);
-
-static struct pwm_tegra_tach *to_tegra_pwm_chip(struct pwm_chip *chip)
-{
-	return container_of(chip, struct pwm_tegra_tach, chip);
-}
 
 static u32 tachometer_readl(struct pwm_tegra_tach *ptt, unsigned long reg)
 {
@@ -348,15 +354,32 @@ static void pwm_tegra_tach_read_platform_data(struct pwm_tegra_tach *ptt)
 
 static int pwm_tegra_tach_probe(struct platform_device *pdev)
 {
+	struct pwm_chip *chip;
 	struct pwm_tegra_tach *ptt;
 	struct pwm_device *pwm;
 	struct device *hwmon;
 	struct resource *r;
 	int ret;
 
+#if defined(NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE)
+	chip = devm_pwmchip_alloc(&pdev->dev, 1, sizeof(*ptt));
+	if (IS_ERR(chip))
+		return PTR_ERR(chip);
+	ptt = to_tegra_pwm_chip(chip);
+#else
 	ptt = devm_kzalloc(&pdev->dev, sizeof(*ptt), GFP_KERNEL);
 	if (!ptt)
 		return -ENOMEM;
+
+	chip = &ptt->chip;
+	chip->dev = &pdev->dev;
+	chip->npwm = 1;
+#endif
+
+	chip->ops = &pwm_tegra_tach_ops;
+#if defined(NV_PWM_CHIP_STRUCT_HAS_BASE_ARG)
+	chip->base = -1;
+#endif
 
 	ptt->dev = &pdev->dev;
 
@@ -373,7 +396,7 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 	if (IS_ERR(ptt->regs))
 		return PTR_ERR(ptt->regs);
 
-	platform_set_drvdata(pdev, ptt);
+	platform_set_drvdata(pdev, chip);
 
 	ptt->clk = devm_clk_get(&pdev->dev, "tach");
 	if (IS_ERR(ptt->clk)) {
@@ -427,14 +450,7 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 		}
 	}
 
-	ptt->chip.dev = &pdev->dev;
-	ptt->chip.ops = &pwm_tegra_tach_ops;
-#if defined(NV_PWM_CHIP_STRUCT_HAS_BASE_ARG)
-	ptt->chip.base = -1;
-#endif
-	ptt->chip.npwm = 1;
-
-	ret = pwmchip_add(&ptt->chip);
+	ret = pwmchip_add(chip);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to add tachometer PWM: %d\n", ret);
 		goto reset_assert;
@@ -444,11 +460,11 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 	 * Pulse Per Revolution Value to measure the accurate time period values
 	 */
 
-	pwm = &ptt->chip.pwms[0];
+	pwm = &chip->pwms[0];
 	if (ptt->pulse_per_rev > ptt->capture_win_len)
 		ptt->capture_win_len = ptt->pulse_per_rev;
 
-	ret = pwm_tegra_tacho_set_capture_wlen(&ptt->chip, pwm, ptt->capture_win_len);
+	ret = pwm_tegra_tacho_set_capture_wlen(chip, pwm, ptt->capture_win_len);
 	if (ret < 0) {
 		dev_err(ptt->dev, "Failed to set window length: %d\n", ret);
 		goto pwm_remove;
@@ -456,7 +472,7 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 
 	if (ptt->soc_data->has_interrupt_support) {
 		/* set upper and lower threshold values */
-		pwm_tegra_tacho_set_threshold(&ptt->chip);
+		pwm_tegra_tacho_set_threshold(chip);
 
 		/* program tach fan control reg */
 		tach_update_mask(ptt, TACH_ERR_CONFIG_MONITOR_PERIOD_VAL,
@@ -472,7 +488,7 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 
 	}
 
-	hwmon = devm_hwmon_device_register_with_groups(&pdev->dev, DRIVER_NAME, ptt, pwm_tach_groups);
+	hwmon = devm_hwmon_device_register_with_groups(&pdev->dev, DRIVER_NAME, chip, pwm_tach_groups);
 	if (IS_ERR(hwmon)) {
 		dev_warn(&pdev->dev, "Failed to register hwmon device: %d\n", PTR_ERR_OR_ZERO(hwmon));
 		dev_warn(&pdev->dev, "Tegra Tachometer got registered witout hwmon sysfs support\n");
@@ -481,7 +497,7 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 	return 0;
 
 pwm_remove:
-	pwmchip_remove(&ptt->chip);
+	pwmchip_remove(chip);
 
 reset_assert:
 	reset_control_assert(ptt->rst);
@@ -494,7 +510,8 @@ clk_unprep:
 
 static int pwm_tegra_tach_remove(struct platform_device *pdev)
 {
-	struct pwm_tegra_tach *ptt = platform_get_drvdata(pdev);
+	struct pwm_chip *chip = platform_get_drvdata(pdev);
+	struct pwm_tegra_tach *ptt = to_tegra_pwm_chip(chip);
 
 	if (WARN_ON(!ptt))
 		return -ENODEV;
@@ -503,7 +520,7 @@ static int pwm_tegra_tach_remove(struct platform_device *pdev)
 
 	clk_disable_unprepare(ptt->clk);
 
-	pwmchip_remove(&ptt->chip);
+	pwmchip_remove(chip);
 
 	return 0;
 }
@@ -515,7 +532,8 @@ static int pwm_tegra_tach_suspend(struct device *dev)
 
 static int pwm_tegra_tach_resume(struct device *dev)
 {
-	struct pwm_tegra_tach *ptt = dev_get_drvdata(dev);
+	struct pwm_chip *chip = dev_get_drvdata(dev);
+	struct pwm_tegra_tach *ptt = to_tegra_pwm_chip(chip);
 
 	pwm_tegra_tacho_set_wlen(ptt, ptt->capture_win_len);
 
