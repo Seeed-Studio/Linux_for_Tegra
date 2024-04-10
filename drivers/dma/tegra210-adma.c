@@ -415,17 +415,17 @@ static irqreturn_t tegra_adma_isr(int irq, void *dev_id)
 	struct tegra_adma_chan *tdc = dev_id;
 	unsigned long status;
 
-	spin_lock(&tdc->vc.lock);
+	dma_vchan_lock(&tdc->vc);
 
 	status = tegra_adma_irq_clear(tdc);
 	if (status == 0 || !tdc->desc) {
-		spin_unlock(&tdc->vc.lock);
+		dma_vchan_unlock(&tdc->vc);
 		return IRQ_NONE;
 	}
 
 	vchan_cyclic_callback(&tdc->desc->vd);
 
-	spin_unlock(&tdc->vc.lock);
+	dma_vchan_unlock(&tdc->vc);
 
 	return IRQ_HANDLED;
 }
@@ -435,14 +435,14 @@ static void tegra_adma_issue_pending(struct dma_chan *dc)
 	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
 	unsigned long flags;
 
-	spin_lock_irqsave(&tdc->vc.lock, flags);
+	dma_vchan_lock_irqsave(&tdc->vc, flags);
 
 	if (vchan_issue_pending(&tdc->vc)) {
 		if (!tdc->desc)
 			tegra_adma_start(tdc);
 	}
 
-	spin_unlock_irqrestore(&tdc->vc.lock, flags);
+	dma_vchan_unlock_irqrestore(&tdc->vc, flags);
 }
 
 static bool tegra_adma_is_paused(struct tegra_adma_chan *tdc)
@@ -496,14 +496,14 @@ static int tegra_adma_terminate_all(struct dma_chan *dc)
 	unsigned long flags;
 	LIST_HEAD(head);
 
-	spin_lock_irqsave(&tdc->vc.lock, flags);
+	dma_vchan_lock_irqsave(&tdc->vc, flags);
 
 	if (tdc->desc)
 		tegra_adma_stop(tdc);
 
 	tegra_adma_request_free(tdc);
 	vchan_get_all_descriptors(&tdc->vc, &head);
-	spin_unlock_irqrestore(&tdc->vc.lock, flags);
+	dma_vchan_unlock_irqrestore(&tdc->vc, flags);
 	vchan_dma_desc_free_list(&tdc->vc, &head);
 
 	return 0;
@@ -524,7 +524,7 @@ static enum dma_status tegra_adma_tx_status(struct dma_chan *dc,
 	if (ret == DMA_COMPLETE || !txstate)
 		return ret;
 
-	spin_lock_irqsave(&tdc->vc.lock, flags);
+	dma_vchan_lock_irqsave(&tdc->vc, flags);
 
 	vd = vchan_find_desc(&tdc->vc, cookie);
 	if (vd) {
@@ -536,7 +536,7 @@ static enum dma_status tegra_adma_tx_status(struct dma_chan *dc,
 		residual = 0;
 	}
 
-	spin_unlock_irqrestore(&tdc->vc.lock, flags);
+	dma_vchan_unlock_irqrestore(&tdc->vc, flags);
 
 	dma_set_residue(txstate, residual);
 
@@ -935,6 +935,11 @@ static int tegra_adma_probe(struct platform_device *pdev)
 			ret = tdc->irq ?: -ENXIO;
 			goto irq_dispose;
 		}
+
+		if (tdma->is_virtualized)
+			tdc->vc.rt_spinlock_fix_enabled = DMA_RT_SPINLOCK_FIX_ENABLED;
+		else
+			tdc->vc.rt_spinlock_fix_enabled = 0;
 
 		vchan_init(&tdc->vc, &tdma->dma_dev);
 		tdc->vc.desc_free = tegra_adma_desc_free;
