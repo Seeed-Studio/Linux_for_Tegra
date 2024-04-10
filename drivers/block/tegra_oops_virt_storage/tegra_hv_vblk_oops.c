@@ -629,8 +629,7 @@ static int vblk_oops_get_configinfo(struct vblk_dev *vblkdev)
 	struct vs_request *req;
 	int32_t status;
 
-	dev_info(vblkdev->device, "get config data from ivc #%d\n",
-		vblkdev->ivc_id);
+	pr_info("get config data from ivc #%d\n", vblkdev->ivc_id);
 
 	req = (struct vs_request *)
 		tegra_hv_ivc_read_get_next_frame(vblkdev->ivck);
