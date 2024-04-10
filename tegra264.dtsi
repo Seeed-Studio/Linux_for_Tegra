@@ -76,43 +76,6 @@
 			status = "disabled";
 		};
 
-		tegra_ufs: ufshci@a80b8d0000 {
-			compatible = "tegra264,ufs_variant",
-				     "tegra234,ufs_variant";
-			status = "disabled";
-
-			reg = <0xa8 0x0b8d0000 0x0 0x10000>,
-			      <0xa8 0x0b8e0000 0x0 0x8000>,
-			      <0xa8 0x0b8e8000 0x0 0x8000>,
-			      <0xa8 0x0b8f0000 0x0 0x10000>,
-			      <0xa8 0x0b910000 0x0 0x10000>,
-			      <0xa8 0x0b920000 0x0 0x10000>;
-			interrupts = <GIC_SPI 951 IRQ_TYPE_LEVEL_HIGH>;
-			iommus = <&smmu1_mmu TEGRA_SID_UFS>;
-			dma-coherent;
-			clocks = <&bpmp TEGRA264_CLK_UFSHC_CG_SYS>;
-			clock-names = "ufshc";
-			resets = <&bpmp TEGRA264_RESET_UFSHC>,
-				 <&bpmp TEGRA264_RESET_UFSHC_AXI_M>,
-				 <&bpmp TEGRA264_RESET_UFSHC_LP_SEQ>;
-			reset-names = "ufs-rst", "ufs-axi-m-rst",
-				      "ufshc-lp-rst";
-			nvidia,enable-x2-config;
-			nvidia,mask-fast-auto-mode;
-			nvidia,enable-hs-mode;
-			nvidia,max-hs-gear = <4>;
-			nvidia,max-pwm-gear = <0>;
-			vcc-max-microamp = <0>;
-			vccq-max-microamp = <0>;
-			vccq2-max-microamp = <0>;
-			nvidia,configure-uphy-pll3;
-
-			ufs_variant {
-				compatible = "tegra264,ufs_variant",
-					     "tegra234,ufs_variant";
-			};
-		};
-
 		gpcdma: dma-controller@8400000 {
 			compatible = "nvidia,tegra264-gpcdma",
 				     "nvidia,tegra234-gpcdma";
@@ -2204,4 +2167,42 @@
 		interrupt-parent = <&gic>;
 		always-on;
 	};
+
+	tegra_ufs: ufshci@a80b8d0000 {
+                   compatible = "tegra264,ufs_variant",
+                              "tegra234,ufs_variant";
+                   status = "okay";
+
+                   reg = <0xa8 0x0b8d0000 0x0 0x10000>,
+                       <0xa8 0x0b8e0000 0x0 0x8000>,
+                       <0xa8 0x0b8e8000 0x0 0x8000>,
+                       <0xa8 0x0b8f0000 0x0 0x10000>,
+                       <0xa8 0x0b910000 0x0 0x10000>,
+                       <0xa8 0x0b920000 0x0 0x10000>;
+                   interrupts = <GIC_SPI 951 IRQ_TYPE_LEVEL_HIGH>;
+                   iommus = <&smmu1_mmu TEGRA_SID_UFS>;
+                   dma-coherent;
+                   clocks = <&bpmp TEGRA264_CLK_UFSHC_CG_SYS>;
+                   clock-names = "ufshc";
+                   resets = <&bpmp TEGRA264_RESET_UFSHC>,
+                          <&bpmp TEGRA264_RESET_UFSHC_AXI_M>,
+                          <&bpmp TEGRA264_RESET_UFSHC_LP_SEQ>;
+                   reset-names = "ufs-rst", "ufs-axi-m-rst",
+                           "ufshc-lp-rst";
+                   nvidia,enable-x2-config;
+                   nvidia,mask-fast-auto-mode;
+                   nvidia,enable-hs-mode;
+                   nvidia,max-hs-gear = <4>;
+                   nvidia,max-pwm-gear = <0>;
+                   vcc-max-microamp = <0>;
+                   vccq-max-microamp = <0>;
+                   vccq2-max-microamp = <0>;
+                   nvidia,configure-uphy-pll3;
+                   nvidia,enable-ufs-provisioning;
+
+                   ufs_variant {
+                           compatible = "tegra264,ufs_variant",
+                                      "tegra234,ufs_variant";
+                   };
+        };
 };
