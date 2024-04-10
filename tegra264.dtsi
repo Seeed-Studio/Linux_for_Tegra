@@ -394,6 +394,80 @@
 			#interrupt-cells = <2>;
 		};
 
+		host1x: host1x@8181200000 {
+			compatible = "nvidia,tegra264-host1x";
+			reg = <0x81 0x81200000 0x0 0x10000>, /* Common */
+			      <0x81 0x81210000 0x0 0x10000>, /* Hypervisor */
+			      <0x81 0x81240000 0x0 0x10000>; /* Guest 0 */
+			reg-names = "common", "hypervisor", "vm";
+
+			interrupts = <GIC_SPI 0x147 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 0x148 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 0x149 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 0x14a IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 0x14b IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 0x14c IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 0x14d IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 0x14e IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 0x145 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "syncpt0",
+					  "syncpt1",
+					  "syncpt2",
+					  "syncpt3",
+					  "syncpt4",
+					  "syncpt5",
+					  "syncpt6",
+					  "syncpt7",
+					  "host1x";
+
+			clocks = <&bpmp TEGRA264_CLK_HOST1X>;
+			clock-names = "host1x";
+			interconnects = <&mc TEGRA264_MEMORY_CLIENT_HOST1XR &emc>;
+			interconnect-names = "dma-mem";
+			iommus = <&smmu1_mmu TEGRA_SID_HOST1X>;
+			dma-coherent;
+			#address-cells = <0x2>;
+			#size-cells = <0x2>;
+			iommu-map = <0x0 &smmu1_mmu (TEGRA_SID_VIC + 0x1) 0x1>,
+				    <0x1 &smmu1_mmu (TEGRA_SID_VIC + 0x2) 0x1>,
+				    <0x2 &smmu1_mmu (TEGRA_SID_VIC + 0x3) 0x1>,
+				    <0x3 &smmu1_mmu (TEGRA_SID_VIC + 0x4) 0x1>,
+				    <0x4 &smmu1_mmu (TEGRA_SID_VIC + 0x5) 0x1>,
+				    <0x5 &smmu1_mmu (TEGRA_SID_VIC + 0x6) 0x1>,
+				    <0x6 &smmu1_mmu (TEGRA_SID_VIC + 0x7) 0x1>,
+				    <0x7 &smmu1_mmu (TEGRA_SID_VIC + 0x8) 0x1>;
+
+			ranges = <0x81 0x81200000 0x81 0x81200000 0x00 0x10000>,
+				 <0x81 0x81210000 0x81 0x81210000 0x00 0x10000>,
+				 <0x81 0x81240000 0x81 0x81240000 0x00 0x10000>,
+				 <0x81 0x88050000 0x81 0x88050000 0x00 0x40000>,
+				 <0x81 0x8c000000 0x81 0x8c000000 0x00 0x900000>,
+				 <0x00 0x10700000 0x00 0x10700000 0x00 0x100000>,
+				 <0x81 0x88140000 0x81 0x88140000 0x00 0x10000>,
+				 <0x81 0x88120000 0x81 0x88120000 0x00 0x10000>,
+				 <0x81 0x88110000 0x81 0x88110000 0x00 0x10000>,
+				 <0x81 0x89880000 0x81 0x89880000 0x00 0x10000>,
+				 <0x81 0x88800000 0x81 0x88800000 0x00 0x300000>;
+			status = "disabled";
+
+			vic@8188050000 {
+				compatible = "nvidia,tegra264-vic";
+				reg = <0x81 0x88050000 0x00 0x40000>;
+				interrupts = <GIC_SPI 0x1d4 IRQ_TYPE_LEVEL_HIGH>;
+				power-domains = <&bpmp TEGRA264_POWER_DOMAIN_VIC>;
+				resets = <&bpmp TEGRA264_RESET_VIC>;
+				reset-names = "vic";
+				clocks = <&bpmp TEGRA264_CLK_VIC>;
+				clock-names = "vic";
+				interconnects = <&mc TEGRA264_MEMORY_CLIENT_VICR &emc>,
+						<&mc TEGRA264_MEMORY_CLIENT_VICW &emc>;
+				interconnect-names = "dma-mem", "write";
+				iommus = <&smmu1_mmu TEGRA_SID_VIC>;
+				dma-coherent;
+				status = "disabled";
+			};
+		};
+
 		gpio_uphy: gpio@a808300000 {
 			reg-names = "security", "gpio";
 			compatible = "nvidia,tegra264-gpio-uphy";

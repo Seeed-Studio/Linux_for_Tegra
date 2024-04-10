@@ -83,223 +83,192 @@
 		pcie@810c000000 {
 			nvidia,host1x = <&host1x>;
 		};
+
+		host1x@8181200000 {
+			pva0@818c000000 {
+				compatible = "nvidia,tegra264-pva", "simple-bus";
+				reg = <0x00000081 0x8c000000 0x00000000 0x00900000 0x00000000 0x10700000 0x00000000 0x00100000>;
+				interrupts = <0x00000000 0x00000195 0x00000004 0x00000000 0x00000196 0x00000004 0x00000000 0x00000197 0x00000004 0x00000000 0x00000198 0x00000004 0x00000000 0x00000199 0x00000004 0x00000000 0x0000019a 0x00000004 0x00000000 0x0000019b 0x00000004 0x00000000 0x0000019c 0x00000004 0x00000000 0x0000019d 0x00000004>;
+				resets = <&bpmp 0x00000030>;
+				reset-names = "pva0";
+				clocks = <&bpmp 0x00000017 &bpmp 0x00000013 &bpmp 0x00000018>;
+				clock-names = "axi", "vps0", "vps1";
+				iommus = <&smmu4_mmu 0x00001100>;
+				dma-coherent;
+				status = "disabled";
+				pva0_niso1_ctx0 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001102>;
+					dma-coherent;
+					status = "disabled";
+				};
+				pva0_niso1_ctx1 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001103>;
+					dma-coherent;
+					status = "disabled";
+				};
+				pva0_niso1_ctx2 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001104>;
+					dma-coherent;
+					status = "disabled";
+				};
+				pva0_niso1_ctx3 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001105>;
+					dma-coherent;
+					status = "disabled";
+				};
+				pva0_niso1_ctx4 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001106>;
+					dma-coherent;
+					status = "disabled";
+				};
+				pva0_niso1_ctx5 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001107>;
+					dma-coherent;
+					status = "disabled";
+				};
+				pva0_niso1_ctx6 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001108>;
+					dma-coherent;
+					status = "disabled";
+				};
+				pva0_niso1_ctx7 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001109>;
+					dma-coherent;
+					status = "disabled";
+				};
+				pva0_niso1_ctx8 {
+					compatible = "nvidia,pva-tegra186-iommu-context";
+					iommus = <&smmu4_mmu 0x00001101>;
+					dma-coherent;
+					status = "disabled";
+				};
+			};
+			se@8188140000 {
+				compatible = "nvidia,tegra264-se4-hash";
+				reg = <0x00000081 0x88140000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x00000025>;
+				clock-names = "se";
+				iommus = <&smmu1_mmu 0x00001804>;
+				dma-coherent;
+				status = "disabled";
+			};
+			se@8188120000 {
+				compatible = "nvidia,tegra264-se2-aes";
+				reg = <0x00000081 0x88120000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x00000025>;
+				clock-names = "se";
+				iommus = <0x0000003e 0x00001802>;
+				dma-coherent;
+				status = "disabled";
+			};
+			se@8188110000 {
+				compatible = "nvidia,tegra264-se1-sm4";
+				reg = <0x00000081 0x88110000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x00000025>;
+				clock-names = "se";
+				iommus = <0x0000003e 0x00001801>;
+				dma-coherent;
+				status = "disabled";
+			};
+			kds@8189880000 {
+				compatible = "nvidia,tegra264-kds";
+				reg = <0x00000081 0x89880000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x00000025>;
+				clock-names = "se";
+				status = "disabled";
+			};
+			vi0: vi0@8188400000 {
+				compatible = "nvidia,tegra234-vi";
+				resets = <&bpmp 0x0000002e>;
+				reset-names = "vi";
+				clocks = <&bpmp 0x00000039>;
+				clock-names = "vi";
+				nvidia,vi-falcon-device = <0x0000004a>;
+				iommus = <&smmu0_mmu 0x00002e01>;
+				non-coherent;
+				status = "disabled";
+			};
+			vi0-thi@8188700000 {
+				compatible = "nvidia,tegra234-vi-thi";
+				resets = <&bpmp 0x0000002e>;
+				reset-names = "vi_thi";
+				status = "disabled";
+			};
+			vi1: vi1@8188c00000 {
+				compatible = "nvidia,tegra234-vi";
+				resets = <&bpmp 0x0000002f>;
+				reset-names = "vi2";
+				clocks = <&bpmp 0x00000039>;
+				clock-names = "vi";
+				nvidia,vi-falcon-device = <0x0000004c>;
+				iommus = <&smmu0_mmu 0x00002f01>;
+				non-coherent;
+				status = "disabled";
+			};
+			vi1-thi@8188f00000 {
+				compatible = "nvidia,tegra234-vi-thi";
+				resets = <&bpmp 0x0000002f>;
+				reset-names = "vi2_thi";
+				status = "disabled";
+			};
+			isp0: isp0@8188800000 {
+				compatible = "nvidia,tegra264-isp";
+				reg = <0x00000081 0x88800000 0x00000000 0x00300000>;
+				resets = <&bpmp 0x00000013>;
+				reset-names = "isp";
+				clocks = <&bpmp 0x0000000f>;
+				clock-names = "isp";
+				nvidia,isp-falcon-device = <0x0000004d>;
+				iommus = <&smmu4_mmu 0x00000c01>;
+				dma-coherent;
+				status = "disabled";
+			};
+			isp0-thi@8188b00000 {
+				compatible = "nvidia,tegra264-isp-thi";
+				resets = <&bpmp 0x00000037>;
+				reset-names = "isp_thi";
+				status = "disabled";
+			};
+			isp1: isp1@818a800000 {
+				compatible = "nvidia,tegra264-isp";
+				resets = <&bpmp 0x00000037>;
+				reset-names = "isp1";
+				clocks = <&bpmp 0x00000010>;
+				clock-names = "isp1";
+				nvidia,isp-falcon-device = <0x0000004e>;
+				iommus = <&smmu4_mmu 0x00000d01>;
+				dma-coherent;
+				status = "disabled";
+			};
+			isp1-thi@818ab00000 {
+				compatible = "nvidia,tegra264-isp-thi";
+				resets = <&bpmp 0x00000037>;
+				reset-names = "isp1_thi";
+				status = "disabled";
+			};
+			nvcsi: nvcsi@8188000000 {
+				compatible = "nvidia,tegra194-nvcsi";
+				clocks = <&bpmp 0x00000014>;
+				clock-names = "nvcsi";
+				resets = <&bpmp 0x00000015>;
+				reset-names = "nvcsi";
+				status = "disabled";
+			};
+		};
 	};
 
 	pmu {
 		compatible = "arm,armv8-pmuv3";
 		interrupts = <0x00000001 0x00000007 0x00000008>;
 		status = "disabled";
-	};
-
-	host1x: host1x@8181200000 {
-		compatible = "nvidia,tegra264-host1x";
-		reg = <0x00000081 0x81200000 0x00000000 0x00010000 0x00000081 0x81210000 0x00000000 0x00010000 0x00000081 0x81240000 0x00000000 0x00010000>;
-		reg-names = "common", "hypervisor", "vm";
-		interrupts = <0x00000000 0x00000147 0x00000004 0x00000000 0x00000148 0x00000004 0x00000000 0x00000149 0x00000004 0x00000000 0x0000014a 0x00000004 0x00000000 0x0000014b 0x00000004 0x00000000 0x0000014c 0x00000004 0x00000000 0x0000014d 0x00000004 0x00000000 0x0000014e 0x00000004 0x00000000 0x00000145 0x00000004>;
-		interrupt-names = "syncpt0", "syncpt1", "syncpt2", "syncpt3", "syncpt4", "syncpt5", "syncpt6", "syncpt7", "host1x";
-		clocks = <&bpmp 0x0000000e>;
-		clock-names = "host1x";
-		interconnects = <&mc 0x00000016 &emc>;
-		interconnect-names = "dma-mem";
-		iommus = <&smmu1_mmu 0x00000b00>;
-		dma-coherent;
-#address-cells = <0x00000002>;
-#size-cells = <0x00000002>;
-		ranges;
-		status = "disabled";
-		iommu-map = <0x00000000 &smmu1_mmu 0x00003001 0x00000001 0x00000001 &smmu1_mmu 0x00003002 0x00000001 0x00000002 &smmu1_mmu 0x00003003 0x00000001 0x00000003 &smmu1_mmu 0x00003004 0x00000001 0x00000004 &smmu1_mmu 0x00003005 0x00000001 0x00000005 &smmu1_mmu 0x00003006 0x00000001 0x00000006 &smmu1_mmu 0x00003007 0x00000001 0x00000007 &smmu1_mmu 0x00003008 0x00000001>;
-		vic@8188050000 {
-			compatible = "nvidia,tegra264-vic";
-			reg = <0x00000081 0x88050000 0x00000000 0x00040000>;
-			interrupts = <0x00000000 0x000001d4 0x00000004>;
-			power-domains = <&bpmp 0x00000012>;
-			resets = <&bpmp 0x00000031>;
-			reset-names = "vic";
-			clocks = <&bpmp 0x0000003b>;
-			clock-names = "vic";
-			interconnects = <&mc 0x0000006c &emc &mc 0x0000006d &emc>;
-			interconnect-names = "dma-mem", "write";
-			iommus = <&smmu1_mmu 0x00003000>;
-			dma-coherent;
-			status = "disabled";
-		};
-		pva0@818c000000 {
-			compatible = "nvidia,tegra264-pva", "simple-bus";
-			reg = <0x00000081 0x8c000000 0x00000000 0x00900000 0x00000000 0x10700000 0x00000000 0x00100000>;
-			interrupts = <0x00000000 0x00000195 0x00000004 0x00000000 0x00000196 0x00000004 0x00000000 0x00000197 0x00000004 0x00000000 0x00000198 0x00000004 0x00000000 0x00000199 0x00000004 0x00000000 0x0000019a 0x00000004 0x00000000 0x0000019b 0x00000004 0x00000000 0x0000019c 0x00000004 0x00000000 0x0000019d 0x00000004>;
-			resets = <&bpmp 0x00000030>;
-			reset-names = "pva0";
-			clocks = <&bpmp 0x00000017 &bpmp 0x00000013 &bpmp 0x00000018>;
-			clock-names = "axi", "vps0", "vps1";
-			iommus = <&smmu4_mmu 0x00001100>;
-			dma-coherent;
-			status = "disabled";
-			pva0_niso1_ctx0 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001102>;
-				dma-coherent;
-				status = "disabled";
-			};
-			pva0_niso1_ctx1 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001103>;
-				dma-coherent;
-				status = "disabled";
-			};
-			pva0_niso1_ctx2 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001104>;
-				dma-coherent;
-				status = "disabled";
-			};
-			pva0_niso1_ctx3 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001105>;
-				dma-coherent;
-				status = "disabled";
-			};
-			pva0_niso1_ctx4 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001106>;
-				dma-coherent;
-				status = "disabled";
-			};
-			pva0_niso1_ctx5 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001107>;
-				dma-coherent;
-				status = "disabled";
-			};
-			pva0_niso1_ctx6 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001108>;
-				dma-coherent;
-				status = "disabled";
-			};
-			pva0_niso1_ctx7 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001109>;
-				dma-coherent;
-				status = "disabled";
-			};
-			pva0_niso1_ctx8 {
-				compatible = "nvidia,pva-tegra186-iommu-context";
-				iommus = <&smmu4_mmu 0x00001101>;
-				dma-coherent;
-				status = "disabled";
-			};
-		};
-		se@8188140000 {
-			compatible = "nvidia,tegra264-se4-hash";
-			reg = <0x00000081 0x88140000 0x00000000 0x00010000>;
-			clocks = <&bpmp 0x00000025>;
-			clock-names = "se";
-			iommus = <&smmu1_mmu 0x00001804>;
-			dma-coherent;
-			status = "disabled";
-		};
-		se@8188120000 {
-			compatible = "nvidia,tegra264-se2-aes";
-			reg = <0x00000081 0x88120000 0x00000000 0x00010000>;
-			clocks = <&bpmp 0x00000025>;
-			clock-names = "se";
-			iommus = <0x0000003e 0x00001802>;
-			dma-coherent;
-			status = "disabled";
-		};
-		se@8188110000 {
-			compatible = "nvidia,tegra264-se1-sm4";
-			reg = <0x00000081 0x88110000 0x00000000 0x00010000>;
-			clocks = <&bpmp 0x00000025>;
-			clock-names = "se";
-			iommus = <0x0000003e 0x00001801>;
-			dma-coherent;
-			status = "disabled";
-		};
-		kds@8189880000 {
-			compatible = "nvidia,tegra264-kds";
-			reg = <0x00000081 0x89880000 0x00000000 0x00010000>;
-			clocks = <&bpmp 0x00000025>;
-			clock-names = "se";
-			status = "disabled";
-		};
-		vi0: vi0@8188400000 {
-			compatible = "nvidia,tegra234-vi";
-			resets = <&bpmp 0x0000002e>;
-			reset-names = "vi";
-			clocks = <&bpmp 0x00000039>;
-			clock-names = "vi";
-			nvidia,vi-falcon-device = <0x0000004a>;
-			iommus = <&smmu0_mmu 0x00002e01>;
-			non-coherent;
-			status = "disabled";
-		};
-		vi0-thi@8188700000 {
-			compatible = "nvidia,tegra234-vi-thi";
-			resets = <&bpmp 0x0000002e>;
-			reset-names = "vi_thi";
-			status = "disabled";
-		};
-		vi1: vi1@8188c00000 {
-			compatible = "nvidia,tegra234-vi";
-			resets = <&bpmp 0x0000002f>;
-			reset-names = "vi2";
-			clocks = <&bpmp 0x00000039>;
-			clock-names = "vi";
-			nvidia,vi-falcon-device = <0x0000004c>;
-			iommus = <&smmu0_mmu 0x00002f01>;
-			non-coherent;
-			status = "disabled";
-		};
-		vi1-thi@8188f00000 {
-			compatible = "nvidia,tegra234-vi-thi";
-			resets = <&bpmp 0x0000002f>;
-			reset-names = "vi2_thi";
-			status = "disabled";
-		};
-		isp0: isp0@8188800000 {
-			compatible = "nvidia,tegra264-isp";
-			reg = <0x00000081 0x88800000 0x00000000 0x00300000>;
-			resets = <&bpmp 0x00000013>;
-			reset-names = "isp";
-			clocks = <&bpmp 0x0000000f>;
-			clock-names = "isp";
-			nvidia,isp-falcon-device = <0x0000004d>;
-			iommus = <&smmu4_mmu 0x00000c01>;
-			dma-coherent;
-			status = "disabled";
-		};
-		isp0-thi@8188b00000 {
-			compatible = "nvidia,tegra264-isp-thi";
-			resets = <&bpmp 0x00000037>;
-			reset-names = "isp_thi";
-			status = "disabled";
-		};
-		isp1: isp1@818a800000 {
-			compatible = "nvidia,tegra264-isp";
-			resets = <&bpmp 0x00000037>;
-			reset-names = "isp1";
-			clocks = <&bpmp 0x00000010>;
-			clock-names = "isp1";
-			nvidia,isp-falcon-device = <0x0000004e>;
-			iommus = <&smmu4_mmu 0x00000d01>;
-			dma-coherent;
-			status = "disabled";
-		};
-		isp1-thi@818ab00000 {
-			compatible = "nvidia,tegra264-isp-thi";
-			resets = <&bpmp 0x00000037>;
-			reset-names = "isp1_thi";
-			status = "disabled";
-		};
-		nvcsi: nvcsi@8188000000 {
-			compatible = "nvidia,tegra194-nvcsi";
-			clocks = <&bpmp 0x00000014>;
-			clock-names = "nvcsi";
-			resets = <&bpmp 0x00000015>;
-			reset-names = "nvcsi";
-			status = "disabled";
-		};
 	};
 
 	aconnect@9000000 {
