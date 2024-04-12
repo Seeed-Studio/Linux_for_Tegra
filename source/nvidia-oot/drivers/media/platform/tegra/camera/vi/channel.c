@@ -4,6 +4,8 @@
  * NVIDIA Tegra Video Input Device
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/atomic.h>
 #include <linux/bitmap.h>
 #include <linux/clk.h>
