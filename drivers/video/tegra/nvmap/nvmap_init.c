@@ -38,6 +38,7 @@ struct device __weak tegra_generic_dev;
 struct device __weak tegra_vpr_dev;
 EXPORT_SYMBOL(tegra_vpr_dev);
 struct device tegra_vpr1_dev;
+EXPORT_SYMBOL(tegra_vpr1_dev);
 
 struct device __weak tegra_generic_cma_dev;
 struct device __weak tegra_vpr_cma_dev;
@@ -740,6 +741,8 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 	} else {
 			co->init_done = true;
 	}
+	if (co->init_done)
+		set_dev_node(co->dma_dev, co->numa_node_id);
 	return err;
 }
 

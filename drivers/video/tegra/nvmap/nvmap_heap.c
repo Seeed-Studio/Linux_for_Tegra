@@ -399,6 +399,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	}
 
 	dev_set_name(h->dma_dev, "%s", co->name);
+	set_dev_node(co->dma_dev, co->numa_node_id);
 	dma_set_coherent_mask(h->dma_dev, DMA_BIT_MASK(64));
 	h->name = co->name;
 	h->arg = arg;
