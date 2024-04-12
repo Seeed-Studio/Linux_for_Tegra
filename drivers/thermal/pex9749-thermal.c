@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -110,10 +110,14 @@ static int pex9749_calc_temp(u16 v)
 	return temp;
 }
 
-#if defined(NV_DEVM_THERMAL_OF_ZONE_REGISTER_PRESENT)
+#if defined(NV_DEVM_THERMAL_OF_ZONE_REGISTER_PRESENT) /* Linux v6.1 */
 static int pex9749_get_temp(struct thermal_zone_device *tz, int *temp)
 {
+#if defined(NV_THERMAL_ZONE_DEVICE_PRIV_PRESENT) /* Linux v6.4 */
+	struct pex9749_priv *priv = thermal_zone_device_priv(tz);
+#else
 	struct pex9749_priv *priv = tz->devdata;
+#endif
 #else
 static int pex9749_get_temp(void *data, int *temp)
 {

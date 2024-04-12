@@ -7815,6 +7815,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP" "" "types"
         ;;
 
+        thermal_zone_device_priv)
+            #
+            # Determine if the function thermal_zone_device_priv() is present.
+            #
+            # Commit a6ff3c002146 ("thermal/core: Add a thermal zone 'devdata'
+            # accessor") added function thermal_zone_device_priv() in Linux
+            # v6.4.
+            #
+            CODE="
+            #include <linux/thermal.h>
+            void conftest_thermal_zone_device_priv(void) {
+                thermal_zone_device_priv();
+            }"
+
+            compile_check_conftest "$CODE" "NV_THERMAL_ZONE_DEVICE_PRIV_PRESENT" "" "functions"
+        ;;
+
         tegra_dev_iommu_get_stream_id)
             #
             # Determine if the function tegra_dev_iommu_get_stream_id is present.

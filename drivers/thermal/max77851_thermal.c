@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Junction temperature thermal driver for Maxim Max77851.
  */
@@ -44,14 +44,18 @@ struct max77851_therm_info {
 	int				irq_tjalarm2;
 };
 
-#if defined(NV_DEVM_THERMAL_OF_ZONE_REGISTER_PRESENT)
+#if defined(NV_DEVM_THERMAL_OF_ZONE_REGISTER_PRESENT) /* Linux v6.1 */
 static int max77851_thermal_read_temp(struct thermal_zone_device *data, int *temp)
 #else
 static int max77851_thermal_read_temp(void *data, int *temp)
 #endif
 {
-#if defined(NV_DEVM_THERMAL_OF_ZONE_REGISTER_PRESENT)
+#if defined(NV_DEVM_THERMAL_OF_ZONE_REGISTER_PRESENT) /* Linux v6.1 */
+#if defined(NV_THERMAL_ZONE_DEVICE_PRIV_PRESENT) /* Linux v6.4 */
+	struct max77851_therm_info *thermal = thermal_zone_device_priv(data);
+#else
 	struct max77851_therm_info *thermal = data->devdata;
+#endif
 #else
 	struct max77851_therm_info *thermal = data;
 #endif
