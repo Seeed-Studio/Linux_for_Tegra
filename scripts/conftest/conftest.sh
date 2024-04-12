@@ -8014,6 +8014,28 @@ compile_test() {
                     "NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_FRAME_INTERVAL" "" "types"
         ;;
 
+        v4l2_subdev_pad_ops_struct_has_dv_timings)
+            #
+            # Determine if struct v4l2_subdev_pad_ops has the 'g_dv_timings'
+            # and 's_dv_timings' function pointers.
+            #
+            # Commit 009e12561369 ("media: v4l2-subdev: Add pad versions of dv
+            # timing subdev calls)" added 'g_dv_timings' and 's_dv_timnigs' to
+            # the v4l2_subdev_pad_ops structure. Commit d8c9a6e204f1 ("media:
+            # v4l2-subdev: Remove non-pad dv timing callbacks") then removed the
+            # the original 'g_dv_timings' and 's_dv_timings' from the
+            # v4l2_subdev_video_ops structure. These changes were made for Linux
+            # v6.10.
+            CODE="
+            #define _LINUX_EFI_H
+            #include <media/v4l2-subdev.h>
+            int conftest_v4l2_subdev_pad_ops_struct_has_dv_timings(void) {
+                return offsetof(struct v4l2_subdev_pad_ops, g_dv_timings);
+            }
+            "
+            compile_check_conftest "$CODE" \
+                    "NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_DV_TIMINGS" "" "types"
+        ;;
         crypto_engine_ctx_struct_removed_test)
             #
             # Determine if struct 'crypto_engine_ctx' is removed in linux kernel.
