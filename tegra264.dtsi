@@ -287,6 +287,13 @@
 			reset-names = "pwm";
 		};
 
+		padctl_aon: pinmux@c7a2000 {
+			compatible = "nvidia,tegra264-pinmux-aon";
+			status = "disabled";
+
+			reg = <0x0 0x0c7a2000 0x0 0x2000>;
+		};
+
 		pmc: pmc@c800000 {
 			compatible = "nvidia,tegra264-pmc",
 				     "nvidia,tegra234-pmc";
@@ -946,64 +953,11 @@
 				  0x81000000 0xd0 0x82000000 0xd0 0x82000000 0x0 0x00200000>;	/* I/O */
 		};
 
-		padctl_aon: pinmux@c7a2000 {
-			compatible = "nvidia,tegra264-pinmux-aon",
-				     "nvidia,tegra234-pinmux-aon";
-			status = "disabled";
-
-			reg = <0x0 0x0c7a2000 0x0 0x1000>,
-			      <0x0 0x0c7a3000 0x0 0x1000>;
-		};
-
 		padctl_main: pinmux@810c281000 {
-			compatible = "nvidia,tegra264-pinmux",
-				     "nvidia,tegra234-pinmux";
+			compatible = "nvidia,tegra264-pinmux-main";
 			status = "disabled";
 
-			reg =   <0x81 0x0c281000 0x0 0x1000>,
-				<0x81 0x0c282000 0x0 0x1000>,
-				<0x81 0x0c283000 0x0 0x1000>,
-				<0x81 0x0c284000 0x0 0x1000>,
-				<0x81 0x0c286000 0x0 0x1000>,
-				<0x81 0x0c287000 0x0 0x1000>,
-				<0x81 0x0c288000 0x0 0x1000>,
-				<0x81 0x0c28b000 0x0 0x1000>,
-				<0xa8 0x082e0000 0x0 0x1000>,
-				<0xa8 0x082e2000 0x0 0x1000>,
-				<0xa8 0x082e3000 0x0 0x1000>;
-
-			pex_rst_c2_in_state: pex_rst_c2_in {
-				pex_rst {
-					nvidia,pins = "pex_l2_rst_n_pb3";
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			pex_rst_c4_in_state: pex_rst_c4_in {
-				pex_rst {
-					nvidia,pins = "pex_l4_rst_n_pd1";
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			pex_rst_c5_in_state: pex_rst_c5_in {
-				pex_rst {
-					nvidia,pins = "pex_l5_rst_n_pd3";
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
-				};
-			};
+			reg =   <0x81 0x0c281000 0x0 0xc000>;
 		};
 
 		sdmmc1: sdhci@810c570000 {
@@ -1084,6 +1038,46 @@
 			nvidia,mbox-ie;
 			#mbox-cells = <2>;
 			interrupt-names = "shared1", "shared2", "shared3", "shared4";
+		};
+
+		padctl_uphy: pinmux@a8082e0000 {
+			compatible = "nvidia,tegra264-pinmux-uphy";
+			status = "disabled";
+
+			reg =   <0xa8 0x082e0000 0x0 0x4000>;
+
+			pex_rst_c2_in_state: pex_rst_c2_in {
+				pex_rst {
+					nvidia,pins = "pex_l2_rst_n_pb3";
+					nvidia,function = "rsvd1";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+				};
+			};
+
+			pex_rst_c4_in_state: pex_rst_c4_in {
+				pex_rst {
+					nvidia,pins = "pex_l4_rst_n_pd1";
+					nvidia,function = "rsvd1";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+				};
+			};
+
+			pex_rst_c5_in_state: pex_rst_c5_in {
+				pex_rst {
+					nvidia,pins = "pex_l5_rst_n_pd3";
+					nvidia,function = "rsvd1";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+				};
+			};
 		};
 
 		pcie@a808400000 {
