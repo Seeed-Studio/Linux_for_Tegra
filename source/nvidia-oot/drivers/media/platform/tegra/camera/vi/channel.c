@@ -23,6 +23,7 @@
 #include <media/v4l2-dev.h>
 #include <media/v4l2-fh.h>
 #include <media/v4l2-ioctl.h>
+#include <media/v4l2-subdev.h>
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-dma-contig.h>
 #include <media/tegra-v4l2-camera.h>
@@ -1157,11 +1158,19 @@ tegra_channel_g_dv_timings(struct file *file, void *fh,
 {
 	struct tegra_channel *chan = video_drvdata(file);
 
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_DV_TIMINGS) /* Linux v6.10 */
+	if (!v4l2_subdev_has_op(chan->subdev_on_csi, pad, g_dv_timings))
+		return -ENOTTY;
+
+	return v4l2_device_call_until_err(chan->video->v4l2_dev,
+			chan->grp_id, pad, g_dv_timings, 0, timings);
+#else
 	if (!v4l2_subdev_has_op(chan->subdev_on_csi, video, g_dv_timings))
 		return -ENOTTY;
 
 	return v4l2_device_call_until_err(chan->video->v4l2_dev,
 			chan->grp_id, video, g_dv_timings, timings);
+#endif
 }
 
 static int
@@ -1173,7 +1182,11 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 	struct v4l2_dv_timings curr_timings;
 	int ret;
 
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_DV_TIMINGS) /* Linux v6.10 */
+	if (!v4l2_subdev_has_op(chan->subdev_on_csi, pad, s_dv_timings))
+#else
 	if (!v4l2_subdev_has_op(chan->subdev_on_csi, video, s_dv_timings))
+#endif
 		return -ENOTTY;
 
 	ret = tegra_channel_g_dv_timings(file, fh, &curr_timings);
@@ -1186,9 +1199,13 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 	if (vb2_is_busy(&chan->queue))
 		return -EBUSY;
 
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_DV_TIMINGS) /* Linux v6.10 */
+	ret = v4l2_device_call_until_err(chan->video->v4l2_dev,
+			chan->grp_id, pad, s_dv_timings, 0, timings);
+#else
 	ret = v4l2_device_call_until_err(chan->video->v4l2_dev,
 			chan->grp_id, video, s_dv_timings, timings);
-
+#endif
 	if (!ret)
 		tegra_channel_update_format(chan, bt->width, bt->height,
 			chan->fmtinfo->fourcc, &chan->fmtinfo->bpp,
@@ -1206,11 +1223,19 @@ tegra_channel_query_dv_timings(struct file *file, void *fh,
 {
 	struct tegra_channel *chan = video_drvdata(file);
 
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_DV_TIMINGS) /* Linux v6.10 */
+	if (!v4l2_subdev_has_op(chan->subdev_on_csi, pad, query_dv_timings))
+		return -ENOTTY;
+
+	return v4l2_device_call_until_err(chan->video->v4l2_dev,
+			chan->grp_id, pad, query_dv_timings, 0, timings);
+#else
 	if (!v4l2_subdev_has_op(chan->subdev_on_csi, video, query_dv_timings))
 		return -ENOTTY;
 
 	return v4l2_device_call_until_err(chan->video->v4l2_dev,
 			chan->grp_id, video, query_dv_timings, timings);
+#endif
 }
 
 static int
@@ -1847,8 +1872,13 @@ static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
 		if (chan->pg_mode) {
 			/* TPG mode */
 			cdev->sensor_type = SENSORTYPE_VIRTUAL;
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_DV_TIMINGS) /* Linux v6.10 */
+		} else if (v4l2_subdev_has_op(chan->subdev_on_csi,
+						pad, g_dv_timings)) {
+#else
 		} else if (v4l2_subdev_has_op(chan->subdev_on_csi,
 						video, g_dv_timings)) {
+#endif
 			/* HDMI-IN */
 			cdev->sensor_type = SENSORTYPE_OTHER;
 			pixelclock = tegra_channel_get_max_source_rate();
@@ -2175,7 +2205,11 @@ tegra_channel_enum_input(struct file *file, void *fh, struct v4l2_input *inp)
 		return -ENODEV;
 
 	inp->type = V4L2_INPUT_TYPE_CAMERA;
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_DV_TIMINGS) /* Linux v6.10 */
+	if (v4l2_subdev_has_op(sd_on_csi, pad, s_dv_timings)) {
+#else
 	if (v4l2_subdev_has_op(sd_on_csi, video, s_dv_timings)) {
+#endif
 		inp->capabilities = V4L2_IN_CAP_DV_TIMINGS;
 		len = snprintf(inp->name,
 			sizeof(inp->name), "HDMI %u",
