@@ -1814,9 +1814,12 @@ void rtw_btcoex_connect_notify(PADAPTER padapter, u8 join_type)
 
 	pHalData = GET_HAL_DATA(padapter);
 
-	if (pHalData->EEPROMBluetoothCoexist == _TRUE)
+	if (pHalData->EEPROMBluetoothCoexist == _TRUE) {
 		_rtw_btcoex_connect_notify(padapter, join_type ? _FALSE : _TRUE);
-	else
+
+		if (join_type)
+			rtw_btcoex_SpecialPacketNotify(padapter, PACKET_EAPOL);
+	} else
 #endif /* CONFIG_BT_COEXIST */
 	rtw_btcoex_wifionly_connect_notify(padapter);
 }

@@ -373,6 +373,7 @@ void rtw_hal_dump_macaddr(void *sel, _adapter *adapter);
 void rtw_hal_set_hw_macaddr(PADAPTER adapter, u8 *mac_addr);
 
 void rtw_init_hal_com_default_value(PADAPTER Adapter);
+u8 rtw_hal_pause_rx_dma(_adapter *adapter);
 
 #ifdef CONFIG_FW_C2H_REG
 void c2h_evt_clear(_adapter *adapter);

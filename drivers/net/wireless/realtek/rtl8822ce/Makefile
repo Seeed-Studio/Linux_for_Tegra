@@ -14,15 +14,13 @@ EXTRA_CFLAGS += -Wno-unused-variable
 #EXTRA_CFLAGS += -Wno-unused-function
 #EXTRA_CFLAGS += -Wno-unused
 #EXTRA_CFLAGS += -Wno-uninitialized
-EXTRA_CFLAGS += -Wno-missing-prototypes
 
 GCC_VER_49 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 4.9 | bc )
 ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-SOURCETREE = $(srctree.nvidia-oot)/drivers/net/wireless/realtek/rtl8822ce
-EXTRA_CFLAGS += -I$(SOURCETREE)/include
+EXTRA_CFLAGS += -I$(src)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -109,7 +107,7 @@ endif
 CONFIG_RTW_DEBUG = y
 # default log level is _DRV_INFO_ = 4,
 # please refer to "How_to_set_driver_debug_log_level.doc" to set the available level.
-CONFIG_RTW_LOG_LEVEL = 0
+CONFIG_RTW_LOG_LEVEL = 4
 
 # enable /proc/net/rtlxxxx/ debug interfaces
 CONFIG_PROC_DEBUG = y
@@ -149,8 +147,7 @@ CONFIG_SECURITY_MEM = n
 CONFIG_SECURITY_MEM_ADDR = 0
 CONFIG_SECURITY_MEM_SIZE = 3686400
 ###################### Platform Related #######################
-CONFIG_PLATFORM_TEGRA = y
-CONFIG_PLATFORM_I386_PC = n
+CONFIG_PLATFORM_I386_PC = y
 CONFIG_PLATFORM_ANDROID_X86 = n
 CONFIG_PLATFORM_ANDROID_INTEL_X86 = n
 CONFIG_PLATFORM_JB_X86 = n
@@ -283,10 +280,10 @@ _HAL_INTFS_FILES :=	hal/hal_intf.o \
 			hal/led/hal_$(HCI_NAME)_led.o
 
 
-EXTRA_CFLAGS += -I$(SOURCETREE)/platform
+EXTRA_CFLAGS += -I$(src)/platform
 _PLATFORM_FILES := platform/platform_ops.o
 
-EXTRA_CFLAGS += -I$(SOURCETREE)/hal/btc
+EXTRA_CFLAGS += -I$(src)/hal/btc
 
 ########### HAL_RTL8188E #################################
 ifeq ($(CONFIG_RTL8188E), y)
@@ -1368,16 +1365,6 @@ EXTRA_CFLAGS += -DSECURITY_MEM_ADDR=$(CONFIG_SECURITY_MEM_ADDR)
 EXTRA_CFLAGS += -DSECURITY_MEM_SIZE=$(CONFIG_SECURITY_MEM_SIZE)
 endif
 
-ifeq ($(CONFIG_PLATFORM_TEGRA), y)
-ARCH = arm
-KVER := $(shell uname -r)
-KSRC := /lib/modules/$(KVER)/build
-EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
-EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
-EXTRA_CFLAGS += -Wno-error=date-time
-MODULE_NAME = rtl8822ce
-endif
-
 ifeq ($(CONFIG_PLATFORM_I386_PC), y)
 EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
 EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
@@ -2379,7 +2366,7 @@ endif
 ifneq ($(KERNELRELEASE),)
 
 ########### this part for *.mk ############################
-include $(SOURCETREE)/hal/phydm/phydm.mk
+include $(src)/hal/phydm/phydm.mk
 
 ########### HAL_RTL8822B #################################
 ifeq ($(CONFIG_RTL8822B), y)
@@ -2393,7 +2380,7 @@ endif
 
 ########### HAL_RTL8822C #################################
 ifeq ($(CONFIG_RTL8822C), y)
-include $(SOURCETREE)/rtl8822c.mk
+include $(src)/rtl8822c.mk
 endif
 
 ########### HAL_RTL8814B #################################
@@ -2456,7 +2443,7 @@ ifeq ($(CONFIG_SDIO_HCI), y)
 rtk_core += core/rtw_sdio.o
 endif
 
-EXTRA_CFLAGS += -I$(SOURCETREE)/core/crypto
+EXTRA_CFLAGS += -I$(src)/core/crypto
 rtk_core += \
 		core/crypto/aes-internal.o \
 		core/crypto/aes-internal-enc.o \
@@ -2490,7 +2477,7 @@ ifeq ($(CONFIG_RTL8723B), y)
 $(MODULE_NAME)-$(CONFIG_MP_INCLUDED)+= core/rtw_bt_mp.o
 endif
 
-obj-m := $(MODULE_NAME).o
+obj-$(CONFIG_RTL8822CE) := $(MODULE_NAME).o
 
 else
 

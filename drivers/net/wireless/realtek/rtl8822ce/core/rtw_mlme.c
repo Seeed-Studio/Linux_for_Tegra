@@ -144,13 +144,13 @@ sint	_rtw_init_mlme_priv(_adapter *padapter)
 #endif
 
 #ifdef CONFIG_LAYER2_ROAMING
-#define RTW_ROAM_SCAN_RESULT_EXP_MS (10*1000)
+#define RTW_ROAM_SCAN_RESULT_EXP_MS (5*1000)
 #define RTW_ROAM_IDLE_RSSI_DIFF_TH 5
 #define RTW_ROAM_BUSY_RSSI_DIFF_TH 10
-#define RTW_ROAM_SCAN_INTERVAL (2)    /* 5*(2 second)*/
-#define RTW_ROAM_IDLE_RSSI_THRESHOLD 40
-#define RTW_ROAM_BUSY_RSSI_THRESHOLD 40
-#define RTW_ROAM_DICONNECT_DELAY	20
+#define RTW_ROAM_SCAN_INTERVAL (5)    /* 5*(2 second)*/
+#define RTW_ROAM_IDLE_RSSI_THRESHOLD 35
+#define RTW_ROAM_BUSY_RSSI_THRESHOLD 30
+#define RTW_ROAM_DICONNECT_DELAY	50
 	_rtw_spinlock_init(&pmlmepriv->clnt_auth_lock);
 	pmlmepriv->roam_flags = CONFIG_ROAMING_FLAG;
 
@@ -1845,16 +1845,30 @@ void rtw_survey_event_callback(_adapter	*adapter, u8 *pbuf)
 					goto exit;
 				}
 			}
-			rtw_check_roaming_candidate(pmlmepriv, &candidate, pnetwork, 0);
+			candidate = pmlmepriv->roam_network; /* backup */
+			rtw_check_roaming_candidate(pmlmepriv, &pmlmepriv->roam_network, pnetwork, 0);
 
-			if (candidate) {
-				pmlmepriv->roam_network = candidate;
+			if (pnetwork == pmlmepriv->roam_network) {
+				/* we got a new candidate */
+				if (candidate)
+					candidate->fixed = _FALSE;
+
+				pmlmepriv->roam_network->fixed = _TRUE;
 				RTW_INFO("%s() found a roaming candidate. abort scan\n", __func__);
 				rtw_scan_abort_no_wait(adapter);
-			}
-			/* find second best candidate */
-			if (!candidate && IS_5G_BSS(pnetwork->network))
+
+			} else if (IS_5G_BSS(pnetwork->network)) {
+				candidate = pmlmepriv->candidate_5G; /* backup */
+				/* find second best candidate */
 				rtw_check_roaming_candidate(pmlmepriv, &pmlmepriv->candidate_5G, pnetwork, 1);
+
+				if (pnetwork == pmlmepriv->candidate_5G) {
+					/* we got a new 5G candidate */
+					if (candidate)
+						candidate->fixed = _FALSE;
+					pmlmepriv->candidate_5G->fixed = _TRUE;
+				}
+			}
 		}
 #endif
 	}
@@ -3311,11 +3325,12 @@ void rtw_stadel_event_callback(_adapter *adapter, u8 *pbuf)
 	u8 diconnect_delay = RTW_ROAM_DICONNECT_DELAY;
 
 	RTW_INFO("%s(mac_id=%d)=" MAC_FMT "\n", __func__, pstadel->mac_id, MAC_ARG(pstadel->macaddr));
+
+	rtw_sta_mstatus_disc_rpt(adapter, pstadel->mac_id);
 #ifdef CONFIG_LAYER2_ROAMING
 	if (pmlmepriv->roam_network)
 		rtw_hal_set_hwreg(adapter, HW_VAR_CHECK_TXBUF, &diconnect_delay);
 #endif
-	rtw_sta_mstatus_disc_rpt(adapter, pstadel->mac_id);
 
 #ifdef CONFIG_MCC_MODE
 	rtw_hal_mcc_update_macid_bitmap(adapter, pstadel->mac_id, _FALSE);
@@ -4132,6 +4147,9 @@ int rtw_select_roaming_candidate(struct mlme_priv *mlme)
 
 	mlme->roam_network = NULL;
 	mlme->candidate_5G = NULL;
+
+	if (candidate) candidate->fixed = _FALSE;
+	if (candidate_5G) candidate_5G->fixed = _FALSE;
 
 	if (mlme->cur_network_scanned == NULL) {
 		rtw_warn_on(1);

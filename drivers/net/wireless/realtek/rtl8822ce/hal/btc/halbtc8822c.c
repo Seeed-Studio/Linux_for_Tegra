@@ -61,7 +61,8 @@ static const struct btc_coex_table_para table_sant_8822c[] = {
 				{0xdaffdaff, 0xdaffdaff},
 				{0x6a555a5a, 0x5a5a5a5a},
 				{0xe5555555, 0xe5555555}, /*case-35*/
-				{0xea5a5a5a, 0xea5a5a5a} };
+				{0xea5a5a5a, 0xea5a5a5a},
+				{0x55555555, 0xaa5a5aaa} }; /*case-37*/
 
 /* Non-Shared-Antenna Coex Table */
 static const struct btc_coex_table_para table_nsant_8822c[] = {
@@ -120,7 +121,9 @@ static const struct btc_tdma_para tdma_sant_8822c[] = {
 				{ {0x65, 0x10, 0x03, 0x11, 0x10} },
 				{ {0x51, 0x10, 0x03, 0x10, 0x51} }, /*case-25*/
 				{ {0x51, 0x08, 0x03, 0x10, 0x50} },
-				{ {0x61, 0x08, 0x03, 0x11, 0x11} } };
+				{ {0x61, 0x08, 0x03, 0x11, 0x11} },
+				{ {0x61, 0x45, 0x03, 0x11, 0x11} },  /*case-28*/
+				{ {0x61, 0x55, 0x03, 0x11, 0x11} } };/*case-29*/
 
 
 /* Non-Shared-Antenna TDMA*/
@@ -214,7 +217,7 @@ const struct btc_5g_afh_map afh_5g_8822c[] = { {0, 0, 0} };
 
 const struct btc_chip_para btc_chip_para_8822c = {
 	"8822c",				/*.chip_name */
-	20240125,				/*.para_ver_date */
+	20240327,				/*.para_ver_date */
 	0x27,					/*.para_ver */
 	0x20,					/* bt_desired_ver */
 	0x7001c,				/* wl_desired_ver */

@@ -1157,6 +1157,8 @@ int rtw_is_same_ibss(_adapter *adapter, struct wlan_network *pnetwork);
 int is_same_network(WLAN_BSSID_EX *src, WLAN_BSSID_EX *dst, u8 feature);
 
 #ifdef CONFIG_LAYER2_ROAMING
+int rtw_check_roaming_candidate(struct mlme_priv *mlme,
+	struct wlan_network **candidate, struct wlan_network *competitor, u8 potential_5G);
 #define rtw_roam_flags(adapter) ((adapter)->mlmepriv.roam_flags)
 #define rtw_chk_roam_flags(adapter, flags) ((adapter)->mlmepriv.roam_flags & flags)
 #define rtw_clr_roam_flags(adapter, flags) \

@@ -5117,44 +5117,7 @@ void rtw_dump_fifo(void *sel, _adapter *adapter, u8 fifo_sel, u32 fifo_addr, u32
 }
 #endif
 
-#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
-static void rtw_hal_force_enable_rxdma(_adapter *adapter)
-{
-	RTW_INFO("%s: Set 0x690=0x00\n", __func__);
-	rtw_write8(adapter, REG_WOW_CTRL,
-		   (rtw_read8(adapter, REG_WOW_CTRL) & 0xf0));
-	RTW_PRINT("%s: Release RXDMA\n", __func__);
-	rtw_write32(adapter, REG_RXPKT_NUM,
-		    (rtw_read32(adapter, REG_RXPKT_NUM) & (~RW_RELEASE_EN)));
-}
-#if defined(CONFIG_RTL8188E)
-static void rtw_hal_disable_tx_report(_adapter *adapter)
-{
-	rtw_write8(adapter, REG_TX_RPT_CTRL,
-		   ((rtw_read8(adapter, REG_TX_RPT_CTRL) & ~BIT(1))) & ~BIT(5));
-	RTW_INFO("disable TXRPT:0x%02x\n", rtw_read8(adapter, REG_TX_RPT_CTRL));
-}
-
-static void rtw_hal_enable_tx_report(_adapter *adapter)
-{
-	rtw_write8(adapter, REG_TX_RPT_CTRL,
-		   ((rtw_read8(adapter, REG_TX_RPT_CTRL) | BIT(1))) | BIT(5));
-	RTW_INFO("enable TX_RPT:0x%02x\n", rtw_read8(adapter, REG_TX_RPT_CTRL));
-}
-#endif
-static void rtw_hal_release_rx_dma(_adapter *adapter)
-{
-	u32 val32 = 0;
-
-	val32 = rtw_read32(adapter, REG_RXPKT_NUM);
-
-	rtw_write32(adapter, REG_RXPKT_NUM, (val32 & (~RW_RELEASE_EN)));
-
-	RTW_INFO("%s, [0x%04x]: 0x%08x\n",
-		 __func__, REG_RXPKT_NUM, (u32)(val32 & (~RW_RELEASE_EN)));
-}
-
-static u8 rtw_hal_pause_rx_dma(_adapter *adapter)
+u8 rtw_hal_pause_rx_dma(_adapter *adapter)
 {
 	PHAL_DATA_TYPE hal = GET_HAL_DATA(adapter);
 	u8 ret = 0;
@@ -5196,7 +5159,7 @@ static u8 rtw_hal_pause_rx_dma(_adapter *adapter)
 #endif /* CONFIG_USB_HCI */
 	} while (trycnt--);
 
-	if (trycnt < 0) {
+	if (trycnt <= 0) {
 		tmp = rtw_read16(adapter, REG_RXPKT_NUM + 2);
 
 		RTW_PRINT("Stop RX DMA failed......\n");
@@ -5217,6 +5180,43 @@ static u8 rtw_hal_pause_rx_dma(_adapter *adapter)
 	}
 
 	return ret;
+}
+
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
+static void rtw_hal_force_enable_rxdma(_adapter *adapter)
+{
+	RTW_INFO("%s: Set 0x690=0x00\n", __func__);
+	rtw_write8(adapter, REG_WOW_CTRL,
+		   (rtw_read8(adapter, REG_WOW_CTRL) & 0xf0));
+	RTW_PRINT("%s: Release RXDMA\n", __func__);
+	rtw_write32(adapter, REG_RXPKT_NUM,
+		    (rtw_read32(adapter, REG_RXPKT_NUM) & (~RW_RELEASE_EN)));
+}
+#if defined(CONFIG_RTL8188E)
+static void rtw_hal_disable_tx_report(_adapter *adapter)
+{
+	rtw_write8(adapter, REG_TX_RPT_CTRL,
+		   ((rtw_read8(adapter, REG_TX_RPT_CTRL) & ~BIT(1))) & ~BIT(5));
+	RTW_INFO("disable TXRPT:0x%02x\n", rtw_read8(adapter, REG_TX_RPT_CTRL));
+}
+
+static void rtw_hal_enable_tx_report(_adapter *adapter)
+{
+	rtw_write8(adapter, REG_TX_RPT_CTRL,
+		   ((rtw_read8(adapter, REG_TX_RPT_CTRL) | BIT(1))) | BIT(5));
+	RTW_INFO("enable TX_RPT:0x%02x\n", rtw_read8(adapter, REG_TX_RPT_CTRL));
+}
+#endif
+static void rtw_hal_release_rx_dma(_adapter *adapter)
+{
+	u32 val32 = 0;
+
+	val32 = rtw_read32(adapter, REG_RXPKT_NUM);
+
+	rtw_write32(adapter, REG_RXPKT_NUM, (val32 & (~RW_RELEASE_EN)));
+
+	RTW_INFO("%s, [0x%04x]: 0x%08x\n",
+		 __func__, REG_RXPKT_NUM, (u32)(val32 & (~RW_RELEASE_EN)));
 }
 
 #if defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)

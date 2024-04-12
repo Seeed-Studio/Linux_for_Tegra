@@ -12192,9 +12192,11 @@ no_external_auth:
 	recv_ack(padapter, true);
 	issue_auth(padapter, NULL, 0);
 
+#ifdef CONFIG_RTW_80211R
 	if (rtw_ft_roam(padapter))
 		set_link_timer(pmlmeext, REAUTH_FT_TO);
 	else
+#endif
 		set_link_timer(pmlmeext, REAUTH_TO);
 
 }
@@ -13689,14 +13691,13 @@ bypass_active_keep_alive:
 
 void roamed_status_chk(_adapter *padapter, u8 from_timer)
 {
-	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
-#if defined(CONFIG_LAYER2_ROAMING) && defined(CONFIG_RTW_80211K)
+	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+#ifdef CONFIG_LAYER2_ROAMING
 	struct wlan_network *ap = pmlmepriv->cur_network_scanned;
-	int wait_times = 10; /* unit 10ms */
-	struct roam_nb_info *pnb = &(pmlmepriv->nb_info);
-	struct recv_priv *precvpriv = &padapter->recvpriv;
 	u8 roam_cur_rssi_th;
 	u8 roam_cur_rssi_diff, pulse_cur_rssi_diff;
+	int wait_times = 10; /* unit 10ms */
+	struct recv_priv *precvpriv = &padapter->recvpriv;
 	u8 int_facotr = 1, skip_time_chk = 0, skip_rssi_chk = 0;
 	u8 reason = RTW_AUTO_SCAN_REASON_ROAM;
 	u32 wait_ms = 0, pass_ms = 0, remain_ms = 0;
@@ -13774,7 +13775,8 @@ void roamed_status_chk(_adapter *padapter, u8 from_timer)
 			pmlmepriv->roam_try_cnt = 0;
 		}
 	}
-#endif
+#endif /* CONFIG_RTW_PREFER_5G */
+
 	/* extend roam scan interval */
 	if (pmlmepriv->roam_try_cnt > pmlmepriv->roam_scan_round3) {
 		wait_ms = pmlmepriv->roam_scan_int3 * 2000;
@@ -15024,7 +15026,6 @@ static int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel
 	struct rtw_ieee80211_channel out5_noir[MAX_CHANNEL_NUM_5G];
 	struct rtw_ieee80211_channel out_roam[RTW_MAX_NB_RPT_NUM];
 
-
 	/* clear first */
 	_rtw_memset(out, 0, sizeof(struct rtw_ieee80211_channel) * out_num);
 	_rtw_memset(out2, 0, sizeof(out2));
@@ -15058,15 +15059,25 @@ static int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel
 		if (set_idx < 0)
 			continue;
 
+		chan = rfctl->channel_set[set_idx].ChannelNum;
+
 		if (rfctl->channel_set[set_idx].band == BAND_ON_5G) {
 
 			if (rfctl->channel_set[set_idx].flags & (RTW_CHF_NO_IR /*| RTW_CHF_DFS*/)) {
+
 				/* 5G DFS and NO_IR */
+				if (rtw_chlist_search_ch(out5_noir, k, chan) != -1)
+					continue;
+
 				_rtw_memcpy(&out5_noir[k], &in[i], sizeof(struct rtw_ieee80211_channel));
 				out5_noir[k].flags |= RTW_IEEE80211_CHAN_PASSIVE_SCAN;
 				k++;
 			} else {
+
 				/* 5G Active channel */
+				if (rtw_chlist_search_ch(out5, j, chan) != -1)
+					continue;
+
 				_rtw_memcpy(&out5[j], &in[i], sizeof(struct rtw_ieee80211_channel));
 				j++;
 			}
@@ -15074,12 +15085,20 @@ static int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel
 		} else { /* 2G */
 
 			if (rfctl->channel_set[set_idx].flags & (RTW_CHF_NO_IR /*| RTW_CHF_DFS*/)) {
+
 				/* 2G  NO_IR */
+				if (rtw_chlist_search_ch(out2_noir, m, chan) != -1)
+					continue;
+
 				_rtw_memcpy(&out2_noir[m], &in[i], sizeof(struct rtw_ieee80211_channel));
 				out2_noir[m].flags |= RTW_IEEE80211_CHAN_PASSIVE_SCAN;
 				m++;
 			} else {
+
 				/* 2G Active channel */
+				if (rtw_chlist_search_ch(out2, l, chan) != -1)
+					continue;
+
 				_rtw_memcpy(&out2[l], &in[i], sizeof(struct rtw_ieee80211_channel));
 				l++;
 			}
@@ -15973,8 +15992,9 @@ operation_by_state:
 			rtw_rx_ampdu_apply(padapter);
 
 		/* clear HW TX queue before scan */
+#ifdef CONFIG_SCAN_FLUSH_TX_FIFO
 		rtw_hal_set_hwreg(padapter, HW_VAR_CHECK_TXBUF, 0);
-
+#endif
 		rtw_hal_macid_sleep_all_used(padapter);
 
 		/* power save state announcement */
@@ -16188,8 +16208,9 @@ operation_by_state:
 		 */
 
 		/* clear HW TX queue before scan */
+#ifdef CONFIG_SCAN_FLUSH_TX_FIFO
 		rtw_hal_set_hwreg(padapter, HW_VAR_CHECK_TXBUF, 0);
-
+#endif
 		rtw_hal_macid_sleep_all_used(padapter);
 		if (mlmeext_chk_scan_backop_flags(pmlmeext, SS_BACKOP_PS_ANNC)
 			&& rtw_ps_annc(padapter, 1)

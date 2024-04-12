@@ -474,6 +474,7 @@ u32 rtw_hal_power_on(_adapter *padapter)
 void rtw_hal_power_off(_adapter *padapter)
 {
 	struct macid_ctl_t *macid_ctl = &padapter->dvobj->macid_ctl;
+	int res;
 
 	_rtw_memset(macid_ctl->h2c_msr, 0, MACID_NUM_SW_LIMIT);
 	_rtw_memset(macid_ctl->op_num, 0, H2C_MSR_ROLE_MAX);
@@ -486,6 +487,10 @@ void rtw_hal_power_off(_adapter *padapter)
 	rtw_btcoex_PowerOffSetting(padapter);
 #endif
 
+	res = rtw_hal_pause_rx_dma(padapter);
+	if (res == _FAIL)
+		RTW_PRINT("[WARNING] pause RX DMA fail\n");
+	
 	padapter->hal_func.hal_power_off(padapter);
 }
 

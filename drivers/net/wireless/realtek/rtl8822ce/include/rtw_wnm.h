@@ -208,7 +208,5 @@ u32 rtw_wnm_btm_candidates_survey(_adapter *padapter,
 	u8* pframe, u32 elem_len, u8 is_preference);
 
 struct mlme_priv;
-int rtw_check_roaming_candidate(struct mlme_priv *mlme,
-	struct wlan_network **candidate, struct wlan_network *competitor, u8 potential_5G);
 #endif /* __RTW_WNM_H_ */
 
