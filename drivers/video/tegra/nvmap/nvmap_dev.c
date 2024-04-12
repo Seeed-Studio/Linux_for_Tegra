@@ -1508,6 +1508,7 @@ int nvmap_remove(struct platform_device *pdev)
 		nvmap_heap_destroy(node->carveout);
 	}
 	kfree(dev->heaps);
+	of_reserved_mem_device_release(&pdev->dev);
 
 	nvmap_dev = NULL;
 	return 0;
