@@ -595,8 +595,7 @@
 		};
 
 		i2c2: i2c@c600000 {
-			compatible = "nvidia,tegra264-i2c",
-				     "nvidia,tegra234-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x0 0x0c600000 0x0 0x10000>;
@@ -614,8 +613,7 @@
 		};
 
 		i2c3: i2c@c610000 {
-			compatible = "nvidia,tegra264-i2c",
-				     "nvidia,tegra234-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x0 0x0c610000 0x0 0x10000>;
@@ -633,8 +631,7 @@
 		};
 
 		i2c14: i2c@810c410000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c410000 0x0 0x10000>;
@@ -650,8 +647,7 @@
 		};
 
 		i2c15: i2c@810c420000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c420000 0x0 0x10000>;
@@ -667,8 +663,7 @@
 		};
 
 		i2c16: i2c@810c430000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c430000 0x0 0x10000>;
@@ -686,8 +681,7 @@
 		};
 
 		i2c0: i2c@810c630000 {
-			compatible = "nvidia,tegra264-i2c",
-				     "nvidia,tegra234-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c630000 0x0 0x10000>;
@@ -705,8 +699,7 @@
 		};
 
 		i2c1: i2c@810c640000 {
-			compatible = "nvidia,tegra264-i2c",
-				     "nvidia,tegra234-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c640000 0x0 0x10000>;
@@ -725,8 +718,7 @@
 		};
 
 		i2c4: i2c@810c650000 {
-			compatible = "nvidia,tegra264-i2c",
-				     "nvidia,tegra234-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c650000 0x0 0x10000>;
@@ -742,8 +734,7 @@
 		};
 
 		i2c6: i2c@810c670000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c670000 0x0 0x10000>;
@@ -759,8 +750,7 @@
 		};
 
 		i2c7: i2c@810c680000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c680000 0x0 0x10000>;
@@ -778,8 +768,7 @@
 		};
 
 		i2c8: i2c@810c690000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c690000 0x0 0x10000>;
@@ -795,8 +784,7 @@
 		};
 
 		i2c9: i2c@810c6a0000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c6a0000 0x0 0x10000>;
@@ -814,8 +802,7 @@
 		};
 
 		i2c10: i2c@810c6b0000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c6b0000 0x0 0x10000>;
@@ -831,8 +818,7 @@
 		};
 
 		i2c11: i2c@810c6c0000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c6c0000 0x0 0x10000>;
@@ -850,8 +836,7 @@
 		};
 
 		i2c12: i2c@810c6d0000 {
-			compatible = "nvidia,tegra234-i2c",
-				     "nvidia,tegra264-i2c";
+			compatible = "nvidia,tegra264-i2c";
 			status = "disabled";
 
 			reg = <0x81 0x0c6d0000 0x0 0x10000>;
