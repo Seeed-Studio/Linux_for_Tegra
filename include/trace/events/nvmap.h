@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-FileCopyrightText: Copyright (c) 2012-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 /*
- * Copyright (c) 2012-2023, NVIDIA CORPORATION. All rights reserved.
- *
  * NvMap event logging to ftrace.
  */
 
@@ -29,7 +28,7 @@ DECLARE_EVENT_CLASS(nvmap,
 	),
 	TP_fast_assign(
 		__entry->client = client;
-		__assign_str(sname, name)
+		__assign_str(sname, name);
 	),
 	TP_printk("client=%p, name=%s",
 		__entry->client, __get_str(sname))
@@ -65,7 +64,7 @@ TRACE_EVENT(nvmap_create_handle,
 
 	TP_fast_assign(
 		__entry->client = client;
-		__assign_str(sname, name)
+		__assign_str(sname, name);
 		__entry->h = h;
 		__entry->size = size;
 		__entry->ref = ref;
@@ -148,7 +147,7 @@ DECLARE_EVENT_CLASS(nvmap_handle_summary,
 		__entry->size = size;
 		__entry->flags = flags;
 		__entry->tag = tag;
-		__assign_str(tag_name, tag_name)
+		__assign_str(tag_name, tag_name);
 	),
 
 	TP_printk("client=0x%p pid=%d dupes=%u handle=0x%p share=%u base=%llx size=%zu flags=0x%x tag=0x%x %s",
@@ -420,7 +419,7 @@ DECLARE_EVENT_CLASS(pin_unpin,
 
 	TP_fast_assign(
 		__entry->client = client;
-		__assign_str(sname, name)
+		__assign_str(sname, name);
 		__entry->h = h;
 		__entry->pin_count = pin_count;
 	),
