@@ -948,5 +948,7 @@ static struct platform_driver nvhost_driver = {
 	},
 };
 
+MODULE_DEVICE_TABLE(of, host1x_match);
+
 module_platform_driver(nvhost_driver);
 MODULE_LICENSE("GPL v2");
