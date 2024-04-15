@@ -502,21 +502,26 @@ DEFINE_SHOW_ATTRIBUTE(actmon_debugfs_usage);
 
 static void virt_engine_setup_actmon_debugfs(struct virt_engine *virt)
 {
+	const char *dir;
+
 	switch (virt->client.base.class) {
 	case HOST1X_CLASS_VIC:
 		virt->name = "vic";
+		dir = "vic";
 		break;
 	case HOST1X_CLASS_NVENC:
-		virt->name = "msenc";
+		virt->name = "nvenc";
+		dir = "msenc";
 		break;
 	case HOST1X_CLASS_NVDEC:
 		virt->name = "nvdec";
+		dir = "nvdec";
 		break;
 	default:
 		return;
 	}
 
-	virt->actmon_debugfs_dir = debugfs_create_dir(virt->name, NULL);
+	virt->actmon_debugfs_dir = debugfs_create_dir(dir, NULL);
 	debugfs_create_file("usage", S_IRUGO, virt->actmon_debugfs_dir, virt, &actmon_debugfs_usage_fops);
 }
 
