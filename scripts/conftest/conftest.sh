@@ -7386,6 +7386,28 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_ENABLE_PCIE_ERROR_REPORTING_PRESENT" "" "functions"
         ;;
 
+        pci_epf_alloc_space_has_epc_features_arg)
+            #
+            # Determine if the function pci_epf_alloc_space() has a
+            # 'epc_features' argument.
+            #
+            # Commit e891becdccaa ("PCI: endpoint: Refactor
+            # pci_epf_alloc_space() API") updated the pci_epf_alloc_space()
+            # function to accept 'epc_features' as a parameter in Linux v6.9.
+            #
+            CODE="
+            #include <linux/pci-epc.h>
+            #include <linux/pci-epf.h>
+            void conftest_pci_epf_alloc_space_has_epc_features_arg(
+                    struct pci_epf *epf, size_t size, enum pci_barno bar,
+                    const struct pci_epc_features *epc_features,
+                    enum pci_epc_interface_type type) {
+                pci_epf_alloc_space(epf, size, bar, epc_features, type);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_EPF_ALLOC_SPACE_HAS_EPC_FEATURES_ARG" "" "types"
+        ;;
+
         pci_epf_driver_struct_probe_has_id_arg)
             #
             # Determine if the struct pci_epf_driver probe API has ID argument or not.

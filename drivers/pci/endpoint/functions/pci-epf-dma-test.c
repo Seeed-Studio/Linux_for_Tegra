@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * PCIe DMA EPF test framework for Tegra PCIe.
- *
- * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -207,6 +206,7 @@ static void pcie_dma_epf_unbind(struct pci_epf *epf)
 
 static int pcie_dma_epf_bind(struct pci_epf *epf)
 {
+	const struct pci_epc_features *epc_features;
 	struct pci_epc *epc = epf->epc;
 	struct pcie_epf_dma *epfnv = epf_get_drvdata(epf);
 	struct device *fdev = &epf->dev;
@@ -222,7 +222,19 @@ static int pcie_dma_epf_bind(struct pci_epf *epf)
 	epfnv->epf = epf;
 	epfnv->epc = epc;
 
-	epfnv->bar0_virt = lpci_epf_alloc_space(epf, BAR0_SIZE, BAR_0, SZ_64K);
+	epc_features = pci_epc_get_features(epc, epf->func_no, epf->vfunc_no);
+	if (!epc_features) {
+		dev_err(fdev, "Failed to get endpoint features!\n");
+		return -EINVAL;
+	}
+
+#if defined(NV_PCI_EPF_ALLOC_SPACE_HAS_EPC_FEATURES_ARG) /* Linux v6.9 */
+	epfnv->bar0_virt = lpci_epf_alloc_space(epf, BAR0_SIZE, BAR_0,
+						epc_features);
+#else
+	epfnv->bar0_virt = lpci_epf_alloc_space(epf, BAR0_SIZE, BAR_0,
+						epc_features->align);
+#endif
 	if (!epfnv->bar0_virt) {
 		dev_err(fdev, "Failed to allocate memory for BAR0\n");
 		return -ENOMEM;
