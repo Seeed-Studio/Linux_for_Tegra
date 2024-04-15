@@ -43,10 +43,36 @@
 #define NVDEC_TFBIF_ACTMON_ACTIVE_WEIGHT	0x2c54
 #define NVDEC_AXI_RW_BANDWIDTH			512
 
+#define NVDEC_CG_SLCG_CTRL			0x297c
+#define NVDEC_CG_SLCG_CTRL_IDLE_SLCG_DIS	BIT(9)
+#define NVDEC_RISCV_CG				0x4398
+#define NVDEC_RISCV_CG_SLCG			BIT(0)
+#define NVDEC_RISCV_CG_CORE_SLCG		BIT(1)
+
+#define NVDEC_PG				0x2314
+#define NVDEC_PG_DEEP_ELPG_EN			BIT(18)
+#define NVDEC_PG1				0x2318
+#define NVDEC_CG2				0x2328
+#define NVDEC_CG3				0x232c
+#define NVDEC_CG4				0x2950
+#define NVDEC_CG5				0x2954
+#define NVDEC_CG6				0x2958
+#define NVDEC_CG7				0x295c
+#define NVDEC_CG8				0x2960
+#define NVDEC_CG9				0x2964
+#define NVDEC_CG10				0x2968
+#define NVDEC_CG11				0x296c
+#define NVDEC_CG12				0x2970
+
 #define NVDEC_TFBIF_ACTMON_ACTIVE_MASK_STARVED	BIT(0)
 #define NVDEC_TFBIF_ACTMON_ACTIVE_MASK_STALLED	BIT(1)
 #define NVDEC_TFBIF_ACTMON_ACTIVE_MASK_DELAYED	BIT(2)
 #define NVDEC_TFBIF_ACTMON_ACTIVE_BORPS_ACTIVE	BIT(7)
+
+struct nvdec_cg_reg {
+	u32 offset;
+	u32 value;
+};
 
 struct nvdec_config {
 	const char *firmware;
@@ -55,6 +81,7 @@ struct nvdec_config {
 	bool supports_timestamping;
 	bool has_riscv;
 	bool has_extra_clocks;
+	const struct nvdec_cg_reg *cg_regs;
 };
 
 struct nvdec {
@@ -89,6 +116,11 @@ static inline void nvdec_writel(struct nvdec *nvdec, u32 value,
 				unsigned int offset)
 {
 	writel(value, nvdec->regs + offset);
+}
+
+static inline u32 nvdec_readl(struct nvdec *nvdec, unsigned int offset)
+{
+	return readl(nvdec->regs + offset);
 }
 
 static int nvdec_set_rate(struct nvdec *nvdec, unsigned long rate)
@@ -557,6 +589,29 @@ static void nvdec_count_weight_init(struct nvdec *nvdec, unsigned long rate)
 	}
 }
 
+static void nvdec_enable_slcg(struct nvdec *nvdec)
+{
+	const struct nvdec_cg_reg *cg;
+	u32 val;
+
+	if (!nvdec->config->cg_regs)
+		return;
+
+	/* Enable power gating */
+	nvdec_writel(nvdec, 0xff00a725, NVDEC_PG1);
+	nvdec_writel(nvdec, NVDEC_PG_DEEP_ELPG_EN | (9 << 20) | (2 << 27), NVDEC_PG);
+
+	/* Enable clock gating */
+	for (cg = nvdec->config->cg_regs; cg->offset; cg++)
+		nvdec_writel(nvdec, cg->value, cg->offset);
+
+	val = nvdec_readl(nvdec, NVDEC_CG_SLCG_CTRL);
+	val &= ~NVDEC_CG_SLCG_CTRL_IDLE_SLCG_DIS;
+	nvdec_writel(nvdec, val, NVDEC_CG_SLCG_CTRL);
+
+	nvdec_writel(nvdec, NVDEC_RISCV_CG_SLCG | NVDEC_RISCV_CG_CORE_SLCG, NVDEC_RISCV_CG);
+}
+
 static __maybe_unused int nvdec_runtime_resume(struct device *dev)
 {
 	struct nvdec *nvdec = dev_get_drvdata(dev);
@@ -581,6 +636,8 @@ static __maybe_unused int nvdec_runtime_resume(struct device *dev)
 		if (err < 0)
 			goto disable;
 	}
+
+	nvdec_enable_slcg(nvdec);
 
 	/* Forcely set frequency as Fmax when device is resumed back */
 	nvdec->devfreq->resume_freq = nvdec->devfreq->scaling_max_freq;
@@ -698,12 +755,28 @@ static const struct nvdec_config nvdec_t194_config = {
 	.supports_timestamping = true,
 };
 
+static const struct nvdec_cg_reg nvdec_t234_cg_regs[] = {
+	{ NVDEC_CG2,  0x00000000 },
+	{ NVDEC_CG3,  0xfc800000 },
+	{ NVDEC_CG4,  0xffffffc0 },
+	{ NVDEC_CG5,  0x00000040 },
+	{ NVDEC_CG6,  0x04004000 },
+	{ NVDEC_CG7,  0xfc000000 },
+	{ NVDEC_CG8,  0x00000000 },
+	{ NVDEC_CG9,  0x80000000 },
+	{ NVDEC_CG10, 0xfffffb00 },
+	{ NVDEC_CG11, 0xfff80000 },
+	{ NVDEC_CG12, 0xffffff80 },
+	{ },
+};
+
 static const struct nvdec_config nvdec_t234_config = {
 	.version = 0x23,
 	.supports_sid = true,
 	.supports_timestamping = true,
 	.has_riscv = true,
 	.has_extra_clocks = true,
+	.cg_regs = nvdec_t234_cg_regs,
 };
 
 static const struct of_device_id tegra_nvdec_of_match[] = {
