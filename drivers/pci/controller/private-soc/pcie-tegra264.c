@@ -18,13 +18,8 @@
 #include <linux/pci.h>
 #include <linux/pci-ecam.h>
 #include <linux/platform_device.h>
-#include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 14, 0)
-#include <drivers-private/pci/k510/pci.h>
-#else
-#include <drivers-private/pci/k619/pci.h>
-#endif
+extern int of_get_pci_domain_nr(struct device_node *node);
 
 #define PCIE_LINK_UP_DELAY	10000	/* 10 msec */
 #define PCIE_LINK_UP_TIMEOUT	1000000	/* 1 s */
