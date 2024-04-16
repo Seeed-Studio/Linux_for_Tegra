@@ -32,6 +32,7 @@ tegra-dce-$(CONFIG_TEGRA_DCE) += dce-admin.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-ipc.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-ipc-signal.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-client-ipc.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-logging.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-module.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-pm.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-os-work.o
@@ -42,6 +43,7 @@ tegra-dce-$(CONFIG_TEGRA_DCE) += dce-os-ivc.o
 
 ifeq ($(CONFIG_DEBUG_FS),y)
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-debug.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-debug-logging.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-admin-debug.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-debug-perf.o
 endif

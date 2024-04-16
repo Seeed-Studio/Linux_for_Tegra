@@ -201,6 +201,19 @@ struct dce_firmware {
 };
 
 /**
+ * struct dce_log_buffer - Contains dce log buffer info
+ *
+ * @iova_addr : iova address of the buffer
+ * @size : size of the buffer
+ * @base : cpu base address of the buffer
+ */
+struct dce_log_buffer {
+	dma_addr_t iova_addr;
+	size_t size;
+	void *cpu_base;
+};
+
+/**
  * struct tegra_dce - Primary OS independent tegra dce structure to hold dce
  * cluster's and it's element's runtime info.
  */
@@ -287,6 +300,10 @@ struct tegra_dce {
 	 * @fw_data - Stores info regardign firmware to be used runtime.
 	 */
 	struct dce_firmware *fw_data;
+	/**
+	 * @dce_log_buffer_struct - Stores info regarding DCE log buffer
+	 */
+	struct dce_log_buffer dce_log_buff;
 	/**
 	 * @dce_admin_ch_cl_buff - Stores admin channel client buffers.
 	 */
@@ -424,6 +441,8 @@ int dce_admin_send_cmd_clear_perf_events(struct tegra_dce *d,
 				       struct dce_ipc_message *msg);
 int dce_admin_ipc_wait(struct tegra_dce *d);
 void dce_admin_ipc_handle_signal(struct tegra_dce *d, u32 ch_type);
+int dce_admin_set_log_info(struct tegra_dce *d, struct dce_ipc_message *msg);
+int dce_admin_get_log_info(struct tegra_dce *d, struct dce_ipc_message *msg);
 
 bool dce_fw_boot_complete(struct tegra_dce *d);
 void dce_request_fw_boot_complete(struct tegra_dce *d);

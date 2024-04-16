@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/errno.h>
@@ -12,6 +12,7 @@
 #include <dce-os-utils.h>
 #include <dce-linux-device.h>
 #include <dce-debug-perf.h>
+#include <dce-debug-logging.h>
 #include <interface/dce-interface.h>
 #include <interface/dce-core-interface-errors.h>
 
@@ -160,6 +161,21 @@ static const struct file_operations load_firmware_fops = {
 	.open =		simple_open,
 	.read =		dbg_dce_load_fw_read,
 	.write =	dbg_dce_load_fw_write,
+};
+
+static const struct file_operations dbg_dce_log_help_fops = {
+	.open		=	dbg_dce_log_help_fops_open,
+	.read		=	seq_read,
+	.llseek		=	seq_lseek,
+	.release	=	single_release,
+};
+
+static const struct file_operations dbg_dce_log_fops = {
+	.open		=	dbg_dce_log_fops_open,
+	.read		=	seq_read,
+	.llseek		=	seq_lseek,
+	.release	=	single_release,
+	.write		=	dbg_dce_log_fops_write,
 };
 
 static ssize_t dbg_dce_config_ast_read(struct file *file,
@@ -764,6 +780,7 @@ void dce_init_debug(struct tegra_dce *d)
 	struct dce_linux_device *d_dev = dce_linux_device_from_dce(d);
 	struct dentry *debugfs_dir = NULL;
 	struct dentry *perf_debugfs_dir = NULL;
+	struct dentry *dce_logging_dir = NULL;
 	int ret = 0;
 
 	ret = dce_admin_channel_client_buffers_init(d, DCE_ADMIN_CH_CL_DBG_BUFF);
@@ -778,6 +795,20 @@ void dce_init_debug(struct tegra_dce *d)
 
 	retval = debugfs_create_file("load_fw", 0444,
 				     d_dev->debugfs, d, &load_firmware_fops);
+	if (!retval)
+		goto err_handle;
+
+	dce_logging_dir = debugfs_create_dir("dce_logs", d_dev->debugfs);
+	if (!dce_logging_dir)
+		goto err_handle;
+
+	retval = debugfs_create_file("help", 0444,
+					dce_logging_dir, d, &dbg_dce_log_help_fops);
+	if (!retval)
+		goto err_handle;
+
+	retval = debugfs_create_file("logs", 0644,
+					dce_logging_dir, d, &dbg_dce_log_fops);
 	if (!retval)
 		goto err_handle;
 

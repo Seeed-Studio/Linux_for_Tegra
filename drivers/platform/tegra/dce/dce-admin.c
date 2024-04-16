@@ -25,6 +25,7 @@
 #include <dce.h>
 #include <dce-mailbox.h>
 #include <dce-os-utils.h>
+#include <dce-logging.h>
 #include <dce-client-ipc-internal.h>
 #include <interface/dce-core-interface-errors.h>
 #include <interface/dce-interface.h>
@@ -532,6 +533,12 @@ int dce_admin_init(struct tegra_dce *d)
 		goto err_ipc_reg_alloc;
 	}
 
+	ret = dce_log_buf_mem_init(d);
+	if (ret) {
+		dce_os_err(d, "dce log buf mem init failed");
+		goto err_log_buf_alloc;
+	}
+
 	ret = dce_admin_channel_init(d);
 	if (ret) {
 		dce_os_err(d, "Channel Initialization Failed");
@@ -553,6 +560,7 @@ err_channel_init:
 	dce_os_ipc_deinit_region_info(d);
 err_ipc_reg_alloc:
 	d->boot_status |= DCE_EARLY_INIT_FAILED;
+err_log_buf_alloc:
 	return ret;
 }
 
@@ -901,6 +909,56 @@ out:
 	return ret;
 }
 
+int dce_admin_get_log_info(struct tegra_dce *d, struct dce_ipc_message *msg)
+{
+	int ret = -1;
+	struct dce_admin_ipc_cmd *req_msg;
+	struct dce_admin_ipc_resp *resp_msg;
+
+	if (msg == NULL) {
+		dce_os_err(d, "Invalid params passed in get log call");
+		goto out;
+	}
+
+	req_msg = (struct dce_admin_ipc_cmd *)(msg->tx.data);
+	resp_msg = (struct dce_admin_ipc_resp *)(msg->rx.data);
+
+	req_msg->cmd = (uint32_t)DCE_ADMIN_CMD_GET_LOG_INFO;
+
+	ret = dce_admin_send_msg(d, msg);
+	if (ret) {
+		dce_os_err(d, "Error in sending get log call msg : [%d]", ret);
+		goto out;
+	}
+
+out:
+	return ret;
+}
+
+int dce_admin_set_log_info(struct tegra_dce *d, struct dce_ipc_message *msg)
+{
+	int ret = -1;
+	struct dce_admin_ipc_cmd *req_msg;
+
+	if (msg == NULL) {
+		dce_os_err(d, "Invalid params passed in set log call");
+		goto out;
+	}
+
+	req_msg = (struct dce_admin_ipc_cmd *)(msg->tx.data);
+
+	req_msg->cmd = (uint32_t)DCE_ADMIN_CMD_SET_LOGGING;
+
+	ret = dce_admin_send_msg(d, msg);
+	if (ret) {
+		dce_os_err(d, "Error in sending set log call msg : [%d]", ret);
+		goto out;
+	}
+
+out:
+	return ret;
+}
+
 static int dce_admin_setup_clients_ipc(struct tegra_dce *d,
 		struct dce_ipc_message *msg)
 {
@@ -1010,6 +1068,12 @@ int dce_start_admin_seq(struct tegra_dce *d)
 	ret = dce_admin_setup_clients_ipc(d, msg);
 	if (ret) {
 		dce_os_err(d, "RPC failed for DCE_ADMIN_CMD_IPC_CREATE");
+		goto out;
+	}
+
+	ret = dce_log_init(d, msg);
+	if (ret) {
+		dce_os_err(d, "RPC failed for DCE_ADMIN_CMD_SET_LOGGING");
 		goto out;
 	}
 

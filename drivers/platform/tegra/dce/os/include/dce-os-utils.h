@@ -64,4 +64,8 @@ void dce_os_bitmap_clear(unsigned long *map,
 
 u8 dce_os_get_dce_stream_id(struct tegra_dce *d);
 
+int dce_os_init_log_buffer(struct tegra_dce *d);
+
+void dce_os_deinit_log_buffer(struct tegra_dce *d);
+
 #endif /* DCE_OS_UTILS_H */

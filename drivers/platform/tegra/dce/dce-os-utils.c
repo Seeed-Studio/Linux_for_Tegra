@@ -570,3 +570,32 @@ void dce_os_bitmap_clear(unsigned long *map,
 {
 	bitmap_clear(map, start, (int)len);
 }
+
+int dce_os_init_log_buffer(struct tegra_dce *d)
+{
+	struct dce_log_buffer *buffer;
+	struct device *dev = dev_from_dce_linux_device(d);
+
+	buffer = &d->dce_log_buff;
+	buffer->size = SZ_512K; // Allocate 512KB for log buffer
+
+	buffer->cpu_base = dma_alloc_coherent(dev, buffer->size, &buffer->iova_addr,
+								GFP_KERNEL);
+
+	if (!buffer->iova_addr)
+		return -ENOMEM;
+
+	return 0;
+}
+
+void dce_os_deinit_log_buffer(struct tegra_dce *d)
+{
+	struct dce_log_buffer *buffer;
+	struct device *dev = dev_from_dce_linux_device(d);
+
+	buffer = &d->dce_log_buff;
+	if (buffer->iova_addr) {
+		dma_free_coherent(dev, buffer->size, (void *)buffer->cpu_base,
+					buffer->iova_addr);
+	}
+}
