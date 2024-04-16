@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef __TEGRA_VIRT_ALT_XBAR_H__
@@ -31,10 +31,19 @@
 	static struct soc_enum name = SOC_VALUE_ENUM_WIDE(xreg, shift, \
 					ARRAY_SIZE(xtexts), xtexts, xvalues)
 
-#define MUX_ENUM_CTRL_DECL_186(ename, id) \
+#define MUX_ENUM_CTRL_DECL_234(ename, id) \
 	SOC_VALUE_ENUM_WIDE_DECL(ename##_enum, MUX_REG(id), 0,	\
-			tegra_virt_t186ref_source_text, \
-			tegra_virt_t186ref_source_value); \
+			tegra_virt_t234ref_source_text, \
+			tegra_virt_t234ref_source_value); \
+	static const struct snd_kcontrol_new ename##_control = \
+		SOC_DAPM_ENUM_EXT("Route", ename##_enum,\
+				tegra_virt_get_route,\
+				tegra_virt_put_route)
+
+#define MUX_ENUM_CTRL_DECL_264(ename, id) \
+	SOC_VALUE_ENUM_WIDE_DECL(ename##_enum, MUX_REG(id), 0,	\
+			tegra_virt_t264ref_source_text, \
+			tegra_virt_t264ref_source_value); \
 	static const struct snd_kcontrol_new ename##_control = \
 		SOC_DAPM_ENUM_EXT("Route", ename##_enum,\
 				tegra_virt_get_route,\

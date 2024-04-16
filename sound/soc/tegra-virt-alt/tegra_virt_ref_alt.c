@@ -84,6 +84,14 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 		if (!match)
 			return -ENODEV;
 		soc_data = (struct tegra_virt_admaif_soc_data *)match->data;
+	} else if (of_device_is_compatible(pdev->dev.of_node,
+		"nvidia,tegra264-virt-pcm")) {
+		card = &tegra_virt_t186ref_card;
+		match = of_match_device(tegra_virt_machine_of_match,
+						&pdev->dev);
+		if (!match)
+			return -ENODEV;
+		soc_data = (struct tegra_virt_admaif_soc_data *)match->data;
 	} else {
 		card = &tegra_virt_t186ref_card;
 		match = of_match_device(tegra_virt_machine_of_match,
