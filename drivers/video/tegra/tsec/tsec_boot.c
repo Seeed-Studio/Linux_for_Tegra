@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -375,29 +375,38 @@ int tsec_finalize_poweron(struct platform_device *dev)
 		goto clean_up;
 	}
 	dev_dbg(&dev->dev, "IPCCO base=0x%llx size=0x%llx\n", ipc_co_info.base, ipc_co_info.size);
-	ipc_co_va = ioremap(ipc_co_info.base, ipc_co_info.size);
-	if (!ipc_co_va) {
-		dev_err(&dev->dev, "IPC Carveout memory VA mapping failed");
-		err = -ENOMEM;
-		goto clean_up;
-	}
-	dev_dbg(&dev->dev, "IPCCO va=0x%llx pa=0x%llx\n",
-		(__force phys_addr_t)(ipc_co_va), page_to_phys(vmalloc_to_page(ipc_co_va)));
+
+	if (!(rv_data->ipc_mem_initialised)) {
+		ipc_co_va = ioremap(ipc_co_info.base, ipc_co_info.size);
+		if (!ipc_co_va) {
+			dev_err(&dev->dev, "IPC Carveout memory VA mapping failed");
+			err = -ENOMEM;
+			goto clean_up;
+		}
+		dev_dbg(&dev->dev, "IPCCO va=0x%llx pa=0x%llx\n",
+			(__force phys_addr_t)(ipc_co_va), page_to_phys(vmalloc_to_page(ipc_co_va)));
 #if (KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE)
-	ipc_co_iova = dma_map_page_attrs(&dev->dev, vmalloc_to_page(ipc_co_va),
-		offset_in_page(ipc_co_va), ipc_co_info.size, DMA_BIDIRECTIONAL, 0);
+		ipc_co_iova = dma_map_page_attrs(&dev->dev, vmalloc_to_page(ipc_co_va),
+			offset_in_page(ipc_co_va), ipc_co_info.size, DMA_BIDIRECTIONAL, 0);
 #else
-	ipc_co_iova = dma_map_page(&dev->dev, vmalloc_to_page(ipc_co_va),
-		offset_in_page(ipc_co_va), ipc_co_info.size, DMA_BIDIRECTIONAL);
+		ipc_co_iova = dma_map_page(&dev->dev, vmalloc_to_page(ipc_co_va),
+			offset_in_page(ipc_co_va), ipc_co_info.size, DMA_BIDIRECTIONAL);
 #endif
-	err = dma_mapping_error(&dev->dev, ipc_co_iova);
-	if (err) {
-		dev_err(&dev->dev, "IPC Carveout memory IOVA mapping failed");
-		ipc_co_iova = 0;
-		err = -ENOMEM;
-		goto clean_up;
+		err = dma_mapping_error(&dev->dev, ipc_co_iova);
+		if (err) {
+			dev_err(&dev->dev, "IPC Carveout memory IOVA mapping failed");
+			ipc_co_iova = 0;
+			err = -ENOMEM;
+			goto clean_up;
+		}
+		dev_dbg(&dev->dev, "IPCCO iova=0x%llx\n", ipc_co_iova);
+		rv_data->ipc_co_va = ipc_co_va;
+		rv_data->ipc_co_iova = ipc_co_iova;
+		rv_data->ipc_mem_initialised = true;
+	} else {
+		ipc_co_va = rv_data->ipc_co_va;
+		ipc_co_iova = rv_data->ipc_co_iova;
 	}
-	dev_dbg(&dev->dev, "IPCCO iova=0x%llx\n", ipc_co_iova);
 
 	/* Lock channel so that non-TZ channel request can't write non-THI region */
 	tsec_writel(pdata, tsec_thi_sec_r(), tsec_thi_sec_chlock_f());
@@ -549,7 +558,7 @@ int tsec_prepare_poweroff(struct platform_device *dev)
 		dev_err(&dev->dev, "found interrupt number to be negative\n");
 		return -ENODATA;
 	}
-	disable_irq((unsigned int) pdata->irq);
+	disable_irq_nosync((unsigned int) pdata->irq);
 
 	return 0;
 }

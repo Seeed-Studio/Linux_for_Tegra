@@ -1,6 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -106,6 +106,24 @@ void *tsec_comms_alloc_mem_from_gscco(u32 size_in_bytes, u32 *gscco_offset);
  *             tsec_comms_alloc_mem_from_gscco
  */
 void tsec_comms_free_gscco_mem(void *page_va);
+
+
+/* @brief: Gets and saves the TSEC context and then shutsdown TSEC
+ *
+ * params[out]: return value(0 for success)
+ */
+int tsec_comms_shutdown(void);
+
+
+typedef int (*shutdown_callback_func_t)(void);
+
+/* @brief: Registers a callback function to cleanly shutdown external
+ * firmware running on tsec
+ *
+ * params[in]: func is the call back function to shutdown external
+ * firmware running on tsec
+ */
+void tsec_comms_register_shutdown_callback(shutdown_callback_func_t func);
 
 /* -------- END -------- */
 

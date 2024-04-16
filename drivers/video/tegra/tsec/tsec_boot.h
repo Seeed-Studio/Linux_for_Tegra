@@ -1,6 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -73,6 +73,9 @@ struct riscv_data {
 	dma_addr_t backdoor_img_iova;
 	u32 *backdoor_img_va;
 	size_t backdoor_img_size;
+	bool ipc_mem_initialised;
+	void __iomem *ipc_co_va;
+	dma_addr_t ipc_co_iova;
 };
 
 int tsec_kickoff_boot(struct platform_device *pdev);

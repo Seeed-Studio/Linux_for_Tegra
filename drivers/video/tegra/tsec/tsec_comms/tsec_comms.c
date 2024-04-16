@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
-
 
 #include "tsec_comms_plat.h"
 #include "tsec_comms.h"
@@ -20,9 +19,9 @@
 #define TSEC_EMEM_SIZE              (0x2000)
 #define TSEC_MAX_MSG_SIZE           (128)
 
+/* If enabled IPC Cmd-Msg Exchange will be done using GSC else over EMEM */
 #define DO_IPC_OVER_GSC_CO  (1)
 
-#ifdef DO_IPC_OVER_GSC_CO
 #define TSEC_BOOT_POLL_TIME_US     (100000)
 #define TSEC_BOOT_POLL_INTERVAL_US (50)
 #define TSEC_BOOT_POLL_COUNT       (TSEC_BOOT_POLL_TIME_US / TSEC_BOOT_POLL_INTERVAL_US)
@@ -33,10 +32,25 @@ static u64 s_ipc_gscco_page_base;
 static u64 s_ipc_gscco_page_size;
 static u64 s_ipc_gscco_page_count;
 static u64 s_ipc_gscco_free_page_mask;
+static void *s_tsec_context_va;
+static u32   s_tsec_context_gscco_offset;
 struct TSEC_BOOT_INFO {
 	u32 bootFlag;
+	u32 bootWithContextFlag;
+	u32 bootContextOffset;
 };
-#endif
+
+enum TSEC_STATE {
+	TSEC_STATE_BOOTED = 0,
+	TSEC_STATE_SHUTDOWN,
+	TSEC_STATE_BOOTED_WITH_CONTEXT,
+};
+
+/*
+ * Tsec State
+ */
+enum TSEC_STATE s_tsec_state;
+
 
 /*
  * Locally cache init message so that same can be conveyed
@@ -44,6 +58,11 @@ struct TSEC_BOOT_INFO {
  */
 static bool s_init_msg_rcvd;
 static u8 s_init_tsec_msg[TSEC_MAX_MSG_SIZE];
+
+/*
+ * Callback function to shutdown external firmware
+ */
+shutdown_callback_func_t s_ext_fw_shutdown_cb;
 
 /*
  * Array of structs to register client callback function
@@ -67,6 +86,100 @@ static int validate_cmd(struct RM_FLCN_QUEUE_HDR *cmd_hdr)
 
 	return 0;
 }
+
+static void tsec_comms_alloc_ctxt_memory(void)
+{
+	s_tsec_context_va = tsec_comms_alloc_mem_from_gscco(s_ipc_gscco_page_size,
+		&s_tsec_context_gscco_offset);
+}
+
+
+/* Sends a get context command to retrieve the context before shutting down tsec */
+static int tsec_comms_send_getctxt_cmd(callback_func_t cb_func, void *cb_ctx)
+{
+	struct RM_FLCN_HDCP22_CMD_GET_CONTEXT cmd;
+
+	cmd.hdr.unitId = RM_GSP_UNIT_HDCP22WIRED;
+	cmd.hdr.size = sizeof(struct RM_FLCN_HDCP22_CMD_GET_CONTEXT);
+	cmd.cmdType = RM_FLCN_HDCP22_CMD_ID_GET_CONTEXT;
+	cmd.context.address.hi = 0U;
+	cmd.context.address.lo = s_tsec_context_gscco_offset;
+	cmd.context.params = s_ipc_gscco_page_size;
+	return tsec_comms_send_cmd(&cmd, 0, cb_func, cb_ctx);
+}
+
+/* Context retrieved, shutdown tsec now */
+static void tsec_comms_process_getctxt_msg(void)
+{
+	tsec_plat_poweroff();
+	s_tsec_state = TSEC_STATE_SHUTDOWN;
+}
+
+/* Power on tsec with context information */
+static void tsec_comms_poweron_with_context(void)
+{
+	struct TSEC_BOOT_INFO *bootInfo = (struct TSEC_BOOT_INFO *)(s_ipc_gscco_base);
+
+	bootInfo->bootWithContextFlag = 1;
+	bootInfo->bootContextOffset = s_tsec_context_gscco_offset;
+	tsec_plat_poweron();
+	s_tsec_state = TSEC_STATE_BOOTED_WITH_CONTEXT;
+}
+
+/* Clear flags after power on with context done */
+static void tsec_comms_poweron_with_context_done(void)
+{
+	struct TSEC_BOOT_INFO *bootInfo = (struct TSEC_BOOT_INFO *)(s_ipc_gscco_base);
+
+	bootInfo->bootWithContextFlag = 0;
+	plat_print(LVL_DBG, "%s: reset boot with context flag in GSCCO\n", __func__);
+	bootInfo->bootContextOffset = 0;
+}
+
+static PLAT_DEFINE_SEMA(s_shutdown_sema);
+
+static void signal_shutdown_done(void *ctx, void *msg)
+{
+	PLAT_UP_SEMA(&s_shutdown_sema);
+}
+
+/* No command should be pending when shutting down tsec */
+static bool is_cmd_pending(void)
+{
+	u8 unit_id;
+	bool cmd_pending = false;
+
+	tsec_plat_acquire_comms_mutex();
+	for (unit_id = 0; unit_id < RM_GSP_UNIT_END; unit_id++) {
+		if (s_callbacks[unit_id].cb_func) {
+			cmd_pending = true;
+			break;
+		}
+	}
+	tsec_plat_release_comms_mutex();
+	return cmd_pending;
+}
+
+/* Synchronously retreives the tsec context and then shuts it down */
+int tsec_comms_shutdown(void)
+{
+	int status = -TSEC_EINVAL;
+
+	if (!is_cmd_pending()) {
+		status = tsec_comms_send_getctxt_cmd(signal_shutdown_done, NULL);
+		if (PLAT_DOWN_SEMA(&s_shutdown_sema))
+			return(-EINTR);
+	}
+	return status;
+}
+EXPORT_SYMBOL_COMMS(tsec_comms_shutdown);
+
+/* External fw shutdown needed before we reboot tsec hdcp fw */
+void tsec_comms_register_shutdown_callback(shutdown_callback_func_t func)
+{
+	s_ext_fw_shutdown_cb = func;
+}
+EXPORT_SYMBOL_COMMS(tsec_comms_register_shutdown_callback);
 
 static int ipc_txfr(u32 offset, u8 *buff, u32 size, bool read_msg)
 {
@@ -200,7 +313,6 @@ static int ipc_read(u32 tail, u8 *pdst, u32 num_bytes)
 	return ipc_txfr(tail, pdst, num_bytes, true);
 }
 
-#ifdef DO_IPC_OVER_GSC_CO
 static u32 tsec_get_boot_flag(void)
 {
 	struct TSEC_BOOT_INFO *bootInfo = (struct TSEC_BOOT_INFO *)(s_ipc_gscco_base);
@@ -222,7 +334,6 @@ static void tsec_reset_boot_flag(void)
 	else
 		bootInfo->bootFlag = 0;
 }
-#endif
 
 static void invoke_init_cb(void *unused)
 {
@@ -255,6 +366,7 @@ void tsec_comms_drain_msg(bool invoke_cb)
 	callback_func_t cb_func = NULL;
 	void *cb_ctx = NULL;
 	u8 tsec_msg[TSEC_MAX_MSG_SIZE];
+	bool shutdown_tsec = false;
 
 	msgq_head_reg = tsec_msgq_head_r(TSEC_MSG_QUEUE_PORT);
 	msgq_tail_reg = tsec_msgq_tail_r(TSEC_MSG_QUEUE_PORT);
@@ -264,6 +376,10 @@ void tsec_comms_drain_msg(bool invoke_cb)
 	cached_init_msg_hdr = (struct RM_FLCN_QUEUE_HDR *)(s_init_tsec_msg);
 	cached_init_msg_body = (struct RM_GSP_INIT_MSG_GSP_INIT *)
 		(s_init_tsec_msg + RM_FLCN_QUEUE_HDR_SIZE);
+
+	/* tsec reboot so read sMsgq_start again */
+	if (s_tsec_state == TSEC_STATE_BOOTED_WITH_CONTEXT)
+		sMsgq_start = 0x0;
 
 	for (i = 0; !sMsgq_start && i < TSEC_QUEUE_POLL_COUNT; i++) {
 		sMsgq_start = tsec_plat_reg_read(msgq_tail_reg);
@@ -310,7 +426,6 @@ void tsec_comms_drain_msg(bool invoke_cb)
 					init_msg_body->numQueues);
 				goto FAIL;
 			}
-#ifdef DO_IPC_OVER_GSC_CO
 			/* Poll for the Tsec booted flag and also reset it */
 			for (i = 0; i < TSEC_BOOT_POLL_COUNT; i++) {
 				if (tsec_get_boot_flag() == TSEC_BOOT_FLAG_MAGIC)
@@ -324,7 +439,7 @@ void tsec_comms_drain_msg(bool invoke_cb)
 				tsec_reset_boot_flag();
 				plat_print(LVL_DBG, "Tsec GSC-CO Boot Flag reset done\n");
 			}
-#endif
+
 			/* cache the init_msg */
 			memcpy(cached_init_msg_hdr, msg_hdr, RM_FLCN_QUEUE_HDR_SIZE);
 			memcpy(cached_init_msg_body, init_msg_body,
@@ -333,7 +448,8 @@ void tsec_comms_drain_msg(bool invoke_cb)
 			/* Invoke the callback and clear it */
 			tsec_plat_acquire_comms_mutex();
 			s_init_msg_rcvd = true;
-			if (invoke_cb) {
+			/* Don't invoke init cb for tsec reboots */
+			if (invoke_cb && (s_tsec_state == TSEC_STATE_BOOTED)) {
 				cb_func = s_callbacks[msg_hdr->unitId].cb_func;
 				cb_ctx  = s_callbacks[msg_hdr->unitId].cb_ctx;
 				s_callbacks[msg_hdr->unitId].cb_func = NULL;
@@ -342,10 +458,21 @@ void tsec_comms_drain_msg(bool invoke_cb)
 			tsec_plat_release_comms_mutex();
 			if (cb_func && invoke_cb)
 				cb_func(cb_ctx, (void *)tsec_msg);
+			if (s_tsec_state == TSEC_STATE_BOOTED_WITH_CONTEXT)
+				tsec_comms_poweron_with_context_done();
 		} else if (msg_hdr->unitId < RM_GSP_UNIT_END) {
 			if (msg_hdr->unitId == RM_GSP_UNIT_HDCP22WIRED) {
-				plat_print(LVL_DBG, "msg received from hdcp22 unitId 0x%x\n",
-					msg_hdr->unitId);
+				struct RM_FLCN_HDCP22_MSG_GENERIC *hdcp22Msg =
+					(struct RM_FLCN_HDCP22_MSG_GENERIC *)
+					(tsec_msg + RM_FLCN_QUEUE_HDR_SIZE);
+				plat_print(LVL_DBG,
+					"msg received from hdcp22 unitId 0x%x msgType 0x%x\n",
+					msg_hdr->unitId, hdcp22Msg->msgType);
+				/* tsec context retrieved so can shutdown now */
+				if (hdcp22Msg->msgType == RM_FLCN_HDCP22_MSG_ID_GET_CONTEXT) {
+					shutdown_tsec = true;
+				}
+
 			} else if (msg_hdr->unitId == RM_GSP_UNIT_REWIND) {
 				tail = sMsgq_start;
 				tsec_plat_reg_write(msgq_tail_reg, tail);
@@ -365,7 +492,8 @@ void tsec_comms_drain_msg(bool invoke_cb)
 				s_callbacks[msg_hdr->unitId].cb_func = NULL;
 				s_callbacks[msg_hdr->unitId].cb_ctx = NULL;
 				tsec_plat_release_comms_mutex();
-				if (cb_func)
+				/* shutdown must be done first and then invoke the cb */
+				if (cb_func && !shutdown_tsec)
 					cb_func(cb_ctx, (void *)tsec_msg);
 			}
 		} else {
@@ -378,6 +506,15 @@ FAIL:
 		tail += ALIGN(msg_hdr->size, 4);
 		head = tsec_plat_reg_read(msgq_head_reg);
 		tsec_plat_reg_write(msgq_tail_reg, tail);
+
+		if (shutdown_tsec) {
+			/* First shutdown then invoke the callback */
+			tsec_comms_process_getctxt_msg();
+			if (cb_func)
+				cb_func(cb_ctx, (void *)tsec_msg);
+			/* tsec is shutdown, break out of loop, no more messages to process*/
+			break;
+		}
 	}
 
 EXIT:
@@ -386,32 +523,35 @@ EXIT:
 
 void tsec_comms_initialize(u64 ipc_co_va, u64 ipc_co_va_size)
 {
-#ifdef DO_IPC_OVER_GSC_CO
-	/* Set IPC CO Info before enabling Msg Interrupts from TSEC to CCPLEX */
-	s_ipc_gscco_base = ipc_co_va;
-	s_ipc_gscco_size = ipc_co_va_size;
+	static bool s_tsec_comms_initialised;
 
-	s_ipc_gscco_page_size = (64 * 1024);
+	if (!s_tsec_comms_initialised) {
+		/* Set IPC CO Info before enabling Msg Interrupts from TSEC to CCPLEX */
+		s_ipc_gscco_base = ipc_co_va;
+		s_ipc_gscco_size = ipc_co_va_size;
 
-	/* First Page Reserved */
-	if (s_ipc_gscco_size > s_ipc_gscco_page_size) {
-		s_ipc_gscco_page_count = (s_ipc_gscco_size -
-			s_ipc_gscco_page_size) / s_ipc_gscco_page_size;
-	} else {
-		s_ipc_gscco_page_count = 0;
-	}
-	s_ipc_gscco_page_base = s_ipc_gscco_page_count ?
+		s_ipc_gscco_page_size = (64 * 1024);
+
+		/* First Page Reserved */
+		if (s_ipc_gscco_size > s_ipc_gscco_page_size) {
+			s_ipc_gscco_page_count = (s_ipc_gscco_size -
+				s_ipc_gscco_page_size) / s_ipc_gscco_page_size;
+		} else {
+			s_ipc_gscco_page_count = 0;
+		}
+		s_ipc_gscco_page_base = s_ipc_gscco_page_count ?
 		s_ipc_gscco_base + s_ipc_gscco_page_size : 0;
-	s_ipc_gscco_free_page_mask = ~((u64)0);
-#else
-	(void)ipc_co_va;
-	(void)ipc_co_va_size;
-#endif
+		s_ipc_gscco_free_page_mask = ~((u64)0);
+		/* Allocate memory in GSCCO to save tsec context */
+		tsec_comms_alloc_ctxt_memory();
+		PLAT_INIT_SEMA(&s_shutdown_sema, 0);
+		s_tsec_state = TSEC_STATE_BOOTED;
+		s_tsec_comms_initialised = true;
+	}
 }
 
 void *tsec_comms_get_gscco_page(u32 page_number, u32 *gscco_offset)
 {
-#ifdef DO_IPC_OVER_GSC_CO
 	u8 *page_va;
 
 	if (!s_ipc_gscco_page_base || (page_number >= s_ipc_gscco_page_count)) {
@@ -429,16 +569,11 @@ void *tsec_comms_get_gscco_page(u32 page_number, u32 *gscco_offset)
 			(page_number * s_ipc_gscco_page_size));
 	}
 	return page_va;
-#else
-	plat_print(LVL_ERR, "%s: IPC over GSC-CO not enabled\n", __func__);
-	return NULL;
-#endif
 }
 EXPORT_SYMBOL_COMMS(tsec_comms_get_gscco_page);
 
 void *tsec_comms_alloc_mem_from_gscco(u32 size_in_bytes, u32 *gscco_offset)
 {
-#ifdef DO_IPC_OVER_GSC_CO
 	void *page_va;
 	u32 page_number;
 	u64 mask;
@@ -471,16 +606,11 @@ void *tsec_comms_alloc_mem_from_gscco(u32 size_in_bytes, u32 *gscco_offset)
 		s_ipc_gscco_free_page_mask &= ~(mask);
 
 	return page_va;
-#else
-	plat_print(LVL_ERR, "%s: IPC over GSC-CO not enabled\n", __func__);
-	return NULL;
-#endif
 }
 EXPORT_SYMBOL_COMMS(tsec_comms_alloc_mem_from_gscco);
 
 void tsec_comms_free_gscco_mem(void *page_va)
 {
-#ifdef DO_IPC_OVER_GSC_CO
 	u64 page_addr = (u64)page_va;
 	u64 gscco_page_start = s_ipc_gscco_page_base;
 	u64 gscco_page_end = s_ipc_gscco_page_base +
@@ -492,7 +622,6 @@ void tsec_comms_free_gscco_mem(void *page_va)
 	    (page_addr < gscco_page_end) &&
 	    (!(page_addr % s_ipc_gscco_page_size)))
 		s_ipc_gscco_free_page_mask |= ((u64)0x1 << page_number);
-#endif
 }
 EXPORT_SYMBOL_COMMS(tsec_comms_free_gscco_mem);
 
@@ -520,6 +649,18 @@ int tsec_comms_send_cmd(void *cmd, u32 queue_id,
 
 	if (queue_id != TSEC_CMD_QUEUE_PORT)
 		return -TSEC_EINVAL;
+
+	/* First shutdown external fw then restart tsec with hdcp fw */
+	if (s_tsec_state == TSEC_STATE_SHUTDOWN) {
+		if (s_ext_fw_shutdown_cb) {
+			int status = s_ext_fw_shutdown_cb();
+
+			if (status)
+				return status;
+		}
+		tsec_comms_poweron_with_context();
+		sCmdq_start = 0x0;
+	}
 
 	cmdq_head_reg = tsec_cmdq_head_r(TSEC_CMD_QUEUE_PORT);
 	cmdq_tail_reg = tsec_cmdq_tail_r(TSEC_CMD_QUEUE_PORT);
@@ -644,7 +785,6 @@ int tsec_comms_set_init_cb(callback_func_t cb_func, void *cb_ctx)
 		plat_print(LVL_DBG, "Init msg already received invoking callback\n");
 		tsec_plat_queue_work(invoke_init_cb, NULL);
 	}
-#ifdef DO_IPC_OVER_GSC_CO
 	else if (tsec_get_boot_flag() == TSEC_BOOT_FLAG_MAGIC) {
 		plat_print(LVL_DBG, "Doorbell missed tsec booted first, invoke init callback\n");
 		/* Interrupt missed as tsec booted first
@@ -656,7 +796,6 @@ int tsec_comms_set_init_cb(callback_func_t cb_func, void *cb_ctx)
 		/* Init message is drained now, hence queue the work item to invoke init callback*/
 		tsec_plat_queue_work(invoke_init_cb, NULL);
 	}
-#endif
 
 FAIL:
 	tsec_plat_release_comms_mutex();

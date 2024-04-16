@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -75,7 +75,15 @@ static void tsec_disable_clk(struct tsec_device_data *pdata)
 static void tsec_deassert_reset(struct tsec_device_data *pdata)
 {
 	reset_control_acquire(pdata->reset_control);
+	/* Does assert and then deassert */
 	reset_control_reset(pdata->reset_control);
+	reset_control_release(pdata->reset_control);
+}
+
+static void tsec_assert_reset(struct tsec_device_data *pdata)
+{
+	reset_control_acquire(pdata->reset_control);
+	reset_control_assert(pdata->reset_control);
 	reset_control_release(pdata->reset_control);
 }
 
@@ -275,8 +283,9 @@ int tsec_poweroff(struct device *dev)
 	pdata = dev_get_drvdata(dev);
 
 	if (pdata->power_on) {
-		tsec_prepare_poweroff(to_platform_device(dev));
+		tsec_assert_reset(pdata);
 		tsec_disable_clk(pdata);
+		tsec_prepare_poweroff(to_platform_device(dev));
 		pdata->power_on = false;
 	}
 

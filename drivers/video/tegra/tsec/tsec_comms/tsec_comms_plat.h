@@ -1,6 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -18,6 +18,9 @@
 #include <linux/types.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
+#include <linux/semaphore.h>
+#include <nvidia/conftest.h>
+#include "../tsec.h"
 
 extern struct platform_device *g_tsec;
 
@@ -37,6 +40,15 @@ do { \
 	else if (level == LVL_ERR) \
 		dev_err(&g_tsec->dev, fmt, ##__VA_ARGS__); \
 } while (0)
+
+#if defined(NV_DEFINE_SEMAPHORE_HAS_NUMBER_ARG)
+#define PLAT_DEFINE_SEMA(s)  DEFINE_SEMAPHORE(s, 0)
+#else
+#define PLAT_DEFINE_SEMA(s)  DEFINE_SEMAPHORE(s)
+#endif
+#define PLAT_INIT_SEMA(s, v) sema_init(s, v)
+#define PLAT_UP_SEMA(s)      up(s)
+#define PLAT_DOWN_SEMA(s)    down_interruptible(s)
 
 #elif __DCE_KERNEL__
 
@@ -101,5 +113,21 @@ void tsec_plat_release_comms_mutex(void);
  *              ctx context
  */
 void tsec_plat_queue_work(tsec_plat_work_cb_t cb, void *ctx);
+
+/*
+ * @brief: Power On Tsec
+ */
+static inline void tsec_plat_poweron(void)
+{
+	tsec_poweron(&g_tsec->dev);
+}
+
+/*
+ * @brief: Power Off Tsec
+ */
+static inline void tsec_plat_poweroff(void)
+{
+	tsec_poweroff(&g_tsec->dev);
+}
 
 #endif /* TSEC_COMMS_PLAT_H */
