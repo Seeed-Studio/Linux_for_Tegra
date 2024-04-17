@@ -1,9 +1,9 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * mapping between nvmap_hnadle and sci_ipc entery
  */
+
 #ifndef __VIDEO_TEGRA_NVMAP_SCI_IPC_H
 #define __VIDEO_TEGRA_NVMAP_SCI_IPC_H
 

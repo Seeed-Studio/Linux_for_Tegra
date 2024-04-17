@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * place to add wrapper function to drop kasan scan
  */
+
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/io.h>
