@@ -22,3 +22,4 @@ obj-m += aon/
 obj-m += tegra-uss-io-proxy.o
 obj-m += nvadsp/
 obj-m += tegra-hv-xhci-debug.o
+obj-m += tegra-hv-xhci.o
