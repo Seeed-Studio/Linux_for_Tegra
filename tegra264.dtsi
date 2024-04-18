@@ -375,6 +375,15 @@
 			pinctrl-0 = <&iopad_defaults>;
 			iopad_defaults: iopad-defaults {
 			};
+			sdmmc1_1v8: sdmmc1-1v8 {
+				pins = "sdmmc1-hv";
+				power-source = <TEGRA_IO_PAD_VOLTAGE_1V8>;
+			};
+
+			sdmmc1_3v3: sdmmc1-3v3 {
+				pins = "sdmmc1-hv";
+				power-source = <TEGRA_IO_PAD_VOLTAGE_3V3>;
+			};
 		};
 
 		gpio_aon: gpio@cf00000 {
@@ -1755,6 +1764,12 @@
 			nvidia,pad-autocal-pull-down-offset-1v8-timeout = <0x07>;
 			nvidia,pad-autocal-pull-up-offset-sdr104 = <0x00>;
 			nvidia,pad-autocal-pull-down-offset-sdr104 = <0x00>;
+			interconnects = <&mc TEGRA264_MEMORY_CLIENT_SDMMC0R &emc>,
+					<&mc TEGRA264_MEMORY_CLIENT_SDMMC0W &emc>;
+			interconnect-names = "dma-mem", "write";
+			pinctrl-names = "sdmmc-3v3", "sdmmc-1v8";
+			pinctrl-0 = <&sdmmc1_3v3>;
+			pinctrl-1 = <&sdmmc1_1v8>;
 			nvidia,default-tap = <14>;
 			nvidia,default-trim = <0x8>;
 			assigned-clocks = <&bpmp TEGRA264_CLK_SDMMC1>,
