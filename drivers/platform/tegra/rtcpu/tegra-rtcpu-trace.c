@@ -333,6 +333,29 @@ static inline void rtcpu_trace_exceptions(struct tegra_rtcpu_trace *tracer)
 	tracer->exception_last_idx = new_next;
 }
 
+static uint32_t rtcpu_trace_event_len(const struct camrtc_event_struct *event)
+{
+	uint32_t len = event->header.len;
+
+	if (len > CAMRTC_TRACE_EVENT_SIZE)
+		len = CAMRTC_TRACE_EVENT_SIZE - CAMRTC_TRACE_EVENT_HEADER_SIZE;
+	else if (len > CAMRTC_TRACE_EVENT_HEADER_SIZE)
+		len = len - CAMRTC_TRACE_EVENT_HEADER_SIZE;
+	else
+		len = 0;
+
+	return len;
+}
+
+static void rtcpu_unknown_trace_event(struct camrtc_event_struct *event)
+{
+	uint32_t id = event->header.id;
+	uint32_t len = rtcpu_trace_event_len(event);
+	uint64_t tstamp = event->header.tstamp;
+
+	trace_rtcpu_unknown(tstamp, id, len, &event->data.data8[0]);
+}
+
 static void rtcpu_trace_base_event(struct camrtc_event_struct *event)
 {
 	switch (event->header.id) {
@@ -343,10 +366,7 @@ static void rtcpu_trace_base_event(struct camrtc_event_struct *event)
 		trace_rtcpu_start_scheduler(event->header.tstamp);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-		    event->header.id,
-		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		    event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -625,10 +645,7 @@ static void rtcpu_trace_rtos_event(struct camrtc_event_struct *event)
 			event->data.data32[1]);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-		    event->header.id,
-		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		    event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -653,10 +670,7 @@ static void rtcpu_trace_dbg_event(struct camrtc_event_struct *event)
 			event->data.data32[1]);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-		    event->header.id,
-		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		    event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -706,10 +720,7 @@ static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 		event->data.data32[6]);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-		event->header.id,
-		event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -783,10 +794,7 @@ static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 		rtcpu_trace_vi_frame_event(tracer, event);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-		    event->header.id,
-		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		    event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -922,10 +930,7 @@ static void rtcpu_trace_isp_event(struct tegra_rtcpu_trace *tracer,
 		rtcpu_trace_isp_falcon_event(event);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-		    event->header.id,
-		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		    event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -961,10 +966,7 @@ static void rtcpu_trace_nvcsi_event(struct camrtc_event_struct *event)
 			event->data.data32[3]);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-			event->header.id,
-			event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-			event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -1044,10 +1046,7 @@ static void rtcpu_trace_capture_event(struct camrtc_event_struct *event)
 	case camrtc_trace_capture_event_inject:
 	case camrtc_trace_capture_event_sensor:
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-			event->header.id,
-			event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-			event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -1065,10 +1064,7 @@ static void rtcpu_trace_perf_event(struct camrtc_event_struct *event)
 		break;
 
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-			event->header.id,
-			event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-			event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -1107,32 +1103,22 @@ static void rtcpu_trace_array_event(struct tegra_rtcpu_trace *tracer,
 		rtcpu_trace_perf_event(event);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-		    event->header.id,
-		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		    event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
 
 static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
-			struct camrtc_event_struct *event)
+		uint32_t id, uint32_t len, const uint8_t *data8)
 {
-	size_t len, used;
+	size_t used;
 
-	if (unlikely(event->header.id != camrtc_trace_type_string))
+	if (unlikely(id != camrtc_trace_type_string))
 		return;
 
-	len = event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE;
-
-	if (len > CAMRTC_TRACE_EVENT_PAYLOAD_SIZE) {
-		pr_err("%s: invalid trace event len (%zu)\n", __func__, len);
-		len = CAMRTC_TRACE_EVENT_PAYLOAD_SIZE;
-	}
-
-	if (len == CAMRTC_TRACE_EVENT_PAYLOAD_SIZE)
+	if (len >= CAMRTC_TRACE_EVENT_PAYLOAD_SIZE)
 		/* Ignore NULs at the end of buffer */
-		len = strnlen(event->data.data8, len);
+		len = strnlen(data8, CAMRTC_TRACE_EVENT_PAYLOAD_SIZE);
 
 	used = tracer->printk_used;
 
@@ -1143,7 +1129,7 @@ static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
 		used = 0;
 	}
 
-	memcpy(tracer->printk + used, event->data.data8, len);
+	memcpy(tracer->printk + used, data8, len);
 
 	used += len;
 
@@ -1175,7 +1161,12 @@ static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
 static void rtcpu_trace_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
-	switch (CAMRTC_EVENT_TYPE_FROM_ID(event->header.id)) {
+	uint32_t id = event->header.id;
+	uint32_t type = CAMRTC_EVENT_TYPE_FROM_ID(id);
+	uint32_t len = rtcpu_trace_event_len(event);
+	uint8_t *data8 = &event->data.data8[0];
+
+	switch (type) {
 	case CAMRTC_EVENT_TYPE_ARRAY:
 		rtcpu_trace_array_event(tracer, event);
 		break;
@@ -1190,24 +1181,15 @@ static void rtcpu_trace_event(struct tegra_rtcpu_trace *tracer,
 		trace_rtcpu_start(event->header.tstamp);
 		break;
 	case CAMRTC_EVENT_TYPE_STRING:
-		trace_rtcpu_string(event->header.tstamp,
-		    event->header.id,
-			  event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-			  (char *) event->data.data8);
+		trace_rtcpu_string(event->header.tstamp, id, len, (char *)data8);
 		if (likely(tracer->enable_printk))
-			trace_rtcpu_log(tracer, event);
+			trace_rtcpu_log(tracer, id, len, data8);
 		break;
 	case CAMRTC_EVENT_TYPE_BULK:
-		trace_rtcpu_bulk(event->header.tstamp,
-		    event->header.id,
-		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		    event->data.data8);
+		trace_rtcpu_bulk(event->header.tstamp, id, len, data8);
 		break;
 	default:
-		trace_rtcpu_unknown(event->header.tstamp,
-		    event->header.id,
-		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
-		    event->data.data8);
+		rtcpu_unknown_trace_event(event);
 		break;
 	}
 }
@@ -1336,7 +1318,7 @@ static int rtcpu_trace_debugfs_last_event_read(
 	if (tracer->n_events == 0)
 		return 0;
 
-	payload_len = event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE;
+	payload_len = rtcpu_trace_event_len(event);
 
 	seq_printf(file, "Len: %u\nID: 0x%08x\nTimestamp: %llu\n",
 	    event->header.len, event->header.id, event->header.tstamp);
