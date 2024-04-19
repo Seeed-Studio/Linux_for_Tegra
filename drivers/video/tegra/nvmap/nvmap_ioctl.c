@@ -38,6 +38,7 @@
 #include "nvmap_heap.h"
 
 #include <linux/syscalls.h>
+#include <linux/nodemask.h>
 
 #if defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
@@ -1149,6 +1150,58 @@ int nvmap_ioctl_handle_from_sci_ipc_id(struct file *filp, void __user *arg)
 #endif
 
 /*
+ * This function calculates total memory and allocable free memory by parsing
+ * /sys/devices/system/node/nodeX/meminfo file
+ * total memory = value of MemTotal field
+ * allocable free memory = Value of MemFree field + (Value of KReclaimable) / 2
+ * Note that the above allocable free memory value is an estimate and may not be an
+ * exact value and may need further tuning in future.
+ */
+#define MEMINFO_SIZE 1536
+static int compute_memory_stat(u64 *total, u64 *free, int numa_id)
+{
+	struct file *file;
+	char meminfo_path[64] = {'\0'};
+	u8 buf[MEMINFO_SIZE];
+	loff_t pos = 0;
+	char *buffer, *ptr;
+	u64 mem_total, mem_free, reclaimable;
+	bool total_found = false, free_found = false, reclaimable_found = false;
+	int nid, rc;
+
+	sprintf(meminfo_path, "/sys/devices/system/node/node%d/meminfo", numa_id);
+	file = filp_open(meminfo_path, O_RDONLY, 0);
+	if (IS_ERR(file)) {
+		pr_err("Could not open file:%s\n", meminfo_path);
+		return -EINVAL;
+	}
+
+	memset(buf, 0, sizeof(buf));
+	rc = kernel_read(file, buf, MEMINFO_SIZE - 1, &pos);
+	buf[rc] = '\n';
+	filp_close(file, NULL);
+	buffer = buf;
+	ptr = buf;
+	while ((ptr = strsep(&buffer, "\n")) != NULL) {
+		if (!ptr[0])
+			continue;
+		else if (sscanf(ptr, "Node %d MemTotal: %llu kB\n", &nid, &mem_total) == 2)
+			total_found = true;
+		else if (sscanf(ptr, "Node %d MemFree: %llu kB\n", &nid, &mem_free) == 2)
+			free_found = true;
+		else if (sscanf(ptr, "Node %d KReclaimable: %llu kB\n", &nid, &reclaimable) == 2)
+			reclaimable_found = true;
+	}
+
+	if (nid == numa_id && total_found && free_found && reclaimable_found) {
+		*total = mem_total * 1024;
+		*free = (mem_free + reclaimable / 2) * 1024;
+		return 0;
+	}
+	return -EINVAL;
+}
+
+/*
  * This function calculates allocatable free memory using following formula:
  * free_mem = avail mem - cma free
  * The CMA memory is not allocatable by NvMap for regular allocations and it
@@ -1241,11 +1294,25 @@ static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 			return -ENODEV;
 
 	} else if (type & iovmm_mask) {
-		op.total = system_heap_total_mem();
-		ret = system_heap_free_mem(&free_mem);
-		if (ret)
-			goto exit;
-		op.free = free_mem;
+		if (num_online_nodes() > 1) {
+			/* multiple numa node exist */
+			ret = compute_memory_stat(&op.total, &op.free, numa_id);
+			if (ret)
+				goto exit;
+		} else {
+			/* Single numa node case
+			 * Check if input numa_id is zero or not.
+			 */
+			if (is_numa_aware && numa_id != 0) {
+				pr_err("Incorrect input for numa_id:%d\n", numa_id);
+				return -EINVAL;
+			}
+			op.total = system_heap_total_mem();
+			ret = system_heap_free_mem(&free_mem);
+			if (ret)
+				goto exit;
+			op.free = free_mem;
+		}
 		op.granule_size = PAGE_SIZE;
 	}
 
