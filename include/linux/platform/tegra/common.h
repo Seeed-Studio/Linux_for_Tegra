@@ -24,11 +24,9 @@ extern phys_addr_t tegra_avp_kernel_size;
 void ahb_gizmo_writel(unsigned long val, void __iomem *reg);
 
 extern struct device tegra_generic_cma_dev;
-extern struct device tegra_vpr_cma_dev;
 extern int tegra_with_secure_firmware;
 
 extern struct device tegra_generic_dev;
-extern struct device tegra_vpr_dev;
 
 u32 tegra_get_bct_strapping(void);
 u32 tegra_get_fuse_opt_subrevision(void);

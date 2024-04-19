@@ -35,7 +35,7 @@
 
 struct device __weak tegra_generic_dev;
 
-struct device __weak tegra_vpr_dev;
+struct device tegra_vpr_dev;
 EXPORT_SYMBOL(tegra_vpr_dev);
 struct device tegra_vpr1_dev;
 EXPORT_SYMBOL(tegra_vpr1_dev);
