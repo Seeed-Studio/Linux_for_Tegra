@@ -404,8 +404,8 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_WRITE_32:
 	case NVMAP_IOC_READ_32:
-		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_32,
-			uarg, sizeof(struct nvmap_rw_handle_32));
+		pr_warn("NVMAP_IOC_WRITE_32/READ_32 pair are deprecated. "
+			"Use the pair NVMAP_IOC_WRITE/READ.\n");
 		break;
 #endif
 
@@ -417,8 +417,8 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_CACHE_32:
-		err = nvmap_ioctl_cache_maint(filp, uarg,
-			sizeof(struct nvmap_cache_op_32));
+		pr_warn("NVMAP_IOC_CACHE_32 is deprecated. "
+			"Use NVMAP_IOC_CACHE instead.\n");
 		break;
 #endif
 

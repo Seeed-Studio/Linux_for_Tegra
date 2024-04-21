@@ -505,10 +505,6 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	struct nvmap_client *client = filp->private_data;
 	struct nvmap_rw_handle __user *uarg = arg;
 	struct nvmap_rw_handle op;
-#ifdef CONFIG_COMPAT
-	struct nvmap_rw_handle_32 __user *uarg32 = arg;
-	struct nvmap_rw_handle_32 op32;
-#endif
 	struct nvmap_handle *h;
 	ssize_t copied;
 	int err = 0;
@@ -517,30 +513,15 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	int handle;
 	bool is_ro = false;
 
-#ifdef CONFIG_COMPAT
-	if (op_size == sizeof(op32)) {
-		if (copy_from_user(&op32, arg, sizeof(op32)))
-			return -EFAULT;
-		addr = op32.addr;
-		handle = op32.handle;
-		offset = op32.offset;
-		elem_size = op32.elem_size;
-		hmem_stride = op32.hmem_stride;
-		user_stride = op32.user_stride;
-		count = op32.count;
-	} else
-#endif
-	{
-		if (copy_from_user(&op, arg, sizeof(op)))
-			return -EFAULT;
-		addr = op.addr;
-		handle = op.handle;
-		offset = op.offset;
-		elem_size = op.elem_size;
-		hmem_stride = op.hmem_stride;
-		user_stride = op.user_stride;
-		count = op.count;
-	}
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+	addr = op.addr;
+	handle = op.handle;
+	offset = op.offset;
+	elem_size = op.elem_size;
+	hmem_stride = op.hmem_stride;
+	user_stride = op.user_stride;
+	count = op.count;
 
 	if (!addr || !count || !elem_size)
 		return -EINVAL;
@@ -592,12 +573,7 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	} else if (copied < (count * elem_size))
 		err = -EINTR;
 
-#ifdef CONFIG_COMPAT
-	if (op_size == sizeof(op32))
-		__put_user(copied, &uarg32->count);
-	else
-#endif
-		__put_user(copied, &uarg->count);
+	__put_user(copied, &uarg->count);
 
 fail:
 	nvmap_handle_put(h);
@@ -609,32 +585,17 @@ int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg, int op_size)
 	struct nvmap_client *client = filp->private_data;
 	struct nvmap_cache_op op;
 	struct nvmap_cache_op_64 op64;
-#ifdef CONFIG_COMPAT
-	struct nvmap_cache_op_32 op32;
-#endif
 
-#ifdef CONFIG_COMPAT
-	if (op_size == sizeof(op32)) {
-		if (copy_from_user(&op32, arg, sizeof(op32)))
+	if (op_size == sizeof(op)) {
+		if (copy_from_user(&op, arg, sizeof(op)))
 			return -EFAULT;
-		op64.addr = op32.addr;
-		op64.handle = op32.handle;
-		op64.len = op32.len;
-		op64.op = op32.op;
-	} else
-#endif
-	{
-		if (op_size == sizeof(op)) {
-			if (copy_from_user(&op, arg, sizeof(op)))
-				return -EFAULT;
-			op64.addr = op.addr;
-			op64.handle = op.handle;
-			op64.len = op.len;
-			op64.op = op.op;
-		} else {
-			if (copy_from_user(&op64, arg, sizeof(op64)))
-				return -EFAULT;
-		}
+		op64.addr = op.addr;
+		op64.handle = op.handle;
+		op64.len = op.len;
+		op64.op = op.op;
+	} else {
+		if (copy_from_user(&op64, arg, sizeof(op64)))
+			return -EFAULT;
 	}
 
 	return __nvmap_cache_maint(client, &op64);
