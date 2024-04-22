@@ -2542,4 +2542,164 @@
                                       "tegra234,ufs_variant";
                    };
         };
+
+	mods_pcie0: mods_pcie0 {
+		compatible = "nvidia,mods_smmu";
+		iommu-map = <0x0 &smmu2_mmu 0x10000 0x10000>;
+		dma-coherent;
+		dev-names = "mods_pcie0";
+		status = "disabled";
+		nvidia,bpmp = <&bpmp 0x0>;
+	};
+
+	mods_pcie1: mods_pcie1 {
+		compatible = "nvidia,mods_smmu";
+		iommu-map = <0x0 &smmu1_mmu 0x10000 0x10000>;
+		iommus = <&smmu1_mmu 0x10000>;
+		dma-coherent;
+		dev-names = "mods_pcie1";
+		status = "disabled";
+		nvidia,bpmp = <&bpmp 0x1>;
+	};
+
+	mods_pcie2: mods_pcie2 {
+		compatible = "nvidia,mods_smmu";
+		iommu-map = <0x0 &smmu1_mmu 0x20000 0x10000>;
+		iommus = <&smmu1_mmu 0x20000>;
+		dma-coherent;
+		dev-names = "mods_pcie2";
+		status = "disabled";
+		nvidia,bpmp = <&bpmp 0x2>;
+	};
+
+	mods_pcie3: mods_pcie3 {
+		compatible = "nvidia,mods_smmu";
+		iommu-map = <0x0 &smmu1_mmu 0x30000 0x10000>;
+		iommus = <&smmu1_mmu 0x30000>;
+		dma-coherent;
+		dev-names = "mods_pcie3";
+		status = "disabled";
+		nvidia,bpmp = <&bpmp 0x3>;
+	};
+
+	mods_pcie4: mods_pcie4 {
+		compatible = "nvidia,mods_smmu";
+		iommu-map = <0x0 &smmu1_mmu 0x40000 0x10000>;
+		iommus = <&smmu1_mmu 0x40000>;
+		dma-coherent;
+		dev-names = "mods_pcie4";
+		status = "disabled";
+		nvidia,bpmp = <&bpmp 0x4>;
+	};
+
+	mods_pcie5: mods_pcie5 {
+		compatible = "nvidia,mods_smmu";
+		iommu-map = <0x0 &smmu1_mmu 0x50000 0x10000>;
+		iommus = <&smmu1_mmu 0x50000>;
+		dma-coherent;
+		dev-names = "mods_pcie5";
+		status = "disabled";
+		nvidia,bpmp = <&bpmp 0x5>;
+	};
+
+	mods_isp0: mods_isp0 {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_ISP0>;
+		dma-coherent;
+		dev-names = "mods_isp0";
+		status = "disabled";
+	};
+
+	mods_isp2: mods_isp2 {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_ISP2>;
+		dma-coherent;
+		dev-names = "mods_isp2";
+		status = "disabled";
+	};
+
+	mods_vi0: mods_vi0 {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu0_mmu TEGRA_SID_VI>;
+		dma-coherent;
+		dev-names = "mods_vi0";
+		status = "disabled";
+	};
+
+	mods_vi1: mods_vi1 {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu0_mmu TEGRA_SID_VI1>;
+		dma-coherent;
+		dev-names = "mods_vi1";
+		status = "disabled";
+	};
+
+	mods_sdmmc1: mods_sdmmc1 {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu2_mmu TEGRA_SID_SDMMC0>;
+		dma-coherent;
+		dev-names = "mods_sdmmc1";
+		status = "disabled";
+	};
+
+	mods_ufs: mods_ufs {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_UFS>;
+		dma-coherent;
+		dev-names = "mods_ufs";
+		status = "disabled";
+	};
+
+	mods_xhci: mods_xhci {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_XUSB_DEV>;
+		dma-coherent;
+		dev-names = "mods_xhci";
+		status = "disabled";
+	};
+
+	mods_test: mods_test {
+		compatible = "nvidia,mods_test";
+		status = "disabled";
+	};
+
+	mods_dma: mods_dma {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_GPCDMA>;
+		dma-coherent;
+		dev-names = "mods_dma";
+		status = "disabled";
+	};
+
+	mods_se: mods_se {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_SE>;
+		dma-coherent;
+		dev-names = "mods_se";
+		status = "disabled";
+	};
+
+	mods_seu1: mods_seu1 {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_SEU1>;
+		dma-coherent;
+		dev-names = "mods_seu1";
+		status = "disabled";
+	};
+
+	mods_seu2: mods_seu2 {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_SEU2>;
+		dma-coherent;
+		dev-names = "mods_seu2";
+		status = "disabled";
+	};
+
+	mods_seu3: mods_seu3 {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_SEU3>;
+		dma-coherent;
+		dev-names = "mods_seu3";
+		status = "disabled";
+	};
 };
