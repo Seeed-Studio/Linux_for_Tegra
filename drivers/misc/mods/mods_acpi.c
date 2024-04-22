@@ -409,17 +409,23 @@ static int mods_eval_acpi_method(struct mods_client           *client,
 				      &output);
 
 	if (ACPI_FAILURE(status)) {
-		cl_info("ACPI method %s failed\n", p->method_name);
+		if (status == AE_NOT_FOUND) {
+			cl_debug(DEBUG_ACPI, "ACPI method %s not found\n", p->method_name);
+			err = -ENXIO;
+		} else {
+			cl_error("ACPI method %s failed\n", p->method_name);
+			err = -EIO;
+		}
 		pci_dev_put(dev);
 		LOG_EXT();
-		return -EINVAL;
+		return err;
 	}
 
 	acpi_method = output.pointer;
 	if (!acpi_method) {
 		cl_error("missing output from ACPI method %s\n",
 			 p->method_name);
-		err = -EINVAL;
+		err = -EIO;
 	} else {
 		u8 *buf = p->out_buffer;
 

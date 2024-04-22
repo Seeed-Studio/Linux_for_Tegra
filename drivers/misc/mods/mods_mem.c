@@ -338,7 +338,7 @@ static int create_dma_map(struct mods_client   *client,
 	int                  err;
 
 	alloc_size = sizeof(struct MODS_DMA_MAP) +
-		     (num_chunks - 1) * sizeof(struct scatterlist);
+		     num_chunks * sizeof(struct scatterlist);
 
 	p_dma_map = kzalloc(alloc_size, GFP_KERNEL | __GFP_NORETRY);
 
@@ -1224,7 +1224,7 @@ static u32 estimate_num_chunks(u32 num_pages)
 static inline size_t calc_mem_info_size_no_bitmap(u32 num_chunks)
 {
 	return sizeof(struct MODS_MEM_INFO) +
-		(num_chunks - 1) * sizeof(struct scatterlist);
+	       num_chunks * sizeof(struct scatterlist);
 }
 
 static inline u32 calc_mem_info_size(u32 num_chunks, u8 cache_type)
@@ -2761,11 +2761,11 @@ int esc_mods_flush_cpu_cache_range(struct mods_client                *client,
  ***************************/
 void mods_free_mem_reservations(void)
 {
+	struct mods_client * const client = mods_client_from_id(1);
 	int i;
-	struct mods_client client;
 
 	/* Dummy client used to ensure ensuing functions do not crash */
-	memset(&client, 0, sizeof(client));
+	memset(client, 0, sizeof(*client));
 
 	/* Clear reserved on claimed reservations and free unclaimed ones */
 	for (i = 0; i < MODS_MEM_MAX_RESERVATIONS; i++) {
@@ -2773,7 +2773,7 @@ void mods_free_mem_reservations(void)
 
 		/* Existing reservation */
 		if (p_reservation->p_mem_info) {
-			release_chunks(&client, p_reservation->p_mem_info);
+			release_chunks(client, p_reservation->p_mem_info);
 			pci_dev_put(p_reservation->p_mem_info->dev);
 			kfree(p_reservation->p_mem_info);
 			memset(p_reservation, 0, sizeof(*p_reservation));

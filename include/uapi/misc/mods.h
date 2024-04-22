@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #ifndef _UAPI_MODS_H_
 #define _UAPI_MODS_H_
@@ -8,7 +8,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 4
-#define MODS_DRIVER_VERSION_MINOR 23
+#define MODS_DRIVER_VERSION_MINOR 24
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR / 10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR % 10))
@@ -1837,8 +1837,18 @@ struct MODS_TEGRA_OIST_STATUS {
 	__u64 a1;
 	/* IN */
 	__u64 a2;
+	/* IN */
+	__u64 a3;
+	/* IN */
+	__u64 a4;
 	/* OUT */
 	__u64 smc_status;
+	/* OUT */
+	__u64 smc_retval;
+	/* OUT */
+	__u64 ist_status;
+	/* OUT */
+	__u64 rist_setup_done;
 };
 
 enum MODS_IPI_TYPE {
