@@ -3,6 +3,7 @@ subdir-ccflags-y += -Werror
 ccflags-y += -I$(srctree)/drivers/media/platform/tegra
 ccflags-y += -I$(srctree)/drivers/video/tegra/camera
 
+obj-$(CONFIG_NV_VIDEO_CAMERA) += nv_cam.o
 obj-$(CONFIG_NV_VIDEO_IMX185) += nv_imx185.o
 obj-$(CONFIG_NV_VIDEO_IMX185) += nv_imx185_v1.o
 obj-$(CONFIG_NV_VIDEO_IMX477) += nv_imx477.o
@@ -22,7 +23,6 @@ obj-$(CONFIG_I2C_IOEXPANDER_SER_MAX9295) += max9295.o
 obj-$(CONFIG_I2C_IOEXPANDER_DESER_MAX9296) += max9296.o
 obj-$(CONFIG_NV_VIDEO_IMX390) += nv_imx390.o
 obj-$(CONFIG_NV_VIDEO_AR0234) += nv_ar0234.o
-obj-$(CONFIG_NV_VIRTUAL_I2C_MUX) += virtual_i2c_mux.o
 obj-$(CONFIG_NV_VIDEO_HAWK_OWL) += nv_hawk_owl.o
 obj-$(CONFIG_NV_DESER_MAX96712) += max96712.o
 obj-$(CONFIG_VIDEO_ECAM) += ar1335.o
