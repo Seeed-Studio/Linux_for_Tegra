@@ -88,8 +88,6 @@
 #elif (DM_ODM_SUPPORT_TYPE == ODM_CE) && defined(DM_ODM_CE_MAC80211)
 	#define PHYDM_SNPRINTF		snprintf
 #elif (DM_ODM_SUPPORT_TYPE == ODM_CE)
-	#undef	pr_debug
-	#define pr_debug		printk
 	#define RT_PRINTK(fmt, args...)	pr_debug(fmt, ## args)
 	#define	RT_DISP(dbgtype, dbgflag, printstr)
 	#define RT_TRACE(adapter, comp, drv_level, fmt, args...)	\
