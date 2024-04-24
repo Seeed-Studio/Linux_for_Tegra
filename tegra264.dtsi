@@ -2508,7 +2508,7 @@
 	tegra_ufs: ufshci@a80b8d0000 {
                    compatible = "tegra264,ufs_variant",
                               "tegra234,ufs_variant";
-                   status = "okay";
+                   status = "disabled";
 
                    reg = <0xa8 0x0b8d0000 0x0 0x10000>,
                        <0xa8 0x0b8e0000 0x0 0x8000>,
