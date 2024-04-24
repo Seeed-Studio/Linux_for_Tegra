@@ -3142,6 +3142,16 @@
 			iommu-addresses = <&aon 0x0 0x00000000 0x0 0x20000000>,
 					  <&aon 0x0 0x40000000 0xffffffff 0xffffffff>;
 		};
+
+		fsicom_resv: reservation-fsicom {
+			iommu-addresses = <&fsicom_client 0x0 0x0 0x0 0xf0000000>,
+					  <&fsicom_client 0x0 0xf1000000 0xffffffff 0x0effffff>;
+		};
+
+		fsicom_resv_inst1: reservation-fsicom_inst1 {
+			iommu-addresses = <&fsicom_client_inst1 0x0 0x0 0x0 0xf0000000>,
+					  <&fsicom_client_inst1 0x0 0xf1000000 0xffffffff 0x0effffff>;
+		};
 	};
 
 	soctherm-oc-event {
@@ -4168,4 +4178,86 @@
 				"mgbe3_macsec";
 		};
 	};
+
+	fsicom_client: fsicom_client {
+		compatible = "nvidia,tegra234-fsicom-client";
+		mboxes =
+			<&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM | TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_TX(2)>,
+			<&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM | TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_RX(1)>,
+			<&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM | TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_TX(5)>,
+			<&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM | TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_RX(4)>;
+		mbox-names = "fsi-tx-cpu0", "fsi-rx-cpu0", "fsi-tx-cpu1", "fsi-rx-cpu1";
+		iommus = <&smmu4_mmu 0xF10>;
+		memory-region = <&fsicom_resv>;
+		dma-coherent;
+#if defined(ENABLE_FSI) && !defined(ENABLE_MODS_CONFIG)
+		enable-deinit-notify;
+#endif
+		smmu_inst = <0>;
+		max_fsi_core=<1>; /*Value 1 <-> core 0, value 2 <-> core0,1*/
+		status = "disabled";
+	};
+
+	fsicom_client_inst1: fsicom_client_inst1 {
+		compatible = "nvidia,tegra234-fsicom-client";
+		iommus = <&smmu4_mmu 0xF11>;
+		memory-region = <&fsicom_resv_inst1>;
+		dma-coherent;
+		smmu_inst = <1>;
+		status = "disabled";
+	};
+
+	FsiComIvc {
+		compatible = "nvidia,tegra-fsicom-channels";
+		status = "disabled";
+		nChannel=<7>;
+		channel_0{
+			frame-count = <4>;
+			frame-size = <1024>;
+			core-id = <0>;
+			NvSciCh = "nvfsicom_EPD";
+		};
+		channel_1{
+			frame-count = <30>;
+			frame-size = <64>;
+			core-id = <0>;
+			NvSciCh = "nvfsicom_CcplexApp";
+		};
+		channel_2{
+			frame-count = <4>;
+			frame-size = <64>;
+			core-id = <0>;
+			NvSciCh = "nvfsicom_CcplexApp_state_change";
+		};
+		channel_3{
+			frame-count = <4>;
+			frame-size = <64>;
+			core-id = <0>;
+			NvSciCh = "nvfsicom_app1";
+		};
+		channel_4{
+			frame-count = <2>;
+			frame-size = <64>;
+			core-id = <1>;
+			NvSciCh = "nvfsicom_app2";
+		};
+		channel_5{
+			frame-count = <4>;
+			frame-size = <64>;
+			core-id = <0>;
+			NvSciCh = "nvfsicom_appGR";
+		};
+		channel_6{
+			frame-count = <4>;
+			frame-size = <10240>;
+			core-id = <0>;
+		};
+	};
+
+	FsiComClientChConfigEpd{
+		compatible = "nvidia,tegra-fsicom-EPD";
+		status = "disabled";
+		channelid_list = <0>;
+	};
+
 };
