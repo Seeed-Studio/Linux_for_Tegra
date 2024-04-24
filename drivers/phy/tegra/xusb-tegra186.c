@@ -610,9 +610,11 @@ static void tegra186_utmi_bias_pad_power_on(struct tegra_xusb_padctl *padctl)
 		return;
 	}
 
-	err = clk_prepare_enable(priv->usb2_trk_clk);
-	if (err < 0)
-		dev_warn(dev, "failed to enable USB2 trk clock: %d\n", err);
+	if (!padctl->is_xhci_iov) {
+		err = clk_prepare_enable(priv->usb2_trk_clk);
+		if (err < 0)
+			dev_warn(dev, "failed to enable USB2 trk clock: %d\n", err);
+	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 	value &= ~USB2_TRK_START_TIMER(~0);
@@ -662,7 +664,8 @@ static void tegra186_utmi_bias_pad_power_on(struct tegra_xusb_padctl *padctl)
 		value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL2);
 		value &= ~(USB2_TRK_HW_MODE | CYA_TRK_CODE_UPDATE_ON_IDLE);
 		padctl_writel(padctl, value, XUSB_PADCTL_USB2_BIAS_PAD_CTL2);
-		clk_disable_unprepare(priv->usb2_trk_clk);
+		if (!padctl->is_xhci_iov)
+			clk_disable_unprepare(priv->usb2_trk_clk);
 	}
 
 	mutex_unlock(&padctl->lock);
@@ -693,7 +696,8 @@ static void tegra186_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl)
 		value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL2);
 		value &= ~USB2_TRK_HW_MODE;
 		padctl_writel(padctl, value, XUSB_PADCTL_USB2_BIAS_PAD_CTL2);
-		clk_disable_unprepare(priv->usb2_trk_clk);
+		if (!padctl->is_xhci_iov)
+			clk_disable_unprepare(priv->usb2_trk_clk);
 	}
 
 	mutex_unlock(&padctl->lock);
@@ -901,20 +905,22 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	value |= TERM_SEL;
 	value &= ~HS_CURR_LEVEL(~0);
 
-	if (usb2->hs_curr_level_offset) {
-		int hs_current_level;
+	if (!padctl->is_xhci_iov) {
+		if (usb2->hs_curr_level_offset) {
+			int hs_current_level;
 
-		hs_current_level = (int)priv->calib.hs_curr_level[index] +
-						usb2->hs_curr_level_offset;
+			hs_current_level = (int)priv->calib.hs_curr_level[index] +
+							usb2->hs_curr_level_offset;
 
-		if (hs_current_level < 0)
-			hs_current_level = 0;
-		if (hs_current_level > 0x3f)
-			hs_current_level = 0x3f;
+			if (hs_current_level < 0)
+				hs_current_level = 0;
+			if (hs_current_level > 0x3f)
+				hs_current_level = 0x3f;
 
-		value |= HS_CURR_LEVEL(hs_current_level);
-	} else {
-		value |= HS_CURR_LEVEL(priv->calib.hs_curr_level[index]);
+			value |= HS_CURR_LEVEL(hs_current_level);
+		} else {
+			value |= HS_CURR_LEVEL(priv->calib.hs_curr_level[index]);
+		}
 	}
 
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
@@ -1025,11 +1031,13 @@ tegra186_usb2_pad_probe(struct tegra_xusb_padctl *padctl,
 		goto out;
 	}
 
-	priv->usb2_trk_clk = devm_clk_get(&pad->dev, "trk");
-	if (IS_ERR(priv->usb2_trk_clk)) {
-		err = PTR_ERR(priv->usb2_trk_clk);
-		dev_dbg(&pad->dev, "failed to get usb2 trk clock: %d\n", err);
-		goto unregister;
+	if (!padctl->is_xhci_iov) {
+		priv->usb2_trk_clk = devm_clk_get(&pad->dev, "trk");
+		if (IS_ERR(priv->usb2_trk_clk)) {
+			err = PTR_ERR(priv->usb2_trk_clk);
+			dev_dbg(&pad->dev, "failed to get usb2 trk clock: %d\n", err);
+			goto unregister;
+		}
 	}
 
 	err = tegra_xusb_pad_register(pad, &utmi_phy_ops);
@@ -1494,6 +1502,8 @@ tegra186_xusb_padctl_probe(struct device *dev,
 	struct tegra186_xusb_padctl *priv;
 	struct resource *res;
 	int err;
+	bool is_xhci_iov = !!of_find_property(dev->of_node, "is_xhci_iov",
+						NULL);
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -1507,9 +1517,11 @@ tegra186_xusb_padctl_probe(struct device *dev,
 	if (IS_ERR(priv->ao_regs))
 		return ERR_CAST(priv->ao_regs);
 
-	err = tegra186_xusb_read_fuse_calibration(priv);
-	if (err < 0)
-		return ERR_PTR(err);
+	if (!is_xhci_iov) {
+		err = tegra186_xusb_read_fuse_calibration(priv);
+		if (err < 0)
+			return ERR_PTR(err);
+	}
 
 	return &priv->base;
 }
