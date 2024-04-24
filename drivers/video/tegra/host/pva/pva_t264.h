@@ -1,7 +1,8 @@
 /*
  * Tegra Graphics Chip support for T264
  *
- * Copyright (c) 2023, NVIDIA Corporation.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0+
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,6 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 #ifndef __PVA_T264_H__
 #define __PVA_T264_H__
@@ -63,7 +65,7 @@ static u32 vm_regs_sid_idx_t264[] = {1, 2, 3, 4, 5, 6, 7, 7,
 				     8, 8, 8, 8, 8, 0, 0, 0};
 #else
 static u32 vm_regs_sid_idx_t264[] = {1, 2, 3, 4, 5, 6, 7, 7,
-				     8, 0, 9, 8, 8, 0, 0, 0};
+				     8, 0, 9, 0, 0, 0, 0, 0};
 #endif
 static u32 vm_regs_reg_idx_t264[] = {0, 1, 2, 3, 4, 5, 6, 7,
 				     8, 8, 8, 9, 9, 0, 0, 0};
