@@ -6538,6 +6538,130 @@
 		};
 	};
 
+	csite_etf: etf_soc@10040000 {
+		compatible = "arm,coresight-tmc", "arm,primecell";
+		status = "disabled";
+
+		reg = <0x0 0x10040000 0x0 0x1000>;
+		coresight-default-sink;
+
+		clocks = <&bpmp TEGRA264_CLK_HCSITE>;
+		clock-names = "apb_pclk";
+
+		in-ports {
+			port {
+				etf_in_port: endpoint {
+					remote-endpoint = <&funnel_major_out_port0>;
+				};
+			};
+		};
+
+		out-ports {
+			port {
+				etf_out_port: endpoint {
+					remote-endpoint = <&replicator_in_port0>;
+				};
+			};
+		};
+	};
+
+	csite_etr: etr_soc@10050000 {
+		compatible = "arm,coresight-tmc", "arm,primecell";
+		status = "disabled";
+
+		reg = <0x0 0x10050000 0x0 0x1000>;
+
+		iommus = <&smmu1_mmu TEGRA_SID_ETR>;
+
+		clocks = <&bpmp TEGRA264_CLK_HCSITE>;
+		clock-names = "apb_pclk";
+
+		in-ports {
+			port {
+				etr_in_port: endpoint {
+					remote-endpoint = <&replicator_out_port0>;
+				};
+			};
+		};
+	};
+
+	csite_replicator: replicator_soc@10060000 {
+		compatible = "arm,coresight-dynamic-replicator", "arm,primecell";
+		status = "disabled";
+
+		reg = <0x0 0x10060000 0x0 0x1000>;
+
+		clocks = <&bpmp TEGRA264_CLK_HCSITE>;
+		clock-names = "apb_pclk";
+
+		in-ports {
+			port {
+				replicator_in_port0: endpoint {
+					slave-mode;
+					remote-endpoint = <&etf_out_port>;
+				};
+			};
+		};
+
+		out-ports {
+			port {
+				replicator_out_port0: endpoint {
+					remote-endpoint = <&etr_in_port>;
+				};
+			};
+		};
+	};
+
+	csite_stm_cfg: stm@10070000 {
+		compatible = "arm,coresight-stm", "arm,primecell";
+		status = "disabled";
+
+		reg = <0x0 0x10070000 0x0 0x1000>,
+		      <0x0 0x11000000 0x0 0x1000000>;
+		reg-names = "stm-base", "stm-stimulus-base";
+
+		clocks = <&bpmp TEGRA264_CLK_CSITE>;
+		clock-names = "apb_pclk";
+
+		out-ports {
+			port {
+				stm_out_port0: endpoint {
+					remote-endpoint = <&funnel_major_in_port2>;
+				};
+			};
+		};
+	};
+
+	csite_funnel: funnel_major@10080000 {
+		compatible = "arm,coresight-dynamic-funnel", "arm,primecell";
+		status = "disabled";
+
+		reg = <0x0 0x10080000 0x0 0x1000>;
+
+		clocks = <&bpmp TEGRA264_CLK_HCSITE>;
+		clock-names = "apb_pclk";
+
+		out-ports {
+			port@0 {
+				funnel_major_out_port0: endpoint {
+					remote-endpoint = <&etf_in_port>;
+				};
+			};
+		};
+
+		in-ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@2 {
+				reg = <2>;
+				funnel_major_in_port2: endpoint {
+					remote-endpoint = <&stm_out_port0>;
+				};
+			};
+
+		};
+	};
+
 	gic: interrupt-controller@8146000000 {
 		compatible = "arm,gic-v3";
 		status = "disabled";
@@ -6873,6 +6997,111 @@
 		       <&cpu_8>, <&cpu_9>, <&cpu_10>, <&cpu_11>,
 		       <&cpu_12>, <&cpu_13>;
 		interrupts = <GIC_SPI 323 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	ete_cpu_0 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_0>;
+	};
+
+	ete_cpu_1 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_1>;
+	};
+
+	ete_cpu_2 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_2>;
+	};
+
+	ete_cpu_3 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_3>;
+	};
+
+	ete_cpu_4 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_4>;
+	};
+
+	ete_cpu_5 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_5>;
+	};
+
+	ete_cpu_6 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_6>;
+	};
+
+	ete_cpu_7 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_7>;
+	};
+
+	ete_cpu_8 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_8>;
+	};
+
+	ete_cpu_9 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_9>;
+	};
+
+	ete_cpu_10 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_10>;
+	};
+
+	ete_cpu_11 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_11>;
+	};
+
+	ete_cpu_12 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_12>;
+	};
+
+	ete_cpu_13 {
+		compatible = "arm,embedded-trace-extension";
+		status = "disabled";
+
+		cpu = <&cpu_13>;
+	};
+
+	trbe {
+		compatible = "arm,trace-buffer-extension";
+		status = "disabled";
+
+		interrupts = <GIC_PPI 6 8>;
 	};
 
 	psci {
