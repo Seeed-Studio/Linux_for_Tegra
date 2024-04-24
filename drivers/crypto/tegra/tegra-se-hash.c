@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Crypto driver to handle HASH algorithms using NVIDIA Security Engine.
  */
 
-#include <nvidia/conftest.h>
 #include <linux/clk.h>
 #include <linux/dma-mapping.h>
-#include <linux/host1x-next.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
@@ -24,18 +22,15 @@
 #include "tegra-se.h"
 
 struct tegra_sha_ctx {
-#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	struct crypto_engine_ctx enginectx;
-#endif
-	struct crypto_ahash *fallback_tfm;
 	struct tegra_se *se;
 	unsigned int alg;
 	bool fallback;
 	u32 key_id;
+	struct crypto_ahash *fallback_tfm;
 };
 
 struct tegra_sha_reqctx {
-	struct ahash_request fallback_req;
 	struct scatterlist *src_sg;
 	struct tegra_se_datbuf datbuf;
 	struct tegra_se_datbuf residue;
@@ -46,6 +41,8 @@ struct tegra_sha_reqctx {
 	unsigned int blk_size;
 	unsigned int task;
 	u32 key_id;
+	u32 result[HASH_RESULT_REG_COUNT];
+	struct ahash_request fallback_req;
 };
 
 static int tegra_sha_get_config(u32 alg)
@@ -216,13 +213,13 @@ static int tegra_sha_fallback_export(struct ahash_request *req, void *out)
 }
 
 static int tegra_sha_prep_cmd(struct tegra_se *se, u32 *cpuvaddr,
-			struct tegra_sha_reqctx *rctx)
+			      struct tegra_sha_reqctx *rctx)
 {
 	u64 msg_len, msg_left;
 	int i = 0;
 
-	msg_len = (u64)rctx->total_len * 8;
-	msg_left = (u64)rctx->datbuf.size * 8;
+	msg_len = rctx->total_len * 8;
+	msg_left = rctx->datbuf.size * 8;
 
 	/*
 	 * If IN_ADDR_HI_0.SZ > SHA_MSG_LEFT_[0-3] to the HASH engine,
@@ -236,7 +233,7 @@ static int tegra_sha_prep_cmd(struct tegra_se *se, u32 *cpuvaddr,
 	}
 
 	cpuvaddr[i++] = host1x_opcode_setpayload(8);
-	cpuvaddr[i++] = host1x_opcode_incr_w(SE_SHA_MSG_LENGTH);
+	cpuvaddr[i++] = se_host1x_opcode_incr_w(SE_SHA_MSG_LENGTH);
 	cpuvaddr[i++] = lower_32_bits(msg_len);
 	cpuvaddr[i++] = upper_32_bits(msg_len);
 	cpuvaddr[i++] = 0;
@@ -246,14 +243,15 @@ static int tegra_sha_prep_cmd(struct tegra_se *se, u32 *cpuvaddr,
 	cpuvaddr[i++] = 0;
 	cpuvaddr[i++] = 0;
 	cpuvaddr[i++] = host1x_opcode_setpayload(6);
-	cpuvaddr[i++] = host1x_opcode_incr_w(SE_SHA_CFG);
+	cpuvaddr[i++] = se_host1x_opcode_incr_w(SE_SHA_CFG);
 	cpuvaddr[i++] = rctx->config;
 
 	if (rctx->task & SHA_FIRST) {
 		cpuvaddr[i++] = SE_SHA_TASK_HASH_INIT;
 		rctx->task &= ~SHA_FIRST;
-	} else
+	} else {
 		cpuvaddr[i++] = 0;
+	}
 
 	cpuvaddr[i++] = rctx->datbuf.addr;
 	cpuvaddr[i++] = (u32)(SE_ADDR_HI_MSB(upper_32_bits(rctx->datbuf.addr)) |
@@ -263,30 +261,47 @@ static int tegra_sha_prep_cmd(struct tegra_se *se, u32 *cpuvaddr,
 				SE_ADDR_HI_SZ(rctx->digest.size));
 	if (rctx->key_id) {
 		cpuvaddr[i++] = host1x_opcode_setpayload(1);
-		cpuvaddr[i++] = host1x_opcode_nonincr_w(SE_SHA_CRYPTO_CFG);
+		cpuvaddr[i++] = se_host1x_opcode_nonincr_w(SE_SHA_CRYPTO_CFG);
 		cpuvaddr[i++] = SE_AES_KEY_INDEX(rctx->key_id);
 	}
 
 	cpuvaddr[i++] = host1x_opcode_setpayload(1);
-	cpuvaddr[i++] = host1x_opcode_nonincr_w(SE_SHA_OPERATION);
+	cpuvaddr[i++] = se_host1x_opcode_nonincr_w(SE_SHA_OPERATION);
 	cpuvaddr[i++] = SE_SHA_OP_WRSTALL |
 			SE_SHA_OP_START |
 			SE_SHA_OP_LASTBUF;
-	cpuvaddr[i++] = host1x_opcode_nonincr(host1x_uclass_incr_syncpt_r(), 1);
+	cpuvaddr[i++] = se_host1x_opcode_nonincr(host1x_uclass_incr_syncpt_r(), 1);
 	cpuvaddr[i++] = host1x_uclass_incr_syncpt_cond_f(1) |
 			host1x_uclass_incr_syncpt_indx_f(se->syncpt_id);
 
 	dev_dbg(se->dev, "msg len %llu msg left %llu cfg %#x",
-			msg_len, msg_left, rctx->config);
+		msg_len, msg_left, rctx->config);
 
 	return i;
+}
+
+static void tegra_sha_copy_hash_result(struct tegra_se *se, struct tegra_sha_reqctx *rctx)
+{
+	int i;
+
+	for (i = 0; i < HASH_RESULT_REG_COUNT; i++)
+		rctx->result[i] = readl(se->base + se->hw->regs->result + (i * 4));
+}
+
+static void tegra_sha_paste_hash_result(struct tegra_se *se, struct tegra_sha_reqctx *rctx)
+{
+	int i;
+
+	for (i = 0; i < HASH_RESULT_REG_COUNT; i++)
+		writel(rctx->result[i],
+		       se->base + se->hw->regs->result + (i * 4));
 }
 
 static int tegra_sha_do_update(struct ahash_request *req)
 {
 	struct tegra_sha_ctx *ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_sha_reqctx *rctx = ahash_request_ctx(req);
-	unsigned int nblks, nresidue, size;
+	unsigned int nblks, nresidue, size, ret;
 	u32 *cpuvaddr = ctx->se->cmdbuf->addr;
 
 	nresidue = (req->nbytes + rctx->residue.size) % rctx->blk_size;
@@ -311,7 +326,7 @@ static int tegra_sha_do_update(struct ahash_request *req)
 	 */
 	if (nblks < 1) {
 		scatterwalk_map_and_copy(rctx->residue.buf + rctx->residue.size,
-				rctx->src_sg, 0, req->nbytes, 0);
+					 rctx->src_sg, 0, req->nbytes, 0);
 
 		rctx->residue.size += req->nbytes;
 		return 0;
@@ -322,10 +337,10 @@ static int tegra_sha_do_update(struct ahash_request *req)
 		memcpy(rctx->datbuf.buf, rctx->residue.buf, rctx->residue.size);
 
 	scatterwalk_map_and_copy(rctx->datbuf.buf + rctx->residue.size,
-			rctx->src_sg, 0, req->nbytes - nresidue, 0);
+				 rctx->src_sg, 0, req->nbytes - nresidue, 0);
 
 	scatterwalk_map_and_copy(rctx->residue.buf, rctx->src_sg,
-			req->nbytes - nresidue, nresidue, 0);
+				 req->nbytes - nresidue, nresidue, 0);
 
 	/* Update residue value with the residue after current block */
 	rctx->residue.size = nresidue;
@@ -333,9 +348,27 @@ static int tegra_sha_do_update(struct ahash_request *req)
 	rctx->config = tegra_sha_get_config(rctx->alg) |
 			SE_SHA_DST_HASH_REG;
 
+	/*
+	 * If this is not the first 'update' call, paste the previous copied
+	 * intermediate results to the registers so that it gets picked up.
+	 * This is to support the import/export functionality.
+	 */
+	if (!(rctx->task & SHA_FIRST))
+		tegra_sha_paste_hash_result(ctx->se, rctx);
+
 	size = tegra_sha_prep_cmd(ctx->se, cpuvaddr, rctx);
 
-	return tegra_se_host1x_submit(ctx->se, size);
+	ret = tegra_se_host1x_submit(ctx->se, size);
+
+	/*
+	 * If this is not the final update, copy the intermediate results
+	 * from the registers so that it can be used in the next 'update'
+	 * call. This is to support the import/export functionality.
+	 */
+	if (!(rctx->task & SHA_FINAL))
+		tegra_sha_copy_hash_result(ctx->se, rctx);
+
+	return ret;
 }
 
 static int tegra_sha_do_final(struct ahash_request *req)
@@ -365,11 +398,11 @@ static int tegra_sha_do_final(struct ahash_request *req)
 
 out:
 	dma_free_coherent(se->dev, SE_SHA_BUFLEN,
-			rctx->datbuf.buf, rctx->datbuf.addr);
+			  rctx->datbuf.buf, rctx->datbuf.addr);
 	dma_free_coherent(se->dev, crypto_ahash_blocksize(tfm),
-			rctx->residue.buf, rctx->residue.addr);
+			  rctx->residue.buf, rctx->residue.addr);
 	dma_free_coherent(se->dev, rctx->digest.size, rctx->digest.buf,
-			rctx->digest.addr);
+			  rctx->digest.addr);
 	return ret;
 }
 
@@ -380,7 +413,7 @@ static int tegra_sha_do_one_req(struct crypto_engine *engine, void *areq)
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct tegra_sha_ctx *ctx = crypto_ahash_ctx(tfm);
 	struct tegra_se *se = ctx->se;
-	int ret = -EINVAL;
+	int ret = 0;
 
 	if (rctx->task & SHA_UPDATE) {
 		ret = tegra_sha_do_update(req);
@@ -394,50 +427,67 @@ static int tegra_sha_do_one_req(struct crypto_engine *engine, void *areq)
 
 	crypto_finalize_hash_request(se->engine, req, ret);
 
-	return ret;
+	return 0;
 }
 
-static void tegra_sha_init_fallback(struct tegra_sha_ctx *ctx, const char *algname)
+static void tegra_sha_init_fallback(struct crypto_ahash *tfm, struct tegra_sha_ctx *ctx,
+				    const char *algname)
 {
+	unsigned int statesize;
+
 	ctx->fallback_tfm = crypto_alloc_ahash(algname, 0, CRYPTO_ALG_ASYNC |
 						CRYPTO_ALG_NEED_FALLBACK);
 
 	if (IS_ERR(ctx->fallback_tfm)) {
-		dev_warn(ctx->se->dev, "failed to allocate fallback for %s %ld\n",
-			 algname, PTR_ERR(ctx->fallback_tfm));
+		dev_warn(ctx->se->dev,
+			 "failed to allocate fallback for %s\n", algname);
 		ctx->fallback_tfm = NULL;
+		return;
 	}
+
+	statesize = crypto_ahash_statesize(ctx->fallback_tfm);
+
+	if (statesize > sizeof(struct tegra_sha_reqctx))
+		crypto_hash_alg_common(tfm)->statesize = statesize;
+
+	/* Update reqsize if fallback is added */
+	crypto_ahash_set_reqsize(tfm,
+				 sizeof(struct tegra_sha_reqctx) +
+			crypto_ahash_reqsize(ctx->fallback_tfm));
 }
 
 static int tegra_sha_cra_init(struct crypto_tfm *tfm)
 {
 	struct tegra_sha_ctx *ctx = crypto_tfm_ctx(tfm);
+	struct crypto_ahash *ahash_tfm = __crypto_ahash_cast(tfm);
 	struct ahash_alg *alg = __crypto_ahash_alg(tfm->__crt_alg);
 	struct tegra_se_alg *se_alg;
 	const char *algname;
+	int ret;
 
 	algname = crypto_tfm_alg_name(tfm);
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-	se_alg = container_of(alg, struct tegra_se_alg, alg.ahash.base);
-#else
 	se_alg = container_of(alg, struct tegra_se_alg, alg.ahash);
-#endif
 
-	crypto_ahash_set_reqsize(__crypto_ahash_cast(tfm),
-				 sizeof(struct tegra_sha_reqctx));
+	crypto_ahash_set_reqsize(ahash_tfm, sizeof(struct tegra_sha_reqctx));
 
 	ctx->se = se_alg->se_dev;
 	ctx->fallback = false;
 	ctx->key_id = 0;
-	ctx->alg = se_algname_to_algid(algname);
-#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-	ctx->enginectx.op.prepare_request = NULL;
-	ctx->enginectx.op.do_one_request = tegra_sha_do_one_req;
-	ctx->enginectx.op.unprepare_request = NULL;
-#endif
+
+	ret = se_algname_to_algid(algname);
+	if (ret < 0) {
+		dev_err(ctx->se->dev, "invalid algorithm\n");
+		return ret;
+	}
 
 	if (se_alg->alg_base)
-		tegra_sha_init_fallback(ctx, algname);
+		tegra_sha_init_fallback(ahash_tfm, ctx, algname);
+
+	ctx->alg = ret;
+
+	ctx->enginectx.op.prepare_request = NULL;
+	ctx->enginectx.op.unprepare_request = NULL;
+	ctx->enginectx.op.do_one_request = tegra_sha_do_one_req;
 
 	return 0;
 }
@@ -449,7 +499,7 @@ static void tegra_sha_cra_exit(struct crypto_tfm *tfm)
 	if (ctx->fallback_tfm)
 		crypto_free_ahash(ctx->fallback_tfm);
 
-	tegra_key_invalidate(ctx->se, ctx->key_id);
+	tegra_key_invalidate(ctx->se, ctx->key_id, ctx->alg);
 }
 
 static int tegra_sha_init(struct ahash_request *req)
@@ -458,34 +508,31 @@ static int tegra_sha_init(struct ahash_request *req)
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct tegra_sha_ctx *ctx = crypto_ahash_ctx(tfm);
 	struct tegra_se *se = ctx->se;
-	const char *algname;
 
 	if (ctx->fallback)
 		return tegra_sha_fallback_init(req);
-
-	algname = crypto_tfm_alg_name(&tfm->base);
 
 	rctx->total_len = 0;
 	rctx->datbuf.size = 0;
 	rctx->residue.size = 0;
 	rctx->key_id = ctx->key_id;
 	rctx->task = SHA_FIRST;
-	rctx->alg = se_algname_to_algid(algname);
+	rctx->alg = ctx->alg;
 	rctx->blk_size = crypto_ahash_blocksize(tfm);
 	rctx->digest.size = crypto_ahash_digestsize(tfm);
 
 	rctx->digest.buf = dma_alloc_coherent(se->dev, rctx->digest.size,
-				&rctx->digest.addr, GFP_KERNEL);
+					      &rctx->digest.addr, GFP_KERNEL);
 	if (!rctx->digest.buf)
 		goto digbuf_fail;
 
 	rctx->residue.buf = dma_alloc_coherent(se->dev, rctx->blk_size,
-					&rctx->residue.addr, GFP_KERNEL);
+					       &rctx->residue.addr, GFP_KERNEL);
 	if (!rctx->residue.buf)
 		goto resbuf_fail;
 
 	rctx->datbuf.buf = dma_alloc_coherent(se->dev, SE_SHA_BUFLEN,
-					&rctx->datbuf.addr, GFP_KERNEL);
+					      &rctx->datbuf.addr, GFP_KERNEL);
 	if (!rctx->datbuf.buf)
 		goto datbuf_fail;
 
@@ -493,10 +540,10 @@ static int tegra_sha_init(struct ahash_request *req)
 
 datbuf_fail:
 	dma_free_coherent(se->dev, rctx->blk_size, rctx->residue.buf,
-				rctx->residue.addr);
+			  rctx->residue.addr);
 resbuf_fail:
 	dma_free_coherent(se->dev, SE_SHA_BUFLEN, rctx->datbuf.buf,
-				rctx->datbuf.addr);
+			  rctx->datbuf.addr);
 digbuf_fail:
 	return -ENOMEM;
 }
@@ -505,7 +552,7 @@ static int tegra_hmac_fallback_setkey(struct tegra_sha_ctx *ctx, const u8 *key,
 				      unsigned int keylen)
 {
 	if (!ctx->fallback_tfm) {
-		dev_err(ctx->se->dev, "invalid key length\n");
+		dev_dbg(ctx->se->dev, "invalid key length (%d)\n", keylen);
 		return -EINVAL;
 	}
 
@@ -593,9 +640,6 @@ static int tegra_sha_export(struct ahash_request *req, void *out)
 		return tegra_sha_fallback_export(req, out);
 
 	memcpy(out, rctx, sizeof(*rctx));
-	/*
-	 * TODO: Copy HASH_RESULT registers as well.
-	 */
 
 	return 0;
 }
@@ -617,9 +661,6 @@ static int tegra_sha_import(struct ahash_request *req, const void *in)
 static struct tegra_se_alg tegra_hash_algs[] = {
 	{
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -629,7 +670,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA1_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha1",
 				.cra_driver_name = "tegra-se-sha1",
@@ -642,16 +682,9 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -661,7 +694,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA224_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha224",
 				.cra_driver_name = "tegra-se-sha224",
@@ -674,16 +706,9 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -693,7 +718,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA256_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha256",
 				.cra_driver_name = "tegra-se-sha256",
@@ -706,16 +730,9 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -725,7 +742,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA384_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha384",
 				.cra_driver_name = "tegra-se-sha384",
@@ -738,16 +754,9 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -757,7 +766,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA512_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha512",
 				.cra_driver_name = "tegra-se-sha512",
@@ -770,16 +778,9 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -789,7 +790,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA3_224_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha3-224",
 				.cra_driver_name = "tegra-se-sha3-224",
@@ -802,16 +802,9 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -821,7 +814,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA3_256_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha3-256",
 				.cra_driver_name = "tegra-se-sha3-256",
@@ -834,16 +826,9 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -853,7 +838,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA3_384_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha3-384",
 				.cra_driver_name = "tegra-se-sha3-384",
@@ -866,16 +850,9 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -885,7 +862,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.import = tegra_sha_import,
 			.halg.digestsize = SHA3_512_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "sha3-512",
 				.cra_driver_name = "tegra-se-sha3-512",
@@ -898,17 +874,10 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg_base = "sha224",
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -919,7 +888,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.setkey = tegra_hmac_setkey,
 			.halg.digestsize = SHA224_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "hmac(sha224)",
 				.cra_driver_name = "tegra-se-hmac-sha224",
@@ -932,17 +900,10 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg_base = "sha256",
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -953,7 +914,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.setkey = tegra_hmac_setkey,
 			.halg.digestsize = SHA256_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "hmac(sha256)",
 				.cra_driver_name = "tegra-se-hmac-sha256",
@@ -966,17 +926,10 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg_base = "sha384",
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -987,7 +940,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.setkey = tegra_hmac_setkey,
 			.halg.digestsize = SHA384_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "hmac(sha384)",
 				.cra_driver_name = "tegra-se-hmac-sha384",
@@ -1000,17 +952,10 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}, {
 		.alg_base = "sha512",
 		.alg.ahash = {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			.base = {
-#endif
 			.init = tegra_sha_init,
 			.update = tegra_sha_update,
 			.final = tegra_sha_final,
@@ -1021,7 +966,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 			.setkey = tegra_hmac_setkey,
 			.halg.digestsize = SHA512_DIGEST_SIZE,
 			.halg.statesize = sizeof(struct tegra_sha_reqctx),
-
 			.halg.base = {
 				.cra_name = "hmac(sha512)",
 				.cra_driver_name = "tegra-se-hmac-sha512",
@@ -1034,10 +978,6 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 				.cra_init = tegra_sha_cra_init,
 				.cra_exit = tegra_sha_cra_exit,
 			}
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-			},
-			.op.do_one_request = tegra_sha_do_one_req,
-#endif
 		}
 	}
 };
@@ -1077,42 +1017,36 @@ static int tegra_hash_kac_manifest(u32 user, u32 alg, u32 keylen)
 
 int tegra_init_hash(struct tegra_se *se)
 {
+	struct ahash_alg *alg;
 	int i, ret;
 
 	se->manifest = tegra_hash_kac_manifest;
 
 	for (i = 0; i < ARRAY_SIZE(tegra_hash_algs); i++) {
-
 		tegra_hash_algs[i].se_dev = se;
-		ret = CRYPTO_REGISTER(ahash, &tegra_hash_algs[i].alg.ahash);
+		alg = &tegra_hash_algs[i].alg.ahash;
+
+		ret = crypto_register_ahash(alg);
 		if (ret) {
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 			dev_err(se->dev, "failed to register %s\n",
-				tegra_hash_algs[i].alg.ahash.base.halg.base.cra_name);
-#else
-			dev_err(se->dev, "failed to register %s\n",
-				tegra_hash_algs[i].alg.ahash.halg.base.cra_name);
-#endif
+				alg->halg.base.cra_name);
 			goto sha_err;
 		}
 	}
 
-	dev_info(se->dev, "registered HASH algorithms\n");
-
 	return 0;
 
 sha_err:
-	for (--i; i >= 0; i--)
-		CRYPTO_UNREGISTER(ahash, &tegra_hash_algs[i].alg.ahash);
+	while (i--)
+		crypto_unregister_ahash(&tegra_hash_algs[i].alg.ahash);
 
 	return ret;
 }
 
-
-void tegra_deinit_hash(void)
+void tegra_deinit_hash(struct tegra_se *se)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(tegra_hash_algs); i++)
-		CRYPTO_UNREGISTER(ahash, &tegra_hash_algs[i].alg.ahash);
+		crypto_unregister_ahash(&tegra_hash_algs[i].alg.ahash);
 }

@@ -1,28 +1,24 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-/*
+/* SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
  * Header file for NVIDIA Security Engine driver.
  */
 
 #ifndef _TEGRA_SE_H
 #define _TEGRA_SE_H
 
-#include <linux/clk.h>
+#include <nvidia/conftest.h>
+
+#include <linux/bitfield.h>
 #include <linux/iommu.h>
 #include <linux/host1x-next.h>
-#include <linux/version.h>
 #include <crypto/aead.h>
+#include <crypto/engine.h>
 #include <crypto/hash.h>
 #include <crypto/sha1.h>
 #include <crypto/sha3.h>
-#include <crypto/sm3.h>
 #include <crypto/skcipher.h>
-#include <nvidia/conftest.h>
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-#include <crypto/engine.h>
-#endif
 
-#define SE_MAX_INSTANCES				3
 #define SE_OWNERSHIP					0x14
 #define SE_OWNERSHIP_UID(x)				FIELD_GET(GENMASK(7, 0), x)
 #define TEGRA_GPSE_ID					3
@@ -67,11 +63,8 @@
 #define SE_SHA_ENC_ALG_HMAC				SE_SHA_CFG_ENC_ALG(7)
 #define SE_SHA_ENC_ALG_KDF				SE_SHA_CFG_ENC_ALG(8)
 #define SE_SHA_ENC_ALG_KEY_INVLD			SE_SHA_CFG_ENC_ALG(10)
-#define SE_SHA_ENC_ALG_KEY_MOV				SE_SHA_CFG_ENC_ALG(11)
 #define SE_SHA_ENC_ALG_KEY_INQUIRE			SE_SHA_CFG_ENC_ALG(12)
 #define SE_SHA_ENC_ALG_INS				SE_SHA_CFG_ENC_ALG(13)
-#define SE_SHA_ENC_ALG_CLONE				SE_SHA_CFG_ENC_ALG(14)
-#define SE_SHA_ENC_ALG_LOCK				SE_SHA_CFG_ENC_ALG(15)
 
 #define SE_SHA_OP_LASTBUF				FIELD_PREP(BIT(16), 1)
 #define SE_SHA_OP_WRSTALL				FIELD_PREP(BIT(15), 1)
@@ -311,12 +304,6 @@
 							 SE_AES_CORE_SEL_DECRYPT | \
 							 SE_AES_IV_SEL_REG)
 
-#define SE_CRYPTO_CFG_OFB				(SE_AES_INPUT_SEL_AESOUT | \
-							 SE_AES_VCTRAM_SEL_MEMORY | \
-							 SE_AES_XOR_POS_BOTTOM | \
-							 SE_AES_CORE_SEL_ENCRYPT | \
-							 SE_AES_IV_SEL_REG)
-
 #define SE_CRYPTO_CFG_CTR				(SE_AES_INPUT_SEL_LINEAR_CTR | \
 							 SE_AES_VCTRAM_SEL_MEMORY | \
 							 SE_AES_XOR_POS_BOTTOM | \
@@ -356,34 +343,17 @@
 #define SE_MAX_KEYSLOT				15
 #define SE_MAX_MEM_ALLOC			SZ_4M
 #define SE_AES_BUFLEN				0x8000
-#define SE_SHA_BUFLEN				SZ_4M
+#define SE_SHA_BUFLEN				0x2000
 
 #define SHA_FIRST	BIT(0)
 #define SHA_UPDATE	BIT(1)
 #define SHA_FINAL	BIT(2)
-
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-#define CRYPTO_REGISTER(alg, x) \
-		crypto_engine_register_##alg(x)
-#else
-#define CRYPTO_REGISTER(alg, x) \
-		crypto_register_##alg(x)
-#endif
-
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-#define CRYPTO_UNREGISTER(alg, x) \
-		crypto_engine_unregister_##alg(x)
-#else
-#define CRYPTO_UNREGISTER(alg, x) \
-		crypto_unregister_##alg(x)
-#endif
 
 /* Security Engine operation modes */
 enum se_aes_alg {
 	SE_ALG_CBC,		/* Cipher Block Chaining (CBC) mode */
 	SE_ALG_ECB,		/* Electronic Codebook (ECB) mode */
 	SE_ALG_CTR,		/* Counter (CTR) mode */
-	SE_ALG_OFB,		/* Output feedback (CFB) mode */
 	SE_ALG_XTS,		/* XTS mode */
 	SE_ALG_GMAC,		/* GMAC mode */
 	SE_ALG_GCM,		/* GCM mode */
@@ -416,15 +386,9 @@ struct tegra_se_alg {
 	const char *alg_base;
 
 	union {
-#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-		struct skcipher_alg	skcipher;
-		struct aead_alg		aead;
-		struct ahash_alg	ahash;
-#else
-		struct skcipher_engine_alg	skcipher;
-		struct aead_engine_alg		aead;
-		struct ahash_engine_alg	ahash;
-#endif
+		struct skcipher_alg skcipher;
+		struct aead_alg aead;
+		struct ahash_alg ahash;
 	} alg;
 };
 
@@ -446,7 +410,7 @@ struct tegra_se_regs {
 struct tegra_se_hw {
 	const struct tegra_se_regs *regs;
 	int (*init_alg)(struct tegra_se *se);
-	void (*deinit_alg)(void);
+	void (*deinit_alg)(struct tegra_se *se);
 	bool support_sm_alg;
 	u32 host1x_class;
 	u32 kac_ver;
@@ -455,18 +419,17 @@ struct tegra_se_hw {
 struct tegra_se {
 	int (*manifest)(u32 user, u32 alg, u32 keylen);
 	const struct tegra_se_hw *hw;
-	struct crypto_engine *engine;
-	struct host1x_channel *channel;
 	struct host1x_client client;
-	struct host1x_syncpt *syncpt;
-	struct clk_bulk_data *clks;
+	struct host1x_channel *channel;
 	struct tegra_se_cmdbuf *cmdbuf;
+	struct crypto_engine *engine;
+	struct host1x_syncpt *syncpt;
 	struct device *dev;
+	struct clk *clk;
 	unsigned int opcode_addr;
 	unsigned int stream_id;
 	unsigned int syncpt_id;
 	void __iomem *base;
-	int num_clks;
 	u32 owner;
 };
 
@@ -476,8 +439,8 @@ struct tegra_se_cmdbuf {
 	struct device *dev;
 	struct kref ref;
 	struct host1x_bo bo;
-	u32 words;
 	ssize_t size;
+	u32 words;
 };
 
 struct tegra_se_datbuf {
@@ -492,8 +455,6 @@ static inline int se_algname_to_algid(const char *name)
 		return SE_ALG_CBC;
 	else if (!strcmp(name, "ecb(aes)"))
 		return SE_ALG_ECB;
-	else if (!strcmp(name, "ofb(aes)"))
-		return SE_ALG_OFB;
 	else if (!strcmp(name, "ctr(aes)"))
 		return SE_ALG_CTR;
 	else if (!strcmp(name, "xts(aes)"))
@@ -536,87 +497,61 @@ static inline int se_algname_to_algid(const char *name)
 }
 
 /* Functions */
-int tegra_init_aead(struct tegra_se *se);
 int tegra_init_aes(struct tegra_se *se);
 int tegra_init_hash(struct tegra_se *se);
-void tegra_deinit_aead(void);
-void tegra_deinit_aes(void);
-void tegra_deinit_hash(void);
-
-int tegra_key_submit(struct tegra_se *se, const u8 *key, u32 keylen, u32 alg, u32 *keyid);
-unsigned int tegra_key_get_idx(struct tegra_se *se, u32 keyid);
-void tegra_key_invalidate(struct tegra_se *se, u32 keyid);
-
-int tegra_se_host1x_register(struct tegra_se *se);
+void tegra_deinit_aes(struct tegra_se *se);
+void tegra_deinit_hash(struct tegra_se *se);
+int tegra_key_submit(struct tegra_se *se, const u8 *key,
+		     u32 keylen, u32 alg, u32 *keyid);
+void tegra_key_invalidate(struct tegra_se *se, u32 keyid, u32 alg);
 int tegra_se_host1x_submit(struct tegra_se *se, u32 size);
 
-static inline void se_writel(struct tegra_se *se, unsigned int val,
-			     unsigned int offset)
-{
-	writel_relaxed(val, se->base + offset);
-}
-
-static inline u32 se_readl(struct tegra_se *se, unsigned int offset)
-{
-	return readl_relaxed(se->base + offset);
-}
-
-
-/****
- *
- * HOST1x OPCODES
- *
- ****/
-
+/* HOST1x OPCODES */
 static inline u32 host1x_opcode_setpayload(unsigned int payload)
 {
 	return (9 << 28) | payload;
 }
 
-#define host1x_opcode_incr_w(x) __host1x_opcode_incr_w((x) / 4)
-static inline u32 __host1x_opcode_incr_w(unsigned int offset)
+static inline u32 host1x_opcode_incr_w(unsigned int offset)
 {
 	/* 22-bit offset supported */
 	return (10 << 28) | offset;
 }
 
-#define host1x_opcode_nonincr_w(x) __host1x_opcode_nonincr_w((x) / 4)
-static inline u32 __host1x_opcode_nonincr_w(unsigned int offset)
+static inline u32 host1x_opcode_nonincr_w(unsigned int offset)
 {
 	/* 22-bit offset supported */
 	return (11 << 28) | offset;
 }
 
-#define host1x_opcode_incr(x, y) __host1x_opcode_incr((x) / 4, y)
-static inline u32 __host1x_opcode_incr(unsigned int offset, unsigned int count)
+static inline u32 host1x_opcode_incr(unsigned int offset, unsigned int count)
 {
-		return (1 << 28) | (offset << 16) | count;
+	return (1 << 28) | (offset << 16) | count;
 }
 
-#define host1x_opcode_nonincr(x, y) __host1x_opcode_nonincr((x) / 4, y)
-static inline u32 __host1x_opcode_nonincr(unsigned int offset, unsigned int count)
+static inline u32 host1x_opcode_nonincr(unsigned int offset, unsigned int count)
 {
-		return (2 << 28) | (offset << 16) | count;
+	return (2 << 28) | (offset << 16) | count;
 }
 
 static inline u32 host1x_uclass_incr_syncpt_cond_f(u32 v)
 {
-		return (v & 0xff) << 10;
+	return (v & 0xff) << 10;
 }
 
 static inline u32 host1x_uclass_incr_syncpt_indx_f(u32 v)
 {
-		return (v & 0x3ff) << 0;
+	return (v & 0x3ff) << 0;
 }
 
 static inline u32 host1x_uclass_wait_syncpt_r(void)
 {
-		return 0x8;
+	return 0x8;
 }
 
 static inline u32 host1x_uclass_incr_syncpt_r(void)
 {
-		return 0x0;
+	return 0x0;
 }
 
 #if !defined(NV_TEGRA_DEV_IOMMU_GET_STREAM_ID_PRESENT)
@@ -634,5 +569,10 @@ static inline bool tegra_dev_iommu_get_stream_id(struct device *dev, u32 *stream
 	return false;
 }
 #endif
+
+#define se_host1x_opcode_incr_w(x) host1x_opcode_incr_w((x) / 4)
+#define se_host1x_opcode_nonincr_w(x) host1x_opcode_nonincr_w((x) / 4)
+#define se_host1x_opcode_incr(x, y) host1x_opcode_incr((x) / 4, y)
+#define se_host1x_opcode_nonincr(x, y) host1x_opcode_nonincr((x) / 4, y)
 
 #endif /*_TEGRA_SE_H*/

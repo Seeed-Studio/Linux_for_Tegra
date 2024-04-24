@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Crypto driver for NVIDIA Security Engine in Tegra Chips
  */
 
 #include <linux/clk.h>
 #include <linux/dma-mapping.h>
-#include <linux/host1x-next.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/mod_devicetable.h>
@@ -124,7 +123,7 @@ static struct tegra_se_cmdbuf *tegra_se_host1x_bo_alloc(struct tegra_se *se, ssi
 	struct tegra_se_cmdbuf *cmdbuf;
 	struct device *dev = se->dev->parent;
 
-	cmdbuf = kzalloc(sizeof(struct tegra_se_cmdbuf), GFP_KERNEL);
+	cmdbuf = kzalloc(sizeof(*cmdbuf), GFP_KERNEL);
 	if (!cmdbuf)
 		return NULL;
 
@@ -153,7 +152,7 @@ int tegra_se_host1x_submit(struct tegra_se *se, u32 size)
 		return -ENOMEM;
 	}
 
-	job->syncpt =  host1x_syncpt_get(se->syncpt);
+	job->syncpt = host1x_syncpt_get(se->syncpt);
 	job->syncpt_incrs = 1;
 	job->client = &se->client;
 	job->class = se->client.class;
@@ -168,17 +167,17 @@ int tegra_se_host1x_submit(struct tegra_se *se, u32 size)
 	ret = host1x_job_pin(job, se->dev);
 	if (ret) {
 		dev_err(se->dev, "failed to pin host1x job\n");
-		goto err_job_pin;
+		goto job_put;
 	}
 
 	ret = host1x_job_submit(job);
 	if (ret) {
 		dev_err(se->dev, "failed to submit host1x job\n");
-		goto err_job_submit;
+		goto job_unpin;
 	}
 
 	ret = host1x_syncpt_wait(job->syncpt, job->syncpt_end,
-			MAX_SCHEDULE_TIMEOUT, NULL);
+				 MAX_SCHEDULE_TIMEOUT, NULL);
 	if (ret) {
 		dev_err(se->dev, "host1x job timed out\n");
 		return ret;
@@ -187,9 +186,9 @@ int tegra_se_host1x_submit(struct tegra_se *se, u32 size)
 	host1x_job_put(job);
 	return 0;
 
-err_job_submit:
+job_unpin:
 	host1x_job_unpin(job);
-err_job_pin:
+job_put:
 	host1x_job_put(job);
 
 	return ret;
@@ -210,7 +209,7 @@ static int tegra_se_client_init(struct host1x_client *client)
 	if (!se->syncpt) {
 		dev_err(se->dev, "host1x syncpt allocation failed\n");
 		ret = -EINVAL;
-		goto err_syncpt;
+		goto channel_put;
 	}
 
 	se->syncpt_id =  host1x_syncpt_id(se->syncpt);
@@ -218,22 +217,22 @@ static int tegra_se_client_init(struct host1x_client *client)
 	se->cmdbuf = tegra_se_host1x_bo_alloc(se, SZ_4K);
 	if (!se->cmdbuf) {
 		ret = -ENOMEM;
-		goto err_bo;
+		goto syncpt_put;
 	}
 
 	ret = se->hw->init_alg(se);
 	if (ret) {
 		dev_err(se->dev, "failed to register algorithms\n");
-		goto err_alg_reg;
+		goto cmdbuf_put;
 	}
 
 	return 0;
 
-err_alg_reg:
+cmdbuf_put:
 	tegra_se_cmdbuf_put(&se->cmdbuf->bo);
-err_bo:
+syncpt_put:
 	host1x_syncpt_put(se->syncpt);
-err_syncpt:
+channel_put:
 	host1x_channel_put(se->channel);
 
 	return ret;
@@ -243,7 +242,7 @@ static int tegra_se_client_deinit(struct host1x_client *client)
 {
 	struct tegra_se *se = container_of(client, struct tegra_se, client);
 
-	se->hw->deinit_alg();
+	se->hw->deinit_alg(se);
 	tegra_se_cmdbuf_put(&se->cmdbuf->bo);
 	host1x_syncpt_put(se->syncpt);
 	host1x_channel_put(se->channel);
@@ -256,7 +255,7 @@ static const struct host1x_client_ops tegra_se_client_ops = {
 	.exit = tegra_se_client_deinit,
 };
 
-int tegra_se_host1x_register(struct tegra_se *se)
+static int tegra_se_host1x_register(struct tegra_se *se)
 {
 	INIT_LIST_HEAD(&se->client.list);
 	se->client.dev = se->dev;
@@ -267,38 +266,6 @@ int tegra_se_host1x_register(struct tegra_se *se)
 	host1x_client_register(&se->client);
 
 	return 0;
-}
-
-static int tegra_se_clk_init(struct tegra_se *se)
-{
-	int i, ret;
-
-	se->num_clks = devm_clk_bulk_get_all(se->dev, &se->clks);
-	if (se->num_clks < 0) {
-		dev_err(se->dev, "failed to get clocks\n");
-		return se->num_clks;
-	}
-
-	for (i = 0; i < se->num_clks; i++) {
-		ret = clk_set_rate(se->clks[i].clk, ULONG_MAX);
-		if (ret) {
-			dev_err(se->dev, "failed to set %d clock rate", i);
-			return ret;
-		}
-	}
-
-	ret = clk_bulk_prepare_enable(se->num_clks, se->clks);
-	if (ret) {
-		dev_err(se->dev, "failed to enable clocks\n");
-		return ret;
-	}
-
-	return 0;
-}
-
-static void tegra_se_clk_deinit(struct tegra_se *se)
-{
-	clk_bulk_disable_unprepare(se->num_clks, se->clks);
 }
 
 static int tegra_se_probe(struct platform_device *pdev)
@@ -312,61 +279,45 @@ static int tegra_se_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	se->dev = dev;
+	se->owner = TEGRA_GPSE_ID;
 	se->hw = device_get_match_data(&pdev->dev);
 
 	se->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(se->base))
 		return PTR_ERR(se->base);
 
-	se->owner = TEGRA_GPSE_ID;
-
 	dma_set_mask_and_coherent(dev, DMA_BIT_MASK(39));
 	platform_set_drvdata(pdev, se);
 
-	ret = tegra_se_clk_init(se);
-	if (ret) {
-		dev_err(dev, "failed to init clocks\n");
-		return ret;
-	}
+	se->clk = devm_clk_get_enabled(se->dev, NULL);
+	if (IS_ERR(se->clk))
+		return dev_err_probe(dev, PTR_ERR(se->clk),
+				"failed to enable clocks\n");
 
-	if (!tegra_dev_iommu_get_stream_id(dev, &se->stream_id)) {
-		dev_err(dev, "failed to get IOMMU stream ID\n");
-		goto err_iommu_spec;
-	}
+	if (!tegra_dev_iommu_get_stream_id(dev, &se->stream_id))
+		return dev_err_probe(dev, -ENODEV,
+				"failed to get IOMMU stream ID\n");
 
-	se_writel(se, se->stream_id, SE_STREAM_ID);
+	writel(se->stream_id, se->base + SE_STREAM_ID);
 
 	se->engine = crypto_engine_alloc_init(dev, 0);
-	if (!se->engine) {
-		dev_err(dev, "failed to init crypto engine\n");
-		ret = -ENOMEM;
-		goto err_engine_alloc;
-	}
+	if (!se->engine)
+		return dev_err_probe(dev, -ENOMEM, "failed to init crypto engine\n");
 
 	ret = crypto_engine_start(se->engine);
 	if (ret) {
-		dev_err(dev, "failed to start crypto engine\n");
-		goto err_engine_start;
+		crypto_engine_exit(se->engine);
+		return dev_err_probe(dev, ret, "failed to start crypto engine\n");
 	}
 
 	ret = tegra_se_host1x_register(se);
 	if (ret) {
-		dev_err(dev, "failed to init host1x params\n");
-		goto err_host1x_init;
+		crypto_engine_stop(se->engine);
+		crypto_engine_exit(se->engine);
+		return dev_err_probe(dev, ret, "failed to init host1x params\n");
 	}
 
 	return 0;
-
-err_host1x_init:
-	crypto_engine_stop(se->engine);
-err_engine_start:
-	crypto_engine_exit(se->engine);
-err_engine_alloc:
-	iommu_fwspec_free(se->dev);
-err_iommu_spec:
-	tegra_se_clk_deinit(se);
-
-	return ret;
 }
 
 static int tegra_se_remove(struct platform_device *pdev)
@@ -377,7 +328,6 @@ static int tegra_se_remove(struct platform_device *pdev)
 	crypto_engine_exit(se->engine);
 	iommu_fwspec_free(se->dev);
 	host1x_client_unregister(&se->client);
-	tegra_se_clk_deinit(se);
 
 	return 0;
 }
@@ -424,10 +374,10 @@ static const struct tegra_se_hw tegra234_hash_hw = {
 
 static const struct of_device_id tegra_se_of_match[] = {
 	{
-		.compatible = "nvidia,tegra234-se2-aes",
+		.compatible = "nvidia,tegra234-se-aes",
 		.data = &tegra234_aes_hw
 	}, {
-		.compatible = "nvidia,tegra234-se4-hash",
+		.compatible = "nvidia,tegra234-se-hash",
 		.data = &tegra234_hash_hw,
 	},
 	{ },
@@ -486,4 +436,4 @@ module_exit(tegra_se_module_exit);
 
 MODULE_DESCRIPTION("NVIDIA Tegra Security Engine Driver");
 MODULE_AUTHOR("Akhil R <akhilrajeev@nvidia.com>");
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
