@@ -6593,6 +6593,288 @@
 		clock-names = "emc";
 	};
 
+	pmu {
+		compatible = "arm,armv8-pmuv3";
+		status = "disabled";
+
+		interrupts = <GIC_PPI 7 8>;
+	};
+
+	pmu_tcu_smmu0: pmu_tcu_smmu0@810a000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0a002000 0x0 0x1000
+		       0x81 0x0a022000 0x0 0x1000>;
+		interrupts = <GIC_SPI 26 IRQ_TYPE_EDGE_RISING>;
+	};
+
+	pmu_tbu0_smmu0: pmu_tbu0_smmu0@810a000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0a043000 0x0 0x1000
+		       0x81 0x0a053000 0x0 0x1000>;
+		interrupts = <GIC_SPI 833 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu2_smmu0: pmu_tbu2_smmu0@810a000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0a083000 0x0 0x1000
+		       0x81 0x0a093000 0x0 0x1000>;
+		interrupts = <GIC_SPI 321 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu3_smmu0: pmu_tbu3_smmu0@810a000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0a0a3000 0x0 0x1000
+		       0x81 0x0a0b3000 0x0 0x1000>;
+		interrupts = <GIC_SPI 321 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tcu_smmu1: pmu_tcu_smmu1@8105000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x05002000 0x0 0x1000
+		       0x81 0x05022000 0x0 0x1000>;
+		interrupts = <GIC_SPI 17 IRQ_TYPE_EDGE_RISING>;
+	};
+
+	pmu_tbu0_smmu1: pmu_tbu0_smmu1@8105000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x05043000 0x0 0x1000
+		       0x81 0x05053000 0x0 0x1000>;
+		interrupts = <GIC_SPI 320 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu1_smmu1: pmu_tbu1_smmu1@8105000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x05063000 0x0 0x1000
+		       0x81 0x05073000 0x0 0x1000>;
+		interrupts = <GIC_SPI 320 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu2_smmu1: pmu_tbu2_smmu1@8105000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x05083000 0x0 0x1000
+		       0x81 0x05093000 0x0 0x1000>;
+		interrupts = <GIC_SPI 833 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu3_smmu1: pmu_tbu3_smmu1@8105000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x050a3000 0x0 0x1000
+		       0x81 0x050b3000 0x0 0x1000>;
+		interrupts = <GIC_SPI 833 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu4_smmu1: pmu_tbu4_smmu1@8105000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x050c3000 0x0 0x1000
+		       0x81 0x050d3000 0x0 0x1000>;
+		interrupts = <GIC_SPI 512 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tcu_smmu2: pmu_tcu_smmu2@8106000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x06002000 0x0 0x1000
+		       0x81 0x06022000 0x0 0x1000>;
+		interrupts = <GIC_SPI 6 IRQ_TYPE_EDGE_RISING>;
+	};
+
+	pmu_tbu10_smmu2: pmu_tbu10_smmu2@8106000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x06183000 0x0 0x1000
+		       0x81 0x06193000 0x0 0x1000>;
+		interrupts = <GIC_SPI 9 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tcu_smmu3: pmu_tcu_smmu3@8806000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x88 0x06002000 0x0 0x1000
+		       0x88 0x06022000 0x0 0x1000>;
+		interrupts = <GIC_SPI 230 IRQ_TYPE_EDGE_RISING>;
+	};
+
+	pmu_tbu10_smmu3: pmu_tbu10_smmu3@8806000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x88 0x06183000 0x0 0x1000
+		       0x88 0x06193000 0x0 0x1000>;
+		interrupts = <GIC_SPI 233 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu12_smmu3: pmu_tbu12_smmu3@8806000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x88 0x061c3000 0x0 0x1000
+		       0x88 0x061d3000 0x0 0x1000>;
+		interrupts = <GIC_SPI 233 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tcu_smmu4: pmu_tcu_smmu4@810b000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0b002000 0x0 0x1000
+		       0x81 0x0b022000 0x0 0x1000>;
+		interrupts = <GIC_SPI 35 IRQ_TYPE_EDGE_RISING>;
+	};
+
+	pmu_tbu0_smmu4: pmu_tbu0_smmu4@810b000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0b043000 0x0 0x1000
+		       0x81 0x0b053000 0x0 0x1000>;
+		interrupts = <GIC_SPI 513 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu2_smmu4: pmu_tbu2_smmu4@810b000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0b083000 0x0 0x1000
+		       0x81 0x0b093000 0x0 0x1000>;
+		interrupts = <GIC_SPI 10 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu8_smmu4: pmu_tbu8_smmu4@810b000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0b143000 0x0 0x1000
+		       0x81 0x0b153000 0x0 0x1000>;
+		interrupts = <GIC_SPI 322 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu9_smmu4: pmu_tbu9_smmu4@810b000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0b163000 0x0 0x1000
+		       0x81 0x0b173000 0x0 0x1000>;
+		interrupts = <GIC_SPI 322 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu10_smmu4: pmu_tbu10_smmu4@810b000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0b183000 0x0 0x1000
+		       0x81 0x0b193000 0x0 0x1000>;
+		interrupts = <GIC_SPI 322 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	pmu_tbu11_smmu4: pmu_tbu11_smmu4@810b000000 {
+		compatible = "arm,smmu-v3-pmcg";
+		status = "disabled";
+
+		reg = <0x81 0x0b1a3000 0x0 0x1000
+		       0x81 0x0b1b3000 0x0 0x1000>;
+		interrupts = <GIC_SPI 322 IRQ_TYPE_EDGE_RISING>;
+		ceid0-override = <0x0 0x7>;
+	};
+
+	csite_ccplex_uapmu: ucf_uapmu@140c0000 {
+		compatible = "arm,coresight-pmu";
+		status = "disabled";
+
+		reg = <0x0 0x140c0000 0x0 0x1000>;
+		cpus = <&cpu_0>, <&cpu_1>, <&cpu_2>, <&cpu_3>,
+		       <&cpu_4>, <&cpu_5>, <&cpu_6>, <&cpu_7>,
+		       <&cpu_8>, <&cpu_9>, <&cpu_10>, <&cpu_11>,
+		       <&cpu_12>, <&cpu_13>;
+		interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	apmu_disp_usb_0: disp_usb_apmu@8808900000 {
+		compatible = "arm,coresight-pmu";
+		status = "disabled";
+
+		reg = <0x88 0x08900000 0x0 0x1000>;
+		cpus = <&cpu_0>, <&cpu_1>, <&cpu_2>, <&cpu_3>,
+		       <&cpu_4>, <&cpu_5>, <&cpu_6>, <&cpu_7>,
+		       <&cpu_8>, <&cpu_9>, <&cpu_10>, <&cpu_11>,
+		       <&cpu_12>, <&cpu_13>;
+		interrupts = <GIC_SPI 236 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	apmu_ucf_gpu_0: ucf_gpu_apmu@810c248000 {
+		compatible = "arm,coresight-pmu";
+		status = "disabled";
+
+		reg = <0x81 0x0c248000 0x0 0x1000>;
+		cpus = <&cpu_0>, <&cpu_1>, <&cpu_2>, <&cpu_3>,
+		       <&cpu_4>, <&cpu_5>, <&cpu_6>, <&cpu_7>,
+		       <&cpu_8>, <&cpu_9>, <&cpu_10>, <&cpu_11>,
+		       <&cpu_12>, <&cpu_13>;
+		interrupts = <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	apmu_uphy0_0: uphy_apmu@a808880000 {
+		compatible = "arm,coresight-pmu";
+		status = "disabled";
+
+		reg = <0xa8 0x08880000 0x0 0x1000>;
+		cpus = <&cpu_0>, <&cpu_1>, <&cpu_2>, <&cpu_3>,
+		       <&cpu_4>, <&cpu_5>, <&cpu_6>, <&cpu_7>,
+		       <&cpu_8>, <&cpu_9>, <&cpu_10>, <&cpu_11>,
+		       <&cpu_12>, <&cpu_13>;
+		interrupts = <GIC_SPI 834 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	apmu_vision_0: vision_apmu@818a000000 {
+		compatible = "arm,coresight-pmu";
+		status = "disabled";
+
+		reg = <0x81 0x8a000000 0x0 0x1000>;
+		cpus = <&cpu_0>, <&cpu_1>, <&cpu_2>, <&cpu_3>,
+		       <&cpu_4>, <&cpu_5>, <&cpu_6>, <&cpu_7>,
+		       <&cpu_8>, <&cpu_9>, <&cpu_10>, <&cpu_11>,
+		       <&cpu_12>, <&cpu_13>;
+		interrupts = <GIC_SPI 323 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
 	psci {
 		compatible = "arm,psci-1.0";
 		status = "disabled";
