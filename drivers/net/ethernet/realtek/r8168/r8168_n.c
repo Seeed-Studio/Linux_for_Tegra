@@ -25331,7 +25331,10 @@ rtl8168_hw_phy_config(struct net_device *dev)
                 }
 
                 rtl8168_mdio_write(tp, 0x1F, 0x0A44);
-                rtl8168_set_eth_phy_bit(tp, 0x11, BIT_11);
+		rtl8168_clear_eth_phy_bit(tp, 0x11, (BIT_11 | BIT_7));
+		rtl8168_set_eth_phy_bit(tp, 0x11, (BIT_11));
+		rtl8168_mdio_write(tp, 0x1F, 0x0A43);
+		rtl8168_clear_eth_phy_bit(tp, 0x10, (BIT_0));
                 rtl8168_mdio_write(tp, 0x1F, 0x0000);
 
 
@@ -25383,7 +25386,10 @@ rtl8168_hw_phy_config(struct net_device *dev)
                 }
 
                 rtl8168_mdio_write(tp, 0x1F, 0x0A44);
-                rtl8168_set_eth_phy_bit(tp, 0x11, BIT_11);
+		rtl8168_clear_eth_phy_bit(tp, 0x11, (BIT_11 | BIT_7));
+		rtl8168_set_eth_phy_bit(tp, 0x11, (BIT_11));
+		rtl8168_mdio_write(tp, 0x1F, 0x0A43);
+		rtl8168_clear_eth_phy_bit(tp, 0x10, (BIT_0));
                 rtl8168_mdio_write(tp, 0x1F, 0x0000);
 
                 if (tp->RequireAdcBiasPatch) {
@@ -25588,7 +25594,10 @@ rtl8168_hw_phy_config(struct net_device *dev)
                 }
         } else if (tp->mcfg == CFG_METHOD_35) {
                 rtl8168_mdio_write(tp, 0x1F, 0x0A44);
-                rtl8168_set_eth_phy_bit(tp, 0x11, BIT_11);
+		rtl8168_clear_eth_phy_bit(tp, 0x11, (BIT_11 | BIT_7));
+		rtl8168_set_eth_phy_bit(tp, 0x11, (BIT_11));
+		rtl8168_mdio_write(tp, 0x1F, 0x0A43);
+		rtl8168_clear_eth_phy_bit(tp, 0x10, (BIT_0));
                 rtl8168_mdio_write(tp, 0x1F, 0x0000);
 
 
