@@ -107,18 +107,6 @@ static void osd_usleep_range(unsigned long umin, unsigned long umax)
 }
 
 /**
- * @brief Adds sleep in milli seconds.
- *
- * Algorithm: Invokes OSD function to add sleep.
- *
- * @param[in] msec:  Minimum sleep required in milli seconds.
- */
-static void osd_msleep(unsigned int msec)
-{
-	msleep(msec);
-}
-
-/**
  * @brief osd_log - OSD logging function
  *
  * @param[in] priv: OSD private data
@@ -922,7 +910,6 @@ void ether_assign_osd_ops(struct osi_core_priv_data *osi_core,
 	osi_core->osd_ops.ops_log = osd_log;
 	osi_core->osd_ops.udelay = osd_udelay;
 	osi_core->osd_ops.usleep_range = osd_usleep_range;
-	osi_core->osd_ops.msleep = osd_msleep;
 	osi_core->osd_ops.padctrl_mii_rx_pins = ether_padctrl_mii_rx_pins;
 #ifdef OSI_DEBUG
 	osi_core->osd_ops.printf = osd_core_printf;
