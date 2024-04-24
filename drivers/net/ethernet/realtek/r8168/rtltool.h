@@ -2,10 +2,10 @@
 /*
 ################################################################################
 #
-# r8168 is the Linux device driver released for Realtek 2.5Gigabit Ethernet
+# r8168 is the Linux device driver released for Realtek Gigabit Ethernet
 # controllers with PCI-Express interface.
 #
-# Copyright(c) 2022 Realtek Semiconductor Corp. All rights reserved.
+# Copyright(c) 2024 Realtek Semiconductor Corp. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -32,37 +32,55 @@
  *  US6,570,884, US6,115,776, and US6,327,625.
  ***********************************************************************************/
 
-#ifndef _LINUX_RTL8168_FIRMWARE_H
-#define _LINUX_RTL8168_FIRMWARE_H
+#ifndef _LINUX_RTLTOOL_H
+#define _LINUX_RTLTOOL_H
 
-#include <linux/device.h>
-#include <linux/firmware.h>
+#define SIOCRTLTOOL		SIOCDEVPRIVATE+1
 
-struct rtl8168_private;
-typedef void (*rtl8168_fw_write_t)(struct rtl8168_private *tp, u16 reg, u16 val);
-typedef u32 (*rtl8168_fw_read_t)(struct rtl8168_private *tp, u16 reg);
+enum rtl_cmd {
+        RTLTOOL_READ_MAC=0,
+        RTLTOOL_WRITE_MAC,
+        RTLTOOL_READ_PHY,
+        RTLTOOL_WRITE_PHY,
+        RTLTOOL_READ_EPHY,
+        RTLTOOL_WRITE_EPHY,
+        RTLTOOL_READ_ERI,
+        RTLTOOL_WRITE_ERI,
+        RTLTOOL_READ_PCI,
+        RTLTOOL_WRITE_PCI,
+        RTLTOOL_READ_EEPROM,
+        RTLTOOL_WRITE_EEPROM,
 
-#define RTL8168_VER_SIZE		32
+        RTL_READ_OOB_MAC,
+        RTL_WRITE_OOB_MAC,
 
-struct rtl8168_fw {
-        rtl8168_fw_write_t phy_write;
-        rtl8168_fw_read_t phy_read;
-        rtl8168_fw_write_t mac_mcu_write;
-        rtl8168_fw_read_t mac_mcu_read;
-        const struct firmware *fw;
-        const char *fw_name;
-        struct device *dev;
+        RTL_ENABLE_PCI_DIAG,
+        RTL_DISABLE_PCI_DIAG,
 
-        char version[RTL8168_VER_SIZE];
+        RTL_READ_MAC_OCP,
+        RTL_WRITE_MAC_OCP,
 
-        struct rtl8168_fw_phy_action {
-                __le32 *code;
-                size_t size;
-        } phy_action;
+        RTL_DIRECT_READ_PHY_OCP,
+        RTL_DIRECT_WRITE_PHY_OCP,
+
+        RTLTOOL_INVALID
 };
 
-int rtl8168_fw_request_firmware(struct rtl8168_fw *rtl_fw);
-void rtl8168_fw_release_firmware(struct rtl8168_fw *rtl_fw);
-void rtl8168_fw_write_firmware(struct rtl8168_private *tp, struct rtl8168_fw *rtl_fw);
+struct rtltool_cmd {
+        __u32	cmd;
+        __u32	offset;
+        __u32	len;
+        __u32	data;
+};
 
-#endif /* _LINUX_RTL8168_FIRMWARE_H */
+enum mode_access {
+        MODE_NONE=0,
+        MODE_READ,
+        MODE_WRITE
+};
+
+#ifdef __KERNEL__
+int rtl8168_tool_ioctl(struct rtl8168_private *tp, struct ifreq *ifr);
+#endif
+
+#endif /* _LINUX_RTLTOOL_H */

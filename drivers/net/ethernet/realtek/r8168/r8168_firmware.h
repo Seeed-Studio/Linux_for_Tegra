@@ -2,10 +2,10 @@
 /*
 ################################################################################
 #
-# r8168 is the Linux device driver released for Realtek Gigabit Ethernet
+# r8168 is the Linux device driver released for Realtek 2.5Gigabit Ethernet
 # controllers with PCI-Express interface.
 #
-# Copyright(c) 2022 Realtek Semiconductor Corp. All rights reserved.
+# Copyright(c) 2024 Realtek Semiconductor Corp. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -32,25 +32,37 @@
  *  US6,570,884, US6,115,776, and US6,327,625.
  ***********************************************************************************/
 
-//EEPROM opcodes
-#define RTL_EEPROM_READ_OPCODE      06
-#define RTL_EEPROM_WRITE_OPCODE     05
-#define RTL_EEPROM_ERASE_OPCODE     07
-#define RTL_EEPROM_EWEN_OPCODE      19
-#define RTL_EEPROM_EWDS_OPCODE      16
+#ifndef _LINUX_RTL8168_FIRMWARE_H
+#define _LINUX_RTL8168_FIRMWARE_H
 
-#define RTL_CLOCK_RATE  3
+#include <linux/device.h>
+#include <linux/firmware.h>
 
-void rtl8168_eeprom_type(struct rtl8168_private *tp);
-void rtl8168_eeprom_cleanup(struct rtl8168_private *tp);
-u16 rtl8168_eeprom_read_sc(struct rtl8168_private *tp, u16 reg);
-void rtl8168_eeprom_write_sc(struct rtl8168_private *tp, u16 reg, u16 data);
-void rtl8168_shift_out_bits(struct rtl8168_private *tp, int data, int count);
-u16 rtl8168_shift_in_bits(struct rtl8168_private *tp);
-void rtl8168_raise_clock(struct rtl8168_private *tp, u8 *x);
-void rtl8168_lower_clock(struct rtl8168_private *tp, u8 *x);
-void rtl8168_stand_by(struct rtl8168_private *tp);
-void rtl8168_set_eeprom_sel_low(struct rtl8168_private *tp);
+struct rtl8168_private;
+typedef void (*rtl8168_fw_write_t)(struct rtl8168_private *tp, u16 reg, u16 val);
+typedef u32 (*rtl8168_fw_read_t)(struct rtl8168_private *tp, u16 reg);
 
+#define RTL8168_VER_SIZE		32
 
+struct rtl8168_fw {
+        rtl8168_fw_write_t phy_write;
+        rtl8168_fw_read_t phy_read;
+        rtl8168_fw_write_t mac_mcu_write;
+        rtl8168_fw_read_t mac_mcu_read;
+        const struct firmware *fw;
+        const char *fw_name;
+        struct device *dev;
 
+        char version[RTL8168_VER_SIZE];
+
+        struct rtl8168_fw_phy_action {
+                __le32 *code;
+                size_t size;
+        } phy_action;
+};
+
+int rtl8168_fw_request_firmware(struct rtl8168_fw *rtl_fw);
+void rtl8168_fw_release_firmware(struct rtl8168_fw *rtl_fw);
+void rtl8168_fw_write_firmware(struct rtl8168_private *tp, struct rtl8168_fw *rtl_fw);
+
+#endif /* _LINUX_RTL8168_FIRMWARE_H */
