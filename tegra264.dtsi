@@ -243,7 +243,7 @@
 			status = "disabled";
 
 			reg = <0x0 0x0c5a8000 0x0 0x8000>,
-			      <0x0 0x0c5b0000 0x0 0x8000>;
+			      <0x0 0x0c5a0000 0x0 0x8000>;
 			reg-names = "rx", "tx";
 			interrupts = <GIC_SPI 527 IRQ_TYPE_LEVEL_HIGH>;
 			current-speed = <115200>;
