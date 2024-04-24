@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-2.0
+
+/ {
+	/* Fake ethernet used by simulator */
+	ethernet@3b40000 {
+		compatible = "smsc,lan91c111";
+		reg = <0x00000000 0x03b40000 0x00000000 0x00000100>;
+		status = "disabled";
+		interrupts = <0x00000000 0x00000218 0x00000004>;
+		reg-io-width = <0x4>;
+		smsc,irq-active-high;
+		smsc,irq-push-pull;
+	};
+
+	/* Fake ethernet used by VSP */
+	ethernet@1a000000 {
+		compatible = "smsc,lan91c111";
+		reg = <0x00000000 0x1a000000 0x00000000 0x00010000>;
+		status = "disabled";
+		interrupts = <0x00000000 0x00000218 0x00000004>;
+		reg-io-width = <0x4>;
+		smsc,irq-active-high;
+		smsc,irq-push-pull;
+	};
+};
