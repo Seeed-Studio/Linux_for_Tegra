@@ -1055,7 +1055,7 @@ static long _nvadsp_wait_for_app_complete_timeout(
 	 * wait_for_complete must be called only after app has started
 	 */
 	if (info->state == NVADSP_APP_STATE_STARTED)
-		ret = wait_for_completion_interruptible_timeout(
+		ret = wait_for_completion_timeout(
 			&info->wait_for_app_complete, timeout);
 
 	return ret;
