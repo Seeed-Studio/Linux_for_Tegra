@@ -670,6 +670,8 @@ struct ether_priv_data {
 	struct ether_xtra_stat_counters xstats;
 	/** PTP configuration passed by aplication */
 	struct hwtstamp_config ptp_config;
+	/** Flag to hold DT config to disable Rx csum in HW */
+	uint32_t disable_rx_csum;
 };
 
 /**

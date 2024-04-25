@@ -2688,6 +2688,17 @@ static int ether_open(struct net_device *dev)
 		goto err_hw_init;
 	}
 
+	if ((pdata->osi_core->mac == OSI_MAC_HW_MGBE) &&
+	    (pdata->disable_rx_csum == 1U)) {
+		ioctl_data.cmd = OSI_CMD_RXCSUM_OFFLOAD;
+		ioctl_data.arg1_u32 = OSI_DISABLE;
+		ret = osi_handle_ioctl(osi_core, &ioctl_data);
+		if (ret < 0) {
+			dev_info(pdata->dev, "Rx Csum offload: Disable: Failed\n");
+			goto err_hw_init;
+		}
+	}
+
 	for (i = 0; i < pdata->osi_dma->num_dma_chans; i++) {
 		chan = pdata->osi_dma->dma_chans[i];
 		ioctl_data.cmd = OSI_CMD_FREE_TS;
@@ -5719,6 +5730,14 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		pdata->osi_core->pause_frames = OSI_PAUSE_FRAMES_DISABLE;
 	}
 #endif /* !OSI_STRIPPED_LIB */
+	/* Read property to disable Rx checksum offload */
+	ret = of_property_read_u32(np, "nvidia,disable-rx-checksum",
+				   &pdata->disable_rx_csum);
+	if (ret < 0) {
+		dev_info(dev, "Failed to read nvida,disable-rx-checksum, so"
+			 " setting to default - rx checksum offload enabled\n");
+		pdata->disable_rx_csum = OSI_DISABLE;
+	}
 
 	/* Check if IOMMU is enabled */
 	if (iommu_get_domain_for_dev(&pdev->dev) != NULL) {
@@ -6375,7 +6394,14 @@ static void ether_set_ndev_features(struct net_device *ndev,
 		features |= NETIF_F_IPV6_CSUM;
 	}
 
-	if (pdata->hw_feat.rx_coe_sel) {
+	/* Enable Rx csum offload only for EQOS until the
+	 * HW WAR sequence is clear for MGBE - to avoid data
+	 * data corruption issue in Bug 4486046. Check if DT
+	 * prop is provided to disable Rx csum for MGBE.
+	 */
+	if ((pdata->hw_feat.rx_coe_sel) &&
+	    ((pdata->disable_rx_csum == OSI_DISABLE) ||
+	     (pdata->osi_core->mac == OSI_MAC_HW_EQOS))) {
 		features |= NETIF_F_RXCSUM;
 	}
 
