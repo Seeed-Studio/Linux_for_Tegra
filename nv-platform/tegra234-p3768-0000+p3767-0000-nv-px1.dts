@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: GPL-2.0
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-p3768-0000+p3767-0000-nv.dts"
+
+/ {
+	compatible = "nvidia,p3768-0000+p3767-0000-px1", "nvidia,p3767-0000", "nvidia,tegra234";
+	model = "NVIDIA Orin NX PX1 Developer Kit";
+
+	bus@0 {
+		host1x@13e00000 {
+			nvdla1@158c0000 {
+				status = "disabled";
+			};
+		};
+	};
+};
