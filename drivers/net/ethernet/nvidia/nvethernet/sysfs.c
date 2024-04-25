@@ -2636,6 +2636,8 @@ static ssize_t ether_phy_iface_mode_show(struct device *dev,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 
 	switch (osi_core->phy_iface_mode) {
+	case OSI_XAUI_MODE_25G:
+		return scnprintf(buf, PAGE_SIZE, "XAUI-25G\n");
 	case OSI_XFI_MODE_10G:
 		return scnprintf(buf, PAGE_SIZE, "XFI-10G\n");
 	case OSI_XFI_MODE_5G:
@@ -2675,7 +2677,9 @@ static ssize_t ether_phy_iface_mode_store(struct device *dev,
 		return size;
 	}
 
-	if (strncmp(buf, "XFI-10G", 7) == 0U) {
+	if (strncmp(buf, "XAUI-25G", 7) == 0U) {
+		osi_core->phy_iface_mode = OSI_XAUI_MODE_25G;
+	} else if (strncmp(buf, "XFI-10G", 7) == 0U) {
 		osi_core->phy_iface_mode = OSI_XFI_MODE_10G;
 	} else if (strncmp(buf, "XFI-5G", 6) == 0U) {
 		osi_core->phy_iface_mode = OSI_XFI_MODE_5G;
@@ -2718,9 +2722,19 @@ static ssize_t ether_uphy_gbe_mode_show(struct device *dev,
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 
-	return scnprintf(buf, PAGE_SIZE, "%s\n",
-			(osi_core->uphy_gbe_mode == OSI_ENABLE) ?
-			"10G" : "5G");
+	switch (osi_core->uphy_gbe_mode) {
+	case OSI_UPHY_GBE_MODE_25G:
+		return scnprintf(buf, PAGE_SIZE, "25G\n");
+	case OSI_GBE_MODE_10G:
+		return scnprintf(buf, PAGE_SIZE, "10G\n");
+	case OSI_GBE_MODE_5G:
+		return scnprintf(buf, PAGE_SIZE, "5G\n");
+	case OSI_GBE_MODE_2_5G:
+		return scnprintf(buf, PAGE_SIZE, "2_5G\n");
+	default:
+		return scnprintf(buf, PAGE_SIZE, "1G\n");
+	}
+
 }
 
 /**
@@ -2749,10 +2763,16 @@ static ssize_t ether_uphy_gbe_mode_store(struct device *dev,
 		return size;
 	}
 
-	if (strncmp(buf, "10G", 3) == 0U) {
-		osi_core->uphy_gbe_mode = OSI_ENABLE;
+	if (strncmp(buf, "25G", 3) == 0U) {
+		osi_core->uphy_gbe_mode = OSI_UPHY_GBE_MODE_25G;
+	} else if (strncmp(buf, "10G", 3) == 0U) {
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_10G;
 	} else if (strncmp(buf, "5G", 2) == 0U) {
-		osi_core->uphy_gbe_mode = OSI_DISABLE;
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_5G;
+	} else if (strncmp(buf, "2_5G", 4) == 0U) {
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_2_5G;
+	} else if (strncmp(buf, "1G", 2) == 0U) {
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_1G;
 	} else {
 		dev_err(pdata->dev,
 			"Invalid value passed. Valid values are 10G or 5G\n");

@@ -128,22 +128,28 @@
  * @brief Ethernet clk rates
  */
 #define ETHER_RX_INPUT_CLK_RATE		125000000UL
+#define ETHER_MGBE_MAC_DIV_RATE_25G	781250000UL
 #define ETHER_MGBE_MAC_DIV_RATE_10G	312500000UL
 #define ETHER_MGBE_MAC_DIV_RATE_5G	156250000UL
 #define ETHER_MGBE_MAC_DIV_RATE_2_5G	78125000UL
 // gbe_pll2_txclkref (644 MHz) --> programmable link TX_CLK divider
 // --> link_Tx_clk --> fixed 1/2 gear box divider --> lane TX clk.
+#define ETHER_MGBE_TXRX_CLK_XAUI_25G		805664000UL
 #define ETHER_MGBE_TX_CLK_USXGMII_10G	644531250UL
 #define ETHER_MGBE_TX_CLK_USXGMII_5G	322265625UL
 #define ETHER_MGBE_RX_CLK_USXGMII_10G	644531250UL
 #define ETHER_MGBE_RX_CLK_USXGMII_5G	322265625UL
+#define ETHER_MGBE_TXRX_PCS_CLK_XAUI_25G	390625000UL
 #define ETHER_MGBE_TX_PCS_CLK_USXGMII_10G	156250000UL
 #define ETHER_MGBE_TX_PCS_CLK_USXGMII_5G	78125000UL
 #define ETHER_MGBE_RX_PCS_CLK_USXGMII_10G	156250000UL
 #define ETHER_MGBE_RX_PCS_CLK_USXGMII_5G	78125000UL
+#define ETHER_EQOS_TX_CLK_2_5G		312500000UL
 #define ETHER_EQOS_TX_CLK_1000M		125000000UL
 #define ETHER_EQOS_TX_CLK_100M		25000000UL
 #define ETHER_EQOS_TX_CLK_10M		2500000UL
+#define ETHER_EQOS_UPHY_LX_TX_2_5G_CLK	195312500UL
+#define ETHER_EQOS_UPHY_LX_TX_1G_CLK	78125000UL
 
 /**
  * @brief 1 Second in Neno Second
@@ -472,6 +478,8 @@ struct ether_priv_data {
 	struct clk *tx_div_clk;
 	/** Receive Monitoring clock */
 	struct clk *rx_m_clk;
+	/** Transmit Monitoring clock */
+	struct clk *tx_m_clk;
 	/** RX PCS monitoring clock */
 	struct clk *rx_pcs_m_clk;
 	/** RX PCS input clock */
@@ -651,6 +659,8 @@ struct ether_priv_data {
 	unsigned int fixed_link;
 	/** Flag to represent rx_m clk enabled or not */
 	bool rx_m_enabled;
+	/** Flag to represent tx_m clk enabled or not */
+	bool tx_m_enabled;
 	/** Flag to represent rx_pcs_m clk enabled or not */
 	bool rx_pcs_m_enabled;
 	/* Timer value in msec for ether_stats_work thread */

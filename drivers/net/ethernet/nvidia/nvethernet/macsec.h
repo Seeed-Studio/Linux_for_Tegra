@@ -218,11 +218,11 @@ struct nvpkcs_data {
 struct macsec_priv_data {
 	/** Non secure reset */
 	struct reset_control *ns_rst;
-	/** MGBE Macsec clock */
-	struct clk *mgbe_clk;
-	/** EQOS Macsec TX clock */
+	/** MGBE/EQOS Macsec clock */
+	struct clk *macsec_clk;
+	/** T23x EQOS Macsec TX clock */
 	struct clk *eqos_tx_clk;
-	/** EQOS Macsec RX clock */
+	/** T23x EQOS Macsec RX clock */
 	struct clk *eqos_rx_clk;
 	/** Secure irq */
 	int s_irq;

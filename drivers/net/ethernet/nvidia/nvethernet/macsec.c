@@ -100,9 +100,9 @@ static int macsec_disable_car(struct macsec_priv_data *macsec_pdata)
 	struct ether_priv_data *pdata = macsec_pdata->ether_pdata;
 
 	PRINT_ENTRY();
-	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-		if (!IS_ERR_OR_NULL(macsec_pdata->mgbe_clk)) {
-			clk_disable_unprepare(macsec_pdata->mgbe_clk);
+	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS)  {
+		if (!IS_ERR_OR_NULL(macsec_pdata->macsec_clk)) {
+			clk_disable_unprepare(macsec_pdata->macsec_clk);
 		}
 	} else {
 		if (!IS_ERR_OR_NULL(macsec_pdata->eqos_tx_clk)) {
@@ -130,8 +130,8 @@ static int macsec_enable_car(struct macsec_priv_data *macsec_pdata)
 
 	PRINT_ENTRY();
 	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-		if (!IS_ERR_OR_NULL(macsec_pdata->mgbe_clk)) {
-			ret = clk_prepare_enable(macsec_pdata->mgbe_clk);
+		if (!IS_ERR_OR_NULL(macsec_pdata->macsec_clk)) {
+			ret = clk_prepare_enable(macsec_pdata->macsec_clk);
 			if (ret < 0) {
 				dev_err(dev, "failed to enable macsec clk\n");
 				goto exit;
@@ -167,8 +167,8 @@ static int macsec_enable_car(struct macsec_priv_data *macsec_pdata)
 
 err_ns_rst:
 	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-		if (!IS_ERR_OR_NULL(macsec_pdata->mgbe_clk)) {
-			clk_disable_unprepare(macsec_pdata->mgbe_clk);
+		if (!IS_ERR_OR_NULL(macsec_pdata->macsec_clk)) {
+			clk_disable_unprepare(macsec_pdata->macsec_clk);
 		}
 	} else {
 		if (!IS_ERR_OR_NULL(macsec_pdata->eqos_rx_clk)) {
@@ -326,10 +326,14 @@ static int macsec_get_platform_res(struct macsec_priv_data *macsec_pdata)
 
 	/* Get clks */
 	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-		macsec_pdata->mgbe_clk = devm_clk_get(dev, "mgbe_macsec");
-		if (IS_ERR(macsec_pdata->mgbe_clk)) {
+		if (pdata->osi_core->mac_ver == OSI_MGBE_MAC_3_10) {
+			macsec_pdata->macsec_clk = devm_clk_get(dev, "mgbe_macsec");
+		} else {
+			macsec_pdata->macsec_clk = devm_clk_get(dev, "macsec");
+		}
+		if (IS_ERR(macsec_pdata->macsec_clk)) {
 			dev_err(dev, "failed to get macsec clk\n");
-			ret = PTR_ERR(macsec_pdata->mgbe_clk);
+			ret = PTR_ERR(macsec_pdata->macsec_clk);
 			goto exit;
 		}
 	} else {
@@ -360,8 +364,8 @@ static void macsec_release_platform_res(struct macsec_priv_data *macsec_pdata)
 
 	PRINT_ENTRY();
 	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-		if (!IS_ERR_OR_NULL(macsec_pdata->mgbe_clk)) {
-			devm_clk_put(dev, macsec_pdata->mgbe_clk);
+		if (!IS_ERR_OR_NULL(macsec_pdata->macsec_clk)) {
+			devm_clk_put(dev, macsec_pdata->macsec_clk);
 		}
 	} else {
 		if (!IS_ERR_OR_NULL(macsec_pdata->eqos_tx_clk)) {
