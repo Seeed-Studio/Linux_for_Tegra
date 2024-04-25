@@ -7,27 +7,6 @@
 #error
 #endif
 
-#if !defined(GMSL_TEGRA_PORT_SERIAL)
-#if GMSL_TEGRA_PORT == 0
-#define GMSL_TEGRA_PORT_SERIAL	"serial_a"
-#elif GMSL_TEGRA_PORT == 1
-#define GMSL_TEGRA_PORT_SERIAL	"serial_b"
-#elif GMSL_TEGRA_PORT == 2
-#define GMSL_TEGRA_PORT_SERIAL	"serial_c"
-#elif GMSL_TEGRA_PORT == 3
-#define GMSL_TEGRA_PORT_SERIAL	"serial_d"
-#elif GMSL_TEGRA_PORT == 4
-#define GMSL_TEGRA_PORT_SERIAL	"serial_e"
-#elif GMSL_TEGRA_PORT == 5
-#define GMSL_TEGRA_PORT_SERIAL	"serial_f"
-#elif GMSL_TEGRA_PORT == 6
-#define GMSL_TEGRA_PORT_SERIAL	"serial_g"
-#elif GMSL_TEGRA_PORT == 7
-#define GMSL_TEGRA_PORT_SERIAL	"serial_h"
-#else
-#error
-#endif
-#endif
 
 / {
 	tegra-capture-vi  {
@@ -36,6 +15,7 @@
 		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
+#define  GMSL_TEGRA_PORT 0
 
 #if defined(GMSL_CAMERA_0)
 			port@0 {
@@ -88,6 +68,61 @@
 				};
 			};
 #endif
+
+#define  GMSL_TEGRA_PORT 2
+#if defined(GMSL_CAMERA_4)
+			port@4 {
+				reg = <4>;
+
+				vi_in4: endpoint {
+					vc-id = <0>;
+					port-index = <GMSL_TEGRA_PORT>;
+					bus-width = <GMSL_DES_PHY_NUM_LANES>;
+					remote-endpoint = <&CSI_X_OUT_LABEL(4)>;
+				};
+			};
+#endif
+
+#if defined(GMSL_CAMERA_5)
+			port@5 {
+				reg = <5>;
+
+				vi_in5: endpoint {
+					vc-id = <1>;
+					port-index = <GMSL_TEGRA_PORT>;
+					bus-width = <GMSL_DES_PHY_NUM_LANES>;
+					remote-endpoint = <&CSI_X_OUT_LABEL(5)>;
+				};
+			};
+#endif
+
+#if defined(GMSL_CAMERA_6)
+			port@6 {
+				reg = <6>;
+
+				vi_in6: endpoint {
+					vc-id = <2>;
+					port-index = <GMSL_TEGRA_PORT>;
+					bus-width = <GMSL_DES_PHY_NUM_LANES>;
+					remote-endpoint = <&CSI_X_OUT_LABEL(6)>;
+				};
+			};
+#endif
+
+#if defined(GMSL_CAMERA_7)
+			port@7 {
+				reg = <7>;
+
+				vi_in7: endpoint {
+					 vc-id = <3>;
+					port-index = <GMSL_TEGRA_PORT>;
+					bus-width = <GMSL_DES_PHY_NUM_LANES>;
+					remote-endpoint = <&CSI_X_OUT_LABEL(7)>;
+				};
+			};
+#endif
+
+
 		};
 	};
 
@@ -97,24 +132,57 @@
 
 			#address-cells = <1>;
 			#size-cells = <0>;
-
+#undef GMSL_TEGRA_PORT
+#define  GMSL_TEGRA_PORT 0
+#define  DES_INDEX 0  
 #if defined(GMSL_CAMERA_0)
 			#define NVCSI_CH_INDEX 0
+			#define  DES_CH_INDEX 0
 			#include "gmsl-nvcsi-channel.dtsi"
 #endif
 
 #if defined(GMSL_CAMERA_1)
 			#define NVCSI_CH_INDEX 1
+			#define  DES_CH_INDEX 1
 			#include "gmsl-nvcsi-channel.dtsi"
 #endif
 
 #if defined(GMSL_CAMERA_2)
 			#define NVCSI_CH_INDEX 2
+			#define  DES_CH_INDEX 2
 			#include "gmsl-nvcsi-channel.dtsi"
 #endif
 
 #if defined(GMSL_CAMERA_3)
 			#define NVCSI_CH_INDEX 3
+			#define  DES_CH_INDEX 3
+			#include "gmsl-nvcsi-channel.dtsi"
+#endif
+
+#undef GMSL_TEGRA_PORT
+#define  GMSL_TEGRA_PORT 2
+#define  DES_INDEX 1
+#if defined(GMSL_CAMERA_4)
+			#define NVCSI_CH_INDEX 4
+			#define  DES_CH_INDEX 0
+			#include "gmsl-nvcsi-channel.dtsi"
+#endif
+
+#if defined(GMSL_CAMERA_5)
+			#define NVCSI_CH_INDEX 5
+			#define  DES_CH_INDEX 1
+			#include "gmsl-nvcsi-channel.dtsi"
+#endif
+
+#if defined(GMSL_CAMERA_6)
+			#define NVCSI_CH_INDEX 6
+			#define  DES_CH_INDEX 2
+			#include "gmsl-nvcsi-channel.dtsi"
+#endif
+
+#if defined(GMSL_CAMERA_7)
+			#define NVCSI_CH_INDEX 7
+			#define  DES_CH_INDEX 3
 			#include "gmsl-nvcsi-channel.dtsi"
 #endif
 		};
@@ -173,6 +241,18 @@
 #if defined(GMSL_CAMERA_3)
 			, "cam_3"
 #endif
+#if defined(GMSL_CAMERA_4)
+			, "cam_4"
+#endif
+#if defined(GMSL_CAMERA_5)
+			, "cam_4"
+#endif
+#if defined(GMSL_CAMERA_6)
+			, "cam_6"
+#endif
+#if defined(GMSL_CAMERA_7)
+			, "cam_7"
+#endif
 			;
 		nv,proc-device-tree-targets = <
 #if defined(GMSL_CAMERA_0)
@@ -187,6 +267,18 @@
 #if defined(GMSL_CAMERA_3)
 			&cam_3
 #endif
+#if defined(GMSL_CAMERA_4)
+			&cam_4
+#endif
+#if defined(GMSL_CAMERA_5)
+			&cam_5
+#endif
+#if defined(GMSL_CAMERA_6)
+			&cam_6
+#endif
+#if defined(GMSL_CAMERA_7)
+			&cam_7
+#endif
 			>;
 
 		/**
@@ -197,8 +289,8 @@
 		 * The third part contains the last 6 characters of a part number which is found
 		 * in the module's specsheet from the vendor.
 		 */
-#if defined(GMSL_CAMERA_0)
 		modules {
+#if defined(GMSL_CAMERA_0)
 			module0 {
 				badge = "jakku_front_camera0";
 				position = "topleft";
@@ -246,6 +338,57 @@
 					pcl_id = "v4l2_sensor";
 					devname = "cam_3";
 					proc-device-tree = "/proc/device-tree/tegra-camera-platform/cam_3";
+				};
+			};
+#endif
+#if defined(GMSL_CAMERA_4)
+			module4 {
+				badge = "jakku_front_camera4";
+				position = "topleft";
+				orientation = "1";
+				drivernode0 {
+					pcl_id = "v4l2_sensor";
+					devname = "cam_4";
+					proc-device-tree = "/proc/device-tree/tegra-camera-platform/cam_4";
+				};
+			};
+#endif
+
+#if defined(GMSL_CAMERA_5)
+			module5 {
+				badge = "jakku_front_camera5";
+				position = "topright";
+				orientation = "1";
+				drivernode0 {
+					pcl_id = "v4l2_sensor";
+					devname = "cam_5";
+					proc-device-tree = "/proc/device-tree/tegra-camera-platform/cam_5";
+				};
+			};
+#endif
+
+#if defined(GMSL_CAMERA_6)
+			module6 {
+				badge = "jakku_front_camera6";
+				position = "bottomleft";
+				orientation = "1";
+				drivernode0 {
+					pcl_id = "v4l2_sensor";
+					devname = "cam_6";
+					proc-device-tree = "/proc/device-tree/tegra-camera-platform/cam_6";
+				};
+			};
+#endif
+
+#if defined(GMSL_CAMERA_7)
+			module7 {
+				badge = "jakku_front_camera7";
+				position = "bottomright";
+				orientation = "1";
+				drivernode0 {
+					pcl_id = "v4l2_sensor";
+					devname = "cam_7";
+					proc-device-tree = "/proc/device-tree/tegra-camera-platform/cam_7";
 				};
 			};
 #endif

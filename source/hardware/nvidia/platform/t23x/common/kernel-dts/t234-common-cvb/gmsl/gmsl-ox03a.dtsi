@@ -5,6 +5,27 @@
 
 #include <dt-bindings/media/camera.h>
 
+
+#if GMSL_TEGRA_PORT == 0
+#define GMSL_TEGRA_PORT_SERIAL	"serial_a"
+#elif GMSL_TEGRA_PORT == 1
+#define GMSL_TEGRA_PORT_SERIAL	"serial_b"
+#elif GMSL_TEGRA_PORT == 2
+#define GMSL_TEGRA_PORT_SERIAL	"serial_c"
+#elif GMSL_TEGRA_PORT == 3
+#define GMSL_TEGRA_PORT_SERIAL	"serial_d"
+#elif GMSL_TEGRA_PORT == 4
+#define GMSL_TEGRA_PORT_SERIAL	"serial_e"
+#elif GMSL_TEGRA_PORT == 5
+#define GMSL_TEGRA_PORT_SERIAL	"serial_f"
+#elif GMSL_TEGRA_PORT == 6
+#define GMSL_TEGRA_PORT_SERIAL	"serial_g"
+#elif GMSL_TEGRA_PORT == 7
+#define GMSL_TEGRA_PORT_SERIAL	"serial_h"
+#else
+#error
+#endif
+
 #if defined(CAM_INDEX)
 #define CAM_VC_ID		CAM_INDEX
 #define CAM_SER_INDEX		CAM_INDEX

@@ -47,12 +47,26 @@
 		// };
 	};
 };
+#if defined(GMSL_CAMERA_0) || defined(GMSL_CAMERA_1) || defined(GMSL_CAMERA_2) || defined(GMSL_CAMERA_3)
 
-&des {
+&des0 {
 	phy@GMSL_DES_PHY {
 		maxim,alt-mem-map8;
 	};
 };
+#endif 
+
+#if defined(GMSL_CAMERA_4) || defined(GMSL_CAMERA_5) || defined(GMSL_CAMERA_6) || defined(GMSL_CAMERA_7)
+
+&des1 {
+	phy@GMSL_DES_PHY {
+		maxim,alt-mem-map8;
+	};
+};
+#endif 
+
+
+
 
 #undef SER_MFP0_PWDN_LABEL
 #undef SER_MFP7_FSYNC_LABEL
