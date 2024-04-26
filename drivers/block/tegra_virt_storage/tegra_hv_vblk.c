@@ -1164,7 +1164,9 @@ static void setup_device(struct vblk_dev *vblkdev)
 
 	vblkdev->max_requests = max_requests;
 	vblkdev->max_ioctl_requests = max_ioctl_requests;
+#if defined(NV_BLK_QUEUE_MAX_HW_SECTORS_PRESENT) /* Removed in Linux v6.10 */
 	blk_queue_max_hw_sectors(vblkdev->queue, max_io_bytes / SECTOR_SIZE);
+#endif
 	blk_queue_flag_set(QUEUE_FLAG_NONROT, vblkdev->queue);
 
 	if ((vblkdev->config.blk_config.req_ops_supported & VS_BLK_SECURE_ERASE_OP_F)

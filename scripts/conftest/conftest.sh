@@ -6539,6 +6539,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_BLK_MQ_DESTROY_QUEUE_PRESENT" "" "functions"
         ;;
 
+        blk_queue_max_hw_sectors)
+            #
+            # Determine whether function blk_queue_max_hw_sectors() is present.
+            #
+            # Commit ec84ca4025c0 ("scsi: block: Remove now unused queue limits
+            # helpers") removed the function blk_queue_max_hw_sectors() in Linux
+            # v6.10.
+            #
+            CODE="
+            #include <linux/blk-mq.h>
+            void conftest_blk_queue_max_hw_sectors(void) {
+                blk_queue_max_hw_sectors();
+            }"
+
+            compile_check_conftest "$CODE" "NV_BLK_QUEUE_MAX_HW_SECTORS_PRESENT" "" "functions"
+        ;;
+
         block_device_operations_open_has_gendisk_arg)
             #
             # Determine if the 'open' function pointer from the
