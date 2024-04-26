@@ -390,7 +390,7 @@ static int tsec_module_init(struct platform_device *dev)
 }
 
 
-const static struct dev_pm_ops tsec_module_pm_ops = {
+static const struct dev_pm_ops tsec_module_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(tsec_module_suspend, tsec_module_resume)
 };
 
