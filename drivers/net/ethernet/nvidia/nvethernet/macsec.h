@@ -163,6 +163,7 @@ static const struct nla_policy nv_macsec_genl_policy[NUM_NV_MACSEC_ATTR] = {
 	[NV_MACSEC_ATTR_TXSC_PORT] = { .type = NLA_U16 },
 	[NV_MACSEC_ATTR_REPLAY_PROT_EN] = { .type = NLA_U32 },
 	[NV_MACSEC_ATTR_REPLAY_WINDOW] = { .type = NLA_U32 },
+	[NV_MACSEC_ATTR_CIPHER_SUITE] = { .type = NLA_U32 },
 	[NV_MACSEC_ATTR_SA_CONFIG] = { .type = NLA_NESTED },
 	[NV_MACSEC_ATTR_TZ_CONFIG] = { .type = NLA_NESTED },
 	[NV_MACSEC_ATTR_TZ_KT_RESET] = { .type = NLA_NESTED },

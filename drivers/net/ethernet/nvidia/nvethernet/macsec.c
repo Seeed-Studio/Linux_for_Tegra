@@ -1429,6 +1429,7 @@ int macsec_probe(struct ether_priv_data *pdata)
 	macsec_pdata->nv_macsec_fam.module = THIS_MODULE;
 	macsec_pdata->nv_macsec_fam.ops = nv_macsec_genl_ops;
 	macsec_pdata->nv_macsec_fam.n_ops = ARRAY_SIZE(nv_macsec_genl_ops);
+	macsec_pdata->nv_macsec_fam.policy = nv_macsec_genl_policy;
 	if (macsec_pdata->is_nv_macsec_fam_registered == OSI_DISABLE) {
 		if (strlen(netdev_name(pdata->ndev)) >= GENL_NAMSIZ) {
 			dev_err(dev, "Intf name %s of len %lu exceed nl_family name size\n",
