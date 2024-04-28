@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "tegra264-p3834-0000.dtsi"
+
+/ {
+
+};

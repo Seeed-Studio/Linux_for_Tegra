@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p3971-0080.dtsi"
+#include "tegra264-p3834-0008.dtsi"
+
+/ {
+
+};
