@@ -4359,4 +4359,71 @@
 		channelid_list = <0>;
 	};
 
+	soc_sb_cluster: psc@d860000 {
+		compatible = "nvidia,tegra234-psc";
+		reg = <0x0 0xd860000 0x0 0x80000 0x0 0xd80201c 0x0 0x8>;
+		reg-names = "mbox-regs", "extcfg";
+		interrupts = <GIC_SPI 755 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 756 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 757 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 759 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 761 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 762 IRQ_TYPE_LEVEL_HIGH>;
+		nvidia,cpu-name = "sb";
+		#mbox-cells = <1>;
+
+		mboxes = <&soc_sb_cluster 0>;
+
+		nvidia,sidconfig = <0x0>;
+
+		numa-node-id = <0x0>;
+	};
+	soc_oesp_cluster: psc@e060000 {
+		compatible = "nvidia,tegra234-psc";
+		reg = <0x0 0xe060000 0x0 0x80000 0x0 0xe00201c 0x0 0x8>;
+		reg-names = "mbox-regs", "extcfg";
+		interrupts =  <GIC_SPI 699 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 700 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 701 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 702 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 703 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 704 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 705 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 706 IRQ_TYPE_LEVEL_HIGH>;
+		nvidia,cpu-name = "oesp";
+		#mbox-cells = <1>;
+
+		mboxes = <&soc_oesp_cluster 0>;
+
+		nvidia,sidconfig = <0x0>;
+
+		numa-node-id = <0x0>;
+	};
+	soc_psc_cluster: psc@e860000 {
+		compatible = "nvidia,tegra234-psc";
+		reg = <0x0 0xe860000 0x0 0x80000 0x0 0xe80201c 0x0 0x8>;
+		reg-names = "mbox-regs", "extcfg";
+		interrupts =  <GIC_SPI 735 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 736 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 737 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 738 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 739 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 740 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 741 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 742 IRQ_TYPE_LEVEL_HIGH>;
+		nvidia,cpu-name = "psc";
+		#mbox-cells = <1>;
+
+		mboxes = <&soc_psc_cluster 0>;
+
+		nvidia,sidconfig = <0x0>;
+
+		iommus = <&smmu4_mmu 0x1c00>;
+		nvidia,sidtable = /bits/ 8 <0x0>;
+		dma-coherent;
+
+		numa-node-id = <0>;
+	};
 };
