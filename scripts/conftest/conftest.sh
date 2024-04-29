@@ -7504,6 +7504,25 @@ compile_test() {
 
             compile_check_conftest "$CODE" "PCI_EPC_IRQ_TYPE_ENUM_PRESENT" "" "types"
         ;;
+
+        pci_irq_intx)
+            #
+            # Determine if PCI_IRQ_INTX is defined.
+            #
+            # Commit 58ff9c5acb4a ("PCI: Rename PCI_IRQ_LEGACY to PCI_IRQ_INTX")
+            # added the definition 'PCI_IRQ_INTX' in Linux v6.8 and commit
+            # 0e1fdd222f0a ("PCI: Remove PCI_IRQ_LEGACY") removed the definition
+            # 'PCI_IRQ_LEGACY' completely in Linux v6.10.
+            #
+            CODE="
+            #include <linux/pci.h>
+            int conftest_pci_irq_intx(void) {
+                return PCI_IRQ_INTX;
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_IRQ_INTX" "" "types"
+        ;;
+
         register_shrinker_has_fmt_arg)
             #
             # Determine if the 'register_shrinker' function
