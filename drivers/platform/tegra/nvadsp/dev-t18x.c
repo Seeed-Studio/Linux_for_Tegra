@@ -629,6 +629,11 @@ static int nvadsp_dev_t18x_init(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int ret = 0;
 
+	d->set_boot_vec     = __set_boot_vec_t18x;
+	d->set_boot_freqs   = __set_boot_freqs_t18x;
+	d->check_wfi_status = __check_wfi_status_t18x;
+	d->dump_core_state  = __dump_core_state_t18x;
+
 #ifdef CONFIG_TEGRA_VIRT_AUDIO_IVC
 
 	if (is_tegra_hypervisor_mode()) {
@@ -638,11 +643,6 @@ static int nvadsp_dev_t18x_init(struct platform_device *pdev)
 		return 0;
 	}
 #endif
-
-	d->set_boot_vec     = __set_boot_vec_t18x;
-	d->set_boot_freqs   = __set_boot_freqs_t18x;
-	d->check_wfi_status = __check_wfi_status_t18x;
-	d->dump_core_state  = __dump_core_state_t18x;
 
 	d->assert_adsp = __assert_t18x_adsp;
 	d->deassert_adsp = __deassert_t18x_adsp;
