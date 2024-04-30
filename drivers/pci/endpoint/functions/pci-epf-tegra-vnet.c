@@ -173,8 +173,13 @@ static void tvnet_ep_raise_irq_work_function(struct work_struct *work)
 #endif
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 15, 0))
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 	lpci_epc_raise_irq(epc, epf->func_no, PCI_EPC_IRQ_MSIX, 0);
 	lpci_epc_raise_irq(epc, epf->func_no, PCI_EPC_IRQ_MSIX, 1);
+#else
+	lpci_epc_raise_irq(epc, epf->func_no, PCI_IRQ_MSIX, 0);
+	lpci_epc_raise_irq(epc, epf->func_no, PCI_IRQ_MSIX, 1);
+#endif
 #else
 	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 1);
@@ -214,7 +219,11 @@ static int tvnet_ep_write_ctrl_msg(struct pci_epf_tvnet *tvnet,
 	if (tvnet_ivc_full(&tvnet->ep2h_ctrl)) {
 		/* Raise an interrupt to let host process EP2H ring */
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 15, 0))
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 		lpci_epc_raise_irq(epc, epf->func_no, PCI_EPC_IRQ_MSIX, 0);
+#else
+		lpci_epc_raise_irq(epc, epf->func_no, PCI_IRQ_MSIX, 0);
+#endif
 #else
 		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 #endif
@@ -226,7 +235,11 @@ static int tvnet_ep_write_ctrl_msg(struct pci_epf_tvnet *tvnet,
 	memcpy(&ctrl_msg[idx], msg, sizeof(*msg));
 	tvnet_ivc_advance_wr(&tvnet->ep2h_ctrl);
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 15, 0))
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 	lpci_epc_raise_irq(epc, epf->func_no, PCI_EPC_IRQ_MSIX, 0);
+#else
+	lpci_epc_raise_irq(epc, epf->func_no, PCI_IRQ_MSIX, 0);
+#endif
 #else
 	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 #endif
@@ -377,7 +390,11 @@ static void tvnet_ep_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 		tvnet_ivc_advance_wr(&tvnet->h2ep_empty);
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 15, 0))
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 		lpci_epc_raise_irq(epc, epf->func_no, PCI_EPC_IRQ_MSIX, 0);
+#else
+		lpci_epc_raise_irq(epc, epf->func_no, PCI_IRQ_MSIX, 0);
+#endif
 #else
 		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 #endif
@@ -626,7 +643,11 @@ static netdev_tx_t tvnet_ep_start_xmit(struct sk_buff *skb,
 	/* Check if EP2H_EMPTY_BUF available to read */
 	if (!tvnet_ivc_rd_available(&tvnet->ep2h_empty)) {
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 15, 0))
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 		lpci_epc_raise_irq(epc, epf->func_no, PCI_EPC_IRQ_MSIX, 0);
+#else
+		lpci_epc_raise_irq(epc, epf->func_no, PCI_IRQ_MSIX, 0);
+#endif
 #else
 		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 #endif
@@ -638,7 +659,11 @@ static netdev_tx_t tvnet_ep_start_xmit(struct sk_buff *skb,
 	/* Check if EP2H_FULL_BUF available to write */
 	if (tvnet_ivc_full(&tvnet->ep2h_full)) {
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 15, 0))
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 		lpci_epc_raise_irq(epc, epf->func_no, PCI_EPC_IRQ_MSIX, 1);
+#else
+		lpci_epc_raise_irq(epc, epf->func_no, PCI_IRQ_MSIX, 1);
+#endif
 #else
 		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 1);
 #endif
@@ -1603,6 +1628,7 @@ static void tvnet_ep_pci_epf_linkup(struct pci_epf *epf)
 #endif
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(5, 14, 0))
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT)
 static int tvnet_ep_pci_epf_core_deinit(struct pci_epf *epf)
 {
 	struct pci_epf_bar *epf_bar = &epf->bar[BAR_0];
@@ -1618,10 +1644,13 @@ static int tvnet_ep_pci_epf_core_deinit(struct pci_epf *epf)
 
 	return 0;
 }
+#endif
 
 static const struct pci_epc_event_ops tvnet_event_ops = {
 	.core_init = tvnet_ep_pci_epf_core_init,
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT)
 	.core_deinit = tvnet_ep_pci_epf_core_deinit,
+#endif
 	.link_up = tvnet_ep_pci_epf_linkup,
 };
 
@@ -2088,7 +2117,11 @@ static const struct pci_epf_device_id tvnet_ep_epf_tvnet_ids[] = {
 };
 #endif
 
+#if defined(NV_PCI_EPF_DRIVER_STRUCT_PROBE_HAS_ID_ARG) /* Linux 6.4 */
+static int tvnet_ep_epf_tvnet_probe(struct pci_epf *epf, const struct pci_epf_device_id *id)
+#else
 static int tvnet_ep_epf_tvnet_probe(struct pci_epf *epf)
+#endif
 {
 	struct device *fdev = &epf->dev;
 	struct pci_epf_tvnet *tvnet;
