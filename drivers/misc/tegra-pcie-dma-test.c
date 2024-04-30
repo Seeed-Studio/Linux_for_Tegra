@@ -8,52 +8,63 @@
 #include <nvidia/conftest.h>
 
 #include <linux/aer.h>
-#include <linux/delay.h>
 #include <linux/crc32.h>
 #include <linux/debugfs.h>
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/pci.h>
-#include <linux/pcie_dma.h>
 #include <linux/random.h>
-#include <linux/types.h>
 #include <linux/tegra-pcie-edma-test-common.h>
+#include <linux/types.h>
+#include <soc/tegra/fuse-helper.h>
 
 #define MODULENAME "pcie_dma_host"
 
 struct ep_pvt {
 	struct pci_dev *pdev;
-	void __iomem *bar0_virt;
-	void __iomem *dma_base;
-	u32 dma_size;
-	void *dma_virt;
-	dma_addr_t dma_phy;
-	dma_addr_t bar0_phy;
+	/* Configurable BAR0/BAR2 virt and phy base addresses */
+	void __iomem *bar_virt;
+	dma_addr_t bar_phy;
+	/* DMA register BAR virt and phy base addresses */
+	void __iomem *dma_virt;
+	phys_addr_t dma_phy_base;
+	u32 dma_phy_size;
+
+	/* dma_alloc_coherent() using RP pci_dev */
+	void *rp_dma_virt;
+	dma_addr_t rp_dma_phy;
+	/* dma_alloc_coherent() using EP pci_dev */
+	void *ep_dma_virt;
+	dma_addr_t ep_dma_phy;
+
 	struct dentry *debugfs;
-	void *cookie;
+
+	u32 dma_size;
 	u32 stress_count;
 	u32 edma_ch;
 	u32 prev_edma_ch;
 	u32 msi_irq;
 	u64 msi_addr;
-	u16 msi_data;
-	phys_addr_t dma_phy_base;
-	u32 dma_phy_size;
-	u64 tsz;
-	ktime_t edma_start_time[DMA_WR_CHNL_NUM];
+	u32 msi_data;
+	u32 pmsi_irq;
+	u64 pmsi_addr;
+	u32 pmsi_data;
+	u8 chip_id;
 	struct edmalib_common edma;
 };
 
 static irqreturn_t ep_isr(int irq, void *arg)
 {
 	struct ep_pvt *ep = (struct ep_pvt *)arg;
-	struct pcie_epf_bar0 *epf_bar0 = (__force struct pcie_epf_bar0 *)ep->bar0_virt;
+	struct pcie_epf_bar *epf_bar = (__force struct pcie_epf_bar *)ep->bar_virt;
+	struct sanity_data *wr_data = &epf_bar->wr_data[0];
 
-	epf_bar0->wr_data[0].crc = crc32_le(~0,	ep->dma_virt + BAR0_DMA_BUF_OFFSET,
-					    epf_bar0->wr_data[0].size);
+	wr_data->crc = crc32_le(~0, ep->ep_dma_virt + BAR0_DMA_BUF_OFFSET + wr_data->dst_offset,
+				wr_data->size);
 
 	return IRQ_HANDLED;
 }
@@ -61,64 +72,44 @@ static irqreturn_t ep_isr(int irq, void *arg)
 static void tegra_pcie_dma_raise_irq(void *p)
 {
 	pr_err("%s: donot support raise IRQ from RP. CRC test if any started may fail.\n",
-	       __func__);
-}
-
-static struct device *tegra_pci_dma_get_host_bridge_device(struct pci_dev *dev)
-{
-	struct pci_bus *bus = dev->bus;
-	struct device *bridge;
-
-	while (bus->parent)
-		bus = bus->parent;
-
-	bridge = bus->bridge;
-	kobject_get(&bridge->kobj);
-
-	return bridge;
-}
-
-static void  tegra_pci_dma_put_host_bridge_device(struct device *dev)
-{
-	kobject_put(&dev->kobj);
+			__func__);
 }
 
 /* debugfs to perform eDMA lib transfers */
 static int edmalib_test(struct seq_file *s, void *data)
 {
 	struct ep_pvt *ep = (struct ep_pvt *)dev_get_drvdata(s->private);
-	struct pcie_epf_bar0 *epf_bar0 = (__force struct pcie_epf_bar0 *)ep->bar0_virt;
-	 /* RP uses 128M(used by EP) + 1M(reserved) offset for source and dest data transfers */
-	dma_addr_t ep_dma_addr = epf_bar0->ep_phy_addr + SZ_128M + SZ_1M;
-	dma_addr_t bar0_dma_addr = ep->bar0_phy + SZ_128M + SZ_1M;
-	dma_addr_t rp_dma_addr = ep->dma_phy + SZ_128M + SZ_1M;
+	struct pcie_epf_bar *epf_bar = (__force struct pcie_epf_bar *)ep->bar_virt;
 	struct pci_dev *pdev = ep->pdev;
-	struct device *bridge, *rdev;
 	struct edmalib_common *edma = &ep->edma;
+	struct pci_dev *ppdev = pcie_find_root_port(pdev);
 
-	ep->edma.src_dma_addr = rp_dma_addr;
-	ep->edma.src_virt = ep->dma_virt + SZ_128M + SZ_1M;
 	ep->edma.fdev = &ep->pdev->dev;
-	ep->edma.epf_bar0 = (__force struct pcie_epf_bar0 *)ep->bar0_virt;
-	ep->edma.bar0_phy = ep->bar0_phy;
-	ep->edma.dma_base = ep->dma_base;
+	ep->edma.epf_bar = epf_bar;
+	ep->edma.bar_phy = ep->bar_phy;
+	ep->edma.dma_virt = ep->dma_virt;
 	ep->edma.priv = (void *)ep;
 	ep->edma.raise_irq = tegra_pcie_dma_raise_irq;
 
+	/* RP uses "Base + SZ_16M + 1M(reserved)" offset for DMA data transfers */
 	if (REMOTE_EDMA_TEST_EN) {
-		ep->edma.dst_dma_addr = ep_dma_addr;
-		ep->edma.edma_remote.msi_addr = ep->msi_addr;
-		ep->edma.edma_remote.msi_data = ep->msi_data;
-		ep->edma.edma_remote.msi_irq = ep->msi_irq;
-		ep->edma.edma_remote.dma_phy_base = ep->dma_phy_base;
-		ep->edma.edma_remote.dma_size = ep->dma_phy_size;
-		ep->edma.edma_remote.dev = &pdev->dev;
+		ep->edma.src_virt = ep->ep_dma_virt + SZ_16M + SZ_1M;
+		ep->edma.src_dma_addr = ep->ep_dma_phy + SZ_16M + SZ_1M;
+		ep->edma.dst_dma_addr = epf_bar->ep_phy_addr + SZ_16M + SZ_1M;
+		ep->edma.msi_addr = ep->msi_addr;
+		ep->edma.msi_data = ep->msi_data;
+		ep->edma.msi_irq = ep->msi_irq;
+		ep->edma.cdev = &pdev->dev;
+		ep->edma.remote.dma_phy_base = ep->dma_phy_base;
+		ep->edma.remote.dma_size = ep->dma_phy_size;
 	} else {
-		bridge = tegra_pci_dma_get_host_bridge_device(pdev);
-		rdev = bridge->parent;
-		tegra_pci_dma_put_host_bridge_device(bridge);
-		ep->edma.of_node = rdev->of_node;
-		ep->edma.dst_dma_addr = bar0_dma_addr;
+		ep->edma.src_dma_addr = ep->rp_dma_phy + SZ_16M + SZ_1M;
+		ep->edma.src_virt = ep->rp_dma_virt + SZ_16M + SZ_1M;
+		ep->edma.dst_dma_addr = ep->bar_phy + SZ_16M + SZ_1M;
+		ep->edma.msi_addr = ep->pmsi_addr;
+		ep->edma.msi_data = ep->pmsi_data;
+		ep->edma.msi_irq = ep->pmsi_irq;
+		ep->edma.cdev = &ppdev->dev;
 	}
 
 	return edmalib_common_test(&ep->edma);
@@ -144,19 +135,25 @@ static void init_debugfs(struct ep_pvt *ep)
 	ep->edma.nents = DMA_LL_DEFAULT_SIZE;
 }
 
-static int ep_test_dma_probe(struct pci_dev *pdev,
-			     const struct pci_device_id *id)
+static int ep_test_dma_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	struct ep_pvt *ep;
-	struct pcie_epf_bar0 *epf_bar0;
+	struct pcie_epf_bar *epf_bar;
+	struct pci_dev *ppdev = pcie_find_root_port(pdev);
 	int ret = 0;
-	u32 val, i;
+	u32 val, i, bar, dma_bar;
 	u16 val_16;
 	char *name;
 
 	ep = devm_kzalloc(&pdev->dev, sizeof(*ep), GFP_KERNEL);
 	if (!ep)
 		return -ENOMEM;
+
+	ep->chip_id = __tegra_get_chip_id();
+	if (ep->chip_id == TEGRA234)
+		ep->edma.chip_id = NVPCIE_DMA_SOC_T234;
+	else
+		ep->edma.chip_id = NVPCIE_DMA_SOC_T264;
 
 	ep->edma.ll_desc = devm_kzalloc(&pdev->dev, sizeof(*ep->edma.ll_desc) * NUM_EDMA_DESC,
 					GFP_KERNEL);
@@ -184,49 +181,65 @@ static int ep_test_dma_probe(struct pci_dev *pdev,
 		goto fail_region_request;
 	}
 
-	ep->bar0_phy = pci_resource_start(pdev, 0);
-	ep->bar0_virt = devm_ioremap(&pdev->dev, ep->bar0_phy, pci_resource_len(pdev, 0));
-	if (!ep->bar0_virt) {
-		dev_err(&pdev->dev, "Failed to IO remap BAR0\n");
+	if (ep->chip_id == TEGRA234)
+		bar = 0;
+	else
+		bar = 2;
+	ep->bar_phy = pci_resource_start(pdev, bar);
+	ep->bar_virt = devm_ioremap_wc(&pdev->dev, ep->bar_phy, pci_resource_len(pdev, bar));
+	if (!ep->bar_virt) {
+		dev_err(&pdev->dev, "Failed to IO remap BAR%d\n", bar);
 		ret = -ENOMEM;
 		goto fail_region_remap;
 	}
 
-	ep->dma_base = devm_ioremap(&pdev->dev, pci_resource_start(pdev, 4),
-				    pci_resource_len(pdev, 4));
-	if (!ep->dma_base) {
-		dev_err(&pdev->dev, "Failed to IO remap BAR4\n");
+	if (ep->chip_id == TEGRA234)
+		dma_bar = 4;
+	else
+		dma_bar = 0;
+	ep->dma_phy_base = pci_resource_start(pdev, dma_bar);
+	ep->dma_phy_size = pci_resource_len(pdev, dma_bar);
+	ep->dma_virt = devm_ioremap(&pdev->dev, ep->dma_phy_base, ep->dma_phy_size);
+	if (!ep->dma_virt) {
+		dev_err(&pdev->dev, "Failed to IO remap BAR%d\n", dma_bar);
 		ret = -ENOMEM;
 		goto fail_region_remap;
 	}
 
-	ret = pci_alloc_irq_vectors(pdev, 2, 2, PCI_IRQ_MSI);
+	ret = pci_alloc_irq_vectors(pdev, 16, 16, PCI_IRQ_MSI);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to enable MSI interrupt\n");
 		ret = -ENODEV;
 		goto fail_region_remap;
 	}
 
-	ret = request_irq(pci_irq_vector(pdev, 1), ep_isr, IRQF_SHARED,
-			  "pcie_ep_isr", ep);
+	ret = request_irq(pci_irq_vector(pdev, 1), ep_isr, IRQF_SHARED, "pcie_ep_isr", ep);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to register isr\n");
 		goto fail_isr;
 	}
 
-	ep->dma_virt = dma_alloc_coherent(&pdev->dev, BAR0_SIZE, &ep->dma_phy,
-					  GFP_KERNEL);
-	if (!ep->dma_virt) {
+	ep->rp_dma_virt = dma_alloc_coherent(&ppdev->dev, BAR0_SIZE, &ep->rp_dma_phy, GFP_KERNEL);
+	if (!ep->rp_dma_virt) {
 		dev_err(&pdev->dev, "Failed to allocate DMA memory\n");
 		ret = -ENOMEM;
-		goto fail_dma_alloc;
+		goto fail_rp_dma_alloc;
 	}
-	get_random_bytes(ep->dma_virt, BAR0_SIZE);
+	get_random_bytes(ep->rp_dma_virt, BAR0_SIZE);
+	dev_info(&ppdev->dev, "DMA mem ppdev, IOVA: 0x%llx size: %d\n", ep->rp_dma_phy, BAR0_SIZE);
 
-	/* Update RP DMA system memory base address in BAR0 */
-	epf_bar0 = (__force struct pcie_epf_bar0 *)ep->bar0_virt;
-	epf_bar0->rp_phy_addr = ep->dma_phy;
-	dev_info(&pdev->dev, "DMA mem, IOVA: 0x%llx size: %d\n", ep->dma_phy, BAR0_SIZE);
+	ep->ep_dma_virt = dma_alloc_coherent(&pdev->dev, BAR0_SIZE, &ep->ep_dma_phy, GFP_KERNEL);
+	if (!ep->ep_dma_virt) {
+		dev_err(&pdev->dev, "Failed to allocate DMA memory for EP\n");
+		ret = -ENOMEM;
+		goto fail_ep_dma_alloc;
+	}
+	get_random_bytes(ep->ep_dma_virt, BAR0_SIZE);
+	dev_info(&pdev->dev, "DMA mem pdev, IOVA: 0x%llx size: %d\n", ep->ep_dma_phy, BAR0_SIZE);
+
+	/* Update RP DMA system memory base address allocated with EP pci_dev in BAR0 */
+	epf_bar = (__force struct pcie_epf_bar *)ep->bar_virt;
+	epf_bar->rp_phy_addr = ep->ep_dma_phy;
 
 	pci_read_config_word(pdev, pdev->msi_cap + PCI_MSI_FLAGS, &val_16);
 	if (val_16 & PCI_MSI_FLAGS_64BIT) {
@@ -242,8 +255,22 @@ static int ep_test_dma_probe(struct pci_dev *pdev,
 	pci_read_config_dword(pdev, pdev->msi_cap + PCI_MSI_ADDRESS_LO, &val);
 	ep->msi_addr = (ep->msi_addr << 32) | val;
 	ep->msi_irq = pci_irq_vector(pdev, 0);
-	ep->dma_phy_base = pci_resource_start(pdev, 4);
-	ep->dma_phy_size = pci_resource_len(pdev, 4);
+
+	pci_read_config_word(ppdev, ppdev->msi_cap + PCI_MSI_FLAGS, &val_16);
+	if (val_16 & PCI_MSI_FLAGS_64BIT) {
+		pci_read_config_dword(ppdev, ppdev->msi_cap + PCI_MSI_ADDRESS_HI, &val);
+		ep->pmsi_addr = val;
+
+		pci_read_config_word(ppdev, ppdev->msi_cap + PCI_MSI_DATA_64, &val_16);
+		ep->pmsi_data = val_16;
+	} else {
+		pci_read_config_word(ppdev, ppdev->msi_cap + PCI_MSI_DATA_32, &val_16);
+		ep->pmsi_data = val_16;
+	}
+	pci_read_config_dword(ppdev, ppdev->msi_cap + PCI_MSI_ADDRESS_LO, &val);
+	ep->pmsi_addr = (ep->pmsi_addr << 32) | val;
+	ep->pmsi_irq = pci_irq_vector(ppdev, 0);
+	ep->pmsi_data += 0;
 
 	name = devm_kasprintf(&ep->pdev->dev, GFP_KERNEL, "%s_pcie_dma_test", dev_name(&pdev->dev));
 	if (!name) {
@@ -252,11 +279,8 @@ static int ep_test_dma_probe(struct pci_dev *pdev,
 		goto fail_name;
 	}
 
-	for (i = 0; i < DMA_WR_CHNL_NUM; i++)
+	for (i = 0; i < TEGRA_PCIE_DMA_WRITE; i++)
 		init_waitqueue_head(&ep->edma.wr_wq[i]);
-
-	for (i = 0; i < DMA_RD_CHNL_NUM; i++)
-		init_waitqueue_head(&ep->edma.rd_wq[i]);
 
 	ep->debugfs = debugfs_create_dir(name, NULL);
 	init_debugfs(ep);
@@ -264,8 +288,10 @@ static int ep_test_dma_probe(struct pci_dev *pdev,
 	return ret;
 
 fail_name:
-	dma_free_coherent(&pdev->dev, BAR0_SIZE, ep->dma_virt, ep->dma_phy);
-fail_dma_alloc:
+	dma_free_coherent(&pdev->dev, BAR0_SIZE, ep->ep_dma_virt, ep->ep_dma_phy);
+fail_ep_dma_alloc:
+	dma_free_coherent(&ppdev->dev, BAR0_SIZE, ep->rp_dma_virt, ep->rp_dma_phy);
+fail_rp_dma_alloc:
 	free_irq(pci_irq_vector(pdev, 1), ep);
 fail_isr:
 	pci_free_irq_vectors(pdev);
@@ -280,10 +306,12 @@ fail_region_request:
 static void ep_test_dma_remove(struct pci_dev *pdev)
 {
 	struct ep_pvt *ep = pci_get_drvdata(pdev);
+	struct pci_dev *ppdev = pcie_find_root_port(pdev);
 
 	debugfs_remove_recursive(ep->debugfs);
-	tegra_pcie_edma_deinit(ep->edma.cookie);
-	dma_free_coherent(&pdev->dev, BAR0_SIZE, ep->dma_virt, ep->dma_phy);
+	tegra_pcie_dma_deinit(&ep->edma.cookie);
+	dma_free_coherent(&pdev->dev, BAR0_SIZE, ep->ep_dma_virt, ep->ep_dma_phy);
+	dma_free_coherent(&ppdev->dev, BAR0_SIZE, ep->rp_dma_virt, ep->rp_dma_phy);
 	free_irq(pci_irq_vector(pdev, 1), ep);
 	pci_free_irq_vectors(pdev);
 	pci_release_regions(pdev);
@@ -293,6 +321,7 @@ static void ep_test_dma_remove(struct pci_dev *pdev)
 static const struct pci_device_id ep_pci_tbl[] = {
 	{ PCI_DEVICE(0x10DE, 0x1AD4)},
 	{ PCI_DEVICE(0x10DE, 0x1AD5)},
+	{ PCI_DEVICE(0x10DE, 0x229a)},
 	{},
 };
 
