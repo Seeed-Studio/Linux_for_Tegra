@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved. */
+/* Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved. */
 /*
  * cam_cdi_tsc.c - tsc driver.
  */
@@ -458,22 +458,31 @@ static void cdi_tsc_debugfs_remove(struct tsc_signal_controller *controller)
 
 static int cdi_tsc_chardev_open(struct inode *inode, struct file *file)
 {
-    pr_info("%s:Device opened\n", __func__);
+	int err = 0;
 
-    /* Set External Fsync */
-    Hawk_Owl_Fsync_program(EXTERNAL_FSYNC);
+	pr_info("%s:Device opened\n", __func__);
 
-    return 0;
+	/* Set External Fsync */
+	err = Hawk_Owl_Fsync_program(EXTERNAL_FSYNC);
+
+	return err;
 }
 
 static int cdi_tsc_chardev_release(struct inode *inode, struct file *file)
 {
-	pr_info("%s:Device closed\n", __func__);
+	struct tsc_signal_controller *controller = dev_get_drvdata(tsc_charDevice);
+	int err = -EFAULT;
 
+	dev_info(controller->dev, "%s Device closed .....\n", __func__);
+	/* To make sure whenever the device is closed, tsc is also stopped
+	 * to avoid inconsistency in generating the pulses */
+	err = cdi_tsc_stop_generators(controller);
+
+	if (err)
+		return err;
 	/* Set back to Internal Fsync */
-	Hawk_Owl_Fsync_program(INTERNAL_FSYNC);
-
-	return 0;
+	err = Hawk_Owl_Fsync_program(INTERNAL_FSYNC);
+	return err;
 }
 
 static long cdi_tsc_chardev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
