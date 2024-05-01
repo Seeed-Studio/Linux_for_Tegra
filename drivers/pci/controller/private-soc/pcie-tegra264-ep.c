@@ -7,6 +7,8 @@
  * Author: Manikanta Maddireddy <mmaddireddy@nvidia.com>
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
@@ -525,8 +527,17 @@ static const struct pci_epc_features tegra264_pcie_epc_features = {
 	.core_init_notifier = false,
 	.msi_capable = true,
 	.msix_capable = false,
+#if defined (NV_PCI_EPC_FEATURES_STRUCT_HAS_BAR)
+	.bar[BAR_0] = { .type = BAR_RESERVED, },
+	.bar[BAR_2] = { .type = BAR_FIXED, .fixed_size = SZ_32M, },
+	.bar[BAR_3] = { .type = BAR_RESERVED, },
+	.bar[BAR_4] = { .type = BAR_RESERVED, },
+	.bar[BAR_5] = { .type = BAR_RESERVED, },
+#else
 	.reserved_bar = 1 << BAR_0 | 1 << BAR_3 | 1 << BAR_4 | 1 << BAR_5,
 	.bar_fixed_size[2] = SZ_32M,
+#endif
+	.align = SZ_64K,
 };
 
 static const struct pci_epc_features *tegra264_pcie_ep_get_features(struct pci_epc *epc,
