@@ -8,3 +8,6 @@
 / {
 
 };
+
+/* Add minimal dtsi at the End of the file */
+#include "tegra264-p3834-0005+p3971-0050-qspi-nvme-minimal.dtsi"
