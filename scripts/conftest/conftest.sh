@@ -7352,6 +7352,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT" "" "types"
         ;;
 
+        pci_epc_features_struct_has_bar)
+            #
+            # Determine if the pci_epc_features struct has a member 'bar'.
+            #
+            # Commit e01c9797c0eb ("PCI: endpoint: Clean up hardware description for BARs")
+            # added 'struct pci_epc_bar_desc bar' to the pci_epc_features structure in
+            # Linux v6.9.
+            #
+            CODE="
+            #include <linux/pci-epc.h>
+            int conftest_pci_epc_features_struct_has_pci_epc_bar_desc(void) {
+                return offsetof(struct pci_epc_features, bar);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_EPC_FEATURES_STRUCT_HAS_BAR" "" "types"
+        ;;
+
         pci_disable_pcie_error_reporting)
             #
             # Determine if the pci_disable_pcie_error_reporting() API available or not.
