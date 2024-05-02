@@ -5,6 +5,10 @@ obj-$(CONFIG_VIDEO_MSP3400) += msp3400.o
 obj-$(CONFIG_VIDEO_SMIAPP)	+= smiapp/
 obj-$(CONFIG_VIDEO_ET8EK8)	+= et8ek8/
 obj-$(CONFIG_VIDEO_CX25840) += cx25840/
+
+obj-$(CONFIG_VIDEO_DS90UB953) += ds90ub953.o
+obj-$(CONFIG_VIDEO_DS90UB960) += ds90ub960.o
+
 obj-$(CONFIG_VIDEO_M5MOLS)	+= m5mols/
 
 obj-$(CONFIG_VIDEO_APTINA_PLL) += aptina-pll.o
@@ -123,5 +127,6 @@ obj-$(CONFIG_VIDEO_MAX9286)	+= max9286.o
 rdacm20-camera_module-objs	:= rdacm20.o max9271.o
 obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-camera_module.o
 obj-$(CONFIG_VIDEO_ST_MIPID02) += st-mipid02.o
+obj-$(CONFIG_VIDEO_MAXIM_SERDES) += maxim-serdes/
 
 obj-$(CONFIG_SDR_MAX2175) += max2175.o
