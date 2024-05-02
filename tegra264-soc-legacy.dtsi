@@ -1,0 +1,2934 @@
+// SPDX-License-Identifier: GPL-2.0
+
+/ {
+	reserved-memory {
+		gpu0_reserved: gpu0_carveout {
+			compatible = "nvidia,gpu0_carveout";
+			size = <0x00000000 0x60000000>;
+			alignment = <0x00000000 0x00200000>;
+			no-map;
+			granule-size = <0x00200000>;
+			status = "disabled";
+		};
+		gpu1_reserved: gpu1_carveout {
+			compatible = "nvidia,gpu1_carveout";
+			no-map;
+			granule-size = <0x200000>;
+			status = "disabled";
+		};
+		rce_resv: rce-reservation {
+			iommu-addresses = <&rce_misc 0x00000000 0x00000000 0x00000000 0x10000000 &rce_misc 0x00000000 0x20000000 0xffffffff 0x3fffffff>;
+		};
+		adsp0_resv: reservation-adsp0 {
+			iommu-addresses = <&adsp 0x00000000 0x00000000 0x00000000 0x20000000 &adsp 0x00000000 0x40000000 0xffffffff 0xffffffff>;
+		};
+		adsp1_resv: reservation-adsp1 {
+			iommu-addresses = <&adsp1 0x00000000 0x00000000 0x00000000 0x20000000 &adsp1 0x00000000 0x40000000 0xffffffff 0xffffffff>;
+		};
+		reservation_fsicom: reservation-fsicom {
+			iommu-addresses = <&fsicom_client 0x00000000 0x00000000 0x00000000 0xf0000000 &fsicom_client 0x00000000 0xf1000000 0xffffffff 0x0effffff>;
+		};
+		fsicom_resv_inst1: reservation-fsicom_inst1 {
+			iommu-addresses = <&fsicom_client_inst1 0x00000000 0x00000000 0x00000000 0xf0000000 &fsicom_client_inst1 0x00000000 0xf1000000 0xffffffff 0x0effffff>;
+		};
+		sec-mon {
+			reg = <0x00000000 0x84080000 0x00000000 0x00400000>;
+		};
+		camdbg_reserved: camdbg_carveout {
+			 compatible = "nvidia,camdbg_carveout";
+			 size = <0 0x6400000>;
+			 alignment = <0 0x100000>;
+			 alloc-ranges = <0x1 0 0x1 0>;
+			 status = "disabled";
+		 };
+	};
+
+	sound {
+		clocks = <&bpmp 0x0000009d &bpmp 0x000000a2>;
+		clock-names = "pll_a", "plla_out0";
+		assigned-clocks = <&bpmp 0x0000009d &bpmp 0x000000a2 &bpmp 0x00000115>;
+		assigned-clock-parents = <0x00000000 &bpmp 0x0000009d &bpmp 0x000000a2>;
+		status = "disabled";
+	};
+
+	tegra-carveouts {
+		compatible = "nvidia,carveouts-t19x";
+		memory-region = <&vpr &gpu0_reserved &gpu1_reserved &fsi_reserved &vpr1>;
+		status = "disabled";
+	};
+
+	tegra_ist {
+		compatible = "nvidia,tegra26x-ist";
+		status = "disabled";
+	};
+
+	smmu_test {
+		compatible = "nvidia,smmu_test";
+		iommus = <&smmu4_mmu 0x00000000>;
+		status = "disabled";
+	};
+
+	bus@0 {
+		memory-controller-hwpm@8108020000 {
+			compatible = "nvidia,tegra-t264-mc-hwpm";
+			reg = <0x00000081 0x08020000 0x00000000 0x00020000 0x00000081 0x08040000 0x00000000 0x00020000 0x00000081 0x08060000 0x00000000 0x00020000 0x00000081 0x08080000 0x00000000 0x00020000 0x00000081 0x080a0000 0x00000000 0x00020000 0x00000081 0x080c0000 0x00000000 0x00020000 0x00000081 0x080e0000 0x00000000 0x00020000 0x00000081 0x08100000 0x00000000 0x00020000 0x00000081 0x08120000 0x00000000 0x00020000 0x00000081 0x08140000 0x00000000 0x00020000 0x00000081 0x08160000 0x00000000 0x00020000 0x00000081 0x08180000 0x00000000 0x00020000 0x00000081 0x081a0000 0x00000000 0x00020000 0x00000081 0x081c0000 0x00000000 0x00020000 0x00000081 0x081e0000 0x00000000 0x00020000 0x00000081 0x08200000 0x00000000 0x00020000 0x00000081 0x08220000 0x00000000 0x00020000>;
+			status = "disabled";
+		};
+		memory-controller-err@8108020000 {
+			compatible = "nvidia,tegra-t264-mc-err";
+			reg = <0x00000081 0x08020000 0x00000000 0x00020000 0x00000081 0x08040000 0x00000000 0x00020000 0x00000081 0x08060000 0x00000000 0x00020000 0x00000081 0x08080000 0x00000000 0x00020000 0x00000081 0x080a0000 0x00000000 0x00020000 0x00000081 0x080c0000 0x00000000 0x00020000 0x00000081 0x080e0000 0x00000000 0x00020000 0x00000081 0x08100000 0x00000000 0x00020000 0x00000081 0x08120000 0x00000000 0x00020000 0x00000081 0x08140000 0x00000000 0x00020000 0x00000081 0x08160000 0x00000000 0x00020000 0x00000081 0x08180000 0x00000000 0x00020000 0x00000081 0x081a0000 0x00000000 0x00020000 0x00000081 0x081c0000 0x00000000 0x00020000 0x00000081 0x081e0000 0x00000000 0x00020000 0x00000081 0x08200000 0x00000000 0x00020000 0x00000081 0x08220000 0x00000000 0x00020000>;
+			interrupts = <0x00000000 0x0000008b 0x00000004>;
+			status = "disabled";
+		};
+		pcie@810c000000 {
+			nvidia,host1x = <&host1x>;
+		};
+	};
+
+	pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <0x00000001 0x00000007 0x00000008>;
+		status = "disabled";
+	};
+
+	host1x: host1x@8181200000 {
+		compatible = "nvidia,tegra264-host1x";
+		reg = <0x00000081 0x81200000 0x00000000 0x00010000 0x00000081 0x81210000 0x00000000 0x00010000 0x00000081 0x81240000 0x00000000 0x00010000>;
+		reg-names = "common", "hypervisor", "vm";
+		interrupts = <0x00000000 0x00000147 0x00000004 0x00000000 0x00000148 0x00000004 0x00000000 0x00000149 0x00000004 0x00000000 0x0000014a 0x00000004 0x00000000 0x0000014b 0x00000004 0x00000000 0x0000014c 0x00000004 0x00000000 0x0000014d 0x00000004 0x00000000 0x0000014e 0x00000004 0x00000000 0x00000145 0x00000004>;
+		interrupt-names = "syncpt0", "syncpt1", "syncpt2", "syncpt3", "syncpt4", "syncpt5", "syncpt6", "syncpt7", "host1x";
+		clocks = <&bpmp 0x0000000e>;
+		clock-names = "host1x";
+		interconnects = <&mc 0x00000016 &emc>;
+		interconnect-names = "dma-mem";
+		iommus = <&smmu1_mmu 0x00000b00>;
+		dma-coherent;
+#address-cells = <0x00000002>;
+#size-cells = <0x00000002>;
+		ranges;
+		status = "disabled";
+		iommu-map = <0x00000000 &smmu1_mmu 0x00003001 0x00000001 0x00000001 &smmu1_mmu 0x00003002 0x00000001 0x00000002 &smmu1_mmu 0x00003003 0x00000001 0x00000003 &smmu1_mmu 0x00003004 0x00000001 0x00000004 &smmu1_mmu 0x00003005 0x00000001 0x00000005 &smmu1_mmu 0x00003006 0x00000001 0x00000006 &smmu1_mmu 0x00003007 0x00000001 0x00000007 &smmu1_mmu 0x00003008 0x00000001>;
+		vic@8188050000 {
+			compatible = "nvidia,tegra264-vic";
+			reg = <0x00000081 0x88050000 0x00000000 0x00040000>;
+			interrupts = <0x00000000 0x000001d4 0x00000004>;
+			power-domains = <&bpmp 0x00000012>;
+			resets = <&bpmp 0x00000031>;
+			reset-names = "vic";
+			clocks = <&bpmp 0x0000003b>;
+			clock-names = "vic";
+			interconnects = <&mc 0x0000006c &emc &mc 0x0000006d &emc>;
+			interconnect-names = "dma-mem", "write";
+			iommus = <&smmu1_mmu 0x00003000>;
+			dma-coherent;
+			status = "disabled";
+		};
+		pva0@818c000000 {
+			compatible = "nvidia,tegra264-pva", "simple-bus";
+			reg = <0x00000081 0x8c000000 0x00000000 0x00900000 0x00000000 0x10700000 0x00000000 0x00100000>;
+			interrupts = <0x00000000 0x00000195 0x00000004 0x00000000 0x00000196 0x00000004 0x00000000 0x00000197 0x00000004 0x00000000 0x00000198 0x00000004 0x00000000 0x00000199 0x00000004 0x00000000 0x0000019a 0x00000004 0x00000000 0x0000019b 0x00000004 0x00000000 0x0000019c 0x00000004 0x00000000 0x0000019d 0x00000004>;
+			resets = <&bpmp 0x00000030>;
+			reset-names = "pva0";
+			clocks = <&bpmp 0x00000017 &bpmp 0x00000013 &bpmp 0x00000018>;
+			clock-names = "axi", "vps0", "vps1";
+			iommus = <&smmu4_mmu 0x00001100>;
+			dma-coherent;
+			status = "disabled";
+			pva0_niso1_ctx0 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001102>;
+				dma-coherent;
+				status = "disabled";
+			};
+			pva0_niso1_ctx1 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001103>;
+				dma-coherent;
+				status = "disabled";
+			};
+			pva0_niso1_ctx2 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001104>;
+				dma-coherent;
+				status = "disabled";
+			};
+			pva0_niso1_ctx3 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001105>;
+				dma-coherent;
+				status = "disabled";
+			};
+			pva0_niso1_ctx4 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001106>;
+				dma-coherent;
+				status = "disabled";
+			};
+			pva0_niso1_ctx5 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001107>;
+				dma-coherent;
+				status = "disabled";
+			};
+			pva0_niso1_ctx6 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001108>;
+				dma-coherent;
+				status = "disabled";
+			};
+			pva0_niso1_ctx7 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001109>;
+				dma-coherent;
+				status = "disabled";
+			};
+			pva0_niso1_ctx8 {
+				compatible = "nvidia,pva-tegra186-iommu-context";
+				iommus = <&smmu4_mmu 0x00001101>;
+				dma-coherent;
+				status = "disabled";
+			};
+		};
+		se@8188140000 {
+			compatible = "nvidia,tegra264-se4-hash";
+			reg = <0x00000081 0x88140000 0x00000000 0x00010000>;
+			clocks = <&bpmp 0x00000025>;
+			clock-names = "se";
+			iommus = <&smmu1_mmu 0x00001804>;
+			dma-coherent;
+			status = "disabled";
+		};
+		se@8188120000 {
+			compatible = "nvidia,tegra264-se2-aes";
+			reg = <0x00000081 0x88120000 0x00000000 0x00010000>;
+			clocks = <&bpmp 0x00000025>;
+			clock-names = "se";
+			iommus = <0x0000003e 0x00001802>;
+			dma-coherent;
+			status = "disabled";
+		};
+		se@8188110000 {
+			compatible = "nvidia,tegra264-se1-sm4";
+			reg = <0x00000081 0x88110000 0x00000000 0x00010000>;
+			clocks = <&bpmp 0x00000025>;
+			clock-names = "se";
+			iommus = <0x0000003e 0x00001801>;
+			dma-coherent;
+			status = "disabled";
+		};
+		kds@8189880000 {
+			compatible = "nvidia,tegra264-kds";
+			reg = <0x00000081 0x89880000 0x00000000 0x00010000>;
+			clocks = <&bpmp 0x00000025>;
+			clock-names = "se";
+			status = "disabled";
+		};
+		vi0: vi0@8188400000 {
+			compatible = "nvidia,tegra234-vi";
+			resets = <&bpmp 0x0000002e>;
+			reset-names = "vi";
+			clocks = <&bpmp 0x00000039>;
+			clock-names = "vi";
+			nvidia,vi-falcon-device = <0x0000004a>;
+			iommus = <&smmu0_mmu 0x00002e01>;
+			non-coherent;
+			status = "disabled";
+		};
+		vi0-thi@8188700000 {
+			compatible = "nvidia,tegra234-vi-thi";
+			resets = <&bpmp 0x0000002e>;
+			reset-names = "vi_thi";
+			status = "disabled";
+		};
+		vi1: vi1@8188c00000 {
+			compatible = "nvidia,tegra234-vi";
+			resets = <&bpmp 0x0000002f>;
+			reset-names = "vi2";
+			clocks = <&bpmp 0x00000039>;
+			clock-names = "vi";
+			nvidia,vi-falcon-device = <0x0000004c>;
+			iommus = <&smmu0_mmu 0x00002f01>;
+			non-coherent;
+			status = "disabled";
+		};
+		vi1-thi@8188f00000 {
+			compatible = "nvidia,tegra234-vi-thi";
+			resets = <&bpmp 0x0000002f>;
+			reset-names = "vi2_thi";
+			status = "disabled";
+		};
+		isp0: isp0@8188800000 {
+			compatible = "nvidia,tegra264-isp";
+			reg = <0x00000081 0x88800000 0x00000000 0x00300000>;
+			resets = <&bpmp 0x00000013>;
+			reset-names = "isp";
+			clocks = <&bpmp 0x0000000f>;
+			clock-names = "isp";
+			nvidia,isp-falcon-device = <0x0000004d>;
+			iommus = <&smmu4_mmu 0x00000c01>;
+			dma-coherent;
+			status = "disabled";
+		};
+		isp0-thi@8188b00000 {
+			compatible = "nvidia,tegra264-isp-thi";
+			resets = <&bpmp 0x00000037>;
+			reset-names = "isp_thi";
+			status = "disabled";
+		};
+		isp1: isp1@818a800000 {
+			compatible = "nvidia,tegra264-isp";
+			resets = <&bpmp 0x00000037>;
+			reset-names = "isp1";
+			clocks = <&bpmp 0x00000010>;
+			clock-names = "isp1";
+			nvidia,isp-falcon-device = <0x0000004e>;
+			iommus = <&smmu4_mmu 0x00000d01>;
+			dma-coherent;
+			status = "disabled";
+		};
+		isp1-thi@818ab00000 {
+			compatible = "nvidia,tegra264-isp-thi";
+			resets = <&bpmp 0x00000037>;
+			reset-names = "isp1_thi";
+			status = "disabled";
+		};
+		nvcsi: nvcsi@8188000000 {
+			compatible = "nvidia,tegra194-nvcsi";
+			clocks = <&bpmp 0x00000014>;
+			clock-names = "nvcsi";
+			resets = <&bpmp 0x00000015>;
+			reset-names = "nvcsi";
+			status = "disabled";
+		};
+	};
+
+	aconnect@9000000 {
+		compatible = "nvidia,tegra264-aconnect", "nvidia,tegra210-aconnect";
+		clocks = <&bpmp 0x000000a4 &bpmp 0x0000009c>;
+		clock-names = "ape", "apb2ape";
+		power-domains = <&bpmp 0x00000002>;
+		#address-cells = <0x00000002>;
+		#size-cells = <0x00000002>;
+		ranges = <0x00000000 0x09000000 0x00000000 0x09000000 0x00000000 0x02000000>;
+		status = "disabled";
+		ape_agic_page0: interrupt-controller@9960000 {
+			compatible = "nvidia,tegra264-agic", "nvidia,tegra210-agic";
+			#interrupt-cells = <0x00000003>;
+			interrupt-controller;
+			reg = <0x00000000 0x09961000 0x00000000 0x00001000 0x00000000 0x09962000 0x00000000 0x00001000>;
+			interrupts = <0x00000000 0x00000230 0x00000f04>;
+			clocks = <&bpmp 0x0000009c>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+		ape_agic_page1: interrupt-controller@9970000 {
+			compatible = "nvidia,tegra264-agic", "nvidia,tegra210-agic";
+			#interrupt-cells = <0x00000003>;
+			interrupt-controller;
+			reg = <0x00000000 0x09971000 0x00000000 0x00001000 0x00000000 0x09972000 0x00000000 0x00001000>;
+			interrupts = <0x00000000 0x00000231 0x00000f04>;
+			clocks = <&bpmp 0x0000009c>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+		interrupt-controller@9980000 {
+			compatible = "nvidia,tegra264-agic", "nvidia,tegra210-agic";
+			#interrupt-cells = <0x00000003>;
+			interrupt-controller;
+			reg = <0x00000000 0x09981000 0x00000000 0x00001000 0x00000000 0x09982000 0x00000000 0x00001000>;
+			interrupts = <0x00000000 0x00000232 0x00000f04>;
+			clocks = <&bpmp 0x0000009c>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+		interrupt-controller@9990000 {
+			compatible = "nvidia,tegra264-agic", "nvidia,tegra210-agic";
+			#interrupt-cells = <0x00000003>;
+			interrupt-controller;
+			reg = <0x00000000 0x09991000 0x00000000 0x00001000 0x00000000 0x09992000 0x00000000 0x00001000>;
+			interrupts = <0x00000000 0x00000233 0x00000f04>;
+			clocks = <&bpmp 0x0000009c>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+		interrupt-controller@99a0000 {
+			compatible = "nvidia,tegra264-agic", "nvidia,tegra210-agic";
+			#interrupt-cells = <0x00000003>;
+			interrupt-controller;
+			reg = <0x00000000 0x099a1000 0x00000000 0x00001000 0x00000000 0x099a2000 0x00000000 0x00001000>;
+			interrupts = <0x00000000 0x00000234 0x00000f04>;
+			clocks = <&bpmp 0x0000009c>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+		interrupt-controller@99b0000 {
+			compatible = "nvidia,tegra264-agic", "nvidia,tegra210-agic";
+			#interrupt-cells = <0x00000003>;
+			interrupt-controller;
+			reg = <0x00000000 0x099b1000 0x00000000 0x00001000 0x00000000 0x099b2000 0x00000000 0x00001000>;
+			interrupts = <0x00000000 0x00000235 0x00000f04>;
+			clocks = <&bpmp 0x0000009c>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+		adsp: adsp@9080000 {
+			compatible = "nvidia,tegra264-adsp";
+			interrupt-parent = <&ape_agic_page0>;
+			resets = <&bpmp 0x0000004a>;
+			reset-names = "adsp";
+			reg = <0x00000000 0x09d60000 0x00000000 0x00010000 0x00000000 0x09a00000 0x00000000 0x00001000 0x00000000 0x09a20000 0x00000000 0x00040000>;
+			nvidia,dram_map = <0x00000000 0x20000000 0x00000000 0x20000000>;
+			nvidia,adsp_mem = <0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00200000>;
+			interrupts = <0x00000000 0x00000029 0x00000001 0x00000000 0x00000020 0x00000001 0x00000000 0x00000052 0x00000001 0x00000000 0x00000040 0x00000001 0x00000000 0x00000039 0x00000001 0x00000000 0x0000003b 0x00000001>;
+			iommus = <&smmu1_mmu 0x00000200>;
+			memory-region = <&adsp0_resv>;
+			nvidia,cluster_mem = <0x00000000 0x09080000 0x00000000 0x00080000 0x00000000 0x00080000 0x00000000 0x09e80000 0x00000000 0x00200000 0x00000000 0x00080000 0x00000000 0x0a080000 0x00000000 0x00100000 0x00000000 0x00018000>;
+			status = "disabled";
+		};
+		adsp1: adsp1@9180000 {
+			compatible = "nvidia,tegra264-adsp1";
+			interrupt-parent = <&ape_agic_page0>;
+			resets = <&bpmp 0x0000004b>;
+			reset-names = "adsp";
+			reg = <0x00000000 0x09d60000 0x00000000 0x00010000 0x00000000 0x09a01000 0x00000000 0x00001000 0x00000000 0x09b20000 0x00000000 0x00040000>;
+			nvidia,dram_map = <0x00000000 0x20000000 0x00000000 0x20000000>;
+			nvidia,adsp_mem = <0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00200000>;
+			interrupts = <0x00000000 0x00000069 0x00000001 0x00000000 0x00000060 0x00000001 0x00000000 0x00000053 0x00000001 0x00000000 0x0000008a 0x00000001 0x00000000 0x0000003a 0x00000001 0x00000000 0x0000003c 0x00000001>;
+			iommus = <&smmu1_mmu 0x00000201>;
+			memory-region = <&adsp1_resv>;
+			nvidia,cluster_mem = <0x00000000 0x09180000 0x00000000 0x00080000 0x00000000 0x00080000 0x00000000 0x09e80000 0x00000000 0x00200000 0x00000000 0x00080000 0x00000000 0x0a080000 0x00000000 0x00100000 0x00000000 0x00018000>;
+			nvidia,adsp_os_secload;
+			status = "disabled";
+		};
+		dma-controller@9440000 {
+			compatible = "nvidia,tegra264-adma";
+			reg = <0x00000000 0x09440000 0x00000000 0x000b0000 0x00000000 0x09450000 0x00000000 0x00010000>;
+			interrupt-parent = <&ape_agic_page0>;
+			interrupts = <0x00000000 0x00000090 0x00000004 0x00000000 0x00000091 0x00000004 0x00000000 0x00000092 0x00000004 0x00000000 0x00000093 0x00000004 0x00000000 0x00000094 0x00000004 0x00000000 0x00000095 0x00000004 0x00000000 0x00000096 0x00000004 0x00000000 0x00000097 0x00000004 0x00000000 0x00000098 0x00000004 0x00000000 0x00000099 0x00000004 0x00000000 0x0000009a 0x00000004 0x00000000 0x0000009b 0x00000004 0x00000000 0x0000009c 0x00000004 0x00000000 0x0000009d 0x00000004 0x00000000 0x0000009e 0x00000004 0x00000000 0x0000009f 0x00000004 0x00000000 0x000000a0 0x00000004 0x00000000 0x000000a1 0x00000004 0x00000000 0x000000a2 0x00000004 0x00000000 0x000000a3 0x00000004 0x00000000 0x000000a4 0x00000004 0x00000000 0x000000a5 0x00000004 0x00000000 0x000000a6 0x00000004 0x00000000 0x000000a7 0x00000004 0x00000000 0x000000a8 0x00000004 0x00000000 0x000000a9 0x00000004 0x00000000 0x000000aa 0x00000004 0x00000000 0x000000ab 0x00000004 0x00000000 0x000000ac 0x00000004 0x00000000 0x000000ad 0x00000004 0x00000000 0x000000ae 0x00000004 0x00000000 0x000000af 0x00000004 0x00000000 0x000000b0 0x00000004 0x00000000 0x000000b1 0x00000004 0x00000000 0x000000b2 0x00000004 0x00000000 0x000000b3 0x00000004 0x00000000 0x000000b4 0x00000004 0x00000000 0x000000b5 0x00000004 0x00000000 0x000000b6 0x00000004 0x00000000 0x000000b7 0x00000004 0x00000000 0x000000b8 0x00000004 0x00000000 0x000000b9 0x00000004 0x00000000 0x000000ba 0x00000004 0x00000000 0x000000bb 0x00000004 0x00000000 0x000000bc 0x00000004 0x00000000 0x000000bd 0x00000004 0x00000000 0x000000be 0x00000004 0x00000000 0x000000bf 0x00000004 0x00000000 0x000000c0 0x00000004 0x00000000 0x000000c1 0x00000004 0x00000000 0x000000c2 0x00000004 0x00000000 0x000000c3 0x00000004 0x00000000 0x000000c4 0x00000004 0x00000000 0x000000c5 0x00000004 0x00000000 0x000000c6 0x00000004 0x00000000 0x000000c7 0x00000004 0x00000000 0x000000c8 0x00000004 0x00000000 0x000000c9 0x00000004 0x00000000 0x000000ca 0x00000004 0x00000000 0x000000cb 0x00000004 0x00000000 0x000000cc 0x00000004 0x00000000 0x000000cd 0x00000004 0x00000000 0x000000ce 0x00000004 0x00000000 0x000000cf 0x00000004>;
+#dma-cells = <0x00000001>;
+			clocks = <&bpmp 0x000000a3>;
+			clock-names = "d_audio";
+			status = "disabled";
+		};
+		ahub@9630000 {
+			compatible = "nvidia,tegra264-ahub";
+			reg = <0x00000000 0x09630000 0x00000000 0x00010000>;
+			clocks = <&bpmp 0x000000a3>;
+			clock-names = "ahub";
+			assigned-clocks = <&bpmp 0x000000a3>;
+			assigned-clock-parents = <&bpmp 0x000000a1>;
+#address-cells = <0x00000002>;
+#size-cells = <0x00000002>;
+			ranges = <0x00000000 0x09280000 0x00000000 0x09280000 0x00000000 0x001c0000 0x00000000 0x09510000 0x00000000 0x09510000 0x00000000 0x00170000 0x00000000 0x09680000 0x00000000 0x09680000 0x00000000 0x00200000>;
+			status = "disabled";
+			admaif@9610000 {
+				compatible = "nvidia,tegra264-admaif";
+				reg = <0x00000000 0x09610000 0x00000000 0x00010000>;
+				dmas = <0x00000053 0x00000001 0x00000053 0x00000001 0x00000053 0x00000002 0x00000053 0x00000002 0x00000053 0x00000003 0x00000053 0x00000003 0x00000053 0x00000004 0x00000053 0x00000004 0x00000053 0x00000005 0x00000053 0x00000005 0x00000053 0x00000006 0x00000053 0x00000006 0x00000053 0x00000007 0x00000053 0x00000007 0x00000053 0x00000008 0x00000053 0x00000008 0x00000053 0x00000009 0x00000053 0x00000009 0x00000053 0x0000000a 0x00000053 0x0000000a 0x00000053 0x0000000b 0x00000053 0x0000000b 0x00000053 0x0000000c 0x00000053 0x0000000c 0x00000053 0x0000000d 0x00000053 0x0000000d 0x00000053 0x0000000e 0x00000053 0x0000000e 0x00000053 0x0000000f 0x00000053 0x0000000f 0x00000053 0x00000010 0x00000053 0x00000010 0x00000053 0x00000011 0x00000053 0x00000011 0x00000053 0x00000012 0x00000053 0x00000012 0x00000053 0x00000013 0x00000053 0x00000013 0x00000053 0x00000014 0x00000053 0x00000014 0x00000053 0x00000015 0x00000053 0x00000015 0x00000053 0x00000016 0x00000053 0x00000016 0x00000053 0x00000017 0x00000053 0x00000017 0x00000053 0x00000018 0x00000053 0x00000018 0x00000053 0x00000019 0x00000053 0x00000019 0x00000053 0x0000001a 0x00000053 0x0000001a 0x00000053 0x0000001b 0x00000053 0x0000001b 0x00000053 0x0000001c 0x00000053 0x0000001c 0x00000053 0x0000001d 0x00000053 0x0000001d 0x00000053 0x0000001e 0x00000053 0x0000001e 0x00000053 0x0000001f 0x00000053 0x0000001f 0x00000053 0x00000020 0x00000053 0x00000020>;
+				dma-names = "rx1", "tx1", "rx2", "tx2", "rx3", "tx3", "rx4", "tx4", "rx5", "tx5", "rx6", "tx6", "rx7", "tx7", "rx8", "tx8", "rx9", "tx9", "rx10", "tx10", "rx11", "tx11", "rx12", "tx12", "rx13", "tx13", "rx14", "tx14", "rx15", "tx15", "rx16", "tx16", "rx17", "tx17", "rx18", "tx18", "rx19", "tx19", "rx20", "tx20", "rx21", "tx21", "rx22", "tx22", "rx23", "tx23", "rx24", "tx24", "rx25", "tx25", "rx26", "tx26", "rx27", "tx27", "rx28", "tx28", "rx29", "tx29", "rx30", "tx30", "rx31", "tx31", "rx32", "tx32";
+				iommus = <&smmu1_mmu 0x00000200>;
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						admaif1: endpoint {
+							remote-endpoint = <&xbar_admaif1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						admaif2: endpoint {
+							remote-endpoint = <&xbar_admaif2>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						admaif3: endpoint {
+							remote-endpoint = <&xbar_admaif3>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						admaif4: endpoint {
+							remote-endpoint = <&xbar_admaif4>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						admaif5: endpoint {
+							remote-endpoint = <&xbar_admaif5>;
+						};
+					};
+					port@5 {
+						reg = <0x00000005>;
+						admaif6: endpoint {
+							remote-endpoint = <&xbar_admaif6>;
+						};
+					};
+					port@6 {
+						reg = <0x00000006>;
+						admaif7: endpoint {
+							remote-endpoint = <&xbar_admaif7>;
+						};
+					};
+					port@7 {
+						reg = <0x00000007>;
+						admaif8: endpoint {
+							remote-endpoint = <&xbar_admaif8>;
+						};
+					};
+					port@8 {
+						reg = <0x00000008>;
+						admaif9: endpoint {
+							remote-endpoint = <&xbar_admaif9>;
+						};
+					};
+					port@9 {
+						reg = <0x00000009>;
+						admaif10: endpoint {
+							remote-endpoint = <&xbar_admaif10>;
+						};
+					};
+					port@10 {
+						reg = <0x0000000a>;
+						admaif11: endpoint {
+							remote-endpoint = <&xbar_admaif11>;
+						};
+					};
+					port@11 {
+						reg = <0x0000000b>;
+						admaif12: endpoint {
+							remote-endpoint = <&xbar_admaif12>;
+						};
+					};
+					port@12 {
+						reg = <0x0000000c>;
+						admaif13: endpoint {
+							remote-endpoint = <&xbar_admaif13>;
+						};
+					};
+					port@13 {
+						reg = <0x0000000d>;
+						admaif14: endpoint {
+							remote-endpoint = <&xbar_admaif14>;
+						};
+					};
+					port@14 {
+						reg = <0x0000000e>;
+						admaif15: endpoint {
+							remote-endpoint = <&xbar_admaif15>;
+						};
+					};
+					port@15 {
+						reg = <0x0000000f>;
+						admaif16: endpoint {
+							remote-endpoint = <&xbar_admaif16>;
+						};
+					};
+					port@16 {
+						reg = <0x00000010>;
+						admaif17: endpoint {
+							remote-endpoint = <&xbar_admaif17>;
+						};
+					};
+					port@17 {
+						reg = <0x00000011>;
+						admaif18: endpoint {
+							remote-endpoint = <&xbar_admaif18>;
+						};
+					};
+					port@18 {
+						reg = <0x00000012>;
+						admaif19: endpoint {
+							remote-endpoint = <&xbar_admaif19>;
+						};
+					};
+					port@19 {
+						reg = <0x00000013>;
+						admaif20: endpoint {
+							remote-endpoint = <&xbar_admaif20>;
+						};
+					};
+					port@20 {
+						reg = <0x00000014>;
+						admaif21: endpoint {
+							remote-endpoint = <&xbar_admaif21>;
+						};
+					};
+					port@21 {
+						reg = <0x00000015>;
+						admaif22: endpoint {
+							remote-endpoint = <&xbar_admaif22>;
+						};
+					};
+					port@22 {
+						reg = <0x00000016>;
+						admaif23: endpoint {
+							remote-endpoint = <&xbar_admaif23>;
+						};
+					};
+					port@23 {
+						reg = <0x00000017>;
+						admaif24: endpoint {
+							remote-endpoint = <&xbar_admaif24>;
+						};
+					};
+					port@24 {
+						reg = <0x00000018>;
+						admaif25: endpoint {
+							remote-endpoint = <&xbar_admaif25>;
+						};
+					};
+					port@25 {
+						reg = <0x00000019>;
+						admaif26: endpoint {
+							remote-endpoint = <&xbar_admaif26>;
+						};
+					};
+					port@26 {
+						reg = <0x0000001a>;
+						admaif27: endpoint {
+							remote-endpoint = <&xbar_admaif27>;
+						};
+					};
+					port@27 {
+						reg = <0x0000001b>;
+						admaif28: endpoint {
+							remote-endpoint = <&xbar_admaif28>;
+						};
+					};
+					port@28 {
+						reg = <0x0000001c>;
+						admaif29: endpoint {
+							remote-endpoint = <&xbar_admaif29>;
+						};
+					};
+					port@29 {
+						reg = <0x0000001d>;
+						admaif30: endpoint {
+							remote-endpoint = <&xbar_admaif30>;
+						};
+					};
+					port@30 {
+						reg = <0x0000001e>;
+						admaif31: endpoint {
+							remote-endpoint = <&xbar_admaif31>;
+						};
+					};
+					port@31 {
+						reg = <0x0000001f>;
+						admaif32: endpoint {
+							remote-endpoint = <&xbar_admaif32>;
+						};
+					};
+				};
+			};
+			sfc@9700000 {
+				compatible = "nvidia,tegra264-sfc", "nvidia,tegra210-sfc";
+				reg = <0x00000000 0x09700000 0x00000000 0x00010000>;
+				sound-name-prefix = "SFC1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						sfc1_cif_in: endpoint {
+							remote-endpoint = <&xbar_sfc1_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						sfc1_cif_out: endpoint {
+							remote-endpoint = <&xbar_sfc1_out>;
+						};
+					};
+				};
+			};
+			sfc@9710000 {
+				compatible = "nvidia,tegra264-sfc", "nvidia,tegra210-sfc";
+				reg = <0x00000000 0x09710000 0x00000000 0x00010000>;
+				sound-name-prefix = "SFC2";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						sfc2_cif_in: endpoint {
+							remote-endpoint = <&xbar_sfc2_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						sfc2_cif_out: endpoint {
+							remote-endpoint = <&xbar_sfc2_out>;
+						};
+					};
+				};
+			};
+			sfc@9720000 {
+				compatible = "nvidia,tegra264-sfc", "nvidia,tegra210-sfc";
+				reg = <0x00000000 0x09720000 0x00000000 0x00010000>;
+				sound-name-prefix = "SFC3";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						sfc3_cif_in: endpoint {
+							remote-endpoint = <&xbar_sfc3_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						sfc3_cif_out: endpoint {
+							remote-endpoint = <&xbar_sfc3_out>;
+						};
+					};
+				};
+			};
+			sfc@9730000 {
+				compatible = "nvidia,tegra264-sfc", "nvidia,tegra210-sfc";
+				reg = <0x00000000 0x09730000 0x00000000 0x00010000>;
+				sound-name-prefix = "SFC4";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						sfc4_cif_in: endpoint {
+							remote-endpoint = <&xbar_sfc4_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						sfc4_cif_out: endpoint {
+							remote-endpoint = <&xbar_sfc4_out>;
+						};
+					};
+				};
+			};
+			amixer@9820000 {
+				compatible = "nvidia,tegra264-amixer", "nvidia,tegra210-amixer";
+				reg = <0x00000000 0x09820000 0x00000000 0x00010000>;
+				sound-name-prefix = "MIXER1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						mix_in1: endpoint {
+							remote-endpoint = <&xbar_mix_in1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						mix_in2: endpoint {
+							remote-endpoint = <&xbar_mix_in2>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						mix_in3: endpoint {
+							remote-endpoint = <&xbar_mix_in3>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						mix_in4: endpoint {
+							remote-endpoint = <&xbar_mix_in4>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						mix_in5: endpoint {
+							remote-endpoint = <&xbar_mix_in5>;
+						};
+					};
+					port@5 {
+						reg = <0x00000005>;
+						mix_in6: endpoint {
+							remote-endpoint = <&xbar_mix_in6>;
+						};
+					};
+					port@6 {
+						reg = <0x00000006>;
+						mix_in7: endpoint {
+							remote-endpoint = <&xbar_mix_in7>;
+						};
+					};
+					port@7 {
+						reg = <0x00000007>;
+						mix_in8: endpoint {
+							remote-endpoint = <&xbar_mix_in8>;
+						};
+					};
+					port@8 {
+						reg = <0x00000008>;
+						mix_in9: endpoint {
+							remote-endpoint = <&xbar_mix_in9>;
+						};
+					};
+					port@9 {
+						reg = <0x00000009>;
+						mix_in10: endpoint {
+							remote-endpoint = <&xbar_mix_in10>;
+						};
+					};
+					port@10 {
+						reg = <0x0000000a>;
+						mix_out1: endpoint {
+							remote-endpoint = <&xbar_mix_out1>;
+						};
+					};
+					port@11 {
+						reg = <0x0000000b>;
+						mix_out2: endpoint {
+							remote-endpoint = <&xbar_mix_out2>;
+						};
+					};
+					port@12 {
+						reg = <0x0000000c>;
+						mix_out3: endpoint {
+							remote-endpoint = <&xbar_mix_out3>;
+						};
+					};
+					port@13 {
+						reg = <0x0000000d>;
+						mix_out4: endpoint {
+							remote-endpoint = <&xbar_mix_out4>;
+						};
+					};
+					port@14 {
+						reg = <0x0000000e>;
+						mix_out5: endpoint {
+							remote-endpoint = <&xbar_mix_out5>;
+						};
+					};
+				};
+			};
+			i2s@9280000 {
+				compatible = "nvidia,tegra264-i2s";
+				reg = <0x00000000 0x09280000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000b8 &bpmp 0x000000a5>;
+				clock-names = "i2s", "sync_input";
+				assigned-clocks = <&bpmp 0x000000b8>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00177000>;
+				sound-name-prefix = "I2S1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						i2s1_cif: endpoint {
+							remote-endpoint = <&xbar_i2s1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						i2s1_dap: endpoint {
+							dai-format = "i2s";
+						};
+					};
+				};
+			};
+			i2s@9290000 {
+				compatible = "nvidia,tegra264-i2s";
+				reg = <0x00000000 0x09290000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000b9 &bpmp 0x000000a6>;
+				clock-names = "i2s", "sync_input";
+				assigned-clocks = <&bpmp 0x000000b9>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00177000>;
+				sound-name-prefix = "I2S2";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						i2s2_cif: endpoint {
+							remote-endpoint = <&xbar_i2s2>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						i2s2_dap: endpoint {
+							dai-format = "i2s";
+						};
+					};
+				};
+			};
+			i2s@92a0000 {
+				compatible = "nvidia,tegra264-i2s";
+				reg = <0x00000000 0x092a0000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000ba &bpmp 0x000000a7>;
+				clock-names = "i2s", "sync_input";
+				assigned-clocks = <&bpmp 0x000000b9>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00177000>;
+				sound-name-prefix = "I2S3";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						i2s3_cif: endpoint {
+							remote-endpoint = <&xbar_i2s3>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						i2s3_dap: endpoint {
+							dai-format = "i2s";
+						};
+					};
+				};
+			};
+			i2s@92b0000 {
+				compatible = "nvidia,tegra264-i2s";
+				reg = <0x00000000 0x092b0000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000bb &bpmp 0x000000a8>;
+				clock-names = "i2s", "sync_input";
+				assigned-clocks = <&bpmp 0x000000bb>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00177000>;
+				sound-name-prefix = "I2S4";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						i2s4_cif: endpoint {
+							remote-endpoint = <&xbar_i2s4>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						i2s4_dap: endpoint {
+							dai-format = "i2s";
+						};
+					};
+				};
+			};
+			i2s@92c0000 {
+				compatible = "nvidia,tegra264-i2s";
+				reg = <0x00000000 0x092c0000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000bc &bpmp 0x000000a9>;
+				clock-names = "i2s", "sync_input";
+				assigned-clocks = <&bpmp 0x000000bc>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00177000>;
+				sound-name-prefix = "I2S5";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						i2s5_cif: endpoint {
+							remote-endpoint = <&xbar_i2s5>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						i2s5_dap: endpoint {
+							dai-format = "i2s";
+						};
+					};
+				};
+			};
+			i2s@92d0000 {
+				compatible = "nvidia,tegra264-i2s";
+				reg = <0x00000000 0x092d0000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000bd &bpmp 0x000000aa>;
+				clock-names = "i2s", "sync_input";
+				assigned-clocks = <&bpmp 0x000000bd>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00177000>;
+				sound-name-prefix = "I2S6";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						i2s6_cif: endpoint {
+							remote-endpoint = <&xbar_i2s6>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						i2s6_dap: endpoint {
+							dai-format = "i2s";
+						};
+					};
+				};
+			};
+			i2s@92e0000 {
+				compatible = "nvidia,tegra264-i2s";
+				reg = <0x00000000 0x092e0000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000be &bpmp 0x000000ab>;
+				clock-names = "i2s", "sync_input";
+				assigned-clocks = <&bpmp 0x000000be>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00177000>;
+				sound-name-prefix = "I2S7";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						i2s7_cif: endpoint {
+							remote-endpoint = <&xbar_i2s7>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						i2s7_dap: endpoint {
+							dai-format = "i2s";
+						};
+					};
+				};
+			};
+			i2s@92f0000 {
+				compatible = "nvidia,tegra264-i2s";
+				reg = <0x00000000 0x092f0000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000bf &bpmp 0x000000ac>;
+				clock-names = "i2s", "sync_input";
+				assigned-clocks = <&bpmp 0x000000bf>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00177000>;
+				sound-name-prefix = "I2S8";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						i2s8_cif: endpoint {
+							remote-endpoint = <&xbar_i2s8>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						i2c8_dap: endpoint {
+							dai-format = "i2s";
+						};
+					};
+				};
+			};
+			amx@9510000 {
+				compatible = "nvidia,tegra264-amx";
+				reg = <0x00000000 0x09510000 0x00000000 0x00010000>;
+				sound-name-prefix = "AMX1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						amx1_in1: endpoint {
+							remote-endpoint = <&xbar_amx1_in1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						amx1_in2: endpoint {
+							remote-endpoint = <&xbar_amx1_in2>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						amx1_in3: endpoint {
+							remote-endpoint = <&xbar_amx1_in3>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						amx1_in4: endpoint {
+							remote-endpoint = <&xbar_amx1_in4>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						amx1_out: endpoint {
+							remote-endpoint = <&xbar_amx1_out>;
+						};
+					};
+				};
+			};
+			amx@9520000 {
+				compatible = "nvidia,tegra264-amx";
+				reg = <0x00000000 0x09520000 0x00000000 0x00010000>;
+				sound-name-prefix = "AMX2";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						amx2_in1: endpoint {
+							remote-endpoint = <&xbar_amx2_in1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						amx2_in2: endpoint {
+							remote-endpoint = <&xbar_amx2_in2>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						amx2_in3: endpoint {
+							remote-endpoint = <&xbar_amx2_in3>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						amx2_in4: endpoint {
+							remote-endpoint = <&xbar_amx2_in4>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						amx2_out: endpoint {
+							remote-endpoint = <&xbar_amx2_out>;
+						};
+					};
+				};
+			};
+			amx@9530000 {
+				compatible = "nvidia,tegra264-amx";
+				reg = <0x00000000 0x09530000 0x00000000 0x00010000>;
+				sound-name-prefix = "AMX3";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						amx3_in1: endpoint {
+							remote-endpoint = <&xbar_amx3_in1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						amx3_in2: endpoint {
+							remote-endpoint = <&xbar_amx3_in2>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						amx3_in3: endpoint {
+							remote-endpoint = <&xbar_amx3_in3>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						amx3_in4: endpoint {
+							remote-endpoint = <&xbar_amx3_in4>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						amx3_out: endpoint {
+							remote-endpoint = <&xbar_amx3_out>;
+						};
+					};
+				};
+			};
+			amx@9540000 {
+				compatible = "nvidia,tegra264-amx";
+				reg = <0x00000000 0x09540000 0x00000000 0x00010000>;
+				sound-name-prefix = "AMX4";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						amx4_in1: endpoint {
+							remote-endpoint = <&xbar_amx4_in1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						amx4_in2: endpoint {
+							remote-endpoint = <&xbar_amx4_in2>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						amx4_in3: endpoint {
+							remote-endpoint = <&xbar_amx4_in3>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						amx4_in4: endpoint {
+							remote-endpoint = <&xbar_amx4_in4>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						amx4_out: endpoint {
+							remote-endpoint = <&xbar_amx4_out>;
+						};
+					};
+				};
+			};
+			amx@9550000 {
+				compatible = "nvidia,tegra264-amx";
+				reg = <0x00000000 0x09550000 0x00000000 0x00010000>;
+				sound-name-prefix = "AMX5";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						amx5_in1: endpoint {
+							remote-endpoint = <&xbar_amx5_in1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						amx5_in2: endpoint {
+							remote-endpoint = <&xbar_amx5_in2>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						amx5_in3: endpoint {
+							remote-endpoint = <&xbar_amx5_in3>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						amx5_in4: endpoint {
+							remote-endpoint = <&xbar_amx5_in4>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						amx5_out: endpoint {
+							remote-endpoint = <&xbar_amx5_out>;
+						};
+					};
+				};
+			};
+			amx@9560000 {
+				compatible = "nvidia,tegra264-amx";
+				reg = <0x00000000 0x09560000 0x00000000 0x00010000>;
+				sound-name-prefix = "AMX6";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						amx6_in1: endpoint {
+							remote-endpoint = <&xbar_amx6_in1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						amx6_in2: endpoint {
+							remote-endpoint = <&xbar_amx6_in2>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						amx6_in3: endpoint {
+							remote-endpoint = <&xbar_amx6_in3>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						amx6_in4: endpoint {
+							remote-endpoint = <&xbar_amx6_in4>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						amx6_out: endpoint {
+							remote-endpoint = <&xbar_amx6_out>;
+						};
+					};
+				};
+			};
+			adx@9590000 {
+				compatible = "nvidia,tegra264-adx";
+				reg = <0x00000000 0x09590000 0x00000000 0x00010000>;
+				sound-name-prefix = "ADX1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						adx1_in: endpoint {
+							remote-endpoint = <&xbar_adx1_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						adx1_out1: endpoint {
+							remote-endpoint = <&xbar_adx1_out1>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						adx1_out2: endpoint {
+							remote-endpoint = <&xbar_adx1_out2>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						adx1_out3: endpoint {
+							remote-endpoint = <&xbar_adx1_out3>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						adx1_out4: endpoint {
+							remote-endpoint = <&xbar_adx1_out4>;
+						};
+					};
+				};
+			};
+			adx@95a0000 {
+				compatible = "nvidia,tegra264-adx";
+				reg = <0x00000000 0x095a0000 0x00000000 0x00010000>;
+				sound-name-prefix = "ADX2";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						adx2_in: endpoint {
+							remote-endpoint = <&xbar_adx2_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						adx2_out1: endpoint {
+							remote-endpoint = <&xbar_adx2_out1>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						adx2_out2: endpoint {
+							remote-endpoint = <&xbar_adx2_out2>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						adx2_out3: endpoint {
+							remote-endpoint = <&xbar_adx2_out3>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						adx2_out4: endpoint {
+							remote-endpoint = <&xbar_adx2_out4>;
+						};
+					};
+				};
+			};
+			adx@95b0000 {
+				compatible = "nvidia,tegra264-adx";
+				reg = <0x00000000 0x095b0000 0x00000000 0x00010000>;
+				sound-name-prefix = "ADX3";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						adx3_in: endpoint {
+							remote-endpoint = <&xbar_adx3_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						adx3_out1: endpoint {
+							remote-endpoint = <&xbar_adx3_out1>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						adx3_out2: endpoint {
+							remote-endpoint = <&xbar_adx3_out2>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						adx3_out3: endpoint {
+							remote-endpoint = <&xbar_adx3_out3>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						adx3_out4: endpoint {
+							remote-endpoint = <&xbar_adx3_out4>;
+						};
+					};
+				};
+			};
+			adx@95c0000 {
+				compatible = "nvidia,tegra264-adx";
+				reg = <0x00000000 0x095c0000 0x00000000 0x00010000>;
+				sound-name-prefix = "ADX4";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						adx4_in: endpoint {
+							remote-endpoint = <&xbar_adx4_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						adx4_out1: endpoint {
+							remote-endpoint = <&xbar_adx4_out1>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						adx4_out2: endpoint {
+							remote-endpoint = <&xbar_adx4_out2>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						adx4_out3: endpoint {
+							remote-endpoint = <&xbar_adx4_out3>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						adx4_out4: endpoint {
+							remote-endpoint = <&xbar_adx4_out4>;
+						};
+					};
+				};
+			};
+			adx@95d0000 {
+				compatible = "nvidia,tegra264-adx";
+				reg = <0x00000000 0x095d0000 0x00000000 0x00010000>;
+				sound-name-prefix = "ADX5";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						adx5_in: endpoint {
+							remote-endpoint = <&xbar_adx5_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						adx5_out1: endpoint {
+							remote-endpoint = <&xbar_adx5_out1>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						adx5_out2: endpoint {
+							remote-endpoint = <&xbar_adx5_out2>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						adx5_out3: endpoint {
+							remote-endpoint = <&xbar_adx5_out3>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						adx5_out4: endpoint {
+							remote-endpoint = <&xbar_adx5_out4>;
+						};
+					};
+				};
+			};
+			adx@95e0000 {
+				compatible = "nvidia,tegra264-adx";
+				reg = <0x00000000 0x095e0000 0x00000000 0x00010000>;
+				sound-name-prefix = "ADX6";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						adx6_in: endpoint {
+							remote-endpoint = <&xbar_adx6_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						adx6_out1: endpoint {
+							remote-endpoint = <&xbar_adx6_out1>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						adx6_out2: endpoint {
+							remote-endpoint = <&xbar_adx6_out2>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						adx6_out3: endpoint {
+							remote-endpoint = <&xbar_adx6_out3>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						adx6_out4: endpoint {
+							remote-endpoint = <&xbar_adx6_out4>;
+						};
+					};
+				};
+			};
+			dmic@9300000 {
+				compatible = "nvidia,tegra264-dmic", "nvidia,tegra210-dmic";
+				reg = <0x00000000 0x09300000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000c1>;
+				clock-names = "dmic";
+				assigned-clocks = <&bpmp 0x000000c1>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x002ee000>;
+				sound-name-prefix = "DMIC1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						dmic1_cif: endpoint {
+							remote-endpoint = <&xbar_dmic1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						dmic1_dap: endpoint {
+						};
+					};
+				};
+			};
+			dmic@9310000 {
+				compatible = "nvidia,tegra264-dmic", "nvidia,tegra210-dmic";
+				reg = <0x00000000 0x09310000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000c1>;
+				clock-names = "dmic";
+				assigned-clocks = <&bpmp 0x000000c1>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x002ee000>;
+				sound-name-prefix = "DMIC2";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						dmic2_cif: endpoint {
+							remote-endpoint = <&xbar_dmic2>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						dmic2_dap: endpoint {
+						};
+					};
+				};
+			};
+			afc@9680000 {
+				compatible = "nvidia,tegra264-afc", "nvidia,tegra186-afc";
+				reg = <0x00000000 0x09680000 0x00000000 0x00010000>;
+				sound-name-prefix = "AFC1";
+				status = "disabled";
+			};
+			afc@9690000 {
+				compatible = "nvidia,tegra264-afc", "nvidia,tegra186-afc";
+				reg = <0x00000000 0x09690000 0x00000000 0x00010000>;
+				sound-name-prefix = "AFC2";
+				status = "disabled";
+			};
+			afc@96a0000 {
+				compatible = "nvidia,tegra264-afc", "nvidia,tegra186-afc";
+				reg = <0x00000000 0x096a0000 0x00000000 0x00010000>;
+				sound-name-prefix = "AFC3";
+				status = "disabled";
+			};
+			afc@96b0000 {
+				compatible = "nvidia,tegra264-afc", "nvidia,tegra186-afc";
+				reg = <0x00000000 0x096b0000 0x00000000 0x00010000>;
+				sound-name-prefix = "AFC4";
+				status = "disabled";
+			};
+			afc@96c0000 {
+				compatible = "nvidia,tegra264-afc", "nvidia,tegra186-afc";
+				reg = <0x00000000 0x096c0000 0x00000000 0x00010000>;
+				sound-name-prefix = "AFC5";
+				status = "disabled";
+			};
+			afc@96d0000 {
+				compatible = "nvidia,tegra264-afc", "nvidia,tegra186-afc";
+				reg = <0x00000000 0x096d0000 0x00000000 0x00010000>;
+				sound-name-prefix = "AFC6";
+				status = "disabled";
+			};
+			mvc@9800000 {
+				compatible = "nvidia,tegra264-mvc", "nvidia,tegra210-mvc";
+				reg = <0x00000000 0x09800000 0x00000000 0x00010000>;
+				sound-name-prefix = "MVC1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						mvc1_cif_in: endpoint {
+							remote-endpoint = <&xbar_mvc1_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						mvc1_cif_out: endpoint {
+							remote-endpoint = <&xbar_mvc1_out>;
+						};
+					};
+				};
+			};
+			mvc@9810000 {
+				compatible = "nvidia,tegra264-mvc", "nvidia,tegra210-mvc";
+				reg = <0x00000000 0x09810000 0x00000000 0x00010000>;
+				sound-name-prefix = "MVC2";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						mvc2_cif_in: endpoint {
+							remote-endpoint = <&xbar_mvc2_in>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						mvc2_cif_out: endpoint {
+							remote-endpoint = <&xbar_mvc2_in>;
+						};
+					};
+				};
+			};
+			asrc@9850000 {
+				compatible = "nvidia,tegra264-asrc";
+				reg = <0x00000000 0x09850000 0x00000000 0x00010000>;
+				sound-name-prefix = "ASRC1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						asrc_in1_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_in1_ep>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						asrc_in2_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_in2_ep>;
+						};
+					};
+					port@2 {
+						reg = <0x00000002>;
+						asrc_in3_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_in3_ep>;
+						};
+					};
+					port@3 {
+						reg = <0x00000003>;
+						asrc_in4_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_in4_ep>;
+						};
+					};
+					port@4 {
+						reg = <0x00000004>;
+						asrc_in5_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_in5_ep>;
+						};
+					};
+					port@5 {
+						reg = <0x00000005>;
+						asrc_in6_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_in6_ep>;
+						};
+					};
+					port@6 {
+						reg = <0x00000006>;
+						asrc_in7_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_in7_ep>;
+						};
+					};
+					port@7 {
+						reg = <0x00000007>;
+						asrc_out1_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_out1_ep>;
+						};
+					};
+					port@8 {
+						reg = <0x00000008>;
+						asrc_out2_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_out2_ep>;
+						};
+					};
+					port@9 {
+						reg = <0x00000009>;
+						asrc_out3_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_out3_ep>;
+						};
+					};
+					port@10 {
+						reg = <0x0000000a>;
+						asrc_out4_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_out4_ep>;
+						};
+					};
+					port@11 {
+						reg = <0x0000000b>;
+						asrc_out5_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_out5_ep>;
+						};
+					};
+					port@12 {
+						reg = <0x0000000c>;
+						asrc_out6_ep: endpoint {
+							remote-endpoint = <&xbar_asrc_out6_ep>;
+						};
+					};
+				};
+			};
+			arad@9870000 {
+				compatible = "nvidia,tegra264-arad", "nvidia,tegra186-arad";
+				reg = <0x00000000 0x09870000 0x00000000 0x00010000>;
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						arad_ep: endpoint {
+							remote-endpoint = <&xbar_arad>;
+						};
+					};
+				};
+			};
+			processing-engine@9780000 {
+				compatible = "nvidia,tegra264-ope", "nvidia,tegra210-ope";
+				reg = <0x00000000 0x09780000 0x00000000 0x00010000>;
+				#address-cells = <0x00000002>;
+				#size-cells = <0x00000002>;
+				ranges = <0x00000000 0x09780000 0x00000000 0x09780000 0x00000000 0x00030000>;
+				sound-name-prefix = "OPE1";
+				status = "disabled";
+				equalizer@9790000 {
+					compatible = "nvidia,tegra264-peq", "nvidia,tegra210-peq";
+					reg = <0x00000000 0x09790000 0x00000000 0x00010000>;
+				};
+				dynamic-range-compressor@97a0000 {
+					compatible = "nvidia,tegra264-mbdrc", "nvidia,tegra210-mbdrc";
+					reg = <0x00000000 0x097a0000 0x00000000 0x00010000>;
+				};
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						ope1_cif_in_ep: endpoint {
+							remote-endpoint = <&xbar_ope1_in_ep>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						ope1_cif_out_ep: endpoint {
+							remote-endpoint = <&xbar_ope1_out_ep>;
+						};
+					};
+				};
+			};
+			dspk@9380000 {
+				compatible = "nvidia,tegra264-dspk", "nvidia,tegra186-dspk";
+				reg = <0x00000000 0x09380000 0x00000000 0x00010000>;
+				clocks = <&bpmp 0x000000c3>;
+				clock-names = "dspk";
+				assigned-clocks = <&bpmp 0x000000c3>;
+				assigned-clock-parents = <&bpmp 0x000000a2>;
+				assigned-clock-rates = <0x00bb8000>;
+				sound-name-prefix = "DSPK1";
+				status = "disabled";
+				ports {
+					#address-cells = <0x00000001>;
+					#size-cells = <0x00000000>;
+					port@0 {
+						reg = <0x00000000>;
+						dspk1_cif: endpoint {
+							remote-endpoint = <&xbar_dspk1>;
+						};
+					};
+					port@1 {
+						reg = <0x00000001>;
+						dspk1_dap: endpoint {
+						};
+					};
+				};
+			};
+			ports {
+				#address-cells = <0x00000001>;
+				#size-cells = <0x00000000>;
+				port@0 {
+					reg = <0x00000000>;
+					xbar_admaif1: endpoint {
+						remote-endpoint = <&admaif1>;
+					};
+				};
+				port@1 {
+					reg = <0x00000001>;
+					xbar_admaif2: endpoint {
+						remote-endpoint = <&admaif2>;
+					};
+				};
+				port@2 {
+					reg = <0x00000002>;
+					xbar_admaif3: endpoint {
+						remote-endpoint = <&admaif3>;
+					};
+				};
+				port@3 {
+					reg = <0x00000003>;
+					xbar_admaif4: endpoint {
+						remote-endpoint = <&admaif4>;
+					};
+				};
+				port@4 {
+					reg = <0x00000004>;
+					xbar_admaif5: endpoint {
+						remote-endpoint = <&admaif5>;
+					};
+				};
+				port@5 {
+					reg = <0x00000005>;
+					xbar_admaif6: endpoint {
+						remote-endpoint = <&admaif6>;
+					};
+				};
+				port@6 {
+					reg = <0x00000006>;
+					xbar_admaif7: endpoint {
+						remote-endpoint = <&admaif7>;
+					};
+				};
+				port@7 {
+					reg = <0x00000007>;
+					xbar_admaif8: endpoint {
+						remote-endpoint = <&admaif8>;
+					};
+				};
+				port@8 {
+					reg = <0x00000008>;
+					xbar_admaif9: endpoint {
+						remote-endpoint = <&admaif9>;
+					};
+				};
+				port@9 {
+					reg = <0x00000009>;
+					xbar_admaif10: endpoint {
+						remote-endpoint = <&admaif10>;
+					};
+				};
+				port@10 {
+					reg = <0x0000000a>;
+					xbar_admaif11: endpoint {
+						remote-endpoint = <&admaif11>;
+					};
+				};
+				port@11 {
+					reg = <0x0000000b>;
+					xbar_admaif12: endpoint {
+						remote-endpoint = <&admaif12>;
+					};
+				};
+				port@12 {
+					reg = <0x0000000c>;
+					xbar_admaif13: endpoint {
+						remote-endpoint = <&admaif13>;
+					};
+				};
+				port@13 {
+					reg = <0x0000000d>;
+					xbar_admaif14: endpoint {
+						remote-endpoint = <&admaif14>;
+					};
+				};
+				port@14 {
+					reg = <0x0000000e>;
+					xbar_admaif15: endpoint {
+						remote-endpoint = <&admaif15>;
+					};
+				};
+				port@15 {
+					reg = <0x0000000f>;
+					xbar_admaif16: endpoint {
+						remote-endpoint = <&admaif16>;
+					};
+				};
+				port@16 {
+					reg = <0x00000010>;
+					xbar_admaif17: endpoint {
+						remote-endpoint = <&admaif17>;
+					};
+				};
+				port@17 {
+					reg = <0x00000011>;
+					xbar_admaif18: endpoint {
+						remote-endpoint = <&admaif18>;
+					};
+				};
+				port@18 {
+					reg = <0x00000012>;
+					xbar_admaif19: endpoint {
+						remote-endpoint = <&admaif19>;
+					};
+				};
+				port@19 {
+					reg = <0x00000013>;
+					xbar_admaif20: endpoint {
+						remote-endpoint = <&admaif20>;
+					};
+				};
+				port@20 {
+					reg = <0x00000014>;
+					xbar_admaif21: endpoint {
+						remote-endpoint = <&admaif21>;
+					};
+				};
+				port@21 {
+					reg = <0x00000015>;
+					xbar_admaif22: endpoint {
+						remote-endpoint = <&admaif22>;
+					};
+				};
+				port@22 {
+					reg = <0x00000016>;
+					xbar_admaif23: endpoint {
+						remote-endpoint = <&admaif23>;
+					};
+				};
+				port@23 {
+					reg = <0x00000017>;
+					xbar_admaif24: endpoint {
+						remote-endpoint = <&admaif24>;
+					};
+				};
+				port@24 {
+					reg = <0x00000018>;
+					xbar_admaif25: endpoint {
+						remote-endpoint = <&admaif25>;
+					};
+				};
+				port@25 {
+					reg = <0x00000019>;
+					xbar_admaif26: endpoint {
+						remote-endpoint = <&admaif26>;
+					};
+				};
+				port@26 {
+					reg = <0x0000001a>;
+					xbar_admaif27: endpoint {
+						remote-endpoint = <&admaif27>;
+					};
+				};
+				port@27 {
+					reg = <0x0000001b>;
+					xbar_admaif28: endpoint {
+						remote-endpoint = <&admaif28>;
+					};
+				};
+				port@28 {
+					reg = <0x0000001c>;
+					xbar_admaif29: endpoint {
+						remote-endpoint = <&admaif29>;
+					};
+				};
+				port@29 {
+					reg = <0x0000001d>;
+					xbar_admaif30: endpoint {
+						remote-endpoint = <&admaif30>;
+					};
+				};
+				port@30 {
+					reg = <0x0000001e>;
+					xbar_admaif31: endpoint {
+						remote-endpoint = <&admaif31>;
+					};
+				};
+				port@31 {
+					reg = <0x0000001f>;
+					xbar_admaif32: endpoint {
+						remote-endpoint = <&admaif32>;
+					};
+				};
+				port@32 {
+					reg = <0x00000020>;
+					xbar_i2s1: endpoint {
+						remote-endpoint = <&i2s1_cif>;
+					};
+				};
+				port@33 {
+					reg = <0x00000021>;
+					xbar_i2s2: endpoint {
+						remote-endpoint = <&i2s2_cif>;
+					};
+				};
+				port@34 {
+					reg = <0x00000022>;
+					xbar_i2s3: endpoint {
+						remote-endpoint = <&i2s3_cif>;
+					};
+				};
+				port@35 {
+					reg = <0x00000023>;
+					xbar_i2s4: endpoint {
+						remote-endpoint = <&i2s4_cif>;
+					};
+				};
+				port@36 {
+					reg = <0x00000024>;
+					xbar_i2s5: endpoint {
+						remote-endpoint = <&i2s5_cif>;
+					};
+				};
+				port@37 {
+					reg = <0x00000025>;
+					xbar_i2s6: endpoint {
+						remote-endpoint = <&i2s6_cif>;
+					};
+				};
+				port@38 {
+					reg = <0x00000026>;
+					xbar_i2s7: endpoint {
+						remote-endpoint = <&i2s7_cif>;
+					};
+				};
+				port@39 {
+					reg = <0x00000027>;
+					xbar_i2s8: endpoint {
+						remote-endpoint = <&i2s8_cif>;
+					};
+				};
+				port@40 {
+					reg = <0x00000028>;
+					xbar_dmic1: endpoint {
+						remote-endpoint = <&dmic1_cif>;
+					};
+				};
+				port@41 {
+					reg = <0x00000029>;
+					xbar_dmic2: endpoint {
+						remote-endpoint = <&dmic2_cif>;
+					};
+				};
+				port@42 {
+					reg = <0x0000002a>;
+					xbar_dspk1: endpoint {
+						remote-endpoint = <&dspk1_cif>;
+					};
+				};
+				port@43 {
+					reg = <0x0000002b>;
+					xbar_sfc1_in: endpoint {
+						remote-endpoint = <&sfc1_cif_in>;
+					};
+				};
+				port@44 {
+					reg = <0x0000002c>;
+					xbar_sfc1_out: endpoint {
+						remote-endpoint = <&sfc1_cif_out>;
+					};
+				};
+				port@45 {
+					reg = <0x0000002d>;
+					xbar_sfc2_in: endpoint {
+						remote-endpoint = <&sfc2_cif_in>;
+					};
+				};
+				port@46 {
+					reg = <0x0000002e>;
+					xbar_sfc2_out: endpoint {
+						remote-endpoint = <&sfc2_cif_out>;
+					};
+				};
+				port@47 {
+					reg = <0x0000002f>;
+					xbar_sfc3_in: endpoint {
+						remote-endpoint = <&sfc3_cif_in>;
+					};
+				};
+				port@48 {
+					reg = <0x00000030>;
+					xbar_sfc3_out: endpoint {
+						remote-endpoint = <&sfc3_cif_out>;
+					};
+				};
+				port@49 {
+					reg = <0x00000031>;
+					xbar_sfc4_in: endpoint {
+						remote-endpoint = <&sfc4_cif_in>;
+					};
+				};
+				port@50 {
+					reg = <0x00000032>;
+					xbar_sfc4_out: endpoint {
+						remote-endpoint = <&sfc4_cif_out>;
+					};
+				};
+				port@115 {
+					reg = <0x00000073>;
+					xbar_mix_in1: endpoint {
+						remote-endpoint = <&mix_in1>;
+					};
+				};
+				port@116 {
+					reg = <0x00000074>;
+					xbar_mix_in2: endpoint {
+						remote-endpoint = <&mix_in2>;
+					};
+				};
+				port@117 {
+					reg = <0x00000075>;
+					xbar_mix_in3: endpoint {
+						remote-endpoint = <&mix_in3>;
+					};
+				};
+				port@118 {
+					reg = <0x00000076>;
+					xbar_mix_in4: endpoint {
+						remote-endpoint = <&mix_in4>;
+					};
+				};
+				port@119 {
+					reg = <0x00000077>;
+					xbar_mix_in5: endpoint {
+						remote-endpoint = <&mix_in5>;
+					};
+				};
+				port@120 {
+					reg = <0x00000078>;
+					xbar_mix_in6: endpoint {
+						remote-endpoint = <&mix_in6>;
+					};
+				};
+				port@121 {
+					reg = <0x00000079>;
+					xbar_mix_in7: endpoint {
+						remote-endpoint = <&mix_in7>;
+					};
+				};
+				port@122 {
+					reg = <0x0000007a>;
+					xbar_mix_in8: endpoint {
+						remote-endpoint = <&mix_in8>;
+					};
+				};
+				port@123 {
+					reg = <0x0000007b>;
+					xbar_mix_in9: endpoint {
+						remote-endpoint = <&mix_in9>;
+					};
+				};
+				port@124 {
+					reg = <0x0000007c>;
+					xbar_mix_in10: endpoint {
+						remote-endpoint = <&mix_in10>;
+					};
+				};
+				port@125 {
+					reg = <0x0000007d>;
+					xbar_mix_out1: endpoint {
+						remote-endpoint = <&mix_out1>;
+					};
+				};
+				port@126 {
+					reg = <0x0000007e>;
+					xbar_mix_out2: endpoint {
+						remote-endpoint = <&mix_out2>;
+					};
+				};
+				port@127 {
+					reg = <0x0000007f>;
+					xbar_mix_out3: endpoint {
+						remote-endpoint = <&mix_out3>;
+					};
+				};
+				port@128 {
+					reg = <0x00000080>;
+					xbar_mix_out4: endpoint {
+						remote-endpoint = <&mix_out4>;
+					};
+				};
+				port@129 {
+					reg = <0x00000081>;
+					xbar_mix_out5: endpoint {
+						remote-endpoint = <&mix_out5>;
+					};
+				};
+				port@143 {
+					reg = <0x0000008f>;
+					xbar_ope1_in_ep: endpoint {
+						remote-endpoint = <&ope1_cif_in_ep>;
+					};
+				};
+				port@144 {
+					reg = <0x00000090>;
+					xbar_ope1_out_ep: endpoint {
+						remote-endpoint = <&ope1_cif_out_ep>;
+					};
+				};
+				port@51 {
+					reg = <0x00000033>;
+					xbar_mvc1_in: endpoint {
+						remote-endpoint = <&mvc1_cif_in>;
+					};
+				};
+				port@52 {
+					reg = <0x00000034>;
+					xbar_mvc1_out: endpoint {
+						remote-endpoint = <&mvc1_cif_out>;
+					};
+				};
+				port@53 {
+					reg = <0x00000035>;
+					xbar_mvc2_in: endpoint {
+						remote-endpoint = <&mvc2_cif_in>;
+					};
+				};
+				port@54 {
+					reg = <0x00000036>;
+					xbar_mvc2_out: endpoint {
+						remote-endpoint = <&mvc2_cif_out>;
+					};
+				};
+				port@55 {
+					reg = <0x00000037>;
+					xbar_amx1_in1: endpoint {
+						remote-endpoint = <&amx1_in1>;
+					};
+				};
+				port@56 {
+					reg = <0x00000038>;
+					xbar_amx1_in2: endpoint {
+						remote-endpoint = <&amx1_in2>;
+					};
+				};
+				port@57 {
+					reg = <0x00000039>;
+					xbar_amx1_in3: endpoint {
+						remote-endpoint = <&amx1_in3>;
+					};
+				};
+				port@58 {
+					reg = <0x0000003a>;
+					xbar_amx1_in4: endpoint {
+						remote-endpoint = <&amx1_in4>;
+					};
+				};
+				port@59 {
+					reg = <0x0000003b>;
+					xbar_amx1_out: endpoint {
+						remote-endpoint = <&amx1_out>;
+					};
+				};
+				port@60 {
+					reg = <0x0000003c>;
+					xbar_amx2_in1: endpoint {
+						remote-endpoint = <&amx2_in1>;
+					};
+				};
+				port@61 {
+					reg = <0x0000003d>;
+					xbar_amx2_in2: endpoint {
+						remote-endpoint = <&amx2_in2>;
+					};
+				};
+				port@62 {
+					reg = <0x0000003e>;
+					xbar_amx2_in3: endpoint {
+						remote-endpoint = <&amx2_in3>;
+					};
+				};
+				port@63 {
+					reg = <0x0000003f>;
+					xbar_amx2_in4: endpoint {
+						remote-endpoint = <&amx2_in4>;
+					};
+				};
+				port@64 {
+					reg = <0x00000040>;
+					xbar_amx2_out: endpoint {
+						remote-endpoint = <&amx2_out>;
+					};
+				};
+				port@65 {
+					reg = <0x00000041>;
+					xbar_amx3_in1: endpoint {
+						remote-endpoint = <&amx3_in1>;
+					};
+				};
+				port@66 {
+					reg = <0x00000042>;
+					xbar_amx3_in2: endpoint {
+						remote-endpoint = <&amx3_in2>;
+					};
+				};
+				port@67 {
+					reg = <0x00000043>;
+					xbar_amx3_in3: endpoint {
+						remote-endpoint = <&amx3_in3>;
+					};
+				};
+				port@68 {
+					reg = <0x00000044>;
+					xbar_amx3_in4: endpoint {
+						remote-endpoint = <&amx3_in4>;
+					};
+				};
+				port@69 {
+					reg = <0x00000045>;
+					xbar_amx3_out: endpoint {
+						remote-endpoint = <&amx3_out>;
+					};
+				};
+				port@70 {
+					reg = <0x00000046>;
+					xbar_amx4_in1: endpoint {
+						remote-endpoint = <&amx4_in1>;
+					};
+				};
+				port@71 {
+					reg = <0x00000047>;
+					xbar_amx4_in2: endpoint {
+						remote-endpoint = <&amx4_in2>;
+					};
+				};
+				port@72 {
+					reg = <0x00000048>;
+					xbar_amx4_in3: endpoint {
+						remote-endpoint = <&amx4_in3>;
+					};
+				};
+				port@73 {
+					reg = <0x00000049>;
+					xbar_amx4_in4: endpoint {
+						remote-endpoint = <&amx4_in4>;
+					};
+				};
+				port@74 {
+					reg = <0x0000004a>;
+					xbar_amx4_out: endpoint {
+						remote-endpoint = <&amx4_out>;
+					};
+				};
+				port@75 {
+					reg = <0x0000004b>;
+					xbar_amx5_in1: endpoint {
+						remote-endpoint = <&amx5_in1>;
+					};
+				};
+				port@76 {
+					reg = <0x0000004c>;
+					xbar_amx5_in2: endpoint {
+						remote-endpoint = <&amx5_in2>;
+					};
+				};
+				port@77 {
+					reg = <0x0000004d>;
+					xbar_amx5_in3: endpoint {
+						remote-endpoint = <&amx5_in3>;
+					};
+				};
+				port@78 {
+					reg = <0x0000004e>;
+					xbar_amx5_in4: endpoint {
+						remote-endpoint = <&amx5_in4>;
+					};
+				};
+				port@79 {
+					reg = <0x0000004f>;
+					xbar_amx5_out: endpoint {
+						remote-endpoint = <&amx5_out>;
+					};
+				};
+				port@80 {
+					reg = <0x00000050>;
+					xbar_amx6_in1: endpoint {
+						remote-endpoint = <&amx6_in1>;
+					};
+				};
+				port@81 {
+					reg = <0x00000051>;
+					xbar_amx6_in2: endpoint {
+						remote-endpoint = <&amx6_in2>;
+					};
+				};
+				port@82 {
+					reg = <0x00000052>;
+					xbar_amx6_in3: endpoint {
+						remote-endpoint = <&amx6_in3>;
+					};
+				};
+				port@83 {
+					reg = <0x00000053>;
+					xbar_amx6_in4: endpoint {
+						remote-endpoint = <&amx6_in4>;
+					};
+				};
+				port@84 {
+					reg = <0x00000054>;
+					xbar_amx6_out: endpoint {
+						remote-endpoint = <&amx6_out>;
+					};
+				};
+				port@85 {
+					reg = <0x00000055>;
+					xbar_adx1_in: endpoint {
+						remote-endpoint = <&adx1_in>;
+					};
+				};
+				port@86 {
+					reg = <0x00000056>;
+					xbar_adx1_out1: endpoint {
+						remote-endpoint = <&adx1_out1>;
+					};
+				};
+				port@87 {
+					reg = <0x00000057>;
+					xbar_adx1_out2: endpoint {
+						remote-endpoint = <&adx1_out2>;
+					};
+				};
+				port@88 {
+					reg = <0x00000058>;
+					xbar_adx1_out3: endpoint {
+						remote-endpoint = <&adx1_out3>;
+					};
+				};
+				port@89 {
+					reg = <0x00000059>;
+					xbar_adx1_out4: endpoint {
+						remote-endpoint = <&adx1_out4>;
+					};
+				};
+				port@90 {
+					reg = <0x0000005a>;
+					xbar_adx2_in: endpoint {
+						remote-endpoint = <&adx2_in>;
+					};
+				};
+				port@91 {
+					reg = <0x0000005b>;
+					xbar_adx2_out1: endpoint {
+						remote-endpoint = <&adx2_out1>;
+					};
+				};
+				port@92 {
+					reg = <0x0000005c>;
+					xbar_adx2_out2: endpoint {
+						remote-endpoint = <&adx2_out2>;
+					};
+				};
+				port@93 {
+					reg = <0x0000005d>;
+					xbar_adx2_out3: endpoint {
+						remote-endpoint = <&adx2_out3>;
+					};
+				};
+				port@94 {
+					reg = <0x0000005e>;
+					xbar_adx2_out4: endpoint {
+						remote-endpoint = <&adx2_out4>;
+					};
+				};
+				port@95 {
+					reg = <0x0000005f>;
+					xbar_adx3_in: endpoint {
+						remote-endpoint = <&adx3_in>;
+					};
+				};
+				port@96 {
+					reg = <0x00000060>;
+					xbar_adx3_out1: endpoint {
+						remote-endpoint = <&adx3_out1>;
+					};
+				};
+				port@97 {
+					reg = <0x00000061>;
+					xbar_adx3_out2: endpoint {
+						remote-endpoint = <&adx3_out2>;
+					};
+				};
+				port@98 {
+					reg = <0x00000062>;
+					xbar_adx3_out3: endpoint {
+						remote-endpoint = <&adx3_out3>;
+					};
+				};
+				port@99 {
+					reg = <0x00000063>;
+					xbar_adx3_out4: endpoint {
+						remote-endpoint = <&adx3_out4>;
+					};
+				};
+				port@100 {
+					reg = <0x00000064>;
+					xbar_adx4_in: endpoint {
+						remote-endpoint = <&adx4_in>;
+					};
+				};
+				port@101 {
+					reg = <0x00000065>;
+					xbar_adx4_out1: endpoint {
+						remote-endpoint = <&adx4_out1>;
+					};
+				};
+				port@102 {
+					reg = <0x00000066>;
+					xbar_adx4_out2: endpoint {
+						remote-endpoint = <&adx4_out2>;
+					};
+				};
+				port@103 {
+					reg = <0x00000067>;
+					xbar_adx4_out3: endpoint {
+						remote-endpoint = <&adx4_out3>;
+					};
+				};
+				port@104 {
+					reg = <0x00000068>;
+					xbar_adx4_out4: endpoint {
+						remote-endpoint = <&adx4_out4>;
+					};
+				};
+				port@105 {
+					reg = <0x00000069>;
+					xbar_adx5_in: endpoint {
+						remote-endpoint = <&adx5_in>;
+					};
+				};
+				port@106 {
+					reg = <0x0000006a>;
+					xbar_adx5_out1: endpoint {
+						remote-endpoint = <&adx5_out1>;
+					};
+				};
+				port@107 {
+					reg = <0x0000006b>;
+					xbar_adx5_out2: endpoint {
+						remote-endpoint = <&adx5_out2>;
+					};
+				};
+				port@108 {
+					reg = <0x0000006c>;
+					xbar_adx5_out3: endpoint {
+						remote-endpoint = <&adx5_out3>;
+					};
+				};
+				port@109 {
+					reg = <0x0000006d>;
+					xbar_adx5_out4: endpoint {
+						remote-endpoint = <&adx5_out4>;
+					};
+				};
+				port@110 {
+					reg = <0x0000006e>;
+					xbar_adx6_in: endpoint {
+						remote-endpoint = <&adx6_in>;
+					};
+				};
+				port@111 {
+					reg = <0x0000006f>;
+					xbar_adx6_out1: endpoint {
+						remote-endpoint = <&adx6_out1>;
+					};
+				};
+				port@112 {
+					reg = <0x00000070>;
+					xbar_adx6_out2: endpoint {
+						remote-endpoint = <&adx6_out2>;
+					};
+				};
+				port@113 {
+					reg = <0x00000071>;
+					xbar_adx6_out3: endpoint {
+						remote-endpoint = <&adx6_out3>;
+					};
+				};
+				port@114 {
+					reg = <0x00000072>;
+					xbar_adx6_out4: endpoint {
+						remote-endpoint = <&adx6_out4>;
+					};
+				};
+				port@130 {
+					reg = <0x00000082>;
+					xbar_asrc_in1_ep: endpoint {
+						remote-endpoint = <&asrc_in1_ep>;
+					};
+				};
+				port@132 {
+					reg = <0x00000084>;
+					xbar_asrc_in2_ep: endpoint {
+						remote-endpoint = <&asrc_in2_ep>;
+					};
+				};
+				port@134 {
+					reg = <0x00000086>;
+					xbar_asrc_in3_ep: endpoint {
+						remote-endpoint = <&asrc_in3_ep>;
+					};
+				};
+				port@136 {
+					reg = <0x00000088>;
+					xbar_asrc_in4_ep: endpoint {
+						remote-endpoint = <&asrc_in4_ep>;
+					};
+				};
+				port@138 {
+					reg = <0x0000008a>;
+					xbar_asrc_in5_ep: endpoint {
+						remote-endpoint = <&asrc_in5_ep>;
+					};
+				};
+				port@140 {
+					reg = <0x0000008c>;
+					xbar_asrc_in6_ep: endpoint {
+						remote-endpoint = <&asrc_in6_ep>;
+					};
+				};
+				port@142 {
+					reg = <0x0000008e>;
+					xbar_asrc_in7_ep: endpoint {
+						remote-endpoint = <&asrc_in7_ep>;
+					};
+				};
+				port@131 {
+					reg = <0x00000083>;
+					xbar_asrc_out1_ep: endpoint {
+						remote-endpoint = <&asrc_out1_ep>;
+					};
+				};
+				port@133 {
+					reg = <0x00000085>;
+					xbar_asrc_out2_ep: endpoint {
+						remote-endpoint = <&asrc_out2_ep>;
+					};
+				};
+				port@135 {
+					reg = <0x00000087>;
+					xbar_asrc_out3_ep: endpoint {
+						remote-endpoint = <&asrc_out3_ep>;
+					};
+				};
+				port@137 {
+					reg = <0x00000089>;
+					xbar_asrc_out4_ep: endpoint {
+						remote-endpoint = <&asrc_out4_ep>;
+					};
+				};
+				port@139 {
+					reg = <0x0000008b>;
+					xbar_asrc_out5_ep: endpoint {
+						remote-endpoint = <&asrc_out5_ep>;
+					};
+				};
+				port@141 {
+					reg = <0x0000008d>;
+					xbar_asrc_out6_ep: endpoint {
+						remote-endpoint = <&asrc_out6_ep>;
+					};
+				};
+				port@151 {
+					reg = <0x00000097>;
+					xbar_arad: endpoint {
+						remote-endpoint = <&arad_ep>;
+					};
+				};
+			};
+		};
+	};
+	rce_misc: rtcpu@81893d0000 {
+		compatible = "nvidia,tegra264-rce";
+		nvidia,cpu-name = "rce";
+		reg = <0x00000081 0x893d0000 0x00000000 0x00010000>;
+		reg-names = "rce-pm";
+		clocks = <&bpmp 0x00000024 &bpmp 0x00000023>;
+		clock-names = "rce-nic", "rce-cpu";
+		nvidia,clock-rates = <0x06ddd000 0x1bc69880 0x06ddd000 0x1bc69880>;
+		resets = <&bpmp 0x00000004>;
+		reset-names = "rce-all";
+		interrupts = <0x00000000 0x0000019e 0x00000004>;
+		interrupt-names = "wdt-remote";
+		nvidia,camera-devices = <&isp0 &vi0 &vi1 &nvcsi &isp1>;
+		nvidia,camera-device-names = "isp", "vi0", "vi1", "nvcsi", "isp1";
+		iommus = <&smmu4_mmu 0x00002b01>;
+		memory-region = <&rce_resv>;
+		dma-coherent;
+		nvidia,test-bw = <0x00249f00>;
+		nvidia,trace = <&rtcpu_trace 0x00000004 0x70100000 0x00100000>;
+		nvidia,ivc-channels = <&camera_ivc_channels 0x00000002 0x90000000 0x00010000>;
+		nvidia,autosuspend-delay-ms = <0x00001388>;
+		status = "disabled";
+		nvidia,cmd-timeout = <0x0000ea60>;
+		hsp-vm1 {
+			compatible = "nvidia,tegra-camrtc-hsp-vm";
+			mboxes = <&rce_hsp0 0x00000001 0x80000000 &rce_hsp0 0x00000001 0x00000001 &rce_hsp0 0x00000002 0x00000000>;
+			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
+		};
+		hsp-vm2 {
+			compatible = "nvidia,tegra-camrtc-hsp-vm";
+			mboxes = <&rce_hsp0 0x00000001 0x80000002 &rce_hsp0 0x00000001 0x00000003 &rce_hsp0 0x00000002 0x00000001>;
+			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
+		};
+		hsp-vm3 {
+			compatible = "nvidia,tegra-camrtc-hsp-vm";
+			mboxes = <&rce_hsp0 0x00000001 0x80000004 &rce_hsp0 0x00000001 0x00000005 &rce_hsp0 0x00000002 0x00000002>;
+			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
+		};
+		hsp-vm4 {
+			compatible = "nvidia,tegra-camrtc-hsp-vm";
+			mboxes = <&rce_hsp0 0x00000001 0x00000006 &rce_hsp0 0x00000001 0x80000007 &rce_hsp0 0x00000002 0x00000003>;
+			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
+		};
+	};
+
+	camera_ivc_channels: camera-ivc-channels {
+		echo@0 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
+			nvidia,service = "echo";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000010>;
+			nvidia,frame-size = <0x00000040>;
+			nvidia,ivc-timeout = <0x0016e360>;
+			nvidia,test-timeout = <0x0016e360>;
+			status = "disabled";
+		};
+		dbg@1 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
+			nvidia,service = "debug";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000001>;
+			nvidia,frame-size = <0x00000200>;
+			nvidia,ivc-timeout = <0x0016e360>;
+			nvidia,test-timeout = <0x0016e360>;
+			status = "disabled";
+		};
+		dbg@2 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
+			nvidia,service = "debug";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000001>;
+			nvidia,frame-size = <0x00002000>;
+			nvidia,ivc-timeout = <0x0016e360>;
+			nvidia,test-timeout = <0x0016e360>;
+			nvidia,mem-map = <&rce_misc &vi0 &isp0 &vi1 &isp1>;
+			nvidia,test-bw = <0x00249f00>;
+			status = "disabled";
+		};
+		ivccontrol@3 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
+			nvidia,service = "capture-control";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000040>;
+			nvidia,frame-size = <0x00000140>;
+			status = "disabled";
+			nvidia,ivc-timeout = <0x0007a120>;
+			nvidia,test-timeout = <0x0007a120>;
+		};
+		ivccapture@4 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-capture";
+			nvidia,service = "capture";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000200>;
+			nvidia,frame-size = <0x00000040>;
+			status = "disabled";
+			nvidia,ivc-timeout = <0x0007a120>;
+			nvidia,test-timeout = <0x0007a120>;
+		};
+		diag@5 {
+			compatible = "nvidia,tegra186-camera-diagnostics";
+			nvidia,service = "diag";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000001>;
+			nvidia,frame-size = <0x00000040>;
+			status = "disabled";
+		};
+	};
+
+	rtcpu_trace: tegra-rtcpu-trace {
+                nvidia,enable-printk;
+                nvidia,interval-ms = <50>;
+                nvidia,log-prefix = "[RCE]";
+                status = "disabled";
+        };
+
+	tegra-capture-vi {
+		compatible = "nvidia,tegra-camrtc-capture-vi";
+		nvidia,vi-devices = <&vi0 &vi1>;
+		nvidia,vi-mapping-size = <0x00000006>;
+		nvidia,vi-mapping = <0x00000000 0x00000000 0x00000001 0x00000000 0x00000002 0x00000001 0x00000003 0x00000001 0x00000004 0x00000000 0x00000005 0x00000001>;
+		nvidia,vi-mapping-names = "csi-stream-id", "vi-unit-id";
+		nvidia,vi-max-channels = <0x00000048>;
+		status = "disabled";
+	};
+
+	tegra-capture-isp {
+		compatible = "nvidia,tegra-camrtc-capture-isp";
+		nvidia,isp-devices = <&isp0 &isp1>;
+		nvidia,isp-max-channels = <0x00000020>;
+		status = "disabled";
+	};
+
+	psc: psc@e800000 {
+		compatible = "nvidia,tegra234-psc";
+		nvidia,cpu-name = "psc";
+		iommus = <&smmu4_mmu 0x00001c00>;
+		nvidia,sidtable = <0x00000000>;
+		dma-coherent;
+#mbox-cells = <0x00000001>;
+		reg = <0x00000000 0x0e860000 0x00000000 0x00080000 0x00000000 0x0e80201c 0x00000000 0x00000008>;
+		reg-names = "mbox-regs", "extcfg";
+		interrupts = <0x00000000 0x000002df 0x00000004 0x00000000 0x000002e0 0x00000004 0x00000000 0x000002e1 0x00000004 0x00000000 0x000002e2 0x00000004 0x00000000 0x000002e3 0x00000004 0x00000000 0x000002e4 0x00000004 0x00000000 0x000002e5 0x00000004 0x00000000 0x000002e6 0x00000004>;
+		mboxes = <&psc 0x00000000>;
+		nvidia,sidconfig = <0x00000000>;
+		numa-node-id = <0x00000000>;
+		status = "disabled";
+	};
+
+	oesp: psc@e000000 {
+		compatible = "nvidia,tegra234-psc";
+		nvidia,cpu-name = "oesp";
+		#mbox-cells = <0x00000001>;
+		reg = <0x00000000 0x0e060000 0x00000000 0x00080000 0x00000000 0x0e00201c 0x00000000 0x00000008>;
+		reg-names = "mbox-regs", "extcfg";
+		interrupts = <0x00000000 0x000002bb 0x00000004 0x00000000 0x000002bc 0x00000004 0x00000000 0x000002bd 0x00000004 0x00000000 0x000002be 0x00000004 0x00000000 0x000002bf 0x00000004 0x00000000 0x000002c0 0x00000004 0x00000000 0x000002c1 0x00000004 0x00000000 0x000002c2 0x00000004>;
+		mboxes = <&oesp 0x00000000>;
+		nvidia,sidconfig = <0x00000000>;
+		numa-node-id = <0x00000000>;
+		phandle = <0x00000187>;
+		status = "disabled";
+	};
+
+	sb: psc@d800000 {
+		compatible = "nvidia,tegra234-psc";
+		nvidia,cpu-name = "sb";
+#mbox-cells = <0x00000001>;
+		reg = <0x00000000 0x0d860000 0x00000000 0x00080000 0x00000000 0x0d80201c 0x00000000 0x00000008>;
+		reg-names = "mbox-regs", "extcfg";
+		interrupts = <0x00000000 0x000002f3 0x00000004 0x00000000 0x000002f4 0x00000004 0x00000000 0x000002f5 0x00000004 0x00000000 0x000002f6 0x00000004 0x00000000 0x000002f7 0x00000004 0x00000000 0x000002f8 0x00000004 0x00000000 0x000002f9 0x00000004 0x00000000 0x000002fa 0x00000004>;
+		mboxes = <&sb 0x00000000>;
+		nvidia,sidconfig = <0x00000000>;
+		numa-node-id = <0x00000000>;
+		phandle = <0x00000188>;
+		status = "disabled";
+	};
+
+	display@8808c00000 {
+		compatible = "nvidia,tegra264-display";
+		power-domains = <&bpmp 0x00000001>;
+		nvidia,num-dpaux-instance = <0x00000001>;
+		reg-names = "nvdisplay", "dpaux0", "hdacodec", "mipical";
+		reg = <0x00000088 0x08c00000 0x00000000 0x001fffff 0x00000088 0x09680000 0x00000000 0x0007ffff 0x00000088 0x09101000 0x00000000 0x00000fff 0x00000081 0x89840000 0x00000000 0x0000ffff>;
+		interrupt-names = "nvdisplay", "dpaux0", "hdacodec";
+		interrupts = <0x00000000 0x00000100 0x00000004 0x00000000 0x000000f7 0x00000004 0x00000000 0x000000fc 0x00000004>;
+		clocks = <&bpmp 0x0000005d &bpmp 0x0000005a &bpmp 0x0000004a &bpmp 0x0000004b &bpmp 0x0000004c &bpmp 0x0000004d &bpmp 0x0000004e &bpmp 0x0000004f &bpmp 0x00000050 &bpmp 0x00000051 &bpmp 0x000000c8 &bpmp 0x0000003f &bpmp 0x00000040 &bpmp 0x00000124 &bpmp 0x00000126 &bpmp 0x00000123 &bpmp 0x00000125 &bpmp 0x00000042 &bpmp 0x00000043 &bpmp 0x00000044 &bpmp 0x00000045 &bpmp 0x00000046 &bpmp 0x00000047 &bpmp 0x00000048 &bpmp 0x00000049 &bpmp 0x00000052 &bpmp 0x00000053 &bpmp 0x00000054 &bpmp 0x00000055 &bpmp 0x00000056 &bpmp 0x00000057 &bpmp 0x00000058 &bpmp 0x00000059 &bpmp 0x0000003d &bpmp 0x00000066 &bpmp 0x00000067 &bpmp 0x00000068 &bpmp 0x00000069 &bpmp 0x00000127 &bpmp 0x00000128 &bpmp 0x00000129 &bpmp 0x0000012a &bpmp 0x00000146 &bpmp 0x00000147 &bpmp 0x00000148 &bpmp 0x00000149 &bpmp 0x0000014a &bpmp 0x0000014b &bpmp 0x0000014c &bpmp 0x0000014d &bpmp 0x0000007a &bpmp 0x0000007b &bpmp 0x0000007c &bpmp 0x0000007d &bpmp 0x00000062 &bpmp 0x00000063 &bpmp 0x00000064 &bpmp 0x00000065 &bpmp 0x0000006e &bpmp 0x0000006f &bpmp 0x00000070 &bpmp 0x00000071 &bpmp 0x00000086 &bpmp 0x00000087 &bpmp 0x00000088 &bpmp 0x00000089 &bpmp 0x0000008a &bpmp 0x0000008b &bpmp 0x0000008c &bpmp 0x0000008d &bpmp 0x0000006a &bpmp 0x0000006b &bpmp 0x0000006c &bpmp 0x0000006d &bpmp 0x00000072 &bpmp 0x00000073 &bpmp 0x00000074 &bpmp 0x00000075 &bpmp 0x00000001 &bpmp 0x0000005b &bpmp 0x0000008e &bpmp 0x0000008f &bpmp 0x0000009b &bpmp 0x0000005e &bpmp 0x0000005f &bpmp 0x00000060 &bpmp 0x00000061 &bpmp 0x0000007e &bpmp 0x0000007f &bpmp 0x00000080 &bpmp 0x00000081 &bpmp 0x00000082 &bpmp 0x00000083 &bpmp 0x00000084 &bpmp 0x00000085 &bpmp 0x00000001 &bpmp 0x00000001 &bpmp 0x00000001>;
+		clock-names = "nvdisplayhub_clk", "nvdisplay_disp_clk", "nvdisplay_p0_clk", "nvdisplay_p1_clk", "nvdisplay_p2_clk", "nvdisplay_p3_clk", "nvdisplay_p4_clk", "nvdisplay_p5_clk", "nvdisplay_p6_clk", "nvdisplay_p7_clk", "fuse_clk", "sppll0_clkouta_clk", "sppll0_clkoutb_clk", "sppll0_clkoutpn_clk", "sppll1_clkoutpn_clk", "sppll0_div27_clk", "sppll1_div27_clk", "vpll0_clk", "vpll1_clk", "vpll2_clk", "vpll3_clk", "vpll4_clk", "vpll5_clk", "vpll6_clk", "vpll7_clk", "rg0_clk", "rg1_clk", "rg2_clk", "rg3_clk", "rg4_clk", "rg5_clk", "rg6_clk", "rg7_clk", "disppll_clk", "pre_sor0_clk", "pre_sor1_clk", "pre_sor2_clk", "pre_sor3_clk", "dp_link_ref_clk", "dp_linkb_ref_clk", "dp_linkc_ref_clk", "dp_linkd_ref_clk", "sor_linka_input_clk", "sor_linkb_input_clk", "sor_linkc_input_clk", "sor_linkd_input_clk", "sor_linka_afifo_clk", "sor_linkb_afifo_clk", "sor_linkc_afifo_clk", "sor_linkd_afifo_clk", "sor0_clk", "sor1_clk", "sor2_clk", "sor3_clk", "sor_pad_input_clk", "sor_padb_input_clk", "sor_padc_input_clk", "sor_padd_input_clk", "sor0_pad_clk", "sor1_pad_clk", "sor2_pad_clk", "sor3_pad_clk", "sf0_clk", "sf1_clk", "sf2_clk", "sf3_clk", "sf4_clk", "sf5_clk", "sf6_clk", "sf7_clk", "sor0_ref_pll_clk", "sor1_ref_pll_clk", "sor2_ref_pll_clk", "sor3_ref_pll_clk", "sor0_ref_clk", "sor1_ref_clk", "sor2_ref_clk", "sor3_ref_clk", "osc_clk", "dsc_clk", "maud_clk", "aza_2xbit_clk", "disp_root", "vpllx_sor0_muxed_clk", "vpllx_sor1_muxed_clk", "vpllx_sor2_muxed_clk", "vpllx_sor3_muxed_clk", "sf0_sor_clk", "sf1_sor_clk", "sf2_sor_clk", "sf3_sor_clk", "sf4_sor_clk", "sf5_sor_clk", "sf6_sor_clk", "sf7_sor_clk", "dpaux0_clk", "dsi_core_clk", "aza_bit_clk";
+		nvidia,disp-sw-soc-chip-id = <0x00002650>;
+		resets = <&bpmp 0x00000008 &bpmp 0x0000001f>;
+		reset-names = "dpaux0_reset", "hdacodec_reset";
+		status = "disabled";
+		iommus = <&smmu3_mmu 0x00000900>;
+		non-coherent;
+		nvidia,dcb-image = <0x55aa1f00 0x00373430 0x30e94c19 0x77cc5649 0x44454f20 0x0d000000 0x70010000 0x00004942 0x4d205647 0x4120436f 0x6d706174 0x69626c65 0x01000000 0x1000c317 0x31312f31 0x332f3233 0x00000000 0x00000000 0x21185000 0xc13c0000 0x504d4944 0x00000000 0x000000a0 0x00b000b8 0x00c0000e 0x41443130 0x42205642 0x494f5320 0x2853696d 0x756c6174 0x696f6e20 0x4275696c 0x64290d0a 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00566572 0x73696f6e 0x2039372e 0x30622e30 0x302e3030 0x2e303020 0x0d0a0043 0x6f707972 0x69676874 0x20284329 0x20313939 0x362d3230 0x3233204e 0x56494449 0x4120436f 0x72702e0d 0x0a000000 0xffff0000 0x0000ffff 0x41443130 0x4220426f 0x61726400 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000043 0x68697020 0x52657620 0x20200000 0x00000000 0x000000ba 0x91989691 0x9a9a8d96 0x9198dfad 0x9a939a9e 0x8c9adfd2 0xdfb1908b 0xdfb9908d 0xdfaf8d90 0x9b8a9c8b 0x969091df 0xaa8c9af2 0xf5ff0000 0x00000000 0x00000000 0x50434952 0xde103f2b 0x00001800 0x00000203 0x1f000100 0x00800000 0x2e8bc02e 0x8bc08bc0 0x4e504445 0x01011400 0x1f000001 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0xffb84249 0x54000001 0x0c061344 0x32010400 0x3e024202 0x25004a02 0x43022c00 0x6f024401 0x04009b02 0x49012400 0x9f024d02 0x2900c302 0x4e000000 0x00005002 0x0001ec02 0x53021800 0xec035401 0x02000404 0x55010500 0x0a045601 0x06000f04 0x78010800 0x15046401 0x02001d04 0x70020400 0x1f047501 0x11002304 0x6b010400 0x34046902 0x7e003804 0x45010400 0x06040000 0xb604b604 0x6f1f701f 0xc03c0000 0x00000000 0x00000000 0x00000000 0x00000000 0x0b970000 0x00000000 0xa8070000 0x00000000 0x00000200 0x5c5c2e02 0x00004202 0x04001000 0x000000f9 0x0f000000 0x00000034 0xcc0000f7 0x3f000000 0x00000000 0x00000000 0x0000006a 0x430000f5 0xcc000059 0xcd000084 0xcd000000 0x0000000a 0x05000000 0x000e0500 0x001e070e 0x05b73a1e 0x07623cb6 0x04c30a84 0x1f321db0 0x1e623c24 0x00ee200d 0x1e070c08 0x9cc30000 0x06c40000 0x07110000 0x701f0000 0x7c1f0000 0x28d30000 0x00000000 0x00000000 0x00000000 0x54460000 0xb7490000 0xb0680000 0x00000000 0x00000000 0xfab80000 0x00000000 0x00000000 0x4e7f0000 0x00000000 0x18a30000 0xb1af0000 0x00000000 0x00000000 0xa7470000 0xa7a60000 0x00b70000 0xa9490000 0x30ba0000 0xd9ba0000 0x18b80000 0x00000000 0x8ac10000 0xc4c10000 0x00000000 0x60c30000 0x170a0000 0x93090000 0x3f0a0000 0x027c0000 0x3f7c0000 0x807c0000 0xca7c0000 0xed7c0000 0x3f7d0000 0x687d0000 0xd77d0000 0xe7ba0000 0x00000000 0xe87d0000 0x2ace0000 0xd0cf0000 0x45d00000 0x37d20000 0xccd40000 0x08d50000 0x96d20000 0x8e7e0000 0xbb7d0000 0x00000000 0x00000000 0x00000000 0x1ed60000 0xbf7e0000 0xcd7e0000 0x6ec30000 0x8cc30000 0xebb80000 0xee7e0000 0x2cdb0000 0x05dc0000 0x1ddc0000 0xabe10000 0xfbba0000 0x640050b5 0x0019cf00 0x28790f14 0x8d0f2300 0x01232301 0x14b00f28 0x1c120000 0x0000d80f 0x000000f5 0x0ea00d00 0x00000001 0x01000000 0x009d1ab9 0xe1000000 0x00000000 0x00000000 0x00000000 0xc23f0000 0x44c10000 0x00000b97 0x00000041 0x98ff015d 0x05000031 0x312f3133 0x2f323300 0x00000000 0x00000000 0x00000023 0x01100000 0x00800100 0x00000000 0x30303030 0x30303030 0x30303030 0x00000000 0x00002300 0x03420000 0x7d239716 0xedda4d75 0x95dae0d0 0xf4e0d37a 0x99e20000 0x00000000 0x15d60000 0x00000000 0x000091e2 0x00000000 0x00000000 0x00000dd3 0x000005d3 0x00000100 0x1000930a 0x30000300 0x3f2b0000 0x00000100 0x44003f0a 0x0000b604 0x00000c08 0x00000e05 0x00000000 0x00001e07 0x00002e07 0x0000170a 0x00009309 0x00003f0a 0x0000570a 0x0000f50e 0x0000a00d 0x00000000 0x00000000 0x00000000 0x0000ac1f 0x000000e8 0x00000100 0x00000000 0x000000e8 0x00000000 0x02000000 0x020030e8 0x00000000 0x02000000 0x020060e9 0x00000000 0x02000000 0x020080eb 0x00000000 0x02000000 0x0200002a 0x13000000 0x04000000 0x04000064 0x13000000 0x04000000 0x0400006e 0x13000000 0x04000000 0x04000066 0x13000000 0x04000000 0x04004c00 0x12003f00 0x00000000 0x0000e021 0x1200ffff 0xffff0000 0x0000000c 0x8200ffff 0xffff0000 0x0000000c 0x82000100 0x00000000 0x0000000c 0x82000200 0x00000000 0x0000000c 0x82000400 0x00000000 0x0000000c 0x82000800 0x00000000 0x0000000c 0x82001000 0x00000000 0x0000000c 0x82002000 0x00000000 0x0000000a 0x00000000 0xf01f0000 0x0000000a 0x00000000 0xf01f0000 0x0000e021 0x1200ffff 0xffff0000 0x0000e021 0x1200ffff 0xffff0000 0x0000000a 0x00000000 0xf01f0000 0x00006400 0x12004000 0x00004000 0x00000414 0x00000400 0x00000000 0x00000414 0x00000800 0x00000800 0x00001438 0x82000000 0x01000000 0x0100000a 0x00000000 0xf01f0000 0x0000140c 0x82000100 0x00000000 0x0000140c 0x82000200 0x00000000 0x0000140c 0x82000400 0x00000000 0x0000140c 0x82000800 0x00000000 0x0000140c 0x82001000 0x00000000 0x0000140c 0x82002000 0x00000000 0x00001001 0x82000100 0x00000000 0x0000d406 0x8200ff03 0x00000000 0x0000e021 0x1200ffff 0xffff0000 0x00004000 0x82000100 0x00000000 0x0000040c 0x82000100 0x00000000 0x00001024 0x02000700 0x00000100 0x00003404 0x82000100 0x00000000 0x0000e021 0x1200ffff 0xffff0000 0x0000000a 0x00000000 0x001f0000 0x001730c0 0x61400000 0x00100000 0x00000001 0x02030405 0x06070001 0x02030405 0x06074106 0x24060000 0x00815d80 0x4f1000ff 0x00000f10 0x82300000 0xcf10033f 0x4029e010 0x04ff5d80 0x4f1085ba 0x0000cf10 0x06b50000 0x3f1007b6 0x00006f10 0x08ff5815 0xbf1009ff 0x00003f10 0x0aff0000 0xef100b40 0x410ae110 0x0cff0017 0xbf100dff 0x0000ef10 0x00ff0000 0x0f1000ff 0x00000f10 0x10ff0000 0xef1011ff 0x0000ef10 0x12ff0000 0xef101351 0x0002ef10 0x14b70000 0x6f101507 0x0001ef10 0x16425011 0xe410170f 0x4b004310 0x18705112 0xe5101941 0x420be210 0x1aff0000 0x6f1000ff 0x00000f10 0x00ff0000 0x0f101dff 0x0000ef10 0x1eff0000 0xef101fff 0x0000ef10 0x00ff0000 0x0f1000ff 0x00000f10 0x00ff0000 0x0f1000ff 0x00000f10 0x10071610 0x0073090f 0xf0100300 0x000000ff 0xffff00ff 0xff001000 0x00000000 0x001f0100 0x00000000 0x00ffffff 0x00ffff00 0x10000000 0x0000002f 0x02000000 0x000000ff 0xffff00ff 0xff001000 0x00000000 0x003f0300 0x00000000 0x00ffffff 0x00ffff00 0x10000000 0x0000004f 0x04000000 0x000000ff 0xffff00ff 0xff001000 0x00000000 0x005f0500 0x00000000 0x00ffffff 0x00ffff00 0x10000000 0x0000006f 0x06000000 0x000000ff 0xffff00ff 0xff001000 0x00000000 0x007f0700 0x00000000 0x00ffffff 0x00ffff00 0x10000000 0x0000008f 0x00000000 0x000000ff 0xffff00ff 0xff001000 0x00000000 0x009f0100 0x00000000 0x00ffffff 0x00ffff00 0x10000000 0x000000af 0x02000000 0x000000ff 0xffff00ff 0xff001000 0x00000000 0x00bf0300 0x00000000 0x00ffffff 0x00ffff00 0x10000000 0x000000cf 0x04000000 0x000000ff 0xffff00ff 0xff001000 0x00000000 0x00df0500 0x00000000 0x00ffffff 0x00ffff00 0x10000000 0x000000ef 0x06000000 0x000000ff 0xffff00ff 0xff001000 0x00000000 0x00ff0700 0x00000000 0x00ffffff 0x00ffff00 0x10000000 0x00000000 0x01020304 0x05060708 0x090a0b0c 0x0d0e0f10 0x11121314 0x15161718 0x191a1b1c 0x1d1e1f10 0x04200402 0x008000b8 0x4c0affe0 0x93040020 0xd61300e0 0x93040140 0x420f00ff 0x00000000 0x00000000 0x008000b8 0x4c0affe0 0x93040320 0xd61300e0 0x93040120 0xd61300ff 0x00000000 0x00000000 0x00000000 0x0000ff00 0x00000000 0x00000000 0x00000100 0x000000ff 0x00000000 0x00000000 0x00000000 0x0000ff00 0x00000000 0x00000000 0x00000100 0x000000ff 0x00000000 0x00000020 0x05230100 0x00350c00 0xffffffff 0xffffffff 0x10000000 0x0000ffff 0xffffffff 0xffffffff 0xffffffff 0xffffff10 0x05130100 0x010000ff 0xff000000 0x00000000 0x00000000 0x00ffff30 0x0c100214 0x01152500 0x00010000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x100d1a34 0xa8048200 0x00000000 0x00000000 0x34a00482 0x00000000 0x00000000 0x0034d402 0x82000000 0x00000000 0x000034a4 0x04820000 0x00000000 0x00000034 0x7c140000 0x00000000 0x00000000 0x34080e82 0x00000000 0x00000000 0x00340c0e 0x82000000 0x00000000 0x000034a8 0x83110000 0x00000000 0x00000034 0xe8138200 0x00000000 0x00000000 0x34e81382 0x00000000 0x00000000 0x0034e813 0x82000000 0x00000000 0x000034e0 0x13820000 0x00000000 0x00000034 0x78018200 0x00000000 0x00000000 0x34780182 0x00000000 0x00000000 0x0034ac04 0x82000000 0x00000000 0x00003494 0x10820000 0x00000000 0x00000034 0x88108200 0x00000000 0x00000000 0x348c1082 0x00000000 0x00000000 0x00349010 0x82000000 0x00000000 0x000034e8 0x13820000 0x00000000 0x00000034 0xac831100 0x00000000 0x00000000 0x34780182 0x00000000 0x00000000 0x0034d402 0x82000000 0x00000000 0x00003478 0x05820000 0x00000000 0x00000034 0xb0048200 0x00000000 0x00000000 0x34780182 0x00000000 0x00000000 0x0010031b 0x07600108 0x40040960 0x090a400c 0x0df0130c 0xe0110e60 0x140f4018 0x10e01f11 0xc0201267 0x2513102b 0x14402c15 0x80301626 0x35176039 0x18403c19 0x60411a60 0x451b6049 0x1cec4d1d 0xe0531ea5 0x541f6059 0x20605d21 0x606122fc 0x57152f63 0xbb0e2ac4 0x15690511 0xe65c4b05 0x671a41cd 0xd60161a4 0xef0acd9a 0x722aa322 0x16202f86 0x5a79cddf 0xfbee4c48 0xb31279e7 0x054e5649 0x44494100 0x00000000 0x00000000 0x00000000 0x004e5649 0x44494120 0x436f7270 0x6f726174 0x696f6e00 0x00000000 0x00000000 0x00000000 0x00000000 0x42494f53 0x20436572 0x74696669 0x63617465 0x20436865 0x636b2046 0x61696c65 0x64212121 0x0d0a0000 0x00000000 0x2205020e 0x0c000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00500413 0x0e079501 0x9501d007 0xa00f1b00 0x1b000f0f 0x32ff013f 0x08950195 0x01d007a0 0x0f1b001b 0x000f0f32 0xff013f0b 0x95019501 0xd007a00f 0x1b001b00 0x0f0f32ff 0x013f04e1 0x00130194 0x112823e1 0x00130101 0x0114ff01 0x020c1b00 0x1b004006 0x800c1b00 0x1b000101 0x28ff013f 0x411b001b 0x0040068c 0x0a1b0028 0x0001ff28 0xff033f42 0x1b001b00 0x40068c0a 0x1b002800 0x01ff28ff 0x033f801b 0x001b0020 0x0354061b 0x001b0001 0x0114ff01 0x3f811b00 0x1b002003 0x54061b00 0x1b000101 0x14ff013f 0x821b001b 0x00200354 0x061b001b 0x00010114 0xff013f83 0x1b001b00 0x20035406 0x1b001b00 0x010114ff 0x013f0d1b 0x001b0020 0x0354061b 0x001b0001 0x0114ff01 0x3f0e9501 0x2a03a406 0x480d0c00 0x260001ff 0x28ff011f 0x0f950195 0x01d007a0 0x0f1b001b 0x000f0f32 0xff013f10 0x04020600 0x01000700 0x07000700 0x07000710 0x05041004 0x0e0e0e0e 0x29292929 0x18181818 0x0f464000 0x0e0e0e0e 0x28282828 0x1a1a1a1a 0x0f464000 0x0e0e0e0e 0x27272727 0x1c1c1c1c 0x0f464000 0x0e0e0e0e 0x26262626 0x1e1e1e1e 0x0f464000 0x0f0f0f0f 0x2d2d2d2d 0x19191919 0x0f464000 0x0f0f0f0f 0x2c2c2c2c 0x1b1b1b1b 0x0f464000 0x0f0f0f0f 0x2b2b2b2b 0x1d1d1d1d 0x0f464000 0x0f0f0f0f 0x2a2a2a2a 0x1f1f1f1f 0x0f464000 0x0f0f0f0f 0x2f2f2f2f 0x1c1c1c1c 0x0f464000 0x0f0f0f0f 0x2f2f2f2f 0x1d1d1d1d 0x0f464000 0x0f0f0f0f 0x2e2e2e2e 0x1e1e1e1e 0x0f464000 0x0f0f0f0f 0x2e2e2e2e 0x1f1f1f1f 0x0f464000 0x0e0e0e0e 0x29292929 0x18181818 0x0f464000 0x0e0e0e0e 0x28282828 0x1a1a1a1a 0x0f464000 0x0e0e0e0e 0x27272727 0x1c1c1c1c 0x0f464000 0x0e0e0e0e 0x26262626 0x1e1e1e1e 0x0f464000 0x20190400 0x00503274 0x40e880e4 0x57010404 0x06721900 0x00171100 0x004d1200 0x002c1300 0x000b1400 0x00ea1400 0x00c91500 0x00a81600 0x0020080e 0x05001d05 0x04d18400 0x00c32f11 0x233a3a3a 0x3a000000 0x00000000 0x00040404 0x04000000 0x00009165 0x0000c32f 0x11233a3a 0x3a3a0000 0x00000000 0x00000404 0x04040000 0x000000c9 0x320000c3 0x2f11233a 0x3a3a3a00 0x00000000 0x00000004 0x04040400 0x00000000 0x65190000 0xc3571124 0x3a3a3a3a 0x00000000 0x00000000 0x04040404 0x00000000 0x00000000 0x00c3a711 0x253a3a3a 0x3a000000 0x00000000 0x00040404 0x04000000 0x00000c00 0x00010a05 0x0f464000 0x00030044 0x0d000001 0x0a080f46 0x40000003 0x00440e00 0x00010a05 0x0f464000 0x00030044 0x0f000001 0x0a050f46 0x40000003 0x00441000 0x00010a08 0x0f464000 0x00030044 0x20080e05 0x001d0504 0xd1840000 0xc32f1123 0x3a3a3a3a 0x00000000 0x00000000 0x04040404 0x00000000 0x00916500 0x00c32f11 0x233a3a3a 0x3a000000 0x00000000 0x00040404 0x04000000 0x0000c932 0x0000c32f 0x11233a3a 0x3a3a0000 0x00000000 0x00000404 0x04040000 0x00000065 0x190000c3 0x5711243a 0x3a3a3a00 0x00000000 0x00000004 0x04040400 0x00000000 0x00000000 0xc3a71125 0x3a3a3a3a 0x00000000 0x00000000 0x04040404 0x00000000 0x000c0000 0x010a050f 0x46400000 0x0300440d 0x0000010a 0x080f4640 0x00000300 0x440e0000 0x010a050f 0x46400000 0x0300440f 0x0000010a 0x050f4640 0x00000300 0x44100000 0x010a080f 0x46400000 0x03004420 0x080e0500 0x1d0504d1 0x840000c3 0x2f11233a 0x3a3a3a00 0x00000000 0x00000004 0x04040400 0x00000000 0x91650000 0xc32f1123 0x3a3a3a3a 0x00000000 0x00000000 0x04040404 0x00000000 0x00c93200 0x00c32f11 0x233a3a3a 0x3a000000 0x00000000 0x00040404 0x04000000 0x00006519 0x0000c357 0x11243a3a 0x3a3a0000 0x00000000 0x00000404 0x04040000 0x00000000 0x000000c3 0xa711253a 0x3a3a3a00 0x00000000 0x00000004 0x04040400 0x00000000 0x0c010001 0x0a050f46 0x40000003 0x00440d01 0x00010a08 0x0f464000 0x00030044 0x0e010001 0x0a050f46 0x40000003 0x00440f01 0x00010a05 0x0f464000 0x00030044 0x10010001 0x0a080f46 0x40000003 0x00442008 0x0e05001d 0x0504d184 0x0000c32f 0x11233a3a 0x3a3a0000 0x00000000 0x00000404 0x04040000 0x00000091 0x650000c3 0x2f11233a 0x3a3a3a00 0x00000000 0x00000004 0x04040400 0x00000000 0xc9320000 0xc32f1123 0x3a3a3a3a 0x00000000 0x00000000 0x04040404 0x00000000 0x00651900 0x00c35711 0x243a3a3a 0x3a000000 0x00000000 0x00040404 0x04000000 0x00000000 0x0000c3a7 0x11253a3a 0x3a3a0000 0x00000000 0x00000404 0x04040000 0x0000000c 0x0000010a 0x050f4640 0x00000300 0x440d0000 0x010a080f 0x46400000 0x0300440e 0x0000010a 0x050f4640 0x00000300 0x440f0000 0x010a050f 0x46400000 0x03004410 0x0000010a 0x080f4640 0x00000300 0x4420080e 0x05001d05 0x04d18400 0x00c32f11 0x233a3a3a 0x3a000000 0x00000000 0x00040404 0x04000000 0x00009165 0x0000c32f 0x11233a3a 0x3a3a0000 0x00000000 0x00000404 0x04040000 0x000000c9 0x320000c3 0x2f11233a 0x3a3a3a00 0x00000000 0x00000004 0x04040400 0x00000000 0x65190000 0xc3571124 0x3a3a3a3a 0x00000000 0x00000000 0x04040404 0x00000000 0x00000000 0x00c3a711 0x253a3a3a 0x3a000000 0x00000000 0x00040404 0x04000000 0x00000c01 0x00010a05 0x0f464000 0x00030044 0x0d010001 0x0a080f46 0x40000003 0x00440e01 0x00010a05 0x0f464000 0x00030044 0x0f010001 0x0a050f46 0x40000003 0x00441001 0x00010a08 0x0f464000 0x00030044 0x20080e05 0x001d0504 0xd1840000 0xc32f1123 0x3a3a3a3a 0x00000000 0x00000000 0x04040404 0x00000000 0x00916500 0x00c32f11 0x233a3a3a 0x3a000000 0x00000000 0x00040404 0x04000000 0x0000c932 0x0000c32f 0x11233a3a 0x3a3a0000 0x00000000 0x00000404 0x04040000 0x00000065 0x190000c3 0x5711243a 0x3a3a3a00 0x00000000 0x00000004 0x04040400 0x00000000 0x00000000 0xc3a71125 0x3a3a3a3a 0x00000000 0x00000000 0x04040404 0x00000000 0x000c0000 0x010a050f 0x46400000 0x0300440d 0x0000010a 0x080f4640 0x00000300 0x440e0000 0x010a050f 0x46400000 0x0300440f 0x0000010a 0x050f4640 0x00000300 0x44100000 0x010a080f 0x46400000 0x03004474 0x05006ee4 0xc56140fe 0xffffff00 0x00000071 0x5bba1971 0x5ba3175b 0xa8177156 0x2bff7271 0x6e0cc161 0x40feffff 0xff000000 0x006e4065 0x6180feff 0xffff0000 0x00007141 0x23100866 0x18cbbddc 0x4e2e0700 0x00000000 0x00a8182d 0x19c10000 0x00000000 0x00000000 0x0000020f 0x80011000 0x0200161f 0x80011000 0x0004261f 0x82012000 0x0000320f 0x83012000 0x02007f00 0x00000000 0x00008f00 0x00000000 0x00000f00 0x00000000 0x00003f00 0x00000000 0x00005f00 0x00000000 0x00007f00 0x00000000 0x00000f00 0x00000000 0x00004f00 0x00000000 0x00000f00 0x00000000 0x00008f00 0x00000000 0x00000f00 0x00000000 0x00000f00 0x00000000 0x00004106 0x0f04020f 0x06000010 0x06000010 0x2a000080 0x2a000010 0xff030010 0xff030010 0xff030010 0xff030010 0xff030010 0xff030010 0xff030000 0xff030000 0xff030000 0xff030000 0xff030000 0x40052004 0x01ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00ff0000 0x00400510 0x04006110 0x00004611 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x0000ff00 0x00001005 0x40010000 0x000b0300 0x000a0200 0x00080200 0x20040200 0x80000000 0x80000000 0x80000000 0x80000000 0x20000000 0x20000300 0x000c0300 0x000a0300 0x800b0300 0x800b0300 0x800b0300 0x800b0371 0x71715840 0xc0614010 0x00000a1d 0x00000a04 0x00000804 0x00200404 0x00800000 0x00800000 0x00800000 0x00800000 0x00200000 0x0020001d 0x00000c1d 0x00000a1d 0x00800a1d 0x00800a1d 0x00800a1d 0x00800a1d 0x71100540 0x01010000 0x00000a00 0x000000a0 0x40000080 0x40000080 0x40000080 0x40000080 0x40000080 0x40000020 0x00003210 0x80000a00 0x00000080 0x80000080 0x80000080 0x80000080 0x80000080 0x80007171 0x6e406561 0x80feffff 0xff000000 0x00715840 0xc0614010 0x00000000 0x32100000 0x00a04000 0x00804000 0x00804000 0x00804000 0x00804000 0x00804000 0x00200000 0x32108000 0x96908000 0x00808000 0x00808000 0x00808000 0x00808000 0x00808000 0x71421502 0x07130403 0x0a042823 0x28230104 0x0406011a 0x00000000 0x00000000 0x00000000 0x00000000 0x14000219 0x0a031e14 0x042b2806 0x1e000325 0x0f042f21 0x06280004 0x3214063c 0x00061400 0x02190a03 0x1e14042b 0x28061e00 0x03250f04 0x2f210628 0x00043214 0x063c0006 0x14000219 0x0a031e14 0x042b2806 0x1e000325 0x0f042f21 0x06280004 0x3214063c 0x00060f00 0x22160933 0x1d0e4427 0x12661700 0x33210944 0x270e661f 0x00442709 0x66270066 0x501b0000 0xe01b0000 0x701c0000 0x001d0000 0x901d0000 0x201e0000 0x20080000 0x00110800 0x1e000000 0x00000001 0x00000000 0x00000000 0x00140000 0x00000000 0x01000000 0x00000000 0x00001000 0x00000000 0x00010000 0x00000000 0x0000000c 0x00000000 0x00000100 0x00000000 0x00000000 0x0a000000 0x00000001 0x00000000 0x00000000 0x00090000 0x00000000 0x01000000 0x00000000 0x00000800 0x00000000 0x00010000 0x00000000 0x00000006 0x00000000 0x00000100 0x00000000 0x00000000 0x20080000 0x00110800 0x1e000000 0x00000001 0x00000000 0x00000000 0x00140000 0x00000000 0x01000000 0x00000000 0x00001000 0x00000000 0x00010000 0x00000000 0x0000000c 0x00000000 0x00000100 0x00000000 0x00000000 0x0a000000 0x00000001 0x00000000 0x00000000 0x00090000 0x00000000 0x01000000 0x00000000 0x00000800 0x00000000 0x00010000 0x00000000 0x00000006 0x00000000 0x00000100 0x00000000 0x00000000 0x20080000 0x00110800 0x1e000000 0x00000001 0x00000000 0x00000000 0x00140000 0x00000000 0x01000000 0x00000000 0x00001000 0x00000000 0x00010000 0x00000000 0x0000000c 0x00000000 0x00000100 0x00000000 0x00000000 0x0a000000 0x00000001 0x00000000 0x00000000 0x00090000 0x00000000 0x01000000 0x00000000 0x00000800 0x00000000 0x00010000 0x00000000 0x00000006 0x00000000 0x00000100 0x00000000 0x00000000 0x20080000 0x00110800 0x1e000000 0x00000001 0x00000000 0x00000000 0x00140000 0x00000000 0x01000000 0x00000000 0x00001000 0x00000000 0x00010000 0x00000000 0x0000000c 0x00000000 0x00000100 0x00000000 0x00000000 0x0a000000 0x00000001 0x00000000 0x00000000 0x00090000 0x00000000 0x01000000 0x00000000 0x00000800 0x00000000 0x00010000 0x00000000 0x00000006 0x00000000 0x00000100 0x00000000 0x00000000 0x20080000 0x00110800 0x1e000000 0x00000001 0x00000000 0x00000000 0x00140000 0x00000000 0x01000000 0x00000000 0x00001000 0x00000000 0x00010000 0x00000000 0x0000000c 0x00000000 0x00000100 0x00000000 0x00000000 0x0a000000 0x00000001 0x00000000 0x00000000 0x00090000 0x00000000 0x01000000 0x00000000 0x00000800 0x00000000 0x00010000 0x00000000 0x00000006 0x00000000 0x00000100 0x00000000 0x00000000 0x20080000 0x00110800 0x1e000000 0x00000001 0x00000000 0x00000000 0x00140000 0x00000000 0x01000000 0x00000000 0x00001000 0x00000000 0x00010000 0x00000000 0x0000000c 0x00000000 0x00000100 0x00000000 0x00000000 0x0a000000 0x00000001 0x00000000 0x00000000 0x00090000 0x00000000 0x01000000 0x00000000 0x00000800 0x00000000 0x00010000 0x00000000 0x00000006 0x00000000 0x00000100 0x00000000 0x00000000>;
+		nvidia,skip-bpmp-mrqs;
+		nvidia,sim-netlist-net07;
+		nvdisplay-niso {
+			compatible = "nvidia,tegra264-display-niso";
+			iommus = <&smmu3_mmu 0x00000901>;
+			dma-coherent;
+			status = "disabled";
+		};
+	};
+
+	dce@8808000000 {
+		compatible = "nvidia,tegra264-dce";
+		reg = <0x00000088 0x08000000 0x00000000 0x00800000>;
+		interrupts = <0x00000000 0x000000ee 0x00000004 0x00000000 0x000000ef 0x00000004 0x00000000 0x000000f0 0x00000004 0x00000000 0x000000f1 0x00000004>;
+		interrupt-names = "dce-smb-0", "dce-smb-1", "dce-smb-2", "dce-smb-3";
+		status = "disabled";
+		numa-node-id = <0x00000000>;
+		sha-carveout {
+			compatible = "sha-carveout";
+			status = "disabled";
+		};
+	};
+
+	fsicom_client: fsicom_client {
+		compatible = "nvidia,tegra234-fsicom-client";
+		mboxes = <&top_hsp2 0x00000101 0x80000002 &top_hsp2 0x00000101 0x00000001 &top_hsp2 0x00000101 0x80000005 &top_hsp2 0x00000101 0x00000004>;
+		mbox-names = "fsi-tx-cpu0", "fsi-rx-cpu0", "fsi-tx-cpu1", "fsi-rx-cpu1";
+		iommus = <&smmu4_mmu 0x00000f10>;
+		memory-region = <&reservation_fsicom>;
+		dma-coherent;
+		smmu_inst = <0x00000000>;
+		max_fsi_core = <0x00000001>;
+		status = "disabled";
+	};
+
+        fsicom_client_inst1: fsicom_client_inst1 {
+                compatible = "nvidia,tegra234-fsicom-client";
+                iommus = <&smmu4_mmu 0x00000f11>;
+                memory-region = <&fsicom_resv_inst1>;
+                dma-coherent;
+                smmu_inst = <1>;
+                status = "disabled";
+        };
+};
