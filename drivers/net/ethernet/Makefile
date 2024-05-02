@@ -5,7 +5,7 @@ obj-m += nvidia/
 
 ifdef CONFIG_PCI
 # Build mft, bluefield3 modules only when mlnx ofed driver is built
-ifeq ($(NV_BUILD_MODULE_DRV_MLNX),1)
+ifeq ($(NV_BUILD_MODULE_DRV_MLNX_MST),1)
 obj-m += mft/
 endif
 obj-m += marvell/
