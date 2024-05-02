@@ -56,6 +56,66 @@
 			status = "disabled";
 		};
 
+		timer@3010000 {
+			/* Do not enable this node (SOC Timer) as ARM Generic Timer
+			 * (DT node="timer") should be used instead
+			 */
+			compatible = "nvidia,tegra186-timer";
+			interrupts = <0 0 4>,
+				     <0 1 4>,
+				     <0 2 4>,
+				     <0 3 4>,
+				     <0 4 4>,
+				     <0 5 4>,
+				     <0 6 4>,
+				     <0 7 4>;
+			clock-frequency = <19200000>;
+			reg = <0x0 0x03010000 0x0 0x000e0000>;
+			tmr-count = <10>;
+			wdt-count = <3>;
+			status = "disabled";
+		};
+
+		tegra_tachometer1: tachometer@39b0000 {
+			compatible = "nvidia,pwm-tegra234-tachometer";
+			reg = <0x0 0x039b0000 0x0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&bpmp TEGRA234_CLK_TACH1>;
+			clock-names = "tach";
+			resets = <&bpmp TEGRA234_RESET_TACH1>;
+			reset-names = "tach";
+			interrupts = <0 TEGRA234_IRQ_TACH1 0x4>;
+			pulse-per-rev = <2>;
+			capture-window-length = <2>;
+			disable-clk-gate;
+			status = "disabled";
+		};
+
+		sce_hsp: tegra-hsp@b150000 {
+			compatible = "nvidia,tegra186-hsp", "nvidia,tegra234-hsp";
+			status = "disabled";
+
+			reg = <0x0 0x0b150000 0x0 0x00090000>;
+			interrupts =	<0 141 0x4>,
+					<0 142 0x4>,
+					<0 143 0x4>,
+					<0 144 0x4>;
+			interrupt-names = "shared1", "shared2", "shared3", "shared4";
+			nvidia,mbox-ie;
+		};
+
+		hsp_pva0: tegra-hsp@16160000 {
+			compatible = "nvidia,tegra186-hsp", "nvidia,tegra234-hsp";
+			reg = <0x0 0x16160000 0x0 0x00090000>;
+			interrupts = <0 234 0x04>;
+			interrupt-names = "shared0";
+			nvidia,num-SM = <0x8>; /* num of shared mailboxes  */
+			nvidia,num-SS = <0x4>; /* num of shared semaphores */
+			nvidia,num-SI = <0x5>; /* num of shared interrupts */
+			nvidia,mbox-ie;
+			status = "disabled";
+		};
+
 		i2c@3160000 {
 			iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
 		};
