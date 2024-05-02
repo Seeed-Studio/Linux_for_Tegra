@@ -230,7 +230,7 @@ static void print_arm_fault_frame(struct nvadsp_drv_data *drv_data)
 
 static void dump_thread_name(struct platform_device *pdev, u32 val)
 {
-	dev_info(&pdev->dev, "%s: adsp current thread: %c%c%c%c\n",
+	dev_err(&pdev->dev, "%s: adsp current thread: %c%c%c%c\n",
 		 __func__,
 		 (val >> 24) & 0xFF, (val >> 16) & 0xFF,
 		 (val >> 8) & 0xFF, (val >> 0) & 0xFF);
@@ -238,7 +238,7 @@ static void dump_thread_name(struct platform_device *pdev, u32 val)
 
 static void dump_irq_num(struct platform_device *pdev, u32 val)
 {
-	dev_info(&pdev->dev, "%s: adsp current/last irq : %d\n",
+	dev_err(&pdev->dev, "%s: adsp current/last irq : %d\n",
 		 __func__, val);
 }
 
@@ -261,7 +261,7 @@ static void get_adsp_state(struct nvadsp_drv_data *drv_data)
 	}
 
 	val = hwmbox_readl(drv_data, drv_data->chip_data->adsp_state_hwmbox);
-	dev_info(dev, "%s: adsp state hwmbox value: 0x%X\n", __func__, val);
+	dev_err(dev, "%s: adsp state hwmbox value: 0x%X\n", __func__, val);
 
 	switch (val) {
 
@@ -409,7 +409,7 @@ static void get_adsp_state(struct nvadsp_drv_data *drv_data)
 		break;
 	}
 
-	dev_info(dev, "%s: %s\n", __func__, msg);
+	dev_err(dev, "%s: %s\n", __func__, msg);
 
 	val = hwmbox_readl(drv_data, drv_data->chip_data->adsp_thread_hwmbox);
 	dump_thread_name(drv_data->pdev, val);
