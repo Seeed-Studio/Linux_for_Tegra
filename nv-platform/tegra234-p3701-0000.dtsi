@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "tegra234-p3701-0000-prod-overlay.dtsi"
+
+#define TEGRA234_TMP451_SHUTDOWN_TEMP 106500
 
 / {
 	bus@0 {
@@ -61,6 +63,14 @@
 			polling-delay-passive = <1000>;
 			thermal-sensors = <&tegra_tmp451 0>;
 			status = "okay";
+
+			trips {
+				tboard-shutdown {
+					temperature = <TEGRA234_TMP451_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
 		};
 
 		tdiode-thermal {
@@ -68,6 +78,14 @@
 			polling-delay-passive = <1000>;
 			thermal-sensors = <&tegra_tmp451 1>;
 			status = "okay";
+
+			trips {
+				tdiode-shutdown {
+					temperature = <TEGRA234_TMP451_SHUTDOWN_TEMP>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
 		};
 	};
 
