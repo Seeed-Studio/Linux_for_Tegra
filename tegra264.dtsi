@@ -225,6 +225,7 @@
 			nvidia,adsp_os_secload;
 			reg = <0x0 0x0c100000 0x0 0x20000>, /* AO_MISC */
 			      <0x0 0x0c410000 0x0 0x40000>; /* AON_HSP */
+
 			nvidia,dram_map = <0x0 0x20000000 0x0 0x20000000>;
 			nvidia,adsp_mem = <0x0 0x0>, /* ADSP OS */
 					  <0x0 0x0>, /* ADSP APP */
@@ -477,7 +478,6 @@
 			interrupts = <GIC_SPI 1 IRQ_TYPE_EDGE_RISING>,
 				     <GIC_SPI 2 IRQ_TYPE_EDGE_RISING>;
 			interrupt-names = "eventq","gerror";
-			dma-coherent;
 			#iommu-cells = <1>;
 		};
 
@@ -500,7 +500,6 @@
 			interrupts = <GIC_SPI 30 IRQ_TYPE_EDGE_RISING>,
 				     <GIC_SPI 31 IRQ_TYPE_EDGE_RISING>;
 			interrupt-names = "eventq","gerror";
-			dma-coherent;
 			#iommu-cells = <1>;
 		};
 
@@ -1633,6 +1632,8 @@
 			ranges = <0x82000000 0x00 0x20000000 0x00 0x20000000 0x0 0x08000000	/* Non-Prefetchable memory */
 				  0xc3000000 0xd0 0xc0000000 0xd0 0xc0000000 0x7 0xc0000000	/* Prefetchable memory */
 				  0x81000000 0xd0 0x82000000 0xd0 0x82000000 0x0 0x00200000>;	/* I/O */
+
+			ats-supported;
 		};
 
 		padctl_main: pinmux@810c281000 {
@@ -3096,6 +3097,11 @@
 			compatible = "nvidia,vpr-carveout";
 			status = "disabled";
 		};
+
+                vpr1: vpr1-carveout {
+                        compatible = "nvidia,vpr1-carveout";
+                        status = "disabled";
+                };
 
 		fsi_reserved: fsi-carveout {
 			compatible = "nvidia,fsi-carveout";
