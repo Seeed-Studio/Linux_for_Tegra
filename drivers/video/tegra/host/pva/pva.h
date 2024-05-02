@@ -19,6 +19,7 @@
 #include "pva-ucode-header.h"
 #include "pva_vpu_app_auth.h"
 #include "pva_fw_carveout.h"
+#include "pva_hwseq.h"
 
 #include <uapi/linux/tegra-soc-hwpm-uapi.h>
 
@@ -81,6 +82,21 @@ struct pva_version_info {
 #define PVA_CCQ6_INDEX 7
 #define PVA_CCQ7_INDEX 8
 
+/**
+ * Maximum number of DMA channels. Gen3 and Gen2 have 16 channels.
+ * R5 FW reserves one DMA channel for internal use.
+ */
+#define MAX_PVA_DMA_CHANNELS	15U
+/**
+ * Maximum number of frames in a hwseq blob.Gen2 has single frame,
+ * Gen3 can have upto 64.
+ */
+#define MAX_PVA_HWSEQ_FRAMES	64U
+/**
+ * Maximum number of column/rows(CR) in hwseq. Gen2 has single CR,
+ * Gen3 can have upto 32.
+ */
+#define MAX_PVA_HWSEQ_CR_COUNT	32U
 
 /**
  * Number of VPUs for each PVA
@@ -443,6 +459,8 @@ struct pva {
 	struct mutex clients_lock;
 
 	struct pva_vpu_dbg_block vpu_dbg_blocks[NUM_VPU_BLOCKS];
+	struct pva_hwseq_cr_info_s hwseq_cr_info[MAX_PVA_DMA_CHANNELS]
+					 [MAX_PVA_HWSEQ_FRAMES][MAX_PVA_HWSEQ_CR_COUNT];
 
 	struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
 };

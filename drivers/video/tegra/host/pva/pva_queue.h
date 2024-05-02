@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2016-2024 NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef PVA_QUEUE_H
@@ -21,6 +21,7 @@
 		NVPVA_TASK_MAX_DMA_DESCRIPTORS_T23X
 #define NVPVA_TASK_MAX_DMA_CHANNELS_T26X \
 		NVPVA_TASK_MAX_DMA_CHANNELS_T23X
+#define NVPVA_TASK_MAX_HWSEQ_FRAME_COUNT_T26X	1U
 #endif
 
 #define task_err(task, fmt, ...) \
@@ -34,6 +35,8 @@
 #define MAX_NUM_CHANNELS MAX_VAL((MAX_VAL(NVPVA_TASK_MAX_DMA_CHANNELS_T19X, \
 					NVPVA_TASK_MAX_DMA_CHANNELS_T23X)), \
 				  NVPVA_TASK_MAX_DMA_CHANNELS_T26X)
+
+#define MAX_NUM_FRAMES NVPVA_TASK_MAX_HWSEQ_FRAME_COUNT_T26X
 
 struct dma_buf;
 
@@ -181,10 +184,11 @@ struct pva_submit_task {
 	u64 fence_act_serial_ids[NVPVA_MAX_FENCE_TYPES]
 				[NVPVA_TASK_MAX_FENCEACTIONS];
 	u64 prefences_serial_ids[NVPVA_TASK_MAX_PREFENCES];
-	struct pva_hwseq_priv_s hwseq_info[MAX_NUM_CHANNELS];
+	struct pva_hwseq_priv_s hwseq_info[MAX_NUM_CHANNELS][MAX_NUM_FRAMES];
 	u8 desc_block_height_log2[MAX_NUM_DESCS];
 	struct pva_dma_task_buffer_info_s task_buff_info[MAX_NUM_DESCS];
-	struct pva_dma_hwseq_desc_entry_s desc_entries[MAX_NUM_CHANNELS][PVA_HWSEQ_DESC_LIMIT];
+	struct pva_dma_hwseq_desc_entry_s
+			 desc_entries[MAX_NUM_CHANNELS][MAX_NUM_FRAMES][PVA_HWSEQ_DESC_LIMIT];
 
 	/** Store Suface base address */
 	u64 src_surf_base_addr;

@@ -1142,10 +1142,10 @@ out:
 }
 
 static inline
-uint64_t get_buffer_size_hwseq(struct pva_hwseq_priv_s *hwseq, bool is_dst)
+uint64_t get_buffer_size_hwseq(struct pva_hwseq_priv_s *hwseq, bool is_dst, uint32_t cr_index)
 {
 	uint64_t mem_size = 0ULL;
-	uint8_t head_desc_index = hwseq->dma_descs[0].did1;
+	uint8_t head_desc_index = hwseq->cr_info[cr_index].dma_descs[0].did1;
 	struct pva_dma_task_buffer_info_s *buff_info;
 
 	nvpva_dbg_fn(hwseq->task->pva, "");
@@ -1192,10 +1192,10 @@ int validate_adv_params(struct nvpva_dma_descriptor *head_desc, bool is_dst)
 }
 
 static
-int validate_cb_tiles(struct pva_hwseq_priv_s *hwseq, uint64_t vmem_size)
+int validate_cb_tiles(struct pva_hwseq_priv_s *hwseq, uint64_t vmem_size, uint32_t cr_index)
 {
-	struct nvpva_dma_descriptor *head_desc = hwseq->head_desc;
-	struct nvpva_dma_descriptor *tail_desc = hwseq->tail_desc;
+	struct nvpva_dma_descriptor *head_desc = hwseq->cr_info[cr_index].head_desc;
+	struct nvpva_dma_descriptor *tail_desc = hwseq->cr_info[cr_index].tail_desc;
 
 	struct nvpva_dma_descriptor *d0 = (hwseq->hdr->to >= 0) ? head_desc : tail_desc;
 	struct nvpva_dma_descriptor *d1 = (hwseq->hdr->to >= 0) ? tail_desc : head_desc;
@@ -1306,15 +1306,15 @@ int validate_xfer_mode(struct nvpva_dma_descriptor *dma_desc)
 }
 
 static
-int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count)
+int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, uint32_t cr_index)
 {
 	int err = 0;
 	uint64_t vmem_size = 0U;
 	uint32_t tx = 0U;
 	uint32_t ty = 0U;
 	uint64_t tile_size = 0ULL;
-	struct nvpva_dma_descriptor *head_desc = hwseq->head_desc;
-	struct nvpva_dma_descriptor *tail_desc = hwseq->tail_desc;
+	struct nvpva_dma_descriptor *head_desc = hwseq->cr_info[cr_index].head_desc;
+	struct nvpva_dma_descriptor *tail_desc = hwseq->cr_info[cr_index].tail_desc;
 
 	nvpva_dbg_fn(hwseq->task->pva, "");
 
@@ -1333,14 +1333,14 @@ int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count)
 		return -EINVAL;
 	}
 
-	vmem_size = get_buffer_size_hwseq(hwseq, true);
+	vmem_size = get_buffer_size_hwseq(hwseq, true, cr_index);
 	if (vmem_size == 0U) {
 		pr_err("Unable to find vmem size");
 		return -EINVAL;
 	}
 
 	if (head_desc->dstCbEnable != 0U) {
-		err = validate_cb_tiles(hwseq, vmem_size);
+		err = validate_cb_tiles(hwseq, vmem_size, cr_index);
 		if (err == 0)
 			return err;
 
@@ -1384,10 +1384,10 @@ int check_no_padding(struct pva_hwseq_frame_header_s *header)
 }
 
 static
-int validate_src_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count)
+int validate_src_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, uint32_t cr_index)
 {
-	struct nvpva_dma_descriptor *head_desc = hwseq->head_desc;
-	struct nvpva_dma_descriptor *tail_desc = hwseq->tail_desc;
+	struct nvpva_dma_descriptor *head_desc = hwseq->cr_info[cr_index].head_desc;
+	struct nvpva_dma_descriptor *tail_desc = hwseq->cr_info[cr_index].tail_desc;
 	uint64_t vmem_size = 0U;
 	int32_t tx = 0U;
 	int32_t ty = 0U;
@@ -1422,7 +1422,7 @@ int validate_src_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count)
 		return -EINVAL;
 	}
 
-	vmem_size = get_buffer_size_hwseq(hwseq, false);
+	vmem_size = get_buffer_size_hwseq(hwseq, false, cr_index);
 
 	tx = get_max_uint(head_desc->tx, tail_desc->tx);
 	ty = get_max_uint(head_desc->ty, tail_desc->ty);
@@ -1594,9 +1594,10 @@ int check_cb_for_bl_inputs(struct nvpva_dma_descriptor *desc)
 static
 int validate_head_desc_transfer_fmt(struct pva_hwseq_priv_s *hwseq,
 				uint16_t frame_line_pitch,
-				int64_t frame_buffer_offset)
+				int64_t frame_buffer_offset,
+				uint32_t cr_index)
 {
-	struct nvpva_dma_descriptor *head_desc = hwseq->head_desc;
+	struct nvpva_dma_descriptor *head_desc = hwseq->cr_info[cr_index].head_desc;
 	int32_t grid_step_x = 0;
 
 	nvpva_dbg_fn(hwseq->task->pva, "");
@@ -1621,7 +1622,8 @@ int validate_head_desc_transfer_fmt(struct pva_hwseq_priv_s *hwseq,
 			return -EINVAL;
 		}
 
-		grid_step_x = hwseq->is_raster_scan ? hwseq->hdr->to : hwseq->colrow->cro;
+		grid_step_x = hwseq->is_raster_scan ? hwseq->hdr->to
+						 : hwseq->cr_info[cr_index].colrow->cro;
 		if (((frame_buffer_offset % 64) != 0) || ((grid_step_x | frame_line_pitch)
 					& (31 >> head_desc->bytePerPixel)) != 0) {
 			pr_err("block linear access offsets are misaligned ");
@@ -1699,112 +1701,129 @@ int validate_dma_boundaries(struct pva_hwseq_priv_s *hwseq)
 	int64_t frame_buffer_size = 0U;
 	struct pva_hwseq_grid_info_s grid_info = {0};
 	struct pva_hwseq_frame_info_s frame_info = {0};
-	struct nvpva_dma_descriptor *head_desc = hwseq->head_desc;
-	struct nvpva_dma_descriptor *tail_desc = hwseq->tail_desc;
+	struct nvpva_dma_descriptor *head_desc;
+	struct nvpva_dma_descriptor *tail_desc;
 	int32_t vmem_tile_count = 0;
+	int32_t vmem_tiles_per_frame = 0;
+	uint32_t cr_count = 0;
+	int i = 0;
 
 	nvpva_dbg_fn(hwseq->task->pva, "");
 
-	if (hwseq->tiles_per_packet > 1U && hwseq->hdr->to == 0U) {
-		pr_err("unsupported hwseq program modality: Tile Offset = 0");
-		return -EINVAL;
-	}
+	cr_count = (hwseq->hdr->no_cr + 1U);
 
-	err = check_padding_tiles(head_desc, tail_desc);
-	if (err != 0) {
-		pr_err("DMA Descriptors have empty tiles");
-		return -EINVAL;
-	}
+	for (i = 0; i < cr_count ; i++) {
+		head_desc = hwseq->cr_info[i].head_desc;
+		tail_desc = hwseq->cr_info[i].tail_desc;
 
-	sequencing_to_vmem = (hwseq->head_desc->dstTransferMode == (uint8_t)DMA_DESC_DST_XFER_VMEM);
-
-	if (sequencing_to_vmem)
-		err = validate_dst_vmem(hwseq, &vmem_tile_count);
-	else
-		err = validate_src_vmem(hwseq, &vmem_tile_count);
-
-	if (err != 0)
-		return -EINVAL;
-
-	/* total count of tiles sequenced */
-	seq_tile_count = hwseq->tiles_per_packet * (hwseq->colrow->crr + 1);
-	if (vmem_tile_count != seq_tile_count) {
-		pr_err("hwseq/vmem tile count mismatch");
-		return -EINVAL;
-	}
-
-	if (hwseq->is_raster_scan) {
-		nvpva_dbg_fn(hwseq->task->pva, "is raster scan");
-
-		grid_info.tile_x[0]       = hwseq->head_desc->tx;
-		grid_info.tile_x[1]       = hwseq->tail_desc->tx;
-		grid_info.tile_y[0]       = hwseq->head_desc->ty;
-		grid_info.tile_y[1]       = hwseq->tail_desc->ty;
-		grid_info.pad_x[0]        = hwseq->hdr->pad_l;
-		grid_info.pad_x[1]        = hwseq->hdr->pad_r;
-		grid_info.pad_y[0]        = hwseq->hdr->pad_t;
-		grid_info.pad_y[1]        = hwseq->hdr->pad_b;
-		grid_info.grid_size_x      = hwseq->tiles_per_packet;
-		grid_info.grid_size_y      = hwseq->colrow->crr + 1;
-		grid_info.grid_step_x      = hwseq->hdr->to;
-		grid_info.grid_step_y      = hwseq->colrow->cro;
-		grid_info.head_tile_count  = hwseq->dma_descs[0].dr1 + 1;
-		grid_info.is_split_padding = hwseq->is_split_padding;
-		if (compute_frame_info(&frame_info, &grid_info) != 0) {
-			pr_err("Error in converting grid to frame");
-			return -EINVAL;
-		}
-	} else {
-	/*
-	 * vertical-mining mode
-	 * this is just raster-scan transposed so let's
-	 * transpose the tile and padding
-	 */
-		nvpva_dbg_fn(hwseq->task->pva, "is vertical mining");
-		if (hwseq->is_split_padding) {
-			pr_err("vertical mining not supported with split padding");
+		if (hwseq->cr_info[i].tiles_per_packet > 1U && hwseq->hdr->to == 0U) {
+			pr_err("unsupported hwseq program modality: Tile Offset = 0");
 			return -EINVAL;
 		}
 
-		grid_info.tile_x[0]          = hwseq->head_desc->ty;
-		grid_info.tile_x[1]          = hwseq->tail_desc->ty;
-		grid_info.tile_y[0]          = hwseq->head_desc->tx;
-		grid_info.tile_y[1]          = hwseq->tail_desc->tx;
-		grid_info.pad_x[0]           = hwseq->hdr->pad_t;
-		grid_info.pad_x[1]           = hwseq->hdr->pad_b;
-		grid_info.pad_y[0]           = hwseq->hdr->pad_l;
-		grid_info.pad_y[1]           = hwseq->hdr->pad_r;
-		grid_info.grid_size_x      = hwseq->tiles_per_packet,
-		grid_info.grid_size_y      = hwseq->colrow->crr + 1;
-		grid_info.grid_step_x      = hwseq->hdr->to;
-		grid_info.grid_step_y      = hwseq->colrow->cro;
-		grid_info.head_tile_count  = hwseq->dma_descs[0].dr1 + 1;
-		grid_info.is_split_padding = false;
-		if (compute_frame_info(&frame_info, &grid_info) != 0) {
-			pr_err("Error in converting grid to frame");
+		err = check_padding_tiles(head_desc, tail_desc);
+		if (err != 0) {
+			pr_err("DMA Descriptors have empty tiles");
 			return -EINVAL;
 		}
 
-		swap_frame_boundaries(&frame_info);
+		sequencing_to_vmem = (hwseq->cr_info[i].head_desc->dstTransferMode
+						 == (uint8_t)DMA_DESC_DST_XFER_VMEM);
+
+		if (sequencing_to_vmem)
+			err = validate_dst_vmem(hwseq, &vmem_tile_count, i);
+		else
+			err = validate_src_vmem(hwseq, &vmem_tile_count, i);
+
+		if (err != 0)
+			return -EINVAL;
+
+		/* total count of tiles sequenced */
+		seq_tile_count += hwseq->cr_info[i].tiles_per_packet *
+					 (hwseq->cr_info[i].colrow->crr + 1);
+
+		if (i == 0)
+			vmem_tiles_per_frame = vmem_tile_count;
+
+		if ((vmem_tiles_per_frame != seq_tile_count) && (i == hwseq->hdr->no_cr)) {
+			pr_err("hwseq/vmem tile count mismatch");
+			return -EINVAL;
+		}
+
+		if (hwseq->is_raster_scan) {
+			nvpva_dbg_fn(hwseq->task->pva, "is raster scan");
+			grid_info.tile_x[0]       = hwseq->cr_info[i].head_desc->tx;
+			grid_info.tile_x[1]       = hwseq->cr_info[i].tail_desc->tx;
+			grid_info.tile_y[0]       = hwseq->cr_info[i].head_desc->ty;
+			grid_info.tile_y[1]       = hwseq->cr_info[i].tail_desc->ty;
+			grid_info.pad_x[0]        = hwseq->hdr->pad_l;
+			grid_info.pad_x[1]        = hwseq->hdr->pad_r;
+			grid_info.pad_y[0]        = hwseq->hdr->pad_t;
+			grid_info.pad_y[1]        = hwseq->hdr->pad_b;
+			grid_info.grid_size_x      = hwseq->cr_info[i].tiles_per_packet;
+			grid_info.grid_size_y      = hwseq->cr_info[i].colrow->crr + 1;
+			grid_info.grid_step_x      = hwseq->hdr->to;
+			grid_info.grid_step_y      = hwseq->cr_info[i].colrow->cro;
+			grid_info.head_tile_count  = hwseq->cr_info[i].dma_descs[0].dr1 + 1;
+			grid_info.is_split_padding = hwseq->is_split_padding;
+			if (compute_frame_info(&frame_info, &grid_info) != 0) {
+				pr_err("Error in converting grid to frame");
+				return -EINVAL;
+			}
+		} else {
+		/*
+		 * vertical-mining mode
+		 * this is just raster-scan transposed so let's
+		 * transpose the tile and padding
+		 */
+			nvpva_dbg_fn(hwseq->task->pva, "is vertical mining");
+			if (hwseq->is_split_padding) {
+				pr_err("vertical mining not supported with split padding");
+				return -EINVAL;
+			}
+			grid_info.tile_x[0]          = hwseq->cr_info[i].head_desc->ty;
+			grid_info.tile_x[1]          = hwseq->cr_info[i].tail_desc->ty;
+			grid_info.tile_y[0]          = hwseq->cr_info[i].head_desc->tx;
+			grid_info.tile_y[1]          = hwseq->cr_info[i].tail_desc->tx;
+			grid_info.pad_x[0]           = hwseq->hdr->pad_t;
+			grid_info.pad_x[1]           = hwseq->hdr->pad_b;
+			grid_info.pad_y[0]           = hwseq->hdr->pad_l;
+			grid_info.pad_y[1]           = hwseq->hdr->pad_r;
+			grid_info.grid_size_x      = hwseq->cr_info[i].tiles_per_packet,
+			grid_info.grid_size_y      = hwseq->cr_info[i].colrow->crr + 1;
+			grid_info.grid_step_x      = hwseq->hdr->to;
+			grid_info.grid_step_y      = hwseq->cr_info[i].colrow->cro;
+			grid_info.head_tile_count  = hwseq->cr_info[i].dma_descs[0].dr1 + 1;
+			grid_info.is_split_padding = false;
+			if (compute_frame_info(&frame_info, &grid_info) != 0) {
+				pr_err("Error in converting grid to frame");
+				return -EINVAL;
+			}
+			swap_frame_boundaries(&frame_info);
+		}
+
+		dump_grid_info(hwseq, &grid_info);
+		dump_frame_info(hwseq, &frame_info);
+		frame_line_pitch = sequencing_to_vmem ? head_desc->srcLinePitch
+							 : head_desc->dstLinePitch;
+		err = pitch_linear_eq_offset(head_desc, &frame_buffer_offset,
+			     head_desc->surfBLOffset,
+			     hwseq->dma_ch->blockHeight,
+			     head_desc->bytePerPixel,
+			     !sequencing_to_vmem, false);
+		if (err)
+			goto out;
+
+		if (validate_head_desc_transfer_fmt(hwseq, frame_line_pitch,
+							 frame_buffer_offset, i) != 0) {
+			pr_err("Error in validating head Descriptor");
+			return -EINVAL;
+		}
+
+		if (i == 0)
+			frame_buffer_size = get_buffer_size_hwseq(hwseq, !sequencing_to_vmem, 0);
 	}
 
-	dump_grid_info(hwseq, &grid_info);
-	dump_frame_info(hwseq, &frame_info);
-	frame_line_pitch = sequencing_to_vmem ? head_desc->srcLinePitch : head_desc->dstLinePitch;
-	err = pitch_linear_eq_offset(head_desc, &frame_buffer_offset,
-				     head_desc->surfBLOffset,
-				     hwseq->dma_ch->blockHeight,
-				     head_desc->bytePerPixel,
-				     !sequencing_to_vmem, false);
-	if (err)
-		goto out;
-
-	if (validate_head_desc_transfer_fmt(hwseq, frame_line_pitch, frame_buffer_offset) != 0) {
-		pr_err("Error in validating head Descriptor");
-		return -EINVAL;
-	}
-
-	frame_buffer_size = get_buffer_size_hwseq(hwseq, !sequencing_to_vmem);
 	frame_buffer_start = frame_info.start_y * frame_line_pitch + frame_info.start_x;
 	frame_buffer_end = (frame_info.end_y - 1) * frame_line_pitch + frame_info.end_x;
 
@@ -1828,6 +1847,7 @@ static int
 verify_hwseq_blob(struct pva_submit_task *task,
 		  struct nvpva_dma_channel *user_ch,
 		  struct nvpva_dma_descriptor *decriptors,
+		  struct pva_hwseq_cr_info_s *hwseq_cr_info,
 		  uint8_t *hwseqbuf_cpuva,
 		  u8 *bl_xfers_in_use,
 		  int8_t ch_num)
@@ -1836,8 +1856,8 @@ verify_hwseq_blob(struct pva_submit_task *task,
 	struct pva_hwseq_desc_header_s *blob_desc;
 	struct pva_hwseq_cr_header_s *cr_header;
 	struct pva_hwseq_cr_header_s *end_addr;
-	struct pva_hwseq_priv_s *hwseq_info = &task->hwseq_info[ch_num - 1];
-	struct pva_dma_hwseq_desc_entry_s *desc_entries = &task->desc_entries[ch_num - 1][0];
+	struct pva_hwseq_priv_s *hwseq_info;
+	struct pva_dma_hwseq_desc_entry_s *desc_entries;
 	s8 *desc_block_height_log2 = task->desc_block_height_log2;
 	int hwgen = task->pva->version;
 
@@ -1852,31 +1872,32 @@ verify_hwseq_blob(struct pva_submit_task *task,
 	uintptr_t tmp_addr;
 	u32 num_desc_entries;
 	u32 num_descriptors;
+	u32 frame = 0;
+	u32 cr_size = 0;
+	u32 num_columns = 0;
+	u32 num_frames;
+	u32 blob_end = 0;
+
 #ifdef CONFIG_TEGRA_T26X_GRHOST_PVA
 	bool validation_done = false;
 
 	if (task->pva->version >= PVA_HW_GEN3) {
 		end = nvpva_get_hwseq_end_idx_t26x(user_ch) * 4U;
 		start = nvpva_get_hwseq_start_idx_t26x(user_ch) * 4U;
+
+		if (user_ch->hwseqFrameCount > (MAX_NUM_FRAMES - 1U)) {
+			pr_err("number of continuos frames is greater than %d",
+				MAX_NUM_FRAMES);
+			err = -EINVAL;
+			goto out;
+		}
 	}
 #endif
 
 	nvpva_dbg_fn(task->pva, "");
 
-	blob = (struct pva_hw_sweq_blob_s *)&hwseqbuf_cpuva[start];
-	end_addr = (struct pva_hwseq_cr_header_s *)&hwseqbuf_cpuva[end + 4];
-	cr_header = &blob->cr_header;
-	blob_desc = &blob->desc_header;
-
-	hwseq_info->hdr = &blob->f_header;
-	hwseq_info->colrow = &blob->cr_header;
-	hwseq_info->task = task;
-	hwseq_info->dma_ch = user_ch;
-	hwseq_info->is_split_padding = (user_ch->hwseqTxSelect != 0U);
-	hwseq_info->is_raster_scan = (user_ch->hwseqTraversalOrder == 0U);
-
 	if ((end <= start)
-	   || (((end - start + 4U) < sizeof(*blob)))) {
+	 || (((end - start + 4U) < sizeof(*blob)))) {
 		pr_err("invalid size of HW sequencer blob");
 		err = -EINVAL;
 		goto out;
@@ -1888,145 +1909,200 @@ verify_hwseq_blob(struct pva_submit_task *task,
 		goto out;
 	}
 
-	if ((is_desc_mode(blob->f_header.fid))
-	  && task->hwseq_config.hwseqTrigMode == NVPVA_HWSEQTM_DMATRIG) {
-		pr_err("dma master not allowed");
-		err = -EINVAL;
-		goto out;
-	}
+	blob = (struct pva_hw_sweq_blob_s *)&hwseqbuf_cpuva[start];
+	end_addr = (struct pva_hwseq_cr_header_s *)&hwseqbuf_cpuva[end + 4];
 
 #ifdef CONFIG_TEGRA_T26X_GRHOST_PVA
-	if (!hwseq_blob_validate_t26x(blob, task, user_ch, &validation_done)) {
-		pr_err("Invalid HW SEQ blob for T26x");
-		err = -EINVAL;
-	}
-
-	if (validation_done)
-		goto out;
+	num_frames = user_ch->hwseqFrameCount + 1;
+#else
+	num_frames = 1;
 #endif
-	if ((!is_desc_mode(blob->f_header.fid))
-	  && !is_frame_mode(blob->f_header.fid)) {
-		pr_err("invalid addressing mode");
-		err = -EINVAL;
-		goto out;
-	}
 
-	cr_count = (blob->f_header.no_cr + 1U);
-	if ((cr_count > PVA_HWSEQ_COL_ROW_LIMIT) && (hwgen <= PVA_HW_GEN2)) {
-		pr_err("number of col/row headers is greater than %d",
-			PVA_HWSEQ_COL_ROW_LIMIT);
-		err = -EINVAL;
-		goto out;
-	}
+	nvpva_dbg_fn(task->pva, "num_frames %d", num_frames);
 
-	start += sizeof(blob->f_header);
-	end += 4;
-	for (i = 0; i < cr_count; i++) {
-		u8 did;
+	// Validate each frame contained in the HW Seq blob
+	for (frame = 0; frame < num_frames; frame++) {
 
-		num_descriptors = cr_header->dec + 1;
-		num_desc_entries = (cr_header->dec + 2) / 2;
-		nvpva_dbg_fn(task->pva,
-			     "n_descs=%d, n_entries=%d",
-			     num_descriptors,
-			     num_desc_entries);
+		hwseq_info = &task->hwseq_info[ch_num - 1][frame];
+		num_columns = blob->f_header.no_cr + 1U;
+		cr_header = &blob->cr_header;
+		blob_desc = &blob->desc_header;
 
-		if ((is_frame_mode(blob->f_header.fid))
-		  && (num_descriptors > PVA_HWSEQ_DESC_LIMIT)) {
-			pr_err("number of descriptors is greater than %d",
-				PVA_HWSEQ_DESC_LIMIT);
+		hwseq_info->hdr = &blob->f_header;
+		hwseq_info->task = task;
+		hwseq_info->dma_ch = user_ch;
+		hwseq_info->is_split_padding = (user_ch->hwseqTxSelect != 0U);
+		hwseq_info->is_raster_scan = (user_ch->hwseqTraversalOrder == 0U);
+		hwseq_info->cr_info = &hwseq_cr_info[((ch_num - 1) * MAX_PVA_DMA_CHANNELS)
+							 + (frame * MAX_PVA_HWSEQ_FRAMES)];
+		desc_entries = &task->desc_entries[ch_num - 1][frame][0];
+
+		if ((is_desc_mode(blob->f_header.fid))
+			&& task->hwseq_config.hwseqTrigMode == NVPVA_HWSEQTM_DMATRIG) {
+			nvpva_dbg_fn(task->pva, "DMA master not allowed");
+			pr_err("dma master not allowed");
 			err = -EINVAL;
 			goto out;
 		}
 
-		entry_size = num_desc_entries;
-		entry_size *= sizeof(struct pva_hwseq_desc_header_s);
-		entry_size += sizeof(struct pva_hwseq_cr_header_s);
-		if ((start + entry_size) > end) {
-			pr_err("row/column entries larger than blob");
+#ifdef CONFIG_TEGRA_T26X_GRHOST_PVA
+		if (!hwseq_blob_validate_t26x(blob, task, user_ch, &validation_done)) {
+			nvpva_dbg_fn(task->pva, "Invalid HW SEQ blob for T26x");
+			pr_err("Invalid HW SEQ blob for T26x");
+			err = -EINVAL;
+		}
+		if (validation_done) {
+			/* Advance blob pointer to point to the start of next frame */
+			blob = (struct pva_hw_sweq_blob_s *)((u8 *)blob
+				+ sizeof(struct pva_hw_sweq_blob_s)
+				+ ((num_columns - 1) * 8));
+			continue;
+		}
+#endif
+
+		if ((!is_desc_mode(blob->f_header.fid))
+			&& !is_frame_mode(blob->f_header.fid)) {
+			nvpva_dbg_fn(task->pva, "Invalid addressing mode");
+			pr_err("invalid addressing mode");
 			err = -EINVAL;
 			goto out;
 		}
 
-		nvpva_dbg_fn(task->pva, "entry size=%d", entry_size);
-		nvpva_dbg_fn(task->pva, "tiles per packet=%d",
-			     hwseq_info->tiles_per_packet);
-		for (j = 0, k = 0; j < num_desc_entries; j++) {
-			err = verify_dma_desc_hwseq(task,
-						    user_ch,
-						    blob,
-						    blob_desc->did1,
-						    blob->f_header.fid,
-						    bl_xfers_in_use);
+		cr_count = (blob->f_header.no_cr + 1U);
+		if ((cr_count > PVA_HWSEQ_MAX_CR_COUNT_T23X) && (hwgen <= PVA_HW_GEN2)) {
+			nvpva_dbg_fn(task->pva, "number of col/row headers is greater than");
+			pr_err("number of col/row headers is greater than %d",
+				PVA_HWSEQ_MAX_CR_COUNT_T23X);
+			err = -EINVAL;
+			goto out;
+		}
 
-			if (err) {
-				pr_err("seq descriptor 1 verification failed");
+		start += sizeof(blob->f_header);
+		blob_end = end + 4;
+
+		for (i = 0; i < cr_count; i++) {
+			u8 did;
+
+			hwseq_info->cr_info[i].colrow = cr_header;
+			num_descriptors = cr_header->dec + 1;
+			num_desc_entries = (cr_header->dec + 2) / 2;
+			hwseq_info->cr_info[i].tiles_per_packet = 0;
+			/* In each NOCR entry, 4 bytes are used for CRO
+			 * and (4 * num of descriptor entries) bytes are used for Desc info.
+			 * since each frame format is a 4-byte data structure
+			 */
+			cr_size = 4 + (num_desc_entries * 4);
+			nvpva_dbg_fn(task->pva,
+					 "n_descs=%d, n_entries=%d",
+					 num_descriptors,
+					 num_desc_entries);
+
+			if ((is_frame_mode(blob->f_header.fid))
+				&& (num_descriptors > PVA_HWSEQ_DESC_LIMIT)) {
+				pr_err("number of descriptors is greater than %d",
+					PVA_HWSEQ_DESC_LIMIT);
+				err = -EINVAL;
 				goto out;
 			}
 
-			did = array_index_nospec((blob_desc->did1 - 1U),
-						  max_desc_id[task->pva->version]);
-			desc_block_height_log2[did] = user_ch->blockHeight;
-			if (!is_desc_mode(blob->f_header.fid)) {
-				desc_entries[k].did = did;
-				desc_entries[k].dr = blob_desc->dr1;
-				hwseq_info->tiles_per_packet += (blob_desc->dr1 + 1U);
-				nvpva_dbg_fn(task->pva,
-					     "tiles per packet=%d",
-					     hwseq_info->tiles_per_packet);
+			entry_size = num_desc_entries;
+			entry_size *= sizeof(struct pva_hwseq_desc_header_s);
+			entry_size += sizeof(struct pva_hwseq_cr_header_s);
+			if ((start + entry_size) > blob_end) {
+				pr_err("row/column entries larger than blob");
+				err = -EINVAL;
+				goto out;
 			}
 
-			++k;
-			if (k >= num_descriptors) {
+			nvpva_dbg_fn(task->pva, "entry size=%d", entry_size);
+			nvpva_dbg_fn(task->pva, "tiles per packet=%d",
+						hwseq_info->cr_info[i].tiles_per_packet);
+			for (j = 0, k = 0; j < num_desc_entries; j++) {
+				nvpva_dbg_fn(task->pva, "entering verify_dma_desc_hwseq");
+				err = verify_dma_desc_hwseq(task,
+										user_ch,
+										blob,
+										blob_desc->did1,
+										blob->f_header.fid,
+										bl_xfers_in_use);
+
+				if (err) {
+					pr_err("seq descriptor 1 verification failed");
+					goto out;
+				}
+
+				did = array_index_nospec((blob_desc->did1 - 1U),
+							  max_desc_id[task->pva->version]);
+				desc_block_height_log2[did] = user_ch->blockHeight;
+				if (!is_desc_mode(blob->f_header.fid)) {
+					desc_entries[k].did = did;
+					nvpva_dbg_fn(task->pva, "did:%d", did);
+					desc_entries[k].dr = blob_desc->dr1;
+					hwseq_info->cr_info[i].tiles_per_packet +=
+									 (blob_desc->dr1 + 1U);
+				}
+
+				++k;
+				if (k >= num_descriptors) {
+					++blob_desc;
+					break;
+				}
+
+				err = verify_dma_desc_hwseq(task,
+							    user_ch,
+								blob,
+								blob_desc->did2,
+								blob->f_header.fid,
+								bl_xfers_in_use);
+
+				if (err) {
+					pr_err("seq descriptor 2 verification failed");
+					goto out;
+				}
+
+				did = array_index_nospec((blob_desc->did2 - 1U),
+							  max_desc_id[task->pva->version]);
+				desc_block_height_log2[did] = user_ch->blockHeight;
+				if (!is_desc_mode(blob->f_header.fid)) {
+					desc_entries[k].did = did;
+					desc_entries[k].dr = blob_desc->dr2;
+					hwseq_info->cr_info[i].tiles_per_packet +=
+									 (blob_desc->dr2 + 1U);
+				}
+
 				++blob_desc;
-				break;
 			}
 
-			err = verify_dma_desc_hwseq(task,
-						    user_ch,
-						    blob,
-						    blob_desc->did2,
-						    blob->f_header.fid,
-						    bl_xfers_in_use);
-
-			if (err) {
-				pr_err("seq descriptor 2 verification failed");
+			nvpva_dbg_fn(task->pva, "entry size=%d", entry_size);
+			nvpva_dbg_fn(task->pva, "tiles per packet=%d",
+						 hwseq_info->cr_info[i].tiles_per_packet);
+			start += entry_size;
+			cr_header = (struct pva_hwseq_cr_header_s *)blob_desc;
+			tmp_addr = (uintptr_t)blob_desc + sizeof(*cr_header);
+			blob_desc = (struct pva_hwseq_desc_header_s *)tmp_addr;
+			if (cr_header > end_addr) {
+				pr_err("blob size smaller than entries");
+				err = -EINVAL;
 				goto out;
 			}
 
-			did = array_index_nospec((blob_desc->did2 - 1U),
-						  max_desc_id[task->pva->version]);
-			desc_block_height_log2[did] = user_ch->blockHeight;
 			if (!is_desc_mode(blob->f_header.fid)) {
-				desc_entries[k].did = did;
-				desc_entries[k].dr = blob_desc->dr2;
-				hwseq_info->tiles_per_packet += (blob_desc->dr2 + 1U);
-				nvpva_dbg_fn(task->pva,
-					     "tiles per packet=%d",
-					     hwseq_info->tiles_per_packet);
+				hwseq_info->cr_info[i].dma_descs =
+					 (struct pva_hwseq_desc_header_s *) desc_entries;
+				hwseq_info->cr_info[i].head_desc =
+					 &decriptors[desc_entries[0].did];
+				hwseq_info->cr_info[i].tail_desc =
+					 &decriptors[desc_entries[num_descriptors - 1U].did];
 			}
-
-			++blob_desc;
 		}
 
-		nvpva_dbg_fn(task->pva, "entry size=%d", entry_size);
-		nvpva_dbg_fn(task->pva, "tiles per packet=%d", hwseq_info->tiles_per_packet);
-		start += entry_size;
-		cr_header = (struct pva_hwseq_cr_header_s *)blob_desc;
-		tmp_addr = (uintptr_t)blob_desc + sizeof(*cr_header);
-		blob_desc = (struct pva_hwseq_desc_header_s *)tmp_addr;
-		if (cr_header > end_addr) {
-			pr_err("blob size smaller than entries");
-			err = -EINVAL;
-			goto out;
-		}
-	}
+		if (!is_desc_mode(blob->f_header.fid))
+			hwseq_info->verify_bounds = true;
 
-	if (!is_desc_mode(blob->f_header.fid)) {
-		hwseq_info->dma_descs = (struct pva_hwseq_desc_header_s *) desc_entries;
-		hwseq_info->head_desc = &decriptors[desc_entries[0].did];
-		hwseq_info->tail_desc = &decriptors[desc_entries[num_descriptors - 1U].did];
-		hwseq_info->verify_bounds = true;
+		/* Move blob pointer to the start of next frame */
+		blob = (struct pva_hw_sweq_blob_s *)((u8 *)blob
+			+ sizeof(struct pva_hw_sweq_blob_s)
+			+ ((num_columns - 1) * cr_size));
 	}
 out:
 	return err;
@@ -2057,6 +2133,7 @@ static int
 nvpva_task_dma_channel_mapping(struct pva_submit_task *task,
 			       struct pva_dma_ch_config_s *ch,
 			       u8 *hwseqbuf_cpuva,
+			       struct pva_hwseq_cr_info_s *hwseq_cr_info,
 			       int8_t ch_num,
 			       int32_t hwgen,
 			       bool hwseq_in_use)
@@ -2169,6 +2246,7 @@ nvpva_task_dma_channel_mapping(struct pva_submit_task *task,
 		err = verify_hwseq_blob(task,
 					user_ch,
 					decriptors,
+					hwseq_cr_info,
 					hwseqbuf_cpuva,
 					&bl_xfers_in_use,
 					ch_num);
@@ -2191,7 +2269,9 @@ int pva_task_write_dma_info(struct pva_submit_task *task,
 	u32 i;
 	u32 j;
 	u32 mask;
+	u32 frame_cnt;
 	struct pva_dma_info_s *hw_task_dma_info;
+	struct pva_hwseq_cr_info_s *hwseq_cr_info = &task->pva->hwseq_cr_info[0][0][0];
 	u8 *desc_block_height_log2 = task->desc_block_height_log2;
 	u8 did;
 	u8 prev_did;
@@ -2205,6 +2285,7 @@ int pva_task_write_dma_info(struct pva_submit_task *task,
 	memset(task->desc_block_height_log2, U8_MAX, sizeof(task->desc_block_height_log2));
 	memset(task->hwseq_info, 0, sizeof(task->hwseq_info));
 	memset(task->desc_processed, 0, sizeof(task->desc_processed));
+	memset(task->pva->hwseq_cr_info, 0, sizeof(task->pva->hwseq_cr_info));
 	task->num_dma_desc_processed = 0;
 	task->special_access = 0;
 	hw_task_dma_info = &hw_task->dma_info_and_params_list.dma_info;
@@ -2273,6 +2354,7 @@ int pva_task_write_dma_info(struct pva_submit_task *task,
 			task,
 			&hw_task_dma_info->dma_channels[i],
 			hwseqbuf_cpuva,
+			hwseq_cr_info,
 			ch_num,
 			hwgen,
 			is_hwseq_mode);
@@ -2291,6 +2373,16 @@ int pva_task_write_dma_info(struct pva_submit_task *task,
 			goto out;
 		}
 
+		/* Ensure that HWSEQFSCNTRL is zero for all dma channels in SW
+		 * mode
+		 */
+		if (!is_hwseq_mode &&
+		    (hw_task_dma_info->dma_channels[i].hwseqfscntl != 0U)) {
+			task_err(task, "invalid HWSeq config in SW mode");
+			err = -EINVAL;
+			goto out;
+		}
+
 		hw_task_dma_info->dma_channels[i].ch_number = ch_num;
 		mask = task->dma_channels[i].outputEnableMask;
 		for (j = 0; j < 7; j++) {
@@ -2302,7 +2394,7 @@ int pva_task_write_dma_info(struct pva_submit_task *task,
 
 		hw_task_dma_info->dma_triggers[7] |=
 			(((mask >> 14) & 1U) << ch_num);
-		if (hwgen == PVA_HW_GEN2) {
+		if (hwgen != PVA_HW_GEN1) {
 			u32 *trig = &(hw_task_dma_info->dma_triggers[8]);
 
 			(*trig) |= (((mask >> 15) & 1U) << ch_num);
@@ -2347,11 +2439,17 @@ int pva_task_write_dma_info(struct pva_submit_task *task,
 		goto out;
 	}
 
-	if (task->pva->version <= PVA_HW_GEN2) {
-		for (i = 0; i < task->num_dma_channels; i++) {
+
+	for (i = 0; i < task->num_dma_channels; i++) {
+#ifdef CONFIG_TEGRA_T26X_GRHOST_PVA
+		frame_cnt = task->dma_channels[i].hwseqFrameCount + 1;
+#else
+		frame_cnt = 1;
+#endif
+		for (j = 0; j < frame_cnt; j++) {
 			err = 0;
-			if (task->hwseq_info[i].verify_bounds)
-				err = validate_dma_boundaries(&task->hwseq_info[i]);
+			if ((task->hwseq_info[i][j].verify_bounds))
+				err = validate_dma_boundaries(&task->hwseq_info[i][j]);
 
 			if (err != 0) {
 				pr_err("HW Sequncer DMA out of memory bounds");

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef PVA_HWSEQ_H
@@ -10,12 +10,12 @@
 #include <linux/mutex.h>
 #include <linux/semaphore.h>
 
-#define PVA_HWSEQ_RAM_SIZE_T23X	1024U
-#define PVA_HWSEQ_RAM_ID_MASK_T23X 0xFFU
+#define PVA_HWSEQ_RAM_SIZE_T23X		1024U
+#define PVA_HWSEQ_RAM_ID_MASK_T23X	0xFFU
+#define PVA_HWSEQ_MAX_CR_COUNT_T23X	1U
 
 #define PVA_HWSEQ_FRAME_ADDR	0xC0DE
 #define PVA_HWSEQ_DESC_ADDR	0xDEAD
-#define PVA_HWSEQ_COL_ROW_LIMIT 1
 #define PVA_HWSEQ_DESC_LIMIT	2
 
 struct pva_hwseq_frame_header_s {
@@ -52,6 +52,14 @@ struct pva_hw_sweq_blob_s {
 	struct pva_hwseq_frame_header_s f_header;
 	struct pva_hwseq_cr_header_s cr_header;
 	struct pva_hwseq_desc_header_s desc_header;
+} __packed;
+
+struct pva_hwseq_cr_info_s {
+	struct pva_hwseq_cr_header_s	*colrow;
+	struct pva_hwseq_desc_header_s	*dma_descs;
+	struct nvpva_dma_descriptor	*head_desc;
+	struct nvpva_dma_descriptor	*tail_desc;
+	uint32_t			tiles_per_packet;
 } __packed;
 
 static inline bool is_frame_mode(u16 id)
@@ -92,13 +100,9 @@ struct pva_hwseq_buffer_s {
 struct pva_hwseq_priv_s {
 	struct pva_hwseq_buffer_s	*blob;
 	struct pva_hwseq_frame_header_s	*hdr;
-	struct pva_hwseq_cr_header_s	*colrow;
+	struct pva_hwseq_cr_info_s	*cr_info;
 	struct pva_submit_task		*task;
 	struct nvpva_dma_channel	*dma_ch;
-	struct nvpva_dma_descriptor	*head_desc;
-	struct nvpva_dma_descriptor	*tail_desc;
-	struct pva_hwseq_desc_header_s	*dma_descs;
-	uint32_t			tiles_per_packet;
 	int32_t				max_tx;
 	int32_t				max_ty;
 	bool				is_split_padding;
