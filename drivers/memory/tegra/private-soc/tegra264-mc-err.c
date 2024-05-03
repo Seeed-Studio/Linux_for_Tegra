@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #define pr_fmt(fmt) "tegra264-mc-err: " fmt
@@ -17,24 +17,46 @@
 
 #define MC_BROADCAST_CHANNEL			~0
 
+#define MCF_COMMON_INTSTATUS0_0_0		0xce04
+#define MSS_HUB_GLOBAL_INTSTATUS_0 		0x6000
 #define MCF_INTSTATUS_0				0xce2c
-#define MC_ERR_STATUS_0				0x8700
-#define MC_ERR_ADR_0				0x8704
-#define MC_ERR_ADR_HI_0				0x8708
-#define MC_ERR_VPR_STATUS_0			0x8720
-#define MC_ERR_VPR_ADR_0			0x8724
-#define MC_ERR_SEC_STATUS_0			0x873c
-#define MC_ERR_SEC_ADR_0			0x8740
-#define MC_ERR_MTS_STATUS_0			0x875c
-#define MC_ERR_MTS_ADR_0			0x8760
-#define MC_ERR_GENERALIZED_CARVEOUT_STATUS_0	0x8778
-#define MC_ERR_GENERALIZED_CARVEOUT_ADR_0	0x877c
-#define MC_ERR_ROUTE_SANITY_STATUS_0		0x8764
-#define MC_ERR_ROUTE_SANITY_ADR_0		0x8768
+#define MSS_HUB_HUBC_INTSTATUS_0		0x6008
+#define MSS_HUB_INTRSTATUS_0			0x600c
+#define MSS_SBS_INTSTATUS_0			0xec08
+#define MC_CH_INTSTATUS_0			0x82d4
+#define MC_ERR_STATUS_0				0xbc00
+#define MC_ERR_ADR_0				0xbc04
+#define MC_ERR_ADR_HI_0				0xbc08
+#define MC_ERR_VPR_STATUS_0			0xbc20
+#define MC_ERR_VPR_ADR_0			0xbc24
+#define MC_ERR_SEC_STATUS_0			0xbc3c
+#define MC_ERR_SEC_ADR_0			0xbc40
+#define MC_ERR_MTS_STATUS_0			0xbc5c
+#define MC_ERR_MTS_ADR_0			0xbc60
+#define MC_ERR_GENERALIZED_CARVEOUT_STATUS_0	0xbc78
+#define MC_ERR_GENERALIZED_CARVEOUT_STATUS_1_0	0xbc74
+#define MC_ERR_GENERALIZED_CARVEOUT_ADR_0	0xbc7c
+#define MC_ERR_ROUTE_SANITY_STATUS_0		0xbc64
+#define MC_ERR_ROUTE_SANITY_ADR_0		0xbc68
 #define MCF_INTMASK_0				0xce30
 #define MCF_INTPRIORITY_0			0xce34
+#define MSS_HUB_INTRMASK_0			0x6018
+#define MSS_HUB_INTRPRIORITY_0			0x601c
+#define MSS_HUB_HUBC_INTMASK_0			0x6010
+#define MSS_HUB_HUBC_INTPRIORITY_0		0x6014
+#define MSS_SBS_INTMASK_0			0xec0c
+#define MC_CH_INTMASK_0				0x82d8
+#define MSS_HUB_RESERVED_PA_ERR_STATUS_0	0x6390
+#define MSS_HUB_RESTRICTED_ACCESS_ERR_STATUS_0	0x638c
+#define MSS_HUB_POISON_RSP_STATUS_0		0x6028
+#define MSS_HUB_MSI_ERR_STATUS_0		0x6024
+#define MSS_HUB_ILLEGAL_TBUGRP_ID_ERR_STATUS_0	0x63b0
+#define MSS_HUB_SMMU_BYPASS_ALLOW_ERR_STATUS_0	0x6020
+#define MSS_HUB_COALESCE_ERR_STATUS_0		0x60e0
+#define MSS_HUB_COALESCE_ERR_ADR_HI_0		0x60e4
+#define MSS_HUB_COALESCE_ERR_ADR_0		0x60e8
 
-
+/* Bit fields of MCF_INTSTATUS_0 register */
 #define MC_INT_DECERR_ROUTE_SANITY_GIC_MSI	BIT(21)
 #define MC_INT_DECERR_ROUTE_SANITY		BIT(20)
 #define MC_INT_SCRUB_ECC_WR_ACK			BIT(18)
@@ -45,13 +67,61 @@
 #define MC_INT_SECURITY_VIOLATION		BIT(8)
 #define MC_INT_DECERR_EMEM			BIT(6)
 
+/* Bit fields of MSS_HUB_INTRMASK_0 register */
+#define COALESCER_ERR_INTMASK			BIT(0)
+#define SMMU_BYPASS_ALLOW_ERR_INTMASK		BIT(1)
+#define ILLEGAL_TBUGRP_ID_INTMASK		BIT(2)
+#define MSI_ERR_INTMASK				BIT(3)
+#define POISON_RSP_INTMASK			BIT(4)
+#define RESTRICTED_ACCESS_ERR_INTMASK		BIT(5)
+#define RESERVED_PA_ERR_INTMASK			BIT(6)
+
+/* Bit fields of MSS_HUB_HUBC_INTMASK_0 register */
+#define SCRUB_DONE_INTMASK			BIT(0)
+
+/* Bit fields of MSS_SBS_INTMASK_0 register */
+#define FILL_FIFO_ISO_OVERFLOW_INTMASK		BIT(0)
+#define FILL_FIFO_SISO_OVERFLOW_INTMASK		BIT(1)
+#define FILL_FIFO_NISO_OVERFLOW_INTMASK		BIT(2)
+
+/* Bit fields of MC_CH_INTMASK_0 register */
+#define WCAM_ERR_INTMASK			BIT(19)
+#define ARBITRATION_EMEM_INTMASK		BIT(9)
+
+/* Bit fields of MCF_COMMON_INTSTATUS0_0_0 register */
+#define MCF_SECURITY0_INT0			BIT(0)
+#define MCF_SECURITY1_INT0			BIT(1)
+#define MCF_SECURITY2_INT0			BIT(2)
+#define MCF_SECURITY3_INT0			BIT(3)
+#define MCF_SECURITY4_INT0			BIT(4)
+
+/* Bit fields of MSS_HUB_GLOBAL_INTSTATUS_0 register */
+#define HUBC_INTR				BIT(0)
+#define HUB0_INTR				BIT(8)
+#define HUB1_INTR				BIT(9)
+#define HUB2_INTR				BIT(10)
+#define HUB3_INTR				BIT(11)
+#define HUB4_INTR				BIT(12)
+#define HUB5_INTR				BIT(13)
+#define HUB6_INTR				BIT(14)
+
 #define MC_ERR_STATUS_TYPE_MASK			(0x3 << 28)
 #define MC_ERR_STATUS_TYPE_SHIFT		28
+#define MC_ERR_STATUS_TYPE_MASK_RT		(0xf << 28)
+#define MC_ERR_STATUS_TYPE_SHIFT_RT		28
 #define MC_ERR_STATUS_ADR_HI_SHIFT		20
-#define MC_ERR_STATUS_ADR_HI_MASK		0x3
+#define MC_ERR_STATUS_ADR_HI_MASK		0xff
+#define MC_ERR_STATUS_ADR_HI_SHIFT_RT		15
+#define MC_ERR_STATUS_ADR_HI_SHIFT_GSC		16
+#define MC_ERR_STATUS_ADR_HI_MASK_GSC		0xffff
 #define MC_ERR_STATUS_RW			BIT(16)
 #define MC_ERR_STATUS_SECURITY			BIT(17)
-
+#define MC_ERR_ROUTE_SANITY_RW			BIT(12)
+#define MC_ERR_ROUTE_SANITY_SEC			BIT(13)
+#define ERR_GENERALIZED_APERTURE_ID_SHIFT	0
+#define ERR_GENERALIZED_APERTURE_ID_MASK	0x1F
+#define ERR_GENERALIZED_CARVEOUT_APERTURE_ID_SHIFT 5
+#define ERR_GENERALIZED_CARVEOUT_APERTURE_ID_MASK 0x1F
 #define CLIENT_ID_MASK				0x1ff
 #define MAX_MC_CHANNELS				16
 
@@ -674,10 +744,32 @@ const char *const tegra_mc_status_names[32] = {
 	[21] = "GIC_MSI error",
 };
 
-const char *const tegra_mc_error_names[8] = {
+const char *const tegra_hub_status_names[32] = {
+	[0] = "coalescer error",
+	[1] = "SMMU BYPASS ALLOW error",
+	[2] = "Illegal tbugrp_id error",
+	[3] = "Malformed MSI request error",
+	[4] = "Read response with poison bit error",
+	[5] = "Restricted access violation error",
+	[6] = "Reserved PA error",
+};
+
+const char *const tegra_mc_error_names[4] = {
 	[1] = "EMEM decode error",
 	[2] = "TrustZone violation",
 	[3] = "Carveout violation",
+};
+
+const char *const tegra_rt_error_names[16] = {
+	[1] = "DECERR_PARTIAL_POPULATED",
+	[2] = "DECERR_SMMU_BYPASS",
+	[3] = "DECERR_INVALID_MMIO",
+	[4] = "DECERR_INVALID_GIC_MSI",
+	[5] = "DECERR_ATOMIC_SYSRAM",
+	[9] = "DECERR_REMOTE_REQ_PRE_BOOT",
+	[10] = "DECERR_ISO_OVER_C2C",
+	[11] = "DECERR_UNSUPPORTED_SBS_OPCODE",
+	[12] = "DECERR_SBS_REQ_OVER_SISO_LL",
 };
 
 struct tegra_mcerr {
@@ -685,8 +777,6 @@ struct tegra_mcerr {
 	void __iomem *bcast_ch_regs;
 	void __iomem **ch_regs;
 	int channels;
-	int irq;
-	u32 mcf_int_mask;
 };
 
 static const struct of_device_id tegra_mcerr_of_ids[] = {
@@ -719,59 +809,178 @@ static inline void mc_ch_writel(const struct tegra_mcerr *mc_err, int ch,
 		writel_relaxed(value, mc_err->ch_regs[ch] + offset);
 }
 
-static void log_fault(struct tegra_mcerr *mc_err, u32 channel, unsigned long mcf_ch_intstatus)
+static void set_interrupt_masks(struct tegra_mcerr *mc_err)
+{
+	u32 mask_value;
+
+	/* Unmask MCF interrupts */
+	mask_value = MC_INT_DECERR_ROUTE_SANITY_GIC_MSI |
+			MC_INT_DECERR_ROUTE_SANITY |
+			MC_INT_DECERR_GENERALIZED_CARVEOUT | MC_INT_DECERR_MTS |
+			MC_INT_SECERR_SEC | MC_INT_DECERR_VPR |
+			MC_INT_SECURITY_VIOLATION | MC_INT_DECERR_EMEM;
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mask_value, MCF_INTMASK_0);
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mask_value, MCF_INTPRIORITY_0);
+
+	/* Unmask HUB and HUBC interrupts */
+	mask_value = COALESCER_ERR_INTMASK | SMMU_BYPASS_ALLOW_ERR_INTMASK |
+			ILLEGAL_TBUGRP_ID_INTMASK | MSI_ERR_INTMASK | POISON_RSP_INTMASK |
+			RESTRICTED_ACCESS_ERR_INTMASK | RESERVED_PA_ERR_INTMASK;
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mask_value, MSS_HUB_INTRMASK_0);
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mask_value, MSS_HUB_INTRPRIORITY_0);
+
+	mask_value = SCRUB_DONE_INTMASK;
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mask_value, MSS_HUB_HUBC_INTMASK_0);
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mask_value, MSS_HUB_HUBC_INTPRIORITY_0);
+
+	/* Unmask SBS interrupt */
+	mask_value = FILL_FIFO_ISO_OVERFLOW_INTMASK | FILL_FIFO_SISO_OVERFLOW_INTMASK |
+				FILL_FIFO_NISO_OVERFLOW_INTMASK;
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mask_value, MSS_SBS_INTMASK_0);
+
+	/* Unmask MC channel interrupt */
+	mask_value = WCAM_ERR_INTMASK | ARBITRATION_EMEM_INTMASK;
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mask_value, MC_CH_INTMASK_0);
+}
+
+static void hub_log_fault(struct tegra_mcerr *mc_err, u32 hub, unsigned long hub_intstat)
+{
+	unsigned int bit;
+
+	for_each_set_bit(bit, &hub_intstat, 32) {
+		const char *error = tegra_hub_status_names[bit] ?: "unknown";
+		u32 intmask = BIT(bit), client_id;
+		const char *client = "unknown";
+		u32 status_reg, addr_reg = 0, addr_hi_reg = 0;
+		u32 value, addr_val, i;
+		phys_addr_t addr = 0;
+
+		switch (intmask) {
+			case COALESCER_ERR_INTMASK:
+				status_reg = MSS_HUB_RESERVED_PA_ERR_STATUS_0;
+				break;
+			case SMMU_BYPASS_ALLOW_ERR_INTMASK:
+				status_reg = MSS_HUB_RESTRICTED_ACCESS_ERR_STATUS_0;
+				break;
+			case ILLEGAL_TBUGRP_ID_INTMASK:
+				status_reg = MSS_HUB_POISON_RSP_STATUS_0;
+				break;
+			case MSI_ERR_INTMASK:
+				status_reg = MSS_HUB_MSI_ERR_STATUS_0;
+				break;
+			case POISON_RSP_INTMASK:
+				status_reg = MSS_HUB_ILLEGAL_TBUGRP_ID_ERR_STATUS_0;
+				break;
+			case RESTRICTED_ACCESS_ERR_INTMASK:
+				status_reg = MSS_HUB_SMMU_BYPASS_ALLOW_ERR_STATUS_0;
+				break;
+			case RESERVED_PA_ERR_INTMASK:
+				status_reg = MSS_HUB_COALESCE_ERR_STATUS_0;
+				addr_reg = MSS_HUB_COALESCE_ERR_ADR_0;
+				addr_hi_reg = MSS_HUB_COALESCE_ERR_ADR_HI_0;
+				break;
+			default:
+				dev_err_ratelimited(mc_err->dev, "Incorrect HUB interrupt mask\n");
+				return;
+		}
+
+		value = mc_ch_readl(mc_err, hub, status_reg);
+		if (addr_reg) {
+			addr = mc_ch_readl(mc_err, hub, addr_hi_reg);
+			addr <<= 32;
+			addr_val = mc_ch_readl(mc_err, hub, addr_reg);
+			addr |= addr_val;
+		}
+
+		client_id = value & CLIENT_ID_MASK;
+		for (i = 0; i < num_clients; i++) {
+			if (clients[i].id == client_id) {
+				client = clients[i].name;
+				break;
+			}
+		}
+
+		dev_err_ratelimited(mc_err->dev, "%s: @%pa: %s status:%u\n",
+							client, &addr, error, value);
+	}
+
+	/* clear interrupts */
+	mc_ch_writel(mc_err, hub, hub_intstat, MSS_HUB_INTRSTATUS_0);
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, hub_intstat, MSS_HUB_INTRSTATUS_0);
+}
+
+static void mcf_log_fault(struct tegra_mcerr *mc_err, u32 channel, unsigned long mcf_ch_intstatus)
 {
 	unsigned int bit;
 
 	for_each_set_bit(bit, &mcf_ch_intstatus, 32) {
 		const char *error = tegra_mc_status_names[bit] ?: "unknown";
 		u32 intmask = BIT(bit);
-		u32 status_reg, addr_reg, addr_hi_reg = 0;
-		u32 addr_val, value, client_id, i;
+		u32 status_reg, status1_reg = 0, addr_reg, addr_hi_reg = 0;
+		u32 addr_val, value, client_id, i, addr_hi_shift = 0, addr_hi_mask = 0, status1;
 		const char *direction, *secure;
-		const char *client = "unknown", *desc;
+		const char *client = "unknown", *desc = "NA";
 		phys_addr_t addr = 0;
+		bool is_gsc = false, err_type_valid = false, err_rt_type_valid = false;
 		u8 type;
+		u32 mc_rw_bit = MC_ERR_STATUS_RW, mc_sec_bit = MC_ERR_STATUS_SECURITY;
 
 		switch (intmask) {
 			case MC_INT_DECERR_EMEM:
 				status_reg = MC_ERR_STATUS_0;
 				addr_reg = MC_ERR_ADR_0;
 				addr_hi_reg = MC_ERR_ADR_HI_0;
+				err_type_valid = true;
 				break;
 			case MC_INT_SECURITY_VIOLATION:
 				status_reg = MC_ERR_STATUS_0;
 				addr_reg = MC_ERR_ADR_0;
 				addr_hi_reg = MC_ERR_ADR_HI_0;
+				err_type_valid = true;
 				break;
 			case MC_INT_DECERR_VPR:
 				status_reg = MC_ERR_VPR_STATUS_0;
 				addr_reg = MC_ERR_VPR_ADR_0;
+				addr_hi_shift = MC_ERR_STATUS_ADR_HI_SHIFT;
+				addr_hi_mask = MC_ERR_STATUS_ADR_HI_MASK;
 				break;
 			case MC_INT_SECERR_SEC:
 				status_reg = MC_ERR_SEC_STATUS_0;
 				addr_reg = MC_ERR_SEC_ADR_0;
+				addr_hi_shift = MC_ERR_STATUS_ADR_HI_SHIFT;
+				addr_hi_mask = MC_ERR_STATUS_ADR_HI_MASK;
 				break;
 			case MC_INT_DECERR_MTS:
 				status_reg = MC_ERR_MTS_STATUS_0;
 				addr_reg = MC_ERR_MTS_ADR_0;
+				addr_hi_shift = MC_ERR_STATUS_ADR_HI_SHIFT;
+				addr_hi_mask = MC_ERR_STATUS_ADR_HI_MASK;
 				break;
 			case MC_INT_DECERR_GENERALIZED_CARVEOUT:
 				status_reg = MC_ERR_GENERALIZED_CARVEOUT_STATUS_0;
+				status1_reg = MC_ERR_GENERALIZED_CARVEOUT_STATUS_1_0;
 				addr_reg = MC_ERR_GENERALIZED_CARVEOUT_ADR_0;
-				break;
-			case MC_INT_SCRUB_ECC_WR_ACK:
-				status_reg = MC_ERR_STATUS_0;
-				addr_reg = MC_ERR_ADR_0;
-				addr_hi_reg = MC_ERR_ADR_HI_0;
+				addr_hi_shift = MC_ERR_STATUS_ADR_HI_SHIFT_GSC;
+				addr_hi_mask = MC_ERR_STATUS_ADR_HI_MASK_GSC;
+				is_gsc = true;
 				break;
 			case MC_INT_DECERR_ROUTE_SANITY:
 				status_reg = MC_ERR_ROUTE_SANITY_STATUS_0;
 				addr_reg = MC_ERR_ROUTE_SANITY_ADR_0;
+				addr_hi_shift = MC_ERR_STATUS_ADR_HI_SHIFT_RT;
+				addr_hi_mask = MC_ERR_STATUS_ADR_HI_MASK;
+				mc_sec_bit = MC_ERR_ROUTE_SANITY_SEC;
+				mc_rw_bit = MC_ERR_ROUTE_SANITY_RW;
+				err_rt_type_valid = true;
 				break;
 			case MC_INT_DECERR_ROUTE_SANITY_GIC_MSI:
 				status_reg = MC_ERR_ROUTE_SANITY_STATUS_0;
 				addr_reg = MC_ERR_ROUTE_SANITY_ADR_0;
+				addr_hi_shift = MC_ERR_STATUS_ADR_HI_SHIFT_RT;
+				addr_hi_mask = MC_ERR_STATUS_ADR_HI_MASK;
+				mc_sec_bit = MC_ERR_ROUTE_SANITY_SEC;
+				mc_rw_bit = MC_ERR_ROUTE_SANITY_RW;
+				err_rt_type_valid = true;
 				break;
 			default:
 				dev_err_ratelimited(mc_err->dev, "Incorrect MC interrupt mask\n");
@@ -779,22 +988,27 @@ static void log_fault(struct tegra_mcerr *mc_err, u32 channel, unsigned long mcf
 		}
 
 		value = mc_ch_readl(mc_err, channel, status_reg);
-		if (addr_hi_reg)
-				addr = mc_ch_readl(mc_err, channel, addr_hi_reg);
-		else
-				addr = ((value >> MC_ERR_STATUS_ADR_HI_SHIFT) &
-						MC_ERR_STATUS_ADR_HI_MASK);
-
+		if (addr_hi_reg) {
+			addr = mc_ch_readl(mc_err, channel, addr_hi_reg);
+		}
+		else {
+			if (!is_gsc) {
+				addr = ((value >> addr_hi_shift) & addr_hi_mask);
+			} else {
+				status1 = mc_ch_readl(mc_err, channel, status1_reg);
+				addr = ((status1 >> addr_hi_shift) & addr_hi_mask);
+			}
+		}
 		addr <<= 32;
 		addr_val = mc_ch_readl(mc_err, channel, addr_reg);
 		addr |= addr_val;
 
-		if (value & MC_ERR_STATUS_RW)
+		if (value & mc_rw_bit)
 			direction = "write";
 		else
 			direction = "read";
 
-		if (value & MC_ERR_STATUS_SECURITY)
+		if (value & mc_sec_bit)
 			secure = "secure";
 		else
 			secure = "non-secure";
@@ -807,48 +1021,244 @@ static void log_fault(struct tegra_mcerr *mc_err, u32 channel, unsigned long mcf
 			}
 		}
 
-		type = (value & MC_ERR_STATUS_TYPE_MASK) >>
-				MC_ERR_STATUS_TYPE_SHIFT;
-		desc = tegra_mc_error_names[type];
+		if (err_type_valid) {
+			type = (value & MC_ERR_STATUS_TYPE_MASK) >>
+					MC_ERR_STATUS_TYPE_SHIFT;
+			desc = tegra_mc_error_names[type];
+		} else if (err_rt_type_valid) {
+			type = (value & MC_ERR_STATUS_TYPE_MASK_RT) >>
+					MC_ERR_STATUS_TYPE_SHIFT_RT;
+			desc = tegra_rt_error_names[type];
+		}
 
-		dev_err_ratelimited(mc_err->dev, "%s: %s%s @%pa: %s (%s)\n",
+		dev_err_ratelimited(mc_err->dev, "%s: %s %s @%pa: %s (%s)\n",
 							client, secure, direction, &addr, error,
 							desc);
+		if (is_gsc) {
+			dev_err_ratelimited(mc_err->dev, "gsc_apr_id=%u gsc_co_apr_id=%u\n",
+						((status1 >> ERR_GENERALIZED_APERTURE_ID_SHIFT)
+						& ERR_GENERALIZED_APERTURE_ID_MASK),
+						((status1 >> ERR_GENERALIZED_CARVEOUT_APERTURE_ID_SHIFT)
+						& ERR_GENERALIZED_CARVEOUT_APERTURE_ID_MASK));
+		}
 	}
+
+	/* clear interrupts */
+	mc_ch_writel(mc_err, channel, mcf_ch_intstatus, MCF_INTSTATUS_0);
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mcf_ch_intstatus, MCF_INTSTATUS_0);
 }
 
-/* Currently this function only handle MCF interrupts, will extend for other components */
-static irqreturn_t handle_irq(int irq, void *data)
+#define SBS_IRQ 1
+#define MC_CHANNEL_IRQ 2
+
+static irqreturn_t handle_generic_irq(void *data, int type)
 {
 	struct tegra_mcerr *mc_err = data;
-	unsigned long mcf_intstatus, mcf_ch_intstatus;
-	u32 i;
+	unsigned long intstat_bc, intstat_reg, intstat;
+	int i;
 
-	/* Read MCF_INSTATUS from MCB and if it is set then check for individual channels */
-	mcf_intstatus = mc_ch_readl(mc_err, MC_BROADCAST_CHANNEL, MCF_INTSTATUS_0);
-	if (mcf_intstatus == 0) {
+	if (type == SBS_IRQ) {
+		intstat_reg = MSS_SBS_INTSTATUS_0;
+	} else if (type == MC_CHANNEL_IRQ) {
+		intstat_reg = MC_CH_INTSTATUS_0;
+	} else {
+		dev_err(mc_err->dev, "Incorrect IRQ type\n");
+		return IRQ_NONE;
+	}
+
+	/* Read INTSTATUS reg from MCB block */
+	intstat_bc = mc_ch_readl(mc_err, MC_BROADCAST_CHANNEL, intstat_reg);
+	if (intstat_bc == 0) {
+		dev_err(mc_err->dev, "No interrupt bit set in INTSTATUS reg\n");
+		return IRQ_NONE;
+	}
+
+	/* Iterate over all MC blocks to read INTSTATUS */
+	for(i = 0; i < MAX_MC_CHANNELS; i++) {
+		intstat = mc_ch_readl(mc_err, i, intstat_reg);
+		dev_err_ratelimited(mc_err->dev, "status:%lu\n", intstat);
+		/* clear interrupt */
+		mc_ch_writel(mc_err, i, intstat, intstat_reg);
+	}
+
+	/* clear interrupt */
+	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, intstat_bc, intstat_reg);
+	return IRQ_HANDLED;
+}
+
+/* Interrupt handler for MC channel */
+static irqreturn_t handle_channel_irq(int irq, void *data)
+{
+	return handle_generic_irq(data, MC_CHANNEL_IRQ);
+}
+
+/* Interrupt handler for SBS */
+static irqreturn_t handle_sbs_irq(int irq, void *data)
+{
+	return handle_generic_irq(data, SBS_IRQ);
+}
+
+/* Interrupt handler for HUB and HUBC */
+static irqreturn_t handle_hub_irq(int irq, void *data)
+{
+	struct tegra_mcerr *mc_err = data;
+	unsigned long hub_global_intstat, hub_intstat;
+	int hub;
+	bool is_hubc = false;
+
+	/* Read MSS_HUB_GLOBAL_INTSTATUS_0 from MCB block */
+	hub_global_intstat = mc_ch_readl(mc_err, MC_BROADCAST_CHANNEL, MSS_HUB_GLOBAL_INTSTATUS_0);
+	if (hub_global_intstat == 0) {
+		dev_err(mc_err->dev, "No interrupt in HUB/HUBC\n");
+		return IRQ_NONE;
+	}
+
+	/* Find out the hub or hubc number on which interrupt occurred */
+	if (hub_global_intstat & HUBC_INTR) {
+		is_hubc = true;
+	} else if (hub_global_intstat & HUB0_INTR) {
+		hub = 0;
+	} else if (hub_global_intstat & HUB1_INTR) {
+		hub = 1;
+	} else if (hub_global_intstat & HUB2_INTR) {
+		hub = 2;
+	} else if (hub_global_intstat & HUB3_INTR) {
+		hub = 3;
+	} else if (hub_global_intstat & HUB4_INTR) {
+		hub = 4;
+	} else if (hub_global_intstat & HUB5_INTR) {
+		hub = 5;
+	} else if (hub_global_intstat & HUB6_INTR) {
+		hub = 6;
+	} else {
+		dev_err(mc_err->dev, "No interrupt in HUB/HUBC\n");
+		return IRQ_NONE;
+	}
+
+	if (is_hubc) {
+		/* Read MSS_HUB_HUBC_INTSTATUS_0 from block MCB */
+		hub_intstat = mc_ch_readl(mc_err, MC_BROADCAST_CHANNEL, MSS_HUB_HUBC_INTSTATUS_0);
+	} else {
+		/* Read MSS_HUB_INTRSTATUS_0 from block MCi */
+		hub_intstat = mc_ch_readl(mc_err, hub, MSS_HUB_INTRSTATUS_0);
+	}
+
+	if (hub_intstat != 0) {
+		if (is_hubc) {
+			dev_err_ratelimited(mc_err->dev, "Scrubber operation status:%lu\n",
+					hub_intstat);
+			/*clear hubc interrupt */
+			mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, hub_intstat,
+					MSS_HUB_HUBC_INTSTATUS_0);
+		} else {
+			hub_log_fault(mc_err, hub, hub_intstat);
+		}
+	}
+	return IRQ_HANDLED;
+}
+
+/* Interrupt handler for MCF */
+static irqreturn_t handle_mcf_irq(int irq, void *data)
+{
+	struct tegra_mcerr *mc_err = data;
+	unsigned long mcf_common_intstat, mcf_intstatus;
+	int slice;
+
+	/* Read MCF_COMMON_INTSTATUS0_0_0 from MCB block */
+	mcf_common_intstat = mc_ch_readl(mc_err, MC_BROADCAST_CHANNEL, MCF_COMMON_INTSTATUS0_0_0);
+	if (mcf_common_intstat == 0) {
 		dev_err(mc_err->dev, "No interrupt in MCF\n");
 		return IRQ_NONE;
 	}
 
-	for(i = 0; i < mc_err->channels; i++) {
-		mcf_ch_intstatus = mc_ch_readl(mc_err, i, MCF_INTSTATUS_0) & (mc_err->mcf_int_mask);
-		if (mcf_ch_intstatus != 0) {
-			/* log fault */
-			log_fault(mc_err, i, mcf_ch_intstatus);
+	/* Find out the slice number on which interrupt occurred */
+	if (mcf_common_intstat & MCF_SECURITY0_INT0) {
+		slice = 0;
+	} else if (mcf_common_intstat & MCF_SECURITY1_INT0) {
+		slice = 1;
+	} else if (mcf_common_intstat & MCF_SECURITY2_INT0) {
+		slice = 2;
+	} else if (mcf_common_intstat & MCF_SECURITY3_INT0) {
+		slice = 3;
+	} else if (mcf_common_intstat & MCF_SECURITY4_INT0) {
+		slice = 4;
+	} else {
+		dev_err(mc_err->dev, "No interrupt in MCF slice\n");
+		return IRQ_NONE;
+	}
 
-			/*
-			 * clear interrupts
-			 * TODO: This code is taken from upstream mc-err driver but looks incorrect
-			 * to me. Need to discuss and correct it.
-			 */
-			mc_ch_writel(mc_err, i, mcf_ch_intstatus, MCF_INTSTATUS_0);
-			mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mcf_intstatus, MCF_INTSTATUS_0);
-			return IRQ_HANDLED;
+	/* Read MCF_INTSTATUS_0 from MCi */
+	mcf_intstatus = mc_ch_readl(mc_err, slice, MCF_INTSTATUS_0);
+	if (mcf_intstatus != 0) {
+		mcf_log_fault(mc_err, slice, mcf_intstatus);
+	}
+	return IRQ_HANDLED;
+}
+
+static int register_irq_handlers(struct platform_device *pdev, struct tegra_mcerr *mc_err)
+{
+	int err, irq_num, i;
+
+	/* Register handler for MCF interrupt */
+	irq_num = platform_get_irq(pdev, 0);
+	if (irq_num< 0) {
+		dev_err(mc_err->dev, "Unable to parse/map MC error interrupt\n");
+		return -EINVAL;
+	}
+
+	err = devm_request_irq(&pdev->dev, irq_num, handle_mcf_irq, IRQF_SHARED,
+							dev_name(&pdev->dev), mc_err);
+	if (err) {
+		dev_err(mc_err->dev, "devm_request_irq failure\n");
+		return err;
+	}
+
+	/* Register handler for HUB and HUBC interrupts */
+	for (i = 1; i <= 5; i++) {
+		irq_num = platform_get_irq(pdev, i);
+		if (irq_num< 0) {
+			dev_err(mc_err->dev, "Unable to parse/map MC error interrupt\n");
+			return -EINVAL;
+		}
+
+		err = devm_request_irq(&pdev->dev, irq_num, handle_hub_irq, IRQF_SHARED,
+							dev_name(&pdev->dev), mc_err);
+		if (err) {
+			dev_err(mc_err->dev, "devm_request_irq failure\n");
+			return err;
 		}
 	}
 
-	return IRQ_NONE;
+	/*Register handler for SBS interrupt */
+	irq_num = platform_get_irq(pdev, i);
+	if (irq_num< 0) {
+		dev_err(mc_err->dev, "Unable to parse/map MC error interrupt\n");
+		return -EINVAL;
+	}
+
+	err = devm_request_irq(&pdev->dev, irq_num, handle_sbs_irq, IRQF_SHARED,
+							dev_name(&pdev->dev), mc_err);
+	if (err) {
+		dev_err(mc_err->dev, "devm_request_irq failure\n");
+		return err;
+	}
+
+	i++;
+	/*Register handler for MC channel interrupt */
+	irq_num = platform_get_irq(pdev, i);
+	if (irq_num< 0) {
+		dev_err(mc_err->dev, "Unable to parse/map MC error interrupt\n");
+		return -EINVAL;
+	}
+
+	err = devm_request_irq(&pdev->dev, irq_num, handle_channel_irq, IRQF_SHARED,
+							dev_name(&pdev->dev), mc_err);
+	if (err) {
+		dev_err(mc_err->dev, "devm_request_irq failure\n");
+		return err;
+	}
+
+	return 0;
 }
 
 static int tegra_mcerr_probe(struct platform_device *pdev)
@@ -898,29 +1308,15 @@ static int tegra_mcerr_probe(struct platform_device *pdev)
 		}
 	}
 
-	/* Set interrupt masks */
-	mc_err->mcf_int_mask = MC_INT_DECERR_ROUTE_SANITY_GIC_MSI |
-			MC_INT_DECERR_ROUTE_SANITY | MC_INT_SCRUB_ECC_WR_ACK |
-			MC_INT_DECERR_GENERALIZED_CARVEOUT | MC_INT_DECERR_MTS |
-			MC_INT_SECERR_SEC | MC_INT_DECERR_VPR |
-			MC_INT_SECURITY_VIOLATION | MC_INT_DECERR_EMEM;
-	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mc_err->mcf_int_mask, MCF_INTMASK_0);
-	mc_ch_writel(mc_err, MC_BROADCAST_CHANNEL, mc_err->mcf_int_mask, MCF_INTPRIORITY_0);
-
 	/* Request IRQ and register handler */
-	mc_err->irq = platform_get_irq(pdev, 0);
-	if (mc_err->irq < 0) {
-		dev_err(mc_err->dev, "Unable to parse/map MC error interrupt\n");
-		return -EINVAL;
-	}
-
-	err = devm_request_irq(&pdev->dev, mc_err->irq, handle_irq, IRQF_SHARED,
-							dev_name(&pdev->dev), mc_err);
+	err = register_irq_handlers(pdev, mc_err);
 	if (err) {
-		dev_err(mc_err->dev, "devm_request_irq failure\n");
+		dev_err(mc_err->dev, "Irq handler registeration failed\n");
 		return err;
 	}
 
+	/* Set interrupt masks */
+	set_interrupt_masks(mc_err);
 	return 0;
 }
 
