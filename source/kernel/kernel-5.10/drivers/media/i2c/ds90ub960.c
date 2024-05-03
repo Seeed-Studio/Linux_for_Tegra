@@ -6,12 +6,19 @@
  * Copyright (c) 2021 Tomi Valkeinen <tomi.valkeinen@ideasonboard.com>
  */
 
+
+/**
+ * https://github.com/torvalds/linux/commit/0d346d2a6f54f06f36b224fd27cd6eafe8c83be9 rename v4l2_subdev_pad_config to  v4l2_subdev_state
+ * https://github.com/beagleboard/linux/commit/592346612eb821c7b340166b9668fb543611610d  add v4l2_subdev_krouting 
+ * 
+*/
+#define DEBUG
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
-#include <linux/i2c-atr.h>
+#include <linux/nv-i2c-atr.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -27,6 +34,22 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-subdev.h>
+
+
+#define v4l2_subdev_state v4l2_subdev_pad_config
+#define v4l2_subdev_alloc_state v4l2_subdev_alloc_pad_config
+#define v4l2_subdev_free_state v4l2_subdev_free_pad_config
+
+#define v4l2_async_nf_init v4l2_async_notifier_init
+#define v4l2_async_nf_unregister v4l2_async_notifier_unregister
+#define v4l2_async_nf_cleanup v4l2_async_notifier_cleanup
+#define v4l2_async_subdev_nf_register v4l2_async_subdev_notifier_register
+#define v4l2_async_nf_add_fwnode(notifier, fwnode, type)                \
+        ((type *)v4l2_async_notifier_add_fwnode_subdev(notifier, fwnode, sizeof(type)))
+
+#define v4l2_mbus_config_mipi_csi2 v4l2_fwnode_bus_mipi_csi2
+
+
 
 #define UB960_MAX_RX_NPORTS	4
 #define UB960_MAX_TX_NPORTS	2
@@ -314,7 +337,7 @@ struct ub960_data {
 	struct regmap		*regmap;
 	struct gpio_desc	*pd_gpio;
 	struct task_struct	*kthread;
-	struct i2c_atr		*atr;
+	struct nv_i2c_atr		*atr;
 	struct ub960_rxport	*rxports[UB960_MAX_RX_NPORTS];
 	struct ub960_txport	*txports[UB960_MAX_TX_NPORTS];
 	struct ub960_vc_map	vc_map;
@@ -402,6 +425,7 @@ static const struct ub960_format_info ub960_formats[] = {
 	{ .code = MEDIA_BUS_FMT_SRGGB12_1X12, .bpp = 12, .datatype = 0x2c, },
 };
 
+#if 0
 static const struct ub960_format_info *ub960_find_format(u32 code)
 {
 	unsigned int i;
@@ -413,7 +437,7 @@ static const struct ub960_format_info *ub960_find_format(u32 code)
 
 	return NULL;
 }
-
+#endif 
 /* -----------------------------------------------------------------------------
  * Basic device access
  */
@@ -618,6 +642,7 @@ static int ub960_csiport_update_bits(struct ub960_data *priv, u8 nport, u8 reg,
 	return ret;
 }
 
+#if 0
 static int ub960_write_ind8(const struct ub960_data *priv, u8 reg, u8 val)
 {
 	int ret;
@@ -640,17 +665,17 @@ static int ub960_write_ind16(const struct ub960_data *priv, u8 reg, u16 val)
 		ret = ub960_write(priv, UB960_SR_IND_ACC_DATA, val & 0xff);
 	return ret;
 }
-
+#endif 
 /* -----------------------------------------------------------------------------
  * I2C-ATR (address translator)
  */
 
-static int ub960_atr_attach_client(struct i2c_atr *atr, u32 chan_id,
+static int ub960_atr_attach_client(struct nv_i2c_atr *atr, u32 chan_id,
 				   const struct i2c_board_info *info,
 				   const struct i2c_client *client,
 				   u16 *alias_id)
 {
-	struct ub960_data *priv = i2c_atr_get_clientdata(atr);
+	struct ub960_data *priv = nv_i2c_atr_get_clientdata(atr);
 	struct ub960_rxport *rxport = priv->rxports[chan_id];
 	struct device *dev = &priv->client->dev;
 	unsigned int reg_idx;
@@ -712,10 +737,10 @@ out:
 	return ret;
 }
 
-static void ub960_atr_detach_client(struct i2c_atr *atr, u32 chan_id,
+static void ub960_atr_detach_client(struct nv_i2c_atr *atr, u32 chan_id,
 				    const struct i2c_client *client)
 {
-	struct ub960_data *priv = i2c_atr_get_clientdata(atr);
+	struct ub960_data *priv = nv_i2c_atr_get_clientdata(atr);
 	struct ub960_rxport *rxport = priv->rxports[chan_id];
 	struct device *dev = &priv->client->dev;
 	unsigned int reg_idx;
@@ -769,7 +794,7 @@ out:
 	mutex_unlock(&priv->alias_table_lock);
 }
 
-static const struct i2c_atr_ops ub960_atr_ops = {
+static const struct nv_i2c_atr_ops ub960_atr_ops = {
 	.attach_client = ub960_atr_attach_client,
 	.detach_client = ub960_atr_detach_client,
 };
@@ -1107,7 +1132,7 @@ static int ub960_rxport_probe_one(struct ub960_data *priv,
 
 	dev_dbg(dev, "ser%d: at alias 0x%02x\n", nport, rxport->ser_alias);
 
-	ret = i2c_atr_add_adapter(priv->atr, nport);
+	ret = nv_i2c_atr_add_adapter(priv->atr, nport);
 	if (ret) {
 		dev_err(dev, "rx%d: cannot add adapter", nport);
 		goto err_node_put;
@@ -1127,7 +1152,7 @@ static void ub960_rxport_remove_one(struct ub960_data *priv, u8 nport)
 {
 	struct ub960_rxport *rxport = priv->rxports[nport];
 
-	i2c_atr_del_adapter(priv->atr, nport);
+	nv_i2c_atr_del_adapter(priv->atr, nport);
 	ub960_rxport_remove_serializer(priv, nport);
 	of_node_put(rxport->remote_of_node);
 	kfree(rxport);
@@ -1138,19 +1163,19 @@ static int ub960_atr_probe(struct ub960_data *priv)
 	struct i2c_adapter *parent_adap = priv->client->adapter;
 	struct device *dev = &priv->client->dev;
 
-	priv->atr = i2c_atr_new(parent_adap, dev, &ub960_atr_ops,
+	priv->atr = nv_i2c_atr_new(parent_adap, dev, &ub960_atr_ops,
 				priv->hw_data->num_rxports);
 	if (IS_ERR(priv->atr))
 		return PTR_ERR(priv->atr);
 
-	i2c_atr_set_clientdata(priv->atr, priv);
+	nv_i2c_atr_set_clientdata(priv->atr, priv);
 
 	return 0;
 }
 
 static void ub960_atr_remove(struct ub960_data *priv)
 {
-	i2c_atr_delete(priv->atr);
+	nv_i2c_atr_delete(priv->atr);
 	priv->atr = NULL;
 }
 
@@ -1207,6 +1232,7 @@ static void ub960_rxport_handle_events(struct ub960_data *priv, u8 nport)
 
 static int ub960_start_streaming(struct ub960_data *priv)
 {
+#if 0
 	const struct v4l2_subdev_krouting *routing;
 	struct v4l2_subdev_state *state;
 	unsigned int i;
@@ -1408,7 +1434,7 @@ static int ub960_start_streaming(struct ub960_data *priv)
 	}
 
 	ub960_write(priv, UB960_SR_FWD_CTL1, fwd_ctl);
-
+#endif 
 	return 0;
 }
 
@@ -1458,6 +1484,7 @@ static const struct v4l2_subdev_video_ops ub960_video_ops = {
 	.s_stream = ub960_s_stream,
 };
 
+#if 0
 static int _ub960_set_routing(struct v4l2_subdev *sd,
 			     struct v4l2_subdev_state *state,
 			     struct v4l2_subdev_krouting *routing)
@@ -1532,11 +1559,13 @@ static int ub960_get_source_frame_desc(struct ub960_data *priv,
 
 	return 0;
 }
+#endif 
 
 static inline u8 ub960_get_output_vc(u8 map, u8 input_vc) {
 	return (map >> (2 * input_vc)) & 0x03;
 }
 
+#if 0
 static void ub960_map_virtual_channels(struct ub960_data *priv)
 {
 	struct device *dev = &priv->client->dev;
@@ -1596,7 +1625,6 @@ static void ub960_map_virtual_channels(struct ub960_data *priv)
 	}
 	priv->vc_map = vc_map;
 }
-
 static int ub960_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
 				struct v4l2_mbus_frame_desc *fd)
 {
@@ -1705,11 +1733,23 @@ out:
 
 	return ret;
 }
+#endif 
+
+static int ub960_get_fmt(struct v4l2_subdev *sd,
+			   struct v4l2_subdev_state *sd_state,
+			   struct v4l2_subdev_format *fmt)
+{
+	// fmt->format = *v4l2_subdev_get_pad_format(sd, state, fmt->pad);
+	return 0;
+}
+
+
 
 static int ub960_set_fmt(struct v4l2_subdev *sd,
 			 struct v4l2_subdev_state *state,
 			 struct v4l2_subdev_format *format)
 {
+#if 0
 	struct ub960_data *priv = sd_to_ub960(sd);
 	struct v4l2_mbus_framefmt *fmt;
 	int ret = 0;
@@ -1719,7 +1759,7 @@ static int ub960_set_fmt(struct v4l2_subdev *sd,
 
 	/* No transcoding, source and sink formats must match. */
 	if (ub960_pad_is_source(priv, format->pad))
-		return v4l2_subdev_get_fmt(sd, state, format);
+		return ub960_get_fmt(sd, state, format);
 
 	/* TODO: implement fmt validation */
 
@@ -1746,8 +1786,10 @@ out:
 	v4l2_subdev_unlock_state(state);
 
 	return ret;
+#endif 
+	return 0;
 }
-
+#if 0
 static int ub960_init_cfg(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_state *state)
 {
@@ -1770,15 +1812,18 @@ static int ub960_init_cfg(struct v4l2_subdev *sd,
 
 	return _ub960_set_routing(sd, state, &routing);
 }
+#endif 
+
+
 
 static const struct v4l2_subdev_pad_ops ub960_pad_ops = {
-	.set_routing	= ub960_set_routing,
-	.get_frame_desc	= ub960_get_frame_desc,
+	// .set_routing	= ub960_set_routing,
+	// .get_frame_desc	= ub960_get_frame_desc,
 
-	.get_fmt = v4l2_subdev_get_fmt,
+	.get_fmt = ub960_get_fmt,
 	.set_fmt = ub960_set_fmt,
 
-	.init_cfg = ub960_init_cfg,
+	// .init_cfg = ub960_init_cfg,
 };
 
 static const struct v4l2_subdev_core_ops ub960_subdev_core_ops = {
@@ -1795,9 +1840,10 @@ static const struct v4l2_subdev_ops ub960_subdev_ops = {
 
 static const struct media_entity_operations ub960_entity_ops = {
 	.link_validate = v4l2_subdev_link_validate,
-	.has_route = v4l2_subdev_has_route
+	// .has_route = v4l2_subdev_has_route
 };
 
+#if 0
 static void ub960_enable_tpg(struct ub960_data *priv, int tpg_num)
 {
 	/*
@@ -1902,7 +1948,7 @@ static int ub960_s_ctrl(struct v4l2_ctrl *ctrl)
 static const struct v4l2_ctrl_ops ub960_ctrl_ops = {
 	.s_ctrl = ub960_s_ctrl,
 };
-
+#endif 
 /* -----------------------------------------------------------------------------
  * Core
  */
@@ -2209,10 +2255,11 @@ static int ub960_create_subdev(struct ub960_data *priv)
 			       ARRAY_SIZE(ub960_tpg_qmenu) - 1);
 	priv->sd.ctrl_handler = &priv->ctrl_handler;
 
-	v4l2_ctrl_new_std_menu_items(&priv->ctrl_handler, &ub960_ctrl_ops,
-				     V4L2_CID_TEST_PATTERN,
-				     ARRAY_SIZE(ub960_tpg_qmenu) - 1, 0, 0,
-				     ub960_tpg_qmenu);
+	// v4l2_ctrl_new_std_menu_items(&priv->ctrl_handler, &ub960_ctrl_ops,
+	// 			     V4L2_CID_TEST_PATTERN,
+	// 			     ARRAY_SIZE(ub960_tpg_qmenu) - 1, 0, 0,
+	// 			     ub960_tpg_qmenu);
+
 
 	v4l2_ctrl_new_int_menu(&priv->ctrl_handler, NULL, V4L2_CID_LINK_FREQ,
 			       ARRAY_SIZE(priv->tx_link_freq) - 1, 0,
@@ -2223,8 +2270,8 @@ static int ub960_create_subdev(struct ub960_data *priv)
 		goto err_free_ctrl;
 	}
 
-	priv->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS |
-		V4L2_SUBDEV_FL_MULTIPLEXED;
+	priv->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+
 	priv->sd.entity.function = MEDIA_ENT_F_VID_IF_BRIDGE;
 	priv->sd.entity.ops = &ub960_entity_ops;
 
@@ -2240,14 +2287,14 @@ static int ub960_create_subdev(struct ub960_data *priv)
 	if (ret)
 		goto err_free_ctrl;
 
-	ret = v4l2_subdev_init_finalize(&priv->sd);
-	if (ret)
-		goto err_entity_cleanup;
+	// ret = v4l2_subdev_init_finalize(&priv->sd);
+	// if (ret)
+	// 	goto err_entity_cleanup;
 
 	ret = ub960_v4l2_notifier_register(priv);
 	if (ret) {
 		dev_err(dev, "v4l2 subdev notifier register failed: %d\n", ret);
-		goto err_free_state;
+		goto err_entity_cleanup;
 	}
 
 	ret = v4l2_async_register_subdev(&priv->sd);
@@ -2260,8 +2307,8 @@ static int ub960_create_subdev(struct ub960_data *priv)
 
 err_unreg_notif:
 	ub960_v4l2_notifier_unregister(priv);
-err_free_state:
-	v4l2_subdev_cleanup(&priv->sd);
+// err_free_state:
+// 	v4l2_subdev_cleanup(&priv->sd);
 err_entity_cleanup:
 	media_entity_cleanup(&priv->sd.entity);
 err_free_ctrl:
@@ -2275,7 +2322,7 @@ static void ub960_destroy_subdev(struct ub960_data *priv)
 	ub960_v4l2_notifier_unregister(priv);
 	v4l2_async_unregister_subdev(&priv->sd);
 
-	v4l2_subdev_cleanup(&priv->sd);
+	// v4l2_subdev_cleanup(&priv->sd);
 
 	media_entity_cleanup(&priv->sd.entity);
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);

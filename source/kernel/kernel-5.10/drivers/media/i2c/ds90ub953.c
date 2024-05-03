@@ -23,6 +23,21 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
 
+
+#define v4l2_subdev_state v4l2_subdev_pad_config
+#define v4l2_subdev_alloc_state v4l2_subdev_alloc_pad_config
+#define v4l2_subdev_free_state v4l2_subdev_free_pad_config
+
+#define v4l2_async_nf_init v4l2_async_notifier_init
+#define v4l2_async_nf_unregister v4l2_async_notifier_unregister
+#define v4l2_async_nf_cleanup v4l2_async_notifier_cleanup
+#define v4l2_async_subdev_nf_register v4l2_async_subdev_notifier_register
+#define v4l2_async_nf_add_fwnode(notifier, fwnode, type)                \
+        ((type *)v4l2_async_notifier_add_fwnode_subdev(notifier, fwnode, sizeof(type)))
+
+#define v4l2_mbus_config_mipi_csi2 v4l2_fwnode_bus_mipi_csi2
+
+
 #define UB953_PAD_SINK			0
 #define UB953_PAD_SOURCE		1
 
@@ -149,7 +164,7 @@ static int ub953_write(const struct ub953_data *priv, u8 reg, u8 val)
 
 	return ret;
 }
-
+#if 0
 static int ub953_write_ind8(const struct ub953_data *priv, u8 reg, u8 val)
 {
 	int ret;
@@ -172,6 +187,7 @@ static int ub953_write_ind16(const struct ub953_data *priv, u8 reg, u16 val)
 		ret = ub953_write(priv, UB953_REG_IND_ACC_DATA, val & 0xff);
 	return ret;
 }
+#endif 
 
 /*
  * Clock output
@@ -438,6 +454,8 @@ static const struct v4l2_subdev_video_ops ub953_video_ops = {
 	.s_stream = ub953_s_stream,
 };
 
+#if 0
+
 static int _ub953_set_routing(struct v4l2_subdev *sd,
 			     struct v4l2_subdev_state *state,
 			     struct v4l2_subdev_krouting *routing)
@@ -509,10 +527,14 @@ static int ub953_get_source_frame_desc(struct ub953_data *priv,
 
 	return 0;
 }
+#endif
+
 
 static int ub953_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
 				struct v4l2_mbus_frame_desc *fd)
 {
+
+#if 0
 	struct ub953_data *priv = sd_to_ub953(sd);
 	const struct v4l2_subdev_krouting *routing;
 	struct v4l2_mbus_frame_desc source_fd;
@@ -577,12 +599,15 @@ out:
 	v4l2_subdev_unlock_state(state);
 
 	return ret;
+#endif
+	return 0;
 }
 
 static int ub953_set_fmt(struct v4l2_subdev *sd,
 			 struct v4l2_subdev_state *state,
 			 struct v4l2_subdev_format *format)
 {
+#if 0
 	struct ub953_data *priv = sd_to_ub953(sd);
 	struct v4l2_mbus_framefmt *fmt;
 	int ret = 0;
@@ -619,8 +644,10 @@ out:
 	v4l2_subdev_unlock_state(state);
 
 	return ret;
+#endif	
+	return 0;
 }
-
+#if 0
 static int ub953_init_cfg(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_state *state)
 {
@@ -641,13 +668,22 @@ static int ub953_init_cfg(struct v4l2_subdev *sd,
 
 	return _ub953_set_routing(sd, state, &routing);
 }
+#endif
+
+static int ub953_get_fmt(struct v4l2_subdev *sd,
+			   struct v4l2_subdev_state *sd_state,
+			   struct v4l2_subdev_format *fmt)
+{
+	// fmt->format = *v4l2_subdev_get_pad_format(sd, state, fmt->pad);
+	return 0;
+}
 
 static const struct v4l2_subdev_pad_ops ub953_pad_ops = {
-	.set_routing = ub953_set_routing,
+    //.set_routing = ub953_set_routing,
 	.get_frame_desc = ub953_get_frame_desc,
-	.get_fmt = v4l2_subdev_get_fmt,
+	.get_fmt = ub953_get_fmt,
 	.set_fmt = ub953_set_fmt,
-	.init_cfg = ub953_init_cfg,
+//	.init_cfg = ub953_init_cfg,
 };
 
 static const struct v4l2_subdev_ops ub953_subdev_ops = {
@@ -674,7 +710,7 @@ static const char *const ub953_tpg_qmenu[] = {
 	"4 vertical color bars",
 	"8 vertical color bars",
 };
-
+#if 0
 static void ub953_enable_tpg(struct ub953_data *priv, int tpg_num)
 {
 	struct v4l2_subdev *sd = &priv->sd;
@@ -761,6 +797,8 @@ static int ub953_s_ctrl(struct v4l2_ctrl *ctrl)
 static const struct v4l2_ctrl_ops ub953_ctrl_ops = {
 	.s_ctrl = ub953_s_ctrl,
 };
+
+#endif
 
 static int ub953_notify_bound(struct v4l2_async_notifier *notifier,
 			      struct v4l2_subdev *source_subdev,
@@ -1037,10 +1075,10 @@ static int ub953_probe(struct i2c_client *client)
 			       ARRAY_SIZE(ub953_tpg_qmenu) - 1);
 	priv->sd.ctrl_handler = &priv->ctrl_handler;
 
-	v4l2_ctrl_new_std_menu_items(&priv->ctrl_handler, &ub953_ctrl_ops,
-				     V4L2_CID_TEST_PATTERN,
-				     ARRAY_SIZE(ub953_tpg_qmenu) - 1, 0, 0,
-				     ub953_tpg_qmenu);
+	// v4l2_ctrl_new_std_menu_items(&priv->ctrl_handler, &ub953_ctrl_ops,
+	// 			     V4L2_CID_TEST_PATTERN,
+	// 			     ARRAY_SIZE(ub953_tpg_qmenu) - 1, 0, 0,
+	// 			     ub953_tpg_qmenu);
 
 	if (priv->ctrl_handler.error) {
 		ret = priv->ctrl_handler.error;
@@ -1048,7 +1086,7 @@ static int ub953_probe(struct i2c_client *client)
 	}
 
 	priv->sd.flags |=
-		V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_MULTIPLEXED;
+		V4L2_SUBDEV_FL_HAS_DEVNODE;
 	priv->sd.entity.function = MEDIA_ENT_F_VID_IF_BRIDGE;
 	priv->sd.entity.ops = &ub953_entity_ops;
 
@@ -1065,14 +1103,14 @@ static int ub953_probe(struct i2c_client *client)
 	priv->tx_ep_np = of_graph_get_endpoint_by_regs(dev->of_node, 1, 0);
 	priv->sd.fwnode = of_fwnode_handle(priv->tx_ep_np);
 
-	ret = v4l2_subdev_init_finalize(&priv->sd);
-	if (ret)
-		goto err_entity_cleanup;
+	// ret = v4l2_subdev_init_finalize(&priv->sd);
+	// if (ret)
+	// 	goto err_entity_cleanup;
 
 	ret = ub953_v4l2_notifier_register(priv);
 	if (ret) {
 		dev_err(dev, "v4l2 subdev notifier register failed: %d\n", ret);
-		goto err_free_state;
+		goto err_entity_cleanup;
 	}
 
 	ret = v4l2_async_register_subdev(&priv->sd);
@@ -1099,8 +1137,8 @@ static int ub953_probe(struct i2c_client *client)
 
 err_unreg_notif:
 	ub953_v4l2_notifier_unregister(priv);
-err_free_state:
-	v4l2_subdev_cleanup(&priv->sd);
+// err_free_state:
+// 	v4l2_subdev_cleanup(&priv->sd);
 err_entity_cleanup:
 	if (priv->rx_ep_np)
 		of_node_put(priv->rx_ep_np);
@@ -1126,7 +1164,7 @@ static int ub953_remove(struct i2c_client *client)
 	ub953_v4l2_notifier_unregister(priv);
 	v4l2_async_unregister_subdev(&priv->sd);
 
-	v4l2_subdev_cleanup(&priv->sd);
+	// v4l2_subdev_cleanup(&priv->sd);
 
 	of_node_put(priv->tx_ep_np);
 
