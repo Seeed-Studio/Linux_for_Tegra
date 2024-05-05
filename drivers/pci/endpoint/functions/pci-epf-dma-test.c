@@ -248,7 +248,10 @@ static void pcie_dma_epf_unbind(struct pci_epf *epf)
 	tegra_pcie_dma_deinit(&cookie);
 
 	if (epfnv->chip_id == TEGRA264) {
+
+#if defined(NV_PLATFORM_MSI_DOMAIN_FREE_IRQS_PRESENT) /* Linux v6.9 */
 		platform_msi_domain_free_irqs(&pdev->dev);
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 		irq = msi_get_virq(&pdev->dev, 0);
 #else
@@ -267,6 +270,7 @@ static void pcie_dma_epf_unbind(struct pci_epf *epf)
 	lpci_epf_free_space(epf, epfnv->bar_virt, bar);
 }
 
+#if defined(NV_PLATFORM_MSI_DOMAIN_ALLOC_IRQS_PRESENT) /* Linux 6.9 */
 static void pcie_dma_epf_write_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
 {
 	if (gepfnv->edma.msi_addr == 0) {
@@ -276,6 +280,7 @@ static void pcie_dma_epf_write_msi_msg(struct msi_desc *desc, struct msi_msg *ms
 		gepfnv->edma.msi_data = msg->data + 1;
 	}
 }
+#endif
 
 static irqreturn_t pcie_dma_epf_irq(int irq, void *arg)
 {
@@ -356,11 +361,13 @@ static int pcie_dma_epf_bind(struct pci_epf *epf)
 			goto fail_kasnprintf;
 		}
 
+#if defined(NV_PLATFORM_MSI_DOMAIN_ALLOC_IRQS_PRESENT) /* Linux 6.9 */
 		ret = platform_msi_domain_alloc_irqs(&pdev->dev, 2, pcie_dma_epf_write_msi_msg);
 		if (ret < 0) {
 			dev_err(fdev, "failed to allocate MSIs: %d\n", ret);
 			goto fail_kasnprintf;
 		}
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 		epfnv->edma.msi_irq = msi_get_virq(&pdev->dev, 1);
 		irq = msi_get_virq(&pdev->dev, 0);
@@ -406,8 +413,10 @@ fail_get_features:
 	if (epfnv->chip_id == TEGRA264)
 		free_irq(irq, epfnv);
 fail_msi_alloc:
+#if defined(NV_PLATFORM_MSI_DOMAIN_FREE_IRQS_PRESENT) /* Linux v6.9 */
 	if (epfnv->chip_id == TEGRA264)
 		platform_msi_domain_free_irqs(&pdev->dev);
+#endif
 fail_kasnprintf:
 	devm_kfree(fdev, name);
 fail_atu_dma:

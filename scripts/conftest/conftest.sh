@@ -7287,6 +7287,38 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MII_BUS_STRUCT_HAS_WRITE_C45" "" "types"
         ;;
 
+        platform_msi_domain_alloc_irqs)
+            #
+            # Determine if the platform_msi_domain_alloc_irqs() API available or not.
+            #
+            # API platform_msi_domain_free_irqs() is dropped from Linux 6.9
+            # with commit 1a4671ff7a903e87 ("platform-msi: Remove unused interfaces")
+            #
+            CODE="
+            #include <linux/msi.h>
+            void conftest_platform_msi_domain_alloc_irqs(void) {
+                platform_msi_domain_alloc_irqs();
+            }"
+
+            compile_check_conftest "$CODE" "NV_PLATFORM_MSI_DOMAIN_ALLOC_IRQS_PRESENT" "" "functions"
+        ;;
+
+        platform_msi_domain_free_irqs)
+            #
+            # Determine if the platform_msi_domain_free_irqs() API available or not.
+            #
+            # API platform_msi_domain_free_irqs() is dropped from Linux 6.9
+            # with commit 1a4671ff7a903e87 ("platform-msi: Remove unused interfaces")
+            #
+            CODE="
+            #include <linux/msi.h>
+            void conftest_platform_msi_domain_free_irqs(void) {
+                platform_msi_domain_free_irqs();
+            }"
+
+            compile_check_conftest "$CODE" "NV_PLATFORM_MSI_DOMAIN_FREE_IRQS_PRESENT" "" "functions"
+        ;;
+
         pwm_chip_struct_has_base_arg)
             #
             # Determine if 'struct pwm_chip' has the 'base' field.
