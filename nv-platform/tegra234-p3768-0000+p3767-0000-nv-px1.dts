@@ -15,5 +15,9 @@
 				status = "disabled";
 			};
 		};
+
+		pcie@140a0000 { /* C8 - Ethernet */
+			status = "disabled";
+		};
 	};
 };
