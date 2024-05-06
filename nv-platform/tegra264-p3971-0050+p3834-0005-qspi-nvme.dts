@@ -6,7 +6,8 @@
 #include "tegra264-p3971-0050.dtsi"
 
 / {
-
+	model = "NVIDIA Jetson Thor Developer Kit";
+	compatible = "nvidia,p3971-0050+p3834-0005", "nvidia,p3834-0005", "nvidia,tegra264";
 };
 
 /* Add minimal dtsi at the End of the file */

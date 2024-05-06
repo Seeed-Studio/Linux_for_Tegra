@@ -1,6 +1,174 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
-/ {
+#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/input/gpio-keys.h>
 
+/ {
+	bus@0 {
+		i2c@810c640000 {
+			/* CVB EEPROM */
+			eeprom@56 {
+				compatible = "atmel,24c02";
+				reg = <0x56>;
+
+				label = "system";
+				vcc-supply = <&vdd_1v8_cvb>;
+				address-width = <8>;
+				pagesize = <8>;
+				size = <256>;
+				read-only;
+			};
+		};
+
+		spi@810c440000 {
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		spi@810c590000 {
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+	};
+
+	eeprom-manager {
+		data-size = <0x100>;
+		bus@0 {
+			i2c-bus = <&i2c1>;
+			eeprom@1 {
+				slave-address = <0x56>;
+				label = "cvb";
+			};
+		};
+	};
+
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		pwms = <&pwm4 0 45334>;
+		#cooling-cells = <2>;
+	};
+
+	nvme_fan: pwm-fan-nvme {
+		compatible = "pwm-fan";
+		pwms = <&pwm3 0 45334>;
+		#cooling-cells = <2>;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		key-force-recovery {
+			label = "Force Recovery";
+			gpios = <&gpio_aon TEGRA264_AON_GPIO(EE, 1) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_KEY>;
+			linux,code = <BTN_1>;
+		};
+
+		key-power {
+			label = "Power";
+			gpios = <&gpio_aon TEGRA264_AON_GPIO(AA, 5) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_KEY>;
+			linux,code = <KEY_POWER>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+
+		key-suspend {
+			label = "Suspend";
+			gpios = <&gpio_main TEGRA264_MAIN_GPIO(U, 2) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_KEY>;
+			linux,code = <KEY_SLEEP>;
+		};
+	};
+
+	SRC_FET_cvb: regulator-vcc-src-fet {
+		compatible = "regulator-fixed";
+		reg = <1>;
+		regulator-name = "VCC_SRC_FET";
+		regulator-min-microvolt = <20000000>;
+		regulator-max-microvolt = <20000000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	vdd_5v_cvb: vdd_5v_ao_cvb: regulator-vdd-5v-ao {
+		compatible = "regulator-fixed";
+		reg = <2>;
+		regulator-name = "VDD_5V_AO";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+
+	vdd_3v3_cvb: regulator-vdd-3v3 {
+		compatible = "regulator-fixed";
+		reg = <3>;
+		regulator-name = "VDD_3V3";
+		vcc-supply = <&vdd_5v_cvb>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	vdd_3v3_ao_cvb: regulator-vdd-3v3-ao {
+		compatible = "regulator-fixed";
+		reg = <4>;
+		regulator-name = "VDD_3V3_AO";
+		vcc-supply = <&vdd_5v_ao_cvb>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	vdd_1v8_cvb: regulator-vdd-1v8 {
+		compatible = "regulator-fixed";
+		reg = <5>;
+		regulator-name = "VDD_1V8";
+		vcc-supply = <&vdd_3v3_cvb>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	vdd_12v_cvb: regulator-vdd-12v {
+		compatible = "regulator-fixed";
+		reg = <6>;
+		regulator-name = "VDD_12V";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_main TEGRA264_MAIN_GPIO(Y, 2) GPIO_ACTIVE_LOW>;
+		vcc-supply = <&SRC_FET_cvb>;
+		regulator-always-on;
+	};
+
+	vdd_5v0_hdmi_cvb: regulator-vdd-5v0-hdmi {
+		compatible = "regulator-fixed";
+		reg = <7>;
+		regulator-name = "VDD_5V0_HDMI";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio_main TEGRA264_MAIN_GPIO(U, 6) GPIO_ACTIVE_HIGH>;
+		vcc-supply = <&vdd_5v_cvb>;
+		regulator-always-on;
+		enable-active-high;
+	};
+
+	vdd_3v3_dp_cvb: regulator-vdd-3v3-dp {
+		compatible = "regulator-fixed";
+		reg = <8>;
+		regulator-name = "VDD_3V3_DP";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio_main TEGRA264_MAIN_GPIO(V, 1) GPIO_ACTIVE_HIGH>;
+		vcc-supply = <&vdd_3v3_cvb>;
+		regulator-always-on;
+		enable-active-high;
+	};
 };

@@ -4,5 +4,162 @@
 #include "tegra264.dtsi"
 
 / {
+	bus@0 {
+		i2c@810c640000 {
+			status = "okay";
+			/* CVB EEPROM */
+			eeprom@56 {
+				compatible = "atmel,24c02";
+				reg = <0x50>;
 
+				label = "system";
+				address-width = <8>;
+				pagesize = <8>;
+				size = <256>;
+				read-only;
+			};
+		};
+
+		/* 40-pin header. PIN: 3, 5 */
+		i2c@810c6d0000 {
+			status = "okay";
+		};
+
+		/* 40-pin header. PIN: 27, 28 */
+		i2c@c600000 {
+			status = "okay";
+		};
+
+		/* 40-pin header. PIN: 8, 9, 10, 36*/
+		uart@810c530000 {
+			status = "okay";
+		};
+
+		/* 40-pin header. PIN: 13 */
+		pwm@810c610000 {
+			status = "okay";
+		};
+
+		/* 40-pin header. PIN: 15 */
+		pwm@810c5e0000 {
+			status = "okay";
+		};
+
+		/* 40-pin header. PIN: 18 */
+		pwm@810c600000 {
+			status = "okay";
+		};
+
+		/* SoC FAN */
+		pwm@c6a0000 {
+			status = "okay";
+		};
+
+		/* NVME FAN */
+		pwm@810c5f0000 {
+			status = "okay";
+		};
+
+		/* SoC FAN-TACH */
+		tachometer@810c5c0000 {
+			status = "okay";
+		};
+
+		gpio@cf00000 {
+			status = "okay";
+		};
+
+		gpio@a808300000 {
+			status = "okay";
+		};
+
+		gpio@810c300000 {
+			status = "okay";
+		};
+
+		pinmux@810c281000 {
+			status = "okay";
+		};
+
+		pinmux@a8082e0000 {
+			status = "okay";
+		};
+
+		pinmux@c7a2000 {
+			status = "okay";
+		};
+
+		spi@810c440000 {
+			status = "okay";
+
+			prod-settings {
+				prod {
+					nvidia,spi-misc-clk-override = <0x0>;
+				};
+			};
+		};
+
+		spi@810c590000 {
+			status = "okay";
+
+			prod-settings {
+				prod {
+					nvidia,spi-misc-clk-override = <0x0>;
+				};
+			};
+		};
+
+		spi@810c5b0000 {
+			status = "okay";
+
+			flash@0 {
+				compatible = "jedec,spi-nor";
+				reg = <0>;
+				spi-max-frequency = <102000000>;
+				spi-tx-bus-width = <4>;
+				spi-rx-bus-width = <4>;
+			};
+		};
+
+		pmc@c800000 {
+			status = "okay";
+		};
+	};
+
+	eeprom-manager {
+		data-size = <0x100>;
+		bus@0 {
+			i2c-bus = <&i2c1>;
+			eeprom@0 {
+				slave-address = <0x50>;
+				label = "cvm";
+			};
+		};
+
+		bus@1 {
+			i2c-bus = <&pwr_i2c>;
+			eeprom@0 {
+				slave-address = <0x4c>;
+				label = "thermal_sensor";
+			};
+		};
+	};
+
+	bpmp {
+		i2c {
+			tegra_tmp451: thermal-sensor@4c {
+				compatible = "ti,tmp451";
+				status = "okay";
+
+				reg = <0x4c>;
+				#thermal-sensor-cells = <1>;
+			};
+		};
+	};
+
+	chosen {
+		/* TODO: fix after UTC enablement */
+		bootargs = "console=ttyTCU0,115200n8";
+		stdout-path = "serial0:115200n8";
+	};
 };
