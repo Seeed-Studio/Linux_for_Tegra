@@ -6,6 +6,7 @@
  * Tegra NVVSE crypto device for crypto operation to NVVSE linux library.
  *
  */
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/errno.h>
@@ -33,6 +34,7 @@
 #include <crypto/sha1.h>
 #include <crypto/sha2.h>
 #include <crypto/sha3.h>
+#include <crypto/sm3.h>
 #include <uapi/misc/tegra-nvvse-cryptodev.h>
 #include <asm/barrier.h>
 
@@ -79,6 +81,7 @@ static const char *sha_alg_names[] = {
 	"sha3-512-vse",
 	"shake128-vse",
 	"shake256-vse",
+	"sm3-vse",
 };
 
 struct tnvvse_crypto_completion {
@@ -295,9 +298,7 @@ static int tnvvse_crypto_sha_init(struct tnvvse_crypto_ctx *ctx,
 	sha_state->remaining_bytes = init_ctl->total_msg_size;
 	sha_state->sha_done_success = SHA_OP_INIT;
 	nvvse_devnode[ctx->node_id].sha_init_done = true;
-
 	memset(sha_state->result_buff , 0, 64);
-
 	ret = 0;
 	goto out;
 
@@ -326,7 +327,6 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 		ret = -EINVAL;
 		goto stop_sha;
 	}
-
 	if (update_ctl->input_buffer_size > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s: Msg size is greater than supported size of %d Bytes\n", __func__,
 						ivc_database.max_buffer_size[ctx->node_id]);
@@ -346,6 +346,7 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 		buffer_size = update_ctl->input_buffer_size;
 
 	sha_state->in_buf = krealloc(sha_state->in_buf, buffer_size, GFP_KERNEL);
+
 	if (sha_state->in_buf == NULL) {
 		ret = -ENOMEM;
 		goto stop_sha;

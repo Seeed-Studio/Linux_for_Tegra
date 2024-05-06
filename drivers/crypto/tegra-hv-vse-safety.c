@@ -31,6 +31,7 @@
 #include <crypto/sha1.h>
 #include <crypto/sha2.h>
 #include <crypto/sha3.h>
+#include <crypto/sm3.h>
 #include <linux/delay.h>
 #include <soc/tegra/virt/hv-ivc.h>
 #include <linux/iommu.h>
@@ -528,12 +529,10 @@ struct sha_zero_length_vector {
 
 /* Tegra Virtual Security Engine operation modes */
 enum tegra_virtual_se_op_mode {
-	/* Secure Hash Algorithm-1 (SHA1) mode */
-	VIRTUAL_SE_OP_MODE_SHA1,
-	/* Secure Hash Algorithm-224  (SHA224) mode */
-	VIRTUAL_SE_OP_MODE_SHA224 = 4,
+	/* (SM3-256) mode */
+	VIRTUAL_SE_OP_MODE_SM3 = 0,
 	/* Secure Hash Algorithm-256  (SHA256) mode */
-	VIRTUAL_SE_OP_MODE_SHA256,
+	VIRTUAL_SE_OP_MODE_SHA256 = 5,
 	/* Secure Hash Algorithm-384  (SHA384) mode */
 	VIRTUAL_SE_OP_MODE_SHA384,
 	/* Secure Hash Algorithm-512  (SHA512) mode */
@@ -1385,16 +1384,11 @@ static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last,
 	int ret;
 	struct sha_zero_length_vector zero_vec[] = {
 		{
-			.size = SHA1_DIGEST_SIZE,
-			.digest = "\xda\x39\xa3\xee\x5e\x6b\x4b\x0d"
-				  "\x32\x55\xbf\xef\x95\x60\x18\x90"
-				  "\xaf\xd8\x07\x09",
-		}, {
-			.size = SHA224_DIGEST_SIZE,
-			.digest = "\xd1\x4a\x02\x8c\x2a\x3a\x2b\xc9"
-				  "\x47\x61\x02\xbb\x28\x82\x34\xc4"
-				  "\x15\xa2\xb0\x1f\x82\x8e\xa6\x2a"
-				  "\xc5\xb3\xe4\x2f",
+			.size = SM3_DIGEST_SIZE,
+			.digest = "\x1a\xb2\x1d\x83\x55\xcf\xa1\x7f"
+					"\x8e\x61\x19\x48\x31\xe8\x1a\x8f"
+					"\x22\xbe\xc8\xc7\x28\xfe\xfb\x74"
+					"\x7e\xd0\x35\xeb\x50\x82\xaa\x2b",
 		}, {
 			.size = SHA256_DIGEST_SIZE,
 			.digest = "\xe3\xb0\xc4\x42\x98\xfc\x1c\x14"
@@ -1513,12 +1507,12 @@ static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last,
 		/* If the request length is zero, SW WAR for zero length SHA
 		 * operation since SE HW can't accept zero length SHA operation
 		 */
-		if (req_ctx->mode == VIRTUAL_SE_OP_MODE_SHA1)
-			mode = VIRTUAL_SE_OP_MODE_SHA1;
+		if (req_ctx->mode == VIRTUAL_SE_OP_MODE_SM3)
+			mode = VIRTUAL_SE_OP_MODE_SM3;
 		else if (req_ctx->mode < VIRTUAL_SE_OP_MODE_SHA3_256)
-			mode = req_ctx->mode - VIRTUAL_SE_OP_MODE_SHA224 + 1;
+			mode = req_ctx->mode - VIRTUAL_SE_OP_MODE_SHA256 + 1;
 		else
-			mode = req_ctx->mode - VIRTUAL_SE_OP_MODE_SHA224 - 1;
+			mode = req_ctx->mode - VIRTUAL_SE_OP_MODE_SHA256 - 1;
 
 		if (is_last) {
 			if (req->result) {
@@ -1622,6 +1616,11 @@ static int tegra_hv_vse_safety_sha_init(struct ahash_request *req)
 			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1088BIT;
 		req_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
 		req_ctx->digest_size = sha_ctx->digest_size;
+	} else if ((strcmp(crypto_ahash_alg_name(tfm), "sm3-vse") == 0) &&
+		(se_dev->chipdata->sm_supported)) {
+		req_ctx->mode = VIRTUAL_SE_OP_MODE_SM3;
+		req_ctx->blk_size = SM3_BLOCK_SIZE;
+		req_ctx->intermediate_digest_size = SM3_DIGEST_SIZE;
 	} else {
 		dev_err(se_dev->dev, "Invalid SHA Mode\n");
 		return -EINVAL;
@@ -4220,52 +4219,6 @@ static struct ahash_alg sha_algs[] = {
 		.digest = tegra_hv_vse_safety_sha_digest,
 		.export = tegra_hv_vse_safety_sha_export,
 		.import = tegra_hv_vse_safety_sha_import,
-		.halg.digestsize = SHA1_DIGEST_SIZE,
-		.halg.statesize = sizeof(struct tegra_virtual_se_req_context),
-		.halg.base = {
-			.cra_name = "sha1-vse",
-			.cra_driver_name = "tegra-hv-vse-sha1",
-			.cra_priority = 300,
-			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
-			.cra_blocksize = SHA1_BLOCK_SIZE,
-			.cra_ctxsize =
-				sizeof(struct tegra_virtual_se_sha_context),
-			.cra_alignmask = 0,
-			.cra_module = THIS_MODULE,
-			.cra_init = tegra_hv_vse_safety_sha_cra_init,
-			.cra_exit = tegra_hv_vse_safety_sha_cra_exit,
-		}
-	}, {
-		.init = tegra_hv_vse_safety_sha_init,
-		.update = tegra_hv_vse_safety_sha_update,
-		.final = tegra_hv_vse_safety_sha_final,
-		.finup = tegra_hv_vse_safety_sha_finup,
-		.digest = tegra_hv_vse_safety_sha_digest,
-		.export = tegra_hv_vse_safety_sha_export,
-		.import = tegra_hv_vse_safety_sha_import,
-		.halg.digestsize = SHA224_DIGEST_SIZE,
-		.halg.statesize = sizeof(struct tegra_virtual_se_req_context),
-		.halg.base = {
-			.cra_name = "sha224-vse",
-			.cra_driver_name = "tegra-hv-vse-sha224",
-			.cra_priority = 300,
-			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
-			.cra_blocksize = SHA224_BLOCK_SIZE,
-			.cra_ctxsize =
-				sizeof(struct tegra_virtual_se_sha_context),
-			.cra_alignmask = 0,
-			.cra_module = THIS_MODULE,
-			.cra_init = tegra_hv_vse_safety_sha_cra_init,
-			.cra_exit = tegra_hv_vse_safety_sha_cra_exit,
-		}
-	}, {
-		.init = tegra_hv_vse_safety_sha_init,
-		.update = tegra_hv_vse_safety_sha_update,
-		.final = tegra_hv_vse_safety_sha_final,
-		.finup = tegra_hv_vse_safety_sha_finup,
-		.digest = tegra_hv_vse_safety_sha_digest,
-		.export = tegra_hv_vse_safety_sha_export,
-		.import = tegra_hv_vse_safety_sha_import,
 		.halg.digestsize = SHA256_DIGEST_SIZE,
 		.halg.statesize = sizeof(struct tegra_virtual_se_req_context),
 		.halg.base = {
@@ -4442,22 +4395,49 @@ static struct ahash_alg sha_algs[] = {
 			.cra_init = tegra_hv_vse_safety_sha_cra_init,
 			.cra_exit = tegra_hv_vse_safety_sha_cra_exit,
 		}
+	}, {
+		.init = tegra_hv_vse_safety_sha_init,
+		.update = tegra_hv_vse_safety_sha_update,
+		.final = tegra_hv_vse_safety_sha_final,
+		.finup = tegra_hv_vse_safety_sha_finup,
+		.digest = tegra_hv_vse_safety_sha_digest,
+		.export = tegra_hv_vse_safety_sha_export,
+		.import = tegra_hv_vse_safety_sha_import,
+		.halg.digestsize = SM3_DIGEST_SIZE,
+		.halg.statesize = sizeof(struct tegra_virtual_se_req_context),
+		.halg.base = {
+			.cra_name = "sm3-vse",
+			.cra_driver_name = "tegra-hv-vse-safety-sm3",
+			.cra_priority = 300,
+			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
+			.cra_blocksize = SM3_BLOCK_SIZE,
+			.cra_ctxsize =
+				sizeof(struct tegra_virtual_se_sha_context),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_hv_vse_safety_sha_cra_init,
+			.cra_exit = tegra_hv_vse_safety_sha_cra_exit,
+		}
 	},
 };
 
 static const struct tegra_vse_soc_info t194_vse_sinfo = {
 	.gcm_decrypt_supported = false,
 	.cmac_hw_verify_supported = false,
+	.sm_supported = false,
+
 };
 
 static const struct tegra_vse_soc_info t234_vse_sinfo = {
 	.gcm_decrypt_supported = true,
 	.cmac_hw_verify_supported = false,
+	.sm_supported = false,
 };
 
 static const struct tegra_vse_soc_info se_51_vse_sinfo = {
 	.gcm_decrypt_supported = true,
 	.cmac_hw_verify_supported = true,
+	.sm_supported = true,
 };
 
 static const struct of_device_id tegra_hv_vse_safety_of_match[] = {

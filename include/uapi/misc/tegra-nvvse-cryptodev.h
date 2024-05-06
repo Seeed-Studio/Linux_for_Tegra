@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
+ * Cryptographic API.
  */
 
 #ifndef __UAPI_TEGRA_NVVSE_CRYPTODEV_H
@@ -61,6 +63,8 @@ enum tegra_nvvse_sha_type {
 	TEGRA_NVVSE_SHA_TYPE_SHAKE128,
 	/** Defines SHAKE256 Type */
 	TEGRA_NVVSE_SHA_TYPE_SHAKE256,
+	/** Defines SM3 Type */
+	TEGRA_NVVSE_SHA_TYPE_SM3,
 	/** Defines maximum SHA Type, must be last entry */
 	TEGRA_NVVSE_SHA_TYPE_MAX,
 };

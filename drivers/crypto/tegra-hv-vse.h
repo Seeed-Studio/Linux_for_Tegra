@@ -13,6 +13,7 @@
 struct tegra_vse_soc_info {
 	bool gcm_decrypt_supported;
 	bool cmac_hw_verify_supported;
+	bool sm_supported;
 };
 
 /* GCM Operation Supported Flag */
