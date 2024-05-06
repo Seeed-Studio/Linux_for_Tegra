@@ -36,9 +36,7 @@
 struct device __weak tegra_generic_dev;
 
 struct device tegra_vpr_dev;
-EXPORT_SYMBOL(tegra_vpr_dev);
 struct device tegra_vpr1_dev;
-EXPORT_SYMBOL(tegra_vpr1_dev);
 
 struct device __weak tegra_generic_cma_dev;
 struct device __weak tegra_vpr_cma_dev;
@@ -460,6 +458,18 @@ err:
 	kvfree(bitmap_nos);
 	return ERR_PTR(-ENOMEM);
 }
+
+struct device *nvmap_get_vpr_dev(void)
+{
+	return &tegra_vpr_dev;
+}
+EXPORT_SYMBOL(nvmap_get_vpr_dev);
+
+struct device *nvmap_get_vpr1_dev(void)
+{
+	return &tegra_vpr1_dev;
+}
+EXPORT_SYMBOL(nvmap_get_vpr1_dev);
 
 void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
 			    dma_addr_t *dma_handle,

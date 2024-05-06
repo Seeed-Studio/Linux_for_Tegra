@@ -10,6 +10,9 @@ void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
 			    unsigned long attrs);
 void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 			  dma_addr_t dma_handle, unsigned long attrs);
-extern struct device tegra_vpr_dev;
-extern struct device tegra_vpr1_dev;
+
+struct device *nvmap_get_vpr_dev(void);
+
+struct device *nvmap_get_vpr1_dev(void);
+
 #endif /* __NVMAP_EXPORTS_H */
