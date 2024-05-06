@@ -186,12 +186,13 @@ static int pcie_dma_epf_core_init(struct pci_epf *epf)
 		return 0;
 
 	/* Expose MSI address as BAR2 to allow RP to send MSI to EP. */
-	epf_bar = &epf->bar[BAR_2];
-	epf_bar[bar].phys_addr = gepfnv->edma.msi_addr & ~(SZ_32M - 1);
-	epf_bar[bar].addr = NULL;
-	epf_bar[bar].size = SZ_32M;
-	epf_bar[bar].barno = BAR_2;
-	epf_bar[bar].flags |= PCI_BASE_ADDRESS_MEM_TYPE_64;
+	bar = BAR_2;
+	epf_bar = &epf->bar[bar];
+	epf_bar->phys_addr = gepfnv->edma.msi_addr & ~(SZ_32M - 1);
+	epf_bar->addr = NULL;
+	epf_bar->size = SZ_32M;
+	epf_bar->barno = bar;
+	epf_bar->flags |= PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH;
 	ret = lpci_epc_set_bar(epc, epf->func_no, epf_bar);
 	if (ret < 0) {
 		dev_err(fdev, "PCIe set BAR2 failed: %d\n", ret);
@@ -327,9 +328,9 @@ static int pcie_dma_epf_bind(struct pci_epf *epf)
 	}
 
 #if defined(NV_PCI_EPF_ALLOC_SPACE_HAS_EPC_FEATURES_ARG) /* Linux v6.9 */
-	epfnv->bar_virt = lpci_epf_alloc_space(epf, BAR0_SIZE, BAR_0, epc_features);
+	epfnv->bar_virt = lpci_epf_alloc_space(epf, BAR0_SIZE, bar, epc_features);
 #else
-	epfnv->bar_virt = lpci_epf_alloc_space(epf, BAR0_SIZE, BAR_0, epc_features->align);
+	epfnv->bar_virt = lpci_epf_alloc_space(epf, BAR0_SIZE, bar, epc_features->align);
 #endif
 	if (!epfnv->bar_virt) {
 		dev_err(fdev, "Failed to allocate memory for BAR0\n");
@@ -353,7 +354,7 @@ static int pcie_dma_epf_bind(struct pci_epf *epf)
 	for (i = 0; i < TEGRA_PCIE_DMA_WRITE; i++)
 		init_waitqueue_head(&epfnv->edma.wr_wq[i]);
 
-	if (epfnv->chip_id == TEGRA234) {
+	if (epfnv->chip_id == TEGRA264) {
 		domain = dev_get_msi_domain(&pdev->dev);
 		if (!domain) {
 			dev_err(fdev, "failed to get MSI domain\n");
