@@ -6,6 +6,7 @@ snd-soc-tegra-utils-objs		:= tegra_asoc_utils.o tegra_asoc_machine.o \
 snd-soc-tegra210-afc-objs		:= tegra210_afc.o
 snd-soc-tegra210-iqc-objs		:= tegra210_iqc.o
 snd-soc-tegra186-arad-objs		:= tegra186_arad.o
+snd-soc-tegra210-adsp-objs		:= tegra210_adsp.o
 snd-soc-tegra-machine-driver-objs	:= tegra_machine_driver.o
 snd-soc-tegra-controls-objs		:= tegra_mixer_control.o
 
@@ -13,5 +14,6 @@ obj-m += snd-soc-tegra-utils.o
 obj-m += snd-soc-tegra210-afc.o
 obj-m += snd-soc-tegra210-iqc.o
 obj-m += snd-soc-tegra186-arad.o
+obj-m += snd-soc-tegra210-adsp.o
 obj-m += snd-soc-tegra-machine-driver.o
 obj-m += snd-soc-tegra-controls.o
