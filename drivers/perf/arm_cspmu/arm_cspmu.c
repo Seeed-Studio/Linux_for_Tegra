@@ -137,6 +137,8 @@ static DEFINE_MUTEX(arm_cspmu_lock);
 static void arm_cspmu_set_ev_filter(struct arm_cspmu *cspmu,
 				    struct hw_perf_event *hwc, u32 filter);
 
+static inline void arm_cspmu_stop_counters(struct arm_cspmu *cspmu);
+
 static struct acpi_apmt_node *arm_cspmu_apmt_node(struct device *dev)
 {
 	struct acpi_apmt_node **ptr = dev_get_platdata(dev);
@@ -491,6 +493,7 @@ static int arm_cspmu_init_impl_ops(struct arm_cspmu *cspmu)
 		DEFAULT_IMPL_OP(event_filter),
 		DEFAULT_IMPL_OP(set_ev_filter),
 		DEFAULT_IMPL_OP(event_attr_is_visible),
+		DEFAULT_IMPL_OP(stop_counters),
 	};
 
 	/* Firmware may override implementer/product ID from PMIIDR */
@@ -625,7 +628,7 @@ static void arm_cspmu_disable(struct pmu *pmu)
 {
 	struct arm_cspmu *cspmu = to_arm_cspmu(pmu);
 
-	arm_cspmu_stop_counters(cspmu);
+	cspmu->impl.ops.stop_counters(cspmu);
 }
 
 static int arm_cspmu_get_event_idx(struct arm_cspmu_hw_events *hw_events,
@@ -1103,7 +1106,7 @@ static irqreturn_t arm_cspmu_handle_irq(int irq_num, void *dev)
 	DECLARE_BITMAP(pmovs, ARM_CSPMU_MAX_HW_CNTRS);
 	bool handled = false;
 
-	arm_cspmu_stop_counters(cspmu);
+	cspmu->impl.ops.stop_counters(cspmu);
 
 	has_overflowed = arm_cspmu_get_reset_overflow(cspmu, (u32 *)pmovs);
 	if (!has_overflowed)

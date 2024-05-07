@@ -121,6 +121,8 @@ struct arm_cspmu_impl_ops {
 	/* Hide/show unsupported events */
 	umode_t (*event_attr_is_visible)(struct kobject *kobj,
 					 struct attribute *attr, int unused);
+	/* Disable all counters */
+	void (*stop_counters)(struct arm_cspmu *cspmu);
 };
 
 /* Vendor/implementer registration parameter. */
