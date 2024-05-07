@@ -11,6 +11,12 @@
 
 #include "arm_cspmu.h"
 
+#define PMCNTENSET					0xC00
+#define PMCNTENCLR					0xC20
+#define PMCR						0xE04
+
+#define PMCR_E						BIT(0)
+
 #define NV_PCIE_PORT_COUNT           10ULL
 #define NV_PCIE_FILTER_ID_MASK       GENMASK_ULL(NV_PCIE_PORT_COUNT - 1, 0)
 
@@ -55,6 +61,7 @@ struct nv_cspmu_ctx {
 	u32 filter_default_val;
 	struct attribute **event_attr;
 	struct attribute **format_attr;
+	u32 *pmcnten;
 };
 
 static struct attribute *scf_pmu_event_attrs[] = {
@@ -370,6 +377,43 @@ static u32 nv_cspmu_event_filter(const struct perf_event *event)
 	return event->attr.config1 & ctx->filter_mask;
 }
 
+/*
+ * UCF leakage workaround:
+ * Disables PMCR and PMCNTEN for each counter before running a
+ * dummy experiment. This clears the internal state and prevents
+ * event leakage from the previous experiment. PMCNTEN is then
+ * re-enabled.
+ */
+static void ucf_pmu_stop_counters_leakage(struct arm_cspmu *cspmu)
+{
+	int reg_id;
+	u32 cntenclr_offset = PMCNTENCLR;
+	u32 cntenset_offset = PMCNTENSET;
+	struct nv_cspmu_ctx *ctx = to_nv_cspmu_ctx(cspmu);
+
+	/* Step 1: Disable PMCR.E */
+	writel(0, cspmu->base0 + PMCR);
+
+	/* Step 2: Clear PMCNTEN for all counters */
+	for (reg_id = 0; reg_id < cspmu->num_set_clr_reg; ++reg_id) {
+		ctx->pmcnten[reg_id] = readl(cspmu->base0 + cntenclr_offset);
+		writel(ctx->pmcnten[reg_id], cspmu->base0 + cntenclr_offset);
+		cntenclr_offset += sizeof(u32);
+	}
+
+	/* Step 3: Enable PMCR.E */
+	writel(PMCR_E, cspmu->base0 + PMCR);
+
+	/* Step 4: Disable PMCR.E */
+	writel(0, cspmu->base0 + PMCR);
+
+	/* Step 5: Enable back PMCNTEN for counters cleared in step 2 */
+	for (reg_id = 0; reg_id < cspmu->num_set_clr_reg; ++reg_id) {
+		writel(ctx->pmcnten[reg_id], cspmu->base0 + cntenset_offset);
+		cntenset_offset += sizeof(u32);
+	}
+}
+
 enum nv_cspmu_name_fmt {
 	NAME_FMT_GENERIC,
 	NAME_FMT_SOCKET
@@ -384,6 +428,7 @@ struct nv_cspmu_match {
 	enum nv_cspmu_name_fmt name_fmt;
 	struct attribute **event_attr;
 	struct attribute **format_attr;
+	void (*stop_counters)(struct arm_cspmu *cspmu);
 };
 
 static const struct nv_cspmu_match nv_cspmu_match[] = {
@@ -445,7 +490,8 @@ static const struct nv_cspmu_match nv_cspmu_match[] = {
 	  .name_pattern = "nvidia_ucf_pmu_%u",
 	  .name_fmt = NAME_FMT_SOCKET,
 	  .event_attr = ucf_pmu_event_attrs,
-	  .format_attr = ucf_pmu_format_attrs
+	  .format_attr = ucf_pmu_format_attrs,
+	  .stop_counters = ucf_pmu_stop_counters_leakage
 	},
 	{
 	  .prodid = 0x10800000,
@@ -563,6 +609,13 @@ static int nv_cspmu_init_ops(struct arm_cspmu *cspmu)
 	impl_ops->get_event_attrs		= nv_cspmu_get_event_attrs;
 	impl_ops->get_format_attrs		= nv_cspmu_get_format_attrs;
 	impl_ops->get_name			= nv_cspmu_get_name;
+	if (match->stop_counters != NULL) {
+		ctx->pmcnten = devm_kzalloc(dev, cspmu->num_set_clr_reg *
+					     sizeof(u32), GFP_KERNEL);
+		if (!ctx->pmcnten)
+			return -ENOMEM;
+		impl_ops->stop_counters		= match->stop_counters;
+	}
 
 	return 0;
 }
