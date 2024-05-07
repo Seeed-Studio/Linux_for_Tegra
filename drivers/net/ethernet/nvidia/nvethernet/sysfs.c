@@ -2567,25 +2567,25 @@ static ssize_t macsec_irq_stats_show(struct device *dev,
 	struct osi_macsec_irq_stats *stats = &osi_core->macsec_irq_stats;
 
 	return scnprintf(buf, PAGE_SIZE,
-			 "tx_dbg_capture_done:\t%lu\n"
-			 "tx_mtu_check_fail  :\t%lu\n"
-			 "tx_mac_crc_error   :\t%lu\n"
-			 "tx_sc_an_not_valid :\t%lu\n"
-			 "tx_aes_gcm_buf_ovf :\t%lu\n"
-			 "tx_lkup_miss       :\t%lu\n"
-			 "tx_uninit_key_slot :\t%lu\n"
-			 "tx_pn_threshold    :\t%lu\n"
-			 "tx_pn_exhausted    :\t%lu\n"
-			 "rx_dbg_capture_done:\t%lu\n"
-			 "rx_icv_err_threshold :\t%lu\n"
-			 "rx_replay_error      :\t%lu\n"
-			 "rx_mtu_check_fail  :\t%lu\n"
-			 "rx_mac_crc_error   :\t%lu\n"
-			 "rx_aes_gcm_buf_ovf :\t%lu\n"
-			 "rx_lkup_miss       :\t%lu\n"
-			 "rx_uninit_key_slot :\t%lu\n"
-			 "rx_pn_exhausted    :\t%lu\n"
-			 "secure_reg_viol    :\t%lu\n",
+			 "tx_dbg_capture_done:\t%llu\n"
+			 "tx_mtu_check_fail  :\t%llu\n"
+			 "tx_mac_crc_error   :\t%llu\n"
+			 "tx_sc_an_not_valid :\t%llu\n"
+			 "tx_aes_gcm_buf_ovf :\t%llu\n"
+			 "tx_lkup_miss       :\t%llu\n"
+			 "tx_uninit_key_slot :\t%llu\n"
+			 "tx_pn_threshold    :\t%llu\n"
+			 "tx_pn_exhausted    :\t%llu\n"
+			 "rx_dbg_capture_done:\t%llu\n"
+			 "rx_icv_err_threshold :\t%llu\n"
+			 "rx_replay_error      :\t%llu\n"
+			 "rx_mtu_check_fail  :\t%llu\n"
+			 "rx_mac_crc_error   :\t%llu\n"
+			 "rx_aes_gcm_buf_ovf :\t%llu\n"
+			 "rx_lkup_miss       :\t%llu\n"
+			 "rx_uninit_key_slot :\t%llu\n"
+			 "rx_pn_exhausted    :\t%llu\n"
+			 "secure_reg_viol    :\t%llu\n",
 			 stats->tx_dbg_capture_done,
 			 stats->tx_mtu_check_fail,
 			 stats->tx_mac_crc_error,
@@ -2636,8 +2636,6 @@ static ssize_t ether_phy_iface_mode_show(struct device *dev,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 
 	switch (osi_core->phy_iface_mode) {
-	case OSI_XAUI_MODE_25G:
-		return scnprintf(buf, PAGE_SIZE, "XAUI-25G\n");
 	case OSI_XFI_MODE_10G:
 		return scnprintf(buf, PAGE_SIZE, "XFI-10G\n");
 	case OSI_XFI_MODE_5G:
@@ -2677,9 +2675,7 @@ static ssize_t ether_phy_iface_mode_store(struct device *dev,
 		return size;
 	}
 
-	if (strncmp(buf, "XAUI-25G", 7) == 0U) {
-		osi_core->phy_iface_mode = OSI_XAUI_MODE_25G;
-	} else if (strncmp(buf, "XFI-10G", 7) == 0U) {
+	if (strncmp(buf, "XFI-10G", 7) == 0U) {
 		osi_core->phy_iface_mode = OSI_XFI_MODE_10G;
 	} else if (strncmp(buf, "XFI-5G", 6) == 0U) {
 		osi_core->phy_iface_mode = OSI_XFI_MODE_5G;
@@ -2723,7 +2719,7 @@ static ssize_t ether_uphy_gbe_mode_show(struct device *dev,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 
 	switch (osi_core->uphy_gbe_mode) {
-	case OSI_UPHY_GBE_MODE_25G:
+	case OSI_GBE_MODE_25G:
 		return scnprintf(buf, PAGE_SIZE, "25G\n");
 	case OSI_GBE_MODE_10G:
 		return scnprintf(buf, PAGE_SIZE, "10G\n");
@@ -2764,7 +2760,7 @@ static ssize_t ether_uphy_gbe_mode_store(struct device *dev,
 	}
 
 	if (strncmp(buf, "25G", 3) == 0U) {
-		osi_core->uphy_gbe_mode = OSI_UPHY_GBE_MODE_25G;
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_25G;
 	} else if (strncmp(buf, "10G", 3) == 0U) {
 		osi_core->uphy_gbe_mode = OSI_GBE_MODE_10G;
 	} else if (strncmp(buf, "5G", 2) == 0U) {
@@ -2823,7 +2819,7 @@ static ssize_t ether_mac_frp_show(struct device *dev,
 		entry = &osi_core->frp_table[i];
 		data = &entry->data;
 		j += scnprintf((buf + j), (PAGE_SIZE - j),
-			       "[%d] ID:%d MD:0x%x ME:0x%x AF:%d RF:%d IM:%d NIC:%d FO:%d OKI:%d DCH:x%lx\n",
+			       "[%d] ID:%d MD:0x%x ME:0x%x AF:%d RF:%d IM:%d NIC:%d FO:%d OKI:%d DCH:x%llx\n",
 			       i, entry->frp_id, data->match_data,
 			       data->match_en, data->accept_frame,
 			       data->reject_frame, data->inverse_match,

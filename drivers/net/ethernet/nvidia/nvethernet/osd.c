@@ -89,7 +89,7 @@ empty:
  *
  * @param[in] usec: Delay number in micro seconds.
  */
-static void osd_udelay(unsigned long usec)
+static void osd_udelay(unsigned long long usec)
 {
 	udelay(usec);
 }
@@ -102,7 +102,7 @@ static void osd_udelay(unsigned long usec)
  * @param[in] umin: Minimum sleep required in micro seconds.
  * @param[in] umax: Maximum sleep required in micro seconds.
  */
-static void osd_usleep_range(unsigned long umin, unsigned long umax)
+static void osd_usleep_range(unsigned long long umin, unsigned long long umax)
 {
 	usleep_range(umin, umax);
 }

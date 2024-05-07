@@ -325,8 +325,9 @@ static int macsec_get_platform_res(struct macsec_priv_data *macsec_pdata)
 	}
 
 	/* Get clks */
-	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-		if (pdata->osi_core->mac_ver == OSI_MGBE_MAC_3_10) {
+	if ((pdata->osi_core->mac != OSI_MAC_HW_EQOS) ||
+	    (pdata->osi_core->mac_ver_type == MAC_CORE_VER_TYPE_EQOS_5_40)) {
+		if (pdata->osi_core->mac == OSI_MAC_HW_MGBE) {
 			macsec_pdata->macsec_clk = devm_clk_get(dev, "mgbe_macsec");
 		} else {
 			macsec_pdata->macsec_clk = devm_clk_get(dev, "macsec");

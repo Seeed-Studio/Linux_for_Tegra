@@ -486,7 +486,7 @@ static void ether_disable_eqos_clks(struct ether_priv_data *pdata)
 		clk_disable_unprepare(pdata->tx_clk);
 	}
 
-	if (pdata->osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+	if (pdata->osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
 		if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
 			clk_disable_unprepare(pdata->rx_pcs_input_clk);
 		}
@@ -572,7 +572,7 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
-		if (uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G)
+		if (uphy_gbe_mode == OSI_GBE_MODE_25G)
 			rate = ETHER_MGBE_TXRX_CLK_XAUI_25G;
 		else if (uphy_gbe_mode == OSI_GBE_MODE_10G)
 			rate = ETHER_MGBE_TX_CLK_USXGMII_10G;
@@ -592,7 +592,7 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
-		if (uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G)
+		if (uphy_gbe_mode == OSI_GBE_MODE_25G)
 			rate = ETHER_MGBE_TXRX_PCS_CLK_XAUI_25G;
 		else if (uphy_gbe_mode == OSI_GBE_MODE_10G)
 			rate = ETHER_MGBE_TX_PCS_CLK_USXGMII_10G;
@@ -757,6 +757,15 @@ static int ether_enable_eqos_clks_t26x(struct ether_priv_data *pdata)
 		}
 	}
 	if (!IS_ERR_OR_NULL(pdata->app_clk)) {
+		if (uphy_gbe_mode == OSI_GBE_MODE_2_5G)
+			rate = ETHER_EQOS_TX_CLK_2_5G;
+		else
+			rate = ETHER_EQOS_TX_CLK_1000M;
+		ret = clk_set_rate(pdata->app_clk, rate);
+		if (ret < 0) {
+			dev_err(pdata->dev, "failed to set EQOS app_clk rate\n");
+			goto err_tx;
+		}
 		ret = clk_prepare_enable(pdata->app_clk);
 		if (ret < 0) {
 			goto err_app;
@@ -901,7 +910,7 @@ static int ether_enable_clks(struct ether_priv_data *pdata)
 	if (pdata->osi_core->use_virtualization == OSI_DISABLE) {
 		if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 			return ether_enable_mgbe_clks(pdata);
-		} else if (pdata->osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+		} else if (pdata->osi_core->mac_ver_type == MAC_CORE_VER_TYPE_EQOS_5_40) {
 			return ether_enable_eqos_clks_t26x(pdata);
 		} else {
 			return ether_enable_eqos_clks(pdata);
@@ -1068,6 +1077,7 @@ static inline void set_speed_work_func(struct work_struct *work)
 	int ret = 0;
 
 	if ((pdata->osi_core->mac != OSI_MAC_HW_MGBE) &&
+	    (pdata->osi_core->mac_ver != OSI_EQOS_MAC_5_40) &&
 	    (pdata->osi_core->mac != OSI_MAC_HW_MGBE_T26X)) {
 		/* Handle retry for MGBE */
 		return;
@@ -1096,6 +1106,12 @@ static inline void set_speed_work_func(struct work_struct *work)
 		speed = OSI_SPEED_5000;
 	}
 
+	if (pdata->osi_core->uphy_gbe_mode == OSI_GBE_MODE_2_5G) {
+		speed = OSI_SPEED_2500;
+	} else if (pdata->osi_core->uphy_gbe_mode == OSI_GBE_MODE_1G) {
+		speed = OSI_SPEED_1000;
+	}
+
 	/* Initiate OSI SET_SPEED ioctl */
 	ioctl_data.cmd = OSI_CMD_SET_SPEED;
 	ioctl_data.arg6_32 = speed;
@@ -1113,6 +1129,9 @@ static inline void set_speed_work_func(struct work_struct *work)
 	phy_print_status(phydev);
 	mac_clk = (pdata->osi_core->mac == OSI_MAC_HW_MGBE_T26X)? pdata->mac_clk:
 				pdata->mac_div_clk;
+	if (pdata->osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
+		mac_clk = pdata->mac_clk;
+	}
 	ether_set_mgbe_mac_div_rate(mac_clk, pdata->speed);
 
 #ifndef OSI_STRIPPED_LIB
@@ -1223,7 +1242,7 @@ static void ether_adjust_link(struct net_device *dev)
 
 		if (pdata->fixed_link == OSI_ENABLE) {
 			if (mac != OSI_MAC_HW_EQOS) {
-				if (iface_mode == OSI_XAUI_MODE_25G) {
+				if (uphy_gbe_mode == OSI_GBE_MODE_25G) {
 					phydev->speed = OSI_SPEED_25000;
 				} else if (iface_mode == OSI_XFI_MODE_10G) {
 					phydev->speed = OSI_SPEED_10000;
@@ -1300,17 +1319,19 @@ static void ether_adjust_link(struct net_device *dev)
 			 *	PHY line side = 1G/100M/10M
 			*/
 			if ((mac != OSI_MAC_HW_EQOS) ||
-			    (mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40)) {
+			    (mac_ver == OSI_EQOS_MAC_5_40)) {
 				/* MAC and XFI/XAUI speed should match in
 				 * XFI/XAUI mode
 				*/
-				if (iface_mode == OSI_XAUI_MODE_25G) {
+				if (uphy_gbe_mode == OSI_GBE_MODE_25G) {
 					speed = OSI_SPEED_25000;
 				} else if (iface_mode == OSI_XFI_MODE_10G) {
 					speed = OSI_SPEED_10000;
 				} else if (iface_mode == OSI_XFI_MODE_5G) {
 					speed = OSI_SPEED_5000;
-				} else if (uphy_gbe_mode == OSI_GBE_MODE_2_5G) {
+				}
+
+				if (uphy_gbe_mode == OSI_GBE_MODE_2_5G) {
 					speed = OSI_SPEED_2500;
 				}
 			}
@@ -1319,7 +1340,7 @@ static void ether_adjust_link(struct net_device *dev)
 			ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
 			if (ret < 0) {
 				if ((mac != OSI_MAC_HW_EQOS) ||
-				    (mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40)) {
+				    (mac_ver == OSI_EQOS_MAC_5_40)) {
 					netdev_dbg(dev, "Retry set speed\n");
 					netif_carrier_off(dev);
 					schedule_delayed_work(&pdata->set_speed_work,
@@ -1377,7 +1398,7 @@ static void ether_adjust_link(struct net_device *dev)
 			mac_clk = (mac == OSI_MAC_HW_MGBE_T26X)? pdata->mac_clk:
 				pdata->mac_div_clk;
 			ether_set_mgbe_mac_div_rate(mac_clk, pdata->speed);
-		} else if(mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+		} else if(mac_ver == OSI_EQOS_MAC_5_40) {
 			ether_set_eqos_tx_clk(pdata->mac_clk,
 				      phydev->speed);
 		} else {
@@ -5393,7 +5414,7 @@ static void ether_put_eqos_clks(struct ether_priv_data *pdata)
 		devm_clk_put(dev, pdata->rx_m_clk);
 	}
 
-	if (pdata->osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+	if (pdata->osi_core->mac_ver == OSI_EQOS_MAC_5_40) {
 		if (!IS_ERR_OR_NULL(pdata->rx_pcs_m_clk)) {
 			devm_clk_put(dev, pdata->rx_pcs_m_clk);
 		}
@@ -5467,7 +5488,7 @@ static int ether_set_mgbe_rx_fmon_rates(struct ether_priv_data *pdata)
 	unsigned long rx_rate, rx_pcs_rate;
 	int ret;
 
-	if (uphy_gbe_mode == OSI_XAUI_MODE_25G) {
+	if (uphy_gbe_mode == OSI_GBE_MODE_25G) {
 		rx_rate = ETHER_MGBE_TXRX_CLK_XAUI_25G;
 		rx_pcs_rate = ETHER_MGBE_TXRX_PCS_CLK_XAUI_25G;
 	} else if (uphy_gbe_mode == OSI_GBE_MODE_10G) {
@@ -5647,7 +5668,7 @@ static int ether_get_eqos_clks(struct ether_priv_data *pdata)
 	struct device *dev = pdata->dev;
 	int ret;
 
-	if (pdata->osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+	if (pdata->osi_core->mac_ver_type == MAC_CORE_VER_TYPE_EQOS_5_40) {
 		pdata->mac_clk = devm_clk_get(dev, "eqos_mac");
 		if (IS_ERR(pdata->mac_clk)) {
 			ret = PTR_ERR(pdata->mac_clk);
@@ -5858,15 +5879,14 @@ static int ether_configure_car(struct platform_device *pdev,
 		}
 	}
 
-	if (osi_core->mac != OSI_MAC_HW_EQOS) {
+	if ((osi_core->mac != OSI_MAC_HW_EQOS) ||
+	    (osi_core->mac_ver_type == MAC_CORE_VER_TYPE_EQOS_5_40)) {
 		pdata->xpcs_rst = devm_reset_control_get(&pdev->dev,
 							 "pcs");
 		if (IS_ERR_OR_NULL(pdata->xpcs_rst)) {
 			dev_info(&pdev->dev, "failed to get XPCS reset\n");
 			return PTR_ERR(pdata->xpcs_rst);
 		}
-	} else {
-		pdata->xpcs_rst = NULL;
 	}
 
 	/* get PHY reset */
@@ -6021,7 +6041,8 @@ static int ether_init_plat_resources(struct platform_device *pdev,
 		osi_dma->base = osi_core->base;
 	}
 
-	if (osi_core->mac != OSI_MAC_HW_EQOS) {
+	if ((osi_core->mac != OSI_MAC_HW_EQOS) ||
+	    (osi_core->mac_ver_type == MAC_CORE_VER_TYPE_EQOS_5_40)) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						   "xpcs");
 		if (res) {
@@ -6032,8 +6053,6 @@ static int ether_init_plat_resources(struct platform_device *pdev,
 				return PTR_ERR(osi_core->xpcs_base);
 			}
 		}
-	} else {
-		osi_core->xpcs_base = NULL;
 	}
 
 	if (osi_core->use_virtualization == OSI_DISABLE) {
@@ -6683,7 +6702,7 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 		if ((osi_core->uphy_gbe_mode != OSI_GBE_MODE_5G) &&
 		    (osi_core->uphy_gbe_mode != OSI_GBE_MODE_10G) &&
-		    (osi_core->uphy_gbe_mode != OSI_UPHY_GBE_MODE_25G)) {
+		    (osi_core->uphy_gbe_mode != OSI_GBE_MODE_25G)) {
 			dev_err(dev, "Invalid UPHY GBE mode"
 				"- default to 10G\n");
 			osi_core->uphy_gbe_mode = OSI_GBE_MODE_10G;
@@ -6710,36 +6729,22 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		if ((osi_core->phy_iface_mode != OSI_XFI_MODE_10G) &&
 		    (osi_core->phy_iface_mode != OSI_XFI_MODE_5G) &&
 		    (osi_core->phy_iface_mode != OSI_USXGMII_MODE_10G) &&
-		    (osi_core->phy_iface_mode != OSI_USXGMII_MODE_5G) &&
-		    (osi_core->phy_iface_mode != OSI_XAUI_MODE_25G)) {
+		    (osi_core->phy_iface_mode != OSI_USXGMII_MODE_5G)) {
 			dev_err(dev, "Invalid PHY iface mode"
 				"- default to 10G\n");
 			osi_core->phy_iface_mode = OSI_XFI_MODE_10G;
 		}
 
-		/* GBE and XAUI must be in same mode */
-		if ((osi_core->uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G) &&
-		    ((osi_core->phy_iface_mode == OSI_XFI_MODE_5G) ||
-		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G) ||
-		    (osi_core->phy_iface_mode == OSI_XFI_MODE_10G) ||
-		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G))) {
-			dev_err(dev, "Invalid combination of UPHY 25GBE mode"
-				"and XFI/USXGMII/XAUI mode\n");
-			return -EINVAL;
-		}
-
 		if ((osi_core->uphy_gbe_mode == OSI_GBE_MODE_10G) &&
 		    ((osi_core->phy_iface_mode == OSI_XFI_MODE_5G) ||
-		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G) ||
-		    (osi_core->phy_iface_mode == OSI_XAUI_MODE_25G))) {
+		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G))) {
 			dev_err(dev, "Invalid combination of UPHY 10GBE mode"
 				"and XFI/USXGMII/AUXA mode\n");
 			return -EINVAL;
 		}
 		if ((osi_core->uphy_gbe_mode == OSI_GBE_MODE_5G) &&
 		    ((osi_core->phy_iface_mode == OSI_XFI_MODE_10G) ||
-		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
-		    (osi_core->phy_iface_mode == OSI_XAUI_MODE_25G))) {
+		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G))) {
 			dev_err(dev, "Invalid combination of UPHY 5GBE mode"
 				"and XFI/USXGMII/XAUI  mode\n");
 			return -EINVAL;
@@ -6752,7 +6757,8 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		goto exit;
 	}
 
-	if (osi_core->mac == OSI_MAC_HW_EQOS) {
+	if ((osi_core->mac == OSI_MAC_HW_EQOS) &&
+	   (osi_core->mac_ver_type != MAC_CORE_VER_TYPE_EQOS_5_40)) {
 		/* Read pad calibration enable/disable input, default enable */
 		ret = of_property_read_u32(np, "nvidia,pad_calibration",
 					   &dt_pad_calibration_enable);
@@ -6887,6 +6893,7 @@ exit:
 static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 					 unsigned int *num_dma_chans,
 					 unsigned int *mac,
+					 unsigned int *mac_ver_type,
 					 unsigned int *macsec,
 					 unsigned int *num_mtl_queues)
 {
@@ -6898,6 +6905,7 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	ret = of_device_is_compatible(np, "nvidia,nveqos");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_EQOS;
+		*mac_ver_type = MAC_CORE_VER_TYPE_EQOS;
 		*macsec = OSI_MACSEC_T23X;
 		max_chans = OSI_EQOS_MAX_NUM_CHANS;
 	}
@@ -6905,6 +6913,7 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	ret = of_device_is_compatible(np, "nvidia,nvmgbe");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_MGBE;
+		*mac_ver_type = MAC_CORE_VER_TYPE_MGBE;
 		max_chans = OSI_MGBE_T23X_MAX_NUM_CHANS;
 		*macsec = OSI_MACSEC_T23X;
 	}
@@ -6912,6 +6921,7 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	ret = of_device_is_compatible(np, "nvidia,tegra234-eqos");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_EQOS;
+		*mac_ver_type = MAC_CORE_VER_TYPE_EQOS_5_30;
 		*macsec = OSI_MACSEC_T23X;
 		max_chans = OSI_EQOS_MAX_NUM_CHANS;
 	}
@@ -6919,18 +6929,21 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	ret = of_device_is_compatible(np, "nvidia,tegra234-mgbe");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_MGBE;
+		*mac_ver_type = MAC_CORE_VER_TYPE_MGBE;
 		max_chans = OSI_MGBE_T23X_MAX_NUM_CHANS;
 		*macsec = OSI_MACSEC_T23X;
 	}
 
 	if (of_device_is_compatible(np, "nvidia,tegra264-mgbe")) {
 		*mac = OSI_MAC_HW_MGBE_T26X;
+		*mac_ver_type = MAC_CORE_VER_TYPE_MGBE;
 		*macsec = OSI_MACSEC_T26X;
 		max_chans = OSI_MGBE_MAX_NUM_CHANS;
 	}
 
 	if (of_device_is_compatible(np, "nvidia,tegra264-eqos")) {
 		*mac = OSI_MAC_HW_EQOS;
+		*mac_ver_type = MAC_CORE_VER_TYPE_EQOS_5_40;
 		*macsec = OSI_MACSEC_T26X;
 		max_chans = OSI_EQOS_MAX_NUM_CHANS;
 	}
@@ -7168,7 +7181,7 @@ static void ether_init_rss(struct ether_priv_data *pdata,
 static int ether_probe(struct platform_device *pdev)
 {
 	struct ether_priv_data *pdata;
-	unsigned int num_dma_chans, mac, macsec, num_mtl_queues, chan;
+	unsigned int num_dma_chans, mac, macsec, num_mtl_queues, chan, mac_ver_type;
 	struct osi_core_priv_data *osi_core;
 	struct osi_dma_priv_data *osi_dma;
 	struct osi_ioctl *ioctl_data;
@@ -7182,7 +7195,7 @@ static int ether_probe(struct platform_device *pdev)
 	};
 
 	ether_get_num_dma_chan_mtl_q(pdev, &num_dma_chans,
-				     &mac, &macsec, &num_mtl_queues);
+				     &mac, &mac_ver_type, &macsec, &num_mtl_queues);
 
 	if (mac == OSI_MAC_HW_MGBE) {
 		ret = pinctrl_pm_select_default_state(&pdev->dev);
@@ -7236,6 +7249,7 @@ static int ether_probe(struct platform_device *pdev)
 	osi_dma->num_dma_chans = num_dma_chans;
 
 	osi_core->mac = mac;
+	osi_core->mac_ver_type = mac_ver_type;
 	osi_core->macsec = macsec;
 	osi_dma->mac = mac;
 
@@ -7748,6 +7762,7 @@ static const struct of_device_id ether_of_match[] = {
 	{ .compatible = "nvidia,tegra234-mgbe" },
 	{ .compatible = "nvidia,tegra234-eqos" },
 	{ .compatible = "nvidia,tegra264-mgbe" },
+	{ .compatible = "nvidia,tegra264-eqos" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ether_of_match);
