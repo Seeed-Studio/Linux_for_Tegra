@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra_mixer_control.c - Override DAI PCM parameters
-//
-// SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION. All rights reserved.
 
 /* The driver is just for audio usecase testing purpose and has few limitations as
  * mentioned below, which is fine looking at the overall requirements.
@@ -33,6 +32,15 @@
 #include <sound/pcm_params.h>
 
 #include "tegra_asoc_machine.h"
+
+#define TEGRA234_MAX_CHANNEL_COUNT	16
+#define TEGRA264_MAX_CHANNEL_COUNT	32
+
+struct tegra_mixer_soc_data {
+	const struct snd_kcontrol_new *i2s_ctls;
+	const struct snd_kcontrol_new *amx_ctls;
+	const struct snd_kcontrol_new *adx_ctls;
+};
 
 static int dai_get_rate(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
@@ -177,10 +185,14 @@ static int dai_put_bits(struct snd_kcontrol *kcontrol,
 	SOC_SINGLE_EXT(name_bits, reg, 0, max_bits, 0,		\
 		       dai_get_bits, dai_put_bits)
 
-static const struct snd_kcontrol_new tegra210_i2s_ctls[] = {
-	PCM_PARAMS_CONTROLS(1, "Sample Rate", "Sample Channels",
-			    "Sample Bits", 192000, 16, 32),
+#define TEGRA_I2S_CTLS(chip, channels) \
+static const struct snd_kcontrol_new chip ## _i2s_ctls[] = {		\
+	PCM_PARAMS_CONTROLS(1, "Sample Rate", "Sample Channels",	\
+			    "Sample Bits", 192000, channels, 32),	\
 };
+
+TEGRA_I2S_CTLS(tegra210, TEGRA234_MAX_CHANNEL_COUNT)
+TEGRA_I2S_CTLS(tegra264, TEGRA264_MAX_CHANNEL_COUNT)
 
 static const struct snd_kcontrol_new tegra210_dmic_ctls[] = {
 	PCM_PARAMS_CONTROLS(1, "Sample Rate", "Sample Channels",
@@ -239,37 +251,42 @@ static struct snd_kcontrol_new tegra210_mixer_ctls[] = {
 		dai_get_channel, dai_put_channel),
 };
 
-#define TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(reg)				\
-	SOC_SINGLE_EXT("Output Sample Channels", reg - 1, 0, 16, 0,	\
+#define TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(reg, channel)				\
+	SOC_SINGLE_EXT("Output Sample Channels", reg - 1, 0, channel, 0,	\
 		       dai_get_channel, dai_put_channel)
 
 #define TEGRA210_AMX_INPUT_CHANNELS_CTRL(reg)				\
 	SOC_SINGLE_EXT("Input" #reg " Sample Channels", reg - 1, 0,	\
 		       16, 0, dai_get_channel, dai_put_channel)
 
-static struct snd_kcontrol_new tegra210_amx_ctls[] = {
-	TEGRA210_AMX_INPUT_CHANNELS_CTRL(1),
-	TEGRA210_AMX_INPUT_CHANNELS_CTRL(2),
-	TEGRA210_AMX_INPUT_CHANNELS_CTRL(3),
-	TEGRA210_AMX_INPUT_CHANNELS_CTRL(4),
-	TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(5),
-};
 
 #define TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(reg)				\
 	SOC_SINGLE_EXT("Output" #reg " Sample Channels", reg, 0,	\
 		       16, 0, dai_get_channel, dai_put_channel)
 
-#define TEGRA210_ADX_INPUT_CHANNELS_CTRL(reg)				\
-	SOC_SINGLE_EXT("Input Sample Channels", reg - 1, 0, 16, 0,	\
+#define TEGRA210_ADX_INPUT_CHANNELS_CTRL(reg, channel)				\
+	SOC_SINGLE_EXT("Input Sample Channels", reg - 1, 0, channel, 0,	\
 		       dai_get_channel, dai_put_channel)
 
-static struct snd_kcontrol_new tegra210_adx_ctls[] = {
-	TEGRA210_ADX_INPUT_CHANNELS_CTRL(1),
-	TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(1),
-	TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(2),
-	TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(3),
-	TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(4),
+#define TEGRA_AMX_ADX_CTRLS(chip, channels)		\
+static struct snd_kcontrol_new chip ## _amx_ctls[] = {	\
+	TEGRA210_AMX_INPUT_CHANNELS_CTRL(1),		\
+	TEGRA210_AMX_INPUT_CHANNELS_CTRL(2),		\
+	TEGRA210_AMX_INPUT_CHANNELS_CTRL(3),		\
+	TEGRA210_AMX_INPUT_CHANNELS_CTRL(4),		\
+	TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(5, channels),	\
+};	\
+\
+static struct snd_kcontrol_new chip ## _adx_ctls[] = {	\
+	TEGRA210_ADX_INPUT_CHANNELS_CTRL(1, channels),	\
+	TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(1),		\
+	TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(2),		\
+	TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(3),		\
+	TEGRA210_ADX_OUTPUT_CHANNELS_CTRL(4),		\
 };
+
+TEGRA_AMX_ADX_CTRLS(tegra210, TEGRA234_MAX_CHANNEL_COUNT)
+TEGRA_AMX_ADX_CTRLS(tegra264, TEGRA264_MAX_CHANNEL_COUNT)
 
 static int dai_is_dummy(struct snd_soc_dai *dai)
 {
@@ -355,8 +372,11 @@ static int tegra_mixer_control_probe(struct platform_device *pdev)
 	struct snd_soc_card *card;
 	struct snd_soc_component *component;
 	struct snd_soc_pcm_runtime *rtd;
+	const struct tegra_mixer_soc_data *soc_data;
 
 	dev_info(dev, "Begin probe of override control device\n");
+
+	soc_data = of_device_get_match_data(&pdev->dev);
 
 	card = dev_get_drvdata(dev->parent);
 	if (!card) {
@@ -372,8 +392,8 @@ static int tegra_mixer_control_probe(struct platform_device *pdev)
 
 		if (strstr(component->name_prefix, "I2S"))
 			snd_soc_add_component_controls(component,
-				tegra210_i2s_ctls,
-				ARRAY_SIZE(tegra210_i2s_ctls));
+					soc_data->i2s_ctls,
+					ARRAY_SIZE(tegra210_i2s_ctls));
 		else if (strstr(component->name_prefix, "DMIC"))
 			snd_soc_add_component_controls(component,
 				tegra210_dmic_ctls,
@@ -392,11 +412,11 @@ static int tegra_mixer_control_probe(struct platform_device *pdev)
 				ARRAY_SIZE(tegra210_mvc_ctls));
 		else if (strstr(component->name_prefix, "AMX"))
 			snd_soc_add_component_controls(component,
-				tegra210_amx_ctls,
+				soc_data->amx_ctls,
 				ARRAY_SIZE(tegra210_amx_ctls));
 		else if (strstr(component->name_prefix, "ADX"))
 			snd_soc_add_component_controls(component,
-				tegra210_adx_ctls,
+				soc_data->adx_ctls,
 				ARRAY_SIZE(tegra210_adx_ctls));
 		else if (strstr(component->name_prefix, "MIXER"))
 			snd_soc_add_component_controls(component,
@@ -457,6 +477,9 @@ static int tegra_mixer_control_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct snd_soc_component *comp;
 	struct snd_soc_card *card = dev_get_drvdata(dev);
+	const struct tegra_mixer_soc_data *soc_data;
+
+	soc_data = of_device_get_match_data(&pdev->dev);
 
 	for_each_card_components(card, comp) {
 		if (!comp->name_prefix)
@@ -464,7 +487,7 @@ static int tegra_mixer_control_remove(struct platform_device *pdev)
 
 		if (strstr(comp->name_prefix, "I2S"))
 			tegra_mixer_control_delete(dev, comp->name_prefix,
-					tegra210_i2s_ctls, ARRAY_SIZE(tegra210_i2s_ctls));
+					soc_data->i2s_ctls, ARRAY_SIZE(tegra210_i2s_ctls));
 		else if (strstr(comp->name_prefix, "DMIC"))
 			tegra_mixer_control_delete(dev, comp->name_prefix,
 					tegra210_dmic_ctls, ARRAY_SIZE(tegra210_dmic_ctls));
@@ -479,10 +502,10 @@ static int tegra_mixer_control_remove(struct platform_device *pdev)
 					tegra210_mvc_ctls, ARRAY_SIZE(tegra210_mvc_ctls));
 		else if (strstr(comp->name_prefix, "AMX"))
 			tegra_mixer_control_delete(dev, comp->name_prefix,
-					tegra210_amx_ctls, ARRAY_SIZE(tegra210_amx_ctls));
+					soc_data->amx_ctls, ARRAY_SIZE(tegra210_amx_ctls));
 		else if (strstr(comp->name_prefix, "ADX"))
 			tegra_mixer_control_delete(dev, comp->name_prefix,
-					tegra210_adx_ctls, ARRAY_SIZE(tegra210_adx_ctls));
+					soc_data->adx_ctls, ARRAY_SIZE(tegra210_adx_ctls));
 		else if (strstr(comp->name_prefix, "MIXER"))
 			tegra_mixer_control_delete(dev, comp->name_prefix,
 					tegra210_mixer_ctls, ARRAY_SIZE(tegra210_mixer_ctls));
@@ -491,13 +514,26 @@ static int tegra_mixer_control_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct tegra_mixer_soc_data soc_data_tegra234 = {
+	.i2s_ctls = tegra210_i2s_ctls,
+	.amx_ctls = tegra210_amx_ctls,
+	.adx_ctls = tegra210_adx_ctls,
+};
+
+static const struct tegra_mixer_soc_data soc_data_tegra264 = {
+	.i2s_ctls = tegra264_i2s_ctls,
+	.amx_ctls = tegra264_amx_ctls,
+	.adx_ctls = tegra264_adx_ctls,
+};
+
 static const struct dev_pm_ops tegra_mixer_control_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
 				pm_runtime_force_resume)
 };
 
 static const struct of_device_id tegra_mixer_control_of_match[] = {
-	{ .compatible = "nvidia,tegra234-mixer-control" },
+	{ .compatible = "nvidia,tegra234-mixer-control", .data = &soc_data_tegra234 },
+	{ .compatible = "nvidia,tegra264-mixer-control", .data = &soc_data_tegra264 },
 	{},
 };
 MODULE_DEVICE_TABLE(of, tegra_mixer_control_of_match);
