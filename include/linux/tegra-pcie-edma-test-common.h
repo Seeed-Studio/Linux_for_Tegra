@@ -2,7 +2,7 @@
 /*
  * PCIe DMA EPF Library for Tegra PCIe
  *
- * Copyright (C) 2022-2023 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2022-2024 NVIDIA Corporation. All rights reserved.
  */
 
 #ifndef TEGRA_PCIE_EDMA_TEST_COMMON_H
@@ -195,8 +195,8 @@ static int edmalib_common_test(struct edmalib_common *edma)
 
 	if (EDMA_ABORT_TEST_EN || EDMA_STOP_TEST_EN) {
 		edma->edma_ch &= ~0xFF;
-		/* only channel 0, 2 is ASYNC, where chan 0 async gets aborted */
-		edma->edma_ch |= 0xF5;
+		/* All channels in ASYNC, where chan 2 async gets aborted */
+		edma->edma_ch |= 0xFF;
 	}
 
 	/* FIXME This is causing crash for remote dma when BAR MMIO virt address is used. */
@@ -457,7 +457,7 @@ static int edmalib_common_test(struct edmalib_common *edma)
 			dev_dbg(edma->fdev, "%s: LL EDMA LIB %d, SZ: %u B CH: %d iter %d\n",
 				__func__, xfer_type, edma->dma_size, ch, i);
 		}
-		if (i == 0) {
+		if (i == 2) {
 			if (EDMA_ABORT_TEST_EN) {
 				msleep(edma->stress_count);
 				/* TODO support abort test case for T264 */
