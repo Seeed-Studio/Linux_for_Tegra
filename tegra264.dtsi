@@ -39,6 +39,7 @@
 		serial5 = &uart5;
 		serial9 = &uart9;
 		serial10 = &uart10;
+		nvdisplay = &nvdisplay;
 	};
 
 	bus@0 {
@@ -9216,5 +9217,272 @@
 		compatible = "nvidia,tegra-fsicom-EPD";
 		status = "disabled";
 		channelid_list = <0>;
+	};
+
+	dce@8808000000 {
+		compatible = "nvidia,tegra264-dce";
+		reg = <0x00000088 0x08000000 0x00000000 0x00800000>;
+		interrupts = <GIC_SPI 238 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "dce-smb-0", "dce-smb-1", "dce-smb-2", "dce-smb-3";
+		status = "disabled";
+		sha-carveout {
+			compatible = "sha-carveout";
+			status = "disabled";
+		};
+	};
+	nvdisplay: display@8808c00000 {
+		compatible = "nvidia,tegra264-display";
+		power-domains = <&bpmp TEGRA264_POWER_DOMAIN_DISP>;
+		nvidia,num-dpaux-instance = <0x00000004>;
+		nvidia,bpmp = <&bpmp>;
+
+		/*
+		 * FIXME: Figure out why using size from address_map causes a timeout in
+		 * ap_sim_display/nvkmsModeset test
+		 */
+		/*
+		 * Note: For dpaux, reg base is specified only for dpaux0 because RM maps and creates
+		 * aperture only for dpaux0 reg space and uses the dpaux0's aperture to access
+		 * registers of all valid dpaux instances by indexing the register offset instead
+		 * of using separate reg space apertures per instance.
+		 * But, the IRQs are handled separately for each dpaux instance. Hence 'interrupts'
+		 * have been added for all instances.
+		 * For resets, only one dpaux0_reset is required because on T264 there's only one
+		 * IP reset for all dpaux instances.
+		 */
+		reg-names = "nvdisplay", "dpaux0", "hdacodec", "mipical";
+		reg = <0x88 0x8c00000 0x00 0x1fffff>,
+		      <0x88 0x9680000 0x00 0x7ffff>,
+		      <0x88 0x9101000 0x00 0xfff>,
+		      <0x81 0x89840000 0x00 0xffff>;
+		interrupt-names = "nvdisplay", "dpaux0", "dpaux1", "dpaux2", "dpaux3", "hdacodec";
+		interrupts = <GIC_SPI 256 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>,
+                             <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH>,
+                             <GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH>,
+                             <GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH>;
+
+		clocks =	<&bpmp TEGRA264_CLK_HUB>,
+				<&bpmp TEGRA264_CLK_DISP>,
+				<&bpmp TEGRA264_CLK_RG0_DIV>,
+				<&bpmp TEGRA264_CLK_RG1_DIV>,
+				<&bpmp TEGRA264_CLK_RG2_DIV>,
+				<&bpmp TEGRA264_CLK_RG3_DIV>,
+				<&bpmp TEGRA264_CLK_RG4_DIV>,
+				<&bpmp TEGRA264_CLK_RG5_DIV>,
+				<&bpmp TEGRA264_CLK_RG6_DIV>,
+				<&bpmp TEGRA264_CLK_RG7_DIV>,
+				<&bpmp TEGRA264_CLK_FUSE>,
+				<&bpmp TEGRA264_CLK_SPPLL0_CLKOUT1A>,
+				<&bpmp TEGRA264_CLK_SPPLL0_CLKOUT2A>,
+				<&bpmp TEGRA264_CLK_SPPLL0_CLKOUT270>,
+				<&bpmp TEGRA264_CLK_SPPLL1_CLKOUT270>,
+				<&bpmp TEGRA264_CLK_SPPLL0_CLKOUT100>,
+				<&bpmp TEGRA264_CLK_SPPLL1_CLKOUT100>,
+				<&bpmp TEGRA264_CLK_VPLL0>,
+				<&bpmp TEGRA264_CLK_VPLL1>,
+				<&bpmp TEGRA264_CLK_VPLL2>,
+				<&bpmp TEGRA264_CLK_VPLL3>,
+				<&bpmp TEGRA264_CLK_VPLL4>,
+				<&bpmp TEGRA264_CLK_VPLL5>,
+				<&bpmp TEGRA264_CLK_VPLL6>,
+				<&bpmp TEGRA264_CLK_VPLL7>,
+				<&bpmp TEGRA264_CLK_RG0>,
+				<&bpmp TEGRA264_CLK_RG1>,
+				<&bpmp TEGRA264_CLK_RG2>,
+				<&bpmp TEGRA264_CLK_RG3>,
+				<&bpmp TEGRA264_CLK_RG4>,
+				<&bpmp TEGRA264_CLK_RG5>,
+				<&bpmp TEGRA264_CLK_RG6>,
+				<&bpmp TEGRA264_CLK_RG7>,
+				<&bpmp TEGRA264_CLK_DISPPLL>,
+				<&bpmp TEGRA264_CLK_PRE_SOR0>,
+				<&bpmp TEGRA264_CLK_PRE_SOR1>,
+				<&bpmp TEGRA264_CLK_PRE_SOR2>,
+				<&bpmp TEGRA264_CLK_PRE_SOR3>,
+				<&bpmp TEGRA264_CLK_DP_LINKA_REF>,
+				<&bpmp TEGRA264_CLK_DP_LINKB_REF>,
+				<&bpmp TEGRA264_CLK_DP_LINKC_REF>,
+				<&bpmp TEGRA264_CLK_DP_LINKD_REF>,
+				<&bpmp TEGRA264_CLK_SOR_LINKA_INPUT>,
+				<&bpmp TEGRA264_CLK_SOR_LINKB_INPUT>,
+				<&bpmp TEGRA264_CLK_SOR_LINKC_INPUT>,
+				<&bpmp TEGRA264_CLK_SOR_LINKD_INPUT>,
+				<&bpmp TEGRA264_CLK_SOR_LINKA_AFIFO>,
+				<&bpmp TEGRA264_CLK_SOR_LINKB_AFIFO>,
+				<&bpmp TEGRA264_CLK_SOR_LINKC_AFIFO>,
+				<&bpmp TEGRA264_CLK_SOR_LINKD_AFIFO>,
+				<&bpmp TEGRA264_CLK_SOR0>,
+				<&bpmp TEGRA264_CLK_SOR1>,
+				<&bpmp TEGRA264_CLK_SOR2>,
+				<&bpmp TEGRA264_CLK_SOR3>,
+				<&bpmp TEGRA264_CLK_LINKA_SYM>,
+				<&bpmp TEGRA264_CLK_LINKB_SYM>,
+				<&bpmp TEGRA264_CLK_LINKC_SYM>,
+				<&bpmp TEGRA264_CLK_LINKD_SYM>,
+				<&bpmp TEGRA264_CLK_SOR0_PAD>,
+				<&bpmp TEGRA264_CLK_SOR1_PAD>,
+				<&bpmp TEGRA264_CLK_SOR2_PAD>,
+				<&bpmp TEGRA264_CLK_SOR3_PAD>,
+				<&bpmp TEGRA264_CLK_SF0>,
+				<&bpmp TEGRA264_CLK_SF1>,
+				<&bpmp TEGRA264_CLK_SF2>,
+				<&bpmp TEGRA264_CLK_SF3>,
+				<&bpmp TEGRA264_CLK_SF4>,
+				<&bpmp TEGRA264_CLK_SF5>,
+				<&bpmp TEGRA264_CLK_SF6>,
+				<&bpmp TEGRA264_CLK_SF7>,
+				<&bpmp TEGRA264_CLK_SOR0_PLL_REF>,
+				<&bpmp TEGRA264_CLK_SOR1_PLL_REF>,
+				<&bpmp TEGRA264_CLK_SOR2_PLL_REF>,
+				<&bpmp TEGRA264_CLK_SOR3_PLL_REF>,
+				<&bpmp TEGRA264_CLK_SOR0_REF>,
+				<&bpmp TEGRA264_CLK_SOR1_REF>,
+				<&bpmp TEGRA264_CLK_SOR2_REF>,
+				<&bpmp TEGRA264_CLK_SOR3_REF>,
+				<&bpmp TEGRA264_CLK_OSC>,
+				<&bpmp TEGRA264_CLK_DSC>,
+				<&bpmp TEGRA264_CLK_MAUD>,
+				<&bpmp TEGRA264_CLK_AZA_2XBIT>,
+				<&bpmp TEGRA264_CLK_DISP_ROOT>,
+				<&bpmp TEGRA264_CLK_VPLLX_SOR0_MUXED>,
+				<&bpmp TEGRA264_CLK_VPLLX_SOR1_MUXED>,
+				<&bpmp TEGRA264_CLK_VPLLX_SOR2_MUXED>,
+				<&bpmp TEGRA264_CLK_VPLLX_SOR3_MUXED>,
+				<&bpmp TEGRA264_CLK_SF0_SOR>,
+				<&bpmp TEGRA264_CLK_SF1_SOR>,
+				<&bpmp TEGRA264_CLK_SF2_SOR>,
+				<&bpmp TEGRA264_CLK_SF3_SOR>,
+				<&bpmp TEGRA264_CLK_SF4_SOR>,
+				<&bpmp TEGRA264_CLK_SF5_SOR>,
+				<&bpmp TEGRA264_CLK_SF6_SOR>,
+				<&bpmp TEGRA264_CLK_SF7_SOR>,
+				<&bpmp TEGRA264_CLK_OSC>, // TODO remove dpaux0_clk
+				<&bpmp TEGRA264_CLK_OSC>, // TODO remove dsi_core_clk
+				<&bpmp TEGRA264_CLK_OSC>; // TODO remove aza_bit_clk
+
+		clock-names =	"nvdisplayhub_clk",
+				"nvdisplay_disp_clk",
+				"nvdisplay_p0_clk",
+				"nvdisplay_p1_clk",
+				"nvdisplay_p2_clk",
+				"nvdisplay_p3_clk",
+				"nvdisplay_p4_clk",
+				"nvdisplay_p5_clk",
+				"nvdisplay_p6_clk",
+				"nvdisplay_p7_clk",
+				"fuse_clk",
+				"sppll0_clkouta_clk",
+				"sppll0_clkoutb_clk",
+				"sppll0_clkoutpn_clk",
+				"sppll1_clkoutpn_clk",
+				"sppll0_div27_clk",
+				"sppll1_div27_clk",
+				"vpll0_clk",
+				"vpll1_clk",
+				"vpll2_clk",
+				"vpll3_clk",
+				"vpll4_clk",
+				"vpll5_clk",
+				"vpll6_clk",
+				"vpll7_clk",
+				"rg0_clk",
+				"rg1_clk",
+				"rg2_clk",
+				"rg3_clk",
+				"rg4_clk",
+				"rg5_clk",
+				"rg6_clk",
+				"rg7_clk",
+				"disppll_clk",
+				"pre_sor0_clk",
+				"pre_sor1_clk",
+				"pre_sor2_clk",
+				"pre_sor3_clk",
+				"dp_link_ref_clk",
+				"dp_linkb_ref_clk",
+				"dp_linkc_ref_clk",
+				"dp_linkd_ref_clk",
+				"sor_linka_input_clk",
+				"sor_linkb_input_clk",
+				"sor_linkc_input_clk",
+				"sor_linkd_input_clk",
+				"sor_linka_afifo_clk",
+				"sor_linkb_afifo_clk",
+				"sor_linkc_afifo_clk",
+				"sor_linkd_afifo_clk",
+				"sor0_clk",
+				"sor1_clk",
+				"sor2_clk",
+				"sor3_clk",
+				"sor_pad_input_clk",
+				"sor_padb_input_clk",
+				"sor_padc_input_clk",
+				"sor_padd_input_clk",
+				"sor0_pad_clk",
+				"sor1_pad_clk",
+				"sor2_pad_clk",
+				"sor3_pad_clk",
+				"sf0_clk",
+				"sf1_clk",
+				"sf2_clk",
+				"sf3_clk",
+				"sf4_clk",
+				"sf5_clk",
+				"sf6_clk",
+				"sf7_clk",
+				"sor0_ref_pll_clk",
+				"sor1_ref_pll_clk",
+				"sor2_ref_pll_clk",
+				"sor3_ref_pll_clk",
+				"sor0_ref_clk",
+				"sor1_ref_clk",
+				"sor2_ref_clk",
+				"sor3_ref_clk",
+				"osc_clk",
+				"dsc_clk",
+				"maud_clk",
+				"aza_2xbit_clk",
+				"disp_root",
+				"vpllx_sor0_muxed_clk",
+				"vpllx_sor1_muxed_clk",
+				"vpllx_sor2_muxed_clk",
+				"vpllx_sor3_muxed_clk",
+				"sf0_sor_clk",
+				"sf1_sor_clk",
+				"sf2_sor_clk",
+				"sf3_sor_clk",
+				"sf4_sor_clk",
+				"sf5_sor_clk",
+				"sf6_sor_clk",
+				"sf7_sor_clk",
+				"dpaux0_clk",
+				"dsi_core_clk",
+				"aza_bit_clk";
+
+		nvidia,disp-sw-soc-chip-id = <0x2650>;
+
+		resets = <&bpmp TEGRA264_RESET_DPAUX>,
+			 <&bpmp TEGRA264_RESET_HDACODEC>;
+		reset-names = "dpaux0_reset", "hdacodec_reset";
+
+		status = "disabled";
+
+		/*
+		 * We're currently using the legacy scheme of assigning a single
+		 * SID for all ISO transactions and another SID for all NISO
+		 * transactions. This is just a temporary solution since the
+		 * display support and scheme for assigning the SID values
+		 * will ultimately be completely different.
+		 */
+		iommus = <&smmu3_mmu 0x900>;
+		non-coherent;
+		nvdisplay-niso {
+			compatible = "nvidia,tegra264-display-niso";
+			iommus = <&smmu3_mmu 0x901>;
+			dma-coherent;
+			status = "disabled";
+		};
 	};
 };
