@@ -91,6 +91,16 @@ int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 		goto free_hp;
 	}
 
+	/* Some user space applications set the dxfer_direction to 0 when
+	 * the dxfer_len is set to 0. The native SCSI driver (sg.c) handles this
+	 * by checking for both dxfer_direction and dxfer_len.
+	 * To be compatible with the native SCSI driver, set the dxfer_direction
+	 * to SG_DXFER_NONE when dxfer_len is <= 0.
+	 */
+	if (hp->dxfer_len <= 0) {
+		hp->dxfer_direction = SG_DXFER_NONE;
+	}
+
 	ioctl_len = data_buf_offset_aligned + data_buf_size_aligned;
 	if (ioctl_len < data_buf_offset_aligned) {
 		err = -EMSGSIZE;
