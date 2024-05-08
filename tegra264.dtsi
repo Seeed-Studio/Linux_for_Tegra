@@ -5795,8 +5795,7 @@
 	        #size-cells = <2>;
 
 		cpu_0: cpu@0 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5815,8 +5814,7 @@
 		};
 
 		cpu_1: cpu@1 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5835,8 +5833,7 @@
 		};
 
 		cpu_2: cpu@2 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5855,8 +5852,7 @@
 		};
 
 		cpu_3: cpu@3 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5875,8 +5871,7 @@
 		};
 
 		cpu_4: cpu@4 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5895,8 +5890,7 @@
 		};
 
 		cpu_5: cpu@5 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5915,8 +5909,7 @@
 		};
 
 		cpu_6: cpu@6 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5935,8 +5928,7 @@
 		};
 
 		cpu_7: cpu@7 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5955,8 +5947,7 @@
 		};
 
 		cpu_8: cpu@8 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5975,8 +5966,7 @@
 		};
 
 		cpu_9: cpu@9 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -5995,8 +5985,7 @@
 		};
 
 		cpu_10: cpu@10 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -6015,8 +6004,7 @@
 		};
 
 		cpu_11: cpu@11 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -6035,8 +6023,7 @@
 		};
 
 		cpu_12: cpu@12 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
@@ -6055,8 +6042,7 @@
 		};
 
 		cpu_13: cpu@13 {
-			compatible = "arm,armv8",
-				     "arm,cortex-a78";
+			compatible = "arm,armv8";
 			status = "disabled";
 
 			device_type = "cpu";
