@@ -164,6 +164,8 @@ static struct device_node *emac_node;
 	(data) = ioread32(MAC_STSR_OFFSET);\
 } while (0)
 
+#define _NANO_SECS (1000000000ULL)
+
 /*
  * tegra_chip_data Tegra chip specific data
  * @support_tsc: Supported TSC sync by chip
@@ -643,6 +645,7 @@ static long nvpps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			u64	ns;
 			u32	reminder;
 			u64	tsc1, tsc2;
+			u64	tsc_ts;
 
 			tsc1 = __arch_counter_get_cntvct();
 
@@ -667,7 +670,16 @@ static long nvpps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
 				ktime_get_ts(&time_stamp.kernel_ts);
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0) */
-				ktime_get_ts64(&time_stamp.kernel_ts);
+
+				/* read TSC counter value */
+				tsc_ts = __arch_counter_get_cntvct();
+
+				/* convert TSC counter value to nsec value */
+				tsc_ts = tsc_ts * pdev_data->tsc_res_ns;
+
+				/* split TSC TS in seconds & nanoseconds */
+				time_stamp.kernel_ts.tv_sec = tsc_ts / _NANO_SECS;
+				time_stamp.kernel_ts.tv_nsec = (tsc_ts - (time_stamp.kernel_ts.tv_sec * _NANO_SECS));
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0) */
 				break;
 
@@ -684,7 +696,7 @@ static long nvpps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				return err;
 			}
 			time_stamp.hw_ptp_ts.tv_sec = div_u64_rem(ns,
-							1000000000ULL,
+							_NANO_SECS,
 							&reminder);
 			time_stamp.hw_ptp_ts.tv_nsec = reminder;
 
