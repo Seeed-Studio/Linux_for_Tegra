@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /* 12 camera module with 4 hawks and 4 Owls
  * HAWK1 - 2 ar0234 cameras - max96712 Aggregator 1 - GMSL0
@@ -750,6 +750,8 @@
 				};
 				/*i2c8*/
 				i2c@31e0000 {
+					/* Set i2c freq to 400khz */
+					clock-frequency = <400000>;
 					virtual_i2c_mux@50 {
 						i2c@0 {
 							ar0234_a@30 {
