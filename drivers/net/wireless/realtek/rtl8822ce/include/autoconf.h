@@ -16,7 +16,7 @@
 #define CONFIG_HEXFILE_CHANNEL_PLAN
 #define CONFIG_HEXFILE_POWER_LIMIT
 #define RTW_HEXFILE_LEN 3072
-#define RTW_HEXFILE_NAME "setting.bin"
+#define RTW_HEXFILE_NAME "/lib/firmware/rtl8822_setting.bin"
 #define CONFIG_SINGLE_IMG
 /* #define CONFIG_DISABLE_ODM */
 
