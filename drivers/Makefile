@@ -14,6 +14,7 @@ endif
 ifdef CONFIG_BT
 obj-m += bluetooth/realtek/
 endif
+obj-m += bus/
 obj-m += c2c/
 obj-m += clink/
 obj-m += cpuidle/
