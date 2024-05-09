@@ -65,6 +65,9 @@ struct tegra_dpaux_chip_data {
 };
 
 #define TEGRA_PIN_DPAUX_0 0
+#define TEGRA_PIN_DPAUX_1 1
+#define TEGRA_PIN_DPAUX_2 2
+#define TEGRA_PIN_DPAUX_3 3
 
 static const struct pinctrl_pin_desc tegra234_dpaux_pins[] = {
 	PINCTRL_PIN(TEGRA_PIN_DPAUX_0, "dpaux-0"),
@@ -118,6 +121,42 @@ static struct tegra_dpaux_chip_data tegra234_dpaux_chip_data[] = {
 	},
 };
 
+static const struct pinctrl_pin_desc tegra264_dpaux_pins[] = {
+	PINCTRL_PIN(TEGRA_PIN_DPAUX_0, "dpaux-0"),
+	PINCTRL_PIN(TEGRA_PIN_DPAUX_1, "dpaux-1"),
+	PINCTRL_PIN(TEGRA_PIN_DPAUX_2, "dpaux-2"),
+	PINCTRL_PIN(TEGRA_PIN_DPAUX_3, "dpaux-3"),
+};
+
+#define TEGRA264_PIN_NAMES "dpaux-0", "dpaux-1", "dpaux-2", "dpaux-3"
+
+static const char * const tegra264_dpaux_pin_groups[] = {
+        TEGRA264_PIN_NAMES
+};
+
+static struct tegra_dpaux_function tegra264_dpaux_functions[] = {
+        FUNCTION(i2c, tegra264_dpaux_pin_groups),
+        FUNCTION(display, tegra264_dpaux_pin_groups),
+};
+
+static const struct tegra_dpaux_pingroup tegra264_dpaux_groups[] = {
+	PINGROUP(dpaux_0, DPAUX_0, I2C, DISPLAY),
+	PINGROUP(dpaux_1, DPAUX_1, I2C, DISPLAY),
+	PINGROUP(dpaux_2, DPAUX_2, I2C, DISPLAY),
+	PINGROUP(dpaux_3, DPAUX_3, I2C, DISPLAY),
+};
+
+static struct tegra_dpaux_chip_data tegra264_dpaux_chip_data[] = {
+	{
+		.pins = tegra264_dpaux_pins,
+		.npins = ARRAY_SIZE(tegra264_dpaux_pins),
+		.pin_group = tegra264_dpaux_groups,
+		.npin_groups = ARRAY_SIZE(tegra264_dpaux_groups),
+		.functions = tegra264_dpaux_functions,
+		.nfunctions = ARRAY_SIZE(tegra264_dpaux_functions),
+	},
+};
+
 static void tegra_dpaux_update(struct tegra_dpaux_pinctl *tdp_aux,
 				u32 reg_offset, u32 mask, u32 val)
 {
@@ -129,20 +168,20 @@ static void tegra_dpaux_update(struct tegra_dpaux_pinctl *tdp_aux,
 }
 
 static int tegra_dpaux_pinctrl_set_mode(struct tegra_dpaux_pinctl *tdpaux_ctl,
-					unsigned int function)
+					unsigned int function, unsigned int offset)
 {
 	u32 mask;
 
 	mask = I2C_SDA_INPUT | I2C_SCL_INPUT | MODE;
 
 	if (function == TEGRA_DPAUX_MUX_DISPLAY)
-		tegra_dpaux_update(tdpaux_ctl, PADCTLREG_I2C_DPAUX, mask, 0);
+		tegra_dpaux_update(tdpaux_ctl, PADCTLREG_I2C_DPAUX + (offset * 4), mask, 0);
 	else if (function == TEGRA_DPAUX_MUX_I2C) {
-		tegra_dpaux_update(tdpaux_ctl, PADCTLREG_I2C_DPAUX, SEL, SEL);
-		tegra_dpaux_update(tdpaux_ctl, PADCTLREG_I2C_DPAUX, mask, mask);
+		tegra_dpaux_update(tdpaux_ctl, PADCTLREG_I2C_DPAUX + (offset * 4), SEL, SEL);
+		tegra_dpaux_update(tdpaux_ctl, PADCTLREG_I2C_DPAUX + (offset * 4), mask, mask);
 	}
 
-	tegra_dpaux_update(tdpaux_ctl, PADCTLREG_I2C_DPAUX, PAD_PWR, 0);
+	tegra_dpaux_update(tdpaux_ctl, PADCTLREG_I2C_DPAUX + (offset * 4), PAD_PWR, 0);
 
 	return 0;
 }
@@ -213,7 +252,7 @@ static int tegra_dpaux_pinctrl_set_mux(struct pinctrl_dev *pctldev,
 	if (i == ARRAY_SIZE(g->funcs))
 		return -EINVAL;
 
-	return tegra_dpaux_pinctrl_set_mode(padctl, function);
+	return tegra_dpaux_pinctrl_set_mode(padctl, function, g->pins[0]);
 }
 
 static const struct pinmux_ops tegra_dpaux_pinmux_ops = {
@@ -311,6 +350,8 @@ static const struct dev_pm_ops tegra234_dpaux_pm_ops = {
 static const struct of_device_id tegra_dpaux_pinctl_of_match[] = {
 	{.compatible = "nvidia,tegra234-misc-dpaux-padctl",
 	 .data = &tegra234_dpaux_chip_data[0]},
+	{.compatible = "nvidia,tegra264-misc-dpaux-padctl",
+	 .data = &tegra264_dpaux_chip_data[0]},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, tegra_dpaux_pinctl_of_match);
