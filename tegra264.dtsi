@@ -3483,6 +3483,25 @@
 			#mbox-cells = <2>;
 		};
 
+		top_hsp3: tegra-hsp@8d00000 {
+			compatible = "nvidia,tegra264-hsp",
+				     "nvidia,tegra234-hsp",
+				     "nvidia,tegra186-hsp";
+			reg = <0x0 0x08d00000 0x0 0xc0000>;
+			interrupts =	<GIC_SPI 670 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 671 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 672 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 674 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 675 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 676 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 677 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "shared0", "shared1", "shared2", "shared3",
+					  "shared4", "shared5", "shared6", "shared7";
+			#mbox-cells = <2>;
+			status = "disabled";
+		};
+
 		aocluster@c000000 {
 			compatible = "nvidia,tegra264-aocluster";
 			#address-cells = <2>;
