@@ -129,6 +129,10 @@
 			status = "okay";
 		};
 
+		tegra_soc_hwpm@1604000 {
+			status = "okay";
+		};
+
 		tegra-utc@c5a0000 {
 			status = "okay";
 		};
