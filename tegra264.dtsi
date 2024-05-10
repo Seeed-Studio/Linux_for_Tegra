@@ -3474,29 +3474,37 @@
 			#mbox-cells = <2>;
 		};
 
-		aon: aon@c040000 {
-			compatible = "nvidia,tegra264-aon";
-			nvidia,adsp_os_secload;
-			reg = <0x0 0xc040000 0x0 0xa0000>, /* Dummy entry for AMC */
-				  <0x0 0xc100000 0x0 0x20000>, /* AO_MISC */
-				  <0x0 0xc410000 0x0 0x40000>;  /* AON_HSP */
-			nvidia,dram_map = <0x0 0x20000000 0x0 0x20000000>;
-			nvidia,adsp_mem =
-				<0x0 0x0>, /* ADSP OS */
-				<0x0 0x0>, /* ADSP APP */
-				<0x0 0x0>, /* ARAM ALIAS 0 */
-				<0x0 0x200000>; /* ACSR */
-			interrupts =
-				<GIC_SPI 0x229 IRQ_TYPE_LEVEL_HIGH>, /* MBOX SEND */
-				<GIC_SPI 0x22a IRQ_TYPE_LEVEL_HIGH>, /* MBOX RECV */
-				<GIC_SPI 0x236 IRQ_TYPE_LEVEL_HIGH>, /* WDT */
-				<GIC_SPI 0x2d8 IRQ_TYPE_LEVEL_HIGH>; /* WFI */
-			iommus = <&smmu1_mmu TEGRA_SID_AON>;
-			memory-region = <&aon_resv>;
-			nvidia,cluster_mem =
-				<0x0 0xc040000 0x0 0x40000  0x0 0xa0000>, /* TCM */
-				<0x0 0xce00000 0x0 0x200000 0x0 0x80000>; /* SRAM */
+		aocluster@c000000 {
+			compatible = "nvidia,tegra264-aocluster";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges = <0x0 0xc000000 0x0 0xc000000 0x0 0x1000000>;
 			status = "disabled";
+
+			aon: aon@c040000 {
+				compatible = "nvidia,tegra264-aon";
+				nvidia,adsp_os_secload;
+				reg = <0x0 0xc040000 0x0 0xa0000>, /* Dummy entry for AMC */
+					  <0x0 0xc100000 0x0 0x20000>, /* AO_MISC */
+					  <0x0 0xc410000 0x0 0x40000>;  /* AON_HSP */
+				nvidia,dram_map = <0x0 0x20000000 0x0 0x20000000>;
+				nvidia,adsp_mem =
+					<0x0 0x0>, /* ADSP OS */
+					<0x0 0x0>, /* ADSP APP */
+					<0x0 0x0>, /* ARAM ALIAS 0 */
+					<0x0 0x200000>; /* ACSR */
+				interrupts =
+					<GIC_SPI 0x229 IRQ_TYPE_LEVEL_HIGH>, /* MBOX SEND */
+					<GIC_SPI 0x22a IRQ_TYPE_LEVEL_HIGH>, /* MBOX RECV */
+					<GIC_SPI 0x236 IRQ_TYPE_LEVEL_HIGH>, /* WDT */
+					<GIC_SPI 0x2d8 IRQ_TYPE_LEVEL_HIGH>; /* WFI */
+				iommus = <&smmu1_mmu TEGRA_SID_AON>;
+				memory-region = <&aon_resv>;
+				nvidia,cluster_mem =
+					<0x0 0xc040000 0x0 0x40000  0x0 0xa0000>, /* TCM */
+					<0x0 0xce00000 0x0 0x200000 0x0 0x80000>; /* SRAM */
+				status = "disabled";
+			};
 		};
 
 		rtc: rtc@c2c0000 {
