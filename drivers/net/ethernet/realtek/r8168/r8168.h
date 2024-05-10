@@ -32,6 +32,8 @@
  *  US6,570,884, US6,115,776, and US6,327,625.
  ***********************************************************************************/
 
+#include <nvidia/conftest.h>
+
 #include <linux/ethtool.h>
 #include <linux/interrupt.h>
 #include <linux/version.h>
@@ -663,11 +665,11 @@ typedef int *napi_budget;
 typedef struct napi_struct *napi_ptr;
 typedef int napi_budget;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,1,0)
+#if defined(NV_NETIF_NAPI_ADD_WEIGHT_PRESENT) /* Linux v6.1 */
 #define RTL_NAPI_CONFIG(ndev, priv, function, weight)   netif_napi_add_weight(ndev, &priv->napi, function, weight)
 #else
 #define RTL_NAPI_CONFIG(ndev, priv, function, weight)   netif_napi_add(ndev, &priv->napi, function, weight)
-#endif //LINUX_VERSION_CODE >= KERNEL_VERSION(6,1,0)
+#endif /* Linux v6.1 */
 #define RTL_NAPI_QUOTA(budget, ndev)            min(budget, budget)
 #define RTL_GET_PRIV(stuct_ptr, priv_struct)        container_of(stuct_ptr, priv_struct, stuct_ptr)
 #define RTL_GET_NETDEV(priv_ptr)            struct net_device *dev = priv_ptr->dev;

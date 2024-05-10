@@ -40,6 +40,8 @@
  * Redefine it to just asm to enable successful compilation.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/pci.h>
@@ -81,9 +83,9 @@
 #include <linux/mdio.h>
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,10)
+#if defined(NV_NET_GSO_H_PRESENT)
 #include <net/gso.h>
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(6,4,10) */
+#endif
 
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -2675,11 +2677,11 @@ static void rtl8168_proc_module_init(void)
 static int rtl8168_proc_open(struct inode *inode, struct file *file)
 {
         struct net_device *dev = proc_get_parent_data(inode);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+#if defined(NV_PDE_DATA_LOWER_CASE_PRESENT) /* Linux v5.17 */
         int (*show)(struct seq_file *, void *) = pde_data(inode);
 #else
         int (*show)(struct seq_file *, void *) = PDE_DATA(inode);
-#endif //LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+#endif //NV_PDE_DATA_LOWER_CASE_PRESENT
 
         return single_open(file, show, dev);
 }
@@ -7215,7 +7217,7 @@ rtl8168_set_ring_size(struct rtl8168_private *tp, u32 rx, u32 tx)
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+#if defined(NV_ETHTOOL_OPS_GET_SET_RINGPARAM_HAS_RINGPARAM_AND_EXTACT_ARGS) /* Linux v5.17 */
 static void rtl8168_get_ringparam(struct net_device *dev,
                                   struct ethtool_ringparam *ring,
                                   struct kernel_ethtool_ringparam *kernel_ring,
@@ -7223,7 +7225,7 @@ static void rtl8168_get_ringparam(struct net_device *dev,
 #else
 static void rtl8168_get_ringparam(struct net_device *dev,
                                   struct ethtool_ringparam *ring)
-#endif //LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+#endif //NV_ETHTOOL_OPS_GET_SET_RINGPARAM_HAS_RINGPARAM_AND_EXTACT_ARGS
 {
         struct rtl8168_private *tp = netdev_priv(dev);
 
@@ -7233,7 +7235,7 @@ static void rtl8168_get_ringparam(struct net_device *dev,
         ring->tx_pending = tp->tx_ring[0].num_tx_desc;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+#if defined(NV_ETHTOOL_OPS_GET_SET_RINGPARAM_HAS_RINGPARAM_AND_EXTACT_ARGS) /* Linux v5.17 */
 static int rtl8168_set_ringparam(struct net_device *dev,
                                  struct ethtool_ringparam *ring,
                                  struct kernel_ethtool_ringparam *kernel_ring,
@@ -7241,7 +7243,7 @@ static int rtl8168_set_ringparam(struct net_device *dev,
 #else
 static int rtl8168_set_ringparam(struct net_device *dev,
                                  struct ethtool_ringparam *ring)
-#endif //LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+#endif //NV_ETHTOOL_OPS_GET_SET_RINGPARAM_HAS_RINGPARAM_AND_EXTACT_ARGS
 {
         struct rtl8168_private *tp = netdev_priv(dev);
         u32 new_rx_count, new_tx_count;
@@ -28526,10 +28528,10 @@ rtl8168_init_one(struct pci_dev *pdev,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
                 if ((tp->mcfg == CFG_METHOD_1) || (tp->mcfg == CFG_METHOD_2) || (tp->mcfg == CFG_METHOD_3)) {
                         dev->hw_features &= ~NETIF_F_IPV6_CSUM;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#if defined(NV_NETIF_SET_TSO_MAX_SIZE_PRESENT) /* Linux v5.19 */
                         netif_set_tso_max_size(dev, LSO_64K);
                         netif_set_tso_max_segs(dev, NIC_MAX_PHYS_BUF_COUNT_LSO2);
-#else //LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#else //NV_NETIF_SET_TSO_MAX_SIZE_PRESENT
                         netif_set_gso_max_size(dev, LSO_32K);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
                         dev->gso_max_segs = NIC_MAX_PHYS_BUF_COUNT_LSO_64K;
@@ -28537,7 +28539,7 @@ rtl8168_init_one(struct pci_dev *pdev,
                         dev->gso_min_segs = NIC_MIN_PHYS_BUF_COUNT;
 #endif //LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)
 #endif //LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
-#endif //LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#endif //NV_NETIF_SET_TSO_MAX_SIZE_PRESENT
                 } else {
                         dev->hw_features |= NETIF_F_IPV6_CSUM;
                         dev->features |=  NETIF_F_IPV6_CSUM;
@@ -28552,10 +28554,10 @@ rtl8168_init_one(struct pci_dev *pdev,
                                         break;
                                 };
                         }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#if defined(NV_NETIF_SET_TSO_MAX_SIZE_PRESENT) /* Linux v5.19 */
                         netif_set_tso_max_size(dev, LSO_64K);
                         netif_set_tso_max_segs(dev, NIC_MAX_PHYS_BUF_COUNT_LSO2);
-#else //LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#else //NV_NETIF_SET_TSO_MAX_SIZE_PRESENT
                         netif_set_gso_max_size(dev, LSO_64K);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
                         dev->gso_max_segs = NIC_MAX_PHYS_BUF_COUNT_LSO2;
@@ -28563,7 +28565,7 @@ rtl8168_init_one(struct pci_dev *pdev,
                         dev->gso_min_segs = NIC_MIN_PHYS_BUF_COUNT;
 #endif //LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)
 #endif //LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
-#endif //LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#endif //NV_NETIF_SET_TSO_MAX_SIZE_PRESENT
                 }
 #endif //LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
 #endif //LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
