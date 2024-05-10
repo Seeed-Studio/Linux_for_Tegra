@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 /dts-v1/;
 
-#include "tegra264-p3971-0050.dtsi"
-#include "tegra264-p3834-0005.dtsi"
+#include "tegra264-p3834-0000.dtsi"
+#include "tegra264-p3740-0000.dtsi"
 
 / {
 
 };
 
 /* Add minimal dtsi at the End of the file */
-#include "tegra264-p3834-0005+p3971-0050-qspi-nvme-minimal.dtsi"
+#include "tegra264-p3740-0000+p3834-0000-qspi-nvme-minimal.dtsi"

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
- 
+
 DTC_FLAGS += -@
 
 old-dtb := $(dtb-y)
@@ -9,10 +9,10 @@ dtb-y :=
 dtbo-y :=
 makefile-path := t264/nv-public/nv-platform
 
-dtb-y += tegra264-p3834-0005+p3971-0050-qspi-nvme.dtb
-dtb-y += tegra264-p3834-0008+p3971-0080-qspi-nvme.dtb
-dtb-y += tegra264-p3834-0008+p3971-0089-qspi-ufs.dtb
-dtb-y += tegra264-p3834-0000+p3740-0000-qspi-nvme.dtb
+dtb-y += tegra264-p3971-0050+p3834-0005-qspi-nvme.dtb
+dtb-y += tegra264-p3971-0080+p3834-0008-qspi-nvme.dtb
+dtb-y += tegra264-p3971-0089+p3834-0008-qspi-ufs.dtb
+dtb-y += tegra264-p3740-0000+p3834-0000-qspi-nvme.dtb
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
