@@ -30,6 +30,7 @@ static int tegra_aocluster_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id tegra_aocluster_of_match[] = {
+	{ .compatible = "nvidia,tegra264-aocluster", },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, tegra_aocluster_of_match);
