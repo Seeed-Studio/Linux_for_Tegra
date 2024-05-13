@@ -362,7 +362,7 @@ static int pva_init_fw(struct platform_device *pdev)
 		      cfg_priv_ar1_end_r(pva->version),
 		      FW_CODE_DATA_END_ADDR);
 	useg_addr = priv1_buffer->pa - FW_CODE_DATA_START_ADDR;
-	if (pva->is_hv_mode) {
+	if ((pva->is_hv_mode) && (!pva->boot_from_file)) {
 		host1x_writel(pdev,
 			      cfg_priv_ar1_lsegreg_r(pva->version),
 			      0xFFFFFFFF);
@@ -390,7 +390,6 @@ static int pva_init_fw(struct platform_device *pdev)
 			host1x_writel(pdev, cfg_scr_priv_0_r(), PVA_PRIV_SCR_VAL | PVA_LOCK_SCR);
 			host1x_writel(pdev, cfg_scr_ccq_ctrl_r(), PVA_CCQ_SCR_VAL | PVA_LOCK_SCR);
 		}
-
 	}
 
 	/* Indicate the OS is waiting for PVA ready Interrupt */
@@ -816,7 +815,8 @@ static int nvpva_write_hwid(struct platform_device *pdev)
 	/* Go through the StreamIDs and assemble register values */
 	for (i = 0; i < ARRAY_SIZE(pdata->vm_regs); i++) {
 		u64 addr = pdata->vm_regs[i].addr;
-		u32 shift = pdata->vm_regs[i].shift;
+		u32 shift = pdata->vm_regs[i].shift & 0x0000FFFF;
+		u32 mask = (pdata->vm_regs[i].shift >> 16) & 0x0000FFFF;
 		u32 val;
 
 		/* Break if this was the last StreamID */
@@ -824,7 +824,10 @@ static int nvpva_write_hwid(struct platform_device *pdev)
 			break;
 
 		/* Update the StreamID value */
-		val = ((streamids[id_idx[i]] & 0x000000FF) << shift);
+		if(mask == 0 )
+			mask = 0x000000FF;
+
+		val = ((streamids[id_idx[i]] & mask) << shift);
 		reg_array[reg_idx[i]] |= val;
 	}
 
@@ -1274,13 +1277,20 @@ static int pva_probe(struct platform_device *pdev)
 	else
 		pva->map_co_needed = true;
 
-#ifdef CONFIG_PVA_CO_DISABLED
-	pva->boot_from_file = true;
-#else
-	if ((pdata->version == PVA_HW_GEN1) || (pdata->version == PVA_HW_GEN3))
+
+	if (pdata->version == PVA_HW_GEN1)
 		pva->boot_from_file = true;
 	else
 		pva->boot_from_file = false;
+
+#if  defined(CONFIG_PVA_CO_DISABLED_T264)
+	if (pdata->version == PVA_HW_GEN3)
+		pva->boot_from_file = true;
+#endif
+
+#if  defined(CONFIG_PVA_CO_DISABLED)
+	if (pdata->version == PVA_HW_GEN2)
+		pva->boot_from_file = true;
 #endif
 
 #ifdef __linux__

@@ -43,7 +43,10 @@ client_context_search_locked(struct platform_device *pdev,
 	if (i >= NVPVA_CLIENT_MAX_CONTEXTS_PER_ENG)
 		return NULL;
 
-	shared_cntxt_dev =  i > (NVPVA_CLIENT_MAX_CONTEXTS_PER_ENG - 3);
+	if (dev->version <= PVA_HW_GEN2)
+		shared_cntxt_dev =  i > (NVPVA_CLIENT_MAX_CONTEXTS_PER_ENG - 3);
+	else
+		shared_cntxt_dev = false;
 
 	c_node->pid = pid;
 	c_node->pva = dev;
