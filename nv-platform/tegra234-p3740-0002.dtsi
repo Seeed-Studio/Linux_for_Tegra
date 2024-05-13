@@ -137,9 +137,9 @@
 	};
 
 	eeprom-manager {
-		bus@0 {
+		bus@1 {
 			i2c-bus = <&dp_aux_ch2_i2c>;
-			eeprom@1 {
+			eeprom@0 {
 				slave-address = <0x55>;
 				label = "cvb";
 			};
