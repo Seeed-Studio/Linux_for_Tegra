@@ -3718,8 +3718,9 @@
 			compatible = "nvidia,tegra264-host1x";
 			reg = <0x81 0x81200000 0x0 0x10000>, /* Common */
 			      <0x81 0x81210000 0x0 0x10000>, /* Hypervisor */
-			      <0x81 0x81240000 0x0 0x10000>; /* Guest 0 */
-			reg-names = "common", "hypervisor", "vm";
+			      <0x81 0x81240000 0x0 0x10000>, /* Guest 0 */
+			      <0x81 0x81320000 0x0 0x20000>; /* Actmon */
+			reg-names = "common", "hypervisor", "vm", "actmon";
 
 			interrupts = <GIC_SPI 0x147 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 0x148 IRQ_TYPE_LEVEL_HIGH>,
@@ -3740,8 +3741,9 @@
 					  "syncpt7",
 					  "host1x";
 
-			clocks = <&bpmp TEGRA264_CLK_HOST1X>;
-			clock-names = "host1x";
+			clocks = <&bpmp TEGRA264_CLK_HOST1X>,
+				 <&bpmp TEGRA264_CLK_OSC>;
+			clock-names = "host1x", "actmon";
 			interconnects = <&mc TEGRA264_MEMORY_CLIENT_HOST1XR &emc>;
 			interconnect-names = "dma-mem";
 			iommus = <&smmu1_mmu TEGRA_SID_HOST1X>;
