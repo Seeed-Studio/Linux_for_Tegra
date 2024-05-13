@@ -20,7 +20,7 @@
 #ifndef __PVA_T264_H__
 #define __PVA_T264_H__
 
-static char *aux_dev_name_t264 = "818c000000.pva0:pva0_niso1_ctx7";
+static char *aux_dev_name_t264 = "818c000000.pva0:pva0_niso1_ctx8";
 static u32 aux_dev_name_len_t264 = 31;
 
 struct nvhost_device_data t264_pva0_info = {
@@ -40,19 +40,19 @@ struct nvhost_device_data t264_pva0_info = {
 	.firmware_name		= "nvhost_pva030.fw",
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {
-		{0x240000, false, 0},
-		{0x240004, false, 0},
-		{0x240008, false, 0},
-		{0x24000c, false, 0},
-		{0x240010, false, 0},
-		{0x240014, false, 0},
-		{0x240018, false, 0},
-		{0x24001c, false, 0},
-		{0x240020, false, 0},
-		{0x240020, false, 8},
-		{0x240020, false, 16},
-		{0x240024, false, 0},
-		{0x240024, false, 8}
+		{0x240000, false, 0xFFFF0000},
+		{0x240004, false, 0xFFFF0000},
+		{0x240008, false, 0xFFFF0000},
+		{0x24000c, false, 0xFFFF0000},
+		{0x240010, false, 0xFFFF0000},
+		{0x240014, false, 0xFFFF0000},
+		{0x240018, false, 0xFFFF0000},
+		{0x24001c, false, 0xFFFF0000},
+		{0x240020, false, 0x00FF0000},
+		{0x240020, false, 0x00FF0008},
+		{0x240020, false, 0x00FF0010},
+		{0x240024, false, 0x00FF0000},
+		{0x240024, false, 0x00FF0008}
 	},
 	.poweron_reset		= true,
 	.serialize		= true,
@@ -60,14 +60,13 @@ struct nvhost_device_data t264_pva0_info = {
 	.can_powergate		= true,
 };
 
-#if (defined(CONFIG_PVA_CO_DISABLED) || defined(CONFIG_TEGRA_T26X_GRHOST_PVA))
-static u32 vm_regs_sid_idx_t264[] = {1, 2, 3, 4, 5, 6, 7, 7,
-				     8, 8, 8, 8, 8, 0, 0, 0};
+#if defined(CONFIG_PVA_CO_DISABLED_T264)
+static u32 vm_regs_sid_idx_t264[] = {1, 2, 3, 4, 5, 6, 7, 8,
+				     9, 9, 9, 9, 9, 0, 0, 0};
 #else
-static u32 vm_regs_sid_idx_t264[] = {1, 2, 3, 4, 5, 6, 7, 7,
-				     8, 0, 9, 0, 0, 0, 0, 0};
+static u32 vm_regs_sid_idx_t264[] = {1, 2, 3, 4, 5, 6, 7, 8,
+				     9, 0, 9, 0, 0, 0, 0, 0};
 #endif
 static u32 vm_regs_reg_idx_t264[] = {0, 1, 2, 3, 4, 5, 6, 7,
 				     8, 8, 8, 9, 9, 0, 0, 0};
-
 #endif

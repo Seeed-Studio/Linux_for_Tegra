@@ -15,5 +15,5 @@
  */
 #ifndef __PVA_CNTXT_DEV_NAME_T264_H__
 #define __PVA_CNTXT_DEV_NAME_T264_H__
-#define PVA_CNTXT_DEV_NAME_T264	"\"pva0_niso1_ctx8\","
+#define PVA_CNTXT_DEV_NAME_T264	"pva0_niso1_ctx8"
 #endif

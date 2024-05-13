@@ -17,6 +17,7 @@ ccflags-y += -DTEGRA_OOT_MODULE
 
 ccflags-y += -DCONFIG_TEGRA_T26X_GRHOST_PVA
 ccflags-y += -DNVPVA_CONFIG_T264
+ccflags-y += -DCONFIG_PVA_CO_DISABLED_T264
 
 nvhost-pva-objs  = \
 		pva.o \
@@ -54,3 +55,4 @@ nvhost-pva-objs  = \
 obj-m += nvhost-pva.o
 endif
 endif
+
