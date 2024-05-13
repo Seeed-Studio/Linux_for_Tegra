@@ -136,6 +136,7 @@ static int central_actmon_remove(struct platform_device *pdev)
 
 static const struct of_device_id central_actmon_of_match[] = {
 	{ .compatible = "nvidia,tegra234-cactmon-mc-all", .data = NULL, },
+	{ .compatible = "nvidia,tegra264-cactmon-mc-all", .data = NULL, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, central_actmon_of_match);
