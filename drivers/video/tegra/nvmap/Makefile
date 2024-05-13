@@ -40,11 +40,6 @@ endif #NVMAP_CONFIG_PAGE_POOLS
 
 KASAN_SANITIZE_nvmap_kasan_wrapper.o := n
 
-ifeq ($(NVMAP_CONFIG_LOADABLE_MODULE), y)
 nvmap-y += nvmap_cache_maint.o
 obj-m += nvmap.o
-else
-# Not a loadable module
-obj-y += nvmap.o
-endif #NVMAP_CONFIG_LOADABLE_MODULE
 endif #NVMAP_CONFIG

@@ -85,9 +85,6 @@ NVMAP_CONFIG_DEFER_FD_RECYCLE_MAX_FD := 0x8000
 # Suppports getting nvmap_handle from SciIpcId passed via ioctl.
 NVMAP_CONFIG_SCIIPC := n
 
-# Config for enabling NvMap as OOT module
-NVMAP_CONFIG_LOADABLE_MODULE := n
-
 # Config for enabling PROCRANK functionality
 NVMAP_CONFIG_PROCRANK := y
 
@@ -100,10 +97,6 @@ NVMAP_CONFIG_DEBUG_MAPS := n
 # To support handle as ID, set this to n
 # This config is useful to debug issue if its due to handle as ID or FD
 NVMAP_CONFIG_HANDLE_AS_FD := n
-
-# Config for kstable/OOT kernel
-# This is useful when any kstable/OOT specific checks are needed
-NVMAP_CONFIG_UPSTREAM_KERNEL := n
 
 # Config for enabling the cache flush at buffer allocation time from carveout
 NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC := y
@@ -118,16 +111,12 @@ NVMAP_CONFIG_VIDMEM_CARVEOUT := n
 # Enable/Disable configs based upon the kernel version
 # Specify the values which are different from the default values
 
-# For 5.10+
-NVMAP_CONFIG_LOADABLE_MODULE := y
 NVMAP_CONFIG_PROCRANK := n
 ifneq ($(NVMAP_CONFIG_HANDLE_AS_FD),y)
 NVMAP_CONFIG_HANDLE_AS_ID := y
 NVMAP_CONFIG_FD_START := 0x0
 endif
 NVMAP_CONFIG_SCIIPC := y
-# For OOT build
-NVMAP_CONFIG_UPSTREAM_KERNEL := y
 ifeq ($(CONFIG_DMABUF_DEFERRED_UNMAPPING),y)
 NVMAP_CONFIG_DMABUF_DEFERRED_UNMAPPING := y
 endif
@@ -171,14 +160,6 @@ endif #NVMAP_CONFIG_DEFER_FD_RECYCLE
 ifeq ($(NVMAP_CONFIG_SCIIPC),y)
 ccflags-y += -DNVMAP_CONFIG_SCIIPC
 endif #NVMAP_CONFIG_SCIIPC
-
-ifeq ($(NVMAP_CONFIG_LOADABLE_MODULE),y)
-ccflags-y += -DNVMAP_LOADABLE_MODULE
-endif #NVMAP_CONFIG_LOADABLE_MODULE
-
-ifeq ($(NVMAP_CONFIG_UPSTREAM_KERNEL),y)
-ccflags-y += -DNVMAP_UPSTREAM_KERNEL
-endif #NVMAP_CONFIG_UPSTREAM_KERNEL
 
 ifeq ($(NVMAP_CONFIG_DMABUF_DEFERRED_UNMAPPING),y)
 ccflags-y += -DNVMAP_DEFERRED_DMABUF_UNMAP
