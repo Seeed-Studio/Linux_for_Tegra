@@ -46,6 +46,14 @@
 		#size-cells = <2>;
 		ranges = <0x0 0x0 0x0 0x0 0x100 0x0>;
 
+		actmon@d3f0000 {
+			compatible = "nvidia,tegra264-cactmon-mc-all";
+			reg = <0x0 0xd3f0000 0x0 0x10000>;
+			clocks = <&bpmp TEGRA264_CLK_OSC>;
+			clock-names = "actmon";
+			status = "disabled";
+		};
+
 		efuse@1000000 {
 			compatible = "nvidia,tegra264-efuse",
 				     "nvidia,tegra234-efuse";
