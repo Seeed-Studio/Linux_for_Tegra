@@ -1596,6 +1596,13 @@
 					};
 				};
 
+				tegra_misc: misc@9640000 {
+					compatible = "nvidia,tegra264-ahub-misc";
+					reg = <0x0 0x9640000 0 0x10000>;
+					interrupt-parent = <&agic_page0>;
+					interrupts =  <GIC_SPI 0x38 IRQ_TYPE_LEVEL_HIGH>;
+				};
+
 				tegra_sfc1: sfc@9700000 {
 					compatible = "nvidia,tegra264-sfc",
 							"nvidia,tegra210-sfc";
