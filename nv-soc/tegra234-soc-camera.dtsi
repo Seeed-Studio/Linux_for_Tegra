@@ -253,6 +253,12 @@
 		nvidia,vi-max-channels = <72>;
 	};
 
+	capture_isp: tegra-capture-isp {
+		compatible = "nvidia,tegra-camrtc-capture-isp";
+		nvidia,isp-devices = <&isp>;
+		nvidia,isp-max-channels = <16>;
+	};
+
 	reserved-memory {
 		rce_resv: rce-reservation {
 			iommu-addresses = <&tegra_rce 0x0 0x00000000 0x00000000 0xA0000000>,
