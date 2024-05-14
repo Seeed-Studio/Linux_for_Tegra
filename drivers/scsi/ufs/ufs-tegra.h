@@ -7,6 +7,7 @@
 
 #include <linux/io.h>
 #include <soc/tegra/fuse.h>
+#include <linux/tegra-oot-prod.h>
 
 #define NV_ADDRESS_MAP_MPHY_L0_BASE		0x02470000
 #define NV_ADDRESS_MAP_MPHY_L1_BASE		0x02480000
@@ -84,6 +85,10 @@
 #define MPHY_TX_APB_TX_ATTRIBUTE_34_37_0	0x34
 #define TX_ADVANCED_GRANULARITY		(0x8 << 16)
 #define TX_ADVANCED_GRANULARITY_SETTINGS	(0x1 << 8)
+
+#define TX_HS_Equalizer_Setting_FIELD_START	24
+#define TX_HS_Equalizer_Setting_FIELD_LEN	3
+
 #define MPHY_PWR_CHANGE_CLK_BOOST		0x0017
 #define MPHY_EQ_TIMEOUT				0x1AADB5
 #define MPHY_GO_BIT	1
@@ -392,6 +397,12 @@ struct ufs_tegra_host {
 	u32 ref_clk_freq;
 	struct ufs_tegra_soc_data *soc;
 	u32 streamid;
+#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
+	struct tegra_prod_cfg_list *prod_list;
+#else
+	struct tegra_prod *prod_list;
+#endif
+
 #ifdef CONFIG_DEBUG_FS
 	u32 refclk_value;
 	long program_refclk;
