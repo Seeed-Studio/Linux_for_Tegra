@@ -1,0 +1,17 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+#ifndef __HOST1X_EMU_SYMMBOL_H
+#define __HOST1X_EMU_SYMMBOL_H
+
+#ifdef CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
+#define HOST1X_EMU_EXPORT_CALL(...)         Dbg_ ## __VA_ARGS__
+#define HOST1X_EMU_EXPORT_DECL(ret, ...)    ret Dbg_ ## __VA_ARGS__
+#define HOST1X_EMU_EXPORT_SYMBOL(f)         EXPORT_SYMBOL( Dbg_## f)
+#else
+#define HOST1X_EMU_EXPORT_CALL(...)         __VA_ARGS__
+#define HOST1X_EMU_EXPORT_DECL(ret, ...)    ret __VA_ARGS__
+#define HOST1X_EMU_EXPORT_SYMBOL(f)         EXPORT_SYMBOL(f)
+#endif
+#endif /*__HOST1X_EMU_SYMMBOL_H*/

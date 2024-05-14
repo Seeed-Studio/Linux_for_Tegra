@@ -26,6 +26,7 @@ obj-m += firmware/tegra/
 obj-m += gpio/
 ifdef CONFIG_TEGRA_HOST1X
 obj-m += gpu/
+obj-m += gpu/host1x-emu/
 endif
 ifdef CONFIG_HWMON
 obj-m += hwmon/
