@@ -17,6 +17,7 @@
 	#size-cells = <2>;
 
 	aliases {
+		efuse0 = &tegra_efuse0;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -54,7 +55,7 @@
 			status = "disabled";
 		};
 
-		efuse@1000000 {
+		tegra_efuse0: efuse@1000000 {
 			compatible = "nvidia,tegra264-efuse",
 				     "nvidia,tegra234-efuse";
 			status = "disabled";
@@ -62,6 +63,13 @@
 			reg = <0x0 0x01000000 0x0 0x10000>;
 			clocks = <&bpmp TEGRA264_CLK_FUSE>;
 			clock-names = "fuse";
+		};
+
+		efuse-helper {
+			compatible = "nvidia,efuse-nvmem-helper";
+			nvmem = <&tegra_efuse0>;
+			nvmem-names = "efuse";
+			status = "disabled";
 		};
 
 		misc@100000 {
