@@ -9,6 +9,11 @@
 #ifdef HSI_SUPPORT
 #include <linux/tegra-epl.h>
 #endif
+
+static bool macsec_enable = true;
+module_param(macsec_enable, bool, 0644);
+MODULE_PARM_DESC(macsec_enable, "Enable Macsec for nvethernet module");
+
 static int macsec_get_tx_next_pn(struct sk_buff *skb, struct genl_info *info);
 
 #ifndef MACSEC_KEY_PROGRAM
@@ -1379,9 +1384,10 @@ int macsec_probe(struct ether_priv_data *pdata)
 	/* Read if macsec is enabled in DT */
 	ret = of_property_read_u32(np, "nvidia,macsec-enable",
 				   &macsec_pdata->is_macsec_enabled_in_dt);
-	if ((ret != 0) || (macsec_pdata->is_macsec_enabled_in_dt == 0U)) {
+	if (ret != 0 || !macsec_enable ||
+	    macsec_pdata->is_macsec_enabled_in_dt == 0U) {
 		dev_info(dev,
-			 "macsec param in DT is missing or disabled\n");
+			 "macsec parameter is missing or disabled\n");
 		ret = 1;
 		goto init_err;
 	}

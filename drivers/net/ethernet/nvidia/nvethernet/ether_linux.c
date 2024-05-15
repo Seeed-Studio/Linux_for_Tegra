@@ -7385,7 +7385,7 @@ static int ether_probe(struct platform_device *pdev)
 		goto err_macsec;
 	} else if (ret == 1) {
 		/* Nothing to do, macsec is not supported */
-		dev_info(&pdev->dev, "Macsec not supported/Not enabled in DT\n");
+		dev_info(&pdev->dev, "Macsec not supported/Not enabled\n");
 	} else {
 		dev_info(&pdev->dev, "Macsec not enabled\n");
 		/* Macsec is supported, reduce MTU */
