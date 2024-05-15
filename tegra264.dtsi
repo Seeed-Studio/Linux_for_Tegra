@@ -3835,7 +3835,7 @@
 				status = "disabled";
 			};
 
-			pva@818c000000 {
+			pva0@818c000000 {
 				compatible = "nvidia,tegra264-pva", "simple-bus";
 				reg = <0x81 0x8c000000 0x0 0x900000>,
 				      <0x0 0x10700000 0x0 0x100000>;
