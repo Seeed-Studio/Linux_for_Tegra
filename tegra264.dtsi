@@ -36,6 +36,7 @@
 		serial4 = &uart4;
 		serial5 = &uart5;
 		serial9 = &uart9;
+		serial10 = &uart10;
 	};
 
 	bus@0 {
@@ -3584,6 +3585,8 @@
 			dma-names = "rx", "tx";
 			dma-coherent;
 			arm,primecell-periphid = <0x00051011>;
+			resets = <&bpmp TEGRA264_RESET_UART4>;
+			reset-names = "serial";
 			status = "disabled";
 		};
 
@@ -3601,6 +3604,8 @@
 			dma-names = "rx", "tx";
 			dma-coherent;
 			arm,primecell-periphid = <0x00051011>;
+			resets = <&bpmp TEGRA264_RESET_UART5>;
+			reset-names = "serial";
 			status = "disabled";
 		};
 
@@ -3618,6 +3623,27 @@
 			dma-names = "rx", "tx";
 			dma-coherent;
 			arm,primecell-periphid = <0x00051011>;
+			resets = <&bpmp TEGRA264_RESET_UART9>;
+			reset-names = "serial";
+			status = "disabled";
+		};
+
+		uart10: serial@810c540000 {
+			compatible = "arm,pl011", "arm,primecell";
+			reg = <0x81 0x0c540000 0x0 0x10000>;
+			interrupts = <GIC_SPI 173 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&bpmp TEGRA264_CLK_UART10>,
+				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "uartclk", "apb_pclk";
+			assigned-clocks = <&bpmp TEGRA264_CLK_UART10>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			iommus = <&smmu1_mmu 0x804>;
+			dmas = <&gpcdma 12>, <&gpcdma 12>;
+			dma-names = "rx", "tx";
+			dma-coherent;
+			arm,primecell-periphid = <0x00051011>;
+			resets = <&bpmp TEGRA264_RESET_UART10>;
+			reset-names = "serial";
 			status = "disabled";
 		};
 
