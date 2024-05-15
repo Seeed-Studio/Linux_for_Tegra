@@ -5240,6 +5240,12 @@
 			status = "disabled";
 		};
 
+		mc_utils: mc-utils {
+			compatible = "nvidia,tegra264-mc-utils";
+			dram_channels = <16>;
+			status = "disabled";
+		};
+
 		pcie@810c000000 {
 			status = "disabled";
 			compatible = "nvidia,tegra264-pcie";
