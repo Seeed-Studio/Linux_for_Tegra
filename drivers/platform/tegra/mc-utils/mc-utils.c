@@ -211,10 +211,10 @@ static int __init tegra_mc_utils_init_t26x(void)
 		}
 	} else {
 		struct device_node *np = of_find_compatible_node(NULL, NULL,
-						"nvidia,tegra-t26x-mc");
+						"nvidia,tegra264-mc-utils");
 
 		if (!np) {
-			pr_err("mc-utils: nvidia,tegra26x-mc node not found\n");
+			pr_err("mc-utils: nvidia,tegra264-mc-utils node not found\n");
 			return -ENODEV;
 		}
 
