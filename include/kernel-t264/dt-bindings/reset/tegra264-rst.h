@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -94,6 +94,13 @@
 #define TEGRA264_RESET_ADSP_CORE0		74U
 #define TEGRA264_RESET_ADSP_CORE1		75U
 #define TEGRA264_RESET_APE			76U
+#define TEGRA264_RESET_XUSB1_PADCTL		77U
+#define TEGRA264_RESET_AON_CPU_ALL		78U
+#define TEGRA264_RESET_AON_HSP			79U
+#define TEGRA264_RESET_UART4			80U
+#define TEGRA264_RESET_UART5			81U
+#define TEGRA264_RESET_UART9			82U
+#define TEGRA264_RESET_UART10			83U
 
 #define TEGRA264_MAX_PUBLIC_RESET_ID		173U
 
