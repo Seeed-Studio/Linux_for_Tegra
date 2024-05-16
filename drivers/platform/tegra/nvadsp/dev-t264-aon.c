@@ -194,4 +194,5 @@ struct nvadsp_chipdata tegra264_aon_chipdata = {
 	.adsp_elf = "aon_t264.elf",
 	.num_irqs = NVAON_VIRQ_MAX,
 	.amc_not_avlbl = true,
+	.no_wfi_irq = true,
 };
