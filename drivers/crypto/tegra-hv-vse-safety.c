@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2024, NVIDIA Corporation. All Rights Reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * Cryptographic API.
  */
@@ -364,6 +365,11 @@ struct tegra_virtual_se_addr {
 	u32 hi;
 };
 
+struct tegra_virtual_se_addr64_buf_size {
+	u64 addr;
+	u32 buf_size;
+};
+
 union tegra_virtual_se_aes_args {
 	struct keyiv {
 		u8 slot[KEYSLOT_SIZE_BYTES];
@@ -449,7 +455,8 @@ union tegra_virtual_se_sha_args {
 		u32 msg_left_length[4];
 		u32 hash[50];
 		u64 dst;
-		struct tegra_virtual_se_addr src_addr;
+		u64 src_addr;
+		u32 src_buf_size;
 		u32 mode;
 		u32 hash_length;
 	} op_hash;
@@ -904,7 +911,8 @@ static int tegra_hv_vse_safety_prepare_ivc_linked_list(
 	u32 total_len, int max_ll_len, int block_size,
 	struct tegra_virtual_se_addr *src_addr,
 	int *num_lists, enum dma_data_direction dir,
-	unsigned int *num_mapped_sgs)
+	unsigned int *num_mapped_sgs,
+	struct tegra_virtual_se_addr64_buf_size *src_addr64)
 {
 	struct scatterlist *src_sg;
 	int err = 0;
@@ -928,7 +936,7 @@ static int tegra_hv_vse_safety_prepare_ivc_linked_list(
 		while (len >= TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE) {
 			process_len = TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE -
 				block_size;
-			if (i > max_ll_len) {
+			if (i >= max_ll_len) {
 				dev_err(se_dev->dev,
 					"Unsupported no. of list %d\n", i);
 				err = -EINVAL;
@@ -936,13 +944,16 @@ static int tegra_hv_vse_safety_prepare_ivc_linked_list(
 			}
 			src_addr[i].lo = addr + addr_offset;
 			src_addr[i].hi = process_len;
+
+			src_addr64[i].addr = (uint64_t)(addr + addr_offset);
+			src_addr64[i].buf_size = process_len;
 			i++;
 			addr_offset += process_len;
 			total_len -= process_len;
 			len -= process_len;
 		}
 		if (len) {
-			if (i > max_ll_len) {
+			if (i >= max_ll_len) {
 				dev_err(se_dev->dev,
 					"Unsupported no. of list %d\n", i);
 				err = -EINVAL;
@@ -950,6 +961,8 @@ static int tegra_hv_vse_safety_prepare_ivc_linked_list(
 			}
 			src_addr[i].lo = addr + addr_offset;
 			src_addr[i].hi = len;
+			src_addr64[i].addr = (uint64_t)(addr + addr_offset);
+			src_addr64[i].buf_size = len;
 			i++;
 		}
 		total_len -= len;
@@ -1104,8 +1117,8 @@ static int tegra_hv_vse_safety_sha_send_one(struct ahash_request *req,
 	}
 	ivc_tx = &ivc_req_msg->tx[0];
 
-	ivc_tx->sha.op_hash.src_addr.lo = req_ctx->sha_buf_addr;
-	ivc_tx->sha.op_hash.src_addr.hi = nbytes;
+	ivc_tx->sha.op_hash.src_addr = req_ctx->sha_buf_addr;
+	ivc_tx->sha.op_hash.src_buf_size = nbytes;
 
 	ivc_tx->sha.op_hash.dst = (u64)req_ctx->hash_result_addr;
 	memcpy(ivc_tx->sha.op_hash.hash, req_ctx->hash_result,
@@ -1128,7 +1141,8 @@ static int tegra_hv_vse_safety_sha_fast_path(struct ahash_request *req,
 	u32 bytes_process_in_req = 0, num_blks;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
-	struct tegra_virtual_se_addr *src_addr = NULL;
+	struct tegra_virtual_se_addr src_addr;
+	struct tegra_virtual_se_addr64_buf_size src_addr64;
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
 	u32 num_mapped_sgs = 0;
 	u32 num_lists = 0;
@@ -1192,7 +1206,7 @@ static int tegra_hv_vse_safety_sha_fast_path(struct ahash_request *req,
 				return -ENOMEM;
 
 			ivc_tx = &ivc_req_msg->tx[0];
-			src_addr = &ivc_tx->sha.op_hash.src_addr;
+			//src_addr = &ivc_tx->sha.op_hash.src_addr;
 
 			bytes_process_in_req = num_blks * req_ctx->blk_size;
 			dev_dbg(se_dev->dev, "%s: bytes_process_in_req %u\n",
@@ -1203,14 +1217,18 @@ static int tegra_hv_vse_safety_sha_fast_path(struct ahash_request *req,
 					(TEGRA_HV_VSE_SHA_MAX_LL_NUM_1 -
 						num_lists),
 					req_ctx->blk_size,
-					src_addr,
+					&src_addr,
 					&num_lists,
-					DMA_TO_DEVICE, &num_mapped_sgs);
+					DMA_TO_DEVICE, &num_mapped_sgs,
+					&src_addr64);
 			if (err) {
 				dev_err(se_dev->dev, "%s: ll error %d\n",
 					__func__, err);
 				goto unmap;
 			}
+
+			ivc_tx->sha.op_hash.src_addr = src_addr64.addr;
+			ivc_tx->sha.op_hash.src_buf_size = src_addr64.buf_size;
 
 			dev_dbg(se_dev->dev, "%s: num_lists %u\n",
 				__func__, num_lists);
@@ -2218,6 +2236,7 @@ static int tegra_hv_vse_safety_cmac_op(struct ahash_request *req, bool is_last)
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
 	unsigned int num_mapped_sgs = 0;
+	struct tegra_virtual_se_addr64_buf_size src_addr64;
 
 	blocks_to_process = req->nbytes / TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE;
 	/* num of bytes less than block size */
@@ -2274,7 +2293,8 @@ static int tegra_hv_vse_safety_cmac_op(struct ahash_request *req, bool is_last)
 			TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE,
 			&ivc_tx->aes.op_cmac_s.src_addr,
 			&num_lists,
-			DMA_TO_DEVICE, &num_mapped_sgs);
+			DMA_TO_DEVICE, &num_mapped_sgs,
+			&src_addr64);
 		if (err)
 			goto free_mem;
 	}
@@ -2525,6 +2545,7 @@ static int tegra_hv_vse_safety_cmac_sv_op(struct ahash_request *req, bool is_las
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
 	unsigned int num_mapped_sgs = 0;
+	struct tegra_virtual_se_addr64_buf_size src_addr64;
 
 	if ((req->nbytes == 0) || (req->nbytes > TEGRA_VIRTUAL_SE_MAX_SUPPORTED_BUFLEN)) {
 		dev_err(se_dev->dev, "%s: input buffer size is invalid\n", __func__);
@@ -2585,7 +2606,8 @@ static int tegra_hv_vse_safety_cmac_sv_op(struct ahash_request *req, bool is_las
 			TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE,
 			&ivc_tx->aes.op_cmac_sv.src_addr,
 			&num_lists,
-			DMA_TO_DEVICE, &num_mapped_sgs);
+			DMA_TO_DEVICE, &num_mapped_sgs,
+			&src_addr64);
 		if (err)
 			goto free_mem;
 
