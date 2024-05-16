@@ -124,6 +124,18 @@
 		pmc@c800000 {
 			status = "okay";
 		};
+
+		efuse@1000000 {
+			status = "okay";
+		};
+
+		tegra-utc@c5a0000 {
+			status = "okay";
+		};
+
+		rtc@c2c0000 {
+			status = "okay";
+		};
 	};
 
 	eeprom-manager {
@@ -158,8 +170,7 @@
 	};
 
 	chosen {
-		/* TODO: fix after UTC enablement */
-		bootargs = "console=ttyTCU0,115200n8";
-		stdout-path = "serial0:115200n8";
+		bootargs = "console=ttyUTC0,115200";
+		stdout-path = "/bus@0/tegra-utc@c5a0000";
 	};
 };
