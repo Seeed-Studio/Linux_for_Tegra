@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/reset.h>
 #include "dev.h"
@@ -9,7 +7,8 @@
 #define AMISC_ADSP_CPU_CONFIG           (0x0)
 #define   AMISC_ADSP_STATVECTORSEL      (1 << 4)
 #define   AMISC_ADSP_RUNSTALL           (1 << 0)
-#define AMISC_ADSP_CPU_RESETVEC         0x4
+#define AMISC_ADSP_CPU_RESETVEC         (0x4)
+#define AMISC_ADSP_CPU_IDLE_STATUS      (0x2c)
 
 static int nvadsp_os_t264_init(struct platform_device *pdev)
 {
@@ -142,8 +141,21 @@ end:
 
 static bool __check_wfi_status_t264(struct nvadsp_drv_data *d)
 {
-	/* TBD */
-	return true;
+	void __iomem *cpu_config_base;
+	bool wfi_status = false;
+	u8 cnt = 5;
+
+	cpu_config_base = d->base_regs[AMISC];
+
+	while (cnt > 0) {
+		wfi_status = readl(cpu_config_base + AMISC_ADSP_CPU_IDLE_STATUS);
+
+		if (wfi_status)
+			return wfi_status;
+		cnt--;
+	}
+
+	return wfi_status;
 }
 
 static int nvadsp_dev_t264_init(struct platform_device *pdev)
