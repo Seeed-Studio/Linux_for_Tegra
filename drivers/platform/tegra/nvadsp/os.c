@@ -1611,7 +1611,9 @@ static void nvadsp_free_os_interrupts(struct nvadsp_os_data *priv)
 	struct device *dev = &priv->pdev->dev;
 
 	devm_free_irq(dev, wdt_virq, priv);
-	devm_free_irq(dev, wfi_virq, priv);
+
+	if (!(drv_data->chip_data->no_wfi_irq))
+		devm_free_irq(dev, wfi_virq, priv);
 }
 
 static int nvadsp_setup_os_interrupts(struct nvadsp_os_data *priv)
@@ -1629,11 +1631,13 @@ static int nvadsp_setup_os_interrupts(struct nvadsp_os_data *priv)
 		goto end;
 	}
 
-	ret = devm_request_irq(dev, wfi_virq, adsp_wfi_handler,
-			IRQF_TRIGGER_RISING, "adsp wfi", priv);
-	if (ret) {
-		dev_err(dev, "cannot request for wfi interrupt\n");
-		goto free_interrupts;
+	if (!(drv_data->chip_data->no_wfi_irq)) {
+		ret = devm_request_irq(dev, wfi_virq, adsp_wfi_handler,
+				IRQF_TRIGGER_RISING, "adsp wfi", priv);
+		if (ret) {
+			dev_err(dev, "cannot request for wfi interrupt\n");
+			goto free_interrupts;
+		}
 	}
 
  end:
@@ -1858,6 +1862,7 @@ static int __nvadsp_os_suspend(struct nvadsp_os_data *priv)
 	struct device *dev = &priv->pdev->dev;
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
 	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;
+	unsigned long wfi_timeout;
 	int ret;
 	bool status = false;
 
@@ -1882,16 +1887,25 @@ static int __nvadsp_os_suspend(struct nvadsp_os_data *priv)
 	}
 
 	dev_dbg(dev, "Waiting for ADSP OS suspend...\n");
-	ret = wait_for_completion_timeout(&priv->entered_wfi,
-		msecs_to_jiffies(ADSP_WFI_TIMEOUT));
-	if (WARN_ON(ret <= 0)) {
-		dev_err(dev, "Unable to suspend ADSP OS err = %d\n", ret);
-		ret = (ret < 0) ? ret : -ETIMEDOUT;
-		goto out;
+
+	if (!(drv_data->chip_data->no_wfi_irq)) {
+		ret = wait_for_completion_timeout(&priv->entered_wfi,
+			msecs_to_jiffies(ADSP_WFI_TIMEOUT));
+		if (WARN_ON(ret <= 0)) {
+			dev_err(dev, "Unable to suspend ADSP OS err = %d\n", ret);
+			ret = (ret < 0) ? ret : -ETIMEDOUT;
+			goto out;
+		}
 	}
 
-	status = nvadsp_check_wfi_status(drv_data);
+	wfi_timeout = jiffies + msecs_to_jiffies(ADSP_WFI_TIMEOUT);
+	do {
+		status = nvadsp_check_wfi_status(drv_data);
+		mdelay(2);
+	} while (time_before(jiffies, wfi_timeout) && !status);
+
 	if (!status) {
+		dev_err(dev, "Core WFI failed\n");
 		ret = -EDEADLK;
 		goto out;
 	}
@@ -1942,8 +1956,25 @@ static void __nvadsp_os_stop(struct nvadsp_os_data *priv, bool reload)
 				NVADSP_MBOX_SMSG, true, UINT_MAX);
 	if (err)
 		dev_err(dev, "failed to send stop msg to adsp\n");
-	err = wait_for_completion_timeout(&priv->entered_wfi,
-		msecs_to_jiffies(ADSP_WFI_TIMEOUT));
+
+	if (!(drv_data->chip_data->no_wfi_irq)) {
+		err = wait_for_completion_timeout(&priv->entered_wfi,
+			msecs_to_jiffies(ADSP_WFI_TIMEOUT));
+		if (err <= 0)
+			err = (err < 0) ? err : -ETIMEDOUT;
+	} else {
+		unsigned long wfi_timeout;
+		bool status = false;
+
+		wfi_timeout = jiffies + msecs_to_jiffies(ADSP_WFI_TIMEOUT);
+		do {
+			status = nvadsp_check_wfi_status(drv_data);
+			mdelay(2);
+		} while (time_before(jiffies, wfi_timeout) && !status);
+
+		if (!status)
+			err = -EDEADLK;
+	}
 
 	/*
 	 * ADSP needs to be in WFI/WFE state to properly reset it.
@@ -1955,7 +1986,7 @@ static void __nvadsp_os_stop(struct nvadsp_os_data *priv, bool reload)
 	nvadsp_assert_adsp(drv_data);
 
 	/* Don't reload ADSPOS if ADSP state is not WFI/WFE */
-	if (WARN_ON(err <= 0)) {
+	if (WARN_ON(err < 0)) {
 		dev_err(dev, "%s: unable to enter wfi state err = %d\n",
 			__func__, err);
 		goto end;

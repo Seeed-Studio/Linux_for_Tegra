@@ -505,6 +505,9 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 	drv_data->base_regs_saved = drv_data->base_regs;
 
 	for (irq_iter = 0; irq_iter < drv_data->chip_data->num_irqs; irq_iter++) {
+		if ((iter == WFI_VIRQ) && drv_data->chip_data->no_wfi_irq)
+			continue;
+
 		irq_num = platform_get_irq(pdev, irq_iter);
 		if (irq_num < 0) {
 			dev_err(dev, "Failed to get irq number for index %d\n",

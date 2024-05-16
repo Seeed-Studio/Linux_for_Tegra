@@ -153,6 +153,7 @@ struct nvadsp_chipdata {
 	int			end_irq;
 
 	bool                    amc_not_avlbl;
+	bool			no_wfi_irq;
 	bool			amc_err_war;
 	u32			chipid_ext;
 
