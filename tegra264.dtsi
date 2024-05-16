@@ -6586,6 +6586,37 @@
 				  0x81000000 0xd0 0x82000000 0xd0 0x82000000 0x0 0x00200000>;	/* I/O */
 
 			ats-supported;
+
+			pci@0,0 {
+				reg = <0x0000 0 0 0 0>;
+				#address-cells = <3>;
+				#size-cells = <2>;
+				ranges;
+
+				gpu@0,0 {
+					reg = <0x0000 0 0 0 0>;
+
+					power-domains = <&bpmp TEGRA264_POWER_DOMAIN_GPU>;
+
+					clocks = <&bpmp TEGRA264_CLK_GPU_UPROC>,
+						 <&bpmp TEGRA264_CLK_GPU_SYS>,
+						 <&bpmp TEGRA264_CLK_GPU_GPC0>,
+						 <&bpmp TEGRA264_CLK_GPU_GPC1>,
+						 <&bpmp TEGRA264_CLK_GPU_GPC2>,
+						 <&bpmp TEGRA264_CLK_GPU_NVD>;
+					clock-names = "uprocclk", "sysclk", "gpc0clk", "gpc1clk", "gpc2clk", "nvdclk";
+
+					interconnects = <&mc TEGRA264_MEMORY_CLIENT_GPUR02MC &emc>,
+							<&mc TEGRA264_MEMORY_CLIENT_GPUW02MC &emc>,
+							<&mc TEGRA264_MEMORY_CLIENT_NVDECSRD2MC &emc>,
+							<&mc TEGRA264_MEMORY_CLIENT_NVDECSWR2MC &emc>;
+					interconnect-names = "gpu-read", "gpu-write", "video-read", "video-write";
+
+					dma-coherent;
+
+					nvidia,bpmp = <&bpmp>;
+				};
+			};
 		};
 
 		xusb_padctl: padctl@a808680000 {
