@@ -6048,6 +6048,8 @@
 			mboxes = <&soc_sb_cluster 0>;
 
 			nvidia,sidconfig = <0x0>;
+
+			status = "disabled";
 		};
 
 		soc_oesp_cluster: psc@e060000 {
@@ -6068,6 +6070,8 @@
 			mboxes = <&soc_oesp_cluster 0>;
 
 			nvidia,sidconfig = <0x0>;
+
+			status = "disabled";
 		};
 
 		soc_psc_cluster: psc@e860000 {
@@ -6092,6 +6096,8 @@
 			iommus = <&smmu4_mmu 0x1c00>;
 			nvidia,sidtable = /bits/ 8 <0x0>;
 			dma-coherent;
+
+			status = "disabled";
 		};
 	};
 
@@ -8538,5 +8544,4 @@
 		status = "disabled";
 		channelid_list = <0>;
 	};
-
 };
