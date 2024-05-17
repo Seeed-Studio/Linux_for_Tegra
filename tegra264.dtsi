@@ -7474,13 +7474,44 @@
                    interrupts = <GIC_SPI 951 IRQ_TYPE_LEVEL_HIGH>;
                    iommus = <&smmu1_mmu TEGRA_SID_UFS>;
                    dma-coherent;
-                   clocks = <&bpmp TEGRA264_CLK_UFSHC_CG_SYS>;
-                   clock-names = "ufshc";
-                   resets = <&bpmp TEGRA264_RESET_UFSHC>,
-                          <&bpmp TEGRA264_RESET_UFSHC_AXI_M>,
-                          <&bpmp TEGRA264_RESET_UFSHC_LP_SEQ>;
-                   reset-names = "ufs-rst", "ufs-axi-m-rst",
-                           "ufshc-lp-rst";
+		   clocks = <&bpmp TEGRA264_CLK_MPHY_CORE_PLL_FIXED>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_TX_SYMB>,
+				<&bpmp TEGRA264_CLK_MPHY_TX_1MHZ_REF> ,
+				<&bpmp TEGRA264_CLK_MPHY_L0_RX_ANA>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_RX_SYMB>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_3XBIT>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_BIT>,
+				<&bpmp TEGRA264_CLK_MPHY_L1_RX_ANA>,
+				<&bpmp TEGRA264_CLK_UFSHC_CG_SYS>,
+				<&bpmp TEGRA264_CLK_PLLREFUFS_UFSDEV_REFCLKOUT>,
+				<&bpmp TEGRA264_CLK_PLLP_OUT0>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_3XBIT_DIV>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_TX_LS_SYMB_DIV>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_BIT_DIV>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_RX_LS_SYMB_DIV>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_TX_HS_SYMB_DIV>,
+				<&bpmp TEGRA264_CLK_MPHY_L0_RX_HS_SYMB_DIV>,
+				<&bpmp TEGRA264_CLK_OSC>;
+                   clock-names = "mphy_core_pll_fixed", "mphy_l0_tx_symb",
+					"mphy_tx_1mhz_ref", "mphy_l0_rx_ana",
+					"mphy_l0_rx_symb", "mphy_l0_tx_ls_3xbit",
+					"mphy_l0_rx_ls_bit", "mphy_l1_rx_ana",
+					"ufshc", "ufsdev_ref", "pll_p",
+					"mphy_l0_tx_ls_3xbit_div", "mphy_l0_tx_ls_symb_div",
+					"mphy_l0_rx_ls_bit_div", "mphy_l0_rx_ls_symb_div",
+					"mphy_l0_tx_hs_symb_div", "mphy_l0_rx_hs_symb_div",
+					"osc";
+                   resets = <&bpmp TEGRA264_RESET_MPHY_L0_RX>,
+				<&bpmp TEGRA264_RESET_MPHY_L0_TX>,
+				<&bpmp TEGRA264_RESET_MPHY_L1_RX>,
+				<&bpmp TEGRA264_RESET_MPHY_L1_TX>,
+				<&bpmp TEGRA264_RESET_MPHY_CLK_CTL>,
+				<&bpmp TEGRA264_RESET_UFSHC>,
+				<&bpmp TEGRA264_RESET_UFSHC_AXI_M>,
+				<&bpmp TEGRA264_RESET_UFSHC_LP_SEQ>;
+		   reset-names = "mphy-l0-rx-rst", "mphy-l0-tx-rst", "mphy-l1-rx-rst",
+				   "mphy-l1-tx-rst", "mphy-clk-ctl-rst", "ufs-rst",
+				   "ufs-axi-m-rst", "ufshc-lp-rst";
                    nvidia,enable-x2-config;
                    nvidia,mask-fast-auto-mode;
                    nvidia,enable-hs-mode;
