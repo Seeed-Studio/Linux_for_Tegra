@@ -128,7 +128,24 @@ static int __deassert_t264_aon(struct nvadsp_drv_data *d)
 
 static int __map_hwmbox_interrupts(struct nvadsp_drv_data *d)
 {
-	/* TBD: Map hwmbox interrupts to shared interrupt lines */
+
+	/* WAR: Map hwmbox interrupts to different shared interrupt lines
+	 * TBD: Actual implementation shall use only one interrupt line i.e SI-1
+	 * for both full and empty interrupts
+	 */
+	void __iomem *hsp_config_base;
+
+	/* Map the AON HSP COMMON physical address to virtual address */
+	hsp_config_base = ioremap(0xc400000, 0x10000);
+	if (!hsp_config_base) {
+		return -ENOMEM;
+	}
+
+	/* Map mbx1 empty int to SI-2 */
+	writel(0x2, (hsp_config_base + 0x108));
+
+	/* Map mbx0 full int to SI-3 */
+	writel(0x100, (hsp_config_base + 0x10c));
 
 	return 0;
 }
