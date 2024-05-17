@@ -36,7 +36,12 @@
 #include "vic.h"
 #include "hwpm.h"
 
+/* Falcon SEC registers */
 #define VIC_SEC_INTF_CRC_CTRL               	0xe000
+
+/* RISC-V SEC registers */
+#define VIC_SEC_SFC_CRC_CFG			0xe000
+#define VIC_SEC_INTF_CRC_CFG			0xe004
 
 #define VIC_RISCV_BCR_CTRL			0x1a68
 #define VIC_RISCV_BCR_CTRL_CORE_SELECT_RISCV	(1 << 4)
@@ -88,19 +93,36 @@ struct vic {
 
 static bool blf_write_allowed(u32 offset)
 {
-	void __iomem *regs = ioremap(0x13a10000 + offset, 12);
+	void __iomem *regs;
 	u32 val;
 
-	val = readl(regs + 0x8);
-	if (!(val & 0x20000)) {
-		iounmap(regs);
-		return true;
-	}
+	if (of_machine_is_compatible("nvidia,tegra264")) {
+		regs = ioremap(0x8180a98b60ULL, 20);
 
-	val = readl(regs + 0x4);
-	iounmap(regs);
-	if (val & BIT(1))
-		return true;
+		val = readl(regs + 16);
+		if (!(val & 0x20000)) {
+			iounmap(regs);
+			return true;
+		}
+
+		val = readl(regs + 8);
+		iounmap(regs);
+		if (val & BIT(1))
+			return true;
+	} else {
+		regs = ioremap(0x13a10000 + offset, 12);
+
+		val = readl(regs + 0x8);
+		if (!(val & 0x20000)) {
+			iounmap(regs);
+			return true;
+		}
+
+		val = readl(regs + 0x4);
+		iounmap(regs);
+		if (val & BIT(1))
+			return true;
+	}
 
 	return false;
 }
@@ -865,6 +887,7 @@ static const struct vic_config vic_t264_config = {
 	.version = 0x26,
 	.supports_sid = true,
 	.supports_timestamping = true,
+	.has_crc_enable = true,
 	.has_riscv = true,
 	.transcfg_addr = 0x2244,
 	.actmon_active_mask = 0x224c,
