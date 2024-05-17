@@ -9,6 +9,7 @@
 
 #define KEYSLOT_SIZE_BYTES		16
 #define KEYSLOT_OFFSET_BYTES		8
+#define MAX_SE_DMA_BUFS	3
 
 struct tegra_vse_soc_info {
 	bool gcm_decrypt_supported;
@@ -30,6 +31,19 @@ enum ivc_irq_state {
 	INTERMEDIATE_REQ_INTERRUPT = 2u,
 };
 
+struct tegra_vse_dma_buf {
+	dma_addr_t buf_iova;
+	void *buf_ptr;
+	uint32_t buf_len;
+};
+
+struct tegra_vse_node_dma {
+	struct device *se_dev;
+	struct device *gpcdma_dev;
+	struct tegra_vse_dma_buf se_dma_buf[MAX_SE_DMA_BUFS];
+	struct tegra_vse_dma_buf gpc_dma_buf;
+};
+
 struct crypto_dev_to_ivc_map {
 	uint32_t ivc_id;
 	uint32_t se_engine;
@@ -40,8 +54,6 @@ struct crypto_dev_to_ivc_map {
 	enum tegra_gcm_dec_supported gcm_dec_supported;
 	uint32_t gcm_dec_buffer_size;
 	uint32_t mempool_id;
-	void *mempool_buf;
-	uint32_t mempool_size;
 	struct tegra_hv_ivc_cookie *ivck;
 	struct tegra_hv_ivm_cookie *ivmk;
 	struct completion tegra_vse_complete;
@@ -55,6 +67,7 @@ struct crypto_dev_to_ivc_map {
 	 */
 	enum ivc_irq_state wait_interrupt;
 	struct mutex irq_state_lock;
+	struct tegra_vse_dma_buf mempool;
 };
 
 struct tegra_virtual_se_dev {
@@ -107,6 +120,9 @@ struct tegra_virtual_se_aes_context {
 	uint8_t b_is_first;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
+	const struct tegra_vse_dma_buf *src;
+	const struct tegra_vse_dma_buf *aad;
+	const struct tegra_vse_dma_buf *tag;
 };
 
 /* Security Engine/TSEC AES CMAC context */
@@ -124,6 +140,7 @@ struct tegra_virtual_se_aes_cmac_context {
 	uint32_t node_id;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
+	const struct tegra_vse_dma_buf *src;
 };
 
 /* Security Engine AES GMAC context */
@@ -140,6 +157,8 @@ struct tegra_virtual_se_aes_gmac_context {
 	uint32_t node_id;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
+	const struct tegra_vse_dma_buf *aad;
+	const struct tegra_vse_dma_buf *tag;
 };
 
 /* Security Engine SHA context */
@@ -152,6 +171,9 @@ struct tegra_virtual_se_sha_context {
 	u8 mode;
 	/*Crypto dev instance*/
 	uint32_t node_id;
+	const struct tegra_vse_dma_buf *plaintext;
+	const struct tegra_vse_dma_buf *residual_plaintext;
+	const struct tegra_vse_dma_buf *hash_result;
 };
 
 struct tegra_virtual_se_hmac_sha_context {
@@ -180,10 +202,6 @@ struct tegra_virtual_se_req_context {
 	unsigned int digest_size;
 	unsigned int intermediate_digest_size;
 	u8 mode;			/* SHA operation mode */
-	u8 *sha_buf;			/* Buffer to store residual data */
-	dma_addr_t sha_buf_addr;	/* DMA address to residual data */
-	u8 *hash_result;		/* Intermediate hash result */
-	dma_addr_t hash_result_addr;	/* Intermediate hash result dma addr */
 	u64 total_count;		/* Total bytes in all the requests */
 	u32 residual_bytes;		/* Residual byte count */
 	u32 blk_size;			/* SHA block size */
