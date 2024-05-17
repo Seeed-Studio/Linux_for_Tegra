@@ -385,8 +385,10 @@ union tegra_virtual_se_aes_args {
 		u32 ivsel;
 		u8 lctr[TEGRA_VIRTUAL_SE_AES_LCTR_SIZE];
 		u32 ctr_cntn;
-		struct tegra_virtual_se_addr src_addr;
-		struct tegra_virtual_se_addr dst_addr;
+		u64 src_addr;
+		u32 src_buf_size;
+		u64 dst_addr;
+		u32 dst_buf_size;
 		u32 key_length;
 	} op;
 	struct aes_cmac_subkey_s {
@@ -1206,7 +1208,6 @@ static int tegra_hv_vse_safety_sha_fast_path(struct ahash_request *req,
 				return -ENOMEM;
 
 			ivc_tx = &ivc_req_msg->tx[0];
-			//src_addr = &ivc_tx->sha.op_hash.src_addr;
 
 			bytes_process_in_req = num_blks * req_ctx->blk_size;
 			dev_dbg(se_dev->dev, "%s: bytes_process_in_req %u\n",
@@ -2037,10 +2038,10 @@ static int tegra_hv_vse_safety_process_aes_req(struct tegra_virtual_se_dev *se_d
 
 	tegra_hv_vse_safety_prepare_cmd(se_dev, ivc_tx, req_ctx, aes_ctx, req);
 
-	aes->op.src_addr.lo = priv->buf_addr;
-	aes->op.src_addr.hi = req->cryptlen;
-	aes->op.dst_addr.lo = priv->buf_addr;
-	aes->op.dst_addr.hi = req->cryptlen;
+	aes->op.src_addr = (u64)priv->buf_addr;
+	aes->op.src_buf_size = req->cryptlen;
+	aes->op.dst_addr = (u64)priv->buf_addr;
+	aes->op.dst_buf_size = req->cryptlen;
 
 	init_completion(&priv->alg_complete);
 
