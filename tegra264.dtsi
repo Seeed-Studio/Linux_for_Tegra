@@ -5329,8 +5329,8 @@
 			pinctrl-names = "sdmmc-3v3", "sdmmc-1v8";
 			pinctrl-0 = <&sdmmc1_3v3>;
 			pinctrl-1 = <&sdmmc1_1v8>;
-			nvidia,default-tap = <14>;
-			nvidia,default-trim = <0x8>;
+			nvidia,default-tap = <6>;
+			nvidia,default-trim = <0>;
 			assigned-clocks = <&bpmp TEGRA264_CLK_SDMMC1>,
 					  <&bpmp TEGRA264_CLK_PLLC4_MUXED>;
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLC4_MUXED>,
