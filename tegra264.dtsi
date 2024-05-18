@@ -6298,6 +6298,146 @@
 
 			ats-supported;
 		};
+
+		xusb_padctl: padctl@0xa808680000 {
+			compatible = "nvidia,tegra264-xusb-padctl";
+			reg = <0xa8 0x8680000 0x00 0x20000>,
+			      <0xa8 0x86a0000 0x00 0x10000>;
+			reg-names = "padctl", "ao";
+			interrupts = <GIC_SPI 0x1007 IRQ_TYPE_LEVEL_HIGH>;
+			resets = <&bpmp TEGRA264_RESET_XUSB1_PADCTL>;
+			reset-names = "padctl";
+			status = "disabled";
+			pads {
+				usb2 {
+					lanes {
+						usb2-0 {
+							nvidia,function = "xusb";
+							status = "disabled";
+							#phy-cells = <0>;
+						};
+						usb2-1 {
+							nvidia,function = "xusb";
+							status = "disabled";
+							#phy-cells = <0>;
+						};
+						usb2-2 {
+							nvidia,function = "xusb";
+							status = "disabled";
+							#phy-cells = <0>;
+						};
+						usb2-3 {
+							nvidia,function = "xusb";
+							status = "disabled";
+							#phy-cells = <0>;
+						};
+					};
+				};
+				usb3 {
+					lanes {
+						usb3-0 {
+							nvidia,function = "xusb";
+							status = "disabled";
+							#phy-cells = <0>;
+						};
+						usb3-1 {
+							nvidia,function = "xusb";
+							status = "disabled";
+							#phy-cells = <0>;
+						};
+						usb3-2 {
+							nvidia,function = "xusb";
+							status = "disabled";
+							#phy-cells = <0>;
+						};
+						usb3-3 {
+							nvidia,function = "xusb";
+							status = "disabled";
+							#phy-cells = <0>;
+						};
+					};
+				};
+			};
+			ports {
+				usb2-0 {
+					status = "disabled";
+				};
+				usb2-1 {
+					status = "disabled";
+				};
+				usb2-2 {
+					status = "disabled";
+				};
+				usb2-3 {
+					status = "disabled";
+				};
+				usb3-0 {
+					status = "disabled";
+				};
+				usb3-1 {
+					status = "disabled";
+				};
+				usb3-2 {
+					status = "disabled";
+				};
+				usb3-3 {
+					status = "disabled";
+				};
+			};
+		};
+
+		usb@0xa808670000 {
+			compatible = "nvidia,tegra264-xudc";
+			reg = <0xa8 0x8670000 0x00 0x8000>,
+			      <0xa8 0x8678000 0x00 0x8000>;
+			reg-names = "base", "fpci";
+			interrupts = <GIC_SPI 0x1004 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&bpmp TEGRA264_CLK_XUSB1_CORE_DEV>,
+				<&bpmp TEGRA264_CLK_XUSB1_CORE_SUPERSPEED>,
+				<&bpmp TEGRA264_CLK_XUSB1_SS>,
+				<&bpmp TEGRA264_CLK_XUSB1_FS>;
+			clock-names = "dev", "ss", "ss_src", "fs_src";
+
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_XUSB_DEV>,
+                                        <&bpmp TEGRA264_POWER_DOMAIN_XUSB_SS>;
+                        power-domain-names = "dev", "ss";
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
+
+		usb@0xa80aa10000 {
+			compatible = "nvidia,tegra264-xusb";
+			reg = <0xa8 0xaa10000 0x00 0x40000>,
+			      <0xa8 0xaa00000 0x00 0x10000>,
+			      <0xa8 0xaa50000 0x00 0x10000>;
+			reg-names = "base", "fpci", "bar2";
+			interrupts-extended = <GIC_SPI 0x3DA IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 0x1002 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 0x1007 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "xhci", "mbox", "padctl";
+
+			clocks = <&bpmp TEGRA264_CLK_XUSB1_CORE_HOST>,
+				<&bpmp TEGRA264_CLK_XUSB1_FALCON>,
+				<&bpmp TEGRA264_CLK_XUSB1_CORE_SUPERSPEED>,
+				<&bpmp TEGRA264_CLK_XUSB1_SS>,
+				<&bpmp TEGRA264_CLK_OSC>,
+				<&bpmp TEGRA264_CLK_XUSB1_FS>,
+				<&bpmp TEGRA264_CLK_UTMI_PLL1>,
+				<&bpmp TEGRA264_CLK_OSC>,
+				<&bpmp TEGRA264_CLK_PLLE0>;
+			clock-names = "xusb_host", "xusb_falcon_src",
+				"xusb_ss", "xusb_ss_src", "xusb_hs_src",
+				"xusb_fs_src", "pll_u_480m", "clk_m",
+				"pll_e";
+
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_XUSB_HOST>,
+                                        <&bpmp TEGRA264_POWER_DOMAIN_XUSB_SS>;
+                        power-domain-names = "xusb_host", "xusb_ss";
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
 	};
 
 	cpus {
