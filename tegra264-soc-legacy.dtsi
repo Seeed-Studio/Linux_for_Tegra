@@ -16,6 +16,9 @@
 			granule-size = <0x200000>;
 			status = "disabled";
 		};
+		rce_resv: rce-reservation {
+			iommu-addresses = <&rce_misc 0x00000000 0x00000000 0x00000000 0x10000000 &rce_misc 0x00000000 0x20000000 0xffffffff 0x3fffffff>;
+		};
 		reservation_fsicom: reservation-fsicom {
 			iommu-addresses = <&fsicom_client 0x00000000 0x00000000 0x00000000 0xf0000000 &fsicom_client 0x00000000 0xf1000000 0xffffffff 0x0effffff>;
 		};
@@ -168,12 +171,231 @@
 				clock-names = "se";
 				status = "disabled";
 			};
+			vi0: vi0@8188400000 {
+				compatible = "nvidia,tegra234-vi";
+				resets = <&bpmp 0x0000002e>;
+				reset-names = "vi";
+				clocks = <&bpmp 0x00000039>;
+				clock-names = "vi";
+				nvidia,vi-falcon-device = <0x0000004a>;
+				iommus = <&smmu0_mmu 0x00002e01>;
+				non-coherent;
+				status = "disabled";
+			};
+			vi0-thi@8188700000 {
+				compatible = "nvidia,tegra234-vi-thi";
+				resets = <&bpmp 0x0000002e>;
+				reset-names = "vi_thi";
+				status = "disabled";
+			};
+			vi1: vi1@8188c00000 {
+				compatible = "nvidia,tegra234-vi";
+				resets = <&bpmp 0x0000002f>;
+				reset-names = "vi2";
+				clocks = <&bpmp 0x00000039>;
+				clock-names = "vi";
+				nvidia,vi-falcon-device = <0x0000004c>;
+				iommus = <&smmu0_mmu 0x00002f01>;
+				non-coherent;
+				status = "disabled";
+			};
+			vi1-thi@8188f00000 {
+				compatible = "nvidia,tegra234-vi-thi";
+				resets = <&bpmp 0x0000002f>;
+				reset-names = "vi2_thi";
+				status = "disabled";
+			};
+			isp0: isp0@8188800000 {
+				compatible = "nvidia,tegra264-isp";
+				reg = <0x00000081 0x88800000 0x00000000 0x00300000>;
+				resets = <&bpmp 0x00000013>;
+				reset-names = "isp";
+				clocks = <&bpmp 0x0000000f>;
+				clock-names = "isp";
+				nvidia,isp-falcon-device = <0x0000004d>;
+				iommus = <&smmu4_mmu 0x00000c01>;
+				dma-coherent;
+				status = "disabled";
+			};
+			isp0-thi@8188b00000 {
+				compatible = "nvidia,tegra264-isp-thi";
+				resets = <&bpmp 0x00000037>;
+				reset-names = "isp_thi";
+				status = "disabled";
+			};
+			isp1: isp1@818a800000 {
+				compatible = "nvidia,tegra264-isp";
+				resets = <&bpmp 0x00000037>;
+				reset-names = "isp1";
+				clocks = <&bpmp 0x00000010>;
+				clock-names = "isp1";
+				nvidia,isp-falcon-device = <0x0000004e>;
+				iommus = <&smmu4_mmu 0x00000d01>;
+				dma-coherent;
+				status = "disabled";
+			};
+			isp1-thi@818ab00000 {
+				compatible = "nvidia,tegra264-isp-thi";
+				resets = <&bpmp 0x00000037>;
+				reset-names = "isp1_thi";
+				status = "disabled";
+			};
+			nvcsi: nvcsi@8188000000 {
+				compatible = "nvidia,tegra194-nvcsi";
+				clocks = <&bpmp 0x00000014>;
+				clock-names = "nvcsi";
+				resets = <&bpmp 0x00000015>;
+				reset-names = "nvcsi";
+				status = "disabled";
+			};
 		};
 	};
 
 	pmu {
 		compatible = "arm,armv8-pmuv3";
 		interrupts = <0x00000001 0x00000007 0x00000008>;
+		status = "disabled";
+	};
+
+	rce_misc: rtcpu@81893d0000 {
+		compatible = "nvidia,tegra264-rce";
+		nvidia,cpu-name = "rce";
+		reg = <0x00000081 0x893d0000 0x00000000 0x00010000>;
+		reg-names = "rce-pm";
+		clocks = <&bpmp 0x00000024 &bpmp 0x00000023>;
+		clock-names = "rce-nic", "rce-cpu";
+		nvidia,clock-rates = <0x06ddd000 0x1bc69880 0x06ddd000 0x1bc69880>;
+		resets = <&bpmp 0x00000004>;
+		reset-names = "rce-all";
+		interrupts = <0x00000000 0x0000019e 0x00000004>;
+		interrupt-names = "wdt-remote";
+		nvidia,camera-devices = <&isp0 &vi0 &vi1 &nvcsi &isp1>;
+		nvidia,camera-device-names = "isp", "vi0", "vi1", "nvcsi", "isp1";
+		iommus = <&smmu4_mmu 0x00002b01>;
+		memory-region = <&rce_resv>;
+		dma-coherent;
+		nvidia,test-bw = <0x00249f00>;
+		nvidia,trace = <&rtcpu_trace 0x00000004 0x70100000 0x00100000>;
+		nvidia,ivc-channels = <&camera_ivc_channels 0x00000002 0x90000000 0x00010000>;
+		nvidia,autosuspend-delay-ms = <0x00001388>;
+		status = "disabled";
+		nvidia,cmd-timeout = <0x0000ea60>;
+		hsp-vm1 {
+			compatible = "nvidia,tegra-camrtc-hsp-vm";
+			mboxes = <&rce_hsp0 0x00000001 0x80000000 &rce_hsp0 0x00000001 0x00000001 &rce_hsp0 0x00000002 0x00000000>;
+			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
+		};
+		hsp-vm2 {
+			compatible = "nvidia,tegra-camrtc-hsp-vm";
+			mboxes = <&rce_hsp0 0x00000001 0x80000002 &rce_hsp0 0x00000001 0x00000003 &rce_hsp0 0x00000002 0x00000001>;
+			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
+		};
+		hsp-vm3 {
+			compatible = "nvidia,tegra-camrtc-hsp-vm";
+			mboxes = <&rce_hsp0 0x00000001 0x80000004 &rce_hsp0 0x00000001 0x00000005 &rce_hsp0 0x00000002 0x00000002>;
+			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
+		};
+		hsp-vm4 {
+			compatible = "nvidia,tegra-camrtc-hsp-vm";
+			mboxes = <&rce_hsp0 0x00000001 0x00000006 &rce_hsp0 0x00000001 0x80000007 &rce_hsp0 0x00000002 0x00000003>;
+			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
+		};
+	};
+
+	camera_ivc_channels: camera-ivc-channels {
+		echo@0 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
+			nvidia,service = "echo";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000010>;
+			nvidia,frame-size = <0x00000040>;
+			nvidia,ivc-timeout = <0x0016e360>;
+			nvidia,test-timeout = <0x0016e360>;
+			status = "disabled";
+		};
+		dbg@1 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
+			nvidia,service = "debug";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000001>;
+			nvidia,frame-size = <0x00000200>;
+			nvidia,ivc-timeout = <0x0016e360>;
+			nvidia,test-timeout = <0x0016e360>;
+			status = "disabled";
+		};
+		dbg@2 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
+			nvidia,service = "debug";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000001>;
+			nvidia,frame-size = <0x00002000>;
+			nvidia,ivc-timeout = <0x0016e360>;
+			nvidia,test-timeout = <0x0016e360>;
+			nvidia,mem-map = <&rce_misc &vi0 &isp0 &vi1 &isp1>;
+			nvidia,test-bw = <0x00249f00>;
+			status = "disabled";
+		};
+		ivccontrol@3 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
+			nvidia,service = "capture-control";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000040>;
+			nvidia,frame-size = <0x00000140>;
+			status = "disabled";
+			nvidia,ivc-timeout = <0x0007a120>;
+			nvidia,test-timeout = <0x0007a120>;
+		};
+		ivccapture@4 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-capture";
+			nvidia,service = "capture";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000200>;
+			nvidia,frame-size = <0x00000040>;
+			status = "disabled";
+			nvidia,ivc-timeout = <0x0007a120>;
+			nvidia,test-timeout = <0x0007a120>;
+		};
+		diag@5 {
+			compatible = "nvidia,tegra186-camera-diagnostics";
+			nvidia,service = "diag";
+			nvidia,version = <0x00000000>;
+			nvidia,group = <0x00000001>;
+			nvidia,frame-count = <0x00000001>;
+			nvidia,frame-size = <0x00000040>;
+			status = "disabled";
+		};
+	};
+
+	rtcpu_trace: tegra-rtcpu-trace {
+                nvidia,enable-printk;
+                nvidia,interval-ms = <50>;
+                nvidia,log-prefix = "[RCE]";
+                status = "disabled";
+        };
+
+	tegra-capture-vi {
+		compatible = "nvidia,tegra-camrtc-capture-vi";
+		nvidia,vi-devices = <&vi0 &vi1>;
+		nvidia,vi-mapping-size = <0x00000006>;
+		nvidia,vi-mapping = <0x00000000 0x00000000 0x00000001 0x00000000 0x00000002 0x00000001 0x00000003 0x00000001 0x00000004 0x00000000 0x00000005 0x00000001>;
+		nvidia,vi-mapping-names = "csi-stream-id", "vi-unit-id";
+		nvidia,vi-max-channels = <0x00000048>;
+		status = "disabled";
+	};
+
+	tegra-capture-isp {
+		compatible = "nvidia,tegra-camrtc-capture-isp";
+		nvidia,isp-devices = <&isp0 &isp1>;
+		nvidia,isp-max-channels = <0x00000020>;
 		status = "disabled";
 	};
 
