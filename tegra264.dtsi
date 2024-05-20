@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 
 #include <dt-bindings/clock/tegra264-clock.h>
+#include <dt-bindings/clock/tegra264-clk.h>
 #include <dt-bindings/gpio/tegra264-gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/mailbox/tegra186-hsp.h>
@@ -5991,6 +5992,24 @@
 					 <0 837 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3",
 					  "macsec-ns-irq", "macsec-s-irq";
+			resets = <&bpmp TEGRA264_RESET_EQOS_MAC>,
+				<&bpmp TEGRA264_RESET_EQOS_PCS>,
+				<&bpmp TEGRA264_RESET_EQOS_MACSEC>; /* MACsec non-secure reset */
+			reset-names = "mac", "pcs", "macsec_ns_rst";
+			clocks = <&bpmp TEGRA264_CLK_EQOS_MAC>,
+				 <&bpmp TEGRA264_CLK_EQOS_TX>,
+				 <&bpmp TEGRA264_CLK_EQOS_RX>,
+				 <&bpmp TEGRA264_CLK_EQOS_APP>,
+				 <&bpmp TEGRA264_CLK_EQOS_MACSEC>,
+				 <&bpmp TEGRA264_CLK_EQOS_TX_PCS>,
+				 <&bpmp TEGRA264_CLK_EQOS_RX_IN>,
+				 <&bpmp TEGRA264_CLK_EQOS_RX_PCS_IN>,
+				 <&bpmp TEGRA264_CLK_EQOS_TX_M>,
+				 <&bpmp TEGRA264_CLK_EQOS_RX_M>,
+				 <&bpmp TEGRA264_CLK_EQOS_RX_PCS_M>;
+			clock-names = "eqos_mac", "eqos_tx", "eqos_rx", "eqos", "macsec",
+				      "eqos_tx_pcs", "eqos_rx_input", "eqos_rx_pcs_input",
+				      "eqos_tx_m", "eqos_rx_m", "eqos_rx_pcs_m";
 			iommus = <&smmu1_mmu TEGRA_SID_EQOS_VF0>;
 			nvidia,num-dma-chans = <8>;
 			nvidia,num-mtl-queues = <8>;
@@ -6040,6 +6059,24 @@
 				     <0 871 4>;	/* MACsec secure intr */
 			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
 					  "macsec-ns-irq", "macsec-s-irq";
+			resets = <&bpmp TEGRA264_RESET_MGBE0_MAC>,
+				 <&bpmp TEGRA264_RESET_MGBE0_PCS>,
+				 <&bpmp TEGRA264_RESET_MGBE0_MACSEC>; /* MACsec non-secure reset */
+			reset-names = "mac", "pcs", "macsec_ns_rst";
+			clocks = <&bpmp TEGRA264_CLK_MGBE0_MAC>,
+				 <&bpmp TEGRA264_CLK_MGBE0_TX>,
+				 <&bpmp TEGRA264_CLK_MGBE0_APP>,
+				 <&bpmp TEGRA264_CLK_MGBE0_MACSEC>,
+				 <&bpmp TEGRA264_CLK_MGBE0_TX_PCS>,
+				 <&bpmp TEGRA264_CLK_MGBES_PTP_REF>,
+				 <&bpmp TEGRA264_CLK_MGBE0_RX_IN>,
+				 <&bpmp TEGRA264_CLK_MGBE0_RX_PCS_IN>,
+				 <&bpmp TEGRA264_CLK_MGBE0_TX_M>,
+				 <&bpmp TEGRA264_CLK_MGBE0_RX_M>,
+				 <&bpmp TEGRA264_CLK_MGBE0_RX_PCS_M>;
+			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
+				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
+				      "rx-pcs-m";
 			nvidia,num-dma-chans = <8>;
 			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE0_VF0>;
@@ -6091,6 +6128,24 @@
 				     <0 879 IRQ_TYPE_LEVEL_HIGH>;	/* MACsec secure intr */
 			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
 					  "macsec-ns-irq", "macsec-s-irq";
+			resets = <&bpmp TEGRA264_RESET_MGBE1_MAC>,
+				 <&bpmp TEGRA264_RESET_MGBE1_PCS>,
+				 <&bpmp TEGRA264_RESET_MGBE1_MACSEC>; /* MACsec non-secure reset */
+			reset-names = "mac", "pcs", "macsec_ns_rst";
+			clocks = <&bpmp TEGRA264_CLK_MGBE1_MAC>,
+				 <&bpmp TEGRA264_CLK_MGBE1_TX>,
+				 <&bpmp TEGRA264_CLK_MGBE1_APP>,
+				 <&bpmp TEGRA264_CLK_MGBE1_MACSEC>,
+				 <&bpmp TEGRA264_CLK_MGBE1_TX_PCS>,
+				 <&bpmp TEGRA264_CLK_MGBES_PTP_REF>,
+				 <&bpmp TEGRA264_CLK_MGBE1_RX_IN>,
+				 <&bpmp TEGRA264_CLK_MGBE1_RX_PCS_IN>,
+				 <&bpmp TEGRA264_CLK_MGBE1_TX_M>,
+				 <&bpmp TEGRA264_CLK_MGBE1_RX_M>,
+				 <&bpmp TEGRA264_CLK_MGBE1_RX_PCS_M>;
+			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
+				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
+				      "rx-pcs-m";
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE1_VF0>;
 			nvidia,num-dma-chans = <8>;
 			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
@@ -6140,6 +6195,24 @@
 				     <0 887 IRQ_TYPE_LEVEL_HIGH>;	/* MACsec secure intr */
 			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
 					  "macsec-ns-irq", "macsec-s-irq";
+			resets = <&bpmp TEGRA264_RESET_MGBE2_MAC>,
+				 <&bpmp TEGRA264_RESET_MGBE2_PCS>,
+				 <&bpmp TEGRA264_RESET_MGBE2_MACSEC>; /* MACsec non-secure reset */
+			reset-names = "mac", "pcs", "macsec_ns_rst";
+			clocks = <&bpmp TEGRA264_CLK_MGBE2_MAC>,
+				 <&bpmp TEGRA264_CLK_MGBE2_TX>,
+				 <&bpmp TEGRA264_CLK_MGBE2_APP>,
+				 <&bpmp TEGRA264_CLK_MGBE2_MACSEC>,
+				 <&bpmp TEGRA264_CLK_MGBE2_TX_PCS>,
+				 <&bpmp TEGRA264_CLK_MGBES_PTP_REF>,
+				 <&bpmp TEGRA264_CLK_MGBE2_RX_IN>,
+				 <&bpmp TEGRA264_CLK_MGBE2_RX_PCS_IN>,
+				 <&bpmp TEGRA264_CLK_MGBE2_TX_M>,
+				 <&bpmp TEGRA264_CLK_MGBE2_RX_M>,
+				 <&bpmp TEGRA264_CLK_MGBE2_RX_PCS_M>;
+			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
+				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
+				      "rx-pcs-m";
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE2_VF0>;
 			nvidia,num-dma-chans = <8>;
 			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
@@ -6189,6 +6262,24 @@
 				     <0 895 IRQ_TYPE_LEVEL_HIGH>;	/* MACsec secure intr */
 			interrupt-names = "common", "vm0", "vm1", "vm2", "vm3", "vm4",
 					  "macsec-ns-irq", "macsec-s-irq";
+			resets = <&bpmp TEGRA264_RESET_MGBE3_MAC>,
+				 <&bpmp TEGRA264_RESET_MGBE3_PCS>,
+				 <&bpmp TEGRA264_RESET_MGBE3_MACSEC>; /* MACsec non-secure reset */
+			reset-names = "mac", "pcs", "macsec_ns_rst";
+			clocks = <&bpmp TEGRA264_CLK_MGBE3_MAC>,
+				 <&bpmp TEGRA264_CLK_MGBE3_TX>,
+				 <&bpmp TEGRA264_CLK_MGBE3_APP>,
+				 <&bpmp TEGRA264_CLK_MGBE3_MACSEC>,
+				 <&bpmp TEGRA264_CLK_MGBE3_TX_PCS>,
+				 <&bpmp TEGRA264_CLK_MGBES_PTP_REF>,
+				 <&bpmp TEGRA264_CLK_MGBE3_RX_IN>,
+				 <&bpmp TEGRA264_CLK_MGBE3_RX_PCS_IN>,
+				 <&bpmp TEGRA264_CLK_MGBE3_TX_M>,
+				 <&bpmp TEGRA264_CLK_MGBE3_RX_M>,
+				 <&bpmp TEGRA264_CLK_MGBE3_RX_PCS_M>;
+			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
+				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
+				      "rx-pcs-m";
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE3_VF0>;
 			nvidia,num-dma-chans = <8>;
 			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
@@ -9082,7 +9173,7 @@
 				<&bpmp TEGRA264_RESET_UFSHC_AXI_M  >,
 				<&bpmp TEGRA264_RESET_UFSHC_LP_SEQ >,
 				<&bpmp TEGRA264_RESET_DPAUX        >,
-				<&bpmp TEGRA264_RESET_EQOS         >,
+				<&bpmp TEGRA264_RESET_EQOS_PCS     >,
 				<&bpmp TEGRA264_RESET_HWPM         >,
 				<&bpmp TEGRA264_RESET_I2C1         >,
 				<&bpmp TEGRA264_RESET_I2C2         >,

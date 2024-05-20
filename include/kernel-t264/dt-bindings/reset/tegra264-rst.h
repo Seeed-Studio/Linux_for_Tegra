@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -26,7 +26,7 @@
 #define TEGRA264_RESET_UFSHC_AXI_M		6U
 #define TEGRA264_RESET_UFSHC_LP_SEQ		7U
 #define TEGRA264_RESET_DPAUX			8U
-#define TEGRA264_RESET_EQOS			9U
+#define TEGRA264_RESET_EQOS_PCS			9U
 #define TEGRA264_RESET_HWPM			10U
 #define TEGRA264_RESET_I2C1			11U
 #define TEGRA264_RESET_I2C2			12U
