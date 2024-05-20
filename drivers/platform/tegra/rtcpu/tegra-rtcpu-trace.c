@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "soc/tegra/camrtc-trace.h"
 
@@ -24,7 +24,7 @@
 #include <linux/platform_device.h>
 #include <linux/nvhost.h>
 #include <asm/cacheflush.h>
-
+#include <uapi/linux/nvdev_fence.h>
 #include "device-group.h"
 
 #define CREATE_TRACE_POINTS
@@ -42,6 +42,9 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(capture_ivc_recv);
 
 #define WORK_INTERVAL_DEFAULT		100
 #define EXCEPTION_STR_LENGTH		2048
+
+#define ISP_CLASS_ID 0x32
+#define VI_CLASS_ID 0x30
 
 /*
  * Private driver data structure
@@ -753,6 +756,16 @@ static void rtcpu_trace_vi_frame_event(struct tegra_rtcpu_trace *tracer,
 			event->data.data32[1],
 			pdata->class
 		);
+		trace_task_fence(
+			NVDEV_FENCE_KIND_POST,
+			VI_CLASS_ID,
+			event->data.data32[0],
+			event->data.data32[1],
+			NVDEV_FENCE_TYPE_SYNCPT,
+			event->data.data32[0],
+			event->data.data32[1],
+			0, 0, 0, 0, 0
+		);
 		break;
 	default:
 		pr_warn("%pS invalid event id %d\n",
@@ -818,6 +831,16 @@ static void rtcpu_trace_isp_task_event(struct tegra_rtcpu_trace *tracer,
 			event->data.data32[1],
 			pdata->class
 		);
+		trace_task_fence(
+			NVDEV_FENCE_KIND_PRE,
+			ISP_CLASS_ID,
+			event->data.data32[0],
+			event->data.data32[1],
+			NVDEV_FENCE_TYPE_SYNCPT,
+			event->data.data32[0],
+			event->data.data32[1],
+			0, 0, 0, 0, 0
+		);
 		break;
 	case camrtc_trace_isp_task_end:
 		trace_isp_task_end(
@@ -826,6 +849,16 @@ static void rtcpu_trace_isp_task_event(struct tegra_rtcpu_trace *tracer,
 			event->data.data32[0],
 			event->data.data32[1],
 			pdata->class
+		);
+		trace_task_fence(
+			NVDEV_FENCE_KIND_POST,
+			ISP_CLASS_ID,
+			event->data.data32[0],
+			event->data.data32[1],
+			NVDEV_FENCE_TYPE_SYNCPT,
+			event->data.data32[0],
+			event->data.data32[1],
+			0, 0, 0, 0, 0
 		);
 		break;
 	default:

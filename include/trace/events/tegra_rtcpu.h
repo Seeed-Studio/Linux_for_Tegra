@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #undef TRACE_SYSTEM
@@ -614,6 +614,59 @@ TRACE_EVENT(isp_task_end,
 		__entry->syncpt_id,
 		__entry->syncpt_thresh,
 		__entry->class_id)
+);
+
+TRACE_EVENT(task_fence,
+	    TP_PROTO(u32 kind, u32 class_id, u32 task_syncpt_id, u32 task_syncpt_thresh,
+		u32 type, u32 syncpt_id, u32 syncpt_thresh, u32 sync_fd, u32 semaphore_handle,
+		u32 semaphore_offset, u32 semaphore_value, u64 semaphore_unique_id),
+	    TP_ARGS(kind, class_id, task_syncpt_id, task_syncpt_thresh,
+		type, syncpt_id, syncpt_thresh, sync_fd, semaphore_handle,
+		semaphore_offset, semaphore_value, semaphore_unique_id),
+	    TP_STRUCT__entry(
+		__field(u32, kind)
+		__field(u32, class_id)
+		__field(u32, task_syncpt_id)
+		__field(u32, task_syncpt_thresh)
+		__field(u32, type)
+		__field(u32, syncpt_id)
+		__field(u32, syncpt_thresh)
+		__field(u32, sync_fd)
+		__field(u32, semaphore_handle)
+		__field(u32, semaphore_offset)
+		__field(u32, semaphore_value)
+		__field(u64, semaphore_unique_id)
+	    ),
+	    TP_fast_assign(
+		__entry->kind = kind;
+		__entry->class_id =  class_id;
+		__entry->task_syncpt_id = task_syncpt_id;
+		__entry->task_syncpt_thresh = task_syncpt_thresh;
+		__entry->type = type;
+		__entry->syncpt_id = syncpt_id;
+		__entry->syncpt_thresh = syncpt_thresh;
+		__entry->sync_fd = sync_fd;
+		__entry->semaphore_handle = semaphore_handle;
+		__entry->semaphore_offset = semaphore_offset;
+		__entry->semaphore_value = semaphore_value;
+		__entry->semaphore_unique_id = semaphore_unique_id;
+	    ),
+	    TP_printk(
+		"kind:0x%x class_id:0x%x task_syncpt_id:%u task_syncpt_thresh:%u type:%u "
+		"syncpt_id:%u syncpt_thresh:%u sync_fd:%u semaphore_handle:%u "
+		"semaphore_offset:%u semaphore_value:%u semaphore_unique_id:%llu",
+		__entry->kind,
+		__entry->class_id,
+		__entry->task_syncpt_id,
+		__entry->task_syncpt_thresh,
+		__entry->type,
+		__entry->syncpt_id,
+		__entry->syncpt_thresh,
+		__entry->sync_fd,
+		__entry->semaphore_handle,
+		__entry->semaphore_offset,
+		__entry->semaphore_value,
+		__entry->semaphore_unique_id)
 );
 
 
