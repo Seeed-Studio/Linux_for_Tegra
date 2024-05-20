@@ -684,7 +684,7 @@ static int tegra_bl_parse_dt_property(struct device_node *np,
 	pr_info("Base address of %s: 0x%llx\n", prop_name, *base);
 	pr_info("Size of %s: 0x%llx\n", prop_name, *size);
 
-	return 0; // Return 0 for success
+	return 0; /* Return 0 for success */
 }
 
 static int tegra_bl_debug_probe(struct platform_device *pdev)
@@ -693,11 +693,10 @@ static int tegra_bl_debug_probe(struct platform_device *pdev)
 	u64 base, size;
 	int ret;
 
-	pr_info("%s\n", __func__);
+	pr_info("%s: bl_prof_dataptr=%s bl_prof_ro_ptr=%s\n", __func__, bl_prof_dataptr, bl_prof_ro_ptr);
 
 	if (strncmp(bl_prof_dataptr, "0@0x0", 5) == 0 ||
-			strncmp(bl_prof_ro_ptr, "0@0x0", 5) == 0 ||
-			strncmp(bl_debug_data, "0@0x0", 5) == 0) {
+		strncmp(bl_prof_ro_ptr, "0@0x0", 5) == 0) {
 
 		if (!np) {
 			pr_err("Device tree node not found\n");
@@ -719,14 +718,14 @@ static int tegra_bl_debug_probe(struct platform_device *pdev)
 	}
 
 
-	return 0; // Return 0 for success
+	return 0; /* Return 0 for success */
 }
 
 static int tegra_bl_debug_remove(struct platform_device *pdev)
 {
-	// Device removal code goes here
+	/* Device removal code goes here */
 	pr_info("%s\n", __func__);
-	return 0; // Return 0 for success
+	return 0; /* Return 0 for success */
 }
 
 static const struct of_device_id tegra_bl_debug_of_match[] = {
