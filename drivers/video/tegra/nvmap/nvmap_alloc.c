@@ -49,16 +49,13 @@ void nvmap_altfree(void *ptr, size_t len)
 		kfree(ptr);
 }
 
-static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size, bool use_numa, int numa_id)
+static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size, int numa_id)
 {
 	struct page *page, *p, *e;
 	unsigned int order;
 
 	order = get_order(size);
-	if (!use_numa)
-		page = alloc_pages(gfp, order);
-	else
-		page = alloc_pages_node(numa_id, gfp, order);
+	page = alloc_pages_node(numa_id, gfp, order);
 
 	if (!page)
 		return NULL;
@@ -93,7 +90,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	if (contiguous) {
 		struct page *page;
-		page = nvmap_alloc_pages_exact(gfp, size, true, h->numa_id);
+		page = nvmap_alloc_pages_exact(gfp, size, h->numa_id);
 		if (!page)
 			goto fail;
 
@@ -121,7 +118,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 			gfp_t gfp_no_reclaim = (gfp | __GFP_NOMEMALLOC) & ~__GFP_RECLAIM;
 
 			page = nvmap_alloc_pages_exact(gfp_no_reclaim,
-					pages_per_big_pg << PAGE_SHIFT, true, h->numa_id);
+					pages_per_big_pg << PAGE_SHIFT, h->numa_id);
 			if (!page)
 				break;
 
@@ -146,7 +143,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 		}
 		for (i = allocated; i < nr_page; i++) {
 			pages[i] = nvmap_alloc_pages_exact(gfp, PAGE_SIZE,
-							   true, h->numa_id);
+							   h->numa_id);
 
 			if (!pages[i])
 				goto fail;
