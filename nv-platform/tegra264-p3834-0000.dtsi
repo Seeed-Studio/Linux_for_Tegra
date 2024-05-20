@@ -136,6 +136,54 @@
 		rtc@c2c0000 {
 			status = "okay";
 		};
+
+		tegra-hsp@8800000 {
+			status = "okay";
+		};
+
+		tegra-hsp@8c00000 {
+			status = "okay";
+		};
+
+		tegra-hsp@8189100000 {
+			status = "okay";
+		};
+
+		tegra-hsp@8189200000 {
+			status = "okay";
+		};
+
+		serial@810c500000 {
+			status = "okay";
+		};
+
+		serial@810c510000 {
+			status = "okay";
+		};
+
+		serial@810c530000 {
+			status = "okay";
+		};
+
+		serial@810c540000 {
+			status = "okay";
+		};
+
+		memory-controller@8108020000 {
+			status = "okay";
+
+			external-memory-controller@8108800000 {
+				status = "okay";
+			};
+		};
+
+		memory-controller-hwpm@8108020000 {
+			status = "okay";
+		};
+
+		memory-controller-err@8108020000 {
+			status = "okay";
+		};
 	};
 
 	eeprom-manager {
@@ -158,6 +206,8 @@
 	};
 
 	bpmp {
+		status = "okay";
+
 		i2c {
 			tegra_tmp451: thermal-sensor@4c {
 				compatible = "ti,tmp451";
@@ -172,5 +222,125 @@
 	chosen {
 		bootargs = "console=ttyUTC0,115200";
 		stdout-path = "/bus@0/tegra-utc@c5a0000";
+	};
+
+	cpus {
+		status = "okay";
+
+		cpu@0 {
+			status = "okay";
+		};
+
+		cpu@1 {
+			status = "okay";
+		};
+
+		cpu@2 {
+			status = "okay";
+		};
+
+		cpu@3 {
+			status = "okay";
+		};
+
+		cpu@4 {
+			status = "okay";
+		};
+
+		cpu@5 {
+			status = "okay";
+		};
+
+		cpu@6 {
+			status = "okay";
+		};
+
+		cpu@7 {
+			status = "okay";
+		};
+
+		cpu@8 {
+			status = "okay";
+		};
+
+		cpu@9 {
+			status = "okay";
+		};
+
+		cpu@10 {
+			status = "okay";
+		};
+
+		cpu@11 {
+			status = "okay";
+		};
+
+		cpu@12 {
+			status = "okay";
+		};
+
+		cpu@13 {
+			status = "okay";
+		};
+	};
+
+	tegra-carveouts {
+		status = "okay";
+	};
+
+	reserved-memory {
+		status = "okay";
+
+		fsi-carveout {
+			status = "okay";
+		};
+
+		gpu0_carveout {
+			status = "okay";
+		};
+
+		linux,cma {
+			status = "okay";
+		};
+
+		bpmp-shmem@0 {
+			status = "okay";
+		};
+
+	};
+
+	psci {
+		status = "okay";
+	};
+
+	interrupt-controller@8146000000 {
+		status = "okay";
+		its@8146040000 {
+			status = "okay";
+		};
+	};
+
+	timer {
+		status = "okay";
+	};
+
+	ufshci@a80b8d0000 {
+		/delete-property/ nvidia,enable-hs-mode;
+		status = "okay";
+	};
+
+	/* Check if it has to go with L4TConfigurations.dtbo */
+	firmware {
+		uefi {
+			use-emulated-variables;
+			variables {
+				gDtPlatformFormSetGuid {
+					DtAcpiPref {
+						data = <0x0>;
+						non-volatile;
+					};
+				};
+			};
+		};
 	};
 };
