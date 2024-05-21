@@ -121,6 +121,26 @@
 			};
 		};
 
+		iommu@8105000000 {
+			status = "okay";
+		};
+
+		iommu@8106000000 {
+			status = "okay";
+		};
+
+		iommu@810a000000 {
+			status = "okay";
+		};
+
+		iommu@810b000000 {
+			status = "okay";
+		};
+
+		iommu@8806000000 {
+			status = "okay";
+		};
+
 		pmc@c800000 {
 			status = "okay";
 		};
