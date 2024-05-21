@@ -66,9 +66,6 @@
 			interrupts = <0x00000000 0x0000008b 0x00000004>;
 			status = "disabled";
 		};
-		pcie@810c000000 {
-			nvidia,host1x = <&host1x>;
-		};
 
 		host1x@8181200000 {
 			se@8188140000 {

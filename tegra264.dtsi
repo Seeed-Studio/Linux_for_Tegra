@@ -5296,6 +5296,7 @@
 				  0x81000000 0xd0 0x82000000 0xd0 0x82000000 0x0 0x00200000>;	/* I/O */
 
 			ats-supported;
+			nvidia,host1x = <&host1x>;
 		};
 
 		padctl_main: pinmux@810c281000 {
