@@ -1,7 +1,5 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0
- */
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
 
 #include <nvidia/conftest.h>
 
@@ -15,6 +13,7 @@
 #include <linux/kfifo.h>
 #include <linux/workqueue.h>
 #include <linux/io.h>
+#include <linux/mm.h>
 
 #include <linux/fs.h>
 #include <linux/poll.h>
