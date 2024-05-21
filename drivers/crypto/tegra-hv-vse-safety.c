@@ -70,6 +70,7 @@
 
 /* Command categories for SHA Engine */
 #define TEGRA_VIRTUAL_SE_CMD_CATEGORY_SHA          0x00010000U
+#define TEGRA_VIRTUAL_SE_CMD_CATEGORY_HMAC         0x00030000U
 
 /* Command categories for TSEC Engine */
 #define TEGRA_VIRTUAL_SE_CMD_CATEGORY_TSEC_KEYS    0x00010000U
@@ -111,6 +112,11 @@
 
 /* Commands in the SHA Category */
 #define TEGRA_VIRTUAL_SE_CMD_OP_SHA                     0x00000001U
+
+/* Commands in the HMAC Category */
+#define TEGRA_VIRTUAL_SE_CMD_OP_HMAC_SIGN               0x00000001U
+#define TEGRA_VIRTUAL_SE_CMD_OP_HMAC_VERIFY             0x00000002U
+#define TEGRA_VIRTUAL_SE_CMD_OP_HMAC_GET_VERIFY         0x00000004U
 
 /* Commands in the TSEC keys category */
 #define TEGRA_VIRTUAL_SE_CMD_OP_TSEC_KEYLOAD_STATUS     0x00000001U
@@ -221,12 +227,27 @@
 #define TEGRA_VIRTUAL_SE_CMD_SHA_HASH    (TEGRA_VIRTUAL_SE_CMD_ENG_SHA \
         | TEGRA_VIRTUAL_SE_CMD_CATEGORY_SHA \
         | TEGRA_VIRTUAL_SE_CMD_OP_SHA)
+
+#define TEGRA_VIRTUAL_SE_CMD_HMAC_SIGN   (TEGRA_VIRTUAL_SE_CMD_ENG_SHA \
+	| TEGRA_VIRTUAL_SE_CMD_CATEGORY_HMAC \
+	| TEGRA_VIRTUAL_SE_CMD_OP_HMAC_SIGN)
+
+#define TEGRA_VIRTUAL_SE_CMD_HMAC_VERIFY   (TEGRA_VIRTUAL_SE_CMD_ENG_SHA \
+	| TEGRA_VIRTUAL_SE_CMD_CATEGORY_HMAC \
+	| TEGRA_VIRTUAL_SE_CMD_OP_HMAC_VERIFY)
+
+#define TEGRA_VIRTUAL_SE_CMD_HMAC_GET_VERIFY   (TEGRA_VIRTUAL_SE_CMD_ENG_SHA \
+	| TEGRA_VIRTUAL_SE_CMD_CATEGORY_HMAC \
+	| TEGRA_VIRTUAL_SE_CMD_OP_HMAC_GET_VERIFY)
+
 #define TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT		(512 / 8)
 #define TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_576BIT		(576 / 8)
 #define TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_832BIT		(832 / 8)
 #define TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1024BIT	(1024 / 8)
 #define TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1088BIT	(1088 / 8)
 #define TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1344BIT	(1344 / 8)
+
+#define TEGRA_VIRTUAL_SE_SHA_MAX_HMAC_SHA_LENGTH    (32U)
 
 #define SHA3_STATE_SIZE	200
 
@@ -346,6 +367,21 @@ struct tegra_vse_gmac_req_data {
 	uint8_t result;
 };
 
+enum hmac_sha_request_type {
+	HMAC_SHA_SIGN = 0U,
+	HMAC_SHA_VERIFY
+};
+
+/* HMAC-SHA request data */
+struct tegra_vse_hmac_sha_req_data {
+	/* Enum to specify HMAC-SHA request type i.e. SIGN/VERIFY */
+	enum hmac_sha_request_type request_type;
+	/* Expected digest for HMAC_SHA_VERIFY request */
+	char *expected_digest;
+	/* Hash comparison result for HMAC_SHA_VERIFY request */
+	uint8_t result;
+};
+
 struct tegra_vse_priv_data {
 	struct skcipher_request *req;
 	struct tegra_virtual_se_dev *se_dev;
@@ -456,6 +492,20 @@ union tegra_virtual_se_sha_args {
 	} op_hash;
 } __attribute__((__packed__));
 
+struct tegra_virtual_se_hmac_sha_args {
+	u8 keyslot[KEYSLOT_SIZE_BYTES];
+	u32 mode;
+	u32 lastblock_len;
+	u8 lastblock[TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT];
+	u32 msg_total_length[4];
+	u32 msg_left_length[4];
+	u64 dst_addr;
+	u64 src_addr;
+	u32 src_buf_size;
+	u8 expected_hmac_sha[TEGRA_VIRTUAL_SE_SHA_MAX_HMAC_SHA_LENGTH];
+	uint64_t hmac_addr;
+};
+
 struct tegra_virtual_tsec_args {
 	/**
 	 * Keyslot index for keyslot containing TSEC key
@@ -506,6 +556,7 @@ struct tegra_virtual_se_ivc_tx_msg_t {
 		union tegra_virtual_se_aes_args aes;
 		union tegra_virtual_se_sha_args sha;
 		struct tegra_virtual_tsec_args tsec;
+		struct tegra_virtual_se_hmac_sha_args hmac;
 	};
 };
 
@@ -590,6 +641,25 @@ struct crypto_dev_to_ivc_map *tegra_hv_vse_get_db(void)
 	return &g_crypto_to_ivc_map[0];
 }
 EXPORT_SYMBOL(tegra_hv_vse_get_db);
+
+static int status_to_errno(u32 err)
+{
+	switch (err) {
+	case 1:		/* VSE_MSG_ERR_INVALID_CMD */
+	case 3:		/* VSE_MSG_ERR_INVALID_ARGS */
+	case 11:	/* VSE_MSG_ERR_MAC_INVALID */
+		return -EINVAL;
+	case 4:		/* VSE_MSG_ERR_INVALID_KEY */
+	case 5:		/* VSE_MSG_ERR_CTR_OVERFLOW */
+	case 6:		/* VSE_MSG_ERR_INVALID_SUBKEY */
+	case 7:		/* VSE_MSG_ERR_CTR_NONCE_INVALID */
+	case 8:		/* VSE_MSG_ERR_GCM_IV_INVALID */
+	case 9:		/* VSE_MSG_ERR_GCM_NONCE_INVALID */
+	case 10:	/* VSE_MSG_ERR_GMAC_INVALID_PARAMS */
+		return -EPERM;
+	}
+	return err;
+}
 
 static int32_t validate_header(
 	struct tegra_virtual_se_dev *se_dev,
@@ -1807,6 +1877,463 @@ static int tegra_hv_vse_safety_sha_digest(struct ahash_request *req)
 	return ret;
 }
 
+static int tegra_hv_vse_safety_hmac_sha_setkey(struct crypto_ahash *tfm, const u8 *key,
+		unsigned int keylen)
+{
+	struct tegra_virtual_se_hmac_sha_context *ctx =
+			crypto_tfm_ctx(crypto_ahash_tfm(tfm));
+	struct tegra_virtual_se_dev *se_dev;
+	int err = 0;
+	s8 label[TEGRA_VIRTUAL_SE_AES_MAX_KEY_SIZE];
+	bool is_keyslot_label;
+
+	if (!ctx)
+		return -EINVAL;
+
+	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[ctx->node_id].se_engine];
+
+	if (keylen != 32) {
+		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
+		return -EINVAL;
+	}
+
+	/* format: 'NVSEAES 1234567\0' */
+	is_keyslot_label = sscanf(key, "%s", label) == 1 &&
+		!strcmp(label, TEGRA_VIRTUAL_SE_AES_KEYSLOT_LABEL);
+
+	if (is_keyslot_label) {
+		ctx->keylen = keylen;
+		memcpy(ctx->aes_keyslot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
+		ctx->is_key_slot_allocated = true;
+	} else {
+		dev_err(se_dev->dev, "%s: Invalid keyslot label %s\n", __func__, key);
+		return -EINVAL;
+	}
+
+	return err;
+}
+
+static int tegra_hv_vse_safety_hmac_sha_init(struct ahash_request *req)
+{
+	struct crypto_ahash *tfm;
+	struct tegra_virtual_se_req_context *req_ctx;
+	struct tegra_virtual_se_hmac_sha_context *hmac_ctx;
+	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+
+	if (!req) {
+		dev_err(se_dev->dev, "HMAC SHA request not valid\n");
+		return -EINVAL;
+	}
+
+	/* Return error if engine is in suspended state */
+	if (atomic_read(&se_dev->se_suspended))
+		return -ENODEV;
+
+	req_ctx = ahash_request_ctx(req);
+	if (!req_ctx) {
+		dev_err(se_dev->dev, "HMAC SHA req_ctx not valid\n");
+		return -EINVAL;
+	}
+
+	tfm = crypto_ahash_reqtfm(req);
+	if (!tfm) {
+		dev_err(se_dev->dev, "HMAC SHA transform not valid\n");
+		return -EINVAL;
+	}
+
+	hmac_ctx = crypto_ahash_ctx(tfm);
+	hmac_ctx->digest_size = crypto_ahash_digestsize(tfm);
+
+	if (!hmac_ctx->is_key_slot_allocated) {
+		pr_err("%s key is not allocated\n", __func__);
+		return -EINVAL;
+	}
+
+	if (strcmp(crypto_ahash_alg_name(tfm), "hmac-sha256-vse") == 0) {
+		hmac_ctx->mode = VIRTUAL_SE_OP_MODE_SHA256;
+		hmac_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT;
+	} else {
+		dev_err(se_dev->dev, "Invalid HMAC-SHA Alg\n");
+		return -EINVAL;
+	}
+
+	req_ctx->total_count = 0;
+	req_ctx->is_first = true;
+	req_ctx->req_context_initialized = true;
+
+	return 0;
+}
+
+static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req, bool is_last)
+{
+	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
+	struct tegra_virtual_se_hmac_sha_context *hmac_ctx =
+			crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	struct tegra_vse_hmac_sha_req_data *hmac_req_data;
+	struct tegra_virtual_se_dev *se_dev =
+			g_virtual_se_dev[g_crypto_to_ivc_map[hmac_ctx->node_id].se_engine];
+	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
+	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
+	struct tegra_virtual_se_ivc_msg_t ivc_req_msg = {0};
+	struct tegra_virtual_se_hmac_sha_args *phmac;
+	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[hmac_ctx->node_id].ivck;
+	int err = 0;
+	struct tegra_vse_priv_data priv = {0};
+	struct tegra_vse_tag *priv_data_ptr;
+
+	u32 cmd = 0;
+	void *src_buf = NULL;
+	dma_addr_t src_buf_addr;
+	void *hash_buf = NULL;
+	dma_addr_t hash_buf_addr;
+	void *verify_result_buf = NULL;
+	dma_addr_t verify_result_addr;
+	void *match_code_buf = NULL;
+	dma_addr_t match_code_addr;
+	u32 matchcode = SE_HW_VALUE_MATCH_CODE;
+	u32 mismatch_code = SE_HW_VALUE_MISMATCH_CODE;
+
+	u32 match_code_buf_size = 4;
+	u32 blocks_to_process, last_block_bytes = 0;
+	u64 msg_len = 0, temp_len = 0;
+
+	if ((req->nbytes == 0) || (req->nbytes > TEGRA_VIRTUAL_SE_MAX_SUPPORTED_BUFLEN)) {
+		dev_err(se_dev->dev, "%s: input buffer size is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!is_last) {
+		if (req->nbytes % TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT != 0) {
+			dev_err(se_dev->dev, "%s: non-last buffer size is invalid\n", __func__);
+			return -EINVAL;
+		}
+	}
+
+	hmac_req_data = (struct tegra_vse_hmac_sha_req_data *) req->priv;
+
+	src_buf = dma_alloc_coherent(
+			se_dev->dev, req->nbytes,
+			&src_buf_addr, GFP_KERNEL);
+	if (!src_buf) {
+		dev_err(se_dev->dev, "Cannot allocate memory for source buffer\n");
+		return -ENOMEM;
+	}
+
+	if (hmac_req_data->request_type == HMAC_SHA_SIGN) {
+		hash_buf = dma_alloc_coherent(
+				se_dev->dev, hmac_ctx->digest_size,
+				&hash_buf_addr, GFP_KERNEL);
+		if (!hash_buf) {
+			dev_err(se_dev->dev, "Cannot allocate memory for hash buffer\n");
+			err = -ENOMEM;
+			goto unmap_exit;
+		}
+		memset(hash_buf, 0, TEGRA_VIRTUAL_SE_SHA_MAX_HMAC_SHA_LENGTH);
+		cmd = TEGRA_VIRTUAL_SE_CMD_HMAC_SIGN;
+	} else {
+		cmd = TEGRA_VIRTUAL_SE_CMD_HMAC_VERIFY;
+	}
+
+	if ((se_dev->chipdata->hmac_verify_hw_support == true)
+			&& (is_last && (hmac_req_data->request_type == HMAC_SHA_VERIFY))) {
+		verify_result_buf = dma_alloc_coherent(
+				se_dev->dev, TEGRA_VIRTUAL_SE_SHA_MAX_HMAC_SHA_LENGTH,
+				&verify_result_addr, GFP_KERNEL);
+		if (!verify_result_buf) {
+			dev_err(se_dev->dev, "Cannot allocate memory for verify_result_buf buffer\n");
+			err = -ENOMEM;
+			goto unmap_exit;
+		}
+		match_code_buf = dma_alloc_coherent(
+				se_dev->dev, match_code_buf_size,
+				&match_code_addr, GFP_KERNEL);
+		if (!match_code_buf) {
+			dev_err(se_dev->dev, "Cannot allocate memory for match_code_buf buffer\n");
+			err = -ENOMEM;
+			goto unmap_exit;
+		}
+	}
+
+	g_crypto_to_ivc_map[hmac_ctx->node_id].vse_thread_start = true;
+
+	msg_len = req->nbytes;
+	temp_len = msg_len;
+	req_ctx->total_count += msg_len;
+
+	ivc_tx = &ivc_req_msg.tx[0];
+	ivc_hdr = &ivc_req_msg.ivc_hdr;
+	ivc_hdr->num_reqs = 1;
+	ivc_hdr->header_magic[0] = 'N';
+	ivc_hdr->header_magic[1] = 'V';
+	ivc_hdr->header_magic[2] = 'D';
+	ivc_hdr->header_magic[3] = 'A';
+	ivc_hdr->engine = VIRTUAL_SE_SHA;
+	ivc_tx->cmd = cmd;
+
+	phmac = &(ivc_tx->hmac);
+	phmac->mode = hmac_ctx->mode;
+	phmac->msg_total_length[2] = 0;
+	phmac->msg_total_length[3] = 0;
+	phmac->msg_left_length[2] = 0;
+	phmac->msg_left_length[3] = 0;
+	memcpy(phmac->keyslot, hmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
+	phmac->src_addr = src_buf_addr;
+
+	if (hmac_req_data->request_type == HMAC_SHA_SIGN)
+		phmac->dst_addr = hash_buf_addr;
+
+	if (is_last) {
+		/* Set msg left length equal to input buffer size */
+		phmac->msg_left_length[0] = msg_len & 0xFFFFFFFF;
+		phmac->msg_left_length[1] = msg_len >> 32;
+
+		/* Set msg total length equal to sum of all input buffer size */
+		phmac->msg_total_length[0] = req_ctx->total_count & 0xFFFFFFFF;
+		phmac->msg_total_length[1] = req_ctx->total_count >> 32;
+
+	} else {
+		/* Set msg left length greater than input buffer size */
+		temp_len += 8;
+		phmac->msg_left_length[0] = temp_len & 0xFFFFFFFF;
+		phmac->msg_left_length[1] = temp_len >> 32;
+
+		/* Set msg total length greater than msg left length for non-first request */
+		if (req_ctx->is_first)
+			req_ctx->is_first = false;
+		else
+			temp_len += 8;
+
+		phmac->msg_total_length[0] = temp_len & 0xFFFFFFFF;
+		phmac->msg_total_length[1] = temp_len >> 32;
+
+	}
+
+	if (se_dev->chipdata->hmac_verify_hw_support == false) {
+		if (is_last && (hmac_req_data->request_type == HMAC_SHA_VERIFY)) {
+			blocks_to_process = msg_len / hmac_ctx->blk_size;
+			/* num of bytes less than block size */
+
+			if ((req->nbytes % hmac_ctx->blk_size) ||
+				blocks_to_process == 0) {
+				last_block_bytes =
+					msg_len % hmac_ctx->blk_size;
+			} else {
+				/* decrement num of blocks */
+				blocks_to_process--;
+				last_block_bytes = hmac_ctx->blk_size;
+			}
+
+			if (blocks_to_process > 0)
+				sg_copy_to_buffer(req->src, (u32)sg_nents(req->src), src_buf,
+						blocks_to_process * hmac_ctx->blk_size);
+
+			phmac->src_buf_size = blocks_to_process * hmac_ctx->blk_size;
+			phmac->lastblock_len = last_block_bytes;
+
+			sg_pcopy_to_buffer(req->src,
+					(u32)sg_nents(req->src),
+					phmac->lastblock,
+					last_block_bytes,
+					blocks_to_process * hmac_ctx->blk_size);
+
+			memcpy(phmac->expected_hmac_sha, hmac_req_data->expected_digest,
+					TEGRA_VIRTUAL_SE_SHA_MAX_HMAC_SHA_LENGTH);
+		} else {
+			phmac->src_buf_size = msg_len;
+			phmac->lastblock_len = 0;
+			sg_copy_to_buffer(req->src, (u32)sg_nents(req->src),
+					src_buf, msg_len);
+		}
+	} else {
+		phmac->src_buf_size = msg_len;
+		phmac->lastblock_len = 0;
+		sg_copy_to_buffer(req->src, (u32)sg_nents(req->src),
+				src_buf, msg_len);
+		if (is_last && (hmac_req_data->request_type == HMAC_SHA_VERIFY)) {
+			phmac->hmac_addr = verify_result_addr;
+			memcpy(verify_result_buf, hmac_req_data->expected_digest,
+					TEGRA_VIRTUAL_SE_SHA_MAX_HMAC_SHA_LENGTH);
+			phmac->dst_addr = match_code_addr;
+		}
+	}
+
+	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg.ivc_hdr.tag;
+	priv_data_ptr->priv_data = (unsigned int *)&priv;
+	priv.cmd = VIRTUAL_SE_PROCESS;
+	priv.se_dev = se_dev;
+	init_completion(&priv.alg_complete);
+
+	err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, &priv, &ivc_req_msg,
+			sizeof(struct tegra_virtual_se_ivc_msg_t), hmac_ctx->node_id);
+	if (err) {
+		dev_err(se_dev->dev, "failed to send data over ivc err %d\n", err);
+		goto unmap_exit;
+	}
+
+	if (priv.rx_status != 0) {
+		err = status_to_errno(priv.rx_status);
+		dev_err(se_dev->dev, "%s: SE server returned error %u\n",
+				__func__, priv.rx_status);
+		goto unmap_exit;
+	}
+
+	if (is_last) {
+		if (hmac_req_data->request_type == HMAC_SHA_VERIFY) {
+			if (se_dev->chipdata->hmac_verify_hw_support == false) {
+				ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_HMAC_GET_VERIFY;
+				priv.cmd = VIRTUAL_SE_PROCESS;
+				init_completion(&priv.alg_complete);
+				err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, &priv,
+					&ivc_req_msg, sizeof(struct tegra_virtual_se_ivc_msg_t),
+					hmac_ctx->node_id);
+				if (err) {
+					dev_err(se_dev->dev,
+						"failed to send data over ivc err %d\n", err);
+					goto unmap_exit;
+				}
+
+				if (priv.rx_status == 0) {
+					hmac_req_data->result = 0;
+				} else if (priv.rx_status != TEGRA_VIRTUAL_SE_ERR_MAC_INVALID) {
+					dev_dbg(se_dev->dev, "%s: tag mismatch", __func__);
+					hmac_req_data->result = 1;
+				} else {
+					err = status_to_errno(priv.rx_status);
+					dev_err(se_dev->dev, "%s: SE server returned error %u\n",
+							__func__, priv.rx_status);
+				}
+			} else {
+				if (memcmp(match_code_buf, &matchcode, 4) == 0) {
+					hmac_req_data->result = 0;
+				} else if (memcmp(match_code_buf, &mismatch_code, 4) == 0) {
+					dev_dbg(se_dev->dev, "%s: tag mismatch", __func__);
+					hmac_req_data->result = 1;
+				} else {
+					dev_err(se_dev->dev, "%s: invalid tag match code",
+							__func__);
+					err = -EINVAL;
+				}
+			}
+		} else {
+			memcpy(req->result, hash_buf, TEGRA_VIRTUAL_SE_SHA_MAX_HMAC_SHA_LENGTH);
+		}
+	}
+
+unmap_exit:
+	if (src_buf)
+		dma_free_coherent(se_dev->dev, msg_len, src_buf, src_buf_addr);
+
+	if (hash_buf)
+		dma_free_coherent(se_dev->dev, hmac_ctx->digest_size, hash_buf, hash_buf_addr);
+
+	if (verify_result_buf)
+		dma_free_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_SHA_MAX_HMAC_SHA_LENGTH,
+			verify_result_buf, verify_result_addr);
+
+	if (match_code_buf)
+		dma_free_coherent(se_dev->dev, match_code_buf_size, match_code_buf,
+			match_code_addr);
+
+	return err;
+}
+
+static int tegra_hv_vse_safety_hmac_sha_update(struct ahash_request *req)
+{
+	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
+	struct tegra_virtual_se_hmac_sha_context *hmac_ctx;
+	struct tegra_virtual_se_dev *se_dev;
+	int ret = 0;
+
+	if (!req) {
+		pr_err("%s HMAC SHA request not valid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!req_ctx->req_context_initialized) {
+		pr_err("%s Request ctx not initialized\n", __func__);
+		return -EINVAL;
+	}
+
+	hmac_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	if (!hmac_ctx) {
+		pr_err("%s HMAC SHA req_ctx not valid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!hmac_ctx->is_key_slot_allocated) {
+		pr_err("%s key is not allocated\n", __func__);
+		return -EINVAL;
+	}
+
+	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[hmac_ctx->node_id].se_engine];
+
+	/* Return error if engine is in suspended state */
+	if (atomic_read(&se_dev->se_suspended))
+		return -ENODEV;
+
+	ret = tegra_hv_vse_safety_hmac_sha_sv_op(req, false);
+	if (ret)
+		dev_err(se_dev->dev, "tegra_se_hmac_sha_update failed - %d\n", ret);
+
+	return ret;
+}
+
+static int tegra_hv_vse_safety_hmac_sha_finup(struct ahash_request *req)
+{
+	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
+	struct tegra_virtual_se_hmac_sha_context *hmac_ctx = NULL;
+	struct tegra_virtual_se_dev *se_dev;
+	int ret = 0;
+
+	if (!req) {
+		pr_err("%s HMAC-SHA request not valid\n", __func__);
+		return -EINVAL;
+	}
+
+	hmac_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	if (!hmac_ctx) {
+		pr_err("%s HMAC-SHA req_ctx not valid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!hmac_ctx->is_key_slot_allocated) {
+		pr_err("%s key is not allocated\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!req_ctx->req_context_initialized) {
+		pr_err("%s Request ctx not initialized\n", __func__);
+		return -EINVAL;
+	}
+
+	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[hmac_ctx->node_id].se_engine];
+
+	/* Return error if engine is in suspended state */
+	if (atomic_read(&se_dev->se_suspended))
+		return -ENODEV;
+
+	ret = tegra_hv_vse_safety_hmac_sha_sv_op(req, true);
+	if (ret)
+		dev_err(se_dev->dev, "tegra_se_hmac_sha_finup failed - %d\n", ret);
+
+	hmac_ctx->is_key_slot_allocated = false;
+	req_ctx->req_context_initialized = false;
+
+	return ret;
+}
+
+static int tegra_hv_vse_safety_hmac_sha_final(struct ahash_request *req)
+{
+	// Unsupported
+	return -EINVAL;
+}
+
+static int tegra_hv_vse_safety_hmac_sha_digest(struct ahash_request *req)
+{
+	// Unsupported
+	return -EINVAL;
+}
+
 static int tegra_hv_vse_safety_sha_export(struct ahash_request *req, void *out)
 {
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
@@ -1866,25 +2393,6 @@ static void tegra_hv_vse_safety_prepare_cmd(struct tegra_virtual_se_dev *se_dev,
 				aes->op.ivsel = AES_IV_REG;
 		}
 	}
-}
-
-static int status_to_errno(u32 err)
-{
-	switch (err) {
-	case 1:		/* VSE_MSG_ERR_INVALID_CMD */
-	case 3:		/* VSE_MSG_ERR_INVALID_ARGS */
-	case 11:	/* VSE_MSG_ERR_MAC_INVALID */
-		return -EINVAL;
-	case 4:		/* VSE_MSG_ERR_INVALID_KEY */
-	case 5:		/* VSE_MSG_ERR_CTR_OVERFLOW */
-	case 6:		/* VSE_MSG_ERR_INVALID_SUBKEY */
-	case 7:		/* VSE_MSG_ERR_CTR_NONCE_INVALID */
-	case 8:		/* VSE_MSG_ERR_GCM_IV_INVALID */
-	case 9:		/* VSE_MSG_ERR_GCM_NONCE_INVALID */
-	case 10:	/* VSE_MSG_ERR_GMAC_INVALID_PARAMS */
-		return -EPERM;
-	}
-	return err;
 }
 
 static int tegra_hv_vse_safety_aes_gen_random_iv(
@@ -4822,7 +5330,31 @@ static struct ahash_alg sha_algs[] = {
 			.cra_init = tegra_hv_vse_safety_sha_cra_init,
 			.cra_exit = tegra_hv_vse_safety_sha_cra_exit,
 		}
-	},
+	}, {
+		.init = tegra_hv_vse_safety_hmac_sha_init,
+		.update = tegra_hv_vse_safety_hmac_sha_update,
+		.final = tegra_hv_vse_safety_hmac_sha_final,
+		.finup = tegra_hv_vse_safety_hmac_sha_finup,
+		.digest = tegra_hv_vse_safety_hmac_sha_digest,
+		.export = tegra_hv_vse_safety_sha_export,
+		.import = tegra_hv_vse_safety_sha_import,
+		.setkey = tegra_hv_vse_safety_hmac_sha_setkey,
+		.halg.digestsize = SHA256_DIGEST_SIZE,
+		.halg.statesize = sizeof(struct tegra_virtual_se_req_context),
+		.halg.base = {
+			.cra_name = "hmac-sha256-vse",
+			.cra_driver_name = "tegra-hv-vse-safety-hmac-sha256",
+			.cra_priority = 300,
+			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
+			.cra_blocksize = SHA256_BLOCK_SIZE,
+			.cra_ctxsize =
+				sizeof(struct tegra_virtual_se_hmac_sha_context),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_hv_vse_safety_sha_cra_init,
+			.cra_exit = tegra_hv_vse_safety_sha_cra_exit,
+		}
+	}
 };
 
 static const struct tegra_vse_soc_info t194_vse_sinfo = {
@@ -4830,6 +5362,7 @@ static const struct tegra_vse_soc_info t194_vse_sinfo = {
 	.cmac_hw_verify_supported = false,
 	.sm_supported = false,
 	.gcm_hw_iv_supported = false,
+	.hmac_verify_hw_support = false,
 };
 
 static const struct tegra_vse_soc_info t234_vse_sinfo = {
@@ -4837,6 +5370,7 @@ static const struct tegra_vse_soc_info t234_vse_sinfo = {
 	.cmac_hw_verify_supported = false,
 	.sm_supported = false,
 	.gcm_hw_iv_supported = false,
+	.hmac_verify_hw_support = false,
 };
 
 static const struct tegra_vse_soc_info se_51_vse_sinfo = {
@@ -4844,6 +5378,7 @@ static const struct tegra_vse_soc_info se_51_vse_sinfo = {
 	.cmac_hw_verify_supported = true,
 	.sm_supported = true,
 	.gcm_hw_iv_supported = true,
+	.hmac_verify_hw_support = true,
 };
 
 static const struct of_device_id tegra_hv_vse_safety_of_match[] = {

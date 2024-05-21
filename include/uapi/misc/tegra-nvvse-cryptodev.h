@@ -29,6 +29,7 @@
 #define TEGRA_NVVSE_CMDID_GET_IVC_DB			12
 #define TEGRA_NVVSE_CMDID_TSEC_SIGN_VERIFY		13
 #define TEGRA_NVVSE_CMDID_TSEC_GET_KEYLOAD_STATUS	14
+#define TEGRA_NVVSE_CMDID_HMAC_SHA_SIGN_VERIFY		15
 
 /** Defines the length of the AES-CBC Initial Vector */
 #define TEGRA_NVVSE_AES_IV_LEN				16U
@@ -42,6 +43,8 @@
 #define TEGRA_NVVSE_AES_CMAC_LEN			16U
 /** Defines the counter offset byte in the AES Initial counter*/
 #define TEGRA_COUNTER_OFFSET				12U
+/** Defines the length of the HMAC SHA Hash */
+#define TEGRA_NVVSE_HMAC_SHA256_LEN			32U
 
 /**
   * @brief Defines SHA Types.
@@ -67,6 +70,16 @@ enum tegra_nvvse_sha_type {
 	TEGRA_NVVSE_SHA_TYPE_SM3,
 	/** Defines maximum SHA Type, must be last entry */
 	TEGRA_NVVSE_SHA_TYPE_MAX,
+};
+
+/**
+ * \brief Defines HMAC SHA request type.
+ */
+enum tegra_nvvse_hmac_sha_sv_type {
+	/** Defines AES GMAC Sign */
+	TEGRA_NVVSE_HMAC_SHA_SIGN = 0u,
+	/** Defines AES GMAC Verify */
+	TEGRA_NVVSE_HMAC_SHA_VERIFY,
 };
 
 /**
@@ -141,6 +154,55 @@ struct tegra_nvvse_sha_final_ctl {
 };
 #define NVVSE_IOCTL_CMDID_FINAL_SHA _IOWR(TEGRA_NVVSE_IOC_MAGIC, TEGRA_NVVSE_CMDID_FINAL_SHA, \
 						struct tegra_nvvse_sha_final_ctl)
+
+struct tegra_nvvse_hmac_sha_sv_ctl {
+	/** [in] Holds the enum which indicates SHA mode */
+	enum  tegra_nvvse_sha_type hmac_sha_mode;
+	/** [in] Holds the enum which indicates HMAC SHA Sign or Verify */
+	enum  tegra_nvvse_hmac_sha_sv_type hmac_sha_type;
+	/** [in] Holds a Boolean that specifies whether this is first
+	 * chunk of message for HMAC-SHA Sign/Verify.
+	 * '0' value indicates it is not First call and
+	 * Non zero value indicates it is the first call.
+	 */
+	uint8_t  is_first;
+	/** [in] Holds a Boolean that specifies whether this is last
+	 * chunk of message for HMAC-SHA Sign/Verify.
+	 * '0' value indicates it is not Last call and
+	 *  Non zero value indicates it is the Last call.
+	 */
+	uint8_t  is_last;
+	/** [in] Holds a keyslot handle which is used for HMAC-SHA operation */
+	uint8_t	key_slot[KEYSLOT_SIZE_BYTES];
+	/** [in] Holds the Key length
+	 * Supported keylength is only 16 bytes and 32 bytes
+	 */
+	uint8_t  key_length;
+	/** [in] Holds a pointer to the input source buffer for which
+	 *  HMAC-SHA is to be calculated/verified.
+	 */
+	uint8_t *src_buffer;
+	/** [in] Holds the Length of the input source buffer.
+	 * data_length shall not be "0" supported for single part sign and verify
+	 * data_length shall be multiple of hashblock size if it is not the last chunk
+	 * i.e when is_last is "0"
+	 */
+	uint32_t data_length;
+	/** Holds the pointer of the digest buffer */
+	uint8_t		*digest_buffer;
+	/** Holds the digest buffer length */
+	uint32_t digest_length;
+	/** [out] Holds HMAC-SHA verification result, which the driver updates.
+	 * Valid only when hmac_sha_type is TEGRA_NVVSE_HMAC_SHA_VERIFY.
+	 * Result values are:
+	 * - '0' indicates HMAC-SHA verification success.
+	 * - Non-zero value indicates HMAC-SHA verification failure.
+	 */
+	uint8_t  result;
+};
+#define NVVSE_IOCTL_CMDID_HMAC_SHA_SIGN_VERIFY _IOWR(TEGRA_NVVSE_IOC_MAGIC, \
+						TEGRA_NVVSE_CMDID_HMAC_SHA_SIGN_VERIFY, \
+						struct tegra_nvvse_hmac_sha_sv_ctl)
 
 /**
   *  \brief Holds AES encrypt/decrypt parameters for IO Control.
