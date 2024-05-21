@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012 Avionic Design GmbH
- * Copyright (C) 2012-2013, NVIDIA Corporation
+ * Copyright (C) 2012-2024, NVIDIA Corporation
  */
 
 #include <nvidia/conftest.h>
@@ -337,7 +337,7 @@ static int host1x_del_client(struct host1x *host1x,
 
 static int host1x_device_match(struct device *dev, struct device_driver *drv)
 {
-	return strcmp(dev_name(dev), drv->name) == 0;
+	return strstr(dev_name(dev), drv->name) != NULL;
 }
 
 #if defined(NV_BUS_TYPE_STRUCT_UEVENT_HAS_CONST_DEV_ARG) /* Linux v6.3 */
@@ -476,7 +476,7 @@ static int host1x_device_add(struct host1x *host1x,
 
 	device->dev.coherent_dma_mask = host1x->dev->coherent_dma_mask;
 	device->dev.dma_mask = &device->dev.coherent_dma_mask;
-	dev_set_name(&device->dev, "%s", driver->driver.name);
+	dev_set_name(&device->dev, "%s.%s", dev_name(host1x->dev), driver->driver.name);
 	device->dev.release = host1x_device_release;
 	device->dev.bus = &host1x_bus_type;
 	device->dev.parent = host1x->dev;

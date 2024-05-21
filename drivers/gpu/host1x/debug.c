@@ -3,7 +3,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (C) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -191,7 +191,16 @@ static const struct file_operations host1x_debug_fops = {
 
 static void host1x_debugfs_init(struct host1x *host1x)
 {
-	struct dentry *de = debugfs_create_dir("tegra-host1x", NULL);
+	struct dentry *de;
+	char dir_name[64];
+	int numa_node = dev_to_node(host1x->dev);
+
+	if (numa_node != NUMA_NO_NODE)
+		sprintf(dir_name, "tegra-host1x.%d", numa_node);
+	else
+		sprintf(dir_name, "tegra-host1x");
+
+	de = debugfs_create_dir(dir_name, NULL);
 
 	/* Store the created entry */
 	host1x->debugfs = de;
