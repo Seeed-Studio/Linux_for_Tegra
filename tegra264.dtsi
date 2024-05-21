@@ -9,6 +9,7 @@
 #include <dt-bindings/pinctrl/pinctrl-tegra-io-pad.h>
 #include <dt-bindings/reset/tegra264-reset.h>
 #include <dt-bindings/soc/tegra264-powergate.h>
+#include <dt-bindings/thermal/tegra264-thermal.h>
 
 / {
 	compatible = "nvidia,tegra264";
@@ -7783,6 +7784,38 @@
 		mixer-controls {
 			compatible = "nvidia,tegra264-mixer-control",
 					"nvidia,tegra234-mixer-control";
+		};
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			status = "disabled";
+
+			thermal-sensors = <&bpmp_thermal TEGRA264_THERMAL_ZONE_CPU_MAX>;
+		};
+
+		gpu-thermal {
+			status = "disabled";
+
+			thermal-sensors = <&bpmp_thermal TEGRA264_THERMAL_ZONE_GPU_MAX>;
+		};
+
+		soc012-thermal {
+			status = "disabled";
+
+			thermal-sensors = <&bpmp_thermal TEGRA264_THERMAL_ZONE_SOC_012_MAX>;
+		};
+
+		soc345-thermal {
+			status = "disabled";
+
+			thermal-sensors = <&bpmp_thermal TEGRA264_THERMAL_ZONE_SOC_345_MAX>;
+		};
+
+		tj-thermal {
+			status = "disabled";
+
+			thermal-sensors = <&bpmp_thermal TEGRA264_THERMAL_ZONE_TJ_MAX>;
 		};
 	};
 
