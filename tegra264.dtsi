@@ -5136,6 +5136,12 @@
 			};
 		};
 
+		mc_carveout: mc_carveout@8108020000 {
+			compatible = "nvidia,tegra-t26x-mc";
+			reg = <0x81 0x08020000 0x0 0x20000>;
+			status = "disabled";
+		};
+
 		mc: memory-controller@8108020000 {
 			compatible = "nvidia,tegra264-mc",
 				     "nvidia,tegra234-mc";
