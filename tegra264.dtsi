@@ -6968,7 +6968,7 @@
 			#size-cells = <0>;
 		};
 
-		bpmpthermal {
+		bpmp_thermal: thermal {
 			compatible = "nvidia,tegra186-bpmp-thermal";
 			status = "disabled";
 
