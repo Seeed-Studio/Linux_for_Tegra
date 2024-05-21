@@ -1,5 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved. */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * virtual_i2c_mux.c - virtual i2c mux driver for P3762 & P3783 GMSL boards.
  */
@@ -87,7 +87,11 @@ static int virtual_i2c_mux_probe(struct i2c_client *client,
 
 	for (chan = 0; chan < children; chan++) {
 		pr_info("%s:  chan = %d\n",__func__, chan);
+#if defined(NV_I2C_MUX_ADD_ADAPTER_HAS_NO_CLASS_ARG)
+		ret = i2c_mux_add_adapter(muxc, 0, chan);
+#else
 		ret = i2c_mux_add_adapter(muxc, 0, chan, 0);
+#endif
 		if (ret)
 			goto err_children;
 	}

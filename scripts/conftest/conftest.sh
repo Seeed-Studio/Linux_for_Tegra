@@ -5467,6 +5467,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_I2C_DRIVER_STRUCT_REMOVE_RETURN_TYPE_INT" "" "types"
         ;;
 
+        i2c_mux_add_adapter_has_no_class_argument)
+            #
+            # Determine if the i2c_mux_add_adapter() has no class argument.
+            #
+            # Commit fec1982d7072 ("i2c: mux: Remove class argument from i2c_mux_add_adapter()")
+            # removed the 'class' argument from i2c_mux_add_adapter() in Linux v6.10.
+            #
+            CODE="
+            #define _LINUX_EFI_H
+            #include <linux/i2c-mux.h>
+            int conftest_i2c_mux_add_adapter_has_no_class_argument(struct i2c_mux_core *muxc) {
+                return i2c_mux_add_adapter(muxc, 0, 0);
+            }"
+
+            compile_check_conftest "$CODE" "NV_I2C_MUX_ADD_ADAPTER_HAS_NO_CLASS_ARG" "" "types"
+        ;;
+
         of_get_named_gpio)
             #
             # Determine if of_get_named_gpio() function is present
