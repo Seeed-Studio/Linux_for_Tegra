@@ -5524,6 +5524,7 @@
 			dma-coherent;
 			msi-parent = <&its 0x120000>;
 
+			linux,pci-domain = <0x2>;
 			nvidia,bpmp = <&bpmp 0x2>;
 		};
 
@@ -5620,6 +5621,7 @@
 			dma-coherent;
 			msi-parent = <&its 0x140000>;
 
+			linux,pci-domain = <0x4>;
 			nvidia,bpmp = <&bpmp 0x4>;
 		};
 
@@ -5683,6 +5685,7 @@
 			dma-coherent;
 			msi-parent = <&its 0x150000>;
 
+			linux,pci-domain = <0x5>;
 			nvidia,bpmp = <&bpmp 0x5>;
 		};
 
