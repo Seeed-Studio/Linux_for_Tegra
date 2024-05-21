@@ -7866,7 +7866,7 @@
 	};
 
 	sound {
-		compatible = "nvidia,tegra186-audio-graph-card";
+		compatible = "nvidia,tegra264-audio-graph-card";
 
 		clocks = <&bpmp TEGRA264_CLK_PLLA1>,
 				<&bpmp TEGRA264_CLK_PLLA1_OUT1>;
