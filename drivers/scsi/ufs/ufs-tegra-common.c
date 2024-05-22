@@ -685,10 +685,13 @@ static int ufs_tegra_init_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 		"pll_p", &ufs_tegra->ufshc_parent);
 	if (err)
 		goto out;
-	err = ufs_tegra_host_clk_get(dev,
-		"clk_m", &ufs_tegra->ufsdev_parent);
-	if (err)
-		goto out;
+	if (ufs_tegra->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_get(dev,
+			"clk_m", &ufs_tegra->ufsdev_parent);
+		if (err)
+			goto out;
+	}
+
 	err = ufs_tegra_host_clk_get(dev,
 		"ufsdev_ref", &ufs_tegra->ufsdev_ref_clk);
 	if (err)
