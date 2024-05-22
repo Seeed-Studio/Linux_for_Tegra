@@ -353,6 +353,10 @@
 		status = "okay";
 	};
 
+	display@8808c00000 {
+		status = "okay";
+	};
+
 	/* Check if it has to go with L4TConfigurations.dtbo */
 	firmware {
 		uefi {
