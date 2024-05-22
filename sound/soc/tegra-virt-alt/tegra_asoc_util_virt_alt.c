@@ -9,9 +9,10 @@
 #include "tegra_asoc_util_virt_alt.h"
 
 const int tegra186_arad_mux_value[] = {
-	-1, /* None */
+	-1,			/* None */
 	0, 1, 2, 3, 4, 5,	/* I2S1~6 */
-	28, 29, 30, 31,	/* SPDIF_RX1,2 & SPDIF_TX1,2 */
+	12, 13, 14, 15,		/* DMIC1~4 */
+	24, 25,			/* DSPK1~2 */
 };
 
 const char * const tegra186_arad_mux_text[] = {
@@ -22,10 +23,12 @@ const char * const tegra186_arad_mux_text[] = {
 	"I2S4",
 	"I2S5",
 	"I2S6",
-	"SPDIF1_RX1",
-	"SPDIF1_RX2",
-	"SPDIF1_TX1",
-	"SPDIF1_TX2",
+	"DMIC1",
+	"DMIC2",
+	"DMIC3",
+	"DMIC4",
+	"DSPK1",
+	"DSPK2",
 };
 
 const char * const tegra186_asrc_ratio_source_text[] = {

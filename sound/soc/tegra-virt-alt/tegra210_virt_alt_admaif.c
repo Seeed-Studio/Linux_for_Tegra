@@ -257,13 +257,13 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 };
 
 #if defined(NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_PRESENT) /* Linux 6.5 */
-#define ADMAIF_DAI(id)							\
+#define ADMAIF_DAI(id, channels)							\
 	{							\
 		.name = "ADMAIF" #id,				\
 		.playback = {					\
 			.stream_name = "Playback " #id,		\
 			.channels_min = 1,			\
-			.channels_max = 16,			\
+			.channels_max = channels,		\
 			.rates = SNDRV_PCM_RATE_8000_192000,	\
 			.formats = SNDRV_PCM_FMTBIT_S8 |	\
 				SNDRV_PCM_FMTBIT_S16_LE |	\
@@ -273,7 +273,7 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 		.capture = {					\
 			.stream_name = "Capture " #id,		\
 			.channels_min = 1,			\
-			.channels_max = 16,			\
+			.channels_max = channels,		\
 			.rates = SNDRV_PCM_RATE_8000_192000,		\
 			.formats = SNDRV_PCM_FMTBIT_S8 |		\
 				SNDRV_PCM_FMTBIT_S16_LE |		\
@@ -283,14 +283,14 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 		.ops = &tegra210_admaif_dai_ops,			\
 	}
 #else
-#define ADMAIF_DAI(id)							\
+#define ADMAIF_DAI(id, channels)							\
 	{							\
 		.name = "ADMAIF" #id,				\
 		.probe = tegra210_admaif_dai_probe,		\
 		.playback = {					\
 			.stream_name = "Playback " #id,		\
 			.channels_min = 1,			\
-			.channels_max = 16,			\
+			.channels_max = channels,		\
 			.rates = SNDRV_PCM_RATE_8000_192000,	\
 			.formats = SNDRV_PCM_FMTBIT_S8 |	\
 				SNDRV_PCM_FMTBIT_S16_LE |	\
@@ -300,7 +300,7 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 		.capture = {					\
 			.stream_name = "Capture " #id,		\
 			.channels_min = 1,			\
-			.channels_max = 16,			\
+			.channels_max = channels,			\
 			.rates = SNDRV_PCM_RATE_8000_192000,		\
 			.formats = SNDRV_PCM_FMTBIT_S8 |		\
 				SNDRV_PCM_FMTBIT_S16_LE |		\
@@ -313,26 +313,61 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 
 
 static struct snd_soc_dai_driver tegra210_admaif_dais[] = {
-	ADMAIF_DAI(1),
-	ADMAIF_DAI(2),
-	ADMAIF_DAI(3),
-	ADMAIF_DAI(4),
-	ADMAIF_DAI(5),
-	ADMAIF_DAI(6),
-	ADMAIF_DAI(7),
-	ADMAIF_DAI(8),
-	ADMAIF_DAI(9),
-	ADMAIF_DAI(10),
-	ADMAIF_DAI(11),
-	ADMAIF_DAI(12),
-	ADMAIF_DAI(13),
-	ADMAIF_DAI(14),
-	ADMAIF_DAI(15),
-	ADMAIF_DAI(16),
-	ADMAIF_DAI(17),
-	ADMAIF_DAI(18),
-	ADMAIF_DAI(19),
-	ADMAIF_DAI(20),
+	ADMAIF_DAI(1, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(2, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(3, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(4, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(5, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(6, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(7, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(8, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(9, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(10, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(11, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(12, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(13, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(14, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(15, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(16, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(17, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(18, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(19, TEGRA186_MAX_CHANNELS),
+	ADMAIF_DAI(20, TEGRA186_MAX_CHANNELS),
+};
+
+static struct snd_soc_dai_driver tegra264_admaif_dais[] = {
+	ADMAIF_DAI(1, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(2, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(3, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(4, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(5, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(6, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(7, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(8, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(9, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(10, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(11, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(12, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(13, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(14, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(15, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(16, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(17, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(18, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(19, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(20, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(21, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(22, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(23, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(24, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(25, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(26, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(27, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(28, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(29, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(30, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(31, TEGRA264_MAX_CHANNELS),
+	ADMAIF_DAI(32, TEGRA264_MAX_CHANNELS),
 };
 
 static const struct soc_enum tegra_virt_t186_asrc_source =
@@ -798,10 +833,386 @@ ADMA_REGDUMP_CTRL_DECL("ADMA31 regdump", 31),
 ADMA_REGDUMP_CTRL_DECL("ADMA32 regdump", 32),
 };
 
+static const struct snd_kcontrol_new tegra_virt_t264ref_controls[] = {
+MIXER_GAIN_CTRL_DECL("RX1 Gain", 0x00),
+MIXER_GAIN_CTRL_DECL("RX2 Gain", 0x01),
+MIXER_GAIN_CTRL_DECL("RX3 Gain", 0x02),
+MIXER_GAIN_CTRL_DECL("RX4 Gain", 0x03),
+MIXER_GAIN_CTRL_DECL("RX5 Gain", 0x04),
+MIXER_GAIN_CTRL_DECL("RX6 Gain", 0x05),
+MIXER_GAIN_CTRL_DECL("RX7 Gain", 0x06),
+MIXER_GAIN_CTRL_DECL("RX8 Gain", 0x07),
+MIXER_GAIN_CTRL_DECL("RX9 Gain", 0x08),
+MIXER_GAIN_CTRL_DECL("RX10 Gain", 0x09),
+
+MIXER_GAIN_INSTANT_CTRL_DECL("RX1 Gain Instant", 0x00),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX2 Gain Instant", 0x01),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX3 Gain Instant", 0x02),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX4 Gain Instant", 0x03),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX5 Gain Instant", 0x04),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX6 Gain Instant", 0x05),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX7 Gain Instant", 0x06),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX8 Gain Instant", 0x07),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX9 Gain Instant", 0x08),
+MIXER_GAIN_INSTANT_CTRL_DECL("RX10 Gain Instant", 0x09),
+
+MIXER_DURATION_CTRL_DECL("RX1 Duration", 0x00),
+MIXER_DURATION_CTRL_DECL("RX2 Duration", 0x01),
+MIXER_DURATION_CTRL_DECL("RX3 Duration", 0x02),
+MIXER_DURATION_CTRL_DECL("RX4 Duration", 0x03),
+MIXER_DURATION_CTRL_DECL("RX5 Duration", 0x04),
+MIXER_DURATION_CTRL_DECL("RX6 Duration", 0x05),
+MIXER_DURATION_CTRL_DECL("RX7 Duration", 0x06),
+MIXER_DURATION_CTRL_DECL("RX8 Duration", 0x07),
+MIXER_DURATION_CTRL_DECL("RX9 Duration", 0x08),
+MIXER_DURATION_CTRL_DECL("RX10 Duration", 0x09),
+
+MIXER_ENABLE_CTRL_DECL("Mixer Enable", 0x00),
+MIXER_SET_FADE("Mixer fade", 0x00),
+MIXER_GET_FADE_STATUS("Mixer fade status", 0x00),
+
+SFC_IN_FREQ_CTRL_DECL("SFC1 input rate", 0x00),
+SFC_IN_FREQ_CTRL_DECL("SFC2 input rate", 0x01),
+SFC_IN_FREQ_CTRL_DECL("SFC3 input rate", 0x02),
+SFC_IN_FREQ_CTRL_DECL("SFC4 input rate", 0x03),
+
+SFC_OUT_FREQ_CTRL_DECL("SFC1 output rate", 0x00),
+SFC_OUT_FREQ_CTRL_DECL("SFC2 output rate", 0x01),
+SFC_OUT_FREQ_CTRL_DECL("SFC3 output rate", 0x02),
+SFC_OUT_FREQ_CTRL_DECL("SFC4 output rate", 0x03),
+
+MVC_CURVE_TYPE_CTRL_DECL("MVC1 Curve Type", 0x00,
+			&tegra_virt_t210_mvc_curvetype),
+MVC_CURVE_TYPE_CTRL_DECL("MVC2 Curve Type", 0x01,
+			&tegra_virt_t210_mvc_curvetype),
+
+MVC_TAR_VOL_CTRL_DECL("MVC1 Vol", 0x00),
+MVC_TAR_VOL_CTRL_DECL("MVC2 Vol", 0x01),
+
+MVC_MUTE_CTRL_DECL("MVC1 Mute", 0x00),
+MVC_MUTE_CTRL_DECL("MVC2 Mute", 0x01),
+
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio1", 0x01),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio2", 0x02),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio3", 0x03),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio4", 0x04),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio5", 0x05),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio6", 0x06),
+
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio1 SRC", 0x01,
+			&tegra_virt_t186_asrc_source),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio2 SRC", 0x02,
+			&tegra_virt_t186_asrc_source),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio3 SRC", 0x03,
+			&tegra_virt_t186_asrc_source),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio4 SRC", 0x04,
+			&tegra_virt_t186_asrc_source),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio5 SRC", 0x05,
+			&tegra_virt_t186_asrc_source),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio6 SRC", 0x06,
+			&tegra_virt_t186_asrc_source),
+
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream1 Enable", 0x01),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream2 Enable", 0x02),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream3 Enable", 0x03),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream4 Enable", 0x04),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream5 Enable", 0x05),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream6 Enable", 0x06),
+
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Stream1 Hwcomp Disable", 0x01),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Stream2 Hwcomp Disable", 0x02),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Stream3 Hwcomp Disable", 0x03),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Stream4 Hwcomp Disable", 0x04),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Stream5 Hwcomp Disable", 0x05),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Stream6 Hwcomp Disable", 0x06),
+
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream1 Input Thresh", 0x01),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream2 Input Thresh", 0x02),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream3 Input Thresh", 0x03),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream4 Input Thresh", 0x04),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream5 Input Thresh", 0x05),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream6 Input Thresh", 0x06),
+
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream1 Output Thresh", 0x01),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream2 Output Thresh", 0x02),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream3 Output Thresh", 0x03),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream4 Output Thresh", 0x04),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream5 Output Thresh", 0x05),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream6 Output Thresh", 0x06),
+
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator1 Mux", numerator1_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator2 Mux", numerator2_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator3 Mux", numerator3_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator4 Mux", numerator4_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator5 Mux", numerator5_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator6 Mux", numerator6_enum,
+				&tegra_virt_t186_arad_source),
+
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator1 Mux", denominator1_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator2 Mux", denominator2_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator3 Mux", denominator3_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator4 Mux", denominator4_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator5 Mux", denominator5_enum,
+				&tegra_virt_t186_arad_source),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator6 Mux", denominator6_enum,
+				&tegra_virt_t186_arad_source),
+
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator1 Prescalar", numerator1_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator2 Prescalar", numerator2_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator3 Prescalar", numerator3_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator4 Prescalar", numerator4_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator5 Prescalar", numerator5_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator6 Prescalar", numerator6_enum),
+
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator1 Prescalar", denominator1_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator2 Prescalar", denominator2_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator3 Prescalar", denominator3_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator4 Prescalar", denominator4_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator5 Prescalar", denominator5_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator6 Prescalar", denominator6_enum),
+
+ARAD_LANE_ENABLE_CTRL_DECL("Lane1 enable", 0x00),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane2 enable", 0x01),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane3 enable", 0x02),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane4 enable", 0x03),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane5 enable", 0x04),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane6 enable", 0x05),
+
+ARAD_LANE_RATIO_CTRL_DECL("Lane1 Ratio", 0x00),
+ARAD_LANE_RATIO_CTRL_DECL("Lane2 Ratio", 0x01),
+ARAD_LANE_RATIO_CTRL_DECL("Lane3 Ratio", 0x02),
+ARAD_LANE_RATIO_CTRL_DECL("Lane4 Ratio", 0x03),
+ARAD_LANE_RATIO_CTRL_DECL("Lane5 Ratio", 0x04),
+ARAD_LANE_RATIO_CTRL_DECL("Lane6 Ratio", 0x05),
+
+AMX_ENABLE_CTRL_DECL("AMX1-1 Enable", 0x01, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX1-2 Enable", 0x01, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX1-3 Enable", 0x01, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX1-4 Enable", 0x01, 0x04),
+
+AMX_ENABLE_CTRL_DECL("AMX2-1 Enable", 0x02, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX2-2 Enable", 0x02, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX2-3 Enable", 0x02, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX2-4 Enable", 0x02, 0x04),
+
+AMX_ENABLE_CTRL_DECL("AMX3-1 Enable", 0x03, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX3-2 Enable", 0x03, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX3-3 Enable", 0x03, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX3-4 Enable", 0x03, 0x04),
+
+AMX_ENABLE_CTRL_DECL("AMX4-1 Enable", 0x04, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX4-2 Enable", 0x04, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX4-3 Enable", 0x04, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX4-4 Enable", 0x04, 0x04),
+
+AMX_ENABLE_CTRL_DECL("AMX5-1 Enable", 0x05, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX5-2 Enable", 0x05, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX5-3 Enable", 0x05, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX5-4 Enable", 0x05, 0x04),
+
+AMX_ENABLE_CTRL_DECL("AMX6-1 Enable", 0x06, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX6-2 Enable", 0x06, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX6-3 Enable", 0x06, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX6-4 Enable", 0x06, 0x04),
+
+I2S_SET_RATE("I2S1 rate", 0x01),
+I2S_SET_RATE("I2S2 rate", 0x02),
+I2S_SET_RATE("I2S3 rate", 0x03),
+I2S_SET_RATE("I2S4 rate", 0x04),
+I2S_SET_RATE("I2S5 rate", 0x05),
+I2S_SET_RATE("I2S6 rate", 0x06),
+I2S_SET_RATE("I2S7 rate", 0x07),
+I2S_SET_RATE("I2S8 rate", 0x08),
+
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S1 Loopback", 0x01),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S2 Loopback", 0x02),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S3 Loopback", 0x03),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S4 Loopback", 0x04),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S5 Loopback", 0x05),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S6 Loopback", 0x06),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S7 Loopback", 0x07),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S8 Loopback", 0x08),
+
+REGDUMP_CTRL_DECL("ADMAIF1 regdump", ADMAIF1, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF2 regdump", ADMAIF2, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF3 regdump", ADMAIF3, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF4 regdump", ADMAIF4, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF5 regdump", ADMAIF5, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF6 regdump", ADMAIF6, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF7 regdump", ADMAIF7, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF8 regdump", ADMAIF8, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF9 regdump", ADMAIF9, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF10 regdump", ADMAIF10, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF11 regdump", ADMAIF11, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF12 regdump", ADMAIF12, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF13 regdump", ADMAIF13, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF14 regdump", ADMAIF14, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF15 regdump", ADMAIF15, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF16 regdump", ADMAIF16, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF17 regdump", ADMAIF17, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF18 regdump", ADMAIF18, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF19 regdump", ADMAIF19, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF20 regdump", ADMAIF20, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF21 regdump", ADMAIF21, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF22 regdump", ADMAIF22, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF23 regdump", ADMAIF23, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF24 regdump", ADMAIF24, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF25 regdump", ADMAIF25, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF26 regdump", ADMAIF26, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF27 regdump", ADMAIF27, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF28 regdump", ADMAIF28, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF29 regdump", ADMAIF29, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF30 regdump", ADMAIF30, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF31 regdump", ADMAIF31, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADMAIF32 regdump", ADMAIF32, 0, NVAUDIO_REGDUMP_RX_TX),
+
+REGDUMP_CTRL_DECL("AMX1 regdump", AMX1, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("AMX2 regdump", AMX2, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("AMX3 regdump", AMX3, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("AMX4 regdump", AMX4, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("AMX5 regdump", AMX5, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("AMX6 regdump", AMX6, 0, NVAUDIO_REGDUMP_RX_TX),
+
+REGDUMP_CTRL_DECL("ADX1 regdump", ADX1, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADX2 regdump", ADX2, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADX3 regdump", ADX3, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADX4 regdump", ADX4, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADX5 regdump", ADX5, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ADX6 regdump", ADX6, 0, NVAUDIO_REGDUMP_RX_TX),
+
+REGDUMP_CTRL_DECL("MIXER1-1 RX regdump", MIXER1, 0, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-2 RX regdump", MIXER1, 1, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-3 RX regdump", MIXER1, 2, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-4 RX regdump", MIXER1, 3, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-5 RX regdump", MIXER1, 4, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-6 RX regdump", MIXER1, 5, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-7 RX regdump", MIXER1, 6, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-8 RX regdump", MIXER1, 7, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-9 RX regdump", MIXER1, 8, NVAUDIO_REGDUMP_RX),
+REGDUMP_CTRL_DECL("MIXER1-10 RX regdump", MIXER1, 9, NVAUDIO_REGDUMP_RX),
+
+REGDUMP_CTRL_DECL("MIXER1-1 TX regdump", MIXER1, 0, NVAUDIO_REGDUMP_TX),
+REGDUMP_CTRL_DECL("MIXER1-2 TX regdump", MIXER1, 1, NVAUDIO_REGDUMP_TX),
+REGDUMP_CTRL_DECL("MIXER1-3 TX regdump", MIXER1, 2, NVAUDIO_REGDUMP_TX),
+REGDUMP_CTRL_DECL("MIXER1-4 TX regdump", MIXER1, 3, NVAUDIO_REGDUMP_TX),
+REGDUMP_CTRL_DECL("MIXER1-5 TX regdump", MIXER1, 4, NVAUDIO_REGDUMP_TX),
+
+REGDUMP_CTRL_DECL("I2S1 regdump", I2S1, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("I2S2 regdump", I2S2, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("I2S3 regdump", I2S3, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("I2S4 regdump", I2S4, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("I2S5 regdump", I2S5, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("I2S6 regdump", I2S6, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("I2S7 regdump", I2S7, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("I2S8 regdump", I2S8, 0, NVAUDIO_REGDUMP_RX_TX),
+
+REGDUMP_CTRL_DECL("ASRC1-1 regdump", ASRC1, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ASRC1-2 regdump", ASRC1, 1, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ASRC1-3 regdump", ASRC1, 2, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ASRC1-4 regdump", ASRC1, 3, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ASRC1-5 regdump", ASRC1, 4, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ASRC1-6 regdump", ASRC1, 5, NVAUDIO_REGDUMP_RX_TX),
+
+REGDUMP_CTRL_DECL("SFC1 regdump", SFC1, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("SFC2 regdump", SFC2, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("SFC3 regdump", SFC3, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("SFC4 regdump", SFC4, 0, NVAUDIO_REGDUMP_RX_TX),
+
+REGDUMP_CTRL_DECL("MVC1 regdump", MVC1, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("MVC2 regdump", MVC2, 0, NVAUDIO_REGDUMP_RX_TX),
+
+REGDUMP_CTRL_DECL("ARAD1 Lane1 regdump", ARAD1, 0, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ARAD1 Lane2 regdump", ARAD1, 1, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ARAD1 Lane3 regdump", ARAD1, 2, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ARAD1 Lane4 regdump", ARAD1, 3, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ARAD1 Lane5 regdump", ARAD1, 4, NVAUDIO_REGDUMP_RX_TX),
+REGDUMP_CTRL_DECL("ARAD1 Lane6 regdump", ARAD1, 5, NVAUDIO_REGDUMP_RX_TX),
+
+ADMA_REGDUMP_CTRL_DECL("ADMA1 regdump", 1),
+ADMA_REGDUMP_CTRL_DECL("ADMA2 regdump", 2),
+ADMA_REGDUMP_CTRL_DECL("ADMA3 regdump", 3),
+ADMA_REGDUMP_CTRL_DECL("ADMA4 regdump", 4),
+ADMA_REGDUMP_CTRL_DECL("ADMA5 regdump", 5),
+ADMA_REGDUMP_CTRL_DECL("ADMA6 regdump", 6),
+ADMA_REGDUMP_CTRL_DECL("ADMA7 regdump", 7),
+ADMA_REGDUMP_CTRL_DECL("ADMA8 regdump", 8),
+ADMA_REGDUMP_CTRL_DECL("ADMA9 regdump", 9),
+ADMA_REGDUMP_CTRL_DECL("ADMA10 regdump", 10),
+ADMA_REGDUMP_CTRL_DECL("ADMA11 regdump", 11),
+ADMA_REGDUMP_CTRL_DECL("ADMA12 regdump", 12),
+ADMA_REGDUMP_CTRL_DECL("ADMA13 regdump", 13),
+ADMA_REGDUMP_CTRL_DECL("ADMA14 regdump", 14),
+ADMA_REGDUMP_CTRL_DECL("ADMA15 regdump", 15),
+ADMA_REGDUMP_CTRL_DECL("ADMA16 regdump", 16),
+ADMA_REGDUMP_CTRL_DECL("ADMA17 regdump", 17),
+ADMA_REGDUMP_CTRL_DECL("ADMA18 regdump", 18),
+ADMA_REGDUMP_CTRL_DECL("ADMA19 regdump", 19),
+ADMA_REGDUMP_CTRL_DECL("ADMA20 regdump", 20),
+ADMA_REGDUMP_CTRL_DECL("ADMA21 regdump", 21),
+ADMA_REGDUMP_CTRL_DECL("ADMA22 regdump", 22),
+ADMA_REGDUMP_CTRL_DECL("ADMA23 regdump", 23),
+ADMA_REGDUMP_CTRL_DECL("ADMA24 regdump", 24),
+ADMA_REGDUMP_CTRL_DECL("ADMA25 regdump", 25),
+ADMA_REGDUMP_CTRL_DECL("ADMA26 regdump", 26),
+ADMA_REGDUMP_CTRL_DECL("ADMA27 regdump", 27),
+ADMA_REGDUMP_CTRL_DECL("ADMA28 regdump", 28),
+ADMA_REGDUMP_CTRL_DECL("ADMA29 regdump", 29),
+ADMA_REGDUMP_CTRL_DECL("ADMA30 regdump", 30),
+ADMA_REGDUMP_CTRL_DECL("ADMA31 regdump", 31),
+ADMA_REGDUMP_CTRL_DECL("ADMA32 regdump", 32),
+ADMA_REGDUMP_CTRL_DECL("ADMA33 regdump", 33),
+ADMA_REGDUMP_CTRL_DECL("ADMA34 regdump", 34),
+ADMA_REGDUMP_CTRL_DECL("ADMA35 regdump", 35),
+ADMA_REGDUMP_CTRL_DECL("ADMA36 regdump", 36),
+ADMA_REGDUMP_CTRL_DECL("ADMA37 regdump", 37),
+ADMA_REGDUMP_CTRL_DECL("ADMA38 regdump", 38),
+ADMA_REGDUMP_CTRL_DECL("ADMA39 regdump", 39),
+ADMA_REGDUMP_CTRL_DECL("ADMA40 regdump", 40),
+ADMA_REGDUMP_CTRL_DECL("ADMA41 regdump", 41),
+ADMA_REGDUMP_CTRL_DECL("ADMA42 regdump", 42),
+ADMA_REGDUMP_CTRL_DECL("ADMA43 regdump", 43),
+ADMA_REGDUMP_CTRL_DECL("ADMA44 regdump", 44),
+ADMA_REGDUMP_CTRL_DECL("ADMA45 regdump", 45),
+ADMA_REGDUMP_CTRL_DECL("ADMA46 regdump", 46),
+ADMA_REGDUMP_CTRL_DECL("ADMA47 regdump", 47),
+ADMA_REGDUMP_CTRL_DECL("ADMA48 regdump", 48),
+ADMA_REGDUMP_CTRL_DECL("ADMA49 regdump", 49),
+ADMA_REGDUMP_CTRL_DECL("ADMA50 regdump", 50),
+ADMA_REGDUMP_CTRL_DECL("ADMA51 regdump", 51),
+ADMA_REGDUMP_CTRL_DECL("ADMA52 regdump", 52),
+ADMA_REGDUMP_CTRL_DECL("ADMA53 regdump", 53),
+ADMA_REGDUMP_CTRL_DECL("ADMA54 regdump", 54),
+ADMA_REGDUMP_CTRL_DECL("ADMA55 regdump", 55),
+ADMA_REGDUMP_CTRL_DECL("ADMA56 regdump", 56),
+ADMA_REGDUMP_CTRL_DECL("ADMA57 regdump", 57),
+ADMA_REGDUMP_CTRL_DECL("ADMA58 regdump", 58),
+ADMA_REGDUMP_CTRL_DECL("ADMA59 regdump", 59),
+ADMA_REGDUMP_CTRL_DECL("ADMA60 regdump", 60),
+ADMA_REGDUMP_CTRL_DECL("ADMA61 regdump", 61),
+ADMA_REGDUMP_CTRL_DECL("ADMA62 regdump", 62),
+ADMA_REGDUMP_CTRL_DECL("ADMA63 regdump", 63),
+ADMA_REGDUMP_CTRL_DECL("ADMA64 regdump", 64),
+};
+
 static struct snd_soc_component_driver tegra210_admaif_dai_driver = {
 	.name		= "tegra210-virt-pcm",
-	.controls = tegra_virt_t186ref_controls,
-	.num_controls = ARRAY_SIZE(tegra_virt_t186ref_controls),
+	.controls	= tegra_virt_t186ref_controls,
+	.num_controls	= ARRAY_SIZE(tegra_virt_t186ref_controls),
+};
+
+static struct snd_soc_component_driver tegra264_admaif_dai_driver = {
+	.name		= "tegra264-virt-pcm",
+	.controls	= tegra_virt_t264ref_controls,
+	.num_controls	= ARRAY_SIZE(tegra_virt_t264ref_controls),
 };
 
 int tegra210_virt_admaif_register_component(struct platform_device *pdev,
@@ -813,7 +1224,6 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev,
 	unsigned int admaif_ch_list[MAX_ADMAIF_IDS] = {0};
 	struct tegra_virt_admaif_soc_data *soc_data = data;
 	int adma_count = 0;
-	bool meta_enabled = false;
 	unsigned int buffer_size;
 
 	admaif = devm_kzalloc(&pdev->dev, sizeof(*admaif), GFP_KERNEL);
@@ -821,9 +1231,10 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev,
 		ret = -ENOMEM;
 		goto err;
 	}
+
+	admaif->num_ch = soc_data->num_ch;
 	admaif->client_data.hivc_client =
 			nvaudio_ivc_alloc_ctxt(&pdev->dev);
-
 	if (!admaif->client_data.hivc_client) {
 		dev_err(&pdev->dev, "Failed to allocate IVC context\n");
 		ret = -ENODEV;
@@ -883,6 +1294,14 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev,
 			admaif->capture_dma_data[i].addr = TEGRA186_ADMAIF_BASE +
 					TEGRA186_ADMAIF_XBAR_RX_FIFO_READ +
 					(i * TEGRA186_ADMAIF_CHANNEL_REG_STRIDE);
+		} else if (of_device_is_compatible(pdev->dev.of_node,
+			"nvidia,tegra264-virt-pcm-oot")) {
+			admaif->playback_dma_data[i].addr = TEGRA264_ADMAIF_BASE +
+					TEGRA264_ADMAIF_XBAR_TX_FIFO_WRITE +
+					(i * TEGRA264_ADMAIF_CHANNEL_REG_STRIDE);
+			admaif->capture_dma_data[i].addr = TEGRA264_ADMAIF_BASE +
+					TEGRA264_ADMAIF_XBAR_RX_FIFO_READ +
+					(i * TEGRA264_ADMAIF_CHANNEL_REG_STRIDE);
 		} else if (of_device_is_compatible(pdev->dev.of_node,
 			"nvidia,tegra210-virt-pcm")) {
 			admaif->playback_dma_data[i].addr = TEGRA210_ADMAIF_BASE +
@@ -951,18 +1370,18 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev,
 		adma_count++;
 	}
 
-	/* Remove exposing metadata controls if not enabled in device node */
-	meta_enabled = of_property_read_bool(pdev->dev.of_node,
-		"sad_enabled");
-	if (!meta_enabled) {
-		tegra210_admaif_dai_driver.num_controls =
-		ARRAY_SIZE(tegra_virt_t186ref_controls) - NUM_META_CONTROLS;
-	}
-
-	ret = tegra_register_component(&pdev->dev,
+	if (of_device_is_compatible(pdev->dev.of_node,
+				"nvidia,tegra264-virt-pcm-oot")) {
+		ret = tegra_register_component(&pdev->dev,
+					&tegra264_admaif_dai_driver,
+					tegra264_admaif_dais,
+					soc_data->num_ch, "admaif");
+	} else {
+		ret = tegra_register_component(&pdev->dev,
 					&tegra210_admaif_dai_driver,
 					tegra210_admaif_dais,
 					soc_data->num_ch, "admaif");
+	}
 	if (ret) {
 		dev_err(&pdev->dev, "Could not register DAIs %d: %d\n",
 			i, ret);

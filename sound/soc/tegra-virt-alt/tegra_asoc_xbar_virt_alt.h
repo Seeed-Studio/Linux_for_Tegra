@@ -12,6 +12,9 @@
 #define TEGRA_T186_SRC_NUM_MUX	83
 #define TEGRA_T210_SRC_NUM_MUX	55
 
+#define TEGRA186_MAX_CHANNELS	16
+#define TEGRA264_MAX_CHANNELS	32
+
 #define MUX_REG(id) (TEGRA_XBAR_RX_STRIDE * (id))
 #define SOC_ENUM_EXT_REG(xname, xcount, xenum, xhandler_get, xhandler_put) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
