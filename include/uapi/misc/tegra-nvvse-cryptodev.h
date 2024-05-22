@@ -92,6 +92,10 @@ enum tegra_nvvse_aes_mode {
 	TEGRA_NVVSE_AES_MODE_CTR,
 	/** Defines AES MODE GCM */
 	TEGRA_NVVSE_AES_MODE_GCM,
+	/** Defines SM4 AES CBC Mode */
+	TEGRA_NVVSE_AES_MODE_SM4_CBC,
+	/** Defines SM4 AES CTR Mode */
+	TEGRA_NVVSE_AES_MODE_SM4_CTR,
 	/** Defines maximum AES MODE, must be last entry*/
 	TEGRA_NVVSE_AES_MODE_MAX,
 };

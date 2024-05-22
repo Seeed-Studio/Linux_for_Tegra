@@ -1245,7 +1245,8 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	int ret = 0;
 	struct tnvvse_crypto_completion tcrypt_complete;
 	struct tegra_virtual_se_aes_context *aes_ctx;
-	char aes_algo[5][15] = {"cbc-vse(aes)", "ctr-vse(aes)"};
+	char aes_algo[5][20] = {"cbc-vse(aes)", "ctr-vse(aes)", "gcm-vse(aes)", "cbc-vse(aes)",
+				"ctr-vse(aes)"};
 	const char *driver_name;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
 	uint8_t next_block_iv[TEGRA_NVVSE_AES_IV_LEN];
@@ -1348,22 +1349,31 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 					tnvvse_crypto_complete, &tcrypt_complete);
 
 	if (aes_ctx->b_is_first == 1U || !aes_enc_dec_ctl->is_encryption) {
-		if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CBC)
+		if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CBC) ||
+			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CBC))
 			memcpy(next_block_iv, aes_enc_dec_ctl->initial_vector,
 				TEGRA_NVVSE_AES_IV_LEN);
-		else if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR)
+		else if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR) ||
+			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CTR))
 			memcpy(next_block_iv, aes_enc_dec_ctl->initial_counter,
 				TEGRA_NVVSE_AES_CTR_LEN);
 		else
 			memset(next_block_iv, 0, TEGRA_NVVSE_AES_IV_LEN);
 	} else {
-		if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR)
-			memcpy(next_block_iv, ctx->intermediate_counter, TEGRA_NVVSE_AES_CTR_LEN);
+		if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR) ||
+			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CTR))
+			memcpy(next_block_iv, ctx->intermediate_counter,
+				TEGRA_NVVSE_AES_CTR_LEN);
 		else		//As CBC uses IV stored in SE server
 			memset(next_block_iv, 0, TEGRA_NVVSE_AES_IV_LEN);
 	}
 	pr_debug("%s(): %scryption\n", __func__, (aes_enc_dec_ctl->is_encryption ? "en" : "de"));
 
+	if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CBC) ||
+		(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CTR))
+		aes_ctx->b_is_sm4 = 1U;
+	else
+		aes_ctx->b_is_sm4 = 0U;
 
 	/* copy input buffer */
 	ret = copy_from_user(in_buf, aes_enc_dec_ctl->src_buffer, in_sz);
@@ -1417,12 +1427,15 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		goto free_out_buf;
 	}
 
-	if ((aes_enc_dec_ctl->is_encryption) &&
-			(aes_enc_dec_ctl->user_nonce == 0U)) {
-		if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CBC)
-			memcpy(aes_enc_dec_ctl->initial_vector, req->iv, TEGRA_NVVSE_AES_IV_LEN);
-		else if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR)
-			memcpy(aes_enc_dec_ctl->initial_counter, req->iv, TEGRA_NVVSE_AES_CTR_LEN);
+	if ((aes_enc_dec_ctl->is_encryption) &&	(aes_enc_dec_ctl->user_nonce == 0U)) {
+		if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CBC) ||
+			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CBC))
+			memcpy(aes_enc_dec_ctl->initial_vector, req->iv,
+				TEGRA_NVVSE_AES_IV_LEN);
+		else if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR) ||
+			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CTR))
+			memcpy(aes_enc_dec_ctl->initial_counter, req->iv,
+				TEGRA_NVVSE_AES_CTR_LEN);
 	}
 
 	if (aes_enc_dec_ctl->user_nonce == 1U) {
@@ -1949,12 +1962,14 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 
 		/* Copy IV returned by VSE */
 		if (aes_enc_dec_ctl->is_encryption) {
-			if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CBC ||
-				aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_GCM)
+			if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CBC) ||
+				(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CBC) ||
+				(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_GCM))
 				ret = copy_to_user(arg_aes_enc_dec_ctl->initial_vector,
 							aes_enc_dec_ctl->initial_vector,
 							sizeof(aes_enc_dec_ctl->initial_vector));
-			else if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR)
+			else if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR) ||
+				(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR))
 				ret = copy_to_user(arg_aes_enc_dec_ctl->initial_counter,
 							aes_enc_dec_ctl->initial_counter,
 							sizeof(aes_enc_dec_ctl->initial_counter));

@@ -606,6 +606,8 @@ enum tegra_virtual_se_op_mode {
 enum tegra_virtual_se_aes_op_mode {
 	AES_CBC = 0U,
 	AES_CTR = 2U,
+	AES_SM4_CBC = 0x10000U,
+	AES_SM4_CTR = 0x10002U,
 };
 
 /* Security Engine request context */
@@ -686,6 +688,17 @@ static int32_t validate_header(
 		dev_err(se_dev->dev, "Invalid message header value.\n");
 	}
 
+	return ret;
+}
+
+static int is_aes_mode_valid(uint32_t opmode)
+{
+	int ret = 0;
+
+	if ((opmode == (uint32_t)AES_CBC) || (opmode == (uint32_t)AES_SM4_CBC) ||
+		(opmode == (uint32_t)AES_SM4_CTR) || (opmode == (uint32_t)AES_CTR)) {
+		ret = 1;
+	}
 	return ret;
 }
 
@@ -772,8 +785,7 @@ static int read_and_validate_valid_msg(
 		priv->rx_status = ivc_msg->rx[0].status;
 		req_ctx = skcipher_request_ctx(priv->req);
 		if ((!priv->rx_status) && (req_ctx->encrypt == true) &&
-				((req_ctx->op_mode == AES_CTR) ||
-				(req_ctx->op_mode == AES_CBC))) {
+				(is_aes_mode_valid(req_ctx->op_mode) == 1)) {
 			memcpy(priv->iv, ivc_msg->rx[0].iv,
 					TEGRA_VIRTUAL_SE_AES_IV_SIZE);
 		}
@@ -2383,9 +2395,9 @@ static void tegra_hv_vse_safety_prepare_cmd(struct tegra_virtual_se_dev *se_dev,
 	if (req->iv) {
 		memcpy(aes->op.lctr, req->iv,
 				TEGRA_VIRTUAL_SE_AES_LCTR_SIZE);
-		if (req_ctx->op_mode == AES_CTR)
+		if ((req_ctx->op_mode == AES_CTR) || (req_ctx->op_mode == AES_SM4_CTR))
 			aes->op.ctr_cntn = TEGRA_VIRTUAL_SE_AES_LCTR_CNTN;
-		else if (req_ctx->op_mode == AES_CBC) {
+		else if ((req_ctx->op_mode == AES_CBC) || (req_ctx->op_mode == AES_SM4_CBC)) {
 			if (req_ctx->encrypt == true && aes_ctx->user_nonce == 1U &&
 			    aes_ctx->b_is_first != 1U)
 				aes->op.ivsel = AES_UPDATED_IV;
@@ -2516,9 +2528,8 @@ static int tegra_hv_vse_safety_process_aes_req(struct tegra_virtual_se_dev *se_d
 	 * If userNonce is not provided random IV generation is needed.
 	 */
 	if (req_ctx->encrypt &&
-			(req_ctx->op_mode == AES_CBC ||
-			req_ctx->op_mode == AES_CTR) && (aes_ctx->user_nonce == 0U) &&
-			req->iv[0] == 1) {
+			(is_aes_mode_valid(req_ctx->op_mode) == 1) && (aes_ctx->user_nonce == 0U) &&
+			(req->iv[0] == 1)) {
 		//Random IV generation is required
 		err = tegra_hv_vse_safety_aes_gen_random_iv(se_dev, req,
 				priv, ivc_req_msg);
@@ -2554,9 +2565,8 @@ static int tegra_hv_vse_safety_process_aes_req(struct tegra_virtual_se_dev *se_d
 			sg_copy_from_buffer(req->dst, num_sgs,
 					priv->buf, req->cryptlen);
 
-		if (((req_ctx->op_mode == AES_CBC)
-				|| (req_ctx->op_mode == AES_CTR))
-				&& req_ctx->encrypt == true && aes_ctx->user_nonce == 0U)
+		if ((is_aes_mode_valid(req_ctx->op_mode) == 1)
+				&& (req_ctx->encrypt == true) && (aes_ctx->user_nonce == 0U))
 			memcpy(req->iv, priv->iv, TEGRA_VIRTUAL_SE_AES_IV_SIZE);
 	} else {
 		dev_err(se_dev->dev,
@@ -2616,9 +2626,16 @@ static int tegra_hv_vse_safety_aes_cbc_encrypt(struct skcipher_request *req)
 	req_ctx = skcipher_request_ctx(req);
 
 	req_ctx->encrypt = true;
-	req_ctx->op_mode = AES_CBC;
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].se_engine;
 	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].se_engine];
+	if ((req_ctx->se_dev->chipdata->sm_supported == false) && (aes_ctx->b_is_sm4 == 1U)) {
+		pr_err("%s: SM4 CBC is not supported for selected platform\n", __func__);
+		return -EINVAL;
+	}
+	if (aes_ctx->b_is_sm4 == 1U)
+		req_ctx->op_mode = AES_SM4_CBC;
+	else
+		req_ctx->op_mode = AES_CBC;
 	err = tegra_hv_vse_safety_process_aes_req(req_ctx->se_dev, req);
 	if (err)
 		dev_err(req_ctx->se_dev->dev,
@@ -2640,9 +2657,20 @@ static int tegra_hv_vse_safety_aes_cbc_decrypt(struct skcipher_request *req)
 	req_ctx = skcipher_request_ctx(req);
 
 	req_ctx->encrypt = false;
-	req_ctx->op_mode = AES_CBC;
+
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].se_engine;
 	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].se_engine];
+
+	if ((req_ctx->se_dev->chipdata->sm_supported == false) && (aes_ctx->b_is_sm4 == 1U)) {
+		pr_err("%s: SM4 CBC is not supported for selected platform\n", __func__);
+		return -EINVAL;
+	}
+
+	if (aes_ctx->b_is_sm4 == 1U)
+		req_ctx->op_mode = AES_SM4_CBC;
+	else
+		req_ctx->op_mode = AES_CBC;
+
 	err = tegra_hv_vse_safety_process_aes_req(req_ctx->se_dev, req);
 	if (err)
 		dev_err(req_ctx->se_dev->dev,
@@ -2671,9 +2699,16 @@ static int tegra_hv_vse_safety_aes_ctr_encrypt(struct skcipher_request *req)
 	req_ctx = skcipher_request_ctx(req);
 
 	req_ctx->encrypt = true;
-	req_ctx->op_mode = AES_CTR;
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].se_engine;
 	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].se_engine];
+	if ((req_ctx->se_dev->chipdata->sm_supported == false) && (aes_ctx->b_is_sm4 == 1U)) {
+		pr_err("%s: SM4 CTR is not supported for selected platform\n", __func__);
+		return -EINVAL;
+	}
+	if (aes_ctx->b_is_sm4 == 1U)
+		req_ctx->op_mode = AES_SM4_CTR;
+	else
+		req_ctx->op_mode = AES_CTR;
 	err = tegra_hv_vse_safety_process_aes_req(req_ctx->se_dev, req);
 	if (err)
 		dev_err(req_ctx->se_dev->dev,
@@ -2695,9 +2730,18 @@ static int tegra_hv_vse_safety_aes_ctr_decrypt(struct skcipher_request *req)
 	req_ctx = skcipher_request_ctx(req);
 
 	req_ctx->encrypt = false;
-	req_ctx->op_mode = AES_CTR;
+
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].se_engine;
 	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].se_engine];
+	if ((req_ctx->se_dev->chipdata->sm_supported == false) && (aes_ctx->b_is_sm4 == 1U)) {
+		pr_err("%s: SM4 CTR is not supported for selected platform\n", __func__);
+		return -EINVAL;
+	}
+	if (aes_ctx->b_is_sm4 == 1U)
+		req_ctx->op_mode = AES_SM4_CTR;
+	else
+		req_ctx->op_mode = AES_CTR;
+
 	err = tegra_hv_vse_safety_process_aes_req(req_ctx->se_dev, req);
 	if (err)
 		dev_err(req_ctx->se_dev->dev,

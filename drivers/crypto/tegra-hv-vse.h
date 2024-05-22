@@ -101,6 +101,8 @@ struct tegra_virtual_se_aes_context {
 	uint8_t user_nonce;
 	/* Flag to indicate first request*/
 	uint8_t b_is_first;
+	/* Flag to indicate if sm4 is enabled*/
+	uint8_t b_is_sm4;
 };
 
 /* Security Engine/TSEC AES CMAC context */
