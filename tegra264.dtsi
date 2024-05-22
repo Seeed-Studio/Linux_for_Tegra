@@ -7850,7 +7850,8 @@
                    interrupts = <GIC_SPI 951 IRQ_TYPE_LEVEL_HIGH>;
                    iommus = <&smmu1_mmu TEGRA_SID_UFS>;
                    dma-coherent;
-		   clocks = <&bpmp TEGRA264_CLK_MPHY_CORE_PLL_FIXED>,
+		   clocks = <&bpmp TEGRA264_CLK_PLLREFUFS_CLKOUT624>,
+				<&bpmp TEGRA264_CLK_MPHY_CORE_PLL_FIXED>,
 				<&bpmp TEGRA264_CLK_MPHY_L0_TX_SYMB>,
 				<&bpmp TEGRA264_CLK_MPHY_TX_1MHZ_REF> ,
 				<&bpmp TEGRA264_CLK_MPHY_L0_RX_ANA>,
@@ -7868,7 +7869,7 @@
 				<&bpmp TEGRA264_CLK_MPHY_L0_TX_HS_SYMB_DIV>,
 				<&bpmp TEGRA264_CLK_MPHY_L0_RX_HS_SYMB_DIV>,
 				<&bpmp TEGRA264_CLK_OSC>;
-                   clock-names = "mphy_core_pll_fixed", "mphy_l0_tx_symb",
+                   clock-names = "pllrefe_vcoout", "mphy_core_pll_fixed", "mphy_l0_tx_symb",
 					"mphy_tx_1mhz_ref", "mphy_l0_rx_ana",
 					"mphy_l0_rx_symb", "mphy_l0_tx_ls_3xbit",
 					"mphy_l0_rx_ls_bit", "mphy_l1_rx_ana",
