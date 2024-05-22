@@ -729,16 +729,10 @@ static int vblk_request_worker(void *data)
 	bool req_submitted, req_completed;
 
 	while (true) {
-retry:
 		wait_for_completion(&vblkdev->complete);
 
 		/* Taking ivc lock before performing IVC read/write */
 		mutex_lock(&vblkdev->ivc_lock);
-		if (tegra_hv_ivc_channel_notified(vblkdev->ivck) != 0) {
-			mutex_unlock(&vblkdev->ivc_lock);
-			goto retry;
-		}
-
 		req_submitted = true;
 		req_completed = true;
 		while (req_submitted || req_completed) {
@@ -1549,27 +1543,13 @@ static void vblk_init_device(struct work_struct *ws)
 	struct vblk_dev *vblkdev = container_of(ws, struct vblk_dev, init);
 	struct sched_attr attr = {0};
 	char vblk_comm[VBLK_DEV_THREAD_NAME_LEN];
-	uint32_t lcpu_affinity;
 	int ret = 0;
 
 	mutex_lock(&vblkdev->ivc_lock);
-	/* wait for ivc channel reset to finish */
-	if (tegra_hv_ivc_channel_notified(vblkdev->ivck) != 0) {
-		mutex_unlock(&vblkdev->ivc_lock);
-		return;	/* this will be rescheduled by irq handler */
-	}
-
 	if (tegra_hv_ivc_can_read(vblkdev->ivck) && !vblkdev->initialized) {
 		if (vblk_get_configinfo(vblkdev)) {
 			mutex_unlock(&vblkdev->ivc_lock);
 			return;
-		}
-
-		/* read lcpu_affinity from dts */
-		if (of_property_read_u32_index(vblkdev->device->of_node, "lcpu_affinity", 0,
-			&lcpu_affinity)) {
-			/* pin thread to logical core 2 if dts property is missing */
-			lcpu_affinity = 2;
 		}
 
 		ret = snprintf(vblk_comm, VBLK_DEV_THREAD_NAME_LEN - 4, "vblkdev%d:%d",
@@ -1580,8 +1560,6 @@ static void vblk_init_device(struct work_struct *ws)
 			return;
 		}
 
-		/* convert lcpu to vcpu */
-		vblkdev->vcpu_affinity = convert_lcpu_to_vcpu(vblkdev, lcpu_affinity);
 		if (vblkdev->vcpu_affinity != U32_MAX) {
 			strncat(vblk_comm, ":%u", 3);
 
@@ -1626,9 +1604,42 @@ static irqreturn_t ivc_irq_handler(int irq, void *data)
 		/* wakeup worker thread */
 		complete(&vblkdev->complete);
 	else
-		schedule_work(&vblkdev->init);
+		schedule_work_on(vblkdev->vcpu_affinity, &vblkdev->init);
 
 	return IRQ_HANDLED;
+}
+
+static void vblk_request_config(struct work_struct *ws)
+{
+	struct vblk_dev *vblkdev = container_of(ws, struct vblk_dev, rq_cfg);
+
+	vblkdev->ivck = tegra_hv_ivc_reserve(NULL, vblkdev->ivc_id, NULL);
+	if (IS_ERR_OR_NULL(vblkdev->ivck)) {
+		dev_err(vblkdev->device, "Failed to reserve IVC channel %d\n",
+			vblkdev->ivc_id);
+		vblkdev->ivck = NULL;
+		return;
+	}
+	tegra_hv_ivc_channel_reset(vblkdev->ivck);
+
+	if (devm_request_irq(vblkdev->device, vblkdev->ivck->irq,
+		ivc_irq_handler, 0, "vblk", vblkdev)) {
+		dev_err(vblkdev->device, "Failed to request irq %d\n", vblkdev->ivck->irq);
+		goto free_ivc;
+	}
+
+	mutex_lock(&vblkdev->ivc_lock);
+	if (vblk_send_config_cmd(vblkdev)) {
+		dev_err(vblkdev->device, "Failed to send config cmd\n");
+		mutex_unlock(&vblkdev->ivc_lock);
+		goto free_ivc;
+	}
+	mutex_unlock(&vblkdev->ivc_lock);
+
+	return;
+
+free_ivc:
+	tegra_hv_ivc_unreserve(vblkdev->ivck);
 }
 
 static void bio_request_timeout_callback(struct timer_list *timer)
@@ -1714,6 +1725,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	static struct device_node *vblk_node;
 	struct vblk_dev *vblkdev;
 	struct device *dev = &pdev->dev;
+	uint32_t lcpu_affinity;
 	int ret;
 
 	if (!is_tegra_hypervisor_mode()) {
@@ -1754,15 +1766,6 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		}
 	}
 
-	vblkdev->ivck = tegra_hv_ivc_reserve(NULL, vblkdev->ivc_id, NULL);
-	if (IS_ERR_OR_NULL(vblkdev->ivck)) {
-		dev_err(dev, "Failed to reserve IVC channel %d\n",
-			vblkdev->ivc_id);
-		vblkdev->ivck = NULL;
-		ret = -ENODEV;
-		goto fail;
-	}
-	tegra_hv_ivc_channel_reset(vblkdev->ivck);
 	vblkdev->initialized = false;
 
 	init_completion(&vblkdev->req_queue_empty);
@@ -1778,6 +1781,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	sema_init(&mpidr_sem, 1);
 
 	INIT_WORK(&vblkdev->init, vblk_init_device);
+	INIT_WORK(&vblkdev->rq_cfg, vblk_request_config);
 
 	/* creating and initializing the an internal request list */
 	INIT_LIST_HEAD(&vblkdev->req_list);
@@ -1790,26 +1794,18 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		populate_lcpu_to_vcpu_info(vblkdev);
 	mutex_unlock(&vcpu_lock);
 
-	if (devm_request_irq(vblkdev->device, vblkdev->ivck->irq,
-		ivc_irq_handler, 0, "vblk", vblkdev)) {
-		dev_err(dev, "Failed to request irq %d\n", vblkdev->ivck->irq);
-		ret = -EINVAL;
-		goto free_ivc;
+	/* read lcpu_affinity from dts */
+	if (of_property_read_u32_index(vblkdev->device->of_node, "lcpu_affinity", 0,
+		&lcpu_affinity)) {
+		/* pin thread to logical core 2 if dts property is missing */
+		lcpu_affinity = 2;
 	}
+	/* convert lcpu to vcpu */
+	vblkdev->vcpu_affinity = convert_lcpu_to_vcpu(vblkdev, lcpu_affinity);
 
-	mutex_lock(&vblkdev->ivc_lock);
-	if (vblk_send_config_cmd(vblkdev)) {
-		dev_err(dev, "Failed to send config cmd\n");
-		ret = -EACCES;
-		mutex_unlock(&vblkdev->ivc_lock);
-		goto free_ivc;
-	}
-	mutex_unlock(&vblkdev->ivc_lock);
+	schedule_work_on(vblkdev->vcpu_affinity, &vblkdev->rq_cfg);
 
 	return 0;
-
-free_ivc:
-	tegra_hv_ivc_unreserve(vblkdev->ivck);
 
 fail:
 	return ret;

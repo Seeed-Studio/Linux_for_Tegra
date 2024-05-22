@@ -102,6 +102,7 @@ struct vblk_dev {
 	uint32_t devnum;
 	bool initialized;
 	struct work_struct init;
+	struct work_struct rq_cfg;
 	struct device *device;
 	void *shared_buffer;
 	struct mutex ioctl_lock;
