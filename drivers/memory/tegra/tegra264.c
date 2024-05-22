@@ -170,6 +170,26 @@ static const struct tegra_mc_client tegra264_mc_clients[] = {
 		.name = "pcie5w",
 		.bpmp_id = TEGRA264_BWMGR_PCIE_5,
 		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_GPUR02MC,
+		.name = "gpur02mc",
+		.bpmp_id = TEGRA264_BWMGR_GPU,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_GPUW02MC,
+		.name = "gpuw02mc",
+		.bpmp_id = TEGRA264_BWMGR_GPU,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_NVDECSRD2MC,
+		.name = "nvdecsrd2mc",
+		.bpmp_id = TEGRA264_BWMGR_NVDEC,
+		.type = TEGRA_ICC_NISO,
+	}, {
+		.id = TEGRA264_MEMORY_CLIENT_NVDECSWR2MC,
+		.name = "nvdecswr2mc",
+		.bpmp_id = TEGRA264_BWMGR_NVDEC,
+		.type = TEGRA_ICC_NISO,
 	},
 };
 
