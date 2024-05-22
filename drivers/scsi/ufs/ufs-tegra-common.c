@@ -379,13 +379,15 @@ static int ufs_tegra_enable_t234_mphy_clocks(struct ufs_tegra_host *host)
 		goto out;
 	}
 
-	err = clk_set_parent(host->mphy_tx_hs_mux_symb_div, host->mphy_tx_hs_symb_div);
-	if (err) {
-		if (err != -EPROBE_DEFER)
-			dev_err(dev,
-			 "%s mphy_tx_hs_mux_symb_div set parent failed %d\n",
-			 __func__, err);
-		goto out;
+	if (host->soc->chip_id != TEGRA264) {
+		err = clk_set_parent(host->mphy_tx_hs_mux_symb_div, host->mphy_tx_hs_symb_div);
+		if (err) {
+			if (err != -EPROBE_DEFER)
+				dev_err(dev,
+				 "%s mphy_tx_hs_mux_symb_div set parent failed %d\n",
+				 __func__, err);
+			goto out;
+		}
 	}
 
 	err = ufs_tegra_host_clk_enable(dev, "mphy_tx_hs_symb_div",
@@ -407,12 +409,14 @@ static int ufs_tegra_enable_t234_mphy_clocks(struct ufs_tegra_host *host)
 		goto disable_mphy_tx_hs_symb_div;
 	}
 
-	err = clk_set_parent(host->mphy_rx_hs_mux_symb_div, host->mphy_rx_hs_symb_div);
-	if (err) {
-		 dev_err(dev,
-			"%s: mphy_rx_hs_symb_div set parent failed %d\n",
-			__func__, err);
-		goto disable_mphy_tx_hs_symb_div;
+	if (host->soc->chip_id != TEGRA264) {
+		err = clk_set_parent(host->mphy_rx_hs_mux_symb_div, host->mphy_rx_hs_symb_div);
+		if (err) {
+			 dev_err(dev,
+				"%s: mphy_rx_hs_symb_div set parent failed %d\n",
+				__func__, err);
+			goto disable_mphy_tx_hs_symb_div;
+		}
 	}
 
 	err = ufs_tegra_host_clk_enable(dev, "mphy_rx_hs_symb_div", host->mphy_rx_hs_symb_div);
@@ -584,20 +588,24 @@ static int ufs_tegra_init_mphy_lane_clks(struct ufs_tegra_host *host)
 	if (err)
 		goto out;
 
-	err = ufs_tegra_host_clk_get(dev, "mphy_l0_tx_mux_symb_div",
-		&host->mphy_tx_hs_mux_symb_div);
-	if (err)
-		goto out;
+	if (host->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_get(dev, "mphy_l0_tx_mux_symb_div",
+			&host->mphy_tx_hs_mux_symb_div);
+		if (err)
+			goto out;
+	}
 
 	err = ufs_tegra_host_clk_get(dev, "mphy_l0_rx_hs_symb_div",
 		&host->mphy_rx_hs_symb_div);
 	if (err)
 		goto out;
 
-	err = ufs_tegra_host_clk_get(dev, "mphy_l0_rx_mux_symb_div",
-		&host->mphy_rx_hs_mux_symb_div);
-	if (err)
-		goto out;
+	if (host->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_get(dev, "mphy_l0_rx_mux_symb_div",
+			&host->mphy_rx_hs_mux_symb_div);
+		if (err)
+			goto out;
+	}
 
 	err = ufs_tegra_host_clk_get(dev, "mphy_l0_tx_2x_symb",
 		&host->mphy_l0_tx_2x_symb);
