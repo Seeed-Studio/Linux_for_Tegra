@@ -428,16 +428,17 @@ static int ufs_tegra_enable_t234_mphy_clocks(struct ufs_tegra_host *host)
 		goto disable_mphy_tx_hs_symb_div;
 	}
 
-	err = ufs_tegra_host_clk_enable(dev, "mphy_l0_tx_2x_symb", host->mphy_l0_tx_2x_symb);
-	if (err) {
-		if (err != -EPROBE_DEFER)
-			dev_err(dev,
-				"%s: mphy_l0_tx_2x_symb clock enable failed %d\n",
-				__func__, err);
-		goto disable_mphy_rx_hs_symb_div;
-	} else {
-		goto out;
+	if (host->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_enable(dev, "mphy_l0_tx_2x_symb", host->mphy_l0_tx_2x_symb);
+		if (err) {
+			if (err != -EPROBE_DEFER)
+				dev_err(dev,
+					"%s: mphy_l0_tx_2x_symb clock enable failed %d\n",
+					__func__, err);
+			goto disable_mphy_rx_hs_symb_div;
+		}
 	}
+	goto out;
 
 disable_mphy_rx_hs_symb_div:
 	clk_disable_unprepare(host->mphy_rx_hs_symb_div);
@@ -607,10 +608,12 @@ static int ufs_tegra_init_mphy_lane_clks(struct ufs_tegra_host *host)
 			goto out;
 	}
 
-	err = ufs_tegra_host_clk_get(dev, "mphy_l0_tx_2x_symb",
-		&host->mphy_l0_tx_2x_symb);
-	if (err)
-		goto out;
+	if (host->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_get(dev, "mphy_l0_tx_2x_symb",
+			&host->mphy_l0_tx_2x_symb);
+		if (err)
+			goto out;
+	}
 
 	if (host->x2config) {
 		err = ufs_tegra_host_clk_get(dev, "mphy_l1_rx_ana",
