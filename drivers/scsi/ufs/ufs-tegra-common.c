@@ -579,10 +579,12 @@ static int ufs_tegra_init_mphy_lane_clks(struct ufs_tegra_host *host)
 	if (err)
 		goto out;
 
-	err = ufs_tegra_host_clk_get(dev, "mphy_force_ls_mode",
-		&host->mphy_force_ls_mode);
-	if (err)
-		goto out;
+	if (host->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_get(dev, "mphy_force_ls_mode",
+			&host->mphy_force_ls_mode);
+		if (err)
+			goto out;
+	}
 
 	err = ufs_tegra_host_clk_get(dev, "mphy_l0_tx_hs_symb_div",
 		&host->mphy_tx_hs_symb_div);
@@ -1473,7 +1475,7 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 
 	switch (status) {
 	case PRE_CHANGE:
-		if (tegra_sku_info.platform != TEGRA_PLATFORM_SYSTEM_FPGA) {
+		if (ufs_tegra->soc->chip_id != TEGRA264) {
 			err = ufs_tegra_host_clk_enable(dev,
 				"mphy_force_ls_mode",
 				ufs_tegra->mphy_force_ls_mode);
@@ -1491,7 +1493,7 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 					UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_0);
 		ufs_tegra_ufs_aux_prog(ufs_tegra);
 		ufs_tegra_set_clk_div(hba);
-		if (tegra_sku_info.platform != TEGRA_PLATFORM_SYSTEM_FPGA)
+		if (ufs_tegra->soc->chip_id != TEGRA264)
 			clk_disable_unprepare(ufs_tegra->mphy_force_ls_mode);
 		if (ufs_tegra->soc->chip_id >= TEGRA234)
 			ufs_tegra_ufs_mmio_axi(hba);
@@ -2039,12 +2041,14 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	err = ufs_tegra_init_uphy_pll3(ufs_tegra);
 	if (err)
 		goto out_host_free;
-	err = ufs_tegra_host_clk_enable(dev, "mphy_force_ls_mode",
+	if (ufs_tegra->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_enable(dev, "mphy_force_ls_mode",
 			ufs_tegra->mphy_force_ls_mode);
-	if (err)
-		goto out_host_free;
-	usleep_range(1000, 2000);
-	clk_disable_unprepare(ufs_tegra->mphy_force_ls_mode);
+		if (err)
+			goto out_host_free;
+		usleep_range(1000, 2000);
+		clk_disable_unprepare(ufs_tegra->mphy_force_ls_mode);
+	}
 	usleep_range(1000, 2000);
 
 enable_ufs_clk:
