@@ -3,8 +3,6 @@
 
 #include "tegra234-p3701-0000-prod-overlay.dtsi"
 
-#define TEGRA234_TMP451_SHUTDOWN_TEMP 106500
-
 / {
 	bus@0 {
 		spi@3270000 {
@@ -59,31 +57,31 @@
 
 	thermal-zones {
 		tboard-thermal {
-			polling-delay = <1000>;
-			polling-delay-passive = <1000>;
+			polling-delay = <0>;
+			polling-delay-passive = <0>;
 			thermal-sensors = <&tegra_tmp451 0>;
 			status = "okay";
 
 			trips {
-				tboard-shutdown {
-					temperature = <TEGRA234_TMP451_SHUTDOWN_TEMP>;
+				tboard-hot {
+					temperature = <106000>;
 					hysteresis = <0>;
-					type = "critical";
+					type = "hot";
 				};
 			};
 		};
 
 		tdiode-thermal {
-			polling-delay = <1000>;
-			polling-delay-passive = <1000>;
+			polling-delay = <0>;
+			polling-delay-passive = <0>;
 			thermal-sensors = <&tegra_tmp451 1>;
 			status = "okay";
 
 			trips {
-				tdiode-shutdown {
-					temperature = <TEGRA234_TMP451_SHUTDOWN_TEMP>;
+				tdiode-hot {
+					temperature = <106000>;
 					hysteresis = <0>;
-					type = "critical";
+					type = "hot";
 				};
 			};
 		};

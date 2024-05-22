@@ -5,7 +5,6 @@
 
 #define TEGRA234_INDUSTRIAL_THERMAL_SLOWDOWN_TEMP 112000
 #define TEGRA234_INDUSTRIAL_THERMAL_SHUTDOWN_TEMP 117500
-#define TEGRA234_INDUSTRIAL_TMP451_SHUTDOWN_TEMP 119500
 
 / {
 	opp-table-cluster0 {
@@ -151,16 +150,16 @@
 
 		tboard-thermal {
 			trips {
-				tboard-shutdown {
-					temperature = <TEGRA234_INDUSTRIAL_TMP451_SHUTDOWN_TEMP>;
+				tboard-hot {
+					temperature = <119000>;
 				};
 			};
 		};
 
 		tdiode-thermal {
 			trips {
-				tdiode-shutdown {
-					temperature = <TEGRA234_INDUSTRIAL_TMP451_SHUTDOWN_TEMP>;
+				tdiode-hot {
+					temperature = <119000>;
 				};
 			};
 		};
