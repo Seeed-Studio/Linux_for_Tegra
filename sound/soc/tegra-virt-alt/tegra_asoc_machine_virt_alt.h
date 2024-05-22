@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef __TEGRA_ASOC_MACHINE_VIRT_ALT_H__
@@ -81,7 +81,7 @@ enum tegra186_xbar_dai_link {
 	TEGRA186_XBAR_DAI_LINKS, /* Total number of xbar dai links */
 };
 
-struct snd_soc_dai_link *tegra_virt_machine_get_dai_link(void);
+struct snd_soc_dai_link *tegra_virt_machine_get_dai_link(struct device *dev);
 unsigned int tegra_virt_machine_get_num_dai_links(void);
 void tegra_virt_machine_set_num_dai_links(unsigned int val);
 void tegra_virt_machine_set_adsp_admaif_dai_params(

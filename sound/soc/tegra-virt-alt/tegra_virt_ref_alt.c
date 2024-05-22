@@ -48,6 +48,9 @@ static struct tegra_virt_admaif_soc_data soc_data_tegra186 = {
 	.num_ch = TEGRA186_ADMAIF_CHANNEL_COUNT,
 };
 
+static struct tegra_virt_admaif_soc_data soc_data_tegra264 = {
+	.num_ch = TEGRA264_ADMAIF_CHANNEL_COUNT,
+};
 
 static const struct of_device_id tegra_virt_machine_of_match[] = {
 	{ .compatible = "nvidia,tegra186-virt-pcm",
@@ -55,8 +58,7 @@ static const struct of_device_id tegra_virt_machine_of_match[] = {
 	{ .compatible = "nvidia,tegra234-virt-pcm-oot",
 		.data = &soc_data_tegra186},
 	{ .compatible = "nvidia,tegra264-virt-pcm-oot",
-		/* TODO: Update soc_data for t264 while adding full Thor support */
-		.data = &soc_data_tegra186},
+		.data = &soc_data_tegra264},
 	{},
 };
 
@@ -102,7 +104,7 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 	}
 
 	card->dev = &pdev->dev;
-	card->dai_link = tegra_virt_machine_get_dai_link();
+	card->dai_link = tegra_virt_machine_get_dai_link(&pdev->dev);
 	card->num_links = tegra_virt_machine_get_num_dai_links();
 	adsp_enabled = of_property_read_bool(pdev->dev.of_node,
 		"adsp_enabled");
@@ -200,7 +202,7 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 		}
 		for (i = 0; i < admaif_ch_num; i++) {
 			tegra_virt_set_dai_params(
-					tegra_virt_machine_get_dai_link(),
+					tegra_virt_machine_get_dai_link(&pdev->dev),
 					NULL,
 					(admaif_ch_list[i] - 1));
 		}
