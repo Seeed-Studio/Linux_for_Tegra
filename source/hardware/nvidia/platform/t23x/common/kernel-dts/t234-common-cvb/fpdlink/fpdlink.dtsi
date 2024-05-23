@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2022 Texas Instruments Incorporated - http://www.ti.com/
+ */
+#include <dt-bindings/gpio/gpio.h>
+
+#define _CONCAT(a, b) a ## b
+#define CONCAT(a, b) _CONCAT(a, b)
+
+#define _STRINGIFY(a) # a
+#define STRINGIFY(a) _STRINGIFY(a)
+
+#define CAM_X_LABEL(x)			CONCAT(cam_, x)
+#define CAM_X_OUT_LABEL(x)		CONCAT(CAM_X_LABEL(x), _out)
+
+#define CSI_X_LABEL(x)			CONCAT(csi_, x)
+#define CSI_X_IN_LABEL(x)		CONCAT(CSI_X_LABEL(x), _in)
+#define CSI_X_OUT_LABEL(x)		CONCAT(CSI_X_LABEL(x), _out)
+
+
+#define FPDLINK_CAMERA_0
+#define FPDLINK_TEGRA_PORT 4
+
+#include "fpdlink-tegra.dtsi"
+
+/ {
+	clk_fusion_25M_fixed: fixed-clock-25M {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25000000>;
+	};
+};
+
+&hdr40_i2c1 {
+
+    ds90ub960_0: deser@3d {
+        compatible = "ti,ds90ub960-q1";
+
+        reg-names = "main", "ser0", "ser1", "ser2", "ser3";
+        reg       = <0x3d>, <0x18>, <0x45>, <0x46>, <0x47>;
+
+        clocks = <&clk_fusion_25M_fixed>;
+
+        i2c-alias-pool = <0x4a 0x4b 0x4c 0x4d 0x4e 0x4f>;
+
+        data-rate = <1600000000>;
+
+        #clock-cells = <0>;
+
+        powerdown-gpios = <&tegra_main_gpio TEGRA234_MAIN_GPIO(AC, 0) GPIO_ACTIVE_HIGH>;
+
+        ds90ub960_0_ports: ports {
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            /* CSI-2 */
+            port@4 {
+                reg = <4>;
+                ds90ub960_0_csi_out: endpoint {
+                    clock-lanes = <0>;
+                    data-lanes = <1 2 3 4>;
+                    remote-endpoint = <&csi_0_in>;
+                };
+            };
+        };
+
+        ds90ub960_0_atr: i2c-atr {
+            #address-cells = <1>;
+            #size-cells = <0>;
+        };
+    };
+};
+
+
+#include "fpdlink-nv-cam-0-0.dtsi"

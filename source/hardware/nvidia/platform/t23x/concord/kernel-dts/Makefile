@@ -10,6 +10,8 @@ BUILD_ENABLE=y
 endif
 
 dtb-$(BUILD_ENABLE) += tegra234-p3701-0000-p3737-0000.dtb
+dtb-$(BUILD_ENABLE) += tegra234-p3701-0000-j501x-0000.dtb
+dtb-$(BUILD_ENABLE) += tegra234-p3701-0000-j501x-0000-gmsl.dtb
 dtb-$(BUILD_ENABLE) += tegra234-p3701-0000-as-p3701-0004-p3737-0000.dtb
 dtb-$(BUILD_ENABLE) += tegra234-p3701-0000-as-p3767-0004-p3737-0000.dtb
 dtb-$(BUILD_ENABLE) += tegra234-p3701-0000-as-p3767-0003-p3737-0000.dtb
@@ -24,6 +26,10 @@ dtb-$(BUILD_ENABLE) += tegra234-p3701-0000-as-pxxxx-p3737-0000.dtb
 dtb-$(BUILD_ENABLE) += tegra234-p3701-0000-p3737-0000-kexec.dtb
 dtb-$(BUILD_ENABLE) += tegra234-p3701-0004-p3737-0000.dtb
 dtb-$(BUILD_ENABLE) += tegra234-p3701-0005-p3737-0000.dtb
+dtb-$(BUILD_ENABLE) += tegra234-p3701-0004-j501x-0000.dtb
+dtb-$(BUILD_ENABLE) += tegra234-p3701-0005-j501x-0000.dtb
+dtb-$(BUILD_ENABLE) += tegra234-p3701-0004-j501x-0000-gmsl.dtb
+dtb-$(BUILD_ENABLE) += tegra234-p3701-0005-j501x-0000-gmsl.dtb
 dtb-$(BUILD_ENABLE) += tegra234-p3701-0008-p3737-0000.dtb
 dtbo-$(BUILD_ENABLE) += tegra234-p3737-overlay.dtbo
 dtbo-$(BUILD_ENABLE) += tegra234-p3737-audio-codec-rt5658.dtbo
@@ -44,6 +50,7 @@ dtbo-$(BUILD_ENABLE) += tegra234-p3737-camera-imx185-overlay.dtbo
 dtbo-$(BUILD_ENABLE) += tegra234-p3737-camera-imx390-overlay.dtbo
 dtbo-$(BUILD_ENABLE) += tegra234-p3737-camera-hawk-owl-overlay.dtbo
 dtbo-$(BUILD_ENABLE) += tegra234-p3701-overlay.dtbo
+dtbo-$(BUILD_ENABLE) += tegra234-j501x-overlay.dtbo
 dtbo-$(BUILD_ENABLE) += tegra234-p3737-camera-dual-hawk-ar0234-e3653-overlay.dtbo
 
 ifneq ($(dtb-y),)
