@@ -86,6 +86,12 @@
 			      <0x0 0x0c140000 0x0 0x10000>;
 		};
 
+		miscreg-dpaux@00100000 {
+			compatible = "nvidia,tegra264-misc-dpaux-padctl";
+			reg = <0x0 0x00100000 0x0 0x4010>;
+			status = "disabled";
+		};
+
 		sys-cbb-fabric@800000 {
 			compatible = "nvidia,tegra264-sys-cbb-fabric";
 			reg = <0x0 0x800000 0x0 0x800000>;
