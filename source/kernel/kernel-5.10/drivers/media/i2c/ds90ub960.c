@@ -18,7 +18,7 @@
 #include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
-#include <linux/nv-i2c-atr.h>
+#include <linux/i2c-atr.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -34,6 +34,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-subdev.h>
+#include <linux/debugfs.h>
 
 
 #define v4l2_subdev_state v4l2_subdev_pad_config
@@ -337,7 +338,7 @@ struct ub960_data {
 	struct regmap		*regmap;
 	struct gpio_desc	*pd_gpio;
 	struct task_struct	*kthread;
-	struct nv_i2c_atr		*atr;
+	struct i2c_atr		*atr;
 	struct ub960_rxport	*rxports[UB960_MAX_RX_NPORTS];
 	struct ub960_txport	*txports[UB960_MAX_TX_NPORTS];
 	struct ub960_vc_map	vc_map;
@@ -367,6 +368,8 @@ struct ub960_data {
 	u8 current_write_csiport_mask;
 
 	bool streaming;
+
+	struct dentry			*debugfs_dir;
 };
 
 static inline struct ub960_data *sd_to_ub960(struct v4l2_subdev *sd)
@@ -449,6 +452,7 @@ static int ub960_read(const struct ub960_data *priv, u8 reg, u8 *val)
 	int ret;
 
 	ret = regmap_read(priv->regmap, reg, &v);
+	dev_err(dev, "read %d 0x%x = 0x%02x\n", ret, reg, v);
 	if (ret) {
 		dev_err(dev, "%s: cannot read register 0x%02x (%d)!\n",
 			__func__, reg, ret);
@@ -466,6 +470,7 @@ static int ub960_write(const struct ub960_data *priv, u8 reg, u8 val)
 	int ret;
 
 	ret = regmap_write(priv->regmap, reg, val);
+	dev_err(dev, "write %d 0x%x = 0x%02x\n", ret, reg, val);
 	if (ret < 0)
 		dev_err(dev, "%s: cannot write register 0x%02x (%d)!\n",
 			__func__, reg, ret);
@@ -480,6 +485,7 @@ static int ub960_update_bits_shared(const struct ub960_data *priv, u8 reg,
 	int ret;
 
 	ret = regmap_update_bits(priv->regmap, reg, mask, val);
+	dev_err(dev, "update %d 0x%x 0x%02x = 0x%02x\n", ret, reg, mask, val);
 	if (ret < 0)
 		dev_err(dev, "%s: cannot update register 0x%02x (%d)!\n",
 			__func__, reg, ret);
@@ -492,12 +498,15 @@ static int ub960_rxport_select(struct ub960_data *priv, u8 nport)
 	struct device *dev = &priv->client->dev;
 	int ret;
 
-	if (priv->current_read_rxport == nport &&
-	    priv->current_write_rxport_mask == BIT(nport))
-		return 0;
+	dev_err(dev, "rxport select %x  <->  %x\n", priv->current_read_rxport, nport);
 
-	ret = regmap_write(priv->regmap, UB960_SR_FPD3_PORT_SEL,
-			   (nport << 4) | (1 << nport));
+	// if (priv->current_read_rxport == nport &&
+	//     priv->current_write_rxport_mask == BIT(nport))
+	// 	return 0;
+
+	// ret = regmap_write(priv->regmap, UB960_SR_FPD3_PORT_SEL,
+	// 		   (nport << 4) | (1 << nport));
+	ret = regmap_write(priv->regmap, UB960_SR_FPD3_PORT_SEL, 0x01);
 	if (ret) {
 		dev_err(dev, "%s: cannot select rxport %d (%d)!\n", __func__,
 			nport, ret);
@@ -518,8 +527,9 @@ static int ub960_rxport_read(struct ub960_data *priv, u8 nport, u8 reg,
 	int ret;
 
 	ub960_rxport_select(priv, nport);
-
 	ret = regmap_read(priv->regmap, reg, &v);
+
+	dev_err(dev, "rxport %x  read %d 0x%x = 0x%02x\n", nport ,ret, reg, v);
 	if (ret) {
 		dev_err(dev, "%s: cannot read register 0x%02x (%d)!\n",
 			__func__, reg, ret);
@@ -540,6 +550,8 @@ static int ub960_rxport_write(struct ub960_data *priv, u8 nport, u8 reg,
 	ub960_rxport_select(priv, nport);
 
 	ret = regmap_write(priv->regmap, reg, val);
+
+	dev_err(dev, "rxport %x  write %d 0x%x = 0x%02x\n", nport ,ret, reg, val);
 	if (ret)
 		dev_err(dev, "%s: cannot write register 0x%02x (%d)!\n",
 			__func__, reg, ret);
@@ -557,6 +569,7 @@ static int ub960_rxport_update_bits(struct ub960_data *priv, u8 nport, u8 reg,
 
 	ret = regmap_update_bits(priv->regmap, reg, mask, val);
 
+	dev_err(dev, "rxport %x update %d 0x%x 0x%02x = 0x%02x\n", nport ,ret, reg, mask, val);
 	if (ret)
 		dev_err(dev, "%s: cannot update register 0x%02x (%d)!\n",
 			__func__, reg, ret);
@@ -670,17 +683,16 @@ static int ub960_write_ind16(const struct ub960_data *priv, u8 reg, u16 val)
  * I2C-ATR (address translator)
  */
 
-static int ub960_atr_attach_client(struct nv_i2c_atr *atr, u32 chan_id,
-				   const struct i2c_board_info *info,
+static int ub960_atr_attach_client(struct i2c_atr *atr, u32 chan_id,
 				   const struct i2c_client *client,
-				   u16 *alias_id)
+				   u16 alias)
 {
-	struct ub960_data *priv = nv_i2c_atr_get_clientdata(atr);
+	struct ub960_data *priv = i2c_atr_get_driver_data(atr);
 	struct ub960_rxport *rxport = priv->rxports[chan_id];
 	struct device *dev = &priv->client->dev;
 	unsigned int reg_idx;
 	unsigned int pool_idx;
-	u16 alias = 0;
+	//u16 alias = 0;
 	int ret = 0;
 
 	dev_dbg(dev, "rx%d: %s\n", chan_id, __func__);
@@ -699,7 +711,7 @@ static int ub960_atr_attach_client(struct nv_i2c_atr *atr, u32 chan_id,
 		goto out;
 	}
 
-	alias = priv->atr_alias_id[pool_idx];
+	 //alias = priv->atr_alias_id[pool_idx];
 
 	/* Find first unused alias register */
 
@@ -727,7 +739,7 @@ static int ub960_atr_attach_client(struct nv_i2c_atr *atr, u32 chan_id,
 
 	priv->atr_slave_id[pool_idx] = client->addr;
 
-	*alias_id = alias; /* tell the atr which alias we chose */
+	//*alias_id = alias; /* tell the atr which alias we chose */
 
 	dev_dbg(dev, "rx%d: client 0x%02x mapped at alias 0x%02x (%s)\n",
 		rxport->nport, client->addr, alias, client->name);
@@ -737,10 +749,10 @@ out:
 	return ret;
 }
 
-static void ub960_atr_detach_client(struct nv_i2c_atr *atr, u32 chan_id,
+static void ub960_atr_detach_client(struct i2c_atr *atr, u32 chan_id,
 				    const struct i2c_client *client)
 {
-	struct ub960_data *priv = nv_i2c_atr_get_clientdata(atr);
+	struct ub960_data *priv = i2c_atr_get_driver_data(atr);
 	struct ub960_rxport *rxport = priv->rxports[chan_id];
 	struct device *dev = &priv->client->dev;
 	unsigned int reg_idx;
@@ -794,7 +806,7 @@ out:
 	mutex_unlock(&priv->alias_table_lock);
 }
 
-static const struct nv_i2c_atr_ops ub960_atr_ops = {
+static const struct i2c_atr_ops ub960_atr_ops = {
 	.attach_client = ub960_atr_attach_client,
 	.detach_client = ub960_atr_detach_client,
 };
@@ -1013,8 +1025,10 @@ static int ub960_rxport_probe_one(struct ub960_data *priv,
 	}
 
 	rxport = kzalloc(sizeof(*rxport), GFP_KERNEL);
-	if (!rxport)
+	if (!rxport){
+		dev_err(dev,"%s: %d", __func__, __LINE__);
 		return -ENOMEM;
+	}
 
 	priv->rxports[nport] = rxport;
 
@@ -1022,8 +1036,10 @@ static int ub960_rxport_probe_one(struct ub960_data *priv,
 	rxport->priv = priv;
 
 	ret = ub960_of_get_reg(priv->client->dev.of_node, ser_names[nport]);
-	if (ret < 0)
+	if (ret < 0){
+		dev_err(dev,"%s: %d", __func__, __LINE__);
 		goto err_free_rxport;
+	}
 
 	rxport->ser_alias = ret;
 
@@ -1122,9 +1138,11 @@ static int ub960_rxport_probe_one(struct ub960_data *priv,
 	ub960_rxport_write(priv, nport, UB960_RR_PORT_ICR_LO, 0x7f);
 
 	/* Enable I2C_PASS_THROUGH */
-	ub960_rxport_update_bits(priv, nport, UB960_RR_BCC_CONFIG,
-				 UB960_RR_BCC_CONFIG_I2C_PASS_THROUGH,
-				 UB960_RR_BCC_CONFIG_I2C_PASS_THROUGH);
+	// ub960_rxport_update_bits(priv, nport, UB960_RR_BCC_CONFIG,
+	// 			 UB960_RR_BCC_CONFIG_I2C_PASS_THROUGH,
+	// 			 UB960_RR_BCC_CONFIG_I2C_PASS_THROUGH);
+	ub960_rxport_write(priv, nport, UB960_RR_BCC_CONFIG, 0xfe);
+
 
 	/* Enable I2C communication to the serializer via the alias addr */
 	ub960_rxport_write(priv, nport, UB960_RR_SER_ALIAS_ID,
@@ -1132,7 +1150,7 @@ static int ub960_rxport_probe_one(struct ub960_data *priv,
 
 	dev_dbg(dev, "ser%d: at alias 0x%02x\n", nport, rxport->ser_alias);
 
-	ret = nv_i2c_atr_add_adapter(priv->atr, nport);
+	ret = i2c_atr_add_adapter(priv->atr, nport, NULL, NULL);
 	if (ret) {
 		dev_err(dev, "rx%d: cannot add adapter", nport);
 		goto err_node_put;
@@ -1152,7 +1170,7 @@ static void ub960_rxport_remove_one(struct ub960_data *priv, u8 nport)
 {
 	struct ub960_rxport *rxport = priv->rxports[nport];
 
-	nv_i2c_atr_del_adapter(priv->atr, nport);
+	i2c_atr_del_adapter(priv->atr, nport);
 	ub960_rxport_remove_serializer(priv, nport);
 	of_node_put(rxport->remote_of_node);
 	kfree(rxport);
@@ -1163,19 +1181,19 @@ static int ub960_atr_probe(struct ub960_data *priv)
 	struct i2c_adapter *parent_adap = priv->client->adapter;
 	struct device *dev = &priv->client->dev;
 
-	priv->atr = nv_i2c_atr_new(parent_adap, dev, &ub960_atr_ops,
+	priv->atr = i2c_atr_new(parent_adap, dev, &ub960_atr_ops,
 				priv->hw_data->num_rxports);
 	if (IS_ERR(priv->atr))
 		return PTR_ERR(priv->atr);
 
-	nv_i2c_atr_set_clientdata(priv->atr, priv);
+	i2c_atr_set_driver_data(priv->atr, priv);
 
 	return 0;
 }
 
 static void ub960_atr_remove(struct ub960_data *priv)
 {
-	nv_i2c_atr_delete(priv->atr);
+	i2c_atr_delete(priv->atr);
 	priv->atr = NULL;
 }
 
@@ -2098,15 +2116,20 @@ static int ub960_parse_dt(struct ub960_data *priv)
 
 	priv->tx_link_freq[0] = priv->tx_data_rate / 2;
 
-	dev_dbg(dev, "Nominal data rate: %u", priv->tx_data_rate);
+	dev_dbg(dev, "Nominal data rate: %u num_rxports: %u num_txports %u", 
+					priv->tx_data_rate,
+					priv->hw_data->num_rxports,
+					priv->hw_data->num_txports);
 
 	for (n = 0; n < priv->hw_data->num_rxports + priv->hw_data->num_txports; ++n) {
 		struct device_node *ep_np;
+		dev_dbg(dev,"%s: %d",__func__, __LINE__);
 
 		ep_np = of_graph_get_endpoint_by_regs(np, n, 0);
 		if (!ep_np)
 			continue;
 
+		dev_dbg(dev,"%s: %d",__func__, __LINE__);
 		if (n < priv->hw_data->num_rxports)
 			ret = ub960_rxport_probe_one(priv, ep_np, n);
 		else
@@ -2290,6 +2313,8 @@ static int ub960_create_subdev(struct ub960_data *priv)
 	// ret = v4l2_subdev_init_finalize(&priv->sd);
 	// if (ret)
 	// 	goto err_entity_cleanup;
+	v4l2_set_subdevdata(&priv->sd, priv);
+
 
 	ret = ub960_v4l2_notifier_register(priv);
 	if (ret) {
@@ -2353,6 +2378,76 @@ static void ub960_sw_reset(struct ub960_data *priv)
 			break;
 	}
 }
+
+
+static int u960_debugfs_show(void *data, u64 *val)
+{
+	struct ub960_data *priv = data;
+	dev_err(&priv->client->dev,"echo flag|reg|val > u960-i2c\n");
+	dev_err(&priv->client->dev,"eg read star addres=0x06,count 0x10:echo 0610 >u960-i2c\n");
+	dev_err(&priv->client->dev,"eg write value:0xfe to address:0x06 :echo 106fe > u960-i2c\n");
+	return 0;
+}
+
+static int u960_debugfs_write(void *data, u64 val)
+{
+	struct ub960_data *priv = data;
+	u8 flag = 0, reg, num, value_w, value_r;
+
+	// ub960_write(priv, UB960_SR_GPIO_PIN_CTL(3), 0xd1);
+
+	dev_err(&priv->client->dev, "val: %llu\n", val);
+
+	flag = (val >> 16) & 0xF;
+
+	if (flag) {
+		reg = (val >> 8) & 0xFF;
+		value_w = val & 0xFF;
+		ub960_write(priv, reg, value_w);
+	} else {
+		int k;
+
+		reg = (val >> 8) & 0xFF;
+		num = val & 0xff;
+		dev_err(&priv->client->dev,"\nRead: start REG:0x%02x,count:0x%02x\n", reg, num);
+		for (k = 0; k < num; k++) {
+			ub960_read(priv, reg+k, &value_r);
+		}
+	}
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(u960_debugfs_fops,
+	u960_debugfs_show,
+	u960_debugfs_write,
+	"%lld\n");
+
+static void u960_debugfs_remove(struct ub960_data *priv)
+{
+	debugfs_remove_recursive(priv->debugfs_dir);
+	priv->debugfs_dir = NULL;
+}
+
+static int u960_debugfs_create(struct ub960_data *priv)
+{
+	
+	priv->debugfs_dir = debugfs_create_dir("u960", NULL);
+	if (priv->debugfs_dir == NULL)
+		return -ENOMEM;
+
+	if (!debugfs_create_file("u960-i2c", 0644, priv->debugfs_dir, priv,
+			&u960_debugfs_fops))
+		goto error;
+
+	return 0;
+
+error:
+	u960_debugfs_remove(priv);
+
+	return -ENOMEM;
+}
+
 
 static int ub960_probe(struct i2c_client *client)
 {
@@ -2471,6 +2566,7 @@ static int ub960_probe(struct i2c_client *client)
 		dev_dbg(dev, "using polling mode\n");
 	}
 
+	u960_debugfs_create(priv);
 	dev_info(dev, "Successfully probed (rev/mask %02x)\n", rev_mask);
 
 	return 0;
