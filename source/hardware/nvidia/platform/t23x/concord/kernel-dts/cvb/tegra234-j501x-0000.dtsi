@@ -1,0 +1,481 @@
+/*
+ * Copyright (c) 2021-2022, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#include <dt-bindings/gpio/tegra234-gpio.h>
+#include "dt-bindings/input/input.h"
+#include "tegra234-pwm-fan.dtsi"
+#include "tegra234-j501x-audio.dtsi"
+#include "tegra234-j501x-fixed-regulator.dtsi"
+#include "tegra234-ethernet-3737-0000.dtsi"
+#include "tegra234-p3737-pcie.dtsi"
+// #include "tegra234-p3737-super-module-e2614.dtsi"
+#include <dt-bindings/net/ti-dp83867.h>
+
+/ {
+	gpio-keys {
+		compatible = "gpio-keys";
+		gpio-keys,name = "gpio-keys";
+		status = "okay";
+
+		forcerecovery {
+			label = "force-recovery";
+			gpios = <&tegra_main_gpio TEGRA234_MAIN_GPIO(G, 0) GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_1>;
+		};
+
+
+		sleep {
+			label = "sleep";
+			gpios = <&tegra_main_gpio TEGRA234_MAIN_GPIO(G, 2) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_SLEEP>;
+		};
+	};
+
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+
+		led {
+			label = "on-board:usr0";
+			gpios = <&tegra_main_gpio TEGRA234_MAIN_GPIO(Q, 6) GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "cpu0";
+			default-state = "off";
+		};
+	};
+
+	soft_wdt:soft_watchdog {
+		compatible = "softdog-platform";
+		status = "okay";
+	};
+
+	eeprom-manager {
+		data-size = <0x100>;
+		bus@0 {
+			i2c-bus = <&gen1_i2c>;
+			eeprom@1 {
+				slave-address = <0x56>;
+				label = "cvb";
+			};
+		};
+
+		bus@1 {
+			i2c-bus = <&gen2_i2c>;
+			eeprom@1 {
+				slave-address = <0x50>;
+				label = "super-module";
+			};
+		};
+
+		bus@2 {
+			i2c-bus = <&cam_i2c>;
+			eeprom@0 {
+				slave-address = <0x54>;
+				label = "sensor0";
+			};
+			eeprom@1 {
+				slave-address = <0x57>;
+				label = "sensor1";
+			};
+			eeprom@2 {
+				slave-address = <0x52>;
+				label = "sensor2";
+			};
+		};
+
+	};
+
+	ufshci@2500000 {
+		nvidia,enable-ufs-provisioning;
+		status = "disabled";
+	};
+
+
+	i2c@c240000 {
+		status = "okay";
+	};
+
+	xusb_padctl: xusb_padctl@3520000 {
+		status = "okay";
+		pads {
+			usb2 {
+				lanes {
+					usb2-0 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-1 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-2 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-3 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+				};
+			};
+			usb3 {
+				lanes {
+					usb3-0 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-1 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-2 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		ports {
+			usb2-0 {
+				mode = "otg";
+				usb-role-switch;
+				status = "okay";
+				connector {
+					compatible = "usb-b-connector", "gpio-usb-b-connector";
+					label = "micro-USB";
+					type = "micro";
+					vbus-gpio = <&tegra_main_gpio TEGRA234_MAIN_GPIO(AF, 3) GPIO_ACTIVE_HIGH>;
+					id-gpio = <&tegra_main_gpio TEGRA234_MAIN_GPIO(AF, 2) GPIO_ACTIVE_HIGH>;
+				};
+			};
+			usb2-1 {
+				mode = "host";
+				status = "okay";
+			};
+			usb2-2 {
+				mode = "host";
+				status = "okay";
+			};
+			usb2-3 {
+				mode = "host";
+				status = "okay";
+			};
+			usb3-0 {
+				nvidia,usb2-companion = <1>;
+				status = "okay";
+			};
+			usb3-1 {
+				nvidia,usb2-companion = <0>;
+				status = "okay";
+			};
+			usb3-2 {
+				nvidia,usb2-companion = <3>;
+				status = "okay";
+			};
+		};
+	};
+
+	tegra_xudc: xudc@3550000 {
+		status = "okay";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
+			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-1}>;
+		phy-names = "usb2-0", "usb3-1";
+		nvidia,xusb-padctl = <&xusb_padctl>;
+		nvidia,boost_cpu_freq = <1200>;
+	};
+
+	tegra_xhci: xhci@3610000 {
+		status = "okay";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
+			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>,
+			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-3}>,
+			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>,
+			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-1}>,
+			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-2}>;
+		phy-names = "usb2-0", "usb2-1", "usb2-2", "usb2-3",
+			"usb3-0", "usb3-1", "usb3-2";
+		nvidia,xusb-padctl = <&xusb_padctl>;
+	};
+
+	spi@3210000{ /* SPI1 in 40 pin conn */
+		status = "okay";
+		spi@0 { /* chip select 0 */
+			compatible = "tegra-spidev";
+			reg = <0x0>;
+			spi-max-frequency = <50000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <0x10>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+			};
+		};
+		spi@1 { /* chip select 1 */
+			compatible = "tegra-spidev";
+			reg = <0x1>;
+			spi-max-frequency = <50000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <0x10>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+			};
+		};
+	};
+
+	spi@3230000{ /* SPI3 in 40 pin conn */
+		status = "okay";
+		spi@0 { /* chip select 0 */
+			compatible = "tegra-spidev";
+			reg = <0x0>;
+			spi-max-frequency = <50000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <0x10>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+			};
+		};
+		spi@1 { /* chips select 1 */
+			compatible = "tegra-spidev";
+			reg = <0x1>;
+			spi-max-frequency = <50000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <0x10>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+			};
+		};
+	};
+
+	gte@c1e0000 {
+		status = "okay";
+	};
+
+	gpio@c2f0000 {
+		/delete-property/ use-timestamp;
+	};
+
+	mttcan@c310000 {
+		status = "okay";
+	};
+
+	mttcan@c320000 {
+		status = "okay";
+	};
+
+	serial@3110000 {
+		status = "okay";
+	};
+
+	tachometer@39c0000 {
+		status = "okay";
+		upper-threshold = <0xfffff>;
+		lower-threshold = <0x0>;
+	};
+
+	pwm@3280000 {
+		status = "okay";
+	};
+
+	pwm@32a0000 {
+		status = "okay";
+	};
+
+	pwm@32c0000 {
+		status = "okay";
+	};
+
+	pwm@32d0000 {
+		status = "disabled";
+	};
+
+	pwm@32f0000 {
+		status = "okay";
+	};
+	spi@c260000 {
+		status = "okay";
+		cs-gpios = <&tegra_main_gpio TEGRA234_MAIN_GPIO(M, 3) GPIO_ACTIVE_HIGH>,
+					<&tegra_aon_gpio TEGRA234_AON_GPIO(CC, 3) GPIO_ACTIVE_HIGH>;
+		num-cs = <2>;
+
+		slb9670@0 {
+			compatible = "infineon,slb9670";
+			status = "okay";
+			reg = <0x0>;
+			spi-max-frequency = <10000000>;
+			controller-data {
+				nvidia,cs-setup-clk-count = <0x1e>;
+				nvidia,cs-hold-clk-count = <0x1e>;
+				nvidia,rx-clk-tap-delay = <0x7>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+				nvidia,cs-inactive-cycles = <0x6>;
+			};
+		};
+		spi@1 { /* chips select 1 */
+			compatible = "tegra-spidev";
+			reg = <0x1>;
+			status = "okay";
+			spi-max-frequency = <10000000>;
+		};
+	};
+
+	spi@3300000 {
+		status = "disabled";
+	};
+
+	gpio@2200000 {
+		/* gpio-name for 40-pin header, gpio-name given as COL(10) x ROW(24),
+		   Tegra-GPIO starts from 348 */
+		gpio-line-names = "",   "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "GPIO35",     "",     "",     "",
+		"",     "",     "",     "I2S2_SCLK",     "I2S2_DOUT",     "I2S2_DIN",     "I2S2_FS",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "GPIO27",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "GPIO17",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "MCLK05",     "",     "PWM01",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
+		"",     "",     "",     "",     "",     "SPI1_CLK",     "SPI1_MISO",     "SPI1_MOSI",     "SPI1_CS0_N",     "SPI1_CS1_N",
+		"",     "",     "",     "";
+	};
+
+	gpio@c2f0000 {
+		/* gpio-name for 40-pin header, gpio-name given as COL(10) x ROW(2),
+		   Tegra-AON-GPIO starts from 316 */
+		gpio-line-names = "CAN0_DOUT",   "CAN0_DIN",     "CAN1_DOUT",     "CAN1_DIN",     "",     "",     "",     "",     "GPIO09",     "GPIO08",
+		"",     "",     "",     "",     "",     "",     "",     "",     "",     "";
+	};
+
+
+	ethernet@2310000 {
+		status = "okay";
+		nvidia,mac-addr-idx = <1>;
+		nvidia,max-platform-mtu = <8000>;
+		nvidia,pause_frames = <0>;
+		nvidia,phy-reset-gpio = <&tegra_main_gpio TEGRA234_MAIN_GPIO(G, 5) 0>;
+		phy-handle = <&phy>;
+		phy-mode = "rgmii-id";		
+	
+		mdio {
+			compatible = "nvidia,eqos-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			phy: phy@0 {
+				reg = <0>;
+				compatible = "ethernet-phy-ieee802.3-c22";
+				tx-fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+				rx-fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+				ti,max-output-impedance;
+			//	ti,clk-output-sel = <DP83867_CLK_O_SEL_CHN_A_RCLK>;
+				ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_75_NS>;
+				ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_75_NS>;
+				interrupt-parent = <&tegra_main_gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(G, 4) IRQ_TYPE_LEVEL_LOW>; //<TODO> Need to check
+			};			
+		};		
+	};
+
+	pcie@14180000 {
+		status = "okay";
+		phys = <&p2u_hsio_0>;
+		phy-names = "p2u-0";		
+	};
+
+	i2c@3180000 {
+		status = "okay";
+		gpio_xten: gpio_xten@21 {
+			compatible = "nxp,pca9535";
+			reg = <0x21>;
+			gpio-controller;
+			#gpio-cells = <2>;
+
+			interrupt-controller;
+			#interrupt-cells=<2>;
+
+			interrupt-parent = <&tegra_main_gpio>;
+			interrupts = <TEGRA234_MAIN_GPIO(AC, 5) IRQ_TYPE_EDGE_FALLING>;
+
+			gpio-line-names =
+					"M2B_DPR"			,"M2B_P_OFF_N",
+					"M2B_W_DIS2_N"		,"PCIe_WAKE",
+					"SIM_MUC_SEL"		,"PCIe_SX1261_RST_N",
+					"M2B_W_DIS1_N"		,"M2B_PCIe_RST_N",
+					"CAN1_120R_EN"		,"CAN0_120R_EN",
+					"TPM_RST"			,"TPM_IRQ",
+					"CODEC_RST_N"		,"USB_HUB_RST_N",
+					"CAM_VDD_SYS_EN"		,"UART2_EN";
+
+			gpio-line-offsets = <0>, <1>, <2>, <3>, <4>, <5>, <6>, <7>, <8>, <9>, <10>, <11>, <12>, <13>, <14>, <15>;
+
+			CAM_VDD_SYS_EN {
+				gpios = <&gpio_xten 14 GPIO_ACTIVE_HIGH>;
+				output-high;
+				line-name = "CAM_VDD_SYS_EN";
+			};
+		};
+	};
+
+	display@13800000 {
+		os_gpio_hotplug_a = <&tegra_main_gpio TEGRA234_MAIN_GPIO(M, 0) GPIO_ACTIVE_HIGH>;
+	};
+
+	pinmux@2430000  {
+		pinctrl-names = "default";
+		pinctrl-0 = <&jetson_io_pinmux>;
+		jetson_io_pinmux: exp-header-pinmux {
+			uart5_tx_py5 {
+					nvidia,pins = "uart5_tx_py5";
+					nvidia,function = "uarte";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			uart5_rx_py6 {
+					nvidia,pins = "uart5_rx_py6";
+					nvidia,function = "uarte";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			uart5_rts_py7 {
+					nvidia,pins = "uart5_rts_py7";
+					nvidia,function = "uarte";
+					nvidia,pull = <TEGRA_PIN_PULL_UP>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			uart5_cts_pz0 {
+					nvidia,pins = "uart5_cts_pz0";
+					nvidia,function = "uarte";
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+		};
+	};
+
+	serial@3140000 {
+		status = "okay";
+	};
+};

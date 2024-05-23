@@ -15,6 +15,7 @@
 #include "../codecs/rt5640.h"
 #include "../codecs/rt5659.h"
 #include "../codecs/sgtl5000.h"
+#include "../codecs/tlv320aic32x4.h"
 
 static int tegra_audio_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
@@ -88,6 +89,21 @@ static int tegra_machine_fepi_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
+	return tegra_audio_dai_init(rtd);
+}
+
+/*Added for TLV320AIC32X4 Audio codec changes*/
+static int tegra_machine_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
+{
+        struct device *dev = rtd->card->dev;
+        int err;
+
+        err = snd_soc_dai_set_sysclk(rtd->dais[rtd->num_cpus], 0, 12288000,
+                                     SND_SOC_CLOCK_IN);
+        if (err) {
+                dev_err(dev, "failed to set aic32x4 sysclk!\n");
+                return err;
+        }
 	return tegra_audio_dai_init(rtd);
 }
 
@@ -260,6 +276,8 @@ int tegra_codecs_init(struct snd_soc_card *card)
 			dai_links[i].init = tegra_machine_rt56xx_init;
 		else if (strstr(dai_links[i].name, "fe-pi-audio-z-v2"))
 			dai_links[i].init = tegra_machine_fepi_init;
+		else if (strstr(dai_links[i].name, "ti-capture"))
+                        dai_links[i].init = tegra_machine_aic32x4_init;
 		else if (strstr(dai_links[i].name, "respeaker-4-mic-array"))
 			dai_links[i].init = tegra_machine_respeaker_init;
 	}
