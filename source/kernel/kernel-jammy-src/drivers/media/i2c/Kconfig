@@ -30,6 +30,7 @@ comment "audio, video and radio I2C drivers auto-selected by 'Autoselect ancilla
 #
 # Encoder / Decoder module configuration
 #
+source "drivers/media/i2c/maxim-serdes/Kconfig"
 
 menu "Audio decoders, processors and mixers"
 	visible if !MEDIA_HIDE_ANCILLARY_SUBDRV
@@ -816,6 +817,8 @@ config VIDEO_IMX290
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx290.
+
+
 
 config VIDEO_IMX319
 	tristate "Sony IMX319 sensor support"
