@@ -365,6 +365,7 @@ int camera_common_get_framesync(struct v4l2_subdev *sd,
 /* Common initialize and cleanup for camera */
 int camera_common_initialize(struct camera_common_data *s_data,
 		const char *dev_name);
+int camera_common_fill_fmts(struct camera_common_data *s_data);
 void camera_common_cleanup(struct camera_common_data *s_data);
 
 /* Focuser */

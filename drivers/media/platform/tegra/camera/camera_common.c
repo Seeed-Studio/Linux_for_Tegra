@@ -723,12 +723,18 @@ int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	struct camera_common_data *s_data = to_camera_common_data(sd->dev);
 	int ret;
+	const struct camera_common_colorfmt *fmt;
 
 	dev_dbg(sd->dev, "%s(%u) size %i x %i\n", __func__,
 			mf->code, mf->width, mf->height);
 
 	if (!s_data)
 		return -EINVAL;
+
+	fmt = s_data->colorfmt; 
+	if (WARN_ON(!fmt))
+			return -EINVAL;
+
 
 	/* MIPI CSI could have changed the format, double-check */
 	if (!camera_common_find_datafmt(mf->code))
@@ -1134,6 +1140,38 @@ int camera_common_initialize(struct camera_common_data *s_data,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(camera_common_initialize);
+
+
+int camera_common_fill_fmts(struct camera_common_data *s_data)
+{
+       struct camera_common_frmfmt *frmfmt;
+       struct device *dev = s_data->dev;
+       unsigned int i;
+
+       s_data->numfmts = s_data->sensor_props.num_modes;
+
+       frmfmt = devm_kcalloc(dev, s_data->numfmts, sizeof(*frmfmt), GFP_KERNEL);
+       if (!frmfmt)
+               return -ENOMEM;
+
+       s_data->frmfmt = frmfmt;
+
+       for (i = 0; i < s_data->numfmts; i++) {
+               struct sensor_mode_properties *sensor_mode =
+                       &s_data->sensor_props.sensor_modes[i];
+
+               frmfmt->size.width = sensor_mode->image_properties.width;
+               frmfmt->size.height = sensor_mode->image_properties.height;
+               frmfmt->framerates = sensor_mode->framerates;
+               frmfmt->num_framerates = sensor_mode->num_framerates;
+               frmfmt->mode = i;
+
+               frmfmt++;
+       }
+
+       return 0;
+}
+EXPORT_SYMBOL_GPL(camera_common_fill_fmts);
 
 void camera_common_cleanup(struct camera_common_data *s_data)
 {
