@@ -29,6 +29,14 @@
 #  This product is covered by one or more of the following patents:
 #  US6,570,884, US6,115,776, and US6,327,625.
 ################################################################################
+LINUX_VERSION := $(shell expr $(VERSION) \* 256 + $(PATCHLEVEL))
+LINUX_VERSION_6_9 := $(shell expr 6 \* 256 + 9)
+
+# Use dummy R8126 driver for K69 and later
+ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_9); echo $$?),0)
+obj-m := r8126.o
+r8168-objs := r8126_dummy.o
+else
 
 CONFIG_SOC_LAN = n
 ENABLE_REALWOW_SUPPORT = n
@@ -130,4 +138,6 @@ ifeq ($(ENABLE_PAGE_REUSE), y)
 endif
 ifeq ($(ENABLE_RX_PACKET_FRAGMENT), y)
 	EXTRA_CFLAGS += -DENABLE_RX_PACKET_FRAGMENT
+endif
+
 endif
