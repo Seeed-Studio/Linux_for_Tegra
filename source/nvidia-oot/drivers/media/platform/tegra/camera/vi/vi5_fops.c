@@ -354,6 +354,10 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, unsigned int 
 	/* Set the NVCSI PixelParser index (Stream ID) and VC ID*/
 	setup.csi_stream_id = chan->port[vi_port];
 	setup.virtual_channel_id = chan->virtual_channel;
+
+	/*print csi_stream_id and virtual_channel_id */
+	dev_dbg(chan->vi->dev, "step %d  csi_stream_id = %d, virtual_channel_id = %d\n", vi_port ,setup.csi_stream_id, setup.virtual_channel_id);
+
 	/* Set CSI port info */
 	if (chan->pg_mode) {
 		setup.csi_port = NVCSI_PORT_UNSPECIFIED;

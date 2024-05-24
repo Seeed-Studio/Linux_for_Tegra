@@ -462,6 +462,7 @@ static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
 			if (ops->ready != NULL)
 				ops->ready(chan, is_ready);
 			rcu_read_unlock();
+			dev_warn(dev, "ivc channel driver ready\n");
 		} else {
 			dev_warn(dev, "ivc channel driver missing\n");
 		}

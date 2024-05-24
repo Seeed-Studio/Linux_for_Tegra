@@ -92,6 +92,14 @@ static int sensor_common_parse_signal_props(
 	}
 	signal->num_lanes = value;
 
+	err = read_property_u32(node, "csi_pixel_bit_depth", &depth);
+	if (err) {
+			dev_err(dev,
+					"%s:csi_pixel_bit_depth property missing.\n",
+					__func__);
+			return err;
+	}
+
 	err = read_property_u64(node, "pix_clk_hz", &val64);
 	if (err) {
 		dev_err(dev, "%s:pix_clk_hz property missing\n", __func__);
@@ -99,11 +107,30 @@ static int sensor_common_parse_signal_props(
 	}
 	signal->pixel_clock.val = val64;
 
+	dev_err(dev, "pixel_clock.val = %llu\n",signal->pixel_clock.val);
+
 	err = read_property_u64(node, "serdes_pix_clk_hz", &val64);
 	if (err)
 		signal->serdes_pixel_clock.val = 0;
 	else
 		signal->serdes_pixel_clock.val = val64;
+
+	err = read_property_u64(node, "serdes_link_freq", &val64);
+	if (!err && signal->serdes_pixel_clock.val == 0ULL) {
+			if (signal->phy_mode == CSI_PHY_MODE_DPHY)
+					val64 = val64 * 2;
+			else if (signal->phy_mode == CSI_PHY_MODE_CPHY)
+					val64 = val64 * 16 / 7;
+
+			dev_err(dev,"serdes_link_freq : %llu\n",val64);
+
+			signal->serdes_pixel_clock.val = val64 * signal->num_lanes / depth;
+	}
+
+	dev_err(dev,"serdes_link_freq err: %d\n",err);
+	//print serdes_pixel_clock
+	dev_err(dev,"serdes_pixel_clock.val = %llu\n",signal->serdes_pixel_clock.val);
+
 
 	if (signal->serdes_pixel_clock.val != 0ULL) {
 		if (signal->serdes_pixel_clock.val < signal->pixel_clock.val) {
@@ -117,13 +144,6 @@ static int sensor_common_parse_signal_props(
 		rate = signal->pixel_clock.val;
 	}
 
-	err = read_property_u32(node, "csi_pixel_bit_depth", &depth);
-	if (err) {
-		dev_err(dev,
-			"%s:csi_pixel_bit_depth property missing.\n",
-			__func__);
-		return err;
-	}
 
 	/* Convert pixel rate to lane data rate */
 	rate = rate * depth / signal->num_lanes;
@@ -138,6 +158,15 @@ static int sensor_common_parse_signal_props(
 		/* Data rate */
 		signal->mipi_clock.val = rate;
 	}
+
+	//print serdes_pixel_clock.val, phy_mode, num_lanes, depth
+	dev_err(dev, "serdes_pixel_clock.val = %llu phy_mode = %d   num_lanes = %d   depth = %d  mipi_clock = %llu\n",
+									signal->serdes_pixel_clock.val,
+									signal->phy_mode,
+									signal->num_lanes,
+									depth,
+									signal->mipi_clock.val);
+                                       
 
 	err = read_property_u32(node, "cil_settletime", &value);
 	if (err)
@@ -505,6 +534,14 @@ static int sensor_common_parse_control_props(
 	} else
 		control->max_framerate = value;
 
+
+	if (control->min_framerate > control->max_framerate) {
+			dev_warn(dev,
+					"%s: min_framerate is bigger than max_framerate, correcting\n",
+					__func__);
+			control->min_framerate = control->max_framerate;
+	}
+
 	err = read_property_u32(node, "step_framerate", &value);
 	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
@@ -674,17 +711,19 @@ static int sensor_common_init_i2c_device_config(
 	err = of_property_read_u32_index(parent, "reg", 1, &value);
 	if (err) {
 		dev_err(dev, "i2c bus regbase unavailable\n");
-		return err;
+		goto skip_reg_base;
 	}
 	i2c_sensor->bus.reg_base = value;
 
+skip_reg_base:
 	err = of_property_read_u32(parent, "clock-frequency", &value);
 	if (err) {
 		dev_err(dev, "bus clock frequency unavailable\n");
-		return err;
+		goto skip_clk_rate;
 	}
 	i2c_sensor->bus.clk_rate = value;
 
+skip_clk_rate:
 	of_node_put(parent);
 	/*
 	 * Read any additional flags to configure I2C for any
@@ -774,6 +813,30 @@ exit:
 	return err;
 }
 
+static int sensor_common_fill_framerates(
+       struct device *dev, struct device_node *np,
+       struct sensor_mode_properties *sensor_mode)
+{
+       struct sensor_control_properties *control = &sensor_mode->control_properties;
+       unsigned int i;
+
+       sensor_mode->num_framerates = (control->max_framerate -
+                                      control->min_framerate) /
+                                     control->framerate_factor + 1;
+       sensor_mode->framerates = devm_kcalloc(dev, sensor_mode->num_framerates,
+                                              sizeof(*sensor_mode->framerates),
+                                              GFP_KERNEL);
+       if (!sensor_mode->framerates)
+               return -ENOMEM;
+
+       for (i = 0; i < sensor_mode->num_framerates; i++)
+               sensor_mode->framerates[i] = (control->min_framerate + i *
+                                            control->framerate_factor) / 1000000;
+
+       return 0;
+}
+
+
 int sensor_common_init_sensor_properties(
 	struct device *dev, struct device_node *np,
 	struct sensor_properties *sensor)
@@ -860,6 +923,15 @@ int sensor_common_init_sensor_properties(
 				temp_str);
 			goto fail;
 		}
+		
+		err = sensor_common_fill_framerates(dev, node,
+				&sensor->sensor_modes[i]);
+		if (err) {
+				dev_err(dev, "Failed to fill %s framerates props\n",
+						temp_str);
+				goto fail;
+		}
+
 		of_node_put(node);
 	}
 
