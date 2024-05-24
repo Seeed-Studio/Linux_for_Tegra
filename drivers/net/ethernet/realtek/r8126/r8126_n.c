@@ -13861,7 +13861,7 @@ rtl8126_init_one(struct pci_dev *pdev,
         tp->phy_reset_enable = rtl8126_xmii_reset_enable;
         tp->phy_reset_pending = rtl8126_xmii_reset_pending;
         tp->link_ok = rtl8126_xmii_link_ok;
-
+        tp->HwSuppPtpVer = 1;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,11,0)
         dev->tstats = devm_netdev_alloc_pcpu_stats(&pdev->dev,
                         struct pcpu_sw_netstats);
