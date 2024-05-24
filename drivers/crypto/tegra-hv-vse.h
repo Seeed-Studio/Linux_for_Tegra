@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-License-Identifier: GPL-2.0-only
+ *
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  */
 
 #ifndef __TEGRA_HV_VSE_H
@@ -10,8 +11,8 @@
 #define KEYSLOT_OFFSET_BYTES		8
 
 struct tegra_vse_soc_info {
-	bool cmac_hw_padding_supported;
 	bool gcm_decrypt_supported;
+	bool cmac_hw_verify_supported;
 };
 
 /* GCM Operation Supported Flag */
