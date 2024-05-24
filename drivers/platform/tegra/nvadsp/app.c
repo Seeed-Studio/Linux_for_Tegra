@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/platform_device.h>
 #include <linux/tegra_nvadsp.h>
@@ -256,7 +256,7 @@ err_out:
 	return ret;
 }
 
-static int __init adsp_app_debug_init(struct nvadsp_app_priv_struct *priv,
+static int adsp_app_debug_init(struct nvadsp_app_priv_struct *priv,
 				struct dentry *root)
 {
 	priv->adsp_app_debugfs_root = debugfs_create_dir("adsp_apps", root);
@@ -1061,7 +1061,7 @@ static long _nvadsp_wait_for_app_complete_timeout(
 	return ret;
 }
 
-int __init nvadsp_app_module_probe(struct platform_device *pdev)
+int nvadsp_app_module_probe(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;

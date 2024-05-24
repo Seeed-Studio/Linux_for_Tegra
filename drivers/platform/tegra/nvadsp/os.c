@@ -2280,7 +2280,7 @@ static ssize_t tegrafw_read_adsp(struct device *dev,
 	return strlen(data);
 }
 
-int __init nvadsp_os_probe(struct platform_device *pdev)
+int nvadsp_os_probe(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct nvadsp_handle *nvadsp_handle = &drv_data->nvadsp_handle;

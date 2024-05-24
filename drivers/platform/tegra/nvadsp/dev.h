@@ -323,7 +323,7 @@ void emc_dfs_exit(void);
 #endif
 
 #ifdef CONFIG_PM
-static inline int __init nvadsp_pm_init(struct platform_device *pdev)
+static inline int nvadsp_pm_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 
@@ -333,7 +333,7 @@ static inline int __init nvadsp_pm_init(struct platform_device *pdev)
 	return -EINVAL;
 }
 #endif
-static inline int __init nvadsp_dev_init(struct platform_device *pdev)
+static inline int nvadsp_dev_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 
@@ -343,7 +343,7 @@ static inline int __init nvadsp_dev_init(struct platform_device *pdev)
 	return -EINVAL;
 }
 
-static inline int __init nvadsp_acast_init(struct platform_device *pdev)
+static inline int nvadsp_acast_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "dev.h"
 #include "hwmailbox.h"
@@ -344,7 +342,7 @@ static status_t _nvadsp_mbox_close(struct nvadsp_handle *nvadsp_handle,
 	return ret;
 }
 
-status_t __init nvadsp_mbox_init(struct platform_device *pdev)
+status_t nvadsp_mbox_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	struct nvadsp_handle *nvadsp_handle = &drv->nvadsp_handle;

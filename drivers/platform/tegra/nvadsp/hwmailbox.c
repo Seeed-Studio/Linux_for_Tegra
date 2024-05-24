@@ -309,7 +309,7 @@ int nvadsp_setup_hwmbox_interrupts(struct platform_device *pdev)
 	return ret;
 }
 
-int __init nvadsp_hwmbox_init(struct platform_device *pdev)
+int nvadsp_hwmbox_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;

@@ -85,7 +85,7 @@ out:
 EXPORT_SYMBOL(nvadsp_get_handle);
 
 #ifdef CONFIG_DEBUG_FS
-static int __init adsp_debug_init(struct nvadsp_drv_data *drv_data,
+static int adsp_debug_init(struct nvadsp_drv_data *drv_data,
 				const char *dev_str)
 {
 	drv_data->adsp_debugfs_root = debugfs_create_dir(dev_str, NULL);
@@ -229,7 +229,7 @@ static void nvadsp_bw_unregister(struct nvadsp_drv_data *drv_data)
 	}
 }
 
-static int __init nvadsp_parse_co_mem(struct platform_device *pdev)
+static int nvadsp_parse_co_mem(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -257,7 +257,7 @@ exit:
 	return err;
 }
 
-static void __init nvadsp_parse_clk_entries(struct platform_device *pdev)
+static void nvadsp_parse_clk_entries(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -283,7 +283,7 @@ static void __init nvadsp_parse_clk_entries(struct platform_device *pdev)
 		drv_data->ape_emc_freq = val32;
 }
 
-static int __init nvadsp_parse_dt(struct platform_device *pdev)
+static int nvadsp_parse_dt(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
@@ -391,7 +391,7 @@ static int __init nvadsp_parse_dt(struct platform_device *pdev)
 	return 0;
 }
 
-static int __init nvadsp_probe(struct platform_device *pdev)
+static int nvadsp_probe(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data;
 	struct device *dev = &pdev->dev;
