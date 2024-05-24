@@ -10,8 +10,14 @@ dtbo-y :=
 makefile-path := t23x/nv-public/nv-platform
 
 dtb-y += tegra234-p3737-0000+p3701-0000-nv.dtb
+dtb-y += tegra234-j501x-0000+p3701-0000-reserver.dtb
+dtb-y += tegra234-j501x-0000+p3701-0000-reserver-gmsl.dtb
 dtb-y += tegra234-p3737-0000+p3701-0004-nv.dtb
+dtb-y += tegra234-j501x-0000+p3701-0004-reserver.dtb
+dtb-y += tegra234-j501x-0000+p3701-0004-reserver-gmsl.dtb
 dtb-y += tegra234-p3737-0000+p3701-0005-nv.dtb
+dtb-y += tegra234-j501x-0000+p3701-0005-reserver.dtb
+dtb-y += tegra234-j501x-0000+p3701-0005-reserver-gmsl.dtb
 dtb-y += tegra234-p3737-0000+p3701-0008-nv.dtb
 dtb-y += tegra234-p3740-0002+p3701-0008-nv.dtb
 dtb-y += tegra234-p3740-0002+p3701-0008-nv-safety.dtb

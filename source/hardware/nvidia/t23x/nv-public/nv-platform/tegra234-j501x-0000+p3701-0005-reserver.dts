@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+#include "tegra234-j501x-0000+p3701-0000-reserver.dts"
+#include "tegra234-p3701-0005.dtsi"
+/ {
+	model = "NVIDIA Jetson AGX Orin Developer Kit";
+	compatible = "nvidia,p3737-0000+p3701-0005", "nvidia,p3701-0005", "nvidia,tegra234";
+};

@@ -1,0 +1,228 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2023 Analog Devices Inc.
+ */
+
+// #include <dt-bindings/media/camera.h>
+
+
+#if GMSL_TEGRA_PORT == 0
+#define GMSL_TEGRA_PORT_SERIAL	"serial_a"
+#elif GMSL_TEGRA_PORT == 1
+#define GMSL_TEGRA_PORT_SERIAL	"serial_b"
+#elif GMSL_TEGRA_PORT == 2
+#define GMSL_TEGRA_PORT_SERIAL	"serial_c"
+#elif GMSL_TEGRA_PORT == 3
+#define GMSL_TEGRA_PORT_SERIAL	"serial_d"
+#elif GMSL_TEGRA_PORT == 4
+#define GMSL_TEGRA_PORT_SERIAL	"serial_e"
+#elif GMSL_TEGRA_PORT == 5
+#define GMSL_TEGRA_PORT_SERIAL	"serial_f"
+#elif GMSL_TEGRA_PORT == 6
+#define GMSL_TEGRA_PORT_SERIAL	"serial_g"
+#elif GMSL_TEGRA_PORT == 7
+#define GMSL_TEGRA_PORT_SERIAL	"serial_h"
+#else
+#error
+#endif
+
+#if defined(CAM_INDEX)
+#define CAM_VC_ID		CAM_INDEX
+#define CAM_SER_INDEX		CAM_INDEX
+#define CAM_SER_LABEL		CONCAT(ser_, CAM_SER_INDEX)
+#define CAM_PWDN_LABEL		CONCAT(CAM_SER_LABEL, _mfp0_pwdn)
+#define CAM_FSYNC_LABEL		CONCAT(CAM_SER_LABEL, _mfp7_fsync)
+#define CAM_OUT_LABEL		CAM_X_OUT_LABEL(CAM_INDEX)
+#define CAM_LABEL		CONCAT(cam_, CAM_INDEX)
+#endif
+
+#if defined(SER_INDEX) && defined(SER_CH_INDEX)
+#define CAM_OUT_REMOTE_LABEL	SER_X_CH_Y_IN_LABEL(SER_INDEX, SER_CH_INDEX)
+#endif
+
+#if !defined(CAM_HEX_REG)
+#error
+#endif
+
+#if !defined(CAM_VC_ID)
+#error
+#endif
+
+#if !defined(CAM_SER_LABEL)
+#error
+#endif
+
+#if !defined(CAM_PWDN_LABEL)
+#error
+#endif
+
+#if !defined(CAM_FSYNC_LABEL)
+#error
+#endif
+
+#if !defined(CAM_OUT_LABEL)
+#error
+#endif
+
+#if !defined(CAM_OUT_REMOTE_LABEL)
+#error
+#endif
+
+#if !defined(CAM_LABEL)
+#error
+#endif
+
+// #define CAM_USE_AD_GAIN
+
+CAM_LABEL: ox03a@CAM_HEX_REG {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	compatible = "nv,nv-cam";
+	reg = <CAM_HEX_REG>;
+
+	label = STRINGIFY(CAM_LABEL);
+
+	// pinctrl-0 = <&CAM_PWDN_LABEL &CAM_FSYNC_LABEL>;
+	// pinctrl-names = "default";
+
+	pwdn-gpios = <&CAM_SER_LABEL 0 GPIO_ACTIVE_HIGH>;
+	nv,pwdn-sleep-us = <500000>;
+
+	reset-gpios = <&CAM_SER_LABEL 7 GPIO_ACTIVE_HIGH>;
+
+	physical_w = "15.0";
+	physical_h = "12.5";
+
+	sensor_model = "isx031";
+
+	use_sensor_mode_id = "true";
+
+	nv,reg-bits = <16>;
+	nv,val-bits = <8>;
+
+	nv,chip-id-regs = <0x7e8a 0x7e8b>;
+	nv,chip-id-masks = <0xff 0x0f>;
+	nv,chip-id-vals = <0x31 0x0>;
+
+	nv,wait-ms-cmd = <0x32>;
+
+	nv,mode-common-cmd = <
+		0x8a01 0x00 /* Stream off */
+		0x8af0 0x01
+		0xbf14 0x01 /* SW reset */
+	>;
+
+	nv,start-stream-cmd = <
+		0x8a01 0x80 /* Stream on */
+	>;
+
+	nv,stop-stream-cmd = <0x8a01 0x00>;
+
+	mode0 {
+		nv,mode-cmd = <0>;
+#if defined(CAM_USE_AD_GAIN)
+		nv,gain-type = "ad";
+
+		nv,again-min = <16>;
+		nv,again-max = <248>;
+		nv,again-regs = <0x3508 0x3509>;
+		nv,again-source-masks = <0xf0 0x0f>;
+		nv,again-target-masks = <0x0f 0xf0>;
+
+		nv,dgain-min = <1024>;
+		nv,dgain-max = <16383>;
+		nv,dgain-regs = <0x350a 0x350b 0x350c>;
+		nv,dgain-source-masks = <0x3c00 0x3fc 0x3>;
+		nv,dgain-target-masks = <0x0f 0xff 0xc000>;
+#endif
+
+		mclk_khz = "24000";
+		set_mode_delay_ms = "5000";
+		num_lanes = STRINGIFY(GMSL_DES_PHY_NUM_LANES);
+		tegra_sinterface = GMSL_TEGRA_PORT_SERIAL;
+		vc_id = STRINGIFY(CAM_VC_ID);
+		phy_mode = "DPHY";
+		discontinuous_clk = "no";
+		dpcm_enable = "false";
+		cil_settletime = "0";
+#ifdef GMSL_TEGRA_LANE_POLARITY_SWAP
+		lane_polarity = "6";
+#endif
+		//1536
+		active_w = "1920";
+		active_h = "1536";
+
+		readout_orientation = "0";
+		csi_pixel_bit_depth = "16";
+		dynamic_pixel_bit_depth = "16";
+		mode_type = "yuv";
+		pixel_phase = "uyvy";
+
+
+		line_length = "2200";
+		inherent_gain = "1";
+		pix_clk_hz = "200000000"; 
+//		pix_clk_hz = "88473600"; 
+		serdes_link_freq = STRINGIFY(GMSL_DES_PHY_LINK_FREQ);
+		// serdes_pix_clk_hz = "375000000";
+
+#if defined(CAM_USE_AD_GAIN)
+		gain_factor = "16384";
+		min_gain_val = "16384"; /* 1.00x */
+		max_gain_val = "4062984"; /* 247.984863281x ((16 - 8/16) * (16 - 1/1024)) */
+		step_gain_val = "1";
+		default_gain = "16384"; /* 1.00x */
+#else
+		gain_factor = "1000";
+		min_gain_val = "1"; /* 1.00x */
+		max_gain_val = "30000"; /* 15.5x (16 - 1/16) */
+		step_gain_val = "300";
+		default_gain = "16"; /* 1.00x */
+#endif
+
+		min_hdr_ratio = "1";
+		max_hdr_ratio = "1";
+
+		framerate_factor = "1000000";
+		min_framerate = "30000000"; /* 30.0 fps */
+		max_framerate = "30000000"; /* 30.0 fps */
+		step_framerate = "1";
+		default_framerate = "30000000"; /* 30.0 fps */
+
+		exposure_factor = "1000000";
+		min_exp_time = "59"; /* us */
+		max_exp_time = "33333"; /* us */
+		step_exp_time = "1";
+		default_exp_time = "33333"; /* us */
+
+		embedded_metadata_height = "0";
+	};
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+
+			CAM_OUT_LABEL: endpoint {
+				port-index = <GMSL_TEGRA_PORT>;
+				bus-width = <GMSL_DES_PHY_NUM_LANES>;
+				remote-endpoint = <&CAM_OUT_REMOTE_LABEL>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+			};
+		};
+	};
+};
+
+#undef CAM_HEX_REG
+#undef CAM_INDEX
+#undef CAM_SER_INDEX
+#undef CAM_SER_LABEL
+#undef CAM_VC_ID
+#undef CAM_PWDN_LABEL
+#undef CAM_FSYNC_LABEL
+#undef CAM_LABEL
+#undef CAM_OUT_LABEL
+#undef CAM_OUT_REMOTE_LABEL
