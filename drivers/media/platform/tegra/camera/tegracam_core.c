@@ -142,8 +142,20 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 	mode_idx = s_data->mode_prop_idx = 0;
 	/* init format context */
 	/*TODO: compile frmfmt array from DT */
+	if (!tc_dev->sensor_ops->frmfmt_table) {
+			err = camera_common_fill_fmts(s_data);
+			if (err) {
+					dev_err(dev, "Failed to fill formats %s\n", tc_dev->name);
+					return err;
+			}
+
+			goto skip_frmfmt;
+	}
+	
 	s_data->frmfmt = tc_dev->sensor_ops->frmfmt_table;
 	s_data->numfmts = tc_dev->sensor_ops->numfrmfmts;
+
+skip_frmfmt:	
 	sensor_mode = &s_data->sensor_props.sensor_modes[mode_idx];
 	signal_props = &sensor_mode->signal_properties;
 	image_props = &sensor_mode->image_properties;

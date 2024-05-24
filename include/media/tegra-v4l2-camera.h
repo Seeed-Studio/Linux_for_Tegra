@@ -177,6 +177,8 @@ struct sensor_mode_properties {
 	struct sensor_image_properties image_properties;
 	struct sensor_control_properties control_properties;
 	struct sensor_dv_timings dv_timings;
+	int *framerates;
+	int num_framerates;
 };
 
 #define SENSOR_SIGNAL_PROPERTIES_CID_SIZE \
