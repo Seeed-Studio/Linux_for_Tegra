@@ -7015,6 +7015,118 @@
 
 			status = "disabled";
 		};
+
+		tegra_xhci_vf1: usb@a80aa70000 {
+			compatible = "nvidia,tegra264-xusb-vf1";
+			reg = <0xa8 0xaa70000 0x0 0x40000>;
+			interrupts = <0 953 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_VF1_HS_PORTS>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF1_SS_PORT1>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF1_SS_PORT2>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF1_SS_PORT3>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF1_SS_PORT4>;
+			dma-coherent;
+
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
+
+		tegra_xhci_vf2: usb@a80aac0000 {
+			compatible = "nvidia,tegra264-xusb-vf2";
+			reg = <0xa8 0xaac0000 0x0 0x40000>;
+			interrupts = <0 954 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_VF2_HS_PORTS>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF2_SS_PORT1>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF2_SS_PORT2>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF2_SS_PORT3>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF2_SS_PORT4>;
+			dma-coherent;
+
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
+
+		tegra_xhci_vf3: usb@a80ab10000 {
+			compatible = "nvidia,tegra264-xusb-vf3";
+			reg = <0xa8 0xab10000 0x0 0x40000>;
+			interrupts = <0 955 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_VF3_HS_PORTS>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF3_SS_PORT1>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF3_SS_PORT2>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF3_SS_PORT3>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF3_SS_PORT4>;
+			dma-coherent;
+
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
+
+		tegra_xhci_vf4: usb@a80ab60000 {
+			compatible = "nvidia,tegra264-xusb-vf4";
+			reg = <0xa8 0xab60000 0x0 0x40000>;
+			interrupts = <0 956 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_VF4_HS_PORTS>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF4_SS_PORT1>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF4_SS_PORT2>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF4_SS_PORT3>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF4_SS_PORT4>;
+			dma-coherent;
+
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
+
+		tegra_xhci_vf5: usb@a80abb0000 {
+			compatible = "nvidia,tegra264-xusb-vf5";
+			reg = <0xa8 0xabb0000 0x0 0x40000>;
+			interrupts = <0 957 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_VF5_HS_PORTS>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF5_SS_PORT1>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF5_SS_PORT2>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF5_SS_PORT3>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF5_SS_PORT4>;
+			dma-coherent;
+
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
+
+		tegra_xhci_vf6: usb@a80ac00000 {
+			compatible = "nvidia,tegra264-xusb-vf6";
+			reg = <0xa8 0xac00000 0x0 0x40000>;
+			interrupts = <0 958 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_VF6_HS_PORTS>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF6_SS_PORT1>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF6_SS_PORT2>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF6_SS_PORT3>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF6_SS_PORT4>;
+			dma-coherent;
+
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
+
+		tegra_xhci_vf7: usb@a80ac50000 {
+			compatible = "nvidia,tegra264-xusb-vf7";
+			reg = <0xa8 0xac50000 0x0 0x40000>;
+			interrupts = <0 959 IRQ_TYPE_LEVEL_HIGH>;
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_VF7_HS_PORTS>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF7_SS_PORT1>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF7_SS_PORT2>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF7_SS_PORT3>,
+				<&smmu1_mmu TEGRA_SID_XUSB_VF7_SS_PORT4>;
+			dma-coherent;
+
+			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			status = "disabled";
+		};
 	};
 
 	cpus {
