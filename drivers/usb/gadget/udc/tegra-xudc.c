@@ -3714,6 +3714,20 @@ static struct tegra_xudc_soc tegra234_hv_xudc_soc_data = {
 	.is_hv_guest = true,
 };
 
+static struct tegra_xudc_soc tegra264_xudc_soc_data = {
+	.clock_names = tegra186_xudc_clock_names,
+	.num_clks = ARRAY_SIZE(tegra186_xudc_clock_names),
+	.num_phys = 4,
+	.u1_enable = false,
+	.u2_enable = false,
+	.lpm_enable = true,
+	.invalid_seq_num = false,
+	.pls_quirk = false,
+	.port_reset_quirk = false,
+	.has_ipfs = false,
+	.has_pg_support = true,
+};
+
 static const struct of_device_id tegra_xudc_of_match[] = {
 	{
 		.compatible = "nvidia,tegra210-xudc",
@@ -3734,6 +3748,10 @@ static const struct of_device_id tegra_xudc_of_match[] = {
 	{
 		.compatible = "nvidia,tegra234-hv-xudc",
 		.data = &tegra234_hv_xudc_soc_data
+	},
+	{
+		.compatible = "nvidia,tegra264-xudc",
+		.data = &tegra264_xudc_soc_data
 	},
 	{ }
 };
