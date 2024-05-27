@@ -6309,7 +6309,7 @@
 			reg = <0xa8 0x8680000 0x00 0x20000>,
 			      <0xa8 0x86a0000 0x00 0x10000>;
 			reg-names = "padctl", "ao";
-			interrupts = <GIC_SPI 0x1007 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <2 5 IRQ_TYPE_LEVEL_HIGH>;
 			resets = <&bpmp TEGRA264_RESET_XUSB1_PADCTL>;
 			reset-names = "padctl";
 			status = "disabled";
@@ -6396,7 +6396,7 @@
 			reg = <0xa8 0x8670000 0x00 0x8000>,
 			      <0xa8 0x8678000 0x00 0x8000>;
 			reg-names = "base", "fpci";
-			interrupts = <GIC_SPI 0x1004 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <2 2 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&bpmp TEGRA264_CLK_XUSB1_CORE_DEV>,
 				<&bpmp TEGRA264_CLK_XUSB1_CORE_SUPERSPEED>,
 				<&bpmp TEGRA264_CLK_XUSB1_SS>,
@@ -6417,9 +6417,9 @@
 			      <0xa8 0xaa00000 0x00 0x10000>,
 			      <0xa8 0xaa50000 0x00 0x10000>;
 			reg-names = "base", "fpci", "bar2";
-			interrupts-extended = <GIC_SPI 0x3DA IRQ_TYPE_LEVEL_HIGH>,
-					<GIC_SPI 0x1002 IRQ_TYPE_LEVEL_HIGH>,
-					<GIC_SPI 0x1007 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <0 952 IRQ_TYPE_LEVEL_HIGH>,
+					<2 0 IRQ_TYPE_LEVEL_HIGH>,
+					<2 5 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "xhci", "mbox", "padctl";
 
 			clocks = <&bpmp TEGRA264_CLK_XUSB1_CORE_HOST>,
