@@ -173,6 +173,7 @@ struct tegra210_adsp {
 		uint32_t rate;
 	} pcm_path[ADSP_FE_COUNT+1][2];
 	struct sock *nl_sk;
+	struct nvadsp_handle *hdl;
 };
 
 static const struct snd_pcm_hardware adsp_pcm_hardware = {
@@ -336,13 +337,22 @@ static uint32_t tegra210_adsp_get_source(struct tegra210_adsp *adsp,
 
 	return source;
 }
+
 /* ADSP shared memory allocate/free functions */
-static int tegra210_adsp_preallocate_dma_buffer(struct device *dev, size_t size,
+static int tegra210_adsp_preallocate_dma_buffer(struct device *dev,
+				struct tegra210_adsp *adsp,
+				size_t size,
 				struct snd_dma_buffer *buf)
 {
-	dev_vdbg(dev, "%s : size %d.", __func__, (uint32_t)size);
+	struct nvadsp_handle *h;
 
-	buf->area = nvadsp_alloc_coherent(size, &buf->addr, GFP_KERNEL);
+	dev_vdbg(dev, "%s : size %d\n", __func__, (uint32_t)size);
+
+	if (!adsp)
+		return -ENODEV;
+
+	h = adsp->hdl;
+	buf->area = h->alloc_coherent(h, size, &buf->addr, GFP_KERNEL);
 	if (!buf->area) {
 		dev_err(dev, "Failed to pre-allocated DMA buffer.");
 		return -ENOMEM;
@@ -356,14 +366,18 @@ static int tegra210_adsp_preallocate_dma_buffer(struct device *dev, size_t size,
 	return 0;
 }
 
-static void tegra210_adsp_deallocate_dma_buffer(struct snd_dma_buffer *buf)
+static void tegra210_adsp_deallocate_dma_buffer(struct tegra210_adsp *adsp,
+				struct snd_dma_buffer *buf)
 {
-	dev_vdbg(buf->dev.dev, "%s : size %d.", __func__, (uint32_t)buf->bytes);
+	struct nvadsp_handle *h;
+
+	dev_vdbg(buf->dev.dev, "%s : size %d\n", __func__, (uint32_t)buf->bytes);
 
 	if (!buf->area)
 		return;
 
-	nvadsp_free_coherent(buf->bytes, buf->area, buf->addr);
+	h = adsp->hdl;
+	h->free_coherent(h, buf->bytes, buf->area, buf->addr);
 	buf->area = NULL;
 	buf->addr = 0;
 }
@@ -372,19 +386,20 @@ static void tegra210_adsp_deallocate_dma_buffer(struct snd_dma_buffer *buf)
 static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 {
 	int i, ret = 0;
+	struct nvadsp_handle *h = adsp->hdl;
 
 	mutex_lock(&adsp->mutex);
 
 	if (adsp->init_done)
 		goto exit;
 
-	ret = nvadsp_os_load();
+	ret = h->os_load(h);
 	if (ret < 0) {
 		dev_err(adsp->dev, "Failed to load OS.");
 		goto exit;
 	}
 
-	ret = nvadsp_os_start();
+	ret = h->os_start(h);
 	if (ret) {
 		dev_err(adsp->dev, "Failed to start OS");
 		goto exit;
@@ -392,7 +407,7 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 
 	/* Load ADSP audio apps */
 	for (i = 0; i < adsp_app_count; i++) {
-		adsp_app_desc[i].handle = nvadsp_app_load(
+		adsp_app_desc[i].handle = h->app_load(h,
 				adsp_app_desc[i].name,
 				adsp_app_desc[i].fw_name);
 		if (adsp_app_desc[i].handle) {
@@ -406,7 +421,7 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 	*/
 
 	/* Suspend OS for now. Resume will happen via runtime pm calls */
-	ret = nvadsp_os_suspend();
+	ret = h->os_suspend(h);
 	if (ret < 0) {
 		dev_err(adsp->dev, "Failed to suspend OS.");
 		goto exit;
@@ -422,9 +437,11 @@ exit:
 
 static void tegra210_adsp_deinit(struct tegra210_adsp *adsp)
 {
+	struct nvadsp_handle *h = adsp->hdl;
+
 	mutex_lock(&adsp->mutex);
 	if (adsp->init_done) {
-		nvadsp_os_stop();
+		h->os_stop(h);
 		adsp->init_done = 0;
 	}
 	reinit_completion(&adsp->init_complete);
@@ -455,6 +472,7 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 {
 	int ret = 0;
 	unsigned long flag;
+	struct nvadsp_handle *h = app->adsp->hdl;
 
 	if (flags & TEGRA210_ADSP_MSG_FLAG_NEED_ACK) {
 		if (flags & TEGRA210_ADSP_MSG_FLAG_HOLD) {
@@ -486,7 +504,7 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 	spin_unlock_irqrestore(&app->apm_msg_queue_lock, flag);
 	if (ret < 0) {
 		/* Wakeup APM to consume messages and give it some time */
-		ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_msg_ready,
+		ret = h->mbox_send(h, &app->apm_mbox, apm_cmd_msg_ready,
 			NVADSP_MBOX_SMSG, false, 0);
 		if (ret) {
 			pr_err("%s: Failed to send mailbox message id %d ret %d\n",
@@ -512,7 +530,7 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 	if (flags & TEGRA210_ADSP_MSG_FLAG_HOLD)
 		return 0;
 
-	ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_msg_ready,
+	ret = h->mbox_send(h, &app->apm_mbox, apm_cmd_msg_ready,
 		NVADSP_MBOX_SMSG, false, 0);
 	if (ret) {
 		pr_err("%s: Failed to send mailbox message id %d ret %d\n",
@@ -539,6 +557,7 @@ static int tegra210_adsp_send_raw_data_msg(struct tegra210_adsp_app *app,
 	int ret = 0;
 	struct tegra210_adsp_app *apm = app;
 	unsigned long flag;
+	struct nvadsp_handle *h = app->adsp->hdl;
 
 	/* Find parent APM to wait for ACK*/
 	if (!IS_APM_IN(apm->reg)) {
@@ -563,7 +582,7 @@ static int tegra210_adsp_send_raw_data_msg(struct tegra210_adsp_app *app,
 		return ret;
 	}
 
-	ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_raw_data_ready,
+	ret = h->mbox_send(h, &app->apm_mbox, apm_cmd_raw_data_ready,
 		NVADSP_MBOX_SMSG, true, 100);
 	if (ret) {
 		pr_err("Failed to send mailbox message id %d ret %d\n",
@@ -820,6 +839,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 				struct tegra210_adsp_app *app)
 {
 	int ret = 0;
+	struct nvadsp_handle *h = adsp->hdl;
 
 	/* If app is already open or it is APM output pin don't open app */
 	if (app->info || IS_APM_OUT(app->reg))
@@ -828,7 +848,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 	if (!app->desc->handle)
 		return -ENODEV;
 
-	app->info = nvadsp_app_init(app->desc->handle, NULL);
+	app->info = h->app_init(h, app->desc->handle, NULL);
 	if (IS_ERR_OR_NULL(app->info)) {
 		dev_err(adsp->dev, "Failed to init app %s(%s).",
 			app->desc->name, app->desc->fw_name);
@@ -852,7 +872,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		app->apm = APM_SHARED_STATE(app->info->mem.shared);
 		app->info->stack_size = apm_stack_size[app->reg - APM_IN_START];
 
-		ret = nvadsp_mbox_open(&app->apm_mbox,
+		ret = h->mbox_open(h, &app->apm_mbox,
 			&app->apm->mbox_id,
 			app->desc->name, tegra210_adsp_msg_handler, app);
 		if (ret < 0) {
@@ -887,7 +907,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		init_completion(app->raw_msg_read_complete);
 		init_completion(app->raw_msg_write_complete);
 
-		ret = nvadsp_app_start(app->info);
+		ret = h->app_start(h, app->info);
 		if (ret < 0) {
 			dev_err(adsp->dev, "Failed to start adsp app");
 			goto err_mbox_close;
@@ -928,7 +948,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 	return 0;
 
 err_mbox_close:
-	nvadsp_mbox_close(&app->apm_mbox);
+	h->mbox_close(h, &app->apm_mbox);
 err_app_exit:
 	app->info = NULL;
 	return 0;
@@ -1452,6 +1472,7 @@ static int tegra210_adsp_compr_free(struct snd_soc_component *component,
 				    struct snd_compr_stream *cstream)
 {
 	struct tegra210_adsp_compr_rtd *prtd = cstream->runtime->private_data;
+	struct tegra210_adsp *adsp = dev_get_drvdata(component->dev);
 	unsigned long flags;
 
 	if (!prtd)
@@ -1462,7 +1483,7 @@ static int tegra210_adsp_compr_free(struct snd_soc_component *component,
 
 	pm_runtime_put(prtd->dev);
 
-	tegra210_adsp_deallocate_dma_buffer(&prtd->buf);
+	tegra210_adsp_deallocate_dma_buffer(adsp, &prtd->buf);
 
 	spin_lock_irqsave(&prtd->fe_apm->lock, flags);
 
@@ -1482,6 +1503,7 @@ static int tegra210_adsp_compr_set_params(struct snd_soc_component *component,
 					  struct snd_compr_params *params)
 {
 	struct tegra210_adsp_compr_rtd *prtd = cstream->runtime->private_data;
+	struct tegra210_adsp *adsp = dev_get_drvdata(component->dev);
 	int ret = 0;
 
 	if (!prtd)
@@ -1493,7 +1515,7 @@ static int tegra210_adsp_compr_set_params(struct snd_soc_component *component,
 		 params->codec.ch_in, params->buffer.fragment_size,
 		 params->buffer.fragments);
 
-	ret = tegra210_adsp_preallocate_dma_buffer(prtd->dev,
+	ret = tegra210_adsp_preallocate_dma_buffer(prtd->dev, adsp,
 		params->buffer.fragment_size * params->buffer.fragments,
 		&prtd->buf);
 	if (ret < 0)
@@ -1994,13 +2016,14 @@ static int tegra210_adsp_pcm_construct(struct snd_soc_component *component,
 #if ENABLE_ADSP
 	struct snd_card *card = rtd->card->snd_card;
 	struct snd_pcm *pcm = rtd->pcm;
+	struct tegra210_adsp *adsp = dev_get_drvdata(component->dev);
 	int ret = 0;
 
 	if (pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream) {
 		struct snd_pcm_substream *substream =
 			pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream;
 
-		ret = tegra210_adsp_preallocate_dma_buffer(card->dev,
+		ret = tegra210_adsp_preallocate_dma_buffer(card->dev, adsp,
 					adsp_pcm_hardware.buffer_bytes_max,
 					&substream->dma_buffer);
 
@@ -2012,7 +2035,7 @@ static int tegra210_adsp_pcm_construct(struct snd_soc_component *component,
 		struct snd_pcm_substream *substream =
 			pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream;
 
-		ret = tegra210_adsp_preallocate_dma_buffer(card->dev,
+		ret = tegra210_adsp_preallocate_dma_buffer(card->dev, adsp,
 					adsp_pcm_hardware.buffer_bytes_max,
 					&substream->dma_buffer);
 		if (ret)
@@ -2022,7 +2045,7 @@ static int tegra210_adsp_pcm_construct(struct snd_soc_component *component,
 	return 0;
 
 err:
-	tegra210_adsp_deallocate_dma_buffer(
+	tegra210_adsp_deallocate_dma_buffer(adsp,
 		&pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream->dma_buffer);
 	return ret;
 #else
@@ -2033,16 +2056,18 @@ err:
 static void tegra210_adsp_pcm_destruct(struct snd_soc_component *component,
 				       struct snd_pcm *pcm)
 {
+	struct tegra210_adsp *adsp = dev_get_drvdata(component->dev);
+
 	if (pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream) {
 		int stream = SNDRV_PCM_STREAM_PLAYBACK;
 
-		tegra210_adsp_deallocate_dma_buffer(
+		tegra210_adsp_deallocate_dma_buffer(adsp,
 			&pcm->streams[stream].substream->dma_buffer);
 	}
 	if (pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream) {
 		int stream = SNDRV_PCM_STREAM_CAPTURE;
 
-		tegra210_adsp_deallocate_dma_buffer(
+		tegra210_adsp_deallocate_dma_buffer(adsp,
 			&pcm->streams[stream].substream->dma_buffer);
 	}
 }
@@ -2379,6 +2404,7 @@ static int tegra210_adsp_runtime_suspend(struct device *dev)
 {
 	struct tegra210_adsp *adsp = dev_get_drvdata(dev);
 	int ret = 0, i;
+	struct nvadsp_handle *h = adsp->hdl;
 
 	dev_dbg(adsp->dev, "%s\n", __func__);
 
@@ -2401,13 +2427,13 @@ static int tegra210_adsp_runtime_suspend(struct device *dev)
 		}
 	}
 
-	ret = nvadsp_os_suspend();
+	ret = h->os_suspend(h);
 	if (ret)
 		dev_err(adsp->dev, "Failed to suspend ADSP OS");
 
 	adsp->adsp_started = 0;
 
-	if (!tegra_platform_is_fpga()) {
+	if (!tegra_platform_is_fpga() && !tegra_platform_is_vdk()) {
 		if (!adsp->soc_data->is_soc_t210)
 			clk_disable_unprepare(adsp->apb2ape_clk);
 		clk_disable_unprepare(adsp->ahub_clk);
@@ -2423,6 +2449,7 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 {
 	struct tegra210_adsp *adsp = dev_get_drvdata(dev);
 	int ret = 0;
+	struct nvadsp_handle *h = adsp->hdl;
 
 	dev_dbg(adsp->dev, "%s\n", __func__);
 
@@ -2430,7 +2457,7 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 	if (!adsp->init_done || adsp->adsp_started)
 		goto exit;
 
-	if (!tegra_platform_is_fpga()) {
+	if (!tegra_platform_is_fpga() && !tegra_platform_is_vdk()) {
 		ret = clk_prepare_enable(adsp->ahub_clk);
 		if (ret < 0) {
 			dev_err(dev, "ahub clk_enable failed: %d\n", ret);
@@ -2453,7 +2480,7 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 		}
 	}
 
-	ret = nvadsp_os_start();
+	ret = h->os_start(h);
 	if (ret) {
 		dev_err(adsp->dev, "Failed to start ADSP OS ret 0x%x", ret);
 		adsp->adsp_started = 0;
@@ -4380,7 +4407,7 @@ static int tegra210_adsp_component_probe(struct snd_soc_component *cmpnt)
 	struct tegra210_adsp *adsp = dev_get_drvdata(cmpnt->dev);
 
 	if (!adsp)
-		return -ENODEV;
+		return -EPROBE_DEFER;
 
 	snd_soc_component_set_drvdata(cmpnt, adsp);
 
@@ -4508,7 +4535,15 @@ static int tegra210_adsp_audio_probe(struct platform_device *pdev)
 	adsp->dev = &pdev->dev;
 	adsp->soc_data = (struct adsp_soc_data *)match->data;
 
-	if (!tegra_platform_is_fpga()) {
+	/*
+	 * Currently it is hardcoded to get the ADSP0 handle
+	 * TODO: Multi instance ADSP support to be added
+	 */
+	adsp->hdl = nvadsp_get_handle("adsp");
+	if (!adsp->hdl)
+		return -EPROBE_DEFER;
+
+	if (!tegra_platform_is_fpga() && !tegra_platform_is_vdk()) {
 		adsp->ahub_clk = devm_clk_get(&pdev->dev, "ahub");
 		if (IS_ERR(adsp->ahub_clk)) {
 			dev_err(&pdev->dev, "Error: Missing AHUB clock\n");
