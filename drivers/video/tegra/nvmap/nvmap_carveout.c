@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Interface with nvmap carveouts
  */
 
 #include <linux/debugfs.h>
 
+#include <soc/tegra/fuse-helper.h>
+
 #include "nvmap_priv.h"
+
+bool vpr_cpu_access;
 
 extern struct nvmap_device *nvmap_dev;
 
@@ -125,6 +129,10 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
 			nvmap_heap_debugfs_init(heap_root,
 						node->carveout);
+			if (!tegra_platform_is_silicon() && node->heap_bit == NVMAP_HEAP_CARVEOUT_VPR)
+				debugfs_create_bool("allow_cpu_access", S_IRUGO | S_IWUGO,
+					heap_root, (bool *)&vpr_cpu_access);
+
 		}
 	}
 out:

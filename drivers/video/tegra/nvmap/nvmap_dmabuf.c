@@ -35,6 +35,8 @@
 
 #define NVMAP_DMABUF_ATTACH  nvmap_dmabuf_attach
 
+extern bool vpr_cpu_access;
+
 struct nvmap_handle_sgt {
 	enum dma_data_direction dir;
 	struct sg_table *sgt;
@@ -380,12 +382,14 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 		nvmap_handle_put(h);
 		return -EPERM;
 	}
+
 	/*
-	 * Don't allow mmap on VPR memory as it would be mapped
-	 * as device memory. User space shouldn't be accessing
-	 * device memory.
+	 * VPR memory would be mapped as device memory.
+	 * User space shouldn't be accessing device memory.
+	 * NvGPU require to access VPR from user-space for validation on pre-sil.
+	 * So, allow VPR CPU access only if vpr_cpu_access flag is set else don't allow.
 	 */
-	if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR)  {
+	if (!vpr_cpu_access && h->heap_type == NVMAP_HEAP_CARVEOUT_VPR)  {
 		nvmap_handle_put(h);
 		return -EPERM;
 	}
