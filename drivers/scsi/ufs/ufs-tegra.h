@@ -157,6 +157,7 @@
 
 /*UFS Clock Defines*/
 #define UFSHC_CLK_FREQ		204000000
+#define UFSHC_CLK_FREQ_T264	208000000
 #define UFSDEV_CLK_FREQ		19200000
 
 /*Uphy pll clock defines*/

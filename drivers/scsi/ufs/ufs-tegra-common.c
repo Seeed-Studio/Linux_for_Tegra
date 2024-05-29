@@ -804,8 +804,14 @@ static int ufs_tegra_init_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 		goto out;
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		goto out;
-	err = ufs_tegra_host_clk_get(dev,
-		"pll_p", &ufs_tegra->ufshc_parent);
+
+	if (ufs_tegra->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_get(dev,
+			"pll_p", &ufs_tegra->ufshc_parent);
+	} else {
+		err = ufs_tegra_host_clk_get(dev,
+			"pllrefufs_clkout624", &ufs_tegra->ufshc_parent);
+	}
 	if (err)
 		goto out;
 	if (ufs_tegra->soc->chip_id != TEGRA264) {
@@ -844,7 +850,10 @@ static int ufs_tegra_enable_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 		pr_err("Function clk_set_parent failed\n");
 		goto out;
 	}
-	err = clk_set_rate(ufs_tegra->ufshc_clk, UFSHC_CLK_FREQ);
+	if (ufs_tegra->soc->chip_id != TEGRA264)
+		err = clk_set_rate(ufs_tegra->ufshc_clk, UFSHC_CLK_FREQ);
+	else
+		err = clk_set_rate(ufs_tegra->ufshc_clk, UFSHC_CLK_FREQ_T264);
 	if (err) {
 		pr_err("Function clk_set_rate failed\n");
 		goto out;
