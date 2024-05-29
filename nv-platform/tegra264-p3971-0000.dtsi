@@ -119,6 +119,21 @@
 				spi-max-frequency = <50000000>;
 			};
 		};
+
+		pcie@a808420000 {
+			status = "okay";
+			pci@0,0 {
+				status = "okay";
+				reg = <0x0000 0 0 0 0>;
+				#address-cells = <3>;
+				#size-cells = <2>;
+				ranges;
+
+				interrupt-parent = <&gpio_aon>;
+				interrupts = <TEGRA264_AON_GPIO(AA, 5) IRQ_TYPE_LEVEL_LOW>;
+				interrupt-names = "wakeup";
+			};
+		};
 	};
 
 	eeprom-manager {
