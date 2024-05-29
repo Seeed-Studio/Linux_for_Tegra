@@ -1192,7 +1192,11 @@ static inline void validate_eee_conf(struct net_device *ndev,
 	 * on whether EEE has toggled or not.
 	 */
 	if (!eee_req->eee_enabled && !eee_req->tx_lpi_enabled &&
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+	    !linkmode_empty(eee_req->advertised)) {
+#else
 	    eee_req->advertised) {
+#endif
 		if (eee_req->eee_enabled != cur_eee.eee_enabled) {
 			netdev_warn(ndev, "EEE off. Set Rx LPI off\n");
 #if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
@@ -1207,7 +1211,11 @@ static inline void validate_eee_conf(struct net_device *ndev,
 	}
 
 	if (!eee_req->eee_enabled && eee_req->tx_lpi_enabled &&
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+	    linkmode_empty(eee_req->advertised)) {
+#else
 	    !eee_req->advertised) {
+#endif
 		if (eee_req->eee_enabled != cur_eee.eee_enabled) {
 			netdev_warn(ndev, "EEE off. Set Tx LPI off\n");
 			eee_req->tx_lpi_enabled = OSI_DISABLE;
@@ -1227,7 +1235,11 @@ static inline void validate_eee_conf(struct net_device *ndev,
 	}
 
 	if (!eee_req->eee_enabled && eee_req->tx_lpi_enabled &&
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+	    !linkmode_empty(eee_req->advertised)) {
+#else
 	    eee_req->advertised) {
+#endif
 		if (eee_req->eee_enabled != cur_eee.eee_enabled) {
 			netdev_warn(ndev, "EEE off. Set Tx & Rx LPI off\n");
 			eee_req->tx_lpi_enabled = OSI_DISABLE;
@@ -1243,7 +1255,11 @@ static inline void validate_eee_conf(struct net_device *ndev,
 	}
 
 	if (eee_req->eee_enabled && !eee_req->tx_lpi_enabled &&
+#if defined(NV_ETHTOOL_KEEE_STRUCT_PRESENT) /* Linux v6.9 */
+	    linkmode_empty(eee_req->advertised)) {
+#else
 	    !eee_req->advertised) {
+#endif
 		if (eee_req->eee_enabled != cur_eee.eee_enabled) {
 			netdev_warn(ndev, "EEE on. Set Tx & Rx LPI on\n");
 			eee_req->tx_lpi_enabled = OSI_ENABLE;
