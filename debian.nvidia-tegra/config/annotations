@@ -1,0 +1,83 @@
+# Menu: HEADER
+# FORMAT: 4
+# ARCH: arm64
+# FLAVOUR: arm64-nvidia-tegra arm64-nvidia-tegra-rt
+# FLAVOUR_DEP: {'arm64-nvidia-tegra': 'arm64-realtime', 'arm64-nvidia-tegra-rt': 'arm64-realtime'}
+
+include "../../debian.realtime/config/annotations"
+
+CONFIG_ACCESSIBILITY                            policy<{'arm64': 'n'}>
+CONFIG_ACCESSIBILITY                            note<'LP: #1967702'>
+
+CONFIG_DMATEST                                  policy<{'arm64': 'm'}>
+CONFIG_DMATEST                                  note<'LP: #2060337'>
+
+CONFIG_LATENCYTOP                               policy<{'arm64': 'y'}>
+CONFIG_LATENCYTOP                               note<'https://lists.ubuntu.com/archives/kernel-team/2014-July/045006.html, LP#1655986'>
+
+CONFIG_PCIE_EDR                                 policy<{'arm64': 'n'}>
+CONFIG_PCIE_EDR                                 note<'LP: #1965241'>
+
+CONFIG_PCI_MESON                                policy<{'arm64': 'n'}>
+CONFIG_PCI_MESON                                note<'LP: #2007745'>
+
+CONFIG_PREEMPT_DYNAMIC                          policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_PREEMPT_DYNAMIC                          note<'LP: #2051342'>
+
+CONFIG_PREEMPT_RT                               policy<{'arm64': 'y', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_PREEMPT_RT                               note<'must be enabled in the real-time kernel'>
+
+CONFIG_SPEAKUP                                  policy<{'arm64': '-'}>
+CONFIG_SPEAKUP                                  note<'LP: #1967702'>
+
+CONFIG_UBSAN                                    policy<{'arm64': 'n'}>
+CONFIG_UBSAN                                    note<'LP#1942215'>
+
+CONFIG_VMWARE_VMCI                              policy<{'arm64': 'n'}>
+CONFIG_VMWARE_VMCI                              note<'LP: #1978145'>
+
+CONFIG_VMWARE_VMCI_VSOCKETS                     policy<{'arm64': '-'}>
+CONFIG_VMWARE_VMCI_VSOCKETS                     note<'LP: #1978145'>
+
+
+# ---- Annotations without notes ----
+
+CONFIG_A11Y_BRAILLE_CONSOLE                     policy<{'arm64': '-'}>
+CONFIG_CC_HAS_UBSAN_BOUNDS_STRICT               policy<{'arm64': '-'}>
+CONFIG_COMPACT_UNEVICTABLE_DEFAULT              policy<{'arm64': '0', 'arm64-nvidia-tegra': '1'}>
+CONFIG_DEBUG_MUTEXES                            policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_DEBUG_PREEMPT                            policy<{'arm64': 'y', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_LEDS_TRIGGER_CPU                         policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_NUMA_BALANCING                           policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_PREEMPT_BUILD                            policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_PREEMPT_NONE                             policy<{'arm64': 'n', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_PREEMPT_NONE_BUILD                       policy<{'arm64-nvidia-tegra': '-'}>
+CONFIG_QUEUED_RWLOCKS                           policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_RCU_BOOST                                policy<{'arm64': 'y', 'arm64-nvidia-tegra': '-'}>
+CONFIG_RCU_BOOST_DELAY                          policy<{'arm64': '500', 'arm64-nvidia-tegra': '-'}>
+CONFIG_RCU_NOCB_CPU_CB_BOOST                    policy<{'arm64': 'y', 'arm64-nvidia-tegra': '-'}>
+CONFIG_SOFTIRQ_ON_OWN_STACK                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_SPEAKUP_SYNTH_ACNTSA                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_APOLLO                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_AUDPTR                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_BNS                        policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_DECEXT                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_DECTLK                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_DUMMY                      policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_LTLK                       policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_SOFT                       policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_SPKOUT                     policy<{'arm64': '-'}>
+CONFIG_SPEAKUP_SYNTH_TXPRT                      policy<{'arm64': '-'}>
+CONFIG_TEST_UBSAN                               policy<{'arm64': '-'}>
+CONFIG_TRANSPARENT_HUGEPAGE                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_UBSAN_ALIGNMENT                          policy<{'arm64': '-'}>
+CONFIG_UBSAN_BOOL                               policy<{'arm64': '-'}>
+CONFIG_UBSAN_BOUNDS                             policy<{'arm64': '-'}>
+CONFIG_UBSAN_BOUNDS_STRICT                      policy<{'arm64': '-'}>
+CONFIG_UBSAN_DIV_ZERO                           policy<{'arm64': '-'}>
+CONFIG_UBSAN_ENUM                               policy<{'arm64': '-'}>
+CONFIG_UBSAN_SANITIZE_ALL                       policy<{'arm64': '-'}>
+CONFIG_UBSAN_SHIFT                              policy<{'arm64': '-'}>
+CONFIG_UBSAN_TRAP                               policy<{'arm64': '-'}>
+CONFIG_UBSAN_UNREACHABLE                        policy<{'arm64': '-'}>
+CONFIG_UNINLINE_SPIN_UNLOCK                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
