@@ -30,6 +30,7 @@
 #include <soc/tegra/pmc.h>
 
 #include <dt-bindings/pinctrl/pinctrl-tegra-io-pad.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
 
 
 static int tegra_pmc_reboot_notify(struct notifier_block *this,
@@ -372,6 +373,7 @@ static const char * const tegra264_reset_sources[] = {
 
 static const struct tegra_wake_event tegra264_wake_events[] = {
 	TEGRA_WAKE_IRQ("rtc", 65, 548),
+	TEGRA_WAKE_GPIO("power_btn", 5, 1, TEGRA264_AON_GPIO(AA, 5)),
 };
 
 static const struct tegra_pmc_soc tegra264_pmc_soc = {
