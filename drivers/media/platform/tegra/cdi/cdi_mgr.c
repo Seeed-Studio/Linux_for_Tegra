@@ -1277,11 +1277,6 @@ static void cdi_mgr_del(struct cdi_mgr_priv *cdi_mgr)
 	if (cdi_mgr->tca9539.enable)
 		i2c_put_adapter(cdi_mgr->tca9539.adap);
 	i2c_put_adapter(cdi_mgr->adap);
-
-	for (i = 0; i < MAX_CDI_GPIOS; i++) {
-		if (cdi_mgr->gpios[i].desc)
-			devm_gpiod_put(cdi_mgr->dev, cdi_mgr->gpios[i].desc);
-	}
 }
 
 static void cdi_mgr_dev_ins(struct work_struct *work)
