@@ -198,6 +198,22 @@
 #define TEGRA264_GPCDMA_SID_I2C15	(TEGRA_SID_GPCDMA | 0x13)
 #define TEGRA264_GPCDMA_SID_I2C16	(TEGRA_SID_GPCDMA | 0x14)
 
+/* STG stream IDs */
+#define TEGRA_SID_MIU0 (56 << 8)
+#define TEGRA_SID_MIU1 (57 << 8)
+#define TEGRA_SID_MIU2 (58 << 8)
+#define TEGRA_SID_MIU3 (59 << 8)
+#define TEGRA_SID_MIU4 (60 << 8)
+#define TEGRA_SID_MIU5 (61 << 8)
+#define TEGRA_SID_MIU6 (62 << 8)
+#define TEGRA_SID_MIU7 (63 << 8)
+/*
+ * MIU8 and MIU9 are having same client insteance ID.
+ * Make sure to use different Streamids.
+ */
+#define TEGRA_SID_MIU8 (0 << 8)
+#define TEGRA_SID_MIU9 (0 << 8)
+
 /*
  * memory client IDs
  */

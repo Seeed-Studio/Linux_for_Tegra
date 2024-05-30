@@ -4262,6 +4262,51 @@
 			#iommu-cells = <1>;
 		};
 
+		memqual0: memqual@f020000 {
+			compatible = "nvidia,tegra-t264-mem-qual";
+			status = "disabled";
+			reg = <0x0 0x0f020000 0x0 0x10000>;
+			iommus= <&smmu1_mmu TEGRA_SID_MIU0>,
+				<&smmu1_mmu TEGRA_SID_MIU1>;
+			dma-coherent;
+		};
+
+		memqual1: memqual@a808730000 {
+			compatible = "nvidia,tegra-t264-mem-qual";
+			status = "disabled";
+			reg = <0xa8 0x08730000 0x0 0x10000>;
+			iommus= <&smmu1_mmu TEGRA_SID_MIU2>,
+				<&smmu1_mmu TEGRA_SID_MIU3>;
+			dma-coherent;
+		};
+
+		memqual2: memqual@818d020000 {
+			compatible = "nvidia,tegra-t264-mem-qual";
+			status = "disabled";
+			reg = <0x81 0x8d020000 0x0 0x10000>;
+			iommus= <&smmu1_mmu TEGRA_SID_MIU4>,
+				<&smmu1_mmu TEGRA_SID_MIU5>;
+			dma-coherent;
+		};
+
+		memqual3: memqual@a808750000 {
+			compatible = "nvidia,tegra-t264-mem-qual";
+			status = "disabled";
+			reg = <0xa8 0x08750000 0x0 0x10000>;
+			iommus= <&smmu1_mmu TEGRA_SID_MIU6>,
+				<&smmu1_mmu TEGRA_SID_MIU7>;
+			dma-coherent;
+		};
+
+		memqual4: memqual@818d030000 {
+			compatible = "nvidia,tegra-t264-mem-qual";
+			status = "disabled";
+			reg = <0x81 0x8d030000 0x0 0x10000>;
+			iommus= <&smmu1_mmu TEGRA_SID_MIU8>,
+				<&smmu1_mmu (TEGRA_SID_MIU9 + 1)>;
+			dma-coherent;
+		};
+
 		pwm2: pwm@810c5e0000 {
 			compatible = "nvidia,tegra264-pwm";
 			status = "disabled";
