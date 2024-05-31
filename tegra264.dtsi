@@ -9499,4 +9499,10 @@
 			status = "disabled";
 		};
 	};
+
+	smmu_test {
+		compatible = "nvidia,smmu_test";
+		iommus = <&smmu4_mmu 0x00000000>;
+		status = "disabled";
+	};
 };
