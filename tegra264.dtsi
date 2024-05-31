@@ -40,6 +40,7 @@
 		serial9 = &uart9;
 		serial10 = &uart10;
 		nvdisplay = &nvdisplay;
+		tegra-camera-rtcpu = &tegra_rce;
 	};
 
 	bus@0 {
@@ -8216,6 +8217,7 @@
 				<&rce_hsp0 TEGRA_HSP_MBOX_TYPE_SM TEGRA_HSP_SM_RX(1)>,
 				<&rce_hsp0 TEGRA_HSP_MBOX_TYPE_SS 0>;
 			mbox-names = "vm-tx", "vm-rx", "vm-ss";
+			status = "disabled";
 		};
 
 		hsp-vm2 {
@@ -8257,6 +8259,7 @@
 			nvidia,group = <1>;
 			nvidia,frame-count = <16>;
 			nvidia,frame-size = <64>;
+			status = "disabled";
 		};
 		dbg@1 {
 			/* This is raw channel exposed as device */
@@ -8266,6 +8269,7 @@
 			nvidia,group = <1>;
 			nvidia,frame-count = <1>;
 			nvidia,frame-size = <512>;
+			status = "disabled";
 		};
 		dbg@2 {
 			/* This is exposed in debugfs */
@@ -8280,6 +8284,7 @@
 			nvidia,mem-map = <&tegra_rce &vi0 &isp &vi1 &isp1>;
 			/* Memory bandwidth in kB/s during tests */
 			nvidia,test-bw = <2400000>;
+			status = "disabled";
 		};
 		ivccontrol@3 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
