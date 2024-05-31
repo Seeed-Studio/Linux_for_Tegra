@@ -262,7 +262,7 @@
 					       <&bpmp TEGRA264_CLK_I2S1_SCLK_IN>;
 					clock-names = "i2s", "sync_input";
 					assigned-clocks = <&bpmp TEGRA264_CLK_I2S1>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <1536000>;
 					sound-name-prefix = "I2S1";
 					/* FIXME: TAS-2381 */
@@ -299,7 +299,7 @@
 						 <&bpmp TEGRA264_CLK_I2S2_SCLK_IN>;
 					clock-names = "i2s", "sync_input";
 					assigned-clocks = <&bpmp TEGRA264_CLK_I2S2>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <1536000>;
 					sound-name-prefix = "I2S2";
 					nvidia,ahub-i2s-id = <1>;
@@ -335,7 +335,7 @@
 					       <&bpmp TEGRA264_CLK_I2S3_SCLK_IN>;
 					clock-names = "i2s", "sync_input";
 					assigned-clocks = <&bpmp TEGRA264_CLK_I2S3>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <1536000>;
 					sound-name-prefix = "I2S3";
 					nvidia,ahub-i2s-id = <2>;
@@ -371,7 +371,7 @@
 					       <&bpmp TEGRA264_CLK_I2S4_SCLK_IN>;
 					clock-names = "i2s", "sync_input";
 					assigned-clocks = <&bpmp TEGRA264_CLK_I2S4>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <1536000>;
 					sound-name-prefix = "I2S4";
 					nvidia,ahub-i2s-id = <3>;
@@ -407,7 +407,7 @@
 					       <&bpmp TEGRA264_CLK_I2S5_SCLK_IN>;
 					clock-names = "i2s", "sync_input";
 					assigned-clocks = <&bpmp TEGRA264_CLK_I2S5>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <1536000>;
 					sound-name-prefix = "I2S5";
 					nvidia,ahub-i2s-id = <4>;
@@ -443,7 +443,7 @@
 					       <&bpmp TEGRA264_CLK_I2S6_SCLK_IN>;
 					clock-names = "i2s", "sync_input";
 					assigned-clocks = <&bpmp TEGRA264_CLK_I2S6>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <1536000>;
 					sound-name-prefix = "I2S6";
 					nvidia,ahub-i2s-id = <5>;
@@ -479,7 +479,7 @@
 					       <&bpmp TEGRA264_CLK_I2S7_SCLK_IN>;
 					clock-names = "i2s", "sync_input";
 					assigned-clocks = <&bpmp TEGRA264_CLK_I2S7>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <1536000>;
 					sound-name-prefix = "I2S7";
 					nvidia,ahub-i2s-id = <6>;
@@ -515,7 +515,7 @@
 					       <&bpmp TEGRA264_CLK_I2S8_SCLK_IN>;
 					clock-names = "i2s", "sync_input";
 					assigned-clocks = <&bpmp TEGRA264_CLK_I2S8>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <1536000>;
 					sound-name-prefix = "I2S8";
 					nvidia,ahub-i2s-id = <7>;
@@ -551,7 +551,7 @@
 					clocks = <&bpmp TEGRA264_CLK_DMIC1>;
 					clock-names = "dmic";
 					assigned-clocks = <&bpmp TEGRA264_CLK_DMIC1>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <3072000>;
 					sound-name-prefix = "DMIC1";
 					status = "disabled";
@@ -585,7 +585,7 @@
 					clocks = <&bpmp TEGRA264_CLK_DMIC1>;
 					clock-names = "dmic";
 					assigned-clocks = <&bpmp TEGRA264_CLK_DMIC1>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <3072000>;
 					sound-name-prefix = "DMIC2";
 					status = "disabled";
@@ -619,7 +619,7 @@
 					clocks = <&bpmp TEGRA264_CLK_DSPK1>;
 					clock-names = "dspk";
 					assigned-clocks = <&bpmp TEGRA264_CLK_DSPK1>;
-					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA_OUT0>;
+					assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 					assigned-clock-rates = <12288000>;
 					sound-name-prefix = "DSPK1";
 					status = "disabled";
@@ -7867,15 +7867,15 @@
 	sound {
 		compatible = "nvidia,tegra186-audio-graph-card";
 
-		clocks = <&bpmp TEGRA264_CLK_PLLA>,
-				<&bpmp TEGRA264_CLK_PLLA_OUT0>;
+		clocks = <&bpmp TEGRA264_CLK_PLLA1>,
+				<&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 		clock-names = "pll_a", "plla_out0";
-		assigned-clocks = <&bpmp TEGRA264_CLK_PLLA>,
-			<&bpmp TEGRA264_CLK_PLLA_OUT0>,
+		assigned-clocks = <&bpmp TEGRA264_CLK_PLLA1>,
+			<&bpmp TEGRA264_CLK_PLLA1_OUT1>,
 			<&bpmp TEGRA264_CLK_AUD_MCLK>;
 		assigned-clock-parents = <0>,
-			<&bpmp TEGRA264_CLK_PLLA>,
-			<&bpmp TEGRA264_CLK_PLLA_OUT0>;
+			<&bpmp TEGRA264_CLK_PLLA1>,
+			<&bpmp TEGRA264_CLK_PLLA1_OUT1>;
 
 		status = "disabled";
 
