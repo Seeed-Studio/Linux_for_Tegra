@@ -223,7 +223,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	 * In case of Gpu carveout, the handle size needs to be aligned to granule.
 	 */
 	if (op.heap_mask & NVMAP_HEAP_CARVEOUT_GPU) {
-		u32 granule_size = 0;
+		size_t granule_size = 0;
 
 		for (i = 0; i < nvmap_dev->nr_carveouts; i++)
 			if (nvmap_dev->heaps[i].heap_bit & NVMAP_HEAP_CARVEOUT_GPU)

@@ -498,7 +498,7 @@ void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 	struct dma_coherent_mem_replica *mem;
 	bool is_gpu = false;
 	const char *device_name;
-	u32 granule_size = 0;
+	size_t granule_size = 0;
 
 	if (!dev || !dev->dma_mem)
 		return;
