@@ -1483,9 +1483,12 @@ finish:
 int nvmap_remove(struct platform_device *pdev)
 {
 	struct nvmap_device *dev = platform_get_drvdata(pdev);
-	struct rb_node *n;
-	struct nvmap_handle *h;
 	int i;
+
+	if (dev && !RB_EMPTY_ROOT(&dev->handles)) {
+		pr_err("Can't remove nvmap module as handles exist\n");
+		return -EBUSY;
+	}
 
 #ifdef NVMAP_CONFIG_SCIIPC
 	nvmap_sci_ipc_exit();
@@ -1497,11 +1500,6 @@ int nvmap_remove(struct platform_device *pdev)
 	nvmap_page_pool_clear();
 	nvmap_page_pool_fini(nvmap_dev);
 #endif
-	while ((n = rb_first(&dev->handles))) {
-		h = rb_entry(n, struct nvmap_handle, node);
-		rb_erase(&h->node, &dev->handles);
-		kfree(h);
-	}
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node = &dev->heaps[i];
