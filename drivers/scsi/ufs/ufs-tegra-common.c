@@ -57,13 +57,21 @@ static void ufs_tegra_init_debugfs(struct ufs_hba *hba)
 
 static void ufs_tegra_set_clk_div(struct ufs_hba *hba)
 {
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
+	u32 hclk_val;
+
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_VSP)
 		return;
+
+	if (ufs_tegra->soc->chip_id == TEGRA264)
+		hclk_val = UFS_VNDR_HCLKDIV_1US_TICK_T264;
+	else
+		hclk_val = UFS_VNDR_HCLKDIV_1US_TICK;
 
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		ufshcd_writel(hba, UFS_VNDR_HCLKDIV_1US_TICK_FPGA, REG_UFS_VNDR_HCLKDIV);
 	else
-		ufshcd_writel(hba, UFS_VNDR_HCLKDIV_1US_TICK, REG_UFS_VNDR_HCLKDIV);
+		ufshcd_writel(hba, hclk_val, REG_UFS_VNDR_HCLKDIV);
 }
 
 static void ufs_tegra_ufs_mmio_axi(struct ufs_hba *hba)
