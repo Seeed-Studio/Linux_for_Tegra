@@ -456,6 +456,8 @@ static void ufs_tegra_disable_mphylane_clks(struct ufs_tegra_host *host)
 
 	if (host->x2config)
 		clk_disable_unprepare(host->mphy_l1_rx_ana);
+	if (host->soc->chip_id == TEGRA264)
+		clk_disable_unprepare(host->mphy_l0_uphy_tx_fifo);
 
 	host->is_lane_clks_enabled = false;
 }
@@ -555,10 +557,18 @@ static int ufs_tegra_enable_mphylane_clks(struct ufs_tegra_host *host)
 	if (err < 0)
 		goto out;
 
+	if (host->soc->chip_id == TEGRA264) {
+		err = ufs_tegra_host_clk_enable(dev,
+			"mphy_l0_uphy_tx_fifo",
+			host->mphy_l0_uphy_tx_fifo);
+		if (err)
+			goto disable_mphy_core_pll_fixed;
+	}
+
 	err = ufs_tegra_host_clk_enable(dev, "mphy_core_pll_fixed",
 		host->mphy_core_pll_fixed);
 	if (err)
-		goto disable_mphy_core_pll_fixed;
+		goto disable_mphy_l0_uphy_tx_fifo;
 
 	err = ufs_tegra_host_clk_enable(dev, "mphy_l0_tx_symb",
 		host->mphy_l0_tx_symb);
@@ -623,6 +633,9 @@ disable_tx_1mhz_ref:
 	clk_disable_unprepare(host->mphy_l0_tx_symb);
 disable_l0_tx_symb:
 	clk_disable_unprepare(host->mphy_core_pll_fixed);
+disable_mphy_l0_uphy_tx_fifo:
+	if (host->soc->chip_id == TEGRA264)
+		clk_disable_unprepare(host->mphy_l0_uphy_tx_fifo);
 disable_mphy_core_pll_fixed:
 	clk_disable_unprepare(host->pllrefe_clk);
 out:
@@ -638,6 +651,13 @@ static int ufs_tegra_init_mphy_lane_clks(struct ufs_tegra_host *host)
 			"pllrefe_vcoout", &host->pllrefe_clk);
 	if (err)
 		goto out;
+
+	if (host->soc->chip_id == TEGRA264) {
+		err = ufs_tegra_host_clk_get(dev, "mphy_l0_uphy_tx_fifo",
+			&host->mphy_l0_uphy_tx_fifo);
+		if (err)
+			goto out;
+	}
 
 	err = ufs_tegra_host_clk_get(dev,
 			"mphy_core_pll_fixed", &host->mphy_core_pll_fixed);

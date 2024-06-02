@@ -385,6 +385,7 @@ struct ufs_tegra_host {
 	struct clk *ufsdev_osc;
 	struct clk *ufs_uphy_pll3;
 	struct clk *pllrefe_clk;
+	struct clk *mphy_l0_uphy_tx_fifo;
 	struct regulator *vddio_ufs;
 	struct regulator *vddio_ufs_ap;
 	struct pinctrl *ufs_pinctrl;
