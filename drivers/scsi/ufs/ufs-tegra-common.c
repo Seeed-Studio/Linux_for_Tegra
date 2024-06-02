@@ -304,6 +304,126 @@ fail:
         return err;
 }
 
+static void ufs_tegra_mphy_tx_calibration_enable(struct ufs_tegra_host *ufs_tegra)
+{
+	struct device *dev = ufs_tegra->hba->dev;
+
+	if ((tegra_sku_info.platform == TEGRA_PLATFORM_VDK) ||
+		(tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA) ||
+		(tegra_sku_info.platform == TEGRA_PLATFORM_VSP) ||
+		(ufs_tegra->soc->chip_id != TEGRA264))
+		return;
+
+	/* Enable TX Calibration */
+	mphy_update(ufs_tegra->mphy_l0_base,
+		MPHY_TX_APB_VENDOR2_0_TX_CAL_EN, MPHY_TX_APB_TX_VENDOR2_0_T264);
+	if (ufs_tegra->x2config == true) {
+		dev_err(dev, "%s:x2config is true so invoking mphy_update\n",
+				__func__);
+		mphy_update(ufs_tegra->mphy_l1_base,
+			MPHY_TX_APB_VENDOR2_0_TX_CAL_EN,
+			MPHY_TX_APB_TX_VENDOR2_0_T264);
+	}
+
+	mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
+			MPHY_TX_APB_TX_VENDOR0_0_T234);
+
+	if (ufs_tegra->x2config == true) {
+		mphy_update(ufs_tegra->mphy_l1_base,
+			MPHY_GO_BIT, MPHY_TX_APB_TX_VENDOR0_0_T234);
+	}
+}
+
+static int ufs_tegra_mphy_tx_calibration_status(struct ufs_tegra_host *ufs_tegra,
+	void __iomem *mphy_base)
+{
+	int err = 0;
+	u32 mphy_tx_vendor2;
+	unsigned int timeout;
+	struct device *dev = ufs_tegra->hba->dev;
+
+	/* Wait till lane calibration is done */
+	timeout = 100U; /* Number of iterations */
+	while (timeout != 0U) {
+		mphy_tx_vendor2 = mphy_readl(mphy_base,
+				MPHY_TX_APB_TX_VENDOR2_0_T264);
+
+		if ((mphy_tx_vendor2 & MPHY_TX_APB_VENDOR2_0_TX_CAL_DONE) != 0U) {
+			dev_err(dev, "%s: MPhy TX Calibration done\n", __func__);
+
+			/* Clear TX lane calibration */
+			mphy_tx_vendor2 &=~(MPHY_TX_APB_VENDOR2_0_TX_CAL_EN);
+			mphy_writel(mphy_base, mphy_tx_vendor2, MPHY_TX_APB_TX_VENDOR2_0_T264);
+			break;
+		} else {
+			udelay(1);
+		}
+		timeout--;
+	}
+	if (timeout == 0U) {
+		dev_err(dev, "%s: MPhy TX Calibration failed\n", __func__);
+		err = -ETIMEDOUT;
+		goto fail;
+	}
+
+	mphy_update(mphy_base, MPHY_GO_BIT,
+		MPHY_TX_APB_TX_VENDOR0_0_T234);
+
+	/* Wait till lane calibration clear is done */
+	timeout = 100U; /* Number of iterations */
+	while (timeout != 0U) {
+		mphy_tx_vendor2 = mphy_readl(mphy_base,
+			MPHY_TX_APB_TX_VENDOR2_0_T264);
+		if ((mphy_tx_vendor2 & MPHY_TX_APB_VENDOR2_0_TX_CAL_DONE) == 0U) {
+			dev_err(dev,
+				"%s: MPhy TX Calibration clear completed\n",
+				__func__);
+				break;
+		} else {
+			udelay(1);
+		}
+		timeout--;
+	}
+	if (timeout == 0U) {
+		dev_err(dev, "%s: MPhy TX Calibration clear failed\n", __func__);
+		err = -ETIMEDOUT;
+	}
+fail:
+	return err;
+}
+
+static int ufs_tegra_mphy_check_tx_calibration_done_status(struct ufs_tegra_host *ufs_tegra)
+{
+	int err = 0;
+	struct device *dev = ufs_tegra->hba->dev;
+
+	if ((tegra_sku_info.platform == TEGRA_PLATFORM_VDK) ||
+		(tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA) ||
+		(tegra_sku_info.platform == TEGRA_PLATFORM_VSP) ||
+		(ufs_tegra->soc->chip_id != TEGRA264))
+		return 0;
+
+	if (ufs_tegra->x2config == true) {
+		err = ufs_tegra_mphy_tx_calibration_status(ufs_tegra,
+				ufs_tegra->mphy_l1_base);
+		if (err ) {
+			dev_err(dev, "%s: MPhy1 TX Calibration status check failed \n", __func__);
+			goto fail;
+		}
+	}
+
+	err = ufs_tegra_mphy_tx_calibration_status(ufs_tegra,
+			ufs_tegra->mphy_l0_base);
+	if (err ) {
+		dev_err(dev, "%s: MPhy0 TX Calibration status check failed \n", __func__);
+		goto fail;
+	}
+	dev_err(dev, "%s: MPhy TX Calibration completed\n", __func__);
+
+fail:
+	return err;
+}
+
 static void ufs_tegra_mphy_war(struct ufs_tegra_host *ufs_tegra)
 {
 	if ((ufs_tegra->soc->chip_id == TEGRA234) && (ufs_tegra->x2config)) {
@@ -1538,9 +1658,15 @@ static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,
 		} else {
 			ufs_tegra_mphy_rx_sync_capability(ufs_tegra);
 			ufs_tegra_unipro_pre_linkup(hba);
+			/* Enable TX link calibration */
+			ufs_tegra_mphy_tx_calibration_enable(ufs_tegra);
 		}
 		break;
 	case POST_CHANGE:
+		/* Check TX link calibration status */
+		err = ufs_tegra_mphy_check_tx_calibration_done_status(ufs_tegra);
+		if (err)
+			return err;
 		/*POST_CHANGE case is called on success of link start-up*/
 		dev_info(hba->dev, "dme-link-startup Successful\n");
 		ufs_tegra_unipro_post_linkup(hba);
