@@ -4,3 +4,5 @@
 obj-m += maxim_gmsl_dp_serializer.o
 obj-m += maxim_gmsl_hdmi_serializer.o
 obj-m += ti_fpdlink_dp_serializer.o
+obj-m += nvdisp_serdes.o
+
