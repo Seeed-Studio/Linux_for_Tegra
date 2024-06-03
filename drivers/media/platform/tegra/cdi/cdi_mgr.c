@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2015-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (C) 2015-2024 NVIDIA CORPORATION.  All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1454,13 +1454,13 @@ static struct cdi_mgr_platform_data *of_cdi_mgr_pdata(struct platform_device
 	dev_dbg(&pdev->dev, "    csiport: %d\n", pd->csi_port);
 
 	pd->num_pwr_gpios = cdi_mgr_of_get_grp_gpio(
-		&pdev->dev, child_np, "pwdn",
+		&pdev->dev, np, "pwdn",
 		ARRAY_SIZE(pd->pwr_gpios), pd->pwr_gpios, pd->pwr_flags);
 	if (pd->num_pwr_gpios < 0)
 		return ERR_PTR(pd->num_pwr_gpios);
 
 	pd->num_mcdi_gpios = cdi_mgr_of_get_grp_gpio(
-		&pdev->dev, child_np, "mcdi",
+		&pdev->dev, np, "mcdi",
 		ARRAY_SIZE(pd->mcdi_gpios), pd->mcdi_gpios, pd->mcdi_flags);
 	if (pd->num_mcdi_gpios < 0)
 		return ERR_PTR(pd->num_mcdi_gpios);
