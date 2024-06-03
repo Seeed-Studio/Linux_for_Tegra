@@ -35,7 +35,7 @@ LINUX_VERSION_6_9 := $(shell expr 6 \* 256 + 9)
 # Use dummy R8126 driver for K69 and later
 ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_9); echo $$?),0)
 obj-m := r8126.o
-r8168-objs := r8126_dummy.o
+r8126-objs := r8126_dummy.o
 else
 
 CONFIG_SOC_LAN = n
