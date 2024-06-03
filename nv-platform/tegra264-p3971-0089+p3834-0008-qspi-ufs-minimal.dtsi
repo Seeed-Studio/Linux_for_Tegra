@@ -32,6 +32,7 @@
 		};
 
 		i2c@810c680000 {
+			status = "disabled";
 			audio-codec@1c {
 				status = "disabled";
 			};
@@ -65,13 +66,137 @@
 		pcie@a808460000 {
 			status = "disabled";
 		};
+
+		dma-controller@8400000 {
+			status = "disabled";
+		};
+
+		pwm@810c610000 {
+			status = "disabled";
+		};
+
+		pwm@810c5e0000 {
+			status = "disabled";
+		};
+
+		pwm@810c600000 {
+			status = "disabled";
+		};
+
+		pwm@c6a0000 {
+			status = "disabled";
+		};
+
+		pwm@810c5f0000 {
+			status = "disabled";
+		};
+
+		pwm@810c620000 {
+			status = "disabled";
+		};
+
+		tachometer@810c5c0000 {
+			status = "disabled";
+		};
+
+		spi@810c440000 {
+			status = "disabled";
+		};
+
+		spi@c6c0000 {
+			status = "disabled";
+		};
+
+		spi@810c590000 {
+			status = "disabled";
+		};
+
+		spi@810c5b0000 {
+			status = "disabled";
+		};
+
+		gpio@cf00000 {
+			status = "disabled";
+		};
+
+		gpio@a808300000 {
+			status = "disabled";
+		};
+
+		gpio@810c300000 {
+			status = "disabled";
+		};
+
+		pinmux@810c281000 {
+			status = "disabled";
+		};
+
+		pinmux@a8082e0000 {
+			status = "disabled";
+		};
+
+		pinmux@c7a2000 {
+			status = "disabled";
+		};
+
+		pmc@c800000 {
+			status = "disabled";
+		};
+
+		crypto@8188110000 {
+			status = "disabled";
+		};
+
+		crypto@8188120000 {
+			status = "disabled";
+		};
+
+		crypto@8188140000 {
+			status = "disabled";
+		};
+
+		crypto@8189880000 {
+			status = "disabled";
+		};
+
+		rtc@c2c0000 {
+			status = "disabled";
+		};
+
+		serial@810c500000 {
+			status = "disabled";
+		};
+
+		serial@810c510000{
+			status = "disabled";
+		};
+
+		serial@810c530000 {
+			status = "disabled";
+		};
+
+		serial@810c540000 {
+			status = "disabled";
+		};
+	};
+
+	bpmp {
+		status = "disabled";
 	};
 
 	display@8808c00000 {
 		status = "disabled";
 	};
 
+	psci {
+		status = "disabled";
+	};
+
 	sound {
+		status = "disabled";
+	};
+
+	ufshci@a80b8d0000 {
 		status = "disabled";
 	};
 };

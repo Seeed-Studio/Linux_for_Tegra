@@ -31,7 +31,7 @@
 		};
 
 		/* 40-pin header. PIN: 8, 9, 10, 36*/
-		uart@810c530000 {
+		serial@810c530000 {
 			status = "okay";
 		};
 
@@ -213,6 +213,30 @@
 		pcie@d0b0000000 {
 			status = "okay";
 		};
+
+		mc_carveout@8108020000 {
+			status = "okay";
+		};
+
+		dma-controller@8400000 {
+			status = "okay";
+		};
+
+		crypto@8188110000 {
+			status = "okay";
+		};
+
+		crypto@8188120000 {
+			status = "okay";
+		};
+
+		crypto@8188140000 {
+			status = "okay";
+		};
+
+		crypto@8189880000 {
+			status = "okay";
+		};
 	};
 
 	eeprom-manager {
@@ -236,8 +260,8 @@
 
 	bpmp {
 		status = "okay";
-
 		i2c {
+			status = "okay";
 			tegra_tmp451: thermal-sensor@4c {
 				compatible = "ti,tmp451";
 				status = "okay";
@@ -249,8 +273,9 @@
 	};
 
 	chosen {
-		bootargs = "console=ttyUTC0,115200";
+		bootargs = "BOOT_IMAGE=/EFI/BOOT/Image tegra_keep_boot_clocks clk_ignore_unused earlyprintk=tegra_utc,mmio32,0xc5a0000 earlycon=tegra_utc,mmio32,0xc5a0000 androidboot.selinux=disabled console=ttyUTC0,115200 maxcpus=1 systemd.unit=nvpre-si.target root=/dev/initrd rw rootwait rootwait rw rootfstype=ext4 firmware_class.path=/etc/firmware kmemleak=off pci=nomsi";
 		stdout-path = "/bus@0/tegra-utc@c5a0000";
+		use_dts_cmdline;
 	};
 
 	cpus {
@@ -335,7 +360,6 @@
 		bpmp-shmem@0 {
 			status = "okay";
 		};
-
 	};
 
 	psci {
