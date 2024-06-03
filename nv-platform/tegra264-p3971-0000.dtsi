@@ -121,6 +121,12 @@
 			};
 		};
 
+		/* PCIe C1 for M.2 Key E(J505) */
+		pcie@a808400000 {
+			status = "okay";
+		};
+
+		/* PCIe C2 for onboard Ethernet */
 		pcie@a808420000 {
 			status = "okay";
 			pci@0,0 {
@@ -134,6 +140,11 @@
 				interrupts = <TEGRA264_AON_GPIO(AA, 5) IRQ_TYPE_LEVEL_LOW>;
 				interrupt-names = "wakeup";
 			};
+		};
+
+		/* PCIe C4 RP for x16 slot(J6) */
+		pcie@a808460000 {
+			status = "okay";
 		};
 	};
 

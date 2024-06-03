@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Tegra264 p3971-0080+p3834-0008-qspi-nvme Dynamic Overlay";
+
+	/* PCIe C4 Endpoint */
+	fragment-t264-p3971-0080-p3834-0008-qspi-nvme-pcie-c4-ep@0 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "pcie-c4-endpoint-enable";
+		};
+		__overlay__ {
+			pcie@a808460000 {
+				status = "disabled";
+			};
+
+			pcie-ep@a808460000 {
+				status = "okay";
+			};
+		};
+	};
+};
