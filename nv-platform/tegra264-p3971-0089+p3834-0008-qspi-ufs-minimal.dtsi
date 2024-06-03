@@ -46,13 +46,6 @@
 				status = "disabled";
 			};
 		};
-
-		pcie@a808420000 {
-			status = "disabled";
-			pci@0,0 {
-				status = "disabled";
-			};
-		};
 	};
 
 	sound {
