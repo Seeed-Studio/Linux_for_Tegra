@@ -1161,7 +1161,7 @@ static int compute_memory_stat(u64 *total, u64 *free, int numa_id)
 {
 	struct file *file;
 	char meminfo_path[64] = {'\0'};
-	u8 buf[MEMINFO_SIZE];
+	u8 *buf;
 	loff_t pos = 0;
 	char *buffer, *ptr;
 	u64 mem_total, mem_free, reclaimable;
@@ -1175,7 +1175,13 @@ static int compute_memory_stat(u64 *total, u64 *free, int numa_id)
 		return -EINVAL;
 	}
 
-	memset(buf, 0, sizeof(buf));
+	buf = nvmap_altalloc(MEMINFO_SIZE * sizeof(*buf));
+	if (!buf) {
+		pr_err("Memory allocation failed\n");
+		filp_close(file, NULL);
+		return -ENOMEM;
+	}
+
 	rc = kernel_read(file, buf, MEMINFO_SIZE - 1, &pos);
 	buf[rc] = '\n';
 	filp_close(file, NULL);
@@ -1192,6 +1198,7 @@ static int compute_memory_stat(u64 *total, u64 *free, int numa_id)
 			reclaimable_found = true;
 	}
 
+	nvmap_altfree(buf, MEMINFO_SIZE * sizeof(*buf));
 	if (nid == numa_id && total_found && free_found && reclaimable_found) {
 		*total = mem_total * 1024;
 		*free = (mem_free + reclaimable / 2) * 1024;
