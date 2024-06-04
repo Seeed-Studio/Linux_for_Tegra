@@ -888,8 +888,13 @@ static void tegra_mc_num_channel_enabled(struct tegra_mc *mc)
 	unsigned int i;
 	u32 value;
 
-	value = mc_ch_readl(mc, 0, MC_EMEM_ADR_CFG_CHANNEL_ENABLE);
-	if (value <= 0) {
+	if(mc->soc->cfg_channel_enable) {
+		value = mc_ch_readl(mc, 0, mc->soc->cfg_channel_enable);
+		if (value <= 0) {
+			mc->num_channels = mc->soc->num_channels;
+			return;
+		}
+	} else {
 		mc->num_channels = mc->soc->num_channels;
 		return;
 	}
