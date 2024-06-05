@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+//
+// This file contains the DT reserved-memory disable nodes of the kdump crash kernel
+
+/dts-v1/;
+/plugin/;
+
+/ {
+    fragment-t234-android@0 {
+ 		target-path = "/";
+		__overlay__ {
+			reserved-memory {
+				linux,cma {
+				    status = "disabled";
+				};
+				fsi-carveout {
+				    status = "disabled";
+				};
+				pva-carveout {
+				    status = "disabled";
+				};
+				rce-reservation {
+				    status = "disabled";
+				};
+				ramoops_carveout {
+				    status = "disabled";
+				};
+				vpr-carveout {
+				    status = "disabled";
+				};
+				camdbg_carveout {
+				    status = "disabled";
+				};
+			};
+		};
+	};
+};

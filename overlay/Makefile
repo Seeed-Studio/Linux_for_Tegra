@@ -11,6 +11,11 @@ makefile-path := t23x/nv-public/overlay
 
 dtbo-y += tegra-optee.dtbo
 dtbo-y += tegra234-android.dtbo
+# Build Kdump DTBOs for Android
+ifeq ($(CONFIG_TEGRA_SYSTEM_TYPE_ACK),y)
+dtbo-y += tegra234-android-kdump.dtbo
+dtbo-y += tegra234-android-crash-kernel.dtbo
+endif
 dtbo-y += tegra234-audio-overlay.dtbo
 dtbo-y += tegra234-carveouts.dtbo
 dtbo-y += tegra234-dcb-p3767-0000-hdmi.dtbo
