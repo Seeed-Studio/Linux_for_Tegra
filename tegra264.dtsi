@@ -10058,18 +10058,20 @@
 		 * For resets, only one dpaux0_reset is required because on T264 there's only one
 		 * IP reset for all dpaux instances.
 		 */
-		reg-names = "nvdisplay", "dpaux0", "hdacodec", "mipical";
+		reg-names = "nvdisplay", "dpaux0", "hdacodec", "mipical", "vdisp";
 		reg = <0x88 0x8c00000 0x00 0x1fffff>,
 		      <0x88 0x9680000 0x00 0x7ffff>,
 		      <0x88 0x9101000 0x00 0xfff>,
-		      <0x81 0x89840000 0x00 0xffff>;
-		interrupt-names = "nvdisplay", "dpaux0", "dpaux1", "dpaux2", "dpaux3", "hdacodec";
+		      <0x81 0x89840000 0x00 0xffff>,
+		      <0x88 0x8d00000 0x00 0x00010000>;
+		interrupt-names = "nvdisplay", "dpaux0", "dpaux1", "dpaux2", "dpaux3", "hdacodec", "vdisp";
 		interrupts = <GIC_SPI 256 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>,
                              <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH>,
                              <GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH>,
                              <GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH>;
+			     <GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 257 IRQ_TYPE_LEVEL_HIGH>;
 
 		clocks =	<&bpmp TEGRA264_CLK_HUB>,
 				<&bpmp TEGRA264_CLK_DISP>,
