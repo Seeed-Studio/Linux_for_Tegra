@@ -54,6 +54,5 @@ void rtl8126_raise_clock(struct rtl8126_private *tp, u8 *x);
 void rtl8126_lower_clock(struct rtl8126_private *tp, u8 *x);
 void rtl8126_stand_by(struct rtl8126_private *tp);
 void rtl8126_set_eeprom_sel_low(struct rtl8126_private *tp);
-int rtl8126_eeprom_cmd_done(struct rtl8126_private *tp);
 
 #endif /* _LINUX_RTLEEPROM_H */

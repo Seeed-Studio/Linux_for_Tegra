@@ -61,6 +61,37 @@ enum PTP_CMD_TYPE {
         PTP_CMD_LATCHED_LOCAL_TIME,
 };
 
+enum PTP_CLKADJ_MOD_TYPE {
+        NO_FUNCTION     = 0,
+        CLKADJ_MODE_SET = 1,
+        RESERVED        = 2,
+        DIRECT_READ     = 4,
+        DIRECT_WRITE    = 6,
+        INCREMENT_STEP  = 8,
+        DECREMENT_STEP  = 10,
+        RATE_READ       = 12,
+        RATE_WRITE      = 14,
+};
+
+enum PTP_INSR_TYPE {
+        EVENT_CAP_INTR   = (1 << 0),
+        TRIG_GEN_INTR    = (1 << 1),
+        RX_TS_INTR       = (1 << 2),
+        TX_TX_INTR       = (1 << 3),
+};
+
+enum PTP_TRX_TS_STA_REG {
+        TRX_TS_RD               = (1 << 0),
+        TRXTS_SEL               = (1 << 1),
+        RX_TS_PDLYRSP_RDY       = (1 << 8),
+        RX_TS_PDLYREQ_RDY       = (1 << 9),
+        RX_TS_DLYREQ_RDY        = (1 << 10),
+        RX_TS_SYNC_RDY          = (1 << 11),
+        TX_TS_PDLYRSP_RDY       = (1 << 12),
+        TX_TS_PDLYREQ_RDY       = (1 << 13),
+        TX_TS_DLYREQ_RDY        = (1 << 14),
+        TX_TS_SYNC_RDY          = (1 << 15),
+};
 
 struct rtl8126_private;
 struct RxDescV3;
@@ -75,7 +106,8 @@ void rtl8126_ptp_stop(struct rtl8126_private *tp);
 
 int rtl8126_ptp_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd);
 
-void rtl8126_rx_ptp_pktstamp(struct rtl8126_private *tp, struct sk_buff *skb,
-                             struct RxDescV3 *descv3);
+void rtl8126_rx_ptp_pktstamp(struct rtl8126_private *tp, struct sk_buff *skb);
+
+void rtl8126_set_local_time(struct rtl8126_private *tp);
 
 #endif /* _LINUX_R8126_PTP_H */

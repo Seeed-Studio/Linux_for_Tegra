@@ -29,14 +29,6 @@
 #  This product is covered by one or more of the following patents:
 #  US6,570,884, US6,115,776, and US6,327,625.
 ################################################################################
-LINUX_VERSION := $(shell expr $(VERSION) \* 256 + $(PATCHLEVEL))
-LINUX_VERSION_6_9 := $(shell expr 6 \* 256 + 9)
-
-# Use dummy R8126 driver for K69 and later
-ifeq ($(shell test $(LINUX_VERSION) -ge $(LINUX_VERSION_6_9); echo $$?),0)
-obj-m := r8126.o
-r8126-objs := r8126_dummy.o
-else
 
 CONFIG_SOC_LAN = n
 ENABLE_REALWOW_SUPPORT = n
@@ -51,7 +43,7 @@ ENABLE_S0_MAGIC_PACKET = n
 ENABLE_TX_NO_CLOSE = y
 ENABLE_MULTIPLE_TX_QUEUE = y
 ENABLE_PTP_SUPPORT = y
-ENABLE_PTP_MASTER_MODE = y
+ENABLE_PTP_MASTER_MODE = n
 ENABLE_RSS_SUPPORT = n
 ENABLE_LIB_SUPPORT = n
 ENABLE_USE_FIRMWARE_FILE = n
@@ -63,7 +55,6 @@ ENABLE_RX_PACKET_FRAGMENT = n
 
 obj-m := r8126.o
 r8126-objs := r8126_n.o rtl_eeprom.o rtltool.o
-
 ifeq ($(CONFIG_SOC_LAN), y)
 	EXTRA_CFLAGS += -DCONFIG_SOC_LAN
 endif
@@ -138,6 +129,4 @@ ifeq ($(ENABLE_PAGE_REUSE), y)
 endif
 ifeq ($(ENABLE_RX_PACKET_FRAGMENT), y)
 	EXTRA_CFLAGS += -DENABLE_RX_PACKET_FRAGMENT
-endif
-
 endif
