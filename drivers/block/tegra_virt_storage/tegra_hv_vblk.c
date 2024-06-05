@@ -1144,14 +1144,15 @@ static void setup_device(struct vblk_dev *vblkdev)
 			req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +
 				(uintptr_t)(req_id * max_io_bytes));
 			req->mempool_offset = (req_id * max_io_bytes);
+			req->mempool_len = max_io_bytes;
 		} else {
 			if (vblkdev->config.blk_config.req_ops_supported & VS_BLK_IOCTL_OP_F) {
 				req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +
 				(uintptr_t)((req_id % max_ioctl_requests) * UFS_IOCTL_MAX_SIZE_SUPPORTED));
 				req->mempool_offset = (req_id % max_ioctl_requests) * UFS_IOCTL_MAX_SIZE_SUPPORTED;
+				req->mempool_len = UFS_IOCTL_MAX_SIZE_SUPPORTED;
 			}
 		}
-		req->mempool_len = max_io_bytes;
 		req->id = req_id;
 		req->vblkdev = vblkdev;
 	}

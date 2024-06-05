@@ -55,7 +55,7 @@ int vblk_prep_ioctl_req(struct vblk_dev *vblkdev,
 
 	if (ioctl_req->ioctl_len > vsc_req->mempool_len) {
 		dev_err(vblkdev->device,
-			"Ioctl length exceeding mempool length!\n");
+			"Ioctl length %u exceeding mempool length!\n", ioctl_req->ioctl_len);
 		return -EINVAL;
 	}
 
