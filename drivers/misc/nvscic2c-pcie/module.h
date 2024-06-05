@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 /*
  * Internal to nvscic2c-pcie module. This file is not supposed to be included
@@ -20,6 +23,7 @@
 struct device_node;
 struct platform_device;
 
+#define NUM_EDMA_DESC   (4096)
 /*
  * Parameters for the nvscic2c-pcie module and it's endpoints.
  *
@@ -102,8 +106,10 @@ struct epc_context_t {
 struct driver_ctx_t {
 	/* driver mode as parsed from compatible string in device-tree.*/
 	enum drv_mode_t drv_mode;
+	u8 chip_id;
 	char *drv_name;
 
+	struct device *dev;
 	/* the configuration for module and it's endpoints.*/
 	struct driver_param_t drv_param;
 

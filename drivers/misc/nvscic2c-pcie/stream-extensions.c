@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: stream-ext: " fmt
 
@@ -17,7 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/syscalls.h>
-#include <linux/tegra-pcie-edma.h>
+#include <linux/tegra-pcie-dma.h>
 
 #include <uapi/misc/nvscic2c-pcie-ioctl.h>
 
@@ -94,7 +97,7 @@ struct copy_request {
 	 * space for num_edma_desc considering worst-case allocation:
 	 * (max_flush_ranges).
 	 */
-	struct tegra_pcie_edma_desc *edma_desc;
+	struct tegra_pcie_dma_desc *edma_desc;
 
 	/*
 	 * actual number of local_post-fences per the submit-copy request.
@@ -228,14 +231,13 @@ signal_remote_post_fences(struct copy_request *cr);
 
 static int
 prepare_edma_desc(enum drv_mode_t drv_mode, struct copy_req_params *params,
-		  struct tegra_pcie_edma_desc *desc, u64 *num_desc);
+		  struct tegra_pcie_dma_desc *desc, u64 *num_desc);
 
-static edma_xfer_status_t
+static tegra_pcie_dma_status_t
 schedule_edma_xfer(void *edma_h, void *priv, u64 num_desc,
-		   struct tegra_pcie_edma_desc *desc);
+		   struct tegra_pcie_dma_desc *desc);
 static void
-callback_edma_xfer(void *priv, edma_xfer_status_t status,
-		   struct tegra_pcie_edma_desc *desc);
+callback_edma_xfer(void *priv, tegra_pcie_dma_status_t status);
 static int
 validate_handle(struct stream_ext_ctx_t *ctx, s32 handle,
 		enum nvscic2c_pcie_obj_type type);
@@ -556,7 +558,7 @@ ioctl_submit_copy_request(struct stream_ext_ctx_t *ctx,
 {
 	int ret = 0;
 	struct copy_request *cr = NULL;
-	edma_xfer_status_t edma_status = EDMA_XFER_FAIL_INVAL_INPUTS;
+	tegra_pcie_dma_status_t edma_status = TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS;
 	enum nvscic2c_pcie_link link = NVSCIC2C_PCIE_LINK_DOWN;
 
 	link = pci_client_query_link_status(ctx->pci_client_h);
@@ -612,7 +614,7 @@ ioctl_submit_copy_request(struct stream_ext_ctx_t *ctx,
 	atomic_inc(&ctx->transfer_count);
 	edma_status = schedule_edma_xfer(ctx->edma_h, (void *)cr,
 					 cr->num_edma_desc, cr->edma_desc);
-	if (edma_status != EDMA_XFER_SUCCESS) {
+	if (edma_status != TEGRA_PCIE_DMA_SUCCESS) {
 		ret = -EIO;
 		atomic_dec(&ctx->transfer_count);
 		release_copy_request_handles(cr);
@@ -935,35 +937,34 @@ allocate_handle(struct stream_ext_ctx_t *ctx, enum nvscic2c_pcie_obj_type type,
 	return handle;
 }
 
-static edma_xfer_status_t
+static tegra_pcie_dma_status_t
 schedule_edma_xfer(void *edma_h, void *priv, u64 num_desc,
-		   struct tegra_pcie_edma_desc *desc)
+		   struct tegra_pcie_dma_desc *desc)
 {
-	struct tegra_pcie_edma_xfer_info info = {0};
+	struct tegra_pcie_dma_xfer_info info = {0};
 
 	if (WARN_ON(!num_desc || !desc))
 		return -EINVAL;
 
-	info.type = EDMA_XFER_WRITE;
+	info.type = TEGRA_PCIE_DMA_WRITE;
 	info.channel_num = 0; // no use-case to use all WR channels yet.
 	info.desc = desc;
 	info.nents = num_desc;
 	info.complete = callback_edma_xfer;
 	info.priv = priv;
 
-	return tegra_pcie_edma_submit_xfer(edma_h, &info);
+	return tegra_pcie_dma_submit_xfer(edma_h, &info);
 }
 
 /* Callback with each async eDMA submit xfer.*/
 static void
-callback_edma_xfer(void *priv, edma_xfer_status_t status,
-		   struct tegra_pcie_edma_desc *desc)
+callback_edma_xfer(void *priv, tegra_pcie_dma_status_t status)
 {
 	struct copy_request *cr = (struct copy_request *)priv;
 
 	mutex_lock(&cr->ctx->free_lock);
 	/* increment post fences: local and remote.*/
-	if (status == EDMA_XFER_SUCCESS) {
+	if (status == TEGRA_PCIE_DMA_SUCCESS) {
 		signal_remote_post_fences(cr);
 		signal_local_post_fences(cr);
 	} else {
@@ -986,7 +987,7 @@ callback_edma_xfer(void *priv, edma_xfer_status_t status,
 
 static int
 prepare_edma_desc(enum drv_mode_t drv_mode, struct copy_req_params *params,
-		  struct tegra_pcie_edma_desc *desc, u64 *num_desc)
+		  struct tegra_pcie_dma_desc *desc, u64 *num_desc)
 {
 	u32 i = 0;
 	int ret = 0;

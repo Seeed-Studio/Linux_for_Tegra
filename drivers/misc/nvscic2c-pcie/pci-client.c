@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: pci-client: " fmt
 
@@ -21,7 +24,7 @@
 #include <linux/version.h>
 
 #include <uapi/misc/nvscic2c-pcie-ioctl.h>
-#include <linux/tegra-pcie-edma.h>
+#include <linux/tegra-pcie-dma.h>
 
 #include "common.h"
 #include "iova-mngr.h"

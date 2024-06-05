@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #include <nvidia/conftest.h>
 
@@ -14,8 +17,9 @@
 #include <linux/pci.h>
 #include <linux/printk.h>
 #include <linux/slab.h>
-#include <linux/tegra-pcie-edma.h>
+#include <linux/tegra-pcie-dma.h>
 #include <linux/types.h>
+#include <soc/tegra/fuse-helper.h>
 
 #include "comm-channel.h"
 #include "common.h"
@@ -38,22 +42,25 @@ edma_module_init(struct driver_ctx_t *drv_ctx)
 {
 	u8 i = 0;
 	int ret = 0;
-	struct tegra_pcie_edma_init_info info = {0};
+	tegra_pcie_dma_status_t dma_status = TEGRA_PCIE_DMA_STATUS_INVAL_STATE;
+	struct tegra_pcie_dma_init_info info = {0};
 
 	if (WARN_ON(!drv_ctx || !drv_ctx->drv_param.edma_np))
 		return -EINVAL;
 
 	memset(&info, 0x0, sizeof(info));
-	info.np = drv_ctx->drv_param.edma_np;
-	info.edma_remote = NULL;
-	for (i = 0; i < DMA_WR_CHNL_NUM; i++) {
-		info.tx[i].ch_type = EDMA_CHAN_XFER_ASYNC;
+	info.dev = drv_ctx->dev;
+	info.remote = NULL;
+	if (drv_ctx->chip_id == TEGRA234)
+		info.soc = NVPCIE_DMA_SOC_T234;
+	for (i = 0; i < TEGRA_PCIE_DMA_WR_CHNL_NUM; i++) {
+		info.tx[i].ch_type = TEGRA_PCIE_DMA_CHAN_XFER_ASYNC;
 		info.tx[i].num_descriptors = NUM_EDMA_DESC;
 	}
 	/*No use-case for RD channels.*/
 
-	drv_ctx->edma_h = tegra_pcie_edma_initialize(&info);
-	if (!drv_ctx->edma_h)
+	dma_status = tegra_pcie_dma_initialize(&info, &drv_ctx->edma_h);
+	if (dma_status != TEGRA_PCIE_DMA_SUCCESS)
 		ret = -ENODEV;
 
 	return ret;
@@ -66,7 +73,7 @@ edma_module_stop(struct driver_ctx_t *drv_ctx)
 	if (!drv_ctx || !drv_ctx->edma_h)
 		return;
 
-	tegra_pcie_edma_stop(drv_ctx->edma_h);
+	tegra_pcie_dma_stop(drv_ctx->edma_h);
 }
 
 /* should not have any ongoing eDMA transfers.*/
@@ -76,7 +83,7 @@ edma_module_deinit(struct driver_ctx_t *drv_ctx)
 	if (!drv_ctx || !drv_ctx->edma_h)
 		return;
 
-	tegra_pcie_edma_deinit(drv_ctx->edma_h);
+	tegra_pcie_dma_deinit(&drv_ctx->edma_h);
 	drv_ctx->edma_h = NULL;
 }
 
@@ -318,6 +325,7 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 	struct callback_ops cb_ops = {0};
 	struct driver_ctx_t *drv_ctx = NULL;
 	struct epc_context_t *epc_ctx = NULL;
+	struct pci_dev *ppdev = NULL;
 	struct pci_client_params params = {0};
 
 	/* allocate module context.*/
@@ -337,12 +345,40 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 		kfree(drv_ctx);
 		return -ENOMEM;
 	}
+
+	drv_ctx->chip_id = __tegra_get_chip_id();
+	if (drv_ctx->chip_id != TEGRA234) {
+		pr_err("(%s): NvSciC2c-Pcie not supported in chip\n",
+		       name);
+		kfree(epc_ctx);
+		kfree(name);
+		kfree(drv_ctx);
+		return -EINVAL;
+	}
+
 	init_completion(&epc_ctx->epf_ready_cmpl);
 	init_completion(&epc_ctx->epf_shutdown_cmpl);
 	atomic_set(&epc_ctx->aer_received, 0);
 
 	drv_ctx->drv_mode = DRV_MODE_EPC;
 	drv_ctx->drv_name = name;
+
+	ppdev = pcie_find_root_port(pdev);
+	if (!ppdev) {
+		kfree(epc_ctx);
+		kfree(name);
+		kfree(drv_ctx);
+		return -ENODEV;
+	}
+
+	drv_ctx->dev = &ppdev->dev;
+	if (!drv_ctx->dev) {
+		kfree(epc_ctx);
+		kfree(name);
+		kfree(drv_ctx);
+		return -ENODEV;
+	}
+
 	drv_ctx->epc_ctx = epc_ctx;
 	pci_set_drvdata(pdev, drv_ctx);
 
@@ -531,7 +567,7 @@ nvscic2c_pcie_error_detected(struct pci_dev *pdev,
 			       PCI_SLOT(pdev->devfn),
 			       PCI_FUNC(pdev->devfn));
 		} else {
-			pr_err("Unknow error for dev %04x:%02x:%02x.%x treat as AER: FATAL\n",
+			pr_err("Unknown error for dev %04x:%02x:%02x.%x treat as AER: FATAL\n",
 			       pci_domain_nr(pdev->bus),
 			       pdev->bus->number,
 			       PCI_SLOT(pdev->devfn),

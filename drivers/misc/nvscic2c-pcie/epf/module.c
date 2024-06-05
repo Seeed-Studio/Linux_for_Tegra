@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #include <nvidia/conftest.h>
 
@@ -14,8 +17,9 @@
 #include <linux/pci-epf.h>
 #include <linux/printk.h>
 #include <linux/slab.h>
-#include <linux/tegra-pcie-edma.h>
+#include <linux/tegra-pcie-dma.h>
 #include <linux/types.h>
+#include <soc/tegra/fuse-helper.h>
 
 #include "comm-channel.h"
 #include "common.h"
@@ -24,6 +28,8 @@
 #include "module.h"
 #include "pci-client.h"
 #include "vmap.h"
+
+#define T234_EPF_MSI_INTERRUPTS (16U)
 
 static const struct pci_epf_device_id nvscic2c_pcie_epf_ids[] = {
 	{
@@ -47,23 +53,26 @@ edma_module_init(struct driver_ctx_t *drv_ctx)
 {
 	u8 i = 0;
 	int ret = 0;
-	struct tegra_pcie_edma_init_info info = {0};
+	tegra_pcie_dma_status_t dma_status = TEGRA_PCIE_DMA_STATUS_INVAL_STATE;
+	struct tegra_pcie_dma_init_info info = {0};
 
 	if (WARN_ON(!drv_ctx || !drv_ctx->drv_param.edma_np))
 		return -EINVAL;
 
 	memset(&info, 0x0, sizeof(info));
-	info.np = drv_ctx->drv_param.edma_np;
-	info.edma_remote = NULL;
+	info.dev = drv_ctx->dev;
+	info.remote = NULL;
+	if (drv_ctx->chip_id == TEGRA234)
+		info.soc = NVPCIE_DMA_SOC_T234;
 
-	for (i = 0; i < DMA_WR_CHNL_NUM; i++) {
-		info.tx[i].ch_type = EDMA_CHAN_XFER_ASYNC;
+	for (i = 0; i < TEGRA_PCIE_DMA_WR_CHNL_NUM; i++) {
+		info.tx[i].ch_type = TEGRA_PCIE_DMA_CHAN_XFER_ASYNC;
 		info.tx[i].num_descriptors = NUM_EDMA_DESC;
 	}
 	/*No use-case for RD channels.*/
 
-	drv_ctx->edma_h = tegra_pcie_edma_initialize(&info);
-	if (!drv_ctx->edma_h)
+	dma_status = tegra_pcie_dma_initialize(&info, &drv_ctx->edma_h);
+	if (dma_status != TEGRA_PCIE_DMA_SUCCESS)
 		ret = -ENODEV;
 
 	return ret;
@@ -76,7 +85,7 @@ edma_module_stop(struct driver_ctx_t *drv_ctx)
 	if (!drv_ctx || !drv_ctx->edma_h)
 		return;
 
-	tegra_pcie_edma_stop(drv_ctx->edma_h);
+	tegra_pcie_dma_stop(drv_ctx->edma_h);
 }
 
 /* should not have any ongoing eDMA transfers.*/
@@ -86,7 +95,7 @@ edma_module_deinit(struct driver_ctx_t *drv_ctx)
 	if (!drv_ctx || !drv_ctx->edma_h)
 		return;
 
-	tegra_pcie_edma_deinit(drv_ctx->edma_h);
+	tegra_pcie_dma_deinit(&drv_ctx->edma_h);
 	drv_ctx->edma_h = NULL;
 }
 
@@ -178,7 +187,7 @@ clear_inbound_translation(struct pci_epf *epf)
 {
 	struct pci_epf_bar *epf_bar = &epf->bar[BAR_0];
 
-	pci_epc_clear_bar(epf->epc, epf->func_no, PCIE_VFNO, epf_bar);
+	pci_epc_clear_bar(epf->epc, epf->func_no, epf->vfunc_no, epf_bar);
 
 	/* no api to clear epf header.*/
 }
@@ -189,25 +198,39 @@ set_inbound_translation(struct pci_epf *epf)
 {
 	int ret = 0;
 	struct pci_epc *epc = epf->epc;
-	struct pci_epf_bar *epf_bar = &epf->bar[BAR_0];
+	struct pci_epf_bar *epf_bar = NULL;
+	struct driver_ctx_t *drv_ctx = NULL;
 
-	ret = pci_epc_write_header(epc, epf->func_no, PCIE_VFNO, epf->header);
+	drv_ctx = epf_get_drvdata(epf);
+	if (!drv_ctx) {
+		pr_err("epf_get_drvdata() failed\n");
+		return -EINVAL;
+	}
+
+	ret = pci_epc_write_header(epc, epf->func_no, epf->vfunc_no, epf->header);
 	if (ret < 0) {
 		pr_err("Failed to write PCIe header\n");
 		return ret;
 	}
 
-	/* BAR:0 setttings are already done in _bind().*/
-	ret = pci_epc_set_bar(epc, epf->func_no, PCIE_VFNO, epf_bar);
+	epf_bar = &epf->bar[BAR_0];
+
+	/* BAR:0 settings are already done in _bind().*/
+	ret = pci_epc_set_bar(epc, epf->func_no, epf->vfunc_no, epf_bar);
 	if (ret) {
 		pr_err("pci_epc_set_bar() failed\n");
 		return ret;
 	}
 
-	ret = pci_epc_set_msi(epc, epf->func_no, PCIE_VFNO,
+	if (epf->msi_interrupts == 0U) {
+		pr_info("(epf->msi_interrupts == 0), initializing msi count.\n");
+		epf->msi_interrupts = T234_EPF_MSI_INTERRUPTS;
+	}
+
+	ret = pci_epc_set_msi(epc, epf->func_no, epf->vfunc_no,
 			      epf->msi_interrupts);
 	if (ret) {
-		pr_err("pci_epc_set_msi() failed\n");
+		pr_err("pci_epc_set_msi() failed (%d)\n", ret);
 		return ret;
 	}
 
@@ -217,7 +240,7 @@ set_inbound_translation(struct pci_epf *epf)
 static void
 clear_outbound_translation(struct pci_epf *epf, struct pci_aper_t *peer_mem)
 {
-	return pci_epc_unmap_addr(epf->epc, epf->func_no, PCIE_VFNO,
+	return pci_epc_unmap_addr(epf->epc, epf->func_no, epf->vfunc_no,
 				  peer_mem->aper);
 }
 
@@ -225,7 +248,7 @@ static int
 set_outbound_translation(struct pci_epf *epf, struct pci_aper_t *peer_mem,
 			 u64 peer_iova)
 {
-	return pci_epc_map_addr(epf->epc, epf->func_no, PCIE_VFNO,
+	return pci_epc_map_addr(epf->epc, epf->func_no, epf->vfunc_no,
 				peer_mem->aper,	peer_iova, peer_mem->size);
 }
 
@@ -599,6 +622,7 @@ nvscic2c_pcie_epf_bind(struct pci_epf *epf)
 {
 	int ret = 0;
 	size_t win_size = 0;
+	struct pci_epc *epc = NULL;
 	struct pci_epf_bar *epf_bar = NULL;
 	struct driver_ctx_t *drv_ctx = NULL;
 	struct pci_client_params params = {0};
@@ -611,12 +635,21 @@ nvscic2c_pcie_epf_bind(struct pci_epf *epf)
 	if (!drv_ctx)
 		return -EINVAL;
 
+	epc = epf->epc;
+	drv_ctx->dev = epc->dev.parent;
 	/*
 	 * device-tree node has edma phandle, user must bind
 	 * the function to the same pcie controller.
 	 */
 	if (drv_ctx->drv_param.edma_np != epf->epc->dev.parent->of_node) {
 		pr_err("epf:(%s) is not bounded to correct controller\n",
+		       epf->name);
+		return -EINVAL;
+	}
+
+	drv_ctx->chip_id = __tegra_get_chip_id();
+	if (drv_ctx->chip_id != TEGRA234) {
+		pr_err("epf:(%s): NvSciC2c-Pcie not supported in chip\n",
 		       epf->name);
 		return -EINVAL;
 	}
