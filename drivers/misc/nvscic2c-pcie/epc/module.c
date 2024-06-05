@@ -13,13 +13,13 @@
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/module.h>
+#include <linux/msi.h>
 #include <linux/of_device.h>
 #include <linux/pci.h>
 #include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/tegra-pcie-dma.h>
 #include <linux/types.h>
-#include <soc/tegra/fuse-helper.h>
 
 #include "comm-channel.h"
 #include "common.h"
@@ -42,17 +42,24 @@ edma_module_init(struct driver_ctx_t *drv_ctx)
 {
 	u8 i = 0;
 	int ret = 0;
-	tegra_pcie_dma_status_t dma_status = TEGRA_PCIE_DMA_STATUS_INVAL_STATE;
 	struct tegra_pcie_dma_init_info info = {0};
+	tegra_pcie_dma_status_t dma_status = TEGRA_PCIE_DMA_STATUS_INVAL_STATE;
 
 	if (WARN_ON(!drv_ctx || !drv_ctx->drv_param.edma_np))
 		return -EINVAL;
 
 	memset(&info, 0x0, sizeof(info));
-	info.dev = drv_ctx->dev;
+	info.dev = drv_ctx->cdev;
 	info.remote = NULL;
 	if (drv_ctx->chip_id == TEGRA234)
 		info.soc = NVPCIE_DMA_SOC_T234;
+	else {
+		info.soc = NVPCIE_DMA_SOC_T264;
+		info.msi_irq = drv_ctx->msi_irq;
+		info.msi_addr = drv_ctx->msi_addr;
+		info.msi_data = drv_ctx->msi_data;
+	}
+
 	for (i = 0; i < TEGRA_PCIE_DMA_WR_CHNL_NUM; i++) {
 		info.tx[i].ch_type = TEGRA_PCIE_DMA_CHAN_XFER_ASYNC;
 		info.tx[i].num_descriptors = NUM_EDMA_DESC;
@@ -60,8 +67,27 @@ edma_module_init(struct driver_ctx_t *drv_ctx)
 	/*No use-case for RD channels.*/
 
 	dma_status = tegra_pcie_dma_initialize(&info, &drv_ctx->edma_h);
-	if (dma_status != TEGRA_PCIE_DMA_SUCCESS)
+	if (dma_status != TEGRA_PCIE_DMA_SUCCESS) {
 		ret = -ENODEV;
+		pr_err("tegra_pcie_dma_initialize() failed : %d\n", dma_status);
+		return ret;
+	}
+
+	if (drv_ctx->chip_id == TEGRA264) {
+		dma_status = tegra_pcie_dma_set_msi(drv_ctx->edma_h, drv_ctx->msi_addr,
+						    drv_ctx->msi_data);
+		if (dma_status != TEGRA_PCIE_DMA_SUCCESS) {
+			ret = -ENOMEM;
+			pr_err("tegra_pcie_dma_set_msi() failed : %d\n", dma_status);
+			goto err_set_msi;
+		}
+	}
+
+	return ret;
+
+err_set_msi:
+	tegra_pcie_dma_deinit(&drv_ctx->edma_h);
+	drv_ctx->edma_h = NULL;
 
 	return ret;
 }
@@ -147,13 +173,13 @@ free_outbound_area(struct pci_dev *pdev, struct pci_aper_t *peer_mem)
 
 /* Assign outbound pcie aperture for CPU/eDMA access towards PCIe EP. */
 static int
-assign_outbound_area(struct pci_dev *pdev, size_t win_size,
+assign_outbound_area(struct pci_dev *pdev, size_t win_size, int bar,
 		     struct pci_aper_t *peer_mem)
 {
 	int ret = 0;
 
 	peer_mem->size = win_size;
-	peer_mem->aper = pci_resource_start(pdev, 0);
+	peer_mem->aper = pci_resource_start(pdev, bar);
 
 	return ret;
 }
@@ -297,7 +323,7 @@ deinit:
 	free_outbound_area(pdev, &drv_ctx->peer_mem);
 	free_inbound_area(pdev, &drv_ctx->self_mem);
 
-	pci_release_region(pdev, 0);
+	pci_release_regions(pdev);
 	pci_clear_master(pdev);
 #if defined(NV_PCI_DISABLE_PCIE_ERROR_REPORTING_PRESENT) /* Linux 6.5 */
 	pci_disable_pcie_error_reporting(pdev);
@@ -327,6 +353,8 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 	struct epc_context_t *epc_ctx = NULL;
 	struct pci_dev *ppdev = NULL;
 	struct pci_client_params params = {0};
+	u16 val_16;
+	u32 val;
 
 	/* allocate module context.*/
 	drv_ctx = kzalloc(sizeof(*drv_ctx), GFP_KERNEL);
@@ -347,8 +375,8 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 	}
 
 	drv_ctx->chip_id = __tegra_get_chip_id();
-	if (drv_ctx->chip_id != TEGRA234) {
-		pr_err("(%s): NvSciC2c-Pcie not supported in chip\n",
+	if ((drv_ctx->chip_id != TEGRA234) && (drv_ctx->chip_id != TEGRA264)) {
+		pr_err("(%s): NvSciC2C-Pcie not supported in chip\n",
 		       name);
 		kfree(epc_ctx);
 		kfree(name);
@@ -356,6 +384,10 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 		return -EINVAL;
 	}
 
+	if (drv_ctx->chip_id == TEGRA234)
+		drv_ctx->bar = 0;
+	else
+		drv_ctx->bar = 2;
 	init_completion(&epc_ctx->epf_ready_cmpl);
 	init_completion(&epc_ctx->epf_shutdown_cmpl);
 	atomic_set(&epc_ctx->aer_received, 0);
@@ -371,8 +403,13 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 		return -ENODEV;
 	}
 
-	drv_ctx->dev = &ppdev->dev;
-	if (!drv_ctx->dev) {
+	/*
+	 * fdev: struct device associated with downstream to access Endpoint memories.
+	 * cdev: struct device associated with upstream to access RootPort memories.
+	 */
+	drv_ctx->fdev = &pdev->dev;
+	drv_ctx->cdev = &ppdev->dev;
+	if ((!drv_ctx->cdev) || (!drv_ctx->fdev)) {
 		kfree(epc_ctx);
 		kfree(name);
 		kfree(drv_ctx);
@@ -394,20 +431,48 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 	pci_enable_pcie_error_reporting(pdev);
 #endif
 	pci_set_master(pdev);
-	ret = pci_request_region(pdev, 0, MODULE_NAME);
+	ret = pci_request_regions(pdev, MODULE_NAME);
 	if (ret)
 		goto err_request_region;
 
-	win_size = pci_resource_len(pdev, 0);
+	win_size = pci_resource_len(pdev, drv_ctx->bar);
 	ret = allocate_inbound_area(pdev, win_size, &drv_ctx->self_mem);
 	if (ret)
 		goto err_alloc_inbound;
 
-	ret = assign_outbound_area(pdev, win_size, &drv_ctx->peer_mem);
+	ret = assign_outbound_area(pdev, win_size, drv_ctx->bar, &drv_ctx->peer_mem);
 	if (ret)
 		goto err_assign_outbound;
 
+	if (drv_ctx->chip_id == TEGRA264) {
+		/* Allocating MSI's for DMA used in thor */
+		ret = pci_alloc_irq_vectors(pdev, 16, 16, PCI_IRQ_MSI);
+		if (ret < 0) {
+			pr_err("Failed to enable MSI interrupt\n");
+			ret = -ENODEV;
+			goto err_alloc_irq;
+		}
+
+		/* Reading the msi_address, to write data and IRQ vector */
+		pci_read_config_word(ppdev, ppdev->msi_cap + PCI_MSI_FLAGS, &val_16);
+		if (val_16 & PCI_MSI_FLAGS_64BIT) {
+			pci_read_config_dword(ppdev, ppdev->msi_cap + PCI_MSI_ADDRESS_HI, &val);
+			drv_ctx->msi_addr = val;
+
+			pci_read_config_word(ppdev, ppdev->msi_cap + PCI_MSI_DATA_64, &val_16);
+			drv_ctx->msi_data = val_16;
+		} else {
+			pci_read_config_word(ppdev, ppdev->msi_cap + PCI_MSI_DATA_32, &val_16);
+			drv_ctx->msi_data = val_16;
+		}
+		pci_read_config_dword(ppdev, ppdev->msi_cap + PCI_MSI_ADDRESS_LO, &val);
+		drv_ctx->msi_addr = (drv_ctx->msi_addr << 32) | val;
+		drv_ctx->msi_irq = pci_irq_vector(ppdev, TEGRA264_PCIE_DMA_MSI_LOCAL_VEC);
+		drv_ctx->msi_data += TEGRA264_PCIE_DMA_MSI_LOCAL_VEC;
+	}
+
 	params.dev = &pdev->dev;
+	params.cdev = drv_ctx->cdev;
 	params.self_mem = &drv_ctx->self_mem;
 	params.peer_mem = &drv_ctx->peer_mem;
 	ret = pci_client_init(&params, &drv_ctx->pci_client_h);
@@ -510,13 +575,15 @@ err_comm_init:
 	pci_client_deinit(&drv_ctx->pci_client_h);
 
 err_pci_client:
+	pci_free_irq_vectors(pdev);
+err_alloc_irq:
 	free_outbound_area(pdev, &drv_ctx->peer_mem);
 
 err_assign_outbound:
 	free_inbound_area(pdev, &drv_ctx->self_mem);
 
 err_alloc_inbound:
-	pci_release_region(pdev, 0);
+	pci_release_regions(pdev);
 
 err_request_region:
 	pci_clear_master(pdev);

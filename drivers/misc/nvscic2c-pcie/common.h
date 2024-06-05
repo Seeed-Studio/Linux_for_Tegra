@@ -1,11 +1,15 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
 #include <linux/types.h>
 #include <linux/bitops.h>
+#include <soc/tegra/fuse-helper.h>
 
 #define MODULE_NAME		"nvscic2c-pcie"
 #define DRIVER_NAME_EPF		"nvscic2c-pcie-epf"
@@ -68,7 +72,8 @@
  * Represents SyncpointShimBase on all T234.
  * Each syncpoint is offset at (syncpt_id * SP_SIZE) on SHIM_BASE.
  */
-#define SHIM_BASE		(0x60000000)
+#define SHIM_BASE_ORIN		(0x60000000)
+#define SHIM_BASE_THOR		(0x81C0000000)
 /*
  * For our use-case, if only 4 bytes of NvRmHost1xSynpointShim aperture mapped
  * to PCIe device, any writes of (SZ_4B) from remote is enough to increment
@@ -198,8 +203,15 @@ enum peer_cpu_t {
 };
 
 /* Returns aperture offset of syncpoint on SHIM_BASE. */
-static inline u64 get_syncpt_shim_offset(u32 id)
+static inline u64 get_syncpt_shim_offset(u32 id, u8 chip_id)
 {
-	return (SHIM_BASE + ((u64)id * SP_SIZE));
+	u64 base = 0U;
+
+	if (chip_id == TEGRA234)
+		base = SHIM_BASE_ORIN;
+	else
+		base = SHIM_BASE_THOR;
+
+	return (base + ((u64)id * SP_SIZE));
 }
 #endif //__COMMON_H__

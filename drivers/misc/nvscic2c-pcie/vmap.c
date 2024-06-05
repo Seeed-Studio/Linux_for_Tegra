@@ -777,6 +777,7 @@ vmap_init(struct driver_ctx_t *drv_ctx, void **vmap_h)
 	vmap_ctx->host1x_pdev = drv_ctx->drv_param.host1x_pdev;
 	vmap_ctx->comm_channel_h = drv_ctx->comm_channel_h;
 	vmap_ctx->pci_client_h = drv_ctx->pci_client_h;
+	vmap_ctx->chip_id = drv_ctx->chip_id;
 	idr_init(&vmap_ctx->mem_idr);
 	idr_init(&vmap_ctx->sync_idr);
 	idr_init(&vmap_ctx->import_idr);
@@ -796,7 +797,10 @@ vmap_init(struct driver_ctx_t *drv_ctx, void **vmap_h)
 		pr_err("Failed to add the dummy platform device\n");
 		goto err;
 	}
-	ret = dma_set_mask(&vmap_ctx->dummy_pdev->dev, DMA_BIT_MASK(39));
+	if (vmap_ctx->chip_id == TEGRA234)
+		ret = dma_set_mask(&vmap_ctx->dummy_pdev->dev, DMA_BIT_MASK(39));
+	else
+		ret = dma_set_mask(&vmap_ctx->dummy_pdev->dev, DMA_BIT_MASK(40));
 	if (ret) {
 		platform_device_del(vmap_ctx->dummy_pdev);
 		platform_device_put(vmap_ctx->dummy_pdev);

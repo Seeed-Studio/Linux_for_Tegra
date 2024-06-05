@@ -41,6 +41,7 @@
 /* Internal private data-structure as PCI client. */
 struct pci_client_t {
 	struct device *dev;
+	struct device *cdev;
 	struct iommu_domain *domain;
 
 	/* Recv area. Peer's write reflect here. */
@@ -293,6 +294,7 @@ pci_client_init(struct pci_client_params *params, void **pci_client_h)
 	if (WARN_ON(!ctx))
 		return -ENOMEM;
 	ctx->dev = params->dev;
+	ctx->cdev = params->cdev;
 	ctx->self_mem = params->self_mem;
 	ctx->peer_mem = params->peer_mem;
 	mutex_init(&ctx->event_tbl_lock);
@@ -460,7 +462,7 @@ pci_client_dmabuf_attach(void *pci_client_h, struct dma_buf *dmabuff)
 	if (WARN_ON(!ctx || !dmabuff))
 		return ERR_PTR(-EINVAL);
 
-	return dma_buf_attach(dmabuff, ctx->dev);
+	return dma_buf_attach(dmabuff, ctx->cdev);
 }
 
 void

@@ -1,5 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
+
 
 #ifndef __VMAP_INTERNAL_H__
 #define __VMAP_INTERNAL_H__
@@ -145,6 +149,7 @@ struct vmap_ctx_t {
 	struct mutex sync_idr_lock;
 	/* exclusive access to import idr.*/
 	struct mutex import_idr_lock;
+	u8 chip_id;
 };
 
 void

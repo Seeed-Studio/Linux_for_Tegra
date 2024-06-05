@@ -91,6 +91,8 @@ struct epf_context_t {
 	atomic_t epf_initialized;
 	atomic_t shutdown_msg_received;
 	wait_queue_head_t core_initialized_waitq;
+	bool isr_registered;
+	int irq;
 };
 
 /* nvscic2c-pcie epc specific context. */
@@ -111,7 +113,8 @@ struct driver_ctx_t {
 	u8 chip_id;
 	char *drv_name;
 
-	struct device *dev;
+	struct device *fdev;
+	struct device *cdev;
 	/* the configuration for module and it's endpoints.*/
 	struct driver_param_t drv_param;
 
@@ -123,6 +126,7 @@ struct driver_ctx_t {
 	 * Peer's write lands here to be read by local/self.
 	 */
 	struct dma_buff_t self_mem;
+	struct dma_buff_t bar2_self_mem;
 
 	/*
 	 * Point to peer's visible region for data-writes. This is a PCIe
@@ -141,6 +145,11 @@ struct driver_ctx_t {
 
 	/* tegra-pcie-edma module handle.*/
 	void *edma_h;
+	/* MSI address that needs to be configured in DMA registers. */
+	u64 msi_addr;
+	/* MSI data that needs to be configured in DMA registers. */
+	u32 msi_data;
+	u32 msi_irq;
 
 	/* endpoint absraction handle.*/
 	void *endpoints_h;
@@ -154,6 +163,9 @@ struct driver_ctx_t {
 
 	/* IOVA alloc abstraction.*/
 	struct iova_alloc_domain_t *ivd_h;
+
+	/* BAR to be used for data xfer.*/
+	int bar;
 };
 
 /*

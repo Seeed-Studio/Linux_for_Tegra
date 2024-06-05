@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: vmap-pin: " fmt
 
@@ -360,7 +363,7 @@ syncobj_pin(struct vmap_ctx_t *vmap_ctx,
 	pin->attrib.syncpt_id = pin->syncpt_id;
 	pin->attrib.size = SP_MAP_SIZE;
 	if (pin->pin_reqd) {
-		pin->phy_addr = get_syncpt_shim_offset(pin->syncpt_id);
+		pin->phy_addr = get_syncpt_shim_offset(pin->syncpt_id, vmap_ctx->chip_id);
 		/*
 		 * remote/export sync obj are mapped to an iova of client
 		 * choice always and we should not come here for local sync objs

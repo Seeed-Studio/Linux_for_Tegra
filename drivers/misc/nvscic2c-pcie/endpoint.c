@@ -84,6 +84,7 @@ struct syncpt_t {
 
 /* private data structure for each endpoint. */
 struct endpoint_t {
+	u8 chip_id;
 	/* properties / attributes of this endpoint.*/
 	char name[NAME_MAX];
 
@@ -759,7 +760,7 @@ allocate_syncpoint(struct endpoint_drv_ctx_t *eps_ctx,
 		return -ENOMEM;
 	syncpt->id = host1x_syncpt_id(syncpt->sp);
 	/* physical address of syncpoint shim. */
-	syncpt->phy_addr = get_syncpt_shim_offset(syncpt->id);
+	syncpt->phy_addr = get_syncpt_shim_offset(syncpt->id, endpoint->chip_id);
 	syncpt->size = SP_MAP_SIZE;
 
 	/* reserve iova with the iova manager.*/
@@ -1102,6 +1103,7 @@ endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 
 		/* copy the parameters from nvscic2c-pcie driver ctx.*/
 		strcpy(endpoint->name, ep_prop->name);
+		endpoint->chip_id = drv_ctx->chip_id;
 		endpoint->minor = ep_prop->id;
 		endpoint->nframes = ep_prop->nframes;
 		endpoint->frame_sz = ep_prop->frame_sz;

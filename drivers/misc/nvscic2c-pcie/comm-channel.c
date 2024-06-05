@@ -117,6 +117,7 @@ struct fifo_t {
 };
 
 struct comm_channel_ctx_t {
+	u8 chip_id;
 	/* data. */
 	struct fifo_t fifo;
 
@@ -226,7 +227,7 @@ send_msg(struct comm_channel_ctx_t *comm_ctx, struct comm_msg *msg)
 		ret = pci_client_raise_irq(comm_ctx->pci_client_h, PCI_IRQ_MSI, 0);
 #endif
 	} else {
-	/* notify peer for each write.*/
+		/* notify peer for each write.*/
 		writel(0x1, syncpt->peer_mem.pva);
 	}
 
@@ -591,7 +592,7 @@ allocate_syncpoint(struct comm_channel_ctx_t *comm_ctx)
 		return -ENOMEM;
 	syncpt->id = host1x_syncpt_id(syncpt->sp);
 	/* physical address of syncpoint shim. */
-	syncpt->phy_addr = get_syncpt_shim_offset(syncpt->id);
+	syncpt->phy_addr = get_syncpt_shim_offset(syncpt->id, comm_ctx->chip_id);
 	syncpt->size = SP_MAP_SIZE;
 
 	/* reserve iova with the iova manager.*/
@@ -793,6 +794,7 @@ comm_channel_init(struct driver_ctx_t *drv_ctx, void **comm_channel_h)
 	mutex_init(&comm_ctx->cb_ops_lock);
 	atomic_set(&comm_ctx->recv_count, 0);
 
+	comm_ctx->chip_id = drv_ctx->chip_id;
 	comm_ctx->pci_client_h = drv_ctx->pci_client_h;
 	comm_ctx->of_node = drv_ctx->drv_param.of_node;
 	comm_ctx->host1x_pdev = drv_ctx->drv_param.host1x_pdev;

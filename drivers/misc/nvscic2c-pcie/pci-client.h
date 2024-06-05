@@ -31,6 +31,13 @@ struct pci_client_params {
 	 * @DRV_MODE_EPF: epf->epc->dev.parent.
 	 */
 	struct device *dev;
+	/*
+	 * For RootPort separate stream ID's are configured for
+	 * upstream and downstream access.
+	 * Hence while using dma_buf API's use device attached with
+	 * upstream in RootPort.
+	 */
+	struct device *cdev;
 };
 
 /* Initialize PCI client either for @DRV_MODE_EPF or @DRV_MODE_EPC. */
