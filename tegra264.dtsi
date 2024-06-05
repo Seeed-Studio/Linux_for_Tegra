@@ -6399,7 +6399,7 @@
 			ats-supported;
 		};
 
-		xusb_padctl: padctl@0xa808680000 {
+		xusb_padctl: padctl@a808680000 {
 			compatible = "nvidia,tegra264-xusb-padctl";
 			reg = <0xa8 0x8680000 0x00 0x20000>,
 			      <0xa8 0x86a0000 0x00 0x10000>;
@@ -6486,7 +6486,7 @@
 			};
 		};
 
-		usb@0xa808670000 {
+		usb@a808670000 {
 			compatible = "nvidia,tegra264-xudc";
 			reg = <0xa8 0x8670000 0x00 0x8000>,
 			      <0xa8 0x8678000 0x00 0x8000>;
@@ -6506,7 +6506,7 @@
 			status = "disabled";
 		};
 
-		usb@0xa80aa10000 {
+		usb@a80aa10000 {
 			compatible = "nvidia,tegra264-xusb";
 			reg = <0xa8 0xaa10000 0x00 0x40000>,
 			      <0xa8 0xaa00000 0x00 0x10000>,
