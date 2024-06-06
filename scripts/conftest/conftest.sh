@@ -7517,6 +7517,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_EPC_FEATURES_STRUCT_HAS_BAR" "" "types"
         ;;
 
+        pci_epc_features_struct_has_core_init_notifier)
+            #
+            # Determine if the pci_epc_features struct has a member 'core_init_notifier'.
+            #
+            # Commit a01e7214bef9 ("PCI: endpoint: Remove "core_init_notifier" flag")
+            # removed the flag 'core_init_notifier' from the pci_epc_features structure
+            # in Linux v6.10.
+            #
+            CODE="
+            #include <linux/pci-epc.h>
+            int conftest_pci_epc_features_struct_has_core_init_notifier(void) {
+                return offsetof(struct pci_epc_features, core_init_notifier);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_EPC_FEATURES_STRUCT_HAS_CORE_INIT_NOTIFIER" "" "types"
+        ;;
+
         pci_epc_write_header_has_vfn_arg)
             #
             # Determine if the pci_epc_write_header() has the vfn argument or not.

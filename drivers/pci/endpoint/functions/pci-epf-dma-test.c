@@ -454,17 +454,18 @@ static int pcie_dma_epf_bind(struct pci_epf *epf)
 		goto fail_get_features;
 	}
 
+#if defined(NV_PCI_EPC_FEATURES_STRUCT_HAS_CORE_INIT_NOTIFIER)
 	if (!epc_features->core_init_notifier) {
 		ret = pcie_dma_epf_core_init(epf);
 		if (ret) {
 			dev_err(fdev, "EPF core init failed with err: %d\n", ret);
-			goto fail_core_init;
+			goto fail_get_features;
 		}
 	}
+#endif
 
 	return 0;
 
-fail_core_init:
 fail_get_features:
 	debugfs_remove_recursive(epfnv->debugfs);
 	if (epfnv->chip_id == TEGRA264)
