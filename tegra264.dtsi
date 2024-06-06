@@ -7994,7 +7994,6 @@
                    vcc-max-microamp = <0>;
                    vccq-max-microamp = <0>;
                    vccq2-max-microamp = <0>;
-                   nvidia,configure-uphy-pll3;
                    nvidia,enable-ufs-provisioning;
 
                    ufs_variant {
