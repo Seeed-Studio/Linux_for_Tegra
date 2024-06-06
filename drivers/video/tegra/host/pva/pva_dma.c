@@ -844,8 +844,11 @@ static int32_t nvpva_task_dma_desc_mapping(struct pva_submit_task *task,
 	const uint8_t resv_desc_end_idx = (NVPVA_RESERVED_DESCRIPTORS_START_IDX
 					   + NVPVA_NUM_RESERVED_DESCRIPTORS - 1);
 	bool dim3_check_relaxed = false;
+	u64 descriptor_mask[2];
 
 	nvpva_dbg_fn(task->pva, "");
+	descriptor_mask[0] = task->dma_misr_config.descriptor_mask;
+	descriptor_mask[1] = (u64) task->dma_misr_config.descriptor_mask_high;
 
 	desc_num = *did;
 	for (i = 0; (i < num_descs)
@@ -863,9 +866,8 @@ static int32_t nvpva_task_dma_desc_mapping(struct pva_submit_task *task,
 
 		umd_dma_desc = &task->dma_descriptors[desc_num];
 		dma_desc = &hw_task->dma_desc[desc_num];
-		is_misr = !((task->dma_misr_config.descriptor_mask
-			    & PVA_BIT64(desc_num)) == 0U);
-		is_misr = is_misr && (task->dma_misr_config.enable != 0U);
+		is_misr = (descriptor_mask[desc_num/64] & PVA_BIT64(desc_num%64))
+			   && (task->dma_misr_config.enable != 0U);
 
 		dim3_check_relaxed = is_hwseq_mode_frm(task, desc_num)
 					|| is_hwseq_mode_t26x(task, desc_num);

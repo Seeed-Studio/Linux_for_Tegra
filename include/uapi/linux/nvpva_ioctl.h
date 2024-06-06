@@ -464,6 +464,7 @@ struct nvpva_dma_misr {
 	 * number of AXI clock cycles.
 	 */
 	uint32_t misr_timeout;
+	uint32_t descriptor_mask_high;
 };
 
 /**
