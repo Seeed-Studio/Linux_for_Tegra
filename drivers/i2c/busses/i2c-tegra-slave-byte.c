@@ -33,6 +33,10 @@
 #define I2C_SL_ADDR2				0x30
 #define I2C_SL_ADDR2_MASK			0x1FFFF
 #define I2C_7BIT_ADDR_MASK                      0x7F
+#define I2C_SL_ADDR2_TEN_BIT_ADDR_MODE		BIT(0)
+#define I2C_SL_ADDR2_HI_ADDR_SHIFT		1
+#define I2C_10BIT_ADDR_MASK			0x3FF
+#define I2C_10BIT_HI_ADDR_SHIFT			8
 
 #define I2C_TLOW_SEXT				0x34
 #define I2C_SL_DELAY_COUNT			0x3c
@@ -167,7 +171,7 @@ static void tegra_i2cslv_handle_tx(struct tegra_i2cslv_dev *i2cslv_dev,
 
 static int tegra_i2cslv_init(struct tegra_i2cslv_dev *i2cslv_dev)
 {
-	u32 reg;
+	u32 reg, hi_addr;
 	int ret;
 
 	ret = clk_enable(i2cslv_dev->div_clk);
@@ -181,14 +185,26 @@ static int tegra_i2cslv_init(struct tegra_i2cslv_dev *i2cslv_dev)
 	udelay(2);
 	reset_control_deassert(i2cslv_dev->rstc);
 
-	/* Program the 7-bit slave address */
-	tegra_i2cslv_writel(i2cslv_dev, i2cslv_dev->slave->addr &
-			    I2C_7BIT_ADDR_MASK, I2C_SL_ADDR1);
+	if (i2cslv_dev->slave->flags & I2C_CLIENT_TEN) {
+		/* Program the 10-bit slave address */
+		tegra_i2cslv_writel(i2cslv_dev, i2cslv_dev->slave->addr &
+				I2C_7BIT_ADDR_MASK, I2C_SL_ADDR1);
+		hi_addr = ((i2cslv_dev->slave->addr & I2C_10BIT_ADDR_MASK) >>
+			I2C_10BIT_HI_ADDR_SHIFT);
+		reg = I2C_SL_ADDR2_TEN_BIT_ADDR_MODE |
+			(hi_addr << I2C_SL_ADDR2_HI_ADDR_SHIFT);
+		tegra_i2cslv_writel(i2cslv_dev, reg, I2C_SL_ADDR2);
+	} else {
 
-	/* Specify its 7-bit address mode */
-	reg = tegra_i2cslv_readl(i2cslv_dev, I2C_SL_ADDR2);
-	reg &= ~(I2C_SL_ADDR2_MASK);
-	tegra_i2cslv_writel(i2cslv_dev, reg, I2C_SL_ADDR2);
+		/* Program the 7-bit slave address */
+		tegra_i2cslv_writel(i2cslv_dev, i2cslv_dev->slave->addr &
+				    I2C_7BIT_ADDR_MASK, I2C_SL_ADDR1);
+
+		/* Specify its 7-bit address mode */
+		reg = tegra_i2cslv_readl(i2cslv_dev, I2C_SL_ADDR2);
+		reg &= ~(I2C_SL_ADDR2_MASK);
+		tegra_i2cslv_writel(i2cslv_dev, reg, I2C_SL_ADDR2);
+	}
 
 	/* Unmask WR2RD interrupt, just to clear it */
 	tegra_i2cslv_writel(i2cslv_dev, (I2C_INTERRUPT_SLV_WR2RD),
@@ -290,8 +306,6 @@ static int tegra_reg_slave(struct i2c_client *slave)
 	if (i2cslv_dev->slave)
 		return -EBUSY;
 
-	if (slave->flags & I2C_CLIENT_TEN)
-		return -EAFNOSUPPORT;
 	i2cslv_dev->slave = slave;
 
 	ret = clk_enable(i2cslv_dev->div_clk);
