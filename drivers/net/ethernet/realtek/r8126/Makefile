@@ -30,6 +30,19 @@
 #  US6,570,884, US6,115,776, and US6,327,625.
 ################################################################################
 
+LINUX_VERSION := $(shell expr $(VERSION) \* 256 + $(PATCHLEVEL))
+LINUX_VERSION_6_16 := $(shell expr 6 \* 256 + 16)
+LINUX_VERSION_5_14 := $(shell expr 5 \* 256 + 14)
+
+# Use dummy R8126 driver for Kernel versions greater that K6.16
+ifeq ($(shell test $(LINUX_VERSION) -gt $(LINUX_VERSION_6_16); echo $$?),0)
+obj-m := r8126.o
+r8126-objs := r8126_dummy.o
+else ifeq ($(shell test $(LINUX_VERSION) -eq $(LINUX_VERSION_5_14); echo $$?),0)
+obj-m := r8126.o
+r8126-objs := r8126_dummy.o
+else
+
 CONFIG_SOC_LAN = y
 ENABLE_FIBER_SUPPORT = n
 ENABLE_REALWOW_SUPPORT = n
@@ -136,3 +149,5 @@ endif
 
 # Backward compatibility
 ccflags-y  += $(EXTRA_CFLAGS)
+
+endif
