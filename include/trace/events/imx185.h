@@ -1,9 +1,10 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 /*
  * imx185.h
- *
- * Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM imx185
@@ -22,7 +23,11 @@ TRACE_EVENT(imx185_s_stream,
 		__field(int,	mode)
 	),
 	TP_fast_assign(
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(name);
+#else
 		__assign_str(name, name);
+#endif
 		__entry->enable = enable;
 		__entry->mode = mode;
 	),

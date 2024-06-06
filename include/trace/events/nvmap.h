@@ -4,6 +4,8 @@
  * NvMap event logging to ftrace.
  */
 
+#include <nvidia/conftest.h>
+
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM nvmap
 
@@ -28,7 +30,11 @@ DECLARE_EVENT_CLASS(nvmap,
 	),
 	TP_fast_assign(
 		__entry->client = client;
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(sname);
+#else
 		__assign_str(sname, name);
+#endif
 	),
 	TP_printk("client=%p, name=%s",
 		__entry->client, __get_str(sname))
@@ -64,7 +70,11 @@ TRACE_EVENT(nvmap_create_handle,
 
 	TP_fast_assign(
 		__entry->client = client;
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(sname);
+#else
 		__assign_str(sname, name);
+#endif
 		__entry->h = h;
 		__entry->size = size;
 		__entry->ref = ref;
@@ -147,7 +157,11 @@ DECLARE_EVENT_CLASS(nvmap_handle_summary,
 		__entry->size = size;
 		__entry->flags = flags;
 		__entry->tag = tag;
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(tag_name);
+#else
 		__assign_str(tag_name, tag_name);
+#endif
 	),
 
 	TP_printk("client=0x%p pid=%d dupes=%u handle=0x%p share=%u base=%llx size=%zu flags=0x%x tag=0x%x %s",
@@ -419,7 +433,11 @@ DECLARE_EVENT_CLASS(pin_unpin,
 
 	TP_fast_assign(
 		__entry->client = client;
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(sname);
+#else
 		__assign_str(sname, name);
+#endif
 		__entry->h = h;
 		__entry->pin_count = pin_count;
 	),
@@ -473,7 +491,11 @@ DECLARE_EVENT_CLASS(nvmap_dmabuf_2,
 
 	TP_fast_assign(
 		__entry->dbuf = dbuf;
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(name);
+#else
 		__assign_str(name, dev_name(dev));
+#endif
 	),
 
 	TP_printk("dmabuf=%p, device=%s",
@@ -841,7 +863,11 @@ TRACE_EVENT(refcount_get_handle_from_sci_ipc_id,
 		__entry->handle = handle;
 		__entry->dmabuf = dmabuf;
 		__entry->handle_ref = handle_ref;
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(acc_perm);
+#else
 		__assign_str(acc_perm, perm);
+#endif
 	),
 
 	TP_printk("handle=0x%p, dmabuf=0x%p, handle_ref=%d, perm=%s",
@@ -868,7 +894,11 @@ DECLARE_EVENT_CLASS(nvmap_refcount,
 		__entry->dmabuf = dmabuf;
 		__entry->handle_ref = handle_ref;
 		__entry->dmabuf_ref = dmabuf_ref;
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(acc_perm);
+#else
 		__assign_str(acc_perm, perm);
+#endif
 	),
 
 	TP_printk("handle=0x%p, dmabuf=0x%p, handle_ref=%d, dmabuf_ref=%ld, perm=%s",

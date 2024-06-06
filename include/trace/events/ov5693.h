@@ -1,10 +1,11 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 /*
- * Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- *
  * ov5693.h
- *
  */
+
+#include <nvidia/conftest.h>
+
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM ov5693
 
@@ -22,7 +23,11 @@ TRACE_EVENT(ov5693_s_stream,
 		__field(int,	mode)
 	),
 	TP_fast_assign(
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(name);
+#else
 		__assign_str(name, name);
+#endif
 		__entry->enable = enable;
 		__entry->mode = mode;
 	),

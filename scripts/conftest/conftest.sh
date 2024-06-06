@@ -6483,6 +6483,37 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_CRYPTO_PRESENT" "" "symbols"
         ;;
 
+        __assign_str_has_no_src_arg)
+            #
+            echo "
+            #define TRACE_INCLUDE_FILE conftest$$
+            #define TRACE_INCLUDE_PATH ${PWD}
+
+            #include <linux/types.h>
+            #include <linux/tracepoint.h>
+
+            TRACE_EVENT(conftest,
+                TP_PROTO(const char *test),
+                TP_ARGS(test),
+                TP_STRUCT__entry(
+                    __string(test, test)
+                ),
+                TP_fast_assign(
+                    __assign_str(test);
+                ),
+                TP_printk(\"test=%s\", __get_str(test))
+            );
+            #include <trace/define_trace.h>" > conftest$$.h
+
+            CODE="
+            #define CREATE_TRACE_POINTS
+            #include \"conftest$$.h\"
+            "
+
+            compile_check_conftest "$CODE" "NV___ASSIGN_STR_HAS_NO_SRC_ARG" "" "types"
+            rm conftest$$.h
+        ;;
+
         __alloc_disk_node_has_lkclass_arg)
             #
             # Determine if the function __alloc_disk_node() has an 'lkclass'

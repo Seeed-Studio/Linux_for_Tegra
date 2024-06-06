@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2017-2023, NVIDIA CORPORATION, All rights reserved.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+
+#include <nvidia/conftest.h>
 
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM camera_common
@@ -22,7 +22,11 @@ DECLARE_EVENT_CLASS(channel_simple,
 		__string(name,	name)
 	),
 	TP_fast_assign(
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(name);
+#else
 		__assign_str(name, name);
+#endif
 	),
 	TP_printk("%s", __get_str(name))
 );
@@ -50,7 +54,11 @@ DECLARE_EVENT_CLASS(channel,
 		__field(int,	num)
 	),
 	TP_fast_assign(
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(name);
+#else
 		__assign_str(name, name);
+#endif
 		__entry->num = num;
 	),
 	TP_printk("%s : 0x%x", __get_str(name), (int)__entry->num)
@@ -110,7 +118,11 @@ DECLARE_EVENT_CLASS(frame,
 		__field(long,	tv_nsec)
 	),
 	TP_fast_assign(
+#if defined(NV___ASSIGN_STR_HAS_NO_SRC_ARG)
+		__assign_str(str);
+#else
 		__assign_str(str, str);
+#endif
 		__entry->tv_sec = ts->tv_sec;
 		__entry->tv_nsec = ts->tv_nsec;
 	),
