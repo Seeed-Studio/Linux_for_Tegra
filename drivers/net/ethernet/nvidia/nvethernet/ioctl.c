@@ -562,9 +562,11 @@ static int ether_config_l2_filters(struct net_device *dev,
 		return ret;
 	}
 
-	if (osi_core->use_virtualization == OSI_DISABLE) {
-		dev_err(pdata->dev, "%s Ethernet virualization is not enabled\n", __func__);
-		return ret;
+	if (osi_core->pre_sil != OSI_ENABLE) {
+		if (osi_core->use_virtualization == OSI_DISABLE) {
+			dev_err(pdata->dev, "%s Ethernet virualization is not enabled\n", __func__);
+			return ret;
+		}
 	}
 	if (copy_from_user(&u_l2_filter, (void __user *)ifdata->ptr,
 			   sizeof(struct ether_l2_filter)) != 0U) {
@@ -589,8 +591,13 @@ static int ether_config_l2_filters(struct net_device *dev,
 	       u_l2_filter.mac_addr, ETH_ALEN);
 	ioctl_data.l2_filter.dma_routing = OSI_ENABLE;
 	ioctl_data.l2_filter.addr_mask = OSI_DISABLE;
-	ioctl_data.l2_filter.dma_chan = osi_dma->dma_chans[0];
-	ioctl_data.l2_filter.dma_chansel = OSI_BIT(osi_dma->dma_chans[0]);
+	ioctl_data.l2_filter.pkt_dup = u_l2_filter.pkt_dup;
+	if (ioctl_data.l2_filter.pkt_dup) {
+		ioctl_data.l2_filter.dma_chan = u_l2_filter.dma_chan;
+	} else {
+		ioctl_data.l2_filter.dma_chan = osi_dma->dma_chans[0];
+	}
+	ioctl_data.l2_filter.dma_chansel = OSI_BIT_64(ioctl_data.l2_filter.dma_chan);
 	ioctl_data.cmd = OSI_CMD_L2_FILTER;
 	return osi_handle_ioctl(osi_core, &ioctl_data);
 }

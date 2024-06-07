@@ -112,6 +112,7 @@
  * @brief Ethernet default PTP clock frequency
  */
 #define ETHER_DFLT_PTP_CLK		312500000U
+#define ETHER_DFLT_PTP_CLK_UFPGA	78125000U
 
 /**
  * @brief Ethernet default PTP default RxQ
@@ -127,22 +128,28 @@
  * @brief Ethernet clk rates
  */
 #define ETHER_RX_INPUT_CLK_RATE		125000000UL
+#define ETHER_MGBE_MAC_DIV_RATE_25G	781250000UL
 #define ETHER_MGBE_MAC_DIV_RATE_10G	312500000UL
 #define ETHER_MGBE_MAC_DIV_RATE_5G	156250000UL
 #define ETHER_MGBE_MAC_DIV_RATE_2_5G	78125000UL
 // gbe_pll2_txclkref (644 MHz) --> programmable link TX_CLK divider
 // --> link_Tx_clk --> fixed 1/2 gear box divider --> lane TX clk.
+#define ETHER_MGBE_TXRX_CLK_XAUI_25G		805664000UL
 #define ETHER_MGBE_TX_CLK_USXGMII_10G	644531250UL
 #define ETHER_MGBE_TX_CLK_USXGMII_5G	322265625UL
 #define ETHER_MGBE_RX_CLK_USXGMII_10G	644531250UL
 #define ETHER_MGBE_RX_CLK_USXGMII_5G	322265625UL
+#define ETHER_MGBE_TXRX_PCS_CLK_XAUI_25G	390625000UL
 #define ETHER_MGBE_TX_PCS_CLK_USXGMII_10G	156250000UL
 #define ETHER_MGBE_TX_PCS_CLK_USXGMII_5G	78125000UL
 #define ETHER_MGBE_RX_PCS_CLK_USXGMII_10G	156250000UL
 #define ETHER_MGBE_RX_PCS_CLK_USXGMII_5G	78125000UL
+#define ETHER_EQOS_TX_CLK_2_5G		312500000UL
 #define ETHER_EQOS_TX_CLK_1000M		125000000UL
 #define ETHER_EQOS_TX_CLK_100M		25000000UL
 #define ETHER_EQOS_TX_CLK_10M		2500000UL
+#define ETHER_EQOS_UPHY_LX_TX_2_5G_CLK	195312500UL
+#define ETHER_EQOS_UPHY_LX_TX_1G_CLK	78125000UL
 
 /**
  * @brief 1 Second in Neno Second
@@ -167,6 +174,7 @@
  */
 #define ETHER_ADDR_REG_CNT_128		128
 #define ETHER_ADDR_REG_CNT_64		64
+#define ETHER_ADDR_REG_CNT_48		48
 #define ETHER_ADDR_REG_CNT_32		32
 #define ETHER_ADDR_REG_CNT_1		1
 /** @} */
@@ -207,8 +215,10 @@
 /**
  * @brief Broadcast and MAC address macros
  */
-#define ETHER_MAC_ADDRESS_INDEX		1U
-#define ETHER_BC_ADDRESS_INDEX		0
+#define ETHER_MAC_ADDRESS_INDEX	1U
+#define ETHER_BC_ADDRESS_INDEX		0U
+#define ETHER_MAC_ADDRESS_INDEX_T26X	0U
+#define ETHER_BC_ADDRESS_INDEX_T26X	1U
 #define ETHER_ADDRESS_MAC		1
 #define ETHER_ADDRESS_BC		0
 
@@ -388,6 +398,8 @@ struct ether_tx_ts_skb_list {
 	struct sk_buff *skb;
 	/** packet id to identify timestamp */
 	unsigned int pktid;
+	/** vdmaid to identify timestamp */
+	unsigned int vdmaid;
 	/** SKB jiffies to find time */
 	unsigned long pkt_jiffies;
 };
@@ -411,13 +423,13 @@ struct ether_timestamp_skb_list {
  */
 struct ether_xtra_stat_counters {
 	/** rx skb allocation failure count */
-	nveu64_t re_alloc_rxbuf_failed[OSI_MGBE_MAX_NUM_QUEUES];
+	nveu64_t re_alloc_rxbuf_failed[OSI_MGBE_MAX_NUM_CHANS];
 	/** TX per channel interrupt count */
-	nveu64_t tx_normal_irq_n[OSI_MGBE_MAX_NUM_QUEUES];
+	nveu64_t tx_normal_irq_n[OSI_MGBE_MAX_NUM_CHANS];
 	/** TX per channel SW timer callback count */
-	nveu64_t tx_usecs_swtimer_n[OSI_MGBE_MAX_NUM_QUEUES];
+	nveu64_t tx_usecs_swtimer_n[OSI_MGBE_MAX_NUM_CHANS];
 	/** RX per channel interrupt count */
-	nveu64_t rx_normal_irq_n[OSI_MGBE_MAX_NUM_QUEUES];
+	nveu64_t rx_normal_irq_n[OSI_MGBE_MAX_NUM_CHANS];
 	/** link connect count */
 	nveu64_t link_connect_count;
 	/** link disconnect count */
@@ -466,6 +478,8 @@ struct ether_priv_data {
 	struct clk *tx_div_clk;
 	/** Receive Monitoring clock */
 	struct clk *rx_m_clk;
+	/** Transmit Monitoring clock */
+	struct clk *tx_m_clk;
 	/** RX PCS monitoring clock */
 	struct clk *rx_pcs_m_clk;
 	/** RX PCS input clock */
@@ -645,6 +659,8 @@ struct ether_priv_data {
 	unsigned int fixed_link;
 	/** Flag to represent rx_m clk enabled or not */
 	bool rx_m_enabled;
+	/** Flag to represent tx_m clk enabled or not */
+	bool tx_m_enabled;
 	/** Flag to represent rx_pcs_m clk enabled or not */
 	bool rx_pcs_m_enabled;
 	/* Timer value in msec for ether_stats_work thread */
@@ -673,6 +689,8 @@ struct ether_priv_data {
 	struct hwtstamp_config ptp_config;
 	/** Flag to hold DT config to disable Rx csum in HW */
 	uint32_t disable_rx_csum;
+	/** select Tx queue/dma channel for testing */
+	unsigned int tx_queue_select;
 };
 
 /**

@@ -39,6 +39,10 @@ struct ether_l2_filter {
 	nveu32_t index;
 	/** Ethernet MAC address to be added */
 	nveu8_t mac_addr[OSI_ETH_ALEN];
+	/** packet duplication */
+	nveu32_t pkt_dup;
+	/** dma channel */
+	nveu32_t dma_chan;
 };
 
 /**

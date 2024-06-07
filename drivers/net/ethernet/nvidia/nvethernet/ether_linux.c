@@ -68,11 +68,12 @@ int ether_get_tx_ts(struct ether_priv_data *pdata)
 
 		ioctl_data.cmd = OSI_CMD_GET_TX_TS;
 		ioctl_data.tx_ts.pkt_id = pnode->pktid;
+		ioctl_data.tx_ts.vdma_id = pnode->vdmaid;
 		ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
 		if (ret == 0) {
 			/* get time stamp form ethernet server */
-			dev_dbg(pdata->dev, "%s() pktid = %x, skb = %p\n",
-				__func__, pnode->pktid, pnode->skb);
+			dev_dbg(pdata->dev,"%s() pktid = %x, skb = %p\n, vdmaid=%x",
+				__func__, pnode->pktid, pnode->skb, pnode->vdmaid);
 
 			if ((ioctl_data.tx_ts.nsec & OSI_MAC_TCR_TXTSSMIS) ==
 			    OSI_MAC_TCR_TXTSSMIS) {
@@ -423,6 +424,19 @@ static int ether_pad_calibrate(struct ether_priv_data *pdata)
  */
 static void ether_disable_mgbe_clks(struct ether_priv_data *pdata)
 {
+	if (pdata->osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
+		if (!IS_ERR_OR_NULL(pdata->eee_pcs_clk)) {
+			clk_disable_unprepare(pdata->eee_pcs_clk);
+		}
+
+		if (!IS_ERR_OR_NULL(pdata->mac_div_clk)) {
+			clk_disable_unprepare(pdata->mac_div_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->rx_pcs_clk)) {
+			clk_disable_unprepare(pdata->rx_pcs_clk);
+		}
+	}
+
 	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk)) {
 		clk_disable_unprepare(pdata->ptp_ref_clk);
 	}
@@ -431,16 +445,8 @@ static void ether_disable_mgbe_clks(struct ether_priv_data *pdata)
 		clk_disable_unprepare(pdata->app_clk);
 	}
 
-	if (!IS_ERR_OR_NULL(pdata->eee_pcs_clk)) {
-		clk_disable_unprepare(pdata->eee_pcs_clk);
-	}
-
 	if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
 		clk_disable_unprepare(pdata->mac_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->mac_div_clk)) {
-		clk_disable_unprepare(pdata->mac_div_clk);
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
@@ -449,10 +455,6 @@ static void ether_disable_mgbe_clks(struct ether_priv_data *pdata)
 
 	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
 		clk_disable_unprepare(pdata->tx_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->rx_pcs_clk)) {
-		clk_disable_unprepare(pdata->rx_pcs_clk);
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
@@ -476,28 +478,43 @@ static void ether_disable_mgbe_clks(struct ether_priv_data *pdata)
  */
 static void ether_disable_eqos_clks(struct ether_priv_data *pdata)
 {
-	if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk)) {
-		clk_disable_unprepare(pdata->axi_cbb_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->axi_clk)) {
-		clk_disable_unprepare(pdata->axi_clk);
-	}
-
 	if (!IS_ERR_OR_NULL(pdata->rx_clk)) {
 		clk_disable_unprepare(pdata->rx_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk)) {
-		clk_disable_unprepare(pdata->ptp_ref_clk);
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
 		clk_disable_unprepare(pdata->tx_clk);
 	}
 
-	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk)) {
-		clk_disable_unprepare(pdata->pllrefe_clk);
+	if (pdata->osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+		if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
+			clk_disable_unprepare(pdata->rx_pcs_input_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->app_clk)) {
+			clk_disable_unprepare(pdata->app_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
+			clk_disable_unprepare(pdata->tx_pcs_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
+			clk_disable_unprepare(pdata->mac_clk);
+		}
+	} else {
+		if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk)) {
+			clk_disable_unprepare(pdata->ptp_ref_clk);
+		}
+
+		if (!IS_ERR_OR_NULL(pdata->axi_clk)) {
+			clk_disable_unprepare(pdata->axi_clk);
+		}
+
+		if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk)) {
+			clk_disable_unprepare(pdata->axi_cbb_clk);
+		}
+
+		if (!IS_ERR_OR_NULL(pdata->pllrefe_clk)) {
+			clk_disable_unprepare(pdata->pllrefe_clk);
+		}
 	}
 
 	pdata->clks_enable = false;
@@ -538,6 +555,7 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 	unsigned int uphy_gbe_mode = pdata->osi_core->uphy_gbe_mode;
 	unsigned long rate = 0;
 	int ret;
+	unsigned short mac= pdata->osi_core->mac;
 
 	if (!IS_ERR_OR_NULL(pdata->rx_input_clk)) {
 		ret = clk_prepare_enable(pdata->rx_input_clk);
@@ -549,19 +567,14 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 	if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
 		ret = clk_prepare_enable(pdata->rx_pcs_input_clk);
 		if (ret < 0) {
-			return ret;
-		}
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->rx_pcs_clk)) {
-		ret = clk_prepare_enable(pdata->rx_pcs_clk);
-		if (ret < 0) {
-			goto err_rx_pcs;
+			goto err_rx_pcs_input;
 		}
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
-		if (uphy_gbe_mode == OSI_ENABLE)
+		if (uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G)
+			rate = ETHER_MGBE_TXRX_CLK_XAUI_25G;
+		else if (uphy_gbe_mode == OSI_GBE_MODE_10G)
 			rate = ETHER_MGBE_TX_CLK_USXGMII_10G;
 		else
 			rate = ETHER_MGBE_TX_CLK_USXGMII_5G;
@@ -579,7 +592,9 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
-		if (uphy_gbe_mode == OSI_ENABLE)
+		if (uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G)
+			rate = ETHER_MGBE_TXRX_PCS_CLK_XAUI_25G;
+		else if (uphy_gbe_mode == OSI_GBE_MODE_10G)
 			rate = ETHER_MGBE_TX_PCS_CLK_USXGMII_10G;
 		else
 			rate = ETHER_MGBE_TX_PCS_CLK_USXGMII_5G;
@@ -597,10 +612,26 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 		}
 	}
 
-	if (!IS_ERR_OR_NULL(pdata->mac_div_clk)) {
-		ret = clk_prepare_enable(pdata->mac_div_clk);
-		if (ret < 0) {
-			goto err_mac_div;
+	if (mac != OSI_MAC_HW_MGBE_T26X) {
+		if (!IS_ERR_OR_NULL(pdata->rx_pcs_clk)) {
+			ret = clk_prepare_enable(pdata->rx_pcs_clk);
+			if (ret < 0) {
+				goto err_rx_pcs;
+			}
+		}
+
+		if (!IS_ERR_OR_NULL(pdata->mac_div_clk)) {
+			ret = clk_prepare_enable(pdata->mac_div_clk);
+			if (ret < 0) {
+				goto err_mac_div;
+			}
+		}
+
+		if (!IS_ERR_OR_NULL(pdata->eee_pcs_clk)) {
+			ret = clk_prepare_enable(pdata->eee_pcs_clk);
+			if (ret < 0) {
+				goto err_eee_pcs;
+			}
 		}
 	}
 
@@ -608,13 +639,6 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 		ret = clk_prepare_enable(pdata->mac_clk);
 		if (ret < 0) {
 			goto err_mac;
-		}
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->eee_pcs_clk)) {
-		ret = clk_prepare_enable(pdata->eee_pcs_clk);
-		if (ret < 0) {
-			goto err_eee_pcs;
 		}
 	}
 
@@ -641,18 +665,22 @@ err_ptp_ref:
 		clk_disable_unprepare(pdata->app_clk);
 	}
 err_app:
-	if (!IS_ERR_OR_NULL(pdata->eee_pcs_clk)) {
-		clk_disable_unprepare(pdata->eee_pcs_clk);
-	}
-err_eee_pcs:
 	if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
 		clk_disable_unprepare(pdata->mac_clk);
 	}
 err_mac:
-	if (!IS_ERR_OR_NULL(pdata->mac_div_clk)) {
+	if (!IS_ERR_OR_NULL(pdata->eee_pcs_clk) && mac == OSI_MAC_HW_MGBE) {
+		clk_disable_unprepare(pdata->eee_pcs_clk);
+	}
+err_eee_pcs:
+	if (!IS_ERR_OR_NULL(pdata->mac_div_clk) && mac == OSI_MAC_HW_MGBE) {
 		clk_disable_unprepare(pdata->mac_div_clk);
 	}
 err_mac_div:
+	if (!IS_ERR_OR_NULL(pdata->mac_div_clk) && mac == OSI_MAC_HW_MGBE) {
+		clk_disable_unprepare(pdata->tx_pcs_clk);
+	}
+err_rx_pcs:
 	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
 		clk_disable_unprepare(pdata->tx_pcs_clk);
 	}
@@ -664,9 +692,111 @@ err_tx:
 	if (!IS_ERR_OR_NULL(pdata->rx_pcs_clk)) {
 		clk_disable_unprepare(pdata->rx_pcs_clk);
 	}
-err_rx_pcs:
+err_rx_pcs_input:
 	if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
 		clk_disable_unprepare(pdata->rx_pcs_input_clk);
+	}
+
+	return ret;
+}
+
+/**
+ * @brief Enable all MAC T26x EQOS related clks.
+ *
+ * Algorithm: Enables the clks by using clock subsystem provided API's.
+ *
+ * @param[in] pdata: OSD private data.
+ *
+ * @retval 0 on success
+ * @retval "negative value" on failure.
+ */
+static int ether_enable_eqos_clks_t26x(struct ether_priv_data *pdata)
+{
+	unsigned int uphy_gbe_mode = pdata->osi_core->uphy_gbe_mode;
+	unsigned long rate = 0;
+	int ret;
+
+	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
+		if (uphy_gbe_mode == OSI_GBE_MODE_2_5G)
+			rate = ETHER_EQOS_TX_CLK_2_5G;
+		else
+			rate = ETHER_EQOS_TX_CLK_1000M;
+		ret = clk_set_rate(pdata->tx_pcs_clk, rate);
+		if (ret < 0) {
+			dev_err(pdata->dev, "failed to set EQOS tx_pcs_clk rate\n");
+			return ret;
+		}
+
+		ret = clk_prepare_enable(pdata->tx_pcs_clk);
+		if (ret < 0) {
+			goto err_tx_pcs;
+		}
+	}
+
+	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
+		if (uphy_gbe_mode == OSI_GBE_MODE_2_5G)
+			rate = ETHER_EQOS_UPHY_LX_TX_2_5G_CLK;
+		else
+			rate = ETHER_EQOS_UPHY_LX_TX_1G_CLK;
+		ret = clk_set_rate(pdata->tx_clk, rate);
+		if (ret < 0) {
+			dev_err(pdata->dev, "failed to set EQOS tx_clk rate\n");
+			goto err_tx;
+		}
+
+		ret = clk_prepare_enable(pdata->tx_clk);
+		if (ret < 0) {
+			goto err_tx;
+		}
+	}
+
+	if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
+		ret = clk_prepare_enable(pdata->mac_clk);
+		if (ret < 0) {
+			goto err_tx;
+		}
+	}
+	if (!IS_ERR_OR_NULL(pdata->app_clk)) {
+		ret = clk_prepare_enable(pdata->app_clk);
+		if (ret < 0) {
+			goto err_app;
+		}
+	}
+	if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
+		ret = clk_prepare_enable(pdata->rx_pcs_input_clk);
+		if (ret < 0) {
+			goto err_rx_pcs_input;
+		}
+	}
+	if (!IS_ERR_OR_NULL(pdata->rx_clk)) {
+		ret = clk_prepare_enable(pdata->rx_clk);
+		if (ret < 0) {
+			goto err_rx;
+		}
+	}
+
+	pdata->clks_enable = true;
+	return 0;
+
+err_rx:
+	if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
+		clk_disable_unprepare(pdata->rx_pcs_input_clk);
+	}
+err_rx_pcs_input:
+	if (!IS_ERR_OR_NULL(pdata->app_clk)) {
+		clk_disable_unprepare(pdata->app_clk);
+	}
+err_app:
+	if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
+		clk_disable_unprepare(pdata->mac_clk);
+	}
+err_tx:
+	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
+		clk_disable_unprepare(pdata->tx_clk);
+	}
+err_tx_pcs:
+	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
+		clk_disable_unprepare(pdata->tx_pcs_clk);
 	}
 
 	return ret;
@@ -771,9 +901,11 @@ static int ether_enable_clks(struct ether_priv_data *pdata)
 	if (pdata->osi_core->use_virtualization == OSI_DISABLE) {
 		if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 			return ether_enable_mgbe_clks(pdata);
+		} else if (pdata->osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+			return ether_enable_eqos_clks_t26x(pdata);
+		} else {
+			return ether_enable_eqos_clks(pdata);
 		}
-
-		return ether_enable_eqos_clks(pdata);
 	}
 
 	return 0;
@@ -848,14 +980,15 @@ int ether_conf_eee(struct ether_priv_data *pdata, unsigned int tx_lpi_enable)
 #endif /* !OSI_STRIPPED_LIB */
 
 /**
- * @brief Set MGBE MAC_DIV/TX clk rate
+ * @brief Set MGBE MAC_DIV/TX(T23x) or MAC(T26x) clk rate
  *
- * Algorithm: Sets MGBE MAC_DIV clk_rate which will be MAC_TX/MACSEC clk rate.
+ * Algorithm: Sets MGBE MAC_DIV or MAC clk_rate which will
+ *            be MAC_TX/MACSEC clk rate.
  *
- * @param[in] mac_div_clk: Pointer to MAC_DIV clk.
+ * @param[in] mac_clk: Pointer to MAC_DIV or MAC clk.
  * @param[in] speed: PHY line speed.
  */
-static inline void ether_set_mgbe_mac_div_rate(struct clk *mac_div_clk,
+static inline void ether_set_mgbe_mac_div_rate(struct clk *mac_clk,
 					       int speed)
 {
 	unsigned long rate;
@@ -867,18 +1000,21 @@ static inline void ether_set_mgbe_mac_div_rate(struct clk *mac_div_clk,
 	case SPEED_5000:
 		rate = ETHER_MGBE_MAC_DIV_RATE_5G;
 		break;
+	case SPEED_25000:
+		rate = ETHER_MGBE_MAC_DIV_RATE_25G;
+		break;
 	case SPEED_10000:
 	default:
 		rate = ETHER_MGBE_MAC_DIV_RATE_10G;
 		break;
 	}
 
-	if (clk_set_rate(mac_div_clk, rate) < 0)
-		pr_err("%s(): failed to set mac_div_clk rate\n", __func__);
+	if (clk_set_rate(mac_clk, rate) < 0)
+		pr_err("%s(): failed to set mac_clk rate\n", __func__);
 }
 
 /**
- * @brief Set EQOS TX clk rate
+ * @brief Set EQOS TX(T23x) or MAC/Macsec (T26x) clk rate
  *
  * @param[in] tx_clk: Pointer to Tx clk.
  * @param[in] speed: PHY line speed.
@@ -895,6 +1031,9 @@ static inline void ether_set_eqos_tx_clk(struct clk *tx_clk,
 	case SPEED_100:
 		rate = ETHER_EQOS_TX_CLK_100M;
 		break;
+	case SPEED_2500:
+		rate = ETHER_EQOS_TX_CLK_2_5G;
+		break;
 	case SPEED_1000:
 	default:
 		rate = ETHER_EQOS_TX_CLK_1000M;
@@ -902,7 +1041,7 @@ static inline void ether_set_eqos_tx_clk(struct clk *tx_clk,
 	}
 
 	if (clk_set_rate(tx_clk, rate) < 0)
-		pr_err("%s(): failed to set eqos tx_clk rate\n", __func__);
+		pr_err("%s(): failed to set eqos tx_clk/mac rate\n", __func__);
 }
 
 /**
@@ -921,6 +1060,7 @@ static inline void set_speed_work_func(struct work_struct *work)
 	struct net_device *dev = pdata->ndev;
 	struct phy_device *phydev = pdata->phydev;
 	nveu32_t iface_mode = pdata->osi_core->phy_iface_mode;
+	struct clk *mac_clk = NULL;
 #ifndef OSI_STRIPPED_LIB
 	unsigned int eee_enable = OSI_DISABLE;
 #endif /* !OSI_STRIPPED_LIB */
@@ -971,8 +1111,9 @@ static inline void set_speed_work_func(struct work_struct *work)
 	/* Set MGBE MAC_DIV/TX clk rate */
 	pdata->speed = speed;
 	phy_print_status(phydev);
-	ether_set_mgbe_mac_div_rate(pdata->mac_div_clk,
-				    pdata->speed);
+	mac_clk = (pdata->osi_core->mac == OSI_MAC_HW_MGBE_T26X)? pdata->mac_clk:
+				pdata->mac_div_clk;
+	ether_set_mgbe_mac_div_rate(mac_clk, pdata->speed);
 
 #ifndef OSI_STRIPPED_LIB
 	if (pdata->eee_enabled && pdata->tx_lpi_enabled) {
@@ -1006,6 +1147,13 @@ static void ether_en_dis_monitor_clks(struct ether_priv_data *pdata,
 			else
 				pdata->rx_pcs_m_enabled = true;
 		}
+		if ((!IS_ERR_OR_NULL(pdata->tx_m_clk) && !pdata->tx_m_clk)){
+			if (clk_prepare_enable(pdata->tx_m_clk) < 0)
+				dev_err(pdata->dev,
+					"failed to enable tx_m_clk");
+			else
+				pdata->tx_m_enabled = true;
+		}
 	} else {
 		/* Disable Monitoring clocks */
 		if (!IS_ERR_OR_NULL(pdata->rx_pcs_m_clk) && pdata->rx_pcs_m_enabled) {
@@ -1016,6 +1164,11 @@ static void ether_en_dis_monitor_clks(struct ether_priv_data *pdata,
 		if (!IS_ERR_OR_NULL(pdata->rx_m_clk) && pdata->rx_m_enabled) {
 			clk_disable_unprepare(pdata->rx_m_clk);
 			pdata->rx_m_enabled = false;
+		}
+
+		if (!IS_ERR_OR_NULL(pdata->tx_m_clk) && pdata->tx_m_enabled) {
+			clk_disable_unprepare(pdata->tx_m_clk);
+			pdata->tx_m_enabled = false;
 		}
 	}
 }
@@ -1035,9 +1188,14 @@ static void ether_adjust_link(struct net_device *dev)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	nveu32_t iface_mode = pdata->osi_core->phy_iface_mode;
+	unsigned int uphy_gbe_mode = pdata->osi_core->uphy_gbe_mode;
+	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
 	struct phy_device *phydev = pdata->phydev;
 	int new_state = 0, speed_changed = 0, speed;
 	unsigned long val;
+	unsigned short mac = pdata->osi_core->mac;
+	unsigned short mac_ver = pdata->osi_core->mac_ver;
+	struct clk *mac_clk = NULL;
 #ifndef OSI_STRIPPED_LIB
 	unsigned int eee_enable = OSI_DISABLE;
 #endif /* !OSI_STRIPPED_LIB */
@@ -1064,8 +1222,10 @@ static void ether_adjust_link(struct net_device *dev)
 #endif /* !OSI_STRIPPED_LIB */
 
 		if (pdata->fixed_link == OSI_ENABLE) {
-			if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-				if (iface_mode == OSI_XFI_MODE_10G) {
+			if (mac != OSI_MAC_HW_EQOS) {
+				if (iface_mode == OSI_XAUI_MODE_25G) {
+					phydev->speed = OSI_SPEED_25000;
+				} else if (iface_mode == OSI_XFI_MODE_10G) {
 					phydev->speed = OSI_SPEED_10000;
 				} else if (iface_mode == OSI_XFI_MODE_5G) {
 					phydev->speed = OSI_SPEED_5000;
@@ -1102,7 +1262,13 @@ static void ether_adjust_link(struct net_device *dev)
 			 * speed will be overwritten as per the
 			 * PHY interface mode */
 			speed = phydev->speed;
-			/* XFI mode = 10G:
+			/*
+			 * XAUI mode = 25G:
+			 *	UPHY GBE mode = 25G
+			 *	MAC = 25G
+			 *	XLGPCS = 25G
+			 *	PHY line side = 25G
+			 * XFI mode = 10G:
 			 *	UPHY GBE mode = 10G
 			 *	MAC = 10G
 			 *	XPCS = 10G
@@ -1122,19 +1288,38 @@ static void ether_adjust_link(struct net_device *dev)
 			 *	MAC = 5G/2.5G ( same as PHY line speed)
 			 *	XPCS = 5G
 			 *	PHY line side = 5G/2.5G
+			 * SGMII mode = 2.5G:
+			 *	UPHY GBE mode = 2.5G
+			 *	MAC = 2.5G
+			 *	PCS = 2.5G
+			 *	PHY line side = 2.5G
+			 * SGMII mode = 1G:
+			 *	UPHY GBE mode = 1G
+			 *	MAC = 1G ( same as PHY line speed)
+			 *	PCS = 1G
+			 *	PHY line side = 1G/100M/10M
 			*/
-			if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-				/* MAC and XFI speed should match in XFI mode */
-				if (iface_mode == OSI_XFI_MODE_10G) {
+			if ((mac != OSI_MAC_HW_EQOS) ||
+			    (mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40)) {
+				/* MAC and XFI/XAUI speed should match in
+				 * XFI/XAUI mode
+				*/
+				if (iface_mode == OSI_XAUI_MODE_25G) {
+					speed = OSI_SPEED_25000;
+				} else if (iface_mode == OSI_XFI_MODE_10G) {
 					speed = OSI_SPEED_10000;
 				} else if (iface_mode == OSI_XFI_MODE_5G) {
 					speed = OSI_SPEED_5000;
+				} else if (uphy_gbe_mode == OSI_GBE_MODE_2_5G) {
+					speed = OSI_SPEED_2500;
 				}
 			}
+
 			ioctl_data.arg6_32 = speed;
 			ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
 			if (ret < 0) {
-				if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
+				if ((mac != OSI_MAC_HW_EQOS) ||
+				    (mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40)) {
 					netdev_dbg(dev, "Retry set speed\n");
 					netif_carrier_off(dev);
 					schedule_delayed_work(&pdata->set_speed_work,
@@ -1153,6 +1338,12 @@ static void ether_adjust_link(struct net_device *dev)
 					netdev_err(dev, "Failed to set speed\n");
 					return;
 				}
+			}
+
+			if (pdata->osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+				osi_dma->ioctl_data.cmd = OSI_DMA_IOCTL_CMD_RX_RIIT_CONFIG;
+				osi_dma->ioctl_data.arg_u32 = speed;
+				osi_dma_ioctl(osi_dma);
 			}
 
 			ether_en_dis_monitor_clks(pdata, OSI_ENABLE);
@@ -1182,9 +1373,13 @@ static void ether_adjust_link(struct net_device *dev)
 	}
 
 	if (speed_changed) {
-		if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
-			ether_set_mgbe_mac_div_rate(pdata->mac_div_clk,
-						    pdata->speed);
+		if((mac == OSI_MAC_HW_MGBE_T26X) || (mac == OSI_MAC_HW_MGBE)) {
+			mac_clk = (mac == OSI_MAC_HW_MGBE_T26X)? pdata->mac_clk:
+				pdata->mac_div_clk;
+			ether_set_mgbe_mac_div_rate(mac_clk, pdata->speed);
+		} else if(mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+			ether_set_eqos_tx_clk(pdata->mac_clk,
+				      phydev->speed);
 		} else {
 			if (pdata->osi_core->mac_ver == OSI_EQOS_MAC_5_30) {
 				ether_set_eqos_tx_clk(pdata->tx_div_clk,
@@ -1829,8 +2024,13 @@ static void free_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned long rx_desc_size = sizeof(struct osi_rx_desc) * osi_dma->rx_ring_sz;
 	struct osi_rx_ring *rx_ring = NULL;
 	unsigned int i, chan;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
 		rx_ring = osi_dma->rx_ring[i];
 		chan = osi_dma->dma_chans[i];
 
@@ -2048,8 +2248,13 @@ static int ether_allocate_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned int chan;
 	unsigned int i;
 	int ret = 0;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
 		chan = osi_dma->dma_chans[i];
 
 		if (chan != ETHER_INVALID_CHAN_NUM) {
@@ -2097,8 +2302,13 @@ static void free_tx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned long tx_desc_size = sizeof(struct osi_tx_desc) * osi_dma->tx_ring_sz;
 	struct osi_tx_ring *tx_ring = NULL;
 	unsigned int i;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i <  max_dma_chan[osi_dma->mac]; i++) {
 		tx_ring = osi_dma->tx_ring[i];
 
 		if (tx_ring != NULL) {
@@ -2200,8 +2410,13 @@ static int ether_allocate_tx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned int chan;
 	unsigned int i;
 	int ret = 0;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
 		chan = osi_dma->dma_chans[i];
 
 		if (chan != ETHER_INVALID_CHAN_NUM) {
@@ -2237,13 +2452,18 @@ exit:
 static void ether_init_invalid_chan_ring(struct osi_dma_priv_data *osi_dma)
 {
 	unsigned int i;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
-	for (i = 0; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
 		osi_dma->tx_ring[i] = NULL;
 		osi_dma->rx_ring[i] = NULL;
 	}
 
-	for (i = osi_dma->num_dma_chans; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+	for (i = osi_dma->num_dma_chans; i < max_dma_chan[osi_dma->mac]; i++) {
 		osi_dma->dma_chans[i] = ETHER_INVALID_CHAN_NUM;
 	}
 }
@@ -2393,6 +2613,16 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
 	nveu32_t dma_channel = osi_dma->dma_chans[0];
 	unsigned char bc_addr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	unsigned int MAC_index[OSI_MAX_MAC_IP_TYPES] = {
+		ETHER_MAC_ADDRESS_INDEX,
+		ETHER_MAC_ADDRESS_INDEX,
+		ETHER_MAC_ADDRESS_INDEX_T26X
+	};
+	unsigned int BC_index[OSI_MAX_MAC_IP_TYPES] = {
+		ETHER_BC_ADDRESS_INDEX,
+		ETHER_BC_ADDRESS_INDEX,
+		ETHER_BC_ADDRESS_INDEX_T26X
+	};
 
 	if ((en_dis > OSI_ENABLE) || (uc_bc > ETHER_ADDRESS_MAC)) {
 		dev_err(pdata->dev,
@@ -2400,10 +2630,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 		       __func__, en_dis, uc_bc);
 		return -1;
 	}
-	//TBD: T264 Use Rx DMA channel 1 for NET05 WAR
-	if (osi_core->pre_sil == 0x1U) {
-		dma_channel = osi_dma->dma_chans[1];
-	}
+
 	memset(&ioctl_data->l2_filter, 0x0, sizeof(struct osi_filter));
 	/* Set MAC address with DCS set to route all legacy Rx
 	 * packets from RxQ0 to default DMA at index 0.
@@ -2418,7 +2645,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 	}
 
 	if (uc_bc == ETHER_ADDRESS_MAC) {
-		ioctl_data->l2_filter.index = ETHER_MAC_ADDRESS_INDEX;
+		ioctl_data->l2_filter.index = MAC_index[osi_core->mac];
 		memcpy(ioctl_data->l2_filter.mac_addr, osi_core->mac_addr,
 		       ETH_ALEN);
 	} else {
@@ -2427,8 +2654,9 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 		} else {
 			dma_channel = osi_dma->dma_chans[0];
 		}
-		ioctl_data->l2_filter.index = ETHER_BC_ADDRESS_INDEX;
+		ioctl_data->l2_filter.index = BC_index[osi_core->mac];
 		memcpy(ioctl_data->l2_filter.mac_addr, bc_addr, ETH_ALEN);
+		ioctl_data->l2_filter.pkt_dup = OSI_ENABLE;
 	}
 	ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
 	ioctl_data->l2_filter.dma_chan = dma_channel;
@@ -3404,11 +3632,15 @@ static unsigned short ether_select_queue(struct net_device *dev,
 		priority = skb_vlan_tag_get_prio(skb);
 	}
 
-	for (i = 0; i < osi_core->num_mtl_queues; i++) {
-		mtlq = osi_core->mtl_queues[i];
-		if (pdata->txq_prio[mtlq] == priority) {
-			txqueue_select = (unsigned short)i;
-			break;
+	if ((osi_core->pre_sil == OSI_ENABLE) && (pdata->tx_queue_select != 0U)) {
+		txqueue_select = pdata->tx_queue_select;
+	} else {
+		for (i = 0; i < osi_core->num_mtl_queues; i++) {
+			mtlq = osi_core->mtl_queues[i];
+			if (pdata->txq_prio[mtlq] == priority) {
+				txqueue_select = (unsigned short)i;
+				break;
+			}
 		}
 	}
 
@@ -4563,6 +4795,89 @@ static void ether_set_vm_irq_chan_mask(struct ether_vm_irq_data *vm_irq_data,
 }
 
 /**
+ * @brief ether_get_rx_riit - Get the rx_riit value for speed.
+ *
+ * Algorimthm: Parse DT to get rx_riit value
+ *
+ * @param[in] pdev: Platform device instance.
+ * @param[in] pdata: OSD private data.
+ *
+ * @retval 0 on success
+ * @retval "negative value" on failure
+ */
+static int ether_get_rx_riit(struct platform_device *pdev,
+				 struct ether_priv_data *pdata)
+{
+	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
+	struct device_node *speed_node, *temp;
+	unsigned int node = 0;
+	int ret = 0;
+
+	speed_node = of_parse_phandle(pdev->dev.of_node,
+				   "nvidia,mgbe-riit-config", 0);
+	if (speed_node == NULL) {
+		dev_warn(pdata->dev, "failed to find rx riit configuration, default disabled\n");
+		osi_dma->use_riit = OSI_DISABLE;
+		return ret;
+	}
+	/* parse the number of riit configs */
+	ret = of_property_read_u32(speed_node, "nvidia,speeds-num",
+				   &osi_dma->num_of_riit);
+	if (ret != 0) {
+		dev_err(&pdev->dev, "failed to get number of rx riit (%d)\n",
+			ret);
+		return -EINVAL;
+	}
+	if (osi_dma->num_of_riit > OSI_MGBE_MAX_NUM_RIIT) {
+		dev_err(&pdev->dev, "Invalid Num. of RIIT's\n");
+		return -EINVAL;
+	}
+	ret = of_get_child_count(speed_node);
+	if (ret != osi_dma->num_of_riit) {
+		dev_err(&pdev->dev,
+			"Mismatch in num_of_riit and riit config DT nodes\n");
+		return -EINVAL;
+	}
+	for_each_child_of_node(speed_node, temp) {
+		if (node == osi_dma->num_of_riit)
+			break;
+
+		ret = of_property_read_u32(temp, "nvidia,speed",
+					  &osi_dma->rx_riit[node].speed);
+		if (ret != 0) {
+			dev_err(&pdev->dev, "failed to read riit speed\n");
+			return -EINVAL;
+		}
+		if ((osi_dma->rx_riit[node].speed > OSI_SPEED_25000) &&
+			(osi_dma->rx_riit[node].speed < OSI_SPEED_2500)) {
+			dev_err(&pdev->dev, "Invalid speed Number\n");
+			return -EINVAL;
+		}
+
+		ret = of_property_read_u32(temp, "nvidia,riit",
+			&osi_dma->rx_riit[node].riit);
+		if (ret != 0) {
+			dev_err(&pdev->dev,
+				"failed to read riit vaue\n");
+			return -EINVAL;
+		}
+		if ((osi_dma->rx_riit[node].riit  > OSI_MGBE_MAX_RX_RIIT_NSEC) ||
+		    (osi_dma->rx_riit[node].riit  < OSI_MGBE_MIN_RX_RIIT_NSEC)) {
+			dev_err(&pdev->dev,
+				"invalid rx_riit, must be in ns range %d to %d\n",
+				OSI_MGBE_MIN_RX_RIIT_NSEC,
+				OSI_MGBE_MAX_RX_RIIT_NSEC);
+			return -EINVAL;
+		}
+		node++;
+	}
+
+	osi_dma->use_riit = OSI_ENABLE;
+	return ret;
+}
+
+
+/**
  * @brief ether_get_vdma_mapping - Get vDMA mapping data from DT.
  *
  * Algorimthm: Parse DT for vDMA mapping data and get vDMA to pDMA mapping
@@ -5004,6 +5319,10 @@ static void ether_put_mgbe_clks(struct ether_priv_data *pdata)
 {
 	struct device *dev = pdata->dev;
 
+	if (!IS_ERR_OR_NULL(pdata->rx_input_clk)) {
+		devm_clk_put(dev, pdata->rx_input_clk);
+	}
+
 	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk)) {
 		devm_clk_put(dev, pdata->ptp_ref_clk);
 	}
@@ -5012,16 +5331,8 @@ static void ether_put_mgbe_clks(struct ether_priv_data *pdata)
 		devm_clk_put(dev, pdata->app_clk);
 	}
 
-	if (!IS_ERR_OR_NULL(pdata->eee_pcs_clk)) {
-		devm_clk_put(dev, pdata->eee_pcs_clk);
-	}
-
 	if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
 		devm_clk_put(dev, pdata->mac_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->mac_div_clk)) {
-		devm_clk_put(dev, pdata->mac_div_clk);
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
@@ -5030,10 +5341,6 @@ static void ether_put_mgbe_clks(struct ether_priv_data *pdata)
 
 	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
 		devm_clk_put(dev, pdata->tx_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->rx_pcs_clk)) {
-		devm_clk_put(dev, pdata->rx_pcs_clk);
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
@@ -5046,6 +5353,22 @@ static void ether_put_mgbe_clks(struct ether_priv_data *pdata)
 
 	if (!IS_ERR_OR_NULL(pdata->rx_m_clk)) {
 		devm_clk_put(dev, pdata->rx_m_clk);
+	}
+
+	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		if (!IS_ERR_OR_NULL(pdata->tx_m_clk)) {
+			devm_clk_put(dev, pdata->tx_m_clk);
+		}
+	} else {
+		if (!IS_ERR_OR_NULL(pdata->eee_pcs_clk)) {
+			devm_clk_put(dev, pdata->eee_pcs_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->mac_div_clk)) {
+			devm_clk_put(dev, pdata->mac_div_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->rx_pcs_clk)) {
+			devm_clk_put(dev, pdata->rx_pcs_clk);
+		}
 	}
 }
 
@@ -5063,37 +5386,51 @@ static void ether_put_eqos_clks(struct ether_priv_data *pdata)
 	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
 		devm_clk_put(dev, pdata->tx_clk);
 	}
-
-	if (!IS_ERR_OR_NULL(pdata->tx_div_clk)) {
-		devm_clk_put(dev, pdata->tx_div_clk);
+	if (!IS_ERR_OR_NULL(pdata->rx_clk)) {
+		devm_clk_put(dev, pdata->rx_clk);
 	}
-
 	if (!IS_ERR_OR_NULL(pdata->rx_m_clk)) {
 		devm_clk_put(dev, pdata->rx_m_clk);
 	}
 
-	if (!IS_ERR_OR_NULL(pdata->rx_input_clk)) {
-		devm_clk_put(dev, pdata->rx_input_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk)) {
-		devm_clk_put(dev, pdata->ptp_ref_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->rx_clk)) {
-		devm_clk_put(dev, pdata->rx_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->axi_clk)) {
-		devm_clk_put(dev, pdata->axi_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk)) {
-		devm_clk_put(dev, pdata->axi_cbb_clk);
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk)) {
-		devm_clk_put(dev, pdata->pllrefe_clk);
+	if (pdata->osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+		if (!IS_ERR_OR_NULL(pdata->rx_pcs_m_clk)) {
+			devm_clk_put(dev, pdata->rx_pcs_m_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->tx_m_clk)) {
+			devm_clk_put(dev, pdata->tx_m_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
+			devm_clk_put(dev, pdata->rx_pcs_input_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->app_clk)) {
+			devm_clk_put(dev, pdata->app_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
+			devm_clk_put(dev, pdata->tx_pcs_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
+			devm_clk_put(dev, pdata->mac_clk);
+		}
+	}else {
+		if (!IS_ERR_OR_NULL(pdata->tx_div_clk)) {
+			devm_clk_put(dev, pdata->tx_div_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->rx_input_clk)) {
+			devm_clk_put(dev, pdata->rx_input_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk)) {
+			devm_clk_put(dev, pdata->ptp_ref_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->axi_clk)) {
+			devm_clk_put(dev, pdata->axi_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk)) {
+			devm_clk_put(dev, pdata->axi_cbb_clk);
+		}
+		if (!IS_ERR_OR_NULL(pdata->pllrefe_clk)) {
+			devm_clk_put(dev, pdata->pllrefe_clk);
+		}
 	}
 }
 
@@ -5130,7 +5467,10 @@ static int ether_set_mgbe_rx_fmon_rates(struct ether_priv_data *pdata)
 	unsigned long rx_rate, rx_pcs_rate;
 	int ret;
 
-	if (uphy_gbe_mode == OSI_ENABLE) {
+	if (uphy_gbe_mode == OSI_XAUI_MODE_25G) {
+		rx_rate = ETHER_MGBE_TXRX_CLK_XAUI_25G;
+		rx_pcs_rate = ETHER_MGBE_TXRX_PCS_CLK_XAUI_25G;
+	} else if (uphy_gbe_mode == OSI_GBE_MODE_10G) {
 		rx_rate = ETHER_MGBE_RX_CLK_USXGMII_10G;
 		rx_pcs_rate = ETHER_MGBE_RX_PCS_CLK_USXGMII_10G;
 	} else {
@@ -5189,13 +5529,6 @@ static int ether_get_mgbe_clks(struct ether_priv_data *pdata)
 		goto err_rx_pcs_input;
 	}
 
-	pdata->rx_pcs_clk = devm_clk_get(dev, "rx-pcs");
-	if (IS_ERR(pdata->rx_pcs_clk)) {
-		ret = PTR_ERR(pdata->rx_pcs_clk);
-		dev_err(dev, "failed to get rx-pcs clk\n");
-		goto err_rx_pcs;
-	}
-
 	pdata->tx_clk = devm_clk_get(dev, "tx");
 	if (IS_ERR(pdata->tx_clk)) {
 		ret = PTR_ERR(pdata->tx_clk);
@@ -5210,25 +5543,11 @@ static int ether_get_mgbe_clks(struct ether_priv_data *pdata)
 		goto err_tx_pcs;
 	}
 
-	pdata->mac_div_clk = devm_clk_get(dev, "mac-divider");
-	if (IS_ERR(pdata->mac_div_clk)) {
-		ret = PTR_ERR(pdata->mac_div_clk);
-		dev_err(dev, "failed to get mac-divider clk\n");
-		goto err_mac_div;
-	}
-
 	pdata->mac_clk = devm_clk_get(dev, "mac");
 	if (IS_ERR(pdata->mac_clk)) {
 		ret = PTR_ERR(pdata->mac_clk);
 		dev_err(dev, "failed to get mac clk\n");
 		goto err_mac;
-	}
-
-	pdata->eee_pcs_clk = devm_clk_get(dev, "eee-pcs");
-	if (IS_ERR(pdata->eee_pcs_clk)) {
-		ret = PTR_ERR(pdata->eee_pcs_clk);
-		dev_err(dev, "failed to get eee-pcs clk\n");
-		goto err_eee_pcs;
 	}
 
 	pdata->app_clk = devm_clk_get(dev, "mgbe");
@@ -5252,29 +5571,58 @@ static int ether_get_mgbe_clks(struct ether_priv_data *pdata)
 		goto err_rx_input;
 	}
 
+	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		pdata->tx_m_clk = devm_clk_get(dev, "tx-m");
+		if (IS_ERR(pdata->tx_m_clk)) {
+			ret = PTR_ERR(pdata->tx_m_clk);
+			dev_err(dev, "failed to get rx-input-m\n");
+			goto err_rx_pcs;
+		}
+	} else {
+		pdata->rx_pcs_clk = devm_clk_get(dev, "rx-pcs");
+		if (IS_ERR(pdata->rx_pcs_clk)) {
+			ret = PTR_ERR(pdata->rx_pcs_clk);
+			dev_err(dev, "failed to get rx-pcs clk\n");
+			goto err_rx_pcs;
+		}
+
+		pdata->mac_div_clk = devm_clk_get(dev, "mac-divider");
+		if (IS_ERR(pdata->mac_div_clk)) {
+			ret = PTR_ERR(pdata->mac_div_clk);
+			dev_err(dev, "failed to get mac-divider clk\n");
+			goto err_mac_div;
+		}
+		pdata->eee_pcs_clk = devm_clk_get(dev, "eee-pcs");
+		if (IS_ERR(pdata->eee_pcs_clk)) {
+			ret = PTR_ERR(pdata->eee_pcs_clk);
+			dev_err(dev, "failed to get eee-pcs clk\n");
+			goto err_eee_pcs;
+		}
+	}
+
 	ret = ether_set_mgbe_rx_fmon_rates(pdata);
 	if (ret < 0)
 		goto err_rx_input;
 
 	return 0;
 
+err_eee_pcs:
+	devm_clk_put(dev, pdata->mac_div_clk);
+err_mac_div:
+	devm_clk_put(dev, pdata->rx_pcs_clk);
+err_rx_pcs:
+	devm_clk_put(dev, pdata->rx_input_clk);
 err_rx_input:
 	devm_clk_put(dev, pdata->ptp_ref_clk);
 err_ptp_ref:
 	devm_clk_put(dev, pdata->app_clk);
 err_app:
-	devm_clk_put(dev, pdata->eee_pcs_clk);
-err_eee_pcs:
 	devm_clk_put(dev, pdata->mac_clk);
 err_mac:
-	devm_clk_put(dev, pdata->mac_div_clk);
-err_mac_div:
 	devm_clk_put(dev, pdata->tx_pcs_clk);
 err_tx_pcs:
 	devm_clk_put(dev, pdata->tx_clk);
 err_tx:
-	devm_clk_put(dev, pdata->rx_pcs_clk);
-err_rx_pcs:
 	devm_clk_put(dev, pdata->rx_pcs_input_clk);
 err_rx_pcs_input:
 	devm_clk_put(dev, pdata->rx_pcs_m_clk);
@@ -5299,24 +5647,80 @@ static int ether_get_eqos_clks(struct ether_priv_data *pdata)
 	struct device *dev = pdata->dev;
 	int ret;
 
-	/* Skip pll_refe clock initialisation for t18x platform */
-	pdata->pllrefe_clk = devm_clk_get(dev, "pllrefe_vcoout");
-	if (IS_ERR(pdata->pllrefe_clk)) {
-		dev_info(dev, "failed to get pllrefe_vcoout clk\n");
-	}
+	if (pdata->osi_core->mac_ver == MAC_CORE_VER_TYPE_EQOS_5_40) {
+		pdata->mac_clk = devm_clk_get(dev, "eqos_mac");
+		if (IS_ERR(pdata->mac_clk)) {
+			ret = PTR_ERR(pdata->mac_clk);
+			dev_err(dev, "failed to get eqos_mac clk\n");
+			goto err_eqos_mac;
+		}
 
-	pdata->axi_cbb_clk = devm_clk_get(dev, "axi_cbb");
-	if (IS_ERR(pdata->axi_cbb_clk)) {
-		ret = PTR_ERR(pdata->axi_cbb_clk);
-		dev_err(dev, "failed to get axi_cbb clk\n");
-		goto err_axi_cbb;
-	}
+		pdata->tx_pcs_clk = devm_clk_get(dev, "eqos_tx_pcs");
+		if (IS_ERR(pdata->tx_pcs_clk)) {
+			ret = PTR_ERR(pdata->tx_pcs_clk);
+			dev_err(dev, "failed to get tx_pcs_clk clk\n");
+			goto err_tx_pcs;
+		}
+		pdata->app_clk = devm_clk_get(dev, "eqos");
+		if (IS_ERR(pdata->app_clk)) {
+			ret = PTR_ERR(pdata->app_clk);
+			dev_err(dev, "failed to get app_clk clk\n");
+			goto err_app;
+		}
 
-	pdata->axi_clk = devm_clk_get(dev, "eqos_axi");
-	if (IS_ERR(pdata->axi_clk)) {
-		ret = PTR_ERR(pdata->axi_clk);
-		dev_err(dev, "failed to get eqos_axi clk\n");
-		goto err_axi;
+		pdata->rx_pcs_input_clk = devm_clk_get(dev, "eqos_rx_pcs_input");
+		if (IS_ERR(pdata->rx_pcs_input_clk)) {
+			ret = PTR_ERR(pdata->rx_pcs_input_clk);
+			dev_err(dev, "failed to get eqos_rx_pcs_input clk\n");
+			goto err_rx_pcs_input;
+		}
+
+		pdata->tx_m_clk = devm_clk_get(dev, "eqos_tx_m");
+		if (IS_ERR(pdata->tx_m_clk)) {
+			ret = PTR_ERR(pdata->tx_m_clk);
+			dev_err(dev, "failed to get tx_m_clk clk\n");
+			goto err_tx_m;
+		}
+
+		pdata->rx_pcs_m_clk = devm_clk_get(dev, "eqos_rx_pcs_m");
+		if (IS_ERR(pdata->rx_pcs_m_clk)) {
+			ret = PTR_ERR(pdata->rx_pcs_m_clk);
+			dev_err(dev, "failed to get eqos_rx_pcs_m clk\n");
+			goto err_rx_pcs_m;
+		}
+	}else {
+		/* Skip pll_refe clock initialisation for t18x platform */
+		pdata->pllrefe_clk = devm_clk_get(dev, "pllrefe_vcoout");
+		if (IS_ERR(pdata->pllrefe_clk)) {
+			dev_info(dev, "failed to get pllrefe_vcoout clk\n");
+		}
+
+		pdata->axi_cbb_clk = devm_clk_get(dev, "axi_cbb");
+		if (IS_ERR(pdata->axi_cbb_clk)) {
+			ret = PTR_ERR(pdata->axi_cbb_clk);
+			dev_err(dev, "failed to get axi_cbb clk\n");
+			goto err_axi_cbb;
+		}
+
+		pdata->axi_clk = devm_clk_get(dev, "eqos_axi");
+		if (IS_ERR(pdata->axi_clk)) {
+			ret = PTR_ERR(pdata->axi_clk);
+			dev_err(dev, "failed to get eqos_axi clk\n");
+			goto err_axi;
+		}
+
+		pdata->ptp_ref_clk = devm_clk_get(dev, "eqos_ptp_ref");
+		if (IS_ERR(pdata->ptp_ref_clk)) {
+			ret = PTR_ERR(pdata->ptp_ref_clk);
+			dev_err(dev, "failed to get eqos_ptp_ref clk\n");
+			goto err_ptp_ref;
+		}
+
+		pdata->tx_div_clk = devm_clk_get(dev, "eqos_tx_divider");
+		if (IS_ERR(pdata->tx_div_clk)) {
+			ret = PTR_ERR(pdata->tx_div_clk);
+			dev_info(dev, "failed to get eqos_tx_divider clk\n");
+		}
 	}
 
 	pdata->rx_clk = devm_clk_get(dev, "eqos_rx");
@@ -5324,13 +5728,6 @@ static int ether_get_eqos_clks(struct ether_priv_data *pdata)
 		ret = PTR_ERR(pdata->rx_clk);
 		dev_err(dev, "failed to get eqos_rx clk\n");
 		goto err_rx;
-	}
-
-	pdata->ptp_ref_clk = devm_clk_get(dev, "eqos_ptp_ref");
-	if (IS_ERR(pdata->ptp_ref_clk)) {
-		ret = PTR_ERR(pdata->ptp_ref_clk);
-		dev_err(dev, "failed to get eqos_ptp_ref clk\n");
-		goto err_ptp_ref;
 	}
 
 	pdata->tx_clk = devm_clk_get(dev, "eqos_tx");
@@ -5352,12 +5749,6 @@ static int ether_get_eqos_clks(struct ether_priv_data *pdata)
 		dev_info(dev, "failed to get eqos_rx_input clk\n");
 	}
 
-	pdata->tx_div_clk = devm_clk_get(dev, "eqos_tx_divider");
-	if (IS_ERR(pdata->tx_div_clk)) {
-		ret = PTR_ERR(pdata->tx_div_clk);
-		dev_info(dev, "failed to get eqos_tx_divider clk\n");
-	}
-
 	/* Set default rate to 1G */
 	if (!IS_ERR_OR_NULL(pdata->rx_input_clk)) {
 		clk_set_rate(pdata->rx_input_clk,
@@ -5365,20 +5756,47 @@ static int ether_get_eqos_clks(struct ether_priv_data *pdata)
 	}
 
 	return 0;
-
-err_tx:
-	devm_clk_put(dev, pdata->ptp_ref_clk);
-err_ptp_ref:
-	devm_clk_put(dev, pdata->rx_clk);
 err_rx:
-	devm_clk_put(dev, pdata->axi_clk);
+	if (!IS_ERR_OR_NULL(pdata->tx_div_clk)) {
+		devm_clk_put(dev, pdata->tx_div_clk);
+	}
+err_tx:
+	if (!IS_ERR_OR_NULL(pdata->rx_clk)) {
+		devm_clk_put(dev, pdata->rx_clk);
+	}
+err_ptp_ref:
+	if (!IS_ERR_OR_NULL(pdata->axi_clk)) {
+		devm_clk_put(dev, pdata->axi_clk);
+	}
 err_axi:
-	devm_clk_put(dev, pdata->axi_cbb_clk);
+	if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk)) {
+		devm_clk_put(dev, pdata->axi_cbb_clk);
+	}
 err_axi_cbb:
 	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk)) {
 		devm_clk_put(dev, pdata->pllrefe_clk);
 	}
-
+err_rx_pcs_m:
+	if (!IS_ERR_OR_NULL(pdata->tx_m_clk)) {
+		devm_clk_put(dev, pdata->tx_m_clk);
+	}
+err_tx_m:
+	if (!IS_ERR_OR_NULL(pdata->rx_pcs_input_clk)) {
+		devm_clk_put(dev, pdata->rx_pcs_input_clk);
+	}
+err_rx_pcs_input:
+	if (!IS_ERR_OR_NULL(pdata->app_clk)) {
+		devm_clk_put(dev, pdata->app_clk);
+	}
+err_app:
+	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
+		devm_clk_put(dev, pdata->tx_pcs_clk);
+	}
+err_tx_pcs:
+	if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
+		devm_clk_put(dev, pdata->mac_clk);
+	}
+err_eqos_mac:
 	return ret;
 }
 
@@ -5397,7 +5815,6 @@ static int ether_get_clks(struct ether_priv_data *pdata)
 	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 		return ether_get_mgbe_clks(pdata);
 	}
-
 	return ether_get_eqos_clks(pdata);
 }
 
@@ -5873,6 +6290,11 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		dev_info(dev, "setting default PTP clk rate as 312.5MHz\n");
 		pdata->ptp_ref_clock_speed = ETHER_DFLT_PTP_CLK;
 	}
+
+	if (osi_core->pre_sil == 0x1U) {
+		pdata->ptp_ref_clock_speed = ETHER_DFLT_PTP_CLK_UFPGA;
+	}
+
 	/* read promiscuous mode supported or not */
 	ret = of_property_read_u32(np, "nvidia,promisc_mode",
 				   &pdata->promisc_mode);
@@ -5987,9 +6409,28 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		}
 	}
 
-	if (osi_dma->num_dma_chans != osi_core->num_mtl_queues) {
-		dev_err(dev, "mismatch in numbers of DMA channel and MTL Q\n");
-		return -EINVAL;
+	if (osi_core->mac != OSI_MAC_HW_MGBE_T26X) {
+		if (osi_dma->num_dma_chans != osi_core->num_mtl_queues) {
+			dev_err(dev, "mismatch in numbers of DMA channel and MTL Q\n");
+			return -EINVAL;
+		}
+
+		for (i = 0; i < osi_dma->num_dma_chans; i++) {
+			if (osi_dma->dma_chans[i] != osi_core->mtl_queues[i]) {
+				dev_err(dev,
+					"mismatch in DMA channel and MTL Q number at index %d\n",
+					i);
+				return -EINVAL;
+			}
+			if (osi_dma->dma_chans[i] == 0) {
+				ret = 0;
+			}
+		}
+
+		if (ret != 0) {
+			dev_err(dev, "Q0 Must be enabled for rx path\n");
+			return -EINVAL;
+		}
 	}
 
 	/* Allow to set non zero DMA channel for virtualization */
@@ -5998,23 +6439,6 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		dev_info(dev, "Virtualization is enabled\n");
 	} else {
 		ret = -1;
-	}
-
-	for (i = 0; i < osi_dma->num_dma_chans; i++) {
-		if (osi_dma->dma_chans[i] != osi_core->mtl_queues[i]) {
-			dev_err(dev,
-				"mismatch in DMA channel and MTL Q number at index %d\n",
-				i);
-			return -EINVAL;
-		}
-		if (osi_dma->dma_chans[i] == 0) {
-			ret = 0;
-		}
-	}
-
-	if (ret != 0) {
-		dev_err(dev, "Q0 Must be enabled for rx path\n");
-		return -EINVAL;
 	}
 
 	ret = of_property_read_u32_array(np, "nvidia,rxq_enable_ctrl",
@@ -6208,6 +6632,15 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 
 		osi_dma->use_riwt = OSI_ENABLE;
 	}
+
+	if (osi_dma->mac == OSI_MAC_HW_MGBE_T26X) {
+		ret = ether_get_rx_riit(pdev, pdata);
+		if (ret < 0) {
+			dev_err(pdata->dev, "failed to get riit info\n");
+			return ret;
+		}
+	}
+
 	/* rx_frames value to be set */
 	ret = of_property_read_u32(np, "nvidia,rx_frames",
 				   &osi_dma->rx_frames);
@@ -6231,23 +6664,41 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		return -EINVAL;
 	}
 
-	if (osi_core->mac != OSI_MAC_HW_EQOS) {
-		ret = of_property_read_u32(np, "nvidia,uphy-gbe-mode",
-					   &osi_core->uphy_gbe_mode);
-		if (ret < 0) {
+	ret = of_property_read_u32(np, "nvidia,uphy-gbe-mode",
+				   &osi_core->uphy_gbe_mode);
+	if (ret < 0) {
+		if (osi_core->mac != OSI_MAC_HW_EQOS) {
 			dev_info(dev,
 				 "failed to read UPHY GBE mode"
 				 "- default to 10G\n");
-			osi_core->uphy_gbe_mode = OSI_ENABLE;
+			osi_core->uphy_gbe_mode = OSI_GBE_MODE_10G;
+		} else {
+			dev_info(dev,
+				 "failed to read UPHY GBE mode"
+				 "- default to 1G\n");
+			osi_core->uphy_gbe_mode = OSI_GBE_MODE_1G;
 		}
+	}
 
-		if ((osi_core->uphy_gbe_mode != OSI_ENABLE) &&
-		    (osi_core->uphy_gbe_mode != OSI_DISABLE)) {
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
+		if ((osi_core->uphy_gbe_mode != OSI_GBE_MODE_5G) &&
+		    (osi_core->uphy_gbe_mode != OSI_GBE_MODE_10G) &&
+		    (osi_core->uphy_gbe_mode != OSI_UPHY_GBE_MODE_25G)) {
 			dev_err(dev, "Invalid UPHY GBE mode"
 				"- default to 10G\n");
-			osi_core->uphy_gbe_mode = OSI_ENABLE;
+			osi_core->uphy_gbe_mode = OSI_GBE_MODE_10G;
 		}
 
+	} else {
+		if ((osi_core->uphy_gbe_mode != OSI_GBE_MODE_2_5G) &&
+		    (osi_core->uphy_gbe_mode != OSI_GBE_MODE_1G)) {
+			dev_err(dev, "Invalid UPHY GBE mode"
+				"- default to 1G\n");
+			osi_core->uphy_gbe_mode = OSI_GBE_MODE_1G;
+		}
+	}
+
+	if (osi_core->mac != OSI_MAC_HW_EQOS) {
 		ret = of_property_read_u32(np, "nvidia,phy-iface-mode",
 					   &osi_core->phy_iface_mode);
 		if (ret < 0) {
@@ -6259,26 +6710,38 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		if ((osi_core->phy_iface_mode != OSI_XFI_MODE_10G) &&
 		    (osi_core->phy_iface_mode != OSI_XFI_MODE_5G) &&
 		    (osi_core->phy_iface_mode != OSI_USXGMII_MODE_10G) &&
-		    (osi_core->phy_iface_mode != OSI_USXGMII_MODE_5G)) {
+		    (osi_core->phy_iface_mode != OSI_USXGMII_MODE_5G) &&
+		    (osi_core->phy_iface_mode != OSI_XAUI_MODE_25G)) {
 			dev_err(dev, "Invalid PHY iface mode"
 				"- default to 10G\n");
 			osi_core->phy_iface_mode = OSI_XFI_MODE_10G;
 		}
 
-		/* GBE and XFI/USXGMII must be in same mode */
-		if ((osi_core->uphy_gbe_mode == OSI_ENABLE) &&
+		/* GBE and XAUI must be in same mode */
+		if ((osi_core->uphy_gbe_mode == OSI_UPHY_GBE_MODE_25G) &&
 		    ((osi_core->phy_iface_mode == OSI_XFI_MODE_5G) ||
-		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G))) {
-			dev_err(dev, "Invalid combination of UPHY 10GBE mode"
-				"and XFI/USXGMII 5G mode\n");
+		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G) ||
+		    (osi_core->phy_iface_mode == OSI_XFI_MODE_10G) ||
+		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G))) {
+			dev_err(dev, "Invalid combination of UPHY 25GBE mode"
+				"and XFI/USXGMII/XAUI mode\n");
 			return -EINVAL;
 		}
 
-		if ((osi_core->uphy_gbe_mode == OSI_DISABLE) &&
+		if ((osi_core->uphy_gbe_mode == OSI_GBE_MODE_10G) &&
+		    ((osi_core->phy_iface_mode == OSI_XFI_MODE_5G) ||
+		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_5G) ||
+		    (osi_core->phy_iface_mode == OSI_XAUI_MODE_25G))) {
+			dev_err(dev, "Invalid combination of UPHY 10GBE mode"
+				"and XFI/USXGMII/AUXA mode\n");
+			return -EINVAL;
+		}
+		if ((osi_core->uphy_gbe_mode == OSI_GBE_MODE_5G) &&
 		    ((osi_core->phy_iface_mode == OSI_XFI_MODE_10G) ||
-		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G))) {
+		    (osi_core->phy_iface_mode == OSI_USXGMII_MODE_10G) ||
+		    (osi_core->phy_iface_mode == OSI_XAUI_MODE_25G))) {
 			dev_err(dev, "Invalid combination of UPHY 5GBE mode"
-				"and XFI/USXGMII 10G mode\n");
+				"and XFI/USXGMII/XAUI  mode\n");
 			return -EINVAL;
 		}
 	}
@@ -6424,6 +6887,7 @@ exit:
 static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 					 unsigned int *num_dma_chans,
 					 unsigned int *mac,
+					 unsigned int *macsec,
 					 unsigned int *num_mtl_queues)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -6434,30 +6898,41 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 	ret = of_device_is_compatible(np, "nvidia,nveqos");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_EQOS;
+		*macsec = OSI_MACSEC_T23X;
 		max_chans = OSI_EQOS_MAX_NUM_CHANS;
 	}
 
 	ret = of_device_is_compatible(np, "nvidia,nvmgbe");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_MGBE;
-		max_chans = OSI_MGBE_MAX_NUM_CHANS;
+		max_chans = OSI_MGBE_T23X_MAX_NUM_CHANS;
+		*macsec = OSI_MACSEC_T23X;
 	}
 
 	ret = of_device_is_compatible(np, "nvidia,tegra234-eqos");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_EQOS;
+		*macsec = OSI_MACSEC_T23X;
 		max_chans = OSI_EQOS_MAX_NUM_CHANS;
 	}
 
 	ret = of_device_is_compatible(np, "nvidia,tegra234-mgbe");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_MGBE;
-		max_chans = OSI_MGBE_MAX_NUM_PDMA_CHANS;
+		max_chans = OSI_MGBE_T23X_MAX_NUM_CHANS;
+		*macsec = OSI_MACSEC_T23X;
 	}
 
 	if (of_device_is_compatible(np, "nvidia,tegra264-mgbe")) {
 		*mac = OSI_MAC_HW_MGBE_T26X;
+		*macsec = OSI_MACSEC_T26X;
 		max_chans = OSI_MGBE_MAX_NUM_CHANS;
+	}
+
+	if (of_device_is_compatible(np, "nvidia,tegra264-eqos")) {
+		*mac = OSI_MAC_HW_EQOS;
+		*macsec = OSI_MACSEC_T26X;
+		max_chans = OSI_EQOS_MAX_NUM_CHANS;
 	}
 
 	/* parse the number of DMA channels */
@@ -6628,6 +7103,9 @@ static void init_filter_values(struct ether_priv_data *pdata)
 	} else if (pdata->hw_feat.mac_addr32_sel == OSI_ENABLE) {
 		pdata->num_mac_addr_regs = ETHER_ADDR_REG_CNT_64;
 	} else if (pdata->hw_feat.mac_addr_sel ==
+		   (ETHER_ADDR_REG_CNT_48 - 1U)) {
+		pdata->num_mac_addr_regs = ETHER_ADDR_REG_CNT_48;
+	} else if (pdata->hw_feat.mac_addr_sel ==
 		   (ETHER_ADDR_REG_CNT_32 - 1U)) {
 		pdata->num_mac_addr_regs = ETHER_ADDR_REG_CNT_32;
 	} else {
@@ -6657,10 +7135,7 @@ static void ether_init_rss(struct ether_priv_data *pdata,
 		osi_core->rss.enable = 0;
 		return;
 	}
-	//TBD:diable rss for T264
-	if (osi_core->pre_sil == 0x1U) {
-		osi_core->rss.enable = 0;
-	}
+
 	/* generate random key */
 	netdev_rss_key_fill(osi_core->rss.key, sizeof(osi_core->rss.key));
 
@@ -6693,16 +7168,21 @@ static void ether_init_rss(struct ether_priv_data *pdata,
 static int ether_probe(struct platform_device *pdev)
 {
 	struct ether_priv_data *pdata;
-	unsigned int num_dma_chans, mac, num_mtl_queues, chan;
+	unsigned int num_dma_chans, mac, macsec, num_mtl_queues, chan;
 	struct osi_core_priv_data *osi_core;
 	struct osi_dma_priv_data *osi_dma;
 	struct osi_ioctl *ioctl_data;
 	struct net_device *ndev;
 	int ret = 0, i;
 	const char *if_name;
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
 
 	ether_get_num_dma_chan_mtl_q(pdev, &num_dma_chans,
-				     &mac, &num_mtl_queues);
+				     &mac, &macsec, &num_mtl_queues);
 
 	if (mac == OSI_MAC_HW_MGBE) {
 		ret = pinctrl_pm_select_default_state(&pdev->dev);
@@ -6756,6 +7236,7 @@ static int ether_probe(struct platform_device *pdev)
 	osi_dma->num_dma_chans = num_dma_chans;
 
 	osi_core->mac = mac;
+	osi_core->macsec = macsec;
 	osi_dma->mac = mac;
 
 	osi_core->mtu = ndev->mtu;
@@ -6852,7 +7333,7 @@ static int ether_probe(struct platform_device *pdev)
 	/* store enabled dma channels into osi_core */
 	osi_core->num_dma_chans = osi_dma->num_dma_chans;
 	memcpy(osi_core->dma_chans, osi_dma->dma_chans,
-	      (sizeof(nveu32_t) * OSI_MGBE_MAX_NUM_CHANS));
+	      (sizeof(nveu32_t) * max_dma_chan[mac]));
 	ndev->netdev_ops = &ether_netdev_ops;
 	ether_set_ethtool_ops(ndev);
 
