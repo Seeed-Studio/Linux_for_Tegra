@@ -162,57 +162,78 @@ struct profiler_record {
 	uint64_t timestamp;
 } __packed;
 
-static void profiler_show_entries(void *addr, int size)
+#define LOG_PROFILER_DATA(print_format, ...) do { \
+	if (!buffer_overflow_detected) { \
+		len = snprintf(buf + ret, PAGE_SIZE - ret, print_format, ##__VA_ARGS__); \
+		if (len >= PAGE_SIZE - ret) { \
+			buffer_overflow_detected = true; \
+		} else { \
+			ret += len; \
+		} \
+	} \
+	pr_info(print_format, ##__VA_ARGS__); \
+} while (0)
+
+static ssize_t profiler_show_entries(void *addr, int size, char *buf)
 {
 	struct profiler_record *profiler_data;
 	int count = 0;
 	int i = 0;
-	int prof_data_section_valid = 0;
+	bool prof_data_section_valid = 0;
+	ssize_t ret = 0;
+	size_t len = 0;
+	bool buffer_overflow_detected = false;
 
 	profiler_data = (struct profiler_record *)addr;
 	count = size / sizeof(struct profiler_record);
 	i = -1;
-	pr_info("\n");
+	LOG_PROFILER_DATA("\n");
 	while (count--) {
 		i++;
 		if (!profiler_data[i].timestamp) {
 			if (prof_data_section_valid) {
-				pr_info("\n");
-				prof_data_section_valid = 0;
+				LOG_PROFILER_DATA("\n");
+				prof_data_section_valid = false;
 			}
 			continue;
 		}
-		pr_info("%-54s\t%16lld",
-			profiler_data[i].str, profiler_data[i].timestamp);
 		if (i > 0 && profiler_data[i - 1].timestamp) {
-			pr_cont("\t%16lld",
-			profiler_data[i].timestamp - profiler_data[i - 1].timestamp);
+			LOG_PROFILER_DATA("%-54s\t%16lld \t%16lld\n",
+				profiler_data[i].str, profiler_data[i].timestamp,
+				profiler_data[i].timestamp - profiler_data[i - 1].timestamp);
+		} else {
+			LOG_PROFILER_DATA("%-54s\t%16lld\n",
+				profiler_data[i].str, profiler_data[i].timestamp);
 		}
-		prof_data_section_valid = 1;
+		prof_data_section_valid = true;
 	}
+	return ret;
 }
 
 static ssize_t profiler_show(struct kobject *kobj,
 			struct kobj_attribute *attr,
 			char *buf)
 {
+	ssize_t ret = 0;
+
 	if (is_privileged_vm) {
 		if (!tegra_bl_mapped_prof_ro_start) {
 			pr_err("%s\n", "Error mapping RO profiling data\n");
 			return -EINVAL;
 		}
 
-		profiler_show_entries(tegra_bl_mapped_prof_ro_start, tegra_bl_prof_ro_size);
+		ret = profiler_show_entries(tegra_bl_mapped_prof_ro_start, tegra_bl_prof_ro_size,
+			buf);
 	} else {
 		if (!tegra_bl_mapped_prof_start) {
 			pr_err("%s\n", "Error mapping RW profiling data\n");
 			return -EINVAL;
 		}
 
-		profiler_show_entries(tegra_bl_mapped_prof_start, tegra_bl_prof_size);
+		ret = profiler_show_entries(tegra_bl_mapped_prof_start, tegra_bl_prof_size, buf);
 	}
 
-	return 0;
+	return ret;
 }
 
 static struct kobj_attribute profiler_attribute =
