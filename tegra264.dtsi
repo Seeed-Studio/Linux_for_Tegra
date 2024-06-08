@@ -5,6 +5,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/mailbox/tegra186-hsp.h>
 #include <dt-bindings/memory/tegra264-mc.h>
+#include <dt-bindings/memory/tegra264-smmu-streamid-xusb.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra-io-pad.h>
 #include <dt-bindings/reset/tegra264-reset.h>
@@ -6503,6 +6504,9 @@
                         power-domain-names = "dev", "ss";
 			nvidia,xusb-padctl = <&xusb_padctl>;
 
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_DEV_MODE>;
+			dma-coherent;
+
 			status = "disabled";
 		};
 
@@ -6535,6 +6539,9 @@
                                         <&bpmp TEGRA264_POWER_DOMAIN_XUSB_SS>;
                         power-domain-names = "xusb_host", "xusb_ss";
 			nvidia,xusb-padctl = <&xusb_padctl>;
+
+			iommus = <&smmu1_mmu TEGRA_SID_XUSB_PF_HS_PORTS>;
+			dma-coherent;
 
 			status = "disabled";
 		};
