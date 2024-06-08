@@ -7278,7 +7278,7 @@
 		interrupt-parent = <&gic>;
 		interrupts = <GIC_PPI 9 8>;
 
-		redistributor-stride = <0x40000>; /* <SOC_CCPLEX_GICR0_REG_LEN> => 256kb stride */
+		redistributor-stride = <0x00 0x40000>; /* <0x00 SOC_CCPLEX_GICR0_REG_LEN> => 256kb stride */
 
 		/*
 		 * This ranges property is needed for bus translation to work correctly for the GIC.
