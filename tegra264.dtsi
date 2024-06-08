@@ -4716,7 +4716,7 @@
 			clock-names = "div-clk", "parent";
 			assigned-clocks = <&bpmp TEGRA264_CLK_TOP_I2C>;
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
-			resets = <&bpmp TEGRA264_RESET_I2C0>;
+			resets = <&bpmp TEGRA264_RESET_I2C1>;
 			reset-names = "i2c";
 			prod-settings {
 				prod {
