@@ -4360,7 +4360,7 @@
 			iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C2>;
 			dma-coherent;
 			clocks = <&bpmp TEGRA264_CLK_AON_I2C>,
-				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+				 <&bpmp TEGRA264_CLK_PLLAON>;
 			clock-names = "div-clk", "parent";
 			assigned-clocks = <&bpmp TEGRA264_CLK_AON_I2C>;
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLAON>;
@@ -4423,7 +4423,7 @@
 			iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C3>;
 			dma-coherent;
 			clocks = <&bpmp TEGRA264_CLK_AON_I2C>,
-				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+				 <&bpmp TEGRA264_CLK_PLLAON>;
 			clock-names = "div-clk", "parent";
 			assigned-clocks = <&bpmp TEGRA264_CLK_AON_I2C>;
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLAON>;
