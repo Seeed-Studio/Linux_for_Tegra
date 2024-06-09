@@ -3715,8 +3715,7 @@
 		};
 
 		pmc: pmc@c800000 {
-			compatible = "nvidia,tegra264-pmc",
-				     "nvidia,tegra234-pmc";
+			compatible = "nvidia,tegra264-pmc";
 			status = "disabled";
 
 			reg = <0x0 0x0c800000 0x0 0x100000>,
