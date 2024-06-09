@@ -140,6 +140,14 @@
 #define TEGRA_SID_SE_SE1 (TEGRA_SID_SE | 0x1U)
 #define TEGRA_SID_SE_SE2 (TEGRA_SID_SE | 0x2U)
 #define TEGRA_SID_SE_SE4 (TEGRA_SID_SE | 0x4U)
+/* Stream ID for SE data buffers for 8 VMs */
+#define TEGRA_SID_SE_VM0 (TEGRA_SID_SE | 1U)
+#define TEGRA_SID_SE_VM1 (TEGRA_SID_SE | 2U)
+#define TEGRA_SID_SE_VM2 (TEGRA_SID_SE | 3U)
+#define TEGRA_SID_SE_VM3 (TEGRA_SID_SE | 4U)
+#define TEGRA_SID_SE_VM4 (TEGRA_SID_SE | 5U)
+#define TEGRA_SID_SE_VM5 (TEGRA_SID_SE | 6U)
+#define TEGRA_SID_SE_VM6 (TEGRA_SID_SE | 7U)
 
 /*
  * memory client IDs
