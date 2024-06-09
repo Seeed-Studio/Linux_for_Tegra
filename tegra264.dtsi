@@ -6729,8 +6729,10 @@
 			compatible = "nvidia,tegra264-xusb";
 			reg = <0xa8 0xaa10000 0x00 0x40000>,
 			      <0xa8 0xaa00000 0x00 0x10000>,
-			      <0xa8 0xaa50000 0x00 0x10000>;
-			reg-names = "base", "fpci", "bar2";
+			      <0xa8 0xaa50000 0x00 0x10000>,
+			      <0xa8 0x2000000 0x00 0x40000>,
+			      <0xa8 0x82e0000 0x00 0x40000>;
+			reg-names = "base", "fpci", "bar2", "rst", "pinmux";
 			interrupts = <0 952 IRQ_TYPE_LEVEL_HIGH>,
 					<2 0 IRQ_TYPE_LEVEL_HIGH>,
 					<2 5 IRQ_TYPE_LEVEL_HIGH>;
