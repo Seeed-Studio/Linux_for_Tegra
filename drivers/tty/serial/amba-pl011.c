@@ -1940,6 +1940,11 @@ static void pl011_unthrottle_rx(struct uart_port *port)
 	} else {
 		if (uap->vendor->eord_interrupt)
 			pl011_write(NV_UART011_EORDIM, uap, REG_NV_MIM);
+
+		if (uap->using_rx_dma) {
+			uap->dmacr |= UART011_RXDMAE;
+			pl011_write(uap->dmacr, uap, REG_DMACR);
+		}
 	}
 
 	pl011_write(uap->im, uap, REG_IMSC);
