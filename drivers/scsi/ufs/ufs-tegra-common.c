@@ -655,10 +655,13 @@ static int ufs_tegra_init_mphy_lane_clks(struct ufs_tegra_host *host)
 	int err = 0;
 	struct device *dev = host->hba->dev;
 
-	err = ufs_tegra_host_clk_get(dev,
-			"pllrefe_vcoout", &host->pllrefe_clk);
-	if (err)
-		goto out;
+
+	if (host->soc->chip_id != TEGRA264) {
+		err = ufs_tegra_host_clk_get(dev,
+				"pllrefe_vcoout", &host->pllrefe_clk);
+		if (err)
+			goto out;
+	}
 
 	if (host->soc->chip_id == TEGRA264) {
 		err = ufs_tegra_host_clk_get(dev, "mphy_l0_uphy_tx_fifo",
@@ -810,7 +813,7 @@ static int ufs_tegra_init_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 			"pll_p", &ufs_tegra->ufshc_parent);
 	} else {
 		err = ufs_tegra_host_clk_get(dev,
-			"pllrefufs_clkout624", &ufs_tegra->ufshc_parent);
+			"pllrefe_vcoout", &ufs_tegra->ufshc_parent);
 	}
 	if (err)
 		goto out;
