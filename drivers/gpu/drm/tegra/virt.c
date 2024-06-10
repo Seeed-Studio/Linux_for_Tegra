@@ -639,23 +639,38 @@ static u32 virt_engine_get_ip_index(const char *name)
 	return (u32)TERGA_SOC_HWPM_NUM_IPS;
 }
 
-static u32 virt_engine_extract_base_addr(struct platform_device *pdev)
+static u64 virt_engine_extract_base_addr(struct platform_device *pdev)
 {
 	u32 hwpm_ip_index;
-	u32 base_address;
+	u64 base_address = 0U;
 
 	hwpm_ip_index = virt_engine_get_ip_index(pdev->name);
-	if (hwpm_ip_index == TEGRA_SOC_HWPM_RESOURCE_VIC) {
-		base_address = 0x15340000;
-	} else if (hwpm_ip_index == TEGRA_SOC_HWPM_RESOURCE_NVENC) {
-		base_address = 0x154c0000;
-	} else if (hwpm_ip_index == TEGRA_SOC_HWPM_RESOURCE_OFA) {
-		base_address = 0x15a50000;
-	} else if (hwpm_ip_index == TEGRA_SOC_HWPM_RESOURCE_NVDEC) {
-		base_address = 0x15480000;
-	} else {
+	switch (hwpm_ip_index) {
+	case TEGRA_SOC_HWPM_RESOURCE_VIC:
+		if (of_machine_is_compatible("nvidia,tegra234")) {
+			base_address = 0x15340000;
+		} else if (of_machine_is_compatible("nvidia,tegra264")) {
+			base_address = 0x8188050000;
+		}
+		break;
+	case TEGRA_SOC_HWPM_RESOURCE_NVENC:
+		if (of_machine_is_compatible("nvidia,tegra234")) {
+			base_address = 0x154c0000;
+		}
+		break;
+	case TEGRA_SOC_HWPM_RESOURCE_OFA:
+		if (of_machine_is_compatible("nvidia,tegra234")) {
+			base_address = 0x15a50000;
+		}
+		break;
+	case TEGRA_SOC_HWPM_RESOURCE_NVDEC:
+		if (of_machine_is_compatible("nvidia,tegra234")) {
+			base_address = 0x15480000;
+		}
+		break;
+	default:
 		dev_err(&pdev->dev, "IP Base address not found");
-		return -ENOMEM;
+		break;
 	}
 
 	return base_address;
@@ -682,7 +697,7 @@ static int virt_engine_ip_reg_op(void *ip_dev,
 		u32 inst_element_index, u64 reg_offset, u32 *reg_data)
 {
 	struct platform_device *pdev = (struct platform_device *)ip_dev;
-	u32 base_address;
+	u64 base_address;
 
 	base_address = virt_engine_extract_base_addr(pdev);
 	if (base_address <= 0) {
