@@ -8,3 +8,9 @@
 # file is just place-holder for empty Makefile to avoid any build
 # issue when copy is not done from command line and building
 # the tree independent of source copy.
+
+# Exception: Adding the dummy driver for T264. It will be override by actual
+# SOC specific driver.
+
+obj-m += pcie-tegra264.o
+pcie-tegra264-objs := pcie-tegra-soc-dummy.o
