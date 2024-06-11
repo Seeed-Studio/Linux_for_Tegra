@@ -3851,7 +3851,7 @@
 			};
 
 			crypto@8188110000 {
-				compatible = "nvidia,tegra264-se-sm4";
+				compatible = "nvidia,tegra264-se1-sm4";
 				reg = <0x81 0x88110000 0x0 0x10000>;
 				clocks = <&bpmp TEGRA264_CLK_SE>;
 				clock-names = "se";
@@ -3861,7 +3861,7 @@
 			};
 
 			crypto@8188120000 {
-				compatible = "nvidia,tegra264-se-aes";
+				compatible = "nvidia,tegra264-se2-aes";
 				reg = <0x81 0x88120000 0x0 0x10000>;
 				clocks = <&bpmp TEGRA264_CLK_SE>;
 				clock-names = "se";
@@ -3871,7 +3871,7 @@
 			};
 
 			crypto@8188140000 {
-				compatible = "nvidia,tegra264-se-hash";
+				compatible = "nvidia,tegra264-se4-hash";
 				reg = <0x81 0x88140000 0x0 0x10000>;
 				clocks = <&bpmp TEGRA264_CLK_SE>;
 				clock-names = "se";
