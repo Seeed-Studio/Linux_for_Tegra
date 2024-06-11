@@ -200,6 +200,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	int err, i;
 	unsigned int page_sz = PAGE_SIZE;
 	long dmabuf_ref = 0;
+	size_t old_size;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -219,6 +220,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	if (IS_ERR_OR_NULL(handle))
 		return -EINVAL;
 
+	old_size = handle->size;
 	/*
 	 * In case of Gpu carveout, the handle size needs to be aligned to granule.
 	 */
@@ -233,6 +235,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	}
 
 	if (!is_nvmap_memory_available(handle->size, op.heap_mask, op.numa_nid)) {
+		handle->size = old_size;
 		nvmap_handle_put(handle);
 		return -ENOMEM;
 	}
@@ -261,6 +264,9 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 				dmabuf_ref,
 				is_ro ? "RO" : "RW");
 	}
+
+	if (err)
+		handle->size = old_size;
 	nvmap_handle_put(handle);
 	return err;
 }
