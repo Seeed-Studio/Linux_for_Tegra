@@ -1263,7 +1263,11 @@ static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 	}
 
 	type = op.heap_mask;
-	WARN_ON(type & (type - 1));
+	if (type & (type - 1)) {
+		ret = -EINVAL;
+		goto exit;
+	}
+
 	if (is_numa_aware)
 		numa_id = op.numa_id;
 
