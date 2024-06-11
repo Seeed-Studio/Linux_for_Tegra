@@ -85,12 +85,6 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 	struct device *dev = h->dma_dev;
 	void *err = NULL;
 
-	if (len > UINT_MAX) {
-		dev_err(dev, "%s: %d alloc size is out of range\n",
-			__func__, __LINE__);
-			return DMA_ERROR_CODE;
-	}
-
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (start && h->is_ivm) {
 		void *ret;
@@ -139,12 +133,6 @@ static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 	struct device *dev = h->dma_dev;
 
 	dev_dbg(dev, "Free base (%pa) size (%zu)\n", &base, len);
-
-	if (len > UINT_MAX) {
-		dev_err(dev, "%s: %d freeing length out of range\n",
-			__func__, __LINE__);
-			return;
-	}
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (h->is_ivm && !h->can_alloc) {
