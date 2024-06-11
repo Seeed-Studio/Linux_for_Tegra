@@ -3613,7 +3613,7 @@
 			compatible = "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x0 0x0c6c0000 0x0 0x10000>;
-			interrupts = <GIC_SPI 78 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 534 IRQ_TYPE_LEVEL_HIGH>;
 			dma-coherent;
 			dma-names = "rx", "tx";
 			dmas = <&gpcdma 8 8 TEGRA264_GPCDMA_SID_SPI2>,
@@ -4256,7 +4256,7 @@
 			compatible = "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x81 0x0c590000 0x0 0x10000>;
-			interrupts = <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
 			dma-coherent;
 			dma-names = "rx", "tx";
 			dmas = <&gpcdma 9 9 TEGRA264_GPCDMA_SID_SPI1>,
@@ -4275,7 +4275,7 @@
 			compatible = "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x81 0x0c440000 0x0 0x10000>;
-			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
 			dma-coherent;
 			dma-names = "rx", "tx";
 			dmas = <&gpcdma 14 14 TEGRA264_GPCDMA_SID_SPI3>,
@@ -4294,7 +4294,7 @@
 			compatible = "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x81 0x0c450000 0x0 0x10000>;
-			interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
 			dma-coherent;
 			dma-names = "rx", "tx";
 			dmas = <&gpcdma 15 15 TEGRA264_GPCDMA_SID_SPI4>,
