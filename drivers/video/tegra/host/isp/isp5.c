@@ -28,7 +28,6 @@
 #include <soc/tegra/fuse-helper.h>
 
 #include "isp5.h"
-#include "capture/capture-support.h"
 #include <uapi/linux/nvhost_isp_ioctl.h>
 #include <uapi/linux/nvhost_ioctl.h>
 
@@ -40,7 +39,6 @@
 
 struct host_isp5 {
 	struct platform_device *pdev;
-	struct platform_device *isp_thi;
 	struct clk *clk;
 };
 
@@ -48,18 +46,28 @@ static int isp5_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
 			uint32_t *syncpt_id)
 {
-	struct nvhost_device_data *info = platform_get_drvdata(pdev);
-	struct host_isp5 *isp5 = info->private_data;
+	uint32_t id;
 
-	return capture_alloc_syncpt(isp5->isp_thi, name, syncpt_id);
+	if (syncpt_id == NULL) {
+		dev_err(&pdev->dev, "%s: null argument\n", __func__);
+		return -EINVAL;
+	}
+
+	id = nvhost_get_syncpt_client_managed(pdev, name);
+	if (id == 0) {
+		dev_err(&pdev->dev, "%s: syncpt allocation failed\n", __func__);
+		return -ENODEV;
+	}
+
+	*syncpt_id = id;
+
+	return 0;
 }
 
 static void isp5_release_syncpt(struct platform_device *pdev, uint32_t id)
 {
-	struct nvhost_device_data *info = platform_get_drvdata(pdev);
-	struct host_isp5 *isp5 = info->private_data;
-
-	capture_release_syncpt(isp5->isp_thi, id);
+	dev_dbg(&pdev->dev, "%s: id=%u\n", __func__, id);
+	nvhost_syncpt_put_ref_ext(pdev, id);
 }
 
 static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
@@ -68,22 +76,37 @@ static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
 			uint32_t *gos_index,
 			uint32_t *gos_offset)
 {
-	struct nvhost_device_data *info = platform_get_drvdata(pdev);
-	struct host_isp5 *isp5 = info->private_data;
+	uint32_t index = GOS_INDEX_INVALID;
+	uint32_t offset = 0;
+	dma_addr_t addr;
 
-	return capture_get_syncpt_gos_backing(isp5->isp_thi, id,
-				syncpt_addr, gos_index, gos_offset);
+	if (id == 0) {
+		dev_err(&pdev->dev, "%s: syncpt id is invalid\n", __func__);
+		return -EINVAL;
+	}
 
+	if (syncpt_addr == NULL || gos_index == NULL || gos_offset == NULL) {
+		dev_err(&pdev->dev, "%s: null arguments\n", __func__);
+		return -EINVAL;
+	}
+
+	addr = nvhost_syncpt_address(pdev, id);
+
+	*syncpt_addr = addr;
+	*gos_index = index;
+	*gos_offset = offset;
+
+	dev_dbg(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
+		__func__, id, addr, index, offset);
+
+	return 0;
 }
 
 static uint32_t isp5_get_gos_table(struct platform_device *pdev,
 			const dma_addr_t **table)
 {
-	struct nvhost_device_data *info = platform_get_drvdata(pdev);
-	struct host_isp5 *isp5 = info->private_data;
-	uint32_t count;
-
-	capture_get_gos_table(isp5->isp_thi, &count, table);
+	uint32_t count = 0;
+	*table = NULL;
 
 	return count;
 }
@@ -99,8 +122,6 @@ int isp5_priv_early_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
-	struct device_node *thi_np;
-	struct platform_device *thi = NULL;
 	struct host_isp5 *isp5;
 	int err = 0;
 
@@ -110,37 +131,15 @@ int isp5_priv_early_probe(struct platform_device *pdev)
 		return -ENODATA;
 	}
 
-	thi_np = of_parse_phandle(dev->of_node, "nvidia,isp-falcon-device", 0);
-	if (thi_np == NULL) {
-		dev_WARN(dev, "missing %s handle\n",
-			"nvidia,isp-falcon-device");
-		err = -ENODEV;
-		goto error;
-	}
-
-	thi = of_find_device_by_node(thi_np);
-	of_node_put(thi_np);
-
-	if (thi == NULL) {
-		err = -ENODEV;
-		goto error;
-	}
-
 	err = isp_channel_drv_fops_register(&isp5_channel_drv_ops);
 	if (err) {
 		goto error;
-	}
-
-	if (thi->dev.driver == NULL) {
-		platform_device_put(thi);
-		return -EPROBE_DEFER;
 	}
 
 	isp5 = devm_kzalloc(dev, sizeof(*isp5), GFP_KERNEL);
 	if (!isp5)
 		return -ENOMEM;
 
-	isp5->isp_thi = thi;
 	isp5->pdev = pdev;
 	info->pdev = pdev;
 	mutex_init(&info->lock);
@@ -224,26 +223,28 @@ static int isp5_probe(struct platform_device *pdev)
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
-		goto put_thi;
+		goto error;
 
 	err = nvhost_module_init(pdev);
 	if (err)
-		goto put_thi;
+		goto error;
 
 	err = nvhost_client_device_init(pdev);
 	if (err) {
 		nvhost_module_deinit(pdev);
-		goto put_thi;
+		goto error;
 	}
+
+	err = nvhost_syncpt_unit_interface_init(pdev);
+	if (err)
+		goto error;
 
 	err = isp5_priv_late_probe(pdev);
 	if (err)
-		goto put_thi;
+		goto error;
 
 	return 0;
 
-put_thi:
-	platform_device_put(isp5->isp_thi);
 error:
 	if (err != -EPROBE_DEFER)
 		dev_err(&pdev->dev, "probe failed: %d\n", err);
@@ -317,8 +318,6 @@ static int isp5_remove(struct platform_device *pdev)
 	tegra_camera_device_unregister(isp5);
 
 	isp_channel_drv_unregister(&pdev->dev);
-
-	platform_device_put(isp5->isp_thi);
 
 	return 0;
 }

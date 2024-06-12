@@ -195,16 +195,6 @@ static const struct of_device_id capture_support_match[] = {
 		.compatible = "nvidia,tegra234-vi-thi",
 		.data = &t23x_vi1_thi_info,
 	},
-	{
-		.name = "isp-thi",
-		.compatible = "nvidia,tegra264-isp-thi",
-		.data = &t264_isp_thi_info,
-	},
-	{
-		.name = "isp1-thi",
-		.compatible = "nvidia,tegra264-isp-thi",
-		.data = &t264_isp1_thi_info,
-	},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, capture_support_match);
