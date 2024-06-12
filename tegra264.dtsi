@@ -5360,6 +5360,62 @@
 			status = "disabled";
 		};
 
+		mttcan@81102f0000 {
+			compatible = "nvidia,tegra264-mttcan";
+			reg = <0x81 0x102f0000 0x00 0x144>,
+			      <0x81 0x102f1000 0x00 0x32>,
+			      <0x81 0x102f2000 0x00 0x1000>;
+			reg-names = "can-regs", "glue-regs", "msg-ram";
+			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+			mram-params = <0 16 16 32 0 0 16 16 16>;
+                	tx-config = <0 16 0 64>;
+	                rx-config = <64 64 64>;
+			/*use-polling;*/
+			status = "disabled";
+		};
+
+		mttcan@8110300000 {
+			compatible = "nvidia,tegra264-mttcan";
+			reg = <0x81 0x10300000 0x00 0x144>,
+			      <0x81 0x10301000 0x00 0x32>,
+			      <0x81 0x10302000 0x00 0x1000>;
+			reg-names = "can-regs", "glue-regs", "msg-ram";
+			interrupts = <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>;
+			mram-params = <0 16 16 32 0 0 16 16 16>;
+                	tx-config = <0 16 0 64>;
+	                rx-config = <64 64 64>;
+			/*use-polling;*/
+			status = "disabled";
+		};
+
+		mttcan@8110330000 {
+			compatible = "nvidia,tegra264-mttcan";
+			reg = <0x81 0x10330000 0x00 0x144>,
+			      <0x81 0x10331000 0x00 0x32>,
+			      <0x81 0x10332000 0x00 0x1000>;
+			reg-names = "can-regs", "glue-regs", "msg-ram";
+			interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
+			mram-params = <0 16 16 32 0 0 16 16 16>;
+                	tx-config = <0 16 0 64>;
+	                rx-config = <64 64 64>;
+			/*use-polling;*/
+			status = "disabled";
+		};
+
+		mttcan@8110340000 {
+			compatible = "nvidia,tegra264-mttcan";
+			reg = <0x81 0x10340000 0x00 0x144>,
+			      <0x81 0x10341000 0x00 0x32>,
+			      <0x81 0x10342000 0x00 0x1000>;
+			reg-names = "can-regs", "glue-regs", "msg-ram";
+			interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
+			mram-params = <0 16 16 32 0 0 16 16 16>;
+                	tx-config = <0 16 0 64>;
+	                rx-config = <64 64 64>;
+			/*use-polling;*/
+			status = "disabled";
+		};
+
 		pcie@810c000000 {
 			status = "disabled";
 			compatible = "nvidia,tegra264-pcie";
