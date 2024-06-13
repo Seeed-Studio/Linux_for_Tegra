@@ -28,6 +28,29 @@
 		/* 40-pin header. PIN: 27, 28 */
 		i2c@c600000 {
 			status = "okay";
+			ina3221@40 {
+				compatible = "ti,ina3221";
+				reg = <0x40>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "okay";
+				channel@0 {
+					reg = <0x0>;
+					label = "VDD_GPU";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@1 {
+					reg = <0x1>;
+					label = "VDD_CPU_SOC_MSS";
+					shunt-resistor-micro-ohms = <2000>;
+				};
+				channel@2 {
+					reg = <0x2>;
+					label = "VIN_SYS_5V0";
+					shunt-resistor-micro-ohms = <2000>;
+					ti,summation-disable;
+				};
+			};
 		};
 
 		/* 40-pin header. PIN: 8, 9, 10, 36*/
