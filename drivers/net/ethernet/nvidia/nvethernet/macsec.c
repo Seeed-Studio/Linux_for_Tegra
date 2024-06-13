@@ -100,7 +100,7 @@ static int macsec_disable_car(struct macsec_priv_data *macsec_pdata)
 	struct ether_priv_data *pdata = macsec_pdata->ether_pdata;
 
 	PRINT_ENTRY();
-	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS)  {
+	if (pdata->osi_core->mac_ver != OSI_EQOS_MAC_5_30)  {
 		if (!IS_ERR_OR_NULL(macsec_pdata->macsec_clk)) {
 			clk_disable_unprepare(macsec_pdata->macsec_clk);
 		}
@@ -129,7 +129,7 @@ static int macsec_enable_car(struct macsec_priv_data *macsec_pdata)
 	int ret = 0;
 
 	PRINT_ENTRY();
-	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
+	if (pdata->osi_core->mac_ver != OSI_EQOS_MAC_5_30) {
 		if (!IS_ERR_OR_NULL(macsec_pdata->macsec_clk)) {
 			ret = clk_prepare_enable(macsec_pdata->macsec_clk);
 			if (ret < 0) {
@@ -166,7 +166,7 @@ static int macsec_enable_car(struct macsec_priv_data *macsec_pdata)
 	goto exit;
 
 err_ns_rst:
-	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
+	if (pdata->osi_core->mac_ver != OSI_EQOS_MAC_5_30) {
 		if (!IS_ERR_OR_NULL(macsec_pdata->macsec_clk)) {
 			clk_disable_unprepare(macsec_pdata->macsec_clk);
 		}
@@ -325,9 +325,8 @@ static int macsec_get_platform_res(struct macsec_priv_data *macsec_pdata)
 	}
 
 	/* Get clks */
-	if ((pdata->osi_core->mac != OSI_MAC_HW_EQOS) ||
-	    (pdata->osi_core->mac_ver_type == MAC_CORE_VER_TYPE_EQOS_5_40)) {
-		if (pdata->osi_core->mac == OSI_MAC_HW_MGBE) {
+	if (pdata->osi_core->mac_ver != OSI_EQOS_MAC_5_30) {
+		if (pdata->osi_core->mac_ver == OSI_MGBE_MAC_3_10) {
 			macsec_pdata->macsec_clk = devm_clk_get(dev, "mgbe_macsec");
 		} else {
 			macsec_pdata->macsec_clk = devm_clk_get(dev, "macsec");
@@ -364,7 +363,7 @@ static void macsec_release_platform_res(struct macsec_priv_data *macsec_pdata)
 	struct device *dev = pdata->dev;
 
 	PRINT_ENTRY();
-	if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
+	if (pdata->osi_core->mac_ver != OSI_EQOS_MAC_5_30) {
 		if (!IS_ERR_OR_NULL(macsec_pdata->macsec_clk)) {
 			devm_clk_put(dev, macsec_pdata->macsec_clk);
 		}
