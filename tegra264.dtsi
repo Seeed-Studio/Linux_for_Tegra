@@ -5676,13 +5676,11 @@
 		};
 
 		tachometer@810c5c0000 {
-			compatible = "nvidia,pwm-tegra264-tachometer",
-				     "nvidia,pwm-tegra234-tachometer";
+			compatible = "nvidia,pwm-tegra264-tachometer";
 			status = "disabled";
-
 			reg = <0x81 0x0c5c0000 0x0 0x10>;
 			#pwm-cells = <2>;
-			//clocks = <&bpmp TEGRA264_CLK_TACH0>;
+			clocks = <&bpmp TEGRA264_CLK_CLK1M>;
 			resets = <&bpmp TEGRA264_RESET_TACH0>;
 			clock-names = "tach";
 			reset-names = "tach";
