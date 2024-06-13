@@ -165,6 +165,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += pci_epf_alloc_space_has_epc_features_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pci_epf_driver_struct_probe_has_id_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pci_epc_irq_type_enum_present
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pci_irq_intx
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += platform_driver_struct_remove_returns_void
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += register_shrinker_has_fmt_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += shrinker_alloc
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += slab_mem_spread

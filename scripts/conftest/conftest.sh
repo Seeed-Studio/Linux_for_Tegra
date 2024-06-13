@@ -7733,6 +7733,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_IRQ_INTX" "" "types"
         ;;
 
+        platform_driver_struct_remove_returns_void)
+            #
+            # Determine if the 'platform_driver' structure 'remove' function
+            # pointer returns void.
+            #
+            # Commit 0edb555a65d1 ("platform: Make platform_driver::remove()
+            # return void") update the platform_driver structure 'remove'
+            # callback to return void instead of int.
+            #
+            CODE="
+            #include <linux/platform_device.h>
+            void conftest_platform_driver_struct_remove_returns_void(struct platform_driver *driver) {
+                void (*fn)(struct platform_device *) = driver->remove;
+            }"
+
+            compile_check_conftest "$CODE" "NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID" "" "types"
+        ;;
+
         register_shrinker_has_fmt_arg)
             #
             # Determine if the 'register_shrinker' function
