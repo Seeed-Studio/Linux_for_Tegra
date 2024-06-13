@@ -8,6 +8,65 @@
 / {
 	model = "NVIDIA Jetson Thor Developer Kit";
 	compatible = "nvidia,p3971-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+	bus@0 {
+		padctl@a808680000 {
+			status = "okay";
+			pads {
+				usb2 {
+					lanes {
+						usb2-0 {
+							status = "okay";
+						};
+						usb2-1 {
+							status = "okay";
+						};
+						usb2-2 {
+							status = "okay";
+						};
+						usb2-3 {
+							status = "okay";
+						};
+					};
+				};
+			};
+
+			ports {
+				usb2-0 {
+					mode = "peripheral";
+                                        vbus-supply = <&vdd_5v_ao_cvb>;
+                                        usb-role-switch;
+                                        role-switch-default-mode = "peripheral";
+                                        status = "okay";
+				};
+				usb2-1 {
+					mode = "host";
+					status = "okay";
+				};
+				usb2-2 {
+					mode = "host";
+					status = "okay";
+				};
+				usb2-3 {
+					mode = "host";
+					status = "okay";
+				};
+			};
+		};
+
+		usb@a808670000 {
+			phys = <&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-0}>;
+			phy-names = "usb2-0";
+			status = "okay";
+		};
+
+		usb@a80aa10000 {
+			phys = <&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-1}>,
+				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-2}>,
+				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-3}>;
+			phy-names = "usb2-1", "usb2-2", "usb2-3";
+			status = "okay";
+		};
+	};
 };
 
 /* Add minimal dtsi at the End of the file */
