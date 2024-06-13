@@ -9,6 +9,14 @@
 	model = "NVIDIA Jetson Thor Developer Kit";
 	compatible = "nvidia,p3971-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
 	bus@0 {
+		sys-cbb-fabric@800000 {
+			status = "okay";
+		};
+
+		top0-cbb-fabric@8100800000 {
+			status = "okay";
+		};
+
 		padctl@a808680000 {
 			status = "okay";
 			pads {

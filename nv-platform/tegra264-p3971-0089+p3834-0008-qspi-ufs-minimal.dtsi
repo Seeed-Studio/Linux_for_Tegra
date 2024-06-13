@@ -67,10 +67,6 @@
 			status = "disabled";
 		};
 
-		dma-controller@8400000 {
-			status = "disabled";
-		};
-
 		pwm@810c610000 {
 			status = "disabled";
 		};
@@ -180,15 +176,7 @@
 		};
 	};
 
-	bpmp {
-		status = "disabled";
-	};
-
 	display@8808c00000 {
-		status = "disabled";
-	};
-
-	psci {
 		status = "disabled";
 	};
 
