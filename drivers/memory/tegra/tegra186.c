@@ -180,6 +180,13 @@ const struct tegra_mc_ops tegra186_mc_ops = {
 	.handle_irq = tegra30_mc_handle_irq,
 };
 
+const struct tegra_mc_ops tegra264_mc_ops = {
+	.probe = tegra186_mc_probe,
+	.remove = tegra186_mc_remove,
+	.probe_device = tegra186_mc_probe_device,
+	.resume = tegra186_mc_resume,
+};
+
 #if defined(CONFIG_ARCH_TEGRA_186_SOC)
 static const struct tegra_mc_client tegra186_mc_clients[] = {
 	{
