@@ -140,14 +140,40 @@
 #define TEGRA_SID_SE_SE1 (TEGRA_SID_SE | 0x1U)
 #define TEGRA_SID_SE_SE2 (TEGRA_SID_SE | 0x2U)
 #define TEGRA_SID_SE_SE4 (TEGRA_SID_SE | 0x4U)
-/* Stream ID for SE data buffers for 8 VMs */
-#define TEGRA_SID_SE_VM0 (TEGRA_SID_SE | 1U)
-#define TEGRA_SID_SE_VM1 (TEGRA_SID_SE | 2U)
-#define TEGRA_SID_SE_VM2 (TEGRA_SID_SE | 3U)
-#define TEGRA_SID_SE_VM3 (TEGRA_SID_SE | 4U)
-#define TEGRA_SID_SE_VM4 (TEGRA_SID_SE | 5U)
-#define TEGRA_SID_SE_VM5 (TEGRA_SID_SE | 6U)
-#define TEGRA_SID_SE_VM6 (TEGRA_SID_SE | 7U)
+
+/*=================== SE Stream IDs for Automotive BEGIN ===================*/
+
+/* Stream IDs for GP-SE AES0 data buffers for 8 VMs */
+#define TEGRA_SID_SE_AES0_VM0 (TEGRA_SID_SE | 1U)
+#define TEGRA_SID_SE_AES0_VM1 (TEGRA_SID_SE | 2U)
+#define TEGRA_SID_SE_AES0_VM2 (TEGRA_SID_SE | 3U)
+#define TEGRA_SID_SE_AES0_VM3 (TEGRA_SID_SE | 4U)
+#define TEGRA_SID_SE_AES0_VM4 (TEGRA_SID_SE | 5U)
+#define TEGRA_SID_SE_AES0_VM5 (TEGRA_SID_SE | 6U)
+#define TEGRA_SID_SE_AES0_VM6 (TEGRA_SID_SE | 7U)
+#define TEGRA_SID_SE_AES0_VM7 (TEGRA_SID_SE | 8U)
+
+/* Stream IDs for GP-SE AES1 data buffers for 8 VMs */
+#define TEGRA_SID_SE_AES1_VM0 (TEGRA_SID_SE | 9U)
+#define TEGRA_SID_SE_AES1_VM1 (TEGRA_SID_SE | 10U)
+#define TEGRA_SID_SE_AES1_VM2 (TEGRA_SID_SE | 11U)
+#define TEGRA_SID_SE_AES1_VM3 (TEGRA_SID_SE | 12U)
+#define TEGRA_SID_SE_AES1_VM4 (TEGRA_SID_SE | 13U)
+#define TEGRA_SID_SE_AES1_VM5 (TEGRA_SID_SE | 14U)
+#define TEGRA_SID_SE_AES1_VM6 (TEGRA_SID_SE | 15U)
+#define TEGRA_SID_SE_AES1_VM7 (TEGRA_SID_SE | 16U)
+
+/* Stream IDs for GP-SE SHA data buffers for 8 VMs */
+#define TEGRA_SID_SE_SHA_VM0 (TEGRA_SID_SE | 17U)
+#define TEGRA_SID_SE_SHA_VM1 (TEGRA_SID_SE | 18U)
+#define TEGRA_SID_SE_SHA_VM2 (TEGRA_SID_SE | 19U)
+#define TEGRA_SID_SE_SHA_VM3 (TEGRA_SID_SE | 20U)
+#define TEGRA_SID_SE_SHA_VM4 (TEGRA_SID_SE | 21U)
+#define TEGRA_SID_SE_SHA_VM5 (TEGRA_SID_SE | 22U)
+#define TEGRA_SID_SE_SHA_VM6 (TEGRA_SID_SE | 23U)
+#define TEGRA_SID_SE_SHA_VM7 (TEGRA_SID_SE | 24U)
+
+/*==================== SE Stream IDs for Automotive END ====================*/
 
 /* GPCDMA stream IDs */
 #define TEGRA264_GPCDMA_SID_I2C0	(TEGRA_SID_GPCDMA | 0x1f)
