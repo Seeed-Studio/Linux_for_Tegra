@@ -4,7 +4,7 @@
 #include <dt-bindings/clock/tegra264-clk.h>
 #include <dt-bindings/gpio/tegra264-gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/mailbox/tegra186-hsp.h>
+#include <dt-bindings/mailbox/tegra186-hsp-oot.h>
 #include <dt-bindings/memory/tegra264-mc.h>
 #include <dt-bindings/memory/tegra264-smmu-streamid-xusb.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
