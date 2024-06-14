@@ -999,15 +999,15 @@ static ssize_t macsec_mmc_counters_show_rx(struct device *dev,
 		mmc->rx_octets_decrypted);
 
 	for (i = 0; i <= sc_idx_max[macsec]; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_invalid sc%d:\t%llu\n",
+		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_invalid sc%d:\t%d\n",
 			i, mmc->in_pkts_invalid[i]);
 	}
 	for (i = 0; i <= sc_idx_max[macsec]; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_delayed sc%d:\t%llu\n",
+		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_delayed sc%d:\t%d\n",
 			i, mmc->rx_pkts_delayed[i]);
 	}
 	for (i = 0; i <= sc_idx_max[macsec]; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_ok sc%d: \t%llu\n",
+		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_ok sc%d: \t%d\n",
 			i, mmc->rx_pkts_ok[i]);
 	}
 
@@ -1058,9 +1058,9 @@ static ssize_t macsec_mmc_counters_show_tx(struct device *dev,
 	buf += scnprintf(buf, PAGE_SIZE, "tx_octets_encrypted:\t%llu\n",
 		mmc->tx_octets_encrypted);
 	for (i = 0; i <= sc_idx_max[macsec]; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_protected sc%d:\t%llu\n",
+		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_protected sc%d:\t%d\n",
 			i, mmc->tx_pkts_protected[i]);
-		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_encrypted sc%d:\t%llu\n",
+		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_encrypted sc%d:\t%d\n",
 			i, mmc->tx_pkts_encrypted[i]);
 	}
 
