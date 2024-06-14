@@ -6009,7 +6009,7 @@
 			 */
 			reg = <0xa8 0x08910000 0x0 0x10000>,    /* EQOS Base Register */
 			      <0xa8 0x089a0000 0x0 0x10000>,    /* XPCS Base Register */
-			      <0xa8 0x089c0000 0x0 0x10000>,    /* MACSEC Base Register */
+			      <0xa8 0x089d0000 0x0 0x10000>,    /* MACSEC Base Register */
 			      <0xa8 0x08900000 0x0 0x10000>;    /* HV Base Register */
 			reg-names = "mac", "xpcs", "macsec-base", "hypervisor";
 			interrupts = <0 836 IRQ_TYPE_LEVEL_HIGH>,
