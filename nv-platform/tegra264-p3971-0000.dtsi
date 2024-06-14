@@ -57,6 +57,46 @@
 			status = "okay";
 		};
 
+		host1x@8181200000 {
+			status = "okay";
+
+			vi0@8188400000 {
+				status = "okay";
+			};
+
+			vi0-thi@8188700000 {
+				status = "okay";
+			};
+
+			vi1@8188c00000 {
+				status = "okay";
+			};
+
+			vi1-thi@8188f00000 {
+				status = "okay";
+			};
+
+			isp@8188800000 {
+				status = "okay";
+			};
+
+			isp-thi@8188b00000 {
+				status = "okay";
+			};
+
+			isp1@818a800000 {
+				status = "okay";
+			};
+
+			isp1-thi@818ab00000 {
+				status = "okay";
+			};
+
+			nvcsi@8188000000 {
+				status = "okay";
+			};
+		};
+
 		i2c@810c640000 {
 			/* CVB EEPROM */
 			eeprom@56 {
@@ -517,4 +557,47 @@
 			  "CVB-RT DMIC1",		"CVB-RT MIC",
 			  "CVB-RT DMIC2",		"CVB-RT MIC";
 	};
+
+	rtcpu@81893d0000 {
+		status = "okay";
+
+		hsp-vm1 {
+			status = "okay";
+		};
+	};
+
+	camera-ivc-channels {
+		echo@0 {
+			status = "okay";
+		};
+
+		dbg@1 {
+			status = "okay";
+		};
+
+		dbg@2 {
+			status = "okay";
+		};
+
+		ivccontrol@3 {
+			status = "okay";
+		};
+
+		ivccapture@4 {
+			status = "okay";
+		};
+	};
+
+	tegra-rtcpu-trace {
+		status = "okay";
+	};
+
+	tegra-capture-vi {
+		status = "okay";
+	};
+
+	tegra-capture-isp {
+		status = "okay";
+	};
+
 };
