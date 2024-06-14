@@ -18,6 +18,9 @@ CONFIG_LATENCYTOP                               note<'https://lists.ubuntu.com/a
 CONFIG_MMC_TEST                                 policy<{'arm64': 'm'}>
 CONFIG_MMC_TEST                                 note<'LP: #2072591'>
 
+CONFIG_OVERLAY_FS                               policy<{'arm64': 'y'}>
+CONFIG_OVERLAY_FS                               note<'LP: #2072591'>
+
 CONFIG_PCIE_EDR                                 policy<{'arm64': 'n'}>
 CONFIG_PCIE_EDR                                 note<'LP: #1965241'>
 
