@@ -42,6 +42,9 @@ CONFIG_PREEMPT_RT                               note<'must be enabled in the rea
 CONFIG_SPEAKUP                                  policy<{'arm64': '-'}>
 CONFIG_SPEAKUP                                  note<'LP: #1967702'>
 
+CONFIG_SPI_TEGRA210_QUAD                        policy<{'arm64': 'n'}>
+CONFIG_SPI_TEGRA210_QUAD                        note<'LP: #2072591'>
+
 CONFIG_TEGRA_EPL                                policy<{'arm64': 'y'}>
 CONFIG_TEGRA_EPL                                note<'LP: #2072591'>
 
