@@ -1345,13 +1345,12 @@
 						"rx30", "tx30",
 						"rx31", "tx31",
 						"rx32", "tx32";
-					/*
-					 * TODO: replace emc with its LABEL once available
-					 * interconnects =
-					 *	<&mc TEGRA264_MEMORY_CLIENT_APEDMAR &emc>,
-					 *	<&mc TEGRA264_MEMORY_CLIENT_APEDMAW &emc>;
-					 * interconnect-names = "dma-mem", "write";
-					 */
+
+					 interconnects =
+						<&mc TEGRA264_MEMORY_CLIENT_APEDMAR &emc>,
+						<&mc TEGRA264_MEMORY_CLIENT_APEDMAW &emc>;
+						interconnect-names = "dma-mem", "write";
+
 					iommus = <&smmu1_mmu TEGRA_SID_APE>;
 
 					ports {
@@ -5581,6 +5580,19 @@
 			interrupt-names = "shared1", "shared2", "shared3", "shared4";
 		};
 
+		hda@88090b0000 {
+			compatible = "nvidia,tegra264-hda";
+			reg = <0x88 0x90b0000 0x0 0x10000>;
+			interrupts = <GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&bpmp TEGRA264_CLK_AZA_2XBIT>;
+			clock-names = "hda";
+			interconnects = <&mc TEGRA264_MEMORY_CLIENT_HDAR &emc>,
+					<&mc TEGRA264_MEMORY_CLIENT_HDAW &emc>;
+			interconnect-names = "dma-mem", "write";
+			iommus = <&smmu3_mmu TEGRA_SID_HDA>;
+			status = "disabled";
+		};
+
 		padctl_uphy: pinmux@a8082e0000 {
 			compatible = "nvidia,tegra264-pinmux-uphy";
 			status = "disabled";
@@ -7470,16 +7482,6 @@
 			#msi-cells = <1>;
 			reg = <0x81 0x46040000 0x0 0x40000>;
 		};
-	};
-
-	hda@88090b0000 {
-		compatible = "nvidia,tegra264-hda";
-		reg = <0x88 0x90b0000 0x0 0x10000>;
-		interrupts = <GIC_SPI 0xfb IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&bpmp TEGRA264_CLK_AZA_2XBIT>;
-		clock-names = "hda";
-		iommus = <&smmu3_mmu TEGRA_SID_HDA>;
-		status = "disabled";
 	};
 
 	nvpmodel {
