@@ -42,6 +42,9 @@ CONFIG_TEGRA_EPL                                note<'LP: #2072591'>
 CONFIG_UBSAN                                    policy<{'arm64': 'n'}>
 CONFIG_UBSAN                                    note<'LP#1942215'>
 
+CONFIG_VIDEO_IMX219                             policy<{'arm64': 'n'}>
+CONFIG_VIDEO_IMX219                             note<'LP: #2072591'>
+
 CONFIG_VMWARE_VMCI                              policy<{'arm64': 'n'}>
 CONFIG_VMWARE_VMCI                              note<'LP: #1978145'>
 
