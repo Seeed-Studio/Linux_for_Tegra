@@ -45,6 +45,8 @@ CONFIG_VMWARE_VMCI_VSOCKETS                     note<'LP: #1978145'>
 CONFIG_A11Y_BRAILLE_CONSOLE                     policy<{'arm64': '-'}>
 CONFIG_CC_HAS_UBSAN_BOUNDS_STRICT               policy<{'arm64': '-'}>
 CONFIG_COMPACT_UNEVICTABLE_DEFAULT              policy<{'arm64': '0', 'arm64-nvidia-tegra': '1'}>
+CONFIG_CRYPTO_DEV_TEGRA                         policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_SUPPORT_TEGRA_TESTS               policy<{'arm64': 'y'}>
 CONFIG_DEBUG_MUTEXES                            policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
 CONFIG_DEBUG_PREEMPT                            policy<{'arm64': 'y', 'arm64-nvidia-tegra': 'n'}>
 CONFIG_LEDS_TRIGGER_CPU                         policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
@@ -56,6 +58,8 @@ CONFIG_QUEUED_RWLOCKS                           policy<{'arm64': '-', 'arm64-nvi
 CONFIG_RCU_BOOST                                policy<{'arm64': 'y', 'arm64-nvidia-tegra': '-'}>
 CONFIG_RCU_BOOST_DELAY                          policy<{'arm64': '500', 'arm64-nvidia-tegra': '-'}>
 CONFIG_RCU_NOCB_CPU_CB_BOOST                    policy<{'arm64': 'y', 'arm64-nvidia-tegra': '-'}>
+CONFIG_SCSI_UFSHCD_QUERY_EXPORT                 policy<{'arm64': 'y'}>
+CONFIG_SOC_TEGRA_PLATFORM_HELPER                policy<{'arm64': 'y'}>
 CONFIG_SOFTIRQ_ON_OWN_STACK                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
 CONFIG_SPEAKUP_SYNTH_ACNTSA                     policy<{'arm64': '-'}>
 CONFIG_SPEAKUP_SYNTH_APOLLO                     policy<{'arm64': '-'}>
@@ -68,6 +72,8 @@ CONFIG_SPEAKUP_SYNTH_LTLK                       policy<{'arm64': '-'}>
 CONFIG_SPEAKUP_SYNTH_SOFT                       policy<{'arm64': '-'}>
 CONFIG_SPEAKUP_SYNTH_SPKOUT                     policy<{'arm64': '-'}>
 CONFIG_SPEAKUP_SYNTH_TXPRT                      policy<{'arm64': '-'}>
+CONFIG_TEGRA_EPL                                policy<{'arm64': 'n'}>
+CONFIG_TEGRA_PLATFORM_DEVICES                   policy<{'arm64': 'y'}>
 CONFIG_TEST_UBSAN                               policy<{'arm64': '-'}>
 CONFIG_TRANSPARENT_HUGEPAGE                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
 CONFIG_UBSAN_ALIGNMENT                          policy<{'arm64': '-'}>
