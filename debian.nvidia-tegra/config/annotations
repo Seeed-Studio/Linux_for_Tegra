@@ -30,6 +30,9 @@ CONFIG_PCI_MESON                                note<'LP: #2007745'>
 CONFIG_PCI_PASID                                policy<{'arm64': 'n'}>
 CONFIG_PCI_PASID                                note<'LP: #2072591'>
 
+CONFIG_PPS_CLIENT_KTIMER                        policy<{'arm64': 'm'}>
+CONFIG_PPS_CLIENT_KTIMER                        note<'LP: #2072591'>
+
 CONFIG_PREEMPT_DYNAMIC                          policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
 CONFIG_PREEMPT_DYNAMIC                          note<'LP: #2051342'>
 
