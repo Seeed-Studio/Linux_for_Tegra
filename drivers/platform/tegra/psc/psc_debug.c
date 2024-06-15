@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2020-2024, NVIDIA Corporation. All rights reserved.
 
 #include <linux/ioctl.h>
 #include <linux/types.h>
@@ -63,14 +63,19 @@ struct psc_debug_dev {
 
 	u8 rx_msg[MBOX_MSG_LEN];
 	struct mbox_controller *mbox;	/* our mbox controller */
-
 	bool is_cfg_inited;	/* did we initialize SIDTABLE, etc? */
 };
 
-static struct psc_debug_dev psc_debug;
-static struct psc_debug_dev oesp_debug;
-static struct psc_debug_dev sb_debug;
-static struct dentry *debugfs_root;
+enum {
+	PSC_PSC = 0,
+	PSC_OESP,
+	PSC_SB,
+	PSC_NUM
+};
+
+static struct psc_debug_dev debug_devs[PSC_NUM];
+
+static struct dentry *debugfs[PSC_NUM];
 
 #define NV(x) "nvidia," #x
 static int
@@ -90,7 +95,6 @@ setup_extcfg(struct platform_device *pdev)
 		return -EINVAL;
 
 	dev_info(&pdev->dev, "ext_cfg base:%p\n", base);
-
 	if (!device_property_read_u8_array(&pdev->dev, NV(sidtable),
 				(u8 *)&value, sizeof(value))) {
 		dev_dbg(&pdev->dev, "sidtable:%08x\n", value);
@@ -372,22 +376,40 @@ static void psc_chan_rx_callback(struct mbox_client *c, void *msg)
 	complete(&dbg->rx_complete);
 }
 
-int psc_debugfs_create(struct platform_device *pdev, struct mbox_controller *mbox)
+static const char *to_instance(struct platform_device *pdev, u32 *id)
 {
-	struct psc_debug_dev *dbg = &psc_debug;
-	struct device *dev = &pdev->dev;
 	const char *psc_name = NULL;
+	struct device *dev = &pdev->dev;
 
 	/* Get the cpu name from dtb and use for debug node*/
 	if (device_property_read_string(dev, "nvidia,cpu-name", &psc_name) != 0) {
+		return NULL;
+	}
+
+	*id = PSC_PSC;
+
+	if (strcmp(psc_name, "oesp") == 0)
+		*id = PSC_OESP;
+	else if (strcmp(psc_name, "sb") == 0)
+		*id = PSC_SB;
+
+	return psc_name;
+}
+
+int psc_debugfs_create(struct platform_device *pdev, struct mbox_controller *mbox)
+{
+	struct device *dev = &pdev->dev;
+	struct dentry *debugfs_root = NULL;
+	struct psc_debug_dev *dbg;
+	u32 id = 0;
+	const char *psc_name = to_instance(pdev, &id);
+
+	if (psc_name == NULL) {
 		dev_err(dev, "Could not find property nvidia,cpu-name in device tree\n");
 		return -ENODEV;
 	}
 
-	if (strcmp(psc_name, "oesp") == 0)
-		dbg = &oesp_debug;
-	else if (strcmp(psc_name, "sb") == 0)
-		dbg = &sb_debug;
+	dbg = &debug_devs[id];
 
 	if (!debugfs_initialized()) {
 		dev_err(dev, "debugfs is not initialized\n");
@@ -395,6 +417,7 @@ int psc_debugfs_create(struct platform_device *pdev, struct mbox_controller *mbo
 	}
 
 	debugfs_root = debugfs_create_dir(psc_name, NULL);
+	debugfs[id] = debugfs_root;
 
 	if (debugfs_root == NULL) {
 		dev_err(dev, "failed to create psc debugfs\n");
@@ -424,8 +447,19 @@ int psc_debugfs_create(struct platform_device *pdev, struct mbox_controller *mbo
 
 void psc_debugfs_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct psc_debug_dev *dbg = NULL;
+	u32 id = 0;
+
+	if (to_instance(pdev, &id) == NULL) {
+		dev_err(dev, "can not find psc_debug device\n");
+		return;
+	}
+
+	dbg = &debug_devs[id];
+
 	dev_dbg(&pdev->dev, "%s\n", __func__);
 
-	mutex_destroy(&psc_debug.lock);
-	debugfs_remove_recursive(debugfs_root);
+	mutex_destroy(&dbg->lock);
+	debugfs_remove_recursive(debugfs[id]);
 }
