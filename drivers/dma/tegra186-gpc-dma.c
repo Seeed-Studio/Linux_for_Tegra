@@ -1311,13 +1311,9 @@ static struct dma_chan *tegra_dma_get_slave_channel(struct tegra_dma *tdma,
 
 
 	chan_id = dma_spec->args[1];
-	if (chan_id > hweight_long(tdma->chan_mask))
+	if (!(tdma->chan_mask & (1 << (chan_id)))) {
 		return NULL;
-
-	/* Adjust the chan_id as channel id from
-	 * DT is starting from an offset
-	 */
-	chan_id += (ffs(tdma->chan_mask) - 1);
+	}
 
 	chan = dma_get_slave_channel(&tdma->channels[chan_id].vc.chan);
 	if (!chan)
