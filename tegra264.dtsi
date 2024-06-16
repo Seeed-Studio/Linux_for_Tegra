@@ -4322,8 +4322,7 @@
 		};
 
 		ccplex@8120000000 {
-			compatible = "nvidia,tegra264-ccplex-cluster",
-				     "nvidia,tegra234-ccplex-cluster";
+			compatible = "nvidia,tegra264-ccplex-cluster";
 			status = "disabled";
 
 			nvidia,bpmp = <&bpmp>;
