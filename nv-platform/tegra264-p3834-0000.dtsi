@@ -232,6 +232,14 @@
 			status = "okay";
 		};
 
+		host1x@8181200000 {
+			status = "okay";
+
+			vic@8188050000 {
+				status = "okay";
+			};
+		};
+
 		/* PCIe C0 ecam generic node for iGPU */
 		pcie@d0b0000000 {
 			status = "okay";
