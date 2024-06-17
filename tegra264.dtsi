@@ -3908,7 +3908,7 @@
 					 <&bpmp TEGRA264_CLK_NAFLL_PVA0_VPS>,
 					 <&bpmp TEGRA264_CLK_PVA0_VPS>;
 				clock-names = "axi", "vps0", "vps1";
-
+				power-domains = <&bpmp TEGRA264_POWER_DOMAIN_PVA0>;
 				iommus = <&smmu4_mmu TEGRA_SID_PVA>;
 				dma-coherent;
 				status = "disabled";
