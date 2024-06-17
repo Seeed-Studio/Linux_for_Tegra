@@ -183,6 +183,11 @@ static void tvnet_host_alloc_empty_buffers(struct tvnet_priv *tvnet)
 			break;
 		}
 
+		/* The PCIe link is stable and dependable,
+		 * so it's not necessary to perform a software checksum.
+		 */
+		skb->ip_summed = CHECKSUM_UNNECESSARY;
+
 		ep2h_empty_ptr = kmalloc(sizeof(*ep2h_empty_ptr), GFP_ATOMIC);
 		if (!ep2h_empty_ptr) {
 			dma_unmap_single(d, iova, len, DMA_FROM_DEVICE);
@@ -651,16 +656,18 @@ static int tvnet_host_process_ep2h_msg(struct tvnet_priv *tvnet)
 		list_for_each_entry(ep2h_empty_ptr, &tvnet->ep2h_empty_list,
 				    list) {
 			if (ep2h_empty_ptr->iova == pcie_address) {
+				list_del(&ep2h_empty_ptr->list);
 				found = 1;
 				break;
 			}
 		}
-		WARN_ON(!found);
-		list_del(&ep2h_empty_ptr->list);
 		spin_unlock_irqrestore(&tvnet->ep2h_empty_lock, flags);
 
 		/* Advance H2EP full buffer after search in local list */
 		tvnet_ivc_advance_rd(&tvnet->ep2h_full);
+		if (WARN_ON(!found))
+			continue;
+
 		/* If EP2H network queue is stopped due to lack of EP2H_FULL
 		 * queue, raising ctrl irq will help.
 		 */

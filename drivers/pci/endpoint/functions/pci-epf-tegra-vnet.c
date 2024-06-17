@@ -30,6 +30,8 @@
 #endif
 
 #define BAR0_SIZE SZ_4M
+#define APPL_INTR_EN_L1_8_0                     0x44
+#define APPL_INTR_EN_L1_8_EDMA_INT_EN           BIT(6)
 
 enum bar0_amap_type {
 	META_DATA,
@@ -146,6 +148,8 @@ struct pci_epf_tvnet {
 	/* IOVA alloc abstraction.*/
 	struct iova_domain *iovad;
 	struct iova *iova;
+	struct resource *appl_res;
+	void __iomem *appl_base;
 #endif
 };
 
@@ -304,6 +308,10 @@ static void tvnet_ep_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 			break;
 		}
 
+		/* The PCIe link is stable and dependable,
+		 * so it's not necessary to perform a software checksum.
+		 */
+		skb->ip_summed = CHECKSUM_UNNECESSARY;
 #else
 		iova = tvnet_ivoa_alloc(tvnet);
 		if (iova == DMA_ERROR_CODE) {
@@ -849,18 +857,19 @@ static int tvnet_ep_process_h2ep_msg(struct pci_epf_tvnet *tvnet)
 		list_for_each_entry(h2ep_empty_ptr, &tvnet->h2ep_empty_list,
 				    list) {
 			if (h2ep_empty_ptr->iova == pcie_address) {
+				list_del(&h2ep_empty_ptr->list);
 				found = 1;
 				break;
 			}
 		}
-		WARN_ON(!found);
-		list_del(&h2ep_empty_ptr->list);
 		spin_unlock_irqrestore(&tvnet->h2ep_empty_lock, flags);
 
 		/* Advance H2EP full buffer after search in local list */
 		tvnet_ivc_advance_rd(&tvnet->h2ep_full);
+		if (WARN_ON(!found))
+			continue;
 #if ENABLE_DMA
-		dma_unmap_single(cdev, pcie_address, ndev->mtu,
+		dma_unmap_single(cdev, pcie_address, ndev->mtu + ETH_HLEN,
 				 DMA_FROM_DEVICE);
 		skb = h2ep_empty_ptr->skb;
 		skb_put(skb, len);
@@ -1597,7 +1606,7 @@ static void tvnet_ep_pci_epf_linkup(struct pci_epf *epf)
 #endif
 {
 	struct pci_epf_tvnet *tvnet = epf_get_drvdata(epf);
-
+	u32 val;
 #if ENABLE_DMA
 	tvnet_ep_setup_dma(tvnet);
 #endif
@@ -1611,6 +1620,11 @@ static void tvnet_ep_pci_epf_linkup(struct pci_epf *epf)
 
 	tvnet->pcie_link_status = true;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0))
+	val = readl(tvnet->appl_base + APPL_INTR_EN_L1_8_0);
+	if (val & APPL_INTR_EN_L1_8_EDMA_INT_EN)
+		writel(val & ~APPL_INTR_EN_L1_8_EDMA_INT_EN,
+			tvnet->appl_base + APPL_INTR_EN_L1_8_0);
+
 	return 0;
 #endif
 }
@@ -1713,6 +1727,18 @@ static int tvnet_ep_pci_epf_bind(struct pci_epf *epf)
 		dev_err(fdev, "dma region map failed: %d\n", ret);
 		goto fail;
 	}
+
+	tvnet->appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+							"appl");
+	if (!tvnet->appl_res) {
+		dev_err(fdev, "Failed to find \"appl\" region\n");
+		goto fail;
+	}
+
+	tvnet->appl_base = devm_ioremap(fdev, tvnet->appl_res->start,
+					PAGE_SIZE);
+	if (IS_ERR(tvnet->appl_base))
+		goto fail;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0))
 	tvnet->iovad = (struct iova_domain *)&domain->iova_cookie->iovad;
