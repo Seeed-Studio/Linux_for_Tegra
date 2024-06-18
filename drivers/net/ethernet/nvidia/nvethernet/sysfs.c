@@ -76,6 +76,84 @@ static ssize_t ether_desc_dump_store(struct device *dev,
 static DEVICE_ATTR(desc_dump_enable, (S_IRUGO | S_IWUSR),
 		   ether_desc_dump_show,
 		   ether_desc_dump_store);
+
+/**
+ * @brief Shows current configured tx queue
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current Tx Q configuration
+ */
+static ssize_t ether_mac_tx_q_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+
+	if (osi_core->pre_sil != OSI_ENABLE) {
+		dev_err(pdata->dev, "Not Allowed. Not pre-sil platform\n");
+		return 0;
+	}
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Current Tx queue: %d\n",
+			 pdata->tx_queue_select);
+	return (buf - start);
+}
+
+/**
+ * @brief Choose dma channel for Tx traffic or Tx queue select when non-zero
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer which contains dma channel number or Tx Q
+ * @param[in] size: size of buffer
+ *
+ * @return size of buffer.
+ */
+static ssize_t ether_mac_tx_q_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	int ret, bufp = 0, dma_chanel = 0;
+
+	if (osi_core->pre_sil != OSI_ENABLE) {
+		dev_err(pdata->dev, "Not Allowed. Not pre-sil platform\n");
+		return 0;
+	}
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return size;
+	}
+
+	ret = sscanf(buf + bufp, "%d", &dma_chanel);
+	if (ret != 1 || dma_chanel >= OSI_MGBE_MAX_NUM_CHANS) {
+		dev_err(pdata->dev, "Failed to parse args or invalid dma chan");
+		goto exit;
+	}
+	pdata->tx_queue_select = dma_chanel;
+
+exit:
+	return size;
+}
+
+/**
+ * @brief Sysfs attribute for MAC Tx Q
+ *
+ */
+static DEVICE_ATTR(mac_tx_q, (S_IRUGO | S_IWUSR),
+		   ether_mac_tx_q_show,
+		   ether_mac_tx_q_store);
 #endif /* OSI_DEBUG */
 
 /**
@@ -736,8 +814,11 @@ static void dump_byp_lut(char **buf_p, unsigned short ctlr_sel,
 	struct osi_macsec_lut_config lut_config = {0};
 	char *buf = *buf_p;
 	int i;
+	const unsigned int byp_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_BYP_LUT_MAX_INDEX,
+		OSI_BYP_LUT_MAX_INDEX_T26X};
 
-	for (i = 0; i <= OSI_BYP_LUT_MAX_INDEX; i++) {
+	for (i = 0; i <= byp_lut_max_index[osi_core->macsec]; i++) {
 		memset(&lut_config, OSI_NONE, sizeof(lut_config));
 		lut_config.table_config.ctlr_sel = ctlr_sel;
 		lut_config.lut_sel = OSI_LUT_SEL_BYPASS;
@@ -820,6 +901,10 @@ static ssize_t macsec_byp_lut_store(struct device *dev,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_macsec_lut_config lut_config;
 	int ret, bufp, ctrl_port;
+	unsigned int macsec = osi_core->macsec;
+	const unsigned int byp_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_BYP_LUT_MAX_INDEX,
+		OSI_BYP_LUT_MAX_INDEX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -844,9 +929,9 @@ static ssize_t macsec_byp_lut_store(struct device *dev,
 	lut_config.lut_sel = OSI_LUT_SEL_BYPASS;
 	lut_config.table_config.rw = OSI_LUT_WRITE;
 	/* Rest of LUT attributes are filled by parse_inputs() */
-	if (lut_config.table_config.index > OSI_BYP_LUT_MAX_INDEX) {
+	if (lut_config.table_config.index > byp_lut_max_index[macsec]) {
 		dev_err(dev, "%s: Index can't be > %d\n", __func__,
-			OSI_BYP_LUT_MAX_INDEX);
+			byp_lut_max_index[macsec]);
 		goto exit;
 	}
 
@@ -871,13 +956,13 @@ static DEVICE_ATTR(macsec_byp_lut, (S_IRUGO | S_IWUSR),
 		   macsec_byp_lut_store);
 
 /**
- * @brief Shows the current macsec statitics counters
+ * @brief Shows the current Rx macsec statitics counters
  *
  * @param[in] dev: Device data.
  * @param[in] attr: Device attribute
  * @param[in] buf: Buffer to print the current counters
  */
-static ssize_t macsec_mmc_counters_show(struct device *dev,
+static ssize_t macsec_mmc_counters_show_rx(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
 	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
@@ -886,6 +971,9 @@ static ssize_t macsec_mmc_counters_show(struct device *dev,
 	struct osi_macsec_mmc_counters *mmc = &osi_core->macsec_mmc;
 	unsigned short i;
 	char *start = buf;
+	unsigned int macsec = osi_core->macsec;
+	const unsigned int sc_idx_max[MAX_MACSEC_IP_TYPES] = {
+			OSI_SC_INDEX_MAX, OSI_SC_INDEX_MAX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -893,17 +981,6 @@ static ssize_t macsec_mmc_counters_show(struct device *dev,
 	}
 
 	osi_macsec_read_mmc(osi_core);
-	buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_untaged:\t%llu\n",
-		mmc->tx_pkts_untaged);
-	buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_too_long:\t%llu\n",
-		mmc->tx_pkts_too_long);
-	buf += scnprintf(buf, PAGE_SIZE, "tx_octets_protected:\t%llu\n",
-		mmc->tx_octets_protected);
-	for (i = 0; i < OSI_MACSEC_SC_INDEX_MAX; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_protected sc%d:\t%llu\n",
-			i, mmc->tx_pkts_protected[i]);
-	}
-
 	buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_no_tag:  \t%llu\n",
 		mmc->rx_pkts_no_tag);
 	buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_untagged:\t%llu\n",
@@ -918,16 +995,18 @@ static ssize_t macsec_mmc_counters_show(struct device *dev,
 		mmc->rx_pkts_overrun);
 	buf += scnprintf(buf, PAGE_SIZE, "rx_octets_validated:\t%llu\n",
 		mmc->rx_octets_validated);
+	buf += scnprintf(buf, PAGE_SIZE, "rx_octets_decrypted:\t%llu\n",
+		mmc->rx_octets_decrypted);
 
-	for (i = 0; i < OSI_MACSEC_SC_INDEX_MAX; i++) {
+	for (i = 0; i <= sc_idx_max[macsec]; i++) {
 		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_invalid sc%d:\t%llu\n",
 			i, mmc->in_pkts_invalid[i]);
 	}
-	for (i = 0; i < OSI_MACSEC_SC_INDEX_MAX; i++) {
+	for (i = 0; i <= sc_idx_max[macsec]; i++) {
 		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_delayed sc%d:\t%llu\n",
 			i, mmc->rx_pkts_delayed[i]);
 	}
-	for (i = 0; i < OSI_MACSEC_SC_INDEX_MAX; i++) {
+	for (i = 0; i <= sc_idx_max[macsec]; i++) {
 		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_ok sc%d: \t%llu\n",
 			i, mmc->rx_pkts_ok[i]);
 	}
@@ -936,11 +1015,64 @@ static ssize_t macsec_mmc_counters_show(struct device *dev,
 }
 
 /**
- * @brief Sysfs attribute for MACsec irq stats
+ * @brief Sysfs attribute for MACsec rx mmc counters
  *
  */
-static DEVICE_ATTR(macsec_mmc_counters, (S_IRUGO | S_IWUSR),
-		   macsec_mmc_counters_show,
+static DEVICE_ATTR(macsec_mmc_counters_rx, (S_IRUGO | S_IWUSR),
+		   macsec_mmc_counters_show_rx,
+		   NULL);
+
+
+/**
+ * @brief Shows the current Tx macsec statitics counters
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current counters
+ */
+static ssize_t macsec_mmc_counters_show_tx(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_macsec_mmc_counters *mmc = &osi_core->macsec_mmc;
+	unsigned short i;
+	char *start = buf;
+	unsigned int macsec = osi_core->macsec;
+	const unsigned int sc_idx_max[MAX_MACSEC_IP_TYPES] = {
+			OSI_SC_INDEX_MAX, OSI_SC_INDEX_MAX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
+	osi_macsec_read_mmc(osi_core);
+	buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_untaged:\t%llu\n",
+		mmc->tx_pkts_untaged);
+	buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_too_long:\t%llu\n",
+		mmc->tx_pkts_too_long);
+	buf += scnprintf(buf, PAGE_SIZE, "tx_octets_protected:\t%llu\n",
+		mmc->tx_octets_protected);
+	buf += scnprintf(buf, PAGE_SIZE, "tx_octets_encrypted:\t%llu\n",
+		mmc->tx_octets_encrypted);
+	for (i = 0; i <= sc_idx_max[macsec]; i++) {
+		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_protected sc%d:\t%llu\n",
+			i, mmc->tx_pkts_protected[i]);
+		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_encrypted sc%d:\t%llu\n",
+			i, mmc->tx_pkts_encrypted[i]);
+	}
+
+	return (buf - start);
+}
+
+/**
+ * @brief Sysfs attribute for MACsec tx mmc counters
+ *
+ */
+static DEVICE_ATTR(macsec_mmc_counters_tx, (S_IRUGO | S_IWUSR),
+		   macsec_mmc_counters_show_tx,
 		   NULL);
 
 #ifdef DEBUG_MACSEC
@@ -1007,6 +1139,11 @@ static ssize_t macsec_dbg_buffer_show(struct device *dev,
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
 		return 0;
 	}
+	if (osi_core->macsec == OSI_MACSEC_T26X) {
+		dev_err(pdata->dev, "T264 Doesn't support MACSEC debug buffer feature\n");
+		return 0;
+	}
+
 	buf += scnprintf(buf, PAGE_SIZE, "Tx Dbg Buffers:\n");
 	dump_dbg_buffers(&buf, OSI_CTLR_SEL_TX, osi_core);
 
@@ -1050,6 +1187,10 @@ static ssize_t macsec_dbg_events_store(struct device *dev,
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return size;
+	}
+	if (osi_core->macsec == OSI_MACSEC_T26X) {
+		dev_err(pdata->dev, "T264 Doesn't support MACSEC debug buffer feature\n");
 		return size;
 	}
 
@@ -1097,65 +1238,34 @@ static DEVICE_ATTR(macsec_dbg_events, (S_IRUGO | S_IWUSR),
 #endif /* DEBUG_MACSEC */
 
 /**
- * @brief Shows the current SCI LUT configuration
+ * @brief Shows the current SCI LUT configuration for RX
  *
  * @param[in] dev: Device data.
  * @param[in] attr: Device attribute
  * @param[in] buf: Buffer to print the current SCI LUT configuration
  */
-static ssize_t macsec_sci_lut_show(struct device *dev,
+static ssize_t macsec_sci_lut_show_rx(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
 	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_macsec_lut_config lut_config = {0};
-	unsigned int an_valid;
 	int i;
 	char *start = buf;
+	unsigned int macsec = osi_core->macsec;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
 		return 0;
 	}
 
-	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
-
-	for (i = 0; i <= OSI_SC_LUT_MAX_INDEX; i++) {
-		memset(&lut_config, OSI_NONE, sizeof(lut_config));
-		lut_config.table_config.ctlr_sel = OSI_CTLR_SEL_TX;
-		lut_config.lut_sel = OSI_LUT_SEL_SCI;
-		lut_config.table_config.rw = OSI_LUT_READ;
-		lut_config.table_config.index = i;
-		if (osi_macsec_config_lut(osi_core, &lut_config) < 0) {
-			dev_err(dev, "%s: Failed to read SCI LUT\n", __func__);
-			goto exit;
-		} else {
-			buf += scnprintf(buf, PAGE_SIZE, "%d.\t", i);
-			if ((lut_config.flags & OSI_LUT_FLAGS_ENTRY_VALID) !=
-			    OSI_LUT_FLAGS_ENTRY_VALID) {
-				buf += scnprintf(buf, PAGE_SIZE, "Invalid\n");
-				memset(&lut_config, 0, sizeof(lut_config));
-				continue;
-			}
-			format_output(&buf, &lut_config);
-			/* Tx SCI LUT output field */
-			an_valid = lut_config.sci_lut_out.an_valid;
-			buf += scnprintf(buf, PAGE_SIZE, "AN3: %d AN2: %d "
-					 "AN1: %d AN0: %d ",
-					 an_valid & OSI_AN3_VALID ? 1 : 0,
-					 an_valid & OSI_AN2_VALID ? 1 : 0,
-					 an_valid & OSI_AN1_VALID ? 1 : 0,
-					 an_valid & OSI_AN0_VALID ? 1 : 0);
-			buf += scnprintf(buf, PAGE_SIZE, "sc_index: %d\n",
-					 lut_config.sci_lut_out.sc_index);
-			memset(&lut_config, 0, sizeof(lut_config));
-		}
-	}
-
 	buf += scnprintf(buf, PAGE_SIZE, "Rx:\n");
 
-	for (i = 0; i <= OSI_SC_LUT_MAX_INDEX; i++) {
+	for (i = 0; i <= sc_lut_max_index[macsec]; i++) {
 		memset(&lut_config, OSI_NONE, sizeof(lut_config));
 		lut_config.table_config.ctlr_sel = OSI_CTLR_SEL_RX;
 		lut_config.lut_sel = OSI_LUT_SEL_SCI;
@@ -1193,6 +1303,162 @@ exit:
 	return (buf - start);
 }
 
+/**
+ * @brief Sysfs attribute for MACsec SCI LUT config
+ *
+ */
+static DEVICE_ATTR(macsec_sci_lut_rx, (S_IRUGO | S_IWUSR),
+		   macsec_sci_lut_show_rx,
+		   NULL);
+
+/**
+ * @brief Shows the current SCI LUT configuration for TX from Index 0 to 23
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current SCI LUT configuration
+ */
+static ssize_t macsec_sci_lut_show_tx(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_macsec_lut_config lut_config = {0};
+	unsigned int an_valid;
+	int i;
+	char *start = buf;
+	unsigned int macsec = osi_core->macsec;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
+
+	for (i = 0; i < (sc_lut_max_index[macsec] > MAX_ENTRIES_PER_SYSFS_NODE?
+				MAX_ENTRIES_PER_SYSFS_NODE: sc_lut_max_index[macsec]);
+				i++) {
+		memset(&lut_config, OSI_NONE, sizeof(lut_config));
+		lut_config.table_config.ctlr_sel = OSI_CTLR_SEL_TX;
+		lut_config.lut_sel = OSI_LUT_SEL_SCI;
+		lut_config.table_config.rw = OSI_LUT_READ;
+		lut_config.table_config.index = i;
+		if (osi_macsec_config_lut(osi_core, &lut_config) < 0) {
+			dev_err(dev, "%s: Failed to read SCI LUT\n", __func__);
+			goto exit;
+		} else {
+			buf += scnprintf(buf, PAGE_SIZE, "%d.\t", i);
+			if ((lut_config.flags & OSI_LUT_FLAGS_ENTRY_VALID) !=
+			    OSI_LUT_FLAGS_ENTRY_VALID) {
+				buf += scnprintf(buf, PAGE_SIZE, "Invalid\n");
+				memset(&lut_config, 0, sizeof(lut_config));
+				continue;
+			}
+			format_output(&buf, &lut_config);
+			/* Tx SCI LUT output field */
+			an_valid = lut_config.sci_lut_out.an_valid;
+			buf += scnprintf(buf, PAGE_SIZE, "AN3: %d AN2: %d "
+					 "AN1: %d AN0: %d ",
+					 an_valid & OSI_AN3_VALID ? 1 : 0,
+					 an_valid & OSI_AN2_VALID ? 1 : 0,
+					 an_valid & OSI_AN1_VALID ? 1 : 0,
+					 an_valid & OSI_AN0_VALID ? 1 : 0);
+			buf += scnprintf(buf, PAGE_SIZE, "sc_index: %d\n",
+					 lut_config.sci_lut_out.sc_index);
+			memset(&lut_config, 0, sizeof(lut_config));
+		}
+	}
+
+exit:
+	return (buf - start);
+}
+
+/**
+ * @brief Sysfs attribute for MACsec SCI LUT config
+ *
+ */
+static DEVICE_ATTR(macsec_sci_lut_tx, (S_IRUGO | S_IWUSR),
+		   macsec_sci_lut_show_tx,
+		   NULL);
+
+/**
+ * @brief Shows the current SCI LUT configuration for TX from Index 24
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current SCI LUT configuration
+ */
+static ssize_t macsec_sci_lut_show_tx_2(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_macsec_lut_config lut_config = {0};
+	unsigned int an_valid;
+	int i;
+	char *start = buf;
+	unsigned int macsec = osi_core->macsec;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
+
+	for (i = MAX_ENTRIES_PER_SYSFS_NODE; i <= sc_lut_max_index[macsec]; i++) {
+		memset(&lut_config, OSI_NONE, sizeof(lut_config));
+		lut_config.table_config.ctlr_sel = OSI_CTLR_SEL_TX;
+		lut_config.lut_sel = OSI_LUT_SEL_SCI;
+		lut_config.table_config.rw = OSI_LUT_READ;
+		lut_config.table_config.index = i;
+		if (osi_macsec_config_lut(osi_core, &lut_config) < 0) {
+			dev_err(dev, "%s: Failed to read SCI LUT\n", __func__);
+			goto exit;
+		} else {
+			buf += scnprintf(buf, PAGE_SIZE, "%d.\t", i);
+			if ((lut_config.flags & OSI_LUT_FLAGS_ENTRY_VALID) !=
+			    OSI_LUT_FLAGS_ENTRY_VALID) {
+				buf += scnprintf(buf, PAGE_SIZE, "Invalid\n");
+				memset(&lut_config, 0, sizeof(lut_config));
+				continue;
+			}
+			format_output(&buf, &lut_config);
+			/* Tx SCI LUT output field */
+			an_valid = lut_config.sci_lut_out.an_valid;
+			buf += scnprintf(buf, PAGE_SIZE, "AN3: %d AN2: %d "
+					 "AN1: %d AN0: %d ",
+					 an_valid & OSI_AN3_VALID ? 1 : 0,
+					 an_valid & OSI_AN2_VALID ? 1 : 0,
+					 an_valid & OSI_AN1_VALID ? 1 : 0,
+					 an_valid & OSI_AN0_VALID ? 1 : 0);
+			buf += scnprintf(buf, PAGE_SIZE, "sc_index: %d\n",
+					 lut_config.sci_lut_out.sc_index);
+			memset(&lut_config, 0, sizeof(lut_config));
+		}
+	}
+
+exit:
+	return (buf - start);
+}
+
+/**
+ * @brief Sysfs attribute for MACsec SCI LUT config
+ *
+ */
+static DEVICE_ATTR(macsec_sci_lut_tx_2, (S_IRUGO | S_IWUSR),
+		   macsec_sci_lut_show_tx_2,
+		   NULL);
+
 #define SCI_LUT_INPUTS 13
 
 /**
@@ -1218,6 +1484,10 @@ static ssize_t macsec_sci_lut_store(struct device *dev,
 	int temp[OSI_SCI_LEN];
 	int i;
 	int sc_index;
+	unsigned int macsec = osi_core->macsec;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -1243,14 +1513,14 @@ static ssize_t macsec_sci_lut_store(struct device *dev,
 	lut_config.lut_sel = OSI_LUT_SEL_SCI;
 	lut_config.table_config.rw = OSI_LUT_WRITE;
 	/* Rest of LUT attributes are filled by parse_inputs() */
-	if (lut_config.table_config.index > OSI_SC_LUT_MAX_INDEX) {
+	if (lut_config.table_config.index > sc_lut_max_index[macsec]) {
 		dev_err(dev, "%s: Index can't be > %d\n", __func__,
-			OSI_SC_LUT_MAX_INDEX);
+			sc_lut_max_index[macsec]);
 		goto exit;
 	}
-	if (sc_index > OSI_SC_LUT_MAX_INDEX) {
+	if (sc_index > sc_lut_max_index[macsec]) {
 		dev_err(dev, "%s: SC Index can't be > %d\n", __func__,
-			OSI_SC_LUT_MAX_INDEX);
+			sc_lut_max_index[macsec]);
 		goto exit;
 	}
 
@@ -1285,18 +1555,20 @@ exit:
  *
  */
 static DEVICE_ATTR(macsec_sci_lut, (S_IRUGO | S_IWUSR),
-		   macsec_sci_lut_show,
+		   NULL,
 		   macsec_sci_lut_store);
 
 #ifdef MACSEC_KEY_PROGRAM
 static void dump_kt(char **buf_p, unsigned short ctlr_sel,
-		    struct osi_core_priv_data *osi_core)
+		    struct osi_core_priv_data *osi_core,
+		    unsigned short start_index,
+		    unsigned short end_index)
 {
 	struct osi_macsec_kt_config kt_config = {0};
 	char *buf = *buf_p;
 	int i, j;
 
-	for (i = 0; i <= OSI_TABLE_INDEX_MAX; i++) {
+	for (i = start_index; i <= end_index; i++) {
 		memset(&kt_config, OSI_NONE, sizeof(kt_config));
 		kt_config.table_config.ctlr_sel = ctlr_sel;
 		kt_config.table_config.rw = OSI_LUT_READ;
@@ -1345,6 +1617,9 @@ static ssize_t macsec_tx_kt_show(struct device *dev,
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	char *start = buf;
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -1352,10 +1627,82 @@ static ssize_t macsec_tx_kt_show(struct device *dev,
 	}
 
 	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
-	dump_kt(&buf, OSI_CTLR_SEL_TX, osi_core);
+	dump_kt(&buf, OSI_CTLR_SEL_TX, osi_core, 0U, 
+		(lut_max_index[osi_core->macsec] <= MAX_SA_ENTRIES_PER_SYSFS_NODE?
+		 lut_max_index[osi_core->macsec]:
+		 MAX_SA_ENTRIES_PER_SYSFS_NODE - 1U));
 
 	return (buf - start);
 }
+
+/**
+ * @brief Shows the current macsec Tx key table from 33 to 65 indices
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current LUT configuration
+ */
+static ssize_t macsec_tx_kt_show_2(struct device *dev,
+			      struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+	if (lut_max_index[osi_core->macsec] <= MAX_SA_ENTRIES_PER_SYSFS_NODE) {
+		dev_err(pdata->dev, "2nd node of KT lut is not allowed for this platform\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
+	dump_kt(&buf, OSI_CTLR_SEL_TX, osi_core, MAX_SA_ENTRIES_PER_SYSFS_NODE,
+			(2U * MAX_SA_ENTRIES_PER_SYSFS_NODE) - 1U);
+
+	return (buf - start);
+}
+
+/**
+ * @brief Shows the current macsec Tx key table from 66 to 96 indices
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current LUT configuration
+ */
+static ssize_t macsec_tx_kt_show_3(struct device *dev,
+			      struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+	if (lut_max_index[osi_core->macsec] <= (2U * MAX_SA_ENTRIES_PER_SYSFS_NODE)) {
+		dev_err(pdata->dev, "3rd node of KT lut is not allowed for this platform\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
+	dump_kt(&buf, OSI_CTLR_SEL_TX, osi_core, (2U * MAX_SA_ENTRIES_PER_SYSFS_NODE),
+			lut_max_index[osi_core->macsec]);
+
+	return (buf - start);
+}
+
 
 /**
  * @brief Shows the current macsec Rx key table
@@ -1371,6 +1718,9 @@ static ssize_t macsec_rx_kt_show(struct device *dev,
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	char *start = buf;
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -1378,7 +1728,78 @@ static ssize_t macsec_rx_kt_show(struct device *dev,
 	}
 
 	buf += scnprintf(buf, PAGE_SIZE, "Rx:\n");
-	dump_kt(&buf, OSI_CTLR_SEL_RX, osi_core);
+	dump_kt(&buf, OSI_CTLR_SEL_RX, osi_core, 0U, 
+		(lut_max_index[osi_core->macsec] <= MAX_SA_ENTRIES_PER_SYSFS_NODE?
+		 lut_max_index[osi_core->macsec]:
+		 MAX_SA_ENTRIES_PER_SYSFS_NODE - 1U));
+
+	return (buf - start);
+}
+
+/**
+ * @brief Shows the current macsec Rx key table from 33 to 65 indices
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current LUT configuration
+ */
+static ssize_t macsec_rx_kt_show_2(struct device *dev,
+			      struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+	if (lut_max_index[osi_core->macsec] <= MAX_SA_ENTRIES_PER_SYSFS_NODE) {
+		dev_err(pdata->dev, "2nd node of KT lut is not allowed for this platform\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Rx:\n");
+	dump_kt(&buf, OSI_CTLR_SEL_RX, osi_core, MAX_SA_ENTRIES_PER_SYSFS_NODE, 
+			(2U * MAX_SA_ENTRIES_PER_SYSFS_NODE) - 1U);
+
+	return (buf - start);
+}
+
+/**
+ * @brief Shows the current macsec Rx key table from 66 to 96 indices
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current LUT configuration
+ */
+static ssize_t macsec_rx_kt_show_3(struct device *dev,
+			      struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+	if (lut_max_index[osi_core->macsec] <= (2U * MAX_SA_ENTRIES_PER_SYSFS_NODE)) {
+		dev_err(pdata->dev, "3rd node of KT lut is not allowed for this platform\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Rx:\n");
+	dump_kt(&buf, OSI_CTLR_SEL_RX, osi_core, (2U * MAX_SA_ENTRIES_PER_SYSFS_NODE), 
+			lut_max_index[osi_core->macsec]);
 
 	return (buf - start);
 }
@@ -1408,6 +1829,9 @@ static ssize_t macsec_kt_store(struct device *dev,
 	struct osi_macsec_kt_config kt_config = {0};
 	int temp[OSI_KEY_LEN_256] = {0};
 	unsigned char sak[OSI_KEY_LEN_256] = {0};
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
 
 	int valid, index, ctlr, key256bit;
 	int i, ret, bufp = 0;
@@ -1441,7 +1865,7 @@ static ssize_t macsec_kt_store(struct device *dev,
 			}
 	}
 
-	if ((index > OSI_TABLE_INDEX_MAX) ||
+	if ((index > lut_max_index[osi_core->macsec]) ||
 	    (valid != OSI_ENABLE && valid != OSI_DISABLE) ||
 	    (ctlr != OSI_CTLR_SEL_TX && ctlr != OSI_CTLR_SEL_RX)) {
 		dev_err(pdata->dev, "%s: Invalid inputs\n", __func__);
@@ -1455,7 +1879,7 @@ static ssize_t macsec_kt_store(struct device *dev,
 	/* HKEY GENERATION */
 	tfm = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
 	if (crypto_cipher_setkey(tfm, sak, OSI_KEY_LEN_128)) {
-		pr_err("%s: Failed to set cipher key for H generation",
+		dev_err(pdata->dev,"%s: Failed to set cipher key for H generation",
 			__func__);
 		goto exit;
 	}
@@ -1491,8 +1915,11 @@ static ssize_t macsec_kt_store(struct device *dev,
 
 	ret = osi_macsec_config_kt(osi_core, &kt_config);
 	if (ret < 0) {
-		pr_err("%s: Failed to set SAK", __func__);
+		dev_err(pdata->dev,"%s: Failed to set SAK", __func__);
 		goto exit;
+	} else {
+		dev_err(pdata->dev,"%s: Added KT LUT idx: %d", __func__,
+				kt_config.table_config.index);
 	}
 
 exit:
@@ -1522,6 +1949,39 @@ static DEVICE_ATTR(macsec_tx_kt, (S_IRUGO | S_IWUSR),
 static DEVICE_ATTR(macsec_rx_kt, (S_IRUGO | S_IWUSR),
 		   macsec_rx_kt_show,
 		   NULL);
+
+/**
+ * @brief Sysfs attribute for MACsec key table (show Tx table)
+ *
+ */
+static DEVICE_ATTR(macsec_tx_kt_2, (S_IRUGO | S_IWUSR),
+		   macsec_tx_kt_show_2,
+		   NULL);
+
+/**
+ * @brief Sysfs attribute for MACsec key table (show Rx table)
+ *
+ */
+static DEVICE_ATTR(macsec_rx_kt_2, (S_IRUGO | S_IWUSR),
+		   macsec_rx_kt_show_2,
+		   NULL);
+/**
+ * @brief Sysfs attribute for MACsec key table (show Tx table)
+ *
+ */
+static DEVICE_ATTR(macsec_tx_kt_3, (S_IRUGO | S_IWUSR),
+		   macsec_tx_kt_show_3,
+		   NULL);
+
+/**
+ * @brief Sysfs attribute for MACsec key table (show Rx table)
+ *
+ */
+static DEVICE_ATTR(macsec_rx_kt_3, (S_IRUGO | S_IWUSR),
+		   macsec_rx_kt_show_3,
+		   NULL);
+
+
 #endif /* MACSEC_KEY_PROGRAM */
 
 static void dump_sc_state_lut(char **buf_p, unsigned short ctlr_sel,
@@ -1530,8 +1990,11 @@ static void dump_sc_state_lut(char **buf_p, unsigned short ctlr_sel,
 	struct osi_macsec_lut_config lut_config = {0};
 	char *buf = *buf_p;
 	int i;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
 
-	for (i = 0; i <= OSI_SC_LUT_MAX_INDEX; i++) {
+	for (i = 0; i <= sc_lut_max_index[osi_core->macsec]; i++) {
 		memset(&lut_config, OSI_NONE, sizeof(lut_config));
 		lut_config.table_config.ctlr_sel = ctlr_sel;
 		lut_config.table_config.rw = OSI_LUT_READ;
@@ -1601,6 +2064,9 @@ static ssize_t macsec_sc_state_lut_store(struct device *dev,
 	int index, ctlr;
 	int ret;
 	nveu32_t curr_an;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -1613,7 +2079,7 @@ static ssize_t macsec_sc_state_lut_store(struct device *dev,
 		goto exit;
 	}
 
-	if ((index > OSI_SC_LUT_MAX_INDEX) ||
+	if ((index > sc_lut_max_index[osi_core->macsec]) ||
 	    (ctlr != OSI_CTLR_SEL_TX && ctlr != OSI_CTLR_SEL_RX) ||
 	    (curr_an >= OSI_MAX_NUM_SA)) {
 		dev_err(pdata->dev, "%s:Invalid inputs", __func__);
@@ -1652,8 +2118,11 @@ static void dump_sa_state_lut(char **buf_p, unsigned short ctlr_sel,
 	struct osi_macsec_lut_config lut_config = {0};
 	char *buf = *buf_p;
 	int i;
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
 
-	for (i = 0; i <= OSI_SA_LUT_MAX_INDEX; i++) {
+	for (i = 0; i <= lut_max_index[osi_core->macsec]; i++) {
 		memset(&lut_config, OSI_NONE, sizeof(lut_config));
 		lut_config.table_config.ctlr_sel = ctlr_sel;
 		lut_config.table_config.rw = OSI_LUT_READ;
@@ -1742,6 +2211,9 @@ static ssize_t macsec_sa_state_lut_store(struct device *dev,
 	int index, ctlr;
 	int ret;
 	unsigned int next_pn, lowest_pn;
+	const nveu32_t lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SA_LUT_MAX_INDEX,
+		OSI_SA_LUT_MAX_INDEX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -1754,7 +2226,7 @@ static ssize_t macsec_sa_state_lut_store(struct device *dev,
 		goto exit;
 	}
 
-	if ((index > OSI_SA_LUT_MAX_INDEX) ||
+	if ((index > lut_max_index[osi_core->macsec]) ||
 	    (ctlr != OSI_CTLR_SEL_TX && ctlr != OSI_CTLR_SEL_RX)) {
 		dev_err(pdata->dev, "%s:Invalid inputs", __func__);
 		goto exit;
@@ -1790,49 +2262,72 @@ static DEVICE_ATTR(macsec_sa_state_lut, (S_IRUGO | S_IWUSR),
 
 
 static void dump_sc_param_lut(char **buf_p, unsigned short ctlr_sel,
-			      struct osi_core_priv_data *osi_core)
+			      struct osi_core_priv_data *osi_core,
+			      unsigned short start_index,
+			      unsigned short end_index)
 {
 	struct osi_macsec_lut_config lut_config = {0};
 	char *buf = *buf_p;
-	int i;
+	char sci_zero[8] = {0};
+	unsigned int i;
 
-	for (i = 0; i <= OSI_SC_LUT_MAX_INDEX; i++) {
+	for (i = start_index; i <= end_index; i++) {
 		memset(&lut_config, OSI_NONE, sizeof(lut_config));
 		lut_config.table_config.ctlr_sel = ctlr_sel;
 		lut_config.table_config.rw = OSI_LUT_READ;
 		lut_config.table_config.index = i;
 		lut_config.lut_sel = OSI_LUT_SEL_SC_PARAM;
 		if (osi_macsec_config_lut(osi_core, &lut_config) < 0) {
-			pr_err("%s: Failed to read BYP LUT\n", __func__);
+			pr_err("%s: Failed to read SC PARAM LUT\n", __func__);
 			goto exit;
 		}
 
 		switch (ctlr_sel) {
 		case OSI_CTLR_SEL_TX:
-			buf += scnprintf(buf, PAGE_SIZE,
-				"%d.\tkey_idx_start: %d pn_max: %u "
-				"pn_threshold: %u tci %01x vlan_clear %01x sci: " SCI_FMT,
-				i, lut_config.sc_param_out.key_index_start,
-				lut_config.sc_param_out.pn_max,
-				lut_config.sc_param_out.pn_threshold,
-				lut_config.sc_param_out.tci,
-				lut_config.sc_param_out.vlan_in_clear,
-				lut_config.sc_param_out.sci[7],
-				lut_config.sc_param_out.sci[6],
-				lut_config.sc_param_out.sci[5],
-				lut_config.sc_param_out.sci[4],
-				lut_config.sc_param_out.sci[3],
-				lut_config.sc_param_out.sci[2],
-				lut_config.sc_param_out.sci[1],
-				lut_config.sc_param_out.sci[0]);
+			if (memcmp(lut_config.sc_param_out.sci, sci_zero, 8) != 0) {
+				buf += scnprintf(buf, PAGE_SIZE,
+					"%d.\tkey_idx: %d pn_max: %u "
+					"pn_threshold: %u tci %01x vlan_clr %01x "
+					"encrypt %01x offset %01x sci: " SCI_FMT,
+					i, lut_config.sc_param_out.key_index_start,
+					lut_config.sc_param_out.pn_max,
+					lut_config.sc_param_out.pn_threshold,
+					lut_config.sc_param_out.tci,
+					lut_config.sc_param_out.vlan_in_clear,
+					lut_config.sc_param_out.encrypt,
+					lut_config.sc_param_out.conf_offset,
+					lut_config.sc_param_out.sci[7],
+					lut_config.sc_param_out.sci[6],
+					lut_config.sc_param_out.sci[5],
+					lut_config.sc_param_out.sci[4],
+					lut_config.sc_param_out.sci[3],
+					lut_config.sc_param_out.sci[2],
+					lut_config.sc_param_out.sci[1],
+					lut_config.sc_param_out.sci[0]);
+			} else {
+				buf += scnprintf(buf, PAGE_SIZE,
+					"%d.\tkey_idx: %d pn_max: %u "
+					"pn_threshold: %u tci %01x vlan_clr %01x "
+					"encrypt %01x offset %01x sci: X",
+					i, lut_config.sc_param_out.key_index_start,
+					lut_config.sc_param_out.pn_max,
+					lut_config.sc_param_out.pn_threshold,
+					lut_config.sc_param_out.tci,
+					lut_config.sc_param_out.vlan_in_clear,
+					lut_config.sc_param_out.encrypt,
+					lut_config.sc_param_out.conf_offset);
+			}
 			buf += scnprintf(buf, PAGE_SIZE, "\n");
 			break;
 		case OSI_CTLR_SEL_RX:
 			buf += scnprintf(buf, PAGE_SIZE,
-				"%d.\tkey_idx_start: %d pn_max: %u pn_window: %u\n", i,
+				"%d.\tkey_idx: %d pn_max: %u pn_window: %u "
+				"encrypt %01x offset %01x\n", i,
 				lut_config.sc_param_out.key_index_start,
 				lut_config.sc_param_out.pn_max,
-				lut_config.sc_param_out.pn_window);
+				lut_config.sc_param_out.pn_window,
+				lut_config.sc_param_out.encrypt,
+				lut_config.sc_param_out.conf_offset);
 			break;
 		default:
 			goto exit;
@@ -1844,13 +2339,14 @@ exit:
 }
 
 /**
- * @brief Shows the current SC parameters LUT configuration
+ * @brief Shows the current SC parameters Tx LUT configuration for
+ * indices above 24
  *
  * @param[in] dev: Device data.
  * @param[in] attr: Device attribute
  * @param[in] buf: Buffer to print the current LUT configuration
  */
-static ssize_t macsec_sc_param_lut_show(struct device *dev,
+static ssize_t macsec_sc_param_tx_lut_show_2(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
 {
@@ -1858,6 +2354,44 @@ static ssize_t macsec_sc_param_lut_show(struct device *dev,
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	char *start = buf;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
+	if (sc_lut_max_index[osi_core->macsec] <= MAX_ENTRIES_PER_SYSFS_NODE) {
+		dev_err(pdata->dev, "2nd node of sc param lut is not allowed for this platform\n");
+		return 0;
+	}
+	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
+	dump_sc_param_lut(&buf, OSI_CTLR_SEL_TX, osi_core, MAX_ENTRIES_PER_SYSFS_NODE + 1U,
+			sc_lut_max_index[osi_core->macsec]);
+
+	return (buf - start);
+}
+
+/**
+ * @brief Shows the current SC parameters Tx LUT configuration
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current LUT configuration
+ */
+static ssize_t macsec_sc_param_tx_lut_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -1865,15 +2399,45 @@ static ssize_t macsec_sc_param_lut_show(struct device *dev,
 	}
 
 	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
-	dump_sc_param_lut(&buf, OSI_CTLR_SEL_TX, osi_core);
-
-	buf += scnprintf(buf, PAGE_SIZE, "Rx:\n");
-	dump_sc_param_lut(&buf, OSI_CTLR_SEL_RX, osi_core);
+	dump_sc_param_lut(&buf, OSI_CTLR_SEL_TX, osi_core, 0U,
+			((sc_lut_max_index[osi_core->macsec] > MAX_ENTRIES_PER_SYSFS_NODE) ?
+			MAX_ENTRIES_PER_SYSFS_NODE: sc_lut_max_index[osi_core->macsec]));
 
 	return (buf - start);
 }
 
-#define SC_PARAM_INPUTS_LEN 16
+/**
+ * @brief Shows the current SC parameters Rx LUT configuration
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current LUT configuration
+ */
+static ssize_t macsec_sc_param_rx_lut_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
+	buf += scnprintf(buf, PAGE_SIZE, "Rx:\n");
+	dump_sc_param_lut(&buf, OSI_CTLR_SEL_RX, osi_core, 0U,
+			 sc_lut_max_index[osi_core->macsec]);
+
+	return (buf - start);
+}
+
+#define SC_PARAM_INPUTS_LEN 18
 
 /**
  * @brief Set the SC parameters LUT configuration
@@ -1894,30 +2458,35 @@ static ssize_t macsec_sc_param_lut_store(struct device *dev,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_macsec_lut_config lut_config = {0};
 	int index, ctlr;
-	int ret, i, tci, vlan_clear;
+	int ret, i, tci, vlan_clear, encrypt, offset;
 	int sci[OSI_SCI_LEN] = {0};
 	unsigned int pn_max, pn_threshold, key_index_start, pn_window;
+	const unsigned int sc_lut_max_index[MAX_MACSEC_IP_TYPES] = {
+		OSI_SC_INDEX_MAX,
+		OSI_SC_INDEX_MAX_T26X};
+	const unsigned int key_idx_max[MAX_MACSEC_IP_TYPES] = {
+			OSI_KEY_INDEX_MAX, OSI_KEY_INDEX_MAX_T26X };
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
 		return size;
 	}
 
-	ret = sscanf(buf, "%d %d %u %u %u %u %d %d" SCI_FMT,
+	ret = sscanf(buf, "%d %d %u %u %u %u %d %d %d %d" SCI_FMT,
 		     &index, &ctlr,
 		     &key_index_start, &pn_max, &pn_threshold, &pn_window,
-		     &tci, &vlan_clear,
+		     &tci, &vlan_clear, &encrypt, &offset,
 		     &sci[7], &sci[6], &sci[5], &sci[4],
 		     &sci[3], &sci[2], &sci[1], &sci[0]);
 	if (ret < SC_PARAM_INPUTS_LEN) {
 		dev_err(pdata->dev, "%s: Failed to parse inputs", __func__);
 		goto exit;
 	}
-
-	if ((index > OSI_SC_LUT_MAX_INDEX) ||
+	if ((index > sc_lut_max_index[osi_core->macsec]) ||
 	    (ctlr != OSI_CTLR_SEL_TX && ctlr != OSI_CTLR_SEL_RX) ||
-	    (key_index_start > OSI_KEY_INDEX_MAX) ||
-	    (pn_threshold > pn_max)) {
+	    (key_index_start > key_idx_max[osi_core->macsec]) ||
+	    (pn_threshold > pn_max) || (encrypt > 1) ||
+		(offset > 2)) {
 		dev_err(pdata->dev, "%s:Invalid inputs", __func__);
 		goto exit;
 	}
@@ -1932,6 +2501,9 @@ static ssize_t macsec_sc_param_lut_store(struct device *dev,
 	lut_config.sc_param_out.pn_window = pn_window;
 	lut_config.sc_param_out.tci = (unsigned char)tci;
 	lut_config.sc_param_out.vlan_in_clear = (unsigned char)vlan_clear;
+	lut_config.sc_param_out.encrypt = (unsigned char)encrypt;
+	lut_config.sc_param_out.conf_offset = (unsigned char)offset;
+
 	for (i = 0; i < OSI_SCI_LEN; i++) {
 		lut_config.sc_param_out.sci[i] = (unsigned char)sci[i];
 	}
@@ -1953,8 +2525,31 @@ exit:
  *
  */
 static DEVICE_ATTR(macsec_sc_param_lut, (S_IRUGO | S_IWUSR),
-		   macsec_sc_param_lut_show,
+		   NULL,
 		   macsec_sc_param_lut_store);
+
+/**
+ * @brief Sysfs attribute for SC param Tx LUT configuration
+ *
+ */
+static DEVICE_ATTR(macsec_sc_param_tx_lut, (S_IRUGO | S_IWUSR),
+		   macsec_sc_param_tx_lut_show,
+		   NULL);
+/**
+ * @brief Sysfs attribute for SC param Tx LUT configuration
+ *
+ */
+static DEVICE_ATTR(macsec_sc_param_tx_lut_2, (S_IRUGO | S_IWUSR),
+		   macsec_sc_param_tx_lut_show_2,
+		   NULL);
+
+/**
+ * @brief Sysfs attribute for SC param Rx LUT configuration
+ *
+ */
+static DEVICE_ATTR(macsec_sc_param_rx_lut, (S_IRUGO | S_IWUSR),
+		   macsec_sc_param_rx_lut_show,
+		   NULL);
 
 /**
  * @brief Shows the current MACsec irq stats
@@ -2041,6 +2636,8 @@ static ssize_t ether_phy_iface_mode_show(struct device *dev,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 
 	switch (osi_core->phy_iface_mode) {
+	case OSI_XAUI_MODE_25G:
+		return scnprintf(buf, PAGE_SIZE, "XAUI-25G\n");
 	case OSI_XFI_MODE_10G:
 		return scnprintf(buf, PAGE_SIZE, "XFI-10G\n");
 	case OSI_XFI_MODE_5G:
@@ -2080,7 +2677,9 @@ static ssize_t ether_phy_iface_mode_store(struct device *dev,
 		return size;
 	}
 
-	if (strncmp(buf, "XFI-10G", 7) == 0U) {
+	if (strncmp(buf, "XAUI-25G", 7) == 0U) {
+		osi_core->phy_iface_mode = OSI_XAUI_MODE_25G;
+	} else if (strncmp(buf, "XFI-10G", 7) == 0U) {
 		osi_core->phy_iface_mode = OSI_XFI_MODE_10G;
 	} else if (strncmp(buf, "XFI-5G", 6) == 0U) {
 		osi_core->phy_iface_mode = OSI_XFI_MODE_5G;
@@ -2123,9 +2722,19 @@ static ssize_t ether_uphy_gbe_mode_show(struct device *dev,
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 
-	return scnprintf(buf, PAGE_SIZE, "%s\n",
-			(osi_core->uphy_gbe_mode == OSI_ENABLE) ?
-			"10G" : "5G");
+	switch (osi_core->uphy_gbe_mode) {
+	case OSI_UPHY_GBE_MODE_25G:
+		return scnprintf(buf, PAGE_SIZE, "25G\n");
+	case OSI_GBE_MODE_10G:
+		return scnprintf(buf, PAGE_SIZE, "10G\n");
+	case OSI_GBE_MODE_5G:
+		return scnprintf(buf, PAGE_SIZE, "5G\n");
+	case OSI_GBE_MODE_2_5G:
+		return scnprintf(buf, PAGE_SIZE, "2_5G\n");
+	default:
+		return scnprintf(buf, PAGE_SIZE, "1G\n");
+	}
+
 }
 
 /**
@@ -2154,10 +2763,16 @@ static ssize_t ether_uphy_gbe_mode_store(struct device *dev,
 		return size;
 	}
 
-	if (strncmp(buf, "10G", 3) == 0U) {
-		osi_core->uphy_gbe_mode = OSI_ENABLE;
+	if (strncmp(buf, "25G", 3) == 0U) {
+		osi_core->uphy_gbe_mode = OSI_UPHY_GBE_MODE_25G;
+	} else if (strncmp(buf, "10G", 3) == 0U) {
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_10G;
 	} else if (strncmp(buf, "5G", 2) == 0U) {
-		osi_core->uphy_gbe_mode = OSI_DISABLE;
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_5G;
+	} else if (strncmp(buf, "2_5G", 4) == 0U) {
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_2_5G;
+	} else if (strncmp(buf, "1G", 2) == 0U) {
+		osi_core->uphy_gbe_mode = OSI_GBE_MODE_1G;
 	} else {
 		dev_err(pdata->dev,
 			"Invalid value passed. Valid values are 10G or 5G\n");
@@ -2208,7 +2823,7 @@ static ssize_t ether_mac_frp_show(struct device *dev,
 		entry = &osi_core->frp_table[i];
 		data = &entry->data;
 		j += scnprintf((buf + j), (PAGE_SIZE - j),
-			       "[%d] ID:%d MD:0x%x ME:0x%x AF:%d RF:%d IM:%d NIC:%d FO:%d OKI:%d DCH:x%x\n",
+			       "[%d] ID:%d MD:0x%x ME:0x%x AF:%d RF:%d IM:%d NIC:%d FO:%d OKI:%d DCH:x%lx\n",
 			       i, entry->frp_id, data->match_data,
 			       data->match_en, data->accept_frame,
 			       data->reject_frame, data->inverse_match,
@@ -2696,18 +3311,29 @@ static struct attribute *ether_sysfs_attrs[] = {
 	&dev_attr_macsec_irq_stats.attr,
 	&dev_attr_macsec_byp_lut.attr,
 	&dev_attr_macsec_sci_lut.attr,
+	&dev_attr_macsec_sci_lut_rx.attr,
+	&dev_attr_macsec_sci_lut_tx.attr,
+	&dev_attr_macsec_sci_lut_tx_2.attr,
 #ifdef MACSEC_KEY_PROGRAM
 	&dev_attr_macsec_kt.attr,
 	&dev_attr_macsec_tx_kt.attr,
 	&dev_attr_macsec_rx_kt.attr,
+	&dev_attr_macsec_tx_kt_2.attr,
+	&dev_attr_macsec_rx_kt_2.attr,
+	&dev_attr_macsec_tx_kt_3.attr,
+	&dev_attr_macsec_rx_kt_3.attr,
 #endif /* MACSEC_KEY_PROGRAM */
 	&dev_attr_macsec_sc_state_lut.attr,
 	&dev_attr_macsec_sa_state_lut.attr,
 	&dev_attr_macsec_sc_param_lut.attr,
+	&dev_attr_macsec_sc_param_tx_lut.attr,
+	&dev_attr_macsec_sc_param_tx_lut_2.attr,
+	&dev_attr_macsec_sc_param_rx_lut.attr,
 	&dev_attr_macsec_cipher.attr,
 	&dev_attr_macsec_enable.attr,
 	&dev_attr_macsec_an_status.attr,
-	&dev_attr_macsec_mmc_counters.attr,
+	&dev_attr_macsec_mmc_counters_tx.attr,
+	&dev_attr_macsec_mmc_counters_rx.attr,
 #ifdef DEBUG_MACSEC
 	&dev_attr_macsec_loopback.attr,
 	&dev_attr_macsec_dbg_buffers.attr,
@@ -2752,6 +3378,7 @@ static struct attribute *ether_sysfs_attrs_without_macsec[] = {
 #if defined HSI_SUPPORT && defined(NV_VLTEST_BUILD) && (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 	&dev_attr_hsi_enable.attr,
 #endif
+	&dev_attr_mac_tx_q.attr,
 #endif /* OSI_STRIPPED_LIB */
 	NULL
 };
@@ -3383,3 +4010,8 @@ void ether_sysfs_unregister(struct ether_priv_data *pdata)
 		sysfs_remove_group(&dev->kobj, &ether_attribute_group_wo_macsec);
 	}
 }
+
+MODULE_AUTHOR("NVIDIA Corporation");
+MODULE_DESCRIPTION("Mac/Macsec Sysfs driver");
+MODULE_LICENSE("GPL");
+MODULE_IMPORT_NS(CRYPTO_INTERNAL);

@@ -7,13 +7,18 @@
 #include <osi_macsec.h>
 #include <linux/random.h>
 #include <net/genetlink.h>
-#include <linux/crypto.h>
-
+#include <crypto/internal/cipher.h>
 
 /**
  * @brief Expected number of inputs in BYP or SCI LUT sysfs config
  */
 #define LUT_INPUTS_LEN			39
+
+/**
+ * @brief Maximum entries per 1 sysfs node
+ */
+#define MAX_ENTRIES_PER_SYSFS_NODE	24
+#define MAX_SA_ENTRIES_PER_SYSFS_NODE	33U
 
 /**
  * @brief Expected number of extra inputs in BYP LUT sysfs config
@@ -61,6 +66,8 @@ enum nv_macsec_sa_attrs {
 	NV_MACSEC_SA_ATTR_AN,
 	NV_MACSEC_SA_ATTR_PN,
 	NV_MACSEC_SA_ATTR_LOWEST_PN,
+	NV_MACSEC_SA_ATTR_CONF_OFFSET,
+	NV_MACSEC_SA_ATTR_ENCRYPT,
 #ifdef NVPKCS_MACSEC
 	NV_MACSEC_SA_PKCS_KEY_WRAP,
 	NV_MACSEC_SA_PKCS_KEK_HANDLE,
@@ -119,6 +126,8 @@ static const struct nla_policy nv_macsec_sa_genl_policy[NUM_NV_MACSEC_SA_ATTR] =
 	[NV_MACSEC_SA_ATTR_AN] = { .type = NLA_U8 },
 	[NV_MACSEC_SA_ATTR_PN] = { .type = NLA_U32 },
 	[NV_MACSEC_SA_ATTR_LOWEST_PN] = { .type = NLA_U32 },
+	[NV_MACSEC_SA_ATTR_CONF_OFFSET] = { .type = NLA_U8 },
+	[NV_MACSEC_SA_ATTR_ENCRYPT] = { .type = NLA_U8 },
 #ifdef NVPKCS_MACSEC
 	[NV_MACSEC_SA_PKCS_KEY_WRAP] = { .type = NLA_BINARY,
 					 .len = NV_SAK_WRAPPED_LEN,},
@@ -135,9 +144,9 @@ static const struct nla_policy nv_macsec_tz_genl_policy[NUM_NV_MACSEC_TZ_ATTR] =
 	[NV_MACSEC_TZ_ATTR_RW] = { .type = NLA_U8 },
 	[NV_MACSEC_TZ_ATTR_INDEX] = { .type = NLA_U8 },
 #ifdef NVPKCS_MACSEC
-	[NV_MACSEC_SA_PKCS_KEY_WRAP] = { .type = NLA_BINARY,
+	[NV_MACSEC_TZ_PKCS_KEY_WRAP] = { .type = NLA_BINARY,
 					 .len = NV_SAK_WRAPPED_LEN,},
-	[NV_MACSEC_SA_PKCS_KEK_HANDLE] = { .type = NLA_U64 },
+	[NV_MACSEC_TZ_PKCS_KEK_HANDLE] = { .type = NLA_U64 },
 #else
 	[NV_MACSEC_TZ_ATTR_KEY] = { .type = NLA_BINARY,
 				    .len = OSI_KEY_LEN_256 },
@@ -154,6 +163,7 @@ static const struct nla_policy nv_macsec_genl_policy[NUM_NV_MACSEC_ATTR] = {
 	[NV_MACSEC_ATTR_TXSC_PORT] = { .type = NLA_U16 },
 	[NV_MACSEC_ATTR_REPLAY_PROT_EN] = { .type = NLA_U32 },
 	[NV_MACSEC_ATTR_REPLAY_WINDOW] = { .type = NLA_U32 },
+	[NV_MACSEC_ATTR_CIPHER_SUITE] = { .type = NLA_U32 },
 	[NV_MACSEC_ATTR_SA_CONFIG] = { .type = NLA_NESTED },
 	[NV_MACSEC_ATTR_TZ_CONFIG] = { .type = NLA_NESTED },
 	[NV_MACSEC_ATTR_TZ_KT_RESET] = { .type = NLA_NESTED },
@@ -209,11 +219,11 @@ struct nvpkcs_data {
 struct macsec_priv_data {
 	/** Non secure reset */
 	struct reset_control *ns_rst;
-	/** MGBE Macsec clock */
-	struct clk *mgbe_clk;
-	/** EQOS Macsec TX clock */
+	/** MGBE/EQOS Macsec clock */
+	struct clk *macsec_clk;
+	/** T23x EQOS Macsec TX clock */
 	struct clk *eqos_tx_clk;
-	/** EQOS Macsec RX clock */
+	/** T23x EQOS Macsec RX clock */
 	struct clk *eqos_rx_clk;
 	/** Secure irq */
 	int s_irq;
@@ -243,6 +253,8 @@ struct macsec_priv_data {
 	unsigned short next_supp_idx;
 	/** macsec mutex lock */
 	struct mutex lock;
+        /** macsec hw instance id */
+        unsigned int id;
 	/** Macsec enable flag in DT */
 	unsigned int is_macsec_enabled_in_dt;
 	/** Context family name  */
