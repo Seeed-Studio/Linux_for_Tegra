@@ -14,6 +14,7 @@
 #include <linux/reset-controller.h>
 #include <linux/types.h>
 #include <linux/tegra-icc.h>
+#include <linux/interrupt.h>
 
 struct clk;
 struct device;
@@ -163,8 +164,27 @@ struct tegra_mc_ops {
 	int (*probe)(struct tegra_mc *mc);
 	void (*remove)(struct tegra_mc *mc);
 	int (*resume)(struct tegra_mc *mc);
-	irqreturn_t (*handle_irq)(int irq, void *data);
+	irq_handler_t *handle_irq;
 	int (*probe_device)(struct tegra_mc *mc, struct device *dev);
+	unsigned int num_interrupts;
+};
+
+struct tegra_mc_regs {
+	unsigned int mc_err_status_reg;
+	unsigned int mc_err_add_reg;
+	unsigned int mc_err_add_hi_reg;
+	unsigned int mc_err_vpr_status_reg;
+	unsigned int mc_err_vpr_add_reg;
+	unsigned int mc_err_sec_status_reg;
+	unsigned int mc_err_sec_add_reg;
+	unsigned int mc_err_mts_status_reg;
+	unsigned int mc_err_mts_add_reg;
+	unsigned int mc_err_gen_co_status_reg;
+	unsigned int mc_err_gen_co_add_reg;
+	unsigned int mc_err_route_status_reg;
+	unsigned int mc_err_route_add_reg;
+	unsigned int mc_addr_hi_mask;
+	unsigned int mc_err_status_type_mask;
 };
 
 struct tegra_mc_soc {
@@ -196,6 +216,13 @@ struct tegra_mc_soc {
 
 	const struct tegra_mc_icc_ops *icc_ops;
 	const struct tegra_mc_ops *ops;
+	bool has_chiplet_arch;
+	u32 mcf_intmask;
+	u32 hub_intmask;
+	u32 hubc_intmask;
+	u32 sbs_intmask;
+	u32 mc_ch_intmask;
+	const struct tegra_mc_regs *mc_regs;
 };
 
 struct tegra_mc {
@@ -206,7 +233,6 @@ struct tegra_mc {
 	void __iomem *bcast_ch_regs;
 	void __iomem **ch_regs;
 	struct clk *clk;
-	int irq;
 
 	const struct tegra_mc_soc *soc;
 	unsigned long tick;
@@ -256,4 +282,5 @@ tegra_mc_get_carveout_info(struct tegra_mc *mc, unsigned int id,
 }
 #endif
 
+extern const struct tegra_mc_regs tegra20_mc_regs;
 #endif /* __SOC_TEGRA_MC_H__ */

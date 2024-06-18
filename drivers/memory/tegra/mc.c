@@ -56,6 +56,24 @@ static const struct of_device_id tegra_mc_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_mc_of_match);
 
+const struct tegra_mc_regs tegra20_mc_regs = {
+	.mc_err_status_reg = 0x08,
+	.mc_err_add_reg = 0x0c,
+	.mc_err_add_hi_reg = 0x11fc,
+	.mc_err_vpr_status_reg = 0x654,
+	.mc_err_vpr_add_reg = 0x658,
+	.mc_err_sec_status_reg = 0x67c,
+	.mc_err_sec_add_reg = 0x680,
+	.mc_err_mts_status_reg = 0x9b0,
+	.mc_err_mts_add_reg = 0x9b4,
+	.mc_err_gen_co_status_reg = 0xc00,
+	.mc_err_gen_co_add_reg = 0xc04,
+	.mc_err_route_status_reg = 0x9c0,
+	.mc_err_route_add_reg = 0x9c4,
+	.mc_addr_hi_mask = 0x3,
+	.mc_err_status_type_mask = (0x7 << 28),
+};
+
 static void tegra_mc_devm_action_put_device(void *data)
 {
 	struct tegra_mc *mc = data;
@@ -537,9 +555,12 @@ int tegra30_mc_probe(struct tegra_mc *mc)
 	return 0;
 }
 
+static irq_handler_t tegra30_mc_irq_handlers = tegra30_mc_handle_irq;
+
 const struct tegra_mc_ops tegra30_mc_ops = {
 	.probe = tegra30_mc_probe,
-	.handle_irq = tegra30_mc_handle_irq,
+	.handle_irq = &tegra30_mc_irq_handlers,
+	.num_interrupts = 1,
 };
 #endif
 
@@ -589,7 +610,7 @@ irqreturn_t tegra30_mc_handle_irq(int irq, void *data)
 		return IRQ_NONE;
 
 	for_each_set_bit(bit, &status, 32) {
-		const char *error = tegra_mc_status_names[bit] ?: "unknown";
+		const char *error = tegra20_mc_status_names[bit] ?: "unknown";
 		const char *client = "unknown", *desc;
 		const char *direction, *secure;
 		u32 status_reg, addr_reg;
@@ -605,37 +626,37 @@ irqreturn_t tegra30_mc_handle_irq(int irq, void *data)
 
 		switch (intmask) {
 		case MC_INT_DECERR_VPR:
-			status_reg = MC_ERR_VPR_STATUS;
-			addr_reg = MC_ERR_VPR_ADR;
+			status_reg = mc->soc->mc_regs->mc_err_vpr_status_reg;
+			addr_reg = mc->soc->mc_regs->mc_err_vpr_add_reg;
 			break;
 
 		case MC_INT_SECERR_SEC:
-			status_reg = MC_ERR_SEC_STATUS;
-			addr_reg = MC_ERR_SEC_ADR;
+			status_reg =  mc->soc->mc_regs->mc_err_sec_status_reg;
+			addr_reg = mc->soc->mc_regs->mc_err_sec_add_reg;
 			break;
 
 		case MC_INT_DECERR_MTS:
-			status_reg = MC_ERR_MTS_STATUS;
-			addr_reg = MC_ERR_MTS_ADR;
+			status_reg = mc->soc->mc_regs->mc_err_mts_status_reg;
+			addr_reg = mc->soc->mc_regs->mc_err_mts_add_reg;
 			break;
 
 		case MC_INT_DECERR_GENERALIZED_CARVEOUT:
-			status_reg = MC_ERR_GENERALIZED_CARVEOUT_STATUS;
-			addr_reg = MC_ERR_GENERALIZED_CARVEOUT_ADR;
+			status_reg = mc->soc->mc_regs->mc_err_gen_co_status_reg;
+			addr_reg = mc->soc->mc_regs->mc_err_gen_co_add_reg;
 			break;
 
 		case MC_INT_DECERR_ROUTE_SANITY:
-			status_reg = MC_ERR_ROUTE_SANITY_STATUS;
-			addr_reg = MC_ERR_ROUTE_SANITY_ADR;
+			status_reg = mc->soc->mc_regs->mc_err_route_status_reg;
+			addr_reg = mc->soc->mc_regs->mc_err_route_add_reg;
 			break;
 
 		default:
-			status_reg = MC_ERR_STATUS;
-			addr_reg = MC_ERR_ADR;
+			status_reg = mc->soc->mc_regs->mc_err_status_reg;
+			addr_reg = mc->soc->mc_regs->mc_err_add_reg;
 
 #ifdef CONFIG_PHYS_ADDR_T_64BIT
 			if (mc->soc->has_addr_hi_reg)
-				addr_hi_reg = MC_ERR_ADR_HI;
+				addr_hi_reg = mc->soc->mc_regs->mc_err_add_hi_reg;
 #endif
 			break;
 		}
@@ -654,7 +675,7 @@ irqreturn_t tegra30_mc_handle_irq(int irq, void *data)
 					addr = mc_readl(mc, addr_hi_reg);
 			} else {
 				addr = ((value >> MC_ERR_STATUS_ADR_HI_SHIFT) &
-					MC_ERR_STATUS_ADR_HI_MASK);
+					mc->soc->mc_regs->mc_addr_hi_mask);
 			}
 			addr <<= 32;
 		}
@@ -679,11 +700,11 @@ irqreturn_t tegra30_mc_handle_irq(int irq, void *data)
 			}
 		}
 
-		type = (value & MC_ERR_STATUS_TYPE_MASK) >>
+		type = (value & mc->soc->mc_regs->mc_err_status_type_mask) >>
 		       MC_ERR_STATUS_TYPE_SHIFT;
-		desc = tegra_mc_error_names[type];
+		desc = tegra20_mc_error_names[type];
 
-		switch (value & MC_ERR_STATUS_TYPE_MASK) {
+		switch (value & mc->soc->mc_regs->mc_err_status_type_mask) {
 		case MC_ERR_STATUS_TYPE_INVALID_SMMU_PAGE:
 			perm[0] = ' ';
 			perm[1] = '[';
@@ -736,7 +757,7 @@ irqreturn_t tegra30_mc_handle_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-const char *const tegra_mc_status_names[32] = {
+const char *const tegra20_mc_status_names[32] = {
 	[ 1] = "External interrupt",
 	[ 6] = "EMEM address decode error",
 	[ 7] = "GART page fault",
@@ -751,7 +772,7 @@ const char *const tegra_mc_status_names[32] = {
 	[20] = "Route Sanity error",
 };
 
-const char *const tegra_mc_error_names[8] = {
+const char *const tegra20_mc_error_names[8] = {
 	[2] = "EMEM decode error",
 	[3] = "TrustZone violation",
 	[4] = "Carveout violation",
@@ -946,25 +967,52 @@ static int tegra_mc_probe(struct platform_device *pdev)
 	tegra_mc_num_channel_enabled(mc);
 
 	if (mc->soc->ops && mc->soc->ops->handle_irq) {
-		mc->irq = platform_get_irq(pdev, 0);
-		if (mc->irq < 0)
-			return mc->irq;
-
 		WARN(!mc->soc->client_id_mask, "missing client ID mask for this SoC\n");
 
+		for (int i = 0; i < mc->soc->ops->num_interrupts; i++) {
+			int irq;
+
+			irq = platform_get_irq(pdev, i);
+			if (irq < 0)
+				return irq;
+
+			err = devm_request_irq(&pdev->dev, irq, mc->soc->ops->handle_irq[i], 0,
+						dev_name(&pdev->dev), mc);
+			if (err < 0) {
+				dev_err(&pdev->dev, "failed to request IRQ#%u: %d\n", irq,
+					err);
+				return err;
+			}
+		}
+	}
+
+	if (mc->soc->has_chiplet_arch) {
+		unsigned long intstat;
+
+		/* Unmask MCF interrupts */
+		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->mcf_intmask, MCF_INTMASK_0);
+		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->mcf_intmask, MCF_INTPRIORITY_0);
+
+		/* Unmask HUB and HUBC interrupts */
+		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->hub_intmask, MSS_HUB_INTRMASK_0);
+		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->hub_intmask,
+						MSS_HUB_INTRPRIORITY_0);
+		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->hubc_intmask,
+						MSS_HUB_HUBC_INTMASK_0);
+		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->hubc_intmask,
+						MSS_HUB_HUBC_INTPRIORITY_0);
+
+		/* Unmask SBS interrupts */
+		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->sbs_intmask, MSS_SBS_INTMASK_0);
+
+		/* Unmask MC channel interrupt */
+		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->mc_ch_intmask, MC_CH_INTMASK_0);
+	} else {
 		if (mc->soc->num_channels)
 			mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->intmask,
-				     MC_INTMASK);
+					MC_INTMASK);
 		else
 			mc_writel(mc, mc->soc->intmask, MC_INTMASK);
-
-		err = devm_request_irq(&pdev->dev, mc->irq, mc->soc->ops->handle_irq, 0,
-				       dev_name(&pdev->dev), mc);
-		if (err < 0) {
-			dev_err(&pdev->dev, "failed to request IRQ#%u: %d\n", mc->irq,
-				err);
-			return err;
-		}
 	}
 
 	if (mc->soc->reset_ops) {

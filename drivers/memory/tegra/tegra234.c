@@ -1153,4 +1153,6 @@ const struct tegra_mc_soc tegra234_mc_soc = {
 	 * supported.
 	 */
 	.num_carveouts = 32,
+	.has_chiplet_arch = false,
+	.mc_regs = &tegra20_mc_regs,
 };
