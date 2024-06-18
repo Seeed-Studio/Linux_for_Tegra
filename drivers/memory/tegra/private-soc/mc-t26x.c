@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (C) 2023 NVIDIA CORPORATION.  All rights reserved.
+// Copyright (C) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
 
 #define pr_fmt(fmt) "mc: " fmt
 #include <linux/module.h>
@@ -8,9 +8,9 @@
 #include <linux/platform_device.h>
 #include <soc/tegra/mc-t26x.h>
 
-#define MC_SECURITY_CARVEOUT_BASE 0x9404
+#define MC_SECURITY_CARVEOUT_BASE 0xa004
 #define MC_CARVEOUT_NEXT 0xa0
-#define MC_SECURITY_CARVEOUT_LITE_BASE 0xa804
+#define MC_SECURITY_CARVEOUT_LITE_BASE 0xb404
 #define MC_CARVEOUT_LITE_NEXT 0x60
 #define MC_CARVEOUT_BASE_HI 0x4
 #define MC_SECURITY_CARVEOUT_SIZE_128KB 0x8
@@ -50,7 +50,13 @@ MODULE_DEVICE_TABLE(of, tegra_mc_of_ids);
 
 static int tegra_mc_probe(struct platform_device *pdev)
 {
-	mcb_base = devm_platform_ioremap_resource(pdev, 0);
+	struct resource *r;
+
+	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!r)
+		return PTR_ERR(r);
+
+	mcb_base = ioremap(r->start, resource_size(r));
 	if (IS_ERR_OR_NULL(mcb_base))
 		return PTR_ERR(mcb_base);
 	return 0;
@@ -58,6 +64,7 @@ static int tegra_mc_probe(struct platform_device *pdev)
 
 static int tegra_mc_remove(struct platform_device *pdev)
 {
+	iounmap(mcb_base);
 	return 0;
 }
 
