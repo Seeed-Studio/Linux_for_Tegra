@@ -163,7 +163,7 @@ kernel_module(
         "sound/soc/tegra-virt-alt/snd-soc-tegra-virt-t210ref-pcm.ko",
         "sound/tegra-safety-audio/safety-i2s.ko",
     ],
-    kernel_build = "//android-common-kernel/6.1/kernel-source:tegra_android",
+    kernel_build = "//nvidia-build/kleaf:tegra_android",
     deps = [
         "//hwpm/drivers/tegra/hwpm:hwpm",
     ],

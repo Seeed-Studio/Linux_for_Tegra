@@ -10,10 +10,10 @@ export srctree.nvidia-oot := $(abspath $(shell dirname $(lastword $(MAKEFILE_LIS
 endif
 
 ifeq ($(origin srctree.hwpm), undefined)
-export srctree.hwpm := $(KERNEL_SRC)/../../../hwpm
+export srctree.hwpm := $(KERNEL_SRC)/../hwpm
 endif
 
-EXTRA_SYMBOLS += $(O)/../../../hwpm/drivers/tegra/hwpm/Module.symvers
+EXTRA_SYMBOLS += $(OUT_DIR)/../hwpm/drivers/tegra/hwpm/Module.symvers
 
 KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build
 M ?= $(shell pwd)
