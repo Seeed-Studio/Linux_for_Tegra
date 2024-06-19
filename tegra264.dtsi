@@ -137,7 +137,7 @@
 					<GIC_SPI 0x40 IRQ_TYPE_EDGE_RISING>, /* WFI */
 					<GIC_SPI 0x39 IRQ_TYPE_EDGE_RISING>, /* AMC ERR IRQ */
 					<GIC_SPI 0x3b IRQ_TYPE_EDGE_RISING>; /* Reserved INTR: 25 */
-				iommus = <&smmu1_mmu TEGRA_SID_APE>;
+				iommus = <&smmu1_mmu (TEGRA_SID_APE + 0x6)>;
 				memory-region = <&adsp0_resv>;
 				nvidia,cluster_mem =
 					<0x0 0x9080000 0x0 0x80000  0x0 0x80000>, /* TCM */
@@ -169,7 +169,7 @@
 					<GIC_SPI 0x8a IRQ_TYPE_EDGE_RISING>, /* WFI */
 					<GIC_SPI 0x3a IRQ_TYPE_EDGE_RISING>, /* Reserved INTR: 24 */
 					<GIC_SPI 0x3c IRQ_TYPE_EDGE_RISING>; /* Reserved INTR: 26 */
-				iommus = <&smmu1_mmu (TEGRA_SID_APE + 0x1)>;
+				iommus = <&smmu1_mmu (TEGRA_SID_APE + 0x7)>;
 				memory-region = <&adsp1_resv>;
 				nvidia,cluster_mem =
 					<0x0 0x9180000 0x0 0x80000  0x0 0x80000>, /* TCM */
