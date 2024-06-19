@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
- * Copyright (c) 2011-2024, NVIDIA CORPORATION. All rights reserved.
- *
  * User-space interface to nvmap
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/backing-dev.h>
 #include <linux/bitmap.h>
@@ -769,6 +770,23 @@ static void nvmap_get_client_mss(struct nvmap_client *client,
 	nvmap_ref_unlock(client);
 }
 
+static int nvmap_page_mapcount(struct page *page)
+{
+	int mapcount = atomic_read(&page->_mapcount) + 1;
+
+	/* Handle page_has_type() pages */
+	if (mapcount < PAGE_MAPCOUNT_RESERVE + 1)
+		mapcount = 0;
+	if (unlikely(PageCompound(page)))
+#if defined(NV_FOLIO_ENTIRE_MAPCOUNT_PRESENT) /* Linux v5.18 */
+		mapcount += folio_entire_mapcount(page_folio(page));
+#else
+		mapcount += compound_mapcount(page);
+#endif
+
+	return mapcount;
+}
+
 #define PSS_SHIFT 12
 static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id)
 {
@@ -802,7 +820,7 @@ static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id
 		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
 			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
 
-			if (page_mapcount(page) > 0)
+			if (nvmap_page_mapcount(page) > 0)
 				*pss += PAGE_SIZE;
 		}
 	}
@@ -1180,7 +1198,7 @@ static int procrank_pte_entry(pte_t *pte, unsigned long addr, unsigned long end,
 	if (!page)
 		return 0;
 
-	mapcount = page_mapcount(page);
+	mapcount = nvmap_page_mapcount(page);
 	if (mapcount >= 2)
 		mss->pss += (PAGE_SIZE << PSS_SHIFT) / mapcount;
 	else

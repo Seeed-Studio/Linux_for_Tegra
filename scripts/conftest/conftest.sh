@@ -7193,6 +7193,24 @@ compile_test() {
                     "NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS" "" "types"
         ;;
 
+        folio_entire_mapcount)
+            #
+            # Determine if function folio_entire_mapcount() is present.
+            #
+            # Commit 74e8ee4708a8 ("mm: Turn head_compound_mapcount() into
+            # folio_entire_mapcount()") add folio_entire_mapcount() in Linux
+            # v5.18.
+            #
+            CODE="
+            #include <linux/mm.h>
+            int conftest(void)
+            {
+                return folio_entire_mapcount();
+            }"
+
+            compile_check_conftest "$CODE" "NV_FOLIO_ENTIRE_MAPCOUNT_PRESENT" "" "functions"
+        ;;
+
         genpd_xlate_t_has_const_of_phandle_args)
             #
             # Determine if genpd_xlate_t function pointer has a
