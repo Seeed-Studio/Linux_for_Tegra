@@ -105,8 +105,11 @@ static struct pwm_device *of_isc_pwm_xlate(struct pwm_chip *pc,
 #endif
 	int err = 0;
 
-	pwm = pwm_request_from_chip(pc, args->args[0], NULL);
-	if (!args->args[1]) {
+	pwm = of_pwm_xlate_with_flags(pc, args);
+	if (IS_ERR(pwm))
+		return NULL;
+
+	if (!pwm->args.period) {
 		dev_err(dev, "Period should be larger than 0\n");
 		return NULL;
 	}
