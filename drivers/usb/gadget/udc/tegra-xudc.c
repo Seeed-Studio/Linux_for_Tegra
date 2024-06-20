@@ -560,6 +560,7 @@ struct tegra_xudc_soc {
 	bool has_ipfs;
 	bool has_pg_support;
 	bool is_hv_guest;
+	bool skip_sspx_config;
 };
 
 static inline u32 fpci_readl(struct tegra_xudc *xudc, unsigned int offset)
@@ -3413,24 +3414,25 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 	if (xudc->soc->port_speed_quirk)
 		tegra_xudc_limit_port_speed(xudc);
 
-	/* Set a reasonable U3 exit timer value. */
-	val = xudc_readl(xudc, SSPX_CORE_PADCTL4);
-	val &= ~(SSPX_CORE_PADCTL4_RXDAT_VLD_TIMEOUT_U3_MASK);
-	val |= SSPX_CORE_PADCTL4_RXDAT_VLD_TIMEOUT_U3(0x5dc0);
-	xudc_writel(xudc, val, SSPX_CORE_PADCTL4);
+	if (!xudc->soc->skip_sspx_config) {
+		/* Set a reasonable U3 exit timer value. */
+		val = xudc_readl(xudc, SSPX_CORE_PADCTL4);
+		val &= ~(SSPX_CORE_PADCTL4_RXDAT_VLD_TIMEOUT_U3_MASK);
+		val |= SSPX_CORE_PADCTL4_RXDAT_VLD_TIMEOUT_U3(0x5dc0);
+		xudc_writel(xudc, val, SSPX_CORE_PADCTL4);
 
-	/* Default ping LFPS tBurst is too large. */
-	val = xudc_readl(xudc, SSPX_CORE_CNT0);
-	val &= ~(SSPX_CORE_CNT0_PING_TBURST_MASK);
-	val |= SSPX_CORE_CNT0_PING_TBURST(0xa);
-	xudc_writel(xudc, val, SSPX_CORE_CNT0);
+		/* Default ping LFPS tBurst is too large. */
+		val = xudc_readl(xudc, SSPX_CORE_CNT0);
+		val &= ~(SSPX_CORE_CNT0_PING_TBURST_MASK);
+		val |= SSPX_CORE_CNT0_PING_TBURST(0xa);
+		xudc_writel(xudc, val, SSPX_CORE_CNT0);
 
-	/* Default tPortConfiguration timeout is too small. */
-	val = xudc_readl(xudc, SSPX_CORE_CNT30);
-	val &= ~(SSPX_CORE_CNT30_LMPITP_TIMER_MASK);
-	val |= SSPX_CORE_CNT30_LMPITP_TIMER(0x978);
-	xudc_writel(xudc, val, SSPX_CORE_CNT30);
-
+		/* Default tPortConfiguration timeout is too small. */
+		val = xudc_readl(xudc, SSPX_CORE_CNT30);
+		val &= ~(SSPX_CORE_CNT30_LMPITP_TIMER_MASK);
+		val |= SSPX_CORE_CNT30_LMPITP_TIMER(0x978);
+		xudc_writel(xudc, val, SSPX_CORE_CNT30);
+	}
 	if (xudc->soc->lpm_enable) {
 		/* Set L1 resume duration to 95 us. */
 		val = xudc_readl(xudc, HSFSPI_COUNT13);
@@ -3439,14 +3441,16 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 		xudc_writel(xudc, val, HSFSPI_COUNT13);
 	}
 
-	/*
-	 * Compliance suite appears to be violating polling LFPS tBurst max
-	 * of 1.4us.  Send 1.45us instead.
-	 */
-	val = xudc_readl(xudc, SSPX_CORE_CNT32);
-	val &= ~(SSPX_CORE_CNT32_POLL_TBURST_MAX_MASK);
-	val |= SSPX_CORE_CNT32_POLL_TBURST_MAX(0xb0);
-	xudc_writel(xudc, val, SSPX_CORE_CNT32);
+	if (!xudc->soc->skip_sspx_config) {
+		/*
+		 * Compliance suite appears to be violating polling
+		 * LFPS tBurst max of 1.4us.  Send 1.45us instead.
+		 */
+		val = xudc_readl(xudc, SSPX_CORE_CNT32);
+		val &= ~(SSPX_CORE_CNT32_POLL_TBURST_MAX_MASK);
+		val |= SSPX_CORE_CNT32_POLL_TBURST_MAX(0xb0);
+		xudc_writel(xudc, val, SSPX_CORE_CNT32);
+	}
 
 	/* Direct HS/FS port instance to RxDetect. */
 	val = xudc_readl(xudc, CFG_DEV_FE);
@@ -3726,6 +3730,7 @@ static struct tegra_xudc_soc tegra264_xudc_soc_data = {
 	.port_reset_quirk = false,
 	.has_ipfs = false,
 	.has_pg_support = true,
+	.skip_sspx_config = true,
 };
 
 static const struct of_device_id tegra_xudc_of_match[] = {
