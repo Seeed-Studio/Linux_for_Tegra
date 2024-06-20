@@ -6185,6 +6185,7 @@
 			nvidia,residual-queue = <1>;
 			nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2 2 2>;
 			nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
+			nvidia,vm-vdma-config = <&mgbe_vm_vdma_config>;
 			nvidia,tx-queue-prio = <0 1 2 3 4 5 6 7 0 0>;
 			nvidia,rx-queue-prio = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80 0x0 0x0>;
 			nvidia,dcs-enable = <0x1>;
@@ -6252,6 +6253,7 @@
 			nvidia,residual-queue = <1>;
 			nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2 2 2>;
 			nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
+			nvidia,vm-vdma-config = <&mgbe_vm_vdma_config>;
 			nvidia,tx-queue-prio = <0 1 2 3 4 5 6 7 0 0>;
 			nvidia,rx-queue-prio = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80 0x0 0x0>;
 			nvidia,dcs-enable = <0x1>;
@@ -6319,6 +6321,7 @@
 			nvidia,residual-queue = <1>;
 			nvidia,rxq_enable_ctrl = <2 2 2 2 2 2 2 2 2 2>;
 			nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
+			nvidia,vm-vdma-config = <&mgbe_vm_vdma_config>;
 			nvidia,tx-queue-prio = <0 1 2 3 4 5 6 7 0 0>;
 			nvidia,rx-queue-prio = <0x1 0x2 0x4 0x8 0x10 0x20 0x40 0x80 0x0 0x0>;
 			nvidia,dcs-enable = <0x1>;
