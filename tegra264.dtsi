@@ -8337,9 +8337,17 @@
 
 	mods_xhci: mods_xhci {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA_SID_XUSB_DEV>;
+		iommus = <&smmu1_mmu TEGRA_SID_XUSB_PF_HS_PORTS>;
 		dma-coherent;
 		dev-names = "mods_xhci";
+		status = "disabled";
+	};
+
+	mods_xusb: mods_xusb {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu1_mmu TEGRA_SID_XUSB_DEV_MODE>;
+		dma-coherent;
+		dev-names = "mods_xusb";
 		status = "disabled";
 	};
 
