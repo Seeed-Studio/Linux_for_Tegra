@@ -48,10 +48,6 @@
 			};
 		};
 
-		pcie@d0b0000000 {
-			status = "disabled";
-		};
-
 		pcie@a808400000 {
 			status = "disabled";
 		};
