@@ -17,7 +17,7 @@
 #include <linux/acpi.h>
 #include "mods_internal.h"
 
-#define MODS_MAX_SMMU_DEVICES 32
+#define MODS_MAX_SMMU_DEVICES 128
 static struct mods_smmu_dev mods_smmu_devs[MODS_MAX_SMMU_DEVICES];
 static int mods_smmu_dev_num;
 
