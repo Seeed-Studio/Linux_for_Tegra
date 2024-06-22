@@ -5503,6 +5503,14 @@
 			reg-names = "broadcast", "ch0", "ch1", "ch2", "ch3",
 					"ch4", "ch5", "ch6", "ch7", "ch8", "ch9", "ch10",
 					"ch11", "ch12", "ch13", "ch14", "ch15";
+			interrupts = <GIC_SPI 139 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 694 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 903 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 401 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH>;
 			#interconnect-cells = <1>;
 
 			#address-cells = <2>;
@@ -5549,36 +5557,6 @@
 				<0x81 0x81e0000 0x0 0x20000>,
 				<0x81 0x8200000 0x0 0x20000>,
 				<0x81 0x8220000 0x0 0x20000>;
-			status = "disabled";
-		};
-
-		mc_err: memory-controller-err@8108020000 {
-			compatible = "nvidia,tegra-t264-mc-err";
-			reg =   <0x81 0x8020000 0x0 0x20000>,
-				<0x81 0x8040000 0x0 0x20000>,
-				<0x81 0x8060000 0x0 0x20000>,
-				<0x81 0x8080000 0x0 0x20000>,
-				<0x81 0x80a0000 0x0 0x20000>,
-				<0x81 0x80c0000 0x0 0x20000>,
-				<0x81 0x80e0000 0x0 0x20000>,
-				<0x81 0x8100000 0x0 0x20000>,
-				<0x81 0x8120000 0x0 0x20000>,
-				<0x81 0x8140000 0x0 0x20000>,
-				<0x81 0x8160000 0x0 0x20000>,
-				<0x81 0x8180000 0x0 0x20000>,
-				<0x81 0x81a0000 0x0 0x20000>,
-				<0x81 0x81c0000 0x0 0x20000>,
-				<0x81 0x81e0000 0x0 0x20000>,
-				<0x81 0x8200000 0x0 0x20000>,
-				<0x81 0x8220000 0x0 0x20000>;
-			interrupts = <GIC_SPI 139 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 694 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 903 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 401 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
 		};
 

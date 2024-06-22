@@ -174,10 +174,6 @@
 			status = "okay";
 		};
 
-		memory-controller-err@8108020000 {
-			status = "okay";
-		};
-
 		host1x@8181200000 {
 			status = "okay";
 
