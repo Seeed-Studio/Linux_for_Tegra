@@ -35,7 +35,6 @@
 #include <soc/tegra/fuse.h>
 #include <uapi/linux/nvhost_vi_ioctl.h>
 
-#include "capture/capture-support.h"
 #include "vi5.h"
 
 /* HW capability, pixels per clock */
@@ -48,7 +47,6 @@
 
 struct host_vi5 {
 	struct platform_device *pdev;
-	struct platform_device *vi_thi;
 	struct vi vi_common;
 	struct icc_path *icc_write;
 
@@ -70,10 +68,22 @@ static int vi5_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
 			uint32_t *syncpt_id)
 {
-	struct nvhost_device_data *info = platform_get_drvdata(pdev);
-	struct host_vi5 *vi5 = info->private_data;
+	uint32_t id;
 
-	return capture_alloc_syncpt(vi5->vi_thi, name, syncpt_id);
+	if (syncpt_id == NULL) {
+		dev_err(&pdev->dev, "%s: null argument\n", __func__);
+		return -EINVAL;
+	}
+
+	id = nvhost_get_syncpt_client_managed(pdev, name);
+	if (id == 0) {
+		dev_err(&pdev->dev, "%s: syncpt allocation failed\n", __func__);
+		return -ENODEV;
+	}
+
+	*syncpt_id = id;
+
+	return 0;
 }
 
 int nvhost_vi5_aggregate_constraints(struct platform_device *dev,
@@ -101,19 +111,16 @@ int nvhost_vi5_aggregate_constraints(struct platform_device *dev,
 
 static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
 {
-	struct nvhost_device_data *info = platform_get_drvdata(pdev);
-	struct host_vi5 *vi5 = info->private_data;
-
-	capture_release_syncpt(vi5->vi_thi, id);
+	dev_dbg(&pdev->dev, "%s: id=%u\n", __func__, id);
+	nvhost_syncpt_put_ref_ext(pdev, id);
 }
 
 static void vi5_get_gos_table(struct platform_device *pdev, int *count,
 			const dma_addr_t **table)
 {
-	struct nvhost_device_data *info = platform_get_drvdata(pdev);
-	struct host_vi5 *vi5 = info->private_data;
-
-	capture_get_gos_table(vi5->vi_thi, count, table);
+	if (count)
+		*count = 0;
+	*table = NULL;
 }
 
 static int vi5_get_syncpt_gos_backing(struct platform_device *pdev,
@@ -122,11 +129,30 @@ static int vi5_get_syncpt_gos_backing(struct platform_device *pdev,
 			uint32_t *gos_index,
 			uint32_t *gos_offset)
 {
-	struct nvhost_device_data *info = platform_get_drvdata(pdev);
-	struct host_vi5 *vi5 = info->private_data;
+	uint32_t index = GOS_INDEX_INVALID;
+	uint32_t offset = 0;
+	dma_addr_t addr;
 
-	return capture_get_syncpt_gos_backing(vi5->vi_thi, id,
-				syncpt_addr, gos_index, gos_offset);
+	if (id == 0) {
+		dev_err(&pdev->dev, "%s: syncpt id is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (syncpt_addr == NULL || gos_index == NULL || gos_offset == NULL) {
+		dev_err(&pdev->dev, "%s: null arguments\n", __func__);
+		return -EINVAL;
+	}
+
+	addr = nvhost_syncpt_address(pdev, id);
+
+	*syncpt_addr = addr;
+	*gos_index = index;
+	*gos_offset = offset;
+
+	dev_dbg(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
+		__func__, id, addr, index, offset);
+
+	return 0;
 }
 
 static struct vi_channel_drv_ops vi5_channel_drv_ops = {
@@ -140,8 +166,6 @@ int vi5_priv_early_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
-	struct device_node *thi_np;
-	struct platform_device *thi = NULL;
 	struct host_vi5 *vi5;
 	int err = 0;
 
@@ -151,38 +175,20 @@ int vi5_priv_early_probe(struct platform_device *pdev)
 		return -ENODATA;
 	}
 
-	thi_np = of_parse_phandle(dev->of_node, "nvidia,vi-falcon-device", 0);
-	if (thi_np == NULL) {
-		dev_WARN(dev, "missing %s handle\n", "nvidia,vi-falcon-device");
-		return -ENODEV;
-	}
-
-	thi = of_find_device_by_node(thi_np);
-	of_node_put(thi_np);
-
-	if (thi == NULL)
-		return -ENODEV;
-
-	if (thi->dev.driver == NULL) {
-		err = -EPROBE_DEFER;
-		goto put_vi;
-	}
-
 	err = vi_channel_drv_fops_register(&vi5_channel_drv_ops);
 	if (err) {
 		dev_warn(&pdev->dev, "syncpt fops register failed, defer probe\n");
-		goto put_vi;
+		goto error;
 	}
 
 	vi5 = (struct host_vi5 *) devm_kzalloc(dev, sizeof(*vi5), GFP_KERNEL);
 	if (!vi5) {
 		err = -ENOMEM;
-		goto put_vi;
+		goto error;
 	}
 
 	vi5->skip_v4l2_init = of_property_read_bool(dev->of_node,
 					"nvidia,skip-v4l2-init");
-	vi5->vi_thi = thi;
 	vi5->pdev = pdev;
 	info->pdev = pdev;
 	mutex_init(&info->lock);
@@ -198,8 +204,7 @@ int vi5_priv_early_probe(struct platform_device *pdev)
 
 	return 0;
 
-put_vi:
-	platform_device_put(thi);
+error:
 	if (err != -EPROBE_DEFER)
 		dev_err(&pdev->dev, "probe failed: %d\n", err);
 
@@ -258,13 +263,19 @@ static int vi5_probe(struct platform_device *pdev)
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
-		goto put_vi;
+		goto error;
 
 	err = nvhost_module_init(pdev);
 	if (err)
-		goto put_vi;
+		goto error;
 
 	err = nvhost_client_device_init(pdev);
+	if (err)
+		goto deinit;
+
+	dev_info(&pdev->dev, "%s: client init done\n", __func__);
+
+	err = nvhost_syncpt_unit_interface_init(pdev);
 	if (err)
 		goto deinit;
 
@@ -276,11 +287,9 @@ static int vi5_probe(struct platform_device *pdev)
 
 deinit:
 	nvhost_module_deinit(pdev);
-put_vi:
-	platform_device_put(vi5->vi_thi);
+error:
 	if (err != -EPROBE_DEFER)
 		dev_err(dev, "probe failed: %d\n", err);
-error:
 	return err;
 }
 
@@ -292,7 +301,6 @@ static int vi5_remove(struct platform_device *pdev)
 	tegra_camera_device_unregister(vi5);
 
 	vi5_remove_debugfs(vi5);
-	platform_device_put(vi5->vi_thi);
 	return 0;
 }
 
