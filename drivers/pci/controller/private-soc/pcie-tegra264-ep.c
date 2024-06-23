@@ -110,7 +110,8 @@
 
 #define XPL_PL_LTSSM_STATE		0x1700
 #define XPL_PL_LTSSM_STATE_FULL			GENMASK(7, 0)
-#define XPL_PL_LTSSM_STATE_DETECT_RESET		0
+#define XPL_PL_LTSSM_STATE_DISABLE_TX		40
+#define XPL_PL_LTSSM_STATE_HOT_RESET		41
 
 #define NV_EP_PCFG_MSI_64_HEADER	0x48
 
@@ -336,8 +337,6 @@ static void tegra264_pcie_ep_clear_bar(struct pci_epc *epc, u8 fn, u8 vfn,
 	u32 val;
 
 	if (bar == BAR_1) {
-		writel(0x0, pcie->xtl_ep_pri_base + XTL_EP_PRI_RESIZE_BAR1);
-
 		writel(0x0, pcie->xal_ep_dm_base + XAL_EP_DM_I_ATU_REDIR_BAR1_ADDR_MSB);
 		writel(0x0, pcie->xal_ep_dm_base + XAL_EP_DM_I_ATU_REDIR_BAR1_ADDR_LSB);
 
@@ -345,9 +344,6 @@ static void tegra264_pcie_ep_clear_bar(struct pci_epc *epc, u8 fn, u8 vfn,
 		val &= ~XAL_EP_DM_I_ATU_REDIR_CTRL_BAR1_EN;
 		writel(val, pcie->xal_ep_dm_base + XAL_EP_DM_I_ATU_REDIR_CTRL);
 	} else if (bar == BAR_2) {
-		val = readl(pcie->xtl_ep_pri_base + XTL_EP_PRI_BAR_CONFIG);
-		writel(val, pcie->xtl_ep_pri_base + XTL_EP_PRI_BAR_CONFIG);
-
 		writel(0x0, pcie->xal_ep_dm_base + XAL_EP_DM_I_ATU_REDIR_BAR2_ADDR_MSB);
 		writel(0x0, pcie->xal_ep_dm_base + XAL_EP_DM_I_ATU_REDIR_BAR2_ADDR_LSB);
 
@@ -355,10 +351,6 @@ static void tegra264_pcie_ep_clear_bar(struct pci_epc *epc, u8 fn, u8 vfn,
 		val &= ~XAL_EP_DM_I_ATU_REDIR_CTRL_BAR2_EN;
 		writel(val, pcie->xal_ep_dm_base + XAL_EP_DM_I_ATU_REDIR_CTRL);
 	}
-
-	val = readl(pcie->xtl_ep_pri_base + XTL_EP_PRI_BAR_CONFIG);
-	val &= ~(XTL_EP_PRI_BAR_CONFIG_BAR1_EN | XTL_EP_PRI_BAR_CONFIG_BAR2_EN);
-	writel(val, pcie->xtl_ep_pri_base + XTL_EP_PRI_BAR_CONFIG);
 }
 
 static int tegra264_pcie_ep_map_addr(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
@@ -567,12 +559,15 @@ static irqreturn_t tegra264_pcie_ep_irq_thread(int irq, void *arg)
 	int ret;
 
 	ret = readl_poll_timeout(pcie->xpl_base + XPL_PL_LTSSM_STATE, val,
-				 (val & XPL_PL_LTSSM_STATE_FULL) == XPL_PL_LTSSM_STATE_DETECT_RESET,
-				 PCIE_LTSSM_DELAY, PCIE_LTSSM_TIMEOUT);
+			((val & XPL_PL_LTSSM_STATE_FULL) == XPL_PL_LTSSM_STATE_DISABLE_TX) ||
+			 ((val & XPL_PL_LTSSM_STATE_FULL) == XPL_PL_LTSSM_STATE_HOT_RESET),
+			 PCIE_LTSSM_DELAY, PCIE_LTSSM_TIMEOUT);
 	if (ret)
 		dev_err(pcie->dev, "PCIe LTSSM state not in detect reset, ltssm: 0x%x\n", val);
 
 	tegra264_pcie_ep_rst_assert(pcie);
+	/* Per PCIe CEM spec minimum time between PERST# toggle is 100 usec(TPERST) */
+	usleep_range(100, 200);
 	tegra264_pcie_ep_rst_deassert(pcie);
 
 	return IRQ_HANDLED;
