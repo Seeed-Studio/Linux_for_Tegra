@@ -1860,11 +1860,11 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 
 	if (pd->drv_name)
 		err = snprintf(cdi_mgr->devname, sizeof(cdi_mgr->devname),
-			       "%s.%x.%c", pd->drv_name, pd->bus,
+			       "%s.%d.%c", pd->drv_name, pd->bus,
 			       'a' + pd->csi_port);
 	else
 		err = snprintf(cdi_mgr->devname, sizeof(cdi_mgr->devname),
-			       "cdi-mgr.%x.%c", pd->bus, 'a' + pd->csi_port);
+			       "cdi-mgr.%d.%c", pd->bus, 'a' + pd->csi_port);
 
 	if (err < 0) {
 		dev_err(&pdev->dev, "encoding error: %d\n", err);
