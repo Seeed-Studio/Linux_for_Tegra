@@ -199,11 +199,6 @@ static int edmalib_common_test(struct edmalib_common *edma)
 		edma->edma_ch |= 0xFF;
 	}
 
-	/* FIXME This is causing crash for remote dma when BAR MMIO virt address is used. */
-#if 0
-	epf_bar->wr_data[0].src_offset = 0;
-	epf_bar->wr_data[0].dst_offset = 0;
-#endif
 	if (EDMA_CRC_TEST_EN) {
 		/* 4 channels in sync mode */
 		edma->edma_ch = (0x10000000 | 0xF0);
@@ -216,31 +211,36 @@ static int edmalib_common_test(struct edmalib_common *edma)
 
 	if (EDMA_UNALIGN_SRC_TEST_EN) {
 		/* 4 channels in sync mode */
-		edma->edma_ch = (0x02000000 | 0x10000000 | 0x10);
+		edma->edma_ch &= ~0xFF;
+		edma->edma_ch |= (0x02000000 | 0x10000000 | 0x10);
 		/* Single SZ_4K packet on each channel, so total SZ_16K of data */
 		edma->stress_count  = 1;
 		edma->dma_size = SZ_4K;
 		edma->nents = nents = 4;
 		epf_bar->wr_data[0].size = edma->dma_size * edma->nents;
 		src_dma_addr += 11;
+		epf_bar->wr_data[0].dst_offset = 0;
 		epf_bar->wr_data[0].src_offset = 11;
 	}
 
 	if (EDMA_UNALIGN_DST_TEST_EN) {
 		/* 4 channels in sync mode */
-		edma->edma_ch = (0x01000000 | 0x10000000 | 0x10);
+		edma->edma_ch &= ~0xFF;
+		edma->edma_ch |= (0x01000000 | 0x10000000 | 0x10);
 		/* Single SZ_4K packet on each channel, so total SZ_16K of data */
 		edma->stress_count  = 1;
 		edma->dma_size = SZ_4K;
 		edma->nents = nents = 4;
 		epf_bar->wr_data[0].size = edma->dma_size * edma->nents;
 		dst_dma_addr += 7;
+		epf_bar->wr_data[0].src_offset = 0;
 		epf_bar->wr_data[0].dst_offset = 7;
 	}
 
 	if (EDMA_UNALIGN_SRC_DST_TEST_EN) {
 		/* 4 channels in sync mode */
-		edma->edma_ch = (0x00800000 | 0x10000000 | 0x10);
+		edma->edma_ch &= ~0xFF;
+		edma->edma_ch |= (0x00800000 | 0x10000000 | 0x10);
 		/* Single SZ_4K packet on each channel, so total SZ_16K of data */
 		edma->stress_count  = 1;
 		edma->dma_size = SZ_4K;
@@ -259,10 +259,10 @@ static int edmalib_common_test(struct edmalib_common *edma)
 	}
 
 	if (edma->cookie && edma->prev_edma_ch != edma->edma_ch) {
-		edma->st_as_ch = -1;
 		dev_info(edma->fdev, "edma_ch changed from 0x%x != 0x%x, deinit\n",
 			edma->prev_edma_ch, edma->edma_ch);
 		tegra_pcie_dma_deinit(&edma->cookie);
+		edma->st_as_ch = -1;
 		edma->cookie = NULL;
 	}
 
