@@ -137,7 +137,7 @@ struct tegra264_pcie_ep {
 	struct pci_epc *epc;
 	struct tegra_bpmp *bpmp;
 
-	phys_addr_t *ob_addr;
+	phys_addr_t ob_addr[NUM_OB_WINDOWS];
 	unsigned long *ob_window_map;
 
 	u32 ctl_id;
