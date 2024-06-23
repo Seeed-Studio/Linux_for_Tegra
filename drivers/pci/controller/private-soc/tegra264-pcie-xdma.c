@@ -281,7 +281,7 @@ static irqreturn_t xdma_irq_handler(int irq, void *cookie)
 				xdma_ch_init(prv, ch, bit + (i * mode_cnt[0]));
 
 				xdma_ll_ch_init(prv->xdma_base, bit + (i * mode_cnt[0]),
-						ch->dma_iova, (bit == 0), prv->is_remote_dma);
+						ch->dma_iova, (i == 0), prv->is_remote_dma);
 			} else {
 				process_ch_irq(prv, bit + (i * mode_cnt[0]), ch, i);
 			}
