@@ -48,6 +48,7 @@ extern int of_get_pci_domain_nr(struct device_node *node);
 struct tegra264_pcie {
 	struct device *dev;
 	struct pci_config_window *cfg;
+	struct pci_host_bridge *bridge;
 	void __iomem *xal_base;
 	void __iomem *xtl_pri_base;
 	void __iomem *ecam_base;
@@ -129,6 +130,7 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 	pcie = pci_host_bridge_priv(bridge);
 	pcie->dev = dev;
 	platform_set_drvdata(pdev, pcie);
+	pcie->bridge = bridge;
 
 	resource_list_for_each_entry(entry, &bridge->windows) {
 		struct resource *res = entry->res;
@@ -200,6 +202,25 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 	return ret;
 }
 
+static int tegra264_pcie_remove(struct platform_device *pdev)
+{
+	struct tegra264_pcie *pcie = platform_get_drvdata(pdev);
+
+	/*
+	 * If we undo tegra264_pcie_init() then link goes down and need controller reset to bring up
+	 * the link again. Remove intention is to clean up the root bridge and re enumerate during
+	 * bind.
+	 */
+	pci_lock_rescan_remove();
+	pci_stop_root_bus(pcie->bridge->bus);
+	pci_remove_root_bus(pcie->bridge->bus);
+	pci_unlock_rescan_remove();
+
+	pci_ecam_free(pcie->cfg);
+
+	return 0;
+}
+
 static int tegra264_pcie_resume_noirq(struct device *dev)
 {
 	struct tegra264_pcie *pcie = dev_get_drvdata(dev);
@@ -222,6 +243,7 @@ static const struct of_device_id tegra264_pcie_of_match[] = {
 
 static struct platform_driver tegra264_pcie_driver = {
 	.probe = tegra264_pcie_probe,
+	.remove = tegra264_pcie_remove,
 	.driver = {
 		.name = "tegra264-pcie",
 		.pm = &tegra264_pcie_pm_ops,
