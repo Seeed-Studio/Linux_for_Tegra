@@ -3715,7 +3715,7 @@
 			reg = <0x0 0xc6a0000 0x0 0x10000>;
 			nvidia,hw-instance-id = <0x4>;
 			clocks = <&bpmp TEGRA264_CLK_PWM4>,
-				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+				 <&bpmp TEGRA264_CLK_OSC>;
 			clock-names = "pwm", "parent";
 			#pwm-cells = <2>;
 			resets = <&bpmp TEGRA264_RESET_PWM4>;

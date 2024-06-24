@@ -69,10 +69,6 @@
 			status = "disabled";
 		};
 
-		pwm@c6a0000 {
-			status = "disabled";
-		};
-
 		pwm@810c5f0000 {
 			status = "disabled";
 		};
