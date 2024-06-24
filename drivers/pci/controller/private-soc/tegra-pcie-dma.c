@@ -125,6 +125,10 @@ tegra_pcie_dma_status_t tegra_pcie_dma_deinit(void **cookie)
 	}
 
 	prv = (struct tegra_pcie_dma_priv *)(*cookie);
+	if (!prv) {
+		pr_err("%s: prv pointer is null\n", __func__);
+		return TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS;
+	}
 	*cookie = NULL;
 	if (prv->soc == NVPCIE_DMA_SOC_T234) {
 		tegra234_pcie_edma_deinit(prv->soc_cookie);
