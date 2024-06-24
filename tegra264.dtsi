@@ -5801,7 +5801,7 @@
 			#size-cells = <0x2>;
 
 			pinctrl-names = "default";
-			pinctrl-0 = <&pex_rst_c2_in_state>;
+			pinctrl-0 = <&pex_rst_c4_in_state>;
 			reset-gpios = <&gpio_uphy TEGRA264_UPHY_GPIO(D, 1) GPIO_ACTIVE_LOW>;
 
 			iommus = <&smmu1_mmu 0x40000>;
@@ -5865,7 +5865,7 @@
 			#size-cells = <0x2>;
 
 			pinctrl-names = "default";
-			pinctrl-0 = <&pex_rst_c2_in_state>;
+			pinctrl-0 = <&pex_rst_c5_in_state>;
 			reset-gpios = <&gpio_uphy TEGRA264_UPHY_GPIO(D, 3) GPIO_ACTIVE_LOW>;
 
 			iommus = <&smmu1_mmu 0x50000>;
