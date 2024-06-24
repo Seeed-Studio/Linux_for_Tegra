@@ -304,7 +304,7 @@
 	};
 
 	chosen {
-		bootargs = "BOOT_IMAGE=/EFI/BOOT/Image tegra_keep_boot_clocks clk_ignore_unused earlyprintk=tegra_utc,mmio32,0xc5a0000 earlycon=tegra_utc,mmio32,0xc5a0000 androidboot.selinux=disabled console=ttyUTC0,115200 systemd.unit=nvpre-si.target root=/dev/initrd rw rootwait rootwait rw rootfstype=ext4 firmware_class.path=/etc/firmware kmemleak=off";
+		bootargs = "BOOT_IMAGE=/EFI/BOOT/Image tegra_keep_boot_clocks clk_ignore_unused earlyprintk=tegra_utc,mmio32,0xc5a0000 earlycon=tegra_utc,mmio32,0xc5a0000 androidboot.selinux=disabled console=ttyUTC0,115200 systemd.unit=nvpre-si.target root=/dev/initrd rw rootwait rootwait rw rootfstype=ext4 firmware_class.path=/etc/firmware kmemleak=off pci=pcie_bus_perf";
 		stdout-path = "/bus@0/tegra-utc@c5a0000";
 		use_dts_cmdline;
 	};
