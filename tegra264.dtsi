@@ -6404,7 +6404,7 @@
 			nvidia,sidconfig = <0x0>;
 
 			iommus = <&smmu4_mmu 0x1c00>;
-			nvidia,sidtable = /bits/ 8 <0x0>;
+			nvidia,sidtable = /bits/ 8 <0x0 0x0 0x0 0x0>;
 			dma-coherent;
 
 			status = "disabled";
