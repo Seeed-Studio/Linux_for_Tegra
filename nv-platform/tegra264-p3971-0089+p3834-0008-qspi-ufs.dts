@@ -5,6 +5,7 @@
 #include "tegra264-p3834-0008.dtsi"
 #include "tegra264-p3971-0089.dtsi"
 #include "tegra264-p3971-xxxx-p3834-xxxx.dtsi"
+#include "tegra264-p3971-0000-camera-imx274-dual.dtsi"
 
 / {
 	model = "NVIDIA Jetson Thor Developer Kit";
