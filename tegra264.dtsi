@@ -3426,8 +3426,7 @@
 		};
 
 		gpcdma: dma-controller@8400000 {
-			compatible = "nvidia,tegra264-gpcdma",
-				     "nvidia,tegra234-gpcdma";
+			compatible = "nvidia,tegra264-gpcdma";
 			status = "disabled";
 
 			reg = <0x0 0x08400000 0x0 0x210000>;
@@ -3464,10 +3463,6 @@
 				     <GIC_SPI 614 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 615 IRQ_TYPE_LEVEL_HIGH>;
 			#dma-cells = <3>;
-			iommus = <&smmu1_mmu 0x00000800>;
-			dma-coherent;
-			nvidia,start-dma-channel-index = <1>;
-			dma-channels = <31>;
 			dma-channel-mask = <0xfffffffe>;
 		};
 
