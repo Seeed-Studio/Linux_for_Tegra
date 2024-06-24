@@ -131,10 +131,6 @@
 			status = "disabled";
 		};
 
-		pmc@c800000 {
-			status = "disabled";
-		};
-
 		crypto@8188110000 {
 			status = "disabled";
 		};
@@ -148,10 +144,6 @@
 		};
 
 		crypto@8189880000 {
-			status = "disabled";
-		};
-
-		rtc@c2c0000 {
 			status = "disabled";
 		};
 
