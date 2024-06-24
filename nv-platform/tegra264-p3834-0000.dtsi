@@ -301,6 +301,10 @@
 				#thermal-sensor-cells = <1>;
 			};
 		};
+
+		thermal {
+			status = "okay";
+		};
 	};
 
 	chosen {
@@ -427,6 +431,83 @@
 						data = <0x0>;
 						non-volatile;
 					};
+				};
+			};
+		};
+	};
+
+	thermal-zones {
+		cpu-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+
+			trips {
+				cpu-sw-shutdown {
+					temperature = <104500>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		gpu-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+
+			trips {
+				gpu-sw-shutdown {
+					temperature = <104500>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		soc012-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+
+			trips {
+				soc012-sw-shutdown {
+					temperature = <104500>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		soc345-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+
+			trips {
+				soc345-sw-shutdown {
+					temperature = <104500>;
+					hysteresis = <0>;
+					type = "critical";
+				};
+			};
+		};
+
+		tj-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+
+			trips {
+				tj-sw-shutdown {
+					temperature = <104500>;
+					hysteresis = <0>;
+					type = "critical";
 				};
 			};
 		};
