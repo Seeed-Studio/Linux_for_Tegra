@@ -7,11 +7,6 @@
 			status = "disabled";
 		};
 
-		host1x@8181200000 {
-			pva0@818c000000 {
-				status = "disabled";
-			};
-		};
 	};
 
 	display@8808c00000 {

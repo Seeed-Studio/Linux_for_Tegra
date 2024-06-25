@@ -242,6 +242,37 @@
 			vic@8188050000 {
 				status = "okay";
 			};
+
+			pva0@818c000000 {
+				status = "okay";
+				pva0_ctx0: pva0_niso1_ctx0 {
+					status = "okay";
+				};
+				pva0_ctx1: pva0_niso1_ctx1 {
+					status = "okay";
+				};
+				pva0_ctx2: pva0_niso1_ctx2 {
+					status = "okay";
+				};
+				pva0_ctx3: pva0_niso1_ctx3 {
+					status = "okay";
+				};
+				pva0_ctx4: pva0_niso1_ctx4 {
+					status = "okay";
+				};
+				pva0_ctx5: pva0_niso1_ctx5 {
+					status = "okay";
+				};
+				pva0_ctx6: pva0_niso1_ctx6 {
+					status = "okay";
+				};
+				pva0_ctx7: pva0_niso1_ctx7 {
+					status = "okay";
+				};
+				pva0_ctx8: pva0_niso1_ctx8 {
+					status = "okay";
+				};
+			};
 		};
 
 		/* PCIe C0 ecam generic node for iGPU */
