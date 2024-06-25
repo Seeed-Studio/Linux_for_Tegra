@@ -10,5 +10,7 @@ filegroup(
     name = "conftest_headers",
     srcs = glob(["**"],
        allow_empty = False,
-    ),
+    ) + [
+       "//nvidia-build/kleaf:p4root_symlink",
+    ],
 )
