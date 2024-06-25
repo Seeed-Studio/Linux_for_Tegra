@@ -3912,63 +3912,63 @@
 				status = "disabled";
 
 				pva0_ctx0: pva0_niso1_ctx0 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x2)>;
 					dma-coherent;
 					status = "disabled";
 				};
 
 				pva0_ctx1: pva0_niso1_ctx1 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x3)>;
 					dma-coherent;
 					status = "disabled";
 				};
 
 				pva0_ctx2: pva0_niso1_ctx2 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x4)>;
 					dma-coherent;
 					status = "disabled";
 				};
 
 				pva0_ctx3: pva0_niso1_ctx3 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x5)>;
 					dma-coherent;
 					status = "disabled";
 				};
 
 				pva0_ctx4: pva0_niso1_ctx4 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x6)>;
 					dma-coherent;
 					status = "disabled";
 				};
 
 				pva0_ctx5: pva0_niso1_ctx5 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x7)>;
 					dma-coherent;
 					status = "disabled";
 				};
 
 				pva0_ctx6: pva0_niso1_ctx6 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x8)>;
 					dma-coherent;
 					status = "disabled";
 				};
 
 				pva0_ctx7: pva0_niso1_ctx7 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x9)>;
 					dma-coherent;
 					status = "disabled";
 				};
 
 				pva0_ctx8: pva0_niso1_ctx8 {
-					compatible = "nvidia,pva-tegra186-iommu-context";
+					compatible = "nvidia,pva-tegra264-iommu-context";
 					iommus = <&smmu4_mmu (TEGRA_SID_PVA + 0x1)>;
 					dma-coherent;
 					status = "disabled";
