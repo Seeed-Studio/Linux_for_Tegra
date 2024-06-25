@@ -372,6 +372,7 @@ static const char * const tegra264_reset_sources[] = {
 };
 
 static const struct tegra_wake_event tegra264_wake_events[] = {
+	TEGRA_WAKE_IRQ("pmu", 0, 727),
 	TEGRA_WAKE_IRQ("rtc", 65, 548),
 	TEGRA_WAKE_GPIO("power_btn", 5, 1, TEGRA264_AON_GPIO(AA, 5)),
 };
