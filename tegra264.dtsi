@@ -8236,6 +8236,7 @@
                    vccq-max-microamp = <0>;
                    vccq2-max-microamp = <0>;
                    nvidia,enable-ufs-provisioning;
+		   nvidia,mask-hs-mode-b;
 
                    ufs_variant {
                            compatible = "tegra264,ufs_variant",
