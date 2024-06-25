@@ -114,11 +114,67 @@ static int edmalib_read_test(struct seq_file *s, void *data)
 	return edmalib_common_test(&epfnv->edma);
 }
 
+/* debugfs to perform EP outbound access */
+static int edmalib_test_ob(struct seq_file *s, void *data)
+{
+	struct pcie_epf_dma *epfnv = (struct pcie_epf_dma *)dev_get_drvdata(s->private);
+	struct pcie_epf_bar *epf_bar = (struct pcie_epf_bar *)epfnv->bar_virt;
+	struct pci_epc *epc = epfnv->epc;
+	void __iomem *dst_va[10] = { 0 };
+	phys_addr_t dst_pci_addr[10] = { 0 };
+	int i, ret;
+
+	if (!epf_bar->rp_phy_addr) {
+		dev_err(epfnv->fdev, "RP DMA address is null\n");
+		return -1;
+	}
+
+	for (i = 0; i < 10; i++) {
+		dst_va[i] = pci_epc_mem_alloc_addr(epc, &dst_pci_addr[i], SZ_64K);
+		if (!dst_va[i]) {
+			dev_err(epfnv->fdev, "failed to allocate dst PCIe address, ob ch: %u\n", i);
+			break;
+		}
+		dev_dbg(epfnv->fdev, "Mapping %llx(EP) to %llx(RP) for size SZ_64K, ob ch: %d\n",
+			 dst_pci_addr[i], epf_bar->rp_phy_addr, i);
+
+		if (lpci_epc_map_addr(epc, 0, dst_pci_addr[i], epf_bar->rp_phy_addr, SZ_64K) < 0) {
+			dev_err(epfnv->fdev, "failed to map rp_phy_addr, ob ch: %d\n", i);
+			break;
+		}
+		if (*((u64 *) ((u8 *)dst_va[i] + PCIE_EP_OB_OFFSET)) != PCIE_EP_OB_MAGIC) {
+			dev_err(epfnv->fdev, "magic number: %llx is not matching, ob ch: %d\n",
+				*((u64 *) ((u8 *)dst_va[i] + PCIE_EP_OB_OFFSET)), i);
+			break;
+		}
+	}
+
+	if (i == 8) {
+		dev_info(epfnv->fdev, "Eight outbound channel mapping success\n");
+		ret = 0;
+	} else {
+		dev_info(epfnv->fdev, "Outbound channel mapping failed at ch: %d\n", i);
+		ret = -1;
+	}
+
+	while (i >= 0) {
+		if (dst_pci_addr[i])
+			lpci_epc_unmap_addr(epc, 0, dst_pci_addr[i]);
+		if (dst_va[i])
+			pci_epc_mem_free_addr(epc, dst_pci_addr[i], dst_va[i], SZ_64K);
+		i--;
+	}
+
+	return ret;
+}
+
 static void init_debugfs(struct pcie_epf_dma *epfnv)
 {
 	debugfs_create_devm_seqfile(epfnv->fdev, "edmalib_test", epfnv->debugfs, edmalib_test);
 	debugfs_create_devm_seqfile(epfnv->fdev, "edmalib_read_test", epfnv->debugfs,
 				    edmalib_read_test);
+	debugfs_create_devm_seqfile(epfnv->fdev, "edmalib_test_ob", epfnv->debugfs,
+				    edmalib_test_ob);
 
 	debugfs_create_u32("dma_size", 0644, epfnv->debugfs, &epfnv->dma_size);
 	epfnv->dma_size = SZ_1M;

@@ -240,6 +240,8 @@ static int ep_test_dma_probe(struct pci_dev *pdev, const struct pci_device_id *i
 	/* Update RP DMA system memory base address allocated with EP pci_dev in BAR0 */
 	epf_bar = (__force struct pcie_epf_bar *)ep->bar_virt;
 	epf_bar->rp_phy_addr = ep->ep_dma_phy;
+	/* Assign OB magic number */
+	*((u64 *)((u8 *)ep->ep_dma_virt + PCIE_EP_OB_OFFSET)) = PCIE_EP_OB_MAGIC;
 
 	pci_read_config_word(pdev, pdev->msi_cap + PCI_MSI_FLAGS, &val_16);
 	if (val_16 & PCI_MSI_FLAGS_64BIT) {

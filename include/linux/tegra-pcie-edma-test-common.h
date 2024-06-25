@@ -64,6 +64,10 @@ static inline void dma_common_wr(void __iomem *p, u32 val, u32 offset)
 /* DMA base offset starts at 0x20000 from ATU_DMA base */
 #define DMA_OFFSET		0x20000
 
+/* Outbound magic number */
+#define PCIE_EP_OB_MAGIC	0xA5A519885A5A1984LU
+#define PCIE_EP_OB_OFFSET	SZ_16K
+
 struct sanity_data {
 	u32 size;
 	u32 src_offset;
