@@ -5,6 +5,10 @@
 
 / {
 	bus@0 {
+		actmon@d3f0000 {
+			status = "okay";
+		};
+
 		i2c@810c640000 {
 			status = "okay";
 			/* CVB EEPROM */
