@@ -73,7 +73,7 @@
 				     "nvidia,tegra234-efuse";
 			status = "disabled";
 
-			reg = <0x0 0x01000000 0x0 0x10000>;
+			reg = <0x0 0x01000000 0x0 0x20000>;
 			clocks = <&bpmp TEGRA264_CLK_FUSE>;
 			clock-names = "fuse";
 		};
