@@ -1,0 +1,8 @@
+# Menu: HEADER
+# FORMAT: 4
+# ARCH: arm64
+# FLAVOUR: arm64-nvidia-tegra-pvw arm64-nvidia-tegra-pvw-rt
+# FLAVOUR_DEP: {'arm64-nvidia-tegra-pvw': 'arm64-nvidia-tegra', 'arm64-nvidia-tegra-pvw-rt': 'arm64-nvidia-tegra-rt'}
+
+include "../../debian.nvidia-tegra/config/annotations"
+
