@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2015-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * nv_imx219.c - imx219 sensor driver
- *
- * Copyright (c) 2015-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  */
 
@@ -747,6 +746,7 @@ static int imx219_probe(struct i2c_client *client,
 
 	err = tegracam_v4l2subdev_register(tc_dev, true);
 	if (err) {
+		tegracam_device_unregister(tc_dev);
 		dev_err(dev, "tegra camera subdev registration failed\n");
 		return err;
 	}

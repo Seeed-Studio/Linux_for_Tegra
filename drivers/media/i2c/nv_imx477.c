@@ -775,6 +775,7 @@ static int imx477_probe(struct i2c_client *client,
 
 	err = tegracam_v4l2subdev_register(tc_dev, true);
 	if (err) {
+		tegracam_device_unregister(tc_dev);
 		dev_err(dev, "tegra camera subdev registration failed\n");
 		return err;
 	}
