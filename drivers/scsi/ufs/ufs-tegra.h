@@ -383,6 +383,7 @@ struct ufs_tegra_host {
 	struct clk *ufshc_parent;
 	struct clk *ufsdev_parent;
 	struct clk *ufshc_clk;
+	struct clk *ufshc_clk_div;
 	struct clk *ufsdev_ref_clk;
 	struct clk *ufsdev_osc;
 	struct clk *ufs_uphy_pll3;

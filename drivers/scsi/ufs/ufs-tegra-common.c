@@ -800,6 +800,7 @@ static int ufs_tegra_init_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 		"ufshc", &ufs_tegra->ufshc_clk);
 	if (err)
 		goto out;
+
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		goto out;
 
@@ -809,6 +810,10 @@ static int ufs_tegra_init_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 	} else {
 		err = ufs_tegra_host_clk_get(dev,
 			"pllrefe_vcoout", &ufs_tegra->ufshc_parent);
+		if (err)
+			goto out;
+		err = ufs_tegra_host_clk_get(dev,
+			"ufshc_div", &ufs_tegra->ufshc_clk_div);
 	}
 	if (err)
 		goto out;
@@ -836,24 +841,44 @@ static int ufs_tegra_enable_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 	struct device *dev = ufs_tegra->hba->dev;
 	int err = 0;
 
-	err = ufs_tegra_host_clk_enable(dev, "ufshc",
-		ufs_tegra->ufshc_clk);
-	if (err)
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA) {
+		err = ufs_tegra_host_clk_enable(dev, "ufshc",
+			ufs_tegra->ufshc_clk);
 		goto out;
-	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
-		goto out;
-	err = clk_set_parent(ufs_tegra->ufshc_clk,
-				ufs_tegra->ufshc_parent);
+	}
+
+	if (ufs_tegra->soc->chip_id == TEGRA264) {
+		/* TEGRA264_CLK_UFSHC_CG_SYS_DIV is parent
+		 * for ufs
+		 */
+		err = clk_set_parent(ufs_tegra->ufshc_clk,
+			ufs_tegra->ufshc_clk_div);
+	} else {
+		err = clk_set_parent(ufs_tegra->ufshc_clk,
+			ufs_tegra->ufshc_parent);
+	}
 	if (err) {
 		pr_err("Function clk_set_parent failed\n");
 		goto out;
 	}
-	if (ufs_tegra->soc->chip_id != TEGRA264)
+	if (ufs_tegra->soc->chip_id != TEGRA264) {
 		err = clk_set_rate(ufs_tegra->ufshc_clk, UFSHC_CLK_FREQ);
-	else
-		err = clk_set_rate(ufs_tegra->ufshc_clk, UFSHC_CLK_FREQ_T264);
+	} else {
+		/* In T264, set frequency for ufs parent and enable
+		 * ufs clock
+		 */
+		err = clk_set_rate(ufs_tegra->ufshc_clk_div, UFSHC_CLK_FREQ_T264);
+	}
 	if (err) {
 		pr_err("Function clk_set_rate failed\n");
+		goto out;
+	}
+
+	err = ufs_tegra_host_clk_enable(dev, "ufshc",
+		ufs_tegra->ufshc_clk);
+
+	if (err) {
+		pr_err("ufshc clock enable failed %d\n", err);
 		goto out;
 	}
 
