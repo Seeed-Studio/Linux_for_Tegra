@@ -57,19 +57,7 @@
 			status = "disabled";
 		};
 
-		pwm@810c610000 {
-			status = "disabled";
-		};
-
-		pwm@810c5e0000 {
-			status = "disabled";
-		};
-
 		pwm@810c600000 {
-			status = "disabled";
-		};
-
-		pwm@810c5f0000 {
 			status = "disabled";
 		};
 
