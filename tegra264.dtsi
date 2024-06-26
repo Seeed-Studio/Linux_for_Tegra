@@ -8468,6 +8468,14 @@
 		status = "disabled";
 	};
 
+	mods_qspi0_dma: mods_qspi0_dma {
+		compatible = "nvidia,mods_smmu";
+		iommus = <&smmu2_mmu TEGRA_SID_XSPI0>;
+		dma-coherent;
+		dev-names = "mods_qspi0_dma";
+		status = "disabled";
+	};
+
 	rce_resv: rce-reservation {
 		iommu-addresses = <&tegra_rce 0x0 0x00000000 0x00000000 0x10000000>,
 					<&tegra_rce 0x0 0x20000000 0xffffffff 0x3fffffff>;
