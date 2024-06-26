@@ -1145,7 +1145,7 @@ static void ufs_tegra_mphy_rx_advgran(struct ufs_tegra_host *ufs_tegra)
 {
 	u32 val = 0, reg_vendor_2;
 
-	if (ufs_tegra->soc->chip_id == TEGRA234)
+	if (ufs_tegra->soc->chip_id >= TEGRA234)
 		reg_vendor_2 = MPHY_RX_APB_VENDOR2_0_T234;
 	else
 		reg_vendor_2 = MPHY_RX_APB_VENDOR2_0;
