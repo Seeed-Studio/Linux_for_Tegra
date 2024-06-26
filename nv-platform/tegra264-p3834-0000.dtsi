@@ -543,6 +543,18 @@
 			polling-delay-passive = <500>;
 
 			trips {
+				tj_trip_active0: active-0 {
+					temperature = <75000>;
+					hysteresis = <4000>;
+					type = "active";
+				};
+
+				tj_trip_active1: active-1 {
+					temperature = <95000>;
+					hysteresis = <4000>;
+					type = "active";
+				};
+
 				tj-sw-shutdown {
 					temperature = <104500>;
 					hysteresis = <0>;
