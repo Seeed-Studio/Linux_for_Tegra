@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* SPDX-FileCopyrightText: Copyright (c) 2017-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 /dts-v1/;
 /plugin/;
@@ -1194,11 +1194,6 @@
 
 			tegra-camera-platform {
 				compatible = "nvidia, tegra-camera-platform";
-				num_csi_lanes = <12>;
-				max_lane_speed = <2500000>;
-				min_bits_per_pixel = <16>;
-				vi_peak_byte_per_pixel = <2>;
-				vi_bw_margin_pct = <67>;
 
 				modules {
 					cam_module0: module0 {

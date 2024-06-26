@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Jetson Device-tree overlay for Camera IMX185 on t23x platforms
  *
@@ -177,15 +177,6 @@
 		board_config {
 			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
 			sw-modules = "kernel";
-		};
-		__overlay__ {
-			num_csi_lanes = <4>;
-			max_lane_speed = <1500000>;
-			min_bits_per_pixel = <10>;
-			vi_peak_byte_per_pixel = <2>;
-			vi_bw_margin_pct = <25>;
-			isp_peak_byte_per_pixel = <5>;
-			isp_bw_margin_pct = <25>;
 		};
 	};
 	/* pca9646 i2c mux */
