@@ -878,6 +878,10 @@ void ether_restart_lane_bringup_task(struct tasklet_struct *t)
 {
 	struct ether_priv_data *pdata = from_tasklet(pdata, t, lane_restart_task);
 
+	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		netdev_info(pdata->ndev, "Ignoring restart_lane_bringup_task!!!\n");
+		return;
+	}
 	if (pdata->tx_start_stop == OSI_DISABLE) {
 		netif_tx_lock(pdata->ndev);
 		netif_carrier_off(pdata->ndev);

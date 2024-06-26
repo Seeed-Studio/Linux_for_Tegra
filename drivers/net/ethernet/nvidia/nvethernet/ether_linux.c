@@ -7152,6 +7152,10 @@ static void ether_init_rss(struct ether_priv_data *pdata,
 	/* generate random key */
 	netdev_rss_key_fill(osi_core->rss.key, sizeof(osi_core->rss.key));
 
+	/* In T26x mgbe default 8 VDMA channels enabled */
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		num_q = pdata->osi_dma->num_dma_chans;
+	}
 	/* initialize hash table */
 	for (i = 0; i < OSI_RSS_MAX_TABLE_SIZE; i++)
 		osi_core->rss.table[i] = ethtool_rxfh_indir_default(i, num_q);
