@@ -4798,6 +4798,20 @@ struct isp_capture_descriptor {
 		uint32_t mr_image_def1;
 
 		/**
+		 * Program identification. Used internally by ISP 7.
+		 *
+		 * @rststar
+		 * +-------+---------------------------------------------------+
+		 * | Bits  | Description                                       |
+		 * +=======+===================================================+
+		 * | 15:0  | Program ID [0,UINT16_MAX]. Should be set to a     |
+		 * |       | unique value for each push buffer.                |
+		 * +-------+---------------------------------------------------+
+		 * @endrst
+		 */
+		uint32_t mr_image_def2;
+
+		/**
 		 * Surface control settings for multi-exposure.
 		 *
 		 * @rststar
@@ -4841,9 +4855,6 @@ struct isp_capture_descriptor {
 		uint32_t surf_stride_chunk;
 	} surface_configs;
 	/**< Configuration for input surfaces. */
-
-	/** Reserved */
-	uint32_t pad2__;
 
 	/**
 	 * Undefined in RCE-FW interface.

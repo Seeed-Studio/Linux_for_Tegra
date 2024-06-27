@@ -1605,6 +1605,7 @@ static int pin_isp_capture_request_buffers_locked(
 			&desc->lac1_surface,	&desc->h0_surface,
 			&desc->h1_surface,	&desc->hist_raw24_surface,
 			&desc->pru_bad_surface,	&desc->ltm_surface,
+			&desc->h2_surface,
 		};
 
 		struct memoryinfo_surface *meminfo_surfaces[] = {
@@ -1613,6 +1614,7 @@ static int pin_isp_capture_request_buffers_locked(
 			&desc_mem->lac1_surface,	&desc_mem->h0_surface,
 			&desc_mem->h1_surface,	&desc_mem->hist_raw24_surface,
 			&desc_mem->pru_bad_surface,	&desc_mem->ltm_surface,
+			&desc_mem->h2_surface,
 		};
 
 		BUILD_BUG_ON(ARRAY_SIZE(stats_surfaces) !=
