@@ -9776,6 +9776,7 @@
 		reg = <0x00000088 0x08000000 0x00000000 0x00800000>;
 		interrupts = <GIC_SPI 238 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "dce-smb-0", "dce-smb-1", "dce-smb-2", "dce-smb-3";
+		iommus = <&smmu3_mmu TEGRA_SID_DCE>;
 		status = "disabled";
 		sha-carveout {
 			compatible = "sha-carveout";
