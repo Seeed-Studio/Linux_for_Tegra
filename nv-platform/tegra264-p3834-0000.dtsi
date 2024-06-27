@@ -303,6 +303,10 @@
 		crypto@8189880000 {
 			status = "okay";
 		};
+
+		ccplex@8120000000 {
+			status = "okay";
+		};
 	};
 
 	eeprom-manager {
