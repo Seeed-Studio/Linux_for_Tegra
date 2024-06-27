@@ -6460,7 +6460,7 @@
 			nvidia,sidtable = /bits/ 8 <0x0 0x0 0x0 0x0>;
 			dma-coherent;
 
-			status = "disabled";
+			status = "okay";
 		};
 
 		pcie@a8b0000000 {
