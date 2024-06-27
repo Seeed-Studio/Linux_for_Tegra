@@ -346,7 +346,7 @@ static ssize_t macsec_enable_store(struct device *dev,
 		ret = macsec_open(macsec_pdata, OSI_NULL);
 	} else {
 		dev_err(pdata->dev,
-			"Invalid. Valid inputs are 0/tx/rx/txrx\n");
+			"Invalid. Valid inputs are 0/txrx\n");
 	}
 
 	return size;
@@ -713,11 +713,6 @@ static int parse_inputs(const char *buf,
 
 	for (i = 0; i < OSI_LUT_BYTE_PATTERN_MAX; i++) {
 		byte[i] = (unsigned char)temp3[i];
-	}
-
-	if (mac_da_valid && !is_valid_ether_addr(mac_da)) {
-		pr_err("%s: Invalid mac DA\n", __func__);
-		goto err;
 	}
 
 	if (mac_sa_valid && !is_valid_ether_addr(mac_sa)) {
@@ -1876,6 +1871,15 @@ static ssize_t macsec_kt_store(struct device *dev,
 	kt_config.table_config.rw = OSI_LUT_WRITE;
 	kt_config.table_config.index = index;
 
+	for (i = 0; i < OSI_KEY_LEN_128; i++) {
+		sak[i] = (unsigned char)temp[i];
+	}
+	if (key256bit == 1) {
+		for (i = OSI_KEY_LEN_128; i < OSI_KEY_LEN_256; i++) {
+			sak[i] = (unsigned char)temp[i];
+		}
+	}
+
 	/* HKEY GENERATION */
 	tfm = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
 	if (crypto_cipher_setkey(tfm, sak, OSI_KEY_LEN_128)) {
@@ -1885,15 +1889,6 @@ static ssize_t macsec_kt_store(struct device *dev,
 	}
 	crypto_cipher_encrypt_one(tfm, hkey, zeros);
 	crypto_free_cipher(tfm);
-
-	for (i = 0; i < OSI_KEY_LEN_128; i++) {
-		sak[i] = (unsigned char)temp[i];
-	}
-	if (key256bit == 1) {
-		for (i = OSI_KEY_LEN_128; i < OSI_KEY_LEN_256; i++) {
-			sak[i] = (unsigned char)temp[i];
-		}
-	}
 
 	for (i = 0; i < OSI_KEY_LEN_128; i++) {
 		kt_config.entry.h[i] = hkey[OSI_KEY_LEN_128 - 1 - i];
