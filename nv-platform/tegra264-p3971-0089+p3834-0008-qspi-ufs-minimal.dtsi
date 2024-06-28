@@ -93,10 +93,6 @@
 			status = "disabled";
 		};
 
-		spi@810c5b0000 {
-			status = "disabled";
-		};
-
 		gpio@cf00000 {
 			status = "disabled";
 		};
@@ -159,10 +155,6 @@
 	};
 
 	sound {
-		status = "disabled";
-	};
-
-	ufshci@a80b8d0000 {
 		status = "disabled";
 	};
 };

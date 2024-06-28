@@ -452,7 +452,6 @@
 	};
 
 	ufshci@a80b8d0000 {
-		/delete-property/ nvidia,enable-hs-mode;
 		status = "okay";
 	};
 
