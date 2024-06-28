@@ -8,6 +8,8 @@
 
 #include <dt-bindings/mailbox/tegra186-hsp.h>
 
+
+#if defined(__QNX__)
 /*
  * These define the types of shared mailbox supported based on data size.
  */
@@ -16,6 +18,7 @@
 #endif
 
 #define TEGRA_HSP_MBOX_TYPE_SM_128BIT 0x4
+#endif
 
 /*
  * Shared interrupt source, mapped with mailboxes
