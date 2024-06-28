@@ -4308,6 +4308,25 @@
 			reset-names = "spi";
 		};
 
+		spi@810c460000 {
+			compatible = "nvidia,tegra210-spi";
+			status = "disabled";
+			reg = <0x81 0x0c460000 0x0 0x10000>;
+			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+			dma-coherent;
+			dma-names = "rx", "tx";
+			dmas = <&gpcdma 16 16 TEGRA264_GPCDMA_SID_SPI5>,
+			       <&gpcdma 16 26 TEGRA264_GPCDMA_SID_SPI5>;
+			iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_SPI5>;
+			clocks = <&bpmp TEGRA264_CLK_SPI5>,
+				  <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			clock-names = "spi";
+			assigned-clocks = <&bpmp TEGRA264_CLK_SPI5>;
+			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
+			resets = <&bpmp TEGRA264_RESET_SPI5>;
+			reset-names = "spi";
+		};
+
 		spi@810c5b0000 {
 			compatible = "nvidia,tegra234-qspi";
 			status = "disabled";
