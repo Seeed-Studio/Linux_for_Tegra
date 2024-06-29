@@ -207,6 +207,7 @@ struct vs_config_info {
 	uint32_t phys_dev;
 	uint32_t phys_base;
 	uint32_t storage_type;
+	uint32_t priority;
 	uint8_t speed_mode[SPEED_MODE_MAX_LEN];
 };
 
