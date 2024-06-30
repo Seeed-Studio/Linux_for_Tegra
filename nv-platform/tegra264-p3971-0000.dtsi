@@ -28,14 +28,6 @@
 
 				i2s@9280000 {
 					status = "okay";
-					ports {
-						port@1 {
-							endpoint {
-								dai-format = "i2s";
-								remote-endpoint = <&rt5640_ep1>;
-							};
-						};
-					};
 				};
 
 				i2s@9290000 {
@@ -44,6 +36,14 @@
 
 				i2s@92b0000 {
 					status = "okay";
+					ports {
+						port@1 {
+							endpoint {
+								dai-format = "i2s";
+								remote-endpoint = <&rt5640_ep1>;
+							};
+						};
+					};
 				};
 			};
 
@@ -96,7 +96,8 @@
 
 				port {
 					rt5640_ep1: endpoint {
-						remote-endpoint = <&i2s1_dap>;
+						link-name = "rt5640-playback";
+						remote-endpoint = <&i2s4_dap>;
 						mclk-fs = <256>;
 					};
 				};
@@ -300,14 +301,15 @@
 	sound {
 		status = "okay";
 
-		compatible = "nvidia,tegra186-audio-graph-card";
-
 		dais = /* ADMAIF (FE) Ports */
 		       <&admaif0_port>, <&admaif1_port>, <&admaif2_port>, <&admaif3_port>,
 		       <&admaif4_port>, <&admaif5_port>, <&admaif6_port>, <&admaif7_port>,
 		       <&admaif8_port>, <&admaif9_port>, <&admaif10_port>, <&admaif11_port>,
 		       <&admaif12_port>, <&admaif13_port>, <&admaif14_port>, <&admaif15_port>,
 		       <&admaif16_port>, <&admaif17_port>, <&admaif18_port>, <&admaif19_port>,
+		       <&admaif20_port>, <&admaif21_port>, <&admaif22_port>, <&admaif23_port>,
+		       <&admaif24_port>, <&admaif25_port>, <&admaif26_port>, <&admaif27_port>,
+		       <&admaif28_port>, <&admaif29_port>, <&admaif30_port>, <&admaif31_port>,
 		       /* XBAR Ports */
 		       <&xbar_i2s1_port>, <&xbar_i2s2_port>, <&xbar_i2s4_port>,
 		       <&xbar_sfc1_in_port>, <&xbar_sfc2_in_port>,
@@ -321,8 +323,13 @@
 		       <&xbar_amx3_in3_port>, <&xbar_amx3_in4_port>,
 		       <&xbar_amx4_in1_port>, <&xbar_amx4_in2_port>,
 		       <&xbar_amx4_in3_port>, <&xbar_amx4_in4_port>,
+		       <&xbar_amx5_in1_port>, <&xbar_amx5_in2_port>,
+		       <&xbar_amx5_in3_port>, <&xbar_amx5_in4_port>,
+		       <&xbar_amx6_in1_port>, <&xbar_amx6_in2_port>,
+		       <&xbar_amx6_in3_port>, <&xbar_amx6_in4_port>,
 		       <&xbar_adx1_in_port>, <&xbar_adx2_in_port>,
 		       <&xbar_adx3_in_port>, <&xbar_adx4_in_port>,
+		       <&xbar_adx5_in_port>, <&xbar_adx6_in_port>,
 		       <&xbar_mix_in1_port>, <&xbar_mix_in2_port>,
 		       <&xbar_mix_in3_port>, <&xbar_mix_in4_port>,
 		       <&xbar_mix_in5_port>, <&xbar_mix_in6_port>,
@@ -339,6 +346,7 @@
 		       <&mvc1_out_port>, <&mvc2_out_port>,
 		       <&amx1_out_port>, <&amx2_out_port>,
 		       <&amx3_out_port>, <&amx4_out_port>,
+		       <&amx5_out_port>, <&amx6_out_port>,
 		       <&adx1_out1_port>, <&adx1_out2_port>,
 		       <&adx1_out3_port>, <&adx1_out4_port>,
 		       <&adx2_out1_port>, <&adx2_out2_port>,
@@ -347,6 +355,10 @@
 		       <&adx3_out3_port>, <&adx3_out4_port>,
 		       <&adx4_out1_port>, <&adx4_out2_port>,
 		       <&adx4_out3_port>, <&adx4_out4_port>,
+		       <&adx5_out1_port>, <&adx5_out2_port>,
+		       <&adx5_out3_port>, <&adx5_out4_port>,
+		       <&adx6_out1_port>, <&adx6_out2_port>,
+		       <&adx6_out3_port>, <&adx6_out4_port>,
 		       <&mix_out1_port>, <&mix_out2_port>, <&mix_out3_port>,
 		       <&mix_out4_port>, <&mix_out5_port>,
 		       <&asrc_out1_port>, <&asrc_out2_port>, <&asrc_out3_port>,
@@ -361,9 +373,9 @@
 			  "Microphone",	"CVB-RT MIC",
 			  "Headphone",	"CVB-RT HP Jack";
 
-		routing = /* I2S1 <-> RT5640 */
-			  "CVB-RT AIF1 Playback",	"I2S1 DAP-Playback",
-			  "I2S1 DAP-Capture",		"CVB-RT AIF1 Capture",
+		routing = /* I2S4 <-> RT5640 */
+			  "CVB-RT AIF1 Playback",	"I2S4 DAP-Playback",
+			  "I2S4 DAP-Capture",		"CVB-RT AIF1 Capture",
 			  /* RT5640 codec controls */
 			  "CVB-RT HP Jack",		"CVB-RT HPOL",
 			  "CVB-RT HP Jack",		"CVB-RT HPOR",
