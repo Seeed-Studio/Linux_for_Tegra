@@ -417,6 +417,14 @@
 		cpu@13 {
 			status = "okay";
 		};
+
+		cpus {
+			idle-states {
+				cc7 {
+					status = "okay";
+				};
+			};
+		};
 	};
 
 	tegra-carveouts {
