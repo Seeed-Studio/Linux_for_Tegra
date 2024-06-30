@@ -1,6 +1,13 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
  */
 
 #include <nvidia/conftest.h>
@@ -28,10 +35,10 @@
 
 #include <uapi/media/cam_fsync.h>
 
-
-#define TSC_TICKS_PER_HZ			(31250000ULL)
-#define TSC_NS_PER_TICK				(32)
+#define TSC_NS_PER_TICK_T234			(32)
+#define TSC_NS_PER_TICK_T264			(1)
 #define NS_PER_MS				(1000000U)
+#define NS_PER_SEC				(1000000000U)
 
 #define TSC_MTSCCNTCV0				(0x10)
 #define TSC_MTSCCNTCV0_CV			GENMASK(31, 0)
@@ -83,6 +90,7 @@
 
 /**
  * struct cam_fsync_controller_features: TSC signal controller SW feature support.
+ * @ns_per_tick: number of nanonseconds per TSC tick (amount of increment)
  * @rational_locking:
  *   @enforced: Generator periods must be derived from a common base.
  *   @max_freq_hz_lcm: Maximum frequency (hz) of the common base generator period.
@@ -90,6 +98,7 @@
  *   @enabled: Allow generators to offset their signal from the start of their period.
  */
 struct cam_fsync_controller_features {
+	u32 ns_per_tick;
 	struct {
 		bool enforced;
 		u32 max_freq_hz_lcm;
@@ -173,6 +182,18 @@ struct cam_fsync_controller {
 };
 
 static const struct cam_fsync_controller_features tegra234_cam_fsync_features = {
+	.ns_per_tick = TSC_NS_PER_TICK_T234,
+	.rational_locking = {
+		.enforced = true,
+		.max_freq_hz_lcm = 120,
+	},
+	.offset = {
+		.enabled = true,
+	},
+};
+
+static const struct cam_fsync_controller_features tegra264_cam_fsync_features = {
+	.ns_per_tick = TSC_NS_PER_TICK_T264,
 	.rational_locking = {
 		.enforced = true,
 		.max_freq_hz_lcm = 120,
@@ -190,7 +211,6 @@ static const struct debugfs_reg32 cam_fsync_generator_debugfs_regset[] = {
 };
 
 #define TSC_SIG_GEN_DEBUGFS_REGSET_SIZE ARRAY_SIZE(cam_fsync_generator_debugfs_regset)
-
 
 static inline void
 cam_fsync_generator_writel(struct cam_fsync_generator *generator, u32 reg, u32 val)
@@ -312,6 +332,7 @@ static int cam_fsync_add_generator(struct fsync_generator_group *group, struct d
 		}
 	}
 	list_add_tail(&generator->list, &group->generators);
+
 	return err;
 }
 
@@ -325,17 +346,18 @@ struct cam_fsync_extra_ticks_and_period {
  *
  * This function does the following:
  * - Calculate the extra ticks and number of periods for a 30Hz signal using the
- *   fractional part of the division between TSC_TICKS_PER_HZ and the frequency.
+ *   fractional part of the division between ticks_per_hz and the frequency.
  * - The smallest fraction is calculated by dividing with the @ref GCD of the
  *   frequency and the remainder.
  *
  * @param[out] extra  Extra ticks and number of periods
  */
 static void cam_fsync_get_extra_ticks_and_period_for_30hz(
-			struct cam_fsync_extra_ticks_and_period *extra)
+			struct cam_fsync_extra_ticks_and_period *extra,
+			u64 const ticks_per_hz)
 {
 	u32 const frequency = 30U;
-	u32 const remainder = TSC_TICKS_PER_HZ % frequency;
+	u32 const remainder = ticks_per_hz % frequency;
 	u32 const hcf = gcd(frequency, remainder);
 
 	extra->extra_ticks = remainder / hcf;
@@ -372,6 +394,8 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 {
 	struct cam_fsync_generator *generator;
 	u32 max_freq_hz_lcm = 0;
+	u64 const ticks_per_hz = DIV_ROUND_CLOSEST(NS_PER_SEC,
+			group->features->ns_per_tick);
 	struct cam_fsync_extra_ticks_and_period extra = {0, 1};
 	bool const can_generate_precise_freq = cam_fsync_can_generate_precise_freq(group);
 
@@ -403,7 +427,8 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 	 * periods to 1 which is the default case.
 	 */
 	if (can_generate_precise_freq)
-		cam_fsync_get_extra_ticks_and_period_for_30hz(&extra);
+		cam_fsync_get_extra_ticks_and_period_for_30hz(&extra,
+			ticks_per_hz);
 
 	list_for_each_entry(generator, &group->generators, list) {
 		u32 ticks_in_period = 0;
@@ -413,10 +438,11 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 		u32 i = 0;
 
 		if (group->features->rational_locking.enforced) {
-			ticks_in_period = DIV_ROUND_CLOSEST(TSC_TICKS_PER_HZ, max_freq_hz_lcm);
+			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz,
+				max_freq_hz_lcm);
 			ticks_in_period *= max_freq_hz_lcm / generator->config.freq_hz;
 		} else {
-			ticks_in_period = DIV_ROUND_CLOSEST(TSC_TICKS_PER_HZ,
+			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz,
 				generator->config.freq_hz);
 		}
 		ticks_active = mult_frac(ticks_in_period, generator->config.duty_cycle, 100);
@@ -475,7 +501,7 @@ static void cam_fsync_program_group_generator_start_values(struct fsync_generato
 		abs_start_tsc_ticks = group->abs_start_ticks;
 		if (group->features->offset.enabled && (generator->config.offset_ms != 0))
 			abs_start_tsc_ticks += mult_frac(generator->config.offset_ms,
-				NS_PER_MS, TSC_NS_PER_TICK);
+				NS_PER_MS, group->features->ns_per_tick);
 
 		cam_fsync_generator_writel(generator, TSC_GENX_START0,
 			FIELD_PREP(TSC_GENX_START0_LSB_VAL, lower_32_bits(abs_start_tsc_ticks)));
@@ -512,7 +538,8 @@ static u64 cam_fsync_get_current_tsc_ticks(struct cam_fsync_controller *controll
 static u64 cam_fsync_get_default_start_ticks(struct cam_fsync_controller *controller)
 {
 	u64 default_start_ticks = mult_frac(
-		TSC_GENX_START_OFFSET_MS, NS_PER_MS, TSC_NS_PER_TICK);
+		TSC_GENX_START_OFFSET_MS, NS_PER_MS,
+		controller->features->ns_per_tick);
 	default_start_ticks += cam_fsync_get_current_tsc_ticks(controller);
 	return default_start_ticks;
 }
@@ -1213,6 +1240,7 @@ static int __maybe_unused cam_fsync_resume(struct device *dev)
 
 static const struct of_device_id cam_fsync_of_match[] = {
 	{ .compatible = "nvidia,tegra234-cdi-tsc", .data = &tegra234_cam_fsync_features },
+	{ .compatible = "nvidia,tegra264-cdi-tsc", .data = &tegra264_cam_fsync_features },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, cam_fsync_of_match);
