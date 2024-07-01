@@ -3363,13 +3363,13 @@ static int ether_close(struct net_device *ndev)
 		reset_control_assert(pdata->xpcs_rst);
 	}
 
+	/* All MDIO interfaces must be disabled before resetting the MAC */
+	if (pdata->mii)
+		mdiobus_unregister(pdata->mii);
+
 	/* Assert MAC RST gpio */
 	if (pdata->mac_rst) {
 		reset_control_assert(pdata->mac_rst);
-	}
-
-	if (pdata->mii != NULL) {
-		mdiobus_unregister(pdata->mii);
 	}
 
 	/* Disable clock */
