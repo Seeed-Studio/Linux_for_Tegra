@@ -51,38 +51,6 @@
 		};
 	};
 
-	thermal-zones {
-		tboard-thermal {
-			polling-delay = <0>;
-			polling-delay-passive = <0>;
-			thermal-sensors = <&tegra_tmp451 0>;
-			status = "okay";
-
-			trips {
-				tboard-hot {
-					temperature = <106000>;
-					hysteresis = <0>;
-					type = "hot";
-				};
-			};
-		};
-
-		tdiode-thermal {
-			polling-delay = <0>;
-			polling-delay-passive = <0>;
-			thermal-sensors = <&tegra_tmp451 1>;
-			status = "okay";
-
-			trips {
-				tdiode-hot {
-					temperature = <106000>;
-					hysteresis = <0>;
-					type = "hot";
-				};
-			};
-		};
-	};
-
 	eeprom-manager {
 		bus@0 {
 			i2c-bus = <&gen1_i2c>;

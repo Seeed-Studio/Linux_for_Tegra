@@ -147,21 +147,5 @@
 				};
 			};
 		};
-
-		tboard-thermal {
-			trips {
-				tboard-hot {
-					temperature = <119000>;
-				};
-			};
-		};
-
-		tdiode-thermal {
-			trips {
-				tdiode-hot {
-					temperature = <119000>;
-				};
-			};
-		};
 	};
 };
