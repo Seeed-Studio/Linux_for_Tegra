@@ -1278,6 +1278,7 @@ static int compute_hugetlbfs_stat(u64 *total, u64 *free, int numa_id)
 /*
  * This function calculates allocatable free memory using following formula:
  * free_mem = avail mem - cma free
+ * free_mem = free_mem - (free_mem / 1000);
  * The CMA memory is not allocatable by NvMap for regular allocations and it
  * is part of Available memory reported, so subtract it from available memory.
  */
@@ -1299,6 +1300,10 @@ int system_heap_free_mem(unsigned long *mem_val)
 		return 0;
 	}
 	free_mem = (available_mem << PAGE_SHIFT) - cma_free;
+
+	/* reduce free_mem by ~ 0.1% */
+	free_mem = free_mem - (free_mem / 1000);
+
 	*mem_val = free_mem;
 	return 0;
 }
@@ -1405,6 +1410,12 @@ static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 		op.granule_size = PAGE_SIZE;
 	}
 
+	/*
+	 * Align free size reported to the previous page.
+	 * This avoids any AllocAttr failures due to using PAGE_ALIGN
+	 * for allocating exactly the free memory reported.
+	 */
+	op.free = op.free & PAGE_MASK;
 	if (copy_to_user(arg, &op, sizeof(op)))
 		ret = -EFAULT;
 exit:

@@ -578,12 +578,12 @@ next_page:
 
 bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid)
 {
-	unsigned long total_num_pages;
 	unsigned int carveout_mask = NVMAP_HEAP_CARVEOUT_MASK;
 	unsigned int iovmm_mask = NVMAP_HEAP_IOVMM;
 	struct nvmap_device *dev = nvmap_dev;
 	bool memory_available = false;
 	int i;
+	unsigned long free_mem = 0;
 
 	if (!heap)
 		return false;
@@ -599,11 +599,15 @@ bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid)
 	}
 
 	if (heap & iovmm_mask) {
-		total_num_pages = totalram_pages();
-		if ((size >> PAGE_SHIFT) > total_num_pages) {
+		if (system_heap_free_mem(&free_mem)) {
+			pr_debug("Call to system_heap_free_mem failed\n");
+			return false;
+		}
+
+		if (size > (free_mem & PAGE_MASK)) {
 			pr_debug("Requested size is more than available memory\n");
 			pr_debug("Requested size : %lu B, Available memory : %lu B\n", size,
-					total_num_pages << PAGE_SHIFT);
+					free_mem & PAGE_MASK);
 			return false;
 		}
 		return true;
@@ -625,14 +629,14 @@ bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid)
 		 * on that numa node.
 		 */
 		if (numa_nid == NUMA_NO_NODE) {
-			if (size > h->free_size)
+			if (size > (h->free_size & PAGE_MASK))
 				continue;
 			memory_available = true;
 			goto exit;
 		} else {
 			if (h->numa_node_id != numa_nid)
 				continue;
-			else if (size > h->free_size)
+			else if (size > (h->free_size & PAGE_MASK))
 				memory_available = false;
 			else
 				memory_available = true;
