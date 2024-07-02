@@ -1192,6 +1192,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MDEV_DRIVER_HAS_SUPPORTED_TYPE_GROUPS" "" "types"
         ;;
 
+        msi_get_virq)
+             #
+             # Determine if msi_get_virq() function is present or not
+             #
+             # Added by commit 98043704f375 ("genirq/msi: Make msi_get_virq()
+             # device domain aware") in Linux V6.1
+             #
+             CODE="
+             #include <linux/msi.h>
+             void conftest_msi_get_virq() {
+                 msi_get_virq();
+             }"
+
+             compile_check_conftest "$CODE" "NV_MSI_GET_VIRQ_PRESENT" "" "functions"
+         ;;
+
         vfio_device_ops_has_dma_unmap)
             #
             # Determine if 'vfio_device_ops' struct has 'dma_unmap' field.

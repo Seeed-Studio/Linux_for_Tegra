@@ -292,7 +292,7 @@ static void pcie_dma_epf_unbind(struct pci_epf *epf)
 	struct pcie_epf_bar *epf_bar = (struct pcie_epf_bar *)epfnv->bar_virt;
 	struct device *cdev = epc->dev.parent;
 	struct platform_device *pdev = of_find_device_by_node(cdev->of_node);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
+#if !defined(NV_MSI_GET_VIRQ_PRESENT) /* Linux v6.1 */
 	struct msi_desc *desc;
 #endif
 	enum pci_barno bar;
@@ -309,7 +309,7 @@ static void pcie_dma_epf_unbind(struct pci_epf *epf)
 #if defined(NV_PLATFORM_MSI_DOMAIN_FREE_IRQS_PRESENT) /* Linux v6.9 */
 		platform_msi_domain_free_irqs(&pdev->dev);
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+#if defined(NV_MSI_GET_VIRQ_PRESENT) /* Linux v6.1 */
 		irq = msi_get_virq(&pdev->dev, 0);
 #else
 		for_each_msi_entry(desc, cdev) {
@@ -355,7 +355,7 @@ static int pcie_dma_epf_bind(struct pci_epf *epf)
 	struct pcie_epf_bar *epf_bar_virt;
 	struct pci_epf_bar *epf_bar;
 	struct irq_domain *domain;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
+#if !defined(NV_MSI_GET_VIRQ_PRESENT) /* Linux v6.1 */
 	struct msi_desc *desc;
 #endif
 	enum pci_barno bar;
@@ -425,7 +425,7 @@ static int pcie_dma_epf_bind(struct pci_epf *epf)
 			goto fail_kasnprintf;
 		}
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+#if defined(NV_MSI_GET_VIRQ_PRESENT) /* Linux v6.1 */
 		epfnv->edma.msi_irq = msi_get_virq(&pdev->dev, 1);
 		irq = msi_get_virq(&pdev->dev, 0);
 #else
