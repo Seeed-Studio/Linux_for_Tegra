@@ -27,10 +27,6 @@
 			};
 		};
 
-		tegra_soc_hwpm@1604000 {
-			status = "disabled";
-		};
-
 		i2c@810c680000 {
 			status = "disabled";
 			audio-codec@1c {
