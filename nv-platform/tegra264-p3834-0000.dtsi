@@ -5,6 +5,10 @@
 
 / {
 	bus@0 {
+		efuse-helper {
+			status = "okay";
+		};
+
 		actmon@d3f0000 {
 			status = "okay";
 		};
