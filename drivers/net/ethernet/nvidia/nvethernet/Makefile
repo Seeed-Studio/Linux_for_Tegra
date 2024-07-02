@@ -15,11 +15,17 @@ endif
 
 ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 # These CFLAGS must not be shared/used in OSI. These are local to Linux
-ccflags-y += -DLINUX_OS -DNET30 -DNVPKCS_MACSEC -DLINUX_IVC -mno-outline-atomics -Werror=frame-larger-than=2048 \
+ccflags-y += -DLINUX_OS -DNET30 -DNVPKCS_MACSEC -DLINUX_IVC -mno-outline-atomics -Werror \
 	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include
 else
 ccflags-y += -DLINUX_OS -DNET30 -DNVPKCS_MACSEC -DLINUX_IVC \
 	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include
+endif
+
+ifdef CONFIG_KASAN
+ccflags-y += -Wframe-larger-than=4096
+else
+ccflags-y += -Wframe-larger-than=2048
 endif
 
 #ccflags-y += -DOSI_DEBUG -DMACSEC_SUPPORT -DDEBUG_MACSEC -DMACSEC_KEY_PROGRAM
