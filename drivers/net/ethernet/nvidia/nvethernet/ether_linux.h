@@ -150,6 +150,11 @@
 #define ETHER_EQOS_TX_CLK_10M		2500000UL
 #define ETHER_EQOS_UPHY_LX_TX_2_5G_CLK	195312500UL
 #define ETHER_EQOS_UPHY_LX_TX_1G_CLK	78125000UL
+#define ETHER_EQOS_RX_PCS_CLK_2_5G	312500000UL
+#define ETHER_EQOS_RX_CLK_1000M		125000000UL
+#define ETHER_EQOS_UPHY_LX_RX_2_5G_CLK	195312500UL
+#define ETHER_MGBE_APP_25G_CLK		650000000UL
+#define ETHER_MGBE_APP_10G_5G_CLK	480000000UL
 
 /**
  * @brief 1 Second in Neno Second
@@ -498,6 +503,16 @@ struct ether_priv_data {
 	struct clk *app_clk;
 	/** MAC Rx input clk */
 	struct clk *rx_input_clk;
+	/** PLL refgp_out1 clock */
+	struct clk *pllrefgp_out1;
+	/** utmi_pll1_clkout480 clock*/
+	struct clk *utmi_pll1_clkout480;
+	/** pll_bpmpcam clock */
+	struct clk *pll_bpmpcam;
+	/** Tx serdes clock */
+	struct clk *tx_ser_clk;
+	/** Rx serdes clock */
+	struct clk *rx_ser_clk;
 	/** Pointer to PHY device tree node */
 	struct device_node *phy_node;
 	/** Pointer to MDIO device tree node */
