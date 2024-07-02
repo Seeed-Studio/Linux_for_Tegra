@@ -7470,6 +7470,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_EPC_FEATURES_STRUCT_HAS_BAR" "" "types"
         ;;
 
+        pci_epc_write_header_has_vfn_arg)
+            #
+            # Determine if the pci_epc_write_header() has the vfn argument or not.
+            #
+            # Commit 53fd3cbe5e9d791("PCI: endpoint: Add virtual function number in pci_epc ops"
+            # added virtual function number as argument in the APIs in Linux 5.14.
+            #
+            CODE="
+            #include <linux/pci-epc.h>
+            int conftest_pci_epc_write_header_has_vfn_arg(void) {
+                return pci_epc_write_header(NULL, 0, 0, NULL);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG" "" "types"
+        ;;
+
         pci_disable_pcie_error_reporting)
             #
             # Determine if the pci_disable_pcie_error_reporting() API available or not.
