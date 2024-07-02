@@ -102,10 +102,30 @@
 		timer@8000000 {
 			compatible = "nvidia,tegra234-timer";
 			reg = <0x0 0x08000000 0x0 0x00140000>;
-			interrupts = <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 773 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 774 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 775 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 776 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		/* Legacy WDT driver device tree node, use on AV+L platforms. */
+		watchdog@8110000 {
+			compatible = "nvidia,tegra-wdt-t264";
+			reg = <0x0 0x08110000 0x0 0x10000>, /* WDT0 */
+			      <0x0 0x08010000 0x0 0x10000>, /* TMR0 */
+			      <0x0 0x08000000 0x0 0x10000>; /* TKE */
+			interrupts = <GIC_SPI 773 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 774 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 775 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 776 IRQ_TYPE_LEVEL_HIGH>; /* TKE shared int */
+			nvidia,watchdog-index = <0>;
+			nvidia,timer-index = <0>;
+			nvidia,shared-interrupt = <0>; /* Shared interrupt to use for WDT. */
+			timeout-sec = <120>;
+			nvidia,extend-watchdog-suspend;
+			nvidia,disable-debug-reset;
+			nvidia,disable-por-reset;
 			status = "disabled";
 		};
 
