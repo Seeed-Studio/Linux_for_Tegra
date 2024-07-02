@@ -51,6 +51,7 @@
 
 #define TIMER_INDEX_T186	0
 #define TIMER_INDEX_T234	1
+#define TIMER_INDEX_T264	2
 
 struct tegra_wdt_t18x_soc {
 	bool unmask_hw_irq;
@@ -130,6 +131,8 @@ static struct tegra_wdt_t18x *to_tegra_wdt_t18x(struct watchdog_device *wdt)
 #define WATCHDOG_INDEX(add)		((((add) >> 16) & 0xF) - 0xc)
 #define T234_TIMER_INDEX(add)		((((add) >> 16) & 0xF) - 0x9)
 #define T234_WATCHDOG_INDEX(add)	((((add) >> 16) & 0xF) - 0x9)
+#define T264_TIMER_INDEX(add)		((((add) >> 16) & 0xF) - 0x1)
+#define T264_WATCHDOG_INDEX(add)	((((add) >> 16) & 0xF) - 0x1)
 
 static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *twdt_t18x)
 {
@@ -484,8 +487,22 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	/* The second entry is the IRQ */
-	twdt_t18x->hwirq = oirq.args[1];
+	switch (twdt_t18x->soc->timer_index) {
+	case TIMER_INDEX_T264:
+		/* Read shared-interrupt. */
+		ret = of_property_read_u32(np, "nvidia,shared-interrupt",
+					   &twdt_t18x->hwirq);
+		if (ret)
+			return -EINVAL;
+
+		dev_info(&pdev->dev, "using shared-interrupt-%d\n",
+			 twdt_t18x->hwirq);
+		break;
+	default:
+		/* The second entry is the IRQ */
+		twdt_t18x->hwirq = oirq.args[1];
+		break;
+	}
 
 	twdt_t18x->enable_on_init = of_property_read_bool(np,
 					"nvidia,enable-on-init");
@@ -506,6 +523,9 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 
 	/* WDT ID from base address */
 	switch (twdt_t18x->soc->timer_index) {
+	case TIMER_INDEX_T264:
+		wdt_id = T264_WATCHDOG_INDEX(res_wdt->start);
+		break;
 	case TIMER_INDEX_T234:
 		wdt_id = T234_WATCHDOG_INDEX(res_wdt->start);
 		break;
@@ -566,6 +586,9 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	 * then adjust address.
 	 */
 	switch (twdt_t18x->soc->timer_index) {
+	case TIMER_INDEX_T264:
+		timer_id = T264_TIMER_INDEX(res_tmr->start);
+		break;
 	case TIMER_INDEX_T234:
 		timer_id = T234_TIMER_INDEX(res_tmr->start);
 		break;
@@ -806,6 +829,11 @@ static const struct dev_pm_ops tegra_wdt_t18x_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_wdt_t18x_suspend, tegra_wdt_t18x_resume)
 };
 
+static const struct tegra_wdt_t18x_soc t264_wdt_silicon = {
+	.unmask_hw_irq	= true,
+	.timer_index	= TIMER_INDEX_T264,
+};
+
 static const struct tegra_wdt_t18x_soc t234_wdt_silicon = {
 	.unmask_hw_irq	= true,
 	.timer_index	= TIMER_INDEX_T234,
@@ -822,6 +850,7 @@ static const struct tegra_wdt_t18x_soc t18x_wdt_sim = {
 };
 
 static const struct of_device_id tegra_wdt_t18x_match[] = {
+	{ .compatible = "nvidia,tegra-wdt-t264", .data = &t264_wdt_silicon},
 	{ .compatible = "nvidia,tegra-wdt-t234", .data = &t234_wdt_silicon},
 	{ .compatible = "nvidia,tegra-wdt-t19x", .data = &t18x_wdt_silicon},
 	{ .compatible = "nvidia,tegra-wdt-t18x", .data = &t18x_wdt_silicon},
