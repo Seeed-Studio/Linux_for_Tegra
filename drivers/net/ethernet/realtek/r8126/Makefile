@@ -32,9 +32,13 @@
 
 LINUX_VERSION := $(shell expr $(VERSION) \* 256 + $(PATCHLEVEL))
 LINUX_VERSION_6_9 := $(shell expr 6 \* 256 + 9)
+LINUX_VERSION_5_14 := $(shell expr 5 \* 256 + 14)
 
 # Use dummy R8126 driver for Kernel versions greater that K69
 ifeq ($(shell test $(LINUX_VERSION) -gt $(LINUX_VERSION_6_9); echo $$?),0)
+obj-m := r8126.o
+r8126-objs := r8126_dummy.o
+else ifeq ($(shell test $(LINUX_VERSION) -eq $(LINUX_VERSION_5_14); echo $$?),0)
 obj-m := r8126.o
 r8126-objs := r8126_dummy.o
 else
