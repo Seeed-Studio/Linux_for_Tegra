@@ -1,13 +1,13 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef TEGRA_DCE_H
 #define TEGRA_DCE_H
 
 #include <linux/cdev.h>
-#include <linux/types.h>
+#include <types.h>
 #include <dce-log.h>
 #include <dce-ipc.h>
 #include <dce-hsp.h>

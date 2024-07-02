@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_HSP_T234_H
 #define DCE_HSP_T234_H
 
-#include <linux/types.h> // TODO: use dce-types
+#include <types.h>
 
 struct tegra_dce;
 

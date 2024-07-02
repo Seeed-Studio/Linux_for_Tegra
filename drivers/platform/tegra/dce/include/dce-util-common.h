@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_UTIL_COMMON_H
 #define DCE_UTIL_COMMON_H
 
-#include <linux/types.h>
+#include <types.h>
 #include <linux/bitops.h>
 #include <linux/bitmap.h>
 #include <linux/workqueue.h>
