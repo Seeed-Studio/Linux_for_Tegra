@@ -98,6 +98,7 @@
 		};
 
 		i2c@810c640000 {
+			status = "okay";
 			/* CVB EEPROM */
 			eeprom@56 {
 				compatible = "atmel,24c02";
@@ -323,6 +324,30 @@
 				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-0}>,
 				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-2}>;
 			phy-names = "usb2-1", "usb2-2", "usb2-3", "usb3-0", "usb3-2";
+			status = "okay";
+		};
+
+		i2c@c610000 {
+			status = "okay";
+		};
+
+		i2c@810c630000 {
+			status = "okay";
+		};
+
+		i2c@810c650000 {
+			status = "okay";
+		};
+
+		i2c@810c670000 {
+			status = "okay";
+		};
+
+		i2c@810c690000 {
+			status = "okay";
+		};
+
+		i2c@810c6a0000 {
 			status = "okay";
 		};
 	};
