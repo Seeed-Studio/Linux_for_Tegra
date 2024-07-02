@@ -7342,6 +7342,20 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MII_BUS_STRUCT_HAS_WRITE_C45" "" "types"
         ;;
 
+        module_import_ns_macro)
+           #
+           # Determine if the MODULE_IMPORT_NS macro present.
+           #
+           # Added in commit 80140a81f7f833 ("module.h: simplify MODULE_IMPORT_NS")
+           # in Linux 5.18.
+           CODE="
+           #include <linux/module.h>
+           MODULE_IMPORT_NS(DMA_BUF);
+           "
+
+           compile_check_conftest "$CODE" "NV_MODULE_IMPORT_NS_PRESENT" "" "types"
+        ;;
+
         platform_msi_domain_alloc_irqs)
             #
             # Determine if the platform_msi_domain_alloc_irqs() API available or not.
