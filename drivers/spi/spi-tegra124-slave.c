@@ -136,6 +136,10 @@
 #define SPI_INTR_CS_MASK           BIT(31)
 
 #define SPI_MISC_REG				0x194
+#define SPI_MISC_FIFO_REG_RX_FIFO_RD_CLK	BIT(26)
+#define SPI_MISC_FIFO_REG_TX_FIFO_RD_CLK	BIT(27)
+#define SPI_MISC_ASYNC_STATUS_FIFO_RD_CLK	BIT(28)
+#define SPI_MISC_RX_PM_ASYNC_FIFO_RD_CLK	BIT(29)
 #define SPI_MISC_EXT_CLK_EN			BIT(30)
 #define SPI_MISC_CLKEN_OVERRIDE			BIT(31)
 
@@ -249,6 +253,7 @@ struct tegra_spi_chip_data {
 	bool intr_mask_reg;
 	bool mask_cs_inactive_intr;
 	bool new_features;
+	bool misc_reg_update;
 };
 
 struct tegra_spi_platform_data {
@@ -828,15 +833,29 @@ static inline int tegra_spi_ext_clk_enable(bool enable,
 	unsigned long misc_reg = 0;
 	int ret = 0;
 
-	if (tspi->chip_data->new_features) {
+	if (tspi->chip_data->new_features && tspi->chip_data->misc_reg_update) {
 		/* Enable external clock bit in SPI_MISC_REG */
+		if (enable)
+			misc_reg |= (SPI_MISC_FIFO_REG_TX_FIFO_RD_CLK |
+					SPI_MISC_RX_PM_ASYNC_FIFO_RD_CLK |
+					SPI_MISC_EXT_CLK_EN |
+					SPI_MISC_CLKEN_OVERRIDE) ;
+		else
+			misc_reg &= ~(SPI_MISC_FIFO_REG_TX_FIFO_RD_CLK |
+					SPI_MISC_RX_PM_ASYNC_FIFO_RD_CLK |
+					SPI_MISC_EXT_CLK_EN |
+					SPI_MISC_CLKEN_OVERRIDE);
+
+		tegra_spi_writel(tspi, misc_reg, SPI_MISC_REG);
+	} else {
 		if (enable)
 			misc_reg |= SPI_MISC_EXT_CLK_EN;
 		else
-			misc_reg &= (~SPI_MISC_EXT_CLK_EN);
+			misc_reg &= ~SPI_MISC_EXT_CLK_EN;
 
 		tegra_spi_writel(tspi, misc_reg, SPI_MISC_REG);
 	}
+
 	return ret;
 }
 static int tegra_spi_start_dma_based_transfer(struct
@@ -1921,18 +1940,28 @@ static struct tegra_spi_chip_data tegra124_spi_chip_data = {
 	.intr_mask_reg = false,
 	.mask_cs_inactive_intr = true,
 	.new_features = false,
+	.misc_reg_update = false,
 };
 
 static struct tegra_spi_chip_data tegra210_spi_chip_data = {
 	.intr_mask_reg = true,
 	.mask_cs_inactive_intr = false,
 	.new_features = false,
+	.misc_reg_update = false,
 };
 
 static struct tegra_spi_chip_data tegra186_spi_chip_data = {
 	.intr_mask_reg = true,
 	.mask_cs_inactive_intr = false,
 	.new_features = true,
+	.misc_reg_update = false,
+};
+
+static struct tegra_spi_chip_data tegra264_spi_chip_data = {
+	.intr_mask_reg = true,
+	.mask_cs_inactive_intr = false,
+	.new_features = true,
+	.misc_reg_update = true,
 };
 
 static const struct of_device_id tegra_spi_of_match[] = {
@@ -1945,6 +1974,9 @@ static const struct of_device_id tegra_spi_of_match[] = {
 	}, {
 		.compatible = "nvidia,tegra186-spi-slave",
 		.data       = &tegra186_spi_chip_data,
+	},{
+		.compatible = "nvidia,tegra264-spi-slave",
+		.data       = &tegra264_spi_chip_data,
 	},
 	{}
 };
