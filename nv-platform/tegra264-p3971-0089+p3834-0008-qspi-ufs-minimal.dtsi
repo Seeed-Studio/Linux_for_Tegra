@@ -120,22 +120,6 @@
 		crypto@8189880000 {
 			status = "disabled";
 		};
-
-		serial@810c500000 {
-			status = "disabled";
-		};
-
-		serial@810c510000{
-			status = "disabled";
-		};
-
-		serial@810c530000 {
-			status = "disabled";
-		};
-
-		serial@810c540000 {
-			status = "disabled";
-		};
 	};
 
 	display@8808c00000 {
