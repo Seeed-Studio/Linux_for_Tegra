@@ -3032,43 +3032,19 @@ static int tegra_hv_vse_safety_aes_setkey(struct crypto_skcipher *tfm,
 
 static int tegra_hv_vse_safety_rng_drbg_init(struct crypto_tfm *tfm)
 {
-	struct tegra_virtual_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
-	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[rng_ctx->node_id].se_engine];
-
-	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
-		return -ENODEV;
-
-	rng_ctx->se_dev = se_dev;
-	rng_ctx->rng_buf =
-		dma_alloc_coherent(rng_ctx->se_dev->dev,
-				TEGRA_VIRTUAL_SE_RNG_DT_SIZE,
-		&rng_ctx->rng_buf_adr, GFP_KERNEL);
-	if (!rng_ctx->rng_buf) {
-		dev_err(se_dev->dev, "can not allocate rng dma buffer");
-		return -ENOMEM;
-	}
-
 	return 0;
 }
 
 static void tegra_hv_vse_safety_rng_drbg_exit(struct crypto_tfm *tfm)
 {
-	struct tegra_virtual_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
-
-	if (rng_ctx->rng_buf) {
-		dma_free_coherent(rng_ctx->se_dev->dev,
-			TEGRA_VIRTUAL_SE_RNG_DT_SIZE, rng_ctx->rng_buf,
-			rng_ctx->rng_buf_adr);
-	}
-	rng_ctx->se_dev = NULL;
+	return;
 }
 
 static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *rng_ctx,
 	u8 *rdata, unsigned int dlen)
 {
-	struct tegra_virtual_se_dev *se_dev = rng_ctx->se_dev;
+	struct tegra_virtual_se_dev *se_dev =
+				g_virtual_se_dev[g_crypto_to_ivc_map[rng_ctx->node_id].se_engine];
 	u8 *rdata_addr;
 	int err = 0, j, num_blocks, data_len = 0;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
@@ -3077,6 +3053,9 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr = NULL;
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
+
+	if (atomic_read(&se_dev->se_suspended))
+		return -ENODEV;
 
 	if (dlen == 0) {
 		return -EINVAL;
@@ -3099,6 +3078,11 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 		devm_kfree(se_dev->dev, ivc_req_msg);
 		return 0;
 	}
+
+	rng_ctx->rng_buf = dma_alloc_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_RNG_DT_SIZE,
+		&rng_ctx->rng_buf_adr, GFP_KERNEL);
+	if (!rng_ctx->rng_buf)
+		return -ENOMEM;
 
 	ivc_tx = &ivc_req_msg->tx[0];
 	ivc_hdr = &ivc_req_msg->ivc_hdr;
@@ -3142,6 +3126,11 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 exit:
 	devm_kfree(se_dev->dev, priv);
 	devm_kfree(se_dev->dev, ivc_req_msg);
+
+	if (rng_ctx->rng_buf)
+		dma_free_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_RNG_DT_SIZE,
+			rng_ctx->rng_buf, rng_ctx->rng_buf_adr);
+
 	return dlen;
 }
 
@@ -4590,14 +4579,6 @@ static int tegra_hv_vse_safety_register_hwrng(struct tegra_virtual_se_dev *se_de
 	}
 
 	rng_ctx->se_dev = se_dev;
-	rng_ctx->rng_buf =
-		dma_alloc_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_RNG_DT_SIZE,
-			&rng_ctx->rng_buf_adr, GFP_KERNEL);
-	if (!rng_ctx->rng_buf) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
 	vse_hwrng->name = "tegra_hv_vse_safety";
 	vse_hwrng->read = tegra_hv_vse_safety_hwrng_read;
 	vse_hwrng->quality = 1024;
