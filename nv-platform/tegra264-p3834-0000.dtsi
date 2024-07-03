@@ -462,6 +462,10 @@
 		status = "okay";
 	};
 
+	dce@8808000000 {
+		status = "okay";
+	};
+
 	display@8808c00000 {
 		status = "okay";
 	};
