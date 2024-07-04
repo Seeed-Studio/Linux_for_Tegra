@@ -8054,7 +8054,7 @@
 
 		gpu0_reserved: gpu0_carveout {
 			compatible = "nvidia,gpu0_carveout";
-			size = <0 0x60000000>;
+			size = <0x2 0x00000000>;
 			alignment = <0 0x200000>;
 			no-map;
 			granule-size = <0x200000>;
