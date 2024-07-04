@@ -1,8 +1,24 @@
 # SPDX-License-Identifier: GPL-2.0
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
 
 ifeq ($(CONFIG_TEGRA_KLEAF_BUILD),y)
 include $(abspath $(shell dirname $(lastword $(MAKEFILE_LIST))))/Makefile.kleaf
+endif
+
+# Include kernel specific config
+ifneq ($(kernel_name),)
+kernel_config := $(abspath $(shell dirname $(lastword $(MAKEFILE_LIST))))/Makefile.config.$(kernel_name)
+ifneq ($(wildcard $(kernel_config)),)
+include $(kernel_config)
+endif
+endif
+
+# Include system specific config
+ifneq ($(system_type),)
+system_config := $(abspath $(shell dirname $(lastword $(MAKEFILE_LIST))))/Makefile.config.$(system_type)
+ifneq ($(wildcard $(system_config)),)
+include $(system_config)
+endif
 endif
 
 LINUXINCLUDE += -I$(srctree.nvconftest)
