@@ -926,7 +926,7 @@ static struct camera_common_pdata *ar0234_parse_dt(struct tegracam_device *tc_de
 	struct camera_common_pdata *board_priv_pdata;
 	const struct of_device_id *match;
 	int err;
-	int gpio = 0;
+	int pwr_gpio = 0;
 	if (!node)
 		return NULL;
 	match = of_match_device(ar0234_of_match, dev);
@@ -939,23 +939,36 @@ static struct camera_common_pdata *ar0234_parse_dt(struct tegracam_device *tc_de
 			&board_priv_pdata->mclk_name);
 	if (err)
 		dev_err(dev, "mclk not in DT\n");
+
 	board_priv_pdata->reset_gpio = of_get_named_gpio(node,
 			"reset-gpios", 0);
-	gpio_direction_output(board_priv_pdata->reset_gpio, 1);
+	if (board_priv_pdata->reset_gpio > 0)
+		gpio_direction_output(board_priv_pdata->reset_gpio, 1);
+	else
+		dev_dbg(dev, "failed to read reset_gpio\n");
+
 	board_priv_pdata->pwdn_gpio = of_get_named_gpio(node,
 			"pwdn-gpios", 0);
-	gpio_direction_output(board_priv_pdata->pwdn_gpio, 1);
-	gpio = of_get_named_gpio(node,
+	if (board_priv_pdata->pwdn_gpio > 0)
+		gpio_direction_output(board_priv_pdata->pwdn_gpio, 1);
+	else
+		dev_dbg(dev, "failed to read pwdn_gpio\n");
+
+	pwr_gpio = of_get_named_gpio(node,
 			"pwr-gpios", 0);
-	gpio_direction_output(gpio, 1);
+	if (pwr_gpio > 0)
+		gpio_direction_output(pwr_gpio, 1);
+	else
+		dev_dbg(dev, "failed to read pwr_gpio\n");
+
 	board_priv_pdata->has_eeprom =
 		of_property_read_bool(node, "has-eeprom");
-
 	if (board_priv_pdata->has_eeprom) {
 		err = of_property_read_u32(node, "eeprom-addr", &board_priv_pdata->eeprom_id_addr);
 		if (err)
 			dev_err(dev, "Failed to read eeprom addr\n");
 	}
+
 	return board_priv_pdata;
 }
 static int ar0234_set_mode(struct tegracam_device *tc_dev)
