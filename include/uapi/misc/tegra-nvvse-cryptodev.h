@@ -425,6 +425,11 @@ struct tegra_nvvse_aes_cmac_sign_verify_ctl {
 	 * - Non-zero value indicates CMAC verification failure.
 	 */
 	uint8_t  result;
+	/** [out] Holds SM4 CMAC flag value for request
+	 * - '0' indicates AES CMAC request
+	 * - Non-zero value indicates SM4 CMAC request.
+	 */
+	uint8_t  is_SM4;
 };
 #define NVVSE_IOCTL_CMDID_AES_CMAC_SIGN_VERIFY _IOWR(TEGRA_NVVSE_IOC_MAGIC, \
 						TEGRA_NVVSE_CMDID_AES_CMAC_SIGN_VERIFY, \

@@ -118,6 +118,8 @@ struct tegra_virtual_se_aes_cmac_context {
 	bool is_key_slot_allocated;
 	/*Crypto dev instance*/
 	uint32_t node_id;
+	/* Flag to indicate if sm4 is enabled*/
+	uint8_t b_is_sm4;
 };
 
 /* Security Engine AES GMAC context */

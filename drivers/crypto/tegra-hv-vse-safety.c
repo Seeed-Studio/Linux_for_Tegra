@@ -346,6 +346,16 @@ enum cmac_request_type {
 	CMAC_VERIFY
 };
 
+/*
+ * @enum vse_sym_cipher_choice
+ * @brief Symmetric cipher to be used for CMAC sign/verify
+ * Currently two choices are supported - AES, SM4.
+ */
+enum vse_sym_cipher_choice {
+	VSE_SYM_CIPH_AES = 0,
+	VSE_SYM_CIPH_SM4 = 0xFFFFFFFF
+};
+
 /* CMAC request data */
 struct tegra_vse_cmac_req_data {
 	enum cmac_request_type request_type;
@@ -475,6 +485,7 @@ union tegra_virtual_se_aes_args {
 		u8 cmac_result[TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE];
 		u64 mac_addr;
 		u64 mac_comp_res_addr;
+		enum vse_sym_cipher_choice sym_ciph;
 	} op_cmac_sv;
 	struct aes_rng {
 		struct tegra_virtual_se_addr dst_addr;
@@ -2968,6 +2979,12 @@ static int tegra_hv_vse_safety_cmac_sv_op_hw_verify_supported(
 	memcpy(ivc_tx->aes.op_cmac_sv.keyslot, cmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
 	ivc_tx->aes.op_cmac_sv.key_length = cmac_ctx->keylen;
 	ivc_tx->aes.op_cmac_sv.config = 0;
+
+	if (cmac_ctx->b_is_sm4 == 1U)
+		ivc_tx->aes.op_cmac_sv.sym_ciph = VSE_SYM_CIPH_SM4;
+	else
+		ivc_tx->aes.op_cmac_sv.sym_ciph = VSE_SYM_CIPH_AES;
+
 	if (is_last == true)
 		ivc_tx->aes.op_cmac_sv.config |= TEGRA_VIRTUAL_SE_AES_CMAC_SV_CONFIG_LASTREQ;
 
@@ -3111,6 +3128,12 @@ static int tegra_hv_vse_safety_cmac_sv_op(struct ahash_request *req, bool is_las
 	ivc_tx->aes.op_cmac_sv.lastblock_len = last_block_bytes;
 	ivc_tx->aes.op_cmac_sv.src_addr = src_addr64.addr;
 	ivc_tx->aes.op_cmac_sv.src_buf_size = src_addr64.buf_size;
+
+	if (cmac_ctx->b_is_sm4 == 1U) {
+		ivc_tx->aes.op_cmac_sv.sym_ciph = VSE_SYM_CIPH_SM4;
+	} else {
+		ivc_tx->aes.op_cmac_sv.sym_ciph = VSE_SYM_CIPH_AES;
+	}
 	sg_pcopy_to_buffer(req->src,
 			(u32)num_sgs,
 			ivc_tx->aes.op_cmac_sv.lastblock,

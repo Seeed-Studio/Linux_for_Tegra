@@ -856,6 +856,7 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 
 	cmac_ctx = crypto_ahash_ctx(tfm);
 	cmac_ctx->node_id = ctx->node_id;
+	cmac_ctx->b_is_sm4 = aes_cmac_ctl->is_SM4;
 
 	driver_name = crypto_tfm_alg_driver_name(crypto_ahash_tfm(tfm));
 	if (driver_name == NULL) {
