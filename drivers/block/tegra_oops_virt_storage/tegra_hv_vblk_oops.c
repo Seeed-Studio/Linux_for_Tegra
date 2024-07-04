@@ -581,7 +581,7 @@ static void setup_device(struct vblk_dev *vblkdev)
 	pstore_zone.write = vblk_oops_write;
 	pstore_zone.panic_write = vblk_oops_panic_write;
 
-#if KERNEL_VERSION(5, 18, 0) > LINUX_VERSION_CODE
+#if KERNEL_VERSION(6, 2, 0) > LINUX_VERSION_CODE
 	if (register_pstore_zone(&pstore_zone))
 		dev_err(vblkdev->device, "Could not register with pstore_zone\n");
 #endif
