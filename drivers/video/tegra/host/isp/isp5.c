@@ -302,7 +302,7 @@ static int isp_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-const struct file_operations tegra194_isp5_ctrl_ops = {
+const struct file_operations isp_ctrl_ops = {
 	.owner = THIS_MODULE,
 	.open = isp_open,
 	.unlocked_ioctl = isp_ioctl,
@@ -330,7 +330,7 @@ struct nvhost_device_data t19_isp5_info = {
 	.clocks			= {
 		{"isp", UINT_MAX},
 	},
-	.ctrl_ops		= &tegra194_isp5_ctrl_ops,
+	.ctrl_ops		= &isp_ctrl_ops,
 	.pre_virt_init		= isp5_priv_early_probe,
 	.post_virt_init		= isp5_priv_late_probe,
 	.autosuspend_delay      = 500,
@@ -344,6 +344,7 @@ struct nvhost_device_data t264_isp_info = {
 	.clocks                 = {
 		{"isp", UINT_MAX},
 	},
+	.ctrl_ops		= &isp_ctrl_ops,
 	.pre_virt_init          = isp5_priv_early_probe,
 	.post_virt_init         = isp5_priv_late_probe,
 	.can_powergate = false,
@@ -356,6 +357,7 @@ struct nvhost_device_data t264_isp1_info = {
 	.clocks                 = {
 		{"isp1", UINT_MAX},
 	},
+	.ctrl_ops		= &isp_ctrl_ops,
 	.pre_virt_init          = isp5_priv_early_probe,
 	.post_virt_init         = isp5_priv_late_probe,
 	.can_powergate = false,
