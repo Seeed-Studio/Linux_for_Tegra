@@ -3794,6 +3794,18 @@
 			#interrupt-cells = <2>;
 		};
 
+		hsp_pva0: tegra-hsp@818c160000 {
+			compatible = "nvidia,tegra264-hsp";
+			reg = <0x81 0x8c160000 0x0 0x00090000>;
+			interrupts = <0 400 0x04>;
+			interrupt-names = "shared0";
+			nvidia,num-SM = <0x8>; /* num of shared mailboxes  */
+			nvidia,num-SS = <0x4>; /* num of shared semaphores */
+			nvidia,num-SI = <0x5>; /* num of shared interrupts */
+			nvidia,mbox-ie;
+			status = "disabled";
+		};
+
 		host1x: host1x@8181200000 {
 			compatible = "nvidia,tegra264-host1x";
 			reg = <0x81 0x81200000 0x0 0x10000>, /* Common */
@@ -3931,6 +3943,23 @@
 				iommus = <&smmu4_mmu TEGRA_SID_PVA>;
 				dma-coherent;
 				status = "disabled";
+
+				hsp {
+					compatible = "nvidia,tegra194-pva0-hsp";
+					hsp-mbox {
+						compatible = "nvidia,tegra186-hsp-mailbox";
+						nvidia,hsp-shared-mailbox = <&hsp_pva0 0x0>,
+							<&hsp_pva0 0x1>,
+							<&hsp_pva0 0x2>,
+							<&hsp_pva0 0x3>,
+							<&hsp_pva0 0x4>,
+							<&hsp_pva0 0x5>,
+							<&hsp_pva0 0x6>,
+							<&hsp_pva0 0x7>;
+						nvidia,hsp-shared-mailbox-names = "command", "addr", "len", "args", "sidechannel-wr", "aisr", "sidechannel-rd", "isr";
+						status = "disabled";
+					};
+				};
 
 				pva0_ctx0: pva0_niso1_ctx0 {
 					compatible = "nvidia,pva-tegra264-iommu-context";
