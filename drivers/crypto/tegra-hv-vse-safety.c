@@ -646,9 +646,13 @@ enum se_engine_id {
 	VIRTUAL_SE_AES1,
 	VIRTUAL_SE_SHA = 2,
 	VIRTUAL_SE_TSEC = 6,
-	VIRTUAL_GCSE1_SHA = 7,
-	VIRTUAL_GCSE2_SHA = 8,
-	VIRTUAL_MAX_SE_ENGINE_NUM = 9
+	VIRTUAL_GCSE1_AES0 = 7,
+	VIRTUAL_GCSE1_AES1 = 8,
+	VIRTUAL_GCSE1_SHA = 9,
+	VIRTUAL_GCSE2_AES0 = 10,
+	VIRTUAL_GCSE2_AES1 = 11,
+	VIRTUAL_GCSE2_SHA = 12,
+	VIRTUAL_MAX_SE_ENGINE_NUM = 13
 };
 
 enum tegra_virtual_se_aes_iv_type {
@@ -5815,6 +5819,10 @@ static int tegra_hv_vse_allocate_se_dma_bufs(struct tegra_vse_node_dma *node_dma
 	switch (ivc_map->se_engine) {
 	case VIRTUAL_SE_AES0:
 	case VIRTUAL_SE_AES1:
+	case VIRTUAL_GCSE1_AES0:
+	case VIRTUAL_GCSE1_AES1:
+	case VIRTUAL_GCSE2_AES0:
+	case VIRTUAL_GCSE2_AES1:
 		/*
 		 * For AES algs, the worst case requirement is for AES-GCM encryption:
 		 * 1. src buffer(requires up to max limit specified in DT)
