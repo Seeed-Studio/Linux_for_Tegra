@@ -184,6 +184,10 @@
 			status = "okay";
 		};
 
+		hardware-timestamp@c2b0000 {
+			status = "okay";
+		};
+
 		tegra-utc@c5a0000 {
 			status = "okay";
 		};
