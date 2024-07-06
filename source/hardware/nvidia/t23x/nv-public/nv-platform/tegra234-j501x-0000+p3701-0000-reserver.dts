@@ -195,13 +195,6 @@
 			};
 		};
 
-		//HDMI
-		display@13800000 {
-			status = "okay";
-			os_gpio_hotplug_a = <&gpio TEGRA234_MAIN_GPIO(M, 0) GPIO_ACTIVE_HIGH>;
-			/delete-property/ hdcp_enabled;
-		};
-
 		//CAN0
 		mttcan@c310000 {
 			status = "okay";
