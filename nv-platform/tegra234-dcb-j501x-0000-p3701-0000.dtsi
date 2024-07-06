@@ -3,6 +3,7 @@
 
 / {
 	display@13800000 {
+		os_gpio_hotplug_a = <&gpio TEGRA234_MAIN_GPIO(M, 0) GPIO_ACTIVE_HIGH>;
 		nvidia,dcb-image = [
 			55 aa 16 00 00 37 34 30 30 e9 4c 19 77 cc 56 49
 			44 45 4f 20 0d 00 00 00 70 01 00 00 00 00 49 42

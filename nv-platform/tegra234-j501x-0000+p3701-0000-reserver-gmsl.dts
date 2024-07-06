@@ -78,7 +78,7 @@
 // #elif GMSL_TEGRA_PORT == 2 || GMSL_TEGRA_PORT == 3
 // #define GMSL_DES_I2C_LABEL cam_i2c_1
 
-#define GMSL_DES_0_I2C_LABEL  dp_aux_ch2_i2c
+#define GMSL_DES_0_I2C_LABEL  dp_aux_ch1_i2c
 #define GMSL_DES_1_I2C_LABEL  hdr40_i2c1
 
 
