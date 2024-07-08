@@ -287,6 +287,16 @@
 		};
 	};
 
+	/* i2c6 */
+	i2c@810c670000 {
+		status = "okay";
+	};
+
+	/* i2c10 */
+	i2c@810c6b0000 {
+		status = "okay";
+	};
+
 	sound {
 		status = "okay";
 

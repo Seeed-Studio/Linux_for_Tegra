@@ -118,10 +118,6 @@
 		};
 	};
 
-	display@8808c00000 {
-		status = "disabled";
-	};
-
 	sound {
 		status = "disabled";
 	};
