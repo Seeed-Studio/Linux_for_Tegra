@@ -370,10 +370,6 @@
 			status = "okay";
 		};
 
-		gpu0_carveout {
-			status = "okay";
-		};
-
 		linux,cma {
 			status = "okay";
 		};

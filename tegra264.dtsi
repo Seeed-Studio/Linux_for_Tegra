@@ -8202,22 +8202,6 @@
 			alloc-ranges = <0x0 0x0 0x1 0x0>;
 		};
 
-		gpu0_reserved: gpu0_carveout {
-			compatible = "nvidia,gpu0_carveout";
-			size = <0x2 0x00000000>;
-			alignment = <0 0x200000>;
-			no-map;
-			granule-size = <0x200000>;
-			status = "disabled";
-		};
-
-		gpu1_reserved: gpu1_carveout {
-			compatible = "nvidia,gpu1_carveout";
-			no-map;
-			granule-size = <0x200000>;
-			status = "disabled";
-		};
-
 		linux,cma {
 			compatible = "shared-dma-pool";
 			status = "disabled";
@@ -8277,7 +8261,7 @@
 
 	tegra-carveouts {
 		compatible = "nvidia,carveouts-t19x";
-		memory-region = <&vpr &gpu0_reserved &gpu1_reserved &fsi_reserved &vpr1>;
+		memory-region = <&vpr &fsi_reserved &vpr1>;
 		status = "disabled";
 	};
 
