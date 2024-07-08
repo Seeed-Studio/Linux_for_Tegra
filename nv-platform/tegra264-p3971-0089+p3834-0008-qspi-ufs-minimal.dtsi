@@ -77,30 +77,6 @@
 			status = "disabled";
 		};
 
-		gpio@cf00000 {
-			status = "disabled";
-		};
-
-		gpio@a808300000 {
-			status = "disabled";
-		};
-
-		gpio@810c300000 {
-			status = "disabled";
-		};
-
-		pinmux@810c281000 {
-			status = "disabled";
-		};
-
-		pinmux@a8082e0000 {
-			status = "disabled";
-		};
-
-		pinmux@c7a2000 {
-			status = "disabled";
-		};
-
 		crypto@8188110000 {
 			status = "disabled";
 		};
