@@ -500,8 +500,15 @@ static int tegra264_pcie_ep_start(struct pci_epc *epc)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
 
-	if (pcie->pex_prsnt_gpiod)
+	if (gpiod_get_value_cansleep(pcie->pex_rst_gpiod) == 0U) {
+		dev_dbg(pcie->dev, "RP already started. Starting EP\n");
+		tegra264_pcie_ep_rst_deassert(pcie);
+	}
+
+	if (pcie->pex_prsnt_gpiod) {
+		dev_dbg(pcie->dev, "De-Asserting PRSNT\n");
 		gpiod_set_value_cansleep(pcie->pex_prsnt_gpiod, 1);
+	}
 
 	return 0;
 }
@@ -510,8 +517,12 @@ static void tegra264_pcie_ep_stop(struct pci_epc *epc)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
 
-	if (pcie->pex_prsnt_gpiod)
+	if (pcie->pex_prsnt_gpiod) {
+		dev_dbg(pcie->dev, "Asserting PRSNT\n");
 		gpiod_set_value_cansleep(pcie->pex_prsnt_gpiod, 0);
+	}
+
+	tegra264_pcie_ep_rst_assert(pcie);
 }
 
 static const struct pci_epc_features tegra264_pcie_epc_features = {
