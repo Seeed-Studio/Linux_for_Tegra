@@ -231,7 +231,6 @@
 		};
 
 		ethernet@6800000 {
-			compatible = "nvidia,tegra234-mgbe";
 			reg = <0x0 0x06800000 0x0 0x10000>, /* HV base */
 			      <0x0 0x06810000 0x0 0x10000>, /* MGBE base */
 			      <0x0 0x068A0000 0x0 0x10000>, /* XPCS base */
@@ -270,8 +269,6 @@
 				      "mgbe_macsec", "rx-input";
 			interconnects = <&mc TEGRA234_MEMORY_CLIENT_MGBEARD>,
 					<&mc TEGRA234_MEMORY_CLIENT_MGBEAWR>;
-			interconnect-names = "dma-mem", "write";
-			iommus = <&smmu_niso0 TEGRA234_SID_MGBE>;
 			nvidia,vm-irq-config = <&mgbe_vm_irq_config>;
 			nvidia,num-dma-chans = <10>;
 			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8 9>;
