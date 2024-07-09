@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_WORKER_H
@@ -9,6 +9,7 @@
 #include <dce-cond.h>
 #include <dce-lock.h>
 #include <dce-thread.h>
+#include <atomic.h>
 
 struct tegra_dce;
 
@@ -20,7 +21,7 @@ struct tegra_dce;
 #define DCE_MAX_WAIT			5
 
 struct dce_wait_cond {
-	atomic_t complete;
+	os_atomic_t complete;
 	struct dce_cond cond_wait;
 };
 

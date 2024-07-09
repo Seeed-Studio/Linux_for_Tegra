@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <dce.h>
@@ -35,9 +35,9 @@ int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id)
 	 * Will be "1" and we immediately exit from the wait.
 	 */
 	DCE_COND_WAIT_INTERRUPTIBLE(&wait->cond_wait,
-			atomic_read(&wait->complete) == 1);
+			os_atomic_read(&wait->complete) == 1);
 
-	if (atomic_read(&wait->complete) != 1)
+	if (os_atomic_read(&wait->complete) != 1)
 		return -EINTR;
 
 	/*
@@ -45,7 +45,7 @@ int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id)
 	 * So that when the next dce_wait_interruptible is called, it doesn't see old
 	 * wait->complete state.
 	 */
-	atomic_set(&wait->complete, 0);
+	os_atomic_set(&wait->complete, 0);
 	return 0;
 }
 
@@ -73,7 +73,7 @@ void dce_wakeup_interruptible(struct tegra_dce *d, u32 msg_id)
 	 * "dce_cond_signal_interruptible", it'll see the complete variable
 	 * as "1" and exit the wait immediately.
 	 */
-	atomic_set(&wait->complete, 1);
+	os_atomic_set(&wait->complete, 1);
 	dce_cond_signal_interruptible(&wait->cond_wait);
 }
 
@@ -95,7 +95,7 @@ void dce_cond_wait_reset(struct tegra_dce *d, u32 msg_id)
 	}
 
 	wait = &d->ipc_waits[msg_id];
-	atomic_set(&wait->complete, 0);
+	os_atomic_set(&wait->complete, 0);
 }
 
 /**
@@ -137,7 +137,7 @@ int dce_work_cond_sw_resource_init(struct tegra_dce *d)
 			goto init_error;
 		}
 
-		atomic_set(&wait->complete, 0);
+		os_atomic_set(&wait->complete, 0);
 	}
 
 	return 0;
@@ -168,7 +168,7 @@ void dce_work_cond_sw_resource_deinit(struct tegra_dce *d)
 		struct dce_wait_cond *wait = &d->ipc_waits[i];
 
 		dce_cond_destroy(&wait->cond_wait);
-		atomic_set(&wait->complete, 0);
+		os_atomic_set(&wait->complete, 0);
 	}
 
 	dce_cond_destroy(&d->dce_bootstrap_done);

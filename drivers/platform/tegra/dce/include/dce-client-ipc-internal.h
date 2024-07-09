@@ -1,12 +1,13 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_CLIENT_IPC_INTERNAL_H
 #define DCE_CLIENT_IPC_INTERNAL_H
 
 #include <linux/platform/tegra/dce/dce-client-ipc.h>
+#include <atomic.h>
 
 /**
  * struct tegra_dce_client_ipc - Data Structure to hold client specific ipc
@@ -33,7 +34,7 @@ struct tegra_dce_client_ipc {
 	uint32_t int_type;
 	struct tegra_dce *d;
 	struct dce_cond recv_wait;
-	atomic_t complete;
+	os_atomic_t complete;
 	tegra_dce_client_ipc_callback_t callback_fn;
 };
 
@@ -41,7 +42,7 @@ struct tegra_dce_client_ipc {
 struct dce_async_work {
 	struct tegra_dce *d;
 	struct work_struct async_event_work;
-	atomic_t in_use;
+	os_atomic_t in_use;
 };
 
 /**
