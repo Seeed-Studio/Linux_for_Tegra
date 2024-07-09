@@ -461,12 +461,34 @@ err:
 
 struct device *nvmap_get_vpr_dev(void)
 {
+	struct device_node *dn = of_find_compatible_node(NULL, NULL, "nvidia,vpr-carveout");
+
+	if (!dn)
+		return NULL;
+
+	if (!of_device_is_available(dn)) {
+		of_node_put(dn);
+		return NULL;
+	}
+
+	of_node_put(dn);
 	return &tegra_vpr_dev;
 }
 EXPORT_SYMBOL(nvmap_get_vpr_dev);
 
 struct device *nvmap_get_vpr1_dev(void)
 {
+	struct device_node *dn = of_find_compatible_node(NULL, NULL, "nvidia,vpr1-carveout");
+
+	if (!dn)
+		return NULL;
+
+	if (!of_device_is_available(dn)) {
+		of_node_put(dn);
+		return NULL;
+	}
+
+	of_node_put(dn);
 	return &tegra_vpr1_dev;
 }
 EXPORT_SYMBOL(nvmap_get_vpr1_dev);
