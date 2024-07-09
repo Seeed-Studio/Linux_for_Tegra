@@ -1,8 +1,20 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * tegra-v4l2-camera.h - utilities for tegra camera driver
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
- * Copyright (c) 2017-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * TEGRA_V4L2_CAMERA.h - utilities for tegra camera driver
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __TEGRA_V4L2_CAMERA__
@@ -48,6 +60,7 @@
 #define TEGRA_CAMERA_CID_SENSOR_DV_TIMINGS         (TEGRA_CAMERA_CID_BASE+108)
 #define TEGRA_CAMERA_CID_LOW_LATENCY         (TEGRA_CAMERA_CID_BASE+109)
 #define TEGRA_CAMERA_CID_VI_PREFERRED_STRIDE (TEGRA_CAMERA_CID_BASE+110)
+#define TEGRA_CAMERA_CID_VI_CAPTURE_TIMEOUT (TEGRA_CAMERA_CID_BASE+111)
 
 /**
  * This is temporary with the current v4l2 infrastructure

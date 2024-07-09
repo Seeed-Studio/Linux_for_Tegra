@@ -1,5 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-vi.c
@@ -1457,7 +1469,12 @@ int vi_capture_status(
 
 	/* negative timeout means wait forever */
 	if (timeout_ms < 0) {
-		wait_for_completion(&capture->capture_resp);
+		ret = wait_for_completion_interruptible(&capture->capture_resp);
+		if (ret == -ERESTARTSYS) {
+			dev_dbg(chan->dev,
+				"capture status interrupted\n");
+			return -ETIMEDOUT;
+		}
 	} else {
 		ret = wait_for_completion_timeout(
 				&capture->capture_resp,
