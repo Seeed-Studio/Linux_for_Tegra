@@ -270,16 +270,13 @@ static int pcie_dma_epf_core_deinit(struct pci_epf *epf)
 
 	if (epfnv->chip_id == TEGRA234)
 		bar = BAR_0;
-	else
-		bar = BAR_1;
+
 	epf_bar = &epf->bar[bar];
 	epfnv->edma.cookie = NULL;
 	epf_bar_virt->rp_phy_addr = 0;
 	tegra_pcie_dma_deinit(&cookie);
-	lpci_epc_clear_bar(epc, epf->func_no, epf_bar);
-	if (epfnv->chip_id == TEGRA264)
-		lpci_epc_clear_bar(epc, epf->func_no, &epf->bar[BAR_2]);
-
+	if (epfnv->chip_id == TEGRA234)
+		lpci_epc_clear_bar(epc, epf->func_no, epf_bar);
 	return 0;
 }
 #endif
