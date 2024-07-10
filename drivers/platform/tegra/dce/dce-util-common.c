@@ -3,6 +3,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 #include <dce.h>
+#include <os-dce-device.h>
 #include <os-utils.h>
 #include <linux/io.h>
 #include <linux/slab.h>

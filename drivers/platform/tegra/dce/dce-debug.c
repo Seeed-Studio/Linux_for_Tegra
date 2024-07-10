@@ -10,6 +10,7 @@
 #include <dce.h>
 #include <dce-log.h>
 #include <os-utils.h>
+#include <os-dce-device.h>
 #include <dce-debug-perf.h>
 #include <interface/dce-interface.h>
 #include <interface/dce-core-interface-errors.h>
