@@ -1053,6 +1053,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 
 	gmac_ctx = crypto_ahash_ctx(tfm);
 	gmac_ctx->node_id = ctx->node_id;
+	gmac_ctx->b_is_sm4 = gmac_sign_verify_ctl->b_is_sm4;
 
 	driver_name = crypto_tfm_alg_driver_name(crypto_ahash_tfm(tfm));
 	if (driver_name == NULL) {

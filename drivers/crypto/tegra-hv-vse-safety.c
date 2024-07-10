@@ -311,6 +311,7 @@
 #define NVVSE_STATUS_SE_SERVER_ERROR				102U
 #define SE_HW_VALUE_MATCH_CODE						0x5A5A5A5A
 #define SE_HW_VALUE_MISMATCH_CODE					0xBDBDBDBD
+
 static struct crypto_dev_to_ivc_map g_crypto_to_ivc_map[MAX_NUMBER_MISC_DEVICES];
 
 static bool gcm_supports_dma;
@@ -473,6 +474,7 @@ union tegra_virtual_se_aes_args {
 		uint32_t config;
 		u8 expected_tag[TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE];
 		uint64_t gcm_vrfy_res_addr;
+		enum vse_sym_cipher_choice sym_ciph;
 	} op_gcm;
 	struct aes_cmac_sv {
 		u8 keyslot[KEYSLOT_SIZE_BYTES];
@@ -490,7 +492,7 @@ union tegra_virtual_se_aes_args {
 	struct aes_rng {
 		struct tegra_virtual_se_addr dst_addr;
 	} op_rng;
-} __attribute__((__packed__));
+};
 
 union tegra_virtual_se_sha_args {
 	struct hash {
@@ -4902,6 +4904,11 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req, boo
 		}
 	}
 
+	if (gmac_ctx->b_is_sm4 == 1U)
+		ivc_tx->aes.op_gcm.sym_ciph = VSE_SYM_CIPH_SM4;
+	else
+		ivc_tx->aes.op_gcm.sym_ciph = VSE_SYM_CIPH_AES;
+
 	g_crypto_to_ivc_map[gmac_ctx->node_id].vse_thread_start = true;
 	init_completion(&priv->alg_complete);
 
@@ -4918,10 +4925,9 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req, boo
 		err = status_to_errno(priv->rx_status);
 		goto free_exit;
 	} else {
-		if (is_last && gmac_req_data->request_type == GMAC_SIGN) {
+		if (is_last && gmac_req_data->request_type == GMAC_SIGN)
 			/* copy tag to req for last GMAC_SIGN requests */
 			memcpy(req->result, tag_buf, gmac_ctx->authsize);
-		}
 	}
 
 	if (is_last && gmac_req_data->request_type == GMAC_VERIFY) {
