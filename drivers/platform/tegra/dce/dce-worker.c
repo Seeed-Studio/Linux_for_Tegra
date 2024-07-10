@@ -5,7 +5,7 @@
 
 #include <dce.h>
 #include <dce-cond.h>
-#include <dce-lock.h>
+#include <os-lock.h>
 #include <dce-worker.h>
 #include <os-utils.h>
 #include <interface/dce-admin-cmds.h>

@@ -1,13 +1,13 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_FSM_H
 #define DCE_FSM_H
 
 #include <dce-cond.h>
-#include <dce-lock.h>
+#include <os-lock.h>
 
 /**
  * enum dce_fsm_event_id_type - IDs to be used to convey various

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_IPC_H
@@ -8,7 +8,7 @@
 
 #include <nvidia/conftest.h>
 
-#include <dce-lock.h>
+#include <os-lock.h>
 #include <soc/tegra/ivc.h>
 #include <interface/dce-admin-cmds.h>
 #include <interface/dce-core-interface-ipc-types.h>
