@@ -13,27 +13,18 @@
 			status = "okay";
 		};
 
-		i2c@810c640000 {
-			status = "okay";
-			/* CVB EEPROM */
-			eeprom@56 {
-				compatible = "atmel,24c02";
-				reg = <0x50>;
-
-				label = "system";
-				address-width = <8>;
-				pagesize = <8>;
-				size = <256>;
-				read-only;
-			};
-		};
-
-		/* 40-pin header. PIN: 3, 5 */
-		i2c@810c6d0000 {
+		gpio@cf00000 {
 			status = "okay";
 		};
 
-		/* 40-pin header. PIN: 27, 28 */
+		gpio@a808300000 {
+			status = "okay";
+		};
+
+		gpio@810c300000 {
+			status = "okay";
+		};
+
 		i2c@c600000 {
 			status = "okay";
 			ina3221@40 {
@@ -61,53 +52,6 @@
 			};
 		};
 
-		/* 40-pin header. PIN: 8, 9, 10, 36*/
-		serial@810c530000 {
-			status = "okay";
-		};
-
-		/* 40-pin header. PIN: 13 */
-		pwm@810c610000 {
-			status = "okay";
-		};
-
-		/* 40-pin header. PIN: 15 */
-		pwm@810c5e0000 {
-			status = "okay";
-		};
-
-		/* 40-pin header. PIN: 18 */
-		pwm@810c600000 {
-			status = "okay";
-		};
-
-		/* SoC FAN */
-		pwm@c6a0000 {
-			status = "okay";
-		};
-
-		/* NVME FAN */
-		pwm@810c5f0000 {
-			status = "okay";
-		};
-
-		/* SoC FAN-TACH */
-		tachometer@810c5c0000 {
-			status = "okay";
-		};
-
-		gpio@cf00000 {
-			status = "okay";
-		};
-
-		gpio@a808300000 {
-			status = "okay";
-		};
-
-		gpio@810c300000 {
-			status = "okay";
-		};
-
 		pinmux@810c281000 {
 			status = "okay";
 		};
@@ -120,26 +64,7 @@
 			status = "okay";
 		};
 
-		spi@810c440000 {
-			status = "okay";
-
-			prod-settings {
-				prod {
-					nvidia,spi-misc-clk-override = <0x0>;
-				};
-			};
-		};
-
-		spi@810c590000 {
-			status = "okay";
-
-			prod-settings {
-				prod {
-					nvidia,spi-misc-clk-override = <0x0>;
-				};
-			};
-		};
-
+		/* QSPI0 */
 		spi@810c5b0000 {
 			status = "okay";
 
@@ -180,6 +105,14 @@
 			status = "okay";
 		};
 
+		sys-cbb-fabric@800000 {
+			status = "okay";
+		};
+
+		top0-cbb-fabric@8100800000 {
+			status = "okay";
+		};
+
 		tegra_soc_hwpm@1604000 {
 			status = "okay";
 		};
@@ -209,22 +142,6 @@
 		};
 
 		tegra-hsp@8189200000 {
-			status = "okay";
-		};
-
-		serial@810c500000 {
-			status = "okay";
-		};
-
-		serial@810c510000 {
-			status = "okay";
-		};
-
-		serial@810c530000 {
-			status = "okay";
-		};
-
-		serial@810c540000 {
 			status = "okay";
 		};
 
@@ -463,18 +380,6 @@
 	};
 
 	timer {
-		status = "okay";
-	};
-
-	ufshci@a80b8d0000 {
-		status = "okay";
-	};
-
-	dce@8808000000 {
-		status = "okay";
-	};
-
-	display@8808c00000 {
 		status = "okay";
 	};
 
