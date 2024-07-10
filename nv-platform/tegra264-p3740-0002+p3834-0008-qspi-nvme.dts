@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p3834-0008.dtsi"
+#include "tegra264-p3740-0002.dtsi"
+
+/ {
+  model = "NVIDIA IGX Thor Development Kit";
+  compatible = "nvidia,p3740-0002+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+};
+
+/* Add minimal dtsi at the End of the file */
+#include "tegra264-p3740-0002+p3834-0008-qspi-nvme-minimal.dtsi"

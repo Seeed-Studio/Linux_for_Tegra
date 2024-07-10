@@ -1,0 +1,255 @@
+// SPDX-License-Identifier: GPL-2.0
+
+#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/input/gpio-keys.h>
+#include <dt-bindings/sound/rt5640.h>
+
+/ {
+	compatible = "nvidia,p3740-0002";
+
+	bus@0 {
+		i2c@810c640000 { /* I2C1 */
+			status = "okay";
+		};
+
+		i2c@c600000 { /* I2C2 */
+			status = "okay";
+		};
+
+		i2c@c610000 { /* I2C3 */
+			status = "okay";
+		};
+
+		i2c@810c6a0000 { /* I2C9 */
+			status = "okay";
+		};
+
+		i2c@810c6d0000 { /* I2C12 */
+			status = "okay";
+		};
+
+		i2c@810c680000 { /* I2C7 */
+			/* carrier board ID EEPROM */
+			eeprom@55 {
+				compatible = "atmel,24c02";
+				reg = <0x55>;
+				label = "system";
+		//		vcc-supply = <&vdd_1v8_ls>;
+				address-width = <8>;
+				pagesize = <8>;
+				size = <256>;
+				read-only;
+			};
+		};
+
+		padctl@a808680000 {
+			status = "okay";
+
+			pads {
+				usb2 {
+					lanes {
+						usb2-0 {
+							nvidia,function = "xusb";
+							status = "okay";
+						};
+
+						usb2-1 {
+							nvidia,function = "xusb";
+							status = "okay";
+						};
+
+						usb2-2 {
+							nvidia,function = "xusb";
+							status = "okay";
+						};
+
+						usb2-3 {
+							nvidia,function = "xusb";
+							status = "okay";
+						};
+					};
+				};
+
+				usb3 {
+					lanes {
+						usb3-0 {
+							nvidia,function = "xusb";
+							status = "okay";
+						};
+
+						usb3-1 {
+							nvidia,function = "xusb";
+							status = "okay";
+						};
+
+						usb3-2 {
+							nvidia,function = "xusb";
+							status = "okay";
+						};
+					};
+				};
+			};
+
+			ports {
+				usb2-0 {
+					mode = "otg";
+					usb-role-switch;
+					status = "okay";
+				};
+
+				usb2-1 {
+					mode = "host";
+					status = "okay";
+				};
+
+				usb2-2 {
+					mode = "host";
+					status = "okay";
+				};
+
+				usb2-3 {
+					mode = "host";
+					status = "okay";
+				};
+
+				usb3-0 {
+					nvidia,usb2-companion = <2>;
+					status = "okay";
+				};
+
+				usb3-1 {
+					nvidia,usb2-companion = <0>;
+					status = "okay";
+				};
+
+				usb3-2 {
+					nvidia,usb2-companion = <1>;
+					status = "okay";
+				};
+			};
+		};
+
+		/* PCIe C1 for M.2 Key E */
+		pcie@a808400000 {
+			status = "okay";
+		};
+
+		/* PCIe C2 for SATA */
+		pcie@a808420000 {
+			status = "okay";
+		};
+
+		/* PCIe C3 for M.2 NVME */
+		pcie@a808440000 {
+			status = "okay";
+		};
+
+		/* PCIe C4 for CX7 */
+		pcie@a808460000 {
+			status = "okay";
+		};
+
+		/* UART5/UARTF to M.2 E */
+		serial@810c510000 {
+			status = "okay";
+		};
+
+		spi@810c440000 {/* SPI3 */
+			status = "okay";
+		};
+
+		tachometer@810c5c0000 {
+			status = "okay";
+		};
+
+		usb@a808670000 {
+			status = "okay";
+
+			phys = <&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-0}>,
+				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-1}>;
+			phy-names = "usb2-0", "usb3-0";
+		};
+
+		usb@a80aa10000 {
+			status = "okay";
+
+			phys =	<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-0}>,
+				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-1}>,
+				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-2}>,
+				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-3}>,
+				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-0}>,
+				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-1}>,
+				<&{/bus@0/padctl@a808680000/pads/usb3/lanes/usb3-2}>;
+			phy-names = "usb2-0", "usb2-1", "usb2-2", "usb2-3",
+				"usb3-0", "usb3-1", "usb3-2";
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		key-force-recovery {
+			label = "Force Recovery";
+			gpios = <&gpio_aon TEGRA264_AON_GPIO(EE, 1) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_KEY>;
+			linux,code = <BTN_1>;
+		};
+
+		key-power {
+			label = "Power";
+			gpios = <&gpio_aon TEGRA264_AON_GPIO(AA, 5) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_KEY>;
+			linux,code = <KEY_POWER>;
+			wakeup-event-action = <EV_ACT_ASSERTED>;
+			wakeup-source;
+		};
+
+		key-suspend {
+			label = "Suspend";
+			gpios = <&gpio_main TEGRA264_MAIN_GPIO(U, 2) GPIO_ACTIVE_LOW>;
+			linux,input-type = <EV_KEY>;
+			linux,code = <KEY_SLEEP>;
+		};
+	};
+
+	eeprom-manager {
+		bus@2 {
+			i2c-bus = <&i2c7>;
+			eeprom@0 {
+				slave-address = <0x55>;
+				label = "cvb";
+			};
+		};
+	};
+
+	vdd_3v3_dp: regulator-vdd-3v3-dp {
+				compatible = "regulator-fixed";
+				regulator-name = "VDD_3V3_DP";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				vin-supply = <&vdd_3v3_sys>;
+				gpio = <&gpio_main TEGRA264_MAIN_GPIO(V, 1) 0>;
+				enable-active-high;
+				regulator-always-on;
+	};
+
+	vdd_3v3_sys: regulator-vdd-3v3-sys {
+				regulator-name = "VDD_3V3_SYS";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+	};
+
+	vdd_3v3_wifi: regulator-vdd-3v3-wifi {
+				compatible = "regulator-fixed";
+				regulator-name = "VDD_3V3_WIFI";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				gpio = <&gpio_main TEGRA264_MAIN_GPIO(U, 3) GPIO_ACTIVE_HIGH>;
+				regulator-boot-on;
+				enable-active-high;
+	};
+
+	display@8808c00000 {
+		status = "okay";
+	};
+};
