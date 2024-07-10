@@ -698,14 +698,9 @@
 				status = "disabled";
 			};
 
-			se@15820000 {
-				compatible = "nvidia,tegra234-se2-aes";
-				reg = <0x0 0x15820000 0x0 0x10000>;
-				clocks = <&bpmp TEGRA234_CLK_SE>;
+			crypto@15820000 {
+				compatible = "nvidia,tegra234-se2-aes", "nvidia,tegra234-se-aes";
 				clock-names = "se";
-
-				iommus = <&smmu_niso1 TEGRA234_SID_SES_SE1>;
-				dma-coherent;
 				interconnects = <&mc TEGRA234_MEMORY_CLIENT_SESRD &emc>,
 						<&mc TEGRA234_MEMORY_CLIENT_SESWR &emc>;
 				interconnect-names = "read", "write";
@@ -713,14 +708,9 @@
 				status = "disabled";
 			};
 
-			se@15840000 {
-				compatible = "nvidia,tegra234-se4-hash";
-				reg = <0x0 0x15840000 0x0 0x10000>;
-				clocks = <&bpmp TEGRA234_CLK_SE>;
+			crypto@15840000 {
+				compatible = "nvidia,tegra234-se4-hash", "nvidia,tegra234-se-hash";
 				clock-names = "se";
-
-				iommus = <&smmu_niso1 TEGRA234_SID_SES_SE2>;
-				dma-coherent;
 				interconnects = <&mc TEGRA234_MEMORY_CLIENT_SESRD &emc>,
 						<&mc TEGRA234_MEMORY_CLIENT_SESWR &emc>;
 				interconnect-names = "read", "write";
