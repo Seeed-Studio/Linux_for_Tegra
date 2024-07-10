@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <dce-cond.h>
+#include <os-cond.h>
 #include <os-lock.h>
 #include <dce-worker.h>
 #include <os-utils.h>

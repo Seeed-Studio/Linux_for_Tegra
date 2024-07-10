@@ -6,7 +6,7 @@
 #ifndef DCE_WORKER_H
 #define DCE_WORKER_H
 
-#include <dce-cond.h>
+#include <os-cond.h>
 #include <os-lock.h>
 #include <dce-thread.h>
 #include <atomic.h>

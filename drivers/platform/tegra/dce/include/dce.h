@@ -11,7 +11,7 @@
 #include <dce-ipc.h>
 #include <dce-hsp.h>
 #include <os-lock.h>
-#include <dce-cond.h>
+#include <os-cond.h>
 #include <dce-regs.h>
 #include <dce-thread.h>
 #include <dce-worker.h>

@@ -6,7 +6,7 @@
 #ifndef DCE_FSM_H
 #define DCE_FSM_H
 
-#include <dce-cond.h>
+#include <os-cond.h>
 #include <os-lock.h>
 
 /**
