@@ -5,7 +5,7 @@
 
 #include <dce.h>
 #include <dce-ipc.h>
-#include <dce-util-common.h>
+#include <os-utils.h>
 #include <dce-client-ipc-internal.h>
 
 #define DCE_IPC_HANDLES_MAX 6U

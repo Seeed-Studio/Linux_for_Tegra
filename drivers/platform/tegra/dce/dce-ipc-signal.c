@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <dce.h>
 #include <dce-ipc.h>
-#include <dce-util-common.h>
+#include <os-utils.h>
 #include <interface/dce-interface.h>
 
 static struct dce_ipc_signal_instance *mb_signals[DCE_NUM_MBOX_REGS];

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <dce.h>
-#include <dce-util-common.h>
+#include <os-utils.h>
 
 struct dce_event_process_struct {
 	enum dce_fsm_event_id_type event;

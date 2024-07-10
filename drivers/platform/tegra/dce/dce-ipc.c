@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
 
 #include <dce.h>
 #include <dce-ipc.h>
-#include <dce-util-common.h>
+#include <os-utils.h>
 #include <interface/dce-interface.h>
 #include <interface/dce-ipc-header.h>
 

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 #include <dce.h>
 #include <dce-log.h>
-#include <dce-util-common.h>
+#include <os-utils.h>
 
 #define MAX_NO_ASTS 2
 #define MAX_AST_REGIONS 1

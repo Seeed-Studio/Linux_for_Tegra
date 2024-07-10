@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ */
 
 #include <linux/errno.h>
 #include <linux/debugfs.h>
@@ -7,7 +9,7 @@
 #include <dce.h>
 #include <dce-debug-perf.h>
 #include <dce-log.h>
-#include <dce-util-common.h>
+#include <os-utils.h>
 #include <interface/dce-interface.h>
 
 #define DCE_PERF_OUTPUT_FORMAT_CSV	((uint32_t)(0U))
