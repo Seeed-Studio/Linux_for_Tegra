@@ -8,7 +8,7 @@
 #include <linux/uaccess.h>
 #include <linux/ktime.h>
 #include <dce.h>
-#include <dce-log.h>
+#include <os-dce-log.h>
 #include <os-utils.h>
 #include <os-dce-device.h>
 #include <dce-debug-perf.h>

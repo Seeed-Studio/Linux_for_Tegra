@@ -8,7 +8,7 @@
 #include <linux/uaccess.h>
 #include <dce.h>
 #include <dce-debug-perf.h>
-#include <dce-log.h>
+#include <os-dce-log.h>
 #include <os-utils.h>
 #include <interface/dce-interface.h>
 

@@ -7,7 +7,7 @@
 #define TEGRA_DCE_H
 
 #include <types.h>
-#include <dce-log.h>
+#include <os-dce-log.h>
 #include <dce-ipc.h>
 #include <dce-hsp.h>
 #include <dce-lock.h>

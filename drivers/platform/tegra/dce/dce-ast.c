@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 #include <dce.h>
-#include <dce-log.h>
+#include <os-dce-log.h>
 #include <os-utils.h>
 
 #define MAX_NO_ASTS 2

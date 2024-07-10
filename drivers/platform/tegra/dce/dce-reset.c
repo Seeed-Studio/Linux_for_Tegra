@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <dce-log.h>
+#include <os-dce-log.h>
 #include <os-utils.h>
 
 enum pm_controls {

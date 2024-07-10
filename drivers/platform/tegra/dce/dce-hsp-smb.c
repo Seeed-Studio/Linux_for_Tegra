@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <dce-log.h>
+#include <os-dce-log.h>
 #include <os-utils.h>
 #include <dce-hsp-t234.h>
 #include <hw/t234/hw_hsp_dce.h>
