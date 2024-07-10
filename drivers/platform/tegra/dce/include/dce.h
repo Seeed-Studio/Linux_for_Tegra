@@ -13,7 +13,6 @@
 #include <os-lock.h>
 #include <os-cond.h>
 #include <dce-regs.h>
-#include <dce-thread.h>
 #include <dce-worker.h>
 #include <dce-fsm.h>
 #include <dce-pm.h>
