@@ -162,7 +162,7 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                     MPHY_RX_APB_VENDOR2_0_RX_CAL_EN, mphy_rx_vendor2_reg);
 
                 if (ufs_tegra->x2config == true) {
-                        dev_err(dev, "%s:x2config is true so invoking mphy_update\n",
+                        dev_dbg(dev, "%s:x2config is true so invoking mphy_update\n",
                                 __func__);
                         mphy_update(ufs_tegra->mphy_l1_base,
                                 MPHY_RX_APB_VENDOR2_0_RX_CAL_EN,
@@ -192,7 +192,7 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                                         mphy_rx_vendor2_reg);
 
                                 if ((mphy_rx_vendor2 & MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE) != 0U) {
-                                        dev_err(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
+                                        dev_dbg(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
                                         break;
                                 } else {
                                         udelay(1);
@@ -219,7 +219,7 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                                         mphy_rx_vendor2_reg);
 
                                 if ((mphy_rx_vendor2 & MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE) == 0U) {
-                                        dev_err(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
+                                        dev_dbg(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
                                         break;
                                 } else {
                                         udelay(1);
@@ -238,7 +238,7 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                                 mphy_rx_vendor2_reg);
 
                         if ((mphy_rx_vendor2 & MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE) != 0U) {
-                                dev_err(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
+                                dev_info(dev, "%s: MPhy Receiver Calibration passed\n", __func__);
                                 break;
                         } else {
                                 udelay(1);
@@ -362,7 +362,7 @@ static int ufs_tegra_mphy_tx_calibration_status(struct ufs_tegra_host *ufs_tegra
 				MPHY_TX_APB_TX_VENDOR2_0_T264);
 
 		if ((mphy_tx_vendor2 & MPHY_TX_APB_VENDOR2_0_TX_CAL_DONE) != 0U) {
-			dev_err(dev, "%s: MPhy TX Calibration done\n", __func__);
+			dev_dbg(dev, "%s: MPhy TX Calibration done\n", __func__);
 
 			/* Clear TX lane calibration */
 			mphy_tx_vendor2 &=~(MPHY_TX_APB_VENDOR2_0_TX_CAL_EN);
@@ -388,7 +388,7 @@ static int ufs_tegra_mphy_tx_calibration_status(struct ufs_tegra_host *ufs_tegra
 		mphy_tx_vendor2 = mphy_readl(mphy_base,
 			MPHY_TX_APB_TX_VENDOR2_0_T264);
 		if ((mphy_tx_vendor2 & MPHY_TX_APB_VENDOR2_0_TX_CAL_DONE) == 0U) {
-			dev_err(dev,
+			dev_dbg(dev,
 				"%s: MPhy TX Calibration clear completed\n",
 				__func__);
 				break;
@@ -431,7 +431,7 @@ static int ufs_tegra_mphy_check_tx_calibration_done_status(struct ufs_tegra_host
 		dev_err(dev, "%s: MPhy0 TX Calibration status check failed \n", __func__);
 		goto fail;
 	}
-	dev_err(dev, "%s: MPhy TX Calibration completed\n", __func__);
+	dev_info(dev, "%s: MPhy TX Calibration completed\n", __func__);
 
 fail:
 	return err;
