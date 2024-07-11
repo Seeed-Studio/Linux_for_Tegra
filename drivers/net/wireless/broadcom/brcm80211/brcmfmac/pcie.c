@@ -52,7 +52,6 @@ enum brcmf_pcie_state {
 BRCMF_FW_DEF(43602, "brcmfmac43602-pcie");
 BRCMF_FW_DEF(4350, "brcmfmac4350-pcie");
 BRCMF_FW_DEF(4350C, "brcmfmac4350c2-pcie");
-CY_FW_DEF(4355, "cyfmac89459-pcie");
 BRCMF_FW_CLM_DEF(4355C1, "brcmfmac4355c1-pcie");
 CY_FW_DEF(4356, "cyfmac4356-pcie");
 CY_FW_DEF(43570, "cyfmac43570-pcie");
@@ -2770,7 +2769,7 @@ static const struct pci_device_id brcmf_pcie_devid_table[] = {
 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4377_DEVICE_ID, WCC),
 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4378_DEVICE_ID, WCC),
 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4387_DEVICE_ID, WCC),
-	BRCMF_PCIE_DEVICE(CY_PCIE_54591_DEVICE_ID),
+	BRCMF_PCIE_DEVICE(CY_PCIE_54591_DEVICE_ID, CYW),
 	{ /* end: all zeroes */ }
 };
 
