@@ -17,6 +17,21 @@
 			status = "okay";
 		};
 
+		i2c@810c640000 {
+			status = "okay";
+			/* CVM EEPROM */
+			eeprom@50 {
+				compatible = "atmel,24c02";
+				reg = <0x50>;
+
+				label = "system";
+				address-width = <8>;
+				pagesize = <8>;
+				size = <256>;
+				read-only;
+			};
+		};
+
 		gpio@a808300000 {
 			status = "okay";
 		};
