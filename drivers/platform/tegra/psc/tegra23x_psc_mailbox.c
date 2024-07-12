@@ -128,6 +128,8 @@ static irqreturn_t psc_mbox_rx_interrupt(int irq, void *p)
 	ext_ctrl = readl(vm_chan->base + MBOX_CHAN_EXT_CTRL);
 	ext_ctrl |= MBOX_OUT_DONE;
 	writel(ext_ctrl, vm_chan->base + MBOX_CHAN_EXT_CTRL);
+	/* Bug 4741744: extra read to clear spurous interrupt */
+	ext_ctrl = readl(vm_chan->base + MBOX_CHAN_EXT_CTRL);
 
 	return IRQ_HANDLED;
 }
