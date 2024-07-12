@@ -10194,10 +10194,7 @@
 				<&bpmp TEGRA264_CLK_SF4_SOR>,
 				<&bpmp TEGRA264_CLK_SF5_SOR>,
 				<&bpmp TEGRA264_CLK_SF6_SOR>,
-				<&bpmp TEGRA264_CLK_SF7_SOR>,
-				<&bpmp TEGRA264_CLK_OSC>, // TODO remove dpaux0_clk
-				<&bpmp TEGRA264_CLK_OSC>, // TODO remove dsi_core_clk
-				<&bpmp TEGRA264_CLK_OSC>; // TODO remove aza_bit_clk
+				<&bpmp TEGRA264_CLK_SF7_SOR>;
 
 		clock-names =	"nvdisplayhub_clk",
 				"nvdisplay_disp_clk",
@@ -10293,10 +10290,7 @@
 				"sf4_sor_clk",
 				"sf5_sor_clk",
 				"sf6_sor_clk",
-				"sf7_sor_clk",
-				"dpaux0_clk",
-				"dsi_core_clk",
-				"aza_bit_clk";
+				"sf7_sor_clk";
 
 		nvidia,disp-sw-soc-chip-id = <0x2650>;
 
