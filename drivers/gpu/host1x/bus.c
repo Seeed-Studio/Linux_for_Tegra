@@ -335,7 +335,11 @@ static int host1x_del_client(struct host1x *host1x,
 	return -ENODEV;
 }
 
+#if defined(NV_BUS_TYPE_STRUCT_MATCH_HAS_CONST_DRV_ARG)
+static int host1x_device_match(struct device *dev, const struct device_driver *drv)
+#else
 static int host1x_device_match(struct device *dev, struct device_driver *drv)
+#endif
 {
 	return strstr(dev_name(dev), drv->name) != NULL;
 }

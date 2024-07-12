@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All Rights Reserved. */
 
 #ifndef _LINUX_TEGRA_IVC_BUS_H
 #define _LINUX_TEGRA_IVC_BUS_H
+
+#include <nvidia/conftest.h>
 
 #include <soc/tegra/ivc-priv.h>
 #include <linux/types.h>
@@ -32,8 +32,11 @@ struct tegra_ivc_driver {
 	} ops;
 };
 
-static inline struct tegra_ivc_driver *to_tegra_ivc_driver(
-						struct device_driver *drv)
+#if defined(NV_BUS_TYPE_STRUCT_MATCH_HAS_CONST_DRV_ARG)
+static inline struct tegra_ivc_driver *to_tegra_ivc_driver(const struct device_driver *drv)
+#else
+static inline struct tegra_ivc_driver *to_tegra_ivc_driver(struct device_driver *drv)
+#endif
 {
 	if (drv == NULL)
 		return NULL;

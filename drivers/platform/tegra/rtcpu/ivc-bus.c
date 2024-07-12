@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -295,7 +295,11 @@ static void tegra_ivc_bus_release(struct device *dev)
 	kfree(bus);
 }
 
+#if defined(NV_BUS_TYPE_STRUCT_MATCH_HAS_CONST_DRV_ARG)
+static int tegra_ivc_bus_match(struct device *dev, const struct device_driver *drv)
+#else
 static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
+#endif
 {
 	struct tegra_ivc_driver *ivcdrv = to_tegra_ivc_driver(drv);
 

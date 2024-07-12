@@ -6662,6 +6662,26 @@ compile_test() {
                     "NV_BLOCK_DEVICE_OPERATIONS_RELEASE_HAS_NO_MODE_ARG" "" "types"
         ;;
 
+        bus_type_struct_match_has_const_drv_arg)
+            #
+            # Determine if the 'match' callback from the 'bus_type' structure
+            # has a const 'struct device_driver' argument.
+            #
+            # Commit d69d80484598 ("driver core: have match() callback in struct
+            # bus_type take a const *") updated the match() function for the
+            # 'bus_type' structure to take a constant 'drv' argument.
+            #
+            CODE="
+            #include <linux/device/bus.h>
+            int conftest_bus_type_struct_match_has_const_drv_arg(struct device *dev,
+                                                                 const struct device_driver *drv,
+                                                                 struct bus_type *bus) {
+                    return bus->match(dev, drv);
+            }"
+
+            compile_check_conftest "$CODE" "NV_BUS_TYPE_STRUCT_MATCH_HAS_CONST_DRV_ARG" "" "types"
+        ;;
+
         bus_type_struct_remove_has_int_return_type)
             #
             # Determine if the 'remove' callback from the 'bus_type' structure
