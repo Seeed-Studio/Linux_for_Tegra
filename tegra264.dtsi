@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/clock/tegra264-clock.h>
 #include <dt-bindings/clock/tegra264-clk.h>
