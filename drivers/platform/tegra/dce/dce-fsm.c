@@ -94,6 +94,8 @@ static struct dce_event_process_struct event_process_table[] = {
  */
 int dce_handle_fsm_start_event(struct tegra_dce *d, void *params)
 {
+	USE(d);
+	USE(params);
 	return 0;
 }
 
@@ -107,6 +109,8 @@ int dce_handle_fsm_start_event(struct tegra_dce *d, void *params)
  */
 int dce_handle_event_stub(struct tegra_dce *d, void *params)
 {
+	USE(d);
+	USE(params);
 	return 0;
 }
 
@@ -394,6 +398,7 @@ static u32
 dce_fsm_get_event_index(struct tegra_dce *d,
 			enum dce_fsm_event_id_type event)
 {
+	USE(d);
 	u32 id;
 
 	for (id = 0; id < DCE_MAX_EVENTS_IDS; id++) {

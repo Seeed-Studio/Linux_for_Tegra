@@ -69,6 +69,7 @@ int dce_handle_boot_cmd_requested_event(struct tegra_dce *d, void *params)
  */
 int dce_handle_boot_cmd_received_event(struct tegra_dce *d, void *params)
 {
+	USE(params);
 	dce_wakeup_interruptible(d, DCE_WAIT_BOOT_CMD);
 	return 0;
 }
@@ -86,6 +87,7 @@ int dce_handle_boot_cmd_received_event(struct tegra_dce *d, void *params)
  */
 int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 {
+	USE(params);
 	int ret = 0;
 
 	d->boot_status |= DCE_FW_EARLY_BOOT_START;
@@ -133,6 +135,7 @@ boot_done:
  */
 int dce_handle_boot_complete_received_event(struct tegra_dce *d, void *params)
 {
+	USE(params);
 	dce_wakeup_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
 	return 0;
 }
@@ -289,6 +292,7 @@ static void dce_bootstrap_handle_boot_status(struct tegra_dce *d, u32 status)
  */
 static void dce_boot_interface_isr(struct tegra_dce *d, void *data)
 {
+	USE(data);
 	u32 status;
 	u8 interface_id = DCE_MAILBOX_BOOT_INTERFACE;
 

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <dce.h>
+#include <os-utils.h>
 
 #define CCPLEX_HSP_IE 1U /* TODO : Have an api to read from platform data */
 
@@ -59,6 +60,7 @@ void dce_resume_work_fn(struct tegra_dce *d)
  */
 int dce_pm_handle_sc7_enter_requested_event(struct tegra_dce *d, void *params)
 {
+	USE(params);
 	int ret = 0;
 	struct dce_ipc_message *msg = NULL;
 
@@ -93,6 +95,7 @@ out:
  */
 int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
 {
+	USE(params);
 	dce_wakeup_interruptible(d, DCE_WAIT_SC7_ENTER);
 	return 0;
 }
@@ -108,6 +111,7 @@ int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
  */
 int dce_pm_handle_sc7_exit_received_event(struct tegra_dce *d, void *params)
 {
+	USE(params);
 	dce_schedule_work(&d->dce_resume_work);
 	return 0;
 }
