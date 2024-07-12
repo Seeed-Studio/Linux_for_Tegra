@@ -1372,6 +1372,11 @@ static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		ufshcd_set_link_off(hba);
 	}
 
+	/* TODO: Check why disabling clocks causing crash */
+	if (ufs_tegra->soc->chip_id == TEGRA264) {
+		goto end;
+	}
+
 	/* Clocks are not present on VDK */
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_VDK)
 		goto end;
