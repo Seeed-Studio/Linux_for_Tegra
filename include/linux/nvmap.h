@@ -93,8 +93,6 @@ struct nvmap_platform_carveout {
 	bool no_cpu_access; /* carveout can't be accessed from cpu at all */
 	bool init_done;	/* FIXME: remove once all caveouts use reserved-memory */
 	struct nvmap_pm_ops pm_ops;
-	bool is_gpu_co; /* Gpu carveout is treated differently */
-	u32 granule_size; /* Granule size for gpu carveout */
 	int numa_node_id; /* NUMA node id from which the carveout is allocated from */
 };
 

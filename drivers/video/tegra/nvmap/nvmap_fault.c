@@ -181,7 +181,7 @@ static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf)
 	if (offs >= priv->handle->size)
 		return VM_FAULT_SIGBUS;
 
-	if (!priv->handle->pgalloc.pages) {
+	if (!priv->handle->heap_pgalloc) {
 		unsigned long pfn;
 
 		BUG_ON(priv->handle->carveout->base & ~PAGE_MASK);
@@ -195,54 +195,44 @@ static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf)
 		page = pfn_to_page(pfn);
 	} else {
 		void *kaddr;
-		unsigned long pfn;
 
-		if (priv->handle->heap_type != NVMAP_HEAP_IOVMM) {
-			offs >>= PAGE_SHIFT;
-			page = priv->handle->pgalloc.pages[offs];
-			pfn = page_to_pfn(page);
-			if (!pfn_is_map_memory(pfn)) {
-				vm_insert_pfn(vma,
-					(unsigned long)vmf_address, pfn);
-				return VM_FAULT_NOPAGE;
-			}
-		} else {
-			offs >>= PAGE_SHIFT;
-			if (atomic_read(&priv->handle->pgalloc.reserved))
-				return VM_FAULT_SIGBUS;
-			page = nvmap_to_page(priv->handle->pgalloc.pages[offs]);
+		offs >>= PAGE_SHIFT;
+		if (atomic_read(&priv->handle->pgalloc.reserved))
+			return VM_FAULT_SIGBUS;
+		page = nvmap_to_page(priv->handle->pgalloc.pages[offs]);
 
-			if (PageAnon(page)) {
-				if (vma->vm_flags & VM_SHARED)
-					return VM_FAULT_SIGSEGV;
-			}
+		if (PageAnon(page)) {
+			if (vma->vm_flags & VM_SHARED)
+				return VM_FAULT_SIGSEGV;
+		}
 
-			if (!nvmap_handle_track_dirty(priv->handle))
-				goto finish;
-			mutex_lock(&priv->handle->lock);
-			if (nvmap_page_dirty(priv->handle->pgalloc.pages[offs])) {
-				mutex_unlock(&priv->handle->lock);
-				goto finish;
-			}
+		if (!nvmap_handle_track_dirty(priv->handle))
+			goto finish;
+		mutex_lock(&priv->handle->lock);
+		if (nvmap_page_dirty(priv->handle->pgalloc.pages[offs])) {
+			mutex_unlock(&priv->handle->lock);
+			goto finish;
+		}
 
-			/* inner cache maint */
-			kaddr  = kmap(page);
-			BUG_ON(!kaddr);
-			inner_cache_maint(NVMAP_CACHE_OP_WB_INV, kaddr, PAGE_SIZE);
-			kunmap(page);
+		/* inner cache maint */
+		kaddr  = kmap(page);
+		BUG_ON(!kaddr);
+		inner_cache_maint(NVMAP_CACHE_OP_WB_INV, kaddr, PAGE_SIZE);
+		kunmap(page);
 
-			if (priv->handle->flags & NVMAP_HANDLE_INNER_CACHEABLE)
-				goto make_dirty;
+		if (priv->handle->flags & NVMAP_HANDLE_INNER_CACHEABLE)
+			goto make_dirty;
 
 make_dirty:
-			nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]);
-			atomic_inc(&priv->handle->pgalloc.ndirty);
-			mutex_unlock(&priv->handle->lock);
-		}
+		nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]);
+		atomic_inc(&priv->handle->pgalloc.ndirty);
+		mutex_unlock(&priv->handle->lock);
 	}
+
 finish:
 	if (page)
 		get_page(page);
+
 	vmf->page = page;
 	return (page) ? 0 : VM_FAULT_SIGBUS;
 }

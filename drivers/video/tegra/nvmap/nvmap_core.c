@@ -53,7 +53,6 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	if (h->from_va && h->is_ro)
 		goto put_handle;
 
-
 	if (!h->alloc)
 		goto put_handle;
 
@@ -66,7 +65,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	nvmap_kmaps_inc(h);
 	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 
-	if (h->pgalloc.pages) {
+	if (h->heap_pgalloc) {
 		pages = nvmap_pages(h->pgalloc.pages, h->size >> PAGE_SHIFT);
 		if (!pages)
 			goto out;
@@ -223,7 +222,7 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 		goto err;
 	}
 
-	if (!h->pgalloc.pages) {
+	if (!h->heap_pgalloc) {
 		phys_addr_t paddr = handle_phys(h);
 		struct page *page = phys_to_page(paddr);
 

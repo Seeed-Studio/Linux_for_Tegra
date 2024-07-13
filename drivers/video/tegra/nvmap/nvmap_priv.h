@@ -43,10 +43,6 @@
 
 #include <linux/fdtable.h>
 
-#define ALIGN_GRANULE_SIZE(size, GRANULE_SIZE) ((size + GRANULE_SIZE - 1) & ~(GRANULE_SIZE - 1))
-#define PAGE_SHIFT_GRANULE(GRANULE_SIZE) (order_base_2(GRANULE_SIZE))
-#define PAGES_PER_GRANULE(GRANULE_SIZE) (GRANULE_SIZE / PAGE_SIZE)
-
 #define DMA_ERROR_CODE	(~(dma_addr_t)0)
 
 #define __DMA_ATTR(attrs) attrs
@@ -215,8 +211,10 @@ struct nvmap_handle {
 	struct nvmap_client *owner;
 	struct dma_buf *dmabuf;
 	struct dma_buf *dmabuf_ro;
-	struct nvmap_pgalloc pgalloc;
-	struct nvmap_heap_block *carveout;
+	union {
+		struct nvmap_pgalloc pgalloc;
+		struct nvmap_heap_block *carveout;
+	};
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
 	bool from_va;		/* handle memory is from VA */
@@ -451,15 +449,14 @@ struct dma_coherent_mem_replica {
 };
 
 int nvmap_dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
-			dma_addr_t device_addr, size_t size, int flags, bool is_gpu,
-			u32 granule_size);
+			dma_addr_t device_addr, size_t size, int flags);
 int nvmap_probe(struct platform_device *pdev);
 int nvmap_remove(struct platform_device *pdev);
 int nvmap_init(struct platform_device *pdev);
 
 int nvmap_create_carveout(const struct nvmap_platform_carveout *co);
 
-int nvmap_co_setup(struct reserved_mem *rmem, u32 granule_size);
+int nvmap_co_setup(struct reserved_mem *rmem);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,

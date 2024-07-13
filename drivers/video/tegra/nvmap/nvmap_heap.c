@@ -79,11 +79,10 @@ void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
 }
 
 static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
-				   phys_addr_t *start, struct nvmap_handle *handle)
+				   phys_addr_t *start)
 {
 	phys_addr_t pa = DMA_MAPPING_ERROR;
 	struct device *dev = h->dma_dev;
-	void *err = NULL;
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (start && h->is_ivm) {
@@ -98,26 +97,8 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 	} else
 #endif
 	{
-		err = nvmap_dma_alloc_attrs(dev, len, &pa,
+		(void)nvmap_dma_alloc_attrs(dev, len, &pa,
 				GFP_KERNEL, DMA_ATTR_ALLOC_EXACT_SIZE);
-		/*
-		 * In case of Gpu carveout, try to allocate the entire granule in physically
-		 * contiguous manner. If it returns error, then try to allocate the memory in
-		 * granules of specified granule size.
-		 */
-		if (h->is_gpu_co && IS_ERR(err)) {
-			err = nvmap_dma_alloc_attrs(dev, len, &pa,
-				GFP_KERNEL, DMA_ATTR_ALLOC_EXACT_SIZE |
-				DMA_ATTR_ALLOC_SINGLE_PAGES);
-
-			if (!IS_ERR_OR_NULL(err)) {
-				/*
-				 * Need to keep track of pages, so that only those pages
-				 * can be freed while freeing the buffer.
-				 */
-				handle->pgalloc.pages = (struct page **)err;
-			}
-		}
 		if (!dma_mapping_error(dev, pa)) {
 			dev_dbg(dev, "Allocated addr (%pa) len(%zu)\n",
 					&pa, len);
@@ -128,7 +109,7 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 }
 
 static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
-			   size_t len, struct nvmap_handle *handle)
+			   size_t len)
 {
 	struct device *dev = h->dma_dev;
 
@@ -140,18 +121,10 @@ static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 	} else
 #endif
 	{
-		if (h->is_gpu_co && handle->pgalloc.pages) {
-			/* In case of pages, we need to pass pointer to array of pages */
-			nvmap_dma_free_attrs(dev, len,
-				     (void *)handle->pgalloc.pages,
-				     (dma_addr_t)base,
-				     DMA_ATTR_ALLOC_EXACT_SIZE | DMA_ATTR_ALLOC_SINGLE_PAGES);
-		} else {
-			nvmap_dma_free_attrs(dev, len,
+		nvmap_dma_free_attrs(dev, len,
 				     (void *)(uintptr_t)base,
 				     (dma_addr_t)base,
 				     DMA_ATTR_ALLOC_EXACT_SIZE);
-		}
 	}
 }
 
@@ -163,8 +136,7 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 					      size_t len, size_t align,
 					      unsigned int mem_prot,
 					      phys_addr_t base_max,
-					      phys_addr_t *start,
-					      struct nvmap_handle *handle)
+					      phys_addr_t *start)
 {
 	struct list_block *heap_block = NULL;
 	dma_addr_t dev_base;
@@ -191,7 +163,7 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 		goto fail_heap_block_alloc;
 	}
 
-	dev_base = nvmap_alloc_mem(heap, len, start, handle);
+	dev_base = nvmap_alloc_mem(heap, len, start);
 	if (dma_mapping_error(dev, dev_base)) {
 		dev_err(dev, "failed to alloc mem of size (%zu)\n",
 			len);
@@ -222,7 +194,7 @@ static void do_heap_free(struct nvmap_heap_block *block)
 
 	list_del(&b->all_list);
 
-	nvmap_free_mem(heap, block->base, b->size, block->handle);
+	nvmap_free_mem(heap, block->base, b->size);
 	heap->free_size += b->size;
 	kmem_cache_free(heap_block_cache, b);
 }
@@ -276,7 +248,7 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 	}
 
 	align = max_t(size_t, align, L1_CACHE_BYTES);
-	b = do_heap_alloc(h, len, align, prot, 0, start, handle);
+	b = do_heap_alloc(h, len, align, prot, 0, start);
 	if (b) {
 		b->handle = handle;
 		handle->carveout = b;
@@ -375,7 +347,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 
 		/* declare Non-CMA heap */
 		err = nvmap_dma_declare_coherent_memory(h->dma_dev, 0, base, len,
-				DMA_MEMORY_NOMAP, co->is_gpu_co, co->granule_size);
+				DMA_MEMORY_NOMAP);
 		if (!err) {
 			pr_info("%s :dma coherent mem declare %pa,%zu\n",
 				co->name, &base, len);
@@ -394,9 +366,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->base = base;
 	h->can_alloc = !!co->can_alloc;
 	h->is_ivm = co->is_ivm;
-	h->is_gpu_co = co->is_gpu_co;
 	h->numa_node_id = co->numa_node_id;
-	h->granule_size = co->granule_size;
 	h->len = len;
 	h->free_size = len;
 	h->peer = co->peer;
@@ -518,33 +488,11 @@ static int nvmap_flush_heap_block(struct nvmap_client *client,
 	phys_addr_t phys = block->base;
 	phys_addr_t end = block->base + len;
 	int ret = 0;
-	struct nvmap_handle *h;
 
 	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
 
-	h = block->handle;
-	if (h->pgalloc.pages) {
-		unsigned long page_count, i;
-		u32 granule_size = 0;
-		struct list_block *b = container_of(block, struct list_block, block);
-
-		/*
-		 * For Gpu carveout with physically discontiguous granules,
-		 * iterate over granules and do cache maint for it.
-		 */
-		page_count = h->size >> PAGE_SHIFT;
-		granule_size = b->heap->granule_size;
-		for (i = 0; i < page_count; i += PAGES_PER_GRANULE(granule_size)) {
-			phys = page_to_phys(h->pgalloc.pages[i]);
-			end = phys + granule_size;
-			ret = nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end,
-					true, prot != NVMAP_HANDLE_INNER_CACHEABLE);
-			if (ret)
-				goto out;
-		}
-	} else
-		ret = nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end,
+	ret = nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end,
 				true, prot != NVMAP_HANDLE_INNER_CACHEABLE);
 
 out:

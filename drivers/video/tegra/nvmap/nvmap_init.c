@@ -96,21 +96,17 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.size		= 0,
 		.numa_node_id = 0,
 	},
+	/* Need uninitialized entries for IVM carveouts */
 	[5] = {
-		.name		= "gpu0",
-		.usage_mask	= NVMAP_HEAP_CARVEOUT_GPU,
-		.base		= 0,
-		.size		= 0,
+		.name		= NULL,
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
 		.numa_node_id = 0,
 	},
 	[6] = {
-		.name		= "gpu1",
-		.usage_mask	= NVMAP_HEAP_CARVEOUT_GPU,
-		.base		= 0,
-		.size		= 0,
-		.numa_node_id = 1,
+		.name		= NULL,
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+		.numa_node_id = 0,
 	},
-	/* Need uninitialized entries for IVM carveouts */
 	[7] = {
 		.name		= NULL,
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
@@ -121,21 +117,11 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
 		.numa_node_id = 0,
 	},
-	[9] = {
-		.name		= NULL,
-		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
-		.numa_node_id = 0,
-	},
-	[10] = {
-		.name		= NULL,
-		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
-		.numa_node_id = 0,
-	},
 };
 
 static struct nvmap_platform_data nvmap_data = {
 	.carveouts	= nvmap_carveouts,
-	.nr_carveouts	= 7,
+	.nr_carveouts	= 5,
 };
 
 static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name)
@@ -313,49 +299,23 @@ static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
 {
 	int order = get_order(size);
 	unsigned long flags;
-	unsigned int count = 0, i = 0, j = 0, k = 0;
+	unsigned int count = 0, i = 0, j = 0;
 	unsigned int alloc_size;
 	unsigned long align, pageno, page_count, first_pageno;
 	void *addr = NULL;
 	struct page **pages = NULL;
 	int do_memset = 0;
 	int *bitmap_nos = NULL;
-	const char *device_name;
-	bool is_gpu = false;
-	u32 granule_size = 0;
 
-	device_name = dev_name(dev);
-	if (!device_name) {
-		pr_err("Could not get device_name\n");
-		return NULL;
-	}
-
-	if (!strncmp(device_name, "gpu", 3)) {
-		struct nvmap_platform_carveout *co;
-
-		is_gpu = true;
-		co = nvmap_get_carveout_pdata("gpu");
-		if (!co) {
-			pr_err("Could not get carveout\n");
+	if (dma_get_attr(DMA_ATTR_ALLOC_EXACT_SIZE, attrs)) {
+		page_count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+		if (page_count > UINT_MAX) {
+			dev_err(dev, "Page count more than max value\n");
 			return NULL;
 		}
-		granule_size = co->granule_size;
-	}
-
-	if (is_gpu) {
-		/* Calculation for Gpu carveout should consider granule size */
-		count = size >> PAGE_SHIFT_GRANULE(granule_size);
-	} else {
-		if (dma_get_attr(DMA_ATTR_ALLOC_EXACT_SIZE, attrs)) {
-			page_count = PAGE_ALIGN(size) >> PAGE_SHIFT;
-			if (page_count > UINT_MAX) {
-				dev_err(dev, "Page count more than max value\n");
-				return NULL;
-			}
-			count = (unsigned int)page_count;
-		} else
-			count = 1 << order;
-	}
+		count = (unsigned int)page_count;
+	} else
+		count = 1 << order;
 
 	if (!count)
 		return NULL;
@@ -368,11 +328,7 @@ static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
 	if ((mem->flags & DMA_MEMORY_NOMAP) &&
 	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
 		alloc_size = 1;
-		/* pages contain the array of pages of kernel PAGE_SIZE */
-		if (!is_gpu)
-			pages = nvmap_kvzalloc_pages(count);
-		else
-			pages = nvmap_kvzalloc_pages(count * PAGES_PER_GRANULE(granule_size));
+		pages = nvmap_kvzalloc_pages(count);
 
 		if (!pages) {
 			kvfree(bitmap_nos);
@@ -384,15 +340,11 @@ static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
 
 	spin_lock_irqsave(&mem->spinlock, flags);
 
-	if (!is_gpu && unlikely(size > ((u64)mem->size << PAGE_SHIFT)))
-		goto err;
-	else if (is_gpu &&
-		 unlikely(size > ((u64)mem->size << PAGE_SHIFT_GRANULE(granule_size))))
+	if (unlikely(size > ((u64)mem->size << PAGE_SHIFT)))
 		goto err;
 
-	if (((mem->flags & DMA_MEMORY_NOMAP) &&
-	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) ||
-	    is_gpu) {
+	if ((mem->flags & DMA_MEMORY_NOMAP) &&
+	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
 		align = 0;
 	} else  {
 		if (order > DMA_BUF_ALIGNMENT)
@@ -412,16 +364,8 @@ static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
 			first_pageno = pageno;
 
 		count -= alloc_size;
-		if (pages) {
-			if (!is_gpu)
-				pages[i++] = pfn_to_page(mem->pfn_base + pageno);
-			else {
-				/* Handle granules */
-				for (k = 0; k < (alloc_size * PAGES_PER_GRANULE(granule_size)); k++)
-					pages[i++] = pfn_to_page(mem->pfn_base + pageno *
-								 PAGES_PER_GRANULE(granule_size) + k);
-			}
-		}
+		if (pages)
+			pages[i++] = pfn_to_page(mem->pfn_base + pageno);
 
 		bitmap_set(mem->bitmap, pageno, alloc_size);
 		bitmap_nos[j++] = pageno;
@@ -430,11 +374,7 @@ static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
 	/*
 	 * Memory was found in the coherent area.
 	 */
-	if (!is_gpu)
-		*dma_handle = mem->device_base + (first_pageno << PAGE_SHIFT);
-	else
-		*dma_handle = mem->device_base + (first_pageno << PAGE_SHIFT_GRANULE(granule_size));
-
+	*dma_handle = mem->device_base + (first_pageno << PAGE_SHIFT);
 	if (!(mem->flags & DMA_MEMORY_NOMAP)) {
 		addr = mem->virt_base + (first_pageno << PAGE_SHIFT);
 		do_memset = 1;
@@ -456,7 +396,7 @@ err:
 	spin_unlock_irqrestore(&mem->spinlock, flags);
 	kvfree(pages);
 	kvfree(bitmap_nos);
-	return ERR_PTR(-ENOMEM);
+	return NULL;
 }
 
 struct device *nvmap_get_vpr_dev(void)
@@ -516,32 +456,11 @@ void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 {
 	void *mem_addr;
 	unsigned long flags;
-	unsigned int pageno, page_shift_val;
+	unsigned int pageno;
 	struct dma_coherent_mem_replica *mem;
-	bool is_gpu = false;
-	const char *device_name;
-	size_t granule_size = 0;
 
 	if (!dev || !dev->dma_mem)
 		return;
-
-	device_name = dev_name(dev);
-	if (!device_name) {
-		pr_err("Could not get device_name\n");
-		return;
-	}
-
-	if (!strncmp(device_name, "gpu", 3)) {
-		struct nvmap_platform_carveout *co;
-
-		is_gpu = true;
-		co = nvmap_get_carveout_pdata("gpu");
-		if (!co) {
-			pr_err("Could not get carveout\n");
-			return;
-		}
-		granule_size = co->granule_size;
-	}
 
 	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
 	if ((mem->flags & DMA_MEMORY_NOMAP) &&
@@ -550,23 +469,12 @@ void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 		int i;
 
 		spin_lock_irqsave(&mem->spinlock, flags);
-		if (!is_gpu) {
-			for (i = 0; i < (size >> PAGE_SHIFT); i++) {
-				pageno = page_to_pfn(pages[i]) - mem->pfn_base;
-				if (WARN_ONCE(pageno > mem->size,
+		for (i = 0; i < (size >> PAGE_SHIFT); i++) {
+			pageno = page_to_pfn(pages[i]) - mem->pfn_base;
+			if (WARN_ONCE(pageno > mem->size,
 				      "invalid pageno:%d\n", pageno))
-					continue;
-				bitmap_clear(mem->bitmap, pageno, 1);
-			}
-		} else {
-			for (i = 0; i < (size >> PAGE_SHIFT); i += PAGES_PER_GRANULE(granule_size)) {
-				pageno = (page_to_pfn(pages[i]) - mem->pfn_base) /
-						PAGES_PER_GRANULE(granule_size);
-				if (WARN_ONCE(pageno > mem->size,
-				      "invalid pageno:%d\n", pageno))
-					continue;
-				bitmap_clear(mem->bitmap, pageno, 1);
-			}
+				continue;
+			bitmap_clear(mem->bitmap, pageno, 1);
 		}
 		spin_unlock_irqrestore(&mem->spinlock, flags);
 		kvfree(pages);
@@ -578,19 +486,14 @@ void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 	else
 		mem_addr =  mem->virt_base;
 
-	page_shift_val = is_gpu ? PAGE_SHIFT_GRANULE(granule_size) : PAGE_SHIFT;
 	if (mem && cpu_addr >= mem_addr &&
-	    cpu_addr - mem_addr < (u64)mem->size << page_shift_val) {
-		unsigned int page = (cpu_addr - mem_addr) >> page_shift_val;
+	    cpu_addr - mem_addr < (u64)mem->size << PAGE_SHIFT) {
+		unsigned int page = (cpu_addr - mem_addr) >> PAGE_SHIFT;
 		unsigned long flags;
 		unsigned int count;
 
-		if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs) {
-			if (is_gpu)
-				count = ALIGN_GRANULE_SIZE(size, granule_size) >> page_shift_val;
-			else
-				count = PAGE_ALIGN(size) >> page_shift_val;
-		}
+		if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
+			count = PAGE_ALIGN(size) >> PAGE_SHIFT;
 		else
 			count = 1 << get_order(size);
 
@@ -680,23 +583,16 @@ static int nvmap_dma_assign_coherent_memory(struct device *dev,
 
 static int nvmap_dma_init_coherent_memory(
 	phys_addr_t phys_addr, dma_addr_t device_addr, size_t size, int flags,
-	struct dma_coherent_mem_replica **mem, bool is_gpu, u32 granule_size)
+	struct dma_coherent_mem_replica **mem)
 {
 	struct dma_coherent_mem_replica *dma_mem = NULL;
 	void *mem_base = NULL;
-	int pages;
-	int bitmap_size;
+	int pages = size >> PAGE_SHIFT;
+	int bitmap_size = BITS_TO_LONGS(pages) * sizeof(long);
 	int ret;
 
 	if (!size)
 		return -EINVAL;
-
-	if (is_gpu)
-		pages = size >> PAGE_SHIFT_GRANULE(granule_size);
-	else
-		pages = size >> PAGE_SHIFT;
-
-	bitmap_size = BITS_TO_LONGS(pages) * sizeof(long);
 
 	if (!(flags & DMA_MEMORY_NOMAP)) {
 		mem_base = memremap(phys_addr, size, MEMREMAP_WC);
@@ -735,14 +631,12 @@ err_memunmap:
 }
 
 int nvmap_dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
-			dma_addr_t device_addr, size_t size, int flags, bool is_gpu,
-			u32 granule_size)
+			dma_addr_t device_addr, size_t size, int flags)
 {
 	struct dma_coherent_mem_replica *mem;
 	int ret;
 
-	ret = nvmap_dma_init_coherent_memory(phys_addr, device_addr, size, flags, &mem,
-					     is_gpu, granule_size);
+	ret = nvmap_dma_init_coherent_memory(phys_addr, device_addr, size, flags, &mem);
 	if (ret)
 		return ret;
 
@@ -768,8 +662,7 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 	if (!co->cma_dev) {
 		err = nvmap_dma_declare_coherent_memory(co->dma_dev, 0,
 				co->base, co->size,
-				DMA_MEMORY_NOMAP, co->is_gpu_co,
-				co->granule_size);
+				DMA_MEMORY_NOMAP);
 		if (!err) {
 			pr_info("%s :dma coherent mem declare %pa,%zu\n",
 				 co->name, &co->base, co->size);
@@ -796,7 +689,7 @@ static const struct reserved_mem_ops nvmap_co_ops = {
 	.device_release	= nvmap_co_device_release,
 };
 
-int __init nvmap_co_setup(struct reserved_mem *rmem, u32 granule_size)
+int __init nvmap_co_setup(struct reserved_mem *rmem)
 {
 	struct nvmap_platform_carveout *co;
 	ulong start = sched_clock();
@@ -812,10 +705,6 @@ int __init nvmap_co_setup(struct reserved_mem *rmem, u32 granule_size)
 	co->base = rmem->base;
 	co->size = rmem->size;
 	co->cma_dev = NULL;
-	if (!strncmp(co->name, "gpu", 3)) {
-		co->is_gpu_co = true;
-		co->granule_size = granule_size;
-	}
 
 	nvmap_init_time += sched_clock() - start;
 	return ret;
@@ -829,8 +718,6 @@ int __init nvmap_init(struct platform_device *pdev)
 {
 	int err;
 	struct reserved_mem rmem;
-
-	u32 granule_size = 0;
 	struct reserved_mem *rmem2;
 	struct device_node *np = pdev->dev.of_node;
 	struct of_phandle_iterator it;
@@ -840,14 +727,6 @@ int __init nvmap_init(struct platform_device *pdev)
 		while (!of_phandle_iterator_next(&it) && it.node) {
 			if (of_device_is_available(it.node) &&
 			    !of_device_is_compatible(it.node, "nvidia,ivm_carveout")) {
-				/* Read granule size in case of gpu carveout */
-				if ((of_device_is_compatible(it.node, "nvidia,gpu0_carveout") ||
-					of_device_is_compatible(it.node, "nvidia,gpu1_carveout")) &&
-					of_property_read_u32(it.node, "granule-size", &granule_size
-						)) {
-					pr_err("granule-size property is missing\n");
-					return -EINVAL;
-				}
 				rmem2 = of_reserved_mem_lookup(it.node);
 				if (!rmem2) {
 					if (!of_property_read_string(it.node, "compatible", &compp))
@@ -855,7 +734,7 @@ int __init nvmap_init(struct platform_device *pdev)
 							compp);
 					return -EINVAL;
 				}
-				nvmap_co_setup(rmem2, granule_size);
+				nvmap_co_setup(rmem2);
 			}
 		}
 	}

@@ -198,10 +198,8 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	struct nvmap_handle *handle;
 	struct dma_buf *dmabuf = NULL;
 	bool is_ro = false;
-	int err, i;
-	unsigned int page_sz = PAGE_SIZE;
+	int err;
 	long dmabuf_ref = 0;
-	size_t old_size;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -221,22 +219,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	if (IS_ERR_OR_NULL(handle))
 		return -EINVAL;
 
-	old_size = handle->size;
-	/*
-	 * In case of Gpu carveout, the handle size needs to be aligned to granule.
-	 */
-	if (op.heap_mask & NVMAP_HEAP_CARVEOUT_GPU) {
-		size_t granule_size = 0;
-
-		for (i = 0; i < nvmap_dev->nr_carveouts; i++)
-			if (nvmap_dev->heaps[i].heap_bit & NVMAP_HEAP_CARVEOUT_GPU)
-				granule_size = nvmap_dev->heaps[i].carveout->granule_size;
-		handle->size = ALIGN_GRANULE_SIZE(handle->size, granule_size);
-		page_sz = granule_size;
-	}
-
 	if (!is_nvmap_memory_available(handle->size, op.heap_mask, op.numa_nid)) {
-		handle->size = old_size;
 		nvmap_handle_put(handle);
 		return -ENOMEM;
 	}
@@ -244,7 +227,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	handle->numa_id = op.numa_nid;
 	/* user-space handles are aligned to page boundaries, to prevent
 	 * data leakage. */
-	op.align = max_t(size_t, op.align, page_sz);
+	op.align = max_t(size_t, op.align, PAGE_SIZE);
 
 	err = nvmap_alloc_handle(client, handle, op.heap_mask, op.align,
 				  0, /* no kind */
@@ -266,8 +249,6 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 				is_ro ? "RO" : "RW");
 	}
 
-	if (err)
-		handle->size = old_size;
 	nvmap_handle_put(handle);
 	return err;
 }
@@ -1008,15 +989,13 @@ int nvmap_ioctl_get_handle_parameters(struct file *filp, void __user *arg)
 	/*
 	 * Check handle is allocated or not while setting contig.
 	 * If heap type is IOVMM, check if it has flag set for contiguous memory
-	 * allocation request. Otherwise, if handle belongs to any carveout except gpu
-	 * carveout then all allocations are contiguous, hence set contig flag to true.
-	 * In case of gpu carveout, if allocation is page based then set contig flag to
-	 * false otherwise true.
+	 * allocation request. Otherwise, if handle belongs to any carveout
+	 * then all allocations are contiguous, hence set contig flag to true.
 	 */
 	if (handle->alloc &&
-	   ((handle->heap_type == NVMAP_HEAP_IOVMM &&
+		((handle->heap_type == NVMAP_HEAP_IOVMM &&
 		    handle->userflags & NVMAP_HANDLE_PHYS_CONTIG) ||
-	   (handle->heap_type != NVMAP_HEAP_IOVMM && !handle->pgalloc.pages))) {
+		handle->heap_type != NVMAP_HEAP_IOVMM)) {
 		op.contig = 1U;
 	} else {
 		op.contig = 0U;
@@ -1300,10 +1279,6 @@ static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 				heap = nvmap_dev->heaps[i].carveout;
 				op.total = nvmap_query_heap_size(heap);
 				op.free = heap->free_size;
-				if (nvmap_dev->heaps[i].carveout->is_gpu_co) {
-					op.granule_size =
-						nvmap_dev->heaps[i].carveout->granule_size;
-				}
 				break;
 			}
 		}
