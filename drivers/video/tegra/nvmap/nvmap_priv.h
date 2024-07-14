@@ -43,6 +43,9 @@
 
 #include <linux/fdtable.h>
 
+#define SIZE_2MB 0x200000
+#define ALIGN_2MB(size) ((size + SIZE_2MB - 1) & ~(SIZE_2MB - 1))
+
 #define DMA_ERROR_CODE	(~(dma_addr_t)0)
 
 #define __DMA_ATTR(attrs) attrs
@@ -251,6 +254,7 @@ struct nvmap_handle {
 	wait_queue_head_t waitq;
 	int numa_id;
 	u64 serial_id;
+	bool has_hugetlbfs_pages;
 };
 
 struct nvmap_handle_info {
@@ -513,7 +517,8 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 			       struct nvmap_handle *h,
 			       ulong addr,
-			       unsigned int flags);
+			       unsigned int flags,
+			       unsigned int heap_mask);
 
 void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h, bool is_ro);
 

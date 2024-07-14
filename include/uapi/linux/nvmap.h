@@ -94,6 +94,7 @@ struct nvmap_alloc_handle {
 	__u32 flags;		/* wb/wc/uc/iwb etc. */
 	__u32 align;		/* min alignment necessary */
 	__s32 numa_nid;		/* NUMA node id */
+	__u64 va;		/* virtual address to get huge pages from */
 };
 
 struct nvmap_alloc_ivm_handle {

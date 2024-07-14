@@ -247,7 +247,8 @@ static void alloc_handle(struct nvmap_client *client,
 static int alloc_handle_from_va(struct nvmap_client *client,
 				 struct nvmap_handle *h,
 				 ulong vaddr,
-				 u32 flags)
+				 u32 flags,
+				 unsigned int heap_mask)
 {
 	size_t nr_page = h->size >> PAGE_SHIFT;
 	struct page **pages;
@@ -276,6 +277,8 @@ static int alloc_handle_from_va(struct nvmap_client *client,
 	h->heap_type = NVMAP_HEAP_IOVMM;
 	h->heap_pgalloc = true;
 	h->from_va = true;
+	if (heap_mask & NVMAP_HEAP_CARVEOUT_GPU)
+		h->has_hugetlbfs_pages = true;
 	mb();
 	h->alloc = true;
 	return ret;
@@ -424,7 +427,8 @@ out:
 int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 			       struct nvmap_handle *h,
 			       ulong addr,
-			       unsigned int flags)
+			       unsigned int flags,
+			       unsigned int heap_mask)
 {
 	int err = -ENOMEM;
 	int tag;
@@ -455,7 +459,7 @@ int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 			client->task->pid, task_comm);
 	}
 
-	err = alloc_handle_from_va(client, h, addr, flags);
+	err = alloc_handle_from_va(client, h, addr, flags, heap_mask);
 	if (err) {
 		pr_err("alloc_handle_from_va failed %d", err);
 		nvmap_handle_put(h);

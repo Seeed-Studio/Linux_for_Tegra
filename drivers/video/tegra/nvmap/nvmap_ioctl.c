@@ -200,6 +200,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	bool is_ro = false;
 	int err;
 	long dmabuf_ref = 0;
+	size_t old_size;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -219,6 +220,16 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	if (IS_ERR_OR_NULL(handle))
 		return -EINVAL;
 
+	if (op.heap_mask & NVMAP_HEAP_CARVEOUT_GPU) {
+		/*
+		 * In case of Gpu carveout, the handle size needs to be aligned to 2MB.
+		 */
+		old_size = handle->size;
+		handle->size = ALIGN_2MB(handle->size);
+		err = nvmap_alloc_handle_from_va(client, handle, op.va, op.flags, op.heap_mask);
+		goto alloc_op_done;
+	}
+
 	if (!is_nvmap_memory_available(handle->size, op.heap_mask, op.numa_nid)) {
 		nvmap_handle_put(handle);
 		return -ENOMEM;
@@ -234,6 +245,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 				  op.flags & (~NVMAP_HANDLE_KIND_SPECIFIED),
 				  NVMAP_IVM_INVALID_PEER);
 
+alloc_op_done:
 	if (!err && !is_nvmap_id_ro(client, op.handle, &is_ro)) {
 		mutex_lock(&handle->lock);
 		dmabuf = is_ro ? handle->dmabuf_ro : handle->dmabuf;
@@ -249,6 +261,8 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 				is_ro ? "RO" : "RW");
 	}
 
+	if ((op.heap_mask & NVMAP_HEAP_CARVEOUT_GPU) && err)
+		handle->size = old_size;
 	nvmap_handle_put(handle);
 	return err;
 }
@@ -426,7 +440,7 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 	handle = ref->handle;
 
 	err = nvmap_alloc_handle_from_va(client, handle,
-					 op.va, op.flags);
+					 op.va, op.flags, 0);
 	if (err) {
 		nvmap_free_handle(client, handle, is_ro);
 		return err;
@@ -978,7 +992,20 @@ int nvmap_ioctl_get_handle_parameters(struct file *filp, void __user *arg)
 	if (!handle->alloc) {
 		op.heap = 0;
 	} else {
-		op.heap = handle->heap_type;
+		/*
+		 * When users specify GPU heap to allocate from, it means the
+		 * allocation is done from hugetlbfs. But the heap_type stored
+		 * in handle struct would still be IOVMM heap, as the pages are
+		 * from system memory and not from any carveout. Also, a lot
+		 * of nvmap APIs treat carveout and system memory in different ways
+		 * hence it's necessary to store IOVMM heap in heap_type, but while
+		 * querying the handle params, return GPU heap for such handles to
+		 * be consistent.
+		 */
+		if (handle->has_hugetlbfs_pages)
+			op.heap = NVMAP_HEAP_CARVEOUT_GPU;
+		else
+			op.heap = handle->heap_type;
 	}
 
 	/* heap_number, only valid for IVM carveout */
@@ -991,8 +1018,10 @@ int nvmap_ioctl_get_handle_parameters(struct file *filp, void __user *arg)
 	 * If heap type is IOVMM, check if it has flag set for contiguous memory
 	 * allocation request. Otherwise, if handle belongs to any carveout
 	 * then all allocations are contiguous, hence set contig flag to true.
+	 * When the handle is allocated from hugetlbfs, then return contig as false,
+	 * since the entire buffer may not be contiguous.
 	 */
-	if (handle->alloc &&
+	if (handle->alloc && !handle->has_hugetlbfs_pages &&
 		((handle->heap_type == NVMAP_HEAP_IOVMM &&
 		    handle->userflags & NVMAP_HANDLE_PHYS_CONTIG) ||
 		handle->heap_type != NVMAP_HEAP_IOVMM)) {
@@ -1195,6 +1224,58 @@ static int compute_memory_stat(u64 *total, u64 *free, int numa_id)
 }
 
 /*
+ * This function calculates HugePages_Total and HugePages_Free by parsing
+ * /sys/devices/system/node/nodeX/meminfo file
+ */
+static int compute_hugetlbfs_stat(u64 *total, u64 *free, int numa_id)
+{
+	struct file *file;
+	char meminfo_path[64] = {'\0'};
+	u8 *buf;
+	loff_t pos = 0;
+	char *buffer, *ptr;
+	unsigned int huge_total, huge_free;
+	bool total_found = false, free_found = false;
+	int nid, rc;
+
+	sprintf(meminfo_path, "/sys/devices/system/node/node%d/meminfo", numa_id);
+	file = filp_open(meminfo_path, O_RDONLY, 0);
+	if (IS_ERR(file)) {
+		pr_err("Could not open file:%s\n", meminfo_path);
+		return -EINVAL;
+	}
+
+	buf = nvmap_altalloc(MEMINFO_SIZE * sizeof(*buf));
+	if (!buf) {
+		pr_err("Memory allocation failed\n");
+		filp_close(file, NULL);
+		return -ENOMEM;
+	}
+
+	rc = kernel_read(file, buf, MEMINFO_SIZE - 1, &pos);
+	buf[rc] = '\n';
+	filp_close(file, NULL);
+	buffer = buf;
+	ptr = buf;
+	while ((ptr = strsep(&buffer, "\n")) != NULL) {
+		if (!ptr[0])
+			continue;
+		else if (sscanf(ptr, "Node %d HugePages_Total: %u\n", &nid, &huge_total) == 2)
+			total_found = true;
+		else if (sscanf(ptr, "Node %d HugePages_Free: %u\n", &nid, &huge_free) == 2)
+			free_found = true;
+	}
+
+	nvmap_altfree(buf, MEMINFO_SIZE * sizeof(*buf));
+	if (nid == numa_id && total_found && free_found) {
+		*total = (u64)huge_total * SIZE_2MB;
+		*free = (u64)huge_free * SIZE_2MB;
+		return 0;
+	}
+	return -EINVAL;
+}
+
+/*
  * This function calculates allocatable free memory using following formula:
  * free_mem = avail mem - cma free
  * The CMA memory is not allocatable by NvMap for regular allocations and it
@@ -1271,7 +1352,22 @@ static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 	/* To Do: select largest free block */
 	op.largest_free_block = PAGE_SIZE;
 
-	if (type & NVMAP_HEAP_CARVEOUT_MASK) {
+	/*
+	 * Special case: GPU heap
+	 * When user is querying the GPU heap, that means the buffer was allocated from
+	 * hugetlbfs, so we need to return the HugePages_Total, HugePages_Free values
+	 */
+	if (type & NVMAP_HEAP_CARVEOUT_GPU) {
+		if (!is_numa_aware)
+			numa_id = 0;
+
+		ret = compute_hugetlbfs_stat(&op.total, &op.free, numa_id);
+		if (ret)
+			goto exit;
+
+		op.largest_free_block = SIZE_2MB;
+		op.granule_size = SIZE_2MB;
+	} else if (type & NVMAP_HEAP_CARVEOUT_MASK) {
 		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
 			if ((type & nvmap_dev->heaps[i].heap_bit) &&
 				(is_numa_aware ?
