@@ -8689,7 +8689,11 @@
 
 	mods_xhci: mods_xhci {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA_SID_XUSB_PF_HS_PORTS>;
+		iommus = <&smmu1_mmu TEGRA_SID_XUSB_PF_HS_PORTS>,
+			<&smmu1_mmu TEGRA_SID_XUSB_PF_SS_PORT1>,
+			<&smmu1_mmu TEGRA_SID_XUSB_PF_SS_PORT2>,
+			<&smmu1_mmu TEGRA_SID_XUSB_PF_SS_PORT3>,
+			<&smmu1_mmu TEGRA_SID_XUSB_PF_SS_PORT4>;
 		dma-coherent;
 		dev-names = "mods_xhci";
 		status = "disabled";
