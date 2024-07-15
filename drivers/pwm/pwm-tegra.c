@@ -58,6 +58,7 @@
 #define PWM_SCALE_SHIFT	0
 
 struct tegra_pwm_soc {
+	unsigned int channel_offset;
 	unsigned int num_channels;
 };
 
@@ -83,12 +84,12 @@ static inline struct tegra_pwm_chip *to_tegra_pwm_chip(struct pwm_chip *chip)
 
 static inline u32 pwm_readl(struct tegra_pwm_chip *pc, unsigned int offset)
 {
-	return readl(pc->regs + (offset << 4));
+	return readl(pc->regs + offset);
 }
 
 static inline void pwm_writel(struct tegra_pwm_chip *pc, unsigned int offset, u32 value)
 {
-	writel(value, pc->regs + (offset << 4));
+	writel(value, pc->regs + offset);
 }
 
 static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
@@ -197,7 +198,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	} else
 		val |= PWM_ENABLE;
 
-	pwm_writel(pc, pwm->hwpwm, val);
+	pwm_writel(pc, pwm->hwpwm * pc->soc->channel_offset, val);
 
 	/*
 	 * If the PWM is not enabled, turn the clock off again to save power.
@@ -211,6 +212,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 static int tegra_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	struct tegra_pwm_chip *pc = to_tegra_pwm_chip(chip);
+	unsigned int enb_offset;
 	int rc = 0;
 	u32 val;
 
@@ -218,9 +220,10 @@ static int tegra_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 	if (rc)
 		return rc;
 
-	val = pwm_readl(pc, pwm->hwpwm);
+	enb_offset = pwm->hwpwm * pc->soc->channel_offset;
+	val = pwm_readl(pc, enb_offset);
 	val |= PWM_ENABLE;
-	pwm_writel(pc, pwm->hwpwm, val);
+	pwm_writel(pc, enb_offset, val);
 
 	return 0;
 }
@@ -228,11 +231,13 @@ static int tegra_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 static void tegra_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	struct tegra_pwm_chip *pc = to_tegra_pwm_chip(chip);
+	unsigned int enb_offset;
 	u32 val;
 
-	val = pwm_readl(pc, pwm->hwpwm);
+	enb_offset = pwm->hwpwm * pc->soc->channel_offset;
+	val = pwm_readl(pc, enb_offset);
 	val &= ~PWM_ENABLE;
-	pwm_writel(pc, pwm->hwpwm, val);
+	pwm_writel(pc, enb_offset, val);
 
 	pm_runtime_put_sync(pc->dev);
 }
@@ -391,14 +396,17 @@ static int __maybe_unused tegra_pwm_runtime_resume(struct device *dev)
 }
 
 static const struct tegra_pwm_soc tegra20_pwm_soc = {
+	.channel_offset = 16,
 	.num_channels = 4,
 };
 
 static const struct tegra_pwm_soc tegra186_pwm_soc = {
+	.channel_offset = 0,
 	.num_channels = 1,
 };
 
 static const struct tegra_pwm_soc tegra194_pwm_soc = {
+	.channel_offset = 0,
 	.num_channels = 1,
 };
 
