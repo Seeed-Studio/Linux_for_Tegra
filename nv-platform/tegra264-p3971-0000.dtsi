@@ -379,7 +379,7 @@
 
 	soc_fan: pwm-fan {
 		compatible = "pwm-fan";
-		pwms = <&pwm4 0 2500000>;
+		pwms = <&pwm4 0 40000>;
 		#cooling-cells = <2>;
 	};
 
