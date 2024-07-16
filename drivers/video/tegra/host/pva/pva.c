@@ -650,16 +650,14 @@ static int pva_read_ucode(struct platform_device *pdev, const char *fw_name,
 	fw_info->priv2_buffer.va = pva->priv2_dma.va;
 	fw_info->priv2_reg_offset = FW_DEBUG_DATA_START_ADDR;
 
+	/* setup FW debug log buffer */
+	pva->fw_debug_log.addr = fw_info->priv2_buffer.va;
+
 	/* setup trace buffer */
 	fw_info->trace_buffer_size = FW_TRACE_BUFFER_SIZE;
-	pva->pva_trace.addr = fw_info->priv2_buffer.va;
+	pva->pva_trace.addr = fw_info->priv2_buffer.va + FW_DEBUG_LOG_BUFFER_SIZE;
 	pva->pva_trace.size = FW_TRACE_BUFFER_SIZE;
 	pva->pva_trace.offset = 0L;
-
-	/* setup FW debug log buffer */
-	pva->fw_debug_log.addr = fw_info->priv2_buffer.va +
-				 FW_TRACE_BUFFER_SIZE +
-				 FW_CODE_COVERAGE_BUFFER_SIZE;
 out:
 	return err;
 }
