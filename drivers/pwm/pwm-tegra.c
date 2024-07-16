@@ -59,6 +59,7 @@
 
 struct tegra_pwm_soc {
 	unsigned int channel_offset;
+	unsigned int enb_offset;
 	unsigned int num_channels;
 };
 
@@ -220,7 +221,7 @@ static int tegra_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 	if (rc)
 		return rc;
 
-	enb_offset = pwm->hwpwm * pc->soc->channel_offset;
+	enb_offset = pwm->hwpwm * pc->soc->channel_offset + pc->soc->enb_offset;
 	val = pwm_readl(pc, enb_offset);
 	val |= PWM_ENABLE;
 	pwm_writel(pc, enb_offset, val);
@@ -234,7 +235,7 @@ static void tegra_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 	unsigned int enb_offset;
 	u32 val;
 
-	enb_offset = pwm->hwpwm * pc->soc->channel_offset;
+	enb_offset = pwm->hwpwm * pc->soc->channel_offset + pc->soc->enb_offset;
 	val = pwm_readl(pc, enb_offset);
 	val &= ~PWM_ENABLE;
 	pwm_writel(pc, enb_offset, val);
@@ -397,16 +398,19 @@ static int __maybe_unused tegra_pwm_runtime_resume(struct device *dev)
 
 static const struct tegra_pwm_soc tegra20_pwm_soc = {
 	.channel_offset = 16,
+	.enb_offset = 0,
 	.num_channels = 4,
 };
 
 static const struct tegra_pwm_soc tegra186_pwm_soc = {
 	.channel_offset = 0,
+	.enb_offset = 0,
 	.num_channels = 1,
 };
 
 static const struct tegra_pwm_soc tegra194_pwm_soc = {
 	.channel_offset = 0,
+	.enb_offset = 0,
 	.num_channels = 1,
 };
 
