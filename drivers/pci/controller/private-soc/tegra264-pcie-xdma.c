@@ -258,19 +258,23 @@ static irqreturn_t xdma_irq_handler(int irq, void *cookie)
 			continue;
 
 		for (bit = 0; bit < mode_cnt[i]; bit++) {
+			u32 xfer_valid = val & (1 << (16 + bit + (i * mode_cnt[0])));
+			u32 err_status = val & (1 << (8 + bit + (i * mode_cnt[0])));
+
 			ch = chan[i] + bit;
 
-			/* Process only if DMA channel status set in INTR status */
-			if (!(val & (1 << (16 + bit + (i * mode_cnt[0])))))
+			/* Ignore if no error or xfer valid set for the channel. */
+			if (!xfer_valid && !err_status)
 				continue;
 
-			if (val & XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS_FUNC_ERR_VALID) {
-				{
-					u32 temp;
+			if (err_status) {
+				u32 temp;
 
-					temp = xdma_channel_rd(prv->xdma_base, prv->is_remote_dma,
-							       XDMA_CHANNEL_FUNC_ERROR_STATUS);
-				}
+				temp = xdma_channel_rd(prv->xdma_base, bit + (i * mode_cnt[0]),
+						       XDMA_CHANNEL_FUNC_ERROR_STATUS);
+
+				dev_info(prv->dev, "MSI error %x seen for channel %d for mode %d\n",
+					 temp, bit, i);
 
 				ch->st = TEGRA_PCIE_DMA_ABORT;
 				xdma_hw_deinit(prv, bit + (i * mode_cnt[0]));
@@ -285,6 +289,11 @@ static irqreturn_t xdma_irq_handler(int irq, void *cookie)
 
 				xdma_ll_ch_init(prv->xdma_base, bit + (i * mode_cnt[0]),
 						ch->dma_iova, (i == 0), prv->is_remote_dma);
+			/*
+			 * If both xfer_valid and err_status are set, error recovery process
+			 * channel(process_ch_irq()), so we can skip else part when both xfer_valid
+			 * and err_status are set.
+			 */
 			} else {
 				process_ch_irq(prv, bit + (i * mode_cnt[0]), ch, i);
 			}
