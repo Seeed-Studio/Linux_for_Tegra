@@ -52,15 +52,15 @@
 #include <soc/tegra/common.h>
 
 #define PWM_ENABLE	(1 << 31)
-#define PWM_DUTY_WIDTH	8
-#define PWM_DUTY_SHIFT	16
-#define PWM_SCALE_WIDTH	13
-#define PWM_SCALE_SHIFT	0
 
 struct tegra_pwm_soc {
 	unsigned int channel_offset;
+	unsigned int duty_shift;
+	unsigned int duty_width;
 	unsigned int enb_offset;
 	unsigned int num_channels;
+	unsigned int scale_shift;
+	unsigned int scale_width;
 };
 
 struct tegra_pwm_chip {
@@ -104,22 +104,22 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	/*
 	 * Convert from duty_ns / period_ns to a fixed number of duty ticks
-	 * per (1 << PWM_DUTY_WIDTH) cycles and make sure to round to the
+	 * per (1 << pc->soc->duty_width) cycles and make sure to round to the
 	 * nearest integer during division.
 	 */
-	c *= (1 << PWM_DUTY_WIDTH);
+	c *= (1 << pc->soc->duty_width);
 	c = DIV_ROUND_CLOSEST_ULL(c, period_ns);
 
-	val = (u32)c << PWM_DUTY_SHIFT;
+	val = (u32)c << pc->soc->duty_shift;
 
 	/*
-	 *  min period = max clock limit >> PWM_DUTY_WIDTH
+	 *  min period = max clock limit >> pc->soc->duty_width
 	 */
 	if (period_ns < pc->min_period_ns)
 		return -EINVAL;
 
 	/*
-	 * Compute the prescaler value for which (1 << PWM_DUTY_WIDTH)
+	 * Compute the prescaler value for which (1 << pc->soc->duty_width)
 	 * cycles at the PWM clock rate will take period_ns nanoseconds.
 	 *
 	 * num_channels: If single instance of PWM controller has multiple
@@ -133,18 +133,18 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 */
 	if (pc->soc->num_channels == 1) {
 		/*
-		 * Rate is multiplied with 2^PWM_DUTY_WIDTH so that it matches
-		 * with the maximum possible rate that the controller can
-		 * provide. Any further lower value can be derived by setting
-		 * PFM bits[0:12].
+		 * Rate is multiplied with 2^pc->soc->duty_width so that it
+		 * matches with the maximum possible rate that the controller
+		 * can provide. Any further lower value can be derived by
+		 * setting PFM bits[0:12].
 		 *
 		 * required_clk_rate is a reference rate for source clock and
 		 * it is derived based on user requested period. By setting the
 		 * source clock rate as required_clk_rate, PWM controller will
 		 * be able to configure the requested period.
 		 */
-		required_clk_rate = DIV_ROUND_UP_ULL((u64)NSEC_PER_SEC << PWM_DUTY_WIDTH,
-						     period_ns);
+		required_clk_rate = DIV_ROUND_UP_ULL(
+			(u64)NSEC_PER_SEC << pc->soc->duty_width, period_ns);
 
 		if (required_clk_rate > clk_round_rate(pc->clk, required_clk_rate))
 			/*
@@ -165,9 +165,9 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		pc->clk_rate = clk_get_rate(pc->clk);
 	}
 
-	/* Consider precision in PWM_SCALE_WIDTH rate calculation */
+	/* Consider precision in pc->soc->scale_width rate calculation */
 	rate = mul_u64_u64_div_u64(pc->clk_rate, period_ns,
-				   (u64)NSEC_PER_SEC << PWM_DUTY_WIDTH);
+				   (u64)NSEC_PER_SEC << pc->soc->duty_width);
 
 	/*
 	 * Since the actual PWM divider is the register's frequency divider
@@ -183,10 +183,10 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 * Make sure that the rate will fit in the register's frequency
 	 * divider field.
 	 */
-	if (rate >> PWM_SCALE_WIDTH)
+	if (rate >> pc->soc->scale_width)
 		return -EINVAL;
 
-	val |= rate << PWM_SCALE_SHIFT;
+	val |= rate << pc->soc->scale_shift;
 
 	/*
 	 * If the PWM channel is disabled, make sure to turn on the clock
@@ -320,7 +320,7 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 
 	/* Set minimum limit of PWM period for the IP */
 	pc->min_period_ns =
-	    (NSEC_PER_SEC / (pc->clk_rate >> PWM_DUTY_WIDTH)) + 1;
+		(NSEC_PER_SEC / (pc->clk_rate >> pc->soc->duty_width)) + 1;
 
 	pc->rst = devm_reset_control_get_exclusive(&pdev->dev, "pwm");
 	if (IS_ERR(pc->rst)) {
@@ -398,20 +398,32 @@ static int __maybe_unused tegra_pwm_runtime_resume(struct device *dev)
 
 static const struct tegra_pwm_soc tegra20_pwm_soc = {
 	.channel_offset = 16,
+	.duty_shift = 16,
+	.duty_width = 8,
 	.enb_offset = 0,
 	.num_channels = 4,
+	.scale_shift = 0,
+	.scale_width = 13,
 };
 
 static const struct tegra_pwm_soc tegra186_pwm_soc = {
 	.channel_offset = 0,
+	.duty_shift = 16,
+	.duty_width = 8,
 	.enb_offset = 0,
 	.num_channels = 1,
+	.scale_shift = 0,
+	.scale_width = 13,
 };
 
 static const struct tegra_pwm_soc tegra194_pwm_soc = {
 	.channel_offset = 0,
+	.duty_shift = 16,
+	.duty_width = 8,
 	.enb_offset = 0,
 	.num_channels = 1,
+	.scale_shift = 0,
+	.scale_width = 13,
 };
 
 static const struct of_device_id tegra_pwm_of_match[] = {
