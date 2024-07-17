@@ -69,6 +69,7 @@
 #include "pva_t264.h"
 #endif
 
+#include "pva-debug-buffer.h"
 /*
  * NO IOMMU set 0x60000000 as start address.
  * With IOMMU set 0x80000000(>2GB) as startaddress
@@ -620,6 +621,15 @@ out:
 	return err;
 }
 
+static void init_fw_print_buffer(struct pva_kmd_fw_print_buffer *print_buffer)
+{
+	print_buffer->size =
+		FW_DEBUG_LOG_BUFFER_SIZE - sizeof(*print_buffer);
+	print_buffer->head = 0;
+	print_buffer->tail = 0;
+	print_buffer->flags = 0;
+}
+
 static int pva_read_ucode(struct platform_device *pdev, const char *fw_name,
 			  struct pva *pva)
 {
@@ -652,6 +662,8 @@ static int pva_read_ucode(struct platform_device *pdev, const char *fw_name,
 
 	/* setup FW debug log buffer */
 	pva->fw_debug_log.addr = fw_info->priv2_buffer.va;
+
+	init_fw_print_buffer((struct pva_kmd_fw_print_buffer *)fw_info->priv2_buffer.va);
 
 	/* setup trace buffer */
 	fw_info->trace_buffer_size = FW_TRACE_BUFFER_SIZE;

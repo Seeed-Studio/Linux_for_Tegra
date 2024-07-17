@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2024, NVIDIA Corporation.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA Corporation.  All rights reserved.
  */
 
 #ifndef PVA_FW_ADDRESS_MAP_H
@@ -66,9 +66,13 @@
  * @defgroup PVA_DEBUG_BUFFERS
  *
  * @brief These buffers are arranged in the following order:
- * TRACE_BUFFER followed by CODE_COVERAGE_BUFFER followed by DEBUG_LOG_BUFFER.
+ * DEBUG_LOG_BUFFER followed by TRACE_BUFFER followed by CODE_COVERAGE_BUFFER.
  * @{
  */
+/**
+ * @brief Maximum size of debug log buffer in bytes.
+ */
+#define FW_DEBUG_LOG_BUFFER_SIZE                    262144 //0x40000
 /**
  * @brief Maximum size of trace buffer in bytes.
  */
@@ -77,20 +81,14 @@
  * @brief Maximum size of code coverage buffer in bytes.
  */
 #define FW_CODE_COVERAGE_BUFFER_SIZE                524288 //0x80000
-/**
- * @brief Maximum size of debug log buffer in bytes.
- */
-#define FW_DEBUG_LOG_BUFFER_SIZE                    262144 //0x40000
 /** @} */
 
 /**
  * @brief Total size of buffers used for FW debug in bytes.
- * TBD: Update this address based on build configuration once KMD changes
- * are merged.
  */
-#define FW_DEBUG_DATA_TOTAL_SIZE	(FW_TRACE_BUFFER_SIZE + \
-					 FW_DEBUG_LOG_BUFFER_SIZE + \
-					 FW_CODE_COVERAGE_BUFFER_SIZE)
+#define FW_DEBUG_DATA_TOTAL_SIZE  (FW_DEBUG_LOG_BUFFER_SIZE + \
+				FW_TRACE_BUFFER_SIZE + \
+				FW_CODE_COVERAGE_BUFFER_SIZE)
 
 /**
  * @brief Starting R5 address where FW debug related data is placed.

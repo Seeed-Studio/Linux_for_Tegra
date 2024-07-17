@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA CORPORATION.  All rights reserved.
  *
  * PVA Debug Information file
  */
@@ -22,6 +22,7 @@
 #include "pva.h"
 #include "pva_vpu_ocd.h"
 #include "pva-fw-address-map.h"
+#include "pva-debug-buffer.h"
 
 static void pva_read_crashdump(struct seq_file *s, struct pva_seg_info *seg_info)
 {
@@ -126,6 +127,8 @@ static int fw_debug_log_open(struct inode *inode, struct file *file)
 		__seq_open_private(file, &log_seq_ops, sizeof(*iter));
 	int err = 0;
 	struct pva *pva = inode->i_private;
+	struct pva_kmd_fw_print_buffer *print_buffer =
+		(struct pva_kmd_fw_print_buffer *)pva->fw_debug_log.saved_log;
 
 	if (IS_ERR_OR_NULL(iter)) {
 		err = -ENOMEM;
@@ -148,8 +151,9 @@ static int fw_debug_log_open(struct inode *inode, struct file *file)
 	}
 
 	iter->buffer = pva->fw_debug_log.saved_log;
-	iter->size =
-		strnlen(pva->fw_debug_log.saved_log, pva->fw_debug_log.size);
+	iter->size = sizeof(struct pva_kmd_fw_print_buffer) +
+			(print_buffer->tail - print_buffer->head);
+
 	iter->pos = 0;
 
 	return 0;
