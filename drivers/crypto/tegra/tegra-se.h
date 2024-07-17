@@ -29,6 +29,7 @@
 #define SE_SHA_KEY_ADDR					0x4094
 #define SE_SHA_KEY_DATA					0x4098
 #define SE_SHA_KEYMANIFEST				0x409c
+#define SE_SHA_KAC2_KEYMANIFEST				0x4178
 #define SE_SHA_CRYPTO_CFG				0x40a4
 #define SE_SHA_KEY_DST					0x40a8
 #define SE_SHA_SRC_KSLT					0x4180
@@ -102,6 +103,7 @@
 #define SE_AES0_CMAC_RESULT				0x10c4
 #define SE_AES0_SRC_KSLT				0x1100
 #define SE_AES0_TGT_KSLT				0x1104
+#define SE_AES0_KAC2_KEYMANIFEST			0x1108
 #define SE_AES0_KEYMANIFEST				0x1114
 #define SE_AES0_AAD_LEN					0x112c
 #define SE_AES0_CRYPTO_MSG_LEN				0x1134
@@ -117,35 +119,66 @@
 #define SE_AES1_CMAC_RESULT				0x20c4
 #define SE_AES1_SRC_KSLT				0x2100
 #define SE_AES1_TGT_KSLT				0x2104
+#define SE_AES1_KAC2_KEYMANIFEST			0x2108
 #define SE_AES1_KEYMANIFEST				0x2114
 #define SE_AES1_AAD_LEN					0x212c
 #define SE_AES1_CRYPTO_MSG_LEN				0x2134
 
 #define SE_AES_CFG_ENC_MODE(x)				FIELD_PREP(GENMASK(31, 24), x)
+#define SE_AES_ENC_MODE_ECB				SE_AES_CFG_ENC_MODE(0)
+#define SE_AES_ENC_MODE_CBC				SE_AES_CFG_ENC_MODE(1)
+#define SE_AES_ENC_MODE_OFB				SE_AES_CFG_ENC_MODE(2)
 #define SE_AES_ENC_MODE_GMAC				SE_AES_CFG_ENC_MODE(3)
 #define SE_AES_ENC_MODE_GCM				SE_AES_CFG_ENC_MODE(4)
 #define SE_AES_ENC_MODE_GCM_FINAL			SE_AES_CFG_ENC_MODE(5)
+#define SE_AES_ENC_MODE_KW				SE_AES_CFG_ENC_MODE(6)
 #define SE_AES_ENC_MODE_CMAC				SE_AES_CFG_ENC_MODE(7)
+#define SE_AES_ENC_MODE_CTR				SE_AES_CFG_ENC_MODE(10)
+#define SE_AES_ENC_MODE_XTS				SE_AES_CFG_ENC_MODE(11)
 #define SE_AES_ENC_MODE_CBC_MAC				SE_AES_CFG_ENC_MODE(12)
+#define SE_AES_ENC_MODE_AESKW_CRYPT			SE_AES_CFG_ENC_MODE(13)
+#define SE_AES_ENC_MODE_CTR_DRBG_INSTANTIATE_DF		SE_AES_CFG_ENC_MODE(14)
+#define SE_AES_ENC_MODE_CTR_DRBG_GENKEY			SE_AES_CFG_ENC_MODE(15)
+#define SE_AES_ENC_MODE_CTR_DRBG_GENRND			SE_AES_CFG_ENC_MODE(16)
+#define SE_AES_ENC_MODE_KDF_CMAC_AES			SE_AES_CFG_ENC_MODE(20)
+#define SE_AES_ENC_MODE_GCM2				SE_AES_CFG_ENC_MODE(21)
 
 #define SE_AES_CFG_DEC_MODE(x)				FIELD_PREP(GENMASK(23, 16), x)
+#define SE_AES_DEC_MODE_ECB				SE_AES_CFG_DEC_MODE(0)
+#define SE_AES_DEC_MODE_CBC				SE_AES_CFG_DEC_MODE(1)
+#define SE_AES_DEC_MODE_OFB				SE_AES_CFG_DEC_MODE(2)
 #define SE_AES_DEC_MODE_GMAC				SE_AES_CFG_DEC_MODE(3)
 #define SE_AES_DEC_MODE_GCM				SE_AES_CFG_DEC_MODE(4)
 #define SE_AES_DEC_MODE_GCM_FINAL			SE_AES_CFG_DEC_MODE(5)
+#define SE_AES_DEC_MODE_KW				SE_AES_CFG_DEC_MODE(6)
+#define SE_AES_DEC_MODE_CMAC				SE_AES_CFG_DEC_MODE(7)
+#define SE_AES_DEC_MODE_CMAC_VERIFY			SE_AES_CFG_DEC_MODE(8)
+#define SE_AES_DEC_MODE_GCM_VERIFY			SE_AES_CFG_DEC_MODE(9)
+#define SE_AES_DEC_MODE_CTR				SE_AES_CFG_DEC_MODE(10)
+#define SE_AES_DEC_MODE_XTS				SE_AES_CFG_DEC_MODE(11)
 #define SE_AES_DEC_MODE_CBC_MAC				SE_AES_CFG_DEC_MODE(12)
+#define SE_AES_DEC_MODE_AESKW_CRYPT			SE_AES_CFG_DEC_MODE(13)
+#define SE_AES_DEC_MODE_GCM2				SE_AES_CFG_DEC_MODE(21)
 
 #define SE_AES_CFG_ENC_ALG(x)				FIELD_PREP(GENMASK(15, 12), x)
 #define SE_AES_ENC_ALG_NOP				SE_AES_CFG_ENC_ALG(0)
 #define SE_AES_ENC_ALG_AES_ENC				SE_AES_CFG_ENC_ALG(1)
 #define SE_AES_ENC_ALG_RNG				SE_AES_CFG_ENC_ALG(2)
 #define SE_AES_ENC_ALG_SHA				SE_AES_CFG_ENC_ALG(3)
+#define SE_AES_ENC_ALG_SM4_ENC				SE_AES_CFG_ENC_ALG(5)
 #define SE_AES_ENC_ALG_HMAC				SE_AES_CFG_ENC_ALG(7)
 #define SE_AES_ENC_ALG_KDF				SE_AES_CFG_ENC_ALG(8)
+#define SE_AES_ENC_ALG_KEY_INVLD			SE_AES_CFG_ENC_ALG(10)
+#define SE_AES_ENC_ALG_KEY_MOV				SE_AES_CFG_ENC_ALG(11)
+#define SE_AES_ENC_ALG_KEY_INQUIRE			SE_AES_CFG_ENC_ALG(12)
 #define SE_AES_ENC_ALG_INS				SE_AES_CFG_ENC_ALG(13)
+#define SE_AES_ENC_ALG_CLONE				SE_AES_CFG_ENC_ALG(14)
+#define SE_AES_ENC_ALG_LOCK				SE_AES_CFG_ENC_ALG(15)
 
 #define SE_AES_CFG_DEC_ALG(x)				FIELD_PREP(GENMASK(11, 8), x)
 #define SE_AES_DEC_ALG_NOP				SE_AES_CFG_DEC_ALG(0)
 #define SE_AES_DEC_ALG_AES_DEC				SE_AES_CFG_DEC_ALG(1)
+#define SE_AES_DEC_ALG_SM4_DEC				SE_AES_CFG_DEC_ALG(5)
 
 #define SE_AES_CFG_DST(x)				FIELD_PREP(GENMASK(4, 2), x)
 #define SE_AES_DST_MEMORY				SE_AES_CFG_DST(0)
@@ -232,6 +265,56 @@
 
 #define SE_KAC_USER_NS					FIELD_PREP(GENMASK(6, 4), 3)
 
+#define SE_KAC2_USER(x)					FIELD_PREP(GENMASK(29, 22), x)
+#define SE_KAC2_USER_GPSE				SE_KAC2_USER(3)
+#define SE_KAC2_USER_GCSE				SE_KAC2_USER(5)
+
+#define SE_KAC2_CLONEABLE				FIELD_PREP(BIT(21), 1)
+#define SE_KAC2_EXPORTABLE				FIELD_PREP(BIT(20), 1)
+#define SE_KAC2_DECRYPT_EN				FIELD_PREP(BIT(19), 1)
+#define SE_KAC2_ENCRYPT_EN				FIELD_PREP(BIT(18), 1)
+
+#define SE_KAC2_PURPOSE(x)				FIELD_PREP(GENMASK(17, 12), x)
+#define SE_KAC2_ENC					SE_KAC2_PURPOSE(0)
+#define SE_KAC2_CMAC					SE_KAC2_PURPOSE(1)
+#define SE_KAC2_HMAC					SE_KAC2_PURPOSE(2)
+#define SE_KAC2_GCM_KW					SE_KAC2_PURPOSE(3)
+#define SE_KAC2_HMAC_KDK				SE_KAC2_PURPOSE(6)
+#define SE_KAC2_HMAC_KDD				SE_KAC2_PURPOSE(7)
+#define SE_KAC2_HMAC_KDD_KUW				SE_KAC2_PURPOSE(8)
+#define SE_KAC2_XTS					SE_KAC2_PURPOSE(9)
+#define SE_KAC2_GCM					SE_KAC2_PURPOSE(10)
+#define SE_KAC2_CMAC_KDK				SE_KAC2_PURPOSE(12)
+#define SE_KAC2_AES_KW					SE_KAC2_PURPOSE(13)
+#define SE_KAC2_CTR_DRBG_ENT				SE_KAC2_PURPOSE(14)
+#define SE_KAC2_CTR_DRBG_KV				SE_KAC2_PURPOSE(15)
+#define SE_KAC2_GCM_HWIV				SE_KAC2_PURPOSE(16)
+#define SE_KAC2_HARDEN_HMAC_KDK				SE_KAC2_PURPOSE(17)
+#define SE_KAC2_HARDEN_HMAC_KDD				SE_KAC2_PURPOSE(18)
+
+#define SE_KAC2_SIZE(x)					FIELD_PREP(GENMASK(11, 8), x)
+#define SE_KAC2_SIZE_128				SE_KAC2_SIZE(0)
+#define SE_KAC2_SIZE_192				SE_KAC2_SIZE(1)
+#define SE_KAC2_SIZE_256				SE_KAC2_SIZE(2)
+
+#define SE_KAC2_ORIGIN_SW				FIELD_PREP(BIT(7), 1)
+
+#define SE_KAC2_SUBTYPE(x)				FIELD_PREP(GENMASK(6, 3), x)
+#define SE_KAC2_SUBTYPE_AES				SE_KAC2_SUBTYPE(0)
+#define SE_KAC2_SUBTYPE_SHA				SE_KAC2_SUBTYPE(0)
+#define SE_KAC2_SUBTYPE_SM4				SE_KAC2_SUBTYPE(1)
+#define SE_KAC2_SUBTYPE_SM3				SE_KAC2_SUBTYPE(1)
+
+#define SE_KAC2_TYPE(x)					FIELD_PREP(GENMASK(2, 0), x)
+#define SE_KAC2_TYPE_SYM				SE_KAC2_TYPE(2)
+
+#define SE_KSLT_TABLE_ID_MASK				GENMASK(31, 26)
+#define SE_KSLT_TABLE_ID(x)				FIELD_PREP(SE_KSLT_TABLE_ID_MASK, x)
+#define SE_KSLT_TABLE_ID_GLOBAL				SE_KSLT_TABLE_ID(48)
+
+#define SE_KSLT_REGION_ID(x)				FIELD_PREP(GENMASK(25, 16), x)
+#define SE_KSLT_REGION_ID_SYM				SE_KSLT_REGION_ID(2)
+
 #define SE_AES_KEY_DST_INDEX(x)				FIELD_PREP(GENMASK(11, 8), x)
 #define SE_ADDR_HI_MSB(x)				FIELD_PREP(GENMASK(31, 24), x)
 #define SE_ADDR_HI_SZ(x)				FIELD_PREP(GENMASK(23, 0), x)
@@ -245,12 +328,10 @@
 							 SE_AES_DST_MEMORY)
 
 #define SE_CFG_GMAC_ENCRYPT				(SE_AES_ENC_ALG_AES_ENC | \
-							 SE_AES_DEC_ALG_NOP | \
 							 SE_AES_ENC_MODE_GMAC | \
 							 SE_AES_DST_MEMORY)
 
-#define SE_CFG_GMAC_DECRYPT				(SE_AES_ENC_ALG_NOP | \
-							 SE_AES_DEC_ALG_AES_DEC | \
+#define SE_CFG_GMAC_DECRYPT				(SE_AES_DEC_ALG_AES_DEC | \
 							 SE_AES_DEC_MODE_GMAC | \
 							 SE_AES_DST_MEMORY)
 
@@ -259,30 +340,135 @@
 							 SE_AES_ENC_MODE_GCM | \
 							 SE_AES_DST_MEMORY)
 
-#define SE_CFG_GCM_DECRYPT				(SE_AES_ENC_ALG_NOP | \
-							 SE_AES_DEC_ALG_AES_DEC | \
+#define SE_CFG_GCM_DECRYPT				(SE_AES_DEC_ALG_AES_DEC | \
 							 SE_AES_DEC_MODE_GCM | \
 							 SE_AES_DST_MEMORY)
 
 #define SE_CFG_GCM_FINAL_ENCRYPT			(SE_AES_ENC_ALG_AES_ENC | \
-							 SE_AES_DEC_ALG_NOP | \
 							 SE_AES_ENC_MODE_GCM_FINAL | \
 							 SE_AES_DST_MEMORY)
 
-#define SE_CFG_GCM_FINAL_DECRYPT			(SE_AES_ENC_ALG_NOP | \
-							 SE_AES_DEC_ALG_AES_DEC | \
+#define SE_CFG_GCM_FINAL_DECRYPT			(SE_AES_DEC_ALG_AES_DEC | \
 							 SE_AES_DEC_MODE_GCM_FINAL | \
 							 SE_AES_DST_MEMORY)
 
+#define SE_CFG_GCM_VERIFY				(SE_AES_DEC_ALG_AES_DEC | \
+							 SE_AES_DEC_MODE_GCM_VERIFY | \
+							 SE_AES_DST_MEMORY)
+
 #define SE_CFG_CMAC					(SE_AES_ENC_ALG_AES_ENC | \
-							 SE_AES_ENC_MODE_CMAC | \
-							 SE_AES_DST_HASH_REG)
+							 SE_AES_ENC_MODE_CMAC)
 
 #define SE_CFG_CBC_MAC					(SE_AES_ENC_ALG_AES_ENC | \
 							 SE_AES_ENC_MODE_CBC_MAC)
 
+#define SE_CFG_SM4_ENCRYPT				(SE_AES_ENC_ALG_SM4_ENC | \
+							 SE_AES_DEC_ALG_NOP | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_DECRYPT				(SE_AES_ENC_ALG_NOP | \
+							 SE_AES_DEC_ALG_SM4_DEC | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_GMAC_ENCRYPT				(SE_AES_ENC_ALG_SM4_ENC | \
+							 SE_AES_ENC_MODE_GMAC | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_GMAC_DECRYPT				(SE_AES_DEC_ALG_SM4_DEC | \
+							 SE_AES_DEC_MODE_GMAC | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_GCM_ENCRYPT				(SE_AES_ENC_ALG_SM4_ENC | \
+							 SE_AES_ENC_MODE_GCM | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_GCM_DECRYPT				(SE_AES_DEC_ALG_SM4_DEC | \
+							 SE_AES_DEC_MODE_GCM | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_GCM_FINAL_ENCRYPT			(SE_AES_ENC_ALG_SM4_ENC | \
+							 SE_AES_ENC_MODE_GCM_FINAL | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_GCM_FINAL_DECRYPT			(SE_AES_DEC_ALG_SM4_DEC | \
+							 SE_AES_DEC_MODE_GCM_FINAL | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_GCM_VERIFY				(SE_AES_DEC_ALG_SM4_DEC | \
+							 SE_AES_DEC_MODE_GCM_VERIFY | \
+							 SE_AES_DST_MEMORY)
+
+#define SE_CFG_SM4_CMAC					(SE_AES_ENC_ALG_SM4_ENC | \
+							 SE_AES_ENC_MODE_CMAC)
+
 #define SE_CFG_INS					(SE_AES_ENC_ALG_INS | \
 							 SE_AES_DEC_ALG_NOP)
+
+#define SE_CFG_MOV					(SE_AES_ENC_ALG_KEY_MOV | \
+							 SE_AES_DEC_ALG_NOP)
+
+#define SE_CFG_INVLD					(SE_AES_ENC_ALG_KEY_INVLD | \
+							 SE_AES_DEC_ALG_NOP)
+
+#define SE_CFG_ECB_ENCRYPT				(SE_AES_ENC_MODE_ECB | \
+							 SE_CFG_AES_ENCRYPT)
+
+#define SE_CFG_ECB_DECRYPT				(SE_AES_DEC_MODE_ECB | \
+							 SE_CFG_AES_DECRYPT)
+
+#define SE_CFG_CBC_ENCRYPT				(SE_AES_ENC_MODE_CBC | \
+							 SE_CFG_AES_ENCRYPT)
+
+#define SE_CFG_CBC_DECRYPT				(SE_AES_DEC_MODE_CBC | \
+							 SE_CFG_AES_DECRYPT)
+
+#define SE_CFG_OFB_ENCRYPT				(SE_AES_ENC_MODE_OFB | \
+							 SE_CFG_AES_ENCRYPT)
+
+#define SE_CFG_OFB_DECRYPT				(SE_AES_DEC_MODE_OFB | \
+							 SE_CFG_AES_DECRYPT)
+
+#define SE_CFG_CTR_ENCRYPT				(SE_AES_ENC_MODE_CTR | \
+							 SE_CFG_AES_ENCRYPT)
+
+#define SE_CFG_CTR_DECRYPT				(SE_AES_DEC_MODE_CTR | \
+							 SE_CFG_AES_DECRYPT)
+
+#define SE_CFG_XTS_ENCRYPT				(SE_AES_ENC_MODE_XTS | \
+							 SE_CFG_AES_ENCRYPT)
+
+#define SE_CFG_XTS_DECRYPT				(SE_AES_DEC_MODE_XTS | \
+							 SE_CFG_AES_DECRYPT)
+
+#define SE_CFG_SM4_ECB_ENCRYPT				(SE_AES_ENC_MODE_ECB | \
+							 SE_CFG_SM4_ENCRYPT)
+
+#define SE_CFG_SM4_ECB_DECRYPT				(SE_AES_DEC_MODE_ECB | \
+							 SE_CFG_SM4_DECRYPT)
+
+#define SE_CFG_SM4_CBC_ENCRYPT				(SE_AES_ENC_MODE_CBC | \
+							 SE_CFG_SM4_ENCRYPT)
+
+#define SE_CFG_SM4_CBC_DECRYPT				(SE_AES_DEC_MODE_CBC | \
+							 SE_CFG_SM4_DECRYPT)
+
+#define SE_CFG_SM4_OFB_ENCRYPT				(SE_AES_ENC_MODE_OFB | \
+							 SE_CFG_SM4_ENCRYPT)
+
+#define SE_CFG_SM4_OFB_DECRYPT				(SE_AES_DEC_MODE_OFB | \
+							 SE_CFG_SM4_DECRYPT)
+
+#define SE_CFG_SM4_CTR_ENCRYPT				(SE_AES_ENC_MODE_CTR | \
+							 SE_CFG_SM4_ENCRYPT)
+
+#define SE_CFG_SM4_CTR_DECRYPT				(SE_AES_DEC_MODE_CTR | \
+							 SE_CFG_SM4_DECRYPT)
+
+#define SE_CFG_SM4_XTS_ENCRYPT				(SE_AES_ENC_MODE_XTS | \
+							 SE_CFG_SM4_ENCRYPT)
+
+#define SE_CFG_SM4_XTS_DECRYPT				(SE_AES_DEC_MODE_XTS | \
+							 SE_CFG_SM4_ENCRYPT)
 
 #define SE_CRYPTO_CFG_ECB_ENCRYPT			(SE_AES_INPUT_SEL_MEMORY | \
 							 SE_AES_XOR_POS_BYPASS | \
@@ -343,6 +529,8 @@
 #define SE_MAX_KEYSLOT				15
 #define SE_MAX_MEM_ALLOC			SZ_4M
 
+#define SE_GCM_VERIFY_OK	0x5a5a5a5a
+
 #define SHA_FIRST	BIT(0)
 #define SHA_UPDATE	BIT(1)
 #define SHA_FINAL	BIT(2)
@@ -372,8 +560,23 @@ enum se_aes_alg {
 	SE_ALG_GMAC,		/* GMAC mode */
 	SE_ALG_GCM,		/* GCM mode */
 	SE_ALG_GCM_FINAL,	/* GCM FINAL mode */
-	SE_ALG_CMAC,	/* Cipher-based MAC (CMAC) mode */
-	SE_ALG_CBC_MAC,	/* CBC MAC mode */
+	SE_ALG_GCM_VERIFY,	/* GCM Verify */
+	SE_ALG_CMAC,		/* Cipher-based MAC (CMAC) mode */
+	SE_ALG_CMAC_FINAL,	/* Cipher-based MAC (CMAC) mode final task */
+	SE_ALG_CBC_MAC,		/* CBC MAC mode */
+
+	/* ShāngMì 4  Algorithms */
+	SE_ALG_SM4_CBC,
+	SE_ALG_SM4_ECB,
+	SE_ALG_SM4_CTR,
+	SE_ALG_SM4_OFB,
+	SE_ALG_SM4_XTS,
+	SE_ALG_SM4_GMAC,
+	SE_ALG_SM4_GCM,
+	SE_ALG_SM4_GCM_FINAL,
+	SE_ALG_SM4_GCM_VERIFY,
+	SE_ALG_SM4_CMAC,
+	SE_ALG_SM4_CMAC_FINAL,
 };
 
 enum se_hash_alg {
@@ -387,6 +590,7 @@ enum se_hash_alg {
 	SE_ALG_SHA3_256,	/* Secure Hash Algorithm3-256 (SHA3-256) mode */
 	SE_ALG_SHA3_384,	/* Secure Hash Algorithm3-384 (SHA3-384) mode */
 	SE_ALG_SHA3_512,	/* Secure Hash Algorithm3-512 (SHA3-512) mode */
+	SE_ALG_SM3_256,		/* ShangMi 3 - 256 */
 	SE_ALG_SHAKE128,	/* Secure Hash Algorithm3 (SHAKE128) mode */
 	SE_ALG_SHAKE256,	/* Secure Hash Algorithm3 (SHAKE256) mode */
 	SE_ALG_HMAC_SHA224,	/* Hash based MAC (HMAC) - 224 */
@@ -424,23 +628,33 @@ struct tegra_se_regs {
 	u32 key_addr;
 	u32 key_data;
 	u32 key_dst;
+	u32 src_kslt;
+	u32 tgt_kslt;
 	u32 result;
+};
+
+struct tegra_se_regcfg {
+	int (*cfg)(u32 alg, bool encrypt);
+	int (*crypto_cfg)(u32 alg, bool encrypt);
+	int (*manifest)(u32 user, u32 alg, u32 keylen);
 };
 
 struct tegra_se_hw {
 	const struct tegra_se_regs *regs;
 	int (*init_alg)(struct tegra_se *se);
 	void (*deinit_alg)(struct tegra_se *se);
+	bool support_kds;
 	bool support_sm_alg;
+	bool support_aad_verify;
 	u32 host1x_class;
 	u32 kac_ver;
 };
 
 struct tegra_se {
-	int (*manifest)(u32 user, u32 alg, u32 keylen);
 	const struct tegra_se_hw *hw;
 	struct host1x_client client;
 	struct host1x_channel *channel;
+	struct tegra_se_regcfg *regcfg;
 	struct tegra_se_cmdbuf *cmdbuf;
 	struct crypto_engine *engine;
 	struct host1x_syncpt *syncpt;
@@ -481,10 +695,37 @@ static inline int se_algname_to_algid(const char *name)
 		return SE_ALG_XTS;
 	else if (!strcmp(name, "cmac(aes)"))
 		return SE_ALG_CMAC;
+	else if (!strcmp(name, "cmac(aes)-final"))
+		return SE_ALG_CMAC_FINAL;
 	else if (!strcmp(name, "gcm(aes)"))
 		return SE_ALG_GCM;
+	else if (!strcmp(name, "gcm(aes)-mac"))
+		return SE_ALG_GMAC;
+	else if (!strcmp(name, "gcm(aes)-final"))
+		return SE_ALG_GCM_FINAL;
 	else if (!strcmp(name, "ccm(aes)"))
 		return SE_ALG_CBC_MAC;
+
+	else if (!strcmp(name, "cbc(sm4)"))
+		return SE_ALG_SM4_CBC;
+	else if (!strcmp(name, "ecb(sm4)"))
+		return SE_ALG_SM4_ECB;
+	else if (!strcmp(name, "ofb(sm4)"))
+		return SE_ALG_SM4_OFB;
+	else if (!strcmp(name, "ctr(sm4)"))
+		return SE_ALG_SM4_CTR;
+	else if (!strcmp(name, "xts(sm4)"))
+		return SE_ALG_SM4_XTS;
+	else if (!strcmp(name, "cmac(sm4)"))
+		return SE_ALG_SM4_CMAC;
+	else if (!strcmp(name, "cmac(sm4)-final"))
+		return SE_ALG_SM4_CMAC_FINAL;
+	else if (!strcmp(name, "gcm(sm4)"))
+		return SE_ALG_SM4_GCM;
+	else if (!strcmp(name, "gcm(sm4)-mac"))
+		return SE_ALG_SM4_GMAC;
+	else if (!strcmp(name, "gcm(sm4)-final"))
+		return SE_ALG_SM4_GCM_FINAL;
 
 	else if (!strcmp(name, "sha1"))
 		return SE_ALG_SHA1;
@@ -504,6 +745,8 @@ static inline int se_algname_to_algid(const char *name)
 		return SE_ALG_SHA3_384;
 	else if (!strcmp(name, "sha3-512"))
 		return SE_ALG_SHA3_512;
+	else if (!strcmp(name, "sm3"))
+		return SE_ALG_SM3_256;
 	else if (!strcmp(name, "hmac(sha224)"))
 		return SE_ALG_HMAC_SHA224;
 	else if (!strcmp(name, "hmac(sha256)"))
@@ -519,12 +762,19 @@ static inline int se_algname_to_algid(const char *name)
 /* Functions */
 int tegra_init_aes(struct tegra_se *se);
 int tegra_init_hash(struct tegra_se *se);
+int tegra_init_sm4(struct tegra_se *se);
 void tegra_deinit_aes(struct tegra_se *se);
 void tegra_deinit_hash(struct tegra_se *se);
+void tegra_deinit_sm4(struct tegra_se *se);
 int tegra_key_submit(struct tegra_se *se, const u8 *key,
 		     u32 keylen, u32 alg, u32 *keyid);
 void tegra_key_invalidate(struct tegra_se *se, u32 keyid, u32 alg);
+unsigned int tegra_key_get_idx(struct tegra_se *se, u32 keyid);
 int tegra_se_host1x_submit(struct tegra_se *se, u32 size);
+
+u32 tegra_kds_get_id(void);
+void tegra_kds_free_id(u32 keyid);
+bool tegra_key_in_kds(u32 keyid);
 
 /* HOST1x OPCODES */
 static inline u32 host1x_opcode_setpayload(unsigned int payload)

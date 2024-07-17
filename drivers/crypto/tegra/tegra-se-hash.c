@@ -15,6 +15,7 @@
 #include <crypto/sha1.h>
 #include <crypto/sha2.h>
 #include <crypto/sha3.h>
+#include <crypto/sm3.h>
 #include <crypto/internal/des.h>
 #include <crypto/engine.h>
 #include <crypto/scatterwalk.h>
@@ -105,6 +106,11 @@ static int tegra_sha_get_config(u32 alg)
 	case SE_ALG_SHA3_512:
 		cfg |= SE_SHA_ENC_ALG_SHA;
 		cfg |= SE_SHA_ENC_MODE_SHA3_512;
+		break;
+
+	case SE_ALG_SM3_256:
+		cfg |= SE_SHA_ENC_ALG_SM3;
+		cfg |= SE_SHA_ENC_MODE_SM3_256;
 		break;
 	default:
 		return -EINVAL;
@@ -445,6 +451,9 @@ static int tegra_sha_do_one_req(struct crypto_engine *engine, void *areq)
 	if (rctx->task & SHA_FINAL) {
 		ret = tegra_sha_do_final(req);
 		rctx->task &= ~SHA_FINAL;
+
+		if (rctx->key_id)
+			tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
 	}
 
 	crypto_finalize_hash_request(se->engine, req, ret);
@@ -543,11 +552,18 @@ static int tegra_sha_init(struct ahash_request *req)
 	rctx->total_len = 0;
 	rctx->datbuf.size = 0;
 	rctx->residue.size = 0;
-	rctx->key_id = ctx->key_id;
+	rctx->key_id = 0;
 	rctx->task = SHA_FIRST;
 	rctx->alg = ctx->alg;
 	rctx->blk_size = crypto_ahash_blocksize(tfm);
 	rctx->digest.size = crypto_ahash_digestsize(tfm);
+
+	/* Retrieve the key slot for HMAC */
+	if (ctx->key_id) {
+		rctx->key_id = tegra_key_get_idx(ctx->se, ctx->key_id);
+		if (!rctx->key_id)
+			return -ENOMEM;
+	}
 
 	rctx->digest.buf = dma_alloc_coherent(se->dev, rctx->digest.size,
 					      &rctx->digest.addr, GFP_KERNEL);
@@ -565,6 +581,9 @@ resbuf_fail:
 	dma_free_coherent(se->dev, rctx->digest.size, rctx->digest.buf,
 			  rctx->digest.addr);
 digbuf_fail:
+	if (rctx->key_id != ctx->key_id)
+		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
+
 	return -ENOMEM;
 }
 
@@ -1093,6 +1112,42 @@ static struct tegra_se_alg tegra_hash_algs[] = {
 	}
 };
 
+static struct tegra_se_alg tegra_sm3_algs[] = {
+	{
+		.alg.ahash = {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			.base = {
+#endif
+			.init = tegra_sha_init,
+			.update = tegra_sha_update,
+			.final = tegra_sha_final,
+			.finup = tegra_sha_finup,
+			.digest = tegra_sha_digest,
+			.export = tegra_sha_export,
+			.import = tegra_sha_import,
+			.halg.digestsize = SM3_DIGEST_SIZE,
+			.halg.statesize = sizeof(struct tegra_sha_reqctx),
+
+			.halg.base = {
+				.cra_name = "sm3",
+				.cra_driver_name = "tegra-se-sm3",
+				.cra_priority = 300,
+				.cra_flags = CRYPTO_ALG_TYPE_AHASH,
+				.cra_blocksize = SM3_BLOCK_SIZE,
+				.cra_ctxsize = sizeof(struct tegra_sha_ctx),
+				.cra_alignmask = 0,
+				.cra_module = THIS_MODULE,
+				.cra_init = tegra_sha_cra_init,
+				.cra_exit = tegra_sha_cra_exit,
+			}
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			},
+			.op.do_one_request = tegra_sha_do_one_req,
+#endif
+		}
+	},
+};
+
 static int tegra_hash_kac_manifest(u32 user, u32 alg, u32 keylen)
 {
 	int manifest;
@@ -1126,6 +1181,57 @@ static int tegra_hash_kac_manifest(u32 user, u32 alg, u32 keylen)
 	return manifest;
 }
 
+static int tegra_hash_kac2_manifest(u32 user, u32 alg, u32 keylen)
+{
+	int manifest;
+
+	manifest = SE_KAC2_USER(user) | SE_KAC2_ORIGIN_SW;
+	manifest |= SE_KAC2_DECRYPT_EN | SE_KAC2_ENCRYPT_EN;
+	manifest |= SE_KAC2_SUBTYPE_SHA | SE_KAC2_TYPE_SYM;
+
+	switch (alg) {
+	case SE_ALG_HMAC_SHA224:
+	case SE_ALG_HMAC_SHA256:
+	case SE_ALG_HMAC_SHA384:
+	case SE_ALG_HMAC_SHA512:
+		manifest |= SE_KAC2_HMAC;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	switch (keylen) {
+	case AES_KEYSIZE_128:
+		manifest |= SE_KAC2_SIZE_128;
+		break;
+	case AES_KEYSIZE_192:
+		manifest |= SE_KAC2_SIZE_192;
+		break;
+	case AES_KEYSIZE_256:
+	default:
+		manifest |= SE_KAC2_SIZE_256;
+		break;
+	}
+
+	return manifest;
+}
+
+struct tegra_se_regcfg tegra234_hash_regcfg = {
+	.manifest = tegra_hash_kac_manifest,
+};
+
+struct tegra_se_regcfg tegra264_hash_regcfg = {
+	.manifest = tegra_hash_kac2_manifest,
+};
+
+static void tegra_hash_set_regcfg(struct tegra_se *se)
+{
+	if (se->hw->kac_ver > 1)
+		se->regcfg = &tegra264_hash_regcfg;
+	else
+		se->regcfg = &tegra234_hash_regcfg;
+}
+
 int tegra_init_hash(struct tegra_se *se)
 {
 #ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
@@ -1135,7 +1241,7 @@ int tegra_init_hash(struct tegra_se *se)
 #endif
 	int i, ret;
 
-	se->manifest = tegra_hash_kac_manifest;
+	tegra_hash_set_regcfg(se);
 
 	for (i = 0; i < ARRAY_SIZE(tegra_hash_algs); i++) {
 		tegra_hash_algs[i].se_dev = se;
@@ -1154,8 +1260,33 @@ int tegra_init_hash(struct tegra_se *se)
 		}
 	}
 
+	if (!se->hw->support_sm_alg)
+		return 0;
+
+	for (i = 0; i < ARRAY_SIZE(tegra_sm3_algs); i++) {
+		tegra_sm3_algs[i].se_dev = se;
+		alg = &tegra_sm3_algs[i].alg.ahash;
+		ret = CRYPTO_REGISTER(ahash, alg);
+		if (ret) {
+#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+			dev_err(se->dev, "failed to register %s\n",
+				alg->base.halg.base.cra_name);
+#else
+			dev_err(se->dev, "failed to register %s\n",
+				alg->halg.base.cra_name);
+#endif
+			goto sm3_err;
+		}
+	}
+
+	dev_info(se->dev, "registered HASH algorithms\n");
+
 	return 0;
 
+sm3_err:
+	for (--i; i >= 0; i--)
+		CRYPTO_REGISTER(ahash, &tegra_sm3_algs[i].alg.ahash);
+	i = ARRAY_SIZE(tegra_hash_algs);
 sha_err:
 	for (--i; i >= 0; i--)
 		CRYPTO_UNREGISTER(ahash, &tegra_hash_algs[i].alg.ahash);
@@ -1169,4 +1300,10 @@ void tegra_deinit_hash(struct tegra_se *se)
 
 	for (i = 0; i < ARRAY_SIZE(tegra_hash_algs); i++)
 		CRYPTO_UNREGISTER(ahash, &tegra_hash_algs[i].alg.ahash);
+
+	if (!se->hw->support_sm_alg)
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(tegra_sm3_algs); i++)
+		CRYPTO_UNREGISTER(ahash, &tegra_sm3_algs[i].alg.ahash);
 }

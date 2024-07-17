@@ -42,6 +42,8 @@ struct tegra_aes_reqctx {
 	u32 crypto_config;
 	u32 len;
 	u32 *iv;
+	u32 key1_id;
+	u32 key2_id;
 };
 
 struct tegra_aead_ctx {
@@ -51,6 +53,9 @@ struct tegra_aead_ctx {
 	struct tegra_se *se;
 	unsigned int authsize;
 	u32 alg;
+	u32 mac_alg;
+	u32 final_alg;
+	u32 verify_alg;
 	u32 keylen;
 	u32 key_id;
 };
@@ -76,7 +81,8 @@ struct tegra_cmac_ctx {
 	struct crypto_engine_ctx enginectx;
 #endif
 	struct tegra_se *se;
-	unsigned int alg;
+	u32 alg;
+	u32 final_alg;
 	u32 key_id;
 	struct crypto_shash *fallback_tfm;
 };
@@ -84,6 +90,7 @@ struct tegra_cmac_ctx {
 struct tegra_cmac_reqctx {
 	struct scatterlist *src_sg;
 	struct tegra_se_datbuf datbuf;
+	struct tegra_se_datbuf digest;
 	struct tegra_se_datbuf residue;
 	unsigned int total_len;
 	unsigned int blk_size;
@@ -138,6 +145,7 @@ static int tegra234_aes_crypto_cfg(u32 alg, bool encrypt)
 {
 	switch (alg) {
 	case SE_ALG_CMAC:
+	case SE_ALG_CMAC_FINAL:
 	case SE_ALG_GMAC:
 	case SE_ALG_GCM:
 	case SE_ALG_GCM_FINAL:
@@ -201,12 +209,16 @@ static int tegra234_aes_cfg(u32 alg, bool encrypt)
 			return SE_CFG_GCM_FINAL_DECRYPT;
 
 	case SE_ALG_CMAC:
+		return SE_CFG_CMAC | SE_AES_DST_HASH_REG;
+
+	case SE_ALG_CMAC_FINAL:
 		return SE_CFG_CMAC;
 
 	case SE_ALG_CBC_MAC:
 		return SE_AES_ENC_ALG_AES_ENC |
 		       SE_AES_DST_HASH_REG;
 	}
+
 	return -EINVAL;
 }
 
@@ -272,12 +284,32 @@ static int tegra_aes_do_one_req(struct crypto_engine *engine, void *areq)
 	unsigned int cmdlen;
 	int ret;
 
+	/* Keys in ctx might be stored in KDS. Copy it to request ctx */
+	rctx->key1_id = tegra_key_get_idx(ctx->se, ctx->key1_id);
+	if (!rctx->key1_id) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	rctx->key2_id = 0;
+
+	/* If there are 2 keys stored (for XTS), retrieve them both */
+	if (ctx->key2_id) {
+		rctx->key2_id = tegra_key_get_idx(ctx->se, ctx->key2_id);
+		if (!rctx->key2_id) {
+			ret = -ENOMEM;
+			goto key1_free;
+		}
+	}
+
 	/* Set buffer size as a multiple of AES_BLOCK_SIZE*/
 	rctx->datbuf.size = ((req->cryptlen / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 	rctx->datbuf.buf = dma_alloc_coherent(se->dev, rctx->datbuf.size,
 					      &rctx->datbuf.addr, GFP_KERNEL);
-	if (!rctx->datbuf.buf)
-		return -ENOMEM;
+	if (!rctx->datbuf.buf) {
+		ret = -ENOMEM;
+		goto key2_free;
+	}
 
 	rctx->iv = (u32 *)req->iv;
 	rctx->len = req->cryptlen;
@@ -289,6 +321,11 @@ static int tegra_aes_do_one_req(struct crypto_engine *engine, void *areq)
 	}
 
 	scatterwalk_map_and_copy(rctx->datbuf.buf, req->src, 0, req->cryptlen, 0);
+
+	/* Update crypto_config with Local KSLT IDs */
+	rctx->crypto_config |= SE_AES_KEY_INDEX(rctx->key1_id);
+	if (rctx->key2_id)
+		rctx->crypto_config |= SE_AES_KEY2_INDEX(rctx->key2_id);
 
 	/* Prepare the command and submit for execution */
 	cmdlen = tegra_aes_prep_cmd(se, rctx);
@@ -302,6 +339,13 @@ static int tegra_aes_do_one_req(struct crypto_engine *engine, void *areq)
 	dma_free_coherent(ctx->se->dev, rctx->datbuf.size,
 			  rctx->datbuf.buf, rctx->datbuf.addr);
 
+key2_free:
+	if (rctx->key2_id != ctx->key2_id)
+		tegra_key_invalidate(ctx->se, rctx->key2_id, ctx->alg);
+key1_free:
+	if (rctx->key1_id != ctx->key1_id)
+		tegra_key_invalidate(ctx->se, rctx->key1_id, ctx->alg);
+out:
 	crypto_finalize_skcipher_request(se->engine, req, ret);
 
 	return 0;
@@ -439,12 +483,147 @@ static int tegra_aes_kac_manifest(u32 user, u32 alg, u32 keylen)
 	return manifest;
 }
 
-static int tegra_aes_crypt(struct skcipher_request *req, bool encrypt)
+static int tegra_aes_kac2_manifest(u32 user, u32 alg, u32 keylen)
+{
+	int manifest;
 
+	manifest = SE_KAC2_USER(user) | SE_KAC2_ORIGIN_SW;
+	manifest |= SE_KAC2_DECRYPT_EN | SE_KAC2_ENCRYPT_EN;
+	manifest |= SE_KAC2_TYPE_SYM | SE_KAC2_SUBTYPE_AES;
+
+	switch (alg) {
+	case SE_ALG_CBC:
+	case SE_ALG_ECB:
+	case SE_ALG_CTR:
+		manifest |= SE_KAC2_ENC;
+		break;
+	case SE_ALG_XTS:
+		manifest |= SE_KAC2_XTS;
+		break;
+	case SE_ALG_GCM:
+		manifest |= SE_KAC2_GCM;
+		break;
+	case SE_ALG_CMAC:
+		manifest |= SE_KAC2_CMAC;
+		break;
+	case SE_ALG_CBC_MAC:
+		manifest |= SE_KAC2_ENC;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	switch (keylen) {
+	case AES_KEYSIZE_128:
+		manifest |= SE_KAC2_SIZE_128;
+		break;
+	case AES_KEYSIZE_192:
+		manifest |= SE_KAC2_SIZE_192;
+		break;
+	case AES_KEYSIZE_256:
+		manifest |= SE_KAC2_SIZE_256;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return manifest;
+}
+
+static inline int tegra264_aes_crypto_cfg(u32 alg, bool encrypt)
+{
+	u32 cfg = SE_AES_CRYPTO_CFG_SCC_DIS;
+
+	switch (alg) {
+	case SE_ALG_ECB:
+	case SE_ALG_SM4_ECB:
+	case SE_ALG_CMAC:
+	case SE_ALG_GMAC:
+		break;
+	case SE_ALG_CTR:
+		cfg |= SE_AES_IV_SEL_REG |
+		       SE_AES_CRYPTO_CFG_CTR_CNTN(1);
+		break;
+	case SE_ALG_CBC:
+	case SE_ALG_CBC_MAC:
+	case SE_ALG_XTS:
+	case SE_ALG_GCM:
+	case SE_ALG_GCM_FINAL:
+	case SE_ALG_GCM_VERIFY:
+		cfg |= SE_AES_IV_SEL_REG;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return cfg;
+}
+
+static int tegra264_aes_cfg(u32 alg, bool encrypt)
+{
+	switch (alg) {
+	case SE_ALG_CBC:
+		if (encrypt)
+			return SE_CFG_CBC_ENCRYPT;
+		else
+			return SE_CFG_CBC_DECRYPT;
+	case SE_ALG_ECB:
+		if (encrypt)
+			return SE_CFG_ECB_ENCRYPT;
+		else
+			return SE_CFG_ECB_DECRYPT;
+	case SE_ALG_CTR:
+		if (encrypt)
+			return SE_CFG_CTR_ENCRYPT;
+		else
+			return SE_CFG_CTR_DECRYPT;
+	case SE_ALG_XTS:
+		if (encrypt)
+			return SE_CFG_XTS_ENCRYPT;
+		else
+			return SE_CFG_XTS_DECRYPT;
+	case SE_ALG_GMAC:
+		if (encrypt)
+			return SE_CFG_GMAC_ENCRYPT;
+		else
+			return SE_CFG_GMAC_DECRYPT;
+
+	case SE_ALG_GCM:
+		if (encrypt)
+			return SE_CFG_GCM_ENCRYPT;
+		else
+			return SE_CFG_GCM_DECRYPT;
+
+	case SE_ALG_GCM_FINAL:
+		if (encrypt)
+			return SE_CFG_GCM_FINAL_ENCRYPT;
+		else
+			return SE_CFG_GCM_FINAL_DECRYPT;
+
+	case SE_ALG_GCM_VERIFY:
+			return SE_CFG_GCM_VERIFY;
+
+	case SE_ALG_CMAC:
+		return SE_CFG_CMAC | SE_AES_DST_KEYTABLE;
+
+	case SE_ALG_CMAC_FINAL:
+		return SE_CFG_CMAC;
+
+	case SE_ALG_CBC_MAC:
+		return SE_CFG_CBC_MAC | SE_AES_DST_HASH_REG;
+
+	}
+
+	return -EINVAL;
+}
+
+static int tegra_aes_crypt(struct skcipher_request *req, bool encrypt)
 {
 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
 	struct tegra_aes_ctx *ctx  = crypto_skcipher_ctx(tfm);
 	struct tegra_aes_reqctx *rctx = skcipher_request_ctx(req);
+	struct tegra_se *se = ctx->se;
 
 	if (ctx->alg != SE_ALG_XTS) {
 		if (!IS_ALIGNED(req->cryptlen, crypto_skcipher_blocksize(tfm))) {
@@ -460,12 +639,8 @@ static int tegra_aes_crypt(struct skcipher_request *req, bool encrypt)
 		return 0;
 
 	rctx->encrypt = encrypt;
-	rctx->config = tegra234_aes_cfg(ctx->alg, encrypt);
-	rctx->crypto_config = tegra234_aes_crypto_cfg(ctx->alg, encrypt);
-	rctx->crypto_config |= SE_AES_KEY_INDEX(ctx->key1_id);
-
-	if (ctx->key2_id)
-		rctx->crypto_config |= SE_AES_KEY2_INDEX(ctx->key2_id);
+	rctx->config = se->regcfg->cfg(ctx->alg, encrypt);
+	rctx->crypto_config = se->regcfg->crypto_cfg(ctx->alg, encrypt);
 
 	return crypto_transfer_skcipher_request_to_engine(ctx->se->engine, req);
 }
@@ -593,10 +768,29 @@ static struct tegra_se_alg tegra_aes_algs[] = {
 		}
 	},
 };
+struct tegra_se_regcfg tegra234_aes_regcfg = {
+	.cfg = tegra234_aes_cfg,
+	.crypto_cfg = tegra234_aes_crypto_cfg,
+	.manifest = tegra_aes_kac_manifest,
+};
+
+struct tegra_se_regcfg tegra264_aes_regcfg = {
+	.cfg = tegra264_aes_cfg,
+	.crypto_cfg = tegra264_aes_crypto_cfg,
+	.manifest = tegra_aes_kac2_manifest
+};
+
+static void tegra_aes_set_regcfg(struct tegra_se *se)
+{
+	if (se->hw->kac_ver > 1)
+		se->regcfg = &tegra264_aes_regcfg;
+	else
+		se->regcfg = &tegra234_aes_regcfg;
+}
 
 static unsigned int tegra_gmac_prep_cmd(struct tegra_se *se, struct tegra_aead_reqctx *rctx)
 {
-	unsigned int data_count, res_bits, i = 0;
+	unsigned int data_count, res_bits, i = 0, j;
 	u32 *cpuvaddr = se->cmdbuf->addr;
 
 	data_count = (rctx->assoclen / AES_BLOCK_SIZE);
@@ -609,6 +803,11 @@ static unsigned int tegra_gmac_prep_cmd(struct tegra_se *se, struct tegra_aead_r
 	if (!res_bits)
 		data_count--;
 
+	cpuvaddr[i++] = host1x_opcode_setpayload(SE_CRYPTO_CTR_REG_COUNT);
+	cpuvaddr[i++] = se_host1x_opcode_incr_w(se->hw->regs->linear_ctr);
+	for (j = 0; j < SE_CRYPTO_CTR_REG_COUNT; j++)
+		cpuvaddr[i++] = rctx->iv[j];
+
 	cpuvaddr[i++] = se_host1x_opcode_nonincr(se->hw->regs->last_blk, 1);
 	cpuvaddr[i++] = SE_LAST_BLOCK_VAL(data_count) |
 			SE_LAST_BLOCK_RES_BITS(res_bits);
@@ -616,6 +815,7 @@ static unsigned int tegra_gmac_prep_cmd(struct tegra_se *se, struct tegra_aead_r
 	cpuvaddr[i++] = se_host1x_opcode_incr(se->hw->regs->config, 4);
 	cpuvaddr[i++] = rctx->config;
 	cpuvaddr[i++] = rctx->crypto_config;
+
 	cpuvaddr[i++] = lower_32_bits(rctx->inbuf.addr);
 	cpuvaddr[i++] = SE_ADDR_HI_MSB(upper_32_bits(rctx->inbuf.addr)) |
 			SE_ADDR_HI_SZ(rctx->assoclen);
@@ -628,6 +828,8 @@ static unsigned int tegra_gmac_prep_cmd(struct tegra_se *se, struct tegra_aead_r
 	cpuvaddr[i++] = se_host1x_opcode_nonincr(host1x_uclass_incr_syncpt_r(), 1);
 	cpuvaddr[i++] = host1x_uclass_incr_syncpt_cond_f(1) |
 			host1x_uclass_incr_syncpt_indx_f(se->syncpt_id);
+
+	dev_dbg(se->dev, "cfg %#x crypto cfg %#x\n", rctx->config, rctx->crypto_config);
 
 	return i;
 }
@@ -687,6 +889,7 @@ static unsigned int tegra_gcm_crypt_prep_cmd(struct tegra_se *se, struct tegra_a
 			host1x_uclass_incr_syncpt_indx_f(se->syncpt_id);
 
 	dev_dbg(se->dev, "cfg %#x crypto cfg %#x\n", rctx->config, rctx->crypto_config);
+
 	return i;
 }
 
@@ -721,8 +924,9 @@ static int tegra_gcm_prep_final_cmd(struct tegra_se *se, u32 *cpuvaddr,
 	cpuvaddr[i++] = se_host1x_opcode_incr(se->hw->regs->config, 6);
 	cpuvaddr[i++] = rctx->config;
 	cpuvaddr[i++] = rctx->crypto_config;
-	cpuvaddr[i++] = 0;
-	cpuvaddr[i++] = 0;
+	cpuvaddr[i++] = lower_32_bits(rctx->inbuf.addr);
+	cpuvaddr[i++] = SE_ADDR_HI_MSB(upper_32_bits(rctx->outbuf.addr)) |
+			SE_ADDR_HI_SZ(rctx->authsize);
 
 	/* Destination Address */
 	cpuvaddr[i++] = lower_32_bits(rctx->outbuf.addr);
@@ -749,9 +953,9 @@ static int tegra_gcm_do_gmac(struct tegra_aead_ctx *ctx, struct tegra_aead_reqct
 	scatterwalk_map_and_copy(rctx->inbuf.buf,
 				 rctx->src_sg, 0, rctx->assoclen, 0);
 
-	rctx->config = tegra234_aes_cfg(SE_ALG_GMAC, rctx->encrypt);
-	rctx->crypto_config = tegra234_aes_crypto_cfg(SE_ALG_GMAC, rctx->encrypt) |
-			      SE_AES_KEY_INDEX(ctx->key_id);
+	rctx->config = se->regcfg->cfg(ctx->mac_alg, rctx->encrypt);
+	rctx->crypto_config = se->regcfg->crypto_cfg(ctx->mac_alg, rctx->encrypt) |
+			      SE_AES_KEY_INDEX(rctx->key_id);
 
 	cmdlen = tegra_gmac_prep_cmd(se, rctx);
 
@@ -766,9 +970,9 @@ static int tegra_gcm_do_crypt(struct tegra_aead_ctx *ctx, struct tegra_aead_reqc
 	scatterwalk_map_and_copy(rctx->inbuf.buf, rctx->src_sg,
 				 rctx->assoclen, rctx->cryptlen, 0);
 
-	rctx->config = tegra234_aes_cfg(SE_ALG_GCM, rctx->encrypt);
-	rctx->crypto_config = tegra234_aes_crypto_cfg(SE_ALG_GCM, rctx->encrypt) |
-			      SE_AES_KEY_INDEX(ctx->key_id);
+	rctx->config = se->regcfg->cfg(ctx->alg, rctx->encrypt);
+	rctx->crypto_config = se->regcfg->crypto_cfg(ctx->alg, rctx->encrypt) |
+			      SE_AES_KEY_INDEX(rctx->key_id);
 
 	/* Prepare command and submit */
 	cmdlen = tegra_gcm_crypt_prep_cmd(se, rctx);
@@ -789,9 +993,9 @@ static int tegra_gcm_do_final(struct tegra_aead_ctx *ctx, struct tegra_aead_reqc
 	u32 *cpuvaddr = se->cmdbuf->addr;
 	int cmdlen, ret, offset;
 
-	rctx->config = tegra234_aes_cfg(SE_ALG_GCM_FINAL, rctx->encrypt);
-	rctx->crypto_config = tegra234_aes_crypto_cfg(SE_ALG_GCM_FINAL, rctx->encrypt) |
-			      SE_AES_KEY_INDEX(ctx->key_id);
+	rctx->config = se->regcfg->cfg(ctx->final_alg, rctx->encrypt);
+	rctx->crypto_config = se->regcfg->crypto_cfg(ctx->final_alg, rctx->encrypt) |
+			      SE_AES_KEY_INDEX(rctx->key_id);
 
 	/* Prepare command and submit */
 	cmdlen = tegra_gcm_prep_final_cmd(se, cpuvaddr, rctx);
@@ -809,15 +1013,48 @@ static int tegra_gcm_do_final(struct tegra_aead_ctx *ctx, struct tegra_aead_reqc
 	return 0;
 }
 
-static int tegra_gcm_do_verify(struct tegra_se *se, struct tegra_aead_reqctx *rctx)
+static int tegra_gcm_hw_verify(struct tegra_aead_ctx *ctx, struct tegra_aead_reqctx *rctx, u8 *mac)
 {
-	unsigned int offset;
+	struct tegra_se *se = ctx->se;
+	u32 result, *cpuvaddr = se->cmdbuf->addr;
+	int size, ret;
+
+	memcpy(rctx->inbuf.buf, mac, rctx->authsize);
+	rctx->inbuf.size = rctx->authsize;
+
+	rctx->config = se->regcfg->cfg(ctx->verify_alg, rctx->encrypt);
+	rctx->crypto_config = se->regcfg->crypto_cfg(ctx->verify_alg, rctx->encrypt) |
+			      SE_AES_KEY_INDEX(rctx->key_id);
+
+	/* Prepare command and submit */
+	size = tegra_gcm_prep_final_cmd(se, cpuvaddr, rctx);
+	ret = tegra_se_host1x_submit(se, size);
+	if (ret)
+		return ret;
+
+	memcpy(&result, rctx->outbuf.buf, 4);
+
+	if (result != SE_GCM_VERIFY_OK)
+		return -EBADMSG;
+
+	return 0;
+}
+
+static int tegra_gcm_do_verify(struct tegra_aead_ctx *ctx, struct tegra_aead_reqctx *rctx)
+{
+	struct tegra_se *se = ctx->se;
+	int offset, ret;
 	u8 mac[16];
 
 	offset = rctx->assoclen + rctx->cryptlen;
 	scatterwalk_map_and_copy(mac, rctx->src_sg, offset, rctx->authsize, 0);
 
-	if (crypto_memneq(rctx->outbuf.buf, mac, rctx->authsize))
+	if (se->hw->support_aad_verify)
+		ret = tegra_gcm_hw_verify(ctx, rctx, mac);
+	else
+		ret = crypto_memneq(rctx->outbuf.buf, mac, rctx->authsize);
+
+	if (ret)
 		return -EBADMSG;
 
 	return 0;
@@ -860,12 +1097,13 @@ static unsigned int tegra_cbcmac_prep_cmd(struct tegra_se *se, struct tegra_aead
 			SE_ADDR_HI_SZ(0x10); /* HW always generates 128 bit tag */
 
 	cpuvaddr[i++] = se_host1x_opcode_nonincr(se->hw->regs->op, 1);
-	cpuvaddr[i++] = SE_AES_OP_WRSTALL |
-			SE_AES_OP_LASTBUF | SE_AES_OP_START;
+	cpuvaddr[i++] = SE_AES_OP_WRSTALL | SE_AES_OP_LASTBUF | SE_AES_OP_START;
 
 	cpuvaddr[i++] = se_host1x_opcode_nonincr(host1x_uclass_incr_syncpt_r(), 1);
 	cpuvaddr[i++] = host1x_uclass_incr_syncpt_cond_f(1) |
 			host1x_uclass_incr_syncpt_indx_f(se->syncpt_id);
+
+	dev_dbg(se->dev, "cfg %#x crypto cfg %#x\n", rctx->config, rctx->crypto_config);
 
 	return i;
 }
@@ -910,15 +1148,13 @@ static unsigned int tegra_ctr_prep_cmd(struct tegra_se *se, struct tegra_aead_re
 	return i;
 }
 
-static int tegra_ccm_do_cbcmac(struct tegra_aead_ctx *ctx, struct tegra_aead_reqctx *rctx)
+static int tegra_ccm_do_cbcmac(struct tegra_se *se, struct tegra_aead_reqctx *rctx)
 {
-	struct tegra_se *se = ctx->se;
 	int cmdlen;
 
-	rctx->config = tegra234_aes_cfg(SE_ALG_CBC_MAC, rctx->encrypt);
-	rctx->crypto_config = tegra234_aes_crypto_cfg(SE_ALG_CBC_MAC,
-						      rctx->encrypt) |
-						      SE_AES_KEY_INDEX(ctx->key_id);
+	rctx->config = se->regcfg->cfg(SE_ALG_CBC_MAC, rctx->encrypt);
+	rctx->crypto_config = se->regcfg->crypto_cfg(SE_ALG_CBC_MAC,
+			      rctx->encrypt) | SE_AES_KEY_INDEX(rctx->key_id);
 
 	/* Prepare command and submit */
 	cmdlen = tegra_cbcmac_prep_cmd(se, rctx);
@@ -1068,9 +1304,8 @@ static int tegra_ccm_ctr_result(struct tegra_se *se, struct tegra_aead_reqctx *r
 	return 0;
 }
 
-static int tegra_ccm_compute_auth(struct tegra_aead_ctx *ctx, struct tegra_aead_reqctx *rctx)
+static int tegra_ccm_compute_auth(struct tegra_se *se, struct tegra_aead_reqctx *rctx)
 {
-	struct tegra_se *se = ctx->se;
 	struct scatterlist *sg;
 	int offset, ret;
 
@@ -1089,23 +1324,22 @@ static int tegra_ccm_compute_auth(struct tegra_aead_ctx *ctx, struct tegra_aead_
 
 	rctx->inbuf.size = offset;
 
-	ret = tegra_ccm_do_cbcmac(ctx, rctx);
+	ret = tegra_ccm_do_cbcmac(se, rctx);
 	if (ret)
 		return ret;
 
 	return tegra_ccm_mac_result(se, rctx);
 }
 
-static int tegra_ccm_do_ctr(struct tegra_aead_ctx *ctx, struct tegra_aead_reqctx *rctx)
+static int tegra_ccm_do_ctr(struct tegra_se *se, struct tegra_aead_reqctx *rctx)
 {
-	struct tegra_se *se = ctx->se;
 	unsigned int cmdlen, offset = 0;
 	struct scatterlist *sg = rctx->src_sg;
 	int ret;
 
-	rctx->config = tegra234_aes_cfg(SE_ALG_CTR, rctx->encrypt);
-	rctx->crypto_config = tegra234_aes_crypto_cfg(SE_ALG_CTR, rctx->encrypt) |
-			      SE_AES_KEY_INDEX(ctx->key_id);
+	rctx->config = se->regcfg->cfg(SE_ALG_CTR, rctx->encrypt);
+	rctx->crypto_config = se->regcfg->crypto_cfg(SE_ALG_CTR, rctx->encrypt) |
+			      SE_AES_KEY_INDEX(rctx->key_id);
 
 	/* Copy authdata in the top of buffer for encryption/decryption */
 	if (rctx->encrypt)
@@ -1181,19 +1415,26 @@ static int tegra_ccm_do_one_req(struct crypto_engine *engine, void *areq)
 	else
 		rctx->cryptlen = req->cryptlen - ctx->authsize;
 
+	/* Keys in ctx might be stored in KDS. Copy it to local keyslot */
+	rctx->key_id = tegra_key_get_idx(ctx->se, ctx->key_id);
+	if (!rctx->key_id)
+		goto out;
+
 	rctx->inbuf.size = rctx->assoclen + rctx->authsize + rctx->cryptlen + 100;
 	/* Allocate buffers required */
 	rctx->inbuf.buf = dma_alloc_coherent(ctx->se->dev, rctx->inbuf.size,
 					     &rctx->inbuf.addr, GFP_KERNEL);
-	if (!rctx->inbuf.buf)
-		return -ENOMEM;
+	if (!rctx->inbuf.buf) {
+		ret = -ENOMEM;
+		goto key_free;
+	}
 
 	rctx->outbuf.size = rctx->assoclen + rctx->authsize + rctx->cryptlen + 100;
 	rctx->outbuf.buf = dma_alloc_coherent(ctx->se->dev, rctx->outbuf.size,
 					      &rctx->outbuf.addr, GFP_KERNEL);
 	if (!rctx->outbuf.buf) {
 		ret = -ENOMEM;
-		goto outbuf_err;
+		goto inbuf_free;
 	}
 
 	ret = tegra_ccm_crypt_init(req, se, rctx);
@@ -1203,34 +1444,38 @@ static int tegra_ccm_do_one_req(struct crypto_engine *engine, void *areq)
 	if (rctx->encrypt) {
 
 		/* CBC MAC Operation */
-		ret = tegra_ccm_compute_auth(ctx, rctx);
+		ret = tegra_ccm_compute_auth(se, rctx);
 		if (ret)
-			goto out;
+			goto outbuf_free;
 
 		/* CTR operation */
-		ret = tegra_ccm_do_ctr(ctx, rctx);
+		ret = tegra_ccm_do_ctr(se, rctx);
 		if (ret)
-			goto out;
+			goto outbuf_free;
 	} else {
 		/* CTR operation */
-		ret = tegra_ccm_do_ctr(ctx, rctx);
+		ret = tegra_ccm_do_ctr(se, rctx);
 		if (ret)
-			goto out;
+			goto outbuf_free;
 
 		/* CBC MAC Operation */
-		ret = tegra_ccm_compute_auth(ctx, rctx);
+		ret = tegra_ccm_compute_auth(se, rctx);
 		if (ret)
-			goto out;
+			goto outbuf_free;
 	}
 
-out:
+outbuf_free:
 	dma_free_coherent(ctx->se->dev, rctx->outbuf.size,
 			  rctx->outbuf.buf, rctx->outbuf.addr);
 
-outbuf_err:
+inbuf_free:
 	dma_free_coherent(ctx->se->dev, rctx->inbuf.size,
 			  rctx->inbuf.buf, rctx->inbuf.addr);
-
+key_free:
+	/* Free the keyslot if it is cloned for this request */
+	if (rctx->key_id != ctx->key_id)
+		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
+out:
 	crypto_finalize_aead_request(ctx->se->engine, req, ret);
 
 	return 0;
@@ -1242,6 +1487,7 @@ static int tegra_gcm_do_one_req(struct crypto_engine *engine, void *areq)
 	struct crypto_aead *tfm = crypto_aead_reqtfm(req);
 	struct tegra_aead_ctx *ctx = crypto_aead_ctx(tfm);
 	struct tegra_aead_reqctx *rctx = aead_request_ctx(req);
+	struct tegra_se *se = ctx->se;
 	int ret;
 
 	rctx->src_sg = req->src;
@@ -1253,6 +1499,12 @@ static int tegra_gcm_do_one_req(struct crypto_engine *engine, void *areq)
 		rctx->cryptlen = req->cryptlen;
 	else
 		rctx->cryptlen = req->cryptlen - ctx->authsize;
+
+
+	/* Keys in ctx might be stored in KDS. Copy it to local keyslot */
+	rctx->key_id = tegra_key_get_idx(ctx->se, ctx->key_id);
+	if (!rctx->key_id)
+		goto key_err;
 
 	/* Allocate buffers required */
 	rctx->inbuf.size = rctx->assoclen + rctx->authsize + rctx->cryptlen;
@@ -1288,17 +1540,22 @@ static int tegra_gcm_do_one_req(struct crypto_engine *engine, void *areq)
 	}
 
 	/* GCM_FINAL operation */
-	ret = tegra_gcm_do_final(ctx, rctx);
-	if (ret)
-		goto out;
+	/* Need not do FINAL operation if hw supports MAC verification */
+	if (rctx->encrypt || !se->hw->support_aad_verify) {
+		ret = tegra_gcm_do_final(ctx, rctx);
+		if (ret)
+			goto out;
+	}
 
 	if (!rctx->encrypt)
-		ret = tegra_gcm_do_verify(ctx->se, rctx);
+		ret = tegra_gcm_do_verify(ctx, rctx);
 
 out:
+	if (rctx->key_id != ctx->key_id)
+		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
+key_err:
 	dma_free_coherent(ctx->se->dev, rctx->outbuf.size,
 			  rctx->outbuf.buf, rctx->outbuf.addr);
-
 outbuf_err:
 	dma_free_coherent(ctx->se->dev, rctx->inbuf.size,
 			  rctx->inbuf.buf, rctx->inbuf.addr);
@@ -1352,10 +1609,6 @@ static int tegra_gcm_cra_init(struct crypto_aead *tfm)
 	struct tegra_aead_ctx *ctx = crypto_aead_ctx(tfm);
 	struct aead_alg *alg = crypto_aead_alg(tfm);
 	struct tegra_se_alg *se_alg;
-	const char *algname;
-	int ret;
-
-	algname = crypto_tfm_alg_name(&tfm->base);
 
 #ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	se_alg = container_of(alg, struct tegra_se_alg, alg.aead.base);
@@ -1368,13 +1621,10 @@ static int tegra_gcm_cra_init(struct crypto_aead *tfm)
 	ctx->se = se_alg->se_dev;
 	ctx->key_id = 0;
 
-	ret = se_algname_to_algid(algname);
-	if (ret < 0) {
-		dev_err(ctx->se->dev, "invalid algorithm\n");
-		return ret;
-	}
-
-	ctx->alg = ret;
+	ctx->alg = SE_ALG_GCM;
+	ctx->final_alg = SE_ALG_GCM_FINAL;
+	ctx->verify_alg = SE_ALG_GCM_VERIFY;
+	ctx->mac_alg = SE_ALG_GMAC;
 
 #ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	ctx->enginectx.op.prepare_request = NULL;
@@ -1480,6 +1730,12 @@ static unsigned int tegra_cmac_prep_cmd(struct tegra_se *se, struct tegra_cmac_r
 		data_count--;
 
 	if (rctx->task & SHA_FIRST) {
+		/* T264 needs INIT to be set for first operation
+		 * whereas T234 will return error if INIT is set
+		 * Differentiate T264 and T234 based on CFG */
+		if ((rctx->config & SE_AES_DST_KEYTABLE) == SE_AES_DST_KEYTABLE)
+			op |= SE_AES_OP_INIT;
+
 		rctx->task &= ~SHA_FIRST;
 
 		cpuvaddr[i++] = host1x_opcode_setpayload(SE_CRYPTO_CTR_REG_COUNT);
@@ -1501,8 +1757,11 @@ static unsigned int tegra_cmac_prep_cmd(struct tegra_se *se, struct tegra_cmac_r
 	cpuvaddr[i++] = lower_32_bits(rctx->datbuf.addr);
 	cpuvaddr[i++] = SE_ADDR_HI_MSB(upper_32_bits(rctx->datbuf.addr)) |
 			SE_ADDR_HI_SZ(rctx->datbuf.size);
-	cpuvaddr[i++] = 0;
-	cpuvaddr[i++] = SE_ADDR_HI_SZ(AES_BLOCK_SIZE);
+
+	/* Destination Address */
+	cpuvaddr[i++] = rctx->digest.addr;
+	cpuvaddr[i++] = (u32)(SE_ADDR_HI_MSB(upper_32_bits(rctx->digest.addr)) |
+				SE_ADDR_HI_SZ(rctx->digest.size));
 
 	cpuvaddr[i++] = se_host1x_opcode_nonincr(se->hw->regs->op, 1);
 	cpuvaddr[i++] = op;
@@ -1510,6 +1769,8 @@ static unsigned int tegra_cmac_prep_cmd(struct tegra_se *se, struct tegra_cmac_r
 	cpuvaddr[i++] = se_host1x_opcode_nonincr(host1x_uclass_incr_syncpt_r(), 1);
 	cpuvaddr[i++] = host1x_uclass_incr_syncpt_cond_f(1) |
 			host1x_uclass_incr_syncpt_indx_f(se->syncpt_id);
+
+	dev_dbg(se->dev, "cfg %#x\n", rctx->config);
 
 	return i;
 }
@@ -1557,8 +1818,9 @@ static int tegra_cmac_do_update(struct ahash_request *req)
 	rctx->src_sg = req->src;
 	rctx->datbuf.size = (req->nbytes + rctx->residue.size) - nresidue;
 	rctx->total_len += rctx->datbuf.size;
-	rctx->config = tegra234_aes_cfg(SE_ALG_CMAC, 0);
-	rctx->crypto_config = SE_AES_KEY_INDEX(ctx->key_id);
+	rctx->config = se->regcfg->cfg(ctx->alg, 0);
+	rctx->crypto_config = se->regcfg->crypto_cfg(ctx->alg, 0) |
+			      SE_AES_KEY_INDEX(rctx->key_id);
 
 	/*
 	 * Keep one block and residue bytes in residue and
@@ -1618,7 +1880,6 @@ static int tegra_cmac_do_final(struct ahash_request *req)
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct tegra_cmac_ctx *ctx = crypto_ahash_ctx(tfm);
 	struct tegra_se *se = ctx->se;
-	u32 *result = (u32 *)req->result;
 	int ret = 0, i, cmdlen;
 
 	if (!req->nbytes && !rctx->total_len && ctx->fallback_tfm) {
@@ -1628,7 +1889,7 @@ static int tegra_cmac_do_final(struct ahash_request *req)
 
 	rctx->datbuf.size = rctx->residue.size;
 	rctx->total_len += rctx->residue.size;
-	rctx->config = tegra234_aes_cfg(SE_ALG_CMAC, 0);
+	rctx->config = se->regcfg->cfg(ctx->final_alg, 0);
 
 	if (rctx->residue.size) {
 		rctx->datbuf.buf = dma_alloc_coherent(se->dev, rctx->residue.size,
@@ -1649,12 +1910,13 @@ static int tegra_cmac_do_final(struct ahash_request *req)
 	if (ret)
 		goto out;
 
-	/* Read and clear Result register */
-	for (i = 0; i < CMAC_RESULT_REG_COUNT; i++)
-		result[i] = readl(se->base + se->hw->regs->result + (i * 4));
+	memcpy(req->result, rctx->digest.buf, rctx->digest.size);
 
 	for (i = 0; i < CMAC_RESULT_REG_COUNT; i++)
 		writel(0, se->base + se->hw->regs->result + (i * 4));
+
+	if (rctx->key_id != ctx->key_id)
+		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
 
 out:
 	if (rctx->residue.size)
@@ -1663,6 +1925,9 @@ out:
 out_free:
 	dma_free_coherent(se->dev, crypto_ahash_blocksize(tfm) * 2,
 			  rctx->residue.buf, rctx->residue.addr);
+	dma_free_coherent(se->dev, rctx->digest.size, rctx->digest.buf,
+			rctx->digest.addr);
+
 	return ret;
 }
 
@@ -1716,7 +1981,6 @@ static int tegra_cmac_cra_init(struct crypto_tfm *tfm)
 	struct ahash_alg *alg = __crypto_ahash_alg(tfm->__crt_alg);
 	struct tegra_se_alg *se_alg;
 	const char *algname;
-	int ret;
 
 	algname = crypto_tfm_alg_name(tfm);
 #ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
@@ -1729,14 +1993,9 @@ static int tegra_cmac_cra_init(struct crypto_tfm *tfm)
 
 	ctx->se = se_alg->se_dev;
 	ctx->key_id = 0;
+	ctx->alg = SE_ALG_CMAC;
+	ctx->final_alg = SE_ALG_CMAC_FINAL;
 
-	ret = se_algname_to_algid(algname);
-	if (ret < 0) {
-		dev_err(ctx->se->dev, "invalid algorithm\n");
-		return ret;
-	}
-
-	ctx->alg = ret;
 
 #ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 	ctx->enginectx.op.prepare_request = NULL;
@@ -1770,13 +2029,27 @@ static int tegra_cmac_init(struct ahash_request *req)
 	rctx->total_len = 0;
 	rctx->datbuf.size = 0;
 	rctx->residue.size = 0;
+	rctx->key_id = 0;
 	rctx->task = SHA_FIRST;
 	rctx->blk_size = crypto_ahash_blocksize(tfm);
+	rctx->digest.size = crypto_ahash_digestsize(tfm);
+
+	/* Retrieve the key slot for CMAC */
+	if (ctx->key_id) {
+		rctx->key_id = tegra_key_get_idx(ctx->se, ctx->key_id);
+		if (!rctx->key_id)
+			return -ENOMEM;
+	}
+
+	rctx->digest.buf = dma_alloc_coherent(se->dev, rctx->digest.size,
+				&rctx->digest.addr, GFP_KERNEL);
+	if (!rctx->digest.buf)
+		goto digbuf_fail;
 
 	rctx->residue.buf = dma_alloc_coherent(se->dev, rctx->blk_size * 2,
 					       &rctx->residue.addr, GFP_KERNEL);
 	if (!rctx->residue.buf)
-		return -ENOMEM;
+		goto resbuf_fail;
 
 	rctx->residue.size = 0;
 	rctx->datbuf.size = 0;
@@ -1786,6 +2059,15 @@ static int tegra_cmac_init(struct ahash_request *req)
 		writel(0, se->base + se->hw->regs->result + (i * 4));
 
 	return 0;
+
+resbuf_fail:
+	dma_free_coherent(se->dev, rctx->blk_size, rctx->digest.buf,
+				rctx->digest.addr);
+digbuf_fail:
+	if (rctx->key_id != ctx->key_id)
+		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
+
+	return -ENOMEM;
 }
 
 static int tegra_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
@@ -1944,7 +2226,7 @@ static struct tegra_se_alg tegra_cmac_algs[] = {
 			.halg.statesize = sizeof(struct tegra_cmac_reqctx),
 			.halg.base = {
 				.cra_name = "cmac(aes)",
-				.cra_driver_name = "tegra-se-cmac",
+				.cra_driver_name = "cmac-aes-tegra",
 				.cra_priority = 300,
 				.cra_flags = CRYPTO_ALG_TYPE_AHASH,
 				.cra_blocksize = AES_BLOCK_SIZE,
@@ -1970,7 +2252,7 @@ int tegra_init_aes(struct tegra_se *se)
 	struct skcipher_engine_alg *sk_alg;
 	int i, ret;
 
-	se->manifest = tegra_aes_kac_manifest;
+	tegra_aes_set_regcfg(se);
 
 	for (i = 0; i < ARRAY_SIZE(tegra_aes_algs); i++) {
 		sk_alg = &tegra_aes_algs[i].alg.skcipher;
@@ -2033,7 +2315,7 @@ int tegra_init_aes(struct tegra_se *se)
 	struct skcipher_alg *sk_alg;
 	int i, ret;
 
-	se->manifest = tegra_aes_kac_manifest;
+	tegra_aes_set_regcfg(se);
 
 	for (i = 0; i < ARRAY_SIZE(tegra_aes_algs); i++) {
 		sk_alg = &tegra_aes_algs[i].alg.skcipher;

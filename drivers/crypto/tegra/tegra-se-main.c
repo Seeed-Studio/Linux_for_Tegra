@@ -334,6 +334,36 @@ static int tegra_se_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct tegra_se_regs tegra234_aes0_regs = {
+	.config = SE_AES0_CFG,
+	.op = SE_AES0_OPERATION,
+	.last_blk = SE_AES0_LAST_BLOCK,
+	.linear_ctr = SE_AES0_LINEAR_CTR,
+	.aad_len = SE_AES0_AAD_LEN,
+	.cryp_msg_len = SE_AES0_CRYPTO_MSG_LEN,
+	.manifest = SE_AES0_KEYMANIFEST,
+	.key_addr = SE_AES0_KEY_ADDR,
+	.key_data = SE_AES0_KEY_DATA,
+	.key_dst = SE_AES0_KEY_DST,
+	.result = SE_AES0_CMAC_RESULT,
+};
+
+static const struct tegra_se_regs tegra264_aes0_regs = {
+	.config = SE_AES0_CFG,
+	.op = SE_AES0_OPERATION,
+	.last_blk = SE_AES0_LAST_BLOCK,
+	.linear_ctr = SE_AES0_LINEAR_CTR,
+	.aad_len = SE_AES0_AAD_LEN,
+	.cryp_msg_len = SE_AES0_CRYPTO_MSG_LEN,
+	.manifest = SE_AES0_KAC2_KEYMANIFEST,
+	.key_addr = SE_AES0_KEY_ADDR,
+	.key_data = SE_AES0_KEY_DATA,
+	.key_dst = SE_AES0_KEY_DST,
+	.src_kslt = SE_AES0_SRC_KSLT,
+	.tgt_kslt = SE_AES0_TGT_KSLT,
+	.result = SE_AES0_CMAC_RESULT,
+};
+
 static const struct tegra_se_regs tegra234_aes1_regs = {
 	.config = SE_AES1_CFG,
 	.op = SE_AES1_OPERATION,
@@ -348,6 +378,22 @@ static const struct tegra_se_regs tegra234_aes1_regs = {
 	.result = SE_AES1_CMAC_RESULT,
 };
 
+static const struct tegra_se_regs tegra264_aes1_regs = {
+	.config = SE_AES1_CFG,
+	.op = SE_AES1_OPERATION,
+	.last_blk = SE_AES1_LAST_BLOCK,
+	.linear_ctr = SE_AES1_LINEAR_CTR,
+	.aad_len = SE_AES1_AAD_LEN,
+	.cryp_msg_len = SE_AES1_CRYPTO_MSG_LEN,
+	.manifest = SE_AES1_KAC2_KEYMANIFEST,
+	.key_addr = SE_AES1_KEY_ADDR,
+	.key_data = SE_AES1_KEY_DATA,
+	.key_dst = SE_AES1_KEY_DST,
+	.src_kslt = SE_AES1_SRC_KSLT,
+	.tgt_kslt = SE_AES1_TGT_KSLT,
+	.result = SE_AES1_CMAC_RESULT,
+};
+
 static const struct tegra_se_regs tegra234_hash_regs = {
 	.config = SE_SHA_CFG,
 	.op = SE_SHA_OPERATION,
@@ -358,9 +404,31 @@ static const struct tegra_se_regs tegra234_hash_regs = {
 	.result = SE_SHA_HASH_RESULT,
 };
 
+static const struct tegra_se_regs tegra264_hash_regs = {
+	.config = SE_SHA_CFG,
+	.op = SE_SHA_OPERATION,
+	.manifest = SE_SHA_KAC2_KEYMANIFEST,
+	.key_addr = SE_SHA_KEY_ADDR,
+	.key_data = SE_SHA_KEY_DATA,
+	.key_dst = SE_SHA_KEY_DST,
+	.src_kslt = SE_SHA_SRC_KSLT,
+	.tgt_kslt = SE_SHA_TGT_KSLT,
+	.result = SE_SHA_HASH_RESULT,
+};
+
 static const struct tegra_se_hw tegra234_aes_hw = {
 	.regs = &tegra234_aes1_regs,
 	.kac_ver = 1,
+	.host1x_class = 0x3b,
+	.init_alg = tegra_init_aes,
+	.deinit_alg = tegra_deinit_aes,
+};
+
+const struct tegra_se_hw tegra264_aes_hw = {
+	.regs = &tegra264_aes1_regs,
+	.kac_ver = 2,
+	.support_sm_alg = true,
+	.support_kds = false, // FIXME: Bug 4663009
 	.host1x_class = 0x3b,
 	.init_alg = tegra_init_aes,
 	.deinit_alg = tegra_deinit_aes,
@@ -374,6 +442,27 @@ static const struct tegra_se_hw tegra234_hash_hw = {
 	.deinit_alg = tegra_deinit_hash,
 };
 
+static const struct tegra_se_hw tegra264_hash_hw = {
+	.regs = &tegra264_hash_regs,
+	.kac_ver = 2,
+	.support_sm_alg = true,
+	.support_kds = false, // FIXME: Bug 4663009
+	.host1x_class = 0x3d,
+	.init_alg = tegra_init_hash,
+	.deinit_alg = tegra_deinit_hash,
+};
+
+static const struct tegra_se_hw tegra264_sm4_hw = {
+	.regs = &tegra264_aes0_regs,
+	.kac_ver = 2,
+	.host1x_class = 0x3a,
+	.support_kds = false, // FIXME: Bug 4663009
+	.support_aad_verify = true,
+	.support_sm_alg = true,
+	.init_alg = tegra_init_sm4,
+	.deinit_alg = tegra_deinit_sm4,
+};
+
 static const struct of_device_id tegra_se_of_match[] = {
 	{
 		.compatible = "nvidia,tegra234-se-aes",
@@ -381,6 +470,15 @@ static const struct of_device_id tegra_se_of_match[] = {
 	}, {
 		.compatible = "nvidia,tegra234-se-hash",
 		.data = &tegra234_hash_hw,
+	}, {
+		.compatible = "nvidia,tegra264-se-aes",
+		.data = &tegra264_aes_hw
+	}, {
+		.compatible = "nvidia,tegra264-se-hash",
+		.data = &tegra264_hash_hw,
+	}, {
+		.compatible = "nvidia,tegra264-se-sm4",
+		.data = &tegra264_sm4_hw
 	},
 	{ },
 };
