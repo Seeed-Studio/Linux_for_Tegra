@@ -1359,6 +1359,7 @@ static const struct tegra_gpio_soc tegra264_aon_soc = {
 	.instance = 1,
 	.num_irqs_per_bank = 8,
 	.has_vm_support = true,
+	.has_gte = true,
 };
 
 static const struct of_device_id tegra186_gpio_of_match[] = {
