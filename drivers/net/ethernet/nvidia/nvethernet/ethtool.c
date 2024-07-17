@@ -894,7 +894,11 @@ static int ether_set_pauseparam(struct net_device *ndev,
  * @return zero on success
  */
 static int ether_get_ts_info(struct net_device *ndev,
+#if defined(NV_ETHTOOL_KERNEL_ETHTOOL_TS_INFO_STRUCT_PRESENT) /* Linux v6.11 */
+		struct kernel_ethtool_ts_info *info)
+#else
 		struct ethtool_ts_info *info)
+#endif
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 

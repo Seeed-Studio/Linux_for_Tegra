@@ -7106,6 +7106,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_ETHTOOL_KEEE_STRUCT_PRESENT" "" "types"
         ;;
 
+        ethtool_kernel_ethtool_ts_info_struct_present)
+            #
+            # Determine if the 'struct kernel_ethtool_ts_info' is present.
+            #
+            # Commit 2111375b85ad ("net: Add struct kernel_ethtool_ts_info")
+            # replaced struct ethtool_ts_info with kernel_ethtool_ts_info in
+            # Linux v6.11.
+            #
+            CODE="
+            #include <linux/ethtool.h>
+            int conftest(struct kernel_ethtool_ts_info *info) {
+                return 0;
+            }"
+
+            compile_check_conftest "$CODE" "NV_ETHTOOL_KERNEL_ETHTOOL_TS_INFO_STRUCT_PRESENT" "" "types"
+        ;;
+
         ethtool_ops_get_set_coalesce_has_coal_and_extack_args)
             #
             # Determine if the 'get_coalesce' and 'set_coalesce' ethtool_ops
