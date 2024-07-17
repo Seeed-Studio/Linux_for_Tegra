@@ -486,4 +486,8 @@
 			};
 		};
 	};
+
+	smmu_test {
+		status = "okay";
+	};
 };
