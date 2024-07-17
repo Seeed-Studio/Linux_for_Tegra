@@ -7,10 +7,27 @@
  * Copyright (c) 2010-2020, NVIDIA Corporation.
  * Based on arch/arm/plat-mxc/pwm.c by Sascha Hauer <s.hauer@pengutronix.de>
  *
- * Overview of Tegra Pulse Width Modulator Register:
- * 1. 13-bit: Frequency division (SCALE)
- * 2. 8-bit : Pulse division (DUTY)
- * 3. 1-bit : Enable bit
+ * Overview of Tegra Pulse Width Modulator Register
+ * CSR_0 of Tegra20, Tegra186, and Tegra194:
+ * +-------+-------+-----------------------------------------------------------+
+ * | Bit   | Field | Description                                               |
+ * +-------+-------+-----------------------------------------------------------+
+ * | 31    | ENB   | Enable Pulse width modulator.                             |
+ * |       |       | 0 = DISABLE, 1 = ENABLE.                                  |
+ * +-------+-------+-----------------------------------------------------------+
+ * | 30:16 | PWM_0 | Pulse width that needs to be programmed.                  |
+ * |       |       | 0 = Always low.                                           |
+ * |       |       | 1 = 1 / (1 + PWM_DEPTH) pulse high.                       |
+ * |       |       | 2 = 2 / (1 + PWM_DEPTH) pulse high.                       |
+ * |       |       | N = N / (1 + PWM_DEPTH) pulse high.                       |
+ * |       |       | Only 8 bits are usable [23:16].                           |
+ * |       |       | Bit[24] can be programmed to 1 to achieve 100% duty       |
+ * |       |       | cycle. In this case the other bits [23:16] are set to     |
+ * |       |       | don't care.                                               |
+ * +-------+-------+-----------------------------------------------------------+
+ * | 12:0  | PFM_0 | Frequency divider that needs to be programmed, also known |
+ * |       |       | as SCALE. Division by (1 + PFM_0).                        |
+ * +-------+-------+-----------------------------------------------------------+
  *
  * The PWM clock frequency is divided by (1 + PWM_DEPTH) before subdividing it
  * based on the programmable frequency division value to generate the required
@@ -19,10 +36,6 @@
  * e.g. if source clock rate is 408 MHz and PWM_DEPTH is 255, maximum output
  * frequency can be: 408 MHz / (1 + 255) ~= 1.6 MHz.
  * This 1.6 MHz frequency can further be divided using SCALE value in PWM.
- *
- * PWM pulse width: 8 bits are usable [23:16] for varying pulse width.
- * To achieve 100% duty cycle, program Bit [24] of this register to
- * 1’b1. In which case the other bits [23:16] are set to don't care.
  *
  * Limitations:
  * -	When PWM is disabled, the output is driven to inactive.
@@ -111,20 +124,14 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 			    int duty_ns, int period_ns)
 {
 	struct tegra_pwm_chip *pc = to_tegra_pwm_chip(chip);
-	unsigned long long c = duty_ns;
-	unsigned long rate, required_clk_rate;
-	u32 val = 0;
+	unsigned long channel_o = pc->soc->channel_offset;
+	unsigned long duty_w = pc->soc->duty_width;
+	unsigned long duty_s = pc->soc->duty_shift;
+	unsigned long scale_w = pc->soc->scale_width;
+	unsigned long scale_s = pc->soc->scale_shift;
+	unsigned long required_clk_rate;
+	u32 pwm_f, pfm_f;
 	int err;
-
-	/*
-	 * Convert from duty_ns / period_ns to a fixed number of duty ticks
-	 * per (1 + pc->pwm_depth) cycles and make sure to round to the
-	 * nearest integer during division.
-	 */
-	c *= (1 + pc->pwm_depth);
-	c = DIV_ROUND_CLOSEST_ULL(c, period_ns);
-
-	val = (u32)c << pc->soc->duty_shift;
 
 	/*
 	 *  min period = max clock limit / (1 + pc->pwm_depth)
@@ -133,74 +140,36 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		return -EINVAL;
 
 	/*
-	 * Compute the prescaler value for which (1 + pc->pwm_depth)
-	 * cycles at the PWM clock rate will take period_ns nanoseconds.
-	 *
-	 * num_channels: If single instance of PWM controller has multiple
-	 * channels (e.g. Tegra210 or older) then it is not possible to
-	 * configure separate clock rates to each of the channels, in such
-	 * case the value stored during probe will be referred.
-	 *
-	 * If every PWM controller instance has one channel respectively, i.e.
-	 * nums_channels == 1 then only the clock rate can be modified
-	 * dynamically (e.g. Tegra186 or Tegra194).
+	 * Convert from duty_ns / period_ns to a fixed number of duty ticks
+	 * per (1 + pc->pwm_depth) cycles and make sure to round to the
+	 * nearest integer during division.
 	 */
-	if (pc->soc->num_channels == 1) {
-		/*
-		 * Rate is multiplied with (1 + pc->pwm_depth) so that it
-		 * matches with the maximum possible rate that the controller
-		 * can provide. Any further lower value can be derived by
-		 * setting PFM bits[0:12].
-		 *
-		 * required_clk_rate is a reference rate for source clock and
-		 * it is derived based on user requested period. By setting the
-		 * source clock rate as required_clk_rate, PWM controller will
-		 * be able to configure the requested period.
-		 */
-		required_clk_rate = DIV_ROUND_UP_ULL(
-			(u64)NSEC_PER_SEC * (1 + pc->pwm_depth), period_ns);
+	pwm_f = (u32)DIV_ROUND_CLOSEST_ULL(duty_ns * (1 + pc->pwm_depth),
+					   period_ns);
 
-		if (required_clk_rate > clk_round_rate(pc->clk, required_clk_rate))
-			/*
-			 * required_clk_rate is a lower bound for the input
-			 * rate; for lower rates there is no value for PWM_SCALE
-			 * that yields a period less than or equal to the
-			 * requested period. Hence, for lower rates, double the
-			 * required_clk_rate to get a clock rate that can meet
-			 * the requested period.
-			 */
-			required_clk_rate *= 2;
-
-		err = dev_pm_opp_set_rate(pc->dev, required_clk_rate);
-		if (err < 0)
-			return -EINVAL;
-
-		/* Store the new rate for further references */
-		pc->clk_rate = clk_get_rate(pc->clk);
-	}
-
-	/* Consider precision in pc->soc->scale_width rate calculation */
-	rate = mul_u64_u64_div_u64(pc->clk_rate, period_ns,
-				   (u64)NSEC_PER_SEC * (1 + pc->pwm_depth));
+	/*
+	 * required_clk_rate is a reference rate for source clock and
+	 * it is derived based on user requested period.
+	 */
+	required_clk_rate = DIV_ROUND_UP_ULL(
+		(u64)NSEC_PER_SEC * (1 + pc->pwm_depth), period_ns);
+	pc->clk_rate = clk_get_rate(pc->clk);
+	if (pc->clk_rate < required_clk_rate)
+		return -EINVAL;
 
 	/*
 	 * Since the actual PWM divider is the register's frequency divider
 	 * field plus 1, we need to decrement to get the correct value to
 	 * write to the register.
 	 */
-	if (rate > 0)
-		rate--;
-	else
-		return -EINVAL;
+	pfm_f = DIV_ROUND_CLOSEST_ULL(pc->clk_rate, required_clk_rate) - 1;
 
 	/*
-	 * Make sure that the rate will fit in the register's frequency
+	 * Make sure that the pfm_f will fit in the register's frequency
 	 * divider field.
 	 */
-	if (rate >> pc->soc->scale_width)
+	if (pfm_f >> scale_w)
 		return -EINVAL;
-
-	val |= rate << pc->soc->scale_shift;
 
 	/*
 	 * If the PWM channel is disabled, make sure to turn on the clock
@@ -210,13 +179,17 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		err = pm_runtime_resume_and_get(pc->dev);
 		if (err)
 			return err;
-	} else
-		val |= PWM_ENABLE;
+	}
 
-	pwm_writel(pc, pwm->hwpwm * pc->soc->channel_offset, val);
+	pwm_writel_mask32(pc, pwm->hwpwm * channel_o,
+			  GENMASK(duty_s + duty_w - 1, duty_s),
+			  pwm_f << duty_s);
+	pwm_writel_mask32(pc, pwm->hwpwm * channel_o,
+			  GENMASK(scale_s + scale_w - 1, scale_s),
+			  pfm_f << scale_s);
 
 	/*
-	 * If the PWM is not enabled, turn the clock off again to save power.
+	 * If the PWM was not enabled, turn the clock off again to save power.
 	 */
 	if (!pwm_is_enabled(pwm))
 		pm_runtime_put(pc->dev);
@@ -467,7 +440,7 @@ static const struct tegra_pwm_soc tegra20_pwm_soc = {
 	.channel_offset = 16,
 	.depth_width = 8,
 	.duty_shift = 16,
-	.duty_width = 8,
+	.duty_width = 9,
 	.enb_offset = 0,
 	.num_channels = 4,
 	.scale_shift = 0,
@@ -479,7 +452,7 @@ static const struct tegra_pwm_soc tegra186_pwm_soc = {
 	.channel_offset = 0,
 	.depth_width = 8,
 	.duty_shift = 16,
-	.duty_width = 8,
+	.duty_width = 9,
 	.enb_offset = 0,
 	.num_channels = 1,
 	.scale_shift = 0,
@@ -491,7 +464,7 @@ static const struct tegra_pwm_soc tegra194_pwm_soc = {
 	.channel_offset = 0,
 	.depth_width = 8,
 	.duty_shift = 16,
-	.duty_width = 8,
+	.duty_width = 9,
 	.enb_offset = 0,
 	.num_channels = 1,
 	.scale_shift = 0,
