@@ -918,7 +918,7 @@ static void nvpps_ptp_tsc_sync_config(struct platform_device *pdev)
 	writel((0x50011 | (pdev_data->k_int_val << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT)),
 		   pdev_data->tsc_reg_map_base + TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET);
 	writel(0x67, pdev_data->tsc_reg_map_base + TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET);
-	writel(0x313, pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
+	writel(0x311, pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 	writel(0x1, pdev_data->tsc_reg_map_base + TSC_STSCRSR_OFFSET);
 
 	tsc_config_ptx_0 = readl(pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
