@@ -14,6 +14,7 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/seq_file.h>
+#include <asm/delay.h>
 
 #include <dt-bindings/gpio/tegra186-gpio.h>
 #include <dt-bindings/gpio/tegra194-gpio.h>
@@ -404,6 +405,7 @@ static int tegra186_gpio_set_config(struct gpio_chip *chip,
 
 	debounce = DIV_ROUND_UP(debounce, USEC_PER_MSEC);
 
+	udelay(1000);
 	value = TEGRA186_GPIO_DEBOUNCE_CONTROL_THRESHOLD(debounce);
 	writel(value, base + TEGRA186_GPIO_DEBOUNCE_CONTROL);
 
