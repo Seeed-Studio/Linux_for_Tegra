@@ -500,4 +500,108 @@
 	smmu_test {
 		status = "okay";
 	};
+
+	pmu {
+		status = "okay";
+	};
+
+	ucf_uapmu@140c0000 {
+		status = "okay";
+	};
+
+	disp_usb_apmu@8808900000 {
+		status = "okay";
+	};
+
+	ucf_gpu_apmu@810c248000 {
+		status = "okay";
+	};
+
+	uphy_apmu@a808880000 {
+		status = "okay";
+	};
+
+	vision_apmu@818a000000 {
+		status = "okay";
+	};
+
+	ete_cpu_0 {
+		status = "okay";
+	};
+
+	ete_cpu_1 {
+		status = "okay";
+	};
+
+	ete_cpu_2 {
+		status = "okay";
+	};
+
+	ete_cpu_3 {
+		status = "okay";
+	};
+
+	ete_cpu_4 {
+		status = "okay";
+	};
+
+	ete_cpu_5 {
+		status = "okay";
+	};
+
+	ete_cpu_6 {
+		status = "okay";
+	};
+
+	ete_cpu_7 {
+		status = "okay";
+	};
+
+	ete_cpu_8 {
+		status = "okay";
+	};
+
+	ete_cpu_9 {
+		status = "okay";
+	};
+
+	ete_cpu_10 {
+		status = "okay";
+	};
+
+	ete_cpu_11 {
+		status = "okay";
+	};
+
+	ete_cpu_12 {
+		status = "okay";
+	};
+
+	ete_cpu_13 {
+		status = "okay";
+	};
+
+	trbe {
+		status = "okay";
+	};
+
+	stm@10070000 {
+		status = "okay";
+	};
+
+	funnel_major@10080000 {
+		status = "okay";
+	};
+
+	etf_soc@10040000 {
+		status = "okay";
+	};
+
+	replicator_soc@10060000 {
+		status = "okay";
+	};
+
+	etr_soc@10050000 {
+		status = "okay";
+	};
 };
