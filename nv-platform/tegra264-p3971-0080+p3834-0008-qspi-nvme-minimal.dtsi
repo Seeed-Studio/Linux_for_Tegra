@@ -6,9 +6,5 @@
 		tegra_soc_hwpm@1604000 {
 			status = "disabled";
 		};
-
-		pcie@a808460000 {
-			status = "disabled";
-		};
 	};
 };
