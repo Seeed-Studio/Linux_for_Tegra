@@ -504,10 +504,8 @@ int dce_fsm_init(struct tegra_dce *d)
 		return ret;
 	}
 
-	dce_mutex_lock(&fsm->lock);
 	fsm->d = d;
 	fsm->initialized = true;
-	dce_mutex_unlock(&fsm->lock);
 
 	return ret;
 }
@@ -523,9 +521,7 @@ void dce_fsm_deinit(struct tegra_dce *d)
 {
 	struct dce_fsm_info *fsm = &d->fsm_info;
 
-	dce_mutex_lock(&fsm->lock);
 	fsm->initialized = false;
-	dce_mutex_unlock(&fsm->lock);
 
 	dce_mutex_destroy(&fsm->lock);
 }
