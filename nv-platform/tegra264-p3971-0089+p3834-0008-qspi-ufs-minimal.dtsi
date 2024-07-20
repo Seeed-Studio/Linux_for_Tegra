@@ -3,14 +3,6 @@
 
 / {
 	bus@0 {
-		aocluster@c000000 {
-			status = "disabled";
-
-			aon@c040000 {
-				status = "disabled";
-			};
-		};
-
 		pcie@a808400000 {
 			status = "disabled";
 		};

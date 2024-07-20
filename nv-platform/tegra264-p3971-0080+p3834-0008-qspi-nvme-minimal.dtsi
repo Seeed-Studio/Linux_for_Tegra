@@ -3,14 +3,6 @@
 
 / {
 	bus@0 {
-		aocluster@c000000 {
-			status = "disabled";
-
-			aon@c040000 {
-				status = "disabled";
-			};
-		};
-
 		tegra_soc_hwpm@1604000 {
 			status = "disabled";
 		};

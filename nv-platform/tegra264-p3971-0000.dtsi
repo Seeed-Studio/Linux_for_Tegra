@@ -52,6 +52,14 @@
 			};
 		};
 
+		aocluster@c000000 {
+			status = "okay";
+
+			aon@c040000 {
+				status = "okay";
+			};
+		};
+
 		hda@88090b0000 {
 			nvidia,model = "NVIDIA Jetson Thor AGX HDA";
 			status = "okay";
