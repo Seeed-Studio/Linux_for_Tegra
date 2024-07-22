@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "linux/tegra-hsp-combo.h"
 
@@ -51,6 +51,7 @@ struct camrtc_hsp_op {
 	int (*ch_setup)(struct camrtc_hsp *, dma_addr_t iova, long *timeout);
 	int (*ping)(struct camrtc_hsp *, u32 data, long *timeout);
 	int (*get_fw_hash)(struct camrtc_hsp *, u32 index, long *timeout);
+	int (*set_operating_point)(struct camrtc_hsp *, u32 operating_point, long *timeout);
 };
 
 static int camrtc_hsp_send(struct camrtc_hsp *camhsp,
@@ -163,6 +164,8 @@ static int camrtc_hsp_vm_ping(struct camrtc_hsp *camhsp,
 		u32 data, long *timeout);
 static int camrtc_hsp_vm_get_fw_hash(struct camrtc_hsp *camhsp,
 		u32 index, long *timeout);
+static int camrtc_hsp_vm_set_operating_point(struct camrtc_hsp *camhsp,
+		u32 operating_point, long *timeout);
 
 static const struct camrtc_hsp_op camrtc_hsp_vm_ops = {
 	.send = camrtc_hsp_vm_send,
@@ -174,6 +177,7 @@ static const struct camrtc_hsp_op camrtc_hsp_vm_ops = {
 	.ping = camrtc_hsp_vm_ping,
 	.ch_setup = camrtc_hsp_vm_ch_setup,
 	.get_fw_hash = camrtc_hsp_vm_get_fw_hash,
+	.set_operating_point = camrtc_hsp_vm_set_operating_point,
 };
 
 static int camrtc_hsp_vm_send(struct camrtc_hsp *camhsp,
@@ -326,6 +330,14 @@ static int camrtc_hsp_vm_get_fw_hash(struct camrtc_hsp *camhsp, u32 index,
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+static int camrtc_hsp_vm_set_operating_point(struct camrtc_hsp *camhsp, u32 operating_point,
+		long *timeout)
+{
+	u32 request = CAMRTC_HSP_MSG(CAMRTC_HSP_SET_OP_POINT, operating_point);
+
+	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
+}
+
 static struct device_node *hsp_vm_get_available(const struct device_node *parent)
 {
 	const char *compatible = "nvidia,tegra-camrtc-hsp-vm";
@@ -456,6 +468,30 @@ int camrtc_hsp_suspend(struct camrtc_hsp *camhsp)
 	return response <= 0 ? response : -EIO;
 }
 EXPORT_SYMBOL(camrtc_hsp_suspend);
+
+/*
+ * Set Operating Point: set operating point
+ */
+int camrtc_hsp_set_operating_point(struct camrtc_hsp *camhsp, uint32_t operating_point)
+{
+	long timeout;
+	int response;
+
+	if (WARN_ON(camhsp == NULL))
+		return -EINVAL;
+
+	timeout = camhsp->timeout;
+	mutex_lock(&camhsp->mutex);
+	response = camhsp->op->set_operating_point(camhsp, operating_point, &timeout);
+	mutex_unlock(&camhsp->mutex);
+
+	if (response != 0)
+		dev_info(&camhsp->dev, "HSP_SET_OP_POINT failed: 0x%08x\n",
+			response);
+
+	return response <= 0 ? response : -EIO;
+}
+EXPORT_SYMBOL(camrtc_hsp_set_operating_point);
 
 /*
  * Bye: tell firmware that VM mappings are going away

@@ -2,9 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
-
 #include <linux/tegra-camera-rtcpu.h>
-
 #include <linux/bitops.h>
 #include <linux/completion.h>
 #include <linux/delay.h>
@@ -31,6 +29,8 @@
 #include <linux/tegra-rtcpu-trace.h>
 #include <linux/version.h>
 #include <linux/wait.h>
+#include <linux/string.h>
+#include <linux/sysfs.h>
 
 #include "clk-group.h"
 #include "device-group.h"
@@ -69,6 +69,7 @@ struct tegra_cam_rtcpu_pdata {
 static int tegra_rce_cam_wait_for_idle(struct device *dev);
 static void tegra_rce_cam_assert_resets(struct device *dev);
 static int tegra_rce_cam_deassert_resets(struct device *dev);
+static int tegra_camrtc_fw_set_operating_point(struct device *dev, uint32_t op);
 
 static const char * const rce_reset_names[] = {
 	"reset-names",			/* all named resets */
@@ -125,6 +126,66 @@ struct tegra_cam_rtcpu {
 	bool fw_active;
 	bool online;
 };
+
+static struct device *s_dev;
+
+static uint32_t operating_point;
+
+static ssize_t show_operating_point(struct kobject *kobj, struct kobj_attribute *attr, char *buff)
+{
+	sprintf(buff, "%d", operating_point);
+
+	return strlen(buff);
+}
+
+static ssize_t store_operating_point(struct  kobject *kobj, struct kobj_attribute *attr,
+	const char *buff, size_t count)
+{
+	u32 temp;
+
+	if (kstrtou32(buff, 10, &temp) == 0) {
+		if ((temp == 0) || (temp == 6)) {
+			operating_point = (uint32_t)temp;
+			tegra_camrtc_fw_set_operating_point(s_dev, operating_point);
+		}
+	}
+
+	return count;
+}
+
+static struct kobj_attribute operating_point_attribute =
+	__ATTR(operating_point, 0644, show_operating_point, store_operating_point);
+
+static struct attribute *attrs[] = {
+	&operating_point_attribute.attr,
+	NULL,
+};
+
+static struct attribute_group attr_group = {
+	.attrs = attrs,
+};
+
+static struct kobject *kobj;
+
+static int init_operating_point_sysfs(void)
+{
+	int ret;
+
+	operating_point = 0;
+
+	kobj = kobject_create_and_add("operating_point", kernel_kobj);
+	if (!kobj)
+		return -ENOMEM;
+	ret = sysfs_create_group(kobj, &attr_group);
+	if (ret)
+		kobject_put(kobj);
+	return ret;
+}
+
+static void deinit_operating_point_sysfs(void)
+{
+	kobject_put(kobj);
+}
 
 static void __iomem *tegra_cam_ioremap(struct device *dev, int index)
 {
@@ -348,6 +409,16 @@ static int tegra_rce_cam_wait_for_idle(struct device *dev)
 	}
 
 	return 0;
+}
+
+static int tegra_camrtc_fw_set_operating_point(struct device *dev, uint32_t op)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+
+	if (!rtcpu->hsp)
+		return 0;
+
+	return camrtc_hsp_set_operating_point(rtcpu->hsp, op);
 }
 
 static int tegra_rce_cam_deassert_resets(struct device *dev)
@@ -707,10 +778,10 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 
 	pdev->dev.dma_parms = NULL;
 
+	deinit_operating_point_sysfs();
+
 	return 0;
 }
-
-static struct device *s_dev;
 
 static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 {
@@ -809,6 +880,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	pm_runtime_put(dev);
 
 	s_dev = dev;
+
+	init_operating_point_sysfs();
 
 	dev_dbg(dev, "successfully probed RTCPU on %s\n", name);
 

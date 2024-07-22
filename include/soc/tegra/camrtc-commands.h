@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
 /**
@@ -463,6 +463,48 @@
  * 2) @ref HspFwVersions   "Firmware HSP protocol version"
  */
 #define CAMRTC_HSP_PROTOCOL		MK_U32(0x47)
+
+/**
+ * @brief SET_OP_POINT message
+ *
+ * The CAMRTC_HSP_SET_OP_POINT message is used to apply the
+ * specified operating point to Camera IP. Two operating points
+ * are supported:
+ *
+ * Operating Point 0: Camera IP runs at maximum clock speeds.
+ * Operating Point 6: Camera IP runs at reduced clock speeds.
+ *
+ * Camera IP:
+ * - RCE HW
+ * - VI HW
+ * - ISP HW
+ * - NVCSI
+ *
+ * @pre @ref CAMRTC_HSP_HELLO exchange has been completed.
+ *
+ * @par Request
+ * @rststar
+ * +-------+---------------------------------------------------+
+ * | Bits  | Description                                       |
+ * +=======+===================================================+
+ * | 30:24 | CAMRTC_HSP_SET_OP_POINT                           |
+ * +-------+---------------------------------------------------+
+ * | 23:0  | Operating Point {0, 6}                            |
+ * +-------+---------------------------------------------------+
+ * @endrst
+ *
+ * @par Response
+ * @rststar
+ * +-------+---------------------------------------------------+
+ * | Bits  | Description                                       |
+ * +=======+===================================================+
+ * | 30:24 | CAMRTC_HSP_SET_OP_POINT                           |
+ * +-------+---------------------------------------------------+
+ * | 23:0  | 0x000000                                          |
+ * +-------+---------------------------------------------------+
+ * @endrst
+ */
+#define CAMRTC_HSP_SET_OP_POINT  MK_U32(0x48)
 
 /** Reserved, not to be used. */
 #define CAMRTC_HSP_RESERVED_5E		MK_U32(0x5E) /* bug 200395605 */
