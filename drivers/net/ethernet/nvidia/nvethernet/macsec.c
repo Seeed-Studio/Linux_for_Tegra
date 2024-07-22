@@ -1289,6 +1289,7 @@ void macsec_remove(struct ether_priv_data *pdata)
 {
 	struct macsec_priv_data *macsec_pdata = NULL;
 	struct macsec_supplicant_data *supplicant = NULL;
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	int i;
 
 	PRINT_ENTRY();
@@ -1307,7 +1308,8 @@ void macsec_remove(struct ether_priv_data *pdata)
 		/* if macsec_close() is not called by supplicant gracefully
 		 * close it now.
 		 */
-		if (atomic_read(&macsec_pdata->ref_count) > 0) {
+		if ((atomic_read(&macsec_pdata->ref_count) > 0) ||
+		    (macsec_pdata->enabled == OSI_ENABLE)) {
 			macsec_close(macsec_pdata);
 		}
 
@@ -1315,6 +1317,10 @@ void macsec_remove(struct ether_priv_data *pdata)
 		if (macsec_pdata->is_nv_macsec_fam_registered == OSI_ENABLE) {
 			genl_unregister_family(&macsec_pdata->nv_macsec_fam);
 			macsec_pdata->is_nv_macsec_fam_registered = OSI_DISABLE;
+		}
+
+		if (osi_core->use_virtualization == OSI_DISABLE) {
+			macsec_disable_car(macsec_pdata);
 		}
 
 		/* Release platform resources */
