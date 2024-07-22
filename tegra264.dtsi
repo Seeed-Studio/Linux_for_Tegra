@@ -8416,7 +8416,8 @@
 				<&bpmp TEGRA264_CLK_MPHY_L0_TX_HS_SYMB_DIV>,
 				<&bpmp TEGRA264_CLK_MPHY_L0_RX_HS_SYMB_DIV>,
 				<&bpmp TEGRA264_CLK_OSC>,
-				<&bpmp TEGRA264_CLK_MPHY_L0_UPHY_TX_FIFO>;
+				<&bpmp TEGRA264_CLK_MPHY_L0_UPHY_TX_FIFO>,
+				<&bpmp TEGRA264_CLK_UPHY0_PLL4_XDIG>;
                    clock-names = "pllrefe_vcoout", "mphy_core_pll_fixed", "mphy_l0_tx_symb",
 					"mphy_tx_1mhz_ref", "mphy_l0_rx_ana",
 					"mphy_l0_rx_symb", "mphy_l0_tx_ls_3xbit",
@@ -8426,7 +8427,8 @@
 					"mphy_l0_rx_ls_bit_div", "mphy_l0_rx_ls_symb_div",
 					"mphy_l0_tx_hs_symb_div", "mphy_l0_rx_hs_symb_div",
 					"osc",
-					"mphy_l0_uphy_tx_fifo";
+					"mphy_l0_uphy_tx_fifo",
+					"uphy_pll3";
                    assigned-clocks = <&bpmp TEGRA264_CLK_ISC_CPU_ROOT>;
                    assigned-clock-parents = <&bpmp TEGRA264_CLK_UTMI_PLL1_CLKOUT480>;
                    resets = <&bpmp TEGRA264_RESET_MPHY_L0_RX>,
@@ -8441,6 +8443,7 @@
 				   "mphy-l1-tx-rst", "mphy-clk-ctl-rst", "ufs-rst",
 				   "ufs-axi-m-rst", "ufshc-lp-rst";
                    nvidia,enable-x2-config;
+		   nvidia,configure-uphy-pll3;
                    nvidia,mask-fast-auto-mode;
                    nvidia,enable-hs-mode;
                    nvidia,max-hs-gear = <4>;
@@ -8449,7 +8452,6 @@
                    vccq-max-microamp = <0>;
                    vccq2-max-microamp = <0>;
                    nvidia,enable-ufs-provisioning;
-		   nvidia,mask-hs-mode-b;
 
                    ufs_variant {
                            compatible = "tegra264,ufs_variant",
