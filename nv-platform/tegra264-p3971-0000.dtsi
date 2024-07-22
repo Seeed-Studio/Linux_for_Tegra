@@ -243,6 +243,8 @@
 		/* PCIe C2 for onboard Ethernet */
 		pcie@a808420000 {
 			status = "okay";
+			interrupts = <TEGRA264_AON_GPIO(AA, 5) IRQ_TYPE_LEVEL_LOW>;
+			interrupt-names = "wakeup";
 		};
 
 		/* PCIe C4 RP for x16 slot(J6) */
