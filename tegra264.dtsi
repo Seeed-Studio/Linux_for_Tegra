@@ -4464,8 +4464,10 @@
 				  <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			clock-names = "qspi", "qspi_out", "pllc0", "pll_p";
 			resets = <&bpmp TEGRA264_RESET_QSPI0>;
-			assigned-clocks = <&bpmp  TEGRA264_CLK_QSPI0>;
+			assigned-clocks = <&bpmp  TEGRA264_CLK_QSPI0_2X_PM>,
+					  <&bpmp TEGRA264_CLK_PLLC0>;
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLC0>;
+			assigned-clock-rates = <199999999 199999999>;
 			reset-names = "qspi";
 		};
 
