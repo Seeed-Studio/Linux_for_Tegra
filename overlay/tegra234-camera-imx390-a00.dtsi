@@ -217,7 +217,7 @@
 									control_point_y_8="4095";
 								};
 
-								mode1 {/*mode IMX390_MODE_1920X1080_CROP_30FPS*/
+								mode1 {/*mode IMX390_MODE_1936X1096_CROP_30FPS*/
 									mclk_khz = "24000";
 									num_lanes = "4";
 									tegra_sinterface = "serial_a";
@@ -230,8 +230,8 @@
 									mode_type = "bayer";
 									pixel_phase = "rggb";
 
-									active_w = "1920";
-									active_h = "1080";
+									active_w = "1936";
+									active_h = "1096";
 									readout_orientation = "0";
 									line_length = "2200";
 									inherent_gain = "1";
