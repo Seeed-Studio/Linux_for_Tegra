@@ -149,6 +149,8 @@
 				interrupt-parent = <&agic_page0>;
 				resets = <&bpmp TEGRA264_RESET_ADSP_CORE0>;
 				reset-names = "adsp";
+				clocks = <&bpmp TEGRA264_CLK_ADSP>;
+				clock-names = "cpu_clock";
 				reg = <0x0 0x9d60000 0x0 0x10000>, /* AMC */
 					  <0x0 0x9a00000 0x0 0x1000>, /* AMISC */
 					  <0x0 0x9a20000 0x0 0x40000>; /* AHSP */
@@ -181,6 +183,8 @@
 				interrupt-parent = <&agic_page0>;
 				resets = <&bpmp TEGRA264_RESET_ADSP_CORE1>;
 				reset-names = "adsp";
+				clocks = <&bpmp TEGRA264_CLK_ADSP>;
+				clock-names = "cpu_clock";
 				reg = <0x0 0x9d60000 0x0 0x10000>,  /* AMC */
 					  <0x0 0x9a01000 0x0 0x1000>,  /* AMISC */
 					  <0x0 0x9b20000 0x0 0x40000>;  /* AHSP */
@@ -3563,6 +3567,8 @@
 			aon: aon@c040000 {
 				compatible = "nvidia,tegra264-aon";
 				nvidia,adsp_os_secload;
+				clocks = <&bpmp TEGRA264_CLK_AON_CPU>;
+				clock-names = "cpu_clock";
 				reg = <0x0 0xc040000 0x0 0xa0000>, /* Dummy entry for AMC */
 					  <0x0 0xc100000 0x0 0x20000>, /* AO_MISC */
 					  <0x0 0xc410000 0x0 0x40000>;  /* AON_HSP */
