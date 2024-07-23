@@ -1738,26 +1738,26 @@ static int _nvadsp_os_start(struct nvadsp_handle *nvadsp_handle)
 	if (ret < 0)
 		goto unlock;
 
-	if (priv->cold_start) {
-		if (drv_data->chip_data->adsp_shared_mem_hwmbox != 0) {
+	if (drv_data->chip_data->adsp_shared_mem_hwmbox != 0) {
 #ifdef CONFIG_TEGRA_ADSP_MULTIPLE_FW
-			int i;
-			for (i = 0; i < MFW_MAX_OTHER_CORES; i++) {
-				if (mfw_hsp_va[i]) {
-					writel((uint32_t)mfw_smem_iova[i],
-						mfw_hsp_va[i] +
-							drv_data->chip_data->
-							adsp_shared_mem_hwmbox
-						);
-				}
+		int i;
+		for (i = 0; i < MFW_MAX_OTHER_CORES; i++) {
+			if (mfw_hsp_va[i]) {
+				writel((uint32_t)mfw_smem_iova[i],
+					mfw_hsp_va[i] +
+						drv_data->chip_data->
+						adsp_shared_mem_hwmbox
+					);
 			}
+		}
 #endif // CONFIG_TEGRA_ADSP_MULTIPLE_FW
 
-			hwmbox_writel(drv_data,
-				(uint32_t)drv_data->shared_adsp_os_data_iova,
-				drv_data->chip_data->adsp_shared_mem_hwmbox);
-		}
+		hwmbox_writel(drv_data,
+			(uint32_t)drv_data->shared_adsp_os_data_iova,
+			drv_data->chip_data->adsp_shared_mem_hwmbox);
+	}
 
+	if (priv->cold_start) {
 		if (!is_tegra_hypervisor_mode() &&
 			drv_data->chip_data->adsp_os_config_hwmbox != 0) {
 			/* Set ADSP to do decompression */
@@ -1769,7 +1769,7 @@ static int _nvadsp_os_start(struct nvadsp_handle *nvadsp_handle)
 				drv_data->chip_data->adsp_os_config_hwmbox);
 		}
 
-		/* Write ACSR base address and decompr enable flag only once */
+		/* Write decompr enable flag only once */
 		priv->cold_start = false;
 	}
 
