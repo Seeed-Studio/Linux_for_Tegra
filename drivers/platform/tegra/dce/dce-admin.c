@@ -103,6 +103,68 @@ void dce_admin_ivc_channel_reset(struct tegra_dce *d)
 }
 
 /**
+ * dce_admin_allocate_message - Allocates memory for a message
+ *						on admin interface.
+ * @d : Pointer tegra_dce struct.
+ *
+ * Return : Allocated msg if successful.
+ */
+static struct dce_ipc_message *dce_admin_allocate_message(struct tegra_dce *d)
+{
+	struct dce_ipc_message *msg;
+
+	msg = dce_kzalloc(d, sizeof(*msg), false);
+	if (!msg) {
+		dce_err(d, "Insufficient memory for admin msg");
+		goto err_alloc_msg;
+	}
+
+	msg->tx.data = dce_kzalloc(d, DCE_ADMIN_CMD_SIZE, false);
+	if (!msg->tx.data) {
+		dce_err(d, "Insufficient memory for admin msg");
+		goto err_alloc_tx;
+	}
+
+	msg->rx.data = dce_kzalloc(d, DCE_ADMIN_RESP_SIZE, false);
+	if (!msg->rx.data) {
+		dce_err(d, "Insufficient memory for admin msg");
+		goto err_alloc_rx;
+	}
+
+	msg->tx.size = DCE_ADMIN_CMD_SIZE;
+	msg->rx.size = DCE_ADMIN_RESP_SIZE;
+
+	return msg;
+
+err_alloc_rx:
+	dce_kfree(d, msg->tx.data);
+err_alloc_tx:
+	dce_kfree(d, msg);
+err_alloc_msg:
+	return NULL;
+}
+
+/**
+ * dce_admin_free_message - Frees memory allocated for a message
+ *						on admin interface.
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @msg : Pointer to allocated message.
+ *
+ * Return : Void.
+ */
+static void dce_admin_free_message(struct tegra_dce *d,
+				struct dce_ipc_message *msg)
+{
+	if (!msg || !msg->tx.data || !msg->rx.data)
+		return;
+
+	dce_kfree(d, msg->tx.data);
+	dce_kfree(d, msg->rx.data);
+	dce_kfree(d, msg);
+}
+
+/**
  * dce_admin_channel_deinit - Cleans up the channel resources.
  *
  * @d : Pointer to tegra_dce struct
@@ -112,6 +174,10 @@ void dce_admin_ivc_channel_reset(struct tegra_dce *d)
 static void dce_admin_channel_deinit(struct tegra_dce *d)
 {
 	u32 loop_cnt;
+	void *admin_msg_buffer = dce_get_admin_msg_buffer(d);
+
+	dce_admin_free_message(d, admin_msg_buffer);
+	dce_set_admin_msg_buffer(d, NULL);
 
 	for (loop_cnt = 0; loop_cnt < DCE_IPC_CH_KMD_TYPE_MAX; loop_cnt++)
 		dce_ipc_channel_deinit(d, loop_cnt);
@@ -129,6 +195,7 @@ static int dce_admin_channel_init(struct tegra_dce *d)
 {
 	int ret = 0;
 	u32 loop_cnt;
+	struct dce_ipc_message *admin_msg_buffer = NULL;
 
 	for (loop_cnt = 0; loop_cnt < DCE_IPC_CH_KMD_TYPE_MAX; loop_cnt++) {
 		ret = dce_ipc_channel_init(d, loop_cnt);
@@ -138,6 +205,16 @@ static int dce_admin_channel_init(struct tegra_dce *d)
 			goto out;
 		}
 	}
+
+	/* Allocate message buffer for DCE admin channel. */
+	admin_msg_buffer = dce_admin_allocate_message(d);
+	if (admin_msg_buffer == NULL) {
+		dce_err(d, "Failed to reserve admin channel msg buffer");
+		ret = -1;
+		goto out;
+	}
+
+	dce_set_admin_msg_buffer(d, admin_msg_buffer);
 
 out:
 	if (ret)
@@ -195,68 +272,6 @@ void dce_admin_deinit(struct tegra_dce *d)
 
 	dce_mailbox_deinit_interface(d,
 			DCE_MAILBOX_ADMIN_INTERFACE);
-}
-
-/**
- * dce_admin_allocate_message - Allocates memory for a message
- *						on admin interface.
- * @d : Pointer tegra_dce struct.
- *
- * Return : Allocated msg if successful.
- */
-struct dce_ipc_message *dce_admin_allocate_message(struct tegra_dce *d)
-{
-	struct dce_ipc_message *msg;
-
-	msg = dce_kzalloc(d, sizeof(*msg), false);
-	if (!msg) {
-		dce_err(d, "Insufficient memory for admin msg");
-		goto err_alloc_msg;
-	}
-
-	msg->tx.data = dce_kzalloc(d, DCE_ADMIN_CMD_SIZE, false);
-	if (!msg->tx.data) {
-		dce_err(d, "Insufficient memory for admin msg");
-		goto err_alloc_tx;
-	}
-
-	msg->rx.data = dce_kzalloc(d, DCE_ADMIN_RESP_SIZE, false);
-	if (!msg->rx.data) {
-		dce_err(d, "Insufficient memory for admin msg");
-		goto err_alloc_rx;
-	}
-
-	msg->tx.size = DCE_ADMIN_CMD_SIZE;
-	msg->rx.size = DCE_ADMIN_RESP_SIZE;
-
-	return msg;
-
-err_alloc_rx:
-	dce_kfree(d, msg->tx.data);
-err_alloc_tx:
-	dce_kfree(d, msg);
-err_alloc_msg:
-	return NULL;
-}
-
-/**
- * dce_admin_free_message - Frees memory allocated for a message
- *						on admin interface.
- *
- * @d : Pointer to tegra_dce struct.
- * @msg : Pointer to allocated message.
- *
- * Return : Void.
- */
-void dce_admin_free_message(struct tegra_dce *d,
-				struct dce_ipc_message *msg)
-{
-	if (!msg || !msg->tx.data || !msg->rx.data)
-		return;
-
-	dce_kfree(d, msg->tx.data);
-	dce_kfree(d, msg->rx.data);
-	dce_kfree(d, msg);
 }
 
 /**
@@ -637,7 +652,7 @@ int dce_start_admin_seq(struct tegra_dce *d)
 	int ret = 0;
 	struct dce_ipc_message *msg;
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg)
 		return -1;
 
@@ -661,7 +676,6 @@ int dce_start_admin_seq(struct tegra_dce *d)
 	}
 	d->boot_status |= DCE_FW_ADMIN_SEQ_DONE;
 out:
-	dce_admin_free_message(d, msg);
 	if (ret)
 		d->boot_status |= DCE_FW_ADMIN_SEQ_FAILED;
 	return ret;

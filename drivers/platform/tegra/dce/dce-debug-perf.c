@@ -33,7 +33,7 @@ ssize_t dbg_dce_perf_stats_stats_fops_write(struct file *file,
 		goto out;
 	}
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
 		dce_err(d, "IPC msg allocation failed");
 		goto out;
@@ -63,7 +63,6 @@ ssize_t dbg_dce_perf_stats_stats_fops_write(struct file *file,
 	dce_debug(d, "DCE perf stats collection %s", start_perf ? "started" : "stopped");
 
 out:
-	dce_admin_free_message(d, msg);
 	return count;
 }
 
@@ -246,7 +245,7 @@ static int dbg_dce_perf_stats_stats_fops_show(struct seq_file *s, void *data)
 	struct dce_admin_perf_info *perf;
 	struct tegra_dce *d = (struct tegra_dce *)s->private;
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
 		dce_err(d, "IPC msg allocation failed");
 		goto out;
@@ -267,7 +266,6 @@ static int dbg_dce_perf_stats_stats_fops_show(struct seq_file *s, void *data)
 		dbg_dce_perf_stats_show_xml(s, d, perf);
 
 out:
-	dce_admin_free_message(d, msg);
 	return 0;
 }
 
@@ -421,7 +419,7 @@ ssize_t dbg_dce_perf_events_events_fops_write(struct file *file,
 		goto out;
 	}
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
 		dce_err(d, "IPC msg allocation failed");
 		goto out;
@@ -445,7 +443,6 @@ ssize_t dbg_dce_perf_events_events_fops_write(struct file *file,
 		goto out;
 	}
 out:
-	dce_admin_free_message(d, msg);
 	return count;
 }
 
@@ -494,7 +491,7 @@ static int dbg_dce_perf_events_events_fops_show(struct seq_file *s, void *data)
 	struct dce_admin_event_info *events;
 	struct tegra_dce *d = (struct tegra_dce *)s->private;
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
 		dce_err(d, "IPC msg allocation failed");
 		goto out;
@@ -515,7 +512,6 @@ static int dbg_dce_perf_events_events_fops_show(struct seq_file *s, void *data)
 		dbg_dce_perf_events_show_xml(s, d, events);
 
 out:
-	dce_admin_free_message(d, msg);
 	return 0;
 }
 

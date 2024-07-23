@@ -257,7 +257,7 @@ static ssize_t dbg_dce_admin_echo_fops_write(struct file *file,
 		goto out;
 	}
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
 		dce_err(d, "IPC msg allocation failed");
 		goto out;
@@ -290,9 +290,6 @@ static ssize_t dbg_dce_admin_echo_fops_write(struct file *file,
 	}
 
 out:
-	if (msg)
-		dce_admin_free_message(d, msg);
-
 	return count;
 }
 
@@ -393,7 +390,7 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 		return -EINVAL;
 	}
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
 		dce_err(d, "IPC msg allocation failed");
 		d_dev->ext_test_status = DCE_ERR_CORE_OTHER;
@@ -427,9 +424,6 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 	d_dev->ext_test_status = resp_msg->error;
 
 exit:
-	if (msg)
-		dce_admin_free_message(d, msg);
-
 	return count;
 }
 

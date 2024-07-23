@@ -64,7 +64,7 @@ int dce_pm_handle_sc7_enter_requested_event(struct tegra_dce *d, void *params)
 	int ret = 0;
 	struct dce_ipc_message *msg = NULL;
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
 		dce_err(d, "IPC msg allocation failed");
 		goto out;
@@ -80,7 +80,6 @@ int dce_pm_handle_sc7_enter_requested_event(struct tegra_dce *d, void *params)
 	d->boot_status |= DCE_FW_SUSPENDED;
 
 out:
-	dce_admin_free_message(d, msg);
 	return ret;
 }
 
@@ -130,7 +129,7 @@ int dce_pm_enter_sc7(struct tegra_dce *d)
 		goto out;
 	}
 
-	msg = dce_admin_allocate_message(d);
+	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
 		dce_err(d, "IPC msg allocation failed");
 		ret = -1;
@@ -154,7 +153,6 @@ int dce_pm_enter_sc7(struct tegra_dce *d)
 	}
 
 out:
-	dce_admin_free_message(d, msg);
 	return ret;
 }
 

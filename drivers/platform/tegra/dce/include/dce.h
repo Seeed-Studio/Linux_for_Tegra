@@ -124,6 +124,15 @@ struct dce_firmware {
 };
 
 /**
+ * struct dce_admin - Contains dce admin info
+ *
+ * @admin_msg_buffer: struct dce_ipc_message pointer to hold admin message buffer.
+ */
+struct dce_admin {
+	struct dce_ipc_message *msg_buffer;
+};
+
+/**
  * struct tegra_dce - Primary OS independent tegra dce structure to hold dce
  * cluster's and it's element's runtime info.
  */
@@ -210,7 +219,35 @@ struct tegra_dce {
 	 * @fw_data - Stores info regardign firmware to be used runtime.
 	 */
 	struct dce_firmware *fw_data;
+
+	struct dce_admin admin_data;
 };
+
+/**
+ * dce_set_admin_msg_buffer - Set dce admin msg buffer pointer.
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @admin_msg_buffer : Pointer to admin message buffer.
+ *
+ * Return : void
+ */
+static inline void dce_set_admin_msg_buffer(struct tegra_dce *d,
+	struct dce_ipc_message *admin_msg_buffer)
+{
+	d->admin_data.msg_buffer = admin_msg_buffer;
+}
+
+/**
+ * dce_get_admin_msg_buffer - Get dce admin msg buffer pointer.
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Return : Pointer to admin message buffer.
+ */
+static inline struct dce_ipc_message *dce_get_admin_msg_buffer(struct tegra_dce *d)
+{
+	return d->admin_data.msg_buffer;
+}
 
 /**
  * dce_set_boot_complete - updates the current dce boot complete status.
@@ -324,10 +361,6 @@ int dce_handle_boot_complete_received_event(struct tegra_dce *d, void *params);
 int dce_admin_init(struct tegra_dce *d);
 void dce_admin_deinit(struct tegra_dce *d);
 int dce_start_admin_seq(struct tegra_dce *d);
-struct dce_ipc_message
-		*dce_admin_allocate_message(struct tegra_dce *d);
-void dce_admin_free_message(struct tegra_dce *d,
-				struct dce_ipc_message *msg);
 int dce_admin_send_msg(struct tegra_dce *d,
 		struct dce_ipc_message *msg);
 void dce_admin_ivc_channel_reset(struct tegra_dce *d);
