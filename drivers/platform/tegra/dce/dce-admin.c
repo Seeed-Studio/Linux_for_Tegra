@@ -180,7 +180,7 @@ static void dce_admin_channel_deinit(struct tegra_dce *d)
 	dce_set_admin_msg_buffer(d, NULL);
 
 	for (loop_cnt = 0; loop_cnt < DCE_IPC_CH_KMD_TYPE_MAX; loop_cnt++)
-		dce_ipc_channel_deinit(d, loop_cnt);
+		dce_ipc_channel_deinit_unlocked(d, loop_cnt);
 }
 
 
@@ -198,7 +198,7 @@ static int dce_admin_channel_init(struct tegra_dce *d)
 	struct dce_ipc_message *admin_msg_buffer = NULL;
 
 	for (loop_cnt = 0; loop_cnt < DCE_IPC_CH_KMD_TYPE_MAX; loop_cnt++) {
-		ret = dce_ipc_channel_init(d, loop_cnt);
+		ret = dce_ipc_channel_init_unlocked(d, loop_cnt);
 		if (ret) {
 			dce_err(d, "Channel init failed for type : [%d]",
 				loop_cnt);

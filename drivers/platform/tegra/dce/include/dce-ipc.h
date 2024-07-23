@@ -6,10 +6,10 @@
 #ifndef DCE_IPC_H
 #define DCE_IPC_H
 
-#include <nvidia/conftest.h>
-
 #include <os-lock.h>
-#include <soc/tegra/ivc.h>
+#include <types.h>
+#include <os-ivc.h>
+
 #include <interface/dce-admin-cmds.h>
 #include <interface/dce-core-interface-ipc-types.h>
 #include <interface/dce-ipc-state.h>
@@ -129,7 +129,7 @@ struct dce_ipc_channel {
 	void *ibuff;
 	void *obuff;
 #endif
-	struct tegra_ivc	d_ivc;
+	os_ivc_t d_ivc;
 	struct tegra_dce *d;
 	struct dce_mutex lock;
 	struct dce_ipc_signal signal;
@@ -165,9 +165,9 @@ int dce_ipc_init_region_info(struct tegra_dce *d);
 
 struct tegra_dce *dce_ipc_get_dce_from_ch(u32 ch_type);
 
-int dce_ipc_channel_init(struct tegra_dce *d, u32 ch_type);
+int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type);
 
-void dce_ipc_channel_deinit(struct tegra_dce *d, u32 ch_type);
+void dce_ipc_channel_deinit_unlocked(struct tegra_dce *d, u32 ch_type);
 
 void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type);
 
