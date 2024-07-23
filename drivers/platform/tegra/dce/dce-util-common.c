@@ -666,3 +666,88 @@ int dce_init_work(struct tegra_dce *d,
 
 	return 0;
 }
+
+/**
+ * ipc_allocate_region [Private] - Allocates IPC region
+ *
+ * @d : Pointer to tegra_dce structure.
+ *
+ * Return : 0 if successful
+ */
+static int ipc_allocate_region(struct tegra_dce *d)
+{
+	unsigned long tot_q_sz;
+	unsigned long tot_ivc_q_sz;
+	struct device *dev;
+	struct dce_ipc_region *region;
+
+	dev = dev_from_dce(d);
+	region = &d->d_ipc.region;
+
+	tot_q_sz = ((DCE_ADMIN_CMD_MAX_NFRAMES *
+		     tegra_ivc_align(DCE_ADMIN_CMD_MAX_FSIZE) * 2) +
+		    (DCE_DISPRM_CMD_MAX_NFRAMES	*
+		     tegra_ivc_align(DCE_DISPRM_CMD_MAX_FSIZE) * 2) +
+		    (DCE_ADMIN_CMD_MAX_NFRAMES *
+		     tegra_ivc_align(DCE_ADMIN_CMD_CHAN_FSIZE) * 2) +
+		    (DCE_DISPRM_EVENT_NOTIFY_CMD_MAX_NFRAMES *
+		     tegra_ivc_align(DCE_DISPRM_EVENT_NOTIFY_CMD_MAX_FSIZE) * 2)
+		   );
+
+	tot_ivc_q_sz = tegra_ivc_total_queue_size(tot_q_sz);
+	region->size = dce_get_nxt_pow_of_2(&tot_ivc_q_sz, 32);
+	region->base = dma_alloc_coherent(dev, region->size,
+			&region->iova, GFP_KERNEL | __GFP_ZERO);
+	if (!region->base)
+		return -ENOMEM;
+
+	region->s_offset = 0;
+
+	return 0;
+}
+
+
+/**
+ * ipc_free_region [Private] - Frees up the IPC region
+ *
+ * @d : Pointer to the tegra_dce struct.
+ *
+ * Return : Void
+ */
+static void ipc_free_region(struct tegra_dce *d)
+{
+	struct device *dev;
+	struct dce_ipc_region *region;
+
+	dev = dev_from_dce(d);
+	region = &d->d_ipc.region;
+
+	dma_free_coherent(dev, region->size,
+		(void *)region->base, region->iova);
+
+	region->s_offset = 0;
+}
+
+/**
+ * dce_ipc_init_region_info - Initialize IPC region information.
+ *
+ * @d : Pointer to tegra_dce structure.
+ *
+ * Return : 0 if successful
+ */
+int dce_ipc_init_region_info(struct tegra_dce *d)
+{
+	return ipc_allocate_region(d);
+}
+
+/**
+ * dce_os_ipc_deinit_region_info - De-initialize the IPC region
+ *
+ * @d : Pointer to the tegra_dce struct.
+ *
+ * Return : Void
+ */
+void dce_ipc_deinit_region_info(struct tegra_dce *d)
+{
+	return ipc_free_region(d);
+}
