@@ -1421,6 +1421,66 @@ end:
 	return ret;
 }
 
+static void nvadsp_set_config_hwmboxes(struct nvadsp_os_data *priv)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+
+	if (drv_data->chip_data->adsp_shared_mem_hwmbox != 0) {
+#ifdef CONFIG_TEGRA_ADSP_MULTIPLE_FW
+		int i;
+		for (i = 0; i < MFW_MAX_OTHER_CORES; i++) {
+			if (mfw_hsp_va[i]) {
+				writel((uint32_t)mfw_smem_iova[i],
+					mfw_hsp_va[i] +
+						drv_data->chip_data->
+						adsp_shared_mem_hwmbox
+					);
+			}
+		}
+#endif // CONFIG_TEGRA_ADSP_MULTIPLE_FW
+
+		/* Pass shared memory base */
+		hwmbox_writel(drv_data,
+			(uint32_t)drv_data->shared_adsp_os_data_iova,
+			drv_data->chip_data->adsp_shared_mem_hwmbox);
+	}
+
+	if (priv->cold_start) {
+		if (!is_tegra_hypervisor_mode() &&
+		    (drv_data->chip_data->adsp_os_config_hwmbox != 0)) {
+			/* Set ADSP to do decompression */
+			uint32_t val = (ADSP_CONFIG_DECOMPRESS_EN <<
+						ADSP_CONFIG_DECOMPRESS_SHIFT);
+
+			/* Write decompr enable flag only once */
+			hwmbox_writel(drv_data, val,
+				drv_data->chip_data->adsp_os_config_hwmbox);
+		}
+	}
+
+	if (drv_data->chip_data->adsp_boot_config_hwmbox != 0) {
+		/*
+		 * Pass boot config to ADSP, so firmware can do any
+		 * specifc setings. E.g. firmware may set up AST in
+		 * case booting is in non-secure mode.
+		 * Presently this MBOX register encodes just the
+		 * adsp_os_secload flag. It could be extended in
+		 * future to pass more information.
+		 */
+		hwmbox_writel(drv_data,
+			(uint32_t)drv_data->adsp_os_secload,
+			drv_data->chip_data->adsp_boot_config_hwmbox);
+	}
+
+	if (drv_data->adsp_clk &&
+	    (drv_data->chip_data->adsp_cpu_freq_hwmbox != 0)) {
+		/* Pass CPU frequency */
+		hwmbox_writel(drv_data,
+			(uint32_t)clk_get_rate(drv_data->adsp_clk),
+			drv_data->chip_data->adsp_cpu_freq_hwmbox);
+	}
+}
+
 static int wait_for_adsp_os_load_complete(struct nvadsp_os_data *priv)
 {
 	struct device *dev = &priv->pdev->dev;
@@ -1479,6 +1539,8 @@ static int __nvadsp_os_start(struct nvadsp_os_data *priv)
 		dev_err(dev, "failed to set boot freqs\n");
 		goto end;
 	}
+
+	nvadsp_set_config_hwmboxes(priv);
 
 	dev_dbg(dev, "De-asserting adsp\n");
 	ret = nvadsp_deassert_adsp(drv_data);
@@ -1738,55 +1800,6 @@ static int _nvadsp_os_start(struct nvadsp_handle *nvadsp_handle)
 	if (ret < 0)
 		goto unlock;
 
-	if (drv_data->chip_data->adsp_shared_mem_hwmbox != 0) {
-#ifdef CONFIG_TEGRA_ADSP_MULTIPLE_FW
-		int i;
-		for (i = 0; i < MFW_MAX_OTHER_CORES; i++) {
-			if (mfw_hsp_va[i]) {
-				writel((uint32_t)mfw_smem_iova[i],
-					mfw_hsp_va[i] +
-						drv_data->chip_data->
-						adsp_shared_mem_hwmbox
-					);
-			}
-		}
-#endif // CONFIG_TEGRA_ADSP_MULTIPLE_FW
-
-		hwmbox_writel(drv_data,
-			(uint32_t)drv_data->shared_adsp_os_data_iova,
-			drv_data->chip_data->adsp_shared_mem_hwmbox);
-	}
-
-	if (priv->cold_start) {
-		if (!is_tegra_hypervisor_mode() &&
-			drv_data->chip_data->adsp_os_config_hwmbox != 0) {
-			/* Set ADSP to do decompression */
-			uint32_t val = (ADSP_CONFIG_DECOMPRESS_EN <<
-						ADSP_CONFIG_DECOMPRESS_SHIFT);
-
-			/* Write to HWMBOX5 */
-			hwmbox_writel(drv_data, val,
-				drv_data->chip_data->adsp_os_config_hwmbox);
-		}
-
-		/* Write decompr enable flag only once */
-		priv->cold_start = false;
-	}
-
-	if (drv_data->chip_data->adsp_boot_config_hwmbox != 0) {
-		/*
-		 * Pass boot config to ADSP, so firmware can do any
-		 * specifc setings. E.g. firmware may set up AST in
-		 * case booting is in non-secure mode.
-		 * Presently this MBOX register encodes just the
-		 * adsp_os_secload flag. It could be extended in
-		 * future to pass more information.
-		 */
-		hwmbox_writel(drv_data,
-			(uint32_t)drv_data->adsp_os_secload,
-			drv_data->chip_data->adsp_boot_config_hwmbox);
-	}
-
 	ret = __nvadsp_os_start(priv);
 	if (ret) {
 		priv->os_running = drv_data->adsp_os_running = false;
@@ -1800,6 +1813,7 @@ static int _nvadsp_os_start(struct nvadsp_handle *nvadsp_handle)
 		goto unlock;
 
 	}
+	priv->cold_start = false;
 	priv->os_running = drv_data->adsp_os_running = true;
 	priv->num_start++;
 #if defined(CONFIG_TEGRA_ADSP_FILEIO)

@@ -263,7 +263,6 @@ static void nvadsp_parse_clk_entries(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	u32 val32 = 0;
 
-
 	/* Optional properties, should come from platform dt files */
 	if (of_property_read_u32(dev->of_node, "nvidia,adsp_freq", &val32))
 		dev_dbg(dev, "adsp_freq dt not found\n");
@@ -281,6 +280,10 @@ static void nvadsp_parse_clk_entries(struct platform_device *pdev)
 		dev_dbg(dev, "ape_emc_freq dt not found\n");
 	else
 		drv_data->ape_emc_freq = val32;
+
+	drv_data->adsp_clk = devm_clk_get(dev, "cpu_clock");
+	if (IS_ERR_OR_NULL(drv_data->adsp_clk))
+		drv_data->adsp_clk = NULL;
 }
 
 static int nvadsp_parse_dt(struct platform_device *pdev)

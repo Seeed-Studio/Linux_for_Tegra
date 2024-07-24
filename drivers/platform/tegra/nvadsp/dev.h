@@ -142,6 +142,7 @@ struct nvadsp_chipdata {
 	u32			adsp_shared_mem_hwmbox;
 	u32			adsp_os_config_hwmbox;
 	u32			adsp_boot_config_hwmbox;
+	u32			adsp_cpu_freq_hwmbox;
 	acast_init		acast_init;
 	dev_init		dev_init;
 	os_init			os_init;
