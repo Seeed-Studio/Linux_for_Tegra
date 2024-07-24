@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <linux/reset.h>
 #include "dev.h"
 
 /* Defining offsets */
@@ -98,31 +99,46 @@ static int __set_boot_freqs_t264(struct nvadsp_drv_data *d)
 
 static int __assert_t264_aon(struct nvadsp_drv_data *d)
 {
+	struct platform_device *pdev = d->pdev;
+	struct device *dev = &pdev->dev;
 	void __iomem *cpu_config_base;
 	u32 cpu_config;
-
-	/* TBD: CPU assert */
+	int ret = 0;
 
 	/* Assert RUNSTALL */
 	cpu_config_base = d->base_regs[AO_MISC];
 	cpu_config = AO_MISC_CPU_SET_RUNSTALL_0;
 	writel(cpu_config, cpu_config_base + AO_MISC_CPU_RUNSTALL_0);
 
+	/* CAR assert */
+	ret = reset_control_assert(d->adspall_rst);
+	if (ret)
+		dev_err(dev, "failed to assert aon_cpu: %d\n", ret);
+
 	return 0;
 }
 
 static int __deassert_t264_aon(struct nvadsp_drv_data *d)
 {
+	struct platform_device *pdev = d->pdev;
+	struct device *dev = &pdev->dev;
 	void __iomem *cpu_config_base;
 	u32 cpu_config;
+	int ret = 0;
 
-	/* TBD: CPU deassert */
+	/* CAR deassert */
+	ret = reset_control_deassert(d->adspall_rst);
+	if (ret) {
+		dev_err(dev, "failed to deassert aon_cpu: %d\n", ret);
+		goto end;
+	}
 
 	/* Lift RUNSTALL */
 	cpu_config_base = d->base_regs[AO_MISC];
 	cpu_config = AO_MISC_CPU_CLEAR_RUNSTALL_0;
 	writel(cpu_config, cpu_config_base + AO_MISC_CPU_RUNSTALL_0);
 
+end:
 	return 0;
 }
 
@@ -172,11 +188,11 @@ static bool __check_wfi_status_t264_aon(struct nvadsp_drv_data *d)
 static int nvaon_dev_t264_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
 	int ret = 0;
 
 	d->assert_adsp   = __assert_t264_aon;
 	d->deassert_adsp = __deassert_t264_aon;
-	d->adspall_rst   = NULL; //TBD
 
 	d->set_boot_vec    = __set_boot_vec_t264;
 	d->set_boot_freqs  = __set_boot_freqs_t264;
@@ -184,6 +200,12 @@ static int nvaon_dev_t264_init(struct platform_device *pdev)
 	d->map_hwmbox_interrupts = __map_hwmbox_interrupts;
 	d->check_wfi_status = __check_wfi_status_t264_aon;
 	d->dump_core_state  = __dump_core_state_t264_aon;
+
+	d->adspall_rst = devm_reset_control_get(dev, "aon_cpu");
+	if (IS_ERR(d->adspall_rst)) {
+		dev_err(dev, "cannot get aon_cpu reset\n");
+		ret = PTR_ERR(d->adspall_rst);
+	}
 
 	return ret;
 }
