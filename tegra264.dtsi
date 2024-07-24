@@ -3567,6 +3567,8 @@
 			aon: aon@c040000 {
 				compatible = "nvidia,tegra264-aon";
 				nvidia,adsp_os_secload;
+				resets = <&bpmp TEGRA264_RESET_AON_CPU_ALL>;
+				reset-names = "aon_cpu";
 				clocks = <&bpmp TEGRA264_CLK_AON_CPU>;
 				clock-names = "cpu_clock";
 				reg = <0x0 0xc040000 0x0 0xa0000>, /* Dummy entry for AMC */
