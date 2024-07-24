@@ -4,6 +4,7 @@
 
 #include "tegra264-p3834-0008.dtsi"
 #include "tegra264-p3971-0089.dtsi"
+#include "tegra264-p3971-xxxx-p3834-xxxx.dtsi"
 
 / {
 	model = "NVIDIA Jetson Thor Developer Kit";
@@ -11,26 +12,6 @@
 
 	ufshci@a80b8d0000 {
 		status = "okay";
-	};
-	
-	pwm-fan {
-		cooling-levels = <66 215 255>;
-	};
-
-	thermal-zones {
-		tj-thermal {
-			cooling-maps {
-				map-active-0 {
-					cooling-device = <&soc_fan 0 1>;
-					trip = <&tj_trip_active0>;
-				};
-
-				map-active-1 {
-					cooling-device = <&soc_fan 1 2>;
-					trip = <&tj_trip_active1>;
-				};
-			};
-		};
 	};
 };
 
