@@ -1190,37 +1190,12 @@ static int cdi_mgr_open(struct inode *inode, struct file *file)
 
 static int cdi_mgr_release(struct inode *inode, struct file *file)
 {
-	u8 val;
 	int i = 0;
 	struct cdi_mgr_priv *cdi_mgr = file->private_data;
-
-	if (cdi_mgr->tca9539.enable) {
-		if (down_timeout(&tca9539_sem,
-			usecs_to_jiffies(TIMEOUT_US)) != 0)
-			dev_err(cdi_mgr->dev,
-				"%s: failed to wait for the semaphore\n",
-				__func__);
-		if (cdi_mgr->cim_ver == 1U) { /* P3714 A01 */
-			if (tca9539_rd(cdi_mgr, 0x02, &val) != 0)
-				return -EFAULT;
-			val &= ~(0x10 << cdi_mgr->tca9539.power_port);
-			if (tca9539_wr(cdi_mgr, 0x02, val) != 0)
-				return -EFAULT;
-		} else if (cdi_mgr->cim_ver == 2U) { /* P3714 A02 */
-			if (tca9539_rd(cdi_mgr, 0x03, &val) != 0)
-				return -EFAULT;
-			val &= ~(0x1 << cdi_mgr->tca9539.power_port);
-			if (tca9539_wr(cdi_mgr, 0x03, val) != 0)
-				return -EFAULT;
-		}
-		up(&tca9539_sem);
-	}
 
 	if (cdi_mgr->pwm)
 		if (pwm_is_enabled(cdi_mgr->pwm))
 			pwm_disable(cdi_mgr->pwm);
-
-	cdi_mgr_mcdi_ctrl(cdi_mgr, false);
 
 	/* disable irq if irq is in use, when device is closed */
 	(void)cdi_mgr_gpio_intr_reset(cdi_mgr);
@@ -1233,10 +1208,6 @@ static int cdi_mgr_release(struct inode *inode, struct file *file)
 		cdi_mgr->stop_err_irq_wait = true;
 		wake_up_interruptible(&cdi_mgr->gpio_events.wait);
 	}
-
-	/* if runtime_pwrctrl_off is not true, power off all here */
-	if (!cdi_mgr->pdata->runtime_pwrctrl_off)
-		cdi_mgr_power_down(cdi_mgr, 0xffffffff);
 
 	/* clear sinfo to prevent report error after handler is closed */
 	memset(&cdi_mgr->sinfo, 0, sizeof(struct kernel_siginfo));
