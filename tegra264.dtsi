@@ -6319,7 +6319,7 @@
 			dma-coherent;
 		};
 
-		ethernet@a808a10000 {
+		mgbe0: ethernet@a808a10000 {
 			compatible = "nvidia,tegra264-mgbe";
 			status = "disabled";
 
@@ -8967,7 +8967,7 @@
 			nvidia,frame-size = <8192>;
 			nvidia,ivc-timeout = <50>;
 			nvidia,test-timeout = <5000>;
-			nvidia,mem-map = <&tegra_rce &vi0 &isp &vi1 &isp1>;
+			nvidia,mem-map = <&tegra_rce &vi0 &isp &vi1 &isp1 &mgbe0>;
 			/* Memory bandwidth in kB/s during tests */
 			nvidia,test-bw = <2400000>;
 			status = "disabled";
