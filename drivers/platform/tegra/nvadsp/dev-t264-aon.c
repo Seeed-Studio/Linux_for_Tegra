@@ -203,6 +203,7 @@ struct nvadsp_chipdata tegra264_aon_chipdata = {
 	},
 	.adsp_shared_mem_hwmbox    = 0x08048, /* HWMBOX1 TYPE1_DATA0 */
 	.adsp_boot_config_hwmbox   = 0x0804C, /* HWMBOX1 TYPE1_DATA1 */
+	.adsp_cpu_freq_hwmbox      = 0x08050, /* HWMBOX1 TYPE1_DATA2 */
 	.dev_init = nvaon_dev_t264_init,
 	.os_init = nvaon_os_t264_init,
 #ifdef CONFIG_PM
