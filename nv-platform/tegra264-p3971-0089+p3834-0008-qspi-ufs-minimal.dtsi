@@ -15,10 +15,6 @@
 			status = "disabled";
 		};
 
-		tachometer@810c5c0000 {
-			status = "disabled";
-		};
-
 		spi@810c440000 {
 			status = "disabled";
 		};
