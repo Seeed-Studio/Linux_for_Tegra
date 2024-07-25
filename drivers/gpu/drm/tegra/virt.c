@@ -15,6 +15,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/seq_file.h>
 #include <linux/version.h>
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
 
 #include <soc/tegra/bpmp.h>
 #include <soc/tegra/virt/hv-ivc.h>
@@ -30,10 +32,15 @@
 #define TEGRA_VHOST_CMD_SUSPEND			2
 #define TEGRA_VHOST_CMD_RESUME			3
 #define TEGRA_VHOST_CMD_GET_CONNECTION_ID	4
+#define TEGRA_VHOST_CMD_POWER_MODE_CHANGE	5
 
 struct tegra_vhost_connect_params {
 	u32 module;
 	u64 connection_id;
+};
+
+struct tegra_vhost_power_mode_change_params {
+	u32 ip_op_mode;
 };
 
 struct tegra_vhost_cmd_msg {
@@ -41,15 +48,17 @@ struct tegra_vhost_cmd_msg {
 	int ret;
 	u64 connection_id;
 	struct tegra_vhost_connect_params connect;
+	struct tegra_vhost_power_mode_change_params pw_mode;
 };
 
 struct virt_engine {
 	struct device *dev;
 	int connection_id;
-
 	struct tegra_drm_client client;
-
 	struct dentry *actmon_debugfs_dir;
+	struct kobject kobj;
+	struct kobj_attribute powermode_attr;
+	u32 powermode;
 	const char *name;
 	unsigned long rate;
 };
@@ -260,6 +269,16 @@ static int virt_engine_resume(struct device *dev)
 	msg.cmd = TEGRA_VHOST_CMD_RESUME;
 	msg.connection_id = virt->connection_id;
 
+	return virt_engine_transfer(&msg, sizeof(msg));
+}
+
+static int virt_engine_power_mode_change(struct virt_engine *virt, u32 ip_op_mode)
+{
+	struct tegra_vhost_cmd_msg msg = { 0 };
+	struct tegra_vhost_power_mode_change_params *p = &msg.pw_mode;
+
+	msg.cmd = TEGRA_VHOST_CMD_POWER_MODE_CHANGE;
+	p->ip_op_mode = ip_op_mode;
 	return virt_engine_transfer(&msg, sizeof(msg));
 }
 
@@ -530,6 +549,65 @@ static void virt_engine_cleanup_actmon_debugfs(struct virt_engine *virt)
 	debugfs_remove_recursive(virt->actmon_debugfs_dir);
 }
 
+static ssize_t virt_engine_powermode_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	struct virt_engine *virt = container_of(kobj, struct virt_engine, kobj);
+	return sprintf(buf, "%d\n", virt->powermode);
+}
+
+static ssize_t virt_engine_powermode_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	struct virt_engine *virt;
+	int ret;
+
+	virt = container_of(kobj, struct virt_engine, kobj);
+	ret = kstrtoint(buf, 0, &virt->powermode);
+	if (ret < 0)
+		return ret;
+
+	/* Send Power Mode transition command to NvHost_Server VM */
+	virt_engine_power_mode_change(virt, virt->powermode);
+	return count;
+}
+
+static struct kobj_type ktype_powermode = {
+	.sysfs_ops = &kobj_sysfs_ops,
+};
+
+static int virt_engine_sysfs_init(struct virt_engine *virt)
+{
+	int ret;
+
+	if (virt == NULL)
+		return -EINVAL;
+
+	/* Create sysfs file */
+	virt->powermode_attr.attr.name = "mode";
+	virt->powermode_attr.attr.mode = 0644;
+	virt->powermode_attr.show = virt_engine_powermode_show;
+	virt->powermode_attr.store = virt_engine_powermode_store;
+	sysfs_attr_init(&virt->powermode_attr.attr);
+
+	/* Initialize kobject */
+	ret = kobject_init_and_add(&virt->kobj, &ktype_powermode, &virt->dev->kobj, "powerprofile");
+	if (ret) {
+		kobject_put(&virt->kobj);
+		return ret;
+	}
+
+	ret = sysfs_create_file(&virt->kobj, &virt->powermode_attr.attr);
+	if (ret)
+		kobject_put(&virt->kobj);
+
+	return ret;
+}
+
+static void virt_engine_sysfs_exit(struct virt_engine *virt)
+{
+	sysfs_remove_file(&virt->kobj, &virt->powermode_attr.attr);
+	kobject_put(&virt->kobj);
+}
+
 static const struct of_device_id tegra_virt_engine_of_match[] = {
 	{ .compatible = "nvidia,tegra234-host1x-virtual-engine" },
 	{ },
@@ -700,6 +778,7 @@ static int virt_engine_probe(struct platform_device *pdev)
 	}
 
 	virt_engine_setup_actmon_debugfs(virt);
+	virt_engine_sysfs_init(virt);
 
 #ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 	hwpm_ip_index = virt_engine_get_ip_index(pdev->name);
@@ -747,6 +826,7 @@ static int virt_engine_remove(struct platform_device *pdev)
 	}
 #endif
 	virt_engine_cleanup_actmon_debugfs(virt_engine);
+	virt_engine_sysfs_exit(virt_engine);
 	virt_engine_cleanup();
 
 	host1x_client_unregister(&virt_engine->client.base);
