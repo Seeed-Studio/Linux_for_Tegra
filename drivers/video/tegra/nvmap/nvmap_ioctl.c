@@ -896,7 +896,7 @@ int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg)
 int nvmap_ioctl_get_handle_parameters(struct file *filp, void __user *arg)
 {
 	struct nvmap_client *client = filp->private_data;
-	struct nvmap_handle_parameters op;
+	struct nvmap_handle_parameters op = {0};
 	struct nvmap_handle *handle;
 	bool is_ro = false;
 
@@ -904,8 +904,26 @@ int nvmap_ioctl_get_handle_parameters(struct file *filp, void __user *arg)
 		return -EFAULT;
 
 	handle = nvmap_handle_get_from_id(client, op.handle);
-	if (IS_ERR_OR_NULL(handle))
+	if (IS_ERR_OR_NULL(handle)) {
+#if defined(NVMAP_CONFIG_ENABLE_FOREIGN_BUFFER) && defined(NVMAP_CONFIG_HANDLE_AS_ID)
+		struct dma_buf *dmabuf;
+
+		dmabuf = dma_buf_get((int)op.handle);
+		if (!IS_ERR_OR_NULL(dmabuf)) {
+			/* Foreign buffer */
+			op.size = dmabuf->size;
+			op.align = PAGE_SIZE;
+			if (copy_to_user(arg, &op, sizeof(op))) {
+				pr_err("Failed to copy to userspace\n");
+				dma_buf_put(dmabuf);
+				goto exit;
+			}
+			dma_buf_put(dmabuf);
+			return 0;
+		}
+#endif /* NVMAP_CONFIG_ENABLE_FOREIGN_BUFFER && NVMAP_CONFIG_HANDLE_AS_ID */
 		goto exit;
+	}
 
 	if (!handle->alloc) {
 		op.heap = 0;
@@ -1129,6 +1147,19 @@ int nvmap_ioctl_dup_handle(struct file *filp, void __user *arg)
 
 	if (client == NULL)
 		return -ENODEV;
+
+#if defined(NVMAP_CONFIG_ENABLE_FOREIGN_BUFFER) && defined(NVMAP_CONFIG_HANDLE_AS_ID)
+	dmabuf = dma_buf_get(op.handle);
+	/*
+	 * Foreign fd should return unique error number to userspace NvRmMem
+	 * function for handle duplication, so that userspace can use dup system
+	 * call to duplicate the fd.
+	 */
+	if (!IS_ERR_OR_NULL(dmabuf)) {
+		dma_buf_put(dmabuf);
+		return -EOPNOTSUPP;
+	}
+#endif /* NVMAP_CONFIG_ENABLE_FOREIGN_BUFFER && NVMAP_CONFIG_HANDLE_AS_ID */
 
 	if (is_nvmap_id_ro(client, op.handle, &is_ro) != 0) {
 		pr_err("Handle ID RO check failed\n");
