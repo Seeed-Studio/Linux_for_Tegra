@@ -7562,8 +7562,8 @@ compile_test() {
             #
             CODE="
             #include <linux/pci-epc.h>
-            int conftest_pci_epc_features_struct_has_core_init_notifier(void) {
-                return offsetof(struct pci_epc_features, core_init_notifier);
+            unsigned int conftest(struct pci_epc_features *epf) {
+                return epf->core_init_notifier;
             }"
 
             compile_check_conftest "$CODE" "NV_PCI_EPC_FEATURES_STRUCT_HAS_CORE_INIT_NOTIFIER" "" "types"
