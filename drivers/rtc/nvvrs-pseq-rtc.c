@@ -2,8 +2,10 @@
 /*
  * RTC driver for NVIDIA Voltage Regulator Power Sequencer
  *
- * Copyright (C) 2022-2023 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/i2c.h>
 #include <linux/init.h>
@@ -520,13 +522,25 @@ static const struct platform_device_id nvvrs_rtc_id[] = {
 };
 MODULE_DEVICE_TABLE(platform, nvvrs_rtc_id);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void nvvrs_rtc_remove_wrapper(struct platform_device *pdev)
+{
+	nvvrs_rtc_remove(pdev);
+}
+#else
+static inline int nvvrs_rtc_remove_wrapper(struct platform_device *pdev)
+{
+	return nvvrs_rtc_remove(pdev);
+}
+#endif
+
 static struct platform_driver nvvrs_rtc_driver = {
 	.driver		= {
 		.name   = "nvvrs-pseq-rtc",
 		.pm     = &nvvrs_rtc_pm_ops,
 	},
 	.probe		= nvvrs_rtc_probe,
-	.remove		= nvvrs_rtc_remove,
+	.remove	= nvvrs_rtc_remove_wrapper,
 	.shutdown	= nvvrs_rtc_shutdown,
 	.id_table       = nvvrs_rtc_id,
 };

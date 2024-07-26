@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
@@ -2119,9 +2119,21 @@ static const struct of_device_id capture_isp_of_match[] = {
 	{ },
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void capture_isp_remove_wrapper(struct platform_device *pdev)
+{
+	capture_isp_remove(pdev);
+}
+#else
+static inline int capture_isp_remove_wrapper(struct platform_device *pdev)
+{
+	return capture_isp_remove(pdev);
+}
+#endif
+
 static struct platform_driver capture_isp_driver = {
 	.probe = capture_isp_probe,
-	.remove = capture_isp_remove,
+	.remove = capture_isp_remove_wrapper,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "tegra-camrtc-capture-isp",

@@ -15,6 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <nvidia/conftest.h>
+
 #include <dce.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -318,6 +320,18 @@ static const struct dev_pm_ops dce_pm_ops = {
 };
 #endif
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_dce_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_dce_remove(pdev);
+}
+#else
+static inline int tegra_dce_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_dce_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_dce_driver = {
 	.driver = {
 		.name   = "tegra-dce",
@@ -328,7 +342,7 @@ static struct platform_driver tegra_dce_driver = {
 #endif
 	},
 	.probe = tegra_dce_probe,
-	.remove = tegra_dce_remove,
+	.remove = tegra_dce_remove_wrapper,
 };
 module_platform_driver(tegra_dce_driver);
 

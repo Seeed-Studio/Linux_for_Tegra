@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/device.h>
 #include <linux/mailbox_client.h>
@@ -112,9 +114,21 @@ static const struct of_device_id tegra_aon_ivc_echo_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_aon_ivc_echo_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_aon_ivc_echo_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_aon_ivc_echo_remove(pdev);
+}
+#else
+static inline int tegra_aon_ivc_echo_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_aon_ivc_echo_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_aon_ivc_echo_driver = {
 	.probe = tegra_aon_ivc_echo_probe,
-	.remove = tegra_aon_ivc_echo_remove,
+	.remove = tegra_aon_ivc_echo_remove_wrapper,
 	.driver = {
 		.name = "tegra-aon-ivc-echo",
 		.of_match_table = tegra_aon_ivc_echo_match,

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2013, NVIDIA Corporation.
+ * SPDX-FileCopyrightText: Copyright (c) 2012-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -392,6 +394,18 @@ static const struct dev_pm_ops tegra_gr2d_pm = {
 				pm_runtime_force_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void gr2d_remove_wrapper(struct platform_device *pdev)
+{
+	gr2d_remove(pdev);
+}
+#else
+static inline int gr2d_remove_wrapper(struct platform_device *pdev)
+{
+	return gr2d_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_gr2d_driver = {
 	.driver = {
 		.name = "tegra-gr2d",
@@ -399,5 +413,5 @@ struct platform_driver tegra_gr2d_driver = {
 		.pm = &tegra_gr2d_pm,
 	},
 	.probe = gr2d_probe,
-	.remove = gr2d_remove,
+	.remove = gr2d_remove_wrapper,
 };

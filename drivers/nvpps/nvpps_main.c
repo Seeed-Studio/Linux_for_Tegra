@@ -1189,6 +1189,18 @@ MODULE_DEVICE_TABLE(of, nvpps_of_table);
 #endif /* !NVPPS_NO_DT */
 
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void nvpps_remove_wrapper(struct platform_device *pdev)
+{
+	nvpps_remove(pdev);
+}
+#else
+static inline int nvpps_remove_wrapper(struct platform_device *pdev)
+{
+	return nvpps_remove(pdev);
+}
+#endif
+
 static struct platform_driver nvpps_plat_driver = {
 	.driver = {
 		.name = KBUILD_MODNAME,
@@ -1198,7 +1210,7 @@ static struct platform_driver nvpps_plat_driver = {
 #endif /* !NVPPS_NO_DT */
 	},
 	.probe = nvpps_probe,
-	.remove = nvpps_remove,
+	.remove = nvpps_remove_wrapper,
 #ifdef CONFIG_PM
 	.suspend = nvpps_suspend,
 	.resume = nvpps_resume,

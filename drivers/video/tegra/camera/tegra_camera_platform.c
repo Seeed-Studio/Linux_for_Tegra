@@ -1,7 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (C) 2015-2023 NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/fs.h>
 #include <linux/platform_device.h>
@@ -796,9 +798,21 @@ static int tegra_camera_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_camera_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_camera_remove(pdev);
+}
+#else
+static inline int tegra_camera_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_camera_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_camera_driver = {
 	.probe = tegra_camera_probe,
-	.remove = tegra_camera_remove,
+	.remove = tegra_camera_remove_wrapper,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "tegra_camera_platform",

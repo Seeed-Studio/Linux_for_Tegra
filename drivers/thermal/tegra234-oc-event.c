@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <dt-bindings/thermal/tegra234-soctherm.h>
 #include <linux/err.h>
@@ -207,9 +209,21 @@ static int tegra234_oc_event_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra234_oc_event_remove_wrapper(struct platform_device *pdev)
+{
+	tegra234_oc_event_remove(pdev);
+}
+#else
+static inline int tegra234_oc_event_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra234_oc_event_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra234_oc_event_driver = {
 	.probe = tegra234_oc_event_probe,
-	.remove = tegra234_oc_event_remove,
+	.remove = tegra234_oc_event_remove_wrapper,
 	.driver = {
 		.name = "tegra234-oc-event",
 		.of_match_table = of_tegra234_oc_event_match,

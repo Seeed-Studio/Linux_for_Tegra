@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2013 NVIDIA Corporation
+ * SPDX-FileCopyrightText: Copyright (c) 2013-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -1692,11 +1692,23 @@ static const struct of_device_id tegra_dsi_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_dsi_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_dsi_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_dsi_remove(pdev);
+}
+#else
+static inline int tegra_dsi_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_dsi_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_dsi_driver = {
 	.driver = {
 		.name = "tegra-dsi",
 		.of_match_table = tegra_dsi_of_match,
 	},
 	.probe = tegra_dsi_probe,
-	.remove = tegra_dsi_remove,
+	.remove = tegra_dsi_remove_wrapper,
 };

@@ -2007,6 +2007,18 @@ static int mttcan_resume(struct platform_device *pdev)
 }
 #endif
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void mttcan_remove_wrapper(struct platform_device *pdev)
+{
+	mttcan_remove(pdev);
+}
+#else
+static inline int mttcan_remove_wrapper(struct platform_device *pdev)
+{
+	return mttcan_remove(pdev);
+}
+#endif
+
 static struct platform_driver mttcan_plat_driver = {
 	.driver = {
 		   .name = KBUILD_MODNAME,
@@ -2014,7 +2026,7 @@ static struct platform_driver mttcan_plat_driver = {
 		   .of_match_table = of_match_ptr(mttcan_of_table),
 		   },
 	.probe = mttcan_probe,
-	.remove = mttcan_remove,
+	.remove = mttcan_remove_wrapper,
 #ifdef CONFIG_PM
 	.suspend = mttcan_suspend,
 	.resume = mttcan_resume,

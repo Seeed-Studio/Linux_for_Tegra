@@ -5,6 +5,8 @@
  * Tegra TSEC Module Support
  */
 
+#include <nvidia/conftest.h>
+
 #include "tsec_linux.h"
 #include "tsec.h"
 #include "tsec_boot.h"
@@ -457,9 +459,21 @@ static int tsec_remove(struct platform_device *dev)
 	return tsec_poweroff(&dev->dev);
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tsec_remove_wrapper(struct platform_device *pdev)
+{
+	tsec_remove(pdev);
+}
+#else
+static inline int tsec_remove_wrapper(struct platform_device *pdev)
+{
+	return tsec_remove(pdev);
+}
+#endif
+
 static struct platform_driver tsec_driver = {
 	.probe = tsec_probe,
-	.remove = tsec_remove,
+	.remove = tsec_remove_wrapper,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "tsec",

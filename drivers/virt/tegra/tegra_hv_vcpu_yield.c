@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #define pr_fmt(fmt) "%s:%s(): " fmt, KBUILD_MODNAME, __func__
 
@@ -458,6 +458,18 @@ static const struct of_device_id tegra_hv_vcpu_yield_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_hv_vcpu_yield_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_hv_vcpu_yield_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_hv_vcpu_yield_remove(pdev);
+}
+#else
+static inline int tegra_hv_vcpu_yield_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_hv_vcpu_yield_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_hv_vcpu_yield_driver = {
 	.driver = {
 		.name = DRV_NAME,
@@ -465,7 +477,7 @@ static struct platform_driver tegra_hv_vcpu_yield_driver = {
 		.of_match_table = of_match_ptr(tegra_hv_vcpu_yield_match),
 	},
 	.probe = tegra_hv_vcpu_yield_probe,
-	.remove = tegra_hv_vcpu_yield_remove,
+	.remove = tegra_hv_vcpu_yield_remove_wrapper,
 };
 module_platform_driver(tegra_hv_vcpu_yield_driver);
 

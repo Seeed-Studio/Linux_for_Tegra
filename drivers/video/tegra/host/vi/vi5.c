@@ -4,6 +4,8 @@
  * VI5 driver
  */
 
+#include <nvidia/conftest.h>
+
 #include <asm/ioctls.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
@@ -416,9 +418,21 @@ const struct dev_pm_ops vi_pm_ops = {
 				pm_runtime_force_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void vi5_remove_wrapper(struct platform_device *pdev)
+{
+	vi5_remove(pdev);
+}
+#else
+static inline int vi5_remove_wrapper(struct platform_device *pdev)
+{
+	return vi5_remove(pdev);
+}
+#endif
+
 static struct platform_driver vi5_driver = {
 	.probe = vi5_probe,
-	.remove = vi5_remove,
+	.remove = vi5_remove_wrapper,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "tegra194-vi5",

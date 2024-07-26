@@ -566,6 +566,18 @@ static const struct of_device_id pwm_tegra_tach_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, pwm_tegra_tach_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void pwm_tegra_tach_remove_wrapper(struct platform_device *pdev)
+{
+	pwm_tegra_tach_remove(pdev);
+}
+#else
+static inline int pwm_tegra_tach_remove_wrapper(struct platform_device *pdev)
+{
+	return pwm_tegra_tach_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_tach_driver = {
 	.driver = {
 		.name = "pwm-tegra-tachometer",
@@ -573,7 +585,7 @@ static struct platform_driver tegra_tach_driver = {
 		.pm = &pwm_tegra_tach_pm_ops,
 	},
 	.probe = pwm_tegra_tach_probe,
-	.remove = pwm_tegra_tach_remove,
+	.remove = pwm_tegra_tach_remove_wrapper,
 };
 
 module_platform_driver(tegra_tach_driver);

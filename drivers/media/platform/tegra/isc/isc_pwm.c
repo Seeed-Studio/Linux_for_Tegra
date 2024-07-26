@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -253,6 +253,18 @@ static const struct dev_pm_ops isc_pwm_pm_ops = {
 	.runtime_resume = isc_pwm_resume,
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void isc_pwm_remove_wrapper(struct platform_device *pdev)
+{
+	isc_pwm_remove(pdev);
+}
+#else
+static inline int isc_pwm_remove_wrapper(struct platform_device *pdev)
+{
+	return isc_pwm_remove(pdev);
+}
+#endif
+
 static struct platform_driver isc_pwm_driver = {
 	.driver = {
 		.name = "isc-pwm",
@@ -261,7 +273,7 @@ static struct platform_driver isc_pwm_driver = {
 		.pm = &isc_pwm_pm_ops,
 	},
 	.probe = isc_pwm_probe,
-	.remove = isc_pwm_remove,
+	.remove = isc_pwm_remove_wrapper,
 };
 
 module_platform_driver(isc_pwm_driver);

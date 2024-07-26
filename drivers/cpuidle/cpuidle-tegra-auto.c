@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/cpu_cooling.h>
 #include <linux/cpuidle.h>
@@ -227,9 +229,21 @@ static const struct of_device_id tegra_auto_cpuidle_of[] = {
 	{ },
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_auto_cpuidle_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_auto_cpuidle_remove(pdev);
+}
+#else
+static inline int tegra_auto_cpuidle_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_auto_cpuidle_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_auto_cpuidle_driver __refdata = {
 	.probe	= tegra_auto_cpuidle_probe,
-	.remove	= tegra_auto_cpuidle_remove,
+	.remove	= tegra_auto_cpuidle_remove_wrapper,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "cpuidle_tegra_auto",

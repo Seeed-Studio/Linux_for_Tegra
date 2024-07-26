@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (C) 2023 NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/debugfs.h>
 #include <linux/fs.h>
@@ -828,9 +830,21 @@ static const struct of_device_id tegra_wdt_t18x_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_wdt_t18x_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_wdt_t18x_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_wdt_t18x_remove(pdev);
+}
+#else
+static inline int tegra_wdt_t18x_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_wdt_t18x_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_wdt_t18x_driver = {
 	.probe		= tegra_wdt_t18x_probe,
-	.remove		= tegra_wdt_t18x_remove,
+	.remove		= tegra_wdt_t18x_remove_wrapper,
 	.shutdown	= tegra_wdt_t18x_shutdown,
 	.driver		= {
 		.owner	= THIS_MODULE,

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
-
-#include <nvidia/conftest.h>
+// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -2213,9 +2211,21 @@ static const struct dev_pm_ops ufs_tegra_pm_ops = {
 	SET_RUNTIME_PM_OPS(ufshcd_runtime_suspend, ufshcd_runtime_resume, NULL)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void ufs_tegra_remove_wrapper(struct platform_device *pdev)
+{
+	ufs_tegra_remove(pdev);
+}
+#else
+static inline int ufs_tegra_remove_wrapper(struct platform_device *pdev)
+{
+	return ufs_tegra_remove(pdev);
+}
+#endif
+
 static struct platform_driver ufs_tegra_platform = {
 	.probe = ufs_tegra_probe,
-	.remove = ufs_tegra_remove,
+	.remove = ufs_tegra_remove_wrapper,
 	.driver = {
 		.name = "ufs_tegra",
 		.pm   = &ufs_tegra_pm_ops,

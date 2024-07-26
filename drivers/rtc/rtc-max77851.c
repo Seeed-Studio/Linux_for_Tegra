@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * RTC driver for Maxim MAX77851
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/i2c.h>
 #include <linux/slab.h>
@@ -874,6 +876,18 @@ static const struct platform_device_id rtc_id[] = {
 };
 MODULE_DEVICE_TABLE(platform, rtc_id);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void max77851_rtc_remove_wrapper(struct platform_device *pdev)
+{
+	max77851_rtc_remove(pdev);
+}
+#else
+static inline int max77851_rtc_remove_wrapper(struct platform_device *pdev)
+{
+	return max77851_rtc_remove(pdev);
+}
+#endif
+
 static struct platform_driver max77851_rtc_driver = {
 	.driver		= {
 		.name	= "max77851-rtc",
@@ -881,7 +895,7 @@ static struct platform_driver max77851_rtc_driver = {
 	},
 	.probe		= max77851_rtc_probe,
 	.shutdown	= max77851_rtc_shutdown,
-	.remove		= max77851_rtc_remove,
+	.remove		= max77851_rtc_remove_wrapper,
 	.id_table	= rtc_id,
 };
 

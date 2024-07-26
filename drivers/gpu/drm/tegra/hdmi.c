@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012 Avionic Design GmbH
- * Copyright (C) 2012 NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2012-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -1909,11 +1909,23 @@ static int tegra_hdmi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_hdmi_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_hdmi_remove(pdev);
+}
+#else
+static inline int tegra_hdmi_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_hdmi_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_hdmi_driver = {
 	.driver = {
 		.name = "tegra-hdmi",
 		.of_match_table = tegra_hdmi_of_match,
 	},
 	.probe = tegra_hdmi_probe,
-	.remove = tegra_hdmi_remove,
+	.remove = tegra_hdmi_remove_wrapper,
 };

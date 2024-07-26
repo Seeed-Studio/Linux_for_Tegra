@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/acpi.h>
 #include <linux/module.h>
@@ -295,9 +297,21 @@ static const struct acpi_device_id tegra23x_psc_acpi_match[] = {
 MODULE_DEVICE_TABLE(acpi, tegra23x_psc_acpi_match);
 #endif
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra234_psc_remove_wrapper(struct platform_device *pdev)
+{
+	tegra234_psc_remove(pdev);
+}
+#else
+static inline int tegra234_psc_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra234_psc_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra234_psc_driver = {
 	.probe          = tegra234_psc_probe,
-	.remove         = tegra234_psc_remove,
+	.remove		= tegra234_psc_remove_wrapper,
 	.driver = {
 		.owner  = THIS_MODULE,
 		.name   = "tegra23x-psc",

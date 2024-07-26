@@ -5370,6 +5370,18 @@ static const struct dev_pm_ops tegra210_adsp_pm_ops = {
 
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra210_adsp_audio_remove_wrapper(struct platform_device *pdev)
+{
+	tegra210_adsp_audio_remove(pdev);
+}
+#else
+static inline int tegra210_adsp_audio_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra210_adsp_audio_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra210_adsp_audio_driver = {
 	.driver = {
 		.name = DRV_NAME_ADSP,
@@ -5380,7 +5392,7 @@ static struct platform_driver tegra210_adsp_audio_driver = {
 	},
 	.probe = tegra210_adsp_audio_probe,
 	.shutdown = tegra210_adsp_audio_shutdown,
-	.remove = tegra210_adsp_audio_remove,
+	.remove = tegra210_adsp_audio_remove_wrapper,
 };
 module_platform_driver(tegra210_adsp_audio_driver);
 

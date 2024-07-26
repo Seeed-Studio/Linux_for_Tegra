@@ -4,6 +4,8 @@
  * Crypto driver for NVIDIA Security Engine in Tegra Chips
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/clk.h>
 #include <linux/dma-mapping.h>
 #include <linux/module.h>
@@ -384,13 +386,25 @@ static const struct of_device_id tegra_se_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_se_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_se_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_se_remove(pdev);
+}
+#else
+static inline int tegra_se_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_se_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_se_driver = {
 	.driver = {
 		.name	= "tegra-se",
 		.of_match_table = tegra_se_of_match,
 	},
 	.probe		= tegra_se_probe,
-	.remove		= tegra_se_remove,
+	.remove		= tegra_se_remove_wrapper,
 };
 
 static int tegra_se_host1x_probe(struct host1x_device *dev)

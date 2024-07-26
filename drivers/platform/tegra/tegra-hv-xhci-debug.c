@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * tegra-hv-xhci-debug: Tegra Hypervisor XHCI server debug
@@ -12,6 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
+#include <nvidia/conftest.h>
+
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -331,9 +333,21 @@ static const struct of_device_id tegra_hv_xhci_debug_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_hv_xhci_debug_match);
 #endif /* CONFIG_OF */
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_hv_xhci_debug_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_hv_xhci_debug_remove(pdev);
+}
+#else
+static inline int tegra_hv_xhci_debug_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_hv_xhci_debug_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_hv_xhci_debug_platform_driver = {
 	.probe	= tegra_hv_xhci_debug_probe,
-	.remove	= tegra_hv_xhci_debug_remove,
+	.remove	= tegra_hv_xhci_debug_remove_wrapper,
 	.driver	= {
 		.name		= DRV_NAME,
 		.owner		= THIS_MODULE,

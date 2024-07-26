@@ -1,6 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
+#include <nvidia/conftest.h>
+
 #include <linux/cpumask.h>
 #include <linux/delay.h>
 #include <linux/io.h>
@@ -580,9 +582,21 @@ static const struct of_device_id t23x_mce_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, t23x_mce_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void t23x_mce_remove_wrapper(struct platform_device *pdev)
+{
+	t23x_mce_remove(pdev);
+}
+#else
+static inline int t23x_mce_remove_wrapper(struct platform_device *pdev)
+{
+	return t23x_mce_remove(pdev);
+}
+#endif
+
 static struct platform_driver t23x_mce_driver = {
 	.probe = t23x_mce_probe,
-	.remove = t23x_mce_remove,
+	.remove = t23x_mce_remove_wrapper,
 	.driver = {
 		.owner  = THIS_MODULE,
 		.name = "t23x-mce",

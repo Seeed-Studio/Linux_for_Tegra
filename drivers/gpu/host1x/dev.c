@@ -2,7 +2,7 @@
 /*
  * Tegra host1x driver
  *
- * Copyright (c) 2010-2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2010-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -1102,6 +1102,18 @@ static const struct dev_pm_ops host1x_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(host1x_runtime_suspend, host1x_runtime_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void host1x_remove_wrapper(struct platform_device *pdev)
+{
+	host1x_remove(pdev);
+}
+#else
+static inline int host1x_remove_wrapper(struct platform_device *pdev)
+{
+	return host1x_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_host1x_driver = {
 	.driver = {
 		.name = "tegra-host1x",
@@ -1109,7 +1121,7 @@ static struct platform_driver tegra_host1x_driver = {
 		.pm = &host1x_pm_ops,
 	},
 	.probe = host1x_probe,
-	.remove = host1x_remove,
+	.remove = host1x_remove_wrapper,
 };
 
 static struct platform_driver * const drivers[] = {

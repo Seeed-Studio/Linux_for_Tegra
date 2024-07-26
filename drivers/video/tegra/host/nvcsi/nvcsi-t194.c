@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (C) 2017-2023 NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include "nvcsi-t194.h"
+
 #include <uapi/linux/nvhost_nvcsi_ioctl.h>
 #include <linux/tegra-camera-rtcpu.h>
 
@@ -243,9 +246,21 @@ static int __exit t194_nvcsi_remove(struct platform_device *dev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void t194_nvcsi_remove_wrapper(struct platform_device *pdev)
+{
+	t194_nvcsi_remove(pdev);
+}
+#else
+static inline int t194_nvcsi_remove_wrapper(struct platform_device *pdev)
+{
+	return t194_nvcsi_remove(pdev);
+}
+#endif
+
 static struct platform_driver t194_nvcsi_driver = {
 	.probe = t194_nvcsi_probe,
-	.remove = __exit_p(t194_nvcsi_remove),
+	.remove = __exit_p(t194_nvcsi_remove_wrapper),
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "t194-nvcsi",

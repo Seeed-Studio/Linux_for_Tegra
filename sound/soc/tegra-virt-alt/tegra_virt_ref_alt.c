@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -251,6 +251,18 @@ static int tegra_virt_machine_driver_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_virt_machine_driver_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_virt_machine_driver_remove(pdev);
+}
+#else
+static inline int tegra_virt_machine_driver_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_virt_machine_driver_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_virt_machine_driver = {
 	.driver = {
 		.name = DRV_NAME,
@@ -260,7 +272,7 @@ static struct platform_driver tegra_virt_machine_driver = {
 			of_match_ptr(tegra_virt_machine_of_match),
 	},
 	.probe = tegra_virt_machine_driver_probe,
-	.remove = tegra_virt_machine_driver_remove,
+	.remove = tegra_virt_machine_driver_remove_wrapper,
 };
 module_platform_driver(tegra_virt_machine_driver);
 

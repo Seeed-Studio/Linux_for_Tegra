@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Support for Tegra NVRNG Engine Error Handling.
  */
+
+#include <nvidia/conftest.h>
 
 #include <asm/io.h>
 #include <linux/acpi.h>
@@ -357,9 +359,21 @@ static const struct of_device_id tegra_se_nvrng_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_se_nvrng_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_se_nvrng_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_se_nvrng_remove(pdev);
+}
+#else
+static inline int tegra_se_nvrng_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_se_nvrng_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_se_nvrng_driver = {
 	.probe = tegra_se_nvrng_probe,
-	.remove = tegra_se_nvrng_remove,
+	.remove = tegra_se_nvrng_remove_wrapper,
 	.driver = {
 		.name = "tegra-se-nvrng",
 		.owner = THIS_MODULE,

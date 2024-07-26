@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 NVIDIA Corporation
+ * SPDX-FileCopyrightText: Copyright (c) 2013-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Permission to use, copy, modify, distribute, and sell this software and its
  * documentation for any purpose is hereby granted without fee, provided that
@@ -19,6 +19,8 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
  * OF THIS SOFTWARE.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/host1x-next.h>
@@ -546,11 +548,23 @@ static int tegra_mipi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_mipi_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_mipi_remove(pdev);
+}
+#else
+static inline int tegra_mipi_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_mipi_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_mipi_driver = {
 	.driver = {
 		.name = "tegra-mipi",
 		.of_match_table = tegra_mipi_of_match,
 	},
 	.probe = tegra_mipi_probe,
-	.remove = tegra_mipi_remove,
+	.remove = tegra_mipi_remove_wrapper,
 };

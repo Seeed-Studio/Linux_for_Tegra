@@ -3,6 +3,8 @@
  * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/debugfs.h>
 #include <linux/host1x-next.h>
 #include <linux/module.h>
@@ -755,6 +757,18 @@ static const struct dev_pm_ops virt_engine_pm_ops = {
 #endif
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void virt_engine_remove_wrapper(struct platform_device *pdev)
+{
+	virt_engine_remove(pdev);
+}
+#else
+static inline int virt_engine_remove_wrapper(struct platform_device *pdev)
+{
+	return virt_engine_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_virt_engine_driver = {
 	.driver = {
 		.name = "tegra-host1x-virtual-engine",
@@ -762,5 +776,5 @@ struct platform_driver tegra_virt_engine_driver = {
 		.pm = &virt_engine_pm_ops,
 	},
 	.probe = virt_engine_probe,
-	.remove = virt_engine_remove,
+	.remove = virt_engine_remove_wrapper,
 };

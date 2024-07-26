@@ -6,6 +6,8 @@
  * Cryptographic API.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/errno.h>
@@ -6003,9 +6005,21 @@ static const struct dev_pm_ops tegra_hv_pm_ops = {
 };
 #endif /* CONFIG_PM */
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_hv_vse_safety_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_hv_vse_safety_remove(pdev);
+}
+#else
+static inline int tegra_hv_vse_safety_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_hv_vse_safety_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_hv_vse_safety_driver = {
 	.probe = tegra_hv_vse_safety_probe,
-	.remove = tegra_hv_vse_safety_remove,
+	.remove = tegra_hv_vse_safety_remove_wrapper,
 	.shutdown = tegra_hv_vse_safety_shutdown,
 	.driver = {
 		.name = "tegra_hv_vse_safety",

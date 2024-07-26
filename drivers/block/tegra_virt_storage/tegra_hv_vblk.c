@@ -1564,9 +1564,21 @@ static struct of_device_id tegra_hv_vblk_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_hv_vblk_match);
 #endif /* CONFIG_OF */
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_hv_vblk_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_hv_vblk_remove(pdev);
+}
+#else
+static inline int tegra_hv_vblk_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_hv_vblk_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_hv_vblk_driver = {
 	.probe	= tegra_hv_vblk_probe,
-	.remove	= tegra_hv_vblk_remove,
+	.remove	= tegra_hv_vblk_remove_wrapper,
 	.driver	= {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,

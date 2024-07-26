@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (C) 2015-2024 NVIDIA CORPORATION.  All rights reserved.
 
 #include <nvidia/conftest.h>
@@ -2050,6 +2050,18 @@ static const struct of_device_id cdi_mgr_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cdi_mgr_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void cdi_mgr_remove_wrapper(struct platform_device *pdev)
+{
+	cdi_mgr_remove(pdev);
+}
+#else
+static inline int cdi_mgr_remove_wrapper(struct platform_device *pdev)
+{
+	return cdi_mgr_remove(pdev);
+}
+#endif
+
 static struct platform_driver cdi_mgr_driver = {
 	.driver = {
 		.name = "cdi-mgr",
@@ -2058,7 +2070,7 @@ static struct platform_driver cdi_mgr_driver = {
 		.pm = &cdi_mgr_pm_ops,
 	},
 	.probe = cdi_mgr_probe,
-	.remove = cdi_mgr_remove,
+	.remove = cdi_mgr_remove_wrapper,
 };
 
 module_platform_driver(cdi_mgr_driver);

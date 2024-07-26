@@ -1924,6 +1924,18 @@ static const struct dev_pm_ops tegra_qspi_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_qspi_suspend, tegra_qspi_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_qspi_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_qspi_remove(pdev);
+}
+#else
+static inline int tegra_qspi_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_qspi_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_qspi_driver = {
 	.driver = {
 		.name		= "tegra-qspi",
@@ -1932,7 +1944,7 @@ static struct platform_driver tegra_qspi_driver = {
 		.acpi_match_table = ACPI_PTR(tegra_qspi_acpi_match),
 	},
 	.probe =	tegra_qspi_probe,
-	.remove =	tegra_qspi_remove,
+	.remove =	tegra_qspi_remove_wrapper,
 };
 module_platform_driver(tegra_qspi_driver);
 

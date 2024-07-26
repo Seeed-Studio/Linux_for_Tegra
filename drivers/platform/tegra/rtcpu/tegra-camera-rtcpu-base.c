@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/tegra-camera-rtcpu.h>
 
@@ -966,6 +968,18 @@ static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 	.runtime_idle = tegra_cam_rtcpu_runtime_idle,
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_cam_rtcpu_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_cam_rtcpu_remove(pdev);
+}
+#else
+static inline int tegra_cam_rtcpu_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_cam_rtcpu_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_cam_rtcpu_driver = {
 	.driver = {
 		.name	= "tegra186-cam-rtcpu",
@@ -976,7 +990,7 @@ static struct platform_driver tegra_cam_rtcpu_driver = {
 #endif
 	},
 	.probe = tegra_cam_rtcpu_probe,
-	.remove = tegra_cam_rtcpu_remove,
+	.remove = tegra_cam_rtcpu_remove_wrapper,
 	.shutdown = tegra_cam_rtcpu_shutdown,
 };
 module_platform_driver(tegra_cam_rtcpu_driver);

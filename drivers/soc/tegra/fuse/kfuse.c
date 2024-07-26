@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (C) 2022-2024 NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION. All rights reserved.
 
 /* The kfuse block stores downstream and upstream HDCP keys for use by HDMI
  * module.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/platform_device.h>
 #include <linux/kernel.h>
@@ -304,9 +306,21 @@ static const struct of_device_id tegra_kfuse_of_match[] = {
 	{ },
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_kfuse_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_kfuse_remove(pdev);
+}
+#else
+static inline int tegra_kfuse_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_kfuse_remove(pdev);
+}
+#endif
+
 static struct platform_driver kfuse_driver = {
 	.probe = tegra_kfuse_probe,
-	.remove = tegra_kfuse_remove,
+	.remove = tegra_kfuse_remove_wrapper,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "kfuse",

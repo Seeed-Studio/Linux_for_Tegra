@@ -799,6 +799,18 @@ static const struct dev_pm_ops tegra186_arad_pm_ops = {
 				     pm_runtime_force_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra186_arad_platform_remove_wrapper(struct platform_device *pdev)
+{
+	tegra186_arad_platform_remove(pdev);
+}
+#else
+static inline int tegra186_arad_platform_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra186_arad_platform_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra186_arad_driver = {
 	.driver = {
 		.name = "tegra186-arad",
@@ -806,7 +818,7 @@ static struct platform_driver tegra186_arad_driver = {
 		.pm = &tegra186_arad_pm_ops,
 	},
 	.probe = tegra186_arad_platform_probe,
-	.remove = tegra186_arad_platform_remove,
+	.remove = tegra186_arad_platform_remove_wrapper,
 };
 module_platform_driver(tegra186_arad_driver)
 

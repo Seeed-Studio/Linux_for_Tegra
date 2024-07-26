@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * PVA Application Specific Virtual Memory
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/dma-mapping.h>
 #include <linux/of_platform.h>
@@ -288,9 +290,21 @@ static int __exit pva_iommu_context_dev_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void __exit pva_iommu_context_dev_remove_wrapper(struct platform_device *pdev)
+{
+	pva_iommu_context_dev_remove(pdev);
+}
+#else
+static inline int __exit pva_iommu_context_dev_remove_wrapper(struct platform_device *pdev)
+{
+	return pva_iommu_context_dev_remove(pdev);
+}
+#endif
+
 struct platform_driver nvpva_iommu_context_dev_driver = {
 	.probe = pva_iommu_context_dev_probe,
-	.remove = __exit_p(pva_iommu_context_dev_remove),
+	.remove = __exit_p(pva_iommu_context_dev_remove_wrapper),
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "pva_iommu_context_dev",

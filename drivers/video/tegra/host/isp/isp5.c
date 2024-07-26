@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <asm/ioctls.h>
 #include <linux/clk.h>
 #include <linux/debugfs.h>
@@ -379,9 +381,21 @@ static const struct of_device_id tegra_isp5_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_isp5_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void isp5_remove_wrapper(struct platform_device *pdev)
+{
+	isp5_remove(pdev);
+}
+#else
+static inline int isp5_remove_wrapper(struct platform_device *pdev)
+{
+	return isp5_remove(pdev);
+}
+#endif
+
 static struct platform_driver isp5_driver = {
 	.probe = isp5_probe,
-	.remove = isp5_remove,
+	.remove = isp5_remove_wrapper,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "tegra194-isp5",

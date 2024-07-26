@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Tegra AOCLUSTER Bus Driver
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/of_platform.h>
@@ -32,9 +34,21 @@ static const struct of_device_id tegra_aocluster_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_aocluster_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_aocluster_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_aocluster_remove(pdev);
+}
+#else
+static inline int tegra_aocluster_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_aocluster_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_aocluster_driver = {
 	.probe = tegra_aocluster_probe,
-	.remove = tegra_aocluster_remove,
+	.remove = tegra_aocluster_remove_wrapper,
 	.driver = {
 		.name = "tegra-aocluster",
 		.of_match_table = tegra_aocluster_of_match,

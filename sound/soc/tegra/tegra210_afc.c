@@ -560,6 +560,18 @@ static const struct dev_pm_ops tegra210_afc_pm_ops = {
 				     pm_runtime_force_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra210_afc_platform_remove_wrapper(struct platform_device *pdev)
+{
+	tegra210_afc_platform_remove(pdev);
+}
+#else
+static inline int tegra210_afc_platform_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra210_afc_platform_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra210_afc_driver = {
 	.driver = {
 		.name = "tegra210-afc",
@@ -567,7 +579,7 @@ static struct platform_driver tegra210_afc_driver = {
 		.pm = &tegra210_afc_pm_ops,
 	},
 	.probe = tegra210_afc_platform_probe,
-	.remove = tegra210_afc_platform_remove,
+	.remove = tegra210_afc_platform_remove_wrapper,
 };
 module_platform_driver(tegra210_afc_driver)
 

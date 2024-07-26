@@ -13,6 +13,8 @@
  *
  *****************************************************************************/
 
+#include <nvidia/conftest.h>
+
 #ifdef CONFIG_GPIO_WAKEUP
 #include <linux/gpio.h>
 #endif
@@ -1275,10 +1277,22 @@ static int wifi_resume(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void wifi_remove_wrapper(struct platform_device *pdev)
+{
+	wifi_remove(pdev);
+}
+#else
+static inline int wifi_remove_wrapper(struct platform_device *pdev)
+{
+	return wifi_remove(pdev);
+}
+#endif
+
 /* temporarily use these two */
 static struct platform_driver wifi_device = {
 	.probe          = wifi_probe,
-	.remove         = wifi_remove,
+	.remove         = wifi_remove_wrapper,
 	.suspend        = wifi_suspend,
 	.resume         = wifi_resume,
 #ifdef RTW_SUPPORT_PLATFORM_SHUTDOWN
@@ -1289,9 +1303,21 @@ static struct platform_driver wifi_device = {
 	}
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void wifi_remove_wrapper(struct platform_device *pdev)
+{
+	wifi_remove(pdev);
+}
+#else
+static inline int wifi_remove_wrapper(struct platform_device *pdev)
+{
+	return wifi_remove(pdev);
+}
+#endif
+
 static struct platform_driver wifi_device_legacy = {
 	.probe          = wifi_probe,
-	.remove         = wifi_remove,
+	.remove = wifi_remove_wrapper,
 	.suspend        = wifi_suspend,
 	.resume         = wifi_resume,
 	.driver         = {

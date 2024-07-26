@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -621,13 +623,25 @@ static const struct of_device_id scf_pmu_of_device_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, scf_pmu_of_device_ids);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void scf_pmu_device_remove_wrapper(struct platform_device *pdev)
+{
+	scf_pmu_device_remove(pdev);
+}
+#else
+static inline int scf_pmu_device_remove_wrapper(struct platform_device *pdev)
+{
+	return scf_pmu_device_remove(pdev);
+}
+#endif
+
 static struct platform_driver scf_pmu_driver = {
 	.driver = {
 		.name = "scf-pmu-drv",
 		.of_match_table = scf_pmu_of_device_ids,
 	},
 	.probe = scf_pmu_device_probe,
-	.remove = scf_pmu_device_remove,
+	.remove = scf_pmu_device_remove_wrapper,
 };
 
 static int __init register_pmu_driver(void)

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/debugfs.h>
@@ -138,9 +140,21 @@ static const struct of_device_id central_actmon_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, central_actmon_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void central_actmon_remove_wrapper(struct platform_device *pdev)
+{
+	central_actmon_remove(pdev);
+}
+#else
+static inline int central_actmon_remove_wrapper(struct platform_device *pdev)
+{
+	return central_actmon_remove(pdev);
+}
+#endif
+
 static struct platform_driver central_actmon_driver = {
 	.probe		= central_actmon_probe,
-	.remove		= central_actmon_remove,
+	.remove		= central_actmon_remove_wrapper,
 	.driver	= {
 		.name	= "tegra-cactmon-mc-all",
 		.owner	= THIS_MODULE,

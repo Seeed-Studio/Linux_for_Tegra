@@ -2,8 +2,10 @@
 /*
  * A platform based Software Watchdog Device
  *
- * Copyright (c) 2014-2022, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/types.h>
@@ -240,6 +242,18 @@ static struct of_device_id softdog_platform_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, softdog_platform_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void softdog_platform_remove_wrapper(struct platform_device *pdev)
+{
+	softdog_platform_remove(pdev);
+}
+#else
+static inline int softdog_platform_remove_wrapper(struct platform_device *pdev)
+{
+	return softdog_platform_remove(pdev);
+}
+#endif
+
 static struct platform_driver softdog_platform_driver = {
 	.driver = {
 		.name = "softdog-platform",
@@ -248,7 +262,7 @@ static struct platform_driver softdog_platform_driver = {
 		.pm = &softdog_platform_pm_ops,
 	},
 	.probe = softdog_platform_probe,
-	.remove = softdog_platform_remove,
+	.remove = softdog_platform_remove_wrapper,
 	.shutdown = softdog_platform_shutdown,
 };
 

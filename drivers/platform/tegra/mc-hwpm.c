@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #define pr_fmt(fmt) "mc-hwpm: " fmt
+
+#include <nvidia/conftest.h>
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -145,6 +147,18 @@ static int tegra_mc_hwpm_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_mc_hwpm_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_mc_hwpm_remove(pdev);
+}
+#else
+static inline int tegra_mc_hwpm_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_mc_hwpm_remove(pdev);
+}
+#endif
+
 static struct platform_driver mc_hwpm_driver = {
 	.driver = {
 		.name	= "tegra-mc-hwpm",
@@ -153,7 +167,7 @@ static struct platform_driver mc_hwpm_driver = {
 	},
 
 	.probe		= tegra_mc_hwpm_hwpm_probe,
-	.remove		= tegra_mc_hwpm_remove,
+	.remove		= tegra_mc_hwpm_remove_wrapper,
 };
 
 static int __init tegra_mc_hwpm_init(void)

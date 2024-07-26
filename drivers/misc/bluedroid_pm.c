@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (C) 2019-2023 NVIDIA CORPORATION.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -591,9 +591,21 @@ static struct of_device_id bdroid_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, bdroid_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void bluedroid_pm_remove_wrapper(struct platform_device *pdev)
+{
+	bluedroid_pm_remove(pdev);
+}
+#else
+static inline int bluedroid_pm_remove_wrapper(struct platform_device *pdev)
+{
+	return bluedroid_pm_remove(pdev);
+}
+#endif
+
 static struct platform_driver bluedroid_pm_driver = {
 	.probe = bluedroid_pm_probe,
-	.remove = bluedroid_pm_remove,
+	.remove = bluedroid_pm_remove_wrapper,
 	.suspend = bluedroid_pm_suspend,
 	.resume = bluedroid_pm_resume,
 	.shutdown = bluedroid_pm_shutdown,

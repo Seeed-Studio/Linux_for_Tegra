@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #define pr_fmt(fmt) "%s: " fmt, __func__
+
+#include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/of.h>
@@ -785,9 +787,21 @@ static bool nvmap_is_carveout_node_present(void)
 	return false;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void nvmap_remove_wrapper(struct platform_device *pdev)
+{
+	nvmap_remove(pdev);
+}
+#else
+static inline int nvmap_remove_wrapper(struct platform_device *pdev)
+{
+	return nvmap_remove(pdev);
+}
+#endif
+
 static struct platform_driver __refdata nvmap_driver = {
 	.probe		= nvmap_probe,
-	.remove		= nvmap_remove,
+	.remove	= nvmap_remove_wrapper,
 
 	.driver = {
 		.name	= "tegra-carveouts",

@@ -2,10 +2,13 @@
 /*
  * Capture support for syncpoint and GoS management
  *
- * Copyright (c) 2017-2024, NVIDIA Corporation.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA Corporation.  All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include "capture-support.h"
+
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/export.h>
@@ -199,9 +202,21 @@ static const struct of_device_id capture_support_match[] = {
 };
 MODULE_DEVICE_TABLE(of, capture_support_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void capture_support_remove_wrapper(struct platform_device *pdev)
+{
+	capture_support_remove(pdev);
+}
+#else
+static inline int capture_support_remove_wrapper(struct platform_device *pdev)
+{
+	return capture_support_remove(pdev);
+}
+#endif
+
 static struct platform_driver capture_support_driver = {
 	.probe = capture_support_probe,
-	.remove = capture_support_remove,
+	.remove = capture_support_remove_wrapper,
 	.driver = {
 		/* Only suitable name for dummy falcon driver */
 		.name = "scare-pigeon",

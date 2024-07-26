@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -489,9 +491,21 @@ static int ras_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void ras_remove_wrapper(struct platform_device *pdev)
+{
+	ras_remove(pdev);
+}
+#else
+static inline int ras_remove_wrapper(struct platform_device *pdev)
+{
+	return ras_remove(pdev);
+}
+#endif
+
 static struct platform_driver ras_driver = {
 	.probe = ras_probe,
-	.remove = ras_remove,
+	.remove = ras_remove_wrapper,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "arm64_ras",

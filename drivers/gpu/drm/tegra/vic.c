@@ -868,6 +868,18 @@ static const struct dev_pm_ops vic_pm_ops = {
 #endif
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void vic_remove_wrapper(struct platform_device *pdev)
+{
+	vic_remove(pdev);
+}
+#else
+static inline int vic_remove_wrapper(struct platform_device *pdev)
+{
+	return vic_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_vic_driver = {
 	.driver = {
 		.name = "tegra-vic",
@@ -875,7 +887,7 @@ struct platform_driver tegra_vic_driver = {
 		.pm = &vic_pm_ops
 	},
 	.probe = vic_probe,
-	.remove = vic_remove,
+	.remove = vic_remove_wrapper,
 };
 
 #if IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC)

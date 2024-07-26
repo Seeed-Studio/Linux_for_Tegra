@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. ALL RIGHTS RESERVED.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * This software product is a proprietary product of Nvidia Corporation and its affiliates
  * (the "Company") and all right, title, and interest in and to the software
@@ -10,9 +10,10 @@
  * provided with the software product.
  */
 
-
+#include <nvidia/conftest.h>
 
 #include "bf3_livefish.h"
+
 #include <linux/acpi.h>
 #include <linux/errno.h>
 #include <linux/io.h>
@@ -338,6 +339,18 @@ static const struct acpi_device_id livefish_acpi_match[] = {
 };
 MODULE_DEVICE_TABLE(acpi, livefish_acpi_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void livefish_remove_wrapper(struct platform_device *pdev)
+{
+    livefish_remove(pdev);
+}
+#else
+static inline int livefish_remove_wrapper(struct platform_device *pdev)
+{
+    return livefish_remove(pdev);
+}
+#endif
+
 static struct platform_driver livefish_driver = {
     .driver = {
         .name = "mlxbf-livefish",
@@ -345,7 +358,7 @@ static struct platform_driver livefish_driver = {
         .acpi_match_table = ACPI_PTR(livefish_acpi_match),
     },
     .probe  = livefish_probe,
-    .remove = livefish_remove,
+    .remove = livefish_remove_wrapper,
 };
 
 

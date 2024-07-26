@@ -3,6 +3,8 @@
  * SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -746,6 +748,18 @@ static const struct dev_pm_ops nvjpg_pm_ops = {
 				pm_runtime_force_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void nvjpg_remove_wrapper(struct platform_device *pdev)
+{
+	nvjpg_remove(pdev);
+}
+#else
+static inline int nvjpg_remove_wrapper(struct platform_device *pdev)
+{
+	return nvjpg_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_nvjpg_driver = {
 	.driver = {
 		.name = "tegra-nvjpg",
@@ -753,7 +767,7 @@ struct platform_driver tegra_nvjpg_driver = {
 		.pm = &nvjpg_pm_ops
 	},
 	.probe = nvjpg_probe,
-	.remove = nvjpg_remove,
+	.remove = nvjpg_remove_wrapper,
 };
 
 #if IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)

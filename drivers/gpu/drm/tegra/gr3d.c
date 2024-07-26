@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2013 Avionic Design GmbH
- * Copyright (C) 2013 NVIDIA Corporation
+ * SPDX-FileCopyrightText: Copyright (c) 2013-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -631,6 +633,18 @@ static const struct dev_pm_ops tegra_gr3d_pm = {
 				pm_runtime_force_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void gr3d_remove_wrapper(struct platform_device *pdev)
+{
+	gr3d_remove(pdev);
+}
+#else
+static inline int gr3d_remove_wrapper(struct platform_device *pdev)
+{
+	return gr3d_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_gr3d_driver = {
 	.driver = {
 		.name = "tegra-gr3d",
@@ -638,5 +652,5 @@ struct platform_driver tegra_gr3d_driver = {
 		.pm = &tegra_gr3d_pm,
 	},
 	.probe = gr3d_probe,
-	.remove = gr3d_remove,
+	.remove = gr3d_remove_wrapper,
 };

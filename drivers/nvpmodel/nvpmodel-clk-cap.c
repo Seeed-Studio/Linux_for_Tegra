@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/kobject.h>
@@ -263,9 +265,21 @@ static int nvpmodel_clk_cap_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void nvpmodel_clk_cap_remove_wrapper(struct platform_device *pdev)
+{
+	nvpmodel_clk_cap_remove(pdev);
+}
+#else
+static inline int nvpmodel_clk_cap_remove_wrapper(struct platform_device *pdev)
+{
+	return nvpmodel_clk_cap_remove(pdev);
+}
+#endif
+
 static struct platform_driver nvpmodel_clk_cap_driver = {
 	.probe = nvpmodel_clk_cap_probe,
-	.remove = nvpmodel_clk_cap_remove,
+	.remove = nvpmodel_clk_cap_remove_wrapper,
 	.driver = {
 		.name = "nvpmodel-clk-cap",
 		.of_match_table = of_nvpmodel_clk_cap_match,

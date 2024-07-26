@@ -1,9 +1,11 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Tegra Ultrasonics Sensor Subsystem IO-Proxy driver
  *
- * Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/kernel.h>
 #include <linux/compiler.h>
@@ -496,9 +498,21 @@ static int tegra_uss_io_proxy_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_uss_io_proxy_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_uss_io_proxy_remove(pdev);
+}
+#else
+static inline int tegra_uss_io_proxy_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_uss_io_proxy_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_uss_io_proxy_driver = {
 	.probe = tegra_uss_io_proxy_probe,
-	.remove = tegra_uss_io_proxy_remove,
+	.remove = tegra_uss_io_proxy_remove_wrapper,
 	.driver = {
 		.name	= "tegra-uss-io-proxy",
 		.owner	= THIS_MODULE,

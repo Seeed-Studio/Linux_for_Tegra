@@ -1,7 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/device.h>
 #include <linux/kernel.h>
@@ -161,13 +163,25 @@ static const struct of_device_id tegra_aon_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_aon_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_aon_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_aon_remove(pdev);
+}
+#else
+static inline int tegra_aon_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_aon_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra234_aon_driver = {
 	.driver = {
 		.name	= "tegra234-aon",
 		.of_match_table = tegra_aon_of_match,
 	},
 	.probe = tegra_aon_probe,
-	.remove = tegra_aon_remove,
+	.remove = tegra_aon_remove_wrapper,
 };
 module_platform_driver(tegra234_aon_driver);
 

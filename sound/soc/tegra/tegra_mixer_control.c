@@ -502,6 +502,18 @@ static const struct of_device_id tegra_mixer_control_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_mixer_control_of_match);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_mixer_control_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_mixer_control_remove(pdev);
+}
+#else
+static inline int tegra_mixer_control_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_mixer_control_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_mixer_control_driver = {
 	.driver = {
 		.name = "tegra-mixer-controls",
@@ -509,7 +521,7 @@ static struct platform_driver tegra_mixer_control_driver = {
 		.pm = &tegra_mixer_control_pm_ops,
 	},
 	.probe = tegra_mixer_control_probe,
-	.remove = tegra_mixer_control_remove,
+	.remove = tegra_mixer_control_remove_wrapper,
 };
 module_platform_driver(tegra_mixer_control_driver);
 

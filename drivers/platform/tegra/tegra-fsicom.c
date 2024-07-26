@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -463,6 +463,18 @@ static int __maybe_unused fsicom_client_resume(struct device *dev)
 
 static SIMPLE_DEV_PM_OPS(fsicom_client_pm, fsicom_client_suspend, fsicom_client_resume);
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void fsicom_client_remove_wrapper(struct platform_device *pdev)
+{
+	fsicom_client_remove(pdev);
+}
+#else
+static inline int fsicom_client_remove_wrapper(struct platform_device *pdev)
+{
+	return fsicom_client_remove(pdev);
+}
+#endif
+
 static struct platform_driver fsicom_client = {
 	.driver = {
 		.name   = "fsicom_client",
@@ -472,7 +484,7 @@ static struct platform_driver fsicom_client = {
 	},
 	.probe		= fsicom_client_probe,
 	.shutdown	= fsicom_client_shutdown,
-	.remove		= fsicom_client_remove,
+	.remove		= fsicom_client_remove_wrapper,
 };
 
 module_platform_driver(fsicom_client);

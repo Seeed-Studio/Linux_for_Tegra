@@ -794,6 +794,18 @@ static const struct dev_pm_ops nvenc_pm_ops = {
 				pm_runtime_force_resume)
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void nvenc_remove_wrapper(struct platform_device *pdev)
+{
+	nvenc_remove(pdev);
+}
+#else
+static inline int nvenc_remove_wrapper(struct platform_device *pdev)
+{
+	return nvenc_remove(pdev);
+}
+#endif
+
 struct platform_driver tegra_nvenc_driver = {
 	.driver = {
 		.name = "tegra-nvenc",
@@ -801,7 +813,7 @@ struct platform_driver tegra_nvenc_driver = {
 		.pm = &nvenc_pm_ops
 	},
 	.probe = nvenc_probe,
-	.remove = nvenc_remove,
+	.remove = nvenc_remove_wrapper,
 };
 
 #if IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)

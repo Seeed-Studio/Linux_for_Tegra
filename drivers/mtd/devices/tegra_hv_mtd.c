@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -726,9 +728,21 @@ static struct of_device_id tegra_virt_mtd_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_virt_mtd_match);
 #endif /* CONFIG_OF */
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void tegra_virt_mtd_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_virt_mtd_remove(pdev);
+}
+#else
+static inline int tegra_virt_mtd_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra_virt_mtd_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra_virt_mtd_driver = {
 	.probe	= tegra_virt_mtd_probe,
-	.remove	= tegra_virt_mtd_remove,
+	.remove	= tegra_virt_mtd_remove_wrapper,
 	.driver	= {
 		.name = "Virtual MTD device",
 		.owner = THIS_MODULE,

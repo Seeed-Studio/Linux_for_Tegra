@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #define pr_fmt(msg) "Safety I2S: " msg
@@ -817,9 +817,21 @@ static int t234_safety_audio_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static inline void t234_safety_audio_remove_wrapper(struct platform_device *pdev)
+{
+	t234_safety_audio_remove(pdev);
+}
+#else
+static inline int t234_safety_audio_remove_wrapper(struct platform_device *pdev)
+{
+	return t234_safety_audio_remove(pdev);
+}
+#endif
+
 static struct platform_driver t234_safety_audio_driver = {
 	.probe = t234_safety_audio_probe,
-	.remove = t234_safety_audio_remove,
+	.remove = t234_safety_audio_remove_wrapper,
 	.driver = {
 		.name = "tegra234-safety-audio",
 		.owner = THIS_MODULE,
