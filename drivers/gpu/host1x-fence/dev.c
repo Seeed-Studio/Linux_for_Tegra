@@ -39,6 +39,7 @@ static int dev_file_open(struct inode *inode, struct file *file)
 		{ .compatible = "nvidia,tegra186-host1x", },
 		{ .compatible = "nvidia,tegra194-host1x", },
 		{ .compatible = "nvidia,tegra234-host1x", },
+		{ .compatible = "nvidia,tegra264-host1x", },
 		{},
 	};
 
