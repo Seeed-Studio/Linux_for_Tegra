@@ -29,6 +29,31 @@
  * |       |       | as SCALE. Division by (1 + PFM_0).                        |
  * +-------+-------+-----------------------------------------------------------+
  *
+ * CSR_0 of Tegra264:
+ * +-------+-------+-----------------------------------------------------------+
+ * | Bit   | Field | Description                                               |
+ * +-------+-------+-----------------------------------------------------------+
+ * | 31:16 | PWM_0 | Pulse width that needs to be programmed.                  |
+ * |       |       | 0 = Always low.                                           |
+ * |       |       | 1 = 1 / (1 + PWM_DEPTH) pulse high.                       |
+ * |       |       | 2 = 2 / (1 + PWM_DEPTH) pulse high.                       |
+ * |       |       | N = N / (1 + PWM_DEPTH) pulse high.                       |
+ * +-------+-------+-----------------------------------------------------------+
+ * | 15:0  | PFM_0 | Frequency divider that needs to be programmed, also known |
+ * |       |       | as SCALE. Division by (1 + PFM_0).                        |
+ * +-------+-------+-----------------------------------------------------------+
+ *
+ * CSR_1 of Tegra264:
+ * +-------+-------+-----------------------------------------------------------+
+ * | Bit   | Field | Description                                               |
+ * +-------+-------+-----------------------------------------------------------+
+ * | 31    | ENB   | Enable Pulse width modulator.                             |
+ * |       |       | 0 = DISABLE, 1 = ENABLE.                                  |
+ * +-------+-------+-----------------------------------------------------------+
+ * | 30:15 | DEPTH | Depth for pulse width modulator. This controls the pulse  |
+ * |       |       | time generated. Division by (1 + PWM_DEPTH).              |
+ * +-------+-------+-----------------------------------------------------------+
+ *
  * The PWM clock frequency is divided by (1 + PWM_DEPTH) before subdividing it
  * based on the programmable frequency division value to generate the required
  * frequency for PWM output. The maximum output frequency that can be
@@ -472,10 +497,25 @@ static const struct tegra_pwm_soc tegra194_pwm_soc = {
 	.has_depth_csr = false,
 };
 
+static const struct tegra_pwm_soc tegra264_pwm_soc = {
+	.channel_offset = 0,
+	.depth_offset = 4,
+	.depth_shift = 15,
+	.depth_width = 16,
+	.duty_shift = 16,
+	.duty_width = 16,
+	.enb_offset = 4,
+	.num_channels = 1,
+	.scale_shift = 0,
+	.scale_width = 16,
+	.has_depth_csr = true,
+};
+
 static const struct of_device_id tegra_pwm_of_match[] = {
 	{ .compatible = "nvidia,tegra20-pwm", .data = &tegra20_pwm_soc },
 	{ .compatible = "nvidia,tegra186-pwm", .data = &tegra186_pwm_soc },
 	{ .compatible = "nvidia,tegra194-pwm", .data = &tegra194_pwm_soc },
+	{ .compatible = "nvidia,tegra264-pwm", .data = &tegra264_pwm_soc },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, tegra_pwm_of_match);
