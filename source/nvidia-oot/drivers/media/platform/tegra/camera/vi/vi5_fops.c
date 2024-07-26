@@ -688,7 +688,6 @@ static int tegra_channel_kthread_capture_enqueue(void *data)
 	struct tegra_channel_buffer *buf;
 	unsigned long flags;
 	set_freezable();
-	allow_signal(SIGINT);
 
 	while (1) {
 		try_to_freeze();
@@ -732,6 +731,7 @@ static int tegra_channel_kthread_capture_dequeue(void *data)
 	struct tegra_channel_buffer *buf;
 
 	set_freezable();
+	allow_signal(SIGINT);
 
 	while (1) {
 		try_to_freeze();
