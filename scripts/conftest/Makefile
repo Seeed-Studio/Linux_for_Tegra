@@ -230,9 +230,9 @@ NV_HEADER_PRESENCE_TESTS = \
   generated/autoconf.h \
   linux/kconfig.h \
   linux/iosys-map.h \
+  linux/tegra_prod.h \
   net/gso.h \
   net/page_pool.h \
-  soc/tegra/tegra-prod.h \
   ufs/ufshcd.h
 
 # Filename to store the define for the header in $(1); this is only consumed by
