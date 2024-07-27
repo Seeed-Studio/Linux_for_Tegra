@@ -422,6 +422,8 @@ const char * const tegra_virt_t264ref_source_text[] = {
 	"MVC2",
 	"DMIC1",
 	"DMIC2",
+	"DMIC3",
+	"DMIC4",
 	"ADX1-1",
 	"ADX1-2",
 	"ADX1-3",
@@ -731,6 +733,8 @@ static struct snd_soc_dapm_widget tegra264_virt_xbar_widgets[] = {
 
 	TX_WIDGETS("DMIC1"),
 	TX_WIDGETS("DMIC2"),
+	TX_WIDGETS("DMIC3"),
+	TX_WIDGETS("DMIC4"),
 
 	TX_WIDGETS("ADX1-1"),
 	TX_WIDGETS("ADX1-2"),
@@ -1101,6 +1105,8 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	{ name " Mux",      "MVC2",		"MVC2 RX" },		\
 	{ name " Mux",      "DMIC1",		"DMIC1 RX" },		\
 	{ name " Mux",      "DMIC2",		"DMIC2 RX" },		\
+	{ name " Mux",      "DMIC3",		"DMIC3 RX" },		\
+	{ name " Mux",      "DMIC4",		"DMIC4 RX" },		\
 	{ name " Mux",      "AMX1",		"AMX1 RX" },		\
 	{ name " Mux",      "ADX1-1",		"ADX1-1 RX" },		\
 	{ name " Mux",      "ADX1-2",		"ADX1-2 RX" },		\
