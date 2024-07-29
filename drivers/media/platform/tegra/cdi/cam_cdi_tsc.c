@@ -32,8 +32,10 @@
 
 
 #define TSC_TICKS_PER_HZ			(31250000ULL)
-#define TSC_NS_PER_TICK				(32)
+#define TSC_NS_PER_TICK_T234			(32)
+#define TSC_NS_PER_TICK_T264			(1)
 #define NS_PER_MS				(1000000U)
+#define NS_PER_SEC				(1000000000U)
 
 #define TSC_MTSCCNTCV0				(0x10)
 #define TSC_MTSCCNTCV0_CV			GENMASK(31, 0)
@@ -94,6 +96,7 @@ extern int Hawk_Owl_Fsync_program(int fsync_type);
  *   @enabled: Allow generators to offset their signal from the start of their period.
  */
 struct tsc_signal_controller_features {
+	u32 ns_per_tick;
 	struct {
 		bool enforced;
 		u32 max_freq_hz_lcm;
@@ -149,7 +152,19 @@ struct tsc_signal_controller {
 	struct list_head generators;
 };
 
-static const struct tsc_signal_controller_features tegra234_tsc_features = {
+static const struct tsc_signal_controller_features tegra234_cam_tsc_features = {
+	.ns_per_tick = TSC_NS_PER_TICK_T234,
+	.rational_locking = {
+		.enforced = true,
+		.max_freq_hz_lcm = 120,
+	},
+	.offset = {
+		.enabled = true,
+	},
+};
+
+static const struct tsc_signal_controller_features tegra264_cam_tsc_features = {
+	.ns_per_tick = TSC_NS_PER_TICK_T264,
 	.rational_locking = {
 		.enforced = true,
 		.max_freq_hz_lcm = 120,
@@ -273,6 +288,8 @@ static int cdi_tsc_program_generator_edges(struct tsc_signal_controller *control
 {
 	struct tsc_signal_generator *generator;
 	u32 max_freq_hz_lcm = 0;
+	u64 const ticks_per_hz = DIV_ROUND_CLOSEST(NS_PER_SEC,
+			controller->features->ns_per_tick);
 
 	/*
 	 * If rational locking is enforced (e.g. a 30Hz & 60Hz signal must align every two periods
@@ -299,10 +316,10 @@ static int cdi_tsc_program_generator_edges(struct tsc_signal_controller *control
 		u32 ticks_inactive = 0;
 
 		if (controller->features->rational_locking.enforced) {
-			ticks_in_period = DIV_ROUND_CLOSEST(TSC_TICKS_PER_HZ, max_freq_hz_lcm);
+			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz, max_freq_hz_lcm);
 			ticks_in_period *= max_freq_hz_lcm / generator->config.freq_hz;
 		} else {
-			ticks_in_period = DIV_ROUND_CLOSEST(TSC_TICKS_PER_HZ, generator->config.freq_hz);
+			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz, generator->config.freq_hz);
 		}
 
 		ticks_active = mult_frac(ticks_in_period, generator->config.duty_cycle, 100);
@@ -324,7 +341,7 @@ static int cdi_tsc_program_generator_edges(struct tsc_signal_controller *control
 static void cdi_tsc_program_generator_start_values(struct tsc_signal_controller *controller)
 {
 	const u32 relative_ticks_to_start = mult_frac(
-		TSC_GENX_START_OFFSET_MS, NS_PER_MS, TSC_NS_PER_TICK);
+		TSC_GENX_START_OFFSET_MS, NS_PER_MS, controller->features->ns_per_tick);
 
 	const u32 current_ticks_lo = FIELD_GET(TSC_MTSCCNTCV0_CV,
 		cdi_tsc_controller_readl(controller, TSC_MTSCCNTCV0));
@@ -339,7 +356,8 @@ static void cdi_tsc_program_generator_start_values(struct tsc_signal_controller 
 		u64 absolute_ticks_to_start = current_ticks + relative_ticks_to_start;
 
 		if (controller->features->offset.enabled && (generator->config.offset_ms != 0)) {
-			absolute_ticks_to_start += mult_frac(generator->config.offset_ms, NS_PER_MS, TSC_NS_PER_TICK);
+			absolute_ticks_to_start += mult_frac(generator->config.offset_ms, NS_PER_MS,
+						controller->features->ns_per_tick);
 		}
 
 		cdi_tsc_generator_writel(generator, TSC_GENX_START0,
@@ -622,7 +640,9 @@ static int __maybe_unused cdi_tsc_resume(struct device *dev)
 }
 
 static const struct of_device_id cdi_tsc_of_match[] = {
-	{ .compatible = "nvidia,tegra234-cam-cdi-tsc", .data = &tegra234_tsc_features },
+	{ .compatible = "nvidia,tegra234-cam-cdi-tsc", .data = &tegra234_cam_tsc_features },
+	{ .compatible = "nvidia,tegra264-cam-cdi-tsc", .data = &tegra264_cam_tsc_features },
+
 	{ },
 };
 MODULE_DEVICE_TABLE(of, cdi_tsc_of_match);
