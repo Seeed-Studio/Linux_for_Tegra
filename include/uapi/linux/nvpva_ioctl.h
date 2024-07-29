@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2021-2023, NVIDIA Corporation.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Tegra PVA Driver ioctls
  */
@@ -598,7 +598,9 @@ union nvpva_set_vpu_print_buffer_size_args {
 
 #define NVPVA_IOCTL_NUMBER_MAX 12
 
+#ifndef MAX
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
 #define NVPVA_IOCTL_MAX_SIZE                                 \
 	    MAX(sizeof(union nvpva_vpu_exe_register_args), \
 	    MAX(sizeof(union nvpva_vpu_exe_unregister_args), \
