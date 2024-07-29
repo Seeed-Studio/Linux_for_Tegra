@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1093,8 +1093,10 @@ static int f75308_probe_child_from_dt(struct device *dev,
 	u32 reg_idx, seg_idx = 0, seg_val;
 	u8 seg5[F75308_MAX_FAN_SEG_CNT];
 	const char *val_str;
+#if !defined(NV_OF_PROPERTY_FOR_EACH_REMOVED_INTERNAL_ARGS) /* Linux v6.11 */
 	struct property *prop;
 	const __be32 *p;
+#endif
 
 	status = of_property_read_u32(child, "reg", &reg_idx);
 	if (status) {
@@ -1125,7 +1127,11 @@ static int f75308_probe_child_from_dt(struct device *dev,
 	if (status)
 		return status;
 
+#if defined(NV_OF_PROPERTY_FOR_EACH_REMOVED_INTERNAL_ARGS) /* Linux v6.11 */
+	of_property_for_each_u32(child, "5seg", seg_val) {
+#else
 	of_property_for_each_u32(child, "5seg", prop, p, seg_val) {
+#endif
 		dev_dbg(dev, "%s: seg5[%u]: %u\n", __func__, seg_idx, seg_val);
 		if (seg_idx < F75308_MAX_FAN_SEG_CNT)
 			seg5[seg_idx++] = seg_val;

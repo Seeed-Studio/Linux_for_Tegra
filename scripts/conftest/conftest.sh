@@ -7438,6 +7438,30 @@ compile_test() {
            compile_check_conftest "$CODE" "NV_MODULE_IMPORT_NS_PRESENT" "" "types"
         ;;
 
+        of_property_for_each_u32_removed_internal_args)
+            #
+            # Determine if the internal arguments for the macro
+            # of_property_for_each_u32() have been removed.
+            #
+            # Commit 9722c3b66e21 ("of: remove internal arguments from
+            # of_property_for_each_u32()") removes two arguments from
+            # of_property_for_each_u32() which are used internally within
+            # the macro and so do not need to be passed. This change was
+            # made for Linux v6.11.
+            #
+            CODE="
+            #include <linux/of.h>
+            void conftest_of_property_for_each_u32(struct device_node *np,
+                                                   char *propname) {
+                u32 val;
+
+                of_property_for_each_u32(np, propname, val)
+                    pr_info(\"val %u\n\", val);
+            }"
+
+            compile_check_conftest "$CODE" "NV_OF_PROPERTY_FOR_EACH_REMOVED_INTERNAL_ARGS" "" "types"
+        ;;
+
         platform_msi_domain_alloc_irqs)
             #
             # Determine if the platform_msi_domain_alloc_irqs() API available or not.
