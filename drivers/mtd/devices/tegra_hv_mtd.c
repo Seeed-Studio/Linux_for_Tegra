@@ -470,9 +470,96 @@ static ssize_t vmtd_phys_base_show(struct device *dev,
 }
 static DEVICE_ATTR(phys_base, 0444, vmtd_phys_base_show, NULL);
 
+static ssize_t manufacturer_id_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
+
+	return sprintf(buf, "0x%x\n", vmtddev->config.mtd_config.manufacturer_id);
+}
+static DEVICE_ATTR_RO(manufacturer_id);
+
+static ssize_t device_id_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
+
+	return sprintf(buf, "0x%x\n", vmtddev->config.mtd_config.device_id);
+}
+static DEVICE_ATTR_RO(device_id);
+
+static ssize_t qspi_device_size_bytes_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%u\n",  (unsigned int)vmtddev->config.mtd_config.qspi_device_size_bytes);
+}
+static DEVICE_ATTR_RO(qspi_device_size_bytes);
+
+static ssize_t ecc_status_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
+	struct vs_request *vs_req;
+	int32_t ret;
+	struct vs_mtd_ecc_response ecc_response;
+
+	vs_req = (struct vs_request *)vmtddev->cmd_frame;
+	vs_req->type = VS_DATA_REQ;
+	vs_req->mtddev_req.req_op = VS_MTD_ECC;
+	vs_req->mtddev_req.mtd_req.offset = 0;
+	vs_req->mtddev_req.mtd_req.size = 0;
+	vs_req->mtddev_req.mtd_req.data_offset = 0;
+	vs_req->req_id = 0;
+
+	ret = vmtd_process_request(vmtddev, vs_req);
+	if (ret != 0) {
+		dev_err(vmtddev->device, "Read ECC Failed\n");
+		return snprintf(buf, PAGE_SIZE, "Error reading ECC status\n");
+	}
+
+	ecc_response = vs_req->mtddev_resp.ecc_resp;
+	vs_req->mtddev_req.stored_ecc_status = ecc_response.status;
+	vs_req->mtddev_req.stored_failed_chunk_addr = ecc_response.failed_chunk_addr;
+
+	switch (ecc_response.status) {
+	case ECC_NO_ERROR:
+		return sprintf(buf, "0x%x\n", ECC_NO_ERROR);
+	case ECC_ONE_BIT_CORRECTED:
+		return sprintf(buf, "0x%x\n", ECC_ONE_BIT_CORRECTED);
+	case ECC_TWO_BIT_ERROR:
+		return sprintf(buf, "0x%x\n", ECC_TWO_BIT_ERROR);
+	case ECC_DISABLED:
+		return sprintf(buf, "0x%x\n", ECC_DISABLED);
+	default:
+		return snprintf(buf, PAGE_SIZE, "ECC Status: Unknown error\n");
+	}
+}
+static DEVICE_ATTR_RO(ecc_status);
+
+static ssize_t failure_chunk_addr_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
+	struct vs_request *vs_req = (struct vs_request *)vmtddev->cmd_frame;
+
+	if (vs_req->mtddev_req.stored_ecc_status == ECC_NO_ERROR)
+		return sprintf(buf, "0x0\n");
+	else
+		return snprintf(buf, PAGE_SIZE, "0x%x\n", vs_req->mtddev_req.stored_failed_chunk_addr);
+
+}
+static DEVICE_ATTR_RO(failure_chunk_addr);
+
 static const struct attribute *vmtd_storage_attrs[] = {
 	&dev_attr_phys_dev.attr,
 	&dev_attr_phys_base.attr,
+	&dev_attr_manufacturer_id.attr,
+	&dev_attr_device_id.attr,
+	&dev_attr_qspi_device_size_bytes.attr,
+	&dev_attr_ecc_status.attr,
+	&dev_attr_failure_chunk_addr.attr,
 	NULL
 };
 

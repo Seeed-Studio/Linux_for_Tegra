@@ -28,9 +28,51 @@ enum mtd_cmd_op {
 	VS_MTD_WRITE = 2,
 	VS_MTD_ERASE = 3,
 	VS_MTD_IOCTL = 4,
+	VS_MTD_ECC = 5,
 	VS_MTD_INVAL_REQ = 32,
 	VS_UNKNOWN_MTD_CMD = 0xffffffff,
 };
+
+typedef enum {
+	/**
+	 * @brief no error detected for ECC 0x800 register.
+	 */
+	ECC_NO_ERROR = 0,
+
+	/**
+	 * @brief one bit error corrected for ECC 0x800 register.
+	 */
+	ECC_ONE_BIT_CORRECTED = 1,
+
+	/**
+	 * @brief two bit error detected for ECC 0x800 register.
+	 */
+	ECC_TWO_BIT_ERROR = 2,
+
+	/**
+	 * @brief ECC is disabled 0x800 register.
+	 */
+	ECC_DISABLED = 3,
+} qspi_ecc_err;
+
+/**
+ * @brief QSPI ecc status
+ *  A structure  contains information related to ecc
+ *  read values
+ */
+typedef struct NvQspi_ecc_status {
+	/**
+	 * @brief read ECC error status.
+	 */
+	qspi_ecc_err status;
+
+	/**
+	 * @brief if 1 or 2 bit error, this will
+	 * hold valid failed chunk address.
+	 */
+	uint32_t failed_chunk_addr;
+} NvQspi_ecc_status;
+
 
 /* MTD device request Operation type features supported */
 #define VS_MTD_READ_OP_F          (1 << VS_MTD_READ)
@@ -118,6 +160,9 @@ struct vs_mtddev_request {
 		struct vs_mtd_request mtd_req;
 		struct vs_ioctl_request ioctl_req;
 	};
+	uint32_t stored_ecc_status;		/* Field to store ECC status */
+
+	uint32_t stored_failed_chunk_addr;	/* field to store failed chunk address */
 };
 
 struct vs_blk_response {
@@ -142,10 +187,30 @@ struct vs_blkdev_response {
 	};
 };
 
+struct vs_mtd_ecc_response {
+	/** Status code returned as part of response message of MTD requests.
+	 * Status code value is "0" for success and "< 0" for failure
+	 * This value of this member is ignored in the MTD request message.
+	 */
+	int32_t status;
+
+	/**
+	 * Read ECC error status.
+	 */
+	uint32_t ecc_status;
+
+	/**
+	 * If 1 or 2 bit error, this will
+	 * hold valid failed chunk address.
+	 */
+	uint32_t failed_chunk_addr;
+};
+
 struct vs_mtddev_response {
 	union {
 		struct vs_mtd_response mtd_resp;
 		struct vs_ioctl_response ioctl_resp;
+		struct vs_mtd_ecc_response ecc_resp;
 	};
 };
 
@@ -176,6 +241,9 @@ struct vs_mtd_dev_config {
 					   device*/
 	uint32_t req_ops_supported;	/* Allowed operations by requests */
 	uint64_t size;			/* Total number of bytes */
+	uint32_t manufacturer_id;
+	uint32_t device_id;
+	uint32_t qspi_device_size_bytes;
 };
 
 /* Physical device types */
@@ -209,6 +277,7 @@ struct vs_config_info {
 	uint32_t storage_type;
 	uint32_t priority;
 	uint8_t speed_mode[SPEED_MODE_MAX_LEN];
+
 };
 
 struct vs_request {
