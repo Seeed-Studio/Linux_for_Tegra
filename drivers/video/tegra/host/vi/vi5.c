@@ -458,13 +458,18 @@ static int vi5_init_debugfs(struct host_vi5 *vi5)
 		{ .name = "channel_count", 0x80 },
 	};
 	struct nvhost_device_data *pdata = platform_get_drvdata(vi5->pdev);
-	struct dentry *dir = pdata->debugfs;
-	struct vi5_debug *debug = &vi5->debug;
 
-	debug->ch0.base = pdata->aperture[0];
-	debug->ch0.regs = vi5_ch_regs;
-	debug->ch0.nregs = ARRAY_SIZE(vi5_ch_regs);
-	debugfs_create_regset32("ch0", S_IRUGO, dir, &debug->ch0);
+	if (pdata->aperture[0]) {
+		struct dentry *dir = pdata->debugfs;
+		struct vi5_debug *debug = &vi5->debug;
+
+		debug->ch0.base = pdata->aperture[0];
+		debug->ch0.regs = vi5_ch_regs;
+		debug->ch0.nregs = ARRAY_SIZE(vi5_ch_regs);
+		debugfs_create_regset32("ch0", 0444, dir, &debug->ch0);
+	} else {
+		dev_info(&vi5->pdev->dev, "Unable to create debugfs entry\n");
+	}
 
 	return 0;
 }
