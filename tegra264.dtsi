@@ -8494,7 +8494,7 @@
 
 	mods_i2c0: mods_i2c0 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C0>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C0>;
 		dma-coherent;
 		dev-names = "mods_i2c0";
 		status = "disabled";
@@ -8502,7 +8502,7 @@
 
 	mods_i2c1: mods_i2c1 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C1>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C1>;
 		dma-coherent;
 		dev-names = "mods_i2c1";
 		status = "disabled";
@@ -8510,7 +8510,7 @@
 
 	mods_i2c2: mods_i2c2 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C2>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C2>;
 		dma-coherent;
 		dev-names = "mods_i2c2";
 		status = "disabled";
@@ -8518,7 +8518,7 @@
 
 	mods_i2c3: mods_i2c3 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C3>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C3>;
 		dma-coherent;
 		dev-names = "mods_i2c3";
 		status = "disabled";
@@ -8526,7 +8526,7 @@
 
 	mods_i2c7: mods_i2c7 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C7>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C7>;
 		dma-coherent;
 		dev-names = "mods_i2c7";
 		status = "disabled";
@@ -8534,7 +8534,7 @@
 
 	mods_i2c9: mods_i2c9 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C9>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C9>;
 		dma-coherent;
 		dev-names = "mods_i2c9";
 		status = "disabled";
@@ -8542,7 +8542,7 @@
 
 	mods_i2c11: mods_i2c11 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C11>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C11>;
 		dma-coherent;
 		dev-names = "mods_i2c11";
 		status = "disabled";
@@ -8550,7 +8550,7 @@
 
 	mods_i2c12: mods_i2c12 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C12>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C12>;
 		dma-coherent;
 		dev-names = "mods_i2c12";
 		status = "disabled";
@@ -8558,7 +8558,7 @@
 
 	mods_i2c14: mods_i2c14 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C14>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C14>;
 		dma-coherent;
 		dev-names = "mods_i2c14";
 		status = "disabled";
@@ -8566,7 +8566,7 @@
 
 	mods_i2c15: mods_i2c15 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C15>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C15>;
 		dma-coherent;
 		dev-names = "mods_i2c15";
 		status = "disabled";
@@ -8574,7 +8574,7 @@
 
 	mods_i2c16: mods_i2c16 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C16>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_I2C16>;
 		dma-coherent;
 		dev-names = "mods_i2c16";
 		status = "disabled";
@@ -8582,7 +8582,7 @@
 
 	mods_spi1: mods_spi1 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_SPI1>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_SPI1>;
 		dma-coherent;
 		dev-names = "mods_spi1";
 		status = "disabled";
@@ -8590,7 +8590,7 @@
 
 	mods_spi2: mods_spi2 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_SPI2>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_SPI2>;
 		dma-coherent;
 		dev-names = "mods_spi2";
 		status = "disabled";
@@ -8598,7 +8598,7 @@
 
 	mods_spi3: mods_spi3 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_SPI3>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_SPI3>;
 		dma-coherent;
 		dev-names = "mods_spi3";
 		status = "disabled";
@@ -8606,7 +8606,7 @@
 
 	mods_spi4: mods_spi4 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_SPI4>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_SPI4>;
 		dma-coherent;
 		dev-names = "mods_spi4";
 		status = "disabled";
@@ -8614,7 +8614,7 @@
 
 	mods_spi5: mods_spi5 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_SPI5>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_SPI5>;
 		dma-coherent;
 		dev-names = "mods_spi5";
 		status = "disabled";
@@ -8622,7 +8622,7 @@
 
 	mods_uart4: mods_uart4 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_UART4>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_UART4>;
 		dma-coherent;
 		dev-names = "mods_uart4";
 		status = "disabled";
@@ -8630,7 +8630,7 @@
 
 	mods_uart5: mods_uart5 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_UART5>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_UART5>;
 		dma-coherent;
 		dev-names = "mods_uart5";
 		status = "disabled";
@@ -8638,7 +8638,7 @@
 
 	mods_uart9: mods_uart9 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_UART9>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_UART9>;
 		dma-coherent;
 		dev-names = "mods_uart9";
 		status = "disabled";
@@ -8646,7 +8646,7 @@
 
 	mods_uart10: mods_uart10 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_UART10>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_UART10>;
 		dma-coherent;
 		dev-names = "mods_uart10";
 		status = "disabled";
@@ -8678,7 +8678,7 @@
 
 	mods_ufs: mods_ufs {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA_SID_UFS>;
+		iommus = <&smmu1_mmu TEGRA264_UFS_SID_MODS_UFS>;
 		dma-coherent;
 		dev-names = "mods_ufs";
 		status = "disabled";
@@ -8711,7 +8711,7 @@
 
 	mods_dma: mods_dma {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA_SID_GPCDMA>;
+		iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_MODS_DMA>;
 		dma-coherent;
 		dev-names = "mods_dma";
 		status = "disabled";
@@ -8751,7 +8751,7 @@
 
 	mods_qspi0_dma: mods_qspi0_dma {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu2_mmu TEGRA_SID_XSPI0>;
+		iommus = <&smmu2_mmu TEGRA264_XSPI0_SID_MODS_XSPI0>;
 		dma-coherent;
 		dev-names = "mods_qspi0_dma";
 		status = "disabled";
@@ -8942,7 +8942,7 @@
 
 	mods_tegra_dma: mods_tegra_dma {
 		compatible = "nvidia,mods_tegra_dma";
-		dmas = <&gpcdma 0 0 TEGRA264_GPCDMA_SID_I2C0>, <&gpcdma 7 7 TEGRA264_GPCDMA_SID_I2C1>, <&gpcdma 3 3 TEGRA264_GPCDMA_SID_I2C2>, <&gpcdma 4 4 TEGRA264_GPCDMA_SID_I2C3>, <&gpcdma 6 6 TEGRA264_GPCDMA_SID_I2C7>, <&gpcdma 2 2 TEGRA264_GPCDMA_SID_I2C9>, <&gpcdma 1 1 TEGRA264_GPCDMA_SID_I2C11>, <&gpcdma 5 5 TEGRA264_GPCDMA_SID_I2C12>, <&gpcdma 18 18 TEGRA264_GPCDMA_SID_I2C14>, <&gpcdma 19 19 TEGRA264_GPCDMA_SID_I2C15>, <&gpcdma 20 20 TEGRA264_GPCDMA_SID_I2C16>, <&gpcdma 9 9 TEGRA264_GPCDMA_SID_SPI1>, <&gpcdma 9 19 TEGRA264_GPCDMA_SID_SPI1>, <&gpcdma 8 8 TEGRA264_GPCDMA_SID_SPI2>, <&gpcdma 8 18 TEGRA264_GPCDMA_SID_SPI2>, <&gpcdma 14 14 TEGRA264_GPCDMA_SID_SPI3>, <&gpcdma 14 24 TEGRA264_GPCDMA_SID_SPI3>, <&gpcdma 15 15 TEGRA264_GPCDMA_SID_SPI4>, <&gpcdma 15 25 TEGRA264_GPCDMA_SID_SPI4>, <&gpcdma 16 16 TEGRA264_GPCDMA_SID_SPI5>, <&gpcdma 16 26 TEGRA264_GPCDMA_SID_SPI5>, <&gpcdma 13 23 TEGRA264_GPCDMA_SID_UART4>, <&gpcdma 13 13 TEGRA264_GPCDMA_SID_UART4>, <&gpcdma 11 11 TEGRA264_GPCDMA_SID_UART5>, <&gpcdma 11 21 TEGRA264_GPCDMA_SID_UART5>, <&gpcdma 10 10 TEGRA264_GPCDMA_SID_UART9>, <&gpcdma 10 20 TEGRA264_GPCDMA_SID_UART9>, <&gpcdma 12 12 TEGRA264_GPCDMA_SID_UART10>, <&gpcdma 12 22 TEGRA264_GPCDMA_SID_UART10>;
+		dmas = <&gpcdma 0 0 TEGRA264_GPCDMA_SID_MODS_I2C0>, <&gpcdma 7 7 TEGRA264_GPCDMA_SID_MODS_I2C1>, <&gpcdma 3 3 TEGRA264_GPCDMA_SID_MODS_I2C2>, <&gpcdma 4 4 TEGRA264_GPCDMA_SID_MODS_I2C3>, <&gpcdma 6 6 TEGRA264_GPCDMA_SID_MODS_I2C7>, <&gpcdma 2 2 TEGRA264_GPCDMA_SID_MODS_I2C9>, <&gpcdma 1 1 TEGRA264_GPCDMA_SID_MODS_I2C11>, <&gpcdma 5 5 TEGRA264_GPCDMA_SID_MODS_I2C12>, <&gpcdma 18 18 TEGRA264_GPCDMA_SID_MODS_I2C14>, <&gpcdma 19 19 TEGRA264_GPCDMA_SID_MODS_I2C15>, <&gpcdma 20 20 TEGRA264_GPCDMA_SID_MODS_I2C16>, <&gpcdma 9 9 TEGRA264_GPCDMA_SID_MODS_SPI1>, <&gpcdma 9 19 TEGRA264_GPCDMA_SID_MODS_SPI1>, <&gpcdma 8 8 TEGRA264_GPCDMA_SID_MODS_SPI2>, <&gpcdma 8 18 TEGRA264_GPCDMA_SID_MODS_SPI2>, <&gpcdma 14 14 TEGRA264_GPCDMA_SID_MODS_SPI3>, <&gpcdma 14 24 TEGRA264_GPCDMA_SID_MODS_SPI3>, <&gpcdma 15 15 TEGRA264_GPCDMA_SID_MODS_SPI4>, <&gpcdma 15 25 TEGRA264_GPCDMA_SID_MODS_SPI4>, <&gpcdma 16 16 TEGRA264_GPCDMA_SID_MODS_SPI5>, <&gpcdma 16 26 TEGRA264_GPCDMA_SID_MODS_SPI5>, <&gpcdma 13 23 TEGRA264_GPCDMA_SID_MODS_UART4>, <&gpcdma 13 13 TEGRA264_GPCDMA_SID_MODS_UART4>, <&gpcdma 11 11 TEGRA264_GPCDMA_SID_MODS_UART5>, <&gpcdma 11 21 TEGRA264_GPCDMA_SID_MODS_UART5>, <&gpcdma 10 10 TEGRA264_GPCDMA_SID_MODS_UART9>, <&gpcdma 10 20 TEGRA264_GPCDMA_SID_MODS_UART9>, <&gpcdma 12 12 TEGRA264_GPCDMA_SID_MODS_UART10>, <&gpcdma 12 22 TEGRA264_GPCDMA_SID_MODS_UART10>;
 		dma-names = "i2c0_tx", "i2c1_tx", "i2c2_tx", "i2c3_tx", "i2c7_tx", "i2c9_tx", "i2c11_tx", "i2c12_tx","i2c14_tx", "i2c15_tx", "i2c16_tx", "spi1_rx", "spi1_tx", "spi2_rx", "spi2_tx", "spi3_rx", "spi3_tx", "spi4_rx", "spi4_tx", "spi5_rx", "spi5_tx", "uart4_rx", "uart4_tx", "uart5_rx", "uart5_tx", "uart9_rx", "uart9_tx", "uart10_rx", "uart10_tx";
 		status = "disabled";
 	};
