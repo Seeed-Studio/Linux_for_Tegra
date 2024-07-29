@@ -701,9 +701,13 @@ static int vblk_request_worker(void *data)
 {
 	struct vblk_dev *vblkdev = (struct vblk_dev *)data;
 	bool req_submitted, req_completed;
+	int ret;
 
 	while (true) {
-		wait_for_completion(&vblkdev->complete);
+		ret = wait_for_completion_interruptible(&vblkdev->complete);
+		if (ret < 0) {
+			continue;
+		}
 
 		/* Taking ivc lock before performing IVC read/write */
 		mutex_lock(&vblkdev->ivc_lock);
