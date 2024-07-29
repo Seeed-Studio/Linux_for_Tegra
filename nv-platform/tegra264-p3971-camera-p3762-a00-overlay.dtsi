@@ -274,7 +274,7 @@
 			};
 		};
 	};
-	tsc_sig_gen@c6a0000 {
+	tsc_sig_gen@c230000 {
 		status = "okay";
 		generator@380 {
 			status = "okay";

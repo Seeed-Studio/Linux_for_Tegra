@@ -10332,4 +10332,52 @@
 #endif
 		status = "disabled";
 	};
+
+	/* TSC Signal Generators */
+	tsc_sig_gen@c230000 {
+		compatible = "nvidia,tegra264-cam-cdi-tsc";
+		ranges = <0x0 0x0 0xc230000 0x10000>;
+		reg = <0x0 0xc230000 0x0 0x18>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		status = "disabled";
+
+		/* EDGE_OUT #0 */
+		gen0: generator@380 {
+			reg = <0x380 0x80>;
+			freq_hz = <30>;
+			duty_cycle = <25>;
+			offset_ms = <0>;
+			gpio_pinmux = <&gpio_aon TEGRA264_AON_GPIO(DD, 7) GPIO_ACTIVE_LOW>;
+			status = "disabled";
+		};
+
+		/* EDGE_OUT #1 */
+		gen1: generator@400 {
+			reg = <0x400 0x80>;
+			freq_hz = <30>;
+			duty_cycle = <25>;
+			offset_ms = <0>;
+			status = "disabled";
+		};
+
+		/* EDGE_OUT #2 */
+		gen2: generator@480 {
+			reg = <0x480 0x80>;
+			freq_hz = <30>;
+			duty_cycle = <25>;
+			offset_ms = <0>;
+			status = "disabled";
+		};
+
+		/* EDGE_OUT #3 */
+		gen3: generator@500 {
+			reg = <0x500 0x80>;
+			freq_hz = <30>;
+			duty_cycle = <25>;
+			offset_ms = <0>;
+			status = "disabled";
+		};
+	};
+
 };
