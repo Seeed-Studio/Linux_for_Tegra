@@ -3395,6 +3395,9 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 {
 	u32 val, imod;
 
+	val = xudc_readl(xudc, BLCG) & ~BLCG_COREPLL_PWRDN;
+	xudc_writel(xudc, val, BLCG);
+
 	if (xudc->soc->has_ipfs) {
 		val = xudc_readl(xudc, BLCG);
 		val |= BLCG_ALL;
@@ -4001,6 +4004,7 @@ tegra_xudc_lowpower_enter(struct tegra_xudc *xudc)
 {
 	unsigned long flags;
 	int err;
+	u32 val;
 
 	dev_dbg(xudc->dev, "entering low power state\n");
 
@@ -4012,6 +4016,9 @@ tegra_xudc_lowpower_enter(struct tegra_xudc *xudc)
 	xudc_writel(xudc, 0, CTRL);
 
 	spin_unlock_irqrestore(&xudc->lock, flags);
+
+	val = xudc_readl(xudc, BLCG) | BLCG_COREPLL_PWRDN;
+	xudc_writel(xudc, val, BLCG);
 
 	clk_bulk_disable_unprepare(xudc->soc->num_clks, xudc->clks);
 
