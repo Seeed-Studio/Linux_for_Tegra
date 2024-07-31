@@ -347,6 +347,10 @@
 			status = "disabled";
 		};
 
+		dce-fabric@de00000 {
+			compatible = "nvidia,tegra234-dce-fabric";
+		};
+
 		i2c@3160000 {
 			iommus = <&smmu_niso0 TEGRA234_SID_GPCDMA>;
 			dma-coherent;
