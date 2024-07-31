@@ -49,6 +49,13 @@ struct pcie_epf_dma {
 static void edma_lib_test_raise_irq(void *p)
 {
 	struct pcie_epf_dma *epfnv = (struct pcie_epf_dma *)p;
+	struct pcie_epf_bar *epf_bar = (__force struct pcie_epf_bar *)epfnv->bar_virt;
+	struct sanity_data *wr_data = &epf_bar->wr_data[0];
+	u64 *data = (u64 *)(epfnv->edma.src_virt + wr_data->src_offset);
+
+	dev_info(epfnv->fdev, "%s: wr_data size(0x%x), offset(%d). data[0]=0x%llx, data[size-1]=0x%llx\n",
+		 __func__, wr_data->size, wr_data->dst_offset, data[0],
+		 data[(wr_data->size/8) - 1u]);
 
 #if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 	lpci_epc_raise_irq(epfnv->epc, epfnv->epf->func_no, PCI_EPC_IRQ_MSI, 1);
@@ -72,35 +79,6 @@ static int edmalib_test(struct seq_file *s, void *data)
 	epfnv->edma.dst_dma_addr = epf_bar->rp_phy_addr + BAR0_DMA_BUF_OFFSET;
 	epfnv->edma.fdev = epfnv->fdev;
 	epfnv->edma.cdev = epfnv->cdev;
-	epfnv->edma.epf_bar = (struct pcie_epf_bar *)epfnv->bar_virt;
-	epfnv->edma.src_virt = epfnv->bar_virt + BAR0_DMA_BUF_OFFSET;
-	epfnv->edma.dma_virt = epfnv->dma_virt;
-	epfnv->edma.dma_size = epfnv->dma_size;
-	epfnv->edma.stress_count = epfnv->stress_count;
-	epfnv->edma.edma_ch = epfnv->edma_ch;
-	epfnv->edma.nents = epfnv->nents;
-	epfnv->edma.priv = (void *)epfnv;
-	epfnv->edma.raise_irq = edma_lib_test_raise_irq;
-
-	return edmalib_common_test(&epfnv->edma);
-}
-
-/* debugfs to perform eDMA lib transfers and do CRC check */
-static int edmalib_read_test(struct seq_file *s, void *data)
-{
-	struct pcie_epf_dma *epfnv = (struct pcie_epf_dma *)dev_get_drvdata(s->private);
-	struct pcie_epf_bar *epf_bar = (struct pcie_epf_bar *)epfnv->bar_virt;
-
-	if (!epf_bar->rp_phy_addr) {
-		dev_err(epfnv->fdev, "RP DMA address is null\n");
-		return -1;
-	}
-
-	epfnv->edma.dst_dma_addr = epf_bar->ep_phy_addr + BAR0_DMA_BUF_OFFSET;
-	epfnv->edma.dst_dma_addr = epf_bar->rp_phy_addr + BAR0_DMA_BUF_OFFSET;
-	epfnv->edma.fdev = epfnv->fdev;
-	epfnv->edma.cdev = epfnv->cdev;
-
 	epfnv->edma.epf_bar = (struct pcie_epf_bar *)epfnv->bar_virt;
 	epfnv->edma.src_virt = epfnv->bar_virt + BAR0_DMA_BUF_OFFSET;
 	epfnv->edma.dma_virt = epfnv->dma_virt;
@@ -171,8 +149,7 @@ static int edmalib_test_ob(struct seq_file *s, void *data)
 static void init_debugfs(struct pcie_epf_dma *epfnv)
 {
 	debugfs_create_devm_seqfile(epfnv->fdev, "edmalib_test", epfnv->debugfs, edmalib_test);
-	debugfs_create_devm_seqfile(epfnv->fdev, "edmalib_read_test", epfnv->debugfs,
-				    edmalib_read_test);
+
 	debugfs_create_devm_seqfile(epfnv->fdev, "edmalib_test_ob", epfnv->debugfs,
 				    edmalib_test_ob);
 
@@ -242,6 +219,10 @@ static int pcie_dma_epf_core_init(struct pci_epf *epf)
 		return 0;
 
 	/* Expose MSI address as BAR2 to allow RP to send MSI to EP. */
+	/**
+	 * Note: This is only for testing MSI interrupt HW feature and should not be used for
+	 * any prodcution use case, as it will result in SMMU errors and system hangs.
+	 */
 	bar = BAR_2;
 	epf_bar = &epf->bar[bar];
 	epf_bar->phys_addr = gepfnv->edma.msi_addr & ~(SZ_32M - 1);
@@ -338,6 +319,20 @@ static void pcie_dma_epf_write_msi_msg(struct msi_desc *desc, struct msi_msg *ms
 
 static irqreturn_t pcie_dma_epf_irq(int irq, void *arg)
 {
+	struct pcie_epf_dma *epfnv = (struct pcie_epf_dma *)arg;
+	struct pcie_epf_bar *epf_bar = (__force struct pcie_epf_bar *)epfnv->bar_virt;
+	struct sanity_data *wr_data = &epf_bar->wr_data[0];
+	u64 *data = (u64 *)(epfnv->bar_virt + ((BAR0_SIZE / 2) + BAR0_DMA_BUF_OFFSET) +
+		    wr_data->dst_offset);
+
+	dev_info(epfnv->fdev, "Received MSI IRQ From RP\n");
+	dev_info(epfnv->fdev, "%s: wr_data size(0x%x), offset(%d). data[0]=0x%llx, data[size-1]=0x%llx\n",
+		 __func__, wr_data->size, wr_data->dst_offset, data[0],
+		 data[(wr_data->size/8) - 1u]);
+
+	wr_data->crc = crc32_le(~0, epfnv->bar_virt + ((BAR0_SIZE / 2) + BAR0_DMA_BUF_OFFSET) +
+				wr_data->dst_offset, wr_data->size);
+
 	return IRQ_HANDLED;
 }
 
