@@ -29,6 +29,11 @@ struct ep_pvt {
 	/* Configurable BAR0/BAR2 virt and phy base addresses */
 	void __iomem *bar_virt;
 	dma_addr_t bar_phy;
+	/* DMA BAR to generate interrupts towards EP */
+	void __iomem *msi_bar_virt;
+	/* MSI address offset at which MSI data needs to be written */
+	void __iomem *msi_bar_offset;
+	dma_addr_t msi_bar_phy;
 	/* DMA register BAR virt and phy base addresses */
 	void __iomem *dma_virt;
 	phys_addr_t dma_phy_base;
@@ -62,6 +67,11 @@ static irqreturn_t ep_isr(int irq, void *arg)
 	struct ep_pvt *ep = (struct ep_pvt *)arg;
 	struct pcie_epf_bar *epf_bar = (__force struct pcie_epf_bar *)ep->bar_virt;
 	struct sanity_data *wr_data = &epf_bar->wr_data[0];
+	u64 *data = (u64 *)(ep->ep_dma_virt + BAR0_DMA_BUF_OFFSET + wr_data->dst_offset);
+
+	dev_info(&ep->pdev->dev, "%s: wr_data size(0x%x), offset(%d). data[0]=0x%llx, data[size-1]=0x%llx\n",
+		 __func__, wr_data->size, wr_data->dst_offset, data[0],
+		 data[(wr_data->size/8) - 1u]);
 
 	wr_data->crc = crc32_le(~0, ep->ep_dma_virt + BAR0_DMA_BUF_OFFSET + wr_data->dst_offset,
 				wr_data->size);
@@ -71,8 +81,18 @@ static irqreturn_t ep_isr(int irq, void *arg)
 
 static void tegra_pcie_dma_raise_irq(void *p)
 {
-	pr_err("%s: donot support raise IRQ from RP. CRC test if any started may fail.\n",
-			__func__);
+	struct ep_pvt *ep = (struct ep_pvt *)p;
+	struct pcie_epf_bar *epf_bar = (__force struct pcie_epf_bar *)ep->bar_virt;
+	struct sanity_data *wr_data = &epf_bar->wr_data[0];
+	u64 *data = (u64 *)(ep->edma.src_virt + wr_data->src_offset);
+
+	dev_info(&ep->pdev->dev, "%s: wr_data size(0x%x), offset(%d). data[0]=0x%llx, data[size-1]=0x%llx\n",
+		 __func__, wr_data->size, wr_data->dst_offset, data[0],
+		 data[(wr_data->size/8) - 1u]);
+	dev_info(&ep->pdev->dev, "%s: IRQ towards EP using MSI virt offset is %p MSI BAR PHY %llx\n",
+		 __func__, ep->msi_bar_offset, ep->msi_bar_phy);
+	writel(0u, ep->msi_bar_offset);
+
 }
 
 /* debugfs to perform eDMA lib transfers */
@@ -83,6 +103,8 @@ static int edmalib_test(struct seq_file *s, void *data)
 	struct pci_dev *pdev = ep->pdev;
 	struct edmalib_common *edma = &ep->edma;
 	struct pci_dev *ppdev = pcie_find_root_port(pdev);
+	/* RP uses "Base + (BAR0_SIZE / 2) + 1M(reserved)" offset for DMA data transfers */
+	u64 offset = ((BAR0_SIZE / 2) + BAR0_DMA_BUF_OFFSET);
 
 	ep->edma.fdev = &ep->pdev->dev;
 	ep->edma.epf_bar = epf_bar;
@@ -91,11 +113,10 @@ static int edmalib_test(struct seq_file *s, void *data)
 	ep->edma.priv = (void *)ep;
 	ep->edma.raise_irq = tegra_pcie_dma_raise_irq;
 
-	/* RP uses "Base + SZ_16M + 1M(reserved)" offset for DMA data transfers */
 	if (REMOTE_EDMA_TEST_EN) {
-		ep->edma.src_virt = ep->ep_dma_virt + SZ_16M + SZ_1M;
-		ep->edma.src_dma_addr = ep->ep_dma_phy + SZ_16M + SZ_1M;
-		ep->edma.dst_dma_addr = epf_bar->ep_phy_addr + SZ_16M + SZ_1M;
+		ep->edma.src_virt = ep->ep_dma_virt + offset;
+		ep->edma.src_dma_addr = ep->ep_dma_phy + offset;
+		ep->edma.dst_dma_addr = epf_bar->ep_phy_addr + offset;
 		ep->edma.msi_addr = ep->msi_addr;
 		ep->edma.msi_data = ep->msi_data;
 		ep->edma.msi_irq = ep->msi_irq;
@@ -103,9 +124,9 @@ static int edmalib_test(struct seq_file *s, void *data)
 		ep->edma.remote.dma_phy_base = ep->dma_phy_base;
 		ep->edma.remote.dma_size = ep->dma_phy_size;
 	} else {
-		ep->edma.src_dma_addr = ep->rp_dma_phy + SZ_16M + SZ_1M;
-		ep->edma.src_virt = ep->rp_dma_virt + SZ_16M + SZ_1M;
-		ep->edma.dst_dma_addr = ep->bar_phy + SZ_16M + SZ_1M;
+		ep->edma.src_dma_addr = ep->rp_dma_phy + offset;
+		ep->edma.src_virt = ep->rp_dma_virt + offset;
+		ep->edma.dst_dma_addr = ep->bar_phy + offset;
 		ep->edma.msi_addr = ep->pmsi_addr;
 		ep->edma.msi_data = ep->pmsi_data;
 		ep->edma.msi_irq = ep->pmsi_irq;
@@ -141,7 +162,7 @@ static int ep_test_dma_probe(struct pci_dev *pdev, const struct pci_device_id *i
 	struct pcie_epf_bar *epf_bar;
 	struct pci_dev *ppdev = pcie_find_root_port(pdev);
 	int ret = 0;
-	u32 val, i, bar, dma_bar;
+	u32 val, i, bar, dma_bar, msi_bar;
 	u16 val_16;
 	char *name;
 
@@ -192,6 +213,28 @@ static int ep_test_dma_probe(struct pci_dev *pdev, const struct pci_device_id *i
 		ret = -ENOMEM;
 		goto fail_region_remap;
 	}
+
+	if (ep->chip_id == TEGRA234)
+		msi_bar = 2;
+	else
+		msi_bar = 4;
+	ep->msi_bar_phy = pci_resource_start(pdev, msi_bar);
+	ep->msi_bar_virt = devm_ioremap_wc(&pdev->dev, ep->msi_bar_phy,
+					   pci_resource_len(pdev, msi_bar));
+	if (!ep->msi_bar_virt) {
+		dev_err(&pdev->dev, "Failed to IO remap MSI bar BAR%d\n", msi_bar);
+		ret = -ENOMEM;
+		goto fail_region_remap;
+	}
+
+	/**
+	 * For T264, MSI address(GIC_TRANSTALATER) is at 0x1FFF040 offset. due to its
+	 * 32 MB allignment.
+	 */
+	if (ep->chip_id == TEGRA264)
+		ep->msi_bar_offset = (void __iomem *)((u8 *)ep->msi_bar_virt + 0x1FFF040);
+	else
+		ep->msi_bar_offset = ep->msi_bar_virt;
 
 	if (ep->chip_id == TEGRA234)
 		dma_bar = 4;
