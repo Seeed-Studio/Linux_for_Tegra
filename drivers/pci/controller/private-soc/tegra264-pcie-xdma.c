@@ -71,12 +71,13 @@ static inline void xdma_ll_ch_init(void __iomem *xdma_base, uint8_t ch, dma_addr
 {
 	uint32_t val;
 
-	/* All channels mapped to same MSI. */
 	val = XDMA_CHANNEL_CTRL_EN;
 	if (rw_type)
 		val |= XDMA_CHANNEL_CTRL_DMA_OPERATION;
 	else
 		val &= ~XDMA_CHANNEL_CTRL_DMA_OPERATION;
+	/* All local channels mapped to same MSI and all remote mapped to same MSI */
+	val |= (is_remote_dma << XDMA_CHANNEL_CTRL_MSI_CHANNEL_SHIFT);
 	xdma_channel_wr(xdma_base, ch, val, XDMA_CHANNEL_CTRL);
 }
 
@@ -108,10 +109,10 @@ static inline int xdma_ch_init(struct xdma_prv *prv, struct xdma_chan *ch, uint8
 			XDMA_CHANNEL_DESCRIPTOR_LIST_POINTER_HIGH);
 
 	if (prv->is_remote_dma)
-		xdma_channel_wr(prv->xdma_base, 0, XDMA_MSI_CHANNEL_CFG_INTR_DESTINATION,
-				XDMA_MSI_CHANNEL_CFG_INTR);
+		xdma_channel_wr(prv->xdma_base, prv->is_remote_dma,
+				XDMA_MSI_CHANNEL_CFG_INTR_DESTINATION, XDMA_MSI_CHANNEL_CFG_INTR);
 	else
-		xdma_channel_wr(prv->xdma_base, 0, 0, XDMA_MSI_CHANNEL_CFG_INTR);
+		xdma_channel_wr(prv->xdma_base, prv->is_remote_dma, 0, XDMA_MSI_CHANNEL_CFG_INTR);
 
 	return 0;
 }
@@ -246,9 +247,11 @@ static irqreturn_t xdma_irq_handler(int irq, void *cookie)
 	 * resetting, set star_processing & end_processing irrespective of
 	 * new_xfer_valid
 	 */
-	val = xdma_channel_rd(prv->xdma_base, 0, XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS);
+	val = xdma_channel_rd(prv->xdma_base, prv->is_remote_dma,
+			      XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS);
 	val |= XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS_INTR_START_PROCESSING;
-	xdma_channel_wr(prv->xdma_base, 0, val, XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS);
+	xdma_channel_wr(prv->xdma_base, prv->is_remote_dma, val,
+			XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS);
 
 	for (i = 0; i < 2; i++) {
 		if (!(prv->ch_init & OSI_BIT(i)))
@@ -265,7 +268,7 @@ static irqreturn_t xdma_irq_handler(int irq, void *cookie)
 				{
 					u32 temp;
 
-					temp = xdma_channel_rd(prv->xdma_base, 0,
+					temp = xdma_channel_rd(prv->xdma_base, prv->is_remote_dma,
 							       XDMA_CHANNEL_FUNC_ERROR_STATUS);
 				}
 
@@ -288,9 +291,11 @@ static irqreturn_t xdma_irq_handler(int irq, void *cookie)
 		}
 	}
 
-	val = xdma_channel_rd(prv->xdma_base, 0, XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS);
+	val = xdma_channel_rd(prv->xdma_base, prv->is_remote_dma,
+			      XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS);
 	val |= XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS_INTR_END_PROCESSING;
-	xdma_channel_wr(prv->xdma_base, 0, val,	XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS);
+	xdma_channel_wr(prv->xdma_base, prv->is_remote_dma, val,
+			XDMA_MSI_CHANNEL_PRIMARY_INTR_STATUS);
 
 	/* Must enable before exit */
 	enable_irq((u32)(irq & INT_MAX));
@@ -523,7 +528,7 @@ tegra_pcie_dma_status_t tegra264_pcie_xdma_set_msi(void *cookie, u64 msi_addr, u
 			       XDMA_MSI_CFG_REMOTE_ADDRESS_HI);
 	}
 
-	xdma_channel_wr(prv->xdma_base, 0, msi_data, XDMA_MSI_CHANNEL_CFG_INTR_ID);
+	xdma_channel_wr(prv->xdma_base, prv->is_remote_dma, msi_data, XDMA_MSI_CHANNEL_CFG_INTR_ID);
 
 	return TEGRA_PCIE_DMA_SUCCESS;
 }
