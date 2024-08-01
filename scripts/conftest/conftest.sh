@@ -7475,8 +7475,7 @@ compile_test() {
                                                    char *propname) {
                 u32 val;
 
-                of_property_for_each_u32(np, propname, val)
-                    pr_info(\"val %u\n\", val);
+                of_property_for_each_u32(np, propname, val);
             }"
 
             compile_check_conftest "$CODE" "NV_OF_PROPERTY_FOR_EACH_REMOVED_INTERNAL_ARGS" "" "types"
