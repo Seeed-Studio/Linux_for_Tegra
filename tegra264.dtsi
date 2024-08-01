@@ -9408,7 +9408,8 @@
 				<&bpmp TEGRA264_CLK_APE_SOUNDWIRE_MSRC0        >,
 				<&bpmp TEGRA264_CLK_APE_SOUNDWIRE_DATA_EN_SHAPER >,
 				<&bpmp TEGRA264_CLK_AO_SOUNDWIRE_MSRC0           >,
-				<&bpmp TEGRA264_CLK_AO_SOUNDWIRE_DATA_EN_SHAPER  >;
+				<&bpmp TEGRA264_CLK_AO_SOUNDWIRE_DATA_EN_SHAPER  >,
+				<&bpmp TEGRA264_CLK_DPAUX                      >;
 			clock-names = "osc",
 				"clk_s",
 				"jtag_reg",
@@ -9857,7 +9858,9 @@
 				"ape_soundwire_msrc0",
 				"ape_soundwire_data_en_shaper",
 				"ao_soundwire_msrc0",
-				"ao_soundwire_data_en_shaper";
+				"ao_soundwire_data_en_shaper",
+				"dpaux0_clk";
+
 			resets = <&bpmp TEGRA264_RESET_APE_TKE     >,
 				<&bpmp TEGRA264_RESET_CEC          >,
 				<&bpmp TEGRA264_RESET_ADSP_ALL     >,
@@ -10249,7 +10252,8 @@
 				<&bpmp TEGRA264_CLK_SF4_SOR>,
 				<&bpmp TEGRA264_CLK_SF5_SOR>,
 				<&bpmp TEGRA264_CLK_SF6_SOR>,
-				<&bpmp TEGRA264_CLK_SF7_SOR>;
+				<&bpmp TEGRA264_CLK_SF7_SOR>,
+				<&bpmp TEGRA264_CLK_DPAUX>;
 
 		clock-names =	"nvdisplayhub_clk",
 				"nvdisplay_disp_clk",
@@ -10345,7 +10349,8 @@
 				"sf4_sor_clk",
 				"sf5_sor_clk",
 				"sf6_sor_clk",
-				"sf7_sor_clk";
+				"sf7_sor_clk",
+				"dpaux0_clk";
 
 		nvidia,disp-sw-soc-chip-id = <0x2650>;
 
