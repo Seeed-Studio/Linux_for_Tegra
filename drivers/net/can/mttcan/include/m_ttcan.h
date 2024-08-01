@@ -287,10 +287,8 @@ struct ttcan_controller {
 	struct list_head rx_q1;
 	struct list_head rx_b;
 	struct list_head tx_evt;
-#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	struct tegra_prod *prod_list;
-#else
-	struct tegra_prod_cfg_list *prod_list;
 #endif
 	void __iomem *base;	/* controller regs space should be remapped. */
 	void __iomem *xbase;    /* extra registers are mapped */

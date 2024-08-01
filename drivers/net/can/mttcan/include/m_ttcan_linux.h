@@ -31,7 +31,9 @@
 #include <linux/net_tstamp.h>
 #include <linux/spinlock.h>
 #include <linux/clocksource.h>
-#include <linux/tegra-oot-prod.h>
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
+#include <linux/tegra_prod.h>
+#endif
 #include <linux/platform/tegra/ptp-notifier.h>
 #include <linux/mailbox_client.h>
 #ifdef CONFIG_CLK_SRC_TEGRA18_US_TIMER

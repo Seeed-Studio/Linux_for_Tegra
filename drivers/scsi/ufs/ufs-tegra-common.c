@@ -40,29 +40,6 @@
 #include "ufs-tegra.h"
 #include "ufs-provision.h"
 
-
-#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
-#define UFS_PROD_FIELD(name, rindex, roffset, fname)  \
-{						\
-	.field_name = name,			\
-	.reg_index = rindex,			\
-	.reg_offset = roffset,			\
-	.field_start = fname##_FIELD_START,	\
-	.field_len = fname##_FIELD_LEN,		\
-}
-
-static const struct tegra_prod_dev_reg_field ufs_prod_dev_reg_field[] = {
-	UFS_PROD_FIELD("nvidia,tx_hs_equilizer_setting", 0,
-			MPHY_TX_APB_TX_ATTRIBUTE_34_37_0, TX_HS_Equalizer_Setting),
-};
-
-static const struct tegra_prod_dev_info ufs_prod_dev_info = {
-	.num_total_dev_reg = 1,
-	.num_dev_reg_field = ARRAY_SIZE(ufs_prod_dev_reg_field),
-	.dev_reg_field = ufs_prod_dev_reg_field,
-};
-#endif
-
 static void ufs_tegra_mphy_startup_sequence(struct ufs_tegra_host *ufs_tegra);
 
 #ifdef CONFIG_DEBUG_FS
@@ -1843,44 +1820,14 @@ static void ufs_tegra_mphy_startup_sequence(struct ufs_tegra_host *ufs_tegra)
 	ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0xd086, 0x0U), 0x80U);
 }
 
-#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
-static void tegra_ufs_write_prod_settings(struct ufs_tegra_host *ufs_tegra, const char *prod_name)
-{
-	struct tegra_prod_reg_info *reg_info;
-	struct tegra_prod_cfg_info *prod_cfg;
-	u32 rval;
-	int i;
-
-	prod_cfg = tegra_prod_get_by_name_from_list(ufs_tegra->hba->dev, ufs_tegra->prod_list, prod_name);
-	if (prod_cfg == NULL)
-		return;
-
-	reg_info = prod_cfg->reg_info;
-	for (i = 0; i < prod_cfg->num_reg_info; ++i) {
-		rval = mphy_readl(ufs_tegra->mphy_l0_base, reg_info[i].reg_offset);
-		rval &= ~reg_info[i].reg_mask;
-		rval |= reg_info[i].reg_value;
-		mphy_writel(ufs_tegra->mphy_l0_base, rval, reg_info[i].reg_offset);
-		if (ufs_tegra->x2config) {
-			rval = mphy_readl(ufs_tegra->mphy_l1_base, reg_info[i].reg_offset);
-			rval &= ~reg_info[i].reg_mask;
-			rval |= reg_info[i].reg_value;
-			mphy_writel(ufs_tegra->mphy_l1_base, rval, reg_info[i].reg_offset);
-		}
-	}
-}
-#endif
-
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 static void ufs_tegra_prod_settings(struct ufs_tegra_host *ufs_tegra)
 {
-#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
 	int err;
-#endif
 
 	if (!ufs_tegra->prod_list)
 		return;
 
-#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
 	err = tegra_prod_set_by_name(&ufs_tegra->mphy_l0_base, "prod", ufs_tegra->prod_list);
 	if (err < 0) {
 		dev_info_once(ufs_tegra->hba->dev,
@@ -1894,11 +1841,9 @@ static void ufs_tegra_prod_settings(struct ufs_tegra_host *ufs_tegra)
 			dev_info_once(ufs_tegra->hba->dev,
 				"Prod config not found for mphy1: %d\n", err);
 	}
-#else
-	tegra_ufs_write_prod_settings(ufs_tegra, "prod");
-#endif
 	return;
 }
+#endif
 
 /**
  * ufs_tegra_init - bind phy with controller
@@ -2006,15 +1951,13 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 		}
 	}
 
-#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	ufs_tegra->prod_list = devm_tegra_prod_get(dev);
-#else
-	ufs_tegra->prod_list = devm_tegra_prod_get_list(dev, &ufs_prod_dev_info);
-#endif
 	if (IS_ERR(ufs_tegra->prod_list)) {
 		dev_dbg(dev, "No Prod list\n");
 		ufs_tegra->prod_list = NULL;
 	}
+#endif
 
 	/*
 	 * Clocks are not present on VDK
@@ -2104,8 +2047,10 @@ end:
 		}
 	}
 
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	/* Configure prod values */
 	ufs_tegra_prod_settings(ufs_tegra);
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 	ufs_tegra_init_debugfs(hba);

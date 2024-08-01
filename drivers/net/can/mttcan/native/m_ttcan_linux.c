@@ -12,28 +12,6 @@
 #define CAN_MSG_FLUSH_TIMEOUT	100
 static void mttcan_start(struct net_device *dev);
 
-#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
-#define MTTCAN_PROD_FIELD(name, rindex, roffset, fname)  \
-{							\
-	.field_name = name,				\
-	.reg_index = rindex,				\
-	.reg_offset = roffset,				\
-	.field_start = fname##_FIELD_START,		\
-	.field_len = fname##_FIELD_WIDTH,		\
-}
-
-static const struct tegra_prod_dev_reg_field mttcan_prod_dev_reg_field[] = {
-	MTTCAN_PROD_FIELD("nvidia,can-enable-tdc-dbtp", 0, ADR_MTTCAN_DBTP, MTTCAN_CORE_DBTP_TDC),
-	MTTCAN_PROD_FIELD("nvidia,can-tdco-value-tdcr", 0, ADR_MTTCAN_TDCR, MTTCAN_CORE_TDCR_TDCO),
-};
-
-static const struct tegra_prod_dev_info mttcan_prod_dev_info = {
-	.num_total_dev_reg = 2,
-	.num_dev_reg_field = ARRAY_SIZE(mttcan_prod_dev_reg_field),
-	.dev_reg_field = mttcan_prod_dev_reg_field,
-};
-#endif
-
 /* We are reading cntvct_el0 for TSC time. We are not issuing ISB
  * before reading the counter as by the time CAN irq comes and
  * CAN softirq is executed, we would have lot of instruction executed.
@@ -1877,15 +1855,13 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (ret)
 		goto exit_free_device;
 
-#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	priv->ttcan->prod_list = devm_tegra_prod_get(&pdev->dev);
-#else
-	priv->ttcan->prod_list = devm_tegra_prod_get_list(&pdev->dev, &mttcan_prod_dev_info);
-#endif
 	if (IS_ERR_OR_NULL(priv->ttcan->prod_list)) {
 		dev_dbg(&pdev->dev, "Prod-setting not available\n");
 		priv->ttcan->prod_list = NULL;
 	}
+#endif
 
 	ret = register_mttcan_dev(dev);
 	if (ret) {

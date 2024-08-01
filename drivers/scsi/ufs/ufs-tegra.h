@@ -7,7 +7,9 @@
 
 #include <linux/io.h>
 #include <soc/tegra/fuse.h>
-#include <linux/tegra-oot-prod.h>
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
+#include <linux/tegra_prod.h>
+#endif
 
 #define NV_ADDRESS_MAP_MPHY_L0_BASE		0x02470000
 #define NV_ADDRESS_MAP_MPHY_L1_BASE		0x02480000
@@ -397,9 +399,7 @@ struct ufs_tegra_host {
 	u32 ref_clk_freq;
 	struct ufs_tegra_soc_data *soc;
 	u32 streamid;
-#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
-	struct tegra_prod_cfg_list *prod_list;
-#else
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	struct tegra_prod *prod_list;
 #endif
 

@@ -13,7 +13,9 @@
 #include <linux/pinctrl/pinconf-generic.h>
 #include <linux/pinctrl/pinmux.h>
 #include <linux/slab.h>
-#include <linux/tegra-oot-prod.h>
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
+#include <linux/tegra_prod.h>
+#endif
 
 #define PCIE_PEXCLK_PADCTL1_REFCLK_OVRD_0	0x8
 #define CFG2TMC_SW_CTL				BIT(0)
@@ -57,7 +59,9 @@ struct t194_pexclk_padctrl {
 	struct device *dev;
 	struct pinctrl_dev *pctl;
 	void __iomem *regs[2];
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	struct tegra_prod *prod_list;
+#endif
 	struct t194_pexclk_pads *pads;
 	int num_pads;
 	struct pinctrl_desc pinctrl_desc;
@@ -198,6 +202,7 @@ static int t194_pexclk_padctrl_probe(struct platform_device *pdev)
 		}
 	}
 
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	pexclk->prod_list = devm_tegra_prod_get(&pdev->dev);
 	if (IS_ERR(pexclk->prod_list)) {
 		dev_dbg(&pdev->dev, "Prod-settngs not available\n");
@@ -210,6 +215,7 @@ static int t194_pexclk_padctrl_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
+#endif
 
 	pexclk->pads = t194_pexclk_pads;
 	pexclk->num_pads = ARRAY_SIZE(t194_pexclk_pads);

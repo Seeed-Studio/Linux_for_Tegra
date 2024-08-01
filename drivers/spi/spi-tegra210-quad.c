@@ -25,7 +25,9 @@
 #include <linux/acpi.h>
 #include <linux/property.h>
 #include <linux/version.h>
-#include <linux/tegra-oot-prod.h>
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
+#include <linux/tegra_prod.h>
+#endif
 
 #define QSPI_COMMAND1				0x000
 #define QSPI_BIT_LENGTH(x)			(((x) & 0x1f) << 0)
@@ -255,46 +257,10 @@ struct tegra_qspi {
 	dma_addr_t				tx_dma_phys;
 	struct dma_async_tx_descriptor		*tx_dma_desc;
 	const struct tegra_qspi_soc_data	*soc_data;
-#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
-	struct tegra_prod_cfg_list *prod_list;
-#else
-	struct tegra_prod *prod_list;
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
+	struct tegra_prod			*prod_list;
 #endif
 };
-
-#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
-#define QSPI_PROD_FIELD(name, rindex, roffset, fname)  \
-{						\
-	.field_name = name,			\
-	.reg_index = rindex,			\
-	.reg_offset = roffset,			\
-	.field_start = fname##_FIELD_START,	\
-	.field_len = fname##_FIELD_LEN,		\
-}
-
-static const struct tegra_prod_dev_reg_field qspi_prod_dev_reg_field[] = {
-	QSPI_PROD_FIELD("nvidia,qspi-rx-tap-delay", 0,
-			QSPI_COMMAND2, QSPI_RX_TAP_DELAY),
-	QSPI_PROD_FIELD("nvidia,qspi-tx-tap-delay", 0,
-			QSPI_COMMAND2, QSPI_TX_TAP_DELAY),
-	QSPI_PROD_FIELD("nvidia,qspi-sel-vreg", 0,
-			QSPI_TRIM_CTRL, QSPI_TRIM_VSEL),
-	QSPI_PROD_FIELD("nvidia,qspi-clk-override", 0,
-			QSPI_MISC_REG, QSPI_MISC_CLEKEN_OVERRIDE),
-	QSPI_PROD_FIELD("nvidia,qspi-comp-pad-drv-dn-ovr", 0,
-			QSPI_COMP_CONTROL, QSPI_COMP_CONTROL_DRVDN_OVR),
-	QSPI_PROD_FIELD("nvidia,qspi-comp-pad-drv-up-ovr", 0,
-			QSPI_COMP_CONTROL, QSPI_COMP_CONTROL_DRVUP_OVR),
-	QSPI_PROD_FIELD("nvidia,qspi-comp-pad-e-input", 0,
-			QSPI_COMP_CONTROL, QSPI_COMP_CONTROL_PAD_E_INPUT),
-};
-
-static const struct tegra_prod_dev_info qspi_prod_dev_info = {
-	.num_total_dev_reg = 4,
-	.num_dev_reg_field = ARRAY_SIZE(qspi_prod_dev_reg_field),
-	.dev_reg_field = qspi_prod_dev_reg_field,
-};
-#endif
 
 static inline u32 tegra_qspi_readl(struct tegra_qspi *tqspi, unsigned long offset)
 {
@@ -967,33 +933,10 @@ static u32 tegra_qspi_setup_transfer_one(struct spi_device *spi, struct spi_tran
 	return command1;
 }
 
-#if defined(CONFIG_TEGRA_PROD_NEXT_GEN)
-static void tegra_qspi_write_prod_settings(struct tegra_qspi *tqspi, const char *prod_name)
-{
-	struct tegra_prod_reg_info *reg_info;
-	struct tegra_prod_cfg_info *prod_cfg;
-	u32 rval;
-	int i;
-
-	prod_cfg = tegra_prod_get_by_name_from_list(tqspi->dev, tqspi->prod_list, prod_name);
-	if (prod_cfg == NULL)
-		return;
-
-	reg_info = prod_cfg->reg_info;
-	for (i = 0; i < prod_cfg->num_reg_info; ++i) {
-		rval = tegra_qspi_readl(tqspi, reg_info[i].reg_offset);
-		rval &= ~reg_info[i].reg_mask;
-		rval |= reg_info[i].reg_value;
-		tegra_qspi_writel(tqspi, rval, reg_info[i].reg_offset);
-	}
-}
-#endif
-
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 static void tegra_qspi_set_gr_registers(struct tegra_qspi *tqspi)
 {
-#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
 	int err;
-#endif
 
 	if (!tqspi->prod_list)
 		goto regs_por;
@@ -1001,14 +944,10 @@ static void tegra_qspi_set_gr_registers(struct tegra_qspi *tqspi)
 	/* If available, initialise the config registers
 	 * for QSPI with the values mentioned in prod list.
 	 */
-#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
 	err = tegra_prod_set_by_name(&tqspi->base, "prod", tqspi->prod_list);
 	if (err < 0)
 		dev_info_once(tqspi->dev,
 			      "Prod config not found for QSPI: %d\n", err);
-#else
-	tegra_qspi_write_prod_settings(tqspi, "prod");
-#endif
 
 	return;
 regs_por:
@@ -1019,6 +958,7 @@ regs_por:
 	tegra_qspi_writel(tqspi, tqspi->spi_cs_timing1, QSPI_CS_TIMING1);
 	tegra_qspi_writel(tqspi, tqspi->spi_cs_timing2, QSPI_CS_TIMING2);
 }
+#endif
 
 static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 					 struct spi_transfer *t, u32 command1)
@@ -1741,15 +1681,13 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 
 	tqspi->controller = controller;
 	tqspi->dev = &pdev->dev;
-#if !defined(CONFIG_TEGRA_PROD_NEXT_GEN)
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	tqspi->prod_list = devm_tegra_prod_get(&pdev->dev);
-#else
-	tqspi->prod_list = devm_tegra_prod_get_list(&pdev->dev, &qspi_prod_dev_info);
-#endif
 	if (IS_ERR_OR_NULL(tqspi->prod_list)) {
 		dev_info(&pdev->dev, "Prod settings list not found\n");
 		tqspi->prod_list = NULL;
 	}
+#endif
 
 	spin_lock_init(&tqspi->lock);
 
@@ -1813,7 +1751,9 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->spi_cs_timing1 = tegra_qspi_readl(tqspi, QSPI_CS_TIMING1);
 	tqspi->spi_cs_timing2 = tegra_qspi_readl(tqspi, QSPI_CS_TIMING2);
 	tqspi->def_command2_reg = tegra_qspi_readl(tqspi, QSPI_COMMAND2);
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	tegra_qspi_set_gr_registers(tqspi);
+#endif
 
 	pm_runtime_mark_last_busy(&pdev->dev);
 	pm_runtime_put_autosuspend(&pdev->dev);
@@ -1879,7 +1819,9 @@ static int __maybe_unused tegra_qspi_resume(struct device *dev)
 
 	tegra_qspi_writel(tqspi, tqspi->command1_reg, QSPI_COMMAND1);
 	tegra_qspi_writel(tqspi, tqspi->def_command2_reg, QSPI_COMMAND2);
+#if defined(CONFIG_TEGRA_PROD_LEGACY)
 	tegra_qspi_set_gr_registers(tqspi);
+#endif
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
 	pm_runtime_put(dev);
