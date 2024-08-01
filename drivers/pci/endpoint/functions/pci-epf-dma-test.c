@@ -58,9 +58,11 @@ static void edma_lib_test_raise_irq(void *p)
 		 data[(wr_data->size/8) - 1u]);
 
 #if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
-	lpci_epc_raise_irq(epfnv->epc, epfnv->epf->func_no, PCI_EPC_IRQ_MSI, 1);
+	lpci_epc_raise_irq(epfnv->epc, epfnv->epf->func_no, PCI_EPC_IRQ_MSI,
+			   TEGRA264_PCIE_DMA_MSI_CRC_VEC);
 #else
-	lpci_epc_raise_irq(epfnv->epc, epfnv->epf->func_no, PCI_IRQ_MSI, 1);
+	lpci_epc_raise_irq(epfnv->epc, epfnv->epf->func_no, PCI_IRQ_MSI,
+			   TEGRA264_PCIE_DMA_MSI_CRC_VEC);
 #endif
 }
 
@@ -312,7 +314,12 @@ static void pcie_dma_epf_write_msi_msg(struct msi_desc *desc, struct msi_msg *ms
 		gepfnv->edma.msi_addr = msg->address_hi;
 		gepfnv->edma.msi_addr <<= 32;
 		gepfnv->edma.msi_addr |= msg->address_lo;
-		gepfnv->edma.msi_data = msg->data + 1;
+		/**
+		 * First information received is for CRC MSI. So substract the same to get base and
+		 * add WR local vector
+		 */
+		gepfnv->edma.msi_data = msg->data -TEGRA264_PCIE_DMA_MSI_CRC_VEC +
+					TEGRA264_PCIE_DMA_MSI_LOCAL_VEC;
 	}
 }
 #endif
@@ -411,20 +418,20 @@ static int pcie_dma_epf_bind(struct pci_epf *epf)
 		}
 
 #if defined(NV_PLATFORM_MSI_DOMAIN_ALLOC_IRQS_PRESENT) /* Linux 6.9 */
-		ret = platform_msi_domain_alloc_irqs(&pdev->dev, 2, pcie_dma_epf_write_msi_msg);
+		ret = platform_msi_domain_alloc_irqs(&pdev->dev, 8, pcie_dma_epf_write_msi_msg);
 		if (ret < 0) {
 			dev_err(fdev, "failed to allocate MSIs: %d\n", ret);
 			goto fail_kasnprintf;
 		}
 #endif
 #if defined(NV_MSI_GET_VIRQ_PRESENT) /* Linux v6.1 */
-		epfnv->edma.msi_irq = msi_get_virq(&pdev->dev, 1);
-		irq = msi_get_virq(&pdev->dev, 0);
+		epfnv->edma.msi_irq = msi_get_virq(&pdev->dev, TEGRA264_PCIE_DMA_MSI_LOCAL_VEC);
+		irq = msi_get_virq(&pdev->dev, TEGRA264_PCIE_DMA_MSI_CRC_VEC);
 #else
 		for_each_msi_entry(desc, cdev) {
-			if (desc->platform.msi_index == 0)
+			if (desc->platform.msi_index == TEGRA264_PCIE_DMA_MSI_CRC_VEC)
 				irq = desc->irq;
-			else if (desc->platform.msi_index == 1)
+			else if (desc->platform.msi_index == TEGRA264_PCIE_DMA_MSI_LOCAL_VEC)
 				epfnv->edma.msi_irq = desc->irq;
 		}
 #endif
