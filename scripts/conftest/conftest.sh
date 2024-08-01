@@ -7578,6 +7578,39 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT" "" "types"
         ;;
 
+        pci_epc_event_ops_struct_has_epc_deinit)
+            #
+            # Determine if the pci_epc_event_ops struct has the epc_deinit function.
+            #
+            # Commit 473b2cf9c4d1 ("PCI: endpoint: Introduce 'epc_deinit' event and
+            # notify the EPF drivers) added 'epc_deinit' callback in Linux v6.11.
+            #
+            CODE="
+            #include <linux/pci-epf.h>
+            int conftest_pci_epc_event_ops_struct_has_epc_deinit(void) {
+                return offsetof(struct pci_epc_event_ops, epc_deinit);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT" "" "types"
+        ;;
+
+        pci_epc_event_ops_struct_has_epc_init)
+            #
+            # Determine if the pci_epc_event_ops struct has the epc_init function.
+            #
+            # Commit 4edd7dc82bd6 ("PCI: endpoint: Rename core_init() callback in
+            # 'struct pci_epc_event_ops' to epc_init()") renamed core_init()
+            # in Linux v6.11.
+            #
+            CODE="
+            #include <linux/pci-epf.h>
+            int conftest_pci_epc_event_ops_struct_has_epc_init(void) {
+                return offsetof(struct pci_epc_event_ops, epc_init);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_INIT" "" "types"
+        ;;
+
         pci_epc_features_struct_has_bar)
             #
             # Determine if the pci_epc_features struct has a member 'bar'.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -171,7 +171,8 @@ allocate_outbound_area(struct pci_epf *epf, size_t win_size,
 	return ret;
 }
 
-#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT) || \
+    defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Linux v6.11 || Nvidia Internal */
 static void
 clear_inbound_translation(struct pci_epf *epf)
 {
@@ -494,7 +495,8 @@ deinit_work(struct work_struct *work)
  * @DRV_MODE_EPC would have already gone then by the time
  * struct pci_epc_event_ops.core_deinit is called.
  */
-#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT) || \
+    defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Linux v6.11 || Nvidia Internal */
 static int
 nvscic2c_pcie_epf_core_deinit(struct pci_epf *epf)
 {
@@ -522,6 +524,13 @@ nvscic2c_pcie_epf_core_deinit(struct pci_epf *epf)
 
 	return 0;
 }
+
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT)
+static void nvscic2c_pcie_epf_epc_deinit(struct pci_epf *epf)
+{
+	WARN_ON(nvscic2c_pcie_epf_core_deinit(epf));
+}
+#endif
 #endif
 
 /* Handle link message from @DRV_MODE_EPC. */
@@ -734,8 +743,14 @@ get_driverdata(const struct pci_epf_device_id *id,
 }
 
 static const struct pci_epc_event_ops nvscic2c_event_ops = {
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_INIT) /* Linux v6.11 */
+	.epc_init = nvscic2c_pcie_epf_core_init,
+#else
 	.core_init = nvscic2c_pcie_epf_core_init,
-#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
+#endif
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT) /* Linux v6.11 */
+	.epc_deinit = nvscic2c_pcie_epf_epc_deinit,
+#elif defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
 	.core_deinit = nvscic2c_pcie_epf_core_deinit,
 #endif
 };

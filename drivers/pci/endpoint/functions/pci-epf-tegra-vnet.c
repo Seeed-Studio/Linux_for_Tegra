@@ -1631,7 +1631,8 @@ static void tvnet_ep_pci_epf_linkup(struct pci_epf *epf)
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0))
-#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT)
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT) || \
+    defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Linux v6.11 || Nvidia Internal */
 static int tvnet_ep_pci_epf_core_deinit(struct pci_epf *epf)
 {
 	struct pci_epf_bar *epf_bar = &epf->bar[BAR_0];
@@ -1647,11 +1648,24 @@ static int tvnet_ep_pci_epf_core_deinit(struct pci_epf *epf)
 
 	return 0;
 }
+
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT)
+static void tvnet_ep_pci_epf_epc_deinit(struct pci_epf *epf)
+{
+	WARN_ON(tvnet_ep_pci_epf_core_deinit(epf));
+}
+#endif
 #endif
 
 static const struct pci_epc_event_ops tvnet_event_ops = {
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_INIT) /* Linux v6.11 */
+	.epc_init = tvnet_ep_pci_epf_core_init,
+#else
 	.core_init = tvnet_ep_pci_epf_core_init,
-#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT)
+#endif
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT) /* Linux v6.11 */
+	.epc_deinit = tvnet_ep_pci_epf_epc_deinit,
+#elif defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
 	.core_deinit = tvnet_ep_pci_epf_core_deinit,
 #endif
 	.link_up = tvnet_ep_pci_epf_linkup,

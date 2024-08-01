@@ -241,7 +241,8 @@ static int pcie_dma_epf_core_init(struct pci_epf *epf)
 	return 0;
 }
 
-#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT) || \
+    defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Linux v6.11 || Nvidia Internal */
 static int pcie_dma_epf_core_deinit(struct pci_epf *epf)
 {
 	struct pcie_epf_dma *epfnv = epf_get_drvdata(epf);
@@ -262,6 +263,13 @@ static int pcie_dma_epf_core_deinit(struct pci_epf *epf)
 		lpci_epc_clear_bar(epc, epf->func_no, epf_bar);
 	return 0;
 }
+
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT)
+static void pcie_dma_epf_epc_deinit(struct pci_epf *epf)
+{
+	pcie_dma_epf_core_deinit(epf);
+}
+#endif
 #endif
 
 static void pcie_dma_epf_unbind(struct pci_epf *epf)
@@ -490,8 +498,14 @@ static const struct pci_epf_device_id pcie_dma_epf_ids[] = {
 };
 
 static const struct pci_epc_event_ops pci_epf_dma_test_event_ops = {
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_INIT) /* Linux v6.11 */
+	.epc_init = pcie_dma_epf_core_init,
+#else
 	.core_init = pcie_dma_epf_core_init,
-#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
+#endif
+#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_DEINIT) /* Linux v6.11 */
+	.epc_deinit = pcie_dma_epf_epc_deinit,
+#elif defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_CORE_DEINIT) /* Nvidia Internal */
 	.core_deinit = pcie_dma_epf_core_deinit,
 #endif
 };
