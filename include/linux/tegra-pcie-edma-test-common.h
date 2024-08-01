@@ -21,6 +21,8 @@ static inline void dma_common_wr(void __iomem *p, u32 val, u32 offset)
 	writel(val, offset + p);
 }
 
+#define  TEGRA264_PCIE_DMA_MSI_CRC_VEC (TEGRA264_PCIE_DMA_MSI_REMOTE_VEC + 1U)
+
 #define REMOTE_EDMA_TEST_EN	(edma->edma_ch & 0x80000000)
 #define EDMA_ABORT_TEST_EN	(edma->edma_ch & 0x40000000)
 #define EDMA_STOP_TEST_EN	(edma->edma_ch & 0x20000000)

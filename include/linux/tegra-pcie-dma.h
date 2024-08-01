@@ -16,8 +16,9 @@
 
 #define TEGRA_PCIE_DMA_DESC_SZ		32
 
-/** MSI IRQ vector number to use on T264 SoC */
-#define TEGRA264_PCIE_DMA_MSI_IRQ_VEC	6
+/** MSI IRQ vector number to use on T264 SoC for write and read channels */
+#define TEGRA264_PCIE_DMA_MSI_LOCAL_VEC		4
+#define TEGRA264_PCIE_DMA_MSI_REMOTE_VEC	5
 
 /**
  * @brief typedef to define various values for xfer status passed for dma_complete_t or
