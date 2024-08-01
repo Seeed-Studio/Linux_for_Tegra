@@ -465,9 +465,11 @@
 		regulator-name = "VDD_12V";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
-		gpio = <&gpio_main TEGRA264_MAIN_GPIO(Y, 2) GPIO_ACTIVE_LOW>;
+		gpio = <&gpio_main TEGRA264_MAIN_GPIO(Y, 2) GPIO_ACTIVE_HIGH>;
 		vcc-supply = <&SRC_FET_cvb>;
 		regulator-always-on;
+		enable-active-high;
+		regulator-boot-on;
 	};
 
 	vdd_5v0_hdmi_cvb: regulator-vdd-5v0-hdmi {
