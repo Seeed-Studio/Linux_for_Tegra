@@ -91,7 +91,7 @@ static void tegra_pcie_dma_raise_irq(void *p)
 		 data[(wr_data->size/8) - 1u]);
 	dev_info(&ep->pdev->dev, "%s: IRQ towards EP using MSI virt offset is %p MSI BAR PHY %llx\n",
 		 __func__, ep->msi_bar_offset, ep->msi_bar_phy);
-	writel(0u, ep->msi_bar_offset);
+	writel(TEGRA264_PCIE_DMA_MSI_CRC_VEC, ep->msi_bar_offset);
 
 }
 
@@ -256,7 +256,8 @@ static int ep_test_dma_probe(struct pci_dev *pdev, const struct pci_device_id *i
 		goto fail_region_remap;
 	}
 
-	ret = request_irq(pci_irq_vector(pdev, 1), ep_isr, IRQF_SHARED, "pcie_ep_isr", ep);
+	ret = request_irq(pci_irq_vector(pdev, TEGRA264_PCIE_DMA_MSI_CRC_VEC), ep_isr, IRQF_SHARED,
+			  "pcie_ep_isr", ep);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to register isr\n");
 		goto fail_isr;
@@ -299,7 +300,8 @@ static int ep_test_dma_probe(struct pci_dev *pdev, const struct pci_device_id *i
 	}
 	pci_read_config_dword(pdev, pdev->msi_cap + PCI_MSI_ADDRESS_LO, &val);
 	ep->msi_addr = (ep->msi_addr << 32) | val;
-	ep->msi_irq = pci_irq_vector(pdev, 0);
+	ep->msi_irq = pci_irq_vector(pdev, TEGRA264_PCIE_DMA_MSI_REMOTE_VEC);
+	ep->msi_data += TEGRA264_PCIE_DMA_MSI_REMOTE_VEC;
 
 	pci_read_config_word(ppdev, ppdev->msi_cap + PCI_MSI_FLAGS, &val_16);
 	if (val_16 & PCI_MSI_FLAGS_64BIT) {
@@ -314,8 +316,8 @@ static int ep_test_dma_probe(struct pci_dev *pdev, const struct pci_device_id *i
 	}
 	pci_read_config_dword(ppdev, ppdev->msi_cap + PCI_MSI_ADDRESS_LO, &val);
 	ep->pmsi_addr = (ep->pmsi_addr << 32) | val;
-	ep->pmsi_irq = pci_irq_vector(ppdev, 0);
-	ep->pmsi_data += 0;
+	ep->pmsi_irq = pci_irq_vector(ppdev, TEGRA264_PCIE_DMA_MSI_LOCAL_VEC);
+	ep->pmsi_data += TEGRA264_PCIE_DMA_MSI_LOCAL_VEC;
 
 	name = devm_kasprintf(&ep->pdev->dev, GFP_KERNEL, "%s_pcie_dma_test", dev_name(&pdev->dev));
 	if (!name) {
