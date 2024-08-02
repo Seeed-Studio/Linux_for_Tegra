@@ -13,6 +13,7 @@
 
 / {
 	aliases {
+		ethernet0 = "/bus@0/ethernet@6800000";
 		serial2 = "/bus@0/serial@3110000";
 	};
 
