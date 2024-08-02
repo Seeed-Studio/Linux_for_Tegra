@@ -4834,6 +4834,10 @@
 			reg = <0x81 0x0c630000 0x0 0x10000>;
 			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <400000>;
+			dmas = <&gpcdma 0 31 TEGRA264_GPCDMA_SID_I2C0>;
+			dma-names = "tx";
+			iommus = <&smmu1_mmu TEGRA264_GPCDMA_SID_I2C0>;
+			dma-coherent;
 			clocks = <&bpmp TEGRA264_CLK_TOP_I2C>,
 				 <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			clock-names = "div-clk", "parent";
