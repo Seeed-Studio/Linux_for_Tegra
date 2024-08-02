@@ -798,11 +798,7 @@ static int ether_enable_eqos_clks_t26x(struct ether_priv_data *pdata)
 		}
 	}
 	if (!IS_ERR_OR_NULL(pdata->app_clk)) {
-		if (uphy_gbe_mode == OSI_GBE_MODE_2_5G)
-			rate = ETHER_EQOS_TX_CLK_2_5G;
-		else
-			rate = ETHER_EQOS_TX_CLK_1000M;
-
+		rate = ETHER_EQOS_TX_CLK_2_5G;
 		ret = clk_set_parent(pdata->app_clk, pdata->pllrefgp_out1);
 		if (ret < 0) {
 			dev_err(pdata->dev, "failed to set EQOS app_clk parent\n");
@@ -1156,7 +1152,9 @@ static inline void set_speed_work_func(struct work_struct *work)
 		speed = OSI_SPEED_5000;
 	}
 
-	if (pdata->osi_core->uphy_gbe_mode == OSI_GBE_MODE_2_5G) {
+	if (pdata->osi_core->uphy_gbe_mode == OSI_GBE_MODE_25G) {
+		speed = OSI_SPEED_25000;
+	} else if (pdata->osi_core->uphy_gbe_mode == OSI_GBE_MODE_2_5G) {
 		speed = OSI_SPEED_2500;
 	} else if (pdata->osi_core->uphy_gbe_mode == OSI_GBE_MODE_1G) {
 		speed = OSI_SPEED_1000;
