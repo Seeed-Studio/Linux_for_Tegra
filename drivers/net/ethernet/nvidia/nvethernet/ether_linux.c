@@ -7566,7 +7566,6 @@ static int ether_probe(struct platform_device *pdev)
 		/* Nothing to do, macsec is not supported */
 		dev_info(&pdev->dev, "Macsec not supported/Not enabled\n");
 	} else {
-		dev_info(&pdev->dev, "Macsec not enabled\n");
 		/* Macsec is supported, reduce MTU */
 		ndev->mtu -= MACSEC_TAG_ICV_LEN;
 		dev_info(&pdev->dev, "Macsec: Reduced MTU: %d Max: %d\n",

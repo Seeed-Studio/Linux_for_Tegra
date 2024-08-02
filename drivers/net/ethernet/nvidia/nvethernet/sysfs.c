@@ -994,15 +994,15 @@ static ssize_t macsec_mmc_counters_show_rx(struct device *dev,
 		mmc->rx_octets_decrypted);
 
 	for (i = 0; i <= sc_idx_max[macsec]; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_invalid sc%d:\t%d\n",
+		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_invalid sc%d:\t%u\n",
 			i, mmc->in_pkts_invalid[i]);
 	}
 	for (i = 0; i <= sc_idx_max[macsec]; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_delayed sc%d:\t%d\n",
+		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_delayed sc%d:\t%u\n",
 			i, mmc->rx_pkts_delayed[i]);
 	}
 	for (i = 0; i <= sc_idx_max[macsec]; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_ok sc%d: \t%d\n",
+		buf += scnprintf(buf, PAGE_SIZE, "rx_pkts_ok sc%d: \t%u\n",
 			i, mmc->rx_pkts_ok[i]);
 	}
 
@@ -1053,9 +1053,9 @@ static ssize_t macsec_mmc_counters_show_tx(struct device *dev,
 	buf += scnprintf(buf, PAGE_SIZE, "tx_octets_encrypted:\t%llu\n",
 		mmc->tx_octets_encrypted);
 	for (i = 0; i <= sc_idx_max[macsec]; i++) {
-		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_protected sc%d:\t%d\n",
+		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_protected sc%d:\t%u\n",
 			i, mmc->tx_pkts_protected[i]);
-		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_encrypted sc%d:\t%d\n",
+		buf += scnprintf(buf, PAGE_SIZE, "tx_pkts_encrypted sc%d:\t%u\n",
 			i, mmc->tx_pkts_encrypted[i]);
 	}
 
@@ -2133,7 +2133,7 @@ static void dump_sa_state_lut(char **buf_p, unsigned short ctlr_sel,
 			if ((lut_config.flags & OSI_LUT_FLAGS_ENTRY_VALID) ==
 			    OSI_LUT_FLAGS_ENTRY_VALID) {
 				buf += scnprintf(buf, PAGE_SIZE,
-					"%d.\tnext_pn: %d\n", i,
+					"%d.\tnext_pn: %u\n", i,
 					lut_config.sa_state_out.next_pn);
 			} else {
 				buf += scnprintf(buf, PAGE_SIZE,
@@ -2142,7 +2142,7 @@ static void dump_sa_state_lut(char **buf_p, unsigned short ctlr_sel,
 			break;
 		case OSI_CTLR_SEL_RX:
 			buf += scnprintf(buf, PAGE_SIZE,
-				"%d.\tnext_pn: %d lowest_pn: %d\n", i,
+				"%d.\tnext_pn: %u lowest_pn: %u\n", i,
 				lut_config.sa_state_out.next_pn,
 				lut_config.sa_state_out.lowest_pn);
 			break;
