@@ -24,6 +24,7 @@
  * used as a clock value in the RPM calculations
  */
 #define TACH_COUNTER_CLK				1010526
+#define TACH_COUNTER_CLK_T264				1000000
 
 #define TACH_FAN_TACH0					0x0
 #define TACH_FAN_TACH0_PERIOD_MASK			0x7FFFF
@@ -80,6 +81,7 @@
 
 struct pwm_tegra_tach_soc_data {
 	bool has_interrupt_support;
+	bool one_mhz_clock_support;
 };
 
 struct pwm_tegra_tach {
@@ -360,6 +362,7 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 	struct device *hwmon;
 	struct resource *r;
 	int ret;
+	unsigned long rate;
 
 #if defined(NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE)
 	chip = devm_pwmchip_alloc(&pdev->dev, 1, sizeof(*ptt));
@@ -421,7 +424,12 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = clk_set_rate(ptt->clk, TACH_COUNTER_CLK);
+	if (ptt->soc_data->one_mhz_clock_support) {
+		rate = TACH_COUNTER_CLK_T264;
+	} else {
+		rate = TACH_COUNTER_CLK;
+        }
+	ret = clk_set_rate(ptt->clk, rate);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to set clock rate %d: %d\n",
 			TACH_COUNTER_CLK, ret);
@@ -548,17 +556,25 @@ static const struct dev_pm_ops pwm_tegra_tach_pm_ops = {
 
 static struct pwm_tegra_tach_soc_data tegra186_tach_soc_data = {
 		.has_interrupt_support = false,
+		.one_mhz_clock_support = false,
 };
 
 static struct pwm_tegra_tach_soc_data tegra194_tach_soc_data = {
 		.has_interrupt_support = false,
+		.one_mhz_clock_support = false,
 };
 
 static struct pwm_tegra_tach_soc_data tegra234_tach_soc_data = {
 		.has_interrupt_support = false,
+		.one_mhz_clock_support = false,
 };
 
+static struct pwm_tegra_tach_soc_data tegra264_tach_soc_data = {
+		.has_interrupt_support = false,
+		.one_mhz_clock_support = true,
+};
 static const struct of_device_id pwm_tegra_tach_of_match[] = {
+	{ .compatible = "nvidia,pwm-tegra264-tachometer", .data = &tegra264_tach_soc_data, },
 	{ .compatible = "nvidia,pwm-tegra234-tachometer", .data = &tegra234_tach_soc_data, },
 	{ .compatible = "nvidia,pwm-tegra194-tachometer", .data = &tegra194_tach_soc_data, },
 	{ .compatible = "nvidia,pwm-tegra186-tachometer", .data = &tegra186_tach_soc_data, },
