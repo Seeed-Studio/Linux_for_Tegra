@@ -213,7 +213,12 @@ static int host1x_pollfd_release(struct inode *inode, struct file *file)
 		if (pfd_fence->callback_set) {
 			if (dma_fence_remove_callback(pfd_fence->fence, &pfd_fence->callback))
 				host1x_fence_cancel(pfd_fence->fence);
+			pfd_fence->callback_set = false;
 		}
+		/*The lock/unlock just ensures that the callback execution has finished*/
+		spin_lock(pfd_fence->fence->lock);
+		spin_unlock(pfd_fence->fence->lock);
+
 		dma_fence_put(pfd_fence->fence);
 	}
 
@@ -235,6 +240,17 @@ static unsigned int host1x_pollfd_poll(struct file *file, poll_table *wait)
 	list_for_each_entry_safe(pfd_fence, pfd_fence_temp, &pollfd->fences, list) {
 		if (dma_fence_is_signaled(pfd_fence->fence)) {
 			mask = POLLPRI | POLLIN;
+
+			if (pfd_fence->callback_set) {
+				if (dma_fence_remove_callback(pfd_fence->fence,
+							      &pfd_fence->callback))
+					host1x_fence_cancel(pfd_fence->fence);
+				pfd_fence->callback_set = false;
+			}
+			/*The lock/unlock just ensures that the callback execution has finished*/
+			spin_lock(pfd_fence->fence->lock);
+			spin_unlock(pfd_fence->fence->lock);
+
 			dma_fence_put(pfd_fence->fence);
 			list_del(&pfd_fence->list);
 		}
