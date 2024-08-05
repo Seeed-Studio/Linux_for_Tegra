@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2011-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
 
-#include <linux/io.h>
 #include <linux/debugfs.h>
-#include <linux/of.h>
-#include <linux/version.h>
-#include <soc/tegra/fuse.h>
-
+#include <linux/io.h>
+#include <linux/kthread.h>
 #include <linux/libnvdimm.h>
-
+#include <linux/of.h>
+#include <linux/rtmutex.h>
 #include <linux/sys_soc.h>
+#include <linux/version.h>
+#include <linux/vmalloc.h>
+#include <soc/tegra/fuse.h>
 __weak struct arm64_ftr_reg arm64_ftr_reg_ctrel0;
 
 #include <trace/events/nvmap.h>
-#include <linux/rtmutex.h>
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
@@ -44,9 +44,17 @@ void nvmap_clean_cache_page(struct page *page)
 	__clean_dcache_area_poc(page_address(page), PAGE_SIZE);
 }
 
+static int threaded_cache_flush(void *arg)
+{
+	struct nvmap_cache_thread *t_data = (struct nvmap_cache_thread *)arg;
+
+	__clean_dcache_area_poc((void *)t_data->va_start, t_data->size);
+	return 0;
+}
+
 void nvmap_clean_cache(struct page **pages, int numpages)
 {
-	int i;
+	int i = 0;
 
 	/* Not technically a flush but that's what nvmap knows about. */
 	nvmap_stats_inc(NS_CFLUSH_DONE, numpages << PAGE_SHIFT);
@@ -55,6 +63,85 @@ void nvmap_clean_cache(struct page **pages, int numpages)
 		nvmap_stats_read(NS_CFLUSH_RQ),
 		nvmap_stats_read(NS_CFLUSH_DONE));
 
+	/*
+	 * If pages are more than THRESHOLD_PAGES_CACHE_FLUSH, then do threaded cache flush
+	 * where number of threads equal to number of online cpus
+	 */
+	if (numpages >= THRESHOLD_PAGES_CACHE_FLUSH) {
+		/* Map pages in kernel VA space */
+		void *vaddr;
+		int online_cpus = num_online_cpus();
+		struct nvmap_cache_thread **td_array = nvmap_altalloc(online_cpus *
+					sizeof(*td_array));
+		int created_threads = 0, j;
+		size_t set_size, last_set_size;
+
+		if (!td_array) {
+			pr_err("td_array allocation failed\n");
+			goto page_by_page_flush;
+		}
+
+		vaddr = vmap(pages, numpages, VM_MAP, PAGE_KERNEL);
+		if (vaddr == NULL) {
+			pr_err("vmap failed\n");
+			nvmap_altfree(td_array, online_cpus * sizeof(*td_array));
+			goto page_by_page_flush;
+		}
+
+		set_size = ((unsigned long long)numpages / online_cpus) << PAGE_SHIFT;
+
+		/*
+		 * The last thread should flush the entire remaining
+		 * pages, as numpages may not be always divisible by
+		 * number of online_cpus.
+		 */
+		last_set_size = (unsigned long long) (numpages - (set_size
+							* (online_cpus - 1))) << PAGE_SHIFT;
+
+		for (i = 0; i < online_cpus; i++) {
+			td_array[i] = nvmap_altalloc(sizeof(struct nvmap_cache_thread));
+			if (!td_array[i]) {
+				pr_err("failed to allocate memory for nvmap_cache_thread\n");
+				goto stop_threads;
+			}
+
+			td_array[i]->thread_id = i + 1;
+			td_array[i]->size = (i == online_cpus - 1) ? last_set_size : set_size;
+			td_array[i]->va_start = vaddr + i * set_size;
+			td_array[i]->task = kthread_run(
+						threaded_cache_flush, td_array[i],
+						"nvmap_cache_flush_thread_%d", i);
+			if (IS_ERR(td_array[i]->task)) {
+				pr_err("failed to create kernel thread:%d\n", i);
+				goto stop_threads;
+			}
+
+			get_task_struct(td_array[i]->task);
+			created_threads++;
+		}
+
+stop_threads:
+		for (j = 0; j < created_threads; j++) {
+			if (!IS_ERR_OR_NULL(td_array[j]->task)) {
+				kthread_stop(td_array[j]->task);
+				put_task_struct(td_array[j]->task);
+			}
+		}
+
+		while (--i >= 0) {
+			nvmap_altfree(td_array[i], sizeof(struct nvmap_cache_thread));
+		}
+
+		vunmap(vaddr);
+		nvmap_altfree(td_array, online_cpus * sizeof(*td_array));
+
+		if (created_threads != online_cpus)
+			goto page_by_page_flush;
+
+		return;
+	}
+
+page_by_page_flush:
 	for (i = 0; i < numpages; i++)
 		nvmap_clean_cache_page(pages[i]);
 }

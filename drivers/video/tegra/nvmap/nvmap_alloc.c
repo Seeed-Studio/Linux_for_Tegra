@@ -104,6 +104,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	gfp_t gfp = GFP_NVMAP | __GFP_ZERO;
 	u64 result;
 #ifdef CONFIG_ARM64_4K_PAGES
+	int cc_index = 0;
 #ifdef NVMAP_CONFIG_PAGE_POOLS
 	int pages_per_big_pg = NVMAP_PP_BIG_PAGE_SIZE >> PAGE_SHIFT;
 #else
@@ -133,6 +134,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 		pages_per_big_pg = nvmap_dev->pool->pages_per_big_pg;
 #endif
 		/* Try to allocate big pages from page allocator */
+		cc_index = page_index;
 		for (i = page_index;
 		     i < nr_page && pages_per_big_pg > 1 && (nr_page - i) >= pages_per_big_pg;
 		     i += pages_per_big_pg, page_index += pages_per_big_pg) {
@@ -151,8 +153,9 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 			for (idx = 0; idx < pages_per_big_pg; idx++)
 				pages[i + idx] = nth_page(page, idx);
-			nvmap_clean_cache(&pages[i], pages_per_big_pg);
 		}
+
+		nvmap_clean_cache(&pages[cc_index], page_index - cc_index);
 
 		if (check_add_overflow(nvmap_big_page_allocs, (u64)page_index, &result))
 			goto fail;
