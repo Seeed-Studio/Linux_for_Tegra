@@ -18,7 +18,7 @@
 #include <dce-pm.h>
 #include <dce-mailbox.h>
 #include <dce-client-ipc-internal.h>
-#include <dce-workqueue.h>
+#include <os-dce-workqueue.h>
 
 #define DCE_MAX_CPU_IRQS 4
 
