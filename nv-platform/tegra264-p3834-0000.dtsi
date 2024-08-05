@@ -350,11 +350,9 @@
 			status = "okay";
 		};
 
-		cpus {
-			idle-states {
-				cc7 {
-					status = "okay";
-				};
+		idle-states {
+			cc7 {
+				status = "okay";
 			};
 		};
 	};
