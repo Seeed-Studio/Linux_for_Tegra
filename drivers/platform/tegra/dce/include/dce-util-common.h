@@ -12,6 +12,11 @@
 #include <linux/workqueue.h>
 
 /**
+ * @brief avoid unused parameter warning when it is not intended to be used.
+ */
+#define USE(x) ((void)(x))
+
+/**
  * This file contains all dce common fucntions and data strutcures which are
  * abstarcted out from the operating system. The underlying OS layer will
  * implement the pertinent low level details. This design is to make sure that
