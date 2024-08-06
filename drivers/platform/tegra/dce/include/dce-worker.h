@@ -8,7 +8,6 @@
 
 #include <os-cond.h>
 #include <os-lock.h>
-#include <dce-thread.h>
 #include <atomic.h>
 
 struct tegra_dce;
