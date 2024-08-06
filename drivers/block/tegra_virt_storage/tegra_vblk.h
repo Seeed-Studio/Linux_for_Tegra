@@ -28,6 +28,19 @@
 
 #define MAX_VSC_REQS 32
 
+/* Set the max IOCTL size to (580KB + 512bytes)
+ * For Micron eMMC, the max FFU size is 573KB.
+ * For Samsung eMMC, the max FFU size is 512KB.
+ * So, setting to 580.5KB to accomodate above.
+ */
+#define EMMC_IOCTL_MAX_SIZE		(0x91200U)
+/* Set the max IOCTL size to 1MB
+ * For Micron UFS, the max FFU size is 936KB.
+ * For Samsung UFS, the max FFU size is 504KB.
+ * So, setting to 1MB to accomodate above.
+ */
+#define UFS_IOCTL_MAX_SIZE_SUPPORTED	(0x100000)
+
 struct vblk_ioctl_req {
 	uint32_t ioctl_id;
 	void *ioctl_buf;

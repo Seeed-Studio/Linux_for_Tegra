@@ -40,7 +40,7 @@
 #define DISCARD_ERASE_SECERASE_MASK	(VS_BLK_DISCARD_OP_F | \
 					VS_BLK_SECURE_ERASE_OP_F | \
 					VS_BLK_ERASE_OP_F)
-#define UFS_IOCTL_MAX_SIZE_SUPPORTED	0x80000
+
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 #define HSI_SDMMC4_REPORT_ID		0x805EU
 #define HSI_ERROR_MAGIC			0xDEADDEAD
@@ -1077,7 +1077,17 @@ static void setup_device(struct vblk_dev *vblkdev)
 				max_ioctl_requests = MAX_VSC_REQS;
 		}
 	} else {
-		max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
+		/* To accomodate 512KB + combo/sg header size in the
+		 * mempool add 512 bytes additional for the each mempool
+		 * slot.
+		 */
+		if ((vblkdev->config.blk_config.req_ops_supported & VS_BLK_IOCTL_OP_F) &&
+				(max_io_bytes < EMMC_IOCTL_MAX_SIZE)) {
+
+			max_requests = ((vblkdev->ivmk->size) / EMMC_IOCTL_MAX_SIZE);
+		} else {
+			max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
+		}
 		max_ioctl_requests = max_requests;
 	}
 
@@ -1141,10 +1151,18 @@ static void setup_device(struct vblk_dev *vblkdev)
 	for (req_id = 0; req_id < max_requests; req_id++){
 		req = &vblkdev->reqs[req_id];
 		if (vblkdev->config.blk_config.use_vm_address == 0U) {
-			req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +
-				(uintptr_t)(req_id * max_io_bytes));
-			req->mempool_offset = (req_id * max_io_bytes);
-			req->mempool_len = max_io_bytes;
+			if ((vblkdev->config.blk_config.req_ops_supported & VS_BLK_IOCTL_OP_F) &&
+					(max_io_bytes < EMMC_IOCTL_MAX_SIZE)) {
+				req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +
+						(uintptr_t)(req_id * EMMC_IOCTL_MAX_SIZE));
+				req->mempool_offset = (req_id * EMMC_IOCTL_MAX_SIZE);
+				req->mempool_len = EMMC_IOCTL_MAX_SIZE;
+			} else {
+				req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +
+						(uintptr_t)(req_id * max_io_bytes));
+				req->mempool_offset = (req_id * max_io_bytes);
+				req->mempool_len = max_io_bytes;
+			}
 		} else {
 			if (vblkdev->config.blk_config.req_ops_supported & VS_BLK_IOCTL_OP_F) {
 				req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +

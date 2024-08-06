@@ -12,8 +12,6 @@
 #include <linux/mmc/core.h>
 #include "tegra_vblk.h"
 
-#define VBLK_MMC_MAX_IOC_SIZE (256 * 1024)
-
 int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 	struct vblk_ioctl_req *ioctl_req,
 	void __user *user,
@@ -28,7 +26,7 @@ int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 	struct mmc_ioc_multi_cmd __user *user_cmd;
 	struct mmc_ioc_cmd __user *usr_ptr;
 	uint32_t combo_cmd_size;
-	uint32_t ioctl_bytes = VBLK_MMC_MAX_IOC_SIZE;
+	uint32_t ioctl_bytes = EMMC_IOCTL_MAX_SIZE;
 	uint8_t *tmpaddr;
 	void *ioctl_buf;
 
@@ -76,7 +74,8 @@ int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 
 	if (combo_cmd_size > ioctl_bytes) {
 		dev_err(vblkdev->device,
-			" buffer has no enough space to serve ioctl\n");
+			" buffer has no enough space to serve ioctl %d %d\n",
+			combo_cmd_size, ioctl_bytes);
 		err = -EFAULT;
 		goto free_ioc_buf;
 	}
