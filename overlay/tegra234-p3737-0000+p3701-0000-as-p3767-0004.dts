@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -53,6 +53,24 @@
 				/* C9 */
 				pcie@140c0000 {
 					max-link-speed = <0x3>;
+				};
+			};
+			opp-table-cluster0 {
+				opp-1510400000 { /* Max CPU freq for Orin Nano */
+					opp-hz = /bits/ 64 <1510400000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+			opp-table-cluster1 {
+				opp-1510400000 { /* Max CPU freq for Orin Nano */
+					opp-hz = /bits/ 64 <1510400000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+			opp-table-cluster2 {
+				opp-1510400000 { /* Max CPU freq for Orin Nano */
+					opp-hz = /bits/ 64 <1510400000>;
+					opp-peak-kBps = <3200000>;
 				};
 			};
 		};

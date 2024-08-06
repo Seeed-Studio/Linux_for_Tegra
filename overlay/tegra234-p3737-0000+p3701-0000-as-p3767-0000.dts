@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -15,6 +15,24 @@
 		__overlay__ {
 			compatible = "nvidia,p3737-0000+p3701-0000-as-p3767-0000", "nvidia,tegra234";
 			model = "Jetson AGX Orin as NX-16GB";
+			opp-table-cluster0 {
+				opp-1984000000 { /* Max CPU freq for ONX */
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+			opp-table-cluster1 {
+				opp-1984000000 { /* Max CPU freq for ONX */
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+			opp-table-cluster2 {
+				opp-1984000000 { /* Max CPU freq for ONX */
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
 		};
 	};
 };

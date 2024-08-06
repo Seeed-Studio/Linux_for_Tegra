@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -20,6 +20,24 @@
 					nvdla1@158c0000 {
 						status = "disabled";
 					};
+				};
+			};
+			opp-table-cluster0 {
+				opp-1984000000 { /* Max CPU freq for ONX */
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+			opp-table-cluster1 {
+				opp-1984000000 { /* Max CPU freq for ONX */
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
+				};
+			};
+			opp-table-cluster2 {
+				opp-1984000000 { /* Max CPU freq for ONX */
+					opp-hz = /bits/ 64 <1984000000>;
+					opp-peak-kBps = <3200000>;
 				};
 			};
 		};
