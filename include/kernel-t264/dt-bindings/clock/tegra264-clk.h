@@ -476,6 +476,7 @@
 #define TEGRA264_CLK_MGBE1_RX_SER		464U
 #define TEGRA264_CLK_MGBE2_RX_SER		465U
 #define TEGRA264_CLK_MGBE3_RX_SER		466U
+#define TEGRA264_CLK_DPAUX			467U
 /** @brief Largest supported public clock identifier for this platform */
 #define TEGRA264_MAX_PUBLIC_CLK_ID              500U
 
