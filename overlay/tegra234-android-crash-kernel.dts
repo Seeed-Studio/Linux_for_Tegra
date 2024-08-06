@@ -14,6 +14,21 @@
 				linux,cma {
 				    status = "disabled";
 				};
+				generic_carveout {
+				    status = "disabled";
+				};
+				grid-of-semaphores {
+				    status = "disabled";
+				};
+				ivm-carveout0 {
+				    status = "disabled";
+				};
+				ivm-carveout1 {
+				    status = "disabled";
+				};
+				virtio_console_region@c0000000 {
+				    status = "disabled";
+				};
 				fsi-carveout {
 				    status = "disabled";
 				};
