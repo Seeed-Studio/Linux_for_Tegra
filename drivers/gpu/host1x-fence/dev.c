@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Host1x fence UAPI
- *
- * Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -205,11 +201,11 @@ struct host1x_pollfd {
 static int host1x_pollfd_release(struct inode *inode, struct file *file)
 {
 	struct host1x_pollfd *pollfd = file->private_data;
-	struct host1x_pollfd_fence *pfd_fence;
+	struct host1x_pollfd_fence *pfd_fence, *pfd_fence_temp;
 
 	mutex_lock(&pollfd->lock);
 
-	list_for_each_entry(pfd_fence, &pollfd->fences, list) {
+	list_for_each_entry_safe(pfd_fence, pfd_fence_temp, &pollfd->fences, list) {
 		if (pfd_fence->callback_set) {
 			if (dma_fence_remove_callback(pfd_fence->fence, &pfd_fence->callback))
 				host1x_fence_cancel(pfd_fence->fence);
@@ -220,9 +216,12 @@ static int host1x_pollfd_release(struct inode *inode, struct file *file)
 		spin_unlock(pfd_fence->fence->lock);
 
 		dma_fence_put(pfd_fence->fence);
+		kfree(pfd_fence);
 	}
 
 	mutex_unlock(&pollfd->lock);
+
+	kfree(pollfd);
 
 	return 0;
 }
@@ -253,6 +252,7 @@ static unsigned int host1x_pollfd_poll(struct file *file, poll_table *wait)
 
 			dma_fence_put(pfd_fence->fence);
 			list_del(&pfd_fence->list);
+			kfree(pfd_fence);
 		}
 	}
 
