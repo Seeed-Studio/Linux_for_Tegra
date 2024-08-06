@@ -8482,7 +8482,7 @@
 
 	mods_isp0: mods_isp0 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA_SID_ISP0>;
+		iommus = <&smmu4_mmu TEGRA_SID_ISP0>;
 		dma-coherent;
 		dev-names = "mods_isp0";
 		status = "disabled";
@@ -8490,7 +8490,7 @@
 
 	mods_isp2: mods_isp2 {
 		compatible = "nvidia,mods_smmu";
-		iommus = <&smmu1_mmu TEGRA_SID_ISP1>;
+		iommus = <&smmu4_mmu TEGRA_SID_ISP1>;
 		dma-coherent;
 		dev-names = "mods_isp2";
 		status = "disabled";
