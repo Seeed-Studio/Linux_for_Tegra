@@ -360,6 +360,10 @@
 		i2c@810c6a0000 {
 			status = "okay";
 		};
+
+		i2c@810c6d0000 {
+			status = "okay";
+		};
 	};
 
 	eeprom-manager {
