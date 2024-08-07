@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "tegra264.dtsi"
+#include "nv-soc/tegra264-soc-prod.dtsi"
 
 / {
 	bus@0 {

@@ -8,6 +8,7 @@ old-dtbo := $(dtbo-y)
 dtb-y :=
 dtbo-y :=
 makefile-path := t264/nv-public/nv-platform
+#makefile-path += t264/nv-public/nv-soc
 
 dtb-y += tegra264-p3971-0050+p3834-0005-qspi-nvme.dtb
 dtb-y += tegra264-p3971-0080+p3834-0008-qspi-nvme.dtb
