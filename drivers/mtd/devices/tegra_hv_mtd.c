@@ -31,6 +31,7 @@
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 #include <linux/tegra-hsierrrptinj.h>
 #endif
+#define ECC_REQUEST_FAILED		0xFFFFFFFF
 
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 #define HSI_QSPI_REPORT_ID(inst)	(0x805B + (inst))
@@ -58,6 +59,7 @@ struct vmtd_dev {
 	uint32_t epl_reporter_id;
 	uint32_t instance_id;
 #endif
+	uint32_t ecc_failed_chunk_address;
 };
 
 #define IVC_RESET_RETRIES 30
@@ -493,7 +495,7 @@ static ssize_t qspi_device_size_bytes_show(struct device *dev,
 {
 	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
 
-	return sprintf(buf, "%u\n",  (unsigned int)vmtddev->config.mtd_config.qspi_device_size_bytes);
+	return sprintf(buf, "%u\n", (unsigned int) vmtddev->config.mtd_config.qspi_device_size_bytes);
 }
 static DEVICE_ATTR_RO(qspi_device_size_bytes);
 
@@ -511,17 +513,17 @@ static ssize_t ecc_status_show(struct device *dev,
 	vs_req->mtddev_req.mtd_req.offset = 0;
 	vs_req->mtddev_req.mtd_req.size = 0;
 	vs_req->mtddev_req.mtd_req.data_offset = 0;
+	/* FIXME: Need to choose request id based on some logic instead of 0 */
 	vs_req->req_id = 0;
 
 	ret = vmtd_process_request(vmtddev, vs_req);
 	if (ret != 0) {
 		dev_err(vmtddev->device, "Read ECC Failed\n");
-		return snprintf(buf, PAGE_SIZE, "Error reading ECC status\n");
+		return sprintf(buf, "0x%x\n", ECC_REQUEST_FAILED);
 	}
 
 	ecc_response = vs_req->mtddev_resp.ecc_resp;
-	vs_req->mtddev_req.stored_ecc_status = ecc_response.status;
-	vs_req->mtddev_req.stored_failed_chunk_addr = ecc_response.failed_chunk_addr;
+	vmtddev->ecc_failed_chunk_address = ecc_response.failed_chunk_addr;
 
 	switch (ecc_response.status) {
 	case ECC_NO_ERROR:
@@ -533,7 +535,7 @@ static ssize_t ecc_status_show(struct device *dev,
 	case ECC_DISABLED:
 		return sprintf(buf, "0x%x\n", ECC_DISABLED);
 	default:
-		return snprintf(buf, PAGE_SIZE, "ECC Status: Unknown error\n");
+		return sprintf(buf, "0x%x\n", ECC_REQUEST_FAILED);
 	}
 }
 static DEVICE_ATTR_RO(ecc_status);
@@ -542,12 +544,12 @@ static ssize_t failure_chunk_addr_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
-	struct vs_request *vs_req = (struct vs_request *)vmtddev->cmd_frame;
+	ssize_t ret;
 
-	if (vs_req->mtddev_req.stored_ecc_status == ECC_NO_ERROR)
-		return sprintf(buf, "0x0\n");
-	else
-		return snprintf(buf, PAGE_SIZE, "0x%x\n", vs_req->mtddev_req.stored_failed_chunk_addr);
+	ret = snprintf(buf, PAGE_SIZE, "0x%x\n", vmtddev->ecc_failed_chunk_address);
+	vmtddev->ecc_failed_chunk_address = 0;
+
+	return ret;
 
 }
 static DEVICE_ATTR_RO(failure_chunk_addr);

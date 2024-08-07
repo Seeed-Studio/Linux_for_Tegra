@@ -160,9 +160,6 @@ struct vs_mtddev_request {
 		struct vs_mtd_request mtd_req;
 		struct vs_ioctl_request ioctl_req;
 	};
-	uint32_t stored_ecc_status;		/* Field to store ECC status */
-
-	uint32_t stored_failed_chunk_addr;	/* field to store failed chunk address */
 };
 
 struct vs_blk_response {
