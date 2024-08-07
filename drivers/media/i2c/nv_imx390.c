@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES.
-// All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * imx390.c - imx390 sensor driver
  * Copyright (c) 2020, RidgeRun. All rights reserved.
@@ -24,32 +23,17 @@
 #include "../platform/tegra/camera/camera_gpio.h"
 #include "imx390_mode_tbls.h"
 
-/* imx390 - sensor parameters */
-#define IMX390_MIN_GAIN         (0)
-#define IMX390_MAX_GAIN         (978)
-#define IMX390_ANALOG_GAIN_C0   (1024)
-#define IMX390_SHIFT_8_BITS     (8)
-#define IMX390_MIN_COARSE_EXPOSURE  (1)
-#define IMX390_MAX_COARSE_DIFF  (10)
-#define IMX390_MASK_LSB_2_BITS  0x0003
-#define IMX390_MASK_LSB_8_BITS  0x00ff
-#define IMX390_MIN_FRAME_LENGTH (3092)
-#define IMX390_MAX_FRAME_LENGTH (0x1FFFF)
-
 /* imx390 sensor register address */
-#define IMX390_MODEL_ID_ADDR_MSB	        0x0000
-#define IMX390_MODEL_ID_ADDR_LSB	        0x0001
-#define IMX390_ANALOG_GAIN_ADDR_MSB	        0x0204
-#define IMX390_ANALOG_GAIN_ADDR_LSB	        0x0205
-#define IMX390_DIGITAL_GAIN_ADDR_MSB		0x020e
-#define IMX390_DIGITAL_GAIN_ADDR_LSB		0x020f
-#define IMX390_FRAME_LENGTH_ADDR_MSB		0x0340
-#define IMX390_FRAME_LENGTH_ADDR_LSB		0x0341
-#define IMX390_COARSE_INTEG_TIME_ADDR_MSB	0x0202
-#define IMX390_COARSE_INTEG_TIME_ADDR_LSB	0x0203
-#define IMX390_FINE_INTEG_TIME_ADDR_MSB		0x0200
-#define IMX390_FINE_INTEG_TIME_ADDR_LSB		0x0201
-#define IMX390_GROUP_HOLD_ADDR              0x0104
+#define IMX390_PGA_GAIN_SP1H			0x0024
+#define IMX390_COARSE_TIME_SHS1_ADDR_MSB	0x000E
+#define IMX390_COARSE_TIME_SHS1_ADDR_MID	0x000D
+#define IMX390_COARSE_TIME_SHS1_ADDR_LSB	0x000C
+#define IMX390_COARSE_TIME_SHS2_ADDR_MSB	0x0012
+#define IMX390_COARSE_TIME_SHS2_ADDR_MID	0x0011
+#define IMX390_COARSE_TIME_SHS2_ADDR_LSB	0x0010
+#define IMX390_GROUP_HOLD_ADDR			0x0008
+
+#define IMX390_DEFAULT_FRAME_LENGTH		(1250)
 
 static const struct of_device_id imx390_of_match[] = {
 	{.compatible = "sony,imx390",},
@@ -60,6 +44,7 @@ MODULE_DEVICE_TABLE(of, imx390_of_match);
 static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_GAIN,
 	TEGRA_CAMERA_CID_EXPOSURE,
+	TEGRA_CAMERA_CID_EXPOSURE_SHORT,
 	TEGRA_CAMERA_CID_FRAME_RATE,
 	TEGRA_CAMERA_CID_HDR_EN,
 	TEGRA_CAMERA_CID_SENSOR_MODE_ID,
@@ -80,31 +65,38 @@ static const struct regmap_config sensor_regmap_config = {
 	.cache_type = REGCACHE_NONE,
 };
 
-static inline void imx390_get_frame_length_regs(imx390_reg *regs,
-		u32 frame_length)
+static inline void imx390_get_coarse_time_regs_shs1(imx390_reg *regs,
+				u32 coarse_time)
 {
-	regs->addr = IMX390_FRAME_LENGTH_ADDR_MSB;
-	regs->val = (frame_length >> 8) & 0xff;
-	(regs + 1)->addr = IMX390_FRAME_LENGTH_ADDR_LSB;
-	(regs + 1)->val = (frame_length) & 0xff;
+	regs->addr = IMX390_COARSE_TIME_SHS1_ADDR_MSB;
+	regs->val = (coarse_time >> 16) & 0x0f;
+
+	(regs + 1)->addr = IMX390_COARSE_TIME_SHS1_ADDR_MID;
+	(regs + 1)->val = (coarse_time >> 8) & 0xff;
+
+	(regs + 2)->addr = IMX390_COARSE_TIME_SHS1_ADDR_LSB;
+	(regs + 2)->val = (coarse_time) & 0xff;
 }
 
-static inline void imx390_get_coarse_integ_time_regs(imx390_reg *regs,
-		u32 coarse_time)
+static inline void imx390_get_coarse_time_regs_shs2(imx390_reg *regs,
+				u32 coarse_time)
 {
-	regs->addr = IMX390_COARSE_INTEG_TIME_ADDR_MSB;
-	regs->val = (coarse_time >> 8) & 0xff;
-	(regs + 1)->addr = IMX390_COARSE_INTEG_TIME_ADDR_LSB;
-	(regs + 1)->val = (coarse_time) & 0xff;
+	regs->addr = IMX390_COARSE_TIME_SHS2_ADDR_MSB;
+	regs->val = (coarse_time >> 16) & 0x0f;
+
+	(regs + 1)->addr = IMX390_COARSE_TIME_SHS2_ADDR_MID;
+	(regs + 1)->val = (coarse_time >> 8) & 0xff;
+
+	(regs + 2)->addr = IMX390_COARSE_TIME_SHS2_ADDR_LSB;
+	(regs + 2)->val = (coarse_time) & 0xff;
 }
 
-static inline void imx390_get_gain_reg(imx390_reg *reg, u16 gain)
+static inline void imx390_get_gain_reg(imx390_reg *regs, u16 gain)
 {
-	reg->addr = IMX390_ANALOG_GAIN_ADDR_MSB;
-	reg->val = (gain >> IMX390_SHIFT_8_BITS) & IMX390_MASK_LSB_2_BITS;
-
-	(reg + 1)->addr = IMX390_ANALOG_GAIN_ADDR_LSB;
-	(reg + 1)->val = (gain) & IMX390_MASK_LSB_8_BITS;
+	regs->addr = IMX390_PGA_GAIN_SP1H + 1;
+	regs->val = (gain >> 8) & 0x03;
+	(regs + 1)->addr = IMX390_PGA_GAIN_SP1H;
+	(regs + 1)->val = gain & 0xff;
 }
 
 static inline int imx390_read_reg(struct camera_common_data *s_data,
@@ -126,7 +118,7 @@ static inline int imx390_write_reg(struct camera_common_data *s_data,
 
 	err = regmap_write(s_data->regmap, addr, val);
 	if (err)
-		dev_err(s_data->dev, "%s: i2c write failed, 0x%x = %x",
+		dev_err(s_data->dev, "%s: i2c write failed, 0x%x = %x\n",
 				__func__, addr, val);
 
 	return err;
@@ -170,25 +162,146 @@ static int imx390_write_table(struct imx390 *priv, const imx390_reg table[])
 
 static int imx390_set_group_hold(struct tegracam_device *tc_dev, bool val)
 {
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct device *dev = tc_dev->dev;
+	int err;
+
+	err = imx390_write_reg(s_data,
+			       IMX390_GROUP_HOLD_ADDR, val);
+	if (err) {
+		dev_dbg(dev,
+			"%s: Group hold control error\n", __func__);
+		return err;
+	}
+
 	return 0;
 }
 
 static int imx390_set_gain(struct tegracam_device *tc_dev, s64 val)
 {
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct device *dev = tc_dev->dev;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
+	imx390_reg reg_list[2];
+	int err, i;
+	u16 gain;
+
+	gain = (u16)(val / mode->control_properties.step_gain_val);
+
+	dev_dbg(dev, "%s: val: %lld db: %d\n",  __func__, val, gain);
+
+	imx390_get_gain_reg(reg_list, gain);
+	for (i = 0; i < 2; i++) {
+		err = imx390_write_reg(s_data, reg_list[i].addr,
+			reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
 	return 0;
+
+fail:
+	dev_info(dev, "%s: GAIN control error\n", __func__);
+	return err;
 }
 
 static int imx390_set_frame_rate(struct tegracam_device *tc_dev, s64 val)
 {
-	struct imx390 *priv = (struct imx390 *)tc_dev->priv;
+	struct imx390 *priv = (struct imx390 *)tegracam_get_privdata(tc_dev);
 
-	priv->frame_length = IMX390_MIN_FRAME_LENGTH;
+	priv->frame_length = IMX390_DEFAULT_FRAME_LENGTH;
 	return 0;
 }
 
 static int imx390_set_exposure(struct tegracam_device *tc_dev, s64 val)
 {
+	struct imx390 *priv = (struct imx390 *)tegracam_get_privdata(tc_dev);
+	struct camera_common_data *s_data = tc_dev->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
+	imx390_reg reg_list[3];
+	int err;
+	u32 coarse_time;
+	u32 shs1;
+	int i;
+
+	/* coarse time in lines */
+	coarse_time = (u32) (val * s_data->frmfmt[s_data->mode].framerates[0] *
+		priv->frame_length / mode->control_properties.exposure_factor);
+
+	shs1 = priv->frame_length - coarse_time;
+	/* 0 to 3 are prohibited */
+	if (shs1 < 4)
+		shs1 = 4;
+	/* over VMAX-5 is prohibited */
+	if (shs1 > priv->frame_length - 5)
+		shs1 = priv->frame_length - 5;
+
+	imx390_get_coarse_time_regs_shs1(reg_list, shs1);
+	for (i = 0; i < 3; i++) {
+		err = imx390_write_reg(priv->s_data, reg_list[i].addr,
+			reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
+	imx390_get_coarse_time_regs_shs2(reg_list, shs1);
+	for (i = 0; i < 3; i++) {
+		err = imx390_write_reg(priv->s_data, reg_list[i].addr,
+			reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
+	dev_dbg(tc_dev->dev, "%s: val=%lld shs1=%u coarse_time=%u frame_len=%u\n",
+			__func__, val, shs1, coarse_time, priv->frame_length);
+
 	return 0;
+fail:
+	dev_dbg(&priv->i2c_client->dev,
+		"%s: set coarse time error\n", __func__);
+	return err;
+}
+
+static int imx390_set_exposure_short(struct tegracam_device *tc_dev, s64 val)
+{
+	struct imx390 *priv = (struct imx390 *)tegracam_get_privdata(tc_dev);
+	struct camera_common_data *s_data = tc_dev->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
+	imx390_reg reg_list[3];
+	int err;
+	u32 coarse_time;
+	u32 shs1;
+	int i;
+
+	/* coarse time in lines */
+	coarse_time = (u32) (val * s_data->frmfmt[s_data->mode].framerates[0] *
+		priv->frame_length / mode->control_properties.exposure_factor);
+
+	shs1 = priv->frame_length - coarse_time;
+	/* 0 to 3 are prohibited */
+	if (shs1 < 4)
+		shs1 = 4;
+	/* over VMAX-5 is prohibited */
+	if (shs1 > priv->frame_length - 5)
+		shs1 = priv->frame_length - 5;
+
+	imx390_get_coarse_time_regs_shs2(reg_list, shs1);
+	for (i = 0; i < 3; i++) {
+		err = imx390_write_reg(priv->s_data, reg_list[i].addr,
+			reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
+	return 0;
+
+fail:
+	dev_dbg(&priv->i2c_client->dev,
+		"%s: set coarse time error\n", __func__);
+	return err;
 }
 
 static struct tegracam_ctrl_ops imx390_ctrl_ops = {
@@ -196,6 +309,7 @@ static struct tegracam_ctrl_ops imx390_ctrl_ops = {
 	.ctrl_cid_list = ctrl_cid_list,
 	.set_gain = imx390_set_gain,
 	.set_exposure = imx390_set_exposure,
+	.set_exposure_short = imx390_set_exposure_short,
 	.set_frame_rate = imx390_set_frame_rate,
 	.set_group_hold = imx390_set_group_hold,
 };
@@ -208,6 +322,7 @@ static int imx390_power_on(struct camera_common_data *s_data)
 	struct device *dev = s_data->dev;
 
 	dev_err(dev, "%s: power on\n", __func__);
+
 	if (pdata && pdata->power_on) {
 		err = pdata->power_on(pw);
 		if (err)
