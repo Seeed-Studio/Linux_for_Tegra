@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_PM_H
@@ -12,6 +12,8 @@ struct dce_sc7_state {
 	uint32_t hsp_ie;
 };
 
+int dce_pm_init(struct tegra_dce *d);
+void dce_pm_deinit(struct tegra_dce *d);
 int dce_pm_enter_sc7(struct tegra_dce *d);
 int dce_pm_exit_sc7(struct tegra_dce *d);
 void dce_resume_work_fn(struct tegra_dce *d);

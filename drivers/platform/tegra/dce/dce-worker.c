@@ -110,18 +110,6 @@ int dce_work_cond_sw_resource_init(struct tegra_dce *d)
 	int ret = 0;
 	int i;
 
-	ret = dce_init_work(d, &d->dce_bootstrap_work, dce_bootstrap_work_fn);
-	if (ret) {
-		dce_err(d, "Bootstrap work init failed");
-		goto exit;
-	}
-
-	ret = dce_init_work(d, &d->dce_resume_work, dce_resume_work_fn);
-	if (ret) {
-		dce_err(d, "resume work init failed");
-		goto exit;
-	}
-
 	if (dce_cond_init(&d->dce_bootstrap_done)) {
 		dce_err(d, "dce boot wait condition init failed");
 		ret = -1;

@@ -170,3 +170,23 @@ int dce_pm_exit_sc7(struct tegra_dce *d)
 out:
 	return ret;
 }
+
+int dce_pm_init(struct tegra_dce *d)
+{
+	int ret = 0;
+
+	ret = dce_init_work(d, &d->dce_resume_work, dce_resume_work_fn);
+	if (ret) {
+		dce_err(d, "resume work init failed");
+		goto done;
+	}
+
+done:
+	return ret;
+}
+
+void dce_pm_deinit(struct tegra_dce *d)
+{
+	USE(d);
+	// Nothing to do.
+}

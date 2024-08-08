@@ -65,6 +65,12 @@ int dce_driver_init(struct tegra_dce *d)
 		goto err_client_init;
 	}
 
+	ret = dce_pm_init(d);
+	if (ret) {
+		dce_err(d, "Failed to init DCE Power management");
+		goto err_pm_init;
+	}
+
 	ret = dce_work_cond_sw_resource_init(d);
 	if (ret) {
 		dce_err(d, "dce sw resource init failed");
@@ -82,6 +88,8 @@ int dce_driver_init(struct tegra_dce *d)
 err_fsm_init:
 	dce_work_cond_sw_resource_deinit(d);
 err_sw_init:
+	dce_pm_deinit(d);
+err_pm_init:
 	dce_client_deinit(d);
 err_client_init:
 	dce_admin_deinit(d);
@@ -108,6 +116,8 @@ void dce_driver_deinit(struct tegra_dce *d)
 	dce_fsm_deinit(d);
 
 	dce_work_cond_sw_resource_deinit(d);
+
+	dce_pm_deinit(d);
 
 	dce_client_deinit(d);
 
