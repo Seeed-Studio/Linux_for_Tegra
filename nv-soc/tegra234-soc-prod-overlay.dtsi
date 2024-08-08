@@ -7,9 +7,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
-					nvidia,i2c-hs-sclk-high-period = <0x03>;
-					nvidia,i2c-hs-sclk-low-period = <0x08>;
 					prod = <
 						0 0x0000009c 0x0000ffff 0x00000308              //i2c_i2c_hs_interface_timing_0_0
 						0 0x000000d4 0x000000ff 0x00000000              //i2c_i2c_interface_timing_2_0
@@ -18,43 +15,18 @@
 						0 0x000000e0 0x0000ffff 0x00000002>;            //i2c_i2c_slv_data_capture_timing_0
 				};
 				prod_c_fm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x3c>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x003c0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_fmplus {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x00160000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_hs {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-clk-divisor-hs-mode = <0x02>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
-					nvidia,i2c-hs-stop-setup-time = <0x09>;
-					nvidia,i2c-hs-start-hold-time = <0x09>;
-					nvidia,i2c-hs-start-setup-time = <0x09>;
 					prod = <
 						0 0x0000006c 0xffffffff 0x00160002              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -62,13 +34,6 @@
 						0 0x000000a0 0x00ffffff 0x00090909>;            //i2c_i2c_hs_interface_timing_1_0
 				};
 				prod_c_sm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x4f>;
-					nvidia,i2c-sclk-high-period = <0x07>;
-					nvidia,i2c-sclk-low-period = <0x08>;
-					nvidia,i2c-bus-free-time = <0x08>;
-					nvidia,i2c-stop-setup-time = <0x08>;
-					nvidia,i2c-start-hold-time = <0x08>;
-					nvidia,i2c-start-setup-time = <0x08>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x004f0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000708              //i2c_i2c_interface_timing_0_0
@@ -81,9 +46,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
-					nvidia,i2c-hs-sclk-high-period = <0x03>;
-					nvidia,i2c-hs-sclk-low-period = <0x08>;
 					prod = <
 						0 0x0000009c 0x0000ffff 0x00000308              //i2c_i2c_hs_interface_timing_0_0
 						0 0x000000d4 0x000000ff 0x00000000              //i2c_i2c_interface_timing_2_0
@@ -92,43 +54,18 @@
 						0 0x000000e0 0x0000ffff 0x00000002>;            //i2c_i2c_slv_data_capture_timing_0
 				};
 				prod_c_fm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x3c>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x003c0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_fmplus {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x00160000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_hs {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-clk-divisor-hs-mode = <0x02>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
-					nvidia,i2c-hs-stop-setup-time = <0x09>;
-					nvidia,i2c-hs-start-hold-time = <0x09>;
-					nvidia,i2c-hs-start-setup-time = <0x09>;
 					prod = <
 						0 0x0000006c 0xffffffff 0x00160002              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -136,13 +73,6 @@
 						0 0x000000a0 0x00ffffff 0x00090909>;            //i2c_i2c_hs_interface_timing_1_0
 				};
 				prod_c_sm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x4f>;
-					nvidia,i2c-sclk-high-period = <0x07>;
-					nvidia,i2c-sclk-low-period = <0x08>;
-					nvidia,i2c-bus-free-time = <0x08>;
-					nvidia,i2c-stop-setup-time = <0x08>;
-					nvidia,i2c-start-hold-time = <0x08>;
-					nvidia,i2c-start-setup-time = <0x08>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x004f0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000708              //i2c_i2c_interface_timing_0_0
@@ -155,9 +85,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
-					nvidia,i2c-hs-sclk-high-period = <0x03>;
-					nvidia,i2c-hs-sclk-low-period = <0x08>;
 					prod = <
 						0 0x0000009c 0x0000ffff 0x00000308              //i2c_i2c_hs_interface_timing_0_0
 						0 0x000000d4 0x000000ff 0x00000000              //i2c_i2c_interface_timing_2_0
@@ -166,13 +93,6 @@
 						0 0x000000e0 0x0000ffff 0x00000002>;            //i2c_i2c_slv_data_capture_timing_0
 				};
 				prod_c_fm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x3c>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x003c0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -185,17 +105,6 @@
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_hs {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-clk-divisor-hs-mode = <0x02>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
-					nvidia,i2c-hs-stop-setup-time = <0x09>;
-					nvidia,i2c-hs-start-hold-time = <0x09>;
-					nvidia,i2c-hs-start-setup-time = <0x09>;
 					prod = <
 						0 0x0000006c 0xffffffff 0x00160002              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -203,13 +112,6 @@
 						0 0x000000a0 0x00ffffff 0x00090909>;            //i2c_i2c_hs_interface_timing_1_0
 				};
 				prod_c_sm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x4f>;
-					nvidia,i2c-sclk-high-period = <0x07>;
-					nvidia,i2c-sclk-low-period = <0x08>;
-					nvidia,i2c-bus-free-time = <0x08>;
-					nvidia,i2c-stop-setup-time = <0x08>;
-					nvidia,i2c-start-hold-time = <0x08>;
-					nvidia,i2c-start-setup-time = <0x08>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x004f0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000708              //i2c_i2c_interface_timing_0_0
@@ -222,9 +124,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
-					nvidia,i2c-hs-sclk-high-period = <0x03>;
-					nvidia,i2c-hs-sclk-low-period = <0x08>;
 					prod = <
 						0 0x0000009c 0x0000ffff 0x00000308              //i2c_i2c_hs_interface_timing_0_0
 						0 0x000000d4 0x000000ff 0x00000000              //i2c_i2c_interface_timing_2_0
@@ -233,43 +132,18 @@
 						0 0x000000e0 0x0000ffff 0x00000002>;            //i2c_i2c_slv_data_capture_timing_0
 				};
 				prod_c_fm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x3c>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x003c0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_fmplus {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x00160000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_hs {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-clk-divisor-hs-mode = <0x02>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
-					nvidia,i2c-hs-stop-setup-time = <0x09>;
-					nvidia,i2c-hs-start-hold-time = <0x09>;
-					nvidia,i2c-hs-start-setup-time = <0x09>;
 					prod = <
 						0 0x0000006c 0xffffffff 0x00160002              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -277,13 +151,6 @@
 						0 0x000000a0 0x00ffffff 0x00090909>;            //i2c_i2c_hs_interface_timing_1_0
 				};
 				prod_c_sm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x4f>;
-					nvidia,i2c-sclk-high-period = <0x07>;
-					nvidia,i2c-sclk-low-period = <0x08>;
-					nvidia,i2c-bus-free-time = <0x08>;
-					nvidia,i2c-stop-setup-time = <0x08>;
-					nvidia,i2c-start-hold-time = <0x08>;
-					nvidia,i2c-start-setup-time = <0x08>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x004f0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000708              //i2c_i2c_interface_timing_0_0
@@ -296,9 +163,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
-					nvidia,i2c-hs-sclk-high-period = <0x03>;
-					nvidia,i2c-hs-sclk-low-period = <0x08>;
 					prod = <
 						0 0x0000009c 0x0000ffff 0x00000308              //i2c_i2c_hs_interface_timing_0_0
 						0 0x000000d4 0x000000ff 0x00000000              //i2c_i2c_interface_timing_2_0
@@ -307,43 +171,18 @@
 						0 0x000000e0 0x0000ffff 0x00000002>;            //i2c_i2c_slv_data_capture_timing_0
 				};
 				prod_c_fm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x3c>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x003c0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_fmplus {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x00160000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_hs {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-clk-divisor-hs-mode = <0x02>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
-					nvidia,i2c-hs-stop-setup-time = <0x09>;
-					nvidia,i2c-hs-start-hold-time = <0x09>;
-					nvidia,i2c-hs-start-setup-time = <0x09>;
 					prod = <
 						0 0x0000006c 0xffffffff 0x00160002              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -351,13 +190,6 @@
 						0 0x000000a0 0x00ffffff 0x00090909>;            //i2c_i2c_hs_interface_timing_1_0
 				};
 				prod_c_sm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x4f>;
-					nvidia,i2c-sclk-high-period = <0x07>;
-					nvidia,i2c-sclk-low-period = <0x08>;
-					nvidia,i2c-bus-free-time = <0x08>;
-					nvidia,i2c-stop-setup-time = <0x08>;
-					nvidia,i2c-start-hold-time = <0x08>;
-					nvidia,i2c-start-setup-time = <0x08>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x004f0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000708              //i2c_i2c_interface_timing_0_0
@@ -370,9 +202,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
-					nvidia,i2c-hs-sclk-high-period = <0x03>;
-					nvidia,i2c-hs-sclk-low-period = <0x08>;
 					prod = <
 						0 0x0000009c 0x0000ffff 0x00000308              //i2c_i2c_hs_interface_timing_0_0
 						0 0x000000d4 0x000000ff 0x00000000              //i2c_i2c_interface_timing_2_0
@@ -381,43 +210,18 @@
 						0 0x000000e0 0x0000ffff 0x00000002>;            //i2c_i2c_slv_data_capture_timing_0
 				};
 				prod_c_fm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x3c>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x003c0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_fmplus {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x00160000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_hs {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-clk-divisor-hs-mode = <0x02>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
-					nvidia,i2c-hs-stop-setup-time = <0x09>;
-					nvidia,i2c-hs-start-hold-time = <0x09>;
-					nvidia,i2c-hs-start-setup-time = <0x09>;
 					prod = <
 						0 0x0000006c 0xffffffff 0x00160002              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -425,13 +229,6 @@
 						0 0x000000a0 0x00ffffff 0x00090909>;            //i2c_i2c_hs_interface_timing_1_0
 				};
 				prod_c_sm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x4f>;
-					nvidia,i2c-sclk-high-period = <0x07>;
-					nvidia,i2c-sclk-low-period = <0x08>;
-					nvidia,i2c-bus-free-time = <0x08>;
-					nvidia,i2c-stop-setup-time = <0x08>;
-					nvidia,i2c-start-hold-time = <0x08>;
-					nvidia,i2c-start-setup-time = <0x08>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x004f0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000708              //i2c_i2c_interface_timing_0_0
@@ -444,9 +241,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
-					nvidia,i2c-hs-sclk-high-period = <0x03>;
-					nvidia,i2c-hs-sclk-low-period = <0x08>;
 					prod = <
 						0 0x0000009c 0x0000ffff 0x00000308              //i2c_i2c_hs_interface_timing_0_0
 						0 0x000000d4 0x000000ff 0x00000000              //i2c_i2c_interface_timing_2_0
@@ -455,43 +249,18 @@
 						0 0x000000e0 0x0000ffff 0x00000002>;            //i2c_i2c_slv_data_capture_timing_0
 				};
 				prod_c_fm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x3c>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x003c0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_fmplus {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x00160000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_hs {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-clk-divisor-hs-mode = <0x02>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
-					nvidia,i2c-hs-stop-setup-time = <0x09>;
-					nvidia,i2c-hs-start-hold-time = <0x09>;
-					nvidia,i2c-hs-start-setup-time = <0x09>;
 					prod = <
 						0 0x0000006c 0xffffffff 0x00160002              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -499,13 +268,6 @@
 						0 0x000000a0 0x00ffffff 0x00090909>;            //i2c_i2c_hs_interface_timing_1_0
 				};
 				prod_c_sm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x4f>;
-					nvidia,i2c-sclk-high-period = <0x07>;
-					nvidia,i2c-sclk-low-period = <0x08>;
-					nvidia,i2c-bus-free-time = <0x08>;
-					nvidia,i2c-stop-setup-time = <0x08>;
-					nvidia,i2c-start-hold-time = <0x08>;
-					nvidia,i2c-start-setup-time = <0x08>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x004f0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000708              //i2c_i2c_interface_timing_0_0
@@ -518,9 +280,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
-					nvidia,i2c-hs-sclk-high-period = <0x03>;
-					nvidia,i2c-hs-sclk-low-period = <0x08>;
 					prod = <
 						0 0x0000009c 0x0000ffff 0x00000308              //i2c_i2c_hs_interface_timing_0_0
 						0 0x000000d4 0x000000ff 0x00000000              //i2c_i2c_interface_timing_2_0
@@ -529,43 +288,18 @@
 						0 0x000000e0 0x0000ffff 0x00000002>;            //i2c_i2c_slv_data_capture_timing_0
 				};
 				prod_c_fm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x3c>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x003c0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_fmplus {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x00160000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
 						0 0x00000098 0xffffffff 0x02020202>;            //i2c_i2c_interface_timing_1_0
 				};
 				prod_c_hs {
-					nvidia,i2c-clk-divisor-fs-mode = <0x16>;
-					nvidia,i2c-clk-divisor-hs-mode = <0x02>;
-					nvidia,i2c-sclk-high-period = <0x02>;
-					nvidia,i2c-sclk-low-period = <0x02>;
-					nvidia,i2c-bus-free-time = <0x02>;
-					nvidia,i2c-stop-setup-time = <0x02>;
-					nvidia,i2c-start-hold-time = <0x02>;
-					nvidia,i2c-start-setup-time = <0x02>;
-					nvidia,i2c-hs-stop-setup-time = <0x09>;
-					nvidia,i2c-hs-start-hold-time = <0x09>;
-					nvidia,i2c-hs-start-setup-time = <0x09>;
 					prod = <
 						0 0x0000006c 0xffffffff 0x00160002              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000202              //i2c_i2c_interface_timing_0_0
@@ -573,13 +307,6 @@
 						0 0x000000a0 0x00ffffff 0x00090909>;            //i2c_i2c_hs_interface_timing_1_0
 				};
 				prod_c_sm {
-					nvidia,i2c-clk-divisor-fs-mode = <0x4f>;
-					nvidia,i2c-sclk-high-period = <0x07>;
-					nvidia,i2c-sclk-low-period = <0x08>;
-					nvidia,i2c-bus-free-time = <0x08>;
-					nvidia,i2c-stop-setup-time = <0x08>;
-					nvidia,i2c-start-hold-time = <0x08>;
-					nvidia,i2c-start-setup-time = <0x08>;
 					prod = <
 						0 0x0000006c 0xffff0000 0x004f0000              //i2c_i2c_clk_divisor_register_0
 						0 0x00000094 0x0000ffff 0x00000708              //i2c_i2c_interface_timing_0_0
@@ -600,8 +327,6 @@
 						0 0x000001e0 0x01f00000 0x00900000>;            //SDMMCA_SDMEMCOMPPADCTRL_0
 				};
 				prod {
-					nvidia,default-tap = <0x08>;
-					nvidia,default-trim = <0x0e>;
 					prod = <
 						0 0x00000028 0x00000022 0x00000002              //SDMMCA_POWER_CONTROL_HOST_0
 						0 0x00000100 0x1fff006a 0x0e080020              //SDMMCA_VENDOR_CLOCK_CNTRL_0
@@ -619,7 +344,6 @@
 						0 0x0000003c 0x00070000 0x00040000>;            //SDMMCA_AUTO_CMD12_ERR_STATUS_0
 				};
 				prod_c_hs200 {
-					nvidia,num-tuning-iter = <0x2>;
 					prod = <
 						0 0x0000003c 0x00070000 0x00030000              //SDMMCA_AUTO_CMD12_ERR_STATUS_0
 						0 0x000001c0 0x0000e000 0x00004000>;            //SDMMCA_VENDOR_TUNING_CNTRL0_0
@@ -635,7 +359,6 @@
 						0 0x000001ac 0x00000004 0x00000004>;            //SDMMCA_VENDOR_IO_TRIM_CNTRL_0
 				};
 				prod_c_sdr104 {
-					nvidia,num-tuning-iter = <0x2>;
 					prod = <
 						0 0x0000003c 0x00070000 0x00030000              //SDMMCA_AUTO_CMD12_ERR_STATUS_0
 						0 0x000001c0 0x0000e000 0x00004000>;            //SDMMCA_VENDOR_TUNING_CNTRL0_0
@@ -649,7 +372,6 @@
 						0 0x0000003c 0x00070000 0x00010000>;            //SDMMCA_AUTO_CMD12_ERR_STATUS_0
 				};
 				prod_c_sdr50 {
-					nvidia,num-tuning-iter = <0x4>;
 					prod = <
 						0 0x0000003c 0x00070000 0x00020000              //SDMMCA_AUTO_CMD12_ERR_STATUS_0
 						0 0x000001c0 0x0000e000 0x00008000>;            //SDMMCA_VENDOR_TUNING_CNTRL0_0
@@ -660,7 +382,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					nvidia,default-trim = <0x12>;
 					prod = <
 						0 0x00000004 0x00000fff 0x00000200              //sdmmcab_block_size_block_count_0
 						0 0x00000028 0x00000020 0x00000020              //sdmmcab_power_control_host_0
@@ -671,28 +392,21 @@
 						0 0x000001e4 0x20000000 0x20000000>;            //sdmmcab_auto_cal_config_0
 				};
 				prod_c_ddr50 {
-					nvidia,default-tap = <0x07>;
-					nvidia,default-trim = <0x12>;
 					prod = <
 						0 0x0000003c 0x00070000 0x00040000              //sdmmcab_auto_cmd12_err_status_0
 						0 0x00000100 0x1fff0000 0x12070000>;            //sdmmcab_vendor_clock_cntrl_0
 				};
 				prod_c_ddr52 {
-					nvidia,default-tap = <0x07>;
-					nvidia,default-trim = <0x12>;
 					prod = <
 						0 0x0000003c 0x00070000 0x00040000              //sdmmcab_auto_cmd12_err_status_0
 						0 0x00000100 0x1fff0000 0x12070000>;            //sdmmcab_vendor_clock_cntrl_0
 				};
 				prod_c_hs200 {
-					nvidia,num-tuning-iter = <0x2>;
 					prod = <
 						0 0x0000003c 0x00070000 0x00030000              //sdmmcab_auto_cmd12_err_status_0
 						0 0x000001c0 0x0000e000 0x00004000>;            //sdmmcab_vendor_tuning_cntrl0_0
 				};
 				prod_c_hs400 {
-					nvidia,num-tuning-iter = <0x2>;
-					nvidia,dqs-trim = <0x28>;
 					prod = <
 						0 0x0000003c 0x00070000 0x00050000              //sdmmcab_auto_cmd12_err_status_0
 						0 0x00000100 0x00000008 0x00000008              //sdmmcab_vendor_clock_cntrl_0
@@ -710,14 +424,10 @@
 						0 0x000001ac 0x00000004 0x00000004>;            //sdmmcab_vendor_io_trim_cntrl_0
 				};
 				prod_c_sdr12 {
-					nvidia,default-tap = <0x07>;
-					nvidia,default-trim = <0x12>;
 					prod = <
 						0 0x00000100 0x1fff0000 0x12070000>;            //sdmmcab_vendor_clock_cntrl_0
 				};
 				prod_c_sdr25 {
-					nvidia,default-tap = <0x07>;
-					nvidia,default-trim = <0x12>;
 					prod = <
 						0 0x00000100 0x1fff0000 0x12070000>;            //sdmmcab_vendor_clock_cntrl_0
 				};
@@ -732,7 +442,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					nvidia,spi-misc-clk-override = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -743,7 +452,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					nvidia,spi-misc-clk-override = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -754,7 +462,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					nvidia,spi-misc-clk-override = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -765,7 +472,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					nvidia,spi-misc-clk-override = <0x1>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -780,18 +486,12 @@
 						0 0x0000f000 0x0000003f 0x00000012>;            //qspi_secure_axi_ctl_0
 				};
 				prod_c_nopwrsave {
-					nvidia,qspi-clk-override = <0x0>;
-					nvidia,qspi-comp-pad-e-input = <0x0>;
-					nvidia,qspi-sel-vreg = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x80000000              //qspi_misc_0
 						0 0x000001ec 0x00000002 0x00000000              //qspi_qspi_comp_control_0
 						0 0x000001fc 0x00000002 0x00000000>;            //qspi_io_trim_cntrl_0
 				};
 				prod_c_pwrsave {
-					nvidia,qspi-clk-override = <0x0>;
-					nvidia,qspi-comp-pad-e-input = <0x2>;
-					nvidia,qspi-sel-vreg = <0x2>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000              //qspi_misc_0
 						0 0x000001ec 0x00000002 0x00000002              //qspi_qspi_comp_control_0
@@ -812,18 +512,12 @@
 						0 0x0000f000 0x0000003f 0x00000012>;            //qspi_secure_axi_ctl_0
 				};
 				prod_c_nopwrsave {
-					nvidia,qspi-clk-override = <0x0>;
-					nvidia,qspi-comp-pad-e-input = <0x0>;
-					nvidia,qspi-sel-vreg = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x80000000              //qspi_misc_0
 						0 0x000001ec 0x00000002 0x00000000              //qspi_qspi_comp_control_0
 						0 0x000001fc 0x00000002 0x00000000>;            //qspi_io_trim_cntrl_0
 				};
 				prod_c_pwrsave {
-					nvidia,qspi-clk-override = <0x0>;
-					nvidia,qspi-comp-pad-e-input = <0x2>;
-					nvidia,qspi-sel-vreg = <0x2>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000              //qspi_misc_0
 						0 0x000001ec 0x00000002 0x00000002              //qspi_qspi_comp_control_0
@@ -840,7 +534,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					nvidia,spi-misc-clk-override = <0x0>;
 					prod = <
 						0 0x00000194 0x80000000 0x00000000>;            //spi_misc_0
 				};
@@ -851,9 +544,6 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
-					nvidia,xusb-pad-hs-discon-level = <0x7>;
-					nvidia,xusb-pad-trk-start-timer = <0x1e>;
-					nvidia,xusb-pad-trk-reset-timer = <0xa>;
 					prod = <
 						0 0x00000284 0x00000038 0x00000038              //XUSB_PADCTL_USB2_BIAS_PAD_CTL_0_0
 						0 0x00000288 0x03fff000 0x0051e000>;            //XUSB_PADCTL_USB2_BIAS_PAD_CTL_1_0
