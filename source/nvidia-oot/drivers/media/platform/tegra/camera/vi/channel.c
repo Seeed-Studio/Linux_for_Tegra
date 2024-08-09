@@ -692,16 +692,33 @@ tegra_channel_queue_setup(struct vb2_queue *vq,
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	struct tegra_mc_vi *vi = chan->vi;
+	int ret = 0;
+
+
+	/* In some cases, if nplanes is valid
+	 * and the requested image size is less than the
+	 * actual image size, we need to return EINVAL.
+	 * Previously, we were just updating sizes[0] irrespective
+	 * of the requested image size. Although this did not harm the
+	 * flow, according to "v4l2-compliance", we need to check if
+	 * the requested size is invalid.
+	 */
+	if (*nplanes) {
+		if (sizes[0] < chan->format.sizeimage) {
+			pr_err("%s: sizes[0] = %d chan->format.sizeimage = %d ...\n"
+					,__func__,sizes[0],chan->format.sizeimage);
+			return -EINVAL;
+		}
+	} else {
+		sizes[0] = chan->format.sizeimage;
+	}
 
 	*nplanes = 1;
-
-	sizes[0] = chan->format.sizeimage;
 	alloc_devs[0] = tegra_channel_get_vi_unit(chan);
 
 	if (vi->fops && vi->fops->vi_setup_queue)
 		return vi->fops->vi_setup_queue(chan, nbuffers);
-	else
-		return -EINVAL;
+	return ret;
 }
 
 int tegra_channel_alloc_buffer_queue(struct tegra_channel *chan,
@@ -2256,7 +2273,7 @@ static long tegra_channel_default_ioctl(struct file *file, void *fh,
 {
 	struct tegra_channel *chan = video_drvdata(file);
 	struct tegra_mc_vi *vi = chan->vi;
-	long ret = 0;
+	long ret = -ENOTTY;
 
 	if (vi->fops && vi->fops->vi_default_ioctl)
 		ret = vi->fops->vi_default_ioctl(file, fh, use_prio, cmd, arg);
