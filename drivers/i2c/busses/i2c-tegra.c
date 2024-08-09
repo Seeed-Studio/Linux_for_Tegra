@@ -313,6 +313,9 @@ static u32 dvc_readl(struct tegra_i2c_dev *i2c_dev, unsigned int reg)
 	return readl_relaxed(i2c_dev->base + reg);
 }
 
+static int tegra_i2c_runtime_resume(struct device *dev);
+static int tegra_i2c_runtime_suspend(struct device *dev);
+
 /*
  * If necessary, i2c_writel() and i2c_readl() will offset the register
  * in order to talk to the I2C block inside the DVC block.
@@ -1427,10 +1430,16 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	struct tegra_i2c_dev *i2c_dev = i2c_get_adapdata(adap);
 	int i, ret;
 
-	ret = pm_runtime_get_sync(i2c_dev->dev);
+	if (pm_runtime_enabled(i2c_dev->dev))
+		ret = pm_runtime_get_sync(i2c_dev->dev);
+	else
+		ret = tegra_i2c_runtime_resume(i2c_dev->dev);
+
 	if (ret < 0) {
+		if (pm_runtime_enabled(i2c_dev->dev))
+			pm_runtime_put_noidle(i2c_dev->dev);
+
 		dev_err(i2c_dev->dev, "runtime resume failed %d\n", ret);
-		pm_runtime_put_noidle(i2c_dev->dev);
 		return ret;
 	}
 
@@ -1458,7 +1467,10 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 			break;
 	}
 
-	pm_runtime_put(i2c_dev->dev);
+	if (pm_runtime_enabled(i2c_dev->dev))
+		pm_runtime_put(i2c_dev->dev);
+	else
+		tegra_i2c_runtime_suspend(i2c_dev->dev);
 
 	return ret ?: i;
 }
