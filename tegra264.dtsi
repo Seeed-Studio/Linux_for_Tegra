@@ -6632,8 +6632,9 @@
 			status = "disabled";
 			compatible = "pci-host-ecam-generic";
 
-			reg = <0xb0 0xb0000000 0x0 0x10000000>;
-			reg-names = "ecam";
+			reg = <0xb0 0xb0000000 0x0 0x10000000
+			       0xa8 0x08520000 0x0 0x00010000>;
+			reg-names = "ecam", "xdma";
 
 			#address-cells = <0x3>;
 			#size-cells = <0x2>;
@@ -6690,8 +6691,9 @@
 			status = "disabled";
 			compatible = "pci-host-ecam-generic";
 
-			reg = <0xc0 0xb0000000 0x0 0x10000000>;
-			reg-names = "ecam";
+			reg = <0xc0 0xb0000000 0x0 0x10000000
+			       0xa8 0x08550000 0x0 0x00010000>;
+			reg-names = "ecam", "xdma";
 
 			#address-cells = <0x3>;
 			#size-cells = <0x2>;
@@ -6719,8 +6721,9 @@
 			status = "disabled";
 			compatible = "pci-host-ecam-generic";
 
-			reg = <0xc8 0xb0000000 0x0 0x10000000>;
-			reg-names = "ecam";
+			reg = <0xc8 0xb0000000 0x0 0x10000000
+			       0xa8 0x08580000 0x0 0x00010000>;
+			reg-names = "ecam", "xdma";
 
 			#address-cells = <0x3>;
 			#size-cells = <0x2>;
