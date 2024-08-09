@@ -823,6 +823,9 @@ static const struct file_operations tegra_drm_fops = {
 	.read = drm_read,
 	.compat_ioctl = drm_compat_ioctl,
 	.llseek = noop_llseek,
+#if defined(NV_FOP_UNSIGNED_OFFSET_PRESENT) /* Linux v6.12 */
+	.fop_flags = FOP_UNSIGNED_OFFSET,
+#endif
 };
 
 static int tegra_drm_context_cleanup(int id, void *p, void *data)

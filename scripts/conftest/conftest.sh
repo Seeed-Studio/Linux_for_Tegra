@@ -7406,6 +7406,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_FOLIO_ENTIRE_MAPCOUNT_PRESENT" "" "functions"
         ;;
 
+        fop_unsigned_offset)
+            #
+            # Determine if definition FOP_UNSIGNED_OFFSET is present.
+            #
+            # Commit 641bb4394f40 ("fs: move FMODE_UNSIGNED_OFFSET to fop_flags")
+            # added the definition FOP_UNSIGNED_OFFSET in Linux v6.12.
+            #
+            CODE="
+            #include <linux/fs.h>
+            int conftest(void)
+            {
+                return FOP_UNSIGNED_OFFSET;
+            }"
+
+            compile_check_conftest "$CODE" "NV_FOP_UNSIGNED_OFFSET_PRESENT" "" "types"
+        ;;
+
+
         genpd_xlate_t_has_const_of_phandle_args)
             #
             # Determine if genpd_xlate_t function pointer has a

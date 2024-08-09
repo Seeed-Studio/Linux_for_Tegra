@@ -134,6 +134,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += fd_empty
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += fd_file
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += file_struct_has_f_ref
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += folio_entire_mapcount
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += fop_unsigned_offset
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += genpd_xlate_t_has_const_of_phandle_args
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += get_file_rcu_has_double_ptr_file_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += get_user_pages
