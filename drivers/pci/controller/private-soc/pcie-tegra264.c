@@ -17,6 +17,7 @@
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/pci-ecam.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 
 extern int of_get_pci_domain_nr(struct device_node *node);
@@ -131,6 +132,12 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 	pcie->dev = dev;
 	platform_set_drvdata(pdev, pcie);
 	pcie->bridge = bridge;
+
+	ret = pinctrl_pm_select_default_state(dev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to configure sideband pins: %d\n", ret);
+		return ret;
+	}
 
 	resource_list_for_each_entry(entry, &bridge->windows) {
 		struct resource *res = entry->res;
