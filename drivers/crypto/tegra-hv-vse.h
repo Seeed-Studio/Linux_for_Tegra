@@ -39,7 +39,11 @@ struct crypto_dev_to_ivc_map {
 	uint32_t channel_grp_id;
 	enum tegra_gcm_dec_supported gcm_dec_supported;
 	uint32_t gcm_dec_buffer_size;
+	uint32_t mempool_id;
+	void *mempool_buf;
+	uint32_t mempool_size;
 	struct tegra_hv_ivc_cookie *ivck;
+	struct tegra_hv_ivm_cookie *ivmk;
 	struct completion tegra_vse_complete;
 	struct task_struct *tegra_vse_task;
 	bool vse_thread_start;

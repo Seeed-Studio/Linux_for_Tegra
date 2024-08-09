@@ -301,7 +301,9 @@
 #define TEGRA_CHANNEL_GROUPID_OFFSET			5U
 #define TEGRA_GCM_SUPPORTED_FLAG_OFFSET			7U
 #define TEGRA_GCM_DEC_BUFFER_SIZE			8U
-#define TEGRA_IVCCFG_ARRAY_LEN				9U
+#define TEGRA_GCM_DEC_MEMPOOL_ID			9U
+#define TEGRA_GCM_DEC_MEMPOOL_SIZE			10U
+#define TEGRA_IVCCFG_ARRAY_LEN				11U
 
 #define VSE_MSG_ERR_TSEC_KEYLOAD_FAILED			21U
 #define VSE_MSG_ERR_TSEC_KEYLOAD_STATUS_CHECK_TIMEOUT	20U
@@ -3898,19 +3900,25 @@ static int tegra_vse_aes_gcm_enc_dec(struct aead_request *req, bool encrypt)
 				goto free_exit;
 			}
 		} else {
-			if (gpcdma_dev != NULL) {
-				/* GPCDMA buffer needs to be 64 bytes aligned */
-				buflen = ALIGN(cryptlen, 64U);
-
-				src_buf = dma_alloc_coherent(gpcdma_dev, buflen,
+			if (cryptlen > g_crypto_to_ivc_map[
+					aes_ctx->node_id].mempool_size) {
+				if (gpcdma_dev != NULL) {
+					/* GPCDMA buffer needs to be 64 bytes aligned */
+					buflen = ALIGN(cryptlen, 64U);
+					src_buf = dma_alloc_coherent(gpcdma_dev, buflen,
 							&src_buf_addr, GFP_KERNEL);
-				if (!src_buf) {
-					err = -ENOMEM;
+				} else {
+					dev_err(se_dev->dev, "gpcdma pdev not initialized\n");
+					err = -ENODATA;
 					goto free_exit;
 				}
 			} else {
-				dev_err(se_dev->dev, "gpcdma pdev not initialized\n");
-				err = -ENODATA;
+				src_buf = g_crypto_to_ivc_map[
+					aes_ctx->node_id].mempool_buf;
+				src_buf_addr = (dma_addr_t)0UL;
+			}
+			if (!src_buf) {
+				err = -ENOMEM;
 				goto free_exit;
 			}
 		}
@@ -4090,7 +4098,8 @@ free_exit:
 			dma_free_coherent(se_dev->dev, cryptlen, src_buf,
 					src_buf_addr);
 	} else {
-		if (src_buf && gpcdma_dev != NULL)
+		if ((cryptlen > g_crypto_to_ivc_map[aes_ctx->node_id].mempool_size)
+			&& (src_buf != NULL) && (gpcdma_dev != NULL))
 			dma_free_coherent(gpcdma_dev, buflen, src_buf,
 					src_buf_addr);
 	}
@@ -5688,6 +5697,18 @@ static bool tegra_ivc_check_entry(struct tegra_virtual_se_dev *se_dev, uint32_t 
 	return false;
 }
 
+static bool tegra_mempool_check_entry(struct tegra_virtual_se_dev *se_dev, uint32_t mempool_id)
+{
+	uint32_t cnt;
+
+	for (cnt = 0; cnt < MAX_NUMBER_MISC_DEVICES; cnt++) {
+		if (g_crypto_to_ivc_map[cnt].mempool_size > 0)
+			if (g_crypto_to_ivc_map[cnt].mempool_id == mempool_id)
+				return true;
+	}
+	return false;
+}
+
 static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 {
 	struct tegra_virtual_se_dev *se_dev = NULL;
@@ -5696,6 +5717,7 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 	int err = 0;
 	int i;
 	unsigned int ivc_id;
+	unsigned int mempool_id;
 	unsigned int engine_id;
 	const struct of_device_id *match;
 	struct tegra_vse_soc_info *pdata = NULL;
@@ -5740,6 +5762,21 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 		err = -ENODEV;
 		goto exit;
 	}
+
+	if (pdev->dev.of_node) {
+		match = of_match_device(of_match_ptr(tegra_hv_vse_safety_of_match),
+					&pdev->dev);
+		if (!match) {
+			dev_err(&pdev->dev, "Error: No device match found\n");
+			return -ENODEV;
+		}
+		pdata = (struct tegra_vse_soc_info *)match->data;
+	} else {
+		pdata =
+		(struct tegra_vse_soc_info *)pdev->id_entry->driver_data;
+	}
+
+	se_dev->chipdata = pdata;
 
 	for (cnt = 0; cnt < ivc_cnt; cnt++) {
 
@@ -5831,6 +5868,24 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 			goto exit;
 		}
 
+		err = of_property_read_u32_index(np, "nvidia,ivccfg", cnt * TEGRA_IVCCFG_ARRAY_LEN
+				 + TEGRA_GCM_DEC_MEMPOOL_ID, &mempool_id);
+		if (err || ((crypto_dev->gcm_dec_supported != GCM_DEC_OP_SUPPORTED) &&
+				(mempool_id != 0))) {
+			pr_err("Error: invalid mempool id. err %d\n", err);
+			err = -ENODEV;
+			goto exit;
+		}
+
+		err = of_property_read_u32_index(np, "nvidia,ivccfg", cnt * TEGRA_IVCCFG_ARRAY_LEN
+				 + TEGRA_GCM_DEC_MEMPOOL_SIZE, &crypto_dev->mempool_size);
+		if (err || ((crypto_dev->gcm_dec_supported == GCM_DEC_OP_SUPPORTED) &&
+				(crypto_dev->mempool_size > crypto_dev->gcm_dec_buffer_size))) {
+			pr_err("Error: invalid mempool size err %d\n", err);
+			err = -ENODEV;
+			goto exit;
+		}
+
 		dev_info(se_dev->dev, "Virtual SE channel number: %d", ivc_id);
 
 		crypto_dev->ivck = tegra_hv_ivc_reserve(NULL, ivc_id, NULL);
@@ -5841,6 +5896,45 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 		}
 
 		tegra_hv_ivc_channel_reset(crypto_dev->ivck);
+
+		if (!se_dev->chipdata->gcm_hw_iv_supported && (crypto_dev->mempool_size > 0)) {
+			dev_info(se_dev->dev, "Virtual SE mempool channel number: %d\n",
+					mempool_id);
+
+			if (tegra_mempool_check_entry(se_dev, mempool_id) == false) {
+				crypto_dev->mempool_id = mempool_id;
+			} else {
+				pr_err("Error: mempool id %u is already used\n", mempool_id);
+				err = -ENODEV;
+				goto exit;
+			}
+
+			crypto_dev->ivmk = tegra_hv_mempool_reserve(crypto_dev->mempool_id);
+			if (IS_ERR_OR_NULL(crypto_dev->ivmk)) {
+				dev_err(&pdev->dev, "Failed to reserve mempool channel %d\n",
+						crypto_dev->mempool_id);
+				err = -ENODEV;
+				goto exit;
+			}
+
+			if (crypto_dev->ivmk->size < crypto_dev->mempool_size) {
+				pr_err("Error: mempool %u size(%llu) is smaller than DT value(%u)",
+						crypto_dev->mempool_id, crypto_dev->ivmk->size,
+						crypto_dev->mempool_size);
+				err = -ENODEV;
+				goto exit;
+			}
+
+			crypto_dev->mempool_buf = devm_memremap(&pdev->dev,
+					crypto_dev->ivmk->ipa, crypto_dev->ivmk->size, MEMREMAP_WB);
+			if (IS_ERR_OR_NULL(crypto_dev->mempool_buf)) {
+				dev_err(&pdev->dev, "Failed to map mempool area %d\n",
+						crypto_dev->mempool_id);
+				err = -ENOMEM;
+				goto exit;
+			}
+		}
+
 		init_completion(&crypto_dev->tegra_vse_complete);
 		mutex_init(&crypto_dev->se_ivc_lock);
 		mutex_init(&crypto_dev->irq_state_lock);
@@ -5863,21 +5957,6 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 		}
 		crypto_dev->wait_interrupt = FIRST_REQ_INTERRUPT;
 	}
-
-	if (pdev->dev.of_node) {
-		match = of_match_device(of_match_ptr(tegra_hv_vse_safety_of_match),
-					&pdev->dev);
-		if (!match) {
-			dev_err(&pdev->dev, "Error: No device match found\n");
-			return -ENODEV;
-		}
-		pdata = (struct tegra_vse_soc_info *)match->data;
-	} else {
-		pdata =
-		(struct tegra_vse_soc_info *)pdev->id_entry->driver_data;
-	}
-
-	se_dev->chipdata = pdata;
 
 	if (engine_id == VIRTUAL_SE_AES0) {
 		err = crypto_register_ahash(&cmac_alg);
