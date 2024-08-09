@@ -1059,12 +1059,27 @@ static int camrtc_run_mem_test(struct seq_file *file,
 		if (!WARN_ON(testmem->size > mem->size))
 			mem->used = testmem->size;
 
-		if (_camdbg_rmem.enabled)
+		if (_camdbg_rmem.enabled) {
 			dma_sync_single_for_cpu(mem_dev, mem->iova, mem->used,
 						DMA_BIDIRECTIONAL);
-		else
-			dma_sync_sg_for_cpu(mem_dev, vi_sgt[i].sgl,
-					    vi_sgt[i].nents, DMA_BIDIRECTIONAL);
+		} else {
+			if (rce_sgt[i].sgl) {
+				dma_sync_sg_for_cpu(mem_dev, rce_sgt[i].sgl,
+						    rce_sgt[i].orig_nents, DMA_BIDIRECTIONAL);
+			}
+			if (vi_sgt[i].sgl) {
+				dma_sync_sg_for_cpu(mem_dev, vi_sgt[i].sgl,
+						    vi_sgt[i].orig_nents, DMA_BIDIRECTIONAL);
+			}
+			if (isp_sgt[i].sgl) {
+				dma_sync_sg_for_cpu(mem_dev, isp_sgt[i].sgl,
+						    isp_sgt[i].orig_nents, DMA_BIDIRECTIONAL);
+			}
+			if (vi2_sgt[i].sgl) {
+				dma_sync_sg_for_cpu(mem_dev, vi2_sgt[i].sgl,
+						    vi2_sgt[i].orig_nents, DMA_BIDIRECTIONAL);
+			}
+		}
 	}
 
 unmap:
