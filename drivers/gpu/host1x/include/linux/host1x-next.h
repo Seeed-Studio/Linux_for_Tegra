@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * Copyright (c) 2009-2023, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2009-2024, NVIDIA Corporation. All rights reserved.
  */
 
 #ifndef __LINUX_HOST1X_H
@@ -217,6 +217,12 @@ static inline void host1x_bo_munmap(struct host1x_bo *bo, void *addr)
 #define HOST1X_SYNCPT_CLIENT_MANAGED	(1 << 0)
 #define HOST1X_SYNCPT_HAS_BASE		(1 << 1)
 #define HOST1X_SYNCPT_GPU		(1 << 2)
+
+#define HOST1X_GLOBAL_TO_LOCAL_SYNCPOINT(global_syncpoint_id) \
+		    (global_syncpoint_id & 0xFFFFFF)
+
+#define HOST1X_LOCAL_TO_GLOBAL_SYNCPOINT(local_syncpoint_id, instance) \
+		    ((instance << 24) | (local_syncpoint_id))
 
 struct host1x_syncpt_base;
 struct host1x_syncpt;
