@@ -265,15 +265,15 @@
 				status = "okay";
 			};
 
-			se@15810000 {
+			crypto@15810000 {
 				status = "okay";
 			};
 
-			se@15820000 {
+			crypto@15820000 {
 				status = "okay";
 			};
 
-			se@15840000 {
+			crypto@15840000 {
 				status = "okay";
 			};
 
