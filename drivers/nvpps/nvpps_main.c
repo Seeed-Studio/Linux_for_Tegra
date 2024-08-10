@@ -89,6 +89,7 @@ struct nvpps_device_data {
 	bool		pri_ptp_failed;
 	bool 		sec_ptp_failed;
 	bool		support_tsc;
+	uint32_t	soc_id;
 	uint8_t		k_int_val;
 	uint16_t	lock_threshold_val;
 	struct hte_ts_desc	desc;
@@ -107,11 +108,21 @@ struct nvpps_file_data {
 #define MGBE_STSR_OFFSET		0xd08
 #define MGBE_STNSR_OFFSET		0xd0c
 
-#define T234_MGBE0_BASE_ADDR		0x6810000
-#define T234_MGBE1_BASE_ADDR		0x6910000
-#define T234_MGBE2_BASE_ADDR		0x6a10000
-#define T234_MGBE3_BASE_ADDR		0x6b10000
+/* MAC Base addresses for T264 Chips */
+#define T264_EQOS_BASE_ADDR		0xa808910000
+#define T264_MGBE0_BASE_ADDR	0xa808a10000
+#define T264_MGBE1_BASE_ADDR	0xa808b10000
+#define T264_MGBE2_BASE_ADDR	0xa808d10000
+#define T264_MGBE3_BASE_ADDR	0xa808e10000
+
+/* MAC Base addresses for T234 Chips */
 #define T234_EQOS_BASE_ADDR		0x2310000
+#define T234_MGBE0_BASE_ADDR	0x6810000
+#define T234_MGBE1_BASE_ADDR	0x6910000
+#define T234_MGBE2_BASE_ADDR	0x6a10000
+#define T234_MGBE3_BASE_ADDR	0x6b10000
+
+/* MAC Base addresses for T194 Chips */
 #define T194_EQOS_BASE_ADDR		0x2490000
 
 #define	TSC_PTP_SRC_EQOS		0
@@ -166,12 +177,20 @@ static struct device_node *emac_node;
 
 #define _NANO_SECS (1000000000ULL)
 
+enum {
+	NV_SOC_T19X = 0U,
+	NV_SOC_T23X,
+	NV_SOC_T26X,
+};
+
 /*
  * tegra_chip_data Tegra chip specific data
  * @support_tsc: Supported TSC sync by chip
+ * @soc_id: chip id
  */
 struct tegra_chip_data {
 	bool support_tsc;
+	uint32_t soc_id;
 };
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
@@ -783,29 +802,44 @@ static void nvpps_fill_default_mac_phc_info(struct platform_device *pdev,
 {
 	struct device_node *np = pdev->dev.of_node;
 	bool memmap_phc_regs;
+	uint64_t mgbe0_mac_pa = 0, mgbe1_mac_pa = 0;
+	uint64_t mgbe2_mac_pa = 0, mgbe3_mac_pa = 0, eqos_mac_pa = 0;
+
+	/* initialze chip specific mac base address */
+	if (pdev_data->soc_id == NV_SOC_T26X) {
+		mgbe0_mac_pa = T264_MGBE0_BASE_ADDR;
+		mgbe1_mac_pa = T264_MGBE1_BASE_ADDR;
+		mgbe2_mac_pa = T264_MGBE2_BASE_ADDR;
+		mgbe3_mac_pa = T264_MGBE3_BASE_ADDR;
+		eqos_mac_pa = T264_EQOS_BASE_ADDR;
+	} else if (pdev_data->soc_id == NV_SOC_T23X) {
+		mgbe0_mac_pa = T234_MGBE0_BASE_ADDR;
+		mgbe1_mac_pa = T234_MGBE1_BASE_ADDR;
+		mgbe2_mac_pa = T234_MGBE2_BASE_ADDR;
+		mgbe3_mac_pa = T234_MGBE3_BASE_ADDR;
+		eqos_mac_pa = T234_EQOS_BASE_ADDR;
+	} else { /* T194 Chip */
+		eqos_mac_pa = T194_EQOS_BASE_ADDR;
+	}
 
 	/* identify the tsc_ptp_src  and sts_offset */
-	if (pdev_data->pri_emac_base_addr == T234_MGBE0_BASE_ADDR) {
+	if (pdev_data->pri_emac_base_addr == mgbe0_mac_pa) {
 		pdev_data->sts_offset = MGBE_STSR_OFFSET;
 		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE0;
-	} else if (pdev_data->pri_emac_base_addr == T234_MGBE1_BASE_ADDR) {
+	} else if (pdev_data->pri_emac_base_addr == mgbe1_mac_pa) {
 		pdev_data->sts_offset = MGBE_STSR_OFFSET;
 		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE1;
-	} else if (pdev_data->pri_emac_base_addr == T234_MGBE2_BASE_ADDR) {
+	} else if (pdev_data->pri_emac_base_addr == mgbe2_mac_pa) {
 		pdev_data->sts_offset = MGBE_STSR_OFFSET;
 		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE2;
-	} else if (pdev_data->pri_emac_base_addr == T234_MGBE3_BASE_ADDR) {
+	} else if (pdev_data->pri_emac_base_addr == mgbe3_mac_pa) {
 		pdev_data->sts_offset = MGBE_STSR_OFFSET;
 		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE3;
-	} else if (pdev_data->pri_emac_base_addr == T234_EQOS_BASE_ADDR) {
-		pdev_data->sts_offset = EQOS_STSR_OFFSET;
-		pdev_data->stns_offset = EQOS_STNSR_OFFSET;
-		pdev_data->tsc_ptp_src = TSC_PTP_SRC_EQOS;
-	} else if (pdev_data->pri_emac_base_addr == T194_EQOS_BASE_ADDR) {
+	} else if (pdev_data->pri_emac_base_addr == eqos_mac_pa) {
 		pdev_data->sts_offset = EQOS_STSR_OFFSET;
 		pdev_data->stns_offset = EQOS_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_EQOS;
@@ -1003,6 +1037,7 @@ static int nvpps_probe(struct platform_device *pdev)
 
 	cdata = of_device_get_match_data(&pdev->dev);
 	pdev_data->support_tsc = cdata->support_tsc;
+	pdev_data->soc_id = cdata->soc_id;
 
 	nvpps_fill_default_mac_phc_info(pdev, pdev_data);
 
@@ -1186,15 +1221,22 @@ static int nvpps_resume(struct platform_device *pdev)
 
 
 #ifndef NVPPS_NO_DT
+static const struct tegra_chip_data tegra264_chip_data = {
+	.support_tsc = true,
+	.soc_id = NV_SOC_T26X,
+};
 static const struct tegra_chip_data tegra234_chip_data = {
 	.support_tsc = true,
+	.soc_id = NV_SOC_T23X,
 };
 static const struct tegra_chip_data tegra194_chip_data = {
 	.support_tsc = false,
+	.soc_id = NV_SOC_T19X,
 };
 static const struct of_device_id nvpps_of_table[] = {
 	{ .compatible = "nvidia,tegra194-nvpps", .data = &tegra194_chip_data },
 	{ .compatible = "nvidia,tegra234-nvpps", .data = &tegra234_chip_data },
+	{ .compatible = "nvidia,tegra264-nvpps", .data = &tegra264_chip_data },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, nvpps_of_table);
