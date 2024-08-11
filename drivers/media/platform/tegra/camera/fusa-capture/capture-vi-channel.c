@@ -159,9 +159,20 @@ void vi_capture_request_unpin(
 	struct tegra_vi_channel *chan,
 	uint32_t buffer_index)
 {
-	struct vi_capture *capture = chan->capture_data;
+	struct vi_capture *capture;
 	struct capture_common_unpins *unpins;
 	int i = 0;
+
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: vi channel pointer is NULL\n", __func__);
+		return;
+	}
+
+	capture = chan->capture_data;
+	if (unlikely(capture == NULL)) {
+		dev_err(chan->dev, "%s: vi capture uninitialized\n", __func__);
+		return;
+	}
 
 	mutex_lock(&capture->unpins_list_lock);
 	unpins = &capture->unpins_list[buffer_index];
@@ -375,9 +386,20 @@ static long vi_channel_ioctl(
 	unsigned long arg)
 {
 	struct tegra_vi_channel *chan = file->private_data;
-	struct vi_capture *capture = chan->capture_data;
+	struct vi_capture *capture;
 	void __user *ptr = (void __user *)arg;
 	int err = -EFAULT;
+
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: invalid channel\n", __func__);
+		return -EINVAL;
+	}
+
+	capture = chan->capture_data;
+	if (unlikely(capture == NULL)) {
+		dev_err(chan->dev, "%s: invalid context", __func__);
+		return -EINVAL;
+	}
 
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(VI_CAPTURE_SETUP): {

@@ -497,11 +497,20 @@ EXPORT_SYMBOL_GPL(vi_capture_init);
 void vi_capture_shutdown(
 	struct tegra_vi_channel *chan)
 {
-	struct vi_capture *capture = chan->capture_data;
+	struct vi_capture *capture;
+
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: vi channel pointer is NULL\n", __func__);
+		return;
+	}
 
 	dev_dbg(chan->dev, "%s--\n", __func__);
-	if (capture == NULL)
+
+	capture = chan->capture_data;
+	if (unlikely(capture == NULL)) {
+		dev_err(chan->dev, "%s: invalid context", __func__);
 		return;
+	}
 
 	if (capture->channel_id != CAPTURE_CHANNEL_INVALID_ID)
 		vi_capture_reset(chan,
@@ -907,22 +916,29 @@ int vi_capture_release(
 	struct tegra_vi_channel *chan,
 	uint32_t reset_flags)
 {
-	struct vi_capture *capture = chan->capture_data;
+	struct vi_capture *capture;
 	struct CAPTURE_CONTROL_MSG control_desc;
-	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	struct CAPTURE_CONTROL_MSG *resp_msg;
 	int err = 0;
 	int ret = 0;
 	int i = 0;
+
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: vi channel pointer is NULL\n", __func__);
+		return -ENODEV;
+	}
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
 		NVHOST_CAMERA_VI_CAPTURE_RELEASE);
 
-	if (capture == NULL) {
-		dev_err(chan->dev,
-			 "%s: vi capture uninitialized\n", __func__);
+	capture = chan->capture_data;
+	if (unlikely(capture == NULL)) {
+		dev_err(chan->dev, "%s: vi capture uninitialized\n", __func__);
 		return -ENODEV;
 	}
+
+	resp_msg = &capture->control_resp_msg;
 
 	if (capture->channel_id == CAPTURE_CHANNEL_INVALID_ID) {
 		dev_err(chan->dev,
@@ -989,9 +1005,10 @@ int vi_capture_release(
 	capture->csi_port = NVCSI_PORT_UNSPECIFIED;
 	capture->virtual_channel_id = NVCSI_STREAM_INVALID_TPG_VC_ID;
 
-	if (capture->is_progress_status_notifier_set)
+	if (capture->is_progress_status_notifier_set) {
 		capture_common_release_progress_status_notifier(
 			&capture->progress_status_notifier);
+	}
 
 	return err;
 }
