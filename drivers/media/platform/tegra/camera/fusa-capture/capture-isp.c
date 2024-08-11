@@ -16,6 +16,7 @@
 #include <linux/printk.h>
 #include <linux/vmalloc.h>
 #include <linux/tegra-capture-ivc.h>
+#include <linux/tegra-camera-rtcpu.h>
 #include <asm/arch_timer.h>
 #include <soc/tegra/fuse.h>
 
@@ -1285,8 +1286,9 @@ int isp_capture_release(
 	struct isp_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_msg;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
-	int i;
 	int err = 0;
+	int ret = 0;
+	int i;
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
@@ -1312,28 +1314,32 @@ int isp_capture_release(
 
 	err = isp_capture_ivc_send_control(chan, &control_msg,
 			sizeof(control_msg), CAPTURE_CHANNEL_ISP_RELEASE_RESP);
-	if (err < 0)
-		goto error;
+	if (err < 0) {
+		dev_err(chan->isp_dev,
+				"%s: release channel IVC failed\n", __func__);
+		WARN_ON("RTCPU is in a bad state. Reboot to recover");
 
-	if (resp_msg->channel_isp_release_resp.result != CAPTURE_OK) {
+		tegra_camrtc_reboot(capture->rtcpu_dev);
+
+		err = -EIO;
+	} else if (resp_msg->channel_isp_release_resp.result != CAPTURE_OK) {
 		dev_err(chan->isp_dev, "%s: control failed, errno %d", __func__,
-			resp_msg->channel_release_resp.result);
-		err = -EINVAL;
-		goto error;
+			resp_msg->channel_isp_release_resp.result);
+		err = -EIO;
 	}
 
-	err = tegra_capture_ivc_unregister_capture_cb(capture->channel_id);
-	if (err < 0) {
+	ret = tegra_capture_ivc_unregister_capture_cb(capture->channel_id);
+	if (ret < 0 && err == 0) {
 		dev_err(chan->isp_dev,
 			"failed to unregister capture callback\n");
-		goto error;
+		err = ret;
 	}
 
-	err = tegra_capture_ivc_unregister_control_cb(capture->channel_id);
-	if (err < 0) {
+	ret = tegra_capture_ivc_unregister_control_cb(capture->channel_id);
+	if (ret < 0 && err == 0) {
 		dev_err(chan->isp_dev,
 			"failed to unregister control callback\n");
-		goto error;
+		err = ret;
 	}
 
 	for (i = 0; i < capture->program_desc_ctx.queue_depth; i++) {
@@ -1380,9 +1386,6 @@ int isp_capture_release(
 
 	capture->channel_id = CAPTURE_CHANNEL_ISP_INVALID_ID;
 
-	return 0;
-
-error:
 	return err;
 }
 
@@ -1457,6 +1460,9 @@ int isp_capture_reset(
 		goto error;
 	}
 
+	err = 0;
+
+error:
 	for (i = 0; i < capture->program_desc_ctx.queue_depth; i++) {
 		isp_capture_program_request_unpin(chan, i);
 		complete(&capture->capture_program_resp);
@@ -1470,9 +1476,6 @@ int isp_capture_reset(
 
 	spec_bar();
 
-	err = 0;
-
-error:
 	mutex_unlock(&capture->reset_lock);
 	return err;
 }
