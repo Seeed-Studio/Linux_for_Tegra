@@ -6,7 +6,7 @@
 #ifndef DCE_PM_H
 #define DCE_PM_H
 
-#include <dce.h>
+struct tegra_dce;
 
 struct dce_sc7_state {
 	uint32_t hsp_ie;
