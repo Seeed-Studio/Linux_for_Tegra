@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef PHY_TEGRA_XUSB_H
@@ -19,6 +19,8 @@ enum usb_device_speed;
 struct tegra_xusb_padctl *tegra_xusb_padctl_get(struct device *dev);
 void tegra_xusb_padctl_put(struct tegra_xusb_padctl *padctl);
 int tegra_xusb_padctl_event_register(struct tegra_xusb_padctl *padctl,
+				     struct notifier_block *nb);
+int tegra_xusb_padctl_event_unregister(struct tegra_xusb_padctl *padctl,
 				     struct notifier_block *nb);
 int tegra_xusb_padctl_event_notify(struct tegra_xusb_padctl *padctl,
 				     unsigned long val);

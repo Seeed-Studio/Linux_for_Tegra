@@ -1386,6 +1386,13 @@ int tegra_xusb_padctl_event_register(struct tegra_xusb_padctl *padctl,
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_event_register);
 
+int tegra_xusb_padctl_event_unregister(struct tegra_xusb_padctl *padctl,
+				     struct notifier_block *nb)
+{
+	return blocking_notifier_chain_unregister(&padctl->notifier, nb);
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_event_unregister);
+
 int tegra_xusb_padctl_event_notify(struct tegra_xusb_padctl *padctl,
 				     unsigned long val)
 {
