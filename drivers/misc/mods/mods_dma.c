@@ -213,6 +213,14 @@ int esc_mods_dma_request_channel_2(struct mods_client *client,
 		cl_debug(DEBUG_TEGRADMA, "dmach is asked for %s\n", p_handle->ctrl_dir);
 		chan = dma_request_chan(mods_tegra_dma_dev, p_handle->ctrl_dir);
 	}
+
+	if (IS_ERR(chan)) {
+		mods_release_dma_id(id);
+		err = -ENOPARAM;
+		pr_err("failed to alloc chan for %s, errno %ld\n", (p_handle->ctrl_dir[0] == '\0') ? "" : p_handle->ctrl_dir, PTR_ERR(chan));
+		goto failed;
+	}
+	else
 	if (!chan) {
 		cl_error("dma channel is not available\n");
 		mods_release_dma_id(id);
