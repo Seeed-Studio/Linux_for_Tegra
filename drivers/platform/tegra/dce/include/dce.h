@@ -306,6 +306,8 @@ u32 dce_get_fw_dce_addr(struct tegra_dce *d);
 u64 dce_get_fw_phy_addr(struct tegra_dce *d, struct dce_firmware *fw);
 const char *dce_get_fw_name(struct tegra_dce *d);
 
+void dce_driver_start(struct tegra_dce *d);
+void dce_driver_stop(struct tegra_dce *d);
 int dce_driver_init(struct tegra_dce *d);
 void dce_driver_deinit(struct tegra_dce *d);
 

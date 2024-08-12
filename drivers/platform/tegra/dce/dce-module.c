@@ -294,6 +294,8 @@ static int tegra_dce_probe(struct platform_device *pdev)
 		goto err_driver_init;
 	}
 
+	dce_driver_start(d);
+
 	dce_set_irqs(pdev, true);
 
 #ifdef CONFIG_DEBUG_FS
@@ -339,6 +341,7 @@ static int tegra_dce_remove(struct platform_device *pdev)
 #endif
 
 	dce_set_irqs(pdev, false);
+	dce_driver_stop(d);
 	dce_driver_deinit(d);
 	return 0;
 }

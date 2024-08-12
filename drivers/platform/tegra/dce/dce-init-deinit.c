@@ -7,6 +7,30 @@
 #include <os-utils.h>
 
 /**
+ * dce_driver_start - Start executing DCE logic
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Returns void
+ */
+void dce_driver_start(struct tegra_dce *d)
+{
+	dce_fsm_start(d);
+}
+
+/**
+ * dce_driver_stop - Stop executing DCE logic
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Returns void
+ */
+void dce_driver_stop(struct tegra_dce *d)
+{
+	dce_fsm_stop(d);
+}
+
+/**
  * dce_driver_init - Initializes the various sw components
  *					and few hw elements dce.
  *
@@ -53,8 +77,6 @@ int dce_driver_init(struct tegra_dce *d)
 		goto err_fsm_init;
 	}
 
-	dce_fsm_start(d);
-
 	return ret;
 
 err_fsm_init:
@@ -82,7 +104,6 @@ err_boot_interface_init:
 void dce_driver_deinit(struct tegra_dce *d)
 {
 	/*  TODO : Reset DCE ? */
-	dce_fsm_stop(d);
 
 	dce_fsm_deinit(d);
 
