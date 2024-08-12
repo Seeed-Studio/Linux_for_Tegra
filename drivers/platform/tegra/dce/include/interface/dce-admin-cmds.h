@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * Copyright (c) 2018-2023 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2024 NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -96,12 +96,10 @@ struct dce_admin_echo {
 	uint32_t	data;
 };
 
-enum dce_admin_ext_test {
-	DCE_ADMIN_EXT_TEST_ALU	= 0U,
-	DCE_ADMIN_EXT_TEST_DMA	= 1U,
-};
+#define	DCE_ADMIN_EXT_TEST_ALU	 0U
+#define	DCE_ADMIN_EXT_TEST_DMA	 1U
 struct dce_admin_ext_test_args {
-	enum dce_admin_ext_test	test;
+	uint32_t	test_cmd;
 };
 
 struct dce_admin_log_args {

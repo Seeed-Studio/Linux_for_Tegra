@@ -1,11 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  */
 
 #include <linux/errno.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
+#include <linux/ktime.h>
 #include <dce.h>
 #include <dce-log.h>
 #include <dce-util-common.h>
@@ -309,7 +319,9 @@ static int dbg_dce_tests_external_help_fops_show(struct seq_file *s, void *data)
 	seq_printf(s, "DCE External Test List\n"
 		      "----------------------\n"
 		      "   - Test #0: MODS ALU Test\n"
-		      "   - Test #1: MODS DMA Test\n");
+		      "   - Test #1: MODS DMA Test\n"
+		      "  Usage: echo 0 > run, will run ALU test\n");
+
 
 	return 0;
 
@@ -359,6 +371,8 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 {
 	int ret = 0;
 	u32 test;
+	u64 start_time;
+	u64 end_time;
 	struct dce_ipc_message *msg = NULL;
 	struct dce_admin_ipc_cmd *req_msg = NULL;
 	struct dce_admin_ipc_resp *resp_msg = NULL;
@@ -397,7 +411,10 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 	req_msg = (struct dce_admin_ipc_cmd *)(msg->tx.data);
 	resp_msg = (struct dce_admin_ipc_resp *) (msg->rx.data);
 
-	req_msg->args.ext_test.test  = test;
+	req_msg->args.ext_test.test_cmd  = test;
+
+	start_time = ktime_get_real_ns();
+
 	ret = dce_admin_send_cmd_ext_test(d, msg);
 	if (ret) {
 		dce_err(d, "Admin msg failed");
@@ -405,9 +422,13 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 		goto exit;
 	}
 
-	if (resp_msg->error == DCE_ERR_CORE_SUCCESS)
-		dce_info(d, "Test passed!");
-	else if (resp_msg->error == DCE_ERR_CORE_NOT_IMPLEMENTED)
+	end_time = ktime_get_real_ns();
+
+	if (resp_msg->error == DCE_ERR_CORE_SUCCESS) {
+		dce_err(d, "Test passed!");
+		dce_err(d, "Took %lld microsecs to finish\n",
+			((end_time - start_time) / 1000));
+	} else if (resp_msg->error == DCE_ERR_CORE_NOT_IMPLEMENTED)
 		dce_err(d, "Test not implemented!");
 	else
 		dce_err(d, "Test failed(%d)!", (int32_t)resp_msg->error);
