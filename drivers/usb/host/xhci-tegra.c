@@ -2500,11 +2500,6 @@ skip_clock_and_reg:
 		}
 	}
 
-	if (tegra->soc->is_xhci_vf) {
-		tegra->padctl_nb.notifier_call = tegra_xhci_padctl_notify;
-		tegra_xusb_padctl_event_register(tegra->padctl, &tegra->padctl_nb);
-	}
-
 	err = tegra_xusb_enable_firmware_messages(tegra);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to enable messages: %d\n", err);
@@ -2515,6 +2510,15 @@ skip_clock_and_reg:
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to init USB PHY: %d\n", err);
 		goto remove_usb3;
+	}
+
+	if (tegra->soc->is_xhci_vf) {
+		tegra->padctl_nb.notifier_call = tegra_xhci_padctl_notify;
+		err = tegra_xusb_padctl_event_register(tegra->padctl, &tegra->padctl_nb);
+		if (err < 0) {
+			dev_err(&pdev->dev, "failed to register padctl event: %d\n", err);
+			goto remove_usb3;
+		}
 	}
 
 	/* Enable wake for both USB 2.0 and USB 3.0 roothubs */
@@ -2580,6 +2584,9 @@ static void tegra_xusb_remove(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
 	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
+
+	if (tegra->soc->is_xhci_vf)
+		tegra_xusb_padctl_event_unregister(tegra->padctl, &tegra->padctl_nb);
 
 	tegra_xusb_deinit_usb_phy(tegra);
 
