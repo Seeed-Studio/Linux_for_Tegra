@@ -37,7 +37,7 @@ do
 		config_file_name=$(basename -- "$config_file")
 		flavor=$(echo ${config_file_name} | cut -d'-' -f3)
 
-		exec "$DEPMOD" "$@" "$KERNELRELEASE"  -C "$config_file"
+		"$DEPMOD" "$@" "$KERNELRELEASE"  -C "$config_file"
 
 		exit_status=$?
 		if [ "$exit_status" -ne 0 ]; then
