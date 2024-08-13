@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2016-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 / {
 	fragment-camera@0 {
@@ -159,7 +159,7 @@
 								* Sensor embedded metadata height in units of rows.
 								* If sensor does not support embedded metadata value should be 0.
 								*/
-								mode0 {/*mode IMX390_MODE_1936X1096_CROP_30FPS*/
+								mode0 {/*mode IMX390_WDR_MODE_1936X1216_CROP_30FPS*/
 									mclk_khz = "24000";
 									num_lanes = "4";
 									tegra_sinterface = "serial_a";
@@ -171,26 +171,26 @@
 									mode_type = "bayer_wdr_pwl";
 									pixel_phase = "rggb";
 									active_w = "1936";
-									active_h = "1096";
+									active_h = "1216";
 									readout_orientation = "0";
-									line_length = "4400";
+									line_length = "3300"; /* HMAX */
 									inherent_gain = "1";
 									mclk_multiplier = "14.58";
-									pix_clk_hz = "148500000";
+									pix_clk_hz = "83250000"; /* 249.75Mbps/Lane * 4Lane / 12bit = 83.25[MPixel] */
 									serdes_pix_clk_hz = "500000000";
 									gain_factor = "10";
-									min_gain_val = "84"; /* dB */
-									max_gain_val = "240"; /* dB */
-									step_gain_val = "1"; /* 0.1 */
-									default_gain = "84";
+									min_gain_val = "1";
+									max_gain_val = "420";
+									step_gain_val = "3";
+									default_gain = "1";
 									framerate_factor = "1000000";
 									min_framerate = "30000000";
 									max_framerate = "30000000";
 									step_framerate = "1";
 									default_framerate = "30000000";
 									exposure_factor = "1000000";
-									min_exp_time = "2000"; /*us, 2 lines*/
-									max_exp_time = "33000";
+									min_exp_time = "134"; /* (ERRWID_BACK/2) + 2 = 5[line] */
+									max_exp_time = "33227"; /* MODE_VMAX - 1 - (ERRWID_BACK/2) = 1250 - 1 - (6/2) = 1246[line] */
 									step_exp_time = "1";
 									default_exp_time = "11000";/* us */
 									embedded_metadata_height = "0";
@@ -198,26 +198,26 @@
 									max_hdr_ratio = "64.0";
 									num_control_point = "9";
 									control_point_x_0 = "0";
+									control_point_x_1 = "469";
+									control_point_x_2 = "1582";
+									control_point_x_3 = "4592";
+									control_point_x_4 = "13446";
+									control_point_x_5 = "39550";
+									control_point_x_6 = "117664";
+									control_point_x_7 = "352265";
+									control_point_x_8 = "1048575";
 									control_point_y_0 = "0";
-									control_point_x_1="479";
-									control_point_y_1="479";
-									control_point_x_2="1438";
-									control_point_y_2="837";
-									control_point_x_3="4315";
-									control_point_y_3="1238";
-									control_point_x_4="12945";
-									control_point_y_4="1688";
-									control_point_x_5="38836";
-									control_point_y_5="2191";
-									control_point_x_6="116508";
-									control_point_y_6="2755";
-									control_point_x_7="349525";
-									control_point_y_7="3387";
-									control_point_x_8="1048575";
-									control_point_y_8="4095";
+									control_point_y_1 = "469";
+									control_point_y_2 = "840";
+									control_point_y_3 = "1270";
+									control_point_y_4 = "1736";
+									control_point_y_5 = "2238";
+									control_point_y_6 = "2792";
+									control_point_y_7 = "3411";
+									control_point_y_8 = "4095";
 								};
 
-								mode1 {/*mode IMX390_MODE_1936X1096_CROP_30FPS*/
+								mode1 {/*mode IMX390_SDR_MODE_1936X1216_CROP_30FPS*/
 									mclk_khz = "24000";
 									num_lanes = "4";
 									tegra_sinterface = "serial_a";
@@ -231,18 +231,18 @@
 									pixel_phase = "rggb";
 
 									active_w = "1936";
-									active_h = "1096";
+									active_h = "1216";
 									readout_orientation = "0";
-									line_length = "2200";
+									line_length = "3300"; /* HMAX */
 									inherent_gain = "1";
-									pix_clk_hz = "74250000";
+									pix_clk_hz = "83250000"; /* 249.75Mbps/Lane * 4Lane / 12bit = 83.25[MPixel] */
 									serdes_pix_clk_hz = "200000000";
 
 									gain_factor = "10";
-									min_gain_val = "0"; /* dB */
-									max_gain_val = "300"; /* dB */
-									step_gain_val = "3"; /* 0.3 */
-									default_gain = "0";
+									min_gain_val = "1";
+									max_gain_val = "420";
+									step_gain_val = "3";
+									default_gain = "1";
 									min_hdr_ratio = "1";
 									max_hdr_ratio = "1";
 									framerate_factor = "1000000";
@@ -251,10 +251,10 @@
 									step_framerate = "1";
 									default_framerate = "30000000";
 									exposure_factor = "1000000";
-									min_exp_time = "59"; /*us, 2 lines*/
-									max_exp_time = "33333";
+									min_exp_time = "134"; /* (ERRWID_BACK/2) + 2 = 5[line] */
+									max_exp_time = "33227"; /* MODE_VMAX - 1 - (ERRWID_BACK/2) = 1250 - 1 - (6/2) = 1246[line] */
 									step_exp_time = "1";
-									default_exp_time = "33333";/* us */
+									default_exp_time = "11000";/* us */
 									embedded_metadata_height = "0";
 								};
 
