@@ -96,25 +96,20 @@
 				secure-status = "disabled";
 			};
 
-			/* This is the Silicon ID public key. */
-			silicon-id-pubkey@0 {
-				compatible = "nvidia,ftpm-silicon-id-pubkey";
+			/*
+			 * This is the Firmware ID private key.
+			 * OP-TEE needs it to sign the EK CSR.
+			 */
+			firmware-id-privkey@0 {
+				compatible = "nvidia,ftpm-firmware-id-privkey";
 				reg = <0 0 0 0>;
 				status = "disabled";
 				secure-status = "disabled";
 			};
 
-			/* This is the signature of the MB2 measurement. */
-			mb2-event-log-sig@0 {
-				compatible = "nvidia,ftpm-mb2-event-log-sig";
-				reg = <0 0 0 0>;
-				status = "disabled";
-				secure-status = "disabled";
-			};
-
-			/* This is the signature of the TOS image measurement. */
-			tos-event-log-sig@0 {
-				compatible = "nvidia,ftpm-tos-event-log-sig";
+			/* This is the Firmware ID certificate. */
+			firmware-id-certificate@0 {
+				compatible = "nvidia,ftpm-firmware-id-certificate";
 				reg = <0 0 0 0>;
 				status = "disabled";
 				secure-status = "disabled";
