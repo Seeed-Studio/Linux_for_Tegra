@@ -22,4 +22,68 @@
 			};
 		};
 	};
+
+	fragment-t264-p3971-0089-p3834-0008-qspi-ufs-mgbe@1 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "uphy1-config-10";
+		};
+		__overlay__ {
+			/* MGBE 0 */
+		        ethernet@a808a10000 {
+				status = "okay";
+				nvidia,mac-addr-idx = <1>;
+				nvidia,uphy-gbe-mode = <1>;
+				nvidia,max-platform-mtu = <9000>;
+				nvidia,phy-iface-mode = <0>;
+
+				fixed-link {
+					full-duplex;
+					speed = <10000>;
+				};
+			};
+
+			/* MGBE 1 */
+		        ethernet@a808b10000 {
+				status = "okay";
+				nvidia,mac-addr-idx = <2>;
+				nvidia,uphy-gbe-mode = <1>;
+				nvidia,max-platform-mtu = <9000>;
+				nvidia,phy-iface-mode = <0>;
+
+				fixed-link {
+					full-duplex;
+					speed = <10000>;
+				};
+			};
+
+			/* MGBE 2 */
+		        ethernet@a808d10000 {
+				status = "okay";
+				nvidia,mac-addr-idx = <3>;
+				nvidia,uphy-gbe-mode = <1>;
+				nvidia,max-platform-mtu = <9000>;
+				nvidia,phy-iface-mode = <0>;
+
+				fixed-link {
+					full-duplex;
+					speed = <10000>;
+				};
+			};
+
+			/* MGBE 3 */
+		        ethernet@a808e10000 {
+				status = "okay";
+				nvidia,mac-addr-idx = <4>;
+				nvidia,uphy-gbe-mode = <1>;
+				nvidia,max-platform-mtu = <9000>;
+				nvidia,phy-iface-mode = <0>;
+
+				fixed-link {
+					full-duplex;
+					speed = <10000>;
+				};
+			};
+		};
+	};
 };
