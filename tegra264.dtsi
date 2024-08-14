@@ -4275,6 +4275,36 @@
 			#iommu-cells = <1>;
 		};
 
+		smmu0_hwpm: smmu-hwpm@810aa30000 {
+			compatible = "nvidia,t264-smmu-hwpm";
+			reg = <0x81 0x0aa30000 0x0 0x10000>;
+			status = "disabled";
+		};
+
+		smmu1_hwpm: smmu-hwpm@8105a30000 {
+			compatible = "nvidia,t264-smmu-hwpm";
+			reg = <0x81 0x05a30000 0x00 0x10000>;
+			status = "disabled";
+		};
+
+		smmu2_hwpm: smmu-hwpm@8106a30000 {
+			compatible = "nvidia,t264-smmu-hwpm";
+			reg = <0x81 0x06a30000 0x0 0x10000>;
+			status = "disabled";
+		};
+
+		smmu3_hwpm: smmu-hwpm@8806a30000 {
+			compatible = "nvidia,t264-smmu-hwpm";
+			reg = <0x88 0x06a30000 0x0 0x10000>;
+			status = "disabled";
+		};
+
+		smmu4_hwpm: smmu-hwpm@810ba30000 {
+			compatible = "nvidia,t264-smmu-hwpm";
+			reg = <0x81 0x0ba30000 0x0 0x10000>;
+			status = "disabled";
+		};
+
 		memqual0: memqual@f020000 {
 			compatible = "nvidia,tegra-t264-mem-qual";
 			status = "disabled";
