@@ -502,9 +502,6 @@
 
 	dce@8808000000 {
 		status = "okay";
-		sha-carveout {
-			status = "okay";
-		};
 	};
 
 	display@8808c00000 {
