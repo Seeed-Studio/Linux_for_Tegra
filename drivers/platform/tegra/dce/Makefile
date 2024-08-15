@@ -14,6 +14,7 @@ endif # CONFIG_TEGRA_OOT_MODULE
 
 ccflags-y += -I$(srctree.nvidia-oot)/include
 ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/include
+ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/os/include
 obj-$(CONFIG_TEGRA_DCE) += tegra-dce.o
 
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-ast.o
