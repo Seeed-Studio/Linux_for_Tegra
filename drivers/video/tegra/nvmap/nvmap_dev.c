@@ -122,7 +122,7 @@ static void nvmap_pid_get_locked(struct nvmap_device *dev, pid_t pid)
 		return;
 
 	p = kzalloc(sizeof(*p), GFP_KERNEL);
-	if (!p)
+	if (p == NULL)
 		return;
 
 	p->pid = pid;
