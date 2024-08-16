@@ -4601,7 +4601,27 @@ static int ufshcd_change_power_mode(struct ufs_hba *hba,
 	 * - PA_TXGEAR, PA_ACTIVETXDATALANES, PA_TXTERMINATION,
 	 * - PA_HSSERIES
 	 */
+	if (!(hba->quirks & UFSHCD_QUIRK_BROKEN_PWR_SEQUENCE)) {
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_ACTIVERXDATALANES),
+				pwr_mode->lane_rx);
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_ACTIVETXDATALANES),
+				pwr_mode->lane_tx);
+
+		/* Lane change is triggered */
+		ret = ufshcd_uic_change_pwr_mode(hba, (SLOWAUTO_MODE << 4
+				| SLOWAUTO_MODE));
+		if (ret) {
+			dev_err(hba->dev,
+				 "%s: lane change failed %d\n", __func__, ret);
+			goto out;
+		}
+		ufshcd_dme_configure_adapt(hba, pwr_mode->gear_rx, PA_INITIAL_ADAPT);
+	}
+
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_RXGEAR), pwr_mode->gear_rx);
+	if (!(hba->quirks & UFSHCD_QUIRK_BROKEN_PWR_SEQUENCE))
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_ACTIVETXDATALANES),
+			pwr_mode->lane_tx);
 	if (pwr_mode->pwr_rx == FASTAUTO_MODE ||
 			pwr_mode->pwr_rx == FAST_MODE)
 		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_RXTERMINATION), true);
@@ -4653,23 +4673,27 @@ static int ufshcd_change_power_mode(struct ufs_hba *hba,
 		return ret;
 	}
 
-	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_ACTIVERXDATALANES),
-			pwr_mode->lane_rx);
-	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_ACTIVETXDATALANES),
-			pwr_mode->lane_tx);
+	if (hba->quirks & UFSHCD_QUIRK_BROKEN_PWR_SEQUENCE) {
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_ACTIVERXDATALANES),
+				pwr_mode->lane_rx);
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_ACTIVETXDATALANES),
+				pwr_mode->lane_tx);
 
-	ret = ufshcd_uic_change_pwr_mode(hba, pwr_mode->pwr_rx << 4
-			| pwr_mode->pwr_tx);
+		ret = ufshcd_uic_change_pwr_mode(hba, pwr_mode->pwr_rx << 4
+				| pwr_mode->pwr_tx);
 
-	if (ret) {
-		dev_err(hba->dev,
-			"%s: Lane change failed %d\n", __func__, ret);
-	} else {
-		memcpy(&hba->pwr_info, pwr_mode,
-			sizeof(struct ufs_pa_layer_attr));
+		if (ret)
+			dev_err(hba->dev,
+				"%s: Lane change failed %d\n", __func__, ret);
 	}
-
-	return ret;
+out:
+        if (!ret) {
+                ufshcd_vops_pwr_change_notify(hba, POST_CHANGE, NULL,
+                                                pwr_mode);
+                memcpy(&hba->pwr_info, pwr_mode,
+                        sizeof(struct ufs_pa_layer_attr));
+        }
+        return ret;
 }
 
 /**
