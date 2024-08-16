@@ -772,8 +772,8 @@ void halbb_physts_rpt_gen(struct bb_info *bb, u32 physts_bitmap,
 			  struct physts_result *rpt,
 			  bool physts_rpt_valid, struct physts_rxd *desc,
 			  bool is_cck_rate, bool is_ie8_valid);
-void halbb_physts_ie_bitmap_set(struct bb_info *bb, u32 ie_page, u32 bitmap);
-u32 halbb_physts_ie_bitmap_get(struct bb_info *bb, u32 ie_page);
+void halbb_physts_ie_bitmap_set(struct bb_info *bb, enum bb_physts_bitmap_t ie_page, u32 bitmap);
+u32 halbb_physts_ie_bitmap_get(struct bb_info *bb, enum bb_physts_bitmap_t ie_page);
 void halbb_physts_ie_bitmap_en(struct bb_info *bb, enum bb_physts_bitmap_t type,
 			       enum bb_physts_ie_t ie, bool en);
 void halbb_phy_sts_manual_trig(struct bb_info *bb, enum bb_mode_type mode, u8 ss);

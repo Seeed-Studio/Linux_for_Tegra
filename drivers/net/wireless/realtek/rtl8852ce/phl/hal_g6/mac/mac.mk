@@ -7,10 +7,10 @@ HAL = hal_g6
 
 ifeq ($(CONFIG_PHL_ARCH), y)
 phl_path := phl/hal_g6
-phl_path_d1 := $(src)/phl/$(HAL)
+phl_path_d1 := $(SOURCETREE)/phl/$(HAL)
 else
 phl_path := hal_g6
-phl_path_d1 := $(src)/$(HAL)
+phl_path_d1 := $(SOURCETREE)/$(HAL)
 endif
 
 # Base directory

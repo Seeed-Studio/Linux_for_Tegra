@@ -7,10 +7,10 @@
 
 ifeq ($(CONFIG_PHL_ARCH), y)
 phl_path := phl/$(HAL)
-phl_path_d1 := $(src)/phl/$(HAL)
+phl_path_d1 := $(SOURCETREE)/phl/$(HAL)
 else
 phl_path := $(HAL)
-phl_path_d1 := $(src)/$(HAL)
+phl_path_d1 := $(SOURCETREE)/$(HAL)
 endif
 
 # Base directory

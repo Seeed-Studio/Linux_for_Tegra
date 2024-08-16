@@ -14,6 +14,9 @@ EXTRA_CFLAGS += -Wno-unused-label
 #EXTRA_CFLAGS += -Wno-unused-function
 EXTRA_CFLAGS += -Wno-unused
 #EXTRA_CFLAGS += -Wno-uninitialized
+EXTRA_CFLAGS += -Wno-missing-prototypes
+EXTRA_CFLAGS += -Wno-missing-declarations
+EXTRA_CFLAGS += -Wno-enum-conversion
 
 ############ ANDROID COMMON KERNEL ############
 # clang
@@ -35,7 +38,8 @@ ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-EXTRA_CFLAGS += -I$(src)/include
+SOURCETREE = $(srctree.nvidia-oot)/drivers/net/wireless/realtek/rtl8852ce
+EXTRA_CFLAGS += -I$(SOURCETREE)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -55,7 +59,7 @@ CONFIG_SDIO_HCI = n
 CONFIG_GSPI_HCI = n
 ########################## Features ###########################
 CONFIG_MP_INCLUDED = y
-CONFIG_CONCURRENT_MODE = y
+CONFIG_CONCURRENT_MODE = n
 CONFIG_POWER_SAVE = y
 CONFIG_IPS_MODE = default
 CONFIG_LPS_MODE = default
@@ -112,7 +116,7 @@ CONFIG_REDUCE_TX_CPU_LOADING = n
 CONFIG_BR_EXT = y
 CONFIG_TDLS = n
 CONFIG_WIFI_MONITOR = n
-CONFIG_MCC_MODE = y
+CONFIG_MCC_MODE = n
 CONFIG_APPEND_VENDOR_IE_ENABLE = n
 CONFIG_RTW_NAPI = y
 CONFIG_RTW_GRO = y
@@ -230,7 +234,8 @@ CONFIG_LAYER2_ROAMING = y
 CONFIG_ROAMING_FLAG = 0x3
 
 ###################### Platform Related #######################
-CONFIG_PLATFORM_I386_PC = y
+CONFIG_PLATFORM_TEGRA = y
+CONFIG_PLATFORM_I386_PC = n
 CONFIG_PLATFORM_RTL8198D = n
 CONFIG_PLATFORM_ANDROID_X86 = n
 CONFIG_PLATFORM_ANDROID_INTEL_X86 = n
@@ -756,6 +761,16 @@ ifeq ($(CONFIG_DBG_AX_CAM), y)
 EXTRA_CFLAGS += -DCONFIG_DBG_AX_CAM
 endif
 
+ifeq ($(CONFIG_PLATFORM_TEGRA), y)
+ARCH = arm64
+KVER := $(shell uname -r)
+KSRC := /lib/modules/$(KVER)/build
+EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
+EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
+EXTRA_CFLAGS += -Wno-error=date-time
+MODULE_NAME = rtl8852ce
+endif
+
 ifeq ($(CONFIG_I386_BUILD_VERIFY), y)
 EXTRA_CFLAGS += -DCONFIG_I386_BUILD_VERIFY
 endif
@@ -772,8 +787,18 @@ endif
 include $(wildcard $(DRV_PATH)/platform/*.mk)
 
 # Import platform specific compile options
-EXTRA_CFLAGS += -I$(src)/platform
+EXTRA_CFLAGS += -I$(SOURCETREE)/platform
 #_PLATFORM_FILES := platform/platform_ops.o
+ifeq ($(CONFIG_PCI_HCI), y)
+EXTRA_CFLAGS += -DCONFIG_PLATFORM_OPS
+_PLATFORM_FILES := platform/platform_linux_pc_pci.o
+OBJS += $(_PLATFORM_FILES)
+# Core Config
+CONFIG_MSG_NUM = 128
+EXTRA_CFLAGS += -DCONFIG_MSG_NUM=$(CONFIG_MSG_NUM)
+#EXTRA_CFLAGS += -DCONFIG_TX_SKB_ORPHAN
+endif
+_PLATFORM_FILES += platform/platform_ops.o
 OBJS += $(_PLATFORM_FILES)
 
 ########### CUSTOMER ################################
@@ -793,7 +818,7 @@ endif
 
 ifneq ($(KERNELRELEASE),)
 ########### COMMON #################################
-include $(src)/common.mk
+include $(SOURCETREE)/common.mk
 
 EXTRA_CFLAGS += -DPHL_PLATFORM_LINUX
 EXTRA_CFLAGS += -DCONFIG_PHL_ARCH
@@ -814,11 +839,10 @@ ifeq ($(DIRTY_FOR_WORK), y)
 EXTRA_CFLAGS += -DDIRTY_FOR_WORK
 endif
 
-include $(src)/phl/phl.mk
+include $(SOURCETREE)/phl/phl.mk
 
 
-obj-$(CONFIG_RTL8852CE) := $(MODULE_NAME).o
-obj-$(CONFIG_RTL8852CE) := $(MODULE_NAME).o
+obj-m := $(MODULE_NAME).o
 $(MODULE_NAME)-y = $(OBJS)
 
 ############# MEMORY MANAGMENT #############
