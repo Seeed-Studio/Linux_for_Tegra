@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #ifndef __VMAP_H__
 #define __VMAP_H__
@@ -232,7 +235,8 @@ vmap_deinit(void **vmap_h);
 /* Map objects to pcie device.*/
 int
 vmap_obj_map(void *vmap_h, struct vmap_obj_map_params *params,
-	     struct vmap_obj_attributes *attrib);
+	     struct vmap_obj_attributes *attrib, uint64_t aperture_limit,
+	     uint64_t *const aperture_inuse);
 
 /* Unmap objects from pcie device.*/
 int

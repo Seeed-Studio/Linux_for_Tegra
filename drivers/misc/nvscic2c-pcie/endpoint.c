@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: endpoint: " fmt
 
@@ -1113,6 +1116,7 @@ endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 		stream_ext_params->ep_id = ep_prop->id;
 		stream_ext_params->ep_name = endpoint->name;
 		stream_ext_params->drv_mode = drv_ctx->drv_mode;
+		stream_ext_params->aperture_limit = ep_prop->aperture_limit;
 
 		/* create nvscic2c-pcie endpoint device.*/
 		ret = create_endpoint_device(eps_ctx, endpoint);

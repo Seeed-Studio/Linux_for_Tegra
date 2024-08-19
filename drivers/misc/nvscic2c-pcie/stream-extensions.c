@@ -180,6 +180,10 @@ struct stream_ext_ctx_t {
 
 	u32 ep_id;
 	char ep_name[NAME_MAX];
+	/* Streaming mode per endpoint PCIe aperture mapping limit */
+	uint64_t aperture_limit;
+	/* Streaming mode per endpoint PCIe aperture mapping usage */
+	uint64_t aperture_inuse;
 
 	struct node_info_t local_node;
 	struct node_info_t peer_node;
@@ -640,6 +644,11 @@ ioctl_set_max_copy_requests(struct stream_ext_ctx_t *ctx,
 	struct copy_request *cr = NULL;
 	struct list_head *curr = NULL, *next = NULL;
 
+	if (ctx->aperture_limit == 0) {
+		pr_err("Err: Streaming is not supported in this Endpoint: %s\n", ctx->ep_name);
+		return -EINVAL;
+	}
+
 	if (WARN_ON(!args->max_copy_requests ||
 		    !args->max_flush_ranges ||
 		    !args->max_post_fences))
@@ -762,6 +771,8 @@ stream_extension_init(struct stream_ext_params *params, void **stream_ext_h)
 	ctx->vmap_h = params->vmap_h;
 	ctx->pci_client_h = params->pci_client_h;
 	ctx->comm_channel_h = params->comm_channel_h;
+	ctx->aperture_limit = params->aperture_limit;
+	ctx->aperture_inuse = 0UL;
 	strscpy(ctx->ep_name, params->ep_name, NAME_MAX);
 	memcpy(&ctx->local_node, params->local_node, sizeof(ctx->local_node));
 	memcpy(&ctx->peer_node, params->peer_node, sizeof(ctx->peer_node));
@@ -895,7 +906,11 @@ allocate_handle(struct stream_ext_ctx_t *ctx, enum nvscic2c_pcie_obj_type type,
 		pr_err("Incorrect NVSCIC2C_IOCTL_MAP params\n");
 		return -EINVAL;
 	}
-	ret = vmap_obj_map(ctx->vmap_h, &vmap_params, &vmap_attrib);
+	ret = vmap_obj_map(ctx->vmap_h,
+			   &vmap_params,
+			   &vmap_attrib,
+			   ctx->aperture_limit,
+			   &ctx->aperture_inuse);
 	if (ret) {
 		if (ret == -EAGAIN)
 			pr_info("Failed to map obj of type: (%d)\n", type);

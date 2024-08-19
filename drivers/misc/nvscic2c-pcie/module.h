@@ -74,6 +74,8 @@ struct driver_param_t {
 		/* Frames and per frame size.*/
 		u8 nframes;
 		u32 frame_sz;
+		/* Streaming mode per endpoint PCIe aperture mapping limit */
+		uint64_t aperture_limit;
 	} endpoint_props[MAX_ENDPOINTS];
 };
 

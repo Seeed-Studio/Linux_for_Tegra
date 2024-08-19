@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: dt: " fmt
 
@@ -59,8 +62,8 @@ dt_print(struct driver_param_t *drv_param)
 
 		prop = &drv_param->endpoint_props[i];
 		pr_debug("\t\t(%s)::\n", prop->name);
-		pr_debug("\t\t\tnframes   = (%02u) frame_size=(%08u)",
-			 prop->nframes, prop->frame_sz);
+		pr_debug("\t\t\tnframes   = (%02u) frame_size=(%08u) buff limit=(%lld)",
+			 prop->nframes, prop->frame_sz, prop->aperture_limit);
 	}
 	pr_debug("dt parsing ends\n");
 }
@@ -110,6 +113,31 @@ tokenize_u8(char **input, const char *delim,
 		ret = -ENODATA;
 	else
 		ret = kstrtou8(token, base, value);
+
+	return ret;
+}
+
+/*
+ * helper function to tokenize the string with caller provided
+ * delimiter and provide the sting->u64 value.
+ *
+ * @param input is an in,out parameter.
+ *
+ */
+static int
+tokenize_u64(char **input, const char *delim,
+	     u32 base, u64 *value)
+{
+	int ret = 0;
+	char *token = NULL;
+
+	/* skipping args check - internal api.*/
+
+	token = tokenize(input, delim);
+	if (!token)
+		ret = -ENODATA;
+	else
+		ret = kstrtou64(token, base, value);
 
 	return ret;
 }
@@ -547,6 +575,13 @@ parse_endpoint_db(struct driver_param_t *drv_param)
 			ret = tokenize_u32(&inp, ",", base, &ep_prop->frame_sz);
 			if (ret) {
 				pr_err("Error parsing token frame_sz\n");
+				break;
+			}
+
+			/* parse streaming mode per endpoint PCIe aperture mapping limit */
+			ret = tokenize_u64(&inp, ",", base, &ep_prop->aperture_limit);
+			if (ret) {
+				pr_err("Error parsing token aperture_limit\n");
 				break;
 			}
 

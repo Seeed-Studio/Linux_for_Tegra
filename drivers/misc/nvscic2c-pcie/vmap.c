@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: vmap: " fmt
 
@@ -42,13 +45,76 @@ match_dmabuf(int id, void *entry, void *data)
 	return 0;
 }
 
+static int dev_map_limit_check(uint64_t aperture_limit, uint64_t aperture_inuse, size_t map_size)
+{
+	int ret = 0;
+
+	if ((aperture_inuse + map_size) > aperture_limit) {
+		ret = -ENOMEM;
+		pr_err("per endpoint mapping limit exceeded, aperture_inuse: %lld, map_size: %zu\n",
+			aperture_inuse, map_size);
+		return ret;
+	}
+
+	return ret;
+}
+
+static void
+dma_mem_get_size_exit(struct memobj_pin_t *pin)
+{
+	if (!(IS_ERR_OR_NULL(pin->sgt))) {
+		dma_buf_unmap_attachment(pin->attach, pin->sgt, pin->dir);
+		pin->sgt = NULL;
+	}
+
+	if (!(IS_ERR_OR_NULL(pin->attach))) {
+		dma_buf_detach(pin->dmabuf, pin->attach);
+		pin->attach = NULL;
+	}
+}
+
+static int dma_mem_get_size(struct vmap_ctx_t *vmap_ctx, struct memobj_pin_t *pin, size_t *map_size)
+{
+	int ret = 0;
+	u32 sg_index = 0;
+	struct scatterlist *sg = NULL;
+
+	/*
+	 * pin to dummy device (which has smmu disabled) to get scatter-list
+	 * of phys addr.
+	 */
+	pin->attach = dma_buf_attach(pin->dmabuf, &vmap_ctx->dummy_pdev->dev);
+	if (IS_ERR_OR_NULL(pin->attach)) {
+		ret = PTR_ERR(pin->attach);
+		pr_err("client_mngd dma_buf_attach failed\n");
+		goto fn_exit;
+	}
+	pin->sgt = dma_buf_map_attachment(pin->attach, pin->dir);
+	if (IS_ERR_OR_NULL(pin->sgt)) {
+		ret = PTR_ERR(pin->sgt);
+		pr_err("client_mngd dma_buf_attachment failed\n");
+		goto fn_exit;
+	}
+
+	*map_size = 0;
+	for_each_sg(pin->sgt->sgl, sg, pin->sgt->nents, sg_index)
+		*map_size += sg->length;
+
+fn_exit:
+	dma_mem_get_size_exit(pin);
+	return ret;
+}
+
 static int
 memobj_map(struct vmap_ctx_t *vmap_ctx,
 	   struct vmap_memobj_map_params *params,
-	   struct vmap_obj_attributes *attrib)
+	   struct vmap_obj_attributes *attrib,
+	   uint64_t aperture_limit,
+	   uint64_t *const aperture_inuse)
 {
 	int ret = 0;
 	s32 id_exist = 0;
+	size_t map_size = 0;
 	struct memobj_map_ref *map = NULL;
 	struct dma_buf *dmabuf = NULL;
 
@@ -105,6 +171,23 @@ memobj_map(struct vmap_ctx_t *vmap_ctx,
 			goto err;
 		}
 
+		if ((map->pin.mngd == VMAP_MNGD_CLIENT) && (aperture_inuse != NULL)) {
+			ret = dma_mem_get_size(vmap_ctx, &map->pin, &map_size);
+			if (ret != 0) {
+				pr_err("Failed in dma buf mem get size\n");
+				idr_remove(&vmap_ctx->mem_idr, map->obj_id);
+				kfree(map);
+				goto err;
+			}
+			ret = dev_map_limit_check(aperture_limit, *aperture_inuse, map_size);
+			if (ret != 0) {
+				pr_err("Failed in aperture limit check\n");
+				idr_remove(&vmap_ctx->mem_idr, map->obj_id);
+				kfree(map);
+				goto err;
+			}
+		}
+
 		/* populates map->pin.attrib within.*/
 		ret = memobj_pin(vmap_ctx, &map->pin);
 		if (ret) {
@@ -113,6 +196,8 @@ memobj_map(struct vmap_ctx_t *vmap_ctx,
 			kfree(map);
 			goto err;
 		}
+		if ((map->pin.mngd == VMAP_MNGD_CLIENT) && (aperture_inuse != NULL))
+			*aperture_inuse +=  map->pin.attrib.size;
 	}
 
 	attrib->type = VMAP_OBJ_TYPE_MEM;
@@ -200,7 +285,9 @@ match_syncpt_id(int id, void *entry, void *data)
 static int
 syncobj_map(struct vmap_ctx_t *vmap_ctx,
 	    struct vmap_syncobj_map_params *params,
-	    struct vmap_obj_attributes *attrib)
+	    struct vmap_obj_attributes *attrib,
+	    uint64_t aperture_limit,
+	    uint64_t *const aperture_inuse)
 {
 	int ret = 0;
 	s32 id_exist = 0;
@@ -239,6 +326,16 @@ syncobj_map(struct vmap_ctx_t *vmap_ctx,
 			goto err;
 		}
 
+		if ((params->mngd == VMAP_MNGD_CLIENT) && (aperture_inuse != NULL)) {
+			ret = dev_map_limit_check(aperture_limit, *aperture_inuse, SP_MAP_SIZE);
+			if (ret != 0) {
+				pr_err("Failed in aperture limit check\n");
+				idr_remove(&vmap_ctx->sync_idr, map->obj_id);
+				kfree(map);
+				goto err;
+			}
+		}
+
 		/* local syncobjs do not need to be pinned to pcie iova.*/
 		map->pin.fd = params->fd;
 		map->pin.syncpt_id = syncpt_id;
@@ -253,6 +350,9 @@ syncobj_map(struct vmap_ctx_t *vmap_ctx,
 			kfree(map);
 			goto err;
 		}
+		if ((params->mngd == VMAP_MNGD_CLIENT) && (aperture_inuse != NULL))
+			*aperture_inuse +=  map->pin.attrib.size;
+
 		attrib->type = VMAP_OBJ_TYPE_SYNC;
 		attrib->id = map->obj_id;
 		attrib->iova = map->pin.attrib.iova;
@@ -461,7 +561,8 @@ importobj_getref(struct vmap_ctx_t *vmap_ctx, s32 obj_id)
 
 int
 vmap_obj_map(void *vmap_h, struct vmap_obj_map_params *params,
-	     struct vmap_obj_attributes *attrib)
+	     struct vmap_obj_attributes *attrib, uint64_t aperture_limit,
+	     uint64_t *const aperture_inuse)
 {
 	int ret = 0;
 	struct vmap_ctx_t *vmap_ctx = (struct vmap_ctx_t *)vmap_h;
@@ -471,10 +572,18 @@ vmap_obj_map(void *vmap_h, struct vmap_obj_map_params *params,
 
 	switch (params->type) {
 	case VMAP_OBJ_TYPE_MEM:
-		ret = memobj_map(vmap_ctx, &params->u.memobj, attrib);
+		ret = memobj_map(vmap_ctx,
+				 &params->u.memobj,
+				 attrib,
+				 aperture_limit,
+				 aperture_inuse);
 		break;
 	case VMAP_OBJ_TYPE_SYNC:
-		ret = syncobj_map(vmap_ctx, &params->u.syncobj, attrib);
+		ret = syncobj_map(vmap_ctx,
+				  &params->u.syncobj,
+				  attrib,
+				  aperture_limit,
+				  aperture_inuse);
 		break;
 	case VMAP_OBJ_TYPE_IMPORT:
 		ret = importobj_map(vmap_ctx, &params->u.importobj, attrib);

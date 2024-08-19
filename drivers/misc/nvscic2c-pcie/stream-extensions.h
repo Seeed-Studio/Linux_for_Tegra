@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 /*
  * Internal to gos-nvscic2c module. This file is not supposed to be included
@@ -21,6 +24,8 @@ struct stream_ext_params {
 	struct node_info_t *peer_node;
 	u32 ep_id;
 	char *ep_name;
+	/* Streaming mode per endpoint PCIe aperture mapping limit */
+	uint64_t aperture_limit;
 	struct platform_device *host1x_pdev;
 	enum drv_mode_t drv_mode;
 	void *pci_client_h;
