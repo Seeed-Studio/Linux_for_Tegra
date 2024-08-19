@@ -6,15 +6,16 @@
 
 #include <linux/miscdevice.h>
 
-#define NVMAP_HEAP_IOVMM   (1ul<<30)
+#define NVMAP_HEAP_IOVMM            (1ul << 30)
 /* common carveout heaps */
-#define NVMAP_HEAP_CARVEOUT_VPR     (1ul<<28)
-#define NVMAP_HEAP_CARVEOUT_TSEC    (1ul<<27)
-#define NVMAP_HEAP_CARVEOUT_VIDMEM  (1ul<<26)
-#define NVMAP_HEAP_CARVEOUT_GPU (1ul << 3)
-#define NVMAP_HEAP_CARVEOUT_FSI   (1ul<<2)
-#define NVMAP_HEAP_CARVEOUT_IVM     (1ul<<1)
-#define NVMAP_HEAP_CARVEOUT_GENERIC (1ul<<0)
+#define NVMAP_HEAP_CARVEOUT_VPR     (1ul << 28)
+#define NVMAP_HEAP_CARVEOUT_TSEC    (1ul << 27)
+#define NVMAP_HEAP_CARVEOUT_VIDMEM  (1ul << 26)
+#define NVMAP_HEAP_CARVEOUT_VI      (1ul << 4)
+#define NVMAP_HEAP_CARVEOUT_GPU     (1ul << 3)
+#define NVMAP_HEAP_CARVEOUT_FSI     (1ul << 2)
+#define NVMAP_HEAP_CARVEOUT_IVM     (1ul << 1)
+#define NVMAP_HEAP_CARVEOUT_GENERIC (1ul << 0)
 
 #define NVMAP_HEAP_CARVEOUT_MASK    (NVMAP_HEAP_IOVMM - 1)
 
