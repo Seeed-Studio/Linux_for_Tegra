@@ -3,10 +3,6 @@
 
 / {
 	bus@0 {
-		pcie@a808420000 {
-			status = "disabled";
-		};
-
 		pwm@810c600000 {
 			status = "disabled";
 		};
