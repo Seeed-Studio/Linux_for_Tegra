@@ -41,6 +41,11 @@
 #include "ufs-tegra.h"
 #include "ufs-provision.h"
 
+/* Fuse register offset to know if chip is RDL part or not */
+#define TEGRA_FUSE_OPT_LOT_CODE_0_0	0x108U
+#define NON_RDL_STRUCTURE	0x90570c8
+#define NON_RDL_LEAD		0x83c1002
+
 static void ufs_tegra_mphy_startup_sequence(struct ufs_tegra_host *ufs_tegra);
 
 #ifdef CONFIG_DEBUG_FS
@@ -158,31 +163,22 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
 
         if (ufs_tegra->soc->chip_id >= TEGRA234) {
                 /* Set RX lane calibration */
-                mphy_update(ufs_tegra->mphy_l0_base,
-                    MPHY_RX_APB_VENDOR2_0_RX_CAL_EN, mphy_rx_vendor2_reg);
-
                 if (ufs_tegra->x2config == true) {
                         dev_dbg(dev, "%s:x2config is true so invoking mphy_update\n",
                                 __func__);
                         mphy_update(ufs_tegra->mphy_l1_base,
                                 MPHY_RX_APB_VENDOR2_0_RX_CAL_EN,
                                 mphy_rx_vendor2_reg);
-                }
-
-                /* TODO: GO bit has to be read back after updating it */
-                mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
-                        mphy_rx_vendor2_reg);
-
-                if (ufs_tegra->x2config == true) {
                         /* TODO: GO bit has to be read back after updating it */
                         mphy_update(ufs_tegra->mphy_l1_base,
                                 MPHY_GO_BIT, mphy_rx_vendor2_reg);
                 }
 
-/* Fuse register offset to know if chip is RDL part or not */
-#define TEGRA_FUSE_OPT_LOT_CODE_0_0	0x108U
-#define NON_RDL_STRUCTURE	0x90570c8
-#define NON_RDL_LEAD		0x83c1002
+                mphy_update(ufs_tegra->mphy_l0_base,
+                    MPHY_RX_APB_VENDOR2_0_RX_CAL_EN, mphy_rx_vendor2_reg);
+                /* TODO: GO bit has to be read back after updating it */
+                mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
+                        mphy_rx_vendor2_reg);
 
                if (ufs_tegra->x2config == true) {
                         /* Wait till lane calibration is done */
