@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
+#include <dt-bindings/thermal/thermal.h>
 #include "tegra264.dtsi"
 #include "nv-soc/tegra264-soc-prod.dtsi"
 
@@ -219,6 +220,12 @@
 		/* PCIe C0 ecam generic node for iGPU */
 		pcie@d0b0000000 {
 			status = "okay";
+			pci@0,0 {
+				gpu@0,0 {
+					nvidia,thermal-zones = "tj-thermal";
+					nvidia,cooling-device = <THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
 		};
 
 		mc_carveout@8108020000 {
@@ -493,6 +500,12 @@
 					hysteresis = <0>;
 					type = "critical";
 				};
+
+				tj_sw_slowdown: tj-sw-slowdown {
+                                        temperature = <99000>;
+                                        hysteresis = <0>;
+                                        type = "passive";
+                                };
 			};
 		};
 	};
