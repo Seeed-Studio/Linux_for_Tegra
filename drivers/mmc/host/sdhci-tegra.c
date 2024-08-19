@@ -425,9 +425,6 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 	if (!(mask & SDHCI_RESET_ALL))
 		return;
 
-	if (tegra_get_platform() == TEGRA_PLATFORM_SILICON)
-		tegra_sdhci_write_prod_settings(host, "prod");
-
 	tegra_sdhci_set_tap(host, tegra_host->default_tap);
 
 	misc_ctrl = sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL);
