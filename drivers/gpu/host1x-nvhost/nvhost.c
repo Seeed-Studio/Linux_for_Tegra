@@ -81,7 +81,7 @@ struct platform_device *nvhost_get_default_device(void)
 }
 EXPORT_SYMBOL(nvhost_get_default_device);
 
-static struct platform_device *nvhost_get_host1x_device(int instance)
+struct platform_device *nvhost_get_host1x_device(int instance)
 {
 	struct platform_device *host1x_pdev;
 	struct device_node *np;
@@ -98,6 +98,7 @@ static struct platform_device *nvhost_get_host1x_device(int instance)
 
 	return NULL;
 }
+EXPORT_SYMBOL(nvhost_get_host1x_device);
 
 struct host1x *nvhost_get_host1x(struct platform_device *client_pdev)
 {

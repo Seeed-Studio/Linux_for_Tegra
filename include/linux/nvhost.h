@@ -185,6 +185,7 @@ int nvhost_flcn_finalize_poweron(struct platform_device *dev);
 
 /* public api to return platform_device ptr to the default host1x instance */
 struct platform_device *nvhost_get_default_device(void);
+struct platform_device *nvhost_get_host1x_device(int instance);
 
 /* common runtime pm and power domain APIs */
 int nvhost_module_init(struct platform_device *ndev);
