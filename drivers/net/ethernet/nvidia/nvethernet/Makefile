@@ -31,6 +31,7 @@ endif
 
 #ccflags-y += -DOSI_DEBUG -DMACSEC_SUPPORT -DDEBUG_MACSEC -DMACSEC_KEY_PROGRAM
 ccflags-y += -DMACSEC_SUPPORT
+ccflags-y += -DBW_TEST
 
 nvethernet-objs:= ether_linux.o \
 		  osd.o \
@@ -41,6 +42,7 @@ nvethernet-objs:= ether_linux.o \
 		  ptp.o \
 		  macsec.o \
 		  selftests.o \
+		  ether_test_tx.o \
 		  $(OSI_CORE)/osi_core.o \
 		  $(OSI_CORE)/osi_hal.o \
 		  $(OSI_CORE)/common_macsec.o \

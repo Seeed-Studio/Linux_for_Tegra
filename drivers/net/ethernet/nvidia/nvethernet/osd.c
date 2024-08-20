@@ -630,9 +630,15 @@ static void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 		return;
 	}
 
+#ifdef BW_TEST
+	/* Process only the Valid packets */
+	if (likely((rx_pkt_cx->flags & OSI_PKT_CX_VALID) ==
+		   OSI_PKT_CX_VALID) && (pdata->test_tx_bandwidth == OSI_DISABLE)) {
+#else
 	/* Process only the Valid packets */
 	if (likely((rx_pkt_cx->flags & OSI_PKT_CX_VALID) ==
 		   OSI_PKT_CX_VALID)) {
+#endif
 #ifdef ETHER_PAGE_POOL
 		skb = netdev_alloc_skb_ip_align(pdata->ndev,
 						rx_pkt_cx->pkt_len);
@@ -753,6 +759,12 @@ static void osd_transmit_complete(void *priv, const struct osi_tx_swcx *swcx,
 	unsigned int len = swcx->len;
 
 	ndev->stats.tx_bytes += len;
+
+#ifdef BW_TEST
+	if (pdata->test_tx_bandwidth == OSI_ENABLE) {
+		return;
+	}
+#endif
 
 	if ((txdone_pkt_cx->flags & OSI_TXDONE_CX_TS) == OSI_TXDONE_CX_TS) {
 		memset(&shhwtstamp, 0, sizeof(struct skb_shared_hwtstamps));

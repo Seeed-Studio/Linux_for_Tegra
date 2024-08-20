@@ -1728,11 +1728,16 @@ static irqreturn_t ether_vm_isr(int irq, void *data)
 				osi_handle_dma_intr(osi_dma, chan,
 						    OSI_DMA_CH_TX_INTR,
 						    OSI_DMA_INTR_DISABLE);
-
+#ifdef BW_TEST
+				if (pdata->test_tx_bandwidth == OSI_DISABLE) {
+#endif
 				if (likely(napi_schedule_prep(&tx_napi->napi))) {
 					/* TODO: Schedule NAPI on different CPU core */
 					__napi_schedule_irqoff(&tx_napi->napi);
 				}
+#ifdef BW_TEST
+				}
+#endif
 			}
 
 			dma_status[i] &= ~BIT(temp);
@@ -3424,6 +3429,11 @@ static int ether_close(struct net_device *ndev)
 	tegra_unregister_hwtime_source(ndev);
 #endif
 
+#ifdef BW_TEST
+	pdata->test_tx_bandwidth = OSI_DISABLE;
+	cancel_delayed_work_sync(&pdata->tx_bandwidth_work);
+#endif
+
 	/* Stop workqueue to get further scheduled */
 	ether_stats_work_queue_stop(pdata);
 
@@ -3884,6 +3894,13 @@ static int ether_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 #endif
 	int count = 0;
 	int ret;
+
+#ifdef BW_TEST
+	if (pdata->test_tx_bandwidth == OSI_ENABLE) {
+		dev_kfree_skb_any(skb);
+		return NETDEV_TX_OK;
+	}
+#endif
 
 	count = ether_tx_swcx_alloc(pdata, tx_ring, skb);
 	if (count <= 0) {
@@ -7639,6 +7656,10 @@ static int ether_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&pdata->tx_ts_skb_head);
 	INIT_LIST_HEAD(&pdata->timestamp_skb_head);
 	INIT_DELAYED_WORK(&pdata->tx_ts_work, ether_get_tx_ts_work);
+#ifdef BW_TEST
+	pdata->tx_bw_wq = create_singlethread_workqueue("tx_bw_wq");
+	INIT_DELAYED_WORK(&pdata->tx_bandwidth_work, ether_tx_bandwidth_work);
+#endif
 	pdata->rx_m_enabled = false;
 	pdata->rx_pcs_m_enabled = false;
 	atomic_set(&pdata->tx_ts_ref_cnt, -1);

@@ -77,6 +77,102 @@ static DEVICE_ATTR(desc_dump_enable, (S_IRUGO | S_IWUSR),
 		   ether_desc_dump_show,
 		   ether_desc_dump_store);
 
+#ifdef BW_TEST
+/**
+ * @brief Shows the current setting of tx packet dump
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to store the current MAC loopback setting
+ */
+static ssize_t ether_test_tx_bandwidth_dump_show(struct device *dev,
+				    struct device_attribute *attr,
+				    char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+
+	return scnprintf(buf, PAGE_SIZE, "%s\n",
+			 (pdata->test_tx_bandwidth == 1U) ?
+			 "enabled" : "disabled");
+}
+
+/**
+ * @brief Extract MTU from String.
+ *
+ * @param[in] str: Input Buffer.
+ *
+ * @return MTU size.
+ */
+static inline int extract_mtu(const char* str)
+{
+	int num = 0;
+
+	// Iterate through the string to find the first digit
+	while (*str) {
+		if (((*str) >= '0') && ((*str) <= '9')) {
+			// Convert the digit characters to an integer
+			num = num * 10 + (*str - '0');
+		}
+		str++;
+	}
+
+	if (num > OSI_MAX_MTU_SIZE) {
+		num = 0;
+	}
+	return num;
+}
+
+/**
+ * @brief Set the user setting for enable_test_tx_bandwidth
+ *
+ * Algorithm: This is used to update osi_dma->enable_desc_dump
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer which contains the user settings of MAC loopback
+ * @param[in] size: size of buffer
+ *
+ * @return size of buffer.
+ */
+static ssize_t ether_test_tx_bandwidth_dump_store(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t size)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	if (strncmp(buf, "enable", 6) == 0U) {
+		pdata->test_tx_bandwidth = OSI_ENABLE;
+		if (pdata->tx_bandwidth_pkt_size == 0U) {
+			pdata->tx_bandwidth_pkt_size = OSI_DFLT_MTU_SIZE;
+		}
+		queue_delayed_work_on(2, pdata->tx_bw_wq, &pdata->tx_bandwidth_work,
+				      msecs_to_jiffies(0));
+	} else if (strncmp(buf, "disable", 7) == 0U) {
+		pdata->test_tx_bandwidth = OSI_DISABLE;
+		cancel_delayed_work_sync(&pdata->tx_bandwidth_work);
+	} else if (strncmp(buf, "rx_disable", 10) == 0U) {
+		pdata->test_tx_bandwidth = OSI_ENABLE;
+	} else if (strncmp(buf, "pkt", 3) == 0U) {
+		pdata->tx_bandwidth_pkt_size = extract_mtu(buf);
+	} else {
+		dev_err(pdata->dev,
+			"Invalid entry Valid Entries are"
+			" enable or disable or rx_disable or pkt1500 or pkt8192 or pkt64 or pkt256\n");
+	}
+
+	return size;
+}
+
+/**
+ * @brief Sysfs attribute for enable burst tx packet
+ *
+ */
+static DEVICE_ATTR(test_tx_bandwidth_dump_enable, (S_IRUGO | S_IWUSR),
+		   ether_test_tx_bandwidth_dump_show,
+		   ether_test_tx_bandwidth_dump_store);
+#endif
+
 /**
  * @brief Shows current configured tx queue
  *
@@ -3365,6 +3461,9 @@ static struct attribute *ether_sysfs_attrs[] = {
 #ifdef OSI_DEBUG
 	&dev_attr_desc_dump_enable.attr,
 #endif /* OSI_DEBUG */
+#ifdef BW_TEST
+	&dev_attr_test_tx_bandwidth_dump_enable.attr,
+#endif
 	&dev_attr_mac_loopback.attr,
 	&dev_attr_pcs_baser_fec.attr,
 	&dev_attr_ptp_mode.attr,
@@ -3426,6 +3525,9 @@ static struct attribute *ether_sysfs_attrs_without_macsec[] = {
 #ifdef OSI_DEBUG
 	&dev_attr_desc_dump_enable.attr,
 #endif /* OSI_DEBUG */
+#ifdef BW_TEST
+	&dev_attr_test_tx_bandwidth_dump_enable.attr,
+#endif
 	&dev_attr_mac_loopback.attr,
 	&dev_attr_ptp_mode.attr,
 	&dev_attr_ptp_sync.attr,

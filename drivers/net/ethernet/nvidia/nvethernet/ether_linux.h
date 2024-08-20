@@ -706,6 +706,16 @@ struct ether_priv_data {
 	uint32_t disable_rx_csum;
 	/** select Tx queue/dma channel for testing */
 	unsigned int tx_queue_select;
+#ifdef BW_TEST
+	/** enable tx bandwidth for testing */
+	unsigned int test_tx_bandwidth;
+	/** enable tx bandwidth pkt size */
+	unsigned int tx_bandwidth_pkt_size;
+	/** delayed work - tx bandwidth for testing */
+	struct delayed_work tx_bandwidth_work;
+	/** tx bandwidth pkt work queue */
+	struct workqueue_struct *tx_bw_wq;
+#endif
 };
 
 /**
@@ -907,4 +917,7 @@ static inline nveu64_t update_stats_counter(nveu64_t last_value, nveu64_t incr)
 #ifdef ETHER_NVGRO
 void ether_nvgro_purge_timer(struct timer_list *t);
 #endif /* ETHER_NVGRO */
+#ifdef BW_TEST
+void ether_tx_bandwidth_work(struct work_struct *work);
+#endif
 #endif /* ETHER_LINUX_H */
