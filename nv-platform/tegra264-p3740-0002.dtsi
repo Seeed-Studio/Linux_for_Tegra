@@ -29,12 +29,13 @@
 		};
 
 		i2c@810c680000 { /* I2C7 */
+			status = "okay";
+
 			/* carrier board ID EEPROM */
 			eeprom@55 {
 				compatible = "atmel,24c02";
 				reg = <0x55>;
 				label = "system";
-		//		vcc-supply = <&vdd_1v8_ls>;
 				address-width = <8>;
 				pagesize = <8>;
 				size = <256>;
