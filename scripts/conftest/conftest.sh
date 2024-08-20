@@ -8093,6 +8093,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_THERMAL_ZONE_DEVICE_PRIV_PRESENT" "" "functions"
         ;;
 
+        thermal_zone_device_ops_struct_has_get_trip_type)
+            #
+            # Determine if the 'thermal_zone_device_ops' structure has the 'get_trip_type' function pointer.
+            #
+            # Commit 35d8dbbb25ad ("thermal: core: Drop unused .get_trip_*()
+            # callbacks") removed function get_trip_type function pointer in
+            # thermal_zone_device_ops struct in Linux v6.5.
+            #
+            CODE="
+            #include <linux/thermal.h>
+            void conftest_thermal_zone_device_ops_has_get_trip_type(struct thermal_zone_device_ops *ops) {
+                ops->get_trip_type = NULL;
+            }"
+
+            compile_check_conftest "$CODE" "NV_THERMAL_ZONE_DEVICE_OPS_STRUCT_HAS_GET_TRIP_TYPE" "" "types"
+        ;;
+
         tegra_dev_iommu_get_stream_id)
             #
             # Determine if the function tegra_dev_iommu_get_stream_id is present.
