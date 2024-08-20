@@ -268,6 +268,73 @@ cam_fsync_is_generator_in_group(struct cam_fsync_controller *controller,
 }
 
 /**
+ * @brief Check if generator configuration is valid based on
+ * the group's enabled features
+ *
+ * @param[in]	group	pointer to struct fsync_generator_group (non-null)
+ * @param[in]	freq_hz	frequency to validate (0 < value < MAX_FREQ_HZ_LCM)
+ * @param[in]	duty_cycle	duty cycle to validate (0 < value < 100)
+ * @param[in]	offset_ms	offset to validate (0 <= value <= 1000)
+ *
+ * @returns	true (Generator configuration is valid), false (invalid)
+ */
+static bool
+cam_fsync_generator_is_config_valid(struct fsync_generator_group *group,
+					u32 freq_hz, u32 duty_cycle, u32 offset_ms)
+{
+	if (freq_hz == 0) {
+		dev_err(group->dev, "Frequency must be non-zero\n");
+		return false;
+	}
+
+	if (group->features->rational_locking.enforced &&
+		freq_hz > group->features->rational_locking.max_freq_hz_lcm) {
+		dev_err(group->dev, "Frequency must not exceed %dHz\n",
+			group->features->rational_locking.max_freq_hz_lcm);
+		return false;
+	}
+
+	if (duty_cycle == 0 || duty_cycle >= 100) {
+		dev_err(group->dev, "Duty cycle must be within the range, (0%%, 100%%)\n");
+		return false;
+	}
+
+	if (group->features->offset.enabled &&
+		offset_ms > 1000) {
+		dev_err(group->dev, "Offset must be within the range, [0%%, 1000%%]\n");
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * @brief Configure the generator
+ * Reverts to old configuration values if new configuration is invalid.
+ *
+ * @param[in]	group	pointer to struct fsync_generator_group (non-null)
+ * @param[in]	generator	pointer to struct cam_fsync_generator (non-null)
+ * @param[in]	freq_hz	new frequency to reconfigure generator to (0 < value < MAX_FREQ_HZ_LCM)
+ * @param[in]	duty_cycle	new duty cycle to reconfigure generator to (0 < value < 100)
+ * @param[in]	offset_ms	new offset to reconfigure generator to (0 <= value <= 1000)
+ *
+ * @returns	0 (success), -EINVAL (failure due to invalid config)
+ */
+static int cam_fsync_generator_set_config(struct fsync_generator_group *group,
+						struct cam_fsync_generator *generator, u32 freq_hz,
+						u32 duty_cycle, u32 offset_ms)
+{
+	if (!cam_fsync_generator_is_config_valid(group, freq_hz, duty_cycle, offset_ms))
+		return -EINVAL;
+
+	generator->config.freq_hz = freq_hz;
+	generator->config.duty_cycle = duty_cycle;
+	generator->config.offset_ms = offset_ms;
+
+	return 0;
+}
+
+/**
  * @brief Add generators to fsync generator group struct
  * Allocate memory for generator, read and program details from DT
  * Add generator to list in group structure
@@ -275,7 +342,7 @@ cam_fsync_is_generator_in_group(struct cam_fsync_controller *controller,
  * @param[in]	group	pointer to struct fsync_generator_group (non-null)
  * @param[in]	np	pointer to struct device_node (non-null)
  *
- * @returns	0 (success), neg. errno (failure)
+ * @returns	0 (success), neg. errno (failure), positive non-zero errno (pointer error)
  */
 static int cam_fsync_add_generator(struct fsync_generator_group *group, struct device_node *np)
 {
@@ -283,6 +350,9 @@ static int cam_fsync_add_generator(struct fsync_generator_group *group, struct d
 	struct resource res;
 	int err;
 	struct cam_fsync_controller *controller = dev_get_drvdata(group->dev);
+	u32 freq_hz;
+	u32 duty_cycle;
+	u32 offset_ms;
 
 	generator = devm_kzalloc(group->dev, sizeof(*generator), GFP_KERNEL);
 	if (!generator)
@@ -303,34 +373,32 @@ static int cam_fsync_add_generator(struct fsync_generator_group *group, struct d
 	if (IS_ERR(generator->base))
 		return PTR_ERR(generator->base);
 
-	err = of_property_read_u32(np, "freq_hz", &generator->config.freq_hz);
+	err = of_property_read_u32(np, "freq_hz", &freq_hz);
 	if (err != 0) {
 		dev_err(group->dev, "Failed to read generator frequency: %d\n", err);
 		return err;
 	}
 
-	if (generator->config.freq_hz == 0) {
-		dev_err(group->dev, "Frequency must be non-zero\n");
-		return -EINVAL;
-	}
-
-	err = of_property_read_u32(np, "duty_cycle", &generator->config.duty_cycle);
+	err = of_property_read_u32(np, "duty_cycle", &duty_cycle);
 	if (err != 0) {
 		dev_err(group->dev, "Failed to read generator duty cycle: %d\n", err);
 		return err;
 	}
-	if (generator->config.duty_cycle >= 100) {
-		dev_err(group->dev, "Duty cycle must be < 100%%\n");
-		return -EINVAL;
-	}
 
 	if (group->features->offset.enabled) {
-		err = of_property_read_u32(np, "offset_ms", &generator->config.offset_ms);
+		err = of_property_read_u32(np, "offset_ms", &offset_ms);
 		if (err != 0) {
 			dev_err(group->dev, "Failed to read generator offset: %d\n", err);
 			return err;
 		}
 	}
+
+	err = cam_fsync_generator_set_config(group, generator, freq_hz, duty_cycle, offset_ms);
+	if (err != 0) {
+		dev_err(group->dev, "Generator configuration is invalid");
+		return err;
+	}
+
 	list_add_tail(&generator->list, &group->generators);
 
 	return err;
@@ -393,30 +461,11 @@ static bool cam_fsync_can_generate_precise_freq(
 static int cam_fsync_program_group_generator_edges(struct fsync_generator_group *group)
 {
 	struct cam_fsync_generator *generator;
-	u32 max_freq_hz_lcm = 0;
+	u32 max_freq_hz_lcm = cam_fsync_find_max_freq_hz_lcm(group);
 	u64 const ticks_per_hz = DIV_ROUND_CLOSEST(NS_PER_SEC,
 			group->features->ns_per_tick);
 	struct cam_fsync_extra_ticks_and_period extra = {0, 1};
 	bool const can_generate_precise_freq = cam_fsync_can_generate_precise_freq(group);
-
-	/*
-	 * If rational locking is enforced (e.g. a 30Hz & 60Hz signal must align every two periods
-	 * w.r.t. the 60Hz signal) edges will be derived from whole-number multiples of the LCM of
-	 * all generator frequencies belonging to this group.
-	 *
-	 * If rational locking is _not_ enforced then generator edges will be independently
-	 * derived based on their configured frequency.
-	 */
-	if (group->features->rational_locking.enforced) {
-		max_freq_hz_lcm = cam_fsync_find_max_freq_hz_lcm(group);
-		if (max_freq_hz_lcm > group->features->rational_locking.max_freq_hz_lcm) {
-			dev_err(group->dev,
-				"Highest common frequency of %u hz exceeds maximum allowed (%u hz)\n",
-				max_freq_hz_lcm,
-				group->features->rational_locking.max_freq_hz_lcm);
-			return -EINVAL;
-		}
-	}
 
 	/**
 	 * Generating a freq with period that is not multiple of TSC unit will
@@ -586,6 +635,40 @@ static inline bool cam_fsync_generator_is_idle(struct cam_fsync_generator *gener
 }
 
 /**
+ * @brief Check if LCM is below configured maximum.
+ * If rational locking is enforced, check that lowest common multiple
+ * is under enforced limit.
+ *
+ * @param[in]	group	pointer to struct fsync_generator_group (non-null)
+ *
+ * @returns	0 (success), -EINVAL (LCM exceeds maximum)
+ */
+static int cam_fsync_group_verify_generators_lcm(struct fsync_generator_group *group)
+{
+	/*
+	 * If rational locking is enforced (e.g. a 30Hz & 60Hz signal must align every two periods
+	 * w.r.t. the 60Hz signal) edges will be derived from whole-number multiples of the LCM of
+	 * all generator frequencies belonging to this group.
+	 *
+	 * If rational locking is _not_ enforced then generator edges will be independently
+	 * derived based on their configured frequency.
+	 */
+	if (group->features->rational_locking.enforced) {
+		u32 max_freq_hz_lcm = cam_fsync_find_max_freq_hz_lcm(group);
+
+		if (max_freq_hz_lcm > group->features->rational_locking.max_freq_hz_lcm) {
+			dev_err(group->dev,
+				"Highest common frequency of %u hz exceeds maximum allowed (%u hz)\n",
+				max_freq_hz_lcm,
+				group->features->rational_locking.max_freq_hz_lcm);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+/**
  * @brief Start all generators in group
  * Program and start generator in group
  *
@@ -649,6 +732,83 @@ static int cam_fsync_stop_group_generators(struct fsync_generator_group *group)
 				generator->of->full_name);
 			return -EIO;
 		}
+	}
+
+	return 0;
+}
+
+/**
+ * @brief Reconfigure a generator within the specified group
+ *
+ * This function does the following:
+ *	- Check if group is valid and inactive
+ *	- Check if the generator id is associated with the generator group
+ *	- Reconfigure specified generator using @ref cam_fsync_generator_reconfigure()
+ *	- Check that the generators share a valid LCM using
+ *	  @ref cam_fsync_group_verify_generators_lcm()
+ *	- If not, revert configuration to previous configuration and return error.
+ *	- Program edges using new configuration.
+ *
+ * @param[in]	group	pointer to struct fsync_generator_group (non-null)
+ * @param[in]	arg	pointer to IOCTL input parameter (non-null)
+ *
+ * @returns	0 (success), neg. errno (failure)
+ */
+static int cam_fsync_reconfigure_group_generator(struct fsync_generator_group *group,
+	struct cam_sync_gen_reconfig_args *new_config)
+{
+	struct cam_fsync_generator *generator;
+	int err = 0;
+	int count = 0;
+
+	if (!group)
+		return -ENXIO;
+
+	if (group->active) {
+		dev_err(group->dev, "Reconfiguration failed: group %d is active\n",
+			group->id);
+		return -EBUSY;
+	}
+
+	list_for_each_entry(generator, &group->generators, list) {
+		if (count == new_config->generator_id) {
+			u32 old_freq_hz = generator->config.freq_hz;
+			u32 old_duty_cycle = generator->config.duty_cycle;
+			u32 old_offset_ms = generator->config.offset_ms;
+
+			err = cam_fsync_generator_set_config(group, generator, new_config->freqHz,
+						new_config->dutyCycle, new_config->offsetMs);
+			if (err != 0) {
+				dev_err(group->dev, "Failed to reconfigure generator %d for group %d\n",
+					new_config->generator_id, group->id);
+				return err;
+			}
+
+			err = cam_fsync_group_verify_generators_lcm(group);
+			if (err != 0) {
+				dev_err(group->dev, "Reconfiguration failed: generator frequencies incompatible\n");
+				if (cam_fsync_generator_set_config(group, generator, old_freq_hz,
+						old_duty_cycle, old_offset_ms) != 0) {
+					dev_err(group->dev, "Failed to revert generator after reconfiguration failure\n");
+					return -EINVAL;
+				}
+				return err;
+			}
+
+			err = cam_fsync_program_group_generator_edges(group);
+			if (err != 0)
+				return err;
+
+			count = -1;
+			break;
+		}
+		count++;
+	}
+
+	if (count >= 0) {
+		dev_err(group->dev, "Reconfiguration failed: Invalid generator %d\n",
+		new_config->generator_id);
+		return -ENODEV;
 	}
 
 	return 0;
@@ -739,19 +899,13 @@ cam_fsync_get_group_by_id(struct cam_fsync_controller *controller, unsigned int 
  */
 static int cam_fsync_open(struct inode *inode, struct file *file)
 {
-	unsigned int group_id = iminor(inode);
 	struct cam_fsync_controller *controller;
-	struct fsync_generator_group *group;
 
 	controller = container_of(file->f_op, struct cam_fsync_controller, cam_fsync_fops);
 	if (IS_ERR(controller))
 		return PTR_ERR(controller);
 
-	group = cam_fsync_get_group_by_id(controller, group_id);
-	if (IS_ERR(group))
-		return PTR_ERR(group);
-
-	file->private_data = group;
+	file->private_data = controller;
 
 	return 0;
 }
@@ -761,7 +915,7 @@ static int cam_fsync_open(struct inode *inode, struct file *file)
  * Start time ticks must be greater than current ticks
  *
  * @param[in]	controller	pointer to struct cam_fsync_controller (non-null)
- * @param[in]	start_time	numerical value start time(current_ticks < value > MAX_UINT64)
+ * @param[in]	start_time	numerical value start time(current_ticks < value < MAX_UINT64)
  *
  * @returns	0 (success), neg. errno (failure)
  */
@@ -790,31 +944,62 @@ cam_fsync_validate_start_time(struct cam_fsync_controller *controller, u64 start
  *
  * @param[in]	file	cam fsync group character device file struct (non-null)
  * @param[in]	cmd	cam fsync group IOCTL command (CAM_FSYNC_GRP_ABS_START_VAL)
- * @param[in]	startTimeInTSCTicks	numerical value start time
- *					(current_ticks < value > MAX_UINT64)
+ * @param[in]	arg	parameters for selected IOCTL command
  *
  * @returns	0 (success), neg. errno (failure)
  */
-static long cam_fsync_ioctl(struct file *file, unsigned int cmd, unsigned long startTimeInTSCTicks)
+static long cam_fsync_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-	struct fsync_generator_group *group = file->private_data;
-	struct cam_fsync_controller *controller = dev_get_drvdata(group->dev);
+	struct fsync_generator_group *group;
+	struct cam_fsync_controller *controller = file->private_data;
+	struct cam_sync_gen_reconfig_args new_config;
+	struct cam_sync_start_args start_args;
+	u32 group_id;
 	long err = 0;
 
 	switch (cmd) {
 	case CAM_FSYNC_GRP_ABS_START_VAL:
-			if (copy_from_user(&group->abs_start_ticks, (u64 *)startTimeInTSCTicks,
-				sizeof(group->abs_start_ticks)))
-				dev_err(group->dev, "Unable to read start value\n");
+			if (copy_from_user(&start_args, (u64 *)arg,
+				sizeof(struct cam_sync_start_args)))
+				dev_err(controller->dev, "Unable to read start value\n");
+			group = cam_fsync_get_group_by_id(controller, start_args.group_id);
+			if (group == NULL)
+				return -ENXIO;
+			group->abs_start_ticks = start_args.start_tsc_ticks;
 			err = cam_fsync_validate_start_time(controller, group->abs_start_ticks);
 			if (err != 0) {
-				dev_err(group->dev, "Invalid start value\n");
+				dev_err(controller->dev, "Invalid start value\n");
 				return err;
 			}
 			err = cam_fsync_start_group_generators(group);
 			break;
+	case CAM_FSYNC_GRP_STOP:
+			if (copy_from_user(&group_id, (u64 *)arg, sizeof(group_id)))
+				dev_err(controller->dev, "Unable to read group ID\n");
+			group = cam_fsync_get_group_by_id(controller, group_id);
+			if (group == NULL)
+				return -ENXIO;
+			if (!group->active) {
+				dev_err(controller->dev, "Failed to stop generators for inactive group %d\n",
+				group->id);
+				return -EIO;
+			}
+			err = cam_fsync_stop_group_generators(group);
+			group->active = false;
+			break;
+	case CAM_FSYNC_GEN_RECONFIGURE:
+			if (copy_from_user(&new_config, (u64 *)arg,
+				sizeof(struct cam_sync_gen_reconfig_args))) {
+				dev_err(controller->dev, "Unable to read reconfiguration parameters\n");
+				return -EINTR;
+			}
+			group = cam_fsync_get_group_by_id(controller, new_config.group_id);
+			if (group == NULL)
+				return -ENXIO;
+			err = cam_fsync_reconfigure_group_generator(group, &new_config);
+			break;
 	default:
-			dev_err(group->dev, "Invalid command\n");
+			dev_err(controller->dev, "Invalid command\n");
 			err = -EINVAL;
 			break;
 	}
@@ -837,21 +1022,20 @@ static const struct file_operations cam_fsync_fileops = {
  * @param[in]	pdev	pointer to struct platform_device (non-null)
  * @param[in]	group	pointer to struct fsync_generator_group (non-null)
  *
- * @returns	0 (success), neg. errno (failure)
+ * @returns	0 (success), non-zero errno (failure)
  */
 static int cam_fsync_group_node_init(struct cam_fsync_controller *controller,
-							struct platform_device *pdev,
-							struct fsync_generator_group *group)
+							struct platform_device *pdev)
 {
 	struct device *dev;
 	dev_t devt;
 
-	devt = MKDEV(controller->cam_fsync_major, group->id);
+	devt = MKDEV(controller->cam_fsync_major, 0);
 
 	dev = device_create(controller->cam_fsync_class, &pdev->dev, devt, NULL,
-			"fsync-group%u", group->id);
+			"fsync-group");
 	if (IS_ERR(dev)) {
-		dev_err(controller->dev, "Error creating device for group %d\n", group->id);
+		dev_err(controller->dev, "Error creating device for cam-fsync\n");
 		return PTR_ERR(dev);
 	}
 
@@ -866,12 +1050,11 @@ static int cam_fsync_group_node_init(struct cam_fsync_controller *controller,
  *
  * @returns	0 (success)
  */
-static int cam_fsync_group_node_deinit(struct cam_fsync_controller *controller,
-							struct fsync_generator_group *group)
+static int cam_fsync_group_node_deinit(struct cam_fsync_controller *controller)
 {
 	dev_t devt;
 
-	devt = MKDEV(controller->cam_fsync_major, group->id);
+	devt = MKDEV(controller->cam_fsync_major, 0);
 
 	device_destroy(controller->cam_fsync_class, devt);
 
@@ -1004,8 +1187,6 @@ static int cam_fsync_find_and_add_groups(struct cam_fsync_controller *controller
 		if (IS_ERR(group))
 			return PTR_ERR(group);
 
-		cam_fsync_group_node_init(controller, pdev, group);
-
 		num_generators = of_property_count_elems_of_size(np, "generators",
 			sizeof(u32));
 		for (i = 0; i < num_generators; i++) {
@@ -1014,9 +1195,14 @@ static int cam_fsync_find_and_add_groups(struct cam_fsync_controller *controller
 			if (err != 0) {
 				dev_err(controller->dev, "Failed to add generator %s : %d\n",
 						gen->full_name, err);
-				cam_fsync_group_node_deinit(controller, group);
 				return err;
 			}
+		}
+
+		err = cam_fsync_group_verify_generators_lcm(group);
+		if (err != 0) {
+			dev_err(controller->dev, "Generator LCM check failed");
+			return err;
 		}
 		list_add_tail(&group->list, &controller->groups);
 	}
@@ -1059,11 +1245,7 @@ static int cam_fsync_chrdev_init(struct cam_fsync_controller *controller)
  */
 static void cam_fsync_chrdev_deinit(struct cam_fsync_controller *controller)
 {
-	struct fsync_generator_group *group;
-
-	list_for_each_entry(group, &controller->groups, list) {
-		cam_fsync_group_node_deinit(controller, group);
-	}
+	cam_fsync_group_node_deinit(controller);
 	unregister_chrdev(controller->cam_fsync_major, CAM_FSYNC_CLASS_NAME);
 	class_destroy(controller->cam_fsync_class);
 }
@@ -1130,6 +1312,14 @@ static int cam_fsync_probe(struct platform_device *pdev)
 		return PTR_ERR(controller->base);
 
 	platform_set_drvdata(pdev, controller);
+
+	err = cam_fsync_group_node_init(controller, pdev);
+	if (err != 0) {
+		dev_err(controller->dev,
+			"Failed to create device node for cam-fsync\n");
+		cam_fsync_chrdev_deinit(controller);
+		return err;
+	}
 
 	/*
 	 * Check if fsync group node defined in DT, if yes read group and expose node for each group
