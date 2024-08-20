@@ -110,8 +110,7 @@
 
 #define XPL_PL_LTSSM_STATE		0x1700
 #define XPL_PL_LTSSM_STATE_FULL			GENMASK(7, 0)
-#define XPL_PL_LTSSM_STATE_DISABLE_TX		40
-#define XPL_PL_LTSSM_STATE_HOT_RESET		41
+#define XPL_PL_LTSSM_DETECT_QUIET		1
 
 #define NV_EP_PCFG_MSI_64_HEADER	0x48
 
@@ -570,8 +569,7 @@ static irqreturn_t tegra264_pcie_ep_irq_thread(int irq, void *arg)
 	int ret;
 
 	ret = readl_poll_timeout(pcie->xpl_base + XPL_PL_LTSSM_STATE, val,
-			((val & XPL_PL_LTSSM_STATE_FULL) == XPL_PL_LTSSM_STATE_DISABLE_TX) ||
-			 ((val & XPL_PL_LTSSM_STATE_FULL) == XPL_PL_LTSSM_STATE_HOT_RESET),
+			(val & XPL_PL_LTSSM_STATE_FULL) == XPL_PL_LTSSM_DETECT_QUIET,
 			 PCIE_LTSSM_DELAY, PCIE_LTSSM_TIMEOUT);
 	if (ret)
 		dev_err(pcie->dev, "PCIe LTSSM state not in detect reset, ltssm: 0x%x\n", val);
