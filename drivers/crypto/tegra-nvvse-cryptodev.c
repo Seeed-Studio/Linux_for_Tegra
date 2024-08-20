@@ -1837,7 +1837,7 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 	struct tegra_nvvse_aes_drng_ctl *aes_drng_ctl;
 	struct tegra_nvvse_aes_gmac_init_ctl *aes_gmac_init_ctl;
 	struct tegra_nvvse_aes_gmac_sign_verify_ctl *aes_gmac_sign_verify_ctl;
-	struct tegra_nvvse_get_ivc_db get_ivc_db;
+	struct tegra_nvvse_get_ivc_db *get_ivc_db;
 	struct tegra_nvvse_tsec_get_keyload_status *tsec_keyload_status;
 	int ret = 0;
 
@@ -2106,18 +2106,27 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		break;
 
 	case NVVSE_IOCTL_CMDID_GET_IVC_DB:
-		ret = tnvvse_crypto_get_ivc_db(&get_ivc_db);
+		get_ivc_db = kzalloc(sizeof(*get_ivc_db), GFP_KERNEL);
+		if (!get_ivc_db) {
+			pr_err("%s(): failed to allocate memory\n", __func__);
+			return -ENOMEM;
+		}
+
+		ret = tnvvse_crypto_get_ivc_db(get_ivc_db);
 		if (ret) {
 			pr_err("%s(): Failed to get ivc database get_ivc_db:%d\n", __func__, ret);
+			kfree(get_ivc_db);
 			goto out;
 		}
 
 		ret = copy_to_user((void __user *)arg, &ivc_database, sizeof(ivc_database));
 		if (ret) {
 			pr_err("%s(): Failed to copy_to_user ivc_database:%d\n", __func__, ret);
+			kfree(get_ivc_db);
 			goto out;
 		}
 
+		kfree(get_ivc_db);
 		break;
 
 	case NVVSE_IOCTL_CMDID_TSEC_SIGN_VERIFY:
