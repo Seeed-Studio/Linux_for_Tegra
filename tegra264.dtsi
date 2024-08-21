@@ -7005,8 +7005,7 @@
 			reg = <0x0 0x0>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd0>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7026,8 +7025,7 @@
 			reg = <0x0 0x10000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd1>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7045,8 +7043,7 @@
 			reg = <0x0 0x20000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd2>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7066,8 +7063,7 @@
 			reg = <0x0 0x30000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd3>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7085,8 +7081,7 @@
 			reg = <0x0 0x40000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd4>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7106,8 +7101,7 @@
 			reg = <0x0 0x50000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd5>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7125,8 +7119,7 @@
 			reg = <0x0 0x60000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd6>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7146,8 +7139,7 @@
 			reg = <0x0 0x70000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd7>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7165,8 +7157,7 @@
 			reg = <0x0 0x80000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd8>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7186,8 +7177,7 @@
 			reg = <0x0 0x90000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd9>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7205,8 +7195,7 @@
 			reg = <0x0 0xa0000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd10>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7226,8 +7215,7 @@
 			reg = <0x0 0xb0000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd11>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7245,8 +7233,7 @@
 			reg = <0x0 0xc0000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd12>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7266,8 +7253,7 @@
 			reg = <0x0 0xd0000>;
 
 			enable-method = "psci";
-			power-domains = <&cluster_pd13>;
-			power-domain-names = "psci";
+			cpu-idle-states = <&cc7>;
 			i-cache-size = <65536>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -7414,18 +7400,6 @@
 			status = "disabled";
 	            };
 	        };
-
-	        domain-idle-states {
-			cr7: cr7 {
-				compatible = "domain-idle-state";
-				state-name = "SoC Railgate";
-				entry-latency-us = <0xFFFFFFFF>;
-				exit-latency-us = <0xFFFFFFFF>;
-				min-residency-us = <0xFFFFFFFF>;
-				arm,psci-suspend-param= <0x40000008>;
-				status = "disabled";
-			};
-		};
 
 		cpu-map {
 			cluster0 {
@@ -8114,95 +8088,6 @@
 		status = "disabled";
 
 		method = "smc";
-
-		cluster_pd0: power-domain-cluster0 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd1: power-domain-cluster1 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd2: power-domain-cluster2 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd3: power-domain-cluster3 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd4: power-domain-cluster4 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd5: power-domain-cluster5 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd6: power-domain-cluster6 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd7: power-domain-cluster7 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd8: power-domain-cluster8 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd9: power-domain-cluster9 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd10: power-domain-cluster10 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd11: power-domain-cluster11 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd12: power-domain-cluster12 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		cluster_pd13: power-domain-cluster13 {
-			#power-domain-cells = <0>;
-			power-domains = <&ccplex_pd0>;
-			domain-idle-states = <&cc7>;
-		};
-
-		ccplex_pd0: power-domain-cpu-complex0 {
-			#power-domain-cells = <0>;
-			domain-idle-states = <&cr7>;
-		};
 	};
 
 	reserved-memory {
