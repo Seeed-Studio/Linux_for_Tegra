@@ -51,7 +51,7 @@
 #define NVVSE_CHUNK_SIZE               (1024*1024) /* 1MB */
 
 /** Defines the Maximum Random Number length supported */
-#define NVVSE_MAX_RANDOM_NUMBER_LEN_SUPPORTED		512U
+#define NVVSE_MAX_RANDOM_NUMBER_LEN_SUPPORTED		1024U
 
 #define INT32_BYTES 4U
 #define CTR_TO_INT32 4U
