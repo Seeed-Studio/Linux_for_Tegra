@@ -57,7 +57,7 @@ static struct fsi_hsp *fsi_hsp_v[MAX_FSI_CORE];
 
 static bool enable_deinit_notify;
 
-static int sgMaxCore;
+static struct fsi_core fsi_core;
 
 static LIST_HEAD(fsi_dev_list);
 static DEFINE_MUTEX(fsi_dev_list_mutex);
@@ -74,8 +74,8 @@ static int fsicom_fsi_pm_notify(u32 state)
 	pdata[3] = PM_STATE_UNI_CODE;
 
 	/* send pm state to fsi */
-	for (lCoreId = sgMaxCore - 1; lCoreId >= 0; lCoreId--) {
-		ret = mbox_send_message(fsi_hsp_v[lCoreId]->tx.chan,
+	for (lCoreId = fsi_core.notify_cnt - 1; lCoreId >= 0; lCoreId--) {
+		ret = mbox_send_message(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.chan,
 				(void *)pdata);
 	}
 	return ret < 0 ? ret : 0;
@@ -115,37 +115,39 @@ static int tegra_hsp_mb_init(struct device *dev)
 	char lTxStr[100] = {0};
 	char lRxStr[100] = {0};
 
-	for (lCoreId = 0; lCoreId < sgMaxCore; lCoreId++) {
-		fsi_hsp_v[lCoreId] = devm_kzalloc(dev, sizeof(*fsi_hsp_v[lCoreId]), GFP_KERNEL);
+	for (lCoreId = 0; lCoreId < fsi_core.notify_cnt; lCoreId++) {
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]] = devm_kzalloc(dev,
+		sizeof(*fsi_hsp_v[fsi_core.notify_list[lCoreId]]),
+		GFP_KERNEL);
 		if (!fsi_hsp_v[lCoreId])
 			return -ENOMEM;
 
 		if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32)))
 			dev_err(dev, "FsiCom: setting DMA MASK failed!\n");
 
-		fsi_hsp_v[lCoreId]->tx.client.dev = dev;
-		fsi_hsp_v[lCoreId]->rx.client.dev = dev;
-		fsi_hsp_v[lCoreId]->tx.client.tx_block = true;
-		fsi_hsp_v[lCoreId]->tx.client.tx_tout = TIMEOUT;
-		fsi_hsp_v[lCoreId]->rx.client.rx_callback = tegra_hsp_rx_notify;
-		fsi_hsp_v[lCoreId]->tx.client.tx_done = tegra_hsp_tx_empty_notify;
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client.dev = dev;
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.client.dev = dev;
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client.tx_block = true;
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client.tx_tout = TIMEOUT;
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.client.rx_callback = tegra_hsp_rx_notify;
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client.tx_done = tegra_hsp_tx_empty_notify;
 
-		(void)snprintf(lTxStr, sizeof(lTxStr), "fsi-tx-cpu%d", lCoreId);
-		fsi_hsp_v[lCoreId]->tx.chan = mbox_request_channel_byname(
-						&fsi_hsp_v[lCoreId]->tx.client,
+		(void)snprintf(lTxStr, sizeof(lTxStr), "fsi-tx-cpu%d", fsi_core.notify_list[lCoreId]);
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.chan = mbox_request_channel_byname(
+						&fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client,
 						lTxStr);
-		if (IS_ERR(fsi_hsp_v[lCoreId]->tx.chan)) {
-			err = PTR_ERR(fsi_hsp_v[lCoreId]->tx.chan);
+		if (IS_ERR(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.chan)) {
+			err = PTR_ERR(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.chan);
 			dev_err(dev, "failed to get tx mailbox: %d\n", err);
 			return err;
 		}
 
-		(void)snprintf(lRxStr, sizeof(lRxStr), "fsi-rx-cpu%d", lCoreId);
-		fsi_hsp_v[lCoreId]->rx.chan = mbox_request_channel_byname(
-						&fsi_hsp_v[lCoreId]->rx.client,
+		(void)snprintf(lRxStr, sizeof(lRxStr), "fsi-rx-cpu%d", fsi_core.notify_list[lCoreId]);
+		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.chan = mbox_request_channel_byname(
+						&fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.client,
 						lRxStr);
-		if (IS_ERR(fsi_hsp_v[lCoreId]->rx.chan)) {
-			err = PTR_ERR(fsi_hsp_v[lCoreId]->rx.chan);
+		if (IS_ERR(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.chan)) {
+			err = PTR_ERR(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.chan);
 			dev_err(dev, "failed to get rx mailbox: %d\n", err);
 			return err;
 		}
@@ -228,10 +230,12 @@ static ssize_t device_file_ioctl(
 	int ret = 0;
 	uint32_t pdata[4] = {0};
 	struct iova_data ldata;
-	struct rw_data *user_input;
+	struct fsi_core *fsi_core_input;
+	int8_t iterator = 0;
 
 	switch (cmd) {
 
+	iterator = 0;
 	case NVMAP_SMMU_MAP:
 		ret = smmu_buff_map(arg);
 		break;
@@ -251,7 +255,12 @@ static ssize_t device_file_ioctl(
 		if (copy_from_user(&input, (void __user *)arg,
 					sizeof(struct rw_data)))
 			return -EACCES;
-		if (input.coreid >= sgMaxCore)
+		while (iterator < fsi_core.notify_cnt) {
+			if (input.coreid == fsi_core.notify_list[iterator])
+				break;
+			iterator++;
+		}
+		if (iterator == fsi_core.notify_cnt)
 			return -ECHRNG;
 		pdata[0] = input.handle;
 		ret = mbox_send_message(fsi_hsp_v[input.coreid]->tx.chan,
@@ -260,9 +269,21 @@ static ssize_t device_file_ioctl(
 
 	case TEGRA_SIGNAL_REG:
 		task = get_current();
-		user_input = (struct rw_data *)arg;
-		if (copy_to_user((void __user *)&user_input->coreid,
-					(void *)&sgMaxCore, sizeof(uint8_t)))
+		fsi_core_input = (struct fsi_core *)arg;
+		if (copy_to_user((void __user *)&fsi_core_input->max_core,
+					(void *)&fsi_core.max_core, sizeof(uint32_t)))
+			return -EACCES;
+		if (copy_to_user((void __user *)&fsi_core_input->notify_cnt,
+					(void *)&fsi_core.notify_cnt, sizeof(uint32_t)))
+			return -EACCES;
+		if (copy_to_user((void __user *)&fsi_core_input->polling_cnt,
+					(void *)&fsi_core.polling_cnt, sizeof(uint32_t)))
+			return -EACCES;
+		if (copy_to_user((void __user *)&fsi_core_input->notify_list,
+					(void *)&fsi_core.notify_list, sizeof(uint32_t)*MAX_FSI_CORE))
+			return -EACCES;
+		if (copy_to_user((void __user *)&fsi_core_input->polling_list,
+					(void *)&fsi_core.polling_list,  sizeof(uint32_t)*MAX_FSI_CORE))
 			return -EACCES;
 		break;
 
@@ -270,9 +291,13 @@ static ssize_t device_file_ioctl(
 		if (copy_from_user(&ldata, (void __user *)arg,
 					sizeof(struct iova_data)))
 			return -EACCES;
-		if (ldata.coreid >= sgMaxCore)
+		while (iterator < fsi_core.notify_cnt) {
+			if (ldata.coreid == fsi_core.notify_list[iterator])
+				break;
+			iterator++;
+		}
+		if (iterator == fsi_core.notify_cnt)
 			return -ECHRNG;
-
 		pdata[0] = ldata.offset;
 		pdata[1] = ldata.iova;
 		pdata[2] = ldata.chid;
@@ -349,6 +374,7 @@ static int fsicom_client_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	const struct device_node *np = dev->of_node;
 	struct fsi_dev_ctx *ctx;
+	int iterator = 0;
 
 	ret = of_property_read_u32(np, "smmu_inst", &val);
 	if (ret) {
@@ -356,17 +382,32 @@ static int fsicom_client_probe(struct platform_device *pdev)
 		return -1;
 	}
 	if (val == 0) {
-		ret = of_property_read_u32(pdev->dev.of_node, "max_fsi_core", &sgMaxCore);
+		ret = of_property_read_u32(pdev->dev.of_node, "max_fsi_core", &fsi_core.max_core);
 		if (ret) {
-			pr_err("failed to read smmu_inst\n");
+			pr_err("failed to read max_core count\n");
 			return -1;
 		}
-		if (sgMaxCore > MAX_FSI_CORE)
+		if (fsi_core.max_core > MAX_FSI_CORE)
 			return -1;
+		ret = of_property_read_variable_u32_array(pdev->dev.of_node, "fsi_core_notify",
+							&fsi_core.notify_list[0], 1, fsi_core.max_core);
+		if (ret > 0) {
+			fsi_core.notify_cnt = ret;
+		} else {
+			/* FSI core 0 and core 1 is configured as notification core by default */
+			fsi_core.notify_cnt = fsi_core.max_core;
+			for (iterator = 0; iterator < fsi_core.notify_cnt; iterator++) {
+				fsi_core.notify_list[iterator] = iterator;
+			}
+		}
+		ret = of_property_read_variable_u32_array(pdev->dev.of_node, "fsi_core_polling",
+							&fsi_core.polling_list[0], 1, fsi_core.max_core);
+		if (ret > 0) {
+			fsi_core.polling_cnt = ret;
+		}
 		fsicom_register_device();
 		ret = tegra_hsp_mb_init(&pdev->dev);
 		pdev_local = pdev;
-
 		if (of_property_read_bool(np, "enable-deinit-notify"))
 			enable_deinit_notify = true;
 	}
