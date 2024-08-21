@@ -275,6 +275,7 @@
 
 		/* PCIe C0 ecam generic node for iGPU */
 		pcie@d0b0000000 {
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_GPU>;
 			status = "okay";
 			pci@0,0 {
 				gpu@0,0 {
