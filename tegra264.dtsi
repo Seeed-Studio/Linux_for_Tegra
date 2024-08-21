@@ -9939,7 +9939,6 @@
 			<&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM | TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_TX(5)>,
 			<&top_hsp2 (TEGRA_HSP_MBOX_TYPE_SM | TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_RX(4)>;
 		mbox-names = "fsi-tx-cpu0", "fsi-rx-cpu0", "fsi-tx-cpu1", "fsi-rx-cpu1";
-		iommus = <&smmu4_mmu 0xF10>;
 		memory-region = <&fsicom_resv>;
 		dma-coherent;
 #if defined(ENABLE_FSI) && !defined(ENABLE_MODS_CONFIG)
@@ -9952,7 +9951,6 @@
 
 	fsicom_client_inst1: fsicom_client_inst1 {
 		compatible = "nvidia,tegra234-fsicom-client";
-		iommus = <&smmu4_mmu 0xF11>;
 		memory-region = <&fsicom_resv_inst1>;
 		dma-coherent;
 		smmu_inst = <1>;
