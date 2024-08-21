@@ -298,7 +298,7 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 
 	BUG_ON(dev != nvmap_dev);
 	priv = __nvmap_create_client(dev, "user");
-	if (!priv)
+	if (priv == NULL)
 		return -ENOMEM;
 	trace_nvmap_open(priv, priv->name);
 

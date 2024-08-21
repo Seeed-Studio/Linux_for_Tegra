@@ -312,7 +312,7 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 	while (ind < nr) {
 		struct page *page = NULL;
 
-		if (!non_zero_cnt)
+		if (non_zero_cnt == 0U)
 			page = get_page_list_page(pool, use_numa, numa_id);
 
 		if (!page) {

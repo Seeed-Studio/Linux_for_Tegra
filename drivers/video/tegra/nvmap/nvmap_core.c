@@ -217,7 +217,7 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 
 	npages = PAGE_ALIGN(h->size) >> PAGE_SHIFT;
 	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
-	if (!sgt) {
+	if (sgt == NULL) {
 		err = -ENOMEM;
 		goto err;
 	}

@@ -698,7 +698,7 @@ int __init nvmap_co_setup(struct reserved_mem *rmem)
 	int ret = 0;
 
 	co = nvmap_get_carveout_pdata(rmem->name);
-	if (!co)
+	if (co == NULL)
 		return ret;
 
 	rmem->ops = &nvmap_co_ops;

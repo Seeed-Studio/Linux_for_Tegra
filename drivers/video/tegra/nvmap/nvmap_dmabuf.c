@@ -369,7 +369,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	if (!h)
 		return -EINVAL;
 
-	if (!(h->heap_type & nvmap_dev->cpu_access_mask)) {
+	if ((h->heap_type & nvmap_dev->cpu_access_mask) == 0U) {
 		nvmap_handle_put(h);
 		return -EPERM;
 	}
