@@ -124,9 +124,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 			for (idx = 0; idx < pages_per_big_pg; idx++)
 				pages[i + idx] = nth_page(page, idx);
-
-			if ((h->userflags & NVMAP_HANDLE_SKIP_CACHE_CLEAN) == 0)
-				nvmap_clean_cache(&pages[i], pages_per_big_pg);
+			nvmap_clean_cache(&pages[i], pages_per_big_pg);
 		}
 		nvmap_big_page_allocs += page_index;
 #endif /* CONFIG_ARM64_4K_PAGES */
@@ -153,17 +151,15 @@ static int handle_page_alloc(struct nvmap_client *client,
 		nvmap_total_page_allocs += nr_page;
 	}
 
-	if ((h->userflags & NVMAP_HANDLE_SKIP_CACHE_CLEAN) == 0) {
-		/*
-		 * Make sure any data in the caches is cleaned out before
-		 * passing these pages to userspace. Many nvmap clients assume that
-		 * the buffers are clean as soon as they are allocated. nvmap
-		 * clients can pass the buffer to hardware as it is without any
-		 * explicit cache maintenance.
-		 */
-		if (page_index < nr_page)
-			nvmap_clean_cache(&pages[page_index], nr_page - page_index);
-	}
+	/*
+	 * Make sure any data in the caches is cleaned out before
+	 * passing these pages to userspace. Many nvmap clients assume that
+	 * the buffers are clean as soon as they are allocated. nvmap
+	 * clients can pass the buffer to hardware as it is without any
+	 * explicit cache maintenance.
+	 */
+	if (page_index < nr_page)
+		nvmap_clean_cache(&pages[page_index], nr_page - page_index);
 
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
