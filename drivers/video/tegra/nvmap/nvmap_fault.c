@@ -9,6 +9,7 @@
 #include <linux/highmem.h>
 
 #include "nvmap_priv.h"
+#include "nvmap_alloc.h"
 
 static void nvmap_vma_close(struct vm_area_struct *vma);
 

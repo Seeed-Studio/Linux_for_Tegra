@@ -10,6 +10,8 @@
 #include <soc/tegra/fuse-helper.h>
 
 #include "nvmap_priv.h"
+#include "nvmap_alloc.h"
+#include "nvmap_alloc_int.h"
 
 bool vpr_cpu_access;
 

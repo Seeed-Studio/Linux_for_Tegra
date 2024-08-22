@@ -61,32 +61,4 @@ struct list_block {
 	struct list_head free_list;
 };
 
-struct nvmap_heap *nvmap_heap_create(struct device *parent,
-				     const struct nvmap_platform_carveout *co,
-				     phys_addr_t base, size_t len, void *arg);
-
-void nvmap_heap_destroy(struct nvmap_heap *heap);
-
-struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *heap,
-					  struct nvmap_handle *handle,
-					  phys_addr_t *start);
-
-struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b);
-
-void nvmap_heap_free(struct nvmap_heap_block *block);
-
-int __init nvmap_heap_init(void);
-
-void nvmap_heap_deinit(void);
-
-#ifndef NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC
-int nvmap_flush_heap_block(struct nvmap_client *client,
-	struct nvmap_heap_block *block, size_t len, unsigned int prot);
-#endif /* !NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */
-
-void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap);
-
-int nvmap_query_heap_peer(struct nvmap_heap *heap, unsigned int *peer);
-size_t nvmap_query_heap_size(struct nvmap_heap *heap);
-
 #endif

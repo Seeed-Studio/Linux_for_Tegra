@@ -43,6 +43,7 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
+#include "nvmap_alloc.h"
 #include "nvmap_heap.h"
 #include "nvmap_ioctl.h"
 #include <linux/pagewalk.h>

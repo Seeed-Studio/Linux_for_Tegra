@@ -23,6 +23,7 @@
 #include "include/linux/nvmap_exports.h"
 
 #include "nvmap_priv.h"
+#include "nvmap_alloc.h"
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 #include <soc/tegra/virt/hv-ivc.h>

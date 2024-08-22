@@ -121,7 +121,6 @@ do {                                                    \
 struct page;
 struct nvmap_device;
 
-void _nvmap_handle_free(struct nvmap_handle *h);
 /* holds max number of handles allocted per process at any time */
 extern u32 nvmap_max_handle_count;
 extern u64 nvmap_big_page_allocs;
@@ -134,7 +133,6 @@ extern struct vm_operations_struct nvmap_vma_ops;
 
 #ifdef CONFIG_ARM64
 #define PG_PROT_KERNEL PAGE_KERNEL
-#define FLUSH_DCACHE_AREA __flush_dcache_area
 #define outer_flush_range(s, e)
 #define outer_inv_range(s, e)
 #define outer_clean_range(s, e)
@@ -144,7 +142,6 @@ extern void __clean_dcache_page(struct page *);
 extern void __clean_dcache_area_poc(void *addr, size_t len);
 #else
 #define PG_PROT_KERNEL pgprot_kernel
-#define FLUSH_DCACHE_AREA __cpuc_flush_dcache_area
 extern void __flush_dcache_page(struct address_space *, struct page *);
 #endif
 
@@ -316,20 +313,6 @@ struct nvmap_page_pool {
 	u64 misses;
 #endif
 };
-
-int nvmap_page_pool_init(struct nvmap_device *dev);
-int nvmap_page_pool_fini(struct nvmap_device *dev);
-struct page *nvmap_page_pool_alloc(struct nvmap_page_pool *pool);
-int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
-		struct page **pages, u32 nr, bool use_numa, int numa_id);
-#ifdef CONFIG_ARM64_4K_PAGES
-int nvmap_page_pool_alloc_lots_bp(struct nvmap_page_pool *pool,
-		struct page **pages, u32 nr, bool use_numa, int numa_id);
-#endif /* CONFIG_ARM64_4K_PAGES */
-u32 nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
-				       struct page **pages, u32 nr);
-int nvmap_page_pool_clear(void);
-int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root);
 #endif
 
 #define NVMAP_IVM_INVALID_PEER		(-1)
@@ -457,14 +440,7 @@ int nvmap_probe(struct platform_device *pdev);
 int nvmap_remove(struct platform_device *pdev);
 int nvmap_init(struct platform_device *pdev);
 
-int nvmap_create_carveout(const struct nvmap_platform_carveout *co);
-
 int nvmap_co_setup(struct reserved_mem *rmem);
-
-struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
-					      struct nvmap_handle *handle,
-					      unsigned long type,
-					      phys_addr_t *start);
 
 struct nvmap_carveout_node;
 
@@ -505,19 +481,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_id(
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd);
 
-void inner_cache_maint(unsigned int op, void *vaddr, size_t size);
 void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size);
-
-int nvmap_alloc_handle(struct nvmap_client *client,
-		       struct nvmap_handle *h, unsigned int heap_mask,
-		       size_t align, u8 kind,
-		       unsigned int flags, unsigned int peer);
-
-int nvmap_alloc_handle_from_va(struct nvmap_client *client,
-			       struct nvmap_handle *h,
-			       ulong addr,
-			       unsigned int flags,
-			       unsigned int heap_mask);
 
 void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h, bool is_ro);
 
@@ -545,14 +509,7 @@ struct nvmap_handle *nvmap_handle_get_from_fd(int fd);
 extern void v7_flush_kern_cache_all(void);
 extern void v7_clean_kern_cache_all(void *);
 
-void nvmap_clean_cache(struct page **pages, int numpages);
-void nvmap_clean_cache_page(struct page *page);
 void nvmap_flush_cache(struct page **pages, int numpages);
-int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
-		phys_addr_t pend, int inner, int outer);
-
-int __nvmap_cache_maint(struct nvmap_client *client,
-			       struct nvmap_cache_op_64 *op);
 
 /* Internal API to support dmabuf */
 struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
@@ -564,9 +521,6 @@ void __nvmap_free_sg_table(struct nvmap_client *client,
 void *__nvmap_mmap(struct nvmap_handle *h);
 void __nvmap_munmap(struct nvmap_handle *h, void *addr);
 int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma);
-int __nvmap_do_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
-			   unsigned long start, unsigned long end,
-			   unsigned int op, bool clean_only_dirty);
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name);
 int __nvmap_dmabuf_fd(struct nvmap_client *client,
@@ -574,14 +528,6 @@ int __nvmap_dmabuf_fd(struct nvmap_client *client,
 
 int nvmap_dmabuf_stash_init(void);
 void nvmap_dmabuf_stash_deinit(void);
-
-void *nvmap_altalloc(size_t len);
-void nvmap_altfree(void *ptr, size_t len);
-
-static inline struct page *nvmap_to_page(struct page *page)
-{
-	return (struct page *)((unsigned long)page & ~3UL);
-}
 
 static inline bool nvmap_page_dirty(struct page *page)
 {
@@ -658,21 +604,6 @@ static inline void _nvmap_handle_mkdirty(struct nvmap_handle *h,
 	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkdirty, true);
 	if (h->heap_pgalloc)
 		atomic_add(nchanged, &h->pgalloc.ndirty);
-}
-
-static inline struct page **nvmap_pages(struct page **pg_pages, u32 nr_pages)
-{
-	struct page **pages;
-	int i;
-
-	pages = nvmap_altalloc(sizeof(*pages) * nr_pages);
-	if (pages == NULL)
-		return NULL;
-
-	for (i = 0; i < nr_pages; i++)
-		pages[i] = nvmap_to_page(pg_pages[i]);
-
-	return pages;
 }
 
 void nvmap_zap_handle(struct nvmap_handle *handle, u64 offset, u64 size);
@@ -884,9 +815,6 @@ void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
 					 dma_addr_t device_addr, size_t size);
 #endif /* CONFIG_TEGRA_VIRTUALIZATION */
-
-extern void __dma_flush_area(const void *cpu_va, size_t size);
-extern void __dma_map_area(const void *cpu_va, size_t size, int dir);
 
 int nvmap_assign_pages_to_handle(struct nvmap_client *client,
 		struct nvmap_handle **hs, struct nvmap_handle *h,

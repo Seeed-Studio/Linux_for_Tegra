@@ -16,6 +16,8 @@
 
 #include <linux/libnvdimm.h>
 #include "nvmap_priv.h"
+#include "nvmap_alloc.h"
+#include "nvmap_alloc_int.h"
 
 bool nvmap_convert_carveout_to_iovmm;
 bool nvmap_convert_iovmm_to_carveout;
@@ -47,6 +49,26 @@ void nvmap_altfree(void *ptr, size_t len)
 		vfree(ptr);
 	else
 		kfree(ptr);
+}
+
+struct page *nvmap_to_page(struct page *page)
+{
+	return (struct page *)((unsigned long)page & ~3UL);
+}
+
+struct page **nvmap_pages(struct page **pg_pages, u32 nr_pages)
+{
+	struct page **pages;
+	int i;
+
+	pages = nvmap_altalloc(sizeof(*pages) * nr_pages);
+	if (pages == NULL)
+		return NULL;
+
+	for (i = 0; i < nr_pages; i++)
+		pages[i] = nvmap_to_page(pg_pages[i]);
+
+	return pages;
 }
 
 static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size, int numa_id)

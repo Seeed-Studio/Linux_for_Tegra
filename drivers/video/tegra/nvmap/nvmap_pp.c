@@ -24,6 +24,8 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
+#include "nvmap_alloc.h"
+#include "nvmap_alloc_int.h"
 
 #define NVMAP_TEST_PAGE_POOL_SHRINKER     1
 #define PENDING_PAGES_SIZE                (SZ_1M / PAGE_SIZE)
@@ -48,8 +50,88 @@ static inline void __pp_dbg_var_add(u64 *dbg_var, u32 nr)
 #define pp_hit_add(pool, nr)   __pp_dbg_var_add(&(pool)->hits, nr)
 #define pp_miss_add(pool, nr)  __pp_dbg_var_add(&(pool)->misses, nr)
 
+#ifdef NVMAP_CONFIG_PAGE_POOL_DEBUG
+static void nvmap_pgcount(struct page *page, bool incr)
+{
+	page_ref_add(page, incr ? 1 : -1);
+}
+#endif /* NVMAP_CONFIG_PAGE_POOL_DEBUG */
+
+#ifdef CONFIG_ARM64_4K_PAGES
+static bool nvmap_is_big_page(struct nvmap_page_pool *pool,
+			      struct page **pages, int idx, int nr)
+{
+	int i;
+	struct page *page = pages[idx];
+
+	if (pool->pages_per_big_pg <= 1)
+		return false;
+
+	if (nr - idx < pool->pages_per_big_pg)
+		return false;
+
+	/* Allow coalescing pages at big page boundary only */
+	if (page_to_phys(page) & (pool->big_pg_sz - 1))
+		return false;
+
+	for (i = 1; i < pool->pages_per_big_pg; i++)
+		if (pages[idx + i] != nth_page(page, i))
+			break;
+
+	return i == pool->pages_per_big_pg ? true : false;
+}
+#endif
+
+/*
+ * Fill a bunch of pages into the page pool. This will fill as many as it can
+ * and return the number of pages filled. Pages are used from the start of the
+ * passed page pointer array in a linear fashion.
+ *
+ * You must lock the page pool before using this.
+ */
 static int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
-				       struct page **pages, u32 nr);
+				       struct page **pages, u32 nr)
+{
+	int real_nr;
+	int pages_to_fill;
+	int ind = 0;
+
+	if (!enable_pp)
+		return 0;
+
+	BUG_ON(pool->count > pool->max);
+	real_nr = min_t(u32, pool->max - pool->count, nr);
+	pages_to_fill = real_nr;
+	if (real_nr == 0)
+		return 0;
+
+	while (real_nr > 0) {
+#ifdef NVMAP_CONFIG_PAGE_POOL_DEBUG
+		nvmap_pgcount(pages[ind], true);
+		BUG_ON(page_count(pages[ind]) != 2);
+#endif /* NVMAP_CONFIG_PAGE_POOL_DEBUG */
+
+#ifdef CONFIG_ARM64_4K_PAGES
+		if (nvmap_is_big_page(pool, pages, ind, pages_to_fill)) {
+			list_add_tail(&pages[ind]->lru, &pool->page_list_bp);
+			ind += pool->pages_per_big_pg;
+			real_nr -= pool->pages_per_big_pg;
+			pool->big_page_count += pool->pages_per_big_pg;
+		} else {
+#endif /* CONFIG_ARM64_4K_PAGES */
+			list_add_tail(&pages[ind++]->lru, &pool->page_list);
+			real_nr--;
+#ifdef CONFIG_ARM64_4K_PAGES
+		}
+#endif /* CONFIG_ARM64_4K_PAGES */
+	}
+
+	pool->count += ind;
+	BUG_ON(pool->count > pool->max);
+	pp_fill_add(pool, ind);
+
+	return ind;
+}
 
 static inline struct page *get_zero_list_page(struct nvmap_page_pool *pool, bool use_numa,
 					int numa_id)
@@ -215,13 +297,6 @@ static int nvmap_background_zero_thread(void *arg)
 	return 0;
 }
 
-#ifdef NVMAP_CONFIG_PAGE_POOL_DEBUG
-static void nvmap_pgcount(struct page *page, bool incr)
-{
-	page_ref_add(page, incr ? 1 : -1);
-}
-#endif /* NVMAP_CONFIG_PAGE_POOL_DEBUG */
-
 /*
  * Free the passed number of pages from the page pool. This happens regardless
  * of whether the page pools are enabled. This lets one disable the page pools
@@ -377,81 +452,7 @@ int nvmap_page_pool_alloc_lots_bp(struct nvmap_page_pool *pool,
 	trace_nvmap_pp_alloc_lots_bp(ind, nr);
 	return ind;
 }
-
-static bool nvmap_is_big_page(struct nvmap_page_pool *pool,
-			      struct page **pages, int idx, int nr)
-{
-	int i;
-	struct page *page = pages[idx];
-
-	if (pool->pages_per_big_pg <= 1)
-		return false;
-
-	if (nr - idx < pool->pages_per_big_pg)
-		return false;
-
-	/* Allow coalescing pages at big page boundary only */
-	if (page_to_phys(page) & (pool->big_pg_sz - 1))
-		return false;
-
-	for (i = 1; i < pool->pages_per_big_pg; i++)
-		if (pages[idx + i] != nth_page(page, i))
-			break;
-
-	return i == pool->pages_per_big_pg ? true: false;
-}
 #endif /* CONFIG_ARM64_4K_PAGES */
-
-/*
- * Fill a bunch of pages into the page pool. This will fill as many as it can
- * and return the number of pages filled. Pages are used from the start of the
- * passed page pointer array in a linear fashion.
- *
- * You must lock the page pool before using this.
- */
-static int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
-				       struct page **pages, u32 nr)
-{
-	int real_nr;
-	int pages_to_fill;
-	int ind = 0;
-
-	if (!enable_pp)
-		return 0;
-
-	BUG_ON(pool->count > pool->max);
-	real_nr = min_t(u32, pool->max - pool->count, nr);
-	pages_to_fill = real_nr;
-	if (real_nr == 0)
-		return 0;
-
-	while (real_nr > 0) {
-#ifdef NVMAP_CONFIG_PAGE_POOL_DEBUG
-		nvmap_pgcount(pages[ind], true);
-		BUG_ON(page_count(pages[ind]) != 2);
-#endif /* NVMAP_CONFIG_PAGE_POOL_DEBUG */
-
-#ifdef CONFIG_ARM64_4K_PAGES
-		if (nvmap_is_big_page(pool, pages, ind, pages_to_fill)) {
-			list_add_tail(&pages[ind]->lru, &pool->page_list_bp);
-			ind += pool->pages_per_big_pg;
-			real_nr -= pool->pages_per_big_pg;
-			pool->big_page_count += pool->pages_per_big_pg;
-		} else {
-#endif /* CONFIG_ARM64_4K_PAGES */
-			list_add_tail(&pages[ind++]->lru, &pool->page_list);
-			real_nr--;
-#ifdef CONFIG_ARM64_4K_PAGES
-		}
-#endif /* CONFIG_ARM64_4K_PAGES */
-	}
-
-	pool->count += ind;
-	BUG_ON(pool->count > pool->max);
-	pp_fill_add(pool, ind);
-
-	return ind;
-}
 
 u32 nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 				       struct page **pages, u32 nr)
@@ -492,7 +493,7 @@ u32 nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 	return ret;
 }
 
-ulong nvmap_page_pool_get_unused_pages(void)
+static ulong nvmap_page_pool_get_unused_pages(void)
 {
 	unsigned long total = 0;
 
