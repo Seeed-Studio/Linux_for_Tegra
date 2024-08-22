@@ -1,10 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
- */
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #include <linux/clk/tegra.h>
 #include <linux/genalloc.h>
+#include <linux/iosys-map.h>
 #include <linux/mailbox_client.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -557,7 +556,9 @@ static int tegra_bpmp_ping(struct tegra_bpmp *bpmp)
 	struct mrq_ping_response response;
 	struct mrq_ping_request request;
 	struct tegra_bpmp_message msg;
+#if (!IS_ENABLED(CONFIG_PREEMPT_RT))
 	unsigned long flags;
+#endif
 	ktime_t start, end;
 	int err;
 
@@ -573,11 +574,17 @@ static int tegra_bpmp_ping(struct tegra_bpmp *bpmp)
 	msg.rx.data = &response;
 	msg.rx.size = sizeof(response);
 
+#if (!IS_ENABLED(CONFIG_PREEMPT_RT))
 	local_irq_save(flags);
 	start = ktime_get();
 	err = tegra_bpmp_transfer_atomic(bpmp, &msg);
 	end = ktime_get();
 	local_irq_restore(flags);
+#else
+	start = ktime_get();
+	err = tegra_bpmp_transfer(bpmp, &msg);
+	end = ktime_get();
+#endif
 
 	if (!err)
 		dev_dbg(bpmp->dev,
@@ -678,7 +685,10 @@ void tegra_bpmp_handle_rx(struct tegra_bpmp *bpmp)
 	count = bpmp->soc->channels.thread.count;
 	busy = bpmp->threaded.busy;
 
-	if (tegra_bpmp_is_request_ready(channel)) {
+	/* Check if supported incoming channel.
+	 * This won't be called for Guest Linux as channel->ib mapping won't be set.
+	 */
+	if (iosys_map_is_set(&channel->ib) && tegra_bpmp_is_request_ready(channel)) {
 		unsigned int mrq = tegra_bpmp_mb_read_field(&channel->ib, code);
 
 		tegra_bpmp_handle_mrq(bpmp, mrq, channel);
@@ -884,6 +894,25 @@ static const struct tegra_bpmp_soc tegra210_soc = {
 };
 #endif
 
+#if IS_ENABLED(CONFIG_TEGRA_HV_DRIVER)
+static const struct tegra_bpmp_soc t194_safe_hv_soc = {
+	.channels = {
+		.cpu_tx = {
+			.offset = 3,
+			.count = 1,
+			.timeout = 30 * USEC_PER_SEC,
+		},
+		.thread = {
+			.offset = 0,
+			.count = 3,
+			.timeout = 30 * USEC_PER_SEC,
+		},
+	},
+	.ops = &tegra194_bpmp_hv_ops,
+	.num_resets = 193,
+};
+#endif
+
 static const struct of_device_id tegra_bpmp_match[] = {
 #if IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || \
     IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC) || \
@@ -892,6 +921,9 @@ static const struct of_device_id tegra_bpmp_match[] = {
 #endif
 #if IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)
 	{ .compatible = "nvidia,tegra210-bpmp", .data = &tegra210_soc },
+#endif
+#if IS_ENABLED(CONFIG_TEGRA_HV_DRIVER)
+	{ .compatible = "nvidia,tegra194-safe-bpmp-hv", .data = &t194_safe_hv_soc },
 #endif
 	{ }
 };
