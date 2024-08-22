@@ -801,7 +801,7 @@ static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id
 	*total = 0;
 	if (pss)
 		*pss = 0;
-	if (!dev)
+	if (dev == NULL)
 		return;
 	spin_lock(&dev->handle_lock);
 	n = rb_first(&dev->handles);

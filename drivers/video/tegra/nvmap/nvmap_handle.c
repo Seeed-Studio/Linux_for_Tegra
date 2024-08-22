@@ -237,7 +237,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 		return ERR_PTR(-ENOMEM);
 
 	ref = kzalloc(sizeof(*ref), GFP_KERNEL);
-	if (!ref)
+	if (ref == NULL)
 		goto ref_alloc_fail;
 
 	atomic_set(&h->ref, 1);
@@ -475,7 +475,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 	struct nvmap_handle_ref *ref;
 	bool is_ro = false;
 
-	if (WARN_ON(!client))
+	if (WARN_ON(client == NULL))
 		return ERR_PTR(-EINVAL);
 
 	handle = nvmap_handle_get_from_dmabuf_fd(client, fd);

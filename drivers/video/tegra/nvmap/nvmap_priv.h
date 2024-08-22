@@ -667,7 +667,7 @@ static inline struct page **nvmap_pages(struct page **pg_pages, u32 nr_pages)
 	int i;
 
 	pages = nvmap_altalloc(sizeof(*pages) * nr_pages);
-	if (!pages)
+	if (pages == NULL)
 		return NULL;
 
 	for (i = 0; i < nr_pages; i++)

@@ -145,7 +145,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 			pages[i] = nvmap_alloc_pages_exact(gfp, PAGE_SIZE,
 							   h->numa_id);
 
-			if (!pages[i])
+			if (pages[i] == NULL)
 				goto fail;
 		}
 		nvmap_total_page_allocs += nr_page;
@@ -434,7 +434,7 @@ int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 	int tag;
 
 	h = nvmap_handle_get(h);
-	if (!h)
+	if (h == NULL)
 		return -EINVAL;
 
 	if (h->alloc) {

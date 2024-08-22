@@ -662,7 +662,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		h_offs + h_stride * (count - 1) + elem_size > h->size)
 		return -EINVAL;
 
-	if (!h->vaddr) {
+	if (h->vaddr == NULL) {
 		if (!__nvmap_mmap(h))
 			return -ENOMEM;
 		__nvmap_munmap(h, h->vaddr);

@@ -254,7 +254,7 @@ static ulong nvmap_page_pool_free_pages_locked(struct nvmap_page_pool *pool,
 		else
 			page = get_zero_list_page(pool, false, 0);
 
-		if (!page) {
+		if (page == NULL) {
 			if (!use_page_list) {
 				use_page_list = true;
 				continue;
@@ -681,7 +681,7 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 {
 	struct dentry *pp_root;
 
-	if (!nvmap_root)
+	if (nvmap_root == NULL)
 		return -ENODEV;
 
 	pp_root = debugfs_create_dir("pagepool", nvmap_root);

@@ -102,7 +102,7 @@ static inline bool access_vpr_phys(struct device *dev)
 	 * Assumes gpu nodes always have DT entry, this is valid as device
 	 * specifying access-vpr-phys will do so through its DT entry.
 	 */
-	if (!dev->of_node)
+	if (dev->of_node == NULL)
 		return false;
 
 	return !!of_find_property(dev->of_node, "access-vpr-phys", NULL);
@@ -395,7 +395,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	}
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv) {
+	if (priv == NULL) {
 		nvmap_handle_put(h);
 		return -ENOMEM;
 	}
