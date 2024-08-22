@@ -1,3 +1,6 @@
+variables:
+        START_TASK: ""
+
 stages:
     - xavier-nx-industrial-16g
     - xavier-nx-industrial-8g
@@ -19,7 +22,15 @@ stages:
 
 job-xavier-nx-industrial-16g:
     stage: xavier-nx-industrial-16g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "xavier-nx"'
+        when: on_success
+      - if: '$START_TASK == "xavier-nx-industrial"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     # image: ubuntu:22.04
     # services:
     #   - docker:dind
@@ -70,13 +81,17 @@ job-xavier-nx-industrial-16g:
 
 job-xavier-nx-industrial-8g:
     stage: xavier-nx-industrial-8g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "xavier-nx"'
+        when: on_success
+      - if: '$START_TASK == "xavier-nx-industrial"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-xavier-nx-industrial-16g]
-
-
 
     script:
          - id
@@ -116,11 +131,17 @@ job-xavier-nx-industrial-8g:
 
 job-xavier-nx-devkit-16g:
     stage: xavier-nx-devkit-16g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "xavier-nx"'
+        when: on_success
+      - if: '$START_TASK == "xavier-nx-devkit"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-xavier-nx-industrial-8g]
 
     script:
          - id
@@ -154,11 +175,17 @@ job-xavier-nx-devkit-16g:
 
 job-xavier-nx-devkit-8g:
     stage: xavier-nx-devkit-8g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "xavier-nx"'
+        when: on_success
+      - if: '$START_TASK == "xavier-nx-devkit"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-xavier-nx-devkit-16g]
 
     script:
          - id
@@ -193,13 +220,17 @@ job-xavier-nx-devkit-8g:
 
 job-orin-nx-industrial-8g:
     stage: orin-nx-industrial-8g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nx"'
+        when: on_success
+      - if: '$START_TASK == "orin-nx-industrial"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-xavier-nx-devkit-8g]
-
-
 
     script:
          - id
@@ -238,13 +269,17 @@ job-orin-nx-industrial-8g:
 
 job-orin-nx-reserver-8g:
     stage: orin-nx-reserver-8g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nx"'
+        when: on_success
+      - if: '$START_TASK == "orin-nx-reserver"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nx-industrial-8g]
-
-
 
     script:
          - id
@@ -284,12 +319,17 @@ job-orin-nx-reserver-8g:
 
 job-orin-nx-devkit-8g:
     stage: orin-nx-devkit-8g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nx"'
+        when: on_success
+      - if: '$START_TASK == "orin-nx-devkit"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nx-reserver-8g]
-
 
     script:
          - id
@@ -324,13 +364,17 @@ job-orin-nx-devkit-8g:
 
 job-orin-nx-industrial-16g:
     stage: orin-nx-industrial-16g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nx"'
+        when: on_success
+      - if: '$START_TASK == "orin-nx-industrial"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nx-devkit-8g]
-
-
 
     script:
          - id
@@ -369,13 +413,17 @@ job-orin-nx-industrial-16g:
 
 job-orin-nx-reserver-16g:
     stage: orin-nx-reserver-16g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nx"'
+        when: on_success
+      - if: '$START_TASK == "orin-nx-reserver"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nx-industrial-16g]
-
-
 
     script:
          - id
@@ -415,12 +463,17 @@ job-orin-nx-reserver-16g:
 
 job-orin-nx-devkit-16g:
     stage: orin-nx-devkit-16g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nx"'
+        when: on_success
+      - if: '$START_TASK == "orin-nx-devkit"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nx-reserver-16g]
-
 
     script:
          - id
@@ -455,13 +508,17 @@ job-orin-nx-devkit-16g:
 
 job-orin-nano-industrial-8g:
     stage: orin-nano-industrial-8g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nano"'
+        when: on_success
+      - if: '$START_TASK == "orin-nano-industrial"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nx-devkit-16g]
-
-
 
     script:
          - id
@@ -500,13 +557,17 @@ job-orin-nano-industrial-8g:
 
 job-orin-nano-reserver-8g:
     stage: orin-nano-reserver-8g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nano"'
+        when: on_success
+      - if: '$START_TASK == "orin-nano-reserver"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nano-industrial-8g]
-
-
 
     script:
          - id
@@ -546,12 +607,17 @@ job-orin-nano-reserver-8g:
 
 job-orin-nano-devkit-8g:
     stage: orin-nano-devkit-8g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nano"'
+        when: on_success
+      - if: '$START_TASK == "orin-nano-devkit"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nano-reserver-8g]
-
 
     script:
          - id
@@ -585,13 +651,17 @@ job-orin-nano-devkit-8g:
 
 job-orin-nano-industrial-4g:
     stage: orin-nano-industrial-4g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nano"'
+        when: on_success
+      - if: '$START_TASK == "orin-nano-industrial"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nano-devkit-8g]
-
-
 
     script:
          - id
@@ -631,13 +701,17 @@ job-orin-nano-industrial-4g:
 
 job-orin-nano-reserver-4g:
     stage: orin-nano-reserver-4g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nano"'
+        when: on_success
+      - if: '$START_TASK == "orin-nano-reserver"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nano-industrial-4g]
-
-
 
     script:
          - id
@@ -678,12 +752,17 @@ job-orin-nano-reserver-4g:
 
 job-orin-nano-devkit-4g:
     stage: orin-nano-devkit-4g
-    when: on_success
+    rules:
+      - if: '$CI_COMMIT_TAG' 
+        when: on_success
+      - if: '$START_TASK == "orin-nano"'
+        when: on_success
+      - if: '$START_TASK == "orin-nano-devkit"'
+        when: on_success
+      - if: '$START_TASK == $CI_JOB_STAGE'
+        when: on_success
     tags:
       - x86-shell
-
-    needs: [job-orin-nano-reserver-4g]
-
 
     script:
          - id
