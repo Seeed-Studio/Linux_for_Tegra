@@ -15,6 +15,10 @@
 
 #include <uapi/linux/tegra-soc-hwpm-uapi.h>
 
+#define MC_MCC_CTL_PERFMUX_OFFSET	0x8914
+#define MC_MCC_DP_PERFMUX_OFFSET 	0x8918
+#define MC_CBRIDGE_PERFMUX_OFFSET	0x891c
+
 #define MAX_MC_CHANNELS 17	// Broadcast Channel + 16 MC Channels
 
 static struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
@@ -57,8 +61,14 @@ static int tegra_mc_hwpm_reg_op(void *ip_dev,
 	}
 
 	if (inst_element_index >= mc->no_ch) {
-		pr_err("Incorrect channel number: %u\n", inst_element_index);
+		dev_err(dev, "Incorrect channel number: %u\n", inst_element_index);
 		return -EINVAL;
+	}
+
+	if (reg_offset != MC_MCC_CTL_PERFMUX_OFFSET && reg_offset != MC_MCC_DP_PERFMUX_OFFSET &&
+	    reg_offset != MC_CBRIDGE_PERFMUX_OFFSET) {
+		dev_err(dev, "SOC-HWPM requesting access to prohibited register");
+		return -EPERM;
 	}
 
 	if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_READ) {
