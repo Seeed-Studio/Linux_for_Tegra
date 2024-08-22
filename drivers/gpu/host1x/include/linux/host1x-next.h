@@ -219,10 +219,13 @@ static inline void host1x_bo_munmap(struct host1x_bo *bo, void *addr)
 #define HOST1X_SYNCPT_GPU		(1 << 2)
 
 #define HOST1X_GLOBAL_TO_LOCAL_SYNCPOINT(global_syncpoint_id) \
-		    (global_syncpoint_id & 0xFFFFFF)
+		(global_syncpoint_id & 0xFFFFFF)
+
+#define HOST1X_INSTANCE_NUM_FROM_GLOBAL_SYNCPOINT(global_syncpoint_id) \
+		((global_syncpoint_id & 0xFF000000) >> 24)
 
 #define HOST1X_LOCAL_TO_GLOBAL_SYNCPOINT(local_syncpoint_id, instance) \
-		    ((instance << 24) | (local_syncpoint_id))
+		((instance << 24) | (local_syncpoint_id))
 
 struct host1x_syncpt_base;
 struct host1x_syncpt;
@@ -257,6 +260,7 @@ void host1x_syncpt_release_vblank_reservation(struct host1x_client *client,
 struct dma_fence *host1x_fence_create(struct host1x_syncpt *sp, u32 threshold,
 				      bool timeout);
 int host1x_fence_extract(struct dma_fence *fence, u32 *id, u32 *threshold);
+int host1x_fence_get_node(struct dma_fence *fence);
 void host1x_fence_cancel(struct dma_fence *fence);
 
 /*

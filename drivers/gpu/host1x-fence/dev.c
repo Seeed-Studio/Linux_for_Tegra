@@ -18,6 +18,8 @@
 
 #include "include/uapi/linux/host1x-fence.h"
 
+#define HOST1X_INSTANCE_MAX		2
+
 static struct host1x_uapi {
 	struct class *class;
 
@@ -30,6 +32,8 @@ static int dev_file_open(struct inode *inode, struct file *file)
 {
 	struct platform_device *host1x_pdev;
 	struct device_node *np;
+	int numa_node;
+	struct host1x **host1xp;
 
 	static const struct of_device_id host1x_match[] = {
 		{ .compatible = "nvidia,tegra186-host1x", },
@@ -38,17 +42,33 @@ static int dev_file_open(struct inode *inode, struct file *file)
 		{},
 	};
 
-	np = of_find_matching_node(NULL, host1x_match);
-	if (!np) {
-		return -ENODEV;
+	host1xp = kzalloc(HOST1X_INSTANCE_MAX * sizeof(struct host1x *), GFP_KERNEL);
+	if (!host1xp)
+		return -ENOMEM;
+
+	for_each_matching_node(np, host1x_match) {
+		host1x_pdev = of_find_device_by_node(np);
+		if (host1x_pdev) {
+			numa_node = dev_to_node(&host1x_pdev->dev);
+			if (numa_node == NUMA_NO_NODE)
+				host1xp[0] = platform_get_drvdata(host1x_pdev);
+			else if (numa_node < HOST1X_INSTANCE_MAX && numa_node >= 0)
+				host1xp[numa_node] = platform_get_drvdata(host1x_pdev);
+			else
+				pr_warn("%s: no host1x_fence support for instance %d\n",
+					__func__, numa_node);
+		}
 	}
 
-	host1x_pdev = of_find_device_by_node(np);
-	if (!host1x_pdev) {
-		return -EAGAIN;
-	}
+	file->private_data = host1xp;
 
-	file->private_data = platform_get_drvdata(host1x_pdev);
+	return 0;
+}
+
+static int dev_file_release(struct inode *inode, struct file *file)
+{
+	kfree(file->private_data);
+	file->private_data = NULL;
 
 	return 0;
 }
@@ -79,12 +99,13 @@ static int host1x_fence_create_fd(struct host1x_syncpt *sp, u32 threshold)
 	return fd;
 }
 
-static int dev_file_ioctl_create_fence(struct host1x *host1x, void __user *data)
+static int dev_file_ioctl_create_fence(struct host1x **host1xp, void __user *data)
 {
 	struct host1x_create_fence args;
 	struct host1x_syncpt *syncpt;
 	unsigned long copy_err;
 	int fd;
+	unsigned int instance, local_id;
 
 	copy_err = copy_from_user(&args, data, sizeof(args));
 	if (copy_err)
@@ -93,7 +114,13 @@ static int dev_file_ioctl_create_fence(struct host1x *host1x, void __user *data)
 	if (args.reserved[0])
 		return -EINVAL;
 
-	syncpt = host1x_syncpt_get_by_id_noref(host1x, args.id);
+	instance = HOST1X_INSTANCE_NUM_FROM_GLOBAL_SYNCPOINT(args.id);
+	local_id = HOST1X_GLOBAL_TO_LOCAL_SYNCPOINT(args.id);
+
+	if (instance >= HOST1X_INSTANCE_MAX || !host1xp[instance])
+		return -EINVAL;
+
+	syncpt = host1x_syncpt_get_by_id_noref(host1xp[instance], local_id);
 	if (!syncpt)
 		return -EINVAL;
 
@@ -110,7 +137,7 @@ static int dev_file_ioctl_create_fence(struct host1x *host1x, void __user *data)
 	return 0;
 }
 
-static int dev_file_ioctl_fence_extract(struct host1x *host1x, void __user *data)
+static int dev_file_ioctl_fence_extract(struct host1x **host1xp, void __user *data)
 {
 	struct host1x_fence_extract_fence __user *fences_user_ptr;
 	struct dma_fence *fence, **fences;
@@ -144,6 +171,7 @@ static int dev_file_ioctl_fence_extract(struct host1x *host1x, void __user *data
 
 	for (i = 0, j = 0; i < num_fences; i++) {
 		struct host1x_fence_extract_fence f;
+		int instance;
 
 		err = host1x_fence_extract(fences[i], &f.id, &f.threshold);
 		if (err == -EINVAL && dma_fence_is_signaled(fences[i])) {
@@ -154,6 +182,11 @@ static int dev_file_ioctl_fence_extract(struct host1x *host1x, void __user *data
 		}
 
 		if (j < args.num_fences) {
+			/* Convert to global id before giving to userspace */
+			instance = host1x_fence_get_node(fences[i]);
+			if (instance < HOST1X_INSTANCE_MAX && instance >= 0)
+				f.id = HOST1X_LOCAL_TO_GLOBAL_SYNCPOINT(f.id, instance);
+
 			copy_err = copy_to_user(fences_user_ptr + j, &f, sizeof(f));
 			if (copy_err) {
 				err = -EFAULT;
@@ -266,7 +299,7 @@ static const struct file_operations host1x_pollfd_ops = {
 	.poll = host1x_pollfd_poll,
 };
 
-static int dev_file_ioctl_create_pollfd(struct host1x *host1x, void __user *data)
+static int dev_file_ioctl_create_pollfd(struct host1x **host1xp, void __user *data)
 {
 	struct host1x_create_pollfd args;
 	struct host1x_pollfd *pollfd;
@@ -324,7 +357,7 @@ static void host1x_pollfd_callback(struct dma_fence *fence, struct dma_fence_cb 
 	wake_up_all(pfd_fence->wq);
 }
 
-static int dev_file_ioctl_trigger_pollfd(struct host1x *host1x, void __user *data)
+static int dev_file_ioctl_trigger_pollfd(struct host1x **host1xp, void __user *data)
 {
 	struct host1x_pollfd_fence *pfd_fence;
 	struct host1x_trigger_pollfd args;
@@ -334,6 +367,7 @@ static int dev_file_ioctl_trigger_pollfd(struct host1x *host1x, void __user *dat
 	unsigned long copy_err;
 	struct file *file;
 	int err;
+	unsigned int instance, local_id;
 
 	copy_err = copy_from_user(&args, data, sizeof(args));
 	if (copy_err)
@@ -350,7 +384,13 @@ static int dev_file_ioctl_trigger_pollfd(struct host1x *host1x, void __user *dat
 
 	pollfd = file->private_data;
 
-	syncpt = host1x_syncpt_get_by_id_noref(host1x, args.id);
+	instance = HOST1X_INSTANCE_NUM_FROM_GLOBAL_SYNCPOINT(args.id);
+	local_id = HOST1X_GLOBAL_TO_LOCAL_SYNCPOINT(args.id);
+
+	if (instance >= HOST1X_INSTANCE_MAX || !host1xp[instance])
+		return -EINVAL;
+
+	syncpt = host1x_syncpt_get_by_id_noref(host1xp[instance], local_id);
 	if (!syncpt) {
 		err = -EINVAL;
 		goto put_file;
@@ -437,6 +477,7 @@ static long dev_file_ioctl(struct file *file, unsigned int cmd,
 static const struct file_operations dev_file_fops = {
 	.owner = THIS_MODULE,
 	.open = dev_file_open,
+	.release = dev_file_release,
 	.unlocked_ioctl = dev_file_ioctl,
 	.compat_ioctl = dev_file_ioctl,
 };

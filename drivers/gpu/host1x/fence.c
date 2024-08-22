@@ -2,7 +2,7 @@
 /*
  * Syncpoint dma_fence implementation
  *
- * Copyright (c) 2020-2023, NVIDIA Corporation.
+ * Copyright (c) 2020-2024, NVIDIA Corporation.
  */
 
 #include <linux/dma-fence.h>
@@ -177,6 +177,21 @@ int host1x_fence_extract(struct dma_fence *fence, u32 *id, u32 *threshold)
 	return 0;
 }
 EXPORT_SYMBOL(host1x_fence_extract);
+
+int host1x_fence_get_node(struct dma_fence *fence)
+{
+	struct host1x_syncpt_fence *f;
+	int node;
+
+	if (fence->ops != &host1x_syncpt_fence_ops)
+		return -EINVAL;
+
+	f = container_of(fence, struct host1x_syncpt_fence, base);
+	node = dev_to_node(f->sp->host->dev);
+
+	return node == NUMA_NO_NODE ? 0 : node;
+}
+EXPORT_SYMBOL(host1x_fence_get_node);
 
 void host1x_fence_cancel(struct dma_fence *f)
 {
