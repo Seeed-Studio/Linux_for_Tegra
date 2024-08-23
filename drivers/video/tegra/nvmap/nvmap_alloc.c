@@ -444,7 +444,11 @@ int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 
 	h->userflags = flags;
 	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
-	h->align = PAGE_SIZE;
+	if ((heap_mask & NVMAP_HEAP_CARVEOUT_GPU) != 0)
+		h->align = SIZE_2MB;
+	else
+		h->align = PAGE_SIZE;
+
 	tag = flags >> 16;
 
 	if (!tag && client && !client->tag_warned) {
