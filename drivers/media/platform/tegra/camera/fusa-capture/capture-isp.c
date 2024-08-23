@@ -332,8 +332,12 @@ static int isp_capture_populate_fence_info(
 	gos_info = ((((uint16_t)gos_offset << 16) | ((uint8_t)gos_index) << 8)
 			& 0xFFFFFFFF);
 
+	reloc_page_addr += (((fence_offset + gos_relative) & PAGE_MASK) - (fence_offset & PAGE_MASK));
+
 	__raw_writeq(gos_info, (void __iomem *)(reloc_page_addr +
 			((fence_offset + gos_relative) & ~PAGE_MASK)));
+
+	reloc_page_addr += (((fence_offset + sp_relative) & PAGE_MASK) - ((fence_offset + gos_relative) & PAGE_MASK));
 
 	__raw_writeq((uint64_t)syncpt_addr, (void __iomem *)(reloc_page_addr +
 			((fence_offset + sp_relative) & ~PAGE_MASK)));
