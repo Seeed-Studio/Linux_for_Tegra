@@ -91,6 +91,7 @@
 
 #define DEFAULT_PWM_DEPTH 255
 #define PWM_ENABLE	(1 << 31)
+#define REG_WIDTH 32
 
 struct tegra_pwm_soc {
 	unsigned int channel_offset;
@@ -171,6 +172,11 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 */
 	pwm_f = (u32)DIV_ROUND_CLOSEST_ULL(duty_ns * (1 + pc->pwm_depth),
 					   period_ns);
+
+	/* Avoid overflow on 100% duty cycle */
+	if (pwm_f == 1 + pc->pwm_depth)
+		if (duty_s + duty_w == REG_WIDTH)
+			--pwm_f;
 
 	/*
 	 * required_clk_rate is a reference rate for source clock and
