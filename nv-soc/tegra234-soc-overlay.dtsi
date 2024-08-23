@@ -363,9 +363,11 @@
 		};
 
 		reserved-memory {
-			adsp_resv: reservation-adsp {
+			ape_resv: reservation-ape {
 				iommu-addresses = <&adsp 0x0 0x00000000 0x0 0x40000000>,
-						<&adsp 0x0 0x60000000 0xffffffff 0xffffffff>;
+						<&adsp 0x0 0x60000000 0xffffffff 0x9fffffff>,
+						<&tegra_admaif 0x0 0x00000000 0x0 0x40000000>,
+						<&tegra_admaif 0x0 0x60000000 0xffffffff 0x9fffffff>;
 			};
 		};
 
@@ -448,6 +450,10 @@
 				};
 			};
 
+			admaif@290f000 {
+				memory-region = <&ape_resv>;
+			};
+
 			adsp: adsp@2993000 {
 				compatible = "nvidia,tegra18x-adsp";
 				interrupt-parent = <&agic>;
@@ -478,7 +484,7 @@
 				resets = <&bpmp TEGRA234_RESET_ADSP_ALL>;
 				reset-names = "adspall";
 				iommus = <&smmu_niso0 TEGRA234_SID_APE>;
-				memory-region = <&adsp_resv>;
+				memory-region = <&ape_resv>;
 				status = "disabled";
 			};
 		};
