@@ -135,6 +135,7 @@ config ARCH_TEGRA_234_SOC
 
 config ARCH_TEGRA_264_SOC
 	bool "NVIDIA Tegra264 SoC"
+	select PINCTRL_TEGRA264
 	help
 	  Enable support for the NVIDIA Tegra264 SoC.
 

@@ -31,13 +31,6 @@ config DEBUG_PINCTRL
 	help
 	  Say Y here to add some extra checks and diagnostics to PINCTRL calls.
 
-config PINCTRL_TEGRA264
-	bool "NVIDIA Tegra264 Pinmux support"
-	select PINCTRL_TEGRA
-	default y
-	help
-	Support for the NVIDIA Tegra264 PINCTRL controller driver.
-
 config PINCTRL_AMD
 	bool "AMD GPIO pin control"
 	depends on HAS_IOMEM
