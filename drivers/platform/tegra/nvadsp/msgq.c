@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2014-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/tegra_nvadsp.h>
 
@@ -61,12 +59,12 @@ int32_t msgq_queue_message(msgq_t *msgq, const msgq_message_t *message)
 		int32_t wi = msgq->write_index;
 		bool wrap = ri <= wi;
 		int32_t *start = msgq->queue;
-		int32_t *end = &msgq->queue[msgq->size];
-		int32_t *first = &msgq->queue[wi];
-		int32_t *last = &msgq->queue[ri];
+		int32_t *end = msgq->queue + msgq->size;
+		int32_t *first = msgq->queue + wi;
+		int32_t *last = msgq->queue + ri;
 		int32_t qremainder = wrap ? end - first : last - first;
 		int32_t qsize = wrap ? qremainder + (last - start) : qremainder;
-		int32_t msize = &message->payload[message->size] -
+		int32_t msize = (message->payload + message->size) -
 			(int32_t *)message;
 
 		if (qsize <= msize) {
@@ -123,7 +121,7 @@ int32_t msgq_dequeue_message(msgq_t *msgq, msgq_message_t *message)
 
 	ri = msgq->read_index;
 	wi = msgq->write_index;
-	msg = (msgq_message_t *)&msgq->queue[msgq->read_index];
+	msg = (msgq_message_t *)(msgq->queue + msgq->read_index);
 
 	if (ri == wi) {
 		/* empty queue */
@@ -145,8 +143,8 @@ int32_t msgq_dequeue_message(msgq_t *msgq, msgq_message_t *message)
 	} else {
 		/* copy message to the output buffer */
 		int32_t msize = MSGQ_MESSAGE_HEADER_WSIZE + msg->size;
-		int32_t *first = &msgq->queue[msgq->read_index];
-		int32_t *end = &msgq->queue[msgq->size];
+		int32_t *first = msgq->queue + msgq->read_index;
+		int32_t *end = msgq->queue + msgq->size;
 		int32_t qremainder = end - first;
 
 		if (msize < qremainder) {
