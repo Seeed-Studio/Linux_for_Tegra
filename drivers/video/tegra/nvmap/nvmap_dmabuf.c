@@ -196,7 +196,7 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(struct dma_buf_attachment *atta
 		goto err_map;
 	} else if (!(nvmap_dev->dynamic_dma_map_mask &
 			info->handle->heap_type)) {
-		sg_dma_address(sgt->sgl) = info->handle->carveout->base;
+		sg_dma_address(sgt->sgl) = nvmap_get_heap_block_base(info->handle->carveout);
 	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
 			access_vpr_phys(attach->dev)) {
 		sg_dma_address(sgt->sgl) = 0;

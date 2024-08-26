@@ -4,6 +4,56 @@
 #ifndef __NVMAP_ALLOC_INT_H
 #define __NVMAP_ALLOC_INT_H
 
+struct nvmap_heap_block {
+	phys_addr_t	base;
+	unsigned int	type;
+	struct nvmap_handle *handle;
+};
+
+/*
+ * Info to be passed to debugfs nodes, so as to provide heap type and
+ * numa node id.
+ */
+struct debugfs_info {
+	unsigned int heap_bit;
+	int numa_id;
+};
+
+struct nvmap_heap {
+	struct list_head all_list;
+	struct mutex lock;
+	const char *name;
+	void *arg;
+	/* heap base */
+	phys_addr_t base;
+	/* heap size */
+	size_t len;
+	size_t free_size;
+	struct device *cma_dev;
+	struct device *dma_dev;
+	bool is_ivm;
+	int numa_node_id;
+	bool can_alloc; /* Used only if is_ivm == true */
+	unsigned int peer; /* Used only if is_ivm == true */
+	unsigned int vm_id; /* Used only if is_ivm == true */
+	struct nvmap_pm_ops pm_ops;
+#ifdef NVMAP_CONFIG_DEBUG_MAPS
+	struct rb_root device_names;
+#endif /* NVMAP_CONFIG_DEBUG_MAPS */
+	struct debugfs_info *carevout_debugfs_info; /* Used for storing debugfs info */
+};
+
+struct list_block {
+	struct nvmap_heap_block block;
+	struct list_head all_list;
+	unsigned int mem_prot;
+	phys_addr_t orig_addr;
+	size_t size;
+	size_t align;
+	struct nvmap_heap *heap;
+	struct list_head free_list;
+};
+
 int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
 		phys_addr_t pend, int inner, int outer);
 

@@ -4,6 +4,9 @@
 #ifndef __NVMAP_ALLOC_H
 #define __NVMAP_ALLOC_H
 
+struct nvmap_heap;
+struct debugfs_info;
+
 void *nvmap_altalloc(size_t len);
 
 void nvmap_altfree(void *ptr, size_t len);
@@ -64,4 +67,26 @@ int nvmap_page_pool_init(struct nvmap_device *dev);
 
 int nvmap_page_pool_fini(struct nvmap_device *dev);
 #endif /* NVMAP_CONFIG_PAGE_POOLS */
+
+/* helper functions for nvmap_heap struct */
+size_t nvmap_get_heap_free_size(struct nvmap_heap *heap);
+
+int nvmap_get_heap_nid(struct nvmap_heap *heap);
+
+/* helper functions for nvmap_heap_block struct */
+phys_addr_t nvmap_get_heap_block_base(struct nvmap_heap_block *block);
+
+void nvmap_set_heap_block_handle(struct nvmap_heap_block *block, struct nvmap_handle *handle);
+
+/* helper functions for debugfs_info struct */
+unsigned int nvmap_get_debug_info_heap(struct debugfs_info *info);
+
+int nvmap_get_debug_info_nid(struct debugfs_info *info);
+
+struct debugfs_info *nvmap_create_debugfs_info(void);
+
+void nvmap_set_debugfs_heap(struct debugfs_info *info, unsigned int heap_bit);
+
+void nvmap_set_debugfs_numa(struct debugfs_info *info, int nid);
+
 #endif /* __NVMAP_ALLOC_H */

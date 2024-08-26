@@ -37,7 +37,6 @@
 #ifndef CONFIG_ARM64
 #include <asm/outercache.h>
 #endif
-#include "nvmap_heap.h"
 #include "nvmap_stats.h"
 
 #include <linux/fdtable.h>
@@ -70,7 +69,7 @@
 	handle,								      \
 	atomic_read(&handle->share_count),				      \
 	handle->heap_type == NVMAP_HEAP_IOVMM ? 0 : 			      \
-			(handle->carveout ? handle->carveout->base : 0),      \
+			(handle->carveout ? nvmap_get_heap_block_base(handle->carveout) : 0),      \
 	handle->size,							      \
 	(handle->userflags & 0xFFFF),                                         \
 	(handle->userflags >> 16),					      \

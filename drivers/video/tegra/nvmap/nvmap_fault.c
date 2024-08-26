@@ -185,8 +185,8 @@ static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf)
 	if (!priv->handle->heap_pgalloc) {
 		unsigned long pfn;
 
-		BUG_ON(priv->handle->carveout->base & ~PAGE_MASK);
-		pfn = ((priv->handle->carveout->base + offs) >> PAGE_SHIFT);
+		BUG_ON(nvmap_get_heap_block_base(priv->handle->carveout) & ~PAGE_MASK);
+		pfn = ((nvmap_get_heap_block_base(priv->handle->carveout) + offs) >> PAGE_SHIFT);
 		if (!pfn_is_map_memory(pfn)) {
 			vm_insert_pfn(vma,
 				(unsigned long)vmf_address, pfn);

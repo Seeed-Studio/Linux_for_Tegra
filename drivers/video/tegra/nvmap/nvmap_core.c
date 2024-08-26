@@ -30,7 +30,7 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
 {
 	if (h->heap_pgalloc)
 		BUG();
-	return h->carveout->base;
+	return nvmap_get_heap_block_base(h->carveout);
 }
 
 void *__nvmap_mmap(struct nvmap_handle *h)
@@ -84,16 +84,16 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	}
 
 	/* carveout - explicitly map the pfns into a vmalloc area */
-	adj_size = h->carveout->base & ~PAGE_MASK;
+	adj_size = nvmap_get_heap_block_base(h->carveout) & ~PAGE_MASK;
 	adj_size += h->size;
 	adj_size = PAGE_ALIGN(adj_size);
 
-	if (pfn_valid(__phys_to_pfn(h->carveout->base & PAGE_MASK))) {
+	if (pfn_valid(__phys_to_pfn(nvmap_get_heap_block_base(h->carveout) & PAGE_MASK))) {
 		unsigned long pfn;
 		struct page *page;
 		int nr_pages;
 
-		pfn = ((h->carveout->base) >> PAGE_SHIFT);
+		pfn = ((nvmap_get_heap_block_base(h->carveout)) >> PAGE_SHIFT);
 		page = pfn_to_page(pfn);
 		nr_pages = h->size >> PAGE_SHIFT;
 
@@ -107,10 +107,11 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 		vaddr = vmap(pages, nr_pages, VM_MAP, prot);
 	} else {
 #if defined(CONFIG_GENERIC_IOREMAP)
-		vaddr = (__force void *)ioremap_prot(h->carveout->base, adj_size, pgprot_val(prot));
+		vaddr = (__force void *)ioremap_prot(nvmap_get_heap_block_base(h->carveout),
+						adj_size, pgprot_val(prot));
 #else
-		vaddr = (__force void *)__ioremap(h->carveout->base, adj_size,
-			 prot);
+		vaddr = (__force void *)__ioremap(nvmap_get_heap_block_base(h->carveout),
+						adj_size, prot);
 #endif
 	}
 	if (vaddr == NULL)
@@ -118,7 +119,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 
 	if (vaddr && atomic_long_cmpxchg((atomic_long_t *)&h->vaddr,
 						 0, (long)vaddr)) {
-		vaddr -= (h->carveout->base & ~PAGE_MASK);
+		vaddr -= (nvmap_get_heap_block_base(h->carveout) & ~PAGE_MASK);
 		/*
 		 * iounmap calls vunmap for vmalloced address, hence
 		 * takes care of vmap/__ioremap freeing part.

@@ -44,7 +44,6 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
-#include "nvmap_heap.h"
 #include "nvmap_ioctl.h"
 #include <linux/pagewalk.h>
 
@@ -58,7 +57,6 @@ static struct device_dma_parameters nvmap_dma_parameters = {
 	.max_segment_size = UINT_MAX,
 };
 
-static struct debugfs_info iovmm_debugfs_info;
 static int nvmap_open(struct inode *inode, struct file *filp);
 static int nvmap_release(struct inode *inode, struct file *filp);
 static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
@@ -543,7 +541,7 @@ static void allocations_stringify(struct nvmap_client *client,
 		if (handle->alloc && handle->heap_type == heap_type) {
 			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   handle->heap_pgalloc ? 0 :
-					   (handle->carveout->base);
+					   (nvmap_get_heap_block_base(handle->carveout));
 			size_t size = K(handle->size);
 			int i = 0;
 
@@ -631,14 +629,14 @@ bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid)
 		 * on that numa node.
 		 */
 		if (numa_nid == NUMA_NO_NODE) {
-			if (size > (h->free_size & PAGE_MASK))
+			if (size > (nvmap_get_heap_free_size(h) & PAGE_MASK))
 				continue;
 			memory_available = true;
 			goto exit;
 		} else {
-			if (h->numa_node_id != numa_nid)
+			if (nvmap_get_heap_nid(h) != numa_nid)
 				continue;
-			else if (size > (h->free_size & PAGE_MASK))
+			else if (size > (nvmap_get_heap_free_size(h) & PAGE_MASK))
 				memory_available = false;
 			else
 				memory_available = true;
@@ -702,7 +700,7 @@ static void maps_stringify(struct nvmap_client *client,
 		if (handle->alloc && handle->heap_type == heap_type) {
 			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   handle->heap_pgalloc ? 0 :
-					   (handle->carveout->base);
+					   (nvmap_get_heap_block_base(handle->carveout));
 			size_t size = K(handle->size);
 			int i = 0;
 
@@ -765,7 +763,7 @@ static void nvmap_get_client_mss(struct nvmap_client *client,
 		struct nvmap_handle *handle = ref->handle;
 		if (handle->alloc && handle->heap_type == heap_type) {
 			if (heap_type != NVMAP_HEAP_IOVMM &&
-				(nvmap_block_to_heap(handle->carveout)->numa_node_id !=
+				(nvmap_get_heap_nid(nvmap_block_to_heap(handle->carveout)) !=
 				 numa_id))
 				continue;
 
@@ -815,7 +813,7 @@ static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id
 			continue;
 
 		if (heap_type != NVMAP_HEAP_IOVMM &&
-			(nvmap_block_to_heap(h->carveout)->numa_node_id !=
+			(nvmap_get_heap_nid(nvmap_block_to_heap(h->carveout)) !=
 			numa_id))
 			continue;
 
@@ -838,8 +836,8 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	u64 total;
 	struct nvmap_client *client;
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
-	u32 heap_type = debugfs_information->heap_bit;
-	int numa_id = debugfs_information->numa_id;
+	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
+	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -915,8 +913,8 @@ DEBUGFS_OPEN_FOPS(device_list);
 static int nvmap_debug_all_allocations_show(struct seq_file *s, void *unused)
 {
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
-	u32 heap_type = debugfs_information->heap_bit;
-	int numa_id = debugfs_information->numa_id;
+	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
+	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
 	struct rb_node *n;
 
 	spin_lock(&nvmap_dev->handle_lock);
@@ -931,14 +929,15 @@ static int nvmap_debug_all_allocations_show(struct seq_file *s, void *unused)
 			rb_entry(n, struct nvmap_handle, node);
 		int i = 0;
 
-		if (handle->alloc && handle->heap_type == debugfs_information->heap_bit) {
+		if (handle->alloc && handle->heap_type ==
+				nvmap_get_debug_info_heap(debugfs_information)) {
 			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   handle->heap_pgalloc ? 0 :
-					   (handle->carveout->base);
+					   (nvmap_get_heap_block_base(handle->carveout));
 			size_t size = K(handle->size);
 
 			if (heap_type != NVMAP_HEAP_IOVMM &&
-			    (nvmap_block_to_heap(handle->carveout)->numa_node_id != numa_id))
+			    (nvmap_get_heap_nid(nvmap_block_to_heap(handle->carveout)) != numa_id))
 				continue;
 
 next_page:
@@ -975,8 +974,8 @@ DEBUGFS_OPEN_FOPS(all_allocations);
 static int nvmap_debug_orphan_handles_show(struct seq_file *s, void *unused)
 {
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
-	u32 heap_type = debugfs_information->heap_bit;
-	int numa_id = debugfs_information->numa_id;
+	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
+	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
 	struct rb_node *n;
 
 
@@ -996,11 +995,11 @@ static int nvmap_debug_orphan_handles_show(struct seq_file *s, void *unused)
 			!atomic_read(&handle->share_count)) {
 			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   handle->heap_pgalloc ? 0 :
-					   (handle->carveout->base);
+					   (nvmap_get_heap_block_base(handle->carveout));
 			size_t size = K(handle->size);
 
 			if (heap_type != NVMAP_HEAP_IOVMM &&
-				(nvmap_block_to_heap(handle->carveout)->numa_node_id !=
+				(nvmap_get_heap_nid(nvmap_block_to_heap(handle->carveout)) !=
 					numa_id))
 				continue;
 
@@ -1039,8 +1038,8 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 	u64 total;
 	struct nvmap_client *client;
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
-	u32 heap_type = debugfs_information->heap_bit;
-	int numa_id = debugfs_information->numa_id;
+	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
+	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -1071,8 +1070,8 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 	u64 total;
 	struct nvmap_client *client;
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
-	u32 heap_type = debugfs_information->heap_bit;
-	int numa_id = debugfs_information->numa_id;
+	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
+	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -1116,7 +1115,7 @@ static int nvmap_debug_handles_by_pid_show_client(struct seq_file *s,
 
 		entry.base = handle->heap_type == NVMAP_HEAP_IOVMM ? 0 :
 			     handle->heap_pgalloc ? 0 :
-			     (handle->carveout->base);
+			     (nvmap_get_heap_block_base(handle->carveout));
 		entry.size = handle->size;
 		entry.flags = handle->userflags;
 		entry.share_count = atomic_read(&handle->share_count);
@@ -1303,41 +1302,44 @@ DEBUGFS_OPEN_FOPS(iovmm_procrank);
 static void nvmap_iovmm_debugfs_init(void)
 {
 	if (!IS_ERR_OR_NULL(nvmap_dev->debug_root)) {
-		struct dentry *iovmm_root =
-			debugfs_create_dir("iovmm", nvmap_dev->debug_root);
+		struct debugfs_info *iovmm_debugfs_info = nvmap_create_debugfs_info();
+		if (iovmm_debugfs_info != NULL) {
+			struct dentry *iovmm_root =
+				debugfs_create_dir("iovmm", nvmap_dev->debug_root);
 
-		iovmm_debugfs_info.heap_bit = NVMAP_HEAP_IOVMM;
-		iovmm_debugfs_info.numa_id = NUMA_NO_NODE;
+			nvmap_set_debugfs_heap(iovmm_debugfs_info, NVMAP_HEAP_IOVMM);
+			nvmap_set_debugfs_numa(iovmm_debugfs_info, NUMA_NO_NODE);
 
-		if (!IS_ERR_OR_NULL(iovmm_root)) {
-			debugfs_create_file("clients", S_IRUGO, iovmm_root,
-				(void *)&iovmm_debugfs_info,
-				&debug_clients_fops);
-			debugfs_create_file("allocations", S_IRUGO, iovmm_root,
-				(void *)&iovmm_debugfs_info,
-				&debug_allocations_fops);
-			debugfs_create_file("all_allocations", S_IRUGO,
-				iovmm_root, (void *)&iovmm_debugfs_info,
-				&debug_all_allocations_fops);
-			debugfs_create_file("orphan_handles", S_IRUGO,
-				iovmm_root, (void *)&iovmm_debugfs_info,
-				&debug_orphan_handles_fops);
-			debugfs_create_file("maps", S_IRUGO, iovmm_root,
-				(void *)&iovmm_debugfs_info,
-				&debug_maps_fops);
-			debugfs_create_file("free_size", S_IRUGO, iovmm_root,
-				(void *)&iovmm_debugfs_info,
-				&debug_free_size_fops);
+			if (!IS_ERR_OR_NULL(iovmm_root)) {
+				debugfs_create_file("clients", S_IRUGO, iovmm_root,
+					(void *)iovmm_debugfs_info,
+					&debug_clients_fops);
+				debugfs_create_file("allocations", S_IRUGO, iovmm_root,
+					(void *)iovmm_debugfs_info,
+					&debug_allocations_fops);
+				debugfs_create_file("all_allocations", S_IRUGO,
+					iovmm_root, (void *)iovmm_debugfs_info,
+					&debug_all_allocations_fops);
+				debugfs_create_file("orphan_handles", S_IRUGO,
+					iovmm_root, (void *)iovmm_debugfs_info,
+					&debug_orphan_handles_fops);
+				debugfs_create_file("maps", S_IRUGO, iovmm_root,
+					(void *)iovmm_debugfs_info,
+					&debug_maps_fops);
+				debugfs_create_file("free_size", S_IRUGO, iovmm_root,
+					(void *)iovmm_debugfs_info,
+					&debug_free_size_fops);
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
-			debugfs_create_file("device_list", S_IRUGO, iovmm_root,
-				(void *)&iovmm_debugfs_info,
-				&debug_device_list_fops);
+				debugfs_create_file("device_list", S_IRUGO, iovmm_root,
+					(void *)iovmm_debugfs_info,
+					&debug_device_list_fops);
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
 
 #ifdef NVMAP_CONFIG_PROCRANK
-			debugfs_create_file("procrank", S_IRUGO, iovmm_root,
-				nvmap_dev, &debug_iovmm_procrank_fops);
+				debugfs_create_file("procrank", S_IRUGO, iovmm_root,
+					nvmap_dev, &debug_iovmm_procrank_fops);
 #endif
+			}
 		}
 	}
 }

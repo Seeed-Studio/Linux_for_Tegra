@@ -36,7 +36,6 @@
 #include "nvmap_ioctl.h"
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
-#include "nvmap_heap.h"
 
 #include <linux/syscalls.h>
 #include <linux/nodemask.h>
@@ -823,7 +822,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		ref->handle->heap_pgalloc = false;
 		ref->handle->ivm_id = op.ivm_id;
 		ref->handle->carveout = block;
-		block->handle = ref->handle;
+		nvmap_set_heap_block_handle(block, ref->handle);
 		mb();
 		ref->handle->alloc = true;
 		NVMAP_TAG_TRACE(trace_nvmap_alloc_handle_done,
@@ -1377,10 +1376,11 @@ static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
 			if ((type & nvmap_dev->heaps[i].heap_bit) &&
 				(is_numa_aware ?
-				(numa_id == nvmap_dev->heaps[i].carveout->numa_node_id) : true)) {
+				(numa_id == nvmap_get_heap_nid(nvmap_dev->heaps[i].carveout)) :
+				true)) {
 				heap = nvmap_dev->heaps[i].carveout;
 				op.total = nvmap_query_heap_size(heap);
-				op.free = heap->free_size;
+				op.free = nvmap_get_heap_free_size(heap);
 				break;
 			}
 		}

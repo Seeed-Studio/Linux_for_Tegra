@@ -28,7 +28,6 @@
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
-#include "nvmap_heap.h"
 #include "include/linux/nvmap_exports.h"
 
 /*
@@ -502,3 +501,51 @@ out:
 	return ret;
 }
 #endif /* !NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC */
+
+size_t nvmap_get_heap_free_size(struct nvmap_heap *heap)
+{
+	return heap->free_size;
+}
+
+int nvmap_get_heap_nid(struct nvmap_heap *heap)
+{
+	return heap->numa_node_id;
+}
+
+phys_addr_t nvmap_get_heap_block_base(struct nvmap_heap_block *block)
+{
+	return block->base;
+}
+
+unsigned int nvmap_get_debug_info_heap(struct debugfs_info *info)
+{
+	return info->heap_bit;
+}
+
+int nvmap_get_debug_info_nid(struct debugfs_info *info)
+{
+	return info->numa_id;
+}
+
+void nvmap_set_heap_block_handle(struct nvmap_heap_block *block, struct nvmap_handle *handle)
+{
+	block->handle = handle;
+}
+
+struct debugfs_info *nvmap_create_debugfs_info(void)
+{
+	struct debugfs_info *info;
+
+	info = kzalloc(sizeof(*info), GFP_KERNEL);
+	return info;
+}
+
+void nvmap_set_debugfs_heap(struct debugfs_info *info, unsigned int heap_bit)
+{
+	info->heap_bit = heap_bit;
+}
+
+void nvmap_set_debugfs_numa(struct debugfs_info *info, int nid)
+{
+	info->numa_id = nid;
+}

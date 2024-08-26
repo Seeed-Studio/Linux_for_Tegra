@@ -27,6 +27,7 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
+#include "nvmap_alloc.h"
 
 /*
  * Verifies that the passed ID is a valid handle ID. Then the passed client's
