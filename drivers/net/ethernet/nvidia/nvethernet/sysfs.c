@@ -157,6 +157,77 @@ static DEVICE_ATTR(mac_tx_q, (S_IRUGO | S_IWUSR),
 #endif /* OSI_DEBUG */
 
 /**
+ * @brief Shows the current setting of PCS BASE-R FEC enabled
+ *
+ * Algorithm: Display the current PCS BASE-R FEC enabled.
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to store the current PCS BASE-R FEC setting
+ */
+static ssize_t ether_mac_base_r_fec_enable_show(
+				  struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+
+	return scnprintf(buf, PAGE_SIZE, "%s\n",
+			 (osi_core->pcs_base_r_fec_en == OSI_ENABLE) ?
+			 "enabled" : "disabled");
+}
+
+/**
+ * @brief Set the PCS BASE-R FEC enabled
+ *
+ * Algorithm: This is used to set the PCS BASE-R FEC enabled.
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer which contains the user settings of PCS BASE-R FEC
+ * @param[in] size: size of buffer
+ *
+ * @return size of buffer.
+ */
+static ssize_t ether_mac_base_r_fec_enable_store(
+				   struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t size)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+
+	/* Interface is up so base-r fec change not allowed */
+	if (netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is up\n");
+		return size;
+	}
+
+	if (strncmp(buf, "enable", 6) == 0U) {
+		osi_core->pcs_base_r_fec_en = OSI_ENABLE;
+		dev_info(pdata->dev, "Enabling PCS BASE-R FEC\n");
+	} else if (strncmp(buf, "disable", 7) == 0U) {
+		osi_core->pcs_base_r_fec_en = OSI_DISABLE;
+		dev_info(pdata->dev, "Disabling PCS BASE-R FEC\n");
+	} else {
+		dev_err(pdata->dev,
+			"Invalid entry. Valid Entries are enable or disable\n");
+	}
+
+	return size;
+}
+
+/**
+ * @brief Sysfs attribute for BASE-R FEC enable
+ *
+ */
+static DEVICE_ATTR(pcs_baser_fec, (S_IRUGO | S_IWUSR),
+		   ether_mac_base_r_fec_enable_show,
+		   ether_mac_base_r_fec_enable_store);
+
+/**
  * @brief Shows the current setting of MAC loopback
  *
  * Algorithm: Display the current MAC loopback setting.
@@ -3295,6 +3366,7 @@ static struct attribute *ether_sysfs_attrs[] = {
 	&dev_attr_desc_dump_enable.attr,
 #endif /* OSI_DEBUG */
 	&dev_attr_mac_loopback.attr,
+	&dev_attr_pcs_baser_fec.attr,
 	&dev_attr_ptp_mode.attr,
 	&dev_attr_ptp_sync.attr,
 	&dev_attr_frp.attr,
