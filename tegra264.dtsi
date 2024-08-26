@@ -8290,8 +8290,6 @@
 					"osc",
 					"mphy_l0_uphy_tx_fifo",
 					"uphy_pll3";
-                   assigned-clocks = <&bpmp TEGRA264_CLK_ISC_CPU_ROOT>;
-                   assigned-clock-parents = <&bpmp TEGRA264_CLK_UTMI_PLL1_CLKOUT480>;
                    resets = <&bpmp TEGRA264_RESET_MPHY_L0_RX>,
 				<&bpmp TEGRA264_RESET_MPHY_L0_TX>,
 				<&bpmp TEGRA264_RESET_MPHY_L1_RX>,
