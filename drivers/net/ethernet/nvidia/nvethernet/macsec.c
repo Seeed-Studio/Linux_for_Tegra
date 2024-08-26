@@ -221,44 +221,45 @@ int macsec_open(struct macsec_priv_data *macsec_pdata,
 	int ret = 0;
 
 	PRINT_ENTRY();
-	/* Request macsec irqs */
-	snprintf(macsec_pdata->irq_name[0], MACSEC_IRQ_NAME_SZ, "%s.macsec_s",
-		 netdev_name(pdata->ndev));
-	ret = devm_request_irq(dev, macsec_pdata->s_irq, macsec_s_isr,
-			       IRQF_TRIGGER_NONE, macsec_pdata->irq_name[0],
-			       macsec_pdata);
-	if (ret < 0) {
-		dev_err(dev, "failed to request irq %d\n", ret);
-		goto exit;
-	}
+	if (pdata->osi_core->use_virtualization == OSI_DISABLE) {
+		/* Request macsec irqs */
+		snprintf(macsec_pdata->irq_name[0], MACSEC_IRQ_NAME_SZ, "%s.macsec_s",
+			 netdev_name(pdata->ndev));
+		ret = devm_request_irq(dev, macsec_pdata->s_irq, macsec_s_isr,
+				       IRQF_TRIGGER_NONE, macsec_pdata->irq_name[0],
+				       macsec_pdata);
+		if (ret < 0) {
+			dev_err(dev, "failed to request irq %d\n", ret);
+			goto exit;
+		}
 
-	dev_info(dev, "%s: requested s_irq %d: %s\n", __func__,
-		 macsec_pdata->s_irq, macsec_pdata->irq_name[0]);
-	macsec_pdata->is_irq_allocated |= OSI_BIT(0);
+		dev_info(dev, "%s: requested s_irq %d: %s\n", __func__,
+			 macsec_pdata->s_irq, macsec_pdata->irq_name[0]);
+		macsec_pdata->is_irq_allocated |= OSI_BIT(0);
 
-	snprintf(macsec_pdata->irq_name[1], MACSEC_IRQ_NAME_SZ, "%s.macsec_ns",
-		 netdev_name(pdata->ndev));
+		snprintf(macsec_pdata->irq_name[1], MACSEC_IRQ_NAME_SZ, "%s.macsec_ns",
+			 netdev_name(pdata->ndev));
 
 #ifdef HSI_SUPPORT
-	ret = devm_request_threaded_irq(dev, macsec_pdata->ns_irq, macsec_ns_isr,
-					macsec_ns_isr_thread,
-					IRQF_TRIGGER_NONE | IRQF_ONESHOT,
-					macsec_pdata->irq_name[1],
-					macsec_pdata);
+		ret = devm_request_threaded_irq(dev, macsec_pdata->ns_irq, macsec_ns_isr,
+						macsec_ns_isr_thread,
+						IRQF_TRIGGER_NONE | IRQF_ONESHOT,
+						macsec_pdata->irq_name[1],
+						macsec_pdata);
 #else
-	ret = devm_request_irq(dev, macsec_pdata->ns_irq, macsec_ns_isr,
-			       IRQF_TRIGGER_NONE, macsec_pdata->irq_name[1],
-			       macsec_pdata);
+		ret = devm_request_irq(dev, macsec_pdata->ns_irq, macsec_ns_isr,
+				       IRQF_TRIGGER_NONE, macsec_pdata->irq_name[1],
+				       macsec_pdata);
 #endif
-	if (ret < 0) {
-		dev_err(dev, "failed to request irq %d\n", ret);
-		goto err_ns_irq;
+		if (ret < 0) {
+			dev_err(dev, "failed to request irq %d\n", ret);
+			goto err_ns_irq;
+		}
+
+		dev_info(dev, "%s: requested ns_irq %d: %s\n", __func__,
+			 macsec_pdata->ns_irq, macsec_pdata->irq_name[1]);
+		macsec_pdata->is_irq_allocated |= OSI_BIT(1);
 	}
-
-	dev_info(dev, "%s: requested ns_irq %d: %s\n", __func__,
-		 macsec_pdata->ns_irq, macsec_pdata->irq_name[1]);
-	macsec_pdata->is_irq_allocated |= OSI_BIT(1);
-
 	/* Invoke OSI HW initialization, initialize standard BYP entries */
 	ret = osi_macsec_init(pdata->osi_core, pdata->osi_core->mtu,
 			      (nveu8_t * const)pdata->ndev->dev_addr);
@@ -1345,37 +1346,39 @@ int macsec_probe(struct ether_priv_data *pdata)
 #endif
 
 	PRINT_ENTRY();
-	/* Check if MACsec is enabled in DT, if so map the I/O base addr */
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "macsec-base");
-	if (res) {
-		osi_core->macsec_base = devm_ioremap_resource(dev, res);
-		if (IS_ERR(osi_core->macsec_base)) {
-			dev_err(dev, "failed to ioremap MACsec base addr\n");
-			ret = PTR_ERR(osi_core->macsec_base);
+	if (osi_core->use_virtualization == OSI_DISABLE) {
+		/* Check if MACsec is enabled in DT, if so map the I/O base addr */
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "macsec-base");
+		if (res) {
+			osi_core->macsec_base = devm_ioremap_resource(dev, res);
+			if (IS_ERR(osi_core->macsec_base)) {
+				dev_err(dev, "failed to ioremap MACsec base addr\n");
+				ret = PTR_ERR(osi_core->macsec_base);
+				goto exit;
+			}
+#ifdef MACSEC_KEY_PROGRAM
+			/* store TZ window base address */
+			tz_addr = (res->start - MACSEC_SIZE);
+#endif
+		} else {
+			/* MACsec not supported per DT config, nothing more to do */
+			osi_core->macsec_base = NULL;
+			osi_core->tz_base = NULL;
+			pdata->macsec_pdata = NULL;
+			/* Return positive value to indicate MACsec not enabled in DT */
+			ret = 1;
 			goto exit;
 		}
-#ifdef MACSEC_KEY_PROGRAM
-		/* store TZ window base address */
-		tz_addr = (res->start - MACSEC_SIZE);
-#endif
-	} else {
-		/* MACsec not supported per DT config, nothing more to do */
-		osi_core->macsec_base = NULL;
-		osi_core->tz_base = NULL;
-		pdata->macsec_pdata = NULL;
-		/* Return positive value to indicate MACsec not enabled in DT */
-		ret = 1;
-		goto exit;
-	}
 
 #ifdef MACSEC_KEY_PROGRAM
-	osi_core->tz_base = devm_ioremap(dev, tz_addr, MACSEC_SIZE);
-	if (IS_ERR(osi_core->tz_base)) {
-		dev_err(dev, "failed to ioremap TZ base addr\n");
-		ret = PTR_ERR(osi_core->tz_base);
-		goto exit;
-	}
+		osi_core->tz_base = devm_ioremap(dev, tz_addr, MACSEC_SIZE);
+		if (IS_ERR(osi_core->tz_base)) {
+			dev_err(dev, "failed to ioremap TZ base addr\n");
+			ret = PTR_ERR(osi_core->tz_base);
+			goto exit;
+		}
 #endif
+	}
 	/* Alloc macsec priv data structure */
 	macsec_pdata = devm_kzalloc(dev, sizeof(struct macsec_priv_data),
 				    GFP_KERNEL);
@@ -1416,17 +1419,17 @@ int macsec_probe(struct ether_priv_data *pdata)
 		goto init_err;
 	}
 
+	if (osi_core->use_virtualization == OSI_DISABLE) {
 	/* Get platform resources - clks, resets, irqs.
 	 * CAR is not enabled and irqs not requested until macsec_init()
 	 */
-	ret = macsec_get_platform_res(macsec_pdata);
-	if (ret < 0) {
-		dev_err(dev, "macsec_get_platform_res failed\n");
-		goto init_err;
-	}
+		ret = macsec_get_platform_res(macsec_pdata);
+		if (ret < 0) {
+			dev_err(dev, "macsec_get_platform_res failed\n");
+			goto init_err;
+		}
 
 	/* Enable CAR */
-	if (osi_core->use_virtualization == OSI_DISABLE) {
 		ret = macsec_enable_car(macsec_pdata);
 		if (ret < 0) {
 			dev_err(dev, "Unable to enable macsec clks & reset\n");

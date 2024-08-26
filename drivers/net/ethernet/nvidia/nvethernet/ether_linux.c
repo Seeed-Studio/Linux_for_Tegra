@@ -3870,6 +3870,7 @@ static int ether_prepare_mc_list(struct net_device *dev,
 			}
 			ioctl_data->l2_filter.addr_mask = OSI_AMASK_DISABLE;
 			ioctl_data->l2_filter.src_dest = OSI_DA_MATCH;
+			ioctl_data->l2_filter.pkt_dup = OSI_ENABLE;
 			ioctl_data->cmd = OSI_CMD_L2_FILTER;
 			ret = osi_handle_ioctl(pdata->osi_core, ioctl_data);
 			if (ret < 0) {
