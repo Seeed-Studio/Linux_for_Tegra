@@ -43,7 +43,7 @@ static struct kmem_cache *heap_block_cache;
 
 int nvmap_query_heap_peer(struct nvmap_heap *heap, unsigned int *peer)
 {
-	if (!heap || !heap->is_ivm)
+	if (heap == NULL || !heap->is_ivm)
 		return -EINVAL;
 	*peer = heap->peer;
 	return 0;

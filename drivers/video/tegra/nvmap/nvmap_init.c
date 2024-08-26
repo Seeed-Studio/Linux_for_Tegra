@@ -225,7 +225,7 @@ static int __init nvmap_populate_ivm_carveout(struct device *dev)
 				co->size     = ivm->size;
 				co->vmid     = guestid;
 
-				if (!co->base || !co->size) {
+				if (co->base == 0U || co->size == 0U) {
 					ret = -EINVAL;
 					goto fail;
 				}
@@ -597,7 +597,7 @@ static int nvmap_dma_init_coherent_memory(
 	if (!size)
 		return -EINVAL;
 
-	if (!(flags & DMA_MEMORY_NOMAP)) {
+	if ((flags & DMA_MEMORY_NOMAP) == 0) {
 		mem_base = memremap(phys_addr, size, MEMREMAP_WC);
 		if (!mem_base)
 			return -EINVAL;
@@ -610,7 +610,7 @@ static int nvmap_dma_init_coherent_memory(
 	}
 
 	dma_mem->bitmap = kzalloc(bitmap_size, GFP_KERNEL);
-	if (!dma_mem->bitmap) {
+	if (dma_mem->bitmap == NULL) {
 		ret = -ENOMEM;
 		goto err_free_dma_mem;
 	}
@@ -662,7 +662,7 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 	if (!co->size)
 		return 0;
 
-	if (!co->cma_dev) {
+	if (co->cma_dev == NULL) {
 		err = nvmap_dma_declare_coherent_memory(co->dma_dev, 0,
 				co->base, co->size,
 				DMA_MEMORY_NOMAP);

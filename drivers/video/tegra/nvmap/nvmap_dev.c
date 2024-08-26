@@ -207,7 +207,7 @@ unlock:
 	}
 
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
-	if (!client) {
+	if (client == NULL) {
 		mutex_unlock(&dev->clients_lock);
 		return NULL;
 	}
@@ -310,7 +310,7 @@ static int nvmap_release(struct inode *inode, struct file *filp)
 {
 	struct nvmap_client *priv = filp->private_data;
 
-	if(!priv)
+	if (priv == NULL)
 		return 0;
 
 	trace_nvmap_release(priv, priv->name);
@@ -809,7 +809,7 @@ static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id
 		struct nvmap_handle *h =
 			rb_entry(n, struct nvmap_handle, node);
 
-		if (!h || !h->alloc || h->heap_type != heap_type)
+		if (h == NULL || !h->alloc || h->heap_type != heap_type)
 			continue;
 
 		if (heap_type != NVMAP_HEAP_IOVMM &&

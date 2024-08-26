@@ -64,7 +64,7 @@ int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
 	struct nvmap_tag_entry *old;
 
 	new = kzalloc(sizeof(struct nvmap_tag_entry) + len + 1, GFP_KERNEL);
-	if (!new)
+	if (new == NULL)
 		return -ENOMEM;
 
 	if (copy_from_user(new + 1, name, len)) {

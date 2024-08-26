@@ -171,7 +171,7 @@ static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf)
 
 	offs = (unsigned long)(vmf_address - vma->vm_start);
 	priv = vma->vm_private_data;
-	if (!priv || !priv->handle || !priv->handle->alloc)
+	if (priv == NULL || priv->handle == NULL || !priv->handle->alloc)
 		return VM_FAULT_SIGBUS;
 
 	offs += priv->offs;

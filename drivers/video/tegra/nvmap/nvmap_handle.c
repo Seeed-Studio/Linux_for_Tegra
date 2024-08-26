@@ -192,7 +192,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 		return ERR_PTR(-EINVAL);
 	}
 
-	if (!size)
+	if (size == 0U)
 		size = vma->vm_end - vaddr;
 
 	/* Don't allow exuberantly large sizes. */
@@ -227,7 +227,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	struct nvmap_handle_ref *ref = NULL;
 	struct dma_buf *dmabuf;
 
-	if (!client)
+	if (client == NULL)
 		return ERR_PTR(-EINVAL);
 
 	if (!size)
@@ -338,7 +338,7 @@ found:
 	 * the ivm allocation ioctl.
 	 */
 	*block = h->carveout;
-	if (!h->dmabuf)
+	if (h->dmabuf == NULL)
 		goto fail;
 	BUG_ON(!h->dmabuf->file);
 	/* This is same as get_dma_buf() if file->f_count was non-zero */
@@ -505,7 +505,7 @@ struct nvmap_handle_ref *nvmap_dup_handle_ro(struct nvmap_client *client,
 	struct nvmap_handle_ref *ref = NULL;
 	long remain;
 
-	if (!client)
+	if (client == NULL)
 		return ERR_PTR(-EINVAL);
 
 	h = nvmap_handle_get_from_id(client, id);

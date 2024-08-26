@@ -379,7 +379,7 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 	u32 non_zero_idx;
 	u32 non_zero_cnt = 0;
 
-	if (!enable_pp || !nr)
+	if (!enable_pp || nr == 0U)
 		return 0;
 
 	rt_mutex_lock(&pool->lock);

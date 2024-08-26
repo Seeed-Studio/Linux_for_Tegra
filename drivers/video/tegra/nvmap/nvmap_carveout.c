@@ -52,7 +52,7 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 		node = krealloc(nvmap_dev->heaps,
 				sizeof(*node) * (nvmap_dev->nr_carveouts + 1),
 				GFP_KERNEL);
-		if (!node) {
+		if (node == NULL) {
 			err = -ENOMEM;
 			pr_err("nvmap heap array resize failed\n");
 			goto out;
@@ -76,7 +76,7 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 	node->base = round_up(co->base, PAGE_SIZE);
 	node->size = round_down(co->size -
 				(node->base - co->base), PAGE_SIZE);
-	if (!co->size)
+	if (co->size == 0)
 		goto out;
 
 	node->carveout = nvmap_heap_create(

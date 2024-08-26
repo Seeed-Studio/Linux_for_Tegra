@@ -428,7 +428,7 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	if (!client)
+	if (client == NULL)
 		return -ENODEV;
 
 	is_ro = op.flags & NVMAP_HANDLE_RO;
@@ -638,10 +638,10 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 	void *addr;
 	int ret = 0;
 
-	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
+	if ((h->heap_type & nvmap_dev->cpu_access_mask) == 0)
 		return -EPERM;
 
-	if (!elem_size || !count)
+	if (elem_size == 0 || count == 0)
 		return -EINVAL;
 
 	if (!h->alloc)
@@ -694,7 +694,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
 				ret = copy_from_user(tmp, (void __user *)sys_addr,
 						     elem_size);
-				if (!ret)
+				if (ret == 0)
 					kasan_memcpy_toio((void __iomem *)addr, tmp, elem_size);
 			} else
 				ret = copy_from_user(addr, (void __user *)sys_addr, elem_size);
@@ -787,7 +787,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	if (!client)
+	if (client == NULL)
 		return -ENODEV;
 
 	ref = nvmap_try_duplicate_by_ivmid(client, op.ivm_id, &block);
@@ -874,7 +874,7 @@ int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
 
 	nvmap_acquire_mmap_read_lock(mm);
 	vma = find_vma(mm, op.va);
-	if (unlikely(!vma) || (unlikely(op.va < vma->vm_start )) ||
+	if (unlikely(vma == NULL) || (unlikely(op.va < vma->vm_start)) ||
 		unlikely(op.va >= vma->vm_end)) {
 		nvmap_release_mmap_read_lock(mm);
 		goto exit;
@@ -1447,7 +1447,7 @@ int nvmap_ioctl_dup_handle(struct file *filp, void __user *arg)
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	if (!client)
+	if (client == NULL)
 		return -ENODEV;
 
 	if (is_nvmap_id_ro(client, op.handle, &is_ro) != 0) {

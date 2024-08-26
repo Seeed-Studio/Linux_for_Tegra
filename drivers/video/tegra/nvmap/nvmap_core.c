@@ -205,11 +205,11 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 	int err, npages;
 	struct page **pages;
 
-	if (!virt_addr_valid(h))
+	if (virt_addr_valid(h) == 0)
 		return ERR_PTR(-EINVAL);
 
 	h = nvmap_handle_get(h);
-	if (!h)
+	if (h == NULL)
 		return ERR_PTR(-EINVAL);
 
 	if (!h->alloc) {

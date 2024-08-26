@@ -367,7 +367,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	struct nvmap_vma_priv *priv;
 
 	h = nvmap_handle_get(h);
-	if (!h)
+	if (h == NULL)
 		return -EINVAL;
 
 	if ((h->heap_type & nvmap_dev->cpu_access_mask) == 0U) {
@@ -566,7 +566,7 @@ int __nvmap_dmabuf_fd(struct nvmap_client *client,
 	if (client->next_fd >= NVMAP_CONFIG_DEFER_FD_RECYCLE_MAX_FD)
 		client->next_fd = NVMAP_CONFIG_FD_START;
 #endif
-	if (!dmabuf || !dmabuf->file)
+	if (dmabuf == NULL || dmabuf->file == NULL)
 		return -EINVAL;
 	/* Allocate fd from start_fd(>=1024) onwards to overcome
 	 * __FD_SETSIZE limitation issue for select(),

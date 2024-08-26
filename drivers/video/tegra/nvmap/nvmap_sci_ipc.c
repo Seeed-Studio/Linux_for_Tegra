@@ -78,7 +78,7 @@ static u64 nvmap_unique_sci_ipc_id(void)
 	static atomic_t unq_id = { 0 };
 	u64 id;
 
-	if (!list_empty(&nvmapsciipc->free_sid_list)) {
+	if (list_empty(&nvmapsciipc->free_sid_list) == 0) {
 		struct free_sid_node *fnode = list_first_entry(
 			&nvmapsciipc->free_sid_list,
 			typeof(*fnode),

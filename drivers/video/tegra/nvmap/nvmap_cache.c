@@ -76,7 +76,7 @@ static void heap_page_cache_maint(
 	}
 
 	if (inner) {
-		if (!h->vaddr) {
+		if (h->vaddr == NULL) {
 			if (__nvmap_mmap(h))
 				__nvmap_munmap(h, h->vaddr);
 			else
@@ -290,7 +290,7 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 	nvmap_acquire_mmap_read_lock(current->mm);
 
 	vma = find_vma(current->active_mm, (unsigned long)op->addr);
-	if (!vma || !is_nvmap_vma(vma) ||
+	if (vma == NULL || is_nvmap_vma(vma) == 0 ||
 	    (ulong)op->addr < vma->vm_start ||
 	    (ulong)op->addr >= vma->vm_end ||
 	    op->len > vma->vm_end - (ulong)op->addr) {
