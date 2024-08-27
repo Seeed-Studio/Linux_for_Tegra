@@ -1794,6 +1794,11 @@ static u16 rtw_select_queue(struct net_device *dev, struct sk_buff *skb
 	if (pmlmepriv->acm_mask != 0)
 		skb->priority = qos_acm(pmlmepriv->acm_mask, skb->priority);
 
+#ifdef RTW_EAPOL_QUEUE
+	if (skb->protocol == htons(0x888e))
+		return 4;
+#endif
+
 	return rtw_1d_to_queue[skb->priority];
 }
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35)) */
@@ -2711,6 +2716,9 @@ struct dvobj_priv *devobj_init(void)
 #if defined(CONFIG_PLATFORM_RTK129X) && defined(CONFIG_PCI_HCI)
 	_rtw_spinlock_init(&pdvobj->io_reg_lock);
 #endif
+#ifdef CONFIG_PCI_HCI
+	_rtw_spinlock_init(&pdvobj->irq_th_lock);
+#endif
 #ifdef CONFIG_MBSSID_CAM
 	rtw_mbid_cam_init(pdvobj);
 #endif
@@ -2810,6 +2818,9 @@ void devobj_deinit(struct dvobj_priv *pdvobj)
 
 #if defined(CONFIG_PLATFORM_RTK129X) && defined(CONFIG_PCI_HCI)
 	_rtw_spinlock_free(&pdvobj->io_reg_lock);
+#endif
+#ifdef CONFIG_PCI_HCI
+	_rtw_spinlock_free(&pdvobj->irq_th_lock);
 #endif
 #ifdef CONFIG_MBSSID_CAM
 	rtw_mbid_cam_deinit(pdvobj);

@@ -175,12 +175,25 @@ u8 rtw_do_join(_adapter *padapter)
 
 				pmlmepriv->to_join = _FALSE;
 				#endif /* CONFIG_AP_MODE */
+
+			} else if (pmlmepriv->need_to_roam == _TRUE || rtw_to_roam(padapter) > 0) {
+				/* can't associate ; reset under-linking			 */
+				_clr_fwstate_(pmlmepriv, WIFI_UNDER_LINKING);
+				/* if all scanned candidates are fail, report to supplicant */
+				rtw_set_to_roam(padapter, 0);
+				rtw_indicate_disconnect(padapter, 0, TRUE);
+				pmlmepriv->to_join = _FALSE;
+#ifdef CONFIG_LAYER2_ROAMING
+				flush_roam_buf_pkt(padapter, TRUE);
+#endif
+				ret = _FAIL;
+
 			} else {
 				/* can't associate ; reset under-linking			 */
 				_clr_fwstate_(pmlmepriv, WIFI_UNDER_LINKING);
-
 				/* when set_ssid/set_bssid for rtw_do_join(), but there are no desired bss in scanning queue */
 				/* we try to issue sitesurvey firstly			 */
+
 				if (pmlmepriv->LinkDetectInfo.bBusyTraffic == _FALSE
 				    || rtw_to_roam(padapter) > 0
 				   ) {

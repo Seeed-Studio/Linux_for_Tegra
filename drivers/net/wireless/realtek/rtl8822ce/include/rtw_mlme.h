@@ -1182,6 +1182,7 @@ void rtw_set_to_roam(_adapter *adapter, u8 to_roam);
 u8 rtw_dec_to_roam(_adapter *adapter);
 u8 rtw_to_roam(_adapter *adapter);
 int rtw_select_roaming_candidate(struct mlme_priv *pmlmepriv);
+void flush_roam_buf_pkt(_adapter *padapter, int clear_roam);
 #else
 #define rtw_roam_flags(adapter) 0
 #define rtw_chk_roam_flags(adapter, flags) 0

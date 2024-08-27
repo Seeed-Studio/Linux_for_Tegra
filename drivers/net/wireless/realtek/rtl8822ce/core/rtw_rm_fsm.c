@@ -72,7 +72,7 @@ int rtw_init_rm(_adapter *padapter)
 		| BIT(RM_BCN_PASSIVE_MEAS_CAP_EN)
 		| BIT(RM_BCN_ACTIVE_MEAS_CAP_EN)
 		| BIT(RM_BCN_TABLE_MEAS_CAP_EN)
-		/*| BIT(RM_BCN_MEAS_REP_COND_CAP_EN)*/;
+		| BIT(RM_BCN_MEAS_REP_COND_CAP_EN);
 
 	/* bit  8-15 */
 	prmpriv->rm_en_cap_def[1] = 0
@@ -910,9 +910,9 @@ static int rm_state_recv_report(struct rm_obj *prm, enum RM_EV_ID evid)
 			if (val8) {
 				RTW_INFO("RM: rmid=%x peer reject (%s repeat=%d)\n",
 					prm->rmid,
-					val8|MEAS_REP_MOD_INCAP?"INCAP":
-					val8|MEAS_REP_MOD_REFUSE?"REFUSE":
-					val8|MEAS_REP_MOD_LATE?"LATE":"",
+					val8&MEAS_REP_MOD_INCAP?"INCAP":
+					val8&MEAS_REP_MOD_REFUSE?"REFUSE":
+					val8&MEAS_REP_MOD_LATE?"LATE":"",
 					prm->p.rpt);
 				rm_state_goto(prm, RM_ST_END);
 				return _SUCCESS;

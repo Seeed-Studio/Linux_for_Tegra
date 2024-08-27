@@ -3871,6 +3871,10 @@ unsigned int OnDeAuth(_adapter *padapter, union recv_frame *precv_frame)
 	}
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_LAYER2_ROAMING
+	/* EAPOL fail case */
+	flush_roam_buf_pkt(padapter, TRUE);
+#endif
 	reason = le16_to_cpu(*(unsigned short *)(pframe + WLAN_HDR_A3_LEN));
 
 #ifdef CONFIG_AP_MODE
@@ -12252,6 +12256,7 @@ unsigned int receive_disconnect(_adapter *padapter, unsigned char *MacAddr, unsi
 	RTW_INFO("%s\n", __FUNCTION__);
 
 #ifdef CONFIG_LAYER2_ROAMING
+	flush_roam_buf_pkt(padapter, FALSE);
 	if (pmlmepriv->roam_network)
 		pmlmepriv->roam_buf_pkt = 1;
 #endif
@@ -13737,6 +13742,9 @@ void roamed_status_chk(_adapter *padapter, u8 from_timer)
 		}
 	}
 
+	if (pmlmepriv->roam_network)
+		return;
+
 #ifdef CONFIG_RTW_PREFER_5G
 	if (IS_2G_BSS(pmlmepriv->cur_network_scanned->network))
 		skip_rssi_chk = 1;
@@ -14701,7 +14709,7 @@ u8 join_cmd_hdl(_adapter *padapter, u8 *pbuf)
 #if 1
 	new_band = get_iqk_band(u_ch);
 	RTW_INFO("iqk_band=%d, new =%d\n", pmlmeext->iqk_band, new_band);
-	if (pmlmeext->iqk_band != new_band) {
+	if (!rnetwork || (pmlmeext->iqk_band != new_band)) {
 		doiqk = _TRUE;
 		rtw_hal_set_hwreg(padapter , HW_VAR_DO_IQK , &doiqk);
 		pmlmeext->iqk_band = new_band;

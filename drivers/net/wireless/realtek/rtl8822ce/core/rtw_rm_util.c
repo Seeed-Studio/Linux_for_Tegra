@@ -386,6 +386,7 @@ int rm_get_path_a_max_tx_power(_adapter *adapter, s8 *path_a)
 	s8 max_pwr[RF_PATH_MAX], pwr;
 
 
+	_rtw_memset(max_pwr, -127, RF_PATH_MAX);
 	band = hal_data->current_band_type;
 	bw = hal_data->current_channel_bw;
 	ch = hal_data->current_channel;

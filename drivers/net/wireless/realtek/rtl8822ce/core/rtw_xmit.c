@@ -5173,7 +5173,10 @@ s32 rtw_xmit(_adapter *padapter, _pkt **ppkt, u16 os_qid)
 	if (start == 0)
 		start = rtw_get_current_time();
 
-	pxmitframe = rtw_alloc_xmitframe(pxmitpriv, os_qid);
+	if (skb->protocol == htons(0x888e))
+		pxmitframe = rtw_alloc_xmitframe_ext(pxmitpriv);
+	else
+		pxmitframe = rtw_alloc_xmitframe(pxmitpriv, os_qid);
 
 	if (rtw_get_passing_time_ms(start) > 2000) {
 		if (drop_cnt)

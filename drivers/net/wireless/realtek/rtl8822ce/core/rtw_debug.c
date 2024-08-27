@@ -2825,6 +2825,10 @@ int proc_get_trx_info(struct seq_file *m, void *v)
 	struct recv_priv  *precvpriv = &padapter->recvpriv;
 	struct hw_xmit *phwxmit;
 	u16 vo_params[4], vi_params[4], be_params[4], bk_params[4];
+#ifdef CONFIG_LAYER2_ROAMING
+	_list *plist, *phead;
+	_irqL irqL;
+#endif
 
 	padapter->hal_func.read_wmmedca_reg(padapter, vo_params, vi_params, be_params, bk_params);
 
@@ -2853,6 +2857,19 @@ int proc_get_trx_info(struct seq_file *m, void *v)
 	}
 
 	rtw_hal_get_hwreg(padapter, HW_VAR_DUMP_MAC_TXFIFO, (u8 *)m);
+
+#ifdef CONFIG_LAYER2_ROAMING
+	i = 0;
+	_enter_critical_bh(&pxmitpriv->rpkt_queue.lock, &irqL);
+	phead = get_list_head(&pxmitpriv->rpkt_queue);
+	plist = get_next(phead);
+	while ((rtw_end_of_queue_search(phead, plist)) == _FALSE) {
+		i++;
+		plist = get_next(plist);
+	}
+	_exit_critical_bh(&pxmitpriv->rpkt_queue.lock, &irqL);
+	RTW_PRINT_SEL(m, "TX: roam_buf_pkt=%d:%d\n", padapter->mlmepriv.roam_buf_pkt, i);
+#endif
 
 #ifdef CONFIG_USB_HCI
 	RTW_PRINT_SEL(m, "rx_urb_pending_cn=%d\n", ATOMIC_READ(&(precvpriv->rx_pending_cnt)));

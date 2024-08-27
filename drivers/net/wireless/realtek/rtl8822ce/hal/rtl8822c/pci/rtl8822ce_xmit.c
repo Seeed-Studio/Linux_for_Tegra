@@ -64,9 +64,7 @@ s32 rtl8822ce_init_xmit_priv(_adapter *padapter)
 
 void rtl8822ce_free_xmit_priv(_adapter *padapter)
 {
-	struct dvobj_priv *pdvobjpriv = adapter_to_dvobj(padapter);
 
-	_rtw_spinlock_free(&pdvobjpriv->irq_th_lock);
 }
 
 static s32 rtl8822ce_enqueue_xmitbuf(struct rtw_tx_ring	*ring,
@@ -1630,7 +1628,7 @@ void rtl8822ce_tx_isr(PADAPTER Adapter, int prio)
 		#endif
 		#ifndef CONFIG_PCIE_DMA_COHERENT
 			dma_unmap_single(&pdvobjpriv->ppcidev->dev,
-				 GET_TX_BD_PHYSICAL_ADDR0_LOW(tx_desc),
+					 mapping,
 					 pxmitbuf->len, DMA_TO_DEVICE);
 		#endif
 			rtw_sctx_done(&pxmitbuf->sctx);

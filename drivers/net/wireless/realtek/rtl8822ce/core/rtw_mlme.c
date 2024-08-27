@@ -144,13 +144,13 @@ sint	_rtw_init_mlme_priv(_adapter *padapter)
 #endif
 
 #ifdef CONFIG_LAYER2_ROAMING
-#define RTW_ROAM_SCAN_RESULT_EXP_MS (10*1000)
+#define RTW_ROAM_SCAN_RESULT_EXP_MS (5*1000)
 #define RTW_ROAM_IDLE_RSSI_DIFF_TH 5
 #define RTW_ROAM_BUSY_RSSI_DIFF_TH 10
-#define RTW_ROAM_SCAN_INTERVAL (2)    /* 5*(2 second)*/
-#define RTW_ROAM_IDLE_RSSI_THRESHOLD 40
-#define RTW_ROAM_BUSY_RSSI_THRESHOLD 40
-#define RTW_ROAM_DICONNECT_DELAY	20
+#define RTW_ROAM_SCAN_INTERVAL (5)    /* 5*(2 second)*/
+#define RTW_ROAM_IDLE_RSSI_THRESHOLD 35
+#define RTW_ROAM_BUSY_RSSI_THRESHOLD 30
+#define RTW_ROAM_DICONNECT_DELAY	50
 	_rtw_spinlock_init(&pmlmepriv->clnt_auth_lock);
 	pmlmepriv->roam_flags = CONFIG_ROAMING_FLAG;
 
@@ -4295,6 +4295,43 @@ exit:
 
 	return ret;
 }
+
+void flush_roam_buf_pkt(_adapter *padapter, int clear_roam)
+{
+	struct xmit_frame *rframe;
+	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
+	_list *plist, *phead;
+	_irqL irqL;
+	int i = 0;
+
+	RTW_INFO(FUNC_ADPT_FMT" - clear_roam = %d, roam_buf_pkt = %d\n",
+		FUNC_ADPT_ARG(padapter), clear_roam, padapter->mlmepriv.roam_buf_pkt);
+
+	if (clear_roam) {
+		padapter->mlmepriv.roam_network = NULL;
+		padapter->mlmepriv.candidate_5G = NULL;
+	}
+
+	if (padapter->mlmepriv.roam_buf_pkt) {
+
+		padapter->mlmepriv.roam_buf_pkt = 0;
+		_enter_critical_bh(&pxmitpriv->rpkt_queue.lock, &irqL);
+		phead = get_list_head(&pxmitpriv->rpkt_queue);
+		plist = get_next(phead);
+		while ((rtw_end_of_queue_search(phead, plist)) == _FALSE) {
+			rframe = LIST_CONTAINOR(plist, struct xmit_frame, list);
+			plist = get_next(plist);
+			rtw_list_delete(&rframe->list);
+			rtw_free_xmitframe(pxmitpriv, rframe);
+			i++;
+		}
+		_exit_critical_bh(&pxmitpriv->rpkt_queue.lock, &irqL);
+		if (i)
+			RTW_INFO(FUNC_ADPT_FMT" - drop %d roam_buf_pkt\n",FUNC_ADPT_ARG(padapter), i);
+	}
+}
+
 #endif /* CONFIG_LAYER2_ROAMING */
 
 /*
@@ -5833,7 +5870,11 @@ inline void rtw_set_to_roam(_adapter *adapter, u8 to_roam)
 
 inline u8 rtw_dec_to_roam(_adapter *adapter)
 {
-	adapter->mlmepriv.to_roam--;
+	if (adapter->mlmepriv.to_roam > 0)
+		adapter->mlmepriv.to_roam--;
+	else
+		adapter->mlmepriv.to_roam = 0;
+
 	return adapter->mlmepriv.to_roam;
 }
 

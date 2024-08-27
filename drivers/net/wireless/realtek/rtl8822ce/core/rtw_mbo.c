@@ -786,9 +786,7 @@ void rtw_mbo_build_assoc_req_ies(
 {
 	u32 len = 0;
 	
-#ifndef CONFIG_ECSA
 	rtw_mbo_build_supp_op_class_elem(padapter, pframe, pattrib);
-#endif
 
 	len += rtw_mbo_attr_sz_get(padapter, RTW_MBO_ATTR_CELL_DATA_CAP_ID);
 	len += rtw_mbo_attr_sz_get(padapter, RTW_MBO_ATTR_NPREF_CH_RPT_ID);

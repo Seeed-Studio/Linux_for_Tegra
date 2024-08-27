@@ -3025,7 +3025,11 @@ struct net_device *rtw_alloc_etherdev_with_old_priv(int sizeof_priv, void *old_p
 	struct rtw_netdev_priv_indicator *pnpi;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
+#ifdef RTW_EAPOL_QUEUE
+	pnetdev = alloc_etherdev_mq(sizeof(struct rtw_netdev_priv_indicator), 5);
+#else
 	pnetdev = alloc_etherdev_mq(sizeof(struct rtw_netdev_priv_indicator), 4);
+#endif /* RTW_EAPOL_QUEUE */
 #else
 	pnetdev = alloc_etherdev(sizeof(struct rtw_netdev_priv_indicator));
 #endif

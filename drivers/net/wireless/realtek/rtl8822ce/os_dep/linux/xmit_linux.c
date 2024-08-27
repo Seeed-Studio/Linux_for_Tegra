@@ -262,7 +262,13 @@ static inline bool rtw_os_need_stop_queue(_adapter *padapter, u16 os_qid)
 		/* No free space for Tx, tx_worker is too slow */
 		if (pxmitpriv->hwxmits[os_qid].accnt > WMM_XMIT_THRESHOLD)
 			return _TRUE;
-	} else {
+	}
+#ifdef RTW_EAPOL_QUEUE
+	else if (os_qid == 4) { /* EAPOL */
+		return _FALSE;
+	}
+#endif
+	else { /* VO VI BE BK */
 		if (pxmitpriv->free_xmitframe_cnt <= 4)
 			return _TRUE;
 	}
