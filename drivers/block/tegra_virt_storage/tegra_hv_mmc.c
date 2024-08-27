@@ -12,6 +12,12 @@
 #include <linux/mmc/core.h>
 #include "tegra_vblk.h"
 
+#define MMC_SWITCH_MODE_WRITE                         ((uint32_t)0x3)
+#define EXT_CSD_MODE_CONFIG                             30
+#define EXT_CSD_MODE_CONFIG_FFU                      1
+#define MMC_SWITCH_CMDSET_DFLT                        0x01U
+#define MMC_SWITCH                      6
+
 int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 	struct vblk_ioctl_req *ioctl_req,
 	void __user *user,
@@ -88,6 +94,21 @@ int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 		}
 		combo_cmd->cmd = ic.opcode;
 		combo_cmd->arg = ic.arg;
+
+
+		if (combo_cmd->cmd == MMC_SWITCH &&
+				(combo_cmd->arg ==
+				 (((uint32_t)MMC_SWITCH_MODE_WRITE << 24) |
+				 ((uint32_t)EXT_CSD_MODE_CONFIG << 16) |
+				 ((uint32_t)EXT_CSD_MODE_CONFIG_FFU << 8) |
+				 (uint32_t)MMC_SWITCH_CMDSET_DFLT)) &&
+				!(vblkdev->allow_ffu_passthrough_cmds)) {
+			dev_err(vblkdev->device,
+					"FFU permission not present\n");
+			err = -EPERM;
+			goto free_ioc_buf;
+		}
+
 		combo_cmd->write_flag = (uint32_t)ic.write_flag;
 		combo_cmd->data_len = (uint32_t)(ic.blksz * ic.blocks);
 		combo_cmd->buf_offset = combo_cmd_size;

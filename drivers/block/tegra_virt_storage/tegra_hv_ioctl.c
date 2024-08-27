@@ -92,8 +92,12 @@ int vblk_submit_ioctl_req(struct block_device *bdev,
 	 * whole block device, not on a partition.  This prevents overspray
 	 * between sibling partitions.
 	 */
-	if (!capable(CAP_SYS_RAWIO))
+	if ((!capable(CAP_SYS_RAWIO)) ||
+			!(vblkdev->allow_rest_of_passthrough_cmds)) {
+		dev_err(vblkdev->device,
+			"Permission denied for passthrough cmds\n");
 		return -EPERM;
+	}
 
 	ioctl_req = kzalloc(sizeof(struct vblk_ioctl_req), GFP_KERNEL);
 	if (!ioctl_req) {
@@ -193,6 +197,31 @@ int vblk_ioctl(struct block_device *bdev, fmode_t mode,
 		break;
 	}
 	mutex_unlock(&vblkdev->ioctl_lock);
+
+	return ret;
+}
+
+/* The ioctl() implementation for block device node */
+int vblk_ioctl_not_supported(struct block_device *bdev, fmode_t mode,
+	unsigned int cmd, unsigned long arg)
+{
+	int ret;
+	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
+
+	switch (cmd) {
+	case MMC_IOC_MULTI_CMD:
+	case MMC_IOC_CMD:
+	case SG_IO:
+	case UFS_IOCTL_COMBO_QUERY:
+		dev_err(vblkdev->device,
+			"IOCTL is not supported on non-ctl device node %u %lu\n",
+			cmd, arg);
+		ret = -ENOTTY;
+		break;
+	default:  /* unknown command */
+		ret = -ENOTTY;
+		break;
+	}
 
 	return ret;
 }

@@ -17,6 +17,8 @@
 #include "tegra_vblk.h"
 
 #define UFS_REQUEST_SENS_DATA_LEN 18U
+#define SCSI_WRITE_BUFFER_CMD_CODE     0x3B
+#define SCSI_MODE_FFU_VAL            0xE
 
 int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 		struct vblk_ioctl_req *ioctl_req,
@@ -38,6 +40,7 @@ int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 	uint32_t ioctl_len;
 	void *ioctl_buf = NULL;
 	uint32_t max_sb_len;
+	uint8_t *cdb;
 
 	hp = kmalloc(header_len, GFP_KERNEL);
 	if (hp == NULL) {
@@ -105,6 +108,16 @@ int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 	cmnd = (ioctl_buf + cmnd_offset);
 	if (copy_from_user(cmnd, hp->cmdp, hp->cmd_len)) {
 		err = -EFAULT;
+		goto free_ioctl_buf;
+	}
+
+	cdb = (uint8_t *)cmnd;
+	if ((cdb[0] == SCSI_WRITE_BUFFER_CMD_CODE) &&
+			(cdb[1] == SCSI_MODE_FFU_VAL) &&
+			!vblkdev->allow_ffu_passthrough_cmds) {
+		dev_err(vblkdev->device,
+			"FFU permission not present\n");
+		err = -EPERM;
 		goto free_ioctl_buf;
 	}
 
