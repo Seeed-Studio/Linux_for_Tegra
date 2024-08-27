@@ -81,6 +81,46 @@
 			status = "okay";
 		};
 
+		spi@810c590000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		spi@c6c0000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		spi@810c440000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
+		spi@810c450000 {
+			status = "okay";
+			spi@0 {
+				/* chip select 0 */
+				compatible = "tegra-spidev";
+				reg = <0x0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+
 		/* QSPI0 */
 		spi@810c5b0000 {
 			status = "okay";
