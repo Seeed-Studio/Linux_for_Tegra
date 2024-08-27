@@ -439,7 +439,6 @@
 	/* Check if it has to go with L4TConfigurations.dtbo */
 	firmware {
 		uefi {
-			use-emulated-variables;
 			variables {
 				gDtPlatformFormSetGuid {
 					DtAcpiPref {
