@@ -23,7 +23,6 @@
 bool nvmap_convert_carveout_to_iovmm;
 bool nvmap_convert_iovmm_to_carveout;
 
-u32 nvmap_max_handle_count;
 u64 nvmap_big_page_allocs;
 u64 nvmap_total_page_allocs;
 
@@ -124,9 +123,9 @@ static int handle_page_alloc(struct nvmap_client *client,
 #ifdef CONFIG_ARM64_4K_PAGES
 #ifdef NVMAP_CONFIG_PAGE_POOLS
 		/* Get as many big pages from the pool as possible. */
-		page_index = nvmap_page_pool_alloc_lots_bp(&nvmap_dev->pool, pages,
+		page_index = nvmap_page_pool_alloc_lots_bp(nvmap_dev->pool, pages,
 							nr_page, true, h->numa_id);
-		pages_per_big_pg = nvmap_dev->pool.pages_per_big_pg;
+		pages_per_big_pg = nvmap_dev->pool->pages_per_big_pg;
 #endif
 		/* Try to allocate big pages from page allocator */
 		for (i = page_index;
@@ -154,7 +153,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 #ifdef NVMAP_CONFIG_PAGE_POOLS
 			/* Get as many pages from the pool as possible. */
 		page_index += nvmap_page_pool_alloc_lots(
-			  &nvmap_dev->pool, &pages[page_index],
+			  nvmap_dev->pool, &pages[page_index],
 			  nr_page - page_index, true, h->numa_id);
 #endif
 		allocated = page_index;
@@ -553,7 +552,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 
 #ifdef NVMAP_CONFIG_PAGE_POOLS
 	if (!h->from_va && !h->is_subhandle)
-		page_index = nvmap_page_pool_fill_lots(&nvmap_dev->pool,
+		page_index = nvmap_page_pool_fill_lots(nvmap_dev->pool,
 					h->pgalloc.pages, nr_page);
 #endif
 

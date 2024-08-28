@@ -4,6 +4,14 @@
 #ifndef __NVMAP_ALLOC_INT_H
 #define __NVMAP_ALLOC_INT_H
 
+#define DMA_ERROR_CODE	(~(dma_addr_t)0)
+
+#define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN)
+
+#ifdef CONFIG_ARM64_4K_PAGES
+#define NVMAP_PP_BIG_PAGE_SIZE           (0x10000)
+#endif /* CONFIG_ARM64_4K_PAGES */
+
 struct nvmap_heap_block {
 	phys_addr_t	base;
 	unsigned int	type;
@@ -52,6 +60,32 @@ struct list_block {
 	size_t align;
 	struct nvmap_heap *heap;
 	struct list_head free_list;
+};
+
+
+struct nvmap_page_pool {
+	struct rt_mutex lock;
+	u32 count;      /* Number of pages in the page & dirty list. */
+	u32 max;        /* Max no. of pages in all lists. */
+	u32 to_zero;    /* Number of pages on the zero list */
+	u32 under_zero; /* Number of pages getting zeroed */
+#ifdef CONFIG_ARM64_4K_PAGES
+	u32 big_pg_sz;  /* big page size supported(64k, etc.) */
+	u32 big_page_count;   /* Number of zeroed big pages avaialble */
+	u32 pages_per_big_pg; /* Number of pages in big page */
+#endif /* CONFIG_ARM64_4K_PAGES */
+	struct list_head page_list;
+	struct list_head zero_list;
+#ifdef CONFIG_ARM64_4K_PAGES
+	struct list_head page_list_bp;
+#endif /* CONFIG_ARM64_4K_PAGES */
+
+#ifdef NVMAP_CONFIG_PAGE_POOL_DEBUG
+	u64 allocs;
+	u64 fills;
+	u64 hits;
+	u64 misses;
+#endif
 };
 
 int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,

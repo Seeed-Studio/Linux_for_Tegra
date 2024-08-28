@@ -540,6 +540,12 @@ struct debugfs_info *nvmap_create_debugfs_info(void)
 	return info;
 }
 
+void nvmap_free_debugfs_info(struct debugfs_info *info)
+{
+	if (info != NULL)
+		kfree(info);
+}
+
 void nvmap_set_debugfs_heap(struct debugfs_info *info, unsigned int heap_bit)
 {
 	info->heap_bit = heap_bit;

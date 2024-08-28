@@ -54,6 +54,8 @@ struct nvmap_device *nvmap_dev;
 EXPORT_SYMBOL(nvmap_dev);
 ulong nvmap_init_time;
 
+struct debugfs_info *iovmm_debugfs_info;
+
 static struct device_dma_parameters nvmap_dma_parameters = {
 	.max_segment_size = UINT_MAX,
 };
@@ -1303,7 +1305,7 @@ DEBUGFS_OPEN_FOPS(iovmm_procrank);
 static void nvmap_iovmm_debugfs_init(void)
 {
 	if (!IS_ERR_OR_NULL(nvmap_dev->debug_root)) {
-		struct debugfs_info *iovmm_debugfs_info = nvmap_create_debugfs_info();
+		iovmm_debugfs_info = nvmap_create_debugfs_info();
 		if (iovmm_debugfs_info != NULL) {
 			struct dentry *iovmm_root =
 				debugfs_create_dir("iovmm", nvmap_dev->debug_root);
@@ -1343,6 +1345,11 @@ static void nvmap_iovmm_debugfs_init(void)
 			}
 		}
 	}
+}
+
+static void nvmap_iovmm_debugfs_free(void)
+{
+	nvmap_free_debugfs_info(iovmm_debugfs_info);
 }
 
 static bool nvmap_is_iommu_present(void)
@@ -1490,6 +1497,7 @@ fail_sci_ipc:
 	nvmap_sci_ipc_exit();
 fail_heaps:
 	debugfs_remove_recursive(nvmap_dev->debug_root);
+	nvmap_iovmm_debugfs_free();
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node = &dev->heaps[i];
 		nvmap_heap_destroy(node->carveout);
@@ -1522,6 +1530,7 @@ int nvmap_remove(struct platform_device *pdev)
 #endif
 	nvmap_dmabuf_stash_deinit();
 	debugfs_remove_recursive(dev->debug_root);
+	nvmap_iovmm_debugfs_free();
 	misc_deregister(&dev->dev_user);
 #ifdef NVMAP_CONFIG_PAGE_POOLS
 	nvmap_page_pool_clear();

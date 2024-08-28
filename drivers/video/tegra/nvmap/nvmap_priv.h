@@ -44,8 +44,6 @@
 #define SIZE_2MB 0x200000
 #define ALIGN_2MB(size) ((size + SIZE_2MB - 1) & ~(SIZE_2MB - 1))
 
-#define DMA_ERROR_CODE	(~(dma_addr_t)0)
-
 #define __DMA_ATTR(attrs) attrs
 #define DEFINE_DMA_ATTRS(attrs) unsigned long attrs = 0
 
@@ -90,8 +88,6 @@ do {                                                    \
 	}                                               \
 } while (0)
 
-#define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN)
-
 /*
  * DMA_ATTR_ALLOC_EXACT_SIZE: This tells the DMA-mapping
  * subsystem to allocate the exact number of pages
@@ -99,19 +95,6 @@ do {                                                    \
 #define DMA_ATTR_ALLOC_EXACT_SIZE	(DMA_ATTR_PRIVILEGED << 2)
 
 #define DMA_MEMORY_NOMAP		0x02
-
-/*
- * DMA_ATTR_READ_ONLY: for DMA memory allocations, attempt to map
- * memory as read-only for the device. CPU access will still be
- * read-write. This corresponds to the direction being DMA_TO_DEVICE
- * instead of DMA_BIDIRECTIONAL.
- */
-#define DMA_ATTR_READ_ONLY	(DMA_ATTR_PRIVILEGED << 12)
-
-/* DMA_ATTR_WRITE_ONLY: This tells the DMA-mapping subsystem
- * to map as write-only
- */
-#define DMA_ATTR_WRITE_ONLY	(DMA_ATTR_PRIVILEGED << 13)
 
 #define DMA_ALLOC_FREE_ATTR	DMA_ATTR_ALLOC_SINGLE_PAGES
 #define ACCESS_OK(type, addr, size)    access_ok(addr, size)
@@ -122,8 +105,6 @@ struct nvmap_device;
 
 /* holds max number of handles allocted per process at any time */
 extern u32 nvmap_max_handle_count;
-extern u64 nvmap_big_page_allocs;
-extern u64 nvmap_total_page_allocs;
 
 extern bool nvmap_convert_iovmm_to_carveout;
 extern bool nvmap_convert_carveout_to_iovmm;
@@ -132,16 +113,8 @@ extern struct vm_operations_struct nvmap_vma_ops;
 
 #ifdef CONFIG_ARM64
 #define PG_PROT_KERNEL PAGE_KERNEL
-#define outer_flush_range(s, e)
-#define outer_inv_range(s, e)
-#define outer_clean_range(s, e)
-#define outer_flush_all()
-#define outer_clean_all()
-extern void __clean_dcache_page(struct page *);
-extern void __clean_dcache_area_poc(void *addr, size_t len);
 #else
 #define PG_PROT_KERNEL pgprot_kernel
-extern void __flush_dcache_page(struct address_space *, struct page *);
 #endif
 
 struct nvmap_vma_list {
@@ -276,44 +249,6 @@ struct nvmap_handle_ref {
 	bool is_ro;
 };
 
-#if defined(NVMAP_CONFIG_PAGE_POOLS)
-/*
- * This is the default ratio defining pool size. It can be thought of as pool
- * size in either MB per GB or KB per MB. That means the max this number can
- * be is 1024 (all physical memory - not a very good idea) or 0 (no page pool
- * at all).
- */
-#define NVMAP_PP_POOL_SIZE               (128)
-
-#ifdef CONFIG_ARM64_4K_PAGES
-#define NVMAP_PP_BIG_PAGE_SIZE           (0x10000)
-#endif /* CONFIG_ARM64_4K_PAGES */
-struct nvmap_page_pool {
-	struct rt_mutex lock;
-	u32 count;      /* Number of pages in the page & dirty list. */
-	u32 max;        /* Max no. of pages in all lists. */
-	u32 to_zero;    /* Number of pages on the zero list */
-	u32 under_zero; /* Number of pages getting zeroed */
-#ifdef CONFIG_ARM64_4K_PAGES
-	u32 big_pg_sz;  /* big page size supported(64k, etc.) */
-	u32 big_page_count;   /* Number of zeroed big pages avaialble */
-	u32 pages_per_big_pg; /* Number of pages in big page */
-#endif /* CONFIG_ARM64_4K_PAGES */
-	struct list_head page_list;
-	struct list_head zero_list;
-#ifdef CONFIG_ARM64_4K_PAGES
-	struct list_head page_list_bp;
-#endif /* CONFIG_ARM64_4K_PAGES */
-
-#ifdef NVMAP_CONFIG_PAGE_POOL_DEBUG
-	u64 allocs;
-	u64 fills;
-	u64 hits;
-	u64 misses;
-#endif
-};
-#endif
-
 #define NVMAP_IVM_INVALID_PEER		(-1)
 
 struct nvmap_client {
@@ -346,7 +281,7 @@ struct nvmap_device {
 	int nr_heaps;
 	int nr_carveouts;
 #ifdef NVMAP_CONFIG_PAGE_POOLS
-	struct nvmap_page_pool pool;
+	struct nvmap_page_pool *pool;
 #endif
 	struct list_head clients;
 	struct rb_root pids;

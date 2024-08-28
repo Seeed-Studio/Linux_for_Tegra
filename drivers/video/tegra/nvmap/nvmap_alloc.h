@@ -85,6 +85,8 @@ int nvmap_get_debug_info_nid(struct debugfs_info *info);
 
 struct debugfs_info *nvmap_create_debugfs_info(void);
 
+void nvmap_free_debugfs_info(struct debugfs_info *info);
+
 void nvmap_set_debugfs_heap(struct debugfs_info *info, unsigned int heap_bit);
 
 void nvmap_set_debugfs_numa(struct debugfs_info *info, int nid);

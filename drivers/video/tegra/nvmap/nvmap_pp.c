@@ -30,11 +30,22 @@
 #define NVMAP_TEST_PAGE_POOL_SHRINKER     1
 #define PENDING_PAGES_SIZE                (SZ_1M / PAGE_SIZE)
 
+extern u64 nvmap_big_page_allocs;
+extern u64 nvmap_total_page_allocs;
+
 static bool enable_pp = 1;
 static u32 pool_size;
 
 static struct task_struct *background_allocator;
 static DECLARE_WAIT_QUEUE_HEAD(nvmap_bg_wait);
+
+/*
+ * This is the default ratio defining pool size. It can be thought of as pool
+ * size in either MB per GB or KB per MB. That means the max this number can
+ * be is 1024 (all physical memory - not a very good idea) or 0 (no page pool
+ * at all).
+ */
+#define NVMAP_PP_POOL_SIZE               (128)
 
 #ifdef NVMAP_CONFIG_PAGE_POOL_DEBUG
 static inline void __pp_dbg_var_add(u64 *dbg_var, u32 nr)
@@ -278,7 +289,7 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
  */
 static int nvmap_background_zero_thread(void *arg)
 {
-	struct nvmap_page_pool *pool = &nvmap_dev->pool;
+	struct nvmap_page_pool *pool = nvmap_dev->pool;
 
 	pr_info("PP zeroing thread starting.\n");
 
@@ -500,7 +511,7 @@ static ulong nvmap_page_pool_get_unused_pages(void)
 	if (!nvmap_dev)
 		return 0;
 
-	total = nvmap_dev->pool.count + nvmap_dev->pool.to_zero;
+	total = nvmap_dev->pool->count + nvmap_dev->pool->to_zero;
 
 	return total;
 }
@@ -511,7 +522,7 @@ static ulong nvmap_page_pool_get_unused_pages(void)
  */
 int nvmap_page_pool_clear(void)
 {
-	struct nvmap_page_pool *pool = &nvmap_dev->pool;
+	struct nvmap_page_pool *pool = nvmap_dev->pool;
 
 	rt_mutex_lock(&pool->lock);
 
@@ -562,10 +573,10 @@ static unsigned long nvmap_page_pool_scan_objects(struct shrinker *shrinker,
 
 	pr_debug("sh_pages=%lu", sc->nr_to_scan);
 
-	rt_mutex_lock(&nvmap_dev->pool.lock);
+	rt_mutex_lock(&nvmap_dev->pool->lock);
 	remaining = nvmap_page_pool_free_pages_locked(
-			&nvmap_dev->pool, sc->nr_to_scan);
-	rt_mutex_unlock(&nvmap_dev->pool.lock);
+			nvmap_dev->pool, sc->nr_to_scan);
+	rt_mutex_unlock(&nvmap_dev->pool->lock);
 
 	return (remaining == sc->nr_to_scan) ? \
 			   SHRINK_STOP : (sc->nr_to_scan - remaining);
@@ -660,8 +671,8 @@ static int pool_size_set(const char *arg, const struct kernel_param *kp)
 {
 	int ret = param_set_uint(arg, kp);
 
-	if (!ret && (pool_size != nvmap_dev->pool.max))
-		nvmap_page_pool_resize(&nvmap_dev->pool, pool_size);
+	if (!ret && (pool_size != nvmap_dev->pool->max))
+		nvmap_page_pool_resize(nvmap_dev->pool, pool_size);
 
 	return ret;
 }
@@ -691,17 +702,17 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 
 	debugfs_create_u32("page_pool_available_pages",
 			   S_IRUGO, pp_root,
-			   &nvmap_dev->pool.count);
+			   &nvmap_dev->pool->count);
 	debugfs_create_u32("page_pool_pages_to_zero",
 			   S_IRUGO, pp_root,
-			   &nvmap_dev->pool.to_zero);
+			   &nvmap_dev->pool->to_zero);
 #ifdef CONFIG_ARM64_4K_PAGES
 	debugfs_create_u32("page_pool_available_big_pages",
 			   S_IRUGO, pp_root,
-			   &nvmap_dev->pool.big_page_count);
+			   &nvmap_dev->pool->big_page_count);
 	debugfs_create_u32("page_pool_big_page_size",
 			   S_IRUGO, pp_root,
-			   &nvmap_dev->pool.big_pg_sz);
+			   &nvmap_dev->pool->big_pg_sz);
 	debugfs_create_u64("total_big_page_allocs",
 			   S_IRUGO, pp_root,
 			   &nvmap_big_page_allocs);
@@ -713,16 +724,16 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 #ifdef NVMAP_CONFIG_PAGE_POOL_DEBUG
 	debugfs_create_u64("page_pool_allocs",
 			   S_IRUGO, pp_root,
-			   &nvmap_dev->pool.allocs);
+			   &nvmap_dev->pool->allocs);
 	debugfs_create_u64("page_pool_fills",
 			   S_IRUGO, pp_root,
-			   &nvmap_dev->pool.fills);
+			   &nvmap_dev->pool->fills);
 	debugfs_create_u64("page_pool_hits",
 			   S_IRUGO, pp_root,
-			   &nvmap_dev->pool.hits);
+			   &nvmap_dev->pool->hits);
 	debugfs_create_u64("page_pool_misses",
 			   S_IRUGO, pp_root,
-			   &nvmap_dev->pool.misses);
+			   &nvmap_dev->pool->misses);
 #endif
 
 	return 0;
@@ -731,8 +742,13 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 int nvmap_page_pool_init(struct nvmap_device *dev)
 {
 	struct sysinfo info;
-	struct nvmap_page_pool *pool = &dev->pool;
+	struct nvmap_page_pool *pool;
 
+	dev->pool = kzalloc(sizeof(*dev->pool), GFP_KERNEL);
+	if (dev->pool == NULL)
+		goto fail_mem;
+
+	pool = dev->pool;
 	memset(pool, 0x0, sizeof(*pool));
 	rt_mutex_init(&pool->lock);
 	INIT_LIST_HEAD(&pool->page_list);
@@ -787,13 +803,12 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	return 0;
 fail:
 	nvmap_page_pool_fini(dev);
+fail_mem:
 	return -ENOMEM;
 }
 
 int nvmap_page_pool_fini(struct nvmap_device *dev)
 {
-	struct nvmap_page_pool *pool = &dev->pool;
-
 	/*
 	 * if background allocator is not initialzed or not
 	 * properly initialized, then shrinker is also not
@@ -801,8 +816,10 @@ int nvmap_page_pool_fini(struct nvmap_device *dev)
 	 */
 	if (!IS_ERR_OR_NULL(background_allocator)) {
 #if defined(NV_SHRINKER_ALLOC_PRESENT) /* Linux 6.7 */
-		shrinker_free(nvmap_page_pool_shrinker);
-		nvmap_page_pool_shrinker = NULL;
+		if (nvmap_page_pool_shrinker != NULL) {
+			shrinker_free(nvmap_page_pool_shrinker);
+			nvmap_page_pool_shrinker = NULL;
+		}
 #else
 		unregister_shrinker(&nvmap_page_pool_shrinker);
 #endif
@@ -810,7 +827,10 @@ int nvmap_page_pool_fini(struct nvmap_device *dev)
 		background_allocator = NULL;
 	}
 
-	WARN_ON(!list_empty(&pool->page_list));
-
+	if (dev->pool != NULL) {
+		WARN_ON(!list_empty(&dev->pool->page_list));
+		kfree(dev->pool);
+		dev->pool = NULL;
+	}
 	return 0;
 }

@@ -22,6 +22,8 @@ __weak struct arm64_ftr_reg arm64_ftr_reg_ctrel0;
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
 
+extern void __clean_dcache_area_poc(void *addr, size_t len);
+
 /*
  * FIXME:
  *

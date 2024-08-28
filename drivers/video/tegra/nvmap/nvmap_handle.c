@@ -30,6 +30,7 @@
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
 
+u32 nvmap_max_handle_count;
 /*
  * Verifies that the passed ID is a valid handle ID. Then the passed client's
  * reference to the handle is returned.
