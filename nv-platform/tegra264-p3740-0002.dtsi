@@ -3,6 +3,7 @@
 #include <dt-bindings/input/linux-event-codes.h>
 #include <dt-bindings/input/gpio-keys.h>
 #include <dt-bindings/sound/rt5640.h>
+#include "tegra264-p3740-0002-p3834-0008-dcb.dtsi"
 
 / {
 	compatible = "nvidia,p3740-0002";
@@ -25,6 +26,10 @@
 		};
 
 		i2c@810c6d0000 { /* I2C12 */
+			status = "okay";
+		};
+
+		i2c@810c670000 { /* I2C6 */
 			status = "okay";
 		};
 
@@ -244,5 +249,8 @@
 
 	display@8808c00000 {
 		status = "okay";
+		nvdisplay-niso {
+			status = "okay";
+		};
 	};
 };
