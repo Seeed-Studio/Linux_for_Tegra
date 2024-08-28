@@ -1562,10 +1562,19 @@ static int tegra_io_pad_set_voltage(struct tegra_pmc *pmc, enum tegra_io_pad id,
 	if (pmc->soc->has_impl_33v_pwr) {
 		value = tegra_pmc_readl(pmc, pad->e_33v_ctl);
 
-		if (voltage == TEGRA_IO_PAD_VOLTAGE_1V8)
+		if (voltage == TEGRA_IO_PAD_VOLTAGE_1V8) {
 			value &= ~BIT(pad->voltage);
-		else
+			if (pad->has_int_reg) {
+				value |= BIT(pad->e_reg06);
+				value |= BIT(pad->e_reg18);
+			}
+		} else {
 			value |= BIT(pad->voltage);
+			if (pad->has_int_reg) {
+				value &= ~BIT(pad->e_reg06);
+				value &= ~BIT(pad->e_reg18);
+			}
+		}
 
 		tegra_pmc_writel(pmc, value, pad->e_33v_ctl);
 	} else {

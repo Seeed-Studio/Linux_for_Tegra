@@ -157,6 +157,9 @@ struct tegra_io_pad_soc {
 	unsigned int dpd;
 	unsigned int request;
 	unsigned int status;
+	bool has_int_reg;
+	unsigned int e_reg06;
+	unsigned int e_reg18;
 	unsigned int voltage;
 	unsigned int e_33v_ctl;
 	const char *name;
