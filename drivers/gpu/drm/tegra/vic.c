@@ -713,8 +713,11 @@ static int __maybe_unused vic_runtime_resume(struct device *dev)
 
 	host1x_actmon_enable(&vic->client.base);
 
-	if (vic->can_enable_crc)
+	if (vic->can_enable_crc) {
 		vic_writel(vic, 0x1, VIC_SEC_INTF_CRC_CTRL);
+		if (of_machine_is_compatible("nvidia,tegra264"))
+			vic_writel(vic, 0x1, VIC_SEC_INTF_CRC_CFG);
+	}
 
 	return 0;
 
