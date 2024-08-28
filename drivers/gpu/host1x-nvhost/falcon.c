@@ -102,10 +102,16 @@ static int falcon_parse_firmware_image(struct falcon *falcon)
 
 int falcon_read_firmware(struct falcon *falcon, const char *name)
 {
-	int err;
+	int err, retry_count=10;
 
+retry_request:
 	/* request_firmware prints error if it fails */
-	err = request_firmware(&falcon->firmware.firmware, name, falcon->dev);
+	err = request_firmware_direct(&falcon->firmware.firmware, name, falcon->dev);
+	if (err == -EINTR && retry_count) {
+		retry_count--;
+		goto retry_request;
+	}
+
 	if (err < 0)
 		return err;
 
