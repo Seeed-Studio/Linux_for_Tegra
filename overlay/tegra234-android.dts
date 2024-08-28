@@ -115,7 +115,15 @@
 					dma-names = "rx", "tx";
 				};
 				host1x@13e00000 {
-					se@15820000 {
+					crypto@15810000 {
+						status = "disabled";
+					};
+
+					crypto@15820000 {
+						status = "disabled";
+					};
+
+					crypto@15840000 {
 						status = "disabled";
 					};
 				};
