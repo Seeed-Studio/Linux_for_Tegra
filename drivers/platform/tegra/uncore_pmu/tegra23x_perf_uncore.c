@@ -113,7 +113,7 @@ static struct attribute_group scf_uncore_pmu_events_group = {
 };
 
 PMU_FORMAT_ATTR(unit,	"config:0-3");
-PMU_FORMAT_ATTR(event,	"config:4-15");
+PMU_FORMAT_ATTR(event,	"config:4-19");
 
 static struct attribute *scf_uncore_pmu_formats[] = {
 	&format_attr_event.attr,
