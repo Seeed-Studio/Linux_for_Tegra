@@ -75,7 +75,7 @@ static int fsicom_fsi_pm_notify(u32 state)
 
 	/* send pm state to fsi */
 	for (lCoreId = fsi_core.notify_cnt - 1; lCoreId >= 0; lCoreId--) {
-		ret = mbox_send_message(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.chan,
+		ret = mbox_send_message(fsi_hsp_v[lCoreId]->tx.chan,
 				(void *)pdata);
 	}
 	return ret < 0 ? ret : 0;
@@ -116,38 +116,36 @@ static int tegra_hsp_mb_init(struct device *dev)
 	char lRxStr[100] = {0};
 
 	for (lCoreId = 0; lCoreId < fsi_core.notify_cnt; lCoreId++) {
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]] = devm_kzalloc(dev,
-		sizeof(*fsi_hsp_v[fsi_core.notify_list[lCoreId]]),
-		GFP_KERNEL);
+		fsi_hsp_v[lCoreId] = devm_kzalloc(dev, sizeof(*fsi_hsp_v[lCoreId]), GFP_KERNEL);
 		if (!fsi_hsp_v[lCoreId])
 			return -ENOMEM;
 
 		if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32)))
 			dev_err(dev, "FsiCom: setting DMA MASK failed!\n");
 
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client.dev = dev;
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.client.dev = dev;
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client.tx_block = true;
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client.tx_tout = TIMEOUT;
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.client.rx_callback = tegra_hsp_rx_notify;
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client.tx_done = tegra_hsp_tx_empty_notify;
+		fsi_hsp_v[lCoreId]->tx.client.dev = dev;
+		fsi_hsp_v[lCoreId]->rx.client.dev = dev;
+		fsi_hsp_v[lCoreId]->tx.client.tx_block = true;
+		fsi_hsp_v[lCoreId]->tx.client.tx_tout = TIMEOUT;
+		fsi_hsp_v[lCoreId]->rx.client.rx_callback = tegra_hsp_rx_notify;
+		fsi_hsp_v[lCoreId]->tx.client.tx_done = tegra_hsp_tx_empty_notify;
 
-		(void)snprintf(lTxStr, sizeof(lTxStr), "fsi-tx-cpu%d", fsi_core.notify_list[lCoreId]);
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.chan = mbox_request_channel_byname(
-						&fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.client,
+		(void)snprintf(lTxStr, sizeof(lTxStr), "fsi-tx-cpu%d", lCoreId);
+		fsi_hsp_v[lCoreId]->tx.chan = mbox_request_channel_byname(
+						&fsi_hsp_v[lCoreId]->tx.client,
 						lTxStr);
-		if (IS_ERR(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.chan)) {
-			err = PTR_ERR(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->tx.chan);
+		if (IS_ERR(fsi_hsp_v[lCoreId]->tx.chan)) {
+			err = PTR_ERR(fsi_hsp_v[lCoreId]->tx.chan);
 			dev_err(dev, "failed to get tx mailbox: %d\n", err);
 			return err;
 		}
 
-		(void)snprintf(lRxStr, sizeof(lRxStr), "fsi-rx-cpu%d", fsi_core.notify_list[lCoreId]);
-		fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.chan = mbox_request_channel_byname(
-						&fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.client,
+		(void)snprintf(lRxStr, sizeof(lRxStr), "fsi-rx-cpu%d", lCoreId);
+		fsi_hsp_v[lCoreId]->rx.chan = mbox_request_channel_byname(
+						&fsi_hsp_v[lCoreId]->rx.client,
 						lRxStr);
-		if (IS_ERR(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.chan)) {
-			err = PTR_ERR(fsi_hsp_v[fsi_core.notify_list[lCoreId]]->rx.chan);
+		if (IS_ERR(fsi_hsp_v[lCoreId]->rx.chan)) {
+			err = PTR_ERR(fsi_hsp_v[lCoreId]->rx.chan);
 			dev_err(dev, "failed to get rx mailbox: %d\n", err);
 			return err;
 		}
@@ -231,11 +229,10 @@ static ssize_t device_file_ioctl(
 	uint32_t pdata[4] = {0};
 	struct iova_data ldata;
 	struct fsi_core *fsi_core_input;
-	int8_t iterator = 0;
+	int8_t hsp_mb_index = 0;
 
 	switch (cmd) {
 
-	iterator = 0;
 	case NVMAP_SMMU_MAP:
 		ret = smmu_buff_map(arg);
 		break;
@@ -255,15 +252,15 @@ static ssize_t device_file_ioctl(
 		if (copy_from_user(&input, (void __user *)arg,
 					sizeof(struct rw_data)))
 			return -EACCES;
-		while (iterator < fsi_core.notify_cnt) {
-			if (input.coreid == fsi_core.notify_list[iterator])
+		while (hsp_mb_index < fsi_core.notify_cnt) {
+			if (input.coreid == fsi_core.notify_list[hsp_mb_index])
 				break;
-			iterator++;
+			hsp_mb_index++;
 		}
-		if (iterator == fsi_core.notify_cnt)
+		if (hsp_mb_index == fsi_core.notify_cnt)
 			return -ECHRNG;
 		pdata[0] = input.handle;
-		ret = mbox_send_message(fsi_hsp_v[input.coreid]->tx.chan,
+		ret = mbox_send_message(fsi_hsp_v[hsp_mb_index]->tx.chan,
 				(void *)pdata);
 		break;
 
@@ -291,18 +288,18 @@ static ssize_t device_file_ioctl(
 		if (copy_from_user(&ldata, (void __user *)arg,
 					sizeof(struct iova_data)))
 			return -EACCES;
-		while (iterator < fsi_core.notify_cnt) {
-			if (ldata.coreid == fsi_core.notify_list[iterator])
+		while (hsp_mb_index < fsi_core.notify_cnt) {
+			if (ldata.coreid == fsi_core.notify_list[hsp_mb_index])
 				break;
-			iterator++;
+			hsp_mb_index++;
 		}
-		if (iterator == fsi_core.notify_cnt)
+		if (hsp_mb_index == fsi_core.notify_cnt)
 			return -ECHRNG;
 		pdata[0] = ldata.offset;
 		pdata[1] = ldata.iova;
 		pdata[2] = ldata.chid;
 		pdata[3] = IOVA_UNI_CODE;
-		ret = mbox_send_message(fsi_hsp_v[ldata.coreid]->tx.chan,
+		ret = mbox_send_message(fsi_hsp_v[hsp_mb_index]->tx.chan,
 				(void *)pdata);
 		break;
 
@@ -375,6 +372,8 @@ static int fsicom_client_probe(struct platform_device *pdev)
 	const struct device_node *np = dev->of_node;
 	struct fsi_dev_ctx *ctx;
 	int iterator = 0;
+	u8 index;
+	uint32_t fsi_core_list[MAX_FSI_CORE] = {0};
 
 	ret = of_property_read_u32(np, "smmu_inst", &val);
 	if (ret) {
@@ -387,12 +386,27 @@ static int fsicom_client_probe(struct platform_device *pdev)
 			pr_err("failed to read max_core count\n");
 			return -1;
 		}
-		if (fsi_core.max_core > MAX_FSI_CORE)
+		if (fsi_core.max_core > MAX_FSI_CORE) {
+			pr_err("wrong fsi max_core count\n");
 			return -1;
+		}
 		ret = of_property_read_variable_u32_array(pdev->dev.of_node, "fsi_core_notify",
-							&fsi_core.notify_list[0], 1, fsi_core.max_core);
-		if (ret > 0) {
-			fsi_core.notify_cnt = ret;
+							&fsi_core_list[0], 1, fsi_core.max_core);
+		if (ret > 0 && ret <= MAX_FSI_CORE) {
+			/* configure core 0 as default notification FSI core */
+			fsi_core.notify_list[0] = 0;
+			index = 1;
+			for (iterator = 0; iterator < ret; iterator++) {
+				if (0 == fsi_core_list[iterator])
+					continue;
+				if (fsi_core_list[iterator] >= MAX_FSI_CORE) {
+					pr_err("invalid fsi core id configured as notification core\n");
+					return -1;
+				}
+				fsi_core.notify_list[index] = fsi_core_list[iterator];
+				index++;
+			}
+			fsi_core.notify_cnt = index;
 		} else {
 			/* FSI core 0 and core 1 is configured as notification core by default */
 			fsi_core.notify_cnt = fsi_core.max_core;
@@ -402,8 +416,14 @@ static int fsicom_client_probe(struct platform_device *pdev)
 		}
 		ret = of_property_read_variable_u32_array(pdev->dev.of_node, "fsi_core_polling",
 							&fsi_core.polling_list[0], 1, fsi_core.max_core);
-		if (ret > 0) {
+		if (ret > 0 && ret <= MAX_FSI_CORE) {
 			fsi_core.polling_cnt = ret;
+			for (iterator = 0; iterator < ret; iterator++) {
+				if (fsi_core.polling_list[iterator] >= MAX_FSI_CORE) {
+					pr_err("invalid fsi core id configured as polling core\n");
+					return -1;
+				}
+			}
 		}
 		fsicom_register_device();
 		ret = tegra_hsp_mb_init(&pdev->dev);
