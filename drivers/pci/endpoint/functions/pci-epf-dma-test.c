@@ -293,20 +293,23 @@ static void pcie_dma_epf_unbind(struct pci_epf *epf)
 	tegra_pcie_dma_deinit(&cookie);
 
 	if (epfnv->chip_id == TEGRA264) {
+#if defined(NV_MSI_GET_VIRQ_PRESENT) /* Linux v6.1 */
+		irq = msi_get_virq(&pdev->dev, TEGRA264_PCIE_DMA_MSI_CRC_VEC);
+#else
+		for_each_msi_entry(desc, cdev) {
+			if (desc->platform.msi_index == TEGRA264_PCIE_DMA_MSI_CRC_VEC) {
+				irq = desc->irq;
+				break;
+			}
+		}
+#endif
+		free_irq(irq, epfnv);
 
 #if defined(NV_PLATFORM_MSI_DOMAIN_FREE_IRQS_PRESENT) /* Linux v6.9 */
 		platform_msi_domain_free_irqs(&pdev->dev);
 #endif
-#if defined(NV_MSI_GET_VIRQ_PRESENT) /* Linux v6.1 */
-		irq = msi_get_virq(&pdev->dev, 0);
-#else
-		for_each_msi_entry(desc, cdev) {
-			if (desc->platform.msi_index == 0)
-				irq = desc->irq;
-		}
-#endif
-		free_irq(irq, epfnv);
 	}
+
 	pci_epc_stop(epc);
 	if (epfnv->chip_id == TEGRA234)
 		bar = BAR_0;
