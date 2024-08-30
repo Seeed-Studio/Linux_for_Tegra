@@ -877,7 +877,7 @@ static int nvmap_debug_free_size_show(struct seq_file *s, void *unused)
 		seq_printf(s, "Max allocatable IOVMM memory: %lu bytes\n", free_mem);
 	return 0;
 }
-DEBUGFS_OPEN_FOPS(free_size);
+DEBUGFS_OPEN_FOPS_STATIC(free_size);
 
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 static int nvmap_debug_device_list_show(struct seq_file *s, void *unused)
