@@ -3562,6 +3562,15 @@ static void tegra264_xudc_device_params_init(struct tegra_xudc *xudc)
 	val |= SSPX_CORE_CNT13_CRDTHP_TIMER(0x33);
 	xudc_writel(xudc, val, SSPX_CORE_CNT13);
 
+#define SSPX_CORE_CNT27 0x407c
+#define  SSPX_CORE_CNT27_PING_LFPS_TRPT_MASK GENMASK(29, 0)
+#define  SSPX_CORE_CNT27_PING_LFPS_TRPT(x) ((x) & \
+					SSPX_CORE_CNT27_PING_LFPS_TRPT_MASK)
+	val = xudc_readl(xudc, SSPX_CORE_CNT27);
+	val &= ~(SSPX_CORE_CNT27_PING_LFPS_TRPT_MASK);
+	val |= SSPX_CORE_CNT27_PING_LFPS_TRPT(0x7a1200);
+	xudc_writel(xudc, val, SSPX_CORE_CNT27);
+
 #define SSPX_CORE_CNT30 0x4088
 #define  SSPX_CORE_CNT30_LMPITP_TIMER_MASK GENMASK(11, 0)
 #define  SSPX_CORE_CNT30_LMPITP_TIMER(x) ((x) & \
