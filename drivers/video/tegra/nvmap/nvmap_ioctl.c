@@ -36,6 +36,7 @@
 #include "nvmap_ioctl.h"
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
+#include "nvmap_dmabuf.h"
 
 #include <linux/syscalls.h>
 #include <linux/nodemask.h>

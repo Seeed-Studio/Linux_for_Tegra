@@ -462,8 +462,6 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 struct nvmap_handle_ref *nvmap_dup_handle_ro(struct nvmap_client *client,
 					int fd);
 
-int is_nvmap_dmabuf_fd_ro(int fd, bool *is_ro);
-
 int is_nvmap_id_ro(struct nvmap_client *client, int id, bool *is_ro);
 
 struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
@@ -492,13 +490,6 @@ void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);
 
 int is_nvmap_vma(struct vm_area_struct *vma);
 
-int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h,
-			bool is_ro);
-struct nvmap_handle *nvmap_handle_get_from_dmabuf_fd(
-				struct nvmap_client *client, int fd);
-int nvmap_dmabuf_duplicate_gen_fd(struct nvmap_client *client,
-		struct dma_buf *dmabuf);
-
 int nvmap_get_handle_param(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, u32 param, u64 *result);
 
@@ -510,23 +501,14 @@ extern void v7_clean_kern_cache_all(void *);
 
 void nvmap_flush_cache(struct page **pages, int numpages);
 
-/* Internal API to support dmabuf */
-struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
-				    struct nvmap_handle *handle, bool ro_buf);
 struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 				  struct nvmap_handle *h);
 void __nvmap_free_sg_table(struct nvmap_client *client,
 			   struct nvmap_handle *h, struct sg_table *sgt);
 void *__nvmap_mmap(struct nvmap_handle *h);
 void __nvmap_munmap(struct nvmap_handle *h, void *addr);
-int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma);
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name);
-int __nvmap_dmabuf_fd(struct nvmap_client *client,
-		      struct dma_buf *dmabuf, int flags);
-
-int nvmap_dmabuf_stash_init(void);
-void nvmap_dmabuf_stash_deinit(void);
 
 static inline bool nvmap_page_dirty(struct page *page)
 {
@@ -804,7 +786,6 @@ void nvmap_add_device_name(char *device_name, u64 dma_mask, u32 heap_type);
 void nvmap_remove_device_name(char *device_name, u32 heap_type);
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
 
-bool dmabuf_is_nvmap(struct dma_buf *dmabuf);
 struct nvmap_handle *nvmap_handle_get_from_id(struct nvmap_client *client,
 		u32 id);
 

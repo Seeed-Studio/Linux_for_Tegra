@@ -18,6 +18,7 @@
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
+#include "nvmap_dmabuf.h"
 
 bool nvmap_convert_carveout_to_iovmm;
 bool nvmap_convert_iovmm_to_carveout;

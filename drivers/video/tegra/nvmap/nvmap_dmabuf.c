@@ -33,6 +33,7 @@
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 #include "nvmap_alloc.h"
+#include "nvmap_dmabuf.h"
 
 #define NVMAP_DMABUF_ATTACH  nvmap_dmabuf_attach
 
@@ -362,7 +363,7 @@ static int __nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
 #define NVMAP_DMABUF_BEGIN_CPU_ACCESS           __nvmap_dmabuf_begin_cpu_access
 #define NVMAP_DMABUF_END_CPU_ACCESS 		__nvmap_dmabuf_end_cpu_access
 
-int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
+static int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 {
 	struct nvmap_vma_priv *priv;
 
@@ -554,7 +555,7 @@ err_nomem:
 	return ERR_PTR(err);
 }
 
-int __nvmap_dmabuf_fd(struct nvmap_client *client,
+static int __nvmap_dmabuf_fd(struct nvmap_client *client,
 		      struct dma_buf *dmabuf, int flags)
 {
 	int ret;

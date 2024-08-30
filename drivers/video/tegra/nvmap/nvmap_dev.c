@@ -45,6 +45,7 @@
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
 #include "nvmap_ioctl.h"
+#include "nvmap_dmabuf.h"
 #include <linux/pagewalk.h>
 
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
