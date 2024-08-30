@@ -208,11 +208,11 @@ const char * const tegra_virt_t234ref_source_text[] = {
 	"SFC2",
 	"SFC3",
 	"SFC4",
-	"MIXER1-1",
-	"MIXER1-2",
-	"MIXER1-3",
-	"MIXER1-4",
-	"MIXER1-5",
+	"MIXER1 TX1",
+	"MIXER1 TX2",
+	"MIXER1 TX3",
+	"MIXER1 TX4",
+	"MIXER1 TX5",
 	"AMX1",
 	"AMX2",
 	"AMX3",
@@ -238,32 +238,32 @@ const char * const tegra_virt_t234ref_source_text[] = {
 	"DMIC2",
 	"DMIC3",
 	"DMIC4",
-	"ADX1-1",
-	"ADX1-2",
-	"ADX1-3",
-	"ADX1-4",
-	"ADX2-1",
-	"ADX2-2",
-	"ADX2-3",
-	"ADX2-4",
-	"ADX3-1",
-	"ADX3-2",
-	"ADX3-3",
-	"ADX3-4",
-	"ADX4-1",
-	"ADX4-2",
-	"ADX4-3",
-	"ADX4-4",
+	"ADX1 TX1",
+	"ADX1 TX2",
+	"ADX1 TX3",
+	"ADX1 TX4",
+	"ADX2 TX1",
+	"ADX2 TX2",
+	"ADX2 TX3",
+	"ADX2 TX4",
+	"ADX3 TX1",
+	"ADX3 TX2",
+	"ADX3 TX3",
+	"ADX3 TX4",
+	"ADX4 TX1",
+	"ADX4 TX2",
+	"ADX4 TX3",
+	"ADX4 TX4",
 	"ADMAIF17",
 	"ADMAIF18",
 	"ADMAIF19",
 	"ADMAIF20",
-	"ASRC1-1",
-	"ASRC1-2",
-	"ASRC1-3",
-	"ASRC1-4",
-	"ASRC1-5",
-	"ASRC1-6",
+	"ASRC1 TX1",
+	"ASRC1 TX2",
+	"ASRC1 TX3",
+	"ASRC1 TX4",
+	"ASRC1 TX5",
+	"ASRC1 TX6",
 };
 
 const int tegra_virt_t264ref_source_value[] = {
@@ -399,11 +399,11 @@ const char * const tegra_virt_t264ref_source_text[] = {
 	"SFC2",
 	"SFC3",
 	"SFC4",
-	"MIXER1-1",
-	"MIXER1-2",
-	"MIXER1-3",
-	"MIXER1-4",
-	"MIXER1-5",
+	"MIXER1 TX1",
+	"MIXER1 TX2",
+	"MIXER1 TX3",
+	"MIXER1 TX4",
+	"MIXER1 TX5",
 	"AMX1",
 	"AMX2",
 	"AMX3",
@@ -424,36 +424,36 @@ const char * const tegra_virt_t264ref_source_text[] = {
 	"DMIC2",
 	"DMIC3",
 	"DMIC4",
-	"ADX1-1",
-	"ADX1-2",
-	"ADX1-3",
-	"ADX1-4",
-	"ADX2-1",
-	"ADX2-2",
-	"ADX2-3",
-	"ADX2-4",
-	"ADX3-1",
-	"ADX3-2",
-	"ADX3-3",
-	"ADX3-4",
-	"ADX4-1",
-	"ADX4-2",
-	"ADX4-3",
-	"ADX4-4",
-	"ADX5-1",
-	"ADX5-2",
-	"ADX5-3",
-	"ADX5-4",
-	"ADX6-1",
-	"ADX6-2",
-	"ADX6-3",
-	"ADX6-4",
-	"ASRC1-1",
-	"ASRC1-2",
-	"ASRC1-3",
-	"ASRC1-4",
-	"ASRC1-5",
-	"ASRC1-6",
+	"ADX1 TX1",
+	"ADX1 TX2",
+	"ADX1 TX3",
+	"ADX1 TX4",
+	"ADX2 TX1",
+	"ADX2 TX2",
+	"ADX2 TX3",
+	"ADX2 TX4",
+	"ADX3 TX1",
+	"ADX3 TX2",
+	"ADX3 TX3",
+	"ADX3 TX4",
+	"ADX4 TX1",
+	"ADX4 TX2",
+	"ADX4 TX3",
+	"ADX4 TX4",
+	"ADX5 TX1",
+	"ADX5 TX2",
+	"ADX5 TX3",
+	"ADX5 TX4",
+	"ADX6 TX1",
+	"ADX6 TX2",
+	"ADX6 TX3",
+	"ADX6 TX4",
+	"ASRC1 TX1",
+	"ASRC1 TX2",
+	"ASRC1 TX3",
+	"ASRC1 TX4",
+	"ASRC1 TX5",
+	"ASRC1 TX6",
 	"ADMAIF17",
 	"ADMAIF18",
 	"ADMAIF19",
@@ -685,31 +685,31 @@ static struct snd_soc_dapm_widget tegra264_virt_xbar_widgets[] = {
 	WIDGETS("SFC2", t264_sfc2_tx),
 	WIDGETS("SFC3", t264_sfc3_tx),
 	WIDGETS("SFC4", t264_sfc4_tx),
-	MIXER_IN_WIDGETS("MIXER1-1", t264_mixer11_tx),
-	MIXER_IN_WIDGETS("MIXER1-2", t264_mixer12_tx),
-	MIXER_IN_WIDGETS("MIXER1-3", t264_mixer13_tx),
-	MIXER_IN_WIDGETS("MIXER1-4", t264_mixer14_tx),
-	MIXER_IN_WIDGETS("MIXER1-5", t264_mixer15_tx),
-	MIXER_IN_WIDGETS("MIXER1-6", t264_mixer16_tx),
-	MIXER_IN_WIDGETS("MIXER1-7", t264_mixer17_tx),
-	MIXER_IN_WIDGETS("MIXER1-8", t264_mixer18_tx),
-	MIXER_IN_WIDGETS("MIXER1-9", t264_mixer19_tx),
-	MIXER_IN_WIDGETS("MIXER1-10", t264_mixer110_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX1", t264_mixer11_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX2", t264_mixer12_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX3", t264_mixer13_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX4", t264_mixer14_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX5", t264_mixer15_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX6", t264_mixer16_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX7", t264_mixer17_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX8", t264_mixer18_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX9", t264_mixer19_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX10", t264_mixer110_tx),
 
-	MIXER_OUT_WIDGETS("MIXER1-1"),
-	MIXER_OUT_WIDGETS("MIXER1-2"),
-	MIXER_OUT_WIDGETS("MIXER1-3"),
-	MIXER_OUT_WIDGETS("MIXER1-4"),
-	MIXER_OUT_WIDGETS("MIXER1-5"),
-	SND_SOC_DAPM_MIXER("Adder1", SND_SOC_NOPM, 1, 0,
+	MIXER_OUT_WIDGETS("MIXER1 TX1"),
+	MIXER_OUT_WIDGETS("MIXER1 TX2"),
+	MIXER_OUT_WIDGETS("MIXER1 TX3"),
+	MIXER_OUT_WIDGETS("MIXER1 TX4"),
+	MIXER_OUT_WIDGETS("MIXER1 TX5"),
+	SND_SOC_DAPM_MIXER("MIXER1 Adder1", SND_SOC_NOPM, 1, 0,
 		Adder1, ARRAY_SIZE(Adder1)),
-	SND_SOC_DAPM_MIXER("Adder2", SND_SOC_NOPM, 1, 0,
+	SND_SOC_DAPM_MIXER("MIXER1 Adder2", SND_SOC_NOPM, 1, 0,
 		Adder2, ARRAY_SIZE(Adder2)),
-	SND_SOC_DAPM_MIXER("Adder3", SND_SOC_NOPM, 1, 0,
+	SND_SOC_DAPM_MIXER("MIXER1 Adder3", SND_SOC_NOPM, 1, 0,
 		Adder3, ARRAY_SIZE(Adder3)),
-	SND_SOC_DAPM_MIXER("Adder4", SND_SOC_NOPM, 1, 0,
+	SND_SOC_DAPM_MIXER("MIXER1 Adder4", SND_SOC_NOPM, 1, 0,
 		Adder4, ARRAY_SIZE(Adder4)),
-	SND_SOC_DAPM_MIXER("Adder5", SND_SOC_NOPM, 1, 0,
+	SND_SOC_DAPM_MIXER("MIXER1 Adder5", SND_SOC_NOPM, 1, 0,
 		Adder5, ARRAY_SIZE(Adder5)),
 	WIDGETS("AFC1", t264_afc1_tx),
 	WIDGETS("AFC2", t264_afc2_tx),
@@ -720,14 +720,14 @@ static struct snd_soc_dapm_widget tegra264_virt_xbar_widgets[] = {
 	WIDGETS("OPE1", t264_ope1_tx),
 	WIDGETS("MVC1", t264_mvc1_tx),
 	WIDGETS("MVC2", t264_mvc2_tx),
-	WIDGETS("AMX1-1", t264_amx11_tx),
-	WIDGETS("AMX1-2", t264_amx12_tx),
-	WIDGETS("AMX1-3", t264_amx13_tx),
-	WIDGETS("AMX1-4", t264_amx14_tx),
-	WIDGETS("AMX2-1", t264_amx21_tx),
-	WIDGETS("AMX2-2", t264_amx22_tx),
-	WIDGETS("AMX2-3", t264_amx23_tx),
-	WIDGETS("AMX2-4", t264_amx24_tx),
+	WIDGETS("AMX1 RX1", t264_amx11_tx),
+	WIDGETS("AMX1 RX2", t264_amx12_tx),
+	WIDGETS("AMX1 RX3", t264_amx13_tx),
+	WIDGETS("AMX1 RX4", t264_amx14_tx),
+	WIDGETS("AMX2 RX1", t264_amx21_tx),
+	WIDGETS("AMX2 RX2", t264_amx22_tx),
+	WIDGETS("AMX2 RX3", t264_amx23_tx),
+	WIDGETS("AMX2 RX4", t264_amx24_tx),
 	WIDGETS("ADX1", t264_adx1_tx),
 	WIDGETS("ADX2", t264_adx2_tx),
 
@@ -736,66 +736,66 @@ static struct snd_soc_dapm_widget tegra264_virt_xbar_widgets[] = {
 	TX_WIDGETS("DMIC3"),
 	TX_WIDGETS("DMIC4"),
 
-	TX_WIDGETS("ADX1-1"),
-	TX_WIDGETS("ADX1-2"),
-	TX_WIDGETS("ADX1-3"),
-	TX_WIDGETS("ADX1-4"),
+	TX_WIDGETS("ADX1 TX1"),
+	TX_WIDGETS("ADX1 TX2"),
+	TX_WIDGETS("ADX1 TX3"),
+	TX_WIDGETS("ADX1 TX4"),
 
-	TX_WIDGETS("ADX2-1"),
-	TX_WIDGETS("ADX2-2"),
-	TX_WIDGETS("ADX2-3"),
-	TX_WIDGETS("ADX2-4"),
+	TX_WIDGETS("ADX2 TX1"),
+	TX_WIDGETS("ADX2 TX2"),
+	TX_WIDGETS("ADX2 TX3"),
+	TX_WIDGETS("ADX2 TX4"),
 	TX_WIDGETS("AMX1"),
 	TX_WIDGETS("AMX2"),
 	WIDGETS("ADMAIF17", t264_admaif17_tx),
 	WIDGETS("ADMAIF18", t264_admaif18_tx),
 	WIDGETS("ADMAIF19", t264_admaif19_tx),
 	WIDGETS("ADMAIF20", t264_admaif20_tx),
-	WIDGETS("AMX3-1", t264_amx31_tx),
-	WIDGETS("AMX3-2", t264_amx32_tx),
-	WIDGETS("AMX3-3", t264_amx33_tx),
-	WIDGETS("AMX3-4", t264_amx34_tx),
-	WIDGETS("AMX4-1", t264_amx41_tx),
-	WIDGETS("AMX4-2", t264_amx42_tx),
-	WIDGETS("AMX4-3", t264_amx43_tx),
-	WIDGETS("AMX4-4", t264_amx44_tx),
-	WIDGETS("AMX5-1", t264_amx51_tx),
-	WIDGETS("AMX5-2", t264_amx52_tx),
-	WIDGETS("AMX5-3", t264_amx53_tx),
-	WIDGETS("AMX5-4", t264_amx54_tx),
-	WIDGETS("AMX6-1", t264_amx61_tx),
-	WIDGETS("AMX6-2", t264_amx62_tx),
-	WIDGETS("AMX6-3", t264_amx63_tx),
-	WIDGETS("AMX6-4", t264_amx64_tx),
+	WIDGETS("AMX3 RX1", t264_amx31_tx),
+	WIDGETS("AMX3 RX2", t264_amx32_tx),
+	WIDGETS("AMX3 RX3", t264_amx33_tx),
+	WIDGETS("AMX3 RX4", t264_amx34_tx),
+	WIDGETS("AMX4 RX1", t264_amx41_tx),
+	WIDGETS("AMX4 RX2", t264_amx42_tx),
+	WIDGETS("AMX4 RX3", t264_amx43_tx),
+	WIDGETS("AMX4 RX4", t264_amx44_tx),
+	WIDGETS("AMX5 RX1", t264_amx51_tx),
+	WIDGETS("AMX5 RX2", t264_amx52_tx),
+	WIDGETS("AMX5 RX3", t264_amx53_tx),
+	WIDGETS("AMX5 RX4", t264_amx54_tx),
+	WIDGETS("AMX6 RX1", t264_amx61_tx),
+	WIDGETS("AMX6 RX2", t264_amx62_tx),
+	WIDGETS("AMX6 RX3", t264_amx63_tx),
+	WIDGETS("AMX6 RX4", t264_amx64_tx),
 	WIDGETS("ADX3", t264_adx3_tx),
 	WIDGETS("ADX4", t264_adx4_tx),
 	WIDGETS("ADX5", t264_adx5_tx),
 	WIDGETS("ADX6", t264_adx6_tx),
-	WIDGETS("ASRC1-1", t264_asrc11_tx),
-	WIDGETS("ASRC1-2", t264_asrc12_tx),
-	WIDGETS("ASRC1-3", t264_asrc13_tx),
-	WIDGETS("ASRC1-4", t264_asrc14_tx),
-	WIDGETS("ASRC1-5", t264_asrc15_tx),
-	WIDGETS("ASRC1-6", t264_asrc16_tx),
+	WIDGETS("ASRC1 RX1", t264_asrc11_tx),
+	WIDGETS("ASRC1 RX2", t264_asrc12_tx),
+	WIDGETS("ASRC1 RX3", t264_asrc13_tx),
+	WIDGETS("ASRC1 RX4", t264_asrc14_tx),
+	WIDGETS("ASRC1 RX5", t264_asrc15_tx),
+	WIDGETS("ASRC1 RX6", t264_asrc16_tx),
 
-	TX_WIDGETS("ADX3-1"),
-	TX_WIDGETS("ADX3-2"),
-	TX_WIDGETS("ADX3-3"),
-	TX_WIDGETS("ADX3-4"),
+	TX_WIDGETS("ADX3 TX1"),
+	TX_WIDGETS("ADX3 TX2"),
+	TX_WIDGETS("ADX3 TX3"),
+	TX_WIDGETS("ADX3 TX4"),
 
-	TX_WIDGETS("ADX4-1"),
-	TX_WIDGETS("ADX4-2"),
-	TX_WIDGETS("ADX4-3"),
-	TX_WIDGETS("ADX4-4"),
-	TX_WIDGETS("ADX5-1"),
-	TX_WIDGETS("ADX5-2"),
-	TX_WIDGETS("ADX5-3"),
-	TX_WIDGETS("ADX5-4"),
+	TX_WIDGETS("ADX4 TX1"),
+	TX_WIDGETS("ADX4 TX2"),
+	TX_WIDGETS("ADX4 TX3"),
+	TX_WIDGETS("ADX4 TX4"),
+	TX_WIDGETS("ADX5 TX1"),
+	TX_WIDGETS("ADX5 TX2"),
+	TX_WIDGETS("ADX5 TX3"),
+	TX_WIDGETS("ADX5 TX4"),
 
-	TX_WIDGETS("ADX6-1"),
-	TX_WIDGETS("ADX6-2"),
-	TX_WIDGETS("ADX6-3"),
-	TX_WIDGETS("ADX6-4"),
+	TX_WIDGETS("ADX6 TX1"),
+	TX_WIDGETS("ADX6 TX2"),
+	TX_WIDGETS("ADX6 TX3"),
+	TX_WIDGETS("ADX6 TX4"),
 	TX_WIDGETS("AMX3"),
 	TX_WIDGETS("AMX4"),
 	TX_WIDGETS("AMX5"),
@@ -821,6 +821,12 @@ static struct snd_soc_dapm_widget tegra264_virt_xbar_widgets[] = {
 	WIDGETS("ADMAIF30", t264_admaif30_tx),
 	WIDGETS("ADMAIF31", t264_admaif31_tx),
 	WIDGETS("ADMAIF32", t264_admaif32_tx),
+	TX_WIDGETS("ASRC1 TX1"),
+	TX_WIDGETS("ASRC1 TX2"),
+	TX_WIDGETS("ASRC1 TX3"),
+	TX_WIDGETS("ASRC1 TX4"),
+	TX_WIDGETS("ASRC1 TX5"),
+	TX_WIDGETS("ASRC1 TX6"),
 };
 
 static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
@@ -843,31 +849,31 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	WIDGETS("SFC2", t234_sfc2_tx),
 	WIDGETS("SFC3", t234_sfc3_tx),
 	WIDGETS("SFC4", t234_sfc4_tx),
-	MIXER_IN_WIDGETS("MIXER1-1", t234_mixer11_tx),
-	MIXER_IN_WIDGETS("MIXER1-2", t234_mixer12_tx),
-	MIXER_IN_WIDGETS("MIXER1-3", t234_mixer13_tx),
-	MIXER_IN_WIDGETS("MIXER1-4", t234_mixer14_tx),
-	MIXER_IN_WIDGETS("MIXER1-5", t234_mixer15_tx),
-	MIXER_IN_WIDGETS("MIXER1-6", t234_mixer16_tx),
-	MIXER_IN_WIDGETS("MIXER1-7", t234_mixer17_tx),
-	MIXER_IN_WIDGETS("MIXER1-8", t234_mixer18_tx),
-	MIXER_IN_WIDGETS("MIXER1-9", t234_mixer19_tx),
-	MIXER_IN_WIDGETS("MIXER1-10", t234_mixer110_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX1", t234_mixer11_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX2", t234_mixer12_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX3", t234_mixer13_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX4", t234_mixer14_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX5", t234_mixer15_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX6", t234_mixer16_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX7", t234_mixer17_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX8", t234_mixer18_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX9", t234_mixer19_tx),
+	MIXER_IN_WIDGETS("MIXER1 RX10", t234_mixer110_tx),
 
-	MIXER_OUT_WIDGETS("MIXER1-1"),
-	MIXER_OUT_WIDGETS("MIXER1-2"),
-	MIXER_OUT_WIDGETS("MIXER1-3"),
-	MIXER_OUT_WIDGETS("MIXER1-4"),
-	MIXER_OUT_WIDGETS("MIXER1-5"),
-	SND_SOC_DAPM_MIXER("Adder1", SND_SOC_NOPM, 1, 0,
+	MIXER_OUT_WIDGETS("MIXER1 TX1"),
+	MIXER_OUT_WIDGETS("MIXER1 TX2"),
+	MIXER_OUT_WIDGETS("MIXER1 TX3"),
+	MIXER_OUT_WIDGETS("MIXER1 TX4"),
+	MIXER_OUT_WIDGETS("MIXER1 TX5"),
+	SND_SOC_DAPM_MIXER("MIXER1 Adder1", SND_SOC_NOPM, 1, 0,
 		Adder1, ARRAY_SIZE(Adder1)),
-	SND_SOC_DAPM_MIXER("Adder2", SND_SOC_NOPM, 1, 0,
+	SND_SOC_DAPM_MIXER("MIXER1 Adder2", SND_SOC_NOPM, 1, 0,
 		Adder2, ARRAY_SIZE(Adder2)),
-	SND_SOC_DAPM_MIXER("Adder3", SND_SOC_NOPM, 1, 0,
+	SND_SOC_DAPM_MIXER("MIXER1 Adder3", SND_SOC_NOPM, 1, 0,
 		Adder3, ARRAY_SIZE(Adder3)),
-	SND_SOC_DAPM_MIXER("Adder4", SND_SOC_NOPM, 1, 0,
+	SND_SOC_DAPM_MIXER("MIXER1 Adder4", SND_SOC_NOPM, 1, 0,
 		Adder4, ARRAY_SIZE(Adder4)),
-	SND_SOC_DAPM_MIXER("Adder5", SND_SOC_NOPM, 1, 0,
+	SND_SOC_DAPM_MIXER("MIXER1 Adder5", SND_SOC_NOPM, 1, 0,
 		Adder5, ARRAY_SIZE(Adder5)),
 	WIDGETS("AFC1", t234_afc1_tx),
 	WIDGETS("AFC2", t234_afc2_tx),
@@ -879,29 +885,29 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	WIDGETS("SPKPROT1", t234_spkprot_tx),
 	WIDGETS("MVC1", t234_mvc1_tx),
 	WIDGETS("MVC2", t234_mvc2_tx),
-	WIDGETS("AMX1-1", t234_amx11_tx),
-	WIDGETS("AMX1-2", t234_amx12_tx),
-	WIDGETS("AMX1-3", t234_amx13_tx),
-	WIDGETS("AMX1-4", t234_amx14_tx),
-	WIDGETS("AMX2-1", t234_amx21_tx),
-	WIDGETS("AMX2-2", t234_amx22_tx),
-	WIDGETS("AMX2-3", t234_amx23_tx),
-	WIDGETS("AMX2-4", t234_amx24_tx),
+	WIDGETS("AMX1 RX1", t234_amx11_tx),
+	WIDGETS("AMX1 RX2", t234_amx12_tx),
+	WIDGETS("AMX1 RX3", t234_amx13_tx),
+	WIDGETS("AMX1 RX4", t234_amx14_tx),
+	WIDGETS("AMX2 RX1", t234_amx21_tx),
+	WIDGETS("AMX2 RX2", t234_amx22_tx),
+	WIDGETS("AMX2 RX3", t234_amx23_tx),
+	WIDGETS("AMX2 RX4", t234_amx24_tx),
 	WIDGETS("ADX1", t234_adx1_tx),
 	WIDGETS("ADX2", t234_adx2_tx),
 	TX_WIDGETS("DMIC1"),
 	TX_WIDGETS("DMIC2"),
 	TX_WIDGETS("DMIC3"),
 	TX_WIDGETS("AMX1"),
-	TX_WIDGETS("ADX1-1"),
-	TX_WIDGETS("ADX1-2"),
-	TX_WIDGETS("ADX1-3"),
-	TX_WIDGETS("ADX1-4"),
+	TX_WIDGETS("ADX1 TX1"),
+	TX_WIDGETS("ADX1 TX2"),
+	TX_WIDGETS("ADX1 TX3"),
+	TX_WIDGETS("ADX1 TX4"),
 	TX_WIDGETS("AMX2"),
-	TX_WIDGETS("ADX2-1"),
-	TX_WIDGETS("ADX2-2"),
-	TX_WIDGETS("ADX2-3"),
-	TX_WIDGETS("ADX2-4"),
+	TX_WIDGETS("ADX2 TX1"),
+	TX_WIDGETS("ADX2 TX2"),
+	TX_WIDGETS("ADX2 TX3"),
+	TX_WIDGETS("ADX2 TX4"),
 	WIDGETS("ADMAIF11", t234_admaif11_tx),
 	WIDGETS("ADMAIF12", t234_admaif12_tx),
 	WIDGETS("ADMAIF13", t234_admaif13_tx),
@@ -913,32 +919,32 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	WIDGETS("ADMAIF19", t234_admaif19_tx),
 	WIDGETS("ADMAIF20", t234_admaif20_tx),
 	WIDGETS("I2S6", t234_i2s6_tx),
-	WIDGETS("AMX3-1", t234_amx31_tx),
-	WIDGETS("AMX3-2", t234_amx32_tx),
-	WIDGETS("AMX3-3", t234_amx33_tx),
-	WIDGETS("AMX3-4", t234_amx34_tx),
-	WIDGETS("AMX4-1", t234_amx41_tx),
-	WIDGETS("AMX4-2", t234_amx42_tx),
-	WIDGETS("AMX4-3", t234_amx43_tx),
-	WIDGETS("AMX4-4", t234_amx44_tx),
+	WIDGETS("AMX3 RX1", t234_amx31_tx),
+	WIDGETS("AMX3 RX2", t234_amx32_tx),
+	WIDGETS("AMX3 RX3", t234_amx33_tx),
+	WIDGETS("AMX3 RX4", t234_amx34_tx),
+	WIDGETS("AMX4 RX1", t234_amx41_tx),
+	WIDGETS("AMX4 RX2", t234_amx42_tx),
+	WIDGETS("AMX4 RX3", t234_amx43_tx),
+	WIDGETS("AMX4 RX4", t234_amx44_tx),
 	WIDGETS("ADX3", t234_adx3_tx),
 	WIDGETS("ADX4", t234_adx4_tx),
-	WIDGETS("ASRC1-1", t234_asrc11_tx),
-	WIDGETS("ASRC1-2", t234_asrc12_tx),
-	WIDGETS("ASRC1-3", t234_asrc13_tx),
-	WIDGETS("ASRC1-4", t234_asrc14_tx),
-	WIDGETS("ASRC1-5", t234_asrc15_tx),
-	WIDGETS("ASRC1-6", t234_asrc16_tx),
+	WIDGETS("ASRC1 RX1", t234_asrc11_tx),
+	WIDGETS("ASRC1 RX2", t234_asrc12_tx),
+	WIDGETS("ASRC1 RX3", t234_asrc13_tx),
+	WIDGETS("ASRC1 RX4", t234_asrc14_tx),
+	WIDGETS("ASRC1 RX5", t234_asrc15_tx),
+	WIDGETS("ASRC1 RX6", t234_asrc16_tx),
 	TX_WIDGETS("AMX3"),
-	TX_WIDGETS("ADX3-1"),
-	TX_WIDGETS("ADX3-2"),
-	TX_WIDGETS("ADX3-3"),
-	TX_WIDGETS("ADX3-4"),
+	TX_WIDGETS("ADX3 TX1"),
+	TX_WIDGETS("ADX3 TX2"),
+	TX_WIDGETS("ADX3 TX3"),
+	TX_WIDGETS("ADX3 TX4"),
 	TX_WIDGETS("AMX4"),
-	TX_WIDGETS("ADX4-1"),
-	TX_WIDGETS("ADX4-2"),
-	TX_WIDGETS("ADX4-3"),
-	TX_WIDGETS("ADX4-4"),
+	TX_WIDGETS("ADX4 TX1"),
+	TX_WIDGETS("ADX4 TX2"),
+	TX_WIDGETS("ADX4 TX3"),
+	TX_WIDGETS("ADX4 TX4"),
 	TX_WIDGETS("DMIC4"),
 	TX_WIDGETS("ARAD1"),
 	CODEC_WIDGET("I2S1"),
@@ -947,6 +953,12 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	CODEC_WIDGET("I2S4"),
 	CODEC_WIDGET("I2S5"),
 	CODEC_WIDGET("I2S6"),
+	TX_WIDGETS("ASRC1 TX1"),
+	TX_WIDGETS("ASRC1 TX2"),
+	TX_WIDGETS("ASRC1 TX3"),
+	TX_WIDGETS("ASRC1 TX4"),
+	TX_WIDGETS("ASRC1 TX5"),
+	TX_WIDGETS("ASRC1 TX6"),
 };
 
 #define MUX_ROUTES_234(name)						\
@@ -969,11 +981,11 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	{ name " Mux",      "SFC2",		"SFC2 RX" },		\
 	{ name " Mux",      "SFC3",		"SFC3 RX" },		\
 	{ name " Mux",      "SFC4",		"SFC4 RX" },		\
-	{ name " Mux",      "MIXER1-1",		"MIXER1-1 RX" },	\
-	{ name " Mux",      "MIXER1-2",		"MIXER1-2 RX" },	\
-	{ name " Mux",      "MIXER1-3",		"MIXER1-3 RX" },	\
-	{ name " Mux",      "MIXER1-4",		"MIXER1-4 RX" },	\
-	{ name " Mux",      "MIXER1-5",		"MIXER1-5 RX" },	\
+	{ name " Mux",      "MIXER1 TX1",		"MIXER1 TX1 RX" },	\
+	{ name " Mux",      "MIXER1 TX2",		"MIXER1 TX2 RX" },	\
+	{ name " Mux",      "MIXER1 TX3",		"MIXER1 TX3 RX" },	\
+	{ name " Mux",      "MIXER1 TX4",		"MIXER1 TX4 RX" },	\
+	{ name " Mux",      "MIXER1 TX5",		"MIXER1 TX5 RX" },	\
 	{ name " Mux",      "AFC1",		"AFC1 RX" },		\
 	{ name " Mux",      "AFC2",		"AFC2 RX" },		\
 	{ name " Mux",      "AFC3",		"AFC3 RX" },		\
@@ -987,15 +999,15 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	{ name " Mux",      "DMIC2",		"DMIC2 RX" },		\
 	{ name " Mux",      "DMIC3",		"DMIC3 RX" },		\
 	{ name " Mux",      "AMX1",		"AMX1 RX" },		\
-	{ name " Mux",      "ADX1-1",		"ADX1-1 RX" },		\
-	{ name " Mux",      "ADX1-2",		"ADX1-2 RX" },		\
-	{ name " Mux",      "ADX1-3",		"ADX1-3 RX" },		\
-	{ name " Mux",      "ADX1-4",		"ADX1-4 RX" },		\
+	{ name " Mux",      "ADX1 TX1",		"ADX1 TX1 RX" },		\
+	{ name " Mux",      "ADX1 TX2",		"ADX1 TX2 RX" },		\
+	{ name " Mux",      "ADX1 TX3",		"ADX1 TX3 RX" },		\
+	{ name " Mux",      "ADX1 TX4",		"ADX1 TX4 RX" },		\
 	{ name " Mux",      "AMX2",		"AMX2 RX" },		\
-	{ name " Mux",      "ADX2-1",		"ADX2-1 RX" },		\
-	{ name " Mux",      "ADX2-2",		"ADX2-2 RX" },		\
-	{ name " Mux",      "ADX2-3",		"ADX2-3 RX" },		\
-	{ name " Mux",      "ADX2-4",		"ADX2-4 RX" },		\
+	{ name " Mux",      "ADX2 TX1",		"ADX2 TX1 RX" },		\
+	{ name " Mux",      "ADX2 TX2",		"ADX2 TX2 RX" },		\
+	{ name " Mux",      "ADX2 TX3",		"ADX2 TX3 RX" },		\
+	{ name " Mux",      "ADX2 TX4",		"ADX2 TX4 RX" },		\
 	{ name " Mux",      "ADMAIF11",		"ADMAIF11 RX" },	\
 	{ name " Mux",      "ADMAIF12",		"ADMAIF12 RX" },	\
 	{ name " Mux",      "ADMAIF13",		"ADMAIF13 RX" },	\
@@ -1008,35 +1020,35 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	{ name " Mux",      "ADMAIF20",		"ADMAIF20 RX" },	\
 	{ name " Mux",      "DMIC4",		"DMIC4 RX" },		\
 	{ name " Mux",      "I2S6",		"I2S6 RX" },		\
-	{ name " Mux",      "ASRC1-1",		"ASRC1-1 RX" },		\
-	{ name " Mux",      "ASRC1-2",		"ASRC1-2 RX" },		\
-	{ name " Mux",      "ASRC1-3",		"ASRC1-3 RX" },		\
-	{ name " Mux",      "ASRC1-4",		"ASRC1-4 RX" },		\
-	{ name " Mux",      "ASRC1-5",		"ASRC1-5 RX" },		\
-	{ name " Mux",      "ASRC1-6",		"ASRC1-6 RX" },		\
+	{ name " Mux",      "ASRC1 TX1",		"ASRC1 TX1 RX" },		\
+	{ name " Mux",      "ASRC1 TX2",		"ASRC1 TX2 RX" },		\
+	{ name " Mux",      "ASRC1 TX3",		"ASRC1 TX3 RX" },		\
+	{ name " Mux",      "ASRC1 TX4",		"ASRC1 TX4 RX" },		\
+	{ name " Mux",      "ASRC1 TX5",		"ASRC1 TX5 RX" },		\
+	{ name " Mux",      "ASRC1 TX6",		"ASRC1 TX6 RX" },		\
 	{ name " Mux",      "AMX3",		"AMX3 RX" },		\
-	{ name " Mux",      "ADX3-1",		"ADX3-1 RX" },		\
-	{ name " Mux",      "ADX3-2",		"ADX3-2 RX" },		\
-	{ name " Mux",      "ADX3-3",		"ADX3-3 RX" },		\
-	{ name " Mux",      "ADX3-4",		"ADX3-4 RX" },		\
+	{ name " Mux",      "ADX3 TX1",		"ADX3 TX1 RX" },		\
+	{ name " Mux",      "ADX3 TX2",		"ADX3 TX2 RX" },		\
+	{ name " Mux",      "ADX3 TX3",		"ADX3 TX3 RX" },		\
+	{ name " Mux",      "ADX3 TX4",		"ADX3 TX4 RX" },		\
 	{ name " Mux",      "AMX4",		"AMX4 RX" },		\
-	{ name " Mux",      "ADX4-1",		"ADX4-1 RX" },		\
-	{ name " Mux",      "ADX4-2",		"ADX4-2 RX" },		\
-	{ name " Mux",      "ADX4-3",		"ADX4-3 RX" },		\
-	{ name " Mux",      "ADX4-4",		"ADX4-4 RX" },		\
+	{ name " Mux",      "ADX4 TX1",		"ADX4 TX1 RX" },		\
+	{ name " Mux",      "ADX4 TX2",		"ADX4 TX2 RX" },		\
+	{ name " Mux",      "ADX4 TX3",		"ADX4 TX3 RX" },		\
+	{ name " Mux",      "ADX4 TX4",		"ADX4 TX4 RX" },		\
 	{ name " Mux",      "ARAD1",		"ARAD1 RX" },
 
 #define AMX_OUT_ROUTES(name)						\
-	{ name " RX",      NULL,		name "-1 Mux" },	\
-	{ name " RX",      NULL,		name "-2 Mux" },	\
-	{ name " RX",      NULL,		name "-3 Mux" },	\
-	{ name " RX",      NULL,		name "-4 Mux" },
+	{ name " RX",      NULL,		name " RX1 Mux" },	\
+	{ name " RX",      NULL,		name " RX2 Mux" },	\
+	{ name " RX",      NULL,		name " RX3 Mux" },	\
+	{ name " RX",      NULL,		name " RX4 Mux" },
 
 #define ADX_IN_ROUTES_234(name)						\
-	{ name "-1 RX",      NULL,		name " Mux" },		\
-	{ name "-2 RX",      NULL,		name " Mux" },		\
-	{ name "-3 RX",      NULL,		name " Mux" },		\
-	{ name "-4 RX",      NULL,		name " Mux" },		\
+	{ name " TX1 RX",      NULL,		name " Mux" },		\
+	{ name " TX2 RX",      NULL,		name " Mux" },		\
+	{ name " TX3 RX",      NULL,		name " Mux" },		\
+	{ name " TX4 RX",      NULL,		name " Mux" },		\
 	TEGRA234_ROUTES(name)
 
 #define IN_OUT_ROUTES_234(name)						\
@@ -1057,17 +1069,17 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	MUX_ROUTES_234(name)
 
 #define MIXER_ROUTES(name, id)	\
-	{name,	"RX1",	"MIXER1-1 Mux",},	\
-	{name,	"RX2",	"MIXER1-2 Mux",},	\
-	{name,	"RX3",	"MIXER1-3 Mux",},	\
-	{name,	"RX4",	"MIXER1-4 Mux",},	\
-	{name,	"RX5",	"MIXER1-5 Mux",},	\
-	{name,	"RX6",	"MIXER1-6 Mux",},	\
-	{name,	"RX7",	"MIXER1-7 Mux",},	\
-	{name,	"RX8",	"MIXER1-8 Mux",},	\
-	{name,	"RX9",	"MIXER1-9 Mux",},	\
-	{name,	"RX10",	"MIXER1-10 Mux"},	\
-	{"MIXER1-"#id " RX",	NULL,	name}
+	{name,	"RX1",	"MIXER1 RX1 Mux",},	\
+	{name,	"RX2",	"MIXER1 RX2 Mux",},	\
+	{name,	"RX3",	"MIXER1 RX3 Mux",},	\
+	{name,	"RX4",	"MIXER1 RX4 Mux",},	\
+	{name,	"RX5",	"MIXER1 RX5 Mux",},	\
+	{name,	"RX6",	"MIXER1 RX6 Mux",},	\
+	{name,	"RX7",	"MIXER1 RX7 Mux",},	\
+	{name,	"RX8",	"MIXER1 RX8 Mux",},	\
+	{name,	"RX9",	"MIXER1 RX9 Mux",},	\
+	{name,	"RX10",	"MIXER1 RX10 Mux"},	\
+	{"MIXER1 TX"#id " RX",	NULL,	name}
 
 #define MUX_ROUTES_264(name)						\
 	{ name " Mux",      "ADMAIF1",		"ADMAIF1 RX" },		\
@@ -1089,11 +1101,11 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	{ name " Mux",      "SFC2",		"SFC2 RX" },		\
 	{ name " Mux",      "SFC3",		"SFC3 RX" },		\
 	{ name " Mux",      "SFC4",		"SFC4 RX" },		\
-	{ name " Mux",      "MIXER1-1",		"MIXER1-1 RX" },	\
-	{ name " Mux",      "MIXER1-2",		"MIXER1-2 RX" },	\
-	{ name " Mux",      "MIXER1-3",		"MIXER1-3 RX" },	\
-	{ name " Mux",      "MIXER1-4",		"MIXER1-4 RX" },	\
-	{ name " Mux",      "MIXER1-5",		"MIXER1-5 RX" },	\
+	{ name " Mux",      "MIXER1 TX1",		"MIXER1 TX1 RX" },	\
+	{ name " Mux",      "MIXER1 TX2",		"MIXER1 TX2 RX" },	\
+	{ name " Mux",      "MIXER1 TX3",		"MIXER1 TX3 RX" },	\
+	{ name " Mux",      "MIXER1 TX4",		"MIXER1 TX4 RX" },	\
+	{ name " Mux",      "MIXER1 TX5",		"MIXER1 TX5 RX" },	\
 	{ name " Mux",      "AFC1",		"AFC1 RX" },		\
 	{ name " Mux",      "AFC2",		"AFC2 RX" },		\
 	{ name " Mux",      "AFC3",		"AFC3 RX" },		\
@@ -1108,15 +1120,15 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	{ name " Mux",      "DMIC3",		"DMIC3 RX" },		\
 	{ name " Mux",      "DMIC4",		"DMIC4 RX" },		\
 	{ name " Mux",      "AMX1",		"AMX1 RX" },		\
-	{ name " Mux",      "ADX1-1",		"ADX1-1 RX" },		\
-	{ name " Mux",      "ADX1-2",		"ADX1-2 RX" },		\
-	{ name " Mux",      "ADX1-3",		"ADX1-3 RX" },		\
-	{ name " Mux",      "ADX1-4",		"ADX1-4 RX" },		\
+	{ name " Mux",      "ADX1 TX1",		"ADX1 TX1 RX" },		\
+	{ name " Mux",      "ADX1 TX2",		"ADX1 TX2 RX" },		\
+	{ name " Mux",      "ADX1 TX3",		"ADX1 TX3 RX" },		\
+	{ name " Mux",      "ADX1 TX4",		"ADX1 TX4 RX" },		\
 	{ name " Mux",      "AMX2",		"AMX2 RX" },		\
-	{ name " Mux",      "ADX2-1",		"ADX2-1 RX" },		\
-	{ name " Mux",      "ADX2-2",		"ADX2-2 RX" },		\
-	{ name " Mux",      "ADX2-3",		"ADX2-3 RX" },		\
-	{ name " Mux",      "ADX2-4",		"ADX2-4 RX" },		\
+	{ name " Mux",      "ADX2 TX1",		"ADX2 TX1 RX" },		\
+	{ name " Mux",      "ADX2 TX2",		"ADX2 TX2 RX" },		\
+	{ name " Mux",      "ADX2 TX3",		"ADX2 TX3 RX" },		\
+	{ name " Mux",      "ADX2 TX4",		"ADX2 TX4 RX" },		\
 	{ name " Mux",      "ADMAIF11",		"ADMAIF11 RX" },	\
 	{ name " Mux",      "ADMAIF12",		"ADMAIF12 RX" },	\
 	{ name " Mux",      "ADMAIF13",		"ADMAIF13 RX" },	\
@@ -1142,39 +1154,39 @@ static struct snd_soc_dapm_widget tegra234_virt_xbar_widgets[] = {
 	{ name " Mux",      "I2S6",		    "I2S6 RX" },		\
 	{ name " Mux",      "I2S7",		    "I2S7 RX" },		\
 	{ name " Mux",      "I2S8",		    "I2S8 RX" },		\
-	{ name " Mux",      "ASRC1-1",		"ASRC1-1 RX" },		\
-	{ name " Mux",      "ASRC1-2",		"ASRC1-2 RX" },		\
-	{ name " Mux",      "ASRC1-3",		"ASRC1-3 RX" },		\
-	{ name " Mux",      "ASRC1-4",		"ASRC1-4 RX" },		\
-	{ name " Mux",      "ASRC1-5",		"ASRC1-5 RX" },		\
-	{ name " Mux",      "ASRC1-6",		"ASRC1-6 RX" },		\
+	{ name " Mux",      "ASRC1 TX1",		"ASRC1 TX1 RX" },		\
+	{ name " Mux",      "ASRC1 TX2",		"ASRC1 TX2 RX" },		\
+	{ name " Mux",      "ASRC1 TX3",		"ASRC1 TX3 RX" },		\
+	{ name " Mux",      "ASRC1 TX4",		"ASRC1 TX4 RX" },		\
+	{ name " Mux",      "ASRC1 TX5",		"ASRC1 TX5 RX" },		\
+	{ name " Mux",      "ASRC1 TX6",		"ASRC1 TX6 RX" },		\
 	{ name " Mux",      "AMX3",		"AMX3 RX" },		\
-	{ name " Mux",      "ADX3-1",		"ADX3-1 RX" },		\
-	{ name " Mux",      "ADX3-2",		"ADX3-2 RX" },		\
-	{ name " Mux",      "ADX3-3",		"ADX3-3 RX" },		\
-	{ name " Mux",      "ADX3-4",		"ADX3-4 RX" },		\
+	{ name " Mux",      "ADX3 TX1",		"ADX3 TX1 RX" },		\
+	{ name " Mux",      "ADX3 TX2",		"ADX3 TX2 RX" },		\
+	{ name " Mux",      "ADX3 TX3",		"ADX3 TX3 RX" },		\
+	{ name " Mux",      "ADX3 TX4",		"ADX3 TX4 RX" },		\
 	{ name " Mux",      "AMX4",		"AMX4 RX" },		\
-	{ name " Mux",      "ADX4-1",		"ADX4-1 RX" },		\
-	{ name " Mux",      "ADX4-2",		"ADX4-2 RX" },		\
-	{ name " Mux",      "ADX4-3",		"ADX4-3 RX" },		\
-	{ name " Mux",      "ADX4-4",		"ADX4-4 RX" },		\
+	{ name " Mux",      "ADX4 TX1",		"ADX4 TX1 RX" },		\
+	{ name " Mux",      "ADX4 TX2",		"ADX4 TX2 RX" },		\
+	{ name " Mux",      "ADX4 TX3",		"ADX4 TX3 RX" },		\
+	{ name " Mux",      "ADX4 TX4",		"ADX4 TX4 RX" },		\
 	{ name " Mux",      "AMX5",		"AMX5 RX" },		\
-	{ name " Mux",      "ADX5-1",		"ADX5-1 RX" },		\
-	{ name " Mux",      "ADX5-2",		"ADX5-2 RX" },		\
-	{ name " Mux",      "ADX5-3",		"ADX5-3 RX" },		\
-	{ name " Mux",      "ADX5-4",		"ADX5-4 RX" },		\
+	{ name " Mux",      "ADX5 TX1",		"ADX5 TX1 RX" },		\
+	{ name " Mux",      "ADX5 TX2",		"ADX5 TX2 RX" },		\
+	{ name " Mux",      "ADX5 TX3",		"ADX5 TX3 RX" },		\
+	{ name " Mux",      "ADX5 TX4",		"ADX5 TX4 RX" },		\
 	{ name " Mux",      "AMX6",		"AMX6 RX" },		\
-	{ name " Mux",      "ADX6-1",		"ADX6-1 RX" },		\
-	{ name " Mux",      "ADX6-2",		"ADX6-2 RX" },		\
-	{ name " Mux",      "ADX6-3",		"ADX6-3 RX" },		\
-	{ name " Mux",      "ADX6-4",		"ADX6-4 RX" },		\
+	{ name " Mux",      "ADX6 TX1",		"ADX6 TX1 RX" },		\
+	{ name " Mux",      "ADX6 TX2",		"ADX6 TX2 RX" },		\
+	{ name " Mux",      "ADX6 TX3",		"ADX6 TX3 RX" },		\
+	{ name " Mux",      "ADX6 TX4",		"ADX6 TX4 RX" },		\
 	{ name " Mux",      "ARAD1",		"ARAD1 RX" },
 
 #define ADX_IN_ROUTES_264(name)						\
-	{ name "-1 RX",      NULL,		name " Mux" },		\
-	{ name "-2 RX",      NULL,		name " Mux" },		\
-	{ name "-3 RX",      NULL,		name " Mux" },		\
-	{ name "-4 RX",      NULL,		name " Mux" },		\
+	{ name " TX1 RX",      NULL,		name " Mux" },		\
+	{ name " TX2 RX",      NULL,		name " Mux" },		\
+	{ name " TX3 RX",      NULL,		name " Mux" },		\
+	{ name " TX4 RX",      NULL,		name " Mux" },		\
 	TEGRA264_ROUTES(name)
 
 #define IN_OUT_ROUTES_264(name)						\
@@ -1214,22 +1226,22 @@ static struct snd_soc_dapm_route tegra234_virt_xbar_routes[] = {
 	TEGRA234_ROUTES("SFC2")
 	TEGRA234_ROUTES("SFC3")
 	TEGRA234_ROUTES("SFC4")
-	MIXER_IN_ROUTES_234("MIXER1-1")
-	MIXER_IN_ROUTES_234("MIXER1-2")
-	MIXER_IN_ROUTES_234("MIXER1-3")
-	MIXER_IN_ROUTES_234("MIXER1-4")
-	MIXER_IN_ROUTES_234("MIXER1-5")
-	MIXER_IN_ROUTES_234("MIXER1-6")
-	MIXER_IN_ROUTES_234("MIXER1-7")
-	MIXER_IN_ROUTES_234("MIXER1-8")
-	MIXER_IN_ROUTES_234("MIXER1-9")
-	MIXER_IN_ROUTES_234("MIXER1-10")
+	MIXER_IN_ROUTES_234("MIXER1 RX1")
+	MIXER_IN_ROUTES_234("MIXER1 RX2")
+	MIXER_IN_ROUTES_234("MIXER1 RX3")
+	MIXER_IN_ROUTES_234("MIXER1 RX4")
+	MIXER_IN_ROUTES_234("MIXER1 RX5")
+	MIXER_IN_ROUTES_234("MIXER1 RX6")
+	MIXER_IN_ROUTES_234("MIXER1 RX7")
+	MIXER_IN_ROUTES_234("MIXER1 RX8")
+	MIXER_IN_ROUTES_234("MIXER1 RX9")
+	MIXER_IN_ROUTES_234("MIXER1 RX10")
 
-	MIXER_ROUTES("Adder1", 1),
-	MIXER_ROUTES("Adder2", 2),
-	MIXER_ROUTES("Adder3", 3),
-	MIXER_ROUTES("Adder4", 4),
-	MIXER_ROUTES("Adder5", 5),
+	MIXER_ROUTES("MIXER1 Adder1", 1),
+	MIXER_ROUTES("MIXER1 Adder2", 2),
+	MIXER_ROUTES("MIXER1 Adder3", 3),
+	MIXER_ROUTES("MIXER1 Adder4", 4),
+	MIXER_ROUTES("MIXER1 Adder5", 5),
 
 	TEGRA234_ROUTES("AFC1")
 	TEGRA234_ROUTES("AFC2")
@@ -1241,14 +1253,14 @@ static struct snd_soc_dapm_route tegra234_virt_xbar_routes[] = {
 	TEGRA234_ROUTES("SPKPROT1")
 	TEGRA234_ROUTES("MVC1")
 	TEGRA234_ROUTES("MVC2")
-	TEGRA234_ROUTES("AMX1-1")
-	TEGRA234_ROUTES("AMX1-2")
-	TEGRA234_ROUTES("AMX1-3")
-	TEGRA234_ROUTES("AMX1-4")
-	TEGRA234_ROUTES("AMX2-1")
-	TEGRA234_ROUTES("AMX2-2")
-	TEGRA234_ROUTES("AMX2-3")
-	TEGRA234_ROUTES("AMX2-4")
+	TEGRA234_ROUTES("AMX1 RX1")
+	TEGRA234_ROUTES("AMX1 RX2")
+	TEGRA234_ROUTES("AMX1 RX3")
+	TEGRA234_ROUTES("AMX1 RX4")
+	TEGRA234_ROUTES("AMX2 RX1")
+	TEGRA234_ROUTES("AMX2 RX2")
+	TEGRA234_ROUTES("AMX2 RX3")
+	TEGRA234_ROUTES("AMX2 RX4")
 	ADX_IN_ROUTES_234("ADX1")
 	ADX_IN_ROUTES_234("ADX2")
 	AMX_OUT_ROUTES("AMX1")
@@ -1263,23 +1275,23 @@ static struct snd_soc_dapm_route tegra234_virt_xbar_routes[] = {
 	IN_OUT_ROUTES_234("ADMAIF18")
 	IN_OUT_ROUTES_234("ADMAIF19")
 	IN_OUT_ROUTES_234("ADMAIF20")
-	TEGRA234_ROUTES("AMX3-1")
-	TEGRA234_ROUTES("AMX3-2")
-	TEGRA234_ROUTES("AMX3-3")
-	TEGRA234_ROUTES("AMX3-4")
-	TEGRA234_ROUTES("AMX4-1")
-	TEGRA234_ROUTES("AMX4-2")
-	TEGRA234_ROUTES("AMX4-3")
-	TEGRA234_ROUTES("AMX4-4")
+	TEGRA234_ROUTES("AMX3 RX1")
+	TEGRA234_ROUTES("AMX3 RX2")
+	TEGRA234_ROUTES("AMX3 RX3")
+	TEGRA234_ROUTES("AMX3 RX4")
+	TEGRA234_ROUTES("AMX4 RX1")
+	TEGRA234_ROUTES("AMX4 RX2")
+	TEGRA234_ROUTES("AMX4 RX3")
+	TEGRA234_ROUTES("AMX4 RX4")
 	ADX_IN_ROUTES_234("ADX3")
 	ADX_IN_ROUTES_234("ADX4")
 	MIC_SPK_ROUTES_234("I2S6")
-	TEGRA234_ROUTES("ASRC1-1")
-	TEGRA234_ROUTES("ASRC1-2")
-	TEGRA234_ROUTES("ASRC1-3")
-	TEGRA234_ROUTES("ASRC1-4")
-	TEGRA234_ROUTES("ASRC1-5")
-	TEGRA234_ROUTES("ASRC1-6")
+	TEGRA234_ROUTES("ASRC1 RX1")
+	TEGRA234_ROUTES("ASRC1 RX2")
+	TEGRA234_ROUTES("ASRC1 RX3")
+	TEGRA234_ROUTES("ASRC1 RX4")
+	TEGRA234_ROUTES("ASRC1 RX5")
+	TEGRA234_ROUTES("ASRC1 RX6")
 	AMX_OUT_ROUTES("AMX3")
 	AMX_OUT_ROUTES("AMX4")
 };
@@ -1313,51 +1325,51 @@ static struct snd_soc_dapm_route tegra264_virt_xbar_routes[] = {
 	TEGRA264_ROUTES("SFC2")
 	TEGRA264_ROUTES("SFC3")
 	TEGRA264_ROUTES("SFC4")
-	MIXER_IN_ROUTES_264("MIXER1-1")
-	MIXER_IN_ROUTES_264("MIXER1-2")
-	MIXER_IN_ROUTES_264("MIXER1-3")
-	MIXER_IN_ROUTES_264("MIXER1-4")
-	MIXER_IN_ROUTES_264("MIXER1-5")
-	MIXER_IN_ROUTES_264("MIXER1-6")
-	MIXER_IN_ROUTES_264("MIXER1-7")
-	MIXER_IN_ROUTES_264("MIXER1-8")
-	MIXER_IN_ROUTES_264("MIXER1-9")
-	MIXER_IN_ROUTES_264("MIXER1-10")
-	MIXER_ROUTES("Adder1", 1),
-	MIXER_ROUTES("Adder2", 2),
-	MIXER_ROUTES("Adder3", 3),
-	MIXER_ROUTES("Adder4", 4),
-	MIXER_ROUTES("Adder5", 5),
+	MIXER_IN_ROUTES_264("MIXER1 RX1")
+	MIXER_IN_ROUTES_264("MIXER1 RX2")
+	MIXER_IN_ROUTES_264("MIXER1 RX3")
+	MIXER_IN_ROUTES_264("MIXER1 RX4")
+	MIXER_IN_ROUTES_264("MIXER1 RX5")
+	MIXER_IN_ROUTES_264("MIXER1 RX6")
+	MIXER_IN_ROUTES_264("MIXER1 RX7")
+	MIXER_IN_ROUTES_264("MIXER1 RX8")
+	MIXER_IN_ROUTES_264("MIXER1 RX9")
+	MIXER_IN_ROUTES_264("MIXER1 RX10")
+	MIXER_ROUTES("MIXER1 Adder1", 1),
+	MIXER_ROUTES("MIXER1 Adder2", 2),
+	MIXER_ROUTES("MIXER1 Adder3", 3),
+	MIXER_ROUTES("MIXER1 Adder4", 4),
+	MIXER_ROUTES("MIXER1 Adder5", 5),
 	AMX_OUT_ROUTES("AMX1")
 	AMX_OUT_ROUTES("AMX2")
 	AMX_OUT_ROUTES("AMX3")
 	AMX_OUT_ROUTES("AMX4")
 	AMX_OUT_ROUTES("AMX5")
 	AMX_OUT_ROUTES("AMX6")
-	TEGRA264_ROUTES("AMX1-1")
-	TEGRA264_ROUTES("AMX1-2")
-	TEGRA264_ROUTES("AMX1-3")
-	TEGRA264_ROUTES("AMX1-4")
-	TEGRA264_ROUTES("AMX2-1")
-	TEGRA264_ROUTES("AMX2-2")
-	TEGRA264_ROUTES("AMX2-3")
-	TEGRA264_ROUTES("AMX2-4")
-	TEGRA264_ROUTES("AMX3-1")
-	TEGRA264_ROUTES("AMX3-2")
-	TEGRA264_ROUTES("AMX3-3")
-	TEGRA264_ROUTES("AMX3-4")
-	TEGRA264_ROUTES("AMX4-1")
-	TEGRA264_ROUTES("AMX4-2")
-	TEGRA264_ROUTES("AMX4-3")
-	TEGRA264_ROUTES("AMX4-4")
-	TEGRA264_ROUTES("AMX5-1")
-	TEGRA264_ROUTES("AMX5-2")
-	TEGRA264_ROUTES("AMX5-3")
-	TEGRA264_ROUTES("AMX5-4")
-	TEGRA264_ROUTES("AMX6-1")
-	TEGRA264_ROUTES("AMX6-2")
-	TEGRA264_ROUTES("AMX6-3")
-	TEGRA264_ROUTES("AMX6-4")
+	TEGRA264_ROUTES("AMX1 RX1")
+	TEGRA264_ROUTES("AMX1 RX2")
+	TEGRA264_ROUTES("AMX1 RX3")
+	TEGRA264_ROUTES("AMX1 RX4")
+	TEGRA264_ROUTES("AMX2 RX1")
+	TEGRA264_ROUTES("AMX2 RX2")
+	TEGRA264_ROUTES("AMX2 RX3")
+	TEGRA264_ROUTES("AMX2 RX4")
+	TEGRA264_ROUTES("AMX3 RX1")
+	TEGRA264_ROUTES("AMX3 RX2")
+	TEGRA264_ROUTES("AMX3 RX3")
+	TEGRA264_ROUTES("AMX3 RX4")
+	TEGRA264_ROUTES("AMX4 RX1")
+	TEGRA264_ROUTES("AMX4 RX2")
+	TEGRA264_ROUTES("AMX4 RX3")
+	TEGRA264_ROUTES("AMX4 RX4")
+	TEGRA264_ROUTES("AMX5 RX1")
+	TEGRA264_ROUTES("AMX5 RX2")
+	TEGRA264_ROUTES("AMX5 RX3")
+	TEGRA264_ROUTES("AMX5 RX4")
+	TEGRA264_ROUTES("AMX6 RX1")
+	TEGRA264_ROUTES("AMX6 RX2")
+	TEGRA264_ROUTES("AMX6 RX3")
+	TEGRA264_ROUTES("AMX6 RX4")
 	TEGRA264_ROUTES("AFC1")
 	TEGRA264_ROUTES("AFC2")
 	TEGRA264_ROUTES("AFC3")
@@ -1373,12 +1385,12 @@ static struct snd_soc_dapm_route tegra264_virt_xbar_routes[] = {
 	ADX_IN_ROUTES_264("ADX4")
 	ADX_IN_ROUTES_264("ADX5")
 	ADX_IN_ROUTES_264("ADX6")
-	TEGRA264_ROUTES("ASRC1-1")
-	TEGRA264_ROUTES("ASRC1-2")
-	TEGRA264_ROUTES("ASRC1-3")
-	TEGRA264_ROUTES("ASRC1-4")
-	TEGRA264_ROUTES("ASRC1-5")
-	TEGRA264_ROUTES("ASRC1-6")
+	TEGRA264_ROUTES("ASRC1 RX1")
+	TEGRA264_ROUTES("ASRC1 RX2")
+	TEGRA264_ROUTES("ASRC1 RX3")
+	TEGRA264_ROUTES("ASRC1 RX4")
+	TEGRA264_ROUTES("ASRC1 RX5")
+	TEGRA264_ROUTES("ASRC1 RX6")
 	IN_OUT_ROUTES_264("ADMAIF17")
 	IN_OUT_ROUTES_264("ADMAIF18")
 	IN_OUT_ROUTES_264("ADMAIF19")

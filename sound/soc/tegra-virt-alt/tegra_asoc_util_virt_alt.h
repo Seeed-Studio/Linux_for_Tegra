@@ -8,6 +8,10 @@
 
 #include <sound/soc.h>
 
+/* ARAD and Regdump controls are non-functional, hence comment them */
+#define TEGRA_REGDUMP	0
+#define TEGRA_ARAD	0
+
 #define MIXER_CONFIG_SHIFT_VALUE 16
 #define STREAM_ID_SHIFT_VALUE    16
 #define REGDUMP_CMD_SHIFT_VALUE  24
@@ -45,12 +49,6 @@
 	0, 1, 0,	\
 	tegra_virt_t210mixer_get_adder_config,	\
 	tegra_virt_t210mixer_set_adder_config)
-
-#define MIXER_ENABLE_CTRL_DECL(ename, reg) \
-	SOC_SINGLE_EXT(ename, reg,	\
-	0, 1, 0,	\
-	tegra_virt_t210mixer_get_enable,	\
-	tegra_virt_t210mixer_set_enable)
 
 #define SFC_IN_FREQ_CTRL_DECL(ename, id) \
 	SOC_SINGLE_EXT(ename, id,	\
@@ -103,12 +101,6 @@
 	tegra186_virt_asrc_get_ratio_source,	\
 	tegra186_virt_asrc_set_ratio_source)
 
-#define ASRC_STREAM_ENABLE_CTRL_DECL(ename, reg) \
-	SOC_SINGLE_EXT(ename, reg,	\
-	0, 1, 0,	\
-	tegra186_virt_asrc_get_stream_enable,	\
-	tegra186_virt_asrc_set_stream_enable)
-
 #define ASRC_STREAM_HWCOMP_CTRL_DECL(ename, reg) \
 	SOC_SINGLE_EXT(ename, reg,	\
 	0, 1, 0,	\
@@ -127,12 +119,7 @@
 	tegra186_virt_asrc_get_output_threshold,	\
 	tegra186_virt_asrc_set_output_threshold)
 
-#define AMX_ENABLE_CTRL_DECL(ename, reg1, reg2) \
-	SOC_SINGLE_EXT(ename, REG_PACK(reg1, reg2),  \
-	0, 1, 0,	\
-	tegra_virt_t210_amx_get_input_stream_enable,	\
-	tegra_virt_t210_amx_set_input_stream_enable)
-
+#if TEGRA_ARAD
 #define ARAD_LANE_SOURCE_CTRL_DECL(ename, reg, src) \
 	SOC_ENUM_EXT_REG(ename, reg,	\
 	src,	\
@@ -155,18 +142,13 @@
 	SOC_SINGLE_EXT(ename, reg,	\
 	0, 0xFFFFFFFF, 0,	\
 	tegra186_virt_arad_get_lane_ratio, NULL)
+#endif
 
 #define I2S_LOOPBACK_ENABLE_CTRL_DECL(ename, reg) \
 	SOC_SINGLE_EXT(ename, reg,	\
 	0, 1, 0,	\
 	tegra_virt_i2s_get_loopback_enable,	\
 	tegra_virt_i2s_set_loopback_enable)
-
-#define I2S_SET_RATE(ename, reg) \
-	SOC_SINGLE_EXT(ename, reg,	\
-	0, 96000, 0,	\
-	tegra_virt_i2s_get_rate,	\
-	tegra_virt_i2s_set_rate)
 
 #define MIXER_SET_FADE(xname, xbase) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,	\
@@ -190,6 +172,7 @@
 	{.base = xbase, .num_regs = 128,	\
 	.mask = SNDRV_CTL_ELEM_TYPE_INTEGER}) }
 
+#if TEGRA_REGDUMP
 #define REGDUMP_PACK(id1, id2, id3) \
 	(id1 | (id2 << STREAM_ID_SHIFT_VALUE) | (id3 << REGDUMP_CMD_SHIFT_VALUE))
 #define REGDUMP_CTRL_DECL(ename, id, stream_id, cmd) \
@@ -203,6 +186,7 @@
 	0, 1, 0,	\
 	tegra_virt_t210adma_get_regdump, \
 	tegra_virt_t210adma_set_regdump)
+#endif
 
 #define ADDER_CTRL_DECL(name, id)	\
 	static const struct snd_kcontrol_new name[] = {	\
@@ -279,12 +263,6 @@ int tegra_virt_t210mixer_get_adder_config(struct snd_kcontrol *kcontrol,
 int tegra_virt_t210mixer_set_adder_config(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 
-int tegra_virt_t210mixer_get_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-
-int tegra_virt_t210mixer_set_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-
 int tegra_virt_t210sfc_get_in_freq(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 
@@ -324,11 +302,6 @@ int tegra186_virt_asrc_get_ratio_source(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int tegra186_virt_asrc_set_ratio_source(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
-int tegra186_virt_asrc_get_stream_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-
-int tegra186_virt_asrc_set_stream_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
 
 int tegra186_virt_asrc_get_hwcomp_disable(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
@@ -347,12 +320,7 @@ int tegra186_virt_asrc_get_output_threshold(
 int tegra186_virt_asrc_set_output_threshold(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 
-int tegra_virt_t210_amx_get_input_stream_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-int tegra_virt_t210_amx_set_input_stream_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-
-
+#if TEGRA_ARAD
 int tegra186_virt_arad_get_lane_source(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
@@ -379,7 +347,7 @@ int tegra186_virt_arad_set_lane_enable(
 int tegra186_virt_arad_get_lane_ratio(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
-
+#endif
 int tegra_virt_i2s_set_loopback_enable(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
@@ -387,12 +355,6 @@ int tegra_virt_i2s_get_loopback_enable(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 
-int tegra_virt_i2s_set_rate(
-	struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-int tegra_virt_i2s_get_rate(
-	struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
 //Mixer fade
 int tegra_virt_t210mixer_get_fade_status(
 	struct snd_kcontrol *kcontrol,
@@ -405,6 +367,7 @@ int tegra_virt_t210mixer_get_fade(
 	struct snd_ctl_elem_value *ucontrol);
 int tegra_virt_t210mixer_param_info(struct snd_kcontrol *kcontrol,
 		       struct snd_ctl_elem_info *uinfo);
+#if TEGRA_REGDUMP
 int tegra_virt_t210ahub_get_regdump(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
@@ -418,5 +381,6 @@ int tegra_virt_t210adma_set_regdump(
 int tegra_virt_t210adma_get_regdump(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+#endif
 
 #endif

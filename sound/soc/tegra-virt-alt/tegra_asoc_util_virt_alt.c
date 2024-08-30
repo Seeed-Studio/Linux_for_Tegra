@@ -8,6 +8,7 @@
 #include "tegra_virt_alt_ivc.h"
 #include "tegra_asoc_util_virt_alt.h"
 
+#if TEGRA_ARAD
 const int tegra186_arad_mux_value[] = {
 	-1,			/* None */
 	0, 1, 2, 3, 4, 5,	/* I2S1~6 */
@@ -30,6 +31,7 @@ const char * const tegra186_arad_mux_text[] = {
 	"DSPK1",
 	"DSPK2",
 };
+#endif
 
 const char * const tegra186_asrc_ratio_source_text[] = {
 	"ARAD",
@@ -266,60 +268,6 @@ int tegra_virt_t210mixer_set_adder_config(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 EXPORT_SYMBOL(tegra_virt_t210mixer_set_adder_config);
-
-int tegra_virt_t210mixer_get_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct nvaudio_ivc_ctxt *hivc_client =
-		nvaudio_ivc_alloc_ctxt(card->dev);
-	int err;
-	struct nvaudio_ivc_msg msg;
-
-	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.cmd = NVAUDIO_AMIXER_GET_ENABLE;
-	msg.params.amixer_info.id = 0;
-	msg.ack_required = true;
-
-	err = nvaudio_ivc_send_receive(hivc_client,
-			&msg,
-			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
-		pr_err("%s: error on ivc_send_receive\n", __func__);
-
-	ucontrol->value.integer.value[0] = msg.params.amixer_info.enable;
-
-	if (err < 0)
-		return err;
-
-	return 0;
-}
-EXPORT_SYMBOL(tegra_virt_t210mixer_get_enable);
-int tegra_virt_t210mixer_set_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct nvaudio_ivc_ctxt *hivc_client =
-		nvaudio_ivc_alloc_ctxt(card->dev);
-	int err;
-	struct nvaudio_ivc_msg msg;
-
-	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.cmd = NVAUDIO_AMIXER_SET_ENABLE;
-	msg.params.amixer_info.id = 0;
-	msg.params.amixer_info.enable =
-		ucontrol->value.integer.value[0];
-	msg.ack_required = true;
-	err = nvaudio_ivc_send_receive(hivc_client,
-			&msg,
-			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0) {
-		pr_err("%s: error on ivc_send_receive\n", __func__);
-		return err;
-	}
-	return 0;
-}
-EXPORT_SYMBOL(tegra_virt_t210mixer_set_enable);
 
 int tegra_virt_t210sfc_get_in_freq(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
@@ -775,68 +723,6 @@ int tegra186_virt_asrc_set_ratio_source(struct snd_kcontrol *kcontrol,
 }
 EXPORT_SYMBOL(tegra186_virt_asrc_set_ratio_source);
 
-int tegra186_virt_asrc_get_stream_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct nvaudio_ivc_ctxt *hivc_client =
-		nvaudio_ivc_alloc_ctxt(card->dev);
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	int32_t reg = mc->reg;
-	int err;
-	struct nvaudio_ivc_msg msg;
-
-	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.cmd = NVAUDIO_ASRC_GET_STREAM_ENABLE;
-	msg.params.asrc_info.id = 0;
-	msg.params.asrc_info.stream_num = reg;
-
-	err = nvaudio_ivc_send_receive(hivc_client,
-			&msg,
-			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0) {
-		pr_err("%s: error on ivc_send_receive\n", __func__);
-		return err;
-	}
-
-	ucontrol->value.integer.value[0] = msg.params.asrc_info.stream_enable;
-
-	return 0;
-}
-EXPORT_SYMBOL(tegra186_virt_asrc_get_stream_enable);
-
-int tegra186_virt_asrc_set_stream_enable(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	int32_t reg = mc->reg;
-	struct nvaudio_ivc_ctxt *hivc_client =
-		nvaudio_ivc_alloc_ctxt(card->dev);
-	int err;
-	struct nvaudio_ivc_msg msg;
-
-	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.cmd = NVAUDIO_ASRC_SET_STREAM_ENABLE;
-	msg.params.asrc_info.id = 0;
-	msg.params.asrc_info.stream_num = reg;
-	msg.params.asrc_info.stream_enable =
-		ucontrol->value.integer.value[0];
-	msg.ack_required = true;
-
-	err = nvaudio_ivc_send_receive(hivc_client,
-			&msg,
-			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0) {
-		pr_err("%s: error on ivc_send_receive\n", __func__);
-		return err;
-	}
-	return 0;
-}
-EXPORT_SYMBOL(tegra186_virt_asrc_set_stream_enable);
-
 int tegra186_virt_asrc_get_hwcomp_disable(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -1035,49 +921,7 @@ int tegra186_virt_asrc_set_output_threshold(
 }
 EXPORT_SYMBOL(tegra186_virt_asrc_set_output_threshold);
 
-int tegra_virt_t210_amx_get_input_stream_enable(
-	struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	return 0;
-}
-EXPORT_SYMBOL(tegra_virt_t210_amx_get_input_stream_enable);
-
-int tegra_virt_t210_amx_set_input_stream_enable(
-	struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	int32_t reg = mc->reg;
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct nvaudio_ivc_ctxt *hivc_client =
-		nvaudio_ivc_alloc_ctxt(card->dev);
-	int err;
-	struct nvaudio_ivc_msg msg;
-
-	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.cmd = NVAUDIO_AMX_SET_INPUT_STREAM_ENABLE;
-	msg.params.amx_info.amx_id = ((reg) >>
-				MIXER_CONFIG_SHIFT_VALUE) & 0xFFFF;
-	msg.params.amx_info.amx_stream_id = (reg) & 0xFFFF;
-	msg.params.amx_info.amx_stream_enable =
-		ucontrol->value.integer.value[0];
-
-	msg.ack_required = true;
-
-	err = nvaudio_ivc_send_receive(hivc_client,
-			&msg,
-			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0) {
-		pr_err("%s: error on ivc_send_receive\n", __func__);
-		return err;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL(tegra_virt_t210_amx_set_input_stream_enable);
-
+#if TEGRA_ARAD
 int tegra186_virt_arad_get_lane_source(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
@@ -1344,6 +1188,7 @@ int tegra186_virt_arad_get_lane_ratio(
 	return 0;
 }
 EXPORT_SYMBOL(tegra186_virt_arad_get_lane_ratio);
+#endif
 
 int tegra_virt_i2s_get_loopback_enable(
 	struct snd_kcontrol *kcontrol,
@@ -1409,70 +1254,7 @@ int tegra_virt_i2s_set_loopback_enable(
 }
 EXPORT_SYMBOL(tegra_virt_i2s_set_loopback_enable);
 
-int tegra_virt_i2s_get_rate(
-	struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct nvaudio_ivc_ctxt *hivc_client =
-		nvaudio_ivc_alloc_ctxt(card->dev);
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
-	int err;
-	struct nvaudio_ivc_msg msg;
-
-	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.cmd = NVAUDIO_I2S_GET_RATE;
-	msg.params.i2s_info.i2s_id = reg;
-
-	err = nvaudio_ivc_send_receive(hivc_client,
-			&msg,
-			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0) {
-		pr_err("%s: error on ivc_send_receive\n", __func__);
-		return err;
-	}
-
-	ucontrol->value.integer.value[0] =
-			msg.params.i2s_info.i2s_rate;
-
-	return 0;
-}
-EXPORT_SYMBOL(tegra_virt_i2s_get_rate);
-
-int tegra_virt_i2s_set_rate(
-	struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
-	int32_t reg = mc->reg;
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct nvaudio_ivc_ctxt *hivc_client =
-		nvaudio_ivc_alloc_ctxt(card->dev);
-	int err;
-	struct nvaudio_ivc_msg msg;
-
-	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.cmd = NVAUDIO_I2S_SET_RATE;
-	msg.params.i2s_info.i2s_id = reg;
-	msg.params.i2s_info.i2s_rate =
-		ucontrol->value.integer.value[0];
-
-	msg.ack_required = true;
-
-	err = nvaudio_ivc_send_receive(hivc_client,
-			&msg,
-			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0) {
-		pr_err("%s: error on ivc_send_receive\n", __func__);
-		return err;
-	}
-	return 0;
-}
-EXPORT_SYMBOL(tegra_virt_i2s_set_rate);
-
+#if TEGRA_REGDUMP
 int tegra_virt_t210ahub_get_regdump(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -1551,6 +1333,7 @@ int tegra_virt_t210adma_set_regdump(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 EXPORT_SYMBOL(tegra_virt_t210adma_set_regdump);
+#endif
 
 //Set mixer fade
 int tegra_virt_t210mixer_set_fade(struct snd_kcontrol *kcontrol,
