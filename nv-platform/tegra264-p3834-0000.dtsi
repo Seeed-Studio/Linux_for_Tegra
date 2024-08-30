@@ -460,7 +460,7 @@
 
 			trips {
 				cpu-sw-shutdown {
-					temperature = <104500>;
+					temperature = <113000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -475,7 +475,7 @@
 
 			trips {
 				gpu-sw-shutdown {
-					temperature = <104500>;
+					temperature = <113000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -490,7 +490,7 @@
 
 			trips {
 				soc012-sw-shutdown {
-					temperature = <104500>;
+					temperature = <113000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -505,7 +505,7 @@
 
 			trips {
 				soc345-sw-shutdown {
-					temperature = <104500>;
+					temperature = <113000>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -531,17 +531,17 @@
 					type = "active";
 				};
 
-				tj-sw-shutdown {
-					temperature = <104500>;
-					hysteresis = <0>;
-					type = "critical";
-				};
-
 				tj_sw_slowdown: tj-sw-slowdown {
-                                        temperature = <99000>;
+                                        temperature = <109000>;
                                         hysteresis = <0>;
                                         type = "passive";
                                 };
+
+				tj-sw-shutdown {
+					temperature = <113000>;
+					hysteresis = <0>;
+					type = "critical";
+				};
 			};
 		};
 	};
