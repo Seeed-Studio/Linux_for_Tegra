@@ -339,7 +339,7 @@ fail_name:
 fail_ep_dma_alloc:
 	dma_free_coherent(&ppdev->dev, BAR0_SIZE, ep->rp_dma_virt, ep->rp_dma_phy);
 fail_rp_dma_alloc:
-	free_irq(pci_irq_vector(pdev, 1), ep);
+	free_irq(pci_irq_vector(pdev, TEGRA264_PCIE_DMA_MSI_CRC_VEC), ep);
 fail_isr:
 	pci_free_irq_vectors(pdev);
 fail_region_remap:
@@ -359,7 +359,7 @@ static void ep_test_dma_remove(struct pci_dev *pdev)
 	tegra_pcie_dma_deinit(&ep->edma.cookie);
 	dma_free_coherent(&pdev->dev, BAR0_SIZE, ep->ep_dma_virt, ep->ep_dma_phy);
 	dma_free_coherent(&ppdev->dev, BAR0_SIZE, ep->rp_dma_virt, ep->rp_dma_phy);
-	free_irq(pci_irq_vector(pdev, 1), ep);
+	free_irq(pci_irq_vector(pdev, TEGRA264_PCIE_DMA_MSI_CRC_VEC), ep);
 	pci_free_irq_vectors(pdev);
 	pci_release_regions(pdev);
 	pci_clear_master(pdev);
