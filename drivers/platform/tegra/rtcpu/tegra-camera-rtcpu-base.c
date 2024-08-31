@@ -15,6 +15,7 @@
 
 #include <nvidia/conftest.h>
 #include <linux/tegra-camera-rtcpu.h>
+#include <linux/atomic.h>
 #include <linux/bitops.h>
 #include <linux/completion.h>
 #include <linux/delay.h>
@@ -166,6 +167,7 @@ struct tegra_cam_rtcpu {
 	u32 mem_bw;
 	struct tegra_camrtc_mon *monitor;
 	u32 max_reboot_retry;
+	atomic_t rebooting;
 	bool powered;
 	bool boot_sync_done;
 	bool fw_active;
@@ -867,6 +869,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail;
 
+	atomic_set(&rtcpu->rebooting, 0);
 	rtcpu->max_reboot_retry = 3;
 	ret = of_property_read_u32(dev->of_node, NV(max-reboot),
 			&rtcpu->max_reboot_retry);
@@ -949,6 +952,7 @@ fail:
 int tegra_camrtc_reboot(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	int ret;
 
 	if (pm_runtime_suspended(dev)) {
 		dev_info(dev, "cannot reboot while suspended\n");
@@ -957,6 +961,11 @@ int tegra_camrtc_reboot(struct device *dev)
 
 	if (!rtcpu->powered)
 		return -EIO;
+
+	if (atomic_cmpxchg(&rtcpu->rebooting, 0, 1) == 1) {
+		dev_info(dev, "reboot already in progress\n");
+		return -EBUSY;
+	}
 
 	rtcpu->boot_sync_done = false;
 	rtcpu->fw_active = false;
@@ -969,7 +978,11 @@ int tegra_camrtc_reboot(struct device *dev)
 
 	rtcpu->powered = false;
 
-	return tegra_camrtc_boot(dev);
+	ret = tegra_camrtc_boot(dev);
+
+	atomic_set(&rtcpu->rebooting, 0);
+
+	return ret;
 }
 EXPORT_SYMBOL(tegra_camrtc_reboot);
 
