@@ -13,7 +13,7 @@
 #include "tegra234-camera-rbpcv2-imx219.dtsi"
 
 / {
-	overlay-name = "Camera IMX219 Dual";
+	overlay-name = "Camera IMX219 Dual Seeed";
 	jetson-header-name = "Jetson 24pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
 
