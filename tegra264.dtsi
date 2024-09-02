@@ -4193,6 +4193,7 @@
 			#gpio-cells = <2>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
+			pinctrl-node = <&padctl_uphy>;
 		};
 
 		gpio_main: gpio@810c300000 {
