@@ -1,6 +1,13 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
 #include <nvidia/conftest.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -177,7 +184,7 @@ static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 				return -EIO;
 			}
 			set_current_state(TASK_INTERRUPTIBLE);
-			schedule_timeout(usecs_to_jiffies(1));
+			schedule_timeout(usecs_to_jiffies(IVC_RESET_RETRY_WAIT_15USECS));
 		}
 	}
 	vs_req = (struct vs_request *)
@@ -1048,7 +1055,7 @@ static int vblk_inject_err_fsi(unsigned int inst_id, struct epl_error_report_fra
 				return -EIO;
 			}
 			set_current_state(TASK_INTERRUPTIBLE);
-			schedule_timeout(usecs_to_jiffies(1));
+			schedule_timeout(usecs_to_jiffies(IVC_RESET_RETRY_WAIT_15USECS));
 		}
 	}
 

@@ -1,8 +1,14 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
  */
-
 #ifndef _TEGRA_VBLK_H_
 #define _TEGRA_VBLK_H_
 
@@ -23,7 +29,8 @@
 /* Minor number and partition management. */
 #define VBLK_MINORS 32
 
-#define IVC_RESET_RETRIES	30
+#define IVC_RESET_RETRIES 1000
+#define IVC_RESET_RETRY_WAIT_15USECS 15
 
 #define VS_LOG_HEADS 4
 #define VS_LOG_SECTS 16
