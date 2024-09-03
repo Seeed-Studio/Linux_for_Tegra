@@ -200,18 +200,6 @@
 			};
 		};
 
-		pcie-ep@14160000 {/* C4 - End Point */
-			phys = <&p2u_hsio_4>, <&p2u_hsio_5>, <&p2u_hsio_6>,
-					<&p2u_hsio_7>;
-			phy-names = "p2u-0", "p2u-1", "p2u-2", "p2u-3";
-			reset-gpios = <&gpio
-					TEGRA234_MAIN_GPIO(L, 1)
-					GPIO_ACTIVE_LOW>;
-			nvidia,refclk-select-gpios = <&gpio_aon
-							TEGRA234_AON_GPIO(AA, 4)
-							GPIO_ACTIVE_HIGH>;
-		};
-
 		/* PWM1, 40pin header, pin 15 */
 		pwm@3280000 {
 			status = "okay";
