@@ -36,7 +36,8 @@
 			rt5640: audio-codec@1c {
 				compatible = "realtek,rt5640";
 				reg = <0x1c>;
-
+				interrupt-parent = <&gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(F, 3) GPIO_ACTIVE_HIGH>;
 				clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
 				clock-names = "mclk";
 
@@ -44,14 +45,7 @@
 				realtek,dmic2-data-pin = <RT5640_DMIC2_DATA_PIN_NONE>;
 				realtek,jack-detect-source = <RT5640_JD_SRC_HDA_HEADER>;
 
-				/* Codec IRQ output */
-				interrupt-parent = <&gpio>;
-				interrupts = <TEGRA234_MAIN_GPIO(F, 3) GPIO_ACTIVE_HIGH>;
-
-				#sound-dai-cells = <1>;
 				sound-name-prefix = "CVB-RT";
-
-				status = "okay";
 
 				port {
 					rt5640_ep: endpoint {
