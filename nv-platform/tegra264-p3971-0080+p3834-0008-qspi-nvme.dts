@@ -17,6 +17,3 @@
 		};
 	};
 };
-
-/* Add minimal dtsi at the End of the file */
-#include "tegra264-p3971-0080+p3834-0008-qspi-nvme-minimal.dtsi"

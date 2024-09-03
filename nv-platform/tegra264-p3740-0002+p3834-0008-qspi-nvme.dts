@@ -9,6 +9,3 @@
   model = "NVIDIA IGX Thor Development Kit";
   compatible = "nvidia,p3740-0002+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
 };
-
-/* Add minimal dtsi at the End of the file */
-#include "tegra264-p3740-0002+p3834-0008-qspi-nvme-minimal.dtsi"
