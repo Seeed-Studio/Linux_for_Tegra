@@ -3519,6 +3519,15 @@ static void tegra264_xudc_device_params_init(struct tegra_xudc *xudc)
 	val = xudc_readl(xudc, BLCG) & ~BLCG_COREPLL_PWRDN;
 	xudc_writel(xudc, val, BLCG);
 
+#define SSPX_CORE_CNT13 0x4044
+#define  SSPX_CORE_CNT13_CRDTHP_TIMER_MASK GENMASK(11, 0)
+#define  SSPX_CORE_CNT13_CRDTHP_TIMER(x) ((x) & \
+					SSPX_CORE_CNT13_CRDTHP_TIMER_MASK)
+	val = xudc_readl(xudc, SSPX_CORE_CNT13);
+	val &= ~(SSPX_CORE_CNT13_CRDTHP_TIMER_MASK);
+	val |= SSPX_CORE_CNT13_CRDTHP_TIMER(0x33);
+	xudc_writel(xudc, val, SSPX_CORE_CNT13);
+
 #define SSPX_CORE_CNT32 0x4090
 	/*
 	 * Compliance suite appears to be violating polling
