@@ -21,12 +21,6 @@
 		bootargs = "console=ttyTCU0,115200n8";
 	};
 
-	bpmp {
-		thermal {
-			status = "okay";
-		};
-	};
-
 	cpus {
 		idle-states {
 			c7 {

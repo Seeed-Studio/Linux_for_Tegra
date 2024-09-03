@@ -32,11 +32,7 @@
 			};
 
 			tegra_tmp451: thermal-sensor@4c {
-				compatible = "ti,tmp451";
-				reg = <0x4c>;
-				vcc-supply = <&vdd_1v8_ao>;
 				#thermal-sensor-cells = <1>;
-				status = "okay";
 			};
 
 			vrs11_1@20 {
