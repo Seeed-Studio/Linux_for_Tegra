@@ -214,9 +214,6 @@
 #define TEGRA_VIRTUAL_SE_CMD_TSEC_SIGN    (TEGRA_VIRTUAL_SE_CMD_ENG_TSEC \
         | TEGRA_VIRTUAL_SE_CMD_CATEGORY_TSEC_AUTH \
         | TEGRA_VIRTUAL_SE_CMD_OP_TSEC_CMAC_SIGN)
-#define TEGRA_VIRTUAL_SE_CMD_AES_CMD_GET_TSEC_SIGN    (TEGRA_VIRTUAL_SE_CMD_ENG_TSEC \
-        | TEGRA_VIRTUAL_SE_CMD_CATEGORY_TSEC_AUTH \
-        | TEGRA_VIRTUAL_SE_CMD_OP_TSEC_GET_CMAC_SIGN)
 #define TEGRA_VIRTUAL_SE_CMD_TSEC_VERIFY    (TEGRA_VIRTUAL_SE_CMD_ENG_TSEC \
         | TEGRA_VIRTUAL_SE_CMD_CATEGORY_TSEC_AUTH \
         | TEGRA_VIRTUAL_SE_CMD_OP_TSEC_CMAC_VERIFY)
@@ -314,6 +311,8 @@
 #define NVVSE_STATUS_SE_SERVER_ERROR				102U
 #define SE_HW_VALUE_MATCH_CODE						0x5A5A5A5A
 #define SE_HW_VALUE_MISMATCH_CODE					0xBDBDBDBD
+
+#define NVVSE_TSEC_CMD_STATUS_ERR_MASK		((uint32_t)0xFFFFFFU)
 
 static struct crypto_dev_to_ivc_map g_crypto_to_ivc_map[MAX_NUMBER_MISC_DEVICES];
 static struct tegra_vse_node_dma g_node_dma[MAX_NUMBER_MISC_DEVICES];
@@ -538,6 +537,22 @@ struct tegra_virtual_tsec_args {
 	 * used because only a 40-bit address space is supported.
 	 */
 	uint64_t src_addr;
+
+	/**
+	 * IOVA address of the output buffer.
+	 * It is expected to point to a buffer with size at least 16 bytes.
+	 * Although it is a 64-bit integer, only least significant 40 bits are
+	 * used because only a 40-bit address space is supported.
+	 */
+	uint64_t dst_addr;
+
+	/**
+	 * IOVA address of the buffer for status returned by TSEC firmware.
+	 * It is expected to point to a buffer with size at least 4 bytes
+	 * Although it is a 64-bit integer, only least significant 40 bits are
+	 * used because only a 40-bit address space is supported.
+	 */
+	uint64_t fw_status_addr;
 
 	/**
 	 * Size of input buffer in bytes.
@@ -2277,7 +2292,12 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req)
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
 	dma_addr_t src_buf_addr;
+	dma_addr_t mac_buf_addr;
+	dma_addr_t fw_status_buf_addr;
 	void *src_buf = NULL;
+	void *mac_buf = NULL;
+	void *fw_status_buf = NULL;
+	uint32_t tsec_fw_err;
 
 	if ((req->nbytes == 0) || (req->nbytes > TEGRA_VIRTUAL_TSEC_MAX_SUPPORTED_BUFLEN)) {
 		dev_err(se_dev->dev, "%s: input buffer size is invalid\n", __func__);
@@ -2315,11 +2335,27 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req)
 		goto free_mem;
 	}
 
+	mac_buf = dma_alloc_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_AES_CMAC_DIGEST_SIZE,
+				&mac_buf_addr, GFP_KERNEL);
+	if (!mac_buf) {
+		err = -ENOMEM;
+		goto unmap_exit;
+	}
+
+	fw_status_buf = dma_alloc_coherent(se_dev->dev, 4U, &fw_status_buf_addr, GFP_KERNEL);
+	if (!fw_status_buf) {
+		err = -ENOMEM;
+		goto unmap_exit;
+	}
+	*((uint32_t *)fw_status_buf) = 0xFFFFFFFF;
+
 	/* copy aad from sgs to buffer*/
 	sg_pcopy_to_buffer(req->src, (u32)sg_nents(req->src),
 			src_buf, req->nbytes, 0);
 
 	ivc_tx->tsec[0U].src_addr = src_buf_addr;
+	ivc_tx->tsec[0U].dst_addr = mac_buf_addr;
+	ivc_tx->tsec[0U].fw_status_addr = fw_status_buf_addr;
 	ivc_tx->tsec[0U].src_buf_size = req->nbytes;
 	ivc_tx->tsec[0U].keyslot = *((uint64_t *)cmac_ctx->aes_keyslot);
 
@@ -2355,26 +2391,29 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req)
 		goto unmap_exit;
 	}
 
-	if (cmac_req_data->request_type == CMAC_SIGN)
-		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_CMD_GET_TSEC_SIGN;
-	else
+	if (cmac_req_data->request_type == CMAC_VERIFY) {
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_CMD_GET_TSEC_VERIFY;
 
-	priv->cmd = VIRTUAL_CMAC_PROCESS;
-	init_completion(&priv->alg_complete);
+		priv->cmd = VIRTUAL_CMAC_PROCESS;
+		init_completion(&priv->alg_complete);
 
-	err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, priv, ivc_req_msg,
-		sizeof(struct tegra_virtual_se_ivc_msg_t), cmac_ctx->node_id);
-	if (err) {
-		dev_err(se_dev->dev, "failed to send data over ivc err %d\n", err);
-		goto unmap_exit;
+		err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, priv, ivc_req_msg,
+			sizeof(struct tegra_virtual_se_ivc_msg_t), cmac_ctx->node_id);
+		if (err) {
+			dev_err(se_dev->dev, "failed to send data over ivc err %d\n", err);
+			goto unmap_exit;
+		}
 	}
 
 	if (cmac_req_data->request_type == CMAC_SIGN) {
-		if (priv->rx_status == 0) {
-			memcpy(req->result,
-					priv->cmac.data,
-					TEGRA_VIRTUAL_SE_AES_CMAC_DIGEST_SIZE);
+		tsec_fw_err = (*((uint32_t *)fw_status_buf) & NVVSE_TSEC_CMD_STATUS_ERR_MASK);
+		if (tsec_fw_err == 0U) {
+			memcpy(req->result, mac_buf, TEGRA_VIRTUAL_SE_AES_CMAC_DIGEST_SIZE);
+		} else {
+			err = -EINVAL;
+			dev_err(se_dev->dev, "%s: TSEC FW returned error %u\n", __func__,
+					tsec_fw_err);
+			goto unmap_exit;
 		}
 	} else {
 		if (priv->rx_status == 0)
@@ -2393,6 +2432,13 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req)
 unmap_exit:
 	if (src_buf)
 		dma_free_coherent(se_dev->dev, req->nbytes, src_buf, src_buf_addr);
+
+	if (mac_buf)
+		dma_free_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_AES_CMAC_DIGEST_SIZE, mac_buf,
+				mac_buf_addr);
+
+	if (fw_status_buf)
+		dma_free_coherent(se_dev->dev, 4U, fw_status_buf, fw_status_buf_addr);
 
 free_mem:
 	devm_kfree(se_dev->dev, priv);
