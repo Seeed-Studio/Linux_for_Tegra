@@ -49,6 +49,7 @@
 #define TEGRA_HV_VSE_SHA_MAX_LL_NUM_1				1
 #define TEGRA_HV_VSE_AES_CMAC_MAX_LL_NUM			1
 #define TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT			1
+#define TEGRA_HV_VSE_MAX_TSEC_TASKS_PER_SUBMIT		1
 #define TEGRA_HV_VSE_TIMEOUT			(msecs_to_jiffies(10000))
 #define TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE				128
 #define TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE				16
@@ -532,17 +533,17 @@ struct tegra_virtual_tsec_args {
 	uint64_t keyslot;
 
 	/**
-	 * Size of input buffer in bytes.
-	 * The maximum size is given by the macro TEGRA_VIRTUAL_TSEC_MAX_SUPPORTED_BUFLEN
-	 */
-	uint32_t src_buf_size;
-
-	/**
 	 * IOVA address of the input buffer.
 	 * Although it is a 64-bit integer, only least significant 40 bits are
 	 * used because only a 40-bit address space is supported.
 	 */
 	uint64_t src_addr;
+
+	/**
+	 * Size of input buffer in bytes.
+	 * The maximum size is given by the macro TEGRA_VIRTUAL_TSEC_MAX_SUPPORTED_BUFLEN
+	 */
+	uint32_t src_buf_size;
 
 	/**
 	 * For CMAC Verify, this array contains the value to be verified.
@@ -574,7 +575,7 @@ struct tegra_virtual_se_ivc_tx_msg_t {
 	union {
 		union tegra_virtual_se_aes_args aes;
 		union tegra_virtual_se_sha_args sha;
-		struct tegra_virtual_tsec_args tsec;
+		struct tegra_virtual_tsec_args tsec[TEGRA_HV_VSE_MAX_TSEC_TASKS_PER_SUBMIT];
 		struct tegra_virtual_se_hmac_sha_args hmac;
 	};
 };
@@ -591,7 +592,7 @@ struct tegra_virtual_se_ivc_msg_t {
 	struct tegra_virtual_se_ivc_hdr_t ivc_hdr;
 	union {
 		struct tegra_virtual_se_ivc_tx_msg_t tx[TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT];
-		struct tegra_virtual_se_ivc_resp_msg_t rx[TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT];
+		struct tegra_virtual_se_ivc_resp_msg_t rx[TEGRA_HV_VSE_MAX_TSEC_TASKS_PER_SUBMIT];
 	};
 };
 
@@ -2318,16 +2319,16 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req)
 	sg_pcopy_to_buffer(req->src, (u32)sg_nents(req->src),
 			src_buf, req->nbytes, 0);
 
-	ivc_tx->tsec.src_addr = src_buf_addr;
-	ivc_tx->tsec.src_buf_size = req->nbytes;
-	ivc_tx->tsec.keyslot = *((uint64_t *)cmac_ctx->aes_keyslot);
+	ivc_tx->tsec[0U].src_addr = src_buf_addr;
+	ivc_tx->tsec[0U].src_buf_size = req->nbytes;
+	ivc_tx->tsec[0U].keyslot = *((uint64_t *)cmac_ctx->aes_keyslot);
 
 	if (cmac_req_data->request_type == CMAC_SIGN) {
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_TSEC_SIGN;
 	} else {
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_TSEC_VERIFY;
 
-		memcpy(ivc_tx->tsec.cmac_result,
+		memcpy(ivc_tx->tsec[0U].cmac_result,
 				req->result,
 				TEGRA_VIRTUAL_SE_AES_CMAC_DIGEST_SIZE);
 	}
