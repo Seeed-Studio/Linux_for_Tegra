@@ -146,10 +146,6 @@
 #define SSPX_CORE_CNT0 0x610
 #define  SSPX_CORE_CNT0_PING_TBURST_MASK GENMASK(7, 0)
 #define  SSPX_CORE_CNT0_PING_TBURST(x) ((x) & SSPX_CORE_CNT0_PING_TBURST_MASK)
-#define SSPX_CORE_CNT30 0x688
-#define  SSPX_CORE_CNT30_LMPITP_TIMER_MASK GENMASK(19, 0)
-#define  SSPX_CORE_CNT30_LMPITP_TIMER(x) ((x) & \
-					SSPX_CORE_CNT30_LMPITP_TIMER_MASK)
 #define  SSPX_CORE_CNT32_POLL_TBURST_MAX_MASK GENMASK(7, 0)
 #define  SSPX_CORE_CNT32_POLL_TBURST_MAX(x) ((x) & \
 					SSPX_CORE_CNT32_POLL_TBURST_MAX_MASK)
@@ -3492,11 +3488,18 @@ static void tegra186_xudc_device_params_init(struct tegra_xudc *xudc)
 	val |= SSPX_CORE_CNT0_PING_TBURST(0xa);
 	xudc_writel(xudc, val, SSPX_CORE_CNT0);
 
+#define SSPX_CORE_CNT30 0x688
+#define  SSPX_CORE_CNT30_LMPITP_TIMER_MASK GENMASK(19, 0)
+#define  SSPX_CORE_CNT30_LMPITP_TIMER(x) ((x) & \
+					SSPX_CORE_CNT30_LMPITP_TIMER_MASK)
 	/* Default tPortConfiguration timeout is too small. */
 	val = xudc_readl(xudc, SSPX_CORE_CNT30);
 	val &= ~(SSPX_CORE_CNT30_LMPITP_TIMER_MASK);
 	val |= SSPX_CORE_CNT30_LMPITP_TIMER(0x978);
 	xudc_writel(xudc, val, SSPX_CORE_CNT30);
+#undef SSPX_CORE_CNT30
+#undef SSPX_CORE_CNT30_LMPITP_TIMER_MASK
+#undef SSPX_CORE_CNT30_LMPITP_TIMER
 
 	/*
 	 * Compliance suite appears to be violating polling
@@ -3527,6 +3530,19 @@ static void tegra264_xudc_device_params_init(struct tegra_xudc *xudc)
 	val &= ~(SSPX_CORE_CNT13_CRDTHP_TIMER_MASK);
 	val |= SSPX_CORE_CNT13_CRDTHP_TIMER(0x33);
 	xudc_writel(xudc, val, SSPX_CORE_CNT13);
+
+#define SSPX_CORE_CNT30 0x4088
+#define  SSPX_CORE_CNT30_LMPITP_TIMER_MASK GENMASK(11, 0)
+#define  SSPX_CORE_CNT30_LMPITP_TIMER(x) ((x) & \
+					SSPX_CORE_CNT30_LMPITP_TIMER_MASK)
+       /* Default tPortConfiguration timeout is too small. */
+	val = xudc_readl(xudc, SSPX_CORE_CNT30);
+	val &= ~(SSPX_CORE_CNT30_LMPITP_TIMER_MASK);
+	val |= SSPX_CORE_CNT30_LMPITP_TIMER(0xc9);;
+	xudc_writel(xudc, val, SSPX_CORE_CNT30);
+#undef SSPX_CORE_CNT30
+#undef SSPX_CORE_CNT30_LMPITP_TIMER_MASK
+#undef SSPX_CORE_CNT30_LMPITP_TIMER
 
 #define SSPX_CORE_CNT32 0x4090
 	/*
