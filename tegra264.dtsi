@@ -7086,11 +7086,24 @@
 			      <0xa8 0x2000000 0x00 0x40000>,
 			      <0xa8 0x82e0000 0x00 0x40000>;
 			reg-names = "base", "fpci", "bar2", "rst", "pinmux";
-			interrupts = <0 952 IRQ_TYPE_LEVEL_HIGH>,
-					<2 0 IRQ_TYPE_LEVEL_HIGH>,
-					<2 5 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "xhci", "mbox", "padctl";
-
+                        interrupts-extended = <&gic 0 952 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&gic 2 0 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&gic 2 5 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&pmc 79 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&pmc 80 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&pmc 81 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&pmc 82 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&pmc 83 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&pmc 84 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&pmc 85 IRQ_TYPE_LEVEL_HIGH>,
+                                     <&pmc 86 IRQ_TYPE_LEVEL_HIGH>;
+                        /*
+                        wake0, wake1, wake2, wake3 are for USB3.0 ports
+                        wake4, wake5, wake6, wake7 are for USB2.0 ports
+                        */
+                        interrupt-names = "xhci", "mbox", "padctl",
+                                  "wake0", "wake1", "wake2", "wake3",
+                                  "wake4", "wake5", "wake6", "wake7";
 			clocks = <&bpmp TEGRA264_CLK_XUSB1_CORE_HOST>,
 				<&bpmp TEGRA264_CLK_XUSB1_FALCON>,
 				<&bpmp TEGRA264_CLK_XUSB1_CORE_SUPERSPEED>,
