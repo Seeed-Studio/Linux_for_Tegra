@@ -4,10 +4,10 @@
 /plugin/;
 
 / {
-	overlay-name = "Tegra264 p3971-0050+p3834-0005-qspi-nvme Dynamic Overlay";
+	overlay-name = "Tegra264 p3971-0000+p3834-xxxx Dynamic Overlay";
 
 	/* PCIe C4 Endpoint */
-	fragment-t264-p3971-0050-p3834-0005-qspi-nvme-pcie-c4-ep@0 {
+	fragment-t264-p3971-0000-p3834-xxxx-pcie-c4-ep@0 {
 		target-path = "/bus@0";
 		board_config {
 			odm-data = "pcie-c4-endpoint-enable";
