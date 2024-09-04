@@ -3,8 +3,5 @@
 
 / {
 	bus@0 {
-		tegra_soc_hwpm@1604000 {
-			status = "disabled";
-		};
 	};
 };
