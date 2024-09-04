@@ -175,6 +175,7 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 	if (of_property_read_string(pdev->dev.of_node, "cardname", &card->name))
 		dev_warn(&pdev->dev, "Using default card name %s\n",
 			card->name);
+	card->driver_name = "tegra-ape";
 
 	if (admaif_ch_num > 0) {
 
