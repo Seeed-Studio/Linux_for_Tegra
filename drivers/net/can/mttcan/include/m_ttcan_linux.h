@@ -69,10 +69,12 @@
 #define TSC_REF_CLK_SHIFT	9U
 
 struct tegra_mttcan_soc_info {
+	bool enable_clocks;
 	bool set_can_core_clk;
 	unsigned long can_core_clk_rate;
 	unsigned long can_clk_rate;
 	bool use_external_timer;
+	bool control_reset;
 };
 
 struct can_gpio {

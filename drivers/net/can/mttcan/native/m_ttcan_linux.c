@@ -213,22 +213,36 @@ static const struct can_bittiming_const mttcan_data_bittiming_const = {
 };
 
 static const struct tegra_mttcan_soc_info t186_mttcan_sinfo = {
+	.enable_clocks = true,
 	.set_can_core_clk = false,
 	.can_core_clk_rate = 40000000,
 	.can_clk_rate = 40000000,
 	.use_external_timer = false,
+	.control_reset = true,
 };
 
 static const struct tegra_mttcan_soc_info t194_mttcan_sinfo = {
+	.enable_clocks = true,
 	.set_can_core_clk = true,
 	.can_core_clk_rate = 50000000,
 	.can_clk_rate = 200000000,
 	.use_external_timer = true,
+	.control_reset = true,
+};
+
+static const struct tegra_mttcan_soc_info t264_mttcan_sinfo = {
+	.enable_clocks = false,
+	.set_can_core_clk = false,
+	.can_core_clk_rate = 40000000,
+	.can_clk_rate = 40000000,
+	.use_external_timer = false,
+	.control_reset = false,
 };
 
 static const struct of_device_id mttcan_of_table[] = {
 	{ .compatible = "nvidia,tegra186-mttcan", .data = &t186_mttcan_sinfo},
 	{ .compatible = "nvidia,tegra194-mttcan", .data = &t194_mttcan_sinfo},
+	{ .compatible = "nvidia,tegra264-mttcan", .data = &t264_mttcan_sinfo},
 	{},
 };
 
@@ -1571,6 +1585,9 @@ static int mttcan_prepare_clock(struct mttcan_priv *priv)
 
 	mttcan_pm_runtime_enable(priv);
 
+	if (!priv->sinfo->enable_clocks)
+		return 0;
+
 	err = clk_prepare_enable(priv->can_clk);
 	if (err) {
 		dev_err(priv->device, "CAN clk enable failed\n");
@@ -1597,6 +1614,9 @@ static int mttcan_prepare_clock(struct mttcan_priv *priv)
 
 static void mttcan_unprepare_clock(struct mttcan_priv *priv)
 {
+	if (!priv->sinfo->enable_clocks)
+		return;
+
 	if (priv->sinfo->set_can_core_clk)
 		clk_disable_unprepare(priv->core_clk);
 
@@ -1629,7 +1649,15 @@ static int set_can_clk_src_and_rate(struct mttcan_priv *priv)
 	struct clk *pclk = NULL;
 	const char *pclk_name;
 
-	/* get the appropriate clk */
+	if (!priv->sinfo->enable_clocks) {
+		/* Provide a fixed clock rate to can struct if clocks
+		   do not need to be enabled by driver. This is required
+		   for bitrate setting by CAN core driver.
+		*/
+		priv->can.clock.freq = rate;
+		return 0;
+	}
+
 	host_clk = devm_clk_get(priv->device, "can_host");
 	can_clk = devm_clk_get(priv->device, "can");
 	if (IS_ERR(host_clk) || IS_ERR(can_clk)) {
@@ -1706,6 +1734,26 @@ static int set_can_clk_src_and_rate(struct mttcan_priv *priv)
 	return 0;
 }
 
+static int mttcan_controller_reset(struct mttcan_priv *priv)
+{
+	int ret = 0;
+	struct reset_control *rstc;
+
+	if (!priv->sinfo->control_reset)
+		goto exit;
+
+	rstc = devm_reset_control_get(priv->device, "can");
+	if (IS_ERR(rstc)) {
+		dev_err(priv->device, "Missing controller reset\n");
+		ret = PTR_ERR(rstc);
+		goto exit;
+	}
+
+	reset_control_reset(rstc);
+exit:
+	return ret;
+}
+
 static int mttcan_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1715,7 +1763,6 @@ static int mttcan_probe(struct platform_device *pdev)
 	struct net_device *dev;
 	struct mttcan_priv *priv;
 	struct resource *ext_res;
-	struct reset_control *rstc;
 	struct resource *mesg_ram, *ctrl_res;
 	const struct tegra_mttcan_soc_info *sinfo;
 	struct device_node *np;
@@ -1740,6 +1787,8 @@ static int mttcan_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
+	/* allocate the mttcan device */
+
 	dev = alloc_mttcan_dev();
 	if (!dev) {
 		ret = -ENOMEM;
@@ -1747,8 +1796,10 @@ static int mttcan_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
+	dev->irq = irq;
 	priv = netdev_priv(dev);
 	priv->sinfo = sinfo;
+	priv->device = &pdev->dev;
 
 	/* mem0 Controller Register Space
 	 * mem1 Controller Extra Registers Space
@@ -1763,13 +1814,10 @@ static int mttcan_probe(struct platform_device *pdev)
 		goto exit_free_can;
 	}
 
-	rstc = devm_reset_control_get(&pdev->dev, "can");
-	if (IS_ERR(rstc)) {
-		dev_err(&pdev->dev, "Missing controller reset\n");
-		ret = PTR_ERR(rstc);
+	if (mttcan_controller_reset(priv)) {
+		dev_err(&pdev->dev, "Controller reset failed\n");
 		goto exit_free_can;
 	}
-	reset_control_reset(rstc);
 
 	regs = devm_ioremap_resource(&pdev->dev, ctrl_res);
 	xregs = devm_ioremap_resource(&pdev->dev, ext_res);
@@ -1780,11 +1828,6 @@ static int mttcan_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto exit;
 	}
-
-	/* allocate the mttcan device */
-
-	dev->irq = irq;
-	priv->device = &pdev->dev;
 
 	if (set_can_clk_src_and_rate(priv))
 		goto exit_free_device;
