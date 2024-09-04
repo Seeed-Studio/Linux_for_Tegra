@@ -11,18 +11,6 @@
 			status = "disabled";
 		};
 
-		spi@810c440000 {
-			status = "disabled";
-		};
-
-		spi@c6c0000 {
-			status = "disabled";
-		};
-
-		spi@810c590000 {
-			status = "disabled";
-		};
-
 		crypto@8188110000 {
 			status = "disabled";
 		};
