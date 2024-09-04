@@ -183,6 +183,11 @@
 			status = "okay";
 		};
 
+		/* PWM10 */
+		pwm@810c620000 {
+			status = "okay";
+		};
+
 		/* SoC FAN */
 		pwm@c6a0000 {
 			status = "okay";

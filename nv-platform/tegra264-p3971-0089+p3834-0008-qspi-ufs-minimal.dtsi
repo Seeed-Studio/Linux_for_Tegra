@@ -3,14 +3,6 @@
 
 / {
 	bus@0 {
-		pwm@810c600000 {
-			status = "disabled";
-		};
-
-		pwm@810c620000 {
-			status = "disabled";
-		};
-
 		crypto@8188110000 {
 			status = "disabled";
 		};
