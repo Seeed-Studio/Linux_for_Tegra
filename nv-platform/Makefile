@@ -19,6 +19,7 @@ dtbo-y += tegra264-p3971-0050+p3834-0005-qspi-nvme-dynamic.dtbo
 dtbo-y += tegra264-p3971-0080+p3834-0008-qspi-nvme-dynamic.dtbo
 dtbo-y += tegra264-p3971-0089+p3834-0008-qspi-ufs-dynamic.dtbo
 dtbo-y += tegra264-android.dtbo
+dtbo-y += tegra264-ufs-provision.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
