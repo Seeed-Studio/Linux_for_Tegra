@@ -2,7 +2,10 @@
 // SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/reset.h>
+#include <soc/tegra/virt/hv-ivc.h>
 #include "dev.h"
+#include "hwmailbox.h"
+#include "os.h"
 
 #define AMISC_ADSP_CPU_CONFIG           (0x0)
 #define   AMISC_ADSP_STATVECTORSEL      (1 << 4)
@@ -12,8 +15,21 @@
 
 static int nvadsp_os_t264_init(struct platform_device *pdev)
 {
-	/* TBD */
-	return 0;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	int ret = 0, val = 0;
+
+	if (drv_data->chip_data->adsp_os_config_hwmbox != 0) {
+		if (is_tegra_hypervisor_mode()) {
+			/* Set ADSP to know its virtualized configuration */
+			val = ADSP_CONFIG_VIRT_EN << ADSP_CONFIG_VIRT_SHIFT;
+
+			/* Write to HWMBOX */
+			hwmbox_writel(drv_data, val,
+				drv_data->chip_data->adsp_os_config_hwmbox);
+		}
+	}
+
+	return ret;
 }
 
 #ifdef CONFIG_PM
@@ -198,6 +214,7 @@ struct nvadsp_chipdata tegra264_adsp0_chipdata = {
 	.adsp_shared_mem_hwmbox    = 0x08048, /* HWMBOX1 TYPE1_DATA0 */
 	.adsp_boot_config_hwmbox   = 0x0804C, /* HWMBOX1 TYPE1_DATA1 */
 	.adsp_cpu_freq_hwmbox      = 0x08050, /* HWMBOX1 TYPE1_DATA2 */
+	.adsp_os_config_hwmbox     = 0x08054, /* HWMBOX1 TYPE1_DATA3 */
 	.dev_init = nvadsp_dev_t264_init,
 	.os_init = nvadsp_os_t264_init,
 #ifdef CONFIG_PM
@@ -223,6 +240,7 @@ struct nvadsp_chipdata tegra264_adsp1_chipdata = {
 	.adsp_shared_mem_hwmbox    = 0x08048, /* HWMBOX1 TYPE1_DATA0 */
 	.adsp_boot_config_hwmbox   = 0x0804C, /* HWMBOX1 TYPE1_DATA1 */
 	.adsp_cpu_freq_hwmbox      = 0x08050, /* HWMBOX1 TYPE1_DATA2 */
+	.adsp_os_config_hwmbox     = 0x08054, /* HWMBOX1 TYPE1_DATA3 */
 	.dev_init = nvadsp_dev_t264_init,
 	.os_init = nvadsp_os_t264_init,
 #ifdef CONFIG_PM
