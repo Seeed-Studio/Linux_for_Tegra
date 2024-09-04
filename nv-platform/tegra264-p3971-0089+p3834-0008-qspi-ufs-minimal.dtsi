@@ -3,20 +3,5 @@
 
 / {
 	bus@0 {
-		crypto@8188110000 {
-			status = "disabled";
-		};
-
-		crypto@8188120000 {
-			status = "disabled";
-		};
-
-		crypto@8188140000 {
-			status = "disabled";
-		};
-
-		crypto@8189880000 {
-			status = "disabled";
-		};
 	};
 };

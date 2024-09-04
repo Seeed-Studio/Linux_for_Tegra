@@ -251,6 +251,22 @@
 					status = "okay";
 				};
 			};
+
+			crypto@8188110000 {
+				status = "okay";
+			};
+
+			crypto@8188120000 {
+				status = "okay";
+			};
+
+			crypto@8188140000 {
+				status = "okay";
+			};
+
+			crypto@8189880000 {
+				status = "disabled";
+			};
 		};
 
 		/* PCIe C0 ecam generic node for iGPU */
@@ -269,22 +285,6 @@
 		};
 
 		dma-controller@8400000 {
-			status = "okay";
-		};
-
-		crypto@8188110000 {
-			status = "okay";
-		};
-
-		crypto@8188120000 {
-			status = "okay";
-		};
-
-		crypto@8188140000 {
-			status = "okay";
-		};
-
-		crypto@8189880000 {
 			status = "okay";
 		};
 
