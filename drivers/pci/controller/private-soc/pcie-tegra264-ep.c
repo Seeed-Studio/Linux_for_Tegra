@@ -53,7 +53,6 @@
 #define XAL_RC_PCIX_INTR_STATUS_EP_RESET	BIT(8)
 
 #define XAL_RC_PCIX_INTR_EN		0x204
-#define XAL_RC_PCIX_INTR_EN_EP_L2		BIT(9)
 #define XAL_RC_PCIX_INTR_EN_EP_RESET		BIT(8)
 
 #define XAL_RC_DEBUG_HB_REG_2		0x514
@@ -70,18 +69,6 @@
 
 #define XTL_EP_PRI_FUNC_INTR_STATUS	0x53c
 #define XTL_EP_PRI_FUNC_INTR_STATUS_L2_ENTRY	BIT(1)
-
-#define XTL_EP_PRI_SW_MSG_DW0		0xa1c
-#define XTL_EP_PRI_SW_MSG_DW0_PME_TO_ACK	0x15
-
-#define XTL_EP_PRI_SW_MSG_DW1		0xa20
-#define XTL_EP_PRI_SW_MSG_DW1_PME_TO_ACK	0x1b
-
-#define XTL_EP_PRI_SW_MSG_CTRL		0xa18
-#define XTL_EP_PRI_SW_MSG_CTRL_TRIGGER		BIT(0)
-
-#define XTL_EP_PRI_PWR_MGMT_CTRL	0xb20
-#define XTL_EP_PRI_PWR_MGMT_CTRL_DIS_PME_TO_ACK	BIT(0)
 
 #define XTL_EP_PRI_DEVID		0xc80
 #define XTL_EP_PRI_DEVID_OVERIDE		GENMASK(6, 0)
@@ -252,11 +239,8 @@ static void tegra264_pcie_ep_rst_deassert(struct tegra264_pcie_ep *pcie)
 	tegra264_pcie_ep_config_bar(pcie);
 
 	val = readl(pcie->xal_base + XAL_RC_PCIX_INTR_EN);
-	val |= XAL_RC_PCIX_INTR_EN_EP_L2 | XAL_RC_PCIX_INTR_EN_EP_RESET;
+	val |= XAL_RC_PCIX_INTR_EN_EP_RESET;
 	writel(val, pcie->xal_base + XAL_RC_PCIX_INTR_EN);
-
-	writel(XTL_EP_PRI_PWR_MGMT_CTRL_DIS_PME_TO_ACK,
-	       pcie->xtl_ep_pri_base + XTL_EP_PRI_PWR_MGMT_CTRL);
 
 	pcie->ep_state = EP_STATE_ENABLED;
 
@@ -589,16 +573,6 @@ static irqreturn_t tegra264_pcie_ep_irq_handler(int irq, void *arg)
 
 	val = readl(pcie->xtl_ep_pri_base + XTL_EP_PRI_FUNC_INTR_STATUS);
 	writel(val, pcie->xtl_ep_pri_base + XTL_EP_PRI_FUNC_INTR_STATUS);
-
-	/* Send PME Turnoff Ack */
-	if (val & XTL_EP_PRI_FUNC_INTR_STATUS_L2_ENTRY) {
-		writel(XTL_EP_PRI_SW_MSG_DW0_PME_TO_ACK,
-		       pcie->xtl_ep_pri_base + XTL_EP_PRI_SW_MSG_DW0);
-		writel(XTL_EP_PRI_SW_MSG_DW1_PME_TO_ACK,
-		       pcie->xtl_ep_pri_base + XTL_EP_PRI_SW_MSG_DW1);
-		writel(XTL_EP_PRI_SW_MSG_CTRL_TRIGGER,
-		       pcie->xtl_ep_pri_base + XTL_EP_PRI_SW_MSG_CTRL);
-	}
 
 	val = readl(pcie->xal_base + XAL_RC_PCIX_INTR_STATUS);
 	writel(val, pcie->xal_base + XAL_RC_PCIX_INTR_STATUS);
