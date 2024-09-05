@@ -22,6 +22,8 @@
 #include <uapi/linux/nvhost_ioctl.h>
 #include <uapi/linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
+#include "port/nvdla_fw.h"
+#include "port/nvdla_device.h"
 
 /**
  * struct nvdla_private per unique FD private data
@@ -47,7 +49,7 @@ static int nvdla_get_fw_ver(struct nvdla_private *priv,
 	nvdla_dbg_fn(pdev, "");
 
 	/* update fw_version if engine is not yet powered on */
-	err = nvhost_module_busy(pdev);
+	err = nvdla_module_busy(pdev);
 	if (err)
 		return err;
 
@@ -55,7 +57,7 @@ static int nvdla_get_fw_ver(struct nvdla_private *priv,
 
 	nvdla_dbg_fn(pdev, "version returned[%u]", args->version);
 
-	nvhost_module_idle(pdev);
+	nvdla_module_idle(pdev);
 
 	return 0;
 }
@@ -127,10 +129,10 @@ static int nvdla_get_q_status(struct nvdla_private *priv, void *args)
 		goto inval_queue;
 	}
 
-	fence.syncpoint_index = queue->syncpt_id;
-	fence.syncpoint_value = nvhost_syncpt_read_maxval(pdev,
-						queue->syncpt_id);
-	nvdla_dbg_info(pdev, "syncpt_id[%u] val[%u]\n", fence.syncpoint_index, fence.syncpoint_value);
+	fence.syncpoint_index = nvdla_sync_get_syncptid(queue->sync_context);
+	fence.syncpoint_value = nvdla_sync_get_max_value(queue->sync_context);
+	nvdla_dbg_info(pdev, "syncptid[%u] val[%u]\n",
+		fence.syncpoint_index, fence.syncpoint_value);
 
 	if (copy_to_user(usr_fence, &fence, sizeof(struct nvdev_fence))) {
 		err = -EFAULT;
@@ -243,8 +245,7 @@ fail_to_get_val_arg:
 	return err;
 }
 
-static int nvdla_ping(struct platform_device *pdev,
-			   struct nvdla_ping_args *args)
+int nvdla_ping(struct platform_device *pdev, struct nvdla_ping_args *args)
 {
 	struct nvdla_cmd_mem_info ping_cmd_mem_info;
 	struct nvdla_cmd_data cmd_data;
@@ -260,7 +261,7 @@ static int nvdla_ping(struct platform_device *pdev,
 	}
 
 	/* make sure that device is powered on */
-	err = nvhost_module_busy(pdev);
+	err = nvdla_module_busy(pdev);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to power on\n");
 		err = -ENODEV;
@@ -294,7 +295,7 @@ static int nvdla_ping(struct platform_device *pdev,
 	cmd_data.wait = true;
 
 	/* send ping cmd */
-	err = nvdla_send_cmd(pdev, &cmd_data);
+	err = nvdla_fw_send_cmd(pdev, &cmd_data);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to send ping command");
 		goto fail_cmd;
@@ -315,7 +316,7 @@ fail_cmd:
 fail_to_alloc:
 	mutex_unlock(&nvdla_dev->ping_lock);
 fail_to_get_nvdla_dev:
-	nvhost_module_idle(pdev);
+	nvdla_module_idle(pdev);
 fail_to_on:
 fail_to_get_val_arg:
 	return err;
@@ -407,13 +408,10 @@ static int nvdla_send_emu_signal_fences(struct nvdla_emu_task *task,
 {
 	int err = 0, i;
 	struct platform_device *dla_pdev = task->queue->pool->pdev;
-	struct platform_device *host_pdev =
-				to_platform_device(dla_pdev->dev.parent);
 	struct nvdev_fence __user *prefences =
 		(struct nvdev_fence __user *)(uintptr_t)user_task->prefences;
 	struct nvdev_fence __user *postfences =
 		(struct nvdev_fence __user *)(uintptr_t)user_task->postfences;
-	char fence_name[32];
 
 	nvdla_dbg_fn(dla_pdev, "sending signal fences");
 
@@ -422,7 +420,11 @@ static int nvdla_send_emu_signal_fences(struct nvdla_emu_task *task,
 			continue;
 
 		if (task->prefences[i].type == NVDEV_FENCE_TYPE_SYNC_FD) {
+#if defined(NVDLA_HAVE_CONFIG_SYNCPTFD) && (NVDLA_HAVE_CONFIG_SYNCPTFD == 1)
+			char fence_name[32];
 			struct nvhost_ctrl_sync_fence_info info;
+			struct platform_device *host_pdev =
+				to_platform_device(dla_pdev->dev.parent);
 
 			info.id = task->prefences[i].syncpoint_index;
 			info.thresh = task->prefences[i].syncpoint_value;
@@ -440,10 +442,12 @@ static int nvdla_send_emu_signal_fences(struct nvdla_emu_task *task,
 					"encoding error: %d\n", err);
 				goto fail;
 			}
-
 			err = nvhost_fence_create_fd(host_pdev,
 				&info, 1, fence_name,
 				&task->prefences[i].sync_fd);
+#else
+			err = -EOPNOTSUPP;
+#endif /* NVDLA_HAVE_CONFIG_SYNCPTFD */
 
 			if (err) {
 				nvdla_dbg_err(dla_pdev,
@@ -469,7 +473,11 @@ static int nvdla_send_emu_signal_fences(struct nvdla_emu_task *task,
 			continue;
 
 		if (task->postfences[i].type == NVDEV_FENCE_TYPE_SYNC_FD) {
+#if defined(NVDLA_HAVE_CONFIG_SYNCPTFD) && (NVDLA_HAVE_CONFIG_SYNCPTFD == 1)
+			char fence_name[32];
 			struct nvhost_ctrl_sync_fence_info info;
+			struct platform_device *host_pdev =
+				to_platform_device(dla_pdev->dev.parent);
 
 			info.id = task->postfences[i].syncpoint_index;
 			info.thresh = task->postfences[i].syncpoint_value;
@@ -491,6 +499,9 @@ static int nvdla_send_emu_signal_fences(struct nvdla_emu_task *task,
 			err = nvhost_fence_create_fd(host_pdev,
 				&info, 1, fence_name,
 				&task->postfences[i].sync_fd);
+#else
+			err = -EOPNOTSUPP;
+#endif /* NVDLA_HAVE_CONFIG_SYNCPTFD */
 
 			if (err) {
 				nvdla_dbg_err(dla_pdev,
@@ -520,13 +531,10 @@ static int nvdla_update_signal_fences(struct nvdla_task *task,
 {
 	int err = 0, i;
 	struct platform_device *dla_pdev = task->queue->pool->pdev;
-	struct platform_device *host_pdev =
-				to_platform_device(dla_pdev->dev.parent);
 	struct nvdev_fence __user *prefences =
 		(struct nvdev_fence __user *)(uintptr_t)user_task->prefences;
 	struct nvdev_fence __user *postfences =
 		(struct nvdev_fence __user *)(uintptr_t)user_task->postfences;
-	char fence_name[32];
 
 	nvdla_dbg_fn(dla_pdev, "copy fences for user");
 
@@ -536,7 +544,11 @@ static int nvdla_update_signal_fences(struct nvdla_task *task,
 			continue;
 
 		if (task->prefences[i].type == NVDEV_FENCE_TYPE_SYNC_FD) {
+#if defined(NVDLA_HAVE_CONFIG_SYNCPTFD) && (NVDLA_HAVE_CONFIG_SYNCPTFD == 1)
+			char fence_name[32];
 			struct nvhost_ctrl_sync_fence_info info;
+			struct platform_device *host_pdev =
+				to_platform_device(dla_pdev->dev.parent);
 
 			info.id = task->prefences[i].syncpoint_index;
 			info.thresh = task->prefences[i].syncpoint_value;
@@ -558,6 +570,9 @@ static int nvdla_update_signal_fences(struct nvdla_task *task,
 			err = nvhost_fence_create_fd(host_pdev,
 				&info, 1, fence_name,
 				&task->prefences[i].sync_fd);
+#else
+			err = -EOPNOTSUPP;
+#endif /* NVDLA_HAVE_CONFIG_SYNCPTFD */
 
 			if (err) {
 				nvdla_dbg_err(dla_pdev,
@@ -583,7 +598,11 @@ static int nvdla_update_signal_fences(struct nvdla_task *task,
 			continue;
 
 		if (task->postfences[i].type == NVDEV_FENCE_TYPE_SYNC_FD) {
+#if defined(NVDLA_HAVE_CONFIG_SYNCPTFD) && (NVDLA_HAVE_CONFIG_SYNCPTFD == 1)
+			char fence_name[32];
 			struct nvhost_ctrl_sync_fence_info info;
+			struct platform_device *host_pdev =
+				to_platform_device(dla_pdev->dev.parent);
 
 			info.id = task->postfences[i].syncpoint_index;
 			info.thresh = task->postfences[i].syncpoint_value;
@@ -605,6 +624,9 @@ static int nvdla_update_signal_fences(struct nvdla_task *task,
 			err = nvhost_fence_create_fd(host_pdev,
 				&info, 1, fence_name,
 				&task->postfences[i].sync_fd);
+#else
+			err = -EOPNOTSUPP;
+#endif /* NVDLA_HAVE_CONFIG_SYNCPTFD */
 
 			if (err) {
 				nvdla_dbg_err(dla_pdev,
@@ -1265,14 +1287,15 @@ static int nvdla_open(struct inode *inode, struct file *file)
 	nvdla_dbg_fn(pdev, "priv:%p", priv);
 
 	/* add priv to client list */
-	err = nvhost_module_add_client(pdev, priv);
+	err = nvdla_module_client_register(pdev, priv);
 	if (err < 0)
-		goto err_add_client;
+		goto err_client_register;
 
 	/* set rate for EMC to max
-         * on device release ACM sets to default rate
-         */
+	 * on device release ACM sets to default rate
+	 */
 	for (index = 0; index < NVHOST_MODULE_MAX_CLOCKS; index++) {
+#if !defined(NVDLA_HAVE_CONFIG_AXI) || (NVDLA_HAVE_CONFIG_AXI == 0)
 		struct nvhost_clock *clock = &pdata->clocks[index];
 
 		if (clock->moduleid ==
@@ -1283,6 +1306,7 @@ static int nvdla_open(struct inode *inode, struct file *file)
 				goto err_set_emc_rate;
 			break;
 		}
+#endif /* not NVDLA_HAVE_CONFIG_AXI */
 	}
 
 	/* Zero out explicitly */
@@ -1302,9 +1326,11 @@ static int nvdla_open(struct inode *inode, struct file *file)
 
 err_alloc_buffer:
 	kfree(priv->buffers);
+#if !defined(NVDLA_HAVE_CONFIG_AXI) || (NVDLA_HAVE_CONFIG_AXI == 0)
 err_set_emc_rate:
-	nvhost_module_remove_client(pdev, priv);
-err_add_client:
+#endif /* not NVDLA_HAVE_CONFIG_AXI */
+	nvdla_module_client_unregister(pdev, priv);
+err_client_register:
 	kfree(priv);
 err_alloc_priv:
 	return err;

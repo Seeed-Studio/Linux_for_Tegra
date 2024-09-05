@@ -1,8 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
- */
-/*
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary */
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
  * Function naming determines intended use:
  *
  *     <x>_r(void) : Returns the offset for register <x>.
@@ -297,7 +295,6 @@ static inline u32 flcn_hwcfg2_mem_scrubbing_done_v(void)
 	return 0x0;
 }
 
-#if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 static inline u32 flcn_safety_erb_r(void)
 {
 	return 0x000012ec;
@@ -312,7 +309,6 @@ static inline u32 flcn_safety_erb_data_uncorrected_err_v(void)
 {
 	return 0xeafe1cff;
 }
-#endif /* CONFIG_TEGRA_HSIERRRPTINJ */
 
 static inline u32 cbb_vic_sec_blf_write_ctl_r(void)
 {

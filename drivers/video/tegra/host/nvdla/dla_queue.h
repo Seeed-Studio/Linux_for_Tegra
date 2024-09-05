@@ -9,6 +9,8 @@
 
 #include <linux/kref.h>
 
+#include "port/nvdla_sync.h"
+
 struct nvdla_queue_task_pool;
 
 /**
@@ -33,7 +35,7 @@ struct nvdla_queue_task_mem_info {
  *
  * pool			pointer queue pool
  * kref			struct kref for reference count
- * syncpt_id		Host1x syncpt id
+ * sync_context		NvDLA synchronization context
  * id			Queue id
  * list_lock		mutex for tasks lists control
  * tasklist		Head of tasks list
@@ -56,7 +58,7 @@ struct nvdla_queue {
 #endif
 	struct platform_device *vm_pdev;
 	bool use_channel;
-	u32 syncpt_id;
+	struct nvdla_sync_context *sync_context;
 
 	size_t task_dma_size;
 	size_t task_kmem_size;

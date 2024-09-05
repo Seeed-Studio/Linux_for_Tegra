@@ -298,7 +298,7 @@ static void nvdla_queue_release(struct kref *ref)
 		nvdla_putchannel(queue);
 
 	/* release allocated resources */
-	nvhost_syncpt_put_ref_ext(pool->pdev, queue->syncpt_id);
+	nvdla_sync_destroy(queue->sync_context);
 
 	/* free the task_pool */
 	if (queue->task_dma_size)
@@ -327,6 +327,8 @@ struct nvdla_queue *nvdla_queue_alloc(struct nvdla_queue_pool *pool,
 					bool use_channel)
 {
 	struct platform_device *pdev = pool->pdev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct nvdla_queue *queues = pool->queues;
 	struct nvdla_queue *queue;
 	int index = 0;
@@ -360,12 +362,12 @@ struct nvdla_queue *nvdla_queue_alloc(struct nvdla_queue_pool *pool,
 	queue = &queues[index];
 	set_bit(index, &pool->alloc_table);
 
-	/* allocate a syncpt for the queue */
-	queue->syncpt_id = nvhost_get_syncpt_host_managed(pdev, index, NULL);
-	if (!queue->syncpt_id) {
-		dev_err(&pdev->dev, "failed to get syncpt id\n");
+	/* allocate a sync context for the queue */
+	queue->sync_context = nvdla_sync_create(nvdla_dev->sync_dev);
+	if (queue->sync_context == NULL) {
+		dev_err(&pdev->dev, "failed to create sync context\n");
 		err = -ENOMEM;
-		goto err_alloc_syncpt;
+		goto err_alloc_sync;
 	}
 
 	/* initialize queue ref count and sequence*/
@@ -407,8 +409,8 @@ err_alloc_task_pool:
 		nvdla_putchannel(queue);
 err_alloc_channel:
 	mutex_lock(&pool->queue_lock);
-	nvhost_syncpt_put_ref_ext(pdev, queue->syncpt_id);
-err_alloc_syncpt:
+	nvdla_sync_destroy(queue->sync_context);
+err_alloc_sync:
 	clear_bit(queue->id, &pool->alloc_table);
 err_alloc_queue:
 	mutex_unlock(&pool->queue_lock);

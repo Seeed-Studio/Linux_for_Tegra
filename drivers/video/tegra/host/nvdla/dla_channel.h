@@ -1,6 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA Corporation.  All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary */
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * NVDLA channel submission
  */
@@ -10,6 +9,7 @@
 
 #include "dla_queue.h"
 #include "nvdla.h"
+#include "port/nvdla_fw.h"
 
 #if IS_ENABLED(CONFIG_TEGRA_NVDLA_CHANNEL)
 struct platform_device *nvdla_channel_map(struct platform_device *pdev,

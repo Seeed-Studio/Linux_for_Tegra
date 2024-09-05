@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA Corporation.  All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary */
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
+ * Device data for T194
  */
 
 #ifndef __NVHOST_NVDLA_T194_H__
@@ -26,9 +27,9 @@ static struct nvhost_device_data t19_nvdla0_info = {
 		 TEGRA_SET_EMC_FLOOR}
 	},
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
-	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
-	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
-	.flcn_isr               = nvhost_nvdla_flcn_isr,
+	.finalize_poweron	= nvdla_finalize_poweron,
+	.prepare_poweroff	= nvdla_prepare_poweroff,
+	.flcn_isr               = nvdla_flcn_isr,
 	.self_config_flcn_isr	= true,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA194_FW,
@@ -38,7 +39,11 @@ static struct nvhost_device_data t19_nvdla0_info = {
 	.poweron_reset		= true,
 	.serialize		= true,
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
+#if defined(NVDLA_HAVE_CONFIG_AXI) && (NVDLA_HAVE_CONFIG_AXI == 1)
+	.get_reloc_phys_addr	= NULL,
+#else
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+#endif
 	.module_irq		= 1,
 	.engine_cg_regs		= nvdla_gating_registers,
 	.engine_can_cg		= true,
@@ -60,9 +65,9 @@ static struct nvhost_device_data t19_nvdla1_info = {
 		 TEGRA_SET_EMC_FLOOR}
 	},
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
-	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
-	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
-	.flcn_isr               = nvhost_nvdla_flcn_isr,
+	.finalize_poweron	= nvdla_finalize_poweron,
+	.prepare_poweroff	= nvdla_prepare_poweroff,
+	.flcn_isr               = nvdla_flcn_isr,
 	.self_config_flcn_isr	= true,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA194_FW,
@@ -72,7 +77,11 @@ static struct nvhost_device_data t19_nvdla1_info = {
 	.poweron_reset		= true,
 	.serialize		= true,
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
+#if defined(NVDLA_HAVE_CONFIG_AXI) && (NVDLA_HAVE_CONFIG_AXI == 1)
+	.get_reloc_phys_addr	= NULL,
+#else
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+#endif
 	.module_irq		= 1,
 	.engine_cg_regs		= nvdla_gating_registers,
 	.engine_can_cg		= true,

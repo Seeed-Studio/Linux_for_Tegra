@@ -17,7 +17,9 @@
 #include "dla_os_interface.h"
 #include "dla_t19x_fw_version.h"
 
-#if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
+#include "port/nvdla_sync.h"
+
+#if defined(NVDLA_HAVE_CONFIG_HSIERRINJ) && (NVDLA_HAVE_CONFIG_HSIERRINJ == 1)
 #include <linux/tegra-hsierrrptinj.h>
 
 /*
@@ -38,7 +40,7 @@
 #define NVDLA0_UE_HSM_ERROR_CODE 0x290BU
 #define NVDLA1_UE_HSM_ERROR_CODE 0x290CU
 
-#endif /* CONFIG_TEGRA_HSIERRRPTINJ */
+#endif /* NVDLA_HAVE_CONFIG_HSIERRINJ */
 
 /* DLA FUSE REGISTER
  * Corresponds to the offset of "opt-dla-disable" - part of the
@@ -66,8 +68,9 @@
  * DLA Host1x class IDs
  */
 enum {
-	NV_DLA0_CLASS_ID	= 0xF3,
-	NV_DLA1_CLASS_ID	= 0xF4,
+	NV_DLA0_CLASS_ID		= 0xF3,
+	NV_DLA1_CLASS_ID		= 0xF4,
+	NV_DLA0_SIM_CLASS_ID		= 0xF5,
 };
 
 /**
@@ -76,9 +79,11 @@ enum {
 #if IS_ENABLED(CONFIG_TEGRA_GRHOST)
 #define NV_DLA_TEGRA194_FW	"nvhost_nvdla010.fw"
 #define NV_DLA_TEGRA234_FW	"nvhost_nvdla020.fw"
+#define NV_DLA_TEGRA25X_FW	"axi_nvdla030.fw"
 #else
 #define NV_DLA_TEGRA194_FW	"nvidia/tegra194/nvdla.bin"
 #define NV_DLA_TEGRA234_FW	"nvidia/tegra234/nvdla.bin"
+#define NV_DLA_TEGRA25X_FW	"nvidia/tegra25x/nvdla.bin"
 #endif
 
 /**
@@ -233,19 +238,6 @@ struct nvdla_cmd_mem {
 	unsigned long alloc_table;
 };
 
-/**
- * data structure to keep command data
- *
- * @method_id		method id with command and other info
- * @method_data		method data for command
- * @wait		If set to true then wait for command completion
- */
-struct nvdla_cmd_data {
-	uint32_t method_id;
-	uint32_t method_data;
-	bool wait;
-};
-
 enum nvdla_submit_mode {
 	NVDLA_SUBMIT_MODE_MMIO		= 0,
 	NVDLA_SUBMIT_MODE_CHANNEL	= 1
@@ -313,6 +305,7 @@ struct nvdla_device {
 #endif
 	struct mutex ping_lock;
 	bool available;
+	struct nvdla_sync_device *sync_dev;
 };
 
 /**
@@ -401,7 +394,7 @@ extern const struct file_operations tegra_nvdla_ctrl_ops;
 extern struct nvdla_queue_ops nvdla_queue_ops;
 
 /**
- * nvhost_nvdla_finalize_poweron() finalize power on for DLA
+ * nvdla_finalize_poweron() finalize power on for DLA
  *
  * @pdev	Pointer for platform device
  *
@@ -410,10 +403,10 @@ extern struct nvdla_queue_ops nvdla_queue_ops;
  * This function called from nvhost ACM subsystem,
  * to boot falcon and wait until falcon goes idle after initial setup
  */
-int nvhost_nvdla_finalize_poweron(struct platform_device *pdev);
+int nvdla_finalize_poweron(struct platform_device *pdev);
 
 /**
- * nvhost_nvdla_prepare_poweron() prepare to poweroff DLA
+ * nvdla_device_prepare_poweron() prepare to poweroff DLA
  *
  * @pdev	Pointer for platform device
  *
@@ -422,10 +415,10 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev);
  * This function called from nvhost ACM subsystem,
  * disables falcon interrupts and pass PM core to powergate and clockgate
  */
-int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev);
+int nvdla_prepare_poweroff(struct platform_device *pdev);
 
 /**
- * nvhost_nvdla_flcn_isr() falcon interrupt handler
+ * nvdla_flcn_isr() falcon interrupt handler
  *
  * @pdev	Pointer for platform device
  *
@@ -434,21 +427,7 @@ int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev);
  * This function called from nvhost falcon subsystem on recieving falcon
  * interrupt, like INT_ON_COMPLETE, INT_ON_ERR, DLA_DEBUG etc.
  */
-int nvhost_nvdla_flcn_isr(struct platform_device *pdev);
-
-/**
- * nvdla_send_cmd() send command to DLA
- *
- * @pdev		Pointer for platform device
- * @cmd_data		Pointer command data
- *
- * Return		0 on success otherwise negative
- *
- * This function used to send method to falcon embedding different supporting
- * command. This uses THI registers to send method id and method data
- */
-int nvdla_send_cmd(struct platform_device *pdev,
-			struct nvdla_cmd_data *cmd_data);
+int nvdla_flcn_isr(struct platform_device *pdev);
 
 /**
  * nvdla_task_put()	decrease task reference count
@@ -541,12 +520,14 @@ int nvdla_get_signal_fences(struct nvdla_queue *queue, void *in_task);
 extern const struct dev_pm_ops nvdla_module_pm_ops;
 #endif
 
-#if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
+#if defined(NVDLA_HAVE_CONFIG_HSIERRINJ) && (NVDLA_HAVE_CONFIG_HSIERRINJ == 1)
 
 int nvdla_error_inj_handler(unsigned int instance_id,
 	struct epl_error_report_frame frame,
 	void *data);
 
-#endif /* CONFIG_TEGRA_HSIERRRPTINJ */
+#endif /* NVDLA_HAVE_CONFIG_HSIERRINJ */
+
+int nvdla_ping(struct platform_device *pdev, struct nvdla_ping_args *args);
 
 #endif /* End of __NVHOST_NVDLA_H__ */
