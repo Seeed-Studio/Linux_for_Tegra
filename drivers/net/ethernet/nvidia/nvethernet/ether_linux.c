@@ -2732,6 +2732,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 		ioctl_data->l2_filter.index = BC_index[osi_core->mac];
 		memcpy(ioctl_data->l2_filter.mac_addr, bc_addr, ETH_ALEN);
 		ioctl_data->l2_filter.pkt_dup = OSI_ENABLE;
+		ioctl_data->l2_filter.dma_chansel = OSI_BIT_64(dma_channel);
 	}
 	ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
 	ioctl_data->l2_filter.dma_chan = dma_channel;
