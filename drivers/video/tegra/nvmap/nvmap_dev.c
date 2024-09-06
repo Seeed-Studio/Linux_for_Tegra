@@ -245,12 +245,20 @@ static void destroy_client(struct nvmap_client *client)
 	if (!client)
 		return;
 
+	mutex_lock(&nvmap_dev->clients_lock);
+	/*
+	 * count field tracks the number of namespaces within a process.
+	 * Destroy the client only after all namespaces close the /dev/nvmap node.
+	 */
+	if (atomic_dec_return(&client->count)) {
+		mutex_unlock(&nvmap_dev->clients_lock);
+		return;
+	}
+
 	nvmap_id_array_exit(&client->id_array);
 #ifdef NVMAP_CONFIG_HANDLE_AS_ID
 	client->ida = NULL;
 #endif
-
-	mutex_lock(&nvmap_dev->clients_lock);
 	if (!IS_ERR_OR_NULL(nvmap_dev->handles_by_pid)) {
 		pid_t pid = nvmap_client_pid(client);
 		nvmap_pid_put_locked(nvmap_dev, pid);
@@ -317,13 +325,7 @@ static int nvmap_release(struct inode *inode, struct file *filp)
 		return 0;
 
 	trace_nvmap_release(priv, priv->name);
-	/*
-	 * count field tracks the number of namespaces within a process.
-	 * Destroy the client only after all namespaces close the /dev/nvmap node.
-	 */
-	if (!atomic_dec_return(&priv->count))
-		destroy_client(priv);
-
+	destroy_client(priv);
 	return 0;
 }
 
