@@ -7477,7 +7477,7 @@
 		#power-domain-cells = <1>;
 
 		pwr_i2c: i2c {
-			compatible = "nvidia,tegra186-bpmp-i2c";
+			compatible = "nvidia,tegra264-bpmp-i2c","nvidia,tegra186-bpmp-i2c";
 			status = "disabled";
 
 			nvidia,bpmp-bus-id = <5>;
