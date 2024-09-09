@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /* 12 camera module with 4 hawks and 4 Owls
  * HAWK1 - 2 ar0234 cameras - max96712 Aggregator 1 - GMSL0
@@ -1113,6 +1113,8 @@
 									};
 								};
 							};
+						};
+						i2c@2 {
 							ar0234_e@34 {
 								compatible = "nvidia,ar0234_hawk_owl";
 								reg = <0x34>;
@@ -1249,6 +1251,8 @@
 									};
 								};
 							};
+						};
+						i2c@3 {
 							ar0234_g@36 {
 								compatible = "nvidia,ar0234_hawk_owl";
 								reg = <0x36>;
@@ -1500,7 +1504,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_e@34";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@2/ar0234_e@34";
 							status = "okay";
 						};
 					};
@@ -1511,7 +1515,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_f@35";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@2/ar0234_f@35";
 							status = "okay";
 						};
 					};
@@ -1522,7 +1526,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_g@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@3/ar0234_g@36";
 							status = "okay";
 						};
 					};
@@ -1533,7 +1537,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@1/ar0234_h@37";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@31e0000/virtual_i2c_mux@50/i2c@3/ar0234_h@37";
 							status = "okay";
 						};
 					};

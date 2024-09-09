@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "tegra234-camera-p3762-a00.dtsi"
 #include "dt-bindings/gpio/tegra234-gpio.h"
@@ -215,6 +215,12 @@
 								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
 							};
+						};
+						i2c@2 {
+							reg = <2>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
 							ar0234_e@34 {
 								status = "disabled";
 								def-addr = <0x10>;
@@ -247,6 +253,12 @@
 								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
 							};
+						};
+						i2c@3 {
+							reg = <3>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
 							ar0234_g@36 {
 								status = "disabled";
 								def-addr = <0x10>;
