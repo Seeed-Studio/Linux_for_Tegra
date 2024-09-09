@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 /*
@@ -305,6 +305,37 @@ exit:
 	return ret;
 }
 #endif /* DEBUG_AUTH_API */
+
+static int nvsciipc_ioctl_get_db_by_idx(struct nvsciipc *ctx, unsigned int cmd,
+	unsigned long arg)
+{
+	struct nvsciipc_get_db_by_idx get_db;
+
+	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
+		ERR("%s[%d] need to set endpoint database first\n", __func__,
+			get_current()->pid);
+		return -EPERM;
+	}
+
+	if (copy_from_user(&get_db, (void __user *)arg, _IOC_SIZE(cmd))) {
+		ERR("%s : copy_from_user failed\n", __func__);
+		return -EFAULT;
+	}
+
+	if (get_db.idx >= ctx->num_eps) {
+		INFO("%s : no entry (0x%x)\n", __func__, get_db.idx);
+		return -ENOENT;
+	}
+
+	get_db.entry = *ctx->db[get_db.idx];
+
+	if (copy_to_user((void __user *)arg, &get_db, _IOC_SIZE(cmd))) {
+		ERR("%s : copy_to_user failed\n", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
+}
 
 static int nvsciipc_ioctl_get_db_by_name(struct nvsciipc *ctx, unsigned int cmd,
 		unsigned long arg)
@@ -618,6 +649,9 @@ static long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 	case NVSCIIPC_IOCTL_GET_DB_BY_VUID:
 		ret = nvsciipc_ioctl_get_db_by_vuid(ctx, cmd, arg);
+		break;
+	case NVSCIIPC_IOCTL_GET_DB_BY_IDX:
+		ret = nvsciipc_ioctl_get_db_by_idx(ctx, cmd, arg);
 		break;
 	case NVSCIIPC_IOCTL_GET_DB_SIZE:
 		ret = nvsciipc_ioctl_get_dbsize(ctx, cmd, arg);

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef __NVSCIIPC_IOCTL_H__
@@ -56,6 +56,11 @@ struct nvsciipc_get_db_by_vuid {
 	uint32_t idx;
 };
 
+struct nvsciipc_get_db_by_idx {
+	struct nvsciipc_config_entry entry;
+	uint32_t idx;
+};
+
 /* for userspace level test, debugging purpose only */
 struct nvsciipc_validate_auth_token {
 	uint32_t auth_token;
@@ -104,6 +109,9 @@ struct nvsciipc_map_vuid {
 #define NVSCIIPC_IOCTL_GET_VMID \
 	_IOWR(NVSCIIPC_IOCTL_MAGIC, 8, uint32_t)
 
-#define NVSCIIPC_IOCTL_NUMBER_MAX 8
+#define NVSCIIPC_IOCTL_GET_DB_BY_IDX \
+	_IOWR(NVSCIIPC_IOCTL_MAGIC, 9, struct nvsciipc_get_db_by_idx)
+
+#define NVSCIIPC_IOCTL_NUMBER_MAX 9
 
 #endif /* __NVSCIIPC_IOCTL_H__ */
