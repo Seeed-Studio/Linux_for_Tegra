@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * virtual_i2c_mux.c - virtual i2c mux driver for P3762 & P3783 GMSL boards.
  */
@@ -13,25 +13,47 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/version.h>
+#include "max96712.h"
 
 #define DESER_A				(0)
-#define ENABLE_IMU			(0xFE)
+#define ENABLE_CC1			(0xFE)
+#define ENABLE_CC2			(0xFB)
+#define ENABLE_CC3			(0xEF)
+#define ENABLE_CC4			(0xBF)
 #define ENABLE_ALL_CC			(0xAA)
 #define DESER_ADDR			(0x52)
 #define DESER_CC_REG			(0x0003)
 
-extern int max96712_write_reg_Dser(int slaveAddr,int channel,
-                u16 addr, u8 val);
 static int virtual_i2c_mux_select(struct i2c_mux_core *muxc, u32 chan)
 {
 	int ret = 0;
 
 	/* Do select 1st channel, to access IMUs from 1st Hawk */
-	if (!chan) {
-		ret = max96712_write_reg_Dser(DESER_ADDR, DESER_A, DESER_CC_REG, ENABLE_IMU);
+	switch (chan) {
+	case 0:
+		ret = max96712_write_reg_Dser(DESER_ADDR, DESER_A, DESER_CC_REG, ENABLE_CC1);
 		if (ret)
-			pr_err("%s: Failed to do i2c address trans for IMUs\n",__func__);
-
+			pr_err("%s: Failed to do i2c address trans for CC1\n", __func__);
+		break;
+	case 1:
+		ret = max96712_write_reg_Dser(DESER_ADDR, DESER_A, DESER_CC_REG, ENABLE_CC2);
+		if (ret)
+			pr_err("%s: Failed to do i2c address trans for CC2\n", __func__);
+		break;
+	case 2:
+		ret = max96712_write_reg_Dser(DESER_ADDR, DESER_A, DESER_CC_REG, ENABLE_CC3);
+		if (ret)
+			pr_err("%s: Failed to do i2c address trans for CC3\n", __func__);
+		break;
+	case 3:
+		ret = max96712_write_reg_Dser(DESER_ADDR, DESER_A, DESER_CC_REG, ENABLE_CC4);
+		if (ret)
+			pr_err("%s: Failed to do i2c address trans for CC4\n", __func__);
+		break;
+	default:
+		pr_err("%s: No channels matched chan = %d\n", __func__, chan);
+		ret = -EINVAL;
+		break;
 	}
 	return ret;
 }
@@ -41,11 +63,10 @@ static int virtual_i2c_mux_deselect(struct i2c_mux_core *muxc, u32 chan)
 	int ret = 0;
 
 	/* Enable all control channels */
-	if (!chan) {
-		ret = max96712_write_reg_Dser(DESER_ADDR, DESER_A, DESER_CC_REG, ENABLE_ALL_CC);
-		if (ret)
-			pr_err("%s: Failed to do i2c address trans for IMUs\n",__func__);
-	}
+	ret = max96712_write_reg_Dser(DESER_ADDR, DESER_A, DESER_CC_REG, ENABLE_ALL_CC);
+	if (ret)
+		pr_err("%s: Failed to do i2c address trans for IMUs\n", __func__);
+
 	return ret;
 }
 
@@ -53,7 +74,7 @@ static int virtual_i2c_mux_deselect(struct i2c_mux_core *muxc, u32 chan)
 static int virtual_i2c_mux_probe(struct i2c_client *client)
 #else
 static int virtual_i2c_mux_probe(struct i2c_client *client,
-                             const struct i2c_device_id *id)
+	const struct i2c_device_id *id)
 #endif
 {
 	struct device *dev = &client->dev;
@@ -75,7 +96,7 @@ static int virtual_i2c_mux_probe(struct i2c_client *client,
 				"failed to get i2c parent adapter\n");
 
 	children = of_get_child_count(np);
-	dev_info(dev, "No of children = %d\n",children);
+	dev_info(dev, "No of children = %d\n", children);
 
 	muxc = i2c_mux_alloc(parent, dev, children, 0, I2C_MUX_LOCKED,
 			virtual_i2c_mux_select, virtual_i2c_mux_deselect);
@@ -86,7 +107,7 @@ static int virtual_i2c_mux_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, muxc);
 
 	for (chan = 0; chan < children; chan++) {
-		pr_info("%s:  chan = %d\n",__func__, chan);
+		pr_info("%s:  chan = %d\n", __func__, chan);
 #if defined(NV_I2C_MUX_ADD_ADAPTER_HAS_NO_CLASS_ARG)
 		ret = i2c_mux_add_adapter(muxc, 0, chan);
 #else
@@ -96,7 +117,7 @@ static int virtual_i2c_mux_probe(struct i2c_client *client,
 			goto err_children;
 	}
 
-	dev_info(dev, "Probde is successful!!! \n");
+	dev_info(dev, "Probde is successful!!!\n");
 	dev_info(dev, "%d-port mux on %s adapter\n", children, parent->name);
 
 	return 0;
@@ -126,14 +147,14 @@ static void virtual_i2c_mux_remove(struct i2c_client *client)
 }
 
 static const struct of_device_id virtual_i2c_mux_of_match[] = {
-    { .compatible = "nvidia,virtual-i2c-mux", },
-    {},
+	{ .compatible = "nvidia,virtual-i2c-mux", },
+	{},
 };
 MODULE_DEVICE_TABLE(of, virtual_i2c_mux_of_match);
 
 static const struct i2c_device_id virt_i2c_mux_id[] = {
-    { "virtual-i2c-mux", 0 },
-    { },
+	{ "virtual-i2c-mux", 0 },
+	{ },
 };
 MODULE_DEVICE_TABLE(i2c, virt_i2c_mux_id);
 
@@ -143,8 +164,8 @@ static struct i2c_driver virtual_i2c_mux_driver = {
 	.id_table = virt_i2c_mux_id,
 	.driver	= {
 		.name	= "virtual-i2c-mux",
-        	.owner = THIS_MODULE,
-        	.of_match_table = of_match_ptr(virtual_i2c_mux_of_match),
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(virtual_i2c_mux_of_match),
 	},
 };
 
