@@ -364,21 +364,13 @@ static long xfer_data(struct file *file, char __user *data)
 	dev_dbg(dev, "tx_virt:%p, tx_phys: %p\n", tx_virt, (void *)tx_phys);
 	dev_dbg(dev, "rx_virt:%p, rx_phys: %p\n", rx_virt, (void *)rx_phys);
 
-	/* For OESP/SB */
-	if (strcmp(psc_name, "oesp") == 0 || strcmp(psc_name, "sb") == 0) {
-		msg.data[0] = info.opcode[0];
-		msg.data[1] = info.opcode[1];
-		if (info.tx_buf && info.tx_size > 0 && info.tx_size <= 56)
-			memcpy(&msg.data[2], tx_virt, info.tx_size);
-	} else if (strcmp(psc_name, "psc") == 0) {
-		/* For PSC */
-		msg.opcode[0] = info.opcode[0];
-		msg.opcode[1] = info.opcode[1];
-		msg.tx_iova = tx_phys;
-		msg.rx_iova = rx_phys;
-		msg.tx_size = info.tx_size;
-		msg.rx_size = info.rx_size;
-	}
+	/* For all PSC Instances */
+	msg.opcode[0] = info.opcode[0];
+	msg.opcode[1] = info.opcode[1];
+	msg.tx_iova = tx_phys;
+	msg.rx_iova = rx_phys;
+	msg.tx_size = info.tx_size;
+	msg.rx_size = info.rx_size;
 
 	ret = send_msg_block(dbg, &msg);
 	if (ret != 0)
