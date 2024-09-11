@@ -784,7 +784,7 @@ static int nvmap_page_mapcount(struct page *page)
 	int mapcount = atomic_read(&page->_mapcount) + 1;
 
 	/* Handle page_has_type() pages */
-	if (mapcount < PAGE_MAPCOUNT_RESERVE + 1)
+	if (page_has_type(page))
 		mapcount = 0;
 	if (unlikely(PageCompound(page)))
 #if defined(NV_FOLIO_ENTIRE_MAPCOUNT_PRESENT) /* Linux v5.18 */
