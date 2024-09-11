@@ -25,6 +25,7 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
+#include "nvmap_handle.h"
 
 static phys_addr_t handle_phys(struct nvmap_handle *h)
 {

@@ -10,6 +10,7 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
+#include "nvmap_handle.h"
 
 static void nvmap_vma_close(struct vm_area_struct *vma);
 

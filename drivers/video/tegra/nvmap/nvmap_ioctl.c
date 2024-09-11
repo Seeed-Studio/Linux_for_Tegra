@@ -30,13 +30,13 @@
 #ifdef NVMAP_CONFIG_SCIIPC
 #include <linux/nvscierror.h>
 #include <linux/nvsciipc_interface.h>
-#include "nvmap_sci_ipc.h"
 #endif
 
 #include "nvmap_ioctl.h"
 #include "nvmap_priv.h"
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
+#include "nvmap_handle.h"
 
 #include <linux/syscalls.h>
 #include <linux/nodemask.h>

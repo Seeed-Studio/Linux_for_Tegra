@@ -34,6 +34,7 @@
 #include "nvmap_ioctl.h"
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
+#include "nvmap_handle.h"
 
 #define NVMAP_DMABUF_ATTACH  nvmap_dmabuf_attach
 

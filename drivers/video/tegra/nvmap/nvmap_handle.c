@@ -29,15 +29,34 @@
 #include "nvmap_ioctl.h"
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
+#include "nvmap_handle.h"
+#include "nvmap_handle_int.h"
 
 u32 nvmap_max_handle_count;
+
+static inline void nvmap_lru_add(struct nvmap_handle *h)
+{
+	spin_lock(&nvmap_dev->lru_lock);
+	BUG_ON(!list_empty(&h->lru));
+	list_add_tail(&h->lru, &nvmap_dev->lru_handles);
+	spin_unlock(&nvmap_dev->lru_lock);
+}
+
+static inline void nvmap_lru_del(struct nvmap_handle *h)
+{
+	spin_lock(&nvmap_dev->lru_lock);
+	list_del(&h->lru);
+	INIT_LIST_HEAD(&h->lru);
+	spin_unlock(&nvmap_dev->lru_lock);
+}
+
 /*
  * Verifies that the passed ID is a valid handle ID. Then the passed client's
  * reference to the handle is returned.
  *
  * Note: to call this function make sure you own the client ref lock.
  */
-struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *c,
+static struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *c,
 						 struct nvmap_handle *h,
 						 bool is_ro)
 {
@@ -57,7 +76,7 @@ struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *c,
 	return NULL;
 }
 /* adds a newly-created handle to the device master tree */
-void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
+static void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
 {
 	struct rb_node **p;
 	struct rb_node *parent = NULL;
@@ -111,7 +130,7 @@ int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h)
 
 /* Validates that a handle is in the device master tree and that the
  * client has permission to access it. */
-struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *id)
+static struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *id)
 {
 	struct nvmap_handle *h = NULL;
 	struct rb_node *n;
@@ -563,4 +582,217 @@ struct nvmap_handle_ref *nvmap_dup_handle_ro(struct nvmap_client *client,
 	nvmap_handle_put(h);
 
 	return ref;
+}
+
+void nvmap_free_handle(struct nvmap_client *client,
+		       struct nvmap_handle *handle, bool is_ro)
+{
+	struct nvmap_handle_ref *ref;
+	struct nvmap_handle *h;
+
+	nvmap_ref_lock(client);
+
+	ref = __nvmap_validate_locked(client, handle, is_ro);
+	if (!ref) {
+		nvmap_ref_unlock(client);
+		return;
+	}
+
+	BUG_ON(!ref->handle);
+	h = ref->handle;
+
+	if (atomic_dec_return(&ref->dupes)) {
+		NVMAP_TAG_TRACE(trace_nvmap_free_handle,
+			NVMAP_TP_ARGS_CHR(client, h, ref));
+		nvmap_ref_unlock(client);
+		goto out;
+	}
+
+	smp_rmb();
+	rb_erase(&ref->node, &client->handle_refs);
+	client->handle_count--;
+	atomic_dec(&ref->handle->share_count);
+
+	nvmap_ref_unlock(client);
+
+	if (h->owner == client)
+		h->owner = NULL;
+
+	if (is_ro)
+		dma_buf_put(ref->handle->dmabuf_ro);
+	else
+		dma_buf_put(ref->handle->dmabuf);
+	NVMAP_TAG_TRACE(trace_nvmap_free_handle,
+		NVMAP_TP_ARGS_CHR(client, h, ref));
+	kfree(ref);
+
+out:
+	BUG_ON(!atomic_read(&h->ref));
+	nvmap_handle_put(h);
+}
+
+void nvmap_free_handle_from_fd(struct nvmap_client *client,
+			       int id)
+{
+	bool is_ro = false;
+	struct nvmap_handle *handle;
+	struct dma_buf *dmabuf = NULL;
+	int handle_ref = 0;
+	long dmabuf_ref = 0;
+
+	handle = nvmap_handle_get_from_id(client, id);
+	if (IS_ERR_OR_NULL(handle))
+		return;
+
+	if (is_nvmap_id_ro(client, id, &is_ro) != 0) {
+		nvmap_handle_put(handle);
+		return;
+	}
+
+	if (client->ida)
+		nvmap_id_array_id_release(client->ida, id);
+
+	nvmap_free_handle(client, handle, is_ro);
+	mutex_lock(&handle->lock);
+	dmabuf = is_ro ? handle->dmabuf_ro : handle->dmabuf;
+	if (dmabuf && dmabuf->file) {
+		dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+	} else {
+		dmabuf_ref = 0;
+	}
+	mutex_unlock(&handle->lock);
+	handle_ref = atomic_read(&handle->ref);
+
+	trace_refcount_free_handle(handle, dmabuf, handle_ref, dmabuf_ref,
+				is_ro ? "RO" : "RW");
+	nvmap_handle_put(handle);
+}
+
+static int nvmap_assign_pages_per_handle(struct nvmap_handle *src_h,
+			struct nvmap_handle *dest_h, u64 src_h_start,
+			u64 src_h_end, u32 *pg_cnt)
+{
+	/* Increament ref count of source handle as its pages
+	 * are referenced here to create new nvmap handle.
+	 * By increamenting the ref count of source handle,
+	 * source handle pages are not freed until new handle's fd is not closed.
+	 * Note: nvmap_dmabuf_release, need to decreement source handle ref count
+	 */
+	src_h = nvmap_handle_get(src_h);
+	if (!src_h)
+		return -EINVAL;
+
+	while (src_h_start < src_h_end) {
+		unsigned long next;
+		struct page *dest_page;
+
+		dest_h->pgalloc.pages[*pg_cnt] =
+			src_h->pgalloc.pages[src_h_start >> PAGE_SHIFT];
+		dest_page = nvmap_to_page(dest_h->pgalloc.pages[*pg_cnt]);
+		get_page(dest_page);
+
+		next = min(((src_h_start + PAGE_SIZE) & PAGE_MASK),
+				src_h_end);
+		src_h_start = next;
+		*pg_cnt = *pg_cnt + 1;
+	}
+
+	mutex_lock(&dest_h->pg_ref_h_lock);
+	list_add_tail(&src_h->pg_ref, &dest_h->pg_ref_h);
+	mutex_unlock(&dest_h->pg_ref_h_lock);
+
+	return 0;
+}
+
+int nvmap_assign_pages_to_handle(struct nvmap_client *client,
+			       struct nvmap_handle **hs, struct nvmap_handle *h,
+			       struct handles_range *rng)
+{
+	size_t nr_page = h->size >> PAGE_SHIFT;
+	struct page **pages;
+	u64 end_cur = 0;
+	u64 start = 0;
+	u64 end = 0;
+	u32 pg_cnt = 0;
+	u32 i;
+	int err = 0;
+
+	h = nvmap_handle_get(h);
+	if (!h)
+		return -EINVAL;
+
+	if (h->alloc) {
+		nvmap_handle_put(h);
+		return -EEXIST;
+	}
+
+	pages = nvmap_altalloc(nr_page * sizeof(*pages));
+	if (!pages) {
+		nvmap_handle_put(h);
+		return -ENOMEM;
+	}
+	h->pgalloc.pages = pages;
+
+	start = rng->offs_start;
+	end = rng->sz;
+
+	for (i = rng->start; i <= rng->end; i++) {
+		end_cur = (end >= hs[i]->size) ? (hs[i]->size - start) : end;
+		err = nvmap_assign_pages_per_handle(hs[i], h, start, start + end_cur, &pg_cnt);
+		if (err) {
+			nvmap_altfree(pages, nr_page * sizeof(*pages));
+			goto err_h;
+		}
+		end -= (hs[i]->size - start);
+		start = 0;
+	}
+
+	h->flags = hs[0]->flags;
+	h->heap_type = NVMAP_HEAP_IOVMM;
+	h->heap_pgalloc = true;
+	h->alloc = true;
+	h->is_subhandle = true;
+	mb();
+	return err;
+err_h:
+	nvmap_handle_put(h);
+	return err;
+}
+
+int is_nvmap_id_ro(struct nvmap_client *client, int id, bool *is_ro)
+{
+	struct nvmap_handle_info *info = NULL;
+	struct dma_buf *dmabuf = NULL;
+
+	if (WARN_ON(!client))
+		goto fail;
+
+	if (client->ida)
+		dmabuf = nvmap_id_array_get_dmabuf_from_id(client->ida,
+				id);
+	else
+		dmabuf = dma_buf_get(id);
+
+	if (IS_ERR_OR_NULL(dmabuf))
+		goto fail;
+
+	if (dmabuf_is_nvmap(dmabuf))
+		info = dmabuf->priv;
+
+	if (!info) {
+		dma_buf_put(dmabuf);
+		/*
+		 * Ideally, we should return error from here,
+		 * but this is done intentionally to handle foreign buffers.
+		 */
+		return 0;
+	}
+
+	*is_ro = info->is_ro;
+	dma_buf_put(dmabuf);
+	return 0;
+
+fail:
+	pr_err("Handle RO check failed\n");
+	return -EINVAL;
 }

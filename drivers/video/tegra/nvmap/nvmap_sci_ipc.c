@@ -21,8 +21,9 @@
 
 #include <trace/events/nvmap.h>
 #include "nvmap_priv.h"
-#include "nvmap_sci_ipc.h"
 #include "nvmap_dmabuf.h"
+#include "nvmap_handle.h"
+#include "nvmap_handle_int.h"
 
 struct nvmap_sci_ipc {
 	struct rb_root entries;
