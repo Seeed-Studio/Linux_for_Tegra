@@ -10273,6 +10273,9 @@
 			 <&bpmp TEGRA264_RESET_HDACODEC>;
 		reset-names = "dpaux0_reset", "hdacodec_reset";
 
+		interconnects = <&mc TEGRA264_MEMORY_CLIENT_DISPR &emc>;
+		interconnect-names = "read-1";
+
 		status = "disabled";
 
 		/*
