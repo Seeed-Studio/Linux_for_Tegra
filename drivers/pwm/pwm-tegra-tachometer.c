@@ -107,37 +107,6 @@ static struct pwm_tegra_tach *to_tegra_pwm_chip(struct pwm_chip *chip)
 #endif
 }
 
-static ssize_t rpm_show(struct device *dev, struct device_attribute *attr,
-			char *buf)
-{
-	struct pwm_chip *chip = dev_get_drvdata(dev);
-	struct pwm_device *pwm = &chip->pwms[0];
-	struct pwm_capture result;
-	unsigned int rpm = 0;
-	int ret;
-
-	ret = pwm_capture(pwm, &result, 0);
-	if (ret < 0) {
-		dev_err(dev, "Failed to capture PWM: %d\n", ret);
-		return ret;
-	}
-
-	if (result.period)
-		rpm = DIV_ROUND_CLOSEST_ULL(60ULL * NSEC_PER_SEC,
-					    result.period);
-
-	return sprintf(buf, "%u\n", rpm);
-}
-
-static DEVICE_ATTR_RO(rpm);
-
-static struct attribute *pwm_tach_attrs[] = {
-	&dev_attr_rpm.attr,
-	NULL,
-};
-
-ATTRIBUTE_GROUPS(pwm_tach);
-
 static u32 tachometer_readl(struct pwm_tegra_tach *ptt, unsigned long reg)
 {
 	return readl(ptt->regs + reg);
@@ -313,6 +282,37 @@ static irqreturn_t tegra_pwm_tach_irq(int irq, void *dev)
 
 	return IRQ_HANDLED;
 }
+
+static ssize_t rpm_show(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+	struct pwm_chip *chip = dev_get_drvdata(dev);
+	struct pwm_device *pwm = &chip->pwms[0];
+	struct pwm_capture result;
+	unsigned int rpm = 0;
+	int ret;
+
+	ret = pwm_tegra_tacho_capture(chip, pwm, &result, 0);
+	if (ret < 0) {
+		dev_err(dev, "Failed to capture PWM: %d\n", ret);
+		return ret;
+	}
+
+	if (result.period)
+		rpm = DIV_ROUND_CLOSEST_ULL(60ULL * NSEC_PER_SEC,
+					    result.period);
+
+	return sprintf(buf, "%u\n", rpm);
+}
+
+static DEVICE_ATTR_RO(rpm);
+
+static struct attribute *pwm_tach_attrs[] = {
+	&dev_attr_rpm.attr,
+	NULL,
+};
+
+ATTRIBUTE_GROUPS(pwm_tach);
 
 static const struct pwm_ops pwm_tegra_tach_ops = {
 #if defined(NV_PWM_OPS_STRUCT_HAS_CONFIG) /* Linux 6.0 */
