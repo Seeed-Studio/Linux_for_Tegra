@@ -17,8 +17,8 @@
 			camera-control-output-high {
 				gpio-hog;
 				output-high;
-				gpios = <CAM0_RST_L 1 CAM0_PWDN 1
-						CAM1_RST_L 1 CAM1_PWDN 1>;
+				gpios = <CAM0_RST_L 0 CAM0_PWDN 0
+						CAM1_RST_L 0 CAM1_PWDN 0>;
 				label = "cam0-rst", "cam0-pwdn",
 					"cam1-rst", "cam1-pwdn";
 			};
