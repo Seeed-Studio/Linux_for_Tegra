@@ -665,7 +665,7 @@ static int nvdisp_serdes_probe(struct i2c_client *client)
 	priv->serdes_errb = of_get_named_gpio(ser, "nvdisp-serdes-errb", 0);
 
 	ret = devm_gpio_request_one(&client->dev, priv->serdes_errb,
-				    GPIOF_DIR_IN, "GPIO_ERRB_NVDISP_SERDES");
+				    GPIOF_IN, "GPIO_ERRB_NVDISP_SERDES");
 	if (ret < 0) {
 		dev_err(dev, "%s: devm_gpio_request_one for nvdisp-serdes-errb failed ret: %d\n",
 			__func__, ret);

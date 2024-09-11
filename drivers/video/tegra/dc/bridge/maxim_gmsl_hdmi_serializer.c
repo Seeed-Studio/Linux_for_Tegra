@@ -126,7 +126,7 @@ static int maxim_gmsl_hdmi_ser_init(struct device *dev)
 	priv = i2c_get_clientdata(client);
 
 	ret = devm_gpio_request_one(&client->dev, priv->ser_pwrdn,
-				GPIOF_DIR_OUT, "GPIO_MAXIM_SER_PWRDN");
+				    GPIOF_OUT_INIT_LOW, "GPIO_MAXIM_SER_PWRDN");
 	if (ret < 0) {
 		dev_err(dev, "%s: GPIO request failed ret: %d\n", __func__, ret);
 		return ret;
@@ -256,8 +256,8 @@ static int maxim_gmsl_hdmi_ser_probe(struct i2c_client *client)
 		return -EFAULT;
 	}
 
-	ret = devm_gpio_request_one(&client->dev, priv->ser_errb,
-					GPIOF_DIR_IN, "GPIO_MAXIM_SER");
+	ret = devm_gpio_request_one(&client->dev, priv->ser_errb, GPIOF_IN,
+				    "GPIO_MAXIM_SER");
 	if (ret < 0) {
 		dev_err(dev, "%s: GPIO request failed\n ret: %d",
 			__func__, ret);

@@ -1287,7 +1287,7 @@ static int max_gmsl_dp_ser_probe(struct i2c_client *client)
 	priv->ser_errb = of_get_named_gpio(ser, "ser-errb", 0);
 
 	ret = devm_gpio_request_one(&client->dev, priv->ser_errb,
-				    GPIOF_DIR_IN, "GPIO_MAXIM_SER");
+				    GPIOF_IN, "GPIO_MAXIM_SER");
 	if (ret < 0) {
 		dev_err(dev, "%s: GPIO request failed\n ret: %d",
 			__func__, ret);
