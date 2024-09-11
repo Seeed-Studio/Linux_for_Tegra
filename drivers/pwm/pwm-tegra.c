@@ -12,12 +12,12 @@
  * 2. 8-bit : Pulse division (DUTY)
  * 3. 1-bit : Enable bit
  *
- * The PWM clock frequency is divided by 256 before subdividing it based
- * on the programmable frequency division value to generate the required
+ * The PWM clock frequency is divided by (1 + PWM_DEPTH) before subdividing it
+ * based on the programmable frequency division value to generate the required
  * frequency for PWM output. The maximum output frequency that can be
- * achieved is (max rate of source clock) / 256.
- * e.g. if source clock rate is 408 MHz, maximum output frequency can be:
- * 408 MHz/256 = 1.6 MHz.
+ * achieved is (max rate of source clock) / (1 + PWM_DEPTH).
+ * e.g. if source clock rate is 408 MHz and PWM_DEPTH is 255, maximum output
+ * frequency can be: 408 MHz / (1 + 255) ~= 1.6 MHz.
  * This 1.6 MHz frequency can further be divided using SCALE value in PWM.
  *
  * PWM pulse width: 8 bits are usable [23:16] for varying pulse width.
@@ -51,16 +51,21 @@
 
 #include <soc/tegra/common.h>
 
+#define DEFAULT_PWM_DEPTH 255
 #define PWM_ENABLE	(1 << 31)
 
 struct tegra_pwm_soc {
 	unsigned int channel_offset;
+	unsigned int depth_offset;
+	unsigned int depth_shift;
+	unsigned int depth_width;
 	unsigned int duty_shift;
 	unsigned int duty_width;
 	unsigned int enb_offset;
 	unsigned int num_channels;
 	unsigned int scale_shift;
 	unsigned int scale_width;
+	bool has_depth_csr;
 };
 
 struct tegra_pwm_chip {
@@ -70,6 +75,7 @@ struct tegra_pwm_chip {
 	struct clk *clk;
 	struct reset_control*rst;
 
+	u32 pwm_depth;
 	unsigned long clk_rate;
 	unsigned long min_period_ns;
 
@@ -93,6 +99,14 @@ static inline void pwm_writel(struct tegra_pwm_chip *pc, unsigned int offset, u3
 	writel(value, pc->regs + offset);
 }
 
+static inline void pwm_writel_mask32(struct tegra_pwm_chip *pc,
+				     unsigned int offset, u32 mask, u32 value)
+{
+	u32 ret = pwm_readl(pc, offset);
+	ret = (ret & ~mask) | (value & mask);
+	pwm_writel(pc, offset, ret);
+}
+
 static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 			    int duty_ns, int period_ns)
 {
@@ -104,22 +118,22 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	/*
 	 * Convert from duty_ns / period_ns to a fixed number of duty ticks
-	 * per (1 << pc->soc->duty_width) cycles and make sure to round to the
+	 * per (1 + pc->pwm_depth) cycles and make sure to round to the
 	 * nearest integer during division.
 	 */
-	c *= (1 << pc->soc->duty_width);
+	c *= (1 + pc->pwm_depth);
 	c = DIV_ROUND_CLOSEST_ULL(c, period_ns);
 
 	val = (u32)c << pc->soc->duty_shift;
 
 	/*
-	 *  min period = max clock limit >> pc->soc->duty_width
+	 *  min period = max clock limit / (1 + pc->pwm_depth)
 	 */
 	if (period_ns < pc->min_period_ns)
 		return -EINVAL;
 
 	/*
-	 * Compute the prescaler value for which (1 << pc->soc->duty_width)
+	 * Compute the prescaler value for which (1 + pc->pwm_depth)
 	 * cycles at the PWM clock rate will take period_ns nanoseconds.
 	 *
 	 * num_channels: If single instance of PWM controller has multiple
@@ -133,7 +147,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 */
 	if (pc->soc->num_channels == 1) {
 		/*
-		 * Rate is multiplied with 2^pc->soc->duty_width so that it
+		 * Rate is multiplied with (1 + pc->pwm_depth) so that it
 		 * matches with the maximum possible rate that the controller
 		 * can provide. Any further lower value can be derived by
 		 * setting PFM bits[0:12].
@@ -144,7 +158,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		 * be able to configure the requested period.
 		 */
 		required_clk_rate = DIV_ROUND_UP_ULL(
-			(u64)NSEC_PER_SEC << pc->soc->duty_width, period_ns);
+			(u64)NSEC_PER_SEC * (1 + pc->pwm_depth), period_ns);
 
 		if (required_clk_rate > clk_round_rate(pc->clk, required_clk_rate))
 			/*
@@ -167,7 +181,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	/* Consider precision in pc->soc->scale_width rate calculation */
 	rate = mul_u64_u64_div_u64(pc->clk_rate, period_ns,
-				   (u64)NSEC_PER_SEC << pc->soc->duty_width);
+				   (u64)NSEC_PER_SEC * (1 + pc->pwm_depth));
 
 	/*
 	 * Since the actual PWM divider is the register's frequency divider
@@ -269,6 +283,46 @@ static int tegra_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	return err;
 }
 
+/**
+ * tegra_pwm_depth_update - Update PWM depth CSR register if any
+ * @chip: pwm chip whose pwm_depth is about to be updated
+ *
+ * Callers must assume that the PM usage counter is non-zero.
+ */
+static void tegra_pwm_depth_update(struct pwm_chip *chip)
+{
+	struct tegra_pwm_chip *pc = to_tegra_pwm_chip(chip);
+	unsigned long depth_o = pc->soc->depth_offset;
+	unsigned long depth_w = pc->soc->depth_width;
+	unsigned long depth_s = pc->soc->depth_shift;
+
+	pwm_writel_mask32(pc, depth_o, GENMASK(depth_s + depth_w - 1, depth_s),
+			  pc->pwm_depth << depth_s);
+}
+
+static int tegra_pwm_probe_from_dt(struct device *dev,
+				   struct tegra_pwm_chip *pc)
+{
+	struct device_node *np = dev->of_node;
+	int ret;
+
+	ret = of_property_read_u32(np, "nvidia,pwm-depth", &pc->pwm_depth);
+
+	/* Ignore -EINVAL for optional property */
+	if (ret == -EINVAL)
+		return 0;
+
+	if (ret)
+		return ret;
+
+	if (pc->pwm_depth >= (u32)(1 << pc->soc->depth_width)) {
+		dev_err(dev, "invalid nvidia,pwm-depth property\n");
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
 static const struct pwm_ops tegra_pwm_ops = {
 	.apply = tegra_pwm_apply,
 };
@@ -295,6 +349,11 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 	if (IS_ERR(pc->clk))
 		return PTR_ERR(pc->clk);
 
+	pc->pwm_depth = DEFAULT_PWM_DEPTH;
+	ret = tegra_pwm_probe_from_dt(&pdev->dev, pc);
+	if (ret)
+		return ret;
+
 	ret = devm_tegra_core_dev_init_opp_table_common(&pdev->dev);
 	if (ret)
 		return ret;
@@ -317,10 +376,15 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 	 * so that PWM period can be calculated more accurately.
 	 */
 	pc->clk_rate = clk_get_rate(pc->clk);
+	if (pc->clk_rate < (1 + pc->pwm_depth)) {
+		dev_err(&pdev->dev, "Invalid clock frequency\n");
+		ret = -EINVAL;
+		goto put_pm;
+	}
 
 	/* Set minimum limit of PWM period for the IP */
 	pc->min_period_ns =
-		(NSEC_PER_SEC / (pc->clk_rate >> pc->soc->duty_width)) + 1;
+		(NSEC_PER_SEC / (pc->clk_rate / (1 + pc->pwm_depth))) + 1;
 
 	pc->rst = devm_reset_control_get_exclusive(&pdev->dev, "pwm");
 	if (IS_ERR(pc->rst)) {
@@ -341,6 +405,9 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 		reset_control_assert(pc->rst);
 		goto put_pm;
 	}
+
+	if (pc->soc->has_depth_csr)
+		tegra_pwm_depth_update(&pc->chip);
 
 	pm_runtime_put(&pdev->dev);
 
@@ -398,32 +465,38 @@ static int __maybe_unused tegra_pwm_runtime_resume(struct device *dev)
 
 static const struct tegra_pwm_soc tegra20_pwm_soc = {
 	.channel_offset = 16,
+	.depth_width = 8,
 	.duty_shift = 16,
 	.duty_width = 8,
 	.enb_offset = 0,
 	.num_channels = 4,
 	.scale_shift = 0,
 	.scale_width = 13,
+	.has_depth_csr = false,
 };
 
 static const struct tegra_pwm_soc tegra186_pwm_soc = {
 	.channel_offset = 0,
+	.depth_width = 8,
 	.duty_shift = 16,
 	.duty_width = 8,
 	.enb_offset = 0,
 	.num_channels = 1,
 	.scale_shift = 0,
 	.scale_width = 13,
+	.has_depth_csr = false,
 };
 
 static const struct tegra_pwm_soc tegra194_pwm_soc = {
 	.channel_offset = 0,
+	.depth_width = 8,
 	.duty_shift = 16,
 	.duty_width = 8,
 	.enb_offset = 0,
 	.num_channels = 1,
 	.scale_shift = 0,
 	.scale_width = 13,
+	.has_depth_csr = false,
 };
 
 static const struct of_device_id tegra_pwm_of_match[] = {
