@@ -6884,6 +6884,19 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PWM_CHIP_STRUCT_HAS_STRUCT_DEVICE" "" "types"
         ;;
 
+        devm_pm_domain_attach_list)
+            #
+            # Determine whether devm_pm_domain_attach_list is present.
+            #
+            CODE="
+            #include <linux/pm_domain.h>
+            void conftest_devm_pm_domain_attach_list(void) {
+                devm_pm_domain_attach_list();
+            }"
+
+            compile_check_conftest "$CODE" "NV_DEVM_PM_DOMAIN_ATTACH_LIST_PRESENT" "" "functions"
+        ;;
+
         devm_tegra_core_dev_init_opp_table_common)
             #
             # Determine whether devm_tegra_core_dev_init_opp_table_common is

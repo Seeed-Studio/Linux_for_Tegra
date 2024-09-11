@@ -49,6 +49,9 @@ struct gr3d {
 	unsigned int nclocks;
 	struct reset_control_bulk_data resets[RST_GR3D_MAX];
 	unsigned int nresets;
+#if defined(NV_DEVM_PM_DOMAIN_ATTACH_LIST_PRESENT) /* Linux v6.13 */
+	struct dev_pm_domain_list *pd_list;
+#endif
 
 	DECLARE_BITMAP(addr_regs, GR3D_NUM_REGS);
 };
@@ -372,13 +375,21 @@ static int gr3d_power_up_legacy_domain(struct device *dev, const char *name,
 	return 0;
 }
 
+#if !defined(NV_DEVM_PM_DOMAIN_ATTACH_LIST_PRESENT) /* Linux v6.13 */
 static void gr3d_del_link(void *link)
 {
 	device_link_del(link);
 }
+#endif
 
 static int gr3d_init_power(struct device *dev, struct gr3d *gr3d)
 {
+#if defined(NV_DEVM_PM_DOMAIN_ATTACH_LIST_PRESENT) /* Linux v6.13 */
+	struct dev_pm_domain_attach_data pd_data = {
+		.pd_names = (const char *[]) { "3d0", "3d1" },
+		.num_pd_names = 2,
+	};
+#else
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	static const char * const opp_genpd_names[] = { "3d0", "3d1", NULL };
 #else
@@ -388,6 +399,7 @@ static int gr3d_init_power(struct device *dev, struct gr3d *gr3d)
 	struct device **opp_virt_devs, *pd_dev;
 	struct device_link *link;
 	unsigned int i;
+#endif
 	int err;
 
 	err = of_count_phandle_with_args(dev->of_node, "power-domains",
@@ -421,6 +433,11 @@ static int gr3d_init_power(struct device *dev, struct gr3d *gr3d)
 	if (dev->pm_domain)
 		return 0;
 
+#if defined(NV_DEVM_PM_DOMAIN_ATTACH_LIST_PRESENT) /* Linux v6.13 */
+	err = devm_pm_domain_attach_list(dev, &pd_data, &gr3d->pd_list);
+	if (err < 0)
+		return err;
+#else
 	err = devm_pm_opp_attach_genpd(dev, opp_genpd_names, &opp_virt_devs);
 	if (err)
 		return err;
@@ -443,6 +460,7 @@ static int gr3d_init_power(struct device *dev, struct gr3d *gr3d)
 		if (err)
 			return err;
 	}
+#endif
 
 	return 0;
 }
