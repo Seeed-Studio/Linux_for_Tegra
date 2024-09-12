@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -619,6 +619,7 @@ static void virt_engine_sysfs_exit(struct virt_engine *virt)
 
 static const struct of_device_id tegra_virt_engine_of_match[] = {
 	{ .compatible = "nvidia,tegra234-host1x-virtual-engine" },
+	{ .compatible = "nvidia,tegra264-host1x-virtual-engine" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_virt_engine_of_match);

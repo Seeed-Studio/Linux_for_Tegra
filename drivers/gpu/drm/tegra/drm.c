@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012 Avionic Design GmbH
- * Copyright (C) 2012-2023 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2012-2024 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -1458,6 +1458,7 @@ static const struct of_device_id host1x_drm_subdevs[] = {
 	{ .compatible = "nvidia,tegra234-ofa", },
 	{ .compatible = "nvidia,tegra234-host1x-virtual-engine", },
 	{ .compatible = "nvidia,tegra264-vic", },
+	{ .compatible = "nvidia,tegra264-host1x-virtual-engine", },
 	{ /* sentinel */ }
 };
 
