@@ -15,6 +15,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/gpio.h>
 #include <linux/jiffies.h>
+#include <soc/tegra/fuse-helper.h>
 
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -178,6 +179,10 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                                 MPHY_GO_BIT, mphy_rx_vendor2_reg);
                 }
 
+/* Fuse register offset to know if chip is RDL part or not */
+#define TEGRA_FUSE_OPT_LOT_CODE_0_0	0x108U
+#define NON_RDL_STRUCTURE	0x90570c8
+#define NON_RDL_LEAD		0x83c1002
 
                if (ufs_tegra->x2config == true) {
                         /* Wait till lane calibration is done */
@@ -2289,6 +2294,24 @@ static int ufs_tegra_probe(struct platform_device *pdev)
 {
 	int err;
 	struct device *dev = &pdev->dev;
+	unsigned int value;
+
+	if (tegra_platform_is_silicon()) {
+		/* Do not enable ufs on non-rdl part*/
+		err = tegra_fuse_readl(TEGRA_FUSE_OPT_LOT_CODE_0_0, &value);
+		if (err) {
+			dev_err(dev, "%s rdl fuse read failed err: %d val: %#x\n", __func__, err, value);
+			goto end;
+		}
+		if ((value == NON_RDL_STRUCTURE) ||
+			(value == NON_RDL_LEAD)) {
+			dev_info(dev, "%s This is non-rdl part. No support for UFS %#x\n", __func__, value);
+			err = -ENODEV;
+			goto end;
+		} else {
+			dev_dbg(dev, "%s This is rdl part. UFS is supported %#x\n", __func__, value);
+		}
+	}
 
 	/* Perform generic probe */
 	err = ufshcd_pltfrm_init(pdev, &ufs_hba_tegra_vops);
@@ -2296,6 +2319,7 @@ static int ufs_tegra_probe(struct platform_device *pdev)
 		if (err != -EPROBE_DEFER)
 			dev_err(dev, "ufshcd_pltfrm_init() failed %d\n", err);
 	}
+end:
 	return err;
 }
 
