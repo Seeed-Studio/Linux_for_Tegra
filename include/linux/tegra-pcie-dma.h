@@ -20,6 +20,9 @@
 #define TEGRA264_PCIE_DMA_MSI_LOCAL_VEC		4
 #define TEGRA264_PCIE_DMA_MSI_REMOTE_VEC	5
 
+/** Enable generic PCIe DMA driver */
+#define CONFIG_PCIE_TEGRA_DMA	1
+
 /**
  * @brief typedef to define various values for xfer status passed for dma_complete_t or
  * tegra_pcie_dma_submit_xfer()
