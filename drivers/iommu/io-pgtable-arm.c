@@ -63,9 +63,6 @@
 /* Calculate the block/page mapping size at level l for pagetable in d. */
 #define ARM_LPAE_BLOCK_SIZE(l,d)	(1ULL << ARM_LPAE_LVL_SHIFT(l,d))
 
-#define ARM_LPAE_BLOCK_MASK(l, d)					\
-		(~(ARM_LPAE_BLOCK_SIZE(l, d) - 1))
-
 /* Page table bits */
 #define ARM_LPAE_PTE_TYPE_SHIFT		0
 #define ARM_LPAE_PTE_TYPE_MASK		0x3
@@ -272,13 +269,6 @@ static void __arm_lpae_sync_pte(arm_lpae_iopte *ptep, int num_entries,
 {
 	dma_sync_single_for_device(cfg->iommu_dev, __arm_lpae_dma_addr(ptep),
 				   sizeof(*ptep) * num_entries, DMA_TO_DEVICE);
-}
-
-static void __arm_lpae_sync_pgtable(arm_lpae_iopte *ptep,
-				struct io_pgtable_cfg *cfg, size_t size)
-{
-	dma_sync_single_for_device(cfg->iommu_dev, __arm_lpae_dma_addr(ptep),
-			size, DMA_TO_DEVICE);
 }
 
 static void __arm_lpae_clear_pte(arm_lpae_iopte *ptep, struct io_pgtable_cfg *cfg)
@@ -714,91 +704,6 @@ static size_t arm_lpae_unmap_pages(struct io_pgtable_ops *ops, unsigned long iov
 				data->start_level, ptep);
 }
 
-static unsigned long arm_lpae_block_addr_end(int lvl,
-			struct arm_lpae_io_pgtable *data,
-			unsigned long addr, unsigned long end)
-{
-	unsigned long boundary = (addr + ARM_LPAE_BLOCK_SIZE(lvl, data))
-					& ARM_LPAE_BLOCK_MASK(lvl, data);
-
-	return (boundary - 1 < end - 1) ? boundary : end;
-}
-
-static void __arm_lpae_dma_sync(struct arm_lpae_io_pgtable *data,
-			    unsigned long iova, size_t size, int lvl,
-			    arm_lpae_iopte *ptep)
-{
-	arm_lpae_iopte pte;
-	arm_lpae_iopte *pte_entry;
-	struct io_pgtable_cfg *cfg = &data->iop.cfg;
-	size_t unmapped_size = 0;
-	size_t blk_size = ARM_LPAE_BLOCK_SIZE(lvl, data);
-
-	/* If we are on the last level then sync.
-	 * We don't do sync flags on last level because its not worth it
-	 * performance wise
-	 * */
-	if ((lvl == ARM_LPAE_MAX_LEVELS - 1)) {
-		pte_entry = ptep + ARM_LPAE_LVL_IDX(iova, lvl, data);
-		__arm_lpae_sync_pgtable(pte_entry, cfg,
-					size / blk_size * sizeof(*ptep));
-		return;
-	}
-
-	while (unmapped_size < size) {
-		/*
-		 * We can map the difference between our address and the end
-		 * address of the table
-		 */
-		size_t end_map_address = arm_lpae_block_addr_end(lvl, data,
-							iova, iova + size);
-		size_t map_size = end_map_address - iova;
-
-		if (map_size > size)
-			map_size = size;
-
-		pte_entry = ptep + ARM_LPAE_LVL_IDX(iova, lvl, data);
-		pte = READ_ONCE(*pte_entry);
-
-		if (pte) {
-			if ((pte & ARM_LPAE_PTE_SW_SYNC) == 0) {
-				pte |= ARM_LPAE_PTE_SW_SYNC;
-				*pte_entry = pte;
-				if (!cfg->coherent_walk)
-					__arm_lpae_sync_pte(pte_entry, 1, cfg);
-				__arm_lpae_sync_pgtable(pte_entry, cfg,
-								sizeof(*ptep));
-			}
-		} else {
-			__arm_lpae_sync_pgtable(pte_entry, cfg, sizeof(*ptep));
-		}
-
-		if (pte && !iopte_leaf(pte, lvl, data->iop.fmt)) {
-			pte_entry = iopte_deref(pte, data);
-			__arm_lpae_dma_sync(data, iova, map_size, lvl + 1,
-								pte_entry);
-		}
-
-		unmapped_size += map_size;
-		iova += map_size;
-	}
-}
-
-static int arm_lpae_dma_sync(struct io_pgtable_ops *ops, unsigned long iova,
-			  size_t size)
-{
-	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
-	arm_lpae_iopte *ptep = data->pgd;
-	int lvl = data->start_level;
-
-	if (WARN_ON(iova >= (1ULL << data->iop.cfg.ias)))
-		return 0;
-
-	__arm_lpae_dma_sync(data, iova, size, lvl, ptep);
-
-	return 0;
-}
-
 static phys_addr_t arm_lpae_iova_to_phys(struct io_pgtable_ops *ops,
 					 unsigned long iova)
 {
@@ -912,7 +817,6 @@ arm_lpae_alloc_pgtable(struct io_pgtable_cfg *cfg)
 	data->iop.ops = (struct io_pgtable_ops) {
 		.map_pages	= arm_lpae_map_pages,
 		.unmap_pages	= arm_lpae_unmap_pages,
-		.dma_sync	= arm_lpae_dma_sync,
 		.iova_to_phys	= arm_lpae_iova_to_phys,
 	};
 

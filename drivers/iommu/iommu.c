@@ -2675,9 +2675,6 @@ static int __iommu_map(struct iommu_domain *domain, unsigned long iova,
 	else
 		trace_map(orig_iova, orig_paddr, orig_size);
 
-	if (domain->ops->dma_sync)
-		domain->ops->dma_sync(domain, orig_iova, orig_size);
-
 	return ret;
 }
 
@@ -2760,9 +2757,6 @@ static size_t __iommu_unmap(struct iommu_domain *domain,
 		iova += unmapped_page;
 		unmapped += unmapped_page;
 	}
-
-	if (ops->dma_sync)
-		ops->dma_sync(domain, orig_iova, size);
 
 	trace_unmap(orig_iova, size, unmapped);
 	return unmapped;

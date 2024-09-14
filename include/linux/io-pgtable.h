@@ -188,8 +188,6 @@ struct io_pgtable_ops {
 	size_t (*unmap_pages)(struct io_pgtable_ops *ops, unsigned long iova,
 			      size_t pgsize, size_t pgcount,
 			      struct iommu_iotlb_gather *gather);
-	int (*dma_sync)(struct io_pgtable_ops *ops, unsigned long iova,
-		     size_t size);
 	phys_addr_t (*iova_to_phys)(struct io_pgtable_ops *ops,
 				    unsigned long iova);
 	int (*read_and_clear_dirty)(struct io_pgtable_ops *ops,
