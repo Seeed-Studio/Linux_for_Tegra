@@ -3,7 +3,7 @@
  * IOMMU API for ARM architected SMMUv3 implementations.
  *
  * Copyright (C) 2015 ARM Limited
- * Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Will Deacon <will.deacon@arm.com>
  *
@@ -2262,7 +2262,7 @@ static bool arm_smmu_ats_supported(struct arm_smmu_master *master)
 	if (!(smmu->features & ARM_SMMU_FEAT_ATS))
 		return false;
 
-	if (is_acpi_node(dev_fwnode(dev)) && !(fwspec->flags & IOMMU_FWSPEC_PCI_RC_ATS))
+	if (!(fwspec->flags & IOMMU_FWSPEC_PCI_RC_ATS))
 		return false;
 
 	return dev_is_pci(dev) && pci_ats_supported(to_pci_dev(dev));
