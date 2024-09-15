@@ -35,19 +35,6 @@ static const char *tegra_revision_name[TEGRA_REVISION_MAX] = {
 	[TEGRA_REVISION_A04]     = "A04",
 };
 
-static const char *tegra_platform_name[TEGRA_PLATFORM_MAX] = {
-	[TEGRA_PLATFORM_SILICON]			= "Silicon",
-	[TEGRA_PLATFORM_QT]				= "QT",
-	[TEGRA_PLATFORM_SYSTEM_FPGA]			= "System FPGA",
-	[TEGRA_PLATFORM_UNIT_FPGA]			= "Unit FPGA",
-	[TEGRA_PLATFORM_ASIM_QT]			= "Asim QT",
-	[TEGRA_PLATFORM_ASIM_LINSIM]			= "Asim Linsim",
-	[TEGRA_PLATFORM_DSIM_ASIM_LINSIM]		= "Dsim Asim Linsim",
-	[TEGRA_PLATFORM_VERIFICATION_SIMULATION]	= "Verification Simulation",
-	[TEGRA_PLATFORM_VDK]				= "VDK",
-	[TEGRA_PLATFORM_VSP]				= "VSP",
-};
-
 static const struct of_device_id car_match[] __initconst = {
 	{ .compatible = "nvidia,tegra20-car", },
 	{ .compatible = "nvidia,tegra30-car", },
@@ -278,6 +265,9 @@ u32 __init tegra_fuse_read_early(unsigned int offset)
 
 int tegra_fuse_readl(unsigned long offset, u32 *value)
 {
+	if (tegra_get_chip_id() == TEGRA264)
+		return tegra_efuse_nvmem_readl(offset + 0x100, value);
+
 	if (!fuse->read || !fuse->clk)
 		return -EPROBE_DEFER;
 
@@ -305,92 +295,6 @@ static void tegra_enable_fuse_clk(void __iomem *base)
 	reg = readl(base + 0x14);
 	reg |= 1 << 7;
 	writel(reg, base + 0x14);
-}
-
-static ssize_t major_show(struct device *dev, struct device_attribute *attr,
-			     char *buf)
-{
-	return sprintf(buf, "%d\n", tegra_get_major_rev());
-}
-
-static DEVICE_ATTR_RO(major);
-
-static ssize_t minor_show(struct device *dev, struct device_attribute *attr,
-			     char *buf)
-{
-	return sprintf(buf, "%d\n", tegra_get_minor_rev());
-}
-
-static DEVICE_ATTR_RO(minor);
-
-static struct attribute *tegra_soc_attr[] = {
-	&dev_attr_major.attr,
-	&dev_attr_minor.attr,
-	NULL,
-};
-
-const struct attribute_group tegra_soc_attr_group = {
-	.attrs = tegra_soc_attr,
-};
-
-#if IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC) || \
-    IS_ENABLED(CONFIG_ARCH_TEGRA_234_SOC)
-static ssize_t platform_show(struct device *dev, struct device_attribute *attr,
-			     char *buf)
-{
-	/*
-	 * Displays the value in the 'pre_si_platform' field of the HIDREV
-	 * register for Tegra194 devices. A value of 0 indicates that the
-	 * platform type is silicon and all other non-zero values indicate
-	 * the type of simulation platform is being used.
-	 */
-	return sprintf(buf, "%d\n", tegra_get_platform());
-}
-
-static DEVICE_ATTR_RO(platform);
-
-static struct attribute *tegra194_soc_attr[] = {
-	&dev_attr_major.attr,
-	&dev_attr_minor.attr,
-	&dev_attr_platform.attr,
-	NULL,
-};
-
-const struct attribute_group tegra194_soc_attr_group = {
-	.attrs = tegra194_soc_attr,
-};
-#endif
-
-struct device * __init tegra_soc_device_register(void)
-{
-	struct soc_device_attribute *attr;
-	struct soc_device *dev;
-
-	attr = kzalloc(sizeof(*attr), GFP_KERNEL);
-	if (!attr)
-		return NULL;
-
-	attr->family = kasprintf(GFP_KERNEL, "Tegra");
-	if (tegra_is_silicon())
-		attr->revision = kasprintf(GFP_KERNEL, "%s %s",
-					   tegra_platform_name[tegra_sku_info.platform],
-					   tegra_revision_name[tegra_sku_info.revision]);
-	else
-		attr->revision = kasprintf(GFP_KERNEL, "%s",
-					   tegra_platform_name[tegra_sku_info.platform]);
-	attr->soc_id = kasprintf(GFP_KERNEL, "%u", tegra_get_chip_id());
-	attr->custom_attr_group = fuse->soc->soc_attr_group;
-
-	dev = soc_device_register(attr);
-	if (IS_ERR(dev)) {
-		kfree(attr->soc_id);
-		kfree(attr->revision);
-		kfree(attr->family);
-		kfree(attr);
-		return ERR_CAST(dev);
-	}
-
-	return soc_device_to_device(dev);
 }
 
 static int __init tegra_init_fuse(void)
@@ -506,27 +410,3 @@ static int __init tegra_init_fuse(void)
 	return 0;
 }
 early_initcall(tegra_init_fuse);
-
-#ifdef CONFIG_ARM64
-static int __init tegra_init_soc(void)
-{
-	struct device_node *np;
-	struct device *soc;
-
-	/* make sure we're running on Tegra */
-	np = of_find_matching_node(NULL, tegra_fuse_match);
-	if (!np)
-		return 0;
-
-	of_node_put(np);
-
-	soc = tegra_soc_device_register();
-	if (IS_ERR(soc)) {
-		pr_err("failed to register SoC device: %ld\n", PTR_ERR(soc));
-		return PTR_ERR(soc);
-	}
-
-	return 0;
-}
-device_initcall(tegra_init_soc);
-#endif

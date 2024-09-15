@@ -37,8 +37,6 @@ struct tegra_fuse_soc {
 	const struct nvmem_keepout *keepouts;
 	unsigned int num_keepouts;
 
-	const struct attribute_group *soc_attr_group;
-
 	bool clk_suspend_on;
 };
 
@@ -72,6 +70,7 @@ void tegra_init_apbmisc(void);
 
 u32 __init tegra_fuse_read_spare(unsigned int spare);
 u32 __init tegra_fuse_read_early(unsigned int offset);
+int tegra_efuse_nvmem_readl(unsigned long offset, u32 *value);
 
 u8 tegra_get_major_rev(void);
 u8 tegra_get_minor_rev(void);
