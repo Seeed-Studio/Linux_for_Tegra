@@ -14,11 +14,15 @@
 #include <linux/of_address.h>
 #include <linux/of_pci.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/pci-ecam.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/interrupt.h>
+#include <linux/gpio/consumer.h>
 
 extern int of_get_pci_domain_nr(struct device_node *node);
 
@@ -50,6 +54,8 @@ struct tegra264_pcie {
 	struct device *dev;
 	struct pci_config_window *cfg;
 	struct pci_host_bridge *bridge;
+	struct gpio_desc *pex_wake_gpiod;
+	unsigned int pex_wake_irq;
 	void __iomem *xal_base;
 	void __iomem *xtl_pri_base;
 	void __iomem *ecam_base;
@@ -59,6 +65,39 @@ struct tegra264_pcie {
 	u64 mem_limit;
 	u32 ctl_id;
 };
+
+
+static int tegra264_pcie_parse_dt(struct tegra264_pcie *pcie)
+{
+	int ret;
+
+	pcie->pex_wake_gpiod = devm_gpiod_get_optional(pcie->dev, "nvidia,pex-wake", GPIOD_IN);
+	if (IS_ERR(pcie->pex_wake_gpiod)) {
+		int err = PTR_ERR(pcie->pex_wake_gpiod);
+
+		if (err == -EPROBE_DEFER)
+			return err;
+
+		dev_err(pcie->dev, "Failed to parse pex_wake gpio, err: %d\n", err);
+
+		/* Don't fail PCie driver probe if pex_wake is not present.*/
+		pcie->pex_wake_gpiod = NULL;
+	}
+
+	if (pcie->pex_wake_gpiod) {
+		device_init_wakeup(pcie->dev, true);
+
+		ret = gpiod_to_irq(pcie->pex_wake_gpiod);
+		if (ret < 0) {
+			dev_err(pcie->dev, "Failed to get IRQ for WAKE GPIO: %d\n", ret);
+			return ret;
+		}
+		pcie->pex_wake_irq = (unsigned int)ret;
+	}
+
+	return 0;
+}
+
 
 static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 {
@@ -154,6 +193,20 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 		}
 	}
 
+
+	ret = tegra264_pcie_parse_dt(pcie);
+	if (ret < 0) {
+		const char *level = KERN_ERR;
+
+		if (ret == -EPROBE_DEFER)
+			level = KERN_DEBUG;
+
+		dev_printk(level, dev,
+			   dev_fmt("Failed to parse device tree: %d\n"),
+			   ret);
+		return ret;
+	}
+
 	ret = of_get_pci_domain_nr(dev->of_node);
 	if (ret < 0) {
 		dev_err(dev, "failed to get domain number: %d\n", ret);
@@ -228,9 +281,31 @@ static int tegra264_pcie_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int tegra264_pcie_suspend_noirq(struct device *dev)
+{
+	struct tegra264_pcie *pcie = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (pcie->pex_wake_gpiod && device_may_wakeup(dev)) {
+		ret = enable_irq_wake(pcie->pex_wake_irq);
+		if (ret < 0)
+			dev_err(dev, "enable wake irq failed: %d\n", ret);
+	}
+
+	return 0;
+}
+
+
 static int tegra264_pcie_resume_noirq(struct device *dev)
 {
 	struct tegra264_pcie *pcie = dev_get_drvdata(dev);
+	int ret;
+
+	if (pcie->pex_wake_gpiod && device_may_wakeup(dev)) {
+		ret = disable_irq_wake(pcie->pex_wake_irq);
+		if (ret < 0)
+			dev_err(dev, "disable wake irq failed: %d\n", ret);
+	}
 
 	tegra264_pcie_init(pcie);
 
@@ -239,6 +314,7 @@ static int tegra264_pcie_resume_noirq(struct device *dev)
 
 static const struct dev_pm_ops tegra264_pcie_pm_ops = {
 	.resume_noirq = tegra264_pcie_resume_noirq,
+	.suspend_noirq = tegra264_pcie_suspend_noirq,
 };
 
 static const struct of_device_id tegra264_pcie_of_match[] = {
