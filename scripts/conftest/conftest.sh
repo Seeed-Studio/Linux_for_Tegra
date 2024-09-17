@@ -7246,6 +7246,40 @@ compile_test() {
                     "NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS" "" "types"
         ;;
 
+        fd_empty)
+            #
+            # Determine if macro fd_empty() is present.
+            #
+            # Added by commit 88a2f6468d01 ("struct fd: representation change")
+            # in Linux v6.12.
+            #
+            CODE="
+            #include <linux/file.h>
+            void conftest(void)
+            {
+                fd_empty();
+            }"
+
+            compile_check_conftest "$CODE" "NV_FD_EMPTY_PRESENT" "" "functions"
+        ;;
+
+        fd_file)
+            #
+            # Determine if macro fd_file() is present.
+            #
+            # Added by commit 88a2f6468d01 ("struct fd: representation change")
+            # in Linux v6.12.
+            #
+            CODE="
+            #include <linux/file.h>
+            void conftest(void)
+            {
+                fd_file();
+            }"
+
+            compile_check_conftest "$CODE" "NV_FD_FILE_PRESENT" "" "functions"
+        ;;
+
         folio_entire_mapcount)
             #
             # Determine if function folio_entire_mapcount() is present.

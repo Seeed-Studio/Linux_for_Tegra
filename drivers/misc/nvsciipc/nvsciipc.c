@@ -84,11 +84,20 @@ NvSciError NvSciIpcEndpointValidateAuthTokenLinuxCurrent(
 	}
 
 	f = fdget((int)authToken);
+#if defined(NV_FD_EMPTY_PRESENT) /* Linux v6.12 */
+	if (fd_empty(f)) {
+#else
 	if (!f.file) {
+#endif
 		ERR("invalid auth token\n");
 		return NvSciError_BadParameter;
 	}
+
+#if defined(NV_FD_FILE_PRESENT) /* Linux v6.12 */
+	filp = fd_file(f);
+#else
 	filp = f.file;
+#endif
 
 	devlen = strlen(filp->f_path.dentry->d_name.name);
 #if DEBUG_VALIDATE_TOKEN
