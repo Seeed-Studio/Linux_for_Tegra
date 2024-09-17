@@ -150,14 +150,6 @@ static const struct file_operations boot_cfg_fops = {
 #endif /* CONFIG_DEBUG_FS */
 
 #define MAX_PROFILE_STRLEN	55
-/* This address corresponds to T234
- * TBD - get this information from DT node
- */
-#define TEGRA_US_COUNTER_REG	0x0C6B0000
-/* Size is currently hardcoded to 64k
- * as QB is using the same size.
- */
-#define SIZE_OF_FULL_CARVEOUT (64*1024)
 
 struct profiler_record {
 	char str[MAX_PROFILE_STRLEN + 1];
@@ -394,11 +386,46 @@ static struct dev_pm_ops profiler_pm_ops = {
 	.resume_noirq = profiler_resume_noirq_handler,
 };
 
+/*
+ * Read the Tegra Microsecond Timer register address.
+ * In particular, we need to read address of reg USEC_CNTR_USECCVR_0.
+ */
+static int read_usec_timer_reg_base(u32 *usec_timer_reg_phy_addr)
+{
+	struct device_node *node;
+	int ret;
+
+	/* Find the device node by compatible string */
+	node = of_find_compatible_node(NULL, NULL, "nvidia,tegra_bl_debug");
+	if (!node) {
+		pr_err("Could not find device node for tegra_bl_debug\n");
+		ret = -ENXIO;
+		goto exit_on_err;
+	}
+
+	/* Read the usec_timer_reg_base property */
+	ret = of_property_read_u32(node, "usec_timer_reg_base", usec_timer_reg_phy_addr);
+	if (ret) {
+		pr_err("Failed to read usec_timer_reg_base property\n");
+		goto exit_on_err;
+	}
+
+	pr_debug("usec_timer_reg_base: 0x%x\n", *usec_timer_reg_phy_addr);
+
+	/* Clean-up */
+	of_node_put(node);
+
+exit_on_err:
+	return ret;
+
+}
+
 static int __init tegra_bootloader_debuginit(void)
 {
 	void __iomem *ptr_bl_prof_ro_carveout = NULL;
 	void __iomem *ptr_bl_prof_carveout = NULL;
 	int bl_debug_verify_file_entry;
+	u32 usec_timer_reg_phy_addr;
 	int ret;
 #ifdef CONFIG_DEBUG_FS
 	void __iomem *ptr_bl_debug_data_start = NULL;
@@ -572,7 +599,13 @@ static int __init tegra_bootloader_debuginit(void)
 		is_privileged_vm = false;
 	}
 
-	usc = ioremap(TEGRA_US_COUNTER_REG, 4);
+	ret = read_usec_timer_reg_base(&usec_timer_reg_phy_addr);
+	if (ret) {
+		pr_err("Failed to read Microsecond Timer base address ret %d\n", ret);
+		goto out_err;
+	}
+
+	usc = ioremap(usec_timer_reg_phy_addr, 4);
 	if (!usc) {
 		pr_err("Failed to map TEGRA_US_COUNTER_REG\n");
 		goto out_err;

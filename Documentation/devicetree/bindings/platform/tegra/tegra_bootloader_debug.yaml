@@ -26,6 +26,7 @@ examples:
   - |
     profiler_device {
         compatible = "nvidia,tegra_bl_debug";
+        usec_timer_reg_base = <0x0C240000>; /* USEC_CNTR_USECCVR_0 */
         status = "okay";
     };
 ...
