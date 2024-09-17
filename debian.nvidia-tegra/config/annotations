@@ -12,6 +12,9 @@ CONFIG_ACCESSIBILITY                            note<'LP: #1967702'>
 CONFIG_DMATEST                                  policy<{'arm64': 'm'}>
 CONFIG_DMATEST                                  note<'LP: #2060337'>
 
+CONFIG_ISO9660_FS                               policy<{'arm64': 'y'}>
+CONFIG_ISO9660_FS                               note<'LP: #2080908'>
+
 CONFIG_LATENCYTOP                               policy<{'arm64': 'y'}>
 CONFIG_LATENCYTOP                               note<'https://lists.ubuntu.com/archives/kernel-team/2014-July/045006.html, LP#1655986'>
 
