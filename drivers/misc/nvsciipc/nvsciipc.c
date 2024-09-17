@@ -45,8 +45,10 @@
 DEFINE_MUTEX(nvsciipc_mutex);
 
 static struct platform_device *nvsciipc_pdev;
-static struct nvsciipc *ctx;
+static struct nvsciipc *s_ctx;
 static int32_t s_guestid = -1;
+/* UID of SET_DB ioctl client (default root UID) */
+static uint32_t s_nvsciipc_uid;
 
 long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 	unsigned long arg);
@@ -78,7 +80,7 @@ NvSciError NvSciIpcEndpointValidateAuthTokenLinuxCurrent(
 	int i, ret, devlen;
 	char node[NVSCIIPC_MAX_EP_NAME+16];
 
-	if ((ctx == NULL) || (ctx->set_db_f != true)) {
+	if ((s_ctx == NULL) || (s_ctx->set_db_f != true)) {
 		ERR("not initialized\n");
 		return NvSciError_NotInitialized;
 	}
@@ -105,24 +107,24 @@ NvSciError NvSciIpcEndpointValidateAuthTokenLinuxCurrent(
 		filp->f_path.dentry->d_name.name, devlen);
 #endif
 
-	for (i = 0; i < ctx->num_eps; i++) {
+	for (i = 0; i < s_ctx->num_eps; i++) {
 		ret = snprintf(node, sizeof(node), "%s%d",
-			ctx->db[i]->dev_name, ctx->db[i]->id);
+			s_ctx->db[i]->dev_name, s_ctx->db[i]->id);
 
 		if ((ret < 0) || (ret != devlen))
 			continue;
 
 #if DEBUG_VALIDATE_TOKEN
-		INFO("node:%s, vuid:0x%llx\n", node, ctx->db[i]->vuid);
+		INFO("node:%s, vuid:0x%llx\n", node, s_ctx->db[i]->vuid);
 #endif
 		/* compare node name itself only (w/o directory) */
 		if (!strncmp(filp->f_path.dentry->d_name.name, node, ret)) {
-			*localUserVuid = ctx->db[i]->vuid;
+			*localUserVuid = s_ctx->db[i]->vuid;
 			break;
 		}
 	}
 
-	if (i == ctx->num_eps) {
+	if (i == s_ctx->num_eps) {
 		fdput(f);
 		ERR("wrong auth token passed\n");
 		return NvSciError_BadParameter;
@@ -147,20 +149,20 @@ NvSciError NvSciIpcEndpointMapVuid(NvSciIpcEndpointVuid localUserVuid,
 		return NvSciError_BadParameter;
 	}
 
-	if ((ctx == NULL) || (ctx->set_db_f != true)) {
+	if ((s_ctx == NULL) || (s_ctx->set_db_f != true)) {
 		ERR("not initialized\n");
 		return NvSciError_NotInitialized;
 	}
 
-	for (i = 0; i < ctx->num_eps; i++) {
-		if (ctx->db[i]->vuid == localUserVuid) {
-			backend = ctx->db[i]->backend;
-			entry = ctx->db[i];
+	for (i = 0; i < s_ctx->num_eps; i++) {
+		if (s_ctx->db[i]->vuid == localUserVuid) {
+			backend = s_ctx->db[i]->backend;
+			entry = s_ctx->db[i];
 			break;
 		}
 	}
 
-	if (i == ctx->num_eps) {
+	if (i == s_ctx->num_eps) {
 		ERR("wrong localUserVuid passed\n");
 		return NvSciError_BadParameter;
 	}
@@ -356,48 +358,19 @@ static int nvsciipc_ioctl_get_db_by_name(struct nvsciipc *ctx, unsigned int cmd,
 	for (i = 0; i < ctx->num_eps; i++) {
 		if (!strncmp(get_db.ep_name, ctx->db[i]->ep_name,
 			NVSCIIPC_MAX_EP_NAME)) {
+// FIXME: consider android
+#if !defined(CONFIG_ANDROID) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+			/* Authenticate the client process with valid UID */
+			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
+			(current_cred()->uid.val != 0) &&
+			(current_cred()->uid.val != ctx->db[i]->uid)) {
+				ERR("%s[Client_UID = %d] : "
+					"Unauthorized access to endpoint\n",
+					__func__, current_cred()->uid.val);
+				return -EPERM;
+			}
+#endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
 			get_db.entry = *ctx->db[i];
-			get_db.idx = i;
-			break;
-		}
-	}
-
-	if (i == ctx->num_eps) {
-		INFO("%s: no entry (%s)\n", __func__, get_db.ep_name);
-		return -ENOENT;
-	} else if (copy_to_user((void __user *)arg, &get_db,
-				_IOC_SIZE(cmd))) {
-		ERR("%s : copy_to_user failed\n", __func__);
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
-// TODO: remove this after migration
-static int nvsciipc_ioctl_get_db_by_name_legacy(struct nvsciipc *ctx,
-	unsigned int cmd, unsigned long arg)
-{
-	struct nvsciipc_get_db_by_name_legacy get_db;
-	int i;
-
-	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
-		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
-		return -EPERM;
-	}
-
-	if (copy_from_user(&get_db, (void __user *)arg, _IOC_SIZE(cmd))) {
-		ERR("%s : copy_from_user failed\n", __func__);
-		return -EFAULT;
-	}
-
-	/* read operation */
-	for (i = 0; i < ctx->num_eps; i++) {
-		if (!strncmp(get_db.ep_name, ctx->db[i]->ep_name,
-			NVSCIIPC_MAX_EP_NAME)) {
-			//get_db.entry = *ctx->db[i];
-			memcpy(&get_db.entry, ctx->db[i], sizeof(get_db.entry));
 			get_db.idx = i;
 			break;
 		}
@@ -435,6 +408,17 @@ static int nvsciipc_ioctl_get_db_by_vuid(struct nvsciipc *ctx, unsigned int cmd,
 	/* read operation */
 	for (i = 0; i < ctx->num_eps; i++) {
 		if (get_db.vuid == ctx->db[i]->vuid) {
+// FIXME: consider android
+#if !defined(CONFIG_ANDROID) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+			/* Authenticate the client process with valid UID */
+			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
+			(current_cred()->uid.val != 0) &&
+			(current_cred()->uid.val != ctx->db[i]->uid)) {
+				ERR("%s[Client_UID = %d] : Unauthorized access to endpoint\n",
+					__func__, current_cred()->uid.val);
+				return -EPERM;
+			}
+#endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
 			get_db.entry = *ctx->db[i];
 			get_db.idx = i;
 			break;
@@ -503,14 +487,15 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 
 #if defined(CONFIG_ANDROID) || defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
 	if ((current_cred()->uid.val != SYSTEM_GID) &&
-	(current_cred()->uid.val != 0)) {
+	(current_cred()->uid.val != 0) &&
+	(current_cred()->uid.val != s_nvsciipc_uid)) {
 		ERR("no permission to set db\n");
 		return -EPERM;
 	}
 #else
 	/* check root or nvsciipc user */
 	if ((current_cred()->uid.val != 0) &&
-	(current_cred()->uid.val != 2000)) {
+	(current_cred()->uid.val != s_nvsciipc_uid)) {
 		ERR("no permission to set db\n");
 		return -EPERM;
 	}
@@ -655,8 +640,6 @@ exit:
 	return ret;
 }
 
-// TODO: remove macro after change delivery btw branches
-#define NVSCIIPC_IOCTL_GET_DB_BY_NAME_LEGACY 0xc140c303
 long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
@@ -686,10 +669,6 @@ long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 	case NVSCIIPC_IOCTL_GET_DB_BY_NAME:
 		ret = nvsciipc_ioctl_get_db_by_name(ctx, cmd, arg);
-		break;
-// TODO: remove legacy cmd after migration
-	case NVSCIIPC_IOCTL_GET_DB_BY_NAME_LEGACY:
-		ret = nvsciipc_ioctl_get_db_by_name_legacy(ctx, cmd, arg);
 		break;
 	case NVSCIIPC_IOCTL_GET_DB_BY_VUID:
 		ret = nvsciipc_ioctl_get_db_by_vuid(ctx, cmd, arg);
@@ -760,6 +739,54 @@ static ssize_t nvsciipc_dbg_read(struct file *filp, char __user *buf,
 	return 0;
 }
 
+static ssize_t nvsciipc_uid_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", s_nvsciipc_uid);
+}
+
+static ssize_t nvsciipc_uid_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	static int init_done;
+	uint32_t val;
+	int ret;
+
+	if (init_done) {
+		ERR("UID is already set as %d\n", s_nvsciipc_uid);
+		return -EPERM;
+	}
+
+	ret = kstrtou32(buf, 0, &val);
+	if (ret) {
+		ERR("Failed to store nvsciipc UID\n");
+		return ret;
+	}
+
+	s_nvsciipc_uid = val;
+	init_done = 1;
+	INFO("nvsciipc_uid is set as %d\n", s_nvsciipc_uid);
+
+	return count;
+}
+
+// /sys/devices/platform/nvsciipc/nvsciipc_uid
+static DEVICE_ATTR(nvsciipc_uid, 0660, nvsciipc_uid_show, nvsciipc_uid_store);
+
+static struct attribute *nvsciipc_uid_attrs[] = {
+	&dev_attr_nvsciipc_uid.attr,
+	NULL,
+};
+
+static struct attribute_group nvsciipc_uid_group = {
+	.attrs = nvsciipc_uid_attrs,
+};
+
+static const struct attribute_group *nvsciipc_uid_groups[] = {
+	&nvsciipc_uid_group,
+	NULL,
+};
+
 static const struct file_operations nvsciipc_fops = {
 	.owner		= THIS_MODULE,
 	.open		= nvsciipc_dev_open,
@@ -781,60 +808,67 @@ static int nvsciipc_probe(struct platform_device *pdev)
 		goto error;
 	}
 
-	ctx = devm_kzalloc(&pdev->dev, sizeof(struct nvsciipc),	GFP_KERNEL);
-	if (ctx == NULL) {
+	s_ctx = devm_kzalloc(&pdev->dev, sizeof(struct nvsciipc),	GFP_KERNEL);
+	if (s_ctx == NULL) {
 		ERR("devm_kzalloc failed for nvsciipc\n");
 		ret = -ENOMEM;
 		goto error;
 	}
-	ctx->set_db_f = false;
+	s_ctx->set_db_f = false;
 
-	ctx->dev = &(pdev->dev);
-	platform_set_drvdata(pdev, ctx);
+	s_ctx->dev = &(pdev->dev);
+	platform_set_drvdata(pdev, s_ctx);
 
 #if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */
-	ctx->nvsciipc_class = class_create(MODULE_NAME);
+	s_ctx->nvsciipc_class = class_create(MODULE_NAME);
 #else
-	ctx->nvsciipc_class = class_create(THIS_MODULE, MODULE_NAME);
+	s_ctx->nvsciipc_class = class_create(THIS_MODULE, MODULE_NAME);
 #endif
-	if (IS_ERR(ctx->nvsciipc_class)) {
+	if (IS_ERR(s_ctx->nvsciipc_class)) {
 		ERR("failed to create class: %ld\n",
-			PTR_ERR(ctx->nvsciipc_class));
-		ret = PTR_ERR(ctx->nvsciipc_class);
+			PTR_ERR(s_ctx->nvsciipc_class));
+		ret = PTR_ERR(s_ctx->nvsciipc_class);
 		goto error;
 	}
 
-	ret = alloc_chrdev_region(&(ctx->dev_t), 0, 1, MODULE_NAME);
+	ret = sysfs_create_group(&pdev->dev.kobj, &nvsciipc_uid_group);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "%s: Failed to reate sysfs group, %d\n",
+			__func__, ret);
+		goto error;
+	}
+
+	ret = alloc_chrdev_region(&(s_ctx->dev_t), 0, 1, MODULE_NAME);
 	if (ret != 0) {
 		ERR("alloc_chrdev_region() failed\n");
 		goto error;
 	}
 
-	ctx->dev_t = MKDEV(MAJOR(ctx->dev_t), 0);
-	cdev_init(&ctx->cdev, &nvsciipc_fops);
-	ctx->cdev.owner = THIS_MODULE;
+	s_ctx->dev_t = MKDEV(MAJOR(s_ctx->dev_t), 0);
+	cdev_init(&s_ctx->cdev, &nvsciipc_fops);
+	s_ctx->cdev.owner = THIS_MODULE;
 
-	ret = cdev_add(&(ctx->cdev), ctx->dev_t, 1);
+	ret = cdev_add(&(s_ctx->cdev), s_ctx->dev_t, 1);
 	if (ret != 0) {
 		ERR("cdev_add() failed\n");
 		goto error;
 	}
 
-	if (snprintf(ctx->device_name, (MAX_NAME_SIZE - 1), "%s", MODULE_NAME) < 0) {
+	if (snprintf(s_ctx->device_name, (MAX_NAME_SIZE - 1), "%s", MODULE_NAME) < 0) {
 		pr_err("snprintf() failed\n");
 		ret = -ENOMEM;
 		goto error;
 	}
 
-	ctx->device = device_create(ctx->nvsciipc_class, NULL,
-			ctx->dev_t, ctx,
-			ctx->device_name, 0);
-	if (IS_ERR(ctx->device)) {
-		ret = PTR_ERR(ctx->device);
+	s_ctx->device = device_create(s_ctx->nvsciipc_class, NULL,
+			s_ctx->dev_t, s_ctx,
+			s_ctx->device_name, 0);
+	if (IS_ERR(s_ctx->device)) {
+		ret = PTR_ERR(s_ctx->device);
 		ERR("device_create() failed\n");
 		goto error;
 	}
-	dev_set_drvdata(ctx->device, ctx);
+	dev_set_drvdata(s_ctx->device, s_ctx);
 
 	if (is_tegra_hypervisor_mode()) {
 		ret = hyp_read_gid(&s_guestid);
@@ -850,7 +884,7 @@ static int nvsciipc_probe(struct platform_device *pdev)
 	return ret;
 
 error:
-	nvsciipc_cleanup(ctx);
+	nvsciipc_cleanup(s_ctx);
 
 	return ret;
 }
@@ -859,6 +893,8 @@ static void nvsciipc_cleanup(struct nvsciipc *ctx)
 {
 	if (ctx == NULL)
 		return;
+
+	sysfs_remove_group(&ctx->dev->kobj, &nvsciipc_uid_group);
 
 	nvsciipc_free_db(ctx);
 
@@ -947,6 +983,7 @@ static struct platform_driver nvsciipc_driver = {
 	.shutdown = nvsciipc_shutdown,
 	.driver = {
 		.name = MODULE_NAME,
+		.groups = nvsciipc_uid_groups,
 	},
 #ifdef CONFIG_PM
 	.suspend = nvsciipc_suspend,
@@ -978,6 +1015,8 @@ static int __init nvsciipc_module_init(void)
 
 static void __exit nvsciipc_module_deinit(void)
 {
+	sysfs_remove_group(&s_ctx->dev->kobj, &nvsciipc_uid_group);
+
 	// calls nvsciipc_remove internally
 	platform_device_unregister(nvsciipc_pdev);
 
