@@ -42,6 +42,9 @@ CONFIG_PCI_MESON                                note<'LP: #2007745'>
 CONFIG_PCI_PASID                                policy<{'arm64': 'n'}>
 CONFIG_PCI_PASID                                note<'LP: #2072591'>
 
+CONFIG_PHY_TEGRA_XUSB                           policy<{'arm64': 'y'}>
+CONFIG_PHY_TEGRA_XUSB                           note<'LP: #2080908'>
+
 CONFIG_PPP_ASYNC                                policy<{'arm64': 'y'}>
 CONFIG_PPP_ASYNC                                note<'LP: #2080908'>
 
@@ -68,6 +71,9 @@ CONFIG_TEGRA_EPL                                note<'LP: #2072591'>
 
 CONFIG_UBSAN                                    policy<{'arm64': 'n'}>
 CONFIG_UBSAN                                    note<'LP#1942215'>
+
+CONFIG_USB_XHCI_TEGRA                           policy<{'arm64': 'y'}>
+CONFIG_USB_XHCI_TEGRA                           note<'LP: #2080908'>
 
 CONFIG_VIDEO_IMX219                             policy<{'arm64': 'n'}>
 CONFIG_VIDEO_IMX219                             note<'LP: #2072591'>
@@ -127,3 +133,5 @@ CONFIG_UBSAN_SHIFT                              policy<{'arm64': '-'}>
 CONFIG_UBSAN_TRAP                               policy<{'arm64': '-'}>
 CONFIG_UBSAN_UNREACHABLE                        policy<{'arm64': '-'}>
 CONFIG_UNINLINE_SPIN_UNLOCK                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
+CONFIG_USB_CONN_GPIO                            policy<{'arm64': 'y'}>
+CONFIG_USB_GPIO_VBUS                            policy<{'arm64': '-'}>
