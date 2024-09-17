@@ -21,6 +21,15 @@ CONFIG_ISO9660_FS                               note<'LP: #2080908'>
 CONFIG_LATENCYTOP                               policy<{'arm64': 'y'}>
 CONFIG_LATENCYTOP                               note<'https://lists.ubuntu.com/archives/kernel-team/2014-July/045006.html, LP#1655986'>
 
+CONFIG_MMC_SDHCI                                policy<{'arm64': 'y'}>
+CONFIG_MMC_SDHCI                                note<'LP: #2080908'>
+
+CONFIG_MMC_SDHCI_PLTFM                          policy<{'arm64': 'y'}>
+CONFIG_MMC_SDHCI_PLTFM                          note<'LP: #2080908'>
+
+CONFIG_MMC_SDHCI_TEGRA                          policy<{'arm64': 'y'}>
+CONFIG_MMC_SDHCI_TEGRA                          note<'LP: #2080908'>
+
 CONFIG_MMC_TEST                                 policy<{'arm64': 'm'}>
 CONFIG_MMC_TEST                                 note<'LP: #2072591'>
 
@@ -97,6 +106,7 @@ CONFIG_CRYPTO_DEV_TEGRA                         policy<{'arm64': 'm'}>
 CONFIG_CRYPTO_SUPPORT_TEGRA_TESTS               policy<{'arm64': 'y'}>
 CONFIG_DEBUG_MUTEXES                            policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
 CONFIG_LEDS_TRIGGER_CPU                         policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
+CONFIG_MMC_CQHCI                                policy<{'arm64': 'y'}>
 CONFIG_NUMA_BALANCING                           policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
 CONFIG_PREEMPT_BUILD                            policy<{'arm64': '-', 'arm64-nvidia-tegra': 'y'}>
 CONFIG_PREEMPT_NONE                             policy<{'arm64': 'n', 'arm64-nvidia-tegra': 'y'}>
