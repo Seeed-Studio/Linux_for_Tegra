@@ -33,6 +33,9 @@ CONFIG_PCI_MESON                                note<'LP: #2007745'>
 CONFIG_PCI_PASID                                policy<{'arm64': 'n'}>
 CONFIG_PCI_PASID                                note<'LP: #2072591'>
 
+CONFIG_PPP_ASYNC                                policy<{'arm64': 'y'}>
+CONFIG_PPP_ASYNC                                note<'LP: #2080908'>
+
 CONFIG_PPS_CLIENT_KTIMER                        policy<{'arm64': 'm'}>
 CONFIG_PPS_CLIENT_KTIMER                        note<'LP: #2072591'>
 
