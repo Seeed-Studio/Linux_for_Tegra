@@ -30,6 +30,9 @@ CONFIG_NTFS_FS                                  note<'LP: #2080908'>
 CONFIG_OVERLAY_FS                               policy<{'arm64': 'y'}>
 CONFIG_OVERLAY_FS                               note<'LP: #2072591'>
 
+CONFIG_PCIE_ECRC                                policy<{'arm64': 'y'}>
+CONFIG_PCIE_ECRC                                note<'LP: #2080908'>
+
 CONFIG_PCIE_EDR                                 policy<{'arm64': 'n'}>
 CONFIG_PCIE_EDR                                 note<'LP: #1965241'>
 
