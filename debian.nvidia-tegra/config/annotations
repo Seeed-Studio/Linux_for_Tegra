@@ -60,6 +60,9 @@ CONFIG_PREEMPT_RT                               note<'must be enabled in the rea
 CONFIG_R8169                                    policy<{'arm64': 'n'}>
 CONFIG_R8169                                    note<'LP: 2080908'>
 
+CONFIG_RODATA_FULL_DEFAULT_ENABLED              policy<{'arm64': 'n'}>
+CONFIG_RODATA_FULL_DEFAULT_ENABLED              note<'LP: #2080908'>
+
 CONFIG_SPEAKUP                                  policy<{'arm64': '-'}>
 CONFIG_SPEAKUP                                  note<'LP: #1967702'>
 
