@@ -1,7 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #ifndef __NVSCIIPC_KERNEL_H__
 #define __NVSCIIPC_KERNEL_H__
@@ -59,7 +57,7 @@ static void nvsciipc_cleanup(struct nvsciipc *ctx);
 
 static int nvsciipc_dev_open(struct inode *inode, struct file *filp);
 static int nvsciipc_dev_release(struct inode *inode, struct file *filp);
-static long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
+long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 			unsigned long arg);
 static int nvsciipc_ioctl_get_vuid(struct nvsciipc *ctx, unsigned int cmd,
 			unsigned long arg);

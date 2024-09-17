@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -17,6 +17,10 @@
 #include <linux/mm.h>
 #include <linux/sched.h>
 #include <soc/tegra/fuse.h>
+#include <linux/uidgid.h>
+#if defined(CONFIG_FUNCTION_ERROR_INJECTION) && defined(CONFIG_BPF_KPROBE_OVERRIDE)
+#include <linux/error-injection.h>
+#endif /* CONFIG_FUNCTION_ERROR_INJECTION && CONFIG_BPF_KPROBE_OVERRIDE */
 
 #include <uapi/linux/tegra-ivc-dev.h>
 #include "tegra_hv.h"
@@ -54,6 +58,8 @@ static const struct ivc_info_page *s_infop;
 /* setup_ivc() set guest id */
 static uint32_t s_guestid = INVALID_VMID;
 
+long ivc_dev_ioctl(struct file *filp, unsigned int cmd,
+	unsigned long arg);
 
 static irqreturn_t ivc_dev_handler(int irq, void *data)
 {
@@ -239,7 +245,7 @@ static int ivc_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 /* Need this temporarily to get the change merged. Will be removed later */
 #define NVIPC_IVC_IOCTL_GET_INFO_LEGACY 0xC018AA01
 #define NVIPC_IVC_IOCTL_NOTIFY_REMOTE_LEGACY 0xC018AA02
-static long ivc_dev_ioctl(struct file *filp, unsigned int cmd,
+long ivc_dev_ioctl(struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
 	struct ivc_dev *ivcd = filp->private_data;
@@ -337,8 +343,12 @@ static long ivc_dev_ioctl(struct file *filp, unsigned int cmd,
 	}
 
 exit:
+#if defined(CONFIG_FUNCTION_ERROR_INJECTION) && defined(CONFIG_BPF_KPROBE_OVERRIDE)
+	ALLOW_ERROR_INJECTION(ivc_dev_ioctl, ERRNO);
+#endif /* CONFIG_FUNCTION_ERROR_INJECTION && CONFIG_BPF_KPROBE_OVERRIDE */
 	return ret;
 }
+EXPORT_SYMBOL(ivc_dev_ioctl);
 
 static const struct file_operations ivc_fops = {
 	.owner		= THIS_MODULE,

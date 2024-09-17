@@ -1,7 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /*
  * This is NvSciIpc kernel driver. At present its only use is to support
@@ -24,6 +22,10 @@
 #include <linux/cred.h>
 #include <linux/of.h>
 #include <linux/fs.h>
+#include <linux/uidgid.h>
+#if defined(CONFIG_FUNCTION_ERROR_INJECTION) && defined(CONFIG_BPF_KPROBE_OVERRIDE)
+#include <linux/error-injection.h>
+#endif /* CONFIG_FUNCTION_ERROR_INJECTION && CONFIG_BPF_KPROBE_OVERRIDE */
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 #include <soc/tegra/virt/syscalls.h>
@@ -40,7 +42,6 @@
 /* enable it to debug auth API via ioctl.
  * enable LINUX_DEBUG_KMD_API in test_nvsciipc_nvmap tool either.
  */
-#define DEBUG_AUTH_API 1
 #define DEBUG_VALIDATE_TOKEN 0
 
 DEFINE_MUTEX(nvsciipc_mutex);
@@ -50,6 +51,9 @@ static struct nvsciipc *ctx;
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 static int32_t s_guestid = -1;
 #endif /* CONFIG_TEGRA_VIRTUALIZATION */
+
+long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
+	unsigned long arg);
 
 NvSciError NvSciIpcEndpointGetAuthToken(NvSciIpcEndpoint handle,
 		NvSciIpcEndpointAuthToken *authToken)
@@ -228,7 +232,6 @@ static int nvsciipc_dev_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-#if DEBUG_AUTH_API
 static int nvsciipc_ioctl_validate_auth_token(struct nvsciipc *ctx,
 	unsigned int cmd, unsigned long arg)
 {
@@ -304,7 +307,6 @@ static int nvsciipc_ioctl_map_vuid(struct nvsciipc *ctx, unsigned int cmd,
 exit:
 	return ret;
 }
-#endif /* DEBUG_AUTH_API */
 
 static int nvsciipc_ioctl_get_db_by_idx(struct nvsciipc *ctx, unsigned int cmd,
 	unsigned long arg)
@@ -359,6 +361,47 @@ static int nvsciipc_ioctl_get_db_by_name(struct nvsciipc *ctx, unsigned int cmd,
 		if (!strncmp(get_db.ep_name, ctx->db[i]->ep_name,
 			NVSCIIPC_MAX_EP_NAME)) {
 			get_db.entry = *ctx->db[i];
+			get_db.idx = i;
+			break;
+		}
+	}
+
+	if (i == ctx->num_eps) {
+		INFO("%s: no entry (%s)\n", __func__, get_db.ep_name);
+		return -ENOENT;
+	} else if (copy_to_user((void __user *)arg, &get_db,
+				_IOC_SIZE(cmd))) {
+		ERR("%s : copy_to_user failed\n", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+// TODO: remove this after migration
+static int nvsciipc_ioctl_get_db_by_name_legacy(struct nvsciipc *ctx,
+	unsigned int cmd, unsigned long arg)
+{
+	struct nvsciipc_get_db_by_name_legacy get_db;
+	int i;
+
+	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
+		ERR("%s[%d] need to set endpoint database first\n", __func__,
+			get_current()->pid);
+		return -EPERM;
+	}
+
+	if (copy_from_user(&get_db, (void __user *)arg, _IOC_SIZE(cmd))) {
+		ERR("%s : copy_from_user failed\n", __func__);
+		return -EFAULT;
+	}
+
+	/* read operation */
+	for (i = 0; i < ctx->num_eps; i++) {
+		if (!strncmp(get_db.ep_name, ctx->db[i]->ep_name,
+			NVSCIIPC_MAX_EP_NAME)) {
+			//get_db.entry = *ctx->db[i];
+			memcpy(&get_db.entry, ctx->db[i], sizeof(get_db.entry));
 			get_db.idx = i;
 			break;
 		}
@@ -469,8 +512,9 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 		return -EPERM;
 	}
 #else
-	/* check root user */
-	if (current_cred()->uid.val != 0) {
+	/* check root or nvsciipc user */
+	if ((current_cred()->uid.val != 0) &&
+	(current_cred()->uid.val != 2000)) {
 		ERR("no permission to set db\n");
 		return -EPERM;
 	}
@@ -617,7 +661,9 @@ exit:
 	return ret;
 }
 
-static long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
+// TODO: remove macro after change delivery btw branches
+#define NVSCIIPC_IOCTL_GET_DB_BY_NAME_LEGACY 0xc140c303
+long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
 	struct nvsciipc *ctx = filp->private_data;
@@ -647,6 +693,10 @@ static long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVSCIIPC_IOCTL_GET_DB_BY_NAME:
 		ret = nvsciipc_ioctl_get_db_by_name(ctx, cmd, arg);
 		break;
+// TODO: remove legacy cmd after migration
+	case NVSCIIPC_IOCTL_GET_DB_BY_NAME_LEGACY:
+		ret = nvsciipc_ioctl_get_db_by_name_legacy(ctx, cmd, arg);
+		break;
 	case NVSCIIPC_IOCTL_GET_DB_BY_VUID:
 		ret = nvsciipc_ioctl_get_db_by_vuid(ctx, cmd, arg);
 		break;
@@ -656,14 +706,12 @@ static long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVSCIIPC_IOCTL_GET_DB_SIZE:
 		ret = nvsciipc_ioctl_get_dbsize(ctx, cmd, arg);
 		break;
-#if DEBUG_AUTH_API
 	case NVSCIIPC_IOCTL_VALIDATE_AUTH_TOKEN:
 		ret = nvsciipc_ioctl_validate_auth_token(ctx, cmd, arg);
 		break;
 	case NVSCIIPC_IOCTL_MAP_VUID:
 		ret = nvsciipc_ioctl_map_vuid(ctx, cmd, arg);
 		break;
-#endif /* DEBUG_AUTH_API */
 	case NVSCIIPC_IOCTL_GET_VMID:
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 		if (copy_to_user((void __user *) arg, &s_guestid,
@@ -681,6 +729,9 @@ static long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 	}
 
 exit:
+#if defined(CONFIG_FUNCTION_ERROR_INJECTION) && defined(CONFIG_BPF_KPROBE_OVERRIDE)
+	ALLOW_ERROR_INJECTION(nvsciipc_dev_ioctl, ERRNO);
+#endif /* CONFIG_FUNCTION_ERROR_INJECTION && defined(CONFIG_BPF_KPROBE_OVERRIDE */
 	return ret;
 }
 
@@ -691,7 +742,8 @@ static ssize_t nvsciipc_dbg_read(struct file *filp, char __user *buf,
 	int i;
 
 	/* check root user */
-	if (current_cred()->uid.val != 0) {
+	if ((current_cred()->uid.val != 0) &&
+	(current_cred()->uid.val != 2000)) {
 		ERR("no permission to read db\n");
 		return -EPERM;
 	}
@@ -703,14 +755,16 @@ static ssize_t nvsciipc_dbg_read(struct file *filp, char __user *buf,
 	}
 
 	for (i = 0; i < ctx->num_eps; i++) {
-		INFO("EP[%03d]: ep:%s,dev:%s,be:%u,nfrm:%u,fsz:%u,id:%u,noti:%d(TRAP:1,MSI:2)\n", i,
-			ctx->db[i]->ep_name,
+		INFO("EP[%03d]: ep_name: %s, dev_name: %s, backend: %u, nframes: %u, ",
+			i, ctx->db[i]->ep_name,
 			ctx->db[i]->dev_name,
 			ctx->db[i]->backend,
-			ctx->db[i]->nframes,
+			ctx->db[i]->nframes);
+		INFO("frame_size: %u, id: %u, noti:%d(TRAP:1,MSI:2), uid: %d\n",
 			ctx->db[i]->frame_size,
 			ctx->db[i]->id,
-			ctx->db[i]->noti_type);
+			ctx->db[i]->noti_type,
+			ctx->db[i]->uid);
 	}
 
 	return 0;
