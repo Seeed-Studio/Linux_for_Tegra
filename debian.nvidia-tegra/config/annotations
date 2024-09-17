@@ -94,6 +94,7 @@ CONFIG_SPEAKUP_SYNTH_SPKOUT                     policy<{'arm64': '-'}>
 CONFIG_SPEAKUP_SYNTH_TXPRT                      policy<{'arm64': '-'}>
 CONFIG_TEGRA_HSIERRRPTINJ                       policy<{'arm64': 'y'}>
 CONFIG_TEGRA_PLATFORM_DEVICES                   policy<{'arm64': 'y'}>
+CONFIG_TEGRA_PROD_LEGACY                        policy<{'arm64': 'y'}>
 CONFIG_TEST_UBSAN                               policy<{'arm64': '-'}>
 CONFIG_TRANSPARENT_HUGEPAGE                     policy<{'arm64': '-', 'arm64-nvidia-tegra': 'n'}>
 CONFIG_UBSAN_ALIGNMENT                          policy<{'arm64': '-'}>
