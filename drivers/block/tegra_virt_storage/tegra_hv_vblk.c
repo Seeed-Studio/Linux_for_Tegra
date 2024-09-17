@@ -64,11 +64,6 @@ static uint32_t total_instance_id;
 
 static int vblk_major;
 
-static uint32_t lcpu_to_vcpus[CPUS_PER_CLUSTER * MAX_NUM_CLUSTERS];
-atomic_t vcpu_init_info;
-static DEFINE_MUTEX(vcpu_lock);
-static struct semaphore mpidr_sem;
-
 static inline uint64_t _arch_counter_get_cntvct(void)
 {
 	uint64_t cval;
@@ -100,27 +95,6 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 
 exit:
 	return req;
-}
-
-static uint32_t convert_lcpu_to_vcpu(struct vblk_dev *vblkdev, uint32_t lcpu_affinity)
-{
-	uint32_t cnt, vcpu = U32_MAX;
-	int adj_lcpu = -1;
-
-	/* search for vcpu corresponding to lcpu_affinity */
-	for (cnt = 0; cnt < MAX_NUM_CLUSTERS * CPUS_PER_CLUSTER; cnt++) {
-		if (lcpu_to_vcpus[cnt] != U32_MAX) {
-			/* calculating adjusted lcpu */
-			adj_lcpu++;
-
-			if (adj_lcpu == lcpu_affinity) {
-				vcpu = lcpu_to_vcpus[cnt];
-				break;
-			}
-		}
-	}
-
-	return vcpu;
 }
 
 static struct vsc_request *vblk_get_req_by_sr_num(struct vblk_dev *vblkdev,
@@ -1560,12 +1534,12 @@ static void vblk_init_device(struct work_struct *ws)
 			return;
 		}
 
-		if (vblkdev->vcpu_affinity != U32_MAX) {
+		if (vblkdev->schedulable_vcpu_number != num_possible_cpus()) {
 			strncat(vblk_comm, ":%u", 3);
 
 			/* create partition specific worker thread */
 			vblkdev->vblk_kthread = kthread_create_on_cpu(&vblk_request_worker, vblkdev,
-						vblkdev->vcpu_affinity, vblk_comm);
+						vblkdev->schedulable_vcpu_number, vblk_comm);
 		} else {
 			/* create partition specific worker thread.
 			 * If the conversion is not successful
@@ -1582,6 +1556,9 @@ static void vblk_init_device(struct work_struct *ws)
 
 		/* set thread priority */
 		attr.sched_policy = SCHED_RR;
+		/*
+		 * FIXME: Need to review the priority level set currently <25.
+		 */
 		attr.sched_priority = VBLK_DEV_BASE_PRIORITY - vblkdev->config.priority;
 		WARN_ON_ONCE(sched_setattr_nocheck(vblkdev->vblk_kthread, &attr) != 0);
 		init_completion(&vblkdev->complete);
@@ -1599,13 +1576,15 @@ static void vblk_init_device(struct work_struct *ws)
 static irqreturn_t ivc_irq_handler(int irq, void *data)
 {
 	struct vblk_dev *vblkdev = (struct vblk_dev *)data;
-
-	if (vblkdev->initialized)
+	if (vblkdev->initialized) {
 		/* wakeup worker thread */
 		complete(&vblkdev->complete);
-	else
-		schedule_work_on(vblkdev->vcpu_affinity, &vblkdev->init);
+	} else {
 
+		int vcpu = (vblkdev->schedulable_vcpu_number != num_possible_cpus()) ?
+				vblkdev->schedulable_vcpu_number : DEFAULT_INIT_VCPU;
+		schedule_work_on(vcpu, &vblkdev->init);
+	}
 	return IRQ_HANDLED;
 }
 
@@ -1660,72 +1639,13 @@ static void tegra_create_timers(struct vblk_dev *vblkdev)
 
 }
 
-static uint64_t read_mpidr(void)
-{
-	uint64_t mpidr;
-	__asm volatile("MRS %0, MPIDR_EL1 " : "=r"(mpidr) :: "memory");
-	return mpidr;
-}
-
-static uint64_t read_mpidr_cluster(uint64_t mpidr)
-{
-	return (mpidr >> MPIDR_AFF2_SHIFT) & MPIDR_AFFLVL_MASK;
-}
-
-static uint64_t read_mpidr_core(uint64_t mpidr)
-{
-	return (mpidr >> MPIDR_AFF1_SHIFT) & MPIDR_AFFLVL_MASK;
-}
-
-static long get_cpu_info(void *data)
-{
-	uint64_t l_mpidr, l_cluster, l_core;
-	uint32_t lcpu;
-
-	l_mpidr = read_mpidr();
-	l_cluster = read_mpidr_cluster(l_mpidr);
-	l_core = read_mpidr_core(l_mpidr);
-
-	lcpu = l_cluster * CPUS_PER_CLUSTER + l_core;
-	lcpu_to_vcpus[lcpu] = smp_processor_id();
-
-	up(&mpidr_sem);
-
-	return 0;
-}
-
-static void populate_lcpu_to_vcpu_info(struct vblk_dev *vblkdev)
-{
-	uint32_t num_vcpus = num_present_cpus();
-	uint32_t cnt, lcpu;
-
-	/* initialize all clusters including holes */
-	for (lcpu = 0; lcpu < MAX_NUM_CLUSTERS * CPUS_PER_CLUSTER; lcpu++)
-		lcpu_to_vcpus[lcpu] = U32_MAX;
-
-	/* queuing API on each present vcpus serially
-	 * by down and up semaphore operation
-	 */
-	for (cnt = 0; cnt < num_vcpus; cnt++) {
-		down(&mpidr_sem);
-		work_on_cpu(cnt, get_cpu_info, vblkdev);
-	}
-
-	/* down and up operation to make sure get_cpu_info API
-	 * gets exuected on last vcpu successfully before exiting function
-	 */
-	down(&mpidr_sem);
-	up(&mpidr_sem);
-
-	atomic_inc(&vcpu_init_info);
-}
-
 static int tegra_hv_vblk_probe(struct platform_device *pdev)
 {
 	static struct device_node *vblk_node;
+	struct device_node *schedulable_vcpu_number_node;
 	struct vblk_dev *vblkdev;
 	struct device *dev = &pdev->dev;
-	uint32_t lcpu_affinity;
+	uint8_t is_cpu_bound = true;
 	int ret;
 
 	if (!is_tegra_hypervisor_mode()) {
@@ -1765,6 +1685,24 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 			goto fail;
 		}
 	}
+	schedulable_vcpu_number_node = of_find_node_by_name(NULL, "virt-storage-request-submit-cpu-mapping");
+	/* read lcpu_affinity from dts */
+	if (schedulable_vcpu_number_node == NULL) {
+		dev_err(dev, "%s: virt-storage-request-submit-cpu-mapping DT not found\n",
+				__func__);
+		is_cpu_bound = false;
+	} else if (of_property_read_u32(schedulable_vcpu_number_node, "lcpu2tovcpu", &(vblkdev->schedulable_vcpu_number)) != 0) {
+		dev_err(dev, "%s: lcpu2tovcpu affinity is not found\n", __func__);
+		is_cpu_bound = false;
+	}
+	if (vblkdev->schedulable_vcpu_number >= num_online_cpus()) {
+		dev_err(dev, "%s: cpu affinity (%d) > online cpus (%d)\n", __func__, vblkdev->schedulable_vcpu_number, num_online_cpus());
+		is_cpu_bound = false;
+	}
+	if (false == is_cpu_bound) {
+		dev_err(dev, "%s: WARN: CPU is unbound\n", __func__);
+		vblkdev->schedulable_vcpu_number = num_possible_cpus();
+	}
 
 	vblkdev->initialized = false;
 
@@ -1778,7 +1716,6 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	spin_lock_init(&vblkdev->queue_lock);
 	mutex_init(&vblkdev->ioctl_lock);
 	mutex_init(&vblkdev->ivc_lock);
-	sema_init(&mpidr_sem, 1);
 
 	INIT_WORK(&vblkdev->init, vblk_init_device);
 	INIT_WORK(&vblkdev->rq_cfg, vblk_request_config);
@@ -1788,25 +1725,10 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 
 	/* Create timers for each request going to storage server*/
 	tegra_create_timers(vblkdev);
-
-	mutex_lock(&vcpu_lock);
-	if (atomic_read(&vcpu_init_info) == 0)
-		populate_lcpu_to_vcpu_info(vblkdev);
-	mutex_unlock(&vcpu_lock);
-
-	/* read lcpu_affinity from dts */
-	if (of_property_read_u32_index(vblkdev->device->of_node, "lcpu_affinity", 0,
-		&lcpu_affinity)) {
-		/* pin thread to logical core 2 if dts property is missing */
-		lcpu_affinity = 2;
-	}
-	/* convert lcpu to vcpu */
-	vblkdev->vcpu_affinity = convert_lcpu_to_vcpu(vblkdev, lcpu_affinity);
-
-	schedule_work_on(vblkdev->vcpu_affinity, &vblkdev->rq_cfg);
+	schedule_work_on(((is_cpu_bound == false) ? DEFAULT_INIT_VCPU : vblkdev->schedulable_vcpu_number),
+			&vblkdev->rq_cfg);
 
 	return 0;
-
 fail:
 	return ret;
 }
