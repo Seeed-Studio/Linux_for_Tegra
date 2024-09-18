@@ -11,6 +11,10 @@
 			status = "okay";
 		};
 
+		timer@8000000 {
+			status = "okay";
+		};
+
 		actmon@d3f0000 {
 			status = "okay";
 		};
