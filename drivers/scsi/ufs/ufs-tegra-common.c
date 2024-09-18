@@ -808,16 +808,42 @@ static int ufs_tegra_init_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 	if (ufs_tegra->soc->chip_id != TEGRA264) {
 		err = ufs_tegra_host_clk_get(dev,
 			"pll_p", &ufs_tegra->ufshc_parent);
+		if (err)
+			goto out;
 	} else {
 		err = ufs_tegra_host_clk_get(dev,
 			"pllrefe_vcoout", &ufs_tegra->ufshc_parent);
-		if (err)
+		if (err) {
+			dev_err(dev, "%s: pllrefe_vcoout clock get failed: Err %d",
+				__func__, err);
 			goto out;
+		}
+
 		err = ufs_tegra_host_clk_get(dev,
 			"ufshc_div", &ufs_tegra->ufshc_clk_div);
+		if (err) {
+			dev_err(dev, "%s: ufshc_div clock get failed: Err %d",
+				__func__, err);
+			goto out;
+		}
+
+		err = ufs_tegra_host_clk_get(dev,
+			"isc_cpu", &ufs_tegra->isc_cpu);
+		if (err) {
+			dev_err(dev, "%s: isc_cpu clock get failed: Err %d",
+				__func__, err);
+			goto out;
+		}
+
+		err = ufs_tegra_host_clk_get(dev,
+			"utmi_pll1", &ufs_tegra->utmi_pll1);
+		if (err) {
+			dev_err(dev, "%s: utmi_pll1 clock get failed: Err %d",
+				__func__, err);
+			goto out;
+		}
 	}
-	if (err)
-		goto out;
+
 	if (ufs_tegra->soc->chip_id != TEGRA264) {
 		err = ufs_tegra_host_clk_get(dev,
 			"clk_m", &ufs_tegra->ufsdev_parent);
@@ -854,12 +880,20 @@ static int ufs_tegra_enable_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 		 */
 		err = clk_set_parent(ufs_tegra->ufshc_clk,
 			ufs_tegra->ufshc_clk_div);
+
+		if (err) {
+			pr_err("\n ufshc_clk clk_set_parent failed\n");
+			goto out;
+		}
+		err = clk_set_parent(ufs_tegra->isc_cpu,
+			ufs_tegra->utmi_pll1);
+
 	} else {
 		err = clk_set_parent(ufs_tegra->ufshc_clk,
 			ufs_tegra->ufshc_parent);
 	}
 	if (err) {
-		pr_err("Function clk_set_parent failed\n");
+		pr_err("\n clk_set_parent failed\n");
 		goto out;
 	}
 	if (ufs_tegra->soc->chip_id != TEGRA264) {
