@@ -31,6 +31,18 @@
 #include "nvmap_handle.h"
 #include "include/linux/nvmap_exports.h"
 
+#ifdef CONFIG_ARM_DMA_IOMMU_ALIGNMENT
+#define DMA_BUF_ALIGNMENT CONFIG_ARM_DMA_IOMMU_ALIGNMENT
+#else
+#define DMA_BUF_ALIGNMENT 8
+#endif
+
+/*
+ * DMA_ATTR_ALLOC_EXACT_SIZE: This tells the DMA-mapping
+ * subsystem to allocate the exact number of pages
+ */
+#define DMA_ATTR_ALLOC_EXACT_SIZE	(DMA_ATTR_PRIVILEGED << 2)
+
 /*
  * "carveouts" are platform-defined regions of physically contiguous memory
  * which are not managed by the OS. A platform may specify multiple carveouts,
@@ -42,8 +54,267 @@
 
 static struct kmem_cache *heap_block_cache;
 
-int nvmap_query_heap_peer(struct nvmap_heap *heap, unsigned int *peer)
+/*
+ * This function calculates allocatable free memory using following formula:
+ * free_mem = avail mem - cma free
+ * free_mem = free_mem - (free_mem / 1000);
+ * The CMA memory is not allocatable by NvMap for regular allocations and it
+ * is part of Available memory reported, so subtract it from available memory.
+ */
+int system_heap_free_mem(unsigned long *mem_val)
 {
+	long available_mem = 0;
+	unsigned long free_mem = 0;
+	unsigned long cma_free = 0;
+
+	available_mem = si_mem_available();
+	if (available_mem <= 0) {
+		*mem_val = 0;
+		return 0;
+	}
+
+	cma_free = global_zone_page_state(NR_FREE_CMA_PAGES) << PAGE_SHIFT;
+	if ((available_mem << PAGE_SHIFT) < cma_free) {
+		*mem_val = 0;
+		return 0;
+	}
+	free_mem = (available_mem << PAGE_SHIFT) - cma_free;
+
+	/* reduce free_mem by ~ 0.1% */
+	free_mem = free_mem - (free_mem / 1000);
+
+	*mem_val = free_mem;
+	return 0;
+}
+
+static unsigned long system_heap_total_mem(void)
+{
+	struct sysinfo sys_heap;
+
+	si_meminfo(&sys_heap);
+
+	return sys_heap.totalram << PAGE_SHIFT;
+}
+
+/*
+ * This function calculates total memory and allocable free memory by parsing
+ * /sys/devices/system/node/nodeX/meminfo file
+ * total memory = value of MemTotal field
+ * allocable free memory = Value of MemFree field + (Value of KReclaimable) / 2
+ * Note that the above allocable free memory value is an estimate and may not be an
+ * exact value and may need further tuning in future.
+ */
+#define MEMINFO_SIZE 1536
+static int compute_memory_stat(u64 *total, u64 *free, int numa_id)
+{
+	struct file *file;
+	char meminfo_path[64] = {'\0'};
+	u8 *buf;
+	loff_t pos = 0;
+	char *buffer, *ptr;
+	u64 mem_total, mem_free, reclaimable;
+	bool total_found = false, free_found = false, reclaimable_found = false;
+	int nid, rc;
+
+	sprintf(meminfo_path, "/sys/devices/system/node/node%d/meminfo", numa_id);
+	file = filp_open(meminfo_path, O_RDONLY, 0);
+	if (IS_ERR(file)) {
+		pr_err("Could not open file:%s\n", meminfo_path);
+		return -EINVAL;
+	}
+
+	buf = nvmap_altalloc(MEMINFO_SIZE * sizeof(*buf));
+	if (!buf) {
+		pr_err("Memory allocation failed\n");
+		filp_close(file, NULL);
+		return -ENOMEM;
+	}
+
+	rc = kernel_read(file, buf, MEMINFO_SIZE - 1, &pos);
+	buf[rc] = '\n';
+	filp_close(file, NULL);
+	buffer = buf;
+	ptr = buf;
+	while ((ptr = strsep(&buffer, "\n")) != NULL) {
+		if (!ptr[0])
+			continue;
+		else if (sscanf(ptr, "Node %d MemTotal: %llu kB\n", &nid, &mem_total) == 2)
+			total_found = true;
+		else if (sscanf(ptr, "Node %d MemFree: %llu kB\n", &nid, &mem_free) == 2)
+			free_found = true;
+		else if (sscanf(ptr, "Node %d KReclaimable: %llu kB\n", &nid, &reclaimable) == 2)
+			reclaimable_found = true;
+	}
+
+	nvmap_altfree(buf, MEMINFO_SIZE * sizeof(*buf));
+	if (nid == numa_id && total_found && free_found && reclaimable_found) {
+		*total = mem_total * 1024;
+		*free = (mem_free + reclaimable / 2) * 1024;
+		return 0;
+	}
+	return -EINVAL;
+}
+
+/*
+ * This function calculates HugePages_Total and HugePages_Free by parsing
+ * /sys/devices/system/node/nodeX/meminfo file
+ */
+static int compute_hugetlbfs_stat(u64 *total, u64 *free, int numa_id)
+{
+	struct file *file;
+	char meminfo_path[64] = {'\0'};
+	u8 *buf;
+	loff_t pos = 0;
+	char *buffer, *ptr;
+	unsigned int huge_total, huge_free;
+	bool total_found = false, free_found = false;
+	int nid, rc;
+
+	sprintf(meminfo_path, "/sys/devices/system/node/node%d/meminfo", numa_id);
+	file = filp_open(meminfo_path, O_RDONLY, 0);
+	if (IS_ERR(file)) {
+		pr_err("Could not open file:%s\n", meminfo_path);
+		return -EINVAL;
+	}
+
+	buf = nvmap_altalloc(MEMINFO_SIZE * sizeof(*buf));
+	if (!buf) {
+		pr_err("Memory allocation failed\n");
+		filp_close(file, NULL);
+		return -ENOMEM;
+	}
+
+	rc = kernel_read(file, buf, MEMINFO_SIZE - 1, &pos);
+	buf[rc] = '\n';
+	filp_close(file, NULL);
+	buffer = buf;
+	ptr = buf;
+	while ((ptr = strsep(&buffer, "\n")) != NULL) {
+		if (!ptr[0])
+			continue;
+		else if (sscanf(ptr, "Node %d HugePages_Total: %u\n", &nid, &huge_total) == 2)
+			total_found = true;
+		else if (sscanf(ptr, "Node %d HugePages_Free: %u\n", &nid, &huge_free) == 2)
+			free_found = true;
+	}
+
+	nvmap_altfree(buf, MEMINFO_SIZE * sizeof(*buf));
+	if (nid == numa_id && total_found && free_found) {
+		*total = (u64)huge_total * SIZE_2MB;
+		*free = (u64)huge_free * SIZE_2MB;
+		return 0;
+	}
+	return -EINVAL;
+}
+
+int nvmap_query_heap(struct nvmap_query_heap_params *op, bool is_numa_aware)
+{
+	unsigned int carveout_mask = NVMAP_HEAP_CARVEOUT_MASK;
+	unsigned int iovmm_mask = NVMAP_HEAP_IOVMM;
+	struct nvmap_heap *heap;
+	unsigned int type;
+	int i;
+	int numa_id;
+	unsigned long free_mem = 0;
+	int ret = 0;
+
+	type = op->heap_mask;
+	if (type & (type - 1)) {
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	if (is_numa_aware)
+		numa_id = op->numa_id;
+
+	if (nvmap_convert_carveout_to_iovmm) {
+		carveout_mask &= ~NVMAP_HEAP_CARVEOUT_GENERIC;
+		iovmm_mask |= NVMAP_HEAP_CARVEOUT_GENERIC;
+	} else if (nvmap_convert_iovmm_to_carveout) {
+		if (type & NVMAP_HEAP_IOVMM) {
+			type &= ~NVMAP_HEAP_IOVMM;
+			type |= NVMAP_HEAP_CARVEOUT_GENERIC;
+		}
+	}
+
+	/* To Do: select largest free block */
+	op->largest_free_block = PAGE_SIZE;
+
+	/*
+	 * Special case: GPU heap
+	 * When user is querying the GPU heap, that means the buffer was allocated from
+	 * hugetlbfs, so we need to return the HugePages_Total, HugePages_Free values
+	 */
+	if (type & NVMAP_HEAP_CARVEOUT_GPU) {
+		if (!is_numa_aware)
+			numa_id = 0;
+
+		ret = compute_hugetlbfs_stat(&op->total, &op->free, numa_id);
+		if (ret)
+			goto exit;
+
+		op->largest_free_block = SIZE_2MB;
+		op->granule_size = SIZE_2MB;
+	} else if (type & NVMAP_HEAP_CARVEOUT_MASK) {
+		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+			if ((type & nvmap_get_heap_bit(nvmap_dev->heaps[i])) &&
+				(is_numa_aware ?
+				(numa_id == nvmap_get_heap_nid(nvmap_get_heap_ptr(
+				nvmap_dev->heaps[i]))) :
+				true)) {
+				heap = nvmap_get_heap_ptr(nvmap_dev->heaps[i]);
+				op->total = nvmap_query_heap_size(heap);
+				op->free = nvmap_get_heap_free_size(heap);
+				break;
+			}
+		}
+		/* If queried heap is not present */
+		if (i >= nvmap_dev->nr_carveouts) {
+			ret = -ENODEV;
+			goto exit;
+		}
+
+	} else if (type & iovmm_mask) {
+		if (num_online_nodes() > 1) {
+			/* multiple numa node exist */
+			ret = compute_memory_stat(&op->total, &op->free, numa_id);
+			if (ret)
+				goto exit;
+		} else {
+			/* Single numa node case
+			 * Check if input numa_id is zero or not.
+			 */
+			if (is_numa_aware && numa_id != 0) {
+				pr_err("Incorrect input for numa_id:%d\n", numa_id);
+				return -EINVAL;
+			}
+			op->total = system_heap_total_mem();
+			ret = system_heap_free_mem(&free_mem);
+			if (ret)
+				goto exit;
+			op->free = free_mem;
+		}
+		op->granule_size = PAGE_SIZE;
+	}
+
+	/*
+	 * Align free size reported to the previous page.
+	 * This avoids any AllocAttr failures due to using PAGE_ALIGN
+	 * for allocating exactly the free memory reported.
+	 */
+	op->free = op->free & PAGE_MASK;
+exit:
+	return ret;
+}
+
+int nvmap_query_heap_peer(struct nvmap_carveout_node *co_heap, unsigned int *peer)
+{
+	struct nvmap_heap *heap;
+
+	if (co_heap == NULL)
+		return -EINVAL;
+
+	heap = co_heap->carveout;
 	if (heap == NULL || !heap->is_ivm)
 		return -EINVAL;
 	*peer = heap->peer;
@@ -80,6 +351,195 @@ void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
 			heap_root, (u32 *)&heap->free_size);
 }
 
+static inline struct page **nvmap_kvzalloc_pages(u32 count)
+{
+	if (count * sizeof(struct page *) <= PAGE_SIZE)
+		return kzalloc(count * sizeof(struct page *), GFP_KERNEL);
+	else
+		return vzalloc(count * sizeof(struct page *));
+}
+
+static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
+					     struct dma_coherent_mem_replica *mem,
+					     size_t size,
+					     dma_addr_t *dma_handle,
+					     unsigned long attrs,
+					     unsigned long start)
+{
+	int order = get_order(size);
+	unsigned long flags;
+	unsigned int count = 0, i = 0, j = 0;
+	unsigned int alloc_size;
+	unsigned long align, pageno, page_count, first_pageno;
+	void *addr = NULL;
+	struct page **pages = NULL;
+	int do_memset = 0;
+	int *bitmap_nos = NULL;
+
+	if (dma_get_attr(DMA_ATTR_ALLOC_EXACT_SIZE, attrs)) {
+		page_count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+		if (page_count > UINT_MAX) {
+			dev_err(dev, "Page count more than max value\n");
+			return NULL;
+		}
+		count = (unsigned int)page_count;
+	} else
+		count = 1 << order;
+
+	if (!count)
+		return NULL;
+
+	bitmap_nos = vzalloc(count * sizeof(int));
+	if (!bitmap_nos) {
+		dev_err(dev, "failed to allocate memory\n");
+		return NULL;
+	}
+	if ((mem->flags & DMA_MEMORY_NOMAP) &&
+	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
+		alloc_size = 1;
+		pages = nvmap_kvzalloc_pages(count);
+
+		if (!pages) {
+			kvfree(bitmap_nos);
+			return NULL;
+		}
+	} else {
+		alloc_size = count;
+	}
+
+	spin_lock_irqsave(&mem->spinlock, flags);
+
+	if (unlikely(size > ((u64)mem->size << PAGE_SHIFT)))
+		goto err;
+
+	if ((mem->flags & DMA_MEMORY_NOMAP) &&
+	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
+		align = 0;
+	} else  {
+		if (order > DMA_BUF_ALIGNMENT)
+			align = (1 << DMA_BUF_ALIGNMENT) - 1;
+		else
+			align = (1 << order) - 1;
+	}
+
+	while (count) {
+		pageno = bitmap_find_next_zero_area(mem->bitmap, mem->size,
+						    start, alloc_size, align);
+
+		if (pageno >= mem->size)
+			goto err;
+
+		if (!i)
+			first_pageno = pageno;
+
+		count -= alloc_size;
+		if (pages)
+			pages[i++] = pfn_to_page(mem->pfn_base + pageno);
+
+		bitmap_set(mem->bitmap, pageno, alloc_size);
+		bitmap_nos[j++] = pageno;
+	}
+
+	/*
+	 * Memory was found in the coherent area.
+	 */
+	*dma_handle = mem->device_base + (first_pageno << PAGE_SHIFT);
+	if (!(mem->flags & DMA_MEMORY_NOMAP)) {
+		addr = mem->virt_base + (first_pageno << PAGE_SHIFT);
+		do_memset = 1;
+	} else if (dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
+		addr = pages;
+	}
+
+	spin_unlock_irqrestore(&mem->spinlock, flags);
+
+	if (do_memset)
+		memset(addr, 0, size);
+
+	kvfree(bitmap_nos);
+	return addr;
+err:
+	while (j--)
+		bitmap_clear(mem->bitmap, bitmap_nos[j], alloc_size);
+
+	spin_unlock_irqrestore(&mem->spinlock, flags);
+	kvfree(pages);
+	kvfree(bitmap_nos);
+	return NULL;
+}
+
+void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
+			    dma_addr_t *dma_handle,
+			    gfp_t flag, unsigned long attrs)
+{
+	struct dma_coherent_mem_replica *mem;
+
+	if (!dev || !dev->dma_mem)
+		return NULL;
+
+	WARN_ON_ONCE(!dev->coherent_dma_mask);
+
+	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
+
+	return __nvmap_dma_alloc_from_coherent(dev, mem, size, dma_handle,
+						   attrs, 0);
+}
+EXPORT_SYMBOL(nvmap_dma_alloc_attrs);
+
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+static void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
+					dma_addr_t device_addr, size_t size)
+{
+	struct dma_coherent_mem_replica *mem;
+	unsigned long flags, pageno;
+	unsigned int alloc_size;
+	int pos;
+
+	if (!dev || !dev->dma_mem)
+		return ERR_PTR(-EINVAL);
+
+	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
+
+	size += device_addr & ~PAGE_MASK;
+	alloc_size = PAGE_ALIGN(size) >> PAGE_SHIFT;
+
+	spin_lock_irqsave(&mem->spinlock, flags);
+	pos = PFN_DOWN(device_addr - mem->device_base);
+	pageno = bitmap_find_next_zero_area(mem->bitmap, mem->size, pos, alloc_size, 0);
+	if (pageno != pos)
+		goto error;
+	bitmap_set(mem->bitmap, pageno, alloc_size);
+	spin_unlock_irqrestore(&mem->spinlock, flags);
+	return mem->virt_base + (pos << PAGE_SHIFT);
+
+error:
+	spin_unlock_irqrestore(&mem->spinlock, flags);
+	return ERR_PTR(-ENOMEM);
+}
+
+static void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
+					 dma_addr_t device_addr, size_t size)
+{
+	struct dma_coherent_mem_replica *mem;
+	unsigned long flags;
+	unsigned int alloc_size;
+	int pos;
+
+	if (!dev || !dev->dma_mem)
+		return;
+
+	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
+
+	size += device_addr & ~PAGE_MASK;
+	alloc_size = PAGE_ALIGN(size) >> PAGE_SHIFT;
+
+	spin_lock_irqsave(&mem->spinlock, flags);
+	pos = PFN_DOWN(device_addr - mem->device_base);
+	bitmap_clear(mem->bitmap, pos, alloc_size);
+	spin_unlock_irqrestore(&mem->spinlock, flags);
+}
+#endif /* CONFIG_TEGRA_VIRTUALIZATION */
+
 static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 				   phys_addr_t *start)
 {
@@ -109,6 +569,59 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 
 	return pa;
 }
+
+void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
+			  dma_addr_t dma_handle, unsigned long attrs)
+{
+	void *mem_addr;
+	unsigned long flags;
+	unsigned int pageno;
+	struct dma_coherent_mem_replica *mem;
+
+	if (!dev || !dev->dma_mem)
+		return;
+
+	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
+	if ((mem->flags & DMA_MEMORY_NOMAP) &&
+	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
+		struct page **pages = cpu_addr;
+		int i;
+
+		spin_lock_irqsave(&mem->spinlock, flags);
+		for (i = 0; i < (size >> PAGE_SHIFT); i++) {
+			pageno = page_to_pfn(pages[i]) - mem->pfn_base;
+			if (WARN_ONCE(pageno > mem->size,
+				      "invalid pageno:%d\n", pageno))
+				continue;
+			bitmap_clear(mem->bitmap, pageno, 1);
+		}
+		spin_unlock_irqrestore(&mem->spinlock, flags);
+		kvfree(pages);
+		return;
+	}
+
+	if (mem->flags & DMA_MEMORY_NOMAP)
+		mem_addr =  (void *)(uintptr_t)mem->device_base;
+	else
+		mem_addr =  mem->virt_base;
+
+	if (mem && cpu_addr >= mem_addr &&
+	    cpu_addr - mem_addr < (u64)mem->size << PAGE_SHIFT) {
+		unsigned int page = (cpu_addr - mem_addr) >> PAGE_SHIFT;
+		unsigned long flags;
+		unsigned int count;
+
+		if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
+			count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+		else
+			count = 1 << get_order(size);
+
+		spin_lock_irqsave(&mem->spinlock, flags);
+		bitmap_clear(mem->bitmap, page, count);
+		spin_unlock_irqrestore(&mem->spinlock, flags);
+	}
+}
+EXPORT_SYMBOL(nvmap_dma_free_attrs);
 
 static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 			   size_t len)
@@ -322,6 +835,94 @@ void nvmap_heap_free(struct nvmap_heap_block *b)
 	mutex_unlock(&h->lock);
 }
 
+static int nvmap_dma_init_coherent_memory(
+	phys_addr_t phys_addr, dma_addr_t device_addr, size_t size, int flags,
+	struct dma_coherent_mem_replica **mem)
+{
+	struct dma_coherent_mem_replica *dma_mem = NULL;
+	void *mem_base = NULL;
+	int pages = size >> PAGE_SHIFT;
+	int bitmap_size = BITS_TO_LONGS(pages) * sizeof(long);
+	int ret;
+
+	if (!size)
+		return -EINVAL;
+
+	if ((flags & DMA_MEMORY_NOMAP) == 0) {
+		mem_base = memremap(phys_addr, size, MEMREMAP_WC);
+		if (!mem_base)
+			return -EINVAL;
+	}
+
+	dma_mem = kzalloc(sizeof(struct dma_coherent_mem_replica), GFP_KERNEL);
+	if (!dma_mem) {
+		ret = -ENOMEM;
+		goto err_memunmap;
+	}
+
+	dma_mem->bitmap = kzalloc(bitmap_size, GFP_KERNEL);
+	if (dma_mem->bitmap == NULL) {
+		ret = -ENOMEM;
+		goto err_free_dma_mem;
+	}
+
+	dma_mem->virt_base = mem_base;
+	dma_mem->device_base = device_addr;
+	dma_mem->pfn_base = PFN_DOWN(device_addr);
+	dma_mem->size = pages;
+	dma_mem->flags = flags;
+	spin_lock_init(&dma_mem->spinlock);
+
+	*mem = dma_mem;
+	return 0;
+
+err_free_dma_mem:
+	kfree(dma_mem);
+
+err_memunmap:
+	memunmap(mem_base);
+	return ret;
+}
+
+static int nvmap_dma_assign_coherent_memory(struct device *dev,
+				      struct dma_coherent_mem_replica *mem)
+{
+	if (!dev)
+		return -ENODEV;
+
+	if (dev->dma_mem)
+		return -EBUSY;
+
+	dev->dma_mem = (struct dma_coherent_mem *)mem;
+	return 0;
+}
+
+static void nvmap_dma_release_coherent_memory(struct dma_coherent_mem_replica *mem)
+{
+	if (!mem)
+		return;
+	if (!(mem->flags & DMA_MEMORY_NOMAP))
+		memunmap(mem->virt_base);
+	kfree(mem->bitmap);
+	kfree(mem);
+}
+
+int nvmap_dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
+			dma_addr_t device_addr, size_t size, int flags)
+{
+	struct dma_coherent_mem_replica *mem;
+	int ret;
+
+	ret = nvmap_dma_init_coherent_memory(phys_addr, device_addr, size, flags, &mem);
+	if (ret)
+		return ret;
+
+	ret = nvmap_dma_assign_coherent_memory(dev, mem);
+	if (ret)
+		nvmap_dma_release_coherent_memory(mem);
+	return ret;
+}
+
 /* nvmap_heap_create: create a heap object of len bytes, starting from
  * address base.
  */
@@ -513,6 +1114,13 @@ int nvmap_get_heap_nid(struct nvmap_heap *heap)
 	return heap->numa_node_id;
 }
 
+#ifdef NVMAP_CONFIG_DEBUG_MAPS
+struct rb_root *nvmap_heap_get_device_ptr(struct nvmap_heap *heap)
+{
+	return &heap->device_names;
+}
+#endif /* NVMAP_CONFIG_DEBUG_MAPS */
+
 phys_addr_t nvmap_get_heap_block_base(struct nvmap_heap_block *block)
 {
 	return block->base;
@@ -556,3 +1164,14 @@ void nvmap_set_debugfs_numa(struct debugfs_info *info, int nid)
 {
 	info->numa_id = nid;
 }
+
+unsigned int nvmap_get_heap_bit(struct nvmap_carveout_node *co_heap)
+{
+	return co_heap->heap_bit;
+}
+
+struct nvmap_heap *nvmap_get_heap_ptr(struct nvmap_carveout_node *co_heap)
+{
+	return co_heap->carveout;
+}
+

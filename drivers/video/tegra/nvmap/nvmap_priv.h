@@ -41,9 +41,6 @@
 
 #include <linux/fdtable.h>
 
-#define SIZE_2MB 0x200000
-#define ALIGN_2MB(size) ((size + SIZE_2MB - 1) & ~(SIZE_2MB - 1))
-
 #define __DMA_ATTR(attrs) attrs
 #define DEFINE_DMA_ATTRS(attrs) unsigned long attrs = 0
 
@@ -88,15 +85,8 @@ do {                                                    \
 	}                                               \
 } while (0)
 
-/*
- * DMA_ATTR_ALLOC_EXACT_SIZE: This tells the DMA-mapping
- * subsystem to allocate the exact number of pages
- */
-#define DMA_ATTR_ALLOC_EXACT_SIZE	(DMA_ATTR_PRIVILEGED << 2)
-
 #define DMA_MEMORY_NOMAP		0x02
 
-#define DMA_ALLOC_FREE_ATTR	DMA_ATTR_ALLOC_SINGLE_PAGES
 #define ACCESS_OK(type, addr, size)    access_ok(addr, size)
 #define SYS_CLOSE(arg) close_fd(arg)
 
@@ -123,14 +113,6 @@ struct nvmap_vma_list {
 	unsigned long save_vm_flags;
 	pid_t pid;
 	atomic_t ref;
-};
-
-struct nvmap_carveout_node {
-	unsigned int		heap_bit;
-	struct nvmap_heap	*carveout;
-	int			index;
-	phys_addr_t		base;
-	size_t			size;
 };
 
 /* handles allocated as collection of pages */
@@ -205,7 +187,7 @@ struct nvmap_device {
 	struct rb_root	handles;
 	spinlock_t	handle_lock;
 	struct miscdevice dev_user;
-	struct nvmap_carveout_node *heaps;
+	struct nvmap_carveout_node **heaps;
 	int nr_heaps;
 	int nr_carveouts;
 #ifdef NVMAP_CONFIG_PAGE_POOLS
@@ -253,19 +235,6 @@ static inline void nvmap_release_mmap_read_lock(struct mm_struct *mm)
 	up_read(&mm->mmap_lock);
 }
 
-struct dma_coherent_mem_replica {
-	void		*virt_base;
-	dma_addr_t	device_base;
-	unsigned long	pfn_base;
-	int		size;
-	int		flags;
-	unsigned long	*bitmap;
-	spinlock_t	spinlock;
-	bool		use_dev_dma_pfn_offset;
-};
-
-int nvmap_dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
-			dma_addr_t device_addr, size_t size, int flags);
 int nvmap_probe(struct platform_device *pdev);
 int nvmap_remove(struct platform_device *pdev);
 int nvmap_init(struct platform_device *pdev);
@@ -282,12 +251,6 @@ void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size);
 int is_nvmap_vma(struct vm_area_struct *vma);
 
 struct nvmap_handle *nvmap_handle_get_from_fd(int fd);
-
-/* MM definitions. */
-extern void v7_flush_kern_cache_all(void);
-extern void v7_clean_kern_cache_all(void *);
-
-void nvmap_flush_cache(struct page **pages, int numpages);
 
 struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 				  struct nvmap_handle *h);
@@ -323,9 +286,6 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u64 offset, u64 size);
 
 void nvmap_vma_open(struct vm_area_struct *vma);
 
-int nvmap_reserve_pages(struct nvmap_handle **handles, u64 *offsets,
-			u64 *sizes, u32 nr, u32 op, bool is_32);
-
 struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag);
 
 int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
@@ -346,63 +306,9 @@ static inline pid_t nvmap_client_pid(struct nvmap_client *client)
 	return client->task ? client->task->pid : 0;
 }
 
-/* must be called with mmap_sem held for read or write */
-static inline int nvmap_get_user_pages(ulong vaddr,
-				size_t nr_page, struct page **pages,
-				bool is_user_flags, u32 user_foll_flags)
-{
-	u32 foll_flags = FOLL_FORCE;
-	struct vm_area_struct *vma;
-	vm_flags_t vm_flags;
-	long user_pages = 0;
-	int ret = 0;
-
-	vma = find_vma(current->mm, vaddr);
-	if (vma) {
-		if (is_user_flags) {
-			foll_flags |= user_foll_flags;
-		} else {
-			vm_flags = vma->vm_flags;
-			/*
-			 * If the vaddr points to writable page then only
-			 * pass FOLL_WRITE flag
-			 */
-			if (vm_flags & VM_WRITE)
-				foll_flags |= FOLL_WRITE;
-		}
-		pr_debug("vaddr %lu is_user_flags %d user_foll_flags %x foll_flags %x.\n",
-			vaddr, is_user_flags?1:0, user_foll_flags, foll_flags);
-#if defined(NV_GET_USER_PAGES_HAS_ARGS_FLAGS) /* Linux v6.5 */
-		user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
-					    foll_flags, pages);
-#else
-		user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
-					    foll_flags, pages, NULL);
-#endif
-	}
-	if (user_pages != nr_page) {
-		ret = user_pages < 0 ? user_pages : -ENOMEM;
-		pr_err("get_user_pages requested/got: %zu/%ld]\n", nr_page,
-				user_pages);
-		while (--user_pages >= 0)
-			put_page(pages[user_pages]);
-	}
-	return ret;
-}
-
-#define device_node_from_iter(iter) \
-	iter.node
-
-extern struct of_device_id __nvmapcache_of_table;
-
-#define NVMAP_CACHE_OF_DECLARE(compat, fn) \
-	_OF_DECLARE(nvmapcache, nvmapcache_of, compat, fn, \
-			nvmap_setup_chip_cache_fn)
-
 void *nvmap_dmabuf_get_drv_data(struct dma_buf *dmabuf,
 		struct device *dev);
 bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid);
-int system_heap_free_mem(unsigned long *mem_val);
 
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 struct nvmap_device_list *nvmap_is_device_present(char *device_name, u32 heap_type);
@@ -413,12 +319,4 @@ void nvmap_remove_device_name(char *device_name, u32 heap_type);
 struct nvmap_handle *nvmap_handle_get_from_id(struct nvmap_client *client,
 		u32 id);
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
-					dma_addr_t device_addr, size_t size);
-void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
-					 dma_addr_t device_addr, size_t size);
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
-
-void nvmap_dma_release_coherent_memory(struct dma_coherent_mem_replica *mem);
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

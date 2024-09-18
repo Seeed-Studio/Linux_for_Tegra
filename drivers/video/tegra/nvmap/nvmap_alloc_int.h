@@ -4,6 +4,8 @@
 #ifndef __NVMAP_ALLOC_INT_H
 #define __NVMAP_ALLOC_INT_H
 
+#define SIZE_2MB 0x200000
+
 #define DMA_ERROR_CODE	(~(dma_addr_t)0)
 
 #define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN)
@@ -11,6 +13,17 @@
 #ifdef CONFIG_ARM64_4K_PAGES
 #define NVMAP_PP_BIG_PAGE_SIZE           (0x10000)
 #endif /* CONFIG_ARM64_4K_PAGES */
+
+struct dma_coherent_mem_replica {
+	void		*virt_base;
+	dma_addr_t	device_base;
+	unsigned long	pfn_base;
+	int		size;
+	int		flags;
+	unsigned long	*bitmap;
+	spinlock_t	spinlock;
+	bool		use_dev_dma_pfn_offset;
+};
 
 struct nvmap_heap_block {
 	phys_addr_t	base;
@@ -49,6 +62,14 @@ struct nvmap_heap {
 	struct rb_root device_names;
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
 	struct debugfs_info *carevout_debugfs_info; /* Used for storing debugfs info */
+};
+
+struct nvmap_carveout_node {
+	unsigned int		heap_bit;
+	struct nvmap_heap	*carveout;
+	int			index;
+	phys_addr_t		base;
+	size_t			size;
 };
 
 struct list_block {

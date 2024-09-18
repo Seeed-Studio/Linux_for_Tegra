@@ -45,6 +45,9 @@
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 #endif
 
+#define SIZE_2MB 0x200000
+#define ALIGN_2MB(size) ((size + SIZE_2MB - 1) & ~(SIZE_2MB - 1))
+
 extern bool vpr_cpu_access;
 
 static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
@@ -755,13 +758,12 @@ int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
 	unsigned int heap_mask = 0;
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
-		struct nvmap_carveout_node *co_heap = &dev->heaps[i];
 		unsigned int peer;
 
-		if (!(co_heap->heap_bit & NVMAP_HEAP_CARVEOUT_IVM))
+		if (!(nvmap_get_heap_bit(dev->heaps[i]) & NVMAP_HEAP_CARVEOUT_IVM))
 			continue;
 
-		if (nvmap_query_heap_peer(co_heap->carveout, &peer) < 0)
+		if (nvmap_query_heap_peer(dev->heaps[i], &peer) < 0)
 			return -EINVAL;
 
 		heap_mask |= BIT(peer);
@@ -966,7 +968,7 @@ int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg)
 	memset(&op, 0, sizeof(op));
 
 	for (i = 0; i < nvmap_dev->nr_carveouts; i++)
-		op.heaps |= nvmap_dev->heaps[i].heap_bit;
+		op.heaps |= nvmap_get_heap_bit(nvmap_dev->heaps[i]);
 
 	if (copy_to_user(arg, &op, sizeof(op))) {
 		pr_err("copy_to_user failed\n");
@@ -1165,170 +1167,10 @@ int nvmap_ioctl_handle_from_sci_ipc_id(struct file *filp, void __user *arg)
 }
 #endif
 
-/*
- * This function calculates total memory and allocable free memory by parsing
- * /sys/devices/system/node/nodeX/meminfo file
- * total memory = value of MemTotal field
- * allocable free memory = Value of MemFree field + (Value of KReclaimable) / 2
- * Note that the above allocable free memory value is an estimate and may not be an
- * exact value and may need further tuning in future.
- */
-#define MEMINFO_SIZE 1536
-static int compute_memory_stat(u64 *total, u64 *free, int numa_id)
-{
-	struct file *file;
-	char meminfo_path[64] = {'\0'};
-	u8 *buf;
-	loff_t pos = 0;
-	char *buffer, *ptr;
-	u64 mem_total, mem_free, reclaimable;
-	bool total_found = false, free_found = false, reclaimable_found = false;
-	int nid, rc;
-
-	sprintf(meminfo_path, "/sys/devices/system/node/node%d/meminfo", numa_id);
-	file = filp_open(meminfo_path, O_RDONLY, 0);
-	if (IS_ERR(file)) {
-		pr_err("Could not open file:%s\n", meminfo_path);
-		return -EINVAL;
-	}
-
-	buf = nvmap_altalloc(MEMINFO_SIZE * sizeof(*buf));
-	if (!buf) {
-		pr_err("Memory allocation failed\n");
-		filp_close(file, NULL);
-		return -ENOMEM;
-	}
-
-	rc = kernel_read(file, buf, MEMINFO_SIZE - 1, &pos);
-	buf[rc] = '\n';
-	filp_close(file, NULL);
-	buffer = buf;
-	ptr = buf;
-	while ((ptr = strsep(&buffer, "\n")) != NULL) {
-		if (!ptr[0])
-			continue;
-		else if (sscanf(ptr, "Node %d MemTotal: %llu kB\n", &nid, &mem_total) == 2)
-			total_found = true;
-		else if (sscanf(ptr, "Node %d MemFree: %llu kB\n", &nid, &mem_free) == 2)
-			free_found = true;
-		else if (sscanf(ptr, "Node %d KReclaimable: %llu kB\n", &nid, &reclaimable) == 2)
-			reclaimable_found = true;
-	}
-
-	nvmap_altfree(buf, MEMINFO_SIZE * sizeof(*buf));
-	if (nid == numa_id && total_found && free_found && reclaimable_found) {
-		*total = mem_total * 1024;
-		*free = (mem_free + reclaimable / 2) * 1024;
-		return 0;
-	}
-	return -EINVAL;
-}
-
-/*
- * This function calculates HugePages_Total and HugePages_Free by parsing
- * /sys/devices/system/node/nodeX/meminfo file
- */
-static int compute_hugetlbfs_stat(u64 *total, u64 *free, int numa_id)
-{
-	struct file *file;
-	char meminfo_path[64] = {'\0'};
-	u8 *buf;
-	loff_t pos = 0;
-	char *buffer, *ptr;
-	unsigned int huge_total, huge_free;
-	bool total_found = false, free_found = false;
-	int nid, rc;
-
-	sprintf(meminfo_path, "/sys/devices/system/node/node%d/meminfo", numa_id);
-	file = filp_open(meminfo_path, O_RDONLY, 0);
-	if (IS_ERR(file)) {
-		pr_err("Could not open file:%s\n", meminfo_path);
-		return -EINVAL;
-	}
-
-	buf = nvmap_altalloc(MEMINFO_SIZE * sizeof(*buf));
-	if (!buf) {
-		pr_err("Memory allocation failed\n");
-		filp_close(file, NULL);
-		return -ENOMEM;
-	}
-
-	rc = kernel_read(file, buf, MEMINFO_SIZE - 1, &pos);
-	buf[rc] = '\n';
-	filp_close(file, NULL);
-	buffer = buf;
-	ptr = buf;
-	while ((ptr = strsep(&buffer, "\n")) != NULL) {
-		if (!ptr[0])
-			continue;
-		else if (sscanf(ptr, "Node %d HugePages_Total: %u\n", &nid, &huge_total) == 2)
-			total_found = true;
-		else if (sscanf(ptr, "Node %d HugePages_Free: %u\n", &nid, &huge_free) == 2)
-			free_found = true;
-	}
-
-	nvmap_altfree(buf, MEMINFO_SIZE * sizeof(*buf));
-	if (nid == numa_id && total_found && free_found) {
-		*total = (u64)huge_total * SIZE_2MB;
-		*free = (u64)huge_free * SIZE_2MB;
-		return 0;
-	}
-	return -EINVAL;
-}
-
-/*
- * This function calculates allocatable free memory using following formula:
- * free_mem = avail mem - cma free
- * free_mem = free_mem - (free_mem / 1000);
- * The CMA memory is not allocatable by NvMap for regular allocations and it
- * is part of Available memory reported, so subtract it from available memory.
- */
-int system_heap_free_mem(unsigned long *mem_val)
-{
-	long available_mem = 0;
-	unsigned long free_mem = 0;
-	unsigned long cma_free = 0;
-
-	available_mem = si_mem_available();
-	if (available_mem <= 0) {
-		*mem_val = 0;
-		return 0;
-	}
-
-	cma_free = global_zone_page_state(NR_FREE_CMA_PAGES) << PAGE_SHIFT;
-	if ((available_mem << PAGE_SHIFT) < cma_free) {
-		*mem_val = 0;
-		return 0;
-	}
-	free_mem = (available_mem << PAGE_SHIFT) - cma_free;
-
-	/* reduce free_mem by ~ 0.1% */
-	free_mem = free_mem - (free_mem / 1000);
-
-	*mem_val = free_mem;
-	return 0;
-}
-
-static unsigned long system_heap_total_mem(void)
-{
-	struct sysinfo sys_heap;
-
-	si_meminfo(&sys_heap);
-
-	return sys_heap.totalram << PAGE_SHIFT;
-}
-
 static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 {
-	unsigned int carveout_mask = NVMAP_HEAP_CARVEOUT_MASK;
-	unsigned int iovmm_mask = NVMAP_HEAP_IOVMM;
 	struct nvmap_query_heap_params op;
-	struct nvmap_heap *heap;
-	unsigned int type;
 	int ret = 0;
-	int i;
-	int numa_id;
-	unsigned long free_mem = 0;
 
 	memset(&op, 0, sizeof(op));
 	if (copy_from_user(&op, arg, sizeof(op))) {
@@ -1336,88 +1178,10 @@ static int nvmap_query_heap_params(void __user *arg, bool is_numa_aware)
 		goto exit;
 	}
 
-	type = op.heap_mask;
-	if (type & (type - 1)) {
-		ret = -EINVAL;
+	ret = nvmap_query_heap(&op, is_numa_aware);
+	if (ret != 0)
 		goto exit;
-	}
 
-	if (is_numa_aware)
-		numa_id = op.numa_id;
-
-	if (nvmap_convert_carveout_to_iovmm) {
-		carveout_mask &= ~NVMAP_HEAP_CARVEOUT_GENERIC;
-		iovmm_mask |= NVMAP_HEAP_CARVEOUT_GENERIC;
-	} else if (nvmap_convert_iovmm_to_carveout) {
-		if (type & NVMAP_HEAP_IOVMM) {
-			type &= ~NVMAP_HEAP_IOVMM;
-			type |= NVMAP_HEAP_CARVEOUT_GENERIC;
-		}
-	}
-
-	/* To Do: select largest free block */
-	op.largest_free_block = PAGE_SIZE;
-
-	/*
-	 * Special case: GPU heap
-	 * When user is querying the GPU heap, that means the buffer was allocated from
-	 * hugetlbfs, so we need to return the HugePages_Total, HugePages_Free values
-	 */
-	if (type & NVMAP_HEAP_CARVEOUT_GPU) {
-		if (!is_numa_aware)
-			numa_id = 0;
-
-		ret = compute_hugetlbfs_stat(&op.total, &op.free, numa_id);
-		if (ret)
-			goto exit;
-
-		op.largest_free_block = SIZE_2MB;
-		op.granule_size = SIZE_2MB;
-	} else if (type & NVMAP_HEAP_CARVEOUT_MASK) {
-		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
-			if ((type & nvmap_dev->heaps[i].heap_bit) &&
-				(is_numa_aware ?
-				(numa_id == nvmap_get_heap_nid(nvmap_dev->heaps[i].carveout)) :
-				true)) {
-				heap = nvmap_dev->heaps[i].carveout;
-				op.total = nvmap_query_heap_size(heap);
-				op.free = nvmap_get_heap_free_size(heap);
-				break;
-			}
-		}
-		/* If queried heap is not present */
-		if (i >= nvmap_dev->nr_carveouts)
-			return -ENODEV;
-
-	} else if (type & iovmm_mask) {
-		if (num_online_nodes() > 1) {
-			/* multiple numa node exist */
-			ret = compute_memory_stat(&op.total, &op.free, numa_id);
-			if (ret)
-				goto exit;
-		} else {
-			/* Single numa node case
-			 * Check if input numa_id is zero or not.
-			 */
-			if (is_numa_aware && numa_id != 0) {
-				pr_err("Incorrect input for numa_id:%d\n", numa_id);
-				return -EINVAL;
-			}
-			op.total = system_heap_total_mem();
-			ret = system_heap_free_mem(&free_mem);
-			if (ret)
-				goto exit;
-			op.free = free_mem;
-		}
-		op.granule_size = PAGE_SIZE;
-	}
-
-	/*
-	 * Align free size reported to the previous page.
-	 * This avoids any AllocAttr failures due to using PAGE_ALIGN
-	 * for allocating exactly the free memory reported.
-	 */
-	op.free = op.free & PAGE_MASK;
 	if (copy_to_user(arg, &op, sizeof(op)))
 		ret = -EFAULT;
 exit:

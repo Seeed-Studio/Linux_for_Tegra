@@ -331,6 +331,53 @@ static const unsigned int heap_policy_excl[] = {
 	0,
 };
 
+/* must be called with mmap_sem held for read or write */
+int nvmap_get_user_pages(ulong vaddr,
+				size_t nr_page, struct page **pages,
+				bool is_user_flags, u32 user_foll_flags)
+{
+	u32 foll_flags = FOLL_FORCE;
+	struct vm_area_struct *vma;
+	vm_flags_t vm_flags;
+	long user_pages = 0;
+	int ret = 0;
+
+	vma = find_vma(current->mm, vaddr);
+	if (vma) {
+		if (is_user_flags) {
+			foll_flags |= user_foll_flags;
+		} else {
+			vm_flags = vma->vm_flags;
+			/*
+			 * If the vaddr points to writable page then only
+			 * pass FOLL_WRITE flag
+			 */
+			if (vm_flags & VM_WRITE)
+				foll_flags |= FOLL_WRITE;
+		}
+
+		pr_debug("vaddr %lu is_user_flags %d user_foll_flags %x foll_flags %x.\n",
+			vaddr, is_user_flags?1:0, user_foll_flags, foll_flags);
+#if defined(NV_GET_USER_PAGES_HAS_ARGS_FLAGS) /* Linux v6.5 */
+		user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
+					    foll_flags, pages);
+#else
+		user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
+					    foll_flags, pages, NULL);
+#endif
+	}
+
+	if (user_pages != nr_page) {
+		ret = user_pages < 0 ? user_pages : -ENOMEM;
+		pr_err("get_user_pages requested/got: %zu/%ld]\n", nr_page,
+				user_pages);
+		while (--user_pages >= 0)
+			put_page(pages[user_pages]);
+	}
+
+	return ret;
+}
+
 int nvmap_alloc_handle(struct nvmap_client *client,
 		       struct nvmap_handle *h, unsigned int heap_mask,
 		       size_t align,

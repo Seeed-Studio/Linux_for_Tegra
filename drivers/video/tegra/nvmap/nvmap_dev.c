@@ -620,14 +620,13 @@ bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid)
 	}
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
-		struct nvmap_carveout_node *co_heap;
 		struct nvmap_heap *h;
+		struct nvmap_carveout_node *co_heap = dev->heaps[i];
 
-		co_heap = &dev->heaps[i];
-		if (!(co_heap->heap_bit & heap))
+		if (!(nvmap_get_heap_bit(co_heap) & heap))
 			continue;
 
-		h = co_heap->carveout;
+		h = nvmap_get_heap_ptr(co_heap);
 		/*
 		 * When user does not specify numa node i.e. in default NUMA_NO_NODE case,
 		 * do not consider numa node id. So check for heap instances on all numa
@@ -883,8 +882,8 @@ DEBUGFS_OPEN_FOPS_STATIC(free_size);
 static int nvmap_debug_device_list_show(struct seq_file *s, void *unused)
 {
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
-	u32 heap_type = debugfs_information->heap_bit;
-	int numa_id = debugfs_information->numa_id;
+	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
+	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
 	struct rb_node *n = NULL;
 	struct nvmap_device_list *dl = NULL;
 	int i;
@@ -894,11 +893,12 @@ static int nvmap_debug_device_list_show(struct seq_file *s, void *unused)
 	} else {
 		/* Iterate over all heaps to find the matching heap */
 		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
-			if (heap_type & nvmap_dev->heaps[i].heap_bit) {
-				if (nvmap_dev->heaps[i].carveout && (nvmap_block_to_heap
-					(nvmap_dev->heaps[i].carveout)->numa_node_id
-					 != numa_id)) {
-					n = rb_first(&nvmap_dev->heaps[i].carveout->device_names);
+			if (heap_type & nvmap_get_heap_bit(nvmap_dev->heaps[i])) {
+				if (nvmap_get_heap_ptr(nvmap_dev->heaps[i]) && (
+					(nvmap_get_heap_nid(nvmap_get_heap_ptr(nvmap_dev->heaps[i]))
+					 == numa_id))) {
+					n = rb_first(nvmap_heap_get_device_ptr
+						((nvmap_get_heap_ptr(nvmap_dev->heaps[i]))));
 					break;
 				}
 			}
@@ -1466,7 +1466,7 @@ int __init nvmap_probe(struct platform_device *pdev)
 		goto fail_heaps;
 
 	for (i = 0; i < dev->nr_carveouts; i++)
-		if (dev->heaps[i].heap_bit & NVMAP_HEAP_CARVEOUT_GENERIC)
+		if (nvmap_get_heap_bit(dev->heaps[i]) & NVMAP_HEAP_CARVEOUT_GENERIC)
 			generic_carveout_present = 1;
 
 	if (generic_carveout_present) {
@@ -1502,8 +1502,10 @@ fail_heaps:
 	debugfs_remove_recursive(nvmap_dev->debug_root);
 	nvmap_iovmm_debugfs_free();
 	for (i = 0; i < dev->nr_carveouts; i++) {
-		struct nvmap_carveout_node *node = &dev->heaps[i];
-		nvmap_heap_destroy(node->carveout);
+		struct nvmap_carveout_node *node = dev->heaps[i];
+
+		nvmap_heap_destroy(nvmap_get_heap_ptr(node));
+		kfree(node);
 	}
 fail:
 #ifdef NVMAP_CONFIG_PAGE_POOLS
@@ -1541,8 +1543,10 @@ int nvmap_remove(struct platform_device *pdev)
 #endif
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
-		struct nvmap_carveout_node *node = &dev->heaps[i];
-		nvmap_heap_destroy(node->carveout);
+		struct nvmap_carveout_node *node = dev->heaps[i];
+
+		nvmap_heap_destroy(nvmap_get_heap_ptr(node));
+		kfree(node);
 	}
 	kfree(dev->heaps);
 	of_reserved_mem_device_release(&pdev->dev);
