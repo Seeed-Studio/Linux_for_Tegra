@@ -6812,6 +6812,39 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DEFINE_SEMAPHORE_HAS_NUMBER_ARG" "" "types"
         ;;
 
+        devfreq_dev_profile_has_is_cooling_device)
+            #
+            # Determine if the 'devfreq_dev_profile' structure has 'is_cooling_device'.
+            #
+            # Commit 1224451bb6f93 ("PM / devfreq: Register devfreq as a cooling device
+            # on demand") updated the devfreq_dev_profile and add the is_cooling_device
+            # field in v5.12.
+            #
+            CODE="
+            #include <linux/devfreq.h>
+            bool conftest_devfreq_dev_profile_has_is_cooling_device(struct devfreq_dev_profile *profile) {
+                    return profile->is_cooling_device;
+            }"
+
+            compile_check_conftest "$CODE" "NV_DEVFREQ_DEV_PROFILE_HAS_IS_COOLING_DEVICE" "" "types"
+        ;;
+
+        devfreq_has_freq_table)
+            #
+            # Determine if the 'devfreq' structure has 'freq_table'.
+            #
+            # Commit b5d281f6c16d ("PM / devfreq: Rework freq_table to be local to devfreq
+            # struct") updated the devfreq and add the freq_table field in v5.19.
+            #
+            CODE="
+            #include <linux/devfreq.h>
+            unsigned long *conftest_devfreq_has_freq_table(struct devfreq *devfreq) {
+                    return devfreq->freq_table;
+            }"
+
+            compile_check_conftest "$CODE" "NV_DEVFREQ_HAS_FREQ_TABLE" "" "types"
+        ;;
+
         device_add_disk_has_int_return_type)
             #
             # Determine if the function device_add_disk() returns an integer.
@@ -8108,6 +8141,23 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_THERMAL_ZONE_DEVICE_OPS_STRUCT_HAS_GET_TRIP_TYPE" "" "types"
+        ;;
+
+        thermal_zone_for_each_trip)
+            #
+            # Determine if the function thermal_zone_for_each_trip is present.
+            #
+            # thermal_zone_for_each_trip was added in commit a56cc0a833852
+            # ("thermal: core: Add function to walk trips under zone lock")
+            # in v6.6-rc3 (2023-10-03)
+            #
+            CODE="
+            #include <linux/thermal.h>
+            int conftest_thermal_zone_for_each_trip(void) {
+				return thermal_zone_for_each_trip();
+            }"
+
+            compile_check_conftest "$CODE" "NV_THERMAL_ZONE_FOR_EACH_TRIP_PRESENT" "" "functions"
         ;;
 
         tegra_dev_iommu_get_stream_id)
