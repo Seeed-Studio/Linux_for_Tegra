@@ -843,7 +843,7 @@ static int max_des_parse_ch_dt(struct max_des_subdev_priv *sd_priv,
 
 	phy = &priv->phys[val];
 	phy->enabled = true;
-	dev_err(priv->dev, "valid PHY !!!!!\n");
+	dev_info(priv->dev, "valid PHY !!!!!\n");
 
 	link = &priv->links[pipe->link_id];
 	link->enabled = true;
