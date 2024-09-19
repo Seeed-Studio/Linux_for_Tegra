@@ -31,7 +31,7 @@ static int max96724_read(struct max96724_priv *priv, int reg)
 	int ret, val;
 
 	ret = regmap_read(priv->regmap, reg, &val);
-	dev_err(priv->dev, "read %d 0x%x = 0x%02x\n", ret, reg, val);
+	dev_info(priv->dev, "read %d 0x%x = 0x%02x\n", ret, reg, val);
 	if (ret) {
 		dev_err(priv->dev, "read 0x%04x failed\n", reg);
 		return ret;
@@ -45,7 +45,7 @@ static int max96724_write(struct max96724_priv *priv, unsigned int reg, u8 val)
 	int ret;
 
 	ret = regmap_write(priv->regmap, reg, val);
-	dev_err(priv->dev, "write %d 0x%x = 0x%02x\n", ret, reg, val);
+	dev_info(priv->dev, "write %d 0x%x = 0x%02x\n", ret, reg, val);
 	if (ret)
 		dev_err(priv->dev, "write 0x%04x failed\n", reg);
 
@@ -58,7 +58,7 @@ static int max96724_update_bits(struct max96724_priv *priv, unsigned int reg,
 	int ret;
 
 	ret = regmap_update_bits(priv->regmap, reg, mask, val);
-	dev_err(priv->dev, "update %d 0x%x 0x%02x = 0x%02x\n", ret, reg, mask, val);
+	dev_info(priv->dev, "update %d 0x%x 0x%02x = 0x%02x\n", ret, reg, mask, val);
 	if (ret)
 		dev_err(priv->dev, "update 0x%04x failed\n", reg);
 
@@ -77,7 +77,7 @@ static int max96724_wait_for_device(struct max96724_priv *priv)
 
 		msleep(100);
 
-		dev_err(priv->dev, "Retry %u waiting for deserializer: %d\n", i, ret);
+		dev_info(priv->dev, "Retry %u waiting for deserializer: %d\n", i, ret);
 	}
 
 	return ret;
@@ -217,11 +217,11 @@ static int max96724_init_lane_config(struct max96724_priv *priv)
 			phy = max_des_phy_by_id(des_priv, j);
 
 			if (!phy->enabled){
-				dev_err(priv->dev, "phy->enabled\n");
+				dev_info(priv->dev, "phy->enabled\n");
 				continue;
 			}
 
-			dev_err(priv->dev, "i  0x%04x, num_data_lanes 0x%04x , clock_lane: 0x%04x\n",i, phy->mipi.num_data_lanes, phy->mipi.clock_lane);
+			dev_info(priv->dev, "i  0x%04x, num_data_lanes 0x%04x , clock_lane: 0x%04x\n",i, phy->mipi.num_data_lanes, phy->mipi.clock_lane);
 
 			if (phy->mipi.num_data_lanes == max96724_lane_configs[i].lanes[j] &&
 			    phy->mipi.clock_lane == max96724_lane_configs[i].clock_lane[j])
@@ -232,7 +232,7 @@ static int max96724_init_lane_config(struct max96724_priv *priv)
 		}
 
 		if (matching){
-			dev_err(priv->dev,"matching!!!\n");
+			dev_info(priv->dev,"matching!!!\n");
 			break;
 		}
 	}
@@ -359,7 +359,7 @@ static int max96724_init_phy(struct max_des_priv *des_priv,
 
 	if (dpll_freq > 1500000000ull) {
 
-		dev_err(priv->dev,"Enable  deskew!!!\n");
+		dev_info(priv->dev,"Enable  deskew!!!\n");
 		/* Enable initial deskew with 2 x 32k UI. */
 		ret = max96724_write(priv, 0x903 + 0x40 * index, 0x81);
 		if (ret)
