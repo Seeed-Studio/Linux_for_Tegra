@@ -4,6 +4,7 @@
 OSI_COMMON := nvethernetrm/osi/common
 OSI_CORE := nvethernetrm/osi/core
 OSI_DMA := nvethernetrm/osi/dma
+OSI_MACSEC := nvethernetrm/osi/nvmacsecrm
 
 obj-m += nvethernet.o
 
@@ -42,7 +43,8 @@ nvethernet-objs:= ether_linux.o \
 		  selftests.o \
 		  $(OSI_CORE)/osi_core.o \
 		  $(OSI_CORE)/osi_hal.o \
-		  $(OSI_CORE)/macsec.o \
+		  $(OSI_CORE)/common_macsec.o \
+		  $(OSI_MACSEC)/macsec.o \
 		  $(OSI_DMA)/osi_dma.o \
 		  $(OSI_DMA)/osi_dma_txrx.o \
 		  $(OSI_CORE)/eqos_core.o \
