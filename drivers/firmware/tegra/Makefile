@@ -5,7 +5,12 @@
 # Makefile for Extended IVC Driver and BPMP driver
 #
 
+ifneq ($(NV_OOT_IVC_EXT_SKIP_BUILD),y)
 obj-m		+= ivc_ext.o
+else
+obj-m		+= ivc_ext.o
+ivc_ext-objs := ivc_ext_dummy.o
+endif
 tegra_bpmp-y	+= ../../clk/tegra/clk-bpmp.o
 tegra_bpmp-y	+= ../../reset/tegra/reset-bpmp.o
 tegra_bpmp-y	+= ../../soc/tegra/powergate-bpmp.o
