@@ -57,7 +57,7 @@ static int sensor_common_parse_signal_props(
 
 	err = of_property_read_string(node, "phy_mode", &temp_str);
 	if (err) {
-		dev_dbg(dev, "%s: use default phy mode DPHY\n", __func__);
+		dev_info(dev, "%s: use default phy mode DPHY\n", __func__);
 		signal->phy_mode = CSI_PHY_MODE_DPHY;
 	} else {
 		if (strcmp(temp_str, "CPHY") == 0)
@@ -107,7 +107,7 @@ static int sensor_common_parse_signal_props(
 	}
 	signal->pixel_clock.val = val64;
 
-	dev_err(dev, "pixel_clock.val = %llu\n",signal->pixel_clock.val);
+	dev_info(dev, "pixel_clock.val = %llu\n",signal->pixel_clock.val);
 
 	err = read_property_u64(node, "serdes_pix_clk_hz", &val64);
 	if (err)
@@ -122,14 +122,14 @@ static int sensor_common_parse_signal_props(
 			else if (signal->phy_mode == CSI_PHY_MODE_CPHY)
 					val64 = val64 * 16 / 7;
 
-			dev_err(dev,"serdes_link_freq : %llu\n",val64);
+			dev_info(dev,"serdes_link_freq : %llu\n",val64);
 
 			signal->serdes_pixel_clock.val = val64 * signal->num_lanes / depth;
 	}
 
-	dev_err(dev,"serdes_link_freq err: %d\n",err);
+	dev_info(dev,"serdes_link_freq err: %d\n",err);
 	//print serdes_pixel_clock
-	dev_err(dev,"serdes_pixel_clock.val = %llu\n",signal->serdes_pixel_clock.val);
+	dev_info(dev,"serdes_pixel_clock.val = %llu\n",signal->serdes_pixel_clock.val);
 
 
 	if (signal->serdes_pixel_clock.val != 0ULL) {
@@ -160,7 +160,7 @@ static int sensor_common_parse_signal_props(
 	}
 
 	//print serdes_pixel_clock.val, phy_mode, num_lanes, depth
-	dev_err(dev, "serdes_pixel_clock.val = %llu phy_mode = %d   num_lanes = %d   depth = %d  mipi_clock = %llu\n",
+	dev_info(dev, "serdes_pixel_clock.val = %llu phy_mode = %d   num_lanes = %d   depth = %d  mipi_clock = %llu\n",
 									signal->serdes_pixel_clock.val,
 									signal->phy_mode,
 									signal->num_lanes,
@@ -451,7 +451,7 @@ static int sensor_common_parse_control_props(
 
 	err = read_property_u32(node, "gain_factor", &value);
 	if (err) {
-		dev_dbg(dev, "%s:%s:property missing\n",
+		dev_info(dev, "%s:%s:property missing\n",
 			__func__, "gain_factor");
 		control->gain_factor = 1;
 		return 0;
@@ -710,7 +710,7 @@ static int sensor_common_init_i2c_device_config(
 	/* read parent which is i2c bus */
 	err = of_property_read_u32_index(parent, "reg", 1, &value);
 	if (err) {
-		dev_err(dev, "i2c bus regbase unavailable\n");
+		dev_info(dev, "i2c bus regbase unavailable\n");
 		goto skip_reg_base;
 	}
 	i2c_sensor->bus.reg_base = value;
@@ -718,7 +718,7 @@ static int sensor_common_init_i2c_device_config(
 skip_reg_base:
 	err = of_property_read_u32(parent, "clock-frequency", &value);
 	if (err) {
-		dev_err(dev, "bus clock frequency unavailable\n");
+		dev_info(dev, "bus clock frequency unavailable\n");
 		goto skip_clk_rate;
 	}
 	i2c_sensor->bus.clk_rate = value;
@@ -890,7 +890,7 @@ int sensor_common_init_sensor_properties(
 			goto fail;
 		};
 
-		dev_dbg(dev, "parsing for %s props\n", temp_str);
+		dev_info(dev, "parsing for %s props\n", temp_str);
 
 		err = sensor_common_parse_signal_props(dev, node,
 			&sensor->sensor_modes[i].signal_properties);
