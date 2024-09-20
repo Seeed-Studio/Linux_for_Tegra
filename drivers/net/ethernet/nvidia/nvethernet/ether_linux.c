@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 #include <linux/version.h>
@@ -7074,7 +7074,7 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 	 */
 	ret_val = of_property_read_u32(np, "nvidia,pps_op_ctrl",
 			&osi_core->pps_frq);
-	if (ret_val < 0 || osi_core->pps_frq > OSI_ENABLE) {
+	if (ret_val < 0 || osi_core->pps_frq > OSI_MAX_PPS_HZ) {
 		osi_core->pps_frq = OSI_DISABLE;
 	}
 
