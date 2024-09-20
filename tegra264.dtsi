@@ -8289,7 +8289,9 @@
 				<&bpmp TEGRA264_CLK_MPHY_L0_RX_HS_SYMB_DIV>,
 				<&bpmp TEGRA264_CLK_OSC>,
 				<&bpmp TEGRA264_CLK_MPHY_L0_UPHY_TX_FIFO>,
-				<&bpmp TEGRA264_CLK_UPHY0_PLL4_XDIG>;
+				<&bpmp TEGRA264_CLK_UPHY0_PLL4_XDIG>,
+				<&bpmp TEGRA264_CLK_ISC_CPU_ROOT>,
+				<&bpmp TEGRA264_CLK_UTMI_PLL1_CLKOUT480>;
                    clock-names = "pllrefe_vcoout", "mphy_core_pll_fixed", "mphy_l0_tx_symb",
 					"mphy_tx_1mhz_ref", "mphy_l0_rx_ana",
 					"mphy_l0_rx_symb", "mphy_l0_tx_ls_3xbit",
@@ -8300,7 +8302,9 @@
 					"mphy_l0_tx_hs_symb_div", "mphy_l0_rx_hs_symb_div",
 					"osc",
 					"mphy_l0_uphy_tx_fifo",
-					"uphy_pll3";
+					"uphy_pll3",
+					"isc_cpu",
+					"utmi_pll1";
                    resets = <&bpmp TEGRA264_RESET_MPHY_L0_RX>,
 				<&bpmp TEGRA264_RESET_MPHY_L0_TX>,
 				<&bpmp TEGRA264_RESET_MPHY_L1_RX>,
