@@ -186,6 +186,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += tc_taprio_qopt_offload_struct_has_cmd
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra264_chip_id
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra_dev_iommu_get_stream_id
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra_ivc_struct_has_iosys_map
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra_ivc_use_ivc_ext_driver
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += thermal_zone_device_priv
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += thermal_zone_device_ops_struct_has_get_trip_type
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += thermal_zone_for_each_trip

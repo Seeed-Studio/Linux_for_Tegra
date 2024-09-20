@@ -8109,6 +8109,19 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP" "" "types"
         ;;
 
+        tegra_ivc_use_ivc_ext_driver)
+            #
+            # Determine to use ivc ext driver
+            #
+            CODE="
+            #include <soc/tegra/ivc.h>
+            void conftest_tegra_ivc_use_ivc_ext_driver(void) {
+                    tegra_ivc_empty();
+            }"
+
+            compile_check_conftest "$CODE" "NV_TEGRA_IVC_USE_IVC_EXT_DRIVER" "" "types"
+        ;;
+
         thermal_zone_device_priv)
             #
             # Determine if the function thermal_zone_device_priv() is present.
