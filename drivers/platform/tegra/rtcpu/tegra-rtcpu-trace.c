@@ -2,7 +2,7 @@
 // Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "soc/tegra/camrtc-trace.h"
-
+#include <linux/cdev.h>
 #include <linux/completion.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
@@ -23,6 +23,8 @@
 #include <linux/workqueue.h>
 #include <linux/platform_device.h>
 #include <linux/nvhost.h>
+#include <linux/delay.h>
+#include <linux/uaccess.h>
 #include <asm/cacheflush.h>
 #include <uapi/linux/nvdev_fence.h>
 #include "device-group.h"
@@ -45,6 +47,9 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(capture_ivc_recv);
 
 #define ISP_CLASS_ID 0x32
 #define VI_CLASS_ID 0x30
+
+#define DEVICE_NAME		"rtcpu-raw-trace"
+#define MAX_READ_SIZE		((ssize_t)(~0U >> 1))
 
 /*
  * Private driver data structure
@@ -102,6 +107,14 @@ struct tegra_rtcpu_trace {
 	bool enable_printk;
 	u32 printk_used;
 	char printk[EXCEPTION_STR_LENGTH];
+
+	struct cdev s_dev;
+};
+
+struct rtcpu_raw_trace_context {
+	struct tegra_rtcpu_trace *tracer;
+	u32 raw_trace_last_read_event_idx;
+	bool first_read_call;
 };
 
 /*
@@ -1278,6 +1291,207 @@ static void rtcpu_trace_worker(struct work_struct *work)
 	schedule_delayed_work(&tracer->work, tracer->work_interval_jiffies);
 }
 
+static int32_t raw_trace_read_impl(
+	struct tegra_rtcpu_trace *tracer,
+	char __user *user_buffer,
+	ssize_t *events_copied,
+	uint32_t *last_read_event_idx,
+	const u32 num_events_requested)
+{
+	const struct camrtc_trace_memory_header *header = tracer->trace_memory;
+
+	u32 old_next = *last_read_event_idx;
+
+	u32 new_next = header->event_next_idx;
+
+	uint32_t num_events_to_copy;
+
+	if (new_next >= tracer->event_entries) {
+		WARN_ON_ONCE(new_next >= tracer->event_entries);
+		dev_warn_ratelimited(
+			tracer->dev,
+			"trace entry %u outside range 0..%u\n",
+			new_next,
+			tracer->event_entries - 1);
+		return -EIO;
+	}
+
+	new_next = array_index_nospec(new_next, tracer->event_entries);
+	old_next = array_index_nospec(old_next, tracer->event_entries);
+	if (old_next == new_next)
+		return 0;
+
+	rtcpu_trace_invalidate_entries(
+		tracer,
+		tracer->dma_handle_events,
+		old_next, new_next,
+		CAMRTC_TRACE_EVENT_SIZE,
+		tracer->event_entries);
+
+	const bool buffer_wrapped = (new_next < old_next);
+
+	num_events_to_copy =
+		(!buffer_wrapped) ?
+			(new_next - old_next) : (tracer->event_entries - old_next + new_next);
+	num_events_to_copy =
+		num_events_requested > num_events_to_copy ?
+			num_events_to_copy : num_events_requested;
+
+	/* No wrap around */
+	if (!buffer_wrapped) {
+		if (copy_to_user(
+			&user_buffer[(*events_copied) * sizeof(struct camrtc_event_struct)],
+			&tracer->events[old_next],
+			num_events_to_copy * sizeof(struct camrtc_event_struct))) {
+			return -EFAULT;
+		}
+	}
+	/* Handling the buffer's circular wrap around */
+	else {
+		/* copy from old_next to the end of buffer
+		 * or till max number of events that can be copied.
+		 */
+		u32 first_part = tracer->event_entries - old_next;
+
+		if (first_part > num_events_to_copy)
+			first_part = num_events_to_copy;
+
+		if (copy_to_user(
+			&user_buffer[(*events_copied) * sizeof(struct camrtc_event_struct)],
+			&tracer->events[old_next],
+			first_part * sizeof(struct camrtc_event_struct)))
+			return -EFAULT;
+
+		/* for wrap around usecase, copy from buffer's beginning */
+		u32 second_part = num_events_to_copy - first_part;
+
+		if (second_part > 0)
+			if (copy_to_user(
+				&user_buffer[
+				(*events_copied + first_part) * sizeof(struct camrtc_event_struct)],
+				&tracer->events[0],
+				second_part * sizeof(struct camrtc_event_struct)))
+				return -EFAULT;
+	}
+
+	*last_read_event_idx = (old_next + num_events_to_copy) % tracer->event_entries;
+	*events_copied += num_events_to_copy;
+
+	return 0;
+}
+
+static ssize_t
+rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_size, loff_t *ppos)
+{
+	ssize_t events_copied = 0;
+
+	struct rtcpu_raw_trace_context *fd_context = file->private_data;
+
+	if (!fd_context) {
+		pr_err("file descriptor context is not set in private data\n");
+		return -ENODEV;
+	}
+
+	struct tegra_rtcpu_trace *tracer = fd_context->tracer;
+
+	if (!tracer) {
+		pr_err("Tracer is not set in file descriptor context\n");
+		return -ENODEV;
+	}
+
+	u32 last_read_event_idx = fd_context->raw_trace_last_read_event_idx;
+
+	const struct camrtc_trace_memory_header *header = tracer->trace_memory;
+
+	/* If buffer has already wrapped around before the 1st read */
+	if (unlikely(fd_context->first_read_call)) {
+		if (header->wrapped_counter > 0) {
+			last_read_event_idx = header->event_next_idx + 1;
+			if (last_read_event_idx == tracer->event_entries)
+				last_read_event_idx = 0;
+		}
+		fd_context->first_read_call = false;
+	}
+
+	/* Truncate buffer_size if it exceeds the maximum read size */
+	if (buffer_size > MAX_READ_SIZE) {
+		dev_dbg(tracer->dev,
+				"Requested read size too large, truncating to %zd\n", MAX_READ_SIZE);
+		buffer_size = MAX_READ_SIZE;
+	}
+
+	const u32 num_events_requested = buffer_size / sizeof(struct camrtc_event_struct);
+
+	if (num_events_requested == 0) {
+		dev_dbg(tracer->dev, "Invalid buffer size\n");
+		return -ENOMEM;
+	}
+
+	const u32 poll_interval = jiffies_to_msecs(tracer->work_interval_jiffies);
+
+	/* Validate if user buffer is a valid address */
+	if (!access_ok(user_buffer, buffer_size)) {
+		dev_err(tracer->dev, "Invalid user buffer address\n");
+		return -EINVAL;
+	}
+
+	do {
+		int32_t ret = raw_trace_read_impl(
+			tracer,
+			user_buffer,
+			&events_copied,
+			&last_read_event_idx,
+			num_events_requested - events_copied);
+
+		if (ret < 0) {
+			dev_err(tracer->dev, "Call to raw_trace_read_impl() failed.\n");
+			return ret;
+		}
+
+		if (msleep_interruptible(poll_interval))
+			return -EINTR;
+
+	} while (events_copied < num_events_requested);
+
+	fd_context->raw_trace_last_read_event_idx = last_read_event_idx;
+	file->private_data = fd_context;
+
+	return events_copied * sizeof(struct camrtc_event_struct);
+}
+
+static int rtcpu_raw_trace_open(struct inode *inode, struct file *file)
+{
+	struct rtcpu_raw_trace_context *fd_context;
+
+	fd_context = kzalloc(sizeof(*fd_context), GFP_KERNEL);
+	if (unlikely(fd_context == NULL))
+		return -ENOMEM;
+
+	struct tegra_rtcpu_trace *tracer;
+
+	tracer = container_of(inode->i_cdev, struct tegra_rtcpu_trace, s_dev);
+
+	if (!tracer) {
+		pr_err("Failed to retrieve tracer\n");
+		kfree(fd_context);
+		return -ENODEV;
+	}
+
+	fd_context->tracer = tracer;
+	fd_context->raw_trace_last_read_event_idx = 0;
+	fd_context->first_read_call = true;
+	file->private_data = fd_context;
+
+	return nonseekable_open(inode, file);
+}
+
+static int rtcpu_raw_trace_release(struct inode *inode, struct file *file)
+{
+	kfree(file->private_data);
+
+	return 0;
+}
+
 /*
  * Debugfs
  */
@@ -1292,6 +1506,14 @@ static void rtcpu_trace_worker(struct work_struct *work)
 		.read = seq_read, \
 		.llseek = seq_lseek, \
 		.release = single_release }
+
+static const struct file_operations rtcpu_raw_trace_fops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.read = rtcpu_raw_trace_read,
+	.open = rtcpu_raw_trace_open,
+	.release = rtcpu_raw_trace_release,
+};
 
 static int rtcpu_trace_debugfs_stats_read(
 	struct seq_file *file, void *data)
@@ -1402,6 +1624,52 @@ failed_create:
 	debugfs_remove_recursive(tracer->debugfs_root);
 }
 
+/* Character device */
+static struct class *rtcpu_raw_trace_class;
+static int rtcpu_raw_trace_major;
+int raw_trace_node_drv_register(struct tegra_rtcpu_trace *tracer)
+{
+	rtcpu_raw_trace_major = register_chrdev(0, DEVICE_NAME, &rtcpu_raw_trace_fops);
+	if (rtcpu_raw_trace_major < 0) {
+		dev_err(tracer->dev, "Register_chrdev failed\n");
+		return rtcpu_raw_trace_major;
+	}
+
+	dev_t devt = MKDEV(rtcpu_raw_trace_major, 0);
+
+	cdev_init(&tracer->s_dev, &rtcpu_raw_trace_fops);
+	tracer->s_dev.owner = THIS_MODULE;
+	tracer->s_dev.ops = &rtcpu_raw_trace_fops;
+	int ret = cdev_add(&tracer->s_dev, devt, 1);
+
+	if (ret < 0) {
+		dev_err(tracer->dev, "cdev_add() failed %d\n", ret);
+		return ret;
+	}
+
+	rtcpu_raw_trace_class = class_create(THIS_MODULE, DEVICE_NAME);
+	if (IS_ERR(rtcpu_raw_trace_class)) {
+		dev_err(tracer->dev, "device class file already in use\n");
+		unregister_chrdev(rtcpu_raw_trace_major, DEVICE_NAME);
+		return PTR_ERR(rtcpu_raw_trace_class);
+	}
+
+	device_create(rtcpu_raw_trace_class, tracer->dev, devt, tracer, DEVICE_NAME);
+
+	return 0;
+}
+
+void raw_trace_node_unregister(
+	struct tegra_rtcpu_trace *tracer)
+{
+	dev_t devt = MKDEV(rtcpu_raw_trace_major, 0);
+
+	device_destroy(rtcpu_raw_trace_class, devt);
+	cdev_del(&tracer->s_dev);
+	class_destroy(rtcpu_raw_trace_class);
+	unregister_chrdev(rtcpu_raw_trace_major, DEVICE_NAME);
+}
+
 /*
  * Init/Cleanup
  */
@@ -1492,6 +1760,13 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 	dev_info(dev, "Trace buffer configured at IOVA=0x%08x\n",
 		 (u32)tracer->dma_handle);
 
+	ret = raw_trace_node_drv_register(tracer);
+	if (ret) {
+		dev_err(dev, "Failed to register device node\n");
+		kfree(tracer);
+		return NULL;
+	}
+
 	return tracer;
 }
 EXPORT_SYMBOL(tegra_rtcpu_trace_create);
@@ -1523,6 +1798,7 @@ void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer)
 	of_node_put(tracer->of_node);
 	cancel_delayed_work_sync(&tracer->work);
 	flush_delayed_work(&tracer->work);
+	raw_trace_node_unregister(tracer);
 	rtcpu_trace_debugfs_deinit(tracer);
 	dma_free_coherent(tracer->dev, tracer->trace_memory_size,
 			tracer->trace_memory, tracer->dma_handle);
