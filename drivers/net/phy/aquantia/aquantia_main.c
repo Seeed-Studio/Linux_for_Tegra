@@ -610,14 +610,6 @@ static int aqr107_read_status(struct phy_device *phydev)
 		break;
 	}
 
-	if (!priv->wol_status)
-		ret = phy_read_mmd_poll_timeout(phydev, MDIO_MMD_PHYXS, MDIO_PHYXS_VEND_IF_STATUS,
-						val, (val & MDIO_PHYXS_VEND_IF_STATUS_TX_READY),
-						20000, 2000000, false);
-	if (ret) {
-		phydev_err(phydev, "PHY system interface is not yet ready\n");
-		return ret;
-	}
 	/* Read possibly downshifted rate from vendor register */
 	return aqr107_read_rate(phydev);
 }
