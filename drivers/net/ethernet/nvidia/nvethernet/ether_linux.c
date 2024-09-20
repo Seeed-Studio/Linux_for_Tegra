@@ -541,6 +541,63 @@ static void ether_disable_clks(struct ether_priv_data *pdata)
 }
 
 /**
+ * @brief Set clk rates for mgbe#_rx_input/mgbe#_rx_pcs_input
+ *
+ * Algorithm: Sets clk rates based on UPHY GBE mode for
+ * mgbe#_rx_input/mgbe#_rx_pcs_input clk ID's.
+ *
+ * @param[in] pdata: OSD private data.
+ *
+ * @retval 0 on success
+ * @retval "negative value" on failure.
+ */
+static int ether_set_mgbe_rx_clk_rates(struct ether_priv_data *pdata)
+{
+    unsigned int uphy_gbe_mode = pdata->osi_core->uphy_gbe_mode;
+    unsigned long rx_rate, rx_pcs_rate, rx_ser_rate;
+    int ret;
+
+    if (uphy_gbe_mode == OSI_GBE_MODE_25G) {
+        rx_rate = ETHER_MGBE_TXRX_CLK_XAUI_25G;
+        rx_pcs_rate = ETHER_MGBE_TXRX_PCS_CLK_XAUI_25G;
+        /* Rx serdes rate same as Rx rate for 25G */
+        rx_ser_rate = rx_rate;
+    } else if (uphy_gbe_mode == OSI_GBE_MODE_10G) {
+        rx_rate = ETHER_MGBE_RX_CLK_USXGMII_10G;
+        rx_pcs_rate = ETHER_MGBE_RX_PCS_CLK_USXGMII_10G;
+        /* Rx serdes rate is half of Rx rate in 10G */
+        rx_ser_rate = (rx_rate / 2);
+    } else {
+        rx_rate = ETHER_MGBE_RX_CLK_USXGMII_5G;
+        rx_pcs_rate = ETHER_MGBE_RX_PCS_CLK_USXGMII_5G;
+        /* Rx serdes rate is half of Rx rate in 5G */
+        rx_ser_rate = (rx_rate / 2);
+    }
+
+    ret = clk_set_rate(pdata->rx_input_clk, rx_rate);
+    if (ret < 0) {
+        dev_err(pdata->dev, "failed to set rx_input_clk rate\n");
+        return ret;
+    }
+
+    if (!IS_ERR_OR_NULL(pdata->rx_ser_clk)) {
+        ret = clk_set_rate(pdata->rx_ser_clk, rx_ser_rate);
+        if (ret < 0) {
+            dev_err(pdata->dev, "failed to set MGBE rx_ser_clk rate\n");
+            return ret;
+        }
+    }
+
+    ret = clk_set_rate(pdata->rx_pcs_input_clk, rx_pcs_rate);
+    if (ret < 0) {
+        dev_err(pdata->dev, "failed to set rx_pcs_input_clk rate\n");
+        return ret;
+    }
+
+    return 0;
+}
+
+/**
  * @brief Enable all MAC MGBE related clks.
  *
  * Algorithm: Enables the clks by using clock subsystem provided API's.
@@ -557,6 +614,11 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 	int ret;
 	unsigned short mac= pdata->osi_core->mac;
 	struct clk *app_parent_clk;
+
+
+	ret = ether_set_mgbe_rx_clk_rates(pdata);
+	if (ret < 0)
+		return ret;
 
 	if (!IS_ERR_OR_NULL(pdata->rx_input_clk)) {
 		ret = clk_prepare_enable(pdata->rx_input_clk);
@@ -652,6 +714,20 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 	}
 
 	if (!IS_ERR_OR_NULL(pdata->mac_clk)) {
+		if (mac == OSI_MAC_HW_MGBE_T26X) {
+		    if (uphy_gbe_mode == OSI_GBE_MODE_25G)
+			rate = ETHER_MGBE_MAC_DIV_RATE_25G;
+		    else if (uphy_gbe_mode == OSI_GBE_MODE_10G)
+			rate = ETHER_MGBE_MAC_DIV_RATE_10G;
+		    else
+			rate = ETHER_MGBE_MAC_DIV_RATE_5G;
+		    ret = clk_set_rate(pdata->mac_clk, rate);
+		    if (ret < 0) {
+			dev_err(pdata->dev,
+			    "failed to set MGBE mac_clk rate\n");
+			goto err_mac;
+		    }
+		}
 		ret = clk_prepare_enable(pdata->mac_clk);
 		if (ret < 0) {
 			goto err_mac;
@@ -674,6 +750,11 @@ static int ether_enable_mgbe_clks(struct ether_priv_data *pdata)
 				rate = ETHER_MGBE_APP_10G_5G_CLK;
 			}
 
+			ret = clk_set_rate(app_parent_clk, rate);
+			if (ret < 0) {
+				dev_err(pdata->dev, "failed to set MGBE app_parent_clk rate\n");
+				goto err_ptp_ref;
+			}
 			ret = clk_set_parent(pdata->app_clk, app_parent_clk);
 			if (ret < 0) {
 				dev_err(pdata->dev, "failed to set MGBE app_parent_clk\n");
@@ -741,6 +822,49 @@ err_rx_pcs_input:
 	return ret;
 }
 
+static int ether_set_eqos_rx_clk_rates(struct ether_priv_data *pdata)
+{
+    unsigned int uphy_gbe_mode = pdata->osi_core->uphy_gbe_mode;
+    unsigned long rx_rate, rx_pcs_rate, rx_clk, rx_m_clk;
+    int ret;
+
+    if (uphy_gbe_mode == OSI_GBE_MODE_2_5G) {
+        rx_rate = ETHER_EQOS_UPHY_LX_RX_2_5G_CLK;
+        rx_pcs_rate = ETHER_EQOS_RX_PCS_CLK_2_5G;
+        rx_clk = ETHER_EQOS_UPHY_LX_RX_2_5G_CLK;
+        rx_m_clk = ETHER_EQOS_UPHY_LX_RX_2_5G_CLK;
+    } else {
+        rx_rate = ETHER_EQOS_RX_CLK_1000M;
+        rx_pcs_rate = ETHER_EQOS_RX_CLK_1000M;
+        rx_clk = ETHER_EQOS_RX_CLK_1000M;
+        rx_m_clk = ETHER_EQOS_RX_CLK_1000M;
+    }
+
+    ret = clk_set_rate(pdata->rx_input_clk, rx_rate);
+    if (ret < 0) {
+        dev_err(pdata->dev, "failed to set rx_input_clk rate\n");
+        return ret;
+    }
+    ret = clk_set_rate(pdata->rx_pcs_input_clk, rx_pcs_rate);
+    if (ret < 0) {
+        dev_err(pdata->dev, "failed to set rx_pcs_input_clk rate\n");
+        return ret;
+    }
+
+    ret = clk_set_rate(pdata->rx_clk, rx_clk);
+    if (ret < 0) {
+        dev_err(pdata->dev, "failed to set rx_clk rate\n");
+        return ret;
+    }
+
+    ret = clk_set_rate(pdata->rx_m_clk, rx_m_clk);
+    if (ret < 0) {
+        dev_err(pdata->dev, "failed to set rx_clk rate\n");
+        return ret;
+    }
+    return 0;
+}
+
 /**
  * @brief Enable all MAC T26x EQOS related clks.
  *
@@ -756,6 +880,12 @@ static int ether_enable_eqos_clks_t26x(struct ether_priv_data *pdata)
 	unsigned int uphy_gbe_mode = pdata->osi_core->uphy_gbe_mode;
 	unsigned long rate = 0;
 	int ret;
+
+	ret = ether_set_eqos_rx_clk_rates(pdata);
+	if (ret < 0) {
+		dev_err(pdata->dev, "failed to set eqos rx clks\n");
+		return ret;
+	}
 
 	if (!IS_ERR_OR_NULL(pdata->tx_pcs_clk)) {
 		if (uphy_gbe_mode == OSI_GBE_MODE_2_5G)
@@ -1143,11 +1273,13 @@ static inline void set_speed_work_func(struct work_struct *work)
 
 	/* Speed will be overwritten as per the PHY interface mode */
 	speed = phydev->speed;
-	/* MAC and XFI speed should match in XFI mode */
-	if (iface_mode == OSI_XFI_MODE_10G) {
+	/* MAC and XFI/USXGMII speed should match */
+	if ((iface_mode == OSI_XFI_MODE_10G) ||
+	    (iface_mode == OSI_USXGMII_MODE_10G)) {
 		/* Set speed to 10G */
 		speed = OSI_SPEED_10000;
-	} else if (iface_mode == OSI_XFI_MODE_5G) {
+	} else if ((iface_mode == OSI_XFI_MODE_5G) ||
+		   (iface_mode == OSI_USXGMII_MODE_5G)) {
 		/* Set speed to 5G */
 		speed = OSI_SPEED_5000;
 	}
@@ -1296,9 +1428,11 @@ static void ether_adjust_link(struct net_device *dev)
 			/* MGBE 25G don't have USXGMI mode, so set speed based on uphy gbe mode */
 				if (uphy_gbe_mode == OSI_GBE_MODE_25G) {
 					phydev->speed = OSI_SPEED_25000;
-				} else if (iface_mode == OSI_XFI_MODE_10G) {
+				} else if ((iface_mode == OSI_XFI_MODE_10G) ||
+					   (iface_mode == OSI_USXGMII_MODE_10G)) {
 					phydev->speed = OSI_SPEED_10000;
-				} else if (iface_mode == OSI_XFI_MODE_5G) {
+				} else if ((iface_mode == OSI_XFI_MODE_5G) ||
+					   (iface_mode == OSI_USXGMII_MODE_5G)) {
 					phydev->speed = OSI_SPEED_5000;
 				}
 			} else if (mac_ver == OSI_EQOS_MAC_5_40) {
@@ -5528,63 +5662,6 @@ static inline void ether_put_clks(struct ether_priv_data *pdata)
 }
 
 /**
- * @brief Set clk rates for mgbe#_rx_input/mgbe#_rx_pcs_input
- *
- * Algorithm: Sets clk rates based on UPHY GBE mode for
- * mgbe#_rx_input/mgbe#_rx_pcs_input clk ID's.
- *
- * @param[in] pdata: OSD private data.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_set_mgbe_rx_clk_rates(struct ether_priv_data *pdata)
-{
-	unsigned int uphy_gbe_mode = pdata->osi_core->uphy_gbe_mode;
-	unsigned long rx_rate, rx_pcs_rate, rx_ser_rate;
-	int ret;
-
-	if (uphy_gbe_mode == OSI_GBE_MODE_25G) {
-		rx_rate = ETHER_MGBE_TXRX_CLK_XAUI_25G;
-		rx_pcs_rate = ETHER_MGBE_TXRX_PCS_CLK_XAUI_25G;
-		/* Rx serdes rate same as Rx rate for 25G */
-		rx_ser_rate = rx_rate;
-	} else if (uphy_gbe_mode == OSI_GBE_MODE_10G) {
-		rx_rate = ETHER_MGBE_RX_CLK_USXGMII_10G;
-		rx_pcs_rate = ETHER_MGBE_RX_PCS_CLK_USXGMII_10G;
-		/* Rx serdes rate is half of Rx rate in 10G */
-		rx_ser_rate = (rx_rate / 2);
-	} else {
-		rx_rate = ETHER_MGBE_RX_CLK_USXGMII_5G;
-		rx_pcs_rate = ETHER_MGBE_RX_PCS_CLK_USXGMII_5G;
-		/* Rx serdes rate is half of Rx rate in 5G */
-		rx_ser_rate = (rx_rate / 2);
-	}
-
-	ret = clk_set_rate(pdata->rx_input_clk, rx_rate);
-	if (ret < 0) {
-		dev_err(pdata->dev, "failed to set rx_input_clk rate\n");
-		return ret;
-	}
-
-	if (!IS_ERR_OR_NULL(pdata->rx_ser_clk)) {
-		ret = clk_set_rate(pdata->rx_ser_clk, rx_ser_rate);
-		if (ret < 0) {
-			dev_err(pdata->dev, "failed to set MGBE rx_ser_clk rate\n");
-			return ret;
-		}
-	}
-
-	ret = clk_set_rate(pdata->rx_pcs_input_clk, rx_pcs_rate);
-	if (ret < 0) {
-		dev_err(pdata->dev, "failed to set rx_pcs_input_clk rate\n");
-		return ret;
-	}
-
-	return 0;
-}
-
-/**
  * @brief Get MAC MGBE related clocks.
  *
  * Algorithm: Get the clocks from DT and stores in OSD private data.
@@ -5719,10 +5796,6 @@ static int ether_get_mgbe_clks(struct ether_priv_data *pdata)
 		}
 	}
 
-	ret = ether_set_mgbe_rx_clk_rates(pdata);
-	if (ret < 0)
-		goto err_rx_input;
-
 	return 0;
 err_rx_ser_clk:
 	devm_clk_put(dev, pdata->tx_ser_clk);
@@ -5760,49 +5833,6 @@ err_rx_pcs_m:
 	devm_clk_put(dev, pdata->rx_m_clk);
 err_rx_m:
 	return ret;
-}
-
-static int ether_set_eqos_rx_clk_rates(struct ether_priv_data *pdata)
-{
-	unsigned int uphy_gbe_mode = pdata->osi_core->uphy_gbe_mode;
-	unsigned long rx_rate, rx_pcs_rate, rx_clk, rx_m_clk;
-	int ret;
-
-	if (uphy_gbe_mode == OSI_GBE_MODE_2_5G) {
-		rx_rate = ETHER_EQOS_UPHY_LX_RX_2_5G_CLK;
-		rx_pcs_rate = ETHER_EQOS_RX_PCS_CLK_2_5G;
-		rx_clk = ETHER_EQOS_UPHY_LX_RX_2_5G_CLK;
-		rx_m_clk = ETHER_EQOS_UPHY_LX_RX_2_5G_CLK;
-	} else {
-		rx_rate = ETHER_EQOS_RX_CLK_1000M;
-		rx_pcs_rate = ETHER_EQOS_RX_CLK_1000M;
-		rx_clk = ETHER_EQOS_RX_CLK_1000M;
-		rx_m_clk = ETHER_EQOS_RX_CLK_1000M;
-	}
-
-	ret = clk_set_rate(pdata->rx_input_clk, rx_rate);
-	if (ret < 0) {
-		dev_err(pdata->dev, "failed to set rx_input_clk rate\n");
-		return ret;
-	}
-	ret = clk_set_rate(pdata->rx_pcs_input_clk, rx_pcs_rate);
-	if (ret < 0) {
-		dev_err(pdata->dev, "failed to set rx_pcs_input_clk rate\n");
-		return ret;
-	}
-
-	ret = clk_set_rate(pdata->rx_clk, rx_clk);
-	if (ret < 0) {
-		dev_err(pdata->dev, "failed to set rx_clk rate\n");
-		return ret;
-	}
-
-	ret = clk_set_rate(pdata->rx_m_clk, rx_m_clk);
-	if (ret < 0) {
-		dev_err(pdata->dev, "failed to set rx_clk rate\n");
-		return ret;
-	}
-	return 0;
 }
 
 /**
@@ -5932,15 +5962,10 @@ static int ether_get_eqos_clks(struct ether_priv_data *pdata)
 
 	/* Set default rate to 1G */
 	if (!IS_ERR_OR_NULL(pdata->rx_input_clk)) {
-		clk_set_rate(pdata->rx_input_clk,
+		ret = clk_set_rate(pdata->rx_input_clk,
 			     ETHER_RX_INPUT_CLK_RATE);
-	}
-
-	/* Overwrite the rx clocks for THOR */
-	if (pdata->osi_core->mac_ver_type == MAC_CORE_VER_TYPE_EQOS_5_40) {
-		ret = ether_set_eqos_rx_clk_rates(pdata);
 		if (ret < 0) {
-			dev_err(dev, "failed to get eqos rx clks\n");
+			dev_err(dev, "failed to set rx_input_clk clk\n");
 			goto err_rx_clk;
 		}
 	}
