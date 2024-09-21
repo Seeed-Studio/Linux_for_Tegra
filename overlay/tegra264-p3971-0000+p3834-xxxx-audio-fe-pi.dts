@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/*
+ * Jetson Device-tree overlay for FE-PI Audio V1 and Z V2.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
+
+/ {
+	overlay-name = "FE-PI Audio V1 and Z V2";
+	jetson-header-name = "Jetson 40pin Header";
+	compatible = "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3971-0089+p3834-0008";
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			clocks {
+				sgtl5000_mclk: sgtl5000_mclk {
+					compatible = "fixed-clock";
+					#clock-cells = <0>;
+					clock-frequency = <12288000>;
+					clock-output-names = "sgtl5000-mclk";
+					status = "okay";
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&hdr40_i2c3>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			sgtl5000: sgtl5000@0a {
+				compatible = "fsl,sgtl5000";
+				reg = <0x0a>;
+				clocks = <&sgtl5000_mclk>;
+				micbias-resistor-k-ohms = <2>;
+				micbias-voltage-m-volts = <3000>;
+				VDDA-supply = <&vdd_3v3_cvb>;
+				VDDIO-supply = <&vdd_3v3_cvb>;
+				status = "okay";
+
+				sound-name-prefix = "H40-SGTL";
+
+				port {
+					sgtl5000_ep: endpoint {
+						remote-endpoint = <&i2s2_dap>;
+						link-name = "fe-pi-audio-z-v2";
+					};
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&padctl_main>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux>;
+
+			jetson_io_pinmux: exp-header-pinmux {
+				hdr40-pin12 {
+					nvidia,pins = "dap2_clk_pv6";
+					nvidia,function = "i2s2_sclk";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+
+				hdr40-pin35 {
+					nvidia,pins = "dap2_fs_pw1";
+					nvidia,function = "i2s2_lrck";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+
+				hdr40-pin38 {
+					nvidia,pins = "dap2_din_pw0";
+					nvidia,function = "i2s2_sdata_in";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+
+				hdr40-pin40 {
+					nvidia,pins = "dap2_dout_pv7";
+					nvidia,function = "i2s2_sdata_out";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				};
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&tegra_sound>;
+		__overlay__ {
+			widgets = "Headphone",	"H40-SGTL Headphone",
+				  "Microphone",	"H40-SGTL Mic",
+				  "Line",	"H40-SGTL Line In",
+				  "Line",	"H40-SGTL Line Out";
+
+			routing = "H40-SGTL Headphone",	"H40-SGTL HP_OUT",
+				  "H40-SGTL MIC_IN",	"H40-SGTL Mic",
+				  "H40-SGTL ADC",	"H40-SGTL Mic Bias",
+				  "H40-SGTL LINE_IN",	"H40-SGTL Line In",
+				  "H40-SGTL Line Out",	"H40-SGTL LINE_OUT";
+		};
+	};
+
+	fragment@4 {
+		target = <&i2s2_dap>;
+		__overlay__ {
+			bitclock-master;
+			frame-master;
+			remote-endpoint = <&sgtl5000_ep>;
+		};
+	};
+};

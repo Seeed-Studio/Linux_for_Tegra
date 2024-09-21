@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/*
+ * Jetson Device-tree overlay for ReSpeaker 4 Mic Linear Array.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
+
+/ {
+	overlay-name = "ReSpeaker 4 Mic Linear Array";
+	jetson-header-name = "Jetson 40pin Header";
+	compatible = "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3971-0089+p3834-0008";
+
+	fragment@0 {
+		target = <&hdr40_i2c3>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			ac108_a: ac108@35{
+				compatible = "x-power,ac108_0";
+				reg = <0x35>;
+				data-protocol = <0>;
+				status = "okay";
+
+				sound-name-prefix = "H40-AC";
+
+				port {
+					ac108_ep: endpoint {
+						remote-endpoint = <&i2s2_dap>;
+						link-name = "respeaker-4-mic-array";
+					};
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&padctl_main>;
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&jetson_io_pinmux>;
+
+			jetson_io_pinmux: exp-header-pinmux {
+				hdr40-pin12 {
+					nvidia,pins = "dap2_clk_pv6";
+					nvidia,function = "i2s2_sclk";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+
+				hdr40-pin35 {
+					nvidia,pins = "dap2_fs_pw1";
+					nvidia,function = "i2s2_lrck";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+
+				hdr40-pin38 {
+					nvidia,pins = "dap2_din_pw0";
+					nvidia,function = "i2s2_sdata_in";
+					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&tegra_sound>;
+		__overlay__ {
+			widgets = "Microphone",		"H40-AC Mic";
+
+			routing = "H40-AC MIC1N",	"H40-AC Mic",
+				  "H40-AC MIC1P",	"H40-AC Mic",
+				  "H40-AC MIC2N",	"H40-AC Mic",
+				  "H40-AC MIC2P",	"H40-AC Mic",
+				  "H40-AC MIC3N",	"H40-AC Mic",
+				  "H40-AC MIC3P",	"H40-AC Mic",
+				  "H40-AC MIC4N",	"H40-AC Mic",
+				  "H40-AC MIC4P",	"H40-AC Mic",
+				  "H40-AC Capture",	"H40-AC Mic";
+		};
+	};
+
+	fragment@3 {
+		target = <&i2s2_dap>;
+		__overlay__ {
+			dai-format = "dsp_a";
+			bitclock-master;
+			frame-master;
+			remote-endpoint = <&ac108_ep>;
+		};
+	};
+};

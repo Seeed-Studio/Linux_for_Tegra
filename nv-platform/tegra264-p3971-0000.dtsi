@@ -164,7 +164,7 @@
 		};
 
 		/* 40-pin header. PIN: 3, 5 goes to I2C3 */
-		i2c@c610000 {
+		hdr40_i2c3: i2c@c610000 {
 			status = "okay";
 		};
 
@@ -555,7 +555,7 @@
 		};
 	};
 
-	sound {
+	tegra_sound: sound {
 		status = "okay";
 
 		dais = /* ADMAIF (FE) Ports */
