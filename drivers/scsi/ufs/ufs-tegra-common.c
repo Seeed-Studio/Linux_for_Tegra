@@ -1493,11 +1493,6 @@ deassert_ufs_clk:
 
 	ufs_tegra_set_clk_div(hba);
 
-	ret = ufs_tegra_mphy_receiver_calibration(ufs_tegra,
-			ufs_tegra->mphy_l0_base);
-	if (ret < 0)
-		goto out_disable_mphylane_clks;
-
 end:
 	pm_runtime_disable(dev);
 	pm_runtime_set_active(dev);
