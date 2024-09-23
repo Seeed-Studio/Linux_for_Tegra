@@ -3,3 +3,4 @@
 
 obj-m += cpuidle-tegra-auto.o
 obj-m += cpuidle-debugfs.o
+obj-m += cpuidle-cg-disable-t264.o
