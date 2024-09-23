@@ -37,6 +37,26 @@
 	};
 
 	bus@0 {
+		usb@3610000 {
+			/delete-property/ interrupts;
+			interrupts-extended = <&gic GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+				     <&gic GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+				     <&pmc 76 IRQ_TYPE_LEVEL_HIGH>,
+				     <&pmc 77 IRQ_TYPE_LEVEL_HIGH>,
+				     <&pmc 78 IRQ_TYPE_LEVEL_HIGH>,
+				     <&pmc 79 IRQ_TYPE_LEVEL_HIGH>,
+				     <&pmc 80 IRQ_TYPE_LEVEL_HIGH>,
+				     <&pmc 81 IRQ_TYPE_LEVEL_HIGH>,
+				     <&pmc 82 IRQ_TYPE_LEVEL_HIGH>;
+			/*
+			   wake0, wake1, wake2 are for USB3.0 ports
+			   wake3, wake4, wake5, wake6 are for USB2.0 ports
+			*/
+			interrupt-names = "xhci", "mbox",
+				  "wake0", "wake1", "wake2", "wake3",
+				  "wake4", "wake5", "wake6";
+		};
+
 		pcie@140a0000 {
 			iommus = <&smmu_niso1 TEGRA234_SID_PCIE8>;
 		};
