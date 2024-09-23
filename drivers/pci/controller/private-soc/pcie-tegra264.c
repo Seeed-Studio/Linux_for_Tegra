@@ -24,6 +24,9 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/gpio/consumer.h>
+#include <soc/tegra/bpmp.h>
+#include <soc/tegra/bpmp-abi.h>
+#include <soc/tegra/fuse.h>
 
 extern int of_get_pci_domain_nr(struct device_node *node);
 
@@ -51,6 +54,9 @@ extern int of_get_pci_domain_nr(struct device_node *node);
 #define XTL_RC_MGMT_PERST_CONTROL		0x218
 #define XTL_RC_MGMT_PERST_CONTROL_PERST_O_N	BIT(0)
 
+#define XTL_RC_MGMT_CLOCK_CONTROL		0x47C
+#define XTL_RC_MGMT_CLOCK_CONTROL_PEX_CLKREQ_I_N_PIN_USE_CONV_TO_PRSNT	BIT(9)
+
 struct tegra264_pcie {
 	struct device *dev;
 	struct pci_config_window *cfg;
@@ -65,8 +71,9 @@ struct tegra264_pcie {
 	u64 mem_base;
 	u64 mem_limit;
 	u32 ctl_id;
+	struct tegra_bpmp *bpmp;
+	bool link_state;
 };
-
 
 static int tegra264_pcie_parse_dt(struct tegra264_pcie *pcie)
 {
@@ -99,6 +106,31 @@ static int tegra264_pcie_parse_dt(struct tegra264_pcie *pcie)
 	return 0;
 }
 
+static void tegra264_pcie_bpmp_set_rp_state(struct tegra264_pcie *pcie)
+{
+	struct tegra_bpmp_message msg;
+	struct mrq_pcie_request req;
+	int err;
+
+	memset(&req, 0, sizeof(req));
+
+	req.cmd = CMD_PCIE_RP_CONTROLLER_OFF;
+	req.rp_ctrlr_off.rp_controller = pcie->ctl_id;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.mrq = MRQ_PCIE;
+	msg.tx.data = &req;
+	msg.tx.size = sizeof(req);
+
+	err = tegra_bpmp_transfer(pcie->bpmp, &msg);
+	if (err)
+		dev_info(pcie->dev, "PCIe Controller-%d failed to turn off via BPMP with error %d\r\n",
+			 pcie->ctl_id, err);
+
+	if (msg.rx.ret)
+		dev_info(pcie->dev, "PCIe Controller-%d failed to turn off via BPMP with error message %d\r\n",
+			 pcie->ctl_id, msg.rx.ret);
+}
 
 static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 {
@@ -137,6 +169,13 @@ static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 	val |= XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
 	writel(val, pcie->xtl_pri_base + XTL_RC_MGMT_PERST_CONTROL);
 
+	if (tegra_sku_info.platform == TEGRA_PLATFORM_VDK) {
+		dev_info(pcie->dev, "PCIe Controller-%d - Skip link state check for VDK\n",
+			 pcie->ctl_id);
+		pcie->link_state = true;
+		return;
+	}
+
 	/* Poll every 10 msec for 1 sec to link up */
 	readl_poll_timeout(pcie->ecam_base + XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS, val,
 			   val & XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE,
@@ -147,9 +186,22 @@ static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 		msleep(100);
 		dev_info(pcie->dev, "PCIe Controller-%d Link is UP (Speed: %d)\n",
 			 pcie->ctl_id, (val & 0xf0000) >> 16);
+		pcie->link_state = true;
 	} else {
 		dev_info(pcie->dev, "PCIe Controller-%d Link is DOWN\r\n", pcie->ctl_id);
+		val = readl(pcie->xtl_pri_base + XTL_RC_MGMT_CLOCK_CONTROL);
+		/** Set link state only when link fails and no hot-plug feature is present */
+		if ((val & XTL_RC_MGMT_CLOCK_CONTROL_PEX_CLKREQ_I_N_PIN_USE_CONV_TO_PRSNT) == 0) {
+			dev_info(pcie->dev, "PCIe Controller-%d Link is DOWN and not hot-plug-capable. Turning off Controller.\r\n",
+				 pcie->ctl_id);
+			tegra264_pcie_bpmp_set_rp_state(pcie);
+			pcie->link_state = false;
+		} else {
+			pcie->link_state = true;
+		}
 	}
+
+	return;
 }
 
 static int tegra264_pcie_probe(struct platform_device *pdev)
@@ -208,13 +260,6 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = of_get_pci_domain_nr(dev->of_node);
-	if (ret < 0) {
-		dev_err(dev, "failed to get domain number: %d\n", ret);
-		return ret;
-	}
-	pcie->ctl_id = ret;
-
 	pcie->xal_base = devm_platform_ioremap_resource_byname(pdev, "xal");
 	if (IS_ERR(pcie->xal_base)) {
 		ret = PTR_ERR(pcie->xal_base);
@@ -241,6 +286,22 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	/* Parse BPMP property only for non VDK, as interaction with BPMP not needed for VDK */
+	if (tegra_sku_info.platform != TEGRA_PLATFORM_VDK) {
+		ret = of_property_read_u32_index(dev->of_node, "nvidia,bpmp", 1, &pcie->ctl_id);
+		if (ret) {
+			dev_err(pcie->dev, "Failed to read Controller-ID: %d\n", ret);
+			return ret;
+		}
+
+		pcie->bpmp = tegra_bpmp_get(dev);
+		if (IS_ERR(pcie->bpmp)) {
+			dev_err(dev, "tegra_bpmp_get fail: %ld\n", PTR_ERR(pcie->bpmp));
+			ret = PTR_ERR(pcie->bpmp);
+			return ret;
+		}
+	}
+
 	pcie->cfg = pci_ecam_create(dev, res, bus->res, &pci_generic_ecam_ops);
 	if (IS_ERR(pcie->cfg)) {
 		dev_err(dev, "failed to create ecam config window\n");
@@ -252,10 +313,17 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 	pcie->ecam_base = pcie->cfg->win;
 
 	tegra264_pcie_init(pcie);
+	if (pcie->link_state == false) {
+		/** De-register ECAM */
+		pci_ecam_free(pcie->cfg);
+		return 0;
+	}
 
 	ret = pci_host_probe(bridge);
 	if (ret < 0) {
 		dev_err(dev, "failed to register host: %d\n", ret);
+		if (tegra_sku_info.platform != TEGRA_PLATFORM_VDK)
+			tegra_bpmp_put(pcie->bpmp);
 		pci_ecam_free(pcie->cfg);
 		return ret;
 	}
@@ -267,6 +335,11 @@ static int tegra264_pcie_remove(struct platform_device *pdev)
 {
 	struct tegra264_pcie *pcie = platform_get_drvdata(pdev);
 
+	if (pcie->link_state == false)
+		return 0;
+
+	if (tegra_sku_info.platform != TEGRA_PLATFORM_VDK)
+		tegra_bpmp_put(pcie->bpmp);
 	/*
 	 * If we undo tegra264_pcie_init() then link goes down and need controller reset to bring up
 	 * the link again. Remove intention is to clean up the root bridge and re enumerate during
@@ -307,6 +380,9 @@ static int tegra264_pcie_resume_noirq(struct device *dev)
 		if (ret < 0)
 			dev_err(dev, "disable wake irq failed: %d\n", ret);
 	}
+
+	if (pcie->link_state == false)
+		return 0;
 
 	tegra264_pcie_init(pcie);
 
