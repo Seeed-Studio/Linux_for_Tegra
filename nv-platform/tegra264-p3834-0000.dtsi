@@ -534,12 +534,6 @@
 					type = "active";
 				};
 
-				tj_sw_slowdown: tj-sw-slowdown {
-                                        temperature = <109000>;
-                                        hysteresis = <0>;
-                                        type = "passive";
-                                };
-
 				tj-sw-shutdown {
 					temperature = <113000>;
 					hysteresis = <0>;
