@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include <dt-bindings/thermal/thermal.h>
+
+/ {
+	bus@0 {
+		/* PCIe C0 ecam generic node for iGPU */
+		pcie@d0b0000000 {
+			status = "okay";
+			pci@0,0 {
+				/* Register devfreq cdevs to tj-thermal zone */
+				gpu@0,0 {
+					nvidia,thermal-zones = "tj-thermal";
+					nvidia,cooling-device = <THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+	};
+
+	thermal-zones {
+
+		tj-thermal {
+
+			trips {
+				tj_sw_slowdown: tj-sw-slowdown {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-cpufreq {
+					trip = <&tj_sw_slowdown>;
+					/* CPU-pairs share the same clock-source */
+					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_8 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_10 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_12 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+	};
+};
