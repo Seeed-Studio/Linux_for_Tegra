@@ -6,7 +6,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/dma-fence.h>
 #include <linux/slab.h>
@@ -241,32 +240,21 @@ int host1x_syncpt_wait_ts(struct host1x_syncpt *sp, u32 thresh, long timeout, u3
 			  ktime_t *ts)
 {
 	struct dma_fence *fence;
-	ktime_t spin_timeout, time;
 	long wait_err;
+
+	host1x_hw_syncpt_load(sp->host, sp);
+
+	if (value)
+		*value = host1x_syncpt_load(sp);
+	if (ts)
+		*ts = ktime_get();
+
+	if (host1x_syncpt_is_expired(sp, thresh))
+		return 0;
 
 	if (timeout < 0)
 		timeout = LONG_MAX;
-
-	/*
-	 * Even 1 jiffy is longer than 50us, so assume timeout is over 50us
-	 * always except for polls (timeout=0)
-	 */
-	spin_timeout = ktime_add_us(ktime_get(), timeout > 0 ? 50 : 0);
-	for (;;) {
-		host1x_hw_syncpt_load(sp->host, sp);
-		time = ktime_get();
-		if (value)
-			*value = host1x_syncpt_load(sp);
-		if (ts)
-			*ts = time;
-		if (host1x_syncpt_is_expired(sp, thresh))
-			return 0;
-		if (ktime_compare(time, spin_timeout) > 0)
-			break;
-		udelay(5);
-	}
-
-	if (timeout == 0)
+	else if (timeout == 0)
 		return -EAGAIN;
 
 	fence = host1x_fence_create(sp, thresh, false);
