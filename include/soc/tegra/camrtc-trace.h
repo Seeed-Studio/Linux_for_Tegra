@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
 #ifndef INCLUDE_CAMRTC_TRACE_H
@@ -79,7 +79,7 @@ struct camrtc_trace_memory_header {
 		uint32_t signature[4] __attribute__((deprecated));
 	};
 	uint32_t revision;
-	uint32_t reserved1;
+	uint32_t wrapped_counter;
 	uint32_t exception_offset;
 	uint32_t exception_size;
 	uint32_t exception_entries;
@@ -143,9 +143,9 @@ struct camrtc_trace_armv7_exception {
  * The format of event data is determined by event type.
  */
 
-#define CAMRTC_TRACE_EVENT_HEADER_SIZE		MK_SIZE(16)
+#define CAMRTC_TRACE_EVENT_HEADER_SIZE		MK_U16(16)
 #define CAMRTC_TRACE_EVENT_PAYLOAD_SIZE		\
-	(CAMRTC_TRACE_EVENT_SIZE - CAMRTC_TRACE_EVENT_HEADER_SIZE)
+	(uint16_t)(CAMRTC_TRACE_EVENT_SIZE - CAMRTC_TRACE_EVENT_HEADER_SIZE)
 
 #define CAMRTC_EVENT_TYPE_OFFSET		MK_U32(24)
 #define CAMRTC_EVENT_TYPE_MASK			\
@@ -170,9 +170,10 @@ struct camrtc_trace_armv7_exception {
 	((uint32_t)(module) << CAMRTC_EVENT_MODULE_OFFSET) | (uint32_t)(subid))
 
 struct camrtc_event_header {
-	uint32_t len;		/* Size in bytes including this field */
-	uint32_t id;		/* Event ID */
-	uint64_t tstamp;	/* Timestamp from TKE TSC */
+	uint16_t len;             /* Size in bytes including this field */
+	uint16_t event_log_level; /* Log level for event trace strings */
+	uint32_t id;              /* Event ID */
+	uint64_t tstamp;          /* Timestamp from TKE TSC */
 };
 
 struct camrtc_event_struct {
