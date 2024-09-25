@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 /*
  * Device-tree overlay for tegra234-p3737-0000-p3701-0000 40-pin
  * Expansion Header.
@@ -30,9 +30,15 @@
 				};
 				hdr40-pin8 {
 					nvidia,pins = "uart1_tx_pr2";
+					nvidia,function = "uarta";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 				};
 				hdr40-pin10 {
 					nvidia,pins = "uart1_rx_pr3";
+					nvidia,function = "uarta";
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin11 {
 					nvidia,pins = "uart1_rts_pr4";
@@ -145,10 +151,16 @@
 				hdr40-pin3 {
 					nvidia,pins = "gen8_i2c_scl_pdd1";
 					nvidia,pin-label = "i2c8";
+					nvidia,function = "i2c8";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin5 {
 					nvidia,pins = "gen8_i2c_sda_pdd2";
 					nvidia,pin-label = "i2c8";
+					nvidia,function = "i2c8";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin16a {
 					nvidia,pins = "can1_en_pbb1";
@@ -166,9 +178,15 @@
 				};
 				hdr40-pin27 {
 					nvidia,pins = "gen2_i2c_sda_pdd0";
+					nvidia,function = "i2c2";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin28 {
 					nvidia,pins = "gen2_i2c_scl_pcc7";
+					nvidia,function = "i2c2";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin29 {
 					nvidia,pins = "can0_din_paa1";
