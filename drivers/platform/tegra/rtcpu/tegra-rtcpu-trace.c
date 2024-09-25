@@ -334,9 +334,9 @@ static inline void rtcpu_trace_exceptions(struct tegra_rtcpu_trace *tracer)
 	tracer->exception_last_idx = new_next;
 }
 
-static uint32_t rtcpu_trace_event_len(const struct camrtc_event_struct *event)
+static uint16_t rtcpu_trace_event_len(const struct camrtc_event_struct *event)
 {
-	uint32_t len = event->header.len;
+	uint16_t len = event->header.len;
 
 	if (len > CAMRTC_TRACE_EVENT_SIZE)
 		len = CAMRTC_TRACE_EVENT_SIZE - CAMRTC_TRACE_EVENT_HEADER_SIZE;
@@ -351,7 +351,7 @@ static uint32_t rtcpu_trace_event_len(const struct camrtc_event_struct *event)
 static void rtcpu_unknown_trace_event(struct camrtc_event_struct *event)
 {
 	uint32_t id = event->header.id;
-	uint32_t len = rtcpu_trace_event_len(event);
+	uint16_t len = rtcpu_trace_event_len(event);
 	uint64_t tstamp = event->header.tstamp;
 
 	trace_rtcpu_unknown(tstamp, id, len, &event->data.data8[0]);
@@ -1174,7 +1174,7 @@ static void rtcpu_trace_event(struct tegra_rtcpu_trace *tracer,
 {
 	uint32_t id = event->header.id;
 	uint32_t type = CAMRTC_EVENT_TYPE_FROM_ID(id);
-	uint32_t len = rtcpu_trace_event_len(event);
+	uint16_t len = rtcpu_trace_event_len(event);
 	uint8_t *data8 = &event->data.data8[0];
 
 	switch (type) {
@@ -1324,7 +1324,8 @@ static int rtcpu_trace_debugfs_last_event_read(
 {
 	struct tegra_rtcpu_trace *tracer = file->private;
 	struct camrtc_event_struct *event = &tracer->copy_last_event;
-	unsigned int i, payload_len;
+	unsigned int i;
+	uint16_t payload_len;
 
 	if (tracer->n_events == 0)
 		return 0;
