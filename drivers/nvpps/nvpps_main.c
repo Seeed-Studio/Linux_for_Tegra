@@ -90,8 +90,9 @@ struct nvpps_device_data {
 	bool 		sec_ptp_failed;
 	bool		support_tsc;
 	uint32_t	soc_id;
+	void (*ptp_tsc_sync_cfg_fn)(struct platform_device *pdata);
 	uint8_t		k_int_val;
-	uint16_t	lock_threshold_val;
+	uint32_t	lock_threshold_val;
 	struct hte_ts_desc	desc;
 	struct gpio_desc	*gpio_in;
 };
@@ -135,20 +136,49 @@ struct nvpps_file_data {
 /* Below are the tsc register offset from ioremapped
  * virtual base region stored in tsc_reg_map_base.
  */
-#define TSC_STSCRSR_OFFSET								      0x104
-#define TSC_CAPTURE_CONFIGURATION_PTX_OFFSET				(TSC_STSCRSR_OFFSET + 0x58)
-#define TSC_CAPTURE_CONTROL_PTX_OFFSET					(TSC_STSCRSR_OFFSET + 0x5c)
-#define TSC_LOCKING_CONFIGURATION_OFFSET				(TSC_STSCRSR_OFFSET + 0xe4)
-#define TSC_LOCKING_CONTROL_OFFSET					(TSC_STSCRSR_OFFSET + 0xe8)
-#define TSC_LOCKING_STATUS_OFFSET					(TSC_STSCRSR_OFFSET + 0xec)
-#define TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET			(TSC_STSCRSR_OFFSET + 0xf0)
-#define TSC_LOCKING_DIFF_CONFIGURATION_OFFSET				(TSC_STSCRSR_OFFSET + 0xf4)
-#define TSC_LOCKING_ADJUST_CONFIGURATION_OFFSET				(TSC_STSCRSR_OFFSET + 0x108)
-#define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET			(TSC_STSCRSR_OFFSET + 0x10c)
-#define TSC_LOCKING_ADJUST_NUM_CONTROL_OFFSET				(TSC_STSCRSR_OFFSET + 0x110)
-#define TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET				(TSC_STSCRSR_OFFSET + 0x114)
+/* T23X Registers */
+#define T23X_TSC_STSCRSR_OFFSET									0x104
+#define T23X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET				(T23X_TSC_STSCRSR_OFFSET + 0x58)
+#define T23X_TSC_CAPTURE_CONTROL_PTX_OFFSET						(T23X_TSC_STSCRSR_OFFSET + 0x5c)
+#define T23X_TSC_LOCKING_CONFIGURATION_OFFSET					(T23X_TSC_STSCRSR_OFFSET + 0xe4)
+#define T23X_TSC_LOCKING_CONTROL_OFFSET							(T23X_TSC_STSCRSR_OFFSET + 0xe8)
+#define T23X_TSC_LOCKING_STATUS_OFFSET							(T23X_TSC_STSCRSR_OFFSET + 0xec)
+#define T23X_TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET		(T23X_TSC_STSCRSR_OFFSET + 0xf0)
+#define T23X_TSC_LOCKING_DIFF_CONFIGURATION_OFFSET				(T23X_TSC_STSCRSR_OFFSET + 0xf4)
+#define T23X_TSC_LOCKING_ADJUST_CONFIGURATION_OFFSET			(T23X_TSC_STSCRSR_OFFSET + 0x108)
+#define T23X_TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET		(T23X_TSC_STSCRSR_OFFSET + 0x10c)
+#define T23X_TSC_LOCKING_ADJUST_NUM_CONTROL_OFFSET				(T23X_TSC_STSCRSR_OFFSET + 0x110)
+#define T23X_TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET			(T23X_TSC_STSCRSR_OFFSET + 0x114)
 
-#define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT	8
+/* T26X Registers */
+#define T26X_TSC_STSCRSR_OFFSET									0x104
+#define T26X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET				(T26X_TSC_STSCRSR_OFFSET + 0x58)
+#define T26X_TSC_CAPTURE_CONTROL_PTX_OFFSET						(T26X_TSC_STSCRSR_OFFSET + 0x5c)
+#define T26X_TSC_LOCKING_CONFIGURATION_OFFSET					(T26X_TSC_STSCRSR_OFFSET + 0xe4)
+#define T26X_TSC_LOCKING_CONTROL_OFFSET							(T26X_TSC_STSCRSR_OFFSET + 0xe8)
+#define T26X_TSC_LOCKING_STATUS_OFFSET							(T26X_TSC_STSCRSR_OFFSET + 0xec)
+#define T26X_TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET		(T26X_TSC_STSCRSR_OFFSET + 0xf0)
+#define T26X_TSC_LOCKING_DIFF_CONFIGURATION_OFFSET				(T26X_TSC_STSCRSR_OFFSET + 0xfc)
+//M field is 6:4, 6th bit is addition in Thor
+#define T26X_TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET		(T26X_TSC_STSCRSR_OFFSET + 0x128)
+#define T26X_TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET				(T26X_TSC_STSCRSR_OFFSET + 0x130)
+
+#define TSC_LOCKING_CONFIG_PPS_SRC_PTX		0x1
+
+#define TSC_LOCKING_CONFIG_SRC_SEL_SHIFT	8U
+#define TSC_LOCKING_CONFIG_EDGE_SEL_SHIFT	4U
+#define TSC_LOCKING_CONFIG_EN_SHIFT			0U
+
+
+#define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_THRSLD_SHIFT	16U
+#define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT	8U
+#define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_M_SHIFT		4U
+#define TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_EN_SHIFT		0U
+
+#define TSC_CAPTURE_CONFIG_EDGE_SHIFT	4U
+#define TSC_CAPTURE_CONFIG_EN_SHIFT		0U
+
+#define CONFIG_RISING_EDGE		0x1
 
 #define SRC_SELECT_BIT_OFFSET	8
 #define SRC_SELECT_BITS	0xff
@@ -191,6 +221,7 @@ enum {
 struct tegra_chip_data {
 	bool support_tsc;
 	uint32_t soc_id;
+	void (*ptp_tsc_sync_cfg_fn)(struct platform_device *pdata);
 };
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
@@ -383,24 +414,27 @@ static void tsc_timer_callback(struct timer_list *t)
 {
 	struct nvpps_device_data *pdev_data = (struct nvpps_device_data *)from_timer(pdev_data, t, tsc_timer);
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0) */
-	uint32_t tsc_lock_status;
-	tsc_lock_status = readl(pdev_data->tsc_reg_map_base + TSC_LOCKING_STATUS_OFFSET);
-	/* Incase TSC is not locked clear ALIGNED bit(RW1C) so that
-	 * TSC starts to lock to the PTP again based on the PTP
-	 * source selected in TSC registers.
-	 */
-	if (!(tsc_lock_status & BIT(TSC_LOCKED_STATUS_BIT_OFFSET))) {
-		uint32_t lock_control;
-		dev_dbg(pdev_data->dev, "tsc_lock_stat:0x%x\n", tsc_lock_status);
-		/* Write 1 to TSC_LOCKING_STATUS_0.ALIGNED to clear it */
-		writel(tsc_lock_status | BIT(TSC_ALIGNED_STATUS_BIT_OFFSET),
-			pdev_data->tsc_reg_map_base + TSC_LOCKING_STATUS_OFFSET);
+	uint32_t lck_sts_offset = 0;
+	uint32_t lck_ctrl_offset = 0;
+	uint32_t reg_val = 0;
 
-		lock_control = readl(pdev_data->tsc_reg_map_base +
-							 TSC_LOCKING_CONTROL_OFFSET);
-		/* Write 1 to TSC_LOCKING_CONTROL_0.ALIGN */
-		writel(lock_control | BIT(TSC_LOCK_CTRL_ALIGN_BIT_OFFSET),
-			pdev_data->tsc_reg_map_base + TSC_LOCKING_CONTROL_OFFSET);
+	if (pdev_data->soc_id == NV_SOC_T26X) {
+		lck_sts_offset = T26X_TSC_LOCKING_STATUS_OFFSET;
+		lck_ctrl_offset = T26X_TSC_LOCKING_CONTROL_OFFSET;
+	} else if (pdev_data->soc_id == NV_SOC_T23X) {
+		lck_sts_offset = T23X_TSC_LOCKING_STATUS_OFFSET;
+		lck_ctrl_offset = T23X_TSC_LOCKING_CONTROL_OFFSET;
+	} else {
+		/* We should not be reaching here */
+		dev_err(pdev_data->dev, "Invalid SOC ID\n");
+		return ;
+	}
+
+	reg_val = readl(pdev_data->tsc_reg_map_base + lck_sts_offset);
+
+	if ((reg_val & BIT(TSC_LOCKED_STATUS_BIT_OFFSET)) == 0) {
+		writel((BIT(TSC_LOCKED_STATUS_BIT_OFFSET) | BIT(TSC_ALIGNED_STATUS_BIT_OFFSET)), pdev_data->tsc_reg_map_base + lck_sts_offset);
+		writel(BIT(TSC_LOCK_CTRL_ALIGN_BIT_OFFSET), pdev_data->tsc_reg_map_base + lck_ctrl_offset);
 	}
 
 	/* set the next expire time */
@@ -822,22 +856,18 @@ static void nvpps_fill_default_mac_phc_info(struct platform_device *pdev,
 		eqos_mac_pa = T194_EQOS_BASE_ADDR;
 	}
 
-	/* identify the tsc_ptp_src  and sts_offset */
+	/* By default set MGBE MAC seconds & nanoseconds register offset */
+	pdev_data->sts_offset = MGBE_STSR_OFFSET;
+	pdev_data->stns_offset = MGBE_STNSR_OFFSET;
+
+	/* identify the tsc_ptp_src and sts_offset */
 	if (pdev_data->pri_emac_base_addr == mgbe0_mac_pa) {
-		pdev_data->sts_offset = MGBE_STSR_OFFSET;
-		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE0;
 	} else if (pdev_data->pri_emac_base_addr == mgbe1_mac_pa) {
-		pdev_data->sts_offset = MGBE_STSR_OFFSET;
-		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE1;
 	} else if (pdev_data->pri_emac_base_addr == mgbe2_mac_pa) {
-		pdev_data->sts_offset = MGBE_STSR_OFFSET;
-		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE2;
 	} else if (pdev_data->pri_emac_base_addr == mgbe3_mac_pa) {
-		pdev_data->sts_offset = MGBE_STSR_OFFSET;
-		pdev_data->stns_offset = MGBE_STNSR_OFFSET;
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_MGBE3;
 	} else if (pdev_data->pri_emac_base_addr == eqos_mac_pa) {
 		pdev_data->sts_offset = EQOS_STSR_OFFSET;
@@ -845,7 +875,7 @@ static void nvpps_fill_default_mac_phc_info(struct platform_device *pdev,
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_EQOS;
 	} else {
 		pdev_data->tsc_ptp_src = TSC_PTP_SRC_INVALID;
-		dev_err(&pdev->dev, "Invalid EMAC base address\n");
+		dev_err(&pdev->dev, "Invalid EMAC selected as PPS source to TSC\n");
 		return;
 	}
 
@@ -929,11 +959,102 @@ static int nvpps_gpio_hte_setup(struct nvpps_device_data *pdev_data)
 	return 0;
 }
 
-static void nvpps_ptp_tsc_sync_config(struct platform_device *pdev)
+static void nvpps_t26x_ptp_tsc_sync_config(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct nvpps_device_data *pdev_data = platform_get_drvdata(pdev);
+	uint32_t reg_val = 0;
+
+	/* Configure LOCKING_CONFIGURATION register */
+	/* Select PTX as PPS Source & Rising edge as edge select */
+	reg_val = ((TSC_LOCKING_CONFIG_PPS_SRC_PTX << TSC_LOCKING_CONFIG_SRC_SEL_SHIFT) |
+			   (CONFIG_RISING_EDGE << TSC_LOCKING_CONFIG_EDGE_SEL_SHIFT));
+
+	writel(reg_val, pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_CONFIGURATION_OFFSET);
+
+	/* Configure LOCKING_DIFF_CONFIGURATION register with lock threshold value */
+#define DEFAULT_T26X_LOCK_THRESHOLD_20US		20000  /* In nanosec */
+	pdev_data->lock_threshold_val = DEFAULT_T26X_LOCK_THRESHOLD_20US;
+
+	if (of_property_read_u32(np, "ptp_tsc_lock_threshold", &pdev_data->lock_threshold_val) == 0) {
+		if (pdev_data->lock_threshold_val < 0x1) {
+			//Use default value
+			dev_warn(&pdev->dev, "ptp_tsc_lock_threshold value should be minimum 1ns(i.e 0x1). Using default value 20us(i.e 20000ns)\n");
+			pdev_data->lock_threshold_val = DEFAULT_T26X_LOCK_THRESHOLD_20US;
+		}
+	}
+
+	dev_info(&pdev->dev, "Using Lock threshold value(in ns) : %u\n", pdev_data->lock_threshold_val);
+
+	writel(pdev_data->lock_threshold_val, pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_DIFF_CONFIGURATION_OFFSET);
+
+
+	/* Configure LOCKING_ADJSUT_DELTA_CONTROL register */
+	/* DELTA INCREMENT value to add/remove(in slow convergence case) from current adjust value */
+#define DEFAULT_T26X_DELTA_INC_STEP	0x67U
+	writel(DEFAULT_T26X_DELTA_INC_STEP, pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET);
+
+	/* Configure LOCKING_FAST_ADJUST_CONFIG register */
+	/* THRESHOLD used in determining when FAST ADJUST Convergence is to be applied by HW */
+#define DEFAULT_T26X_FAST_ADJ_THRSLD		0x64U
+	/* K_INT value used to calculate gain factor */
+#define DEFAULT_T26X_K_INT_VAL				0x2U
+	pdev_data->k_int_val = DEFAULT_T26X_K_INT_VAL;
+
+	/* Set THRESHOLD, K_INT, M and ENABLE bits */
+	reg_val = ((DEFAULT_T26X_FAST_ADJ_THRSLD << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_THRSLD_SHIFT) |
+			   (DEFAULT_T26X_K_INT_VAL << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT) |
+			   (0 << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_M_SHIFT) | /* M = 0 always */
+			   (BIT(TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_EN_SHIFT)));
+
+	writel(reg_val, pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET);
+
+	/* Configure LOCKING_REF_FREQ_CONFIG register */
+#define DEFAULT_T26X_REF_FREQ_INC_1S		1000000000 /* 1s expressed in ns */
+	writel(DEFAULT_T26X_REF_FREQ_INC_1S, pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET);
+
+	/* Configure CAPTURE_CONFIGURATION_PTX register */
+	/* Select PPS src MAC */
+	if (pdev_data->tsc_ptp_src < TSC_PTP_SRC_INVALID) {
+		reg_val = (pdev_data->tsc_ptp_src << SRC_SELECT_BIT_OFFSET);
+	} else {
+		dev_err(&pdev->dev, "Invalid PTP MAC src configured as PPS source \n");
+	}
+	/* Use PPS Rising EDGE to capture TSC values */
+	reg_val = (reg_val | (CONFIG_RISING_EDGE << TSC_CAPTURE_CONFIG_EDGE_SHIFT));
+
+	writel(reg_val, pdev_data->tsc_reg_map_base + T26X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
+
+
+	/* Configure CAPTURE_CONTROL register */
+	/* Enable updating capture value registers on PPS edge */
+	writel(0x1, pdev_data->tsc_reg_map_base + T26X_TSC_CAPTURE_CONTROL_PTX_OFFSET);
+
+	/* Configure TSC_LOCKING_CONFIG register */
+	/* Enable HW LOCKING Mechanism */
+	reg_val = readl(pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_CONFIGURATION_OFFSET);
+	reg_val = (reg_val | BIT(TSC_LOCKING_CONFIG_EN_SHIFT));
+	writel(reg_val, pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_CONFIGURATION_OFFSET);
+
+	/* Configure TSC_CAPTURE_CONFIG register */
+	/* Enable ability to feed the HW Lock mechanism */
+	reg_val = readl(pdev_data->tsc_reg_map_base + T26X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
+	reg_val = (reg_val | BIT(TSC_CAPTURE_CONFIG_EN_SHIFT));
+	writel(reg_val, pdev_data->tsc_reg_map_base + T26X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
+
+	reg_val = readl(pdev_data->tsc_reg_map_base + T26X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
+
+	set_mode_tsc(pdev_data);
+
+	return;
+}
+
+static void nvpps_t23x_ptp_tsc_sync_config(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	uint32_t tsc_config_ptx_0;
 	struct nvpps_device_data *pdev_data = platform_get_drvdata(pdev);
+	u16 lock_threshold_val;
 
 #define DEFAULT_K_INT_VAL			0x70
 #define DEFAULT_LOCK_THRESHOLD_20US	0x26c
@@ -948,26 +1069,29 @@ static void nvpps_ptp_tsc_sync_config(struct platform_device *pdev)
 	}
 
 	//Override default Lock Threshold value
-	if (of_property_read_u16(np, "ptp_tsc_lock_threshold", &pdev_data->lock_threshold_val) == 0) {
-		if (pdev_data->lock_threshold_val < 0x1F) {
+	if (of_property_read_u16(np, "ptp_tsc_lock_threshold", &lock_threshold_val) == 0) {
+		if (lock_threshold_val < 0x1F) {
 			//Use default value
 			dev_warn(&pdev->dev, "ptp_tsc_lock_threshold value should be minimum 1us(i.e 0x1F). Using default value 20us(i.e 0x26c)\n");
 			pdev_data->lock_threshold_val = DEFAULT_LOCK_THRESHOLD_20US;
+		} else {
+			pdev_data->lock_threshold_val = lock_threshold_val;
 		}
-		dev_info(&pdev->dev, "Using Lock threshold value : 0x%x\n", pdev_data->lock_threshold_val);
 	}
 
-	//onetime config to init PTP TSC Sync logic
-	writel(0x119, pdev_data->tsc_reg_map_base + TSC_LOCKING_CONFIGURATION_OFFSET);
-	writel(pdev_data->lock_threshold_val, pdev_data->tsc_reg_map_base + TSC_LOCKING_DIFF_CONFIGURATION_OFFSET);
-	writel(0x1, pdev_data->tsc_reg_map_base + TSC_LOCKING_CONTROL_OFFSET);
-	writel((0x50011 | (pdev_data->k_int_val << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT)),
-		   pdev_data->tsc_reg_map_base + TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET);
-	writel(0x67, pdev_data->tsc_reg_map_base + TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET);
-	writel(0x311, pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
-	writel(0x1, pdev_data->tsc_reg_map_base + TSC_STSCRSR_OFFSET);
+	dev_info(&pdev->dev, "Using Lock threshold value : 0x%x\n", pdev_data->lock_threshold_val);
 
-	tsc_config_ptx_0 = readl(pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
+	//onetime config to init PTP TSC Sync logic
+	writel(0x119, pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_CONFIGURATION_OFFSET);
+	writel(pdev_data->lock_threshold_val, pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_DIFF_CONFIGURATION_OFFSET);
+	writel(0x1, pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_CONTROL_OFFSET);
+	writel((0x50011 | (pdev_data->k_int_val << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT)),
+		   pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET);
+	writel(0x67, pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET);
+	writel(0x313, pdev_data->tsc_reg_map_base + T23X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
+	writel(0x1, pdev_data->tsc_reg_map_base + T23X_TSC_STSCRSR_OFFSET);
+
+	tsc_config_ptx_0 = readl(pdev_data->tsc_reg_map_base + T23X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 	/* clear and set the ptp src based on ethernet interface passed
 	 * from dt for tsc to lock onto.
 	 */
@@ -976,9 +1100,8 @@ static void nvpps_ptp_tsc_sync_config(struct platform_device *pdev)
 	if (pdev_data->tsc_ptp_src != TSC_PTP_SRC_INVALID)
 		tsc_config_ptx_0 = tsc_config_ptx_0 |
 						(pdev_data->tsc_ptp_src << SRC_SELECT_BIT_OFFSET);
-	writel(tsc_config_ptx_0, pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
-	tsc_config_ptx_0 = readl(pdev_data->tsc_reg_map_base + TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
-	dev_info(&pdev->dev, "TSC config ptx 0x%x\n", tsc_config_ptx_0);
+	writel(tsc_config_ptx_0, pdev_data->tsc_reg_map_base + T23X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
+	tsc_config_ptx_0 = readl(pdev_data->tsc_reg_map_base + T23X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 
 	set_mode_tsc(pdev_data);
 
@@ -1011,7 +1134,7 @@ static int nvpps_probe(struct platform_device *pdev)
 
 	pdev_data->pri_emac_node = of_parse_phandle(np, "primary-emac", 0);
 	if (pdev_data->pri_emac_node == NULL) {
-		dev_info(&pdev->dev, "primary-emac node not found\n");
+		dev_err(&pdev->dev, "primary-emac node not found\n");
 	} else {
 		dev_info(&pdev->dev, "primary-emac found %s", pdev_data->pri_emac_node->full_name);
 		index = of_property_match_string(pdev_data->pri_emac_node, "reg-names", "mac");
@@ -1024,7 +1147,7 @@ static int nvpps_probe(struct platform_device *pdev)
 						pdev_data->pri_emac_base_addr);
 			}
 		} else {
-			dev_info(&pdev->dev, "failed to find ethernet mac registers\n");
+			dev_err(&pdev->dev, "failed to find ethernet mac registers\n");
 		}
 	}
 
@@ -1038,6 +1161,7 @@ static int nvpps_probe(struct platform_device *pdev)
 	cdata = of_device_get_match_data(&pdev->dev);
 	pdev_data->support_tsc = cdata->support_tsc;
 	pdev_data->soc_id = cdata->soc_id;
+	pdev_data->ptp_tsc_sync_cfg_fn = cdata->ptp_tsc_sync_cfg_fn;
 
 	nvpps_fill_default_mac_phc_info(pdev, pdev_data);
 
@@ -1151,8 +1275,12 @@ static int nvpps_probe(struct platform_device *pdev)
 		}
 
 		/* skip PTP TSC sync configuration if `ptp_tsc_sync_dis` is set */
-		if ((of_property_read_bool(np, "ptp_tsc_sync_dis")) == false)
-			nvpps_ptp_tsc_sync_config(pdev);
+		if ((of_property_read_bool(np, "ptp_tsc_sync_dis")) == false) {
+			if (pdev_data->ptp_tsc_sync_cfg_fn != NULL)
+				pdev_data->ptp_tsc_sync_cfg_fn(pdev);
+		} else {
+			dev_info(&pdev->dev, "ptp tsc sync is disabled\n");
+		}
 	}
 
 	return 0;
@@ -1224,14 +1352,17 @@ static int nvpps_resume(struct platform_device *pdev)
 static const struct tegra_chip_data tegra264_chip_data = {
 	.support_tsc = true,
 	.soc_id = NV_SOC_T26X,
+	.ptp_tsc_sync_cfg_fn = &nvpps_t26x_ptp_tsc_sync_config,
 };
 static const struct tegra_chip_data tegra234_chip_data = {
 	.support_tsc = true,
 	.soc_id = NV_SOC_T23X,
+	.ptp_tsc_sync_cfg_fn = &nvpps_t23x_ptp_tsc_sync_config,
 };
 static const struct tegra_chip_data tegra194_chip_data = {
 	.support_tsc = false,
 	.soc_id = NV_SOC_T19X,
+	.ptp_tsc_sync_cfg_fn = NULL,
 };
 static const struct of_device_id nvpps_of_table[] = {
 	{ .compatible = "nvidia,tegra194-nvpps", .data = &tegra194_chip_data },
