@@ -212,6 +212,10 @@ static void isp_capture_release_syncpts(
 	struct tegra_isp_channel *chan)
 {
 	struct isp_capture *capture = chan->capture_data;
+	if (capture == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return;
+	}
 
 	isp_capture_release_syncpt(chan, &capture->progress_sp);
 	isp_capture_release_syncpt(chan, &capture->stats_progress_sp);
@@ -229,6 +233,12 @@ static int isp_capture_setup_syncpts(
 {
 	struct isp_capture *capture = chan->capture_data;
 	int err = 0;
+
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
 
 #ifdef HAVE_ISP_GOS_TABLES
 	capture->num_gos_tables = chan->ops->get_gos_table(chan->ndev,
@@ -363,6 +373,9 @@ static int isp_capture_setup_inputfences(
 	struct isp_capture_req *req,
 	int request_offset)
 {
+	int i = 0;
+	int err = 0;
+
 	uint32_t __user *inpfences_reloc_user;
 	uint32_t *inpfences_relocs = NULL;
 	uint32_t inputfences_offset = 0;
@@ -374,8 +387,12 @@ static int isp_capture_setup_inputfences(
 #else
 	struct dma_buf_map map;
 #endif
-	int i = 0;
-	int err = 0;
+
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
 
 	/* It is valid not to have inputfences for given frame capture */
 	if (!req->inputfences_relocs.num_relocs)
@@ -461,6 +478,12 @@ static int isp_capture_setup_prefences(
 	struct dma_buf_map map;
 #endif
 
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
 	/* It is valid not to have prefences for given frame capture */
 	if (!req->prefences_relocs.num_relocs)
 		return 0;
@@ -529,6 +552,12 @@ static void isp_capture_request_unpin(
 	struct capture_common_unpins *unpins;
 	int i = 0;
 
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return;
+	}
+
 	mutex_lock(&capture->capture_desc_ctx.unpins_list_lock);
 	unpins = &capture->capture_desc_ctx.unpins_list[buffer_index];
 	if (unpins->num_unpins != 0U) {
@@ -553,6 +582,12 @@ static void isp_capture_program_request_unpin(
 	struct isp_capture *capture = chan->capture_data;
 	struct capture_common_unpins *unpins;
 	int i = 0;
+
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return;
+	}
 
 	mutex_lock(&capture->program_desc_ctx.unpins_list_lock);
 	unpins = &capture->program_desc_ctx.unpins_list[buffer_index];
@@ -669,6 +704,11 @@ static inline void isp_capture_ivc_capture_cleanup(
 {
 	struct tegra_isp_channel *chan = capture->isp_channel;
 
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return;
+	}
+
 	isp_capture_request_unpin(chan, buffer_index);
 	dma_sync_single_range_for_cpu(capture->rtcpu_dev,
 		capture->capture_desc_ctx.requests.iova,
@@ -717,6 +757,11 @@ static inline void isp_capture_ivc_program_cleanup(
 	uint32_t buffer_index)
 {
 	struct tegra_isp_channel *chan = capture->isp_channel;
+
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return;
+	}
 
 	isp_capture_program_request_unpin(chan, buffer_index);
 	dma_sync_single_range_for_cpu(capture->rtcpu_dev,
@@ -773,16 +818,22 @@ static void isp_capture_ivc_status_callback(
 {
 	struct CAPTURE_MSG *status_msg = (struct CAPTURE_MSG *)ivc_resp;
 	struct isp_capture *capture = (struct isp_capture *)pcontext;
-	struct tegra_isp_channel *chan = capture->isp_channel;
+	struct tegra_isp_channel *chan;
 	uint32_t buffer_index;
 
-	if (unlikely(capture == NULL)) {
-		dev_err(chan->isp_dev, "%s: invalid context", __func__);
+	if (unlikely(status_msg == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
 		return;
 	}
 
-	if (unlikely(status_msg == NULL)) {
-		dev_err(chan->isp_dev, "%s: invalid response", __func__);
+	if (unlikely(capture == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
+		return;
+	}
+
+	chan = capture->isp_channel;
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
 		return;
 	}
 
@@ -847,6 +898,11 @@ static int isp_capture_ivc_send_control(struct tegra_isp_channel *chan,
 	uint32_t timeout = HZ;
 	int err = 0;
 
+	if (capture == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
 	dev_dbg(chan->isp_dev, "%s: sending chan_id %u msg_id %u\n",
 			__func__, resp_header.channel_id, resp_header.msg_id);
 
@@ -900,15 +956,21 @@ static void isp_capture_ivc_control_callback(
 {
 	const struct CAPTURE_CONTROL_MSG *control_msg = ivc_resp;
 	struct isp_capture *capture = (struct isp_capture *)pcontext;
-	struct tegra_isp_channel *chan = capture->isp_channel;
+	struct tegra_isp_channel *chan;
 
-	if (unlikely(capture == NULL)) {
-		dev_err(chan->isp_dev, "%s: invalid context", __func__);
+	if (unlikely(control_msg == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
 		return;
 	}
 
-	if (unlikely(control_msg == NULL)) {
-		dev_err(chan->isp_dev, "%s: invalid response", __func__);
+	if (unlikely(capture == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
+		return;
+	}
+
+	chan = capture->isp_channel;
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
 		return;
 	}
 
@@ -933,6 +995,11 @@ int isp_capture_init(
 	struct isp_capture *capture;
 	struct device_node *node;
 	struct platform_device *rtc_pdev;
+
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
 
 	dev_dbg(chan->isp_dev, "%s++\n", __func__);
 	node = of_find_node_by_path("tegra-camera-rtcpu");
@@ -977,7 +1044,14 @@ int isp_capture_init(
 void isp_capture_shutdown(
 	struct tegra_isp_channel *chan)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
+
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
+		return;
+	}
+
+	capture = chan->capture_data;
 
 	dev_dbg(chan->isp_dev, "%s--\n", __func__);
 	if (capture == NULL)
@@ -1006,17 +1080,142 @@ void isp_get_nvhost_device(
 	chan->ndev = info->isp_pdevices[isp_inst];
 }
 
+static int setup_capture_descriptors(
+	struct tegra_isp_channel *chan,
+	struct isp_capture *capture,
+	const struct isp_capture_setup *setup,
+	struct capture_buffer_table *buffer_ctx)
+{
+	int err;
+
+	/* pin the process descriptor ring buffer to RTCPU */
+	dev_dbg(chan->isp_dev, "%s: descr buffer handle 0x%x\n", __func__, setup->mem);
+	err = capture_common_pin_memory(capture->rtcpu_dev,
+			setup->mem, &capture->capture_desc_ctx.requests);
+	if (err < 0) {
+		dev_err(chan->isp_dev, "%s: memory setup failed\n", __func__);
+		return err;
+	}
+
+	/* pin the process descriptor ring buffer to ISP */
+	err = capture_buffer_add(buffer_ctx, setup->mem);
+	if (err < 0) {
+		dev_err(chan->isp_dev, "%s: memory setup failed\n", __func__);
+		return err;
+	}
+
+	/* cache isp capture desc ring buffer details */
+	capture->capture_desc_ctx.queue_depth = setup->queue_depth;
+	capture->capture_desc_ctx.request_size = setup->request_size;
+	capture->capture_desc_ctx.request_buf_size = setup->request_size *
+							setup->queue_depth;
+
+	/* allocate isp capture desc unpin list based on queue depth */
+	capture->capture_desc_ctx.unpins_list = vzalloc(
+		capture->capture_desc_ctx.queue_depth *
+			sizeof(*capture->capture_desc_ctx.unpins_list));
+	if (unlikely(capture->capture_desc_ctx.unpins_list == NULL)) {
+		dev_err(chan->isp_dev, "failed to allocate unpins array\n");
+		capture_common_unpin_memory(&capture->capture_desc_ctx.requests);
+		return -ENOMEM;
+	}
+
+	/* Allocate memory info ring buffer for isp capture descriptors */
+	capture->capture_desc_ctx.requests_memoryinfo =
+		dma_alloc_coherent(capture->rtcpu_dev,
+			capture->capture_desc_ctx.queue_depth *
+			sizeof(struct isp_capture_descriptor_memoryinfo),
+			&capture->capture_desc_ctx.requests_memoryinfo_iova,
+			GFP_KERNEL);
+
+	if (!capture->capture_desc_ctx.requests_memoryinfo) {
+		dev_err(chan->isp_dev,
+			"%s: capture_desc_ctx meminfo alloc failed\n",
+			__func__);
+		vfree(capture->capture_desc_ctx.unpins_list);
+		capture_common_unpin_memory(&capture->capture_desc_ctx.requests);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+static int setup_program_descriptors(
+	struct tegra_isp_channel *chan,
+	struct isp_capture *capture,
+	const struct isp_capture_setup *setup,
+	struct capture_buffer_table *buffer_ctx)
+{
+	int err;
+
+	/* pin the isp program descriptor ring buffer */
+	dev_dbg(chan->isp_dev, "%s: descr buffer handle %u\n", __func__, setup->isp_program_mem);
+	err = capture_common_pin_memory(capture->rtcpu_dev,
+				setup->isp_program_mem,
+				&capture->program_desc_ctx.requests);
+	if (err < 0) {
+		dev_err(chan->isp_dev,
+			"%s: isp_program memory setup failed\n", __func__);
+		return err;
+	}
+
+	/* pin the isp program descriptor ring buffer to ISP */
+	err = capture_buffer_add(buffer_ctx, setup->isp_program_mem);
+	if (err < 0) {
+		dev_err(chan->isp_dev, "%s: isp_program memory setup failed\n", __func__);
+		capture_common_unpin_memory(&capture->program_desc_ctx.requests);
+		return err;
+	}
+
+	/* cache isp program desc ring buffer details */
+	capture->program_desc_ctx.queue_depth = setup->isp_program_queue_depth;
+	capture->program_desc_ctx.request_size =
+					setup->isp_program_request_size;
+	capture->program_desc_ctx.request_buf_size =
+					setup->isp_program_request_size *
+						setup->isp_program_queue_depth;
+
+	/* allocate isp program unpin list based on queue depth */
+	capture->program_desc_ctx.unpins_list = vzalloc(
+			capture->program_desc_ctx.queue_depth *
+				sizeof(*capture->program_desc_ctx.unpins_list));
+	if (unlikely(capture->program_desc_ctx.unpins_list == NULL)) {
+		dev_err(chan->isp_dev,
+			"failed to allocate isp program unpins array\n");
+		capture_common_unpin_memory(&capture->program_desc_ctx.requests);
+		return -ENOMEM;
+	}
+
+	/* Allocate memory info ring buffer for program descriptors */
+	capture->program_desc_ctx.requests_memoryinfo =
+		dma_alloc_coherent(capture->rtcpu_dev,
+			capture->program_desc_ctx.queue_depth *
+			sizeof(struct memoryinfo_surface),
+			&capture->program_desc_ctx.requests_memoryinfo_iova,
+			GFP_KERNEL);
+
+	if (!capture->program_desc_ctx.requests_memoryinfo) {
+		dev_err(chan->isp_dev,
+			"%s: program_desc_ctx meminfo alloc failed\n",
+				__func__);
+		vfree(capture->program_desc_ctx.unpins_list);
+		capture_common_unpin_memory(&capture->program_desc_ctx.requests);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
 int isp_capture_setup(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_setup *setup)
 {
 	struct capture_buffer_table *buffer_ctx;
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 	uint32_t transaction;
 	struct CAPTURE_CONTROL_MSG control_msg;
-	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
-	struct capture_channel_isp_config *config =
-		&control_msg.channel_isp_setup_req.channel_config;
+	struct CAPTURE_CONTROL_MSG *resp_msg;
+	struct capture_channel_isp_config *config;
 	int err = 0;
 #ifdef HAVE_ISP_GOS_TABLES
 	int i;
@@ -1025,15 +1224,24 @@ int isp_capture_setup(
 	struct tegra_capture_isp_data *info =
 			platform_get_drvdata(chan->isp_capture_pdev);
 
+	if (unlikely(chan == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	capture = chan->capture_data;
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
+	resp_msg = &capture->control_resp_msg;
+	config = &control_msg.channel_isp_setup_req.channel_config;
+
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
 		NVHOST_CAMERA_ISP_CAPTURE_SETUP);
-
-	if (capture == NULL) {
-		dev_err(chan->isp_dev,
-			 "%s: isp capture uninitialized\n", __func__);
-		return -ENODEV;
-	}
 
 	if (capture->channel_id != CAPTURE_CHANNEL_ISP_INVALID_ID) {
 		dev_err(chan->isp_dev,
@@ -1058,111 +1266,18 @@ int isp_capture_setup(
 		return -ENOMEM;
 	}
 
-	/* pin the process descriptor ring buffer to RTCPU */
-	dev_dbg(chan->isp_dev, "%s: descr buffer handle 0x%x\n",
-			__func__, setup->mem);
-	err = capture_common_pin_memory(capture->rtcpu_dev,
-			setup->mem, &capture->capture_desc_ctx.requests);
-	if (err < 0) {
-		dev_err(chan->isp_dev, "%s: memory setup failed\n", __func__);
+	err = setup_capture_descriptors(chan, capture, setup, buffer_ctx);
+	if (err < 0)
 		goto pin_fail;
-	}
 
-	/* pin the process descriptor ring buffer to ISP */
-	err = capture_buffer_add(buffer_ctx, setup->mem);
-	if (err < 0) {
-		dev_err(chan->isp_dev, "%s: memory setup failed\n", __func__);
-		goto pin_fail;
-	}
-
-	/* cache isp capture desc ring buffer details */
-	capture->capture_desc_ctx.queue_depth = setup->queue_depth;
-	capture->capture_desc_ctx.request_size = setup->request_size;
-	capture->capture_desc_ctx.request_buf_size = setup->request_size *
-							setup->queue_depth;
-
-	/* allocate isp capture desc unpin list based on queue depth */
-	capture->capture_desc_ctx.unpins_list = vzalloc(
-		capture->capture_desc_ctx.queue_depth *
-			sizeof(*capture->capture_desc_ctx.unpins_list));
-	if (unlikely(capture->capture_desc_ctx.unpins_list == NULL)) {
-		dev_err(chan->isp_dev, "failed to allocate unpins array\n");
-		goto unpins_list_fail;
-	}
-
-	/* Allocate memory info ring buffer for isp capture descriptors */
-	capture->capture_desc_ctx.requests_memoryinfo =
-		dma_alloc_coherent(capture->rtcpu_dev,
-			capture->capture_desc_ctx.queue_depth *
-			sizeof(struct isp_capture_descriptor_memoryinfo),
-			&capture->capture_desc_ctx.requests_memoryinfo_iova,
-			GFP_KERNEL);
-
-	if (!capture->capture_desc_ctx.requests_memoryinfo) {
-		dev_err(chan->isp_dev,
-			"%s: capture_desc_ctx meminfo alloc failed\n",
-			__func__);
+	err = setup_program_descriptors(chan, capture, setup, buffer_ctx);
+	if (err < 0)
 		goto capture_meminfo_alloc_fail;
-	}
-
-
-	/* pin the isp program descriptor ring buffer */
-	dev_dbg(chan->isp_dev, "%s: descr buffer handle %u\n",
-			__func__, setup->isp_program_mem);
-	err = capture_common_pin_memory(capture->rtcpu_dev,
-				setup->isp_program_mem,
-				&capture->program_desc_ctx.requests);
-	if (err < 0) {
-		dev_err(chan->isp_dev,
-			"%s: isp_program memory setup failed\n", __func__);
-		goto prog_pin_fail;
-	}
-
-	/* pin the isp program descriptor ring buffer to ISP */
-	err = capture_buffer_add(buffer_ctx, setup->isp_program_mem);
-	if (err < 0) {
-		dev_err(chan->isp_dev,
-			"%s: isp_program memory setup failed\n", __func__);
-		goto prog_pin_fail;
-	}
-
-	/* cache isp program desc ring buffer details */
-	capture->program_desc_ctx.queue_depth = setup->isp_program_queue_depth;
-	capture->program_desc_ctx.request_size =
-					setup->isp_program_request_size;
-	capture->program_desc_ctx.request_buf_size =
-					setup->isp_program_request_size *
-						setup->isp_program_queue_depth;
-
-	/* allocate isp program unpin list based on queue depth */
-	capture->program_desc_ctx.unpins_list = vzalloc(
-			capture->program_desc_ctx.queue_depth *
-				sizeof(*capture->program_desc_ctx.unpins_list));
-	if (unlikely(capture->program_desc_ctx.unpins_list == NULL)) {
-		dev_err(chan->isp_dev,
-			"failed to allocate isp program unpins array\n");
-		goto prog_unpins_list_fail;
-	}
-
-	/* Allocate memory info ring buffer for program descriptors */
-	capture->program_desc_ctx.requests_memoryinfo =
-		dma_alloc_coherent(capture->rtcpu_dev,
-			capture->program_desc_ctx.queue_depth *
-			sizeof(struct memoryinfo_surface),
-			&capture->program_desc_ctx.requests_memoryinfo_iova,
-			GFP_KERNEL);
-
-	if (!capture->program_desc_ctx.requests_memoryinfo) {
-		dev_err(chan->isp_dev,
-			"%s: program_desc_ctx meminfo alloc failed\n",
-			__func__);
-		goto program_meminfo_alloc_fail;
-	}
 
 	err = isp_capture_setup_syncpts(chan);
 	if (err < 0) {
 		dev_err(chan->isp_dev, "%s: syncpt setup failed\n", __func__);
-		goto syncpt_fail;
+		goto program_meminfo_alloc_fail;
 	}
 
 	err = tegra_capture_ivc_register_control_cb(
@@ -1254,25 +1369,21 @@ submit_fail:
 	tegra_capture_ivc_unregister_control_cb(transaction);
 control_cb_fail:
 	isp_capture_release_syncpts(chan);
-syncpt_fail:
+program_meminfo_alloc_fail:
 	dma_free_coherent(capture->rtcpu_dev,
 		capture->program_desc_ctx.queue_depth *
 			sizeof(struct memoryinfo_surface),
 		capture->program_desc_ctx.requests_memoryinfo,
 		capture->program_desc_ctx.requests_memoryinfo_iova);
-program_meminfo_alloc_fail:
 	vfree(capture->program_desc_ctx.unpins_list);
-prog_unpins_list_fail:
 	capture_common_unpin_memory(&capture->program_desc_ctx.requests);
-prog_pin_fail:
+capture_meminfo_alloc_fail:
 	dma_free_coherent(capture->rtcpu_dev,
 		capture->capture_desc_ctx.queue_depth *
 			sizeof(struct isp_capture_descriptor_memoryinfo),
 		capture->capture_desc_ctx.requests_memoryinfo,
 		capture->capture_desc_ctx.requests_memoryinfo_iova);
-capture_meminfo_alloc_fail:
 	vfree(capture->capture_desc_ctx.unpins_list);
-unpins_list_fail:
 	capture_common_unpin_memory(&capture->capture_desc_ctx.requests);
 pin_fail:
 	destroy_buffer_table(buffer_ctx);
@@ -1283,22 +1394,30 @@ int isp_capture_release(
 	struct tegra_isp_channel *chan,
 	uint32_t reset_flags)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 	struct CAPTURE_CONTROL_MSG control_msg;
-	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	struct CAPTURE_CONTROL_MSG *resp_msg;
 	int err = 0;
 	int ret = 0;
 	int i;
 
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	capture = chan->capture_data;
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
+	resp_msg = &capture->control_resp_msg;
+
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
 		NVHOST_CAMERA_ISP_CAPTURE_RELEASE);
-
-	if (capture == NULL) {
-		dev_err(chan->isp_dev,
-			 "%s: isp capture uninitialized\n", __func__);
-		return -ENODEV;
-	}
 
 	if (capture->channel_id == CAPTURE_CHANNEL_ISP_INVALID_ID) {
 		dev_err(chan->isp_dev,
@@ -1393,24 +1512,33 @@ int isp_capture_reset(
 	struct tegra_isp_channel *chan,
 	uint32_t reset_flags)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 #ifdef CAPTURE_ISP_RESET_BARRIER_IND
 	struct CAPTURE_MSG capture_msg;
 #endif
 	struct CAPTURE_CONTROL_MSG control_msg;
-	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	struct CAPTURE_CONTROL_MSG *resp_msg;
 	int i;
 	int err = 0;
+
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	capture = chan->capture_data;
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
+	resp_msg = &capture->control_resp_msg;
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
 		NVHOST_CAMERA_ISP_CAPTURE_RESET);
 
-	if (capture == NULL) {
-		dev_err(chan->isp_dev,
-			 "%s: isp capture uninitialized\n", __func__);
-		return -ENODEV;
-	}
 
 	if (capture->channel_id == CAPTURE_CHANNEL_ISP_INVALID_ID) {
 		dev_err(chan->isp_dev,
@@ -1484,18 +1612,25 @@ int isp_capture_get_info(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_info *info)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 	int err;
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	capture = chan->capture_data;
+
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
 		NVHOST_CAMERA_ISP_CAPTURE_GET_INFO);
 
-	if (capture == NULL) {
-		dev_err(chan->isp_dev,
-			 "%s: isp capture uninitialized\n", __func__);
-		return -ENODEV;
-	}
 
 	if (capture->channel_id == CAPTURE_CHANNEL_ISP_INVALID_ID) {
 		dev_err(chan->isp_dev,
@@ -1655,10 +1790,16 @@ int isp_capture_request(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_req *req)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 	struct CAPTURE_MSG capture_msg;
 	uint32_t request_offset;
 	int err = 0;
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	capture = chan->capture_data;
 
 	if (capture == NULL) {
 		dev_err(chan->isp_dev,
@@ -1726,7 +1867,8 @@ int isp_capture_request(
 			"%s: descriptor is still in use by rtcpu\n",
 			__func__);
 		mutex_unlock(&capture->capture_desc_ctx.unpins_list_lock);
-		return -EBUSY;
+		err = -EBUSY;
+		goto fail;
 	}
 
 	err = pin_isp_capture_request_buffers_locked(chan, req,
@@ -1770,8 +1912,14 @@ int isp_capture_status(
 	struct tegra_isp_channel *chan,
 	int32_t timeout_ms)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 	int err = 0;
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	capture = chan->capture_data;
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
@@ -1823,9 +1971,27 @@ int isp_capture_program_request(
 	struct tegra_isp_channel *chan,
 	struct isp_program_req *req)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 	struct CAPTURE_MSG capture_msg;
 	int err = 0;
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	capture = chan->capture_data;
+
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			 "%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
+	if (req == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: Invalid req\n", __func__);
+		return -EINVAL;
+	}
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
@@ -1861,8 +2027,13 @@ int isp_capture_program_request(
 int isp_capture_program_status(
 	struct tegra_isp_channel *chan)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 	int err = 0;
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+	capture = chan->capture_data;
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
@@ -1906,10 +2077,21 @@ int isp_capture_request_ex(
 	struct isp_capture_req_ex *req)
 {
 	int err;
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
 		NVHOST_CAMERA_ISP_CAPTURE_REQUEST_EX);
+
+	if (req == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: Invalid req\n", __func__);
+		return -EINVAL;
+	}
 
 	if (req->program_req.buffer_index == U32_MAX) {
 		/* forward to process request */
@@ -1939,11 +2121,30 @@ int isp_capture_set_progress_status_notifier(
 	struct isp_capture_progress_status_req *req)
 {
 	int err = 0;
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
+
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	capture = chan->capture_data;
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
 		NVHOST_CAMERA_ISP_CAPTURE_SET_PROGRESS_STATUS);
+
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+				"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
+	if (req == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: Invalid req\n", __func__);
+		return -EINVAL;
+	}
 
 	if (req->mem == 0 ||
 		req->process_buffer_depth == 0) {
@@ -1961,11 +2162,6 @@ int isp_capture_set_progress_status_notifier(
 		return -EINVAL;
 	}
 
-	if (capture == NULL) {
-		dev_err(chan->isp_dev,
-				"%s: isp capture uninitialized\n", __func__);
-		return -ENODEV;
-	}
 
 	if (req->process_buffer_depth < capture->capture_desc_ctx.queue_depth) {
 		dev_err(chan->isp_dev,
@@ -2031,8 +2227,26 @@ int isp_capture_buffer_request(
 	struct tegra_isp_channel *chan,
 	struct isp_buffer_req *req)
 {
-	struct isp_capture *capture = chan->capture_data;
+	struct isp_capture *capture;
 	int err;
+
+	if (chan == NULL) {
+		pr_err("%s: invalid context\n", __func__);
+		return -ENODEV;
+	}
+
+	if (req == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: Invalid req\n", __func__);
+		return -EINVAL;
+	}
+	capture = chan->capture_data;
+
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
 
 	err = capture_buffer_request(
 		capture->buffer_ctx, req->mem, req->flag);
