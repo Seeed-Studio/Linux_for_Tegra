@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+//
+// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -1637,6 +1636,10 @@ int tegra_virt_t210mixer_param_info(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.min = 0;
 		uinfo->value.integer.max = 0xffffffff;
 	}
+
+	if (strstr(kcontrol->id.name, "Status"))
+		params->num_regs = 10;
+
 	uinfo->type = params->mask;
 	uinfo->count = params->num_regs;
 
