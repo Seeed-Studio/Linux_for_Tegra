@@ -120,6 +120,9 @@ static void camrtc_hsp_rx_full_notify(mbox_client *cl, void *data)
 	status >>= CAMRTC_HSP_SS_FW_SHIFT;
 	group = status & CAMRTC_HSP_SS_IVC_MASK;
 
+	if (WARN_ON(camhsp == NULL))
+		return;
+
 	if (CAMRTC_HSP_MSG_ID(msg) == CAMRTC_HSP_UNKNOWN)
 		dev_dbg(&camhsp->dev, "request message unknown 0x%08x\n", msg);
 
@@ -230,9 +233,59 @@ static int camrtc_hsp_vm_sendrecv(struct camrtc_hsp *camhsp,
 	return CAMRTC_HSP_MSG_PARAM(response);
 }
 
+static int camrtc_hsp_vm_read_boot_log(struct camrtc_hsp *camhsp)
+{
+	uint32_t boot_log;
+	long msg_timeout;
+
+	if (WARN_ON(camhsp == NULL))
+		return -EINVAL;
+
+	msg_timeout = camhsp->timeout;
+
+	for (;;) {
+		boot_log = camrtc_hsp_recv(camhsp, CAMRTC_HSP_BOOT_COMPLETE, &msg_timeout);
+
+		if (boot_log == -ETIMEDOUT) {
+			dev_warn(&camhsp->dev,
+				"%s: Error reading mailbox. Failed to obtain RTCPU boot logs\n", __func__);
+			return boot_log;
+		}
+
+		if (CAMRTC_HSP_MSG_ID(boot_log) == CAMRTC_HSP_BOOT_COMPLETE) {
+			dev_info(&camhsp->dev, "%s: RTCPU boot complete\n", __func__);
+			break;
+		} else if (CAMRTC_HSP_MSG_ID(boot_log) == CAMRTC_HSP_BOOT_STAGE) {
+			dev_dbg(&camhsp->dev, "%s: RTCPU boot stage: %x\n", __func__, boot_log);
+		} else if (CAMRTC_HSP_MSG_ID(boot_log) == CAMRTC_HSP_BOOT_ERROR) {
+			uint32_t err_code = CAMRTC_HSP_MSG_PARAM(boot_log);
+			dev_err(&camhsp->dev, "%s: RTCPU boot failure message received: 0x%x",
+				__func__, err_code);
+			return -EINVAL;
+		} else {
+			dev_warn(&camhsp->dev,
+				"%s: Unexpected message received during RTCPU boot: 0x%08x\n",
+				__func__, boot_log);
+		}
+
+	}
+
+	return 0U;
+}
+
 static int camrtc_hsp_vm_sync(struct camrtc_hsp *camhsp, long *timeout)
 {
-	int response = camrtc_hsp_vm_hello(camhsp, timeout);
+	int response;
+
+	response = camrtc_hsp_vm_read_boot_log(camhsp);
+
+	if (response < 0) {
+		/* Failing to read boot logs is not a fatal error.
+		 * Log error and continue with HSP handshake. */
+		dev_warn(&camhsp->dev, "%s: Failed to read boot logs", __func__);
+	}
+
+	response = camrtc_hsp_vm_hello(camhsp, timeout);
 
 	if (response >= 0) {
 		camhsp->cookie = response;
@@ -657,6 +710,7 @@ struct camrtc_hsp *camrtc_hsp_create(
 	camhsp->rx.client.rx_callback = camrtc_hsp_rx_full_notify;
 	camhsp->tx.client.tx_done = camrtc_hsp_tx_empty_notify;
 	camhsp->rx.client.dev = camhsp->tx.client.dev = &(camhsp->dev);
+	dev_set_drvdata(&camhsp->dev, camhsp);
 
 	ret = camrtc_hsp_probe(camhsp);
 	if (ret < 0)
@@ -665,8 +719,6 @@ struct camrtc_hsp *camrtc_hsp_create(
 	ret = device_add(&camhsp->dev);
 	if (ret < 0)
 		goto fail;
-
-	dev_set_drvdata(&camhsp->dev, camhsp);
 
 	return camhsp;
 
