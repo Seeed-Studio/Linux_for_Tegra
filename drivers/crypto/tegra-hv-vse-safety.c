@@ -319,6 +319,7 @@ static struct tegra_vse_node_dma g_node_dma[MAX_NUMBER_MISC_DEVICES];
 
 static bool gcm_supports_dma;
 static struct device *gpcdma_dev;
+static bool s_set_sha_algs;
 
 /* Security Engine Linked List */
 struct tegra_virtual_se_ll {
@@ -645,7 +646,9 @@ enum se_engine_id {
 	VIRTUAL_SE_AES1,
 	VIRTUAL_SE_SHA = 2,
 	VIRTUAL_SE_TSEC = 6,
-	VIRTUAL_MAX_SE_ENGINE_NUM = 7
+	VIRTUAL_GCSE1_SHA = 7,
+	VIRTUAL_GCSE2_SHA = 8,
+	VIRTUAL_MAX_SE_ENGINE_NUM = 9
 };
 
 enum tegra_virtual_se_aes_iv_type {
@@ -1111,7 +1114,7 @@ static int tegra_hv_vse_safety_send_sha_data(struct tegra_virtual_se_dev *se_dev
 
 	ivc_tx = &ivc_req_msg->tx[0];
 	ivc_hdr = &ivc_req_msg->ivc_hdr;
-	ivc_hdr->engine = VIRTUAL_SE_SHA;
+	ivc_hdr->engine = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_SHA_HASH;
 
 	psha = &(ivc_tx->sha);
@@ -1173,14 +1176,18 @@ exit:
 static int tegra_hv_vse_safety_sha_send_one(struct ahash_request *req,
 				u32 nbytes, bool islast)
 {
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
 	struct tegra_virtual_se_sha_context *sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	uint8_t *residual_data_buf = sha_ctx->residual_plaintext->buf_ptr;
 	int err = 0;
+	uint32_t engine_id;
 
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 	ivc_req_msg = devm_kzalloc(se_dev->dev, sizeof(*ivc_req_msg),
 			GFP_KERNEL);
 	if (!ivc_req_msg)
@@ -1215,15 +1222,19 @@ exit:
 static int tegra_hv_vse_safety_sha_fast_path(struct ahash_request *req,
 					bool is_last, bool process_cur_req)
 {
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	u32 bytes_process_in_req = 0, num_blks;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	struct tegra_virtual_se_sha_context *sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	struct tegra_virtual_se_sha_context *sha_ctx;
 	int err = 0;
 	u32 nbytes_in_req = req->nbytes;
+	uint32_t engine_id;
 
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 	/* process_cur_req  is_last :
 	 *     false		 false  : update()				   -> hash
 	 *     true		  true   : finup(), digest()		  -> hash
@@ -1344,14 +1355,19 @@ free:
 static int tegra_hv_vse_safety_sha_slow_path(struct ahash_request *req,
 					bool is_last, bool process_cur_req)
 {
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	struct tegra_virtual_se_sha_context *sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	struct tegra_virtual_se_sha_context *sha_ctx;
 	u32 nblk_bytes = 0, num_blks, buflen = SZ_4M;
 	u32 length = 0, skip = 0, offset = 0;
 	u64 total_bytes = 0, left_bytes = 0;
 	int err = 0;
 	bool data_processed;
+	uint32_t engine_id;
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 
 	if ((process_cur_req == false && is_last == false) ||
 		(process_cur_req == true && is_last == true)) {
@@ -1446,12 +1462,14 @@ static int tegra_hv_vse_safety_sha_slow_path(struct ahash_request *req,
 static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last,
 			   bool process_cur_req)
 {
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	struct tegra_virtual_se_sha_context *sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	struct tegra_virtual_se_sha_context *sha_ctx;
 	u32 mode;
 	u32 num_blks;
 	int ret;
+	uint32_t engine_id;
+
 	struct sha_zero_length_vector zero_vec[] = {
 		{
 			.size = SM3_DIGEST_SIZE,
@@ -1509,6 +1527,10 @@ static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last,
 				  "\x01\x75\x85\x86\x28\x1d\xcd\x26",
 		}
 	};
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 
 	if (req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128 ||
 			req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE256) {
@@ -1616,8 +1638,13 @@ static int tegra_hv_vse_safety_sha_init(struct ahash_request *req)
 	struct crypto_ahash *tfm;
 	struct tegra_virtual_se_req_context *req_ctx;
 	struct tegra_virtual_se_sha_context *sha_ctx;
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	uint32_t hash_result_len;
+	uint32_t engine_id;
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 
 	if (!req) {
 		dev_err(se_dev->dev, "SHA request not valid\n");
@@ -1749,9 +1776,16 @@ static void tegra_hv_vse_safety_sha_req_deinit(struct ahash_request *req)
 
 static int tegra_hv_vse_safety_sha_update(struct ahash_request *req)
 {
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	struct tegra_virtual_se_req_context *req_ctx;
 	int ret = 0;
+	uint32_t engine_id;
+	struct tegra_virtual_se_sha_context *sha_ctx;
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	req_ctx = ahash_request_ctx(req);
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 
 	if (!req) {
 		dev_err(se_dev->dev, "SHA request not valid\n");
@@ -1778,9 +1812,16 @@ static int tegra_hv_vse_safety_sha_update(struct ahash_request *req)
 
 static int tegra_hv_vse_safety_sha_finup(struct ahash_request *req)
 {
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	struct tegra_virtual_se_req_context *req_ctx;
 	int ret = 0;
+	uint32_t engine_id;
+	struct tegra_virtual_se_sha_context *sha_ctx;
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	req_ctx = ahash_request_ctx(req);
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 
 	if (!req) {
 		dev_err(se_dev->dev, "SHA request not valid\n");
@@ -1809,9 +1850,16 @@ static int tegra_hv_vse_safety_sha_finup(struct ahash_request *req)
 
 static int tegra_hv_vse_safety_sha_final(struct ahash_request *req)
 {
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	struct tegra_virtual_se_req_context *req_ctx;
 	int ret = 0;
+	uint32_t engine_id;
+	struct tegra_virtual_se_sha_context *sha_ctx;
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	req_ctx = ahash_request_ctx(req);
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 
 	if (!req) {
 		dev_err(se_dev->dev, "SHA request not valid\n");
@@ -1841,8 +1889,16 @@ static int tegra_hv_vse_safety_sha_final(struct ahash_request *req)
 
 static int tegra_hv_vse_safety_sha_digest(struct ahash_request *req)
 {
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 	int ret = 0;
+	uint32_t engine_id;
+	struct tegra_virtual_se_sha_context *sha_ctx;
+	struct tegra_virtual_se_req_context *req_ctx;
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	req_ctx = ahash_request_ctx(req);
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 
 	if (!req) {
 		dev_err(se_dev->dev, "SHA request not valid\n");
@@ -5780,6 +5836,28 @@ static int tegra_hv_vse_allocate_se_dma_bufs(struct tegra_vse_node_dma *node_dma
 		buf_sizes[1] = ivc_map->max_buffer_size;
 		buf_sizes[2] = 1024U;
 		break;
+	case VIRTUAL_GCSE1_SHA:
+		/*
+		 * For SHA algs, the worst case requirement for SHAKE128/SHAKE256:
+		 * 1. plaintext buffer(requires up to max limit specified in DT)
+		 * 2. residual plaintext buffer(requires up to max limit specified in DT)
+		 * 3. digest buffer(support a maximum digest size of 1024 bytes)
+		 */
+		buf_sizes[0] = ivc_map->max_buffer_size;
+		buf_sizes[1] = ivc_map->max_buffer_size;
+		buf_sizes[2] = 1024U;
+		break;
+	case VIRTUAL_GCSE2_SHA:
+		/*
+		 * For SHA algs, the worst case requirement for SHAKE128/SHAKE256:
+		 * 1. plaintext buffer(requires up to max limit specified in DT)
+		 * 2. residual plaintext buffer(requires up to max limit specified in DT)
+		 * 3. digest buffer(support a maximum digest size of 1024 bytes)
+		 */
+		buf_sizes[0] = ivc_map->max_buffer_size;
+		buf_sizes[1] = ivc_map->max_buffer_size;
+		buf_sizes[2] = 1024U;
+		break;
 	default:
 		err = 0;
 		goto exit;
@@ -6191,7 +6269,10 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (engine_id == VIRTUAL_SE_SHA) {
+	if ((engine_id == VIRTUAL_SE_SHA ||
+		engine_id == VIRTUAL_GCSE1_SHA ||
+		engine_id == VIRTUAL_GCSE2_SHA) &&
+		s_set_sha_algs == false) {
 		for (i = 0; i < ARRAY_SIZE(sha_algs); i++) {
 			err = crypto_register_ahash(&sha_algs[i]);
 			if (err) {
@@ -6200,6 +6281,7 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 				goto release_bufs;
 			}
 		}
+		s_set_sha_algs = true;
 	}
 	if (engine_id == VIRTUAL_SE_TSEC) {
 		err = crypto_register_ahash(&tsec_alg);
