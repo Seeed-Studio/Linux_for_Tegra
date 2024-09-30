@@ -85,5 +85,5 @@ struct snd_soc_dai_link *tegra_virt_machine_get_dai_link(struct device *dev);
 unsigned int tegra_virt_machine_get_num_dai_links(void);
 void tegra_virt_machine_set_num_dai_links(unsigned int val);
 void tegra_virt_machine_set_adsp_admaif_dai_params(
-		uint32_t id, struct snd_soc_pcm_stream *params);
+		struct device *dev, uint32_t id, struct snd_soc_pcm_stream *params);
 #endif

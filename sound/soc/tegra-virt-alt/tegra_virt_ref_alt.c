@@ -159,7 +159,7 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 			adsp_admaif_dt_params.channels_min = adsp_admaif_channels;
 			adsp_admaif_dt_params.channels_max = adsp_admaif_channels;
 
-			tegra_virt_machine_set_adsp_admaif_dai_params(
+			tegra_virt_machine_set_adsp_admaif_dai_params(&pdev->dev,
 					i, &adsp_admaif_dt_params);
 		}
 	} else {
