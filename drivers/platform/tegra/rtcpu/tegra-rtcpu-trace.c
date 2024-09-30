@@ -95,6 +95,7 @@ struct tegra_rtcpu_trace {
 	struct platform_device *vi_platform_device;
 	struct platform_device *vi1_platform_device;
 	struct platform_device *isp_platform_device;
+	struct platform_device *isp1_platform_device;
 
 	/* printk logging */
 	const char *log_prefix;
@@ -822,11 +823,20 @@ static void rtcpu_trace_isp_task_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
 	struct nvhost_device_data *pdata = NULL;
+	struct platform_device *pdev = NULL;
+	u32 isp_unit_id = event->data.data32[4];
 
-	if (tracer->isp_platform_device == NULL)
+	if (isp_unit_id == 0U)
+		pdev = tracer->isp_platform_device;
+	else if (isp_unit_id == 1U)
+		pdev = tracer->isp1_platform_device;
+	else
+		pdev = NULL;
+
+	if (pdev == NULL)
 		return;
 
-	pdata = platform_get_drvdata(tracer->isp_platform_device);
+	pdata = platform_get_drvdata(pdev);
 	if (pdata == NULL)
 		return;
 
@@ -882,11 +892,12 @@ static void rtcpu_trace_isp_falcon_event(struct camrtc_event_struct *event)
 	u8 ch = (u8) ((event->data.data32[0] & 0xFF00) >> 8U);
 	u8 seq = (u8) ((event->data.data32[0] & 0xFF0000) >> 16U);
 	u32 tstamp = event->data.data32[1];
+	u32 isp_unit_id = event->data.data32[4];
 
 	switch (ispfalcon_tag) {
 	case TRACE_ISP_FALCON_EVENT_TS:
 		trace_rtcpu_isp_falcon_tile_start(
-			ch, seq, tstamp,
+			ch, seq, tstamp, isp_unit_id,
 			(u8) (event->data.data32[3] & 0xFF),
 			(u8) ((event->data.data32[3] & 0xFF00) >> 8U),
 			(u16) (event->data.data32[2] & 0xFFFF),
@@ -894,23 +905,23 @@ static void rtcpu_trace_isp_falcon_event(struct camrtc_event_struct *event)
 		break;
 	case TRACE_ISP_FALCON_EVENT_TE:
 		trace_rtcpu_isp_falcon_tile_end(
-			ch, seq, tstamp,
+			ch, seq, tstamp, isp_unit_id,
 			(u8) (event->data.data32[3] & 0xFF),
 			(u8) ((event->data.data32[3] & 0xFF00) >> 8U));
 		break;
 	case TRACE_ISP_FALCON_PROFILE_START:
 		trace_rtcpu_isp_falcon_task_start(
-			ch, tstamp,
+			ch, tstamp, isp_unit_id,
 			event->data.data32[2]);
 		break;
 	case TRACE_ISP_FALCON_PROFILE_END:
 		trace_rtcpu_isp_falcon_task_end(
-			tstamp,
+			tstamp, isp_unit_id,
 			event->data.data32[2]);
 		break;
 	default:
 		trace_rtcpu_isp_falcon(
-			ispfalcon_tag, ch, seq, tstamp,
+			ispfalcon_tag, ch, seq, tstamp, isp_unit_id,
 			event->data.data32[2],
 			event->data.data32[3]);
 		break;
@@ -1428,6 +1439,13 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 		if (IS_ERR(tracer->isp_platform_device)) {
 			dev_info(dev, "no camera-device \"%s\"\n", "isp");
 			tracer->isp_platform_device = NULL;
+		}
+
+		tracer->isp1_platform_device =
+			camrtc_device_get_byname(camera_devices, "isp1");
+		if (IS_ERR(tracer->isp1_platform_device)) {
+			dev_info(dev, "no camera-device \"%s\"\n", "isp1");
+			tracer->isp1_platform_device = NULL;
 		}
 
 		tracer->vi_platform_device =
