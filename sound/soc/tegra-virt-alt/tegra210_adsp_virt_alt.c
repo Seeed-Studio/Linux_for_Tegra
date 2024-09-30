@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
-//
+/*
+ * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ */
 
 #include <nvidia/conftest.h>
 
@@ -161,6 +162,7 @@ struct tegra210_adsp_compr_rtd {
 struct adsp_soc_data {
 	bool is_soc_t210;
 	uint32_t max_adma_ch;
+	uint32_t max_admaif_ch;
 };
 
 struct tegra210_adsp {
@@ -329,6 +331,15 @@ static void tegra210_adsp_reg_update_bits(struct tegra210_adsp *adsp,
 	dev_vdbg(adsp->dev, "%s : 0x%x -> 0x%x\n", __func__, reg, val);
 }
 
+static bool check_hv_audio_config(struct device_node *node)
+{
+	bool is_hv_compatible =
+		of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv") ||
+		of_device_is_compatible(node, "nvidia,tegra264-adsp-audio-hv");
+
+	return is_hv_compatible;
+}
+
 /* API to find Plugin app from name*/
 static struct tegra210_adsp_app *tegra210_adsp_get_plugin(
 				struct tegra210_adsp *adsp,
@@ -407,6 +418,8 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 {
 	int i, ret = 0;
 	struct nvadsp_handle *h = adsp->hdl;
+	struct device *dev = adsp->dev;
+	struct device_node *node = dev->of_node;
 
 	mutex_lock(&adsp->mutex);
 
@@ -434,11 +447,16 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 
 	/* TODO: set callback function for adsp to dump adma registers for debug */
 
-	/* Suspend OS for now. Resume will happen via runtime pm calls */
-	ret = h->os_suspend(h);
-	if (ret < 0) {
-		dev_err(adsp->dev, "Failed to suspend OS.");
-		goto exit;
+	 /* runtime pm calls are not supported on t264 auto */
+	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
+		/* Suspend OS for now. Resume will happen via runtime pm calls */
+		ret = h->os_suspend(h);
+		if (ret < 0) {
+			dev_err(adsp->dev, "Failed to suspend OS.");
+			goto exit;
+		}
+	} else {
+		adsp->adsp_started = 1;
 	}
 
 	adsp->init_done = 1;
@@ -2107,7 +2125,7 @@ static int tegra210_adsp_send_hv_state_msg(
 	struct device_node *node = dev->of_node;
 
 	/* Only applicable for HV configurations */
-	if (!of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv"))
+	if (!check_hv_audio_config(node))
 		return 0;
 
 	apm_in_id = app->reg - APM_IN_START;
@@ -2369,8 +2387,7 @@ static int tegra210_adsp_pcm_trigger(struct snd_soc_component *component,
 		return -EINVAL;
 	}
 
-	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
-
+	if (check_hv_audio_config(node)) {
 		ret = tegra210_adsp_hv_pcm_trigger(adsp,
 					prtd->fe_apm->reg, /* apm_out_in */
 					substream->stream,
@@ -2592,6 +2609,10 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 	snd_pcm_format_t format = SNDRV_PCM_FORMAT_S16_LE;
 	uint32_t rate = DEFAULT_RATE, apm_in_reg, source;
 	uint32_t max_bytes = adsp_pcm_hardware.buffer_bytes_max;
+	unsigned int audio_bits_shift;
+	unsigned int audio_ch_shift;
+	unsigned int client_ch_shift;
+	unsigned int admaif_num_ch = adsp->soc_data->max_admaif_ch;
 
 	adsp->hivc_client =
 			nvaudio_ivc_alloc_ctxt(adsp->dev);
@@ -2682,16 +2703,22 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 		return -EINVAL;
 	}
 
+	audio_bits_shift = (admaif_num_ch == TEGRA264_MAX_CHANNELS) ?
+		TEGRA_32CH_ACIF_CTRL_AUDIO_BITS_SHIFT : TEGRA210_AUDIOCIF_CTRL_AUDIO_BITS_SHIFT;
+
+	audio_ch_shift = (admaif_num_ch == TEGRA264_MAX_CHANNELS) ?
+		TEGRA_32CH_ACIF_CTRL_AUDIO_CH_SHIFT : TEGRA210_AUDIOCIF_CTRL_AUDIO_CHANNELS_SHIFT;
+
+	client_ch_shift = (admaif_num_ch == TEGRA264_MAX_CHANNELS) ?
+		TEGRA_32CH_ACIF_CTRL_CLIENT_CH_SHIFT : TEGRA210_AUDIOCIF_CTRL_CLIENT_CHANNELS_SHIFT;
+
 	cif_conf->direction = stream;
 
 	value = (cif_conf->threshold <<
 			TEGRA210_AUDIOCIF_CTRL_FIFO_THRESHOLD_SHIFT) |
-		((cif_conf->audio_channels - 1) <<
-			TEGRA210_AUDIOCIF_CTRL_AUDIO_CHANNELS_SHIFT) |
-		((cif_conf->client_channels - 1) <<
-			TEGRA210_AUDIOCIF_CTRL_CLIENT_CHANNELS_SHIFT) |
-		(cif_conf->audio_bits <<
-			TEGRA210_AUDIOCIF_CTRL_AUDIO_BITS_SHIFT) |
+		((cif_conf->audio_channels - 1) << audio_ch_shift) |
+		((cif_conf->client_channels - 1) << client_ch_shift) |
+		(cif_conf->audio_bits << audio_bits_shift) |
 		(cif_conf->client_bits <<
 			TEGRA210_AUDIOCIF_CTRL_CLIENT_BITS_SHIFT) |
 		(cif_conf->expand <<
@@ -2806,8 +2833,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 
 	memset(&adma_params, 0, sizeof(adma_params));
-	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
-
+	if (check_hv_audio_config(node)) {
 		/*Start of sending IVC command for admaif cif settings*/
 		ret = tegra210_adsp_admaif_hv_hw_params(adsp,
 				params,
@@ -2949,6 +2975,7 @@ static int tegra210_adsp_eavb_hw_params(struct snd_pcm_substream *substream,
 static int tegra210_adsp_runtime_suspend(struct device *dev)
 {
 	struct tegra210_adsp *adsp = dev_get_drvdata(dev);
+	struct device_node *node = dev->of_node;
 	int ret = 0, i;
 	struct nvadsp_handle *h = adsp->hdl;
 
@@ -2979,10 +3006,12 @@ static int tegra210_adsp_runtime_suspend(struct device *dev)
 
 	adsp->adsp_started = 0;
 
-	if (!adsp->soc_data->is_soc_t210)
-		clk_disable_unprepare(adsp->apb2ape_clk);
-	clk_disable_unprepare(adsp->ahub_clk);
-	clk_disable_unprepare(adsp->ape_clk);
+	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
+		if (!adsp->soc_data->is_soc_t210)
+			clk_disable_unprepare(adsp->apb2ape_clk);
+		clk_disable_unprepare(adsp->ahub_clk);
+		clk_disable_unprepare(adsp->ape_clk);
+	}
 
 exit:
 	mutex_unlock(&adsp->mutex);
@@ -2992,6 +3021,7 @@ exit:
 static int tegra210_adsp_runtime_resume(struct device *dev)
 {
 	struct tegra210_adsp *adsp = dev_get_drvdata(dev);
+	struct device_node *node = dev->of_node;
 	int ret = 0;
 	struct nvadsp_handle *h = adsp->hdl;
 
@@ -3001,24 +3031,26 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 	if (!adsp->init_done || adsp->adsp_started)
 		goto exit;
 
-	ret = clk_prepare_enable(adsp->ahub_clk);
-	if (ret < 0) {
-		dev_err(dev, "ahub clk_enable failed: %d\n", ret);
-		goto exit;
-	}
-
-	ret = clk_prepare_enable(adsp->ape_clk);
-	if (ret < 0) {
-		dev_err(dev, "ape clk_enable failed: %d\n", ret);
-		goto exit;
-	}
-
-	if (!adsp->soc_data->is_soc_t210) {
-		ret = clk_prepare_enable(adsp->apb2ape_clk);
+	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
+		ret = clk_prepare_enable(adsp->ahub_clk);
 		if (ret < 0) {
-			dev_err(dev, "apb2ape clk_enable failed: %d\n"
-				, ret);
+			dev_err(dev, "ahub clk_enable failed: %d\n", ret);
 			goto exit;
+		}
+
+		ret = clk_prepare_enable(adsp->ape_clk);
+		if (ret < 0) {
+			dev_err(dev, "ape clk_enable failed: %d\n", ret);
+			goto exit;
+		}
+
+		if (!adsp->soc_data->is_soc_t210) {
+			ret = clk_prepare_enable(adsp->apb2ape_clk);
+			if (ret < 0) {
+				dev_err(dev, "apb2ape clk_enable failed: %d\n"
+					, ret);
+				goto exit;
+			}
 		}
 	}
 
@@ -3245,7 +3277,7 @@ static int tegra210_adsp_fe_widget_event(struct snd_soc_dapm_widget *w,
 	unsigned long flags;
 
 	/* Handle only HV environment ADSP FE events */
-	if (!of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv"))
+	if (!check_hv_audio_config(node))
 		return 0;
 
 	if (!IS_ADSP_FE(w->reg))
@@ -3632,6 +3664,18 @@ static struct snd_soc_dai_driver tegra210_adsp_cmpnt_dai[] = {
 	ADSP_ADMAIF_CODEC_DAI(18),
 	ADSP_ADMAIF_CODEC_DAI(19),
 	ADSP_ADMAIF_CODEC_DAI(20),
+	ADSP_ADMAIF_CODEC_DAI(21),
+	ADSP_ADMAIF_CODEC_DAI(22),
+	ADSP_ADMAIF_CODEC_DAI(23),
+	ADSP_ADMAIF_CODEC_DAI(24),
+	ADSP_ADMAIF_CODEC_DAI(25),
+	ADSP_ADMAIF_CODEC_DAI(26),
+	ADSP_ADMAIF_CODEC_DAI(27),
+	ADSP_ADMAIF_CODEC_DAI(28),
+	ADSP_ADMAIF_CODEC_DAI(29),
+	ADSP_ADMAIF_CODEC_DAI(30),
+	ADSP_ADMAIF_CODEC_DAI(31),
+	ADSP_ADMAIF_CODEC_DAI(32),
 	ADSP_PCM_DAI(1),
 	ADSP_PCM_DAI(2),
 	ADSP_PCM_DAI(3),
@@ -3692,6 +3736,18 @@ static const char *tegra210_adsp_mux_texts[] = {
 	"ADSP-ADMAIF18",
 	"ADSP-ADMAIF19",
 	"ADSP-ADMAIF20",
+	"ADSP-ADMAIF21",
+	"ADSP-ADMAIF22",
+	"ADSP-ADMAIF23",
+	"ADSP-ADMAIF24",
+	"ADSP-ADMAIF25",
+	"ADSP-ADMAIF26",
+	"ADSP-ADMAIF27",
+	"ADSP-ADMAIF28",
+	"ADSP-ADMAIF29",
+	"ADSP-ADMAIF30",
+	"ADSP-ADMAIF31",
+	"ADSP-ADMAIF32",
 	"APM-IN1",
 	"APM-IN2",
 	"APM-IN3",
@@ -3818,6 +3874,18 @@ static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif17, TEGRA210_ADSP_ADMAIF17);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif18, TEGRA210_ADSP_ADMAIF18);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif19, TEGRA210_ADSP_ADMAIF19);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif20, TEGRA210_ADSP_ADMAIF20);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif21, TEGRA210_ADSP_ADMAIF21);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif22, TEGRA210_ADSP_ADMAIF22);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif23, TEGRA210_ADSP_ADMAIF23);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif24, TEGRA210_ADSP_ADMAIF24);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif25, TEGRA210_ADSP_ADMAIF25);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif26, TEGRA210_ADSP_ADMAIF26);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif27, TEGRA210_ADSP_ADMAIF27);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif28, TEGRA210_ADSP_ADMAIF28);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif29, TEGRA210_ADSP_ADMAIF29);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif30, TEGRA210_ADSP_ADMAIF30);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif31, TEGRA210_ADSP_ADMAIF31);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif32, TEGRA210_ADSP_ADMAIF32);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in1, TEGRA210_ADSP_APM_IN1);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in2, TEGRA210_ADSP_APM_IN2);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in3, TEGRA210_ADSP_APM_IN3);
@@ -3958,6 +4026,18 @@ static struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_EP_WIDGETS("ADSP-ADMAIF18", adsp_admaif18),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF19", adsp_admaif19),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF20", adsp_admaif20),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF21", adsp_admaif21),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF22", adsp_admaif22),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF23", adsp_admaif23),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF24", adsp_admaif24),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF25", adsp_admaif25),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF26", adsp_admaif26),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF27", adsp_admaif27),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF28", adsp_admaif28),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF29", adsp_admaif29),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF30", adsp_admaif30),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF31", adsp_admaif31),
+	ADSP_EP_WIDGETS("ADSP-ADMAIF32", adsp_admaif32),
 	ADSP_WIDGETS("APM-IN1", apm_in1, TEGRA210_ADSP_APM_IN1),
 	ADSP_WIDGETS("APM-IN2", apm_in2, TEGRA210_ADSP_APM_IN2),
 	ADSP_WIDGETS("APM-IN3", apm_in3, TEGRA210_ADSP_APM_IN3),
@@ -4077,6 +4157,18 @@ static struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",		"ADSP-ADMAIF18", "ADSP-ADMAIF18 RX"}, \
 	{ name " MUX",		"ADSP-ADMAIF19", "ADSP-ADMAIF19 RX"}, \
 	{ name " MUX",		"ADSP-ADMAIF20", "ADSP-ADMAIF20 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF21", "ADSP-ADMAIF21 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF22", "ADSP-ADMAIF22 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF23", "ADSP-ADMAIF23 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF24", "ADSP-ADMAIF24 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF25", "ADSP-ADMAIF25 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF26", "ADSP-ADMAIF26 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF27", "ADSP-ADMAIF27 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF28", "ADSP-ADMAIF28 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF29", "ADSP-ADMAIF29 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF30", "ADSP-ADMAIF30 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF31", "ADSP-ADMAIF31 RX"}, \
+	{ name " MUX",		"ADSP-ADMAIF32", "ADSP-ADMAIF32 RX"}, \
 	{ name " MUX",		"ADSP-EAVB", "ADSP-EAVB RX"}
 
 #define ADSP_APM_IN_ROUTES(name)				\
@@ -4236,6 +4328,18 @@ static struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF18"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF19"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF20"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF21"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF22"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF23"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF24"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF25"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF26"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF27"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF28"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF29"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF30"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF31"),
+	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF32"),
 
 	ADSP_EP_MUX_ROUTES("ADSP-EAVB"),
 
@@ -5016,10 +5120,18 @@ static u64 tegra_dma_mask = DMA_BIT_MASK(32);
 static struct adsp_soc_data adsp_soc_data_t186 = {
 	.is_soc_t210 = false,
 	.max_adma_ch = TEGRA186_MAX_ADMA_CHANNEL,
+	.max_admaif_ch = TEGRA186_ADMAIF_CHANNEL_COUNT,
+};
+
+static struct adsp_soc_data adsp_soc_data_t264 = {
+	.is_soc_t210 = false,
+	.max_adma_ch = TEGRA264_MAX_ADMA_CHANNEL,
+	.max_admaif_ch = TEGRA264_ADMAIF_CHANNEL_COUNT,
 };
 
 static const struct of_device_id tegra210_adsp_audio_of_match[] = {
 	{ .compatible = "nvidia,tegra210-adsp-audio-hv",  .data = &adsp_soc_data_t186},
+	{ .compatible = "nvidia,tegra264-adsp-audio-hv",  .data = &adsp_soc_data_t264},
 	{},
 };
 
@@ -5104,26 +5216,28 @@ static int tegra210_adsp_audio_probe(struct platform_device *pdev)
 	if (!adsp->hdl)
 		return -EPROBE_DEFER;
 
-	adsp->ahub_clk = devm_clk_get(&pdev->dev, "ahub");
-	if (IS_ERR(adsp->ahub_clk)) {
-		dev_err(&pdev->dev, "Error: Missing AHUB clock\n");
-		ret = PTR_ERR(adsp->ahub_clk);
-		goto err;
-	}
-
-	adsp->ape_clk = devm_clk_get(&pdev->dev, "ape");
-	if (IS_ERR(adsp->ape_clk)) {
-		dev_err(&pdev->dev, "Error: Missing APE clock\n");
-		ret = PTR_ERR(adsp->ape_clk);
-		goto err;
-	}
-
-	if (!adsp->soc_data->is_soc_t210) {
-		adsp->apb2ape_clk = devm_clk_get(&pdev->dev, "apb2ape");
-		if (IS_ERR(adsp->apb2ape_clk)) {
-			dev_err(&pdev->dev, "Error: Missing APB2APE clock\n");
-			ret = PTR_ERR(adsp->apb2ape_clk);
+	if (of_device_is_compatible(np, "nvidia,tegra210-adsp-audio-hv")) {
+		adsp->ahub_clk = devm_clk_get(&pdev->dev, "ahub");
+		if (IS_ERR(adsp->ahub_clk)) {
+			dev_err(&pdev->dev, "Error: Missing AHUB clock\n");
+			ret = PTR_ERR(adsp->ahub_clk);
 			goto err;
+		}
+
+		adsp->ape_clk = devm_clk_get(&pdev->dev, "ape");
+		if (IS_ERR(adsp->ape_clk)) {
+			dev_err(&pdev->dev, "Error: Missing APE clock\n");
+			ret = PTR_ERR(adsp->ape_clk);
+			goto err;
+		}
+
+		if (!adsp->soc_data->is_soc_t210) {
+			adsp->apb2ape_clk = devm_clk_get(&pdev->dev, "apb2ape");
+			if (IS_ERR(adsp->apb2ape_clk)) {
+				dev_err(&pdev->dev, "Error: Missing APB2APE clock\n");
+				ret = PTR_ERR(adsp->apb2ape_clk);
+				goto err;
+			}
 		}
 	}
 
