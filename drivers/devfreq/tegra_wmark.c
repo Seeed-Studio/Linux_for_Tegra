@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2023, NVIDIA Corporation. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/devfreq.h>
 #include <linux/devfreq/tegra_wmark.h>
@@ -13,11 +15,7 @@
 #include <linux/slab.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
-#include <drivers-private/devfreq/k519/governor.h>
-#else
 #include <drivers-private/devfreq/governor.h>
-#endif
 
 /**
  * struct tegra_wmark_data - governor private data stored in struct devfreq
@@ -65,12 +63,12 @@ struct tegra_wmark_data {
 
 static int devfreq_get_freq_index(struct devfreq *df, unsigned long freq)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	unsigned long *freq_table = df->profile->freq_table;
-	unsigned int max_state = df->profile->max_state;
-#else
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
 	unsigned long *freq_table = df->freq_table;
 	unsigned int max_state = df->max_state;
+#else
+	unsigned long *freq_table = df->profile->freq_table;
+	unsigned int max_state = df->profile->max_state;
 #endif
 	int i;
 
@@ -86,12 +84,12 @@ static int devfreq_tegra_wmark_target_freq(struct devfreq *df, unsigned long *fr
 {
 	struct tegra_wmark_data *govdata = df->governor_data;
 	struct devfreq_tegra_wmark_data *drvdata = df->data;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	unsigned long *freq_table = df->profile->freq_table;
-	unsigned int max_state = df->profile->max_state;
-#else
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
 	unsigned long *freq_table = df->freq_table;
 	unsigned int max_state = df->max_state;
+#else
+	unsigned long *freq_table = df->profile->freq_table;
+	unsigned int max_state = df->profile->max_state;
 #endif
 	int target_index = 0;
 
@@ -119,7 +117,6 @@ static int devfreq_tegra_wmark_target_freq(struct devfreq *df, unsigned long *fr
 	return 0;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
 static s32 devfreq_pm_qos_read_value(struct devfreq *df, enum dev_pm_qos_req_type type)
 {
 	struct device *dev = df->dev.parent;
@@ -153,8 +150,13 @@ static void devfreq_get_freq_range(struct devfreq *df,
 {
 	s32 qos_min_freq, qos_max_freq;
 
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
+	*min_freq = df->freq_table[0];
+	*max_freq = df->freq_table[df->max_state - 1];
+#else
 	*min_freq = df->profile->freq_table[0];
 	*max_freq = df->profile->freq_table[df->profile->max_state - 1];
+#endif
 
 	qos_min_freq = devfreq_pm_qos_read_value(df, DEV_PM_QOS_MIN_FREQUENCY);
 	qos_max_freq = devfreq_pm_qos_read_value(df, DEV_PM_QOS_MAX_FREQUENCY);
@@ -168,7 +170,6 @@ static void devfreq_get_freq_range(struct devfreq *df,
 	*min_freq = max(*min_freq, df->scaling_min_freq);
 	*max_freq = min(*max_freq, df->scaling_max_freq);
 }
-#endif
 
 static void devfreq_update_wmark_threshold(struct devfreq *df)
 {
@@ -176,10 +177,10 @@ static void devfreq_update_wmark_threshold(struct devfreq *df)
 	struct devfreq_tegra_wmark_data *drvdata = df->data;
 	struct devfreq_tegra_wmark_config wmark_config;
 	unsigned long curr_freq, prev_freq, min_freq, max_freq;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	unsigned long *freq_table = df->profile->freq_table;
-#else
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
 	unsigned long *freq_table = df->freq_table;
+#else
+	unsigned long *freq_table = df->profile->freq_table;
 #endif
 	int err;
 
@@ -225,10 +226,10 @@ static ssize_t up_freq_margin_store(struct device *dev,
 	struct devfreq *df = to_devfreq(dev);
 	struct tegra_wmark_data *govdata;
 	unsigned int freq_margin;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	unsigned int max_state = df->profile->max_state;
-#else
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
 	unsigned int max_state = df->max_state;
+#else
+	unsigned int max_state = df->profile->max_state;
 #endif
 	int ret;
 
@@ -270,10 +271,10 @@ static ssize_t down_freq_margin_store(struct device *dev,
 	struct devfreq *df = to_devfreq(dev);
 	struct tegra_wmark_data *govdata;
 	unsigned int freq_margin;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0)
-	unsigned int max_state = df->profile->max_state;
-#else
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
 	unsigned int max_state = df->max_state;
+#else
+	unsigned int max_state = df->profile->max_state;
 #endif
 	int ret;
 
