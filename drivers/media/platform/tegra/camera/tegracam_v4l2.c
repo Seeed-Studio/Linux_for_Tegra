@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * tegracam_v4l2 - tegra camera framework for v4l2 support
- *
- * Copyright (c) 2018-2022, NVIDIA CORPORATION.  All rights reserved.
  */
 #include <linux/types.h>
 #include <media/tegra-v4l2-camera.h>
@@ -109,6 +108,21 @@ static int v4l2sd_g_input_status(struct v4l2_subdev *sd, u32 *status)
 
 	pw = s_data->power;
 	*status = pw->state == SWITCH_ON;
+	return 0;
+}
+
+static int cam_g_frame_interval(struct v4l2_subdev *sd,
+		struct v4l2_subdev_state *sd_state,
+		struct v4l2_subdev_frame_interval *ival)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
+
+	if (!s_data)
+		return -EINVAL;
+
+	ival->interval.denominator = s_data->frmfmt[s_data->mode_prop_idx].framerates[0];
+	ival->interval.numerator = 1;
 	return 0;
 }
 
