@@ -18,6 +18,9 @@
 #define MC_MCC_CTL_PERFMUX_OFFSET	0x8914
 #define MC_MCC_DP_PERFMUX_OFFSET 	0x8918
 #define MC_CBRIDGE_PERFMUX_OFFSET	0x891c
+#define MSS_HUB_IB_PERFMUX_OFFSET	0x6f3c
+#define MSS_HUB_CIF_PERFMUX_OFFSET	0x6f34
+#define MSS_HUB_TU_PERFMUX_0		0x6f38
 
 #define MAX_MC_CHANNELS 17	// Broadcast Channel + 16 MC Channels
 
@@ -66,7 +69,8 @@ static int tegra_mc_hwpm_reg_op(void *ip_dev,
 	}
 
 	if (reg_offset != MC_MCC_CTL_PERFMUX_OFFSET && reg_offset != MC_MCC_DP_PERFMUX_OFFSET &&
-	    reg_offset != MC_CBRIDGE_PERFMUX_OFFSET) {
+	    reg_offset != MC_CBRIDGE_PERFMUX_OFFSET && reg_offset != MSS_HUB_IB_PERFMUX_OFFSET &&
+	    reg_offset != MSS_HUB_CIF_PERFMUX_OFFSET && reg_offset != MSS_HUB_TU_PERFMUX_0) {
 		dev_err(dev, "SOC-HWPM requesting access to prohibited register");
 		return -EPERM;
 	}
