@@ -700,6 +700,20 @@ int tegra186_virt_asrc_set_ratio(struct snd_kcontrol *kcontrol,
 }
 EXPORT_SYMBOL(tegra186_virt_asrc_set_ratio);
 
+int tegra186_virt_ratio_param_info(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_info *uinfo)
+{
+	struct soc_mreg_control *mc =
+		(struct soc_mreg_control *)kcontrol->private_value;
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER64;
+	uinfo->count = 1;
+	uinfo->value.integer.min = mc->min;
+	uinfo->value.integer.max = mc->max;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra186_virt_ratio_param_info);
+
 int tegra186_virt_asrc_get_ratio_source(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {

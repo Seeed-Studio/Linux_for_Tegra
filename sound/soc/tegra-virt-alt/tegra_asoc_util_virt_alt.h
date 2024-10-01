@@ -1,6 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-License-Identifier: GPL-2.0-only
+ *
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef __LINUX_VIRT_UTIL_H
@@ -84,10 +84,11 @@
 
 #define SOC_SINGLE_EXT_FRAC(xname, xregbase, xmax, xget, xput) \
 {       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
-	.info = snd_soc_info_xr_sx, .get = xget, \
+	.info =  tegra186_virt_ratio_param_info,	\
+	.get = xget, \
 	.put  = xput, \
 	.private_value = (unsigned long)&(struct soc_mreg_control) \
-		{.regbase = xregbase, .regcount = 1, .nbits = 32, \
+		{.regbase = xregbase, .regcount = 1, .nbits = 64, \
 		.invert = 0, .min = 0, .max = xmax} }
 
 #define ASRC_RATIO_CTRL_DECL(ename, reg) \
@@ -315,6 +316,9 @@ int tegra186_virt_asrc_get_ratio(struct snd_kcontrol *kcontrol,
 
 int tegra186_virt_asrc_set_ratio(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+
+int tegra186_virt_ratio_param_info(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_info *uinfo);
 
 int tegra186_virt_asrc_get_ratio_source(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
