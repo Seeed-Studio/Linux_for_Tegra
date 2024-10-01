@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2014-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVCSI driver
  */
+
+#include <nvidia/conftest.h>
+
 #include <linux/device.h>
 #include <linux/export.h>
 #include <linux/module.h>
@@ -129,7 +132,9 @@ static int nvcsi_release(struct inode *inode, struct file *file)
 
 const struct file_operations tegra_nvcsi_ctrl_ops = {
 	.owner = THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 	.unlocked_ioctl = nvcsi_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = nvcsi_ioctl,

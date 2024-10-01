@@ -7525,6 +7525,25 @@ compile_test() {
            compile_check_conftest "$CODE" "NV_MODULE_IMPORT_NS_PRESENT" "" "types"
         ;;
 
+        no_llseek)
+            #
+            # Determine if the function no_llseek() is present.
+            #
+            # Commit cb787f4ac0c2 ("[tree-wide] finally take no_llseek out")
+            # removed the definition for no_llseek() in Linux v6.12-rc1. Note
+            # that commit 868941b14441 ("fs: remove no_llseek") in Linux v6.0
+            # had previously redefined no_llseek as NULL in preparation for
+            # its removal.
+            #
+            CODE="
+            #include <linux/fs.h>
+            void conftest_no_llseek(void) {
+                no_llseek();
+            }"
+
+            compile_check_conftest "$CODE" "NV_NO_LLSEEK_PRESENT" "" "functions"
+        ;;
+
         of_property_for_each_u32_removed_internal_args)
             #
             # Determine if the internal arguments for the macro

@@ -687,7 +687,9 @@ static const struct file_operations nvsciipc_fops = {
 	.open		= nvsciipc_dev_open,
 	.release		= nvsciipc_dev_release,
 	.unlocked_ioctl	= nvsciipc_dev_ioctl,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek		= no_llseek,
+#endif
 	.read		= nvsciipc_dbg_read,
 };
 

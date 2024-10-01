@@ -638,7 +638,9 @@ static long vi_channel_ioctl(
 
 static const struct file_operations vi_channel_fops = {
 	.owner = THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 	.unlocked_ioctl = vi_channel_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = vi_channel_ioctl,

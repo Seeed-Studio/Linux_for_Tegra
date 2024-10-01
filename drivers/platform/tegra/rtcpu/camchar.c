@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -226,7 +226,9 @@ static const struct file_operations tegra_camchar_fops = {
 	.release = tegra_camchar_release,
 	.unlocked_ioctl = tegra_camchar_ioctl,
 	.compat_ioctl = tegra_camchar_ioctl,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 };
 
 static int __init tegra_camchar_init(struct tegra_ivc_driver *drv)

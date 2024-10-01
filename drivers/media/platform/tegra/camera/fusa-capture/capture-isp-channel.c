@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2017-2023 NVIDIA Corporation.	All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-isp-channel.c
@@ -477,7 +477,9 @@ static long isp_channel_ioctl(
 
 static const struct file_operations isp_channel_fops = {
 	.owner = THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 	.unlocked_ioctl = isp_channel_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = isp_channel_ioctl,

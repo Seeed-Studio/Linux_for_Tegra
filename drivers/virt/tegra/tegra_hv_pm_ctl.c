@@ -391,7 +391,9 @@ static int tegra_hv_pm_ctl_release(struct inode *inode, struct file *filp)
 
 static const struct file_operations tegra_hv_pm_ctl_fops = {
 	.owner		= THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek		= no_llseek,
+#endif
 	.read		= tegra_hv_pm_ctl_read,
 	.write		= tegra_hv_pm_ctl_write,
 	.poll		= tegra_hv_pm_ctl_poll,

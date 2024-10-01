@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include <linux/err.h>
 #include <linux/jiffies.h>
@@ -1133,7 +1133,9 @@ static ssize_t pva_read_vpu_print_buffer(struct file *file,
 
 const struct file_operations tegra_pva_ctrl_ops = {
 	.owner = THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 	.unlocked_ioctl = pva_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = pva_ioctl,

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
- * Copyright (c) 2016-2023, NVIDIA Corporation.  All rights reserved.
- *
  * NVDLA IOCTL for T194
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/arm64-barrier.h>
 #include <linux/fs.h>
@@ -1329,7 +1330,9 @@ static int nvdla_release(struct inode *inode, struct file *file)
 
 const struct file_operations tegra_nvdla_ctrl_ops = {
 	.owner = THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 	.unlocked_ioctl = nvdla_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = nvdla_ioctl,

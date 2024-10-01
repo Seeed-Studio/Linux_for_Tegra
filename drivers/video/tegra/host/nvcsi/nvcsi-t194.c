@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -112,7 +110,9 @@ static int t194_nvcsi_release(struct inode *inode, struct file *file)
 
 const struct file_operations tegra194_nvcsi_ctrl_ops = {
 	.owner = THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 	.unlocked_ioctl = t194_nvcsi_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = t194_nvcsi_ioctl,
