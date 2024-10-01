@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/errno.h>
@@ -50,7 +49,7 @@ struct hyp_shared_memory_info {
 
 #define HYP_SHM_ID_NUM  (2 * NGUESTS_MAX + 1U) // trace buffers + PCT.
 static struct hyp_shared_memory_info hyp_shared_memory_attrs[HYP_SHM_ID_NUM];
-
+static uint64_t EventType = 1;
 
 /* Map the HV trace buffer to the calling user process */
 static int nvlog_buffer_mmap(struct file *fp, struct kobject *ko,
@@ -281,6 +280,8 @@ static int hvc_create_sysfs(
 static ssize_t log_mask_read(struct file *fp, struct kobject *ko,
 	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
 {
+	/* Kernel checks for validity of buf, no need to check here. */
+	*(uint64_t *)buf = EventType;
 	if (size == sizeof(uint64_t))
 		hyp_trace_get_mask((uint64_t *)buf);
 	return size;
@@ -289,8 +290,11 @@ static ssize_t log_mask_read(struct file *fp, struct kobject *ko,
 static ssize_t log_mask_write(struct file *fp, struct kobject *ko,
 	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
 {
-	if (size == sizeof(uint64_t))
-		hyp_trace_set_mask(*(uint64_t *)buf);
+	if (size == 2 * sizeof(uint64_t))
+		hyp_trace_set_mask(*(uint64_t *)buf, *((uint64_t *)buf + 1));
+	else
+		EventType = *buf;
+
 	return size;
 }
 
@@ -305,7 +309,7 @@ static int create_log_mask_node(struct kobject *kobj)
 	log_mask_attr.attr.mode = 0600;
 	log_mask_attr.read = log_mask_read;
 	log_mask_attr.write = log_mask_write;
-	log_mask_attr.size = sizeof(uint64_t);
+	log_mask_attr.size = sizeof(uint64_t) * 2U;
 	return sysfs_create_bin_file(kobj, &log_mask_attr);
 }
 
@@ -315,7 +319,7 @@ static int hyp_trace_buffer_init(void)
 	int ret;
 	uint64_t ipa;
 	struct hyp_info_page *info;
-	uint64_t log_mask;
+	uint64_t log_mask = 1;
 	struct trace_buf *buffs;
 	uint16_t i, count;
 

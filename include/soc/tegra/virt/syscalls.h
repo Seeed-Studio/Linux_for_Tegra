@@ -512,8 +512,7 @@ __attribute__((no_sanitize_address)) static __attribute__((always_inline)) inlin
 
 __attribute__((no_sanitize_address)) static inline int hyp_trace_get_mask(uint64_t *value)
 {
-	uint64_t args[4] = { 0U, 0U, 0U, 0U };
-
+	uint64_t args[4] = { *value, 0U, 0U, 0U };
 	hyp_call44(HVC_NR_TRACE_GET_EVENT_MASK, args);
 	if (args[0] == 0U)
 		*value = args[1];
@@ -521,10 +520,9 @@ __attribute__((no_sanitize_address)) static inline int hyp_trace_get_mask(uint64
 	return (int) args[0];
 }
 
-__attribute__((no_sanitize_address)) static inline int hyp_trace_set_mask(uint64_t mask)
+__attribute__((no_sanitize_address)) static inline int hyp_trace_set_mask(uint64_t type, uint64_t value)
 {
-	uint64_t args[4] = { mask, 0U, 0U, 0U };
-
+	uint64_t args[4] = { type, value, 0U, 0U};
 	hyp_call44(HVC_NR_TRACE_SET_EVENT_MASK, args);
 	return (int) args[0];
 }
