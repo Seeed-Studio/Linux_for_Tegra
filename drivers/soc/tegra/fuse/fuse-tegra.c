@@ -290,20 +290,6 @@ int tegra_fuse_readl(unsigned long offset, u32 *value)
 }
 EXPORT_SYMBOL(tegra_fuse_readl);
 
-int tegra_fuse_control_read(unsigned long offset, u32 *value)
-{
-	if (!fuse->read || !fuse->clk)
-		return -EPROBE_DEFER;
-
-	if (IS_ERR(fuse->clk))
-		return PTR_ERR(fuse->clk);
-
-	*value = fuse->control_read(fuse, offset);
-
-	return 0;
-}
-EXPORT_SYMBOL(tegra_fuse_control_read);
-
 static void tegra_enable_fuse_clk(void __iomem *base)
 {
 	u32 reg;

@@ -63,22 +63,6 @@ static u32 tegra30_fuse_read(struct tegra_fuse *fuse, unsigned int offset)
 	return value;
 }
 
-static u32 tegra30_fuse_control_read(struct tegra_fuse *fuse, unsigned int offset)
-{
-	u32 value;
-	int err;
-
-	err = pm_runtime_resume_and_get(fuse->dev);
-	if (err)
-		return 0;
-
-	value = readl_relaxed(fuse->base + offset);
-
-	pm_runtime_put(fuse->dev);
-
-	return value;
-}
-
 static void __init tegra30_fuse_add_randomness(void)
 {
 	u32 randomness[12];
@@ -105,7 +89,6 @@ static void __init tegra30_fuse_init(struct tegra_fuse *fuse)
 {
 	fuse->read_early = tegra30_fuse_read_early;
 	fuse->read = tegra30_fuse_read;
-	fuse->control_read = tegra30_fuse_control_read;
 
 	tegra_init_revision();
 
