@@ -15,35 +15,69 @@
 
 static int nvaon_os_t264_init(struct platform_device *pdev)
 {
-	/* TBD */
-	return 0;
-}
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+	void __iomem *cpu_config_base = drv_data->base_regs[AO_MISC];
+	u32 cpu_config;
 
-static __attribute__((unused))
-int nvaon_t264_clocks_disable(struct platform_device *pdev)
-{
-	/* TBD */
-	return 0;
-}
+	/**
+	 * If AON CPU is already running at driver probe,
+	 * then assume that it is expected to be always ON
+	 */
+	cpu_config = readl(cpu_config_base + AO_MISC_CPU_RUNSTALL_0);
+	if (cpu_config == AO_MISC_CPU_CLEAR_RUNSTALL_0) {
+		dev_info(dev, "AON CPU running as always ON\n");
+		drv_data->is_always_on = true;
+	}
 
-static __attribute__((unused))
-int nvaon_t264_clocks_enable(struct platform_device *pdev)
-{
-	/* TBD */
 	return 0;
 }
 
 #ifdef CONFIG_PM
+static int nvaon_t264_clocks_disable(struct platform_device *pdev)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+
+	if (drv_data->adsp_clk) {
+		clk_disable_unprepare(drv_data->adsp_clk);
+		dev_dbg(dev, "cpu_clock disabled\n");
+	}
+
+	return 0;
+}
+
+static int nvaon_t264_clocks_enable(struct platform_device *pdev)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+	int ret = 0;
+
+	if (drv_data->adsp_clk) {
+		ret = clk_prepare_enable(drv_data->adsp_clk);
+		if (ret)
+			dev_err(dev, "unable to enable cpu_clock\n");
+		else
+			dev_dbg(dev, "cpu_clock enabled\n");
+	}
+
+	return ret;
+}
+
 static int __nvaon_t264_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	int ret;
 
 	dev_dbg(dev, "at %s:%d\n", __func__, __LINE__);
 
+	if (drv_data->is_always_on)
+		return 0;
+
 	ret = nvaon_t264_clocks_enable(pdev);
 	if (ret) {
-		dev_dbg(dev, "failed in nvadsp_t264_clocks_enable\n");
+		dev_warn(dev, "failed in nvadsp_t264_clocks_enable\n");
 		return ret;
 	}
 
@@ -53,8 +87,12 @@ static int __nvaon_t264_runtime_resume(struct device *dev)
 static int __nvaon_t264_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 
 	dev_dbg(dev, "at %s:%d\n", __func__, __LINE__);
+
+	if (drv_data->is_always_on)
+		return 0;
 
 	return nvaon_t264_clocks_disable(pdev);
 }
