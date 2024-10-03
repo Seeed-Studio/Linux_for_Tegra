@@ -31,7 +31,6 @@
 #include <linux/dcache.h>
 #include <linux/reboot.h>
 #include <net/sock.h>
-#include <asm/unaligned.h>
 
 #include "rtk_bt.h"
 #include "rtk_misc.h"
