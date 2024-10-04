@@ -23,7 +23,9 @@
 #include "include/linux/nvmap_exports.h"
 
 #include "nvmap_priv.h"
+#include "nvmap_dev.h"
 #include "nvmap_alloc.h"
+#include "nvmap_dev_int.h"
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 #include <soc/tegra/virt/hv-ivc.h>
@@ -356,7 +358,7 @@ static const struct reserved_mem_ops nvmap_co_ops = {
 	.device_release	= nvmap_co_device_release,
 };
 
-int __init nvmap_co_setup(struct reserved_mem *rmem)
+static int __init nvmap_co_setup(struct reserved_mem *rmem)
 {
 	struct nvmap_platform_carveout *co;
 	ulong start = sched_clock();
@@ -507,5 +509,7 @@ static void __exit nvmap_exit_driver(void)
 module_exit(nvmap_exit_driver);
 MODULE_IMPORT_NS(DMA_BUF);
 MODULE_DESCRIPTION("NvMap: Nvidia Tegra Memory Management Driver");
-MODULE_AUTHOR("Puneet Saxena <puneets@nvidia.com>");
+MODULE_AUTHOR("Ketan Patil <ketanp@nvidia.com>");
+MODULE_AUTHOR("Ashish Mhetre <amhetre@nvidia.com>");
+MODULE_AUTHOR("Pritesh Raithatha <praithatha@nvidia.com>");
 MODULE_LICENSE("GPL v2");

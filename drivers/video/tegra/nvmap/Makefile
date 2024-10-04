@@ -26,7 +26,6 @@ nvmap-y := nvmap_core.o \
 	nvmap_ioctl.o \
 	nvmap_init.o \
 	nvmap_tag.o \
-	nvmap_mm.o \
 	nvmap_stats.o \
 	nvmap_carveout.o \
 	nvmap_kasan_wrapper.o

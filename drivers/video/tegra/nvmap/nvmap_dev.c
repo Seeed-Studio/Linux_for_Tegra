@@ -43,10 +43,11 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
+#include "nvmap_dev.h"
 #include "nvmap_alloc.h"
-#include "nvmap_ioctl.h"
 #include "nvmap_dmabuf.h"
 #include "nvmap_handle.h"
+#include "nvmap_dev_int.h"
 #include <linux/pagewalk.h>
 
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
@@ -169,7 +170,7 @@ static void nvmap_pid_put_locked(struct nvmap_device *dev, pid_t pid)
 		kref_put(&p->refcount, nvmap_pid_release_locked);
 }
 
-struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
+static struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name)
 {
 	struct nvmap_client *client;

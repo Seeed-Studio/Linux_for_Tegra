@@ -8,7 +8,8 @@
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/io.h>
-#include "nvmap_ioctl.h"
+#include <linux/device.h>
+#include "nvmap_dev.h"
 
 void kasan_memcpy_toio(void __iomem *to,
 			const void *from, size_t count)

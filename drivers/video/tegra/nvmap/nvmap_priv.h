@@ -235,12 +235,6 @@ static inline void nvmap_release_mmap_read_lock(struct mm_struct *mm)
 	up_read(&mm->mmap_lock);
 }
 
-int nvmap_probe(struct platform_device *pdev);
-int nvmap_remove(struct platform_device *pdev);
-int nvmap_init(struct platform_device *pdev);
-
-int nvmap_co_setup(struct reserved_mem *rmem);
-
 struct nvmap_carveout_node;
 
 struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h);
@@ -258,8 +252,6 @@ void __nvmap_free_sg_table(struct nvmap_client *client,
 			   struct nvmap_handle *h, struct sg_table *sgt);
 void *__nvmap_mmap(struct nvmap_handle *h);
 void __nvmap_munmap(struct nvmap_handle *h, void *addr);
-struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
-					   const char *name);
 
 static inline bool nvmap_page_dirty(struct page *page)
 {
@@ -281,8 +273,6 @@ static inline bool nvmap_page_mkclean(struct page **page)
 	*page = (struct page *)((unsigned long)*page & ~1UL);
 	return true;
 }
-
-void nvmap_zap_handle(struct nvmap_handle *handle, u64 offset, u64 size);
 
 void nvmap_vma_open(struct vm_area_struct *vma);
 
@@ -308,7 +298,6 @@ static inline pid_t nvmap_client_pid(struct nvmap_client *client)
 
 void *nvmap_dmabuf_get_drv_data(struct dma_buf *dmabuf,
 		struct device *dev);
-bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid);
 
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 struct nvmap_device_list *nvmap_is_device_present(char *device_name, u32 heap_type);

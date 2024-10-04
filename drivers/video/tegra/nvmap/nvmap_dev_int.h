@@ -1,26 +1,20 @@
-/* SPDX-License-Identifier: GPL-2.0-only
- * SPDX-FileCopyrightText: Copyright (c) 2010-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- *
- * ioctl declarations for nvmap
- */
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-FileCopyrightText: Copyright (c) 2010-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
-#ifndef __VIDEO_TEGRA_NVMAP_IOCTL_H
-#define __VIDEO_TEGRA_NVMAP_IOCTL_H
+#ifndef __NVMAP_DEV_INT_H
+#define __NVMAP_DEV_INT_H
 
-#include <linux/nvmap.h>
+int nvmap_probe(struct platform_device *pdev);
 
-int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
-	bool is32);
+int nvmap_remove(struct platform_device *pdev);
 
-int nvmap_ioctl_getid(struct file *filp, void __user *arg);
+int nvmap_init(struct platform_device *pdev);
 
 int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_alloc(struct file *filp, void __user *arg);
-
-int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_alloc_ivm(struct file *filp, void __user *arg);
 
@@ -34,8 +28,6 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg);
 
-int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32);
-
 int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg, int size);
 
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
@@ -46,9 +38,6 @@ int nvmap_ioctl_gup_test(struct file *filp, void __user *arg);
 int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg);
-
-void kasan_memcpy_toio(void __iomem *to, const void *from,
-			size_t count);
 
 int nvmap_ioctl_get_handle_parameters(struct file *filp, void __user *arg);
 
@@ -63,4 +52,5 @@ int nvmap_ioctl_query_heap_params_numa(struct file *filp, void __user *arg);
 int nvmap_ioctl_dup_handle(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_get_fd_from_list(struct file *filp, void __user *arg);
-#endif	/*  __VIDEO_TEGRA_NVMAP_IOCTL_H */
+
+#endif /* __NVMAP_DEV_INT_H */

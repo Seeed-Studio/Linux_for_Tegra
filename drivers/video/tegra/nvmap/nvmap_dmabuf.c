@@ -31,7 +31,7 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
-#include "nvmap_ioctl.h"
+#include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
 #include "nvmap_handle.h"

@@ -26,13 +26,137 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
-#include "nvmap_ioctl.h"
+#include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
 #include "nvmap_handle.h"
 #include "nvmap_handle_int.h"
 
 u32 nvmap_max_handle_count;
+
+struct nvmap_handle *nvmap_handle_get_from_id(struct nvmap_client *client,
+		u32 id)
+{
+	struct nvmap_handle *handle = ERR_PTR(-EINVAL);
+	struct nvmap_handle_info *info;
+	struct dma_buf *dmabuf;
+
+	if (WARN_ON(!client))
+		return ERR_PTR(-EINVAL);
+
+	if (client->ida) {
+		dmabuf = dma_buf_get((int)id);
+		/*
+		 * id is dmabuf fd created from foreign dmabuf
+		 * but handle as ID is enabled, hence it doesn't belong
+		 * to nvmap_handle, bail out early.
+		 */
+		if (!IS_ERR_OR_NULL(dmabuf)) {
+			dma_buf_put(dmabuf);
+			return NULL;
+		}
+
+		dmabuf = nvmap_id_array_get_dmabuf_from_id(client->ida, id);
+	} else {
+		dmabuf = dma_buf_get((int)id);
+	}
+	if (IS_ERR_OR_NULL(dmabuf))
+		return ERR_CAST(dmabuf);
+
+	if (dmabuf_is_nvmap(dmabuf)) {
+		info = dmabuf->priv;
+		handle = info->handle;
+		if (!nvmap_handle_get(handle))
+			handle = ERR_PTR(-EINVAL);
+	}
+
+	dma_buf_put(dmabuf);
+
+	if (!IS_ERR(handle))
+		return handle;
+
+	return	NULL;
+}
+
+int nvmap_install_fd(struct nvmap_client *client,
+	struct nvmap_handle *handle, int fd, void __user *arg,
+	void *op, size_t op_size, bool free, struct dma_buf *dmabuf)
+{
+	int err = 0;
+	struct nvmap_handle_info *info;
+
+	if (!dmabuf) {
+		err = -EFAULT;
+		goto dmabuf_fail;
+	}
+	info = dmabuf->priv;
+	if (IS_ERR_VALUE((uintptr_t)fd)) {
+		err = fd;
+		goto fd_fail;
+	}
+
+	if (copy_to_user(arg, op, op_size)) {
+		err = -EFAULT;
+		goto copy_fail;
+	}
+
+	fd_install(fd, dmabuf->file);
+	return err;
+
+copy_fail:
+	put_unused_fd(fd);
+fd_fail:
+	if (dmabuf)
+		dma_buf_put(dmabuf);
+	if (free && handle)
+		nvmap_free_handle(client, handle, info->is_ro);
+dmabuf_fail:
+	return err;
+}
+
+int find_range_of_handles(struct nvmap_handle **hs, u32 nr,
+		struct handles_range *hrange)
+{
+	u64 tot_sz = 0, rem_sz = 0;
+	u64 offs = hrange->offs;
+	u32 start = 0, end = 0;
+	u64 sz = hrange->sz;
+	u32 i;
+
+	hrange->offs_start = offs;
+	/* Find start handle */
+	for (i = 0; i < nr; i++) {
+		tot_sz += hs[i]->size;
+		if (offs > tot_sz) {
+			hrange->offs_start -= tot_sz;
+			continue;
+		} else {
+			rem_sz = tot_sz - offs;
+			start = i;
+			/* Check size in current handle */
+			if (rem_sz >= sz) {
+				end = i;
+				hrange->start = start;
+				hrange->end = end;
+				return 0;
+			}
+			/* Though start found but end lies in further handles */
+			i++;
+			break;
+		}
+	}
+	/* find end handle number */
+	for (; i < nr; i++) {
+		rem_sz += hs[i]->size;
+		if (rem_sz >= sz) {
+			end = i;
+			hrange->start = start;
+			hrange->end = end;
+			return 0;
+		}
+	}
+	return -1;
+}
 
 static inline void nvmap_lru_add(struct nvmap_handle *h)
 {

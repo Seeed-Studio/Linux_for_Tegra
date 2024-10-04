@@ -26,6 +26,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dma-map-ops.h>
 #include "nvmap_priv.h"
+#include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
 #include "nvmap_handle.h"

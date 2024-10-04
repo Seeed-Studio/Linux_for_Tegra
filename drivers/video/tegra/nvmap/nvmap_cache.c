@@ -19,6 +19,7 @@ __weak struct arm64_ftr_reg arm64_ftr_reg_ctrel0;
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
+#include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
 #include "nvmap_handle.h"
@@ -75,7 +76,6 @@ static void heap_page_cache_maint(
 		 * will result in a fault and can be marked dirty
 		 */
 		nvmap_handle_mkclean(h, start, end-start);
-		nvmap_zap_handle(h, start, end - start);
 	}
 
 	if (inner) {

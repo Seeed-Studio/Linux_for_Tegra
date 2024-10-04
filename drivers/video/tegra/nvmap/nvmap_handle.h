@@ -239,6 +239,13 @@ struct nvmap_handle_ref *nvmap_create_handle_from_id(
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd);
 
+int nvmap_install_fd(struct nvmap_client *client,
+	struct nvmap_handle *handle, int fd, void __user *arg,
+	void *op, size_t op_size, bool free, struct dma_buf *dmabuf);
+
+int find_range_of_handles(struct nvmap_handle **hs, u32 nr,
+		struct handles_range *hrange);
+
 void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h, bool is_ro);
 
 void nvmap_free_handle_from_fd(struct nvmap_client *c, int fd);
