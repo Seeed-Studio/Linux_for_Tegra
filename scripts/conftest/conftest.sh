@@ -6919,6 +6919,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DEVM_PM_DOMAIN_ATTACH_LIST_PRESENT" "" "functions"
         ;;
 
+        devm_spi_alloc_host)
+            #
+            # Determine whether devm_spi_alloc_host() is present.
+            #
+            # Commit b8d3b056a78d ("spi: introduce new helpers with using modern
+            # naming") added devm_spi_alloc_host() in Linux v6.2.
+            #
+            CODE="
+            #undef CONFIG_ACPI
+            #include <linux/spi/spi.h>
+            void conftest_devm_spi_alloc_host(void) {
+                devm_spi_alloc_host();
+            }"
+
+            compile_check_conftest "$CODE" "NV_DEVM_SPI_ALLOC_HOST_PRESENT" "" "functions"
+        ;;
+
         devm_tegra_core_dev_init_opp_table_common)
             #
             # Determine whether devm_tegra_core_dev_init_opp_table_common is

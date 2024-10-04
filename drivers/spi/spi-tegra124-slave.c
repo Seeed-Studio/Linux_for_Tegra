@@ -2017,7 +2017,11 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		 pdata->rx_trig_words != 4 && pdata->rx_trig_words != 8)
 		pdata->rx_trig_words = 0;
 
+#if defined(NV_DEVM_SPI_ALLOC_HOST_PRESENT) /* Linux v6.2 */
+	controller = devm_spi_alloc_host(&pdev->dev, sizeof(*tspi));
+#else
 	controller = devm_spi_alloc_master(&pdev->dev, sizeof(*tspi));
+#endif
 	if (!controller) {
 		dev_err(&pdev->dev, "controller allocation failed\n");
 		return -ENOMEM;

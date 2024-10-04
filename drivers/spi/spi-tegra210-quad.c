@@ -1660,7 +1660,11 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	int bus_num;
 	u32 as_delay;
 
+#if defined(NV_DEVM_SPI_ALLOC_HOST_PRESENT) /* Linux v6.2 */
+	controller = devm_spi_alloc_host(&pdev->dev, sizeof(*tqspi));
+#else
 	controller = devm_spi_alloc_master(&pdev->dev, sizeof(*tqspi));
+#endif
 	if (!controller)
 		return -ENOMEM;
 
