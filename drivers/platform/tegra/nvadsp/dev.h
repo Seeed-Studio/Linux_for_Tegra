@@ -224,6 +224,7 @@ struct nvadsp_drv_data {
 	bool adsp_os_running;
 	bool adsp_os_suspended;
 	bool adsp_os_secload;
+	bool is_always_on;
 
 	void *shared_adsp_os_data;
 	dma_addr_t shared_adsp_os_data_iova;
