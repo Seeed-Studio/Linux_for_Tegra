@@ -6,7 +6,7 @@
 #ifndef DCE_HSP_T234_H
 #define DCE_HSP_T234_H
 
-#include <types.h>
+#include <dce-os-types.h>
 
 struct tegra_dce;
 

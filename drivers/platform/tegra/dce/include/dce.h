@@ -6,7 +6,7 @@
 #ifndef TEGRA_DCE_H
 #define TEGRA_DCE_H
 
-#include <types.h>
+#include <dce-os-types.h>
 #include <os-dce-log.h>
 #include <dce-ipc.h>
 #include <dce-hsp.h>

@@ -7,7 +7,7 @@
 #define DCE_IPC_H
 
 #include <os-lock.h>
-#include <types.h>
+#include <dce-os-types.h>
 #include <os-ivc.h>
 
 #include <interface/dce-admin-cmds.h>

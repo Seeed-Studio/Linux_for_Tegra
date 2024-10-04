@@ -6,7 +6,7 @@
 #ifndef DCE_UTIL_COMMON_H
 #define DCE_UTIL_COMMON_H
 
-#include <types.h>
+#include <dce-os-types.h>
 #include <linux/bitops.h>
 #include <linux/bitmap.h>
 #include <linux/workqueue.h>
