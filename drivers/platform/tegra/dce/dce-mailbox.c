@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 
@@ -23,8 +23,8 @@
  */
 static u32 dce_hsp_get_irq_sources(struct tegra_dce *d)
 {
-	return (dce_hsp_ie_read(d, CCPLEX_HSP_IE) &
-					dce_hsp_ir_read(d));
+	return (dce_hsp_ie_read(d, d->hsp_id, CCPLEX_HSP_IE) &
+					dce_hsp_ir_read(d, d->hsp_id));
 }
 
 /**
@@ -56,8 +56,8 @@ void dce_mailbox_isr(struct tegra_dce *d)
 			 * bit before storing the result.
 			 *
 			 */
-			value = dce_smb_read(d, d_mb->r_mb);
-			dce_smb_set(d, 0U, d_mb->r_mb);
+			value = dce_smb_read(d, d->hsp_id, d_mb->r_mb);
+			dce_smb_set(d, 0U, d->hsp_id, d_mb->r_mb);
 			dce_mailbox_store_interface_status(d, value, i);
 			d_mb->notify(d, d_mb->notify_data);
 		}
@@ -132,7 +132,7 @@ static bool dce_mailbox_write_safe(struct tegra_dce *d, u8 id)
 {
 	unsigned long val;
 
-	val = dce_smb_read(d, id);
+	val = dce_smb_read(d, d->hsp_id, id);
 
 	return !(val & BIT(31));
 }
@@ -157,7 +157,7 @@ void dce_mailbox_set_full_interrupt(struct tegra_dce *d, u8 id)
 		dce_info(d, "Intr bit set multiple times for MB : [0x%x]",
 			 d_mb->s_mb);
 
-	dce_smb_set(d, BIT(31), d_mb->s_mb);
+	dce_smb_set(d, BIT(31), d->hsp_id, d_mb->s_mb);
 
 	dce_mutex_unlock(&d_mb->lock);
 }
@@ -187,7 +187,7 @@ int dce_handle_mailbox_send_cmd_sync(struct tegra_dce *d, u32 cmd, u32 interface
 		return -1;
 	}
 
-	dce_smb_set(d, cmd | BIT(31), d_mb->s_mb);
+	dce_smb_set(d, cmd | BIT(31), d->hsp_id, d_mb->s_mb);
 	d_mb->valid = false;
 
 	dce_mutex_unlock(&d_mb->lock);
@@ -251,10 +251,10 @@ int dce_mailbox_init_interface(struct tegra_dce *d, u8 id, u8 s_mb,
 
 	d_mb->valid = false;
 
-	dce_smb_set_full_ie(d, true, r_mb);
+	dce_smb_set_full_ie(d, true, d->hsp_id, r_mb);
 
 	ie_wr_val = BIT(r_mb) << 8U;
-	dce_hsp_ie_write(d, ie_wr_val, CCPLEX_HSP_IE);
+	dce_hsp_ie_write(d, ie_wr_val, d->hsp_id, CCPLEX_HSP_IE);
 
 	d_mb->s_mb = s_mb;
 	d_mb->r_mb = r_mb;
