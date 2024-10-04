@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef TEGRA_DCE_H
@@ -179,6 +179,10 @@ struct tegra_dce {
 	 * @hsp_id - HSP instance id used for dce communication
 	 */
 	u32 hsp_id;
+	/**
+	 * @hsp - Struct to store function pointers for HSP access.
+	 */
+	struct dce_hsp_fn hsp;
 	/**
 	 * @boot_status - u32 variable to store dce's boot status.
 	 */

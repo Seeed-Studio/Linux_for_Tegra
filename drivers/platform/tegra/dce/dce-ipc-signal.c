@@ -19,7 +19,7 @@ static void dce_ipc_mbox_notify(struct tegra_dce *d,
 	}
 
 	if (s->sema_num < DCE_NUM_SEMA_REGS)
-		dce_ss_set(d, s->sema_bit, d->hsp_id, s->sema_num);
+		d->hsp.ss_set(d, s->sema_bit, d->hsp_id, s->sema_num);
 
 	dce_mailbox_set_full_interrupt(d, s->form.mbox.mb_type);
 }
@@ -41,12 +41,12 @@ static void dce_ipc_mbox_handle_signal(struct tegra_dce *d, void *data)
 
 	for (cur_s = s; cur_s != NULL; cur_s = cur_s->next) {
 		if (cur_s->sema_num < DCE_NUM_SEMA_REGS) {
-			sema_val = dce_ss_get_state(d, d->hsp_id, cur_s->sema_num);
+			sema_val = d->hsp.ss_get_state(d, d->hsp_id, cur_s->sema_num);
 			if ((sema_val & BIT(cur_s->sema_bit)) == 0)
 				continue;
 		}
 
-		dce_ss_clear(d, cur_s->sema_num, d->hsp_id, BIT(cur_s->sema_bit));
+		d->hsp.ss_clear(d, cur_s->sema_num, d->hsp_id, BIT(cur_s->sema_bit));
 
 		ch = cur_s->signal->ch;
 

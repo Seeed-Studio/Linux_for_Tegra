@@ -25,6 +25,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/device.h>
+#include <dce-hsp-t234.h>
 
 /**
  * The following platform info is needed for backdoor
@@ -197,6 +198,42 @@ static int match_display_dev(struct device *dev, const void *data)
 	return 0;
 }
 
+/**
+ * dce_init_hsp_hal_fn - Function to initialize DCE HSP hal functions.
+ *
+ * @pdev : Pointer to Linux's platform device used for registering DCE.
+ * @pdata: pointer to dce_platform data structure
+ *
+ * Primarily used during initialization sequence and is expected to be called
+ * from probe only.
+ *
+ * Return : 0 if success else the corresponding error value.
+ */
+static int dce_init_hsp_hal_fn(struct platform_device *pdev,
+			       struct dce_platform_data *pdata)
+{
+	struct device *dev = &pdev->dev;
+	struct device_node *node = dev->of_node;
+	struct tegra_dce *d = NULL;
+	int ret = 0;
+
+	d = dce_get_pdata_dce(pdev);
+	if (of_device_is_compatible(node, "nvidia,tegra234-dce")) {
+		dev_info(&pdev->dev, "Setting DCE HSP functions for tegra234-dce");
+		DCE_HSP_INIT_T234(d->hsp);
+	} else {
+		ret = -1;
+		dev_err(&pdev->dev, "DCE SOC not supported");
+	}
+
+	/**
+	 * TODO: Get HSP_ID from DT
+	 */
+	d->hsp_id = pdata->hsp_id;
+
+	return ret;
+}
+
 static int tegra_dce_probe(struct platform_device *pdev)
 {
 	int err = 0;
@@ -229,6 +266,15 @@ static int tegra_dce_probe(struct platform_device *pdev)
 		goto os_init_err;
 	}
 
+	/*
+	 * Initialize SOC HSP HAL Functions
+	 */
+	err = dce_init_hsp_hal_fn(pdev, pdata);
+	if (err) {
+		dev_err(dev, "failed to init HSP functions err:%d\n", err);
+		goto os_init_err;
+	}
+
 	err = dce_req_interrupts(pdev);
 	if (err) {
 		dev_err(dev, "failed to get interrupts with err = %d\n",
@@ -237,12 +283,6 @@ static int tegra_dce_probe(struct platform_device *pdev)
 	}
 
 	d = dce_get_pdata_dce(pdev);
-
-	/**
-	 * TODO: Get HSP_ID from DT
-	 */
-	d->hsp_id = pdata->hsp_id;
-
 
 	err = dce_driver_init(d);
 	if (err) {

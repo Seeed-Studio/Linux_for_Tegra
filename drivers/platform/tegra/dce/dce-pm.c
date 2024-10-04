@@ -9,14 +9,14 @@
 
 static void dce_pm_save_state(struct tegra_dce *d)
 {
-	d->sc7_state.hsp_ie = dce_hsp_ie_read(d, d->hsp_id, CCPLEX_HSP_IE);
+	d->sc7_state.hsp_ie = d->hsp.hsp_ie_read(d, d->hsp_id, CCPLEX_HSP_IE);
 }
 
 static void dce_pm_restore_state(struct tegra_dce *d)
 {
 	uint32_t val = d->sc7_state.hsp_ie;
 
-	dce_hsp_ie_write(d, val, d->hsp_id, CCPLEX_HSP_IE);
+	d->hsp.hsp_ie_write(d, val, d->hsp_id, CCPLEX_HSP_IE);
 }
 
 /**

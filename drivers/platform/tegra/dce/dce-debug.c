@@ -504,7 +504,7 @@ static ssize_t dbg_dce_boot_status_fops_read(struct file *file,
 	unsigned long bitmap;
 	struct tegra_dce *d = file->private_data;
 	u32 boot_status = d->boot_status;
-	hsp_sema_t ss = dce_ss_get_state(d, d->hsp_id, DCE_BOOT_SEMA);
+	hsp_sema_t ss = d->hsp.ss_get_state(d, d->hsp_id, DCE_BOOT_SEMA);
 
 	if (ss & DCE_BOOT_COMPLETE)
 		goto core_boot_done;
@@ -682,25 +682,25 @@ static int dump_hsp_regs_show(struct seq_file *s, void *unused)
 	 * Dump Boot Semaphore Value
 	 */
 	dce_info(d, "DCE_BOOT_SEMA : 0x%x",
-				dce_ss_get_state(d, d->hsp_id, DCE_BOOT_SEMA));
+				d->hsp.ss_get_state(d, d->hsp_id, DCE_BOOT_SEMA));
 
 	/**
 	 * Dump Shared Mailboxes Values
 	 */
 	dce_info(d, "DCE_MBOX_FROM_DCE_RM : 0x%x",
-				dce_smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_RM));
+			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_RM));
 	dce_info(d, "DCE_MBOX_TO_DCE_RM: 0x%x",
-				dce_smb_read(d, d->hsp_id, DCE_MBOX_TO_DCE_RM));
+			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_TO_DCE_RM));
 	dce_info(d, "DCE_MBOX_FROM_DCE_RM_EVENT_NOTIFY: 0x%x",
-				dce_smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_RM_EVENT_NOTIFY));
+			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_RM_EVENT_NOTIFY));
 	dce_info(d, "DCE_MBOX_TO_DCE_RM_EVENT_NOTIFY: 0x%x",
-				dce_smb_read(d, d->hsp_id, DCE_MBOX_TO_DCE_RM_EVENT_NOTIFY));
+			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_TO_DCE_RM_EVENT_NOTIFY));
 	dce_info(d, "DCE_MBOX_FROM_DCE_ADMIN: 0x%x",
-				dce_smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_ADMIN));
+			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_ADMIN));
 	dce_info(d, "DCE_MBOX_BOOT_CMD: 0x%x",
-				dce_smb_read(d, d->hsp_id, DCE_MBOX_BOOT_CMD));
+			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_BOOT_CMD));
 	dce_info(d, "DCE_MBOX_IRQ: 0x%x",
-				dce_smb_read(d, d->hsp_id, DCE_MBOX_IRQ));
+			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_IRQ));
 
 	/**
 	 * Dump HSP IE registers Values
@@ -708,7 +708,7 @@ static int dump_hsp_regs_show(struct seq_file *s, void *unused)
 
 #define DCE_MAX_IE_REGS 5U
 	for (i = 0; i < DCE_MAX_IE_REGS; i++)
-		dce_info(d, "DCE_HSP_IE_%d : 0x%x", i, dce_hsp_ie_read(d, d->hsp_id, i));
+		dce_info(d, "DCE_HSP_IE_%d : 0x%x", i, d->hsp.hsp_ie_read(d, d->hsp_id, i));
 #undef DCE_MAX_IE_REGS
 
 	/**
@@ -717,12 +717,12 @@ static int dump_hsp_regs_show(struct seq_file *s, void *unused)
 #define DCE_MAX_SM_FULL_REGS 8U
 	for (i = 0; i < DCE_MAX_SM_FULL_REGS; i++) {
 		dce_info(d, "DCE_HSP_SM_FULL_%d : 0x%x", i,
-			 dce_smb_read_full_ie(d, d->hsp_id, i));
+			 d->hsp.smb_read_full_ie(d, d->hsp_id, i));
 	}
 #undef DCE_MAX_SM_FULL_REGS
 
 	dce_info(d, "DCE_HSP_IR : 0x%x",
-					dce_hsp_ir_read(d, d->hsp_id));
+			d->hsp.hsp_ir_read(d, d->hsp_id));
 	return 0;
 }
 
