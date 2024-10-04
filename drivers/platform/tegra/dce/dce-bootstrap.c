@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 #include <dce.h>
 #include <dce-util-common.h>
@@ -16,7 +16,7 @@
  */
 inline bool dce_fw_boot_complete(struct tegra_dce *d)
 {
-	return !!(dce_ss_get_state(d, DCE_BOOT_SEMA)
+	return !!(dce_ss_get_state(d, d->hsp_id, DCE_BOOT_SEMA)
 					& DCE_BOOT_COMPLETE);
 }
 
@@ -31,7 +31,7 @@ inline bool dce_fw_boot_complete(struct tegra_dce *d)
 inline void dce_request_fw_boot_complete(struct tegra_dce *d)
 {
 #define DCE_BOOT_INIT_BPOS 31U
-	dce_ss_set(d, DCE_BOOT_INIT_BPOS, DCE_BOOT_SEMA);
+	dce_ss_set(d, DCE_BOOT_INIT_BPOS, d->hsp_id, DCE_BOOT_SEMA);
 #undef DCE_BOOT_INIT_BPOS
 }
 

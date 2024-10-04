@@ -504,7 +504,7 @@ static ssize_t dbg_dce_boot_status_fops_read(struct file *file,
 	unsigned long bitmap;
 	struct tegra_dce *d = file->private_data;
 	u32 boot_status = d->boot_status;
-	hsp_sema_t ss = dce_ss_get_state(d, DCE_BOOT_SEMA);
+	hsp_sema_t ss = dce_ss_get_state(d, d->hsp_id, DCE_BOOT_SEMA);
 
 	if (ss & DCE_BOOT_COMPLETE)
 		goto core_boot_done;
@@ -682,7 +682,7 @@ static int dump_hsp_regs_show(struct seq_file *s, void *unused)
 	 * Dump Boot Semaphore Value
 	 */
 	dce_info(d, "DCE_BOOT_SEMA : 0x%x",
-				dce_ss_get_state(d, DCE_BOOT_SEMA));
+				dce_ss_get_state(d, d->hsp_id, DCE_BOOT_SEMA));
 
 	/**
 	 * Dump Shared Mailboxes Values
