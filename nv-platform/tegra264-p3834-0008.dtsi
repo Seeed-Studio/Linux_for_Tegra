@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "tegra264-p3834-0000.dtsi"
+#include "nv-soc/tegra264-soc-thermal-slowdown.dtsi"
+#include "nv-soc/tegra264-soc-thermal-shutdown.dtsi"
 
 / {
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
-#include <dt-bindings/thermal/thermal.h>
 #include "tegra264.dtsi"
 #include "nv-soc/tegra264-soc-prod.dtsi"
+#include "nv-soc/tegra264-soc-thermal.dtsi"
 
 / {
 	bus@0 {
@@ -277,12 +277,6 @@
 		pcie@d0b0000000 {
 			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_GPU>;
 			status = "okay";
-			pci@0,0 {
-				gpu@0,0 {
-					nvidia,thermal-zones = "tj-thermal";
-					nvidia,cooling-device = <THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
-			};
 		};
 
 		mc_carveout@8108020000 {
@@ -456,66 +450,6 @@
 	};
 
 	thermal-zones {
-		cpu-thermal {
-			status = "okay";
-
-			polling-delay = <1000>;
-			polling-delay-passive = <500>;
-
-			trips {
-				cpu-sw-shutdown {
-					temperature = <113000>;
-					hysteresis = <0>;
-					type = "critical";
-				};
-			};
-		};
-
-		gpu-thermal {
-			status = "okay";
-
-			polling-delay = <1000>;
-			polling-delay-passive = <500>;
-
-			trips {
-				gpu-sw-shutdown {
-					temperature = <113000>;
-					hysteresis = <0>;
-					type = "critical";
-				};
-			};
-		};
-
-		soc012-thermal {
-			status = "okay";
-
-			polling-delay = <1000>;
-			polling-delay-passive = <500>;
-
-			trips {
-				soc012-sw-shutdown {
-					temperature = <113000>;
-					hysteresis = <0>;
-					type = "critical";
-				};
-			};
-		};
-
-		soc345-thermal {
-			status = "okay";
-
-			polling-delay = <1000>;
-			polling-delay-passive = <500>;
-
-			trips {
-				soc345-sw-shutdown {
-					temperature = <113000>;
-					hysteresis = <0>;
-					type = "critical";
-				};
-			};
-		};
-
 		tj-thermal {
 			status = "okay";
 
@@ -533,12 +467,6 @@
 					temperature = <95000>;
 					hysteresis = <4000>;
 					type = "active";
-				};
-
-				tj-sw-shutdown {
-					temperature = <113000>;
-					hysteresis = <0>;
-					type = "critical";
 				};
 			};
 		};

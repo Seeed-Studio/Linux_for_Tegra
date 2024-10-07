@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
-#include "nv-soc/tegra264-soc-thermal-slowdown.dtsi"
-
 / {
 	pwm-fan {
 		cooling-levels = <66 215 255>;

@@ -2,7 +2,33 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "tegra264-p3834-0000.dtsi"
+#include "nv-soc/tegra264-soc-thermal-slowdown.dtsi"
+#include "nv-soc/tegra264-soc-thermal-shutdown.dtsi"
 
 / {
 
+};
+
+&tj_sw_slowdown {
+	temperature = <99000>;
+};
+
+&cpu_sw_shutdown {
+	temperature = <104500>;
+};
+
+&gpu_sw_shutdown {
+	temperature = <104500>;
+};
+
+&soc012_sw_shutdown {
+	temperature = <104500>;
+};
+
+&soc345_sw_shutdown {
+	temperature = <104500>;
+};
+
+&tj_sw_shutdown {
+	temperature = <104500>;
 };
