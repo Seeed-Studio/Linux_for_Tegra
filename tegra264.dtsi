@@ -7009,8 +7009,6 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			next-level-cache = <&l2c_0>;
-
-			#cooling-cells = <2>;
 		};
 
 		cpu_1: cpu@1 {
@@ -7047,8 +7045,6 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			next-level-cache = <&l2c_2>;
-
-			#cooling-cells = <2>;
 		};
 
 		cpu_3: cpu@3 {
@@ -7085,8 +7081,6 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			next-level-cache = <&l2c_4>;
-
-			#cooling-cells = <2>;
 		};
 
 		cpu_5: cpu@5 {
@@ -7123,8 +7117,6 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			next-level-cache = <&l2c_6>;
-
-			#cooling-cells = <2>;
 		};
 
 		cpu_7: cpu@7 {
@@ -7161,8 +7153,6 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			next-level-cache = <&l2c_8>;
-
-			#cooling-cells = <2>;
 		};
 
 		cpu_9: cpu@9 {
@@ -7199,8 +7189,6 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			next-level-cache = <&l2c_10>;
-
-			#cooling-cells = <2>;
 		};
 
 		cpu_11: cpu@11 {
@@ -7237,8 +7225,6 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			next-level-cache = <&l2c_12>;
-
-			#cooling-cells = <2>;
 		};
 
 		cpu_13: cpu@13 {

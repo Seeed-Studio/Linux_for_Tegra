@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/ {
+	thermal-zones {
+		cpu-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+		};
+
+		gpu-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+		};
+
+		soc012-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+		};
+
+		soc345-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+		};
+
+		tj-thermal {
+			status = "okay";
+
+			polling-delay = <1000>;
+			polling-delay-passive = <500>;
+		};
+	};
+};
