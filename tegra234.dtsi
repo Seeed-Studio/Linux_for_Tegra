@@ -3286,7 +3286,7 @@
 
 		fuse@3810000 {
 			compatible = "nvidia,tegra234-efuse";
-			reg = <0x0 0x03810000 0x0 0x20000>;
+			reg = <0x0 0x03810000 0x0 0x10000>;
 			clocks = <&bpmp TEGRA234_CLK_FUSE>;
 			clock-names = "fuse";
 		};
