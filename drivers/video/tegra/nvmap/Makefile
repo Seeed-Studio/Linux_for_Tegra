@@ -29,6 +29,11 @@ nvmap-y := nvmap_core.o \
 	nvmap_stats.o \
 	nvmap_carveout.o \
 	nvmap_kasan_wrapper.o
+
+ifdef CONFIG_DEBUG_FS
+nvmap-y += nvmap_debug.o
+endif
+
 nvmap-$(NVMAP_CONFIG_HANDLE_AS_ID) += nvmap_id_array.o
 
 nvmap-$(NVMAP_CONFIG_SCIIPC) += nvmap_sci_ipc.o

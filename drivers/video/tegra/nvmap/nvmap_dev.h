@@ -73,6 +73,13 @@ struct nvmap_platform_data {
 	unsigned int nr_carveouts;
 };
 
+struct nvmap_pid_data {
+	struct rb_node node;
+	pid_t pid;
+	struct kref refcount;
+	struct dentry *handles_file;
+};
+
 bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid);
 
 void kasan_memcpy_toio(void __iomem *to, const void *from,
