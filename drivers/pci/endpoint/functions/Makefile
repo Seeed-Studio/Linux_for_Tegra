@@ -3,5 +3,6 @@
 
 ifdef CONFIG_PCIE_TEGRA194_EP
 obj-m += pci-epf-dma-test.o
+obj-m += pci-epf-tegra-dma-sanity.o
 obj-m += pci-epf-tegra-vnet.o
 endif
