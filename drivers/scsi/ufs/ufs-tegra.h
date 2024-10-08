@@ -163,6 +163,7 @@
 /*Uphy pll clock defines*/
 #define UFS_CLK_UPHY_PLL3_RATEA 4992000000
 #define UFS_CLK_UPHY_PLL3_RATEB 5840000000
+#define UFS_CLK_UPHY_PLL3_RATEB_T264  582400000
 
 /* HS clock frequencies */
 #define MPHY_TX_HS_BIT_DIV_CLK	600000000

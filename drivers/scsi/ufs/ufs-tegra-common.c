@@ -755,6 +755,7 @@ static int ufs_tegra_enable_ufs_uphy_pll3(struct ufs_tegra_host *ufs_tegra,
 {
 	int err = 0;
 	struct device *dev = ufs_tegra->hba->dev;
+	unsigned long rate_b_freq;
 
 	if (!ufs_tegra->configure_uphy_pll3)
 		return 0;
@@ -765,9 +766,15 @@ static int ufs_tegra_enable_ufs_uphy_pll3(struct ufs_tegra_host *ufs_tegra,
 		return err;
 
 	if (is_rate_b) {
-		if (ufs_tegra->ufs_uphy_pll3)
+		if (ufs_tegra->ufs_uphy_pll3) {
+			if (ufs_tegra->soc->chip_id == TEGRA264)
+				rate_b_freq = UFS_CLK_UPHY_PLL3_RATEB_T264;
+			else
+				rate_b_freq = UFS_CLK_UPHY_PLL3_RATEB;
+
 			err = clk_set_rate(ufs_tegra->ufs_uphy_pll3,
-				UFS_CLK_UPHY_PLL3_RATEB);
+				rate_b_freq);
+		}
 	} else {
 		if (ufs_tegra->ufs_uphy_pll3)
 			err = clk_set_rate(ufs_tegra->ufs_uphy_pll3,
