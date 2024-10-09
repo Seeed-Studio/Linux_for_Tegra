@@ -78,6 +78,7 @@ static void ufs_tegra_set_clk_div(struct ufs_hba *hba)
 		ufshcd_writel(hba, UFS_VNDR_HCLKDIV_1US_TICK_FPGA, REG_UFS_VNDR_HCLKDIV);
 	else
 		ufshcd_writel(hba, hclk_val, REG_UFS_VNDR_HCLKDIV);
+	udelay(20);
 }
 
 static void ufs_tegra_ufs_mmio_axi(struct ufs_hba *hba)
