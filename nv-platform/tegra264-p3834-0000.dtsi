@@ -182,6 +182,10 @@
 			status = "okay";
 		};
 
+		tegra-utc@c4e0000 {
+			status = "okay";
+		};
+
 		tegra-utc@c5a0000 {
 			status = "okay";
 		};
@@ -330,8 +334,8 @@
 	};
 
 	chosen {
-		bootargs = "BOOT_IMAGE=/EFI/BOOT/Image tegra_keep_boot_clocks clk_ignore_unused earlyprintk=tegra_utc,mmio32,0xc5a0000 earlycon=tegra_utc,mmio32,0xc5a0000 androidboot.selinux=disabled console=ttyUTC0,115200 root=/dev/initrd rw rootwait rootwait rw rootfstype=ext4 firmware_class.path=/etc/firmware kmemleak=off pci=pcie_bus_perf";
-		stdout-path = "/bus@0/tegra-utc@c5a0000";
+		bootargs = "BOOT_IMAGE=/EFI/BOOT/Image tegra_keep_boot_clocks clk_ignore_unused earlyprintk=tegra_utc,mmio32,0xc4e0000 earlycon=tegra_utc,mmio32,0xc4e0000 androidboot.selinux=disabled console=ttyUTC0,115200 root=/dev/initrd rw rootwait rootwait rw rootfstype=ext4 firmware_class.path=/etc/firmware kmemleak=off pci=pcie_bus_perf";
+		stdout-path = "/bus@0/tegra-utc@c4e0000";
 	};
 
 	cpus {

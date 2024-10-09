@@ -3673,6 +3673,16 @@
 			status = "disabled";
 		};
 
+		tegra-utc@c4e0000 {
+			compatible = "nvidia,tegra264-utc";
+			reg = <0x0 0x0c4e8000 0x0 0x8000>,
+			      <0x0 0x0c4e0000 0x0 0x8000>;
+			reg-names = "rx", "tx";
+			interrupts = <GIC_SPI 515 IRQ_TYPE_LEVEL_HIGH>;
+			current-speed = <115200>;
+			status = "disabled";
+		};
+
 		tegra-utc@c5a0000 {
 			compatible = "nvidia,tegra264-utc";
 			status = "disabled";
