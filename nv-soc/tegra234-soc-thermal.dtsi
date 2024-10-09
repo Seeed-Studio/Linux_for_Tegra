@@ -6,46 +6,64 @@
 / {
 	thermal-zones {
 		cpu-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};
 
 		gpu-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};
 
 		cv0-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};
 
 		cv1-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};
 
 		cv2-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};
 
 		soc0-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};
 
 		soc1-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};
 
 		soc2-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};
 
 		tj-thermal {
+			status = "okay";
+
 			polling-delay = <TEGRA234_THERMAL_POLLING_DELAY>;
 			polling-delay-passive = <TEGRA234_THERMAL_POLLING_DELAY>;
 		};

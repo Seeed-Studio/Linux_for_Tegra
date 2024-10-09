@@ -2,6 +2,10 @@
 // SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "tegra234-p3701-0000-prod-overlay.dtsi"
+#include "nv-soc/tegra234-soc-thermal.dtsi"
+#include "nv-soc/tegra234-soc-thermal-slowdown-cluster.dtsi"
+#include "nv-soc/tegra234-soc-thermal-shutdown.dtsi"
+#include "nv-soc/tegra234-soc-thermal-trip-event.dtsi"
 
 / {
 	bus@0 {

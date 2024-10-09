@@ -2,10 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "nv-soc/tegra234-overlay.dtsi"
-#include "nv-soc/tegra234-soc-thermal.dtsi"
-#include "nv-soc/tegra234-soc-thermal-slowdown-cluster.dtsi"
-#include "nv-soc/tegra234-soc-thermal-shutdown.dtsi"
-#include "nv-soc/tegra234-soc-thermal-trip-event.dtsi"
 #include "nv-soc/tegra234-soc-camera.dtsi"
 #include "tegra234-camera-p3785.dtsi"
 #include "tegra234-p3740-0002.dtsi"
@@ -39,8 +35,6 @@
 
 	thermal-zones {
 		cpu-thermal {
-			status = "okay";
-
 			cooling-maps {
 				map-hot-surface-alert {
 					cooling-device = <&hot_surface_alert 0 0>;
@@ -49,8 +43,6 @@
 		};
 
 		cv0-thermal {
-			status = "okay";
-
 			cooling-maps {
 				map-hot-surface-alert {
 					cooling-device = <&hot_surface_alert 0 0>;
@@ -59,8 +51,6 @@
 		};
 
 		cv1-thermal {
-			status = "okay";
-
 			cooling-maps {
 				map-hot-surface-alert {
 					cooling-device = <&hot_surface_alert 0 0>;
@@ -69,8 +59,6 @@
 		};
 
 		cv2-thermal {
-			status = "okay";
-
 			cooling-maps {
 				map-hot-surface-alert {
 					cooling-device = <&hot_surface_alert 0 0>;
@@ -79,8 +67,6 @@
 		};
 
 		gpu-thermal {
-			status = "okay";
-
 			cooling-maps {
 				map-hot-surface-alert {
 					cooling-device = <&hot_surface_alert 0 0>;
@@ -89,8 +75,6 @@
 		};
 
 		soc0-thermal {
-			status = "okay";
-
 			cooling-maps {
 				map-hot-surface-alert {
 					cooling-device = <&hot_surface_alert 0 0>;
@@ -99,8 +83,6 @@
 		};
 
 		soc1-thermal {
-			status = "okay";
-
 			cooling-maps {
 				map-hot-surface-alert {
 					cooling-device = <&hot_surface_alert 0 0>;
@@ -109,17 +91,11 @@
 		};
 
 		soc2-thermal {
-			status = "okay";
-
 			cooling-maps {
 				map-hot-surface-alert {
 					cooling-device = <&hot_surface_alert 0 0>;
 				};
 			};
-		};
-
-		tj-thermal {
-			status = "okay";
 		};
 	};
 

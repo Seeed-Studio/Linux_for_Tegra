@@ -2,10 +2,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "nv-soc/tegra234-overlay.dtsi"
-#include "nv-soc/tegra234-soc-thermal.dtsi"
-#include "nv-soc/tegra234-soc-thermal-slowdown-corepair.dtsi"
-#include "nv-soc/tegra234-soc-thermal-shutdown.dtsi"
-#include "nv-soc/tegra234-soc-thermal-trip-event.dtsi"
 #include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
 #include "tegra234-p3768-0000.dtsi"
 #include "tegra234-p3767-0000.dtsi"
@@ -331,40 +327,6 @@
 
 	soctherm-oc-event {
 		status = "okay";
-	};
-
-	thermal-zones {
-		cpu-thermal {
-			status = "okay";
-		};
-
-		gpu-thermal {
-			status = "okay";
-		};
-
-		cv0-thermal {
-			status = "okay";
-		};
-
-		cv1-thermal {
-			status = "okay";
-		};
-
-		cv2-thermal {
-			status = "okay";
-		};
-
-		soc0-thermal {
-			status = "okay";
-		};
-
-		soc1-thermal {
-			status = "okay";
-		};
-
-		soc2-thermal {
-			status = "okay";
-		};
 	};
 
 	tegra-hsp@b950000 {

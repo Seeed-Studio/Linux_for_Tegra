@@ -4,6 +4,10 @@
 #include <dt-bindings/gpio/tegra234-gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt/tegra234-irq.h>
+#include "nv-soc/tegra234-soc-thermal.dtsi"
+#include "nv-soc/tegra234-soc-thermal-slowdown-corepair.dtsi"
+#include "nv-soc/tegra234-soc-thermal-shutdown.dtsi"
+#include "nv-soc/tegra234-soc-thermal-trip-event.dtsi"
 
 / {
 	bus@0 {
