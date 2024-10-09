@@ -93,7 +93,7 @@
 
 #define MPHY_PWR_CHANGE_CLK_BOOST		0x0017
 #define MPHY_EQ_TIMEOUT				0x1AADB5
-#define MPHY_GO_BIT	1
+#define MPHY_GO_BIT	1U
 
 #define MPHY_RX_APB_CAPABILITY_88_8B_0		0x88
 #define RX_HS_G1_SYNC_LENGTH_CAPABILITY(x)	(((x) & 0x3f) << 24)

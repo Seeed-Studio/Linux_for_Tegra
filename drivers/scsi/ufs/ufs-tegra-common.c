@@ -48,6 +48,28 @@
 
 static void ufs_tegra_mphy_startup_sequence(struct ufs_tegra_host *ufs_tegra);
 
+static int mphy_go_bit_status(void __iomem *mphy_base, u32 offset) {
+
+	unsigned int timeout;
+	unsigned int err = 0;
+	u32 mphy_rx_vendor2 = 0;
+
+	timeout = 500U; /* Number of iterations */
+	while (timeout != 0U) {
+                mphy_rx_vendor2 = mphy_readl(mphy_base, offset);
+                if ((mphy_rx_vendor2 & MPHY_GO_BIT) == 0U) {
+		      break;
+		} else {
+			udelay(1);
+		}
+		timeout--;
+	}
+	if (timeout == 0U) {
+		err = -ETIMEDOUT;
+	}
+	return err;
+}
+
 #ifdef CONFIG_DEBUG_FS
 static void ufs_tegra_init_debugfs(struct ufs_hba *hba)
 {
@@ -173,13 +195,23 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                         /* TODO: GO bit has to be read back after updating it */
                         mphy_update(ufs_tegra->mphy_l1_base,
                                 MPHY_GO_BIT, mphy_rx_vendor2_reg);
-                }
+			err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, mphy_rx_vendor2_reg);
+			if (err) {
+				dev_err(dev, "%s: Go bit clear failed for mphy1\n", __func__);
+				goto fail;
+			}
+		}
 
                 mphy_update(ufs_tegra->mphy_l0_base,
                     MPHY_RX_APB_VENDOR2_0_RX_CAL_EN, mphy_rx_vendor2_reg);
                 /* TODO: GO bit has to be read back after updating it */
                 mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
                         mphy_rx_vendor2_reg);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, mphy_rx_vendor2_reg);
+	        if (err) {
+			dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+			goto fail;
+ 	        }
 
                if (ufs_tegra->x2config == true) {
                         /* Wait till lane calibration is done */
@@ -208,6 +240,11 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                                 mphy_rx_vendor2_reg);
                         mphy_update(ufs_tegra->mphy_l1_base,
                                 MPHY_GO_BIT, mphy_rx_vendor2_reg);
+			err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, mphy_rx_vendor2_reg);
+			if (err) {
+				dev_err(dev, "%s: Go bit clear failed for mphy1\n", __func__);
+				goto fail;
+			}
 
                         /* Wait till lane calibration is done */
                         timeout = 100U; /* Number of iterations */
@@ -254,6 +291,11 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                                 mphy_rx_vendor2_reg);
                 mphy_update(ufs_tegra->mphy_l0_base,
                                 MPHY_GO_BIT, mphy_rx_vendor2_reg);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, mphy_rx_vendor2_reg);
+	        if (err) {
+			dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+			goto fail;
+ 	        }
                 timeout = 100U; /* Number of iterations */
                 while (timeout != 0U) {
                         mphy_rx_vendor2 = mphy_readl(ufs_tegra->mphy_l0_base,
@@ -287,10 +329,19 @@ static int ufs_tegra_mphy_receiver_calibration(struct ufs_tegra_host *ufs_tegra,
                         /* TODO: GO bit has to be read back after updating it */
                         mphy_update(ufs_tegra->mphy_l1_base,
                                 MPHY_GO_BIT, mphy_rx_vendor2_reg);
+			err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, mphy_rx_vendor2_reg);
+	                if (err) {
+				goto fail;
+	                }
                 }
-                /* TODO: GO bit has to be read back after updating it */
+
                 mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
                         mphy_rx_vendor2_reg);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, mphy_rx_vendor2_reg);
+	        if (err) {
+			dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+			goto fail;
+ 	        }
                 timeout = 10U; /* Number of iterations */
                 while (timeout != 0U) {
 			udelay(1000);
@@ -314,15 +365,16 @@ fail:
         return err;
 }
 
-static void ufs_tegra_mphy_tx_calibration_enable(struct ufs_tegra_host *ufs_tegra)
+static int ufs_tegra_mphy_tx_calibration_enable(struct ufs_tegra_host *ufs_tegra)
 {
 	struct device *dev = ufs_tegra->hba->dev;
+	int err = 0;
 
 	if ((tegra_sku_info.platform == TEGRA_PLATFORM_VDK) ||
 		(tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA) ||
 		(tegra_sku_info.platform == TEGRA_PLATFORM_VSP) ||
 		(ufs_tegra->soc->chip_id != TEGRA264))
-		return;
+		goto end;
 
 	/* Enable TX Calibration */
 	mphy_update(ufs_tegra->mphy_l0_base,
@@ -337,11 +389,24 @@ static void ufs_tegra_mphy_tx_calibration_enable(struct ufs_tegra_host *ufs_tegr
 
 	mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
 			MPHY_TX_APB_TX_VENDOR0_0_T234);
+	err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, MPHY_TX_APB_TX_VENDOR0_0_T234);
+	if (err) {
+		dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+		goto end;
+	}
 
 	if (ufs_tegra->x2config == true) {
 		mphy_update(ufs_tegra->mphy_l1_base,
 			MPHY_GO_BIT, MPHY_TX_APB_TX_VENDOR0_0_T234);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, MPHY_TX_APB_TX_VENDOR0_0_T234);
+		if (err) {
+			dev_err(dev, "%s: Go bit clear failed for mphy1\n", __func__);
+		}
 	}
+end:
+	if (err)
+		dev_err(dev, "%s: failed\n", __func__);
+	return err;
 }
 
 static int ufs_tegra_mphy_tx_calibration_status(struct ufs_tegra_host *ufs_tegra,
@@ -378,6 +443,11 @@ static int ufs_tegra_mphy_tx_calibration_status(struct ufs_tegra_host *ufs_tegra
 
 	mphy_update(mphy_base, MPHY_GO_BIT,
 		MPHY_TX_APB_TX_VENDOR0_0_T234);
+	err = mphy_go_bit_status(mphy_base, MPHY_TX_APB_TX_VENDOR0_0_T234);
+	if (err) {
+		dev_err(dev, "%s: failed\n", __func__);
+		goto fail;
+	}
 
 	/* Wait till lane calibration clear is done */
 	timeout = 100U; /* Number of iterations */
@@ -1083,9 +1153,11 @@ static void ufs_tegra_mphy_deassert_reset(struct ufs_tegra_host *ufs_tegra)
 	}
 }
 
-static void ufs_tegra_pwr_change_clk_boost(struct ufs_tegra_host *ufs_tegra)
+static int ufs_tegra_pwr_change_clk_boost(struct ufs_tegra_host *ufs_tegra)
 {
 	u32 reg_vendor_0;
+	struct device *dev = ufs_tegra->hba->dev;
+	int err;
 
 	if (ufs_tegra->soc->chip_id >= TEGRA234)
 		reg_vendor_0 = MPHY_RX_APB_VENDOR2_0_T234;
@@ -1095,22 +1167,37 @@ static void ufs_tegra_pwr_change_clk_boost(struct ufs_tegra_host *ufs_tegra)
 	mphy_writel(ufs_tegra->mphy_l0_base, MPHY_PWR_CHANGE_CLK_BOOST,
 			MPHY_RX_APB_VENDOR49_0_T234);
 	mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT, reg_vendor_0);
+	err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, reg_vendor_0);
+	if (err) {
+		dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+		goto end;
+	}
 
 	if (ufs_tegra->x2config) {
 		mphy_writel(ufs_tegra->mphy_l1_base, MPHY_PWR_CHANGE_CLK_BOOST,
 				MPHY_RX_APB_VENDOR49_0_T234);
 		mphy_update(ufs_tegra->mphy_l1_base, MPHY_GO_BIT, reg_vendor_0);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, reg_vendor_0);
+	        if (err) {
+			dev_err(dev, "%s: Go bit clear failed for for mphy1\n", __func__);
+			goto end;
+ 	        }
+
 	}
 	udelay(20);
+end:
+	return err;
 }
 
-static void ufs_tegra_mphy_rx_sync_capability(struct ufs_tegra_host *ufs_tegra)
+static int ufs_tegra_mphy_rx_sync_capability(struct ufs_tegra_host *ufs_tegra)
 {
 	u32 val_88_8b = 0;
 	u32 val_94_97 = 0;
 	u32 val_8c_8f = 0;
 	u32 val_98_9b = 0;
 	u32 vendor2_reg, vendor3_reg;
+	struct device *dev = ufs_tegra->hba->dev;
+	int err = 0;
 
 	if (ufs_tegra->soc->chip_id >= TEGRA234) {
 		vendor2_reg = MPHY_RX_APB_VENDOR2_0_T234;
@@ -1165,6 +1252,11 @@ static void ufs_tegra_mphy_rx_sync_capability(struct ufs_tegra_host *ufs_tegra)
 				vendor3_reg);
 	mphy_update(ufs_tegra->mphy_l0_base,
 				MPHY_GO_BIT, vendor2_reg);
+	err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, vendor2_reg);
+	if (err) {
+		dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+		goto fail;
+	}
 
 	if (ufs_tegra->x2config) {
 		mphy_writel(ufs_tegra->mphy_l1_base, val_88_8b,
@@ -1181,12 +1273,20 @@ static void ufs_tegra_mphy_rx_sync_capability(struct ufs_tegra_host *ufs_tegra)
 		/* set gobit */
 		mphy_update(ufs_tegra->mphy_l1_base,
 				MPHY_GO_BIT, vendor2_reg);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, vendor2_reg);
+		if (err) {
+			dev_err(dev, "%s: Go bit clear failed for mphy1\n", __func__);
+		}
 	}
+fail:
+	return err;
 }
 
-static void ufs_tegra_mphy_rx_advgran(struct ufs_tegra_host *ufs_tegra)
+static int ufs_tegra_mphy_rx_advgran(struct ufs_tegra_host *ufs_tegra)
 {
 	u32 val = 0, reg_vendor_2;
+	struct device *dev = ufs_tegra->hba->dev;	
+	int err;
 
 	if (ufs_tegra->soc->chip_id >= TEGRA234)
 		reg_vendor_2 = MPHY_RX_APB_VENDOR2_0_T234;
@@ -1204,6 +1304,11 @@ static void ufs_tegra_mphy_rx_advgran(struct ufs_tegra_host *ufs_tegra)
 					MPHY_RX_APB_CAPABILITY_98_9B_0);
 	mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT,
 			reg_vendor_2);
+	err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, reg_vendor_2);
+	if (err) {
+		dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+		goto end;
+	}
 
 	if (ufs_tegra->x2config) {
 		val = mphy_readl(ufs_tegra->mphy_l1_base,
@@ -1218,7 +1323,13 @@ static void ufs_tegra_mphy_rx_advgran(struct ufs_tegra_host *ufs_tegra)
 					MPHY_RX_APB_CAPABILITY_98_9B_0);
 		mphy_update(ufs_tegra->mphy_l1_base, MPHY_GO_BIT,
 			reg_vendor_2);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, reg_vendor_2);
+		if (err) {
+			dev_err(dev, "%s: Go bit clear failed for mphy1\n", __func__);
+		}
 	}
+end:
+	return err;
 }
 
 static void ufs_tegra_ufs_aux_ref_clk_enable(struct ufs_tegra_host *ufs_tegra)
@@ -1623,7 +1734,9 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 			 * is required as per T234 IAS document
 			 */
 			if (ufs_tegra->soc->chip_id == TEGRA234) {
-				ufs_tegra_pwr_change_clk_boost(ufs_tegra);
+				ret = ufs_tegra_pwr_change_clk_boost(ufs_tegra);
+				if (ret)
+					goto out;
 				ufshcd_dme_configure_adapt(hba, dev_req_params->gear_rx,
 						PA_INITIAL_ADAPT);
 			}
@@ -1762,7 +1875,7 @@ static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,
 			ufs_tegra_mphy_rx_sync_capability(ufs_tegra);
 			ufs_tegra_unipro_pre_linkup(hba);
 			/* Enable TX link calibration */
-			ufs_tegra_mphy_tx_calibration_enable(ufs_tegra);
+			err = ufs_tegra_mphy_tx_calibration_enable(ufs_tegra);
 		}
 		break;
 	case POST_CHANGE:
@@ -1836,17 +1949,30 @@ static int ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	return 0;
 }
 
-static void ufs_tegra_eq_timeout(struct ufs_tegra_host *ufs_tegra)
+static int ufs_tegra_eq_timeout(struct ufs_tegra_host *ufs_tegra)
 {
+	struct device *dev = ufs_tegra->hba->dev;
+	int err;
+
 	mphy_writel(ufs_tegra->mphy_l0_base, MPHY_EQ_TIMEOUT,
 			MPHY_RX_APB_VENDOR3B_0_T234);
 	mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT, MPHY_RX_APB_VENDOR2_0_T234);
-
+	err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, MPHY_RX_APB_VENDOR2_0_T234);
+	if (err) {
+		dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+		goto end;
+	}
 	if (ufs_tegra->x2config) {
 		mphy_writel(ufs_tegra->mphy_l1_base, MPHY_EQ_TIMEOUT,
 				MPHY_RX_APB_VENDOR3B_0_T234);
 		mphy_update(ufs_tegra->mphy_l1_base, MPHY_GO_BIT, MPHY_RX_APB_VENDOR2_0_T234);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, MPHY_RX_APB_VENDOR2_0_T234);
+		if (err) {
+			dev_err(dev, "%s: Go bit clear failed for mphy1\n", __func__);
+		}
 	}
+end:
+	return err;
 }
 static void ufs_tegra_jtag(struct ufs_tegra_host *ufs_tegra, u32 addr, u32 val)
 {
@@ -2254,14 +2380,18 @@ ufs_clk_deassert:
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		goto end;
 
-	ufs_tegra_mphy_rx_advgran(ufs_tegra);
+	err = ufs_tegra_mphy_rx_advgran(ufs_tegra);
+	if (err)
+		goto out_disable_mphylane_clks;
 
 aux_init:
 	ufs_tegra_ufs_aux_ref_clk_disable(ufs_tegra);
 	ufs_tegra_aux_reset_enable(ufs_tegra);
 	ufs_tegra_ufs_aux_prog(ufs_tegra);
 	ufs_tegra_set_clk_div(hba);
-	ufs_tegra_eq_timeout(ufs_tegra);
+	err = ufs_tegra_eq_timeout(ufs_tegra);
+	if (err)
+		goto out_disable_mphylane_clks;
 
 end:
 	if (ufs_tegra->soc->chip_id >= TEGRA234) {
