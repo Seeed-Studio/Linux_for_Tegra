@@ -392,16 +392,25 @@ HOST1X_EMU_EXPORT_SYMBOL(nvhost_syncpt_incr_max_ext);
 HOST1X_EMU_EXPORT_DECL(u32, nvhost_syncpt_unit_interface_get_byte_offset_ext(struct platform_device *pdev,
                              u32 syncpt_id))
 {
-    struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct platform_device *host1x_pdev;
+	struct host1x *host1x;
 
-    if (WARN_ON(!pdata))
-        return 0;
-    if (syncpt_id >= pdata->host1x->syncpt_count) {
-        pr_info("Invalid syncpoint ID!\n");
-        return 0;
-    }
+	host1x_pdev = HOST1X_EMU_EXPORT_CALL(nvhost_get_default_device());
+	if (WARN_ON(!host1x_pdev))
+		return 0;
 
-    return syncpt_id * pdata->host1x->syncpt_page_size;
+	host1x = platform_get_drvdata(host1x_pdev);
+	if (!host1x) {
+		pr_info("No platform data for host1x!\n");
+		return 0;
+	}
+
+	if (syncpt_id >= host1x->syncpt_count) {
+		pr_info("Invalid syncpoint ID!\n");
+		return 0;
+	}
+
+	return syncpt_id * host1x->syncpt_page_size;
 }
 HOST1X_EMU_EXPORT_SYMBOL(nvhost_syncpt_unit_interface_get_byte_offset_ext);
 
@@ -431,11 +440,22 @@ HOST1X_EMU_EXPORT_SYMBOL(nvhost_syncpt_unit_interface_get_byte_offset);
 HOST1X_EMU_EXPORT_DECL(int, nvhost_syncpt_unit_interface_get_aperture(struct platform_device *pdev,
                           u64 *base, size_t *size))
 {
-    struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct platform_device *host1x_pdev;
+	struct host1x *host1x;
 
-    *base = pdata->host1x->syncpt_phy_apt;
-    *size = pdata->host1x->syncpt_page_size * pdata->host1x->syncpt_count;
-    return 0;
+	host1x_pdev = HOST1X_EMU_EXPORT_CALL(nvhost_get_default_device());
+	if (WARN_ON(!host1x_pdev))
+		return 0;
+
+	host1x = platform_get_drvdata(host1x_pdev);
+	if (!host1x) {
+		pr_info("No platform data for host1x!\n");
+		return 0;
+	}
+
+	*base = host1x->syncpt_phy_apt;
+	*size = host1x->syncpt_page_size * host1x->syncpt_count;
+	return 0;
 }
 HOST1X_EMU_EXPORT_SYMBOL(nvhost_syncpt_unit_interface_get_aperture);
 

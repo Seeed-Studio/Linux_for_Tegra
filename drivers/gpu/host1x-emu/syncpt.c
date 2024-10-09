@@ -313,20 +313,21 @@ HOST1X_EMU_EXPORT_DECL(struct host1x_syncpt*, host1x_syncpt_alloc(struct host1x 
      * TODO: Optimize syncpoint allocation, serial allocation
      * dosen't effectively utilize per pool polling thread.
      */
-    for (i = host->syncpt_base; i < host->syncpt_end; i++, sp++) {
+	/* FIXME: WAR to allocate syncpoint from index 1, As at client level synpt-id 0 is invalid*/
+	for (i = host->syncpt_base + 1; i < host->syncpt_end; i++, sp++) {
 
-        /* Do pool verification if pool selected */
-        if ((pool != NULL) && (sp->pool != pool))
-            continue;
+		/* Do pool verification if pool selected */
+		if ((pool != NULL) && (sp->pool != pool))
+			continue;
 
-        /* Skip if pool is read only pool */
-        if (sp->pool == &host->pools[host->ro_pool_id])
-            continue;
+		/* Skip if pool is read only pool */
+		if (sp->pool == &host->pools[host->ro_pool_id])
+			continue;
 
-        if (kref_read(&sp->ref) == 0) {
-            break;
-        }
-    }
+		if (kref_read(&sp->ref) == 0) {
+			break;
+		}
+	}
 
     if (i >= host->syncpt_end) {
         goto unlock;

@@ -218,19 +218,27 @@ static int host1x_ioctl_syncpoint_wait(
                     struct host1x_emu_ctrl_syncpt_wait_args *args)
 
 {
-    signed long timeout_jiffies;
-    struct host1x_syncpt 		*sp;
-    struct host1x 				*host = ctx->host;
+	signed long timeout_jiffies;
+	struct host1x_syncpt *sp;
+	struct host1x *host = ctx->host;
+	ktime_t ts;
+	int err;
 
-    sp = HOST1X_EMU_EXPORT_CALL(host1x_syncpt_get_by_id_noref(host, args->id));
-    if (!sp)
-        return -EINVAL;
-    timeout_jiffies = timeout_abs_to_jiffies(args->timeout_ns);
+	sp = HOST1X_EMU_EXPORT_CALL(host1x_syncpt_get_by_id_noref(host, args->id));
+	if (!sp)
+		return -EINVAL;
 
-    return HOST1X_EMU_EXPORT_CALL(host1x_syncpt_wait(sp,
-                              args->threshold,
-                              timeout_jiffies,
-                              &args->value));
+	timeout_jiffies = timeout_abs_to_jiffies(args->timeout_ns);
+	err = HOST1X_EMU_EXPORT_CALL(host1x_syncpt_wait_ts(sp,
+				args->threshold,
+				timeout_jiffies,
+				&args->value,
+				&ts));
+	if (err)
+		return err;
+
+	args->timestamp = ktime_to_ns(ts);
+	return 0;
 }
 
 static long host1x_ctrlctl(struct file *filp, unsigned int cmd, unsigned long arg)
