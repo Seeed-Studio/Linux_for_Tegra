@@ -60,22 +60,6 @@
 
 #define NVMAP_TAG_LABEL_MAXLEN	(63 - sizeof(struct nvmap_tag_entry))
 
-#define NVMAP_TP_ARGS_H(handle)					      	      \
-	handle,								      \
-	atomic_read(&handle->share_count),				      \
-	handle->heap_type == NVMAP_HEAP_IOVMM ? 0 : 			      \
-			(handle->carveout ? nvmap_get_heap_block_base(handle->carveout) : 0),      \
-	handle->size,							      \
-	(handle->userflags & 0xFFFF),                                         \
-	(handle->userflags >> 16),					      \
-	__nvmap_tag_name(nvmap_dev, handle->userflags >> 16)
-
-#define NVMAP_TP_ARGS_CHR(client, handle, ref)			      	      \
-	client,                                                               \
-	client ? nvmap_client_pid((struct nvmap_client *)client) : 0,         \
-	(ref) ? atomic_read(&((struct nvmap_handle_ref *)ref)->dupes) : 1,    \
-	NVMAP_TP_ARGS_H(handle)
-
 #define NVMAP_TAG_TRACE(x, ...) 			\
 do {                                                    \
 	if (x##_enabled()) {                            \
@@ -92,9 +76,6 @@ do {                                                    \
 
 struct page;
 struct nvmap_device;
-
-/* holds max number of handles allocted per process at any time */
-extern u32 nvmap_max_handle_count;
 
 extern bool nvmap_convert_iovmm_to_carveout;
 extern bool nvmap_convert_carveout_to_iovmm;
@@ -113,14 +94,6 @@ struct nvmap_vma_list {
 	unsigned long save_vm_flags;
 	pid_t pid;
 	atomic_t ref;
-};
-
-/* handles allocated as collection of pages */
-struct nvmap_pgalloc {
-	struct page **pages;
-	bool contig;			/* contiguous system memory */
-	atomic_t reserved;
-	atomic_t ndirty;	/* count number of dirty pages */
 };
 
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
@@ -146,13 +119,6 @@ struct nvmap_device_list {
 #define NVMAP_IVM_IVMID_MASK   ((1 << NVMAP_IVM_IVMID_WIDTH) - 1)
 #define NVMAP_IVM_ALIGNMENT    (SZ_32K)
 
-struct nvmap_handle_dmabuf_priv {
-	void *priv;
-	struct device *dev;
-	void (*priv_release)(void *priv);
-	struct list_head list;
-};
-
 struct nvmap_tag_entry {
 	struct rb_node node;
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
@@ -160,22 +126,6 @@ struct nvmap_tag_entry {
 };
 
 #define NVMAP_IVM_INVALID_PEER		(-1)
-
-struct nvmap_client {
-	const char			*name;
-	struct rb_root			handle_refs;
-	struct mutex			ref_lock;
-	bool				kernel_client;
-	atomic_t			count;
-	struct task_struct		*task;
-	struct list_head		list;
-	u32				handle_count;
-	u32				next_fd;
-	int				warned;
-	int				tag_warned;
-	struct xarray			id_array;
-	struct xarray			*ida;
-};
 
 struct nvmap_vma_priv {
 	struct nvmap_handle *handle;
@@ -215,16 +165,6 @@ struct nvmap_device {
 extern struct nvmap_device *nvmap_dev;
 extern ulong nvmap_init_time;
 
-static inline void nvmap_ref_lock(struct nvmap_client *priv)
-{
-	mutex_lock(&priv->ref_lock);
-}
-
-static inline void nvmap_ref_unlock(struct nvmap_client *priv)
-{
-	mutex_unlock(&priv->ref_lock);
-}
-
 static inline void nvmap_acquire_mmap_read_lock(struct mm_struct *mm)
 {
 	down_read(&mm->mmap_lock);
@@ -237,19 +177,10 @@ static inline void nvmap_release_mmap_read_lock(struct mm_struct *mm)
 
 struct nvmap_carveout_node;
 
-struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h);
-void nvmap_handle_put(struct nvmap_handle *h);
-
 void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size);
 
 int is_nvmap_vma(struct vm_area_struct *vma);
 
-struct nvmap_handle *nvmap_handle_get_from_fd(int fd);
-
-struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
-				  struct nvmap_handle *h);
-void __nvmap_free_sg_table(struct nvmap_client *client,
-			   struct nvmap_handle *h, struct sg_table *sgt);
 void *__nvmap_mmap(struct nvmap_handle *h);
 void __nvmap_munmap(struct nvmap_handle *h, void *addr);
 
@@ -291,10 +222,6 @@ static inline char *__nvmap_tag_name(struct nvmap_device *dev, u32 tag)
 	entry = nvmap_search_tag_entry(&dev->tags, tag);
 	return entry ? (char *)(entry + 1) : "";
 }
-static inline pid_t nvmap_client_pid(struct nvmap_client *client)
-{
-	return client->task ? client->task->pid : 0;
-}
 
 void *nvmap_dmabuf_get_drv_data(struct dma_buf *dmabuf,
 		struct device *dev);
@@ -304,8 +231,5 @@ struct nvmap_device_list *nvmap_is_device_present(char *device_name, u32 heap_ty
 void nvmap_add_device_name(char *device_name, u64 dma_mask, u32 heap_type);
 void nvmap_remove_device_name(char *device_name, u32 heap_type);
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
-
-struct nvmap_handle *nvmap_handle_get_from_id(struct nvmap_client *client,
-		u32 id);
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

@@ -27,7 +27,10 @@ int nvmap_get_user_pages(ulong vaddr,
 				size_t nr_page, struct page **pages,
 				bool is_user_flags, u32 user_foll_flags);
 
-void _nvmap_handle_free(struct nvmap_handle *h);
+phys_addr_t nvmap_alloc_get_co_base(struct nvmap_handle *h);
+
+void nvmap_alloc_free(struct page **pages, unsigned int nr_page, bool from_va,
+		      bool is_subhandle);
 
 int __nvmap_cache_maint(struct nvmap_client *client,
 			       struct nvmap_cache_op_64 *op);

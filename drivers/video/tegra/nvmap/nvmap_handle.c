@@ -34,6 +34,11 @@
 
 u32 nvmap_max_handle_count;
 
+u32 nvmap_handle_get_max_handle_count(void)
+{
+	return nvmap_max_handle_count;
+}
+
 struct nvmap_handle *nvmap_handle_get_from_id(struct nvmap_client *client,
 		u32 id)
 {
@@ -920,3 +925,101 @@ fail:
 	pr_err("Handle RO check failed\n");
 	return -EINVAL;
 }
+
+static void _nvmap_handle_free(struct nvmap_handle *h)
+{
+	unsigned int nr_page;
+	struct nvmap_handle_dmabuf_priv *curr, *next;
+
+	list_for_each_entry_safe(curr, next, &h->dmabuf_priv, list) {
+		curr->priv_release(curr->priv);
+		list_del(&curr->list);
+		kfree_sensitive(curr);
+	}
+
+	if (nvmap_handle_remove(nvmap_dev, h) != 0)
+		return;
+
+	if (!h->alloc)
+		goto out;
+
+	nvmap_stats_inc(NS_RELEASE, h->size);
+	nvmap_stats_dec(NS_TOTAL, h->size);
+	if (!h->heap_pgalloc) {
+		if (h->vaddr) {
+			void *addr = h->vaddr;
+			phys_addr_t base = nvmap_alloc_get_co_base(h);
+
+			addr -= (base & ~PAGE_MASK);
+			iounmap((void __iomem *)addr);
+		}
+
+		nvmap_heap_free(h->carveout);
+		nvmap_kmaps_dec(h);
+		h->carveout = NULL;
+		h->vaddr = NULL;
+		goto out;
+	}
+
+	nr_page = DIV_ROUND_UP(h->size, PAGE_SIZE);
+
+	BUG_ON(h->size & ~PAGE_MASK);
+	BUG_ON(!h->pgalloc.pages);
+
+	if (h->vaddr) {
+		nvmap_kmaps_dec(h);
+		vunmap(h->vaddr);
+
+		h->vaddr = NULL;
+	}
+
+	nvmap_alloc_free(h->pgalloc.pages, nr_page, h->from_va, h->is_subhandle);
+out:
+	NVMAP_TAG_TRACE(trace_nvmap_destroy_handle,
+		NULL, get_current()->pid, 0, NVMAP_TP_ARGS_H(h));
+	kfree(h);
+}
+
+/*
+ * NOTE: this does not ensure the continued existence of the underlying
+ * dma_buf. If you want ensure the existence of the dma_buf you must get an
+ * nvmap_handle_ref as that is what tracks the dma_buf refs.
+ */
+struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h)
+{
+	int cnt;
+
+	if (WARN_ON(!virt_addr_valid(h))) {
+		pr_err("%s: invalid handle\n", current->group_leader->comm);
+		return NULL;
+	}
+
+	cnt = atomic_inc_return(&h->ref);
+	NVMAP_TAG_TRACE(trace_nvmap_handle_get, h, cnt);
+
+	if (unlikely(cnt <= 1)) {
+		pr_err("%s: %s attempt to get a freed handle\n",
+			__func__, current->group_leader->comm);
+		atomic_dec(&h->ref);
+		return NULL;
+	}
+
+	return h;
+}
+
+void nvmap_handle_put(struct nvmap_handle *h)
+{
+	int cnt;
+
+	if (WARN_ON(!virt_addr_valid(h)))
+		return;
+	cnt = atomic_dec_return(&h->ref);
+	NVMAP_TAG_TRACE(trace_nvmap_handle_put, h, cnt);
+
+	if (WARN_ON(cnt < 0)) {
+		pr_err("%s: %s put to negative references\n",
+			__func__, current->comm);
+	} else if (cnt == 0)
+		_nvmap_handle_free(h);
+}
+

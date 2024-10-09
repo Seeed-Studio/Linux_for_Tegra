@@ -11,9 +11,9 @@
 
 #include "nvmap_priv.h"
 #include "nvmap_dev.h"
+#include "nvmap_handle.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
-#include "nvmap_handle.h"
 
 bool vpr_cpu_access;
 

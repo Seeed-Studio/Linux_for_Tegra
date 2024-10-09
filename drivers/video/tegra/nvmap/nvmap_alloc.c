@@ -550,76 +550,34 @@ int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 	return err;
 }
 
-void _nvmap_handle_free(struct nvmap_handle *h)
+void nvmap_alloc_free(struct page **pages, unsigned int nr_page, bool from_va,
+		      bool is_subhandle)
 {
-	unsigned int i, nr_page, page_index = 0;
-	struct nvmap_handle_dmabuf_priv *curr, *next;
-
-	list_for_each_entry_safe(curr, next, &h->dmabuf_priv, list) {
-		curr->priv_release(curr->priv);
-		list_del(&curr->list);
-		kfree_sensitive(curr);
-	}
-
-	if (nvmap_handle_remove(nvmap_dev, h) != 0)
-		return;
-
-	if (!h->alloc)
-		goto out;
-
-	nvmap_stats_inc(NS_RELEASE, h->size);
-	nvmap_stats_dec(NS_TOTAL, h->size);
-	if (!h->heap_pgalloc) {
-		if (h->vaddr) {
-			void *addr = h->vaddr;
-
-			addr -= (h->carveout->base & ~PAGE_MASK);
-			iounmap((void __iomem *)addr);
-		}
-
-		nvmap_heap_free(h->carveout);
-		nvmap_kmaps_dec(h);
-		h->carveout = NULL;
-		h->vaddr = NULL;
-		goto out;
-	}
-
-	nr_page = DIV_ROUND_UP(h->size, PAGE_SIZE);
-
-	BUG_ON(h->size & ~PAGE_MASK);
-	BUG_ON(!h->pgalloc.pages);
-
-	if (h->vaddr) {
-		nvmap_kmaps_dec(h);
-		vunmap(h->vaddr);
-
-		h->vaddr = NULL;
-	}
+	unsigned int i, page_index = 0U;
 
 	for (i = 0; i < nr_page; i++)
-		h->pgalloc.pages[i] = nvmap_to_page(h->pgalloc.pages[i]);
+		pages[i] = nvmap_to_page(pages[i]);
 
 #ifdef NVMAP_CONFIG_PAGE_POOLS
-	if (!h->from_va && !h->is_subhandle)
+	if (!from_va && !is_subhandle)
 		page_index = nvmap_page_pool_fill_lots(nvmap_dev->pool,
-					h->pgalloc.pages, nr_page);
+							pages, nr_page);
 #endif
 
 	for (i = page_index; i < nr_page; i++) {
-		if (h->from_va)
-			put_page(h->pgalloc.pages[i]);
+		if (from_va)
+			put_page(pages[i]);
 		/* Knowingly kept in "else if" handle for subrange */
-		else if (h->is_subhandle)
-			put_page(h->pgalloc.pages[i]);
+		else if (is_subhandle)
+			put_page(pages[i]);
 		else
-			__free_page(h->pgalloc.pages[i]);
+			__free_page(pages[i]);
 	}
 
-	nvmap_altfree(h->pgalloc.pages, nr_page * sizeof(struct page *));
-
-out:
-	NVMAP_TAG_TRACE(trace_nvmap_destroy_handle,
-		NULL, get_current()->pid, 0, NVMAP_TP_ARGS_H(h));
-	kfree(h);
+	nvmap_altfree(pages, nr_page * sizeof(struct page *));
 }
 
+phys_addr_t nvmap_alloc_get_co_base(struct nvmap_handle *h)
+{
+	return h->carveout->base;
+}

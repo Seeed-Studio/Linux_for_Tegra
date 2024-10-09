@@ -10,6 +10,14 @@
 #include <linux/nvscierror.h>
 #include <linux/nvsciipc_interface.h>
 
+/* handles allocated as collection of pages */
+struct nvmap_pgalloc {
+	struct page **pages;
+	bool contig;		/* contiguous system memory */
+	atomic_t reserved;
+	atomic_t ndirty;	/* count number of dirty pages */
+};
+
 struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
@@ -89,6 +97,60 @@ struct handles_range {
 	u64 offs; /* user passed offset */
 	u64 sz; /* user passed size */
 };
+
+struct nvmap_handle_dmabuf_priv {
+	void *priv;
+	struct device *dev;
+	void (*priv_release)(void *priv);
+	struct list_head list;
+};
+
+struct nvmap_client {
+	const char			*name;
+	struct rb_root			handle_refs;
+	struct mutex			ref_lock;
+	bool				kernel_client;
+	atomic_t			count;
+	struct task_struct		*task;
+	struct list_head		list;
+	u32				handle_count;
+	u32				next_fd;
+	int				warned;
+	int				tag_warned;
+	struct xarray			id_array;
+	struct xarray			*ida;
+};
+
+#define NVMAP_TP_ARGS_H(handle)					      	      \
+	handle,								      \
+	atomic_read(&handle->share_count),				      \
+	handle->heap_type == NVMAP_HEAP_IOVMM ? 0 : 			      \
+			(handle->carveout ? nvmap_get_heap_block_base(handle->carveout) : 0),      \
+	handle->size,							      \
+	(handle->userflags & 0xFFFF),                                         \
+	(handle->userflags >> 16),					      \
+	__nvmap_tag_name(nvmap_dev, handle->userflags >> 16)
+
+#define NVMAP_TP_ARGS_CHR(client, handle, ref)			      	      \
+	client,                                                               \
+	client ? nvmap_client_pid((struct nvmap_client *)client) : 0,         \
+	(ref) ? atomic_read(&((struct nvmap_handle_ref *)ref)->dupes) : 1,    \
+	NVMAP_TP_ARGS_H(handle)
+
+static inline void nvmap_ref_lock(struct nvmap_client *priv)
+{
+	mutex_lock(&priv->ref_lock);
+}
+
+static inline void nvmap_ref_unlock(struct nvmap_client *priv)
+{
+	mutex_unlock(&priv->ref_lock);
+}
+
+static inline pid_t nvmap_client_pid(struct nvmap_client *client)
+{
+	return client->task ? client->task->pid : 0;
+}
 
 static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 {
@@ -275,6 +337,23 @@ int nvmap_get_handle_from_sci_ipc_id(struct nvmap_client *client,
 				u64 sci_ipc_id,
 				NvSciIpcEndpointVuid localusr_vuid,
 				u32 *h);
+
+struct nvmap_handle *nvmap_handle_get_from_fd(int fd);
+
+struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
+				  struct nvmap_handle *h);
+
+void __nvmap_free_sg_table(struct nvmap_client *client,
+			   struct nvmap_handle *h, struct sg_table *sgt);
+
+struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h);
+
+void nvmap_handle_put(struct nvmap_handle *h);
+
+struct nvmap_handle *nvmap_handle_get_from_id(struct nvmap_client *client,
+		u32 id);
+
+u32 nvmap_handle_get_max_handle_count(void);
 
 #ifdef NVMAP_CONFIG_SCIIPC
 int nvmap_sci_ipc_init(void);

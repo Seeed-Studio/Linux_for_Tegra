@@ -828,6 +828,8 @@ static void nvmap_iovmm_debugfs_free(void)
 
 void nvmap_debug_init(struct dentry **nvmap_debug_root)
 {
+	u32 max_handle = nvmap_handle_get_max_handle_count();
+
 	*nvmap_debug_root = debugfs_create_dir("nvmap", NULL);
 	if (IS_ERR_OR_NULL(*nvmap_debug_root)) {
 		pr_err("nvmap_debug: couldn't create debugfs\n");
@@ -836,7 +838,7 @@ void nvmap_debug_init(struct dentry **nvmap_debug_root)
 	}
 
 	debugfs_create_u32("max_handle_count", 0444,
-				*nvmap_debug_root, &nvmap_max_handle_count);
+				*nvmap_debug_root, &max_handle);
 
 	nvmap_dev->handles_by_pid = debugfs_create_dir("handles_by_pid",
 				*nvmap_debug_root);
