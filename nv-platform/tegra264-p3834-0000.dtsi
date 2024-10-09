@@ -480,6 +480,10 @@
 		status = "okay";
 	};
 
+	spe-pmu {
+		status = "okay";
+	};
+
 	ucf_uapmu@140c0000 {
 		status = "okay";
 	};
