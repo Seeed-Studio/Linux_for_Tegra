@@ -7,6 +7,7 @@
 #include <dce-log.h>
 #include <dce-util-common.h>
 #include <dce-hsp-t234.h>
+#include <hw/t234/hw_hsp_dce.h>
 
 /**
  * ss_set_regs is a 2D array of read-only pointers to a function returning u32.
