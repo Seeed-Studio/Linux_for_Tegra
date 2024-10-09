@@ -7825,6 +7825,12 @@
 		interrupts = <GIC_PPI 7 8>;
 	};
 
+	spe-pmu {
+		compatible = "arm,statistical-profiling-extension-v1";
+		interrupts = <GIC_PPI 5 8>;
+		status = "disabled";
+	};
+
 	pmu_tcu_smmu0: pmu_tcu_smmu0@810a000000 {
 		compatible = "arm,smmu-v3-pmcg";
 		status = "disabled";
