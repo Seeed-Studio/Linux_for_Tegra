@@ -94,7 +94,7 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 	if (!ret && !IS_ERR_OR_NULL(handle)) {
 		mutex_lock(&handle->lock);
 		if (dmabuf && dmabuf->file) {
-			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+			dmabuf_ref = file_count(dmabuf->file);
 		} else {
 			dmabuf_ref = 0;
 		}
@@ -171,7 +171,7 @@ alloc_op_done:
 		mutex_lock(&handle->lock);
 		dmabuf = is_ro ? handle->dmabuf_ro : handle->dmabuf;
 		if (dmabuf && dmabuf->file) {
-			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+			dmabuf_ref = file_count(dmabuf->file);
 		} else {
 			dmabuf_ref = 0;
 		}
@@ -313,7 +313,7 @@ out:
 	if (!ret && !IS_ERR_OR_NULL(handle)) {
 		mutex_lock(&handle->lock);
 		if (dmabuf && dmabuf->file) {
-			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+			dmabuf_ref = file_count(dmabuf->file);
 		} else {
 			dmabuf_ref = 0;
 		}
@@ -411,7 +411,7 @@ out:
 	if (!err) {
 		mutex_lock(&handle->lock);
 		if (dmabuf && dmabuf->file) {
-			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+			dmabuf_ref = file_count(dmabuf->file);
 		} else {
 			dmabuf_ref = 0;
 		}
@@ -1052,7 +1052,7 @@ exit:
 		mutex_lock(&handle->lock);
 		dmabuf = is_ro ? handle->dmabuf_ro : handle->dmabuf;
 		if (dmabuf && dmabuf->file) {
-			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+			dmabuf_ref = file_count(dmabuf->file);
 		} else {
 			dmabuf_ref = 0;
 		}
@@ -1238,7 +1238,7 @@ out:
 	if (!ret && !IS_ERR_OR_NULL(handle))
 		trace_refcount_dup_handle(handle, dmabuf,
 				atomic_read(&handle->ref),
-				atomic_long_read(&dmabuf->file->f_count),
+				file_count(dmabuf->file),
 				is_ro ? "RO" : "RW");
 
 	if (!IS_ERR(ref))

@@ -7280,6 +7280,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_FD_FILE_PRESENT" "" "functions"
         ;;
 
+        file_struct_has_f_ref)
+            #
+            # Determine if 'struct file' has the 'f_ref' member.
+            #
+            # Commit 90ee6ed776c0 ("fs: port files to file_ref") replaced the
+            # 'f_count' member of 'struct file' with 'f_ref' in Linux v6.13.
+            #
+            CODE="
+            #include <linux/fs.h>
+            int conftest_file_struct_has_f_ref(void) {
+                return offsetof(struct file, f_ref);
+            }"
+
+            compile_check_conftest "$CODE" "NV_FILE_STRUCT_HAS_F_REF" "" "types"
+        ;;
+
         folio_entire_mapcount)
             #
             # Determine if function folio_entire_mapcount() is present.

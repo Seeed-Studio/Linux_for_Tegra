@@ -350,7 +350,7 @@ unlock:
 	if (!ret) {
 		mutex_lock(&h->lock);
 		if (dmabuf && dmabuf->file) {
-			dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+			dmabuf_ref = file_count(dmabuf->file);
 		} else {
 			dmabuf_ref = 0;
 		}

@@ -495,7 +495,11 @@ found:
 		goto fail;
 	BUG_ON(!h->dmabuf->file);
 	/* This is same as get_dma_buf() if file->f_count was non-zero */
+#if defined(NV_FILE_STRUCT_HAS_F_REF) /* Linux v6.13 */
+	if (file_ref_get(&h->dmabuf->file->f_ref) == 0)
+#else
 	if (atomic_long_inc_not_zero(&h->dmabuf->file->f_count) == 0)
+#endif
 		goto fail;
 	mutex_unlock(&h->lock);
 
@@ -788,7 +792,7 @@ void nvmap_free_handle_from_fd(struct nvmap_client *client,
 	mutex_lock(&handle->lock);
 	dmabuf = is_ro ? handle->dmabuf_ro : handle->dmabuf;
 	if (dmabuf && dmabuf->file) {
-		dmabuf_ref = atomic_long_read(&dmabuf->file->f_count);
+		dmabuf_ref = file_count(dmabuf->file);
 	} else {
 		dmabuf_ref = 0;
 	}
