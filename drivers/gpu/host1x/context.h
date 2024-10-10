@@ -19,6 +19,7 @@ struct host1x_memory_context_list {
 	struct mutex lock;
 	struct host1x_hw_memory_context *devs;
 	unsigned int len;
+	struct list_head waiters;
 };
 
 struct host1x_hw_memory_context {
