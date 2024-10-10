@@ -76,6 +76,10 @@
 			status = "disabled";
 		};
 
+		fuse@3810000 {
+			reg = <0x0 0x03810000 0x0 0x20000>;
+		};
+
 		tegra_tachometer1: tachometer@39b0000 {
 			compatible = "nvidia,pwm-tegra234-tachometer";
 			reg = <0x0 0x039b0000 0x0 0x10>;
