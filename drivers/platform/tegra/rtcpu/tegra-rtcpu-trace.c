@@ -23,8 +23,8 @@
 #include <linux/workqueue.h>
 #include <linux/platform_device.h>
 #include <linux/nvhost.h>
-#include <linux/delay.h>
 #include <linux/uaccess.h>
+#include <linux/poll.h>
 #include <asm/cacheflush.h>
 #include <uapi/linux/nvdev_fence.h>
 #include "device-group.h"
@@ -109,6 +109,7 @@ struct tegra_rtcpu_trace {
 	char printk[EXCEPTION_STR_LENGTH];
 
 	struct cdev s_dev;
+	wait_queue_head_t wait_queue;
 };
 
 struct rtcpu_raw_trace_context {
@@ -1238,6 +1239,9 @@ static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
 	if (old_next == new_next)
 		return;
 
+	/* Wake up any polling process waiting for data */
+	wake_up_all(&tracer->wait_queue);
+
 	rtcpu_trace_invalidate_entries(tracer,
 				tracer->dma_handle_events,
 				old_next, new_next,
@@ -1380,10 +1384,35 @@ static int32_t raw_trace_read_impl(
 	return 0;
 }
 
+static bool check_event_availability(
+	struct rtcpu_raw_trace_context *fd_context,
+	struct tegra_rtcpu_trace *tracer)
+{
+	u32 last_read_event_idx = fd_context->raw_trace_last_read_event_idx;
+
+	const struct camrtc_trace_memory_header *header = tracer->trace_memory;
+
+	/* If buffer has already wrapped around before the 1st read */
+	if (unlikely(fd_context->first_read_call)) {
+		if (header->wrapped_counter > 0) {
+			last_read_event_idx = header->event_next_idx + 1;
+			if (last_read_event_idx == tracer->event_entries)
+				last_read_event_idx = 0;
+		}
+	}
+
+	/* check if new event on worker thread is relavant for current reader */
+	bool ret = header->event_next_idx != last_read_event_idx;
+
+	return ret;
+}
+
 static ssize_t
 rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_size, loff_t *ppos)
 {
 	ssize_t events_copied = 0;
+
+	bool blocking_call = !(file->f_flags & O_NONBLOCK);
 
 	struct rtcpu_raw_trace_context *fd_context = file->private_data;
 
@@ -1427,8 +1456,6 @@ rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_
 		return -ENOMEM;
 	}
 
-	const u32 poll_interval = jiffies_to_msecs(tracer->work_interval_jiffies);
-
 	/* Validate if user buffer is a valid address */
 	if (!access_ok(user_buffer, buffer_size)) {
 		dev_err(tracer->dev, "Invalid user buffer address\n");
@@ -1448,8 +1475,15 @@ rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_
 			return ret;
 		}
 
-		if (msleep_interruptible(poll_interval))
-			return -EINTR;
+		if (!blocking_call)
+			break;
+
+		/* Wait indefinitely until event is not available */
+		ret = wait_event_interruptible(
+				tracer->wait_queue,
+				check_event_availability(fd_context, tracer));
+		if (ret < 0)
+			return ret;
 
 	} while (events_copied < num_events_requested);
 
@@ -1457,6 +1491,36 @@ rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_
 	file->private_data = fd_context;
 
 	return events_copied * sizeof(struct camrtc_event_struct);
+}
+
+unsigned int rtcpu_raw_trace_poll(struct file *file, poll_table *wait)
+{
+	unsigned int ret = 0;
+
+	struct rtcpu_raw_trace_context *fd_context = file->private_data;
+
+	if (!fd_context) {
+		pr_err("file descriptor context is not set in private data\n");
+		return -ENODEV;
+	}
+
+	struct tegra_rtcpu_trace *tracer = fd_context->tracer;
+
+	if (!tracer) {
+		pr_err("Tracer is not set in file descriptor context\n");
+		return -ENODEV;
+	}
+
+	/* check if new event on worker thread is relavant for current reader */
+	if (check_event_availability(fd_context, tracer)) {
+		ret = POLLIN | POLLRDNORM;  // event is available to read for current reader
+		return ret;
+	}
+
+	/* No data available, register for wait queue */
+	poll_wait(file, &tracer->wait_queue, wait);
+
+	return ret;
 }
 
 static int rtcpu_raw_trace_open(struct inode *inode, struct file *file)
@@ -1511,6 +1575,7 @@ static const struct file_operations rtcpu_raw_trace_fops = {
 	.owner = THIS_MODULE,
 	.llseek = no_llseek,
 	.read = rtcpu_raw_trace_read,
+	.poll = rtcpu_raw_trace_poll,
 	.open = rtcpu_raw_trace_open,
 	.release = rtcpu_raw_trace_release,
 };
@@ -1731,6 +1796,9 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 			tracer->vi1_platform_device = NULL;
 		}
 	}
+
+	/* Initialize the wait queue */
+	init_waitqueue_head(&tracer->wait_queue);
 
 	/* Worker */
 	param = WORK_INTERVAL_DEFAULT;
