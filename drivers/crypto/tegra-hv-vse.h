@@ -9,7 +9,7 @@
 
 #define KEYSLOT_SIZE_BYTES		16
 #define KEYSLOT_OFFSET_BYTES		8
-#define MAX_SE_DMA_BUFS	3
+#define MAX_SE_DMA_BUFS	4
 
 struct tegra_vse_soc_info {
 	bool gcm_decrypt_supported;
@@ -89,10 +89,6 @@ struct tegra_virtual_se_dev {
 struct tegra_virtual_se_rng_context {
 	/* Security Engine device */
 	struct tegra_virtual_se_dev *se_dev;
-	/* RNG buffer pointer */
-	u32 *rng_buf;
-	/* RNG buffer dma address */
-	dma_addr_t rng_buf_adr;
 	/*Crypto dev instance*/
 	uint32_t node_id;
 };
@@ -120,16 +116,11 @@ struct tegra_virtual_se_aes_context {
 	uint8_t b_is_first;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
-	const struct tegra_vse_dma_buf *src;
-	const struct tegra_vse_dma_buf *aad;
-	const struct tegra_vse_dma_buf *tag;
 };
 
 /* Security Engine/TSEC AES CMAC context */
 struct tegra_virtual_se_aes_cmac_context {
 	unsigned int digest_size;
-	u8 *hash_result;		/* Intermediate hash result */
-	dma_addr_t hash_result_addr;	/* Intermediate hash result dma addr */
 	bool is_first;			/* Represents first block */
 	bool req_context_initialized;	/* Mark initialization status */
 	u8 aes_keyslot[KEYSLOT_SIZE_BYTES];
@@ -140,7 +131,6 @@ struct tegra_virtual_se_aes_cmac_context {
 	uint32_t node_id;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
-	const struct tegra_vse_dma_buf *src;
 };
 
 /* Security Engine AES GMAC context */
@@ -157,8 +147,6 @@ struct tegra_virtual_se_aes_gmac_context {
 	uint32_t node_id;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
-	const struct tegra_vse_dma_buf *aad;
-	const struct tegra_vse_dma_buf *tag;
 };
 
 /* Security Engine SHA context */
@@ -175,8 +163,6 @@ struct tegra_virtual_se_sha_context {
 	bool is_first;
 	/*Crypto dev instance*/
 	uint32_t node_id;
-	const struct tegra_vse_dma_buf *plaintext;
-	const struct tegra_vse_dma_buf *hash_result;
 };
 
 struct tegra_virtual_se_hmac_sha_context {
