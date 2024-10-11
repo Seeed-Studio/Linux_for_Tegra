@@ -434,17 +434,17 @@ int dce_fsm_post_event(struct tegra_dce *d,
 	enum dce_fsm_state prev_state;
 	struct dce_fsm_info *fsm = &d->fsm_info;
 
-	dce_mutex_lock(&fsm->lock);
+	dce_os_mutex_lock(&fsm->lock);
 
 	ret = dce_fsm_validate_event(d, event);
 	if (ret) {
-		dce_mutex_unlock(&fsm->lock);
+		dce_os_mutex_unlock(&fsm->lock);
 		goto out;
 	}
 
 	prev_state = fsm->c_state;
 	dce_fsm_set_state(d, event);
-	dce_mutex_unlock(&fsm->lock);
+	dce_os_mutex_unlock(&fsm->lock);
 
 	/*
 	 * call callback function with mutex unlocked
@@ -454,11 +454,11 @@ int dce_fsm_post_event(struct tegra_dce *d,
 	    (event_process_table[id].fsm_event_handle != NULL)) {
 		ret = event_process_table[id].fsm_event_handle(d, data);
 		if (ret) {
-			dce_mutex_lock(&fsm->lock);
+			dce_os_mutex_lock(&fsm->lock);
 			dce_os_err(d, "Callback failed: Resetting state old:new [%d:%d]",
 				prev_state, fsm->c_state);
 			fsm->c_state = prev_state;
-			dce_mutex_unlock(&fsm->lock);
+			dce_os_mutex_unlock(&fsm->lock);
 		}
 	}
 out:
@@ -502,7 +502,7 @@ int dce_fsm_init(struct tegra_dce *d)
 	struct dce_fsm_info *fsm = &d->fsm_info;
 
 	fsm->c_state = STATE_DCE_INVALID;
-	ret = dce_mutex_init(&fsm->lock);
+	ret = dce_os_mutex_init(&fsm->lock);
 	if (ret) {
 		dce_os_err(d, "dce mutex initialization failed for FSM");
 		return ret;
@@ -527,5 +527,5 @@ void dce_fsm_deinit(struct tegra_dce *d)
 
 	fsm->initialized = false;
 
-	dce_mutex_destroy(&fsm->lock);
+	dce_os_mutex_destroy(&fsm->lock);
 }

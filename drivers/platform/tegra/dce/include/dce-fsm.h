@@ -7,7 +7,7 @@
 #define DCE_FSM_H
 
 #include <os-cond.h>
-#include <os-lock.h>
+#include <dce-os-lock.h>
 
 /**
  * enum dce_fsm_event_id_type - IDs to be used to convey various
@@ -61,7 +61,7 @@ struct dce_fsm_info {
 	struct tegra_dce *d;
 	bool initialized;
 	enum dce_fsm_state c_state;
-	struct dce_mutex lock;
+	struct dce_os_mutex lock;
 	u32 requested_ipcs;
 };
 

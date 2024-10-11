@@ -7,7 +7,7 @@
 #define DCE_WORKER_H
 
 #include <os-cond.h>
-#include <os-lock.h>
+#include <dce-os-lock.h>
 #include <dce-os-atomic.h>
 
 struct tegra_dce;

@@ -6,7 +6,7 @@
 #ifndef DCE_IPC_H
 #define DCE_IPC_H
 
-#include <os-lock.h>
+#include <dce-os-lock.h>
 #include <dce-os-types.h>
 #include <os-ivc.h>
 
@@ -131,7 +131,7 @@ struct dce_ipc_channel {
 #endif
 	os_ivc_t d_ivc;
 	struct tegra_dce *d;
-	struct dce_mutex lock;
+	struct dce_os_mutex lock;
 	struct dce_ipc_signal signal;
 	struct dce_ipc_queue_info q_info;
 };

@@ -78,10 +78,10 @@ void dce_mailbox_store_interface_status(struct tegra_dce *d, u32 v, u8 id)
 {
 	struct dce_mailbox_interface *d_mb = &d->d_mb[id];
 
-	dce_mutex_lock(&d_mb->lock);
+	dce_os_mutex_lock(&d_mb->lock);
 	d_mb->ack_value = v;
 	d_mb->valid = true;
-	dce_mutex_unlock(&d_mb->lock);
+	dce_os_mutex_unlock(&d_mb->lock);
 }
 
 /**
@@ -114,9 +114,9 @@ void dce_mailbox_invalidate_status(struct tegra_dce *d, u8 id)
 {
 	struct dce_mailbox_interface *d_mb = &d->d_mb[id];
 
-	dce_mutex_lock(&d_mb->lock);
+	dce_os_mutex_lock(&d_mb->lock);
 	d_mb->valid = false;
-	dce_mutex_unlock(&d_mb->lock);
+	dce_os_mutex_unlock(&d_mb->lock);
 }
 
 /**
@@ -151,7 +151,7 @@ void dce_mailbox_set_full_interrupt(struct tegra_dce *d, u8 id)
 
 	d_mb = &d->d_mb[id];
 
-	dce_mutex_lock(&d_mb->lock);
+	dce_os_mutex_lock(&d_mb->lock);
 
 	if (!dce_mailbox_write_safe(d, d_mb->s_mb))
 		dce_os_info(d, "Intr bit set multiple times for MB : [0x%x] id:[0x%x]",
@@ -159,7 +159,7 @@ void dce_mailbox_set_full_interrupt(struct tegra_dce *d, u8 id)
 
 	d->hsp.smb_set(d, BIT(31), d->hsp_id, d_mb->s_mb);
 
-	dce_mutex_unlock(&d_mb->lock);
+	dce_os_mutex_unlock(&d_mb->lock);
 }
 
 /**
@@ -180,7 +180,7 @@ int dce_handle_mailbox_send_cmd_sync(struct tegra_dce *d, u32 cmd, u32 interface
 
 	d_mb = &d->d_mb[interface];
 
-	dce_mutex_lock(&d_mb->lock);
+	dce_os_mutex_lock(&d_mb->lock);
 
 	if (!dce_mailbox_write_safe(d, d_mb->s_mb)) {
 		dce_os_err(d, "Previously sent message isn't synced");
@@ -190,7 +190,7 @@ int dce_handle_mailbox_send_cmd_sync(struct tegra_dce *d, u32 cmd, u32 interface
 	d->hsp.smb_set(d, cmd | BIT(31), d->hsp_id, d_mb->s_mb);
 	d_mb->valid = false;
 
-	dce_mutex_unlock(&d_mb->lock);
+	dce_os_mutex_unlock(&d_mb->lock);
 
 	ret = d_mb->dce_mailbox_wait(d);
 
@@ -243,7 +243,7 @@ int dce_mailbox_init_interface(struct tegra_dce *d, u8 id, u8 s_mb,
 
 	d_mb = &d->d_mb[id];
 
-	ret = dce_mutex_init(&d_mb->lock);
+	ret = dce_os_mutex_init(&d_mb->lock);
 	if (ret) {
 		dce_os_err(d, "dce lock initialization failed for mailbox");
 		goto err_lock_init;
@@ -285,5 +285,5 @@ void dce_mailbox_deinit_interface(struct tegra_dce *d, u8 id)
 
 	d_mb = &d->d_mb[id];
 
-	dce_mutex_destroy(&d_mb->lock);
+	dce_os_mutex_destroy(&d_mb->lock);
 }

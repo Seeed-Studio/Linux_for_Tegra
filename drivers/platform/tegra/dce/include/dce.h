@@ -10,7 +10,7 @@
 #include <dce-os-log.h>
 #include <dce-ipc.h>
 #include <dce-hsp.h>
-#include <os-lock.h>
+#include <dce-os-lock.h>
 #include <os-cond.h>
 #include <dce-regs.h>
 #include <dce-worker.h>

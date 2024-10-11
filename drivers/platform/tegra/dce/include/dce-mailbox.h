@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_MAILBOX_H
@@ -17,7 +17,7 @@ struct tegra_dce;
 /**
  * struct dce_mailbox_interface - Contains dce mailbox interface state info
  *
- * @lock : dce_mutext for this mailbox interface.
+ * @lock : dce_os_mutext for this mailbox interface.
  * @state : Stores the current status of the mailbox interface.
  * @ack_value : Stores the response received from dce f/w on an interface.
  * @s_mb : mailbox used to send commands to DCE CCPLEX for this interface.
@@ -30,7 +30,7 @@ struct dce_mailbox_interface {
 	int state;
 	bool valid;
 	void *notify_data;
-	struct dce_mutex lock;
+	struct dce_os_mutex lock;
 	unsigned int ack_value;
 	int (*dce_mailbox_wait)(struct tegra_dce *);
 	void (*notify)(struct tegra_dce *, void *);

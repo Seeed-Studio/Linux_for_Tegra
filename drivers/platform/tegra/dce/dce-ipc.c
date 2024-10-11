@@ -147,14 +147,14 @@ static int _dce_ipc_wait(struct tegra_dce *d, u32 w_type, u32 ch_type)
 
 	ch->w_type = w_type;
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	if (ch_type == DCE_IPC_TYPE_ADMIN)
 		ret = dce_admin_ipc_wait(d);
 	else
 		ret = dce_client_ipc_wait(d, ch_type);
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	ch->w_type = DCE_IPC_WAIT_TYPE_INVALID;
 
@@ -178,11 +178,11 @@ u32 dce_ipc_get_cur_wait_type(struct tegra_dce *d, u32 ch_type)
 		return -EINVAL;
 	}
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	w_type = ch->w_type;
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	return w_type;
 }
@@ -221,7 +221,7 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 		goto out;
 	}
 
-	ret = dce_mutex_init(&ch->lock);
+	ret = dce_os_mutex_init(&ch->lock);
 	if (ret) {
 		dce_os_err(d, "dce lock initialization failed for mailbox");
 		goto out;
@@ -272,7 +272,7 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 
 out_lock_destroy:
 	if (ret)
-		dce_mutex_destroy(&ch->lock);
+		dce_os_mutex_destroy(&ch->lock);
 out:
 	return ret;
 }
@@ -295,7 +295,7 @@ void dce_ipc_channel_deinit_unlocked(struct tegra_dce *d, u32 ch_type)
 		return;
 	}
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	dce_ipc_deinit_signaling(d, ch);
 
@@ -304,9 +304,9 @@ void dce_ipc_channel_deinit_unlocked(struct tegra_dce *d, u32 ch_type)
 
 	d->d_ipc.ch[ch_type] = NULL;
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
-	dce_mutex_destroy(&ch->lock);
+	dce_os_mutex_destroy(&ch->lock);
 
 }
 
@@ -320,11 +320,11 @@ struct tegra_dce *dce_ipc_get_dce_from_ch(u32 ch_type)
 
 	ch = &ivc_channels[ch_type];
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	d = ch->d;
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 out:
 	return d;
@@ -344,13 +344,13 @@ bool dce_ipc_channel_is_ready(struct tegra_dce *d, u32 ch_type)
 
 	struct dce_ipc_channel *ch = d->d_ipc.ch[ch_type];
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	is_est = (os_ivc_notified(&ch->d_ivc) ? false : true);
 
 	ch->signal.notify(d, &ch->signal.to_d);
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	return is_est;
 }
@@ -369,11 +369,11 @@ bool dce_ipc_channel_is_synced(struct tegra_dce *d, u32 ch_type)
 
 	struct dce_ipc_channel *ch = d->d_ipc.ch[ch_type];
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	ret = (ch->flags & DCE_IPC_CHANNEL_SYNCED) ? true : false;
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	return ret;
 }
@@ -391,7 +391,7 @@ void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type)
 {
 	struct dce_ipc_channel *ch = d->d_ipc.ch[ch_type];
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	os_ivc_reset(&ch->d_ivc);
 
@@ -401,7 +401,7 @@ void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type)
 
 	ch->signal.notify(d, &ch->signal.to_d);
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	do {
 		if (dce_ipc_channel_is_ready(d, ch_type) == true)
@@ -409,13 +409,13 @@ void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type)
 
 	} while (true);
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	ch->flags |= DCE_IPC_CHANNEL_SYNCED;
 
 	trace_ivc_channel_reset_complete(d, ch);
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 }
 
 /**
@@ -496,7 +496,7 @@ int dce_ipc_send_message(struct tegra_dce *d, u32 ch_type,
 	struct dce_ipc_channel *ch
 		= d->d_ipc.ch[ch_type];
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	trace_ivc_send_req_received(d, ch);
 
@@ -517,7 +517,7 @@ int dce_ipc_send_message(struct tegra_dce *d, u32 ch_type,
 	trace_ivc_send_complete(d, ch);
 
 out:
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	return ret;
 }
@@ -598,7 +598,7 @@ int dce_ipc_read_message(struct tegra_dce *d, u32 ch_type,
 	int ret = 0;
 	struct dce_ipc_channel *ch = d->d_ipc.ch[ch_type];
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	trace_ivc_receive_req_received(d, ch);
 
@@ -617,7 +617,7 @@ int dce_ipc_read_message(struct tegra_dce *d, u32 ch_type,
 	trace_ivc_receive_req_complete(d, ch);
 
 out:
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 	return ret;
 }
 
@@ -643,9 +643,9 @@ int dce_ipc_send_message_sync(struct tegra_dce *d, u32 ch_type,
 		goto done;
 	}
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 	ret = _dce_ipc_wait(ch->d, DCE_IPC_WAIT_TYPE_RPC, ch_type);
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 	if (ret) {
 		dce_os_err(ch->d, "Error in waiting for ack");
 		goto done;
@@ -680,11 +680,11 @@ int dce_ipc_get_channel_info(struct tegra_dce *d,
 	if (ch == NULL)
 		return -ENOMEM;
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	memcpy(q_info, &ch->q_info, sizeof(ch->q_info));
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	return 0;
 }
@@ -726,13 +726,13 @@ bool dce_ipc_is_data_available(struct tegra_dce *d, u32 ch_type)
 	int err = 0;
 	struct dce_ipc_channel *ch = d->d_ipc.ch[ch_type];
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	err = os_ivc_get_next_read_frame(&ch->d_ivc, &frame);
 	if (err == 0)
 		ret = true;
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	return ret;
 }
@@ -750,11 +750,11 @@ uint32_t dce_ipc_get_ipc_type(struct tegra_dce *d, u32 ch_type)
 	uint32_t ipc_type;
 	struct dce_ipc_channel *ch = d->d_ipc.ch[ch_type];
 
-	dce_mutex_lock(&ch->lock);
+	dce_os_mutex_lock(&ch->lock);
 
 	ipc_type = ch->ipc_type;
 
-	dce_mutex_unlock(&ch->lock);
+	dce_os_mutex_unlock(&ch->lock);
 
 	return ipc_type;
 }
