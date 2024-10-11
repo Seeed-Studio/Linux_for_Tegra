@@ -33,7 +33,7 @@ struct tegra_dce_client_ipc {
 	uint32_t handle;
 	uint32_t int_type;
 	struct tegra_dce *d;
-	struct dce_cond recv_wait;
+	struct dce_os_cond recv_wait;
 	dce_os_atomic_t complete;
 	tegra_dce_client_ipc_callback_t callback_fn;
 };

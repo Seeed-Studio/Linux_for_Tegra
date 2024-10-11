@@ -11,7 +11,7 @@
 #include <dce-ipc.h>
 #include <dce-hsp.h>
 #include <dce-os-lock.h>
-#include <os-cond.h>
+#include <dce-os-cond.h>
 #include <dce-regs.h>
 #include <dce-worker.h>
 #include <dce-fsm.h>
@@ -164,7 +164,7 @@ struct tegra_dce {
 	/**
 	 * dce_bootstrap_done - Data structure to manage wait for boot done
 	 */
-	struct dce_cond dce_bootstrap_done;
+	struct dce_os_cond dce_bootstrap_done;
 	/**
 	 * @d_mb - Stores the current status of dce mailbox interfaces.
 	 */

@@ -151,7 +151,7 @@ int tegra_dce_register_ipc_client(u32 type,
 	 * Wait for bootstrapping to complete before client IPC registration
 	 */
 #define DCE_IPC_REGISTER_BOOT_WAIT	(30U * 1000)
-	ret = DCE_COND_WAIT_INTERRUPTIBLE_TIMEOUT(&d->dce_bootstrap_done,
+	ret = DCE_OS_COND_WAIT_INTERRUPTIBLE_TIMEOUT(&d->dce_bootstrap_done,
 						  dce_is_bootstrap_done(d),
 						  DCE_IPC_REGISTER_BOOT_WAIT);
 	if (ret) {
@@ -173,7 +173,7 @@ int tegra_dce_register_ipc_client(u32 type,
 	cl->callback_fn = callback_fn;
 	dce_os_atomic_set(&cl->complete, 0);
 
-	ret = dce_cond_init(&cl->recv_wait);
+	ret = dce_os_cond_init(&cl->recv_wait);
 	if (ret) {
 		dce_os_err(d, "dce condition initialization failed for int_type: [%u]",
 			int_type);
@@ -204,8 +204,8 @@ int tegra_dce_unregister_ipc_client(u32 handle)
 		return -EINVAL;
 	}
 
-	dce_cond_destroy(&cl->recv_wait);
-	atomic_set(&cl->complete, 0);
+	dce_os_cond_destroy(&cl->recv_wait);
+	dce_os_atomic_set(&cl->complete, 0);
 
 	return dce_client_ipc_handle_free(cl);
 }
@@ -283,7 +283,7 @@ int dce_client_ipc_wait(struct tegra_dce *d, u32 int_type)
 	}
 
 retry_wait:
-	DCE_COND_WAIT_INTERRUPTIBLE(&cl->recv_wait,
+	DCE_OS_COND_WAIT_INTERRUPTIBLE(&cl->recv_wait,
 			dce_os_atomic_read(&cl->complete) == 1);
 	if (dce_os_atomic_read(&cl->complete) != 1)
 		goto retry_wait;
@@ -375,5 +375,5 @@ void dce_client_ipc_wakeup(struct tegra_dce *d, u32 ch_type)
 		return dce_client_schedule_event_work(d);
 
 	dce_os_atomic_set(&cl->complete, 1);
-	dce_cond_signal_interruptible(&cl->recv_wait);
+	dce_os_cond_signal_interruptible(&cl->recv_wait);
 }

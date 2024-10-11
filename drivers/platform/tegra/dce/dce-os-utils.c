@@ -371,13 +371,13 @@ void dce_os_log_msg(struct tegra_dce *d, const char *func_name, int line,
 }
 
 /**
- * dce_cond_init - Initialize a condition variable
+ * dce_os_cond_init - Initialize a condition variable
  *
  * @cond - The condition variable to initialize
  *
  * Initialize a condition variable before using it.
  */
-int dce_cond_init(struct dce_cond *cond)
+int dce_os_cond_init(struct dce_os_cond *cond)
 {
 	init_waitqueue_head(&cond->wq);
 	cond->initialized = true;
@@ -386,17 +386,17 @@ int dce_cond_init(struct dce_cond *cond)
 }
 
 /**
- * dce_cond_destroy - Destroy a condition variable
+ * dce_os_cond_destroy - Destroy a condition variable
  *
  * @cond - The condition variable to destroy
  */
-void dce_cond_destroy(struct dce_cond *cond)
+void dce_os_cond_destroy(struct dce_os_cond *cond)
 {
 	cond->initialized = false;
 }
 
 /**
- * dce_cond_signal - Signal a condition variable
+ * dce_os_cond_signal - Signal a condition variable
  *
  * @cond - The condition variable to signal
  *
@@ -405,7 +405,7 @@ void dce_cond_destroy(struct dce_cond *cond)
  *
  * The waiter is using an uninterruptible wait.
  */
-void dce_cond_signal(struct dce_cond *cond)
+void dce_os_cond_signal(struct dce_os_cond *cond)
 {
 	WARN_ON(!cond->initialized);
 
@@ -413,7 +413,7 @@ void dce_cond_signal(struct dce_cond *cond)
 }
 
 /**
- * dce_cond_signal_interruptible - Signal a condition variable
+ * dce_os_cond_signal_interruptible - Signal a condition variable
  *
  * @cond - The condition variable to signal
  *
@@ -422,7 +422,7 @@ void dce_cond_signal(struct dce_cond *cond)
  *
  * The waiter is using an interruptible wait.
  */
-void dce_cond_signal_interruptible(struct dce_cond *cond)
+void dce_os_cond_signal_interruptible(struct dce_os_cond *cond)
 {
 	WARN_ON(!cond->initialized);
 
@@ -430,7 +430,7 @@ void dce_cond_signal_interruptible(struct dce_cond *cond)
 }
 
 /**
- * dce_cond_broadcast - Signal all waiters of a condition variable
+ * dce_os_cond_broadcast - Signal all waiters of a condition variable
  *
  * @cond - The condition variable to signal
  *
@@ -439,7 +439,7 @@ void dce_cond_signal_interruptible(struct dce_cond *cond)
  *
  * The waiters are using an uninterruptible wait.
  */
-int dce_cond_broadcast(struct dce_cond *cond)
+int dce_os_cond_broadcast(struct dce_os_cond *cond)
 {
 	if (!cond->initialized)
 		return -EINVAL;
@@ -450,7 +450,7 @@ int dce_cond_broadcast(struct dce_cond *cond)
 }
 
 /**
- * dce_cond_broadcast_interruptible - Signal all waiters of a condition
+ * dce_os_cond_broadcast_interruptible - Signal all waiters of a condition
  * variable
  *
  * @cond - The condition variable to signal
@@ -460,7 +460,7 @@ int dce_cond_broadcast(struct dce_cond *cond)
  *
  * The waiters are using an interruptible wait.
  */
-int dce_cond_broadcast_interruptible(struct dce_cond *cond)
+int dce_os_cond_broadcast_interruptible(struct dce_os_cond *cond)
 {
 	if (!cond->initialized)
 		return -EINVAL;

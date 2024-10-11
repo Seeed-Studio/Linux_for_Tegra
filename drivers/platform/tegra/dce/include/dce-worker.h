@@ -6,7 +6,7 @@
 #ifndef DCE_WORKER_H
 #define DCE_WORKER_H
 
-#include <os-cond.h>
+#include <dce-os-cond.h>
 #include <dce-os-lock.h>
 #include <dce-os-atomic.h>
 
@@ -21,7 +21,7 @@ struct tegra_dce;
 
 struct dce_wait_cond {
 	dce_os_atomic_t complete;
-	struct dce_cond cond_wait;
+	struct dce_os_cond cond_wait;
 };
 
 int dce_work_cond_sw_resource_init(struct tegra_dce *d);
@@ -29,6 +29,6 @@ void dce_work_cond_sw_resource_deinit(struct tegra_dce *d);
 void dce_schedule_boot_complete_wait_worker(struct tegra_dce *d);
 int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id);
 void dce_wakeup_interruptible(struct tegra_dce *d, u32 msg_id);
-void dce_cond_wait_reset(struct tegra_dce *d, u32 msg_id);
+void dce_os_cond_wait_reset(struct tegra_dce *d, u32 msg_id);
 
 #endif

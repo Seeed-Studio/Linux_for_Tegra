@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <os-cond.h>
+#include <dce-os-cond.h>
 #include <dce-os-lock.h>
 #include <dce-worker.h>
 #include <dce-os-utils.h>
@@ -34,7 +34,7 @@ int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id)
 	 * start waiting. But that should not be an issue as wait->complete
 	 * Will be "1" and we immediately exit from the wait.
 	 */
-	DCE_COND_WAIT_INTERRUPTIBLE(&wait->cond_wait,
+	DCE_OS_COND_WAIT_INTERRUPTIBLE(&wait->cond_wait,
 			dce_os_atomic_read(&wait->complete) == 1);
 
 	if (dce_os_atomic_read(&wait->complete) != 1)
@@ -70,22 +70,22 @@ void dce_wakeup_interruptible(struct tegra_dce *d, u32 msg_id)
 
 	/*
 	 * Set wait->complete to "1", so if the wait is called even after
-	 * "dce_cond_signal_interruptible", it'll see the complete variable
+	 * "dce_os_cond_signal_interruptible", it'll see the complete variable
 	 * as "1" and exit the wait immediately.
 	 */
 	dce_os_atomic_set(&wait->complete, 1);
-	dce_cond_signal_interruptible(&wait->cond_wait);
+	dce_os_cond_signal_interruptible(&wait->cond_wait);
 }
 
 /*
- * dce_cond_wait_reset : reset condition wait variable to zero
+ * dce_os_cond_wait_reset : reset condition wait variable to zero
  *
  * @d : Pointer to tegra_dce struct.
  * @msg_id : index of wait condition
  *
  * Return : void
  */
-void dce_cond_wait_reset(struct tegra_dce *d, u32 msg_id)
+void dce_os_cond_wait_reset(struct tegra_dce *d, u32 msg_id)
 {
 	struct dce_wait_cond *wait;
 
@@ -110,7 +110,7 @@ int dce_work_cond_sw_resource_init(struct tegra_dce *d)
 	int ret = 0;
 	int i;
 
-	if (dce_cond_init(&d->dce_bootstrap_done)) {
+	if (dce_os_cond_init(&d->dce_bootstrap_done)) {
 		dce_os_err(d, "dce boot wait condition init failed");
 		ret = -1;
 		goto exit;
@@ -119,7 +119,7 @@ int dce_work_cond_sw_resource_init(struct tegra_dce *d)
 	for (i = 0; i < DCE_MAX_WAIT; i++) {
 		struct dce_wait_cond *wait = &d->ipc_waits[i];
 
-		if (dce_cond_init(&wait->cond_wait)) {
+		if (dce_os_cond_init(&wait->cond_wait)) {
 			dce_os_err(d, "dce wait condition %d init failed", i);
 			ret = -1;
 			goto init_error;
@@ -133,10 +133,10 @@ init_error:
 	while (i >= 0) {
 		struct dce_wait_cond *wait = &d->ipc_waits[i];
 
-		dce_cond_destroy(&wait->cond_wait);
+		dce_os_cond_destroy(&wait->cond_wait);
 		i--;
 	}
-	dce_cond_destroy(&d->dce_bootstrap_done);
+	dce_os_cond_destroy(&d->dce_bootstrap_done);
 exit:
 	return ret;
 }
@@ -155,9 +155,9 @@ void dce_work_cond_sw_resource_deinit(struct tegra_dce *d)
 	for (i = 0; i < DCE_MAX_WAIT; i++) {
 		struct dce_wait_cond *wait = &d->ipc_waits[i];
 
-		dce_cond_destroy(&wait->cond_wait);
+		dce_os_cond_destroy(&wait->cond_wait);
 		dce_os_atomic_set(&wait->complete, 0);
 	}
 
-	dce_cond_destroy(&d->dce_bootstrap_done);
+	dce_os_cond_destroy(&d->dce_bootstrap_done);
 }

@@ -100,7 +100,7 @@ int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 		if (ret)
 			dce_os_err(d, "failed to send DCE_BOOT_COMPLETE_RECEIVED event");
 
-		dce_cond_wait_reset(d, DCE_WAIT_BOOT_COMPLETE);
+		dce_os_cond_wait_reset(d, DCE_WAIT_BOOT_COMPLETE);
 		goto boot_done;
 	}
 
@@ -173,7 +173,7 @@ dce_start_boot_flow(struct tegra_dce *d)
 	} else {
 		d->boot_status |= DCE_FW_BOOT_DONE;
 		dce_os_info(d, "DCE_BOOT_DONE");
-		dce_cond_broadcast_interruptible(&d->dce_bootstrap_done);
+		dce_os_cond_broadcast_interruptible(&d->dce_bootstrap_done);
 	}
 
 exit:
