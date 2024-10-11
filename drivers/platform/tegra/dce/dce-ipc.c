@@ -242,8 +242,8 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 	}
 
 	q_info = &ch->q_info;
-	msg_sz = os_ivc_align(q_info->frame_sz);
-	q_sz = os_ivc_total_queue_size(msg_sz * q_info->nframes);
+	msg_sz = dce_os_ivc_align(q_info->frame_sz);
+	q_sz = dce_os_ivc_total_queue_size(msg_sz * q_info->nframes);
 
 	r = &d->d_ipc.region;
 	if (!r->base) {
@@ -251,7 +251,7 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 		goto out_lock_destroy;
 	}
 
-	ret = os_ivc_init(&ch->d_ivc,
+	ret = dce_os_ivc_init(&ch->d_ivc,
 			(char *)r->base + r->s_offset, (char *)r->base + r->s_offset + q_sz,
 			r->iova + r->s_offset, r->iova + r->s_offset + q_sz,
 			q_info->nframes, msg_sz);
@@ -346,7 +346,7 @@ bool dce_ipc_channel_is_ready(struct tegra_dce *d, u32 ch_type)
 
 	dce_os_mutex_lock(&ch->lock);
 
-	is_est = (os_ivc_notified(&ch->d_ivc) ? false : true);
+	is_est = (dce_os_ivc_notified(&ch->d_ivc) ? false : true);
 
 	ch->signal.notify(d, &ch->signal.to_d);
 
@@ -393,7 +393,7 @@ void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type)
 
 	dce_os_mutex_lock(&ch->lock);
 
-	os_ivc_reset(&ch->d_ivc);
+	dce_os_ivc_reset(&ch->d_ivc);
 
 	trace_ivc_channel_reset_triggered(d, ch);
 
@@ -430,7 +430,7 @@ static int _dce_ipc_get_next_write_buff(struct dce_ipc_channel *ch)
 	int err = 0;
 
 	if (ch != NULL)
-		err = os_ivc_get_next_write_frame(&ch->d_ivc, &ch->obuff);
+		err = dce_os_ivc_get_next_write_frame(&ch->d_ivc, &ch->obuff);
 	else
 		err = -EINVAL;
 
@@ -476,7 +476,7 @@ static int _dce_ipc_write_channel(struct dce_ipc_channel *ch,
 		memcpy(ch->obuff, data, size);
 #endif
 
-	return os_ivc_write_advance(&ch->d_ivc);
+	return dce_os_ivc_write_advance(&ch->d_ivc);
 }
 
 /**
@@ -534,7 +534,7 @@ static int _dce_ipc_get_next_read_buff(struct dce_ipc_channel *ch)
 	int err = 0;
 
 	if (ch != NULL)
-		err = os_ivc_get_next_read_frame(&ch->d_ivc, &ch->ibuff);
+		err = dce_os_ivc_get_next_read_frame(&ch->d_ivc, &ch->ibuff);
 	else
 		err = -EINVAL;
 
@@ -579,7 +579,7 @@ static int _dce_ipc_read_channel(struct dce_ipc_channel *ch,
 		memcpy(data, ch->ibuff, size);
 #endif
 
-	return os_ivc_read_advance(&ch->d_ivc);
+	return dce_os_ivc_read_advance(&ch->d_ivc);
 }
 
 /**
@@ -728,7 +728,7 @@ bool dce_ipc_is_data_available(struct tegra_dce *d, u32 ch_type)
 
 	dce_os_mutex_lock(&ch->lock);
 
-	err = os_ivc_get_next_read_frame(&ch->d_ivc, &frame);
+	err = dce_os_ivc_get_next_read_frame(&ch->d_ivc, &frame);
 	if (err == 0)
 		ret = true;
 

@@ -8,7 +8,7 @@
 
 #include <dce-os-lock.h>
 #include <dce-os-types.h>
-#include <os-ivc.h>
+#include <dce-os-ivc.h>
 
 #include <interface/dce-admin-cmds.h>
 #include <interface/dce-core-interface-ipc-types.h>
@@ -129,7 +129,7 @@ struct dce_ipc_channel {
 	void *ibuff;
 	void *obuff;
 #endif
-	os_ivc_t d_ivc;
+	dce_os_ivc_t d_ivc;
 	struct tegra_dce *d;
 	struct dce_os_mutex lock;
 	struct dce_ipc_signal signal;
