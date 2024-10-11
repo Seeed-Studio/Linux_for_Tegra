@@ -506,6 +506,76 @@
  */
 #define CAMRTC_HSP_SET_OP_POINT  MK_U32(0x48)
 
+/**
+ * @brief BOOT_STAGE logging message
+ *
+ * The CAMRTC_HSP_BOOT_STAGE message is a unidirectional
+ * message from RCE to client to log the currently running
+ * init function's feature ID and init level.
+ *
+ * @pre None
+ *
+ * @par Response
+ * @rststar
+ * +-------+---------------------------------------------------+
+ * | Bits  | Description                                       |
+ * +=======+===================================================+
+ * | 30:24 | CAMRTC_HSP_BOOT_STAGE                             |
+ * +-------+---------------------------------------------------+
+ * | 23:16 | Init step feature ID                              |
+ * +-------+---------------------------------------------------+
+ * | 15:8  | Init step level                                   |
+ * +-------+---------------------------------------------------+
+ * | 7:0   | Undefined                                         |
+ * +-------+---------------------------------------------------+
+ * @endrst
+ */
+#define CAMRTC_HSP_BOOT_STAGE  MK_U32(0x49)
+
+/**
+ * @brief BOOT_ERROR logging message
+ *
+ * The CAMRTC_HSP_BOOT_ERROR message is a unidirectional
+ * message from RCE to client to log that an RCE init handler
+ * returned error and RCE has halted.
+ *
+ * @pre None
+ *
+ * @par Response
+ * @rststar
+ * +-------+---------------------------------------------------+
+ * | Bits  | Description                                       |
+ * +=======+===================================================+
+ * | 30:24 | CAMRTC_HSP_BOOT_ERROR                             |
+ * +-------+---------------------------------------------------+
+ * | 23:0  | RTOS error                                        |
+ * +-------+---------------------------------------------------+
+ * @endrst
+ */
+#define CAMRTC_HSP_BOOT_ERROR  MK_U32(0x4A)
+
+/**
+ * @brief BOOT_COMPLETE logging message
+ *
+ * The CAMRTC_HSP_BOOT_COMPLETE message is a unidirectional
+ * message from RCE to client to log that RCE early boot has
+ * completed.
+ *
+ * @pre None
+ *
+ * @par Response
+ * @rststar
+ * +-------+---------------------------------------------------+
+ * | Bits  | Description                                       |
+ * +=======+===================================================+
+ * | 30:24 | CAMRTC_HSP_BOOT_COMPLETE                          |
+ * +-------+---------------------------------------------------+
+ * | 23:0  | 0x000000                                          |
+ * +-------+---------------------------------------------------+
+ * @endrst
+ */
+#define CAMRTC_HSP_BOOT_COMPLETE  MK_U32(0x4B)
+
 /** Reserved, not to be used. */
 #define CAMRTC_HSP_RESERVED_5E		MK_U32(0x5E) /* bug 200395605 */
 
