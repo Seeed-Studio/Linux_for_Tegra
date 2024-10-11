@@ -5,7 +5,7 @@
 
 #include <dce.h>
 #include <dce-ipc.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <interface/dce-interface.h>
 
 static struct dce_ipc_signal_instance *mb_signals[DCE_NUM_MBOX_REGS];

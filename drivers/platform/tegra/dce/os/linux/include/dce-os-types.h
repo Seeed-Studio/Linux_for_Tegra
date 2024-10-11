@@ -3,9 +3,9 @@
  * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
-#ifndef OS_TYPES_H
-#define OS_TYPES_H
+#ifndef DCE_OS_TYPES_H
+#define DCE_OS_TYPES_H
 
 #include <linux/types.h>
 
-#endif /* OS_TYPES_H */
+#endif /* DCE_OS_TYPES_H */

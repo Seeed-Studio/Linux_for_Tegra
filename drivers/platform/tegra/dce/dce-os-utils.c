@@ -4,17 +4,24 @@
  */
 #include <dce.h>
 #include <dce-thread.h>
-#include <os-dce-device.h>
-#include <os-utils.h>
+#include <dce-os-device.h>
+#include <dce-os-utils.h>
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>
 #include <linux/firmware.h>
+#include <linux/bitops.h>
+#include <linux/bitmap.h>
 
 /**
- * dce_writel - Dce io function to perform MMIO writes
+ * Do not add any more util functions to this file.
+ * We should add OS util functions to respective OS module files.
+ */
+
+/**
+ * dce_os_writel - Dce io function to perform MMIO writes
  *
  * @d : Pointer to tegra_dce struct.
  * @r : register offset from dce_base.
@@ -22,9 +29,9 @@
  *
  * Return : Void
  */
-void dce_writel(struct tegra_dce *d, u32 r, u32 v)
+void dce_os_writel(struct tegra_dce *d, u32 r, u32 v)
 {
-	struct dce_device *d_dev = dce_device_from_dce(d);
+	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 
 	if (unlikely(!d_dev->regs))
 		dce_err(d, "DCE Register Space not IOMAPed to CPU");
@@ -33,18 +40,18 @@ void dce_writel(struct tegra_dce *d, u32 r, u32 v)
 }
 
 /**
- * dce_readl - Dce io function to perform MMIO reads
+ * dce_os_readl - Dce io function to perform MMIO reads
  *
  * @d : Pointer to tegra_dce struct.
  * @r : register offset from dce_base.
  *
  * Return : the read value
  */
-u32 dce_readl(struct tegra_dce *d, u32 r)
+u32 dce_os_readl(struct tegra_dce *d, u32 r)
 {
 	u32 v = 0xffffffff;
 
-	struct dce_device *d_dev = dce_device_from_dce(d);
+	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 
 	if (unlikely(!d_dev->regs))
 		dce_err(d, "DCE Register Space not IOMAPed to CPU");
@@ -55,7 +62,7 @@ u32 dce_readl(struct tegra_dce *d, u32 r)
 }
 
 /**
- * dce_writel_check - Performs MMIO writes and checks if the writes
+ * dce_os_writel_check - Performs MMIO writes and checks if the writes
  *			are actaully correct.
  *
  * @d : Pointer to tegra_dce struct.
@@ -64,28 +71,28 @@ u32 dce_readl(struct tegra_dce *d, u32 r)
  *
  * Return : Void
  */
-void dce_writel_check(struct tegra_dce *d, u32 r, u32 v)
+void dce_os_writel_check(struct tegra_dce *d, u32 r, u32 v)
 {
 	/* TODO : Write and read back to check */
 }
 
 /**
- * dce_io_exists - Dce io function to check if the registers are mapped
+ * dce_os_io_exists - Dce io function to check if the registers are mapped
  *			to CPU correctly
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : True if mapped.
  */
-bool dce_io_exists(struct tegra_dce *d)
+bool dce_os_io_exists(struct tegra_dce *d)
 {
-	struct dce_device *d_dev = dce_device_from_dce(d);
+	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 
 	return d_dev->regs != NULL;
 }
 
 /**
- * dce_io_valid_regs - Dce io function to check if the requested offset is
+ * dce_os_io_valid_reg - Dce io function to check if the requested offset is
  *			within the range of CPU mapped MMIO range.
  *
  * @d : Pointer to tegra_dce struct.
@@ -93,14 +100,14 @@ bool dce_io_exists(struct tegra_dce *d)
  *
  * Return : True if offset within range.
  */
-bool dce_io_valid_reg(struct tegra_dce *d, u32 r)
+bool dce_os_io_valid_reg(struct tegra_dce *d, u32 r)
 {
 	/* TODO : Implement range check here. Returning true for now*/
 	return true;
 }
 
 /**
- * dce_kzalloc - Function to allocate contiguous kernel memory
+ * dce_os_kzalloc - Function to allocate contiguous kernel memory
  *
  * @d : Pointer to tegra_dce struct.
  * @size_t : Size of the memory to be allocated
@@ -108,7 +115,7 @@ bool dce_io_valid_reg(struct tegra_dce *d, u32 r)
  *
  * Return : CPU Mapped Address if successful else NULL.
  */
-void *dce_kzalloc(struct tegra_dce *d, size_t size, bool dma_flag)
+void *dce_os_kzalloc(struct tegra_dce *d, size_t size, bool dma_flag)
 {
 	void *alloc;
 	gfp_t flags = GFP_KERNEL;
@@ -122,34 +129,34 @@ void *dce_kzalloc(struct tegra_dce *d, size_t size, bool dma_flag)
 }
 
 /**
- * dce_kfree - Frees an alloc from dce_kzalloc
+ * dce_os_kfree - Frees an alloc from dce_os_kzalloc
  *
  * @d : Pointer to tegra_dce struct.
  * @addr : Address of the object to free.
  *
  * Return : void
  */
-void dce_kfree(struct tegra_dce *d, void *addr)
+void dce_os_kfree(struct tegra_dce *d, void *addr)
 {
 	kfree(addr);
 }
 
 /**
- * dce_request_firmware - Reads the fw into memory.
+ * dce_os_request_firmware - Reads the fw into memory.
  *
  * @d : Pointer to tegra_dce struct.
  * @fw_name : Name of the fw.
  *
  * Return : Pointer to dce_firmware if successful else NULL.
  */
-struct dce_firmware *dce_request_firmware(struct tegra_dce *d,
+struct dce_firmware *dce_os_request_firmware(struct tegra_dce *d,
 					const char *fw_name)
 {
 	struct device *dev = dev_from_dce(d);
 	struct dce_firmware *fw;
 	const struct firmware *l_fw;
 
-	fw = dce_kzalloc(d, sizeof(*fw), false);
+	fw = dce_os_kzalloc(d, sizeof(*fw), false);
 	if (!fw)
 		return NULL;
 
@@ -187,7 +194,7 @@ struct dce_firmware *dce_request_firmware(struct tegra_dce *d,
 err_release:
 	release_firmware(l_fw);
 err:
-	dce_kfree(d, fw);
+	dce_os_kfree(d, fw);
 	return NULL;
 }
 
@@ -199,7 +206,7 @@ err:
  *
  * Return : void
  */
-void dce_release_fw(struct tegra_dce *d, struct dce_firmware *fw)
+void dce_os_release_fw(struct tegra_dce *d, struct dce_firmware *fw)
 {
 	struct device *dev = dev_from_dce(d);
 
@@ -210,7 +217,7 @@ void dce_release_fw(struct tegra_dce *d, struct dce_firmware *fw)
 			(void *)fw->data,
 			(dma_addr_t)fw->dma_handle);
 
-	dce_kfree(d, fw);
+	dce_os_kfree(d, fw);
 }
 
 /**
@@ -571,14 +578,14 @@ void dce_thread_join(struct dce_thread *thread)
 };
 
 /**
- * dce_get_nxt_pow_of_2 : get next power of 2 number for a given number
+ * dce_os_get_nxt_pow_of_2 : get next power of 2 number for a given number
  *
  * @addr : Address of given number
  * @nbits : bits in given number
  *
  * Return : unsigned long next power of 2 value
  */
-unsigned long dce_get_nxt_pow_of_2(unsigned long *addr, u8 nbits)
+unsigned long dce_os_get_nxt_pow_of_2(unsigned long *addr, u8 nbits)
 {
 	u8 l_bit = 0;
 	u8 bit_index = 0;
@@ -604,7 +611,7 @@ unsigned long dce_get_nxt_pow_of_2(unsigned long *addr, u8 nbits)
 }
 
 /*
- * dce_usleep_range : sleep between min-max range
+ * dce_os_usleep_range : sleep between min-max range
  *
  * @min : minimum sleep time in usec
  * @max : maximum sleep time in usec
@@ -612,7 +619,7 @@ unsigned long dce_get_nxt_pow_of_2(unsigned long *addr, u8 nbits)
  * Return : void
  */
 
-void dce_usleep_range(unsigned long min, unsigned long max)
+void dce_os_usleep_range(unsigned long min, unsigned long max)
 {
 	usleep_range(min, max);
 }
@@ -695,7 +702,7 @@ static int ipc_allocate_region(struct tegra_dce *d)
 		   );
 
 	tot_ivc_q_sz = tegra_ivc_total_queue_size(tot_q_sz);
-	region->size = dce_get_nxt_pow_of_2(&tot_ivc_q_sz, 32);
+	region->size = dce_os_get_nxt_pow_of_2(&tot_ivc_q_sz, 32);
 	region->base = dma_alloc_coherent(dev, region->size,
 			&region->iova, GFP_KERNEL | __GFP_ZERO);
 	if (!region->base)
@@ -750,4 +757,34 @@ int dce_ipc_init_region_info(struct tegra_dce *d)
 void dce_ipc_deinit_region_info(struct tegra_dce *d)
 {
 	return ipc_free_region(d);
+}
+
+/**
+ * dce_os_bitmap_set - Set bits in a bitmap
+ *
+ * @map : Pointer to map
+ * @start : Start bit
+ * @len : Length indicating number of bits to set.
+ *
+ * Return : Void
+ */
+void dce_os_bitmap_set(unsigned long *map,
+				  unsigned int start, unsigned int len)
+{
+	bitmap_set(map, start, (int)len);
+}
+
+/**
+ * dce_os_bitmap_set - Set bits in a bitmap
+ *
+ * @map : Pointer to map
+ * @start : Start bit
+ * @len : Length indicating number of bits to clear.
+ *
+ * Return : Void
+ */
+void dce_os_bitmap_clear(unsigned long *map,
+				    unsigned int start, unsigned int len)
+{
+	bitmap_clear(map, start, (int)len);
 }

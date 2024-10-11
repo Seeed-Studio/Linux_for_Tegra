@@ -8,7 +8,7 @@
 
 #include <os-cond.h>
 #include <os-lock.h>
-#include <atomic.h>
+#include <dce-os-atomic.h>
 
 struct tegra_dce;
 
@@ -20,7 +20,7 @@ struct tegra_dce;
 #define DCE_MAX_WAIT			5
 
 struct dce_wait_cond {
-	os_atomic_t complete;
+	dce_os_atomic_t complete;
 	struct dce_cond cond_wait;
 };
 

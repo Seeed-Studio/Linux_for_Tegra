@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 
 #define CCPLEX_HSP_IE 1U /* TODO : Have an api to read from platform data */
 

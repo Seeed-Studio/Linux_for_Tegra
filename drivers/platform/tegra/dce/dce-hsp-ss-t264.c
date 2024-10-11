@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <hw/t264/hw_hsp_dce.h>
 #include <dce-hsp-t264.h>
 
@@ -84,7 +84,7 @@ static u32 (*const ss_state_regs[DCE_MAX_HSP_T264][DCE_MAX_NO_SS_T264])(void) = 
  */
 u32 dce_ss_get_state_t264(struct tegra_dce *d, u8 hsp_id, u8 id)
 {
-	return dce_readl(d, ss_state_regs[hsp_id][id]());
+	return dce_os_readl(d, ss_state_regs[hsp_id][id]());
 }
 
 /**
@@ -116,14 +116,14 @@ void dce_ss_set_t264(struct tegra_dce *d, u8 bpos, u8 hsp_id, u8 id)
 	/**
 	 * TODO :Use DCE_INSERT here.
 	 */
-	dce_bitmap_set(&val, bpos, 1);
+	dce_os_bitmap_set(&val, bpos, 1);
 
 	/**
 	 * Debug info. please remove
 	 */
 	dce_info(d, "Value after bitmap operation : %lx", val);
 
-	dce_writel(d, ss_set_regs[hsp_id][id](), (u32)val);
+	dce_os_writel(d, ss_set_regs[hsp_id][id](), (u32)val);
 
 	/**
 	 * Debug info. please remove
@@ -153,7 +153,7 @@ void dce_ss_clear_t264(struct tegra_dce *d, u8 bpos, u8 hsp_id, u8 id)
 
 	val = dce_ss_get_state_t264(d, d->hsp_id, id);
 
-	dce_bitmap_set(&val, bpos, 1);
+	dce_os_bitmap_set(&val, bpos, 1);
 
-	dce_writel(d, ss_clear_regs[hsp_id][id](), val);
+	dce_os_writel(d, ss_clear_regs[hsp_id][id](), val);
 }

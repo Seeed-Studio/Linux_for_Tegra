@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 #include <dce.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <interface/dce-interface.h>
 #include <interface/dce-boot-cmds.h>
 
@@ -165,7 +165,7 @@ dce_start_boot_flow(struct tegra_dce *d)
 	}
 
 	dce_admin_ivc_channel_reset(d);
-	dce_usleep_range(10, 50);
+	dce_os_usleep_range(10, 50);
 
 	ret = dce_start_admin_seq(d);
 	if (ret) {

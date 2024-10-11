@@ -6,7 +6,7 @@
 
 #include <dce.h>
 #include <dce-mailbox.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <interface/dce-interface.h>
 #include <interface/dce-boot-cmds.h>
 

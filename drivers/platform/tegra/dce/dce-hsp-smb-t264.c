@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <hw/t264/hw_hsp_dce.h>
 #include <dce-hsp-t264.h>
 
@@ -114,7 +114,7 @@ void dce_smb_set_t264(struct tegra_dce *d, u32 val, u8 hsp_id, u8 id)
 		return;
 	}
 
-	dce_writel(d, smb_regs[hsp_id][id](), val);
+	dce_os_writel(d, smb_regs[hsp_id][id](), val);
 }
 
 /**
@@ -136,7 +136,7 @@ void dce_smb_set_full_ie_t264(struct tegra_dce *d, bool en, u8 hsp_id, u8 id)
 		return;
 	}
 
-	dce_writel(d, smb_full_ie_regs[hsp_id][id](), val);
+	dce_os_writel(d, smb_full_ie_regs[hsp_id][id](), val);
 }
 
 /**
@@ -155,7 +155,7 @@ u32 dce_smb_read_full_ie_t264(struct tegra_dce *d, u8 hsp_id, u8 id)
 		return 0xffffffff; /* TODO : Add DCE Error Numbers */
 	}
 
-	return dce_readl(d, smb_full_ie_regs[hsp_id][id]());
+	return dce_os_readl(d, smb_full_ie_regs[hsp_id][id]());
 }
 
 /**
@@ -177,7 +177,7 @@ void dce_smb_set_empty_ie_t264(struct tegra_dce *d, bool en, u8 hsp_id, u8 id)
 		return;
 	}
 
-	dce_writel(d, smb_empty_ie_regs[hsp_id][id](), val);
+	dce_os_writel(d, smb_empty_ie_regs[hsp_id][id](), val);
 }
 
 /**
@@ -196,7 +196,7 @@ u32 dce_smb_read_t264(struct tegra_dce *d, u8 hsp_id, u8 id)
 		return 0xffffffff; /* TODO : Add DCE Error Numbers */
 	}
 
-	return dce_readl(d, smb_regs[hsp_id][id]());
+	return dce_os_readl(d, smb_regs[hsp_id][id]());
 }
 
 /**
@@ -259,7 +259,7 @@ u32 dce_hsp_ie_read_t264(struct tegra_dce *d, u8 hsp_id, u8 id)
 		return 0xffffffff; /* TODO : Add DCE Error Numbers */
 	}
 
-	return dce_readl(d, hsp_int_ie_regs[hsp_id][id]());
+	return dce_os_readl(d, hsp_int_ie_regs[hsp_id][id]());
 }
 
 /**
@@ -280,8 +280,8 @@ void dce_hsp_ie_write_t264(struct tegra_dce *d, u32 val, u8 hsp_id, u8 id)
 		return;
 	}
 
-	dce_writel(d, hsp_int_ie_regs[hsp_id][id](),
-			val | dce_readl(d, hsp_int_ie_regs[hsp_id][id]()));
+	dce_os_writel(d, hsp_int_ie_regs[hsp_id][id](),
+			val | dce_os_readl(d, hsp_int_ie_regs[hsp_id][id]()));
 }
 
 /**
@@ -300,5 +300,5 @@ u32 dce_hsp_ir_read_t264(struct tegra_dce *d, u8 hsp_id)
 		return 0xffffffff; /* TODO : Add DCE Error Numbers */
 	}
 
-	return dce_readl(d, hsp_int_ir_regs[hsp_id]());
+	return dce_os_readl(d, hsp_int_ir_regs[hsp_id]());
 }

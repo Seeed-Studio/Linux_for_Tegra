@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 
 /**
  * dce_driver_start - Start executing DCE logic
@@ -125,5 +125,5 @@ void dce_driver_deinit(struct tegra_dce *d)
 
 	dce_boot_interface_deinit(d);
 
-	dce_release_fw(d, d->fw_data);
+	dce_os_release_fw(d, d->fw_data);
 }

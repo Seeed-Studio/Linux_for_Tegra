@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 
 struct dce_event_process_struct {
 	enum dce_fsm_event_id_type event;

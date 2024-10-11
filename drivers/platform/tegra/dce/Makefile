@@ -15,8 +15,7 @@ endif # CONFIG_TEGRA_OOT_MODULE
 ccflags-y += -I$(srctree.nvidia-oot)/include
 ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/include
 ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/os/include
-ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/os/interface/include
-ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/os/include/linux
+ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/os/linux/include
 obj-$(CONFIG_TEGRA_DCE) += tegra-dce.o
 
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-ast.o
@@ -34,7 +33,7 @@ tegra-dce-$(CONFIG_TEGRA_DCE) += dce-ipc-signal.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-client-ipc.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-module.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-pm.o
-tegra-dce-$(CONFIG_TEGRA_DCE) += dce-util-common.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-os-utils.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-hsp-smb-t264.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-hsp-ss-t264.o
 

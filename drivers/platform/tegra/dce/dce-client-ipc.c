@@ -5,7 +5,7 @@
 
 #include <dce.h>
 #include <dce-ipc.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <dce-client-ipc-internal.h>
 
 #define DCE_IPC_HANDLES_MAX 6U
@@ -114,7 +114,7 @@ static void dce_client_async_event_work(struct work_struct *data)
 	cl = d->d_clients[DCE_CLIENT_IPC_TYPE_RM_EVENT];
 
 	dce_client_process_event_ipc(d, cl);
-	os_atomic_set(&work->in_use, 0);
+	dce_os_atomic_set(&work->in_use, 0);
 }
 
 int tegra_dce_register_ipc_client(u32 type,
@@ -171,7 +171,7 @@ int tegra_dce_register_ipc_client(u32 type,
 	cl->handle = handle;
 	cl->int_type = int_type;
 	cl->callback_fn = callback_fn;
-	os_atomic_set(&cl->complete, 0);
+	dce_os_atomic_set(&cl->complete, 0);
 
 	ret = dce_cond_init(&cl->recv_wait);
 	if (ret) {
@@ -249,7 +249,7 @@ int dce_client_init(struct tegra_dce *d)
 		INIT_WORK(&d_work->async_event_work,
 			  dce_client_async_event_work);
 		d_work->d = d;
-		os_atomic_set(&d_work->in_use, 0);
+		dce_os_atomic_set(&d_work->in_use, 0);
 	}
 
 	return ret;
@@ -284,11 +284,11 @@ int dce_client_ipc_wait(struct tegra_dce *d, u32 int_type)
 
 retry_wait:
 	DCE_COND_WAIT_INTERRUPTIBLE(&cl->recv_wait,
-			os_atomic_read(&cl->complete) == 1);
-	if (os_atomic_read(&cl->complete) != 1)
+			dce_os_atomic_read(&cl->complete) == 1);
+	if (dce_os_atomic_read(&cl->complete) != 1)
 		goto retry_wait;
 
-	os_atomic_set(&cl->complete, 0);
+	dce_os_atomic_set(&cl->complete, 0);
 
 	return 0;
 }
@@ -310,7 +310,7 @@ static void dce_client_process_event_ipc(struct tegra_dce *d,
 		return;
 	}
 
-	msg_data = dce_kzalloc(d, DCE_CLIENT_MAX_IPC_MSG_SIZE, false);
+	msg_data = dce_os_kzalloc(d, DCE_CLIENT_MAX_IPC_MSG_SIZE, false);
 	if (msg_data == NULL) {
 		dce_err(d, "Could not allocate msg read buffer");
 		goto done;
@@ -330,7 +330,7 @@ static void dce_client_process_event_ipc(struct tegra_dce *d,
 
 done:
 	if (msg_data)
-		dce_kfree(d, msg_data);
+		dce_os_kfree(d, msg_data);
 }
 
 static void dce_client_schedule_event_work(struct tegra_dce *d)
@@ -341,7 +341,7 @@ static void dce_client_schedule_event_work(struct tegra_dce *d)
 	for (i = 0; i < DCE_MAX_ASYNC_WORK; i++) {
 		struct dce_async_work *d_work = &async_work_info->work[i];
 
-		if (os_atomic_add_unless(&d_work->in_use, 1, 1) > 0) {
+		if (dce_os_atomic_add_unless(&d_work->in_use, 1, 1) > 0) {
 			queue_work(async_work_info->async_event_wq,
 				   &d_work->async_event_work);
 			break;
@@ -374,6 +374,6 @@ void dce_client_ipc_wakeup(struct tegra_dce *d, u32 ch_type)
 	if (type == DCE_CLIENT_IPC_TYPE_RM_EVENT)
 		return dce_client_schedule_event_work(d);
 
-	os_atomic_set(&cl->complete, 1);
+	dce_os_atomic_set(&cl->complete, 1);
 	dce_cond_signal_interruptible(&cl->recv_wait);
 }

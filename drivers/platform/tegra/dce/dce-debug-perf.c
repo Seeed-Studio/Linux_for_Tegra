@@ -9,7 +9,7 @@
 #include <dce.h>
 #include <dce-debug-perf.h>
 #include <os-dce-log.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <interface/dce-interface.h>
 
 #define DCE_PERF_OUTPUT_FORMAT_CSV	((uint32_t)(0U))

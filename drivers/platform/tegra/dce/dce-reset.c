@@ -5,7 +5,7 @@
 
 #include <dce.h>
 #include <os-dce-log.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 
 enum pm_controls {
 	FW_LOAD_HALTED,
@@ -22,7 +22,7 @@ enum pm_controls {
  */
 static inline void dce_evp_set_reset_addr(struct tegra_dce *d, u32 addr)
 {
-	dce_writel(d, evp_reset_addr_r(), addr);
+	dce_os_writel(d, evp_reset_addr_r(), addr);
 }
 
 /**
@@ -37,10 +37,10 @@ static void dce_pm_set_pm_ctrl(struct tegra_dce *d, enum pm_controls val)
 {
 	switch (val) {
 	case FW_LOAD_DONE:
-		dce_writel(d, pm_r5_ctrl_r(), pm_r5_ctrl_fwloaddone_done_f());
+		dce_os_writel(d, pm_r5_ctrl_r(), pm_r5_ctrl_fwloaddone_done_f());
 		break;
 	case FW_LOAD_HALTED:
-		dce_writel(d, pm_r5_ctrl_r(), pm_r5_ctrl_fwloaddone_halted_f());
+		dce_os_writel(d, pm_r5_ctrl_r(), pm_r5_ctrl_fwloaddone_halted_f());
 		break;
 	default:
 		break;

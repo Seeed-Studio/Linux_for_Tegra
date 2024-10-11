@@ -6,7 +6,7 @@
 
 #include <dce.h>
 #include <dce-mailbox.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <dce-client-ipc-internal.h>
 #include <interface/dce-core-interface-errors.h>
 #include <interface/dce-interface.h>
@@ -113,19 +113,19 @@ static struct dce_ipc_message *dce_admin_allocate_message(struct tegra_dce *d)
 {
 	struct dce_ipc_message *msg;
 
-	msg = dce_kzalloc(d, sizeof(*msg), false);
+	msg = dce_os_kzalloc(d, sizeof(*msg), false);
 	if (!msg) {
 		dce_err(d, "Insufficient memory for admin msg");
 		goto err_alloc_msg;
 	}
 
-	msg->tx.data = dce_kzalloc(d, DCE_ADMIN_CMD_SIZE, false);
+	msg->tx.data = dce_os_kzalloc(d, DCE_ADMIN_CMD_SIZE, false);
 	if (!msg->tx.data) {
 		dce_err(d, "Insufficient memory for admin msg");
 		goto err_alloc_tx;
 	}
 
-	msg->rx.data = dce_kzalloc(d, DCE_ADMIN_RESP_SIZE, false);
+	msg->rx.data = dce_os_kzalloc(d, DCE_ADMIN_RESP_SIZE, false);
 	if (!msg->rx.data) {
 		dce_err(d, "Insufficient memory for admin msg");
 		goto err_alloc_rx;
@@ -137,9 +137,9 @@ static struct dce_ipc_message *dce_admin_allocate_message(struct tegra_dce *d)
 	return msg;
 
 err_alloc_rx:
-	dce_kfree(d, msg->tx.data);
+	dce_os_kfree(d, msg->tx.data);
 err_alloc_tx:
-	dce_kfree(d, msg);
+	dce_os_kfree(d, msg);
 err_alloc_msg:
 	return NULL;
 }
@@ -159,9 +159,9 @@ static void dce_admin_free_message(struct tegra_dce *d,
 	if (!msg || !msg->tx.data || !msg->rx.data)
 		return;
 
-	dce_kfree(d, msg->tx.data);
-	dce_kfree(d, msg->rx.data);
-	dce_kfree(d, msg);
+	dce_os_kfree(d, msg->tx.data);
+	dce_os_kfree(d, msg->rx.data);
+	dce_os_kfree(d, msg);
 }
 
 /**

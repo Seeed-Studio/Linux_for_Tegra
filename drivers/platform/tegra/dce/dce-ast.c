@@ -4,7 +4,7 @@
  */
 #include <dce.h>
 #include <os-dce-log.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 
 #define MAX_NO_ASTS 2
 #define MAX_AST_REGIONS 1
@@ -38,7 +38,7 @@ static void dce_config_ast0_control(struct tegra_dce *d)
 		| def_physical | ast_ast0_control_matcherrctl_decerr_f()
 		| ast_ast0_control_lock_false_f();
 
-	dce_writel(d, ast_ast0_control_r(), val);
+	dce_os_writel(d, ast_ast0_control_r(), val);
 }
 
 /**
@@ -67,7 +67,7 @@ static void dce_config_ast1_control(struct tegra_dce *d)
 		| def_physical | ast_ast1_control_matcherrctl_decerr_f()
 		| ast_ast1_control_lock_false_f();
 
-	dce_writel(d, ast_ast1_control_r(), val);
+	dce_os_writel(d, ast_ast1_control_r(), val);
 }
 
 /**
@@ -101,7 +101,7 @@ static void dce_cfg_ast0_streamid_ctl_0(struct tegra_dce *d)
 	else
 		stream_id_en = ast_ast0_streamid_ctl_0_enable_enable_f();
 
-	dce_writel(d, ast_ast0_streamid_ctl_0_r(),
+	dce_os_writel(d, ast_ast0_streamid_ctl_0_r(),
 		(dce_stream_id << ast_ast0_streamid_ctl_0_streamid_shift_v()) |
 		stream_id_en);
 }
@@ -124,7 +124,7 @@ static void dce_cfg_ast0_streamid_ctl_1(struct tegra_dce *d)
 	else
 		stream_id_en = ast_ast0_streamid_ctl_1_enable_enable_f();
 
-	dce_writel(d, ast_ast0_streamid_ctl_1_r(), (dce_stream_id <<
+	dce_os_writel(d, ast_ast0_streamid_ctl_1_r(), (dce_stream_id <<
 			ast_ast0_streamid_ctl_1_streamid_shift_v()) |
 			stream_id_en);
 }
@@ -147,7 +147,7 @@ static void dce_cfg_ast1_streamid_ctl_0(struct tegra_dce *d)
 	else
 		stream_id_en = ast_ast1_streamid_ctl_0_enable_enable_f();
 
-	dce_writel(d, ast_ast1_streamid_ctl_0_r(),
+	dce_os_writel(d, ast_ast1_streamid_ctl_0_r(),
 		(dce_stream_id << ast_ast1_streamid_ctl_0_streamid_shift_v()) |
 		stream_id_en);
 }
@@ -170,7 +170,7 @@ static void dce_cfg_ast1_streamid_ctl_1(struct tegra_dce *d)
 	else
 		stream_id_en = ast_ast1_streamid_ctl_1_enable_enable_f();
 
-	dce_writel(d, ast_ast1_streamid_ctl_1_r(),
+	dce_os_writel(d, ast_ast1_streamid_ctl_1_r(),
 		(dce_stream_id << ast_ast1_streamid_ctl_1_streamid_shift_v()) |
 		stream_id_en);
 }
@@ -207,7 +207,7 @@ static void (*const ast_strmidctl_fn[MAX_NO_ASTS][MAX_AST_STRMCTLS])
  */
 static void dce_set_ast0_slave_addr_32_reg0(struct tegra_dce *d, u32 addr)
 {
-	dce_writel(d, ast_ast0_region_0_slave_base_lo_r(),
+	dce_os_writel(d, ast_ast0_region_0_slave_base_lo_r(),
 		   (addr | ast_ast0_region_0_slave_base_lo_enable_true_f()) &
 		   ast_ast1_region_0_slave_base_lo_write_mask_v());
 }
@@ -223,7 +223,7 @@ static void dce_set_ast0_slave_addr_32_reg0(struct tegra_dce *d, u32 addr)
  */
 static void dce_set_ast1_slave_addr_32_reg0(struct tegra_dce *d, u32 addr)
 {
-	dce_writel(d, ast_ast1_region_0_slave_base_lo_r(),
+	dce_os_writel(d, ast_ast1_region_0_slave_base_lo_r(),
 		   (addr | ast_ast1_region_0_slave_base_lo_enable_true_f()) &
 		   ast_ast1_region_0_slave_base_lo_write_mask_v());
 }
@@ -259,7 +259,7 @@ static void (*const ast_slave_addr_fn[MAX_NO_ASTS][MAX_AST_REGIONS])
 static inline void
 dce_set_ast0_master_addr_lo_reg0(struct tegra_dce *d, u32 addr)
 {
-	dce_writel(d, ast_ast0_region_0_master_base_lo_r(), addr);
+	dce_os_writel(d, ast_ast0_region_0_master_base_lo_r(), addr);
 }
 
 /**
@@ -274,7 +274,7 @@ dce_set_ast0_master_addr_lo_reg0(struct tegra_dce *d, u32 addr)
 static inline void
 dce_set_ast1_master_addr_lo_reg0(struct tegra_dce *d, u32 addr)
 {
-	dce_writel(d, ast_ast1_region_0_master_base_lo_r(), addr);
+	dce_os_writel(d, ast_ast1_region_0_master_base_lo_r(), addr);
 }
 
 /**
@@ -289,7 +289,7 @@ dce_set_ast1_master_addr_lo_reg0(struct tegra_dce *d, u32 addr)
 static inline void
 dce_set_ast1_master_addr_hi_reg0(struct tegra_dce *d, u32 addr)
 {
-	dce_writel(d, ast_ast1_region_0_master_base_hi_r(), addr);
+	dce_os_writel(d, ast_ast1_region_0_master_base_hi_r(), addr);
 }
 
 /**
@@ -304,7 +304,7 @@ dce_set_ast1_master_addr_hi_reg0(struct tegra_dce *d, u32 addr)
 static inline void
 dce_set_ast0_master_addr_hi_reg0(struct tegra_dce *d, u32 addr)
 {
-	dce_writel(d, ast_ast0_region_0_master_base_hi_r(), addr);
+	dce_os_writel(d, ast_ast0_region_0_master_base_hi_r(), addr);
 }
 
 /**
@@ -398,7 +398,7 @@ static void dce_ast_cfg_reg_mask_ast0_reg0(struct tegra_dce *d)
 	u64 size_mask = dce_get_fw_ast_reg_mask(d);
 	u32 val = size_mask & ast_ast0_region_0_mask_lo_write_mask_v();
 
-	dce_writel(d, ast_ast0_region_0_mask_lo_r(), val);
+	dce_os_writel(d, ast_ast0_region_0_mask_lo_r(), val);
 }
 
 /**
@@ -414,7 +414,7 @@ static void dce_ast_cfg_reg_mask_ast1_reg0(struct tegra_dce *d)
 	u64 size_mask = dce_get_fw_ast_reg_mask(d);
 	u32 val = size_mask & ast_ast1_region_0_mask_lo_write_mask_v();
 
-	dce_writel(d, ast_ast1_region_0_mask_lo_r(), val);
+	dce_os_writel(d, ast_ast1_region_0_mask_lo_r(), val);
 }
 
 /**
@@ -463,7 +463,7 @@ static void dce_ast_cfg_reg_control_ast0_reg0(struct tegra_dce *d)
 	carveout_id = dce_get_fw_carveout_id(d) <<
 		ast_ast0_region_0_control_carveoutid_shift_v();
 
-	dce_writel(d, ast_ast0_region_0_control_r(),
+	dce_os_writel(d, ast_ast0_region_0_control_r(),
 		   use_physical_id | vm_index | carveout_id |
 		   ast_ast0_region_0_control_snoop_enable_f());
 }
@@ -498,7 +498,7 @@ static void dce_ast_cfg_reg_control_ast1_reg0(struct tegra_dce *d)
 		ast_ast1_region_0_control_carveoutid_shift_v();
 
 
-	dce_writel(d, ast_ast1_region_0_control_r(),
+	dce_os_writel(d, ast_ast1_region_0_control_r(),
 		   use_physical_id | vm_index | carveout_id |
 		   ast_ast1_region_0_control_snoop_enable_f());
 }

@@ -6,7 +6,7 @@
 
 #include <dce.h>
 #include <dce-mailbox.h>
-#include <os-utils.h>
+#include <dce-os-utils.h>
 #include <dce-client-ipc-internal.h>
 #include <interface/dce-core-interface-errors.h>
 #include <interface/dce-interface.h>

@@ -9,8 +9,8 @@
 #include <linux/ktime.h>
 #include <dce.h>
 #include <os-dce-log.h>
-#include <os-utils.h>
-#include <os-dce-device.h>
+#include <dce-os-utils.h>
+#include <dce-os-device.h>
 #include <dce-debug-perf.h>
 #include <interface/dce-interface.h>
 #include <interface/dce-core-interface-errors.h>
@@ -26,7 +26,7 @@ static int dbg_dce_load_fw(struct tegra_dce *d)
 {
 	const char *name = dce_get_fw_name(d);
 
-	d->fw_data = dce_request_firmware(d, name);
+	d->fw_data = dce_os_request_firmware(d, name);
 	if (!d->fw_data) {
 		dce_err(d, "FW Request Failed");
 		return -EBUSY;
@@ -335,7 +335,7 @@ static ssize_t dbg_dce_tests_external_status_fops_read(struct file *file,
 			char __user *user_buf, size_t count, loff_t *ppos)
 {
 	struct tegra_dce *d = file->private_data;
-	struct dce_device *d_dev = dce_device_from_dce(d);
+	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 	char buf[15];
 	ssize_t bytes_printed;
 
@@ -366,7 +366,7 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 	struct dce_admin_ipc_cmd *req_msg = NULL;
 	struct dce_admin_ipc_resp *resp_msg = NULL;
 	struct tegra_dce *d = file->private_data;
-	struct dce_device *d_dev = dce_device_from_dce(d);
+	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 
 	ret = kstrtou32_from_user(user_buf, count, 10, &test);
 	if (ret) {
@@ -652,7 +652,7 @@ static const struct file_operations perf_events_help_fops = {
 
 void dce_remove_debug(struct tegra_dce *d)
 {
-	struct dce_device *d_dev = dce_device_from_dce(d);
+	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 
 	debugfs_remove(d_dev->debugfs);
 
@@ -735,7 +735,7 @@ void dce_init_debug(struct tegra_dce *d)
 {
 	struct dentry *retval;
 	struct device *dev = dev_from_dce(d);
-	struct dce_device *d_dev = dce_device_from_dce(d);
+	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 	struct dentry *debugfs_dir = NULL;
 	struct dentry *perf_debugfs_dir = NULL;
 

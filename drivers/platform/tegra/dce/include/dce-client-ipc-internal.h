@@ -7,7 +7,7 @@
 #define DCE_CLIENT_IPC_INTERNAL_H
 
 #include <linux/platform/tegra/dce/dce-client-ipc.h>
-#include <atomic.h>
+#include <dce-os-atomic.h>
 
 /**
  * struct tegra_dce_client_ipc - Data Structure to hold client specific ipc
@@ -34,7 +34,7 @@ struct tegra_dce_client_ipc {
 	uint32_t int_type;
 	struct tegra_dce *d;
 	struct dce_cond recv_wait;
-	os_atomic_t complete;
+	dce_os_atomic_t complete;
 	tegra_dce_client_ipc_callback_t callback_fn;
 };
 
@@ -42,7 +42,7 @@ struct tegra_dce_client_ipc {
 struct dce_async_work {
 	struct tegra_dce *d;
 	struct work_struct async_event_work;
-	os_atomic_t in_use;
+	dce_os_atomic_t in_use;
 };
 
 /**
