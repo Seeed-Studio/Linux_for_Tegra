@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <os-dce-log.h>
+#include <dce-os-log.h>
 #include <dce-os-utils.h>
 #include <dce-hsp-t234.h>
 #include <hw/t234/hw_hsp_dce.h>
@@ -81,7 +81,7 @@ static  u32 (*const smb_empty_ie_regs[DCE_MAX_HSP_T234][DCE_MAX_NO_SMB_T234])(vo
 void dce_smb_set_t234(struct tegra_dce *d, u32 val, u8 hsp_id, u8 id)
 {
 	if (id >= DCE_MAX_NO_SMB_T234 || hsp_id >= DCE_MAX_HSP_T234) {
-		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		dce_os_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
 		return;
 	}
 
@@ -103,7 +103,7 @@ void dce_smb_set_full_ie_t234(struct tegra_dce *d, bool en, u8 hsp_id, u8 id)
 	u32 val = en ? 1U : 0U;
 
 	if (id >= DCE_MAX_NO_SMB_T234 || hsp_id >= DCE_MAX_HSP_T234) {
-		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		dce_os_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
 		return;
 	}
 
@@ -122,7 +122,7 @@ void dce_smb_set_full_ie_t234(struct tegra_dce *d, bool en, u8 hsp_id, u8 id)
 u32 dce_smb_read_full_ie_t234(struct tegra_dce *d, u8 hsp_id, u8 id)
 {
 	if (id >= DCE_MAX_NO_SMB_T234 || hsp_id >= DCE_MAX_HSP_T234) {
-		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		dce_os_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
 		return 0xffffffff; /* TODO : Add DCE Error Numbers */
 	}
 
@@ -144,7 +144,7 @@ void dce_smb_set_empty_ie_t234(struct tegra_dce *d, bool en, u8 hsp_id, u8 id)
 	u32 val = en ? 1U : 0U;
 
 	if (id >= DCE_MAX_NO_SMB_T234 || hsp_id >= DCE_MAX_HSP_T234) {
-		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		dce_os_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
 		return;
 	}
 
@@ -163,7 +163,7 @@ void dce_smb_set_empty_ie_t234(struct tegra_dce *d, bool en, u8 hsp_id, u8 id)
 u32 dce_smb_read_t234(struct tegra_dce *d, u8 hsp_id, u8 id)
 {
 	if (id >= DCE_MAX_NO_SMB_T234 || hsp_id >= DCE_MAX_HSP_T234) {
-		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		dce_os_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
 		return 0xffffffff; /* TODO : Add DCE Error Numbers */
 	}
 
@@ -215,7 +215,7 @@ static  u32 (*const hsp_int_ir_regs[DCE_MAX_HSP_T234])(void) = {
 u32 dce_hsp_ie_read_t234(struct tegra_dce *d, u8 hsp_id, u8 id)
 {
 	if (id >= DCE_MAX_HSP_IE_T234 || hsp_id >= DCE_MAX_HSP_T234) {
-		dce_err(d, "Invalid Shared HSP IE ID:%u or hsp:%u", id, hsp_id);
+		dce_os_err(d, "Invalid Shared HSP IE ID:%u or hsp:%u", id, hsp_id);
 		return 0xffffffff; /* TODO : Add DCE Error Numbers */
 	}
 
@@ -236,7 +236,7 @@ u32 dce_hsp_ie_read_t234(struct tegra_dce *d, u8 hsp_id, u8 id)
 void dce_hsp_ie_write_t234(struct tegra_dce *d, u32 val, u8 hsp_id, u8 id)
 {
 	if (id >= DCE_MAX_HSP_IE_T234 || hsp_id >= DCE_MAX_HSP_T234) {
-		dce_err(d, "Invalid Shared HSP IE ID:%u or hsp:%u", id, hsp_id);
+		dce_os_err(d, "Invalid Shared HSP IE ID:%u or hsp:%u", id, hsp_id);
 		return;
 	}
 
@@ -256,7 +256,7 @@ void dce_hsp_ie_write_t234(struct tegra_dce *d, u32 val, u8 hsp_id, u8 id)
 u32 dce_hsp_ir_read_t234(struct tegra_dce *d, u8 hsp_id)
 {
 	if (hsp_id >= DCE_MAX_HSP_T234) {
-		dce_err(d, "Invalid HSP ID:%u", hsp_id);
+		dce_os_err(d, "Invalid HSP ID:%u", hsp_id);
 		return 0xffffffff; /* TODO : Add DCE Error Numbers */
 	}
 

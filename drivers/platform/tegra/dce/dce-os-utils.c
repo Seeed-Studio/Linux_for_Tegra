@@ -34,7 +34,7 @@ void dce_os_writel(struct tegra_dce *d, u32 r, u32 v)
 	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 
 	if (unlikely(!d_dev->regs))
-		dce_err(d, "DCE Register Space not IOMAPed to CPU");
+		dce_os_err(d, "DCE Register Space not IOMAPed to CPU");
 	else
 		writel(v, d_dev->regs + r);
 }
@@ -54,7 +54,7 @@ u32 dce_os_readl(struct tegra_dce *d, u32 r)
 	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 
 	if (unlikely(!d_dev->regs))
-		dce_err(d, "DCE Register Space not IOMAPed to CPU");
+		dce_os_err(d, "DCE Register Space not IOMAPed to CPU");
 	else
 		v = readl(d_dev->regs + r);
 	/*TODO : Add error check here */
@@ -161,7 +161,7 @@ struct dce_firmware *dce_os_request_firmware(struct tegra_dce *d,
 		return NULL;
 
 	if (request_firmware(&l_fw, fw_name, dev) < 0) {
-		dce_err(d, "FW Request Failed");
+		dce_os_err(d, "FW Request Failed");
 		goto err;
 	}
 
@@ -332,21 +332,21 @@ const char *dce_get_fw_name(struct tegra_dce *d)
 }
 
 static void dce_print(const char *func_name, int line,
-			enum dce_log_type type, const char *log)
+			enum dce_os_log_type type, const char *log)
 {
 #define DCE_LOG_FMT	"dce: %15s:%-4d %s\n"
 
 	switch (type) {
-	case DCE_DEBUG:
+	case DCE_OS_DEBUG:
 		pr_debug(DCE_LOG_FMT, func_name, line, log);
 		break;
-	case DCE_INFO:
+	case DCE_OS_INFO:
 		pr_info(DCE_LOG_FMT, func_name, line, log);
 		break;
-	case DCE_WARNING:
+	case DCE_OS_WARNING:
 		pr_warn(DCE_LOG_FMT, func_name, line, log);
 		break;
-	case DCE_ERROR:
+	case DCE_OS_ERROR:
 		pr_err(DCE_LOG_FMT, func_name, line, log);
 		break;
 	}
@@ -354,8 +354,8 @@ static void dce_print(const char *func_name, int line,
 }
 
 __printf(5, 6)
-void dce_log_msg(struct tegra_dce *d, const char *func_name, int line,
-			enum dce_log_type type, const char *fmt, ...)
+void dce_os_log_msg(struct tegra_dce *d, const char *func_name, int line,
+			enum dce_os_log_type type, const char *fmt, ...)
 {
 
 #define BUF_LEN 100

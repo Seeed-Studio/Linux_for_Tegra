@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 #include <dce.h>
-#include <os-dce-log.h>
+#include <dce-os-log.h>
 #include <dce-os-utils.h>
 
 #define MAX_NO_ASTS 2
@@ -540,7 +540,7 @@ void dce_config_ast(struct tegra_dce *d)
 	slave_addr = dce_get_fw_dce_addr(d);
 
 	if (!d->fw_data) {
-		dce_err(d, "DCE_BOOT_FAILED: No fw_data present");
+		dce_os_err(d, "DCE_BOOT_FAILED: No fw_data present");
 		d->boot_status |= DCE_AST_CONFIG_FAILED;
 		return;
 	}

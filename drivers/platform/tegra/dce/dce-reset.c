@@ -4,7 +4,7 @@
  */
 
 #include <dce.h>
-#include <os-dce-log.h>
+#include <dce-os-log.h>
 #include <dce-os-utils.h>
 
 enum pm_controls {
@@ -60,7 +60,7 @@ int dce_reset_dce(struct tegra_dce *d)
 	u32 fw_dce_addr;
 
 	if (!d->fw_data) {
-		dce_err(d, "No fw_data present");
+		dce_os_err(d, "No fw_data present");
 		return -1;
 	}
 

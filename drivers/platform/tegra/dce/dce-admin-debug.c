@@ -34,7 +34,7 @@ int dce_admin_send_cmd_set_perf_stat(struct tegra_dce *d,
 
 	/* return if dce bootstrap not completed */
 	if (!dce_is_bootstrap_done(d)) {
-		dce_err(d, "Admin Bootstrap not yet done");
+		dce_os_err(d, "Admin Bootstrap not yet done");
 		goto out;
 	}
 
@@ -48,7 +48,7 @@ int dce_admin_send_cmd_set_perf_stat(struct tegra_dce *d,
 
 	ret = dce_admin_send_msg(d, msg);
 	if (ret) {
-		dce_err(d, "Error sending set perf msg : [%d]", ret);
+		dce_os_err(d, "Error sending set perf msg : [%d]", ret);
 		goto out;
 	}
 
@@ -75,7 +75,7 @@ int dce_admin_send_cmd_get_perf_stat(struct tegra_dce *d,
 
 	/* return if dce bootstrap not completed */
 	if (!dce_is_bootstrap_done(d)) {
-		dce_err(d, "Admin Bootstrap not yet done");
+		dce_os_err(d, "Admin Bootstrap not yet done");
 		goto out;
 	}
 
@@ -86,7 +86,7 @@ int dce_admin_send_cmd_get_perf_stat(struct tegra_dce *d,
 
 	ret = dce_admin_send_msg(d, msg);
 	if (ret) {
-		dce_err(d, "Error sending get perf msg : [%d]", ret);
+		dce_os_err(d, "Error sending get perf msg : [%d]", ret);
 		goto out;
 	}
 
@@ -106,7 +106,7 @@ int dce_admin_send_cmd_get_perf_events(struct tegra_dce *d,
 
 	/* return if dce bootstrap not completed */
 	if (!dce_is_bootstrap_done(d)) {
-		dce_err(d, "Admin Bootstrap not yet done");
+		dce_os_err(d, "Admin Bootstrap not yet done");
 		goto out;
 	}
 
@@ -117,7 +117,7 @@ int dce_admin_send_cmd_get_perf_events(struct tegra_dce *d,
 
 	ret = dce_admin_send_msg(d, msg);
 	if (ret) {
-		dce_err(d, "Error sending get perf events msg : [%d]", ret);
+		dce_os_err(d, "Error sending get perf events msg : [%d]", ret);
 		goto out;
 	}
 
@@ -136,7 +136,7 @@ int dce_admin_send_cmd_clear_perf_events(struct tegra_dce *d,
 
 	/* return if dce bootstrap not completed */
 	if (!dce_is_bootstrap_done(d)) {
-		dce_err(d, "Admin Bootstrap not yet done");
+		dce_os_err(d, "Admin Bootstrap not yet done");
 		goto out;
 	}
 
@@ -146,7 +146,7 @@ int dce_admin_send_cmd_clear_perf_events(struct tegra_dce *d,
 
 	ret = dce_admin_send_msg(d, msg);
 	if (ret) {
-		dce_err(d, "Error sending clear perf events msg : [%d]", ret);
+		dce_os_err(d, "Error sending clear perf events msg : [%d]", ret);
 		goto out;
 	}
 

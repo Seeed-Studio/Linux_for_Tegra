@@ -102,7 +102,7 @@ void dce_ss_set_t264(struct tegra_dce *d, u8 bpos, u8 hsp_id, u8 id)
 	unsigned long val = 0U;
 
 	if (hsp_id >= DCE_MAX_HSP_T264 || id >= DCE_MAX_NO_SS_T264) {
-		dce_err(d, "Invalid HSP ID:%u OR SS ID:%u", hsp_id, id);
+		dce_os_err(d, "Invalid HSP ID:%u OR SS ID:%u", hsp_id, id);
 		return;
 	}
 
@@ -111,7 +111,7 @@ void dce_ss_set_t264(struct tegra_dce *d, u8 bpos, u8 hsp_id, u8 id)
 	/**
 	 * Debug info. please remove
 	 */
-	dce_info(d, "Current Value in SS#%d : %lx", id, val);
+	dce_os_info(d, "Current Value in SS#%d : %lx", id, val);
 
 	/**
 	 * TODO :Use DCE_INSERT here.
@@ -121,7 +121,7 @@ void dce_ss_set_t264(struct tegra_dce *d, u8 bpos, u8 hsp_id, u8 id)
 	/**
 	 * Debug info. please remove
 	 */
-	dce_info(d, "Value after bitmap operation : %lx", val);
+	dce_os_info(d, "Value after bitmap operation : %lx", val);
 
 	dce_os_writel(d, ss_set_regs[hsp_id][id](), (u32)val);
 
@@ -129,7 +129,7 @@ void dce_ss_set_t264(struct tegra_dce *d, u8 bpos, u8 hsp_id, u8 id)
 	 * Debug info. please remove
 	 */
 	val = dce_ss_get_state_t264(d, d->hsp_id, id);
-	dce_info(d, "Current Value in SS#%d : %lx", id, val);
+	dce_os_info(d, "Current Value in SS#%d : %lx", id, val);
 }
 
 /**
@@ -147,7 +147,7 @@ void dce_ss_clear_t264(struct tegra_dce *d, u8 bpos, u8 hsp_id, u8 id)
 	unsigned long val;
 
 	if (hsp_id >= DCE_MAX_HSP_T264 || id >= DCE_MAX_NO_SS_T264) {
-		dce_err(d, "Invalid HSP ID:%u OR SS ID:%u", hsp_id, id);
+		dce_os_err(d, "Invalid HSP ID:%u OR SS ID:%u", hsp_id, id);
 		return;
 	}
 

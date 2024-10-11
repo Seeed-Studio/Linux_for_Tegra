@@ -23,7 +23,7 @@ int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id)
 	struct dce_wait_cond *wait;
 
 	if (msg_id >= DCE_MAX_WAIT) {
-		dce_err(d, "Invalid wait requested %u", msg_id);
+		dce_os_err(d, "Invalid wait requested %u", msg_id);
 		return -EINVAL;
 	}
 
@@ -62,7 +62,7 @@ void dce_wakeup_interruptible(struct tegra_dce *d, u32 msg_id)
 	struct dce_wait_cond *wait;
 
 	if (msg_id >= DCE_MAX_WAIT) {
-		dce_err(d, "Invalid wait requested %u", msg_id);
+		dce_os_err(d, "Invalid wait requested %u", msg_id);
 		return;
 	}
 
@@ -90,7 +90,7 @@ void dce_cond_wait_reset(struct tegra_dce *d, u32 msg_id)
 	struct dce_wait_cond *wait;
 
 	if (msg_id >= DCE_MAX_WAIT) {
-		dce_err(d, "Invalid wait requested %u", msg_id);
+		dce_os_err(d, "Invalid wait requested %u", msg_id);
 		return;
 	}
 
@@ -111,7 +111,7 @@ int dce_work_cond_sw_resource_init(struct tegra_dce *d)
 	int i;
 
 	if (dce_cond_init(&d->dce_bootstrap_done)) {
-		dce_err(d, "dce boot wait condition init failed");
+		dce_os_err(d, "dce boot wait condition init failed");
 		ret = -1;
 		goto exit;
 	}
@@ -120,7 +120,7 @@ int dce_work_cond_sw_resource_init(struct tegra_dce *d)
 		struct dce_wait_cond *wait = &d->ipc_waits[i];
 
 		if (dce_cond_init(&wait->cond_wait)) {
-			dce_err(d, "dce wait condition %d init failed", i);
+			dce_os_err(d, "dce wait condition %d init failed", i);
 			ret = -1;
 			goto init_error;
 		}

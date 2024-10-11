@@ -95,7 +95,7 @@ static struct dce_event_process_struct event_process_table[] = {
 int dce_handle_fsm_start_event(struct tegra_dce *d, void *params)
 {
 	if (params != NULL)
-		dce_warn(d, "Params aren't expected in this function\n");
+		dce_os_warn(d, "Params aren't expected in this function\n");
 
 	return 0;
 }
@@ -111,7 +111,7 @@ int dce_handle_fsm_start_event(struct tegra_dce *d, void *params)
 int dce_handle_event_stub(struct tegra_dce *d, void *params)
 {
 	if (params != NULL)
-		dce_warn(d, "Params aren't expected in this function\n");
+		dce_os_warn(d, "Params aren't expected in this function\n");
 
 	return 0;
 }
@@ -202,7 +202,7 @@ dce_fsm_set_state(struct tegra_dce *d,
 	case EVENT_ID_DCE_ABORT_RECEIVED:
 	case EVENT_ID_DCE_CRASH_LOG_RECEIVED:
 	case EVENT_ID_DCE_LOG_OVERFLOW_RECEIVED:
-		dce_debug(d, "DCE Abort received");
+		dce_os_debug(d, "DCE Abort received");
 		fsm->c_state = STATE_DCE_ABORT;
 		/*
 		 * TODO: error handling
@@ -211,7 +211,7 @@ dce_fsm_set_state(struct tegra_dce *d,
 		 */
 		break;
 	default:
-		dce_err(d, "INVALID EVENT [%d]", event);
+		dce_os_err(d, "INVALID EVENT [%d]", event);
 	}
 
 }
@@ -235,18 +235,18 @@ dce_fsm_validate_event(struct tegra_dce *d,
 	enum dce_fsm_state curr_state;
 
 	if (event > EVENT_ID_DCE_FSM_STOP) {
-		dce_err(d, "Invalid event received [%d]\n", event);
+		dce_os_err(d, "Invalid event received [%d]\n", event);
 		return -EINVAL;
 	}
 
 	// Should we check This??
 	if (fsm->initialized == false) {
-		dce_err(d, "FSM is not initialized yet\n");
+		dce_os_err(d, "FSM is not initialized yet\n");
 		return -EINVAL;
 	}
 
 	curr_state = fsm->c_state;
-	dce_debug(d, "Called for event [%d], curr_state:[%d]", event, curr_state);
+	dce_os_debug(d, "Called for event [%d], curr_state:[%d]", event, curr_state);
 	switch (curr_state) {
 	case STATE_DCE_INVALID:
 		switch (event) {
@@ -254,7 +254,7 @@ dce_fsm_validate_event(struct tegra_dce *d,
 			ret = 0;
 			break;
 		default:
-			dce_err(d, "Invalid event received [%d] state:[%d]\n",
+			dce_os_err(d, "Invalid event received [%d] state:[%d]\n",
 				event, curr_state);
 			ret = -EINVAL;
 			break;
@@ -268,7 +268,7 @@ dce_fsm_validate_event(struct tegra_dce *d,
 		case EVENT_ID_DCE_SC7_ENTERED_RECEIVED:
 		case EVENT_ID_DCE_LOG_READY_RECEIVED:
 		case EVENT_ID_DCE_FSM_START:
-			dce_err(d, "Invalid event received [%d] state:[%d]\n",
+			dce_os_err(d, "Invalid event received [%d] state:[%d]\n",
 				event, curr_state);
 			ret = -EINVAL;
 			break;
@@ -288,7 +288,7 @@ dce_fsm_validate_event(struct tegra_dce *d,
 			ret = 0;
 			break;
 		default:
-			dce_err(d, "Invalid event received [%d] state:[%d]\n",
+			dce_os_err(d, "Invalid event received [%d] state:[%d]\n",
 				event, curr_state);
 			ret = -EINVAL;
 			break;
@@ -305,7 +305,7 @@ dce_fsm_validate_event(struct tegra_dce *d,
 			ret = 0;
 			break;
 		default:
-			dce_err(d, "Invalid event received [%d] state:[%d]\n",
+			dce_os_err(d, "Invalid event received [%d] state:[%d]\n",
 				event, curr_state);
 			ret = -EINVAL;
 			break;
@@ -322,7 +322,7 @@ dce_fsm_validate_event(struct tegra_dce *d,
 			ret = 0;
 			break;
 		default:
-			dce_err(d, "Invalid event received [%d] state:[%d]\n",
+			dce_os_err(d, "Invalid event received [%d] state:[%d]\n",
 				event, curr_state);
 			ret = -EINVAL;
 			break;
@@ -338,7 +338,7 @@ dce_fsm_validate_event(struct tegra_dce *d,
 			ret = 0;
 			break;
 		default:
-			dce_err(d, "Invalid event received [%d] state:[%d]\n",
+			dce_os_err(d, "Invalid event received [%d] state:[%d]\n",
 				event, curr_state);
 			ret = -EINVAL;
 			break;
@@ -355,7 +355,7 @@ dce_fsm_validate_event(struct tegra_dce *d,
 			ret = 0;
 			break;
 		default:
-			dce_err(d, "Invalid event received [%d] state:[%d]\n",
+			dce_os_err(d, "Invalid event received [%d] state:[%d]\n",
 				event, curr_state);
 			ret = -EINVAL;
 			break;
@@ -367,20 +367,20 @@ dce_fsm_validate_event(struct tegra_dce *d,
 			ret = 0;
 			break;
 		default:
-			dce_err(d, "Invalid event received [%d] state:[%d]\n",
+			dce_os_err(d, "Invalid event received [%d] state:[%d]\n",
 				event, curr_state);
 			ret = -EINVAL;
 			break;
 		}
 		break;
 	default:
-		dce_err(d, "Invalid state:[%d] event received [%d]\n", curr_state,
+		dce_os_err(d, "Invalid state:[%d] event received [%d]\n", curr_state,
 			event);
 
 	}
 
 	if (ret) {
-		dce_err(d, "dce event handling failed for event[%d] curr state [%d]",
+		dce_os_err(d, "dce event handling failed for event[%d] curr state [%d]",
 			event, curr_state);
 		goto done;
 	}
@@ -403,7 +403,7 @@ dce_fsm_get_event_index(struct tegra_dce *d,
 	u32 id;
 
 	if (d == NULL)
-		dce_warn(NULL, "DCE struct is expected to be valid\n");
+		dce_os_warn(NULL, "DCE struct is expected to be valid\n");
 
 	for (id = 0; id < DCE_MAX_EVENTS_IDS; id++) {
 		struct dce_event_process_struct *e =
@@ -455,7 +455,7 @@ int dce_fsm_post_event(struct tegra_dce *d,
 		ret = event_process_table[id].fsm_event_handle(d, data);
 		if (ret) {
 			dce_mutex_lock(&fsm->lock);
-			dce_err(d, "Callback failed: Resetting state old:new [%d:%d]",
+			dce_os_err(d, "Callback failed: Resetting state old:new [%d:%d]",
 				prev_state, fsm->c_state);
 			fsm->c_state = prev_state;
 			dce_mutex_unlock(&fsm->lock);
@@ -504,7 +504,7 @@ int dce_fsm_init(struct tegra_dce *d)
 	fsm->c_state = STATE_DCE_INVALID;
 	ret = dce_mutex_init(&fsm->lock);
 	if (ret) {
-		dce_err(d, "dce mutex initialization failed for FSM");
+		dce_os_err(d, "dce mutex initialization failed for FSM");
 		return ret;
 	}
 

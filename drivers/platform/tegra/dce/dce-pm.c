@@ -32,19 +32,19 @@ void dce_resume_work_fn(struct tegra_dce *d)
 	int ret = 0;
 
 	if (d == NULL) {
-		dce_err(d, "tegra_dce struct is NULL");
+		dce_os_err(d, "tegra_dce struct is NULL");
 		return;
 	}
 
 	ret = dce_fsm_post_event(d, EVENT_ID_DCE_BOOT_COMPLETE_REQUESTED, NULL);
 	if (ret) {
-		dce_err(d, "Error while posting DCE_BOOT_COMPLETE_REQUESTED event");
+		dce_os_err(d, "Error while posting DCE_BOOT_COMPLETE_REQUESTED event");
 		return;
 	}
 
 	ret = dce_start_boot_flow(d);
 	if (ret) {
-		dce_err(d, "DCE bootstrapping failed\n");
+		dce_os_err(d, "DCE bootstrapping failed\n");
 		return;
 	}
 }
@@ -64,17 +64,17 @@ int dce_pm_handle_sc7_enter_requested_event(struct tegra_dce *d, void *params)
 	struct dce_ipc_message *msg = NULL;
 
 	if (params != NULL)
-		dce_warn(d, "Params aren't expected in this function\n");
+		dce_os_warn(d, "Params aren't expected in this function\n");
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
-		dce_err(d, "IPC msg allocation failed");
+		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
 	}
 
 	ret = dce_admin_send_enter_sc7(d, msg);
 	if (ret) {
-		dce_err(d, "Enter SC7 failed [%d]", ret);
+		dce_os_err(d, "Enter SC7 failed [%d]", ret);
 		goto out;
 	}
 
@@ -97,7 +97,7 @@ out:
 int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
 {
 	if (params != NULL)
-		dce_warn(d, "Params aren't expected in this function\n");
+		dce_os_warn(d, "Params aren't expected in this function\n");
 
 	dce_wakeup_interruptible(d, DCE_WAIT_SC7_ENTER);
 	return 0;
@@ -115,7 +115,7 @@ int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
 int dce_pm_handle_sc7_exit_received_event(struct tegra_dce *d, void *params)
 {
 	if (params != NULL)
-		dce_warn(d, "Params aren't expected in this function\n");
+		dce_os_warn(d, "Params aren't expected in this function\n");
 
 	dce_schedule_work(&d->dce_resume_work);
 	return 0;
@@ -131,13 +131,13 @@ int dce_pm_enter_sc7(struct tegra_dce *d)
 	 * Return success immediately.
 	 */
 	if (!dce_is_bootstrap_done(d)) {
-		dce_debug(d, "Bootstrap not done, Succeed SC7 enter\n");
+		dce_os_debug(d, "Bootstrap not done, Succeed SC7 enter\n");
 		goto out;
 	}
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
-		dce_err(d, "IPC msg allocation failed");
+		dce_os_err(d, "IPC msg allocation failed");
 		ret = -1;
 		goto out;
 	}
@@ -146,14 +146,14 @@ int dce_pm_enter_sc7(struct tegra_dce *d)
 
 	ret = dce_admin_send_prepare_sc7(d, msg);
 	if (ret) {
-		dce_err(d, "Prepare SC7 failed [%d]", ret);
+		dce_os_err(d, "Prepare SC7 failed [%d]", ret);
 		ret = -1;
 		goto out;
 	}
 
 	ret = dce_fsm_post_event(d, EVENT_ID_DCE_SC7_ENTER_REQUESTED, NULL);
 	if (ret) {
-		dce_err(d, "Error while posting SC7_ENTER event [%d]", ret);
+		dce_os_err(d, "Error while posting SC7_ENTER event [%d]", ret);
 		ret = -1;
 		goto out;
 	}
@@ -170,7 +170,7 @@ int dce_pm_exit_sc7(struct tegra_dce *d)
 
 	ret = dce_fsm_post_event(d, EVENT_ID_DCE_SC7_EXIT_RECEIVED, NULL);
 	if (ret) {
-		dce_err(d, "Error while posting SC7_EXIT event [%d]", ret);
+		dce_os_err(d, "Error while posting SC7_EXIT event [%d]", ret);
 		goto out;
 	}
 out:
@@ -183,7 +183,7 @@ int dce_pm_init(struct tegra_dce *d)
 
 	ret = dce_init_work(d, &d->dce_resume_work, dce_resume_work_fn);
 	if (ret) {
-		dce_err(d, "resume work init failed");
+		dce_os_err(d, "resume work init failed");
 		goto done;
 	}
 
@@ -194,7 +194,7 @@ done:
 void dce_pm_deinit(struct tegra_dce *d)
 {
 	if (d == NULL)
-		dce_warn(NULL, "DCE struct is expected to be valid.\n");
+		dce_os_warn(NULL, "DCE struct is expected to be valid.\n");
 
 	return;
 }

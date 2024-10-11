@@ -128,13 +128,13 @@ int tegra_dce_register_ipc_client(u32 type,
 	u32 handle = DCE_CLIENT_IPC_HANDLE_INVALID;
 
 	if (handlep == NULL) {
-		dce_err(d, "Invalid handle pointer");
+		dce_os_err(d, "Invalid handle pointer");
 		ret = -EINVAL;
 		goto end;
 	}
 
 	if (type >= DCE_CLIENT_IPC_TYPE_MAX) {
-		dce_err(d, "Failed to retrieve client info for type: [%u]", type);
+		dce_os_err(d, "Failed to retrieve client info for type: [%u]", type);
 		ret = -EINVAL;
 		goto end;
 	}
@@ -155,7 +155,7 @@ int tegra_dce_register_ipc_client(u32 type,
 						  dce_is_bootstrap_done(d),
 						  DCE_IPC_REGISTER_BOOT_WAIT);
 	if (ret) {
-		dce_info(d, "dce boot wait failed (%d)\n", ret);
+		dce_os_info(d, "dce boot wait failed (%d)\n", ret);
 		goto out;
 	}
 
@@ -175,7 +175,7 @@ int tegra_dce_register_ipc_client(u32 type,
 
 	ret = dce_cond_init(&cl->recv_wait);
 	if (ret) {
-		dce_err(d, "dce condition initialization failed for int_type: [%u]",
+		dce_os_err(d, "dce condition initialization failed for int_type: [%u]",
 			int_type);
 		goto out;
 	}
@@ -270,14 +270,14 @@ int dce_client_ipc_wait(struct tegra_dce *d, u32 int_type)
 
 	type = dce_client_get_type(int_type);
 	if (type >= DCE_CLIENT_IPC_TYPE_MAX) {
-		dce_err(d, "Failed to retrieve client info for int_type: [%d]",
+		dce_os_err(d, "Failed to retrieve client info for int_type: [%d]",
 			int_type);
 		return -EINVAL;
 	}
 
 	cl = d->d_clients[type];
 	if ((cl == NULL) || (cl->int_type != int_type)) {
-		dce_err(d, "Failed to retrieve client info for int_type: [%d]",
+		dce_os_err(d, "Failed to retrieve client info for int_type: [%d]",
 			int_type);
 		return -EINVAL;
 	}
@@ -301,18 +301,18 @@ static void dce_client_process_event_ipc(struct tegra_dce *d,
 	int ret = 0;
 
 	if ((cl == NULL) || (cl->callback_fn == NULL)) {
-		dce_err(d, "Invalid arg tegra_dce_client_ipc");
+		dce_os_err(d, "Invalid arg tegra_dce_client_ipc");
 		return;
 	}
 
 	if (cl->type != DCE_CLIENT_IPC_TYPE_RM_EVENT) {
-		dce_err(d, "Invalid arg for DCE_CLIENT_IPC_TYPE_RM_EVENT type:[%u]", cl->type);
+		dce_os_err(d, "Invalid arg for DCE_CLIENT_IPC_TYPE_RM_EVENT type:[%u]", cl->type);
 		return;
 	}
 
 	msg_data = dce_os_kzalloc(d, DCE_CLIENT_MAX_IPC_MSG_SIZE, false);
 	if (msg_data == NULL) {
-		dce_err(d, "Could not allocate msg read buffer");
+		dce_os_err(d, "Could not allocate msg read buffer");
 		goto done;
 	}
 	msg_length = DCE_CLIENT_MAX_IPC_MSG_SIZE;
@@ -320,7 +320,7 @@ static void dce_client_process_event_ipc(struct tegra_dce *d,
 	while (dce_ipc_is_data_available(d, cl->int_type)) {
 		ret = dce_ipc_read_message(d, cl->int_type, msg_data, msg_length);
 		if (ret) {
-			dce_info(d, "Error in reading DCE msg for ch_type [%d]",
+			dce_os_info(d, "Error in reading DCE msg for ch_type [%d]",
 				cl->int_type);
 			goto done;
 		}
@@ -349,7 +349,7 @@ static void dce_client_schedule_event_work(struct tegra_dce *d)
 	}
 
 	if (i == DCE_MAX_ASYNC_WORK)
-		dce_err(d, "Failed to schedule Async event Queue Full!");
+		dce_os_err(d, "Failed to schedule Async event Queue Full!");
 }
 
 void dce_client_ipc_wakeup(struct tegra_dce *d, u32 ch_type)
@@ -359,14 +359,14 @@ void dce_client_ipc_wakeup(struct tegra_dce *d, u32 ch_type)
 
 	type = dce_client_get_type(ch_type);
 	if (type == DCE_CLIENT_IPC_TYPE_MAX) {
-		dce_err(d, "Failed to retrieve client info for ch_type: [%d]",
+		dce_os_err(d, "Failed to retrieve client info for ch_type: [%d]",
 			ch_type);
 		return;
 	}
 
 	cl = d->d_clients[type];
 	if ((cl == NULL) || (cl->valid == false) || (cl->int_type != ch_type)) {
-		dce_err(d, "Failed to retrieve client info for ch_type: [%d]",
+		dce_os_err(d, "Failed to retrieve client info for ch_type: [%d]",
 			ch_type);
 		return;
 	}

@@ -134,13 +134,13 @@ static int _dce_ipc_wait(struct tegra_dce *d, u32 w_type, u32 ch_type)
 	struct dce_ipc_channel *ch;
 
 	if (ch_type >= DCE_IPC_CH_KMD_TYPE_MAX) {
-		dce_err(d, "Invalid Channel Type : [%d]", ch_type);
+		dce_os_err(d, "Invalid Channel Type : [%d]", ch_type);
 		return -EINVAL;
 	}
 
 	ch = d->d_ipc.ch[ch_type];
 	if (ch == NULL) {
-		dce_err(d, "Invalid Channel Data for type : [%d]", ch_type);
+		dce_os_err(d, "Invalid Channel Data for type : [%d]", ch_type);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -168,13 +168,13 @@ u32 dce_ipc_get_cur_wait_type(struct tegra_dce *d, u32 ch_type)
 	struct dce_ipc_channel *ch;
 
 	if (ch_type >= DCE_IPC_CH_KMD_TYPE_MAX) {
-		dce_err(d, "Invalid Channel Type : [%d]", ch_type);
+		dce_os_err(d, "Invalid Channel Type : [%d]", ch_type);
 		return -EINVAL;
 	}
 
 	ch = d->d_ipc.ch[ch_type];
 	if (ch == NULL) {
-		dce_err(d, "Invalid Channel Data for type : [%d]", ch_type);
+		dce_os_err(d, "Invalid Channel Data for type : [%d]", ch_type);
 		return -EINVAL;
 	}
 
@@ -208,14 +208,14 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 	struct dce_ipc_queue_info *q_info;
 
 	if (ch_type >= DCE_IPC_CH_KMD_TYPE_MAX) {
-		dce_err(d, "Invalid ivc channel ch_type : [%d]", ch_type);
+		dce_os_err(d, "Invalid ivc channel ch_type : [%d]", ch_type);
 		ret = -EINVAL;
 		goto out;
 	}
 
 	ch = &ivc_channels[ch_type];
 	if (!ch) {
-		dce_err(d, "Invalid ivc channel for this ch_type : [%d]",
+		dce_os_err(d, "Invalid ivc channel for this ch_type : [%d]",
 			ch_type);
 		ret = -ENOMEM;
 		goto out;
@@ -223,12 +223,12 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 
 	ret = dce_mutex_init(&ch->lock);
 	if (ret) {
-		dce_err(d, "dce lock initialization failed for mailbox");
+		dce_os_err(d, "dce lock initialization failed for mailbox");
 		goto out;
 	}
 
 	if ((ch->flags & DCE_IPC_CHANNEL_VALID) == 0U) {
-		dce_info(d, "Invalid Channel State [0x%x] for ch_type [%d]",
+		dce_os_info(d, "Invalid Channel State [0x%x] for ch_type [%d]",
 		ch->flags, ch_type);
 		goto out_lock_destroy;
 	}
@@ -237,7 +237,7 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 
 	ret = dce_ipc_init_signaling(d, ch);
 	if (ret) {
-		dce_err(d, "Signaling init failed");
+		dce_os_err(d, "Signaling init failed");
 		goto out_lock_destroy;
 	}
 
@@ -256,7 +256,7 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 			r->iova + r->s_offset, r->iova + r->s_offset + q_sz,
 			q_info->nframes, msg_sz);
 	if (ret) {
-		dce_err(d, "IVC creation failed");
+		dce_os_err(d, "IVC creation failed");
 		goto out_lock_destroy;
 	}
 
@@ -291,7 +291,7 @@ void dce_ipc_channel_deinit_unlocked(struct tegra_dce *d, u32 ch_type)
 	struct dce_ipc_channel *ch = d->d_ipc.ch[ch_type];
 
 	if (ch == NULL || (ch->flags & DCE_IPC_CHANNEL_INITIALIZED) == 0U) {
-		dce_info(d, "Invalid IVC Channel [%d]", ch_type);
+		dce_os_info(d, "Invalid IVC Channel [%d]", ch_type);
 		return;
 	}
 
@@ -502,13 +502,13 @@ int dce_ipc_send_message(struct tegra_dce *d, u32 ch_type,
 
 	ret = _dce_ipc_get_next_write_buff(ch);
 	if (ret) {
-		dce_err(ch->d, "Error getting next free buf to write");
+		dce_os_err(ch->d, "Error getting next free buf to write");
 		goto out;
 	}
 
 	ret = _dce_ipc_write_channel(ch, data, size);
 	if (ret) {
-		dce_err(ch->d, "Error writing to channel");
+		dce_os_err(ch->d, "Error writing to channel");
 		goto out;
 	}
 
@@ -604,13 +604,13 @@ int dce_ipc_read_message(struct tegra_dce *d, u32 ch_type,
 
 	ret = _dce_ipc_get_next_read_buff(ch);
 	if (ret) {
-		dce_debug(ch->d, "No Msg to read");
+		dce_os_debug(ch->d, "No Msg to read");
 		goto out;
 	}
 
 	ret = _dce_ipc_read_channel(ch, data, size);
 	if (ret) {
-		dce_err(ch->d, "Error reading from channel");
+		dce_os_err(ch->d, "Error reading from channel");
 		goto out;
 	}
 
@@ -639,7 +639,7 @@ int dce_ipc_send_message_sync(struct tegra_dce *d, u32 ch_type,
 
 	ret = dce_ipc_send_message(d, ch_type, msg->tx.data, msg->tx.size);
 	if (ret) {
-		dce_err(ch->d, "Error in sending message to DCE");
+		dce_os_err(ch->d, "Error in sending message to DCE");
 		goto done;
 	}
 
@@ -647,7 +647,7 @@ int dce_ipc_send_message_sync(struct tegra_dce *d, u32 ch_type,
 	ret = _dce_ipc_wait(ch->d, DCE_IPC_WAIT_TYPE_RPC, ch_type);
 	dce_mutex_unlock(&ch->lock);
 	if (ret) {
-		dce_err(ch->d, "Error in waiting for ack");
+		dce_os_err(ch->d, "Error in waiting for ack");
 		goto done;
 	}
 
@@ -655,7 +655,7 @@ int dce_ipc_send_message_sync(struct tegra_dce *d, u32 ch_type,
 
 	ret = dce_ipc_read_message(d, ch_type, msg->rx.data, msg->rx.size);
 	if (ret) {
-		dce_err(ch->d, "Error in reading DCE msg for ch_type [%d]",
+		dce_os_err(ch->d, "Error in reading DCE msg for ch_type [%d]",
 			ch_type);
 		goto done;
 	}

@@ -290,7 +290,7 @@ static int tegra_dce_probe(struct platform_device *pdev)
 
 	err = dce_driver_init(d);
 	if (err) {
-		dce_err(d, "DCE Driver Init Failed");
+		dce_os_err(d, "DCE Driver Init Failed");
 		goto err_driver_init;
 	}
 
@@ -304,11 +304,11 @@ static int tegra_dce_probe(struct platform_device *pdev)
 
 	c_dev = bus_find_device(&platform_bus_type, NULL, NULL, match_display_dev);
 	if (c_dev != NULL) {
-		dce_info(d, "Found display consumer device");
+		dce_os_info(d, "Found display consumer device");
 		link = device_link_add(c_dev, dev,
 				       DL_FLAG_PM_RUNTIME | DL_FLAG_AUTOREMOVE_SUPPLIER);
 		if (link == NULL) {
-			dce_err(d, "Failed to create device link to %s\n", dev_name(c_dev));
+			dce_os_err(d, "Failed to create device link to %s\n", dev_name(c_dev));
 			return -EINVAL;
 		}
 	}
@@ -317,8 +317,8 @@ static int tegra_dce_probe(struct platform_device *pdev)
 	 * FIXME: Allow tegra_dce.ko unloading.
 	 */
 	if (!try_module_get(THIS_MODULE)) {
-		dce_info(d, "Failed to get lock of DCE Module.\n");
-		dce_info(d, "modprobe --remove of kernel modules depending on tegra_dce.ko will fail.\n");
+		dce_os_info(d, "Failed to get lock of DCE Module.\n");
+		dce_os_info(d, "modprobe --remove of kernel modules depending on tegra_dce.ko will fail.\n");
 	}
 
 	return 0;

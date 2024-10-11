@@ -14,7 +14,7 @@ static void dce_ipc_mbox_notify(struct tegra_dce *d,
 		struct dce_ipc_signal_instance *s)
 {
 	if (s == NULL) {
-		dce_info(d, "Invalid signal instance for notification");
+		dce_os_info(d, "Invalid signal instance for notification");
 		return;
 	}
 
@@ -35,7 +35,7 @@ static void dce_ipc_mbox_handle_signal(struct tegra_dce *d, void *data)
 	if ((s == NULL) || (s->signal == NULL) ||
 			(s->signal->ch == NULL)	||
 			(s->form.mbox.mb_num > DCE_NUM_MBOX_REGS)) {
-		dce_err(d, "Invalid signal instance in mailbox callback");
+		dce_os_err(d, "Invalid signal instance in mailbox callback");
 		return;
 	}
 
@@ -71,7 +71,7 @@ int dce_ipc_init_signaling(struct tegra_dce *d, struct dce_ipc_channel *ch)
 	ch->signal.ch = ch;
 
 	if ((from_d == NULL) || (to_d == NULL)) {
-		dce_err(d, "Invalid signal instances");
+		dce_os_err(d, "Invalid signal instances");
 		ret = -1;
 		goto out;
 	}
@@ -79,7 +79,7 @@ int dce_ipc_init_signaling(struct tegra_dce *d, struct dce_ipc_channel *ch)
 	mb_type = to_d->form.mbox.mb_type;
 	if (to_d->form.mbox.mb_type !=
 			from_d->form.mbox.mb_type) {
-		dce_err(d, "Mailbox type doesn't match");
+		dce_os_err(d, "Mailbox type doesn't match");
 		ret = -1;
 		goto out;
 	}
@@ -93,7 +93,7 @@ int dce_ipc_init_signaling(struct tegra_dce *d, struct dce_ipc_channel *ch)
 		to_d->signal->notify = dce_ipc_mbox_notify;
 		mb_signals[to_mbox] = to_d;
 	} else {
-		dce_info(d, "Signal type not supported : [%d]", to_d->type);
+		dce_os_info(d, "Signal type not supported : [%d]", to_d->type);
 	}
 
 	from_d->signal = &ch->signal;
@@ -101,7 +101,7 @@ int dce_ipc_init_signaling(struct tegra_dce *d, struct dce_ipc_channel *ch)
 	if (from_d->type == DCE_IPC_SIGNAL_MAILBOX) {
 		if ((from_d->next != NULL)
 				|| (from_mbox >= DCE_NUM_MBOX_REGS)) {
-			dce_err(d, "Invalid Signal Instance");
+			dce_os_err(d, "Invalid Signal Instance");
 			ret = -1;
 			goto out;
 		}
@@ -112,7 +112,7 @@ int dce_ipc_init_signaling(struct tegra_dce *d, struct dce_ipc_channel *ch)
 
 		mb_signals[from_d->form.mbox.mb_num] = from_d;
 	} else {
-		dce_info(d, "Signal type not supported : [%d]", from_d->type);
+		dce_os_info(d, "Signal type not supported : [%d]", from_d->type);
 	}
 
 	/**
@@ -141,7 +141,7 @@ void dce_ipc_deinit_signaling(struct tegra_dce *d, struct dce_ipc_channel *ch)
 	mb_type = to_d->form.mbox.mb_type;
 	if (to_d->form.mbox.mb_type !=
 			from_d->form.mbox.mb_type) {
-		dce_err(d, "Mailbox type doesn't match");
+		dce_os_err(d, "Mailbox type doesn't match");
 		return;
 	}
 	dce_mailbox_deinit_interface(d,	mb_type);

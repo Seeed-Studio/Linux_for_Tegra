@@ -154,7 +154,7 @@ void dce_mailbox_set_full_interrupt(struct tegra_dce *d, u8 id)
 	dce_mutex_lock(&d_mb->lock);
 
 	if (!dce_mailbox_write_safe(d, d_mb->s_mb))
-		dce_info(d, "Intr bit set multiple times for MB : [0x%x] id:[0x%x]",
+		dce_os_info(d, "Intr bit set multiple times for MB : [0x%x] id:[0x%x]",
 			 d_mb->s_mb, id);
 
 	d->hsp.smb_set(d, BIT(31), d->hsp_id, d_mb->s_mb);
@@ -183,7 +183,7 @@ int dce_handle_mailbox_send_cmd_sync(struct tegra_dce *d, u32 cmd, u32 interface
 	dce_mutex_lock(&d_mb->lock);
 
 	if (!dce_mailbox_write_safe(d, d_mb->s_mb)) {
-		dce_err(d, "Previously sent message isn't synced");
+		dce_os_err(d, "Previously sent message isn't synced");
 		return -1;
 	}
 
@@ -217,7 +217,7 @@ int dce_mailbox_send_cmd_sync(struct tegra_dce *d, u32 cmd, u32 interface)
 	ret = dce_fsm_post_event(d, EVENT_ID_DCE_BOOT_CMD_MSG_REQUESTED,
 				 (void *)&params);
 	if (ret) {
-		dce_err(d, "Unable to send msg ret :%d", ret);
+		dce_os_err(d, "Unable to send msg ret :%d", ret);
 		goto out;
 	}
 
@@ -245,7 +245,7 @@ int dce_mailbox_init_interface(struct tegra_dce *d, u8 id, u8 s_mb,
 
 	ret = dce_mutex_init(&d_mb->lock);
 	if (ret) {
-		dce_err(d, "dce lock initialization failed for mailbox");
+		dce_os_err(d, "dce lock initialization failed for mailbox");
 		goto err_lock_init;
 	}
 

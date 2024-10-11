@@ -8,7 +8,7 @@
 #include <linux/uaccess.h>
 #include <dce.h>
 #include <dce-debug-perf.h>
-#include <os-dce-log.h>
+#include <dce-os-log.h>
 #include <dce-os-utils.h>
 #include <interface/dce-interface.h>
 
@@ -29,13 +29,13 @@ ssize_t dbg_dce_perf_stats_stats_fops_write(struct file *file,
 
 	ret = kstrtobool_from_user(user_buf, 3ULL, &start_perf);
 	if (ret) {
-		dce_err(d, "Unable to parse start/stop for dce perf stats");
+		dce_os_err(d, "Unable to parse start/stop for dce perf stats");
 		goto out;
 	}
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
-		dce_err(d, "IPC msg allocation failed");
+		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
 	}
 
@@ -56,11 +56,11 @@ ssize_t dbg_dce_perf_stats_stats_fops_write(struct file *file,
 	 */
 	ret = dce_admin_send_cmd_set_perf_stat(d, msg, start_perf);
 	if (ret) {
-		dce_err(d, "Failed to Set perf stat\n");
+		dce_os_err(d, "Failed to Set perf stat\n");
 		goto out;
 	}
 
-	dce_debug(d, "DCE perf stats collection %s", start_perf ? "started" : "stopped");
+	dce_os_debug(d, "DCE perf stats collection %s", start_perf ? "started" : "stopped");
 
 out:
 	return count;
@@ -247,13 +247,13 @@ static int dbg_dce_perf_stats_stats_fops_show(struct seq_file *s, void *data)
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
-		dce_err(d, "IPC msg allocation failed");
+		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
 	}
 
 	ret = dce_admin_send_cmd_get_perf_stat(d, msg);
 	if (ret) {
-		dce_err(d, "Failed to Get perf stat\n");
+		dce_os_err(d, "Failed to Get perf stat\n");
 		goto out;
 	}
 
@@ -326,7 +326,7 @@ ssize_t dbg_dce_perf_format_fops_write(struct file *file,
 
 	ret = kstrtou32_from_user(user_buf, count, 10, &format);
 	if (ret) {
-		dce_err(d, "Invalid format!");
+		dce_os_err(d, "Invalid format!");
 		goto done;
 	}
 
@@ -335,7 +335,7 @@ ssize_t dbg_dce_perf_format_fops_write(struct file *file,
 	else if (format == DCE_PERF_OUTPUT_FORMAT_XML)
 		perf_output_format = DCE_PERF_OUTPUT_FORMAT_XML;
 	else
-		dce_err(d, "Invalid format [%u]!", format);
+		dce_os_err(d, "Invalid format [%u]!", format);
 
 done:
 	return count;
@@ -415,13 +415,13 @@ ssize_t dbg_dce_perf_events_events_fops_write(struct file *file,
 	 */
 	ret = kstrtou32_from_user(user_buf, count, 0, &events);
 	if (ret) {
-		dce_err(d, "Unable to parse for event perf stats");
+		dce_os_err(d, "Unable to parse for event perf stats");
 		goto out;
 	}
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
-		dce_err(d, "IPC msg allocation failed");
+		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
 	}
 
@@ -439,7 +439,7 @@ ssize_t dbg_dce_perf_events_events_fops_write(struct file *file,
 
 	ret = dce_admin_send_cmd_clear_perf_events(d, msg);
 	if (ret) {
-		dce_err(d, "Failed to Clear perf events\n");
+		dce_os_err(d, "Failed to Clear perf events\n");
 		goto out;
 	}
 out:
@@ -493,13 +493,13 @@ static int dbg_dce_perf_events_events_fops_show(struct seq_file *s, void *data)
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
-		dce_err(d, "IPC msg allocation failed");
+		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
 	}
 
 	ret = dce_admin_send_cmd_get_perf_events(d, msg);
 	if (ret) {
-		dce_err(d, "Failed to Get perf stat\n");
+		dce_os_err(d, "Failed to Get perf stat\n");
 		goto out;
 	}
 

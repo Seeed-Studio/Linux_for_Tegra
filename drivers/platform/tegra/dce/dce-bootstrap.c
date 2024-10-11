@@ -50,7 +50,7 @@ int dce_handle_boot_cmd_requested_event(struct tegra_dce *d, void *params)
 	struct dce_mailbox_send_cmd_params *mbox_params =
 			(struct dce_mailbox_send_cmd_params *)params;
 
-	dce_debug(d, "cmd:%u interface:%u", mbox_params->cmd, mbox_params->interface);
+	dce_os_debug(d, "cmd:%u interface:%u", mbox_params->cmd, mbox_params->interface);
 
 	ret = dce_handle_mailbox_send_cmd_sync(d, mbox_params->cmd,
 					       mbox_params->interface);
@@ -70,7 +70,7 @@ int dce_handle_boot_cmd_requested_event(struct tegra_dce *d, void *params)
 int dce_handle_boot_cmd_received_event(struct tegra_dce *d, void *params)
 {
 	if (params != NULL)
-		dce_warn(d, "Params aren't expected in this function\n");
+		dce_os_warn(d, "Params aren't expected in this function\n");
 
 	dce_wakeup_interruptible(d, DCE_WAIT_BOOT_CMD);
 	return 0;
@@ -92,13 +92,13 @@ int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 	int ret = 0;
 
 	if (params != NULL)
-		dce_warn(d, "Params aren't expected in this function\n");
+		dce_os_warn(d, "Params aren't expected in this function\n");
 
 	d->boot_status |= DCE_FW_EARLY_BOOT_START;
 	if (dce_fw_boot_complete(d)) {
 		ret = dce_fsm_post_event(d, EVENT_ID_DCE_BOOT_COMPLETE_RECEIVED, NULL);
 		if (ret)
-			dce_err(d, "failed to send DCE_BOOT_COMPLETE_RECEIVED event");
+			dce_os_err(d, "failed to send DCE_BOOT_COMPLETE_RECEIVED event");
 
 		dce_cond_wait_reset(d, DCE_WAIT_BOOT_COMPLETE);
 		goto boot_done;
@@ -106,21 +106,21 @@ int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 
 	dce_request_fw_boot_complete(d);
 
-	dce_debug(d, "Waiting for dce fw to boot...");
+	dce_os_debug(d, "Waiting for dce fw to boot...");
 
 	ret = dce_wait_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
 	if (ret) {
 		/**
 		 * TODO: Add error handling for abort and retry
 		 */
-		dce_err(d, "dce boot wait was interrupted with err:%d", ret);
+		dce_os_err(d, "dce boot wait was interrupted with err:%d", ret);
 	}
 
 boot_done:
 	if (!ret) {
 		dce_set_boot_complete(d, true);
 		d->boot_status |= DCE_FW_EARLY_BOOT_DONE;
-		dce_debug(d, "dce is ready to receive bootstrap commands");
+		dce_os_debug(d, "dce is ready to receive bootstrap commands");
 	} else {
 		d->boot_status |= DCE_FW_EARLY_BOOT_FAILED;
 	}
@@ -140,7 +140,7 @@ boot_done:
 int dce_handle_boot_complete_received_event(struct tegra_dce *d, void *params)
 {
 	if (params != NULL)
-		dce_warn(d, "Params aren't expected in this function\n");
+		dce_os_warn(d, "Params aren't expected in this function\n");
 
 	dce_wakeup_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
 	return 0;
@@ -160,7 +160,7 @@ dce_start_boot_flow(struct tegra_dce *d)
 
 	ret = dce_start_bootstrap_flow(d);
 	if (ret) {
-		dce_err(d, "DCE_BOOT_FAILED: Bootstrap flow didn't complete");
+		dce_os_err(d, "DCE_BOOT_FAILED: Bootstrap flow didn't complete");
 		goto exit;
 	}
 
@@ -169,10 +169,10 @@ dce_start_boot_flow(struct tegra_dce *d)
 
 	ret = dce_start_admin_seq(d);
 	if (ret) {
-		dce_err(d, "DCE_BOOT_FAILED: Admin flow didn't complete");
+		dce_os_err(d, "DCE_BOOT_FAILED: Admin flow didn't complete");
 	} else {
 		d->boot_status |= DCE_FW_BOOT_DONE;
-		dce_info(d, "DCE_BOOT_DONE");
+		dce_os_info(d, "DCE_BOOT_DONE");
 		dce_cond_broadcast_interruptible(&d->dce_bootstrap_done);
 	}
 
@@ -195,25 +195,25 @@ void dce_bootstrap_work_fn(struct tegra_dce *d)
 	int ret = 0;
 
 	if (d == NULL) {
-		dce_err(d, "tegra_dce struct is NULL");
+		dce_os_err(d, "tegra_dce struct is NULL");
 		return;
 	}
 
 	ret = dce_fsm_post_event(d, EVENT_ID_DCE_FSM_START, NULL);
 	if (ret) {
-		dce_err(d, "FSM start failed\n");
+		dce_os_err(d, "FSM start failed\n");
 		return;
 	}
 
 	ret = dce_fsm_post_event(d, EVENT_ID_DCE_BOOT_COMPLETE_REQUESTED, NULL);
 	if (ret) {
-		dce_err(d, "Error while posting DCE_BOOT_COMPLETE_REQUESTED event");
+		dce_os_err(d, "Error while posting DCE_BOOT_COMPLETE_REQUESTED event");
 		return;
 	}
 
 	ret = dce_start_boot_flow(d);
 	if (ret) {
-		dce_err(d, "DCE bootstrapping failed\n");
+		dce_os_err(d, "DCE bootstrapping failed\n");
 		return;
 	}
 }
@@ -230,30 +230,30 @@ static void dce_handle_irq_status(struct tegra_dce *d, u32 status)
 {
 
 	if (status & DCE_IRQ_LOG_OVERFLOW)
-		dce_info(d, "DCE trace log overflow error received");
+		dce_os_info(d, "DCE trace log overflow error received");
 
 	if (status & DCE_IRQ_CRASH_LOG)
-		dce_info(d, "DCE crash log available");
+		dce_os_info(d, "DCE crash log available");
 
 	if (status & DCE_IRQ_ABORT)
-		dce_err(d, "DCE ucode abort occurred");
+		dce_os_err(d, "DCE ucode abort occurred");
 
 	if (status & DCE_IRQ_READY) {
-		dce_debug(d, "DCE IRQ Ready Received");
+		dce_os_debug(d, "DCE IRQ Ready Received");
 		(void)dce_fsm_post_event(d,
 					 EVENT_ID_DCE_BOOT_COMPLETE_RECEIVED,
 					 NULL);
 	}
 
 	if (status & DCE_IRQ_SC7_ENTERED) {
-		dce_info(d, "DCE can be safely powered-off now");
+		dce_os_info(d, "DCE can be safely powered-off now");
 		(void)dce_fsm_post_event(d,
 					 EVENT_ID_DCE_SC7_ENTERED_RECEIVED,
 					 NULL);
 	}
 
 	if (status & DCE_IRQ_LOG_READY) {
-		dce_info(d, "DCE trace log buffers available");
+		dce_os_info(d, "DCE trace log buffers available");
 		dce_wakeup_interruptible(d, DCE_WAIT_LOG);
 	}
 
@@ -285,7 +285,7 @@ static void dce_bootstrap_handle_boot_status(struct tegra_dce *d, u32 status)
 
 	ret = dce_fsm_post_event(d, EVENT_ID_DCE_BOOT_CMD_MSG_RECEIVED, NULL);
 	if (ret)
-		dce_err(d, "Mbox bootstrap cmd failed");
+		dce_os_err(d, "Mbox bootstrap cmd failed");
 }
 
 
@@ -302,7 +302,7 @@ static void dce_boot_interface_isr(struct tegra_dce *d, void *data)
 	u8 interface_id = DCE_MAILBOX_BOOT_INTERFACE;
 
 	if (data != NULL)
-		dce_warn(d, "Data param isn't expected in this function\n");
+		dce_os_warn(d, "Data param isn't expected in this function\n");
 
 	status = dce_mailbox_get_interface_status(d, interface_id);
 	if (status == 0xffffffff)
@@ -316,7 +316,7 @@ static void dce_boot_interface_isr(struct tegra_dce *d, void *data)
 		dce_bootstrap_handle_boot_status(d, status);
 		break;
 	default:
-		dce_info(d, "Invalid Status Received from DCE. Status: [%x]",
+		dce_os_info(d, "Invalid Status Received from DCE. Status: [%x]",
 			 status);
 		break;
 	}
@@ -338,25 +338,25 @@ static void dce_parse_boot_status_err(struct tegra_dce *d, u32 status)
 
 	switch (status) {
 	case DCE_BOOT_CMD_ERR_BAD_COMMAND:
-		dce_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_BAD_COMMAND");
+		dce_os_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_BAD_COMMAND");
 		break;
 	case DCE_BOOT_CMD_ERR_UNIMPLEMENTED:
-		dce_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_UNIMPLEMENTED");
+		dce_os_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_UNIMPLEMENTED");
 		break;
 	case DCE_BOOT_CMD_ERR_IPC_SETUP:
-		dce_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_IPC_SETUP");
+		dce_os_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_IPC_SETUP");
 		break;
 	case DCE_BOOT_CMD_ERR_INVALID_NFRAMES:
-		dce_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_INVALID_NFRAMES");
+		dce_os_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_INVALID_NFRAMES");
 		break;
 	case DCE_BOOT_CMD_ERR_IPC_CREATE:
-		dce_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_IPC_CREATE");
+		dce_os_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_IPC_CREATE");
 		break;
 	case DCE_BOOT_CMD_ERR_LOCKED:
-		dce_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_LOCKED");
+		dce_os_info(d, "Boot Status Error : DCE_BOOT_CMD_ERR_LOCKED");
 		break;
 	default:
-		dce_info(d, "Invalid Error Status Rcvd. Status: [%x]", status);
+		dce_os_info(d, "Invalid Error Status Rcvd. Status: [%x]", status);
 		break;
 	}
 }
@@ -378,7 +378,7 @@ static int dce_mailbox_wait_boot_interface(struct tegra_dce *d)
 		/**
 		 * TODO: Add error handling for abort and retry
 		 */
-		dce_err(d, "dce mbox wait was interrupted with err:%d", ret);
+		dce_os_err(d, "dce mbox wait was interrupted with err:%d", ret);
 	}
 
 	status = dce_mailbox_get_interface_status(d,
@@ -386,7 +386,7 @@ static int dce_mailbox_wait_boot_interface(struct tegra_dce *d)
 
 	if (status & DCE_BOOT_CMD_ERR_FLAG) {
 		dce_parse_boot_status_err(d, status);
-		dce_err(d, "Error code received on boot interface : 0x%x",
+		dce_os_err(d, "Error code received on boot interface : 0x%x",
 			status);
 		return -EBADE;
 	}
@@ -412,13 +412,13 @@ int dce_boot_interface_init(struct tegra_dce *d)
 					dce_mailbox_wait_boot_interface,
 					NULL, dce_boot_interface_isr);
 	if (ret) {
-		dce_err(d, "Boot Mailbox Interface Init Failed");
+		dce_os_err(d, "Boot Mailbox Interface Init Failed");
 		goto err_init;
 	}
 
 	ret = dce_init_work(d, &d->dce_bootstrap_work, dce_bootstrap_work_fn);
 	if (ret) {
-		dce_err(d, "Bootstrap work init failed");
+		dce_os_err(d, "Bootstrap work init failed");
 		goto err_init;
 	}
 
@@ -564,13 +564,13 @@ static int dce_send_set_addr_read_cmd(struct tegra_dce *d, const u64 rd_buff)
 #define DCE_DATA_NBITS_SHIFT 20
 	ret = dce_send_set_addr_cmd_hi(d, rd_buff >> DCE_DATA_NBITS_SHIFT, 0);
 	if (ret) {
-		dce_err(d, "Sending of SEND_ADDR for READ IOVA HI failed");
+		dce_os_err(d, "Sending of SEND_ADDR for READ IOVA HI failed");
 		goto err_sending;
 	}
 
 	ret = dce_send_set_addr_cmd_lo(d, rd_buff, 0);
 	if (ret) {
-		dce_err(d, "Sending of SEND_ADDR for READ IOVA LO failed");
+		dce_os_err(d, "Sending of SEND_ADDR for READ IOVA LO failed");
 		goto err_sending;
 	}
 #undef DCE_DATA_NBITS_SHIFT
@@ -595,13 +595,13 @@ static int dce_send_set_addr_write_cmd(struct tegra_dce *d, const u64 wr_buff)
 #define DCE_DATA_NBITS_SHIFT 20
 	ret = dce_send_set_addr_cmd_hi(d, wr_buff >> DCE_DATA_NBITS_SHIFT, 1);
 	if (ret) {
-		dce_err(d, "Sending of SEND_ADDR for READ IOVA HI failed");
+		dce_os_err(d, "Sending of SEND_ADDR for READ IOVA HI failed");
 		goto err_sending;
 	}
 
 	ret = dce_send_set_addr_cmd_lo(d, wr_buff, 1);
 	if (ret) {
-		dce_err(d, "Sending of SEND_ADDR for READ IOVA LO failed");
+		dce_os_err(d, "Sending of SEND_ADDR for READ IOVA LO failed");
 		goto err_sending;
 	}
 #undef DCE_DATA_NBITS_SHIFT
@@ -706,7 +706,7 @@ static int dce_bootstrap_send_ast_iova_info(struct tegra_dce *d)
 
 	ret = dce_ipc_get_region_iova_info(d, &iova, &size);
 	if (ret) {
-		dce_err(d, "Failed to get the iova info needed for ast config");
+		dce_os_err(d, "Failed to get the iova info needed for ast config");
 		goto err_sending;
 	}
 
@@ -717,7 +717,7 @@ static int dce_bootstrap_send_ast_iova_info(struct tegra_dce *d)
 			DCE_BOOT_CMD_PARM_SET(0U, size >> DCE_DATA_NBITS_SHIFT),
 			DCE_MAILBOX_BOOT_INTERFACE);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd SET_AST_LENGTH(HI) failed");
+		dce_os_err(d, "Sending of bootstrap cmd SET_AST_LENGTH(HI) failed");
 		goto err_sending;
 	}
 
@@ -727,7 +727,7 @@ static int dce_bootstrap_send_ast_iova_info(struct tegra_dce *d)
 			DCE_BOOT_CMD_PARM_SET(0U, size),
 			DCE_MAILBOX_BOOT_INTERFACE);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd SET_AST_LENGTH(LO) failed");
+		dce_os_err(d, "Sending of bootstrap cmd SET_AST_LENGTH(LO) failed");
 		goto err_sending;
 	}
 
@@ -737,7 +737,7 @@ static int dce_bootstrap_send_ast_iova_info(struct tegra_dce *d)
 			DCE_BOOT_CMD_PARM_SET(0U, iova >> DCE_DATA_NBITS_SHIFT),
 			DCE_MAILBOX_BOOT_INTERFACE);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd SET_AST_IOVA(HI) failed");
+		dce_os_err(d, "Sending of bootstrap cmd SET_AST_IOVA(HI) failed");
 		goto err_sending;
 	}
 #undef DCE_DATA_NBITS_SHIFT
@@ -748,7 +748,7 @@ static int dce_bootstrap_send_ast_iova_info(struct tegra_dce *d)
 			DCE_BOOT_CMD_PARM_SET(0U, iova),
 			DCE_MAILBOX_BOOT_INTERFACE);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd SET_AST_IOVA(LO) failed");
+		dce_os_err(d, "Sending of bootstrap cmd SET_AST_IOVA(LO) failed");
 		goto err_sending;
 	}
 
@@ -773,25 +773,25 @@ static int dce_bootstrap_send_admin_ivc_info(struct tegra_dce *d)
 
 	ret = dce_admin_get_ipc_channel_info(d, &q_info);
 	if (ret) {
-		dce_err(d, "Failed to get the admin ivc channel info");
+		dce_os_err(d, "Failed to get the admin ivc channel info");
 		goto err_sending;
 	}
 
 	ret = dce_send_set_addr_read_cmd(d, (u64)(q_info.tx_iova));
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd set_addr_read failed");
+		dce_os_err(d, "Sending of bootstrap cmd set_addr_read failed");
 		goto err_sending;
 	}
 
 	ret = dce_send_set_addr_write_cmd(d, (u64)(q_info.rx_iova));
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd set_addr_write failed");
+		dce_os_err(d, "Sending of bootstrap cmd set_addr_write failed");
 		goto err_sending;
 	}
 
 	ret = dce_send_get_fsize_cmd(d);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd get_fsize failed");
+		dce_os_err(d, "Sending of bootstrap cmd get_fsize failed");
 		goto err_sending;
 	}
 
@@ -803,13 +803,13 @@ static int dce_bootstrap_send_admin_ivc_info(struct tegra_dce *d)
 
 	ret = dce_send_set_nframes_cmd(d, q_info.nframes);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd set_nframes failed");
+		dce_os_err(d, "Sending of bootstrap cmd set_nframes failed");
 		goto err_sending;
 	}
 
 	ret = dce_send_set_fsize_cmd(d, q_info.frame_sz);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd set_fsize failed");
+		dce_os_err(d, "Sending of bootstrap cmd set_fsize failed");
 		goto err_sending;
 	}
 
@@ -833,7 +833,7 @@ int dce_start_bootstrap_flow(struct tegra_dce *d)
 	d->boot_status |= DCE_FW_BOOTSTRAP_START;
 	ret = dce_send_version_cmd(d);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd VERSION failed");
+		dce_os_err(d, "Sending of bootstrap cmd VERSION failed");
 		goto err_sending;
 	}
 	/**
@@ -844,31 +844,31 @@ int dce_start_bootstrap_flow(struct tegra_dce *d)
 
 	ret = dce_send_set_sid_cmd(d);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd set_sid failed");
+		dce_os_err(d, "Sending of bootstrap cmd set_sid failed");
 		goto err_sending;
 	}
 
 	ret = dce_bootstrap_send_ast_iova_info(d);
 	if (ret) {
-		dce_err(d, "Sending of iova info failed");
+		dce_os_err(d, "Sending of iova info failed");
 		goto err_sending;
 	}
 
 	ret = dce_bootstrap_send_admin_ivc_info(d);
 	if (ret) {
-		dce_err(d, "Sending of ivc channel info failedbootstrap cmd set_sid failed");
+		dce_os_err(d, "Sending of ivc channel info failedbootstrap cmd set_sid failed");
 		goto err_sending;
 	}
 
 	ret = dce_send_channel_int_cmd(d);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd channel_int failed");
+		dce_os_err(d, "Sending of bootstrap cmd channel_int failed");
 		goto err_sending;
 	}
 
 	ret = dce_send_lock_cmd(d);
 	if (ret) {
-		dce_err(d, "Sending of bootstrap cmd lock failed");
+		dce_os_err(d, "Sending of bootstrap cmd lock failed");
 		goto err_sending;
 	}
 
@@ -876,7 +876,7 @@ int dce_start_bootstrap_flow(struct tegra_dce *d)
 	return 0;
 
 err_sending:
-	dce_err(d, "Bootstrap process failed");
+	dce_os_err(d, "Bootstrap process failed");
 	d->boot_status |= DCE_FW_BOOTSTRAP_FAILED;
 	return ret;
 }

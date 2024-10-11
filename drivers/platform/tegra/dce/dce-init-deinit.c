@@ -49,37 +49,37 @@ int dce_driver_init(struct tegra_dce *d)
 
 	ret = dce_boot_interface_init(d);
 	if (ret) {
-		dce_err(d, "dce boot interface init failed");
+		dce_os_err(d, "dce boot interface init failed");
 		goto err_boot_interface_init;
 	}
 
 	ret = dce_admin_init(d);
 	if (ret) {
-		dce_err(d, "dce admin interface init failed");
+		dce_os_err(d, "dce admin interface init failed");
 		goto err_admin_interface_init;
 	}
 
 	ret = dce_client_init(d);
 	if (ret) {
-		dce_err(d, "dce client workqueue init failed");
+		dce_os_err(d, "dce client workqueue init failed");
 		goto err_client_init;
 	}
 
 	ret = dce_pm_init(d);
 	if (ret) {
-		dce_err(d, "Failed to init DCE Power management");
+		dce_os_err(d, "Failed to init DCE Power management");
 		goto err_pm_init;
 	}
 
 	ret = dce_work_cond_sw_resource_init(d);
 	if (ret) {
-		dce_err(d, "dce sw resource init failed");
+		dce_os_err(d, "dce sw resource init failed");
 		goto err_sw_init;
 	}
 
 	ret = dce_fsm_init(d);
 	if (ret) {
-		dce_err(d, "dce FSM init failed");
+		dce_os_err(d, "dce FSM init failed");
 		goto err_fsm_init;
 	}
 

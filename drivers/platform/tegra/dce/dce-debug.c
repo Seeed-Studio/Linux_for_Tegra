@@ -8,7 +8,7 @@
 #include <linux/uaccess.h>
 #include <linux/ktime.h>
 #include <dce.h>
-#include <os-dce-log.h>
+#include <dce-os-log.h>
 #include <dce-os-utils.h>
 #include <dce-os-device.h>
 #include <dce-debug-perf.h>
@@ -28,7 +28,7 @@ static int dbg_dce_load_fw(struct tegra_dce *d)
 
 	d->fw_data = dce_os_request_firmware(d, name);
 	if (!d->fw_data) {
-		dce_err(d, "FW Request Failed");
+		dce_os_err(d, "FW Request Failed");
 		return -EBUSY;
 	}
 
@@ -65,7 +65,7 @@ static int dbg_dce_reset_dce(struct tegra_dce *d)
 
 	ret = dce_reset_dce(d);
 	if (ret) {
-		dce_err(d, "DCE Reset Failed");
+		dce_os_err(d, "DCE Reset Failed");
 		return ret;
 	}
 	dce_set_dce_reset_status(d, true);
@@ -89,7 +89,7 @@ static int dbg_dce_boot_dce(struct tegra_dce *d)
 
 	ret = dbg_dce_load_fw(d);
 	if (ret) {
-		dce_err(d, "DCE Load FW Failed");
+		dce_os_err(d, "DCE Load FW Failed");
 		return ret;
 	}
 
@@ -98,7 +98,7 @@ static int dbg_dce_boot_dce(struct tegra_dce *d)
 	ret = dbg_dce_reset_dce(d);
 
 	if (ret)
-		dce_err(d, "DCE Reset Failed");
+		dce_os_err(d, "DCE Reset Failed");
 
 	return ret;
 
@@ -253,20 +253,20 @@ static ssize_t dbg_dce_admin_echo_fops_write(struct file *file,
 	buf_size = min(count, (sizeof(buf)-1));
 	ret = kstrtou32_from_user(user_buf, buf_size, 10, &echo_count);
 	if (ret) {
-		dce_err(d, "Admin msg count out of range");
+		dce_os_err(d, "Admin msg count out of range");
 		goto out;
 	}
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
-		dce_err(d, "IPC msg allocation failed");
+		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
 	}
 
 	req_msg = (struct dce_admin_ipc_cmd *)(msg->tx.data);
 	resp_msg = (struct dce_admin_ipc_resp *) (msg->rx.data);
 
-	dce_info(d, "Requested %u echo messages", echo_count);
+	dce_os_info(d, "Requested %u echo messages", echo_count);
 
 	for (i = 0; i < echo_count; i++) {
 		u32 resp;
@@ -274,17 +274,17 @@ static ssize_t dbg_dce_admin_echo_fops_write(struct file *file,
 		req_msg->args.echo.data = i;
 		ret = dce_admin_send_cmd_echo(d, msg);
 		if (ret) {
-			dce_err(d, "Admin msg failed for seq No : %u", i);
+			dce_os_err(d, "Admin msg failed for seq No : %u", i);
 			goto out;
 		}
 
 		resp = resp_msg->args.echo.data;
 
 		if (i == resp) {
-			dce_info(d, "Received Response:%u for request:%u",
+			dce_os_info(d, "Received Response:%u for request:%u",
 				 resp, i);
 		} else {
-			dce_err(d, "Invalid response, expected:%u received:%u",
+			dce_os_err(d, "Invalid response, expected:%u received:%u",
 				i, resp);
 		}
 	}
@@ -341,7 +341,7 @@ static ssize_t dbg_dce_tests_external_status_fops_read(struct file *file,
 
 	bytes_printed = snprintf(buf, 15, "%d\n", d_dev->ext_test_status);
 	if (bytes_printed < 0) {
-		dce_err(d, "Unable to return external test status");
+		dce_os_err(d, "Unable to return external test status");
 		buf[0] = '\0';
 		bytes_printed = 0;
 	}
@@ -370,21 +370,21 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 
 	ret = kstrtou32_from_user(user_buf, count, 10, &test);
 	if (ret) {
-		dce_err(d, "Invalid test number!");
+		dce_os_err(d, "Invalid test number!");
 		d_dev->ext_test_status = DCE_ERR_CORE_NOT_FOUND;
 		return -EINVAL;
 	}
 	switch (test) {
 	case DCE_ADMIN_EXT_TEST_ALU:
-		dce_info(d, "Running ALU test");
+		dce_os_info(d, "Running ALU test");
 		break;
 
 	case DCE_ADMIN_EXT_TEST_DMA:
-		dce_info(d, "Running DMA test");
+		dce_os_info(d, "Running DMA test");
 		break;
 
 	default:
-		dce_err(d, "Test(%u) not found! Check help node for valid test IDs.",
+		dce_os_err(d, "Test(%u) not found! Check help node for valid test IDs.",
 			test);
 		d_dev->ext_test_status = DCE_ERR_CORE_NOT_FOUND;
 		return -EINVAL;
@@ -392,7 +392,7 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
-		dce_err(d, "IPC msg allocation failed");
+		dce_os_err(d, "IPC msg allocation failed");
 		d_dev->ext_test_status = DCE_ERR_CORE_OTHER;
 		goto exit;
 	}
@@ -406,7 +406,7 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 
 	ret = dce_admin_send_cmd_ext_test(d, msg);
 	if (ret) {
-		dce_err(d, "Admin msg failed");
+		dce_os_err(d, "Admin msg failed");
 		d_dev->ext_test_status = DCE_ERR_CORE_IPC_IVC_ERR;
 		goto exit;
 	}
@@ -414,13 +414,13 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 	end_time = ktime_get_real_ns();
 
 	if (resp_msg->error == DCE_ERR_CORE_SUCCESS) {
-		dce_err(d, "Test passed!");
-		dce_err(d, "Took %lld microsecs to finish\n",
+		dce_os_err(d, "Test passed!");
+		dce_os_err(d, "Took %lld microsecs to finish\n",
 			((end_time - start_time) / 1000));
 	} else if (resp_msg->error == DCE_ERR_CORE_NOT_IMPLEMENTED)
-		dce_err(d, "Test not implemented!");
+		dce_os_err(d, "Test not implemented!");
 	else
-		dce_err(d, "Test failed(%d)!", (int32_t)resp_msg->error);
+		dce_os_err(d, "Test failed(%d)!", (int32_t)resp_msg->error);
 	d_dev->ext_test_status = resp_msg->error;
 
 exit:
@@ -501,7 +501,7 @@ static ssize_t dbg_dce_boot_status_fops_read(struct file *file,
 
 	fsb = find_first_bit(&bitmap, 32U);
 	if (fsb > 31U) {
-		dce_info(d, "dce-fw boot not started yet");
+		dce_os_info(d, "dce-fw boot not started yet");
 		goto core_boot_done;
 	}
 
@@ -603,7 +603,7 @@ core_boot_done:
 done:
 	len = strlen(buf);
 	buf[len] = '\0';
-	dce_info(d, "boot status:%s status_val:0x%x\n", buf, d->boot_status);
+	dce_os_info(d, "boot status:%s status_val:0x%x\n", buf, d->boot_status);
 	return simple_read_from_buffer(user_buf, count, ppos, buf, len + 1);
 }
 
@@ -667,25 +667,25 @@ static int dump_hsp_regs_show(struct seq_file *s, void *unused)
 	/**
 	 * Dump Boot Semaphore Value
 	 */
-	dce_info(d, "DCE_BOOT_SEMA : 0x%x",
+	dce_os_info(d, "DCE_BOOT_SEMA : 0x%x",
 				d->hsp.ss_get_state(d, d->hsp_id, DCE_BOOT_SEMA));
 
 	/**
 	 * Dump Shared Mailboxes Values
 	 */
-	dce_info(d, "DCE_MBOX_FROM_DCE_RM : 0x%x",
+	dce_os_info(d, "DCE_MBOX_FROM_DCE_RM : 0x%x",
 			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_RM));
-	dce_info(d, "DCE_MBOX_TO_DCE_RM: 0x%x",
+	dce_os_info(d, "DCE_MBOX_TO_DCE_RM: 0x%x",
 			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_TO_DCE_RM));
-	dce_info(d, "DCE_MBOX_FROM_DCE_RM_EVENT_NOTIFY: 0x%x",
+	dce_os_info(d, "DCE_MBOX_FROM_DCE_RM_EVENT_NOTIFY: 0x%x",
 			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_RM_EVENT_NOTIFY));
-	dce_info(d, "DCE_MBOX_TO_DCE_RM_EVENT_NOTIFY: 0x%x",
+	dce_os_info(d, "DCE_MBOX_TO_DCE_RM_EVENT_NOTIFY: 0x%x",
 			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_TO_DCE_RM_EVENT_NOTIFY));
-	dce_info(d, "DCE_MBOX_FROM_DCE_ADMIN: 0x%x",
+	dce_os_info(d, "DCE_MBOX_FROM_DCE_ADMIN: 0x%x",
 			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_FROM_DCE_ADMIN));
-	dce_info(d, "DCE_MBOX_BOOT_CMD: 0x%x",
+	dce_os_info(d, "DCE_MBOX_BOOT_CMD: 0x%x",
 			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_BOOT_CMD));
-	dce_info(d, "DCE_MBOX_IRQ: 0x%x",
+	dce_os_info(d, "DCE_MBOX_IRQ: 0x%x",
 			d->hsp.smb_read(d, d->hsp_id, DCE_MBOX_IRQ));
 
 	/**
@@ -694,7 +694,7 @@ static int dump_hsp_regs_show(struct seq_file *s, void *unused)
 
 #define DCE_MAX_IE_REGS 5U
 	for (i = 0; i < DCE_MAX_IE_REGS; i++)
-		dce_info(d, "DCE_HSP_IE_%d : 0x%x", i, d->hsp.hsp_ie_read(d, d->hsp_id, i));
+		dce_os_info(d, "DCE_HSP_IE_%d : 0x%x", i, d->hsp.hsp_ie_read(d, d->hsp_id, i));
 #undef DCE_MAX_IE_REGS
 
 	/**
@@ -702,12 +702,12 @@ static int dump_hsp_regs_show(struct seq_file *s, void *unused)
 	 */
 #define DCE_MAX_SM_FULL_REGS 8U
 	for (i = 0; i < DCE_MAX_SM_FULL_REGS; i++) {
-		dce_info(d, "DCE_HSP_SM_FULL_%d : 0x%x", i,
+		dce_os_info(d, "DCE_HSP_SM_FULL_%d : 0x%x", i,
 			 d->hsp.smb_read_full_ie(d, d->hsp_id, i));
 	}
 #undef DCE_MAX_SM_FULL_REGS
 
-	dce_info(d, "DCE_HSP_IR : 0x%x",
+	dce_os_info(d, "DCE_HSP_IR : 0x%x",
 			d->hsp.hsp_ir_read(d, d->hsp_id));
 	return 0;
 }
