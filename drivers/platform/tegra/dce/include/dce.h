@@ -18,7 +18,7 @@
 #include <dce-pm.h>
 #include <dce-mailbox.h>
 #include <dce-client-ipc-internal.h>
-#include <os-dce-workqueue.h>
+#include <dce-os-work.h>
 
 #define DCE_MAX_CPU_IRQS 4
 
@@ -148,11 +148,11 @@ struct tegra_dce {
 	/**
 	 * dce_bootstrap_work : dce work to be executed to start FSM flow
 	 */
-	struct dce_work_struct dce_bootstrap_work;
+	struct dce_os_work_struct dce_bootstrap_work;
 	/**
 	 * dce_resume_work : dce work to executed dce resume flow
 	 */
-	struct dce_work_struct dce_resume_work;
+	struct dce_os_work_struct dce_resume_work;
 	/**
 	 * dce_sc7_state : structure to save/restore state during sc7 enter/exit
 	 */

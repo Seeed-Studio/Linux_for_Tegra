@@ -416,7 +416,7 @@ int dce_boot_interface_init(struct tegra_dce *d)
 		goto err_init;
 	}
 
-	ret = dce_init_work(d, &d->dce_bootstrap_work, dce_bootstrap_work_fn);
+	ret = dce_os_work_init(d, &d->dce_bootstrap_work, dce_bootstrap_work_fn);
 	if (ret) {
 		dce_os_err(d, "Bootstrap work init failed");
 		goto err_init;

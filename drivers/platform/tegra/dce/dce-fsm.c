@@ -474,7 +474,7 @@ out:
  */
 void dce_fsm_start(struct tegra_dce *d)
 {
-	dce_schedule_work(&d->dce_bootstrap_work);
+	dce_os_work_schedule(&d->dce_bootstrap_work);
 }
 
 /**

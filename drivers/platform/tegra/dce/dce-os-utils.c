@@ -625,36 +625,36 @@ void dce_os_usleep_range(unsigned long min, unsigned long max)
 }
 
 /*
- * dce_schedule_work : schedule work in global highpri workqueue
+ * dce_os_work_schedule : schedule work in global highpri workqueue
  *
  * @work : dce work to be scheduled
  *
  * Return : void
  */
-void dce_schedule_work(struct dce_work_struct *work)
+void dce_os_work_schedule(struct dce_os_work_struct *work)
 {
 	queue_work(system_highpri_wq, &work->work);
 }
 
 /*
- * dce_work_handle_fn : handler function for scheduled dce-work
+ * dce_os_work_handle_fn : handler function for scheduled dce-work
  *
  * @work : Pointer to the scheduled work
  *
  * Return : void
  */
-static void dce_work_handle_fn(struct work_struct *work)
+static void dce_os_work_handle_fn(struct work_struct *work)
 {
-	struct dce_work_struct *dce_work = container_of(work,
-							struct dce_work_struct,
+	struct dce_os_work_struct *dce_os_work = container_of(work,
+							struct dce_os_work_struct,
 							work);
 
-	if (dce_work->dce_work_fn != NULL)
-		dce_work->dce_work_fn(dce_work->d);
+	if (dce_os_work->dce_os_work_fn != NULL)
+		dce_os_work->dce_os_work_fn(dce_os_work->d);
 }
 
 /*
- * dce_init_work : Init dce work structure
+ * dce_os_work_init : Init dce work structure
  *
  * @d : Pointer to tegra_dce struct.
  * @work : Pointer to dce work structure
@@ -662,14 +662,14 @@ static void dce_work_handle_fn(struct work_struct *work)
  *
  * Return : 0 if successful
  */
-int dce_init_work(struct tegra_dce *d,
-		   struct dce_work_struct *work,
+int dce_os_work_init(struct tegra_dce *d,
+		   struct dce_os_work_struct *work,
 		   void (*work_fn)(struct tegra_dce *d))
 {
 	work->d = d;
-	work->dce_work_fn = work_fn;
+	work->dce_os_work_fn = work_fn;
 
-	INIT_WORK(&work->work, dce_work_handle_fn);
+	INIT_WORK(&work->work, dce_os_work_handle_fn);
 
 	return 0;
 }

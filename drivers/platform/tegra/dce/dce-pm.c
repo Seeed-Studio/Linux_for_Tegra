@@ -117,7 +117,7 @@ int dce_pm_handle_sc7_exit_received_event(struct tegra_dce *d, void *params)
 	if (params != NULL)
 		dce_os_warn(d, "Params aren't expected in this function\n");
 
-	dce_schedule_work(&d->dce_resume_work);
+	dce_os_work_schedule(&d->dce_resume_work);
 	return 0;
 }
 
@@ -181,7 +181,7 @@ int dce_pm_init(struct tegra_dce *d)
 {
 	int ret = 0;
 
-	ret = dce_init_work(d, &d->dce_resume_work, dce_resume_work_fn);
+	ret = dce_os_work_init(d, &d->dce_resume_work, dce_resume_work_fn);
 	if (ret) {
 		dce_os_err(d, "resume work init failed");
 		goto done;
