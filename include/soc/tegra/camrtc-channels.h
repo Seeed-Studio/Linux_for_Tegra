@@ -180,6 +180,12 @@ struct camrtc_tlv_ivc_setup {
 
 /** Channel setup failed: Invalid parameter. */
 #define	RTCPU_CH_ERR_INVALID_PARAM	MK_U32(132)
+
+/** Channel setup failed: RCE trace disabled */
+#define	RTCPU_CH_ERR_TRACE_DISABLED	MK_U32(133)
+
+/** Channel setup failed: Invalid buffer IOVA range*/
+#define	RTCPU_CH_ERR_INVALID_IOVA_RANGE	MK_U32(134)
 /* @} */
 
 /**
