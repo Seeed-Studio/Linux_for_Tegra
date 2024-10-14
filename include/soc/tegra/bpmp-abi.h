@@ -292,6 +292,30 @@ struct mrq_request {
 	 * | ---------------| ----------------------------------| ---------------------- |
 	 * | #MRQ_PCIE      | #CMD_PCIE_EP_CONTROLLER_INIT      | 5                      |
 	 * | #MRQ_PCIE      | #CMD_PCIE_EP_CONTROLLER_OFF       | 5                      |
+	 * | #MRQ_CR7	    | #CMD_CR7_ENTRY			| 12			 |
+	 * | #MRQ_CR7	    | #CMD_CR7_EXIT			| 12			 |
+	 * | #MRQ_SLC       | #CMD_SLC_QUERY_ABI                | 8                      |
+	 * | #MRQ_SLC       | #CMD_SLC_BYPASS_SET               | 8                      |
+	 * | #MRQ_SLC       | #CMD_SLC_BYPASS_GET               | 4                      |
+	 *
+	 * @cond (!bpmp_safe)
+	 * The following additional MRQs are supported on non-functional-safety
+	 *
+	 * | MRQ            | Sub-command                       | Minimum payload length |
+	 * | ---------------| ----------------------------------| ---------------------- |
+	 * | #MRQ_PCIE      | #CMD_PCIE_RP_CONTROLLER_OFF       | 5                      |
+	 * @endcond
+	 *
+	 * @endcond
+	 *
+	 * @cond (!bpmp_safe && bpmp_t264)
+	 *
+	 * The following additional MRQs are supported on non-functional-safety
+	 * builds for the T264 platform:
+	 *
+	 * | MRQ            | Sub-command                       | Minimum payload length |
+	 * | ---------------| ----------------------------------| ---------------------- |
+	 * | #MRQ_OC_STATUS | -                                 | 0                      |
 	 * @endcond
 	 *
 	 * @cond (!bpmp_safe)
@@ -439,6 +463,8 @@ struct mrq_response {
 #define MRQ_PWRMODEL		87U
 #define MRQ_PCIE		88U
 #define MRQ_PWR_CNTRL		89U
+#define MRQ_CR7			90U
+#define MRQ_SLC			91U
 
 /** @} */
 
@@ -447,7 +473,7 @@ struct mrq_response {
  * @brief Maximum MRQ code to be sent by CPU software to
  * BPMP. Subject to change in future
  */
-#define MAX_CPU_MRQ_ID		89U
+#define MAX_CPU_MRQ_ID		91U
 
 /**
  * @addtogroup MRQ_Payloads
@@ -484,6 +510,8 @@ struct mrq_response {
  *   @defgroup Pwrcntrl Power Controllers
  * @cond bpmp_t264
  * *  @defgroup PCIE PCIE
+ * *  @defgroup CR7 CR7
+ * *  @defgroup Slc Slc
  * @endcond
  * @} MRQ_Payloads
  */
@@ -1026,7 +1054,7 @@ enum mrq_reset_commands {
  * @brief Request with #MRQ_RESET
  *
  * Used by the sender of an #MRQ_RESET message to request BPMP to
- * assert or or deassert a given reset line.
+ * assert or deassert a given reset line.
  */
 struct mrq_reset_request {
 	/** @brief Reset action to perform, from @ref mrq_reset_commands */
@@ -1117,13 +1145,14 @@ struct mrq_reset_response {
 #define SERIALI2C_IGNORE_NAK    0x1000U
 /** @} seriali2c_flags */
 
-/** @cond DEPRECATED */
-/* Unused, deprecated flags */
+/** brief Unused flag. Retained for backwards compatibility. */
 #define SERIALI2C_STOP          0x8000U
+/** brief Unused flag. Retained for backwards compatibility. */
 #define SERIALI2C_REV_DIR_ADDR  0x2000U
+/** brief Unused flag. Retained for backwards compatibility. */
 #define SERIALI2C_NO_RD_ACK     0x0800U
+/** brief Unused flag. Retained for backwards compatibility. */
 #define SERIALI2C_RECV_LEN      0x0400U
-/** @endcond */
 
 /**
  * @brief Supported I2C sub-command identifiers
@@ -2245,8 +2274,8 @@ union mrq_thermal_bpmp_to_host_response {
  * @def MRQ_OC_STATUS
  * @brief Query overcurrent status
  *
- * * Platforms: T234 and T239 non-functional-safety
- * @cond (!bpmp_safe && (bpmp_t234 || bpmp_t239))
+ * * Platforms: T234, T239, T264 non-functional-safety
+ * @cond (!bpmp_safe && (bpmp_t234 || bpmp_t239 || bpmp_t264))
  * * Initiators: CCPLEX
  * * Targets: BPMP
  * * Request Payload: N/A
@@ -2579,7 +2608,10 @@ struct mrq_abi_ratchet_response {
  * @def MRQ_EMC_DVFS_LATENCY
  * @brief Query frequency dependent EMC DVFS latency
  *
- * * Platforms: T186, T194, T234
+ * On T264 and onwards, this MRQ service is available only when
+ * BPMP-FW has valid DRAM timing table passed by earlier boot stages.
+ *
+ * * Platforms: T186, T194, T234, T264
  * * Initiators: CCPLEX
  * * Targets: BPMP
  * * Request Payload: N/A
@@ -4934,6 +4966,136 @@ struct mrq_pwr_cntrl_response {
 /** @} Pwrcntrl */
 /** @endcond */
 
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_SLC
+ * @brief Configure SLC state.
+ *
+ * * Platforms: T264 onwards
+ * @cond bpmp_t264
+ * * Initiators: Any
+ * * Targets: BPMP
+ * * Request Payload: @ref mrq_slc_request
+ * * Response Payload: @ref mrq_slc_response
+ *
+ * @addtogroup Slc
+ * @{
+ */
+
+/**
+ * @brief Sub-command identifiers for #MRQ_SLC.
+ */
+enum mrq_slc_cmd {
+	/**
+	 * @brief Check whether the BPMP-FW supports the specified
+	 * #MRQ_SLC sub-command.
+	 *
+	 * mrq_response::err is 0 if the specified request is
+	 * supported and -#BPMP_ENODEV otherwise.
+	 */
+	CMD_SLC_QUERY_ABI = 0,
+
+	/**
+	 * @brief Switch SLC to/out of bypass mode
+	 *
+	 * mrq_response:err is defined as:
+	 *
+	 * | Value          | Description                                 |
+	 * |----------------|---------------------------------------------|
+	 * | 0              | Success                                     |
+	 * | -#BPMP_ENODEV  | #MRQ_SLC is not supported by BPMP-FW.       |
+	 * | -#BPMP_EINVAL  | Invalid request parameters.                 |
+	 * | -#BPMP_ENOTSUP | Bypass mode is not supported.               |
+	 */
+	CMD_SLC_BYPASS_SET = 1,
+
+	/**
+	 * @brief Get SLC bypass mode status
+	 *
+	 * mrq_response:err is defined as:
+	 *
+	 * | Value          | Description                                 |
+	 * |----------------|---------------------------------------------|
+	 * | 0              | Success                                     |
+	 * | -#BPMP_ENODEV  | #MRQ_SLC is not supported by BPMP-FW.       |
+	 */
+	CMD_SLC_BYPASS_GET = 2,
+};
+
+/**
+ * @brief Request data for #MRQ_SLC sub-command #CMD_SLC_QUERY_ABI
+ */
+struct cmd_slc_query_abi_request {
+	/** @brief Sub-command identifier from @ref mrq_slc_cmd */
+	uint32_t cmd_code;
+} BPMP_ABI_PACKED;
+
+/**
+ * @brief Request data for #MRQ_SLC sub-command #CMD_SLC_BYPASS_SET
+ *
+ * Switch SLC to / out of bypass mode provided such
+ * mode is supported by the SLC.
+ */
+struct cmd_slc_bypass_set_request {
+	/**
+	 * @brief Bypass setting.
+	 *
+	 * Valid values:
+	 *
+	 * * 1 to enter bypass mode,
+	 * * 0 to exit bypass mode.
+	 */
+	uint32_t bypass_setting;
+} BPMP_ABI_PACKED;
+
+/**
+ * @brief Response data for #MRQ_SLC sub-command #CMD_SLC_BYPASS_GET
+ *
+ * Get current bypass mode status if such mode is supported by the SLC.
+ * Otherwise, return "out of bypass" .
+ */
+struct cmd_slc_bypass_get_response {
+	/**
+	 * @brief Bypass mode status: 1 SLC is in bypass,
+	 * 0 SLC is out of bypass.
+	 */
+	uint32_t bypass_status;
+} BPMP_ABI_PACKED;
+
+/**
+ * @brief Request payload for the #MRQ_SLC -command
+ *
+ * | Sub-command               | Request payload                   |
+ * |---------------------------|-----------------------------------|
+ * | #CMD_SLC_QUERY_ABI        | #cmd_slc_query_abi_request        |
+ * | #CMD_SLC_BYPASS_SET       | #cmd_slc_bypass_set_request       |
+ * | #CMD_SLC_BYPASS_GET       | -       |
+ */
+struct mrq_slc_request {
+	uint32_t cmd;
+	union {
+		struct cmd_slc_query_abi_request slc_query_abi_req;
+		struct cmd_slc_bypass_set_request slc_bypass_set_req;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
+
+/**
+ * @brief Response payload for the #MRQ_SLC -command.
+ *
+ * | Sub-command               | Response payload                  |
+ * |---------------------------|-----------------------------------|
+ * | #CMD_SLC_QUERY_ABI        | -                                 |
+ * | #CMD_SLC_BYPASS_SET       | -                                 |
+ * | #CMD_SLC_BYPASS_GET       | #cmd_slc_bypass_get_response      |
+ */
+struct mrq_slc_response {
+	union {
+		struct cmd_slc_bypass_get_response slc_bypass_get_rsp;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
+
+/** @} Slc */
+/** @endcond */
 
 /**
  * @ingroup MRQ_Codes
@@ -5256,6 +5418,9 @@ enum mrq_pcie_cmd {
 	/** @brief Disable PCIE EP controller. */
 	CMD_PCIE_EP_CONTROLLER_OFF = 1,
 
+	/** @brief Disable PCIE RP controller. */
+	CMD_PCIE_RP_CONTROLLER_OFF = 100,
+
 	CMD_PCIE_MAX,
 };
 
@@ -5312,6 +5477,14 @@ struct cmd_pcie_ep_controller_off_request {
 } BPMP_ABI_PACKED;
 
 /**
+ * @brief Request payload for #MRQ_PCIE sub-command #CMD_PCIE_RP_CONTROLLER_OFF.
+ */
+struct cmd_pcie_rp_controller_off_request {
+	/** @brief RP controller number, T264 valid: 1-5 */
+	uint8_t rp_controller;
+} BPMP_ABI_PACKED;
+
+/**
  * @ingroup PCIE
  * @brief Request payload for the #MRQ_PCIE command.
  *
@@ -5323,6 +5496,16 @@ struct cmd_pcie_ep_controller_off_request {
  * |#CMD_PCIE_EP_CONTROLLER_INIT          |#cmd_pcie_ep_controller_init_request     |
  * |#CMD_PCIE_EP_CONTROLLER_OFF           |#cmd_pcie_ep_controller_off_request      |
  *
+ * @cond (!bpmp_safe)
+ *
+ * The following additional MRQs are supported on non-functional-safety
+ * builds:
+ * |sub-command                           |payload                                  |
+ * |--------------------------------------|-----------------------------------------|
+ * |#CMD_PCIE_RP_CONTROLLER_OFF           |#cmd_pcie_rp_controller_off_request      |
+ *
+ * @endcond
+ *
  */
 struct mrq_pcie_request {
 	/** @brief Sub-command ID from @ref mrq_pcie_cmd. */
@@ -5331,12 +5514,85 @@ struct mrq_pcie_request {
 	union {
 		struct cmd_pcie_ep_controller_init_request ep_ctrlr_init;
 		struct cmd_pcie_ep_controller_off_request ep_ctrlr_off;
+		struct cmd_pcie_rp_controller_off_request rp_ctrlr_off;
 	} BPMP_UNION_ANON;
 } BPMP_ABI_PACKED;
 
 /** @} PCIE */
 /** @endcond */
 
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_CR7
+ * @brief Perform a CR7 operation
+ *
+ * * Platforms: T264
+ * @cond bpmp_t264
+ * * Initiators: CPU_S
+ * * Targets: BPMP
+ * * Request Payload: @ref mrq_cr7_request
+ *
+ * @addtogroup CR7
+ * @{
+ */
+
+/**
+ * @brief Payload for #MRQ_CR7
+ * 2 fields for future parameters are provided. These must be 0 currently.
+ */
+struct cmd_cr7_request {
+	uint32_t fld0;
+	uint32_t fld1;
+} BPMP_ABI_PACKED;
+
+struct cmd_cr7_query_abi_request {
+        /** #MRQ_CR7 sub-command identifier from @ref mrq_cr7_cmd */
+        uint32_t type;
+} BPMP_ABI_PACKED;
+
+/**
+ * @brief Sub-command identifiers for #MRQ_CR7.
+ */
+enum mrq_cr7_cmd {
+	/**
+	 * @brief Check whether the BPMP driver supports the specified request
+	 * type
+	 *
+	 * mrq_response:: err is 0 if the specified request is supported and
+	 * -#BPMP_ENODEV otherwise
+         */
+        CMD_CR7_QUERY_ABI = 0,
+
+	/** @brief Enter CR7 state on the package BPMP-FW is running on. */
+	CMD_CR7_ENTRY = 1,
+	/** @brief Exit CR7 state on the package BPMP-FW is running on. */
+	CMD_CR7_EXIT = 2,
+
+	CMD_CR7_MAX,
+};
+
+/**
+ * @ingroup CR7
+ * @brief #MRQ_CR7 structure
+ *
+ * |Sub-command                 |Payload                    |
+ * |----------------------------|---------------------------|
+ * |#CMD_CR7_QUERY_ABI          | #cmd_cr7_query_abi_request|
+ * |#CMD_CR7_ENTRY              | #cmd_cr7_request	    |
+ * |#CMD_CR7_EXIT               | #cmd_cr7_request	    |
+
+ */
+struct mrq_cr7_request {
+	/** @brief Sub-command ID from @ref mrq_cr7_cmd. */
+	uint32_t cmd;
+	union {
+		struct cmd_cr7_query_abi_request query_abi;
+		struct cmd_cr7_request cr7_request;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
+
+/** @} CR7 */
+/** @endcond */
 /**
  * @addtogroup Error_Codes
  * Negative values for mrq_response::err generally indicate some
