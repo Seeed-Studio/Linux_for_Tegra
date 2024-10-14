@@ -1168,25 +1168,47 @@ out:
 }
 
 static inline
-int validate_adv_params(struct nvpva_dma_descriptor *head_desc, bool is_dst)
+int validate_adv_params(struct nvpva_dma_descriptor *head_desc, bool is_dst, bool const has_dim3)
 {
 	int err = 0;
 	if (is_dst) {
-		if (head_desc->srcAdv1 != 0
+		if (!has_dim3 && (head_desc->srcAdv1 != 0
 		|| head_desc->srcAdv2 != 0
 		|| head_desc->srcAdv3 != 0
 		|| (head_desc->srcRpt1 +
 		    head_desc->srcRpt2 +
-		    head_desc->srcRpt3) != 0) {
+		    head_desc->srcRpt3) != 0)) {
+			pr_err("Descriptor source tile looping not allowed");
+			err = -EINVAL;
+		}
+
+		if (head_desc->srcAdv1 < 0) {
+			pr_err("source advance amount on dim1 can not be negative");
+			err = -EINVAL;
+		}
+
+		if ((head_desc->srcAdv1 * (head_desc->srcRpt1 + 1)) != head_desc->srcAdv2) {
+			pr_err("Invalid source advance amount on dim1 or dim2");
 			err = -EINVAL;
 		}
 	} else {
-		if (head_desc->dstAdv1 != 0
+		if (!has_dim3 && (head_desc->dstAdv1 != 0
 		|| head_desc->dstAdv2 != 0
 		|| head_desc->dstAdv3 != 0
 		|| (head_desc->dstRpt1 +
 		    head_desc->dstRpt2 +
-		    head_desc->dstRpt3) != 0) {
+		    head_desc->dstRpt3) != 0)) {
+			pr_err("Descriptor source tile looping not allowed");
+			err = -EINVAL;
+		}
+
+		if (head_desc->dstAdv1 < 0) {
+			pr_err("destination advance amount on dim1 can not be negative");
+			err = -EINVAL;
+		}
+
+		if ((head_desc->dstAdv1 * (head_desc->dstRpt1 + 1)) != head_desc->dstAdv2) {
+			pr_err("Invalid destination advance amount on dim1 or dim2");
 			err = -EINVAL;
 		}
 	}
@@ -1194,7 +1216,8 @@ int validate_adv_params(struct nvpva_dma_descriptor *head_desc, bool is_dst)
 }
 
 static
-int validate_cb_tiles(struct pva_hwseq_priv_s *hwseq, uint64_t vmem_size, uint32_t cr_index)
+int validate_cb_tiles(struct pva_hwseq_priv_s *hwseq, uint64_t vmem_size,
+		      uint32_t cr_index, bool has_dim3)
 {
 	struct nvpva_dma_descriptor *head_desc = hwseq->cr_info[cr_index].head_desc;
 	struct nvpva_dma_descriptor *tail_desc = hwseq->cr_info[cr_index].tail_desc;
@@ -1239,8 +1262,13 @@ int validate_cb_tiles(struct pva_hwseq_priv_s *hwseq, uint64_t vmem_size, uint32
 	}
 
 	tile_size = (int64_t)(head_desc->dstLinePitch) * (ty - 1) + tx;
-	if ((tile_size << head_desc->bytePerPixel) > head_desc->dstCbSize)
-	{
+	tile_size = tile_size + (head_desc->srcRpt1 * head_desc->dstAdv1);
+	if ((head_desc->dstAdv2 > 0) && (tile_size > head_desc->dstAdv2)) {
+		pr_err("Tile voxel size exceeds destination advance amount on dim2");
+		return -EINVAL;
+	}
+
+	if ((tile_size << head_desc->bytePerPixel) > head_desc->dstCbSize) {
 		pr_err("VMEM address range validation failed (dst, cb on)");
 		return -EINVAL;
 	}
@@ -1251,20 +1279,20 @@ int validate_cb_tiles(struct pva_hwseq_priv_s *hwseq, uint64_t vmem_size, uint32
 
 static inline
 int check_vmem_setup(struct nvpva_dma_descriptor *head_desc,
-		     int32_t vmem_tile_count, bool is_dst)
+		     int32_t vmem_tile_count, bool is_dst, bool has_dim3)
 {
 	if (is_dst) {
-		if ((vmem_tile_count > 1) &&
+		if (!has_dim3 && ((vmem_tile_count > 1) &&
 			(head_desc->dstAdv1 != 0
 			|| head_desc->dstAdv2 != 0
-			|| head_desc->dstAdv3 != 0)) {
+			|| head_desc->dstAdv3 != 0))) {
 			return -EINVAL;
 		}
 	} else {
-		if (vmem_tile_count > 1 &&
+		if (!has_dim3 && (vmem_tile_count > 1 &&
 			(head_desc->srcAdv1 != 0
 			|| head_desc->srcAdv2 != 0
-			|| head_desc->srcAdv3 != 0)) {
+			|| head_desc->srcAdv3 != 0))) {
 			return -EINVAL;
 		}
 	}
@@ -1308,7 +1336,8 @@ int validate_xfer_mode(struct nvpva_dma_descriptor *dma_desc)
 }
 
 static
-int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, uint32_t cr_index)
+int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count,
+		      uint32_t cr_index, bool has_dim3)
 {
 	int err = 0;
 	uint64_t vmem_size = 0U;
@@ -1320,8 +1349,10 @@ int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, 
 
 	nvpva_dbg_fn(hwseq->task->pva, "");
 
-	*vmem_tile_count = (head_desc->dstRpt1 + 1) * (head_desc->dstRpt2 + 1)
-					* (head_desc->dstRpt3 + 1);
+	*vmem_tile_count = has_dim3 ? (head_desc->dstRpt3 + 1) :
+				((head_desc->dstRpt1 + 1) *
+				 (head_desc->dstRpt2 + 1) *
+				 (head_desc->dstRpt3 + 1));
 
 	err = validate_xfer_mode(head_desc);
 	if (err != 0) {
@@ -1329,9 +1360,8 @@ int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, 
 		return -EINVAL;
 	}
 
-	err = validate_adv_params(head_desc, true);
+	err = validate_adv_params(head_desc, true, has_dim3);
 	if (err != 0) {
-		pr_err("Descriptor source tile looping not allowed");
 		return -EINVAL;
 	}
 
@@ -1342,7 +1372,7 @@ int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, 
 	}
 
 	if (head_desc->dstCbEnable != 0U) {
-		err = validate_cb_tiles(hwseq, vmem_size, cr_index);
+		err = validate_cb_tiles(hwseq, vmem_size, cr_index, has_dim3);
 		if (err == 0)
 			return err;
 
@@ -1355,15 +1385,28 @@ int validate_dst_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, 
 		return -EINVAL;
 	}
 
-	err = check_vmem_setup(head_desc, *vmem_tile_count, true);
+	err = check_vmem_setup(head_desc, *vmem_tile_count, true, has_dim3);
 	if (err != 0) {
-		pr_err("Invalid VMEM destination setup");
+		pr_err("invalid VMEM destination setup in hwseq program");
+		return -EINVAL;
+	}
+
+	if (head_desc->srcAdv1 < 0) {
+		pr_err("src Adv1 cannot be negative");
 		return -EINVAL;
 	}
 
 	tx = get_max_uint(head_desc->tx, tail_desc->tx);
 	ty = get_max_uint(head_desc->ty, tail_desc->ty);
 	tile_size = (int64_t)(head_desc->dstLinePitch) * (ty - 1) + tx;
+	// In RasterDataflow case, the srcRpt1 * srcAdv1 will be zero
+	tile_size = tile_size + (head_desc->srcRpt1 * head_desc->dstAdv1);
+	if ((head_desc->dstAdv2 > 0) && (tile_size > head_desc->dstAdv2)) {
+		pr_err("Tile voxel size exceeds destination advance amount on dim2");
+		return -EINVAL;
+	}
+
+
 	if (((tile_size << head_desc->bytePerPixel) +
 		head_desc->dst_offset) > vmem_size) {
 		pr_err("VMEM address range validation failed (dst, cb off)");
@@ -1386,7 +1429,8 @@ int check_no_padding(struct pva_hwseq_frame_header_s *header)
 }
 
 static
-int validate_src_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, uint32_t cr_index)
+int validate_src_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count,
+		      uint32_t cr_index, bool has_dim3)
 {
 	struct nvpva_dma_descriptor *head_desc = hwseq->cr_info[cr_index].head_desc;
 	struct nvpva_dma_descriptor *tail_desc = hwseq->cr_info[cr_index].tail_desc;
@@ -1398,9 +1442,10 @@ int validate_src_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, 
 
 	nvpva_dbg_fn(hwseq->task->pva, "");
 
-	*vmem_tile_count = (head_desc->srcRpt1 + 1) *
-		(head_desc->srcRpt2 + 1) *
-		(head_desc->srcRpt3 + 1);
+	*vmem_tile_count = has_dim3 ? (head_desc->srcRpt3 + 1) :
+				((head_desc->srcRpt1 + 1) *
+				 (head_desc->srcRpt2 + 1) *
+				 (head_desc->srcRpt3 + 1));
 	err = validate_xfer_mode(head_desc);
 	if (err != 0) {
 		pr_err("Invalid dst transfer mode");
@@ -1408,7 +1453,7 @@ int validate_src_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, 
 	}
 
 	/* make sure last 3 loop dimensions are not used */
-	err = validate_adv_params(head_desc, false);
+	err = validate_adv_params(head_desc, false, has_dim3);
 	if (err != 0) {
 		pr_err("Descriptor destination tile looping not allowed");
 		return -EINVAL;
@@ -1431,23 +1476,30 @@ int validate_src_vmem(struct pva_hwseq_priv_s *hwseq, int32_t *vmem_tile_count, 
 	tile_size = ((int64_t)(head_desc->srcLinePitch) * (ty - 1) + tx);
 
 	if (head_desc->srcCbEnable) {
+		tile_size = tile_size + (head_desc->dstRpt1 * head_desc->srcAdv1);
+		if ((head_desc->srcAdv2 > 0) && (tile_size > head_desc->srcAdv2)) {
+			pr_err("Tile size exceeds src tile dim2 advance amount");
+			return -EINVAL;
+		}
+
 		if (head_desc->srcCbSize > vmem_size) {
 			pr_err("VMEM symbol size is smaller than the source circular buffer size");
 			return -EINVAL;
 		}
 
-		if (tile_size > head_desc->srcCbSize) {
+		if ((tile_size << head_desc->bytePerPixel) > head_desc->srcCbSize) {
 			pr_err("VMEM address range validation failed (src, cb on)");
 			return -EINVAL;
 		}
 	} else {
-		err = check_vmem_setup(head_desc, *vmem_tile_count, false);
+		err = check_vmem_setup(head_desc, *vmem_tile_count, false, has_dim3);
 		if (err != 0) {
 			pr_err("Invalid VMEM Source setup in hw sequencer");
 			return -EINVAL;
 		}
 
-		if ((tile_size + head_desc->src_offset) > vmem_size) {
+		tile_size = tile_size + (head_desc->dstRpt1 * head_desc->srcAdv1);
+		if (((tile_size << head_desc->bytePerPixel) + head_desc->src_offset) > vmem_size) {
 			pr_err("VMEM address range validation failed (src, cb off)");
 			return -EINVAL;
 		}
@@ -1498,6 +1550,7 @@ int compute_frame_info(struct pva_hwseq_frame_info_s *fi, struct pva_hwseq_grid_
 	/* update Y span (full) */
 	dim_offset  = gi->grid_step_y * (gi->grid_size_y - 1);
 	fi->start_y = get_min_int(dim_offset, 0);
+	fi->start_z = 0;
 	if (gi->grid_step_y < 0) {
 		/*
 		 * For reversed scans, when the padding is
@@ -1508,6 +1561,7 @@ int compute_frame_info(struct pva_hwseq_frame_info_s *fi, struct pva_hwseq_grid_
 
 	fi->end_y   = get_max_int(dim_offset, 0);
 	fi->end_y += (gi->tile_y[1] - gi->pad_y[0] - gi->pad_y[1]);
+	fi->end_z = gi->tile_z * gi->grid_size_z;
 
 	if (gi->is_split_padding) {
 		/* disallow overlapping tiles */
@@ -1701,6 +1755,7 @@ int validate_dma_boundaries(struct pva_hwseq_priv_s *hwseq)
 	int64_t frame_buffer_start = 0U;
 	int64_t frame_buffer_end = 0U;
 	int64_t frame_buffer_size = 0U;
+	int64_t frame_plane_size = 0U;
 	struct pva_hwseq_grid_info_s grid_info = {0};
 	struct pva_hwseq_frame_info_s frame_info = {0};
 	struct nvpva_dma_descriptor *head_desc;
@@ -1709,6 +1764,7 @@ int validate_dma_boundaries(struct pva_hwseq_priv_s *hwseq)
 	int32_t vmem_tiles_per_frame = 0;
 	uint32_t cr_count = 0;
 	int i = 0;
+	bool has_dim3 = false;
 
 	nvpva_dbg_fn(hwseq->task->pva, "");
 
@@ -1732,10 +1788,21 @@ int validate_dma_boundaries(struct pva_hwseq_priv_s *hwseq)
 		sequencing_to_vmem = (hwseq->cr_info[i].head_desc->dstTransferMode
 						 == (uint8_t)DMA_DESC_DST_XFER_VMEM);
 
+		// Check if this is a 3D tensor transfer
+		has_dim3 = ((head_desc->srcRpt1 == head_desc->dstRpt1)
+					&& (head_desc->srcRpt2 == head_desc->dstRpt2));
+		// The rpt3 needs to set 1 for Tensor dataflow.
+		// To check
+		has_dim3 = has_dim3 && ((sequencing_to_vmem) ?
+				((head_desc->srcAdv1 > 0) && (head_desc->srcAdv2 > 0)
+				 && (head_desc->dstAdv1 > 0)) :
+				((head_desc->dstAdv1 > 0) && (head_desc->dstAdv2 > 0)
+				 && (head_desc->srcAdv1 > 0)));
+
 		if (sequencing_to_vmem)
-			err = validate_dst_vmem(hwseq, &vmem_tile_count, i);
+			err = validate_dst_vmem(hwseq, &vmem_tile_count, i, has_dim3);
 		else
-			err = validate_src_vmem(hwseq, &vmem_tile_count, i);
+			err = validate_src_vmem(hwseq, &vmem_tile_count, i, has_dim3);
 
 		if (err != 0)
 			return -EINVAL;
@@ -1758,12 +1825,14 @@ int validate_dma_boundaries(struct pva_hwseq_priv_s *hwseq)
 			grid_info.tile_x[1]       = hwseq->cr_info[i].tail_desc->tx;
 			grid_info.tile_y[0]       = hwseq->cr_info[i].head_desc->ty;
 			grid_info.tile_y[1]       = hwseq->cr_info[i].tail_desc->ty;
+			grid_info.tile_z	  = hwseq->cr_info[i].head_desc->srcRpt1 + 1;
 			grid_info.pad_x[0]        = hwseq->hdr->pad_l;
 			grid_info.pad_x[1]        = hwseq->hdr->pad_r;
 			grid_info.pad_y[0]        = hwseq->hdr->pad_t;
 			grid_info.pad_y[1]        = hwseq->hdr->pad_b;
 			grid_info.grid_size_x      = hwseq->cr_info[i].tiles_per_packet;
 			grid_info.grid_size_y      = hwseq->cr_info[i].colrow->crr + 1;
+			grid_info.grid_size_z      = hwseq->cr_info[i].head_desc->srcRpt2 + 1;
 			grid_info.grid_step_x      = hwseq->hdr->to;
 			grid_info.grid_step_y      = hwseq->cr_info[i].colrow->cro;
 			grid_info.head_tile_count  = hwseq->cr_info[i].dma_descs[0].dr1 + 1;
@@ -1787,12 +1856,14 @@ int validate_dma_boundaries(struct pva_hwseq_priv_s *hwseq)
 			grid_info.tile_x[1]          = hwseq->cr_info[i].tail_desc->ty;
 			grid_info.tile_y[0]          = hwseq->cr_info[i].head_desc->tx;
 			grid_info.tile_y[1]          = hwseq->cr_info[i].tail_desc->tx;
+			grid_info.tile_z	     = hwseq->cr_info[i].head_desc->srcRpt1 + 1;
 			grid_info.pad_x[0]           = hwseq->hdr->pad_t;
 			grid_info.pad_x[1]           = hwseq->hdr->pad_b;
 			grid_info.pad_y[0]           = hwseq->hdr->pad_l;
 			grid_info.pad_y[1]           = hwseq->hdr->pad_r;
 			grid_info.grid_size_x      = hwseq->cr_info[i].tiles_per_packet,
 			grid_info.grid_size_y      = hwseq->cr_info[i].colrow->crr + 1;
+			grid_info.grid_size_z	   = hwseq->cr_info[i].head_desc->srcRpt2 + 1;
 			grid_info.grid_step_x      = hwseq->hdr->to;
 			grid_info.grid_step_y      = hwseq->cr_info[i].colrow->cro;
 			grid_info.head_tile_count  = hwseq->cr_info[i].dma_descs[0].dr1 + 1;
@@ -1826,8 +1897,11 @@ int validate_dma_boundaries(struct pva_hwseq_priv_s *hwseq)
 			frame_buffer_size = get_buffer_size_hwseq(hwseq, !sequencing_to_vmem, 0);
 	}
 
-	frame_buffer_start = frame_info.start_y * frame_line_pitch + frame_info.start_x;
-	frame_buffer_end = (frame_info.end_y - 1) * frame_line_pitch + frame_info.end_x;
+		frame_plane_size = sequencing_to_vmem ? head_desc->srcAdv1 : head_desc->dstAdv1;
+		frame_buffer_start = frame_info.start_y * frame_line_pitch + frame_info.start_x;
+		frame_buffer_end = ((frame_info.end_z - 1) * frame_plane_size) +
+				 (frame_info.end_y - 1) * frame_line_pitch + frame_info.end_x;
+
 
 	nvpva_dbg_fn(hwseq->task->pva, "flp=%d, st = %lld, ed=%lld, fbo=%lld, bpp = %d, fbs=%lld",
 		frame_line_pitch, frame_buffer_start, frame_buffer_end, frame_buffer_offset,

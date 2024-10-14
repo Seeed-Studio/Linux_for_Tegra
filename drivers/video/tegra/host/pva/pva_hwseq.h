@@ -75,12 +75,15 @@ static inline bool is_desc_mode(u16 id)
 struct pva_hwseq_grid_info_s {
 	int32_t	tile_x[2];
 	int32_t	tile_y[2];
+	int32_t tile_z;
 	int32_t	pad_x[2];
 	int32_t	pad_y[2];
 	int32_t	grid_size_x;
 	int32_t	grid_size_y;
+	int32_t grid_size_z;
 	int32_t	grid_step_x;
 	int32_t	grid_step_y;
+	int32_t	grid_step_z;
 	int32_t	head_tile_count;
 	bool	is_split_padding;
 };
@@ -88,8 +91,10 @@ struct pva_hwseq_grid_info_s {
 struct pva_hwseq_frame_info_s {
 	int32_t	start_x;
 	int32_t	start_y;
+	int32_t start_z;
 	int32_t	end_x;
 	int32_t	end_y;
+	int32_t end_z;
 };
 
 struct pva_hwseq_buffer_s {
