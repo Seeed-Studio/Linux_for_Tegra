@@ -6,10 +6,9 @@
 #include <dce.h>
 #include <dce-ipc.h>
 #include <dce-os-utils.h>
+#include <dce-os-trace.h>
 #include <interface/dce-interface.h>
 #include <interface/dce-ipc-header.h>
-
-#include <os-dce-events.h>
 
 static struct dce_ipc_channel ivc_channels[DCE_IPC_CH_KMD_TYPE_MAX] = {
 	[DCE_IPC_CH_KMD_TYPE_ADMIN] = {
@@ -265,7 +264,7 @@ int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type)
 	q_info->rx_iova = r->iova + r->s_offset;
 	q_info->tx_iova = r->iova + r->s_offset + q_sz;
 
-	trace_ivc_channel_init_complete(d, ch);
+	dce_os_trace_ivc_channel_init_complete(d, ch);
 
 	d->d_ipc.ch[ch_type] = ch;
 	r->s_offset += (2 * q_sz);
@@ -395,7 +394,7 @@ void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type)
 
 	dce_os_ivc_reset(&ch->d_ivc);
 
-	trace_ivc_channel_reset_triggered(d, ch);
+	dce_os_trace_ivc_channel_reset_triggered(d, ch);
 
 	ch->flags &= ~DCE_IPC_CHANNEL_SYNCED;
 
@@ -413,7 +412,7 @@ void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type)
 
 	ch->flags |= DCE_IPC_CHANNEL_SYNCED;
 
-	trace_ivc_channel_reset_complete(d, ch);
+	dce_os_trace_ivc_channel_reset_complete(d, ch);
 
 	dce_os_mutex_unlock(&ch->lock);
 }
@@ -498,7 +497,7 @@ int dce_ipc_send_message(struct tegra_dce *d, u32 ch_type,
 
 	dce_os_mutex_lock(&ch->lock);
 
-	trace_ivc_send_req_received(d, ch);
+	dce_os_trace_ivc_send_req_received(d, ch);
 
 	ret = _dce_ipc_get_next_write_buff(ch);
 	if (ret) {
@@ -514,7 +513,7 @@ int dce_ipc_send_message(struct tegra_dce *d, u32 ch_type,
 
 	ch->signal.notify(d, &ch->signal.to_d);
 
-	trace_ivc_send_complete(d, ch);
+	dce_os_trace_ivc_send_complete(d, ch);
 
 out:
 	dce_os_mutex_unlock(&ch->lock);
@@ -600,7 +599,7 @@ int dce_ipc_read_message(struct tegra_dce *d, u32 ch_type,
 
 	dce_os_mutex_lock(&ch->lock);
 
-	trace_ivc_receive_req_received(d, ch);
+	dce_os_trace_ivc_receive_req_received(d, ch);
 
 	ret = _dce_ipc_get_next_read_buff(ch);
 	if (ret) {
@@ -614,7 +613,7 @@ int dce_ipc_read_message(struct tegra_dce *d, u32 ch_type,
 		goto out;
 	}
 
-	trace_ivc_receive_req_complete(d, ch);
+	dce_os_trace_ivc_receive_req_complete(d, ch);
 
 out:
 	dce_os_mutex_unlock(&ch->lock);
@@ -651,7 +650,7 @@ int dce_ipc_send_message_sync(struct tegra_dce *d, u32 ch_type,
 		goto done;
 	}
 
-	trace_ivc_wait_complete(d, ch);
+	dce_os_trace_ivc_wait_complete(d, ch);
 
 	ret = dce_ipc_read_message(d, ch_type, msg->rx.data, msg->rx.size);
 	if (ret) {
