@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2012-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 /*
@@ -12,6 +12,8 @@
  * indicates if the device frequency should be altered.
  *
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/clk/tegra.h>
@@ -113,15 +115,21 @@ static void get_freq_range(struct devfreq *devfreq,
 				unsigned long *min_freq,
 				unsigned long *max_freq)
 {
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
+	unsigned long *freq_table = devfreq->freq_table;
+	unsigned int max_state = devfreq->max_state;
+#else
 	unsigned long *freq_table = devfreq->profile->freq_table;
+	unsigned int max_state = devfreq->profile->max_state;
+#endif
 
 	lockdep_assert_held(&devfreq->lock);
 
-	if (freq_table[0] < freq_table[devfreq->profile->max_state - 1]) {
+	if (freq_table[0] < freq_table[max_state - 1]) {
 		*min_freq = freq_table[0];
-		*max_freq = freq_table[devfreq->profile->max_state - 1];
+		*max_freq = freq_table[max_state - 1];
 	} else {
-		*min_freq = freq_table[devfreq->profile->max_state - 1];
+		*min_freq = freq_table[max_state - 1];
 		*max_freq = freq_table[0];
 	}
 
@@ -767,8 +775,13 @@ static int nvhost_pod_init(struct devfreq *df)
 	if (sysfs_create_file(&df->dev.parent->kobj, &attr->attr))
 		goto err_create_user_sysfs_entry;
 
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
+	podgov->freq_count = df->max_state;
+	podgov->freqlist = df->freq_table;
+#else
 	podgov->freq_count = df->profile->max_state;
 	podgov->freqlist = df->profile->freq_table;
+#endif
 	if (!podgov->freq_count || !podgov->freqlist)
 		goto err_get_freqs;
 
