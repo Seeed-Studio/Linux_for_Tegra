@@ -1079,735 +1079,286 @@ exit:
 	return err;
 }
 
-static int tegra_hv_vse_safety_send_sha_data(struct tegra_virtual_se_dev *se_dev,
-				struct ahash_request *req,
-				struct tegra_virtual_se_ivc_msg_t *ivc_req_msg,
-				u32 count, bool islast)
-{
-	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
-	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr = NULL;
-	struct tegra_virtual_se_sha_context *sha_ctx;
-	struct tegra_hv_ivc_cookie *pivck;
-	struct tegra_vse_priv_data *priv = NULL;
-	struct tegra_virtual_se_req_context *req_ctx;
-	struct tegra_vse_tag *priv_data_ptr;
-	union tegra_virtual_se_sha_args *psha = NULL;
-	int err = 0;
-	u64 total_count = 0, msg_len = 0;
-
-	if (!req) {
-		pr_err("%s: SHA request not valid\n", __func__);
-		return -EINVAL;
-	}
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	pivck = g_crypto_to_ivc_map[sha_ctx->node_id].ivck;
-
-	if (!ivc_req_msg) {
-		dev_err(se_dev->dev,
-			"%s Invalid ivc_req_msg\n", __func__);
-		return -EINVAL;
-	}
-
-	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
-
-	req_ctx = ahash_request_ctx(req);
-	total_count = req_ctx->total_count;
-
-	ivc_tx = &ivc_req_msg->tx[0];
-	ivc_hdr = &ivc_req_msg->ivc_hdr;
-	ivc_hdr->engine = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_SHA_HASH;
-
-	psha = &(ivc_tx->sha);
-	psha->op_hash.mode = req_ctx->mode;
-	psha->op_hash.msg_total_length[0] = count;
-	psha->op_hash.msg_total_length[1] = 0;
-	psha->op_hash.msg_total_length[2] = 0;
-	psha->op_hash.msg_total_length[3] = 0;
-	psha->op_hash.msg_left_length[0] = count;
-	psha->op_hash.msg_left_length[1] = 0;
-	psha->op_hash.msg_left_length[2] = 0;
-	psha->op_hash.msg_left_length[3] = 0;
-	psha->op_hash.hash_length = sha_ctx->digest_size;
-	if (islast) {
-		psha->op_hash.msg_total_length[0] = total_count & 0xFFFFFFFF;
-		psha->op_hash.msg_total_length[1] = total_count >> 32;
-	} else {
-		msg_len = count + 8;
-		psha->op_hash.msg_left_length[0] = msg_len & 0xFFFFFFFF;
-		psha->op_hash.msg_left_length[1] = msg_len >> 32;
-
-		if (req_ctx->is_first) {
-			psha->op_hash.msg_total_length[0] = msg_len & 0xFFFFFFFF;
-			psha->op_hash.msg_total_length[1] = msg_len >> 32;
-			req_ctx->is_first = false;
-		} else {
-			msg_len += 8;
-			psha->op_hash.msg_total_length[0] = msg_len & 0xFFFFFFFF;
-			psha->op_hash.msg_total_length[1] = msg_len >> 32;
-		}
-	}
-
-	ivc_hdr->header_magic[0] = 'N';
-	ivc_hdr->header_magic[1] = 'V';
-	ivc_hdr->header_magic[2] = 'D';
-	ivc_hdr->header_magic[3] = 'A';
-	ivc_hdr->num_reqs = 1;
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
-	priv->cmd = VIRTUAL_SE_PROCESS;
-	priv->se_dev = se_dev;
-
-	g_crypto_to_ivc_map[sha_ctx->node_id].vse_thread_start = true;
-	init_completion(&priv->alg_complete);
-
-	err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, priv, ivc_req_msg,
-			sizeof(struct tegra_virtual_se_ivc_msg_t), sha_ctx->node_id);
-	if (err) {
-		dev_err(se_dev->dev, "failed to send data over ivc err %d\n", err);
-		goto exit;
-	}
-
-exit:
-	devm_kfree(se_dev->dev, priv);
-
-	return err;
-}
-
-static int tegra_hv_vse_safety_sha_send_one(struct ahash_request *req,
-				u32 nbytes, bool islast)
-{
-	struct tegra_virtual_se_dev *se_dev;
-	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
-	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
-	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	struct tegra_virtual_se_sha_context *sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	uint8_t *residual_data_buf = sha_ctx->residual_plaintext->buf_ptr;
-	int err = 0;
-	uint32_t engine_id;
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	se_dev = g_virtual_se_dev[engine_id];
-	ivc_req_msg = devm_kzalloc(se_dev->dev, sizeof(*ivc_req_msg),
-			GFP_KERNEL);
-	if (!ivc_req_msg)
-		return -ENOMEM;
-
-	if (islast == true &&
-			(req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128 ||
-			req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE256)) {
-		residual_data_buf[nbytes] = 0xff;
-		nbytes++;
-		req_ctx->total_count++;
-	}
-	ivc_tx = &ivc_req_msg->tx[0];
-
-	ivc_tx->sha.op_hash.src_addr = sha_ctx->residual_plaintext->buf_iova;
-	ivc_tx->sha.op_hash.src_buf_size = nbytes;
-
-	ivc_tx->sha.op_hash.dst = (u64)sha_ctx->hash_result->buf_iova;
-	memcpy(ivc_tx->sha.op_hash.hash, sha_ctx->hash_result->buf_ptr,
-		req_ctx->intermediate_digest_size);
-	err = tegra_hv_vse_safety_send_sha_data(se_dev, req, ivc_req_msg,
-				nbytes, islast);
-	if (err) {
-		dev_err(se_dev->dev, "%s error %d\n", __func__, err);
-		goto exit;
-	}
-exit:
-	devm_kfree(se_dev->dev, ivc_req_msg);
-	return err;
-}
-
-static int tegra_hv_vse_safety_sha_fast_path(struct ahash_request *req,
-					bool is_last, bool process_cur_req)
-{
-	struct tegra_virtual_se_dev *se_dev;
-	u32 bytes_process_in_req = 0, num_blks;
-	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
-	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
-	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	struct tegra_virtual_se_sha_context *sha_ctx;
-	int err = 0;
-	u32 nbytes_in_req = req->nbytes;
-	uint32_t engine_id;
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	se_dev = g_virtual_se_dev[engine_id];
-	/* process_cur_req  is_last :
-	 *     false		 false  : update()				   -> hash
-	 *     true		  true   : finup(), digest()		  -> hash
-	 *				   true   : finup(), digest(), final() -> result
-	 */
-	ivc_req_msg = devm_kzalloc(se_dev->dev,
-		sizeof(*ivc_req_msg), GFP_KERNEL);
-	if (!ivc_req_msg)
-		return -ENOMEM;
-
-	if ((process_cur_req == false && is_last == false) ||
-		(process_cur_req == true && is_last == true)) {
-		/* When calling update(), if req->nbytes is aligned with
-		 * req_ctx->blk_size, reduce req->nbytes with req_ctx->blk_size
-		 * to avoid hashing zero length input at the end.
-		 */
-		if (req_ctx->residual_bytes == req_ctx->blk_size) {
-			err = tegra_hv_vse_safety_sha_send_one(req,
-					req_ctx->residual_bytes, false);
-			if (err) {
-				dev_err(se_dev->dev,
-					"%s: failed to send residual data %u\n",
-					__func__, req_ctx->residual_bytes);
-				goto free;
-			}
-			req_ctx->residual_bytes = 0;
-		}
-
-		num_blks = nbytes_in_req / req_ctx->blk_size;
-		req_ctx->residual_bytes =
-			nbytes_in_req - (num_blks * req_ctx->blk_size);
-
-		if (num_blks > 0 && req_ctx->residual_bytes == 0) {
-			/* blk_size aligned. reduce size with one blk and
-			 * handle it in the next call.
-			 */
-			req_ctx->residual_bytes = req_ctx->blk_size;
-			req_ctx->total_count += req_ctx->residual_bytes;
-			num_blks--;
-			sg_pcopy_to_buffer(req->src, (u32)sg_nents(req->src),
-				sha_ctx->residual_plaintext->buf_ptr, req_ctx->residual_bytes,
-				num_blks * req_ctx->blk_size);
-		} else {
-			/* not aligned at all */
-			req_ctx->total_count += req_ctx->residual_bytes;
-			sg_pcopy_to_buffer(req->src, (u32)sg_nents(req->src),
-				sha_ctx->residual_plaintext->buf_ptr, req_ctx->residual_bytes,
-				num_blks * req_ctx->blk_size);
-		}
-		nbytes_in_req -= req_ctx->residual_bytes;
-
-		dev_dbg(se_dev->dev, "%s: req_ctx->residual_bytes %u\n",
-			__func__, req_ctx->residual_bytes);
-
-		if (num_blks > 0) {
-			ivc_tx = &ivc_req_msg->tx[0];
-
-			bytes_process_in_req = num_blks * req_ctx->blk_size;
-			dev_dbg(se_dev->dev, "%s: bytes_process_in_req %u\n",
-				__func__, bytes_process_in_req);
-
-			sg_copy_to_buffer(req->src, sg_nents(req->src), sha_ctx->plaintext->buf_ptr,
-				bytes_process_in_req);
-			ivc_tx->sha.op_hash.src_addr = sha_ctx->plaintext->buf_iova;
-			ivc_tx->sha.op_hash.src_buf_size = bytes_process_in_req;
-			ivc_tx->sha.op_hash.dst = (u64)sha_ctx->hash_result->buf_iova;
-			memcpy(ivc_tx->sha.op_hash.hash, sha_ctx->hash_result->buf_ptr,
-				req_ctx->intermediate_digest_size);
-
-			req_ctx->total_count += bytes_process_in_req;
-
-			err = tegra_hv_vse_safety_send_sha_data(se_dev, req,
-				ivc_req_msg, bytes_process_in_req, false);
-			if (err) {
-				dev_err(se_dev->dev, "%s error %d\n",
-					__func__, err);
-				goto free;
-			}
-		}
-
-		if (req_ctx->residual_bytes > 0 &&
-			req_ctx->residual_bytes < req_ctx->blk_size) {
-			/* At this point, the buffer is not aligned with
-			 * blk_size. Thus, buffer alignment need to be done via
-			 * slow path.
-			 */
-			req_ctx->force_align = true;
-		}
-	}
-
-	if (is_last) {
-		/* handle the last data in finup() , digest() */
-		if (req_ctx->residual_bytes > 0) {
-			err = tegra_hv_vse_safety_sha_send_one(req,
-					req_ctx->residual_bytes, true);
-			if (err) {
-				dev_err(se_dev->dev,
-					"%s: failed to send last data %u\n",
-					__func__, req_ctx->residual_bytes);
-				goto free;
-			}
-			req_ctx->residual_bytes = 0;
-		}
-
-		if (req->result) {
-			memcpy(req->result, sha_ctx->hash_result->buf_ptr, req_ctx->digest_size);
-		} else {
-			dev_err(se_dev->dev, "Invalid clinet result buffer\n");
-		}
-	}
-
-free:
-	devm_kfree(se_dev->dev, ivc_req_msg);
-
-	return err;
-}
-
-static int tegra_hv_vse_safety_sha_slow_path(struct ahash_request *req,
-					bool is_last, bool process_cur_req)
-{
-	struct tegra_virtual_se_dev *se_dev;
-	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	struct tegra_virtual_se_sha_context *sha_ctx;
-	u32 nblk_bytes = 0, num_blks, buflen = SZ_4M;
-	u32 length = 0, skip = 0, offset = 0;
-	u64 total_bytes = 0, left_bytes = 0;
-	int err = 0;
-	bool data_processed;
-	uint32_t engine_id;
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	se_dev = g_virtual_se_dev[engine_id];
-
-	if ((process_cur_req == false && is_last == false) ||
-		(process_cur_req == true && is_last == true)) {
-
-		total_bytes = req_ctx->residual_bytes + req->nbytes;
-		num_blks = total_bytes / req_ctx->blk_size;
-		nblk_bytes = num_blks * req_ctx->blk_size;
-		offset = req_ctx->residual_bytes;
-
-		/* if blk_size aligned, reduce 1 blk_size for the last hash */
-		if ((total_bytes - nblk_bytes) == 0)
-			total_bytes -= req_ctx->blk_size;
-
-		left_bytes = req->nbytes;
-
-		data_processed = false;
-		while (total_bytes >= req_ctx->blk_size) {
-			/* Copy to linear buffer */
-			num_blks = total_bytes / req_ctx->blk_size;
-			nblk_bytes = num_blks * req_ctx->blk_size;
-			length = min(buflen, nblk_bytes) - offset;
-
-			sg_pcopy_to_buffer(req->src, (u32)sg_nents(req->src),
-				sha_ctx->residual_plaintext->buf_ptr + offset, length, skip);
-			skip += length;
-			req_ctx->total_count += length;
-
-			/* Hash */
-			err = tegra_hv_vse_safety_sha_send_one(req,
-						length + offset, false);
-			if (err) {
-				dev_err(se_dev->dev,
-					"%s: failed to send one %u\n",
-					__func__, length + offset);
-				return err;
-			}
-			total_bytes -= (length + offset);
-			left_bytes -= length;
-			offset = 0;
-			data_processed = true;
-		}
-
-		if (data_processed == true) {
-			/* Processed in while() loop */
-			sg_pcopy_to_buffer(req->src, (u32)sg_nents(req->src),
-				sha_ctx->residual_plaintext->buf_ptr, left_bytes, skip);
-			req_ctx->total_count += left_bytes;
-			req_ctx->residual_bytes = left_bytes;
-		} else {
-			/* Accumulate the request */
-			sg_pcopy_to_buffer(req->src, (u32)sg_nents(req->src),
-				sha_ctx->residual_plaintext->buf_ptr + req_ctx->residual_bytes,
-				req->nbytes, skip);
-			req_ctx->total_count += req->nbytes;
-			req_ctx->residual_bytes += req->nbytes;
-		}
-
-		if (req_ctx->force_align == true &&
-			req_ctx->residual_bytes == req_ctx->blk_size) {
-			/* At this point, the buffer is aligned with blk_size.
-			 * Thus, the next call can use fast path.
-			 */
-			req_ctx->force_align = false;
-		}
-	}
-
-	if (is_last) {
-		/* handle the last data in finup() , digest() */
-		if (req_ctx->residual_bytes > 0) {
-			err = tegra_hv_vse_safety_sha_send_one(req,
-					req_ctx->residual_bytes, true);
-			if (err) {
-				dev_err(se_dev->dev,
-					"%s: failed to send last data%u\n",
-					__func__, req_ctx->residual_bytes);
-				return err;
-			}
-			req_ctx->residual_bytes = 0;
-		}
-
-		if (req->result) {
-			memcpy(req->result, sha_ctx->hash_result->buf_ptr,
-				req_ctx->digest_size);
-		} else {
-			dev_err(se_dev->dev, "Invalid clinet result buffer\n");
-		}
-	}
-
-	return err;
-}
-
-static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last,
-			   bool process_cur_req)
-{
-	struct tegra_virtual_se_dev *se_dev;
-	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	struct tegra_virtual_se_sha_context *sha_ctx;
-	u32 mode;
-	u32 num_blks;
-	int ret;
-	uint32_t engine_id;
-
-	struct sha_zero_length_vector zero_vec[] = {
-		{
-			.size = SM3_DIGEST_SIZE,
-			.digest = "\x1a\xb2\x1d\x83\x55\xcf\xa1\x7f"
-					"\x8e\x61\x19\x48\x31\xe8\x1a\x8f"
-					"\x22\xbe\xc8\xc7\x28\xfe\xfb\x74"
-					"\x7e\xd0\x35\xeb\x50\x82\xaa\x2b",
-		}, {
-			.size = SHA256_DIGEST_SIZE,
-			.digest = "\xe3\xb0\xc4\x42\x98\xfc\x1c\x14"
-				  "\x9a\xfb\xf4\xc8\x99\x6f\xb9\x24"
-				  "\x27\xae\x41\xe4\x64\x9b\x93\x4c"
-				  "\xa4\x95\x99\x1b\x78\x52\xb8\x55",
-		}, {
-			.size = SHA384_DIGEST_SIZE,
-			.digest = "\x38\xb0\x60\xa7\x51\xac\x96\x38"
-				  "\x4c\xd9\x32\x7e\xb1\xb1\xe3\x6a"
-				  "\x21\xfd\xb7\x11\x14\xbe\x07\x43"
-				  "\x4c\x0c\xc7\xbf\x63\xf6\xe1\xda"
-				  "\x27\x4e\xde\xbf\xe7\x6f\x65\xfb"
-				  "\xd5\x1a\xd2\xf1\x48\x98\xb9\x5b",
-		}, {
-			.size = SHA512_DIGEST_SIZE,
-			.digest = "\xcf\x83\xe1\x35\x7e\xef\xb8\xbd"
-				  "\xf1\x54\x28\x50\xd6\x6d\x80\x07"
-				  "\xd6\x20\xe4\x05\x0b\x57\x15\xdc"
-				  "\x83\xf4\xa9\x21\xd3\x6c\xe9\xce"
-				  "\x47\xd0\xd1\x3c\x5d\x85\xf2\xb0"
-				  "\xff\x83\x18\xd2\x87\x7e\xec\x2f"
-				  "\x63\xb9\x31\xbd\x47\x41\x7a\x81"
-				  "\xa5\x38\x32\x7a\xf9\x27\xda\x3e",
-		}, {
-			.size = SHA3_256_DIGEST_SIZE,
-			.digest = "\xa7\xff\xc6\xf8\xbf\x1e\xd7\x66"
-				  "\x51\xc1\x47\x56\xa0\x61\xd6\x62"
-				  "\xf5\x80\xff\x4d\xe4\x3b\x49\xfa"
-				  "\x82\xd8\x0a\x4b\x80\xf8\x43\x4a",
-		}, {
-			.size = SHA3_384_DIGEST_SIZE,
-			.digest = "\x0c\x63\xa7\x5b\x84\x5e\x4f\x7d"
-				  "\x01\x10\x7d\x85\x2e\x4c\x24\x85"
-				  "\xc5\x1a\x50\xaa\xaa\x94\xfc\x61"
-				  "\x99\x5e\x71\xbb\xee\x98\x3a\x2a"
-				  "\xc3\x71\x38\x31\x26\x4a\xdb\x47"
-				  "\xfb\x6b\xd1\xe0\x58\xd5\xf0\x04",
-		}, {
-			.size = SHA3_512_DIGEST_SIZE,
-			.digest = "\xa6\x9f\x73\xcc\xa2\x3a\x9a\xc5"
-				   "\xc8\xb5\x67\xdc\x18\x5a\x75\x6e"
-				   "\x97\xc9\x82\x16\x4f\xe2\x58\x59"
-				  "\xe0\xd1\xdc\xc1\x47\x5c\x80\xa6"
-				  "\x15\xb2\x12\x3a\xf1\xf5\xf9\x4c"
-				  "\x11\xe3\xe9\x40\x2c\x3a\xc5\x58"
-				  "\xf5\x00\x19\x9d\x95\xb6\xd3\xe3"
-				  "\x01\x75\x85\x86\x28\x1d\xcd\x26",
-		}
-	};
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	se_dev = g_virtual_se_dev[engine_id];
-
-	if (req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128 ||
-			req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE256) {
-		if (req_ctx->digest_size == 0) {
-			dev_info(se_dev->dev, "digest size is 0\n");
-			return 0;
-		}
-	}
-
-	if (req->nbytes == 0) {
-		if (req_ctx->total_count > 0) {
-			if (is_last == false) {
-				dev_info(se_dev->dev, "empty packet\n");
-				return 0;
-			}
-
-			if (req_ctx->residual_bytes > 0) { /*final() */
-				ret = tegra_hv_vse_safety_sha_send_one(req,
-					req_ctx->residual_bytes, is_last);
-				if (ret) {
-					dev_err(se_dev->dev,
-					"%s: failed to send last data %u\n",
-					__func__, req_ctx->residual_bytes);
-					return ret;
-				}
-				req_ctx->residual_bytes = 0;
-			}
-
-			if (is_last) {
-				if (req->result) {
-					memcpy(req->result,
-						sha_ctx->hash_result->buf_ptr,
-						req_ctx->digest_size);
-				} else {
-					dev_err(se_dev->dev,
-						"Invalid clinet result buffer\n");
-				}
-			}
-
-			return 0;
-		}
-
-		if (req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128 ||
-				req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE256) {
-			ret = tegra_hv_vse_safety_sha_send_one(req,
-					0, is_last);
-			if (ret) {
-				dev_err(se_dev->dev, "%s: failed to send last data\n",
-						__func__);
-				return ret;
-			}
-
-			if (is_last) {
-				if (req->result) {
-					memcpy(req->result,
-						sha_ctx->hash_result->buf_ptr,
-						req_ctx->digest_size);
-				} else {
-					dev_err(se_dev->dev,
-						"Invalid clinet result buffer\n");
-				}
-			}
-
-			return 0;
-		}
-		/* If the request length is zero, SW WAR for zero length SHA
-		 * operation since SE HW can't accept zero length SHA operation
-		 */
-		if (req_ctx->mode == VIRTUAL_SE_OP_MODE_SM3)
-			mode = VIRTUAL_SE_OP_MODE_SM3;
-		else if (req_ctx->mode < VIRTUAL_SE_OP_MODE_SHA3_256)
-			mode = req_ctx->mode - VIRTUAL_SE_OP_MODE_SHA256 + 1;
-		else
-			mode = req_ctx->mode - VIRTUAL_SE_OP_MODE_SHA256 - 1;
-
-		if (is_last) {
-			if (req->result) {
-				memcpy(req->result,
-					zero_vec[mode].digest,
-					zero_vec[mode].size);
-			} else {
-				dev_err(se_dev->dev,
-					"Invalid clinet result buffer\n");
-			}
-		}
-
-		return 0;
-	}
-
-	num_blks = req->nbytes / req_ctx->blk_size;
-
-	if (sg_nents(req->src) > 1)
-		req_ctx->force_align = true;
-
-	if (req_ctx->force_align == false && num_blks > 0)
-		ret = tegra_hv_vse_safety_sha_fast_path(req, is_last, process_cur_req);
-	else
-		ret = tegra_hv_vse_safety_sha_slow_path(req, is_last, process_cur_req);
-
-	return ret;
-}
-
 static int tegra_hv_vse_safety_sha_init(struct ahash_request *req)
 {
 	struct crypto_ahash *tfm;
 	struct tegra_virtual_se_req_context *req_ctx;
 	struct tegra_virtual_se_sha_context *sha_ctx;
 	struct tegra_virtual_se_dev *se_dev;
-	uint32_t hash_result_len;
 	uint32_t engine_id;
 
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	se_dev = g_virtual_se_dev[engine_id];
-
 	if (!req) {
-		dev_err(se_dev->dev, "SHA request not valid\n");
+		pr_err("%s: SHA request invalid\n", __func__);
 		return -EINVAL;
 	}
 
-	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
-		return -ENODEV;
-
 	req_ctx = ahash_request_ctx(req);
 	if (!req_ctx) {
-		dev_err(se_dev->dev, "SHA req_ctx not valid\n");
+		pr_err("%s: SHA req_ctx not valid\n", __func__);
 		return -EINVAL;
 	}
 
 	tfm = crypto_ahash_reqtfm(req);
 	if (!tfm) {
-		dev_err(se_dev->dev, "SHA transform not valid\n");
+		pr_err("%s: SHA transform not valid\n", __func__);
 		return -EINVAL;
 	}
 
 	sha_ctx = crypto_ahash_ctx(tfm);
-	req_ctx->digest_size = crypto_ahash_digestsize(tfm);
-	if (strcmp(crypto_ahash_alg_name(tfm), "sha256-vse") == 0) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SHA256;
-		req_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT;
-		req_ctx->intermediate_digest_size = SHA256_DIGEST_SIZE;
-	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha384-vse") == 0) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SHA384;
-		req_ctx->blk_size =
-			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1024BIT;
-		/*
-		 * The intermediate digest size of SHA384 is same as SHA512
-		 */
-		req_ctx->intermediate_digest_size = SHA512_DIGEST_SIZE;
-	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha512-vse") == 0) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SHA512;
-		req_ctx->blk_size =
-			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1024BIT;
-		req_ctx->intermediate_digest_size = SHA512_DIGEST_SIZE;
-	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha3-256-vse") == 0) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SHA3_256;
-		req_ctx->blk_size =
-			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1088BIT;
-		req_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
-	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha3-384-vse") == 0) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SHA3_384;
-		req_ctx->blk_size =
-			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_832BIT;
-		req_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
-	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha3-512-vse") == 0) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SHA3_512;
-		req_ctx->blk_size =
-			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_576BIT;
-		req_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
-	} else if (strcmp(crypto_ahash_alg_name(tfm), "shake128-vse") == 0) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SHAKE128;
-		req_ctx->blk_size =
-			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1344BIT;
-		req_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
-		req_ctx->digest_size = sha_ctx->digest_size;
-	} else if (strcmp(crypto_ahash_alg_name(tfm), "shake256-vse") == 0) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SHAKE256;
-		req_ctx->blk_size =
-			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1088BIT;
-		req_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
-		req_ctx->digest_size = sha_ctx->digest_size;
-	} else if ((strcmp(crypto_ahash_alg_name(tfm), "sm3-vse") == 0) &&
-		(se_dev->chipdata->sm_supported)) {
-		req_ctx->mode = VIRTUAL_SE_OP_MODE_SM3;
-		req_ctx->blk_size = SM3_BLOCK_SIZE;
-		req_ctx->intermediate_digest_size = SM3_DIGEST_SIZE;
-	} else {
-		dev_err(se_dev->dev, "Invalid SHA Mode\n");
-		return -EINVAL;
-	}
-
-	sha_ctx->residual_plaintext = &g_node_dma[sha_ctx->node_id].se_dma_buf[0];
-	if (!sha_ctx->residual_plaintext->buf_ptr) {
-		dev_err(se_dev->dev, "%s res_buf is NULL\n", __func__);
-		return -ENOMEM;
-	}
-
-	sha_ctx->plaintext = &g_node_dma[sha_ctx->node_id].se_dma_buf[1];
-	if (!sha_ctx->plaintext->buf_ptr) {
-		dev_err(se_dev->dev, "%s src_buf is NULL\n", __func__);
-		return -ENOMEM;
-	}
-
-	if ((req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128) ||
-			(req_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE256)) {
-		hash_result_len = sha_ctx->digest_size;
-	} else {
-		hash_result_len = req_ctx->intermediate_digest_size;
-	}
-
-	sha_ctx->hash_result = &g_node_dma[sha_ctx->node_id].se_dma_buf[2];
-	if (!sha_ctx->hash_result->buf_ptr) {
-		dev_err(se_dev->dev, "%s hash_result is NULL\n", __func__);
-		return -ENOMEM;
-	}
-
-	if (hash_result_len > sha_ctx->hash_result->buf_len) {
-		dev_err(se_dev->dev, "%s hash_result buffer size insufficient\n", __func__);
-		return -ENOMEM;
-	}
-
-	req_ctx->total_count = 0;
-	req_ctx->is_first = true;
-	req_ctx->residual_bytes = 0;
-	req_ctx->req_context_initialized = true;
-	req_ctx->force_align = false;
-
-	return 0;
-}
-
-static void tegra_hv_vse_safety_sha_req_deinit(struct ahash_request *req)
-{
-	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	struct tegra_virtual_se_sha_context *sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-
-	sha_ctx->residual_plaintext = NULL;
-	sha_ctx->plaintext = NULL;
-	sha_ctx->hash_result = NULL;
-
-	req_ctx->req_context_initialized = false;
-}
-
-static int tegra_hv_vse_safety_sha_update(struct ahash_request *req)
-{
-	struct tegra_virtual_se_dev *se_dev;
-	struct tegra_virtual_se_req_context *req_ctx;
-	int ret = 0;
-	uint32_t engine_id;
-	struct tegra_virtual_se_sha_context *sha_ctx;
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	req_ctx = ahash_request_ctx(req);
 	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
 	se_dev = g_virtual_se_dev[engine_id];
-
-	if (!req) {
-		dev_err(se_dev->dev, "SHA request not valid\n");
-		return -EINVAL;
-	}
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
 		return -ENODEV;
 
-	req_ctx = ahash_request_ctx(req);
-	if (!req_ctx->req_context_initialized) {
-		dev_err(se_dev->dev,
-			"%s Request ctx not initialized\n", __func__);
+	if (strcmp(crypto_ahash_alg_name(tfm), "sha256-vse") == 0) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SHA256;
+		sha_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT;
+		sha_ctx->intermediate_digest_size = SHA256_DIGEST_SIZE;
+		sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
+	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha384-vse") == 0) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SHA384;
+		sha_ctx->blk_size =
+			TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1024BIT;
+		/*
+		 * The intermediate digest size of SHA384 is same as SHA512
+		 */
+		sha_ctx->intermediate_digest_size = SHA512_DIGEST_SIZE;
+		sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
+	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha512-vse") == 0) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SHA512;
+		sha_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1024BIT;
+		sha_ctx->intermediate_digest_size = SHA512_DIGEST_SIZE;
+		sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
+	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha3-256-vse") == 0) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SHA3_256;
+		sha_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1088BIT;
+		sha_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
+		sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
+	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha3-384-vse") == 0) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SHA3_384;
+		sha_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_832BIT;
+		sha_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
+		sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
+	} else if (strcmp(crypto_ahash_alg_name(tfm), "sha3-512-vse") == 0) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SHA3_512;
+		sha_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_576BIT;
+		sha_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
+		sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
+	} else if (strcmp(crypto_ahash_alg_name(tfm), "shake128-vse") == 0) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SHAKE128;
+		sha_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1344BIT;
+		sha_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
+	} else if (strcmp(crypto_ahash_alg_name(tfm), "shake256-vse") == 0) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SHAKE256;
+		sha_ctx->blk_size = TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1088BIT;
+		sha_ctx->intermediate_digest_size = SHA3_STATE_SIZE;
+	} else if ((strcmp(crypto_ahash_alg_name(tfm), "sm3-vse") == 0) &&
+		(se_dev->chipdata->sm_supported)) {
+		sha_ctx->mode = VIRTUAL_SE_OP_MODE_SM3;
+		sha_ctx->blk_size = SM3_BLOCK_SIZE;
+		sha_ctx->intermediate_digest_size = SM3_DIGEST_SIZE;
+		sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
+	} else {
+		dev_err(se_dev->dev, "Invalid SHA Mode\n");
 		return -EINVAL;
 	}
 
-	ret = tegra_hv_vse_safety_sha_op(req, false, false);
+	sha_ctx->plaintext = &g_node_dma[sha_ctx->node_id].se_dma_buf[0];
+	if (!sha_ctx->plaintext->buf_ptr) {
+		dev_err(se_dev->dev, "%s src_buf is NULL\n", __func__);
+		return -ENOMEM;
+	}
+
+	sha_ctx->hash_result = &g_node_dma[sha_ctx->node_id].se_dma_buf[1];
+	if (!sha_ctx->hash_result->buf_ptr) {
+		dev_err(se_dev->dev, "%s hash_result is NULL\n", __func__);
+		return -ENOMEM;
+	}
+
+	if (sha_ctx->digest_size > sha_ctx->hash_result->buf_len) {
+		dev_err(se_dev->dev, "%s hash_result buffer size insufficient\n", __func__);
+		return -ENOMEM;
+	}
+
+	req_ctx->req_context_initialized = true;
+
+	return 0;
+}
+
+static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last)
+{
+	struct tegra_virtual_se_sha_context *sha_ctx =
+			crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	struct tegra_virtual_se_dev *se_dev;
+	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
+	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
+	struct tegra_virtual_se_ivc_msg_t ivc_req_msg = {0};
+	union tegra_virtual_se_sha_args *psha;
+	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[sha_ctx->node_id].ivck;
+	struct tegra_vse_priv_data priv = {0};
+	struct tegra_vse_tag *priv_data_ptr;
+	u64 msg_len = 0, temp_len = 0;
+	uint32_t engine_id;
+	int err = 0;
+
+	void *src_buf = NULL;
+	dma_addr_t src_buf_addr;
+	void *hash_buf = NULL;
+	dma_addr_t hash_buf_addr;
+
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
+
+	if (sha_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128 ||
+			sha_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE256) {
+		if (sha_ctx->digest_size == 0) {
+			dev_info(se_dev->dev, "digest size is 0\n");
+			return 0;
+		}
+	}
+
+	if (req->nbytes > TEGRA_VIRTUAL_SE_MAX_SUPPORTED_BUFLEN) {
+		dev_err(se_dev->dev, "%s: input buffer size is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	if ((!is_last) && (req->nbytes % sha_ctx->blk_size != 0)) {
+		dev_err(se_dev->dev, "%s: non-last buffer size is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	src_buf = sha_ctx->plaintext->buf_ptr;
+	src_buf_addr = sha_ctx->plaintext->buf_iova;
+
+	hash_buf = sha_ctx->hash_result->buf_ptr;
+	hash_buf_addr = sha_ctx->hash_result->buf_iova;
+
+	g_crypto_to_ivc_map[sha_ctx->node_id].vse_thread_start = true;
+
+	ivc_tx = &ivc_req_msg.tx[0];
+	ivc_hdr = &ivc_req_msg.ivc_hdr;
+	ivc_hdr->num_reqs = 1;
+	ivc_hdr->header_magic[0] = 'N';
+	ivc_hdr->header_magic[1] = 'V';
+	ivc_hdr->header_magic[2] = 'D';
+	ivc_hdr->header_magic[3] = 'A';
+	ivc_hdr->engine = VIRTUAL_SE_SHA;
+	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_SHA_HASH;
+
+	psha = &(ivc_tx->sha);
+	psha->op_hash.mode = sha_ctx->mode;
+	psha->op_hash.msg_total_length[2] = 0;
+	psha->op_hash.msg_total_length[3] = 0;
+	psha->op_hash.msg_left_length[2] = 0;
+	psha->op_hash.msg_left_length[3] = 0;
+	psha->op_hash.hash_length = sha_ctx->digest_size;
+	psha->op_hash.dst = hash_buf_addr;
+
+	if (!sha_ctx->is_first)
+		memcpy(psha->op_hash.hash, sha_ctx->intermediate_digest,
+			sha_ctx->intermediate_digest_size);
+
+	msg_len = req->nbytes;
+	sg_copy_to_buffer(req->src, (u32)sg_nents(req->src), src_buf, msg_len);
+
+	if (is_last == true &&
+			(sha_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128 ||
+			 sha_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE256)) {
+		((uint8_t *)src_buf)[msg_len] = 0xff;
+		msg_len++;
+		sha_ctx->total_count++;
+	}
+
+	temp_len = msg_len;
+
+	if (is_last) {
+		/* Set msg left length equal to input buffer size */
+		psha->op_hash.msg_left_length[0] = msg_len & 0xFFFFFFFF;
+		psha->op_hash.msg_left_length[1] = msg_len >> 32;
+
+		/* Set msg total length equal to sum of all input buffer size */
+		psha->op_hash.msg_total_length[0] = sha_ctx->total_count & 0xFFFFFFFF;
+		psha->op_hash.msg_total_length[1] = sha_ctx->total_count >> 32;
+	} else {
+		/* Set msg left length greater than input buffer size */
+		temp_len += 8;
+		psha->op_hash.msg_left_length[0] = temp_len & 0xFFFFFFFF;
+		psha->op_hash.msg_left_length[1] = temp_len >> 32;
+
+		/* Set msg total length greater than msg left length for non-first request */
+		if (!sha_ctx->is_first)
+			temp_len += 8;
+
+		psha->op_hash.msg_total_length[0] = temp_len & 0xFFFFFFFF;
+		psha->op_hash.msg_total_length[1] = temp_len >> 32;
+	}
+
+	psha->op_hash.src_addr = src_buf_addr;
+	psha->op_hash.src_buf_size = msg_len;
+
+	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg.ivc_hdr.tag;
+	priv_data_ptr->priv_data = (unsigned int *)&priv;
+	priv.cmd = VIRTUAL_SE_PROCESS;
+	priv.se_dev = se_dev;
+	init_completion(&priv.alg_complete);
+
+	err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, &priv, &ivc_req_msg,
+			sizeof(struct tegra_virtual_se_ivc_msg_t), sha_ctx->node_id);
+	if (err) {
+		dev_err(se_dev->dev, "failed to send data over ivc err %d\n", err);
+		goto exit;
+	}
+
+	if (priv.rx_status != 0) {
+		err = status_to_errno(priv.rx_status);
+		dev_err(se_dev->dev, "%s: SE server returned error %u\n",
+				__func__, priv.rx_status);
+		goto exit;
+	}
+
+	if (is_last)
+		memcpy(req->result, hash_buf, sha_ctx->digest_size);
+	else
+		memcpy(sha_ctx->intermediate_digest, hash_buf, sha_ctx->intermediate_digest_size);
+
+exit:
+	return err;
+}
+
+static int tegra_hv_vse_safety_sha_update(struct ahash_request *req)
+{
+	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
+	struct tegra_virtual_se_sha_context *sha_ctx;
+	struct tegra_virtual_se_dev *se_dev;
+	uint32_t engine_id;
+	int ret = 0;
+
+	if (!req) {
+		pr_err("%s SHA request not valid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!req_ctx->req_context_initialized) {
+		pr_err("%s Request ctx not initialized\n", __func__);
+		return -EINVAL;
+	}
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	if (!sha_ctx) {
+		pr_err("%s SHA req_ctx not valid\n", __func__);
+		return -EINVAL;
+	}
+
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
+
+	/* Return error if engine is in suspended state */
+	if (atomic_read(&se_dev->se_suspended))
+		return -ENODEV;
+
+	ret = tegra_hv_vse_safety_sha_op(req, false);
 	if (ret)
 		dev_err(se_dev->dev, "tegra_se_sha_update failed - %d\n", ret);
 
@@ -1816,116 +1367,54 @@ static int tegra_hv_vse_safety_sha_update(struct ahash_request *req)
 
 static int tegra_hv_vse_safety_sha_finup(struct ahash_request *req)
 {
+	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
+	struct tegra_virtual_se_sha_context *sha_ctx = NULL;
 	struct tegra_virtual_se_dev *se_dev;
-	struct tegra_virtual_se_req_context *req_ctx;
-	int ret = 0;
 	uint32_t engine_id;
-	struct tegra_virtual_se_sha_context *sha_ctx;
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	req_ctx = ahash_request_ctx(req);
-	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	se_dev = g_virtual_se_dev[engine_id];
+	int ret = 0;
 
 	if (!req) {
-		dev_err(se_dev->dev, "SHA request not valid\n");
+		pr_err("%s SHA request not valid\n", __func__);
 		return -EINVAL;
 	}
+
+	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	if (!sha_ctx) {
+		pr_err("%s SHA req_ctx not valid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!req_ctx->req_context_initialized) {
+		pr_err("%s Request ctx not initialized\n", __func__);
+		return -EINVAL;
+	}
+
+	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
+	se_dev = g_virtual_se_dev[engine_id];
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
 		return -ENODEV;
 
-	req_ctx = ahash_request_ctx(req);
-	if (!req_ctx->req_context_initialized) {
-		dev_err(se_dev->dev,
-			"%s Request ctx not initialized\n", __func__);
-		return -EINVAL;
-	}
-
-	ret = tegra_hv_vse_safety_sha_op(req, true, true);
+	ret = tegra_hv_vse_safety_sha_op(req, true);
 	if (ret)
 		dev_err(se_dev->dev, "tegra_se_sha_finup failed - %d\n", ret);
 
-	tegra_hv_vse_safety_sha_req_deinit(req);
+	req_ctx->req_context_initialized = false;
 
 	return ret;
 }
 
 static int tegra_hv_vse_safety_sha_final(struct ahash_request *req)
 {
-	struct tegra_virtual_se_dev *se_dev;
-	struct tegra_virtual_se_req_context *req_ctx;
-	int ret = 0;
-	uint32_t engine_id;
-	struct tegra_virtual_se_sha_context *sha_ctx;
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	req_ctx = ahash_request_ctx(req);
-	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	se_dev = g_virtual_se_dev[engine_id];
-
-	if (!req) {
-		dev_err(se_dev->dev, "SHA request not valid\n");
-		return -EINVAL;
-	}
-
-	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
-		return -ENODEV;
-
-	req_ctx = ahash_request_ctx(req);
-	if (!req_ctx->req_context_initialized) {
-		dev_err(se_dev->dev,
-			"%s Request ctx not initialized\n", __func__);
-		return -EINVAL;
-	}
-
-	/* Do not process data in given request */
-	ret = tegra_hv_vse_safety_sha_op(req, true, false);
-	if (ret)
-		dev_err(se_dev->dev, "tegra_se_sha_final failed - %d\n", ret);
-
-	tegra_hv_vse_safety_sha_req_deinit(req);
-
-	return ret;
+	// Unsupported
+	return -EINVAL;
 }
 
 static int tegra_hv_vse_safety_sha_digest(struct ahash_request *req)
 {
-	struct tegra_virtual_se_dev *se_dev;
-	int ret = 0;
-	uint32_t engine_id;
-	struct tegra_virtual_se_sha_context *sha_ctx;
-	struct tegra_virtual_se_req_context *req_ctx;
-
-	sha_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
-	req_ctx = ahash_request_ctx(req);
-	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].se_engine;
-	se_dev = g_virtual_se_dev[engine_id];
-
-	if (!req) {
-		dev_err(se_dev->dev, "SHA request not valid\n");
-		return -EINVAL;
-	}
-
-	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
-		return -ENODEV;
-
-	ret = tegra_hv_vse_safety_sha_init(req);
-	if (ret) {
-		dev_err(se_dev->dev, "%s init failed - %d\n", __func__, ret);
-		return ret;
-	}
-
-	ret = tegra_hv_vse_safety_sha_op(req, true, true);
-	if (ret)
-		dev_err(se_dev->dev, "tegra_se_sha_digest failed - %d\n", ret);
-
-	tegra_hv_vse_safety_sha_req_deinit(req);
-
-	return ret;
+	// Unsupported
+	return -EINVAL;
 }
 
 static int tegra_hv_vse_safety_hmac_sha_setkey(struct crypto_ahash *tfm, const u8 *key,
@@ -2008,8 +1497,6 @@ static int tegra_hv_vse_safety_hmac_sha_init(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	req_ctx->total_count = 0;
-	req_ctx->is_first = true;
 	req_ctx->req_context_initialized = true;
 
 	return 0;
@@ -2017,7 +1504,6 @@ static int tegra_hv_vse_safety_hmac_sha_init(struct ahash_request *req)
 
 static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req, bool is_last)
 {
-	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
 	struct tegra_virtual_se_hmac_sha_context *hmac_ctx =
 			crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_vse_hmac_sha_req_data *hmac_req_data;
@@ -2109,7 +1595,6 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req, bool is
 
 	msg_len = req->nbytes;
 	temp_len = msg_len;
-	req_ctx->total_count += msg_len;
 
 	ivc_tx = &ivc_req_msg.tx[0];
 	ivc_hdr = &ivc_req_msg.ivc_hdr;
@@ -2139,8 +1624,8 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req, bool is
 		phmac->msg_left_length[1] = msg_len >> 32;
 
 		/* Set msg total length equal to sum of all input buffer size */
-		phmac->msg_total_length[0] = req_ctx->total_count & 0xFFFFFFFF;
-		phmac->msg_total_length[1] = req_ctx->total_count >> 32;
+		phmac->msg_total_length[0] = hmac_ctx->total_count & 0xFFFFFFFF;
+		phmac->msg_total_length[1] = hmac_ctx->total_count >> 32;
 
 	} else {
 		/* Set msg left length greater than input buffer size */
@@ -2149,14 +1634,11 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req, bool is
 		phmac->msg_left_length[1] = temp_len >> 32;
 
 		/* Set msg total length greater than msg left length for non-first request */
-		if (req_ctx->is_first)
-			req_ctx->is_first = false;
-		else
+		if (!hmac_ctx->is_first)
 			temp_len += 8;
 
 		phmac->msg_total_length[0] = temp_len & 0xFFFFFFFF;
 		phmac->msg_total_length[1] = temp_len >> 32;
-
 	}
 
 	if (se_dev->chipdata->hmac_verify_hw_support == false) {
@@ -3793,12 +3275,11 @@ static void tegra_vse_aes_gcm_exit(struct crypto_aead *tfm)
 	/* nothing to do as user unloads the key manually with tzvault*/
 }
 
-static int tegra_vse_aes_gcm_check_params(struct aead_request *req,
-							bool encrypt)
+static int tegra_vse_aes_gcm_check_params(struct aead_request *req, bool encrypt, bool is_hw_req)
 {
 	struct crypto_aead *tfm = crypto_aead_reqtfm(req);
 	struct tegra_virtual_se_aes_context *aes_ctx = crypto_aead_ctx(tfm);
-	uint32_t cryptlen;
+	uint32_t cryptlen = 0U;
 	struct tegra_virtual_se_dev *se_dev =
 				g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].se_engine];
 
@@ -3810,25 +3291,25 @@ static int tegra_vse_aes_gcm_check_params(struct aead_request *req,
 		return -EINVAL;
 	}
 
-
 	if (!encrypt) {
 		if (req->cryptlen < aes_ctx->authsize) {
 			dev_err(se_dev->dev, "%s: gcm_dec cryptlen is invalid\n", __func__);
 			return -EINVAL;
 		}
-
 		cryptlen = req->cryptlen - aes_ctx->authsize;
-		if (cryptlen > TEGRA_VIRTUAL_SE_MAX_GCMDEC_BUFLEN) {
-			dev_err(se_dev->dev, "%s: dec srcbuf len is invalid %d\n", __func__,
-											cryptlen);
-			return -EINVAL;
-		}
-
 	} else {
 		cryptlen = req->cryptlen;
-		if (cryptlen > TEGRA_VIRTUAL_SE_MAX_SUPPORTED_BUFLEN) {
-			dev_err(se_dev->dev, "%s: enc srcbuf len is invalid %d\n", __func__,
-											cryptlen);
+	}
+
+	if (cryptlen > TEGRA_VIRTUAL_SE_MAX_SUPPORTED_BUFLEN) {
+		dev_err(se_dev->dev, "%s: enc srcbuf len is invalid %d\n", __func__, cryptlen);
+		return -EINVAL;
+	}
+
+	if ((!is_hw_req) && (!encrypt)) {
+		if (cryptlen > TEGRA_VIRTUAL_SE_MAX_GCMDEC_BUFLEN) {
+			dev_err(se_dev->dev, "%s: dec srcbuf len is invalid %d\n", __func__,
+					cryptlen);
 			return -EINVAL;
 		}
 	}
@@ -3869,7 +3350,7 @@ static int tegra_vse_aes_gcm_enc_dec(struct aead_request *req, bool encrypt)
 	dma_addr_t src_buf_addr;
 	dma_addr_t tag_buf_addr;
 
-	err = tegra_vse_aes_gcm_check_params(req, encrypt);
+	err = tegra_vse_aes_gcm_check_params(req, encrypt, false);
 	if (err != 0)
 		goto free_exit;
 
@@ -4098,7 +3579,7 @@ static int tegra_vse_aes_gcm_enc_dec_hw_support(struct aead_request *req, bool e
 	dma_addr_t tag_buf_addr;
 	dma_addr_t mac_buf_addr;
 
-	err = tegra_vse_aes_gcm_check_params(req, encrypt);
+	err = tegra_vse_aes_gcm_check_params(req, encrypt, true);
 	if (err != 0)
 		goto free_exit;
 
@@ -5837,34 +5318,28 @@ static int tegra_hv_vse_allocate_se_dma_bufs(struct tegra_vse_node_dma *node_dma
 		/*
 		 * For SHA algs, the worst case requirement for SHAKE128/SHAKE256:
 		 * 1. plaintext buffer(requires up to max limit specified in DT)
-		 * 2. residual plaintext buffer(requires up to max limit specified in DT)
-		 * 3. digest buffer(support a maximum digest size of 1024 bytes)
+		 * 2. digest buffer(support a maximum digest size of 1024 bytes for SHAKE)
 		 */
 		buf_sizes[0] = ivc_map->max_buffer_size;
-		buf_sizes[1] = ivc_map->max_buffer_size;
-		buf_sizes[2] = 1024U;
+		buf_sizes[1] = 1024U;
 		break;
 	case VIRTUAL_GCSE1_SHA:
 		/*
 		 * For SHA algs, the worst case requirement for SHAKE128/SHAKE256:
 		 * 1. plaintext buffer(requires up to max limit specified in DT)
-		 * 2. residual plaintext buffer(requires up to max limit specified in DT)
-		 * 3. digest buffer(support a maximum digest size of 1024 bytes)
+		 * 2. digest buffer(support a maximum digest size of 1024 bytes for SHAKE)
 		 */
 		buf_sizes[0] = ivc_map->max_buffer_size;
-		buf_sizes[1] = ivc_map->max_buffer_size;
-		buf_sizes[2] = 1024U;
+		buf_sizes[1] = 1024U;
 		break;
 	case VIRTUAL_GCSE2_SHA:
 		/*
 		 * For SHA algs, the worst case requirement for SHAKE128/SHAKE256:
 		 * 1. plaintext buffer(requires up to max limit specified in DT)
-		 * 2. residual plaintext buffer(requires up to max limit specified in DT)
-		 * 3. digest buffer(support a maximum digest size of 1024 bytes)
+		 * 2. digest buffer(support a maximum digest size of 1024 bytes for SHAKE)
 		 */
 		buf_sizes[0] = ivc_map->max_buffer_size;
-		buf_sizes[1] = ivc_map->max_buffer_size;
-		buf_sizes[2] = 1024U;
+		buf_sizes[1] = 1024U;
 		break;
 	default:
 		err = 0;

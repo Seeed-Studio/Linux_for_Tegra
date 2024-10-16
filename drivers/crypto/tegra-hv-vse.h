@@ -166,13 +166,16 @@ struct tegra_virtual_se_sha_context {
 	/* Security Engine device */
 	struct tegra_virtual_se_dev *se_dev;
 	/* SHA operation mode */
-	u32 op_mode;
+	uint32_t mode;
+	u32 blk_size;
 	unsigned int digest_size;
-	u8 mode;
+	uint8_t *intermediate_digest;
+	unsigned int intermediate_digest_size;
+	u64 total_count;		/* Total bytes in all the requests */
+	bool is_first;
 	/*Crypto dev instance*/
 	uint32_t node_id;
 	const struct tegra_vse_dma_buf *plaintext;
-	const struct tegra_vse_dma_buf *residual_plaintext;
 	const struct tegra_vse_dma_buf *hash_result;
 };
 
@@ -185,6 +188,8 @@ struct tegra_virtual_se_hmac_sha_context {
 	unsigned int digest_size;
 	/* Total bytes in all the requests */
 	u64 total_count;
+	/* Represents first block */
+	bool is_first;
 	bool is_key_slot_allocated;
 	/* Keyslot for HMAC-SHA request */
 	u8 aes_keyslot[KEYSLOT_SIZE_BYTES];
@@ -199,15 +204,7 @@ struct tegra_virtual_se_hmac_sha_context {
 struct tegra_virtual_se_req_context {
 	/* Security Engine device */
 	struct tegra_virtual_se_dev *se_dev;
-	unsigned int digest_size;
-	unsigned int intermediate_digest_size;
-	u8 mode;			/* SHA operation mode */
-	u64 total_count;		/* Total bytes in all the requests */
-	u32 residual_bytes;		/* Residual byte count */
-	u32 blk_size;			/* SHA block size */
-	bool is_first;			/* Represents first block */
 	bool req_context_initialized;	/* Mark initialization status */
-	bool force_align;		/* Enforce buffer alignment */
 	/*Crypto dev instance*/
 	uint32_t node_id;
 };

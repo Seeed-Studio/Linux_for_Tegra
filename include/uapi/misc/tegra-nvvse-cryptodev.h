@@ -121,43 +121,30 @@ enum tegra_nvvse_cmac_type {
 };
 
 /**
-  * \brief Holds SHA Init Header Params
-  */
-struct tegra_nvvse_sha_init_ctl {
-	enum tegra_nvvse_sha_type	sha_type;
-	uint32_t			digest_size;
-	uint64_t			total_msg_size;
-};
-#define NVVSE_IOCTL_CMDID_INIT_SHA _IOW(TEGRA_NVVSE_IOC_MAGIC, TEGRA_NVVSE_CMDID_INIT_SHA, \
-						struct tegra_nvvse_sha_init_ctl)
-
-/**
-  * \brief Holds SHA Update Header Params
-  */
+ * \brief Holds SHA Update Header Params
+ */
 struct tegra_nvvse_sha_update_ctl {
+	/** Holds the SHA request type */
+	enum tegra_nvvse_sha_type sha_type;
+	/** Specifies first request */
+	uint8_t is_first;
+	/** Specifies last request */
+	uint8_t is_last;
+	/** Specifies if only init is to be performed */
+	uint8_t init_only;
+	/** Specifies if context is to be reinitialized */
+	uint8_t do_reset;
 	/** Holds the pointer of the input buffer */
-	char		*in_buff;
+	uint8_t *in_buff;
 	/** Holds the size of the input buffer */
-	uint32_t	input_buffer_size;
-	/** Indicates the last chunk of the input message. 1 means last buffer
-	  * else not the last buffer
-	  */
-	uint8_t		last_buffer;
+	uint32_t input_buffer_size;
+	/** Holds the pointer of the digest buffer */
+	uint8_t	*digest_buffer;
+	/** Holds the size of the digest buffer */
+	uint32_t digest_size;
 };
 #define NVVSE_IOCTL_CMDID_UPDATE_SHA _IOW(TEGRA_NVVSE_IOC_MAGIC, TEGRA_NVVSE_CMDID_UPDATE_SHA, \
 						struct tegra_nvvse_sha_update_ctl)
-
-/**
-  * \brief Holds SHA Final Header Params
-  */
-struct tegra_nvvse_sha_final_ctl {
-	/** Holds the pointer of the digest buffer */
-	uint8_t		*digest_buffer;
-	/** Holds the size of the digest buffer */
-	uint32_t	digest_size;
-};
-#define NVVSE_IOCTL_CMDID_FINAL_SHA _IOWR(TEGRA_NVVSE_IOC_MAGIC, TEGRA_NVVSE_CMDID_FINAL_SHA, \
-						struct tegra_nvvse_sha_final_ctl)
 
 struct tegra_nvvse_hmac_sha_sv_ctl {
 	/** [in] Holds the enum which indicates SHA mode */
