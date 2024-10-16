@@ -16,7 +16,11 @@
 #include <linux/pm_runtime.h>
 #include <linux/version.h>
 
+#if defined(NV_APERTURE_REMOVE_ALL_CONFLICTING_DEVICES_PRESENT) /* Linux v6.0 */
+#include <linux/aperture.h>
+#else
 #include <drm/drm_aperture.h>
+#endif
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_debugfs.h>
@@ -1315,7 +1319,9 @@ static int host1x_drm_probe(struct host1x_device *dev)
 	drm_mode_config_reset(drm);
 
 	if (drm->mode_config.num_crtc > 0) {
-#if defined(NV_DRM_APERTURE_REMOVE_FRAMEBUFFERS_HAS_NO_PRIMARY_ARG) /* Linux v6.5 */
+#if defined(NV_APERTURE_REMOVE_ALL_CONFLICTING_DEVICES_PRESENT) /* Linux v6.0 */
+		err = aperture_remove_all_conflicting_devices(tegra_drm_driver.name);
+#elif defined(NV_DRM_APERTURE_REMOVE_FRAMEBUFFERS_HAS_NO_PRIMARY_ARG) /* Linux v6.5 */
 		err = drm_aperture_remove_framebuffers(&tegra_drm_driver);
 #elif defined(NV_DRM_APERTURE_REMOVE_FRAMEBUFFERS_HAS_DRM_DRIVER_ARG) /* Linux v5.15 */
 		err = drm_aperture_remove_framebuffers(false, &tegra_drm_driver);

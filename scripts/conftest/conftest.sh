@@ -6534,6 +6534,28 @@ compile_test() {
             compile_check_conftest "$CODE" "NV___ALLOC_DISK_NODE_HAS_LKCLASS_ARG" "" "types"
         ;;
 
+        aperture_remove_all_conflicting_devices)
+            #
+            # Determine if the function aperture_remove_all_conflicting_devices()
+            # is present.
+            #
+            # In Linux v6.0, commit 7283f862bd99 ("drm: Implement DRM aperture
+            # helpers under video/") added the function
+            # aperture_remove_all_conflicting_devices().
+            #
+            CODE="
+            #if defined(NV_LINUX_APERTURE_H_PRESENT)
+            #include <linux/aperture.h>
+            #else
+            #error \"linux/aperture.h not found!\"
+            #endif
+            void conftest_aperture_remove_all_conflicting_devices(const char *name) {
+                aperture_remove_all_conflicting_devices(name);
+            }"
+
+            compile_check_conftest "$CODE" "NV_APERTURE_REMOVE_ALL_CONFLICTING_DEVICES_PRESENT" "" "types"
+        ;;
+
         blk_execute_rq_has_no_gendisk_arg)
             #
             # Determine if the function blk_execute_rq() has an argument of

@@ -90,6 +90,7 @@ endef
 
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += __alloc_disk_node_has_lkclass_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += __assign_str_has_no_src_arg
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += aperture_remove_all_conflicting_devices
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_execute_rq_has_no_gendisk_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_mq_alloc_disk_for_queue
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_mq_alloc_queue
@@ -244,6 +245,7 @@ NV_HEADER_PRESENCE_TESTS = \
   drm/drm_dp_aux_bus.h \
   drm/drm_eld.h \
   generated/autoconf.h \
+  linux/aperture.h \
   linux/kconfig.h \
   linux/iosys-map.h \
   linux/tegra_prod.h \
