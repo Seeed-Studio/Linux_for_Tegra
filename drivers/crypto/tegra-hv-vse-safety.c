@@ -2185,7 +2185,7 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req, bool is
 
 				if (priv.rx_status == 0) {
 					hmac_req_data->result = 0;
-				} else if (priv.rx_status != TEGRA_VIRTUAL_SE_ERR_MAC_INVALID) {
+				} else if (priv.rx_status == TEGRA_VIRTUAL_SE_ERR_MAC_INVALID) {
 					dev_dbg(se_dev->dev, "%s: tag mismatch", __func__);
 					hmac_req_data->result = 1;
 				} else {
