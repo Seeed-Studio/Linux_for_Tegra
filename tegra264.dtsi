@@ -9021,6 +9021,20 @@
 		status = "disabled";
 	};
 
+	tegra-isp-map {
+		/* Add compatible string as no parent node available */
+		compatible = "nvidia,csi-isp-map-config";
+		/* CSI Stream ID to ISP Instance static mapping */
+		nvidia,isp-mapping =
+			<0 0>,
+			<1 0>,
+			<2 1>,
+			<3 1>,
+			<4 0>,
+			<5 1>;
+		status = "disabled";
+	};
+
 	mods_tegra_dma: mods_tegra_dma {
 		compatible = "nvidia,mods_tegra_dma";
 		dmas = <&gpcdma 0 31 TEGRA264_GPCDMA_SID_I2C0>, <&gpcdma 7 7 TEGRA264_GPCDMA_SID_I2C1>, <&gpcdma 3 3 TEGRA264_GPCDMA_SID_I2C2>, <&gpcdma 4 4 TEGRA264_GPCDMA_SID_I2C3>, <&gpcdma 6 6 TEGRA264_GPCDMA_SID_I2C7>, <&gpcdma 2 2 TEGRA264_GPCDMA_SID_I2C9>, <&gpcdma 1 1 TEGRA264_GPCDMA_SID_I2C11>, <&gpcdma 5 5 TEGRA264_GPCDMA_SID_I2C12>, <&gpcdma 18 28 TEGRA264_GPCDMA_SID_I2C14>, <&gpcdma 19 29 TEGRA264_GPCDMA_SID_I2C15>, <&gpcdma 20 30 TEGRA264_GPCDMA_SID_I2C16>, <&gpcdma 9 9 TEGRA264_GPCDMA_SID_SPI1>, <&gpcdma 9 19 TEGRA264_GPCDMA_SID_SPI1>, <&gpcdma 8 8 TEGRA264_GPCDMA_SID_SPI2>, <&gpcdma 8 18 TEGRA264_GPCDMA_SID_SPI2>, <&gpcdma 14 14 TEGRA264_GPCDMA_SID_SPI3>, <&gpcdma 14 24 TEGRA264_GPCDMA_SID_SPI3>, <&gpcdma 15 15 TEGRA264_GPCDMA_SID_SPI4>, <&gpcdma 15 25 TEGRA264_GPCDMA_SID_SPI4>, <&gpcdma 16 16 TEGRA264_GPCDMA_SID_SPI5>, <&gpcdma 16 26 TEGRA264_GPCDMA_SID_SPI5>, <&gpcdma 13 23 TEGRA264_GPCDMA_SID_UART4>, <&gpcdma 13 13 TEGRA264_GPCDMA_SID_UART4>, <&gpcdma 11 11 TEGRA264_GPCDMA_SID_UART5>, <&gpcdma 11 21 TEGRA264_GPCDMA_SID_UART5>, <&gpcdma 10 10 TEGRA264_GPCDMA_SID_UART9>, <&gpcdma 10 20 TEGRA264_GPCDMA_SID_UART9>, <&gpcdma 12 12 TEGRA264_GPCDMA_SID_UART10>, <&gpcdma 12 22 TEGRA264_GPCDMA_SID_UART10>;
