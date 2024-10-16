@@ -17,6 +17,7 @@ struct tegra_pcie_dma_priv {
 	nvpcie_dma_soc_t soc;
 };
 
+#ifdef CONFIG_PCIE_TEGRA_DMA
 tegra_pcie_dma_status_t tegra_pcie_dma_initialize(struct tegra_pcie_dma_init_info *info,
 						  void **cookie)
 {
@@ -52,7 +53,6 @@ tegra_pcie_dma_status_t tegra_pcie_dma_initialize(struct tegra_pcie_dma_init_inf
 	}
 }
 EXPORT_SYMBOL_GPL(tegra_pcie_dma_initialize);
-
 tegra_pcie_dma_status_t tegra_pcie_dma_set_msi(void *cookie, u64 msi_addr, u32 msi_data)
 {
 	struct tegra_pcie_dma_priv *prv = (struct tegra_pcie_dma_priv *)cookie;
@@ -144,5 +144,6 @@ tegra_pcie_dma_status_t tegra_pcie_dma_deinit(void **cookie)
 	}
 }
 EXPORT_SYMBOL_GPL(tegra_pcie_dma_deinit);
+#endif
 
 MODULE_LICENSE("GPL v2");
