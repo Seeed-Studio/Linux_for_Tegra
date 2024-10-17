@@ -3681,7 +3681,7 @@
 		};
 
 		spi1: spi@c6c0000 {
-			compatible = "nvidia,tegra210-spi";
+			compatible = "nvidia,tegra234-spi", "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x0 0x0c6c0000 0x0 0x10000>;
 			interrupts = <GIC_SPI 534 IRQ_TYPE_LEVEL_HIGH>;
@@ -4453,7 +4453,7 @@
 		};
 
 		spi0: spi@810c590000 {
-			compatible = "nvidia,tegra210-spi";
+			compatible = "nvidia,tegra234-spi", "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x81 0x0c590000 0x0 0x10000>;
 			interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
@@ -4472,7 +4472,7 @@
 		};
 
 		spi2: spi@810c440000 {
-			compatible = "nvidia,tegra210-spi";
+			compatible = "nvidia,tegra234-spi", "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x81 0x0c440000 0x0 0x10000>;
 			interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
@@ -4491,7 +4491,7 @@
 		};
 
 		spi3: spi@810c450000 {
-			compatible = "nvidia,tegra210-spi";
+			compatible = "nvidia,tegra234-spi", "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x81 0x0c450000 0x0 0x10000>;
 			interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
@@ -4510,7 +4510,7 @@
 		};
 
 		spi4: spi@810c460000 {
-			compatible = "nvidia,tegra210-spi";
+			compatible = "nvidia,tegra234-spi", "nvidia,tegra210-spi";
 			status = "disabled";
 			reg = <0x81 0x0c460000 0x0 0x10000>;
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
