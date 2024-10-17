@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/power/tegra234-powergate.h>
 
 / {
+	reserved-memory {
+		fb0_reserved: framebuffer@0,0 {
+			compatible = "framebuffer";
+			reg = <0x00 0x00 0x00 0x00>;
+			iommu-addresses = <&nvdisplay 0x0 0x0 0x0 0x0>;
+			no-map;
+			status = "disabled";
+		};
+	};
+
 	dce@d800000 {
 		compatible = "nvidia,tegra234-dce";
 		reg = <0x0 0x0d800000 0x0 0x00800000>;
@@ -16,7 +26,7 @@
 		status = "disabled";
 	};
 
-	display@13800000 {
+	nvdisplay: display@13800000 {
 		compatible = "nvidia,tegra234-display";
 		power-domains = <&bpmp TEGRA234_POWER_DOMAIN_DISP>;
 		nvidia,num-dpaux-instance = <1>;
@@ -164,6 +174,7 @@
 			"mipi_cal_reset";
 		hdcp_enabled;
 		status = "disabled";
+		memory-region = <&fb0_reserved>;
 		nvidia,disp-sw-soc-chip-id = <0x2350>;
 		interconnects = <&mc TEGRA234_MEMORY_CLIENT_NVDISPLAYR &emc>,
 			      <&mc TEGRA234_MEMORY_CLIENT_NVDISPLAYR1 &emc>;
