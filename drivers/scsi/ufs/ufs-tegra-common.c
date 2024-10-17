@@ -1071,6 +1071,11 @@ static int ufs_tegra_ufs_reset_init(struct ufs_tegra_host *ufs_tegra)
 
 static void ufs_tegra_ufs_deassert_reset(struct ufs_tegra_host *ufs_tegra)
 {
+	reset_control_assert(ufs_tegra->ufs_rst);
+	reset_control_assert(ufs_tegra->ufs_axi_m_rst);
+	reset_control_assert(ufs_tegra->ufshc_lp_rst);
+	udelay(100);
+
 	reset_control_deassert(ufs_tegra->ufs_rst);
 	reset_control_deassert(ufs_tegra->ufs_axi_m_rst);
 	reset_control_deassert(ufs_tegra->ufshc_lp_rst);
