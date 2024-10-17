@@ -1,7 +1,7 @@
-
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
 
+ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 ifeq ($(CONFIG_TEGRA_OOT_MODULE),m)
 
 ifeq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)
@@ -55,4 +55,4 @@ nvhost-pva-objs  = \
 obj-m += nvhost-pva.o
 endif
 endif
-
+endif
