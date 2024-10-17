@@ -14,6 +14,81 @@
 		};
 	};
 
+	chosen {
+		framebuffer {
+			compatible = "simple-framebuffer";
+			status = "disabled";
+			memory-region = <&fb0_reserved>;
+			power-domains = <&bpmp TEGRA234_POWER_DOMAIN_DISP>;
+			clocks = <&bpmp TEGRA234_CLK_HUB>,
+				 <&bpmp TEGRA234_CLK_DISP>,
+				 <&bpmp TEGRA234_CLK_NVDISPLAY_P0>,
+				 <&bpmp TEGRA234_CLK_NVDISPLAY_P1>,
+				 <&bpmp TEGRA234_CLK_DPAUX>,
+				 <&bpmp TEGRA234_CLK_FUSE>,
+				 <&bpmp TEGRA234_CLK_DSIPLL_VCO>,
+				 <&bpmp TEGRA234_CLK_DSIPLL_CLKOUTPN>,
+				 <&bpmp TEGRA234_CLK_DSIPLL_CLKOUTA>,
+				 <&bpmp TEGRA234_CLK_SPPLL0_VCO>,
+				 <&bpmp TEGRA234_CLK_SPPLL0_CLKOUTPN>,
+				 <&bpmp TEGRA234_CLK_SPPLL0_CLKOUTA>,
+				 <&bpmp TEGRA234_CLK_SPPLL0_CLKOUTB>,
+				 <&bpmp TEGRA234_CLK_SPPLL0_DIV10>,
+				 <&bpmp TEGRA234_CLK_SPPLL0_DIV25>,
+				 <&bpmp TEGRA234_CLK_SPPLL0_DIV27PN>,
+				 <&bpmp TEGRA234_CLK_SPPLL1_VCO>,
+				 <&bpmp TEGRA234_CLK_SPPLL1_CLKOUTPN>,
+				 <&bpmp TEGRA234_CLK_SPPLL1_DIV27PN>,
+				 <&bpmp TEGRA234_CLK_VPLL0_REF>,
+				 <&bpmp TEGRA234_CLK_VPLL0>,
+				 <&bpmp TEGRA234_CLK_VPLL1>,
+				 <&bpmp TEGRA234_CLK_NVDISPLAY_P0_REF>,
+				 <&bpmp TEGRA234_CLK_RG0>,
+				 <&bpmp TEGRA234_CLK_RG1>,
+				 <&bpmp TEGRA234_CLK_DISPPLL>,
+				 <&bpmp TEGRA234_CLK_DISPHUBPLL>,
+				 <&bpmp TEGRA234_CLK_DSI_LP>,
+				 <&bpmp TEGRA234_CLK_DSI_CORE>,
+				 <&bpmp TEGRA234_CLK_DSI_PIXEL>,
+				 <&bpmp TEGRA234_CLK_PRE_SOR0>,
+				 <&bpmp TEGRA234_CLK_PRE_SOR1>,
+				 <&bpmp TEGRA234_CLK_DP_LINK_REF>,
+				 <&bpmp TEGRA234_CLK_SOR_LINKA_INPUT>,
+				 <&bpmp TEGRA234_CLK_SOR_LINKA_AFIFO>,
+				 <&bpmp TEGRA234_CLK_SOR_LINKA_AFIFO_M>,
+				 <&bpmp TEGRA234_CLK_RG0_M>,
+				 <&bpmp TEGRA234_CLK_RG1_M>,
+				 <&bpmp TEGRA234_CLK_SOR0_M>,
+				 <&bpmp TEGRA234_CLK_SOR1_M>,
+				 <&bpmp TEGRA234_CLK_PLLHUB>,
+				 <&bpmp TEGRA234_CLK_SOR0>,
+				 <&bpmp TEGRA234_CLK_SOR1>,
+				 <&bpmp TEGRA234_CLK_SOR_PAD_INPUT>,
+				 <&bpmp TEGRA234_CLK_PRE_SF0>,
+				 <&bpmp TEGRA234_CLK_SF0>,
+				 <&bpmp TEGRA234_CLK_SF1>,
+				 <&bpmp TEGRA234_CLK_DSI_PAD_INPUT>,
+				 <&bpmp TEGRA234_CLK_PRE_SOR0_REF>,
+				 <&bpmp TEGRA234_CLK_PRE_SOR1_REF>,
+				 <&bpmp TEGRA234_CLK_SOR0_PLL_REF>,
+				 <&bpmp TEGRA234_CLK_SOR1_PLL_REF>,
+				 <&bpmp TEGRA234_CLK_SOR0_REF>,
+				 <&bpmp TEGRA234_CLK_SOR1_REF>,
+				 <&bpmp TEGRA234_CLK_OSC>,
+				 <&bpmp TEGRA234_CLK_DSC>,
+				 <&bpmp TEGRA234_CLK_MAUD>,
+				 <&bpmp TEGRA234_CLK_AZA_2XBIT>,
+				 <&bpmp TEGRA234_CLK_AZA_BIT>,
+				 <&bpmp TEGRA234_CLK_MIPI_CAL>,
+				 <&bpmp TEGRA234_CLK_UART_FST_MIPI_CAL>,
+				 <&bpmp TEGRA234_CLK_SOR0_DIV>;
+			width  = <0>;
+			height = <0>;
+			stride = <0>;
+			format = "x8b8g8r8";
+		};
+	};
+
 	dce@d800000 {
 		compatible = "nvidia,tegra234-dce";
 		reg = <0x0 0x0d800000 0x0 0x00800000>;
