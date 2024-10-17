@@ -194,6 +194,7 @@ struct pva_submit_task {
 	u64 src_surf_base_addr;
 	u64 dst_surf_base_addr;
 	bool is_system_app;
+	bool default_sem_update_method;
 };
 
 struct pva_submit_tasks {

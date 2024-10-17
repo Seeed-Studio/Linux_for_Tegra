@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2020-2024, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -376,6 +376,7 @@ pva_task_process_fence_actions(struct pva_submit_task *task,
 			}
 			case NVPVA_FENCE_OBJ_SEM:
 			{
+				u32 update_method;
 				err = pva_task_pin_fence(task,
 							 &fence_action->fence,
 							 &fence_addr,
@@ -383,10 +384,17 @@ pva_task_process_fence_actions(struct pva_submit_task *task,
 				if (err)
 					goto out;
 
-				task->sem_num += 1;
-				task->sem_thresh += 1;
-				fence_value = task->sem_thresh;
-				fence_action->fence.obj.sem.value = fence_value;
+				update_method = fence_action->fence.update_method;
+				if ((task->default_sem_update_method)
+				 || (update_method == NVPVA_FENCE_OBJ_UPDATE_INC)) {
+					task->sem_num += 1;
+					task->sem_thresh += 1;
+					fence_value = task->sem_thresh;
+					fence_action->fence.obj.sem.value = fence_value;
+				} else {
+					fence_value = fence_action->fence.obj.sem.value;
+				}
+
 				task->fence_act_serial_ids[fence_type][i] = serial_id;
 				break;
 			}

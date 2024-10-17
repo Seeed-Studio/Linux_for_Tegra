@@ -234,6 +234,12 @@ enum nvpva_fence_obj_type {
 	NVPVA_FENCE_OBJ_SYNC_FD = 3U,
 };
 
+enum nvpva_fence_obj_update_method {
+	NVPVA_FENCE_OBJ_UPDATE_INC	= 0U,
+	NVPVA_FENCE_OBJ_UPDATE_SET	= 1U,
+	NVPVA_FENCE_OBJ_UPDATE_INVALID	= 2U,
+};
+
 enum nvpva_symbol_config {
 	NVPVA_SYMBOL_PARAM = 0U,
 	NVPVA_SYMBOL_POINTER = 1U,
@@ -284,7 +290,7 @@ union nvpva_fence_obj {
 
 struct nvpva_submit_fence {
 	uint32_t type;
-	uint32_t reserved;
+	uint32_t update_method;
 	union nvpva_fence_obj obj;
 };
 
@@ -596,7 +602,10 @@ union nvpva_set_vpu_print_buffer_size_args {
 #define NVPVA_IOCTL_PIN_EX \
 	_IOWR(NVPVA_IOCTL_MAGIC, 12, union nvpva_pin_args_ex)
 
-#define NVPVA_IOCTL_NUMBER_MAX 12
+#define NVPVA_IOCTL_SUBMIT_EX \
+	_IOW(NVPVA_IOCTL_MAGIC, 13, union nvpva_ioctl_submit_args)
+
+#define NVPVA_IOCTL_NUMBER_MAX 13
 
 #ifndef MAX
 #define MAX(a, b) ((a) > (b) ? (a) : (b))

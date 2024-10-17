@@ -319,7 +319,8 @@ out:
  * @return	0 on Success or negative error code
  *
  */
-static int pva_submit(struct pva_private *priv, void *arg)
+
+static int pva_submit(struct pva_private *priv, void *arg, bool is_ex)
 {
 	struct nvpva_ioctl_submit_in_arg *ioctl_tasks_header =
 		(struct nvpva_ioctl_submit_in_arg *)arg;
@@ -419,6 +420,10 @@ static int pva_submit(struct pva_private *priv, void *arg)
 		task->pva = priv->pva;
 		task->queue = priv->queue;
 		task->client = priv->client;
+		if (is_ex)
+			task->default_sem_update_method = false;
+		else
+			task->default_sem_update_method = true;
 
 		/* setup ownership */
 		err = nvhost_module_busy(task->pva->pdev);
@@ -953,7 +958,10 @@ static long pva_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		err = pva_unpin(priv, buf);
 		break;
 	case NVPVA_IOCTL_SUBMIT:
-		err = pva_submit(priv, buf);
+		err = pva_submit(priv, buf, false);
+		break;
+	case NVPVA_IOCTL_SUBMIT_EX:
+		err = pva_submit(priv, buf, true);
 		break;
 	case NVPVA_IOCTL_SET_VPU_PRINT_BUFFER_SIZE:
 		err = pva_set_vpu_print_buffer_size(priv, buf);
