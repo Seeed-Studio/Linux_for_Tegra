@@ -3,6 +3,9 @@
 /*
  * tegracam_v4l2 - tegra camera framework for v4l2 support
  */
+
+#include <nvidia/conftest.h>
+
 #include <linux/types.h>
 #include <media/tegra-v4l2-camera.h>
 #include <media/tegracam_core.h>
@@ -111,6 +114,7 @@ static int v4l2sd_g_input_status(struct v4l2_subdev *sd, u32 *status)
 	return 0;
 }
 
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_SET_FRAME_INTERVAL)
 static int cam_g_frame_interval(struct v4l2_subdev *sd,
 		struct v4l2_subdev_state *sd_state,
 		struct v4l2_subdev_frame_interval *ival)
@@ -125,6 +129,7 @@ static int cam_g_frame_interval(struct v4l2_subdev *sd,
 	ival->interval.numerator = 1;
 	return 0;
 }
+#endif
 
 static struct v4l2_subdev_video_ops v4l2sd_video_ops = {
 	.s_stream	= v4l2sd_stream,
@@ -175,6 +180,10 @@ static int v4l2sd_set_fmt(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_subdev_pad_ops v4l2sd_pad_ops = {
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_SET_FRAME_INTERVAL)
+	.get_frame_interval = cam_g_frame_interval,
+	.set_frame_interval = cam_g_frame_interval,
+#endif
 	.set_fmt = v4l2sd_set_fmt,
 	.get_fmt = v4l2sd_get_fmt,
 	.enum_mbus_code = camera_common_enum_mbus_code,

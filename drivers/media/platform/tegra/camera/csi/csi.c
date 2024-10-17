@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVIDIA Tegra CSI Device
- *
- * Copyright (c) 2015-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -687,7 +686,7 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 }
 
 static int tegra_csi_g_frame_interval(struct v4l2_subdev *sd,
-#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_FRAME_INTERVAL)
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_SET_FRAME_INTERVAL)
 			struct v4l2_subdev_state *sd_state,
 #endif
 			struct v4l2_subdev_frame_interval *vfi)
@@ -721,13 +720,13 @@ static int tegra_csi_enum_mbus_code(struct v4l2_subdev *sd,
 static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 	.s_stream	= tegra_csi_s_stream,
 	.g_input_status = tegra_csi_g_input_status,
-#if !defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_FRAME_INTERVAL)
+#if !defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_SET_FRAME_INTERVAL)
 	.g_frame_interval = tegra_csi_g_frame_interval,
 #endif
 };
 
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {
-#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_FRAME_INTERVAL)
+#if defined(NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_SET_FRAME_INTERVAL)
 	.get_frame_interval = tegra_csi_g_frame_interval,
 #endif
 	.get_fmt	= tegra_csi_get_format,

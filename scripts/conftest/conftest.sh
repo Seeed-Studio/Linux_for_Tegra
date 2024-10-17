@@ -8651,10 +8651,12 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_V4L2_ASYNC_NF_ADD_SUBDEV_PRESENT" "" "functions"
         ;;
 
-        v4l2_subdev_pad_ops_struct_has_get_frame_interval)
+        v4l2_subdev_pad_ops_struct_has_get_set_frame_interval)
             #
             # Determine if struct v4l2_subdev_pad_ops has the 'get_frame_interval'
-            # function pointer.
+            # and 'set_frame_interval' function pointers. Note that it is only
+            # necessary to check for the presence of one because both were added
+            # by the same commit.
             #
             # Added by commit 287fe160834a ("media: v4l2-subdev: Turn
             # .[gs]_frame_interval into pad operations") in Linux v6.8.
@@ -8667,7 +8669,7 @@ compile_test() {
             }
             "
             compile_check_conftest "$CODE" \
-                    "NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_FRAME_INTERVAL" "" "types"
+                    "NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_GET_SET_FRAME_INTERVAL" "" "types"
         ;;
 
         v4l2_subdev_pad_ops_struct_has_dv_timings)
