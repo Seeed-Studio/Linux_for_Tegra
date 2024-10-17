@@ -73,6 +73,11 @@ static int heap_page_cache_maint(
 	struct nvmap_handle *h, unsigned long start, unsigned long end,
 	unsigned int op, bool inner, bool outer, bool clean_only_dirty)
 {
+	unsigned long difference;
+
+	if (check_sub_overflow(end, start, &difference))
+		return -EOVERFLOW;
+
 	/* Don't perform cache maint for RO mapped buffers */
 	if (h->from_va && h->is_ro)
 		return 0;
@@ -82,7 +87,7 @@ static int heap_page_cache_maint(
 		 * zap user VA->PA mappings so that any access to the pages
 		 * will result in a fault and can be marked dirty
 		 */
-		nvmap_handle_mkclean(h, start, end-start);
+		nvmap_handle_mkclean(h, start, difference);
 	}
 
 	if (inner) {
@@ -93,7 +98,7 @@ static int heap_page_cache_maint(
 				goto per_page_cache_maint;
 		}
 		/* Fast inner cache maintenance using single mapping */
-		inner_cache_maint(op, h->vaddr + start, end - start);
+		inner_cache_maint(op, h->vaddr + start, difference);
 		if (!outer)
 			return 0;
 		/* Skip per-page inner maintenance in loop below */
@@ -115,7 +120,10 @@ per_page_cache_maint:
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
 		off = start & ~PAGE_MASK;
 		size = next - start;
-		paddr = page_to_phys(page) + off;
+		if (check_add_overflow((phys_addr_t)page_to_phys(page), (phys_addr_t)off, &sum))
+			return -EOVERFLOW;
+
+		paddr = sum;
 
 		if (check_add_overflow(paddr, (phys_addr_t)size, &sum))
 			return -EOVERFLOW;
@@ -125,6 +133,7 @@ per_page_cache_maint:
 		WARN_ON(ret != 0);
 		start = next;
 	}
+
 	return 0;
 }
 
@@ -198,7 +207,9 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 				(h->flags == NVMAP_HANDLE_INNER_CACHEABLE) ?
 				false : true, cache_work->clean_only_dirty);
 		if (err != 0)
-			return err;
+			err = -EOVERFLOW;
+
+		goto out;
 	}
 
 	if (!h->vaddr) {
