@@ -44,4 +44,20 @@ void dce_os_bitmap_set(unsigned long *map,
 void dce_os_bitmap_clear(unsigned long *map,
 				    unsigned int start, unsigned int len);
 
+u8 dce_os_get_phys_stream_id(struct tegra_dce *d);
+
+u8 dce_os_get_dce_stream_id(struct tegra_dce *d);
+
+u8 dce_os_get_fw_vm_index(struct tegra_dce *d);
+
+u8 dce_os_get_fw_carveout_id(struct tegra_dce *d);
+
+bool dce_os_is_physical_id_valid(struct tegra_dce *d);
+
+u32 dce_os_get_fw_dce_addr(struct tegra_dce *d);
+
+u64 dce_os_get_fw_phy_addr(struct tegra_dce *d, struct dce_firmware *fw);
+
+const char *dce_os_get_fw_name(struct tegra_dce *d);
+
 #endif /* DCE_OS_UTILS_H */

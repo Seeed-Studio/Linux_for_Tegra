@@ -333,16 +333,6 @@ static inline void dce_set_load_fw_status(struct tegra_dce *d, bool val)
  * Common Utility Functions. Description can be found with
  * function definitions.
  */
-u8 dce_get_phys_stream_id(struct tegra_dce *d);
-u8 dce_get_dce_stream_id(struct tegra_dce *d);
-u8 dce_get_fw_vm_index(struct tegra_dce *d);
-u8 dce_get_fw_carveout_id(struct tegra_dce *d);
-bool dce_is_physical_id_valid(struct tegra_dce *d);
-
-u32 dce_get_fw_dce_addr(struct tegra_dce *d);
-u64 dce_get_fw_phy_addr(struct tegra_dce *d, struct dce_firmware *fw);
-const char *dce_get_fw_name(struct tegra_dce *d);
-
 void dce_driver_start(struct tegra_dce *d);
 void dce_driver_stop(struct tegra_dce *d);
 int dce_driver_init(struct tegra_dce *d);

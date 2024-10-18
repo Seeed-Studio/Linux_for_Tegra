@@ -472,7 +472,7 @@ static int dce_send_set_sid_cmd(struct tegra_dce *d)
 	int ret = 0;
 
 	val = DCE_BOOT_CMD_SET(0U, DCE_BOOT_CMD_SET_SID) |
-			DCE_BOOT_CMD_PARM_SET(0, dce_get_dce_stream_id(d));
+			DCE_BOOT_CMD_PARM_SET(0, dce_os_get_dce_stream_id(d));
 
 	ret = dce_mailbox_send_cmd_sync(d, val, DCE_MAILBOX_BOOT_INTERFACE);
 

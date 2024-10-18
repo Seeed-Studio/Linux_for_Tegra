@@ -64,7 +64,7 @@ int dce_reset_dce(struct tegra_dce *d)
 		return -1;
 	}
 
-	fw_dce_addr = dce_get_fw_dce_addr(d);
+	fw_dce_addr = dce_os_get_fw_dce_addr(d);
 	dce_evp_set_reset_addr(d, fw_dce_addr);
 
 	dce_pm_set_pm_ctrl(d, FW_LOAD_DONE);

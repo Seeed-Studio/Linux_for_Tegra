@@ -161,9 +161,9 @@ int dce_ipc_send_message_sync(struct tegra_dce *d,
 int dce_ipc_get_channel_info(struct tegra_dce *d,
 		struct dce_ipc_queue_info *q_info, u32 ch_index);
 
-void dce_ipc_deinit_region_info(struct tegra_dce *d);
+void dce_os_ipc_deinit_region_info(struct tegra_dce *d);
 
-int dce_ipc_init_region_info(struct tegra_dce *d);
+int dce_os_ipc_init_region_info(struct tegra_dce *d);
 
 struct tegra_dce *dce_ipc_get_dce_from_ch(u32 ch_type);
 

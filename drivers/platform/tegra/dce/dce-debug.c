@@ -24,7 +24,7 @@
  */
 static int dbg_dce_load_fw(struct tegra_dce *d)
 {
-	const char *name = dce_get_fw_name(d);
+	const char *name = dce_os_get_fw_name(d);
 
 	d->fw_data = dce_os_request_firmware(d, name);
 	if (!d->fw_data) {

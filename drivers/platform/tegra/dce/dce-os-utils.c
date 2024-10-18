@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 #include <dce.h>
-#include <dce-thread.h>
+#include <dce-os-thread.h>
 #include <dce-os-device.h>
 #include <dce-os-utils.h>
 #include <linux/io.h>
@@ -221,71 +221,71 @@ void dce_os_release_fw(struct tegra_dce *d, struct dce_firmware *fw)
 }
 
 /**
- * dce_get_phys_stream_id - Gets the physical stream ID to be programmed from
+ * dce_os_get_phys_stream_id - Gets the physical stream ID to be programmed from
  * platform data.
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : Stream ID Value
  */
-u8 dce_get_phys_stream_id(struct tegra_dce *d)
+u8 dce_os_get_phys_stream_id(struct tegra_dce *d)
 {
 	return pdata_from_dce(d)->phys_stream_id;
 }
 
 /**
- * dce_get_dce_stream_id - Gets the dce stream ID to be programmed from
+ * dce_os_get_dce_stream_id - Gets the dce stream ID to be programmed from
  * platform data.
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : Stream ID Value
  */
-u8 dce_get_dce_stream_id(struct tegra_dce *d)
+u8 dce_os_get_dce_stream_id(struct tegra_dce *d)
 {
 	return pdata_from_dce(d)->stream_id;
 }
 
 /**
- * dce_get_fw_vm_index - Gets the VMIndex for the fw region to be
+ * dce_os_get_fw_vm_index - Gets the VMIndex for the fw region to be
  * programmed from platform data.
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : VMIndex
  */
-u8 dce_get_fw_vm_index(struct tegra_dce *d)
+u8 dce_os_get_fw_vm_index(struct tegra_dce *d)
 {
 	return pdata_from_dce(d)->fw_vmindex;
 }
 
 /**
- * dce_get_fw_carveout_id- Gets the carveout ID for the fw region to be
+ * dce_os_get_fw_carveout_id- Gets the carveout ID for the fw region to be
  * programmed from platform data.
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : Carveout Id
  */
-u8 dce_get_fw_carveout_id(struct tegra_dce *d)
+u8 dce_os_get_fw_carveout_id(struct tegra_dce *d)
 {
 	return pdata_from_dce(d)->fw_carveout_id;
 }
 
 /**
- * dce_is_physical_id_valid - Checks if the DCE can use physical stream ID.
+ * dce_os_is_physical_id_valid - Checks if the DCE can use physical stream ID.
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : True if SMMU is disabled.
  */
-bool dce_is_physical_id_valid(struct tegra_dce *d)
+bool dce_os_is_physical_id_valid(struct tegra_dce *d)
 {
 	return pdata_from_dce(d)->use_physical_id;
 }
 
 /**
- * dce_get_fw_dce_addr - Gets the 32bit address to be used for
+ * dce_os_get_fw_dce_addr - Gets the 32bit address to be used for
  *				loading	the fw before being converted
  *				by AST into a 40-bit address.
  *
@@ -293,13 +293,13 @@ bool dce_is_physical_id_valid(struct tegra_dce *d)
  *
  * Return : 32bit address
  */
-u32 dce_get_fw_dce_addr(struct tegra_dce *d)
+u32 dce_os_get_fw_dce_addr(struct tegra_dce *d)
 {
 	return pdata_from_dce(d)->fw_dce_addr;
 }
 
 /**
- * dce_get_fw_phy_addr - Gets the 40bit address to be used by AST
+ * dce_os_get_fw_phy_addr - Gets the 40bit address to be used by AST
  *				for loading the fw after converting
  *				the 32bit incoming address.
  *
@@ -311,7 +311,7 @@ u32 dce_get_fw_dce_addr(struct tegra_dce *d)
  *
  * Return : 64bit address
  */
-u64 dce_get_fw_phy_addr(struct tegra_dce *d, struct dce_firmware *fw)
+u64 dce_os_get_fw_phy_addr(struct tegra_dce *d, struct dce_firmware *fw)
 {
 	/* Caller should make sure that *fw is valid since this func is
 	 * not expected to return any error.
@@ -320,13 +320,13 @@ u64 dce_get_fw_phy_addr(struct tegra_dce *d, struct dce_firmware *fw)
 }
 
 /**
- * dce_get_fw_name - Gets the dce fw name from platform data.
+ * dce_os_get_fw_name - Gets the dce fw name from platform data.
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : fw_name
  */
-const char *dce_get_fw_name(struct tegra_dce *d)
+const char *dce_os_get_fw_name(struct tegra_dce *d)
 {
 	return pdata_from_dce(d)->fw_name;
 }
@@ -487,7 +487,7 @@ static int dce_thread_proxy(void *thread_data)
 }
 
 /**
- * dce_thread_create - Create and run a new thread.
+ * dce_os_thread_create - Create and run a new thread.
  *
  * @thread - thread structure to use
  * @data - data to pass to threadfn
@@ -497,10 +497,10 @@ static int dce_thread_proxy(void *thread_data)
  * Create a thread and run threadfn in it. The thread stays alive as long as
  * threadfn is running. As soon as threadfn returns the thread is destroyed.
  *
- * threadfn needs to continuously poll dce_thread_should_stop() to determine
+ * threadfn needs to continuously poll dce_os_thread_should_stop() to determine
  * if it should exit.
  */
-int dce_thread_create(struct dce_thread *thread,
+int dce_os_thread_create(struct dce_thread *thread,
 		void *data,
 		int (*threadfn)(void *data), const char *name)
 {
@@ -518,17 +518,17 @@ int dce_thread_create(struct dce_thread *thread,
 };
 
 /**
- * dce_thread_stop - Destroy or request to destroy a thread
+ * dce_os_thread_stop - Destroy or request to destroy a thread
  *
  * @thread - thread to stop
  *
- * Request a thread to stop by setting dce_thread_should_stop() to
+ * Request a thread to stop by setting dce_os_thread_should_stop() to
  * true and wait for thread to exit.
  */
-void dce_thread_stop(struct dce_thread *thread)
+void dce_os_thread_stop(struct dce_thread *thread)
 {
 	/*
-	 * Threads waiting on wq's should have dce_thread_should_stop()
+	 * Threads waiting on wq's should have dce_os_thread_should_stop()
 	 * as one of its wakeup condition. This allows the thread to be woken
 	 * up when kthread_stop() is invoked and does not require an additional
 	 * callback to wakeup the sleeping thread.
@@ -540,38 +540,38 @@ void dce_thread_stop(struct dce_thread *thread)
 };
 
 /**
- * dce_thread_should_stop - Query if thread should stop
+ * dce_os_thread_should_stop - Query if thread should stop
  *
  * @thread
  *
  * Return true if thread should exit. Can be run only in the thread's own
  * context and with the thread as parameter.
  */
-bool dce_thread_should_stop(struct dce_thread *thread)
+bool dce_os_thread_should_stop(struct dce_thread *thread)
 {
 	return kthread_should_stop();
 };
 
 /**
- * dce_thread_is_running - Query if thread is running
+ * dce_os_thread_is_running - Query if thread is running
  *
  * @thread
  *
  * Return true if thread is started.
  */
-bool dce_thread_is_running(struct dce_thread *thread)
+bool dce_os_thread_is_running(struct dce_thread *thread)
 {
 	return READ_ONCE(thread->running);
 };
 
 /**
- * dce_thread_join - join a thread to reclaim resources
+ * dce_os_thread_join - join a thread to reclaim resources
  * after it has exited
  *
  * @thread - thread to join
  *
  */
-void dce_thread_join(struct dce_thread *thread)
+void dce_os_thread_join(struct dce_thread *thread)
 {
 	while (READ_ONCE(thread->running))
 		usleep_range(10000, 20000);
@@ -736,13 +736,13 @@ static void ipc_free_region(struct tegra_dce *d)
 }
 
 /**
- * dce_ipc_init_region_info - Initialize IPC region information.
+ * dce_os_ipc_init_region_info - Initialize IPC region information.
  *
  * @d : Pointer to tegra_dce structure.
  *
  * Return : 0 if successful
  */
-int dce_ipc_init_region_info(struct tegra_dce *d)
+int dce_os_ipc_init_region_info(struct tegra_dce *d)
 {
 	return ipc_allocate_region(d);
 }
@@ -754,7 +754,7 @@ int dce_ipc_init_region_info(struct tegra_dce *d)
  *
  * Return : Void
  */
-void dce_ipc_deinit_region_info(struct tegra_dce *d)
+void dce_os_ipc_deinit_region_info(struct tegra_dce *d)
 {
 	return ipc_free_region(d);
 }

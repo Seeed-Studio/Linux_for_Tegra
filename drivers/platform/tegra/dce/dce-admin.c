@@ -234,7 +234,7 @@ int dce_admin_init(struct tegra_dce *d)
 	int ret = 0;
 
 	d->boot_status |= DCE_EARLY_INIT_START;
-	ret = dce_ipc_init_region_info(d);
+	ret = dce_os_ipc_init_region_info(d);
 	if (ret) {
 		dce_os_err(d, "IPC region allocation failed");
 		goto err_ipc_reg_alloc;
@@ -250,7 +250,7 @@ int dce_admin_init(struct tegra_dce *d)
 	return 0;
 
 err_channel_init:
-	dce_ipc_deinit_region_info(d);
+	dce_os_ipc_deinit_region_info(d);
 err_ipc_reg_alloc:
 	d->boot_status |= DCE_EARLY_INIT_FAILED;
 	return ret;
@@ -268,7 +268,7 @@ void dce_admin_deinit(struct tegra_dce *d)
 {
 	dce_admin_channel_deinit(d);
 
-	dce_ipc_deinit_region_info(d);
+	dce_os_ipc_deinit_region_info(d);
 
 	dce_mailbox_deinit_interface(d,
 			DCE_MAILBOX_ADMIN_INTERFACE);
