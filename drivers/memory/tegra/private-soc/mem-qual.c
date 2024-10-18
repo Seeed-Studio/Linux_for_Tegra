@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
+#include <nvidia/conftest.h>
+
 #define pr_fmt(fmt) "tegra264-mem-qual: " fmt
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -292,7 +294,7 @@ static int __init tegra_mem_qual_init(void)
 	dev_num = 0;
 	device_index = 0;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+#if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */
 	class = class_create("qual_class");
 #else
 	class = class_create(THIS_MODULE, "qual_class");
