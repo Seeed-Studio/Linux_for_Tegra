@@ -69,7 +69,7 @@ struct cfg_list_item {
 	struct list_head list;
 	u16 offset;
 	u8 len;
-	u8 data[0];
+	u8 data[];
 };
 
 static struct list_head list_configs;
