@@ -36,6 +36,7 @@ tegra-dce-$(CONFIG_TEGRA_DCE) += dce-pm.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-os-utils.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-hsp-smb-t264.o
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-hsp-ss-t264.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-os-ivc.o
 
 ifeq ($(CONFIG_DEBUG_FS),y)
 tegra-dce-$(CONFIG_TEGRA_DCE) += dce-debug.o

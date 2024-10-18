@@ -437,48 +437,6 @@ static int _dce_ipc_get_next_write_buff(struct dce_ipc_channel *ch)
 }
 
 /**
- * dce_ipc_write_channel - Writes to an ivc channel.
- *
- * @ch : Pointer to the pertinent channel.
- * @data : Pointer to the data to be written.
- * @size : Size of the data to be written.
- *
- * Return : 0 if successful.
- */
-static int _dce_ipc_write_channel(struct dce_ipc_channel *ch,
-		const void *data, size_t size)
-{
-	struct dce_ipc_header *hdr;
-
-	/**
-	 * Add actual length information to the top
-	 * of the IVC frame
-	 */
-
-#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP) /* Linux v6.2 */
-	if ((ch->flags & DCE_IPC_CHANNEL_MSG_HEADER) != 0U) {
-		iosys_map_wr_field(&ch->obuff, 0, struct dce_ipc_header, length,
-				   size);
-		iosys_map_incr(&ch->obuff, sizeof(*hdr));
-	}
-
-	if (data && size > 0)
-		iosys_map_memcpy_to(&ch->obuff, 0, data, size);
-#else
-	if ((ch->flags & DCE_IPC_CHANNEL_MSG_HEADER) != 0U) {
-		hdr = (struct dce_ipc_header *)ch->obuff;
-		hdr->length = (uint32_t)size;
-		ch->obuff = (void *)(hdr + 1U);
-	}
-
-	if (data && size > 0)
-		memcpy(ch->obuff, data, size);
-#endif
-
-	return dce_os_ivc_write_advance(&ch->d_ivc);
-}
-
-/**
  * dce_ipc_send_message - Sends messages over ipc.
  *
  * @d : Pointer to tegra_dce struct.
@@ -505,7 +463,7 @@ int dce_ipc_send_message(struct tegra_dce *d, u32 ch_type,
 		goto out;
 	}
 
-	ret = _dce_ipc_write_channel(ch, data, size);
+	ret = dce_os_ivc_write_channel(ch, data, size);
 	if (ret) {
 		dce_os_err(ch->d, "Error writing to channel");
 		goto out;
@@ -541,47 +499,6 @@ static int _dce_ipc_get_next_read_buff(struct dce_ipc_channel *ch)
 }
 
 /**
- * dce_ipc_read_channel - Writes to an ivc channel.
- *
- * @ch : Pointer to the pertinent channel.
- * @data : Pointer to the data to be read.
- * @size : Size of the data to be read.
- *
- * Return : 0 if successful.
- */
-static int _dce_ipc_read_channel(struct dce_ipc_channel *ch,
-		void *data, size_t size)
-{
-	struct dce_ipc_header *hdr;
-
-	/**
-	 * Get actual length information from the top
-	 * of the IVC frame
-	 */
-#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP) /* Linux v6.2 */
-	if ((ch->flags & DCE_IPC_CHANNEL_MSG_HEADER) != 0U) {
-		iosys_map_wr_field(&ch->ibuff, 0, struct dce_ipc_header, length,
-				   size);
-		iosys_map_incr(&ch->ibuff, sizeof(*hdr));
-	}
-
-	if (data && size > 0)
-		iosys_map_memcpy_from(data, &ch->ibuff, 0, size);
-#else
-	if ((ch->flags & DCE_IPC_CHANNEL_MSG_HEADER) != 0U) {
-		hdr = (struct dce_ipc_header *)ch->ibuff;
-		size = (size_t)(hdr->length);
-		ch->ibuff = (void *)(hdr + 1U);
-	}
-
-	if (data && size > 0)
-		memcpy(data, ch->ibuff, size);
-#endif
-
-	return dce_os_ivc_read_advance(&ch->d_ivc);
-}
-
-/**
  * dce_ipc_read_message - Reads messages over ipc.
  *
  * @d : Pointer to tegra_dce struct.
@@ -607,7 +524,7 @@ int dce_ipc_read_message(struct tegra_dce *d, u32 ch_type,
 		goto out;
 	}
 
-	ret = _dce_ipc_read_channel(ch, data, size);
+	ret = dce_os_ivc_read_channel(ch, data, size);
 	if (ret) {
 		dce_os_err(ch->d, "Error reading from channel");
 		goto out;
@@ -711,25 +628,22 @@ int dce_ipc_get_region_iova_info(struct tegra_dce *d, u64 *iova, u32 *size)
 }
 
 /*
- * dce_ipc_handle_notification - Handles the notification from remote
+ * dce_ipc_is_data_available - Check if IVC channel has new data
+ *				avaialble for reading.
  *
  * @d : Pointer to tegra_dce struct
  * @id : Channel Index
  *
- * Return : True if the worker thread needs to wake up
+ * Return : true if the worker thread needs to wake up
  */
 bool dce_ipc_is_data_available(struct tegra_dce *d, u32 ch_type)
 {
 	bool ret = false;
-	void *frame;
-	int err = 0;
 	struct dce_ipc_channel *ch = d->d_ipc.ch[ch_type];
 
 	dce_os_mutex_lock(&ch->lock);
 
-	err = dce_os_ivc_get_next_read_frame(&ch->d_ivc, &frame);
-	if (err == 0)
-		ret = true;
+	ret = dce_os_ivc_is_data_available(ch);
 
 	dce_os_mutex_unlock(&ch->lock);
 

@@ -9,6 +9,8 @@
 #include <soc/tegra/ivc.h>
 #include <nvidia/conftest.h>
 
+struct dce_ipc_channel;
+
 typedef struct tegra_ivc dce_os_ivc_t;
 
 /*
@@ -56,76 +58,10 @@ static inline int dce_os_ivc_notified(dce_os_ivc_t *ivc)
     return tegra_ivc_notified(ivc);
 }
 
-/*
- * Return negative err code on Failure, or 0 on Success.
- * This function will populate address of next write frame
- * info functions ppframe input argument.
- */
-static inline int dce_os_ivc_get_next_write_frame(dce_os_ivc_t *ivc, void **ppframe)
-{
-    int err = 0;
-
-#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP) /* Linux v6.2 */
-    struct iosys_map pframe;
-
-    err = tegra_ivc_write_get_next_frame(ivc, &pframe);
-    if (err) {
-        iosys_map_clear(&pframe);
-        goto done;
-    }
-#else
-    void *pframe = NULL;
-
-    pframe = tegra_ivc_write_get_next_frame(ivc);
-    if (IS_ERR(pframe)) {
-        err = -ENOMEM;
-        goto done;
-    }
-#endif
-
-    *ppframe = pframe;
-
-done:
-    return err;
-}
-
 /* Returns 0, or a negative error value if failed. */
 static inline int dce_os_ivc_write_advance(dce_os_ivc_t *ivc)
 {
     return tegra_ivc_write_advance(ivc);
-}
-
-/*
- * Return negative err code on Failure, or 0 on Success.
- * This function will populate address of next read frame
- * info functions ppframe input argument.
- */
-static inline int dce_os_ivc_get_next_read_frame(dce_os_ivc_t *ivc, void **ppframe)
-{
-    int err = 0;
-
-#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP) /* Linux v6.2 */
-    struct iosys_map pframe;
-
-    err = tegra_ivc_read_get_next_frame(ivc, &pframe);
-    if (err) {
-        iosys_map_clear(&pframe);
-        goto done;
-    }
-#else
-    void *pframe = NULL;
-
-    pframe = tegra_ivc_read_get_next_frame(ivc);
-    if (IS_ERR(pframe)) {
-        err = -ENOMEM;
-        goto done;
-    }
-#endif
-
-    *ppframe = pframe;
-
-done:
-    return err;
 }
 
 /* Returns 0, or a negative error value if failed. */
@@ -144,5 +80,48 @@ static inline uint32_t dce_os_ivc_total_queue_size(uint32_t size)
 {
     return tegra_ivc_total_queue_size(size);
 }
+
+int dce_os_ivc_write_channel(struct dce_ipc_channel *ch,
+		const void *data, size_t size);
+
+int dce_os_ivc_read_channel(struct dce_ipc_channel *ch,
+		void *data, size_t size);
+
+/**
+ * dce_os_ivc_is_data_available - Check if data is avaialble for reading.
+ *
+ * @ch : Pointer to DCE IPC channel struct
+ *
+ * Return : true if success and data is available, false otherwise
+ */
+bool dce_os_ivc_is_data_available(struct dce_ipc_channel *ch);
+
+/**
+ * dce_os_ivc_get_next_write_frame - Get next write frame.
+ *
+ * @ivc : Pointer to IVC struct
+ * @ppFrame : Pointer to frame reference.
+ *
+ * Return : 0 if successful.
+ */
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP) /* Linux v6.2 */
+int dce_os_ivc_get_next_write_frame(dce_os_ivc_t *ivc, struct iosys_map *ppframe);
+#else /* NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP */
+int dce_os_ivc_get_next_write_frame(dce_os_ivc_t *ivc, void **ppframe);
+#endif /* NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP */
+
+/**
+ * dce_os_ivc_get_next_read_frame - Get next read frame.
+ *
+ * @ivc : Pointer to IVC struct
+ * @ppFrame : Pointer to frame reference.
+ *
+ * Return : 0 if successful.
+ */
+#if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP) /* Linux v6.2 */
+int dce_os_ivc_get_next_read_frame(dce_os_ivc_t *ivc, struct iosys_map *ppframe);
+#else /* NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP */
+int dce_os_ivc_get_next_read_frame(dce_os_ivc_t *ivc, void **ppframe);
+#endif /* NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP */
 
 #endif /* DCE_OS_IVC_H */

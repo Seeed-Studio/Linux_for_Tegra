@@ -15,6 +15,8 @@
 #include <interface/dce-ipc-state.h>
 #include <linux/platform/tegra/dce/dce-client-ipc.h>
 
+struct tegra_dce;
+
 #define DCE_IPC_CHANNEL_TYPE_ADMIN 0U
 #define DCE_IPC_CHANNEL_TYPE_CPU_CLIENTS 1U
 
