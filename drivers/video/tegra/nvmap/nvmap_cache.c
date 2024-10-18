@@ -164,6 +164,7 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 	int err = 0;
 	struct nvmap_handle *h = cache_work->h;
 	unsigned int op = cache_work->op;
+	phys_addr_t difference;
 
 	if (!h || !h->alloc)
 		return -EFAULT;
@@ -204,11 +205,10 @@ per_page_phy_cache_maint:
 			h->flags != NVMAP_HANDLE_INNER_CACHEABLE);
 
 out:
-	if (!err) {
-		nvmap_stats_inc(NS_CFLUSH_DONE, pend - pstart);
-	}
+	if (!err && !check_sub_overflow(pend, pstart, &difference))
+		nvmap_stats_inc(NS_CFLUSH_DONE, difference);
 
-	trace_nvmap_cache_flush(pend - pstart,
+	trace_nvmap_cache_flush(difference,
 		nvmap_stats_read(NS_ALLOC),
 		nvmap_stats_read(NS_CFLUSH_RQ),
 		nvmap_stats_read(NS_CFLUSH_DONE));
