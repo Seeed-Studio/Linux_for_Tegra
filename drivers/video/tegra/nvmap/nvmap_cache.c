@@ -69,13 +69,13 @@ void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 		__dma_map_area(vaddr, size, DMA_TO_DEVICE);
 }
 
-static void heap_page_cache_maint(
+static int heap_page_cache_maint(
 	struct nvmap_handle *h, unsigned long start, unsigned long end,
 	unsigned int op, bool inner, bool outer, bool clean_only_dirty)
 {
 	/* Don't perform cache maint for RO mapped buffers */
 	if (h->from_va && h->is_ro)
-		return;
+		return 0;
 
 	if (h->userflags & NVMAP_HANDLE_CACHE_SYNC) {
 		/*
@@ -95,7 +95,7 @@ static void heap_page_cache_maint(
 		/* Fast inner cache maintenance using single mapping */
 		inner_cache_maint(op, h->vaddr + start, end - start);
 		if (!outer)
-			return;
+			return 0;
 		/* Skip per-page inner maintenance in loop below */
 		inner = false;
 
@@ -109,6 +109,7 @@ per_page_cache_maint:
 		unsigned long off;
 		size_t size;
 		int ret;
+		phys_addr_t sum;
 
 		page = nvmap_to_page(h->pgalloc.pages[start >> PAGE_SHIFT]);
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
@@ -116,11 +117,15 @@ per_page_cache_maint:
 		size = next - start;
 		paddr = page_to_phys(page) + off;
 
-		ret = nvmap_cache_maint_phys_range(op, paddr, paddr + size,
+		if (check_add_overflow(paddr, (phys_addr_t)size, &sum))
+			return -EOVERFLOW;
+
+		ret = nvmap_cache_maint_phys_range(op, paddr, sum,
 				inner, outer);
 		WARN_ON(ret != 0);
 		start = next;
 	}
+	return 0;
 }
 
 struct cache_maint_op {
@@ -189,10 +194,11 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 	}
 
 	if (h->heap_pgalloc) {
-		heap_page_cache_maint(h, pstart, pend, op, true,
-			(h->flags == NVMAP_HANDLE_INNER_CACHEABLE) ?
-			false : true, cache_work->clean_only_dirty);
-		goto out;
+		err = heap_page_cache_maint(h, pstart, pend, op, true,
+				(h->flags == NVMAP_HANDLE_INNER_CACHEABLE) ?
+				false : true, cache_work->clean_only_dirty);
+		if (err != 0)
+			return err;
 	}
 
 	if (!h->vaddr) {
@@ -212,13 +218,14 @@ per_page_phy_cache_maint:
 			h->flags != NVMAP_HANDLE_INNER_CACHEABLE);
 
 out:
-	if (!err && !check_sub_overflow(pend, pstart, &difference))
+	if (!err && !check_sub_overflow(pend, pstart, &difference)) {
 		nvmap_stats_inc(NS_CFLUSH_DONE, difference);
 
-	trace_nvmap_cache_flush(difference,
+		trace_nvmap_cache_flush(difference,
 		nvmap_stats_read(NS_ALLOC),
 		nvmap_stats_read(NS_CFLUSH_RQ),
 		nvmap_stats_read(NS_CFLUSH_DONE));
+	}
 
 	return 0;
 }
@@ -287,6 +294,7 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 	struct nvmap_handle *handle;
 	unsigned long start;
 	unsigned long end;
+	unsigned long sum;
 	int err = 0;
 
 	if (!op->addr || op->op < NVMAP_CACHE_OP_WB ||
@@ -317,7 +325,12 @@ int __nvmap_cache_maint(struct nvmap_client *client,
 
 	start = (unsigned long)op->addr - vma->vm_start +
 		(vma->vm_pgoff << PAGE_SHIFT);
-	end = start + op->len;
+	if (check_add_overflow(start, (unsigned long)op->len, &sum)) {
+		err = -EOVERFLOW;
+		goto out;
+	}
+
+	end = sum;
 
 	err = __nvmap_do_cache_maint(client, priv->handle, start, end, op->op,
 				     false);
