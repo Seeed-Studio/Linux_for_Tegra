@@ -1,0 +1,312 @@
+/*
+ * Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include <dce.h>
+#include <dce-util-common.h>
+#include <hw/t264/hw_hsp_dce.h>
+#include <dce-hsp-t264.h>
+
+/**
+ * smb_regs is a 2D array of read-only pointers to a function returning u32.
+ *
+ * Array of functions that retrun base addresses of shared maiboxes registers
+ * in DCE cluster based on the mailbox id and HSP id.
+ */
+static u32 (*const smb_regs[DCE_MAX_HSP_T264][DCE_MAX_NO_SMB_T264])(void) = {
+	[0U] = {
+		hsp_0_sm0_r,
+		hsp_0_sm1_r,
+		hsp_0_sm2_r,
+		hsp_0_sm3_r,
+		hsp_0_sm4_r,
+		hsp_0_sm5_r,
+		hsp_0_sm6_r,
+		hsp_0_sm7_r,
+	},
+	[1U] = {
+		hsp_1_sm0_r,
+		hsp_1_sm1_r,
+		hsp_1_sm2_r,
+		hsp_1_sm3_r,
+		hsp_1_sm4_r,
+		hsp_1_sm5_r,
+		hsp_1_sm6_r,
+		hsp_1_sm7_r,
+	},
+};
+
+/**
+ * smb_full_ie_regs is a 2D array of read-only pointers to a function
+ * returning u32.
+ *
+ * Array of functions that retrun base addresses of full IE for shared
+ * maiboxes registers in DCE cluster based on the mailbox id and HSP id.
+ */
+static u32 (*const smb_full_ie_regs[DCE_MAX_HSP_T264][DCE_MAX_NO_SMB_T264])(void) = {
+	[0U] = {
+		hsp_0_sm0_full_int_ie_r,
+		hsp_0_sm1_full_int_ie_r,
+		hsp_0_sm2_full_int_ie_r,
+		hsp_0_sm3_full_int_ie_r,
+		hsp_0_sm4_full_int_ie_r,
+		hsp_0_sm5_full_int_ie_r,
+		hsp_0_sm6_full_int_ie_r,
+		hsp_0_sm7_full_int_ie_r,
+	},
+	[1U] = {
+		hsp_1_sm0_full_int_ie_r,
+		hsp_1_sm1_full_int_ie_r,
+		hsp_1_sm2_full_int_ie_r,
+		hsp_1_sm3_full_int_ie_r,
+		hsp_1_sm4_full_int_ie_r,
+		hsp_1_sm5_full_int_ie_r,
+		hsp_1_sm6_full_int_ie_r,
+		hsp_1_sm7_full_int_ie_r,
+	},
+};
+
+/**
+ * smb_empty_ie_regs is a 2D array of read-only pointers to a function
+ * returning u32.
+ *
+ * Array of functions that retrun base addresses of empty IE for shared
+ * maiboxes registers in DCE cluster based on the mailbox id and HSP id.
+ */
+static u32 (*const smb_empty_ie_regs[DCE_MAX_HSP_T264][DCE_MAX_NO_SMB_T264])(void) = {
+	[0U] = {
+		hsp_0_sm0_empty_int_ie_r,
+		hsp_0_sm1_empty_int_ie_r,
+		hsp_0_sm2_empty_int_ie_r,
+		hsp_0_sm3_empty_int_ie_r,
+		hsp_0_sm4_empty_int_ie_r,
+		hsp_0_sm5_empty_int_ie_r,
+		hsp_0_sm6_empty_int_ie_r,
+		hsp_0_sm7_empty_int_ie_r,
+	},
+	[1U] = {
+		hsp_1_sm0_empty_int_ie_r,
+		hsp_1_sm1_empty_int_ie_r,
+		hsp_1_sm2_empty_int_ie_r,
+		hsp_1_sm3_empty_int_ie_r,
+		hsp_1_sm4_empty_int_ie_r,
+		hsp_1_sm5_empty_int_ie_r,
+		hsp_1_sm6_empty_int_ie_r,
+		hsp_1_sm7_empty_int_ie_r,
+	},
+};
+
+/**
+ * dce_smb_set_t264 - Set an u32 value to smb_#n in the DCE Cluster
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @val : val to set.
+ * @hsp_id : ID of hsp instance used
+ * @id : Shared Mailbox Id.
+ *
+ * Return : Void
+ */
+void dce_smb_set_t264(struct tegra_dce *d, u32 val, u8 hsp_id, u8 id)
+{
+	if (id >= DCE_MAX_NO_SMB_T264 || hsp_id >= DCE_MAX_HSP_T264) {
+		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		return;
+	}
+
+	dce_writel(d, smb_regs[hsp_id][id](), val);
+}
+
+/**
+ * dce_smb_set_full_ie_t264 - Set an u32 value to smb_#n in the DCE Cluster
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @en : enable if true and disable if false
+ * @hsp_id : ID of hsp instance used
+ * @id : Shared Mailbox Id.
+ *
+ * Return : Void
+ */
+void dce_smb_set_full_ie_t264(struct tegra_dce *d, bool en, u8 hsp_id, u8 id)
+{
+	u32 val = en ? 1U : 0U;
+
+	if (id >= DCE_MAX_NO_SMB_T264 || hsp_id >= DCE_MAX_HSP_T264) {
+		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		return;
+	}
+
+	dce_writel(d, smb_full_ie_regs[hsp_id][id](), val);
+}
+
+/**
+ * dce_smb_read_full_ie_t264 - Set an u32 value to smb_#n in the DCE Cluster
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @hsp_id : ID of hsp instance used
+ * @id : Shared Mailbox Id.
+ *
+ * Return : u32 register value
+ */
+u32 dce_smb_read_full_ie_t264(struct tegra_dce *d, u8 hsp_id, u8 id)
+{
+	if (id >= DCE_MAX_NO_SMB_T264 || hsp_id >= DCE_MAX_HSP_T264) {
+		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		return 0xffffffff; /* TODO : Add DCE Error Numbers */
+	}
+
+	return dce_readl(d, smb_full_ie_regs[hsp_id][id]());
+}
+
+/**
+ * dce_smb_enable_empty_ie_t264 - Set an u32 value to smb_#n in the DCE Cluster
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @en : enable if true and disable if false
+ * @hsp_id : ID of hsp instance used
+ * @id : Shared Mailbox Id.
+ *
+ * Return : Void
+ */
+void dce_smb_set_empty_ie_t264(struct tegra_dce *d, bool en, u8 hsp_id, u8 id)
+{
+	u32 val = en ? 1U : 0U;
+
+	if (id >= DCE_MAX_NO_SMB_T264 || hsp_id >= DCE_MAX_HSP_T264) {
+		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		return;
+	}
+
+	dce_writel(d, smb_empty_ie_regs[hsp_id][id](), val);
+}
+
+/**
+ * dce_smb_read_t264 - Read the u32 value from smb_#n in the DCE Cluster
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @hsp_id : ID of hsp instance used
+ * @id : Shared Mailbox Id.
+ *
+ * Return : actual value if successful, 0xffffffff for errors scenarios
+ */
+u32 dce_smb_read_t264(struct tegra_dce *d, u8 hsp_id, u8 id)
+{
+	if (id >= DCE_MAX_NO_SMB_T264 || hsp_id >= DCE_MAX_HSP_T264) {
+		dce_err(d, "Invalid Shared Mailbox ID:%u or hsp:%u", id, hsp_id);
+		return 0xffffffff; /* TODO : Add DCE Error Numbers */
+	}
+
+	return dce_readl(d, smb_regs[hsp_id][id]());
+}
+
+/**
+ * hsp_int_ie_regs is a 2D array of read-only pointers to a
+ * function returning u32.
+ *
+ * Array of functions that retrun base addresses of hsp IE
+ * regs in DCE cluster based on the id.
+ */
+static u32 (*const hsp_int_ie_regs[DCE_MAX_HSP_T264][DCE_MAX_NO_SMB_T264])(void) = {
+	[0U] = {
+		hsp_0_int_ie0_r,
+		hsp_0_int_ie1_r,
+		hsp_0_int_ie2_r,
+		hsp_0_int_ie3_r,
+		hsp_0_int_ie4_r,
+		hsp_0_int_ie5_r,
+		hsp_0_int_ie6_r,
+		hsp_0_int_ie7_r,
+	},
+	[1U] = {
+		hsp_1_int_ie0_r,
+		hsp_1_int_ie1_r,
+		hsp_1_int_ie2_r,
+		hsp_1_int_ie3_r,
+		hsp_1_int_ie4_r,
+		hsp_1_int_ie5_r,
+		hsp_1_int_ie6_r,
+		hsp_1_int_ie7_r,
+	},
+};
+
+/**
+ * hsp_int_ie_regs is a 1D array of read-only pointers to a
+ * function returning u32.
+ *
+ * Array of functions that retrun addresses of hsp IR
+ * regs in DCE cluster based on the id.
+ */
+static u32 (*const hsp_int_ir_regs[DCE_MAX_HSP_T264])(void) = {
+
+	[0U] = hsp_0_int_ir_r,
+	[1U] = hsp_1_int_ir_r,
+};
+
+/**
+ * dce_hsp_ie_read_t264 - Read the u32 value from hsp_int_ie#n
+ *						in the DCE Cluster
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @hsp_id : ID of hsp instance used
+ * @id : Shared IE Id.
+ *
+ * Return : actual value if successful, 0xffffffff for errors scenarios
+ */
+u32 dce_hsp_ie_read_t264(struct tegra_dce *d, u8 hsp_id, u8 id)
+{
+	if (id >= DCE_MAX_HSP_IE_T264 || hsp_id >= DCE_MAX_HSP_T264) {
+		dce_err(d, "Invalid Shared HSP IE ID:%u or hsp:%u", id, hsp_id);
+		return 0xffffffff; /* TODO : Add DCE Error Numbers */
+	}
+
+	return dce_readl(d, hsp_int_ie_regs[hsp_id][id]());
+}
+
+/**
+ * dce_hsp_ie_write_t264 - Read the u32 value from hsp_int_ie#n
+ *						in the DCE Cluster
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @val : Value to be written
+ * @hsp_id : ID of hsp instance used
+ * @id : Shared IE Id.
+ *
+ * Return : void
+ */
+void dce_hsp_ie_write_t264(struct tegra_dce *d, u32 val, u8 hsp_id, u8 id)
+{
+	if (id >= DCE_MAX_HSP_IE_T264 || hsp_id >= DCE_MAX_HSP_T264) {
+		dce_err(d, "Invalid Shared HSP IE ID:%u or hsp:%u", id, hsp_id);
+		return;
+	}
+
+	dce_writel(d, hsp_int_ie_regs[hsp_id][id](),
+			val | dce_readl(d, hsp_int_ie_regs[hsp_id][id]()));
+}
+
+/**
+ * dce_hsp_ir_read_t264 - Read the u32 value from hsp_int_ir
+ *					in the DCE Cluster
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @hsp_id : ID of hsp instance used
+ *
+ * Return : actual value if successful, 0xffffffff for errors scenarios
+ */
+u32 dce_hsp_ir_read_t264(struct tegra_dce *d, u8 hsp_id)
+{
+	if (hsp_id >= DCE_MAX_HSP_T264) {
+		dce_err(d, "Invalid HSP ID:%u", hsp_id);
+		return 0xffffffff; /* TODO : Add DCE Error Numbers */
+	}
+
+	return dce_readl(d, hsp_int_ir_regs[hsp_id]());
+}

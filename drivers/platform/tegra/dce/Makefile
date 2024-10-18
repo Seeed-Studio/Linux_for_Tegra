@@ -1,35 +1,42 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Display Controller Engine code.
 #
+
 GCOV_PROFILE := y
 
-ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/include
-ccflags-y += -Werror
+ifeq ($(CONFIG_TEGRA_OOT_MODULE),m)
+CONFIG_TEGRA_DCE := m
+else # CONFIG_TEGRA_OOT_MODULE
+CONFIG_TEGRA_DCE := y
+endif # CONFIG_TEGRA_OOT_MODULE
 
-obj-m += tegra-dce.o
-tegra-dce-objs += \
-	dce-ast.o \
-	dce-reset.o \
-	dce-hsp-smb.o \
-	dce-hsp-ss.o \
-	dce-worker.o \
-	dce-fsm.o \
-	dce-init-deinit.o \
-	dce-mailbox.o \
-	dce-bootstrap.o \
-	dce-admin.o \
-	dce-ipc.o \
-	dce-ipc-signal.o \
-	dce-client-ipc.o \
-	dce-module.o \
-	dce-pm.o \
-	dce-util-common.o
+ccflags-y += -I$(srctree.nvidia-oot)/include
+ccflags-y += -I$(srctree.nvidia-oot)/drivers/platform/tegra/dce/include
+obj-$(CONFIG_TEGRA_DCE) += tegra-dce.o
+
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-ast.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-reset.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-hsp-smb.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-hsp-ss.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-worker.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-fsm.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-init-deinit.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-mailbox.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-bootstrap.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-admin.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-ipc.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-ipc-signal.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-client-ipc.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-module.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-pm.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-util-common.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-hsp-smb-t264.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-hsp-ss-t264.o
 
 ifeq ($(CONFIG_DEBUG_FS),y)
-tegra-dce-objs += \
-	dce-debug.o \
-	dce-admin-debug.o \
-	dce-debug-perf.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-debug.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-admin-debug.o
+tegra-dce-$(CONFIG_TEGRA_DCE) += dce-debug-perf.o
 endif

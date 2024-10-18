@@ -26,6 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/device.h>
 #include <dce-hsp-t234.h>
+#include <dce-hsp-t264.h>
 
 /**
  * The following platform info is needed for backdoor
@@ -43,10 +44,21 @@ static const struct dce_platform_data t234_dce_platform_data = {
 	.use_physical_id = false,
 };
 
-__weak const struct of_device_id tegra_dce_of_match[] = {
+static const struct dce_platform_data t264_dce_platform_data = {
+	.stream_id = 0x0,
+	.hsp_id = 0x0,
+	.fw_info_valid = false,
+	.use_physical_id = false,
+};
+
+const struct of_device_id tegra_dce_of_match[] = {
 	{
 		.compatible = "nvidia,tegra234-dce",
 		.data = (struct dce_platform_data *)&t234_dce_platform_data
+	},
+	{
+		.compatible = "nvidia,tegra264-dce",
+		.data = (struct dce_platform_data *)&t264_dce_platform_data
 	},
 	{ },
 };
@@ -221,6 +233,9 @@ static int dce_init_hsp_hal_fn(struct platform_device *pdev,
 	if (of_device_is_compatible(node, "nvidia,tegra234-dce")) {
 		dev_info(&pdev->dev, "Setting DCE HSP functions for tegra234-dce");
 		DCE_HSP_INIT_T234(d->hsp);
+	} else if (of_device_is_compatible(node, "nvidia,tegra264-dce")) {
+		dev_info(&pdev->dev, "Setting DCE HSP functions for tegra234-dce");
+		DCE_HSP_INIT_T264(d->hsp);
 	} else {
 		ret = -1;
 		dev_err(&pdev->dev, "DCE SOC not supported");
