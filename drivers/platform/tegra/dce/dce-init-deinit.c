@@ -71,7 +71,7 @@ int dce_driver_init(struct tegra_dce *d)
 		goto err_pm_init;
 	}
 
-	ret = dce_work_cond_sw_resource_init(d);
+	ret = dce_os_work_cond_sw_resource_init(d);
 	if (ret) {
 		dce_os_err(d, "dce sw resource init failed");
 		goto err_sw_init;
@@ -86,7 +86,7 @@ int dce_driver_init(struct tegra_dce *d)
 	return ret;
 
 err_fsm_init:
-	dce_work_cond_sw_resource_deinit(d);
+	dce_os_work_cond_sw_resource_deinit(d);
 err_sw_init:
 	dce_pm_deinit(d);
 err_pm_init:
@@ -115,7 +115,7 @@ void dce_driver_deinit(struct tegra_dce *d)
 
 	dce_fsm_deinit(d);
 
-	dce_work_cond_sw_resource_deinit(d);
+	dce_os_work_cond_sw_resource_deinit(d);
 
 	dce_pm_deinit(d);
 

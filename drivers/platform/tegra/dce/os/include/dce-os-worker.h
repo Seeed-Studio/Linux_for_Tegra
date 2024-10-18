@@ -3,8 +3,8 @@
  * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
-#ifndef DCE_WORKER_H
-#define DCE_WORKER_H
+#ifndef DCE_OS_WORKER_H
+#define DCE_OS_WORKER_H
 
 #include <dce-os-cond.h>
 #include <dce-os-lock.h>
@@ -24,11 +24,10 @@ struct dce_wait_cond {
 	struct dce_os_cond cond_wait;
 };
 
-int dce_work_cond_sw_resource_init(struct tegra_dce *d);
-void dce_work_cond_sw_resource_deinit(struct tegra_dce *d);
-void dce_schedule_boot_complete_wait_worker(struct tegra_dce *d);
-int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id);
-void dce_wakeup_interruptible(struct tegra_dce *d, u32 msg_id);
+int dce_os_work_cond_sw_resource_init(struct tegra_dce *d);
+void dce_os_work_cond_sw_resource_deinit(struct tegra_dce *d);
+int dce_os_wait_interruptible(struct tegra_dce *d, u32 msg_id);
+void dce_os_wakeup_interruptible(struct tegra_dce *d, u32 msg_id);
 void dce_os_cond_wait_reset(struct tegra_dce *d, u32 msg_id);
 
-#endif
+#endif /* DCE_OS_WORKER_H */

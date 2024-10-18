@@ -23,7 +23,7 @@ int dce_admin_ipc_wait(struct tegra_dce *d)
 {
 	int ret = 0;
 
-	ret = dce_wait_interruptible(d, DCE_WAIT_ADMIN_IPC);
+	ret = dce_os_wait_interruptible(d, DCE_WAIT_ADMIN_IPC);
 	if (ret) {
 		/**
 		 * TODO: Add error handling for abort and retry
@@ -340,7 +340,7 @@ int dce_admin_handle_ipc_received_event(struct tegra_dce *d, void *params)
 	if (params != NULL)
 		dce_os_warn(d, "Params aren't expected in this function\n");
 
-	dce_wakeup_interruptible(d, DCE_WAIT_ADMIN_IPC);
+	dce_os_wakeup_interruptible(d, DCE_WAIT_ADMIN_IPC);
 	return 0;
 }
 
@@ -550,7 +550,7 @@ int dce_admin_send_enter_sc7(struct tegra_dce *d,
 	}
 
 	/* Wait for SC7 Enter done */
-	ret = dce_wait_interruptible(d, DCE_WAIT_SC7_ENTER);
+	ret = dce_os_wait_interruptible(d, DCE_WAIT_SC7_ENTER);
 	if (ret) {
 		dce_os_err(d, "SC7 Enter wait was interrupted with err:%d", ret);
 		goto out;

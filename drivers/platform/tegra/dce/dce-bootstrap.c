@@ -72,7 +72,7 @@ int dce_handle_boot_cmd_received_event(struct tegra_dce *d, void *params)
 	if (params != NULL)
 		dce_os_warn(d, "Params aren't expected in this function\n");
 
-	dce_wakeup_interruptible(d, DCE_WAIT_BOOT_CMD);
+	dce_os_wakeup_interruptible(d, DCE_WAIT_BOOT_CMD);
 	return 0;
 }
 
@@ -108,7 +108,7 @@ int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 
 	dce_os_debug(d, "Waiting for dce fw to boot...");
 
-	ret = dce_wait_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
+	ret = dce_os_wait_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
 	if (ret) {
 		/**
 		 * TODO: Add error handling for abort and retry
@@ -142,7 +142,7 @@ int dce_handle_boot_complete_received_event(struct tegra_dce *d, void *params)
 	if (params != NULL)
 		dce_os_warn(d, "Params aren't expected in this function\n");
 
-	dce_wakeup_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
+	dce_os_wakeup_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
 	return 0;
 }
 
@@ -254,7 +254,7 @@ static void dce_handle_irq_status(struct tegra_dce *d, u32 status)
 
 	if (status & DCE_IRQ_LOG_READY) {
 		dce_os_info(d, "DCE trace log buffers available");
-		dce_wakeup_interruptible(d, DCE_WAIT_LOG);
+		dce_os_wakeup_interruptible(d, DCE_WAIT_LOG);
 	}
 
 	/*
@@ -373,7 +373,7 @@ static int dce_mailbox_wait_boot_interface(struct tegra_dce *d)
 	u32 status;
 	int ret;
 
-	ret = dce_wait_interruptible(d, DCE_WAIT_BOOT_CMD);
+	ret = dce_os_wait_interruptible(d, DCE_WAIT_BOOT_CMD);
 	if (ret) {
 		/**
 		 * TODO: Add error handling for abort and retry

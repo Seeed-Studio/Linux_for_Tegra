@@ -13,7 +13,7 @@
 #include <dce-os-lock.h>
 #include <dce-os-cond.h>
 #include <dce-regs.h>
-#include <dce-worker.h>
+#include <dce-os-worker.h>
 #include <dce-fsm.h>
 #include <dce-pm.h>
 #include <dce-mailbox.h>

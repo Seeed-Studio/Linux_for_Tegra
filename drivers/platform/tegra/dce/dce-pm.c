@@ -99,7 +99,7 @@ int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
 	if (params != NULL)
 		dce_os_warn(d, "Params aren't expected in this function\n");
 
-	dce_wakeup_interruptible(d, DCE_WAIT_SC7_ENTER);
+	dce_os_wakeup_interruptible(d, DCE_WAIT_SC7_ENTER);
 	return 0;
 }
 

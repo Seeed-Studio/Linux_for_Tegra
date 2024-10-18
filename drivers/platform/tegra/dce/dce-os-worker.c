@@ -6,19 +6,19 @@
 #include <dce.h>
 #include <dce-os-cond.h>
 #include <dce-os-lock.h>
-#include <dce-worker.h>
+#include <dce-os-worker.h>
 #include <dce-os-utils.h>
 #include <interface/dce-admin-cmds.h>
 
 /*
- * dce_wait_interruptible : Wait for a given condition
+ * dce_os_wait_interruptible : Wait for a given condition
  *
  * @d : Pointer to tegra_dce struct.
  * @msg_id : index of wait condition
  *
  * Return : 0 if successful else error code
  */
-int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id)
+int dce_os_wait_interruptible(struct tegra_dce *d, u32 msg_id)
 {
 	struct dce_wait_cond *wait;
 
@@ -42,7 +42,7 @@ int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id)
 
 	/*
 	 * Clear wait->complete as soon as we exit from wait (consume the wake call)
-	 * So that when the next dce_wait_interruptible is called, it doesn't see old
+	 * So that when the next dce_os_wait_interruptible is called, it doesn't see old
 	 * wait->complete state.
 	 */
 	dce_os_atomic_set(&wait->complete, 0);
@@ -50,14 +50,14 @@ int dce_wait_interruptible(struct tegra_dce *d, u32 msg_id)
 }
 
 /*
- * dce_wakeup_interruptible : Wakeup waiting task on given condition
+ * dce_os_wakeup_interruptible : Wakeup waiting task on given condition
  *
  * @d : Pointer to tegra_dce struct.
  * @msg_id : index of wait condition
  *
  * Return : void
  */
-void dce_wakeup_interruptible(struct tegra_dce *d, u32 msg_id)
+void dce_os_wakeup_interruptible(struct tegra_dce *d, u32 msg_id)
 {
 	struct dce_wait_cond *wait;
 
@@ -99,13 +99,13 @@ void dce_os_cond_wait_reset(struct tegra_dce *d, u32 msg_id)
 }
 
 /**
- * dce_work_cond_sw_resource_init : Init dce workqueues related resources
+ * dce_os_work_cond_sw_resource_init : Init dce workqueues related resources
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : 0 if successful else error code
  */
-int dce_work_cond_sw_resource_init(struct tegra_dce *d)
+int dce_os_work_cond_sw_resource_init(struct tegra_dce *d)
 {
 	int ret = 0;
 	int i;
@@ -142,13 +142,13 @@ exit:
 }
 
 /**
- * dce_work_cond_sw_resource_deinit : de-init dce workqueues related resources
+ * dce_os_work_cond_sw_resource_deinit : de-init dce workqueues related resources
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : void
  */
-void dce_work_cond_sw_resource_deinit(struct tegra_dce *d)
+void dce_os_work_cond_sw_resource_deinit(struct tegra_dce *d)
 {
 	int i;
 
