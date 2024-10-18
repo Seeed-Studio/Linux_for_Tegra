@@ -1,12 +1,23 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
  *
  *  Realtek Bluetooth USB driver
  *
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
  */
-#ifndef __RTK_BT_H__
-#define __RTK_BT_H__
-
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -30,14 +41,17 @@
 /* #define HCI_VERSION_CODE KERNEL_VERSION(3, 14, 41) */
 #define HCI_VERSION_CODE LINUX_VERSION_CODE
 
-#ifdef CONFIG_BTCOEX
+#define CONFIG_BTCOEX			1
+#define CONFIG_BTUSB_WAKEUP_HOST	0
+
+#if CONFIG_BTCOEX
 #define BTCOEX
 #endif
 
 /***********************************
 ** Realtek - For rtk_btusb driver **
 ***********************************/
-#ifdef CONFIG_BTUSB_WAKEUP_HOST
+#if CONFIG_BTUSB_WAKEUP_HOST
 #define BTUSB_WAKEUP_HOST
 #endif
 
@@ -84,6 +98,7 @@ int btusb_send_frame(struct sk_buff *skb);
 #define BTUSB_ISOC_RUNNING		2
 #define BTUSB_SUSPENDING		3
 #define BTUSB_DID_ISO_RESUME	4
+#define BTUSB_USE_ALT3_FOR_WBS	15
 
 struct btusb_data {
 	struct hci_dev *hdev;
@@ -125,6 +140,7 @@ struct btusb_data {
 
 #if HCI_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
 	unsigned int air_mode;
+	bool usb_alt6_packet_flow;
 #endif
 	int isoc_altsetting;
 	int suspend_count;
@@ -136,6 +152,3 @@ struct btusb_data {
 	struct notifier_block shutdown_notifier;
 	void *context;
 };
-
-
-#endif /* __RTK_BT_H__ */

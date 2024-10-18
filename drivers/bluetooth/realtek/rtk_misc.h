@@ -1,11 +1,23 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
  *
  *  Realtek Bluetooth USB download firmware driver
  *
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
  */
-#ifndef __RTK_MISC_H__
-#define __RTK_MISC_H__
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -13,6 +25,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/usb.h>
 #include <linux/suspend.h>
+
+#define CONFIG_BTUSB_AUTOSUSPEND	0
 
 /* Download LPS patch when host suspends or power off
  *   LPS patch name:  lps_rtl8xxx_fw
@@ -33,19 +47,21 @@
 #if 1
 #define RTKBT_DBG(fmt, arg...) printk(KERN_DEBUG "rtk_btusb: " fmt "\n" , ## arg)
 #define RTKBT_INFO(fmt, arg...) printk(KERN_INFO "rtk_btusb: " fmt "\n" , ## arg)
-#define RTKBT_WARN(fmt, arg...) printk(KERN_DEBUG "rtk_btusb: " fmt "\n", ## arg)
+#define RTKBT_WARN(fmt, arg...) printk(KERN_WARNING "rtk_btusb: " fmt "\n", ## arg)
 #else
 #define RTKBT_DBG(fmt, arg...)
 #endif
 
 #if 1
-#define RTKBT_ERR(fmt, arg...) printk(KERN_DEBUG "rtk_btusb: " fmt "\n" , ## arg)
+#define RTKBT_ERR(fmt, arg...) printk(KERN_ERR "rtk_btusb: " fmt "\n" , ## arg)
 #else
 #define RTKBT_ERR(fmt, arg...)
 #endif
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 33)
-#define USB_RPM
+#define USB_RPM		1
+#else
+#define USB_RPM		0
 #endif
 
 #define CONFIG_NEEDS_BINDING
@@ -56,7 +72,7 @@
 #endif
 
 /* USB SS */
-#if (defined CONFIG_BTUSB_AUTOSUSPEND) && (defined USB_RPM)
+#if (CONFIG_BTUSB_AUTOSUSPEND && USB_RPM)
 #define BTUSB_RPM
 #endif
 
@@ -82,12 +98,41 @@ struct api_context {
 	int			status;
 };
 
-int download_lps_patch(struct usb_interface *intf);
+int download_special_patch(struct usb_interface *intf, const char *special_name);
 #endif
+
+int setup_btrealtek_flag(struct usb_interface *intf, struct hci_dev *hdev);
+
+enum {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
+	REALTEK_ALT6_CONTINUOUS_TX_CHIP,
+#endif
+
+	__REALTEK_NUM_FLAGS,
+};
+
+struct btrealtek_data {
+	DECLARE_BITMAP(flags, __REALTEK_NUM_FLAGS);
+};
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
+static inline void *hci_get_priv(struct hci_dev *hdev)
+{
+	return (char *)hdev + sizeof(*hdev);
+}
+#endif
+
+#define btrealtek_set_flag(hdev, nr)					\
+	do {								\
+		struct btrealtek_data *realtek = hci_get_priv((hdev));	\
+		set_bit((nr), realtek->flags);				\
+	} while (0)
+
+#define btrealtek_get_flag(hdev)						\
+	(((struct btrealtek_data *)hci_get_priv(hdev))->flags)
+
+#define btrealtek_test_flag(hdev, nr)	test_bit((nr), btrealtek_get_flag(hdev))
 
 #if defined RTKBT_SUSPEND_WAKEUP || defined RTKBT_SHUTDOWN_WAKEUP || defined RTKBT_SWITCH_PATCH
 int set_scan(struct usb_interface *intf);
 #endif
-
-
-#endif /* __RTK_MISC_H__ */
