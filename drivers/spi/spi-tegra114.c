@@ -1031,7 +1031,7 @@ static int tegra_spi_setup(struct spi_device *spi)
 static void tegra_spi_transfer_end(struct spi_device *spi)
 {
 	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
-	int cs_val = (spi->mode & SPI_CS_HIGH) ? 0 : 1;
+	int cs_val = (spi->mode & SPI_CS_HIGH) ? 1 : 0;
 
 	/* GPIO based chip select control */
 	if (spi->cs_gpiod)
