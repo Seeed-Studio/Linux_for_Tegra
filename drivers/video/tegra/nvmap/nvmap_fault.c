@@ -171,8 +171,12 @@ static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf)
 	unsigned long offs;
 	struct vm_area_struct *vma = vmf->vma;
 	unsigned long vmf_address = vmf->address;
+	unsigned long difference;
 
-	offs = (unsigned long)(vmf_address - vma->vm_start);
+	if (check_sub_overflow(vmf_address, (unsigned long)vma->vm_start, &difference))
+		return VM_FAULT_SIGBUS;
+
+	offs = difference;
 	priv = vma->vm_private_data;
 	if (priv == NULL || priv->handle == NULL || !priv->handle->alloc)
 		return VM_FAULT_SIGBUS;
