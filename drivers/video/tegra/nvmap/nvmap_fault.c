@@ -168,7 +168,7 @@ static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf)
 {
 	struct page *page;
 	struct nvmap_vma_priv *priv;
-	unsigned long offs;
+	unsigned long offs, sum;
 	struct vm_area_struct *vma = vmf->vma;
 	unsigned long vmf_address = vmf->address;
 	unsigned long difference;
@@ -181,10 +181,16 @@ static vm_fault_t nvmap_vma_fault(struct vm_fault *vmf)
 	if (priv == NULL || priv->handle == NULL || !priv->handle->alloc)
 		return VM_FAULT_SIGBUS;
 
-	offs += priv->offs;
+	if (check_add_overflow(offs, (unsigned long)priv->offs, &sum))
+		return VM_FAULT_SIGBUS;
+
+	offs = sum;
 	/* if the VMA was split for some reason, vm_pgoff will be the VMA's
 	 * offset from the original VMA */
-	offs += (vma->vm_pgoff << PAGE_SHIFT);
+	if (check_add_overflow(offs, (unsigned long)vma->vm_pgoff << PAGE_SHIFT, &sum))
+		return VM_FAULT_SIGBUS;
+
+	offs = sum;
 
 	if (offs >= priv->handle->size)
 		return VM_FAULT_SIGBUS;
