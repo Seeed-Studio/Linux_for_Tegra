@@ -1721,6 +1721,7 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 	struct device_node *child_tca9539 = NULL;
 	struct device_node *root_node = NULL;
 	const char *model;
+	u32 fsync_ctrl_port;
 
 	dev_info(&pdev->dev, "%sing...\n", __func__);
 
@@ -1938,6 +1939,17 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 					__func__, err,
 					cdi_mgr->tca9539.power_port);
 				goto err_probe;
+			}
+			cdi_mgr->tca9539.fsync_ctrl_port = -1;
+			err = of_property_read_u32(child_tca9539,
+					"fsync_ctrl_port",
+					&fsync_ctrl_port);
+			if (err == 0) {
+				if ((fsync_ctrl_port >= 0) &&
+					(fsync_ctrl_port <= 3)) {
+					cdi_mgr->tca9539.fsync_ctrl_port =
+						fsync_ctrl_port;
+				}
 			}
 
 			cdi_mgr->tca9539.reg_len /= 8;

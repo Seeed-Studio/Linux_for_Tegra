@@ -431,6 +431,7 @@ static int cdi_dev_set_fsync_mux(
 	void __user *arg)
 {
 	u8 val, shift;
+	u8 cam_grp;
 	struct cdi_dev_fsync_mux fsync_mux;
 
 	if (copy_from_user(&fsync_mux, arg, sizeof(fsync_mux))) {
@@ -445,9 +446,14 @@ static int cdi_dev_set_fsync_mux(
 		 * P05:P04 for the camera group D. cam_grp 3.
 		 */
 		if ((fsync_mux.cam_grp > 0U) && (fsync_mux.cam_grp < 4U)) {
+			if (info->tca9539.fsync_ctrl_port != -1)
+				cam_grp = info->tca9539.fsync_ctrl_port;
+			else
+				cam_grp = fsync_mux.cam_grp;
+
 			if (tca9539_rd(info, 0x02, &val) != 0)
 				return -EFAULT;
-			switch (fsync_mux.cam_grp) {
+			switch (cam_grp) {
 			case 1U:
 				shift = 0U;
 				break;
@@ -581,6 +587,7 @@ static int cdi_dev_probe(struct i2c_client *client,
 	int err;
 	int numLinks = 0;
 	int i;
+	u32 fsync_ctrl_port;
 
 	dev_dbg(&client->dev, "%s: initializing link @%x-%04x\n",
 		__func__, client->adapter->nr, client->addr);
@@ -727,7 +734,17 @@ static int cdi_dev_probe(struct i2c_client *client,
 						info->tca9539.power_port);
 					return -ENODEV;
 				}
-
+				info->tca9539.fsync_ctrl_port = -1;
+				err = of_property_read_u32(child_tca9539,
+					"fsync_ctrl_port",
+					&fsync_ctrl_port);
+				if (err == 0) {
+					if ((fsync_ctrl_port >= 0) &&
+						(fsync_ctrl_port <= 3)) {
+						info->tca9539.fsync_ctrl_port =
+							fsync_ctrl_port;
+					}
+				}
 				info->tca9539.reg_len /= 8;
 				info->tca9539.dat_len /= 8;
 				info->tca9539.enable = 1;
