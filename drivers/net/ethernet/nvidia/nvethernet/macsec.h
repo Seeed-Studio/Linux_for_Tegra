@@ -38,7 +38,7 @@
 /**
  * @brief Maximum number of supplicants allowed per VF
  */
-#define MAX_SUPPLICANTS_ALLOWED		1
+#define MAX_SUPPLICANTS_ALLOWED		48
 
 #define NV_MACSEC_GENL_VERSION	1
 
@@ -63,6 +63,7 @@
 enum nv_macsec_sa_attrs {
 	NV_MACSEC_SA_ATTR_UNSPEC,
 	NV_MACSEC_SA_ATTR_SCI,
+	NV_MACSEC_SA_ATTR_PEER_MACID,
 	NV_MACSEC_SA_ATTR_AN,
 	NV_MACSEC_SA_ATTR_PN,
 	NV_MACSEC_SA_ATTR_LOWEST_PN,
@@ -123,6 +124,8 @@ enum nv_macsec_attrs {
 static const struct nla_policy nv_macsec_sa_genl_policy[NUM_NV_MACSEC_SA_ATTR] = {
 	[NV_MACSEC_SA_ATTR_SCI] = { .type = NLA_BINARY,
 				    .len = 8, }, /* SCI is 64bit */
+	[NV_MACSEC_SA_ATTR_PEER_MACID] = { .type = NLA_BINARY,
+				    .len = 6, }, /* MACID is 48bit */
 	[NV_MACSEC_SA_ATTR_AN] = { .type = NLA_U8 },
 	[NV_MACSEC_SA_ATTR_PN] = { .type = NLA_U32 },
 	[NV_MACSEC_SA_ATTR_LOWEST_PN] = { .type = NLA_U32 },

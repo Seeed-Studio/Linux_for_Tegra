@@ -505,6 +505,10 @@ static int parse_sa_config(struct nlattr **attrs, struct nlattr **tb_sa,
 		memcpy(sc_info->sci, nla_data(tb_sa[NV_MACSEC_SA_ATTR_SCI]),
 			sizeof(sc_info->sci));
 	}
+	if (tb_sa[NV_MACSEC_SA_ATTR_PEER_MACID]) {
+		memcpy(sc_info->peer_macid, nla_data(tb_sa[NV_MACSEC_SA_ATTR_PEER_MACID]),
+		       sizeof(sc_info->peer_macid));
+	}
 	if (tb_sa[NV_MACSEC_SA_ATTR_AN]) {
 		sc_info->curr_an = nla_get_u8(tb_sa[NV_MACSEC_SA_ATTR_AN]);
 	}
