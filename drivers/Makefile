@@ -12,7 +12,9 @@ ifdef CONFIG_PSTORE
 obj-m += block/tegra_oops_virt_storage/
 endif
 ifdef CONFIG_BT
+ifneq ($(NV_OOT_REALTEK_BTUSB_SKIP_BUILD),y)
 obj-m += bluetooth/realtek/
+endif
 endif
 obj-m += bus/
 obj-m += c2c/
