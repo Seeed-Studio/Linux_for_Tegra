@@ -537,7 +537,6 @@ static void tegra264_pcie_ep_stop(struct pci_epc *epc)
 
 static const struct pci_epc_features tegra264_pcie_epc_features = {
 	.linkup_notifier = true,
-	.core_init_notifier = false,
 	.msi_capable = true,
 	.msix_capable = false,
 #if defined (NV_PCI_EPC_FEATURES_STRUCT_HAS_BAR)
