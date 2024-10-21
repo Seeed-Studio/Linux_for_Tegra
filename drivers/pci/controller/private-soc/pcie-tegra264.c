@@ -1,11 +1,12 @@
-// SPDX-License-Identifier: GPL-2.0+
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 /*
  * PCIe host controller driver for Tegra264 SoC
  *
- * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
- *
  * Author: Manikanta Maddireddy <mmaddireddy@nvidia.com>
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/delay.h>
 #include <linux/kernel.h>
@@ -324,9 +325,21 @@ static const struct of_device_id tegra264_pcie_of_match[] = {
 	{},
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static void tegra264_pcie_remove_wrapper(struct platform_device *pdev)
+{
+	tegra264_pcie_remove(pdev);
+}
+#else
+static int tegra264_pcie_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra264_pcie_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra264_pcie_driver = {
 	.probe = tegra264_pcie_probe,
-	.remove = tegra264_pcie_remove,
+	.remove = tegra264_pcie_remove_wrapper,
 	.driver = {
 		.name = "tegra264-pcie",
 		.pm = &tegra264_pcie_pm_ops,

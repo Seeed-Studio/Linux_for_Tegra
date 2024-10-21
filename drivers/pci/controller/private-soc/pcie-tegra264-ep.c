@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 /*
  * PCIe EP controller driver for Tegra264 SoC
- *
- * Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Manikanta Maddireddy <mmaddireddy@nvidia.com>
  */
@@ -802,9 +801,21 @@ static const struct dev_pm_ops tegra264_pcie_ep_dev_pm_ops = {
 };
 #endif
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static void tegra264_pcie_ep_remove_wrapper(struct platform_device *pdev)
+{
+	tegra264_pcie_ep_remove(pdev);
+}
+#else
+static int tegra264_pcie_ep_remove_wrapper(struct platform_device *pdev)
+{
+	return tegra264_pcie_ep_remove(pdev);
+}
+#endif
+
 static struct platform_driver tegra264_pcie_ep_driver = {
 	.probe = tegra264_pcie_ep_probe,
-	.remove = tegra264_pcie_ep_remove,
+	.remove = tegra264_pcie_ep_remove_wrapper,
 	.driver = {
 		.name = "tegra264-pcie-ep",
 		.of_match_table = tegra264_pcie_ep_of_match,
