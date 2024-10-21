@@ -148,12 +148,12 @@ static int tegra_mc_hwpm_remove(struct platform_device *pdev)
 }
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_mc_hwpm_remove_wrapper(struct platform_device *pdev)
+static void tegra_mc_hwpm_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_mc_hwpm_remove(pdev);
 }
 #else
-static inline int tegra_mc_hwpm_remove_wrapper(struct platform_device *pdev)
+static int tegra_mc_hwpm_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_mc_hwpm_remove(pdev);
 }

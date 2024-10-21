@@ -298,12 +298,12 @@ MODULE_DEVICE_TABLE(acpi, tegra23x_psc_acpi_match);
 #endif
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra234_psc_remove_wrapper(struct platform_device *pdev)
+static void tegra234_psc_remove_wrapper(struct platform_device *pdev)
 {
 	tegra234_psc_remove(pdev);
 }
 #else
-static inline int tegra234_psc_remove_wrapper(struct platform_device *pdev)
+static int tegra234_psc_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra234_psc_remove(pdev);
 }

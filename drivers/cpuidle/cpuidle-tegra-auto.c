@@ -230,12 +230,12 @@ static const struct of_device_id tegra_auto_cpuidle_of[] = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_auto_cpuidle_remove_wrapper(struct platform_device *pdev)
+static void tegra_auto_cpuidle_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_auto_cpuidle_remove(pdev);
 }
 #else
-static inline int tegra_auto_cpuidle_remove_wrapper(struct platform_device *pdev)
+static int tegra_auto_cpuidle_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_auto_cpuidle_remove(pdev);
 }

@@ -843,12 +843,12 @@ static const struct dev_pm_ops virt_engine_pm_ops = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void virt_engine_remove_wrapper(struct platform_device *pdev)
+static void virt_engine_remove_wrapper(struct platform_device *pdev)
 {
 	virt_engine_remove(pdev);
 }
 #else
-static inline int virt_engine_remove_wrapper(struct platform_device *pdev)
+static int virt_engine_remove_wrapper(struct platform_device *pdev)
 {
 	return virt_engine_remove(pdev);
 }

@@ -360,12 +360,12 @@ static const struct of_device_id tegra_se_nvrng_of_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_se_nvrng_of_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_se_nvrng_remove_wrapper(struct platform_device *pdev)
+static void tegra_se_nvrng_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_se_nvrng_remove(pdev);
 }
 #else
-static inline int tegra_se_nvrng_remove_wrapper(struct platform_device *pdev)
+static int tegra_se_nvrng_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_se_nvrng_remove(pdev);
 }

@@ -247,12 +247,12 @@ static int __exit t194_nvcsi_remove(struct platform_device *dev)
 }
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void t194_nvcsi_remove_wrapper(struct platform_device *pdev)
+static void t194_nvcsi_remove_wrapper(struct platform_device *pdev)
 {
 	t194_nvcsi_remove(pdev);
 }
 #else
-static inline int t194_nvcsi_remove_wrapper(struct platform_device *pdev)
+static int t194_nvcsi_remove_wrapper(struct platform_device *pdev)
 {
 	return t194_nvcsi_remove(pdev);
 }

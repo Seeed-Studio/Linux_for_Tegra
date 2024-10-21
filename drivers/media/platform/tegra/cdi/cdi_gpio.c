@@ -331,12 +331,12 @@ static const struct of_device_id cdi_gpio_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, cdi_gpio_dt_ids);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void cdi_gpio_remove_wrapper(struct platform_device *pdev)
+static void cdi_gpio_remove_wrapper(struct platform_device *pdev)
 {
 	cdi_gpio_remove(pdev);
 }
 #else
-static inline int cdi_gpio_remove_wrapper(struct platform_device *pdev)
+static int cdi_gpio_remove_wrapper(struct platform_device *pdev)
 {
 	return cdi_gpio_remove(pdev);
 }

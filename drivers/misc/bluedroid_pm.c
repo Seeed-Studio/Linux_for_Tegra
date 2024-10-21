@@ -592,12 +592,12 @@ static struct of_device_id bdroid_of_match[] = {
 MODULE_DEVICE_TABLE(of, bdroid_of_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void bluedroid_pm_remove_wrapper(struct platform_device *pdev)
+static void bluedroid_pm_remove_wrapper(struct platform_device *pdev)
 {
 	bluedroid_pm_remove(pdev);
 }
 #else
-static inline int bluedroid_pm_remove_wrapper(struct platform_device *pdev)
+static int bluedroid_pm_remove_wrapper(struct platform_device *pdev)
 {
 	return bluedroid_pm_remove(pdev);
 }

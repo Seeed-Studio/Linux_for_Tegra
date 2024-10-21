@@ -1103,12 +1103,12 @@ static const struct dev_pm_ops host1x_pm_ops = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void host1x_remove_wrapper(struct platform_device *pdev)
+static void host1x_remove_wrapper(struct platform_device *pdev)
 {
 	host1x_remove(pdev);
 }
 #else
-static inline int host1x_remove_wrapper(struct platform_device *pdev)
+static int host1x_remove_wrapper(struct platform_device *pdev)
 {
 	return host1x_remove(pdev);
 }

@@ -1781,12 +1781,12 @@ MODULE_DEVICE_TABLE(of, tegra_hv_vblk_match);
 #endif /* CONFIG_OF */
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_hv_vblk_remove_wrapper(struct platform_device *pdev)
+static void tegra_hv_vblk_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_hv_vblk_remove(pdev);
 }
 #else
-static inline int tegra_hv_vblk_remove_wrapper(struct platform_device *pdev)
+static int tegra_hv_vblk_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_hv_vblk_remove(pdev);
 }

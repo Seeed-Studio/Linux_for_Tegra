@@ -831,12 +831,12 @@ static const struct of_device_id tegra_wdt_t18x_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_wdt_t18x_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_wdt_t18x_remove_wrapper(struct platform_device *pdev)
+static void tegra_wdt_t18x_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_wdt_t18x_remove(pdev);
 }
 #else
-static inline int tegra_wdt_t18x_remove_wrapper(struct platform_device *pdev)
+static int tegra_wdt_t18x_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_wdt_t18x_remove(pdev);
 }

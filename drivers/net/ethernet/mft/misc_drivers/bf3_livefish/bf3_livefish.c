@@ -340,12 +340,12 @@ static const struct acpi_device_id livefish_acpi_match[] = {
 MODULE_DEVICE_TABLE(acpi, livefish_acpi_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void livefish_remove_wrapper(struct platform_device *pdev)
+static void livefish_remove_wrapper(struct platform_device *pdev)
 {
     livefish_remove(pdev);
 }
 #else
-static inline int livefish_remove_wrapper(struct platform_device *pdev)
+static int livefish_remove_wrapper(struct platform_device *pdev)
 {
     return livefish_remove(pdev);
 }

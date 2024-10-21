@@ -455,12 +455,12 @@ static bool nvmap_is_carveout_node_present(void)
 }
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void nvmap_remove_wrapper(struct platform_device *pdev)
+static void nvmap_remove_wrapper(struct platform_device *pdev)
 {
 	nvmap_remove(pdev);
 }
 #else
-static inline int nvmap_remove_wrapper(struct platform_device *pdev)
+static int nvmap_remove_wrapper(struct platform_device *pdev)
 {
 	return nvmap_remove(pdev);
 }

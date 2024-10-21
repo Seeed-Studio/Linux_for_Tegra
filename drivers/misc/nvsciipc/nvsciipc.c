@@ -834,12 +834,12 @@ exit:
 }
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void nvsciipc_remove_wrapper(struct platform_device *pdev)
+static void nvsciipc_remove_wrapper(struct platform_device *pdev)
 {
 	nvsciipc_remove(pdev);
 }
 #else
-static inline int nvsciipc_remove_wrapper(struct platform_device *pdev)
+static int nvsciipc_remove_wrapper(struct platform_device *pdev)
 {
 	return nvsciipc_remove(pdev);
 }

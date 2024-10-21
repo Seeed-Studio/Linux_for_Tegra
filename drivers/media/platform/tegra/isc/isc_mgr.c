@@ -1205,12 +1205,12 @@ static const struct of_device_id isc_mgr_of_match[] = {
 MODULE_DEVICE_TABLE(of, isc_mgr_of_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void isc_mgr_remove_wrapper(struct platform_device *pdev)
+static void isc_mgr_remove_wrapper(struct platform_device *pdev)
 {
 	isc_mgr_remove(pdev);
 }
 #else
-static inline int isc_mgr_remove_wrapper(struct platform_device *pdev)
+static int isc_mgr_remove_wrapper(struct platform_device *pdev)
 {
 	return isc_mgr_remove(pdev);
 }

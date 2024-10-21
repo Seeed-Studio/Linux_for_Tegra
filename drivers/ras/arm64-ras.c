@@ -492,12 +492,12 @@ static int ras_remove(struct platform_device *pdev)
 }
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void ras_remove_wrapper(struct platform_device *pdev)
+static void ras_remove_wrapper(struct platform_device *pdev)
 {
 	ras_remove(pdev);
 }
 #else
-static inline int ras_remove_wrapper(struct platform_device *pdev)
+static int ras_remove_wrapper(struct platform_device *pdev)
 {
 	return ras_remove(pdev);
 }

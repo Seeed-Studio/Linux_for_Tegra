@@ -7952,12 +7952,12 @@ static const struct of_device_id ether_of_match[] = {
 MODULE_DEVICE_TABLE(of, ether_of_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void ether_remove_wrapper(struct platform_device *pdev)
+static void ether_remove_wrapper(struct platform_device *pdev)
 {
 	ether_remove(pdev);
 }
 #else
-static inline int ether_remove_wrapper(struct platform_device *pdev)
+static int ether_remove_wrapper(struct platform_device *pdev)
 {
 	return ether_remove(pdev);
 }

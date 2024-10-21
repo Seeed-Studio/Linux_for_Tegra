@@ -650,12 +650,12 @@ MODULE_DEVICE_TABLE(of, cdi_tsc_of_match);
 static SIMPLE_DEV_PM_OPS(cdi_tsc_pm, cdi_tsc_suspend, cdi_tsc_resume);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void cdi_tsc_remove_wrapper(struct platform_device *pdev)
+static void cdi_tsc_remove_wrapper(struct platform_device *pdev)
 {
 	cdi_tsc_remove(pdev);
 }
 #else
-static inline int cdi_tsc_remove_wrapper(struct platform_device *pdev)
+static int cdi_tsc_remove_wrapper(struct platform_device *pdev)
 {
 	return cdi_tsc_remove(pdev);
 }

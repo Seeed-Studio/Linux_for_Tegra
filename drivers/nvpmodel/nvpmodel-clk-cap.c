@@ -266,12 +266,12 @@ static int nvpmodel_clk_cap_remove(struct platform_device *pdev)
 }
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void nvpmodel_clk_cap_remove_wrapper(struct platform_device *pdev)
+static void nvpmodel_clk_cap_remove_wrapper(struct platform_device *pdev)
 {
 	nvpmodel_clk_cap_remove(pdev);
 }
 #else
-static inline int nvpmodel_clk_cap_remove_wrapper(struct platform_device *pdev)
+static int nvpmodel_clk_cap_remove_wrapper(struct platform_device *pdev)
 {
 	return nvpmodel_clk_cap_remove(pdev);
 }

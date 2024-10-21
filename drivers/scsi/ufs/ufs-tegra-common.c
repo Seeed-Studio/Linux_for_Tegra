@@ -2157,12 +2157,12 @@ static const struct dev_pm_ops ufs_tegra_pm_ops = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void ufs_tegra_remove_wrapper(struct platform_device *pdev)
+static void ufs_tegra_remove_wrapper(struct platform_device *pdev)
 {
 	ufs_tegra_remove(pdev);
 }
 #else
-static inline int ufs_tegra_remove_wrapper(struct platform_device *pdev)
+static int ufs_tegra_remove_wrapper(struct platform_device *pdev)
 {
 	return ufs_tegra_remove(pdev);
 }

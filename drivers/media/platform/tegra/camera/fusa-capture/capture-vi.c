@@ -1729,12 +1729,12 @@ static const struct of_device_id capture_vi_of_match[] = {
 MODULE_DEVICE_TABLE(of, capture_vi_of_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void capture_vi_remove_wrapper(struct platform_device *pdev)
+static void capture_vi_remove_wrapper(struct platform_device *pdev)
 {
 	capture_vi_remove(pdev);
 }
 #else
-static inline int capture_vi_remove_wrapper(struct platform_device *pdev)
+static int capture_vi_remove_wrapper(struct platform_device *pdev)
 {
 	return capture_vi_remove(pdev);
 }

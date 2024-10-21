@@ -523,12 +523,12 @@ static const struct platform_device_id nvvrs_rtc_id[] = {
 MODULE_DEVICE_TABLE(platform, nvvrs_rtc_id);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void nvvrs_rtc_remove_wrapper(struct platform_device *pdev)
+static void nvvrs_rtc_remove_wrapper(struct platform_device *pdev)
 {
 	nvvrs_rtc_remove(pdev);
 }
 #else
-static inline int nvvrs_rtc_remove_wrapper(struct platform_device *pdev)
+static int nvvrs_rtc_remove_wrapper(struct platform_device *pdev)
 {
 	return nvvrs_rtc_remove(pdev);
 }

@@ -877,12 +877,12 @@ static const struct platform_device_id rtc_id[] = {
 MODULE_DEVICE_TABLE(platform, rtc_id);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void max77851_rtc_remove_wrapper(struct platform_device *pdev)
+static void max77851_rtc_remove_wrapper(struct platform_device *pdev)
 {
 	max77851_rtc_remove(pdev);
 }
 #else
-static inline int max77851_rtc_remove_wrapper(struct platform_device *pdev)
+static int max77851_rtc_remove_wrapper(struct platform_device *pdev)
 {
 	return max77851_rtc_remove(pdev);
 }

@@ -446,12 +446,12 @@ static const struct of_device_id tegra_i2cslv_of_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_i2cslv_of_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_i2cslv_remove_wrapper(struct platform_device *pdev)
+static void tegra_i2cslv_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_i2cslv_remove(pdev);
 }
 #else
-static inline int tegra_i2cslv_remove_wrapper(struct platform_device *pdev)
+static int tegra_i2cslv_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_i2cslv_remove(pdev);
 }

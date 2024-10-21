@@ -291,12 +291,12 @@ static int __exit pva_iommu_context_dev_remove(struct platform_device *pdev)
 }
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void __exit pva_iommu_context_dev_remove_wrapper(struct platform_device *pdev)
+static void __exit pva_iommu_context_dev_remove_wrapper(struct platform_device *pdev)
 {
 	pva_iommu_context_dev_remove(pdev);
 }
 #else
-static inline int __exit pva_iommu_context_dev_remove_wrapper(struct platform_device *pdev)
+static int __exit pva_iommu_context_dev_remove_wrapper(struct platform_device *pdev)
 {
 	return pva_iommu_context_dev_remove(pdev);
 }

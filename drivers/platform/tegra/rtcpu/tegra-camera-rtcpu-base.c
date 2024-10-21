@@ -1042,12 +1042,12 @@ static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_cam_rtcpu_remove_wrapper(struct platform_device *pdev)
+static void tegra_cam_rtcpu_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_cam_rtcpu_remove(pdev);
 }
 #else
-static inline int tegra_cam_rtcpu_remove_wrapper(struct platform_device *pdev)
+static int tegra_cam_rtcpu_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_cam_rtcpu_remove(pdev);
 }

@@ -464,12 +464,12 @@ static int __maybe_unused fsicom_client_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(fsicom_client_pm, fsicom_client_suspend, fsicom_client_resume);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void fsicom_client_remove_wrapper(struct platform_device *pdev)
+static void fsicom_client_remove_wrapper(struct platform_device *pdev)
 {
 	fsicom_client_remove(pdev);
 }
 #else
-static inline int fsicom_client_remove_wrapper(struct platform_device *pdev)
+static int fsicom_client_remove_wrapper(struct platform_device *pdev)
 {
 	return fsicom_client_remove(pdev);
 }

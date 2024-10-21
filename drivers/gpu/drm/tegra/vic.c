@@ -869,12 +869,12 @@ static const struct dev_pm_ops vic_pm_ops = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void vic_remove_wrapper(struct platform_device *pdev)
+static void vic_remove_wrapper(struct platform_device *pdev)
 {
 	vic_remove(pdev);
 }
 #else
-static inline int vic_remove_wrapper(struct platform_device *pdev)
+static int vic_remove_wrapper(struct platform_device *pdev)
 {
 	return vic_remove(pdev);
 }

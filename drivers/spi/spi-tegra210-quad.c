@@ -1867,12 +1867,12 @@ static const struct dev_pm_ops tegra_qspi_pm_ops = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_qspi_remove_wrapper(struct platform_device *pdev)
+static void tegra_qspi_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_qspi_remove(pdev);
 }
 #else
-static inline int tegra_qspi_remove_wrapper(struct platform_device *pdev)
+static int tegra_qspi_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_qspi_remove(pdev);
 }

@@ -967,12 +967,12 @@ static const struct dev_pm_ops nvdec_pm_ops = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void nvdec_remove_wrapper(struct platform_device *pdev)
+static void nvdec_remove_wrapper(struct platform_device *pdev)
 {
 	nvdec_remove(pdev);
 }
 #else
-static inline int nvdec_remove_wrapper(struct platform_device *pdev)
+static int nvdec_remove_wrapper(struct platform_device *pdev)
 {
 	return nvdec_remove(pdev);
 }

@@ -2275,12 +2275,12 @@ static const struct dev_pm_ops tegra_spi_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_spi_suspend, tegra_spi_resume)
 };
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra_spi_remove_wrapper(struct platform_device *pdev)
+static void tegra_spi_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_spi_remove(pdev);
 }
 #else
-static inline int tegra_spi_remove_wrapper(struct platform_device *pdev)
+static int tegra_spi_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra_spi_remove(pdev);
 }

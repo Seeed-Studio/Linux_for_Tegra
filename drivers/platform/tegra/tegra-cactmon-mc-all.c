@@ -141,12 +141,12 @@ static const struct of_device_id central_actmon_of_match[] = {
 MODULE_DEVICE_TABLE(of, central_actmon_of_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void central_actmon_remove_wrapper(struct platform_device *pdev)
+static void central_actmon_remove_wrapper(struct platform_device *pdev)
 {
 	central_actmon_remove(pdev);
 }
 #else
-static inline int central_actmon_remove_wrapper(struct platform_device *pdev)
+static int central_actmon_remove_wrapper(struct platform_device *pdev)
 {
 	return central_actmon_remove(pdev);
 }

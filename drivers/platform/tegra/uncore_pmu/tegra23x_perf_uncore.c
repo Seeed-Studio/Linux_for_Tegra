@@ -624,12 +624,12 @@ static const struct of_device_id scf_pmu_of_device_ids[] = {
 MODULE_DEVICE_TABLE(of, scf_pmu_of_device_ids);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void scf_pmu_device_remove_wrapper(struct platform_device *pdev)
+static void scf_pmu_device_remove_wrapper(struct platform_device *pdev)
 {
 	scf_pmu_device_remove(pdev);
 }
 #else
-static inline int scf_pmu_device_remove_wrapper(struct platform_device *pdev)
+static int scf_pmu_device_remove_wrapper(struct platform_device *pdev)
 {
 	return scf_pmu_device_remove(pdev);
 }

@@ -1306,12 +1306,12 @@ const struct dev_pm_ops nvdla_module_pm_ops = {
 #endif /* CONFIG_PM */
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void __exit nvdla_remove_wrapper(struct platform_device *pdev)
+static void __exit nvdla_remove_wrapper(struct platform_device *pdev)
 {
 	nvdla_remove(pdev);
 }
 #else
-static inline int __exit nvdla_remove_wrapper(struct platform_device *pdev)
+static int __exit nvdla_remove_wrapper(struct platform_device *pdev)
 {
 	return nvdla_remove(pdev);
 }

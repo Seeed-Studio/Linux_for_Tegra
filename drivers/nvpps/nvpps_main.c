@@ -1375,12 +1375,12 @@ MODULE_DEVICE_TABLE(of, nvpps_of_table);
 
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void nvpps_remove_wrapper(struct platform_device *pdev)
+static void nvpps_remove_wrapper(struct platform_device *pdev)
 {
 	nvpps_remove(pdev);
 }
 #else
-static inline int nvpps_remove_wrapper(struct platform_device *pdev)
+static int nvpps_remove_wrapper(struct platform_device *pdev)
 {
 	return nvpps_remove(pdev);
 }

@@ -561,12 +561,12 @@ static const struct dev_pm_ops tegra210_afc_pm_ops = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void tegra210_afc_platform_remove_wrapper(struct platform_device *pdev)
+static void tegra210_afc_platform_remove_wrapper(struct platform_device *pdev)
 {
 	tegra210_afc_platform_remove(pdev);
 }
 #else
-static inline int tegra210_afc_platform_remove_wrapper(struct platform_device *pdev)
+static int tegra210_afc_platform_remove_wrapper(struct platform_device *pdev)
 {
 	return tegra210_afc_platform_remove(pdev);
 }

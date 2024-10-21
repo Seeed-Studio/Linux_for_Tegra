@@ -395,12 +395,12 @@ static const struct dev_pm_ops tegra_gr2d_pm = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static inline void gr2d_remove_wrapper(struct platform_device *pdev)
+static void gr2d_remove_wrapper(struct platform_device *pdev)
 {
 	gr2d_remove(pdev);
 }
 #else
-static inline int gr2d_remove_wrapper(struct platform_device *pdev)
+static int gr2d_remove_wrapper(struct platform_device *pdev)
 {
 	return gr2d_remove(pdev);
 }
