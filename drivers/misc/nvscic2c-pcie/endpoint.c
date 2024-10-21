@@ -125,8 +125,6 @@ struct endpoint_t {
 	 */
 	atomic_t event_count;
 
-	u32 linkevent_id;
-
 	/* propagate events when endpoint was initialized.*/
 	atomic_t event_handling;
 
@@ -939,7 +937,7 @@ remove_endpoint_device(struct endpoint_drv_ctx_t *eps_ctx,
 		return ret;
 
 	pci_client_unregister_for_link_event(endpoint->pci_client_h,
-					     endpoint->linkevent_id);
+					     endpoint->minor);
 	free_syncpoint(eps_ctx, endpoint);
 	free_memory(eps_ctx, endpoint);
 	if (endpoint->device) {
@@ -1010,8 +1008,7 @@ create_endpoint_device(struct endpoint_drv_ctx_t *eps_ctx,
 	/* Register for link events.*/
 	ops.callback = &(event_callback);
 	ops.ctx = (void *)(endpoint);
-	ret = pci_client_register_for_link_event(endpoint->pci_client_h, &ops,
-						 &endpoint->linkevent_id);
+	ret = pci_client_register_for_link_event(endpoint->pci_client_h, &ops, endpoint->minor);
 	if (ret) {
 		pr_err("(%s): Failed to register for PCIe link events\n",
 		       endpoint->name);

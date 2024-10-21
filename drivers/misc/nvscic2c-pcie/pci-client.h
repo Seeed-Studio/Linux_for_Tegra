@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #ifndef __PCI_CLIENT_H__
 #define __PCI_CLIENT_H__
@@ -73,7 +76,7 @@ pci_client_dmabuf_detach(void *pci_client_h, struct dma_buf *dmabuff,
  */
 int
 pci_client_register_for_link_event(void *pci_client_h,
-				   struct callback_ops *ops, u32 *id);
+				   struct callback_ops *ops, u32 id);
 
 /* Unregister for PCI link events. - teardown only. */
 int

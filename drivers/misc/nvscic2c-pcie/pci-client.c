@@ -550,7 +550,7 @@ pci_client_set_edma_error(void *pci_client_h, u32 ep_id, u32 err)
 	if (WARN_ON(!ctx))
 		return -EINVAL;
 
-	if (WARN_ON(ep_id > MAX_LINK_EVENT_USERS ||
+	if (WARN_ON(ep_id >= MAX_LINK_EVENT_USERS ||
 		    err != NVSCIC2C_PCIE_EDMA_XFER_ERROR))
 		return -EINVAL;
 
@@ -588,9 +588,8 @@ pci_client_query_link_status(void *pci_client_h)
  */
 int
 pci_client_register_for_link_event(void *pci_client_h,
-				   struct callback_ops *ops, u32 *id)
+				   struct callback_ops *ops, u32 id)
 {
-	u32 i = 0;
 	int ret = 0;
 	struct event_t *event = NULL;
 	struct pci_client_t *ctx = (struct pci_client_t *)pci_client_h;
@@ -598,23 +597,18 @@ pci_client_register_for_link_event(void *pci_client_h,
 	if (WARN_ON(!ctx))
 		return -EINVAL;
 
-	if (WARN_ON(!id || !ops || !ops->callback))
+	if (WARN_ON((id >= MAX_LINK_EVENT_USERS) || !ops || !ops->callback))
 		return -EINVAL;
 
 	mutex_lock(&ctx->event_tbl_lock);
-	for (i = 0; i < MAX_LINK_EVENT_USERS; i++) {
-		event = &ctx->event_tbl[i];
-		if (!atomic_read(&event->in_use)) {
-			event->cb_ops.callback = ops->callback;
-			event->cb_ops.ctx = ops->ctx;
-			atomic_set(&event->in_use, 1);
-			*id = i;
-			break;
-		}
-	}
-	if (i == MAX_LINK_EVENT_USERS) {
+	event = &ctx->event_tbl[id];
+	if (atomic_read(&event->in_use)) {
 		ret = -ENOMEM;
-		pr_err("PCI link event registration full\n");
+		pr_err("PCIe link event already registered for endpoint: %d\n", id);
+	} else {
+		event->cb_ops.callback = ops->callback;
+		event->cb_ops.ctx = ops->ctx;
+		atomic_set(&event->in_use, 1);
 	}
 	mutex_unlock(&ctx->event_tbl_lock);
 
