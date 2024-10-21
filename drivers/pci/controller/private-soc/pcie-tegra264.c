@@ -95,6 +95,7 @@ static int tegra264_pcie_parse_dt(struct tegra264_pcie *pcie)
 
 static void tegra264_pcie_bpmp_set_rp_state(struct tegra264_pcie *pcie)
 {
+#if defined(NV_MRQ_PCIE_REQUEST_STRUCT_PRESENT) && defined(CMD_PCIE_RP_CONTROLLER_OFF)
 	struct tegra_bpmp_message msg;
 	struct mrq_pcie_request req;
 	int err;
@@ -117,6 +118,9 @@ static void tegra264_pcie_bpmp_set_rp_state(struct tegra264_pcie *pcie)
 	if (msg.rx.ret)
 		dev_info(pcie->dev, "PCIe Controller-%d failed to turn off via BPMP with error message %d\r\n",
 			 pcie->ctl_id, msg.rx.ret);
+#else
+	dev_err(pcie->dev, "%s not supported!\n", __func__);
+#endif
 }
 
 static void tegra264_pcie_init(struct tegra264_pcie *pcie)

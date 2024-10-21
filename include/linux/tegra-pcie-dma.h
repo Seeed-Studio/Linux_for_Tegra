@@ -1,7 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION. All rights reserved. */
 
 #ifndef TEGRA_PCIE_DMA_H
 #define TEGRA_PCIE_DMA_H
@@ -31,11 +29,6 @@
 #ifndef DOXYGEN_ICD
 /** MSI IRQ vector number to use on NVPCIE_DMA_SOC_T264 SoC for generating remote interrupt */
 #define TEGRA264_PCIE_DMA_MSI_REMOTE_VEC	5
-#endif
-
-#ifndef NV_CONFIG_PCIE_TEGRA_DMA_DISABLE
-/** Enable generic PCIe DMA driver */
-#define CONFIG_PCIE_TEGRA_DMA	1
 #endif
 
 /**
@@ -222,7 +215,6 @@ struct tegra_pcie_dma_xfer_info {
 	void *priv;
 };
 
-#ifdef CONFIG_PCIE_TEGRA_DMA
 #ifdef DOXYGEN_ICD
 /**
  * @dir
@@ -403,31 +395,5 @@ bool tegra_pcie_dma_stop(void *cookie);
  * - DMA HW is stopped.
  */
 tegra_pcie_dma_status_t tegra_pcie_dma_deinit(void **cookie);
-#else
-static inline tegra_pcie_dma_status_t
-		tegra_pcie_dma_initialize(struct tegra_pcie_dma_init_info *info, void **cookie) {
-	return -EOPNOTSUPP;
-}
-
-static inline tegra_pcie_dma_status_t tegra_pcie_dma_set_msi(void *cookie, u64 msi_addr,
-							     u32 msi_data) {
-	return -EOPNOTSUPP;
-}
-
-static inline tegra_pcie_dma_status_t
-		tegra_pcie_dma_submit_xfer(void *cookie, struct tegra_pcie_dma_xfer_info *tx_info) {
-	return -EOPNOTSUPP;
-}
-
-static inline bool tegra_pcie_dma_stop(void *cookie)
-{
-	return -EOPNOTSUPP;
-}
-
-static inline tegra_pcie_dma_status_t tegra_pcie_dma_deinit(void **cookie)
-{
-	return -EOPNOTSUPP;
-}
-#endif
 
 #endif //TEGRA_PCIE_DMA_H

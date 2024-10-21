@@ -138,6 +138,7 @@ struct tegra264_pcie_ep {
 
 static int tegra264_pcie_bpmp_set_ep_state(struct tegra264_pcie_ep *pcie, bool enable)
 {
+#if defined(NV_MRQ_PCIE_REQUEST_STRUCT_PRESENT)
 	struct tegra_bpmp_message msg;
 	struct mrq_pcie_request req;
 	int err;
@@ -169,6 +170,9 @@ static int tegra264_pcie_bpmp_set_ep_state(struct tegra264_pcie_ep *pcie, bool e
 		return -EINVAL;
 
 	return 0;
+#else
+	return -EOPNOTSUPP;
+#endif
 }
 
 static void tegra264_pcie_ep_rst_assert(struct tegra264_pcie_ep *pcie)
@@ -183,7 +187,11 @@ static void tegra264_pcie_ep_rst_assert(struct tegra264_pcie_ep *pcie)
 	if (pcie->pex_prsnt_gpiod)
 		gpiod_set_value_cansleep(pcie->pex_prsnt_gpiod, 0);
 
+#if defined(NV_PCI_EPC_DEINIT_NOTIFY_PRESENT) /* Linux v6.11 */
 	pci_epc_deinit_notify(pcie->epc);
+#else
+	dev_WARN(pcie->dev, "kernel does not support pci_epc_deinit_notify!\n");
+#endif
 
 	ret = readl_poll_timeout(pcie->xal_base + XAL_RC_DEBUG_HB_REG_2, val,
 				 val & XAL_RC_DEBUG_HB_REG_2_HB_HIER_IDLE,

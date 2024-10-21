@@ -7796,6 +7796,22 @@ compile_test() {
            compile_check_conftest "$CODE" "NV_MODULE_IMPORT_NS_CALLS_STRINGIFY" "" "types"
         ;;
 
+        mrq_pcie_request_struct_present)
+            #
+            # Determine if the 'struct mrq_pcie_request_req' is present. This
+            # structure is not available in current upstream Linux kernels and
+            # so add a test to see if the necessary downstream change is
+            # present.
+            #
+            CODE="
+            #include <linux/types.h>
+            #include <soc/tegra/bpmp-abi.h>
+
+	    static struct mrq_pcie_request req;"
+
+            compile_check_conftest "$CODE" "NV_MRQ_PCIE_REQUEST_STRUCT_PRESENT" "" "symbols"
+        ;;
+
         no_llseek)
             #
             # Determine if the function no_llseek() is present.
@@ -7917,6 +7933,22 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_PWM_OPS_STRUCT_HAS_CONFIG" "" "types"
+        ;;
+
+        pci_epc_deinit_notify)
+            #
+            # Determine if the function pci_epc_deinit_notify() is present.
+            #
+            # In Linux v6.11, commit 473b2cf9c4d1 ("PCI: endpoint: Introduce 'epc_deinit'
+            # event and notify the EPF drivers") added the function pci_epc_deinit_notify().
+            #
+            CODE="
+            #include <linux/pci-epc.h>
+            void conftest_pci_epc_deinit_notify(void) {
+                pci_epc_deinit_notify();
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_EPC_DEINIT_NOTIFY_PRESENT" "" "functions"
         ;;
 
         pci_epc_event_ops_struct_has_core_deinit)

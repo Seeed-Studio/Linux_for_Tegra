@@ -19,7 +19,6 @@ struct tegra_pcie_dma_priv {
 	nvpcie_dma_soc_t soc;
 };
 
-#ifdef CONFIG_PCIE_TEGRA_DMA
 irqreturn_t tegra_pcie_dma_irq(int irq, void *cookie)
 {
 	struct tegra_pcie_dma_priv *prv = (struct tegra_pcie_dma_priv *)cookie;
@@ -176,6 +175,5 @@ tegra_pcie_dma_status_t tegra_pcie_dma_deinit(void **cookie)
 	}
 }
 EXPORT_SYMBOL_GPL(tegra_pcie_dma_deinit);
-#endif
 
 MODULE_LICENSE("GPL v2");
