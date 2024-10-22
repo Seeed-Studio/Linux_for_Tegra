@@ -26,7 +26,6 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/resource.h>
-#include <linux/version.h>
 #include <soc/tegra/bpmp.h>
 #include <soc/tegra/bpmp-abi.h>
 
@@ -259,7 +258,10 @@ static irqreturn_t tegra264_pcie_ep_rst_irq(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
-static int tegra264_pcie_ep_write_header(struct pci_epc *epc, u8 fn, u8 vfn,
+static int tegra264_pcie_ep_write_header(struct pci_epc *epc, u8 fn,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
+					 u8 vfn,
+#endif
 					 struct pci_epf_header *hdr)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
@@ -272,7 +274,11 @@ static int tegra264_pcie_ep_write_header(struct pci_epc *epc, u8 fn, u8 vfn,
 	return 0;
 }
 
-static int tegra264_pcie_ep_set_bar(struct pci_epc *epc, u8 fn, u8 vfn, struct pci_epf_bar *epf_bar)
+static int tegra264_pcie_ep_set_bar(struct pci_epc *epc, u8 fn,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
+			            u8 vfn,
+#endif
+				    struct pci_epf_bar *epf_bar)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
 	enum pci_barno bar = epf_bar->barno;
@@ -312,7 +318,10 @@ static int tegra264_pcie_ep_set_bar(struct pci_epc *epc, u8 fn, u8 vfn, struct p
 	return 0;
 }
 
-static void tegra264_pcie_ep_clear_bar(struct pci_epc *epc, u8 fn, u8 vfn,
+static void tegra264_pcie_ep_clear_bar(struct pci_epc *epc, u8 fn,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
+				       u8 vfn,
+#endif
 				       struct pci_epf_bar *epf_bar)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
@@ -336,7 +345,10 @@ static void tegra264_pcie_ep_clear_bar(struct pci_epc *epc, u8 fn, u8 vfn,
 	}
 }
 
-static int tegra264_pcie_ep_map_addr(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
+static int tegra264_pcie_ep_map_addr(struct pci_epc *epc, u8 func_no,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
+				     u8 vfunc_no,
+#endif
 				     phys_addr_t addr, u64 pci_addr, size_t size)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
@@ -368,7 +380,10 @@ static int tegra264_pcie_ep_map_addr(struct pci_epc *epc, u8 func_no, u8 vfunc_n
 	return 0;
 }
 
-static void tegra264_pcie_ep_unmap_addr(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
+static void tegra264_pcie_ep_unmap_addr(struct pci_epc *epc, u8 func_no,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
+					u8 vfunc_no,
+#endif
 					phys_addr_t addr)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
@@ -393,7 +408,11 @@ static void tegra264_pcie_ep_unmap_addr(struct pci_epc *epc, u8 func_no, u8 vfun
 	clear_bit(ob_idx, pcie->ob_window_map);
 }
 
-static int tegra264_pcie_ep_set_msi(struct pci_epc *epc, u8 fn, u8 vfn, u8 mmc)
+static int tegra264_pcie_ep_set_msi(struct pci_epc *epc, u8 fn,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
+				    u8 vfn,
+#endif
+				    u8 mmc)
 {
 	/*
 	 * Tegra264 PCIe EP HW supports 16 MSIs only, return success if multi msg cap encoded
@@ -408,7 +427,12 @@ static int tegra264_pcie_ep_set_msi(struct pci_epc *epc, u8 fn, u8 vfn, u8 mmc)
 		return -EINVAL;
 }
 
-static int tegra264_pcie_ep_get_msi(struct pci_epc *epc, u8 fn, u8 vfn)
+static int tegra264_pcie_ep_get_msi(struct pci_epc *epc,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
+				    u8 fn, u8 vfn)
+#else
+				    u8 fn)
+#endif
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
 	u32 val;
@@ -445,13 +469,16 @@ static int tegra264_pcie_ep_send_msi_irq(struct tegra264_pcie_ep *pcie, u8 fn, u
 	return 0;
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0))
-static int tegra264_pcie_ep_raise_irq(struct pci_epc *epc, u8 fn, u8 vfn,
-				      enum pci_epc_irq_type type, u16 irq_num)
-#else
-static int tegra264_pcie_ep_raise_irq(struct pci_epc *epc, u8 fn, u8 vfn,
-				      unsigned int type, u16 irq_num)
+static int tegra264_pcie_ep_raise_irq(struct pci_epc *epc, u8 fn,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
+				      u8 vfn,
 #endif
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
+				      enum pci_epc_irq_type type,
+#else
+				      unsigned int type,
+#endif
+				      u16 irq_num)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
 
@@ -461,14 +488,14 @@ static int tegra264_pcie_ep_raise_irq(struct pci_epc *epc, u8 fn, u8 vfn,
 	 * same time.
 	 */
 	switch (type) {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0))
-	case PCI_EPC_IRQ_LEGACY:
-#else
+#if defined(NV_PCI_IRQ_INTX)
 	case PCI_IRQ_INTX:
+#else
+	case PCI_EPC_IRQ_LEGACY:
 #endif
 		/* Only INTA is supported. */
 		return tegra264_pcie_ep_send_legacy_irq(pcie, fn);
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0))
+#if defined(PCI_EPC_IRQ_TYPE_ENUM_PRESENT) /* Dropped from Linux 6.8 */
 	case PCI_EPC_IRQ_MSI:
 #else
 	case PCI_IRQ_MSI:
@@ -527,7 +554,11 @@ static const struct pci_epc_features tegra264_pcie_epc_features = {
 };
 
 static const struct pci_epc_features *tegra264_pcie_ep_get_features(struct pci_epc *epc,
+#if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
 								    u8 fn, u8 vfn)
+#else
+								    u8 fn)
+#endif
 {
 	return &tegra264_pcie_epc_features;
 }
