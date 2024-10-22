@@ -4,6 +4,8 @@
 #ifndef __NVMAP_ALLOC_H
 #define __NVMAP_ALLOC_H
 
+#define DMA_MEMORY_NOMAP	0x02
+
 struct nvmap_heap;
 struct debugfs_info;
 struct nvmap_carveout_node;

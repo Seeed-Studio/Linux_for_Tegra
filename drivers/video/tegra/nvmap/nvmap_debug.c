@@ -14,6 +14,7 @@
 #include "nvmap_debug.h"
 #include "nvmap_alloc.h"
 #include "nvmap_stats.h"
+#include "nvmap_dmabuf.h"
 
 struct debugfs_info *iovmm_debugfs_info;
 

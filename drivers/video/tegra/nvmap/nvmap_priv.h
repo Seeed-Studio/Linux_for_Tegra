@@ -17,7 +17,6 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/atomic.h>
-#include <linux/dma-buf.h>
 #include <linux/syscalls.h>
 #include <linux/mm.h>
 #include <linux/miscdevice.h>
@@ -27,8 +26,6 @@
 #include <linux/version.h>
 
 #include <linux/workqueue.h>
-#include <linux/dma-mapping.h>
-#include <linux/dma-direction.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_reserved_mem.h>
@@ -41,23 +38,6 @@
 
 #include <linux/fdtable.h>
 
-#define __DMA_ATTR(attrs) attrs
-#define DEFINE_DMA_ATTRS(attrs) unsigned long attrs = 0
-
-/**
- * dma_set_attr - set a specific attribute
- * @attr: attribute to set
- * @attrs: struct dma_attrs (may be NULL)
- */
-#define dma_set_attr(attr, attrs) (attrs |= attr)
-
-/**
- * dma_get_attr - check for a specific attribute
- * @attr: attribute to set
- * @attrs: struct dma_attrs (may be NULL)
- */
-#define dma_get_attr(attr, attrs) (attrs & attr)
-
 #define NVMAP_TAG_LABEL_MAXLEN	(63 - sizeof(struct nvmap_tag_entry))
 
 #define NVMAP_TAG_TRACE(x, ...) 			\
@@ -69,8 +49,6 @@ do {                                                    \
 	}                                               \
 } while (0)
 
-#define DMA_MEMORY_NOMAP		0x02
-
 #define ACCESS_OK(type, addr, size)    access_ok(addr, size)
 #define SYS_CLOSE(arg) close_fd(arg)
 
@@ -80,21 +58,11 @@ struct nvmap_device;
 extern bool nvmap_convert_iovmm_to_carveout;
 extern bool nvmap_convert_carveout_to_iovmm;
 
-extern struct vm_operations_struct nvmap_vma_ops;
-
 #ifdef CONFIG_ARM64
 #define PG_PROT_KERNEL PAGE_KERNEL
 #else
 #define PG_PROT_KERNEL pgprot_kernel
 #endif
-
-struct nvmap_vma_list {
-	struct list_head list;
-	struct vm_area_struct *vma;
-	unsigned long save_vm_flags;
-	pid_t pid;
-	atomic_t ref;
-};
 
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 struct nvmap_device_list {
@@ -179,8 +147,6 @@ struct nvmap_carveout_node;
 
 void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size);
 
-int is_nvmap_vma(struct vm_area_struct *vma);
-
 void *__nvmap_mmap(struct nvmap_handle *h);
 void __nvmap_munmap(struct nvmap_handle *h, void *addr);
 
@@ -205,8 +171,6 @@ static inline bool nvmap_page_mkclean(struct page **page)
 	return true;
 }
 
-void nvmap_vma_open(struct vm_area_struct *vma);
-
 struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag);
 
 int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
@@ -222,9 +186,6 @@ static inline char *__nvmap_tag_name(struct nvmap_device *dev, u32 tag)
 	entry = nvmap_search_tag_entry(&dev->tags, tag);
 	return entry ? (char *)(entry + 1) : "";
 }
-
-void *nvmap_dmabuf_get_drv_data(struct dma_buf *dmabuf,
-		struct device *dev);
 
 #ifdef NVMAP_CONFIG_DEBUG_MAPS
 struct nvmap_device_list *nvmap_is_device_present(char *device_name, u32 heap_type);

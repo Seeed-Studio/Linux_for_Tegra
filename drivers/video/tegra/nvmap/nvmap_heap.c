@@ -30,6 +30,8 @@
 #include "nvmap_handle.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
+#include "nvmap_dmabuf.h"
+
 #include "include/linux/nvmap_exports.h"
 
 #ifdef CONFIG_ARM_DMA_IOMMU_ALIGNMENT
