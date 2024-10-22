@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
+// All rights reserved.
 //
 // tegra210_i2s.c - Tegra210 I2S driver
 
@@ -641,6 +642,7 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_FORMAT_S16_LE:
 		cif_conf.audio_bits = TEGRA_ACIF_BITS_16;
 		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
 	case SNDRV_PCM_FORMAT_S32_LE:
 		cif_conf.audio_bits = TEGRA_ACIF_BITS_32;
 		break;
@@ -667,6 +669,11 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 		val = I2S_BITS_16;
 		sample_size = 16;
 		cif_conf.client_bits = TEGRA_ACIF_BITS_16;
+		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
+		val = I2S_BITS_24;
+		sample_size = 32;
+		cif_conf.client_bits = TEGRA_ACIF_BITS_24;
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		val = I2S_BITS_32;
@@ -738,6 +745,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
 				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.capture = {
@@ -747,6 +755,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
 				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 	},
@@ -759,6 +768,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
 				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.capture = {
@@ -768,6 +778,7 @@ static struct snd_soc_dai_driver tegra210_i2s_dais[] = {
 			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE |
 				SNDRV_PCM_FMTBIT_S32_LE,
 		},
 		.ops = &tegra210_i2s_dai_ops,
