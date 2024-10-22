@@ -40,8 +40,7 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvmap.h>
-
-#include "nvmap_priv.h"
+#include <linux/of_reserved_mem.h>
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
@@ -56,6 +55,9 @@
 struct nvmap_device *nvmap_dev;
 EXPORT_SYMBOL(nvmap_dev);
 ulong nvmap_init_time;
+
+extern bool nvmap_convert_iovmm_to_carveout;
+extern bool nvmap_convert_carveout_to_iovmm;
 
 static struct device_dma_parameters nvmap_dma_parameters = {
 	.max_segment_size = UINT_MAX,
@@ -734,3 +736,101 @@ int nvmap_remove(struct platform_device *pdev)
 	nvmap_dev = NULL;
 	return 0;
 }
+
+#ifdef NVMAP_CONFIG_DEBUG_MAPS
+struct nvmap_device_list *nvmap_is_device_present(char *device_name, u32 heap_type)
+{
+	struct rb_node *node = NULL;
+	int i;
+
+	if (heap_type == NVMAP_HEAP_IOVMM) {
+		node = nvmap_dev->device_names.rb_node;
+	} else {
+		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+			if ((heap_type & nvmap_get_heap_bit(nvmap_dev->heaps[i])) &&
+					nvmap_get_heap_ptr(nvmap_dev->heaps[i])) {
+				node = nvmap_get_device_names(nvmap_dev->heaps[i])->rb_node;
+				break;
+			}
+		}
+	}
+	while (node) {
+		struct nvmap_device_list *dl = container_of(node,
+						struct nvmap_device_list, node);
+		if (strcmp(dl->device_name, device_name) > 0)
+			node = node->rb_left;
+		else if (strcmp(dl->device_name, device_name) < 0)
+			node = node->rb_right;
+		else
+			return dl;
+	}
+	return NULL;
+}
+
+void nvmap_add_device_name(char *device_name, u64 dma_mask, u32 heap_type)
+{
+	struct rb_root *root = NULL;
+	struct rb_node **new = NULL, *parent = NULL;
+	struct nvmap_device_list *dl = NULL;
+	int i;
+
+	if (heap_type == NVMAP_HEAP_IOVMM) {
+		root = &nvmap_dev->device_names;
+	} else {
+		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+			if ((heap_type & nvmap_get_heap_bit(nvmap_dev->heaps[i])) &&
+				nvmap_get_heap_ptr(nvmap_dev->heaps[i])) {
+				root = nvmap_get_device_names(nvmap_dev->heaps[i]);
+				break;
+			}
+		}
+	}
+	if (root) {
+		new = &(root->rb_node);
+		while (*new) {
+			dl = container_of(*new, struct nvmap_device_list, node);
+			parent = *new;
+			if (strcmp(dl->device_name, device_name) > 0)
+				new = &((*new)->rb_left);
+			else if (strcmp(dl->device_name, device_name) < 0)
+				new = &((*new)->rb_right);
+		}
+		dl = kzalloc(sizeof(*dl), GFP_KERNEL);
+		if (!dl)
+			return;
+		dl->device_name = kzalloc(strlen(device_name) + 1, GFP_KERNEL);
+		if (!dl->device_name)
+			return;
+		strcpy(dl->device_name, device_name);
+		dl->dma_mask = dma_mask;
+		rb_link_node(&dl->node, parent, new);
+		rb_insert_color(&dl->node, root);
+	}
+}
+
+void nvmap_remove_device_name(char *device_name, u32 heap_type)
+{
+	struct nvmap_device_list *dl = NULL;
+	int i;
+
+	dl = nvmap_is_device_present(device_name, heap_type);
+	if (dl) {
+		if (heap_type == NVMAP_HEAP_IOVMM) {
+			rb_erase(&dl->node,
+				&nvmap_dev->device_names);
+			kfree(dl->device_name);
+			kfree(dl);
+			return;
+		}
+		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+			if ((heap_type & nvmap_get_heap_bit(nvmap_dev->heaps[i])) &&
+				nvmap_get_heap_ptr(nvmap_dev->heaps[i])) {
+				rb_erase(&dl->node, nvmap_get_device_names(nvmap_dev->heaps[i]));
+				kfree(dl->device_name);
+				kfree(dl);
+				return;
+			}
+		}
+	}
+}
+#endif /* NVMAP_CONFIG_DEBUG_MAPS */

@@ -17,6 +17,7 @@
 #include <linux/rbtree.h>
 #include <linux/dma-buf.h>
 #include <linux/moduleparam.h>
+#include <linux/slab.h>
 #include <linux/nvmap.h>
 #include <linux/version.h>
 #include <linux/wait.h>
@@ -25,12 +26,12 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
 #include "nvmap_handle.h"
 #include "nvmap_handle_int.h"
+#include "nvmap_debug.h"
 
 u32 nvmap_max_handle_count;
 

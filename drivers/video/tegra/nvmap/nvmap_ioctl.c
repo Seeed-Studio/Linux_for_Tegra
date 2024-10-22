@@ -31,9 +31,9 @@
 #include <linux/nvscierror.h>
 #include <linux/nvsciipc_interface.h>
 #endif
-
+#include <linux/platform_device.h>
+#include <linux/fdtable.h>
 #include "nvmap_dev.h"
-#include "nvmap_priv.h"
 #include "nvmap_alloc.h"
 #include "nvmap_dmabuf.h"
 #include "nvmap_handle.h"
@@ -48,8 +48,10 @@ MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 
 #define SIZE_2MB 0x200000
 #define ALIGN_2MB(size) ((size + SIZE_2MB - 1) & ~(SIZE_2MB - 1))
+#define NVMAP_TAG_LABEL_MAXLEN	(63 - sizeof(struct nvmap_tag_entry))
 
 extern bool vpr_cpu_access;
+extern struct nvmap_device *nvmap_dev;
 
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 {
@@ -638,7 +640,7 @@ int nvmap_ioctl_free(struct file *filp, unsigned long arg)
 		return 0;
 	}
 close_fd:
-	return SYS_CLOSE(arg);
+	return close_fd(arg);
 }
 
 int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg)
@@ -859,12 +861,14 @@ int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg)
 	struct nvmap_set_tag_label op;
 	struct nvmap_device *dev = nvmap_dev;
 	int err;
+	unsigned int nvmap_tag_label_maxlen = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	if (op.len > NVMAP_TAG_LABEL_MAXLEN)
-		op.len = NVMAP_TAG_LABEL_MAXLEN;
+	nvmap_tag_label_maxlen = nvmap_get_tag_maxlen();
+	if (op.len > nvmap_tag_label_maxlen)
+		op.len = nvmap_tag_label_maxlen;
 
 	if (op.len)
 		err = nvmap_define_tag(dev, op.tag,

@@ -7,8 +7,8 @@
 
 #include <trace/events/nvmap.h>
 #include <linux/highmem.h>
+#include <linux/slab.h>
 
-#include "nvmap_priv.h"
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_handle.h"

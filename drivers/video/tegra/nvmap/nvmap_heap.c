@@ -25,10 +25,10 @@
 #include <linux/nvmap.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-map-ops.h>
-#include "nvmap_priv.h"
+#include <linux/rtmutex.h>
 #include "nvmap_dev.h"
-#include "nvmap_handle.h"
 #include "nvmap_alloc.h"
+#include "nvmap_handle.h"
 #include "nvmap_alloc_int.h"
 #include "nvmap_dmabuf.h"
 
@@ -56,6 +56,10 @@
  */
 
 static struct kmem_cache *heap_block_cache;
+
+extern bool nvmap_convert_iovmm_to_carveout;
+extern bool nvmap_convert_carveout_to_iovmm;
+extern ulong nvmap_init_time;
 
 /*
  * This function calculates allocatable free memory using following formula:
@@ -1178,3 +1182,9 @@ struct nvmap_heap *nvmap_get_heap_ptr(struct nvmap_carveout_node *co_heap)
 	return co_heap->carveout;
 }
 
+#ifdef NVMAP_CONFIG_DEBUG_MAPS
+struct rb_root *nvmap_get_device_names(struct nvmap_carveout_node *co_heap)
+{
+	return &co_heap->carveout->device_names;
+}
+#endif /* NVMAP_CONFIG_DEBUG_MAPS */

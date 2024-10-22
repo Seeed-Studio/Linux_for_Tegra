@@ -10,10 +10,23 @@
 #include <linux/moduleparam.h>
 
 #include <trace/events/nvmap.h>
+#include <linux/platform_device.h>
+#include <linux/slab.h>
+#include "nvmap_dev.h"
+#include "nvmap_dev_int.h"
 
-#include "nvmap_priv.h"
+struct nvmap_tag_entry {
+	struct rb_node node;
+	atomic_t ref;		/* reference count (i.e., # of duplications) */
+	u32 tag;
+};
 
-struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag)
+unsigned int nvmap_get_tag_maxlen(void)
+{
+	return 63 - sizeof(struct nvmap_tag_entry);
+}
+
+static struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag)
 {
 	struct rb_node *node = root->rb_node;  /* top of the tree */
 	struct nvmap_tag_entry *entry;
@@ -100,4 +113,13 @@ int nvmap_remove_tag(struct nvmap_device *dev, u32 tag)
 	mutex_unlock(&dev->tags_lock);
 
 	return 0;
+}
+
+/* must hold tag_lock */
+char *__nvmap_tag_name(struct nvmap_device *dev, u32 tag)
+{
+	struct nvmap_tag_entry *entry;
+
+	entry = nvmap_search_tag_entry(&dev->tags, tag);
+	return entry ? (char *)(entry + 1) : "";
 }

@@ -10,6 +10,8 @@
 #include <linux/nvscierror.h>
 #include <linux/nvsciipc_interface.h>
 
+extern struct nvmap_device *nvmap_dev;
+
 /* handles allocated as collection of pages */
 struct nvmap_pgalloc {
 	struct page **pages;
@@ -177,6 +179,9 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 	}
 	return prot;
 }
+
+static inline bool nvmap_page_mkdirty(struct page **page);
+static inline bool nvmap_page_mkclean(struct page **page);
 
 /*
  * FIXME: assume user space requests for reserve operations
@@ -354,6 +359,10 @@ struct nvmap_handle *nvmap_handle_get_from_id(struct nvmap_client *client,
 		u32 id);
 
 u32 nvmap_handle_get_max_handle_count(void);
+
+void *__nvmap_mmap(struct nvmap_handle *h);
+
+void __nvmap_munmap(struct nvmap_handle *h, void *addr);
 
 #ifdef NVMAP_CONFIG_SCIIPC
 int nvmap_sci_ipc_init(void);

@@ -6,7 +6,6 @@
 #define pr_fmt(fmt) "%s: " fmt, __func__
 
 #include <nvidia/conftest.h>
-
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -14,18 +13,17 @@
 #include <linux/version.h>
 #include <linux/kmemleak.h>
 #include <linux/io.h>
-
 #include <linux/nvmap_t19x.h>
-
+#include <linux/platform_device.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/sched/clock.h>
 #include <linux/cma.h>
 #include <linux/dma-map-ops.h>
-#include "include/linux/nvmap_exports.h"
 
-#include "nvmap_priv.h"
+#include "include/linux/nvmap_exports.h"
 #include "nvmap_dev.h"
-#include "nvmap_handle.h"
 #include "nvmap_alloc.h"
+#include "nvmap_handle.h"
 #include "nvmap_dev_int.h"
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
@@ -42,6 +40,7 @@ struct device __weak tegra_generic_cma_dev;
 struct device __weak tegra_vpr_cma_dev;
 
 static struct platform_device *pdev;
+extern ulong nvmap_init_time;
 
 const struct of_device_id nvmap_of_ids[] = {
 	{ .compatible = "nvidia,carveouts" },

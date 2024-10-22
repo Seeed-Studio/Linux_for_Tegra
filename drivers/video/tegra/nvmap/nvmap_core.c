@@ -24,9 +24,14 @@
 #include <linux/libnvdimm.h>
 
 #include "nvmap_dev.h"
-#include "nvmap_priv.h"
 #include "nvmap_alloc.h"
 #include "nvmap_handle.h"
+
+#ifdef CONFIG_ARM64
+#define PG_PROT_KERNEL PAGE_KERNEL
+#else
+#define PG_PROT_KERNEL pgprot_kernel
+#endif
 
 static phys_addr_t handle_phys(struct nvmap_handle *h)
 {

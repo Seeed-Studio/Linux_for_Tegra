@@ -6,6 +6,7 @@
 #ifndef __NVMAP_DEBUG_H
 #define __NVMAP_DEBUG_H
 
+#include "nvmap_stats.h"
 #if defined(CONFIG_DEBUG_FS)
 void nvmap_debug_init(struct dentry **nvmap_debug_root);
 void nvmap_debug_free(struct dentry *nvmap_debug_root);

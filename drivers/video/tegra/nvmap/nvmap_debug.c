@@ -8,15 +8,18 @@
 #include <linux/debugfs.h>
 #include <linux/pagewalk.h>
 
-#include "nvmap_priv.h"
+#include <nvidia/conftest.h>
+#include <linux/mm.h>
+#include <linux/nvmap.h>
 #include "nvmap_dev.h"
+#include "nvmap_alloc.h"
 #include "nvmap_handle.h"
 #include "nvmap_debug.h"
-#include "nvmap_alloc.h"
 #include "nvmap_stats.h"
 #include "nvmap_dmabuf.h"
 
 struct debugfs_info *iovmm_debugfs_info;
+extern ulong nvmap_init_time;
 
 #define DEBUGFS_OPEN_FOPS_STATIC(name) \
 static int nvmap_debug_##name##_open(struct inode *inode, \

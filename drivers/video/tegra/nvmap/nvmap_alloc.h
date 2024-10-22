@@ -6,9 +6,27 @@
 
 #define DMA_MEMORY_NOMAP	0x02
 
+/* bit 31-29: IVM peer
+ * bit 28-16: offset (aligned to 32K)
+ * bit 15-00: len (aligned to page_size)
+ */
+#define NVMAP_IVM_LENGTH_SHIFT (0)
+#define NVMAP_IVM_LENGTH_WIDTH (16)
+#define NVMAP_IVM_LENGTH_MASK  ((1 << NVMAP_IVM_LENGTH_WIDTH) - 1)
+#define NVMAP_IVM_OFFSET_SHIFT (NVMAP_IVM_LENGTH_SHIFT + NVMAP_IVM_LENGTH_WIDTH)
+#define NVMAP_IVM_OFFSET_WIDTH (13)
+#define NVMAP_IVM_OFFSET_MASK  ((1 << NVMAP_IVM_OFFSET_WIDTH) - 1)
+#define NVMAP_IVM_IVMID_SHIFT  (NVMAP_IVM_OFFSET_SHIFT + NVMAP_IVM_OFFSET_WIDTH)
+#define NVMAP_IVM_IVMID_WIDTH  (3)
+#define NVMAP_IVM_IVMID_MASK   ((1 << NVMAP_IVM_IVMID_WIDTH) - 1)
+#define NVMAP_IVM_ALIGNMENT    (SZ_32K)
+#define NVMAP_IVM_INVALID_PEER		(-1)
+
 struct nvmap_heap;
 struct debugfs_info;
 struct nvmap_carveout_node;
+struct nvmap_client;
+struct nvmap_handle;
 
 void *nvmap_altalloc(size_t len);
 
@@ -117,4 +135,36 @@ unsigned int nvmap_get_heap_bit(struct nvmap_carveout_node *co_heap);
 
 struct nvmap_heap *nvmap_get_heap_ptr(struct nvmap_carveout_node *co_heap);
 
+struct rb_root *nvmap_get_device_names(struct nvmap_carveout_node *co_heap);
+
+static inline bool nvmap_page_dirty(struct page *page)
+{
+	return (unsigned long)page & 1UL;
+}
+
+static inline bool nvmap_page_mkdirty(struct page **page)
+{
+	if (nvmap_page_dirty(*page))
+		return false;
+	*page = (struct page *)((unsigned long)*page | 1UL);
+	return true;
+}
+
+static inline bool nvmap_page_mkclean(struct page **page)
+{
+	if (!nvmap_page_dirty(*page))
+		return false;
+	*page = (struct page *)((unsigned long)*page & ~1UL);
+	return true;
+}
+
+static inline void nvmap_acquire_mmap_read_lock(struct mm_struct *mm)
+{
+	down_read(&mm->mmap_lock);
+}
+
+static inline void nvmap_release_mmap_read_lock(struct mm_struct *mm)
+{
+	up_read(&mm->mmap_lock);
+}
 #endif /* __NVMAP_ALLOC_H */

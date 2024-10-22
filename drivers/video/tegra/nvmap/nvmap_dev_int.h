@@ -4,6 +4,8 @@
 #ifndef __NVMAP_DEV_INT_H
 #define __NVMAP_DEV_INT_H
 
+#define ACCESS_OK(type, addr, size)    access_ok(addr, size)
+
 int nvmap_probe(struct platform_device *pdev);
 
 int nvmap_remove(struct platform_device *pdev);
@@ -53,4 +55,10 @@ int nvmap_ioctl_dup_handle(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_get_fd_from_list(struct file *filp, void __user *arg);
 
+int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
+	const char __user *name, u32 len);
+
+int nvmap_remove_tag(struct nvmap_device *dev, u32 tag);
+
+unsigned int nvmap_get_tag_maxlen(void);
 #endif /* __NVMAP_DEV_INT_H */

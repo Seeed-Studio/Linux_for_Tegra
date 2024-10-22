@@ -3,8 +3,10 @@
 
 #ifndef __NVMAP_DEV_H
 #define __NVMAP_DEV_H
-#define NVMAP_HEAP_IOVMM   (1ul<<30)
 
+#include <linux/miscdevice.h>
+
+#define NVMAP_HEAP_IOVMM   (1ul<<30)
 /* common carveout heaps */
 #define NVMAP_HEAP_CARVEOUT_VPR     (1ul<<28)
 #define NVMAP_HEAP_CARVEOUT_TSEC    (1ul<<27)
@@ -80,9 +82,60 @@ struct nvmap_pid_data {
 	struct dentry *handles_file;
 };
 
+struct nvmap_device {
+	struct rb_root	handles;
+	spinlock_t	handle_lock;
+	struct miscdevice dev_user;
+	struct nvmap_carveout_node **heaps;
+	int nr_heaps;
+	int nr_carveouts;
+#ifdef NVMAP_CONFIG_PAGE_POOLS
+	struct nvmap_page_pool *pool;
+#endif
+	struct list_head clients;
+	struct rb_root pids;
+	struct mutex	clients_lock;
+	struct list_head lru_handles;
+	spinlock_t	lru_lock;
+	struct dentry *handles_by_pid;
+	struct dentry *debug_root;
+	struct nvmap_platform_data *plat;
+	struct rb_root	tags;
+	struct mutex	tags_lock;
+	struct mutex carveout_lock; /* needed to serialize carveout creation */
+	u32 dynamic_dma_map_mask;
+	u32 cpu_access_mask;
+#ifdef NVMAP_CONFIG_DEBUG_MAPS
+	struct rb_root device_names;
+#endif /* NVMAP_CONFIG_DEBUG_MAPS */
+	u64 serial_id_counter; /* This is global counter common across different client processes */
+};
+
+#define NVMAP_TAG_TRACE(x, ...) 			\
+do {                                                    \
+	if (x##_enabled()) {                            \
+		mutex_lock(&nvmap_dev->tags_lock);      \
+		x(__VA_ARGS__);                         \
+		mutex_unlock(&nvmap_dev->tags_lock);    \
+	}                                               \
+} while (0)
+
 bool is_nvmap_memory_available(size_t size, uint32_t heap, int numa_nid);
 
 void kasan_memcpy_toio(void __iomem *to, const void *from,
 			size_t count);
 
+char *__nvmap_tag_name(struct nvmap_device *dev, u32 tag);
+
+#ifdef NVMAP_CONFIG_DEBUG_MAPS
+struct nvmap_device_list {
+	struct rb_node node;
+	u64 dma_mask;
+	char *device_name;
+};
+
+struct nvmap_device_list *nvmap_is_device_present(char *device_name, u32 heap_type);
+void nvmap_add_device_name(char *device_name, u64 dma_mask, u32 heap_type);
+void nvmap_remove_device_name(char *device_name, u32 heap_type);
+#endif /* NVMAP_CONFIG_DEBUG_MAPS */
 #endif /* __NVMAP_DEV_H */

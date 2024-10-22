@@ -13,9 +13,10 @@
 #include <linux/io.h>
 #include <soc/tegra/fuse.h>
 #include <trace/events/nvmap.h>
-
 #include <linux/libnvdimm.h>
-#include "nvmap_priv.h"
+#include <linux/rtmutex.h>
+#include <linux/slab.h>
+#include "nvmap_stats.h"
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"

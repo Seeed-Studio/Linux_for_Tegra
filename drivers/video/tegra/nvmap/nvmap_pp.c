@@ -22,8 +22,7 @@
 #include <linux/sched/clock.h>
 #include <uapi/linux/sched/types.h>
 #include <trace/events/nvmap.h>
-
-#include "nvmap_priv.h"
+#include <linux/rtmutex.h>
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
@@ -33,6 +32,7 @@
 
 extern u64 nvmap_big_page_allocs;
 extern u64 nvmap_total_page_allocs;
+extern struct nvmap_device *nvmap_dev;
 
 static bool enable_pp = 1;
 static u32 pool_size;

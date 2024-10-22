@@ -17,13 +17,19 @@
 __weak struct arm64_ftr_reg arm64_ftr_reg_ctrel0;
 
 #include <trace/events/nvmap.h>
-
-#include "nvmap_priv.h"
+#include <linux/rtmutex.h>
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"
 #include "nvmap_alloc_int.h"
 #include "nvmap_handle.h"
 #include "nvmap_dmabuf.h"
+#include "nvmap_debug.h"
+
+#ifdef CONFIG_ARM64
+#define PG_PROT_KERNEL PAGE_KERNEL
+#else
+#define PG_PROT_KERNEL pgprot_kernel
+#endif
 
 extern void __clean_dcache_area_poc(void *addr, size_t len);
 

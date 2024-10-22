@@ -6,8 +6,7 @@
  */
 
 #include <linux/debugfs.h>
-
-#include "nvmap_priv.h"
+#include "nvmap_stats.h"
 
 struct nvmap_stats nvmap_stats;
 

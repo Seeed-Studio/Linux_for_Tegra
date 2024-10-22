@@ -50,6 +50,12 @@ struct nvmap_vma_list {
 	atomic_t ref;
 };
 
+struct nvmap_vma_priv {
+	struct nvmap_handle *handle;
+	size_t		offs;
+	atomic_t	count;	/* number of processes cloning the VMA */
+};
+
 int is_nvmap_vma(struct vm_area_struct *vma);
 
 void nvmap_vma_open(struct vm_area_struct *vma);
