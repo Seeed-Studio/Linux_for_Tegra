@@ -124,12 +124,12 @@ next_page:
  * sorted in ascending order of handle offsets.
  * NOTE: This function should be called while holding handle's lock mutex.
  */
-static void nvmap_get_client_handle_mss(struct nvmap_client *client,
+static int nvmap_get_client_handle_mss(struct nvmap_client *client,
 				struct nvmap_handle *handle, u64 *total)
 {
 	struct nvmap_vma_list *vma_list = NULL;
 	struct vm_area_struct *vma = NULL;
-	u64 end_offset = 0, vma_start_offset, vma_size;
+	u64 end_offset = 0, vma_start_offset, vma_size, sum, difference;
 	int64_t overlap_size;
 
 	*total = 0;
@@ -140,25 +140,41 @@ static void nvmap_get_client_handle_mss(struct nvmap_client *client,
 			vma_size = vma->vm_end - vma->vm_start;
 
 			vma_start_offset = vma->vm_pgoff << PAGE_SHIFT;
-			if (end_offset < vma_start_offset + vma_size) {
-				*total += vma_size;
+			if (check_add_overflow(vma_start_offset, vma_size, &sum))
+				return -EOVERFLOW;
+
+			if (end_offset < sum) {
+				if (check_add_overflow(*total, vma_size, &sum))
+					return -EOVERFLOW;
+
+				*total = sum;
 
 				overlap_size = end_offset - vma_start_offset;
-				if (overlap_size > 0)
-					*total -= overlap_size;
-				end_offset = vma_start_offset + vma_size;
+				if (overlap_size > 0) {
+					if (check_sub_overflow(*total, (u64)overlap_size,
+						&difference))
+						return -EOVERFLOW;
+
+					*total = difference;
+				}
+				if (check_add_overflow(vma_start_offset, vma_size, &sum))
+					return -EOVERFLOW;
+
+				end_offset = sum;
 			}
 		}
 	}
+	return 0;
 }
 
-static void maps_stringify(struct nvmap_client *client,
+static int maps_stringify(struct nvmap_client *client,
 				struct seq_file *s, u32 heap_type)
 {
 	struct rb_node *n;
 	struct nvmap_vma_list *vma_list = NULL;
 	struct vm_area_struct *vma = NULL;
 	u64 total_mapped_size, vma_size;
+	int err = 0;
 
 	nvmap_ref_lock(client);
 	n = rb_first(&client->handle_refs);
@@ -195,8 +211,13 @@ next_page:
 			}
 
 			mutex_lock(&handle->lock);
-			nvmap_get_client_handle_mss(client, handle,
+			err = nvmap_get_client_handle_mss(client, handle,
 							&total_mapped_size);
+			if (err != 0) {
+				mutex_unlock(&handle->lock);
+				goto finish;
+			}
+
 			seq_printf(s, "%6lluK\n", K(total_mapped_size));
 
 			list_for_each_entry(vma_list, &handle->vmas, list) {
@@ -214,13 +235,17 @@ next_page:
 			mutex_unlock(&handle->lock);
 		}
 	}
+
+finish:
 	nvmap_ref_unlock(client);
+	return err;
 }
 
-static void nvmap_get_client_mss(struct nvmap_client *client,
+static int nvmap_get_client_mss(struct nvmap_client *client,
 				 u64 *total, u32 heap_type, int numa_id)
 {
 	struct rb_node *n;
+	u64 sum;
 
 	*total = 0;
 	nvmap_ref_lock(client);
@@ -235,28 +260,39 @@ static void nvmap_get_client_mss(struct nvmap_client *client,
 				(nvmap_get_heap_nid(nvmap_block_to_heap(handle->carveout)) !=
 				 numa_id))
 				continue;
+			if (check_add_overflow((u64)handle->size, *total, &sum))
+				return -EOVERFLOW;
 
 			*total += handle->size /
 				  atomic_read(&handle->share_count);
 		}
 	}
 	nvmap_ref_unlock(client);
+	return 0;
 }
 
 static int nvmap_page_mapcount(struct page *page)
 {
-	int mapcount = atomic_read(&page->_mapcount) + 1;
+
+	int mapcount, sum;
+
+	if (check_add_overflow(atomic_read(&page->_mapcount), 1, &sum))
+		return -EOVERFLOW;
+
+	mapcount = sum;
 
 	/* Handle page_has_type() pages */
 	if (page_has_type(page))
 		mapcount = 0;
-	if (unlikely(PageCompound(page)))
+	if (unlikely(PageCompound(page))) {
 #if defined(NV_FOLIO_ENTIRE_MAPCOUNT_PRESENT) /* Linux v5.18 */
-		mapcount += folio_entire_mapcount(page_folio(page));
+		if (check_add_overflow(mapcount, folio_entire_mapcount(page_folio(page)), &sum))
+			return -EOVERFLOW;
+		mapcount = sum;
 #else
 		mapcount += compound_mapcount(page);
 #endif
-
+	}
 	return mapcount;
 }
 
@@ -307,6 +343,7 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
 	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
 	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
+	int err;
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -318,7 +355,11 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 		u64 client_total;
 
 		client_stringify(client, s);
-		nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
+		err = nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
+		if (err != 0) {
+			mutex_unlock(&nvmap_dev->clients_lock);
+			return err;
+		}
 		seq_printf(s, " %10lluK\n", K(client_total));
 		allocations_stringify(client, s, heap_type);
 		seq_puts(s, "\n");
@@ -511,6 +552,7 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
 	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
 	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
+	int err;
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -523,9 +565,18 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 		u64 client_total;
 
 		client_stringify(client, s);
-		nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
+		err = nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
+		if (err != 0) {
+			mutex_unlock(&nvmap_dev->clients_lock);
+			return err;
+		}
 		seq_printf(s, " %10lluK\n", K(client_total));
-		maps_stringify(client, s, heap_type);
+		err = maps_stringify(client, s, heap_type);
+		if (err != 0) {
+			mutex_unlock(&nvmap_dev->clients_lock);
+			return -EOVERFLOW;
+		}
+
 		seq_puts(s, "\n");
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
@@ -544,6 +595,7 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
 	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
 	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
+	int err;
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -552,7 +604,11 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 		u64 client_total;
 
 		client_stringify(client, s);
-		nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
+		err = nvmap_get_client_mss(client, &client_total, heap_type, numa_id);
+		if (err != 0) {
+			mutex_unlock(&nvmap_dev->clients_lock);
+			return err;
+		}
 		seq_printf(s, " %10lluK\n", K(client_total));
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
@@ -585,8 +641,10 @@ static int nvmap_debug_handles_by_pid_show_client(struct seq_file *s,
 			continue;
 
 		mutex_lock(&handle->lock);
-		nvmap_get_client_handle_mss(client, handle, &total_mapped_size);
+		ret = nvmap_get_client_handle_mss(client, handle, &total_mapped_size);
 		mutex_unlock(&handle->lock);
+		if (ret != 0)
+			goto finish;
 
 		entry.base = handle->heap_type == NVMAP_HEAP_IOVMM ? 0 :
 			     handle->heap_pgalloc ? 0 :
@@ -611,6 +669,8 @@ next_page:
 				goto next_page;
 		}
 	}
+
+finish:
 	nvmap_ref_unlock(client);
 
 	return ret;
