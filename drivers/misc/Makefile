@@ -1,14 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
-LINUX_VERSION := $(shell expr $(VERSION) \* 256 + $(PATCHLEVEL))
-LINUX_VERSION_6_11 := $(shell expr 6 \* 256 + 11)
-
 # MODS is currently broken for Linux v6.11 and later
-ifeq ($(shell test $(LINUX_VERSION) -lt $(LINUX_VERSION_6_11); echo $$?),0)
 ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 obj-m += mods/
-endif
 endif
 obj-m += nvsciipc/
 ifdef CONFIG_PCI

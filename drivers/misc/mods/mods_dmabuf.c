@@ -114,11 +114,6 @@ static int mods_dmabuf_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mods_dmabuf_remove(struct platform_device *pdev)
-{
-	return 0;
-}
-
 static const struct of_device_id of_ids[] = {
 	{ .compatible = "nvidia,mods_test" },
 	{ }
@@ -126,7 +121,6 @@ static const struct of_device_id of_ids[] = {
 
 static struct platform_driver mods_dummy_driver = {
 	.probe  = mods_dmabuf_probe,
-	.remove = mods_dmabuf_remove,
 	.driver = {
 		.name   = "nvidia_mods_dummy_driver",
 		.owner  = THIS_MODULE,

@@ -98,11 +98,18 @@ static int mods_smmu_driver_probe(struct platform_device *pdev)
 	return err;
 }
 
+#if KERNEL_VERSION(6, 11, 0) <= MODS_KERNEL_VERSION
+static void mods_smmu_driver_remove(struct platform_device *pdev)
+{
+	mods_smmu_dev_num = 0;
+}
+#else
 static int mods_smmu_driver_remove(struct platform_device *pdev)
 {
 	mods_smmu_dev_num = 0;
 	return 0;
 }
+#endif
 
 static const struct of_device_id of_ids[] = {
 	{ .compatible = "nvidia,mods_smmu" },
