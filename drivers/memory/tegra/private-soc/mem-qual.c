@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+// SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -14,7 +14,7 @@
 #include <linux/fs.h>
 #include <linux/dma-mapping.h>
 #include <linux/scatterlist.h>
-#include <linux/version.h>
+#include <linux/vmalloc.h>
 #include <linux/slab.h>
 
 /* Number of mem qual devices */
@@ -268,14 +268,26 @@ exit:
 	return ret;
 }
 
-static int tegra_mem_qual_remove(struct platform_device *pdev)
+static void tegra_mem_qual_remove(struct platform_device *pdev)
 {
 	struct memqual_devdata *qual_data = platform_get_drvdata(pdev);
 
 	device_destroy(class, qual_data->dev_nr);
 	cdev_del(&qual_data->cdev);
+}
+
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static void tegra_mem_qual_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_mem_qual_remove(pdev);
+}
+#else
+static int tegra_mem_qual_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_mem_qual_remove(pdev);
 	return 0;
 }
+#endif
 
 static struct platform_driver mqual_driver = {
 	.driver = {
@@ -284,7 +296,7 @@ static struct platform_driver mqual_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe = tegra_mem_qual_probe,
-	.remove = tegra_mem_qual_remove,
+	.remove = tegra_mem_qual_remove_wrapper,
 };
 
 static int __init tegra_mem_qual_init(void)

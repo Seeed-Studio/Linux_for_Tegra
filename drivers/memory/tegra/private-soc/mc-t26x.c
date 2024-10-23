@@ -1,7 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (C) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
 
 #define pr_fmt(fmt) "mc: " fmt
+
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/export.h>
 #include <linux/of_address.h>
@@ -62,11 +65,23 @@ static int tegra_mc_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int tegra_mc_remove(struct platform_device *pdev)
+static void tegra_mc_remove(struct platform_device *pdev)
 {
 	iounmap(mcb_base);
+}
+
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static void tegra_mc_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_mc_remove(pdev);
+}
+#else
+static int tegra_mc_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_mc_remove(pdev);
 	return 0;
 }
+#endif
 
 static struct platform_driver mc_driver = {
 	.driver = {
@@ -74,7 +89,7 @@ static struct platform_driver mc_driver = {
 		.of_match_table = tegra_mc_of_ids,
 		.owner	= THIS_MODULE,
 	},
-	.remove		= tegra_mc_remove,
+	.remove = tegra_mc_remove_wrapper,
 };
 
 module_platform_driver_probe(mc_driver, tegra_mc_probe);

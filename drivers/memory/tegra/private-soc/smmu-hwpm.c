@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
 
 #define pr_fmt(fmt) "smmu-hwpm: " fmt
+
+#include <nvidia/conftest.h>
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -104,11 +104,23 @@ static int smmu_hwpm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int smmu_hwpm_remove(struct platform_device *pdev)
+static void smmu_hwpm_remove(struct platform_device *pdev)
 {
 	tegra_soc_hwpm_ip_unregister(&hwpm_ip_ops);
+}
+
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static void smmu_hwpm_remove_wrapper(struct platform_device *pdev)
+{
+	smmu_hwpm_remove(pdev);
+}
+#else
+static int smmu_hwpm_remove_wrapper(struct platform_device *pdev)
+{
+	smmu_hwpm_remove(pdev);
 	return 0;
 }
+#endif
 
 static struct platform_driver smmu_hwpm_driver = {
 	.driver = {
@@ -118,7 +130,7 @@ static struct platform_driver smmu_hwpm_driver = {
 	},
 
 	.probe		= smmu_hwpm_probe,
-	.remove		= smmu_hwpm_remove,
+	.remove		= smmu_hwpm_remove_wrapper,
 };
 
 static int __init smmu_hwpm_init(void)
