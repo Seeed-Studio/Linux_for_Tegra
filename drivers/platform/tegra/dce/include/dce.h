@@ -432,7 +432,7 @@ int dce_admin_send_cmd_get_perf_events(struct tegra_dce *d,
 				       struct dce_ipc_message *msg);
 int dce_admin_send_cmd_clear_perf_events(struct tegra_dce *d,
 				       struct dce_ipc_message *msg);
-int dce_admin_ipc_wait(struct tegra_dce *d, u32 w_type);
+int dce_admin_ipc_wait(struct tegra_dce *d);
 void dce_admin_ipc_handle_signal(struct tegra_dce *d, u32 ch_type);
 
 bool dce_fw_boot_complete(struct tegra_dce *d);

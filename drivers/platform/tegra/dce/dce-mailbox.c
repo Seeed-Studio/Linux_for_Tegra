@@ -154,8 +154,8 @@ void dce_mailbox_set_full_interrupt(struct tegra_dce *d, u8 id)
 	dce_mutex_lock(&d_mb->lock);
 
 	if (!dce_mailbox_write_safe(d, d_mb->s_mb))
-		dce_info(d, "Intr bit set multiple times for MB : [0x%x]",
-			 d_mb->s_mb);
+		dce_info(d, "Intr bit set multiple times for MB : [0x%x] id:[0x%x]",
+			 d_mb->s_mb, id);
 
 	d->hsp.smb_set(d, BIT(31), d->hsp_id, d_mb->s_mb);
 

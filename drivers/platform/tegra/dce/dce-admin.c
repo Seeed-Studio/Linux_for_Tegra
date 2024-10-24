@@ -16,11 +16,10 @@
  * dce_admin_ipc_wait - Waits for message from DCE.
  *
  * @d :  Pointer to tegra_dce struct.
- * @w_type : Requested wait type.
  *
  * Return : 0 if successful
  */
-int dce_admin_ipc_wait(struct tegra_dce *d, u32 w_type)
+int dce_admin_ipc_wait(struct tegra_dce *d)
 {
 	int ret = 0;
 
