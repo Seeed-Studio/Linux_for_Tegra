@@ -8143,6 +8143,20 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TEGRA264_CHIP_ID_PRESENT" "" "types"
         ;;
 
+        tegra264_io_pad_power_enable)
+            #
+            # Determine if tegra264_io_pad_power_enable() exists or not
+            #
+            CODE="
+            #include <soc/tegra/pmc.h>
+            int conftest_tegra264_io_pad_power_enable(void) {
+                tegra264_io_pad_power_enable();
+            }
+            "
+
+            compile_check_conftest "$CODE" "NV_TEGRA264_IO_PAD_POWER_ENABLE_PRESENT" "" "functions"
+        ;;
+
         tegra_ivc_struct_has_iosys_map)
             #
             # Determine if the 'tegra_ivc' structure has the 'map' argument.

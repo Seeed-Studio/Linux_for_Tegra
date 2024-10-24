@@ -4,6 +4,9 @@
  *
  * Copyright (c) 2015-2024, NVIDIA CORPORATION.  All rights reserved.
  */
+
+#include <nvidia/conftest.h>
+
 #include <linux/types.h>
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
@@ -875,12 +878,17 @@ void camera_common_dpd_disable(struct camera_common_data *s_data)
 		}
 		if (atomic_inc_return(
 			&camera_common_csi_io_pads[io_idx].ref) == 1) {
+#if defined(NV_TEGRA264_IO_PAD_POWER_ENABLE_PRESENT)
 			if (__tegra_get_chip_id() == TEGRA264)
 				tegra264_io_pad_power_enable(s_data->dev,
 						TEGRA_IO_PAD_CSIA + io_idx);
 			else
 				tegra_io_pad_power_enable(
 						TEGRA_IO_PAD_CSIA + io_idx);
+#else
+			tegra_io_pad_power_enable(
+					TEGRA_IO_PAD_CSIA + io_idx);
+#endif
 		}
 
 		dev_dbg(s_data->dev,
@@ -906,12 +914,17 @@ void camera_common_dpd_enable(struct camera_common_data *s_data)
 		}
 		if (atomic_dec_return(
 			&camera_common_csi_io_pads[io_idx].ref) == 0) {
+#if defined(NV_TEGRA264_IO_PAD_POWER_ENABLE_PRESENT)
 			if (__tegra_get_chip_id() == TEGRA264)
 				tegra264_io_pad_power_disable(s_data->dev,
 						TEGRA_IO_PAD_CSIA + io_idx);
 			else
 				tegra_io_pad_power_disable(
 						TEGRA_IO_PAD_CSIA + io_idx);
+#else
+			tegra_io_pad_power_disable(
+					TEGRA_IO_PAD_CSIA + io_idx);
+#endif
 		}
 
 		dev_dbg(s_data->dev,

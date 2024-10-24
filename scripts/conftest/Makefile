@@ -187,6 +187,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += spi_driver_struct_remove_return_type_int
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += spi_get_chipselect
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tc_taprio_qopt_offload_struct_has_cmd
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra264_chip_id
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra264_io_pad_power_enable
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra_dev_iommu_get_stream_id
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra_ivc_struct_has_iosys_map
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tegra_ivc_use_ivc_ext_driver
