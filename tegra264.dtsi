@@ -8298,6 +8298,16 @@
 					  <&fsicom_client_inst1 0x0 0xf1000000 0xffffffff 0x0effffff>;
 		};
 
+		fsicom_resv_inst2: reservation-fsicom_inst2 {
+			iommu-addresses = <&fsicom_client_inst2 0x0 0x0 0x0 0xf0000000>,
+					  <&fsicom_client_inst2 0x0 0xf1000000 0xffffffff 0x0effffff>;
+		};
+
+		fsicom_resv_inst3: reservation-fsicom_inst3 {
+			iommu-addresses = <&fsicom_client_inst3 0x0 0x0 0x0 0xf0000000>,
+					  <&fsicom_client_inst3 0x0 0xf1000000 0xffffffff 0x0effffff>;
+		};
+
 		adsp0_resv: reservation-adsp0 {
 			iommu-addresses = <&adsp0 0x0 0x00000000 0x0 0x20000000>,
 					  <&adsp0 0x0 0x40000000 0xffffffff 0xbfffffff>;
@@ -10095,7 +10105,9 @@
 		enable-deinit-notify;
 #endif
 		smmu_inst = <0>;
-		max_fsi_core=<1>; /*Value 1 <-> core 0, value 2 <-> core0,1*/
+		max_fsi_core=<1>;
+		fsi_core_notify=<0>;
+		fsi_core_polling=<>;
 		status = "disabled";
 	};
 
@@ -10107,10 +10119,32 @@
 		status = "disabled";
 	};
 
+	fsicom_client_inst2: fsicom_client_inst2 {
+		compatible = "nvidia,tegra234-fsicom-client";
+		memory-region = <&fsicom_resv_inst2>;
+		dma-coherent;
+		smmu_inst = <2>;
+		status = "disabled";
+	};
+
+	fsicom_client_inst3: fsicom_client_inst3 {
+		compatible = "nvidia,tegra234-fsicom-client";
+		memory-region = <&fsicom_resv_inst3>;
+		dma-coherent;
+		smmu_inst = <3>;
+		status = "disabled";
+	};
+
 	FsiComIvc {
 		compatible = "nvidia,tegra-fsicom-channels";
 		status = "disabled";
-		nChannel=<7>;
+		nChannel=<9>;
+		nvsciipc_endpoint = "nvfsicom_EPD",
+												"nvfsicom_CcplexApp",
+												"nvfsicom_CcplexApp_state_change",
+												"nvfsicom_app1",
+												"nvfsicom_app2",
+												"nvfsicom_appGR";
 		channel_0{
 			frame-count = <7>;
 			frame-size = <2048>;
@@ -10151,6 +10185,20 @@
 			frame-count = <4>;
 			frame-size = <10240>;
 			core-id = <0>;
+		};
+		channel_10{
+			frame-count = <4>;
+			frame-size = <64>;
+			core-id = <2>;
+			notification = "disabled";
+			NvSciCh = "nvfsicom_app3";
+		};
+		channel_11{
+			frame-count = <4>;
+			frame-size = <1024>;
+			core-id = <3>;
+			notification = "disabled";
+			NvSciCh = "nvfsicom_app4";
 		};
 	};
 
