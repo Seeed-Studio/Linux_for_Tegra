@@ -11,7 +11,7 @@
 #include <dt-bindings/tegra234-p3767-0000-common.h>
 
 / {
-	overlay-name = "Jetson 24pin CSI Connector";
+	overlay-name = "Jetson 22pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
 
 	p3767-0000_p3768-0000-csi@0 {

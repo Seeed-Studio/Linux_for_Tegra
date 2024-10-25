@@ -13,7 +13,7 @@
 
 / {
 	overlay-name = "Camera IMX219-A and IMX477-C";
-	jetson-header-name = "Jetson 24pin CSI Connector";
+	jetson-header-name = "Jetson 22pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
 	/* IMX477 connected on cam0 and IMX219 connected on cam1 port */
 
