@@ -2268,7 +2268,9 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 		ufs_virt_base_addr = NV_ADDRESS_MAP_T23X_UFSHC_VIRT_BASE;
 		ufs_virt_addr_range = UFS_AUX_ADDR_VIRT_RANGE_23X;
 		virt_ctrl_en = UFS_AUX_ADDR_VIRT_CTRL_EN;
+#if defined(NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_POWER_SEQUENCE)
 		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_BROKEN_PWR_SEQUENCE;
+#endif
 	} else {
 		ufs_aux_base_addr = NV_ADDRESS_MAP_UFSHC_AUX_BASE;
 		ufs_aux_addr_range = UFS_AUX_ADDR_RANGE;

@@ -8357,6 +8357,20 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS" "" "types"
         ;;
 
+        ufshcd_quirks_enum_has_ufshcd_quirk_broken_power_seqeunce)
+            #
+            # Determine if the 'UFSHCD_QUIRK_BROKEN_PWR_SEQUENCE' is defined in the
+            # enum ufshcd_quirks.
+            #
+            #
+            CODE="
+            #include <ufs/ufshcd.h>
+            enum ufshcd_quirks quirk = UFSHCD_QUIRK_BROKEN_PWR_SEQUENCE;
+            "
+
+            compile_check_conftest "$CODE" "NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_POWER_SEQUENCE" "" "types"
+        ;;
+
         v4l2_async_connection_struct_present)
             #
             # Determine if the 'struct v4l2_async_connection' present or not.
