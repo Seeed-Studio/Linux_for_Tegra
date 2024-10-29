@@ -45,6 +45,7 @@
 #define UFS_AUX_ADDR_VIRT_CTRL_EN		0x1
 #define UFS_AUX_ADDR_VIRT_PA_VA_CTRL		0x2
 #define UFS_AUX_ADDR_VIRT_REG_0			0x4
+#define UFSHC_AUX_UFSHC_CARD_DET_LP_PWR_CTRL_0	0x1CU
 
 /*
  * M-PHY Registers
@@ -348,6 +349,7 @@ struct ufs_tegra_host {
 	bool enable_hs_mode;
 	bool enable_38mhz_clk;
 	bool enable_ufs_provisioning;
+	bool enable_auto_hibern8;
 	u32 max_hs_gear;
 	bool mask_fast_auto_mode;
 	bool mask_hs_mode_b;

@@ -1816,6 +1816,10 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 			clk_disable_unprepare(ufs_tegra->mphy_force_ls_mode);
 		if (ufs_tegra->soc->chip_id >= TEGRA234)
 			ufs_tegra_ufs_mmio_axi(hba);
+		/* Enable auto hibernate */
+		if (ufs_tegra->enable_auto_hibern8)
+			ufs_aux_writel(ufs_tegra->ufs_aux_base, 0x4,
+				UFSHC_AUX_UFSHC_CARD_DET_LP_PWR_CTRL_0);
 		break;
 	default:
 		break;
@@ -1941,6 +1945,8 @@ static int ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 
 	ufs_tegra->enable_scramble =
 		of_property_read_bool(np, "nvidia,enable-scramble");
+	ufs_tegra->enable_auto_hibern8 =
+		of_property_read_bool(np, "nvidia,enable-auto-hibern8");
 
 	if (ufs_tegra->soc->chip_id >= TEGRA234) {
 #if defined(NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS) /* Linux 6.0 */
