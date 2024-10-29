@@ -4,8 +4,6 @@
 /dts-v1/;
 /plugin/;
 
-#include "tegra234-p3768-camera-rbpcv2-imx219.dtsi"
-
 / {
 	overlay-name = "Tegra234 p3768-0000+p3767-xxxx Dynamic Overlay";
 };
