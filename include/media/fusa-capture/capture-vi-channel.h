@@ -46,6 +46,18 @@ struct vi_channel_drv_ops {
 		uint32_t id);
 
 	/**
+	 * Fast forward a progres syncpt to Host1x.
+	 *
+	 * @param[in]	pdev		VI platform_device
+	 * @param[in]	id			syncpt id to fast forward
+	 * @param[in]	threshold	value to fast forward to
+	 */
+	void (*fast_forward_syncpt)(
+		struct platform_device *pdev,
+		uint32_t id,
+		uint32_t threshold);
+
+	/**
 	 * Retrieve the GoS table allocated in the VI-THI carveout.
 	 *
 	 * @param[in]	pdev	VI platform_device

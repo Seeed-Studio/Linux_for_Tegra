@@ -170,6 +170,22 @@ cleanup:
 }
 
 /**
+ * @brief Fast forward a VI syncpoint to its threshold value.
+ *
+ * @param[in]	chan	VI channel context
+ */
+static void vi_capture_fastforward_syncpt(
+	struct tegra_vi_channel *chan)
+{
+	struct vi_capture *capture = chan->capture_data;
+
+	if (capture->progress_sp.id)
+		chan->ops->fast_forward_syncpt(chan->ndev,
+						capture->progress_sp.id,
+						capture->progress_sp.threshold);
+}
+
+/**
  * @brief Release a VI syncpoint and clear its handle.
  *
  * @param[in]	chan	VI channel context
@@ -918,6 +934,8 @@ int vi_capture_reset(
 		err = -EINVAL;
 	}
 
+	vi_capture_fastforward_syncpt(chan);
+
 submit_fail:
 	mutex_unlock(&capture->reset_lock);
 	return err;
@@ -1380,6 +1398,50 @@ int vi_capture_get_info(
 }
 EXPORT_SYMBOL_GPL(vi_capture_get_info);
 
+static uint32_t vi_capture_get_num_progress(
+	struct tegra_vi_channel *chan,
+	struct vi_capture_req *req)
+{
+	struct vi_capture *capture = chan->capture_data;
+	struct capture_descriptor* desc = (struct capture_descriptor*)
+		(capture->requests.va +
+				req->buffer_index * capture->request_size);
+	struct vi_channel_config* config = &desc->ch_cfg;
+
+	const uint16_t minProgress = 2U;
+	uint16_t numProgress = minProgress;
+
+	/* Minimum of two progress fences for PXL_SOF and PXL_EOF */
+	if (config->flush_enable == 0x1UL)
+	{
+		if (config->flush_periodic == 0x1UL)
+		{
+			if (config->flush_first != 0U)
+			{
+				numProgress++;
+			}
+			numProgress += (config->frame.frame_y - config->flush_first) /
+				config->flush;
+		}
+		else
+		{
+			numProgress++;
+		}
+		/**
+		 * if (HEIGHT % TRIPLINE == 0) then TRIPLINE is reached at the same
+		 * time as PXL_EOF. EOF occurs on the cropped last line, hence EOF and
+		 * EOL are simultaneous. In this case, final PXL_EOF tag have NLINES bit
+		 * set in its payload, while there is no NLINE_DONE tag. Therefore,
+		 * number of progress fences should be decreased by one.
+		 */
+		if (((config->frame.frame_y - config->flush_first) % config->flush) == 0U)
+		{
+			numProgress--;
+		}
+	}
+	return (uint32_t)numProgress;
+}
+
 int vi_capture_request(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_req *req)
@@ -1434,6 +1496,9 @@ int vi_capture_request(
 		dev_err(chan->dev, "IVC capture submit failed\n");
 		return err;
 	}
+
+	// Progress syncpoints + 1 for status syncpoint
+	capture->progress_sp.threshold += vi_capture_get_num_progress(chan, req) + 1;
 
 	mutex_unlock(&capture->reset_lock);
 

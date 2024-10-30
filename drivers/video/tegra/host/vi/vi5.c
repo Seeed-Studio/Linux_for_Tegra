@@ -117,6 +117,12 @@ static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
 	nvhost_syncpt_put_ref_ext(pdev, id);
 }
 
+static void vi5_fast_forward_syncpt(struct platform_device *pdev, uint32_t id, uint32_t threshold)
+{
+	dev_dbg(&pdev->dev, "%s: id=%u -> thresh=%u\n", __func__, id, threshold);
+	nvhost_syncpt_set_min_update(pdev, id, threshold);
+}
+
 static void vi5_get_gos_table(struct platform_device *pdev, int *count,
 			const dma_addr_t **table)
 {
@@ -160,6 +166,7 @@ static int vi5_get_syncpt_gos_backing(struct platform_device *pdev,
 static struct vi_channel_drv_ops vi5_channel_drv_ops = {
 	.alloc_syncpt = vi5_alloc_syncpt,
 	.release_syncpt = vi5_release_syncpt,
+	.fast_forward_syncpt = vi5_fast_forward_syncpt,
 	.get_gos_table = vi5_get_gos_table,
 	.get_syncpt_gos_backing = vi5_get_syncpt_gos_backing,
 };
