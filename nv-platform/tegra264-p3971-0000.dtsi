@@ -248,7 +248,7 @@
 		/* PCIe C2 for onboard Ethernet */
 		pcie@a808420000 {
 			status = "okay";
-			interrupts = <TEGRA264_AON_GPIO(AA, 5) IRQ_TYPE_LEVEL_LOW>;
+			interrupts = <TEGRA264_AON_GPIO(AA, 5) GPIO_ACTIVE_LOW>;
 			interrupt-names = "wakeup";
 		};
 
