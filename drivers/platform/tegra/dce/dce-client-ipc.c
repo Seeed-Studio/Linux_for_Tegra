@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
 #include <dce.h>
@@ -89,22 +89,17 @@ static int dce_client_ipc_handle_alloc(u32 *handle)
 	return ret;
 }
 
-static int dce_client_ipc_handle_free(u32 handle)
+static int dce_client_ipc_handle_free(struct tegra_dce_client_ipc *cl)
 {
 	struct tegra_dce *d;
-	struct tegra_dce_client_ipc *cl;
 
-	if (!is_client_handle_valid(handle))
-		return -EINVAL;
-
-	cl = &client_handles[client_handle_to_index(handle)];
-
-	if (cl->valid == false)
+	if ((cl == NULL) || (cl->valid == false))
 		return -EINVAL;
 
 	d = cl->d;
 	d->d_clients[cl->type] = NULL;
 	memset(cl, 0, sizeof(struct tegra_dce_client_ipc));
+	cl->valid = false;
 
 	return 0;
 }
@@ -129,7 +124,7 @@ int tegra_dce_register_ipc_client(u32 type,
 	int ret;
 	uint32_t int_type;
 	struct tegra_dce *d = NULL;
-	struct tegra_dce_client_ipc *cl;
+	struct tegra_dce_client_ipc *cl = NULL;
 	u32 handle = DCE_CLIENT_IPC_HANDLE_INVALID;
 
 	if (handlep == NULL) {
@@ -185,11 +180,12 @@ int tegra_dce_register_ipc_client(u32 type,
 		goto out;
 	}
 
+	cl->valid = true;
 	d->d_clients[type] = cl;
 
 out:
 	if (ret != 0) {
-		dce_client_ipc_handle_free(handle);
+		(void)dce_client_ipc_handle_free(cl);
 		handle = DCE_CLIENT_IPC_HANDLE_INVALID;
 	}
 
@@ -209,8 +205,9 @@ int tegra_dce_unregister_ipc_client(u32 handle)
 	}
 
 	dce_cond_destroy(&cl->recv_wait);
+	atomic_set(&cl->complete, 0);
 
-	return dce_client_ipc_handle_free(handle);
+	return dce_client_ipc_handle_free(cl);
 }
 EXPORT_SYMBOL(tegra_dce_unregister_ipc_client);
 
@@ -368,7 +365,7 @@ void dce_client_ipc_wakeup(struct tegra_dce *d, u32 ch_type)
 	}
 
 	cl = d->d_clients[type];
-	if ((cl == NULL) || (cl->int_type != ch_type)) {
+	if ((cl == NULL) || (cl->valid == false) || (cl->int_type != ch_type)) {
 		dce_err(d, "Failed to retrieve client info for ch_type: [%d]",
 			ch_type);
 		return;
