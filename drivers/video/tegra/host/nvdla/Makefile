@@ -5,8 +5,13 @@
 # nvhost-nvdla.ko
 #
 
-NVDLA_TOP := ./
+NVDLA_TOP := .
+
+ifndef CONFIG_TEGRA_KLEAF_BUILD
 include $(src)/Makefile.config.mk
+else
+include $(srctree.nvidia-oot)/drivers/video/tegra/host/nvdla/Makefile.config.mk
+endif
 
 NVDLA_COMMON_OBJS := $(addprefix $(NVDLA_TOP)/,$(NVDLA_COMMON_OBJS))
 
