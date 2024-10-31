@@ -1107,6 +1107,17 @@ struct drm_tegra_syncpoint_export_memory {
 	__u32 stride;
 };
 
+struct drm_tegra_syncpoint_increment {
+	/**
+	 * @id: [in]
+	 *
+	 * ID of syncpoint to increment. The specific syncpoint
+	 * must be allocated through this file descriptor.
+	 */
+	__u32 id;
+	__u32 padding;
+};
+
 #define DRM_IOCTL_TEGRA_CHANNEL_OPEN DRM_IOWR(DRM_COMMAND_BASE + 0x10, struct drm_tegra_channel_open)
 #define DRM_IOCTL_TEGRA_CHANNEL_CLOSE DRM_IOWR(DRM_COMMAND_BASE + 0x11, struct drm_tegra_channel_close)
 #define DRM_IOCTL_TEGRA_CHANNEL_MAP DRM_IOWR(DRM_COMMAND_BASE + 0x12, struct drm_tegra_channel_map)
@@ -1116,6 +1127,7 @@ struct drm_tegra_syncpoint_export_memory {
 #define DRM_IOCTL_TEGRA_SYNCPOINT_ALLOCATE DRM_IOWR(DRM_COMMAND_BASE + 0x20, struct drm_tegra_syncpoint_allocate)
 #define DRM_IOCTL_TEGRA_SYNCPOINT_FREE DRM_IOWR(DRM_COMMAND_BASE + 0x21, struct drm_tegra_syncpoint_free)
 #define DRM_IOCTL_TEGRA_SYNCPOINT_WAIT DRM_IOWR(DRM_COMMAND_BASE + 0x22, struct drm_tegra_syncpoint_wait)
+#define DRM_IOCTL_TEGRA_SYNCPOINT_INCREMENT DRM_IOWR(DRM_COMMAND_BASE + 0x23, struct drm_tegra_syncpoint_increment)
 #define DRM_IOCTL_TEGRA_SYNCPOINT_EXPORT_MEMORY DRM_IOWR(DRM_COMMAND_BASE + 0x24, struct drm_tegra_syncpoint_export_memory)
 
 #if defined(__cplusplus)

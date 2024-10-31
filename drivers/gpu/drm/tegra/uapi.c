@@ -574,3 +574,27 @@ put_syncpts:
 
 	return err;
 }
+
+int tegra_drm_ioctl_syncpoint_increment(struct drm_device *drm, void *data,
+					struct drm_file *file)
+{
+	struct drm_tegra_syncpoint_increment *args = data;
+	struct tegra_drm_file *fpriv = file->driver_priv;
+	struct host1x_syncpt *sp;
+	int err;
+
+	if (args->padding != 0)
+		return -EINVAL;
+
+	mutex_lock(&fpriv->lock);
+	sp = xa_load(&fpriv->syncpoints, args->id);
+	if (!sp) {
+		mutex_unlock(&fpriv->lock);
+		return -EINVAL;
+	}
+
+	err = host1x_syncpt_incr(sp);
+	mutex_unlock(&fpriv->lock);
+
+	return err;
+}

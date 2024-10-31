@@ -51,6 +51,8 @@ int tegra_drm_ioctl_syncpoint_free(struct drm_device *drm, void *data,
 				   struct drm_file *file);
 int tegra_drm_ioctl_syncpoint_wait(struct drm_device *drm, void *data,
 				   struct drm_file *file);
+int tegra_drm_ioctl_syncpoint_increment(struct drm_device *drm, void *data,
+					struct drm_file *file);
 int tegra_drm_ioctl_syncpoint_export_memory(struct drm_device *drm, void *data,
 					    struct drm_file *file);
 
