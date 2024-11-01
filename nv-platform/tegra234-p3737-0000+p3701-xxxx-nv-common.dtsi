@@ -208,10 +208,6 @@
 				status = "okay";
 			};
 
-			crypto@15810000 {
-				status = "okay";
-			};
-
 			crypto@15820000 {
 				status = "okay";
 			};

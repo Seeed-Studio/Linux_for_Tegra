@@ -721,7 +721,6 @@
 			};
 
 			crypto@15820000 {
-				compatible = "nvidia,tegra234-se2-aes", "nvidia,tegra234-se-aes";
 				clock-names = "se";
 				interconnects = <&mc TEGRA234_MEMORY_CLIENT_SESRD &emc>,
 						<&mc TEGRA234_MEMORY_CLIENT_SESWR &emc>;
@@ -731,7 +730,6 @@
 			};
 
 			crypto@15840000 {
-				compatible = "nvidia,tegra234-se4-hash", "nvidia,tegra234-se-hash";
 				clock-names = "se";
 				interconnects = <&mc TEGRA234_MEMORY_CLIENT_SESRD &emc>,
 						<&mc TEGRA234_MEMORY_CLIENT_SESWR &emc>;

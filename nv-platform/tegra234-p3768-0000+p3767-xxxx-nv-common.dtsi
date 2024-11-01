@@ -255,6 +255,14 @@
 				status = "okay";
 			};
 
+			crypto@15820000 {
+				status = "okay";
+			};
+
+			crypto@15840000 {
+				status = "okay";
+			};
+
 			nvdla0@15880000 {
 				status = "okay";
 			};
