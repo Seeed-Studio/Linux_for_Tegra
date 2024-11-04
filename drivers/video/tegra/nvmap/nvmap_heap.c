@@ -1052,6 +1052,7 @@ void nvmap_heap_destroy(struct nvmap_heap *heap)
 int nvmap_heap_init(void)
 {
 	ulong start_time = sched_clock();
+	ulong sum;
 
 	heap_block_cache = KMEM_CACHE(list_block, 0);
 	if (!heap_block_cache) {
@@ -1059,7 +1060,10 @@ int nvmap_heap_init(void)
 		return -ENOMEM;
 	}
 	pr_info("%s: created heap block cache\n", __func__);
-	nvmap_init_time += sched_clock() - start_time;
+	if (check_add_overflow((ulong)sched_clock() - start_time, nvmap_init_time, &sum))
+		return -EOVERFLOW;
+
+	nvmap_init_time = sum;
 	return 0;
 }
 
