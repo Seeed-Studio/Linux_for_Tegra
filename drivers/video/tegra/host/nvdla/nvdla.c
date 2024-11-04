@@ -38,10 +38,15 @@
 
 #include "nvdla.h"
 #include "nvdla_hw_flcn.h"
-#include "nvdla_t194.h"
-#include "nvdla_t234.h"
+#if defined(NVDLA_HAVE_CONFIG_AXI) && (NVDLA_HAVE_CONFIG_AXI == 1)
 #include "nvdla_t25x.h"
 #include "nvdla_t264_sim.h"
+#else
+#include "nvdla_t194.h"
+#include "nvdla_t234.h"
+#endif /* NVDLA_HAVE_CONFIG_AXI */
+#include "dla_t19x_fw_version.h"
+#include "dla_t23x_fw_version.h"
 #include "dla_queue.h"
 #include "nvdla_buffer.h"
 #include "nvdla_debug.h"
@@ -907,6 +912,23 @@ static struct kobj_type nvdla_kobj_ktype = {
 #endif
 
 /* driver probe and init */
+#if defined(NVDLA_HAVE_CONFIG_AXI) && (NVDLA_HAVE_CONFIG_AXI == 1)
+static struct of_device_id tegra_nvdla_of_match[] = {
+	{
+		.name = "nvdla0",
+		.compatible = "nvidia,tegra25x-nvdla",
+		.data = (struct nvhost_device_data *)&t25x_nvdla0_info },
+	{
+		.name = "nvdla1",
+		.compatible = "nvidia,tegra25x-nvdla",
+		.data = (struct nvhost_device_data *)&t25x_nvdla1_info },
+	{
+		.name = "nvdla0",
+		.compatible = "nvidia,tegra264-nvdla",
+		.data = (struct nvhost_device_data *)&t264_sim_nvdla0_info },
+	{ },
+};
+#else
 static struct of_device_id tegra_nvdla_of_match[] = {
 	{
 		.name = "nvdla0",
@@ -924,16 +946,9 @@ static struct of_device_id tegra_nvdla_of_match[] = {
 		.name = "nvdla1",
 		.compatible = "nvidia,tegra234-nvdla",
 		.data = (struct nvhost_device_data *)&t23x_nvdla1_info },
-	{
-		.name = "nvdla0",
-		.compatible = "nvidia,tegra25x-nvdla",
-		.data = (struct nvhost_device_data *)&t25x_nvdla0_info },
-	{
-		.name = "nvdla",
-		.compatible = "nvidia,tegra264-nvdla",
-		.data = (struct nvhost_device_data *)&t264_sim_nvdla_info },
 	{ },
 };
+#endif /* NVDLA_HAVE_CONFIG_AXI */
 MODULE_DEVICE_TABLE(of, tegra_nvdla_of_match);
 
 static uint32_t num_enabled_dla_instances(uint32_t soft_fuse_ret,
@@ -1103,10 +1118,14 @@ static int nvdla_probe(struct platform_device *pdev)
 	nvdla_reset_handler_init(nvdla_dev);
 
 	nvdla_dev->sync_dev = nvdla_sync_device_create_syncpoint(pdev);
+#if defined(BUG_4942853) && (BUG_4942853 == 1)
+	/* Intentionally left empty until bug is resolved */
+#else
 	if (nvdla_dev->sync_dev == NULL) {
 		err = -ENOMEM;
 		goto err_mss_init;
 	}
+#endif // BUG_4942853
 
 	err = nvdla_alloc_cmd_memory(pdev);
 	if (err)
@@ -1198,7 +1217,11 @@ err_alloc_utilization_rate_mem:
 	nvdla_free_cmd_memory(pdev);
 err_alloc_cmd_mem:
 	nvdla_sync_device_destroy(nvdla_dev->sync_dev);
+#if defined(BUG_4942853) && (BUG_4942853 == 1)
+	/* Intentionally left empty until bug is resolved */
+#else
 err_mss_init:
+#endif
 	nvdla_queue_deinit(nvdla_dev->pool);
 err_queue_init:
 	nvdla_fw_deinit(pdev);

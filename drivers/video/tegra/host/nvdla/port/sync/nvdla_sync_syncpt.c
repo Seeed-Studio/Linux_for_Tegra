@@ -195,7 +195,7 @@ int32_t nvdla_sync_wait(struct nvdla_sync_context *context,
 				context->syncptid,
 				threshold);
 		if (wait_complete == 0) {
-			nvdla_dbg_info(device->pdev,
+			nvdla_dbg_err(device->pdev,
 				"Wait on sp[%u] for threshold[%u] timedout\n",
 				context->syncptid, threshold);
 			err = -ETIMEDOUT;

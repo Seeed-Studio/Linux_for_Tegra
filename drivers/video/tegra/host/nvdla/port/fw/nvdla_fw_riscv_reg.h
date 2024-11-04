@@ -38,10 +38,10 @@
 #ifndef __NVDLA_FW_RISCV_REG_H__
 #define __NVDLA_FW_RISCV_REG_H__
 
-static inline uint32_t riscv_mthddata_r(void)
+static inline uint32_t riscv_mthdwdat_r(void)
 {
-	/* NV_PNVDLA_FALCON_MTHDDATA */
-	return 0x00000064U;
+	/* NV_PNVDLA_FALCON_MTHDWDAT */
+	return 0x0000006cU;
 }
 
 static inline uint32_t riscv_mthdid_r(void)
@@ -60,6 +60,12 @@ static inline uint32_t riscv_mailbox1_r(void)
 {
 	/* NV_PNVDLA_FALCON_MAILBOX1 */
 	return 0x00000044U;
+}
+
+static inline uint32_t riscv_irqstat_r(void)
+{
+	/* NV_PNVDLA_FALCON_IRQSTAT */
+	return 0x00000008U;
 }
 
 static inline uint32_t riscv_irqmclr_r(void)

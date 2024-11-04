@@ -21,7 +21,6 @@
 
 #define DLA_UCODE_BIN_HEADER_MAGIC 0x10fe
 #define DLA_BOOTVECTOR_LO 0x100000
-static bool s_force_bitbang_load = true;
 
 struct riscv_bin_header {
 	uint32_t magic;
@@ -56,6 +55,7 @@ struct riscv_ucode_header {
 
 struct riscv {
 	struct device *dev;
+	struct nvdla_device *nvdladev;
 	void __iomem *regs;
 
 	void *cpuva;
@@ -331,7 +331,7 @@ static int32_t s_riscv_boot(struct riscv *riscv)
 
 	dev_info(riscv->dev, "Switched to RISCV MCU successfully\n");
 
-	if (s_force_bitbang_load)
+	if (riscv->nvdladev->bitbang == 1U)
 		s_riscv_load_mem_bitbang(riscv);
 	else
 		s_riscv_load_mem_dma(riscv);
@@ -363,13 +363,6 @@ static int32_t s_riscv_finalize_poweron(struct platform_device *pdev)
 	/* Falcon will use ctxdma 2 to access ucode imem/dmem */
 	nvdla_device_register_write(pdev, pdata->transcfg_addr,
 		pdata->transcfg_val);
-
-	/* TODO: Check if STREAMID need to be set. */
-
-	if (pdata->class == NV_DLA0_SIM_CLASS_ID)
-		nvdla_device_register_write(pdev, riscv_irqtype_r(),
-			(riscv_irqtype_swgen0_host_nonstall_f() |
-				riscv_irqtype_swgen1_host_nonstall_f()));
 
 	err = s_riscv_boot(riscv);
 	if (err < 0) {
@@ -496,6 +489,7 @@ int32_t nvdla_fw_init(struct platform_device *pdev)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdladev = pdata->private_data;
 	struct riscv *riscv;
 
 	pdata->irq = platform_get_irq(pdev, 0);
@@ -523,6 +517,7 @@ int32_t nvdla_fw_init(struct platform_device *pdev)
 	}
 
 	riscv->dev = &pdev->dev;
+	riscv->nvdladev = nvdladev;
 	riscv->regs = pdata->aperture[0];
 
 	pdata->falcon_data = riscv;
@@ -586,11 +581,11 @@ int32_t nvdla_fw_send_cmd(struct platform_device *pdev,
 
 	nvdla_dev->waiting = 1;
 
+	nvdla_dbg_reg(pdev, "method_data=[0x%x]", method_data);
+	nvdla_device_register_write(pdev, riscv_mthdwdat_r(), method_data);
+
 	nvdla_dbg_reg(pdev, "method_id=[0x%x]", method_id);
 	nvdla_device_register_write(pdev, riscv_mthdid_r(), method_id);
-
-	nvdla_dbg_reg(pdev, "method_data=[0x%x]", method_data);
-	nvdla_device_register_write(pdev, riscv_mthddata_r(), method_data);
 
 	if (!wait)
 		goto reset_waiting_status;

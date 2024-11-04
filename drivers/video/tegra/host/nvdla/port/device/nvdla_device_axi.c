@@ -108,7 +108,7 @@ static int32_t s_nvdla_module_pm_enable(struct platform_device *pdev)
 		goto fail;
 	}
 
-	reset_control_acquire(pdata->reset_control);
+	err = reset_control_acquire(pdata->reset_control);
 	if (err < 0) {
 		nvdla_dbg_err(pdev, "failed to acquire reset: %d\n", err);
 		goto fail;
@@ -134,6 +134,7 @@ static int32_t s_nvdla_module_pm_enable(struct platform_device *pdev)
 	/* Enable the power module. */
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
+		nvdla_dbg_err(pdev, "failed to enable pm_runtime\n");
 		err = -EOPNOTSUPP;
 		goto fail;
 	}
@@ -200,7 +201,6 @@ static int32_t s_nvdla_module_device_create(struct platform_device *pdev)
 			NULL,
 			"nvhost-ctrl-%s",
 			pdev->dev.of_node->name);
-
 	if (IS_ERR(dev)) {
 		nvdla_dbg_err(pdev, "failed to create nvhost-ctrl-%s device\n",
 			pdev->dev.of_node->name);
@@ -307,14 +307,15 @@ int32_t nvdla_module_busy(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
 	if (pdata->class == NV_DLA0_SIM_CLASS_ID) {
+		err = 0;
+
 		nvdla_dbg_warn(pdev, "skipping PM for simulator\n");
 
-		/* Temporarily force power on. */
 		nvdla_module_load_regs(pdev, pdata->engine_can_cg);
 
 		if (pdata->finalize_poweron)
-			pdata->finalize_poweron(pdev);
-		err = 0;
+			err = pdata->finalize_poweron(pdev);
+
 		goto fail;
 	}
 
@@ -344,9 +345,9 @@ void nvdla_module_idle_mult(struct platform_device *pdev, int32_t refs)
 	if (pdata->class == NV_DLA0_SIM_CLASS_ID) {
 		nvdla_dbg_warn(pdev, "skipping PM for simulator\n");
 
-		/* Temporarily force power off. */
 		if (pdata->prepare_poweroff)
 			pdata->prepare_poweroff(pdev);
+
 		goto fail;
 	}
 
@@ -417,14 +418,19 @@ int nvdla_module_runtime_suspend(struct device *dev)
 
 	if (pdata->prepare_poweroff) {
 		err = pdata->prepare_poweroff(pdev);
-		if (err)
-			return err;
+		if (err) {
+			nvdla_dbg_err(pdev, "failed to poweroff %d\n", err);
+			goto fail;
+		}
 	}
 
 	if (pdata->class != NV_DLA0_SIM_CLASS_ID)
 		clk_bulk_disable_unprepare(pdata->num_clks, pdata->clks);
 
 	return 0;
+
+fail:
+	return err;
 }
 
 int nvdla_module_runtime_resume(struct device *dev)

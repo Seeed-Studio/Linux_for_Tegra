@@ -270,7 +270,7 @@ enum nvdla_submit_mode {
  * @window_mem_va       virtual address of window size buffer
  * @is_suspended	flag to check if module is in suspend state.
  * @ping_lock	lock to synchronize the ping operation requests.
- * @avaiable		flag to check if device is available to use.
+ * @available		flag to check if device is available to use.
  */
 struct nvdla_device {
 	struct device *dev;
@@ -305,6 +305,7 @@ struct nvdla_device {
 #endif
 	struct mutex ping_lock;
 	bool available;
+	u32 bitbang;
 	struct nvdla_sync_device *sync_dev;
 };
 

@@ -18,7 +18,7 @@ static struct nvhost_gating_register nvdla_t264_gating_registers[] = {
 	{}
 };
 
-static struct nvhost_device_data t264_sim_nvdla_info = {
+static struct nvhost_device_data t264_sim_nvdla0_info = {
 	.devfs_name_family	= "nvdla",
 	.class			= NV_DLA0_SIM_CLASS_ID,
 	.clocks			= {
