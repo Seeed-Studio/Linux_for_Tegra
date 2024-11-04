@@ -4,6 +4,7 @@
 #ifndef _MODS_INTERNAL_H_
 #define _MODS_INTERNAL_H_
 
+#include <linux/completion.h>
 #include <linux/fb.h>
 #include <linux/list.h>
 #include <linux/miscdevice.h>
@@ -44,9 +45,10 @@
 #define MSI_DEV_NOT_FOUND 0
 
 struct en_dev_entry {
+	struct list_head    list;
 	struct pci_dev	    *dev;
-	struct en_dev_entry *next;
 	struct msix_entry   *msix_entries;
+	struct completion    client_completion;
 	u32                  irq_flags;
 	u32                  nvecs;
 #ifdef MODS_HAS_SRIOV
@@ -86,10 +88,10 @@ struct mods_client {
 	struct list_head         ppc_tce_bypass_list;
 	struct list_head         nvlink_sysmem_trained_list;
 #endif
+	struct list_head         enabled_devices;
 	wait_queue_head_t        interrupt_event;
 	struct irq_q_info        irq_queue;
 	spinlock_t               irq_lock;
-	struct en_dev_entry     *enabled_devices;
 	struct workqueue_struct *work_queue;
 	struct mem_type          mem_type;
 #if defined(CONFIG_PCI)
@@ -105,12 +107,6 @@ struct mods_client {
 #endif
 	atomic_t                 last_bad_dbdf;
 	u8                       client_id;
-};
-
-/* VM private data */
-struct mods_vm_private_data {
-	struct mods_client *client;
-	atomic_t            usage_count;
 };
 
 /* Free WC or UC chunk, which can be reused */
@@ -131,7 +127,7 @@ struct MODS_DMA_MAP {
 					* was mapped to is not a PCI device.
 					*/
 	struct device     *dev;        /* device these mappings are for */
-	struct scatterlist sg[1];      /* each entry corresponds to phys chunk
+	struct scatterlist sg[];       /* each entry corresponds to phys chunk
 					* in sg array in MODS_MEM_INFO at the
 					* same index
 					*/
@@ -146,23 +142,24 @@ struct MODS_MEM_INFO {
 	 */
 	struct list_head dma_map_list;
 
-	u32 num_pages;       /* total number of allocated pages */
-	u32 num_chunks;      /* number of allocated contig chunks */
-	int numa_node;       /* numa node for the allocation */
-	u8  cache_type : 2;  /* MODS_ALLOC_* */
-	u8  dma32      : 1;  /* true/false */
-	u8  force_numa : 1;  /* true/false */
-	u8  reservation_tag; /* zero if not reserved */
+	u32 num_pages;                  /* total number of allocated pages */
+	u32 num_chunks;                 /* number of allocated contig chunks */
+	int numa_node;                  /* numa node for the allocation */
+	u8  cache_type     : 2;         /* MODS_ALLOC_* */
+	u8  dma32          : 1;         /* true/false */
+	u8  force_numa     : 1;         /* true/false */
+	u8  no_free_opt    : 1;         /* true/false */
+	u8  dma_pages      : 1;         /* true/false */
+	u8  decrypted_mmap : 1;         /* true/false */
+	u8  reservation_tag;            /* zero if not reserved */
 
-	struct pci_dev     *dev;         /* (optional) pci_dev this allocation
-					  * is for.
-					  */
-	unsigned long      *wc_bitmap;   /* marks which chunks use WC/UC */
-	struct scatterlist *sg;          /* current list of chunks */
-	struct scatterlist  contig_sg;   /* contiguous merged chunk */
-	struct scatterlist  alloc_sg[1]; /* allocated memory chunks, each chunk
-					  * consists of 2^n contiguous pages
-					  */
+	struct pci_dev     *dev;        /* (optional) pci_dev this allocation is for. */
+	unsigned long      *wc_bitmap;  /* marks which chunks use WC/UC */
+	struct scatterlist *sg;         /* current list of chunks */
+	struct scatterlist  contig_sg;  /* contiguous merged chunk */
+	struct scatterlist  alloc_sg[]; /* allocated memory chunks, each chunk
+					 * consists of 2^n contiguous pages
+					 */
 };
 
 static inline u32 get_num_chunks(const struct MODS_MEM_INFO *p_mem_info)
@@ -180,10 +177,12 @@ struct SYS_MAP_MEMORY {
 	/* used for offset lookup, NULL for device memory */
 	struct MODS_MEM_INFO *p_mem_info;
 
-	phys_addr_t   phys_addr;
-	unsigned long virtual_addr;
-	unsigned long mapping_offs;   /* mapped offset from the beginning of the allocation */
-	unsigned long mapping_length; /* how many bytes were mapped */
+	struct mods_client *client;
+	atomic_t            usage_count;
+	phys_addr_t         phys_addr;
+	unsigned long       virtual_addr;
+	unsigned long       mapping_offs;   /* mapped offset from the beginning of the allocation */
+	unsigned long       mapping_length; /* how many bytes were mapped */
 };
 
 struct mods_smmu_dev {
@@ -233,6 +232,8 @@ struct NVL_TRAINED {
 
 #define IRQ_VAL_POISON		0xfafbfcfdU
 
+#define INVALID_CLIENT_ID   0
+
 /* debug print masks */
 #define DEBUG_IOCTL		0x2
 #define DEBUG_PCI		0x4
@@ -242,13 +243,12 @@ struct NVL_TRAINED {
 #define DEBUG_FUNC		0x40
 #define DEBUG_CLOCK		0x80
 #define DEBUG_DETAILED		0x100
-#define DEBUG_TEGRADC		0x200
 #define DEBUG_TEGRADMA		0x400
 #define DEBUG_ISR_DETAILED	(DEBUG_ISR | DEBUG_DETAILED)
 #define DEBUG_MEM_DETAILED	(DEBUG_MEM | DEBUG_DETAILED)
 #define DEBUG_ALL	        (DEBUG_IOCTL | DEBUG_PCI | DEBUG_ACPI | \
 	DEBUG_ISR | DEBUG_MEM | DEBUG_FUNC | DEBUG_CLOCK | DEBUG_DETAILED | \
-	DEBUG_TEGRADC | DEBUG_TEGRADMA)
+	DEBUG_TEGRADMA)
 
 #define LOG_ENT() mods_debug_printk(DEBUG_FUNC, "> %s\n", __func__)
 #define LOG_EXT() mods_debug_printk(DEBUG_FUNC, "< %s\n", __func__)
@@ -283,6 +283,9 @@ struct NVL_TRAINED {
 
 #define cl_warn(fmt, args...)\
 	pr_notice("mods [%u] warning: " fmt, client->client_id, ##args)
+
+#define is_valid_client_id(client_id)\
+	((client_id) != INVALID_CLIENT_ID)
 
 struct irq_mask_info {
 	void __iomem *dev_irq_mask_reg;    /*IRQ mask register, read-only reg*/

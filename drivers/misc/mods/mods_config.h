@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #ifndef _MODS_CONFIG_H_
 #define _MODS_CONFIG_H_
@@ -45,6 +45,10 @@
 #       define MODS_HAS_SRIOV 1
 #endif
 
+#if KERNEL_VERSION(3, 13, 0) <= MODS_KERNEL_VERSION
+#       define MODS_HAS_REINIT_COMPLETION 1
+#endif
+
 #if KERNEL_VERSION(3, 14, 0) <= MODS_KERNEL_VERSION
 #       define MODS_HAS_MSIX_RANGE 1
 #else
@@ -78,12 +82,21 @@
 #       define MODS_HAS_KERNEL_WRITE
 #endif
 
+#if KERNEL_VERSION(4, 14, 0) <= MODS_KERNEL_VERSION && \
+	defined(CONFIG_X86)
+#       define MODS_HAS_PGPROT_DECRYPTED
+#endif
+
 #if KERNEL_VERSION(4, 16, 0) <= MODS_KERNEL_VERSION
 #       define MODS_HAS_POLL_T 1
 #endif
 
 #if defined(CONFIG_ACPI_NUMA) && KERNEL_VERSION(5, 1, 0) <= MODS_KERNEL_VERSION
 #       define MODS_HAS_PXM_TO_NODE 1
+#endif
+
+#if KERNEL_VERSION(5, 10, 0) <= MODS_KERNEL_VERSION
+#       define MODS_HAS_DMA_ALLOC_PAGES 1
 #endif
 
 #if KERNEL_VERSION(5, 17, 0) <= MODS_KERNEL_VERSION
@@ -94,9 +107,13 @@
 #       define MODS_ENABLE_BPMP_MRQ_API 1
 #endif
 
-#if KERNEL_VERSION(5, 15, 0) > MODS_KERNEL_VERSION
+#if (KERNEL_VERSION(5, 14, 0) > MODS_KERNEL_VERSION)
 #       define MODS_HAS_FB_SET_SUSPEND 1
-#elif (KERNEL_VERSION(6, 1, 0) > MODS_KERNEL_VERSION) && !defined(CONFIG_CHROME_PLATFORMS)
+#elif (KERNEL_VERSION(5, 15, 0) > MODS_KERNEL_VERSION) && !defined(CONFIG_RHEL_DIFFERENCES)
+#       define MODS_HAS_FB_SET_SUSPEND 1
+#elif (KERNEL_VERSION(6, 1, 0) > MODS_KERNEL_VERSION) && \
+	!defined(CONFIG_CHROME_PLATFORMS) && \
+	!defined(CONFIG_RHEL_DIFFERENCES)
 #       define MODS_HAS_FB_SET_SUSPEND 1
 #endif
 

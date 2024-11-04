@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #include "mods_internal.h"
 
@@ -248,6 +248,8 @@ static void unmap_sg(struct device      *dev,
 
 		dma_unmap_sg(dev, sg, (int)chunks_to_unmap, DMA_BIDIRECTIONAL);
 
+		sg_dma_address(sg) = 0;
+
 		sg         += chunks_to_unmap;
 		num_chunks -= chunks_to_unmap;
 
@@ -296,14 +298,12 @@ static int dma_unmap_all(struct mods_client   *client,
 	struct list_head *tmp;
 
 #ifdef CONFIG_PCI
-	if (sg_dma_address(p_mem_info->sg) &&
+	if (sg_dma_address(p_mem_info->sg) && !p_mem_info->dma_pages &&
 	    (dev == &p_mem_info->dev->dev || !dev)) {
 
 		unmap_sg(&p_mem_info->dev->dev,
 			 p_mem_info->sg,
 			 get_num_chunks(p_mem_info));
-
-		sg_dma_address(p_mem_info->sg) = 0;
 	}
 #endif
 
@@ -494,6 +494,9 @@ static void save_non_wb_chunks(struct mods_client   *client,
 	if (p_mem_info->cache_type == MODS_ALLOC_CACHED)
 		return;
 
+	if (p_mem_info->no_free_opt)
+		return;
+
 	if (unlikely(mutex_lock_interruptible(&client->mtx)))
 		return;
 
@@ -661,8 +664,8 @@ static void release_chunks(struct mods_client   *client,
 {
 	u32 i;
 
-	WARN_ON(sg_dma_address(p_mem_info->sg));
 	WARN_ON(!list_empty(&p_mem_info->dma_map_list));
+	WARN_ON(sg_dma_address(p_mem_info->sg) && !p_mem_info->dma_pages);
 
 	restore_cache(client, p_mem_info);
 
@@ -679,7 +682,19 @@ static void release_chunks(struct mods_client   *client,
 		order = get_order(sg->length);
 		WARN_ON((PAGE_SIZE << order) != sg->length);
 
-		__free_pages(sg_page(sg), order);
+		if (p_mem_info->dma_pages) {
+#ifdef MODS_HAS_DMA_ALLOC_PAGES
+			WARN_ON(!sg_dma_address(sg));
+			WARN_ON(!p_mem_info->dev);
+			dma_free_pages(&p_mem_info->dev->dev,
+				       PAGE_SIZE << order,
+				       sg_page(sg),
+				       sg_dma_address(sg),
+				       DMA_BIDIRECTIONAL);
+#endif
+		} else
+			__free_pages(sg_page(sg), order);
+
 		atomic_sub(1u << order, &client->num_pages);
 
 		sg_set_page(sg, NULL, 0, 0);
@@ -711,7 +726,8 @@ static gfp_t get_alloc_flags(struct MODS_MEM_INFO *p_mem_info, u32 order)
 static struct page *alloc_chunk(struct mods_client   *client,
 				struct MODS_MEM_INFO *p_mem_info,
 				u32                   order,
-				int                  *need_cup)
+				int                  *need_cup,
+				dma_addr_t	     *dma_handle)
 {
 	struct page *p_page     = NULL;
 	u8           cache_type = p_mem_info->cache_type;
@@ -759,9 +775,18 @@ static struct page *alloc_chunk(struct mods_client   *client,
 		}
 	}
 
-	p_page = alloc_pages_node(p_mem_info->numa_node,
-				  get_alloc_flags(p_mem_info, order),
-				  order);
+	if (p_mem_info->dma_pages) {
+#ifdef MODS_HAS_DMA_ALLOC_PAGES
+		p_page = dma_alloc_pages(&p_mem_info->dev->dev,
+					 PAGE_SIZE << order,
+					 dma_handle,
+					 DMA_BIDIRECTIONAL,
+					 GFP_KERNEL | __GFP_NORETRY | __GFP_NOWARN);
+#endif
+	} else
+		p_page = alloc_pages_node(p_mem_info->numa_node,
+					  get_alloc_flags(p_mem_info, order),
+					  order);
 
 	*need_cup = 1;
 
@@ -777,6 +802,7 @@ static int alloc_contig_sys_pages(struct mods_client   *client,
 	const unsigned long req_bytes = (unsigned long)p_mem_info->num_pages
 					<< PAGE_SHIFT;
 	struct page *p_page;
+	dma_addr_t   dma_handle = 0;
 	u64          phys_addr;
 	u64          end_addr = 0;
 	u32          order    = 0;
@@ -788,7 +814,7 @@ static int alloc_contig_sys_pages(struct mods_client   *client,
 	while ((1U << order) < p_mem_info->num_pages)
 		order++;
 
-	p_page = alloc_chunk(client, p_mem_info, order, &is_wb);
+	p_page = alloc_chunk(client, p_mem_info, order, &is_wb, &dma_handle);
 
 	if (unlikely(!p_page))
 		goto failed;
@@ -796,6 +822,9 @@ static int alloc_contig_sys_pages(struct mods_client   *client,
 	p_mem_info->num_pages = 1U << order;
 
 	sg_set_page(p_mem_info->alloc_sg, p_page, PAGE_SIZE << order, 0);
+	sg_dma_address(p_mem_info->alloc_sg) = dma_handle;
+	if (!sg_dma_len(p_mem_info->alloc_sg))
+		sg_dma_len(p_mem_info->alloc_sg) = PAGE_SIZE << order;
 
 	if (!is_wb)
 		mark_chunk_wc(p_mem_info, 0);
@@ -864,12 +893,18 @@ static int alloc_noncontig_sys_pages(struct mods_client   *client,
 		}
 
 		for (;;) {
+			dma_addr_t dma_handle = 0;
+
 			struct page *p_page = alloc_chunk(client,
 							  p_mem_info,
 							  order,
-							  &is_wb);
+							  &is_wb,
+							  &dma_handle);
 			if (p_page) {
 				sg_set_page(sg, p_page, PAGE_SIZE << order, 0);
+				sg_dma_address(sg) = dma_handle;
+				if (!sg_dma_len(sg))
+					sg_dma_len(sg) = PAGE_SIZE << order;
 				allocated_pages = 1u << order;
 				break;
 			}
@@ -1377,6 +1412,21 @@ int esc_mods_alloc_pages_2(struct mods_client        *client,
 		goto failed;
 	}
 
+	if (unlikely((p->flags & MODS_ALLOC_DMA_PAGES) &&
+		     ((p->flags & MODS_ALLOC_DMA32)    ||
+		      (p->flags & MODS_ALLOC_USE_NUMA) ||
+		      !(p->flags & MODS_ALLOC_MAP_DEV)))) {
+		cl_error("invalid combination of alloc flags 0x%x for dma pages\n", p->flags);
+		goto failed;
+	}
+
+#ifndef MODS_HAS_DMA_ALLOC_PAGES
+	if (unlikely(p->flags & MODS_ALLOC_DMA_PAGES)) {
+		cl_error("dma pages are not supported in this kernel\n");
+		goto failed;
+	}
+#endif
+
 #ifdef CONFIG_PPC64
 	if (unlikely((p->flags & MODS_ALLOC_CACHE_MASK) != MODS_ALLOC_CACHED)) {
 		cl_error("unsupported cache attr %u (%s)\n",
@@ -1405,6 +1455,14 @@ int esc_mods_alloc_pages_2(struct mods_client        *client,
 	p_mem_info->dma32           = (p->flags & MODS_ALLOC_DMA32) ? true : false;
 	p_mem_info->force_numa      = (p->flags & MODS_ALLOC_FORCE_NUMA)
 				      ? true : false;
+	p_mem_info->no_free_opt     = (p->flags & MODS_ALLOC_NO_FREE_OPTIMIZATION) ||
+				      (p->flags & MODS_ALLOC_DMA_PAGES) ||
+				      (p->flags & MODS_ALLOC_DECRYPTED_MMAP)
+				      ? true : false;
+	p_mem_info->dma_pages       = (p->flags & MODS_ALLOC_DMA_PAGES) ? true : false;
+#ifdef MODS_HAS_PGPROT_DECRYPTED
+	p_mem_info->decrypted_mmap  = (p->flags & MODS_ALLOC_DECRYPTED_MMAP) ? true : false;
+#endif
 	p_mem_info->reservation_tag = 0;
 #ifdef MODS_HASNT_NUMA_NO_NODE
 	p_mem_info->numa_node       = numa_node_id();

@@ -8,7 +8,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 4
-#define MODS_DRIVER_VERSION_MINOR 24
+#define MODS_DRIVER_VERSION_MINOR 28
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR / 10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR % 10))
@@ -114,22 +114,25 @@ struct MODS_ALLOC_PAGES_2 {
 #define MODS_ANY_NUMA_NODE (-1)
 
 /* Bit flags for the flags member above */
-#define MODS_ALLOC_CACHED        0   /* Default WB cache attr */
-#define MODS_ALLOC_UNCACHED      1   /* UC cache attr */
-#define MODS_ALLOC_WRITECOMBINE  2   /* WC cache attr */
-#define MODS_ALLOC_CACHE_MASK    7U  /* The first three bits are cache attr */
+#define MODS_ALLOC_CACHED               0U          /* Default WB cache attr */
+#define MODS_ALLOC_UNCACHED             (1U << 0)   /* UC cache attr */
+#define MODS_ALLOC_WRITECOMBINE         (1U << 1)   /* WC cache attr */
+#define MODS_ALLOC_CACHE_MASK           7U          /* The first three bits are cache attr */
 
-#define MODS_ALLOC_DMA32         8   /* Force 32-bit PA, else any PA */
-#define MODS_ALLOC_CONTIGUOUS    16  /* Force contiguous, else non-contig */
-#define MODS_ALLOC_USE_NUMA      32  /* Use numa_node member instead of PCI dev
-				      * for NUMA node hint
-				      */
-#define MODS_ALLOC_FORCE_NUMA    64  /* Force memory to be from a given NUMA
-				      * node (specified by PCI dev or
-				      * numa_node).  Otherwise use PCI dev or
-				      * numa_node as a hint only.
-				      */
-#define MODS_ALLOC_MAP_DEV       128 /* DMA map to PCI device */
+#define MODS_ALLOC_DMA32                (1U << 3)   /* Force 32-bit PA, else any PA */
+#define MODS_ALLOC_CONTIGUOUS           (1U << 4)   /* Force contiguous, else non-contig */
+#define MODS_ALLOC_USE_NUMA             (1U << 5)   /* Use numa_node member instead of PCI dev
+						     * for NUMA node hint
+						     */
+#define MODS_ALLOC_FORCE_NUMA           (1U << 6)   /* Force memory to be from a given NUMA
+						     * node (specified by PCI dev or
+						     * numa_node).  Otherwise use PCI dev or
+						     * numa_node as a hint only.
+						     */
+#define MODS_ALLOC_MAP_DEV              (1U << 7)   /* DMA map to PCI device */
+#define MODS_ALLOC_NO_FREE_OPTIMIZATION (1U << 8)   /* Don't cache surfaces on free */
+#define MODS_ALLOC_DMA_PAGES            (1U << 9)   /* Allocate memory from DMA region */
+#define MODS_ALLOC_DECRYPTED_MMAP       (1U << 10)  /* Allocate decrypted memory */
 
 /* Used by MODS_ESC_ALLOC_PAGES ioctl */
 struct MODS_ALLOC_PAGES {

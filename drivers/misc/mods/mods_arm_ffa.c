@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #include "mods_internal.h"
 #include <linux/uuid.h>
@@ -19,7 +19,7 @@ static const struct ffa_device_id mods_ffa_device_id[] = {
 
 struct mods_ffa_ctx {
 	struct ffa_device        *ffa_dev;
-#if KERNEL_VERSION(6, 1, 0) <= MODS_KERNEL_VERSION
+#if KERNEL_VERSION(6, 1, 0) <= MODS_KERNEL_VERSION || defined(FFA_PARTITION_AARCH64_EXEC)
 	const struct ffa_msg_ops *ffa_ops;
 #else
 	const struct ffa_dev_ops *ffa_ops;
@@ -34,7 +34,7 @@ static int ffa_probe(struct ffa_device *ffa_dev)
 {
 	int ret = 0;
 
-#if KERNEL_VERSION(6, 1, 0) <= MODS_KERNEL_VERSION
+#if KERNEL_VERSION(6, 1, 0) <= MODS_KERNEL_VERSION || defined(FFA_PARTITION_AARCH64_EXEC)
 	const struct ffa_msg_ops *ffa_ops = NULL;
 
 	if (ffa_dev->ops)

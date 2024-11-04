@@ -47,18 +47,31 @@ int mods_enable_device(struct mods_client   *client,
 		       struct en_dev_entry **dev_entry)
 {
 	int                  err   = OK;
-	struct en_dev_entry *dpriv = client->enabled_devices;
+	struct en_dev_entry *dpriv = NULL;
 
 	WARN_ON(!mutex_is_locked(&irq_mtx));
 
 	dpriv = pci_get_drvdata(dev);
-	if (dpriv) {
-		if (dpriv->client_id == client->client_id) {
-			if (dev_entry)
-				*dev_entry = dpriv;
-			return OK;
-		}
+	if (!dpriv) {
+		cl_error(
+			"driver data is not set for %04x:%02x:%02x.%x\n",
+			pci_domain_nr(dev->bus),
+			dev->bus->number,
+			PCI_SLOT(dev->devfn),
+			PCI_FUNC(dev->devfn));
+		return -EINVAL;
+	}
 
+
+	/* Client already owns the device */
+	if (dpriv->client_id == client->client_id) {
+		if (dev_entry)
+			*dev_entry = dpriv;
+		return OK;
+	}
+
+	/* Another client owns the device */
+	if (is_valid_client_id(dpriv->client_id)) {
 		cl_error(
 			"invalid client for dev %04x:%02x:%02x.%x, expected %u\n",
 			pci_domain_nr(dev->bus),
@@ -69,11 +82,6 @@ int mods_enable_device(struct mods_client   *client,
 		return -EBUSY;
 	}
 
-	dpriv = kzalloc(sizeof(*dpriv), GFP_KERNEL | __GFP_NORETRY);
-	if (unlikely(!dpriv))
-		return -ENOMEM;
-	atomic_inc(&client->num_allocs);
-
 	err = pci_enable_device(dev);
 	if (unlikely(err)) {
 		cl_error("failed to enable dev %04x:%02x:%02x.%x\n",
@@ -81,8 +89,6 @@ int mods_enable_device(struct mods_client   *client,
 			 dev->bus->number,
 			 PCI_SLOT(dev->devfn),
 			 PCI_FUNC(dev->devfn));
-		kfree(dpriv);
-		atomic_dec(&client->num_allocs);
 		return err;
 	}
 
@@ -93,10 +99,12 @@ int mods_enable_device(struct mods_client   *client,
 		PCI_FUNC(dev->devfn));
 
 	dpriv->client_id        = client->client_id;
-	dpriv->dev              = pci_dev_get(dev);
-	dpriv->next             = client->enabled_devices;
-	client->enabled_devices = dpriv;
-	pci_set_drvdata(dev, dpriv);
+	list_add(&dpriv->list, &client->enabled_devices);
+#ifdef MODS_HAS_REINIT_COMPLETION
+	reinit_completion(&dpriv->client_completion);
+#else
+	INIT_COMPLETION(dpriv->client_completion);
+#endif
 
 	if (dev_entry)
 		*dev_entry = dpriv;
@@ -110,17 +118,12 @@ void mods_disable_device(struct mods_client *client,
 
 	WARN_ON(!mutex_is_locked(&irq_mtx));
 
-#ifdef MODS_HAS_SRIOV
-	if (dpriv && dpriv->num_vfs)
-		pci_disable_sriov(dev);
-#endif
+	pci_disable_device(dev);
 
 	if (dpriv) {
-		pci_set_drvdata(dev, NULL);
-		pci_dev_put(dev);
+		dpriv->client_id = INVALID_CLIENT_ID;
+		complete(&dpriv->client_completion);
 	}
-
-	pci_disable_device(dev);
 
 	cl_info("disabled dev %04x:%02x:%02x.%x\n",
 		pci_domain_nr(dev->bus),
@@ -675,9 +678,27 @@ static int mods_free_irqs(struct mods_client *client,
 	dpriv = pci_get_drvdata(dev);
 
 	if (!dpriv) {
+		cl_error(
+			"driver data is not set for %04x:%02x:%02x.%x\n",
+			pci_domain_nr(dev->bus),
+			dev->bus->number,
+			PCI_SLOT(dev->devfn),
+			PCI_FUNC(dev->devfn));
 		mutex_unlock(&irq_mtx);
 		LOG_EXT();
-		return OK;
+		return -EINVAL;
+	}
+
+	if (!is_valid_client_id(dpriv->client_id)) {
+		cl_error(
+			"no client owns dev %04x:%02x:%02x.%x\n",
+			pci_domain_nr(dev->bus),
+			dev->bus->number,
+			PCI_SLOT(dev->devfn),
+			PCI_FUNC(dev->devfn));
+		mutex_unlock(&irq_mtx);
+		LOG_EXT();
+		return -EINVAL;
 	}
 
 	if (dpriv->client_id != client->client_id) {
@@ -751,14 +772,16 @@ static int mods_free_irqs(struct mods_client *client,
 
 void mods_free_client_interrupts(struct mods_client *client)
 {
-	struct en_dev_entry *dpriv = client->enabled_devices;
+	struct list_head *head = &client->enabled_devices;
+	struct list_head *iter;
+	struct en_dev_entry *dpriv;
 
 	LOG_ENT();
 
 	/* Release all interrupts */
-	while (dpriv) {
+	list_for_each(iter, head) {
+		dpriv = list_entry(iter, struct en_dev_entry, list);
 		mods_free_irqs(client, dpriv->dev);
-		dpriv = dpriv->next;
 	}
 
 	LOG_EXT();
@@ -1014,7 +1037,20 @@ static int mods_register_pci_irq(struct mods_client         *client,
 	}
 
 	dpriv = pci_get_drvdata(dev);
-	if (dpriv) {
+	if (!dpriv) {
+		cl_error(
+			"driver data is not set for %04x:%02x:%02x.%x\n",
+			pci_domain_nr(dev->bus),
+			dev->bus->number,
+			PCI_SLOT(dev->devfn),
+			PCI_FUNC(dev->devfn));
+		mutex_unlock(&irq_mtx);
+		pci_dev_put(dev);
+		LOG_EXT();
+		return -EINVAL;
+	}
+
+	if (is_valid_client_id(dpriv->client_id)) {
 		if (dpriv->client_id != client->client_id) {
 			cl_error(
 				"dev %04x:%02x:%02x.%x already owned by client %u\n",
