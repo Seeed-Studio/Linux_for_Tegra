@@ -6,5 +6,7 @@
 #include "nv-soc/tegra264-soc-thermal-shutdown.dtsi"
 
 / {
-
+	nvtherm-oc-event {
+		status = "okay";
+	};
 };

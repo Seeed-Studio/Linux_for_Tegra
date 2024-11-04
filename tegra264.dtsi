@@ -8344,9 +8344,8 @@
 		status = "disabled";
 	};
 
-	soctherm-oc-event {
-		compatible = "nvidia,tegra264-oc-event",
-			     "nvidia,tegra234-oc-event";
+	nvtherm-oc-event {
+		compatible = "nvidia,tegra234-oc-event";
 		status = "disabled";
 
 		nvidia,bpmp = <&bpmp>;
