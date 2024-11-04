@@ -1493,6 +1493,31 @@ rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_
 	return events_copied * sizeof(struct camrtc_event_struct);
 }
 
+static ssize_t rtcpu_raw_trace_write(
+	struct file *file, const char __user *user_buffer, size_t buffer_size, loff_t *ppos)
+{
+	struct rtcpu_raw_trace_context *fd_context = file->private_data;
+
+	if (!fd_context) {
+		pr_err("file descriptor context is not set in private data\n");
+		return -ENODEV;
+	}
+
+	struct tegra_rtcpu_trace *tracer = fd_context->tracer;
+
+	if (!tracer) {
+		pr_err("Tracer is not set in file descriptor context\n");
+		return -ENODEV;
+	}
+
+	const struct camrtc_trace_memory_header *header = tracer->trace_memory;
+
+	fd_context->raw_trace_last_read_event_idx = header->event_next_idx;
+	file->private_data = fd_context;
+
+	return buffer_size;
+}
+
 unsigned int rtcpu_raw_trace_poll(struct file *file, poll_table *wait)
 {
 	unsigned int ret = 0;
@@ -1575,6 +1600,7 @@ static const struct file_operations rtcpu_raw_trace_fops = {
 	.owner = THIS_MODULE,
 	.llseek = no_llseek,
 	.read = rtcpu_raw_trace_read,
+	.write = rtcpu_raw_trace_write,
 	.poll = rtcpu_raw_trace_poll,
 	.open = rtcpu_raw_trace_open,
 	.release = rtcpu_raw_trace_release,
