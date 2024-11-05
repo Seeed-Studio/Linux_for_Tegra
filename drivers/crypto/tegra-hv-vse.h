@@ -10,6 +10,7 @@
 #define KEYSLOT_SIZE_BYTES		16
 #define KEYSLOT_OFFSET_BYTES		8
 #define MAX_SE_DMA_BUFS	4
+#define TEGRA_HV_VSE_AES_IV_LEN		16U
 
 struct tegra_vse_soc_info {
 	bool gcm_decrypt_supported;
@@ -112,8 +113,6 @@ struct tegra_virtual_se_aes_context {
 	u32 op_mode;
 	/* Is key slot */
 	bool is_key_slot_allocated;
-	/* size of GCM tag*/
-	u32 authsize;
 	/*Crypto dev instance*/
 	uint32_t node_id;
 	/* Flag to indicate user nonce*/
@@ -122,6 +121,19 @@ struct tegra_virtual_se_aes_context {
 	uint8_t b_is_first;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
+	uint8_t *user_aad_buf;
+	uint8_t *user_src_buf;
+	uint8_t *user_tag_buf;
+	uint8_t *user_dst_buf;
+	uint32_t user_src_buf_size;
+	uint32_t user_aad_buf_size;
+	uint32_t user_tag_buf_size;
+	uint8_t iv[TEGRA_HV_VSE_AES_IV_LEN];
+};
+
+enum cmac_request_type {
+	TEGRA_HV_VSE_CMAC_SIGN,
+	TEGRA_HV_VSE_CMAC_VERIFY
 };
 
 /* Security Engine/TSEC AES CMAC context */
@@ -137,6 +149,18 @@ struct tegra_virtual_se_aes_cmac_context {
 	uint32_t node_id;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
+	uint8_t *user_src_buf;
+	uint8_t *user_mac_buf;
+	uint32_t user_src_buf_size;
+	enum cmac_request_type request_type;
+	/* For CMAC_VERIFY tag comparison result */
+	uint8_t result;
+};
+
+enum gmac_request_type {
+	TEGRA_HV_VSE_GMAC_INIT = 0U,
+	TEGRA_HV_VSE_GMAC_SIGN,
+	TEGRA_HV_VSE_GMAC_VERIFY
 };
 
 /* Security Engine AES GMAC context */
@@ -153,6 +177,15 @@ struct tegra_virtual_se_aes_gmac_context {
 	uint32_t node_id;
 	/* Flag to indicate if sm4 is enabled*/
 	uint8_t b_is_sm4;
+	uint8_t *user_aad_buf;
+	uint8_t *user_tag_buf;
+	uint32_t user_aad_buf_size;
+	enum gmac_request_type request_type;
+	/* Return IV after GMAC_INIT and pass IV during GMAC_VERIFY*/
+	unsigned char *iv;
+	bool is_first;
+	/* For GMAC_VERIFY tag comparison result */
+	uint8_t result;
 };
 
 /* Security Engine SHA context */
@@ -169,6 +202,14 @@ struct tegra_virtual_se_sha_context {
 	bool is_first;
 	/*Crypto dev instance*/
 	uint32_t node_id;
+	uint8_t *user_src_buf;
+	uint8_t *user_digest_buffer;
+	uint32_t user_src_buf_size;
+};
+
+enum hmac_sha_request_type {
+	TEGRA_HV_VSE_HMAC_SHA_SIGN = 0U,
+	TEGRA_HV_VSE_HMAC_SHA_VERIFY
 };
 
 struct tegra_virtual_se_hmac_sha_context {
@@ -189,6 +230,11 @@ struct tegra_virtual_se_hmac_sha_context {
 	u32 keylen;
 	/*Crypto dev instance*/
 	uint32_t node_id;
+	uint8_t *user_src_buf;
+	uint8_t *user_digest_buffer;
+	uint32_t user_src_buf_size;
+	enum hmac_sha_request_type request_type;
+	uint8_t result;
 };
 
 

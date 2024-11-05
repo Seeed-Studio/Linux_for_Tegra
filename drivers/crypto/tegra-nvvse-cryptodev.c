@@ -118,49 +118,6 @@ struct tnvvse_crypto_ctx {
 	uint32_t			node_id;
 };
 
-enum tnvvse_gmac_request_type {
-	GMAC_INIT = 0u,
-	GMAC_SIGN,
-	GMAC_VERIFY
-};
-
-/* GMAC request data */
-struct tnvvse_gmac_req_data {
-	enum tnvvse_gmac_request_type request_type;
-	/* Return IV after GMAC_INIT and Pass IV during GMAC_VERIFY */
-	char *iv;
-	uint8_t is_first;
-	/* For GMAC_VERIFY tag comparison result */
-	uint8_t result;
-};
-
-enum tnvvse_cmac_request_type {
-	CMAC_SIGN,
-	CMAC_VERIFY
-};
-
-/* CMAC request data */
-struct tnvvse_cmac_req_data {
-	enum tnvvse_cmac_request_type request_type;
-	/* For CMAC_VERIFY tag comparison result */
-	uint8_t result;
-};
-
-enum tnvvse_hmac_sha_request_type {
-	HMAC_SHA_SIGN,
-	HMAC_SHA_VERIFY
-};
-
-/* HMAC SHA request data */
-struct tnvvse_hmac_sha_req_data {
-	/* Enum to specify HMAC-SHA request type i.e. SIGN/VERIFY */
-	enum tnvvse_hmac_sha_request_type request_type;
-	/* Expected digest for HMAC_SHA_VERIFY request */
-	char *expected_digest;
-	/* Hash comparison result for HMAC_SHA_VERIFY request */
-	uint8_t result;
-};
-
 #if (KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE)
 static void tnvvse_crypto_complete(void *data, int err)
 {
@@ -302,15 +259,10 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	struct crypto_ahash *tfm = NULL;
 	struct ahash_request *req = NULL;
 	struct tnvvse_crypto_completion sha_complete;
-	struct scatterlist sg;
-	uint8_t *in_buf = NULL;
-	char *result_buff = NULL;
 	enum tegra_nvvse_sha_type sha_type;
-	uint32_t in_sz, in_buf_size;
 	int ret = -ENOMEM;
 
 	sha_type = sha_update_ctl->sha_type;
-	in_sz = sha_update_ctl->input_buffer_size;
 
 	if (sha_update_ctl->do_reset != 0U) {
 		/* Force reset SHA state and return */
@@ -334,42 +286,12 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	if (sha_update_ctl->is_first != 0U)
 		sha_state->sha_init_done = 1U;
 
-	if (in_sz == 0U)
-		/**
-		 * Need to pass non-zero buffer size to kzalloc so that a
-		 * valid ptr is passed to sg_init_one API in debug build
-		 */
-		in_buf_size = 1U;
-	else
-		in_buf_size = in_sz;
-
-	in_buf = kzalloc(in_buf_size, GFP_KERNEL);
-	if (in_buf == NULL) {
-		ret = -ENOMEM;
-		goto exit;
-	}
-
-	/* Shake128/Shake256 have variable digest size */
-	if ((sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE128)
-			|| (sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE256)) {
-		if (sha_update_ctl->digest_size > NVVSE_MAX_ALLOCATED_SHA_RESULT_BUFF_SIZE) {
-			result_buff = kzalloc(sha_update_ctl->digest_size, GFP_KERNEL);
-			if (!result_buff) {
-				ret = -ENOMEM;
-				goto free_buf;
-			}
-		}
-	}
-
-	if (!result_buff)
-		result_buff = ctx->sha_result;
-
 	tfm = crypto_alloc_ahash(sha_alg_names[sha_type], 0, 0);
 	if (IS_ERR(tfm)) {
 		pr_err("%s(): Failed to load transform for %s:%ld\n",
 				__func__, sha_alg_names[sha_type], PTR_ERR(tfm));
 		ret = PTR_ERR(tfm);
-		goto free_buf;
+		goto exit;
 	}
 	crypto_ahash_clear_flags(tfm, ~0U);
 
@@ -378,30 +300,28 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 		crypto_free_ahash(tfm);
 		pr_err("%s(): Failed to allocate request\n", __func__);
 		ret = -ENOMEM;
-		goto free_buf;
+		goto exit;
 	}
+
+	sha_ctx = crypto_ahash_ctx(tfm);
+	sha_ctx->node_id = ctx->node_id;
 
 	init_completion(&sha_complete.restart);
 	sha_complete.req_err = 0;
 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 				   tnvvse_crypto_complete, &sha_complete);
 
-	/* copy input buffer */
-	ret = copy_from_user(in_buf, sha_update_ctl->in_buff, in_sz);
-	if (ret) {
-		pr_err("%s(): Failed to copy user input data: %d\n", __func__, ret);
-		goto free_tfm;
-	}
-	sha_state->sha_total_msg_length += in_sz;
+	sha_ctx->user_src_buf_size = sha_update_ctl->input_buffer_size;
+	sha_state->sha_total_msg_length += sha_ctx->user_src_buf_size;
 
-	/* Initialize SHA ctx */
-	sha_ctx = crypto_ahash_ctx(tfm);
-	sha_ctx->node_id = ctx->node_id;
 	sha_ctx->digest_size = sha_update_ctl->digest_size;
 	sha_ctx->total_count = sha_state->sha_total_msg_length;
 	sha_ctx->intermediate_digest = sha_state->sha_intermediate_digest;
 
-	if (sha_state->sha_total_msg_length == in_sz)
+	sha_ctx->user_src_buf = sha_update_ctl->in_buff;
+	sha_ctx->user_digest_buffer = sha_update_ctl->digest_buffer;
+
+	if (sha_state->sha_total_msg_length == sha_ctx->user_src_buf_size)
 		sha_ctx->is_first = true;
 	else
 		sha_ctx->is_first = false;
@@ -411,9 +331,6 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 		pr_err("%s(): Failed to initialize ahash: %d\n", __func__, ret);
 		goto free_tfm;
 	}
-
-	sg_init_one(&sg, in_buf, in_sz);
-	ahash_request_set_crypt(req, &sg, result_buff, in_sz);
 
 	if (sha_update_ctl->is_last == 0) {
 		ret = wait_async_op(&sha_complete, crypto_ahash_update(req));
@@ -428,13 +345,8 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 			goto free_tfm;
 		}
 
-		/* Shake128/Shake256 have variable digest size */
-		if ((sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE128)
-				|| (sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE256)) {
-			ret = copy_to_user((void __user *)sha_update_ctl->digest_buffer,
-					(const void *)result_buff,
-					sha_update_ctl->digest_size);
-		} else {
+		if ((sha_type != TEGRA_NVVSE_SHA_TYPE_SHAKE128)
+				&& (sha_type != TEGRA_NVVSE_SHA_TYPE_SHAKE256)) {
 			if (sha_update_ctl->digest_size != crypto_ahash_digestsize(tfm)) {
 				pr_err("%s(): %s: input digest size of %d is invalid\n",
 					__func__, sha_alg_names[sha_type],
@@ -442,15 +354,6 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 				ret = -EINVAL;
 				goto free_tfm;
 			}
-
-			ret = copy_to_user((void __user *)sha_update_ctl->digest_buffer,
-					(const void *)result_buff,
-					crypto_ahash_digestsize(tfm));
-		}
-		if (ret) {
-			pr_err("%s(): Failed to copy_to_user for %s: %d\n", __func__,
-						sha_alg_names[sha_type], ret);
-			goto free_tfm;
 		}
 
 		/* Reset sha state */
@@ -463,12 +366,6 @@ free_tfm:
 		ahash_request_free(req);
 	if (tfm)
 		crypto_free_ahash(tfm);
-
-free_buf:
-	//kfree won't fail even if input is NULL
-	if (result_buff != ctx->sha_result)
-		kfree(result_buff);
-	kfree(in_buf);
 
 exit:
 	return ret;
@@ -513,15 +410,9 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	struct tegra_virtual_se_hmac_sha_context *hmac_ctx;
 	struct crypto_ahash *tfm = NULL;
 	struct ahash_request *req = NULL;
-	char *src_buffer;
 	struct tnvvse_crypto_completion hmac_sha_complete;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
-	struct tnvvse_hmac_sha_req_data priv_data;
-	struct scatterlist sg;
 	int ret = -ENOMEM;
-	uint32_t in_sz;
-	uint8_t *in_buf = NULL;
-	char *result = NULL;
 
 	ret = tnvvse_crypto_hmac_sha_validate_req(ctx, hmac_sha_ctl);
 	if (ret != 0)
@@ -562,28 +453,16 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		goto free_tfm;
 	}
 
-	in_sz = hmac_sha_ctl->data_length;
-	in_buf = kzalloc(in_sz, GFP_KERNEL);
-	if (in_buf == NULL) {
-		ret = -ENOMEM;
-		goto free_tfm;
-	}
-
-	result = kzalloc(crypto_ahash_digestsize(tfm), GFP_KERNEL);
-	if (result == NULL) {
-		ret = -ENOMEM;
-		goto free_buf;
-	}
+	hmac_ctx->user_src_buf_size = hmac_sha_ctl->data_length;
 
 	crypto_ahash_clear_flags(tfm, ~0U);
 
 	if (hmac_sha_ctl->hmac_sha_type == TEGRA_NVVSE_HMAC_SHA_SIGN)
-		priv_data.request_type = HMAC_SHA_SIGN;
+		hmac_ctx->request_type = TEGRA_HV_VSE_HMAC_SHA_SIGN;
 	else
-		priv_data.request_type = HMAC_SHA_VERIFY;
+		hmac_ctx->request_type = TEGRA_HV_VSE_HMAC_SHA_VERIFY;
 
-	priv_data.result = 0;
-	req->priv = &priv_data;
+	hmac_ctx->result = 0;
 
 	sha_state->hmac_sha_total_msg_length += hmac_sha_ctl->data_length;
 	sha_state->hmac_sha_init_done = 1;
@@ -597,63 +476,31 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	ret = wait_async_op(&hmac_sha_complete, crypto_ahash_init(req));
 	if (ret) {
 		pr_err("%s(): Failed to initialize ahash: %d\n", __func__, ret);
-		goto free_buf;
+		goto free_tfm;
 	}
 
-	src_buffer = hmac_sha_ctl->src_buffer;
-
-	/* copy input buffer */
-	ret = copy_from_user(in_buf, src_buffer, in_sz);
-	if (ret) {
-		pr_err("%s(): Failed to copy user input data: %d\n", __func__, ret);
-		goto free_buf;
-	}
-
-	sg_init_one(&sg, in_buf, in_sz);
-	ahash_request_set_crypt(req, &sg, result, in_sz);
+	hmac_ctx->user_src_buf = hmac_sha_ctl->src_buffer;
+	hmac_ctx->user_digest_buffer = hmac_sha_ctl->digest_buffer;
 
 	if (hmac_sha_ctl->is_last == 0) {
 		ret = wait_async_op(&hmac_sha_complete, crypto_ahash_update(req));
 		if (ret) {
 			pr_err("%s(): Failed to ahash_update: %d\n", __func__, ret);
-			goto free_buf;
+			goto free_tfm;
 		}
 	} else {
-		if (hmac_sha_ctl->hmac_sha_type == TEGRA_NVVSE_HMAC_SHA_VERIFY) {
-			ret = copy_from_user((void *)result,
-				(void __user *)hmac_sha_ctl->digest_buffer,
-				crypto_ahash_digestsize(tfm));
-			if (ret) {
-				pr_err("%s(): Failed to copy_from_user: %d\n", __func__, ret);
-				goto free_buf;
-			}
-			priv_data.expected_digest = result;
-		}
-
 		ret = wait_async_op(&hmac_sha_complete, crypto_ahash_finup(req));
 		if (ret) {
 			pr_err("%s(): Failed to ahash_finup: %d\n", __func__, ret);
-			goto free_buf;
+			goto free_tfm;
 		}
 
-		if (hmac_sha_ctl->hmac_sha_type == TEGRA_NVVSE_HMAC_SHA_SIGN) {
-			ret = copy_to_user((void __user *)hmac_sha_ctl->digest_buffer,
-					(const void *)result,
-					crypto_ahash_digestsize(tfm));
-			if (ret)
-				pr_err("%s(): Failed to copy_to_user: %d\n", __func__, ret);
-		} else {
-			hmac_sha_ctl->result = priv_data.result;
-		}
+		if (hmac_sha_ctl->hmac_sha_type == TEGRA_NVVSE_HMAC_SHA_VERIFY)
+			hmac_sha_ctl->result = hmac_ctx->result;
 
 		sha_state->hmac_sha_init_done = 0;
 		sha_state->hmac_sha_total_msg_length = 0;
 	}
-
-free_buf:
-	//kfree won't fail even if input is NULL
-	kfree(result);
-	kfree(in_buf);
 
 free_tfm:
 	if (req)
@@ -676,17 +523,12 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 				struct tegra_nvvse_aes_cmac_sign_verify_ctl *aes_cmac_ctl)
 {
 	struct crypto_ahash *tfm;
-	char *result, *src_buffer;
 	const char *driver_name;
 	struct ahash_request *req;
 	struct tnvvse_crypto_completion sha_complete;
 	struct tegra_virtual_se_aes_cmac_context *cmac_ctx;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
-	struct tnvvse_cmac_req_data priv_data;
 	int ret = -ENOMEM;
-	struct scatterlist sg;
-	uint32_t total = 0;
-	uint8_t *hash_buff;
 
 	if (aes_cmac_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s(): Input size is (data = %d) is not supported\n",
@@ -694,15 +536,11 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		return -EINVAL;
 	}
 
-	result = kzalloc(64, GFP_KERNEL);
-	if (!result)
-		return -ENOMEM;
-
 	tfm = crypto_alloc_ahash("cmac-tsec(aes)", 0, 0);
 	if (IS_ERR(tfm)) {
 		ret = PTR_ERR(tfm);
 		pr_err("%s(): Failed to allocate ahash for cmac-tsec(aes): %d\n", __func__, ret);
-		goto free_result;
+		goto out;
 	}
 
 	cmac_ctx = crypto_ahash_ctx(tfm);
@@ -730,15 +568,14 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	crypto_ahash_clear_flags(tfm, ~0U);
 
 	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_SIGN)
-		priv_data.request_type = CMAC_SIGN;
+		cmac_ctx->request_type = TEGRA_HV_VSE_CMAC_SIGN;
 	else
-		priv_data.request_type = CMAC_VERIFY;
+		cmac_ctx->request_type = TEGRA_HV_VSE_CMAC_VERIFY;
 
 	ret = snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, aes_cmac_ctl->key_slot, KEYSLOT_SIZE_BYTES);
 
-	req->priv = &priv_data;
-	priv_data.result = 0;
+	cmac_ctx->result = 0;
 	ret = crypto_ahash_setkey(tfm, key_as_keyslot, aes_cmac_ctl->key_length);
 	if (ret) {
 		pr_err("%s(): Failed to set keys for cmac-tsec(aes): %d\n", __func__, ret);
@@ -753,65 +590,31 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		goto free_req;
 	}
 
-	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_VERIFY) {
-		/* Copy digest */
-		ret = copy_from_user((void *)result, (void __user *)aes_cmac_ctl->cmac_buffer,
-						TEGRA_NVVSE_AES_CMAC_LEN);
-		if (ret) {
-			pr_err("%s(): Failed to copy_from_user: %d\n", __func__, ret);
-			ret = -EINVAL;
-			goto free_req;
-		}
-	}
+	cmac_ctx->user_src_buf_size = aes_cmac_ctl->data_length;
+	cmac_ctx->user_src_buf = aes_cmac_ctl->src_buffer;
+	cmac_ctx->user_mac_buf = aes_cmac_ctl->cmac_buffer;
 
-	total = aes_cmac_ctl->data_length;
-	src_buffer = aes_cmac_ctl->src_buffer;
-
-	if (total > ivc_database.max_buffer_size[ctx->node_id]) {
-		pr_err("%s(): Unsupported buffer size: %u\n", __func__, total);
+	if (cmac_ctx->user_src_buf_size > ivc_database.max_buffer_size[ctx->node_id]) {
+		pr_err("%s(): Unsupported buffer size: %u\n",
+			__func__, cmac_ctx->user_src_buf_size);
 		ret = -EINVAL;
 		goto free_req;
 	}
 
-	hash_buff = kcalloc(total, sizeof(uint8_t), GFP_KERNEL);
-	if (hash_buff == NULL) {
-		ret = -ENOMEM;
-		goto free_req;
-	}
-
-	ret = copy_from_user((void *)hash_buff, (void __user *)src_buffer, total);
-	if (ret) {
-		pr_err("%s(): Failed to copy_from_user: %d\n", __func__, ret);
-		goto free_xbuf;
-	}
-
-	sg_init_one(&sg, hash_buff, total);
-	ahash_request_set_crypt(req, &sg, result, total);
-
 	ret = wait_async_op(&sha_complete, crypto_ahash_finup(req));
 	if (ret) {
 		pr_err("%s(): Failed to ahash_finup: %d\n", __func__, ret);
-		goto free_xbuf;
+		goto free_req;
 	}
 
-	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_SIGN) {
-		ret = copy_to_user((void __user *)aes_cmac_ctl->cmac_buffer, (const void *)result,
-								crypto_ahash_digestsize(tfm));
-		if (ret)
-			pr_err("%s(): Failed to copy_to_user: %d\n", __func__, ret);
-	} else {
-		aes_cmac_ctl->result = priv_data.result;
-	}
+	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_VERIFY)
+		aes_cmac_ctl->result = cmac_ctx->result;
 
-free_xbuf:
-	kfree(hash_buff);
 free_req:
 	ahash_request_free(req);
 free_tfm:
 	crypto_free_ahash(tfm);
-free_result:
-	kfree(result);
-
+out:
 	return ret;
 }
 
@@ -819,17 +622,12 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 				struct tegra_nvvse_aes_cmac_sign_verify_ctl *aes_cmac_ctl)
 {
 	struct crypto_ahash *tfm;
-	char *result, *src_buffer;
 	const char *driver_name;
 	struct ahash_request *req;
 	struct tnvvse_crypto_completion sha_complete;
 	struct tegra_virtual_se_aes_cmac_context *cmac_ctx;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
-	struct tnvvse_cmac_req_data priv_data;
-	struct scatterlist sg;
 	int ret = -ENOMEM;
-	uint32_t in_sz;
-	uint8_t *in_buf;
 
 	if (aes_cmac_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s(): Input size is (data = %d) is not supported\n",
@@ -837,15 +635,11 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		return -EINVAL;
 	}
 
-	result = kzalloc(64, GFP_KERNEL);
-	if (!result)
-		return -ENOMEM;
-
 	tfm = crypto_alloc_ahash("cmac-vse(aes)", 0, 0);
 	if (IS_ERR(tfm)) {
 		ret = PTR_ERR(tfm);
 		pr_err("%s(): Failed to allocate ahash for cmac-vse(aes): %d\n", __func__, ret);
-		goto free_result;
+		return ret;
 	}
 
 	cmac_ctx = crypto_ahash_ctx(tfm);
@@ -867,12 +661,7 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 				   tnvvse_crypto_complete, &sha_complete);
 
-	in_sz = aes_cmac_ctl->data_length;
-	in_buf = kzalloc(in_sz, GFP_KERNEL);
-	if (in_buf == NULL) {
-		ret = -ENOMEM;
-		goto free_req;
-	}
+	cmac_ctx->user_src_buf_size = aes_cmac_ctl->data_length;
 
 	init_completion(&sha_complete.restart);
 	sha_complete.req_err = 0;
@@ -880,73 +669,43 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	crypto_ahash_clear_flags(tfm, ~0U);
 
 	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_SIGN)
-		priv_data.request_type = CMAC_SIGN;
+		cmac_ctx->request_type = TEGRA_HV_VSE_CMAC_SIGN;
 	else
-		priv_data.request_type = CMAC_VERIFY;
+		cmac_ctx->request_type = TEGRA_HV_VSE_CMAC_VERIFY;
 
 	ret = snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, aes_cmac_ctl->key_slot, KEYSLOT_SIZE_BYTES);
 
-	req->priv = &priv_data;
-	priv_data.result = 0;
+	cmac_ctx->result = 0;
 	ret = crypto_ahash_setkey(tfm, key_as_keyslot, aes_cmac_ctl->key_length);
 	if (ret) {
 		pr_err("%s(): Failed to set keys for cmac-vse(aes): %d\n", __func__, ret);
-		goto free_buf;
+		goto free_req;
 	}
 
 	ret = wait_async_op(&sha_complete, crypto_ahash_init(req));
 	if (ret) {
 		pr_err("%s(): Failed to initialize ahash: %d\n", __func__, ret);
-		goto free_buf;
+		goto free_req;
 	}
 
-	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_VERIFY) {
-		/* Copy digest */
-		ret = copy_from_user((void *)result,
-				(void __user *)aes_cmac_ctl->cmac_buffer,
-						TEGRA_NVVSE_AES_CMAC_LEN);
-		if (ret) {
-			pr_err("%s(): Failed to copy_from_user: %d\n", __func__, ret);
-			goto free_buf;
-		}
-	}
-
-	src_buffer = aes_cmac_ctl->src_buffer;
-
-	/* copy input buffer */
-	ret = copy_from_user(in_buf, src_buffer, aes_cmac_ctl->data_length);
-	if (ret) {
-		pr_err("%s(): Failed to copy user input data: %d\n", __func__, ret);
-		goto free_buf;
-	}
-
-	sg_init_one(&sg, in_buf, aes_cmac_ctl->data_length);
-	ahash_request_set_crypt(req, &sg, result, aes_cmac_ctl->data_length);
+	cmac_ctx->user_src_buf = aes_cmac_ctl->src_buffer;
+	cmac_ctx->user_mac_buf = aes_cmac_ctl->cmac_buffer;
 
 	ret = wait_async_op(&sha_complete, crypto_ahash_finup(req));
 	if (ret) {
 		pr_err("%s(): Failed to ahash_finup: %d\n", __func__, ret);
-		goto free_buf;
+		goto free_req;
 	}
 
-	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_SIGN) {
-		ret = copy_to_user((void __user *)aes_cmac_ctl->cmac_buffer, (const void *)result,
-								crypto_ahash_digestsize(tfm));
-		if (ret)
-			pr_err("%s(): Failed to copy_to_user: %d\n", __func__, ret);
-	} else {
-		aes_cmac_ctl->result = priv_data.result;
-	}
+	if (aes_cmac_ctl->cmac_type == TEGRA_NVVSE_AES_CMAC_VERIFY)
+		aes_cmac_ctl->result = cmac_ctx->result;
 
-free_buf:
-	kfree(in_buf);
 free_req:
 	ahash_request_free(req);
+
 free_tfm:
 	crypto_free_ahash(tfm);
-free_result:
-	kfree(result);
 
 	return ret;
 }
@@ -961,7 +720,6 @@ static int tnvvse_crypto_aes_gmac_init(struct tnvvse_crypto_ctx *ctx,
 	struct ahash_request *req;
 	const char *driver_name;
 	uint8_t iv[TEGRA_NVVSE_AES_GCM_IV_LEN];
-	struct tnvvse_gmac_req_data priv_data;
 	int ret = -ENOMEM, klen;
 
 	tfm = crypto_alloc_ahash("gmac-vse(aes)", 0, 0);
@@ -1005,9 +763,8 @@ static int tnvvse_crypto_aes_gmac_init(struct tnvvse_crypto_ctx *ctx,
 	}
 
 	memset(iv, 0, TEGRA_NVVSE_AES_GCM_IV_LEN);
-	priv_data.request_type = GMAC_INIT;
-	priv_data.iv = iv;
-	req->priv = &priv_data;
+	gmac_ctx->request_type = TEGRA_HV_VSE_GMAC_INIT;
+	gmac_ctx->iv = iv;
 
 	ret = wait_async_op(&sha_state->sha_complete, crypto_ahash_init(req));
 	if (ret) {
@@ -1015,7 +772,7 @@ static int tnvvse_crypto_aes_gmac_init(struct tnvvse_crypto_ctx *ctx,
 					__func__, ret);
 	}
 
-	memcpy(gmac_init_ctl->IV, priv_data.iv, TEGRA_NVVSE_AES_GCM_IV_LEN);
+	memcpy(gmac_init_ctl->IV, gmac_ctx->iv, TEGRA_NVVSE_AES_GCM_IV_LEN);
 
 free_req:
 	ahash_request_free(req);
@@ -1026,23 +783,25 @@ out:
 }
 
 static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx,
-		struct tegra_nvvse_aes_gmac_sign_verify_ctl *gmac_sign_verify_ctl)
+		struct tegra_nvvse_aes_gmac_sign_verify_ctl *gmac_sign_verify_ctl,
+		struct ahash_request *req)
 {
 	struct crypto_sha_state *sha_state = &ctx->sha_state;
 	struct tegra_virtual_se_aes_gmac_context *gmac_ctx;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
 	struct crypto_ahash *tfm;
-	struct ahash_request *req;
-	struct tnvvse_gmac_req_data priv_data;
 	const char *driver_name;
 	int ret = -EINVAL, klen;
 
-	tfm = crypto_alloc_ahash("gmac-vse(aes)", 0, 0);
-	if (IS_ERR(tfm)) {
-		pr_err("%s(): Failed to load transform for gmac-vse(aes):%ld\n", __func__,
-							PTR_ERR(tfm));
-		ret = PTR_ERR(tfm);
-		goto out;
+	if (!req) {
+		pr_err("%s AES-GMAC request not valid\n", __func__);
+		return -EINVAL;
+	}
+
+	tfm = crypto_ahash_reqtfm(req);
+	if (!tfm) {
+		pr_err("%s AES-GMAC transform not valid\n", __func__);
+		return -EINVAL;
 	}
 
 	gmac_ctx = crypto_ahash_ctx(tfm);
@@ -1056,20 +815,8 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	}
 	pr_debug("%s(): Algo name gmac-vse(aes), driver name %s\n", __func__, driver_name);
 
-	req = ahash_request_alloc(tfm, GFP_KERNEL);
-	if (!req) {
-		pr_err("%s(): Failed to allocate request for gmac-vse(aes)\n", __func__);
-		goto free_tfm;
-	}
-
 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 				   tnvvse_crypto_complete, &sha_state->sha_complete);
-
-	sha_state->in_buf = kzalloc(gmac_sign_verify_ctl->data_length, GFP_KERNEL);
-	if (sha_state->in_buf == NULL) {
-		ret = -ENOMEM;
-		goto free_req;
-	}
 
 	init_completion(&sha_state->sha_complete.restart);
 	sha_state->sha_complete.req_err = 0;
@@ -1086,10 +833,9 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	}
 
 	if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_SIGN)
-		priv_data.request_type = GMAC_SIGN;
+		gmac_ctx->request_type = TEGRA_HV_VSE_GMAC_SIGN;
 	else
-		priv_data.request_type = GMAC_VERIFY;
-	req->priv = &priv_data;
+		gmac_ctx->request_type = TEGRA_HV_VSE_GMAC_VERIFY;
 
 	ret = wait_async_op(&sha_state->sha_complete, crypto_ahash_init(req));
 	if (ret) {
@@ -1109,8 +855,6 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 
 free_buf:
 	kfree(sha_state->in_buf);
-free_req:
-	ahash_request_free(req);
 free_tfm:
 	crypto_free_ahash(tfm);
 out:
@@ -1121,17 +865,37 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		struct tegra_nvvse_aes_gmac_sign_verify_ctl *gmac_sign_verify_ctl)
 {
 	struct crypto_sha_state *sha_state = &ctx->sha_state;
-	char *result_buff;
+	struct tegra_virtual_se_aes_gmac_context *gmac_ctx;
+	struct crypto_ahash *tfm;
 	uint8_t iv[TEGRA_NVVSE_AES_GCM_IV_LEN];
 	struct ahash_request *req;
-	char *src_buffer = gmac_sign_verify_ctl->src_buffer;
-	struct tnvvse_gmac_req_data priv_data;
-	struct scatterlist sg;
 	int ret = -EINVAL;
 
-	if (gmac_sign_verify_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id] ||
-			gmac_sign_verify_ctl->data_length == 0) {
-		pr_err("%s(): Failed due to invalid input size: %d\n", __func__, ret);
+	tfm = crypto_alloc_ahash("gmac-vse(aes)", 0, 0);
+	if (IS_ERR(tfm)) {
+		pr_err("%s(): Failed to load transform for gmac-vse(aes):%ld\n", __func__,
+							PTR_ERR(tfm));
+		ret = PTR_ERR(tfm);
+		goto done;
+	}
+
+	gmac_ctx = crypto_ahash_ctx(tfm);
+	gmac_ctx->node_id = ctx->node_id;
+	gmac_ctx->b_is_sm4 = gmac_sign_verify_ctl->b_is_sm4;
+
+	req = ahash_request_alloc(tfm, GFP_KERNEL);
+	if (!req) {
+		pr_err("%s(): Failed to allocate request for gmac-vse(aes)\n", __func__);
+		goto free_tfm;
+	}
+
+	gmac_ctx->user_aad_buf = gmac_sign_verify_ctl->src_buffer;
+	gmac_ctx->user_tag_buf = gmac_sign_verify_ctl->tag_buffer;
+	gmac_ctx->user_aad_buf_size = gmac_sign_verify_ctl->data_length;
+
+	if (gmac_ctx->user_aad_buf_size > ivc_database.max_buffer_size[ctx->node_id] ||
+			gmac_ctx->user_aad_buf_size == 0) {
+		pr_err("%s(): Failed due to invalid aad buf size: %d\n", __func__, ret);
 		goto done;
 	}
 
@@ -1142,89 +906,51 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		goto done;
 	}
 
-	ret = tnvvse_crypto_aes_gmac_sign_verify_init(ctx, gmac_sign_verify_ctl);
+	ret = tnvvse_crypto_aes_gmac_sign_verify_init(ctx, gmac_sign_verify_ctl, req);
 	if (ret) {
 		pr_err("%s(): Failed to init: %d\n", __func__, ret);
 		goto done;
 	}
 
-	result_buff = sha_state->result_buff;
-	req = sha_state->req;
-
 	if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_SIGN)
-		priv_data.request_type = GMAC_SIGN;
+		gmac_ctx->request_type = TEGRA_HV_VSE_GMAC_SIGN;
 	else
-		priv_data.request_type = GMAC_VERIFY;
-	priv_data.iv = NULL;
-	priv_data.is_first = gmac_sign_verify_ctl->is_first;
-	req->priv = &priv_data;
+		gmac_ctx->request_type = TEGRA_HV_VSE_GMAC_VERIFY;
+	gmac_ctx->iv = NULL;
+	gmac_ctx->is_first = gmac_sign_verify_ctl->is_first;
 
-	/* copy input buffer */
-	ret = copy_from_user(sha_state->in_buf, src_buffer, gmac_sign_verify_ctl->data_length);
-	if (ret) {
-		pr_err("%s(): Failed to copy user input data: %d\n", __func__, ret);
-		goto stop_sha;
-	}
-
-	sg_init_one(&sg, sha_state->in_buf, gmac_sign_verify_ctl->data_length);
-	ahash_request_set_crypt(req, &sg, result_buff,
-			gmac_sign_verify_ctl->data_length);
 	if (gmac_sign_verify_ctl->is_last == 0) {
 		ret = wait_async_op(&sha_state->sha_complete,
 				crypto_ahash_update(req));
 		if (ret) {
 			pr_err("%s(): Failed to ahash_update for gmac-vse(aes): %d\n",
 					__func__, ret);
-			goto stop_sha;
+			goto free_tfm;
 		}
 	} else {
 		if (gmac_sign_verify_ctl->gmac_type ==
 				TEGRA_NVVSE_AES_GMAC_VERIFY) {
-			/* Copy tag/digest */
-			ret = copy_from_user((void *)result_buff,
-					(void __user *)gmac_sign_verify_ctl->tag_buffer,
-					TEGRA_NVVSE_AES_GCM_TAG_SIZE);
-			if (ret) {
-				pr_err("%s(): Failed to copy_from_user: %d\n",
-						__func__, ret);
-				goto stop_sha;
-			}
 
 			memcpy(iv, gmac_sign_verify_ctl->initial_vector,
 					TEGRA_NVVSE_AES_GCM_IV_LEN);
-			priv_data.iv = iv;
+			gmac_ctx->iv = iv;
 		}
 		ret = wait_async_op(&sha_state->sha_complete,
 				crypto_ahash_finup(req));
 		if (ret) {
 			pr_err("%s(): Failed to ahash_finup for gmac-vse(aes): %d\n",
 					__func__, ret);
-			goto stop_sha;
+			goto free_tfm;
 		}
 	}
 
 	if (gmac_sign_verify_ctl->is_last) {
-		if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_SIGN) {
-			ret = copy_to_user((void __user *)gmac_sign_verify_ctl->tag_buffer,
-				(const void *)result_buff,
-				gmac_sign_verify_ctl->tag_length);
-			if (ret)
-				pr_err("%s(): Failed to copy_to_user:%d\n", __func__, ret);
-		} else {
-			gmac_sign_verify_ctl->result = priv_data.result;
-		}
+		if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_VERIFY)
+			gmac_sign_verify_ctl->result = gmac_ctx->result;
 	}
 
-stop_sha:
-	kfree(sha_state->in_buf);
-	if (sha_state->req)
-		ahash_request_free(sha_state->req);
-	if (sha_state->tfm)
-		crypto_free_ahash(sha_state->tfm);
-
-	sha_state->req = NULL;
-	sha_state->tfm = NULL;
-	sha_state->result_buff = NULL;
+free_tfm:
+	crypto_free_ahash(tfm);
 
 done:
 	return ret;
@@ -1235,9 +961,6 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 {
 	struct crypto_skcipher *tfm;
 	struct skcipher_request *req = NULL;
-	struct scatterlist in_sg;
-	struct scatterlist out_sg;
-	uint8_t *in_buf, *out_buf;
 	int ret = 0;
 	struct tnvvse_crypto_completion tcrypt_complete;
 	struct tegra_virtual_se_aes_context *aes_ctx;
@@ -1245,8 +968,6 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 				"ctr-vse(aes)"};
 	const char *driver_name;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
-	uint8_t next_block_iv[TEGRA_NVVSE_AES_IV_LEN];
-	uint32_t in_sz, out_sz;
 
 	if (aes_enc_dec_ctl->aes_mode >= TEGRA_NVVSE_AES_MODE_MAX) {
 		pr_err("%s(): The requested AES ENC/DEC (%d) is not supported\n",
@@ -1325,19 +1046,7 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		goto free_req;
 	}
 
-	in_sz = aes_enc_dec_ctl->data_length;
-	out_sz = aes_enc_dec_ctl->data_length;
-	in_buf = kzalloc(in_sz, GFP_KERNEL);
-	if (in_buf == NULL) {
-		ret = -ENOMEM;
-		goto free_req;
-	}
-
-	out_buf = kzalloc(out_sz, GFP_KERNEL);
-	if (out_buf == NULL) {
-		ret = -ENOMEM;
-		goto free_in_buf;
-	}
+	aes_ctx->user_src_buf_size = aes_enc_dec_ctl->data_length;
 
 	init_completion(&tcrypt_complete.restart);
 
@@ -1347,21 +1056,21 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	if (aes_ctx->b_is_first == 1U || !aes_enc_dec_ctl->is_encryption) {
 		if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CBC) ||
 			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CBC))
-			memcpy(next_block_iv, aes_enc_dec_ctl->initial_vector,
+			memcpy(aes_ctx->iv, aes_enc_dec_ctl->initial_vector,
 				TEGRA_NVVSE_AES_IV_LEN);
 		else if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR) ||
 			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CTR))
-			memcpy(next_block_iv, aes_enc_dec_ctl->initial_counter,
+			memcpy(aes_ctx->iv, aes_enc_dec_ctl->initial_counter,
 				TEGRA_NVVSE_AES_CTR_LEN);
 		else
-			memset(next_block_iv, 0, TEGRA_NVVSE_AES_IV_LEN);
+			memset(aes_ctx->iv, 0, TEGRA_NVVSE_AES_IV_LEN);
 	} else {
 		if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR) ||
 			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CTR))
-			memcpy(next_block_iv, ctx->intermediate_counter,
+			memcpy(aes_ctx->iv, ctx->intermediate_counter,
 				TEGRA_NVVSE_AES_CTR_LEN);
 		else		//As CBC uses IV stored in SE server
-			memset(next_block_iv, 0, TEGRA_NVVSE_AES_IV_LEN);
+			memset(aes_ctx->iv, 0, TEGRA_NVVSE_AES_IV_LEN);
 	}
 	pr_debug("%s(): %scryption\n", __func__, (aes_enc_dec_ctl->is_encryption ? "en" : "de"));
 
@@ -1371,31 +1080,23 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	else
 		aes_ctx->b_is_sm4 = 0U;
 
-	/* copy input buffer */
-	ret = copy_from_user(in_buf, aes_enc_dec_ctl->src_buffer, in_sz);
-	if (ret) {
-		pr_err("%s(): Failed to copy_from_user input data: %d\n", __func__, ret);
-		goto free_out_buf;
-	}
-
-	sg_init_one(&in_sg, in_buf, in_sz);
-	sg_init_one(&out_sg, out_buf, out_sz);
-	skcipher_request_set_crypt(req, &in_sg, &out_sg, in_sz, next_block_iv);
+	aes_ctx->user_src_buf = aes_enc_dec_ctl->src_buffer;
+	aes_ctx->user_dst_buf = aes_enc_dec_ctl->dest_buffer;
 
 	reinit_completion(&tcrypt_complete.restart);
 	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 			tnvvse_crypto_complete, &tcrypt_complete);
 	tcrypt_complete.req_err = 0;
 
-	/* Set first byte of next_block_iv to 1 for first encryption request and 0 for other
+	/* Set first byte of aes_ctx->iv to 1 for first encryption request and 0 for other
 	 * encryption requests. This is used to invoke generation of random IV.
 	 * If userNonce is not provided random IV generation is needed.
 	 */
 	if (aes_enc_dec_ctl->is_encryption && (aes_enc_dec_ctl->user_nonce == 0U)) {
 		if (!aes_enc_dec_ctl->is_non_first_call)
-			next_block_iv[0] = 1;
+			aes_ctx->iv[0] = 1;
 		else
-			next_block_iv[0] = 0;
+			aes_ctx->iv[0] = 0;
 	}
 	ret = aes_enc_dec_ctl->is_encryption ? crypto_skcipher_encrypt(req) :
 		crypto_skcipher_decrypt(req);
@@ -1404,56 +1105,43 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		ret = wait_for_completion_timeout(&tcrypt_complete.restart,
 				msecs_to_jiffies(5000));
 		if (ret == 0)
-			goto free_out_buf;
+			goto free_req;
 
 		if (tcrypt_complete.req_err < 0) {
 			ret = tcrypt_complete.req_err;
-			goto free_out_buf;
+			goto free_req;
 		}
 	} else if (ret < 0) {
 		pr_err("%s(): Failed to %scrypt: %d\n",
 				__func__, aes_enc_dec_ctl->is_encryption ? "en" : "de", ret);
-		goto free_out_buf;
-	}
-
-	/* copy output buffer to userspace */
-	ret = copy_to_user(aes_enc_dec_ctl->dest_buffer, out_buf, out_sz);
-	if (ret) {
-		pr_err("%s(): Failed to copy_to_user output: %d\n", __func__, ret);
-		goto free_out_buf;
+		goto free_req;
 	}
 
 	if ((aes_enc_dec_ctl->is_encryption) &&	(aes_enc_dec_ctl->user_nonce == 0U)) {
 		if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CBC) ||
 			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CBC))
-			memcpy(aes_enc_dec_ctl->initial_vector, req->iv,
+			memcpy(aes_enc_dec_ctl->initial_vector, aes_ctx->iv,
 				TEGRA_NVVSE_AES_IV_LEN);
 		else if ((aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR) ||
 			(aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_SM4_CTR))
-			memcpy(aes_enc_dec_ctl->initial_counter, req->iv,
+			memcpy(aes_enc_dec_ctl->initial_counter, aes_ctx->iv,
 				TEGRA_NVVSE_AES_CTR_LEN);
 	}
 
 	if (aes_enc_dec_ctl->user_nonce == 1U) {
 		if (aes_enc_dec_ctl->is_encryption != 0U &&
 				aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_CTR) {
-			ret = update_counter(&next_block_iv[0], aes_enc_dec_ctl->data_length >> 4U);
+			ret = update_counter(&aes_ctx->iv[0], aes_enc_dec_ctl->data_length >> 4U);
 			if (ret) {
 				pr_err("%s(): Failed to update counter: %d\n",
 						__func__, ret);
-				goto free_out_buf;
+				goto free_req;
 			}
 
-			memcpy(ctx->intermediate_counter, &next_block_iv[0],
+			memcpy(ctx->intermediate_counter, &aes_ctx->iv[0],
 					TEGRA_NVVSE_AES_CTR_LEN);
 		}
 	}
-
-free_out_buf:
-	kfree(out_buf);
-
-free_in_buf:
-	kfree(in_buf);
 
 free_req:
 	skcipher_request_free(req);
@@ -1470,16 +1158,11 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 {
 	struct crypto_aead *tfm;
 	struct aead_request *req = NULL;
-	struct scatterlist in_sg;
-	struct scatterlist out_sg;
-	uint8_t *in_buf, *out_buf;
 	int32_t ret = 0;
-	uint32_t in_sz, out_sz, aad_length, data_length, tag_length;
 	struct tnvvse_crypto_completion tcrypt_complete;
 	struct tegra_virtual_se_aes_context *aes_ctx;
 	const char *driver_name;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
-	uint8_t iv[TEGRA_NVVSE_AES_GCM_IV_LEN];
 	bool enc;
 
 	if (aes_enc_dec_ctl->aes_mode != TEGRA_NVVSE_AES_MODE_GCM) {
@@ -1561,75 +1244,34 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 	tcrypt_complete.req_err = 0;
 
 	enc = aes_enc_dec_ctl->is_encryption;
-	data_length = aes_enc_dec_ctl->data_length;
-	tag_length = aes_enc_dec_ctl->tag_length;
-	aad_length = aes_enc_dec_ctl->aad_length;
 
 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 					tnvvse_crypto_complete, &tcrypt_complete);
-	aead_request_set_ad(req, aad_length);
+	aead_request_set_ad(req, aes_enc_dec_ctl->aad_length);
 
-	memset(iv, 0, TEGRA_NVVSE_AES_GCM_IV_LEN);
+	memset(aes_ctx->iv, 0, TEGRA_NVVSE_AES_GCM_IV_LEN);
 	if (!enc || aes_enc_dec_ctl->user_nonce != 0U)
-		memcpy(iv, aes_enc_dec_ctl->initial_vector, TEGRA_NVVSE_AES_GCM_IV_LEN);
+		memcpy(aes_ctx->iv, aes_enc_dec_ctl->initial_vector, TEGRA_NVVSE_AES_GCM_IV_LEN);
 	else if (enc && !aes_enc_dec_ctl->is_non_first_call)
 		/* Set first byte of iv to 1 for first encryption request. This is used to invoke
 		 * generation of random IV.
 		 * If userNonce is not provided random IV generation is needed.
 		 */
-		iv[0] = 1;
+		aes_ctx->iv[0] = 1;
 
-	/* Prepare buffers
-	 * - AEAD encryption input:  assoc data || plaintext
-	 * - AEAD encryption output: assoc data || ciphertext || auth tag
-	 * - AEAD decryption input:  assoc data || ciphertext || auth tag
-	 * - AEAD decryption output: assoc data || plaintext
+	aes_ctx->user_src_buf_size = aes_enc_dec_ctl->data_length;
+	aes_ctx->user_tag_buf_size = aes_enc_dec_ctl->tag_length;
+	aes_ctx->user_aad_buf_size = aes_enc_dec_ctl->aad_length;
+
+	aes_ctx->user_aad_buf = aes_enc_dec_ctl->aad_buffer;
+	aes_ctx->user_src_buf = aes_enc_dec_ctl->src_buffer;
+	aes_ctx->user_tag_buf = aes_enc_dec_ctl->tag_buffer;
+	aes_ctx->user_dst_buf = aes_enc_dec_ctl->dest_buffer;
+
+	/* this field is unused by VSE driver and is being set only to pass the validation
+	 * check in crypto_aead_decrypt.
 	 */
-	in_sz = enc ? aad_length + data_length :
-			aad_length + data_length + tag_length;
-	in_buf = kzalloc(in_sz, GFP_KERNEL);
-	if (in_buf == NULL) {
-		ret = -ENOMEM;
-		goto free_req;
-	}
-
-	out_sz = enc ? aad_length + data_length + tag_length :
-			aad_length + data_length;
-	out_buf = kzalloc(out_sz, GFP_KERNEL);
-	if (out_buf == NULL) {
-		ret = -ENOMEM;
-		goto free_in_buf;
-	}
-
-	/* copy AAD buffer */
-	ret = copy_from_user((void *)in_buf, (void __user *)(aes_enc_dec_ctl->aad_buffer), aad_length);
-	if (ret) {
-		pr_err("%s(): Failed to copy_from_user assoc data: %d\n", __func__, ret);
-		goto free_buf;
-	}
-
-	/* copy data buffer */
-	ret = copy_from_user((void *)in_buf + aad_length, (void __user *)(aes_enc_dec_ctl->src_buffer), data_length);
-	if (ret) {
-		pr_err("%s(): Failed to copy_from_user src data: %d\n", __func__, ret);
-		goto free_buf;
-	}
-
-	/* copy TAG buffer in case of decryption */
-	if (!enc) {
-		ret = copy_from_user((void *)in_buf + aad_length + data_length,
-				(void __user *)aes_enc_dec_ctl->tag_buffer, tag_length);
-		if (ret) {
-			pr_err("%s(): Failed copy_from_user tag data: %d\n", __func__, ret);
-			goto free_buf;
-		}
-	}
-
-	sg_init_one(&in_sg, in_buf, in_sz);
-	sg_init_one(&out_sg, out_buf, out_sz);
-	aead_request_set_crypt(req, &in_sg, &out_sg,
-				enc ? data_length : data_length + tag_length,
-				iv);
+	req->cryptlen = crypto_aead_authsize(tfm);
 
 	ret =  enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
 	if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
@@ -1637,42 +1279,24 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 		ret = wait_for_completion_timeout(&tcrypt_complete.restart,
 					msecs_to_jiffies(5000));
 		if (ret == 0)
-			goto free_buf;
+			goto free_req;
 
 		if (tcrypt_complete.req_err < 0) {
 			ret = tcrypt_complete.req_err;
-			goto free_buf;
+			goto free_req;
 		}
 	} else if (ret < 0) {
 		pr_err("%s(): Failed to %scrypt: %d\n",
 				__func__, enc ? "en" : "de", ret);
-		goto free_buf;
-	}
-
-	/* copy data buffer */
-	ret = copy_to_user((void __user *)aes_enc_dec_ctl->dest_buffer, (const void *)out_buf + aad_length, data_length);
-	if (ret) {
-		pr_err("%s(): Failed to copy_from_user assoc data: %d\n", __func__, ret);
-		goto free_buf;
+		goto free_req;
 	}
 
 	if (enc) {
-		ret = copy_to_user((void __user *)aes_enc_dec_ctl->tag_buffer,
-				(const void *)out_buf + aad_length + data_length, tag_length);
-		if (ret) {
-			pr_err("%s(): Failed copy_from_user tag data: %d\n", __func__, ret);
-			goto free_buf;
-		}
-
 		if (aes_enc_dec_ctl->user_nonce == 0U)
-			memcpy(aes_enc_dec_ctl->initial_vector, req->iv,
+			memcpy(aes_enc_dec_ctl->initial_vector, aes_ctx->iv,
 					TEGRA_NVVSE_AES_GCM_IV_LEN);
 	}
 
-free_buf:
-	kfree(out_buf);
-free_in_buf:
-	kfree(in_buf);
 free_req:
 	aead_request_free(req);
 free_tfm:
@@ -2302,4 +1926,3 @@ module_exit(tnvvse_crypto_device_exit);
 MODULE_DESCRIPTION("Tegra NVVSE Crypto device driver.");
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_LICENSE("GPL v2");
-
