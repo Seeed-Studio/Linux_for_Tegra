@@ -210,11 +210,6 @@ static int tegra_kds_probe(struct platform_device *pdev)
 	return tegra_kds_region_setup(kds);
 }
 
-static int tegra_kds_remove(struct platform_device *pdev)
-{
-	return 0;
-}
-
 static const struct of_device_id tegra_kds_of_match[] = {
 	{
 		.compatible = "nvidia,tegra264-kds",
@@ -229,7 +224,6 @@ static struct platform_driver tegra_kds_driver = {
 		.of_match_table = tegra_kds_of_match,
 	},
 	.probe		= tegra_kds_probe,
-	.remove		= tegra_kds_remove,
 };
 
 module_platform_driver(tegra_kds_driver);
