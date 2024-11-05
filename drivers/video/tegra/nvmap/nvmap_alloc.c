@@ -16,6 +16,7 @@
 #include <linux/libnvdimm.h>
 #include <linux/rtmutex.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include "nvmap_stats.h"
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"

@@ -20,6 +20,7 @@
 #include <linux/slab.h>
 #include <linux/nvmap.h>
 #include <linux/version.h>
+#include <linux/vmalloc.h>
 #include <linux/wait.h>
 #include <soc/tegra/fuse.h>
 #include <asm/pgtable.h>
