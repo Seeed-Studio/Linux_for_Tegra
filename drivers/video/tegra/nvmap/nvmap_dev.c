@@ -554,25 +554,6 @@ exit:
 	return memory_available;
 }
 
-static bool nvmap_is_iommu_present(void)
-{
-	struct device_node *np;
-	struct property *prop;
-
-	np = of_find_node_by_name(NULL, "iommu");
-	while (np) {
-		prop = of_find_property(np, "status", NULL);
-		if (prop && !strcmp(prop->value, "okay")) {
-			of_node_put(np);
-			return true;
-		}
-		of_node_put(np);
-		np = of_find_node_by_name(np, "iommu");
-	}
-
-	return false;
-}
-
 int __init nvmap_probe(struct platform_device *pdev)
 {
 	struct nvmap_platform_data *plat;
@@ -654,11 +635,8 @@ int __init nvmap_probe(struct platform_device *pdev)
 			generic_carveout_present = 1;
 
 	if (generic_carveout_present) {
-		if (!iommu_present(&platform_bus_type) &&
-			!nvmap_is_iommu_present())
-			nvmap_convert_iovmm_to_carveout = 1;
-		else if (!of_property_read_bool(pdev->dev.of_node,
-				"dont-convert-iovmm-to-carveout"))
+		if (!of_property_read_bool(pdev->dev.of_node,
+			"dont-convert-iovmm-to-carveout"))
 			nvmap_convert_iovmm_to_carveout = 1;
 	} else {
 		nvmap_convert_carveout_to_iovmm = 1;
