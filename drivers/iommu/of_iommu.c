@@ -152,7 +152,6 @@ int of_iommu_configure(struct device *dev, struct device_node *master_np,
 			.np = master_np,
 		};
 
-		pci_request_acs();
 		err = pci_for_each_dma_alias(to_pci_dev(dev),
 					     of_pci_iommu_init, &info);
 		of_pci_check_device_ats(dev, master_np);
