@@ -6628,6 +6628,10 @@
 
 			nvidia,sidconfig = <0x0>;
 
+			iommus = <&smmu1_mmu 0x2400>;
+			nvidia,sidtable = /bits/ 8 <0x0 0x0 0x0 0x0>;
+			dma-coherent;
+
 			status = "disabled";
 		};
 
@@ -6649,6 +6653,10 @@
 			mboxes = <&soc_oesp_cluster 0>;
 
 			nvidia,sidconfig = <0x0>;
+
+			iommus = <&smmu1_mmu 0x2300>;
+			nvidia,sidtable = /bits/ 8 <0x0 0x0 0x0 0x0>;
+			dma-coherent;
 
 			status = "disabled";
 		};
