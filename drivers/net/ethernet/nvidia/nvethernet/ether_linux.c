@@ -7717,6 +7717,8 @@ static int ether_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct device *dev = pdata->dev;
+	struct device_node *np = dev->of_node;
 
 #ifdef MACSEC_SUPPORT
 	macsec_remove(pdata);
@@ -7726,6 +7728,11 @@ static int ether_remove(struct platform_device *pdev)
 
 	/* remove nvethernet sysfs group under /sys/devices/<ether_device>/ */
 	ether_sysfs_unregister(pdata);
+
+	/* De registering the fixed link */
+	if (of_phy_is_fixed_link(np)) {
+		of_phy_deregister_fixed_link(np);
+	}
 
 	ether_put_clks(pdata);
 
