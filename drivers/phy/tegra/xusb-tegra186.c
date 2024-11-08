@@ -939,29 +939,29 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	value &= ~USB2_OTG_PD_ZI;
 	value |= TERM_SEL;
 
-	if (padctl->soc->ignore_fuse) {
+	if (padctl->is_xhci_iov) {
 		padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
-		goto ignore_fuse;
-	}
+		goto skip_fuse_calibration;
+        }
 
 	value &= ~HS_CURR_LEVEL(~0);
-	if (!padctl->is_xhci_iov) {
-		if (usb2->hs_curr_level_offset) {
-			int hs_current_level;
 
-			hs_current_level = (int)priv->calib.hs_curr_level[index] +
-							usb2->hs_curr_level_offset;
+        if (usb2->hs_curr_level_offset) {
+		int hs_current_level;
 
-			if (hs_current_level < 0)
-				hs_current_level = 0;
-			if (hs_current_level > 0x3f)
-				hs_current_level = 0x3f;
+		hs_current_level = (int)priv->calib.hs_curr_level[index] +
+						usb2->hs_curr_level_offset;
 
-			value |= HS_CURR_LEVEL(hs_current_level);
-		} else {
-			value |= HS_CURR_LEVEL(priv->calib.hs_curr_level[index]);
-		}
+		if (hs_current_level < 0)
+			hs_current_level = 0;
+		if (hs_current_level > 0x3f)
+			hs_current_level = 0x3f;
+
+		value |= HS_CURR_LEVEL(hs_current_level);
+	} else {
+		value |= HS_CURR_LEVEL(priv->calib.hs_curr_level[index]);
 	}
+
 
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
 
@@ -972,7 +972,7 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	value |= RPD_CTRL(priv->calib.rpd_ctrl);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
 
-ignore_fuse:
+skip_fuse_calibration:
 	tegra186_utmi_pad_power_on(phy);
 
 	return 0;
@@ -1558,7 +1558,7 @@ tegra186_xusb_padctl_probe(struct device *dev,
 	if (IS_ERR(priv->ao_regs))
 		return ERR_CAST(priv->ao_regs);
 
-	if (!is_xhci_iov && !soc->ignore_fuse) {
+	if (!is_xhci_iov) {
 		err = tegra186_xusb_read_fuse_calibration(priv);
 		if (err < 0)
 			return ERR_PTR(err);
@@ -1793,7 +1793,6 @@ const struct tegra_xusb_padctl_soc tegra264_xusb_padctl_soc = {
 	.poll_trk_completed = true,
 	.trk_hw_mode = true,
 	.supports_lp_cfg_en = true,
-	.ignore_fuse = true,
 };
 EXPORT_SYMBOL_GPL(tegra264_xusb_padctl_soc);
 #endif
