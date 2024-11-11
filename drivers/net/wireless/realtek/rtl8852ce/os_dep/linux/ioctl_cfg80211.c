@@ -141,6 +141,13 @@ static const struct wiphy_wowlan_support wowlan_stub = {
 };
 #endif
 
+static void rtw_cfg80211_set_wakeup(struct wiphy *wiphy, bool enabled)
+{
+	struct device *dev = wiphy_to_dev(wiphy);
+	RTW_INFO("%s: trigger_set_wakeup = %d\n", __func__, enabled);
+	device_set_wakeup_enable(dev, enabled);
+}
+
 static const struct ieee80211_rate rtw_rates[] = {
 	RATETAB_ENT(10,  0x1,   0),
 	RATETAB_ENT(20,  0x2,   0),
@@ -3094,8 +3101,31 @@ static int rtw_cfg80211_set_probe_req_wpsp2pie(_adapter *padapter, char *buf, in
 
 }
 
+static u8 rtw_cfg80211_scan_via_auto_scan(_adapter *adapter, struct cfg80211_scan_request *request)
+{
+	struct rtw_wdev_priv *wdev_priv;
+	u8 ret = _FALSE;
+
+	if (rtw_is_adapter_up(adapter) == _FALSE)
+		goto exit;
+
+	if (!MLME_IS_SCAN(adapter))
+		goto exit;
+
+	wdev_priv = adapter_wdev_data(adapter);
+	_rtw_spinlock_bh(&wdev_priv->scan_req_lock);
+	if (!wdev_priv->scan_request) { /* auto scan */
+		wdev_priv->scan_request = request;
+		ret = _TRUE;
+	}
+	_rtw_spinunlock_bh(&wdev_priv->scan_req_lock);
+
+exit:
+	return ret;
+}
+
 #ifdef CONFIG_CONCURRENT_MODE
-u8 rtw_cfg80211_scan_via_buddy(_adapter *padapter, struct cfg80211_scan_request *request)
+static u8 rtw_cfg80211_scan_via_buddy(_adapter *padapter, struct cfg80211_scan_request *request)
 {
 	int i;
 	u8 ret = _FALSE;
@@ -3212,7 +3242,7 @@ int rtw_cfg80211_split_scan_6ghz(_adapter *padapter) /* second scan of two part 
 		return -ENOMEM;
 	}
 
-	rtw_init_sitesurvey_parm(padapter, parm);
+	rtw_init_sitesurvey_parm(parm);
 	parm->scan_6ghz_only = true;
 	parm->split_scan_6ghz = true;
 
@@ -3378,7 +3408,7 @@ static int cfg80211_rtw_scan(struct wiphy *wiphy
 		goto exit;
 	}
 
-	rtw_init_sitesurvey_parm(padapter, parm);
+	rtw_init_sitesurvey_parm(parm);
 
 #ifdef CONFIG_RTW_SCAN_RAND
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
@@ -3451,8 +3481,6 @@ bypass_p2p_chk:
 		case SS_DENY_BLOCK_SCAN :
 		case SS_DENY_SELF_AP_UNDER_WPS :
 		case SS_DENY_SELF_AP_UNDER_LINKING :
-		case SS_DENY_SELF_AP_UNDER_SURVEY :
-		case SS_DENY_SELF_STA_UNDER_SURVEY :
 		#ifdef CONFIG_CONCURRENT_MODE
 		case SS_DENY_BUDDY_UNDER_LINK_WPS :
 		#endif
@@ -3475,16 +3503,17 @@ bypass_p2p_chk:
 			ret = -EBUSY;
 			goto check_need_indicate_scan_done;
 
+		case SS_DENY_SELF_AP_UNDER_SURVEY:
+		case SS_DENY_SELF_STA_UNDER_SURVEY:
+			if (rtw_cfg80211_scan_via_auto_scan(padapter, request) == _FALSE)
+				need_indicate_scan_done = _TRUE;
+			goto check_need_indicate_scan_done;
+
 		#ifdef CONFIG_CONCURRENT_MODE
-		case SS_DENY_BUDDY_UNDER_SURVEY :
-			{
-				bool scan_via_buddy = rtw_cfg80211_scan_via_buddy(padapter, request);
-
-				if (scan_via_buddy == _FALSE)
-					need_indicate_scan_done = _TRUE;
-
-				goto check_need_indicate_scan_done;
-			}
+		case SS_DENY_BUDDY_UNDER_SURVEY:
+			if (rtw_cfg80211_scan_via_buddy(padapter, request) == _FALSE)
+				need_indicate_scan_done = _TRUE;
+			goto check_need_indicate_scan_done;
 		#endif
 
 		default :
@@ -4729,41 +4758,6 @@ static int cfg80211_rtw_set_power_mgmt(struct wiphy *wiphy,
 	return 0;
 }
 
-static void _rtw_set_pmksa(struct net_device *ndev,
-	u8 *bssid, u8 *pmkid)
-{
-	_adapter *padapter = (_adapter *)rtw_netdev_priv(ndev);
-	struct security_priv *psecuritypriv = &padapter->securitypriv;
-	u8 index, blInserted = _FALSE;
-
-	/* overwrite PMKID */
-	for (index = 0 ; index < NUM_PMKID_CACHE; index++) {
-		if (_rtw_memcmp(psecuritypriv->PMKIDList[index].Bssid, bssid, ETH_ALEN) == _TRUE) {
-			/* BSSID is matched, the same AP => rewrite with new PMKID. */
-			RTW_INFO("BSSID("MAC_FMT") exists in the PMKList.\n", MAC_ARG(bssid));
-
-			_rtw_memcpy(psecuritypriv->PMKIDList[index].PMKID, pmkid, WLAN_PMKID_LEN);
-			psecuritypriv->PMKIDList[index].bUsed = _TRUE;
-			blInserted = _TRUE;
-			break;
-		}
-	}
-
-	if (!blInserted) {
-		/* Find a new entry */
-		RTW_INFO("Use the new entry index = %d for this PMKID.\n",
-			psecuritypriv->PMKIDIndex);
-
-		_rtw_memcpy(psecuritypriv->PMKIDList[psecuritypriv->PMKIDIndex].Bssid, bssid, ETH_ALEN);
-		_rtw_memcpy(psecuritypriv->PMKIDList[psecuritypriv->PMKIDIndex].PMKID, pmkid, WLAN_PMKID_LEN);
-
-		psecuritypriv->PMKIDList[psecuritypriv->PMKIDIndex].bUsed = _TRUE;
-		psecuritypriv->PMKIDIndex++ ;
-		if (psecuritypriv->PMKIDIndex == 16)
-			psecuritypriv->PMKIDIndex = 0;
-	}
-}
-
 static int cfg80211_rtw_set_pmksa(struct wiphy *wiphy,
 				  struct net_device *ndev,
 				  struct cfg80211_pmksa *pmksa)
@@ -4775,13 +4769,13 @@ static int cfg80211_rtw_set_pmksa(struct wiphy *wiphy,
 	u8	strZeroMacAddress[ETH_ALEN] = { 0x00 };
 	bool sae_auth = rtw_sec_chk_auth_type(padapter, MLME_AUTHTYPE_SAE);
 
-	RTW_INFO(FUNC_NDEV_FMT" "MAC_FMT" "KEY_FMT"\n", FUNC_NDEV_ARG(ndev)
+	RTW_INFO(FUNC_NDEV_FMT" "MAC_FMT" "KEY_FMT" pmkid\n", FUNC_NDEV_ARG(ndev)
 		, MAC_ARG(pmksa->bssid), KEY_ARG(pmksa->pmkid));
 
 	if (_rtw_memcmp((u8 *)pmksa->bssid, strZeroMacAddress, ETH_ALEN) == _TRUE)
 		return -EINVAL;
 
-	_rtw_set_pmksa(ndev, (u8 *)pmksa->bssid, (u8 *)pmksa->pmkid);
+	rtw_set_pmksa(padapter, (u8 *)pmksa->bssid, (u8 *)pmksa->pmkid);
 
 	if (sae_auth &&
 		(psecuritypriv->extauth_status == WLAN_STATUS_SUCCESS)) {
@@ -4800,7 +4794,7 @@ static int cfg80211_rtw_del_pmksa(struct wiphy *wiphy,
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(ndev);
 	struct security_priv	*psecuritypriv = &padapter->securitypriv;
 
-	RTW_INFO(FUNC_NDEV_FMT" "MAC_FMT" "KEY_FMT"\n", FUNC_NDEV_ARG(ndev)
+	RTW_INFO(FUNC_NDEV_FMT" "MAC_FMT" "KEY_FMT" pmkid\n", FUNC_NDEV_ARG(ndev)
 		, MAC_ARG(pmksa->bssid), KEY_ARG(pmksa->pmkid));
 
 	for (index = 0 ; index < NUM_PMKID_CACHE; index++) {
@@ -8946,7 +8940,7 @@ u8 *rtw_cfg80211_construct_mesh_beacon_ies(struct wiphy *wiphy, _adapter *adapte
 		goto exit;
 
 #if defined(CONFIG_80211AC_VHT) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
-	vht = ht && rtw_chdef->chan > 14 && rtw_chdef->bw >= CHANNEL_WIDTH_80; /* VHT40/VHT20? */
+	vht = ht && rtw_chdef->band != BAND_ON_24G && rtw_chdef->bw >= CHANNEL_WIDTH_80; /* VHT40/VHT20? */
 #endif
 
 	RTW_INFO(FUNC_ADPT_FMT" => ch:%u,%u,%u, ht:%u, vht:%u\n"
@@ -9680,7 +9674,7 @@ int	cfg80211_rtw_resume(struct wiphy *wiphy) {
 
 		rtw_cfg80211_disconnected(padapter->rtw_wdev, 0, NULL, 0, 1, GFP_ATOMIC);
 
-		rtw_init_sitesurvey_parm(padapter, &parm);
+		rtw_init_sitesurvey_parm(&parm);
 		for (i=0;i<wow_nlo->num_of_networks && i < RTW_SSID_SCAN_AMOUNT; i++) {
 			len = wow_nlo->ssidlen[i];
 			_rtw_memcpy(&parm.ssid[i].Ssid, wow_nlo->ssid[i], len);
@@ -10963,7 +10957,7 @@ void rtw_cfg80211_external_auth_status(struct wiphy *wiphy, struct net_device *d
 
 		/* ToDo: Kernel v5.1 pmkid is pointer */
 		/* RTW_INFO_DUMP("PMKID:", params->pmkid, PMKID_LEN); */
-		_rtw_set_pmksa(dev, params->bssid, params->pmkid);
+		rtw_set_pmksa(padapter, params->bssid, params->pmkid);
 
 		_rtw_spinlock_bh(&psta->lock);
 		if ((psta->auth_len != 0) && (psta->pauth_frame != NULL)) {
@@ -11253,6 +11247,9 @@ struct cfg80211_ops rtw_cfg80211_ops = {
 	.channel_switch = cfg80211_rtw_channel_switch,
 #endif
 #endif /* #ifdef CONFIG_AP_MODE */
+#ifdef CONFIG_WOWLAN
+	.set_wakeup = rtw_cfg80211_set_wakeup,
+#endif /* CONFIG_WOWLAN */
 };
 
 struct wiphy *rtw_wiphy_alloc(_adapter *padapter, struct device *dev)

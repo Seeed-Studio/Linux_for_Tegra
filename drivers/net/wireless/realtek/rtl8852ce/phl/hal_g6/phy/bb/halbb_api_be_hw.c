@@ -22,6 +22,10 @@ u8 halbb_get_prim_sb_be(struct bb_info *bb, u8 central_ch, u8 pri_ch,
 	u8 prim_sb = 0;
 	u8 prisb_cal_ofst[5] = {0, 2, 6, 14, 30};
 
+	if (bw > 4) {
+		BB_WARNING("out-of-bounds, bw:%d\n", bw);
+		return prim_sb;
+	}
 	prim_sb = (prisb_cal_ofst[bw] + pri_ch - central_ch) / 4;
 
 	return prim_sb;

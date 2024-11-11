@@ -93,11 +93,13 @@ struct rtw_chset {
 int rtw_chset_init(struct rtw_chset *chset, u8 band_bmp);
 
 RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch(const struct rtw_chset *chset, u32 ch);
+RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch_include_dis(const struct rtw_chset *chset, u32 ch);
 RTW_FUNC_2G_5G_ONLY u8 rtw_chset_is_chbw_valid(const struct rtw_chset *chset, u8 ch, u8 bw, u8 offset
 	, bool allow_primary_passive, bool allow_passive);
 RTW_FUNC_2G_5G_ONLY void rtw_chset_sync_chbw(const struct rtw_chset *chset, u8 *req_ch, u8 *req_bw, u8 *req_offset
 	, u8 *g_ch, u8 *g_bw, u8 *g_offset, bool allow_primary_passive, bool allow_passive);
 int rtw_chset_search_bch(const struct rtw_chset *chset, enum band_type band, u32 ch);
+int rtw_chset_search_bch_include_dis(const struct rtw_chset *chset, enum band_type band, u32 ch);
 RT_CHANNEL_INFO *rtw_chset_get_chinfo_by_bch(struct rtw_chset *chset, enum band_type band, u32 ch, bool include_dis);
 u8 rtw_chset_is_bchbw_valid(const struct rtw_chset *chset, enum band_type band, u8 ch, u8 bw, u8 offset
 	, bool allow_primary_passive, bool allow_passive);

@@ -113,6 +113,7 @@ void _phl_com_init_ppdu_sts(struct rtw_phl_com_t *phl_com)
 		for (i = 0; i < PHL_MAX_PPDU_CNT; i++) {
 			pq_init(phl_com->drv_priv,
 				&(phl_com->ppdu_sts_info.sts_ent[j][i].frames));
+			phl_com->ppdu_sts_info.sts_ent[j][i].frame_type = RTW_FRAME_TYPE_MAX;
 		}
 	}
 #endif

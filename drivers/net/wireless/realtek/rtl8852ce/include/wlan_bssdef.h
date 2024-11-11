@@ -248,6 +248,7 @@ typedef struct _WLAN_BSSID_EX {
 #ifdef CONFIG_STA_MULTIPLE_BSSID
 	u8 is_mbssid;
 	u8 mbssid_index;
+	NDIS_802_11_MAC_ADDRESS  mbsMacAddress;
 #endif
 	u32  IELength;
 	u8  IEs[MAX_IE_SZ];	/* (timestamp, beacon interval, and capability information) */
@@ -321,7 +322,7 @@ enum UAPSD_MAX_SP {
 
 
 /* john */
-#define NUM_PRE_AUTH_KEY 16
+#define NUM_PRE_AUTH_KEY 64
 #define NUM_PMKID_CACHE NUM_PRE_AUTH_KEY
 
 #endif /* #ifndef WLAN_BSSDEF_H_ */

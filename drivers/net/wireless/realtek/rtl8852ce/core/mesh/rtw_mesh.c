@@ -212,7 +212,7 @@ int rtw_bss_is_candidate_mesh_peer(_adapter *adapter, WLAN_BSSID_EX *target, u8 
 
 			if (!ch) {
 				/* off-channel, check target with our hardcode capability */
-				if (target->Configuration.DSConfig > 14)
+				if (BSS_EX_OP_BAND(target) != BAND_ON_24G)
 					match = rtw_is_basic_rate_ofdm(target->SupportedRates[i]);
 				else
 					match = rtw_is_basic_rate_mix(target->SupportedRates[i]);

@@ -685,9 +685,6 @@ static int rtw_pci_suspend(struct pci_dev *pdev, pm_message_t state)
 		goto exit;
 	}
 
-#ifdef CONFIG_WOWLAN
-	device_set_wakeup_enable(&pdev->dev, true);
-#endif
 	pci_disable_device(pdev);
 
 #ifdef CONFIG_WOWLAN
@@ -745,10 +742,6 @@ static int rtw_pci_resume(struct pci_dev *pdev)
 		RTW_INFO("%s Failed on pci_restore_state (%d)\n", __func__, err);
 		goto exit;
 	}
-#endif
-
-#ifdef CONFIG_WOWLAN
-	device_set_wakeup_enable(&pdev->dev, false);
 #endif
 
 	if (pwrpriv->wowlan_mode || pwrpriv->wowlan_ap_mode) {
@@ -1124,6 +1117,7 @@ static int __init rtw_drv_entry(void)
 
 	pci_drvpriv.drv_registered = _TRUE;
 	rtw_suspend_lock_init();
+	rtw_chplan_init();
 	rtw_drv_proc_init();
 	rtw_nlrtw_init();
 	rtw_ndev_notifier_register();
@@ -1143,6 +1137,7 @@ static int __init rtw_drv_entry(void)
 	if (ret != 0) {
 		pci_drvpriv.drv_registered = _FALSE;
 		rtw_suspend_lock_uninit();
+		rtw_chplan_deinit();
 		rtw_drv_proc_deinit();
 		rtw_nlrtw_deinit();
 		rtw_ndev_notifier_unregister();
@@ -1174,6 +1169,7 @@ static void __exit rtw_drv_halt(void)
 
 	platform_wifi_power_off();
 	rtw_suspend_lock_uninit();
+	rtw_chplan_deinit();
 	rtw_drv_proc_deinit();
 	rtw_nlrtw_deinit();
 	rtw_ndev_notifier_unregister();

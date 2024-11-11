@@ -1282,15 +1282,29 @@ bool halbb_ldpc_chk(struct bb_info *bb,  struct rtw_phl_stainfo_t *phl_sta_i, u8
 	return ldpc_en;
 }
 
-u8 halbb_nss_mapping(struct bb_info *bb,  u8 nss)
+u8 halbb_nss_mapping(struct bb_info *bb, u8 nss_cap, u8 nss_limit)
 {
 	u8 mapping_nss = 0;
 
-	if (nss != 0)
-		mapping_nss = nss - 1;
 	/* Driver tx_nss mapping */
-	if (mapping_nss > (bb->phl_com->phy_cap[bb->bb_phy_idx].tx_path_num - 1))
+	if (nss_cap != 0)
+		mapping_nss = nss_cap - 1;
+
+	/*nss_limit. e.g. BTC_1ss feature*/
+	if (nss_limit != 0) { /*nss_limit = 0 means no limit*/
+		if (mapping_nss > nss_limit - 1)
+			mapping_nss = nss_limit - 1;
+	}
+
+	/*protection when AP/NIC is connected to a device whose rx_nss > 2*/
+	if (mapping_nss > (bb->phl_com->phy_cap[bb->bb_phy_idx].tx_path_num - 1)) {
 		mapping_nss = bb->phl_com->phy_cap[bb->bb_phy_idx].tx_path_num - 1;
+	}
+
+	BB_DBG(bb, DBG_RA, "nss_mapping:{nss_cap,nss_limit,rfpath_tx} = {%d,%d,%d}\n",
+	       nss_cap, nss_limit, bb->phl_com->phy_cap[bb->bb_phy_idx].tx_path_num);
+
+
 	return mapping_nss;
 }
 
@@ -1643,7 +1657,7 @@ bool rtw_halbb_raregistered(struct bb_info *bb_0, struct rtw_phl_stainfo_t *phl_
 	BB_DBG(bb, DBG_RA, "Phy_idx=%d, RSSI_LV=%d, rssi_assoc=%d\n", bb->bb_phy_idx, init_lv, rssi_assoc);
 
 	/*@Becareful RA use our "Tx" capability which means the capability of their "Rx"*/
-	tx_nss = halbb_nss_mapping(bb, asoc_cap_i->nss_rx);
+	tx_nss = halbb_nss_mapping(bb, asoc_cap_i->nss_rx, hal_sta_i->ra_info.ra_nss_limit);
 	if (asoc_cap_i->dcm_max_const_rx)
 		ra_cfg->dcm_cap = 1;
 	else
@@ -1850,7 +1864,7 @@ bool rtw_halbb_raupdate(struct bb_info *bb_0,
 	asoc_cap_i = &phl_sta_i->asoc_cap;
 	rssi = hal_sta_i->rssi_stat.rssi >> 1;
 	/*@Becareful RA use our "Tx" capability which means the capability of their "Rx"*/
-	tx_nss = halbb_nss_mapping(bb, asoc_cap_i->nss_rx);
+	tx_nss = halbb_nss_mapping(bb, asoc_cap_i->nss_rx, hal_sta_i->ra_info.ra_nss_limit);
 	ra_cfg->is_dis_ra = hal_sta_i->ra_info.dis_ra;
 	mod_mask = hal_sta_i->ra_info.cur_ra_mask;
 	ra_cfg->upd_all= false;
@@ -1956,7 +1970,7 @@ bool halbb_ra_update_mask_watchdog(struct bb_info *bb, struct rtw_phl_stainfo_t 
 	asoc_cap_i = &phl_sta_i->asoc_cap;
 	rssi = hal_sta_i->rssi_stat.rssi >> 1;
 	/*@Becareful RA use our "Tx" capability which means the capability of their "Rx"*/
-	tx_nss = halbb_nss_mapping(bb, asoc_cap_i->nss_rx);
+	tx_nss = halbb_nss_mapping(bb, asoc_cap_i->nss_rx, hal_sta_i->ra_info.ra_nss_limit);
 	ra_cfg->is_dis_ra = hal_sta_i->ra_info.dis_ra;
 	mod_mask = hal_sta_i->ra_info.cur_ra_mask;
 #ifdef BB_1115_DVLP_SPF

@@ -1545,13 +1545,17 @@ static int rtw_build_max_cohost_bssid_ind(_adapter *padapter, u8 *pbuf)
 }
 
 static int rtw_build_6g_oper_info(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
-	u8 *pbuf, struct rtw_chan_def *chandef)
+	u8 *pbuf, struct rtw_chan_def *chandef, u8 regu)
 {
 	struct link_mlme_ext_priv *pmlmeext = &padapter_link->mlmeextpriv;
 	int info_len = 5;
 
 	/* Set 6GHz Operation Information */
 	SET_HE_OP_INFO_PRIMARY_CHAN(pbuf, chandef->chan);
+
+	/* control */
+	SET_HE_OP_INFO_CHAN_WIDTH(pbuf, chandef->bw);
+	SET_HE_OP_INFO_REGULATORY_INFO(pbuf, regu);
 
 	if (!chandef->center_freq1)
 		SET_HE_OP_INFO_CENTER_FREQ_0(pbuf, chandef->chan);
@@ -1567,7 +1571,7 @@ static int rtw_build_6g_oper_info(_adapter *padapter, struct _ADAPTER_LINK *pada
 
 u32	rtw_build_he_operation_ie(_adapter *padapter,
 				struct _ADAPTER_LINK *padapter_link,
-				u8 *pbuf, struct rtw_chan_def *chandef)
+				u8 *pbuf, struct rtw_chan_def *chandef, u8 regu)
 {
 	struct link_mlme_priv	*pmlmepriv = &padapter_link->mlmepriv;
 	struct he_priv		*phepriv = &pmlmepriv->hepriv;
@@ -1602,7 +1606,7 @@ u32	rtw_build_he_operation_ie(_adapter *padapter,
 #if CONFIG_IEEE80211_BAND_6GHZ
 	/* 6G Oper Info */
 	if (he_6g_op_present)
-		poper += rtw_build_6g_oper_info(padapter, padapter_link, poper, chandef);
+		poper += rtw_build_6g_oper_info(padapter, padapter_link, poper, chandef, regu);
 #endif
 
 	he_oper_total_len = (poper - poper_start);
@@ -1652,7 +1656,7 @@ void rtw_he_ies_attach(_adapter *padapter, struct _ADAPTER_LINK *padapter_link, 
 	pnetwork->IELength += cap_len;
 
 	operation_len = rtw_build_he_operation_ie(padapter, padapter_link, pnetwork->IEs + pnetwork->IELength,
-				&padapter_link->mlmeextpriv.chandef);
+				&padapter_link->mlmeextpriv.chandef, 0);
 	pnetwork->IELength += operation_len;
 
 	pmlmepriv->hepriv.he_option = _TRUE;
@@ -1801,6 +1805,7 @@ void rtw_update_he_ies(_adapter *padapter, struct _ADAPTER_LINK *padapter_link, 
 	u8 he_op_ie_len;
 	u8 he_op_ie[255];
 	u8 he_op_eid_ext = WLAN_EID_EXTENSION_HE_OPERATION;
+	u8 *_6g_op_info, regu = 0;
 
 	RTW_INFO("Don't setting HE capability/operation IE from hostap, builded by driver temporarily\n");
 	rtw_he_use_default_setting(padapter, padapter_link);
@@ -1809,8 +1814,14 @@ void rtw_update_he_ies(_adapter *padapter, struct _ADAPTER_LINK *padapter_link, 
 	he_cap_ie_len = rtw_build_he_cap_ie(padapter, padapter_link, he_cap_ie, chandef->band);
 	rtw_add_bcn_ie_ex(padapter, pnetwork, he_cap_eid_ext, he_cap_ie + 2, he_cap_ie_len - 2);
 
+	/* get regulatory info */
+	_6g_op_info = rtw_ies_get_he_6g_op_info_ie(pnetwork->IEs + _FIXED_IE_LENGTH_,
+		pnetwork->IELength - _FIXED_IE_LENGTH_);
+	if (_6g_op_info)
+		regu = GET_HE_OP_INFO_REG_INFO(_6g_op_info);
+
 	rtw_remove_bcn_ie_ex(padapter, pnetwork, WLAN_EID_EXTENSION, &he_op_eid_ext, 1);
-	he_op_ie_len = rtw_build_he_operation_ie(padapter, padapter_link, he_op_ie, chandef);
+	he_op_ie_len = rtw_build_he_operation_ie(padapter, padapter_link, he_op_ie, chandef, regu);
 	rtw_add_bcn_ie_ex(padapter, pnetwork, he_op_eid_ext, he_op_ie + 2, he_op_ie_len - 2);
 }
 
@@ -1823,6 +1834,7 @@ void rtw_update_probe_rsp_he_cap_and_op(struct _ADAPTER *a, u8 *ies, sint *ies_l
 	uint ie_len;
 	u8 he_cap_eid_ext = WLAN_EID_EXTENSION_HE_CAPABILITY;
 	u8 he_op_eid_ext = WLAN_EID_EXTENSION_HE_OPERATION;
+	u8 *_6g_op_info, regu = 0;
 
 	he_cap_ie = rtw_get_ie_ex(ies, *ies_len, WLAN_EID_EXTENSION,
 							&he_cap_eid_ext, 1, NULL, &ie_len);
@@ -1835,8 +1847,13 @@ void rtw_update_probe_rsp_he_cap_and_op(struct _ADAPTER *a, u8 *ies, sint *ies_l
 	he_op_ie = rtw_get_ie_ex(ies, *ies_len, WLAN_EID_EXTENSION,
 							&he_op_eid_ext, 1, NULL, &ie_len);
 	if (he_op_ie) {
+		/* get regulatory info */
+		_6g_op_info = rtw_ies_get_he_6g_op_info_ie(ies, ie_len);
+		if (_6g_op_info)
+			regu = GET_HE_OP_INFO_REG_INFO(_6g_op_info);
+
 		cur_he_op_ie_len = rtw_build_he_operation_ie(a, a_link,
-					cur_he_op_ie, &a_link->mlmeextpriv.chandef);
+					cur_he_op_ie, &a_link->mlmeextpriv.chandef, regu);
 		rtw_ies_update_ie_ex(ies, ies_len, 0, WLAN_EID_EXTENSION_HE_OPERATION,
 					cur_he_op_ie, cur_he_op_ie_len);
 	}

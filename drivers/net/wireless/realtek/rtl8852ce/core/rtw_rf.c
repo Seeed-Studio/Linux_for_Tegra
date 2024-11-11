@@ -890,13 +890,13 @@ static u8 rtw_get_center_ch_6g(u8 ch, u8 bw, u8 offset)
 	};
 	u8 cch = ch;
 
-	if (bw < CHANNEL_WIDTH_20 || bw > CHANNEL_WIDTH_160) {
+	if (bw == CHANNEL_WIDTH_20 || bw == CHANNEL_WIDTH_10 || bw == CHANNEL_WIDTH_5)
+		goto exit;
+
+	if (bw > CHANNEL_WIDTH_160) {
 		rtw_warn_on(1);
 		goto exit;
 	}
-
-	if (bw == CHANNEL_WIDTH_20)
-		goto exit;
 
 	cch = (((ch - 1) >> shift[bw]) << shift[bw]) + start[bw];
 
@@ -1295,6 +1295,38 @@ const u8 _opc_bw_to_ch_width[OPC_BW_NUM] = {
 
 /* 802.11-2020, 802.11ax-2021 Table E-4, partial */
 const struct op_class_t global_op_class[] = {
+	/* United state : begin */
+	OP_CLASS_ENT(1,		BAND_ON_5G,	OPC_BW20,	4,	36, 40, 44, 48), /* 115 */
+	OP_CLASS_ENT(2,		BAND_ON_5G,	OPC_BW20,	4,	52, 56, 60, 64), /* 118 */
+	OP_CLASS_ENT(3,		BAND_ON_5G,	OPC_BW20,	4,	149, 153, 157, 161), /* 124 */
+	OP_CLASS_ENT(4,		BAND_ON_5G,	OPC_BW20,	12,	100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144), /* 121 */
+	OP_CLASS_ENT(5,		BAND_ON_5G,	OPC_BW20,	8,	149, 153, 157, 161, 165, 169, 173, 177), /* 125 */
+	/* 6, 103 */
+	/* 7, 103 */
+	/* 8, 102 */
+	/* 9, 102 */
+	/* 10, 101 */
+	/* 11, 101 */
+	OP_CLASS_ENT(12,	BAND_ON_24G,	OPC_BW20,	13,	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13), /* 81 */
+	/* 13, 94 */
+	/* 14, 95 */
+	/* 15, 96 */
+#if CONFIG_IEEE80211_BAND_5GHZ
+	OP_CLASS_ENT(22,	BAND_ON_5G,	OPC_BW40PLUS,	2,	36, 44), /* 116 */
+	OP_CLASS_ENT(23,	BAND_ON_5G,	OPC_BW40PLUS,	2,	52, 60), /* 119 */
+	OP_CLASS_ENT(24,	BAND_ON_5G,	OPC_BW40PLUS,	6,	100, 108, 116, 124, 132, 140), /* 122 */
+	OP_CLASS_ENT(25,	BAND_ON_5G,	OPC_BW40PLUS,	4,	149, 157, 165, 173), /* 126 */
+	OP_CLASS_ENT(26,	BAND_ON_5G,	OPC_BW40PLUS,	4,	149, 157, 165, 173), /* 126 */
+	OP_CLASS_ENT(27,	BAND_ON_5G,	OPC_BW40MINUS,	2,	40, 48), /* 117 */
+	OP_CLASS_ENT(28,	BAND_ON_5G,	OPC_BW40MINUS,	2,	56, 64), /* 120 */
+	OP_CLASS_ENT(29,	BAND_ON_5G,	OPC_BW40MINUS,	6,	104, 112, 120, 128, 136, 144), /* 123 */
+	OP_CLASS_ENT(30,	BAND_ON_5G,	OPC_BW40MINUS,	4,	153, 161, 169, 177), /* 127 */
+	OP_CLASS_ENT(31,	BAND_ON_5G,	OPC_BW40MINUS,	4,	153, 161, 169, 177), /* 127 */
+#endif
+	OP_CLASS_ENT(32,	BAND_ON_24G,	OPC_BW40PLUS,	9,	1, 2, 3, 4, 5, 6, 7, 8, 9), /* 83 */
+	OP_CLASS_ENT(33,	BAND_ON_24G,	OPC_BW40MINUS,	9,	5, 6, 7, 8, 9, 10, 11, 12, 13), /* 84 */
+	/* United state : end */
+
 	/* 2G ch1~13, 20M */
 	OP_CLASS_ENT(81,	BAND_ON_24G,	OPC_BW20,		13,	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13),
 	/* 2G ch14, 20M */
@@ -1618,7 +1650,6 @@ u8 rtw_get_bw_offset_by_op_class_ch(u8 gid, u8 ch, u8 *bw, u8 *offset)
 {
 	const struct op_class_t *opc;
 	u8 valid = 0;
-	int i;
 
 	opc = get_global_op_class_by_id(gid);
 	if (!opc)
@@ -1941,7 +1972,6 @@ void op_class_pref_apply_regulatory(struct rf_ctl_t *rfctl, u8 reason)
 static void dump_opc_pref_single(void *sel, struct op_class_pref_t *opc_pref, bool show_snon_ocp, bool show_no_ir, bool detail)
 {
 	u8 i;
-	u8 ch_num = 0;
 
 	if (!show_snon_ocp && !opc_pref->op_ch_num)
 		return;

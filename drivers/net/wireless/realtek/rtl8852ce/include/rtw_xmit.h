@@ -977,7 +977,9 @@ struct	xmit_priv	{
 	_timer tx_poll_timer;
 #endif
 #ifdef CONFIG_LAYER2_ROAMING
+#ifndef CONFIG_RTW_ROAM_STOP_NETIF_QUEUE
 	_queue	rpkt_queue;
+#endif
 #endif
 	_lock lock_sctx;
 #ifdef CONFIG_CORE_TXSC
@@ -1002,6 +1004,8 @@ struct	xmit_priv	{
 	u64 cnt_txsc_amsdu_timeout_fail[4];
 #endif /* CONFIG_TXSC_AMSDU */
 #endif /* CONFIG_CORE_TXSC */
+
+	u16 max_agg_time;
 };
 
 #if 0 /*CONFIG_CORE_XMITBUF*/
@@ -1190,7 +1194,7 @@ void rtw_set_xmit_block(_adapter *padapter, enum XMIT_BLOCK_REASON reason);
 void rtw_clr_xmit_block(_adapter *padapter, enum XMIT_BLOCK_REASON reason);
 bool rtw_is_xmit_blocked(_adapter *padapter);
 #ifdef CONFIG_LAYER2_ROAMING
-void dequeuq_roam_pkt(_adapter *padapter);
+void dequeuq_roam_pkt(_adapter *padapter, bool drop);
 #endif
 /* include after declaring struct xmit_buf, in order to avoid warning */
 #include <xmit_osdep.h>

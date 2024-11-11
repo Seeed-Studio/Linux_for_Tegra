@@ -19,6 +19,7 @@
 #include "rtw_fsm_rrm.h" /* rrm_priv */
 #include "rtw_fsm_wnm.h" /* btm_priv */
 
+#ifdef CONFIG_RTW_FSM
 u8 fsm_post_event_hdl(_adapter *padapter, u8 *pbuf);
 
 /* #define RTW_DEBUG_FSM */
@@ -335,4 +336,5 @@ _adapter *fsm_to_adapter(struct fsm_main *fsm);
 #undef FSM_EV_MSG
 #define FSM_EV_MSG(fsm, level, fmt, ...)
 #endif  /* CONFIG_PHL_WPP */
+#endif /* CONFIG_RTW_FSM */
 #endif /* __PHL_FSM_H__ */

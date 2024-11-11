@@ -24,6 +24,13 @@ u32 rtw_hal_mac_set_grant_act(struct rtw_hal_com_t *hal_com, u8 *value);
 u32 rtw_hal_mac_set_grant(struct rtw_hal_com_t *hal_com, u8 *value);
 u32 rtw_hal_mac_get_grant(struct rtw_hal_com_t *hal_com, u8 *value);
 u32 rtw_hal_mac_set_polluted(struct rtw_hal_com_t *hal_com, u8 band, u8 tx_val, u8 rx_val);
+enum rtw_hal_status rtw_hal_btc_cfg_1ss(struct rtw_hal_com_t *hal_c,
+		struct rtw_phl_com_t *phl_c, enum band_type band,
+		bool tx_en, bool rx_en, bool tx_res, bool rx_res);
+
+enum rtw_hal_status rtw_hal_btc_cfg_trx_path(struct rtw_hal_com_t *hal_c,
+		enum rf_path tx, u8 tx_nss, enum rf_path rx, u8 rx_nss);
+
 u32 rtw_hal_mac_set_tx_time(struct rtw_hal_com_t *hal_com, u8 is_btc,
 			    u8 is_resume, u8 macid, u32 tx_time);
 u32 rtw_hal_mac_get_tx_time(struct rtw_hal_com_t *hal_com, u8 macid, u32 *tx_time);

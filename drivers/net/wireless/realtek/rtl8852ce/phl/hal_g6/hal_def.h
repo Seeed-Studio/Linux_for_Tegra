@@ -665,6 +665,7 @@ struct rtw_ra_sta_info {
 	/* u8 drv_ractrl; */
 
 	/* Ctrl */
+	u8 ra_nss_limit; /* 0: no limitation, otherwise, limit to tx nss pkt*/
 	bool dis_ra; /*move from rtw_hal_stainfo_t*/
 	bool ra_registered;/*move from rtw_hal_stainfo_t*/
 	u64 ra_mask;/*move from rtw_hal_stainfo_t*/ /*drv decide by specific req*/

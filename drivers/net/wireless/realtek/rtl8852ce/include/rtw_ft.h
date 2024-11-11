@@ -125,7 +125,6 @@ struct ft_roam_info {
 	u8	ft_flags;
 	u32 ft_status;
 	u32 ft_req_retry_cnt;
-	bool ft_updated_bcn;
 };
 
 struct rtw_sta_ft_info_t {
@@ -155,8 +154,6 @@ void rtw_ft_validate_akm_type(_adapter  *padapter,
 	WLAN_BSSID_EX *network);
 
 void rtw_ft_update_bcn(_adapter *padapter, union recv_frame *precv_frame);
-
-void rtw_ft_start_clnt_join(_adapter *padapter);
 
 u8 rtw_ft_update_rsnie(
 	_adapter *padapter, u8 bwrite,

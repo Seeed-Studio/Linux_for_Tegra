@@ -324,6 +324,10 @@
 #define CONFIG_RTW_DIS_CH_FLAGS NULL
 #endif
 
+#ifndef CONFIG_RTW_EXTRA_ALPHA2
+#define CONFIG_RTW_EXTRA_ALPHA2 NULL
+#endif
+
 #ifndef CONFIG_RTW_BCN_HINT_VALID_MS
 #define CONFIG_RTW_BCN_HINT_VALID_MS (60 * 1000)
 #endif
@@ -348,8 +352,16 @@
 #define CONFIG_RTW_COUNTRY_IE_SLAVE_EN_IFBMP 0xFF /* all iface */
 #endif
 
+#ifndef CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_BAND_BMP
+#define CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_BAND_BMP 0xFF /* all band */
+#endif
+
 #ifndef CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_INT_MS
-#define CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_INT_MS (60 * 1000)
+#define CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_INT_MS (50 * 60 * 1000)
+#endif
+
+#ifndef CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_URGENT_MS
+#define CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_URGENT_MS (55 * 60 * 1000)
 #endif
 
 #define CONFIG_IEEE80211_BAND_5GHZ 1
@@ -438,21 +450,6 @@
 
 #ifndef CONFIG_COUNTRY_CHPLAN_EDCCA_OVERRIDE
 #define CONFIG_COUNTRY_CHPLAN_EDCCA_OVERRIDE 0
-#endif
-
-#ifndef RTW_DEF_MODULE_REGULATORY_CERT
-	#define RTW_DEF_MODULE_REGULATORY_CERT 0
-#endif
-
-#if RTW_DEF_MODULE_REGULATORY_CERT
-	#ifdef CONFIG_REGD_SRC_FROM_OS
-	#error "CONFIG_REGD_SRC_FROM_OS is not supported when enable RTW_DEF_MODULE_REGULATORY_CERT"
-	#endif
-	/* force enable TX power by rate and TX power limit */
-	#undef CONFIG_TXPWR_BY_RATE_EN
-	#undef CONFIG_TXPWR_LIMIT_EN
-	#define CONFIG_TXPWR_BY_RATE_EN 1
-	#define CONFIG_TXPWR_LIMIT_EN 1
 #endif
 
 #if !CONFIG_TXPWR_LIMIT && CONFIG_TXPWR_LIMIT_EN
@@ -803,6 +800,10 @@ power down etc.) in last time, we can unmark this flag to avoid some unpredictab
 	#ifndef CONFIG_PHL_CHSWOFLD
 	#define CONFIG_PHL_CHSWOFLD
 	#endif
+#endif
+
+#ifdef CONFIG_BTC
+//#define CONFIG_BTC_TRXSS_CHG
 #endif
 
 /*

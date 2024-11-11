@@ -41,20 +41,6 @@ static u8 wnm_non_pref_ch_oui[] = {0x50, 0x6F, 0x9A, 0x2};
 
 #define rtw_wnm_get_non_pref_ch_oui(p) ((u8 *)(p) + 2)
 
-void rtw_wnm_candidate_info(struct wlan_network *pnetwork, struct wlan_network *cnetwork, u8 *reason)
-{
-	if (reason)
-		RTW_INFO("candidate:%s %s("MAC_FMT", ch%3u) rssi:%d dBm, age:%5d [%7s]\n",
-			 (pnetwork == cnetwork) ? "*" : " " ,
-			 pnetwork->network.Ssid.Ssid,
-			 MAC_ARG(pnetwork->network.MacAddress),
-			 pnetwork->network.Configuration.DSConfig,
-			 (int)pnetwork->network.PhyInfo.rssi,
-			 rtw_get_passing_time_ms(pnetwork->last_scanned),
-			 reason
-			);
-}
-
 static void rtw_wmn_btm_cache_update(
 	_adapter *padapter, struct btm_req_hdr *phdr)
 {
@@ -154,11 +140,11 @@ u8 rtw_wmn_btm_rsp_reason_decision(_adapter *padapter, struct roam_nb_info *pnb)
 	}
 
 	if (recvinfo->signal_strength_data.avg_val >=
-		pmlmepriv->roam_rssi_threshold) {
+		wnm_roam_rssi_th(pmlmepriv)) {
 		reason = 1;
 		RTW_INFO("WNM : Reject - under high roam rssi(%u, %u) \n",
 			recvinfo->signal_strength_data.avg_val,			
-			pmlmepriv->roam_rssi_threshold);
+			wnm_roam_rssi_th(pmlmepriv));
 		goto candidate_remove;
 	}
 
@@ -275,7 +261,7 @@ void rtw_wnm_roam_scan_hdl(void *ctx)
 		RTW_WNM_INFO("%s : enable roaming\n", __func__);
 	}
 
-	rtw_drv_scan_by_self(padapter, RTW_AUTO_SCAN_REASON_ROAM);
+	rtw_drv_scan_by_self(padapter, RTW_AUTO_SCAN_REASON_ROAM, false);
 #endif
 }
 
@@ -369,7 +355,7 @@ void rtw_wnm_process_btm_req(_adapter *padapter,
 
 #ifndef PRIVATE_R
 	/* MBO must respond to 11v BTM Requests from the AP with a Reject. */
-	if (pnb->nb_rpt_ch_list_num == 0)
+	if (pnb->nb_rpt.ch_list_num == 0)
 #endif /* PRIVATE_R */
 		goto done;
 
@@ -389,7 +375,7 @@ done:
 	/* for wifi-test; AP2 could power-off when BTM-req received */
 	if ((reason > 0) && (rtw_mbo_wifi_logo_test(padapter))) {
 		_rtw_memcpy(pnb->roam_target_addr,
-			pnb->nb_rpt[0].bssid, ETH_ALEN);
+			pnb->nb_rpt.nb_list[0].ent.bssid, ETH_ALEN);
 		RTW_WNM_INFO("%s : used report 0 as roam_target_addr"
 			"(reason=%u)\n", __func__, reason);
 		reason = 0;
@@ -424,6 +410,7 @@ void rtw_wnm_reset_btm_cache(_adapter *padapter)
 
 	rtw_wnm_reset_btm_candidate(pnb);
 	_rtw_memset(pcache, 0, sizeof(struct btm_rpt_cache));
+	_rtw_memset(pmlmepriv->roam_from_addr, 0, ETH_ALEN);
 	pcache->validity_time = wnm_defualt_validity_time;
 	pcache->disassoc_time= wnm_default_disassoc_time;
 
@@ -440,13 +427,13 @@ void rtw_wnm_reset_btm_state(_adapter *padapter)
 {
 	struct roam_nb_info *pnb = &(padapter->mlmepriv.nb_info);
 
-	pnb->last_nb_rpt_entries = 0;
+	pnb->nb_rpt.nb_list_num = 0;
 	pnb->nb_rpt_is_same = _TRUE;
 	pnb->nb_rpt_valid = _FALSE;
-	pnb->nb_rpt_ch_list_num = 0;
+	pnb->nb_rpt.ch_list_num = 0;
 	pnb->disassoc_waiting = -1;
 	_rtw_memset(&pnb->nb_rpt, 0, sizeof(pnb->nb_rpt));
-	_rtw_memset(&pnb->nb_rpt_ch_list, 0, sizeof(pnb->nb_rpt_ch_list));
+	_rtw_memset(&pnb->nb_rpt.ch_list, 0, sizeof(pnb->nb_rpt.ch_list));
 	rtw_wnm_reset_btm_cache(padapter);
 }
 
@@ -861,13 +848,13 @@ void rtw_roam_nb_info_init(_adapter *padapter)
 	struct btm_rpt_cache *pcache = &(pnb->btm_cache);
 
 	_rtw_memset(&pnb->nb_rpt, 0, sizeof(pnb->nb_rpt));
-	_rtw_memset(&pnb->nb_rpt_ch_list, 0, sizeof(pnb->nb_rpt_ch_list));
+	_rtw_memset(&pnb->nb_rpt.ch_list, 0, sizeof(pnb->nb_rpt.ch_list));
 	_rtw_memset(&pnb->roam_target_addr, 0, ETH_ALEN);
 	pnb->nb_rpt_valid = _FALSE;
-	pnb->nb_rpt_ch_list_num = 0;
+	pnb->nb_rpt.ch_list_num = 0;
 	pnb->preference_en = _FALSE;
 	pnb->nb_rpt_is_same = _TRUE;
-	pnb->last_nb_rpt_entries = 0;
+	pnb->nb_rpt.nb_list_num = 0;
 	pnb->disassoc_waiting = -1;
 #ifdef CONFIG_RTW_WNM
 	pnb->features = 0;
@@ -903,7 +890,7 @@ u8 rtw_roam_nb_scan_list_set(
 	if (!pmlmepriv->need_to_roam)
 		return ret;
 
-	if ((!pmlmepriv->nb_info.nb_rpt_valid) || (!pnb->nb_rpt_ch_list_num))
+	if ((!pmlmepriv->nb_info.nb_rpt_valid) || (!pnb->nb_rpt.ch_list_num))
 		return ret;
 
 	if (!pparm)
@@ -912,9 +899,9 @@ u8 rtw_roam_nb_scan_list_set(
 	if (rtw_roam_busy_scan(padapter, pnb)) {
 		pparm->ch_num = 1;
 		pparm->ch[pmlmepriv->ch_cnt].hw_value =
-			pnb->nb_rpt_ch_list[pmlmepriv->ch_cnt].hw_value;
+			pnb->nb_rpt.ch_list[pmlmepriv->ch_cnt].hw_value;
 		pparm->ch[pmlmepriv->ch_cnt].band =
-			pnb->nb_rpt_ch_list[pmlmepriv->ch_cnt].band;
+			pnb->nb_rpt.ch_list[pmlmepriv->ch_cnt].band;
 		ret = _TRUE;
 
 		RTW_WNM_INFO("%s: ch_cnt=%u, (%u)hw_value=%u\n",
@@ -923,19 +910,19 @@ u8 rtw_roam_nb_scan_list_set(
 
 		pmlmepriv->ch_cnt++;
 
-		if (pmlmepriv->ch_cnt == pnb->nb_rpt_ch_list_num) {
+		if (pmlmepriv->ch_cnt == pnb->nb_rpt.ch_list_num) {
 			pmlmepriv->nb_info.nb_rpt_valid = _FALSE;
 			pmlmepriv->ch_cnt = 0;
 		}
 		goto set_bssid_list;
 	}
 
-	pparm->ch_num = (pnb->nb_rpt_ch_list_num > RTW_MAX_NB_RPT_NUM)?
-		(RTW_MAX_NB_RPT_NUM):(pnb->nb_rpt_ch_list_num);
+	pparm->ch_num = (pnb->nb_rpt.ch_list_num > RTW_MAX_NB_RPT_NUM)?
+		(RTW_MAX_NB_RPT_NUM):(pnb->nb_rpt.ch_list_num);
 	for (i=0; i<pparm->ch_num; i++) {
-		pparm->ch[i].hw_value = pnb->nb_rpt_ch_list[i].hw_value;
+		pparm->ch[i].hw_value = pnb->nb_rpt.ch_list[i].hw_value;
 		pparm->ch[i].flags = RTW_IEEE80211_CHAN_PASSIVE_SCAN;
-		pparm->ch[i].band = pnb->nb_rpt_ch_list[i].band;
+		pparm->ch[i].band = pnb->nb_rpt.ch_list[i].band;
 	}
 
 	pmlmepriv->nb_info.nb_rpt_valid = _FALSE;
@@ -1008,10 +995,10 @@ static u8 rtw_wnm_nb_elem_parsing(
 				pcandidate->nb_rpt.phy_type,
 				pcandidate->preference);
 		} else {
-			if (_rtw_memcmp(&pnb->nb_rpt[i], pie,
+			if (_rtw_memcmp(&pnb->nb_rpt.nb_list[i].ent, pie,
 				sizeof(struct nb_rpt_hdr)) == _FALSE)
 				*nb_rpt_is_same = _FALSE;
-			_rtw_memcpy(&pnb->nb_rpt[i], pie,
+			_rtw_memcpy(&pnb->nb_rpt.nb_list[i].ent, pie,
 				sizeof(struct nb_rpt_hdr));
 		}
 		nb_rpt_entries++;
@@ -1075,46 +1062,45 @@ static void rtw_wnm_nb_info_update(
 	if (!pnb)
 		return;
 
-	pnb->nb_rpt_ch_list_num = 0;
+	pnb->nb_rpt.ch_list_num = 0;
 	for (i=0; i<nb_rpt_entries; i++) {
 		is_found = _FALSE;
 		if (from_btm) {
 			pcand = (pcandidates+i);
-			if (_rtw_memcmp(&pnb->nb_rpt[i], &pcand->nb_rpt,
+			if (_rtw_memcmp(&pnb->nb_rpt.nb_list[i].ent, &pcand->nb_rpt,
 					sizeof(struct nb_rpt_hdr)) == _FALSE)
 				*nb_rpt_is_same = _FALSE;
-			_rtw_memcpy(&pnb->nb_rpt[i], &pcand->nb_rpt,
+			_rtw_memcpy(&pnb->nb_rpt.nb_list[i].ent, &pcand->nb_rpt,
 					sizeof(struct nb_rpt_hdr));
 		}
 
 		RTW_WNM_INFO("WNM: bssid(" MAC_FMT
 			") , bss_info(0x%04X), reg_class(0x%02X),"
 			" ch_num(%d), phy_type(0x%02X)\n",
-			MAC_ARG(pnb->nb_rpt[i].bssid), pnb->nb_rpt[i].bss_info,
-			pnb->nb_rpt[i].reg_class, pnb->nb_rpt[i].ch_num,
-			pnb->nb_rpt[i].phy_type);
+			MAC_ARG(pnb->nb_rpt.nb_list[i].ent.bssid), pnb->nb_rpt[i].bss_info,
+			pnb->nb_rpt.nb_list[i].ent.reg_class, pnb->nb_rpt[i].ch_num,
+			pnb->nb_rpt.nb_list[i].ent.phy_type);
 
-		if (pnb->nb_rpt[i].ch_num == 0)
+		if (pnb->nb_rpt.nb_list[i].ent.ch_num == 0)
 			continue;
 
 		for (j=0; j<nb_rpt_entries; j++) {
-			if (pnb->nb_rpt[i].ch_num ==
-				pnb->nb_rpt_ch_list[j].hw_value) {
+			if (pnb->nb_rpt.nb_list[i].ent.ch_num ==
+				pnb->nb_rpt.ch_list[j].hw_value) {
 				is_found = _TRUE;
 				break;
 			}
 		}
 
 		if (!is_found) {
-			pnb->nb_rpt_ch_list[pnb->nb_rpt_ch_list_num].hw_value =\
-				pnb->nb_rpt[i].ch_num;
-			pnb->nb_rpt_ch_list[pnb->nb_rpt_ch_list_num].band =
-				rtw_get_band_by_op_class(pnb->nb_rpt[i].reg_class);
+			pnb->nb_rpt.ch_list[pnb->nb_rpt.ch_list_num].hw_value =\
+				pnb->nb_rpt.nb_list[i].ent.ch_num;
+			pnb->nb_rpt.ch_list[pnb->nb_rpt.ch_list_num].band =
+				rtw_get_band_by_op_class(pnb->nb_rpt.nb_list[i].ent.reg_class);
 			/* error handling */
-			if (pnb->nb_rpt_ch_list[pnb->nb_rpt_ch_list_num].band == BAND_MAX)
-				pnb->nb_rpt_ch_list[pnb->nb_rpt_ch_list_num].band = BAND_ON_24G;
-
-			pnb->nb_rpt_ch_list_num++;
+			if (pnb->nb_rpt.ch_list[pnb->nb_rpt.ch_list_num].band == BAND_MAX)
+				pnb->nb_rpt.ch_list[pnb->nb_rpt.ch_list_num].band = BAND_ON_24G;
+			pnb->nb_rpt.ch_list_num++;
 		}
 	}
 }
@@ -1123,12 +1109,13 @@ struct wlan_network * rtw_wnm_btm_candidate_check(_adapter *padapter,
 	struct roam_nb_info *pnb, struct wlan_network *pnetwork)
 {
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+	struct recv_info *precvinfo = &padapter->recvinfo;
 	struct wlan_network *cnetwork = pmlmepriv->cur_network_scanned;
-	int i, preference = 0;
+	int i, preference = 0, delta;
 	s8 rssi;
 
-	for (i = 0; i < pnb->last_nb_rpt_entries; i++) {
-		if ((_rtw_memcmp(pnb->nb_rpt[i].bssid,\
+	for (i = 0; i < pnb->nb_rpt.nb_list_num; i++) {
+		if ((_rtw_memcmp(pnb->nb_rpt.nb_list[i].ent.bssid,\
 			padapter->mlmepriv.dev_cur_network.network.MacAddress, ETH_ALEN))) {
 			/* pnb has self entry */
 			preference = 1;
@@ -1140,22 +1127,22 @@ struct wlan_network * rtw_wnm_btm_candidate_check(_adapter *padapter,
 			continue;
 		}
 
-#ifndef DBG_WNM_UNIT_TEST
-		/* check RSSI */
-		if (!rtw_mbo_wifi_logo_test(padapter)) {
-			rssi = pnetwork->network.PhyInfo.rssi - cnetwork->network.PhyInfo.rssi;
-			if (rssi < pmlmepriv->roam_rssi_diff_th) {
+		if (!rtw_mbo_wifi_logo_test(padapter) &&
+			!rtw_chk_roam_flags(padapter, RTW_ROAM_BTM_IGNORE_DELTA)) {
+			/* check RSSI */
+			rssi = pnetwork->network.PhyInfo.rssi - precvinfo->bcn_rssi;
+			delta = wnm_roam_rssi_delta(pmlmepriv);
+			if (rssi < delta) {
 				rtw_wnm_candidate_info(pnetwork, cnetwork, "delta");
 				continue;
 			}
 		}
-#endif
 
-		if (_rtw_memcmp(pnb->nb_rpt[i].bssid,
+		if (_rtw_memcmp(pnb->nb_rpt.nb_list[i].ent.bssid,
 			pnetwork->network.MacAddress, ETH_ALEN) == _TRUE) {
-			_rtw_memcpy(pnb->roam_target_addr, pnb->nb_rpt[i].bssid, ETH_ALEN);
+			_rtw_memcpy(pnb->roam_target_addr, pnb->nb_rpt.nb_list[i].ent.bssid, ETH_ALEN);
 
-			/* Only accept 1'st entry(highest preference) */
+			/* Only accept 1'st entry(highest preference) */ //TODO
 			if (pnb->preference_en && i != preference) {
 				rtw_wnm_candidate_info(pnetwork, cnetwork, "!prefer");
 				break;
@@ -1180,20 +1167,16 @@ struct wlan_network * rtw_wnm_btm_candidate_select(_adapter *padapter, struct ro
 		ignore_currrent = _TRUE;
 #endif
 
-	for (i = 0; i < pnb->last_nb_rpt_entries; i++) {
-		if (ignore_currrent &&
-			(_rtw_memcmp(pnb->nb_rpt[i].bssid,\
-			padapter->mlmepriv.dev_cur_network.network.MacAddress,
-			ETH_ALEN))) {
-			RTW_WNM_INFO("WNM: ignore candidate "MAC_FMT
-				" for it's connected(%u)!\n",
-					MAC_ARG(pnb->nb_rpt[i].bssid), i);
+	for (i = 0; i < pnb->nb_rpt.nb_list_num; i++) {
+		if (ignore_currrent && (_rtw_memcmp(pnb->nb_rpt.nb_list[i].ent.bssid,\
+			padapter->mlmepriv.dev_cur_network.network.MacAddress, ETH_ALEN))) {
+			RTW_INFO("WNM: ignore candidate "MAC_FMT " for it's connected(%u)!\n",
+					MAC_ARG(pnb->nb_rpt.nb_list[i].ent.bssid), i);
 			continue;
 		}
 
-		pnetwork = rtw_find_network(
-				&(pmlmepriv->scanned_queue),
-				pnb->nb_rpt[i].bssid);
+		pnetwork = rtw_find_network(&(pmlmepriv->scanned_queue),
+				pnb->nb_rpt.nb_list[i].ent.bssid);
 
 		if (pnetwork) {
 			bfound = _TRUE;
@@ -1203,7 +1186,7 @@ struct wlan_network * rtw_wnm_btm_candidate_select(_adapter *padapter, struct ro
 
 	if (bfound) {
 		_rtw_memcpy(pnb->roam_target_addr,
-			pnb->nb_rpt[i].bssid, ETH_ALEN);
+			pnb->nb_rpt.nb_list[i].ent.bssid, ETH_ALEN);
 		RTW_INFO("WNM: select btm entry(%d) -"
 			" %s("MAC_FMT", ch:%u) rssi:%d\n"
 			, i
@@ -1234,7 +1217,7 @@ u32 rtw_wnm_btm_candidates_survey(
 	}
 
 	/*clean the status set last time*/
-	_rtw_memset(&pnb->nb_rpt_ch_list, 0, sizeof(pnb->nb_rpt_ch_list));
+	_rtw_memset(&pnb->nb_rpt.ch_list, 0, sizeof(pnb->nb_rpt.ch_list));
 	pnb->nb_rpt_valid = _FALSE;
 	if (!rtw_wnm_nb_elem_parsing(
 			pframe, elem_len, from_btm,
@@ -1254,15 +1237,15 @@ u32 rtw_wnm_btm_candidates_survey(
 	}
 
 	RTW_WNM_INFO("nb_rpt_is_same = %d, nb_rpt_entries = %d,"
-		" last_nb_rpt_entries = %d\n",
+		" nb_list_num = %d\n",
 		nb_rpt_is_same, nb_rpt_entries,
-		pnb->last_nb_rpt_entries);
+		pnb->nb_rpt.nb_list_num);
 	if ((nb_rpt_is_same == _TRUE) &&
-		(nb_rpt_entries == pnb->last_nb_rpt_entries)) {
+		(nb_rpt_entries == pnb->nb_rpt.nb_list_num)) {
 		pnb->nb_rpt_is_same = _TRUE;
 	} else {
 		pnb->nb_rpt_is_same = _FALSE;
-		pnb->last_nb_rpt_entries = nb_rpt_entries;
+		pnb->nb_rpt.nb_list_num = nb_rpt_entries;
 	}
 	pnb->nb_rpt_valid = _TRUE;
 	ret = _SUCCESS;
@@ -1502,5 +1485,41 @@ void rtw_wnm_process_notification_req(
 		RTW_WLAN_ACTION_WNM_NOTIF_RSP, 0, dialog);
 
 }
+
+void rtw_wnm_start_clnt_join(_adapter *padapter, struct _ADAPTER_LINK *al)
+{
+	struct mlme_ext_priv *pmlmeext = &(padapter->mlmeextpriv);
+	struct mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
+	struct	mlme_priv *pmlmepriv = &(padapter->mlmepriv);
+#ifdef CONFIG_RTW_80211R
+	struct ft_roam_info *pft_roam = &(pmlmepriv->ft_roam);
+
+	if (rtw_ft_otd_roam(padapter)) {
+		pmlmeinfo->state = WIFI_FW_AUTH_SUCCESS | WIFI_FW_STATION_STATE;
+		pft_roam->ft_event.ies =
+			(pft_roam->ft_action + \
+			sizeof(struct rtw_ieee80211_hdr_3addr) + 16);
+		pft_roam->ft_event.ies_len =
+			(pft_roam->ft_action_len - \
+			sizeof(struct rtw_ieee80211_hdr_3addr));
+
+		/*Not support RIC*/
+		pft_roam->ft_event.ric_ies =  NULL;
+		pft_roam->ft_event.ric_ies_len = 0;
+		rtw_ft_report_evt(padapter);
+		return;
+	}
+#endif
+	/* update beacon_key */
+	if (pmlmepriv->roam_network->bcn_keys_valid)
+		_rtw_memcpy(&al->mlmepriv.cur_beacon_keys,
+			&pmlmepriv->roam_network->bcn_keys, sizeof(struct beacon_keys));
+	else
+		RTW_WARN("WNM : invalid beacon key!!\n");
+
+	pmlmeinfo->state = WIFI_FW_AUTH_NULL | WIFI_FW_STATION_STATE;
+	start_clnt_auth(padapter);
+}
+
 #endif /*defined(CONFIG_RTW_WNM) || defined(CONFIG_RTW_80211K) || defined(CONFIG_RTW_FSM_RRM)*/
 

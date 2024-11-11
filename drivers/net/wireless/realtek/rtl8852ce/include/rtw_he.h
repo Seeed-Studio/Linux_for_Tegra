@@ -719,9 +719,9 @@
 	SET_BITS_TO_LE_1BYTE((_pEleStart), 0, 8, _val)
 #define SET_HE_OP_INFO_CHAN_WIDTH(_pEleStart, _val) \
 	SET_BITS_TO_LE_1BYTE((_pEleStart) + 1, 0, 2, _val)
-#define SET_HE_OP_INFO_DUPL_BCN(_pEleStart) \
+#define SET_HE_OP_INFO_DUPL_BCN(_pEleStart, _val) \
 	SET_BITS_TO_LE_1BYTE((_pEleStart) + 1, 2, 1, _val)
-#define SET_HE_OP_INFO_REGULATORY_INFO(_pEleStart) \
+#define SET_HE_OP_INFO_REGULATORY_INFO(_pEleStart, _val) \
 	SET_BITS_TO_LE_1BYTE((_pEleStart) + 1, 3, 3, _val)
 
 #define SET_HE_OP_INFO_CENTER_FREQ_0(_pEleStart, _val) \
@@ -1088,7 +1088,8 @@ void HE_mu_edca_handler(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
 void HE_6g_bandcap_handler(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
 			PNDIS_802_11_VARIABLE_IEs pIE);
 u32 rtw_build_he_cap_ie(_adapter *padapter, struct _ADAPTER_LINK *padapter_link, u8 *pbuf, enum band_type band);
-u32 rtw_build_he_operation_ie(_adapter *padapter, struct _ADAPTER_LINK *padapter_link, u8 *pbuf, struct rtw_chan_def *chandef);
+u32 rtw_build_he_operation_ie(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
+	u8 *pbuf, struct rtw_chan_def *chandef, u8 regu);
 
 struct protocol_cap_t;
 struct phy_cap_t;

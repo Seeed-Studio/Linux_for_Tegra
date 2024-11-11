@@ -134,9 +134,7 @@ typedef struct _RT_PMKID_LIST {
 	u8						bUsed;
 	u8						Bssid[6];
 	u8						PMKID[16];
-	u8						SsidBuf[33];
-	u8						*ssid_octet;
-	u16						ssid_length;
+	systime                                         last_use;
 } RT_PMKID_LIST, *PRT_PMKID_LIST;
 
 struct link_security_priv {

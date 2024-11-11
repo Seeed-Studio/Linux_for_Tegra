@@ -15,6 +15,7 @@
 #define _RTW_REGDB_PHL_C_
 
 #include <drv_types.h>
+#include "rtw_regdb.h"
 
 static enum rtw_regd phl_regulation_to_regd(enum REGULATION reg)
 {
@@ -180,22 +181,18 @@ static void phl_regdb_get_ver_str(char *buf, size_t buf_len)
 	snprintf(buf, buf_len, "%d-%d", rtw_phl_get_regu_chplan_ver(), rtw_phl_get_regu_country_ver());
 }
 
-struct rtw_regdb_ops regdb_ops = {
-	.get_default_regd_2g = phl_regdb_get_default_regd_2g,
-#if CONFIG_IEEE80211_BAND_5GHZ
-	.get_default_regd_5g = phl_regdb_get_default_regd_5g,
-#endif
-	.is_domain_code_valid = phl_regdb_is_domain_code_valid,
-	.domain_get_ch = phl_regdb_domain_get_ch,
-
-#if CONFIG_IEEE80211_BAND_6GHZ
-	.get_default_regd_6g = phl_regdb_get_default_regd_6g,
-	.is_domain_code_6g_valid = phl_regdb_is_domain_code_6g_valid,
-	.domain_6g_get_ch = phl_regdb_domain_6g_get_ch,
-#endif
-
-	.get_chplan_from_alpha2 = phl_regdb_get_chplan_from_alpha2,
-
-	.get_ver_str = phl_regdb_get_ver_str,
-};
+DECL_REGDB_OPS(
+	NULL,					/* _init */
+	NULL,					/* _deinit */
+	phl_regdb_get_default_regd_2g,		/* _get_default_regd_2g */
+	phl_regdb_get_default_regd_5g,		/* _get_default_regd_5g */
+	phl_regdb_is_domain_code_valid,		/* _is_domain_code_valid */
+	phl_regdb_domain_get_ch,		/* _domain_get_ch */
+	phl_regdb_get_default_regd_6g,		/* _get_default_regd_6g */
+	phl_regdb_is_domain_code_6g_valid,	/* _is_domain_code_6g_valid */
+	phl_regdb_domain_6g_get_ch,		/* _domain_6g_get_ch */
+	phl_regdb_get_chplan_from_alpha2,	/* _get_chplan_from_alpha2 */
+	NULL,					/* _dump_chplan_test */
+	phl_regdb_get_ver_str			/* _get_ver_str */
+)
 

@@ -146,6 +146,7 @@ struct cmd_scan_ctrl {
 	struct phl_scan_channel *scan_ch;
 	int ch_idx; /* current scaned cahnnel index, init vaule = (-1) */
 	u32 last_opch_add_time; /* used for timer */
+	u32 off_ch_time;
 };
 
 enum scan_result {
@@ -185,6 +186,7 @@ struct rtw_phl_scan_param {
 
 	struct phl_scan_channel *ch;
 	u8 ch_num;
+	u8 done_num;
 	u32 ch_sz;
 	u8 repeat;  /* 255 means scan forever until cancel */
 

@@ -236,6 +236,7 @@ enum mlme_auth_type {
 #define WIFI_FREQUENCY_BAND_2GHZ 2
 
 #define rtw_band_valid(band) ((band) <= WIFI_FREQUENCY_BAND_2GHZ)
+#define rtw_band_str(band) (band==BAND_ON_6G)?"6G":(band==BAND_ON_5G)?"5G":(band==BAND_ON_24G)?"2G":"unknown"
 
 enum SCAN_RESULT_TYPE {
 	SCAN_RESULT_P2P_ONLY = 0,		/*	Will return all the P2P devices. */
@@ -450,7 +451,11 @@ enum {
 	RTW_ROAM_ON_EXPIRED = BIT0,
 	RTW_ROAM_ON_RESUME = BIT1,
 	RTW_ROAM_ACTIVE = BIT2,
-	RTW_ROAM_BTM = BIT3,
+	RTW_ROAM_QUICK_SCAN = BIT3,
+	RTW_ROAM_ACTIVE_INTERVAL_EXT = BIT4,
+	RTW_ROAM_BTM_IGNORE_DELTA = BIT5,
+	RTW_ROAM_ACTIVE_IGNORE_CHK = BIT6,
+	RTW_ROAM_BTM = BIT7
 };
 
 #define UNASOC_STA_SRC_RX_BMC		0
@@ -606,16 +611,28 @@ struct mlme_priv {
 	u8	to_join; /* flag */
 	u16 join_status;
 #ifdef CONFIG_LAYER2_ROAMING
+	u8 roam_scan_order[4];
 	u8 to_roam; /* roaming trying times */
 	struct wlan_network *roam_network; /* the target of active roam */
-	u8 roam_flags;
-	u8 roam_rssi_diff_th; /* rssi difference threshold for active scan candidate selection */
+	u16 roam_flags;
+#ifdef PRIVATE_N
+	u8 roam_idle_rssi_delta; /* idle rssi delta for active scan candidate selection */
+	u8 roam_busy_rssi_delta; /* busy rssi delta for active scan candidate selection */
+	u8 roam_idle_rssi_th;
+	u8 roam_busy_rssi_th;
+#else
+	u8 roam_rssi_delta; /* rssi delta for active scan candidate selection */
+	u8 roam_rssi_th;
+#endif
 	u32 roam_scan_int; 		/* scan interval for active roam (Unit:2 second)*/
 	u32 roam_scanr_exp_ms; /* scan result expire time in ms  for roam */
 	u8 roam_tgt_addr[ETH_ALEN]; /* request to roam to speicific target without other consideration */
-	u8 roam_rssi_threshold;
+	u8 roam_from_addr[ETH_ALEN];
+	u8 roam_scan_count;
+	u8 roam_freeze_rssi;
 	systime last_roaming;
 	bool need_to_roam;
+	bool roam_buf_pkt;
 #endif
 
 	u32 defs_lmt_sta;
@@ -655,8 +672,6 @@ struct mlme_priv {
 #endif
 
 	/* uint wireless_mode; no used, remove it */
-
-	u32	auto_scan_int_ms;
 
 	_timer assoc_timer;
 
@@ -702,7 +717,6 @@ struct mlme_priv {
 	RT_LINK_DETECT_T	LinkDetectInfo;
 
 	u8	acm_mask; /* for wmm acm mask */
-	enum rtw_phl_scan_type scan_mode; /* active: 1, passive: 0 */
 
 	u8 *wps_probe_req_ie;
 	u32 wps_probe_req_ie_len;
@@ -826,11 +840,6 @@ struct mlme_priv {
 #endif
 };
 
-#define rtw_mlme_set_auto_scan_int(adapter, ms) \
-	do { \
-		adapter->mlmepriv.auto_scan_int_ms = ms; \
-	} while (0)
-
 #define set_assoc_timer(mlme, ms) \
 	do { \
 		/*RTW_INFO("%s set_assoc_timer(%p, %d)\n", __FUNCTION__, (mlme), (ms));*/ \
@@ -850,7 +859,10 @@ struct mlme_priv {
 #define RTW_AUTO_SCAN_REASON_MESH_OFFCH_CAND	BIT4
 #define RTW_AUTO_SCAN_REASON_CIS_ENV_BSS	BIT5
 
-void rtw_mlme_reset_auto_scan_int(_adapter *adapter, u8 *reason);
+/* special auto scan interval values */
+#define RTW_ASCAN_INT_NONE	0	/* don't do auto scan */
+#define RTW_ASCAN_INT_URGENT	1	/* will ignore busy status */
+#define RTW_ASCAN_INT_ASAP	2	/* will blocked by busy status */
 
 #ifdef CONFIG_AP_MODE
 
@@ -900,6 +912,17 @@ __inline static u8 *get_link_bssid(struct link_mlme_priv *pmlmepriv)
 	/* if sta_mode:pmlmepriv->cur_network.network.MacAddress=> bssid */
 	/* if adhoc_mode:pmlmepriv->cur_network.network.MacAddress=> ibss mac address */
 	return pmlmepriv->cur_network.network.MacAddress;
+}
+
+__inline static u8 *get_mbssid(struct mlme_priv *pmlmepriv)
+{
+
+#ifdef CONFIG_STA_MULTIPLE_BSSID
+	if (pmlmepriv->dev_cur_network.network.is_mbssid)
+		return pmlmepriv->dev_cur_network.network.mbsMacAddress;
+	else
+#endif
+		return pmlmepriv->dev_cur_network.network.MacAddress;
 }
 
 __inline static u8 *get_bssid(struct mlme_priv *pmlmepriv)
@@ -1011,6 +1034,7 @@ u32 rtw_join_abort_timeout(_adapter *adapter, u32 timeout_ms);
 
 int rtw_cached_pmkid(_adapter *adapter, u8 *bssid);
 int rtw_pmkid_sync_rsn(_adapter *adapter, u8 *ie, uint ie_len, int i_ent);
+void rtw_set_pmksa(_adapter *padapter, u8 *bssid, u8 *pmkid);
 
 extern int rtw_restruct_sec_ie(_adapter *adapter, u8 *out_ie);
 extern int rtw_restruct_wmm_ie(_adapter *adapter, struct _ADAPTER_LINK *adapter_link,
@@ -1135,6 +1159,7 @@ void rtw_set_to_roam(_adapter *adapter, u8 to_roam);
 u8 rtw_dec_to_roam(_adapter *adapter);
 u8 rtw_to_roam(_adapter *adapter);
 struct wlan_network *rtw_select_roaming_candidate(struct mlme_priv *pmlmepriv);
+void rtw_wnm_candidate_info(struct wlan_network *pnetwork, struct wlan_network *cnetwork, u8 *reason);
 int rtw_check_roaming_candidate(struct mlme_priv *mlme, struct wlan_network **candidate,
 	struct wlan_network *competitor);
 #else

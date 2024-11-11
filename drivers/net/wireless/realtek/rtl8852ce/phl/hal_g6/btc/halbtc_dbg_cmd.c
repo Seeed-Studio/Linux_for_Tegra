@@ -353,12 +353,14 @@ static void _show_wl_info(struct btc_t *btc, u32 *used, char input[][MAX_ARGV],
 
 	s_1ant = md->ant.single_pos? "(s1)" : "(s0)";
 
-	CLI_PRT("\n\r %-15s : tx[num:%d/ss:%d%s%s], rx[num:%d/ss:%d%s%s]",
+	CLI_PRT("\n\r %-15s : tx[num:%d/ss:%d%s%s/path:%s], rx[num:%d/ss:%d%s%s/path:%s]",
 		"[ant_stream]",
 		p->phy_cap[0].tx_path_num, p->phy_cap[0].txss,
 		(p->phy_cap[0].txss != 1? "" : s_1ant), s_tx,
+		id_to_str(BTC_STR_PATH, (u32)(md->ant.path_pos & 0xf0)>> 4),
 		p->phy_cap[0].rx_path_num, p->phy_cap[0].rxss,
-		(p->phy_cap[0].rxss != 1? "" : s_1ant), s_rx);
+		(p->phy_cap[0].rxss != 1? "" : s_1ant), s_rx,
+		id_to_str(BTC_STR_PATH, (u32)md->ant.path_pos & 0xf));
 
 	if (wl->role_info.dbcc_en)
 		CLI_PRT(", tx1[num:%d/ss:%d], rx1[num:%d/ss:%d]",
@@ -503,8 +505,9 @@ static void _show_bt_info(struct btc_t *btc, u32 *used, char input[][MAX_ARGV],
 	CLI_PRT("igno_wl:%d, mailbox_avl:%d, rfk_state:0x%x",
 		bt->igno_wl, bt->mbx_avl, bt->rfk_info.val);
 
-	CLI_PRT("\n\r %-15s : profile:%s%s%s%s%s%s", "[profile]",
+	CLI_PRT("\n\r %-15s : profile:%s%s%s%s%s%s%s", "[profile]",
 		((bt_linfo->profile_cnt.now == 0) ? "None," : ""),
+		(bt->hiduty_dev ? "Hi-Duty-Dev," : ""),
 		(bt_linfo->hfp_desc.exist? "HFP," : ""),
 		(bt_linfo->hid_desc.exist? "HID," : ""),
 		(bt_linfo->a2dp_desc.exist?
@@ -641,6 +644,7 @@ static void _show_dm_info(struct btc_t *btc, u32 *used, char input[][MAX_ARGV],
 	struct btc_bt_psd_dm *bp = &btc->bt_psd_dm;
 	struct btc_aiso_val *av = &bp->aiso_val;
 	struct btc_ant_info *ant = &btc->mdinfo.ant;
+	struct btc_module *md = &btc->mdinfo;
 	u8 cnt, aiso_cur, aiso_ori = ant->isolation;
 
 	if (!(dm->coex_info_map & BTC_COEX_INFO_DM))
@@ -670,11 +674,17 @@ static void _show_dm_info(struct btc_t *btc, u32 *used, char input[][MAX_ARGV],
 #endif
 
 	CLI_PRT("\n\r %-15s : wl_tx_limit[en:%d/max_t:%dus],"
-		" bt_slot_req:[%d/%d], bt_stbc_req:%d, ofld[scan:%d/",
+		" wl_trx_1ss[tx:%d/path:%s/rx:%d/path:%s],"
+		" bt_slot_req:[%d/%d], bt_stbc_req:%d, wa_type:0x%x,"
+		" ofld[scan:%d/",
 		"[dm_drv_ctrl]",
 		dm->wl_tx_limit.en, dm->wl_tx_limit.tx_time,
+		dm->wl_trx_nss.tx_ss,
+		id_to_str(BTC_STR_PATH, (u32)dm->wl_trx_nss.tx_path),
+		dm->wl_trx_nss.rx_ss,
+		id_to_str(BTC_STR_PATH, (u32)dm->wl_trx_nss.rx_path),
 		btc->bt_req_len[HW_PHY_0], btc->bt_req_len[HW_PHY_1],
-		btc->bt_req_stbc, btc->hal->scanofld_en);
+		btc->bt_req_stbc, md->wa_type, btc->hal->scanofld_en);
 
 #ifdef BTC_CONFIG_FW_IO_OFLD_SUPPORT
 	CLI_PRT("/io:%d", hal_btc_check_io_ofld(btc));

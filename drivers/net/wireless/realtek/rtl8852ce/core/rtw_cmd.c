@@ -5091,6 +5091,11 @@ u8 rtw_drvextra_cmd_hdl(_adapter *padapter, unsigned char *pbuf)
 		break;
 #endif
 #endif
+#ifdef CONFIG_BTC
+	case CORE_BTC_CID:
+		ret = rtw_core_btc_hdl(padapter, (enum rtw_core_btc_cmd_id)pdrvextra_cmd->type);
+		break;
+#endif
 	default:
 		break;
 	}

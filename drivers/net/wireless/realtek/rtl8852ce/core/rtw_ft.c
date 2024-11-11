@@ -40,7 +40,6 @@ void rtw_ft_info_init(struct ft_roam_info *pft)
 		| RTW_FT_BTM_ROAM
 #endif
 		;
-	pft->ft_updated_bcn = _FALSE;
 	RTW_FT_INFO("%s : ft_flags=0x%02x\n", __func__, pft->ft_flags);
 }
 
@@ -272,116 +271,6 @@ void rtw_ft_validate_akm_type(_adapter  *padapter,
 	}
 
 	RTW_FT_INFO("%s : ft_flags=0x%02x\n", __func__, pft_roam->ft_flags);
-}
-
-void rtw_ft_update_bcn(_adapter *padapter, union recv_frame *precv_frame)
-{
-	struct _ADAPTER_LINK *padapter_link = precv_frame->u.hdr.adapter_link;
-	struct link_mlme_ext_priv *pmlmeext = &padapter_link->mlmeextpriv;
-	struct link_mlme_ext_info *pmlmeinfo = &(padapter_link->mlmeextpriv.mlmext_info);
-	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
-	u8 *pframe = precv_frame->u.hdr.rx_data;
-	uint len = precv_frame->u.hdr.len;
-	WLAN_BSSID_EX *pbss;
-
-	if (rtw_ft_chk_status(padapter,RTW_FT_ASSOCIATED_STA)
-		&& (pmlmepriv->ft_roam.ft_updated_bcn == _FALSE)) {
-		pbss = (WLAN_BSSID_EX*)rtw_malloc(sizeof(WLAN_BSSID_EX));
-		if (pbss) {
-			if (collect_bss_info(
-				padapter, precv_frame, pbss) == _SUCCESS) {
-				struct beacon_keys recv_beacon;
-
-				/* Update adapter network info */
-				rtw_update_adapter_network(
-					&(pmlmepriv->dev_cur_network.network),
-					pbss, padapter, _TRUE);
-
-				rtw_update_network(
-					&(padapter_link->mlmepriv.cur_network.network),
-					pbss, padapter, _TRUE);
-
-				/* Move into rtw_get_bcn_keys */
-				/* rtw_get_bcn_info(&(pmlmepriv->cur_network)); */
-
-				/* update bcn keys */
-				if (rtw_get_bcn_keys(padapter, padapter_link, pframe, len,
-						&recv_beacon) == _TRUE) {
-
-					RTW_FT_INFO("%s: beacon keys ready\n",
-						__func__);
-
-					_rtw_memcpy(
-						&padapter_link->mlmepriv.cur_beacon_keys,
-						&recv_beacon,
-						sizeof(recv_beacon));
-
-					if (is_hidden_ssid(
-						recv_beacon.ssid,
-						recv_beacon.ssid_len)) {
-
-						_rtw_memcpy(
-						padapter_link->mlmepriv.cur_beacon_keys.ssid,
-						pmlmeinfo->network.Ssid.Ssid,
-						IW_ESSID_MAX_SIZE);
-
-						padapter_link->mlmepriv.cur_beacon_keys.ssid_len = \
-						pmlmeinfo->network.Ssid.SsidLength;
-					}
-				} else {
-					RTW_ERR("%s: get beacon keys failed\n",
-						__func__);
-					_rtw_memset(
-						&padapter_link->mlmepriv.cur_beacon_keys,
-						0, sizeof(recv_beacon));
-				}
-				#ifdef CONFIG_BCN_CNT_CONFIRM_HDL
-				pmlmepriv->new_beacon_cnts = 0;
-				#endif
-			}
-			rtw_mfree((u8*)pbss, sizeof(WLAN_BSSID_EX));
-		}
-
-		/* check the vendor of the assoc AP */
-		padapter->mlmeextpriv.mlmext_info.assoc_AP_vendor =
-			check_assoc_AP(
-				pframe + sizeof(struct rtw_ieee80211_hdr_3addr),
-				(len - sizeof(struct rtw_ieee80211_hdr_3addr))
-				);
-
-		/* update TSF Value */
-		update_TSF(pmlmeext, pframe, len);
-		pmlmeext->bcn_cnt = 0;
-		pmlmeext->last_bcn_cnt = 0;
-		pmlmepriv->ft_roam.ft_updated_bcn = _TRUE;
-	}
-}
-
-void rtw_ft_start_clnt_join(_adapter *padapter)
-{
-	struct mlme_ext_priv *pmlmeext = &(padapter->mlmeextpriv);
-	struct mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
-	struct	mlme_priv *pmlmepriv = &(padapter->mlmepriv);
-	struct ft_roam_info *pft_roam = &(pmlmepriv->ft_roam);
-
-	if (rtw_ft_otd_roam(padapter)) {
-		pmlmeinfo->state = WIFI_FW_AUTH_SUCCESS | WIFI_FW_STATION_STATE;
-		pft_roam->ft_event.ies =
-			(pft_roam->ft_action + \
-			sizeof(struct rtw_ieee80211_hdr_3addr) + 16);
-		pft_roam->ft_event.ies_len =
-			(pft_roam->ft_action_len - \
-			sizeof(struct rtw_ieee80211_hdr_3addr));
-
-		/*Not support RIC*/
-		pft_roam->ft_event.ric_ies =  NULL;
-		pft_roam->ft_event.ric_ies_len = 0;
-		rtw_ft_report_evt(padapter);
-		return;
-	}
-
-	pmlmeinfo->state = WIFI_FW_AUTH_NULL | WIFI_FW_STATION_STATE;
-	start_clnt_auth(padapter);
 }
 
 u8 rtw_ft_update_rsnie(
@@ -709,6 +598,10 @@ void rtw_ft_link_timer_hdl(void *ctx)
 	struct ft_roam_info *pft_roam = &(pmlmepriv->ft_roam);
 
 	if (rtw_ft_chk_status(padapter, RTW_FT_REQUESTING_STA)) {
+		if (pmlmepriv->roam_network) {
+			pmlmepriv->roam_buf_pkt = _TRUE;
+			rtw_roam_stop_queue(padapter);
+		}
 		if (pft_roam->ft_req_retry_cnt < RTW_FT_ACTION_REQ_LMT) {
 			pft_roam->ft_req_retry_cnt++;
 			rtw_ft_issue_action_req(padapter,
@@ -750,8 +643,6 @@ void rtw_ft_roam_status_reset(_adapter *padapter)
 		(!rtw_ft_chk_status(padapter, RTW_FT_REQUESTED_STA))) {
 		rtw_ft_reset_status(padapter);
 	}
-
-	padapter->mlmepriv.ft_roam.ft_updated_bcn = _FALSE;
 }
 
 void rtw_ft_peer_info_init(struct sta_info *psta)

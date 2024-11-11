@@ -862,7 +862,7 @@ u8 *rtw_tdls_set_he_operation(_adapter *padapter, u8 *pframe, struct pkt_attrib 
 	u32 ie_len = 0;
 
 	ie_len = rtw_build_he_operation_ie(padapter, pattrib->adapter_link,
-			pframe, &pattrib->adapter_link->mlmeextpriv.chandef);
+			pframe, &pattrib->adapter_link->mlmeextpriv.chandef, 0);
 	pattrib->pktlen += ie_len;
 
 	return pframe + ie_len;

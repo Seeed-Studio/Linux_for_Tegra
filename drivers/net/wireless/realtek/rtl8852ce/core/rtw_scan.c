@@ -15,12 +15,50 @@
 #include <drv_types.h>
 
 /*rtw_mlme.c*/
-void rtw_init_sitesurvey_parm(_adapter *padapter, struct sitesurvey_parm *pparm)
+void rtw_init_sitesurvey_parm(struct sitesurvey_parm *pparm)
 {
-	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
-
 	_rtw_memset(pparm, 0, sizeof(struct sitesurvey_parm));
-	pparm->scan_mode = pmlmepriv->scan_mode;
+	pparm->scan_mode = RTW_PHL_SCAN_ACTIVE;
+}
+
+void rtw_auto_scan_ch_list_init(struct sitesurvey_parm *parm, u8 band_bmp, u8 flags)
+{
+	u8 ch_num = 0;
+	int band, i;
+	u8 (*center_chs_num)(u8);
+	u8 (*center_chs)(u8, u8);
+	u8 cch_num;
+
+	for (band = 0; band < BAND_MAX; band++) {
+		if (!(band_bmp & band_to_band_cap(band)))
+			continue;
+
+		center_chs_num = center_chs_num_of_band[band];
+		center_chs = center_chs_of_band[band];
+		if (!center_chs_num || !center_chs)
+			continue;
+
+		cch_num = center_chs_num(CHANNEL_WIDTH_20);
+		for (i = 0; i < cch_num; i++) {
+			parm->ch[ch_num].band = band;
+			parm->ch[ch_num].hw_value = center_chs(CHANNEL_WIDTH_20, i);
+			parm->ch[ch_num].flags = flags;
+			ch_num++;
+		}
+	}
+
+	parm->ch_num = ch_num;
+}
+
+static void rtw_auto_scan_ch_list_set_flags(struct sitesurvey_parm *parm, u8 band_bmp, u8 flags)
+{
+	int i;
+
+	for (i = 0; i < parm->ch_num; i++) {
+		if (BIT(parm->ch[i].band) & band_bmp)
+			parm->ch[i].flags = flags;
+	}
+
 }
 
 #ifdef CONFIG_SET_SCAN_DENY_TIMER
@@ -53,16 +91,21 @@ void rtw_set_scan_deny(_adapter *adapter, u32 ms)
 }
 #endif
 
-void rtw_drv_scan_by_self(_adapter *padapter, u8 reason)
+void rtw_drv_scan_by_self(_adapter *padapter, u8 reason, bool urgent)
 {
 	struct sitesurvey_parm *parm = NULL;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	int i;
-#if 1
 	u8 ssc_chk;
 
+	if (!rtw_is_adapter_up(padapter))
+		goto exit;
+
 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
-	if( ssc_chk == SS_DENY_BUSY_TRAFFIC) {
+	if (ssc_chk == SS_DENY_BUSY_TRAFFIC) {
+		if (urgent)
+			; /* auto scan by urgent case, ignore busy traffic */
+		else
 		#ifdef CONFIG_LAYER2_ROAMING
 		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE) {
 			RTW_INFO(FUNC_ADPT_FMT" need to roam, don't care BusyTraffic\n", FUNC_ADPT_ARG(padapter));
@@ -76,72 +119,45 @@ void rtw_drv_scan_by_self(_adapter *padapter, u8 reason)
 		goto exit;
 	}
 
-	if (!rtw_is_adapter_up(padapter))
-		goto exit;
-#else
-	if (rtw_is_scan_deny(padapter))
-		goto exit;
-
-	if (!rtw_is_adapter_up(padapter))
-		goto exit;
-
-	if (rtw_mi_busy_traffic_check(padapter)) {
-#ifdef CONFIG_LAYER2_ROAMING
-		if (rtw_chk_roam_flags(padapter, RTW_ROAM_ACTIVE) && pmlmepriv->need_to_roam == _TRUE) {
-			RTW_INFO("need to roam, don't care BusyTraffic\n");
-		} else
-#endif
-		{
-			RTW_INFO(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
-			goto exit;
-		}
-	}
-	if (check_fwstate(pmlmepriv, WIFI_AP_STATE) && check_fwstate(pmlmepriv, WIFI_UNDER_WPS)) {
-		RTW_INFO(FUNC_ADPT_FMT" WIFI_AP_STATE && WIFI_UNDER_WPS\n", FUNC_ADPT_ARG(padapter));
-		goto exit;
-	}
-	if (check_fwstate(pmlmepriv, (WIFI_UNDER_SURVEY | WIFI_UNDER_LINKING)) == _TRUE) {
-		RTW_INFO(FUNC_ADPT_FMT" WIFI_UNDER_SURVEY|WIFI_UNDER_LINKING\n", FUNC_ADPT_ARG(padapter));
-		goto exit;
-	}
-
-#ifdef CONFIG_CONCURRENT_MODE
-	if (rtw_mi_buddy_check_fwstate(padapter, (WIFI_UNDER_SURVEY | WIFI_UNDER_LINKING | WIFI_UNDER_WPS))) {
-		RTW_INFO(FUNC_ADPT_FMT", but buddy_intf is under scanning or linking or wps_phase\n", FUNC_ADPT_ARG(padapter));
-		goto exit;
-	}
-#endif
-#endif
-
 	RTW_INFO(FUNC_ADPT_FMT" reason:0x%02x\n", FUNC_ADPT_ARG(padapter), reason);
 
 	parm = rtw_malloc(sizeof(*parm));
 	if (parm == NULL)
 		goto exit;
 
-	rtw_init_sitesurvey_parm(padapter, parm);
-	/* only for 20/40 BSS */
-	if (reason == RTW_AUTO_SCAN_REASON_2040_BSS) {
-		for (i=0;i<14;i++) {
-			parm->ch[i].hw_value = i + 1;
-			parm->ch[i].flags = RTW_IEEE80211_CHAN_PASSIVE_SCAN;
-		}
-		parm->ch_num = 14;
-		rtw_sitesurvey_cmd(padapter, parm);
-		goto exit;
-	}
+	rtw_init_sitesurvey_parm(parm);
+	parm->reason = reason;
 
 #ifdef CONFIG_RTW_MBO
 #if defined(CONFIG_RTW_WNM) || defined(CONFIG_RTW_80211K) || defined(CONFIG_RTW_FSM_RRM)
 	if ((reason == RTW_AUTO_SCAN_REASON_ROAM)
 		&& (rtw_roam_nb_scan_list_set(padapter, parm))) {
-		rtw_sitesurvey_cmd(padapter, parm);
-		goto exit;
+		goto scan;
 	}
 #endif
 #endif
 
-	rtw_sitesurvey_cmd(padapter, NULL);
+	/*
+	* reasons below can merge scan
+	* init channels of all band disabled
+	*/
+	rtw_auto_scan_ch_list_init(parm, 0xFF, RTW_IEEE80211_CHAN_DISABLED);
+
+	if (reason & RTW_AUTO_SCAN_REASON_2040_BSS) {
+		rtw_auto_scan_ch_list_set_flags(parm, BIT(BAND_ON_24G)
+			, RTW_IEEE80211_CHAN_PASSIVE_SCAN);
+	}
+
+#ifdef CONFIG_80211D
+	if (reason & RTW_AUTO_SCAN_REASON_CIS_ENV_BSS) {
+		rtw_auto_scan_ch_list_set_flags(parm
+			, adapter_to_rfctl(padapter)->cis_scan_band_bmp
+			, RTW_IEEE80211_CHAN_PASSIVE_SCAN);
+	}
+#endif
+
+scan:
+	rtw_sitesurvey_cmd(padapter, parm);
 exit:
 	if (parm)
 		rtw_mfree(parm, sizeof(*parm));
@@ -1255,6 +1271,8 @@ void add_mbssid_network(_adapter *padapter, WLAN_BSSID_EX *ref_bss)
 	u8 mbssid_index;
 	u8 copy_ie_offset;
 	u32 copy_ie_len = 0;
+	struct wlan_network *pnetwork = NULL;
+	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 
 	mbssid_ie = rtw_get_ie(ref_bss->IEs + _BEACON_IE_OFFSET_
 		                              , WLAN_EID_MULTIPLE_BSSID
@@ -1329,6 +1347,7 @@ void add_mbssid_network(_adapter *padapter, WLAN_BSSID_EX *ref_bss)
 					rtw_gen_new_bssid(ref_bss->MacAddress, max_bssid_indicator
 						                          , mbssid_index, pbss->MacAddress);
 					pbss->mbssid_index = mbssid_index;
+					_rtw_memcpy(pbss->mbsMacAddress, ref_bss->MacAddress, ETH_ALEN);
 					break;
 				default:
 					break;
@@ -1338,7 +1357,16 @@ void add_mbssid_network(_adapter *padapter, WLAN_BSSID_EX *ref_bss)
 				/*RTW_INFO("%s, j=%d\n", __func__, j);*/
 			}
 			pbss->is_mbssid = _TRUE;
-			add_network(padapter, pbss);
+			pnetwork = add_network(padapter, pbss);
+#ifdef CONFIG_RTW_FSM_BTM
+			if (padapter->fsmpriv.btmpriv.btm && pnetwork) {
+				/* check SSID */
+				if ((pbss->Ssid.SsidLength == pmlmepriv->dev_cur_network.network.Ssid.SsidLength) &&
+					_rtw_memcmp(pbss->Ssid.Ssid, pmlmepriv->dev_cur_network.network.Ssid.Ssid,
+					pbss->Ssid.SsidLength))
+					rtw_btm_notify_scan_found_candidate(padapter->fsmpriv.btmpriv.btm, pnetwork);
+			}
+#endif
 			rtw_mfree((u8 *)pbss, sizeof(WLAN_BSSID_EX));
 			break;
 		case MBSSID_VENDOR_SPECIFIC_ID:
@@ -1456,6 +1484,10 @@ void rtw_surveydone_event_callback(_adapter *adapter, u8 *pbuf)
 	_rtw_spinunlock_bh(&pmlmepriv->lock);
 
 	_rtw_spinlock_bh(&pmlmepriv->lock);
+
+	if (adapter_to_pwrctl(adapter)->bInSuspend == _TRUE)
+		goto done;
+
 	#ifdef CONFIG_SIGNAL_STAT_PROCESS
 	rtw_set_signal_stat_timer(&adapter->recvinfo);
 	#endif
@@ -1516,7 +1548,7 @@ void rtw_surveydone_event_callback(_adapter *adapter, u8 *pbuf)
 
 					scan_parm = rtw_malloc(sizeof(*scan_parm));
 					if (scan_parm) {
-						rtw_init_sitesurvey_parm(adapter, scan_parm);
+						rtw_init_sitesurvey_parm(scan_parm);
 						_rtw_memcpy(&scan_parm->ssid[0], &pmlmepriv->assoc_ssid, sizeof(NDIS_802_11_SSID));
 						scan_parm->ssid_num = 1;
 					}
@@ -1567,6 +1599,7 @@ void rtw_surveydone_event_callback(_adapter *adapter, u8 *pbuf)
 	}
 #endif /* CONFIG_RTW_FSM_BTM */
 
+done:
 	RTW_INFO("scan complete in %dms\n",rtw_get_passing_time_ms(pmlmepriv->scan_start_time));
 
 	_rtw_spinunlock_bh(&pmlmepriv->lock);
@@ -1595,9 +1628,8 @@ void rtw_surveydone_event_callback(_adapter *adapter, u8 *pbuf)
 		rtw_beacon_hint_ch_change_notifier(adapter_to_rfctl(adapter));
 
 #ifdef CONFIG_80211D
-	if (adapter_to_rfctl(adapter)->cis_enabled
-		&& (adapter_to_rfctl(adapter)->cis_flags & CISF_ENV_BSS))
-		rtw_apply_scan_network_country_ie_cmd(adapter, RTW_CMDF_DIRECTLY);
+	if (parm->complete &&(parm->reason & RTW_AUTO_SCAN_REASON_CIS_ENV_BSS))
+		rtw_cis_scan_complete_hdl(adapter);
 #endif
 
 #ifdef CONFIG_RTW_MESH
@@ -1874,11 +1906,11 @@ static u8 rtw_scan_sparse(_adapter *adapter, struct rtw_ieee80211_channel *ch, u
 	return ret_num;
 }
 
-static int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel *out,
-		u32 out_num, struct rtw_ieee80211_channel *in, u32 in_num, bool no_sparse)
+static int _rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel *out,
+		u32 out_num, struct rtw_ieee80211_channel *in, u32 in_num, bool include_dis, bool no_sparse)
 {
 	int i, j;
-	int set_idx;
+	RT_CHANNEL_INFO *chinfo;
 	u8 chan;
 	struct rtw_chset *chset = adapter_to_chset(padapter);
 	struct registry_priv *regsty = dvobj_to_regsty(adapter_to_dvobj(padapter));
@@ -1898,9 +1930,9 @@ static int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel
 		if (rtw_mlme_band_check(padapter, in[i].hw_value) == _FALSE)
 			continue;
 
-		set_idx = rtw_chset_search_bch(chset, in[i].band, in[i].hw_value);
+		chinfo = rtw_chset_get_chinfo_by_bch(chset, in[i].band, in[i].hw_value, include_dis);
 
-		if (set_idx >= 0) {
+		if (chinfo) {
 			if (j >= out_num) {
 				RTW_PRINT(FUNC_ADPT_FMT" out_num:%u not enough\n",
 					  FUNC_ADPT_ARG(padapter), out_num);
@@ -1909,7 +1941,7 @@ static int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel
 
 			_rtw_memcpy(&out[j], &in[i], sizeof(struct rtw_ieee80211_channel));
 
-			if (chset->chs[set_idx].flags & (RTW_CHF_NO_IR | RTW_CHF_DFS))
+			if (chinfo->flags & (RTW_CHF_NO_IR | RTW_CHF_DFS))
 				out[j].flags |= RTW_IEEE80211_CHAN_PASSIVE_SCAN;
 
 			j++;
@@ -1921,7 +1953,7 @@ static int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel
 	/* if out is empty, use chset as default */
 	if (j == 0) {
 		for (i = 0; i < chset->chs_len; i++) {
-			if (chset->chs[i].flags & RTW_CHF_DIS)
+			if (!include_dis && chset->chs[i].flags & RTW_CHF_DIS)
 				continue;
 			chan = chset->chs[i].ChannelNum;
 			if (rtw_mlme_band_check(padapter, chan) == _TRUE) {
@@ -1958,6 +1990,19 @@ static int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel
 
 	return j;
 }
+
+int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel *out,
+		u32 out_num, struct rtw_ieee80211_channel *in, u32 in_num, bool no_sparse)
+{
+	return _rtw_scan_ch_decision(padapter, out, out_num, in, in_num, false, no_sparse);
+}
+
+int rtw_scan_ch_dec(_adapter *padapter, struct rtw_ieee80211_channel *out,
+		u32 out_num, struct rtw_ieee80211_channel *in, u32 in_num, bool include_dis, bool no_sparse)
+{
+	return _rtw_scan_ch_decision(padapter, out, out_num, in, in_num, include_dis, no_sparse);
+}
+
 #ifdef CONFIG_SCAN_BACKOP
 u8 rtw_scan_backop_decision(_adapter *adapter)
 {
@@ -2029,10 +2074,6 @@ struct scan_priv {
 #endif
 #ifdef CONFIG_RTW_FSM
 	struct sta_info *psta;
-#if defined(CONFIG_RTW_FSM_RRM) || defined(CONFIG_RTW_FSM_BTM)
-	u8 nb_num;
-	struct nb_bssid nb[RTW_MAX_NB_RPT_NUM];
-#endif
 #endif /* CONFIG_RTW_FSMCONFIG_RTW_FSM */
 
 #if CONFIG_IEEE80211_BAND_6GHZ
@@ -2041,6 +2082,7 @@ struct scan_priv {
 	bool split_scan_6ghz; /* indicate if current scan is second scan for 6GHz */
 #endif
 #endif
+	u8 reason;
 };
 
 #ifdef CONFIG_CMD_SCAN
@@ -2262,7 +2304,10 @@ static int scan_complete_cb(void *priv, struct rtw_phl_scan_param *param)
 	#endif /* CONFIG_IEEE80211_BAND_6GHZ */
 
 	mlmeext_set_scan_state(pmlmeext, SCAN_DISABLE);
-	report_surveydone_event(padapter, acs, RTW_CMDF_DIRECTLY);
+	report_surveydone_event(padapter,
+		scan_priv->reason,
+		param->result == SCAN_REQ_COMPLETE,
+		acs, RTW_CMDF_DIRECTLY);
 
 	issue_action_BSSCoexistPacket(padapter);
 	issue_action_BSSCoexistPacket(padapter);
@@ -2374,7 +2419,10 @@ static int scan_ch_ready_cb(void *priv, struct rtw_phl_scan_param *param, u8 sct
 	_adapter *padapter = scan_priv->padapter;
 	struct phl_scan_channel *scan_ch = param->sctrl[sctrl_idx].scan_ch;
 
-	RTW_INFO("%s: band=%d, ch=%d\n", __func__, scan_ch->band, scan_ch->channel);
+	RTW_INFO("scan_ch %s:%3d:%c (%3dms) %s\n",
+		scan_ch->band==BAND_ON_24G?"2G":scan_ch->band==BAND_ON_5G?"5G":"6G",
+		scan_ch->channel, scan_ch->scan_mode==BACKOP_MODE?'A':scan_ch->type?'A':'P',
+		scan_ch->duration, scan_ch->scan_mode==BACKOP_MODE?"OP":"");
 	return 0;
 }
 
@@ -2500,9 +2548,9 @@ static int scan_complete_wnm_cb(void *priv, struct rtw_phl_scan_param *param)
 
 	ret = _SUCCESS;
 _exit:
-	RTW_INFO(FUNC_ADPT_FMT" %d ms to scan %d channels (%x)\n",
-		FUNC_ADPT_ARG(padapter), param->total_scan_time,
-		param->ch_num, pmlmeext->sitesurvey_res.bss_cnt);
+	RTW_INFO(FUNC_ADPT_FMT" %d/%d ms to scan %d/%d channels(%x)\n",
+		FUNC_ADPT_ARG(padapter), param->total_scan_time, param->max_scan_time,
+		param->done_num, param->ch_num, pmlmeext->sitesurvey_res.bss_cnt);
 	_rtw_scan_abort_check(padapter, __func__);
 
 	rtw_fsm_notify_scan_done(&padapter->fsmpriv, scan_priv->psta);
@@ -2519,10 +2567,9 @@ static int scan_issue_pbreq_wnm_cb(void *priv, struct rtw_phl_scan_param *param,
 	_adapter *padapter = spriv->padapter;
 	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
 	struct rtw_wifi_role_t *wrole = param->sctrl[sctrl_idx].wrole;
-	NDIS_802_11_SSID ssid;
-	int i, j;
 	/* ToDo CONFIG_RTW_MLD: [currently primary link only] */
 	struct _ADAPTER_LINK *padapter_link = NULL;
+	struct phl_scan_channel *scan_ch = param->sctrl[sctrl_idx].scan_ch;
 
 	if (wrole == NULL) {
 		rtw_warn_on(1);
@@ -2534,25 +2581,7 @@ static int scan_issue_pbreq_wnm_cb(void *priv, struct rtw_phl_scan_param *param,
 		return 0;
 
 	padapter_link = GET_PRIMARY_LINK(padapter);
-
-	if (!param->ssid_num) {
-		issue_probereq(padapter, padapter_link, NULL, NULL);
-		return 0;
-	}
-
-	for (i = 0; i < param->ssid_num; i++) {
-		if (param->ssid[i].ssid_len == 0)
-			continue;
-
-		ssid.SsidLength = param->ssid[i].ssid_len;
-		_rtw_memcpy(ssid.Ssid, &param->ssid[i].ssid, ssid.SsidLength);
-
-		for (j = 0; j < spriv->nb_num; j++) {
-			if (param->ch->channel == spriv->nb[j].ch)
-				issue_probereq(padapter, padapter_link, &ssid, spriv->nb[j].bssid);
-		}
-		issue_probereq(padapter, padapter_link, &ssid, NULL);
-	}
+	rtw_btm_notify_scan_probe_req(padapter->fsmpriv.btmpriv.btm, scan_ch);
 
 	return 0;
 }
@@ -2672,7 +2701,13 @@ static void scan_channel_list_filled(_adapter *padapter,
 			phl_ch[i].type = RTW_PHL_SCAN_PASSIVE;
 		} else {
 			phl_ch[i].type = RTW_PHL_SCAN_ACTIVE;
-			phl_ch[i].duration = ACTIVE_CH_SURVEY_TO;
+			if (param->scan_type == RTW_SCAN_ROAM) {
+				if (phl_ch[i].band != BAND_ON_6G)
+					phl_ch[i].duration = ROAM_A_CH_SURVEY_TO;
+			} else {
+				if (phl_ch[i].band != BAND_ON_6G)
+					phl_ch[i].duration = ACTIVE_CH_SURVEY_TO;
+			}
 		}
 	}
 	phl_param->ch_num = param->ch_num;
@@ -2691,17 +2726,16 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 	struct mlme_ext_priv *mlmeext = &padapter->mlmeextpriv;
 	struct ss_res *ss = &mlmeext->sitesurvey_res;
 	struct rtw_chset *chset = adapter_to_chset(padapter);
-#if defined(CONFIG_RTW_80211K) || defined(CONFIG_RTW_FSM_RRM) || defined(CONFIG_RTW_FSM_BTM) || (CONFIG_IEEE80211_BAND_6GHZ && (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)))
 	struct scan_priv *scan_priv = NULL;
-#endif
+	int j;
 
 	if (pparm == NULL) {
-		tmp_parm = rtw_zmalloc(sizeof(struct sitesurvey_parm));
+		tmp_parm = rtw_malloc(sizeof(struct sitesurvey_parm));
 		if (tmp_parm == NULL) {
 			RTW_ERR("%s alloc tmp_parm fail\n", __func__);
 			goto _err_exit;
 		}
-		rtw_init_sitesurvey_parm(padapter, tmp_parm);
+		rtw_init_sitesurvey_parm(tmp_parm);
 		pparm = tmp_parm;
 	}
 
@@ -2710,9 +2744,10 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 		sizeof(struct rtw_ieee80211_channel) * pparm->ch_num);
 
 	/* modify ch list according to chanel plan */
-	pparm->ch_num = rtw_scan_ch_decision(padapter,
-					pparm->ch, RTW_CHANNEL_SCAN_AMOUNT,
-					ch, pparm->ch_num, pparm->acs);
+	pparm->ch_num = rtw_scan_ch_dec(padapter
+			, pparm->ch, RTW_CHANNEL_SCAN_AMOUNT, ch, pparm->ch_num
+			, pparm->reason & RTW_AUTO_SCAN_REASON_CIS_ENV_BSS
+			, pparm->acs || pparm->reason);
 
 	if (pparm->duration == 0)
 		pparm->duration = ss->scan_ch_ms; /* ms */
@@ -2723,6 +2758,8 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 		RTW_ERR("%s alloc phl_param fail\n", __func__);
 		goto _err_param;
 	}
+
+	scan_priv = (struct scan_priv *)phl_param->priv;
 
 	/* STEP_1 transfer to rtw channel list to phl channel list */
 	scan_channel_list_filled(padapter, phl_param, pparm);
@@ -2761,6 +2798,8 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 		phl_param->opt = SCAN_CMD_OPT_DB;
 	#endif
 
+	scan_priv->reason = pparm->reason;
+
 	/* STEP_3 set ops according to scan_type */
 	switch (pparm->scan_type) {
 	#ifdef CONFIG_P2P
@@ -2773,16 +2812,29 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 	case RTW_SCAN_ROAM:
 
 		phl_param->ops = &scan_ops_wnm_cb;
-		scan_priv = (struct scan_priv *)phl_param->priv;
 		scan_priv->psta = pparm->psta;
-		memcpy(scan_priv->nb, pparm->nb, sizeof(struct nb_bssid) * RTW_MAX_NB_RPT_NUM);
-		scan_priv->nb_num = pparm->nb_num;
-
+		#ifdef PRIVATE_N
+		for (i=0;i<pparm->nb_num;i++) {
+			for (j=0;j<phl_param->ch_num;j++) {
+				if (phl_param->ch[j].band == pparm->nb[i].band &&
+					phl_param->ch[j].channel == pparm->nb[i].ch) {
+					phl_param->ch[j].type = RTW_PHL_SCAN_ACTIVE;
+					break;
+				}
+			}
+		}
+		#endif
 		#ifdef CONFIG_SCAN_BACKOP
 		if (rtw_scan_backop_decision(padapter)) {
+#if 1
+			phl_param->back_op.ch_dur_ms = ROAM_P_CH_SURVEY_TO;
+			phl_param->back_op.mode = SCAN_BKOP_TIMER;
+			phl_param->back_op.off_ch_dur_ms = ROAM_P_CH_SURVEY_TO;
+#else
 			phl_param->back_op.ch_dur_ms = ss->backop_ms;
 			phl_param->back_op.mode = SCAN_BKOP_CNT;
 			phl_param->back_op.ch_intv = ss->scan_cnt_max;
+#endif
 		} else
 		#endif /* CONFIG_SCAN_BACKOP */
 		{
@@ -2793,7 +2845,6 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 	#ifdef CONFIG_RTW_80211K
 	case RTW_SCAN_RRM:
 		phl_param->ops = &scan_ops_rrm_cb;
-		scan_priv = (struct scan_priv *)phl_param->priv;
 		scan_priv->rrm_token = pparm->rrm_token;
 		ss->token = pparm->rrm_token;
 	break;
@@ -2801,7 +2852,6 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 	#ifdef CONFIG_RTW_FSM_RRM
 	case RTW_SCAN_RRM:
 		phl_param->ops = &scan_ops_rrm_cb;
-		scan_priv = (struct scan_priv *)phl_param->priv;
 		scan_priv->psta = pparm->psta;
 	break;
 	#endif
@@ -2823,7 +2873,6 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 
 		#if CONFIG_IEEE80211_BAND_6GHZ
 		#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
-		scan_priv = (struct scan_priv *)phl_param->priv;
 		scan_priv->pending_6ghz_scan = pparm->pending_6ghz_scan;
 		scan_priv->split_scan_6ghz = pparm->split_scan_6ghz;
 		#endif
@@ -2841,7 +2890,7 @@ u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm)
 	}
 
 	phl_param->max_scan_time = rtw_scan_timeout_decision(padapter, phl_param, pparm->duration);
-	#ifdef PRIVATE_R
+	#if defined(PRIVATE_R) || defined(PRIVATE_N)
 	phl_param->max_scan_time += 10000;
 	#endif
 
@@ -3360,6 +3409,7 @@ u8 rtw_phl_remain_on_ch_cmd(_adapter *padapter,
 	struct rtw_phl_scan_param *phl_param = NULL;
 	struct scan_priv *scan_priv = NULL;
 	u16 remain_ch;
+	enum band_type remain_band;
 	u8 chan_num;
 	u8 res = _FAIL;
 	struct rtw_chan_def u_chdef = {0};
@@ -3368,6 +3418,7 @@ u8 rtw_phl_remain_on_ch_cmd(_adapter *padapter,
 
 	/* prepare remain channel - check channel */
 	remain_ch = (u16)rtw_freq2ch(ch->center_freq);
+	remain_band = nl80211_band_to_rtw_band(ch->band);
 	if (roch_stay_in_cur_chan(padapter) == _TRUE) {
 		if (rtw_phl_mr_get_chandef(dvobj->phl, padapter->phl_role,
 					padapter_link->wrlink, &u_chdef)
@@ -3376,8 +3427,9 @@ u8 rtw_phl_remain_on_ch_cmd(_adapter *padapter,
 			rtw_warn_on(1);
 		}
 		remain_ch = u_chdef.chan;
-		RTW_INFO(FUNC_ADPT_FMT" stay in union ch:%d\n",
-			FUNC_ADPT_ARG(padapter), remain_ch);
+		remain_band = u_chdef.band;
+		RTW_INFO(FUNC_ADPT_FMT" stay in union ch:%d, band:%d\n",
+			FUNC_ADPT_ARG(padapter), remain_ch, remain_band);
 	}
 	chan_num = 1;
 
@@ -3400,7 +3452,7 @@ u8 rtw_phl_remain_on_ch_cmd(_adapter *padapter,
 	/* fill phl param - chan */
 	phl_param->ch->channel = remain_ch;
 	phl_param->ch->bw = CHANNEL_WIDTH_20;
-	phl_param->ch->band = nl80211_band_to_rtw_band(ch->band);
+	phl_param->ch->band = remain_band;
 	phl_param->ch->duration = duration;
 	phl_param->ch->scan_mode = P2P_LISTEN_MODE;
 	phl_param->ch_num = chan_num;

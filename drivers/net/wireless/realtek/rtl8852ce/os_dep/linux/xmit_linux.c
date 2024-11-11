@@ -254,11 +254,18 @@ static inline bool rtw_os_need_wake_queue(_adapter *padapter, u16 os_qid)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 
 	if (padapter->registrypriv.wifi_spec) {
-		if (pxmitpriv->hwxmits[os_qid].accnt < WMM_XMIT_THRESHOLD)
+		if (os_qid < 4 && pxmitpriv->hwxmits[os_qid].accnt < WMM_XMIT_THRESHOLD)
+			return _TRUE;
+		else if (os_qid == 4) /* EAPOL */
 			return _TRUE;
 	} else {
+#ifdef CONFIG_RTW_ROAM_STOP_NETIF_QUEUE
+		if (os_qid < 5 && pmlmepriv->roam_buf_pkt)
+			return _FALSE;
+#endif
 		return _TRUE;
 	}
 	return _FALSE;
@@ -273,14 +280,18 @@ static inline bool rtw_os_need_stop_queue(_adapter *padapter, u16 os_qid)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
 	if (padapter->registrypriv.wifi_spec) {
 		/* No free space for Tx, tx_worker is too slow */
-		if (pxmitpriv->hwxmits[os_qid].accnt > WMM_XMIT_THRESHOLD)
+		if ((os_qid < 4) && (pxmitpriv->hwxmits[os_qid].accnt > WMM_XMIT_THRESHOLD))
+			return _TRUE;
+		else if ((os_qid == 4) && (pxmitpriv->free_xframe_ext_cnt == 0)) /* EAPOL */
 			return _TRUE;
 	} else {
-		if (pxmitpriv->free_xmitframe_cnt <= 4)
+		if ((os_qid < 4) && (pxmitpriv->free_xmitframe_cnt <= 4)) /* VO VI BE BK */
+			return _TRUE;
+		else if ((os_qid == 4) && (pxmitpriv->free_xframe_ext_cnt == 0)) /* EAPOL */
 			return _TRUE;
 	}
 #else
-	if (pxmitpriv->free_xmitframe_cnt <= 4)
+	if (pxmitpriv->free_xmitframe_cnt < 4)
 		return _TRUE;
 #endif
 	return _FALSE;
@@ -377,6 +388,28 @@ bool rtw_os_check_stop_queue(_adapter *padapter, u16 os_qid)
 	}
 #endif
 	return busy;
+}
+
+void rtw_roam_stop_queue(_adapter *padapter)
+{
+#ifdef CONFIG_RTW_ROAM_STOP_NETIF_QUEUE
+	int i;
+
+	RTW_INFO("%s\n",__func__);
+	for (i = 0;i < 4; i++) /* exclude eapol queue(id 4) */
+		netif_stop_subqueue(padapter->pnetdev, i);
+#endif
+}
+
+void rtw_roam_wake_queue(_adapter *padapter)
+{
+#ifdef CONFIG_RTW_ROAM_STOP_NETIF_QUEUE
+	int i;
+
+	RTW_INFO("%s\n",__func__);
+	for (i = 0;i < 5; i++)
+		rtw_os_check_wakup_queue(padapter, i);
+#endif
 }
 
 void rtw_os_wake_queue_at_free_stainfo(_adapter *padapter, int *qcnt_freed)
@@ -604,7 +637,7 @@ int rtw_os_tx(struct sk_buff *pkt, _nic_hdl pnetdev)
 
 	if ((rtw_os_is_adapter_ready(padapter, pkt) == _FALSE)
 #ifdef CONFIG_LAYER2_ROAMING
-		&& (!padapter->mlmepriv.roam_network)
+		&& (!padapter->mlmepriv.roam_buf_pkt)
 #endif
 	)
 		goto drop_packet;

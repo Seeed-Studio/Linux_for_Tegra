@@ -16,12 +16,16 @@
 #define __RTW_SCAN_H_
 
 /*rtw_mlme.h*/
-void rtw_drv_scan_by_self(_adapter *padapter, u8 reason);
+void rtw_drv_scan_by_self(_adapter *padapter, u8 reason, bool urgent);
 void rtw_scan_abort_no_wait(_adapter *adapter);
 u32 rtw_scan_abort(_adapter *adapter, u32 timeout_ms);
 
 void rtw_survey_event_callback(_adapter *adapter, u8 *pbuf);
 void rtw_surveydone_event_callback(_adapter *adapter, u8 *pbuf);
+int rtw_scan_ch_decision(_adapter *padapter, struct rtw_ieee80211_channel *out,
+	u32 out_num, struct rtw_ieee80211_channel *in, u32 in_num, bool no_sparse);
+int rtw_scan_ch_dec(_adapter *padapter, struct rtw_ieee80211_channel *out,
+	u32 out_num, struct rtw_ieee80211_channel *in, u32 in_num, bool include_dis, bool no_sparse);
 
 enum {
 	SS_DENY_MP_MODE,
@@ -239,6 +243,8 @@ struct ss_res {
 	u8 bw;		/* 0: use default */
 
 	bool acs; /* aim to trigger channel selection when scan done */
+
+	bool scan_2040bss; /* 1: use default */
 };
 
 enum rtw_scan_type {
@@ -251,6 +257,7 @@ enum rtw_scan_type {
 #define RTW_MAX_NB_RPT_NUM 8
 #if defined(CONFIG_RTW_FSM_RRM) || defined(CONFIG_RTW_FSM_BTM)
 struct nb_bssid{
+	u8 band;
 	u8 ch;
 	u8 bssid[ETH_ALEN];
 };
@@ -269,6 +276,7 @@ struct sitesurvey_parm {
 	u8 bw;		/* 0: use default */
 
 	bool acs; /* aim to trigger channel selection when scan done */
+	u8 reason;
 
 	enum rtw_scan_type scan_type;
 #ifdef CONFIG_RTW_FSM
@@ -288,7 +296,8 @@ struct sitesurvey_parm {
 #endif
 };
 
-void rtw_init_sitesurvey_parm(_adapter *padapter, struct sitesurvey_parm *pparm);
+void rtw_init_sitesurvey_parm(struct sitesurvey_parm *pparm);
+void rtw_auto_scan_ch_list_init(struct sitesurvey_parm *parm, u8 band_bmp, u8 flags);
 u8 rtw_sitesurvey_cmd(_adapter *padapter, struct sitesurvey_parm *pparm);
 #ifndef CONFIG_CMD_SCAN
 u32 rtw_site_survey_fsm(_adapter *padapter, struct cmd_obj *pcmd);

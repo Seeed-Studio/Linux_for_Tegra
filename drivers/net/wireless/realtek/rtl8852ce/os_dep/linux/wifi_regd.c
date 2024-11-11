@@ -244,8 +244,10 @@ static struct ieee80211_reg_rule rtw_get_ieee80211_reg_rule(struct get_chplan_re
 	)
 		rule.flags |= NL80211_RRF_AUTO_BW;
 
+	#if 0 /* TODO: limit to 20MHz */
 	if (regd_max_bw < 40)
 		rule.flags |= NL80211_RRF_NO_HT40;
+	#endif
 	if (regd_max_bw < 80)
 		rule.flags |= NL80211_RRF_NO_80MHZ;
 	if (regd_max_bw < 160)
@@ -369,8 +371,6 @@ static void rtw_regd_disable_no_20mhz_chs(struct wiphy *wiphy)
 			continue;
 		for (j = 0; j < sband->n_channels; j++) {
 			ch = &sband->channels[j];
-			if (!ch)
-				continue;
 			if (ch->flags & IEEE80211_CHAN_NO_20MHZ) {
 				RTW_INFO(FUNC_WIPHY_FMT" disable band:%d ch:%u w/o 20MHz\n", FUNC_WIPHY_ARG(wiphy), ch->band, ch->hw_value);
 				ch->flags = IEEE80211_CHAN_DISABLED;
@@ -777,7 +777,6 @@ static void dump_requlatory_request(void *sel, struct regulatory_request *reques
 static void rtw_reg_notifier(struct wiphy *wiphy, struct regulatory_request *request)
 {
 	struct dvobj_priv *dvobj = wiphy_to_dvobj(wiphy);
-	struct registry_priv *regsty = dvobj_to_regsty(dvobj);
 	enum rtw_regd_inr inr;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
@@ -794,7 +793,7 @@ static void rtw_reg_notifier(struct wiphy *wiphy, struct regulatory_request *req
 	inr = nl80211_reg_initiator_to_rtw_regd_inr(request->initiator);
 
 #ifdef CONFIG_REGD_SRC_FROM_OS
-	if (REGSTY_REGD_SRC_FROM_OS(regsty)) {
+	if (REGSTY_REGD_SRC_FROM_OS(dvobj_to_regsty(dvobj))) {
 		enum rtw_dfs_regd dfs_region =  RTW_DFS_REGD_NONE;
 		enum rtw_env_t env = RTW_ENV_NUM;
 

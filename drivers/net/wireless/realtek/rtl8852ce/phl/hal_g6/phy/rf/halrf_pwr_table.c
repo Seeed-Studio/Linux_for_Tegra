@@ -2418,17 +2418,13 @@ s16 halrf_get_power(void *rf_void,
 	struct halrf_pwr_info *pwr = &rf->pwr_info;
 	struct rtw_phl_com_t *phl = rf->phl_com;
 	struct rtw_tpu_info *tpu = &rf->hal_com->band[HW_PHY_0].rtw_tpu_i;
-	u8 band, limit_rate = PW_LMT_RS_CCK, tx_num = PW_LMT_PH_1T, limit_ch, reg = 0;
+	u32 band = rf->hal_com->band[HW_PHY_0].cur_chandef.band;
+	u8 limit_rate = PW_LMT_RS_CCK, tx_num = PW_LMT_PH_1T, limit_ch, reg = 0;
 	u16 rate_tmp;
 	s16 pwr_by_rate, pwr_limit, power;
 
-	RF_DBG(rf, DBG_RF_INIT, "======>%s rf_path=%d rate=%d dcm=%d bw=%d bf=%d ch=%d\n",
+	RF_DBG(rf, DBG_RF_POWER, "======>%s rf_path=%d rate=%d dcm=%d bw=%d bf=%d ch=%d\n",
 		__func__, rf_path, rate, dcm, bandwidth, beamforming, channel);
-
-	if (channel >= 1 && channel <= 14)
-		band = PW_LMT_BAND_2_4G;
-	else
-		band = PW_LMT_BAND_5G;
 
 	tx_num = rf_path;
 
@@ -2436,31 +2432,52 @@ s16 halrf_get_power(void *rf_void,
 
 	pwr_by_rate = (s16)pwr->tx_pwr_by_rate[band][rate_tmp];
 
-	RF_DBG(rf, DBG_RF_INIT, "pwr_by_rate(%d)=(s16)pwr->tx_pwr_by_rate[%d][%d]\n",
+	RF_DBG(rf, DBG_RF_POWER, "pwr_by_rate(%d)=(s16)pwr->tx_pwr_by_rate[%d][%d]\n",
 		pwr_by_rate, band, rate_tmp);
 
 	limit_rate = halrf_hw_rate_to_limit_rate_tx_num(rf, rate);
-	limit_ch = halrf_get_ch_idx_to_limit_array(rf, channel);
 
-	if (channel >= 1 && channel <= 14) {
+	if (band == BAND_ON_24G) {
+		limit_ch = halrf_get_ch_idx_to_limit_array(rf, channel);
 		reg = halrf_get_regulation_info(rf, BAND_ON_24G);
-		if (reg >= PW_LMT_MAX_REGULATION_NUM) {
+		if (reg < PW_LMT_MAX_REGULATION_NUM) {
+			pwr_limit = (s16)pwr->tx_pwr_limit_2g[reg][bandwidth][limit_rate][beamforming][limit_ch][tx_num];
+			RF_DBG(rf, DBG_RF_POWER, "pwr_limit(%d) = (s16)pwr->tx_pwr_limit_2g[%d][%d][%d][%d][%d][%d]\n",
+				pwr_limit, reg, bandwidth, limit_rate, beamforming, limit_ch, tx_num);
+		} else {
 			reg = PW_LMT_REGU_WW13;
 			RF_WARNING("===>%s reg >= PW_LMT_MAX_REGULATION_NUM\n", __func__);
-		} else {
 			pwr_limit = (s16)pwr->tx_pwr_limit_2g[reg][bandwidth][limit_rate][beamforming][limit_ch][tx_num];
-			RF_DBG(rf, DBG_RF_INIT, "pwr_limit(%d) = (s16)pwr->tx_pwr_limit_2g[%d][%d][%d][%d][%d][%d]\n",
-				pwr_limit, halrf_get_regulation_info(rf, BAND_ON_24G), bandwidth, limit_rate, beamforming, limit_ch, tx_num);
+			RF_DBG(rf, DBG_RF_POWER, "pwr_limit(%d) = (s16)pwr->tx_pwr_limit_2g[%d][%d][%d][%d][%d][%d]\n",
+				pwr_limit, PW_LMT_REGU_WW13, bandwidth, limit_rate, beamforming, limit_ch, tx_num);
+		}
+	} else if (band == BAND_ON_5G) {
+		limit_ch = halrf_get_ch_idx_to_limit_array(rf, channel);
+		reg = halrf_get_regulation_info(rf, BAND_ON_5G);
+		if (reg < PW_LMT_MAX_REGULATION_NUM) {
+			pwr_limit = (s16)pwr->tx_pwr_limit_5g[reg][bandwidth][limit_rate][beamforming][limit_ch][tx_num];
+			RF_DBG(rf, DBG_RF_POWER, "pwr_limit(%d) = (s16)pwr->tx_pwr_limit_5g[%d][%d][%d][%d][%d][%d]\n",
+				pwr_limit, reg, bandwidth, limit_rate, beamforming, limit_ch, tx_num);
+		} else {
+			reg = PW_LMT_REGU_WW13;
+			RF_WARNING("===>%s reg >= PW_LMT_MAX_REGULATION_NUM\n", __func__);
+			pwr_limit = (s16)pwr->tx_pwr_limit_5g[reg][bandwidth][limit_rate][beamforming][limit_ch][tx_num];
+			RF_DBG(rf, DBG_RF_POWER, "pwr_limit(%d) = (s16)pwr->tx_pwr_limit_5g[%d][%d][%d][%d][%d][%d]\n",
+				pwr_limit, PW_LMT_REGU_WW13, bandwidth, limit_rate, beamforming, limit_ch, tx_num);
 		}
 	} else {
-		reg = halrf_get_regulation_info(rf, BAND_ON_5G);
-		if (reg >= PW_LMT_MAX_REGULATION_NUM) {
-			reg = PW_LMT_REGU_WW13;
-			RF_WARNING("===>%s reg >= PW_LMT_MAX_REGULATION_NUM\n", __func__);
+		limit_ch = halrf_get_ch_idx_to_6g_limit_array(rf, channel);
+		reg = halrf_get_regulation_info(rf, BAND_ON_6G);
+		if (reg < PW_LMT_MAX_6G_REGULATION_NUM) {
+			pwr_limit = (s16)pwr->tx_pwr_limit_6g[reg][bandwidth][limit_rate][beamforming][limit_ch][tx_num];
+			RF_DBG(rf, DBG_RF_POWER, "pwr_limit(%d) = (s16)pwr->tx_pwr_limit_6g[%d][%d][%d][%d][%d][%d]\n",
+				pwr_limit, reg, bandwidth, limit_rate, beamforming, limit_ch, tx_num);
 		} else {
-			pwr_limit = (s16)pwr->tx_pwr_limit_5g[reg][bandwidth][limit_rate][beamforming][limit_ch][tx_num];
-			RF_DBG(rf, DBG_RF_INIT, "pwr_limit(%d) = (s16)pwr->tx_pwr_limit_5g[%d][%d][%d][%d][%d][%d]\n",
-				pwr_limit, halrf_get_regulation_info(rf, BAND_ON_5G), bandwidth, limit_rate, beamforming, limit_ch, tx_num);
+			reg = PW_LMT_REGU_6G_WW13;
+			RF_WARNING("===>%s reg >= PW_LMT_MAX_6G_REGULATION_NUM\n", __func__);
+			pwr_limit = (s16)pwr->tx_pwr_limit_6g[reg][bandwidth][limit_rate][beamforming][limit_ch][tx_num];
+			RF_DBG(rf, DBG_RF_POWER, "pwr_limit(%d) = (s16)pwr->tx_pwr_limit_6g[%d][%d][%d][%d][%d][%d]\n",
+				pwr_limit, PW_LMT_REGU_6G_WW13, bandwidth, limit_rate, beamforming, limit_ch, tx_num);
 		}
 	}
 
@@ -2469,7 +2486,7 @@ s16 halrf_get_power(void *rf_void,
 	else
 		power = pwr_by_rate;
 
-	RF_DBG(rf, DBG_RF_INIT, "power = %d\n", power);
+	RF_DBG(rf, DBG_RF_POWER, "power = %d\n", power);
 
 	return power;
 }

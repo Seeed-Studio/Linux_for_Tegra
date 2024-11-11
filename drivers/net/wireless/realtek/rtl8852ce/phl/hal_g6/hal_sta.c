@@ -336,6 +336,8 @@ rtw_hal_upd_ampdu_cctrl_info(void *hal, struct rtw_phl_stainfo_t *sta)
 	struct hal_info_t *hal_info = (struct hal_info_t *)hal;
 	enum rtw_hal_status sts = RTW_HAL_STATUS_FAILURE;
 	struct rtw_hal_mac_ax_cctl_info cctrl, cctl_info_mask;
+	u16 max_txop = 0, cur_txop = 0;
+	u8 i = 0;
 
 	_os_mem_set(hal_to_drvpriv(hal_info), &cctrl, 0, sizeof(struct rtw_hal_mac_ax_cctl_info));
 	_os_mem_set(hal_to_drvpriv(hal_info), &cctl_info_mask, 0, sizeof(struct rtw_hal_mac_ax_cctl_info));
@@ -343,8 +345,26 @@ rtw_hal_upd_ampdu_cctrl_info(void *hal, struct rtw_phl_stainfo_t *sta)
 	if (NULL == sta)
 		goto out;
 
+	for (i = 0; i < 4; i++) {
+		cur_txop = (u16)(sta->asoc_cap.edca[i].param >> 16);
+		if (cur_txop > max_txop) {
+			max_txop = cur_txop;
+		}
+	}
+	if (max_txop > 0xFF00) {
+		PHL_WARN("%s max txop = 0x%x, > HW define \n", __func__, max_txop);
+	}
+	else
+		PHL_INFO("[LOGO_DBG]: %s max txop = 0x%x\n", __func__, max_txop);
+
+	cctrl.ampdu_time_sel = 1;
+	cctl_info_mask.ampdu_time_sel = 1;
+
 	cctrl.max_agg_num_sel = 1;
 	cctl_info_mask.max_agg_num_sel = 1;
+
+	cctrl.ampdu_max_time = (max_txop >> 4) - 1;
+	cctl_info_mask.ampdu_max_time = 0xF;
 
 	cctrl.max_agg_num = sta->asoc_cap.num_ampdu - 1;
 	cctl_info_mask.max_agg_num = 0xFF;
@@ -394,13 +414,26 @@ rtw_hal_cfg_tx_ampdu(void *hal, struct rtw_phl_stainfo_t *sta)
 {
 	struct hal_info_t *hal_info = (struct hal_info_t *)hal;
 	enum rtw_hal_status hsts = RTW_HAL_STATUS_FAILURE;
+	u16 max_txop = 0, cur_txop = 0;
+	u8 i = 0;
+
+	for (i = 0; i < 4; i++) {
+		cur_txop = (u16)(sta->asoc_cap.edca[i].param >> 16);
+		if (cur_txop > max_txop) {
+			max_txop = cur_txop;
+		}
+	}
+	if (max_txop > 0xFF00) {
+		PHL_WARN("%s max txop = 0x%x, > HW define \n", __func__, max_txop);
+	}
+	PHL_INFO("[LOGO_DBG]: %s max txop = 0x%x\n", __func__, max_txop);
 
 	/* update ampdu configuration */
 	if (256 >= sta->asoc_cap.num_ampdu) {
 		hsts = rtw_hal_mac_set_hw_ampdu_cfg(hal_info,
 		                                    sta->rlink->hw_band,
 		                                    sta->asoc_cap.num_ampdu,
-		                                    0xA5);
+		                                    (u8)max_txop);
 	} else {
 		PHL_WARN("%s not consider this case : num_ampdu(%u), please check \n",
 			__func__, sta->asoc_cap.num_ampdu);

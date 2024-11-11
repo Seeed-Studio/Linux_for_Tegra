@@ -468,6 +468,12 @@ __inline static _list *get_next(_list	*list)
 {
 	return list->next;
 }
+
+__inline static _list *get_prev(_list	*list)
+{
+	return list->prev;
+}
+
 __inline static _list	*get_list_head(_queue *queue)
 {
 	return &(queue->queue);
@@ -1169,7 +1175,7 @@ static inline void rtw_dump_stack(void)
 	do { \
 		if (condition) { \
 			WARN_ON(1); \
-			ATOMIC_INC((ATOMIC_T *)&rtw_warn_on_cnt); \
+			ATOMIC_INC(&rtw_warn_on_cnt); \
 		} \
 	} while (0)
 

@@ -355,6 +355,10 @@ char *rtw_dis_ch_flags = CONFIG_RTW_DIS_CH_FLAGS;
 module_param(rtw_dis_ch_flags, charp, 0644);
 MODULE_PARM_DESC(rtw_dis_ch_flags, "The flags with which channel is to be disabled");
 
+char *rtw_extra_alpha2 = CONFIG_RTW_EXTRA_ALPHA2;
+module_param(rtw_extra_alpha2, charp, 0644);
+MODULE_PARM_DESC(rtw_extra_alpha2, "The extra alpha2 country code which will always apply");
+
 static uint rtw_bcn_hint_valid_ms = CONFIG_RTW_BCN_HINT_VALID_MS;
 module_param(rtw_bcn_hint_valid_ms, uint, 0644);
 MODULE_PARM_DESC(rtw_bcn_hint_valid_ms, "The length of time beacon hint continue");
@@ -382,7 +386,8 @@ static uint rtw_country_ie_slave_flags = CONFIG_RTW_COUNTRY_IE_SLAVE_FLAGS;
 module_param(rtw_country_ie_slave_flags, uint, 0644);
 MODULE_PARM_DESC(rtw_country_ie_slave_flags, "802.11d country IE slave flags:"
 	" BIT0: deprecated BIT"
-	", BIT1: consider all environment BSSs, otherwise associated BSSs only");
+	", BIT1: consider all environment BSSs, otherwise associated BSSs only"
+	", BIT2: consider all environment BSSs with majority selection (implys BIT1)");
 
 static uint rtw_country_ie_slave_en_role = CONFIG_RTW_COUNTRY_IE_SLAVE_EN_ROLE;
 module_param(rtw_country_ie_slave_en_role, uint, 0644);
@@ -392,10 +397,19 @@ static uint rtw_country_ie_slave_en_ifbmp = CONFIG_RTW_COUNTRY_IE_SLAVE_EN_IFBMP
 module_param(rtw_country_ie_slave_en_ifbmp, uint, 0644);
 MODULE_PARM_DESC(rtw_country_ie_slave_en_ifbmp, "802.11d country IE slave enable iface bitmap");
 
+static uint rtw_country_ie_slave_scan_band_bmp = CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_BAND_BMP;
+module_param(rtw_country_ie_slave_scan_band_bmp, uint, 0644);
+MODULE_PARM_DESC(rtw_country_ie_slave_scan_band_bmp, "802.11d country IE slave auto scan band bitmap. BIT0:2G, BIT1:5G, BIT2:6G");
+
 static uint rtw_country_ie_slave_scan_int_ms = CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_INT_MS;
 module_param(rtw_country_ie_slave_scan_int_ms, uint, 0644);
 MODULE_PARM_DESC(rtw_country_ie_slave_scan_int_ms, "802.11d country IE slave auto scan interval in ms to find environment BSSs."
-	" 0: no environment BSS auto scan triggered by driver self");
+	" 0: no auto scan");
+
+static uint rtw_country_ie_slave_scan_urgent_ms = CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_URGENT_MS;
+module_param(rtw_country_ie_slave_scan_urgent_ms, uint, 0644);
+MODULE_PARM_DESC(rtw_country_ie_slave_scan_urgent_ms, "time in ms when 802.11d country IE slave auto scan is not completed for, urgent scan will be triggered."
+	" 0: no urgent scan");
 #endif
 
 /*if concurrent softap + p2p(GO) is needed, this param lets p2p response full channel list.
@@ -418,6 +432,13 @@ MODULE_PARM_DESC(rtw_ant_num, "Antenna number setting, 0:by efuse");
 int rtw_bt_iso = 2;/* 0:Low, 1:High, 2:From Efuse */
 int rtw_bt_sco = 3;/* 0:Idle, 1:None-SCO, 2:SCO, 3:From Counter, 4.Busy, 5.OtherBusy */
 int rtw_bt_ampdu = 1 ; /* 0:Disable BT control A-MPDU, 1:Enable BT control A-MPDU. */
+
+#ifdef CONFIG_BTC_TRXSS_CHG
+int rtw_btc_trxss_chg = 1;
+module_param(rtw_btc_trxss_chg, int, 0644);
+MODULE_PARM_DESC(rtw_btc_trxss_chg, "Tx/Rx SS change triggered by BTC");
+#endif
+
 #endif /* CONFIG_BTC */
 
 int rtw_AcceptAddbaReq = _TRUE;/* 0:Reject AP's Add BA req, 1:Accept AP's Add BA req. */
@@ -630,7 +651,7 @@ MODULE_PARM_DESC(rtw_adaptor_info_caching_file_path, "The path of adapter info c
 #endif /* CONFIG_ADAPTOR_INFO_CACHING_FILE */
 
 #ifdef CONFIG_LAYER2_ROAMING
-uint rtw_max_roaming_times = 2;
+uint rtw_max_roaming_times = 1;
 module_param(rtw_max_roaming_times, uint, 0644);
 MODULE_PARM_DESC(rtw_max_roaming_times, "The max roaming times to try");
 #endif /* CONFIG_LAYER2_ROAMING */
@@ -1133,19 +1154,31 @@ static inline void rtw_regsty_load_chplan(struct registry_priv *regsty)
 #endif
 }
 
-static inline void rtw_regsty_load_alpha2(struct registry_priv *regsty)
+static void _rtw_regsty_load_alpha2(const char *in, char *out, const char *tag)
 {
-	if (!rtw_country_code || strlen(rtw_country_code) != 2
-		|| (!IS_ALPHA2_WORLDWIDE(rtw_country_code)
-			&& (is_alpha(rtw_country_code[0]) == _FALSE
-				|| is_alpha(rtw_country_code[1]) == _FALSE)
+	if (!in || strlen(in) != 2
+		|| (!IS_ALPHA2_WORLDWIDE(in)
+			&& (is_alpha(in[0]) == _FALSE
+				|| is_alpha(in[1]) == _FALSE)
 			)
 	) {
-		if (rtw_country_code && rtw_country_code[0] != '\0')
-			RTW_ERR("%s discard rtw_country_code not in alpha2 or \"%s\"\n", __func__, WORLDWIDE_ALPHA2);
-		SET_UNSPEC_ALPHA2(regsty->alpha2);
-	} else
-		_rtw_memcpy(regsty->alpha2, rtw_country_code, 2);
+		if (in && in[0] != '\0')
+			RTW_ERR("%s discard %s not in alpha2 or \"%s\"\n", __func__, tag, WORLDWIDE_ALPHA2);
+		SET_UNSPEC_ALPHA2(out);
+	} else {
+		if (IS_ALPHA2_WORLDWIDE(in))
+			_rtw_memcpy(out, WORLDWIDE_ALPHA2, 2);
+		else {
+			out[0] = alpha_to_upper(in[0]);
+			out[1] = alpha_to_upper(in[1]);
+		}
+	}
+}
+
+static void rtw_regsty_load_alpha2(struct registry_priv *regsty)
+{
+	_rtw_regsty_load_alpha2(rtw_country_code, regsty->alpha2, "rtw_country_code");
+	_rtw_regsty_load_alpha2(rtw_extra_alpha2, regsty->extra_alpha2, "rtw_extra_alpha2");
 }
 
 static void rtw_regsty_load_addl_ch_disable_conf(struct registry_priv *regsty)
@@ -1202,13 +1235,15 @@ static inline void rtw_regsty_load_env_settings(struct registry_priv *regsty)
 }
 
 #ifdef CONFIG_80211D
-inline void rtw_regsty_load_country_ie_slave_settings(struct registry_priv *regsty)
+static inline void rtw_regsty_load_country_ie_slave_settings(struct registry_priv *regsty)
 {
 	regsty->country_ie_slave_en_mode = rtw_country_ie_slave_en_mode;
 	regsty->country_ie_slave_flags = rtw_country_ie_slave_flags;
 	regsty->country_ie_slave_en_role = rtw_country_ie_slave_en_role;
 	regsty->country_ie_slave_en_ifbmp = rtw_country_ie_slave_en_ifbmp;
+	regsty->country_ie_slave_scan_band_bmp = rtw_country_ie_slave_scan_band_bmp;
 	regsty->country_ie_slave_scan_int_ms = rtw_country_ie_slave_scan_int_ms;
+	regsty->country_ie_slave_scan_urgent_ms = rtw_country_ie_slave_scan_urgent_ms;
 }
 #endif
 
@@ -1522,6 +1557,10 @@ void rtw_core_update_default_setting (struct dvobj_priv *dvobj)
 
 #ifdef CONFIG_BTC
 	phl_com->dev_sw_cap.btc_mode = BTC_MODE_NORMAL;
+#ifdef CONFIG_BTC_TRXSS_CHG
+	if (rtw_btc_trxss_chg)
+		GET_DEV_SW_BTC_CAP(phl_com).btc_deg_wifi_cap |= BTC_DRG_WIFI_CAP_TRX1SS;
+#endif
 #else
 	phl_com->dev_sw_cap.btc_mode = BTC_MODE_WL;
 #endif

@@ -811,6 +811,25 @@ void SetBandwidth(_adapter *padapter)
 #endif
 }
 
+u8 rtw_mp_rfpath2txnss(_adapter *padapter, enum rf_path path)
+{
+	struct mp_priv *pmppriv = &padapter->mppriv;
+	u8 tx_nss = MP_NSS1;
+
+	if (path < RF_PATH_AB)
+		tx_nss = MP_NSS1;
+	else if (path > RF_PATH_D && path < RF_PATH_ABC)
+		tx_nss = MP_NSS2;
+	else if (path > RF_PATH_CD && path < RF_PATH_ABCD)
+		tx_nss = MP_NSS3;
+	else if (path == RF_PATH_ABCD)
+		tx_nss = MP_NSS4;
+	else
+		RTW_ERR("not support path %d\n", path);
+
+	return tx_nss;
+}
+
 void SetAntenna(_adapter *padapter)
 {
 	mp_ant_path mp_trx_path = padapter->mppriv.antenna_trx;
@@ -967,7 +986,7 @@ u16 rtw_mp_txpower_dbm(_adapter *adapter, u8 rf_path)
 	s16 pre_pwr_refcw_idx = 0;
 	u8 rfpath_i = 0;
 	struct _ADAPTER_LINK *padapter_link = GET_PRIMARY_LINK(adapter);
-        u8 tx_nss = get_phy_tx_nss(adapter, padapter_link);
+	u8 tx_nss = get_phy_tx_nss(adapter, padapter_link);
 
 	_rtw_memset((void *)&ptxpwr_arg, 0, sizeof(struct rtw_mp_txpwr_arg));
 
@@ -975,14 +994,14 @@ u16 rtw_mp_txpower_dbm(_adapter *adapter, u8 rf_path)
 	ptxpwr_arg.is_cck = rtw_mp_is_cck_rate(pmppriv->rateidx);
 	ptxpwr_arg.rfpath = rf_path;
 
-        if (pmppriv->tssi_mode == RTW_MP_TSSI_ON && ptxpwr_arg.txpwr > 17 * TX_POWER_BASE) {
+	if (pmppriv->tssi_mode == RTW_MP_TSSI_ON && ptxpwr_arg.txpwr > 17 * TX_POWER_BASE) {
 		pmppriv->txpowerdbm = 16 * TX_POWER_BASE ;
 
 		for (rfpath_i = 0 ; rfpath_i < tx_nss; rfpath_i ++)
 			rtw_mp_txpower_dbm(adapter, rfpath_i);
 		rtw_msleep_os(20);
 		pmppriv->txpowerdbm = ptxpwr_arg.txpwr;
-        }
+	}
 
 	rtw_mp_phl_txpower(adapter, &ptxpwr_arg, RTW_MP_TXPWR_CMD_SET_TXPWR);
 

@@ -344,6 +344,11 @@ u8 rtw_efuse_map_write(_adapter * adapter, u16 addr, u16 cnts, u8 *data, u8 efus
 
 	efuse_arg = rtw_zmalloc(sizeof(struct rtw_efuse_phl_arg));
 
+	if (efuse_arg == NULL) {
+		status = _FAIL;
+		goto exit;
+	}
+
 	if (efuse_type == RTW_EFUSE_WIFI)
 		err = rtw_efuse_get_map_size(adapter, &size, RTW_EFUSE_CMD_WIFI_GET_LOG_SIZE);
 	else if (efuse_type == RTW_EFUSE_BT)

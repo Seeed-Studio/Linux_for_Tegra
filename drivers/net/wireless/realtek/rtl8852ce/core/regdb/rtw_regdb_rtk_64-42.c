@@ -15,47 +15,13 @@
 #define _RTW_REGDB_RTK_C_
 
 #include <drv_types.h>
+#include "rtw_regdb_rtk_common.h"
 
+#define RTW_MODULE_NAME		""
 #define RTW_DOMAIN_MAP_VER	"64"
 #define RTW_DOMAIN_MAP_M_VER	""
 #define RTW_COUNTRY_MAP_VER	"42"
 #define RTW_COUNTRY_MAP_M_VER	""
-
-#define rtw_is_5g_band1(ch) ((ch) >= 36 && (ch) <= 48)
-#define rtw_is_5g_band2(ch) ((ch) >= 52 && (ch) <= 64)
-#define rtw_is_5g_band3(ch) ((ch) >= 100 && (ch) <= 144)
-#define rtw_is_5g_band4(ch) ((ch) >= 149 && (ch) <= 177)
-
-#define rtw_is_6g_band1(ch) ((ch) >= 1 && (ch) <= 93)
-#define rtw_is_6g_band2(ch) ((ch) >= 97 && (ch) <= 117)
-#define rtw_is_6g_band3(ch) ((ch) >= 121 && (ch) <= 189)
-#define rtw_is_6g_band4(ch) ((ch) >= 193 && (ch) <= 237)
-
-struct ch_list_t {
-	u8 *len_ch_attr;
-};
-
-#define CLA_2G_12_14_PASSIVE	BIT0
-
-#define CLA_5G_B1_PASSIVE		BIT0
-#define CLA_5G_B2_PASSIVE		BIT1
-#define CLA_5G_B3_PASSIVE		BIT2
-#define CLA_5G_B4_PASSIVE		BIT3
-#define CLA_5G_B2_DFS			BIT4
-#define CLA_5G_B3_DFS			BIT5
-#define CLA_5G_B4_DFS			BIT6
-
-#define CLA_6G_B1_PASSIVE		BIT0
-#define CLA_6G_B2_PASSIVE		BIT1
-#define CLA_6G_B3_PASSIVE		BIT2
-#define CLA_6G_B4_PASSIVE		BIT3
-
-#define CH_LIST_ENT(_len, arg...) \
-	{.len_ch_attr = (u8[_len + 2]) {_len, ##arg}, }
-
-#define CH_LIST_LEN(_ch_list) (_ch_list.len_ch_attr[0])
-#define CH_LIST_CH(_ch_list, _i) (_ch_list.len_ch_attr[_i + 1])
-#define CH_LIST_ATTRIB(_ch_list) (_ch_list.len_ch_attr[CH_LIST_LEN(_ch_list) + 1])
 
 enum rtw_chd_2g {
 	RTW_CHD_2G_INVALID = 0,
@@ -138,97 +104,80 @@ enum rtw_chd_5g {
 	RTW_CHD_5G_NULL = RTW_CHD_5G_00,
 };
 
-static const struct ch_list_t rtw_channel_def_2g[] = {
-	/* RTW_CHD_2G_INVALID */	CH_LIST_ENT(0, 0),
-	/* RTW_CHD_2G_00 */	CH_LIST_ENT(0, 0),
-	/* RTW_CHD_2G_01 */	CH_LIST_ENT(13, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, CLA_2G_12_14_PASSIVE),
-	/* RTW_CHD_2G_02 */	CH_LIST_ENT(13, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0),
-	/* RTW_CHD_2G_03 */	CH_LIST_ENT(11, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0),
-	/* RTW_CHD_2G_04 */	CH_LIST_ENT(14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0),
-	/* RTW_CHD_2G_05 */	CH_LIST_ENT(4, 10, 11, 12, 13, 0),
-	/* RTW_CHD_2G_06 */	CH_LIST_ENT(14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, CLA_2G_12_14_PASSIVE),
+static const CH_LIST_2G_T rtw_channel_def_2g[] = {
+	/* RTW_CHD_2G_INVALID */	CH_LIST_ENT_2G(0),
+	/* RTW_CHD_2G_00 */	CH_LIST_ENT_2G(0),
+	/* RTW_CHD_2G_01 */	CH_LIST_ENT_2G(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, CLA_2G_12_14_PASSIVE),
+	/* RTW_CHD_2G_02 */	CH_LIST_ENT_2G(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 0),
+	/* RTW_CHD_2G_03 */	CH_LIST_ENT_2G(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0),
+	/* RTW_CHD_2G_04 */	CH_LIST_ENT_2G(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0),
+	/* RTW_CHD_2G_05 */	CH_LIST_ENT_2G(10, 11, 12, 13, 0),
+	/* RTW_CHD_2G_06 */	CH_LIST_ENT_2G(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, CLA_2G_12_14_PASSIVE),
 };
 
 #if CONFIG_IEEE80211_BAND_5GHZ
-static const struct ch_list_t rtw_channel_def_5g[] = {
-	/* RTW_CHD_5G_INVALID */	CH_LIST_ENT(0, 0),
-	/* RTW_CHD_5G_00 */	CH_LIST_ENT(0, 0),
-	/* RTW_CHD_5G_01 */	CH_LIST_ENT(21, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_02 */	CH_LIST_ENT(19, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_03 */	CH_LIST_ENT(24, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_04 */	CH_LIST_ENT(22, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_05 */	CH_LIST_ENT(19, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 149, 153, 157, 161, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_06 */	CH_LIST_ENT(9, 36, 40, 44, 48, 149, 153, 157, 161, 165, 0),
-	/* RTW_CHD_5G_07 */	CH_LIST_ENT(13, 36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B2_DFS),
-	/* RTW_CHD_5G_08 */	CH_LIST_ENT(12, 36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, CLA_5G_B2_DFS),
-	/* RTW_CHD_5G_09 */	CH_LIST_ENT(5, 149, 153, 157, 161, 165, 0),
-	/* RTW_CHD_5G_10 */	CH_LIST_ENT(8, 36, 40, 44, 48, 52, 56, 60, 64, CLA_5G_B2_DFS),
-	/* RTW_CHD_5G_11 */	CH_LIST_ENT(11, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_12 */	CH_LIST_ENT(16, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_13 */	CH_LIST_ENT(8, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B2_DFS),
-	/* RTW_CHD_5G_14 */	CH_LIST_ENT(4, 36, 40, 44, 48, 0),
-	/* RTW_CHD_5G_15 */	CH_LIST_ENT(4, 149, 153, 157, 161, 0),
-	/* RTW_CHD_5G_16 */	CH_LIST_ENT(11, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 0),
-	/* RTW_CHD_5G_17 */	CH_LIST_ENT(16, 36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_18 */	CH_LIST_ENT(17, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_19 */	CH_LIST_ENT(16, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_20 */	CH_LIST_ENT(20, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_21 */	CH_LIST_ENT(11, 36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_22 */	CH_LIST_ENT(25, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_23 */	CH_LIST_ENT(21, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_24 */	CH_LIST_ENT(24, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_25 */	CH_LIST_ENT(24, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE),
-	/* RTW_CHD_5G_26 */	CH_LIST_ENT(24, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE),
-	/* RTW_CHD_5G_27 */	CH_LIST_ENT(21, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE),
-	/* RTW_CHD_5G_28 */	CH_LIST_ENT(13, 36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B2_PASSIVE),
-	/* RTW_CHD_5G_29 */	CH_LIST_ENT(13, 36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE),
-	/* RTW_CHD_5G_30 */	CH_LIST_ENT(9, 36, 40, 44, 48, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_31 */	CH_LIST_ENT(24, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_32 */	CH_LIST_ENT(9, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B2_DFS),
-	/* RTW_CHD_5G_33 */	CH_LIST_ENT(22, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_34 */	CH_LIST_ENT(13, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_35 */	CH_LIST_ENT(8, 100, 104, 108, 112, 116, 132, 136, 140, CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_36 */	CH_LIST_ENT(25, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_PASSIVE | CLA_5G_B3_DFS | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_37 */	CH_LIST_ENT(8, 36, 40, 44, 48, 52, 56, 60, 64, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE),
-	/* RTW_CHD_5G_38 */	CH_LIST_ENT(16, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_39 */	CH_LIST_ENT(21, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_DFS | CLA_5G_B4_DFS),
-	/* RTW_CHD_5G_40 */	CH_LIST_ENT(21, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_41 */	CH_LIST_ENT(24, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_42 */	CH_LIST_ENT(24, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_DFS | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_43 */	CH_LIST_ENT(23, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_44 */	CH_LIST_ENT(21, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_45 */	CH_LIST_ENT(13, 36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_46 */	CH_LIST_ENT(12, 36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, CLA_5G_B2_PASSIVE),
-	/* RTW_CHD_5G_47 */	CH_LIST_ENT(19, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE),
-	/* RTW_CHD_5G_48 */	CH_LIST_ENT(20, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_49 */	CH_LIST_ENT(17, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_50 */	CH_LIST_ENT(17, 36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_51 */	CH_LIST_ENT(13, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_52 */	CH_LIST_ENT(28, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_53 */	CH_LIST_ENT(17, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
-	/* RTW_CHD_5G_54 */	CH_LIST_ENT(8, 36, 40, 44, 48, 149, 153, 157, 161, 0),
-	/* RTW_CHD_5G_55 */	CH_LIST_ENT(28, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_PASSIVE | CLA_5G_B3_DFS | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_57 */	CH_LIST_ENT(25, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
-	/* RTW_CHD_5G_58 */	CH_LIST_ENT(16, 36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
+static const CH_LIST_5G_T rtw_channel_def_5g[] = {
+	/* RTW_CHD_5G_INVALID */	CH_LIST_ENT_5G(0),
+	/* RTW_CHD_5G_00 */	CH_LIST_ENT_5G(0),
+	/* RTW_CHD_5G_01 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_02 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_03 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_04 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_05 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 149, 153, 157, 161, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_06 */	CH_LIST_ENT_5G(36, 40, 44, 48, 149, 153, 157, 161, 165, 0),
+	/* RTW_CHD_5G_07 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B2_DFS),
+	/* RTW_CHD_5G_08 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, CLA_5G_B2_DFS),
+	/* RTW_CHD_5G_09 */	CH_LIST_ENT_5G(149, 153, 157, 161, 165, 0),
+	/* RTW_CHD_5G_10 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, CLA_5G_B2_DFS),
+	/* RTW_CHD_5G_11 */	CH_LIST_ENT_5G(100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_12 */	CH_LIST_ENT_5G(56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_13 */	CH_LIST_ENT_5G(56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B2_DFS),
+	/* RTW_CHD_5G_14 */	CH_LIST_ENT_5G(36, 40, 44, 48, 0),
+	/* RTW_CHD_5G_15 */	CH_LIST_ENT_5G(149, 153, 157, 161, 0),
+	/* RTW_CHD_5G_16 */	CH_LIST_ENT_5G(100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 0),
+	/* RTW_CHD_5G_17 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_18 */	CH_LIST_ENT_5G(52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_19 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_20 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_21 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_22 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_23 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_24 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_25 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE),
+	/* RTW_CHD_5G_26 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE),
+	/* RTW_CHD_5G_27 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE),
+	/* RTW_CHD_5G_28 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B2_PASSIVE),
+	/* RTW_CHD_5G_29 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE),
+	/* RTW_CHD_5G_30 */	CH_LIST_ENT_5G(36, 40, 44, 48, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_31 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_32 */	CH_LIST_ENT_5G(52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B2_DFS),
+	/* RTW_CHD_5G_33 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_34 */	CH_LIST_ENT_5G(100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_35 */	CH_LIST_ENT_5G(100, 104, 108, 112, 116, 132, 136, 140, CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_36 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_PASSIVE | CLA_5G_B3_DFS | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_37 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE),
+	/* RTW_CHD_5G_38 */	CH_LIST_ENT_5G(52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_39 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_DFS | CLA_5G_B4_DFS),
+	/* RTW_CHD_5G_40 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_41 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_42 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_DFS | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_43 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_44 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_45 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_46 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, CLA_5G_B2_PASSIVE),
+	/* RTW_CHD_5G_47 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE),
+	/* RTW_CHD_5G_48 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_49 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_50 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_51 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_52 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_53 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 149, 153, 157, 161, 165, CLA_5G_B2_DFS | CLA_5G_B3_DFS),
+	/* RTW_CHD_5G_54 */	CH_LIST_ENT_5G(36, 40, 44, 48, 149, 153, 157, 161, 0),
+	/* RTW_CHD_5G_55 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B2_DFS | CLA_5G_B3_PASSIVE | CLA_5G_B3_DFS | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_57 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
+	/* RTW_CHD_5G_58 */	CH_LIST_ENT_5G(36, 40, 44, 48, 52, 56, 60, 64, 132, 136, 140, 149, 153, 157, 161, 165, CLA_5G_B1_PASSIVE | CLA_5G_B2_PASSIVE | CLA_5G_B3_PASSIVE | CLA_5G_B4_PASSIVE),
 };
 #endif /* CONFIG_IEEE80211_BAND_5GHZ */
-
-struct chplan_ent_t {
-	u8 regd_2g; /* value of enum rtw_regd */
-	u8 chd_2g;
-#if CONFIG_IEEE80211_BAND_5GHZ
-	u8 regd_5g; /* value of enum rtw_regd */
-	u8 chd_5g;
-#endif
-};
-
-#if CONFIG_IEEE80211_BAND_5GHZ
-#define CHPLAN_ENT(_regd_2g, _chd_2g, _regd_5g, _chd_5g) {.regd_2g = RTW_REGD_##_regd_2g, .chd_2g = RTW_CHD_2G_##_chd_2g, .regd_5g = RTW_REGD_##_regd_5g, .chd_5g = RTW_CHD_5G_##_chd_5g}
-#else
-#define CHPLAN_ENT(_regd_2g, _chd_2g, _regd_5g, _chd_5g) {.regd_2g = RTW_REGD_##_regd_2g, .chd_2g = RTW_CHD_2G_##_chd_2g}
-#endif
-
-#define CHPLAN_ENT_NOT_DEFINED CHPLAN_ENT(NA, INVALID, NA, INVALID)
 
 static const struct chplan_ent_t RTW_ChannelPlanMap[] = {
 	[0x00] = CHPLAN_ENT(ETSI , 02, ETSI , 49),
@@ -347,92 +296,6 @@ static const struct chplan_ent_t RTW_ChannelPlanMap[] = {
 	[0x7F] = CHPLAN_ENT(WW   , 01, WW   , 55),
 };
 
-static const int RTW_ChannelPlanMap_size = sizeof(RTW_ChannelPlanMap) / sizeof(RTW_ChannelPlanMap[0]);
-
-static u8 rtk_regdb_get_default_regd_2g(u8 id)
-{
-	if (id < RTW_ChannelPlanMap_size)
-		return RTW_ChannelPlanMap[id].regd_2g;
-	return RTW_REGD_NA;
-}
-
-#if CONFIG_IEEE80211_BAND_5GHZ
-static u8 rtk_regdb_get_default_regd_5g(u8 id)
-{
-	if (id < RTW_ChannelPlanMap_size)
-		return RTW_ChannelPlanMap[id].regd_5g;
-	return RTW_REGD_NA;
-}
-#endif
-
-static bool rtk_regdb_is_domain_code_valid(u8 id)
-{
-	if (id < RTW_ChannelPlanMap_size) {
-		const struct chplan_ent_t *chplan_map = &RTW_ChannelPlanMap[id];
-
-		if (chplan_map->chd_2g != RTW_CHD_2G_INVALID
-			#if CONFIG_IEEE80211_BAND_5GHZ
-			&& chplan_map->chd_5g != RTW_CHD_5G_INVALID
-			#endif
-		)
-			return true;
-	}
-
-	return false;
-}
-
-static bool rtk_regdb_domain_get_ch(u8 id, u32 ch, u8 *flags)
-{
-	u8 index, attrib;
-
-	if (flags)
-		*flags = 0;
-
-#if CONFIG_IEEE80211_BAND_5GHZ
-	if (ch > 14) {
-		u8 chd_5g = RTW_ChannelPlanMap[id].chd_5g;
-
-		attrib = CH_LIST_ATTRIB(rtw_channel_def_5g[chd_5g]);
-
-		for (index = 0; index < CH_LIST_LEN(rtw_channel_def_5g[chd_5g]); index++) {
-			if (CH_LIST_CH(rtw_channel_def_5g[chd_5g], index) == ch) {
-				if (flags) {
-					if ((rtw_is_5g_band1(ch) && (attrib & CLA_5G_B1_PASSIVE)) /* band1 passive */
-						|| (rtw_is_5g_band2(ch) && (attrib & CLA_5G_B2_PASSIVE)) /* band2 passive */
-						|| (rtw_is_5g_band3(ch) && (attrib & CLA_5G_B3_PASSIVE)) /* band3 passive */
-						|| (rtw_is_5g_band4(ch) && (attrib & CLA_5G_B4_PASSIVE)) /* band4 passive */
-					)
-						*flags |= RTW_CHF_NO_IR;
-
-					if ((rtw_is_5g_band2(ch) && (attrib & CLA_5G_B2_DFS))
-						|| (rtw_is_5g_band3(ch) && (attrib & CLA_5G_B3_DFS))
-						|| (rtw_is_5g_band4(ch) && (attrib & CLA_5G_B4_DFS)))
-						*flags |= RTW_CHF_DFS;
-				}
-				return true;
-			}
-		}
-	} else
-#endif /* CONFIG_IEEE80211_BAND_5GHZ */
-	 {
-		u8 chd_2g = RTW_ChannelPlanMap[id].chd_2g;
-
-		attrib = CH_LIST_ATTRIB(rtw_channel_def_2g[chd_2g]);
-
-		for (index = 0; index < CH_LIST_LEN(rtw_channel_def_2g[chd_2g]); index++) {
-			if (CH_LIST_CH(rtw_channel_def_2g[chd_2g], index) == ch) {
-				if (flags) {
-					if (ch >= 12 && ch <= 14 && (attrib & CLA_2G_12_14_PASSIVE))
-						*flags |= RTW_CHF_NO_IR;
-				}
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
 #if CONFIG_IEEE80211_BAND_6GHZ
 enum rtw_chd_6g {
 	RTW_CHD_6G_INVALID = 0,
@@ -449,25 +312,16 @@ enum rtw_chd_6g {
 	RTW_CHD_6G_NULL = RTW_CHD_6G_00,
 };
 
-static const struct ch_list_t rtw_channel_def_6g[] = {
-	/* RTW_CHD_6G_INVALID */	CH_LIST_ENT(0, 0),
-	/* RTW_CHD_6G_00 */	CH_LIST_ENT(0, 0),
-	/* RTW_CHD_6G_01 */	CH_LIST_ENT(24, 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93, 0),
-	/* RTW_CHD_6G_02 */	CH_LIST_ENT(6, 97, 101, 105, 109, 113, 117, 0),
-	/* RTW_CHD_6G_03 */	CH_LIST_ENT(18, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177, 181, 185, 189, 0),
-	/* RTW_CHD_6G_04 */	CH_LIST_ENT(11, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 233, 0),
-	/* RTW_CHD_6G_05 */	CH_LIST_ENT(59, 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113, 117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 233, CLA_6G_B1_PASSIVE | CLA_6G_B2_PASSIVE | CLA_6G_B3_PASSIVE | CLA_6G_B4_PASSIVE),
-	/* RTW_CHD_6G_06 */	CH_LIST_ENT(59, 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113, 117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 233, 0),
+static const CH_LIST_6G_T rtw_channel_def_6g[] = {
+	/* RTW_CHD_6G_INVALID */	CH_LIST_ENT_6G(0),
+	/* RTW_CHD_6G_00 */	CH_LIST_ENT_6G(0),
+	/* RTW_CHD_6G_01 */	CH_LIST_ENT_6G(1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93, 0),
+	/* RTW_CHD_6G_02 */	CH_LIST_ENT_6G(97, 101, 105, 109, 113, 117, 0),
+	/* RTW_CHD_6G_03 */	CH_LIST_ENT_6G(121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177, 181, 185, 189, 0),
+	/* RTW_CHD_6G_04 */	CH_LIST_ENT_6G(193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 233, 0),
+	/* RTW_CHD_6G_05 */	CH_LIST_ENT_6G(1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113, 117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 233, CLA_6G_B1_PASSIVE | CLA_6G_B2_PASSIVE | CLA_6G_B3_PASSIVE | CLA_6G_B4_PASSIVE),
+	/* RTW_CHD_6G_06 */	CH_LIST_ENT_6G(1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113, 117, 121, 125, 129, 133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 233, 0),
 };
-
-struct chplan_6g_ent_t {
-	u8 regd; /* value of enum rtw_regd */
-	u8 chd;
-};
-
-#define CHPLAN_6G_ENT(_regd, _chd) {.regd = RTW_REGD_##_regd, .chd = RTW_CHD_6G_##_chd}
-
-#define CHPLAN_6G_ENT_NOT_DEFINED CHPLAN_6G_ENT(NA, INVALID)
 
 static const struct chplan_6g_ent_t rtw_chplan_6g_map[] = {
 	[0x00] = CHPLAN_6G_ENT(NA   , 00),
@@ -484,56 +338,6 @@ static const struct chplan_6g_ent_t rtw_chplan_6g_map[] = {
 	[0x1C] = CHPLAN_6G_ENT(MKK  , 01),
 	[0x7F] = CHPLAN_6G_ENT(WW   , 05),
 };
-
-static const int rtw_chplan_6g_map_size = sizeof(rtw_chplan_6g_map) / sizeof(rtw_chplan_6g_map[0]);
-
-static u8 rtk_regdb_get_default_regd_6g(u8 id)
-{
-	if (id < rtw_chplan_6g_map_size)
-		return rtw_chplan_6g_map[id].regd;
-	return RTW_REGD_NA;
-}
-
-static bool rtk_regdb_is_domain_code_6g_valid(u8 id)
-{
-	if (id < rtw_chplan_6g_map_size) {
-		const struct chplan_6g_ent_t *chplan_map = &rtw_chplan_6g_map[id];
-
-		if (chplan_map->chd != RTW_CHD_6G_INVALID)
-			return true;
-	}
-
-	return false;
-}
-
-static bool rtk_regdb_domain_6g_get_ch(u8 id, u32 ch, u8 *flags)
-{
-	u8 index, attrib;
-	u8 chd_6g;
-
-	if (flags)
-		*flags = 0;
-
-	chd_6g = rtw_chplan_6g_map[id].chd;
-
-	attrib = CH_LIST_ATTRIB(rtw_channel_def_6g[chd_6g]);
-
-	for (index = 0; index < CH_LIST_LEN(rtw_channel_def_6g[chd_6g]); index++) {
-		if (CH_LIST_CH(rtw_channel_def_6g[chd_6g], index) == ch) {
-			if (flags) {
-				if ((rtw_is_6g_band1(ch) && (attrib & CLA_6G_B1_PASSIVE)) /* band1 passive */
-					|| (rtw_is_6g_band2(ch) && (attrib & CLA_6G_B2_PASSIVE)) /* band2 passive */
-					|| (rtw_is_6g_band3(ch) && (attrib & CLA_6G_B3_PASSIVE)) /* band3 passive */
-					|| (rtw_is_6g_band4(ch) && (attrib & CLA_6G_B4_PASSIVE)) /* band4 passive */
-				)
-					*flags |= RTW_CHF_NO_IR;
-			}
-			return true;
-		}
-	}
-
-	return false;
-}
 #endif /* CONFIG_IEEE80211_BAND_6GHZ */
 
 static const struct country_chplan country_chplan_map[] = {
@@ -778,154 +582,5 @@ static const struct country_chplan country_chplan_map[] = {
 	COUNTRY_CHPLAN_ENT("ZW", 0x5E, 0x00, DEF    , 1, 1, 1), /* Zimbabwe */
 };
 
-static bool rtk_regdb_get_chplan_from_alpha2(const char *alpha2, struct country_chplan *ent)
-{
-	const struct country_chplan *map = country_chplan_map;
-	u16 map_sz = sizeof(country_chplan_map) / sizeof(struct country_chplan);
-	int i;
-
-	for (i = 0; i < map_sz; i++) {
-		if (strncmp(alpha2, map[i].alpha2, 2) == 0) {
-			if (ent)
-				_rtw_memcpy(ent, &map[i], sizeof(*ent));
-			return true;
-		}
-	}
-	return false;
-}
-
-#ifdef CONFIG_RTW_DEBUG
-static void rtk_regdb_dump_chplan_test(void *sel)
-{
-	int i, j;
-
-	/* check 2G CHD redundent */
-	for (i = RTW_CHD_2G_00; i < RTW_CHD_2G_MAX; i++) {
-		for (j = RTW_CHD_2G_00; j < i; j++) {
-			if (CH_LIST_LEN(rtw_channel_def_2g[i]) == CH_LIST_LEN(rtw_channel_def_2g[j])
-				&& _rtw_memcmp(&CH_LIST_CH(rtw_channel_def_2g[i], 0), &CH_LIST_CH(rtw_channel_def_2g[j], 0), CH_LIST_LEN(rtw_channel_def_2g[i]) + 1) == _TRUE)
-				RTW_PRINT_SEL(sel, "2G chd:%u and %u is the same\n", i, j);
-		}
-	}
-
-	/* check 2G CHD invalid channel */
-	for (i = RTW_CHD_2G_00; i < RTW_CHD_2G_MAX; i++) {
-		for (j = 0; j < CH_LIST_LEN(rtw_channel_def_2g[i]); j++) {
-			if (rtw_bch2freq(BAND_ON_24G, CH_LIST_CH(rtw_channel_def_2g[i], j)) == 0)
-				RTW_PRINT_SEL(sel, "2G invalid ch:%u at (%d,%d)\n", CH_LIST_CH(rtw_channel_def_2g[i], j), i, j);
-		}
-	}
-
-#if CONFIG_IEEE80211_BAND_5GHZ
-	/* check 5G CHD redundent */
-	for (i = RTW_CHD_5G_00; i < RTW_CHD_5G_MAX; i++) {
-		for (j = RTW_CHD_5G_00; j < i; j++) {
-			if (CH_LIST_LEN(rtw_channel_def_5g[i]) == CH_LIST_LEN(rtw_channel_def_5g[j])
-				&& _rtw_memcmp(&CH_LIST_CH(rtw_channel_def_5g[i], 0), &CH_LIST_CH(rtw_channel_def_5g[j], 0), CH_LIST_LEN(rtw_channel_def_5g[i]) + 1) == _TRUE)
-				RTW_PRINT_SEL(sel, "5G chd:%u and %u is the same\n", i, j);
-		}
-	}
-
-	/* check 5G CHD invalid channel */
-	for (i = RTW_CHD_5G_00; i < RTW_CHD_5G_MAX; i++) {
-		for (j = 0; j < CH_LIST_LEN(rtw_channel_def_5g[i]); j++) {
-			if (rtw_bch2freq(BAND_ON_5G, CH_LIST_CH(rtw_channel_def_5g[i], j)) == 0)
-				RTW_PRINT_SEL(sel, "5G invalid ch:%u at (%d,%d)\n", CH_LIST_CH(rtw_channel_def_5g[i], j), i, j);
-		}
-	}
-#endif
-
-#if CONFIG_IEEE80211_BAND_6GHZ
-	/* check 6G CHD redundent */
-	for (i = RTW_CHD_6G_00; i < RTW_CHD_6G_MAX; i++) {
-		for (j = RTW_CHD_6G_00; j < i; j++) {
-			if (CH_LIST_LEN(rtw_channel_def_6g[i]) == CH_LIST_LEN(rtw_channel_def_6g[j])
-				&& _rtw_memcmp(&CH_LIST_CH(rtw_channel_def_6g[i], 0), &CH_LIST_CH(rtw_channel_def_6g[j], 0), CH_LIST_LEN(rtw_channel_def_6g[i]) + 1) == _TRUE)
-				RTW_PRINT_SEL(sel, "6G chd:%u and %u is the same\n", i, j);
-		}
-	}
-
-	/* check 6G CHD invalid channel */
-	for (i = RTW_CHD_6G_00; i < RTW_CHD_6G_MAX; i++) {
-		for (j = 0; j < CH_LIST_LEN(rtw_channel_def_6g[i]); j++) {
-			if (rtw_bch2freq(BAND_ON_6G, CH_LIST_CH(rtw_channel_def_6g[i], j)) == 0)
-				RTW_PRINT_SEL(sel, "6G invalid ch:%u at (%d,%d)\n", CH_LIST_CH(rtw_channel_def_6g[i], j), i, j);
-		}
-	}
-#endif
-
-	/* check chplan 2G_5G redundent */
-	for (i = 0; i < RTW_ChannelPlanMap_size; i++) {
-		if (!rtw_is_channel_plan_valid(i))
-			continue;
-		for (j = 0; j < i; j++) {
-			if (!rtw_is_channel_plan_valid(j))
-				continue;
-			if (_rtw_memcmp(&RTW_ChannelPlanMap[i], &RTW_ChannelPlanMap[j], sizeof(RTW_ChannelPlanMap[i])) == _TRUE)
-				RTW_PRINT_SEL(sel, "channel plan 0x%02x and 0x%02x is the same\n", i, j);
-		}
-	}
-
-#if CONFIG_IEEE80211_BAND_6GHZ
-	/* check chplan 6G redundent */
-	for (i = 0; i < rtw_chplan_6g_map_size; i++) {
-		if (!rtw_is_channel_plan_6g_valid(i))
-			continue;
-		for (j = 0; j < i; j++) {
-			if (!rtw_is_channel_plan_6g_valid(j))
-				continue;
-			if (_rtw_memcmp(&rtw_chplan_6g_map[i], &rtw_chplan_6g_map[j], sizeof(rtw_chplan_6g_map[i])) == _TRUE)
-				RTW_PRINT_SEL(sel, "channel plan 6g 0x%02x and 0x%02x is the same\n", i, j);
-		}
-	}
-#endif
-
-
-	/* check country invalid chplan/chplan_6g */
-{
-	struct country_chplan ent;
-	u8 code[2];
-
-	for (code[0] = 'A'; code[0] <= 'Z'; code[0]++) {
-		for (code[1] = 'A'; code[1] <= 'Z'; code[1]++) {
-			if (!rtw_get_chplan_from_country(code, &ent))
-				continue;
-			if (!rtw_is_channel_plan_valid(ent.domain_code))
-				RTW_PRINT_SEL(sel, "country \"%c%c\" has invalid domain_code:0x%02X\n", code[0], code[1], ent.domain_code);
-			#if CONFIG_IEEE80211_BAND_6GHZ
-			if (!rtw_is_channel_plan_6g_valid(ent.domain_code_6g))
-				RTW_PRINT_SEL(sel, "country \"%c%c\" has invalid domain_code_6g:0x%02X\n", code[0], code[1], ent.domain_code_6g);
-			#endif
-		}
-	}
-}
-}
-#endif /* CONFIG_RTW_DEBUG */
-
-static void rtk_regdb_get_ver_str(char *buf, size_t buf_len)
-{
-	snprintf(buf, buf_len, "%s%s-%s%s", RTW_DOMAIN_MAP_VER, RTW_DOMAIN_MAP_M_VER, RTW_COUNTRY_MAP_VER, RTW_COUNTRY_MAP_M_VER);
-}
-
-struct rtw_regdb_ops regdb_ops = {
-	.get_default_regd_2g = rtk_regdb_get_default_regd_2g,
-#if CONFIG_IEEE80211_BAND_5GHZ
-	.get_default_regd_5g = rtk_regdb_get_default_regd_5g,
-#endif
-	.is_domain_code_valid = rtk_regdb_is_domain_code_valid,
-	.domain_get_ch = rtk_regdb_domain_get_ch,
-
-#if CONFIG_IEEE80211_BAND_6GHZ
-	.get_default_regd_6g = rtk_regdb_get_default_regd_6g,
-	.is_domain_code_6g_valid = rtk_regdb_is_domain_code_6g_valid,
-	.domain_6g_get_ch = rtk_regdb_domain_6g_get_ch,
-#endif
-
-	.get_chplan_from_alpha2 = rtk_regdb_get_chplan_from_alpha2,
-
-#ifdef CONFIG_RTW_DEBUG
-	.dump_chplan_test = rtk_regdb_dump_chplan_test,
-#endif
-	.get_ver_str = rtk_regdb_get_ver_str,
-};
+#include "rtw_regdb_rtk_common.c"
 

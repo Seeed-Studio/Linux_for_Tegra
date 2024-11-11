@@ -60,6 +60,10 @@ enum phl_band_idx {
 #define RTW_ONE_LINK (1)
 #define RTW_RLINK_PRIMARY (0)
 
+#define GET_DEV_SW_CAP(_phl_com) (_phl_com->dev_sw_cap)
+#define GET_DEV_HW_CAP(_phl_com) (_phl_com->dev_hw_cap)
+#define GET_DEV_CAP(_phl_com) (_phl_com->dev_cap)
+
 /*
  * Refer to 802.11 spec (BE D1.3).
  * The description of Link ID subfield reserves 15 for if the reported AP is
@@ -1077,6 +1081,8 @@ enum phl_msg_evt_id {
 	MSG_EVT_P2P_SESSION_NO_LINK = 235,
 	MSG_EVT_P2P_SESSION_LINKED = 236,
 
+	MSG_EVT_ANN_RX1SS = 240, /* Announce rx 1ss */
+	MSG_EVT_ANN_RX_MAXSS = 241, /* Announce rx nss for max cap */
 	/* sub module IO */
 	MSG_EVT_NOTIFY_BB = 300,
 	MSG_EVT_NOTIFY_RF = 301,
@@ -2228,6 +2234,21 @@ enum dump_cfg_option {
 #define SET_FW_LOG_DUMP_ALLOWED(_phl_com) (_phl_com->dbg_cfg.dump_cfg |= DUMP_CFG_FW_LOG_ALLOW)
 #define CLR_FW_LOG_DUMP_ALLOWED(_phl_com) (_phl_com->dbg_cfg.dump_cfg &= ~DUMP_CFG_FW_LOG_ALLOW)
 
+#ifdef CONFIG_BTCOEX
+#define GET_DEV_BTC_CAP(_phl_com) (GET_DEV_CAP(_phl_com).btc_cap_i)
+#define GET_DEV_SW_BTC_CAP(_phl_com) (GET_DEV_SW_CAP(_phl_com).btc_cap_i)
+#define GET_DEV_HW_BTC_CAP(_phl_com) (GET_DEV_HW_CAP(_phl_com).btc_cap_i)
+
+enum rtw_btc_deg_wifi_cap {
+	BTC_DRG_WIFI_CAP_NONE = 0,
+	BTC_DRG_WIFI_CAP_TRX1SS = BIT0
+};
+
+struct btc_cap_info {
+	u16 btc_deg_wifi_cap; /* enum rtw_btc_deg_wifi_cap */
+};
+#endif /* CONFIG_BTCOEX */
+
 struct rtw_phl_dbg_bb {
 	u32 bb_init_ctrl_opt;
 	u32 bb_init_ctrl_val;
@@ -2345,6 +2366,9 @@ struct dev_cap_t {
 	u8 domain;
 	u8 domain_6g;
 	u8 btc_mode;
+#ifdef CONFIG_BTCOEX
+	struct btc_cap_info btc_cap_i;
+#endif /* CONFIG_BTCOEX */
 	u8 ap_ps;           /* support for AP mode PS in PHL */
 	u8 pwrbyrate_off;
 	u8 pwrlmt_type;

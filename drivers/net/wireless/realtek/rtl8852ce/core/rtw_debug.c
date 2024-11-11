@@ -115,7 +115,6 @@ void dump_drv_cfg(void *sel)
 	RTW_PRINT_SEL(sel, "CONFIG_CALIBRATE_TX_POWER_TO_MAX\n");
 #endif
 #endif
-	RTW_PRINT_SEL(sel, "RTW_DEF_MODULE_REGULATORY_CERT=0x%02x\n", RTW_DEF_MODULE_REGULATORY_CERT);
 
 	RTW_PRINT_SEL(sel, "CONFIG_TXPWR_BY_RATE=%d\n", CONFIG_TXPWR_BY_RATE);
 	RTW_PRINT_SEL(sel, "CONFIG_TXPWR_BY_RATE_EN=%d\n", CONFIG_TXPWR_BY_RATE_EN);
@@ -1084,8 +1083,13 @@ int proc_get_roam_flags(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
 	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	int i;
+	char str[4], *band = adapter->mlmepriv.roam_scan_order;
 
-	RTW_PRINT_SEL(m, "0x%02x\n", rtw_roam_flags(adapter));
+	for (i = 0; i < sizeof(str); i++)
+		str[i] = (band[i]==BAND_ON_24G)?'2':(band[i]==BAND_ON_5G)?'5':(band[i]==BAND_ON_6G)?'6':0;
+
+	RTW_PRINT_SEL(m, "0x%04x, order:%s\n", rtw_roam_flags(adapter), str);
 
 	return 0;
 }
@@ -1095,8 +1099,9 @@ ssize_t proc_set_roam_flags(struct file *file, const char __user *buffer, size_t
 	struct net_device *dev = data;
 	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
 
-	char tmp[32];
-	u8 flags;
+	char tmp[32], str[8];
+	int num, i = 0;
+	u16 flags;
 
 	if (count < 1)
 		return -EFAULT;
@@ -1108,28 +1113,44 @@ ssize_t proc_set_roam_flags(struct file *file, const char __user *buffer, size_t
 
 	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
-		int num = sscanf(tmp, "%hhx", &flags);
+		num = sscanf(tmp, "%hx %d", &flags, &i);
 
-		if (num == 1)
+		if (num >= 1)
 			rtw_assign_roam_flags(adapter, flags);
+
+		if (num >= 2 && i > 0) {
+			sprintf(str, "%d", i);
+			for (i = 0; i < sizeof(adapter->mlmepriv.roam_scan_order); i++)
+				adapter->mlmepriv.roam_scan_order[i] = \
+					(str[i]=='2') ? BAND_ON_24G: \
+					(str[i]=='5') ? BAND_ON_5G: \
+					(str[i]=='6') ? BAND_ON_6G:BAND_MAX;
+		}
 	}
-
 	return count;
-
 }
 
+#ifdef PRIVATE_N
 int proc_get_roam_param(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
 	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *mlme = &adapter->mlmepriv;
 
-	RTW_PRINT_SEL(m, "%12s %15s %26s %16s\n", "rssi_diff_th", "scanr_exp_ms", "scan_interval(unit:2 sec)", "rssi_threshold");
-	RTW_PRINT_SEL(m, "%-15u %-13u %-27u %-11u\n"
-		, mlme->roam_rssi_diff_th
+	RTW_PRINT_SEL(m, "%14s %16s %13s %21s %13s %13s\n"
+		, "idle_rssi_delta"
+		, "busy_rssi_delta"
+		, "scanr_exp_ms"
+		, "scan_int(unit:2 sec)"
+		, "idle_rssi_th"
+		, "busy_rssi_th");
+	RTW_PRINT_SEL(m, "%-16u %-16u %-13u %-21u %-13u %-13u\n"
+		, mlme->roam_idle_rssi_delta
+		, mlme->roam_busy_rssi_delta
 		, mlme->roam_scanr_exp_ms
 		, mlme->roam_scan_int
-		, mlme->roam_rssi_threshold
+		, mlme->roam_idle_rssi_th
+		, mlme->roam_busy_rssi_th
 	);
 
 	return 0;
@@ -1142,7 +1163,74 @@ ssize_t proc_set_roam_param(struct file *file, const char __user *buffer, size_t
 	struct mlme_priv *mlme = &adapter->mlmepriv;
 
 	char tmp[32];
-	u8 rssi_diff_th;
+	u8 idle_rssi_delta;
+	u8 busy_rssi_delta;
+	u32 scanr_exp_ms;
+	u32 scan_int;
+	u8 idle_rssi_th;
+	u8 busy_rssi_th;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhu %hhu %u %u %hhu %hhu"
+			, &idle_rssi_delta
+			, &busy_rssi_delta
+			, &scanr_exp_ms
+			, &scan_int
+			, &idle_rssi_th
+			, &busy_rssi_th);
+
+		if (num >= 1)
+			mlme->roam_idle_rssi_delta = idle_rssi_delta;
+		if (num >= 2)
+			mlme->roam_busy_rssi_delta = busy_rssi_delta;
+		if (num >= 3)
+			mlme->roam_scanr_exp_ms = scanr_exp_ms;
+		if (num >= 4)
+			mlme->roam_scan_int = scan_int;
+		if (num >= 5)
+			mlme->roam_idle_rssi_th = idle_rssi_th;
+		if (num >= 6)
+			mlme->roam_busy_rssi_th = busy_rssi_th;
+	}
+
+	return count;
+
+}
+#else
+int proc_get_roam_param(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_priv *mlme = &adapter->mlmepriv;
+
+	RTW_PRINT_SEL(m, "%12s %15s %26s %16s\n", "rssi_diff_th", "scanr_exp_ms", "scan_interval(unit:2 sec)", "rssi_threshold");
+	RTW_PRINT_SEL(m, "%-15u %-13u %-27u %-11u\n"
+		, mlme->roam_rssi_delta
+		, mlme->roam_scanr_exp_ms
+		, mlme->roam_scan_int
+		, mlme->roam_rssi_th
+	);
+
+	return 0;
+}
+
+ssize_t proc_set_roam_param(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_priv *mlme = &adapter->mlmepriv;
+
+	char tmp[32];
+	u8 rssi_delta;
 	u32 scanr_exp_ms;
 	u32 scan_int;
 	u8 rssi_threshold;
@@ -1157,21 +1245,22 @@ ssize_t proc_set_roam_param(struct file *file, const char __user *buffer, size_t
 
 	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
-		int num = sscanf(tmp, "%hhu %u %u %hhu", &rssi_diff_th, &scanr_exp_ms, &scan_int, &rssi_threshold);
+		int num = sscanf(tmp, "%hhu %u %u %hhu", &rssi_delta, &scanr_exp_ms, &scan_int, &rssi_threshold);
 
 		if (num >= 1)
-			mlme->roam_rssi_diff_th = rssi_diff_th;
+			mlme->roam_rssi_delta = rssi_delta;
 		if (num >= 2)
 			mlme->roam_scanr_exp_ms = scanr_exp_ms;
 		if (num >= 3)
 			mlme->roam_scan_int = scan_int;
 		if (num >= 4)
-			mlme->roam_rssi_threshold = rssi_threshold;
+			mlme->roam_rssi_th = rssi_threshold;
 	}
 
 	return count;
 
 }
+#endif
 
 ssize_t proc_set_roam_tgt_addr(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
@@ -1256,8 +1345,12 @@ int proc_get_scan_param(struct seq_file *m, void *v)
 	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
 	struct ss_res *ss = &mlmeext->sitesurvey_res;
 
-#define SCAN_PARAM_TITLE_FMT "%10s"
-#define SCAN_PARAM_VALUE_FMT "%-10u"
+#define SCAN_PARAM_TITLE_FMT_2040BSS "%12s"
+#define SCAN_PARAM_VALUE_FMT_2040BSS "%-12u"
+#define SCAN_PARAM_TITLE_ARG_2040BSS , "scan_2040bss"
+#define SCAN_PARAM_VALUE_ARG_2040BSS , ss->scan_2040bss
+#define SCAN_PARAM_TITLE_FMT " %10s"
+#define SCAN_PARAM_VALUE_FMT " %-10u"
 #define SCAN_PARAM_TITLE_ARG , "scan_ch_ms"
 #define SCAN_PARAM_VALUE_ARG , ss->scan_ch_ms
 #ifdef CONFIG_80211N_HT
@@ -1284,20 +1377,24 @@ int proc_get_scan_param(struct seq_file *m, void *v)
 #endif
 
 	RTW_PRINT_SEL(m,
+		SCAN_PARAM_TITLE_FMT_2040BSS
 		SCAN_PARAM_TITLE_FMT
 		SCAN_PARAM_TITLE_FMT_HT
 		SCAN_PARAM_TITLE_FMT_BACKOP
 		"\n"
+		SCAN_PARAM_TITLE_ARG_2040BSS
 		SCAN_PARAM_TITLE_ARG
 		SCAN_PARAM_TITLE_ARG_HT
 		SCAN_PARAM_TITLE_ARG_BACKOP
 	);
 
 	RTW_PRINT_SEL(m,
+		SCAN_PARAM_VALUE_FMT_2040BSS
 		SCAN_PARAM_VALUE_FMT
 		SCAN_PARAM_VALUE_FMT_HT
 		SCAN_PARAM_VALUE_FMT_BACKOP
 		"\n"
+		SCAN_PARAM_VALUE_ARG_2040BSS
 		SCAN_PARAM_VALUE_ARG
 		SCAN_PARAM_VALUE_ARG_HT
 		SCAN_PARAM_VALUE_ARG_BACKOP
@@ -1316,7 +1413,10 @@ ssize_t proc_set_scan_param(struct file *file, const char __user *buffer, size_t
 	char tmp[32] = {0};
 
 	u16 scan_ch_ms;
-#define SCAN_PARAM_INPUT_FMT "%hu"
+	u8 scan_2040bss;
+#define SCAN_PARAM_INPUT_FMT_2040BSS "%hhu"
+#define SCAN_PARAM_INPUT_ARG_2040BSS , &scan_2040bss
+#define SCAN_PARAM_INPUT_FMT " %hu"
 #define SCAN_PARAM_INPUT_ARG , &scan_ch_ms
 #ifdef CONFIG_80211N_HT
 	u8 rx_ampdu_accept;
@@ -1348,14 +1448,18 @@ ssize_t proc_set_scan_param(struct file *file, const char __user *buffer, size_t
 	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp,
+			SCAN_PARAM_INPUT_FMT_2040BSS
 			SCAN_PARAM_INPUT_FMT
 			SCAN_PARAM_INPUT_FMT_HT
 			SCAN_PARAM_INPUT_FMT_BACKOP
+			SCAN_PARAM_INPUT_ARG_2040BSS
 			SCAN_PARAM_INPUT_ARG
 			SCAN_PARAM_INPUT_ARG_HT
 			SCAN_PARAM_INPUT_ARG_BACKOP
 		);
 
+		if (num-- > 0)
+			ss->scan_2040bss = scan_2040bss;
 		if (num-- > 0)
 			ss->scan_ch_ms = scan_ch_ms;
 #ifdef CONFIG_80211N_HT
@@ -1453,7 +1557,6 @@ ssize_t proc_set_survey_info(struct file *file, const char __user *buffer, size_
 			acs = 1;
 	}
 
-#if 1
 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
 	if (ssc_chk != SS_ALLOW)
 		goto exit;
@@ -1462,45 +1565,6 @@ ssize_t proc_set_survey_info(struct file *file, const char __user *buffer, size_
 		RTW_INFO("scan abort!! adapter cannot use\n");
 		goto exit;
 	}
-#else
-#ifdef CONFIG_MP_INCLUDED
-	if (rtw_mp_mode_check(padapter)) {
-		RTW_INFO("MP mode block Scan request\n");
-		goto exit;
-	}
-#endif
-	if (rtw_is_scan_deny(padapter)) {
-		RTW_INFO(FUNC_ADPT_FMT  ": scan deny\n", FUNC_ADPT_ARG(padapter));
-		goto exit;
-	}
-
-	if (!rtw_is_adapter_up(padapter)) {
-		RTW_INFO("scan abort!! adapter cannot use\n");
-		goto exit;
-	}
-
-	if (rtw_mi_busy_traffic_check(padapter)) {
-		RTW_INFO("scan abort!! BusyTraffic == _TRUE\n");
-		goto exit;
-	}
-
-	if (check_fwstate(pmlmepriv, WIFI_AP_STATE) && check_fwstate(pmlmepriv, WIFI_UNDER_WPS)) {
-		RTW_INFO("scan abort!! AP mode process WPS\n");
-		goto exit;
-	}
-	if (check_fwstate(pmlmepriv, WIFI_UNDER_SURVEY | WIFI_UNDER_LINKING) == _TRUE) {
-		RTW_INFO("scan abort!! fwstate=0x%x\n", pmlmepriv->fw_state);
-		goto exit;
-	}
-
-#ifdef CONFIG_CONCURRENT_MODE
-	if (rtw_mi_buddy_check_fwstate(padapter,
-		       WIFI_UNDER_SURVEY | WIFI_UNDER_LINKING | WIFI_UNDER_WPS)) {
-		RTW_INFO("scan abort!! buddy_fwstate check failed\n");
-		goto exit;
-	}
-#endif
-#endif
 
 	if (acs) {
 		#ifdef CONFIG_RTW_ACS
@@ -1693,7 +1757,9 @@ int proc_get_ap_info(struct seq_file *m, void *v)
 		RTW_PRINT_SEL(m, "SSID=%s\n", cur_network->network.Ssid.Ssid);
 		RTW_PRINT_SEL(m, "sta's macaddr:" MAC_FMT "\n", MAC_ARG(psta->phl_sta->mac_addr));
 		RTW_PRINT_SEL(m, "Max Bit Rate=%u (Mbps)\n", mbps);
-		RTW_PRINT_SEL(m, "cur_channel=%d, cur_bwmode=%d(%s), cur_ch_offset=%d\n", pmlmeext->chandef.chan, pmlmeext->chandef.bw, ch_width_str(pmlmeext->chandef.bw), pmlmeext->chandef.offset);
+		RTW_PRINT_SEL(m, "cur_channel=%d-%s, cur_bwmode=%d(%s), cur_ch_offset=%d\n",
+			pmlmeext->chandef.chan, rtw_band_str(pmlmeext->chandef.band),
+			pmlmeext->chandef.bw, ch_width_str(pmlmeext->chandef.bw), pmlmeext->chandef.offset);
 		RTW_PRINT_SEL(m, "wireless_mode=0x%x(%s), rtsen=%d, cts2slef=%d hw_rts_en=%d\n",
 				psta->phl_sta->wmode, wl_mode, psta->rtsen, psta->cts2self, psta->hw_rts_en);
 		/* ToDo: need API to query hal_sta->ra_info.rate_id */
@@ -3412,6 +3478,51 @@ ssize_t proc_set_tx_amsdu_rate(struct file *file, const char __user *buffer, siz
 	return count;
 }
 #endif /* CONFIG_TX_AMSDU */
+
+int proc_get_tx_max_agg_time(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+
+	if (padapter)
+	{
+		RTW_PRINT_SEL(m, "max agg time = 0x%x\n", pxmitpriv->max_agg_time);
+	}
+
+	return 0;
+}
+
+ssize_t proc_set_tx_max_agg_time(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+	char tmp[32];
+	u16 agg_t;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hx ", &agg_t);
+
+		if (padapter && (num == 1)) {
+			RTW_INFO("max_agg_time = 0x%x\n", agg_t);
+
+			pxmitpriv->max_agg_time = agg_t;
+		}
+	}
+
+	return count;
+}
+
 #endif /* CONFIG_80211N_HT */
 
 #ifdef CONFIG_80211AC_VHT

@@ -33,6 +33,8 @@ bss_cnt indicates the number of bss that has been reported.
 struct surveydone_event {
 	unsigned int	bss_cnt;
 	u8 activate_ch_cnt;
+	u8 reason;
+	bool complete; /* scan done w/o aborting */
 	bool acs; /* aim to trigger channel selection */
 };
 

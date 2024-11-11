@@ -18,11 +18,11 @@
 #ifdef CONFIG_CORE_TXSC
 
 //#define USE_ONE_WLHDR /* do not use one hdr when use sw amsdu in txsc */ /* TBD, open this when hw_hde_conv ready */
-
+/*
 #ifndef USE_ONE_WLHDR
 #define USE_PREV_WLHDR_BUF
 #endif
-
+*/
 #define CORE_TXSC_ENTRY_NUM 8
 #define CORE_TXSC_WLHDR_SIZE (WLHDR_SIZE + SNAP_SIZE + 2 + _AES_IV_LEN_)
 #define CORE_TXSC_DEBUG_BUF_SIZE (sizeof(struct rtw_xmit_req) + sizeof(struct rtw_pkt_buf_list)*2)
@@ -82,6 +82,12 @@ struct txsc_pkt_entry {
 	u8 ac;
 	bool amsdu;
 	bool is_amsdu_timeout;
+#endif
+#ifdef TXSC_DBG_COPY_ORI_WLHDR_MDATA
+	bool is_spec_pkt;
+	struct rtw_t_meta_data mdata_ori;
+	u8      wlhdr_ori[CORE_TXSC_WLHDR_SIZE];
+	u8      wlhdr_ori_len;
 #endif
 };
 

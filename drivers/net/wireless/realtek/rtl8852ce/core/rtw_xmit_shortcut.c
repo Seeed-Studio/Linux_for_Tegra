@@ -22,8 +22,9 @@ void _print_txreq_pklist(struct xmit_frame *pxframe, struct rtw_xmit_req *ptxreq
 	struct rtw_pkt_buf_list *pkt_list = NULL;
 	struct rtw_xmit_req *txreq = NULL;
 	u8 pkt_cnt = 0, i;
-
+#ifndef TXSC_DBG_DUMP_SPEC_PKT
 	if (DBG_PRINT_TXREQ_ONCE == 1) {
+#endif
 		RTW_PRINT("%s\n", func);
 		RTW_PRINT("[%s] pxframe=%p txreq=%p\n", func, pxframe, ptxreq);
 
@@ -47,7 +48,9 @@ void _print_txreq_pklist(struct xmit_frame *pxframe, struct rtw_xmit_req *ptxreq
 			pkt_list++;
 		}
 		DBG_PRINT_TXREQ_ONCE = 0;
+#ifndef TXSC_DBG_DUMP_SPEC_PKT
 	}
+#endif
 }
 
 #ifdef CONFIG_TXSC_AMSDU
@@ -1104,7 +1107,12 @@ u8 txsc_apply_sc_cached_entry(_adapter *padapter, struct txsc_pkt_entry *txsc_pk
 #endif
 
 	/* fill_txreq_mdata */
-	_rtw_memcpy(&txreq->mdata, mdata, sizeof(txreq->mdata));
+#ifdef TXSC_DBG_COPY_ORI_WLHDR_MDATA 
+	if (txsc_pkt->is_spec_pkt) {
+        _rtw_memcpy(&txreq->mdata, &txsc_pkt->mdata_ori, sizeof(txreq->mdata));
+    } else
+#endif
+		_rtw_memcpy(&txreq->mdata, mdata, sizeof(txreq->mdata));
 
 	/* Update TID from IP header */
 	/* priority = *(xmit_skb[0]->data + ETH_HLEN + 1); */
@@ -1143,28 +1151,34 @@ u8 txsc_apply_sc_cached_entry(_adapter *padapter, struct txsc_pkt_entry *txsc_pk
 	#endif
 		wlhdr_copy_len = txsc_wlhdr_len;
 
-	if (txreq->mdata.sec_hw_enc) {
-		if (padapter->dvobj->phl_com->dev_cap.sec_cap.hw_form_hdr &&
-		    mdata->sec_type != RTW_ENC_WAPI && mdata->hw_sec_iv == 0) {
-			txreq->mdata.sec_keyid = psta->key_idx;
-			/* Fill PN of IV */
-			for (i = 0; i < 6; i++)
-				txreq->mdata.iv[i] = (psta->dot11txpn.val >> 8 * i) & 0xff;
-			_txsc_update_sec_iv(padapter, psta, txreq);
-			RTW_DBG("%s: keyid=%d, iv=" PN_FMT "\n", __func__,
-				txreq->mdata.sec_keyid, PN_ARG(txreq->mdata.iv));
+#ifdef TXSC_DBG_COPY_ORI_WLHDR_MDATA
+	if (!txsc_pkt->is_spec_pkt) {
+#endif
+		if (txreq->mdata.sec_hw_enc) {
+			if (padapter->dvobj->phl_com->dev_cap.sec_cap.hw_form_hdr &&
+				mdata->sec_type != RTW_ENC_WAPI && mdata->hw_sec_iv == 0) {
+				txreq->mdata.sec_keyid = psta->key_idx;
+				/* Fill PN of IV */
+				for (i = 0; i < 6; i++)
+					txreq->mdata.iv[i] = (psta->dot11txpn.val >> 8 * i) & 0xff;
+				_txsc_update_sec_iv(padapter, psta, txreq);
+				RTW_DBG("%s: keyid=%d, iv=" PN_FMT "\n", __func__,
+					txreq->mdata.sec_keyid, PN_ARG(txreq->mdata.iv));
+			}
+			else {
+				//RTW_INFO("%s udpate iv, psta->iv_len : %d, psta->dot11txpn : %d\n", __func__, psta->iv_len, psta->dot11txpn);
+				//RTW_PRINT_DUMP("[before upadte iv]", ptxsc_wlhdr, wlhdr_copy_len);
+				_txsc_update_sec_iv(padapter, psta, txreq);
+				offset = wlhdr_copy_len - psta->iv_len  - RTW_SZ_LLC;
+				_rtw_memcpy((hdr + offset), psta->iv, psta->iv_len);
+				//RTW_INFO("%s offset : %d\n", __func__, offset);
+				//RTW_PRINT_DUMP("[IV]", psta->iv, psta->iv_len);
+				//RTW_PRINT_DUMP("[after upadte iv]", pkt_list0->vir_addr, wlhdr_copy_len);
+			}
 		}
-		else {
-			//RTW_INFO("%s udpate iv, psta->iv_len : %d, psta->dot11txpn : %d\n", __func__, psta->iv_len, psta->dot11txpn);
-			//RTW_PRINT_DUMP("[before upadte iv]", ptxsc_wlhdr, wlhdr_copy_len);
-			_txsc_update_sec_iv(padapter, psta, txreq);
-			offset = wlhdr_copy_len - psta->iv_len  - RTW_SZ_LLC;
-			_rtw_memcpy((hdr + offset), psta->iv, psta->iv_len);
-			//RTW_INFO("%s offset : %d\n", __func__, offset);
-			//RTW_PRINT_DUMP("[IV]", psta->iv, psta->iv_len);
-			//RTW_PRINT_DUMP("[after upadte iv]", pkt_list0->vir_addr, wlhdr_copy_len);
-		}
+#ifdef TXSC_DBG_COPY_ORI_WLHDR_MDATA
 	}
+#endif
 
 	/* WLAN header from cache */
 	#ifdef USE_ONE_WLHDR
@@ -1191,8 +1205,18 @@ u8 txsc_apply_sc_cached_entry(_adapter *padapter, struct txsc_pkt_entry *txsc_pk
 	} else
 	#endif /* USE_PREV_WLHDR_BUF */
 	{
+	#ifdef TXSC_DBG_COPY_ORI_WLHDR_MDATA
+		if (txsc_pkt->is_spec_pkt) {
+                        wlhdr_copy_len = txsc_pkt->wlhdr_ori_len;
+                        SetSeqNum(txsc_pkt->wlhdr_ori, txsc_pkt->mdata_ori.sw_seq);
+                        _rtw_memcpy(head, txsc_pkt->wlhdr_ori, wlhdr_copy_len);
+        } else
+	#endif
 		_rtw_memcpy(head, ptxsc_wlhdr, wlhdr_copy_len);
 	}
+
+	qc = (u16 *)(head + WLAN_HDR_A3_LEN);
+	SetPriority(qc, priority);
 
 	/* fill wlhdr in pkt_list[0] */
 	pkt_list->vir_addr = head;

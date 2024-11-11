@@ -287,7 +287,7 @@ unsigned int ratetbl2rateset(_adapter *padapter, struct _ADAPTER_LINK *padapter_
 	for (i = 0; i < NumRates; i++) {
 		rate = pmlmeext->datarate[i];
 
-		if (rtw_get_oper_ch(padapter, padapter_link) > 14 && rate < _6M_RATE_) /*5G no support CCK rate*/
+		if (rtw_get_oper_band(padapter, padapter_link) != BAND_ON_24G && rate < _6M_RATE_) /* non 2G no support CCK rate*/
 			continue;
 
 		switch (rate) {
@@ -2563,8 +2563,8 @@ void update_tx_basic_rate(_adapter *padapter, struct _ADAPTER_LINK *padapter_lin
 
 	_rtw_memset(supported_rates, 0, NDIS_802_11_LENGTH_RATES_EX);
 
-	/* clear B mod if current channel is in 5G band, avoid tx cck rate in 5G band. */
-	if (pmlmeext->chandef.chan > 14)
+	/* clear B mod if current channel is in non 2G band, avoid tx cck rate in non 2G band. */
+	if (pmlmeext->chandef.band != BAND_ON_24G)
 		wirelessmode &= ~(WLAN_MD_11B);
 
 	if ((wirelessmode & WLAN_MD_11B) && (wirelessmode == WLAN_MD_11B))
@@ -3212,6 +3212,22 @@ _adapter *dvobj_get_unregisterd_adapter(struct dvobj_priv *dvobj)
 
 	for (i = 0; i < dvobj->iface_nums; i++) {
 		if (dvobj->padapters[i]->registered == 0)
+			break;
+	}
+
+	if (i < dvobj->iface_nums)
+		adapter = dvobj->padapters[i];
+
+	return adapter;
+}
+
+_adapter *dvobj_get_netif_up_adapter(struct dvobj_priv *dvobj)
+{
+	_adapter *adapter = NULL;
+	int i;
+
+	for (i = 0; i < dvobj->iface_nums; i++) {
+		if (dvobj->padapters[i]->netif_up)
 			break;
 	}
 

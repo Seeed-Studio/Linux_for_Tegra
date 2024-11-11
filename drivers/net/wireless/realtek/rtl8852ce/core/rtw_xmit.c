@@ -325,7 +325,9 @@ s32 _rtw_init_xmit_priv(struct xmit_priv *pxmitpriv, _adapter *padapter)
 	/* init xframe_ext queue,  the same count as extbuf */
 	_rtw_init_queue(&pxmitpriv->free_xframe_ext_queue);
 #ifdef CONFIG_LAYER2_ROAMING
+#ifndef CONFIG_RTW_ROAM_STOP_NETIF_QUEUE
 	_rtw_init_queue(&pxmitpriv->rpkt_queue);
+#endif
 #endif
 
 	pxmitpriv->xframe_ext_alloc_addr = rtw_zvmalloc(NR_XMITFRAME_EXT * sizeof(struct xmit_frame) + 4);
@@ -456,6 +458,8 @@ s32 _rtw_init_xmit_priv(struct xmit_priv *pxmitpriv, _adapter *padapter)
 #endif
 	rtw_alloc_hwxmits(padapter);
 	rtw_init_hwxmits(pxmitpriv->hwxmits, pxmitpriv->hwxmit_entry);
+
+	pxmitpriv->max_agg_time = 0xA5; /* Default set to max. 5.28msec */
 
 	for (i = 0; i < 4; i++)
 		pxmitpriv->wmm_para_seq[i] = i;
@@ -666,7 +670,9 @@ void _rtw_free_xmit_priv(struct xmit_priv *pxmitpriv)
 	rtw_free_hwxmits(padapter);
 
 #ifdef CONFIG_LAYER2_ROAMING
+#ifndef CONFIG_RTW_ROAM_STOP_NETIF_QUEUE
 	_rtw_spinlock_free(&pxmitpriv->rpkt_queue.lock);
+#endif
 #endif
 
 #ifdef RTW_PHL_TX
@@ -6236,6 +6242,7 @@ s32 rtw_xmit(_adapter *padapter, struct sk_buff **ppkt, u16 os_qid)
 	static u32 drop_cnt = 0;
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 	struct xmit_frame *pxmitframe = NULL;
+	struct sk_buff *skb = (struct sk_buff *)(*ppkt);
 	s32 res;
 
 	DBG_COUNTER(padapter->tx_logs.core_tx);
@@ -6248,6 +6255,11 @@ s32 rtw_xmit(_adapter *padapter, struct sk_buff **ppkt, u16 os_qid)
 
 	if (start == 0)
 		start = rtw_get_current_time();
+
+	if (skb->protocol == htons(0x888e))
+		pxmitframe = rtw_alloc_xmitframe_ext(pxmitpriv);
+	else
+		pxmitframe = rtw_alloc_xmitframe(pxmitpriv, os_qid);
 
 	pxmitframe = rtw_alloc_xmitframe(pxmitpriv, os_qid);
 
@@ -7385,7 +7397,7 @@ static enum rtw_data_rate _rate_drv2phl(struct sta_info *sta, u8 rate)
 
 void dbg_dump_txreq_mdata(struct rtw_t_meta_data *mdata, const char *func)
 {
-#ifdef DBG_DUMP_TX_COUNTER
+#if defined(DBG_DUMP_TX_COUNTER) || defined(TXSC_DBG_DUMP_SPEC_PKT)
 	if (1) {
 		RTW_PRINT("[%s]\n", func);
 
@@ -7449,8 +7461,8 @@ void dbg_dump_txreq_mdata(struct rtw_t_meta_data *mdata, const char *func)
 		RTW_PRINT_DUMP("iv", mdata->iv, 6);
 
 		/* mlo */
-		RTW_PRINT("is_mld_sw_en: %d\n", mdata->is_mld_sw_en);
-		RTW_PRINT("is_mld: %d\n", mdata->is_mld);
+		//RTW_PRINT("is_mld_sw_en: %d\n", mdata->is_mld_sw_en);
+		//RTW_PRINT("is_mld: %d\n", mdata->is_mld);
 
 		/* misc */
 		RTW_PRINT("no_ack: %d\n", mdata->no_ack);
@@ -7530,11 +7542,11 @@ void dbg_dump_txreq_mdata(struct rtw_t_meta_data *mdata, const char *func)
 		RTW_PRINT("raw: %d\n", mdata->raw);
 		RTW_PRINT("sw_define: %d\n", mdata->sw_define);
 		RTW_PRINT("sw_tx_ok: %d\n", mdata->sw_tx_ok);
-		RTW_PRINT("sr_en: %d\n", mdata->sr_en);
-		RTW_PRINT("sr_rate: %d\n", mdata->sr_rate);
+		//RTW_PRINT("sr_en: %d\n", mdata->sr_en);
+		//RTW_PRINT("sr_rate: %d\n", mdata->sr_rate);
 		/* info section end */
 	}
-#endif /*DBG_DUMP_TX_COUNTER*/
+#endif
 }
 
 void fill_txreq_mdata(_adapter *padapter, struct xmit_frame *pxframe)
@@ -7699,10 +7711,11 @@ void fill_txreq_mdata(_adapter *padapter, struct xmit_frame *pxframe)
 		mdata->userate_sel = 1;
 		mdata->f_rate = _rate_mrate2phl(pxframe->attrib.rate);
 	} else {
-		/* low rate for EAPOL/ARP/DHCP */
-		if ((pxframe->attrib.ether_type == 0x888e) ||
+		/* low rate for EAPOL/ARP/DHCP under normal mode */
+		if (((pxframe->attrib.ether_type == 0x888e) ||
 			(pxframe->attrib.ether_type == 0x0806) ||
-			(pxframe->attrib.dhcp_pkt == 1)) {
+			(pxframe->attrib.dhcp_pkt == 1)) &&
+			!padapter->registrypriv.wifi_spec) {
 
 			mdata->userate_sel = 1;
 			if (IS_CCK_RATE(padapter_link->mlmeextpriv.tx_rate))
@@ -8446,9 +8459,14 @@ s32 rtw_core_tx(_adapter *padapter, struct sk_buff **pskb, struct sta_info *psta
 	u8 status;
 #endif
 #ifdef CONFIG_CORE_TXSC
-	struct txsc_pkt_entry txsc_pkt = {0};
-
-	u8 icmp_wrk = 0;
+	u8 is_txsc_pkt = 0;
+	struct txsc_pkt_entry txsc_pkt = { .step = TXSC_NONE };
+#define CONFIG_CORE_TXSC_ONLY_TCP_UDP
+#ifdef CONFIG_CORE_TXSC_ONLY_TCP_UDP
+	struct ethhdr *ethh;
+	struct iphdr *iph;
+	struct udphdr *udph;
+#else
 #define PARSE_ICMP_V3
 #ifdef PARSE_ICMP_V1
 	struct pkt_file pktfile;
@@ -8457,22 +8475,47 @@ s32 rtw_core_tx(_adapter *padapter, struct sk_buff **pskb, struct sta_info *psta
 	u8 *pktptr;
 	struct ethhdr *etherhdr;
 #else
+	struct ethhdr *ethh;
 	struct iphdr *iph;
+	struct udphdr *udph;
 	struct icmphdr *icmph;
 #endif
-#define PARSE_ICMP_TIMEX
-#ifdef PARSE_ICMP_TIME
+#endif /* CONFIG_CORE_TXSC_ONLY_TCP_UDP */
+//#define IS_TXSC_PARSE_TIME
+#ifdef IS_TXSC_PARSE_TIME
 	sysptime start, end;
 #endif
 
-	if (MLME_STATE(padapter) & WIFI_AP_STATE) {
+	if ((MLME_STATE(padapter) & WIFI_AP_STATE) || padapter->registrypriv.wifi_spec) {
 		/* use slow path */
 	}
 	else {
-#ifdef PARSE_ICMP_TIME
+#ifdef IS_TXSC_PARSE_TIME
 		start = rtw_sptime_get_raw();
 #endif
-
+#ifdef CONFIG_CORE_TXSC_ONLY_TCP_UDP
+		// Extract the ETH header
+		ethh = eth_hdr(*pskb);
+		if (ethh && ntohs(ethh->h_proto) == ETH_P_IP) {
+			// Extract the IP header
+			iph = ip_hdr(*pskb);
+			if (iph) {
+			       if (iph->protocol == IPPROTO_TCP)
+					is_txsc_pkt = 1;
+			       else if (iph->protocol == IPPROTO_UDP) {
+					udph = udp_hdr(*pskb);
+					/* 67 : UDP BOOTP server, 68 : UDP BOOTP client */
+					if (udph && ((ntohs(udph->source) == 68 && ntohs(udph->dest) == 67) ||
+						(ntohs(udph->source) == 67 && ntohs(udph->dest) == 68)))
+						/* no fast path if special packet */
+						;
+					else
+						is_txsc_pkt = 1;
+			       }
+			}
+		}
+#else
+		is_txsc_pkt = 1;
 #ifdef PARSE_ICMP_V1
 		_rtw_open_pktfile(*pskb, &pktfile);
 		_rtw_pktfile_read(&pktfile, (u8 *)&etherhdr, ETH_HLEN);
@@ -8488,10 +8531,8 @@ s32 rtw_core_tx(_adapter *padapter, struct sk_buff **pskb, struct sta_info *psta
 				u8 icmp[16];	/* seq = icmp[6]*256 + icmp[7] */
 				_rtw_pktfile_read(&pktfile, icmp, 16);
 				// ICMP Type: 3 (Destination unreachable) & Code: 3 (Port unreachable)
-				if (3 == icmp[0] && 3 == icmp[1]) {
-					icmp_wrk = 1;
-					txsc_pkt.step = TXSC_NONE;
-				}
+				if (3 == icmp[0] && 3 == icmp[1])
+					is_txsc_pkt = 0;
 			}
 		}
 #elif defined(PARSE_ICMP_V2)
@@ -8507,34 +8548,45 @@ s32 rtw_core_tx(_adapter *padapter, struct sk_buff **pskb, struct sta_info *psta
 
 			if (GET_IPV4_PROTOCOL(ip) == 0x01) { /* ICMP */
 				u8 *icmp = pktptr;	/* seq = icmp[6]*256 + icmp[7] */
-				if (3 == icmp[0] && 3 == icmp[1]) {
-					icmp_wrk = 1;
-					txsc_pkt.step = TXSC_NONE;
-				}
+				if (3 == icmp[0] && 3 == icmp[1])
+					is_txsc_pkt = 0;
 			}
 		}
 #else
-		// Extract the IP header
-		iph = ip_hdr(*pskb);
-		if (iph && iph->protocol == IPPROTO_ICMP) {
-			icmph = icmp_hdr(*pskb);
-			if (icmph && icmph->type == ICMP_DEST_UNREACH &&
-			    icmph->code == ICMP_PORT_UNREACH) {
-				icmp_wrk = 1;
-				txsc_pkt.step = TXSC_NONE;
+		// Extract the ETH header
+		ethh = eth_hdr(*pskb);
+		if (ethh && ntohs(ethh->h_proto) == ETH_P_IP) {
+			// Extract the IP header
+			iph = ip_hdr(*pskb);
+			if (iph && iph->protocol == IPPROTO_ICMP) {
+				icmph = icmp_hdr(*pskb);
+				if (icmph && icmph->type == ICMP_DEST_UNREACH &&
+					icmph->code == ICMP_PORT_UNREACH)
+					is_txsc_pkt = 0;
+			} else if (iph && iph->protocol == IPPROTO_UDP) {
+				udph = udp_hdr(*pskb);
+				if (udph && ((ntohs(udph->source) == 68 && ntohs(udph->dest) == 67)
+					|| (ntohs(udph->source) == 67 && ntohs(udph->dest) == 68)))
+					is_txsc_pkt = 0;
 			}
-		}
+		} else
+			is_txsc_pkt = 0;	// for ARP/EAPOL fix rate
 #endif
+#endif	/* CONFIG_CORE_TXSC_ONLY_TCP_UDP */
 
-#ifdef PARSE_ICMP_TIME
+#ifdef IS_TXSC_PARSE_TIME
 		end = rtw_sptime_get_raw();
 		RTW_INFO_LMT("%s: pass_t=%lld\n", __func__, rtw_sptime_diff_ns(start,end));
 #endif
-
-		if (0 == icmp_wrk) {
-			if ( (txsc_get_sc_cached_entry(padapter, *pskb, &txsc_pkt) == _SUCCESS) )
-				goto core_txsc;
+	#ifdef TXSC_DBG_DUMP_SPEC_PKT
+		if (0 == txsc_pkt.is_spec_pkt) {
+	#endif
+			if (likely(is_txsc_pkt))
+				if ( (txsc_get_sc_cached_entry(padapter, *pskb, &txsc_pkt) == _SUCCESS) )
+					goto core_txsc;
+	#ifdef TXSC_DBG_DUMP_SPEC_PKT
 		}
+	#endif
 	}
 #endif
 
@@ -8589,7 +8641,9 @@ s32 rtw_core_tx(_adapter *padapter, struct sk_buff **pskb, struct sta_info *psta
 	}
 #endif /* defined(CONFIG_AP_MODE) */
 #ifdef CONFIG_LAYER2_ROAMING
-        if ((padapter->mlmepriv.roam_network) && ((*pskb)->protocol != htons(0x888e))) {        /* eapol never enqueue.*/
+#ifndef CONFIG_RTW_ROAM_STOP_NETIF_QUEUE
+        if ((padapter->mlmepriv.roam_buf_pkt) &&
+		((*pskb)->protocol != htons(0x888e))) { /* never enqueue eapol */
 		pxframe->pkt = *pskb;
 		rtw_list_delete(&pxframe->list);
 		_rtw_spinlock_bh(&pxmitpriv->rpkt_queue.lock);
@@ -8598,25 +8652,56 @@ s32 rtw_core_tx(_adapter *padapter, struct sk_buff **pskb, struct sta_info *psta
 		return SUCCESS;
 	}
 #endif
+#endif
 
 #ifdef CONFIG_CORE_TXSC
-	if ((MLME_STATE(padapter) & WIFI_AP_STATE) || icmp_wrk)
-		res = core_tx_per_packet(padapter, pxframe, pskb, psta);
-	else
+	if (likely(is_txsc_pkt))
 		res = core_tx_per_packet_sc(padapter, pxframe, pskb, psta, &txsc_pkt);
+	else
+		res = core_tx_per_packet(padapter, pxframe, pskb, psta);
 #else
 	res = core_tx_per_packet(padapter, pxframe, pskb, psta);
 #endif
 	if (res == FAIL)
 		return FAIL;
-		
+
 #ifdef CONFIG_CORE_TXSC
 	// TXSC WRK
-	if (NULL == pxframe->phl_txreq || icmp_wrk || (MLME_STATE(padapter) & WIFI_AP_STATE))
+	if (pxframe->phl_txreq == NULL) {
+		RTW_WARN_LMT("%s: phl_txreq is null\n", __func__);
+		return SUCCESS;
+	}
+
+	if (is_txsc_pkt == 0)
 		return SUCCESS;
 
-	txsc_add_sc_cache_entry(padapter, pxframe, &txsc_pkt);
+#ifdef TXSC_DBG_DUMP_SPEC_PKT
+	if (1 == txsc_pkt.is_spec_pkt) {
+		struct rtw_xmit_req     *txreq_ori = (struct rtw_xmit_req *) pxframe->ptxreq_buf->txreq;
+		struct rtw_pkt_buf_list *pkt_list_ori = (struct rtw_pkt_buf_list *)txreq_ori->pkt_list;
 
+#ifdef TXSC_DBG_COPY_ORI_WLHDR_MDATA
+		memcpy(txsc_pkt.wlhdr_ori, pkt_list_ori->vir_addr, pkt_list_ori->length);
+		txsc_pkt.wlhdr_ori_len = pkt_list_ori->length;
+
+		memcpy(&txsc_pkt.mdata_ori, &pxframe->phl_txreq->mdata, sizeof(struct rtw_t_meta_data));
+#endif
+		/* for tx debug */
+		dbg_dump_txreq_mdata(&pxframe->phl_txreq->mdata, __func__);
+		_print_txreq_pklist(NULL, pxframe->phl_txreq, *pskb, __func__);
+
+		pxframe->pkt = NULL;
+		core_tx_free_xmitframe(padapter, pxframe);
+		pxframe = NULL;
+
+		if (txsc_get_sc_cached_entry(padapter, *pskb, &txsc_pkt) != _SUCCESS)
+				return SUCCESS;
+	} else {
+			txsc_add_sc_cache_entry(padapter, pxframe, &txsc_pkt);
+	}
+#else
+	txsc_add_sc_cache_entry(padapter, pxframe, &txsc_pkt);
+#endif
 core_txsc:
 
 #ifdef CONFIG_TXSC_AMSDU
@@ -9625,25 +9710,41 @@ exit:
 
 #ifdef CONFIG_LAYER2_ROAMING
 /*	dequeuq + xmit the cache skb during the roam procedure	*/
-void dequeuq_roam_pkt(_adapter *padapter)
+void dequeuq_roam_pkt(_adapter *padapter, bool drop)
 {
 	struct xmit_frame *rframe;
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	_list *plist = NULL, *phead = NULL;
+	int i = 0;
 
-	if (padapter->mlmepriv.roam_network) {
-		padapter->mlmepriv.roam_network = NULL;
-		_rtw_spinlock_bh(&pxmitpriv->rpkt_queue.lock);
-		phead = get_list_head(&pxmitpriv->rpkt_queue);
-		plist = get_next(phead);
-		while ((rtw_end_of_queue_search(phead, plist)) == _FALSE) {
-			rframe = LIST_CONTAINOR(plist, struct xmit_frame, list);
-			plist = get_next(plist);
-			rtw_list_delete(&rframe->list);
-			core_tx_per_packet(padapter, rframe, &rframe->pkt, NULL);
-		}
-		_rtw_spinunlock_bh(&pxmitpriv->rpkt_queue.lock);
+	padapter->mlmepriv.roam_network = NULL;
+	if (pmlmepriv->roam_buf_pkt) {
+		padapter->mlmepriv.roam_buf_pkt = _FALSE;
+		rtw_roam_wake_queue(padapter);
 	}
+	_rtw_memset(pmlmepriv->roam_from_addr, 0, ETH_ALEN);
+#ifndef CONFIG_RTW_ROAM_STOP_NETIF_QUEUE
+	_rtw_spinlock_bh(&pxmitpriv->rpkt_queue.lock);
+	phead = get_list_head(&pxmitpriv->rpkt_queue);
+	plist = get_next(phead);
+	while ((rtw_end_of_queue_search(phead, plist)) == _FALSE) {
+		rframe = LIST_CONTAINOR(plist, struct xmit_frame, list);
+		plist = get_next(plist);
+		rtw_list_delete(&rframe->list);
+		i++;
+		if (drop) {
+			if (rframe->pkt == NULL)
+				rtw_os_pkt_complete(padapter, rframe->pkt);
+			core_tx_free_xmitframe(padapter, rframe);
+			continue;
+		}
+		core_tx_per_packet(padapter, rframe, &rframe->pkt, NULL);
+	}
+	_rtw_spinunlock_bh(&pxmitpriv->rpkt_queue.lock);
+
+	RTW_INFO("%s %d roam_buf_pkts\n", drop?"drop":"send", i);
+#endif
 }
 #endif
 

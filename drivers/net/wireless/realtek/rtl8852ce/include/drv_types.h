@@ -84,6 +84,7 @@ struct _ADAPTER_LINK;
 
 #include "platform_ops.h"
 #include "rtw_scan.h"
+#include <rtw_fsm.h>
 #ifdef CONFIG_RTW_80211R
 #include <rtw_ft.h>
 #endif
@@ -173,9 +174,6 @@ struct _ADAPTER_LINK;
 #include <rtw_android.h>
 
 #include <rtw_btc.h>
-#ifdef CONFIG_RTW_FSM
-#include <rtw_fsm.h>
-#endif
 
 #define SPEC_DEV_ID_NONE BIT(0)
 #define SPEC_DEV_ID_DISABLE_HT BIT(1)
@@ -376,6 +374,7 @@ struct registry_priv {
 	enum rtw_env_t env;
 #endif
 	u8 dis_ch_flags;
+	char extra_alpha2[2];
 	u32 bcn_hint_valid_ms;
 
 	u8	full_ch_in_p2p_handshake; /* 0: reply only softap channel, 1: reply full channel list*/
@@ -411,7 +410,9 @@ struct registry_priv {
 	u8 country_ie_slave_flags;
 	u8 country_ie_slave_en_role;
 	u8 country_ie_slave_en_ifbmp;
+	u8 country_ie_slave_scan_band_bmp;
 	u32 country_ie_slave_scan_int_ms;
+	u32 country_ie_slave_scan_urgent_ms;
 #endif
 
 	u8 ifname[16];
@@ -986,6 +987,7 @@ struct rf_ctl_t {
 	bool user_regd_always_apply;
 	struct regd_req_t init_req;
 	struct regd_req_t *user_req;
+	struct regd_req_t *extra_req;
 
 	u32 bcn_hint_valid_ms; /* the length of time beacon hint continue */
 
@@ -995,7 +997,9 @@ struct rf_ctl_t {
 
 	u8 cis_en_role; /* per link cis enable role, see COUNTRY_IE_SLAVE_EN_ROLE_XXX, used when CISF_ENV_BSS is not set */
 	u8 cis_en_ifbmp; /* per link cis enable iface bitmap, used when CISF_ENV_BSS is not set */
-	u32 cis_scan_int_ms; /* 0 means no env BSS scan triggerred by driver self, used when CISF_ENV_BSS is set */
+	u8 cis_scan_band_bmp; /* the band bitmap  to do env BSS scan triggered by driver self, used when CISF_ENV_BSS is set */
+	u32 cis_scan_int_ms; /* the interval in ms of env BSS scan triggered by driver self, used when CISF_ENV_BSS is set */
+	u32 cis_scan_urgent_ms; /* time in ms when env BSS scan is not completed for,  urgent env BSS scan will be triggered */
 
 	bool init_user_req_is_ww;
 	bool cis_enabled; /* enable status */
@@ -1009,6 +1013,10 @@ struct rf_ctl_t {
 	enum country_ie_slave_6g_reg_info recv_6g_reg_info[CONFIG_IFACE_NUMBER][RTW_RLINK_MAX];
 	#endif
 	struct country_ie_slave_record cisr[CONFIG_IFACE_NUMBER][RTW_RLINK_MAX];
+
+	/* env BSS scan status */
+	systime cis_scan_last_complete_time; /* last ENV_BSS scan complete time */
+	struct cis_scan_stat_t cis_scan_stat; /* env BSS scan result statistics data */
 
 	#if CONFIG_IEEE80211_BAND_6GHZ
 	u8 default_chplan_cate_6g_map; /* bitmap of CHPLAN_6G_CATE_XXX */
@@ -1459,6 +1467,7 @@ static inline struct device *dvobj_to_dev(struct dvobj_priv *dvobj)
 #endif
 
 _adapter *dvobj_get_unregisterd_adapter(struct dvobj_priv *dvobj);
+_adapter *dvobj_get_netif_up_adapter(struct dvobj_priv *dvobj);
 _adapter *dvobj_get_adapter_by_addr(struct dvobj_priv *dvobj, u8 *addr);
 #define dvobj_get_primary_adapter(dvobj)	((dvobj)->padapters[IFACE_ID0])
 

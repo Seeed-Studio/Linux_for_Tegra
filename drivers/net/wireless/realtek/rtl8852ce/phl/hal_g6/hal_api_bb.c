@@ -503,7 +503,7 @@ rtw_hal_bb_ra_deregister(struct hal_info_t *hal_info,
 {
 	if (!rtw_halbb_ra_deregistered(hal_info->bb, sta))
 		PHL_ERR("rtw_halbb_ra_deregistered failed\n");
-
+	sta->hal_sta->ra_info.ra_nss_limit = 0;
 	sta->hal_sta->ra_info.ra_registered = false;
 	return RTW_HAL_STATUS_SUCCESS;
 }
@@ -546,6 +546,143 @@ exit:
 #endif /* DBG_DBCC_MONITOR_TIME */
 	return hal_sts;
 }
+
+#ifdef CONFIG_BTCOEX
+/*
+ * Origin 2T2R
+ *  tx_en,  rx_en,  tx_res,  rx_res
+ *     1         1         0          0             2T2R >> 1T1R
+ *     0         0         1          1             1T1R >> 2T2R
+ *     1         0         0          0             2T2R >> 1T2R
+ *     0         0         1          0             1T2R >> 2T2R
+ */
+enum rtw_hal_status rtw_hal_btc_cfg_1ss(struct rtw_hal_com_t *hal_c,
+		struct rtw_phl_com_t *phl_c, enum band_type band,
+		bool tx_en, bool rx_en, bool tx_res, bool rx_res)
+{
+	enum rtw_hal_status hsts = RTW_HAL_STATUS_FAILURE;
+	enum rtw_phl_status psts = RTW_PHL_STATUS_FAILURE;
+	struct hal_info_t *hal_i = (struct hal_info_t *)hal_c->hal_priv;
+	void *drv = halcom_to_drvpriv(hal_c);
+	struct rtw_wifi_role_t *wr = NULL;
+	struct rtw_wifi_role_link_t *rlk = NULL;
+	struct phl_queue *sta_queue = NULL;
+	struct rtw_phl_stainfo_t *sta = NULL;
+	struct rtw_phl_stainfo_t **sta_todo = NULL;
+	size_t sta_todo_len = 0;
+	size_t i;
+	int sta_qlen = 0;
+	u8 ra_nss_lim, ridx = 0, lidx = 0, map_idx = 0;
+	u32 macid_map[2] = {0};
+	u16 bit_num = (u16)(sizeof(macid_map) * 8);
+	struct phl_msg msg = {0};
+	enum phl_msg_evt_id evt = MSG_EVT_NONE;
+
+	PHL_WARN("%s: Interferential ch-band(%d), tx_en(%d), rx_en(%d), tx_res(%d), rx_res(%d)\n",
+		__FUNCTION__, band, tx_en, rx_en, tx_res, rx_res);
+	if (!(GET_DEV_BTC_CAP(phl_c).btc_deg_wifi_cap & BTC_DRG_WIFI_CAP_TRX1SS)) {
+		PHL_ERR("%s: Don't support, btc_deg_wifi_cap(0x%x)\n",
+			__FUNCTION__, GET_DEV_BTC_CAP(phl_c).btc_deg_wifi_cap);
+		goto exit;
+	}
+	if ((tx_en && tx_res) || (rx_en && rx_res)) {
+		PHL_ERR("%s: error para\n", __FUNCTION__);
+		goto exit;
+	}
+	if (tx_en && !tx_res)
+		ra_nss_lim = 1;
+	else
+		ra_nss_lim = 0;
+	for (ridx = 0; ridx < MAX_WIFI_ROLE_NUMBER; ridx++) {
+		wr = &(phl_c->wifi_roles[ridx]);
+		if (false == wr->active || MLME_LINKED != wr->mstate)
+			continue;
+		if (!rtw_phl_role_is_ap_category(wr) &&
+		    !rtw_phl_role_is_client_category(wr))
+			continue;
+		for (lidx = 0; lidx < RTW_RLINK_MAX; lidx++) {
+			rlk = &(wr->rlink[lidx]);
+			if (MLME_LINKED != rlk->mstate)
+				continue;
+			if (band != rlk->chandef.band)
+				continue;
+			sta_queue = &rlk->assoc_sta_queue;
+			sta_todo = NULL;
+			sta_todo_len = 0;
+			/* collect the sta list */
+			_os_spinlock(drv, &sta_queue->lock, _bh, NULL);
+			sta_qlen = sta_queue->cnt;
+			sta_todo = (struct rtw_phl_stainfo_t **)
+				_os_kmem_alloc(drv, sta_qlen * sizeof(struct rtw_phl_stainfo_t *));
+			if (!sta_todo) {
+				PHL_ERR("%s: failed to alloc sta_todo\n", __FUNCTION__);
+				hsts = RTW_HAL_STATUS_RESOURCE;
+				_os_spinunlock(drv, &sta_queue->lock, _bh, NULL);
+				goto exit;
+			}
+			phl_list_for_loop(sta, struct rtw_phl_stainfo_t,
+			                  &sta_queue->queue, list) {
+				if (sta) {
+					sta_todo[sta_todo_len++] = sta;
+					if (sta->macid < bit_num) {
+						map_idx = (u8)(sta->macid / 32);
+						macid_map[map_idx] |=  BIT(sta->macid % 32);
+					} else {
+						PHL_ERR("%s: macid(%d) > macid_map\n",
+							__FUNCTION__, sta->macid);
+					}
+				}
+			}
+			_os_spinunlock(drv, &sta_queue->lock, _bh, NULL);
+			if (!tx_en && !tx_res)
+				goto _next_loop; /* no need to cfg tx */
+			for (i = 0; i < sta_todo_len; i++) {
+				sta = sta_todo[i];
+				sta->hal_sta->ra_info.ra_nss_limit = ra_nss_lim;
+				hsts = rtw_hal_bb_ra_update(hal_i, sta);
+				if (RTW_HAL_STATUS_SUCCESS != hsts) {
+					PHL_ERR("%s: macid(%d), Fail to cfg ra_nss_limit(%d)\n",
+					        __FUNCTION__, sta->macid, ra_nss_lim);
+				} else {
+					PHL_WARN("%s: macid(%d), succee to cfg ra_nss_limit(%d)\n",
+					         __FUNCTION__, sta->macid, ra_nss_lim);
+				}
+			}
+			_next_loop:
+			_os_kmem_free(drv, sta_todo, sta_qlen * sizeof(struct rtw_phl_stainfo_t *));
+		}
+	}
+	if (!rx_en && !rx_res)
+		goto exit; /* no need to cfg rx */
+	if (rx_en && !rx_res)
+		evt = MSG_EVT_ANN_RX1SS;
+	else if (!rx_en && rx_res)
+		evt = MSG_EVT_ANN_RX_MAXSS;
+	else
+		goto exit;
+	msg.rsvd[0].value = macid_map[0]; /* macid 0~31 */
+	msg.rsvd[1].value = macid_map[1]; /* macid 32~63 */
+	SET_MSG_MDL_ID_FIELD(msg.msg_id, PHL_MDL_GENERAL);
+	SET_MSG_EVT_ID_FIELD(msg.msg_id, evt);
+	PHL_WARN("%s: macid map(0x%08x-%08x) need to announce rx nss to %d\n",
+		__FUNCTION__, (u32)msg.rsvd[1].value, (u32)msg.rsvd[0].value, evt);
+	psts = rtw_phl_msg_hub_hal_send(phl_c, NULL, &msg);
+	if (RTW_PHL_STATUS_SUCCESS != psts) {
+		PHL_ERR("%s: Send msg fail\n", __FUNCTION__);
+		hsts = RTW_HAL_STATUS_FAILURE;
+	} else {
+		PHL_WARN("%s: Send msg ok\n", __FUNCTION__);
+	}
+exit:
+	return hsts;
+}
+
+enum rtw_hal_status rtw_hal_btc_cfg_trx_path(struct rtw_hal_com_t *hal_c,
+		enum rf_path tx, u8 tx_nss, enum rf_path rx, u8 rx_nss)
+{
+	return rtw_hal_bb_trx_path_cfg(hal_c->hal_priv, tx, tx_nss, rx, rx_nss);
+}
+#endif /* CONFIG_BTCOEX */
 
 enum rtw_hal_status
 rtw_hal_bb_query_txsts_rpt(struct hal_info_t *hal_info,
@@ -1475,7 +1612,7 @@ rtw_hal_bb_parse_phy_sts(void *hal,
 	rxdesc.macid_su = (u8)mdata->macid;
 	rxdesc.user_num = hal_ppdu->usr_num;
 	rxdesc.is_to_self = (true == sniffer_mode) ? 1 : ((mdata->a1_match == true) ? 1 : 0);
-	if (RTW_IS_ASOC_REQ_PKT(ppdu_info->sts_ent[band][mdata->ppdu_cnt].frame_type))
+	if (RTW_IS_ASOC_REQ_PKT(ppdu_info->sts_ent[band][mdata->ppdu_cnt].frame_type) || RTW_IS_BEACON_OR_PROBE_RESP_PKT(ppdu_info->sts_ent[band][mdata->ppdu_cnt].frame_type))
 		rxdesc.is_to_self = true;
 
 	rxdesc.phy_idx = (mdata->bb_sel == 0) ? HW_PHY_0 : HW_PHY_1;

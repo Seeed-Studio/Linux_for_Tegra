@@ -86,8 +86,10 @@ u8 rtw_init_recv_info(_adapter *adapter)
 #endif
 	#ifdef CONFIG_SIGNAL_STAT_PROCESS
 	rtw_init_timer(&recvinfo->signal_stat_timer, rtw_signal_stat_timer_hdl, adapter);
+	recvinfo->signal_stat_sampling_interval = 1000; /* ms */
+	recvinfo->bcn_signal_strength = 0;
+	recvinfo->bcn_rssi = -110;
 
-	recvinfo->signal_stat_sampling_interval = 2000; /* ms */
 	/* recvinfo->signal_stat_converging_constant = 5000; */ /* ms */
 	#endif
 	return ret;
@@ -4651,110 +4653,245 @@ _recv_entry_drop:
 #endif
 
 #ifdef CONFIG_SIGNAL_STAT_PROCESS
+#ifdef DBG_SERVING_AP_RSSI
+static void _rx_dbg_bcn_rssi(struct signal_stat *signal_stat, union recv_frame *prframe)
+{
+	struct rx_pkt_attrib *pattrib = &prframe->u.hdr.attrib;
+
+		signal_stat->signal_raw[signal_stat->signal_raw_idx] =
+			pattrib->phy_info.signal_strength;
+		signal_stat->signal_avg[signal_stat->signal_raw_idx] =
+			signal_stat->avg_val;
+		signal_stat->signal_raw_idx = (signal_stat->signal_raw_idx + 1) % RAW_LEN;
+}
+
+static void rtw_signal_stat_dump_row_data(struct signal_stat *signal_stat)
+{
+	int i, s, l;
+	u8 row[128];
+	u8 avg[128];
+
+	i = signal_stat->signal_raw_idx ? (signal_stat->signal_raw_idx - 1) : RAW_LEN - 1;
+
+	if (signal_stat->signal_raw[i] != 0) {
+		memset (row, 0, sizeof(row));
+		memset (avg, 0, sizeof(row));
+		sprintf(row, "[RAW]");
+		sprintf(avg, "[AVG]");
+
+		s = 0;
+		l = signal_stat->signal_raw_idx;
+		if (signal_stat->signal_raw[signal_stat->signal_raw_idx] != 0) {
+			/* round-wrap */
+			s = signal_stat->signal_raw_idx + 1; /* next one is the 1'st entry */
+			l = RAW_LEN;
+		}
+
+		for (i = 0; i < l; i++) {
+			sprintf(row + strlen(row), " %2d", signal_stat->signal_raw[(s+i)%RAW_LEN]);
+			sprintf(avg + strlen(avg), " %2d", signal_stat->signal_avg[(s+i)%RAW_LEN]);
+
+			if ((i+1)%20 == 0) {
+				printk("%s\n", row);
+				printk("%s\n", avg);
+				memset (row, 0, sizeof(row));
+				memset (avg, 0, sizeof(row));
+				sprintf(row, "[RAW]");
+				sprintf(avg, "[AVG]");
+			}
+		}
+
+		if ((i)%20 != 0) {
+			printk("%s\n", row);
+			printk("%s\n", avg);
+		}
+
+		signal_stat->signal_raw_idx = 0;
+		memset (signal_stat->signal_raw, 0, RAW_LEN);
+		memset (signal_stat->signal_avg, 0, RAW_LEN);
+	}
+}
+#endif
+void rtw_signal_state_reset(_adapter *adapter)
+{
+	struct recv_info *recvinfo = &adapter->recvinfo;
+
+	recvinfo->signal_strength_bcn.update_req = 2;
+	recvinfo->signal_qual_bcn.update_req = 2;
+	recvinfo->bcn_signal_strength = 0;
+	recvinfo->bcn_rssi = -110;
+#ifdef DBG_SERVING_AP_RSSI
+	recvinfo->signal_strength_bcn.signal_raw_idx = 0;
+	memset (recvinfo->signal_strength_bcn.signal_raw, 0, RAW_LEN);
+	memset (recvinfo->signal_strength_bcn.signal_avg, 0, RAW_LEN);
+#endif
+}
+
+static void rtw_signal_state(_adapter *adapter, bool is_bcn)
+{
+	struct recv_info *recvinfo = &adapter->recvinfo;
+	/* ToDo CONFIG_RTW_MLD: currently primary link only */
+	struct _ADAPTER_LINK *adapter_link = GET_PRIMARY_LINK(adapter);
+	u8 *signal_strength, *signal_qual;
+	s8 *rssi;
+	u32 tmp_s, tmp_q;
+	u8 avg_signal_strength = 0, avg_signal_qual = 0;
+	u32 num_signal_strength = 0, num_signal_qual = 0;
+	u8 ratio_pre_stat = 0, ratio_curr_stat = 0, ratio_total = 0, ratio_profile = SIGNAL_STAT_CALC_PROFILE_0;
+
+	if (is_bcn) {
+
+		rssi = &recvinfo->bcn_rssi;
+		signal_qual = &recvinfo->bcn_signal_qual;
+		signal_strength = &recvinfo->bcn_signal_strength;
+
+		if (recvinfo->signal_strength_bcn.update_req == 0) {
+			avg_signal_strength = recvinfo->signal_strength_bcn.avg_val;
+			num_signal_strength = recvinfo->signal_strength_bcn.total_num;
+			recvinfo->signal_strength_bcn.avg_val = 0;
+			recvinfo->signal_strength_bcn.total_num = 0;
+			/* after avg_vals are accquired, we can re-stat the signal values */
+			recvinfo->signal_strength_bcn.update_req = 1;
+		}
+		if (recvinfo->signal_qual_bcn.update_req == 0) {
+			avg_signal_qual = recvinfo->signal_qual_bcn.avg_val;
+			num_signal_qual = recvinfo->signal_qual_bcn.total_num;
+			recvinfo->signal_qual_bcn.avg_val = 0;
+			recvinfo->signal_qual_bcn.total_num = 0;
+			/* after avg_vals are accquired, we can re-stat the signal values */
+			recvinfo->signal_qual_bcn.update_req = 1;
+		}
+
+	} else {
+		rssi = &recvinfo->rssi;
+		signal_qual = &recvinfo->signal_qual;
+		signal_strength = &recvinfo->signal_strength;
+
+		if (recvinfo->signal_strength_data.update_req == 0) {
+			avg_signal_strength = recvinfo->signal_strength_data.avg_val;
+			num_signal_strength = recvinfo->signal_strength_data.total_num;
+			recvinfo->signal_strength_data.avg_val = 0;
+			recvinfo->signal_strength_data.total_num = 0;
+			/* after avg_vals are accquired, we can re-stat the signal values */
+			recvinfo->signal_strength_data.update_req = 1;
+		}
+		if (recvinfo->signal_qual_data.update_req == 0) {
+			avg_signal_qual = recvinfo->signal_qual_data.avg_val;
+			num_signal_qual = recvinfo->signal_qual_data.total_num;
+			recvinfo->signal_qual_data.avg_val = 0;
+			recvinfo->signal_qual_data.total_num = 0;
+			/* after avg_vals are accquired, we can re-stat the signal values */
+			recvinfo->signal_qual_data.update_req = 1;
+		}
+	}
+
+	if (!is_bcn && num_signal_strength == 0) {
+		if (rtw_get_on_cur_ch_time(adapter) == 0
+		    || rtw_get_passing_time_ms(rtw_get_on_cur_ch_time(adapter)) < 2 * adapter_link->mlmeextpriv.mlmext_info.bcn_interval
+		   )
+			return;
+	}
+
+	if (!is_bcn) {
+		if (check_fwstate(&adapter->mlmepriv, WIFI_UNDER_SURVEY) == _TRUE
+		    || check_fwstate(&adapter->mlmepriv, WIFI_ASOC_STATE) == _FALSE
+		   )
+			return;
+	}
+
+#ifdef CONFIG_CONCURRENT_MODE
+	if (rtw_mi_buddy_check_fwstate(adapter, WIFI_UNDER_SURVEY) == _TRUE)
+		return;
+#endif
+
+#ifdef CONFIG_MP_INCLUDED
+	if (adapter->registrypriv.mp_mode == 1) {
+		ratio_profile = SIGNAL_STAT_CALC_PROFILE_2;
+	}
+	else
+#endif
+	if (RTW_SIGNAL_STATE_CALC_PROFILE < SIGNAL_STAT_CALC_PROFILE_MAX)
+		ratio_profile = RTW_SIGNAL_STATE_CALC_PROFILE;
+
+	if (*signal_strength == 0) {
+		*signal_strength = avg_signal_strength;
+		*signal_qual = avg_signal_qual;
+		*rssi = (s8)rtw_phl_rssi_to_dbm(avg_signal_strength);
+		return;
+	}
+
+	ratio_pre_stat = signal_stat_calc_profile[ratio_profile][0];
+	ratio_curr_stat = signal_stat_calc_profile[ratio_profile][1];
+	ratio_total = ratio_pre_stat + ratio_curr_stat;
+
+	tmp_s = (ratio_curr_stat * avg_signal_strength + ratio_pre_stat * *signal_strength);
+	if (tmp_s % ratio_total)
+		tmp_s = tmp_s / ratio_total + 1;
+	else
+		tmp_s = tmp_s / ratio_total;
+	if (tmp_s > PHL_MAX_RSSI)
+		tmp_s = PHL_MAX_RSSI;
+
+	tmp_q = (ratio_curr_stat * avg_signal_qual + ratio_pre_stat * *signal_qual);
+	if (tmp_q % ratio_total)
+		tmp_q = tmp_q / ratio_total + 1;
+	else
+		tmp_q = tmp_q / ratio_total;
+	if (tmp_q > PHL_MAX_RSSI)
+		tmp_q = PHL_MAX_RSSI;
+
+	*signal_strength = tmp_s;
+	*signal_qual = tmp_q;
+	*rssi = (s8)rtw_phl_rssi_to_dbm(tmp_s);
+
+#if defined(DBG_RX_SIGNAL_DISPLAY_PROCESSING) && 1
+	RTW_INFO(FUNC_ADPT_FMT" signal_strength:%3u, rssi:%3d, signal_qual:%3u"
+		 ", num_signal_strength:%u, num_signal_qual:%u"
+		 ", on_cur_ch_ms:%d"
+		 "\n"
+		 , FUNC_ADPT_ARG(adapter)
+		 , *signal_strength
+		 , *rssi
+		 , *signal_qual
+		 , num_signal_strength, num_signal_qual
+		, rtw_get_on_cur_ch_time(adapter) ? rtw_get_passing_time_ms(rtw_get_on_cur_ch_time(adapter)) : 0
+		);
+#endif
+}
+
 static void rtw_signal_stat_timer_hdl(void *ctx)
 {
 	_adapter *adapter = (_adapter *)ctx;
 	struct recv_info *recvinfo = &adapter->recvinfo;
-	/* ToDo CONFIG_RTW_MLD: currently primary link only */
-	struct _ADAPTER_LINK *adapter_link = GET_PRIMARY_LINK(adapter);
+#ifdef DBG_SERVING_AP_RSSI
+	u8 avg = recvinfo->signal_strength_bcn.avg_val;
+	u8 bcn = recvinfo->bcn_signal_strength;
+#endif
 
-	u32 tmp_s, tmp_q;
-	u8 avg_signal_strength = 0;
-	u8 avg_signal_qual = 0;
-	u32 num_signal_strength = 0;
-	u32 num_signal_qual = 0;
-	u8 ratio_pre_stat = 0, ratio_curr_stat = 0, ratio_total = 0, ratio_profile = SIGNAL_STAT_CALC_PROFILE_0;
+	if (!is_client_associated_to_ap(adapter))
+		return;
+
+	/* beacon */
+	rtw_signal_state(adapter, _TRUE);
+
+	/* data + beacon */
+	rtw_signal_state(adapter, _FALSE);
 
 	if (recvinfo->is_signal_dbg) {
-		/* update the user specific value, signal_strength_dbg, to signal_strength, rssi */
 		recvinfo->signal_strength = recvinfo->signal_strength_dbg;
 		recvinfo->rssi = (s8)rtw_phl_rssi_to_dbm((u8)recvinfo->signal_strength_dbg);
-	} else {
-
-		if (recvinfo->signal_strength_data.update_req == 0) { /* update_req is clear, means we got rx */
-			avg_signal_strength = recvinfo->signal_strength_data.avg_val;
-			num_signal_strength = recvinfo->signal_strength_data.total_num;
-			/* after avg_vals are accquired, we can re-stat the signal values */
-			recvinfo->signal_strength_data.update_req = 1;
-		}
-
-		if (recvinfo->signal_qual_data.update_req == 0) { /* update_req is clear, means we got rx */
-			avg_signal_qual = recvinfo->signal_qual_data.avg_val;
-			num_signal_qual = recvinfo->signal_qual_data.total_num;
-			/* after avg_vals are accquired, we can re-stat the signal values */
-			recvinfo->signal_qual_data.update_req = 1;
-		}
-
-		if (num_signal_strength == 0) {
-			if (rtw_get_on_cur_ch_time(adapter) == 0
-			    || rtw_get_passing_time_ms(rtw_get_on_cur_ch_time(adapter)) < 2 * adapter_link->mlmeextpriv.mlmext_info.bcn_interval
-			   )
-				goto set_timer;
-		}
-
-		if (check_fwstate(&adapter->mlmepriv, WIFI_UNDER_SURVEY) == _TRUE
-		    || check_fwstate(&adapter->mlmepriv, WIFI_ASOC_STATE) == _FALSE
-		   )
-			goto set_timer;
-
-#ifdef CONFIG_CONCURRENT_MODE
-		if (rtw_mi_buddy_check_fwstate(adapter, WIFI_UNDER_SURVEY) == _TRUE)
-			goto set_timer;
-#endif
-
-#ifdef CONFIG_MP_INCLUDED
-		if (adapter->registrypriv.mp_mode == 1) {
-			ratio_profile = SIGNAL_STAT_CALC_PROFILE_2;
-		}
-		else
-#endif
-		if (RTW_SIGNAL_STATE_CALC_PROFILE < SIGNAL_STAT_CALC_PROFILE_MAX)
-			ratio_profile = RTW_SIGNAL_STATE_CALC_PROFILE;
-
-		ratio_pre_stat = signal_stat_calc_profile[ratio_profile][0];
-		ratio_curr_stat = signal_stat_calc_profile[ratio_profile][1];
-		ratio_total = ratio_pre_stat + ratio_curr_stat;
-
-		/* update value of signal_strength, rssi, signal_qual */
-		tmp_s = (ratio_curr_stat * avg_signal_strength + ratio_pre_stat * recvinfo->signal_strength);
-		if (tmp_s % ratio_total)
-			tmp_s = tmp_s / ratio_total + 1;
-		else
-			tmp_s = tmp_s / ratio_total;
-		if (tmp_s > PHL_MAX_RSSI)
-			tmp_s = PHL_MAX_RSSI;
-
-		tmp_q = (ratio_curr_stat * avg_signal_qual + ratio_pre_stat * recvinfo->signal_qual);
-		if (tmp_q % ratio_total)
-			tmp_q = tmp_q / ratio_total + 1;
-		else
-			tmp_q = tmp_q / ratio_total;
-		if (tmp_q > PHL_MAX_RSSI)
-			tmp_q = PHL_MAX_RSSI;
-
-		recvinfo->signal_strength = tmp_s;
-		recvinfo->rssi = (s8)rtw_phl_rssi_to_dbm(tmp_s);
-		recvinfo->signal_qual = tmp_q;
-
-#if defined(DBG_RX_SIGNAL_DISPLAY_PROCESSING) && 1
-		RTW_INFO(FUNC_ADPT_FMT" signal_strength:%3u, rssi:%3d, signal_qual:%3u"
-			 ", num_signal_strength:%u, num_signal_qual:%u"
-			 ", on_cur_ch_ms:%d"
-			 "\n"
-			 , FUNC_ADPT_ARG(adapter)
-			 , recvinfo->signal_strength
-			 , recvinfo->rssi
-			 , recvinfo->signal_qual
-			 , num_signal_strength, num_signal_qual
-			, rtw_get_on_cur_ch_time(adapter) ? rtw_get_passing_time_ms(rtw_get_on_cur_ch_time(adapter)) : 0
-			);
-#endif
 	}
 
-set_timer:
+#ifdef DBG_SERVING_AP_RSSI
+	rtw_signal_stat_dump_row_data(&recvinfo->signal_strength_bcn);
+	if (bcn)
+		RTW_INFO("%d + %d --> %d\n", bcn, avg, recvinfo->bcn_signal_strength);
+	else
+		RTW_INFO("-- + %d --> %d\n", avg, recvinfo->bcn_signal_strength);
+#endif
 	rtw_set_signal_stat_timer(recvinfo);
-
 }
+
 #endif/*CONFIG_SIGNAL_STAT_PROCESS*/
 
 /*
@@ -5267,11 +5404,10 @@ void core_update_recvframe_mdata(union recv_frame *prframe, struct rtw_recv_pkt 
 }
 
 #ifdef RTW_WKARD_CORE_RSSI_V1
-static inline void _rx_process_ss_sq(_adapter *padapter, union recv_frame *prframe)
+static inline void _rx_process_ss_sq(_adapter *padapter, union recv_frame *prframe,
+	struct signal_stat *ss, struct signal_stat *sq)
 {
 	struct rx_pkt_attrib *pattrib = &prframe->u.hdr.attrib;
-	struct signal_stat *ss = &padapter->recvinfo.signal_strength_data;
-	struct signal_stat *sq = &padapter->recvinfo.signal_qual_data;
 
 	if (ss->update_req) {
 		ss->total_num = 0;
@@ -5294,7 +5430,7 @@ static inline void _rx_process_ss_sq(_adapter *padapter, union recv_frame *prfra
 	sq->avg_val = sq->total_val / sq->total_num;
 }
 
-/*#define DBG_RECV_INFO*/
+/* #define DBG_RECV_INFO */
 void rx_process_phy_info(union recv_frame *precvframe)
 {
 	_adapter *padapter = precvframe->u.hdr.adapter;
@@ -5348,7 +5484,7 @@ void rx_process_phy_info(union recv_frame *precvframe)
 
 	is_packet_match_bssid = (!IsFrameTypeCtrl(wlanhdr))
 			&& (!pattrib->icv_err) && (!pattrib->crc_err)
-			&& ((!MLME_IS_MESH(padapter) && _rtw_memcmp(get_hdr_bssid(wlanhdr), get_bssid(&padapter->mlmepriv), ETH_ALEN))
+			&& ((!MLME_IS_MESH(padapter) && _rtw_memcmp(get_hdr_bssid(wlanhdr), get_mbssid(&padapter->mlmepriv), ETH_ALEN))
 				|| (MLME_IS_MESH(padapter) && psta));
 
 	/*is_to_self = (!pattrib->icv_err) && (!pattrib->crc_err)
@@ -5383,7 +5519,7 @@ void rx_process_phy_info(union recv_frame *precvframe)
 
 	RTW_INFO("hdr_bssid:"MAC_FMT" my_bssid:"MAC_FMT"\n", 
 				MAC_ARG(get_hdr_bssid(wlanhdr)),
-				MAC_ARG(get_bssid(&padapter->mlmepriv)));
+				MAC_ARG(get_mbssid(&padapter->mlmepriv)));
 
 	RTW_INFO("ra:"MAC_FMT" my_addr:"MAC_FMT"\n", 
 				MAC_ARG(ra),
@@ -5400,8 +5536,20 @@ void rx_process_phy_info(union recv_frame *precvframe)
 			rx_process_dframe_raw_data(precvframe);
 #endif
 			}
-			if (phy_info->is_valid)
-				_rx_process_ss_sq(padapter, precvframe);/*signal_strength & signal_quality*/
+			if (phy_info->is_valid) {
+				_rx_process_ss_sq(padapter, precvframe,
+					&precvinfo->signal_strength_data,
+					&precvinfo->signal_qual_data);
+
+				if (is_packet_beacon) {
+					_rx_process_ss_sq(padapter, precvframe,
+						&precvinfo->signal_strength_bcn,
+						&precvinfo->signal_qual_bcn);
+#ifdef DBG_SERVING_AP_RSSI
+					_rx_dbg_bcn_rssi(&precvinfo->signal_strength_bcn, precvframe);
+#endif
+				}
+			}
 		} else if (is_packet_to_self || is_packet_beacon) {
 			if (psta) {
 				precvframe->u.hdr.psta = psta;
@@ -5409,8 +5557,20 @@ void rx_process_phy_info(union recv_frame *precvframe)
 			rx_process_dframe_raw_data(precvframe);
 #endif
 			}
-			if (phy_info->is_valid)
-				_rx_process_ss_sq(padapter, precvframe);/*signal_strength & signal_quality*/
+			if (phy_info->is_valid) {
+				_rx_process_ss_sq(padapter, precvframe,
+					&precvinfo->signal_strength_data,
+					&precvinfo->signal_qual_data);
+
+				if (is_packet_beacon) {
+					_rx_process_ss_sq(padapter, precvframe,
+						&precvinfo->signal_strength_bcn,
+						&precvinfo->signal_qual_bcn);
+#ifdef DBG_SERVING_AP_RSSI
+					_rx_dbg_bcn_rssi(&precvinfo->signal_strength_bcn, precvframe);
+#endif
+				}
+			}
 		}
 	}
 #ifdef CONFIG_MP_INCLUDED
@@ -5421,17 +5581,29 @@ void rx_process_phy_info(union recv_frame *precvframe)
 				RTW_INFO("in MP Rx is_packet_beacon\n");
 				if (psta)
 					precvframe->u.hdr.psta = psta;
-				_rx_process_ss_sq(padapter, precvframe);
+				_rx_process_ss_sq(padapter, precvframe,
+					&precvinfo->signal_strength_data,
+					&precvinfo->signal_qual_data);
 			}
 		} else	{
 			if (psta)
 				precvframe->u.hdr.psta = psta;
-			_rx_process_ss_sq(padapter, precvframe);
+			_rx_process_ss_sq(padapter, precvframe,
+					&precvinfo->signal_strength_data,
+					&precvinfo->signal_qual_data);
+		}
+
+		if (is_packet_beacon) {
+			_rx_process_ss_sq(padapter, precvframe,
+				&precvinfo->signal_strength_bcn,
+				&precvinfo->signal_qual_bcn);
+#ifdef DBG_SERVING_AP_RSSI
+			_rx_dbg_bcn_rssi(&precvinfo->signal_strength_bcn, precvframe);
+#endif
 		}
 	}
 #endif
 }
-
 
 /*#define DBG_PHY_INFO*/
 void core_update_recvframe_phyinfo(union recv_frame *prframe, struct rtw_recv_pkt *rx_req)

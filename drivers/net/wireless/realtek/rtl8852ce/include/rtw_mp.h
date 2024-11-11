@@ -1059,7 +1059,9 @@ struct rtw_mp_config_arg {
 	u8 ant_sw;
 	u8 hci_speed;
 	struct rtw_gpio_config_arg gpio_cfg;
+#ifdef CONFIG_POWER_SAVE
 	struct rtw_pwr_config_arg pwr_cfg;
+#endif
 };
 
 struct rtw_mp_tx_arg {
@@ -1433,6 +1435,7 @@ int	rtw_mp_txpoweridx(_adapter *adapter);
 u16 rtw_mp_txpower_dbm(_adapter *adapter, u8 rf_path);
 u16 rtw_mp_get_pwrtab_dbm(_adapter *adapter, u8 rfpath);
 
+u8 rtw_mp_rfpath2txnss(_adapter *padapter, enum rf_path path);
 void	SetAntenna(_adapter *adapter);
 void	SetDataRate(_adapter *adapter);
 s32	SetThermalMeter(_adapter *adapter, u8 target_ther);

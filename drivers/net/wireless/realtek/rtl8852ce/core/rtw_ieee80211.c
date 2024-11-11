@@ -778,7 +778,7 @@ u8 rtw_update_rate_bymode(WLAN_BSSID_EX *pbss_network, u32 mode)
 		}
 		network_type = WLAN_MD_11B;
 	} else {
-		if (pbss_network->Configuration.DSConfig > 14) {
+		if (BSS_EX_OP_BAND(pbss_network) != BAND_ON_24G){
 			/* Remove CCK in support_rate IE */
 			rtw_filter_suppport_rateie(pbss_network, OFDM);
 			network_type = WLAN_MD_11A;
@@ -2121,7 +2121,7 @@ ParseRes rtw_ieee802_11_override_elems_by_mbssid(
 	uint left = mbssid_ie_len;
 	u8 *pos = mbssid_ie;
 	u8 max_bssid_indicator;
-	int unknown = 0;
+	ParseRes ret = ParseOK;
 
 	if (left < 3) {
 		RTW_WARN("%s mbssid_ie_len < 3\n", __func__);
@@ -2156,7 +2156,7 @@ ParseRes rtw_ieee802_11_override_elems_by_mbssid(
 		switch (id) {
 		case MBSSID_NONTRANSMITTED_BSSID_PROFILE_ID:
 			if (rtw_mbssid_ntbssid_profile_match_id(pos, elen, mbssid_idx))
-				_rtw_ieee802_11_parse_elems(pos, elen, elems, show_errors, false);
+				ret = _rtw_ieee802_11_parse_elems(pos, elen, elems, show_errors, false);
 			break;
 		default:
 			break;
@@ -2168,7 +2168,7 @@ ParseRes rtw_ieee802_11_override_elems_by_mbssid(
 	if (left)
 		return ParseFailed;
 
-	return unknown ? ParseUnknown : ParseOK;
+	return ret;
 
 }
 #endif /* CONFIG_STA_MULTIPLE_BSSID */

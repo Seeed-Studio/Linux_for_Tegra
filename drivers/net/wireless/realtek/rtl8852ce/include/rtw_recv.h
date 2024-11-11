@@ -100,6 +100,13 @@ struct signal_stat {
 	u8	avg_val;		/* avg of valid elements */
 	u32	total_num;		/* num of valid elements */
 	u32	total_val;		/* sum of valid elements	 */
+
+#ifdef DBG_SERVING_AP_RSSI
+#define RAW_LEN	64
+	u8 signal_raw_idx;
+	u8 signal_raw[RAW_LEN];
+	u8 signal_avg[RAW_LEN];
+#endif
 };
 
 /*TODO get phyinfo from PHL PPDU status - RTW_WKARD_CORE_RSSI_V1*/
@@ -308,7 +315,6 @@ struct recv_info {
 	u8 signal_qual;
 	s8 rssi;	/* rtw_phl_rssi_to_dbm(ptarget_wlan->network.PhyInfo.SignalStrength); */
 
-
 	#ifdef CONFIG_SIGNAL_STAT_PROCESS
 	_timer signal_stat_timer;
 	u32 signal_stat_sampling_interval;
@@ -318,6 +324,11 @@ struct recv_info {
 	struct signal_stat signal_qual_data;
 	struct signal_stat signal_strength_data;
 
+	u8 bcn_signal_strength;
+	u8 bcn_signal_qual;
+	s8 bcn_rssi;
+	struct signal_stat signal_qual_bcn;
+	struct signal_stat signal_strength_bcn;
 
 	u16 sink_udpport, pre_rtp_rxseq, cur_rtp_rxseq;
 
@@ -656,4 +667,7 @@ u8 rtw_get_idx_by_rx_rate(u16 data_rate);
 void count_rx_stats(_adapter *padapter, union recv_frame *prframe, struct sta_info *sta);
 u8 rtw_init_lite_recv_resource(struct dvobj_priv *dvobj);
 void rtw_free_lite_recv_resource(struct dvobj_priv *dvobj);
+#endif
+#ifdef CONFIG_SIGNAL_STAT_PROCESS
+void rtw_signal_state_reset(_adapter *adapter);
 #endif

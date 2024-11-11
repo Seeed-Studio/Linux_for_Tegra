@@ -1862,7 +1862,6 @@ static int rtw_wx_set_scan(struct net_device *dev, struct iw_request_info *a,
 	RTW_INFO("DBG_IOCTL %s:%d\n", __FUNCTION__, __LINE__);
 #endif
 
-#if 1
 	ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
 
 	#ifdef CONFIG_DOSCAN_IN_BUSYTRAFFIC
@@ -1891,54 +1890,6 @@ static int rtw_wx_set_scan(struct net_device *dev, struct iw_request_info *a,
 		ret = -1;
 		goto exit;
 	}
-#else
-
-#ifdef CONFIG_MP_INCLUDED
-	if (rtw_mp_mode_check(padapter)) {
-		RTW_INFO("MP mode block Scan request\n");
-		ret = -EPERM;
-		goto exit;
-	}
-#endif
-	if (rtw_is_scan_deny(padapter)) {
-		indicate_wx_scan_complete_event(padapter);
-		goto exit;
-	}
-
-	if (!rtw_is_adapter_up(padapter)) {
-		ret = -1;
-		goto exit;
-	}
-
-#ifndef CONFIG_DOSCAN_IN_BUSYTRAFFIC
-	/* When Busy Traffic, driver do not site survey. So driver return success. */
-	/* wpa_supplicant will not issue SIOCSIWSCAN cmd again after scan timeout. */
-	/* modify by thomas 2011-02-22. */
-	if (rtw_mi_busy_traffic_check(padapter)) {
-		indicate_wx_scan_complete_event(padapter);
-		goto exit;
-	}
-#endif
-	if (check_fwstate(pmlmepriv, WIFI_AP_STATE) && check_fwstate(pmlmepriv, WIFI_UNDER_WPS)) {
-		RTW_INFO("AP mode process WPS\n");
-		indicate_wx_scan_complete_event(padapter);
-		goto exit;
-	}
-
-	if (check_fwstate(pmlmepriv, WIFI_UNDER_SURVEY | WIFI_UNDER_LINKING) == _TRUE) {
-		indicate_wx_scan_complete_event(padapter);
-		goto exit;
-	}
-
-#ifdef CONFIG_CONCURRENT_MODE
-	if (rtw_mi_buddy_check_fwstate(padapter,
-		       WIFI_UNDER_SURVEY | WIFI_UNDER_LINKING | WIFI_UNDER_WPS)) {
-
-		indicate_wx_scan_complete_event(padapter);
-		goto exit;
-	}
-#endif
-#endif
 
 	parm = rtw_malloc(sizeof(*parm));
 	if (parm == NULL) {
@@ -1953,7 +1904,7 @@ static int rtw_wx_set_scan(struct net_device *dev, struct iw_request_info *a,
 		if (wrqu->data.flags & IW_SCAN_THIS_ESSID) {
 			int len = min((int)req->essid_len, IW_ESSID_MAX_SIZE);
 
-			rtw_init_sitesurvey_parm(padapter, parm);
+			rtw_init_sitesurvey_parm(parm);
 			_rtw_memcpy(&parm->ssid[0].Ssid, &req->essid, len);
 			parm->ssid[0].SsidLength = len;
 			parm->ssid_num = 1;
@@ -1978,7 +1929,7 @@ static int rtw_wx_set_scan(struct net_device *dev, struct iw_request_info *a,
 			int ssid_index = 0;
 
 			/* RTW_INFO("%s COMBO_SCAN header is recognized\n", __FUNCTION__); */
-			rtw_init_sitesurvey_parm(padapter, parm);
+			rtw_init_sitesurvey_parm(parm);
 
 			while (len >= 1) {
 				section = *(pos++);
@@ -5000,16 +4951,6 @@ static int rtw_wx_set_priv(struct net_device *dev,
 		break;
 	case ANDROID_WIFI_CMD_MACADDR:
 		sprintf(ext, "MACADDR = " MAC_FMT, MAC_ARG(dev->dev_addr));
-		break;
-	case ANDROID_WIFI_CMD_SCAN_ACTIVE: {
-		/* rtw_set_scan_mode(padapter, SCAN_ACTIVE); */
-		sprintf(ext, "OK");
-	}
-		break;
-	case ANDROID_WIFI_CMD_SCAN_PASSIVE: {
-		/* rtw_set_scan_mode(padapter, SCAN_PASSIVE); */
-		sprintf(ext, "OK");
-	}
 		break;
 
 	case ANDROID_WIFI_CMD_COUNTRY: {

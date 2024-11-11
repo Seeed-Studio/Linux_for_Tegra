@@ -22,7 +22,7 @@
 
 #define rtw_roam_busy_scan(a, nb)	\
 	(((a)->mlmepriv.LinkDetectInfo.bBusyTraffic == _TRUE) && \
-	(((a)->mlmepriv.ch_cnt) < ((nb)->nb_rpt_ch_list_num)))
+	(((a)->mlmepriv.ch_cnt) < ((nb)->nb_rpt.ch_list_num)))
 
 #define rtw_wnm_btm_preference_cap(b) \
 	(b->preference_en == _TRUE)
@@ -66,23 +66,22 @@
 
 #define RTW_WLAN_ACTION_WNM_NB_RPT_ELEM	0x34
 
+#ifdef PRIVATE_N
+#define wnm_roam_rssi_th(m) \
+	m->LinkDetectInfo.bBusyTraffic?m->roam_busy_rssi_th:m->roam_idle_rssi_th
+#define wnm_roam_rssi_delta(m) \
+	m->LinkDetectInfo.bBusyTraffic?m->roam_busy_rssi_delta:m->roam_idle_rssi_delta
+#else
+#define wnm_roam_rssi_th(m) m->roam_rssi_th
+#define wnm_roam_rssi_delta(m) m->roam_rssi_delta
+#endif
+
 enum rtw_ieee80211_wnm_actioncode {
 	RTW_WLAN_ACTION_WNM_BTM_QUERY = 6,
 	RTW_WLAN_ACTION_WNM_BTM_REQ = 7,
 	RTW_WLAN_ACTION_WNM_BTM_RSP = 8,
 	RTW_WLAN_ACTION_WNM_NOTIF_REQ = 26,
 	RTW_WLAN_ACTION_WNM_NOTIF_RSP = 27,
-};
-
-/*IEEE Std 80211k Figure 7-95b Neighbor Report element format*/
-struct nb_rpt_hdr {
-	u8 id; /*0x34: Neighbor Report Element ID*/
-	u8 len;
-	u8 bssid[ETH_ALEN];
-	u32 bss_info;
-	u8 reg_class;
-	u8 ch_num;
-	u8 phy_type;
 };
 
 /*IEEE Std 80211v, Figure 7-9 BSS Termination Duration subelement field format */
@@ -150,14 +149,12 @@ enum rtw_btm_req_mod {
 };
 
 struct roam_nb_info {
-	struct nb_rpt_hdr nb_rpt[RTW_MAX_NB_RPT_NUM];
-	struct rtw_ieee80211_channel nb_rpt_ch_list[RTW_MAX_NB_RPT_NUM];
+	struct rrm_nb_rpt nb_rpt;
+
 	struct btm_rpt_cache btm_cache;
 	bool	nb_rpt_valid;
-	u8	nb_rpt_ch_list_num;
 	u8 preference_en;
 	u8 roam_target_addr[ETH_ALEN];
-	u32	last_nb_rpt_entries;
 	u8 nb_rpt_is_same;
 	s8 disassoc_waiting;
 	_timer roam_scan_timer;
@@ -165,8 +162,6 @@ struct roam_nb_info {
 
 	u32 features;
 };
-
-void rtw_wnm_candidate_info(struct wlan_network *pnetwork, struct wlan_network *cnetwork, u8 *reason);
 
 u8 rtw_wnm_btm_reassoc_req(_adapter *padapter);
 
@@ -218,6 +213,8 @@ struct wlan_network *rtw_wnm_btm_candidate_select(
 	_adapter *padapter, struct roam_nb_info *pnb);
 struct wlan_network * rtw_wnm_btm_candidate_check(_adapter *padapter,
 	struct roam_nb_info *pnb, struct wlan_network *pnetwork);
+
+void rtw_wnm_start_clnt_join(_adapter *padapter, struct _ADAPTER_LINK *al);
 
 //u8 rtw_wmn_btm_rsp_reason_decision(_adapter *padapter, u8* req_mode);
 u8 rtw_wmn_btm_rsp_reason_decision(_adapter *padapter, struct roam_nb_info *pnb);

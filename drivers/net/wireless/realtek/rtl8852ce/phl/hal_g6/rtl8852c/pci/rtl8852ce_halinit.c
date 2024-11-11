@@ -902,6 +902,13 @@ bool hal_recognize_int_8852ce(struct hal_info_t *hal)
 		hal_disable_int_rmn_8852ce(hal);
 	} else {
 		/* if isr is not recognized, go to end */
+#if 1
+		PHL_WARN("%s: unknown isr\n", __func__);
+		hal_com->_intr[0].val = 0;
+		hal_com->_intr[1].val = 0;
+		hal_com->_intr[2].val = 0;
+		hal_com->_intr[3].val = 0;
+#endif
 		goto end;
 	}
 

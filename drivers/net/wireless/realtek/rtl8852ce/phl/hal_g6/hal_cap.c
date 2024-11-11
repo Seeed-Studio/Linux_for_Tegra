@@ -247,6 +247,16 @@ static void _hal_ps_final_cap_decision(struct rtw_phl_com_t *phl_com,
 	rtw_hal_ps_fw_cap_decision(phl_com, false);
 }
 
+#ifdef CONFIG_BTCOEX
+static void _hal_btc_final_cap_decision(struct rtw_phl_com_t *phl_com)
+{
+	struct btc_cap_info *btc_sw_cap = &GET_DEV_SW_BTC_CAP(phl_com);
+	struct btc_cap_info *btc_dev_cap = &GET_DEV_BTC_CAP(phl_com);
+
+	btc_dev_cap->btc_deg_wifi_cap = btc_sw_cap->btc_deg_wifi_cap;
+}
+#endif /* CONFIG_BTCOEX */
+
 static void _hal_edcca_final_cap_decision(struct rtw_phl_com_t *phl_com,
 			struct rtw_hal_com_t *hal_com)
 {
@@ -457,7 +467,12 @@ void rtw_hal_final_cap_decision(struct rtw_phl_com_t *phl_com, void *hal)
 	dev_cap->xcap = dev_hw_cap->xcap;
 	dev_cap->domain = dev_hw_cap->domain;
 	dev_cap->domain_6g = dev_hw_cap->domain_6g;
+
+	/* btc related */
 	dev_cap->btc_mode = dev_sw_cap->btc_mode;
+#ifdef CONFIG_BTCOEX
+	_hal_btc_final_cap_decision(phl_com);
+#endif /* CONFIG_BTCOEX */
 
 #ifdef CONFIG_PCI_HCI
 	_hal_bus_final_cap_decision(phl_com, hal_com);

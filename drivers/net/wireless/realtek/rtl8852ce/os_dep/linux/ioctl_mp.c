@@ -694,10 +694,13 @@ int rtw_mp_txpower_index(struct net_device *dev,
 	_adapter *padapter = rtw_netdev_priv(dev);
 	char input[RTW_IWD_MAX_LEN];
 	u32 rfpath = 0 ;
-	u32 txpower_inx = 0, tarpowerdbm = 0;
+	u32 txpower_inx = 0;
+	int tarpowerdbm = 0;
 	char *pextra = extra;
 	u8 rf_type = GET_HAL_RFPATH(adapter_to_dvobj(padapter));
 	struct _ADAPTER_LINK *adapter_link = GET_PRIMARY_LINK(padapter);
+	struct mp_priv *pmp_priv = (struct mp_priv *)&padapter->mppriv;
+	u8 tx_nss = rtw_mp_rfpath2txnss(padapter, pmp_priv->curr_rfpath);
 
 	if (rtw_do_mp_iwdata_len_chk(__func__, (wrqu->length + 1)))
 		return -EFAULT;
@@ -715,12 +718,11 @@ int rtw_mp_txpower_index(struct net_device *dev,
 		rfpath = rtw_atoi(input);
 #ifndef CONFIG_80211AX_HE
 			txpower_inx = mpt_ProQueryCalTxPower(padapter, rfpath);
-
+			pextra += sprintf(pextra, " %d\n\t\t", txpower_inx);
 #else
-		pextra += sprintf(pextra, " %d\n", txpower_inx);
-		tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, rfpath);
+		tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, tx_nss);
 			if (tarpowerdbm > 0) {
-				pextra += sprintf(pextra, "\t\t dBm:%d.%d",
+				pextra += sprintf(pextra, "dBm:%d.%d",
 				(tarpowerdbm / TX_POWER_BASE), rtw_mpt_raw2dec_dbm(tarpowerdbm));
 				padapter->mppriv.txpowerdbm = tarpowerdbm;
 				rtw_mp_txpower_dbm(padapter, rfpath);
@@ -730,38 +732,23 @@ int rtw_mp_txpower_index(struct net_device *dev,
 	} else {
 		u8 rfpath_i = 0;
 		u8 tx_nss = get_phy_tx_nss(padapter, adapter_link);
-#ifndef CONFIG_80211AX_HE
-		txpower_inx = mpt_ProQueryCalTxPower(padapter, 0);
-		pextra += sprintf(pextra, "patha=%d", txpower_inx);
-		if (rf_type > RF_1T2R) {
-			txpower_inx = mpt_ProQueryCalTxPower(padapter, 1);
-			pextra += sprintf(pextra, ",pathb=%d", txpower_inx);
-		}
-		if (rf_type > RF_2T4R) {
-			txpower_inx = mpt_ProQueryCalTxPower(padapter, 2);
-			pextra += sprintf(pextra, ",pathc=%d", txpower_inx);
-		}
-		if (rf_type > RF_3T4R) {
-			txpower_inx = mpt_ProQueryCalTxPower(padapter, 3);
-			pextra += sprintf(pextra, ",pathd=%d", txpower_inx);
-		}
-#endif
-		tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, 0);
-		pextra += sprintf(pextra, "\n\t\t\tpatha dBm:%d.%d",
+
+		tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, MP_NSS1);
+		pextra += sprintf(pextra, "\n\t\t\t 1SS dBm:%d.%d",
 				(tarpowerdbm / TX_POWER_BASE), rtw_mpt_raw2dec_dbm(tarpowerdbm));
 		if (rf_type > RF_1T2R) {
-			tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, 1);
-			pextra += sprintf(pextra, ",pathb dBm:%d.%d",
+			tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, MP_NSS2);
+			pextra += sprintf(pextra, ",2SS dBm:%d.%d",
 			(tarpowerdbm / TX_POWER_BASE), rtw_mpt_raw2dec_dbm(tarpowerdbm));
 		}
 		if (rf_type > RF_2T4R) {
-			tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, 2);
-			pextra += sprintf(pextra, ",pathc dBm:%d.%d",
+			tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, MP_NSS3);
+			pextra += sprintf(pextra, ",3SS dBm:%d.%d",
 			(tarpowerdbm / TX_POWER_BASE), rtw_mpt_raw2dec_dbm(tarpowerdbm));
 		}
 		if (rf_type > RF_3T4R) {
-			tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, 3);
-			pextra += sprintf(pextra, ",pathd dBm:%d.%d",
+			tarpowerdbm = mpt_get_tx_power_finalabs_val(padapter, MP_NSS4);
+			pextra += sprintf(pextra, ",4SS dBm:%d.%d",
 				(tarpowerdbm / TX_POWER_BASE), rtw_mpt_raw2dec_dbm(tarpowerdbm));
 		}
 		padapter->mppriv.txpowerdbm = tarpowerdbm;
@@ -917,7 +904,8 @@ int rtw_mp_ant_tx(struct net_device *dev,
 
 	SetAntenna(padapter);
 	if(registry_par->mp_mode == 1) {
-		pwr_dbm = mpt_get_tx_power_finalabs_val(padapter, pmppriv->curr_rfpath);
+		u8 tx_nss = rtw_mp_rfpath2txnss(padapter, pmppriv->curr_rfpath);
+		pwr_dbm = mpt_get_tx_power_finalabs_val(padapter, tx_nss);
 		if ( pwr_dbm > 0) {
 			padapter->mppriv.txpowerdbm = pwr_dbm;
 			pextra += sprintf(pextra, "read pwr dbm:%d.%d",

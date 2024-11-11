@@ -1211,6 +1211,16 @@ void core_handler_phl_msg(void *drv_priv, struct phl_msg *msg)
 		rtw_msg_hub_power_mgnt_evt_hdlr(dvobj, evt_id, msg->inbuf, msg->inlen, &pwrpriv->rfkill_state);
 	}
 		break;
+
+case PHL_MDL_GENERAL:
+#ifdef CONFIG_BTC
+#ifdef CONFIG_BTC_TRXSS_CHG
+		if ((evt_id == MSG_EVT_ANN_RX1SS) || (evt_id == MSG_EVT_ANN_RX_MAXSS))
+			rtw_btc_trxss_chg_hdl(dvobj, msg, evt_id);
+#endif
+#endif
+		break;
+
 	default:
 		RTW_ERR("%s mdl_id :%d not support\n", __func__, mdl_id);
 		break;
@@ -1220,7 +1230,7 @@ void core_handler_phl_msg(void *drv_priv, struct phl_msg *msg)
 u8 rtw_core_register_phl_msg(struct dvobj_priv *dvobj)
 {
 	struct phl_msg_receiver ctx = {0};
-	u8 imr[] = {PHL_MDL_RX, PHL_MDL_SER, PHL_MDL_WOW, PHL_MDL_MRC, PHL_MDL_POWER_MGNT};
+	u8 imr[] = {PHL_MDL_RX, PHL_MDL_SER, PHL_MDL_WOW, PHL_MDL_MRC, PHL_MDL_POWER_MGNT, PHL_MDL_GENERAL};
 	enum rtw_phl_status psts = RTW_PHL_STATUS_FAILURE;
 
 	ctx.incoming_evt_notify = core_handler_phl_msg;
@@ -4485,8 +4495,6 @@ bool rtw_dfs_hal_region_supported(struct dvobj_priv* dvobj, enum rtw_dfs_regd do
 
 void rtw_dfs_hal_update_region(struct dvobj_priv *dvobj, u8 band_idx, enum rtw_dfs_regd domain)
 {
-	struct rtw_phl_com_t *phl_com = GET_PHL_COM(dvobj);
-
 	rtw_phl_cmd_dfs_change_domain(GET_PHL_INFO(dvobj), band_idx, rtw_dfs_regd_to_phl(domain), PHL_CMD_DIRECTLY, 0);
 }
 
@@ -4582,7 +4590,6 @@ bool phy_is_txpwr_user_lmt_specified(struct dvobj_priv *dvobj)
 */
 static s8 phy_get_txpwr_user_lmt(struct dvobj_priv *dvobj, u8 ntx_idx)
 {
-	struct rf_ctl_t *rfctl = dvobj_to_rfctl(dvobj);
 	void *phl_info = GET_PHL_INFO(dvobj);
 	s16 total_mbm = UNSPECIFIED_MBM;
 	s8 lmt;

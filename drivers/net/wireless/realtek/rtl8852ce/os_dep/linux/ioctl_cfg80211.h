@@ -309,7 +309,7 @@ struct rtw_wiphy_data {
 #define rtw_wiphy_priv(wiphy) ((struct rtw_wiphy_data *)wiphy_priv(wiphy))
 #define wiphy_to_dvobj(wiphy) (((struct rtw_wiphy_data *)wiphy_priv(wiphy))->dvobj)
 #define wiphy_to_adapter(wiphy) (dvobj_get_primary_adapter(wiphy_to_dvobj(wiphy)))
-
+#define wiphy_to_dev(wiphy) (dvobj_to_dev(wiphy_to_dvobj(wiphy)))
 
 #if defined(RTW_DEDICATED_P2P_DEVICE)
 #define wiphy_to_pd_wdev(wiphy) (rtw_wiphy_priv(wiphy)->pd_wdev)
@@ -361,7 +361,6 @@ void rtw_cfg80211_indicate_scan_done(_adapter *adapter, bool aborted);
 u32 rtw_cfg80211_wait_scan_req_empty(_adapter *adapter, u32 timeout_ms);
 
 #ifdef CONFIG_CONCURRENT_MODE
-u8 rtw_cfg80211_scan_via_buddy(_adapter *padapter, struct cfg80211_scan_request *request);
 void rtw_cfg80211_indicate_scan_done_for_buddy(_adapter *padapter, bool bscan_aborted);
 #endif
 

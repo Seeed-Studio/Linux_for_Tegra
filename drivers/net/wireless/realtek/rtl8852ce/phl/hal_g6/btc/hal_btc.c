@@ -65,6 +65,10 @@ static const u8 btc_ap_tpl [][3] = {
 	{0x8C, 0x21, 0x0a}, {0x64, 0x66, 0xb3}, {0xbc, 0x46, 0x99}
 };
 
+static const u8 btc_hiduty_hid_name [][3] = {
+	{0x57, 0x69, 0x72}, {0x44, 0x75, 0x61}, {0x58, 0x62, 0x6f}
+};
+
 #ifdef BTC_FDDT_TRAIN_SUPPORT
 static const struct btc_fddt_cell cell_ul_bt0[4][5] = {
 	{{0,0,0,0},   {0,0,0,0},   {0,0,0,0},   {-2,8,10,4}, {-5,5,10,4}},
@@ -701,6 +705,30 @@ u8 _get_wl_role_idx(struct btc_t *btc, u8 role)
 	return rid; /*cation: return BTC_WL_MAX_ROLE_NUMBER if role not found */
 }
 
+bool _chk_bt_hiduty_dev(struct btc_t *btc)
+{
+	struct btc_cx *cx = &btc->cx;
+	struct btc_bt_info *bt = &cx->bt;
+
+	if (bt->link_info.status.map.connect &&
+	    ((cx->cnt_bt[BTC_BCNT_LOPRI_TX] + cx->cnt_bt[BTC_BCNT_LOPRI_RX]) >
+	      BTC_BT_HID_HIGHDUTY_THS)) {
+		if (!bt->link_info.status.map.inq_pag)
+			bt->hiduty_dev = true;
+	} else {
+			bt->hiduty_dev = false;
+	}
+
+	if (bt->hiduty_dev != bt->hiduty_dev_last) {
+		bt->hiduty_dev_last = bt->hiduty_dev;
+		PHL_TRACE(COMP_PHL_BTC, _PHL_DEBUG_,
+		  "[BTC] %s(): High duty hid connection %s! \n",
+		  __func__, bt->hiduty_dev ? "Connected" : "Disconnected");
+		return true;
+	}
+	return false;
+}
+
 void _set_wl_req_mac(struct btc_t *btc, u8 mac_id)
 {
 	struct btc_wl_info *wl = &btc->cx.wl;
@@ -789,6 +817,7 @@ static void _update_wl_info(struct btc_t *btc, u8 rid, enum link_state reason)
 	struct btc_wl_active_role *act_role = NULL;
 	struct rtw_hal_com_t *h = btc->hal;
 	struct rtw_chan_def cid_ch[BTC_WL_MAX_ROLE_NUMBER];
+	u8 client_cnt_last[BTC_WL_MAX_ROLE_NUMBER] = {0};
 
 	u8 i, j, cnt = 0, mac_id = HW_PHY_0, specific_ap = 0;
 	u8 cnt_2g = 0, cnt_5g = 0, mode = BTC_WLINK_NOLINK;
@@ -796,8 +825,11 @@ static void _update_wl_info(struct btc_t *btc, u8 rid, enum link_state reason)
 	u8 cid_role[BTC_WL_MAX_ROLE_NUMBER] = {0};
 	u8 dbcc_2g_phy = HW_PHY_0, phy_now = 0, phy_dbcc;
 	u32 noa_duration = 0, sz = sizeof(struct rtw_chan_def);
-	bool b2g = false, b5g = false, client_joined = false;
-	     wl->legacy_mode = false;
+	bool client_joined = false, client_inc_2g = false;
+	bool b2g = false, b5g = false;
+
+	for (i = 0; i < BTC_WL_MAX_ROLE_NUMBER; i++)
+		client_cnt_last[i] = wl_rinfo->active_role[i].client_cnt;
 
 	hal_mem_set(h, wl_rinfo, 0, sizeof(struct btc_wl_role_info));
 	hal_mem_set(h, wl_dinfo, 0, sizeof(struct btc_wl_dbcc_info));
@@ -860,10 +892,17 @@ static void _update_wl_info(struct btc_t *btc, u8 rid, enum link_state reason)
 			phy_now = act_role->phy;
 
 		/* only if client connect for p2p-Go/AP */
-		if ((wl_linfo[i].role == PHL_RTYPE_P2P_GO ||
-		     wl_linfo[i].role == PHL_RTYPE_AP) &&
-		     wl_linfo[i].client_cnt > 1)
-			client_joined = true;
+		if (wl_linfo[i].role == PHL_RTYPE_P2P_GO ||
+		     wl_linfo[i].role == PHL_RTYPE_AP) {
+			if (wl_linfo[i].client_cnt > 1)
+				client_joined = true;
+			if (client_cnt_last[i] < wl_linfo[i].client_cnt &&
+			    wl_linfo[i].chdef.band == BAND_ON_24G)
+				client_inc_2g = true;
+			act_role->client_cnt = (u8)wl_linfo[i].client_cnt;
+		} else {
+			act_role->client_cnt = 0;
+		}
 
 		/* only one noa-role exist */
 		if (act_role->noa && act_role->noa_dur > 0) {
@@ -911,6 +950,8 @@ static void _update_wl_info(struct btc_t *btc, u8 rid, enum link_state reason)
 			    wl_linfo[i].mode == WLAN_MD_11G ||
 			    wl_linfo[i].mode == WLAN_MD_11BG )
 				wl->legacy_mode = true;
+			else if (wl_linfo[i].mode & WLAN_MD_11AX)
+				wl->he_mode = true;
 
 			cnt_2g++;
 			b2g = true;
@@ -923,6 +964,7 @@ static void _update_wl_info(struct btc_t *btc, u8 rid, enum link_state reason)
 	}
 
 	wl_rinfo->connect_cnt = cnt;
+	wl->client_cnt_inc_2g = (u8)client_inc_2g;
 
 	/* Be careful to change the following sequence!! */
 	if (cnt == 0) {
@@ -1658,6 +1700,9 @@ static void _update_bt_info(struct btc_t *btc, u8 *buf, u32 len)
 		return;
 	}
 
+	if (_chk_bt_hiduty_dev(btc))
+		bt_link_change = true;
+
 	hal_mem_cpy(h, bt->raw_info, buf, BTC_BTINFO_MAX);
 
 	PHL_TRACE(COMP_PHL_BTC, _PHL_DEBUG_,
@@ -1689,6 +1734,7 @@ static void _update_bt_info(struct btc_t *btc, u8 *buf, u32 len)
 	b->profile_cnt.now += (u8)pan->exist;
 	b->profile_cnt.now += (u8)leaudio->bis_cnt;
 	b->profile_cnt.now += (u8)leaudio->cis_cnt;
+	b->profile_cnt.now += (u8)bt->hiduty_dev;
 	btc->dm.trx_info.bt_profile = (btinfo.val & 0xf0) >>4;
 
 	/* ======= parse raw info low-Byte3 ======= */
@@ -1850,11 +1896,9 @@ static void _query_bt_dev(struct btc_t *btc)
 				_query_bt_dev_info(btc, BTC_DEV_HID_BINFO, h);
 				_query_bt_dev_info(btc, BTC_DEV_HID_VINFO, h);
 			}
-
 			hid->query_timer = 0;
 			hid->devinfo_query = 1;
 		}
-
 		if (hid->query_timer < 15)
 			hid->query_timer++;
 	}
@@ -1955,7 +1999,8 @@ static void _update_bt_dev_info(struct btc_t *btc, u8 *buf, u32 len)
 				continue;
 
 			hid->links[i].vendor_id = src->data[1];
-			break;
+			hal_mem_cpy(h, hid->links[i].name, src->data+2,
+				    sizeof(hid->links[i].name));
 		}
 		break;
 	case BTC_DEV_HID_DNAME:
@@ -2102,6 +2147,7 @@ static void _ntfy_role_info(struct btc_t *btc, u8 rid,
 
 	wl->role_info.link_mode_chg = 0;
 	wl->pta_reg_mac_chg = 0;
+	wl->client_cnt_inc_2g = 0;
 }
 
 static void _ntfy_radio_state(struct btc_t *btc, u8 rf_state)
@@ -2311,9 +2357,6 @@ static void _ntfy_wl_sta(struct btc_t *btc, struct rtw_stats *phl_stats,
 
 		link_cnt++;
 
-#if BTC_BB_TX_1SS_LIMIT
-		linfo->tx_1ss_limit = sta[i]->hal_sta->ra_info.ra_nss_limit;
-#endif
 		/* ===== Refresh Tx/Rx Rate information (by role) ===== */
 		last_rx_rate = linfo->rx_rate;
 

@@ -24,9 +24,16 @@
 #define SURVEY_TO		(100)
 #endif /*SURVEY_TO*/
 #define ACTIVE_CH_SURVEY_TO	(50)
+#define ROAM_A_CH_SURVEY_TO	(20)
+#define ROAM_P_CH_SURVEY_TO 	(120)
 
+#ifdef PRIVATE_N
 #define REAUTH_TO		(300) /* (50) */
 #define REASSOC_TO		(300) /* (50) */
+#else
+#define REAUTH_TO		(240)
+#define REASSOC_TO		(240)
+#endif
 /* #define DISCONNECT_TO	(3000) */
 #define ADDBA_TO			(2000)
 
@@ -553,7 +560,6 @@ unsigned int decide_wait_for_beacon_timeout(unsigned int bcn_interval);
 #if CONFIG_IEEE80211_BAND_6GHZ
 BOOLEAN Is6GHzPreferScanChannel(u8 channel);
 #endif
-BOOLEAN IsLegal5GChannel(_adapter *adapter, u8 channel);
 
 u8 collect_bss_info(_adapter *padapter, union recv_frame *precv_frame, WLAN_BSSID_EX *bssid);
 void rtw_update_adapter_network(WLAN_BSSID_EX *dst, WLAN_BSSID_EX *src, _adapter *padapter, bool update_ie);
@@ -681,7 +687,7 @@ bool rtw_tim_map_anyone_be_set_exclude_aid0(_adapter *padapter, const u8 *map);
 
 u32 report_join_res(_adapter *padapter, int aid_res, u16 status);
 void report_survey_event(_adapter *padapter, union recv_frame *precv_frame);
-void report_surveydone_event(_adapter *padapter, bool acs, u8 flags);
+void report_surveydone_event(_adapter *padapter, u8 reason, bool complete, bool acs, u8 flags);
 u32 report_del_sta_event(_adapter *padapter, unsigned char *MacAddr, unsigned short reason, bool enqueue, u8 locally_generated);
 void report_add_sta_event(_adapter *padapter, unsigned char *MacAddr);
 void report_wmm_edca_update(_adapter *padapter);

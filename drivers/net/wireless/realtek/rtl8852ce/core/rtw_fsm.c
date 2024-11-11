@@ -925,21 +925,33 @@ void fsm_deactivate_obj(struct fsm_obj *obj)
 	fsm_gen_msg(obj, NULL, 0, FSM_EV_DEL_OBJ);
 }
 
+#if 0
 bool fsm_is_alarm_off_ext(struct fsm_obj *obj, u8 id)
 {
 	struct fsm_clocks *clocks = obj->clocks;
 	struct fsm_clk *clk = &clocks->clk[id];
+	bool is_clk_off;
 
-	return IS_CLK_OFF(clk);
+	_rtw_spinunlock_bh(&obj->fsm->clk_queue.lock);
+	is_clk_off = IS_CLK_OFF(clk);
+	_rtw_spinunlock_bh(&obj->fsm->clk_queue.lock);
+
+	return is_clk_off;
 }
 
 bool fsm_is_alarm_off(struct fsm_obj *obj)
 {
 	struct fsm_clocks *clocks = obj->clocks;
 	struct fsm_clk *clk = &clocks->clk[0];
+	bool is_clk_off;
 
-	return IS_CLK_OFF(clk);
+	_rtw_spinunlock_bh(&obj->fsm->clk_queue.lock);
+	is_clk_off = IS_CLK_OFF(clk);
+	_rtw_spinunlock_bh(&obj->fsm->clk_queue.lock);
+
+	return is_clk_off;
 }
+#endif
 
 static void _fsm_set_alarm(struct fsm_obj *obj, int ms,
 	u16 event, u8 id, void *priv)
@@ -981,6 +993,7 @@ static void _fsm_set_alarm(struct fsm_obj *obj, int ms,
  *	remain time does not less than 'ms'
  * @id: alarm id; start from 1
  */
+#if 0
 void fsm_extend_alarm_ext(struct fsm_obj *obj, int ms, u8 id)
 
 {
@@ -1000,6 +1013,7 @@ void fsm_extend_alarm_ext(struct fsm_obj *obj, int ms, u8 id)
 	remain = MAX((int)rtw_fsm_time_left(clk->start, clk->end), ms);
 	fsm_set_alarm_ext(obj, remain, clk->event, id, clk->priv);
 }
+#endif
 
 /* For EXTERNAL application to setup alarm (expose)
  *
@@ -1086,6 +1100,7 @@ static void _fsm_pause_alarm(struct fsm_obj *obj, u8 id)
  *
  * @obj: obj param when calling FSM framework function
  */
+#if 0
 void fsm_pause_alarm(struct fsm_obj *obj)
 {
 	_fsm_pause_alarm(obj, 0);
@@ -1104,6 +1119,7 @@ void fsm_pause_alarm_ext(struct fsm_obj *obj, u8 id)
 	}
 	_fsm_pause_alarm(obj, id);
 }
+#endif
 
 static void _fsm_resume_alarm(struct fsm_obj *obj, u8 id)
 {
@@ -1122,6 +1138,7 @@ static void _fsm_resume_alarm(struct fsm_obj *obj, u8 id)
  *
  * @obj: obj param when calling FSM framework function
  */
+#if 0
 void fsm_resume_alarm(struct fsm_obj *obj)
 {
 	_fsm_resume_alarm(obj, 0);
@@ -1141,6 +1158,7 @@ void fsm_resume_alarm_ext(struct fsm_obj *obj, u8 id)
 	}
 	_fsm_resume_alarm(obj, id);
 }
+#endif
 
 /* For EXTERNAL application to change state (expose)
  *

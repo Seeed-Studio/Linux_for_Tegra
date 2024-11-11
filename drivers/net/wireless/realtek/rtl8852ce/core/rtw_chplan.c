@@ -15,30 +15,38 @@
 #define _RTW_CHPLAN_C_
 
 #include <drv_types.h>
+#include "regdb/rtw_regdb.h"
 
-extern struct rtw_regdb_ops regdb_ops;
+bool rtw_chplan_init(void)
+{
+	if (!regdb_ops.init || regdb_ops.init())
+		return true;
+
+	rtw_warn_on(1);
+	return false;
+}
+
+void rtw_chplan_deinit(void)
+{
+	if (regdb_ops.deinit)
+		regdb_ops.deinit();
+}
 
 u8 rtw_chplan_get_default_regd_2g(u8 id)
 {
-	if (regdb_ops.get_default_regd_2g)
-		return regdb_ops.get_default_regd_2g(id);
-	return RTW_REGD_NA;
+	return regdb_ops.get_default_regd_2g(id);
 }
 
 #if CONFIG_IEEE80211_BAND_5GHZ
 u8 rtw_chplan_get_default_regd_5g(u8 id)
 {
-	if (regdb_ops.get_default_regd_5g)
-		return regdb_ops.get_default_regd_5g(id);
-	return RTW_REGD_NA;
+	return regdb_ops.get_default_regd_5g(id);
 }
 #endif
 
 bool rtw_is_channel_plan_valid(u8 id)
 {
-	if (regdb_ops.is_domain_code_valid)
-		return regdb_ops.is_domain_code_valid(id);
-	return false;
+	return regdb_ops.is_domain_code_valid(id);
 }
 
 /*
@@ -50,24 +58,18 @@ bool rtw_is_channel_plan_valid(u8 id)
  */
 static bool rtw_chplan_get_ch(u8 id, u32 ch, u8 *flags)
 {
-	if (regdb_ops.domain_get_ch)
-		return regdb_ops.domain_get_ch(id, ch, flags);
-	return false;
+	return regdb_ops.domain_get_ch(id, ch, flags);
 }
 
 #if CONFIG_IEEE80211_BAND_6GHZ
 u8 rtw_chplan_get_default_regd_6g(u8 id)
 {
-	if (regdb_ops.get_default_regd_6g)
-		return regdb_ops.get_default_regd_6g(id);
-	return RTW_REGD_NA;
+	return regdb_ops.get_default_regd_6g(id);
 }
 
 bool rtw_is_channel_plan_6g_valid(u8 id)
 {
-	if (regdb_ops.is_domain_code_6g_valid)
-		return regdb_ops.is_domain_code_6g_valid(id);
-	return false;
+	return regdb_ops.is_domain_code_6g_valid(id);
 }
 
 /*
@@ -79,9 +81,7 @@ bool rtw_is_channel_plan_6g_valid(u8 id)
  */
 static bool rtw_chplan_6g_get_ch(u8 id, u32 ch, u8 *flags)
 {
-	if (regdb_ops.domain_6g_get_ch)
-		return regdb_ops.domain_6g_get_ch(id, ch, flags);
-	return false;
+	return regdb_ops.domain_6g_get_ch(id, ch, flags);
 }
 #endif /* CONFIG_IEEE80211_BAND_6GHZ */
 
@@ -149,7 +149,6 @@ u8 rtw_chplan_is_bchbw_valid(u8 id, u8 id_6g, enum band_type band, u8 ch, u8 bw,
 	u8 op_ch;
 	u8 valid = 0;
 	int i;
-	int ch_idx;
 	u8 flags;
 
 	cch = rtw_get_center_ch_by_band(band, ch, bw, offset);
@@ -470,12 +469,13 @@ static void rtw_beacon_hint_expire(struct rf_ctl_t *rfctl)
 }
 
 const char *const _regd_inr_str[] = {
-	[RTW_REGD_SET_BY_INIT]			= "INIT",
-	[RTW_REGD_SET_BY_USER]			= "USER",
+	[RTW_REGD_SET_BY_INIT]		= "INIT",
+	[RTW_REGD_SET_BY_USER]		= "USER",
 	[RTW_REGD_SET_BY_COUNTRY_IE]	= "COUNTRY_IE",
-	[RTW_REGD_SET_BY_DRIVER]		= "DRIVER",
-	[RTW_REGD_SET_BY_CORE]			= "CORE",
-	[RTW_REGD_SET_BY_NUM]			= "UNKNOWN",
+	[RTW_REGD_SET_BY_EXTRA]		= "EXTRA",
+	[RTW_REGD_SET_BY_DRIVER]	= "DRIVER",
+	[RTW_REGD_SET_BY_CORE]		= "CORE",
+	[RTW_REGD_SET_BY_NUM]		= "UNKNOWN",
 };
 
 const char *const _regd_str[] = {
@@ -885,7 +885,6 @@ char *rtw_get_txpwr_lmt_name_of_bands_str(char *buf, const char *name_of_band[],
 #define BOOL_S_DIFF (-2)
 #define BOOL_S_SEQ_COMPARE(result, operand) ( \
 	(result) == BOOL_S_NONE ? BOOL_TO_S8(operand) : \
-	BOOL_TO_S8(operand) == BOOL_S_NONE ? (result) : \
 	(result) != BOOL_TO_S8(operand) ? BOOL_S_DIFF : (result) \
 	)
 
@@ -1148,7 +1147,6 @@ static void rtw_txpwr_apply_predefined(struct rf_ctl_t *rfctl, struct regd_req_t
 static void rtw_txpwr_apply_regd_req_default(struct rf_ctl_t *rfctl, struct regd_req_t *req
 	, const char *name_of_band[], u8 *unknown_bmp)
 {
-	struct dvobj_priv *dvobj = rfctl_to_dvobj(rfctl);
 	struct country_chplan *chplan = &req->chplan;
 	u8 txpwr_lmt[BAND_MAX];
 	char buf[TXPWR_NAME_OF_BANDS_STR_LEN];
@@ -1235,10 +1233,9 @@ static void rtw_txpwr_apply_regd_req(struct rf_ctl_t *rfctl, struct regd_req_t *
 #else
 #define REG_6G_NAME_BSZ 0
 #endif
-	struct dvobj_priv *dvobj = rfctl_to_dvobj(rfctl);
 	struct rtw_chset *chset = &rfctl->chset;
-	struct country_chplan *chplan = &req->chplan;
 #ifdef CONFIG_REGD_SRC_FROM_OS
+	struct country_chplan *chplan = &req->chplan;
 	char req_alpha2_str[3] = {chplan->alpha2[0], chplan->alpha2[1], 0};
 #endif
 	char req_6g_name_buf[REG_6G_NAME_BSZ];
@@ -1320,12 +1317,6 @@ void rtw_txpwr_update_cur_lmt_regs(struct dvobj_priv *dvobj, bool req_lock)
 static const struct country_chplan world_wide_chplan =
 	COUNTRY_CHPLAN_ENT(WORLDWIDE_ALPHA2, RTW_CHPLAN_WORLDWIDE, RTW_CHPLAN_6G_WORLDWIDE, DEF, 1, 1, 1, 1, ___);
 
-#ifdef CONFIG_CUSTOMIZED_COUNTRY_CHPLAN_MAP
-#include "../platform/custom_country_chplan.h"
-#elif RTW_DEF_MODULE_REGULATORY_CERT
-#include "./def_module_country_chplan.h"
-#endif
-
 /*
 * rtw_get_chplan_worldwide -
 * @ent: the buf to copy country_chplan entry content
@@ -1344,35 +1335,15 @@ void rtw_get_chplan_worldwide(struct country_chplan *ent)
 */
 bool rtw_get_chplan_from_country(const char *country_code, struct country_chplan *ent)
 {
-#if defined(CONFIG_CUSTOMIZED_COUNTRY_CHPLAN_MAP) || RTW_DEF_MODULE_REGULATORY_CERT
-	const struct country_chplan *map = NULL;
-	u16 map_sz = 0;
-	int i;
-#endif
-	char code[2] = {alpha_to_upper(country_code[0]), alpha_to_upper(country_code[1])};
+	char code[2];
 
-#if defined(CONFIG_CUSTOMIZED_COUNTRY_CHPLAN_MAP) || RTW_DEF_MODULE_REGULATORY_CERT
-	#ifdef CONFIG_CUSTOMIZED_COUNTRY_CHPLAN_MAP
-	map = CUSTOMIZED_country_chplan_map;
-	map_sz = sizeof(CUSTOMIZED_country_chplan_map) / sizeof(struct country_chplan);
-	#else
-	map_sz = rtw_def_module_country_chplan_map(&map);
-	#endif
+	if (!is_alpha(country_code[0]) || !is_alpha(country_code[1]))
+		return false;
 
-	for (i = 0; i < map_sz; i++) {
-		if (strncmp(code, map[i].alpha2, 2) == 0) {
-			if (ent)
-				_rtw_memcpy(ent, &map[i], sizeof(*ent));
-			return true;
-		}
-	}
+	code[0] = alpha_to_upper(country_code[0]);
+	code[1] = alpha_to_upper(country_code[1]);
 
-	return false;
-#else
-	if (regdb_ops.get_chplan_from_alpha2)
-		return regdb_ops.get_chplan_from_alpha2(code, ent);
-	return false;
-#endif
+	return regdb_ops.get_chplan_from_alpha2(code, ent);
 }
 
 void rtw_chplan_ioctl_input_mapping(u16 *chplan, u16 *chplan_6g)
@@ -1516,6 +1487,138 @@ static const enum rtw_env_t _reg_info_to_env[] = {
 #define reg_info_to_env(reg_info) (((reg_info) >= CIS_6G_REG_NUM) ? _reg_info_to_env[CIS_6G_REG_NUM] : _reg_info_to_env[(reg_info)])
 #endif
 
+static void cis_scan_stat_clr(struct cis_scan_stat_t *stat)
+{
+	_list *list, *head;
+	struct cis_scan_stat_ent *ent;
+
+	_rtw_mutex_lock(&stat->lock);
+
+	head = &stat->ent;
+	list = get_next(head);
+	while (!rtw_end_of_queue_search(head, list)) {
+		ent = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
+		list = get_next(list);
+		rtw_list_delete(&ent->list);
+		rtw_mfree(ent, sizeof(*ent));
+	}
+
+	stat->ent_num = 0;
+	CIS_SCAN_STAT_SET_MAJORITY(stat, NULL);
+
+	_rtw_mutex_unlock(&stat->lock);
+}
+
+static void cis_scan_stat_add(struct cis_scan_stat_t *stat, const struct country_ie_slave_record *cisr)
+{
+	_list *list, *head;
+	struct cis_scan_stat_ent *ent, *inc;
+
+	head = &stat->ent;
+	list = get_next(head);
+	while (!rtw_end_of_queue_search(head, list)) {
+		ent = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
+
+		if (ent->cisr.alpha2[0] == cisr->alpha2[0] && ent->cisr.alpha2[1] == cisr->alpha2[1]) {
+			ent->count++;
+			inc = ent;
+			goto check_order;
+		}
+
+		list = get_next(list);
+	}
+
+	/* not match, add new ent and insert tail */
+	ent = rtw_malloc(sizeof(*ent));
+	if (!ent)
+		return;
+
+	_rtw_memcpy(&ent->cisr, cisr, sizeof(ent->cisr));
+	ent->count = 1;
+
+	rtw_list_insert_tail(&ent->list, head);
+	stat->ent_num++;
+	return;
+
+check_order:
+	/* keep decending by count */
+
+	/* search ent with count >= inc's (or search to head) */
+	list = get_prev(list);
+	while (!rtw_end_of_queue_search(head, list)) {
+		ent = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
+		if (ent->count >= inc->count)
+			break;
+		list = get_prev(list);
+	}
+
+	if (list != get_prev(&inc->list)) {
+		rtw_list_delete(&inc->list);
+		rtw_list_insert_head(&inc->list, list);
+	}
+}
+
+#if CONFIG_80211D_ENV_BSS_MAJORITY
+static struct cis_scan_stat_ent *cis_scan_stat_update_majority(struct cis_scan_stat_t *stat, bool disable)
+{
+	_list *list, *head;
+	struct cis_scan_stat_ent *ent, *m = NULL;
+
+	if (stat->ent_num == 0 || disable)
+		goto update;
+
+	head = &stat->ent;
+	list = get_next(head);
+	m = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
+
+	/* check if not single majority */
+	list = get_next(list);
+	if (!rtw_end_of_queue_search(head, list)) {
+		ent = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
+		if (m->count == ent->count)
+			m = NULL;
+	}
+
+update:
+	CIS_SCAN_STAT_SET_MAJORITY(stat, m);
+	return CIS_SCAN_STAT_GET_MAJORITY(stat);
+}
+#endif
+
+static void cis_scan_stat_init(struct cis_scan_stat_t *stat)
+{
+	_rtw_init_listhead(&stat->ent);
+	_rtw_mutex_init(&stat->lock);
+	stat->ent_num = 0;
+	CIS_SCAN_STAT_SET_MAJORITY(stat, NULL);
+}
+
+static void cis_scan_stat_deinit(struct cis_scan_stat_t *stat)
+{
+	cis_scan_stat_clr(stat);
+	_rtw_mutex_free(&stat->lock);
+}
+
+static void dump_cis_scan_stat(void *sel, struct cis_scan_stat_t *stat)
+{
+	_list *list, *head;
+	struct cis_scan_stat_ent *ent;
+
+	_rtw_mutex_lock(&stat->lock);
+
+	head = &stat->ent;
+	list = get_next(head);
+	while (!rtw_end_of_queue_search(head, list)) {
+		ent = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
+		list = get_next(list);
+		RTW_PRINT_SEL(sel, "%c"ALPHA2_FMT" %u\n"
+			, stat->majority == ent ? '*' : ' '
+			, ALPHA2_ARG(ent->cisr.alpha2), ent->count);
+	}
+
+	_rtw_mutex_unlock(&stat->lock);
+}
+
 void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_noset)
 {
 #define CISR_TITLE_FMT "%-6s %-4s %-4s"
@@ -1577,6 +1680,11 @@ void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_
 	RTW_PRINT_SEL(sel, "6g_cate_map_int_link_num:%u\n", rfctl->txpwr_lmt_6g_cate_map_int_link_num);
 	RTW_PRINT_SEL(sel, "6g_cate_map_int_all_link:0x%02x\n", rfctl->txpwr_lmt_6g_cate_map_int_all_link);
 #endif
+
+	if (rfctl->cis_flags & CISF_ENV_BSS) {
+		RTW_PRINT_SEL(sel, "\nENV_BSS\n");
+		dump_cis_scan_stat(sel, &rfctl->cis_scan_stat);
+	}
 }
 
 #if CONFIG_IEEE80211_BAND_6GHZ
@@ -1722,13 +1830,6 @@ void dump_country_chplan_map(void *sel, bool regd_info)
 	struct country_chplan ent;
 	u8 code[2];
 
-#if RTW_DEF_MODULE_REGULATORY_CERT
-	RTW_PRINT_SEL(sel, "RTW_DEF_MODULE_REGULATORY_CERT:0x%x\n", RTW_DEF_MODULE_REGULATORY_CERT);
-#endif
-#ifdef CONFIG_CUSTOMIZED_COUNTRY_CHPLAN_MAP
-	RTW_PRINT_SEL(sel, "CONFIG_CUSTOMIZED_COUNTRY_CHPLAN_MAP\n");
-#endif
-
 	rtw_get_chplan_worldwide(&ent);
 	dump_country_chplan(sel, &ent, regd_info);
 
@@ -1862,20 +1963,146 @@ void dump_chplan_6g_country_list(void *sel)
 }
 #endif /* CONFIG_IEEE80211_BAND_6GHZ */
 
-#ifdef CONFIG_RTW_DEBUG
+#ifdef CONFIG_RTW_CHPLAN_DEV
+static void dump_chplan_get_ch_2g_search_test(void *sel, u8 id, u8 *ch_array, size_t ch_array_sz, bool content, u32 times)
+{
+	u8 flags_buf;
+	u8 *flags = content ? &flags_buf : NULL;
+	u32 round = times / ch_array_sz;
+	u32 i, r;
+	sysptime start, end;
+
+	start = rtw_sptime_get_raw();
+
+	for (r = 0; r < round; r++)
+		for (i = 0; i < ch_array_sz; i++)
+			rtw_chplan_get_ch(id, ch_array[i], flags);
+
+	end = rtw_sptime_get_raw();
+	RTW_PRINT_SEL(sel, "2G_CHD times:%10u round:%10u %10lld ns\n", times, round, rtw_sptime_diff_ns(start, end));
+}
+
+#if CONFIG_IEEE80211_BAND_5GHZ
+static void dump_chplan_get_ch_5g_search_test(void *sel, u8 id, u8 *ch_array, size_t ch_array_sz, bool content, u32 times)
+{
+	u8 flags_buf;
+	u8 *flags = content ? &flags_buf : NULL;
+	u32 round = times / ch_array_sz;
+	u32 i, r;
+	sysptime start, end;
+
+	start = rtw_sptime_get_raw();
+
+	for (r = 0; r < round; r++)
+		for (i = 0; i < ch_array_sz; i++)
+			rtw_chplan_get_ch(id, ch_array[i], flags);
+
+	end = rtw_sptime_get_raw();
+	RTW_PRINT_SEL(sel, "5G_CHD times:%10u round:%10u %10lld ns\n", times, round, rtw_sptime_diff_ns(start, end));
+}
+#endif
+
+#if CONFIG_IEEE80211_BAND_6GHZ
+static void dump_chplan_get_ch_6g_search_test(void *sel, u8 id, u8 *ch_array, size_t ch_array_sz, bool content, u32 times)
+{
+	u8 flags_buf;
+	u8 *flags = content ? &flags_buf : NULL;
+	u32 round = times / ch_array_sz;
+	u32 i, r;
+	sysptime start, end;
+
+	start = rtw_sptime_get_raw();
+
+	for (r = 0; r < round; r++)
+		for (i = 0; i < ch_array_sz; i++)
+			rtw_chplan_6g_get_ch(id, ch_array[i], flags);
+
+	end = rtw_sptime_get_raw();
+	RTW_PRINT_SEL(sel, "6G_CHD times:%10u round:%10u %10lld ns\n", times, round, rtw_sptime_diff_ns(start, end));
+}
+#endif
+
+static const char alpha2_list[][2] = {
+	"AD", "AE", "AF", "AG", "AI", "AL", "AM", "AN", "AO", "AQ",
+	"AR", "AS", "AT", "AU", "AW", "AZ", "BA", "BB", "BD", "BE",
+	"BF", "BG", "BH", "BI", "BJ", "BM", "BN", "BO", "BR", "BS",
+	"BT", "BV", "BW", "BY", "BZ", "CA", "CC", "CD", "CF", "CG",
+	"CH", "CI", "CK", "CL", "CM", "CN", "CO", "CR", "CV", "CX",
+	"CY", "CZ", "DE", "DJ", "DK", "DM", "DO", "DZ", "EC", "EE",
+	"EG", "EH", "ER", "ES", "ET", "FI", "FJ", "FK", "FM", "FO",
+	"FR", "GA", "GB", "GD", "GE", "GF", "GG", "GH", "GI", "GL",
+	"GM", "GN", "GP", "GQ", "GR", "GS", "GT", "GU", "GW", "GY",
+	"HK", "HM", "HN", "HR", "HT", "HU", "ID", "IE", "IL", "IM",
+	"IN", "IO", "IQ", "IR", "IS", "IT", "JE", "JM", "JO", "JP",
+	"KE", "KG", "KH", "KI", "KM", "KN", "KR", "KW", "KY", "KZ",
+	"LA", "LB", "LC", "LI", "LK", "LR", "LS", "LT", "LU", "LV",
+	"LY", "MA", "MC", "MD", "ME", "MF", "MG", "MH", "MK", "ML",
+	"MM", "MN", "MO", "MP", "MQ", "MR", "MS", "MT", "MU", "MV",
+	"MW", "MX", "MY", "MZ", "NA", "NC", "NE", "NF", "NG", "NI",
+	"NL", "NO", "NP", "NR", "NU", "NZ", "OM", "PA", "PE", "PF",
+	"PG", "PH", "PK", "PL", "PM", "PR", "PS", "PT", "PW", "PY",
+	"QA", "RE", "RO", "RS", "RU", "RW", "SA", "SB", "SC", "SE",
+	"SG", "SH", "SI", "SJ", "SK", "SL", "SM", "SN", "SO", "SR",
+	"ST", "SV", "SX", "SZ", "TC", "TD", "TF", "TG", "TH", "TJ",
+	"TK", "TM", "TN", "TO", "TR", "TT", "TV", "TW", "TZ", "UA",
+	"UG", "US", "UY", "UZ", "VA", "VC", "VE", "VG", "VI", "VN",
+	"VU", "WF", "WS", "XK", "YE", "YT", "ZA", "ZM", "ZW"
+};
+
+static void dump_country_chplan_search_test(void *sel, const char cc_array[][2], size_t cc_array_sz, bool content, u32 times)
+{
+	struct country_chplan ent_buf;
+	struct country_chplan *ent = content ? &ent_buf : NULL;
+	u32 round = times / cc_array_sz;
+	u32 i, r;
+	sysptime start, end;
+
+	start = rtw_sptime_get_raw();
+
+	for (r = 0; r < round; r++)
+		for (i = 0; i < cc_array_sz; i++)
+			rtw_get_chplan_from_country(cc_array[i], ent);
+
+	end = rtw_sptime_get_raw();
+	RTW_PRINT_SEL(sel, "CC_MAP times:%10u round:%10u %10lld ns\n", times, round, rtw_sptime_diff_ns(start, end));
+}
+
 void dump_chplan_test(void *sel)
 {
 	if (regdb_ops.dump_chplan_test)
 		regdb_ops.dump_chplan_test(sel);
+
+	dump_chplan_get_ch_2g_search_test(sel, 0x7F, center_ch_2g, ARRAY_SIZE(center_ch_2g), false, 100000);
+	dump_chplan_get_ch_2g_search_test(sel, 0x7F, center_ch_2g, ARRAY_SIZE(center_ch_2g), true, 100000);
+	dump_chplan_get_ch_2g_search_test(sel, 0x7F, center_ch_2g, 1, false, 100000);
+	dump_chplan_get_ch_2g_search_test(sel, 0x7F, center_ch_2g, 1, true, 100000);
+
+#if CONFIG_IEEE80211_BAND_5GHZ
+	dump_chplan_get_ch_5g_search_test(sel, 0x7F, center_ch_5g_20m, ARRAY_SIZE(center_ch_5g_20m), false, 100000);
+	dump_chplan_get_ch_5g_search_test(sel, 0x7F, center_ch_5g_20m, ARRAY_SIZE(center_ch_5g_20m), true, 100000);
+	dump_chplan_get_ch_5g_search_test(sel, 0x7F, center_ch_5g_20m, 1, false, 100000);
+	dump_chplan_get_ch_5g_search_test(sel, 0x7F, center_ch_5g_20m, 1, true, 100000);
+#endif
+
+#if CONFIG_IEEE80211_BAND_6GHZ
+	dump_chplan_get_ch_6g_search_test(sel, 0x7F, center_ch_6g_20m, ARRAY_SIZE(center_ch_6g_20m), false, 100000);
+	dump_chplan_get_ch_6g_search_test(sel, 0x7F, center_ch_6g_20m, ARRAY_SIZE(center_ch_6g_20m), true, 100000);
+	dump_chplan_get_ch_6g_search_test(sel, 0x7F, center_ch_6g_20m, 1, false, 100000);
+	dump_chplan_get_ch_6g_search_test(sel, 0x7F, center_ch_6g_20m, 1, true, 100000);
+#endif
+
+	dump_country_chplan_search_test(sel, alpha2_list, ARRAY_SIZE(alpha2_list), false, 100000);
+	dump_country_chplan_search_test(sel, alpha2_list, ARRAY_SIZE(alpha2_list), true, 100000);
+	dump_country_chplan_search_test(sel, alpha2_list, 1, false, 100000);
+	dump_country_chplan_search_test(sel, alpha2_list, 1, true, 100000);
 }
-#endif /* CONFIG_RTW_DEBUG */
+#endif /* CONFIG_RTW_CHPLAN_DEV */
 
 void dump_chplan_ver(void *sel)
 {
 	char buf[CHPLAN_VER_STR_BUF_LEN] = {0};
 
-	if (regdb_ops.get_ver_str)
-		regdb_ops.get_ver_str(buf, CHPLAN_VER_STR_BUF_LEN);
+	regdb_ops.get_ver_str(buf, CHPLAN_VER_STR_BUF_LEN);
 	RTW_PRINT_SEL(sel, "%s\n", buf);
 }
 
@@ -1946,6 +2173,7 @@ void rtw_regd_req_list_free(struct rf_ctl_t *rfctl)
 			rtw_regd_req_free(req);
 	}
 	rfctl->user_req = NULL;
+	rfctl->extra_req = NULL;
 	rfctl->regd_req_num = 0;
 
 	_rtw_mutex_unlock(&rfctl->regd_req_mutex);
@@ -1953,15 +2181,22 @@ void rtw_regd_req_list_free(struct rf_ctl_t *rfctl)
 	_rtw_mutex_free(&rfctl->regd_req_mutex);
 }
 
-void rtw_regd_watchdog_hdl(struct dvobj_priv *dvobj)
+bool rtw_regd_watchdog_hdl(struct dvobj_priv *dvobj)
 {
 	struct rf_ctl_t *rfctl = dvobj_to_rfctl(dvobj);
+	bool ret = false;
 
 	rtw_beacon_hint_expire(rfctl);
 
 #ifdef CONFIG_DFS_MASTER
 	rtw_rfctl_chset_chk_non_ocp_finish(rfctl);
 #endif
+
+#ifdef CONFIG_80211D
+	ret = rtw_cis_scan_needed(rfctl, NULL);
+#endif
+
+	return ret;
 }
 
 static enum channel_width rtw_regd_adjust_linking_bw(struct rf_ctl_t *rfctl
@@ -2076,6 +2311,41 @@ static void rtw_rfctl_regd_status_init_by_req(struct rf_ctl_t *rfctl, struct reg
 #endif
 }
 
+static void rtw_rfctl_regd_status_update_by_req(struct rf_ctl_t *rfctl, struct regd_req_t *req)
+{
+	if (rfctl->regd_src == REGD_SRC_NUM) {
+		/* first applied req */
+		rtw_rfctl_regd_status_init_by_req(rfctl, req);
+
+	} else if (rfctl->regd_src == req->src || req->inr == RTW_REGD_SET_BY_EXTRA) {
+		struct country_chplan *chplan = &req->chplan;
+
+		rfctl->regd_inr_bmp |= BIT(req->inr);
+		#if CONFIG_IEEE80211_BAND_6GHZ
+		rfctl->env_bmp |= BIT(req->env);
+		#endif
+		if (_rtw_memcmp(rfctl->alpha2, chplan->alpha2, 2) != _TRUE
+			|| rfctl->domain_code != chplan->domain_code
+			#if CONFIG_IEEE80211_BAND_6GHZ
+			|| rfctl->domain_code_6g != chplan->domain_code_6g
+			#endif
+		)
+			SET_INTERSECTEDC_ALPHA2(rfctl->alpha2);
+		if (rfctl->domain_code != chplan->domain_code)
+			rfctl->domain_code = RTW_CHPLAN_UNSPECIFIED;
+		#if CONFIG_IEEE80211_BAND_6GHZ
+		if (rfctl->domain_code_6g != chplan->domain_code_6g)
+			rfctl->domain_code_6g = RTW_CHPLAN_UNSPECIFIED;
+		#endif
+		#ifdef CONFIG_CHPLAN_PROTO_EN
+		rfctl->proto_en &= chplan->proto_en;
+		#endif
+	} else {
+		RTW_WARN("%s req->src:%s != applied src:%s\n", __func__, regd_src_str(req->src), regd_src_str(rfctl->regd_src));
+		rtw_warn_on(1);
+	}
+}
+
 #ifdef CONFIG_80211D
 static bool rtw_rfctl_is_init_user_req_world_wide(struct rf_ctl_t *rfctl)
 {
@@ -2157,7 +2427,7 @@ static void rtw_rfctl_update_default_chplan_cate_6g_map(struct rf_ctl_t *rfctl, 
 
 /* 
 * Update txpwr_lmt_6g_cate_map for 
-* a. REGD_SRC_RTK_PRIV's INIT/USER req
+* a. REGD_SRC_RTK_PRIV's INIT/USER/EXTRA req
 * b. REGD_SRC_OS's all req
 */
 static void rtw_rfctl_update_regd_req_txpwr_6g_cate_map(struct rf_ctl_t *rfctl)
@@ -2173,8 +2443,8 @@ static void rtw_rfctl_update_regd_req_txpwr_6g_cate_map(struct rf_ctl_t *rfctl)
 		cur = get_next(cur);
 
 		if (rfctl->regd_src == REGD_SRC_RTK_PRIV) {
-			/* apply txpwr lmt 6g cate map only for INIT/USER req */
-			if (req->inr > RTW_REGD_SET_BY_USER)
+			/* apply txpwr lmt 6g cate map only for INIT/USER/EXTRA req */
+			if (req->inr > RTW_REGD_SET_BY_USER && req->inr != RTW_REGD_SET_BY_EXTRA)
 				continue;
 		}
 
@@ -2190,6 +2460,81 @@ static void rtw_rfctl_update_regd_req_txpwr_6g_cate_map(struct rf_ctl_t *rfctl)
 }
 #endif
 #endif /* CONFIG_80211D */
+
+static bool rtw_rfctl_get_chplan_from_alpha2(struct country_chplan *ent, const char *alpha2)
+{
+	if (IS_ALPHA2_WORLDWIDE(alpha2)
+		|| rtw_get_chplan_from_country(alpha2, ent)
+	) {
+		if (IS_ALPHA2_WORLDWIDE(alpha2))
+			rtw_get_chplan_worldwide(ent);
+		return true;
+	}
+	return false;
+}
+
+static bool rtw_rfctl_update_extra_alpha2_req(struct rf_ctl_t *rfctl, const char *alpha2)
+{
+	struct country_chplan ent;
+
+	if (rtw_rfctl_get_chplan_from_alpha2(&ent, alpha2)) {
+		if (!rfctl->extra_req) {
+			rfctl->extra_req = rtw_regd_req_alloc_with_country_chplan(&ent);
+			if (!rfctl->extra_req) {
+				rtw_warn_on(1);
+				return false;
+			}
+			rfctl->extra_req->src = REGD_SRC_RTK_PRIV;
+			rfctl->extra_req->inr = RTW_REGD_SET_BY_EXTRA;
+			#if CONFIG_IEEE80211_BAND_6GHZ
+			rfctl->extra_req->env = RTW_ENV_NUM;
+			#endif
+			rtw_regd_req_list_insert(rfctl, rfctl->extra_req);
+		} else {
+			if (rfctl->extra_req->chplan.alpha2[0] == ent.alpha2[0]
+				&& rfctl->extra_req->chplan.alpha2[1] == ent.alpha2[1])
+				return false;
+			rfctl->extra_req->chplan = ent;
+		}
+
+		return true;
+
+	} else if (rfctl->extra_req) {
+		rtw_regd_req_list_delete(rfctl, rfctl->extra_req);
+		rtw_regd_req_free(rfctl->extra_req);
+		rfctl->extra_req = NULL;
+		return true;
+	}
+
+	return false;
+}
+
+static bool rtw_rfctl_extra_alpha2_req_needed(struct rf_ctl_t *rfctl)
+{
+	if (CIS_SCAN_STAT_GET_MAJORITY(&rfctl->cis_scan_stat))
+		return false;
+
+	if (rfctl->regd_src == REGD_SRC_RTK_PRIV) {
+		struct regd_req_t *req, *extra_req = rfctl->extra_req;
+		_list *cur, *head;
+
+		head = &rfctl->regd_req_list;
+		cur = get_next(head);
+		while ((rtw_end_of_queue_search(head, cur)) == _FALSE) {
+			req = LIST_CONTAINOR(cur, struct regd_req_t, list);
+			cur = get_next(cur);
+
+			if (!req->applied || req->inr == RTW_REGD_SET_BY_EXTRA)
+				continue;
+
+			if  (IS_ALPHA2_WORLDWIDE(req->chplan.alpha2)
+				|| (req->chplan.alpha2[0] == extra_req->chplan.alpha2[0]
+					&& req->chplan.alpha2[1] == extra_req->chplan.alpha2[1]))
+				return false;
+		}
+	}
+	return true;
+}
 
 /*
  * Description:
@@ -2267,12 +2612,8 @@ chk_sw_config:
 	#endif
 
 	if (sw_alpha2 && !IS_ALPHA2_UNSPEC(sw_alpha2)) {
-		if (IS_ALPHA2_WORLDWIDE(sw_alpha2)
-			|| rtw_get_chplan_from_country(sw_alpha2, &ent)
-		) {
+		if (rtw_rfctl_get_chplan_from_alpha2(&ent, sw_alpha2)) {
 			/* get chplan from sw country code, by pass sw chplan setting */
-			if (IS_ALPHA2_WORLDWIDE(sw_alpha2))
-				rtw_get_chplan_worldwide(&ent);
 			country_ent = &ent;
 			chplan = ent.domain_code;
 			#if CONFIG_IEEE80211_BAND_6GHZ
@@ -2337,6 +2678,24 @@ done:
 	rtw_regd_req_list_insert(rfctl, &rfctl->init_req);
 
 	rtw_rfctl_regd_status_init_by_req(rfctl, &rfctl->init_req);
+
+	if (!rfctl->disable_sw_chplan) {
+		/* handle extra_alpha2 */
+		sw_alpha2 = regsty->extra_alpha2;
+		if (sw_alpha2 && !IS_ALPHA2_UNSPEC(sw_alpha2)) {
+			bool added = rtw_rfctl_update_extra_alpha2_req(rfctl, sw_alpha2);
+
+			RTW_PRINT("%s%s extra_alpha2:\"%c%c\"\n", __func__
+				,  added ? "" :  " unsupported"
+				, sw_alpha2[0], sw_alpha2[1]);
+
+			if (added) {
+				rfctl->extra_req->applied = rtw_rfctl_extra_alpha2_req_needed(rfctl);
+				if (rfctl->extra_req->applied)
+					rtw_rfctl_regd_status_update_by_req(rfctl, rfctl->extra_req);
+			}
+		}
+	}
 }
 
 void rtw_rfctl_apply_init_chplan(struct rf_ctl_t *rfctl, bool req_lock)
@@ -2501,6 +2860,28 @@ static void rtw_chplan_rtk_priv_req_prehdl_country_ent(struct rf_ctl_t *rfctl, s
 	}
 }
 
+#ifdef CONFIG_80211D
+static u8 get_cis_scan_band_bmp(struct rf_ctl_t *rfctl, u8 band_bmp)
+{
+	struct rtw_chset *chset = &rfctl->chset;
+	u8 bmp = 0;
+	int i;
+
+	for (i = 0; i < BAND_MAX; i++)
+		if (chset->chs_of_band[i])
+			bmp |= BIT(i);
+
+	return bmp & band_bmp;
+}
+
+static u32 get_cis_scan_urgent_ms(u32 int_ms, u32 urgent_ms)
+{
+	if (int_ms && urgent_ms)
+		return rtw_max(int_ms, urgent_ms);
+	return 0;
+}
+#endif
+
 static void rtw_chplan_rtk_priv_req_prehdl_confs(struct rf_ctl_t *rfctl, struct chplan_confs *confs, const char *caller)
 {
 	if (confs->set_types & BIT(CHPLAN_CONFS_DIS_CH_FLAGS)) {
@@ -2585,6 +2966,18 @@ static void rtw_chplan_rtk_priv_req_prehdl_confs(struct rf_ctl_t *rfctl, struct 
 		confs->set_types &= ~BIT(CHPLAN_CONFS_BCN_HINT_VALID_MS); /* setting done here */
 	}
 
+	if (confs->set_types & BIT(CHPLAN_CONFS_EXTRA_ALPHA2)) {
+		if (!rtw_rfctl_update_extra_alpha2_req(rfctl, confs->extra_alpha2))
+			confs->set_types &= ~BIT(CHPLAN_CONFS_EXTRA_ALPHA2); /* setting done here */
+		else {
+			if (rfctl->extra_req) {
+				RTW_INFO("%s set extra_alpha2 to "ALPHA2_FMT"\n", caller
+					, ALPHA2_ARG(rfctl->extra_req->chplan.alpha2));
+			} else
+				RTW_INFO("%s clear extra_alpha2\n", caller);
+		}
+	}
+
 #ifdef CONFIG_80211D
 	#ifdef CONFIG_REGD_SRC_FROM_OS
 	if (RFCTL_REGD_SRC_FROM_OS(rfctl)) {
@@ -2608,6 +3001,8 @@ static void rtw_chplan_rtk_priv_req_prehdl_confs(struct rf_ctl_t *rfctl, struct 
 	}
 
 	if (confs->set_types & BIT(CHPLAN_CONFS_CIS_FLAGS)) {
+		if (confs->cis_flags & CISF_ENV_BSS_MAJ)
+			confs->cis_flags |= CISF_ENV_BSS;
 		if (confs->cis_flags & ~CISF_VALIDS) {
 			RTW_WARN("%s cis_flags:0x%02x has undefined bits, apply valid bits only\n", caller, confs->cis_flags);
 			confs->cis_flags &= CISF_VALIDS;
@@ -2635,12 +3030,41 @@ static void rtw_chplan_rtk_priv_req_prehdl_confs(struct rf_ctl_t *rfctl, struct 
 		confs->set_types &= ~BIT(CHPLAN_CONFS_CIS_EN_IFBMP); /* setting done here */
 	}
 
+	if (confs->set_types & BIT(CHPLAN_CONFS_CIS_SCAN_BAND_BMP)) {
+		if (rfctl->cis_scan_band_bmp != confs->cis_scan_band_bmp) {
+			rfctl->cis_scan_band_bmp = get_cis_scan_band_bmp(rfctl, confs->cis_scan_band_bmp);
+			RTW_INFO("%s set cis_scan_band_bmp to 0x%02x\n", caller, rfctl->cis_scan_band_bmp);
+		}
+		confs->set_types &= ~BIT(CHPLAN_CONFS_CIS_SCAN_BAND_BMP); /* setting done here */
+	}
+
 	if (confs->set_types & BIT(CHPLAN_CONFS_CIS_SCAN_INT_MS)) {
 		if (rfctl->cis_scan_int_ms != confs->cis_scan_int_ms) {
+			u32 urgent_ms;
+
 			rfctl->cis_scan_int_ms = confs->cis_scan_int_ms;
 			RTW_INFO("%s set cis_scan_int_ms to %u\n", caller, confs->cis_scan_int_ms);
+
+			if (confs->set_types & BIT(CHPLAN_CONFS_CIS_SCAN_URGENT_MS))
+				urgent_ms = get_cis_scan_urgent_ms(rfctl->cis_scan_int_ms, confs->cis_scan_urgent_ms);
+			else
+				urgent_ms = get_cis_scan_urgent_ms(rfctl->cis_scan_int_ms, rfctl->cis_scan_urgent_ms);
+
+			if (rfctl->cis_scan_urgent_ms != urgent_ms) {
+				rfctl->cis_scan_urgent_ms = urgent_ms;
+				RTW_INFO("%s set cis_scan_urgent_ms to %u\n", caller, rfctl->cis_scan_urgent_ms);
+			}
+			confs->set_types &= ~BIT(CHPLAN_CONFS_CIS_SCAN_URGENT_MS); /* setting done here */
 		}
 		confs->set_types &= ~BIT(CHPLAN_CONFS_CIS_SCAN_INT_MS); /* setting done here */
+	}
+
+	if (confs->set_types & BIT(CHPLAN_CONFS_CIS_SCAN_URGENT_MS)) {
+		if (rfctl->cis_scan_urgent_ms != confs->cis_scan_urgent_ms) {
+			rfctl->cis_scan_urgent_ms = get_cis_scan_urgent_ms(rfctl->cis_scan_int_ms, confs->cis_scan_urgent_ms);
+			RTW_INFO("%s set cis_scan_urgent_ms to %u\n", caller, rfctl->cis_scan_urgent_ms);
+		}
+		confs->set_types &= ~BIT(CHPLAN_CONFS_CIS_SCAN_URGENT_MS); /* setting done here */
 	}
 #endif
 }
@@ -2752,7 +3176,6 @@ static enum cisr_match rtw_cisr_compare(struct country_ie_slave_record *a, struc
 #if CONFIG_IEEE80211_BAND_6GHZ
 static void rtw_rfctl_update_6g_cate_map_int_all_link(struct rf_ctl_t *rfctl)
 {
-	struct regd_req_t *user_req = rfctl->user_req;
 	int i, j;
 	u8 bmp;
 	u8 applied_link_num;
@@ -2816,7 +3239,6 @@ static bool rtw_chplan_update_per_link_cisr(struct rf_ctl_t *rfctl, u8 iface_id
 {
 	struct country_ie_slave_record ori_cisr_cont[RTW_RLINK_MAX];
 	u8 alink_id_s, alink_id_e, alink_id;
-	int i, j;
 	bool effected = false;
 
 	if (cisr_alink_id < RTW_RLINK_MAX) {
@@ -2954,21 +3376,54 @@ static bool rtw_regd_req_list_add_country_ie_req_from_scanned_network_cisr(_adap
 	_list *list, *head;
 	struct wlan_network *scanned;
 	bool effected = false;
+	struct cis_scan_stat_t *stat = &rfctl->cis_scan_stat;
+#if CONFIG_80211D_ENV_BSS_MAJORITY
+	struct cis_scan_stat_ent *majority;
+#endif
+
+	_rtw_mutex_lock(&stat->lock);
 
 	_rtw_spinlock_bh(&queue->lock);
 
+	/* loop scan queue for stat */
 	head = get_list_head(queue);
 	list = get_next(head);
 	while (!rtw_end_of_queue_search(head, list)) {
 		scanned = LIST_CONTAINOR(list, struct wlan_network, list);
 		list = get_next(list);
 
-		if (scanned->cisr.status != COUNTRY_IE_SLAVE_APPLICABLE)
+		if (scanned->cisr.status == COUNTRY_IE_SLAVE_NOCOUNTRY
+			|| scanned->cisr.status == COUNTRY_IE_SLAVE_UNKNOWN)
 			continue;
-		effected |= rtw_regd_req_list_add_country_ie_req(rfctl, &scanned->cisr, false);
+
+		cis_scan_stat_add(stat, &scanned->cisr);
+	}
+#if CONFIG_80211D_ENV_BSS_MAJORITY
+	majority = cis_scan_stat_update_majority(stat, !(rfctl->cis_flags & CISF_ENV_BSS_MAJ));
+	if (majority) {
+		/* single majority exist, follow */
+		effected |= rtw_regd_req_list_add_country_ie_req(rfctl, &majority->cisr, false);
+	} else
+#endif
+	{
+		/* follow all ENV BSS */
+		head = get_list_head(queue);
+		list = get_next(head);
+		while (!rtw_end_of_queue_search(head, list)) {
+			scanned = LIST_CONTAINOR(list, struct wlan_network, list);
+			list = get_next(list);
+
+			if (scanned->cisr.status == COUNTRY_IE_SLAVE_NOCOUNTRY
+				|| scanned->cisr.status == COUNTRY_IE_SLAVE_UNKNOWN)
+				continue;
+
+			effected |= rtw_regd_req_list_add_country_ie_req(rfctl, &scanned->cisr, false);
+		}
 	}
 
 	_rtw_spinunlock_bh(&queue->lock);
+
+	_rtw_mutex_unlock(&stat->lock);
 
 	return effected;
 }
@@ -3045,12 +3500,15 @@ static bool rtw_chplan_rtk_priv_req_prehdl_country_ie(_adapter *adapter, struct 
 	}
 
 	if (rfctl->regd_src == REGD_SRC_RTK_PRIV) {
+		cis_scan_stat_clr(&rfctl->cis_scan_stat);
+
 		rtw_regd_req_list_clear_ref_cnt_by_inr(rfctl, RTW_REGD_SET_BY_COUNTRY_IE);
 
 		if (rfctl->cis_enabled) {
-			effected |= rtw_regd_req_list_add_country_ie_req_from_per_link_cisr(rfctl);
 			if (rfctl->cis_flags & CISF_ENV_BSS)
 				effected |= rtw_regd_req_list_add_country_ie_req_from_scanned_network_cisr(adapter);
+			if (!CIS_SCAN_STAT_GET_MAJORITY(&rfctl->cis_scan_stat))
+				effected |= rtw_regd_req_list_add_country_ie_req_from_per_link_cisr(rfctl);
 		}
 
 		effected |= rtw_regd_req_list_clear_zero_ref_req_by_inr(rfctl, RTW_REGD_SET_BY_COUNTRY_IE);
@@ -3242,7 +3700,6 @@ exit:
 static void rtw_rfctl_regd_req_sel_and_status_update(struct rf_ctl_t *rfctl)
 {
 	struct regd_req_t *req;
-	struct country_chplan *chplan;
 	_list *cur, *head;
 	enum regd_src_t applied_src = REGD_SRC_NUM;
 	enum rtw_regd_inr applied_inr = RTW_REGD_SET_BY_NUM;
@@ -3253,6 +3710,8 @@ static void rtw_rfctl_regd_req_sel_and_status_update(struct rf_ctl_t *rfctl)
 	while ((rtw_end_of_queue_search(head, cur)) == _FALSE) {
 		req = LIST_CONTAINOR(cur, struct regd_req_t, list);
 		cur = get_next(cur);
+		if (req->inr == RTW_REGD_SET_BY_EXTRA)
+			continue;
 		if (applied_src == REGD_SRC_NUM || req->src > applied_src)
 			applied_src = req->src;
 	}
@@ -3265,6 +3724,8 @@ static void rtw_rfctl_regd_req_sel_and_status_update(struct rf_ctl_t *rfctl)
 		cur = get_next(cur);
 		if (req->src != applied_src)
 			continue;
+		if (req->inr == RTW_REGD_SET_BY_EXTRA)
+			continue;
 		if (applied_inr == RTW_REGD_SET_BY_NUM || req->inr > applied_inr)
 			applied_inr = req->inr;
 	}
@@ -3275,6 +3736,8 @@ static void rtw_rfctl_regd_req_sel_and_status_update(struct rf_ctl_t *rfctl)
 	while ((rtw_end_of_queue_search(head, cur)) == _FALSE) {
 		req = LIST_CONTAINOR(cur, struct regd_req_t, list);
 		cur = get_next(cur);
+		if (req->inr == RTW_REGD_SET_BY_EXTRA)
+			continue;
 
 		/* mark req with different src as not applied*/
 		if (applied_src != req->src) {
@@ -3288,36 +3751,13 @@ static void rtw_rfctl_regd_req_sel_and_status_update(struct rf_ctl_t *rfctl)
 		if (!req->applied)
 			continue;
 
-		chplan = &req->chplan;
-		if (rfctl->regd_src == REGD_SRC_NUM) {
-			/* first applied req */
-			rtw_rfctl_regd_status_init_by_req(rfctl, req);
+		rtw_rfctl_regd_status_update_by_req(rfctl, req);
+	}
 
-		} else if (rfctl->regd_src == req->src) {
-			rfctl->regd_inr_bmp |= BIT(req->inr);
-			#if CONFIG_IEEE80211_BAND_6GHZ
-			rfctl->env_bmp |= BIT(req->env);
-			#endif
-			if (_rtw_memcmp(rfctl->alpha2, chplan->alpha2, 2) != _TRUE
-				|| rfctl->domain_code != chplan->domain_code
-				#if CONFIG_IEEE80211_BAND_6GHZ
-				|| rfctl->domain_code_6g != chplan->domain_code_6g
-				#endif
-			)
-				SET_INTERSECTEDC_ALPHA2(rfctl->alpha2);
-			if (rfctl->domain_code != chplan->domain_code)
-				rfctl->domain_code = RTW_CHPLAN_UNSPECIFIED;
-			#if CONFIG_IEEE80211_BAND_6GHZ
-			if (rfctl->domain_code_6g != chplan->domain_code_6g)
-				rfctl->domain_code_6g = RTW_CHPLAN_UNSPECIFIED;
-			#endif
-			#ifdef CONFIG_CHPLAN_PROTO_EN
-			rfctl->proto_en &= chplan->proto_en;
-			#endif
-		} else {
-			RTW_WARN("%s req->src:%s != applied src:%s\n", __func__, regd_src_str(req->src), regd_src_str(rfctl->regd_src));
-			rtw_warn_on(1);
-		}
+	if (rfctl->extra_req) {
+		rfctl->extra_req->applied = rtw_rfctl_extra_alpha2_req_needed(rfctl);
+		if (rfctl->extra_req->applied)
+			rtw_rfctl_regd_status_update_by_req(rfctl, rfctl->extra_req);
 	}
 
 	#ifdef CONFIG_80211D
@@ -3689,12 +4129,15 @@ static const char *const chplan_confs_type_str[] = {
 	[CHPLAN_CONFS_EXCL_CHS_6G]		= "excl_chs_6g",
 	[CHPLAN_CONFS_INIT_REGD_ALWAYS_APPLY]	= "init_regd_always_apply",
 	[CHPLAN_CONFS_USER_REGD_ALWAYS_APPLY]	= "user_regd_always_apply",
+	[CHPLAN_CONFS_EXTRA_ALPHA2]		= "extra_alpha2",
 	[CHPLAN_CONFS_BCN_HINT_VALID_MS]	= "bcn_hint_valid_ms",
 	[CHPLAN_CONFS_CIS_EN_MODE]		= "cis_en_mode",
 	[CHPLAN_CONFS_CIS_FLAGS]		= "cis_flags",
 	[CHPLAN_CONFS_CIS_EN_IFBMP]		= "cis_en_ifbmp",
 	[CHPLAN_CONFS_CIS_EN_ROLE]		= "cis_en_role",
+	[CHPLAN_CONFS_CIS_SCAN_BAND_BMP]	= "cis_scan_band_bmp",
 	[CHPLAN_CONFS_CIS_SCAN_INT_MS]		= "cis_scan_int_ms",
+	[CHPLAN_CONFS_CIS_SCAN_URGENT_MS]	= "cis_scan_urgent_ms",
 };
 
 static enum chplan_confs_type get_chplan_confs_type_from_str(const char *str, size_t str_len)
@@ -3779,6 +4222,17 @@ static void rtw_parse_chplan_confs_type_arg_str(struct chplan_confs *confs, enum
 			}
 		}
 
+	} else if (type == CHPLAN_CONFS_EXTRA_ALPHA2) {
+		confs->set_types |= BIT(type);
+		if (strlen(str)) {
+			char alpha2[2];
+
+			if (sscanf(str, "%c%c", &alpha2[0], &alpha2[1]) == 2) {
+				confs->extra_alpha2[0] = alpha2[0];
+				confs->extra_alpha2[1] = alpha2[1];
+			}
+		}
+
 #ifdef CONFIG_80211D
 	} else if (type == CHPLAN_CONFS_CIS_EN_MODE) {
 		if (strlen(str)) {
@@ -3820,6 +4274,16 @@ static void rtw_parse_chplan_confs_type_arg_str(struct chplan_confs *confs, enum
 			}
 		}
 
+	} else if (type == CHPLAN_CONFS_CIS_SCAN_BAND_BMP) {
+		if (strlen(str)) {
+			u8 bmp;
+
+			if (sscanf(str, "%hhx", &bmp) == 1) {
+				confs->set_types |= BIT(type);
+				confs->cis_scan_band_bmp = bmp;
+			}
+		}
+
 	} else if (type == CHPLAN_CONFS_CIS_SCAN_INT_MS) {
 		if (strlen(str)) {
 			u32 ms;
@@ -3827,6 +4291,16 @@ static void rtw_parse_chplan_confs_type_arg_str(struct chplan_confs *confs, enum
 			if (sscanf(str, "%u", &ms) == 1) {
 				confs->set_types |= BIT(type);
 				confs->cis_scan_int_ms = ms;
+			}
+		}
+
+	} else if (type == CHPLAN_CONFS_CIS_SCAN_URGENT_MS) {
+		if (strlen(str)) {
+			u32 ms;
+
+			if (sscanf(str, "%u", &ms) == 1) {
+				confs->set_types |= BIT(type);
+				confs->cis_scan_urgent_ms = ms;
 			}
 		}
 #endif /* CONFIG_80211D */
@@ -4028,13 +4502,17 @@ u8 rtw_get_chplan_hdl(_adapter *adapter, u8 *pbuf)
 #endif
 	chplan->confs.init_regd_always_apply = rfctl->init_regd_always_apply;
 	chplan->confs.user_regd_always_apply = rfctl->user_regd_always_apply;
+	chplan->confs.extra_alpha2[0] = rfctl->extra_req ? rfctl->extra_req->chplan.alpha2[0] : '\0';
+	chplan->confs.extra_alpha2[1] = rfctl->extra_req ? rfctl->extra_req->chplan.alpha2[1] : '\0';
 	chplan->confs.bcn_hint_valid_ms = rfctl->bcn_hint_valid_ms;
 #ifdef CONFIG_80211D
 	chplan->confs.cis_en_mode = rfctl->cis_en_mode;
 	chplan->confs.cis_flags = rfctl->cis_flags;
 	chplan->confs.cis_en_role = rfctl->cis_en_role;
 	chplan->confs.cis_en_ifbmp = rfctl->cis_en_ifbmp;
+	chplan->confs.cis_scan_band_bmp = rfctl->cis_scan_band_bmp;
 	chplan->confs.cis_scan_int_ms = rfctl->cis_scan_int_ms;
+	chplan->confs.cis_scan_urgent_ms = rfctl->cis_scan_urgent_ms;
 #endif
 
 	chplan->chs_len = chset->chs_len;
@@ -4310,8 +4788,10 @@ void alink_process_regu_ies(struct _ADAPTER_LINK *alink, u8 *ies, uint ies_len)
 		sint country_ie_len = 0;
 		bool country_ie_changed;
 		bool country_str_changed = false;
+		#if CONFIG_IEEE80211_BAND_6GHZ
 		enum country_ie_slave_6g_reg_info reg_info = CIS_6G_REG_RSVD;
 		bool reg_info_changed = false;
+		#endif
 
 		if (rtw_iface_accept_country_ie(adapter)) {
 			country_ie = rtw_get_ie(ies, WLAN_EID_COUNTRY, &country_ie_len, ies_len);
@@ -4333,7 +4813,11 @@ void alink_process_regu_ies(struct _ADAPTER_LINK *alink, u8 *ies, uint ies_len)
 		reg_info_changed = rfctl->recv_6g_reg_info[iface_id][alink_id] != reg_info;
 		#endif
 
-		if (!country_ie_changed && !reg_info_changed)
+		if (!country_ie_changed
+			#if CONFIG_IEEE80211_BAND_6GHZ
+			&& !reg_info_changed
+			#endif
+		)
 			return;
 
 		if (country_ie_changed) {
@@ -4353,7 +4837,9 @@ void alink_process_regu_ies(struct _ADAPTER_LINK *alink, u8 *ies, uint ies_len)
 		#endif
 
 		if (country_str_changed /* for now only country str is used */
+			#if CONFIG_IEEE80211_BAND_6GHZ
 			|| reg_info_changed
+			#endif
 		) {
 			RTW_INFO(FUNC_ADPT_FMT" id:%u%s%s changed\n", FUNC_ADPT_ARG(adapter), alink_id
 				, country_str_changed ? " country_str" : ""
@@ -4483,6 +4969,59 @@ exit:
 	return ret;
 }
 
+bool rtw_cis_scan_needed(struct rf_ctl_t *rfctl, bool *urgent)
+{
+	if (rfctl->cis_enabled && (rfctl->cis_flags & CISF_ENV_BSS)
+		&& rfctl->cis_scan_band_bmp
+		&& rfctl->cis_scan_int_ms
+		&& dvobj_get_netif_up_adapter(rfctl_to_dvobj(rfctl))
+	) {
+		u32 pt = rtw_get_passing_time_ms(rfctl->cis_scan_last_complete_time);
+
+		if (pt >= rfctl->cis_scan_int_ms) {
+			if (urgent)
+				*urgent = rfctl->cis_scan_urgent_ms && pt >= rfctl->cis_scan_urgent_ms;
+			return true;
+		}
+	}
+	return false;
+}
+
+void rtw_cis_scan_idle_check(struct rf_ctl_t *rfctl)
+{
+	if (rtw_cis_scan_needed(rfctl, NULL)) {
+		_adapter *adapter = dvobj_get_netif_up_adapter(rfctl_to_dvobj(rfctl));
+		struct sitesurvey_parm *parm;
+
+		if (!adapter)
+			return;
+
+		parm = rtw_malloc(sizeof(*parm));
+		if (parm == NULL)
+			return;
+
+		rtw_init_sitesurvey_parm(parm);
+		parm->reason = RTW_AUTO_SCAN_REASON_CIS_ENV_BSS;
+		rtw_auto_scan_ch_list_init(parm, rfctl->cis_scan_band_bmp, RTW_IEEE80211_CHAN_PASSIVE_SCAN);
+
+		rtw_sitesurvey_cmd(adapter, parm);
+
+		rtw_mfree(parm, sizeof(*parm));
+	}
+}
+
+void rtw_cis_scan_complete_hdl(_adapter *adapter)
+{
+	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+
+	if (rfctl->cis_enabled && (rfctl->cis_flags & CISF_ENV_BSS)) {
+		rfctl->cis_scan_last_complete_time = rtw_get_current_time();
+
+		/* 802.11d scan has done complete, trigger regulation selection */
+		rtw_apply_scan_network_country_ie_cmd(adapter, RTW_CMDF_DIRECTLY);
+	}
+}
+
 void rtw_rfctl_cis_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty)
 {
 #if CONFIG_IEEE80211_BAND_6GHZ
@@ -4496,6 +5035,8 @@ void rtw_rfctl_cis_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty)
 	}
 
 	rfctl->cis_flags = regsty->country_ie_slave_flags;
+	if (rfctl->cis_flags & CISF_ENV_BSS_MAJ)
+		rfctl->cis_flags |= CISF_ENV_BSS;
 	if (rfctl->cis_flags & ~CISF_VALIDS) {
 		RTW_WARN("%s cis_flags:0x%02x has undefined bits, apply valid bits only\n", __func__, rfctl->cis_flags);
 		rfctl->cis_flags &= CISF_VALIDS;
@@ -4503,7 +5044,12 @@ void rtw_rfctl_cis_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty)
 
 	rfctl->cis_en_role = regsty->country_ie_slave_en_role;
 	rfctl->cis_en_ifbmp = regsty->country_ie_slave_en_ifbmp;
+	rfctl->cis_scan_band_bmp = get_cis_scan_band_bmp(rfctl, regsty->country_ie_slave_scan_band_bmp);
 	rfctl->cis_scan_int_ms = regsty->country_ie_slave_scan_int_ms;
+	rfctl->cis_scan_urgent_ms = get_cis_scan_urgent_ms(rfctl->cis_scan_int_ms, regsty->country_ie_slave_scan_urgent_ms);
+	rfctl->cis_scan_last_complete_time = rtw_get_current_time() - rtw_ms_to_systime(rfctl->cis_scan_int_ms);
+
+	cis_scan_stat_init(&rfctl->cis_scan_stat);
 
 #if CONFIG_IEEE80211_BAND_6GHZ
 	for (i = 0; i < CONFIG_IFACE_NUMBER; i++) {
@@ -4518,6 +5064,8 @@ void rtw_rfctl_cis_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty)
 void rtw_rfctl_cis_deinit(struct rf_ctl_t *rfctl)
 {
 	int i, j;
+
+	cis_scan_stat_deinit(&rfctl->cis_scan_stat);
 
 	for (i = 0; i < CONFIG_IFACE_NUMBER; i++)
 		for (j = 0; j < RTW_RLINK_MAX; j++)
@@ -4556,13 +5104,16 @@ void dump_cur_chplan_confs(void *sel, struct rf_ctl_t *rfctl)
 #endif
 	RTW_PRINT_SEL(sel, "init_regd_always_apply=%d\n", confs->init_regd_always_apply);
 	RTW_PRINT_SEL(sel, "user_regd_always_apply=%d\n", confs->user_regd_always_apply);
+	RTW_PRINT_SEL(sel, "extra_alpha2="ALPHA2_FMT"\n", ALPHA2_ARG_EX(confs->extra_alpha2, ' '));
 	RTW_PRINT_SEL(sel, "bcn_hint_valid_ms=%u\n", confs->bcn_hint_valid_ms);
 #ifdef CONFIG_80211D
 	RTW_PRINT_SEL(sel, "cis_en_mode=%u\n", confs->cis_en_mode);
 	RTW_PRINT_SEL(sel, "cis_flags=0x%02x\n", confs->cis_flags);
 	RTW_PRINT_SEL(sel, "cis_en_role=0x%02x\n", confs->cis_en_role);
 	RTW_PRINT_SEL(sel, "cis_en_ifbmp=0x%02x\n", confs->cis_en_ifbmp);
+	RTW_PRINT_SEL(sel, "cis_scan_band_bmp=0x%02x\n", confs->cis_scan_band_bmp);
 	RTW_PRINT_SEL(sel, "cis_scan_int_ms=%u\n", confs->cis_scan_int_ms);
+	RTW_PRINT_SEL(sel, "cis_scan_urgent_ms=%u\n", confs->cis_scan_urgent_ms);
 #endif
 
 	rtw_free_get_chplan_resp(chplan);
@@ -4625,7 +5176,6 @@ static void dump_chplan_edcca_modes(void *sel, struct get_chplan_resp *chplan)
 static void dump_addl_ch_disable_conf(void *sel, struct get_chplan_resp *chplan)
 {
 	struct chplan_confs *confs = &chplan->confs;
-	int i;
 
 	if (confs->dis_ch_flags) {
 		char buf[RTW_CH_FLAGS_STR_LEN];
@@ -4641,10 +5191,6 @@ static void dump_addl_ch_disable_conf(void *sel, struct get_chplan_resp *chplan)
 	}
 
 #if CONFIG_IEEE80211_BAND_6GHZ
-	for (i = 0; i < MAX_CHANNEL_NUM_6G; i++)
-		if (confs->excl_chs_6g[i] != 0)
-			break;
-
 	if (confs->excl_chs_6g[0] != 0) {
 		char buf[EXCL_CHS_6G_STR_LEN];
 

@@ -86,6 +86,8 @@
 	case SET_##src: return #src
 #define case_vendorid(src) \
 	case BTC_VID_##src: return #src
+#define case_path(src) \
+	case RF_PATH_##src: return #src
 
 const char *id_to_str(u8 type, u32 id)
 {
@@ -765,6 +767,25 @@ const char *id_to_str(u8 type, u32 id)
 		case_vendorid(AMD);
 		case_vendorid(FUJITSU);
 		case_vendorid(DELL);
+		}
+		break;
+	case BTC_STR_PATH:
+		switch(id) {
+		case_path(A);
+		case_path(B);
+		case_path(C);
+		case_path(D);
+		case_path(AB);
+		case_path(AC);
+		case_path(AD);
+		case_path(BC);
+		case_path(BD);
+		case_path(CD);
+		case_path(ABC);
+		case_path(ABD);
+		case_path(ACD);
+		case_path(BCD);
+		case_path(ABCD);
 		}
 		break;
 	}

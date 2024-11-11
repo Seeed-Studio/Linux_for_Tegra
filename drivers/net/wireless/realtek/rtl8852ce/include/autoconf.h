@@ -335,6 +335,12 @@
  * Software feature Related Config
  */
 #define CONFIG_SCAN_BACKOP_STA
+#define PRIVATE_N
+
+#ifdef PRIVATE_N
+/* scan 2G & 5G only */
+#define CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_BAND_BMP 0x03
+#endif
 
 
 /*
@@ -401,7 +407,8 @@
 /* #define DBG_RX_SIGNAL_DISPLAY_PROCESSING */
 /* #define DBG_RX_SIGNAL_DISPLAY_SSID_MONITORED "jeff-ap" */
 
-/* #define DBG_ROAMING_TEST */
+#define DBG_ROAMING_TEST
+/* #define DBG_SERVING_AP_RSSI */
 
 /* #define DBG_HAL_INIT_PROFILING */
 
@@ -528,16 +535,22 @@
 #endif
 #endif
 
-#define CONFIG_CORE_TXSC
-#define CONFIG_PHL_TXSC
+/* #define CONFIG_CORE_TXSC */
+/* #define CONFIG_PHL_TXSC */
 
 #ifdef CONFIG_CORE_TXSC
+//#define TXSC_DBG_DUMP_SPEC_PKT
+#ifdef TXSC_DBG_DUMP_SPEC_PKT
+//#define TXSC_DBG_COPY_ORI_WLHDR_MDATA
+#endif
 //#define USE_ONE_WLHDR
 //#define CONFIG_RTW_TXSC_USE_HW_SEQ
 #ifdef CONFIG_TX_AMSDU
 #undef CONFIG_TX_AMSDU_SW_MODE
 #undef CONFIG_RTW_TX_AMSDU_USE_WQ
+#ifndef TXSC_DBG_DUMP_SPEC_PKT
 #define CONFIG_TXSC_AMSDU
+#endif
 #endif
 #endif
 

@@ -994,7 +994,7 @@ struct net_device *rtw_alloc_etherdev_with_old_priv(int sizeof_priv, void *old_p
 	struct rtw_netdev_priv_indicator *pnpi;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
-	pnetdev = alloc_etherdev_mq(sizeof(struct rtw_netdev_priv_indicator), 4);
+	pnetdev = alloc_etherdev_mq(sizeof(struct rtw_netdev_priv_indicator), 5);
 #else
 	pnetdev = alloc_etherdev(sizeof(struct rtw_netdev_priv_indicator));
 #endif
@@ -1091,5 +1091,5 @@ void rtw_wiphy_rfkill_set_hw_state(struct wiphy *wiphy, bool blocked)
 	wiphy_rfkill_set_hw_state(wiphy, blocked);
 }
 
-u16 rtw_warn_on_cnt;
+ATOMIC_T rtw_warn_on_cnt;
 

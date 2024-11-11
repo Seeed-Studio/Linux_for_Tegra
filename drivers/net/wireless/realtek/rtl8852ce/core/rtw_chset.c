@@ -119,6 +119,11 @@ RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch(const struct rtw_chset *chset, u32 c
 {
 	return _rtw_chset_search_ch(chset, ch, false);
 }
+
+RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch_include_dis(const struct rtw_chset *chset, u32 ch)
+{
+	return _rtw_chset_search_ch(chset, ch, true);
+}
 #endif
 
 /*
@@ -148,6 +153,11 @@ static int _rtw_chset_search_bch(const struct rtw_chset *chset, enum band_type b
 int rtw_chset_search_bch(const struct rtw_chset *chset, enum band_type band, u32 ch)
 {
 	return _rtw_chset_search_bch(chset, band, ch, false);
+}
+
+int rtw_chset_search_bch_include_dis(const struct rtw_chset *chset, enum band_type band, u32 ch)
+{
+	return _rtw_chset_search_bch(chset, band, ch, true);
 }
 
 RT_CHANNEL_INFO *rtw_chset_get_chinfo_by_bch(struct rtw_chset *chset, enum band_type band, u32 ch, bool include_dis)

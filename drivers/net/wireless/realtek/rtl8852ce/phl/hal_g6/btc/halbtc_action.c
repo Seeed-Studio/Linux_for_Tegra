@@ -672,21 +672,18 @@ static void _set_halmac_tx_limit(struct btc_t *btc)
 		return;
 
 	if (btc->dm.freerun || btc->ctrl.igno_bt || b->profile_cnt.now == 0 ||
-	    mode == BTC_WLINK_5G || mode == BTC_WLINK_NOLINK) {
+	    mode == BTC_WLINK_5G || mode == BTC_WLINK_NOLINK ||
+	    dm->wl_trx_nss.tx_limit) {
 		enable = 0;
 		tx_time = BTC_MAX_TX_TIME_DEF;
 		tx_1ss_limit = 0;
 	} else if (hfp->exist || hid->exist) {
 		enable = 1;
 		tx_time = BTC_MAX_TX_TIME_L3;
-
-		if (wl_rinfo->p2p_2g)
-			tx_1ss_limit = 1;
 	}
 
 	if (dm->wl_tx_limit.en == enable &&
 	    dm->wl_tx_limit.tx_time == tx_time &&
-	    dm->wl_tx_limit.tx_1ss == tx_1ss_limit &&
 	    !wl_rinfo->link_mode_chg)
 		return;
 
@@ -713,16 +710,126 @@ static void _set_halmac_tx_limit(struct btc_t *btc)
 			tx_time = plink->tx_time;
 
 		rtw_hal_mac_set_tx_time(h, 1, resume, id, tx_time);
-
-#if BTC_BB_TX_1SS_LIMIT
-		if (tx_1ss_limit != plink->tx_1ss_limit)
-			rtw_hal_btc_cfg_tx_1ss(h, btc->phl, i, tx_1ss_limit);
-#endif
 	}
 
 	dm->wl_tx_limit.en = enable;
 	dm->wl_tx_limit.tx_time = tx_time;
-	dm->wl_tx_limit.tx_1ss = tx_1ss_limit;
+}
+
+static void _set_trx_nss(struct btc_t *btc)
+{
+	struct btc_wl_trx_nss_para *trx_nss = &btc->dm.wl_trx_nss;
+	struct btc_dm *dm = &btc->dm;
+	struct btc_wl_info *wl = &btc->cx.wl;
+	struct btc_bt_info *bt = &btc->cx.bt;
+	struct btc_wl_role_info *wl_rinfo = &wl->role_info;
+	struct btc_bt_link_info *b = &bt->link_info;
+	struct btc_bt_hfp_desc *hfp = &b->hfp_desc;
+	struct btc_bt_hid_desc *hid = &b->hid_desc;
+	struct btc_bt_a2dp_desc *a2dp = &b->a2dp_desc;
+	struct btc_bt_leaudio_desc *le_audio = &b->leaudio_desc;
+	struct btc_chip_ops *ops = btc->chip->ops;
+	u8 tx_en = 0, tx_re = 0, rx_en = 0, rx_re = 0;
+	u8 tx_limit = 0, rx_limit = 0;
+	u8 tx_ss, rx_ss, tx_path, rx_path;
+	u8 tx_ss_ori, rx_ss_ori, tx_path_ori, rx_path_ori;
+
+	/* tx/rx_limit = 1 ----> 1ss
+	 * tx/rx_limit = 0 ----> default
+	 */
+
+	if (btc->ctrl.manual ||
+	    wl->status.map.dbccing ||
+	    !dm->wl_trx_nss_en)
+		return;
+
+	if (wl_rinfo->link_mode == BTC_WLINK_NOLINK ||
+	    wl_rinfo->link_mode == BTC_WLINK_5G ||
+	    wl_rinfo->dbcc_en) {
+		tx_limit = 0;
+		rx_limit = 0;
+	} else if (bt->hiduty_dev) {
+		tx_limit = 1;
+		rx_limit = 1;
+	} else if (le_audio->bis_cnt) {
+		tx_limit = 1;
+		rx_limit = 1;
+	} else if (le_audio->cis_cnt &&
+	           (btc->mdinfo.wa_type & BTC_WA_CO_RX)) {
+		if (wl->he_mode) {
+			tx_limit = 1;
+			rx_limit = 1;
+		}
+	} else if (a2dp->exist && a2dp->sink) {
+		tx_limit = 1;
+		rx_limit = 1;
+	} else if (wl_rinfo->link_mode == BTC_WLINK_2G_AP ||
+		   wl_rinfo->link_mode == BTC_WLINK_2G_GO) {
+		if (b->profile_cnt.now) {
+			tx_limit = 1;
+			rx_limit = 1;
+		}
+	} else if (hid->exist || hfp->exist) {
+		if (wl_rinfo->p2p_2g) {
+			tx_limit = 1;
+			rx_limit = 0;
+		}
+	}
+
+	if (trx_nss->tx_limit == tx_limit &&
+	    trx_nss->rx_limit == rx_limit &&
+	    !wl->client_cnt_inc_2g)
+		return;
+
+	tx_ss_ori = (btc->mdinfo.ant.stream_cnt & 0xf0) >> 4;
+	rx_ss_ori = btc->mdinfo.ant.stream_cnt & 0xf;
+	tx_path_ori = (btc->mdinfo.ant.path_pos & 0xf0) >> 4;
+	rx_path_ori = btc->mdinfo.ant.path_pos & 0xf;
+
+	if (tx_ss_ori == 2 && tx_limit) {
+		tx_en = 1;
+		tx_re = 0;
+		tx_ss = 1;
+		tx_path = RF_PATH_A;
+	} else {
+		tx_en = 0;
+		tx_re = 1;
+		tx_ss = tx_ss_ori;
+		tx_path = tx_path_ori;
+	}
+
+	if (rx_ss_ori == 2 && rx_limit) {
+		rx_en = 1;
+		rx_re = 0;
+		rx_ss = 1;
+		rx_path = RF_PATH_A;
+	} else {
+		rx_en = 0;
+		rx_re = 1;
+		rx_ss = rx_ss_ori;
+		rx_path = rx_path_ori;
+	}
+
+	rtw_hal_btc_cfg_1ss(btc->hal, btc->phl, BAND_ON_24G,
+			    tx_en, rx_en, tx_re, rx_re);
+	rtw_hal_btc_cfg_trx_path(btc->hal, tx_path, tx_ss, rx_path, rx_ss);
+
+	trx_nss->tx_limit = tx_limit;
+	trx_nss->rx_limit = rx_limit;
+	trx_nss->tx_ss = tx_ss;
+	trx_nss->rx_ss = rx_ss;
+	trx_nss->tx_path = tx_path;
+	trx_nss->rx_path = rx_path;
+
+	/* if enable MIMO-PS (to 1T1R), change ant shared-type */
+	if (dm->wl_trx_nss.tx_limit &&
+	    dm->wl_trx_nss.rx_limit)
+		btc->mdinfo.ant.type = BTC_ANT_DEDICATED;
+	else
+		btc->mdinfo.ant.type = BTC_ANT_SHARED;
+
+	if (ops && ops->init_cfg)
+		ops->init_cfg(btc);
 }
 
 void _set_fddt_ctrl(struct btc_t *btc, bool force_exec)
@@ -894,13 +1001,13 @@ static void _set_policy(struct btc_t *btc, u16 policy_type, const char* action)
 		_tdma_cpy(t, &t_def[CXTD_OFF_EXT]);
 
 		/* To avoid wl-s0 tx break by hid/hfp tx */
-		if (hid->exist || hfp->exist) {
-			if (p->phy_cap[0].tx_path_num == 1 &&
-			    p->phy_cap[0].rx_path_num == 1 &&
-			    btc->mdinfo.ant.type == BTC_ANT_SHARED &&
+		if (btc->cx.bt.hiduty_dev || hid->exist || hfp->exist) {
+			if (dm->wl_trx_nss.tx_limit)
+				tbl_w1 = cxtbl[16];
+			else if (btc->mdinfo.ant.type == BTC_ANT_SHARED &&
 			    (wl_rinfo->role_map & BIT(PHL_RTYPE_P2P_GO)))
 				tbl_w1 = cxtbl[22];
-			else if (p->phy_cap[0].tx_path_num == 1 &&
+			else if (btc->mdinfo.ant.type == BTC_ANT_SHARED &&
 			    p->phy_cap[0].rx_path_num == 1 &&
 			    btc->mdinfo.ant.type == BTC_ANT_SHARED &&
 			    (wl_rinfo->role_map & BIT(PHL_RTYPE_P2P_GC)))
@@ -1718,12 +1825,13 @@ static void _action_bt_hid(struct btc_t *btc)
 	struct btc_bt_info *bt = &btc->cx.bt;
 	struct btc_bt_hid_desc *hid = &bt->link_info.hid_desc;
 	struct btc_bt_a2dp_desc *a2dp = &bt->link_info.a2dp_desc;
+	struct btc_dm *dm = &btc->dm;
 	u16 policy_type = BTC_CXP_OFF_BT;
 
 	if (btc->mdinfo.ant.type == BTC_ANT_SHARED) { /* shared-antenna */
 		if (wl->status.map._4way) {
 			policy_type = BTC_CXP_OFF_WL;
-		} else if (a2dp->active) {
+		} else if (a2dp->active || bt->hiduty_dev) {
 			btc->dm.slot_dur[CXST_W1] = 80;
 			btc->dm.slot_dur[CXST_B1] = 20;
 			policy_type = BTC_CXP_PFIX_TDW1B1;
@@ -2085,6 +2193,9 @@ void _action_common(struct btc_t *btc)
 	struct btc_bt_info *bt = &btc->cx.bt;
 	u32 bt_rom_code_id = 0, bt_fw_ver = 0;
 
+#if BTC_BB_TX_1SS_LIMIT
+	_set_trx_nss(btc);
+#endif
 	_set_halbb_btg_ctrl(btc);
 	_set_halbb_preagc_ctrl(btc);
 	_set_halmac_tx_limit(btc);
@@ -2139,7 +2250,7 @@ void _action_wl_2g_sta(struct btc_t *btc)
 	if (bt_linfo->hfp_desc.exist)
 		profile_map |= BTC_BT_HFP;
 
-	if (bt_linfo->hid_desc.exist)
+	if (bt_linfo->hid_desc.exist || bt->hiduty_dev)
 		profile_map |= BTC_BT_HID;
 
 	if (bt_linfo->a2dp_desc.exist)

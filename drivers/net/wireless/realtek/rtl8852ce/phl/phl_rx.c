@@ -2195,6 +2195,7 @@ phl_rx_proc_ppdu_sts(struct phl_info_t *phl_info, struct rtw_phl_rx_pkt *phl_rx)
 			}
 		}
 	}
+	ppdu_sts_ent->frame_type = RTW_FRAME_TYPE_MAX;
 #ifdef CONFIG_PHL_SNIFFER_SUPPORT
 	/* sniffer info for high performance mode : only process once in recving ppdu_sts */
 	if (SNIFFER_INFO_MODE_HIGH_PERFORMANCE == ppdu_info->sniffer_info_mode) {

@@ -484,13 +484,6 @@ int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		/* bytes_written = wl_android_wifi_off(net); */
 		break;
 
-	case ANDROID_WIFI_CMD_SCAN_ACTIVE:
-		/* rtw_set_scan_mode((_adapter *)rtw_netdev_priv(net), SCAN_ACTIVE); */
-		break;
-	case ANDROID_WIFI_CMD_SCAN_PASSIVE:
-		/* rtw_set_scan_mode((_adapter *)rtw_netdev_priv(net), SCAN_PASSIVE); */
-		break;
-
 	case ANDROID_WIFI_CMD_RSSI:
 		bytes_written = rtw_android_get_rssi(net, command, priv_cmd.total_len);
 		break;

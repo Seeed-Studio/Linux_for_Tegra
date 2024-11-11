@@ -1516,7 +1516,7 @@ static void rtw_ap_check_scan(_adapter *padapter, struct _ADAPTER_LINK *padapter
 
 	if (_TRUE == do_scan) {
 		RTW_INFO("%s : drv scans by itself and wait_completed\n", __func__);
-		rtw_drv_scan_by_self(padapter, reason);
+		rtw_drv_scan_by_self(padapter, reason, false);
 		rtw_scan_abort(padapter, 0);
 	}
 
@@ -3345,7 +3345,7 @@ static void update_bcn_htinfo_ie(_adapter *padapter, struct _ADAPTER_LINK *padap
 		pht_info = (struct HT_info_element *)(p + 2);
 
 		/* for STA Channel Width/Secondary Channel Offset*/
-		if ((pmlmepriv->sw_to_20mhz == 0) && (pmlmeext->chandef.chan <= 14)) {
+		if ((pmlmepriv->sw_to_20mhz == 0) && (pmlmeext->chandef.band == BAND_ON_24G)) {
 			if ((pmlmepriv->num_sta_40mhz_intolerant > 0) || (pmlmepriv->ht_20mhz_width_req == _TRUE)
 			    || (pmlmepriv->ht_intolerant_ch_reported == _TRUE) || (ATOMIC_READ(&pmlmepriv->olbc) == _TRUE)) {
 				SET_HT_OP_ELE_2ND_CHL_OFFSET(pht_info, 0);
@@ -6388,7 +6388,7 @@ void rtw_ap_set_sta_wmode(_adapter *padapter, struct sta_info *sta)
 	}
 #endif
 
-	if (pcur_network->Configuration.DSConfig > 14)
+	if (BSS_EX_OP_BAND(pcur_network) != BAND_ON_24G)
 		network_type |= WLAN_MD_11A;
 	else {
 		if ((cckratesonly_included(sta->bssrateset, sta->bssratelen)) == _TRUE)
@@ -7407,6 +7407,10 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_acquired(void *dispr, void *pri
 	struct _ADAPTER_LINK *padapter_link = GET_PRIMARY_LINK(padapter);
 
 	RTW_DBG(FUNC_ADPT_FMT ": +\n", FUNC_ADPT_ARG(padapter));
+	if (!check_fwstate(&padapter->mlmepriv, WIFI_ASOC_STATE)) {
+		RTW_ERR(FUNC_ADPT_FMT": ap is disconnected\n", FUNC_ADPT_ARG(padapter));
+		return status;
+	}
 
 	_rtw_spinlock_bh(&padapter->ap_add_del_sta_lock);
 	if (padapter->ap_add_del_sta_cmd_state != ADD_DEL_STA_ST_REQUESTING)

@@ -138,7 +138,6 @@ bool rtw_rfctl_overlap_radar_detect_ch(struct rf_ctl_t *rfctl, enum band_type ba
 	bool ret = false;
 	u8 rd_hwband;
 	u32 hi = 0, lo = 0;
-	u32 r_hi = 0, r_lo = 0;
 
 	if (band != BAND_ON_5G || !rfctl->radar_detect_enabled)
 		goto exit;
@@ -443,32 +442,39 @@ static bool rtw_rfctl_chset_chk_non_ocp_finish_for_bchbw(struct rf_ctl_t *rfctl,
 {
 	struct rtw_chset *chset = &rfctl->chset;
 	RT_CHANNEL_INFO *chinfo;
+	s8 ch_idx[8]; /* 5G non_ocp up to 160MHz */
 	u8 cch;
 	u8 *op_chs;
 	u8 op_ch_num;
 	int i;
-	bool ret = 0;
+	bool ret = false;
 
 	cch = rtw_get_center_ch_by_band(band, ch, bw, offset);
 
 	if (!rtw_get_op_chs_by_bcch_bw(band, cch, bw, &op_chs, &op_ch_num))
 		goto exit;
 
+	if (op_ch_num > ARRAY_SIZE(ch_idx)) {
+		rtw_warn_on(1);
+		goto exit;
+	}
+
 	for (i = 0; i < op_ch_num; i++) {
 		if (0)
 			RTW_INFO("%u,%u,%u,%u - cch:%u, bw:%u, op_ch:%u\n", band, ch, bw, offset, cch, bw, *(op_chs + i));
-		chinfo = rtw_chset_get_chinfo_by_bch(chset, band, *(op_chs + i), true);
-		if (!chinfo)
+		ch_idx[i] = rtw_chset_search_bch_include_dis(chset, band, *(op_chs + i));
+		if (ch_idx[i] < 0)
 			break;
+		chinfo = &chset->chs[ch_idx[i]];
 		if (CH_IS_NON_OCP_STOPPED(chinfo) || CH_IS_NON_OCP(chinfo))
 			break;
 	}
 
 	if (op_ch_num != 0 && i == op_ch_num) {
-		ret = 1;
+		ret = true;
 		/* set to RTW_NON_OCP_STOPPED */
 		for (i = 0; i < op_ch_num; i++) {
-			chinfo = rtw_chset_get_chinfo_by_bch(chset, band, *(op_chs + i), true);
+			chinfo = &chset->chs[ch_idx[i]];
 			chinfo->non_ocp_end_time = RTW_NON_OCP_STOPPED;
 		}
 		for (i = HW_BAND_0; i < HW_BAND_MAX; i++) /* single chset shared by all hwband */
@@ -636,7 +642,6 @@ static void rtw_dfs_ch_switch_hdl(struct dvobj_priv *dvobj, u8 band_idx)
 	_adapter *m_iface = rtw_mi_get_ap_mesh_iface_by_hwband(dvobj, band_idx);
 	u8 ifbmp_m;
 	u8 ifbmp_s;
-	u8 i;
 
 	if (!m_iface) {
 		RTW_WARN(FUNC_HWBAND_FMT" can't get ap/mesh iface\n", FUNC_HWBAND_ARG(band_idx));

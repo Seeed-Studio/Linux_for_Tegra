@@ -196,6 +196,9 @@ enum rtw_drvextra_cmd_id {
 	HIDE_SSID_WK_CID,
 #endif
 #endif
+#ifdef CONFIG_BTC
+	CORE_BTC_CID,
+#endif
 	MAX_WK_CID
 };
 

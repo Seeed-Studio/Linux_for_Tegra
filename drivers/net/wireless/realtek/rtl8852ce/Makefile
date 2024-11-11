@@ -14,9 +14,6 @@ EXTRA_CFLAGS += -Wno-unused-label
 #EXTRA_CFLAGS += -Wno-unused-function
 EXTRA_CFLAGS += -Wno-unused
 #EXTRA_CFLAGS += -Wno-uninitialized
-EXTRA_CFLAGS += -Wno-missing-prototypes
-EXTRA_CFLAGS += -Wno-missing-declarations
-EXTRA_CFLAGS += -Wno-enum-conversion
 
 ############ ANDROID COMMON KERNEL ############
 # clang
@@ -38,8 +35,7 @@ ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-SOURCETREE = $(srctree.nvidia-oot)/drivers/net/wireless/realtek/rtl8852ce
-EXTRA_CFLAGS += -I$(SOURCETREE)/include
+EXTRA_CFLAGS += -I$(src)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -89,6 +85,7 @@ CONFIG_RTW_REGDB = rtk_8852CE_M.2_2230-67-52
 ########################## Initial Channel Plan  ##########################
 # XX: unspecified
 CONFIG_RTW_COUNTRY_CODE = XX
+CONFIG_RTW_EXTRA_ALPHA2 = US
 # 0xFFFF: unspecified
 CONFIG_RTW_CHPLAN = 0xFFFF
 # 0xFFFF: unspecified
@@ -97,10 +94,11 @@ CONFIG_RTW_CHPLAN_6G = 0xFFFF
 ########################## 802.11d (country IE slave) ##########################
 CONFIG_80211D = y
 # 0: disable, 1: enable, 2: enable when INIT/USER set world wide mode
-CONFIG_RTW_COUNTRY_IE_SLAVE_EN_MODE = 0
+CONFIG_RTW_COUNTRY_IE_SLAVE_EN_MODE = 2
 # BIT0: deprecated BIT
 # BIT1: consider all environment BSSs, otherwise associated BSSs only
-CONFIG_RTW_COUNTRY_IE_SLAVE_FLAGS = 0x00
+# BIT2: consider all environment BSSs with majority selection (implys BIT1)
+CONFIG_RTW_COUNTRY_IE_SLAVE_FLAGS = 0x04
 
 ########################## EDCCA for regulatory ##########################
 # NORMAL: Without regulatory consideration
@@ -231,11 +229,16 @@ CONFIG_MP_VHT_HW_TX_MODE = n
 ###################### ROAMING #####################################
 CONFIG_LAYER2_ROAMING = y
 #bit0: ROAM_ON_EXPIRED, #bit1: ROAM_ON_RESUME, #bit2: ROAM_ACTIVE
-CONFIG_ROAMING_FLAG = 0x3
+#bit3: ROAM_QUICK_SCAN
+#bit4: ROAM_ACTIVE_INTERVAL_EXTENSION
+#bit5: ROAM_BTM_IGNORE_DELTA
+#bit6: ROAM_ACTIVE_IGNORE_CHK (Debug)
+CONFIG_ROAMING_FLAG = 0x3f
+# 2:2G, 5:5G, 6:6G, 52:5G-2G, 526:5G-2G-6G, 562:5G-6G-2G, ...
+CONFIG_ROAM_SCAN_ORDER = 526
 
 ###################### Platform Related #######################
-CONFIG_PLATFORM_TEGRA = y
-CONFIG_PLATFORM_I386_PC = n
+CONFIG_PLATFORM_I386_PC = y
 CONFIG_PLATFORM_RTL8198D = n
 CONFIG_PLATFORM_ANDROID_X86 = n
 CONFIG_PLATFORM_ANDROID_INTEL_X86 = n
@@ -384,7 +387,7 @@ ifeq ($(CONFIG_RTW_FSM), y)
 EXTRA_CFLAGS += -DCONFIG_RTW_FSM
 #EXTRA_CFLAGS += -DCONFIG_RTW_FSM_XXX
 EXTRA_CFLAGS += -DCONFIG_RTW_FSM_RRM
-#EXTRA_CFLAGS += -DCONFIG_RTW_FSM_BTM
+EXTRA_CFLAGS += -DCONFIG_RTW_FSM_BTM
 endif
 
 ifeq ($(CONFIG_PHL_FSM), y)
@@ -517,6 +520,9 @@ endif
 ifneq ($(CONFIG_RTW_COUNTRY_CODE), XX)
 EXTRA_CFLAGS += -DCONFIG_RTW_COUNTRY_CODE=\"$(CONFIG_RTW_COUNTRY_CODE)\"
 endif
+ifneq ($(CONFIG_RTW_EXTRA_ALPHA2), XX)
+EXTRA_CFLAGS += -DCONFIG_RTW_EXTRA_ALPHA2=\"$(CONFIG_RTW_EXTRA_ALPHA2)\"
+endif
 ifneq ($(CONFIG_RTW_CHPLAN), 0xFFFF)
 EXTRA_CFLAGS += -DCONFIG_RTW_CHPLAN=$(CONFIG_RTW_CHPLAN)
 endif
@@ -596,6 +602,7 @@ endif
 
 ifeq ($(CONFIG_LAYER2_ROAMING), y)
 	EXTRA_CFLAGS += -DCONFIG_LAYER2_ROAMING -DCONFIG_ROAMING_FLAG=$(CONFIG_ROAMING_FLAG)
+	EXTRA_CFLAGS += -DCONFIG_ROAM_SCAN_ORDER=$(CONFIG_ROAM_SCAN_ORDER)
 endif
 
 ifeq ($(CONFIG_PNO_SUPPORT), y)
@@ -761,22 +768,12 @@ ifeq ($(CONFIG_DBG_AX_CAM), y)
 EXTRA_CFLAGS += -DCONFIG_DBG_AX_CAM
 endif
 
-ifeq ($(CONFIG_PLATFORM_TEGRA), y)
-ARCH = arm64
-KVER := $(shell uname -r)
-KSRC := /lib/modules/$(KVER)/build
-EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
-EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
-EXTRA_CFLAGS += -Wno-error=date-time
-MODULE_NAME = rtl8852ce
-endif
-
 ifeq ($(CONFIG_I386_BUILD_VERIFY), y)
 EXTRA_CFLAGS += -DCONFIG_I386_BUILD_VERIFY
 endif
 
 ifeq ($(CONFIG_RTW_MBO), y)
-EXTRA_CFLAGS += -DCONFIG_RTW_MBO -DCONFIG_RTW_WNM -DCONFIG_RTW_BTM_ROAM
+EXTRA_CFLAGS += -DCONFIG_RTW_MBO -DCONFIG_RTW_WNM -DCONFIG_RTW_BTM_ROAM -DCONFIG_RTW_ROAM_STOP_NETIF_QUEUE
 #EXTRA_CFLAGS += -DCONFIG_RTW_80211K
 EXTRA_CFLAGS += -DCONFIG_RTW_80211R
 EXTRA_CFLAGS += -DRTW_FT_DBG=0 -DRTW_WNM_DBG=0 -DRTW_MBO_DBG=0
@@ -787,18 +784,8 @@ endif
 include $(wildcard $(DRV_PATH)/platform/*.mk)
 
 # Import platform specific compile options
-EXTRA_CFLAGS += -I$(SOURCETREE)/platform
+EXTRA_CFLAGS += -I$(src)/platform
 #_PLATFORM_FILES := platform/platform_ops.o
-ifeq ($(CONFIG_PCI_HCI), y)
-EXTRA_CFLAGS += -DCONFIG_PLATFORM_OPS
-_PLATFORM_FILES := platform/platform_linux_pc_pci.o
-OBJS += $(_PLATFORM_FILES)
-# Core Config
-CONFIG_MSG_NUM = 128
-EXTRA_CFLAGS += -DCONFIG_MSG_NUM=$(CONFIG_MSG_NUM)
-#EXTRA_CFLAGS += -DCONFIG_TX_SKB_ORPHAN
-endif
-_PLATFORM_FILES += platform/platform_ops.o
 OBJS += $(_PLATFORM_FILES)
 
 ########### CUSTOMER ################################
@@ -818,7 +805,7 @@ endif
 
 ifneq ($(KERNELRELEASE),)
 ########### COMMON #################################
-include $(SOURCETREE)/common.mk
+include $(src)/common.mk
 
 EXTRA_CFLAGS += -DPHL_PLATFORM_LINUX
 EXTRA_CFLAGS += -DCONFIG_PHL_ARCH
@@ -839,10 +826,11 @@ ifeq ($(DIRTY_FOR_WORK), y)
 EXTRA_CFLAGS += -DDIRTY_FOR_WORK
 endif
 
-include $(SOURCETREE)/phl/phl.mk
+include $(src)/phl/phl.mk
 
 
-obj-m := $(MODULE_NAME).o
+obj-$(CONFIG_RTL8852CE) := $(MODULE_NAME).o
+obj-$(CONFIG_RTL8852CE) := $(MODULE_NAME).o
 $(MODULE_NAME)-y = $(OBJS)
 
 ############# MEMORY MANAGMENT #############

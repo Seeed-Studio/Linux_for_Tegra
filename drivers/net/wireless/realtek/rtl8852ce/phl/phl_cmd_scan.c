@@ -241,17 +241,29 @@ _cmd_scan_update_chlist(void *drv, struct rtw_phl_scan_param *param,
  * => 0,1,2,[op0],[op1],3,4,5,[op0],[op1],6,7,8,[op0],[op1]
  */
 
-static inline void
+static inline u8
 _cmd_scan_enqueue_opch(void *drv, struct cmd_scan_ctrl *sctrl)
 {
 	u8 idx = 0;
+	u8 op_ch = 0;
 
 	for(idx = 0; idx < MAX_WIFI_ROLE_NUMBER; idx ++) {
-		if(sctrl->back_op_ch[idx].channel)
+		if(sctrl->back_op_ch[idx].channel) {
+			#if 0
+			if (sctrl->scan_ch &&
+				sctrl->scan_ch->band == sctrl->back_op_ch[idx].band &&
+				sctrl->scan_ch->channel == sctrl->back_op_ch[idx].channel &&
+				sctrl->scan_ch->duration >= sctrl->back_op_ch[idx].duration) {
+					continue; /* same as previous scan ch skip op channel */
+				}
+			#endif
+			op_ch++;
 			pq_push(drv, &sctrl->chlist, &sctrl->back_op_ch[idx].list, _first, _ps);
-		else
+		} else {
 			break;
+		}
 	}
+	return op_ch;
 }
 static struct phl_scan_channel *_cmd_scan_select_chnl(
 	void *drv, struct rtw_phl_scan_param *param, u8 band_idx)
@@ -276,6 +288,7 @@ next_ch:
 
 		if(scan_ch->scan_mode == NORMAL_SCAN_MODE) {
 			sctrl->ch_idx++;
+
 			/* 1- enable,  2- BK_CNT mode, 3- prev is non-op, 4- ch_intvl's turn */
 			if (back_op_is_required && param->back_op.mode == SCAN_BKOP_CNT) {
 				if(!((sctrl->ch_idx + 1) % param->back_op.ch_intv)) {
@@ -283,6 +296,19 @@ next_ch:
 				}
 			} else if (back_op_is_required && param->back_op.mode == SCAN_BKOP_TIMER) {
 
+#ifdef PRIVATE_N
+				sctrl->off_ch_time += scan_ch->duration;
+				if (sctrl->off_ch_time > param->back_op.off_ch_dur_ms) {
+
+					pq_push(drv, &sctrl->chlist, &scan_ch->list, _first, _ps);
+					sctrl->last_opch_add_time =
+					        phl_get_passing_time_ms(param->start_time);
+
+					if (_cmd_scan_enqueue_opch(drv, sctrl))
+						sctrl->off_ch_time = 0;
+					goto next_ch;
+				}
+#else
 				if ((phl_get_passing_time_ms(param->start_time) -
 				     sctrl->last_opch_add_time) >
 					param->back_op.off_ch_dur_ms) {
@@ -290,6 +316,7 @@ next_ch:
 					        phl_get_passing_time_ms(param->start_time);
 					_cmd_scan_enqueue_opch(drv, sctrl);
 				}
+#endif
 			}
 		}
 		#ifdef CONFIG_PHL_CMD_SCAN_BKOP_TIME
@@ -299,6 +326,9 @@ next_ch:
 				_cmd_scan_enqueue_opch(drv, sctrl);
 			}
 			sctrl->ch_idx++;
+		} else if (scan_ch->scan_mode == BACKOP_MODE) {
+			sctrl->off_ch_time = 0;
+			sctrl->last_opch_add_time += scan_ch->duration;
 		}
 		#endif
 		sctrl->scan_ch = scan_ch;
@@ -313,12 +343,14 @@ next_ch:
 		goto next_ch;
 	}
 	else {
+		printk("%s: scan done\n", __func__);
 		return NULL;
 	}
 
-	PHL_INFO("%s:[%d] repeat[%d] ch_idx=[%d], remain=[%d], ch_number=%d, scan_mode= %s\n", __func__,
-		 band_idx, sctrl->repeat, sctrl->ch_idx, sctrl->chlist.cnt, sctrl->scan_ch->channel,
-		 (sctrl->scan_ch->scan_mode == BACKOP_MODE)? "OP_CH": "Non-OP");
+	param->done_num = param->ch_num - sctrl->chlist.cnt;
+	printk("%s:[%d] idx=%d, r=%d, ch=%d, p=%d\n", __func__,
+		band_idx, sctrl->ch_idx, sctrl->chlist.cnt, sctrl->scan_ch->channel,
+		phl_get_passing_time_ms(param->start_time));
 
 	return sctrl->scan_ch;
 }
@@ -535,6 +567,7 @@ void _cmd_abort_notify(void *dispr, void *drv,
 			_cmd_abort_notify_cb(drv, &msg);
 			return;
 		}
+		printk("%s(%d)vv abort=%d\n",__func__,__LINE__,abort);
 		msg.rsvd[0].ptr = (u8*)sctrl->wrole;
 
 		if (abort)
@@ -814,6 +847,7 @@ enum phl_mdl_ret_code _cmd_scan_hdl_internal_evt(
 			_cmd_scan_start(phl_info, sctrl, band_idx);
 
 			PHL_INFO("[%d]MSG_EVT_SCAN_START \n", band_idx);
+			sctrl->off_ch_time = 0;
 			/* [scan start notify] */
 			if (!TEST_SCAN_FLAGS(param->state, CMD_SCAN_STARTED)) {
 				if (param->ops->scan_start)
@@ -1229,7 +1263,7 @@ _cmd_scan_update_chparam(void *drv, struct rtw_phl_scan_param *param, u8 sctrl_i
 			param->max_listen_time = ch->duration;
 			total_scan_ms = ch->duration;
 			break;
-	}
+		}
 	} while(pq_get_next(drv, &sctrl->chlist, node, &node, _ps));
 
 	scan_section_ms = param->back_op.ch_dur_ms + param->back_op.off_ch_dur_ms;

@@ -25,6 +25,9 @@
 #define RTW_CHPLAN_6G_WORLDWIDE		0x7F
 #define RTW_CHPLAN_6G_UNSPECIFIED	0xFF
 
+bool rtw_chplan_init(void);
+void rtw_chplan_deinit(void);
+
 u8 rtw_chplan_get_default_regd_2g(u8 id);
 #if CONFIG_IEEE80211_BAND_5GHZ
 u8 rtw_chplan_get_default_regd_5g(u8 id);
@@ -58,7 +61,8 @@ u8 rtw_process_beacon_hint(struct rf_ctl_t *rfctl, struct wlan_network *network)
 void rtw_beacon_hint_ch_change_notifier(struct rf_ctl_t *rfctl);
 
 #define ALPHA2_FMT "%c%c"
-#define ALPHA2_ARG(a2) ((is_alpha(a2[0]) || is_decimal(a2[0])) ? a2[0] : '-'), ((is_alpha(a2[1]) || is_decimal(a2[1])) ? a2[1] : '-')
+#define ALPHA2_ARG_EX(a2, c) ((is_alpha(a2[0]) || is_decimal(a2[0])) ? a2[0] : c), ((is_alpha(a2[1]) || is_decimal(a2[1])) ? a2[1] : c)
+#define ALPHA2_ARG(a2) ALPHA2_ARG_EX(a2, '-')
 
 #define WORLDWIDE_ALPHA2	"00"
 #define UNSPEC_ALPHA2		"99"
@@ -74,10 +78,11 @@ enum rtw_regd_inr {
 	RTW_REGD_SET_BY_INIT = 0,
 	RTW_REGD_SET_BY_USER = 1,
 	RTW_REGD_SET_BY_COUNTRY_IE = 2,
+	RTW_REGD_SET_BY_EXTRA = 3,
 
 	/* below is not used for REGD_SRC_RTK_PRIV */
-	RTW_REGD_SET_BY_DRIVER = 3,
-	RTW_REGD_SET_BY_CORE = 4,
+	RTW_REGD_SET_BY_DRIVER = 4,
+	RTW_REGD_SET_BY_CORE = 5,
 
 	RTW_REGD_SET_BY_NUM,
 };
@@ -197,7 +202,7 @@ extern const enum rtw_edcca_mode_t _rtw_regd_to_edcca_mode_6g[RTW_REGD_NUM];
 extern const REGULATION_TXPWR_LMT _rtw_regd_to_txpwr_lmt[];
 #define rtw_regd_to_txpwr_lmt(regd) (((regd) >= RTW_REGD_NUM) ? TXPWR_LMT_WW : _rtw_regd_to_txpwr_lmt[(regd)])
 
-#define REGD_INR_BMP_STR_LEN (33)
+#define REGD_INR_BMP_STR_LEN (39)
 char *rtw_get_regd_inr_bmp_str(char *buf, u8 bmp);
 
 #define ENV_BMP_STR_LEN (11)
@@ -393,10 +398,11 @@ enum country_ie_slave_en_mode {
 #define CIS_EN_MODE_IS_VALID(mode) ((mode) < CISEM_NUM)
 
 enum country_ie_slave_flags {
-	_CISF_RSVD_0	= BIT0, /* deprecated BIT0 */
-	CISF_ENV_BSS	= BIT1, /* if not set, consider IEs of associated BSSs only */
+	_CISF_RSVD_0		= BIT0, /* deprecated BIT0 */
+	CISF_ENV_BSS		= BIT1, /* if set, consider IEs of all environment BSSs (not only associated BSSs) */
+	CISF_ENV_BSS_MAJ	= BIT2, /* if set, consider IEs of all environment BSSs with majority selection */
 
-	CISF_VALIDS = CISF_ENV_BSS,
+	CISF_VALIDS = (CISF_ENV_BSS | CISF_ENV_BSS_MAJ),
 };
 
 enum country_ie_slave_6g_reg_info {
@@ -433,6 +439,33 @@ struct country_ie_slave_record {
 	struct country_chplan chplan;
 };
 
+#ifndef CONFIG_80211D_ENV_BSS_MAJORITY
+#define CONFIG_80211D_ENV_BSS_MAJORITY 1
+#endif
+
+struct cis_scan_stat_ent {
+	_list list;
+	struct country_ie_slave_record cisr;
+	u16 count;
+};
+
+struct cis_scan_stat_t {
+	_list ent;
+	u8 ent_num;
+#if CONFIG_80211D_ENV_BSS_MAJORITY
+	struct cis_scan_stat_ent *majority;
+#endif
+	_mutex lock;
+};
+
+#if CONFIG_80211D_ENV_BSS_MAJORITY
+#define CIS_SCAN_STAT_GET_MAJORITY(stat) (stat)->majority
+#define CIS_SCAN_STAT_SET_MAJORITY(stat, m) (stat)->majority = (m)
+#else
+#define CIS_SCAN_STAT_GET_MAJORITY(stat) NULL
+#define CIS_SCAN_STAT_SET_MAJORITY(stat, m)
+#endif
+
 #ifdef CONFIG_80211D
 extern const char _rtw_env_char[];
 #define rtw_env_char(e) (((e) >= RTW_ENV_NUM) ? _rtw_env_char[RTW_ENV_ANY] : _rtw_env_char[e])
@@ -449,7 +482,7 @@ void dump_chplan_country_list(void *sel);
 void dump_chplan_6g_id_list(void *sel);
 void dump_chplan_6g_country_list(void *sel);
 #endif
-#ifdef CONFIG_RTW_DEBUG
+#ifdef CONFIG_RTW_CHPLAN_DEV
 void dump_chplan_test(void *sel);
 #endif
 void dump_chplan_ver(void *sel);
@@ -473,7 +506,7 @@ struct regd_req_t {
 void rtw_regd_req_list_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty);
 void rtw_regd_req_list_free(struct rf_ctl_t *rfctl);
 
-void rtw_regd_watchdog_hdl(struct dvobj_priv *dvobj);
+bool rtw_regd_watchdog_hdl(struct dvobj_priv *dvobj);
 
 struct _ADAPTER_LINK;
 enum channel_width alink_adjust_linking_bw_by_regd(struct _ADAPTER_LINK *alink
@@ -502,12 +535,15 @@ enum chplan_confs_type {
 	CHPLAN_CONFS_EXCL_CHS_6G,
 	CHPLAN_CONFS_INIT_REGD_ALWAYS_APPLY,
 	CHPLAN_CONFS_USER_REGD_ALWAYS_APPLY,
+	CHPLAN_CONFS_EXTRA_ALPHA2,
 	CHPLAN_CONFS_BCN_HINT_VALID_MS,
 	CHPLAN_CONFS_CIS_EN_MODE,
 	CHPLAN_CONFS_CIS_FLAGS,
 	CHPLAN_CONFS_CIS_EN_ROLE,
 	CHPLAN_CONFS_CIS_EN_IFBMP,
+	CHPLAN_CONFS_CIS_SCAN_BAND_BMP,
 	CHPLAN_CONFS_CIS_SCAN_INT_MS,
+	CHPLAN_CONFS_CIS_SCAN_URGENT_MS,
 	CHPLAN_CONFS_NUM,
 };
 
@@ -520,13 +556,16 @@ struct chplan_confs {
 #endif
 	bool init_regd_always_apply;
 	bool user_regd_always_apply;
+	char extra_alpha2[2];
 	u32 bcn_hint_valid_ms;
 #ifdef CONFIG_80211D
 	u8 cis_en_mode;
 	u8 cis_flags;
 	u8 cis_en_role;
 	u8 cis_en_ifbmp;
+	u8 cis_scan_band_bmp;
 	u32 cis_scan_int_ms;
+	u32 cis_scan_urgent_ms;
 #endif
 };
 
@@ -614,7 +653,7 @@ struct get_chplan_resp {
 	struct chplan_confs confs;
 
 	u8 chs_len;
-	RT_CHANNEL_INFO chs[0];
+	RT_CHANNEL_INFO chs[];
 };
 
 struct get_channel_plan_param {
@@ -644,6 +683,9 @@ void process_regu_ies(_adapter *adapter, u8 *ies, uint ies_len);
 bool rtw_update_scanned_network_cisr(struct rf_ctl_t *rfctl, struct wlan_network *network);
 bool rtw_network_chk_regu_ies(struct rf_ctl_t *rfctl, struct wlan_network *network);
 
+bool rtw_cis_scan_needed(struct rf_ctl_t *rfctl, bool *urgent);
+void rtw_cis_scan_idle_check(struct rf_ctl_t *rfctl);
+void rtw_cis_scan_complete_hdl(_adapter *adapter);
 void rtw_rfctl_cis_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty);
 void rtw_rfctl_cis_deinit(struct rf_ctl_t *rfctl);
 #else
@@ -658,28 +700,5 @@ void dump_cur_chplan(void *sel, struct rf_ctl_t *rfctl);
 void dump_cur_env(void *sel, struct rf_ctl_t *rfctl);
 #endif
 #endif /* CONFIG_PROC_DEBUG */
-
-#define CHPLAN_VER_STR_BUF_LEN 64
-
-struct rtw_regdb_ops {
-	u8 (*get_default_regd_2g)(u8 id);
-#if CONFIG_IEEE80211_BAND_5GHZ
-	u8 (*get_default_regd_5g)(u8 id);
-#endif
-	bool (*is_domain_code_valid)(u8 id);
-	bool (*domain_get_ch)(u8 id, u32 ch, u8 *flags);
-#if CONFIG_IEEE80211_BAND_6GHZ
-	u8 (*get_default_regd_6g)(u8 id);
-	bool (*is_domain_code_6g_valid)(u8 id);
-	bool (*domain_6g_get_ch)(u8 id, u32 ch, u8 *flags);
-#endif
-
-	bool (*get_chplan_from_alpha2)(const char *alpha2, struct country_chplan *ent);
-
-#ifdef CONFIG_RTW_DEBUG
-	void (*dump_chplan_test)(void *sel);
-#endif
-	void (*get_ver_str)(char *buf, size_t buf_len);
-};
 
 #endif /* __RTW_CHPLAN_H__ */

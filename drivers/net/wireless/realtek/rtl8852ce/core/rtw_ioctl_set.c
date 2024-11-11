@@ -96,7 +96,7 @@ u8 rtw_do_join(_adapter *padapter)
 
 	pmlmepriv->to_join = _TRUE;
 
-	rtw_init_sitesurvey_parm(padapter, parm);
+	rtw_init_sitesurvey_parm(parm);
 	_rtw_memcpy(&parm->ssid[0], &pmlmepriv->assoc_ssid, sizeof(NDIS_802_11_SSID));
 	parm->ssid_num = 1;
 
@@ -768,24 +768,6 @@ u16 rtw_get_cur_max_rate(_adapter *adapter)
 }
 
 /*
-* rtw_set_scan_mode -
-* @adapter: pointer to _adapter structure
-* @scan_mode:
-*
-* Return _SUCCESS or _FAIL
-*/
-int rtw_set_scan_mode(_adapter *adapter, enum rtw_phl_scan_type scan_mode)
-{
-	if (scan_mode != RTW_PHL_SCAN_ACTIVE &&
-		scan_mode != RTW_PHL_SCAN_PASSIVE)
-		return _FAIL;
-
-	adapter->mlmepriv.scan_mode = scan_mode;
-
-	return _SUCCESS;
-}
-
-/*
 * rtw_set_channel_plan -
 * @adapter: pointer to _adapter structure
 * @channel_plan:
@@ -795,9 +777,7 @@ int rtw_set_scan_mode(_adapter *adapter, enum rtw_phl_scan_type scan_mode)
 int rtw_set_channel_plan(_adapter *adapter, u8 channel_plan, u8 chplan_6g
 	, enum rtw_env_t env, enum rtw_regd_inr inr)
 {
-	struct registry_priv *regsty = adapter_to_regsty(adapter);
-
-	if (!REGSTY_REGD_SRC_FROM_OS(regsty))
+	if (!REGSTY_REGD_SRC_FROM_OS(adapter_to_regsty(adapter)))
 		return rtw_set_chplan_cmd(adapter, RTW_CMDF_WAIT_ACK, channel_plan, chplan_6g, env, inr);
 	RTW_WARN("%s(): not applied\n", __func__);
 	return _SUCCESS;
@@ -823,9 +803,7 @@ int rtw_set_country(_adapter *adapter, const char *country_code
 #endif
 
 #if CONFIG_RTW_IOCTL_SET_COUNTRY
-	struct registry_priv *regsty = adapter_to_regsty(adapter);
-
-	if (!REGSTY_REGD_SRC_FROM_OS(regsty))
+	if (!REGSTY_REGD_SRC_FROM_OS(adapter_to_regsty(adapter)))
 		return rtw_set_country_cmd(adapter, RTW_CMDF_WAIT_ACK, country_code, env, inr);
 #endif
 	RTW_WARN("%s(): not applied\n", __func__);
@@ -842,10 +820,8 @@ int rtw_set_country(_adapter *adapter, const char *country_code
 */
 int rtw_set_env(_adapter *adapter, enum rtw_env_t env, enum rtw_regd_inr inr)
 {
-	struct registry_priv *regsty = adapter_to_regsty(adapter);
-
 	return rtw_set_env_cmd(adapter, RTW_CMDF_WAIT_ACK, env
-		, REGSTY_REGD_SRC_FROM_OS(regsty) ? REGD_SRC_OS : REGD_SRC_RTK_PRIV
+		, REGSTY_REGD_SRC_FROM_OS(adapter_to_regsty(adapter)) ? REGD_SRC_OS : REGD_SRC_RTK_PRIV
 		, inr);
 }
 #endif

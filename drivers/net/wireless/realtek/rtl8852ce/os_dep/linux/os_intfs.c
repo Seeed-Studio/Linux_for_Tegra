@@ -184,6 +184,9 @@ static u16 rtw_select_queue(struct net_device *dev, struct sk_buff *skb
 	if (pmlmepriv->acm_mask != 0)
 		skb->priority = qos_acm(pmlmepriv->acm_mask, skb->priority);
 
+	if (skb->protocol == htons(0x888e))
+		return 4;
+
 	return rtw_1d_to_queue[skb->priority];
 }
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35)) */
@@ -1212,8 +1215,10 @@ static void devobj_decide_init_chplan(struct dvobj_priv *dvobj)
 	/*
 	* treat {0xFF, 0xFF} as unspecified
 	*/
+#if 0 /* TODO: alpha2 from dev_cap(efuse) */
 	if (alpha2 && strncmp(alpha2, "\xFF\xFF", 2) == 0)
 		alpha2 = NULL;
+#endif
 
 #ifdef CONFIG_FORCE_SW_CHANNEL_PLAN
 	disable_sw_chplan = _FALSE;
@@ -2405,6 +2410,10 @@ int netdev_open(struct net_device *pnetdev)
 	ret = _netdev_open(pnetdev);
 	_rtw_mutex_unlock(&(adapter_to_dvobj(padapter)->hw_init_mutex));
 
+#ifdef CONFIG_80211D
+	if (ret == 0)
+		rtw_cis_scan_idle_check(adapter_to_rfctl(padapter));
+#endif
 
 #ifdef CONFIG_AUTO_AP_MODE
 	if (padapter->iface_id == IFACE_ID2)

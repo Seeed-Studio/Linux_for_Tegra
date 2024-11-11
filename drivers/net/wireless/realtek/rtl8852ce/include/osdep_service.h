@@ -99,7 +99,7 @@
 #endif
 
 extern int RTW_STATUS_CODE(int error_code);
-extern u16 rtw_warn_on_cnt;
+extern ATOMIC_T rtw_warn_on_cnt;
 
 #ifndef RTK_DMP_PLATFORM
 	#define CONFIG_USE_VMALLOC

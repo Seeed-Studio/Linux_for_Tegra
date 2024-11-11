@@ -129,7 +129,7 @@
 #define BTC_BB_PRE_AGC_FWCTRL 2
 #define BTC_BB_PRE_AGC_NOTFOUND 3
 
-#define BTC_BB_TX_1SS_LIMIT 0 /* if halbb support rtw_hal_btc_cfg_tx_1ss */
+#define BTC_BB_TX_1SS_LIMIT 1 /* if halbb support rtw_hal_btc_cfg_tx_1ss */
 
 #define BTC_AP_BLIST 0 /* Sporton AP issue*/
 
@@ -190,6 +190,9 @@ struct btc_t;
 
 /* mailbox 0x45 BT device info related */
 #define BTC_DEV_LINK_MAX 4
+#define BTC_BT_HID_HIGHDUTY_THS 1000
+#define BTC_DEV_HID_NAME 3
+#define BTC_DEV_HID_MTK 0x46
 
 #define _write_cx_reg(btc, offset, val) \
 	rtw_hal_mac_coex_reg_write(btc->hal, offset, val)
@@ -459,6 +462,7 @@ enum btc_dbg_str_type {
 	BTC_STR_RPTMATCH,
 	BTC_STR_H2CERROR,
 	BTC_STR_VENDORID,
+	BTC_STR_PATH,
 	BTC_STR_MAX
 };
 
@@ -1044,7 +1048,9 @@ enum btc_wa_type {
 	BTC_WA_5G_HI_CH_RX = BIT(0),
 	BTC_WA_NULL_AP = BIT(1),
 	BTC_WA_HFP_ZB = BIT(2),  /* HFP PTA req bit4 define issue */
-	BTC_WA_HFP_LAG = BIT(3)  /*52BT WL break BT Rx lag issue*/
+	BTC_WA_HFP_LAG = BIT(3),  /*52BT WL break BT Rx lag issue*/
+	BTC_WA_INIT_SCAN = BIT(4),  /*52A/C/D init scan move to wl slot WA*/
+	BTC_WA_CO_RX = BIT(5)  /* 52B high rate co-rx issue */
 };
 
 struct btc_wl_tx_limit_para {
@@ -1052,6 +1058,15 @@ struct btc_wl_tx_limit_para {
 	u8 tx_1ss;
 	u32 tx_time;	/* unit: us */
 	u16 tx_retry;
+};
+
+struct btc_wl_trx_nss_para {
+	u8 tx_limit;
+	u8 rx_limit;
+	u8 tx_ss;
+	u8 rx_ss;
+	u8 tx_path;
+	u8 rx_path;
 };
 
 struct btc_rf_trx_para {
@@ -1104,6 +1119,8 @@ struct btc_bt_link_hid {
 	bool type;
 	bool role;
 	bool sniff;
+
+	u8 name[BTC_DEV_HID_NAME];
 };
 
 struct btc_bt_link_a2dp {
@@ -1353,7 +1370,7 @@ struct btc_wl_active_role { /* struct size must be n*4 bytes */
 
 	u8 ch;
 	u8 noa_dur; /* ms */
-	u8 rsvd1;
+	u8 client_cnt;
 	u8 rsvd2;
 };
 
@@ -1554,8 +1571,10 @@ struct btc_bt_info {
 	u32 lna_constrain: 3;
 	u32 scan_info_update: 1;
 	u32 fw_ver_mismatch: 1;
+	u32 hiduty_dev: 1;
+	u32 hiduty_dev_last: 1;
 
-	u32 rsvd: 16;
+	u32 rsvd: 14;
 };
 
 struct btc_bt_mb_devinfo {
@@ -1632,7 +1651,8 @@ struct btc_wl_info {
 	u8 is_5g_hi_channel: 1;
 	u8 busy_to_idle: 1;
 	u8 legacy_mode: 1;
-	u8 rsvd: 2;
+	u8 he_mode: 1;
+	u8 client_cnt_inc_2g: 1; /* client count increase for 2G AP/P2P */
 
 	u8 coex_mode;
 
@@ -1649,8 +1669,8 @@ struct btc_ant_info {
 
 	u8 diversity; /* only for wifi use 1-antenna */
 	u8 btg_pos; /* btg-circuit at 0:S0/1:S1/others:all */
-	u8 stream_cnt;  /* spatial_stream count */
-	u8 rsvd;
+	u8 stream_cnt;  /* spatial_stream count: Tx[7:4], Rx[3:0] */
+	u8 path_pos;    /* path pos: Tx[7:4], Rx[3:0] */
 };
 
 struct btc_module {
@@ -1787,6 +1807,7 @@ struct btc_dm {
 	struct btc_init_info init_info; /* pass to wl_fw if offload */
 	struct btc_rf_trx_para rf_trx_para;
 	struct btc_wl_tx_limit_para wl_tx_limit;
+	struct btc_wl_trx_nss_para wl_trx_nss;
 	struct btc_wl_scc_ctrl wl_scc;
 	struct btc_dm_step dm_step;
 
@@ -1827,7 +1848,8 @@ struct btc_dm {
 	u32 rx_err_rpt_en: 1;
 	u32 wl_btg_rx_rb: 2;  /* 0x10980 reg state from reg-moniter read-back */
 	u32 tpl_ap: 1;
-	u32 rsvd2: 3;
+	u32 wl_trx_nss_en: 1; /* xTxR switch to 1T1R */
+	u32 rsvd2: 2;
 
 	u8 wl_pre_agc: 2;
 	u8 wl_lna2: 1;

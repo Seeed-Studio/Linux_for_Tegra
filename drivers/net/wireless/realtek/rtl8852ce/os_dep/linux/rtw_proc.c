@@ -226,7 +226,7 @@ static int proc_get_chplan_6g_country_list(struct seq_file *m, void *v)
 }
 #endif
 
-#ifdef CONFIG_RTW_DEBUG
+#ifdef CONFIG_RTW_CHPLAN_DEV
 static int proc_get_chplan_test(struct seq_file *m, void *v)
 {
 	dump_chplan_test(m);
@@ -279,7 +279,7 @@ const struct rtw_proc_hdl drv_proc_hdls[] = {
 	RTW_PROC_HDL_SSEQ("chplan_6g_id_list", proc_get_chplan_6g_id_list, NULL),
 	RTW_PROC_HDL_SSEQ("chplan_6g_country_list", proc_get_chplan_6g_country_list, NULL),
 #endif
-#ifdef CONFIG_RTW_DEBUG
+#ifdef CONFIG_RTW_CHPLAN_DEV
 	RTW_PROC_HDL_SSEQ("chplan_test", proc_get_chplan_test, NULL),
 #endif
 	RTW_PROC_HDL_SSEQ("chplan_ver", proc_get_chplan_ver, NULL),
@@ -1922,8 +1922,6 @@ static int proc_get_cap_spt_op_class_ch(struct seq_file *m, void *v)
 
 static ssize_t proc_set_cap_spt_op_class_ch(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
-	struct net_device *dev = data;
-	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	char tmp[32];
 
 	if (count < 1)
@@ -1956,8 +1954,6 @@ static int proc_get_reg_spt_op_class_ch(struct seq_file *m, void *v)
 
 static ssize_t proc_set_reg_spt_op_class_ch(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
-	struct net_device *dev = data;
-	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	char tmp[32];
 
 	if (count < 1)
@@ -1990,8 +1986,6 @@ static int proc_get_cur_spt_op_class_ch(struct seq_file *m, void *v)
 
 static ssize_t proc_set_cur_spt_op_class_ch(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
-	struct net_device *dev = data;
-	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	char tmp[32];
 
 	if (count < 1)
@@ -3225,9 +3219,6 @@ static int proc_get_tx_power_ext_info(struct seq_file *m, void *v)
 
 static ssize_t proc_set_tx_power_ext_info(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
-	struct net_device *dev = data;
-	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
-
 	char tmp[32] = {0};
 	char cmd[16] = {0};
 
@@ -3244,6 +3235,9 @@ static ssize_t proc_set_tx_power_ext_info(struct file *file, const char __user *
 			return count;
 
 #if 0 /* TODO */
+		struct net_device *dev = data;
+		_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+
 		#ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
 		phy_free_filebuf_mask(adapter, LOAD_BB_PG_PARA_FILE | LOAD_RF_TXPWR_LMT_PARA_FILE);
 		#endif
@@ -5605,6 +5599,7 @@ const struct rtw_proc_hdl adapter_proc_hdls[] = {
 	RTW_PROC_HDL_SSEQ("tx_amsdu", proc_get_tx_amsdu, proc_set_tx_amsdu),
 	RTW_PROC_HDL_SSEQ("tx_amsdu_rate", proc_get_tx_amsdu_rate, proc_set_tx_amsdu_rate),
 #endif
+	RTW_PROC_HDL_SSEQ("tx_max_agg_time", proc_get_tx_max_agg_time, proc_set_tx_max_agg_time),
 #ifdef CONFIG_CORE_TXSC
 	RTW_PROC_HDL_SSEQ("txsc", proc_get_txsc, proc_set_txsc),
 #ifdef CONFIG_TXSC_AMSDU
@@ -6503,7 +6498,7 @@ static int proc_get_self_diag_info(struct seq_file *m, void *v)
 		RTW_PRINT_SEL(m, "get passing time from last get self_diag_info (%d ms)\n\n", rtw_get_passing_time_ms(last_time));
 	last_time =  rtw_get_current_time();
 
-	RTW_PRINT_SEL(m, "driver warn on count = %d \n\n", rtw_warn_on_cnt);
+	RTW_PRINT_SEL(m, "driver warn on count = %u \n\n", ATOMIC_READ(&rtw_warn_on_cnt));
 
 #ifdef CONFIG_USB_HCI
 	RTW_PRINT_SEL(m, "%s%17s, %s\n", "Driver RX:", "Last count", "Current count");
@@ -6622,12 +6617,12 @@ static ssize_t proc_set_self_diag_info(struct file *file, const char __user *buf
 	}
 	else if (strcmp(type, "reset_drv_counter") == 0) {
 		if (val == '1') {
-			rtw_warn_on_cnt = 0;
+			ATOMIC_SET(&rtw_warn_on_cnt, 0);
 #ifdef CONFIG_USB_HCI
 			_rtw_memset(&(dvobj->usb_data.trx_stats), 0, sizeof(struct trx_stats));
 #endif
 		}
-		RTW_INFO("driver_warn_on_cnt : %u\n", rtw_warn_on_cnt);
+		RTW_INFO("driver_warn_on_cnt : %u\n", ATOMIC_READ(&rtw_warn_on_cnt));
 	}
 	return count;
 
