@@ -7,7 +7,7 @@
 #ifndef __NVHOST_NVDLA_T194_H__
 #define __NVHOST_NVDLA_T194_H__
 
-#include <linux/nvhost.h>
+#include "port/nvdla_host_wrapper.h"
 #include <linux/platform/tegra/emc_bwmgr.h>
 
 #include "nvdla.h"

@@ -1,6 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2016-2023, NVIDIA Corporation.  All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary */
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * NVDLA debug utils header
  */
@@ -10,7 +9,7 @@
 
 #include <linux/platform_device.h>
 #include <linux/debugfs.h>
-#include <linux/nvhost.h>
+#include "port/nvdla_host_wrapper.h"
 
 #include "nvdla.h"
 

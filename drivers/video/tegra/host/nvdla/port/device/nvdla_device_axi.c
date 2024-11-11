@@ -14,12 +14,14 @@
 #include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/errno.h>
-#include <linux/nvhost.h>
+#include <linux/nvhost-emu.h>
 #include <linux/of.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 
 #define NVDLA_NUM_CDEV 1
+
+static uint32_t s_powerref;
 
 uint32_t nvdla_device_register_read(struct platform_device *pdev,
 	uint32_t reg)
@@ -46,6 +48,13 @@ static int32_t s_nvdla_module_get_platform_resources(
 	int32_t err;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	int32_t i;
+
+	pdata->host1x = HOST1X_EMU_EXPORT_CALL(nvhost_get_host1x(pdev));
+	if (pdata->host1x == NULL) {
+		nvdla_dbg_err(pdev, "Failed to get private data\n");
+		err = -ENODEV;
+		goto fail;
+	}
 
 	/* Get resources. */
 	for (i = 0; i < pdev->num_resources; i++) {
@@ -79,7 +88,8 @@ static int32_t s_nvdla_module_pm_enable(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	uint32_t i;
 
-	if (pdata->class == NV_DLA0_SIM_CLASS_ID) {
+	if ((pdata->class == NV_DLA0_SIM_CLASS_ID) ||
+		(pdata->class == NV_DLA1_SIM_CLASS_ID)) {
 		nvdla_dbg_warn(pdev, "skipping PM for simulator\n");
 		err = 0;
 		goto fail;
@@ -149,7 +159,8 @@ static void s_nvdla_module_pm_disable(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
-	if (pdata->class == NV_DLA0_SIM_CLASS_ID) {
+	if ((pdata->class == NV_DLA0_SIM_CLASS_ID) ||
+		(pdata->class == NV_DLA1_SIM_CLASS_ID)) {
 		nvdla_dbg_warn(pdev, "skipping PM for simulator\n");
 		goto fail;
 	}
@@ -306,14 +317,16 @@ int32_t nvdla_module_busy(struct platform_device *pdev)
 
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
-	if (pdata->class == NV_DLA0_SIM_CLASS_ID) {
+	if ((pdata->class == NV_DLA0_SIM_CLASS_ID) ||
+		(pdata->class == NV_DLA1_SIM_CLASS_ID)) {
 		err = 0;
 
 		nvdla_dbg_warn(pdev, "skipping PM for simulator\n");
 
 		nvdla_module_load_regs(pdev, pdata->engine_can_cg);
 
-		if (pdata->finalize_poweron)
+		s_powerref++;
+		if (pdata->finalize_poweron && (s_powerref == 1U))
 			err = pdata->finalize_poweron(pdev);
 
 		goto fail;
@@ -342,10 +355,18 @@ void nvdla_module_idle_mult(struct platform_device *pdev, int32_t refs)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
-	if (pdata->class == NV_DLA0_SIM_CLASS_ID) {
-		nvdla_dbg_warn(pdev, "skipping PM for simulator\n");
+	if (refs == 0)
+		goto fail;
 
-		if (pdata->prepare_poweroff)
+	if ((pdata->class == NV_DLA0_SIM_CLASS_ID) ||
+		(pdata->class == NV_DLA1_SIM_CLASS_ID)) {
+		nvdla_dbg_warn(pdev, "skipping PM for simulator\n");
+		if (s_powerref >= refs)
+			s_powerref -= refs;
+		else
+			s_powerref = 0U;
+
+		if (pdata->prepare_poweroff && (s_powerref == 0U))
 			pdata->prepare_poweroff(pdev);
 
 		goto fail;
@@ -365,21 +386,8 @@ fail:
 
 static void nvdla_module_load_regs(struct platform_device *pdev, bool prod)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvhost_gating_register *regs = pdata->engine_cg_regs;
-
-	if (!regs)
-		return;
-
-	while (regs->addr) {
-		if (prod)
-			nvdla_device_register_write(pdev, regs->addr,
-				regs->prod);
-		else
-			nvdla_device_register_write(pdev, regs->addr,
-				regs->disable);
-		regs++;
-	}
+	(void) pdev;
+	(void) prod;
 }
 
 void nvdla_module_reset(struct platform_device *pdev, bool reboot)
@@ -424,7 +432,8 @@ int nvdla_module_runtime_suspend(struct device *dev)
 		}
 	}
 
-	if (pdata->class != NV_DLA0_SIM_CLASS_ID)
+	if ((pdata->class != NV_DLA0_SIM_CLASS_ID) ||
+		(pdata->class == NV_DLA1_SIM_CLASS_ID))
 		clk_bulk_disable_unprepare(pdata->num_clks, pdata->clks);
 
 	return 0;
@@ -439,7 +448,8 @@ int nvdla_module_runtime_resume(struct device *dev)
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	int err = 0;
 
-	if (pdata->class != NV_DLA0_SIM_CLASS_ID) {
+	if ((pdata->class != NV_DLA0_SIM_CLASS_ID) ||
+		(pdata->class == NV_DLA1_SIM_CLASS_ID)) {
 		err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
 		if (err < 0) {
 			dev_err(&pdev->dev, "failed to enabled clocks: %d\n", err);

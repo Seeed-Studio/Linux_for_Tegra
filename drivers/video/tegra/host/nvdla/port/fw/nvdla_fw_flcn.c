@@ -5,6 +5,7 @@
  */
 
 #include "../nvdla_fw.h"
+#include "../nvdla_host_wrapper.h"
 
 #include "../nvdla_device.h"
 #include "../../dla_os_interface.h"
@@ -16,7 +17,6 @@
 #include <linux/errno.h>
 #include <linux/jiffies.h>
 #include <linux/mutex.h>
-#include <linux/nvhost.h>
 
 int32_t nvdla_fw_poweron(struct platform_device *pdev)
 {

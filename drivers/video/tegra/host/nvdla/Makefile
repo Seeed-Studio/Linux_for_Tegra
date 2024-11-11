@@ -30,4 +30,7 @@ nvhost-nvdla-objs += dla_channel.o
 endif
 
 obj-m += nvhost-nvdla.o
+
+ifeq ($(NV_BUILD_CONFIGURATION_EXPOSING_T26X), 1)
 obj-m += axi/
+endif

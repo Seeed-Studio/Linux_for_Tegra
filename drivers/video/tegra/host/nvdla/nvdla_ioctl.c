@@ -1354,7 +1354,7 @@ static int nvdla_release(struct inode *inode, struct file *file)
 	}
 
 	nvdla_buffer_release(priv->buffers);
-	nvhost_module_remove_client(pdev, priv);
+	nvdla_module_client_unregister(pdev, priv);
 
 	kfree(priv);
 	return 0;

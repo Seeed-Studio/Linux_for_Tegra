@@ -7,20 +7,19 @@
 #ifndef __NVHOST_NVDLA_T25X_H__
 #define __NVHOST_NVDLA_T25X_H__
 
-#include <linux/nvhost.h>
+#include "port/nvdla_host_wrapper.h"
 #include <dt-bindings/interconnect/tegra_icc_id.h>
 
 #include "nvdla.h"
 #include "dla_t25x_fw_version.h"
 
-/* REVISIT the registers */
-static struct nvhost_gating_register nvdla_t25x_gating_registers[] = {
-	{}
-};
-
 static struct nvhost_device_data t25x_nvdla0_info = {
 	.devfs_name_family	= "nvdla",
+#if defined(BUG_4972382) && (BUG_4972382 == 1)
+	.class			= NV_DLA0_SIM_CLASS_ID,
+#else
 	.class			= NV_DLA0_CLASS_ID,
+#endif /* BUG_4972382 */
 	.clocks			= {
 		{"nvdla0", UINT_MAX},
 		{"nvdla0_flcn", UINT_MAX}
@@ -40,8 +39,7 @@ static struct nvhost_device_data t25x_nvdla0_info = {
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= NULL,
 	.module_irq		= 1,
-	.engine_cg_regs		= nvdla_t25x_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 	.can_powergate		= true,
 	.icc_id			= TEGRA_ICC_DLA_0,
 	.transcfg_addr		= 0x0444,
@@ -51,7 +49,11 @@ static struct nvhost_device_data t25x_nvdla0_info = {
 
 static struct nvhost_device_data t25x_nvdla1_info = {
 	.devfs_name_family	= "nvdla",
+#if defined(BUG_4972382) && (BUG_4972382 == 1)
+	.class			= NV_DLA1_SIM_CLASS_ID,
+#else
 	.class			= NV_DLA1_CLASS_ID,
+#endif /* BUG_4972382 */
 	.clocks			= {
 		{"nvdla1", UINT_MAX},
 		{"nvdla1_flcn", UINT_MAX}
@@ -71,8 +73,7 @@ static struct nvhost_device_data t25x_nvdla1_info = {
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= NULL,
 	.module_irq		= 1,
-	.engine_cg_regs		= nvdla_t25x_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 	.can_powergate		= true,
 	.icc_id			= TEGRA_ICC_DLA_1,
 	.transcfg_addr		= 0x0444,

@@ -71,6 +71,7 @@ enum {
 	NV_DLA0_CLASS_ID		= 0xF3,
 	NV_DLA1_CLASS_ID		= 0xF4,
 	NV_DLA0_SIM_CLASS_ID		= 0xF5,
+	NV_DLA1_SIM_CLASS_ID		= 0xF6,
 };
 
 /**

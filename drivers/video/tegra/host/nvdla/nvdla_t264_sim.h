@@ -7,16 +7,11 @@
 #ifndef __NVHOST_NVDLA_T264_SIM_H__
 #define __NVHOST_NVDLA_T264_SIM_H__
 
-#include <linux/nvhost.h>
+#include "port/nvdla_host_wrapper.h"
 #include <dt-bindings/interconnect/tegra_icc_id.h>
 
 #include "nvdla.h"
 #include "dla_t25x_fw_version.h"
-
-/* REVISIT the registers */
-static struct nvhost_gating_register nvdla_t264_gating_registers[] = {
-	{}
-};
 
 static struct nvhost_device_data t264_sim_nvdla0_info = {
 	.devfs_name_family	= "nvdla",
@@ -40,8 +35,7 @@ static struct nvhost_device_data t264_sim_nvdla0_info = {
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= NULL,
 	.module_irq		= 1,
-	.engine_cg_regs		= nvdla_t264_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 	.can_powergate		= true,
 	.icc_id			= TEGRA_ICC_DLA_0,
 	.transcfg_addr		= 0x0444,

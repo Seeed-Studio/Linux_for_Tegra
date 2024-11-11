@@ -7,7 +7,7 @@
 #ifndef __NVHOST_NVDLA_T234_H__
 #define __NVHOST_NVDLA_T234_H__
 
-#include <linux/nvhost.h>
+#include "port/nvdla_host_wrapper.h"
 #include <dt-bindings/interconnect/tegra_icc_id.h>
 
 #include "nvdla.h"

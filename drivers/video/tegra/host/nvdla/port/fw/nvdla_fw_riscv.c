@@ -5,6 +5,7 @@
  */
 
 #include "../nvdla_fw.h"
+#include "../nvdla_host_wrapper.h"
 
 #include "nvdla_fw_riscv_reg.h"
 
@@ -17,7 +18,6 @@
 #include <linux/firmware.h>
 #include <linux/interrupt.h>
 #include <linux/iopoll.h>
-#include <linux/nvhost.h>
 
 #define DLA_UCODE_BIN_HEADER_MAGIC 0x10fe
 #define DLA_BOOTVECTOR_LO 0x100000
@@ -187,6 +187,17 @@ static uint32_t s_riscv_read(struct riscv *riscv, uint32_t offset)
 	return readl(riscv->regs + offset);
 }
 
+static int32_t s_riscv_wait_mthdid_idle(struct riscv *riscv)
+{
+	uint32_t value;
+
+	return readl_poll_timeout(riscv->regs + riscv_mthdid_r(),
+			value,
+			(riscv_mthdid_wpend_v(value) == riscv_mthdid_wpend_done_v()),
+			10 /* sleep in us */,
+			100000 /* timeout in us*/);
+}
+
 static int32_t s_riscv_wait_idle(struct riscv *riscv)
 {
 	uint32_t value;
@@ -354,6 +365,7 @@ static int32_t s_riscv_finalize_poweron(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct riscv *riscv = (struct riscv *) pdata->falcon_data;
 	int err;
+	bool skip_boot = false;
 
 	err = s_riscv_load_firmware(riscv, pdata->firmware_name);
 	if (err < 0) {
@@ -364,16 +376,33 @@ static int32_t s_riscv_finalize_poweron(struct platform_device *pdev)
 	nvdla_device_register_write(pdev, pdata->transcfg_addr,
 		pdata->transcfg_val);
 
-	err = s_riscv_boot(riscv);
-	if (err < 0) {
-		nvdla_dbg_err(pdev, "boot err: %d\n", err);
-		goto unload_firmware;
-	}
+#if defined(BUG_4960393) && (BUG_4960393 == 1)
+	if ((pdata->class == NV_DLA0_SIM_CLASS_ID) ||
+		(pdata->class == NV_DLA1_SIM_CLASS_ID)) {
+		uint32_t bcr_ctrl;
 
-	err = s_riscv_wait_idle(riscv);
-	if (err < 0) {
-		nvdla_dbg_err(pdev, "boot timed out\n");
-		goto unload_firmware;
+		bcr_ctrl = s_riscv_read(riscv, riscv_bcr_ctrl_r());
+		if (riscv_bcr_ctrl_valid_v(bcr_ctrl) ==
+			riscv_bcr_ctrl_valid_true_v()) {
+			dev_warn(riscv->dev, "uC will continue from halt.\n");
+			dev_warn(riscv->dev, "Skipping uC boot.\n");
+			skip_boot = true;
+		}
+	}
+#endif /* BUG_4960393 */
+
+	if (!skip_boot) {
+		err = s_riscv_boot(riscv);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "boot err: %d\n", err);
+			goto unload_firmware;
+		}
+
+		err = s_riscv_wait_idle(riscv);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "boot timed out\n");
+			goto unload_firmware;
+		}
 	}
 
 	if (pdata->flcn_isr)
@@ -555,6 +584,7 @@ int32_t nvdla_fw_send_cmd(struct platform_device *pdev,
 	unsigned long timeout;
 	int ret = 0;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct riscv *riscv = (struct riscv *) pdata->falcon_data;
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 	uint32_t method_id = cmd_data->method_id;
 	uint32_t method_data = cmd_data->method_data;
@@ -568,7 +598,8 @@ int32_t nvdla_fw_send_cmd(struct platform_device *pdev,
 	if (!nvdla_dev->available) {
 		nvdla_dbg_err(pdev, "Command failed: device unavailable\n");
 		mutex_unlock(&nvdla_dev->cmd_lock);
-		return -EAGAIN;
+		ret = -EAGAIN;
+		goto fail;
 	}
 
 	/*
@@ -578,6 +609,13 @@ int32_t nvdla_fw_send_cmd(struct platform_device *pdev,
 	if (wait)
 		method_id |= (1 << DLA_INT_ON_COMPLETE_SHIFT) |
 					(1 << DLA_INT_ON_ERROR_SHIFT);
+
+	ret = s_riscv_wait_mthdid_idle(riscv);
+	if (ret < 0) {
+		nvdla_dbg_err(pdev, "mthdid timed out\n");
+		mutex_unlock(&nvdla_dev->cmd_lock);
+		goto fail;
+	}
 
 	nvdla_dev->waiting = 1;
 
@@ -598,7 +636,8 @@ int32_t nvdla_fw_send_cmd(struct platform_device *pdev,
 	}
 
 	if (nvdla_dev->cmd_status != DLA_ERR_NONE) {
-		nvdla_dbg_err(pdev, "Command %u failed\n", method_id);
+		nvdla_dbg_err(pdev, "Command %u failed (status:%x)\n",
+			method_id, nvdla_dev->cmd_status);
 		ret = -EINVAL;
 		goto reset_cmd_status;
 	}
@@ -610,6 +649,7 @@ unlock_cmd:
 	mutex_unlock(&nvdla_dev->cmd_lock);
 reset_waiting_status:
 	nvdla_dev->waiting = 0;
+fail:
 	return ret;
 }
 

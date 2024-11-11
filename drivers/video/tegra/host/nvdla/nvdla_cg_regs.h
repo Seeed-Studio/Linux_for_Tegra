@@ -1,12 +1,12 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA Corporation.  All rights reserved.
+/* SPDX-License-Identifier: LicenseRef-NvidiaProprietary */
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
  */
 
 #ifndef __NVHOST_NVDLA_CG_REGS_H__
 #define __NVHOST_NVDLA_CG_REGS_H__
 
-#include <linux/nvhost.h>
+#include "port/nvdla_host_wrapper.h"
 
 static struct nvhost_gating_register __attribute__((__unused__))
 	nvdla_gating_registers[] = {

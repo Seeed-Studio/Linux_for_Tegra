@@ -13,7 +13,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/debugfs.h>
 
-#include <linux/nvhost.h>
+#include "port/nvdla_host_wrapper.h"
 
 #if IS_ENABLED(CONFIG_TEGRA_NVDLA_CHANNEL)
 #include "nvhost_job.h"

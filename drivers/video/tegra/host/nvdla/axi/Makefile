@@ -15,6 +15,9 @@ ccflags-y += -I$(srctree.nvidia-oot)/drivers/video/tegra/host/nvdla
 ccflags-y += -I$(srctree.nvidia-oot)/drivers/video/tegra/host/nvdla/port/fw
 endif
 
+LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-emu/include
+ccflags-y += -DCONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
+
 #
 # axi-nvdla.ko
 #
@@ -23,12 +26,14 @@ ccflags-y += -DNVDLA_HAVE_CONFIG_AXI=1
 ccflags-y += -DNVDLA_HAVE_CONFIG_SYNCPTFD=0
 ccflags-y += -DNVDLA_HAVE_CONFIG_HSIERRINJ=0
 ccflags-y += -DBUG_4942853=1
+ccflags-y += -DBUG_4960393=1
+ccflags-y += -DBUG_4972382=1
 
 NVDLA_OBJS := \
 	$(NVDLA_COMMON_OBJS) \
 	port/device/nvdla_device_axi.o \
 	port/fw/nvdla_fw_riscv.o \
-	port/sync/nvdla_sync_stub.o
+	port/sync/nvdla_sync_syncpt_emu.o
 
 # Duplicate source file for forcing compilation.
 NVDLA_OBJS := $(addprefix $(NVDLA_TOP)/,$(NVDLA_OBJS))

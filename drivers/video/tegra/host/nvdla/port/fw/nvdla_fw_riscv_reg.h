@@ -50,6 +50,18 @@ static inline uint32_t riscv_mthdid_r(void)
 	return 0x00000068U;
 }
 
+static inline uint32_t riscv_mthdid_wpend_v(uint32_t r)
+{
+	/* NV_PNVDLA_FALCON_MTHDID_WPEND (16:16) */
+	return ((r >> 0x10) & 0x1);
+}
+
+static inline uint32_t riscv_mthdid_wpend_done_v(void)
+{
+	/* NV_PNVDLA_FALCON_MTHDID_WPEND_DONE (16:16) */
+	return 0x0U;
+}
+
 static inline uint32_t riscv_mailbox0_r(void)
 {
 	/* NV_PNVDLA_FALCON_MAILBOX0 */

@@ -6,7 +6,7 @@
 
 #include <linux/platform_device.h>
 #include <linux/debugfs.h>
-#include <linux/nvhost.h>
+#include "port/nvdla_host_wrapper.h"
 #include <linux/uaccess.h>
 #include <linux/delay.h>
 #include <linux/version.h>

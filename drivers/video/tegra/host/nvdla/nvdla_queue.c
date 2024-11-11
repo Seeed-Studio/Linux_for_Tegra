@@ -728,8 +728,13 @@ static int nvdla_fill_signal_fence_action(struct nvdla_task *task,
 
 		/* For postaction also update MSS addr */
 		syncpt_addr = nvdla_sync_get_address(queue->sync_context);
+#if defined(NVDLA_HAVE_CONFIG_AXI) && (NVDLA_HAVE_CONFIG_AXI == 1)
+		next = add_fence_action(next, ACTION_INCREMENT_SEM,
+				syncpt_addr, 1);
+#else
 		next = add_fence_action(next, ACTION_WRITE_SEM,
 				syncpt_addr, 1);
+#endif /* NVDLA_HAVE_CONFIG_AXI */
 
 		task->fence_counter = task->fence_counter + 1;
 
