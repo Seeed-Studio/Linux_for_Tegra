@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
-#include <nvidia/conftest.h>
-
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ */
 #include <linux/debugfs.h>
 #include <linux/module.h>
 #include <linux/msi.h>
@@ -350,11 +349,7 @@ static const struct pci_epf_device_id pcie_dma_epf_sanity_ids[] = {
 };
 
 static const struct pci_epc_event_ops pci_epf_dma_sanity_event_ops = {
-#if defined(NV_PCI_EPC_EVENT_OPS_STRUCT_HAS_EPC_INIT) /* Linux v6.11 */
-	.epc_init = pcie_epf_dma_sanity_core_init,
-#else
 	.core_init = pcie_epf_dma_sanity_core_init,
-#endif
 };
 
 static struct pci_epf_ops ops = {
