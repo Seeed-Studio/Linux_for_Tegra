@@ -8,7 +8,6 @@ endif
 obj-m += nvsciipc/
 ifdef CONFIG_PCI
 obj-m += tegra-pcie-dma-test.o
-obj-m += tegra-pcie-dma-sanity-test.o
 endif
 obj-m += bluedroid_pm.o
 obj-m += nvscic2c-pcie/
