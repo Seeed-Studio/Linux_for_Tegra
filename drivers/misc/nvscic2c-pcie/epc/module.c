@@ -435,7 +435,7 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 	if (ret)
 		goto err_request_region;
 
-	win_size = pci_resource_len(pdev, drv_ctx->bar);
+	win_size = pci_resource_len(pdev, 0U);
 	ret = allocate_inbound_area(pdev, win_size, &drv_ctx->self_mem);
 	if (ret)
 		goto err_alloc_inbound;
@@ -545,7 +545,7 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 	timeout =
 	wait_for_completion_timeout(&drv_ctx->epc_ctx->epf_ready_cmpl,
 				    msecs_to_jiffies(MAX_EPF_SETUP_TIMEOUT_MSEC));
-	if (timeout == 0) {
+	if (timeout == 0U) {
 		ret = -ENOLINK;
 		pr_err("(%s): Timed-out waiting for nvscic2c-pcie-epf\n",
 		       drv_ctx->drv_name);

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  */
 
 #ifndef __UAPI_NVSCIC2C_PCIE_IOCTL_H__
@@ -214,7 +215,7 @@ union nvscic2c_pcie_ioctl_arg_max_size {
 };
 
 /* IOCTL magic number - seen available in ioctl-number.txt*/
-#define NVSCIC2C_PCIE_IOCTL_MAGIC    0xC2
+#define NVSCIC2C_PCIE_IOCTL_MAGIC    0xC2U
 
 #define NVSCIC2C_PCIE_IOCTL_GET_INFO \
 	_IOWR(NVSCIC2C_PCIE_IOCTL_MAGIC, 1,\
@@ -230,42 +231,42 @@ union nvscic2c_pcie_ioctl_arg_max_size {
  * Pin/Map Mem or Sync objects.
  */
 #define NVSCIC2C_PCIE_IOCTL_MAP \
-	_IOWR(NVSCIC2C_PCIE_IOCTL_MAGIC, 3,\
+	_IOWR(NVSCIC2C_PCIE_IOCTL_MAGIC, 3U,\
 	      struct nvscic2c_pcie_map_obj_args)
 
 /**
  * Get Export descriptor for Target/Remote Mem/Sync objects.
  */
 #define NVSCIC2C_PCIE_IOCTL_GET_AUTH_TOKEN \
-	_IOWR(NVSCIC2C_PCIE_IOCTL_MAGIC, 4,\
+	_IOWR(NVSCIC2C_PCIE_IOCTL_MAGIC, 4U,\
 	      struct nvscic2c_pcie_export_obj_args)
 
 /**
  * Get Handle from the imported export descriptor.
  */
 #define NVSCIC2C_PCIE_IOCTL_GET_HANDLE \
-	_IOWR(NVSCIC2C_PCIE_IOCTL_MAGIC, 5,\
+	_IOWR(NVSCIC2C_PCIE_IOCTL_MAGIC, 5U,\
 	      struct nvscic2c_pcie_import_obj_args)
 
 /**
  * Free the Mapped/Pinned Source, Target or Imported Mem or Sync object handle.
  */
 #define NVSCIC2C_PCIE_IOCTL_FREE \
-	_IOW(NVSCIC2C_PCIE_IOCTL_MAGIC, 6,\
+	_IOW(NVSCIC2C_PCIE_IOCTL_MAGIC, 6U,\
 	      struct nvscic2c_pcie_free_obj_args)
 
 /**
  * Submit a Copy request for transfer.
  */
 #define NVSCIC2C_PCIE_IOCTL_SUBMIT_COPY_REQUEST \
-	_IOW(NVSCIC2C_PCIE_IOCTL_MAGIC, 7,\
+	_IOW(NVSCIC2C_PCIE_IOCTL_MAGIC, 7U,\
 	      struct nvscic2c_pcie_submit_copy_args)
 
 /**
  * Set the maximum possible outstanding copy requests that can be submitted.
  */
 #define NVSCIC2C_PCIE_IOCTL_MAX_COPY_REQUESTS \
-	_IOW(NVSCIC2C_PCIE_IOCTL_MAGIC, 8,\
+	_IOW(NVSCIC2C_PCIE_IOCTL_MAGIC, 8U,\
 	      struct nvscic2c_pcie_max_copy_args)
 
 #define NVSCIC2C_PCIE_IOCTL_NUMBER_MAX 8

@@ -26,11 +26,11 @@
 #define SOC_ID_PROP_NAME		("nvidia,soc-id")
 #define CNTRLR_ID_PROP_NAME		("nvidia,cntrlr-id")
 #define ENDPOINT_DB_PROP_NAME		("nvidia,endpoint-db")
-#define MAX_PROP_LEN			(1024)
-#define FRAME_SZ_ALIGN			(64)
+#define MAX_PROP_LEN			(1024U)
+#define FRAME_SZ_ALIGN			(64U)
 
 #define MAX_FRAME_SZ			(SZ_32K)
-#define MAX_NFRAMES			(64)
+#define MAX_NFRAMES			(64U)
 #define MIN_BAR_WIN_SZ			(SZ_64M)
 
 /*
@@ -435,7 +435,7 @@ parse_bar_win_size(struct driver_param_t *drv_param)
 		       drv_param->bar_win_size);
 		goto err;
 	}
-	if (drv_param->bar_win_size & (drv_param->bar_win_size - 1)) {
+	if (drv_param->bar_win_size & (drv_param->bar_win_size - 1U)) {
 		ret = -EINVAL;
 		pr_err("BAR window size: (%u) not a power of 2\n",
 		       drv_param->bar_win_size);
@@ -467,13 +467,13 @@ validate_endpoint_prop(struct endpoint_prop_t *prop)
 	if ((prop->name[0] == '\0')) {
 		ret = -EINVAL;
 		pr_err("Endpoint must have a name\n");
-	} else if (prop->nframes == 0) {
+	} else if (prop->nframes == 0U) {
 		ret = -EINVAL;
 		pr_err("(%s): Invalid number of frames\n", prop->name);
-	} else if (prop->frame_sz == 0) {
+	} else if (prop->frame_sz == 0U) {
 		ret = -EINVAL;
 		pr_err("(%s): Invalid frame size\n", prop->name);
-	} else if ((prop->frame_sz & (FRAME_SZ_ALIGN - 1)) != 0) {
+	} else if ((prop->frame_sz & (FRAME_SZ_ALIGN - 1U)) != 0U) {
 		ret = -EINVAL;
 		pr_err("(%s): Frame size unaligned to (%u)\n",
 		       prop->name, FRAME_SZ_ALIGN);
@@ -511,7 +511,7 @@ parse_endpoint_db(struct driver_param_t *drv_param)
 	}
 	nr_endpoint = ret;
 
-	if (nr_endpoint == 0) {
+	if (nr_endpoint == 0U) {
 		ret = -EINVAL;
 		pr_err("No endpoint information in property: (%s)\n",
 		       ENDPOINT_DB_PROP_NAME);
@@ -541,7 +541,7 @@ parse_endpoint_db(struct driver_param_t *drv_param)
 			 * per endpoint entry in endpointdb is longer than
 			 * expected.
 			 */
-			if (strlen(entry) > (MAX_PROP_LEN - 1)) {
+			if (strlen(entry) > (MAX_PROP_LEN - 1U)) {
 				ret = -EINVAL;
 				pr_err("Endpoint entry invalid\n");
 				break;
@@ -556,7 +556,7 @@ parse_endpoint_db(struct driver_param_t *drv_param)
 				pr_err("Error parsing endpoint name\n");
 				break;
 			}
-			if (strlen(name) > (NAME_MAX - 1)) {
+			if (strlen(name) > (NAME_MAX - 1U)) {
 				ret = -EINVAL;
 				pr_err("Endpoint name: (%s) long, max char:(%u)\n",
 				       name, (NAME_MAX - 1));

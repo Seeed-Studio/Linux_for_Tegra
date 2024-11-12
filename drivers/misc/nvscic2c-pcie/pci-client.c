@@ -677,7 +677,7 @@ pci_client_change_link_status(void *pci_client_h,
 
 	/* interrupt registered users. */
 	mutex_lock(&ctx->event_tbl_lock);
-	for (i = 0; i < MAX_LINK_EVENT_USERS; i++) {
+	for (i = 0U; i < MAX_LINK_EVENT_USERS; i++) {
 		event = &ctx->event_tbl[i];
 		if (atomic_read(&event->in_use)) {
 			ops = &event->cb_ops;

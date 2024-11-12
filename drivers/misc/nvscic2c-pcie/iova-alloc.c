@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: iova-alloc: " fmt
 #include <linux/iommu.h>
@@ -95,7 +98,7 @@ iova_alloc_init(struct device *dev, size_t size, dma_addr_t *dma_handle,
 	iova_len = size >> shift;
 
 	/* Recommendation is to allocate in power of 2.*/
-	if (iova_len < (1 << (IOVA_RANGE_CACHE_MAX_SIZE - 1)))
+	if (iova_len < (1U << (IOVA_RANGE_CACHE_MAX_SIZE - 1U)))
 		iova_len = roundup_pow_of_two(iova_len);
 
 	if (*ivd_ctx->dev->dma_mask)

@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #ifndef __DESCRIPTOR_H__
 #define __DESCRIPTOR_H__
@@ -9,7 +12,7 @@
 #include "common.h"
 
 /* Magic code for descriptor.*/
-#define DESC_MAGIC_CODE_32BIT	(0x69152734)
+#define DESC_MAGIC_CODE_32BIT	(0x69152734UL)
 
 /*
  * Format of Export Descriptor (at the moment)

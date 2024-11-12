@@ -42,7 +42,7 @@
  * after few retries.
  */
 #define COMM_CHANNEL_NFRAMES	(1024)
-#define COMM_CHANNEL_FRAME_SZ	(64)
+#define COMM_CHANNEL_FRAME_SZ	(64U)
 
 /* fifo header.*/
 struct header {
@@ -170,7 +170,7 @@ can_recv(struct fifo_t *fifo, int *ret)
 	bool recv = false;
 	u32 toread = (fifo->recv_hdr->wr_count - fifo->local_hdr->rd_count);
 
-	if (toread == 0) {
+	if (toread == 0U) {
 		/* no frame available to read.*/
 		recv = false;
 		*ret = -ENODATA;
@@ -231,7 +231,7 @@ send_msg(struct comm_channel_ctx_t *comm_ctx, struct comm_msg *msg)
 		writel(0x1, syncpt->peer_mem.pva);
 	}
 
-	fifo->wr_pos = fifo->wr_pos + 1;
+	fifo->wr_pos = fifo->wr_pos + 1U;
 	if (fifo->wr_pos >= fifo->nframes)
 		fifo->wr_pos = 0;
 
@@ -335,7 +335,7 @@ recv_taskfn(void *arg)
 
 			/* do not noifty peer for space availability. */
 
-			fifo->rd_pos = fifo->rd_pos + 1;
+			fifo->rd_pos = fifo->rd_pos + 1U;
 			if (fifo->rd_pos >= fifo->nframes)
 				fifo->rd_pos = 0;
 		}

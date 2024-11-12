@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #ifndef __IOVA_ALLOC_H__
 #define __IOVA_ALLOC_H__
@@ -37,7 +40,7 @@ iova_alloc_deinit(dma_addr_t dma_handle, size_t size,
 		  struct iova_alloc_domain_t **ivd_h);
 
 #ifndef IOVA_RANGE_CACHE_MAX_SIZE
-#define IOVA_RANGE_CACHE_MAX_SIZE 6 /* log of max cached IOVA range size (in pages) */
+#define IOVA_RANGE_CACHE_MAX_SIZE 6U /* log of max cached IOVA range size (in pages) */
 #endif
 
 #endif //__IOVA_ALLOC_H__

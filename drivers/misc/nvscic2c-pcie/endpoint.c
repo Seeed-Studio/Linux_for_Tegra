@@ -1053,11 +1053,11 @@ endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 	if (WARN_ON(!drv_ctx || !endpoints_h || *endpoints_h))
 		return -EINVAL;
 
-	if (WARN_ON(drv_ctx->drv_param.nr_endpoint == 0 ||
+	if (WARN_ON(drv_ctx->drv_param.nr_endpoint == 0U ||
 		    drv_ctx->drv_param.nr_endpoint > MAX_ENDPOINTS))
 		return -EINVAL;
 
-	if (WARN_ON(strlen(drv_ctx->drv_name) > (NAME_MAX - 1)))
+	if (WARN_ON(strlen(drv_ctx->drv_name) > (NAME_MAX - 1U)))
 		return -EINVAL;
 
 	/* start by allocating the endpoint driver (global for all eps) ctx.*/
@@ -1114,7 +1114,7 @@ endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 		/* set index of the msi-x interruper vector
 		 * where the first one is reserved for comm-channel
 		 */
-		endpoint->msi_irq = i + 1;
+		endpoint->msi_irq = i + 1U;
 		stream_ext_params->local_node = &drv_ctx->drv_param.local_node;
 		stream_ext_params->peer_node = &drv_ctx->drv_param.peer_node;
 		stream_ext_params->host1x_pdev = drv_ctx->drv_param.host1x_pdev;

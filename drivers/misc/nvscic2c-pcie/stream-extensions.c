@@ -412,9 +412,9 @@ ioctl_export_obj(struct stream_ext_ctx_t *ctx,
 		return ret;
 
 	/* only target/remote can be exported.*/
-	if (args->obj_type == NVSCIC2C_PCIE_OBJ_TYPE_TARGET_MEM)
+	if (args->obj_type == (__s32)NVSCIC2C_PCIE_OBJ_TYPE_TARGET_MEM)
 		export_type = STREAM_OBJ_TYPE_MEM;
-	else if (args->obj_type == NVSCIC2C_PCIE_OBJ_TYPE_REMOTE_SYNC)
+	else if (args->obj_type == (__s32)NVSCIC2C_PCIE_OBJ_TYPE_REMOTE_SYNC)
 		export_type = STREAM_OBJ_TYPE_SYNC;
 	else
 		return -EINVAL;
@@ -646,7 +646,7 @@ ioctl_set_max_copy_requests(struct stream_ext_ctx_t *ctx,
 	struct copy_request *cr = NULL;
 	struct list_head *curr = NULL, *next = NULL;
 
-	if (ctx->aperture_limit == 0) {
+	if (ctx->aperture_limit == 0U) {
 		pr_err("Err: Streaming is not supported in this Endpoint: %s\n", ctx->ep_name);
 		return -EINVAL;
 	}
@@ -1277,17 +1277,17 @@ validate_flush_range(struct stream_ext_ctx_t *ctx,
 	struct file *filep = NULL;
 	struct stream_ext_obj *stream_obj = NULL;
 
-	if (flush_range->size <= 0)
+	if (flush_range->size <= 0U)
 		return -EINVAL;
 
 	/* eDMA expects u32 datatype.*/
 	if (flush_range->size > U32_MAX)
 		return -EINVAL;
 
-	if (flush_range->size & 0x3)
+	if (flush_range->size & 0x3U)
 		return -EINVAL;
 
-	if (flush_range->offset & 0x3)
+	if (flush_range->offset & 0x3U)
 		return -EINVAL;
 
 	ret = validate_handle(ctx, flush_range->src_handle,
@@ -1450,7 +1450,7 @@ allocate_copy_request(struct stream_ext_ctx_t *ctx,
 
 	/* flush range has two handles: src, dst + all possible post_fences.*/
 	cr->handles = kzalloc((sizeof(*cr->handles) *
-				((2 * ctx->cr_limits.max_flush_ranges) +
+				((2U * ctx->cr_limits.max_flush_ranges) +
 				(ctx->cr_limits.max_post_fences))),
 				GFP_KERNEL);
 	if (WARN_ON(!cr->handles)) {

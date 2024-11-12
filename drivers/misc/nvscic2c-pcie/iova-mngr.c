@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: iova-mgr: " fmt
 
@@ -308,7 +311,7 @@ iova_mngr_init(char *name, u64 base_address, size_t size, void **mngr_handle)
 		goto err;
 	}
 
-	if (strlen(name) > (NAME_MAX - 1)) {
+	if (strlen(name) > (NAME_MAX - 1U)) {
 		ret = -EINVAL;
 		pr_err("name: (%s) long, max char:(%u)\n", name, (NAME_MAX - 1));
 		goto err;

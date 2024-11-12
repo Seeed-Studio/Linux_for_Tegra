@@ -16,8 +16,8 @@
 #define DRIVER_NAME_EPC		"nvscic2c-pcie-epc"
 
 /* STREAM_OBJ_TYPE. */
-#define STREAM_OBJ_TYPE_MEM	(0)
-#define STREAM_OBJ_TYPE_SYNC	(1)
+#define STREAM_OBJ_TYPE_MEM	(0U)
+#define STREAM_OBJ_TYPE_SYNC	(1U)
 
 /*
  * This capped number shall be used to derive export descriptor, therefore any
@@ -38,8 +38,8 @@
  * change should be evaluated thoroughly.
  */
 #define MAX_BOARDS		(16)
-#define MAX_SOCS		(16)
-#define MAX_PCIE_CNTRLRS	(16)
+#define MAX_SOCS		(16U)
+#define MAX_PCIE_CNTRLRS	(16U)
 
 /*
  * Maximum NvSciIpc INTER_CHHIP(NvSciC2cPcie) endpoints that can be supported
@@ -50,7 +50,7 @@
  * This capped number shall be used to derive export descriptor, therefore any
  * change should be evaluated thoroughly.
  */
-#define MAX_ENDPOINTS		(16)
+#define MAX_ENDPOINTS		(16U)
 
 /*
  * Each NvSciIpc INTER_CHIP(NvSciC2cPcie) endpoint shall require at least one
@@ -66,7 +66,7 @@
 #define MIN_NUM_NOTIFY		(MAX_ENDPOINTS + (2))
 
 /* NvRmHost1xSyncpointShim have size: 64KB on Orin.*/
-#define SP_SIZE			(0x10000)
+#define SP_SIZE			(0x10000UL)
 
 /*
  * Represents SyncpointShimBase on all T234.
@@ -89,9 +89,9 @@
  * These are three PCI Function Device ID's to be configured in PCI header
  * when Tegra acting as PCI Function to peer Tegra acting as PCI RP.
  */
-#define PCI_DEVICE_ID_C2C_1	(0x22CB)
-#define PCI_DEVICE_ID_C2C_2	(0x22CC)
-#define PCI_DEVICE_ID_C2C_3	(0x22CD)
+#define PCI_DEVICE_ID_C2C_1	(0x22CBU)
+#define PCI_DEVICE_ID_C2C_2	(0x22CCU)
+#define PCI_DEVICE_ID_C2C_3	(0x22CDU)
 
 /*
  * For NvStreams extensions over NvSciC2cPcie, an endpoint is a producer on
