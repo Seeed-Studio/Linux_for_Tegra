@@ -343,12 +343,12 @@ next_ch:
 		goto next_ch;
 	}
 	else {
-		printk("%s: scan done\n", __func__);
+		PHL_INFO("%s: scan done\n", __func__);
 		return NULL;
 	}
 
 	param->done_num = param->ch_num - sctrl->chlist.cnt;
-	printk("%s:[%d] idx=%d, r=%d, ch=%d, p=%d\n", __func__,
+	PHL_INFO("%s:[%d] idx=%d, r=%d, ch=%d, p=%d\n", __func__,
 		band_idx, sctrl->ch_idx, sctrl->chlist.cnt, sctrl->scan_ch->channel,
 		phl_get_passing_time_ms(param->start_time));
 
