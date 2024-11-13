@@ -1451,13 +1451,15 @@ static const struct of_device_id host1x_drm_subdevs[] = {
 	{ .compatible = "nvidia,tegra194-nvdec", },
 	{ .compatible = "nvidia,tegra194-nvenc", },
 	{ .compatible = "nvidia,tegra194-nvjpg", },
+#ifndef CONFIG_TEGRA_DRM_NATIVE_DIS
 	{ .compatible = "nvidia,tegra234-vic", },
 	{ .compatible = "nvidia,tegra234-nvdec", },
 	{ .compatible = "nvidia,tegra234-nvenc", },
 	{ .compatible = "nvidia,tegra234-nvjpg", },
 	{ .compatible = "nvidia,tegra234-ofa", },
-	{ .compatible = "nvidia,tegra234-host1x-virtual-engine", },
 	{ .compatible = "nvidia,tegra264-vic", },
+#endif
+	{ .compatible = "nvidia,tegra234-host1x-virtual-engine", },
 	{ .compatible = "nvidia,tegra264-host1x-virtual-engine", },
 	{ /* sentinel */ }
 };
@@ -1481,11 +1483,13 @@ static struct platform_driver * const drivers[] = {
 	&tegra_sor_driver,
 	&tegra_gr2d_driver,
 	&tegra_gr3d_driver,
+#ifndef CONFIG_TEGRA_DRM_NATIVE_DIS
 	&tegra_vic_driver,
 	&tegra_nvdec_driver,
 	&tegra_nvenc_driver,
 	&tegra_nvjpg_driver,
 	&tegra_ofa_driver,
+#endif
 	&tegra_virt_engine_driver,
 };
 

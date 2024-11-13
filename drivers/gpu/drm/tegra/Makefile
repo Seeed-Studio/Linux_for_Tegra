@@ -26,6 +26,12 @@ tegra-drm-y := \
 	dpaux.o \
 	gr2d.o \
 	gr3d.o \
+	virt.o
+
+ifeq ($(CONFIG_TEGRA_DRM_NATIVE_DIS),y)
+ccflags-y += -DCONFIG_TEGRA_DRM_NATIVE_DIS
+else
+tegra-drm-y += \
 	falcon.o \
 	hwpm.o \
 	vic.o \
@@ -34,8 +40,8 @@ tegra-drm-y := \
 	nvjpg.o \
 	riscv.o \
 	util.o \
-	ofa.o \
-	virt.o
+	ofa.o
+endif
 
 tegra-drm-y += trace.o
 
