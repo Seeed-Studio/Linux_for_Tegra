@@ -230,12 +230,12 @@ int tegra_camera_update_isobw(void)
 
 	dev_dbg(info->dev, "%s:Set iso bw %lu kbyteps at %lu KHz\n",
 		__func__, bw, total_khz);
-#if !defined(CONFIG_TEGRA_BWMGR)
+
 	ret = clk_set_rate(info->iso_emc, total_khz * 1000);
 	if (ret)
 		dev_err(info->dev, "%s:Failed to set iso bw\n",
 			__func__);
-#endif
+
 	/*
 	 * Request to ISOMGR or ICC depending on chip version.
 	 */
