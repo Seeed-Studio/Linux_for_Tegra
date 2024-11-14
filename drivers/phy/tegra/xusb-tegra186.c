@@ -21,13 +21,17 @@
 /* FUSE USB_CALIB registers */
 #define HS_CURR_LEVEL_PADX_SHIFT(x)	((x) ? (11 + (x - 1) * 6) : 0)
 #define HS_CURR_LEVEL_PAD_MASK		0x3f
-#define HS_TERM_RANGE_ADJ_SHIFT		7
-#define HS_TERM_RANGE_ADJ_MASK		0xf
+#define HS_TERM_RANGE_ADJ_PADX_SHIFT(x)	((x) ? (5 + (x - 1) * 4) : 7)
+#define HS_TERM_RANGE_ADJ_PAD_MASK	0xf
 #define HS_SQUELCH_SHIFT		29
 #define HS_SQUELCH_MASK			0x7
 
 #define RPD_CTRL_SHIFT			0
 #define RPD_CTRL_MASK			0x1f
+#define REC_OS_PADX_SHIFT(x)	        (17 + (x) * 4)
+#define REC_OS_PAD_MASK		        0xf
+#define SQ_OS_PADX_SHIFT(x)	        ((x) * 8)
+#define SQ_OS_PAD_MASK		        0xff
 
 /* XUSB PADCTL registers */
 #define XUSB_PADCTL_USB2_PAD_MUX	0x4
@@ -81,6 +85,10 @@
 #define  USB2_OTG_PD_DR				BIT(2)
 #define  TERM_RANGE_ADJ(x)			(((x) & 0xf) << 3)
 #define  RPD_CTRL(x)				(((x) & 0x1f) << 26)
+
+#define XUSB_PADCTL_USB2_OTG_PADX_CTL3(x)	(0x94 + (x) * 0x40)
+#define  REC_OS(x)			        (((x) & 0xf) << 9)
+#define  SQ_OS(x)				(((x) & 0xff) << 14)
 
 #define XUSB_PADCTL_USB2_BIAS_PAD_CTL0		0x284
 #define  BIAS_PAD_PD				BIT(11)
@@ -254,8 +262,6 @@
 #define USB2_BIAS_PAD_CTL1_TRK_DONE_RESET_TIMER_FIELD_START	19
 #define USB2_BIAS_PAD_CTL1_TRK_DONE_RESET_TIMER_FIELD_WIDTH	7
 
-#define XUSB_PADCTL_USB2_OTG_PADX_CTL3(x)		(0x94 + (x) * 0x40)
-
 #define TEGRA186_LANE(_name, _offset, _shift, _mask, _type)		\
 	{								\
 		.name = _name,						\
@@ -269,8 +275,10 @@
 struct tegra_xusb_fuse_calibration {
 	u32 *hs_curr_level;
 	u32 hs_squelch;
-	u32 hs_term_range_adj;
+	u32 *hs_term_range_adj;
 	u32 rpd_ctrl;
+	u32 *sq_os;
+	u32 *rec_os;
 };
 
 struct tegra186_xusb_padctl_context {
@@ -967,10 +975,19 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
 	value &= ~TERM_RANGE_ADJ(~0);
-	value |= TERM_RANGE_ADJ(priv->calib.hs_term_range_adj);
+	value |= TERM_RANGE_ADJ(priv->calib.hs_term_range_adj[index]);
 	value &= ~RPD_CTRL(~0);
 	value |= RPD_CTRL(priv->calib.rpd_ctrl);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+
+	if (priv->calib.rec_os && priv->calib.sq_os) {
+		value = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL3(index));
+		value &= ~REC_OS(~0);
+		value |= REC_OS(priv->calib.rec_os[index]);
+		value &= ~SQ_OS(~0);
+		value |= SQ_OS(priv->calib.sq_os[index]);
+		padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL3(index));
+	}
 
 skip_fuse_calibration:
 	tegra186_utmi_pad_power_on(phy);
@@ -1495,13 +1512,18 @@ tegra186_xusb_read_fuse_calibration(struct tegra186_xusb_padctl *padctl)
 {
 	struct device *dev = padctl->base.dev;
 	unsigned int i, count;
-	u32 value, *level;
+	u32 value, *level, *hs_term_range_adj;
 	int err;
+	u32 chip_id = tegra_get_chip_id();
 
 	count = padctl->base.soc->ports.usb2.count;
 
 	level = devm_kcalloc(dev, count, sizeof(u32), GFP_KERNEL);
 	if (!level)
+		return -ENOMEM;
+
+	hs_term_range_adj = devm_kcalloc(dev, count, sizeof(u32), GFP_KERNEL);
+	if (!hs_term_range_adj)
 		return -ENOMEM;
 
 	err = tegra_fuse_readl(TEGRA_FUSE_SKU_CALIB_0, &value);
@@ -1519,18 +1541,65 @@ tegra186_xusb_read_fuse_calibration(struct tegra186_xusb_padctl *padctl)
 
 	padctl->calib.hs_squelch = (value >> HS_SQUELCH_SHIFT) &
 					HS_SQUELCH_MASK;
-	padctl->calib.hs_term_range_adj = (value >> HS_TERM_RANGE_ADJ_SHIFT) &
-						HS_TERM_RANGE_ADJ_MASK;
+
+	hs_term_range_adj[0] = (value >> HS_TERM_RANGE_ADJ_PADX_SHIFT(0)) &
+					HS_TERM_RANGE_ADJ_PAD_MASK;
 
 	err = tegra_fuse_readl(TEGRA_FUSE_USB_CALIB_EXT_0, &value);
-	if (err) {
-		dev_err(dev, "failed to read calibration fuse: %d\n", err);
-		return err;
-	}
+	if (err)
+		return dev_err_probe(dev, err,
+				     "failed to read EXT0 calibration fuse\n");
 
 	dev_dbg(dev, "FUSE_USB_CALIB_EXT_0 %#x\n", value);
 
 	padctl->calib.rpd_ctrl = (value >> RPD_CTRL_SHIFT) & RPD_CTRL_MASK;
+
+	for (i = 1; i < count; i++) {
+		if (chip_id && chip_id > TEGRA186)
+			hs_term_range_adj[i] = (value >> HS_TERM_RANGE_ADJ_PADX_SHIFT(i)) &
+						    HS_TERM_RANGE_ADJ_PAD_MASK;
+		else
+			hs_term_range_adj[i] = hs_term_range_adj[0];
+	}
+
+	padctl->calib.hs_term_range_adj = hs_term_range_adj;
+
+	if (chip_id && chip_id > TEGRA234) {
+		u32 *sq_os, *rec_os;
+
+		sq_os = devm_kcalloc(dev, count, sizeof(u32), GFP_KERNEL);
+		if (!sq_os)
+			return -ENOMEM;
+
+		rec_os = devm_kcalloc(dev, count, sizeof(u32), GFP_KERNEL);
+		if (!rec_os)
+			return -ENOMEM;
+
+		for (i = 0; i < 3; i++)
+			rec_os[i] = (value >> REC_OS_PADX_SHIFT(i)) & REC_OS_PAD_MASK;
+
+		err = tegra_fuse_readl(TEGRA_FUSE_USB_CALIB_EXT3_0, &value);
+		if (err)
+			return dev_err_probe(dev, err,
+					     "failed to read EXT3 calibration fuse\n");
+
+		dev_dbg(dev, "FUSE_USB_CALIB_EXT3_0 %#x\n", value);
+
+		rec_os[3] = value & REC_OS_PAD_MASK;
+
+		err = tegra_fuse_readl(TEGRA_FUSE_USB_CALIB_EXT2_0, &value);
+		if (err)
+			return dev_err_probe(dev, err,
+					     "failed to read EXT2 calibration fuse\n");
+
+		dev_dbg(dev, "FUSE_USB_CALIB_EXT2_0 %#x\n", value);
+
+		for (i = 0; i < count; i++)
+			sq_os[i] = (value >> SQ_OS_PADX_SHIFT(i)) & SQ_OS_PAD_MASK;
+
+		padctl->calib.rec_os = rec_os;
+		padctl->calib.sq_os = sq_os;
+	}
 
 	return 0;
 }
