@@ -221,19 +221,6 @@ void dce_os_release_fw(struct tegra_dce *d, struct dce_firmware *fw)
 }
 
 /**
- * dce_os_get_phys_stream_id - Gets the physical stream ID to be programmed from
- * platform data.
- *
- * @d : Pointer to tegra_dce struct.
- *
- * Return : Stream ID Value
- */
-u8 dce_os_get_phys_stream_id(struct tegra_dce *d)
-{
-	return pdata_from_dce(d)->phys_stream_id;
-}
-
-/**
  * dce_os_get_dce_stream_id - Gets the dce stream ID to be programmed from
  * platform data.
  *
@@ -244,91 +231,6 @@ u8 dce_os_get_phys_stream_id(struct tegra_dce *d)
 u8 dce_os_get_dce_stream_id(struct tegra_dce *d)
 {
 	return pdata_from_dce(d)->stream_id;
-}
-
-/**
- * dce_os_get_fw_vm_index - Gets the VMIndex for the fw region to be
- * programmed from platform data.
- *
- * @d : Pointer to tegra_dce struct.
- *
- * Return : VMIndex
- */
-u8 dce_os_get_fw_vm_index(struct tegra_dce *d)
-{
-	return pdata_from_dce(d)->fw_vmindex;
-}
-
-/**
- * dce_os_get_fw_carveout_id- Gets the carveout ID for the fw region to be
- * programmed from platform data.
- *
- * @d : Pointer to tegra_dce struct.
- *
- * Return : Carveout Id
- */
-u8 dce_os_get_fw_carveout_id(struct tegra_dce *d)
-{
-	return pdata_from_dce(d)->fw_carveout_id;
-}
-
-/**
- * dce_os_is_physical_id_valid - Checks if the DCE can use physical stream ID.
- *
- * @d : Pointer to tegra_dce struct.
- *
- * Return : True if SMMU is disabled.
- */
-bool dce_os_is_physical_id_valid(struct tegra_dce *d)
-{
-	return pdata_from_dce(d)->use_physical_id;
-}
-
-/**
- * dce_os_get_fw_dce_addr - Gets the 32bit address to be used for
- *				loading	the fw before being converted
- *				by AST into a 40-bit address.
- *
- * @d : Pointer to tegra_dce struct.
- *
- * Return : 32bit address
- */
-u32 dce_os_get_fw_dce_addr(struct tegra_dce *d)
-{
-	return pdata_from_dce(d)->fw_dce_addr;
-}
-
-/**
- * dce_os_get_fw_phy_addr - Gets the 40bit address to be used by AST
- *				for loading the fw after converting
- *				the 32bit incoming address.
- *
- * @d : Pointer to tegra_dce struct.
- *
- * This API is to be used only if the memory is being allocated
- * via kzalloc or friends. Do not use this if memory is
- * allocated via dma apis.
- *
- * Return : 64bit address
- */
-u64 dce_os_get_fw_phy_addr(struct tegra_dce *d, struct dce_firmware *fw)
-{
-	/* Caller should make sure that *fw is valid since this func is
-	 * not expected to return any error.
-	 */
-	return (u64)virt_to_phys((void *)fw->data);
-}
-
-/**
- * dce_os_get_fw_name - Gets the dce fw name from platform data.
- *
- * @d : Pointer to tegra_dce struct.
- *
- * Return : fw_name
- */
-const char *dce_os_get_fw_name(struct tegra_dce *d)
-{
-	return pdata_from_dce(d)->fw_name;
 }
 
 static void dce_print(const char *func_name, int line,

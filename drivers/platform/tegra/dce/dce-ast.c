@@ -5,12 +5,79 @@
 #include <dce.h>
 #include <dce-os-log.h>
 #include <dce-os-utils.h>
+#include <dce-os-device.h>
 
 #define MAX_NO_ASTS 2
 #define MAX_AST_REGIONS 1
 #define MAX_AST_STRMCTLS 2
 
 #define AST_MASTER_ADDR_HI_BITS_SHIFT 32
+
+/**
+ * dce_get_phys_stream_id - Gets the physical stream ID to be programmed from
+ * platform data.
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Return : Stream ID Value
+ */
+static u8 dce_get_phys_stream_id(struct tegra_dce *d)
+{
+	return pdata_from_dce(d)->phys_stream_id;
+}
+
+
+/**
+ * dce_get_fw_vm_index - Gets the VMIndex for the fw region to be
+ * programmed from platform data.
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Return : VMIndex
+ */
+static u8 dce_get_fw_vm_index(struct tegra_dce *d)
+{
+	return pdata_from_dce(d)->fw_vmindex;
+}
+
+/**
+ * dce_get_fw_carveout_id- Gets the carveout ID for the fw region to be
+ * programmed from platform data.
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Return : Carveout Id
+ */
+static u8 dce_get_fw_carveout_id(struct tegra_dce *d)
+{
+	return pdata_from_dce(d)->fw_carveout_id;
+}
+
+/**
+ * dce_is_physical_id_valid - Checks if the DCE can use physical stream ID.
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Return : True if SMMU is disabled.
+ */
+static bool dce_is_physical_id_valid(struct tegra_dce *d)
+{
+	return pdata_from_dce(d)->use_physical_id;
+}
+
+/**
+ * dce_get_fw_dce_addr - Gets the 32bit address to be used for
+ *				loading	the fw before being converted
+ *				by AST into a 40-bit address.
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Return : 32bit address
+ */
+static u32 dce_get_fw_dce_addr(struct tegra_dce *d)
+{
+	return pdata_from_dce(d)->fw_dce_addr;
+}
 
 /**
  * dce_config_ast0_control - programs the global
@@ -24,10 +91,10 @@ static void dce_config_ast0_control(struct tegra_dce *d)
 {
 	u32 val;
 	u32 def_physical;
-	u32 phy_stream_id = dce_os_get_phys_stream_id(d) <<
+	u32 phy_stream_id = dce_get_phys_stream_id(d) <<
 				ast_ast0_control_physstreamid_shift_v();
 
-	if (dce_os_is_physical_id_valid(d))
+	if (dce_is_physical_id_valid(d))
 		def_physical = 1 <<
 			ast_ast0_control_carveoutlock_defphysical_shift_v();
 	else
@@ -53,10 +120,10 @@ static void dce_config_ast1_control(struct tegra_dce *d)
 {
 	u32 val;
 	u32 def_physical;
-	u32 phy_stream_id = dce_os_get_phys_stream_id(d) <<
+	u32 phy_stream_id = dce_get_phys_stream_id(d) <<
 				ast_ast1_control_physstreamid_shift_v();
 
-	if (dce_os_is_physical_id_valid(d))
+	if (dce_is_physical_id_valid(d))
 		def_physical = 1 <<
 			ast_ast1_control_carveoutlock_defphysical_shift_v();
 	else
@@ -96,7 +163,7 @@ static void dce_cfg_ast0_streamid_ctl_0(struct tegra_dce *d)
 	u32 stream_id_en;
 	u32 dce_stream_id = dce_os_get_dce_stream_id(d);
 
-	if (dce_os_is_physical_id_valid(d))
+	if (dce_is_physical_id_valid(d))
 		stream_id_en = ast_ast0_streamid_ctl_0_enable_disable_f();
 	else
 		stream_id_en = ast_ast0_streamid_ctl_0_enable_enable_f();
@@ -119,7 +186,7 @@ static void dce_cfg_ast0_streamid_ctl_1(struct tegra_dce *d)
 	u32 stream_id_en;
 	u32 dce_stream_id = dce_os_get_dce_stream_id(d);
 
-	if (dce_os_is_physical_id_valid(d))
+	if (dce_is_physical_id_valid(d))
 		stream_id_en = ast_ast0_streamid_ctl_1_enable_disable_f();
 	else
 		stream_id_en = ast_ast0_streamid_ctl_1_enable_enable_f();
@@ -142,7 +209,7 @@ static void dce_cfg_ast1_streamid_ctl_0(struct tegra_dce *d)
 	u32 stream_id_en;
 	u32 dce_stream_id = dce_os_get_dce_stream_id(d);
 
-	if (dce_os_is_physical_id_valid(d))
+	if (dce_is_physical_id_valid(d))
 		stream_id_en = ast_ast1_streamid_ctl_0_enable_disable_f();
 	else
 		stream_id_en = ast_ast1_streamid_ctl_0_enable_enable_f();
@@ -165,7 +232,7 @@ static void dce_cfg_ast1_streamid_ctl_1(struct tegra_dce *d)
 	u32 stream_id_en;
 	u32 dce_stream_id = dce_os_get_dce_stream_id(d);
 
-	if (dce_os_is_physical_id_valid(d))
+	if (dce_is_physical_id_valid(d))
 		stream_id_en = ast_ast1_streamid_ctl_1_enable_disable_f();
 	else
 		stream_id_en = ast_ast1_streamid_ctl_1_enable_enable_f();
@@ -449,7 +516,7 @@ static void dce_ast_cfg_reg_control_ast0_reg0(struct tegra_dce *d)
 	u32 carveout_id;
 	u32 use_physical_id;
 
-	if (dce_os_is_physical_id_valid(d)) {
+	if (dce_is_physical_id_valid(d)) {
 		use_physical_id = 1 <<
 			ast_ast0_region_0_control_physical_shift_v();
 		vm_index = 0 <<
@@ -457,10 +524,10 @@ static void dce_ast_cfg_reg_control_ast0_reg0(struct tegra_dce *d)
 	} else {
 		use_physical_id = 0 <<
 			ast_ast0_region_0_control_physical_shift_v();
-		vm_index = dce_os_get_fw_vm_index(d) <<
+		vm_index = dce_get_fw_vm_index(d) <<
 			ast_ast0_region_0_control_vmindex_shift_v();
 	}
-	carveout_id = dce_os_get_fw_carveout_id(d) <<
+	carveout_id = dce_get_fw_carveout_id(d) <<
 		ast_ast0_region_0_control_carveoutid_shift_v();
 
 	dce_os_writel(d, ast_ast0_region_0_control_r(),
@@ -482,7 +549,7 @@ static void dce_ast_cfg_reg_control_ast1_reg0(struct tegra_dce *d)
 	u32 carveout_id;
 	u32 use_physical_id;
 
-	if (dce_os_is_physical_id_valid(d)) {
+	if (dce_is_physical_id_valid(d)) {
 		use_physical_id = 1 <<
 			ast_ast1_region_0_control_physical_shift_v();
 		vm_index = 0 <<
@@ -490,11 +557,11 @@ static void dce_ast_cfg_reg_control_ast1_reg0(struct tegra_dce *d)
 	} else {
 		use_physical_id = 0 <<
 			ast_ast1_region_0_control_physical_shift_v();
-		vm_index = dce_os_get_fw_vm_index(d) <<
+		vm_index = dce_get_fw_vm_index(d) <<
 			ast_ast1_region_0_control_vmindex_shift_v();
 	}
 
-	carveout_id = dce_os_get_fw_carveout_id(d) <<
+	carveout_id = dce_get_fw_carveout_id(d) <<
 		ast_ast1_region_0_control_carveoutid_shift_v();
 
 
@@ -537,7 +604,7 @@ void dce_config_ast(struct tegra_dce *d)
 	u64 master_addr;
 
 	d->boot_status |= DCE_AST_CONFIG_START;
-	slave_addr = dce_os_get_fw_dce_addr(d);
+	slave_addr = dce_get_fw_dce_addr(d);
 
 	if (!d->fw_data) {
 		dce_os_err(d, "DCE_BOOT_FAILED: No fw_data present");
