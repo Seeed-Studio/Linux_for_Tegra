@@ -72,6 +72,12 @@ static void isp5_release_syncpt(struct platform_device *pdev, uint32_t id)
 	nvhost_syncpt_put_ref_ext(pdev, id);
 }
 
+static void isp5_fast_forward_syncpt(struct platform_device *pdev, uint32_t id, uint32_t threshold)
+{
+	dev_dbg(&pdev->dev, "%s: id=%u -> thresh=%u\n", __func__, id, threshold);
+	nvhost_syncpt_set_min_update(pdev, id, threshold);
+}
+
 static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
 			uint32_t id,
 			dma_addr_t *syncpt_addr,
@@ -116,6 +122,7 @@ static uint32_t isp5_get_gos_table(struct platform_device *pdev,
 static struct isp_channel_drv_ops isp5_channel_drv_ops = {
 	.alloc_syncpt = isp5_alloc_syncpt,
 	.release_syncpt = isp5_release_syncpt,
+	.fast_forward_syncpt = isp5_fast_forward_syncpt,
 	.get_gos_table = isp5_get_gos_table,
 	.get_syncpt_gos_backing = isp5_get_syncpt_gos_backing,
 };

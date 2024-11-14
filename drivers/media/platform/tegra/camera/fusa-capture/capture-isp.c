@@ -185,6 +185,23 @@ cleanup:
 	return err;
 }
 
+static void isp_capture_fastforward_syncpt(
+	struct tegra_isp_channel *chan,
+	struct syncpoint_info *sp)
+{
+	if (sp->id)
+		chan->ops->fast_forward_syncpt(chan->ndev, sp->id, sp->threshold);
+}
+
+static void isp_capture_fastforward_syncpts(
+	struct tegra_isp_channel *chan)
+{
+	struct isp_capture *capture = chan->capture_data;
+
+	isp_capture_fastforward_syncpt(chan, &capture->progress_sp);
+	isp_capture_fastforward_syncpt(chan, &capture->stats_progress_sp);
+}
+
 /**
  * @brief Release an ISP syncpoint and clear its handle.
  *
@@ -1588,6 +1605,8 @@ int isp_capture_reset(
 		goto error;
 	}
 
+	isp_capture_fastforward_syncpts(chan);
+
 	err = 0;
 
 error:
@@ -1786,6 +1805,22 @@ fail:
 	return err;
 }
 
+static uint32_t isp_capture_get_num_progress(
+	struct tegra_isp_channel *chan,
+	struct isp_capture_req *req)
+{
+	struct isp_desc_rec *capture_desc_ctx =
+		&chan->capture_data->capture_desc_ctx;
+	struct isp_capture_descriptor *desc = (struct isp_capture_descriptor *)
+		(capture_desc_ctx->requests.va +
+			req->buffer_index * capture_desc_ctx->request_size);
+
+	uint16_t sliceHeight = desc->surface_configs.slice_height;
+	uint16_t height = desc->surface_configs.mr_height;
+
+	return ((height + (sliceHeight - 1U)) / sliceHeight);
+}
+
 int isp_capture_request(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_req *req)
@@ -1900,6 +1935,10 @@ int isp_capture_request(
 		dev_err(chan->isp_dev, "IVC capture submit failed\n");
 		goto fail;
 	}
+
+	// Progress syncpoints + 1 for frame completion
+	capture->progress_sp.threshold += isp_capture_get_num_progress(chan, req) + 1;
+	capture->stats_progress_sp.threshold += isp_capture_get_num_progress(chan, req) + 1 + 2;
 
 	return 0;
 
