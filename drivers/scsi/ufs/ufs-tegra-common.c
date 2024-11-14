@@ -2304,6 +2304,7 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	}
 
 	if (ufs_tegra->soc->chip_id >= TEGRA234) {
+		hba->caps |= UFSHCD_CAP_WB_EN;
 		ufs_tegra->ufs_virtualization_base = devm_ioremap(dev,
 				ufs_virt_base_addr,
 				ufs_virt_addr_range);
