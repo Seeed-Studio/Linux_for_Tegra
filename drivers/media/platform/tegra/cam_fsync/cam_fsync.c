@@ -467,24 +467,22 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 	struct cam_fsync_extra_ticks_and_period extra = {0, 1};
 	bool const can_generate_precise_freq = cam_fsync_can_generate_precise_freq(group);
 
-	/**
-	 * Generating a freq with period that is not multiple of TSC unit will
-	 * cause the signal to drift over time. To avoid this, if precise signal
-	 * is supported, calculate the extra ticks over the number of periods
-	 * using @ref getextra_ticksAndPeriodFor30Hz() for accurate phase alignment.
-	 * If the signal is not precise, set the extra ticks to 0 and number of
-	 * periods to 1 which is the default case.
-	 */
-	if (can_generate_precise_freq)
-		cam_fsync_get_extra_ticks_and_period_for_30hz(&extra,
-			ticks_per_hz);
-
 	list_for_each_entry(generator, &group->generators, list) {
 		u32 ticks_in_period = 0;
 		u32 ticks_active = 0;
 		u32 ticks_inactive = 0;
 		u32 const edge_reg_offset = 8U;
 		u32 i = 0;
+		/**
+		 * Generating a freq with period that is not multiple of TSC unit will
+		 * cause the signal to drift over time. To avoid this, if precise signal
+		 * is supported, calculate the extra ticks over the number of periods
+		 * using @ref getextra_ticksAndPeriodFor30Hz() for accurate phase alignment.
+		 * If the signal is not precise, set the extra ticks to 0 and number of
+		 * periods to 1 which is the default case.
+		 */
+		if (can_generate_precise_freq)
+			cam_fsync_get_extra_ticks_and_period_for_30hz(&extra, ticks_per_hz);
 
 		if (group->features->rational_locking.enforced) {
 			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz,
