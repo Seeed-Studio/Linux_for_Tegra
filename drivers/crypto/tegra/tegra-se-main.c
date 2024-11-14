@@ -143,9 +143,10 @@ static struct tegra_se_cmdbuf *tegra_se_host1x_bo_alloc(struct tegra_se *se, ssi
 	return cmdbuf;
 }
 
-int tegra_se_host1x_submit(struct tegra_se *se, u32 size)
+int tegra_se_host1x_submit(struct tegra_se *se, u32 *cpuvaddr, u32 size)
 {
 	struct host1x_job *job;
+	struct tegra_se_cmdbuf *cmdbuf;
 	int ret;
 
 	job = host1x_job_alloc(se->channel, 1, 0, true);
@@ -153,6 +154,12 @@ int tegra_se_host1x_submit(struct tegra_se *se, u32 size)
 		dev_err(se->dev, "failed to allocate host1x job\n");
 		return -ENOMEM;
 	}
+
+	cmdbuf = tegra_se_host1x_bo_alloc(se, SZ_4K);
+	if (!cmdbuf)
+		goto job_put;
+
+	memcpy(cmdbuf->addr, cpuvaddr, size * 4);
 
 	job->syncpt = host1x_syncpt_get(se->syncpt);
 	job->syncpt_incrs = 1;
@@ -162,14 +169,14 @@ int tegra_se_host1x_submit(struct tegra_se *se, u32 size)
 	job->engine_fallback_streamid = se->stream_id;
 	job->engine_streamid_offset = SE_STREAM_ID;
 
-	se->cmdbuf->words = size;
+	cmdbuf->words = size;
 
-	host1x_job_add_gather(job, &se->cmdbuf->bo, size, 0);
+	host1x_job_add_gather(job, &cmdbuf->bo, size, 0);
 
 	ret = host1x_job_pin(job, se->dev);
 	if (ret) {
 		dev_err(se->dev, "failed to pin host1x job\n");
-		goto job_put;
+		goto cmdbuf_put;
 	}
 
 	ret = host1x_job_submit(job);
@@ -186,10 +193,14 @@ int tegra_se_host1x_submit(struct tegra_se *se, u32 size)
 	}
 
 	host1x_job_put(job);
+	tegra_se_cmdbuf_put(&cmdbuf->bo);
+
 	return 0;
 
 job_unpin:
 	host1x_job_unpin(job);
+cmdbuf_put:
+	tegra_se_cmdbuf_put(&cmdbuf->bo);
 job_put:
 	host1x_job_put(job);
 
@@ -216,22 +227,14 @@ static int tegra_se_client_init(struct host1x_client *client)
 
 	se->syncpt_id =  host1x_syncpt_id(se->syncpt);
 
-	se->cmdbuf = tegra_se_host1x_bo_alloc(se, SZ_4K);
-	if (!se->cmdbuf) {
-		ret = -ENOMEM;
-		goto syncpt_put;
-	}
-
 	ret = se->hw->init_alg(se);
 	if (ret) {
 		dev_err(se->dev, "failed to register algorithms\n");
-		goto cmdbuf_put;
+		goto syncpt_put;
 	}
 
 	return 0;
 
-cmdbuf_put:
-	tegra_se_cmdbuf_put(&se->cmdbuf->bo);
 syncpt_put:
 	host1x_syncpt_put(se->syncpt);
 channel_put:
@@ -245,7 +248,6 @@ static int tegra_se_client_deinit(struct host1x_client *client)
 	struct tegra_se *se = container_of(client, struct tegra_se, client);
 
 	se->hw->deinit_alg(se);
-	tegra_se_cmdbuf_put(&se->cmdbuf->bo);
 	host1x_syncpt_put(se->syncpt);
 	host1x_channel_put(se->channel);
 

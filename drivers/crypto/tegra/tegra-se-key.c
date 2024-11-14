@@ -177,22 +177,22 @@ static int tegra_key_insert(struct tegra_se *se, const u8 *key,
 			    u32 keylen, u16 slot, u32 alg)
 {
 	const u32 *keyval = (u32 *)key;
-	u32 *addr = se->cmdbuf->addr, size;
+	u32 cmdbuf[100], size;
 
-	size = tegra_key_prep_ins_cmd(se, addr, keyval, keylen, slot, alg);
+	size = tegra_key_prep_ins_cmd(se, cmdbuf, keyval, keylen, slot, alg);
 
-	return tegra_se_host1x_submit(se, size);
+	return tegra_se_host1x_submit(se, cmdbuf, size);
 }
 
 static int tegra_key_move_to_kds(struct tegra_se *se, u32 slot, u32 kds_id)
 {
-	u32 src_keyid, size;
+	u32 src_keyid, size, cmdbuf[100];
 	int ret;
 
 	src_keyid = SE_KSLT_REGION_ID_SYM | slot;
-	size = tegra_key_prep_mov_cmd(se, se->cmdbuf->addr, src_keyid, kds_id);
+	size = tegra_key_prep_mov_cmd(se, cmdbuf, src_keyid, kds_id);
 
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, cmdbuf, size);
 	if (ret)
 		return ret;
 
@@ -201,13 +201,13 @@ static int tegra_key_move_to_kds(struct tegra_se *se, u32 slot, u32 kds_id)
 
 static unsigned int tegra_kac_get_from_kds(struct tegra_se *se, u32 keyid, u16 slot)
 {
-	u32 tgt_keyid, size;
+	u32 tgt_keyid, size, cmdbuf[100];
 	int ret;
 
 	tgt_keyid = SE_KSLT_REGION_ID_SYM | slot;
-	size = tegra_key_prep_mov_cmd(se, se->cmdbuf->addr, keyid, tgt_keyid);
+	size = tegra_key_prep_mov_cmd(se, cmdbuf, keyid, tgt_keyid);
 
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, cmdbuf, size);
 	if (ret)
 		tegra_keyslot_free(slot);
 
@@ -216,10 +216,10 @@ static unsigned int tegra_kac_get_from_kds(struct tegra_se *se, u32 keyid, u16 s
 
 static void tegra_key_kds_invalidate(struct tegra_se *se, u32 keyid)
 {
-	unsigned int size;
+	unsigned int size, cmdbuf[100];
 
-	size = tegra_key_prep_invld_cmd(se, se->cmdbuf->addr, keyid);
-	tegra_se_host1x_submit(se, size);
+	size = tegra_key_prep_invld_cmd(se, cmdbuf, keyid);
+	tegra_se_host1x_submit(se, cmdbuf, size);
 	tegra_kds_free_id(keyid);
 }
 
