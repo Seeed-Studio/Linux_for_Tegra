@@ -77,7 +77,7 @@ int dce_driver_init(struct tegra_dce *d)
 		goto err_sw_init;
 	}
 
-	ret = dce_fsm_init(d);
+	ret = dce_fsm_init_unlocked(d);
 	if (ret) {
 		dce_os_err(d, "dce FSM init failed");
 		goto err_fsm_init;
@@ -113,7 +113,7 @@ void dce_driver_deinit(struct tegra_dce *d)
 {
 	/*  TODO : Reset DCE ? */
 
-	dce_fsm_deinit(d);
+	dce_fsm_deinit_unlocked(d);
 
 	dce_os_work_cond_sw_resource_deinit(d);
 

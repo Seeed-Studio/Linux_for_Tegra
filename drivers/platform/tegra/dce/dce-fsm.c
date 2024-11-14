@@ -490,13 +490,16 @@ void dce_fsm_stop(struct tegra_dce *d)
 }
 
 /**
- * dce_fsm_init - Init the FSM
+ * dce_fsm_init_unlocked - Init the FSM
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : 0 if successful else error code.
+ *
+ * Note: This function is not thread safe and should be called only once
+ *       during initialization.
  */
-int dce_fsm_init(struct tegra_dce *d)
+int dce_fsm_init_unlocked(struct tegra_dce *d)
 {
 	int ret = 0;
 	struct dce_fsm_info *fsm = &d->fsm_info;
@@ -515,13 +518,16 @@ int dce_fsm_init(struct tegra_dce *d)
 }
 
 /**
- * dce_fsm_deinit - DeInit the FSM
+ * dce_fsm_deinit_unlocked - DeInit the FSM
  *
  * @d : Pointer to tegra_dce struct.
  *
  * Return : void
+ *
+ * Note: This function is not thread safe and should be called only once
+ *       during de-initialization.
  */
-void dce_fsm_deinit(struct tegra_dce *d)
+void dce_fsm_deinit_unlocked(struct tegra_dce *d)
 {
 	struct dce_fsm_info *fsm = &d->fsm_info;
 

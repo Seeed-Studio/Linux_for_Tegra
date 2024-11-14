@@ -83,10 +83,10 @@ struct dce_admin_send_msg_params {
 	struct dce_ipc_message *msg;
 };
 
-int dce_fsm_init(struct tegra_dce *d);
+int dce_fsm_init_unlocked(struct tegra_dce *d);
 void dce_fsm_start(struct tegra_dce *d);
 void dce_fsm_stop(struct tegra_dce *d);
-void dce_fsm_deinit(struct tegra_dce *d);
+void dce_fsm_deinit_unlocked(struct tegra_dce *d);
 int dce_fsm_post_event(struct tegra_dce *d,
 		       enum dce_fsm_event_id_type event,
 		       void *data);
