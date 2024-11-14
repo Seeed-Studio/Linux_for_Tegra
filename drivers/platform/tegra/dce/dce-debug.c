@@ -269,7 +269,8 @@ static ssize_t dbg_dce_admin_echo_fops_write(struct file *file,
 		goto out;
 	}
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_DBG_BUFF,
+		0 /* reserved flags */);
 	if (!msg) {
 		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
@@ -302,6 +303,8 @@ static ssize_t dbg_dce_admin_echo_fops_write(struct file *file,
 	}
 
 out:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
 	return count;
 }
 
@@ -402,7 +405,8 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 		return -EINVAL;
 	}
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_DBG_BUFF,
+		0 /* reserved flags */);
 	if (!msg) {
 		dce_os_err(d, "IPC msg allocation failed");
 		d_dev->ext_test_status = DCE_ERR_CORE_OTHER;
@@ -436,6 +440,8 @@ static ssize_t dbg_dce_tests_external_run_fops_write(struct file *file,
 	d_dev->ext_test_status = resp_msg->error;
 
 exit:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
 	return count;
 }
 
@@ -666,6 +672,14 @@ void dce_remove_debug(struct tegra_dce *d)
 {
 	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 
+	dce_admin_channel_client_buffers_deinit(d, DCE_ADMIN_CH_CL_DBG_BUFF);
+
+	/**
+	 * TODO: Separate out below debug perf debug deinit code to separate
+	 * debug perf deinit function.
+	 */
+	dce_admin_channel_client_buffers_deinit(d, DCE_ADMIN_CH_CL_DBG_PERF_BUFF);
+
 	debugfs_remove(d_dev->debugfs);
 
 	d_dev->debugfs = NULL;
@@ -750,6 +764,13 @@ void dce_init_debug(struct tegra_dce *d)
 	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
 	struct dentry *debugfs_dir = NULL;
 	struct dentry *perf_debugfs_dir = NULL;
+	int ret = 0;
+
+	ret = dce_admin_channel_client_buffers_init(d, DCE_ADMIN_CH_CL_DBG_BUFF);
+	if (ret) {
+		dce_os_err(d, "Admin channel clients buffer init failed: DBG");
+		goto err_handle;
+	}
 
 	d_dev->debugfs = debugfs_create_dir("tegra_dce", NULL);
 	if (!d_dev->debugfs)
@@ -784,6 +805,16 @@ void dce_init_debug(struct tegra_dce *d)
 				     d_dev->debugfs, d, &boot_status_fops);
 	if (!retval)
 		goto err_handle;
+
+	/**
+	 * TODO: Separate out below debug perf init code to separate debug perf
+	 *	init function.
+	 */
+	ret = dce_admin_channel_client_buffers_init(d, DCE_ADMIN_CH_CL_DBG_PERF_BUFF);
+	if (ret) {
+		dce_os_err(d, "Admin channel clients buffer init failed: DBG_PERF");
+		goto err_handle;
+	}
 
 	perf_debugfs_dir = debugfs_create_dir("perf", d_dev->debugfs);
 	if (!perf_debugfs_dir)

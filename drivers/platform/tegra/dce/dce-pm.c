@@ -65,7 +65,8 @@ int dce_pm_handle_sc7_enter_requested_event(struct tegra_dce *d, void *params)
 
 	DCE_WARN_ON_NOT_NULL(params);
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_PM_BUFF,
+		0 /* reserved flags */);
 	if (!msg) {
 		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
@@ -81,6 +82,8 @@ int dce_pm_handle_sc7_enter_requested_event(struct tegra_dce *d, void *params)
 	d->boot_status |= DCE_FW_SUSPENDED;
 
 out:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
 	return ret;
 }
 
@@ -132,7 +135,8 @@ int dce_pm_enter_sc7(struct tegra_dce *d)
 		goto out;
 	}
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_ADMIN_BUFF,
+		0 /* reserved flags */);
 	if (!msg) {
 		dce_os_err(d, "IPC msg allocation failed");
 		ret = -1;
@@ -156,6 +160,8 @@ int dce_pm_enter_sc7(struct tegra_dce *d)
 	}
 
 out:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
 	return ret;
 }
 
@@ -178,6 +184,12 @@ int dce_pm_init(struct tegra_dce *d)
 {
 	int ret = 0;
 
+	ret = dce_admin_channel_client_buffers_init(d, DCE_ADMIN_CH_CL_PM_BUFF);
+	if (ret) {
+		dce_os_err(d, "Admin channel client buffers init failed: PM");
+		goto done;
+	}
+
 	ret = dce_os_work_init(d, &d->dce_resume_work, dce_resume_work_fn);
 	if (ret) {
 		dce_os_err(d, "resume work init failed");
@@ -190,8 +202,5 @@ done:
 
 void dce_pm_deinit(struct tegra_dce *d)
 {
-	if (d == NULL)
-		dce_os_warn(NULL, "DCE struct is expected to be valid.\n");
-
-	return;
+	dce_admin_channel_client_buffers_deinit(d, DCE_ADMIN_CH_CL_PM_BUFF);
 }

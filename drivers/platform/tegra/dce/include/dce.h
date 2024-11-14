@@ -58,7 +58,42 @@
 #define DCE_STATUS_FAILED		DCE_BIT(0)
 #define DCE_STATUS_UNKNOWN		((u32)(0))
 
+/**
+ * DCE Admin channel client buffer IDs.
+ * These are also indices to buffers in
+ * tegra_dce's admin_cl_msg_buffer[]
+ */
+#define DCE_ADMIN_CH_CL_ADMIN_BUFF	0U
+#define DCE_ADMIN_CH_CL_PM_BUFF	1U
+#define DCE_ADMIN_CH_CL_DBG_BUFF	2U
+#define DCE_ADMIN_CH_CL_DBG_PERF_BUFF	3U
+#define DCE_ADMIN_CH_CL_MAX		4U
+
+/**
+ * DCE Admin channel client buffer counts.
+ * These indicate buffers reserved for
+ * respective DCE admin channel client.
+ */
+#define DCE_ADMIN_CH_CL_ADMIN_BUFF_COUNT	1U
+#define DCE_ADMIN_CH_CL_PM_BUFF_COUNT		1U
+#define DCE_ADMIN_CH_CL_DBG_BUFF_COUNT		1U
+#define DCE_ADMIN_CH_CL_DBG_PERF_BUFF_COUNT	1U
+
 struct tegra_dce;
+
+/**
+ * struct dce_admin_ch_cl_buff - DCE Admin channel client buffer.
+ */
+struct dce_admin_ch_cl_buff {
+	/**
+	 * @msg : DCE IPC message buffer.
+	 */
+	struct dce_ipc_message msg;
+	/**
+	 * @in_use : Indicates if this buffer is in use.
+	 */
+	dce_os_atomic_t in_use;
+};
 
 /**
  * struct dce_platform_data - Data Structure to hold platform specific DCE
@@ -128,15 +163,6 @@ struct dce_firmware {
 	u8 *data;
 	size_t size;
 	u64 dma_handle;
-};
-
-/**
- * struct dce_admin - Contains dce admin info
- *
- * @admin_msg_buffer: struct dce_ipc_message pointer to hold admin message buffer.
- */
-struct dce_admin {
-	struct dce_ipc_message *msg_buffer;
 };
 
 /**
@@ -226,35 +252,11 @@ struct tegra_dce {
 	 * @fw_data - Stores info regardign firmware to be used runtime.
 	 */
 	struct dce_firmware *fw_data;
-
-	struct dce_admin admin_data;
+	/**
+	 * @dce_admin_ch_cl_buff - Stores admin channel client buffers.
+	 */
+	struct dce_admin_ch_cl_buff **admin_ch_cl_buff[DCE_ADMIN_CH_CL_MAX];
 };
-
-/**
- * dce_set_admin_msg_buffer - Set dce admin msg buffer pointer.
- *
- * @d : Pointer to tegra_dce struct.
- * @admin_msg_buffer : Pointer to admin message buffer.
- *
- * Return : void
- */
-static inline void dce_set_admin_msg_buffer(struct tegra_dce *d,
-	struct dce_ipc_message *admin_msg_buffer)
-{
-	d->admin_data.msg_buffer = admin_msg_buffer;
-}
-
-/**
- * dce_get_admin_msg_buffer - Get dce admin msg buffer pointer.
- *
- * @d : Pointer to tegra_dce struct.
- *
- * Return : Pointer to admin message buffer.
- */
-static inline struct dce_ipc_message *dce_get_admin_msg_buffer(struct tegra_dce *d)
-{
-	return d->admin_data.msg_buffer;
-}
 
 /**
  * dce_set_boot_complete - updates the current dce boot complete status.
@@ -389,6 +391,13 @@ void dce_admin_ipc_handle_signal(struct tegra_dce *d, u32 ch_type);
 
 bool dce_fw_boot_complete(struct tegra_dce *d);
 void dce_request_fw_boot_complete(struct tegra_dce *d);
+
+int dce_admin_channel_client_buffers_init(struct tegra_dce *d, u32 cl_id);
+void dce_admin_channel_client_buffers_deinit(struct tegra_dce *d, u32 cl_id);
+struct dce_ipc_message *dce_admin_channel_client_buffer_get(
+	struct tegra_dce *d, u32 cl_id, u32 flags);
+void dce_admin_channel_client_buffer_put(
+	struct tegra_dce *d, struct dce_ipc_message *pmsg);
 
 /**
  * Functions to be used in debug mode only.

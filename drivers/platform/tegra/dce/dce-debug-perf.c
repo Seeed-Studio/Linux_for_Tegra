@@ -33,7 +33,8 @@ ssize_t dbg_dce_perf_stats_stats_fops_write(struct file *file,
 		goto out;
 	}
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_DBG_PERF_BUFF,
+		0 /* reserved flags */);
 	if (!msg) {
 		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
@@ -63,6 +64,8 @@ ssize_t dbg_dce_perf_stats_stats_fops_write(struct file *file,
 	dce_os_debug(d, "DCE perf stats collection %s", start_perf ? "started" : "stopped");
 
 out:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
 	return count;
 }
 
@@ -245,7 +248,8 @@ static int dbg_dce_perf_stats_stats_fops_show(struct seq_file *s, void *data)
 	struct dce_admin_perf_info *perf;
 	struct tegra_dce *d = (struct tegra_dce *)s->private;
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_DBG_PERF_BUFF,
+		0 /* reserved flags */);
 	if (!msg) {
 		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
@@ -266,6 +270,8 @@ static int dbg_dce_perf_stats_stats_fops_show(struct seq_file *s, void *data)
 		dbg_dce_perf_stats_show_xml(s, d, perf);
 
 out:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
 	return 0;
 }
 
@@ -419,7 +425,8 @@ ssize_t dbg_dce_perf_events_events_fops_write(struct file *file,
 		goto out;
 	}
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_DBG_PERF_BUFF,
+		0 /* reserved flags */);
 	if (!msg) {
 		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
@@ -443,6 +450,8 @@ ssize_t dbg_dce_perf_events_events_fops_write(struct file *file,
 		goto out;
 	}
 out:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
 	return count;
 }
 
@@ -491,7 +500,8 @@ static int dbg_dce_perf_events_events_fops_show(struct seq_file *s, void *data)
 	struct dce_admin_event_info *events;
 	struct tegra_dce *d = (struct tegra_dce *)s->private;
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_DBG_PERF_BUFF,
+		0 /* reserved flags */);
 	if (!msg) {
 		dce_os_err(d, "IPC msg allocation failed");
 		goto out;
@@ -512,6 +522,8 @@ static int dbg_dce_perf_events_events_fops_show(struct seq_file *s, void *data)
 		dbg_dce_perf_events_show_xml(s, d, events);
 
 out:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
 	return 0;
 }
 

@@ -103,65 +103,354 @@ void dce_admin_ivc_channel_reset(struct tegra_dce *d)
 }
 
 /**
- * dce_admin_allocate_message - Allocates memory for a message
- *						on admin interface.
- * @d : Pointer tegra_dce struct.
+ * dce_admin_channel_client_get_buff_count - Get admin channel client buffer count.
  *
- * Return : Allocated msg if successful.
+ * @d : Pointer to tegra_dce struct.
+ * @cl_id : Admin channel client ID.
+ *
+ * Return : Admin channel client buffer count if client is valid,
+ *		0 otherwise.
  */
-static struct dce_ipc_message *dce_admin_allocate_message(struct tegra_dce *d)
+static u32 dce_admin_channel_client_get_buff_count(struct tegra_dce *d, u32 cl_id)
 {
-	struct dce_ipc_message *msg;
+	u32 count = 0;
 
-	msg = dce_os_kzalloc(d, sizeof(*msg), false);
-	if (!msg) {
-		dce_os_err(d, "Insufficient memory for admin msg");
-		goto err_alloc_msg;
+	if (d == NULL)
+		dce_os_warn(d, "Invalid tegra DCE struct");
+
+	switch (cl_id) {
+		case DCE_ADMIN_CH_CL_ADMIN_BUFF: {
+			count = DCE_ADMIN_CH_CL_ADMIN_BUFF_COUNT;
+			break;
+		}
+		case DCE_ADMIN_CH_CL_PM_BUFF: {
+			count = DCE_ADMIN_CH_CL_PM_BUFF_COUNT;
+			break;
+		}
+		case DCE_ADMIN_CH_CL_DBG_BUFF: {
+			count = DCE_ADMIN_CH_CL_DBG_BUFF_COUNT;
+			break;
+		}
+		case DCE_ADMIN_CH_CL_DBG_PERF_BUFF: {
+			count = DCE_ADMIN_CH_CL_DBG_PERF_BUFF_COUNT;
+			break;
+		}
+		default: {
+			count = 0;
+			break;
+		}
 	}
 
-	msg->tx.data = dce_os_kzalloc(d, DCE_ADMIN_CMD_SIZE, false);
-	if (!msg->tx.data) {
-		dce_os_err(d, "Insufficient memory for admin msg");
-		goto err_alloc_tx;
-	}
-
-	msg->rx.data = dce_os_kzalloc(d, DCE_ADMIN_RESP_SIZE, false);
-	if (!msg->rx.data) {
-		dce_os_err(d, "Insufficient memory for admin msg");
-		goto err_alloc_rx;
-	}
-
-	msg->tx.size = DCE_ADMIN_CMD_SIZE;
-	msg->rx.size = DCE_ADMIN_RESP_SIZE;
-
-	return msg;
-
-err_alloc_rx:
-	dce_os_kfree(d, msg->tx.data);
-err_alloc_tx:
-	dce_os_kfree(d, msg);
-err_alloc_msg:
-	return NULL;
+	return count;
 }
 
 /**
- * dce_admin_free_message - Frees memory allocated for a message
- *						on admin interface.
+ * dce_admin_channel_client_buffers_deinit - De-init admin channel client buffers.
  *
  * @d : Pointer to tegra_dce struct.
- * @msg : Pointer to allocated message.
+ * @ch_id : Admin channel client buffer ID.
  *
  * Return : Void.
+ *
+ * Note: This function shall not be called concurrently with any of the following
+ *	functions for the same client:
+ *	- dce_admin_channel_client_buffers_init()
+ *	- dce_{get/put}_admin_channel_client_buffer()
  */
-static void dce_admin_free_message(struct tegra_dce *d,
-				struct dce_ipc_message *msg)
+void dce_admin_channel_client_buffers_deinit(struct tegra_dce *d, u32 cl_id)
 {
-	if (!msg || !msg->tx.data || !msg->rx.data)
-		return;
+	struct dce_admin_ch_cl_buff **cl_buff_arr = NULL;
+	u32 cl_buff_count = 0;
+	u32 buff_idx = 0;
 
-	dce_os_kfree(d, msg->tx.data);
-	dce_os_kfree(d, msg->rx.data);
-	dce_os_kfree(d, msg);
+	if (cl_id >= DCE_ADMIN_CH_CL_MAX) {
+		dce_os_err(d, "Invalid client ID [%u]", cl_id);
+		goto fail;
+	}
+
+	cl_buff_arr = d->admin_ch_cl_buff[cl_id];
+
+	// Nothing to do for this client if the array is not allocated.
+	if (!cl_buff_arr) {
+		dce_os_err(d, "Trying to free unallocated buffers for client ID [%u]", cl_id);
+		goto fail;
+	}
+
+	// Get number of buffers for this client.
+	cl_buff_count = dce_admin_channel_client_get_buff_count(d, cl_id);
+
+	// De-init and free actual buffer structs
+	for (buff_idx = 0; buff_idx < cl_buff_count; buff_idx++) {
+		struct dce_admin_ch_cl_buff *buff = cl_buff_arr[buff_idx];
+		struct dce_ipc_message *pmsg = NULL;
+
+		// Nothing to do if this buffer is not allocated.
+		if (!buff)
+			continue;
+
+		// Free DCE IPC message tx and rx buffers.
+		pmsg = &buff->msg;
+
+		if (!pmsg->tx.data)
+			dce_os_kfree(d, pmsg->tx.data);
+
+		if (!pmsg->rx.data)
+			dce_os_kfree(d, pmsg->rx.data);
+
+		pmsg->tx.data = NULL;
+		pmsg->rx.data = NULL;
+		pmsg->tx.size = 0;
+		pmsg->rx.size = 0;
+
+		// Free the buffer.
+		dce_os_kfree(d, buff);
+		cl_buff_arr[buff_idx] = NULL;
+	}
+
+
+	// Finally, free admin channel client buffer array for this client.
+	dce_os_kfree(d, cl_buff_arr);
+	d->admin_ch_cl_buff[cl_id] = NULL;
+
+fail:
+	return;
+}
+
+/**
+ * dce_admin_channel_client_buffers_init - Init admin channel client buffers.
+ *
+ * @d : Pointer tegra_dce struct.
+ * @ch_id : Admin channel client buffer ID.
+ *
+ * Return : 0 on success, non-zero error otherwise.
+ *
+ * Notes:
+ * 1) Since we call dce_admin_channel_client_buffers_deinit() if anything fails
+ *	in this function, we need to be careful with the order of how we
+ *	set allocated pointers in this function.
+ *	- dce_admin_channel_client_buffers_deinit() will free any data that's set.
+ *	- If this not done carefully then we will have memory leaks.
+ *
+ * 2) This function shall not be called concurrently with any of the following
+ *	functions for the same client:
+ *	- dce_admin_channel_client_buffers_deinit()
+ *	- dce_{get/put}_admin_channel_client_buffer()
+ */
+int dce_admin_channel_client_buffers_init(struct tegra_dce *d, u32 cl_id)
+{
+	int ret = -1;
+	struct dce_admin_ch_cl_buff **cl_buff_arr = NULL;
+	u32 cl_buff_count = 0;
+	u32 buff_idx = 0;
+
+	if (cl_id >= DCE_ADMIN_CH_CL_MAX) {
+		dce_os_err(d, "Invalid client ID [%u]", cl_id);
+		goto fail;
+	}
+
+	// Get number of buffers for this client.
+	cl_buff_count = dce_admin_channel_client_get_buff_count(d, cl_id);
+
+	// Set to NULL so deinit works as intended.
+	d->admin_ch_cl_buff[cl_id] = NULL;
+
+	// Allocate admin channel client buffer array for this client.
+	cl_buff_arr = dce_os_kzalloc(d, sizeof(*cl_buff_arr) * cl_buff_count, false);
+	if (!cl_buff_arr) {
+		dce_os_err(d, "Insufficient memory for admin client [%u] buff array",
+				cl_id);
+		goto fail;
+	}
+
+	// Set the allocated buffer array for this client.
+	d->admin_ch_cl_buff[cl_id] = cl_buff_arr;
+
+	// Finally allocate and init actual buffer structs.
+	for (buff_idx = 0; buff_idx < cl_buff_count; buff_idx++) {
+		struct dce_admin_ch_cl_buff *buff = NULL;
+		struct dce_ipc_message *pmsg = NULL;
+		dce_os_atomic_t *p_in_use = NULL;
+
+		// Set to NULL so deinit works as intended.
+		cl_buff_arr[buff_idx] = NULL;
+
+		buff = dce_os_kzalloc(d, sizeof(*buff), false);
+		if (!buff) {
+			dce_os_err(d, "Insufficient memory for admin client id [%u] buff idx [%u]",
+					cl_id, buff_idx);
+			goto fail;
+		}
+
+		// Set the allocated buffer.
+		cl_buff_arr[buff_idx] = buff;
+
+		// Allocate DCE IPC message tx and rx buffers.
+		pmsg = &buff->msg;
+
+		// Set to NULL so deinit works as intended.
+		pmsg->tx.data = NULL;
+
+		pmsg->tx.data = dce_os_kzalloc(d, DCE_ADMIN_CMD_SIZE, false);
+		if (!pmsg->tx.data) {
+			dce_os_err(d, "Insufficient memory for admin msg");
+			goto fail;
+		}
+
+		// Set to NULL so deinit works as intended.
+		pmsg->rx.data = NULL;
+
+		pmsg->rx.data = dce_os_kzalloc(d, DCE_ADMIN_RESP_SIZE, false);
+		if (!pmsg->rx.data) {
+			dce_os_err(d, "Insufficient memory for admin msg");
+			goto fail;
+		}
+
+		pmsg->tx.size = DCE_ADMIN_CMD_SIZE;
+		pmsg->rx.size = DCE_ADMIN_RESP_SIZE;
+
+		// Init in_use atomic variable.
+		p_in_use = &buff->in_use;
+		dce_os_atomic_set(p_in_use, 0);
+	}
+
+	ret = 0;
+
+fail:
+	if (ret != 0)
+		dce_admin_channel_client_buffers_deinit(d, cl_id);
+
+	return ret;
+}
+
+/**
+ * dce_admin_channel_client_buffer_get - Get dce admin msg buffer pointer
+ *					for client.
+ *
+ * @d : Pointer to tegra_dce struct.
+ * @cl_id : Admin channel client ID.
+ * @flags: This is reserved argument for future use.
+ *	Must be set to 0.
+ *
+ * Return : Pointer to admin message buffer or
+ *		NULL if buffer is not available at the moment.
+ *
+ * Notes:
+ * This function shouldn't be called concurrently with below
+ * functions with same client id:
+ *	- dce_admin_channel_client_buffer_get()
+ *	- dce_admin_channel_client_buffers_{init/deinit}()
+ *	- dce_admin_channel_client_buffer_put()
+ */
+struct dce_ipc_message *dce_admin_channel_client_buffer_get(
+	struct tegra_dce *d, u32 cl_id, u32 flags)
+{
+	struct dce_ipc_message *pmsg = NULL;
+	u32 cl_buff_count = 0;
+	struct dce_admin_ch_cl_buff **cl_buff_arr = NULL;
+	u32 buff_idx = 0;
+
+	if (flags != 0) {
+		dce_os_err(d, "flags=[%u] must be set to 0 for client [%u]",
+			flags, cl_id);
+		goto done;
+	}
+
+	if (cl_id >= DCE_ADMIN_CH_CL_MAX) {
+		dce_os_err(d, "Invalid admin channel client ID [%u]", cl_id);
+		goto done;
+	}
+
+	cl_buff_arr = d->admin_ch_cl_buff[cl_id];
+	if (!cl_buff_arr) {
+		dce_os_err(d, "Invalid client buff arr [%u]", cl_id);
+		goto done;
+	}
+
+	cl_buff_count = dce_admin_channel_client_get_buff_count(d, cl_id);
+
+	for (buff_idx = 0; buff_idx < cl_buff_count; buff_idx++) {
+		struct dce_admin_ch_cl_buff *buff = cl_buff_arr[buff_idx];
+		dce_os_atomic_t *p_in_use = NULL;
+		u32 in_use = 0;
+
+		if (!buff) {
+			dce_os_err(d, "Invalid client [%u] buff [%u]", cl_id, buff_idx);
+			goto done;
+		}
+
+		p_in_use = &buff->in_use;
+
+		// Continue to next buffer if this one is in use.
+		in_use = dce_os_atomic_read(p_in_use);
+		if (in_use == 1)
+			continue;
+
+		// If this buffer is available then mark it as in use.
+		dce_os_atomic_set(p_in_use, 1);
+
+		// Return buffer to the caller.
+		pmsg = &buff->msg;
+
+		// Ensure that this buffer is valid.
+		if (!pmsg->tx.data || !pmsg->rx.data) {
+			// This should never happen so fail.
+			pmsg = NULL;
+		}
+
+		// Search complete.
+		goto done;
+	}
+
+done:
+	return pmsg;
+}
+
+/**
+ * dce_admin_channel_client_buffer_get - Release admin channel client buffer.
+ *
+ * @d : Pointer to tegra_dce struct.
+ *
+ * Return : void
+ *
+ * Notes:
+ * This function shouldn't be called concurrently with below
+ * functions with same client id:
+ *	- dce_admin_channel_client_buffer_put()
+ *	- dce_admin_channel_client_buffers_{init/deinit}()
+ *	- dce_admin_channel_client_buffer_get()
+ */
+void dce_admin_channel_client_buffer_put(
+	struct tegra_dce *d, struct dce_ipc_message *pmsg)
+{
+	struct dce_admin_ch_cl_buff *buff = NULL;
+	dce_os_atomic_t *p_in_use = NULL;
+	u32 in_use = 0;
+
+	if (!d || !pmsg) {
+		dce_os_err(d, "Invalid input");
+		goto done;
+	}
+
+	buff = container_of(pmsg, struct dce_admin_ch_cl_buff, msg);
+	if (!buff) {
+		dce_os_err(d, "Invalid buffer");
+		goto done;
+	}
+
+	p_in_use = &buff->in_use;
+
+	// Verify that buffer is in use
+	in_use = dce_os_atomic_read(p_in_use);
+	if (in_use == 0) {
+		dce_os_err(d, "Buffer not in use");
+		goto done;
+	}
+
+	// Release buffer
+	dce_os_atomic_set(p_in_use, 0);
+
+done:
+	return;
 }
 
 /**
@@ -174,10 +463,6 @@ static void dce_admin_free_message(struct tegra_dce *d,
 static void dce_admin_channel_deinit(struct tegra_dce *d)
 {
 	u32 loop_cnt;
-	void *admin_msg_buffer = dce_get_admin_msg_buffer(d);
-
-	dce_admin_free_message(d, admin_msg_buffer);
-	dce_set_admin_msg_buffer(d, NULL);
 
 	for (loop_cnt = 0; loop_cnt < DCE_IPC_CH_KMD_TYPE_MAX; loop_cnt++)
 		dce_ipc_channel_deinit_unlocked(d, loop_cnt);
@@ -195,7 +480,6 @@ static int dce_admin_channel_init(struct tegra_dce *d)
 {
 	int ret = 0;
 	u32 loop_cnt;
-	struct dce_ipc_message *admin_msg_buffer = NULL;
 
 	for (loop_cnt = 0; loop_cnt < DCE_IPC_CH_KMD_TYPE_MAX; loop_cnt++) {
 		ret = dce_ipc_channel_init_unlocked(d, loop_cnt);
@@ -205,16 +489,6 @@ static int dce_admin_channel_init(struct tegra_dce *d)
 			goto out;
 		}
 	}
-
-	/* Allocate message buffer for DCE admin channel. */
-	admin_msg_buffer = dce_admin_allocate_message(d);
-	if (admin_msg_buffer == NULL) {
-		dce_os_err(d, "Failed to reserve admin channel msg buffer");
-		ret = -1;
-		goto out;
-	}
-
-	dce_set_admin_msg_buffer(d, admin_msg_buffer);
 
 out:
 	if (ret)
@@ -246,9 +520,17 @@ int dce_admin_init(struct tegra_dce *d)
 		goto err_channel_init;
 	}
 
+	ret = dce_admin_channel_client_buffers_init(d, DCE_ADMIN_CH_CL_ADMIN_BUFF);
+	if (ret) {
+		dce_os_err(d, "Admin channel client buffers init failed: Admin");
+		goto err_channel_clients_buff_init;
+	}
+
 	d->boot_status |= DCE_EARLY_INIT_DONE;
 	return 0;
 
+err_channel_clients_buff_init:
+	dce_admin_channel_deinit(d);
 err_channel_init:
 	dce_os_ipc_deinit_region_info(d);
 err_ipc_reg_alloc:
@@ -266,6 +548,8 @@ err_ipc_reg_alloc:
  */
 void dce_admin_deinit(struct tegra_dce *d)
 {
+	dce_admin_channel_client_buffers_deinit(d, DCE_ADMIN_CH_CL_ADMIN_BUFF);
+
 	dce_admin_channel_deinit(d);
 
 	dce_os_ipc_deinit_region_info(d);
@@ -653,7 +937,8 @@ int dce_start_admin_seq(struct tegra_dce *d)
 	int ret = 0;
 	struct dce_ipc_message *msg;
 
-	msg = dce_get_admin_msg_buffer(d);
+	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_ADMIN_BUFF,
+			0 /* reserved flags */);
 	if (!msg)
 		return -1;
 
@@ -677,7 +962,11 @@ int dce_start_admin_seq(struct tegra_dce *d)
 	}
 	d->boot_status |= DCE_FW_ADMIN_SEQ_DONE;
 out:
+	if (msg)
+		dce_admin_channel_client_buffer_put(d, msg);
+
 	if (ret)
 		d->boot_status |= DCE_FW_ADMIN_SEQ_FAILED;
+
 	return ret;
 }
