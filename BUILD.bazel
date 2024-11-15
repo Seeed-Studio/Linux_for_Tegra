@@ -152,6 +152,7 @@ kernel_module(
         "drivers/video/tegra/dc/bridge/ti_fpdlink_dp_serializer.ko",
         "drivers/video/tegra/host/capture/nvhost-capture.ko",
         "drivers/video/tegra/host/nvcsi/nvhost-nvcsi.ko",
+        "drivers/video/tegra/host/nvdla/axi/axi-nvdla.ko",
         "drivers/video/tegra/host/nvdla/nvhost-nvdla.ko",
         "drivers/video/tegra/nvmap/nvmap.ko",
         "drivers/video/tegra/tsec/tsecriscv.ko",

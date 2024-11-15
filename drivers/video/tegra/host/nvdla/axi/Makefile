@@ -11,6 +11,8 @@ ifndef CONFIG_TEGRA_KLEAF_BUILD
 include $(src)/../Makefile.config.mk
 else
 include $(srctree.nvidia-oot)/drivers/video/tegra/host/nvdla/Makefile.config.mk
+ccflags-y += -I$(srctree.nvidia-oot)/drivers/video/tegra/host/nvdla
+ccflags-y += -I$(srctree.nvidia-oot)/drivers/video/tegra/host/nvdla/port/fw
 endif
 
 #
