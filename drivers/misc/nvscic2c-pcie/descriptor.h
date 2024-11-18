@@ -78,7 +78,7 @@ gen_desc(u32 peer_board_id, u32 peer_soc_id, u32 peer_cntrlr_id, u32 ep_id,
 	desc.bit.cntrlr_id = peer_cntrlr_id;
 	desc.bit.endpoint_id = ep_id;
 	desc.bit.handle_type = handle_type;
-	desc.bit.handle_id = handle_id;
+	desc.bit.handle_id = (u64)handle_id;
 
 	return desc.value;
 }

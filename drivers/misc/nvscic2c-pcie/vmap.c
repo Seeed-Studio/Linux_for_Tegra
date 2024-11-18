@@ -85,13 +85,13 @@ static int dma_mem_get_size(struct vmap_ctx_t *vmap_ctx, struct memobj_pin_t *pi
 	 */
 	pin->attach = dma_buf_attach(pin->dmabuf, &vmap_ctx->dummy_pdev->dev);
 	if (IS_ERR_OR_NULL(pin->attach)) {
-		ret = PTR_ERR(pin->attach);
+		ret = (int)PTR_ERR(pin->attach);
 		pr_err("client_mngd dma_buf_attach failed\n");
 		goto fn_exit;
 	}
 	pin->sgt = dma_buf_map_attachment(pin->attach, pin->dir);
 	if (IS_ERR_OR_NULL(pin->sgt)) {
-		ret = PTR_ERR(pin->sgt);
+		ret = (int)PTR_ERR(pin->sgt);
 		pr_err("client_mngd dma_buf_attachment failed\n");
 		goto fn_exit;
 	}
@@ -130,7 +130,7 @@ memobj_map(struct vmap_ctx_t *vmap_ctx,
 	/* check if the dma_buf is already mapped ? */
 	id_exist = idr_for_each(&vmap_ctx->mem_idr, match_dmabuf, &dmabuf);
 	if (id_exist > 0)
-		map = idr_find(&vmap_ctx->mem_idr, id_exist);
+		map = idr_find(&vmap_ctx->mem_idr, (unsigned long)id_exist);
 
 	if (map) {
 		/* already mapped.*/
@@ -175,14 +175,14 @@ memobj_map(struct vmap_ctx_t *vmap_ctx,
 			ret = dma_mem_get_size(vmap_ctx, &map->pin, &map_size);
 			if (ret != 0) {
 				pr_err("Failed in dma buf mem get size\n");
-				idr_remove(&vmap_ctx->mem_idr, map->obj_id);
+				idr_remove(&vmap_ctx->mem_idr, (unsigned long)map->obj_id);
 				kfree(map);
 				goto err;
 			}
 			ret = dev_map_limit_check(aperture_limit, *aperture_inuse, map_size);
 			if (ret != 0) {
 				pr_err("Failed in aperture limit check\n");
-				idr_remove(&vmap_ctx->mem_idr, map->obj_id);
+				idr_remove(&vmap_ctx->mem_idr, (unsigned long)map->obj_id);
 				kfree(map);
 				goto err;
 			}
@@ -192,7 +192,7 @@ memobj_map(struct vmap_ctx_t *vmap_ctx,
 		ret = memobj_pin(vmap_ctx, &map->pin);
 		if (ret) {
 			pr_err("Failed to pin mem obj fd: (%d)\n", params->fd);
-			idr_remove(&vmap_ctx->mem_idr, map->obj_id);
+			idr_remove(&vmap_ctx->mem_idr, (unsigned long)map->obj_id);
 			kfree(map);
 			goto err;
 		}
@@ -223,7 +223,7 @@ memobj_free(struct kref *kref)
 	map = container_of(kref, struct memobj_map_ref, refcount);
 	if (map) {
 		memobj_unpin(map->vmap_ctx, &map->pin);
-		idr_remove(&map->vmap_ctx->mem_idr, map->obj_id);
+		idr_remove(&map->vmap_ctx->mem_idr, (unsigned long)map->obj_id);
 		kfree(map);
 	}
 }
@@ -234,7 +234,7 @@ memobj_unmap(struct vmap_ctx_t *vmap_ctx, s32 obj_id)
 	struct memobj_map_ref *map = NULL;
 
 	mutex_lock(&vmap_ctx->mem_idr_lock);
-	map = idr_find(&vmap_ctx->mem_idr, obj_id);
+	map = idr_find(&vmap_ctx->mem_idr, (unsigned long)obj_id);
 	if (!map) {
 		mutex_unlock(&vmap_ctx->mem_idr_lock);
 		return -EBADF;
@@ -258,7 +258,7 @@ memobj_getref(struct vmap_ctx_t *vmap_ctx, s32 obj_id)
 	struct memobj_map_ref *map = NULL;
 
 	mutex_lock(&vmap_ctx->mem_idr_lock);
-	map = idr_find(&vmap_ctx->mem_idr, obj_id);
+	map = idr_find(&vmap_ctx->mem_idr, (unsigned long)obj_id);
 	if (WARN_ON(!map)) {
 		mutex_unlock(&vmap_ctx->mem_idr_lock);
 		return -EBADF;
@@ -301,7 +301,7 @@ syncobj_map(struct vmap_ctx_t *vmap_ctx,
 	id_exist = idr_for_each(&vmap_ctx->sync_idr, match_syncpt_id,
 				&syncpt_id);
 	if (id_exist > 0)
-		map = idr_find(&vmap_ctx->sync_idr, id_exist);
+		map = idr_find(&vmap_ctx->sync_idr, (unsigned long)id_exist);
 
 	if (map) {
 		/* mapping again a SYNC obj(local or remote) is not permitted.*/
@@ -330,7 +330,7 @@ syncobj_map(struct vmap_ctx_t *vmap_ctx,
 			ret = dev_map_limit_check(aperture_limit, *aperture_inuse, SP_MAP_SIZE);
 			if (ret != 0) {
 				pr_err("Failed in aperture limit check\n");
-				idr_remove(&vmap_ctx->sync_idr, map->obj_id);
+				idr_remove(&vmap_ctx->sync_idr, (unsigned long)map->obj_id);
 				kfree(map);
 				goto err;
 			}
@@ -346,7 +346,7 @@ syncobj_map(struct vmap_ctx_t *vmap_ctx,
 		if (ret) {
 			pr_err("Failed to pin sync obj Id: (%d)\n",
 			       syncpt_id);
-			idr_remove(&vmap_ctx->sync_idr, map->obj_id);
+			idr_remove(&vmap_ctx->sync_idr, (unsigned long)map->obj_id);
 			kfree(map);
 			goto err;
 		}
@@ -378,7 +378,7 @@ syncobj_free(struct kref *kref)
 	map = container_of(kref, struct syncobj_map_ref, refcount);
 	if (map) {
 		syncobj_unpin(map->vmap_ctx, &map->pin);
-		idr_remove(&map->vmap_ctx->sync_idr, map->obj_id);
+		idr_remove(&map->vmap_ctx->sync_idr, (unsigned long)map->obj_id);
 		kfree(map);
 	}
 }
@@ -389,7 +389,7 @@ syncobj_unmap(struct vmap_ctx_t *vmap_ctx, s32 obj_id)
 	struct syncobj_map_ref *map = NULL;
 
 	mutex_lock(&vmap_ctx->sync_idr_lock);
-	map = idr_find(&vmap_ctx->sync_idr, obj_id);
+	map = idr_find(&vmap_ctx->sync_idr, (unsigned long)obj_id);
 	if (!map) {
 		mutex_unlock(&vmap_ctx->sync_idr_lock);
 		return -EBADF;
@@ -416,7 +416,7 @@ syncobj_getref(struct vmap_ctx_t *vmap_ctx, s32 obj_id)
 		return -EINVAL;
 
 	mutex_lock(&vmap_ctx->sync_idr_lock);
-	map = idr_find(&vmap_ctx->sync_idr, obj_id);
+	map = idr_find(&vmap_ctx->sync_idr, (unsigned long)obj_id);
 	if (WARN_ON(!map)) {
 		mutex_unlock(&vmap_ctx->sync_idr_lock);
 		return -EBADF;
@@ -455,7 +455,7 @@ importobj_map(struct vmap_ctx_t *vmap_ctx,
 	id_exist = idr_for_each(&vmap_ctx->import_idr, match_export_desc,
 				&params->export_desc);
 	if (id_exist > 0)
-		map = idr_find(&vmap_ctx->import_idr, id_exist);
+		map = idr_find(&vmap_ctx->import_idr, (unsigned long)id_exist);
 
 	if (!map) {
 		ret = -EAGAIN;
@@ -493,7 +493,7 @@ importobj_free(struct kref *kref)
 
 	map = container_of(kref, struct importobj_map_ref, refcount);
 	if (map) {
-		idr_remove(&map->vmap_ctx->import_idr, map->obj_id);
+		idr_remove(&map->vmap_ctx->import_idr, (unsigned long)map->obj_id);
 		kfree(map);
 	}
 }
@@ -506,7 +506,7 @@ importobj_unmap(struct vmap_ctx_t *vmap_ctx, s32 obj_id)
 
 	mutex_lock(&vmap_ctx->import_idr_lock);
 
-	map = idr_find(&vmap_ctx->import_idr, obj_id);
+	map = idr_find(&vmap_ctx->import_idr, (unsigned long)obj_id);
 	if (!map) {
 		mutex_unlock(&vmap_ctx->import_idr_lock);
 		return -EINVAL;
@@ -547,7 +547,7 @@ importobj_getref(struct vmap_ctx_t *vmap_ctx, s32 obj_id)
 	struct memobj_map_ref *map = NULL;
 
 	mutex_lock(&vmap_ctx->import_idr_lock);
-	map = idr_find(&vmap_ctx->import_idr, obj_id);
+	map = idr_find(&vmap_ctx->import_idr, (unsigned long)obj_id);
 	if (WARN_ON(!map)) {
 		mutex_unlock(&vmap_ctx->import_idr_lock);
 		return -EBADF;
@@ -688,10 +688,10 @@ vmap_importobj_unregister(void *data, void *ctx)
 	pr_debug("Unregister Desc: (%llu)\n", desc.value);
 	if (desc.bit.handle_type == STREAM_OBJ_TYPE_MEM)
 		vmap_obj_putref(vmap_ctx, VMAP_OBJ_TYPE_MEM,
-				desc.bit.handle_id);
+				(s32)desc.bit.handle_id);
 	else
 		vmap_obj_putref(vmap_ctx, VMAP_OBJ_TYPE_SYNC,
-				desc.bit.handle_id);
+				(s32)desc.bit.handle_id);
 }
 
 static void
@@ -712,7 +712,7 @@ vmap_importobj_register(void *data, void *ctx)
 	id_exist = idr_for_each(&vmap_ctx->import_idr, match_export_desc,
 				&msg->u.reg.export_desc);
 	if (id_exist > 0)
-		map = idr_find(&vmap_ctx->import_idr, id_exist);
+		map = idr_find(&vmap_ctx->import_idr, (unsigned long)id_exist);
 
 	if (map) {
 		if (msg->u.reg.iova != map->reg.attrib.iova) {

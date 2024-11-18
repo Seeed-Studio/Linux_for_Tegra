@@ -474,13 +474,13 @@ ioctl_get_info_impl(struct endpoint_t *endpoint,
 	get_info->nframes         = endpoint->nframes;
 	get_info->frame_size      = endpoint->frame_sz;
 	get_info->peer.offset     = (PEER_MEM_MMAP << PAGE_SHIFT);
-	get_info->peer.size       = endpoint->peer_mem.size;
+	get_info->peer.size       = (__u32)endpoint->peer_mem.size;
 	get_info->self.offset     = (SELF_MEM_MMAP << PAGE_SHIFT);
-	get_info->self.size       = endpoint->self_mem.size;
+	get_info->self.size       = (__u32)endpoint->self_mem.size;
 	get_info->link.offset     = (LINK_MEM_MMAP << PAGE_SHIFT);
-	get_info->link.size       = PAGE_ALIGN(sizeof(enum nvscic2c_pcie_link));
+	get_info->link.size       = (__u32)PAGE_ALIGN(sizeof(enum nvscic2c_pcie_link));
 	get_info->edma_err.offset = (EDMA_ERR_MEM_MMAP << PAGE_SHIFT);
-	get_info->edma_err.size   = PAGE_ALIGN(sizeof(u32));
+	get_info->edma_err.size   = (__u32)PAGE_ALIGN(sizeof(u32));
 
 	return 0;
 }
@@ -596,7 +596,7 @@ allocate_fence(struct syncpt_t *syncpt)
 		++syncpt->threshold;
 	fence = host1x_fence_create(syncpt->sp, syncpt->threshold, false);
 	if (IS_ERR(fence)) {
-		ret = PTR_ERR(fence);
+		ret = (int)PTR_ERR(fence);
 		pr_err("host1x_fence_create failed with: %d\n", ret);
 		return ret;
 	}
@@ -682,7 +682,7 @@ free_syncpoint(struct endpoint_drv_ctx_t *eps_ctx,
 		mutex_lock(&syncpt->lock);
 		syncpt->fence_release = true;
 		if (syncpt->fence) {
-			ret = dma_fence_remove_callback(syncpt->fence,
+			ret = (int)dma_fence_remove_callback(syncpt->fence,
 							&syncpt->fence_cb);
 			if (ret) {
 				/*
@@ -994,7 +994,7 @@ create_endpoint_device(struct endpoint_drv_ctx_t *eps_ctx,
 					 endpoint->name);
 	if (IS_ERR(endpoint->device)) {
 		cdev_del(&endpoint->cdev);
-		ret = PTR_ERR(endpoint->device);
+		ret = (int)PTR_ERR(endpoint->device);
 		pr_err("(%s): device_create() failed\n", endpoint->name);
 		goto err;
 	}
@@ -1042,7 +1042,7 @@ err:
 int
 endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 {
-	u32 i = 0;
+	u16 i = 0;
 	int ret = 0;
 	struct endpoint_t *endpoint = NULL;
 	struct endpoint_prop_t *ep_prop = NULL;
@@ -1082,7 +1082,7 @@ endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 	eps_ctx->class = class_create(THIS_MODULE, eps_ctx->drv_name);
 #endif
 	if (IS_ERR_OR_NULL(eps_ctx->class)) {
-		ret = PTR_ERR(eps_ctx->class);
+		ret = (int)PTR_ERR(eps_ctx->class);
 		goto err;
 	}
 
@@ -1180,7 +1180,7 @@ endpoints_waitfor_close(void *endpoints_h)
 
 			if (atomic_read(&endpoint->in_use)) {
 				if (timeout == -ERESTARTSYS) {
-					ret = timeout;
+					ret = (int)timeout;
 					pr_err("(%s): Wait for endpoint:(%s) close - Interrupted\n",
 					       eps_ctx->drv_name, endpoint->name);
 				} else if (timeout == 0) {

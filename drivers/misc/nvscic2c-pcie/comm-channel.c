@@ -385,7 +385,7 @@ allocate_fence(struct syncpt_t *syncpt)
 		++syncpt->threshold;
 	fence = host1x_fence_create(syncpt->sp, syncpt->threshold, false);
 	if (IS_ERR_OR_NULL(fence)) {
-		ret = PTR_ERR(fence);
+		ret = (int)PTR_ERR(fence);
 		pr_err("host1x_fence_create failed with: %d\n", ret);
 		return ret;
 	}
@@ -455,7 +455,7 @@ start_msg_handling(struct comm_channel_ctx_t *comm_ctx)
 				   "comm-channel-recv-task");
 	if (IS_ERR_OR_NULL(r_task->task)) {
 		pr_err("Failed to create comm channel recv task\n");
-		return PTR_ERR(r_task->task);
+		return (int)PTR_ERR(r_task->task);
 	}
 	r_task->created = true;
 
@@ -494,7 +494,7 @@ stop_msg_handling(struct comm_channel_ctx_t *comm_ctx)
 		mutex_lock(&syncpt->lock);
 		syncpt->fence_release = true;
 		if (syncpt->fence) {
-			ret = dma_fence_remove_callback(syncpt->fence,
+			ret = (int)dma_fence_remove_callback(syncpt->fence,
 							&syncpt->fence_cb);
 			if (ret) {
 				/*

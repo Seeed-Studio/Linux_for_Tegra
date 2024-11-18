@@ -63,13 +63,13 @@ memobj_devmngd_pin(struct vmap_ctx_t *vmap_ctx,
 	pin->attach = pci_client_dmabuf_attach(vmap_ctx->pci_client_h,
 					       pin->dmabuf);
 	if (IS_ERR_OR_NULL(pin->attach)) {
-		ret = PTR_ERR(pin->attach);
+		ret = (int)PTR_ERR(pin->attach);
 		goto err;
 	}
 
 	pin->sgt = dma_buf_map_attachment(pin->attach, pin->dir);
 	if (IS_ERR_OR_NULL(pin->sgt)) {
-		ret = PTR_ERR(pin->sgt);
+		ret = (int)PTR_ERR(pin->sgt);
 		goto err;
 	}
 
@@ -157,13 +157,13 @@ memobj_clientmngd_pin(struct vmap_ctx_t *vmap_ctx,
 	 */
 	pin->attach = dma_buf_attach(pin->dmabuf, &vmap_ctx->dummy_pdev->dev);
 	if (IS_ERR_OR_NULL(pin->attach)) {
-		ret = PTR_ERR(pin->attach);
+		ret = (int)PTR_ERR(pin->attach);
 		pr_err("client_mngd dma_buf_attach failed\n");
 		goto err;
 	}
 	pin->sgt = dma_buf_map_attachment(pin->attach, pin->dir);
 	if (IS_ERR_OR_NULL(pin->sgt)) {
-		ret = PTR_ERR(pin->sgt);
+		ret = (int)PTR_ERR(pin->sgt);
 		pr_err("client_mngd dma_buf_attachment failed\n");
 		goto err;
 	}
@@ -355,7 +355,7 @@ syncobj_pin(struct vmap_ctx_t *vmap_ctx,
 	 */
 	pin->sp = tegra_drm_get_syncpt(pin->fd, pin->syncpt_id);
 	if (IS_ERR_OR_NULL(pin->sp)) {
-		ret = PTR_ERR(pin->sp);
+		ret = (int)PTR_ERR(pin->sp);
 		pr_err("Failed to get syncpoint from id\n");
 		goto err;
 	}

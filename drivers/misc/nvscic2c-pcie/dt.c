@@ -509,7 +509,7 @@ parse_endpoint_db(struct driver_param_t *drv_param)
 		       ENDPOINT_DB_PROP_NAME);
 		return -EFAULT;
 	}
-	nr_endpoint = ret;
+	nr_endpoint = (u8)ret;
 
 	if (nr_endpoint == 0U) {
 		ret = -EINVAL;

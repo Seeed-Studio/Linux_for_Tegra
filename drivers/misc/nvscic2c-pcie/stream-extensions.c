@@ -374,7 +374,7 @@ ioctl_free_obj(struct stream_ext_ctx_t *ctx,
 	if (ret)
 		return ret;
 
-	filep = fget(args->handle);
+	filep = fget((__u32)args->handle);
 	if (filep == NULL)
 		return -EINVAL;
 	stream_obj = filep->private_data;
@@ -388,7 +388,7 @@ ioctl_free_obj(struct stream_ext_ctx_t *ctx,
 	}
 
 	/* this shall close the handle: resulting in fops_release().*/
-	close_fd(args->handle);
+	close_fd((__u32)args->handle);
 
 	return 0;
 }
@@ -419,7 +419,7 @@ ioctl_export_obj(struct stream_ext_ctx_t *ctx,
 	else
 		return -EINVAL;
 
-	filep = fget(args->in.handle);
+	filep = fget((__u32)args->in.handle);
 	if (!filep) {
 		pr_err("filep is NULL\n");
 		return -EINVAL;
@@ -447,7 +447,7 @@ ioctl_export_obj(struct stream_ext_ctx_t *ctx,
 	/* generate export desc.*/
 	peer = &ctx->peer_node;
 	exp_desc = gen_desc(peer->board_id, peer->soc_id, peer->cntrlr_id,
-			    ctx->ep_id, export_type, stream_obj->vmap.id);
+			    ctx->ep_id, (u32)export_type, stream_obj->vmap.id);
 
 	/*share it with peer for peer for corresponding import.*/
 	pr_debug("Exporting descriptor = (%llu)\n", exp_desc);
@@ -500,7 +500,7 @@ ioctl_import_obj(struct stream_ext_ctx_t *ctx,
 		return handle;
 	pr_debug("Imported descriptor = (%llu)\n", args->in.desc);
 
-	filep = fget(handle);
+	filep = fget((__u32)handle);
 	if (!filep)
 		return -ENOMEM;
 
@@ -1132,7 +1132,7 @@ cache_copy_request_handles(struct copy_req_params *params,
 	cr->num_remote_buf_objs = 0;
 	for (i = 0; i < params->num_local_post_fences; i++) {
 		handle = params->local_post_fences[i];
-		filep = fget(handle);
+		filep = fget((__u32)handle);
 		if (filep == NULL)
 			return -EINVAL;
 		stream_obj = filep->private_data;
@@ -1152,7 +1152,7 @@ cache_copy_request_handles(struct copy_req_params *params,
 	}
 	for (i = 0; i < params->num_remote_post_fences; i++) {
 		handle = params->remote_post_fences[i];
-		filep = fget(handle);
+		filep = fget((__u32)handle);
 		if (filep == NULL)
 			return -EINVAL;
 		stream_obj = filep->private_data;
@@ -1172,7 +1172,7 @@ cache_copy_request_handles(struct copy_req_params *params,
 	}
 	for (i = 0; i < params->num_flush_ranges; i++) {
 		handle = params->flush_ranges[i].src_handle;
-		filep = fget(handle);
+		filep = fget((__u32)handle);
 		if (filep == NULL)
 			return -EINVAL;
 		stream_obj = filep->private_data;
@@ -1185,7 +1185,7 @@ cache_copy_request_handles(struct copy_req_params *params,
 		fput(filep);
 
 		handle = params->flush_ranges[i].dst_handle;
-		filep = fget(handle);
+		filep = fget((__u32)handle);
 		if (filep == NULL)
 			return -EINVAL;
 		stream_obj = filep->private_data;
@@ -1213,7 +1213,7 @@ validate_handle(struct stream_ext_ctx_t *ctx, s32 handle,
 {
 	int ret = -EINVAL;
 	struct stream_ext_obj *stream_obj = NULL;
-	struct file *filep = fget(handle);
+	struct file *filep = fget((__u32)handle);
 
 	if (!filep)
 		goto exit;
@@ -1385,25 +1385,25 @@ copy_args_from_user(struct stream_ext_ctx_t *ctx,
 	params->num_remote_post_fences = args->num_remote_post_fences;
 	params->num_flush_ranges = args->num_flush_ranges;
 
-	ret = copy_from_user(params->local_post_fences,
+	ret = (int)copy_from_user(params->local_post_fences,
 			     (void __user *)args->local_post_fences,
 			     (params->num_local_post_fences * sizeof(s32)));
 	if (ret < 0)
 		return -EFAULT;
 
-	ret = copy_from_user(params->remote_post_fences,
+	ret = (int)copy_from_user(params->remote_post_fences,
 			     (void __user *)args->remote_post_fences,
 			     (params->num_remote_post_fences * sizeof(s32)));
 	if (ret < 0)
 		return -EFAULT;
 
-	ret = copy_from_user(params->remote_post_fence_values,
+	ret = (int)copy_from_user(params->remote_post_fence_values,
 			     (void __user *)args->remote_post_fence_values,
 			     (params->num_remote_post_fences * sizeof(u64)));
 	if (ret < 0)
 		return -EFAULT;
 
-	ret = copy_from_user(params->flush_ranges,
+	ret = (int)copy_from_user(params->flush_ranges,
 			     (void __user *)args->flush_ranges,
 			     (params->num_flush_ranges *
 			      sizeof(struct nvscic2c_pcie_flush_range)));

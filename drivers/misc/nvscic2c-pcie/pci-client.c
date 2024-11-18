@@ -162,7 +162,7 @@ allocate_link_status_mem(struct pci_client_t *ctx)
 	if (WARN_ON(!mem->pva))
 		return -ENOMEM;
 
-	atomic_set(&ctx->link_status, NVSCIC2C_PCIE_LINK_DOWN);
+	atomic_set(&ctx->link_status, (int)NVSCIC2C_PCIE_LINK_DOWN);
 	link_mem = ((struct nvscic2c_pcie_link_mem  *)mem->pva);
 
 	link_mem->link_status = NVSCIC2C_PCIE_LINK_DOWN;
@@ -670,7 +670,7 @@ pci_client_change_link_status(void *pci_client_h,
 	 * For consistent view of same phys_addr by user-space, flush the update
 	 * Call is arm64 specific.
 	 */
-	atomic_set(&ctx->link_status, status);
+	atomic_set(&ctx->link_status, (__s32)status);
 	link_mem = ((struct nvscic2c_pcie_link_mem *)ctx->link_status_mem.pva);
 	link_mem->link_status = status;
 	arch_invalidate_pmem(ctx->link_status_mem.pva, ctx->link_status_mem.size);
