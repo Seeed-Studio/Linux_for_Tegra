@@ -319,6 +319,7 @@ static void remove_handle_ref(struct nvmap_client *client,
 {
 	nvmap_ref_lock(client);
 	atomic_dec(&ref->handle->share_count);
+	BUG_ON(client->handle_count == 0);
 	client->handle_count--;
 	rb_erase(&ref->node, &client->handle_refs);
 	nvmap_ref_unlock(client);
