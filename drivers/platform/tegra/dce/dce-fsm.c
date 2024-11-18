@@ -94,8 +94,7 @@ static struct dce_event_process_struct event_process_table[] = {
  */
 int dce_handle_fsm_start_event(struct tegra_dce *d, void *params)
 {
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	return 0;
 }
@@ -110,8 +109,7 @@ int dce_handle_fsm_start_event(struct tegra_dce *d, void *params)
  */
 int dce_handle_event_stub(struct tegra_dce *d, void *params)
 {
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	return 0;
 }

@@ -337,8 +337,7 @@ out:
 
 int dce_admin_handle_ipc_received_event(struct tegra_dce *d, void *params)
 {
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	dce_os_wakeup_interruptible(d, DCE_WAIT_ADMIN_IPC);
 	return 0;

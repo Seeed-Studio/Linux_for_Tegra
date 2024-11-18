@@ -63,8 +63,7 @@ int dce_pm_handle_sc7_enter_requested_event(struct tegra_dce *d, void *params)
 	int ret = 0;
 	struct dce_ipc_message *msg = NULL;
 
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	msg = dce_get_admin_msg_buffer(d);
 	if (!msg) {
@@ -96,8 +95,7 @@ out:
  */
 int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
 {
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	dce_os_wakeup_interruptible(d, DCE_WAIT_SC7_ENTER);
 	return 0;
@@ -114,8 +112,7 @@ int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
  */
 int dce_pm_handle_sc7_exit_received_event(struct tegra_dce *d, void *params)
 {
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	dce_os_work_schedule(&d->dce_resume_work);
 	return 0;

@@ -20,6 +20,13 @@
 #include <dce-client-ipc-internal.h>
 #include <dce-os-work.h>
 
+#define DCE_WARN_ON_NOT_NULL(x) \
+	do { \
+		if (x != NULL) { \
+			dce_os_warn(d, "Unexpected non-NULL value for " #x "\n"); \
+		} \
+	} while (0)
+
 #define DCE_MAX_CPU_IRQS 4
 
 /**

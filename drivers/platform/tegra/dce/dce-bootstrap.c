@@ -69,8 +69,7 @@ int dce_handle_boot_cmd_requested_event(struct tegra_dce *d, void *params)
  */
 int dce_handle_boot_cmd_received_event(struct tegra_dce *d, void *params)
 {
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	dce_os_wakeup_interruptible(d, DCE_WAIT_BOOT_CMD);
 	return 0;
@@ -91,8 +90,7 @@ int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 {
 	int ret = 0;
 
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	d->boot_status |= DCE_FW_EARLY_BOOT_START;
 	if (dce_fw_boot_complete(d)) {
@@ -139,8 +137,7 @@ boot_done:
  */
 int dce_handle_boot_complete_received_event(struct tegra_dce *d, void *params)
 {
-	if (params != NULL)
-		dce_os_warn(d, "Params aren't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(params);
 
 	dce_os_wakeup_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
 	return 0;
@@ -301,8 +298,7 @@ static void dce_boot_interface_isr(struct tegra_dce *d, void *data)
 	u32 status;
 	u8 interface_id = DCE_MAILBOX_BOOT_INTERFACE;
 
-	if (data != NULL)
-		dce_os_warn(d, "Data param isn't expected in this function\n");
+	DCE_WARN_ON_NOT_NULL(data);
 
 	status = dce_mailbox_get_interface_status(d, interface_id);
 	if (status == 0xffffffff)
