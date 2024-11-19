@@ -272,6 +272,16 @@ static int extract_pixel_format(
 		*format = V4L2_PIX_FMT_SGRBG12;
 	else if (strncmp(pixel_t, "bayer_wdr_dol_rggb10", size) == 0)
 		*format = V4L2_PIX_FMT_SRGGB10;
+	else if (strncmp(pixel_t, "bayer_wdr_dol_gbrg10", size) == 0)
+		*format = V4L2_PIX_FMT_SGBRG10;
+	else if (strncmp(pixel_t, "bayer_wdr_dol_grbg10", size) == 0)
+		*format = V4L2_PIX_FMT_SGRBG10;
+	else if (strncmp(pixel_t, "bayer_wdr_dol_rggb12", size) == 0)
+		*format = V4L2_PIX_FMT_SRGGB12;
+	else if (strncmp(pixel_t, "bayer_wdr_dol_gbrg12", size) == 0)
+		*format = V4L2_PIX_FMT_SGBRG12;
+	else if (strncmp(pixel_t, "bayer_wdr_dol_grbg12", size) == 0)
+		*format = V4L2_PIX_FMT_SGRBG12;
 #if 0 /* disable for Canonical kenrel */
 	else if (strncmp(pixel_t, "bayer_xbggr10p", size) == 0)
 		*format = V4L2_PIX_FMT_XBGGR10P;
