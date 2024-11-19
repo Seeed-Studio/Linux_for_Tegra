@@ -3,8 +3,6 @@
  * Copyright (c) 2022, NVIDIA Corporation.
  */
 
-#include <asm/unaligned.h>
-
 #include <linux/dev_printk.h>
 #include <linux/device.h>
 #include <linux/firmware.h>
