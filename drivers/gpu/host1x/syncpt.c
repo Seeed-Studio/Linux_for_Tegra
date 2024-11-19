@@ -587,3 +587,17 @@ void host1x_syncpt_release_vblank_reservation(struct host1x_client *client,
 	kref_put(&host->syncpt[syncpt_id].ref, do_nothing);
 }
 EXPORT_SYMBOL(host1x_syncpt_release_vblank_reservation);
+
+int host1x_syncpt_get_shim_info(struct host1x *host, phys_addr_t *base, u32 *stride,
+				u32 *num_syncpts)
+{
+	if (!host->shim_base)
+		return -ENODEV;
+
+	*base = host->shim_base;
+	*stride = host->shim_stride;
+	*num_syncpts = host->info->nb_pts;
+
+	return 0;
+}
+EXPORT_SYMBOL(host1x_syncpt_get_shim_info);

@@ -169,6 +169,10 @@ struct host1x {
 	struct host1x_syncpt_pool *pools;
 	unsigned int num_pools;
 
+	/* Syncpoint shim */
+	phys_addr_t shim_base;
+	u32 shim_stride;
+
 	struct iommu_group *group;
 	struct iommu_domain *domain;
 	struct iova_domain iova;

@@ -14,6 +14,7 @@
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
@@ -937,6 +938,49 @@ static int host1x_get_syncpt_pools(struct host1x *host)
 	return 0;
 }
 
+static int host1x_get_syncpt_shim(struct host1x *host)
+{
+	struct device_node *np = host->dev->of_node, *shim_np;
+	u64 base, size;
+	int err;
+
+	shim_np = of_parse_phandle(np, "nvidia,syncpoint-shim", 0);
+	if (!shim_np)
+		return 0;
+
+#ifdef NV_OF_PROPERTY_READ_REG_PRESENT
+	err = of_property_read_reg(shim_np, 0, &base, &size);
+	of_node_put(shim_np);
+	if (err) {
+		dev_err(host->dev, "syncpoint shim node has invalid reg property: %d\n", err);
+		return err;
+	}
+#else
+	{
+		u32 data[4];
+		err = of_property_read_u32_array(shim_np, "reg", data, ARRAY_SIZE(data));
+		of_node_put(shim_np);
+		if (err) {
+			dev_err(host->dev, "syncpoint shim has invalid reg property: %d\n", err);
+			return err;
+		}
+
+		base = data[1];
+		size = data[3];
+	}
+#endif
+
+	host->shim_stride = size / host->info->nb_pts;
+	if (host->shim_stride != 0x1000 && host->shim_stride != 0x10000) {
+		dev_err(host->dev, "syncpoint shim has unexpected stride %u\n", host->shim_stride);
+		return err;
+	}
+
+	host->shim_base = base;
+
+	return 0;
+}
+
 static int host1x_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -1035,6 +1079,10 @@ static int host1x_probe(struct platform_device *pdev)
 		return err;
 
 	err = host1x_get_syncpt_pools(host);
+	if (err)
+		return err;
+
+	err = host1x_get_syncpt_shim(host);
 	if (err)
 		return err;
 
