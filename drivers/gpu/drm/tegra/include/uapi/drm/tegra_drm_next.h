@@ -1066,6 +1066,47 @@ struct drm_tegra_syncpoint_wait {
 	__u64 timestamp;
 };
 
+#define DRM_TEGRA_SYNCPOINT_EXPORT_MEMORY_READWRITE	(1<<0)
+
+struct drm_tegra_syncpoint_export_memory {
+	/**
+	 * @start: [in]
+	 *
+	 * ID of first syncpoint in exported memory region.
+	 */
+	__u32 start;
+
+	/**
+	 * @length: [in, out]
+	 *
+	 * Number of syncpoints in exported memory region. Specify 0 for all
+	 * syncpoints from @start until end of syncpoint memory. The number
+	 * of syncpoints in the returned buffer will be written to this field.
+	 */
+	__u32 length;
+
+	/**
+	 * @flags: [in]
+	 *
+	 * Flags.
+	 */
+	__u32 flags;
+
+	/**
+	 * @fd: [out]
+	 *
+	 * Dma-buf file descriptor corresponding to exported memory region.
+	 */
+	__s32 fd;
+
+	/**
+	 * @stride: [out]
+	 *
+	 * Stride in bytes between syncpoints in the exported memory region.
+	 */
+	__u32 stride;
+};
+
 #define DRM_IOCTL_TEGRA_CHANNEL_OPEN DRM_IOWR(DRM_COMMAND_BASE + 0x10, struct drm_tegra_channel_open)
 #define DRM_IOCTL_TEGRA_CHANNEL_CLOSE DRM_IOWR(DRM_COMMAND_BASE + 0x11, struct drm_tegra_channel_close)
 #define DRM_IOCTL_TEGRA_CHANNEL_MAP DRM_IOWR(DRM_COMMAND_BASE + 0x12, struct drm_tegra_channel_map)
@@ -1075,6 +1116,7 @@ struct drm_tegra_syncpoint_wait {
 #define DRM_IOCTL_TEGRA_SYNCPOINT_ALLOCATE DRM_IOWR(DRM_COMMAND_BASE + 0x20, struct drm_tegra_syncpoint_allocate)
 #define DRM_IOCTL_TEGRA_SYNCPOINT_FREE DRM_IOWR(DRM_COMMAND_BASE + 0x21, struct drm_tegra_syncpoint_free)
 #define DRM_IOCTL_TEGRA_SYNCPOINT_WAIT DRM_IOWR(DRM_COMMAND_BASE + 0x22, struct drm_tegra_syncpoint_wait)
+#define DRM_IOCTL_TEGRA_SYNCPOINT_EXPORT_MEMORY DRM_IOWR(DRM_COMMAND_BASE + 0x24, struct drm_tegra_syncpoint_export_memory)
 
 #if defined(__cplusplus)
 }

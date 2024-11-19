@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2020 NVIDIA Corporation */
 
+#include <linux/dma-buf.h>
 #include <linux/host1x-next.h>
 #include <linux/iommu.h>
 #include <linux/list.h>
@@ -377,4 +378,187 @@ int tegra_drm_ioctl_syncpoint_wait(struct drm_device *drm, void *data, struct dr
 	args->timestamp = ktime_to_ns(ts);
 
 	return 0;
+}
+
+struct tegra_drm_syncpoint_memory_data {
+	phys_addr_t base;
+	u32 start, length, stride;
+	bool readwrite;
+	struct host1x *host1x;
+};
+
+static struct sg_table *tegra_drm_syncpoint_memory_map_dma_buf(
+	struct dma_buf_attachment *attachment, enum dma_data_direction direction)
+{
+	struct tegra_drm_syncpoint_memory_data *priv = attachment->dmabuf->priv;
+	phys_addr_t mem_start = priv->base + priv->stride * priv->start;
+	size_t mem_length = priv->stride * priv->length;
+	dma_addr_t mem_start_dma;
+	struct sg_table *sgt;
+	int err;
+
+	if (!priv->readwrite && direction != DMA_TO_DEVICE)
+		return ERR_PTR(-EPERM);
+
+	if (!PAGE_ALIGNED(mem_start) || !PAGE_ALIGNED(mem_start + mem_length)) {
+		dev_err(attachment->dev, "denied mapping for unaligned syncpoint shim mapping\n");
+		return ERR_PTR(-EINVAL);
+	}
+
+	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
+	if (!sgt)
+		return ERR_PTR(-ENOMEM);
+
+	err = sg_alloc_table(sgt, 1, GFP_KERNEL);
+	if (err)
+		goto free_sgt;
+
+	mem_start_dma = dma_map_resource(attachment->dev, mem_start, mem_length, direction,
+					 DMA_ATTR_SKIP_CPU_SYNC);
+	err = dma_mapping_error(attachment->dev, mem_start_dma);
+	if (!mem_start_dma || err)
+		goto free_table;
+
+	sg_set_page(sgt->sgl, phys_to_page(mem_start), mem_length, 0);
+	sg_dma_address(sgt->sgl) = mem_start_dma;
+	sg_dma_len(sgt->sgl) = mem_length;
+
+	return sgt;
+
+free_table:
+	sg_free_table(sgt);
+free_sgt:
+	kfree(sgt);
+
+	return ERR_PTR(err);
+}
+
+static void tegra_drm_syncpoint_memory_unmap_dma_buf(
+	struct dma_buf_attachment *attachment, struct sg_table *sgt,
+	enum dma_data_direction direction)
+{
+	dma_unmap_resource(attachment->dev, sg_dma_address(sgt->sgl), sg_dma_len(sgt->sgl),
+			   direction, DMA_ATTR_SKIP_CPU_SYNC);
+	sg_free_table(sgt);
+	kfree(sgt);
+}
+
+static void tegra_drm_syncpoint_memory_release(struct dma_buf *dma_buf)
+{
+	struct tegra_drm_syncpoint_memory_data *priv = dma_buf->priv;
+	int i;
+
+	if (priv->readwrite) {
+		for (i = priv->start; i < priv->start + priv->length; i++) {
+			struct host1x_syncpt *sp = host1x_syncpt_get_by_id_noref(priv->host1x, i);
+
+			host1x_syncpt_put(sp);
+		}
+	}
+
+	kfree(priv);
+}
+
+static const struct dma_buf_ops syncpoint_dmabuf_ops = {
+	.map_dma_buf = tegra_drm_syncpoint_memory_map_dma_buf,
+	.unmap_dma_buf = tegra_drm_syncpoint_memory_unmap_dma_buf,
+	.release = tegra_drm_syncpoint_memory_release,
+};
+
+int tegra_drm_ioctl_syncpoint_export_memory(struct drm_device *drm, void *data,
+					    struct drm_file *file)
+{
+	struct host1x *host1x = tegra_drm_to_host1x(drm->dev_private);
+	struct drm_tegra_syncpoint_export_memory *args = data;
+	struct tegra_drm_file *fpriv = file->driver_priv;
+	struct tegra_drm_syncpoint_memory_data *priv;
+	u32 stride, num_syncpts, end_syncpts_user;
+	DEFINE_DMA_BUF_EXPORT_INFO(exp_info);
+	struct dma_buf *dma_buf;
+	phys_addr_t base;
+	int err, i;
+
+	if (args->flags & ~DRM_TEGRA_SYNCPOINT_EXPORT_MEMORY_READWRITE)
+		return -EINVAL;
+
+	err = host1x_syncpt_get_shim_info(host1x, &base, &stride, &num_syncpts);
+	if (err)
+		return err;
+
+	if (check_add_overflow(args->start, args->length, &end_syncpts_user))
+		return -EINVAL;
+
+	if (end_syncpts_user >= num_syncpts)
+		return -EINVAL;
+
+	if (args->length == 0)
+		args->length = num_syncpts - end_syncpts_user;
+
+	if (args->flags & DRM_TEGRA_SYNCPOINT_EXPORT_MEMORY_READWRITE) {
+		mutex_lock(&fpriv->lock);
+
+		for (i = args->start; i < args->start + args->length; i++) {
+			struct host1x_syncpt *sp = xa_load(&fpriv->syncpoints, i);
+
+			if (!sp) {
+				mutex_unlock(&fpriv->lock);
+				return -EINVAL;
+			}
+
+			host1x_syncpt_get(sp);
+		}
+
+		mutex_unlock(&fpriv->lock);
+	}
+
+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	if (!priv) {
+		err = -ENOMEM;
+		goto put_syncpts;
+	}
+
+	priv->base = base;
+	priv->start = args->start;
+	priv->length = args->length;
+	priv->stride = stride;
+	priv->readwrite = (args->flags & DRM_TEGRA_SYNCPOINT_EXPORT_MEMORY_READWRITE);
+	priv->host1x = host1x;
+
+	exp_info.ops = &syncpoint_dmabuf_ops;
+	exp_info.size = args->length * stride;
+	exp_info.flags = O_RDWR;
+	exp_info.priv = priv;
+
+	dma_buf = dma_buf_export(&exp_info);
+	if (IS_ERR(dma_buf)) {
+		err = PTR_ERR(dma_buf);
+		goto free_priv;
+	}
+
+	args->fd = dma_buf_fd(dma_buf, O_RDWR);
+	if (args->fd < 0) {
+		err = args->fd;
+		goto put_dma_buf;
+	}
+
+	args->stride = stride;
+
+	return 0;
+
+put_dma_buf:
+	dma_buf_put(dma_buf);
+
+free_priv:
+	kfree(priv);
+
+put_syncpts:
+	if (args->flags & DRM_TEGRA_SYNCPOINT_EXPORT_MEMORY_READWRITE) {
+		for (i = args->start; i < args->start + args->length; i++) {
+			struct host1x_syncpt *sp = host1x_syncpt_get_by_id_noref(host1x, i);
+
+			host1x_syncpt_put(sp);
+		}
+	}
+
+	return err;
 }
