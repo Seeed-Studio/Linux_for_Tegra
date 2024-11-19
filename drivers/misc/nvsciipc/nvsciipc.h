@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  */
 
 #ifndef __NVSCIIPC_KERNEL_H__
@@ -8,7 +9,7 @@
 
 #include <linux/nvscierror.h>
 #include <linux/nvsciipc_interface.h>
-#include <uapi/linux/nvsciipc_ioctl.h>
+#include "nvsciipc_ioctl.h"
 
 #define ERR(...) pr_err("nvsciipc: " __VA_ARGS__)
 #define INFO(...) pr_info("nvsciipc: " __VA_ARGS__)
