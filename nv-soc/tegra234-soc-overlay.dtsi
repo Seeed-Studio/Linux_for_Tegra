@@ -648,6 +648,8 @@
 				 <&bpmp TEGRA234_CLK_ACTMON>;
 			clock-names = "host1x", "actmon";
 
+			nvidia,syncpoint-shim = <&syncpoint_shim>;
+
 			nvjpg@15380000 {
 				compatible = "nvidia,tegra234-nvjpg";
 				reg = <0x0 0x15380000 0x0 0x00040000>;
@@ -1142,5 +1144,10 @@
 			offset_ms = <0>;
 			status = "disabled";
 		};
+	};
+
+	syncpoint_shim: memory@60000000 {
+		compatible = "nvidia,tegra234-syncpoint-shim";
+		reg = <0x0 0x60000000 0x0 0x4000000>;
 	};
 };
