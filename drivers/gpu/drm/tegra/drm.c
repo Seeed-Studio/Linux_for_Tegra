@@ -60,7 +60,13 @@ static int tegra_atomic_check(struct drm_device *drm,
 	if (err < 0)
 		return err;
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	return tegra_display_hub_atomic_check(drm, state);
+#else
+	return 0;
+#endif
 }
 
 static const struct drm_mode_config_funcs tegra_drm_mode_config_funcs = {
@@ -72,6 +78,9 @@ static const struct drm_mode_config_funcs tegra_drm_mode_config_funcs = {
 	.atomic_commit = drm_atomic_helper_commit,
 };
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 static void tegra_atomic_post_commit(struct drm_device *drm,
 				     struct drm_atomic_state *old_state)
 {
@@ -110,6 +119,12 @@ static const struct drm_mode_config_helper_funcs
 tegra_drm_mode_config_helpers = {
 	.atomic_commit_tail = tegra_atomic_commit_tail,
 };
+#else
+static const struct drm_mode_config_helper_funcs
+tegra_drm_mode_config_helpers = {
+	.atomic_commit_tail = drm_atomic_helper_commit_tail_rpm,
+};
+#endif
 
 static int tegra_drm_open(struct drm_device *drm, struct drm_file *filp)
 {
@@ -1294,11 +1309,15 @@ static int host1x_drm_probe(struct host1x_device *dev)
 		iova_cache_put();
 	}
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	if (tegra->hub) {
 		err = tegra_display_hub_prepare(tegra->hub);
 		if (err < 0)
 			goto device;
 	}
+#endif
 
 #if defined(NV_DRM_DRIVER_STRUCT_HAS_IRQ_ENABLED_ARG) /* Linux v5.15 */
 	/*
@@ -1345,9 +1364,13 @@ static int host1x_drm_probe(struct host1x_device *dev)
 fb:
 	tegra_drm_fb_exit(drm);
 hub:
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	if (tegra->hub)
 		tegra_display_hub_cleanup(tegra->hub);
 device:
+#endif
 	if (tegra->domain) {
 		mutex_destroy(&tegra->mm_lock);
 		drm_mm_takedown(&tegra->mm);
@@ -1384,8 +1407,12 @@ static int host1x_drm_remove(struct host1x_device *dev)
 	drm_atomic_helper_shutdown(drm);
 	drm_mode_config_cleanup(drm);
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	if (tegra->hub)
 		tegra_display_hub_cleanup(tegra->hub);
+#endif
 
 	err = host1x_device_exit(dev);
 	if (err < 0)
@@ -1425,25 +1452,36 @@ static SIMPLE_DEV_PM_OPS(host1x_drm_pm_ops, host1x_drm_suspend,
 			 host1x_drm_resume);
 
 static const struct of_device_id host1x_drm_subdevs[] = {
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC)
 	{ .compatible = "nvidia,tegra20-dc", },
 	{ .compatible = "nvidia,tegra20-hdmi", },
 	{ .compatible = "nvidia,tegra20-gr2d", },
 	{ .compatible = "nvidia,tegra20-gr3d", },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC)
 	{ .compatible = "nvidia,tegra30-dc", },
 	{ .compatible = "nvidia,tegra30-hdmi", },
 	{ .compatible = "nvidia,tegra30-gr2d", },
 	{ .compatible = "nvidia,tegra30-gr3d", },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC)
 	{ .compatible = "nvidia,tegra114-dc", },
 	{ .compatible = "nvidia,tegra114-dsi", },
 	{ .compatible = "nvidia,tegra114-hdmi", },
 	{ .compatible = "nvidia,tegra114-gr2d", },
 	{ .compatible = "nvidia,tegra114-gr3d", },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC)
 	{ .compatible = "nvidia,tegra124-dc", },
 	{ .compatible = "nvidia,tegra124-sor", },
 	{ .compatible = "nvidia,tegra124-hdmi", },
 	{ .compatible = "nvidia,tegra124-dsi", },
 	{ .compatible = "nvidia,tegra124-vic", },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)
 	{ .compatible = "nvidia,tegra132-dsi", },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)
 	{ .compatible = "nvidia,tegra210-dc", },
 	{ .compatible = "nvidia,tegra210-dsi", },
 	{ .compatible = "nvidia,tegra210-sor", },
@@ -1452,6 +1490,8 @@ static const struct of_device_id host1x_drm_subdevs[] = {
 	{ .compatible = "nvidia,tegra210-nvdec", },
 	{ .compatible = "nvidia,tegra210-nvenc", },
 	{ .compatible = "nvidia,tegra210-nvjpg", },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC)
 	{ .compatible = "nvidia,tegra186-display", },
 	{ .compatible = "nvidia,tegra186-dc", },
 	{ .compatible = "nvidia,tegra186-sor", },
@@ -1460,6 +1500,8 @@ static const struct of_device_id host1x_drm_subdevs[] = {
 	{ .compatible = "nvidia,tegra186-nvdec", },
 	{ .compatible = "nvidia,tegra186-nvenc", },
 	{ .compatible = "nvidia,tegra186-nvjpg", },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	{ .compatible = "nvidia,tegra194-display", },
 	{ .compatible = "nvidia,tegra194-dc", },
 	{ .compatible = "nvidia,tegra194-sor", },
@@ -1467,6 +1509,7 @@ static const struct of_device_id host1x_drm_subdevs[] = {
 	{ .compatible = "nvidia,tegra194-nvdec", },
 	{ .compatible = "nvidia,tegra194-nvenc", },
 	{ .compatible = "nvidia,tegra194-nvjpg", },
+#endif
 #ifndef CONFIG_TEGRA_DRM_NATIVE_DIS
 	{ .compatible = "nvidia,tegra234-vic", },
 	{ .compatible = "nvidia,tegra234-nvdec", },
@@ -1491,6 +1534,9 @@ static struct host1x_driver host1x_drm_driver = {
 };
 
 static struct platform_driver * const drivers[] = {
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	&tegra_display_hub_driver,
 	&tegra_dc_driver,
 	&tegra_hdmi_driver,
@@ -1499,6 +1545,7 @@ static struct platform_driver * const drivers[] = {
 	&tegra_sor_driver,
 	&tegra_gr2d_driver,
 	&tegra_gr3d_driver,
+#endif
 #ifndef CONFIG_TEGRA_DRM_NATIVE_DIS
 	&tegra_vic_driver,
 	&tegra_nvdec_driver,

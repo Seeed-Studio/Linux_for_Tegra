@@ -12,16 +12,24 @@
 #include <linux/gpio/consumer.h>
 
 #include <drm/drm_atomic.h>
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 #include <drm/drm_bridge.h>
 #include <drm/drm_edid.h>
 #include <drm/drm_encoder.h>
+#endif
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_fixed.h>
 #include <drm/drm_probe_helper.h>
 #include <uapi/drm/tegra_drm_next.h>
 
 #include "gem.h"
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 #include "hub.h"
+#endif
 #include <trace/events/trace.h>
 
 /* XXX move to include/uapi/drm/drm_fourcc.h? */
@@ -61,7 +69,11 @@ struct tegra_drm {
 	unsigned int pitch_align;
 	unsigned int num_crtcs;
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	struct tegra_display_hub *hub;
+#endif
 };
 
 static inline struct host1x *tegra_drm_to_host1x(struct tegra_drm *tegra)
@@ -150,6 +162,9 @@ void *tegra_drm_alloc(struct tegra_drm *tegra, size_t size, dma_addr_t *iova);
 void tegra_drm_free(struct tegra_drm *tegra, size_t size, void *virt,
 		    dma_addr_t iova);
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 struct cec_notifier;
 
 struct tegra_output {
@@ -200,6 +215,7 @@ int drm_dp_aux_attach(struct drm_dp_aux *aux, struct tegra_output *output);
 int drm_dp_aux_detach(struct drm_dp_aux *aux);
 int drm_dp_aux_enable(struct drm_dp_aux *aux);
 int drm_dp_aux_disable(struct drm_dp_aux *aux);
+#endif
 
 /* from fb.c */
 struct tegra_bo *tegra_fb_get_plane(struct drm_framebuffer *framebuffer,
@@ -215,6 +231,9 @@ void tegra_drm_fb_free(struct drm_device *drm);
 int tegra_drm_fb_init(struct drm_device *drm);
 void tegra_drm_fb_exit(struct drm_device *drm);
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 extern struct platform_driver tegra_display_hub_driver;
 extern struct platform_driver tegra_dc_driver;
 extern struct platform_driver tegra_hdmi_driver;
@@ -223,6 +242,8 @@ extern struct platform_driver tegra_dpaux_driver;
 extern struct platform_driver tegra_sor_driver;
 extern struct platform_driver tegra_gr2d_driver;
 extern struct platform_driver tegra_gr3d_driver;
+#endif
+
 #ifndef CONFIG_TEGRA_DRM_NATIVE_DIS
 extern struct platform_driver tegra_vic_driver;
 extern struct platform_driver tegra_nvdec_driver;

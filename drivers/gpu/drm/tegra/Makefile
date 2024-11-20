@@ -12,6 +12,12 @@ tegra-drm-y := \
 	firewall.o \
 	gem.o \
 	fb.o \
+	virt.o
+
+ifneq ($(filter y, $(CONFIG_ARCH_TEGRA_2x_SOC) $(CONFIG_ARCH_TEGRA_3x_SOC) \
+	$(CONFIG_ARCH_TEGRA_114_SOC) $(CONFIG_ARCH_TEGRA_124_SOC) $(CONFIG_ARCH_TEGRA_132_SOC) \
+	$(CONFIG_ARCH_TEGRA_210_SOC) $(CONFIG_ARCH_TEGRA_186_SOC) $(CONFIG_ARCH_TEGRA_194_SOC)),)
+tegra-drm-y += \
 	dp.o \
 	hub.o \
 	plane.o \
@@ -25,8 +31,8 @@ tegra-drm-y := \
 	sor.o \
 	dpaux.o \
 	gr2d.o \
-	gr3d.o \
-	virt.o
+	gr3d.o
+endif
 
 ifeq ($(CONFIG_TEGRA_DRM_NATIVE_DIS),y)
 ccflags-y += -DCONFIG_TEGRA_DRM_NATIVE_DIS
