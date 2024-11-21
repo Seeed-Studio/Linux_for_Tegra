@@ -8528,6 +8528,21 @@ compile_test() {
 
             compile_check_conftest "$CODE" "NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX" "" "functions"
         ;;
+        of_property_read_reg)
+            #
+            # Determine if the function of_property_read_reg is present or not.
+            #
+            # The API is added with commit ff61bacd77f2
+            # ("of/address: Add of_property_read_reg() helper") in Linux 6.4.
+            #
+            CODE="
+            #include <linux/of_address.h>
+            void conftest_of_property_read_reg_present(void) {
+                of_property_read_reg();
+            }"
+
+            compile_check_conftest "$CODE" "NV_OF_PROPERTY_READ_REG_PRESENT" "" "functions"
+        ;;
 
         # When adding a new conftest entry, please use the correct format for
         # specifying the relevant upstream Linux kernel commit.
