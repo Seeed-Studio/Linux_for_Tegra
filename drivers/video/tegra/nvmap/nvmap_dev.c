@@ -53,7 +53,6 @@
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
 
 struct nvmap_device *nvmap_dev;
-EXPORT_SYMBOL(nvmap_dev);
 ulong nvmap_init_time;
 
 extern bool nvmap_convert_iovmm_to_carveout;

@@ -143,32 +143,6 @@ found:
 	return NULL;
 }
 
-#ifdef NVMAP_CONFIG_VIDMEM_CARVEOUT
-int nvmap_register_vidmem_carveout(struct device *dma_dev,
-				phys_addr_t base, size_t size)
-{
-	struct nvmap_platform_carveout *vidmem_co;
-
-	if (!base || !size || (base != PAGE_ALIGN(base)) ||
-	    (size != PAGE_ALIGN(size)))
-		return -EINVAL;
-
-	vidmem_co = nvmap_get_carveout_pdata("vidmem");
-	if (!vidmem_co)
-		return -ENODEV;
-
-	if (vidmem_co->base || vidmem_co->size)
-		return -EEXIST;
-
-	vidmem_co->base = base;
-	vidmem_co->size = size;
-	if (dma_dev)
-		vidmem_co->dma_dev = dma_dev;
-	return nvmap_create_carveout(vidmem_co);
-}
-EXPORT_SYMBOL(nvmap_register_vidmem_carveout);
-#endif /* NVMAP_CONFIG_VIDMEM_CARVEOUT */
-
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 static int __init nvmap_populate_ivm_carveout(struct device *dev)
 {

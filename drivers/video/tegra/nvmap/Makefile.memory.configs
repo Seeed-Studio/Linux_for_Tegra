@@ -104,9 +104,6 @@ NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC := y
 # Config for enabling the dma-buf deferred unmapping
 NVMAP_CONFIG_DMABUF_DEFERRED_UNMAPPING := n
 
-#Config for enabling nvmap_register_vidmem_carveout
-NVMAP_CONFIG_VIDMEM_CARVEOUT := n
-
 # Config for enabling Foreign buffer support (for OpenRM created buffer)
 # This config protects the code added for supporting APIs like NvRmMemQueryHandleParams
 # for Foreign fd for a buffer created by OpenRM.
