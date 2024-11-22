@@ -9,6 +9,18 @@ include "../../debian.nvidia-tegra/config/annotations"
 CONFIG_ARM_FFA_TRANSPORT                        policy<{'arm64': 'y'}>
 CONFIG_ARM_FFA_TRANSPORT                        note<'EMBARGOED'>
 
+CONFIG_INTEGRITY_ASYMMETRIC_KEYS                policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_ASYMMETRIC_KEYS                note<'EMBARGOED'>
+
+CONFIG_INTEGRITY_PLATFORM_KEYRING               policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_PLATFORM_KEYRING               note<'EMBARGOED'>
+
+CONFIG_INTEGRITY_SIGNATURE                      policy<{'arm64': 'y'}>
+CONFIG_INTEGRITY_SIGNATURE                      note<'EMBARGOED'>
+
+CONFIG_SYSTEM_BLACKLIST_KEYRING                 policy<{'arm64': 'y'}>
+CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'EMBARGOED'>
+
 
 # ---- Annotations without notes ----
 
