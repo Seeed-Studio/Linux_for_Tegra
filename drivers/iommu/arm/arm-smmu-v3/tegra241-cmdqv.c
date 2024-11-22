@@ -9,6 +9,8 @@
 #include <linux/interrupt.h>
 #include <linux/iommu.h>
 #include <linux/iopoll.h>
+#include <linux/of_platform.h>
+#include <linux/platform_device.h>
 
 #include <acpi/acpixf.h>
 
@@ -748,6 +750,26 @@ free_list:
 	return res;
 }
 
+static struct resource *
+tegra241_cmdqv_find_dt_resource(struct device *dev, int *irq)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct resource *res;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(dev, "no memory resource found for CMDQV\n");
+		return NULL;
+	}
+
+	if (irq)
+		*irq = platform_get_irq_byname_optional(pdev, "cmdqv");
+	if (!irq || *irq <= 0)
+		dev_warn(dev, "no interrupt. errors will not be reported\n");
+
+	return res;
+}
+
 static int tegra241_cmdqv_init_structures(struct arm_smmu_device *smmu)
 {
 	struct tegra241_cmdqv *cmdqv =
@@ -875,11 +897,14 @@ struct arm_smmu_device *tegra241_cmdqv_probe(struct arm_smmu_device *smmu)
 
 	if (!smmu->dev->of_node)
 		res = tegra241_cmdqv_find_acpi_resource(smmu->impl_dev, &irq);
+	else
+		res = tegra241_cmdqv_find_dt_resource(smmu->impl_dev, &irq);
 	if (!res)
 		goto out_fallback;
 
 	new_smmu = __tegra241_cmdqv_probe(smmu, res, irq);
-	kfree(res);
+	if (!smmu->dev->of_node)
+		kfree(res);
 
 	if (new_smmu)
 		return new_smmu;
@@ -890,3 +915,20 @@ out_fallback:
 	put_device(smmu->impl_dev);
 	return ERR_PTR(-ENODEV);
 }
+
+static const struct of_device_id tegra241_cmdqv_of_match[] = {
+	{ .compatible = "nvidia,tegra264-cmdqv" },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, tegra241_cmdqv_of_match);
+
+static struct platform_driver tegra241_cmdqv_driver = {
+	.driver = {
+		.name = "tegra241-cmdqv",
+		.of_match_table = tegra241_cmdqv_of_match,
+	},
+};
+module_platform_driver(tegra241_cmdqv_driver);
+
+MODULE_DESCRIPTION("NVIDIA Tegra241 Command Queue Virtualization Driver");
+MODULE_LICENSE("GPL v2");
