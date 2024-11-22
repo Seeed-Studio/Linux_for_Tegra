@@ -4304,7 +4304,16 @@
 			interrupt-names = "eventq","gerror";
 			dma-coherent;
 			#iommu-cells = <1>;
+			nvidia,cmdqv = <&cmdqv1>;
+		};
 
+		cmdqv1: cmdqv@8105200000 {
+			compatible = "nvidia,tegra264-cmdqv";
+			status = "disabled";
+
+			reg = <0x81 0x05200000 0x0 0x00830000>;
+			interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "cmdqv";
 		};
 
 		smmu2_mmu: iommu@8106000000 {
@@ -4317,6 +4326,16 @@
 			interrupt-names = "eventq","gerror";
 			dma-coherent;
 			#iommu-cells = <1>;
+			nvidia,cmdqv = <&cmdqv2>;
+		};
+
+		cmdqv2: cmdqv@8106200000 {
+			compatible = "nvidia,tegra264-cmdqv";
+			status = "disabled";
+
+			reg = <0x81 0x06200000 0x0 0x00830000>;
+			interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "cmdqv";
 		};
 
 		smmu0_mmu: iommu@810a000000 {
@@ -4328,6 +4347,16 @@
 				     <GIC_SPI 22 IRQ_TYPE_EDGE_RISING>;
 			interrupt-names = "eventq","gerror";
 			#iommu-cells = <1>;
+			nvidia,cmdqv = <&cmdqv0>;
+		};
+
+		cmdqv0: cmdqv@810a200000 {
+			compatible = "nvidia,tegra264-cmdqv";
+			status = "disabled";
+
+			reg = <0x81 0x0a200000 0x0 0x00830000>;
+			interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "cmdqv";
 		};
 
 		smmu4_mmu: iommu@810b000000 {
@@ -4340,6 +4369,16 @@
 			interrupt-names = "eventq","gerror";
 			dma-coherent;
 			#iommu-cells = <1>;
+			nvidia,cmdqv = <&cmdqv4>;
+		};
+
+		cmdqv4: cmdqv@810b200000 {
+			compatible = "nvidia,tegra264-cmdqv";
+			status = "disabled";
+
+			reg = <0x81 0x0b200000 0x0 0x00830000>;
+			interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "cmdqv";
 		};
 
 		smmu0_hwpm: smmu-hwpm@810aa30000 {
@@ -4598,6 +4637,16 @@
 				     <GIC_SPI 226 IRQ_TYPE_EDGE_RISING>;
 			interrupt-names = "eventq","gerror";
 			#iommu-cells = <1>;
+			nvidia,cmdqv = <&cmdqv3>;
+		};
+
+		cmdqv3: cmdqv@8806200000 {
+			compatible = "nvidia,tegra264-cmdqv";
+			status = "disabled";
+
+			reg = <0x88 0x06200000 0x0 0x00830000>;
+			interrupts = <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "cmdqv";
 		};
 
 		i2c2: i2c@c600000 {
@@ -8297,7 +8346,7 @@
 			status = "disabled";
 
 			reusable;
-			size = <0x0 0x4000000>;
+			size = <0x0 0x20000000>;
 			alignment = <0x0 0x10000>;
 			linux,cma-default;
 		};
