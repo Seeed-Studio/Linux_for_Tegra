@@ -36,6 +36,9 @@ CONFIG_IP_NF_TARGET_REDIRECT                    note<'EMBARGOED'>
 CONFIG_MLX5_INFINIBAND                          policy<{'arm64': 'm'}>
 CONFIG_MLX5_INFINIBAND                          note<'EMBARGOED'>
 
+CONFIG_NETFILTER_XT_MATCH_STATISTIC             policy<{'arm64': 'm'}>
+CONFIG_NETFILTER_XT_MATCH_STATISTIC             note<'EMBARGOED'>
+
 CONFIG_PSTORE_BLK                               policy<{'arm64': 'y'}>
 CONFIG_PSTORE_BLK                               note<'EMBARGOED'>
 
@@ -47,6 +50,9 @@ CONFIG_PSTORE_RAM                               note<'EMBARGOED'>
 
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 policy<{'arm64': 'y'}>
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'EMBARGOED'>
+
+CONFIG_VXLAN                                    policy<{'arm64': 'm'}>
+CONFIG_VXLAN                                    note<'EMBARGOED'>
 
 CONFIG_ZRAM                                     policy<{'arm64': 'm'}>
 CONFIG_ZRAM                                     note<'EMBARGOED'>
