@@ -9,6 +9,15 @@ include "../../debian.nvidia-tegra/config/annotations"
 CONFIG_ARM_FFA_TRANSPORT                        policy<{'arm64': 'y'}>
 CONFIG_ARM_FFA_TRANSPORT                        note<'EMBARGOED'>
 
+CONFIG_INFINIBAND                               policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND                               note<'EMBARGOED'>
+
+CONFIG_INFINIBAND_IPOIB                         policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_IPOIB                         note<'EMBARGOED'>
+
+CONFIG_INFINIBAND_USER_MAD                      policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_USER_MAD                      note<'EMBARGOED'>
+
 CONFIG_INTEGRITY_ASYMMETRIC_KEYS                policy<{'arm64': 'y'}>
 CONFIG_INTEGRITY_ASYMMETRIC_KEYS                note<'EMBARGOED'>
 
