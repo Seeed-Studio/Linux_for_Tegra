@@ -15,6 +15,9 @@ CONFIG_INFINIBAND                               note<'EMBARGOED'>
 CONFIG_INFINIBAND_IPOIB                         policy<{'arm64': 'm'}>
 CONFIG_INFINIBAND_IPOIB                         note<'EMBARGOED'>
 
+CONFIG_INFINIBAND_USER_ACCESS                   policy<{'arm64': 'm'}>
+CONFIG_INFINIBAND_USER_ACCESS                   note<'EMBARGOED'>
+
 CONFIG_INFINIBAND_USER_MAD                      policy<{'arm64': 'm'}>
 CONFIG_INFINIBAND_USER_MAD                      note<'EMBARGOED'>
 
@@ -26,6 +29,9 @@ CONFIG_INTEGRITY_PLATFORM_KEYRING               note<'EMBARGOED'>
 
 CONFIG_INTEGRITY_SIGNATURE                      policy<{'arm64': 'y'}>
 CONFIG_INTEGRITY_SIGNATURE                      note<'EMBARGOED'>
+
+CONFIG_MLX5_INFINIBAND                          policy<{'arm64': 'm'}>
+CONFIG_MLX5_INFINIBAND                          note<'EMBARGOED'>
 
 CONFIG_PSTORE_BLK                               policy<{'arm64': 'y'}>
 CONFIG_PSTORE_BLK                               note<'EMBARGOED'>
