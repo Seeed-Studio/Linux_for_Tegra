@@ -21,6 +21,12 @@ CONFIG_INTEGRITY_SIGNATURE                      note<'EMBARGOED'>
 CONFIG_PSTORE_BLK                               policy<{'arm64': 'y'}>
 CONFIG_PSTORE_BLK                               note<'EMBARGOED'>
 
+CONFIG_PSTORE_CONSOLE                           policy<{'arm64': 'y'}>
+CONFIG_PSTORE_CONSOLE                           note<'EMBARGOED'>
+
+CONFIG_PSTORE_RAM                               policy<{'arm64': 'm'}>
+CONFIG_PSTORE_RAM                               note<'EMBARGOED'>
+
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 policy<{'arm64': 'y'}>
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'EMBARGOED'>
 
@@ -32,4 +38,5 @@ CONFIG_ZRAM                                     note<'EMBARGOED'>
 
 CONFIG_ARCH_TEGRA_264_SOC                       policy<{'arm64': 'y'}>
 CONFIG_PINCTRL_TEGRA264                         policy<{'arm64': 'y'}>
+CONFIG_PSTORE_BLK_CONSOLE_SIZE                  policy<{'arm64': '64'}>
 CONFIG_PSTORE_ZONE                              policy<{'arm64': 'y'}>
