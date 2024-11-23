@@ -30,6 +30,9 @@ CONFIG_INTEGRITY_PLATFORM_KEYRING               note<'EMBARGOED'>
 CONFIG_INTEGRITY_SIGNATURE                      policy<{'arm64': 'y'}>
 CONFIG_INTEGRITY_SIGNATURE                      note<'EMBARGOED'>
 
+CONFIG_IP_NF_TARGET_REDIRECT                    policy<{'arm64': 'm'}>
+CONFIG_IP_NF_TARGET_REDIRECT                    note<'EMBARGOED'>
+
 CONFIG_MLX5_INFINIBAND                          policy<{'arm64': 'm'}>
 CONFIG_MLX5_INFINIBAND                          note<'EMBARGOED'>
 
