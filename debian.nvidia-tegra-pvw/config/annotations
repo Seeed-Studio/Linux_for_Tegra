@@ -9,6 +9,21 @@ include "../../debian.nvidia-tegra/config/annotations"
 CONFIG_ARM_FFA_TRANSPORT                        policy<{'arm64': 'y'}>
 CONFIG_ARM_FFA_TRANSPORT                        note<'EMBARGOED'>
 
+CONFIG_CRYPTO_USER_API                          policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API                          note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API_AEAD                     policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_AEAD                     note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API_HASH                     policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_HASH                     note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API_RNG                      policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_RNG                      note<'EMBARGOED'>
+
+CONFIG_CRYPTO_USER_API_SKCIPHER                 policy<{'arm64': 'm'}>
+CONFIG_CRYPTO_USER_API_SKCIPHER                 note<'EMBARGOED'>
+
 CONFIG_EXFAT_FS                                 policy<{'arm64': 'y'}>
 CONFIG_EXFAT_FS                                 note<'EMBARGOED'>
 
