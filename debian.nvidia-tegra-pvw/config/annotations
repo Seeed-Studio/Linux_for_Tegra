@@ -96,6 +96,9 @@ CONFIG_PSTORE_CONSOLE                           note<'EMBARGOED'>
 CONFIG_PSTORE_RAM                               policy<{'arm64': 'm'}>
 CONFIG_PSTORE_RAM                               note<'EMBARGOED'>
 
+CONFIG_QFMT_V2                                  policy<{'arm64': 'm'}>
+CONFIG_QFMT_V2                                  note<'EMBARGOED'>
+
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 policy<{'arm64': 'y'}>
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'EMBARGOED'>
 
