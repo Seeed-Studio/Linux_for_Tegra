@@ -9,6 +9,9 @@ include "../../debian.nvidia-tegra/config/annotations"
 CONFIG_ARM_FFA_TRANSPORT                        policy<{'arm64': 'y'}>
 CONFIG_ARM_FFA_TRANSPORT                        note<'EMBARGOED'>
 
+CONFIG_EXFAT_FS                                 policy<{'arm64': 'y'}>
+CONFIG_EXFAT_FS                                 note<'EMBARGOED'>
+
 CONFIG_INFINIBAND                               policy<{'arm64': 'm'}>
 CONFIG_INFINIBAND                               note<'EMBARGOED'>
 
