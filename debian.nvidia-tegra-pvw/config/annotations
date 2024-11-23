@@ -105,6 +105,12 @@ CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'EMBARGOED'>
 CONFIG_UIO                                      policy<{'arm64': 'm'}>
 CONFIG_UIO                                      note<'EMBARGOED'>
 
+CONFIG_USB_IPHETH                               policy<{'arm64': 'm'}>
+CONFIG_USB_IPHETH                               note<'EMBARGOED'>
+
+CONFIG_USB_NET_RNDIS_HOST                       policy<{'arm64': 'm'}>
+CONFIG_USB_NET_RNDIS_HOST                       note<'EMBARGOED'>
+
 CONFIG_VXLAN                                    policy<{'arm64': 'm'}>
 CONFIG_VXLAN                                    note<'EMBARGOED'>
 
