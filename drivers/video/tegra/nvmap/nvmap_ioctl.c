@@ -435,6 +435,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 	void *tmp = NULL;
 	void *addr;
 	int ret = 0;
+	unsigned long sum;
 
 	if ((h->heap_type & nvmap_dev->cpu_access_mask) == 0)
 		return -EPERM;
@@ -508,7 +509,12 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 				false);
 
 		copied += elem_size;
-		sys_addr += sys_stride;
+		if (check_add_overflow(sys_addr, sys_stride, &sum)) {
+			ret = -EOVERFLOW;
+			break;
+		}
+
+		sys_addr = sum;
 		h_offs += h_stride;
 		addr += h_stride;
 	}

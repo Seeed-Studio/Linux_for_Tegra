@@ -246,11 +246,12 @@ static void nvmap_pp_zero_pages(struct page **pages, int nr)
 	trace_nvmap_pp_zero_pages(nr);
 }
 
-static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
+static int nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 {
 	int i;
 	struct page *page;
 	int ret;
+	u32 difference, sum;
 	/*
 	 * Statically declared array of pages to be zeroed in a batch,
 	 * local to this thread but too big for the stack.
@@ -263,7 +264,12 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 		if (page == NULL)
 			break;
 		pending_zero_pages[i] = page;
-		pool->under_zero++;
+		if (check_add_overflow(pool->under_zero, 1U, &sum)) {
+			rt_mutex_unlock(&pool->lock);
+			return -EOVERFLOW;
+		}
+
+		pool->under_zero = sum;
 	}
 	rt_mutex_unlock(&pool->lock);
 
@@ -271,13 +277,20 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 
 	rt_mutex_lock(&pool->lock);
 	ret = __nvmap_page_pool_fill_lots_locked(pool, pending_zero_pages, i);
-	pool->under_zero -= i;
+	if (check_sub_overflow(pool->under_zero, (u32)i, &difference)) {
+		rt_mutex_unlock(&pool->lock);
+		return -EOVERFLOW;
+	}
+
+	pool->under_zero = difference;
 	rt_mutex_unlock(&pool->lock);
 
 	trace_nvmap_pp_do_background_zero_pages(ret, i);
 
 	for (; ret < i; ret++)
 		__free_page(pending_zero_pages[ret]);
+
+	return 0;
 }
 
 /*
@@ -291,6 +304,7 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 static int nvmap_background_zero_thread(void *arg)
 {
 	struct nvmap_page_pool *pool = nvmap_dev->pool;
+	int err;
 
 	pr_info("PP zeroing thread starting.\n");
 
@@ -298,8 +312,11 @@ static int nvmap_background_zero_thread(void *arg)
 	sched_set_normal(current, MAX_NICE);
 
 	while (!kthread_should_stop()) {
-		while (nvmap_bg_should_run(pool))
-			nvmap_pp_do_background_zero_pages(pool);
+		while (nvmap_bg_should_run(pool)) {
+			err = nvmap_pp_do_background_zero_pages(pool);
+			if (err != 0)
+				return -EOVERFLOW;
+		}
 
 		wait_event_freezable(nvmap_bg_wait,
 				nvmap_bg_should_run(pool) ||
@@ -493,6 +510,7 @@ u32 nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 			__free_page(pages[i]);
 		} else {
 			list_add_tail(&pages[i]->lru, &pool->zero_list);
+			BUG_ON(pool->to_zero == UINT_MAX);
 			pool->to_zero++;
 		}
 	}
