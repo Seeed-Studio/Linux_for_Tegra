@@ -34,6 +34,10 @@ extern int of_get_pci_domain_nr(struct device_node *node);
 #define PCIE_LINK_UP_TIMEOUT	1000000	/* 1 s */
 
 /* XAL registers */
+#define XAL_RC_IO_BASE_HI			0xc
+#define XAL_RC_IO_BASE_LO			0x10
+#define XAL_RC_IO_LIMIT_HI			0x14
+#define XAL_RC_IO_LIMIT_LO			0x18
 #define XAL_RC_MEM_32BIT_BASE_HI		0x1c
 #define XAL_RC_MEM_32BIT_BASE_LO		0x20
 #define XAL_RC_MEM_32BIT_LIMIT_HI		0x24
@@ -70,6 +74,8 @@ struct tegra264_pcie {
 	u64 prefetch_mem_limit;
 	u64 mem_base;
 	u64 mem_limit;
+	u64 io_base;
+	u64 io_limit;
 	u32 ctl_id;
 	struct tegra_bpmp *bpmp;
 	bool link_state;
@@ -137,6 +143,12 @@ static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 	u32 val;
 
 	/* Program XAL */
+	writel(upper_32_bits(pcie->io_base), pcie->xal_base + XAL_RC_IO_BASE_HI);
+	writel(lower_32_bits(pcie->io_base), pcie->xal_base + XAL_RC_IO_BASE_LO);
+
+	writel(upper_32_bits(pcie->io_limit), pcie->xal_base + XAL_RC_IO_LIMIT_HI);
+	writel(lower_32_bits(pcie->io_limit), pcie->xal_base + XAL_RC_IO_LIMIT_LO);
+
 	writel(upper_32_bits(pcie->mem_base), pcie->xal_base + XAL_RC_MEM_32BIT_BASE_HI);
 	writel(lower_32_bits(pcie->mem_base), pcie->xal_base + XAL_RC_MEM_32BIT_BASE_LO);
 
@@ -234,15 +246,17 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 	resource_list_for_each_entry(entry, &bridge->windows) {
 		struct resource *res = entry->res;
 
-		if (resource_type(res) != IORESOURCE_MEM)
-			continue;
-
-		if (res->flags & IORESOURCE_PREFETCH) {
-			pcie->prefetch_mem_base = res->start;
-			pcie->prefetch_mem_limit = res->end;
-		} else {
-			pcie->mem_base = res->start;
-			pcie->mem_limit = res->end;
+		if (resource_type(res) == IORESOURCE_IO) {
+			pcie->io_base = pci_pio_to_address(res->start);
+			pcie->io_limit = pcie->io_base + resource_size(res) - 1U;
+		} else if (resource_type(res) == IORESOURCE_MEM) {
+			if (res->flags & IORESOURCE_PREFETCH) {
+				pcie->prefetch_mem_base = res->start;
+				pcie->prefetch_mem_limit = res->end;
+			} else {
+				pcie->mem_base = res->start;
+				pcie->mem_limit = res->end;
+			}
 		}
 	}
 
