@@ -6,7 +6,7 @@
 #include <dce.h>
 #include <dce-os-log.h>
 #include <dce-os-utils.h>
-#include <dce-os-device.h>
+#include <dce-linux-device.h>
 
 enum pm_controls {
 	FW_LOAD_HALTED,
@@ -65,7 +65,7 @@ int dce_reset_dce(struct tegra_dce *d)
 		return -1;
 	}
 
-	fw_dce_addr = pdata_from_dce(d)->fw_dce_addr;
+	fw_dce_addr = pdata_from_dce_linux_device(d)->fw_dce_addr;
 	dce_evp_set_reset_addr(d, fw_dce_addr);
 
 	dce_pm_set_pm_ctrl(d, FW_LOAD_DONE);

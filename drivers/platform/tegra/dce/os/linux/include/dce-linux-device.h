@@ -11,10 +11,10 @@
 #include <dce.h>
 
 /**
- * struct dce_os_device - DCE data structure for storing
+ * struct dce_linux_device - DCE data structure for storing
  * OS device specific info.
  */
-struct dce_os_device {
+struct dce_linux_device {
 	/**
 	 * @d : OS agnostic dce struct. Stores all runitme info for dce cluster
 	 * elements.
@@ -52,15 +52,15 @@ struct dce_os_device {
 };
 
 /**
- * dce_os_device_from_dce - inline function to get linux os data from the
+ * dce_linux_device_from_dce - inline function to get linux os data from the
  *		os agnostic struct tegra_dc
  * @d : Pointer to the os agnostic tegra_dce data structure.
  *
- * Return : pointer to struct dce_os_device
+ * Return : pointer to struct dce_linux_device
  */
-static inline struct dce_os_device *dce_os_device_from_dce(struct tegra_dce *d)
+static inline struct dce_linux_device *dce_linux_device_from_dce(struct tegra_dce *d)
 {
-	return container_of(d, struct dce_os_device, d);
+	return container_of(d, struct dce_linux_device, d);
 }
 
 /**
@@ -70,22 +70,22 @@ static inline struct dce_os_device *dce_os_device_from_dce(struct tegra_dce *d)
  *
  * Return : pointer to struct device
  */
-static inline struct device *dev_from_dce(struct tegra_dce *d)
+static inline struct device *dev_from_dce_linux_device(struct tegra_dce *d)
 {
-	return dce_os_device_from_dce(d)->dev;
+	return dce_linux_device_from_dce(d)->dev;
 }
 
 /**
- * pdata_from_dce - inline function to get dce platform data from
+ * pdata_from_dce_linux_device - inline function to get dce platform data from
  *		the os agnostic struct tegra_dc.
  *
  * @d : Pointer to the os agnostic tegra_dce data structure.
  *
  * Return : pointer to struct device
  */
-static inline struct dce_platform_data *pdata_from_dce(struct tegra_dce *d)
+static inline struct dce_platform_data *pdata_from_dce_linux_device(struct tegra_dce *d)
 {
-	return ((struct dce_os_device *)dev_get_drvdata(dev_from_dce(d)))->pdata;
+	return ((struct dce_linux_device *)dev_get_drvdata(dev_from_dce_linux_device(d)))->pdata;
 }
 
 #endif /* DCE_OS_DEVICE_H */

@@ -6,7 +6,7 @@
 #include <nvidia/conftest.h>
 
 #include <dce.h>
-#include <dce-os-device.h>
+#include <dce-linux-device.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/of_device.h>
@@ -63,7 +63,7 @@ MODULE_DEVICE_TABLE(of, tegra_dce_of_match);
  */
 static inline struct tegra_dce *dce_get_pdata_dce(struct platform_device *pdev)
 {
-	return (&((struct dce_os_device *)dev_get_drvdata(&pdev->dev))->d);
+	return (&((struct dce_linux_device *)dev_get_drvdata(&pdev->dev))->d);
 }
 
 /**
@@ -76,7 +76,7 @@ static inline struct tegra_dce *dce_get_pdata_dce(struct platform_device *pdev)
  */
 static inline struct tegra_dce *dce_get_tegra_dce_from_dev(struct device *dev)
 {
-	return (&((struct dce_os_device *)dev_get_drvdata(dev))->d);
+	return (&((struct dce_linux_device *)dev_get_drvdata(dev))->d);
 }
 
 /**
@@ -92,7 +92,7 @@ static inline struct tegra_dce *dce_get_tegra_dce_from_dev(struct device *dev)
 static int dce_init_dev_data(struct platform_device *pdev, struct dce_platform_data *pdata)
 {
 	struct device *dev = &pdev->dev;
-	struct dce_os_device *d_dev = NULL;
+	struct dce_linux_device *d_dev = NULL;
 
 	d_dev = devm_kzalloc(dev, sizeof(*d_dev), GFP_KERNEL);
 	if (!d_dev)
@@ -126,7 +126,7 @@ static void dce_set_irqs(struct platform_device *pdev, bool en)
 {
 	int i = 0;
 	struct tegra_dce *d;
-	struct dce_os_device *d_dev = NULL;
+	struct dce_linux_device *d_dev = NULL;
 
 	d_dev = dev_get_drvdata(&pdev->dev);
 	d = dce_get_pdata_dce(pdev);
@@ -152,7 +152,7 @@ static int dce_req_interrupts(struct platform_device *pdev)
 	int ret = 0;
 	int no_ints = 0;
 	struct tegra_dce *d;
-	struct dce_os_device *d_dev = NULL;
+	struct dce_linux_device *d_dev = NULL;
 
 	d_dev = dev_get_drvdata(&pdev->dev);
 	d = dce_get_pdata_dce(pdev);

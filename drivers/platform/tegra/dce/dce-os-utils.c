@@ -4,7 +4,7 @@
  */
 #include <dce.h>
 #include <dce-os-thread.h>
-#include <dce-os-device.h>
+#include <dce-linux-device.h>
 #include <dce-os-utils.h>
 #include <linux/io.h>
 #include <linux/slab.h>
@@ -31,7 +31,7 @@
  */
 void dce_os_writel(struct tegra_dce *d, u32 r, u32 v)
 {
-	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
+	struct dce_linux_device *d_dev = dce_linux_device_from_dce(d);
 
 	if (unlikely(!d_dev->regs))
 		dce_os_err(d, "DCE Register Space not IOMAPed to CPU");
@@ -51,7 +51,7 @@ u32 dce_os_readl(struct tegra_dce *d, u32 r)
 {
 	u32 v = 0xffffffff;
 
-	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
+	struct dce_linux_device *d_dev = dce_linux_device_from_dce(d);
 
 	if (unlikely(!d_dev->regs))
 		dce_os_err(d, "DCE Register Space not IOMAPed to CPU");
@@ -86,7 +86,7 @@ void dce_os_writel_check(struct tegra_dce *d, u32 r, u32 v)
  */
 bool dce_os_io_exists(struct tegra_dce *d)
 {
-	struct dce_os_device *d_dev = dce_os_device_from_dce(d);
+	struct dce_linux_device *d_dev = dce_linux_device_from_dce(d);
 
 	return d_dev->regs != NULL;
 }
@@ -152,7 +152,7 @@ void dce_os_kfree(struct tegra_dce *d, void *addr)
 struct dce_firmware *dce_os_request_firmware(struct tegra_dce *d,
 					const char *fw_name)
 {
-	struct device *dev = dev_from_dce(d);
+	struct device *dev = dev_from_dce_linux_device(d);
 	struct dce_firmware *fw;
 	const struct firmware *l_fw;
 
@@ -208,7 +208,7 @@ err:
  */
 void dce_os_release_fw(struct tegra_dce *d, struct dce_firmware *fw)
 {
-	struct device *dev = dev_from_dce(d);
+	struct device *dev = dev_from_dce_linux_device(d);
 
 	if (!fw)
 		return;
@@ -230,7 +230,7 @@ void dce_os_release_fw(struct tegra_dce *d, struct dce_firmware *fw)
  */
 u8 dce_os_get_dce_stream_id(struct tegra_dce *d)
 {
-	return pdata_from_dce(d)->stream_id;
+	return pdata_from_dce_linux_device(d)->stream_id;
 }
 
 static void dce_print(const char *func_name, int line,
@@ -590,7 +590,7 @@ static int ipc_allocate_region(struct tegra_dce *d)
 	struct device *dev;
 	struct dce_ipc_region *region;
 
-	dev = dev_from_dce(d);
+	dev = dev_from_dce_linux_device(d);
 	region = &d->d_ipc.region;
 
 	tot_q_sz = ((DCE_ADMIN_CMD_MAX_NFRAMES *
@@ -628,7 +628,7 @@ static void ipc_free_region(struct tegra_dce *d)
 	struct device *dev;
 	struct dce_ipc_region *region;
 
-	dev = dev_from_dce(d);
+	dev = dev_from_dce_linux_device(d);
 	region = &d->d_ipc.region;
 
 	dma_free_coherent(dev, region->size,

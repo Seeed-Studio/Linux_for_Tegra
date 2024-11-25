@@ -5,7 +5,7 @@
 #include <dce.h>
 #include <dce-os-log.h>
 #include <dce-os-utils.h>
-#include <dce-os-device.h>
+#include <dce-linux-device.h>
 
 #define MAX_NO_ASTS 2
 #define MAX_AST_REGIONS 1
@@ -23,7 +23,7 @@
  */
 static u8 dce_get_phys_stream_id(struct tegra_dce *d)
 {
-	return pdata_from_dce(d)->phys_stream_id;
+	return pdata_from_dce_linux_device(d)->phys_stream_id;
 }
 
 
@@ -37,7 +37,7 @@ static u8 dce_get_phys_stream_id(struct tegra_dce *d)
  */
 static u8 dce_get_fw_vm_index(struct tegra_dce *d)
 {
-	return pdata_from_dce(d)->fw_vmindex;
+	return pdata_from_dce_linux_device(d)->fw_vmindex;
 }
 
 /**
@@ -50,7 +50,7 @@ static u8 dce_get_fw_vm_index(struct tegra_dce *d)
  */
 static u8 dce_get_fw_carveout_id(struct tegra_dce *d)
 {
-	return pdata_from_dce(d)->fw_carveout_id;
+	return pdata_from_dce_linux_device(d)->fw_carveout_id;
 }
 
 /**
@@ -62,7 +62,7 @@ static u8 dce_get_fw_carveout_id(struct tegra_dce *d)
  */
 static bool dce_is_physical_id_valid(struct tegra_dce *d)
 {
-	return pdata_from_dce(d)->use_physical_id;
+	return pdata_from_dce_linux_device(d)->use_physical_id;
 }
 
 /**
@@ -76,7 +76,7 @@ static bool dce_is_physical_id_valid(struct tegra_dce *d)
  */
 static u32 dce_get_fw_dce_addr(struct tegra_dce *d)
 {
-	return pdata_from_dce(d)->fw_dce_addr;
+	return pdata_from_dce_linux_device(d)->fw_dce_addr;
 }
 
 /**
