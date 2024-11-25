@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 load("//build/kernel/kleaf:kernel.bzl", "kernel_module")
 
@@ -48,6 +48,7 @@ kernel_module(
         # keep sorted
         "drivers/block/tegra_oops_virt_storage/tegra_hv_vblk_oops.ko",
         "drivers/block/tegra_virt_storage/tegra_vblk.ko",
+        "drivers/bluetooth/realtek/rtk_btusb.ko",
         "drivers/bus/tegra-aocluster.ko",
         "drivers/cpuidle/cpuidle-cg-disable-t264.ko",
         "drivers/cpuidle/cpuidle-debugfs.ko",
@@ -92,7 +93,7 @@ kernel_module(
         "drivers/misc/nvscic2c-pcie/nvscic2c-pcie-epc.ko",
         "drivers/misc/nvscic2c-pcie/nvscic2c-pcie-epf.ko",
         "drivers/misc/nvsciipc/nvsciipc.ko",
-        "drivers/misc/tegra-pcie-dma-sanity-test.ko",
+        "drivers/misc/tegra-cec/tegra_cec.ko",
         "drivers/misc/tegra-pcie-dma-test.ko",
         "drivers/mtd/devices/tegra_hv_mtd.ko",
         "drivers/net/can/mttcan/mttcan.ko",
@@ -112,7 +113,6 @@ kernel_module(
         "drivers/pci/controller/private-soc/tegra-pcie-dma-lib.ko",
         "drivers/pci/controller/tegra-pcie-edma.ko",
         "drivers/pci/endpoint/functions/pci-epf-dma-test.ko",
-        "drivers/pci/endpoint/functions/pci-epf-tegra-dma-sanity.ko",
         "drivers/pci/endpoint/functions/pci-epf-tegra-vnet.ko",
         "drivers/pinctrl/pinctrl-max77851.ko",
         "drivers/pinctrl/pinctrl-tegra194-pexclk-padctrl.ko",
@@ -153,7 +153,6 @@ kernel_module(
         "drivers/video/tegra/dc/bridge/ti_fpdlink_dp_serializer.ko",
         "drivers/video/tegra/host/capture/nvhost-capture.ko",
         "drivers/video/tegra/host/nvcsi/nvhost-nvcsi.ko",
-        "drivers/video/tegra/host/nvdla/axi/axi-nvdla.ko",
         "drivers/video/tegra/host/nvdla/nvhost-nvdla.ko",
         "drivers/video/tegra/nvmap/nvmap.ko",
         "drivers/video/tegra/tsec/tsecriscv.ko",
