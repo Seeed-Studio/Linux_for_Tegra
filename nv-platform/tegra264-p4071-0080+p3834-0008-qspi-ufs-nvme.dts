@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p3834-0008.dtsi"
+#include "tegra264-p4071-0000.dtsi"
+#include "tegra264-p4071-xxxx-p3834-xxxx-thermal-cooling.dtsi"
+
+/ {
+	model = "NVIDIA Jetson Thor Developer Kit";
+	compatible = "nvidia,p4071-0080+p3834-0008", "nvidia,p4071-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+
+};
