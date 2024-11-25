@@ -83,10 +83,12 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 			goto out;
 		nvmap_altfree(pages, (h->size >> PAGE_SHIFT) * sizeof(*pages));
 
-		if (vaddr && atomic_long_cmpxchg((atomic_long_t *)&h->vaddr, 0, (long)vaddr)) {
+		if (vaddr && atomic_long_cmpxchg((atomic_long_t *)(void *)&h->vaddr, 0,
+				(long)vaddr)) {
 			nvmap_kmaps_dec(h);
 			vunmap(vaddr);
 		}
+
 		return h->vaddr;
 	}
 
@@ -124,7 +126,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	if (vaddr == NULL)
 		goto out;
 
-	if (vaddr && atomic_long_cmpxchg((atomic_long_t *)&h->vaddr,
+	if (vaddr && atomic_long_cmpxchg((atomic_long_t *)(void *)&h->vaddr,
 						 0, (long)vaddr)) {
 		vaddr -= (nvmap_get_heap_block_base(h->carveout) & ~PAGE_MASK);
 		/*
