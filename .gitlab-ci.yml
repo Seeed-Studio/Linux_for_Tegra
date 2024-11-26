@@ -49,6 +49,7 @@ job-xavier-nx-industrial-16g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-xavier-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/xavier-nx-seeed-industry.dtbo  kernel/dtb/
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial  external
@@ -99,6 +100,7 @@ job-xavier-nx-industrial-8g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-xavier-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/xavier-nx-seeed-industry.dtbo  kernel/dtb/
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0003 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial  external
@@ -149,6 +151,7 @@ job-xavier-nx-devkit-16g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-xavier-nx-16g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-devkit  external
          - mkdir deploy
@@ -193,6 +196,7 @@ job-xavier-nx-devkit-8g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-xavier-nx-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0003 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-devkit  external
          - mkdir deploy
@@ -238,6 +242,7 @@ job-orin-nx-industrial-8g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo  kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D4 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
@@ -287,6 +292,7 @@ job-orin-nx-reserver-8g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_reserver-orin-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo  kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D4 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
@@ -337,6 +343,7 @@ job-orin-nx-devkit-8g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D4  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
          - mkdir deploy
@@ -382,6 +389,7 @@ job-orin-nx-industrial-16g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D3 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
@@ -431,6 +439,7 @@ job-orin-nx-reserver-16g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_reserver-orin-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo  kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3  CHIP_SKU=00:00:00:D3 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external
@@ -481,6 +490,7 @@ job-orin-nx-devkit-16g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D3 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
          - mkdir deploy
@@ -526,6 +536,7 @@ job-orin-nano-industrial-8g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo kernel/dtb
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6 CHIP_SKU=00:00:00:D5 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
@@ -575,6 +586,7 @@ job-orin-nano-reserver-8g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_reserver-orin-nano-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo kernel/dtb
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6 CHIP_SKU=00:00:00:D5  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
@@ -625,6 +637,7 @@ job-orin-nano-devkit-8g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6 CHIP_SKU=00:00:00:D5  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
          - mkdir deploy
@@ -669,6 +682,7 @@ job-orin-nano-industrial-4g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo kernel/dtb
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
@@ -719,6 +733,7 @@ job-orin-nano-reserver-4g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_reserver-orin-nano-4g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo kernel/dtb
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
@@ -770,6 +785,7 @@ job-orin-nano-devkit-4g:
          - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -q
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
+         - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2  CHIP_SKU=00:00:00:D6  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
