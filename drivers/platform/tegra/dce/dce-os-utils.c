@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 #include <dce.h>
 #include <dce-os-thread.h>
@@ -524,56 +524,6 @@ unsigned long dce_os_get_nxt_pow_of_2(unsigned long *addr, u8 nbits)
 void dce_os_usleep_range(unsigned long min, unsigned long max)
 {
 	usleep_range(min, max);
-}
-
-/*
- * dce_os_work_schedule : schedule work in global highpri workqueue
- *
- * @work : dce work to be scheduled
- *
- * Return : void
- */
-void dce_os_work_schedule(struct dce_os_work_struct *work)
-{
-	queue_work(system_highpri_wq, &work->work);
-}
-
-/*
- * dce_os_work_handle_fn : handler function for scheduled dce-work
- *
- * @work : Pointer to the scheduled work
- *
- * Return : void
- */
-static void dce_os_work_handle_fn(struct work_struct *work)
-{
-	struct dce_os_work_struct *dce_os_work = container_of(work,
-							struct dce_os_work_struct,
-							work);
-
-	if (dce_os_work->dce_os_work_fn != NULL)
-		dce_os_work->dce_os_work_fn(dce_os_work->d);
-}
-
-/*
- * dce_os_work_init : Init dce work structure
- *
- * @d : Pointer to tegra_dce struct.
- * @work : Pointer to dce work structure
- * @work_fn : worker function to be called
- *
- * Return : 0 if successful
- */
-int dce_os_work_init(struct tegra_dce *d,
-		   struct dce_os_work_struct *work,
-		   void (*work_fn)(struct tegra_dce *d))
-{
-	work->d = d;
-	work->dce_os_work_fn = work_fn;
-
-	INIT_WORK(&work->work, dce_os_work_handle_fn);
-
-	return 0;
 }
 
 /**

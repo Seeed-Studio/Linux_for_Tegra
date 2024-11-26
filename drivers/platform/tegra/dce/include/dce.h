@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef TEGRA_DCE_H
@@ -181,11 +181,11 @@ struct tegra_dce {
 	/**
 	 * dce_bootstrap_work : dce work to be executed to start FSM flow
 	 */
-	struct dce_os_work_struct dce_bootstrap_work;
+	dce_os_work_handle_t dce_bootstrap_work;
 	/**
 	 * dce_resume_work : dce work to executed dce resume flow
 	 */
-	struct dce_os_work_struct dce_resume_work;
+	dce_os_work_handle_t dce_resume_work;
 	/**
 	 * dce_sc7_state : structure to save/restore state during sc7 enter/exit
 	 */

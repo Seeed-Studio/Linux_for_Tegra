@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <dce.h>
@@ -115,10 +115,16 @@ int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
  */
 int dce_pm_handle_sc7_exit_received_event(struct tegra_dce *d, void *params)
 {
+	int ret = 0;
+
 	DCE_WARN_ON_NOT_NULL(params);
 
-	dce_os_work_schedule(&d->dce_resume_work);
-	return 0;
+	ret = dce_os_wq_work_schedule(d, NULL /* default WQ */,
+			d->dce_resume_work);
+	if (ret)
+		dce_os_err(d, "Failed to schedule dce resume work");
+
+	return ret;
 }
 
 int dce_pm_enter_sc7(struct tegra_dce *d)
@@ -190,7 +196,8 @@ int dce_pm_init(struct tegra_dce *d)
 		goto done;
 	}
 
-	ret = dce_os_work_init(d, &d->dce_resume_work, dce_resume_work_fn);
+	ret = dce_os_wq_work_init(d, &d->dce_resume_work,
+			dce_resume_work_fn);
 	if (ret) {
 		dce_os_err(d, "resume work init failed");
 		goto done;
@@ -202,5 +209,6 @@ done:
 
 void dce_pm_deinit(struct tegra_dce *d)
 {
+	dce_os_wq_work_deinit(d, d->dce_resume_work);
 	dce_admin_channel_client_buffers_deinit(d, DCE_ADMIN_CH_CL_PM_BUFF);
 }

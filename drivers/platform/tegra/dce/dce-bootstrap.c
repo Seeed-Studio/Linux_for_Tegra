@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 #include <dce.h>
 #include <dce-os-utils.h>
@@ -412,7 +412,8 @@ int dce_boot_interface_init(struct tegra_dce *d)
 		goto err_init;
 	}
 
-	ret = dce_os_work_init(d, &d->dce_bootstrap_work, dce_bootstrap_work_fn);
+	ret = dce_os_wq_work_init(d, &d->dce_bootstrap_work,
+			dce_bootstrap_work_fn);
 	if (ret) {
 		dce_os_err(d, "Bootstrap work init failed");
 		goto err_init;
@@ -432,6 +433,7 @@ err_init:
  */
 void dce_boot_interface_deinit(struct tegra_dce *d)
 {
+	dce_os_wq_work_deinit(d, d->dce_bootstrap_work);
 	dce_mailbox_deinit_interface(d,
 			DCE_MAILBOX_BOOT_INTERFACE);
 }

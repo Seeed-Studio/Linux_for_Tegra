@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <dce.h>
@@ -472,7 +472,10 @@ out:
  */
 void dce_fsm_start(struct tegra_dce *d)
 {
-	dce_os_work_schedule(&d->dce_bootstrap_work);
+	int ret = dce_os_wq_work_schedule(d, NULL /* default WQ */,
+			d->dce_bootstrap_work);
+	if (ret)
+		dce_os_err(d, "Failed schedule bootstrap work");
 }
 
 /**
