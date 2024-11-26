@@ -348,7 +348,6 @@ int dce_driver_init(struct tegra_dce *d);
 void dce_driver_deinit(struct tegra_dce *d);
 
 int dce_start_boot_flow(struct tegra_dce *d);
-void dce_bootstrap_work_fn(struct tegra_dce *d);
 int dce_start_bootstrap_flow(struct tegra_dce *d);
 int dce_boot_interface_init(struct tegra_dce *d);
 void dce_boot_interface_deinit(struct tegra_dce *d);

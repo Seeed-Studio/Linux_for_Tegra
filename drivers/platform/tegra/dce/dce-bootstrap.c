@@ -183,13 +183,14 @@ exit:
 /**
  * dce_bootstrap_work_fn : execute fsm start and bootstrap flow
  *
- * @d : Pointer to tegra_dce struct.
+ * @data : Pointer to callback data.
  *
  * Return : void
  */
-void dce_bootstrap_work_fn(struct tegra_dce *d)
+static void dce_bootstrap_work_fn(void *data)
 {
 	int ret = 0;
+	struct tegra_dce *d = (struct tegra_dce *) data;
 
 	if (d == NULL) {
 		dce_os_err(d, "tegra_dce struct is NULL");
@@ -413,7 +414,7 @@ int dce_boot_interface_init(struct tegra_dce *d)
 	}
 
 	ret = dce_os_wq_work_init(d, &d->dce_bootstrap_work,
-			dce_bootstrap_work_fn);
+			dce_bootstrap_work_fn, (void *)d);
 	if (ret) {
 		dce_os_err(d, "Bootstrap work init failed");
 		goto err_init;

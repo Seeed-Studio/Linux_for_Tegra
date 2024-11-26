@@ -45,12 +45,13 @@ void dce_os_wq_destroy(struct tegra_dce *d,
  * @d : Pointer to tegra_dce struct.
  * @p_work_handle : Pointer to DCE OS Work handle to init.
  * @work_fn : Worker function to be called.
+ * @data : Input data pointer for worker function.
  *
  * Return : 0 if successful
  */
 int dce_os_wq_work_init(struct tegra_dce *d,
 	dce_os_work_handle_t *p_work_handle,
-	void (*work_fn)(struct tegra_dce *d));
+	void (*work_fn)(void *data), void *data);
 
 /*
  * dce_os_wq_work_deinit : Deinit dce work structure.

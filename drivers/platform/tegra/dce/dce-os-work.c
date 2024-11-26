@@ -14,9 +14,9 @@ struct dce_os_wq_struct {
 };
 
 struct dce_os_work_struct {
-	struct tegra_dce *d;
+	void *data;
 	struct work_struct work;
-	void (*dce_os_work_fn)(struct tegra_dce *d);
+	void (*dce_os_work_fn)(void *data);
 };
 
  /**
@@ -33,12 +33,12 @@ static void dce_os_work_handle_fn(struct work_struct *work)
 							work);
 
 	if (dce_os_work->dce_os_work_fn != NULL)
-		dce_os_work->dce_os_work_fn(dce_os_work->d);
+		dce_os_work->dce_os_work_fn(dce_os_work->data);
 }
 
 int dce_os_wq_work_init(struct tegra_dce *d,
 	dce_os_work_handle_t *p_work_handle,
-	void (*work_fn)(struct tegra_dce *d))
+	void (*work_fn)(void *data), void *data)
 {
 	struct dce_os_work_struct *p_work = NULL;
 	int ret = 0;
@@ -50,7 +50,7 @@ int dce_os_wq_work_init(struct tegra_dce *d,
 		goto fail;
 	}
 
-	p_work->d = d;
+	p_work->data = data;
 	p_work->dce_os_work_fn = work_fn;
 
 	INIT_WORK(&p_work->work, dce_os_work_handle_fn);

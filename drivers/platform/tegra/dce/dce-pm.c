@@ -23,13 +23,14 @@ static void dce_pm_restore_state(struct tegra_dce *d)
 /**
  * dce_resume_work_fn : execute resume and bootstrap flow
  *
- * @d : Pointer to tegra_dce struct.
+ * @data : Pointer to callback data.
  *
  * Return : void
  */
-void dce_resume_work_fn(struct tegra_dce *d)
+static void dce_resume_work_fn(void *data)
 {
 	int ret = 0;
+	struct tegra_dce *d = (struct tegra_dce *) data;
 
 	if (d == NULL) {
 		dce_os_err(d, "tegra_dce struct is NULL");
@@ -197,7 +198,7 @@ int dce_pm_init(struct tegra_dce *d)
 	}
 
 	ret = dce_os_wq_work_init(d, &d->dce_resume_work,
-			dce_resume_work_fn);
+			dce_resume_work_fn, (void *)d);
 	if (ret) {
 		dce_os_err(d, "resume work init failed");
 		goto done;

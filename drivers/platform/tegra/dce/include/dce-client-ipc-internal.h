@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_CLIENT_IPC_INTERNAL_H
@@ -8,6 +8,7 @@
 
 #include <linux/platform/tegra/dce/dce-client-ipc.h>
 #include <dce-os-atomic.h>
+#include <dce-os-work.h>
 
 /**
  * struct tegra_dce_client_ipc - Data Structure to hold client specific ipc
@@ -41,7 +42,7 @@ struct tegra_dce_client_ipc {
 #define DCE_MAX_ASYNC_WORK	8
 struct dce_async_work {
 	struct tegra_dce *d;
-	struct work_struct async_event_work;
+	dce_os_work_handle_t async_event_work;
 	dce_os_atomic_t in_use;
 };
 
@@ -49,7 +50,7 @@ struct dce_async_work {
  * @async_event_wq - Workqueue to process async events from DCE
  */
 struct tegra_dce_async_ipc_info {
-	struct workqueue_struct *async_event_wq;
+	dce_os_wq_handle_t async_event_wq;
 	struct dce_async_work work[DCE_MAX_ASYNC_WORK];
 };
 

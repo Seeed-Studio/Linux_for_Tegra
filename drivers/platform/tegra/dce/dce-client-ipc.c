@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <dce.h>
@@ -104,17 +104,26 @@ static int dce_client_ipc_handle_free(struct tegra_dce_client_ipc *cl)
 	return 0;
 }
 
-static void dce_client_async_event_work(struct work_struct *data)
+static void dce_client_async_event_work(void *data)
 {
 	struct tegra_dce_client_ipc *cl;
-	struct dce_async_work *work = container_of(data, struct dce_async_work,
-						   async_event_work);
-	struct tegra_dce *d = work->d;
+	struct dce_async_work *work = (struct dce_async_work *) data;
+	struct tegra_dce *d = NULL;
+
+	if ((work == NULL) || (work->d == NULL)) {
+		dce_os_err(d, "Invalid work struct");
+		goto fail;
+	}
+
+	d = work->d;
 
 	cl = d->d_clients[DCE_CLIENT_IPC_TYPE_RM_EVENT];
 
 	dce_client_process_event_ipc(d, cl);
 	dce_os_atomic_set(&work->in_use, 0);
+
+fail:
+	return;
 }
 
 int tegra_dce_register_ipc_client(u32 type,
@@ -240,27 +249,53 @@ int dce_client_init(struct tegra_dce *d)
 	uint8_t i;
 	struct tegra_dce_async_ipc_info *d_aipc = &d->d_async_ipc;
 
-	d_aipc->async_event_wq =
-		create_singlethread_workqueue("dce-async-ipc-wq");
+	ret = dce_os_wq_create(d, &d_aipc->async_event_wq, "dce-async-ipc-wq");
+	if (ret) {
+		dce_os_err(d, "Failed to create async ipc wq. err [%d]", ret);
+		goto fail_wq_create;
+	}
 
 	for (i = 0; i < DCE_MAX_ASYNC_WORK; i++) {
 		struct dce_async_work *d_work = &d_aipc->work[i];
 
-		INIT_WORK(&d_work->async_event_work,
-			  dce_client_async_event_work);
+		ret = dce_os_wq_work_init(d, &d_work->async_event_work,
+				dce_client_async_event_work, (void *)d_work);
+		if (ret) {
+			dce_os_err(d, "Failed to init async work [%u] err [%d]", i, ret);
+			goto fail_work_init;
+		}
+
 		d_work->d = d;
 		dce_os_atomic_set(&d_work->in_use, 0);
 	}
 
+fail_work_init:
+	if (ret) {
+		uint8_t j = 0;
+
+		for (j = i - 1; j >= 0; j--)  {
+			struct dce_async_work *d_work = &d_aipc->work[j];
+
+			dce_os_wq_work_deinit(d, d_work->async_event_work);
+		}
+		dce_os_wq_destroy(d, d_aipc->async_event_wq);
+	}
+fail_wq_create:
 	return ret;
 }
 
 void dce_client_deinit(struct tegra_dce *d)
 {
 	struct tegra_dce_async_ipc_info *d_aipc = &d->d_async_ipc;
+	uint8_t i = 0;
 
-	flush_workqueue(d_aipc->async_event_wq);
-	destroy_workqueue(d_aipc->async_event_wq);
+	for (i = 0; i < DCE_MAX_ASYNC_WORK; i++) {
+		struct dce_async_work *d_work = &d_aipc->work[i];
+
+		dce_os_wq_work_deinit(d, d_work->async_event_work);
+	}
+
+	dce_os_wq_destroy(d, d_aipc->async_event_wq);
 }
 
 int dce_client_ipc_wait(struct tegra_dce *d, u32 int_type)
@@ -337,19 +372,27 @@ static void dce_client_schedule_event_work(struct tegra_dce *d)
 {
 	struct tegra_dce_async_ipc_info *async_work_info = &d->d_async_ipc;
 	uint8_t i;
+	int ret = 0;
 
 	for (i = 0; i < DCE_MAX_ASYNC_WORK; i++) {
 		struct dce_async_work *d_work = &async_work_info->work[i];
 
 		if (dce_os_atomic_add_unless(&d_work->in_use, 1, 1) > 0) {
-			queue_work(async_work_info->async_event_wq,
-				   &d_work->async_event_work);
+			ret = dce_os_wq_work_schedule(d, async_work_info->async_event_wq,
+					d_work->async_event_work);
+			if (ret) {
+				dce_os_err(d, "Failed to schedule Async work. id [%u] err [%d]", i, ret);
+				goto fail;
+			}
 			break;
 		}
 	}
 
 	if (i == DCE_MAX_ASYNC_WORK)
 		dce_os_err(d, "Failed to schedule Async event Queue Full!");
+
+fail:
+	return;
 }
 
 void dce_client_ipc_wakeup(struct tegra_dce *d, u32 ch_type)
