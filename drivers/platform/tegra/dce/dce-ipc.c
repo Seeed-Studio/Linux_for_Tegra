@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <dce.h>
@@ -418,25 +418,6 @@ void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type)
 }
 
 /**
- * dce_ipc_get_next_write_buff - waits for the next write frame.
- *
- * @ch : Pointer to the pertinent channel.
- *
- * Return : 0 if successful
- */
-static int _dce_ipc_get_next_write_buff(struct dce_ipc_channel *ch)
-{
-	int err = 0;
-
-	if (ch != NULL)
-		err = dce_os_ivc_get_next_write_frame(&ch->d_ivc, &ch->obuff);
-	else
-		err = -EINVAL;
-
-	return err;
-}
-
-/**
  * dce_ipc_send_message - Sends messages over ipc.
  *
  * @d : Pointer to tegra_dce struct.
@@ -457,7 +438,7 @@ int dce_ipc_send_message(struct tegra_dce *d, u32 ch_type,
 
 	dce_os_trace_ivc_send_req_received(d, ch);
 
-	ret = _dce_ipc_get_next_write_buff(ch);
+	ret = dce_os_ivc_get_next_write_frame(&ch->d_ivc, &ch->obuff);
 	if (ret) {
 		dce_os_err(ch->d, "Error getting next free buf to write");
 		goto out;
@@ -480,25 +461,6 @@ out:
 }
 
 /**
- * dce_ipc_get_next_read_buff - waits for the next write frame.
- *
- * @ch : Pointer to the pertinent channel.
- *
- * Return : 0 if successful
- */
-static int _dce_ipc_get_next_read_buff(struct dce_ipc_channel *ch)
-{
-	int err = 0;
-
-	if (ch != NULL)
-		err = dce_os_ivc_get_next_read_frame(&ch->d_ivc, &ch->ibuff);
-	else
-		err = -EINVAL;
-
-	return err;
-}
-
-/**
  * dce_ipc_read_message - Reads messages over ipc.
  *
  * @d : Pointer to tegra_dce struct.
@@ -518,7 +480,7 @@ int dce_ipc_read_message(struct tegra_dce *d, u32 ch_type,
 
 	dce_os_trace_ivc_receive_req_received(d, ch);
 
-	ret = _dce_ipc_get_next_read_buff(ch);
+	ret = dce_os_ivc_get_next_read_frame(&ch->d_ivc, &ch->ibuff);
 	if (ret) {
 		dce_os_debug(ch->d, "No Msg to read");
 		goto out;
