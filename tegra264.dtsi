@@ -3955,6 +3955,8 @@
 				 <0x81 0x88800000 0x81 0x88800000 0x00 0x300000>;
 			status = "disabled";
 
+			nvidia,syncpoint-shim = <&syncpoint_shim>;
+
 			tsec@8188150000 {
 				compatible = "nvidia,tegra264-tsec";
 				reg = <0x81 0x88150000 0x00 0x40000>;
@@ -10637,4 +10639,8 @@
 		};
 	};
 
+	syncpoint_shim: syncpoint-shim@81c0000000 {
+		compatible = "nvidia,tegra264-syncpoint-shim";
+		reg = <0x81 0xc0000000 0x0 0x4000000>;
+	};
 };
