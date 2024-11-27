@@ -202,7 +202,7 @@ out:
 end:
 	return ret;
 }
-EXPORT_SYMBOL(tegra_dce_register_ipc_client);
+DCE_EXPORT_SYMBOL(tegra_dce_register_ipc_client);
 
 int tegra_dce_unregister_ipc_client(u32 handle)
 {
@@ -218,7 +218,7 @@ int tegra_dce_unregister_ipc_client(u32 handle)
 
 	return dce_client_ipc_handle_free(cl);
 }
-EXPORT_SYMBOL(tegra_dce_unregister_ipc_client);
+DCE_EXPORT_SYMBOL(tegra_dce_unregister_ipc_client);
 
 int tegra_dce_client_ipc_send_recv(u32 handle, struct dce_ipc_message *msg)
 {
@@ -241,7 +241,7 @@ int tegra_dce_client_ipc_send_recv(u32 handle, struct dce_ipc_message *msg)
 out:
 	return ret;
 }
-EXPORT_SYMBOL(tegra_dce_client_ipc_send_recv);
+DCE_EXPORT_SYMBOL(tegra_dce_client_ipc_send_recv);
 
 int dce_client_init(struct tegra_dce *d)
 {
