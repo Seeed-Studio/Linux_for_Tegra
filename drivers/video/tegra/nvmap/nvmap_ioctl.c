@@ -228,6 +228,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	u32 id = 0;
 	bool is_ro = false;
 	long dmabuf_ref = 0;
+	unsigned long long size_temp = 0;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -235,8 +236,10 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	if (!client)
 		return -ENODEV;
 
-	if (cmd == NVMAP_IOC_CREATE)
-		op.size64 = op.size;
+	if (cmd == NVMAP_IOC_CREATE) {
+		size_temp = op.size;
+		op.size64 = size_temp;
+	}
 
 	if ((cmd == NVMAP_IOC_CREATE) || (cmd == NVMAP_IOC_CREATE_64)) {
 		ref = nvmap_create_handle(client, op.size64, false);
