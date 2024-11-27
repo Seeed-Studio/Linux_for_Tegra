@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 
@@ -23,7 +23,7 @@ int dce_admin_ipc_wait(struct tegra_dce *d)
 {
 	int ret = 0;
 
-	ret = dce_os_wait_interruptible(d, DCE_WAIT_ADMIN_IPC);
+	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_ADMIN_IPC], true, 0);
 	if (ret) {
 		/**
 		 * TODO: Add error handling for abort and retry
@@ -623,7 +623,7 @@ int dce_admin_handle_ipc_received_event(struct tegra_dce *d, void *params)
 {
 	DCE_WARN_ON_NOT_NULL(params);
 
-	dce_os_wakeup_interruptible(d, DCE_WAIT_ADMIN_IPC);
+	dce_wait_cond_signal_interruptible(d, &d->ipc_waits[DCE_WAIT_ADMIN_IPC]);
 	return 0;
 }
 
@@ -833,7 +833,7 @@ int dce_admin_send_enter_sc7(struct tegra_dce *d,
 	}
 
 	/* Wait for SC7 Enter done */
-	ret = dce_os_wait_interruptible(d, DCE_WAIT_SC7_ENTER);
+	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_SC7_ENTER], true, 0);
 	if (ret) {
 		dce_os_err(d, "SC7 Enter wait was interrupted with err:%d", ret);
 		goto out;

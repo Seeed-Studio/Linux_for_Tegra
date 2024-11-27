@@ -13,7 +13,7 @@
 #include <dce-os-lock.h>
 #include <dce-os-cond.h>
 #include <dce-regs.h>
-#include <dce-os-worker.h>
+#include <dce-wait-cond.h>
 #include <dce-fsm.h>
 #include <dce-pm.h>
 #include <dce-mailbox.h>
@@ -24,6 +24,13 @@
 	do { \
 		if (x != NULL) { \
 			dce_os_warn(d, "Unexpected non-NULL value for " #x "\n"); \
+		} \
+	} while (0)
+
+#define DCE_WARN_ON_NULL(x) \
+	do { \
+		if (x == NULL) { \
+			dce_os_warn(d, "Unexpected NULL value for " #x "\n"); \
 		} \
 	} while (0)
 
@@ -78,6 +85,16 @@
 #define DCE_ADMIN_CH_CL_PM_BUFF_COUNT		1U
 #define DCE_ADMIN_CH_CL_DBG_BUFF_COUNT		1U
 #define DCE_ADMIN_CH_CL_DBG_PERF_BUFF_COUNT	1U
+
+/**
+ * DCE Wait condition IDs.
+ */
+#define DCE_WAIT_BOOT_COMPLETE		0
+#define DCE_WAIT_BOOT_CMD		1
+#define DCE_WAIT_ADMIN_IPC		2
+#define DCE_WAIT_SC7_ENTER		3
+#define DCE_WAIT_LOG			4
+#define DCE_MAX_WAIT			5
 
 struct tegra_dce;
 
@@ -397,6 +414,9 @@ struct dce_ipc_message *dce_admin_channel_client_buffer_get(
 	struct tegra_dce *d, u32 cl_id, u32 flags);
 void dce_admin_channel_client_buffer_put(
 	struct tegra_dce *d, struct dce_ipc_message *pmsg);
+
+int dce_waiters_init(struct tegra_dce *d);
+void dce_waiters_deinit(struct tegra_dce *d);
 
 /**
  * Functions to be used in debug mode only.

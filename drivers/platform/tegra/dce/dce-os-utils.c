@@ -272,13 +272,6 @@ void dce_os_log_msg(struct tegra_dce *d, const char *func_name, int line,
 	dce_print(func_name, line, type, log);
 }
 
-/**
- * dce_os_cond_init - Initialize a condition variable
- *
- * @cond - The condition variable to initialize
- *
- * Initialize a condition variable before using it.
- */
 int dce_os_cond_init(struct dce_os_cond *cond)
 {
 	init_waitqueue_head(&cond->wq);
@@ -287,43 +280,11 @@ int dce_os_cond_init(struct dce_os_cond *cond)
 	return 0;
 }
 
-/**
- * dce_os_cond_destroy - Destroy a condition variable
- *
- * @cond - The condition variable to destroy
- */
 void dce_os_cond_destroy(struct dce_os_cond *cond)
 {
 	cond->initialized = false;
 }
 
-/**
- * dce_os_cond_signal - Signal a condition variable
- *
- * @cond - The condition variable to signal
- *
- * Wake up a waiter for a condition variable to check if its condition has been
- * satisfied.
- *
- * The waiter is using an uninterruptible wait.
- */
-void dce_os_cond_signal(struct dce_os_cond *cond)
-{
-	WARN_ON(!cond->initialized);
-
-	wake_up(&cond->wq);
-}
-
-/**
- * dce_os_cond_signal_interruptible - Signal a condition variable
- *
- * @cond - The condition variable to signal
- *
- * Wake up a waiter for a condition variable to check if its condition has been
- * satisfied.
- *
- * The waiter is using an interruptible wait.
- */
 void dce_os_cond_signal_interruptible(struct dce_os_cond *cond)
 {
 	WARN_ON(!cond->initialized);
@@ -331,37 +292,6 @@ void dce_os_cond_signal_interruptible(struct dce_os_cond *cond)
 	wake_up_interruptible(&cond->wq);
 }
 
-/**
- * dce_os_cond_broadcast - Signal all waiters of a condition variable
- *
- * @cond - The condition variable to signal
- *
- * Wake up all waiters for a condition variable to check if their conditions
- * have been satisfied.
- *
- * The waiters are using an uninterruptible wait.
- */
-int dce_os_cond_broadcast(struct dce_os_cond *cond)
-{
-	if (!cond->initialized)
-		return -EINVAL;
-
-	wake_up_all(&cond->wq);
-
-	return 0;
-}
-
-/**
- * dce_os_cond_broadcast_interruptible - Signal all waiters of a condition
- * variable
- *
- * @cond - The condition variable to signal
- *
- * Wake up all waiters for a condition variable to check if their conditions
- * have been satisfied.
- *
- * The waiters are using an interruptible wait.
- */
 int dce_os_cond_broadcast_interruptible(struct dce_os_cond *cond)
 {
 	if (!cond->initialized)

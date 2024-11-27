@@ -101,7 +101,7 @@ int dce_pm_handle_sc7_enter_received_event(struct tegra_dce *d, void *params)
 {
 	DCE_WARN_ON_NOT_NULL(params);
 
-	dce_os_wakeup_interruptible(d, DCE_WAIT_SC7_ENTER);
+	dce_wait_cond_signal_interruptible(d, &d->ipc_waits[DCE_WAIT_SC7_ENTER]);
 	return 0;
 }
 

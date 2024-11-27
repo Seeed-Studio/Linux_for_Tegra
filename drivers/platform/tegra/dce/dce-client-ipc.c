@@ -180,9 +180,8 @@ int tegra_dce_register_ipc_client(u32 type,
 	cl->handle = handle;
 	cl->int_type = int_type;
 	cl->callback_fn = callback_fn;
-	dce_os_atomic_set(&cl->complete, 0);
 
-	ret = dce_os_cond_init(&cl->recv_wait);
+	ret = dce_wait_cond_init(d, &cl->recv_wait);
 	if (ret) {
 		dce_os_err(d, "dce condition initialization failed for int_type: [%u]",
 			int_type);
@@ -213,8 +212,7 @@ int tegra_dce_unregister_ipc_client(u32 handle)
 		return -EINVAL;
 	}
 
-	dce_os_cond_destroy(&cl->recv_wait);
-	dce_os_atomic_set(&cl->complete, 0);
+	dce_wait_cond_deinit(cl->d, &cl->recv_wait);
 
 	return dce_client_ipc_handle_free(cl);
 }
@@ -302,30 +300,38 @@ int dce_client_ipc_wait(struct tegra_dce *d, u32 int_type)
 {
 	uint32_t type;
 	struct tegra_dce_client_ipc *cl;
+	int ret = 0;
 
 	type = dce_client_get_type(int_type);
 	if (type >= DCE_CLIENT_IPC_TYPE_MAX) {
 		dce_os_err(d, "Failed to retrieve client info for int_type: [%d]",
 			int_type);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto fail;
 	}
 
 	cl = d->d_clients[type];
 	if ((cl == NULL) || (cl->int_type != int_type)) {
 		dce_os_err(d, "Failed to retrieve client info for int_type: [%d]",
 			int_type);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto fail;
 	}
 
 retry_wait:
-	DCE_OS_COND_WAIT_INTERRUPTIBLE(&cl->recv_wait,
-			dce_os_atomic_read(&cl->complete) == 1);
-	if (dce_os_atomic_read(&cl->complete) != 1)
-		goto retry_wait;
+	ret = dce_wait_cond_wait_interruptible(d, &cl->recv_wait, true, 0);
+	if (ret) {
+		if (ret == -ERESTARTSYS) { /* Interrupt. */
+			dce_os_debug(d, "Client [%u] wait interrupted: retrying.", type);
+			goto retry_wait;
+		} else { /* Unexpected error. */
+			dce_os_err(d, "Client [%u] unexpected err: [%d]", type, ret);
+			goto fail;
+		}
+	}
 
-	dce_os_atomic_set(&cl->complete, 0);
-
-	return 0;
+fail:
+	return ret;
 }
 
 static void dce_client_process_event_ipc(struct tegra_dce *d,
@@ -417,6 +423,5 @@ void dce_client_ipc_wakeup(struct tegra_dce *d, u32 ch_type)
 	if (type == DCE_CLIENT_IPC_TYPE_RM_EVENT)
 		return dce_client_schedule_event_work(d);
 
-	dce_os_atomic_set(&cl->complete, 1);
-	dce_os_cond_signal_interruptible(&cl->recv_wait);
+	dce_wait_cond_signal_interruptible(d, &cl->recv_wait);
 }

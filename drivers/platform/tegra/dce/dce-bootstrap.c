@@ -71,7 +71,7 @@ int dce_handle_boot_cmd_received_event(struct tegra_dce *d, void *params)
 {
 	DCE_WARN_ON_NOT_NULL(params);
 
-	dce_os_wakeup_interruptible(d, DCE_WAIT_BOOT_CMD);
+	dce_wait_cond_signal_interruptible(d, &d->ipc_waits[DCE_WAIT_BOOT_CMD]);
 	return 0;
 }
 
@@ -98,7 +98,7 @@ int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 		if (ret)
 			dce_os_err(d, "failed to send DCE_BOOT_COMPLETE_RECEIVED event");
 
-		dce_os_cond_wait_reset(d, DCE_WAIT_BOOT_COMPLETE);
+		dce_wait_cond_reset(d, &d->ipc_waits[DCE_WAIT_BOOT_COMPLETE]);
 		goto boot_done;
 	}
 
@@ -106,7 +106,7 @@ int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 
 	dce_os_debug(d, "Waiting for dce fw to boot...");
 
-	ret = dce_os_wait_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
+	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_BOOT_COMPLETE], true, 0);
 	if (ret) {
 		/**
 		 * TODO: Add error handling for abort and retry
@@ -139,7 +139,7 @@ int dce_handle_boot_complete_received_event(struct tegra_dce *d, void *params)
 {
 	DCE_WARN_ON_NOT_NULL(params);
 
-	dce_os_wakeup_interruptible(d, DCE_WAIT_BOOT_COMPLETE);
+	dce_wait_cond_signal_interruptible(d, &d->ipc_waits[DCE_WAIT_BOOT_COMPLETE]);
 	return 0;
 }
 
@@ -252,7 +252,7 @@ static void dce_handle_irq_status(struct tegra_dce *d, u32 status)
 
 	if (status & DCE_IRQ_LOG_READY) {
 		dce_os_info(d, "DCE trace log buffers available");
-		dce_os_wakeup_interruptible(d, DCE_WAIT_LOG);
+		dce_wait_cond_signal_interruptible(d, &d->ipc_waits[DCE_WAIT_LOG]);
 	}
 
 	/*
@@ -370,7 +370,7 @@ static int dce_mailbox_wait_boot_interface(struct tegra_dce *d)
 	u32 status;
 	int ret;
 
-	ret = dce_os_wait_interruptible(d, DCE_WAIT_BOOT_CMD);
+	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_BOOT_CMD], true, 0);
 	if (ret) {
 		/**
 		 * TODO: Add error handling for abort and retry
