@@ -1,13 +1,14 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+/* Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
  *
- * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
- * property and proprietary rights in and to this material, related
- * documentation and any modifications thereto. Any use, reproduction,
- * disclosure or distribution of this material and related documentation
- * without an express license agreement from NVIDIA CORPORATION or
- * its affiliates is strictly prohibited.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  */
 
 #include <nvidia/conftest.h>
@@ -39,12 +40,6 @@
 #define TSC_NS_PER_TICK_T264			(1)
 #define NS_PER_MS				(1000000U)
 #define NS_PER_SEC				(1000000000U)
-
-#define TSC_MTSCCNTCV0				(0x10)
-#define TSC_MTSCCNTCV0_CV			GENMASK(31, 0)
-
-#define TSC_MTSCCNTCV1				(0x14)
-#define TSC_MTSCCNTCV1_CV			GENMASK(31, 0)
 
 #define TSC_GENX_CTRL				(0x00)
 #define TSC_GENX_CTRL_RST			(0x00)
@@ -561,18 +556,20 @@ static void cam_fsync_program_group_generator_start_values(struct fsync_generato
 /**
  * @brief Get current tsc ticks
  *
- * @param[in]	controller	pointer to struct cam_fsync_controller (non-null)
- *
  * @returns Current ticks
  */
-static u64 cam_fsync_get_current_tsc_ticks(struct cam_fsync_controller *controller)
+static u64 cam_fsync_get_current_tsc_ticks(void)
 {
-	const u32 current_ticks_lo = FIELD_GET(TSC_MTSCCNTCV0_CV,
-		cam_fsync_controller_readl(controller, TSC_MTSCCNTCV0));
-	const u32 current_ticks_hi = FIELD_GET(TSC_MTSCCNTCV1_CV,
-		cam_fsync_controller_readl(controller, TSC_MTSCCNTCV1));
-	const u64 current_ticks = ((u64)current_ticks_hi << 32) | current_ticks_lo;
-	return current_ticks;
+	u64 tscTicks;
+
+	__asm__ __volatile__ ("ISB; \
+				mrs %[result], cntvct_el0; \
+				ISB"
+				: [result] "=r" (tscTicks)
+				:
+				: "memory");
+
+	return tscTicks;
 }
 
 /**
@@ -587,7 +584,7 @@ static u64 cam_fsync_get_default_start_ticks(struct cam_fsync_controller *contro
 	u64 default_start_ticks = mult_frac(
 		TSC_GENX_START_OFFSET_MS, NS_PER_MS,
 		controller->features->ns_per_tick);
-	default_start_ticks += cam_fsync_get_current_tsc_ticks(controller);
+	default_start_ticks += cam_fsync_get_current_tsc_ticks();
 	return default_start_ticks;
 }
 
@@ -920,7 +917,7 @@ static int cam_fsync_open(struct inode *inode, struct file *file)
 static int
 cam_fsync_validate_start_time(struct cam_fsync_controller *controller, u64 start_time_ticks)
 {
-	u64 current_ticks = cam_fsync_get_current_tsc_ticks(controller);
+	u64 current_ticks = cam_fsync_get_current_tsc_ticks();
 
 	if (start_time_ticks < current_ticks) {
 		dev_err(controller->dev, "Start time is in past\n");
