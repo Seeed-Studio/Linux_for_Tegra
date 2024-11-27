@@ -477,6 +477,10 @@ u32 nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 
 	save_to_zero = pool->to_zero;
 
+	BUG_ON(pool->max < pool->count);
+	BUG_ON(pool->max - pool->count < pool->to_zero);
+	BUG_ON(pool->max - pool->count - pool->to_zero < pool->under_zero);
+
 	ret = min(nr, pool->max - pool->count - pool->to_zero - pool->under_zero);
 
 	for (i = 0; i < ret; i++) {
@@ -744,6 +748,7 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 {
 	struct sysinfo info;
 	struct nvmap_page_pool *pool;
+	unsigned long result;
 
 	dev->pool = kzalloc(sizeof(*dev->pool), GFP_KERNEL);
 	if (dev->pool == NULL)
@@ -764,10 +769,15 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	si_meminfo(&info);
 	pr_info("Total RAM pages: %lu\n", info.totalram);
 
-	if (!NVMAP_CONFIG_PAGE_POOL_SIZE)
+	if (!NVMAP_CONFIG_PAGE_POOL_SIZE) {
 		/* The ratio is pool pages per 1K ram pages.
 		 * So, the >> 10 */
-		pool->max = (info.totalram * NVMAP_PP_POOL_SIZE) >> 10;
+
+		if (check_mul_overflow(info.totalram, (unsigned long)NVMAP_PP_POOL_SIZE, &result))
+			goto fail;
+
+		pool->max = (result) >> 10;
+	}
 	else
 		pool->max = NVMAP_CONFIG_PAGE_POOL_SIZE;
 
