@@ -130,6 +130,7 @@
 			nvidia,timer-index = <0>;
 			nvidia,shared-interrupt = <0>; /* Shared interrupt to use for WDT. */
 			timeout-sec = <120>;
+			nvidia,wdt-error-threshold = <5>;
 			nvidia,extend-watchdog-suspend;
 			nvidia,disable-debug-reset;
 			nvidia,disable-por-reset;
