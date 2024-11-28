@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "ether_linux.h"
 #ifdef MACSEC_SUPPORT
@@ -111,6 +111,12 @@ static inline int extract_mtu(const char* str)
 	// Iterate through the string to find the first digit
 	while (*str) {
 		if (((*str) >= '0') && ((*str) <= '9')) {
+			// Adding boundary check
+			if ((num > (INT_MAX / 10)) ||
+			    ((num == (INT_MAX / 10)) && ((*str - '0') > (INT_MAX % 10)))) {
+				num = 0;
+				break;
+			}
 			// Convert the digit characters to an integer
 			num = num * 10 + (*str - '0');
 		}
@@ -2974,19 +2980,26 @@ static ssize_t ether_mac_frp_show(struct device *dev,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_core_frp_entry *entry = NULL;
 	struct osi_core_frp_data *data = NULL;
-	int i = 0, j = 0;
+	int i = 0, j = 0, written = 0;
 
 	/* Write FRP table entries */
 	for (i = 0, j = 0; ((i < osi_core->frp_cnt) && (j < PAGE_SIZE)); i++) {
 		entry = &osi_core->frp_table[i];
 		data = &entry->data;
-		j += scnprintf((buf + j), (PAGE_SIZE - j),
-			       "[%d] ID:%d MD:0x%x ME:0x%x AF:%d RF:%d IM:%d NIC:%d FO:%d OKI:%d DCH:x%llx\n",
-			       i, entry->frp_id, data->match_data,
-			       data->match_en, data->accept_frame,
-			       data->reject_frame, data->inverse_match,
-			       data->next_ins_ctrl, data->frame_offset,
-			       data->ok_index, data->dma_chsel);
+		written = scnprintf((buf + j), (PAGE_SIZE - j),
+				    "[%d] ID:%d MD:0x%x ME:0x%x AF:%d "
+				    "RF:%d IM:%d NIC:%d FO:%d OKI:%d DCH:x%llx\n",
+				    i, entry->frp_id, data->match_data,
+				    data->match_en, data->accept_frame,
+				    data->reject_frame, data->inverse_match,
+				    data->next_ins_ctrl, data->frame_offset,
+				    data->ok_index, data->dma_chsel);
+		//Ensure `written` is non-negative and within bounds
+		if ((written < 0) || (((unsigned long)j + (unsigned long)written) >= PAGE_SIZE)) {
+			// Prevent overflow and exit loop
+			break;
+		}
+		j += written;
 	}
 
 	return j;

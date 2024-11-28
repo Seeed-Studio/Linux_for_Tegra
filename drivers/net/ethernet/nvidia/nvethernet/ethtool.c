@@ -1030,6 +1030,23 @@ static const struct ether_stats ether_tstrings_stats[] = {
 #endif /* OSI_STRIPPED_LIB */
 };
 
+static u64 counter_helper(u64 sizeof_stat, char *p)
+{
+	u64 ret = 0;
+
+	if (sizeof_stat == sizeof(u64)) {
+		u64 temp = 0;
+		(void)memcpy(&temp, (void *)p, sizeof(temp));
+		ret = temp;
+	} else {
+		u32 temp = 0;
+		(void)memcpy(&temp, (void *)p, sizeof(temp));
+		ret = temp;
+	}
+
+	return ret;
+}
+
 void ether_get_ethtool_stats(struct net_device *dev,
 			     struct ethtool_stats *dummy,
 			     u64 *data)
@@ -1077,18 +1094,18 @@ void ether_get_ethtool_stats(struct net_device *dev,
 
 		for (i = 0; i < ETHER_MMC_STATS_LEN; i++) {
 			char *p = (char *)osi_core + ether_mmc[i].stat_offset;
-
-			data[j++] = (ether_mmc[i].sizeof_stat ==
-					sizeof(u64)) ? (*(u64 *)p) :
-				     (*(u32 *)p);
+			if (j < OSD_INT_MAX) {
+				data[j++] = counter_helper(ether_mmc[i].sizeof_stat, p);
+			}
 		}
 
 		for (i = 0; i < ETHER_EXTRA_STAT_LEN; i++) {
 			char *p = (char *)pdata +
 				  ether_gstrings_stats[i].stat_offset;
 
-			data[j++] = (ether_gstrings_stats[i].sizeof_stat ==
-				     sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
+			if (j < OSD_INT_MAX) {
+				data[j++] = counter_helper(ether_gstrings_stats[i].sizeof_stat, p);
+			}
 		}
 
 #ifndef OSI_STRIPPED_LIB
@@ -1096,16 +1113,18 @@ void ether_get_ethtool_stats(struct net_device *dev,
 			char *p = (char *)osi_dma +
 				  ether_dstrings_stats[i].stat_offset;
 
-			data[j++] = (ether_dstrings_stats[i].sizeof_stat ==
-				     sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
+			if (j < OSD_INT_MAX) {
+				data[j++] = counter_helper(ether_dstrings_stats[i].sizeof_stat, p);
+			}
 		}
 
 		for (i = 0; i < ETHER_PKT_ERR_STAT_LEN; i++) {
 			char *p = (char *)osi_dma +
 				  ether_cstrings_stats[i].stat_offset;
 
-			data[j++] = (ether_cstrings_stats[i].sizeof_stat ==
-				     sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
+			if (j < OSD_INT_MAX) {
+				data[j++] = counter_helper(ether_cstrings_stats[i].sizeof_stat, p);
+			}
 		}
 
 		for (i = 0; ((i < ETHER_FRP_STAT_LEN) &&
@@ -1113,8 +1132,9 @@ void ether_get_ethtool_stats(struct net_device *dev,
 			char *p = (char *)osi_dma +
 				  ether_frpstrings_stats[i].stat_offset;
 
-			data[j++] = (ether_frpstrings_stats[i].sizeof_stat ==
-				     sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
+			if (j < OSD_INT_MAX) {
+				data[j++] = counter_helper(ether_frpstrings_stats[i].sizeof_stat, p);
+			}
 		}
 #endif /* OSI_STRIPPED_LIB */
 
@@ -1122,8 +1142,9 @@ void ether_get_ethtool_stats(struct net_device *dev,
 			char *p = (char *)osi_core +
 				  ether_tstrings_stats[i].stat_offset;
 
-			data[j++] = (ether_tstrings_stats[i].sizeof_stat ==
-				     sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
+			if (j < OSD_INT_MAX) {
+				data[j++] = counter_helper(ether_tstrings_stats[i].sizeof_stat, p);
+			}
 		}
 	}
 }
@@ -1135,29 +1156,29 @@ int ether_get_sset_count(struct net_device *dev, int sset)
 
 	if (sset == ETH_SS_STATS) {
 		if (pdata->hw_feat.mmc_sel == OSI_ENABLE) {
-			if (INT_MAX < ETHER_MMC_STATS_LEN) {
+			if (OSD_INT_MAX < ETHER_MMC_STATS_LEN) {
 				/* do nothing*/
 			} else {
 				len = ETHER_MMC_STATS_LEN;
 			}
 		}
-		if (INT_MAX - ETHER_EXTRA_STAT_LEN < len) {
+		if (OSD_INT_MAX - ETHER_EXTRA_STAT_LEN < len) {
 			/* do nothing */
 		} else {
 			len += ETHER_EXTRA_STAT_LEN;
 		}
 #ifndef OSI_STRIPPED_LIB
-		if (INT_MAX - ETHER_EXTRA_DMA_STAT_LEN < len) {
+		if (OSD_INT_MAX - ETHER_EXTRA_DMA_STAT_LEN < len) {
 			/* do nothing */
 		} else {
 			len += ETHER_EXTRA_DMA_STAT_LEN;
 		}
-		if (INT_MAX - ETHER_PKT_ERR_STAT_LEN < len) {
+		if (OSD_INT_MAX - ETHER_PKT_ERR_STAT_LEN < len) {
 			/* do nothing */
 		} else {
 			len += ETHER_PKT_ERR_STAT_LEN;
 		}
-		if (INT_MAX - ETHER_FRP_STAT_LEN < len) {
+		if (OSD_INT_MAX - ETHER_FRP_STAT_LEN < len) {
 			/* do nothing */
 		} else {
 			if (pdata->hw_feat.frp_sel == OSI_ENABLE) {
@@ -1165,7 +1186,7 @@ int ether_get_sset_count(struct net_device *dev, int sset)
 			}
 		}
 #endif /* OSI_STRIPPED_LIB */
-		if (INT_MAX - ETHER_CORE_STAT_LEN < len) {
+		if (OSD_INT_MAX - ETHER_CORE_STAT_LEN < len) {
 			/* do nothing */
 		} else {
 			len += ETHER_CORE_STAT_LEN;

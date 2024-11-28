@@ -159,9 +159,9 @@ static int ether_test_loopback_validate(struct sk_buff *skb,
 #else
 	unsigned char *dst = tpdata->ctxt->dst;
 #endif
-	struct ether_testhdr *thdr;
-	struct ethhdr *ehdr;
-	struct udphdr *uhdr;
+	struct ether_testhdr thdr;
+	struct ethhdr ehdr;
+	struct udphdr *uhdr, local_uhdr;
 	struct iphdr *ihdr;
 
 	skb = skb_unshare(skb, GFP_ATOMIC);
@@ -173,9 +173,9 @@ static int ether_test_loopback_validate(struct sk_buff *skb,
 	if (skb_headlen(skb) < (ETHER_TEST_PKT_SIZE - ETH_HLEN))
 		goto out;
 
-	ehdr = (struct ethhdr *)skb_mac_header(skb);
+	(void)memcpy(&ehdr, (void *)skb_mac_header(skb), sizeof(struct ethhdr));
 	if (dst) {
-		if (!ether_addr_equal_unaligned(ehdr->h_dest, dst))
+		if (!ether_addr_equal_unaligned(ehdr.h_dest, dst))
 			goto out;
 	}
 
@@ -183,13 +183,14 @@ static int ether_test_loopback_validate(struct sk_buff *skb,
 	if (ihdr->protocol != IPPROTO_UDP)
 		goto out;
 
-	uhdr = (struct udphdr *)((u8 *)ihdr + 4 * ihdr->ihl);
-	if (uhdr->dest != htons(ETHER_UDP_TEST_PORT))
+	(void)memcpy(&local_uhdr, (void *)((u8 *)ihdr + (4 * ihdr->ihl)), sizeof(local_uhdr));
+	if (local_uhdr.dest != htons(ETHER_UDP_TEST_PORT))
 		goto out;
 
-	thdr = (struct ether_testhdr *)((u8 *)uhdr + sizeof(*uhdr));
+	uhdr = (struct udphdr *)((u8 *)ihdr + (4 * ihdr->ihl));
+	(void)memcpy(&thdr, (void *)((char *)uhdr + sizeof(*uhdr)), sizeof(thdr));
 
-	if (thdr->magic != cpu_to_be64(ETHER_TEST_PKT_MAGIC))
+	if (thdr.magic != cpu_to_be64(ETHER_TEST_PKT_MAGIC))
 		goto out;
 
 	tpdata->completed = true;

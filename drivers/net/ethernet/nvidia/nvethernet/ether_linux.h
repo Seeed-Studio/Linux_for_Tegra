@@ -96,6 +96,16 @@
 #define ETH_MAC_STR_LEN			20
 
 /**
+ * @addtogroup Maximum number of child nodes
+ */
+#define MAX_CHILD_NODES			0xFFFFU
+
+/**
+ * @addtogroup Helper for INT_32 MAX
+ */
+#define OSD_INT_MAX			0x7FFFFFFF
+
+/**
  * @addtogroup Ethernet Transmit Queue Priority
  *
  * @brief Macros to define the default, maximum and invalid range of Transmit
@@ -308,8 +318,14 @@ static inline bool valid_tx_len(unsigned int length)
 static inline int ether_avail_txdesc_cnt(struct osi_dma_priv_data *osi_dma,
 					 struct osi_tx_ring *tx_ring)
 {
-	return ((tx_ring->clean_idx - tx_ring->cur_tx_idx - 1) &
-		(osi_dma->tx_ring_sz - 1));
+	int ret = -EINVAL;
+
+	if ((osi_dma->tx_ring_sz == 0U) || (tx_ring->cur_tx_idx == 0U) ||
+	    (tx_ring->clean_idx < (tx_ring->cur_tx_idx - 1U))) {
+		return ret;
+	}
+	return ((tx_ring->clean_idx - tx_ring->cur_tx_idx - 1U) &
+		(osi_dma->tx_ring_sz - 1U));
 }
 
 /**

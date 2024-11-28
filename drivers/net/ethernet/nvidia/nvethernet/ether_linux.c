@@ -2013,6 +2013,12 @@ static int ether_request_irqs(struct ether_priv_data *pdata)
 	if (osi_core->mac_ver > OSI_EQOS_MAC_5_00 ||
 	    osi_core->mac != OSI_MAC_HW_EQOS) {
 		for (i = 0; i < osi_core->num_vm_irqs; i++) {
+			// Need to get reviewd for these checks
+			if ((j >= ETHER_IRQ_MAX_IDX) || (i >= OSI_MAX_VM_IRQS)) {
+				dev_err(pdata->dev,
+					"unexpected irq name index received (%d)\n", j);
+				goto err_chan_irq;
+			}
 			snprintf(pdata->irq_names[j], ETHER_IRQ_NAME_SZ, "%s.vm%d",
 				 netdev_name(pdata->ndev), i);
 			ret = devm_request_irq(pdata->dev, pdata->vm_irqs[i],
@@ -2031,8 +2037,12 @@ static int ether_request_irqs(struct ether_priv_data *pdata)
 		}
 	} else {
 		for (i = 0; i < osi_dma->num_dma_chans; i++) {
+			if (j >= (ETHER_IRQ_MAX_IDX - 1)) {
+				dev_err(pdata->dev,
+					"unexpected irq name index received (%d)\n", j);
+				goto err_chan_irq;
+			}
 			chan = osi_dma->dma_chans[i];
-
 			snprintf(pdata->irq_names[j], ETHER_IRQ_NAME_SZ, "%s.rx%d",
 				 netdev_name(pdata->ndev), chan);
 			ret = devm_request_irq(pdata->dev, pdata->rx_irqs[i],
@@ -2826,7 +2836,9 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 
 static u32 ether_mdio_c45_addr(int devad, u16 regnum)
 {
-	return OSI_MII_ADDR_C45 | devad << MII_DEVADDR_C45_SHIFT | regnum;
+	unsigned int udevad = (unsigned int)devad & 0x7FFFU;
+
+	return OSI_MII_ADDR_C45 | (udevad << MII_DEVADDR_C45_SHIFT) | regnum;
 }
 
 /**
@@ -3457,19 +3469,21 @@ int ether_close(struct net_device *ndev)
  * @retval 1 on success
  * @retval "negative value" on failure.
  */
-static int ether_handle_tso(struct osi_tx_pkt_cx *tx_pkt_cx,
+static int ether_handle_tso(struct device *dev,
+			    struct osi_tx_pkt_cx *tx_pkt_cx,
 			    struct sk_buff *skb)
 {
 	int ret = 1;
 
 	if (skb_is_gso(skb) == 0) {
-		return 0;
+		ret = 0;
+		goto func_exit;
 	}
 
 	if (skb_header_cloned(skb)) {
 		ret = pskb_expand_head(skb, 0, 0, GFP_ATOMIC);
-		if (ret) {
-			return ret;
+		if (ret != 0) {
+			goto func_exit;
 		}
 	}
 
@@ -3482,16 +3496,28 @@ static int ether_handle_tso(struct osi_tx_pkt_cx *tx_pkt_cx,
 		tx_pkt_cx->tcp_udp_hdrlen = tcp_hdrlen(skb);
 		tx_pkt_cx->mss = skb_shinfo(skb)->gso_size;
 	}
+	if ((UINT_MAX - skb_transport_offset(skb)) < tx_pkt_cx->tcp_udp_hdrlen) {
+		dev_err(dev, "Unexpected udp hdr length\n");
+		ret = -EINVAL; // return failure in boundary condition
+		goto func_exit;
+	}
 	tx_pkt_cx->total_hdrlen = skb_transport_offset(skb) +
 			tx_pkt_cx->tcp_udp_hdrlen;
-	tx_pkt_cx->payload_len = (skb->len - tx_pkt_cx->total_hdrlen);
+	if (tx_pkt_cx->total_hdrlen > skb->len) {
+		dev_err(dev, "Unexpected total hdr length\n");
+		ret = -EINVAL; // return failure in boundary condition
+		goto func_exit;
+	} else {
+		tx_pkt_cx->payload_len = (skb->len - tx_pkt_cx->total_hdrlen);
+	}
 
 	netdev_dbg(skb->dev, "mss           =%u\n", tx_pkt_cx->mss);
 	netdev_dbg(skb->dev, "payload_len   =%u\n", tx_pkt_cx->payload_len);
 	netdev_dbg(skb->dev, "tcp_udp_hdrlen=%u\n", tx_pkt_cx->tcp_udp_hdrlen);
 	netdev_dbg(skb->dev, "total_hdrlen  =%u\n", tx_pkt_cx->total_hdrlen);
 
-	return 1;
+func_exit:
+	return ret;
 }
 
 /**
@@ -3517,6 +3543,10 @@ static void ether_tx_swcx_rollback(struct ether_priv_data *pdata,
 	struct osi_tx_swcx *tx_swcx = NULL;
 
 	while (count > 0) {
+		if ((pdata->osi_dma->tx_ring_sz == 0U) || (cur_tx_idx == 0U)) {
+			dev_err(dev, "Invalid Tx ring size or index\n");
+			break;
+		}
 		DECR_TX_DESC_INDEX(cur_tx_idx, pdata->osi_dma->tx_ring_sz);
 		tx_swcx = tx_ring->tx_swcx + cur_tx_idx;
 		if (tx_swcx->buf_phy_addr) {
@@ -3568,11 +3598,13 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 
 	memset(tx_pkt_cx, 0, sizeof(*tx_pkt_cx));
 
-	ret = ether_handle_tso(tx_pkt_cx, skb);
+	// Need to get reviewed aboyut this properly
+	ret = ether_handle_tso(dev, tx_pkt_cx, skb);
+
 	if (unlikely(ret < 0)) {
 		dev_err(dev, "Unable to handle TSO packet (%d)\n", ret);
 		/* Caller will take care of consuming skb */
-		return ret;
+		goto exit_func;
 	}
 
 	if (ret == 0) {
@@ -3597,6 +3629,10 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 		tx_pkt_cx->flags |= OSI_PKT_CX_PTP;
 	}
 
+	if (pdata->osi_dma->tx_ring_sz == 0U) {
+		dev_err(dev, "Invalid Tx ring size\n");
+		goto exit_func;
+	}
 	if (((tx_pkt_cx->flags & OSI_PKT_CX_VLAN) == OSI_PKT_CX_VLAN) ||
 	    ((tx_pkt_cx->flags & OSI_PKT_CX_TSO) == OSI_PKT_CX_TSO) ||
 	    (((tx_pkt_cx->flags & OSI_PKT_CX_PTP) == OSI_PKT_CX_PTP) &&
@@ -3606,7 +3642,8 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 		OSI_PTP_SYNC_ONESTEP)))) {
 		tx_swcx = tx_ring->tx_swcx + cur_tx_idx;
 		if (tx_swcx->len) {
-			return 0;
+			ret = 0;
+			goto exit_func;
 		}
 
 		tx_swcx->len = -1;
@@ -3647,6 +3684,11 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 		tx_swcx->len = size;
 		len -= size;
 		offset += size;
+		if (cnt == (int)INT_MAX) {
+			dev_err(dev, "Reached Max desc count\n");
+			ret = -ENOMEM;
+			goto dma_map_failed;
+		}
 		cnt++;
 		INCR_TX_DESC_INDEX(cur_tx_idx, pdata->osi_dma->tx_ring_sz);
 	}
@@ -3678,7 +3720,19 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 			tx_swcx->flags &= ~OSI_PKT_CX_PAGED_BUF;
 			tx_swcx->len = size;
 			len -= size;
+			if (offset > UINT_MAX - size) {
+				dev_err(dev, "Offset addition overflow detected:"
+					"size = %u, offset = %u\n",
+					size, offset);
+				ret = -ENOMEM;
+				goto dma_map_failed;
+			}
 			offset += size;
+			if (cnt == (int)INT_MAX) {
+				dev_err(dev, "Reached Max desc count\n");
+				ret = -ENOMEM;
+				goto dma_map_failed;
+			}
 			cnt++;
 			INCR_TX_DESC_INDEX(cur_tx_idx, pdata->osi_dma->tx_ring_sz);
 		}
@@ -3697,6 +3751,12 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 			}
 
 			size = min(len, max_data_len_per_txd);
+			if (skb_frag_off(frag) > UINT_MAX - offset) {
+				dev_err(dev, "Offset addition overflow detected:"
+					"frag offset = %u, offset = %u\n",
+					skb_frag_off(frag), offset);
+				return -ENOMEM;
+			}
 			page_idx = (skb_frag_off(frag) + offset) >> PAGE_SHIFT;
 			page_offset = (skb_frag_off(frag) + offset) & ~PAGE_MASK;
 			tx_swcx->buf_phy_addr = dma_map_page(dev,
@@ -3714,6 +3774,11 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 			tx_swcx->len = size;
 			len -= size;
 			offset += size;
+			if (cnt == (int)INT_MAX) {
+				dev_err(dev, "Reached Max desc count\n");
+				ret = -ENOMEM;
+				goto dma_map_failed;
+			}
 			cnt++;
 			INCR_TX_DESC_INDEX(cur_tx_idx, pdata->osi_dma->tx_ring_sz);
 		}
@@ -3730,6 +3795,7 @@ desc_not_free:
 dma_map_failed:
 	/* Failed to fill current desc. Rollback previous desc's */
 	ether_tx_swcx_rollback(pdata, tx_ring, cur_tx_idx, cnt);
+exit_func:
 	return ret;
 }
 
@@ -3954,7 +4020,7 @@ static int ether_prepare_uc_list(struct net_device *dev,
 
 	if (ioctl_data == NULL) {
 		dev_err(pdata->dev, "ioctl_data is NULL\n");
-		return ret;
+		goto exit_func;
 	}
 
 	memset(&ioctl_data->l2_filter, 0x0, sizeof(struct osi_filter));
@@ -3971,6 +4037,11 @@ static int ether_prepare_uc_list(struct net_device *dev,
 		return osi_handle_ioctl(osi_core, ioctl_data);
 	}
 #endif /* !OSI_STRIPPED_LIB */
+	if (i > pdata->num_mac_addr_regs) {
+		dev_err(pdata->dev, "Invalid value: i (%u) exceeds num_mac_addr_regs (%u)\n",
+			i, pdata->num_mac_addr_regs);
+		goto exit_func;
+	}
 	if (netdev_uc_count(dev) > (pdata->num_mac_addr_regs - i)) {
 		/* switch to PROMISCUOUS mode */
 		ioctl_data->l2_filter.oper_mode = (OSI_OPER_DIS_PERFECT |
@@ -4028,6 +4099,7 @@ static int ether_prepare_uc_list(struct net_device *dev,
 		*mac_addr_idx = i;
 	}
 
+exit_func:
 	return ret;
 }
 
@@ -4980,8 +5052,8 @@ static int ether_get_vm_irq_data(struct platform_device *pdev,
 {
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct device_node *vm_node, *temp;
-	unsigned int i, j, node = 0;
-	int vm_irq_id, child_id, ret =0;
+	unsigned int i, j, node = 0, vm_irq_id, child_id;
+	int ret = 0;
 
 	vm_node = of_parse_phandle(pdev->dev.of_node,
 				   "nvidia,vm-irq-config", 0);
@@ -5063,6 +5135,8 @@ static int ether_get_vm_irq_data(struct platform_device *pdev,
 			}
 		}
 
+		/* Assuming there would not be more than 0xFFFF nodes */
+		child_id &= MAX_CHILD_NODES;
 		child_id++;
 	}
 
@@ -5128,6 +5202,11 @@ static int ether_get_irqs(struct platform_device *pdev,
 	} else {
 		/* get TX IRQ numbers */
 		for (i = 0, j = 1; i < num_chans; i++) {
+			if (j == UINT_MAX) {
+				dev_err(pdata->dev, "Index j exceeded maximum value\n");
+				ret = -1;
+				goto exit_func;
+			}
 			pdata->tx_irqs[i] = platform_get_irq(pdev, j++);
 			if (pdata->tx_irqs[i] < 0) {
 				dev_err(&pdev->dev, "failed to get TX IRQ number\n");
@@ -5136,6 +5215,11 @@ static int ether_get_irqs(struct platform_device *pdev,
 		}
 
 		for (i = 0; i < num_chans; i++) {
+			if (j == UINT_MAX) {
+				dev_err(pdata->dev, "Index j exceeded maximum value\n");
+				ret = -1;
+				goto exit_func;
+			}
 			pdata->rx_irqs[i] = platform_get_irq(pdev, j++);
 			if (pdata->rx_irqs[i] < 0) {
 				dev_err(&pdev->dev, "failed to get RX IRQ number\n");
@@ -5144,7 +5228,10 @@ static int ether_get_irqs(struct platform_device *pdev,
 		}
 	}
 
-	return 0;
+	ret = 0;
+
+exit_func:
+	return ret;
 }
 
 /**
@@ -5299,6 +5386,12 @@ static int ether_get_mac_address(struct ether_priv_data *pdata)
 		eth_mac_addr = addr;
 	}
 
+	/* Added below to fix FORWARD_NULL Static analysis error */
+	if (eth_mac_addr == NULL) {
+		ret = -EINVAL;
+		goto exit_func;
+	}
+
 	/* Found a valid mac address */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
         dev_addr_mod(ndev, 0, eth_mac_addr, ETH_ALEN);
@@ -5309,6 +5402,7 @@ static int ether_get_mac_address(struct ether_priv_data *pdata)
 
 	dev_info(dev, "Ethernet MAC address: %pM\n", ndev->dev_addr);
 
+exit_func:
 	return ret;
 }
 

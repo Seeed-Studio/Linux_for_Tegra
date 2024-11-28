@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #ifndef INCLUDED_MACSEC_H
 #define INCLUDED_MACSEC_H
@@ -39,6 +39,11 @@
  * @brief Maximum number of supplicants allowed per VF
  */
 #define MAX_SUPPLICANTS_ALLOWED		48
+
+/**
+ * @brief Maximum number of Key Indices for masking
+ */
+#define MAX_KEY_INDEX			0xFFU
 
 #define NV_MACSEC_GENL_VERSION	1
 
@@ -251,7 +256,7 @@ struct macsec_priv_data {
 	/** MACsec controller init reference count */
 	atomic_t ref_count;
 	/** supplicant instance specific data */
-	struct macsec_supplicant_data supplicant[OSI_MAX_NUM_SC];
+	struct macsec_supplicant_data supplicant[OSI_MAX_NUM_SC_T26x];
 	/** next supplicant instance index */
 	unsigned short next_supp_idx;
 	/** macsec mutex lock */

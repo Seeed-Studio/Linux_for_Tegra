@@ -33,6 +33,7 @@ static inline void add_skb_node(struct ether_priv_data *pdata, struct sk_buff *s
 	unsigned int idx;
 	unsigned long flags;
 	unsigned long now_jiffies = jiffies;
+	unsigned long timeout_jiffies = msecs_to_jiffies(ETHER_SECTOMSEC);
 
 	if (list_empty(&pdata->tx_ts_skb_head)) {
 		goto empty;
@@ -44,16 +45,17 @@ static inline void add_skb_node(struct ether_priv_data *pdata, struct sk_buff *s
 		pnode = list_entry(head_node,
 				   struct ether_tx_ts_skb_list,
 				   list_head);
-
-		if ((jiffies_to_msecs(now_jiffies) - jiffies_to_msecs(pnode->pkt_jiffies))
-		     >= ETHER_SECTOMSEC) {
-			dev_dbg(pdata->dev, "%s() skb %p deleting for pktid = %x time=%lu\n",
-				__func__, pnode->skb, pnode->pktid, pnode->pkt_jiffies);
-			if (pnode->skb != NULL) {
-				dev_consume_skb_any(pnode->skb);
+		if ((ULLONG_MAX - pnode->pkt_jiffies > timeout_jiffies) &&
+		    (now_jiffies > (pnode->pkt_jiffies + timeout_jiffies))) {
+			if (time_after_eq(now_jiffies, pnode->pkt_jiffies + timeout_jiffies)) {
+				dev_dbg(pdata->dev, "%s() skb %p deleting for pktid=%x time=%lu\n",
+					__func__, pnode->skb, pnode->pktid, pnode->pkt_jiffies);
+				if (pnode->skb != NULL) {
+					dev_consume_skb_any(pnode->skb);
+				}
+				list_del(head_node);
+				pnode->in_use = OSI_DISABLE;
 			}
-			list_del(head_node);
-			pnode->in_use = OSI_DISABLE;
 		}
 	}
 	raw_spin_unlock_irqrestore(&pdata->txts_lock, flags);
@@ -671,7 +673,11 @@ void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 		skb_record_rx_queue(skb, chan);
 		skb->dev = ndev;
 		skb->protocol = eth_type_trans(skb, ndev);
-		ndev->stats.rx_bytes += skb->len;
+		if ((ULLONG_MAX - ndev->stats.rx_bytes) <= (skb->len)) {
+			ndev->stats.rx_bytes = skb->len;
+		} else {
+			ndev->stats.rx_bytes += skb->len;
+		}
 #ifdef ETHER_NVGRO
 		if ((ndev->features & NETIF_F_GRO) &&
 		    ether_do_nvgro(pdata, &rx_napi->napi, skb))
@@ -688,7 +694,11 @@ void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 		ndev->stats.rx_frame_errors = pkt_err_stat->rx_frame_error;
 #endif /* !OSI_STRIPPED_LIB */
 		ndev->stats.rx_fifo_errors = osi_core->mmc.mmc_rx_fifo_overflow;
-		ndev->stats.rx_errors++;
+		if (ndev->stats.rx_errors == ULLONG_MAX) {
+			ndev->stats.rx_errors = 0;
+		} else {
+			ndev->stats.rx_errors++;
+		}
 #ifdef ETHER_PAGE_POOL
 		page_pool_recycle_direct(pdata->page_pool[chan], page);
 #endif
@@ -698,7 +708,11 @@ void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 #ifdef ETHER_NVGRO
 done:
 #endif
-	ndev->stats.rx_packets++;
+	if (ndev->stats.rx_packets == ULLONG_MAX) {
+		ndev->stats.rx_packets = 0;
+	} else {
+		ndev->stats.rx_packets++;
+	}
 	rx_swcx->buf_virt_addr = NULL;
 	rx_swcx->buf_phy_addr = 0;
 	/* mark packet is processed */
@@ -723,7 +737,11 @@ void osd_transmit_complete(void *priv, const struct osi_tx_swcx *swcx,
 	unsigned int chan, qinx;
 	unsigned int len = swcx->len;
 
-	ndev->stats.tx_bytes += len;
+	if ((ULLONG_MAX - ndev->stats.tx_bytes) <= (len)) {
+		ndev->stats.tx_bytes = len;
+	} else {
+		ndev->stats.tx_bytes += len;
+	}
 
 #ifdef BW_TEST
 	if (pdata->test_tx_bandwidth == OSI_ENABLE) {
@@ -764,8 +782,11 @@ void osd_transmit_complete(void *priv, const struct osi_tx_swcx *swcx,
 			netif_tx_wake_queue(txq);
 			netdev_dbg(ndev, "Tx ring[%d] - waking Txq\n", chan);
 		}
-
-		ndev->stats.tx_packets++;
+		if (ndev->stats.tx_packets == ULLONG_MAX) {
+			ndev->stats.tx_packets = 0;
+		} else {
+			ndev->stats.tx_packets++;
+		}
 		if ((txdone_pkt_cx->flags & OSI_TXDONE_CX_TS_DELAYED) ==
 		    OSI_TXDONE_CX_TS_DELAYED) {
 			add_skb_node(pdata, skb, txdone_pkt_cx->pktid, txdone_pkt_cx->vdmaid);
@@ -936,6 +957,9 @@ int osd_ivc_send_cmd(void *priv, ivc_msg_common_t *ivc_buf, unsigned int len)
 		return -1;
 	}
 	ivc_buf->status = -1;
+	if (cnt == (int)INT_MAX) {
+		cnt = 0;
+	}
 	ivc_buf->count = cnt++;
 
 	raw_spin_lock_irqsave(&ictxt->ivck_lock, flags);

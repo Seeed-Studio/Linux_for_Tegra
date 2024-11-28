@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved */
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #ifdef MACSEC_SUPPORT
 #include "ether_linux.h"
@@ -420,7 +420,7 @@ static struct macsec_supplicant_data *macsec_get_supplicant(
 	int i;
 
 	/* check for already exist instance */
-	for (i = 0; i < OSI_MAX_NUM_SC; i++) {
+	for (i = 0; i < OSI_MAX_NUM_SC_T26x; i++) {
 		if (supplicant[i].snd_portid == portid &&
 		    supplicant[i].in_use == OSI_ENABLE) {
 			return &supplicant[i];
@@ -1052,6 +1052,7 @@ static int macsec_deinit(struct sk_buff *skb, struct genl_info *info)
 	struct macsec_supplicant_data *supplicant;
 	struct ether_priv_data *pdata;
 	int ret = 0;
+	int ref_count_lcl = 0;
 
 	PRINT_ENTRY();
 
@@ -1084,7 +1085,8 @@ static int macsec_deinit(struct sk_buff *skb, struct genl_info *info)
 	macsec_pdata->next_supp_idx--;
 
 	/* check for reference count to zero before deinit macsec */
-	if ((atomic_read(&macsec_pdata->ref_count) - 1) > 0) {
+	ref_count_lcl = atomic_read(&macsec_pdata->ref_count);
+	if (ref_count_lcl > 1) {
 		ret = 0;
 		mutex_unlock(&macsec_pdata->lock);
 		goto done;
@@ -1309,7 +1311,7 @@ void macsec_remove(struct ether_priv_data *pdata)
 		mutex_lock(&macsec_pdata->lock);
 		/* Delete if any supplicant active heartbeat timer */
 		supplicant = macsec_pdata->supplicant;
-		for (i = 0; i < OSI_MAX_NUM_SC; i++) {
+		for (i = 0; i < OSI_MAX_NUM_SC_T26x; i++) {
 			if (supplicant[i].in_use == OSI_ENABLE) {
 				supplicant->snd_portid = OSI_NONE;
 				supplicant->in_use = OSI_NONE;
@@ -1473,6 +1475,8 @@ int macsec_probe(struct ether_priv_data *pdata)
 		} else {
 			strncpy(macsec_pdata->nv_macsec_fam.name,
 				netdev_name(pdata->ndev), GENL_NAMSIZ - 1);
+			// Explicit null-termination to fix CERT STR07-C
+			macsec_pdata->nv_macsec_fam.name[GENL_NAMSIZ - 1] = '\0';
 		}
 		ret = genl_register_family(&macsec_pdata->nv_macsec_fam);
 			if (ret) {
@@ -1671,6 +1675,8 @@ static int macsec_get_tx_next_pn(struct sk_buff *skb, struct genl_info *info)
 	memset(&lut_config, OSI_NONE, sizeof(lut_config));
 	lut_config.table_config.ctlr_sel = OSI_CTLR_SEL_TX;
 	lut_config.table_config.rw = OSI_LUT_READ;
+	// Added bitwise just to avoid CERT error
+	key_index = key_index & MAX_KEY_INDEX;
 	lut_config.table_config.index = key_index + tx_sa.curr_an;
 	lut_config.lut_sel = OSI_LUT_SEL_SA_STATE;
 	if (osi_macsec_config_lut(osi_core, &lut_config) < 0) {
