@@ -144,7 +144,6 @@ static int nvvrs_rtc_update_alarm_reg(struct i2c_client *client,
 	}
 
 out:
-	mutex_unlock(&info->lock);
 	return ret;
 }
 
