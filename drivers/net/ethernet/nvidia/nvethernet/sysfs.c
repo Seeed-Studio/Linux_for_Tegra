@@ -3366,11 +3366,6 @@ static ssize_t hsi_enable_show(struct device *dev,
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 
-	if (osi_core->use_virtualization == OSI_ENABLE) {
-		dev_err(pdata->dev, "Not supported with Ethernet virtualization enabled\n");
-		return 0;
-	}
-
 	return scnprintf(buf, PAGE_SIZE, "%s\n",
 			 (osi_core->hsi.enabled == OSI_ENABLE) ?
 			 "enabled" : "disabled");
@@ -3398,12 +3393,7 @@ static ssize_t hsi_enable_store(struct device *dev,
 	struct osi_ioctl ioctl_data = {};
 	int ret = 0;
 	u32 inst_id = osi_core->instance_id;
-	u32 ip_type[2] = {IP_EQOS, IP_MGBE};
-
-	if (osi_core->use_virtualization == OSI_ENABLE) {
-		dev_err(pdata->dev, "Not supported with Ethernet virtualization enabled\n");
-		return size;
-	}
+	u32 ip_type[3] = {IP_EQOS, IP_MGBE, IP_MGBE};
 
 	if (!netif_running(ndev)) {
 		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
@@ -3412,17 +3402,16 @@ static ssize_t hsi_enable_store(struct device *dev,
 
 	ioctl_data.cmd = OSI_CMD_HSI_CONFIGURE;
 	if (strncmp(buf, "enable", 6) == OSI_NONE) {
-		ioctl_data.arg1_u32 = OSI_ENABLE;
-		ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
-		if (ret < 0) {
-			dev_err(pdata->dev,
-				"Failed to enable HSI\n");
-		} else {
+		if (osi_core->use_virtualization != OSI_ENABLE) {
+			ioctl_data.arg1_u32 = OSI_ENABLE;
+			ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
+			if (ret < 0) {
+				dev_err(pdata->dev, "Failed to enable HSI\n");
+			}
+		}
+		if (ret == 0) {
 			osi_core->hsi.enabled = OSI_ENABLE;
 			dev_info(pdata->dev, "HSI Enabled\n");
-			if (osi_core->instance_id == OSI_INSTANCE_ID_EQOS)
-				inst_id = 0;
-
 			ret = hsierrrpt_reg_cb(ip_type[osi_core->mac], inst_id,
 					       hsi_inject_err_fsi, pdata);
 			if (ret != 0) {
@@ -3431,16 +3420,16 @@ static ssize_t hsi_enable_store(struct device *dev,
 			}
 		}
 	} else if (strncmp(buf, "disable", 7) == OSI_NONE) {
-		ioctl_data.arg1_u32 = OSI_DISABLE;
-		ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
-		if (ret < 0) {
-			dev_err(pdata->dev,
-				"Failed to disable HSI\n");
-		} else {
+		if (osi_core->use_virtualization != OSI_ENABLE) {
+			ioctl_data.arg1_u32 = OSI_DISABLE;
+			ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
+			if (ret < 0) {
+				dev_err(pdata->dev, "Failed to disable HSI\n");
+			}
+		}
+		if (ret == 0) {
 			osi_core->hsi.enabled = OSI_DISABLE;
 			dev_info(pdata->dev, "HSI Disabled\n");
-			if (osi_core->instance_id == OSI_INSTANCE_ID_EQOS)
-				inst_id = 0;
 
 			ret = hsierrrpt_dereg_cb(ip_type[osi_core->mac], inst_id);
 			if (ret != 0) {

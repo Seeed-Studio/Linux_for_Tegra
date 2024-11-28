@@ -51,6 +51,12 @@
 #define ETHER_M2M_TSYNC			59
 /** Configure L2 Filter (Only with Ethernet virtualization) */
 #define ETHER_L2_ADDR			61
+/** To get the AVB performance */
+#define ETHER_GET_AVB_PERF		62
+/** To get timestamp status */
+#define ETHER_VERIFY_TS			63
+/** To get regsiter status */
+#define ETHER_GET_STATUS		64
 /** @} */
 
 /**
@@ -190,6 +196,8 @@ struct ether_exported_ifr_data {
 	/** IOCTL cmd specific structure pointer
          * - Valid range: A valid pointer to the IOCTL private structure data */
 	void *ptr;
+	/** MAC instance ID (eqos:0 mgbe0:1 mgbe1:2 mgbe2:3 mgbe3:4) */
+	nve32_t mac_id;
 };
 
 enum nv_macsec_nl_commands {

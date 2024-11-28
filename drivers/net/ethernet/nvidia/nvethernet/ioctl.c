@@ -1073,6 +1073,7 @@ int ether_handle_priv_ioctl(struct net_device *ndev,
 	struct osi_ioctl ioctl_data = {};
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 #endif /* !OSI_STRIPPED_LIB */
+	ivc_msg_common_t *ivc_buf;
 	struct ether_exported_ifr_data ifdata;
 #ifdef OSI_DEBUG
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
@@ -1084,6 +1085,15 @@ int ether_handle_priv_ioctl(struct net_device *ndev,
 		dev_err(pdata->dev, "%s(): copy_from_user failed %d\n"
 			, __func__, __LINE__);
 		return -EFAULT;
+	}
+
+	if (ifdata.ifcmd == ETHER_GET_AVB_PERF || ifdata.ifcmd == ETHER_VERIFY_TS ||
+	    ifdata.ifcmd == ETHER_GET_STATUS) {
+		ivc_buf = kzalloc(sizeof(*ivc_buf), GFP_KERNEL);
+		if (!ivc_buf) {
+			ret = -ENOMEM;
+			goto err;
+		}
 	}
 
 	/* Enforce admin permission check */
@@ -1134,6 +1144,39 @@ int ether_handle_priv_ioctl(struct net_device *ndev,
 	case ETHER_GET_AVB_ALGORITHM:
 		ret = ether_get_avb_algo(ndev, &ifdata);
 		break;
+	case ETHER_GET_AVB_PERF:
+		ivc_buf->cmd = nvethmgr_get_avb_perf;
+		ivc_buf->args.arguments[0] = ifdata.mac_id;
+		ivc_buf->args.arguments[1] = ifdata.qinx;
+		ret = osd_ivc_send_cmd(pdata->osi_core, ivc_buf, sizeof(*ivc_buf));
+		if (ret != 0) {
+			dev_err(pdata->dev, "Failed to get AVB perf info\n");
+			goto err;
+		}
+		ret = ivc_buf->status;
+		break;
+	case ETHER_VERIFY_TS:
+		ivc_buf->cmd = nvethmgr_verify_ts;
+		ivc_buf->args.arguments[0] = ifdata.mac_id;
+		ivc_buf->args.arguments[1] = ifdata.qinx;
+		ret = osd_ivc_send_cmd(pdata->osi_core, ivc_buf, sizeof(*ivc_buf));
+		if (ret != 0) {
+			dev_err(pdata->dev, "Failed to verify timestamp\n");
+			goto err;
+		}
+		ret = ivc_buf->status;
+		break;
+	case ETHER_GET_STATUS:
+		ivc_buf->cmd = nvethmgr_get_status;
+		ivc_buf->args.arguments[0] = ifdata.mac_id;
+		ret = osd_ivc_send_cmd(pdata->osi_core, ivc_buf, sizeof(*ivc_buf));
+		if (ret != 0) {
+			dev_err(pdata->dev, "Failed to get status for registers\n");
+			goto err;
+		}
+		ret = ivc_buf->status;
+		break;
+
 #ifndef OSI_STRIPPED_LIB
 	case ETHER_CONFIG_ARP_OFFLOAD:
 		ret = ether_config_arp_offload(pdata, &ifdata);
@@ -1242,6 +1285,8 @@ int ether_handle_priv_ioctl(struct net_device *ndev,
 		break;
 	}
 err:
+	kfree(ivc_buf);
+
 	ifdata.command_error = ret;
 	if (copy_to_user(ifr->ifr_data, &ifdata, sizeof(ifdata)) != 0U) {
 		dev_err(pdata->dev, "%s: copy_to_user failed\n", __func__);
