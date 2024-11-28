@@ -1,19 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * drivers/misc/tegra-cec/tegra_cec.h
- *
- * Copyright (c) 2012-2021, NVIDIA CORPORATION.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-FileCopyrightText: Copyright (c) 2012-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef TEGRA_CEC_H
@@ -24,13 +11,6 @@
 #include <uapi/misc/tegra_cec.h>
 
 #define TEGRA_CEC_FRAME_MAX_LENGTH  16
-
-struct tegra_cec_soc {
-	int powergate_id;
-	int offset;
-	bool use_tegra_dc;
-	bool cec_always_on;
-};
 
 struct tegra_cec {
 	struct device		*dev;
@@ -50,7 +30,6 @@ struct tegra_cec {
 #endif
 	u16			logical_addr;
 	struct work_struct	work;
-	const struct tegra_cec_soc *soc;
 	unsigned int		rx_wake;
 	unsigned int		tx_wake;
 	u16			rx_buffer;
