@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2020-2024, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2020-2025, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -1104,6 +1104,7 @@ pva_queue_dump(struct nvpva_queue *queue, struct seq_file *s)
 
 	mutex_unlock(&queue->list_lock);
 }
+
 static int pva_task_submit_mmio_ccq(struct pva_submit_task *task, u8 batchsize)
 {
 	u32 flags = PVA_CMD_INT_ON_ERR;
@@ -1560,6 +1561,41 @@ static int pva_queue_abort(struct nvpva_queue *queue)
 	nvhost_syncpt_set_min_update(queue->vm_pdev, queue->syncpt_id,
 				     atomic_read(&queue->syncpt_maxval));
 	mutex_unlock(&queue->list_lock);
+
+	return 0;
+}
+
+static void
+pva_queue_dump_all(struct pva *pva,
+		   struct nvpva_queue *queue)
+{
+	struct pva_submit_task *task;
+	int i = 0;
+
+	nvpva_err(&pva->pdev->dev, "Queue %u, Tasks\n", queue->id);
+	mutex_lock(&queue->list_lock);
+	list_for_each_entry(task, &queue->tasklist, node) {
+		nvpva_err(&pva->pdev->dev, "    #%u: exe_id = %u\n", i++, task->exe_id);
+	}
+
+	mutex_unlock(&queue->list_lock);
+}
+
+int pva_dump_queues(struct pva *pva)
+{
+	struct nvpva_queue_pool *pool =  pva->pool;
+	unsigned long queue_id;
+	u32 i;
+
+	mutex_lock(&pool->queue_lock);
+	for (i = 0; i < NUM_POOL_ALLOC_SUB_TABLES; i++)
+		for_each_set_bit(queue_id,
+				 &pool->alloc_table[i],
+				 pool->max_queue_cnt)
+			pva_queue_dump_all(pva,
+					  &pool->queues[64 * i + queue_id]);
+
+	mutex_unlock(&pool->queue_lock);
 
 	return 0;
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * PVA Command Queue Interface handling
  */
@@ -26,27 +26,46 @@
 static int pva_ccq_wait(struct pva *pva, int timeout, unsigned int queue_id)
 {
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+	u32 poll_count = 0;
+
 	/*
 	 * Wait until there is free room in the CCQ. Otherwise the writes
 	 * could stall the CPU. Ignore the timeout in simulation.
 	 */
 
-	while (time_before(jiffies, end_jiffies) ||
-	       (pva->timeout_enabled == false)) {
-		u32 val = PVA_EXTRACT(
+	do {
+		u32 val;
+
+		if ((pva->timeout_enabled == true) && time_after(jiffies, end_jiffies)) {
+			/* check once more if a slot is available*/
+			val = PVA_EXTRACT(
+				host1x_readl(pva->pdev,
+					     cfg_ccq_status_r(pva->version, queue_id,
+							      PVA_CCQ_STATUS2_INDEX)),
+				4, 0, u32);
+			if (val <= MAX_CCQ_ELEMENTS) {
+				if (!poll_count)
+					WARN(true, "pva_ccq_wait false time out on first check");
+				return 0;
+			}
+
+			nvpva_err(&pva->pdev->dev, "ccq wait timed out with %u in fifo", val);
+			return -ETIMEDOUT;
+		}
+
+		++poll_count;
+		val = PVA_EXTRACT(
 			host1x_readl(pva->pdev,
 				     cfg_ccq_status_r(pva->version, queue_id,
 						      PVA_CCQ_STATUS2_INDEX)),
 			4, 0, u32);
+
 		if (val <= MAX_CCQ_ELEMENTS)
 			return 0;
 
 		usleep_range(5, 10);
-	}
-
-	return -ETIMEDOUT;
+	} while (true);
 }
-
 static int pva_ccq_send_cmd(struct pva *pva, u32 queue_id,
 			    struct pva_cmd_s *cmd)
 {

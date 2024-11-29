@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * Tegra PVA header
  */
@@ -123,6 +123,7 @@ enum nvpva_dbg_categories {
 	pva_dbg_fn      = BIT(2),  /* fn name tracing */
 	pva_dbg_reg     = BIT(3),  /* register accesses, very verbose */
 	pva_dbg_prof    = BIT(7),  /* profiling info */
+	pva_dbg_powercycle    = BIT(8),  /* poer cycle info */
 	pva_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 
@@ -163,6 +164,9 @@ enum nvpva_dbg_categories {
 
 #define nvpva_dbg_prof(pva, fmt, arg...) \
 	nvpva_dbg(pva, pva_dbg_prof, fmt, ##arg)
+
+#define nvpva_dbg_powercycle(pva, fmt, arg...) \
+	nvpva_dbg(pva, pva_dbg_powercycle, fmt, ##arg)
 
 /**
  * @brief		struct to hold the segment details

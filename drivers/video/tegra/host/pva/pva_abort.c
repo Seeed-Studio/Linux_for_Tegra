@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2022-2025, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/nvhost.h>
@@ -8,6 +8,13 @@
 
 #include "pva.h"
 #include "pva_sec_ec.h"
+#include "pva_queue.h"
+
+
+static void nvpva_debug_dump_device(struct pva *pva)
+{
+	pva_dump_queues(pva);
+}
 
 static void pva_abort_handler(struct work_struct *work)
 {
@@ -15,6 +22,21 @@ static void pva_abort_handler(struct work_struct *work)
 				       pva_abort_handler_work);
 	struct platform_device *pdev = pva->pdev;
 	int i;
+	u32 checkpoint;
+
+	/* show checkpoint value here*/
+	checkpoint = host1x_readl(pdev,
+		cfg_ccq_status_r(pva->version, 0, 6));
+	nvpva_warn(&pdev->dev, "Checkpoint value: 0x%08x",
+		   checkpoint);
+
+	/* Dump nvhost state to show the pending jobs */
+	nvhost_debug_dump_device(pdev);
+	nvpva_debug_dump_device(pva);
+
+	/* Copy trace points to ftrace buffer */
+	pva_trace_copy_to_ftrace(pva);
+
 
 	/*wake up sync cmd waiters*/
         for (i = 0; i < pva->version_config->irq_count; i++) {

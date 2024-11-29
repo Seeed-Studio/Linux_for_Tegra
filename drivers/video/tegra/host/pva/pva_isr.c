@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * PVA ISR code
  */
@@ -39,7 +39,7 @@ static irqreturn_t pva_system_isr(int irq, void *dev_id)
 	struct pva *pva = dev_id;
 	struct platform_device *pdev = pva->pdev;
 	u32 checkpoint = host1x_readl(pdev,
-		cfg_ccq_status_r(pva->version, 0, 8));
+		cfg_ccq_status_r(pva->version, 0, 6));
 	u32 status7 = pva->version_config->read_mailbox(pdev, PVA_MBOX_ISR);
 	u32 status5 = pva->version_config->read_mailbox(pdev, PVA_MBOX_AISR);
 	u32 lic_int_status = host1x_readl(pdev,

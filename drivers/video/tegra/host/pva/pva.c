@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2016-2025, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -1098,6 +1098,7 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 	int ret = 0;
 #endif
 
+	nvpva_dbg_fn(pva, "");
 	/*
 	 * Disable IRQs. Interrupt handler won't be under execution after the
 	 * call returns.

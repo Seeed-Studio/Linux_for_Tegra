@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * PVA Command Queue Interface handling
  */
@@ -28,23 +28,34 @@
 static int pva_ccq_wait(struct pva *pva, int timeout)
 {
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+
 	/*
 	 * Wait until there is free room in the CCQ. Otherwise the writes
 	 * could stall the CPU. Ignore the timeout in simulation.
 	 */
 
-	while (time_before(jiffies, end_jiffies) ||
-	       (pva->timeout_enabled == false)) {
+	do {
 		u32 val = host1x_readl(pva->pdev,
-				       cfg_ccq_status_r(pva->version, 0,
-							PVA_CCQ_STATUS2_INDEX));
+				   cfg_ccq_status_r(pva->version, 0,
+				   PVA_CCQ_STATUS2_INDEX));
+
 		if (val <= MAX_CCQ_ELEMENTS)
 			return 0;
 
-		usleep_range(5, 10);
-	}
+		if ((pva->timeout_enabled == true) && time_after(jiffies, end_jiffies)) {
+			/* check once more if a slot is available */
+			val = host1x_readl(pva->pdev,
+					       cfg_ccq_status_r(pva->version, 0,
+					       PVA_CCQ_STATUS2_INDEX));
+			if (val <= MAX_CCQ_ELEMENTS)
+				return 0;
+			else
+				return -ETIMEDOUT;
+		} else {
+			usleep_range(5, 10);
+		}
+	} while (true);
 
-	return -ETIMEDOUT;
 }
 
 int pva_ccq_send_task_t19x(struct pva *pva, u32 queue_id, dma_addr_t task_addr,

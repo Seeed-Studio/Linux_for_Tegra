@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * PVA Debug Information file
  */
@@ -453,6 +453,8 @@ void pva_debugfs_init(struct platform_device *pdev)
 	debugfs_create_u32("profiling_level", 0644, de, &pva->profiling_level);
 	debugfs_create_bool("stats_enabled", 0644, de, &pva->stats_enabled);
 	debugfs_create_file("vpu_stats", 0644, de, pva, &pva_stats_fops);
+	debugfs_create_bool("driver_timeouts_enabled", 0644, de,
+			    &pva->timeout_enabled);
 
 	mutex_init(&pva->fw_debug_log.saved_log_lock);
 	pva->fw_debug_log.size = FW_DEBUG_LOG_BUFFER_SIZE;

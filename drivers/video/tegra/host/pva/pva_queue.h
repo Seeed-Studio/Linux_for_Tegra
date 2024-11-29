@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2016-2024 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2016-2025 NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef PVA_QUEUE_H
@@ -323,6 +323,16 @@ struct pva_pinned_memory *pva_task_pin_mem(struct pva_submit_task *task,
 					   u32 id);
 
 void pva_dmabuf_vunmap(struct dma_buf *dmabuf, void *addr);
-void *pva_dmabuf_vmap(struct dma_buf *dmabuf);
 
+void *pva_dmabuf_vmap(struct dma_buf *dmabuf);
+/**
+ * @brief	pva_dump_queues
+ *
+ * This function dumps out the contents of queues in the pool
+ *
+ * @param pva		Pointer to the pva device instance
+ * @return		0
+ *
+ */
+int pva_dump_queues(struct pva *pva);
 #endif

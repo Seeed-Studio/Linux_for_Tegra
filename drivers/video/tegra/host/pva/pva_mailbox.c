@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * PVA mailbox code
  */
@@ -69,7 +69,8 @@ static int pva_mailbox_send_cmd(struct pva *pva, struct pva_cmd_s *cmd,
 int pva_mailbox_wait_event(struct pva *pva, int wait_time)
 {
 	int timeout = 1;
-	int err;
+	int err = 0;
+
 	/* Wait for the event being triggered in ISR */
 	if (pva->timeout_enabled == true)
 		timeout = wait_event_timeout(
@@ -87,9 +88,22 @@ int pva_mailbox_wait_event(struct pva *pva, int wait_time)
 						PVA_CMD_STATUS_ABORTED);
 
 	if (timeout <= 0) {
-		err = -ETIMEDOUT;
-		pva_abort(pva);
-	} else if  (pva->cmd_status[PVA_MAILBOX_INDEX] ==
+		if ((pva->cmd_status[PVA_MAILBOX_INDEX] !=
+						PVA_CMD_STATUS_DONE)
+		     && (pva->cmd_status[PVA_MAILBOX_INDEX] !=
+						PVA_CMD_STATUS_ABORTED)) {
+			err = -ETIMEDOUT;
+			pva_abort(pva);
+		} else {
+			WARN(true, "wait_event_timeout reported false timeout");
+			if (pva->cmd_status[PVA_MAILBOX_INDEX] ==
+						PVA_CMD_STATUS_ABORTED) {
+				err = -EIO;
+			}
+
+			err = 0;
+		}
+	} else if (pva->cmd_status[PVA_MAILBOX_INDEX] ==
 						PVA_CMD_STATUS_ABORTED)
 		err = -EIO;
 	else
