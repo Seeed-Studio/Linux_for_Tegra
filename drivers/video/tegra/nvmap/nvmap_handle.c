@@ -126,6 +126,7 @@ int find_range_of_handles(struct nvmap_handle **hs, u32 nr,
 {
 	u64 tot_sz = 0, rem_sz = 0;
 	u64 offs = hrange->offs;
+	u64 sum, difference;
 	u32 start = 0, end = 0;
 	u64 sz = hrange->sz;
 	u32 i;
@@ -133,9 +134,15 @@ int find_range_of_handles(struct nvmap_handle **hs, u32 nr,
 	hrange->offs_start = offs;
 	/* Find start handle */
 	for (i = 0; i < nr; i++) {
-		tot_sz += hs[i]->size;
+		if (check_add_overflow(tot_sz, (u64)hs[i]->size, &sum))
+			return -EOVERFLOW;
+
+		tot_sz = sum;
 		if (offs > tot_sz) {
-			hrange->offs_start -= tot_sz;
+			if (check_sub_overflow(hrange->offs_start, tot_sz, &difference))
+				return -EOVERFLOW;
+
+			hrange->offs_start = difference;
 			continue;
 		} else {
 			rem_sz = tot_sz - offs;
@@ -154,7 +161,10 @@ int find_range_of_handles(struct nvmap_handle **hs, u32 nr,
 	}
 	/* find end handle number */
 	for (; i < nr; i++) {
-		rem_sz += hs[i]->size;
+		if (check_add_overflow(rem_sz, (u64)hs[i]->size, &sum))
+			return -EOVERFLOW;
+
+		rem_sz = sum;
 		if (rem_sz >= sz) {
 			end = i;
 			hrange->start = start;
@@ -304,6 +314,7 @@ static void add_handle_ref(struct nvmap_client *client,
 	}
 	rb_link_node(&ref->node, parent, p);
 	rb_insert_color(&ref->node, &client->handle_refs);
+	BUG_ON(client->handle_count == UINT_MAX);
 	client->handle_count++;
 	if (client->handle_count > nvmap_max_handle_count)
 		nvmap_max_handle_count = client->handle_count;
@@ -746,6 +757,7 @@ void nvmap_free_handle(struct nvmap_client *client,
 
 	smp_rmb();
 	rb_erase(&ref->node, &client->handle_refs);
+	BUG_ON(client->handle_count == 0U);
 	client->handle_count--;
 	atomic_dec(&ref->handle->share_count);
 
@@ -814,9 +826,13 @@ static int nvmap_assign_pages_per_handle(struct nvmap_handle *src_h,
 	 * source handle pages are not freed until new handle's fd is not closed.
 	 * Note: nvmap_dmabuf_release, need to decreement source handle ref count
 	 */
+	u32 sum, current_pg_cnt, initial_pg_cnt;
+
 	src_h = nvmap_handle_get(src_h);
 	if (!src_h)
 		return -EINVAL;
+
+	initial_pg_cnt = *pg_cnt;
 
 	while (src_h_start < src_h_end) {
 		unsigned long next;
@@ -830,7 +846,25 @@ static int nvmap_assign_pages_per_handle(struct nvmap_handle *src_h,
 		next = min(((src_h_start + PAGE_SIZE) & PAGE_MASK),
 				src_h_end);
 		src_h_start = next;
-		*pg_cnt = *pg_cnt + 1;
+
+		if (check_add_overflow(*pg_cnt, 1U, &sum)) {
+			current_pg_cnt = *pg_cnt;
+
+			while (current_pg_cnt >= 0U) {
+				dest_page = nvmap_to_page(
+							dest_h->pgalloc.pages[current_pg_cnt]);
+				put_page(dest_page);
+
+				if (current_pg_cnt == initial_pg_cnt)
+					break;
+
+				current_pg_cnt--;
+			}
+
+			return -EOVERFLOW;
+		}
+
+		*pg_cnt = sum;
 	}
 
 	mutex_lock(&dest_h->pg_ref_h_lock);
