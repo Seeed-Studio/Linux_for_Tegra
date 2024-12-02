@@ -1246,6 +1246,7 @@ static inline void set_speed_work_func(struct work_struct *work)
 	struct phy_device *phydev = pdata->phydev;
 	nveu32_t iface_mode = pdata->osi_core->phy_iface_mode;
 	struct clk *mac_clk = NULL;
+	unsigned long val = 0;
 #ifndef OSI_STRIPPED_LIB
 	unsigned int eee_enable = OSI_DISABLE;
 #endif /* !OSI_STRIPPED_LIB */
@@ -1302,6 +1303,12 @@ static inline void set_speed_work_func(struct work_struct *work)
 				      msecs_to_jiffies(1000));
 		atomic_set(&pdata->set_speed_ref_cnt, OSI_DISABLE);
 		return;
+	}
+
+	if (!pdata->oldlink) {
+		pdata->oldlink = 1;
+		val = pdata->xstats.link_connect_count;
+		pdata->xstats.link_connect_count = update_stats_counter(val, 1UL);
 	}
 
 	/* Set MGBE MAC_DIV/TX clk rate */
