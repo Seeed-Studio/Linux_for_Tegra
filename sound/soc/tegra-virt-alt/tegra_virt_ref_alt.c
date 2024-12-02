@@ -18,7 +18,7 @@
 #include "tegra_asoc_machine_virt_alt.h"
 #include "tegra_asoc_util_virt_alt.h"
 #include "tegra_asoc_xbar_virt_alt.h"
-#include "tegra_virt_alt_ivc.h"
+#include "nvaudio_ivc/tegra_virt_alt_ivc.h"
 
 static struct snd_soc_card tegra_virt_t210ref_card = {
 	.name = "t210ref-virt-card",

@@ -5,7 +5,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 
-#include "tegra_virt_alt_ivc.h"
+#include "nvaudio_ivc/tegra_virt_alt_ivc.h"
 #include "tegra_asoc_util_virt_alt.h"
 
 #if TEGRA_ARAD

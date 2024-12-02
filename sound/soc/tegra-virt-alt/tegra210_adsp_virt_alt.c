@@ -43,7 +43,7 @@
 #include "tegra_asoc_utils_alt.h"
 #include "tegra210_adsp_virt_alt.h"
 #include "tegra210_virt_alt_admaif.h"
-#include "tegra_virt_alt_ivc.h"
+#include "nvaudio_ivc/tegra_virt_alt_ivc.h"
 
 #define DRV_NAME_ADSP "tegra210-adsp-virt"
 
