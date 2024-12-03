@@ -66,11 +66,19 @@ static bool host1x_syncpt_fence_enable_signaling(struct dma_fence *f)
     return true;
 }
 
+static void host1x_syncpt_fence_release(struct dma_fence *fence)
+{
+	struct host1x_syncpt_fence *sf = to_host1x_fence(fence);
+
+	kfree(sf);
+}
+
 const struct dma_fence_ops host1x_syncpt_fence_ops = {
-    .get_driver_name   = host1x_syncpt_fence_get_driver_name,
-    .get_timeline_name = host1x_syncpt_fence_get_timeline_name,
-    .enable_signaling  = host1x_syncpt_fence_enable_signaling,
-    .signaled          = host1x_syncpt_fence_signaled,
+	.get_driver_name   = host1x_syncpt_fence_get_driver_name,
+	.get_timeline_name = host1x_syncpt_fence_get_timeline_name,
+	.enable_signaling  = host1x_syncpt_fence_enable_signaling,
+	.signaled          = host1x_syncpt_fence_signaled,
+	.release           = host1x_syncpt_fence_release,
 };
 
 static void host1x_fence_timeout_handler(struct work_struct *work)
