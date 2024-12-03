@@ -126,17 +126,14 @@ static struct attribute *t234_oc3_attrs[] = {
 
 static const struct attribute_group oc1_data = {
 	.attrs = t234_oc1_attrs,
-	NULL,
 };
 
 static const struct attribute_group oc2_data = {
 	.attrs = t234_oc2_attrs,
-	NULL,
 };
 
 static const struct attribute_group oc3_data = {
 	.attrs = t234_oc3_attrs,
-	NULL,
 };
 
 static const struct attribute_group *t234_oc_groups[] = {
