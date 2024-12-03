@@ -6609,23 +6609,23 @@
 			dma-coherent;
 		};
 
-		soc_sb_cluster: psc@d860000 {
+		soc_sb_cluster: psc@d8e0000 {
 			compatible = "nvidia,tegra234-psc";
-			reg = <0x0 0xd860000 0x0 0x80000 0x0 0xd80201c 0x0 0x8>;
+			reg = <0x0 0xd8e0000 0x0 0x80000 0x0 0xd80205c 0x0 0x8>;
 			reg-names = "mbox-regs", "extcfg";
-			interrupts = <GIC_SPI 755 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 756 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 757 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 759 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 761 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 762 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 763 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 764 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 765 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 766 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 767 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 768 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 769 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 770 IRQ_TYPE_LEVEL_HIGH>;
 			nvidia,cpu-name = "sb";
 			#mbox-cells = <1>;
 
 			mboxes = <&soc_sb_cluster 0>;
-
+			nvidia,mailbox-mutex = <1>;
 			nvidia,sidconfig = <0x0>;
 
 			iommus = <&smmu1_mmu 0x2400>;
@@ -6635,23 +6635,23 @@
 			status = "disabled";
 		};
 
-		soc_oesp_cluster: psc@e060000 {
+		soc_oesp_cluster: psc@e0e0000 {
 			compatible = "nvidia,tegra234-psc";
-			reg = <0x0 0xe060000 0x0 0x80000 0x0 0xe00201c 0x0 0x8>;
+			reg = <0x0 0xe0e0000 0x0 0x80000 0x0 0xe00205c 0x0 0x8>;
 			reg-names = "mbox-regs", "extcfg";
-			interrupts =  <GIC_SPI 699 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 700 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 701 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 702 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 703 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 704 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 705 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 706 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts =  <GIC_SPI 707 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 708 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 709 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 710 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 711 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 712 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 713 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 714 IRQ_TYPE_LEVEL_HIGH>;
 			nvidia,cpu-name = "oesp";
 			#mbox-cells = <1>;
 
 			mboxes = <&soc_oesp_cluster 0>;
-
+			nvidia,mailbox-mutex = <1>;
 			nvidia,sidconfig = <0x0>;
 
 			iommus = <&smmu1_mmu 0x2300>;
