@@ -7459,6 +7459,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_IIO_DEV_OPAQUE_HAS_LOCK" "" "types"
         ;;
 
+        irq_get_nr_irqs)
+            #
+            # Determine if the function irq_get_nr_irqs() is present.
+            #
+            # Commit 5280a14a6079 ("genirq: Introduce irq_get_nr_irqs() and
+            # irq_set_nr_irqs()") added irq_get_nr_irqs() in Linux v6.13.
+            #
+            CODE="
+            #include <linux/irqnr.h>
+            void conftest_irq_get_nr_irqs(void) {
+                irq_get_nr_irqs();
+            }"
+
+            compile_check_conftest "$CODE" "NV_IRQ_GET_NR_IRQS_PRESENT" "" "functions"
+        ;;
+
         kthread_complete_and_exit)
             #
             # Determine if function kthread_complete_and_exit() is present.

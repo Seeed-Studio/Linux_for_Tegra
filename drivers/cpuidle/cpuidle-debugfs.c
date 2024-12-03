@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
- *
  * Module to force cpuidle states through debugfs files.
- *
  */
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/irq.h>
 #include <linux/irqdesc.h>
@@ -26,9 +26,16 @@ static void suspend_all_device_irqs(void)
 {
 	struct irq_data *data;
 	struct irq_desc *desc;
+	unsigned int nirqs;
 	int irq;
 
-	for (irq = 0, data = irq_get_irq_data(irq); irq < nr_irqs;
+#if defined(NV_IRQ_GET_NR_IRQS_PRESENT) /* Linux v6.13 */
+	nirqs = irq_get_nr_irqs();
+#else
+	nirqs = nr_irqs;
+#endif
+
+	for (irq = 0, data = irq_get_irq_data(irq); irq < nirqs;
 			irq++, data = irq_get_irq_data(irq)) {
 		if (!data)
 			continue;
@@ -44,9 +51,16 @@ static void resume_all_device_irqs(void)
 {
 	struct irq_data *data;
 	struct irq_desc *desc;
+	unsigned int nirqs;
 	int irq;
 
-	for (irq = 0, data = irq_get_irq_data(irq); irq < nr_irqs;
+#if defined(NV_IRQ_GET_NR_IRQS_PRESENT)
+	nirqs = irq_get_nr_irqs();
+#else
+	nirqs = nr_irqs;
+#endif
+
+	for (irq = 0, data = irq_get_irq_data(irq); irq < nirqs;
 			irq++, data = irq_get_irq_data(irq)) {
 		if (!data)
 			continue;
