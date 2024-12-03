@@ -175,25 +175,20 @@ SYM_FUNC_START(__dma_flush_area)
 SYM_FUNC_END(__dma_flush_area)
 
 /*
- *	__dma_map_area(start, size, dir)
+ *	__dma_map_area_from_device(start, size)
  *	- start	- kernel virtual start address
  *	- size	- size of region
- *	- dir	- DMA direction
  */
-SYM_FUNC_START(__dma_map_area)
-	cmp	w2, #DMA_FROM_DEVICE
-	b.eq	__dma_inv_area
+SYM_FUNC_START(__dma_map_area_from_device)
+	b	__dma_inv_area
 	b	__dma_clean_area
-SYM_FUNC_END(__dma_map_area)
+SYM_FUNC_END(__dma_map_area_from_device)
 
 /*
- *	__dma_unmap_area(start, size, dir)
+ *	__dma_map_area_to_device(start, size)
  *	- start	- kernel virtual start address
  *	- size	- size of region
- *	- dir	- DMA direction
  */
-SYM_FUNC_START(__dma_unmap_area)
-	cmp	w2, #DMA_TO_DEVICE
-	b.ne	__dma_inv_area
-	ret
-SYM_FUNC_END(__dma_unmap_area)
+SYM_FUNC_START(__dma_map_area_to_device)
+	b	__dma_clean_area
+SYM_FUNC_END(__dma_map_area_to_device)

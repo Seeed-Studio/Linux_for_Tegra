@@ -121,7 +121,8 @@ void nvmap_clean_cache(struct page **pages, int numpages);
 
 void nvmap_clean_cache_page(struct page *page);
 
-void __dma_map_area(const void *cpu_va, size_t size, int dir);
+void __dma_map_area_from_device(const void *cpu_va, size_t size);
+void __dma_map_area_to_device(const void *cpu_va, size_t size);
 
 void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap);
 

@@ -64,9 +64,9 @@ void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 	if (op == NVMAP_CACHE_OP_WB_INV)
 		arch_invalidate_pmem(vaddr, size);
 	else if (op == NVMAP_CACHE_OP_INV)
-		__dma_map_area(vaddr, size, DMA_FROM_DEVICE);
+		__dma_map_area_from_device(vaddr, size);
 	else
-		__dma_map_area(vaddr, size, DMA_TO_DEVICE);
+		__dma_map_area_to_device(vaddr, size);
 }
 
 static int heap_page_cache_maint(
