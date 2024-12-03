@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0-only
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,6 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <nvidia/conftest.h>
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -52,7 +54,12 @@ static struct hyp_shared_memory_info hyp_shared_memory_attrs[HYP_SHM_ID_NUM];
 
 /* Map the HV trace buffer to the calling user process */
 static int hvc_sysfs_mmap(struct file *fp, struct kobject *ko,
-	struct bin_attribute *attr, struct vm_area_struct *vma)
+#if defined(NV_BIN_ATTRIBUTE_STRUCT_MMAP_HAS_CONST_BIN_ATTRIBUTE_ARG) /* Linux v6.13 */
+			  const struct bin_attribute *attr,
+#else
+			  struct bin_attribute *attr,
+#endif
+			  struct vm_area_struct *vma)
 {
 	struct hyp_shared_memory_info *hyp_shm_info =
 		container_of(attr, struct hyp_shared_memory_info, attr);
