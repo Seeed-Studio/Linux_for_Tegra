@@ -159,6 +159,7 @@
 		};
 
 		pmc@c800000 {
+			nvidia,invert-interrupt;
 			status = "okay";
 		};
 
@@ -319,6 +320,11 @@
 		status = "okay";
 		i2c {
 			status = "okay";
+
+			vrs@3c {
+				status = "okay";
+			};
+
 			tegra_tmp451: thermal-sensor@4c {
 				compatible = "ti,tmp451";
 				status = "okay";
