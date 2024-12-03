@@ -1030,7 +1030,10 @@ prepare_edma_desc(enum drv_mode_t drv_mode, struct copy_req_params *params,
 		fput(filep);
 
 		desc[iter].sz = flush_range->size;
-		iter++;
+		if (iter == U32_MAX)
+			iter = 0;
+		else
+			iter++;
 	}
 	*num_desc += iter;
 	return ret;
@@ -1127,10 +1130,16 @@ cache_copy_request_handles(struct copy_req_params *params,
 		stream_obj = filep->private_data;
 		kref_get(&stream_obj->refcount);
 		cr->handles[cr->num_handles] = stream_obj;
-		cr->num_handles++;
+		if (cr->num_handles == U64_MAX)
+			cr->num_handles = 0;
+		else
+			cr->num_handles++;
 		/* collect all local post fences separately for nvhost incr.*/
 		cr->local_post_fences[cr->num_local_post_fences] = stream_obj;
-		cr->num_local_post_fences++;
+		if (cr->num_local_post_fences == U64_MAX)
+			cr->num_local_post_fences = 0;
+		else
+			cr->num_local_post_fences++;
 		fput(filep);
 	}
 	for (i = 0; i < params->num_remote_post_fences; i++) {
@@ -1139,10 +1148,16 @@ cache_copy_request_handles(struct copy_req_params *params,
 		stream_obj = filep->private_data;
 		kref_get(&stream_obj->refcount);
 		cr->handles[cr->num_handles] = stream_obj;
-		cr->num_handles++;
+		if (cr->num_handles == U64_MAX)
+			cr->num_handles = 0;
+		else
+			cr->num_handles++;
 		cr->remote_post_fence_values[i] =  params->remote_post_fence_values[i];
 		cr->remote_post_fences[cr->num_remote_post_fences] = stream_obj;
-		cr->num_remote_post_fences++;
+		if (cr->num_remote_post_fences == U64_MAX)
+			cr->num_remote_post_fences = 0;
+		else
+			cr->num_remote_post_fences++;
 		fput(filep);
 	}
 	for (i = 0; i < params->num_flush_ranges; i++) {
@@ -1151,7 +1166,10 @@ cache_copy_request_handles(struct copy_req_params *params,
 		stream_obj = filep->private_data;
 		kref_get(&stream_obj->refcount);
 		cr->handles[cr->num_handles] = stream_obj;
-		cr->num_handles++;
+		if (cr->num_handles == U64_MAX)
+			cr->num_handles = 0;
+		else
+			cr->num_handles++;
 		fput(filep);
 
 		handle = params->flush_ranges[i].dst_handle;
@@ -1159,10 +1177,16 @@ cache_copy_request_handles(struct copy_req_params *params,
 		stream_obj = filep->private_data;
 		kref_get(&stream_obj->refcount);
 		cr->handles[cr->num_handles] = stream_obj;
-		cr->num_handles++;
+		if (cr->num_handles == U64_MAX)
+			cr->num_handles = 0;
+		else
+			cr->num_handles++;
 
 		cr->remote_buf_objs[cr->num_remote_buf_objs] = stream_obj;
-		cr->num_remote_buf_objs++;
+		if (cr->num_remote_buf_objs == U64_MAX)
+			cr->num_remote_buf_objs = 0;
+		else
+			cr->num_remote_buf_objs++;
 		fput(filep);
 	}
 

@@ -589,7 +589,11 @@ allocate_fence(struct syncpt_t *syncpt)
 	int ret = 0;
 	struct dma_fence *fence = NULL;
 
-	fence = host1x_fence_create(syncpt->sp, ++syncpt->threshold, false);
+	if (syncpt->threshold == U32_MAX)
+		syncpt->threshold = 0;
+	else
+		++syncpt->threshold;
+	fence = host1x_fence_create(syncpt->sp, syncpt->threshold, false);
 	if (IS_ERR(fence)) {
 		ret = PTR_ERR(fence);
 		pr_err("host1x_fence_create failed with: %d\n", ret);

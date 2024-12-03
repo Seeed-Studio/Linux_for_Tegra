@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: comm-channel: " fmt
 
@@ -375,7 +378,11 @@ allocate_fence(struct syncpt_t *syncpt)
 	int ret = 0;
 	struct dma_fence *fence = NULL;
 
-	fence = host1x_fence_create(syncpt->sp, ++syncpt->threshold, false);
+	if (syncpt->threshold == U32_MAX)
+		syncpt->threshold = 0;
+	else
+		++syncpt->threshold;
+	fence = host1x_fence_create(syncpt->sp, syncpt->threshold, false);
 	if (IS_ERR_OR_NULL(fence)) {
 		ret = PTR_ERR(fence);
 		pr_err("host1x_fence_create failed with: %d\n", ret);
