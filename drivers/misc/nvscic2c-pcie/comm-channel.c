@@ -314,7 +314,7 @@ recv_taskfn(void *arg)
 		atomic_dec(&comm_ctx->recv_count);
 		while (can_recv(fifo, &ret)) {
 			msg = (struct comm_msg *)
-				(fifo->recv + (fifo->rd_pos * fifo->frame_sz));
+				((void *)(fifo->recv + (fifo->rd_pos * fifo->frame_sz)));
 
 			if (msg->type > COMM_MSG_TYPE_INVALID &&
 			    msg->type < COMM_MSG_TYPE_MAXIMUM) {
@@ -583,6 +583,12 @@ allocate_syncpoint(struct comm_channel_ctx_t *comm_ctx)
 		goto err;
 	}
 
+	/*
+	 * this is added just to address cert-c violation even though this check
+	 * is already part of above IS_ERR_OR_NULL.
+	 */
+	if (syncpt->sp == NULL)
+		return -ENOMEM;
 	syncpt->id = host1x_syncpt_id(syncpt->sp);
 	/* physical address of syncpoint shim. */
 	syncpt->phy_addr = get_syncpt_shim_offset(syncpt->id);

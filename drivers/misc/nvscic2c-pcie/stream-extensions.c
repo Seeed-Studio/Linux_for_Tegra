@@ -375,6 +375,8 @@ ioctl_free_obj(struct stream_ext_ctx_t *ctx,
 		return ret;
 
 	filep = fget(args->handle);
+	if (filep == NULL)
+		return -EINVAL;
 	stream_obj = filep->private_data;
 	filep->private_data = NULL;
 	fput(filep);
@@ -1016,11 +1018,15 @@ prepare_edma_desc(enum drv_mode_t drv_mode, struct copy_req_params *params,
 		flush_range = &params->flush_ranges[i];
 
 		filep = fget(flush_range->src_handle);
+		if (filep == NULL)
+			return -EINVAL;
 		stream_obj = filep->private_data;
 		desc[iter].src = (stream_obj->vmap.iova + flush_range->offset);
 		fput(filep);
 
 		filep = fget(flush_range->dst_handle);
+		if (filep == NULL)
+			return -EINVAL;
 		stream_obj = filep->private_data;
 		if (drv_mode == DRV_MODE_EPC)
 			desc[iter].dst = stream_obj->aper;
@@ -1127,6 +1133,8 @@ cache_copy_request_handles(struct copy_req_params *params,
 	for (i = 0; i < params->num_local_post_fences; i++) {
 		handle = params->local_post_fences[i];
 		filep = fget(handle);
+		if (filep == NULL)
+			return -EINVAL;
 		stream_obj = filep->private_data;
 		kref_get(&stream_obj->refcount);
 		cr->handles[cr->num_handles] = stream_obj;
@@ -1145,6 +1153,8 @@ cache_copy_request_handles(struct copy_req_params *params,
 	for (i = 0; i < params->num_remote_post_fences; i++) {
 		handle = params->remote_post_fences[i];
 		filep = fget(handle);
+		if (filep == NULL)
+			return -EINVAL;
 		stream_obj = filep->private_data;
 		kref_get(&stream_obj->refcount);
 		cr->handles[cr->num_handles] = stream_obj;
@@ -1163,6 +1173,8 @@ cache_copy_request_handles(struct copy_req_params *params,
 	for (i = 0; i < params->num_flush_ranges; i++) {
 		handle = params->flush_ranges[i].src_handle;
 		filep = fget(handle);
+		if (filep == NULL)
+			return -EINVAL;
 		stream_obj = filep->private_data;
 		kref_get(&stream_obj->refcount);
 		cr->handles[cr->num_handles] = stream_obj;
@@ -1174,6 +1186,8 @@ cache_copy_request_handles(struct copy_req_params *params,
 
 		handle = params->flush_ranges[i].dst_handle;
 		filep = fget(handle);
+		if (filep == NULL)
+			return -EINVAL;
 		stream_obj = filep->private_data;
 		kref_get(&stream_obj->refcount);
 		cr->handles[cr->num_handles] = stream_obj;
@@ -1243,6 +1257,8 @@ validate_import_handle(struct stream_ext_ctx_t *ctx, s32 handle,
 		return ret;
 
 	filep = fget(handle);
+	if (filep == NULL)
+		return -EINVAL;
 	stream_obj = filep->private_data;
 	if (stream_obj->import_type != import_type) {
 		fput(filep);
@@ -1285,6 +1301,8 @@ validate_flush_range(struct stream_ext_ctx_t *ctx,
 		return ret;
 
 	filep = fget(flush_range->src_handle);
+	if (filep == NULL)
+		return -EINVAL;
 	stream_obj = filep->private_data;
 	if ((flush_range->offset + flush_range->size) > stream_obj->vmap.size) {
 		fput(filep);
@@ -1293,6 +1311,8 @@ validate_flush_range(struct stream_ext_ctx_t *ctx,
 	fput(filep);
 
 	filep = fget(flush_range->dst_handle);
+	if (filep == NULL)
+		return -EINVAL;
 	stream_obj = filep->private_data;
 	if ((flush_range->offset + flush_range->size) > stream_obj->vmap.size) {
 		fput(filep);

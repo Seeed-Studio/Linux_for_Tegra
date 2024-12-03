@@ -751,6 +751,12 @@ allocate_syncpoint(struct endpoint_drv_ctx_t *eps_ctx,
 		return -ENOMEM;
 	}
 
+	/*
+	 * this is added just to address cert-c violation even though this check
+	 * is already part of above IS_ERR_OR_NULL.
+	 */
+	if (syncpt->sp == NULL)
+		return -ENOMEM;
 	syncpt->id = host1x_syncpt_id(syncpt->sp);
 	/* physical address of syncpoint shim. */
 	syncpt->phy_addr = get_syncpt_shim_offset(syncpt->id);
