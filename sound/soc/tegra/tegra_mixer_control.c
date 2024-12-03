@@ -55,7 +55,11 @@ static int dai_get_rate(struct snd_kcontrol *kcontrol,
 		if (i++ != reg)
 			continue;
 
+#if defined(NV_SND_SOC_DAI_STRUCT_HAS_SYMMETRIC_PREFIX) /* Linux v6.13 */
+		ucontrol->value.integer.value[0] = dai->symmetric_rate;
+#else
 		ucontrol->value.integer.value[0] = dai->rate;
+#endif
 
 		break;
 	}
@@ -78,7 +82,11 @@ static int dai_put_rate(struct snd_kcontrol *kcontrol,
 		if (i++ != reg)
 			continue;
 
+#if defined(NV_SND_SOC_DAI_STRUCT_HAS_SYMMETRIC_PREFIX) /* Linux v6.13 */
+		dai->symmetric_rate = value;
+#else
 		dai->rate = value;
+#endif
 
 		change = true;
 		break;
@@ -100,7 +108,11 @@ static int dai_get_channel(struct snd_kcontrol *kcontrol,
 		if (i++ != reg)
 			continue;
 
+#if defined(NV_SND_SOC_DAI_STRUCT_HAS_SYMMETRIC_PREFIX) /* Linux v6.13 */
+		ucontrol->value.integer.value[0] = dai->symmetric_channels;
+#else
 		ucontrol->value.integer.value[0] = dai->channels;
+#endif
 		break;
 	}
 
@@ -122,7 +134,11 @@ static int dai_put_channel(struct snd_kcontrol *kcontrol,
 		if (i++ != reg)
 			continue;
 
+#if defined(NV_SND_SOC_DAI_STRUCT_HAS_SYMMETRIC_PREFIX) /* Linux v6.13 */
+		dai->symmetric_channels = value;
+#else
 		dai->channels = value;
+#endif
 
 		change = true;
 		break;
@@ -144,7 +160,11 @@ static int dai_get_bits(struct snd_kcontrol *kcontrol,
 		if (i++ != reg)
 			continue;
 
+#if defined(NV_SND_SOC_DAI_STRUCT_HAS_SYMMETRIC_PREFIX) /* Linux v6.13 */
+		ucontrol->value.integer.value[0] = dai->symmetric_sample_bits;
+#else
 		ucontrol->value.integer.value[0] = dai->sample_bits;
+#endif
 		break;
 	}
 
@@ -166,7 +186,11 @@ static int dai_put_bits(struct snd_kcontrol *kcontrol,
 		if (i++ != reg)
 			continue;
 
+#if defined(NV_SND_SOC_DAI_STRUCT_HAS_SYMMETRIC_PREFIX) /* Linux v6.13 */
+		dai->symmetric_sample_bits = value;
+#else
 		dai->sample_bits = value;
+#endif
 
 		change = true;
 		break;
@@ -305,21 +329,28 @@ static void tegra_dai_fixup(struct snd_soc_dai *dai,
 						SNDRV_PCM_HW_PARAM_CHANNELS);
 	struct snd_mask *mask = hw_param_mask(params,
 						SNDRV_PCM_HW_PARAM_FORMAT);
+	unsigned int d_rate, d_channels, d_sample_bits;
 
-	if (dai->rate) {
-		rate->min =
-		rate->max = dai->rate;
-	}
+#if defined(NV_SND_SOC_DAI_STRUCT_HAS_SYMMETRIC_PREFIX) /* Linux v6.13 */
+	d_rate = dai->symmetric_rate;
+	d_channels = dai->symmetric_channels;
+	d_sample_bits = dai->symmetric_sample_bits;
+#else
+	d_rate = dai->rate;
+	d_channels = dai->channels;
+	d_sample_bits = dai->sample_bits;
+#endif
 
-	if (dai->channels) {
-		channels->min =
-		channels->max = dai->channels;
-	}
+	if (d_rate)
+		rate->min = rate->max = d_rate;
 
-	if (dai->sample_bits) {
+	if (d_channels)
+		channels->min = channels->max = d_channels;
+
+	if (d_sample_bits) {
 		snd_mask_none(mask);
 
-		switch (dai->sample_bits) {
+		switch (d_sample_bits) {
 		case 8:
 			snd_mask_set(mask, SNDRV_PCM_FORMAT_S8);
 			break;

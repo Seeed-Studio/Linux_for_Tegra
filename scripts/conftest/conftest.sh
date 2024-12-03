@@ -8034,6 +8034,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_SND_SOC_DAI_OPS_STRUCT_HAS_PROBE_PRESENT" "" "types"
         ;;
 
+        snd_soc_dai_struct_has_symmetric_prefix)
+            #
+            # Determine if the rate/channels/sample_bits members of the
+            # snd_soc_dai structure have a 'symmetric_' prefix.
+            #
+            # Commit 1bd775da9ba9 ("ASoC: add symmetric_ prefix for
+            # dai->rate/channels/sample_bits") added a 'symmetric_' prefix to
+            # members of the snd_soc_dai structure in Linux v6.13.
+            #
+            CODE="
+            #include <sound/soc.h>
+            unsigned int conftest_snd_soc_dai_struct_has_symmetric_prefix(struct snd_soc_dai *dai) {
+                return dai->symmetric_rate;
+            }"
+
+            compile_check_conftest "$CODE" "NV_SND_SOC_DAI_STRUCT_HAS_SYMMETRIC_PREFIX" "" "types"
+        ;;
+
         snd_soc_of_get_dai_name_has_index_arg)
             #
             # Determine if the function 'snd_soc_of_get_dai_name()' has an index argument.
