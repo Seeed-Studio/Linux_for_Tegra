@@ -34,3 +34,7 @@
 	path = source/nvethernetrm
 	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack/nvethernetrm
 	branch = mybranch_2024-12-03-1733213486
+[submodule "source/kernel-devicetree"]
+	path = source/kernel-devicetree
+	url = http://192.168.1.77:1080/awesome-se/jetson/jetpack/kernel-devicetree.git
+	branch = mybranch_2024-12-03-1733213487
