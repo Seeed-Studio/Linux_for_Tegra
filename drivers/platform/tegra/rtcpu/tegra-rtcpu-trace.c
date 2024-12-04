@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
 
 #include "soc/tegra/camrtc-trace.h"
 #include <linux/cdev.h>
@@ -1614,7 +1616,9 @@ static int rtcpu_raw_trace_release(struct inode *inode, struct file *file)
 
 static const struct file_operations rtcpu_raw_trace_fops = {
 	.owner = THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 	.read = rtcpu_raw_trace_read,
 	.write = rtcpu_raw_trace_write,
 	.poll = rtcpu_raw_trace_poll,
