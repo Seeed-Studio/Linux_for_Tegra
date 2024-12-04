@@ -48,6 +48,68 @@
 				    status = "disabled";
 				};
 			};
+			bus@0 {
+				i2c@3160000 {
+				    status = "disabled";
+				};
+				i2c@3180000 {
+				    status = "disabled";
+				};
+				i2c@3190000 {
+				    status = "disabled";
+				};
+				i2c@31b0000 {
+				    status = "disabled";
+				};
+				i2c@31e0000 {
+				    status = "disabled";
+				};
+				aconnect@2900000 {
+				    status = "disabled";
+				};
+				host1x@13e00000 {
+				    status = "disabled";
+				};
+				pcie@140a0000 {
+				    status = "disabled";
+				};
+				pcie@140c0000 {
+				    status = "disabled";
+				};
+				pcie@140e0000 {
+				    status = "disabled";
+				};
+				pcie@14100000 {
+				    status = "disabled";
+				};
+				pcie@14120000 {
+				    status = "disabled";
+				};
+				pcie@14140000 {
+				    status = "disabled";
+				};
+				pcie@14160000 {
+				    status = "disabled";
+				};
+				pcie@14180000 {
+				    status = "disabled";
+				};
+				gpu@17000000 {
+				    status = "disabled";
+				};
+				rtc@c2a0000 {
+				    status = "disabled";
+				};
+				hda@3510000 {
+				    status = "disabled";
+				};
+				cbb-fabric@13a00000 {
+				    status = "disabled";
+				};
+			};
+			display@13800000 {
+				    status = "disabled";
+			};
 		};
 	};
 };
