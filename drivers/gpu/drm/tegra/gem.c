@@ -3,7 +3,7 @@
  * NVIDIA Tegra DRM GEM helper functions
  *
  * Copyright (C) 2012 Sascha Hauer, Pengutronix
- * Copyright (C) 2013-2023 NVIDIA CORPORATION, All rights reserved.
+ * Copyright (C) 2013-2024 NVIDIA CORPORATION, All rights reserved.
  *
  * Based on the GEM/CMA helpers
  *
@@ -24,7 +24,11 @@
 #include "drm.h"
 #include "gem.h"
 
+#if defined(NV_MODULE_IMPORT_NS_CALLS_STRINGIFY)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 
 static unsigned int sg_dma_count_chunks(struct scatterlist *sgl, unsigned int nents)
 {

@@ -1372,6 +1372,10 @@ static void __exit nvdla_exit(void)
 module_exit(nvdla_exit);
 #endif
 
+#if defined(NV_MODULE_IMPORT_NS_CALLS_STRINGIFY)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 MODULE_AUTHOR("Shridhar Rasal <srasal@nvidia.com>");
 MODULE_LICENSE("GPL v2");

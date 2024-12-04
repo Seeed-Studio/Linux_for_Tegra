@@ -2385,6 +2385,10 @@ static void __exit capture_isp_exit(void)
 module_init(capture_isp_init);
 module_exit(capture_isp_exit);
 
+#if defined(NV_MODULE_IMPORT_NS_CALLS_STRINGIFY)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("tegra capture-isp driver");

@@ -7633,18 +7633,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MII_BUS_STRUCT_HAS_WRITE_C45" "" "types"
         ;;
 
-        module_import_ns_macro)
+        module_import_ns_calls_stringify)
            #
-           # Determine if the MODULE_IMPORT_NS macro present.
+           # Determine if the MODULE_IMPORT_NS macro takes a string literal as
+           # an argument.
            #
-           # Added in commit 80140a81f7f833 ("module.h: simplify MODULE_IMPORT_NS")
-           # in Linux 5.18.
+           # Commit cdd30ebb1b9f ("module: Convert symbol namespace to string
+           # literal") updated the symbol namespace macros to take a string
+           # literal as an argument and removes the call to __stringify from
+           # within the macro for Linux v6.13.
+           #
            CODE="
            #include <linux/module.h>
            MODULE_IMPORT_NS(DMA_BUF);
            "
 
-           compile_check_conftest "$CODE" "NV_MODULE_IMPORT_NS_PRESENT" "" "types"
+           compile_check_conftest "$CODE" "NV_MODULE_IMPORT_NS_CALLS_STRINGIFY" "" "types"
         ;;
 
         no_llseek)

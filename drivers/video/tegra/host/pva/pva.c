@@ -1826,5 +1826,9 @@ static void __exit nvpva_exit(void)
 module_exit(nvpva_exit);
 #endif
 
+#if defined(NV_MODULE_IMPORT_NS_CALLS_STRINGIFY)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 MODULE_LICENSE("GPL v2");

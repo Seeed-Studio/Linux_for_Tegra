@@ -483,7 +483,11 @@ static void __exit nvmap_exit_driver(void)
 	nvmap_dev = NULL;
 }
 module_exit(nvmap_exit_driver);
+#if defined(NV_MODULE_IMPORT_NS_CALLS_STRINGIFY)
 MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 MODULE_DESCRIPTION("NvMap: Nvidia Tegra Memory Management Driver");
 MODULE_AUTHOR("Ketan Patil <ketanp@nvidia.com>");
 MODULE_AUTHOR("Ashish Mhetre <amhetre@nvidia.com>");

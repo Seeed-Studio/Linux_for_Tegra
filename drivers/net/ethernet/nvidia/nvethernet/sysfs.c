@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved */
+// SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "ether_linux.h"
 #ifdef MACSEC_SUPPORT
@@ -4179,4 +4179,8 @@ void ether_sysfs_unregister(struct ether_priv_data *pdata)
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_DESCRIPTION("Mac/Macsec Sysfs driver");
 MODULE_LICENSE("GPL");
+#if defined(NV_MODULE_IMPORT_NS_CALLS_STRINGIFY)
 MODULE_IMPORT_NS(CRYPTO_INTERNAL);
+#else
+MODULE_IMPORT_NS("CRYPTO_INTERNAL");
+#endif
