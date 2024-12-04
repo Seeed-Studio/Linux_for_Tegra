@@ -7447,6 +7447,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_NETIF_NAPI_ADD_WEIGHT_PRESENT" "" "functions"
         ;;
 
+        iommu_paging_domain_alloc)
+            #
+            # Determine if iommu_paging_domain_alloc() function is present
+            #
+            # Added by commit a27bf2743cb8 ("iommu: Add iommu_paging_domain_alloc()
+            # interface") in Linux v6.11.
+            #
+            CODE="
+            #include <linux/iommu.h>
+            void conftest_iommu_paging_domain_alloc(void)
+            {
+                    iommu_paging_domain_alloc();
+            }
+            "
+            compile_check_conftest "$CODE" "NV_IOMMU_PAGING_DOMAIN_ALLOC_PRESENT" "" "functions"
+        ;;
+
         iommu_map_has_gfp_arg)
             #
             # Determine if iommu_map() has 'gfp' argument.
