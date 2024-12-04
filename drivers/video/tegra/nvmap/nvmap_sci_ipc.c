@@ -366,7 +366,7 @@ unlock:
 				atomic_read(&h->ref),
 				is_ro ? "RO" : "RW");
 
-		if (!IS_ERR(ref))
+		if (!IS_ERR_OR_NULL(ref))
 			atomic_dec(&ref->dupes);
 	}
 
