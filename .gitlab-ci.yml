@@ -11,6 +11,7 @@ variables:
   BUILD_QSPI_IMG: "1" #enable image build for qspi flash by default
   JETPACKVER: "6.1"
   JETSONVER: "36.4.0"
+  ROOTFS_NAME: "Tegra_Linux_Sample-Root-Filesystem_R36.4.0_aarch64.tbz2"
 
 stages:
   - reserver-industrial-orin-nano-4g-j401
@@ -57,8 +58,8 @@ stages:
   # clean the rootfs for every image
   - ls rootfs/ -l
   - rm -rf rootfs/*
-  - wget  http://192.168.1.77/jetson/tegra_linux_sample-root-filesystem_r36.3.0_aarch64.tbz2 -q
-  - tar xpf tegra_linux_sample-root-filesystem_r36.3.0_aarch64.tbz2 -C rootfs
+  - wget  http://192.168.1.77/jetson/$ROOTFS_NAME -q
+  - tar xpf $ROOTFS_NAME -C rootfs
   # this is special for jetson orin nano 4g
   - >
     if [[ $BOARDID == "3767" && $BOARDSKU == "0004" ]]; then
