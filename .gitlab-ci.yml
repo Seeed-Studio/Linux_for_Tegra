@@ -9,6 +9,8 @@ variables:
   START_TASK: ""
   INSTALL_NV_JP: "1" #enable install nvidia-jetpack by default
   BUILD_QSPI_IMG: "1" #enable image build for qspi flash by default
+  JETPACKVER: "6.1"
+  JETSONVER: "36.4.0"
 
 stages:
   - reserver-industrial-orin-nano-4g-j401
@@ -65,7 +67,7 @@ stages:
   # apply necessary changes to rootfs
   - ./apply_binaries.sh
   # record the system image name of seeed to target rootfs.
-  - echo "# Seeed Image Name mfi_$CI_JOB_STAGE-6.0-36.3.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+  - echo "# Seeed Image Name mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
   # copy the pcie chip firmware of renesas to rootfs
   - cp -v extra_scripts/renesas_usb_fw.mem rootfs/lib/firmware/renesas_usb_fw.mem
   # reconfigure the kernel log level
@@ -97,7 +99,7 @@ stages:
       # upload image of qspi
       mkdir -p deploy
       mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
-      cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-qspiflash-6.0-36.3.0-$DATE_STR.tar.gz || true
+      cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-qspiflash-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz || true
       cp md5sum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt deploy/ || true
       umount deploy
     fi
@@ -125,7 +127,7 @@ stages:
   # upload image of qspi & nvme ssd
   - mkdir -p deploy
   - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy 
-  - cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-6.0-36.3.0-$DATE_STR.tar.gz || true
+  - cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz || true
   - cp md5sum-$CI_JOB_STAGE-$DATE_STR.txt deploy/ || true
   - umount deploy
 
