@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2014-2023, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2014-2024, NVIDIA CORPORATION.  All rights reserved. */
 
 #include <linux/dma-buf.h>
 #include <linux/module.h>
@@ -8,7 +8,11 @@
 
 #include "mods_internal.h"
 
+#if KERNEL_VERSION(6, 13, 0) <= MODS_KERNEL_VERSION
+MODULE_IMPORT_NS("DMA_BUF");
+#else
 MODULE_IMPORT_NS(DMA_BUF);
+#endif
 
 static struct device *dummy_device;
 
