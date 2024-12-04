@@ -66,8 +66,10 @@ stages:
     fi
   # apply necessary changes to rootfs
   - ./apply_binaries.sh
-  # record the system image name of seeed to target rootfs.
+  # record the system image name and commit info of seeed to target rootfs.
   - echo "# Seeed Image Name mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+  - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
+  - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
   # copy the pcie chip firmware of renesas to rootfs
   - cp -v extra_scripts/renesas_usb_fw.mem rootfs/lib/firmware/renesas_usb_fw.mem
   # reconfigure the kernel log level
