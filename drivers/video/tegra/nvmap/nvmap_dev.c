@@ -561,6 +561,7 @@ int __init nvmap_probe(struct platform_device *pdev)
 	int e;
 	int generic_carveout_present = 0;
 	ulong start_time = sched_clock();
+	ulong result;
 
 	if (WARN_ON(nvmap_dev != NULL)) {
 		dev_err(&pdev->dev, "only one nvmap device may be present\n");
@@ -676,7 +677,13 @@ fail:
 		misc_deregister(&dev->dev_user);
 	nvmap_dev = NULL;
 finish:
-	nvmap_init_time += sched_clock() - start_time;
+	if (check_sub_overflow((ulong)sched_clock(),
+				start_time, &result) ||
+				check_add_overflow(nvmap_init_time,
+				result, &result))
+		return -EOVERFLOW;
+
+	nvmap_init_time = result;
 	return e;
 }
 
