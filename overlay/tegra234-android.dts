@@ -31,6 +31,10 @@
 				use_dts_cmdline;
 				bootargs   = ANDROID_BOOTARGS;
 				bootconfig = ANDROID_BOOTCONFIG;
+				/* Test key hash, will got overriden on signing server */
+				avb_key0_sha1 = <0x2597c218 0xaae470a1 0x30f61162 0xfeaae70a 0xfd97f011>;
+				/* RSA2K = 520, RSA4K = 1032, RSA8K = 2056 */
+				avb_key0_size = <1032>;
 			};
 
 			bus@0 {
