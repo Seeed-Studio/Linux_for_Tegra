@@ -227,7 +227,8 @@ int nvmap_query_heap(struct nvmap_query_heap_params *op, bool is_numa_aware)
 	int ret = 0;
 
 	type = op->heap_mask;
-	if (type & (type - 1)) {
+
+	if (type && (type & (type - 1))) {
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -392,7 +393,7 @@ static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
 		}
 		count = (unsigned int)page_count;
 	} else
-		count = 1 << order;
+		count = 1U << order;
 
 	if (!count)
 		return NULL;
@@ -526,7 +527,7 @@ static void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 	if (!mem)
 		return ERR_PTR(-EINVAL);
 
-	size += device_addr & ~PAGE_MASK;
+	BUG_ON(check_add_overflow(size, (size_t)device_addr & ~PAGE_MASK, &size));
 	alloc_size = PAGE_ALIGN(size) >> PAGE_SHIFT;
 
 	spin_lock_irqsave(&mem->spinlock, flags);
@@ -561,7 +562,7 @@ static void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
 	if (!mem)
 		return;
 
-	size += device_addr & ~PAGE_MASK;
+	BUG_ON(check_add_overflow(size, (size_t)device_addr & ~PAGE_MASK, &size));
 	alloc_size = PAGE_ALIGN(size) >> PAGE_SHIFT;
 
 	spin_lock_irqsave(&mem->spinlock, flags);
@@ -576,11 +577,15 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 {
 	phys_addr_t pa = DMA_MAPPING_ERROR;
 	struct device *dev = h->dma_dev;
-
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
+	phys_addr_t sum;
+
 	if (start && h->is_ivm) {
 		void *ret;
-		pa = h->base + (*start);
+		if (check_add_overflow(h->base, (*start), &sum))
+			return DMA_ERROR_CODE;
+
+		pa = sum;
 		ret = nvmap_dma_mark_declared_memory_occupied(dev, pa, len);
 		if (IS_ERR(ret)) {
 			dev_err(dev, "Failed to reserve (%pa) len(%zu)\n",
@@ -754,7 +759,7 @@ static void do_heap_free(struct nvmap_heap_block *block)
 	list_del(&b->all_list);
 
 	nvmap_free_mem(heap, block->base, b->size);
-	heap->free_size += b->size;
+	BUG_ON(check_add_overflow(b->size, heap->free_size, &heap->free_size));
 	kmem_cache_free(heap_block_cache, b);
 }
 
