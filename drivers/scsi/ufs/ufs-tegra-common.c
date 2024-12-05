@@ -2428,6 +2428,11 @@ end:
 	ufs_tegra_prod_settings(ufs_tegra);
 #endif
 
+	if (ufs_tegra->soc->chip_id > TEGRA234) {
+		err = ufs_tegra_pwr_change_clk_boost(ufs_tegra);
+		if (err)
+			goto out_disable_mphylane_clks;
+	}
 #ifdef CONFIG_DEBUG_FS
 	ufs_tegra_init_debugfs(hba);
 #endif
