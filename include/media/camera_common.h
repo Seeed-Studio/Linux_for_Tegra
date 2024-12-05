@@ -1,8 +1,19 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2015-2023, NVIDIA Corporation.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
- * camera_common.h - utilities for tegra camera driver
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __camera_common__
@@ -271,7 +282,16 @@ struct camera_common_focuser_data {
 
 static inline void msleep_range(unsigned int delay_base)
 {
-	usleep_range(delay_base * 1000, delay_base * 1000 + 500);
+	unsigned int time_start = 0;
+	unsigned int time_end = 0;
+
+	if (__builtin_umul_overflow(delay_base, 1000, &time_start))
+		return;
+
+	if (__builtin_uadd_overflow(time_start, 500, &time_end))
+		return;
+
+	usleep_range(time_start, time_end);
 }
 
 static inline struct camera_common_data *to_camera_common_data(

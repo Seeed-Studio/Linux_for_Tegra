@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -524,6 +524,10 @@ static const struct camera_common_colorfmt *find_matching_color_fmt(
 			if (cur_props->pixel_format ==
 					camera_common_color_fmts[i].pix_fmt &&
 					!matched[i]) {
+				if (match_num == INT_MAX) {
+					dev_err(s_data->dev, "Number of matched color format exceeds the limit\n");
+					return NULL;
+				}
 				match_num++;
 				match_index = i;
 				// Found index
@@ -624,9 +628,14 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	hdr_control.id = TEGRA_CAMERA_CID_HDR_EN;
 
 	/* mode_type can be filled in sensor driver */
-	if (!(v4l2_g_ctrl(s_data->ctrl_handler, &hdr_control)))
-		mode_type |=
-			switch_ctrl_qmenu[hdr_control.value] ? HDR_ENABLE : 0;
+	if (!(v4l2_g_ctrl(s_data->ctrl_handler, &hdr_control))) {
+		if ((hdr_control.value < 0) || (hdr_control.value >= ARRAY_SIZE(switch_ctrl_qmenu))) {
+			dev_err(sd->dev, "Number of tried camera common format exceeds the limit\n");
+			return -EINVAL;
+		}
+		mode_type |= switch_ctrl_qmenu[hdr_control.value] ? HDR_ENABLE : 0;
+	}
+
 
 	s_data->mode = s_data->def_mode;
 	s_data->mode_prop_idx = 0;
@@ -898,7 +907,15 @@ void camera_common_dpd_disable(struct camera_common_data *s_data)
 	int i;
 	int io_idx;
 	/* 2 lanes per port, divide by two to get numports */
-	int numports = (s_data->numlanes + 1) >> 1;
+	int result_add1 = 0;
+	int numports = 0;
+
+	if (__builtin_add_overflow(1, s_data->numlanes, &result_add1)) {
+		dev_err(s_data->dev, "Number of data lanes exceeds the limit\n");
+		spec_bar();
+		return;
+	}
+	numports = result_add1 >> 1;
 
 	/* disable CSI IOs DPD mode to turn on camera */
 	for (i = 0; i < numports; i++) {
@@ -934,7 +951,15 @@ void camera_common_dpd_enable(struct camera_common_data *s_data)
 	int i;
 	int io_idx;
 	/* 2 lanes per port, divide by two to get numports */
-	int numports = (s_data->numlanes + 1) >> 1;
+	int result_add1 = 0;
+	int numports = 0;
+
+	if (__builtin_add_overflow(1, s_data->numlanes, &result_add1)) {
+		dev_err(s_data->dev, "Number of data lanes exceeds the limit\n");
+		spec_bar();
+		return;
+	}
+	numports = result_add1 >> 1;
 
 	/* disable CSI IOs DPD mode to turn on camera */
 	for (i = 0; i < numports; i++) {

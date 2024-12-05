@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVIDIA Tegra CSI Device
  */
@@ -15,6 +15,7 @@
 #include <linux/of_platform.h>
 #include <linux/property.h>
 #include <linux/nospec.h>
+#include <linux/string.h>
 
 #include <media/media-entity.h>
 #include <media/v4l2-async.h>
@@ -276,10 +277,17 @@ static int update_video_source(struct tegra_csi_device *csi, int on, int is_tpg)
 {
 	mutex_lock(&csi->source_update);
 	if (!on) {
-		if (is_tpg)
-			csi->tpg_active--;
-		else
-			csi->sensor_active--;
+		if (is_tpg) {
+			if (csi->tpg_active > INT_MIN)
+				csi->tpg_active--;
+			else
+				goto stream_fail;
+		} else {
+			if (csi->sensor_active > INT_MIN)
+				csi->sensor_active--;
+			else
+				goto stream_fail;
+		}
 		WARN_ON(csi->tpg_active < 0 || csi->sensor_active < 0);
 		goto stream_okay;
 	}
@@ -291,6 +299,7 @@ static int update_video_source(struct tegra_csi_device *csi, int on, int is_tpg)
 		csi->sensor_active++;
 		goto stream_okay;
 	}
+stream_fail:
 	mutex_unlock(&csi->source_update);
 	dev_err(csi->dev, "Request rejected for new %s stream\n",
 		is_tpg ? "tpg" : "sensor");
@@ -420,10 +429,45 @@ unsigned int tegra_csi_ths_settling_time(
 		const unsigned int csicil_clk_mhz,
 		const unsigned int mipi_clk_mhz)
 {
-	unsigned int cil_settletime;
+	unsigned int cil_settletime = 0;
 
-	cil_settletime = (115 * csicil_clk_mhz + 8000 * csicil_clk_mhz
-		/ (2 * mipi_clk_mhz) - 5500) / 1000;
+	/* The calculation formula is as follows:
+	 * (115 * csicil_clk_mhz + 8000 * csicil_clk_mhz / (2 * mipi_clk_mhz) - 5500) / 1000
+	 */
+	unsigned int result_mul1 = 0;
+	unsigned int result_mul2 = 0;
+	unsigned int result_mul3 = 0;
+	unsigned int result_add1 = 0;
+	unsigned int result_sub1 = 0;
+
+	if (__builtin_umul_overflow(115, csicil_clk_mhz, &result_mul1)) {
+		dev_err(csi->dev, "Number of calculated tegra csi ths settling time exceeds the limit\n");
+		return cil_settletime;
+	}
+
+	if (__builtin_umul_overflow(8000, csicil_clk_mhz, &result_mul2)) {
+		dev_err(csi->dev, "Number of calculated tegra csi ths settling time exceeds the limit\n");
+		return cil_settletime;
+	}
+
+	if (__builtin_umul_overflow(2, mipi_clk_mhz, &result_mul3) || (result_mul3 == 0)) {
+		dev_err(csi->dev, "Number of calculated tegra csi ths settling time exceeds the limit " \
+		"or bad param of mipi clk mhz value is 0\n");
+		return cil_settletime;
+	}
+
+	if (__builtin_uadd_overflow(result_mul1, (result_mul2 / result_mul3), &result_add1)) {
+		dev_err(csi->dev, "Number of calculated tegra csi ths settling time exceeds the limit\n");
+		return cil_settletime;
+	}
+
+	if (__builtin_usub_overflow(result_add1, 5500, &result_sub1)) {
+		dev_err(csi->dev, "Number of calculated tegra csi ths settling time exceeds the limit\n");
+		return cil_settletime;
+	}
+
+	cil_settletime = result_sub1 / 1000;
+
 	return cil_settletime;
 }
 EXPORT_SYMBOL(tegra_csi_ths_settling_time);
@@ -432,9 +476,24 @@ unsigned int tegra_csi_clk_settling_time(
 	struct tegra_csi_device *csi,
 	const unsigned int csicil_clk_mhz)
 {
-	unsigned int clk_settletime;
+	unsigned int clk_settletime = 0;
 
-	clk_settletime = ((95 + 300) * csicil_clk_mhz - 13000) / 2000;
+	/* The calculation formula is as follows:
+	 * ((95 + 300) * csicil_clk_mhz - 13000) / 2000;
+	 */
+	unsigned int result_mul1 = 0;
+	unsigned int result_sub1 = 0;
+
+	if (__builtin_umul_overflow((95 + 300), csicil_clk_mhz, &result_mul1)) {
+		dev_err(csi->dev, "Number of calculated tegra csi clk settling time exceeds the limit\n");
+		return clk_settletime;
+	}
+
+	if (__builtin_usub_overflow(result_mul1, 13000, &result_sub1)) {
+		dev_err(csi->dev, "Number of calculated tegra csi clk settling time exceeds the limit\n");
+		return clk_settletime;
+	}
+	clk_settletime = result_sub1 / 2000;
 	return clk_settletime;
 }
 EXPORT_SYMBOL(tegra_csi_clk_settling_time);
@@ -903,8 +962,16 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 		 * pp means pixel parser, correspond to port[0] below.
 		 * tpg id correspond to chan->id
 		 */
-		chan->port[0] = (chan->id - csi->num_channels)
-				% NUM_TPG_INSTANCE;
+
+		int result_sub1 = 0;
+
+		if (__builtin_sub_overflow(chan->id, csi->num_channels, &result_sub1)) {
+			dev_err(chan->csi->dev, "Number of calculated channel port exceeds the limit“\
+			”\n");
+			return -ENOMEM;
+		}
+
+		chan->port[0] = result_sub1 % NUM_TPG_INSTANCE;
 		WARN_ON(chan->port[0] > csi->num_tpg_channels);
 		chan->ports[0].stream_id = chan->port[0];
 		chan->ports[0].virtual_channel_id
@@ -987,7 +1054,9 @@ static int csi_parse_dt(struct tegra_csi_device *csi,
 
 	if (strncmp(node->name, "nvcsi", 5)) {
 		node = of_find_node_by_name(node, "nvcsi");
-		strncpy(csi->devname, "nvcsi", 6);
+		if (sizeof(csi->devname) >= sizeof("nvcsi")) {
+			strncpy(csi->devname, "nvcsi", 6);
+		}
 	}
 
 	if (node) {
