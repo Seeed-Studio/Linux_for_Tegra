@@ -25,6 +25,11 @@ struct dma_coherent_mem_replica {
 	bool		use_dev_dma_pfn_offset;
 };
 
+union dma_coherent_mem_block {
+	struct dma_coherent_mem *dma_mem;
+	struct dma_coherent_mem_replica *mem;
+};
+
 struct nvmap_heap_block {
 	phys_addr_t	base;
 	unsigned int	type;

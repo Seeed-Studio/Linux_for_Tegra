@@ -486,6 +486,7 @@ static void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
 			    gfp_t flag, unsigned long attrs)
 #endif /* NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX */
 {
+	union dma_coherent_mem_block dma_coherent_mem_type;
 	struct dma_coherent_mem_replica *mem;
 
 	if (!dev || !dev->dma_mem)
@@ -493,7 +494,11 @@ static void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
 
 	WARN_ON_ONCE(!dev->coherent_dma_mask);
 
-	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
+	dma_coherent_mem_type.dma_mem = dev->dma_mem;
+	mem = dma_coherent_mem_type.mem;
+
+	if (!mem)
+		return NULL;
 
 	return __nvmap_dma_alloc_from_coherent(dev, mem, size, dma_handle,
 						   attrs, 0);
@@ -506,6 +511,7 @@ EXPORT_SYMBOL(nvmap_dma_alloc_attrs);
 static void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 					dma_addr_t device_addr, size_t size)
 {
+	union dma_coherent_mem_block dma_coherent_mem_type;
 	struct dma_coherent_mem_replica *mem;
 	unsigned long flags, pageno;
 	unsigned int alloc_size;
@@ -514,7 +520,11 @@ static void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 	if (!dev || !dev->dma_mem)
 		return ERR_PTR(-EINVAL);
 
-	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
+	dma_coherent_mem_type.dma_mem = dev->dma_mem;
+	mem = dma_coherent_mem_type.mem;
+
+	if (!mem)
+		return ERR_PTR(-EINVAL);
 
 	size += device_addr & ~PAGE_MASK;
 	alloc_size = PAGE_ALIGN(size) >> PAGE_SHIFT;
@@ -536,6 +546,7 @@ error:
 static void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
 					 dma_addr_t device_addr, size_t size)
 {
+	union dma_coherent_mem_block dma_coherent_mem_type;
 	struct dma_coherent_mem_replica *mem;
 	unsigned long flags;
 	unsigned int alloc_size;
@@ -544,7 +555,11 @@ static void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
 	if (!dev || !dev->dma_mem)
 		return;
 
-	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
+	dma_coherent_mem_type.dma_mem = dev->dma_mem;
+	mem = dma_coherent_mem_type.mem;
+
+	if (!mem)
+		return;
 
 	size += device_addr & ~PAGE_MASK;
 	alloc_size = PAGE_ALIGN(size) >> PAGE_SHIFT;
@@ -597,12 +612,18 @@ static void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr
 	void *mem_addr;
 	unsigned long flags;
 	unsigned int pageno;
+	union dma_coherent_mem_block dma_coherent_mem_type;
 	struct dma_coherent_mem_replica *mem;
 
 	if (!dev || !dev->dma_mem)
 		return;
 
-	mem = (struct dma_coherent_mem_replica *)(dev->dma_mem);
+	dma_coherent_mem_type.dma_mem = dev->dma_mem;
+	mem = dma_coherent_mem_type.mem;
+
+	if (!mem)
+		return;
+
 	if ((mem->flags & DMA_MEMORY_NOMAP) &&
 	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
 		struct page **pages = cpu_addr;
@@ -626,7 +647,7 @@ static void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr
 	else
 		mem_addr =  mem->virt_base;
 
-	if (mem && cpu_addr >= mem_addr &&
+	if (cpu_addr >= mem_addr &&
 	    cpu_addr - mem_addr < (u64)mem->size << PAGE_SHIFT) {
 		unsigned int page = (cpu_addr - mem_addr) >> PAGE_SHIFT;
 		unsigned long flags;
