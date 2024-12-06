@@ -468,7 +468,7 @@ static void *__nvmap_dma_alloc_from_coherent(struct device *dev,
 	kvfree(bitmap_nos);
 	return addr;
 err:
-	while (j--)
+	while (j && j--)
 		bitmap_clear(mem->bitmap, bitmap_nos[j], alloc_size);
 
 	spin_unlock_irqrestore(&mem->spinlock, flags);
@@ -517,6 +517,7 @@ static void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 	unsigned long flags, pageno;
 	unsigned int alloc_size;
 	int pos;
+	dma_addr_t diff;
 
 	if (!dev || !dev->dma_mem)
 		return ERR_PTR(-EINVAL);
@@ -531,7 +532,11 @@ static void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 	alloc_size = PAGE_ALIGN(size) >> PAGE_SHIFT;
 
 	spin_lock_irqsave(&mem->spinlock, flags);
-	pos = PFN_DOWN(device_addr - mem->device_base);
+	if (check_sub_overflow(device_addr, mem->device_base, &diff)) {
+		goto error;
+	}
+
+	pos = PFN_DOWN(diff);
 	pageno = bitmap_find_next_zero_area(mem->bitmap, mem->size, pos, alloc_size, 0);
 	if (pageno != pos)
 		goto error;
