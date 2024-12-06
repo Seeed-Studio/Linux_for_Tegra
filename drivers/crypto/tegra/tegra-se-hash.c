@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Crypto driver to handle HASH algorithms using NVIDIA Security Engine.
  */
@@ -366,7 +366,7 @@ static int tegra_sha_do_update(struct ahash_request *req)
 
 	size = tegra_sha_prep_cmd(ctx->se, cpuvaddr, rctx);
 
-	ret = tegra_se_host1x_submit(ctx->se, size);
+	ret = tegra_se_host1x_submit(ctx->se, ctx->se->cmdbuf, size);
 
 	/*
 	 * If this is not the final update, copy the intermediate results
@@ -409,7 +409,7 @@ static int tegra_sha_do_final(struct ahash_request *req)
 	}
 
 	size = tegra_sha_prep_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, size);
 	if (ret)
 		goto out;
 
