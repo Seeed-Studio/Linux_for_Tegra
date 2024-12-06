@@ -153,7 +153,7 @@ static int __init nvmap_populate_ivm_carveout(struct device *dev)
 	struct of_phandle_iterator it;
 	struct tegra_hv_ivm_cookie *ivm;
 	unsigned long long id;
-	unsigned int guestid;
+	unsigned int guestid, result;
 
 	if (!of_phandle_iterator_init(&it, dev->of_node, "memory-region", NULL, 0)) {
 		while (!of_phandle_iterator_next(&it) && it.node) {
@@ -222,7 +222,15 @@ static int __init nvmap_populate_ivm_carveout(struct device *dev)
 				pr_info("IVM carveout IPA:%p, size=%zu, peer vmid=%u, name=%s\n",
 					(void *)(uintptr_t)co->base, co->size, co->peer, name);
 				co->name      = name;
-				nvmap_data.nr_carveouts++;
+
+				if (check_add_overflow(nvmap_data.nr_carveouts, 1U, &result)) {
+					co->name = NULL;
+					kfree(name);
+					ret = -EINVAL;
+					goto fail;
+				}
+
+				nvmap_data.nr_carveouts = result;
 
 			}
 		}
@@ -337,12 +345,15 @@ static const struct reserved_mem_ops nvmap_co_ops = {
 static int __init nvmap_co_setup(struct reserved_mem *rmem)
 {
 	struct nvmap_platform_carveout *co;
-	ulong start = sched_clock();
+	ulong start_time = sched_clock();
 	int ret = 0;
+	ulong result;
 
 	co = nvmap_get_carveout_pdata(rmem->name);
-	if (co == NULL)
-		return ret;
+	if (co == NULL) {
+		ret = -ENOMEM;
+		goto exit;
+	}
 
 	rmem->ops = &nvmap_co_ops;
 	rmem->priv = co;
@@ -351,7 +362,12 @@ static int __init nvmap_co_setup(struct reserved_mem *rmem)
 	co->size = rmem->size;
 	co->cma_dev = NULL;
 
-	nvmap_init_time += sched_clock() - start;
+	if (check_sub_overflow((ulong)sched_clock(), start_time, &result) ||
+		check_add_overflow(nvmap_init_time, result, &result))
+		return -EOVERFLOW;
+
+	nvmap_init_time = result;
+exit:
 	return ret;
 }
 
@@ -379,7 +395,10 @@ int __init nvmap_init(struct platform_device *pdev)
 							compp);
 					return -EINVAL;
 				}
-				nvmap_co_setup(rmem2);
+
+				err = nvmap_co_setup(rmem2);
+				if (err)
+					goto end;
 			}
 		}
 	}
