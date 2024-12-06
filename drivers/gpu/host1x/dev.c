@@ -36,14 +36,30 @@
 #include "dev.h"
 #include "intr.h"
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC)
 #include "hw/host1x01.h"
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC)
 #include "hw/host1x02.h"
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC)
 #include "hw/host1x04.h"
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)
 #include "hw/host1x05.h"
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC)
 #include "hw/host1x06.h"
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 #include "hw/host1x07.h"
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_234_SOC)
 #include "hw/host1x08.h"
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_264_SOC)
 #include "hw/host1x09.h"
+#endif
 
 void host1x_common_writel(struct host1x *host1x, u32 v, u32 r)
 {
@@ -89,6 +105,7 @@ u32 host1x_ch_readl(struct host1x_channel *ch, u32 r)
 	return readl(ch->regs + r);
 }
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC)
 static const struct host1x_info host1x01_info = {
 	.nb_channels = 8,
 	.nb_pts = 32,
@@ -103,7 +120,9 @@ static const struct host1x_info host1x01_info = {
 	.sid_table = NULL,
 	.reserve_vblank_syncpts = true,
 };
+#endif
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC)
 static const struct host1x_info host1x02_info = {
 	.nb_channels = 9,
 	.nb_pts = 32,
@@ -118,7 +137,9 @@ static const struct host1x_info host1x02_info = {
 	.sid_table = NULL,
 	.reserve_vblank_syncpts = true,
 };
+#endif
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC)
 static const struct host1x_info host1x04_info = {
 	.nb_channels = 12,
 	.nb_pts = 192,
@@ -133,7 +154,9 @@ static const struct host1x_info host1x04_info = {
 	.sid_table = NULL,
 	.reserve_vblank_syncpts = false,
 };
+#endif
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)
 static const struct host1x_info host1x05_info = {
 	.nb_channels = 14,
 	.nb_pts = 192,
@@ -148,7 +171,9 @@ static const struct host1x_info host1x05_info = {
 	.sid_table = NULL,
 	.reserve_vblank_syncpts = false,
 };
+#endif
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC)
 static const struct host1x_sid_entry tegra186_sid_table[] = {
 	{
 		/* VIC */
@@ -190,7 +215,9 @@ static const struct host1x_info host1x06_info = {
 	.sid_table = tegra186_sid_table,
 	.reserve_vblank_syncpts = false,
 };
+#endif
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 static const struct host1x_sid_entry tegra194_sid_table[] = {
 	{
 		/* VIC */
@@ -256,7 +283,9 @@ static const struct host1x_info host1x07_info = {
 	.sid_table = tegra194_sid_table,
 	.reserve_vblank_syncpts = false,
 };
+#endif
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_234_SOC)
 /*
  * Tegra234 has two stream ID protection tables, one for setting stream IDs
  * through the channel path via SETSTREAMID, and one for setting them via
@@ -505,7 +534,9 @@ static const struct host1x_info host1x08_info = {
 	.mmio_vm_table = { 0x1504, 25 },
 	.reserve_vblank_syncpts = false,
 };
+#endif
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_264_SOC)
 static const struct host1x_sid_entry tegra264_sid_table[] = {
 	{
 		/* SE1 MMIO */
@@ -641,17 +672,36 @@ static const struct host1x_info host1x09_info = {
 	.mmio_vm_table = { 0x1504, 25 },
 	.reserve_vblank_syncpts = false,
 };
+#endif
 
 static const struct of_device_id host1x_of_match[] = {
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_264_SOC)
 	{ .compatible = "nvidia,tegra264-host1x", .data = &host1x09_info, },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_234_SOC)
 	{ .compatible = "nvidia,tegra234-host1x", .data = &host1x08_info, },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	{ .compatible = "nvidia,tegra194-host1x", .data = &host1x07_info, },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC)
 	{ .compatible = "nvidia,tegra186-host1x", .data = &host1x06_info, },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)
 	{ .compatible = "nvidia,tegra210-host1x", .data = &host1x05_info, },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC)
 	{ .compatible = "nvidia,tegra124-host1x", .data = &host1x04_info, },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC)
 	{ .compatible = "nvidia,tegra114-host1x", .data = &host1x02_info, },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC)
 	{ .compatible = "nvidia,tegra30-host1x", .data = &host1x01_info, },
+#endif
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC)
 	{ .compatible = "nvidia,tegra20-host1x", .data = &host1x01_info, },
+#endif
 	{ },
 };
 MODULE_DEVICE_TABLE(of, host1x_of_match);
@@ -1319,7 +1369,11 @@ static struct platform_driver tegra_host1x_driver = {
 
 static struct platform_driver * const drivers[] = {
 	&tegra_host1x_driver,
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 	&tegra_mipi_driver,
+#endif
 };
 
 static int __init tegra_host1x_init(void)

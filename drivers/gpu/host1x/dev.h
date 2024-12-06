@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2023, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
+ * Copyright (c) 2012-2024, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
  */
 
 #ifndef HOST1X_DEV_H
@@ -416,6 +416,10 @@ static inline void host1x_hw_show_mlocks(struct host1x *host, struct output *o)
 	host->debug_op->show_mlocks(host, o);
 }
 
+#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
+	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
 extern struct platform_driver tegra_mipi_driver;
+#endif
 
 #endif
