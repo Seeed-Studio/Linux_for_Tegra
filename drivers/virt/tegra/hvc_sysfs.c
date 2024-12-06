@@ -1,18 +1,13 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
  */
 
 #include <nvidia/conftest.h>
@@ -34,11 +29,26 @@
 
 /*
  * This file implements a hypervisor control driver that can be accessed
- * from user-space via the sysfs interface. Currently, the only supported
- * use case is retrieval of the HV trace log when it is available.
+ * from user-space via the sysfs interface. Currently, supported use case are
+ * retrieval of the HV trace log when it is available and mapping nvlog buffers
+ * to user space.
  */
 
 #define MAX_NAME_SIZE 50
+
+struct nvlog_shmem_info {
+	struct bin_attribute attr;
+	struct bin_attribute region_size_attr;
+	struct bin_attribute buf_size_attr;
+	struct bin_attribute buf_count_attr;
+	struct kobject *kobj;
+	char node_name[MAX_NAME_SIZE];
+	uint64_t ipa;
+	uint64_t region_size;
+	uint64_t buf_size;
+	uint64_t buf_count;
+};
+static struct nvlog_shmem_info nvlog_shmem_attrs[MAX_NVLOG_PRODUCERS];
 
 struct hyp_shared_memory_info {
 	char node_name[MAX_NAME_SIZE];
@@ -51,6 +61,181 @@ struct hyp_shared_memory_info {
 static struct hyp_shared_memory_info hyp_shared_memory_attrs[HYP_SHM_ID_NUM];
 
 
+/* Map the HV trace buffer to the calling user process */
+static int nvlog_buffer_mmap(struct file *fp, struct kobject *ko,
+	struct bin_attribute *attr, struct vm_area_struct *vma)
+{
+	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, attr);
+
+	if ((info->ipa == 0) || (info->region_size == 0))
+		return -EINVAL;
+
+
+	if ((vma->vm_end - vma->vm_start) != attr->size)
+		return -EINVAL;
+
+	return remap_pfn_range(
+		vma, vma->vm_start,
+		info->ipa >> PAGE_SHIFT,
+		info->region_size, vma->vm_page_prot);
+}
+
+static ssize_t nvlog_region_size_read(struct file *fp, struct kobject *ko,
+	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
+{
+	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, region_size_attr);
+
+	snprintf(buf, size, "%llu\n", info->region_size);
+	return size;
+}
+
+static ssize_t nvlog_buffer_size_read(struct file *fp, struct kobject *ko,
+	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
+{
+	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, buf_size_attr);
+
+	snprintf(buf, size, "%llu\n", info->buf_size);
+	return size;
+}
+
+static ssize_t nvlog_buffer_count_read(struct file *fp, struct kobject *ko,
+	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
+{
+	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, buf_count_attr);
+
+	snprintf(buf, size, "%llu\n", info->buf_count);
+	return size;
+}
+
+static int nvlog_create_sysfs_nodes(struct nvlog_shmem_info *info)
+{
+	int ret = 0;
+
+	if (info == NULL)
+		return -EINVAL;
+
+	sysfs_bin_attr_init((struct bin_attribute *)&info->attr);
+	info->attr.attr.name = info->node_name;
+	info->attr.attr.mode = 0600;
+	info->attr.size = info->region_size;
+	info->attr.mmap = nvlog_buffer_mmap;
+	ret = sysfs_create_bin_file(info->kobj, &info->attr);
+	if (ret != 0)
+		goto fail;
+
+	sysfs_bin_attr_init((struct bin_attribute *)&info->region_size_attr);
+	info->region_size_attr.attr.name = "region_size";
+	info->region_size_attr.attr.mode = 0444;
+	info->region_size_attr.size = 16u;
+	info->region_size_attr.read = nvlog_region_size_read;
+	ret = sysfs_create_bin_file(info->kobj, &info->region_size_attr);
+	if (ret != 0)
+		goto del_attr;
+
+	sysfs_bin_attr_init((struct bin_attribute *)&info->buf_size_attr);
+	info->buf_size_attr.attr.name = "buf_size";
+	info->buf_size_attr.attr.mode = 0444;
+	info->buf_size_attr.size = 16u;
+	info->buf_size_attr.read = nvlog_buffer_size_read;
+	ret = sysfs_create_bin_file(info->kobj, &info->buf_size_attr);
+	if (ret != 0)
+		goto del_region_size;
+
+	sysfs_bin_attr_init((struct bin_attribute *)&info->buf_count_attr);
+	info->buf_count_attr.attr.name = "buf_count";
+	info->buf_count_attr.attr.mode = 0444;
+	info->buf_count_attr.size = 16u;
+	info->buf_count_attr.read = nvlog_buffer_count_read;
+	ret = sysfs_create_bin_file(info->kobj, &info->buf_count_attr);
+	if (ret != 0)
+		goto del_buf_size;
+
+	return 0;
+
+del_buf_size:
+	sysfs_remove_bin_file(info->kobj, &info->buf_size_attr);
+del_region_size:
+	sysfs_remove_bin_file(info->kobj, &info->region_size_attr);
+del_attr:
+	sysfs_remove_bin_file(info->kobj, &info->attr);
+fail:
+	return ret;
+}
+
+static int hyp_nvlog_buffer_init(void)
+{
+	struct vm_info_region *info;
+	struct kobject *parent;
+	uint64_t ipa, cntr;
+	char dir_name[MAX_NAME_SIZE];
+	int ret;
+
+	parent = kobject_create_and_add("nvlog", NULL);
+	if (parent == NULL) {
+		TEGRA_HV_INFO("failed to add kobject\n");
+		return -ENOMEM;
+	}
+
+	if (hyp_read_vm_info(&ipa) != 0) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	info = (__force struct vm_info_region *)ioremap(ipa, sizeof(*info));
+	if (info == NULL) {
+		ret = -EFAULT;
+		goto fail;
+	}
+
+	for (cntr = 0; cntr < MAX_NVLOG_PRODUCERS; cntr++) {
+		if (info->nvlog_producers[cntr].ipa != 0U
+					&& info->nvlog_producers[cntr].region_size != 0U) {
+			nvlog_shmem_attrs[cntr].ipa = info->nvlog_producers[cntr].ipa;
+			nvlog_shmem_attrs[cntr].region_size = info->nvlog_producers[cntr].region_size;
+			nvlog_shmem_attrs[cntr].buf_size = info->nvlog_producers[cntr].buf_size;
+			nvlog_shmem_attrs[cntr].buf_count = info->nvlog_producers[cntr].buf_count;
+
+			ret = snprintf(nvlog_shmem_attrs[cntr].node_name, MAX_NAME_SIZE, "%s",
+								info->nvlog_producers[cntr].name);
+			if (ret > 0U) {
+				nvlog_shmem_attrs[cntr].node_name[ret] = '\0';
+			} else {
+				TEGRA_HV_INFO("snprintf failure - %s\n",
+							info->nvlog_producers[cntr].name);
+				iounmap((void __iomem *)info);
+				ret = -EFAULT;
+				goto fail;
+			}
+
+			strncpy(dir_name, nvlog_shmem_attrs[cntr].node_name, MAX_NAME_SIZE);
+			strncat(dir_name, "_dir", 4);
+			nvlog_shmem_attrs[cntr].kobj = kobject_create_and_add(dir_name, parent);
+			if (nvlog_shmem_attrs[cntr].kobj == NULL) {
+				TEGRA_HV_INFO("failed to add kobject\n");
+				ret = -ENOMEM;
+				goto fail;
+			}
+
+			ret = nvlog_create_sysfs_nodes(&nvlog_shmem_attrs[cntr]);
+			if (ret != 0)
+				goto fail;
+		}
+	}
+
+	iounmap((void __iomem *)info);
+	return 0;
+
+fail:
+	for (cntr = 0; cntr < MAX_NVLOG_PRODUCERS; cntr++) {
+		if (nvlog_shmem_attrs[cntr].kobj)
+			kobject_del(nvlog_shmem_attrs[cntr].kobj);
+	}
+
+	if (parent)
+		kobject_del(parent);
+
+	return ret;
+}
 
 /* Map the HV trace buffer to the calling user process */
 static int hvc_sysfs_mmap(struct file *fp, struct kobject *ko,
@@ -128,8 +313,7 @@ static int create_log_mask_node(struct kobject *kobj)
 	return sysfs_create_bin_file(kobj, &log_mask_attr);
 }
 
-/* Set up all relevant hypervisor control nodes */
-static int __init hvc_sysfs_register(void)
+static int hyp_trace_buffer_init(void)
 {
 	struct kobject *kobj;
 	int ret;
@@ -138,13 +322,6 @@ static int __init hvc_sysfs_register(void)
 	uint64_t log_mask;
 	struct trace_buf *buffs;
 	uint16_t i, count;
-
-	if (is_tegra_hypervisor_mode() == false) {
-		TEGRA_HV_INFO("hypervisor is not present\n");
-		/*retunring success in case of native kernel otherwise
-		  systemd-modules-load service will failed.*/
-		return 0;
-	}
 
 	kobj = kobject_create_and_add("hvc", NULL);
 	if (kobj == NULL) {
@@ -231,6 +408,34 @@ static int __init hvc_sysfs_register(void)
 fail:
 	kobject_del(kobj);
 	return ret;
+}
+
+/* Set up all relevant hypervisor control nodes */
+static int __init hvc_sysfs_register(void)
+{
+	int ret;
+
+	if (is_tegra_hypervisor_mode() == false) {
+		TEGRA_HV_INFO("hypervisor is not present\n");
+		/* retunring success in case of native kernel otherwise
+		 * systemd-modules-load service will failed.
+		 */
+		return 0;
+	}
+
+	ret = hyp_trace_buffer_init();
+	if (ret != 0)
+		TEGRA_HV_ERR("Error: Hypervisor trace buffer init failed\n");
+	else
+		TEGRA_HV_INFO("Hypervisor trace buffer initialized successfully\n");
+
+	ret = hyp_nvlog_buffer_init();
+	if (ret != 0)
+		TEGRA_HV_ERR("Error: Hypervisor nvlog buffer init failed\n");
+	else
+		TEGRA_HV_INFO("Hypervisor nvlog buffer initialized successfully\n");
+
+	return 0;
 }
 
 late_initcall(hvc_sysfs_register);
