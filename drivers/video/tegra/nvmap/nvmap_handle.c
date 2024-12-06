@@ -886,6 +886,7 @@ int nvmap_assign_pages_to_handle(struct nvmap_client *client,
 	u32 pg_cnt = 0;
 	u32 i;
 	int err = 0;
+	u64 diff, sum;
 
 	h = nvmap_handle_get(h);
 	if (!h)
@@ -907,8 +908,20 @@ int nvmap_assign_pages_to_handle(struct nvmap_client *client,
 	end = rng->sz;
 
 	for (i = rng->start; i <= rng->end; i++) {
-		end_cur = (end >= hs[i]->size) ? (hs[i]->size - start) : end;
-		err = nvmap_assign_pages_per_handle(hs[i], h, start, start + end_cur, &pg_cnt);
+		if (check_sub_overflow((u64)hs[i]->size, start, &diff)) {
+			err = -EOVERFLOW;
+			nvmap_altfree(pages, nr_page * sizeof(*pages));
+			goto err_h;
+		}
+
+		end_cur = (end >= hs[i]->size) ? (diff) : end;
+		if (check_add_overflow(start, end_cur, &sum)) {
+			err = -EOVERFLOW;
+			nvmap_altfree(pages, nr_page * sizeof(*pages));
+			goto err_h;
+		}
+
+		err = nvmap_assign_pages_per_handle(hs[i], h, start, sum, &pg_cnt);
 		if (err) {
 			nvmap_altfree(pages, nr_page * sizeof(*pages));
 			goto err_h;
