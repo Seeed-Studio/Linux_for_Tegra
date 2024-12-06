@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2009-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2009-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Memory manager for Tegra GPU
  */
@@ -96,7 +96,9 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 
 	/* carveout - explicitly map the pfns into a vmalloc area */
 	adj_size = nvmap_get_heap_block_base(h->carveout) & ~PAGE_MASK;
-	adj_size += h->size;
+	if (check_add_overflow(adj_size, h->size, &adj_size))
+		goto dec_kmaps;
+
 	adj_size = PAGE_ALIGN(adj_size);
 
 	if (pfn_valid(__phys_to_pfn(nvmap_get_heap_block_base(h->carveout) & PAGE_MASK))) {
@@ -149,6 +151,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 out:
 	if (pages)
 		vfree(pages);
+dec_kmaps:
 	nvmap_kmaps_dec(h);
 put_handle:
 	nvmap_handle_put(h);
