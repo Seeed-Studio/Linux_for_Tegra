@@ -102,6 +102,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	int i = 0, page_index = 0, allocated = 0;
 	struct page **pages;
 	gfp_t gfp = GFP_NVMAP | __GFP_ZERO;
+	u64 result;
 #ifdef CONFIG_ARM64_4K_PAGES
 #ifdef NVMAP_CONFIG_PAGE_POOLS
 	int pages_per_big_pg = NVMAP_PP_BIG_PAGE_SIZE >> PAGE_SHIFT;
@@ -152,7 +153,11 @@ static int handle_page_alloc(struct nvmap_client *client,
 				pages[i + idx] = nth_page(page, idx);
 			nvmap_clean_cache(&pages[i], pages_per_big_pg);
 		}
-		nvmap_big_page_allocs += page_index;
+
+		if (check_add_overflow(nvmap_big_page_allocs, (u64)page_index, &result))
+			goto fail;
+
+		nvmap_big_page_allocs = result;
 #endif /* CONFIG_ARM64_4K_PAGES */
 #ifdef NVMAP_CONFIG_PAGE_POOLS
 			/* Get as many pages from the pool as possible. */
@@ -174,7 +179,11 @@ static int handle_page_alloc(struct nvmap_client *client,
 			if (pages[i] == NULL)
 				goto fail;
 		}
-		nvmap_total_page_allocs += nr_page;
+
+		if (check_add_overflow(nvmap_big_page_allocs, (u64)nr_page, &result))
+			goto fail;
+
+		nvmap_total_page_allocs = result;
 	}
 
 	/*
