@@ -256,6 +256,13 @@ static void tegra264_read_counters(struct tegra_cpu_ctr *c)
 	u32 delta_refcnt;
 	int cnt = 0;
 
+	/**
+	 * Bug 4934006 observes that we under-read the CPU Frequency compared
+	 * to our clock-source HW counters. Disabling IRQs to avoid preemption
+	 * and make this a critical section.
+	 */
+
+	local_irq_disable();
 	/* SYS_AMEVCNTR0_CORE_EL0 and SYS_AMEVCNTR0_CORE_EL1 */
 	asm volatile("mrs %0, S3_3_C13_C4_0" : "=r" (c->last_coreclk_cnt) : );
 	asm volatile("mrs %0, S3_3_C13_C4_1" : "=r" (c->last_refclk_cnt) : );
@@ -279,6 +286,7 @@ static void tegra264_read_counters(struct tegra_cpu_ctr *c)
 			break;
 		}
 	} while (delta_refcnt < data->soc->refclk_delta_min);
+	local_irq_enable();
 }
 
 static struct tegra_cpufreq_ops tegra264_cpufreq_ops = {
