@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: endpoint: " fmt
@@ -864,6 +863,8 @@ allocate_memory(struct endpoint_drv_ctx_t *eps_ctx, struct endpoint_t *ep)
 	int ret = 0;
 	int prot = 0;
 	size_t offsetof = 0x0;
+	bool retval = 0;
+	uint64_t total_size = 0;
 
 	/*
 	 * memory size includes space for frames(aligned to PAGE_SIZE) plus
@@ -871,7 +872,12 @@ allocate_memory(struct endpoint_drv_ctx_t *eps_ctx, struct endpoint_t *ep)
 	 */
 	ep->self_mem.size = (ep->nframes * ep->frame_sz);
 	ep->self_mem.size = ALIGN(ep->self_mem.size, PAGE_SIZE);
-	ep->self_mem.size += PAGE_SIZE;
+	retval = AddU64(ep->self_mem.size, PAGE_SIZE, &total_size);
+	if (retval == false) {
+		pr_err("sum of ep->self_mem.size and PAGE_SIZE exceeding max U64 limit\n");
+		return -EINVAL;
+	}
+	ep->self_mem.size = total_size;
 	ep->self_mem.pva = alloc_pages_exact(ep->self_mem.size,
 					     (GFP_KERNEL | __GFP_ZERO));
 	if (!ep->self_mem.pva) {

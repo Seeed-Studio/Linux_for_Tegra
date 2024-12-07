@@ -1,7 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #ifndef __COMMON_H__
@@ -214,4 +213,38 @@ static inline u64 get_syncpt_shim_offset(u32 id, u8 chip_id)
 
 	return (base + ((u64)id * SP_SIZE));
 }
+
+/* Adition of uint64 variables with overflow detection */
+static inline bool
+AddU64(uint64_t op1, uint64_t op2, uint64_t *result)
+{
+	bool e = false;
+
+	if (((U64_MAX - op1) < op2) == false) {
+		*result = op1 + op2;
+		e = true;
+	}
+
+	return e;
+}
+
+/* Multiplication of uint64 variables with overflow detection */
+static inline bool
+MultU64(uint64_t op1, uint64_t op2, uint64_t *result)
+{
+	bool e = false;
+
+	if ((op1 == 0U) || (op2 == 0U))
+		*result = 0U;
+	else if ((op1 > (U64_MAX / op2)) == false)
+		*result = op1 * op2;
+	else
+		goto fail;
+
+	e = true;
+
+fail:
+	return e;
+}
+
 #endif //__COMMON_H__

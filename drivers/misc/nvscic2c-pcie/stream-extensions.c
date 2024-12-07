@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: stream-ext: " fmt
@@ -1012,6 +1011,8 @@ prepare_edma_desc(enum drv_mode_t drv_mode, struct copy_req_params *params,
 	struct file *filep = NULL;
 	struct stream_ext_obj *stream_obj = NULL;
 	struct nvscic2c_pcie_flush_range *flush_range = NULL;
+	bool retval = 0;
+	uint64_t dest_address = 0;
 
 	*num_desc = 0;
 	for (i = 0; i < params->num_flush_ranges; i++) {
@@ -1032,7 +1033,12 @@ prepare_edma_desc(enum drv_mode_t drv_mode, struct copy_req_params *params,
 			desc[iter].dst = stream_obj->aper;
 		else
 			desc[iter].dst = stream_obj->vmap.iova;
-		desc[iter].dst += flush_range->offset;
+		retval = AddU64(desc[iter].dst, flush_range->offset, &dest_address);
+		if (retval == false) {
+			pr_err("AddU64 overflow: flush_range dst address, offset\n");
+			return -EINVAL;
+		}
+		desc[iter].dst = dest_address;
 		fput(filep);
 
 		desc[iter].sz = flush_range->size;
@@ -1438,6 +1444,12 @@ allocate_copy_request(struct stream_ext_ctx_t *ctx,
 {
 	int ret = 0;
 	struct copy_request *cr = NULL;
+	uint64_t size_of_element = 0;
+	uint64_t num_elements = 0;
+	uint64_t max_flush_ranges = 0;
+	uint64_t maxcr_limits = 0;
+	uint64_t total_size = 0;
+	bool retval = 0;
 
 	/*worst-case allocation for each copy request.*/
 
@@ -1449,52 +1461,98 @@ allocate_copy_request(struct stream_ext_ctx_t *ctx,
 	cr->ctx = ctx;
 
 	/* flush range has two handles: src, dst + all possible post_fences.*/
-	cr->handles = kzalloc((sizeof(*cr->handles) *
-				((2U * ctx->cr_limits.max_flush_ranges) +
-				(ctx->cr_limits.max_post_fences))),
-				GFP_KERNEL);
+	retval = MultU64(2, ctx->cr_limits.max_flush_ranges, &max_flush_ranges);
+	if (retval == false) {
+		pr_err("MultU64 overflow: 2, max_flush_ranges\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	retval = AddU64(max_flush_ranges, ctx->cr_limits.max_post_fences, &maxcr_limits);
+	if (retval == false) {
+		pr_err("AddU64 overflow: max_flush_ranges, max_post_fences\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	size_of_element = sizeof(*cr->handles);
+	retval = MultU64(size_of_element, maxcr_limits, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: size_of_element, maxcr_limits\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	cr->handles = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!cr->handles)) {
 		ret = -ENOMEM;
 		goto err;
 	}
 
 	/* edma_desc shall include flush_range.*/
-	cr->edma_desc = kzalloc((sizeof(*cr->edma_desc) *
-				ctx->cr_limits.max_flush_ranges),
-				GFP_KERNEL);
+	size_of_element = sizeof(*cr->edma_desc);
+	num_elements = ctx->cr_limits.max_flush_ranges;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: flush_ranges: size_of_element, num_elements\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	cr->edma_desc = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!cr->edma_desc)) {
 		ret = -ENOMEM;
 		goto err;
 	}
 
 	/* OR all max_post_fences could be local_post_fence. */
-	cr->local_post_fences = kzalloc((sizeof(*cr->local_post_fences) *
-					ctx->cr_limits.max_post_fences),
-					GFP_KERNEL);
+	size_of_element = sizeof(*cr->local_post_fences);
+	num_elements = ctx->cr_limits.max_post_fences;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: local_post_fences: size_of_element, num_elements\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	cr->local_post_fences = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!cr->local_post_fences)) {
 		ret = -ENOMEM;
 		goto err;
 	}
-	cr->remote_post_fences = kzalloc((sizeof(*cr->remote_post_fences) *
-					ctx->cr_limits.max_post_fences),
-					GFP_KERNEL);
+
+	size_of_element = sizeof(*cr->remote_post_fences);
+	num_elements = ctx->cr_limits.max_post_fences;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: remote_post_fences: size_of_element, num_elements\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	cr->remote_post_fences = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!cr->remote_post_fences)) {
 		ret = -ENOMEM;
 		goto err;
 	}
 
-	cr->remote_buf_objs = kzalloc((sizeof(*cr->remote_buf_objs) *
-					ctx->cr_limits.max_flush_ranges),
-					GFP_KERNEL);
+	size_of_element = sizeof(*cr->remote_buf_objs);
+	num_elements = ctx->cr_limits.max_flush_ranges;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: remote_buf_objs: size_of_element, num_elements\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	cr->remote_buf_objs = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!cr->remote_buf_objs)) {
 		ret = -ENOMEM;
 		goto err;
 	}
 
-	cr->remote_post_fence_values =
-				kzalloc((sizeof(*cr->remote_post_fence_values) *
-				ctx->cr_limits.max_post_fences),
-				GFP_KERNEL);
+	size_of_element = sizeof(*cr->remote_post_fence_values);
+	num_elements = ctx->cr_limits.max_post_fences;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: remote_post_fence_values: size_of_element, num_elements");
+		ret = -EINVAL;
+		goto err;
+	}
+	cr->remote_post_fence_values = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!cr->remote_post_fence_values)) {
 		ret = -ENOMEM;
 		goto err;
@@ -1528,36 +1586,61 @@ allocate_copy_req_params(struct stream_ext_ctx_t *ctx,
 			 struct copy_req_params *params)
 {
 	int ret = 0;
+	uint64_t size_of_element = 0;
+	uint64_t num_elements = 0;
+	uint64_t total_size = 0;
+	bool retval = 0;
 
 	/*worst-case allocation for each.*/
 
-	params->flush_ranges = kzalloc((sizeof(*params->flush_ranges) *
-					ctx->cr_limits.max_flush_ranges),
-				       GFP_KERNEL);
+	size_of_element = sizeof(*params->flush_ranges);
+	num_elements = ctx->cr_limits.max_flush_ranges;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false)
+		return -EINVAL;
+	params->flush_ranges = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!params->flush_ranges)) {
 		ret = -ENOMEM;
 		goto err;
 	}
-	params->local_post_fences =
-				kzalloc((sizeof(*params->local_post_fences) *
-					 ctx->cr_limits.max_post_fences),
-					GFP_KERNEL);
+
+	size_of_element = sizeof(*params->local_post_fences);
+	num_elements = ctx->cr_limits.max_post_fences;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: local_post_fences: size_of_element, num_elements\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	params->local_post_fences = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!params->local_post_fences)) {
 		ret = -ENOMEM;
 		goto err;
 	}
-	params->remote_post_fences =
-				kzalloc((sizeof(*params->remote_post_fences) *
-					 ctx->cr_limits.max_post_fences),
-					GFP_KERNEL);
+
+	size_of_element = sizeof(*params->remote_post_fences);
+	num_elements = ctx->cr_limits.max_post_fences;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: remote_post_fences: size_of_element, num_elements\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	params->remote_post_fences =  kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!params->remote_post_fences)) {
 		ret = -ENOMEM;
 		goto err;
 	}
-	params->remote_post_fence_values =
-				kzalloc((sizeof(*params->remote_post_fence_values) *
-					 ctx->cr_limits.max_post_fences),
-					GFP_KERNEL);
+
+	size_of_element = sizeof(*params->remote_post_fence_values);
+	num_elements = ctx->cr_limits.max_post_fences;
+	retval = MultU64(size_of_element, num_elements, &total_size);
+	if (retval == false) {
+		pr_err("MultU64 overflow: remote_post_fence_values: size_of_element, num_elements");
+		ret = -EINVAL;
+		goto err;
+	}
+	params->remote_post_fence_values = kzalloc(total_size, GFP_KERNEL);
 	if (WARN_ON(!params->remote_post_fence_values)) {
 		ret = -ENOMEM;
 		goto err;

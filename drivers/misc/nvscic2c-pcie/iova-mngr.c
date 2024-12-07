@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: iova-mgr: " fmt
@@ -162,6 +161,9 @@ iova_mngr_block_release(void *mngr_handle, void **block_handle)
 	struct block_t *curr = NULL, *prev = NULL;
 	bool done = false;
 	int ret = 0;
+	bool retval = 0;
+	uint64_t last_address = 0;
+	uint64_t total_size = 0;
 
 	if (!ctx || !release)
 		return -EINVAL;
@@ -223,9 +225,19 @@ iova_mngr_block_release(void *mngr_handle, void **block_handle)
 			 */
 			struct block_t *last =
 			list_last_entry(ctx->free_list, struct block_t, node);
-			if ((last->address + last->size) == release->address) {
+			retval = AddU64(last->address, last->size, &last_address);
+			if (retval == false) {
+				pr_err("AddU64 overflow: last->address, last->size\n");
+				return -EINVAL;
+			}
+			if (last_address == release->address) {
 				/* can be merged with last node of list.*/
-				last->size += release->size;
+				retval = AddU64(last->size, release->size, &total_size);
+				if (retval == false) {
+					pr_err("AddU64 overflow: last->size, release->size\n");
+					return -EINVAL;
+				}
+				last->size = total_size;
 				list_del(&release->node);
 				kfree(release);
 			} else {

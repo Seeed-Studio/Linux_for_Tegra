@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <nvidia/conftest.h>
@@ -178,6 +177,15 @@ assign_outbound_area(struct pci_dev *pdev, size_t win_size, int bar,
 {
 	int ret = 0;
 
+	/*
+	 * Added below check to fix CERT ARR30-C violation:
+	 * cert_arr30_c_violation: pdev->resource[bar] evaluates to an address
+	 * that could be at negative offset of an array.
+	 */
+	if (bar < 0) {
+		pr_err("Invalid BAR index : %d", bar);
+		return -EINVAL;
+	}
 	peer_mem->size = win_size;
 	peer_mem->aper = pci_resource_start(pdev, bar);
 

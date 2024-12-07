@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #define pr_fmt(fmt)	"nvscic2c-pcie: vmap: " fmt
@@ -48,8 +47,15 @@ match_dmabuf(int id, void *entry, void *data)
 static int dev_map_limit_check(uint64_t aperture_limit, uint64_t aperture_inuse, size_t map_size)
 {
 	int ret = 0;
+	bool retval = 0;
+	uint64_t total_size = 0;
 
-	if ((aperture_inuse + map_size) > aperture_limit) {
+	retval = AddU64(aperture_inuse, map_size, &total_size);
+	if (retval == false) {
+		pr_err("AddU64 overflow: aperture_inuse, map_size\n");
+		return -EINVAL;
+	}
+	if (total_size > aperture_limit) {
 		ret = -ENOMEM;
 		pr_err("per endpoint mapping limit exceeded, aperture_inuse: %lld, map_size: %zu\n",
 			aperture_inuse, map_size);
@@ -78,6 +84,8 @@ static int dma_mem_get_size(struct vmap_ctx_t *vmap_ctx, struct memobj_pin_t *pi
 	int ret = 0;
 	u32 sg_index = 0;
 	struct scatterlist *sg = NULL;
+	bool retval = 0;
+	uint64_t total_size = 0;
 
 	/*
 	 * pin to dummy device (which has smmu disabled) to get scatter-list
@@ -97,8 +105,14 @@ static int dma_mem_get_size(struct vmap_ctx_t *vmap_ctx, struct memobj_pin_t *pi
 	}
 
 	*map_size = 0;
-	for_each_sg(pin->sgt->sgl, sg, pin->sgt->nents, sg_index)
-		*map_size += sg->length;
+	for_each_sg(pin->sgt->sgl, sg, pin->sgt->nents, sg_index) {
+		retval = AddU64(*map_size, sg->length, &total_size);
+		if (retval == false) {
+			pr_err("AddU64 overflow: map_size, sg->length\n");
+			return -EINVAL;
+		}
+		*map_size = total_size;
+	}
 
 fn_exit:
 	dma_mem_get_size_exit(pin);
@@ -117,6 +131,8 @@ memobj_map(struct vmap_ctx_t *vmap_ctx,
 	size_t map_size = 0;
 	struct memobj_map_ref *map = NULL;
 	struct dma_buf *dmabuf = NULL;
+	bool retval = 0;
+	uint64_t total_size = 0;
 
 	dmabuf = dma_buf_get(params->fd);
 	if (IS_ERR_OR_NULL(dmabuf)) {
@@ -196,8 +212,14 @@ memobj_map(struct vmap_ctx_t *vmap_ctx,
 			kfree(map);
 			goto err;
 		}
-		if ((map->pin.mngd == VMAP_MNGD_CLIENT) && (aperture_inuse != NULL))
-			*aperture_inuse +=  map->pin.attrib.size;
+		if ((map->pin.mngd == VMAP_MNGD_CLIENT) && (aperture_inuse != NULL)) {
+			retval = AddU64(*aperture_inuse, map->pin.attrib.size, &total_size);
+			if (retval == false) {
+				pr_err("AddU64 overflow: aperture_inuse, map->pin.attrib.size\n");
+				return -EINVAL;
+			}
+			*aperture_inuse = total_size;
+		}
 	}
 
 	attrib->type = VMAP_OBJ_TYPE_MEM;
@@ -293,6 +315,8 @@ syncobj_map(struct vmap_ctx_t *vmap_ctx,
 	s32 id_exist = 0;
 	u32 syncpt_id = 0;
 	struct syncobj_map_ref *map = NULL;
+	bool retval = 0;
+	uint64_t total_size = 0;
 
 	syncpt_id = params->id;
 	mutex_lock(&vmap_ctx->sync_idr_lock);
@@ -350,8 +374,14 @@ syncobj_map(struct vmap_ctx_t *vmap_ctx,
 			kfree(map);
 			goto err;
 		}
-		if ((params->mngd == VMAP_MNGD_CLIENT) && (aperture_inuse != NULL))
-			*aperture_inuse +=  map->pin.attrib.size;
+		if ((params->mngd == VMAP_MNGD_CLIENT) && (aperture_inuse != NULL)) {
+			retval = AddU64(*aperture_inuse, map->pin.attrib.size, &total_size);
+			if (retval == false) {
+				pr_err("AddU64 overflow: aperture_inuse, map->pin.attrib.size\n");
+				return -EINVAL;
+			}
+			*aperture_inuse = total_size;
+		}
 
 		attrib->type = VMAP_OBJ_TYPE_SYNC;
 		attrib->id = map->obj_id;
