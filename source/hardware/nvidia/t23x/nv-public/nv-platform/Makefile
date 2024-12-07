@@ -17,6 +17,7 @@ dtb-y += tegra234-p3740-0002+p3701-0008-nv.dtb
 dtb-y += tegra234-p3740-0002+p3701-0008-nv-safety.dtb
 dtb-y += tegra234-p3768-0000+p3767-0000-nv.dtb
 dtb-y += tegra234-p3768-0000+p3767-0000-nv-px1.dtb
+dtb-y += tegra234-p3768-0000+p3767-0000-nv-super.dtb
 dtb-y += tegra234-p3768-0000+p3767-0000-nv-taylor-high.dtb
 dtb-y += tegra234-p3768-0000+p3767-0000-nv-taylor-low.dtb
 dtb-y += tegra234-p3768-0000+p3767-0001-nv.dtb
