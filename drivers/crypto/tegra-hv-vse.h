@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only
  *
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  */
 
@@ -46,8 +46,12 @@ struct tegra_vse_node_dma {
 
 struct crypto_dev_to_ivc_map {
 	uint32_t ivc_id;
-	uint32_t se_engine;
+	/* Engine ID - Specific HW engine instance used for performing crypto operations */
+	uint32_t engine_id;
+	/* Node ID - Global ID, used for internal mapping between Cryptodev and VSE driver */
 	uint32_t node_id;
+	/* Instance ID - Device node index for a particular engine instance, read from DT */
+	uint32_t instance_id;
 	uint32_t priority;
 	uint32_t max_buffer_size;
 	uint32_t channel_grp_id;
@@ -68,6 +72,7 @@ struct crypto_dev_to_ivc_map {
 	enum ivc_irq_state wait_interrupt;
 	struct mutex irq_state_lock;
 	struct tegra_vse_dma_buf mempool;
+	bool node_in_use;
 };
 
 struct tegra_virtual_se_dev {

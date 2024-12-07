@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Tegra NVVSE crypto device for crypto operation to NVVSE linux library.
@@ -62,7 +62,7 @@
  */
 #define NVVSE_MAX_ALLOCATED_SHA_RESULT_BUFF_SIZE	256U
 
-#define MISC_DEVICE_NAME_LEN		32U
+#define MISC_DEVICE_NAME_LEN		33U
 
 struct nvvse_devnode {
 	struct miscdevice *g_misc_devices;
@@ -72,7 +72,7 @@ struct nvvse_devnode {
 static struct tegra_nvvse_get_ivc_db ivc_database;
 
 /* SHA Algorithm Names */
-static const char *sha_alg_names[] = {
+static const char * const sha_alg_names[] = {
 	"sha256-vse",
 	"sha384-vse",
 	"sha512-vse",
@@ -1737,8 +1737,8 @@ static int tnvvse_crypto_get_ivc_db(struct tegra_nvvse_get_ivc_db *get_ivc_db)
 
 	for (i = 0; i < MAX_NUMBER_MISC_DEVICES; i++) {
 		get_ivc_db->ivc_id[i] = hv_vse_db[i].ivc_id;
-		get_ivc_db->se_engine[i] = hv_vse_db[i].se_engine;
-		get_ivc_db->node_id[i] = hv_vse_db[i].node_id;
+		get_ivc_db->se_engine[i] = hv_vse_db[i].engine_id;
+		get_ivc_db->node_id[i] = hv_vse_db[i].instance_id;
 		get_ivc_db->priority[i] = hv_vse_db[i].priority;
 		get_ivc_db->max_buffer_size[i] = hv_vse_db[i].max_buffer_size;
 		get_ivc_db->channel_grp_id[i] = hv_vse_db[i].channel_grp_id;
@@ -1753,23 +1753,12 @@ static int tnvvse_crypto_dev_open(struct inode *inode, struct file *filp)
 {
 	struct tnvvse_crypto_ctx *ctx = NULL;
 	struct crypto_sha_state *p_sha_state = NULL;
-	char root_path_buf[512];
-	const char *root_path, *str;
 	int ret = 0;
 	uint32_t node_id;
+	struct miscdevice *misc;
 
-	/* get the node id from file name */
-	root_path = dentry_path_raw(filp->f_path.dentry, root_path_buf, sizeof(root_path_buf));
-	str = strrchr(root_path, '-');
-	if (str == NULL) {
-		pr_err("%s: invalid dev node name\n", __func__);
-		return -EINVAL;
-	}
-
-	if (kstrtou32(str+1, 10, &node_id)) {
-		pr_err("%s: invalid crypto dev instance passed\n", __func__);
-		return -EINVAL;
-	}
+	misc = filp->private_data;
+	node_id = misc->this_device->id;
 
 	ctx = kzalloc(sizeof(struct tnvvse_crypto_ctx), GFP_KERNEL);
 	if (!ctx) {
@@ -2190,42 +2179,92 @@ static int __init tnvvse_crypto_device_init(void)
 	uint32_t cnt, ctr;
 	int ret = 0;
 	struct miscdevice *misc;
+	struct crypto_dev_to_ivc_map *ivc_db;
+	/* Device node type */
+	const char * const node_prefix[] = {
+		"tegra-nvvse-crypto-gpse-aes0-",
+		"tegra-nvvse-crypto-gpse-aes1-",
+		"tegra-nvvse-crypto-gpse-sha-",
+		"",
+		"",
+		"",
+		"tegra-nvvse-crypto-tsec-",
+		"tegra-nvvse-crypto-gcse1-aes0-",
+		"tegra-nvvse-crypto-gcse1-aes1-",
+		"tegra-nvvse-crypto-gcse1-sha-",
+		"tegra-nvvse-crypto-gcse2-aes0-",
+		"tegra-nvvse-crypto-gcse2-aes1-",
+		"tegra-nvvse-crypto-gcse2-sha-"
+	};
+	char const numbers[] = "0123456789";
+	char *node_name;
+	uint32_t str_len;
 
 	/* get ivc databse */
 	tnvvse_crypto_get_ivc_db(&ivc_database);
+	ivc_db = tegra_hv_vse_get_db();
 
 	for (cnt = 0; cnt < MAX_NUMBER_MISC_DEVICES; cnt++) {
+
+		if (ivc_db[cnt].node_in_use != true)
+			break;
 
 		/* Dynamic initialisation of misc device */
 		misc = kzalloc(sizeof(struct miscdevice), GFP_KERNEL);
 		if (misc == NULL) {
 			ret = -ENOMEM;
 			goto fail;
-		} else {
-
-			misc->minor = MISC_DYNAMIC_MINOR;
-			misc->fops = &tnvvse_crypto_fops;
-
-			misc->name = kzalloc(MISC_DEVICE_NAME_LEN, GFP_KERNEL);
-			if (misc->name == NULL) {
-				ret = -ENOMEM;
-				goto fail;
-			}
-
-			ret = snprintf((char *)misc->name, MISC_DEVICE_NAME_LEN,
-								"tegra-nvvse-crypto-%u", cnt);
-			if (ret >= MISC_DEVICE_NAME_LEN) {
-				pr_err("%s: buffer overflown for misc dev %u\n", __func__, cnt);
-				ret = -EINVAL;
-				goto fail;
-			}
 		}
+
+		node_name = kzalloc(MISC_DEVICE_NAME_LEN, GFP_KERNEL);
+		if (node_name == NULL) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+
+		misc->minor = MISC_DYNAMIC_MINOR;
+		misc->fops = &tnvvse_crypto_fops;
+		misc->name = node_name;
+
+		if (ivc_db[cnt].engine_id >= sizeof(node_prefix)/sizeof(char *)) {
+			pr_err("%s: invalid engine id %u\n", __func__,
+				ivc_db[cnt].engine_id);
+			ret = -EINVAL;
+			goto fail;
+		}
+
+		if (node_prefix[ivc_db[cnt].engine_id][0U] == '\0') {
+			pr_err("%s: unsupported engine id %u\n", __func__,
+				ivc_db[cnt].engine_id);
+			ret = -EINVAL;
+			goto fail;
+		}
+
+		if (ivc_db[cnt].instance_id > 99U) {
+			pr_err("%s: unsupported instance id %u\n", __func__,
+				ivc_db[cnt].instance_id);
+			ret = -EINVAL;
+			goto fail;
+		}
+
+		str_len = strlen(node_prefix[ivc_db[cnt].engine_id]);
+		if (str_len > (MISC_DEVICE_NAME_LEN - 3U)) {
+			pr_err("%s: buffer overflown for misc dev %u\n", __func__, cnt);
+			ret = -EINVAL;
+			goto fail;
+		}
+		memcpy(node_name, node_prefix[ivc_db[cnt].engine_id], str_len);
+
+		node_name[str_len++] = numbers[(ivc_db[cnt].instance_id / 10U)];
+		node_name[str_len++] = numbers[(ivc_db[cnt].instance_id % 10U)];
+		node_name[str_len++] = '\0';
 
 		ret = misc_register(misc);
 		if (ret != 0) {
 			pr_err("%s: misc dev %u registeration failed err %d\n", __func__, cnt, ret);
 			goto fail;
 		}
+		misc->this_device->id = cnt;
 		nvvse_devnode[cnt].g_misc_devices = misc;
 		mutex_init(&nvvse_devnode[cnt].lock);
 	}
