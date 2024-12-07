@@ -106,6 +106,8 @@ struct isp_capture {
 	struct syncpoint_info progress_sp; /**< Syncpoint for frame progress */
 	struct syncpoint_info stats_progress_sp;
 		/**< Syncpoint for stats progress */
+	uint32_t stats_progress_delta;
+		/**< Expected stats progress increment for a frame */
 
 	struct completion control_resp;
 		/**< Completion for capture-control IVC response */
@@ -616,6 +618,25 @@ static void isp_capture_program_request_unpin(
 	mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);
 }
 
+static uint32_t isp_capture_get_num_stats_progress(
+	struct tegra_isp_channel *chan,
+	struct isp_program_req *req)
+{
+	struct isp_desc_rec *program_desc_ctx =
+		&chan->capture_data->program_desc_ctx;
+	struct isp5_program *program = (struct isp5_program *)
+		(program_desc_ctx->requests.va + sizeof(struct isp_program_descriptor) +
+		req->buffer_index * program_desc_ctx->request_size);
+
+	if (!program) {
+		dev_dbg(chan->isp_dev,
+			"%s: could not create program handle from pool\n", __func__);
+		return 0U;
+	}
+
+	return hweight32(program->stats_aidx_flag);
+}
+
 /**
  * @brief Prepare and submit a pin and relocation request for a program
  * descriptor, the resultant mappings are added to the channel program
@@ -706,6 +727,7 @@ static int isp_capture_program_prepare(
 
 	mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);
 
+	capture->stats_progress_delta = isp_capture_get_num_stats_progress(chan, req);
 	return err;
 }
 
@@ -1938,7 +1960,7 @@ int isp_capture_request(
 
 	// Progress syncpoints + 1 for frame completion
 	capture->progress_sp.threshold += isp_capture_get_num_progress(chan, req) + 1;
-	capture->stats_progress_sp.threshold += isp_capture_get_num_progress(chan, req) + 1 + 2;
+	capture->stats_progress_sp.threshold += chan->capture_data->stats_progress_delta;
 
 	return 0;
 
