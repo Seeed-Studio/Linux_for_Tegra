@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-p3768-0000+p3767-0004-nv.dts"
+
+/ {
+	compatible = "nvidia,p3768-0000+p3767-0004-super", "nvidia,p3767-0004", "nvidia,tegra234";
+};
+
+/delete-node/ &{/opp-table-cluster0/opp-1510400000};
+/delete-node/ &{/opp-table-cluster1/opp-1510400000};
+/delete-node/ &{/opp-table-cluster2/opp-1510400000};
