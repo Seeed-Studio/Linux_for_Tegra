@@ -22,6 +22,9 @@
 					method = "smc";
 					status = "okay";
 				};
+				uefi {
+					use-partition-name-suffixes;
+				};
 			};
 
 			chosen {
