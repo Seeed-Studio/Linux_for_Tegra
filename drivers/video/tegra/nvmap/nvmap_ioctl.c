@@ -1261,6 +1261,7 @@ int nvmap_ioctl_get_fd_from_list(struct file *filp, void __user *arg)
 	int err = 0;
 	int fd = -1;
 	u32 *hndls;
+	size_t result;
 
 	if (!client)
 		return -ENODEV;
@@ -1269,7 +1270,8 @@ int nvmap_ioctl_get_fd_from_list(struct file *filp, void __user *arg)
 		return -EFAULT;
 
 	if (!op.handles || !op.num_handles
-		 || !op.size || op.num_handles > U32_MAX / sizeof(u32))
+		 || !op.size || op.num_handles > U32_MAX / sizeof(u32)
+		 || op.offset > (U64_MAX - op.size))
 		return -EINVAL;
 
 	hrange.offs = op.offset;
@@ -1312,7 +1314,15 @@ int nvmap_ioctl_get_fd_from_list(struct file *filp, void __user *arg)
 			err = -EINVAL;
 			goto free_mem;
 		}
-		tot_hs_size += hs[i]->size;
+
+		if (check_add_overflow(tot_hs_size, hs[i]->size, &result)) {
+			while (i >= 0)
+				nvmap_handle_put(hs[i--]);
+			err = -EOVERFLOW;
+			goto free_mem;
+		}
+
+		tot_hs_size = result;
 	}
 
 	/* Add check for sizes of all the handles should be > offs and size */
