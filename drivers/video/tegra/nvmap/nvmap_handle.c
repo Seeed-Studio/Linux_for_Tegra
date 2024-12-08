@@ -242,7 +242,11 @@ static void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
 	 * This operation is done here, so as to protect from concurrency issue, as we take
 	 * lock on handle_lock.
 	 */
-	h->serial_id = dev->serial_id_counter++;
+	if (dev->serial_id_counter == U64_MAX)
+		dev->serial_id_counter = 0;
+	else
+		h->serial_id = dev->serial_id_counter++;
+
 	spin_unlock(&dev->handle_lock);
 }
 
