@@ -139,7 +139,7 @@ int find_range_of_handles(struct nvmap_handle **hs, u32 nr,
 
 		tot_sz = sum;
 		if (offs > tot_sz) {
-			if (check_sub_overflow(hrange->offs_start, tot_sz, &difference))
+			if (check_sub_overflow(hrange->offs_start, (u64)hs[i]->size, &difference))
 				return -EOVERFLOW;
 
 			hrange->offs_start = difference;
