@@ -571,6 +571,7 @@ static void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
 	alloc_size = PAGE_ALIGN(size) >> PAGE_SHIFT;
 
 	spin_lock_irqsave(&mem->spinlock, flags);
+	BUG_ON(device_addr < mem->device_base);
 	pos = PFN_DOWN(device_addr - mem->device_base);
 	bitmap_clear(mem->bitmap, pos, alloc_size);
 	spin_unlock_irqrestore(&mem->spinlock, flags);
@@ -621,7 +622,7 @@ static void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr
 {
 	void *mem_addr;
 	unsigned long flags;
-	unsigned int pageno;
+	unsigned long pageno;
 	union dma_coherent_mem_block dma_coherent_mem_type;
 	struct dma_coherent_mem_replica *mem;
 
@@ -641,9 +642,9 @@ static void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr
 
 		spin_lock_irqsave(&mem->spinlock, flags);
 		for (i = 0; i < (size >> PAGE_SHIFT); i++) {
-			pageno = page_to_pfn(pages[i]) - mem->pfn_base;
+			BUG_ON(check_sub_overflow(page_to_pfn(pages[i]), mem->pfn_base, &pageno));
 			if (WARN_ONCE(pageno > mem->size,
-				      "invalid pageno:%d\n", pageno))
+				      "invalid pageno:%lu\n", pageno))
 				continue;
 			bitmap_clear(mem->bitmap, pageno, 1);
 		}
@@ -666,7 +667,7 @@ static void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr
 		if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
 			count = PAGE_ALIGN(size) >> PAGE_SHIFT;
 		else
-			count = 1 << get_order(size);
+			count = 1U << get_order(size);
 
 		spin_lock_irqsave(&mem->spinlock, flags);
 		bitmap_clear(mem->bitmap, page, count);
