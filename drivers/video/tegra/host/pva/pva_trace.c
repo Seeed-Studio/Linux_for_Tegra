@@ -27,7 +27,7 @@ static void read_linear(struct pva *pva, struct pva_trace_log *trace, u32 toff)
 		dt = bh->start_time;
 		for (i = 0 ; i < bh->n_entries ; i++) {
 			dt = dt + tp->delta_time;
-			nvpva_dbg_info(pva, "delta_time: %llu\t %s\t major: %u\t"
+			nvpva_dbg_fw_trace(pva, "delta_time: %llu\t %s\t major: %u\t"
 				"minor: %u\t flags: %u\tsequence: %u\targ1:"
 				" %u\targ2: %u\n",
 				dt, name, tp->major, tp->minor, tp->flags,

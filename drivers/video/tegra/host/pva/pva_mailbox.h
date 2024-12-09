@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * PVA mailbox header
  */
@@ -130,6 +130,6 @@ int pva_poll_mailbox_isr(struct pva *pva, int wait_time);
  * This function do the wait until the mailbox isr get invoked based on
  * the mailbox register set by the ucode.
  */
-int pva_mailbox_wait_event(struct pva *pva, int wait_time);
+int pva_mailbox_wait_event(struct pva *pva, int wait_time, bool abort_ok);
 
 #endif /*__PVA_MAINBOX_H__*/

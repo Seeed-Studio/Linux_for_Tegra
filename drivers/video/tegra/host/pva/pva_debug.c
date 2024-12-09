@@ -47,7 +47,7 @@ static int pva_crashdump(struct seq_file *s, void *data)
 			(struct pva_crashdump_debugfs_entry *)s->private;
 	struct pva *pva = entry->pva;
 
-	err = nvhost_module_busy(pva->pdev);
+	err = pva_busy(pva, 2);
 	if (err) {
 		nvpva_dbg_info(pva, "err in powering up pva\n");
 		goto err_poweron;
@@ -55,7 +55,7 @@ static int pva_crashdump(struct seq_file *s, void *data)
 
 	pva_read_crashdump(s, &entry->seg_info);
 
-	nvhost_module_idle(pva->pdev);
+	pva_idle(pva);
 
 err_poweron:
 	return err;
@@ -138,7 +138,7 @@ static int fw_debug_log_open(struct inode *inode, struct file *file)
 	iter->pva = pva;
 
 	if (pva->booted) {
-		err = nvhost_module_busy(pva->pdev);
+		err = pva_busy(pva, 2);
 		if (err) {
 			nvpva_err(&pva->pdev->dev, "err in powering up pva");
 			err = -EIO;
@@ -147,7 +147,7 @@ static int fw_debug_log_open(struct inode *inode, struct file *file)
 
 		save_fw_debug_log(pva);
 
-		nvhost_module_idle(pva->pdev);
+		pva_idle(pva);
 	}
 
 	iter->buffer = pva->fw_debug_log.saved_log;
@@ -189,7 +189,7 @@ static int print_firmware_versions(struct seq_file *s, void *data)
 	struct pva_version_info info;
 	int ret = 0;
 
-	ret = nvhost_module_busy(pva->pdev);
+	ret = pva_busy(pva, 2);
 	if (ret < 0)
 		goto err_poweron;
 
@@ -197,7 +197,7 @@ static int print_firmware_versions(struct seq_file *s, void *data)
 	if (ret < 0)
 		goto err_get_firmware_version;
 
-	nvhost_module_idle(pva->pdev);
+	pva_idle(pva);
 
 	print_version(s, "pva_r5_version", info.pva_r5_version);
 	print_version(s, "pva_compat_version", info.pva_compat_version);
@@ -207,7 +207,7 @@ static int print_firmware_versions(struct seq_file *s, void *data)
 	return 0;
 
 err_get_firmware_version:
-	nvhost_module_idle(pva->pdev);
+	pva_idle(pva);
 err_poweron:
 	return ret;
 }
@@ -260,11 +260,11 @@ static void update_vpu_stats(struct pva *pva, bool stats_enabled)
 	if (pm_runtime_suspended(&pva->pdev->dev)) {
 		vpu_stats[0] = 0;
 		vpu_stats[1] = 0;
+
 		return;
 	}
 #endif
-
-	err = nvhost_module_busy(pva->pdev);
+	err = pva_busy(pva, 2);
 	if (err < 0) {
 		dev_err(&pva->pdev->dev, "error in powering up pva %d",
 			err);
@@ -301,7 +301,7 @@ err_out:
 	vpu_stats[0] = 0;
 	vpu_stats[1] = 0;
 out:
-	nvhost_module_idle(pva->pdev);
+	pva_idle(pva);
 }
 
 static int print_vpu_stats(struct seq_file *s, void *data)

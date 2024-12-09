@@ -23,18 +23,34 @@
 
 #define MAX_CCQ_ELEMENTS 6
 
+#define PVA_TASK_FREE		0
+#define PVA_TASK_ASSIGNED	1
+#define PVA_TASK_QUEUED		2
+#define PVA_TASK_SUBMITTED	3
+#define PVA_TASK_INVALID	4
+
+
 static int pva_ccq_wait(struct pva *pva, int timeout, unsigned int queue_id)
 {
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
 	u32 poll_count = 0;
+	u32 err = 0;
 
 	/*
 	 * Wait until there is free room in the CCQ. Otherwise the writes
 	 * could stall the CPU. Ignore the timeout in simulation.
 	 */
 
+	atomic_add(1,&pva->ccq_polling[queue_id]);
+	nvpva_dbg_fn(pva, "b  %d", atomic_read(&pva->ccq_polling[queue_id]));
+
 	do {
 		u32 val;
+
+		if(pva->in_recovery) {
+			err = -ETIMEDOUT;
+			break;
+		}
 
 		if ((pva->timeout_enabled == true) && time_after(jiffies, end_jiffies)) {
 			/* check once more if a slot is available*/
@@ -46,11 +62,12 @@ static int pva_ccq_wait(struct pva *pva, int timeout, unsigned int queue_id)
 			if (val <= MAX_CCQ_ELEMENTS) {
 				if (!poll_count)
 					WARN(true, "pva_ccq_wait false time out on first check");
-				return 0;
+				break;
 			}
 
 			nvpva_err(&pva->pdev->dev, "ccq wait timed out with %u in fifo", val);
-			return -ETIMEDOUT;
+			err = -ETIMEDOUT;
+			break;
 		}
 
 		++poll_count;
@@ -61,40 +78,59 @@ static int pva_ccq_wait(struct pva *pva, int timeout, unsigned int queue_id)
 			4, 0, u32);
 
 		if (val <= MAX_CCQ_ELEMENTS)
-			return 0;
+			break;
 
 		usleep_range(5, 10);
 	} while (true);
+
+	atomic_sub(1,&pva->ccq_polling[queue_id]);
+
+	nvpva_dbg_fn(pva, "e %d", atomic_read(&pva->ccq_polling[queue_id]));
+
+	return err;
 }
 static int pva_ccq_send_cmd(struct pva *pva, u32 queue_id,
-			    struct pva_cmd_s *cmd)
+			    struct pva_cmd_s *cmd, u8 *task_status)
 {
 	int err = 0;
+
+	if(!pva->booted)
+		err = -ENODEV;
+
 	err = pva_ccq_wait(pva, 100, queue_id);
 	if (err < 0)
 		goto err_wait_ccq;
+
+	if ((task_status != NULL) && (*task_status == PVA_TASK_INVALID)) {
+		err = -EINVAL;
+		return err;
+	}
 
 	/* Make the writes to CCQ */
 	host1x_writel(pva->pdev, cfg_ccq_r(pva->version, queue_id),
 		      cmd->cmd_field[1]);
 	host1x_writel(pva->pdev, cfg_ccq_r(pva->version, queue_id),
 		      cmd->cmd_field[0]);
+	if (task_status != NULL)
+		*task_status = PVA_TASK_SUBMITTED;
+
 	return err;
 
 err_wait_ccq:
+
 	pva_abort(pva);
 	return err;
 }
 
 int pva_ccq_send_task_t23x(struct pva *pva, u32 queue_id, dma_addr_t task_addr,
-			   u8 batchsize, u32 flags)
+			   u8 batchsize, u8 *task_status, u32 flags)
 {
 	int err = 0;
 	struct pva_cmd_s cmd = { 0 };
 
 	(void)pva_cmd_submit_batch(&cmd, queue_id, task_addr, batchsize, flags);
 
-	err = pva_ccq_send_cmd(pva, queue_id, &cmd);
+	err = pva_ccq_send_cmd(pva, queue_id, &cmd, task_status);
 	return err;
 }
 
@@ -141,6 +177,7 @@ static int pva_ccq_wait_event(struct pva *pva, unsigned int queue_id, int wait_t
 				   pva->cmd_status[interface] ==
 					   PVA_CMD_STATUS_ABORTED);
 	}
+
 	if (timeout <= 0) {
 		err = -ETIMEDOUT;
 		pva_abort(pva);
@@ -173,13 +210,16 @@ int pva_ccq_send_cmd_sync(struct pva *pva, struct pva_cmd_s *cmd, u32 nregs,
 		goto err_check_status;
 	}
 
+	if(!pva->booted)
+		err = -ENODEV;
+
 	/* Mark that we are waiting for an interrupt */
 	pva->cmd_status[interface] = PVA_CMD_STATUS_WFI;
 	memset(&pva->cmd_status_regs[interface], 0,
 	       sizeof(struct pva_cmd_status_regs));
 
 	/* Submit command to PVA */
-	err = pva_ccq_send_cmd(pva, queue_id, cmd);
+	err = pva_ccq_send_cmd(pva, queue_id, cmd, NULL);
 	if (err < 0)
 		goto err_send_command;
 
@@ -206,6 +246,9 @@ int pva_send_cmd_sync(struct pva *pva, struct pva_cmd_s *cmd, u32 nregs,
 		      u32 queue_id, struct pva_cmd_status_regs *status_regs)
 {
 	int err = 0;
+
+	if(!pva->booted)
+		err = -ENODEV;
 
 	switch (pva->submit_cmd_mode) {
 	case PVA_SUBMIT_MODE_MAILBOX:

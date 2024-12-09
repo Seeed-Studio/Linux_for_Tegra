@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2016-2025, NVIDIA CORPORATION. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1013,7 +1013,7 @@ static int pva_open(struct inode *inode, struct file *file)
 	}
 
 	sema_init(&priv->queue->task_pool_sem, MAX_PVA_TASK_COUNT_PER_QUEUE);
-	err = nvhost_module_busy(pva->pdev);
+	err = pva_busy(pva, 2);
 	if (err < 0) {
 		dev_err(&pva->pdev->dev, "error in powering up pva %d",
 			err);
@@ -1032,7 +1032,7 @@ err_alloc_priv:
 	return err;
 }
 
-static void pva_queue_flush(struct pva *pva, struct nvpva_queue *queue)
+static int pva_queue_flush(struct pva *pva, struct nvpva_queue *queue)
 {
 	u32 flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
 	struct pva_cmd_status_regs status = {};
@@ -1040,12 +1040,19 @@ static void pva_queue_flush(struct pva *pva, struct nvpva_queue *queue)
 	int err = 0;
 	u32 nregs;
 
+	if (!pva_recovery_acquire(pva, &pva->ccq_mutex[queue->id + 1])) {
+		nvpva_warn(&pva->pdev->dev,
+			   "queue flush with abort pending ignored");
+		err = -ENODEV;
+		goto err_out;
+	}
+
 	nregs = pva_cmd_abort_task(&cmd, queue->id, flags);
 	err = nvhost_module_busy(pva->pdev);
 	if (err < 0) {
 		dev_err(&pva->pdev->dev, "error in powering up pva %d",
 			err);
-		goto err_out;
+		goto err_cleanup;
 	}
 
 	err = pva->version_config->submit_cmd_sync(pva, &cmd, nregs, queue->id,
@@ -1054,7 +1061,7 @@ static void pva_queue_flush(struct pva *pva, struct nvpva_queue *queue)
 	if (err < 0) {
 		dev_err(&pva->pdev->dev, "failed to issue FW abort command: %d",
 			err);
-		goto err_out;
+		goto err_cleanup;
 	}
 	/* Ensure that response is valid */
 	if (status.error != PVA_ERR_NO_ERROR) {
@@ -1062,8 +1069,10 @@ static void pva_queue_flush(struct pva *pva, struct nvpva_queue *queue)
 			status.error);
 	}
 
+err_cleanup:
+	mutex_unlock(&pva->ccq_mutex[queue->id + 1]);
 err_out:
-	return;
+	return err;
 }
 
 static int pva_release(struct inode *inode, struct file *file)
@@ -1071,16 +1080,18 @@ static int pva_release(struct inode *inode, struct file *file)
 	struct pva_private *priv = file->private_data;
 	bool queue_empty;
 	int i;
+	int err = 0;
 
 	flush_workqueue(priv->pva->task_status_workqueue);
 	mutex_lock(&priv->queue->list_lock);
 	queue_empty = list_empty(&priv->queue->tasklist);
-	mutex_unlock(&priv->queue->list_lock);
 	if (!queue_empty) {
 		/* Cancel remaining tasks */
 		nvpva_dbg_info(priv->pva, "cancel remaining tasks");
-		pva_queue_flush(priv->pva, priv->queue);
+		err = pva_queue_flush(priv->pva, priv->queue);
 	}
+
+	mutex_unlock(&priv->queue->list_lock);
 
 	/* make sure all tasks have been finished */
 	for (i = 0; i < MAX_PVA_TASK_COUNT_PER_QUEUE; i++) {
@@ -1094,7 +1105,7 @@ static int pva_release(struct inode *inode, struct file *file)
 		}
 	}
 
-	nvhost_module_idle(priv->pva->pdev);
+	pva_idle(priv->pva);
 
 	/* Release reference to client */
 	nvpva_client_context_put(priv->client);

@@ -31,10 +31,13 @@ irqreturn_t pva_ccq_isr(int irq, void *dev_id)
 			break;
 		}
 	}
+
 	if (queue_id == MAX_PVA_QUEUE_COUNT + 1) {
-		printk("Invalid IRQ received. Returning from ISR");
+		nvpva_warn(&pdev->dev,
+			   "Invalid IRQ received. Returning from ISR");
 		return IRQ_HANDLED;
 	}
+
 	nvpva_dbg_info(pva, "Received ISR from CCQ block, IRQ: %d", irq);
 	int_status = host1x_readl(pdev, cfg_ccq_status_r(pva->version,
 				queue_id, PVA_CCQ_STATUS2_INDEX))
@@ -54,10 +57,12 @@ irqreturn_t pva_ccq_isr(int irq, void *dev_id)
 		isr_status = host1x_readl(pdev, cfg_ccq_status_r(pva->version,
 					queue_id, PVA_CCQ_STATUS7_INDEX));
 	}
+
 	if (int_status & PVA_VALID_CCQ_AISR) {
 		aisr_status = host1x_readl(pdev, cfg_ccq_status_r(pva->version,
 					queue_id, PVA_CCQ_STATUS8_INDEX));
 	}
+
 	if (aisr_status & PVA_AISR_INT_PENDING) {
 		nvpva_dbg_info(pva, "PVA CCQ AISR (%x)", aisr_status);
 		if (aisr_status &
@@ -76,21 +81,29 @@ irqreturn_t pva_ccq_isr(int irq, void *dev_id)
 				    "PVA AISR: \
 				    PVA_AISR_TASK_ERROR for queue id = %d",
 				    queue_id);
+
 		if (aisr_status & PVA_AISR_ABORT) {
 			nvpva_warn(&pdev->dev, "PVA AISR: \
 				PVA_AISR_ABORT for queue id = %d",
 				queue_id);
 			nvpva_warn(&pdev->dev, "Checkpoint value: 0x%08x",
-				    aisr_status);
+				   cfg_ccq_status_r(pva->version,
+						    queue_id,
+						    PVA_CCQ_STATUS6_INDEX));
 			recover = true;
 		}
+
 		/* Acknowledge AISR by writing status 1 */
 		host1x_writel(pdev, cfg_ccq_status_r(pva->version, queue_id,
 			      PVA_CCQ_STATUS1_INDEX), 0x01U);
 	}
+
 	if (isr_status & PVA_INT_PENDING) {
 		pva_ccq_isr_handler(pva, queue_id);
 	}
+
+	pva_trace_copy_to_ftrace(pva);
+
 	if (recover)
 		pva_abort(pva);
 

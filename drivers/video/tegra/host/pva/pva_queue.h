@@ -38,6 +38,12 @@
 
 #define MAX_NUM_FRAMES NVPVA_TASK_MAX_HWSEQ_FRAME_COUNT_T26X
 
+#define PVA_TASK_FREE		0
+#define PVA_TASK_ASSIGNED	1
+#define PVA_TASK_QUEUED		2
+#define PVA_TASK_SUBMITTED	3
+#define PVA_TASK_INVALID	4
+
 struct dma_buf;
 
 extern struct nvpva_queue_ops pva_queue_ops;
@@ -195,6 +201,7 @@ struct pva_submit_task {
 	u64 dst_surf_base_addr;
 	bool is_system_app;
 	bool default_sem_update_method;
+	u8 task_state;
 };
 
 struct pva_submit_tasks {
@@ -220,7 +227,7 @@ struct pva_submit_tasks {
 	ALIGN(((NVPVA_TASK_MAX_PREFENCES * ACTION_LIST_FENCE_SIZE) +           \
 	       ((NVPVA_TASK_MAX_FENCEACTIONS * 2U) * ACTION_LIST_FENCE_SIZE) + \
 	       NVPVA_TASK_MAX_INPUT_STATUS *                                   \
-		       ACTION_LIST_STATUS_OPERATION_SIZE +                     \
+	       ACTION_LIST_STATUS_OPERATION_SIZE +                             \
 	       ACTION_LIST_TERMINATION_SIZE),                                  \
 	      256)
 

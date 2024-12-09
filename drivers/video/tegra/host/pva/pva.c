@@ -71,6 +71,8 @@
 #endif
 
 #include "pva-debug-buffer.h"
+#include "pva_trace.h"
+
 /*
  * NO IOMMU set 0x60000000 as start address.
  * With IOMMU set 0x80000000(>2GB) as startaddress
@@ -250,6 +252,10 @@ static u32 evp_reg_val[EVP_REG_NUM] = {
 	EVP_FIQ_VECTOR
 };
 
+static int pva_cleanup_after_boot_fail(struct platform_device *pdev);
+static int pva_prepare_poweroff_core(struct platform_device *pdev,
+				     bool hold_reset);
+
 /**
  * Allocate and set a circular array for FW to provide status info about
  * completed tasks from all the PVA R5 queues.
@@ -310,7 +316,7 @@ static void pva_free_task_status_buffer(struct pva *pva)
 			  pva->priv_circular_array.pa);
 }
 
-void pva_fw_log_dump(struct pva *pva)
+void pva_fw_log_dump(struct pva *pva, bool hold_mutex)
 {
 	uint32_t tail;
 	char *content;
@@ -321,11 +327,16 @@ void pva_fw_log_dump(struct pva *pva)
 	mutex_lock(&pva->pva_fw_log_mutex);
 
 	fw_log_buffer = (struct pva_kmd_fw_print_buffer *) pva->fw_info.priv2_buffer.va;
+	if(!fw_log_buffer)
+		goto exit;
+
 	tail = fw_log_buffer->tail;
 	content = ((char *)fw_log_buffer) + sizeof(struct pva_kmd_fw_print_buffer);
 
-	//fault_if(tail, GREATER, fw_log_buffer->size, uint32_t, "Firmware print tail is out of bounds\n");
-
+	if(tail > fw_log_buffer->size) {
+		nvpva_err(&pva->pdev->dev, "Firmware print tail is out of bounds");
+		goto exit;
+	}
 
 	while (fw_log_buffer->head != tail) {
 		const char *str = content + fw_log_buffer->head;
@@ -361,14 +372,16 @@ void pva_fw_log_dump(struct pva *pva)
 	if ((fw_log_buffer->flags & PVA_FW_PRINT_BUFFER_FULL_LOG_DROPPED) != 0U)
 		nvpva_err(&pva->pdev->dev, "Firmware print log dropped!");
 
-	mutex_unlock(&pva->pva_fw_log_mutex);
+exit:
+	if(!hold_mutex)
+		mutex_unlock(&pva->pva_fw_log_mutex);
 }
 
 static void pva_fw_log_dump_handler(struct work_struct *work)
 {
 	struct pva *pva = container_of(work, struct pva, pva_fw_log_work);
 
-	pva_fw_log_dump(pva);
+	pva_fw_log_dump(pva, false);
 }
 
 static void pva_fw_log_dump_init(struct pva *pva)
@@ -484,6 +497,11 @@ static int pva_init_fw(struct platform_device *pdev)
 		sema_value |= PVA_VMEM_RD_WAR_DISABLE;
 
 	sema_value |= (PVA_BOOT_INT | PVA_TEST_WAIT | PVA_VMEM_MBX_WAR_ENABLE);
+	pva->boot_count += 1;
+
+	nvpva_dbg_fn(pva, "boot count = %d", pva->boot_count);
+
+	host1x_writel(pdev, hsp_ss0_clr_r(), 0xFFFFFFFF);
 	host1x_writel(pdev, hsp_ss0_set_r(), sema_value);
 
 	if (pva->version == PVA_HW_GEN1) {
@@ -546,23 +564,22 @@ static int pva_init_fw(struct platform_device *pdev)
 #ifdef CONFIG_PVA_INTERRUPT_DISABLED
 	err = pva_poll_mailbox_isr(pva, 600000);
 #else
-	err = pva_mailbox_wait_event(pva, 60000);
+	err = pva_mailbox_wait_event(pva, 60000, false);
 #endif
+	nvpva_dbg_fn(pva, "PVA boot returned: %d", err);
 	if (err) {
 		dev_err(&pdev->dev, "mbox timedout boot sema=%x\n",
 			(host1x_readl(pdev, hsp_ss0_state_r())));
 		goto wait_timeout;
 	}
 
-	pva->cmd_status[PVA_MAILBOX_INDEX] = PVA_CMD_STATUS_INVALID;
-
-	nvpva_dbg_fn(pva, "PVA boot returned: %d", err);
-
 	pva_reset_task_status_buffer(pva);
 	(void)memset(pva->priv_circular_array.va, 0,
 		     pva->priv_circular_array.size);
 wait_timeout:
 out:
+	pva->cmd_status[PVA_MAILBOX_INDEX] = PVA_CMD_STATUS_INVALID;
+
 	return err;
 }
 
@@ -583,10 +600,10 @@ static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
 		}
 
 		pva->co->base_pa = 0;
-		pva->co->base_va = 0;
 	}
 
 	pva->priv1_dma.pa = 0;
+	pva->priv1_dma.va = 0;
 	if (pva->priv2_dma.va) {
 		dma_free_coherent(&pva->aux_pdev->dev, pva->priv2_dma.size,
 				  pva->priv2_dma.va, pva->priv2_dma.pa);
@@ -595,6 +612,8 @@ static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
 	}
 
 	memset(fw_info, 0, sizeof(struct pva_fw));
+	pva->fw_debug_log.addr = NULL;
+	pva->pva_trace.addr = NULL;
 
 	return 0;
 }
@@ -828,9 +847,9 @@ int pva_set_log_level(struct pva *pva, u32 log_level, bool mailbox_locked)
 	nregs = pva_cmd_set_logging_level(&cmd, log_level, flags);
 
 	if (mailbox_locked)
-		pva_mailbox_send_cmd_sync_locked(pva, &cmd, nregs, &status);
+		err = pva_mailbox_send_cmd_sync_locked(pva, &cmd, nregs, &status);
 	else
-		pva_mailbox_send_cmd_sync(pva, &cmd, nregs, &status);
+		err = pva_mailbox_send_cmd_sync(pva, &cmd, nregs, &status);
 
 	if (err < 0)
 		nvpva_warn(&pva->pdev->dev, "mbox set log level failed: %d\n",
@@ -1002,13 +1021,14 @@ int pva_finalize_poweron(struct platform_device *pdev)
 	timestamp = nvpva_get_tsc_stamp();
 
 	nvpva_dbg_fn(pva, "");
+
 	if (!pva->boot_from_file) {
 		nvpva_dbg_fn(pva, "boot from co");
 		pva->co = pva_fw_co_get_info(pva);
 		if (pva->co == NULL) {
 			nvpva_dbg_fn(pva, "failed to get carveout");
 			err = -ENOMEM;
-			goto err_poweron;
+			goto err_poweron_1;
 		}
 
 		nvpva_dbg_fn(pva, "CO base = %llx, CO size = %llu\n",
@@ -1037,7 +1057,7 @@ int pva_finalize_poweron(struct platform_device *pdev)
 
 	if (err < 0) {
 		nvpva_err(&pdev->dev, " pva fw failed to load\n");
-		goto err_poweron;
+		goto err_poweron_1;
 	}
 
 	for (i = 0; i < pva->version_config->irq_count; i++)
@@ -1062,19 +1082,32 @@ int pva_finalize_poweron(struct platform_device *pdev)
 
 	timestamp2 = nvpva_get_tsc_stamp() - timestamp;
 
-	pva_set_log_level(pva, pva->log_level, true);
+	err = pva_set_log_level(pva, pva->log_level, true);
+
+	if (err < 0) {
+		nvpva_err(&pdev->dev, " pva fw init: set log level failed\n");
+		goto err_poweron;
+	}
+
 	pva->booted = true;
-
 	timestamp = nvpva_get_tsc_stamp() - timestamp;
-
-	nvpva_dbg_prof(pva, "Power on took %lld us, without log level%lld\n",
+	nvpva_dbg_prof(pva, "Power on took %lld us, without log level %lld\n",
 		       (32 * timestamp)/1000, (32 * timestamp2)/1000);
+	pva->pva_power_on_err = err;
+
+	pva_trace_copy_to_ftrace(pva);
 
 	return err;
 
 err_poweron:
-	for (i = 0; i < pva->version_config->irq_count; i++)
-		disable_irq(pva->irq[i]);
+
+	pva_trace_copy_to_ftrace(pva);
+	pva_cleanup_after_boot_fail(pdev);
+
+err_poweron_1:
+
+	pva->pva_power_on_err = err;
+
 	return err;
 }
 
@@ -1089,7 +1122,18 @@ void save_fw_debug_log(struct pva *pva)
 	}
 }
 
+static int pva_cleanup_after_boot_fail(struct platform_device *pdev)
+{
+	return pva_prepare_poweroff_core(pdev, false);
+}
+
 int pva_prepare_poweroff(struct platform_device *pdev)
+{
+	return pva_prepare_poweroff_core(pdev, true);
+}
+
+static int pva_prepare_poweroff_core(struct platform_device *pdev,
+				     bool hold_reset)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
@@ -1099,6 +1143,7 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 #endif
 
 	nvpva_dbg_fn(pva, "");
+
 	/*
 	 * Disable IRQs. Interrupt handler won't be under execution after the
 	 * call returns.
@@ -1123,7 +1168,11 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0)
 	reset_control_acquire(pdata->reset_control);
 #endif
-	reset_control_assert(pdata->reset_control);
+	if(hold_reset)
+		reset_control_assert(pdata->reset_control);
+	else
+		reset_control_reset(pdata->reset_control);
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0)
 	reset_control_release(pdata->reset_control);
 #endif
@@ -1132,6 +1181,43 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 	pva_free_fw(pdev, pva);
 
 	return 0;
+}
+
+int pva_busy(struct pva *pva, u32 attempts)
+{
+	int err = 0;
+
+	nvpva_dbg_fn(pva, "b");
+
+#ifdef CONFIG_PM
+	mutex_lock(&pva->pva_busy_mutex);
+	while ( attempts-- > 0) {
+		nvpva_dbg_fn(pva, "%d\n", attempts);
+		err = nvhost_module_busy(pva->pdev);
+		if (err == 0)
+			break;
+
+		if (!pm_runtime_suspended(&pva->pdev->dev))
+			break;
+
+		if(!pva->pdev->dev.power.runtime_error)
+			break;
+
+		pm_runtime_set_suspended(&pva->pdev->dev);
+	}
+
+	mutex_unlock(&pva->pva_busy_mutex);
+#else
+	err = nvhost_module_busy(pva->pdev);
+#endif
+
+	nvpva_dbg_fn(pva, "e");
+	return err;
+}
+
+void pva_idle(struct pva *pva)
+{
+	nvhost_module_idle(pva->pdev);
 }
 
 int pva_hwpm_ip_pm(void *ip_dev, bool disable)
@@ -1342,15 +1428,21 @@ static int pva_probe(struct platform_device *pdev)
 	pdata->private_data = pva;
 	platform_set_drvdata(pdev, pdata);
 	mutex_init(&pva->mailbox_mutex);
-	mutex_init(&pva->ccq_mutex);
+	for (i = 0; i < MAX_PVA_INTERFACE; i++)
+		mutex_init(&pva->ccq_mutex[i]);
+	mutex_init(&pva->recovery_mutex);
+	mutex_init(&pva->pva_busy_mutex);
+	atomic_set(&pva->recovery_cnt, 0);
 	pva->submit_task_mode = PVA_SUBMIT_MODE_MMIO_CCQ;
 	pva->slcg_disable = 0;
 	pva->vmem_war_disable = 0;
 	pva->vpu_printf_enabled = true;
 	pva->vpu_debug_enabled = true;
 	pva->driver_log_mask = NVPVA_DEFAULT_DBG_MASK;
+	pva->log_level = NVPVA_DEFAULT_LG_MASK;
 	pva->profiling_level = 0;
 	pva->stats_enabled = false;
+	pva->in_recovery = false;
 	memset(&pva->vpu_util_info, 0, sizeof(pva->vpu_util_info));
 	pva->syncpts.syncpts_mapped_r = false;
 	pva->syncpts.syncpts_mapped_rw = false;
@@ -1359,6 +1451,7 @@ static int pva_probe(struct platform_device *pdev)
 #endif
 	nvpva_dbg_fn(pva, "match. compatible = %s", match->compatible);
 	pva->is_hv_mode = is_tegra_hypervisor_mode();
+	pva->booted = false;
 	if (pva->is_hv_mode)
 		pva->map_co_needed = false;
 	else
@@ -1379,7 +1472,6 @@ static int pva_probe(struct platform_device *pdev)
 	if (pdata->version == PVA_HW_GEN2)
 		pva->boot_from_file = true;
 #endif
-
 #ifdef __linux__
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 #if KERNEL_VERSION(4, 15, 0) > LINUX_VERSION_CODE
@@ -1629,7 +1721,10 @@ static int __exit pva_remove(struct platform_device *pdev)
 	nvhost_module_deinit(pdev);
 	mutex_destroy(&pdata->lock);
 	mutex_destroy(&pva->mailbox_mutex);
-	mutex_destroy(&pva->ccq_mutex);
+	for (i = 0; i < MAX_PVA_INTERFACE; i++)
+		mutex_destroy(&pva->ccq_mutex[i]);
+	mutex_destroy(&pva->recovery_mutex);
+	mutex_destroy(&pva->pva_busy_mutex);
 	mutex_destroy(&pva->pva_auth.allow_list_lock);
 	mutex_destroy(&pva->pva_auth_sys.allow_list_lock);
 

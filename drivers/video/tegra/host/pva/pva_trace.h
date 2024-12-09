@@ -6,6 +6,8 @@
 #ifndef _PVA_TRACE_H_
 #define _PVA_TRACE_H_
 
+#define NVPVA_DEFAULT_LG_MASK 0x00000000
+
 /*
  * Individual Trace point
  *

@@ -59,14 +59,14 @@ static int pva_ccq_wait(struct pva *pva, int timeout)
 }
 
 int pva_ccq_send_task_t19x(struct pva *pva, u32 queue_id, dma_addr_t task_addr,
-			   u8 batchsize, u32 flags)
+			   u8 batchsize, u8 *task_status, u32 flags)
 {
 	int err = 0;
 	struct pva_cmd_s cmd = {0};
 
 	(void)pva_cmd_submit_batch(&cmd, queue_id, task_addr, batchsize, flags);
 
-	mutex_lock(&pva->ccq_mutex);
+	mutex_lock(&pva->ccq_mutex[1]);
 	err = pva_ccq_wait(pva, 100);
 	if (err < 0)
 		goto err_wait_ccq;
@@ -75,12 +75,12 @@ int pva_ccq_send_task_t19x(struct pva *pva, u32 queue_id, dma_addr_t task_addr,
 	host1x_writel(pva->pdev, cfg_ccq_r(pva->version, 0), cmd.cmd_field[1]);
 	host1x_writel(pva->pdev, cfg_ccq_r(pva->version, 0), cmd.cmd_field[0]);
 
-	mutex_unlock(&pva->ccq_mutex);
+	mutex_unlock(&pva->ccq_mutex[1]);
 
 	return err;
 
 err_wait_ccq:
-	mutex_unlock(&pva->ccq_mutex);
+	mutex_unlock(&pva->ccq_mutex[1]);
 	pva_abort(pva);
 
 	return err;

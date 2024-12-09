@@ -119,12 +119,10 @@ struct pva_version_info {
 #endif
 
 enum nvpva_dbg_categories {
-	pva_dbg_info    = BIT(0),  /* slightly verbose info */
-	pva_dbg_fn      = BIT(2),  /* fn name tracing */
-	pva_dbg_reg     = BIT(3),  /* register accesses, very verbose */
-	pva_dbg_prof    = BIT(7),  /* profiling info */
-	pva_dbg_powercycle    = BIT(8),  /* poer cycle info */
-	pva_dbg_mem     = BIT(31), /* memory accesses, very verbose */
+	pva_dbg_info     = BIT(0),  /* slightly verbose info */
+	pva_dbg_fn       = BIT(2),  /* fn name tracing */
+	pva_dbg_prof     = BIT(7),  /* profiling info */
+	pva_dbg_fw_trace = BIT(8),  /* FW trace logs */
 };
 
 #if defined(NVPVA_DEBUG)
@@ -165,8 +163,8 @@ enum nvpva_dbg_categories {
 #define nvpva_dbg_prof(pva, fmt, arg...) \
 	nvpva_dbg(pva, pva_dbg_prof, fmt, ##arg)
 
-#define nvpva_dbg_powercycle(pva, fmt, arg...) \
-	nvpva_dbg(pva, pva_dbg_powercycle, fmt, ##arg)
+#define nvpva_dbg_fw_trace(pva, fmt, arg...) \
+	nvpva_dbg(pva, pva_dbg_fw_trace, fmt, ##arg)
 
 /**
  * @brief		struct to hold the segment details
@@ -298,7 +296,7 @@ struct pva_version_config {
 				      u32 isr_status,
 				      struct pva_cmd_status_regs *status_out);
 	int (*ccq_send_task)(struct pva *pva, u32 queue_id,
-			     dma_addr_t task_addr, u8 batchsize, u32 flags);
+			     dma_addr_t task_addr, u8 batchsize, u8 *task_status, u32 flags);
 	int (*submit_cmd_sync_locked)(struct pva *pva, struct pva_cmd_s *cmd,
 				      u32 nregs, u32 queue_id,
 				      struct pva_cmd_status_regs *status_regs);
@@ -410,8 +408,9 @@ struct pva {
 	struct pva_cmd_status_regs cmd_status_regs[MAX_PVA_INTERFACE];
 	enum pva_cmd_status cmd_status[MAX_PVA_INTERFACE];
 	struct mutex mailbox_mutex;
-
-	struct mutex ccq_mutex;
+	struct mutex recovery_mutex;
+	struct mutex pva_busy_mutex;
+	struct mutex ccq_mutex[MAX_PVA_INTERFACE];
 
 	struct pva_crashdump_debugfs_entry debugfs_entry_r5;
 	struct pva_crashdump_debugfs_entry debugfs_entry_vpu0;
@@ -431,6 +430,7 @@ struct pva {
 	u32 circular_array_wr_pos;
 	struct work_struct task_update_work;
 	atomic_t n_pending_tasks;
+	atomic_t recovery_cnt;
 	struct workqueue_struct *task_status_workqueue;
 	struct pva_trace_log pva_trace;
 	struct pva_fw_debug_log fw_debug_log;
@@ -438,6 +438,8 @@ struct pva {
 	u32 submit_cmd_mode;
 
 	u32 r5_dbg_wait;
+	u32 boot_count;
+	int pva_power_on_err;
 	bool timeout_enabled;
 	u32 slcg_disable;
 	u32 vmem_war_disable;
@@ -447,9 +449,10 @@ struct pva {
 	bool map_co_needed;
 	bool boot_from_file;
 	bool is_hv_mode;
+	bool in_recovery;
 	struct pva_vpu_util_info vpu_util_info;
 	u32 profiling_level;
-
+	atomic_t ccq_polling[MAX_PVA_INTERFACE];
 	struct work_struct pva_abort_handler_work;
 	struct work_struct pva_fw_log_work;
 	struct mutex pva_fw_log_mutex;
@@ -494,7 +497,7 @@ void pva_trace_copy_to_ftrace(struct pva *pva);
  * @pva Pointer to pva structure
  *
  */
-void pva_fw_log_dump(struct pva *pva);
+void pva_fw_log_dump(struct pva *pva, bool hold_mutex);
 
 /**
  * @brief	Register PVA ISR
@@ -544,6 +547,15 @@ void pva_abort_init(struct pva *pva);
  */
 void pva_abort(struct pva *pva);
 
+/**
+ * @brief	Check if PVA is in recovery
+ *
+ * @param pva	Pointer to PVA structure
+ * @return	True if in recover, else false
+ *
+ */
+bool pva_recovery_acquire(struct pva *pva, struct mutex *mutex);
+void pva_recovery_release(struct pva *pva);
 /**
  * @brief	Run the ucode selftests
  *
@@ -639,3 +651,6 @@ static inline u64 nvpva_get_tsc_stamp(void)
 	return timestamp;
 }
 #endif
+
+int pva_busy(struct pva *pva, u32 attempts);
+void pva_idle(struct pva *pva);

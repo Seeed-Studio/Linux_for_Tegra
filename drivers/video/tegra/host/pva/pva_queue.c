@@ -1110,9 +1110,21 @@ static int pva_task_submit_mmio_ccq(struct pva_submit_task *task, u8 batchsize)
 	u32 flags = PVA_CMD_INT_ON_ERR;
 	int err = 0;
 
+	mutex_lock(&task->pva->ccq_mutex[task->queue->id + 1]);
+
+	if (task->task_state != PVA_TASK_QUEUED) {
+		err = -EINVAL;
+		goto err_invalid;
+	}
+
 	/* Construct submit command */
 	err = task->pva->version_config->ccq_send_task(
-	    task->pva, task->queue->id, task->dma_addr, batchsize, flags);
+	    task->pva, task->queue->id, task->dma_addr, batchsize, &task->task_state, flags);
+
+err_invalid:
+
+	mutex_unlock(&task->pva->ccq_mutex[task->queue->id  + 1]);
+
 	return err;
 }
 static int pva_task_submit_mailbox(struct pva_submit_task *task, u8 batchsize)
@@ -1122,6 +1134,15 @@ static int pva_task_submit_mailbox(struct pva_submit_task *task, u8 batchsize)
 	struct pva_cmd_s cmd;
 	u32 flags, nregs;
 	int err = 0;
+
+	mutex_lock(&task->pva->mailbox_mutex);
+	if (task->task_state != PVA_TASK_QUEUED) {
+		err = -EINVAL;
+		mutex_unlock(&task->pva->mailbox_mutex);
+		goto out;
+	}
+
+	mutex_unlock(&task->pva->mailbox_mutex);
 
 	/* Construct submit command */
 	flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
@@ -1143,7 +1164,6 @@ static int pva_task_submit_mailbox(struct pva_submit_task *task, u8 batchsize)
 	}
 
 out:
-
 	return err;
 }
 
@@ -1184,6 +1204,7 @@ static int pva_task_submit(const struct pva_submit_tasks *task_header)
 #else
 	timestamp = arch_counter_get_cntvct();
 #endif
+	mutex_lock(&queue->list_lock);
 	for (i = 0; i < task_header->num_tasks; i++) {
 		struct pva_submit_task *task = task_header->tasks[i];
 		struct pva_hw_task *hw_task = task->va;
@@ -1194,12 +1215,12 @@ static int pva_task_submit(const struct pva_submit_tasks *task_header)
 		nvpva_syncpt_incr_max(queue, task->fence_num);
 		task->client->curr_sema_value += task->sem_num;
 
-		mutex_lock(&queue->list_lock);
 		list_add_tail(&task->node, &queue->tasklist);
-		mutex_unlock(&queue->list_lock);
-
 		hw_task->task.queued_time = timestamp;
+		task->task_state = PVA_TASK_QUEUED;
 	}
+
+	mutex_unlock(&queue->list_lock);
 
 	/*
 	 * TSC timestamp is same as CNTVCT. Task statistics are being
@@ -1263,6 +1284,9 @@ out:
 
 err_submit:
 
+	if ((err == -ETIMEDOUT) || (err == -EINVAL))
+		goto out_err;
+
 	for (i = 0; i < task_header->num_tasks; i++) {
 		struct pva_submit_task *task = task_header->tasks[i];
 
@@ -1275,6 +1299,8 @@ err_submit:
 
 		kref_put(&task->ref, pva_task_free);
 	}
+
+out_err:
 
 	return err;
 }
@@ -1449,9 +1475,11 @@ static int pva_queue_submit(struct nvpva_queue *queue, void *args)
 	err = pva_task_submit(task_header);
 	if (err) {
 		dev_err(&queue->vm_pdev->dev, "failed to submit task");
-		mutex_lock(&queue->tail_lock);
-		queue->hw_task_tail = queue->old_tail;
-		mutex_unlock(&queue->tail_lock);
+		if (queue->hw_task_tail != NULL) {
+			mutex_lock(&queue->tail_lock);
+			queue->hw_task_tail = queue->old_tail;
+			mutex_unlock(&queue->tail_lock);
+		}
 	}
 unlock:
 	mutex_unlock(&client->sema_val_lock);
@@ -1553,6 +1581,7 @@ static int pva_queue_abort(struct nvpva_queue *queue)
 
 	list_for_each_entry_safe(task, n, &queue->tasklist, node) {
 		pva_queue_cleanup(queue, task);
+		task->task_state = PVA_TASK_INVALID;
 		list_del(&task->node);
 		kref_put(&task->ref, pva_task_free);
 	}
@@ -1560,6 +1589,7 @@ static int pva_queue_abort(struct nvpva_queue *queue)
 	/* Finish syncpoint increments to release waiters */
 	nvhost_syncpt_set_min_update(queue->vm_pdev, queue->syncpt_id,
 				     atomic_read(&queue->syncpt_maxval));
+	queue->hw_task_tail = NULL;
 	mutex_unlock(&queue->list_lock);
 
 	return 0;
@@ -1575,7 +1605,10 @@ pva_queue_dump_all(struct pva *pva,
 	nvpva_err(&pva->pdev->dev, "Queue %u, Tasks\n", queue->id);
 	mutex_lock(&queue->list_lock);
 	list_for_each_entry(task, &queue->tasklist, node) {
-		nvpva_err(&pva->pdev->dev, "    #%u: exe_id = %u\n", i++, task->exe_id);
+		nvpva_err(&pva->pdev->dev,
+			  "    #%u: exe_id1 = %u, exe_id2 = %u\n",
+			  i++, task->exe_id1, task->exe_id2);
+
 	}
 
 	mutex_unlock(&queue->list_lock);

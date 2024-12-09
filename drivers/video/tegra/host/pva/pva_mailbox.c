@@ -66,7 +66,7 @@ static int pva_mailbox_send_cmd(struct pva *pva, struct pva_cmd_s *cmd,
 	return 0;
 }
 
-int pva_mailbox_wait_event(struct pva *pva, int wait_time)
+int pva_mailbox_wait_event(struct pva *pva, int wait_time, bool abort_ok)
 {
 	int timeout = 1;
 	int err = 0;
@@ -93,15 +93,16 @@ int pva_mailbox_wait_event(struct pva *pva, int wait_time)
 		     && (pva->cmd_status[PVA_MAILBOX_INDEX] !=
 						PVA_CMD_STATUS_ABORTED)) {
 			err = -ETIMEDOUT;
-			pva_abort(pva);
+			if(abort_ok)
+				pva_abort(pva);
 		} else {
 			WARN(true, "wait_event_timeout reported false timeout");
 			if (pva->cmd_status[PVA_MAILBOX_INDEX] ==
 						PVA_CMD_STATUS_ABORTED) {
 				err = -EIO;
+			} else {
+				err = 0;
 			}
-
-			err = 0;
 		}
 	} else if (pva->cmd_status[PVA_MAILBOX_INDEX] ==
 						PVA_CMD_STATUS_ABORTED)
@@ -117,7 +118,8 @@ void pva_mailbox_isr(struct pva *pva)
 	struct platform_device *pdev = pva->pdev;
 	u32 int_status = pva->version_config->read_mailbox(pdev, PVA_MBOX_ISR);
 	if (pva->cmd_status[PVA_MAILBOX_INDEX] != PVA_CMD_STATUS_WFI) {
-		nvpva_warn(&pdev->dev, "Unexpected PVA ISR (%x)", int_status);
+		nvpva_warn(&pdev->dev, "Unexpected PVA ISR (%x, %X), ",
+			   int_status, pva->cmd_status[PVA_MAILBOX_INDEX]);
 		return;
 	}
 
@@ -143,6 +145,9 @@ int pva_mailbox_send_cmd_sync_locked(struct pva *pva,
 {
 	int err = 0;
 
+	if(!pva->booted)
+		err = -ENODEV;
+
 	if (status_regs == NULL) {
 		err = -EINVAL;
 		goto err_invalid_parameter;
@@ -167,7 +172,7 @@ int pva_mailbox_send_cmd_sync_locked(struct pva *pva,
 #ifdef CONFIG_PVA_INTERRUPT_DISABLED
 	err = pva_poll_mailbox_isr(pva, 100000);
 #else
-	err = pva_mailbox_wait_event(pva, 100);
+	err = pva_mailbox_wait_event(pva, 100, true);
 #endif
 	if (err < 0)
 		goto err_wait_response;
@@ -175,15 +180,12 @@ int pva_mailbox_send_cmd_sync_locked(struct pva *pva,
 	/* Return interrupt status back to caller */
 	memcpy(status_regs, &pva->cmd_status_regs,
 				sizeof(struct pva_cmd_status_regs));
-
-	pva->cmd_status[PVA_MAILBOX_INDEX] = PVA_CMD_STATUS_INVALID;
-	return err;
-
 err_wait_response:
 err_send_command:
 	pva->cmd_status[PVA_MAILBOX_INDEX] = PVA_CMD_STATUS_INVALID;
 err_check_status:
 err_invalid_parameter:
+
 	return err;
 }
 

@@ -39,7 +39,7 @@ static irqreturn_t pva_system_isr(int irq, void *dev_id)
 	struct pva *pva = dev_id;
 	struct platform_device *pdev = pva->pdev;
 	u32 checkpoint = host1x_readl(pdev,
-		cfg_ccq_status_r(pva->version, 0, 6));
+		cfg_ccq_status_r(pva->version, 0, PVA_CCQ_STATUS6_INDEX));
 	u32 status7 = pva->version_config->read_mailbox(pdev, PVA_MBOX_ISR);
 	u32 status5 = pva->version_config->read_mailbox(pdev, PVA_MBOX_AISR);
 	u32 lic_int_status = host1x_readl(pdev,
@@ -75,7 +75,6 @@ static irqreturn_t pva_system_isr(int irq, void *dev_id)
 
 	if (status7 & PVA_INT_PENDING) {
 		nvpva_dbg_info(pva, "PVA ISR (%x)", status7);
-
 		pva_mailbox_isr(pva);
 	}
 
