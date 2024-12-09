@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Crypto driver to handle HASH algorithms using NVIDIA Security Engine.
  */
@@ -310,8 +310,9 @@ static int tegra_sha_do_update(struct ahash_request *req)
 {
 	struct tegra_sha_ctx *ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_sha_reqctx *rctx = ahash_request_ctx(req);
-	unsigned int nblks, nresidue, size, ret;
-	u32 *cpuvaddr = ctx->se->cmdbuf->addr;
+	struct tegra_se *se = ctx->se;
+	unsigned int nblks, nresidue, cmdlen, ret;
+	u32 *cpuvaddr = se->cmdbuf->addr;
 
 	nresidue = (req->nbytes + rctx->residue.size) % rctx->blk_size;
 	nblks = (req->nbytes + rctx->residue.size) / rctx->blk_size;
@@ -368,11 +369,10 @@ static int tegra_sha_do_update(struct ahash_request *req)
 	 * This is to support the import/export functionality.
 	 */
 	if (!(rctx->task & SHA_FIRST))
-		tegra_sha_paste_hash_result(ctx->se, rctx);
+		tegra_sha_paste_hash_result(se, rctx);
 
-	size = tegra_sha_prep_cmd(ctx->se, cpuvaddr, rctx);
-
-	ret = tegra_se_host1x_submit(ctx->se, size);
+	cmdlen = tegra_sha_prep_cmd(se, cpuvaddr, rctx);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, cmdlen);
 
 	/*
 	 * If this is not the final update, copy the intermediate results
@@ -380,7 +380,7 @@ static int tegra_sha_do_update(struct ahash_request *req)
 	 * call. This is to support the import/export functionality.
 	 */
 	if (!(rctx->task & SHA_FINAL))
-		tegra_sha_copy_hash_result(ctx->se, rctx);
+		tegra_sha_copy_hash_result(se, rctx);
 
 	dma_free_coherent(ctx->se->dev, rctx->datbuf.size,
 			  rctx->datbuf.buf, rctx->datbuf.addr);
@@ -395,7 +395,7 @@ static int tegra_sha_do_final(struct ahash_request *req)
 	struct tegra_sha_ctx *ctx = crypto_ahash_ctx(tfm);
 	struct tegra_se *se = ctx->se;
 	u32 *cpuvaddr = se->cmdbuf->addr;
-	int size, ret = 0;
+	int cmdlen, ret = 0;
 
 	rctx->datbuf.size = rctx->residue.size;
 	rctx->total_len += rctx->residue.size;
@@ -414,8 +414,8 @@ static int tegra_sha_do_final(struct ahash_request *req)
 		memcpy(rctx->datbuf.buf, rctx->residue.buf, rctx->residue.size);
 	}
 
-	size = tegra_sha_prep_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, size);
+	cmdlen = tegra_sha_prep_cmd(se, cpuvaddr, rctx);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, cmdlen);
 	if (ret)
 		goto out;
 

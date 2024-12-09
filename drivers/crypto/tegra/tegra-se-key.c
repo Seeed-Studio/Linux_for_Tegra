@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Crypto driver file to manage keys of NVIDIA Security Engine.
  */
@@ -177,11 +177,17 @@ static int tegra_key_insert(struct tegra_se *se, const u8 *key,
 			    u32 keylen, u16 slot, u32 alg)
 {
 	const u32 *keyval = (u32 *)key;
-	u32 *addr = se->cmdbuf->addr, size;
+	u32 *addr = se->keybuf->addr, size;
+	int ret;
+
+	mutex_lock(&kslt_lock);
 
 	size = tegra_key_prep_ins_cmd(se, addr, keyval, keylen, slot, alg);
+	ret = tegra_se_host1x_submit(se, se->keybuf, size);
 
-	return tegra_se_host1x_submit(se, size);
+	mutex_unlock(&kslt_lock);
+
+	return ret;
 }
 
 static int tegra_key_move_to_kds(struct tegra_se *se, u32 slot, u32 kds_id)
@@ -192,7 +198,7 @@ static int tegra_key_move_to_kds(struct tegra_se *se, u32 slot, u32 kds_id)
 	src_keyid = SE_KSLT_REGION_ID_SYM | slot;
 	size = tegra_key_prep_mov_cmd(se, se->cmdbuf->addr, src_keyid, kds_id);
 
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, se->keybuf, size);
 	if (ret)
 		return ret;
 
@@ -207,7 +213,7 @@ static unsigned int tegra_kac_get_from_kds(struct tegra_se *se, u32 keyid, u16 s
 	tgt_keyid = SE_KSLT_REGION_ID_SYM | slot;
 	size = tegra_key_prep_mov_cmd(se, se->cmdbuf->addr, keyid, tgt_keyid);
 
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, size);
 	if (ret)
 		tegra_keyslot_free(slot);
 
@@ -219,7 +225,7 @@ static void tegra_key_kds_invalidate(struct tegra_se *se, u32 keyid)
 	unsigned int size;
 
 	size = tegra_key_prep_invld_cmd(se, se->cmdbuf->addr, keyid);
-	tegra_se_host1x_submit(se, size);
+	tegra_se_host1x_submit(se, se->keybuf, size);
 	tegra_kds_free_id(keyid);
 }
 

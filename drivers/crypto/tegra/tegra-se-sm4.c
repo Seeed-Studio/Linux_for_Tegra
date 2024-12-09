@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
- * Crypto driver for NVIDIA Security Engine for block cipher operations.
- *
- * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+ * Crypto driver to handle SM4 block cipher algorithms using NVIDIA Security Engine.
  */
 
 #include <nvidia/conftest.h>
@@ -245,7 +244,7 @@ static int tegra_sm4_do_one_req(struct crypto_engine *engine, void *areq)
 	size = tegra_sm4_prep_cmd(se, cpuvaddr, iv, len, rctx->datbuf.addr,
 					 config, crypto_config);
 
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, size);
 
 	/* Copy the result */
 	dst_nents = sg_nents(req->dst);
@@ -842,7 +841,7 @@ static int tegra_sm4_gcm_do_gmac(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm4
 
 	size = tegra_sm4_gmac_prep_cmd(se, cpuvaddr, rctx);
 
-	return tegra_se_host1x_submit(se, size);
+	return tegra_se_host1x_submit(se, se->cmdbuf, size);
 }
 
 static int tegra_sm4_gcm_do_crypt(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm4_gcm_reqctx *rctx)
@@ -860,7 +859,7 @@ static int tegra_sm4_gcm_do_crypt(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm
 
 	/* Prepare command and submit */
 	size = tegra_sm4_gcm_crypt_prep_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, size);
 	if (ret)
 		return ret;
 
@@ -883,7 +882,7 @@ static int tegra_sm4_gcm_do_final(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm
 
 	/* Prepare command and submit */
 	size = tegra_sm4_gcm_prep_final_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, size);
 	if (ret)
 		return ret;
 
@@ -912,7 +911,7 @@ static int tegra_sm4_gcm_hw_verify(struct tegra_sm4_gcm_ctx *ctx, struct tegra_s
 
 	/* Prepare command and submit */
 	size = tegra_sm4_gcm_prep_final_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, size);
 	if (ret)
 		return ret;
 
@@ -1228,7 +1227,7 @@ static int tegra_sm4_cmac_do_update(struct ahash_request *req)
 
 	size = tegra_sm4_cmac_prep_cmd(se, se->cmdbuf->addr, rctx);
 
-	return tegra_se_host1x_submit(se, size);
+	return tegra_se_host1x_submit(se, se->cmdbuf, size);
 }
 
 static int tegra_sm4_cmac_do_final(struct ahash_request *req)
@@ -1256,7 +1255,7 @@ static int tegra_sm4_cmac_do_final(struct ahash_request *req)
 
 	/* Prepare command and submit */
 	size = tegra_sm4_cmac_prep_cmd(se, se->cmdbuf->addr, rctx);
-	ret = tegra_se_host1x_submit(se, size);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, size);
 	if (ret)
 		goto out;
 
