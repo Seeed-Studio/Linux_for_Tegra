@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * PVA ISR code
  */
@@ -54,8 +54,10 @@ static irqreturn_t pva_system_isr(int irq, void *dev_id)
 			atomic_add(1, &pva->n_pending_tasks);
 			queue_work(pva->task_status_workqueue,
 				   &pva->task_update_work);
-			if ((status5 & PVA_AISR_ABORT) == 0U)
+			if ((status5 & PVA_AISR_ABORT) == 0U) {
 				pva_push_aisr_status(pva, status5);
+				schedule_work(&pva->pva_fw_log_work);
+			}
 		}
 
 		/* For now, just log the errors */

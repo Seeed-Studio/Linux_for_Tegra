@@ -20,12 +20,12 @@
 /* No space in circular buffer to add more logs */
 #define PVA_FW_PRINT_BUFFER_FULL_LOG_DROPPED (1 << 2)
 
-struct PVA_PACKED pva_kmd_fw_print_buffer {
+struct pva_kmd_fw_print_buffer {
 	uint32_t size;
 	uint32_t head;
 	uint32_t tail;
 	uint32_t flags;
 	uint8_t pad0[4];
 	/* Followed by print content */
-};
+} __packed;
 #endif

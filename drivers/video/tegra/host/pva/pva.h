@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Tegra PVA header
  */
@@ -244,6 +244,7 @@ struct pva_fw_debug_log {
 	struct mutex saved_log_lock;
 	u8 *saved_log;
 };
+
 void save_fw_debug_log(struct pva *pva);
 
 /*
@@ -446,6 +447,9 @@ struct pva {
 	u32 profiling_level;
 
 	struct work_struct pva_abort_handler_work;
+	struct work_struct pva_fw_log_work;
+	struct mutex pva_fw_log_mutex;
+
 #ifdef CONFIG_PVA_INTERRUPT_DISABLED
 	struct task_struct *pva_aisr_handler_task;
 #endif
@@ -476,6 +480,17 @@ struct pva {
  *
  */
 void pva_trace_copy_to_ftrace(struct pva *pva);
+
+/**
+ * @brief	Copy FW logs to kernel message log.
+ *
+ * when FW errors occur, this function is called to
+ * dump out the FW log buffer to kernel msg log.
+ *
+ * @pva Pointer to pva structure
+ *
+ */
+void pva_fw_log_dump(struct pva *pva);
 
 /**
  * @brief	Register PVA ISR

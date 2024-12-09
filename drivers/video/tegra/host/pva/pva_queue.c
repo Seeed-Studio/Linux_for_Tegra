@@ -1225,7 +1225,7 @@ static int pva_task_submit(const struct pva_submit_tasks *task_header)
 		/* assume no task has been submitted to firmware from now on */
 		pr_err("pva: failed to submit %u tasks",
 		       task_header->num_tasks);
-		goto remove_tasks;
+		goto err_submit;
 	}
 
 	if (first_task->pva->profiling_level == 0)
@@ -1260,7 +1260,8 @@ static int pva_task_submit(const struct pva_submit_tasks *task_header)
 out:
 	return 0;
 
-remove_tasks:
+err_submit:
+
 	for (i = 0; i < task_header->num_tasks; i++) {
 		struct pva_submit_task *task = task_header->tasks[i];
 

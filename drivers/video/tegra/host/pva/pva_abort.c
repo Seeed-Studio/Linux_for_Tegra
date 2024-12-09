@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/nvhost.h>
@@ -70,6 +70,8 @@ void pva_abort(struct pva *pva)
 {
 	struct platform_device *pdev = pva->pdev;
 	size_t i;
+	u32 checkpoint;
+
 	/* For selftest mode to finish the test */
 	if (host1x_readl(pdev, hsp_ss0_state_r())
 		& PVA_TEST_MODE) {
@@ -79,6 +81,16 @@ void pva_abort(struct pva *pva)
 		}
 		return;
 	}
+
+	/* show checkpoint value here*/
+	checkpoint = host1x_readl(pdev,
+		cfg_ccq_status_r(pva->version, 0, 6));
+	nvpva_warn(&pdev->dev, "Checkpoint value: 0x%08x",
+		   checkpoint);
+
+	/* Copy trace points to ftrace buffer */
+	pva_trace_copy_to_ftrace(pva);
+	pva_fw_log_dump(pva);
 
 	WARN(true, "Attempting to recover the engine");
 	schedule_work(&pva->pva_abort_handler_work);

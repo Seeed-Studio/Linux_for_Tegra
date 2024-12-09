@@ -64,6 +64,7 @@
 #include "nvpva_syncpt.h"
 #include "pva-fw-address-map.h"
 #include "pva_sec_ec.h"
+#include "pva-debug-buffer.h"
 
 #ifdef CONFIG_TEGRA_T26X_GRHOST_PVA
 #include "pva_t264.h"
@@ -307,6 +308,78 @@ static void pva_free_task_status_buffer(struct pva *pva)
 	dma_free_coherent(&pva->aux_pdev->dev, pva->priv_circular_array.size,
 			  pva->priv_circular_array.va,
 			  pva->priv_circular_array.pa);
+}
+
+void pva_fw_log_dump(struct pva *pva)
+{
+	uint32_t tail;
+	char *content;
+	struct pva_kmd_fw_print_buffer *fw_log_buffer;
+	char log_msg[PVA_MAX_DEBUG_LOG_MSG_CHARACTERS];
+
+
+	mutex_lock(&pva->pva_fw_log_mutex);
+
+	fw_log_buffer = (struct pva_kmd_fw_print_buffer *) pva->fw_info.priv2_buffer.va;
+	tail = fw_log_buffer->tail;
+	content = ((char *)fw_log_buffer) + sizeof(struct pva_kmd_fw_print_buffer);
+
+	//fault_if(tail, GREATER, fw_log_buffer->size, uint32_t, "Firmware print tail is out of bounds\n");
+
+
+	while (fw_log_buffer->head != tail) {
+		const char *str = content + fw_log_buffer->head;
+		uint32_t print_size;
+		uint32_t i = 0U;
+
+		if ((fw_log_buffer->head + PVA_MAX_DEBUG_LOG_MSG_CHARACTERS) > fw_log_buffer->size) {
+			fw_log_buffer->head = 0;
+			continue;
+		}
+		/* Scan max of (PVA_MAX_DEBUG_LOG_MSG_CHARACTERS-1) characters for \n or \0 */
+		while ((i < (PVA_MAX_DEBUG_LOG_MSG_CHARACTERS - 1U))
+			&& (str[i] != '\n') && (str[i] != '\0')) {
+
+			log_msg[i] = str[i];
+			i++;
+		}
+		log_msg[i] = '\0';
+
+		nvpva_err(&pva->pdev->dev, "%s", log_msg);
+		/* +1 for null terminator */
+		print_size = i + 1;
+		fw_log_buffer->head += print_size;
+		(void)memset(log_msg, 0, PVA_MAX_DEBUG_LOG_MSG_CHARACTERS);
+	}
+
+	if ((fw_log_buffer->flags & PVA_FW_PRINT_BUFFER_LOG_MSG_OVERFLOWED) != 0U)
+		nvpva_err(&pva->pdev->dev, "Firmware print buffer overflowed!");
+
+	if ((fw_log_buffer->flags & PVA_FW_PRINT_FAILURE) != 0U)
+		nvpva_err(&pva->pdev->dev, "Firmware print failed!");
+
+	if ((fw_log_buffer->flags & PVA_FW_PRINT_BUFFER_FULL_LOG_DROPPED) != 0U)
+		nvpva_err(&pva->pdev->dev, "Firmware print log dropped!");
+
+	mutex_unlock(&pva->pva_fw_log_mutex);
+}
+
+static void pva_fw_log_dump_handler(struct work_struct *work)
+{
+	struct pva *pva = container_of(work, struct pva, pva_fw_log_work);
+
+	pva_fw_log_dump(pva);
+}
+
+static void pva_fw_log_dump_init(struct pva *pva)
+{
+	INIT_WORK(&pva->pva_fw_log_work, pva_fw_log_dump_handler);
+	mutex_init(&pva->pva_fw_log_mutex);
+}
+
+static void pva_fw_log_dump_deinit(struct pva *pva)
+{
+	mutex_destroy(&pva->pva_fw_log_mutex);
 }
 
 static int pva_init_fw(struct platform_device *pdev)
@@ -1394,6 +1467,7 @@ static int pva_probe(struct platform_device *pdev)
 		init_waitqueue_head(&pva->cmd_waitqueue[i]);
 
 	pva_abort_init(pva);
+	pva_fw_log_dump_init(pva);
 
 	err = nvhost_syncpt_unit_interface_init(pdev);
 	if (err)
@@ -1543,6 +1617,7 @@ static int __exit pva_remove(struct platform_device *pdev)
 	pva_auth_allow_list_destroy(&pva->pva_auth_sys);
 	pva_auth_allow_list_destroy(&pva->pva_auth);
 	pva_free_task_status_buffer(pva);
+	pva_fw_log_dump_deinit(pva);
 	nvpva_syncpt_unit_interface_deinit(pdev, pva->aux_pdev);
 	nvpva_client_context_deinit(pva);
 	nvpva_queue_deinit(pva->pool);
