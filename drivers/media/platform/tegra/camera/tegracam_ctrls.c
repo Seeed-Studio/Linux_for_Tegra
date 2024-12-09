@@ -2,7 +2,7 @@
 /*
  * tegracam_ctrls - control framework for tegra camera drivers
  *
- * Copyright (c) 2017-2023, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/nospec.h>
@@ -300,6 +300,7 @@ static int tegracam_set_ctrls(struct tegracam_ctrl_handler *handler,
 	struct sensor_control_properties *ctrlprops = NULL;
 	int err = 0;
 	u32 status = 0;
+	u64 max_exp_time = 0;
 
 	/* For controls that are independent of power state */
 	switch (ctrl->id) {
@@ -334,7 +335,10 @@ static int tegracam_set_ctrls(struct tegracam_ctrl_handler *handler,
 		err = ops->set_frame_rate(tc_dev, *ctrl->p_new.p_s64);
 		break;
 	case TEGRA_CAMERA_CID_EXPOSURE:
-		if (*ctrl->p_new.p_s64 == ctrlprops->max_exp_time.val + 1)
+		if (check_add_overflow(ctrlprops->max_exp_time.val, 1ULL, &max_exp_time))
+			return -EOVERFLOW;
+
+		if (*ctrl->p_new.p_s64 == max_exp_time)
 			return 0;
 		err = ops->set_exposure(tc_dev, *ctrl->p_new.p_s64);
 		break;
@@ -582,6 +586,7 @@ int tegracam_init_ctrl_ranges_by_mode(
 	s64 max_short_exp_time = 0;
 	s64 default_short_exp_time = 0;
 	int i;
+	u64 max_exp_time = 0;
 
 	if (handler->numctrls == 0)
 		return 0;
@@ -620,9 +625,12 @@ int tegracam_init_ctrl_ranges_by_mode(
 				ctrlprops->default_framerate);
 			break;
 		case TEGRA_CAMERA_CID_EXPOSURE:
+			if (check_add_overflow(ctrlprops->max_exp_time.val, 1ULL, &max_exp_time))
+				return -EOVERFLOW;
+
 			err = v4l2_ctrl_modify_range(ctrl,
 				ctrlprops->min_exp_time.val,
-				ctrlprops->max_exp_time.val + 1,
+				max_exp_time,
 				ctrlprops->step_exp_time.val,
 				ctrlprops->default_exp_time.val);
 			break;
@@ -737,37 +745,50 @@ static int tegracam_check_ctrl_ops(
 			if (ops->set_gain == NULL && ops->set_gain_ex == NULL)
 				dev_err(dev,
 					"Missing TEGRA_CAMERA_CID_GAIN implementation\n");
-			if (ops->set_gain != NULL)
-				sensor_ops++;
-			if (ops->set_gain_ex != NULL)
-				sensor_ex_ops++;
+			if (ops->set_gain != NULL) {
+				if (check_add_overflow(sensor_ops, 1, &sensor_ops))
+					return -EOVERFLOW;
+			}
+			if (ops->set_gain_ex != NULL) {
+				if (check_add_overflow(sensor_ex_ops, 1, &sensor_ex_ops))
+					return -EOVERFLOW;
+			}
 			break;
 		case TEGRA_CAMERA_CID_EXPOSURE:
 			if (ops->set_exposure == NULL &&
 				ops->set_exposure_ex == NULL)
 				dev_err(dev,
 					"Missing TEGRA_CAMERA_CID_EXPOSURE implementation\n");
-			if (ops->set_exposure != NULL)
-				sensor_ops++;
-			if (ops->set_exposure_ex != NULL)
-				sensor_ex_ops++;
+			if (ops->set_exposure != NULL) {
+				if (check_add_overflow(sensor_ops, 1, &sensor_ops))
+					return -EOVERFLOW;
+			}
+			if (ops->set_exposure_ex != NULL) {
+				if (check_add_overflow(sensor_ex_ops, 1, &sensor_ex_ops))
+					return -EOVERFLOW;
+			}
 			break;
 		case TEGRA_CAMERA_CID_EXPOSURE_SHORT:
 			if (ops->set_exposure_short == NULL)
 				dev_err(dev,
 					"Missing TEGRA_CAMERA_CID_EXPOSURE_SHORT implementation\n");
 			else
-				sensor_ops++;
+				if (check_add_overflow(sensor_ops, 1, &sensor_ops))
+					return -EOVERFLOW;
 			break;
 		case TEGRA_CAMERA_CID_FRAME_RATE:
 			if (ops->set_frame_rate == NULL &&
 				ops->set_frame_rate_ex == NULL)
 				dev_err(dev,
 					"Missing TEGRA_CAMERA_CID_FRAME_RATE implementation\n");
-			if (ops->set_frame_rate != NULL)
-				sensor_ops++;
-			if (ops->set_frame_rate_ex != NULL)
-				sensor_ex_ops++;
+			if (ops->set_frame_rate != NULL) {
+				if (check_add_overflow(sensor_ops, 1, &sensor_ops))
+					return -EOVERFLOW;
+			}
+			if (ops->set_frame_rate_ex != NULL) {
+				if (check_add_overflow(sensor_ex_ops, 1, &sensor_ex_ops))
+					return -EOVERFLOW;
+			}
 			break;
 		case TEGRA_CAMERA_CID_GROUP_HOLD:
 			dev_err(dev,
@@ -778,21 +799,24 @@ static int tegracam_check_ctrl_ops(
 					TEGRA_CAMERA_CID_EEPROM_DATA, ops) == 0)
 				dev_err(dev, "EEPROM size not specified\n");
 			else
-				string_ops++;
+				if (check_add_overflow(string_ops, 1, &string_ops))
+					return -EOVERFLOW;
 			break;
 		case TEGRA_CAMERA_CID_FUSE_ID:
 			if (tegracam_get_string_ctrl_size(
 					TEGRA_CAMERA_CID_FUSE_ID, ops) == 0)
 				dev_err(dev, "Fuse ID size not specified\n");
 			else
-				string_ops++;
+				if (check_add_overflow(string_ops, 1, &string_ops))
+					return -EOVERFLOW;
 			break;
 		case TEGRA_CAMERA_CID_OTP_DATA:
 			if (tegracam_get_string_ctrl_size(
 					TEGRA_CAMERA_CID_OTP_DATA, ops) == 0)
 				dev_err(dev, "OTP size not specified\n");
 			else
-				string_ops++;
+				if (check_add_overflow(string_ops, 1, &string_ops))
+					return -EOVERFLOW;
 			break;
 		case TEGRA_CAMERA_CID_STEREO_EEPROM:
 			if (tegracam_get_compound_ctrl_size(
@@ -803,7 +827,8 @@ static int tegracam_check_ctrl_ops(
 				dev_err(dev,
 					"Missing compound control implementation for TEGRA_CAMERA_CID_STEREO_EEPROM");
 			else
-				compound_ops++;
+				if (check_add_overflow(compound_ops, 1, &compound_ops))
+					return -EOVERFLOW;
 			break;
 		case TEGRA_CAMERA_CID_ALTERNATING_EXPOSURE:
 			if (tegracam_get_compound_ctrl_size(
@@ -813,13 +838,15 @@ static int tegracam_check_ctrl_ops(
 				dev_err(dev,
 					"Missing control implementation for TEGRA_CAMERA_CID_ALTERNATING_EXPOSURE");
 			else
-				compound_ops++;
+				if (check_add_overflow(compound_ops, 1, &compound_ops))
+					return -EOVERFLOW;
 			break;
 
 		/* The below controls are handled by framework */
 		case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
 		case TEGRA_CAMERA_CID_HDR_EN:
-			mode_ops++;
+			if (check_add_overflow(mode_ops, 1, &mode_ops))
+				return -EOVERFLOW;
 			break;
 		default:
 			break;
@@ -844,10 +871,14 @@ static int tegracam_check_ctrl_ops(
 				ops->set_group_hold_ex == NULL))
 				dev_err(dev,
 					"Missing TEGRA_CAMERA_CID_GROUP_HOLD implementation\n");
-			if (ops->set_group_hold != NULL)
-				default_ops++;
-			if (ops->set_group_hold_ex != NULL)
-				default_ex_ops++;
+			if (ops->set_group_hold != NULL) {
+				if (check_add_overflow(default_ops, 1, &default_ops))
+					return -EOVERFLOW;
+			}
+			if (ops->set_group_hold_ex != NULL) {
+				if (check_add_overflow(default_ex_ops, 1, &default_ex_ops))
+					return -EOVERFLOW;
+			}
 			break;
 		default:
 			break;
