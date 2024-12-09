@@ -194,19 +194,35 @@ static inline int nvmap_handle_mk(struct nvmap_handle *h,
 {
 	int i, nchanged = 0;
 	u32 start_page = offset >> PAGE_SHIFT;
-	u32 end_page = PAGE_ALIGN(offset + size) >> PAGE_SHIFT;
+	u32 end_page;
+	u32 offset_size_sum;
+	int nchanged_inc;
+
+	if (check_add_overflow(offset, size, &offset_size_sum))
+		return 0;
+
+	end_page = PAGE_ALIGN(offset_size_sum) >> PAGE_SHIFT;
 
 	if (!locked)
 		mutex_lock(&h->lock);
+
 	if (h->heap_pgalloc &&
 		(offset < h->size) &&
 		(size <= h->size) &&
 		(offset <= (h->size - size))) {
-		for (i = start_page; i < end_page; i++)
-			nchanged += fn(&h->pgalloc.pages[i]) ? 1 : 0;
+		for (i = start_page; i < end_page; i++) {
+			if (fn(&h->pgalloc.pages[i])) {
+				if (check_add_overflow(nchanged, 1, &nchanged_inc))
+					return 0;
+
+				nchanged = nchanged_inc;
+			}
+		}
 	}
+
 	if (!locked)
 		mutex_unlock(&h->lock);
+
 	return nchanged;
 }
 
