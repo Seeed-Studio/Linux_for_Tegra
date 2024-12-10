@@ -108,6 +108,10 @@ NVMAP_CONFIG_DMABUF_DEFERRED_UNMAPPING := n
 # This config protects the code added for supporting APIs like NvRmMemQueryHandleParams
 # for Foreign fd for a buffer created by OpenRM.
 NVMAP_CONFIG_ENABLE_FOREIGN_BUFFER := y
+
+# Config for enabling nvmap page pool sysfs nodes
+# The nvmap page pool can be enabled/disabled, resized with the help of these sysfs nodes.
+NVMAP_CONFIG_PP_RESIZE := y
 ################################################################################
 # Section 3
 # Enable/Disable configs based upon the kernel version
@@ -121,6 +125,10 @@ endif
 NVMAP_CONFIG_SCIIPC := y
 ifeq ($(CONFIG_DMABUF_DEFERRED_UNMAPPING),y)
 NVMAP_CONFIG_DMABUF_DEFERRED_UNMAPPING := y
+endif
+
+ifeq ($(NV_OOT_NVMAP_IN_EMBEDDED_LINUX),y)
+NVMAP_CONFIG_PP_RESIZE := n
 endif
 
 ################################################################################
@@ -186,5 +194,9 @@ endif #NVMAP_CONFIG_CACHE_FLUSH_AT_ALLOC
 ifeq ($(NVMAP_CONFIG_ENABLE_FOREIGN_BUFFER),y)
 ccflags-y += -DNVMAP_CONFIG_ENABLE_FOREIGN_BUFFER
 endif #NVMAP_CONFIG_ENABLE_FOREIGN_BUFFER
+
+ifeq ($(NVMAP_CONFIG_PP_RESIZE),y)
+ccflags-y += -DNVMAP_CONFIG_PP_RESIZE
+endif #NVMAP_CONFIG_PP_RESIZE
 endif #NVMAP_CONFIG
 endif #CONFIG_ARCH_TEGRA

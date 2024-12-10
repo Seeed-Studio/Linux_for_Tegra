@@ -509,6 +509,7 @@ u32 nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 	return ret;
 }
 
+#ifdef NVMAP_CONFIG_PP_RESIZE
 static ulong nvmap_page_pool_get_unused_pages(void)
 {
 	unsigned long total = 0;
@@ -520,6 +521,7 @@ static ulong nvmap_page_pool_get_unused_pages(void)
 
 	return total;
 }
+#endif /* NVMAP_CONFIG_PP_RESIZE */
 
 /*
  * Remove and free to the system all the pages currently in the page
@@ -544,6 +546,7 @@ int nvmap_page_pool_clear(void)
 	return 0;
 }
 
+#ifdef NVMAP_CONFIG_PP_RESIZE
 /*
  * Resizes the page pool to the passed size. If the passed size is 0 then
  * all associated resources are released back to the system. This operation
@@ -693,6 +696,7 @@ static struct kernel_param_ops pool_size_ops = {
 };
 
 module_param_cb(pool_size, &pool_size_ops, &pool_size, 0644);
+#endif /* NVMAP_CONFIG_PP_RESIZE */
 
 int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 {
@@ -792,6 +796,8 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 					    NULL, "nvmap-bz");
 	if (IS_ERR(background_allocator))
 		goto fail;
+
+#ifdef NVMAP_CONFIG_PP_RESIZE
 #if defined(NV_SHRINKER_ALLOC_PRESENT) /* Linux 6.7 */
 	nvmap_page_pool_shrinker = shrinker_alloc(0, "nvmap_pp_shrinker");
 	if (!nvmap_page_pool_shrinker) {
@@ -810,6 +816,7 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	register_shrinker(&nvmap_page_pool_shrinker);
 #endif
 #endif
+#endif /* NVMAP_CONFIG_PP_RESIZE */
 
 	return 0;
 fail:
@@ -826,6 +833,7 @@ int nvmap_page_pool_fini(struct nvmap_device *dev)
 	 * registered
 	 */
 	if (!IS_ERR_OR_NULL(background_allocator)) {
+#ifdef NVMAP_CONFIG_PP_RESIZE
 #if defined(NV_SHRINKER_ALLOC_PRESENT) /* Linux 6.7 */
 		if (nvmap_page_pool_shrinker != NULL) {
 			shrinker_free(nvmap_page_pool_shrinker);
@@ -834,6 +842,8 @@ int nvmap_page_pool_fini(struct nvmap_device *dev)
 #else
 		unregister_shrinker(&nvmap_page_pool_shrinker);
 #endif
+#endif /* NVMAP_CONFIG_PP_RESIZE */
+
 		kthread_stop(background_allocator);
 		background_allocator = NULL;
 	}
