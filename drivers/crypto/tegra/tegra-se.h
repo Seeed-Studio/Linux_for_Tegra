@@ -532,8 +532,9 @@
 #define SE_GCM_VERIFY_OK	0x5a5a5a5a
 
 #define SHA_FIRST	BIT(0)
-#define SHA_UPDATE	BIT(1)
-#define SHA_FINAL	BIT(2)
+#define SHA_INIT	BIT(1)
+#define SHA_UPDATE	BIT(2)
+#define SHA_FINAL	BIT(3)
 
 #ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
 #define CRYPTO_REGISTER(alg, x) \
