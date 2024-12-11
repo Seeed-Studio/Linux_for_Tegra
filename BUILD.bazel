@@ -80,6 +80,7 @@ kernel_module(
         "drivers/media/platform/tegra/isc/isc_gpio.ko",
         "drivers/media/platform/tegra/isc/isc_mgr.ko",
         "drivers/media/platform/tegra/isc/isc_pwm.ko",
+        "drivers/media/platform/tegra/v4l2loopback/v4l2loopback.ko",
         "drivers/memory/tegra/private-soc/mc-t26x.ko",
         "drivers/memory/tegra/private-soc/mem-qual.ko",
         "drivers/memory/tegra/private-soc/smmu-hwpm.ko",
