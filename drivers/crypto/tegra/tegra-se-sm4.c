@@ -1169,6 +1169,23 @@ static int tegra_sm4_cmac_prep_cmd(struct tegra_se *se, u32 *cpuvaddr, struct te
 	return i;
 }
 
+static void tegra_sm4_cmac_copy_result(struct tegra_se *se, struct tegra_sm4_cmac_reqctx *rctx)
+{
+	int i;
+
+	for (i = 0; i < CMAC_RESULT_REG_COUNT; i++)
+		rctx->result[i] = readl(se->base + se->hw->regs->result + (i * 4));
+}
+
+static void tegra_sm4_cmac_paste_result(struct tegra_se *se, struct tegra_sm4_cmac_reqctx *rctx)
+{
+	int i;
+
+	for (i = 0; i < CMAC_RESULT_REG_COUNT; i++)
+		writel(rctx->result[i],
+		       se->base + se->hw->regs->result + (i * 4));
+}
+
 static int tegra_sm4_cmac_do_init(struct ahash_request *req)
 {
 	struct tegra_sm4_cmac_reqctx *rctx = ahash_request_ctx(req);
@@ -1228,6 +1245,7 @@ static int tegra_sm4_cmac_do_update(struct ahash_request *req)
 	struct tegra_sm4_cmac_ctx *ctx = crypto_ahash_ctx(tfm);
 	struct tegra_se *se = ctx->se;
 	unsigned int nblks, nresidue, size;
+	int ret;
 
 	nresidue = (req->nbytes + rctx->residue.size) % rctx->blk_size;
 	nblks = (req->nbytes + rctx->residue.size) / rctx->blk_size;
@@ -1277,9 +1295,18 @@ static int tegra_sm4_cmac_do_update(struct ahash_request *req)
 	/* Update residue value with the residue after current block */
 	rctx->residue.size = nresidue;
 
-	size = tegra_sm4_cmac_prep_cmd(se, se->cmdbuf->addr, rctx);
+	/*
+	 * If this is not the first task, paste the previous copied
+	 * intermediate results to the registers so that it gets picked up.
+	 */
+	if (!(rctx->task & SHA_FIRST))
+		tegra_sm4_cmac_paste_result(ctx->se, rctx);
 
-	return tegra_se_host1x_submit(se, se->cmdbuf, size);
+	size = tegra_sm4_cmac_prep_cmd(se, se->cmdbuf->addr, rctx);
+	ret = tegra_se_host1x_submit(se, se->cmdbuf, size);
+	tegra_sm4_cmac_copy_result(ctx->se, rctx);
+
+	return ret;
 }
 
 static int tegra_sm4_cmac_do_final(struct ahash_request *req)
@@ -1304,6 +1331,13 @@ static int tegra_sm4_cmac_do_final(struct ahash_request *req)
 
 		memcpy(rctx->datbuf.buf, rctx->residue.buf, rctx->residue.size);
 	}
+
+	/*
+	 * If this is not the first task, paste the previous copied
+	 * intermediate results to the registers so that it gets picked up.
+	 */
+	if (!(rctx->task & SHA_FIRST))
+		tegra_sm4_cmac_paste_result(ctx->se, rctx);
 
 	/* Prepare command and submit */
 	size = tegra_sm4_cmac_prep_cmd(se, se->cmdbuf->addr, rctx);
@@ -1480,13 +1514,6 @@ static int tegra_sm4_cmac_digest(struct ahash_request *req)
 static int tegra_sm4_cmac_export(struct ahash_request *req, void *out)
 {
 	struct tegra_sm4_cmac_reqctx *rctx = ahash_request_ctx(req);
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct tegra_sm4_cmac_ctx *ctx = crypto_ahash_ctx(tfm);
-	u32 result_reg = ctx->se->hw->regs->result;
-	int i;
-
-	for (i = 0; i < CMAC_RESULT_REG_COUNT; i++)
-		rctx->result[i] = readl(ctx->se->base + result_reg + (i * 4));
 
 	memcpy(out, rctx, sizeof(*rctx));
 
@@ -1496,15 +1523,8 @@ static int tegra_sm4_cmac_export(struct ahash_request *req, void *out)
 static int tegra_sm4_cmac_import(struct ahash_request *req, const void *in)
 {
 	struct tegra_sm4_cmac_reqctx *rctx = ahash_request_ctx(req);
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct tegra_sm4_cmac_ctx *ctx = crypto_ahash_ctx(tfm);
-	u32 result_reg = ctx->se->hw->regs->result;
-	int i;
 
 	memcpy(rctx, in, sizeof(*rctx));
-
-	for (i = 0; i < CMAC_RESULT_REG_COUNT; i++)
-		writel(rctx->result[i], ctx->se->base + result_reg + (i * 4));
 
 	return 0;
 }
