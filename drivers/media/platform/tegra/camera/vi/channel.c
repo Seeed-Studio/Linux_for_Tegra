@@ -115,15 +115,25 @@ static u32 gang_mode_height(enum camera_gang_mode gang_mode,
 
 static void update_gang_mode_params(struct tegra_channel *chan)
 {
+	u32 numerator_product = 0;
+
 	chan->gang_width = gang_mode_width(chan->gang_mode,
 						chan->format.width);
 	chan->gang_height = gang_mode_height(chan->gang_mode,
 						chan->format.height);
-	chan->gang_bytesperline = ((chan->gang_width *
-					chan->fmtinfo->bpp.numerator) /
-					chan->fmtinfo->bpp.denominator);
-	chan->gang_sizeimage = chan->gang_bytesperline *
-					chan->format.height;
+	if (__builtin_umul_overflow(chan->gang_width, chan->fmtinfo->bpp.numerator,
+					&numerator_product)) {
+		dev_err(chan->vi->dev,
+			"%s: calculate the width product failed due to an overflow\n", __func__);
+		return;
+	}
+	chan->gang_bytesperline = (numerator_product / chan->fmtinfo->bpp.denominator);
+	if (__builtin_umul_overflow(chan->gang_bytesperline, chan->format.height,
+					&chan->gang_sizeimage)) {
+		dev_err(chan->vi->dev,
+			"%s: update gang size image failed due to an overflow\n", __func__);
+		return;
+	}
 	gang_buffer_offsets(chan);
 }
 
@@ -157,7 +167,13 @@ static u32 get_aligned_buffer_size(struct tegra_channel *chan,
 	u32 temp_size, size;
 
 	height_aligned = roundup(height, chan->height_align);
-	temp_size = bytesperline * height_aligned;
+
+	if (__builtin_umul_overflow(bytesperline, height_aligned, &temp_size)) {
+		dev_err(&chan->video->dev,
+			"%s: calculate the buffer size failed due to an overflow\n", __func__);
+		return 0;
+	}
+
 	size = roundup(temp_size, chan->size_align);
 
 	return size;
@@ -257,7 +273,15 @@ static void tegra_channel_update_format(struct tegra_channel *chan,
 {
 	u32 denominator = (!bpp->denominator) ? 1 : bpp->denominator;
 	u32 numerator = (!bpp->numerator) ? 1 : bpp->numerator;
-	u32 bytesperline = (width * numerator / denominator);
+	u32 scaled_width = 0;
+	u32 bytesperline = 0;
+
+	if (__builtin_umul_overflow(width, numerator, &scaled_width)) {
+		dev_err(&chan->video->dev, "%s: update format failed due to an overflow\n",
+			__func__);
+		return;
+	}
+	bytesperline = (scaled_width / denominator);
 
 	/* Align stride */
 	if (chan->vi->fops->vi_stride_align)
@@ -389,7 +413,12 @@ void release_buffer(struct tegra_channel *chan,
 	s64 frame_arrived_ts = 0;
 
 	/* release one frame */
-	vbuf->sequence = chan->sequence++;
+	vbuf->sequence = chan->sequence;
+	if (__builtin_uadd_overflow(chan->sequence, 1, &chan->sequence)) {
+		dev_err(&chan->video->dev,
+			"%s: release buffer failed due to an overflow\n", __func__);
+		return;
+	}
 	vbuf->field = V4L2_FIELD_NONE;
 	vb2_set_plane_payload(&vbuf->vb2_buf,
 		0, chan->format.sizeimage);
@@ -543,7 +572,12 @@ static void add_buffer_to_ring(struct tegra_channel *chan,
 	/* Mark buffer state as error before start */
 	spin_lock(&chan->buffer_lock);
 	chan->buffer_state[chan->save_index] = VB2_BUF_STATE_ERROR;
-	chan->buffers[chan->save_index++] = vb;
+	chan->buffers[chan->save_index] = vb;
+	if (__builtin_uadd_overflow(chan->save_index, 1, &chan->save_index)) {
+		dev_err(&chan->video->dev,
+			"%s: save the buffer to the ring failed due to an overflow\n", __func__);
+		return;
+	}
 	if (chan->save_index >= chan->capture_queue_depth)
 		chan->save_index = 0;
 	chan->num_buffers++;
@@ -552,7 +586,7 @@ static void add_buffer_to_ring(struct tegra_channel *chan,
 
 static void update_state_to_buffer(struct tegra_channel *chan, int state)
 {
-	int save_index = (chan->save_index - PREVIOUS_BUFFER_DEC_INDEX);
+	int save_index = ((int)chan->save_index - PREVIOUS_BUFFER_DEC_INDEX);
 
 	/* save index decrements by 2 as 3 bufs are added in ring buffer */
 	if (save_index < 0)
@@ -596,7 +630,7 @@ void tegra_channel_ec_close(struct tegra_mc_vi *vi)
 
 	/* clear all channles sync point fifo context */
 	list_for_each_entry(chan, &vi->vi_chans, list) {
-		memset(&chan->syncpoint_fifo[0],
+		memset(chan->syncpoint_fifo,
 			0, sizeof(chan->syncpoint_fifo));
 	}
 }
@@ -979,6 +1013,11 @@ int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 	}
 
 	/* Power on CSI at the last to complete calibration of mipi lanes */
+	if ((chan->num_subdevs <= 0) || (chan->num_subdevs > MAX_SUBDEVICES)) {
+		dev_err(chan->vi->dev, "%s: set power failed due to an invalid num_subdevs value\n",
+			__func__);
+		return -EINVAL;
+	}
 	for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
 		sd = chan->subdev[num_sd];
 
@@ -1138,10 +1177,17 @@ tegra_channel_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *f)
 	if (f->index >= bitmap_weight(fmts_bitmap, MAX_FORMAT_NUM))
 		return -EINVAL;
 
-	for (i = 0; i < f->index + 1; i++, index++)
+	for (i = 0; i < f->index + 1; i++, index++) {
 		index = find_next_bit(fmts_bitmap, MAX_FORMAT_NUM, index);
+		if (index >= MAX_FORMAT_NUM)
+			break;
+	}
 
-	index -= 1;
+	if (__builtin_usub_overflow(index, 1, &index)) {
+		dev_err(chan->vi->dev, "%s: update pixel format failed due to an overflow\n",
+			__func__);
+		return -EOVERFLOW;
+	}
 	f->pixelformat = tegra_core_get_fourcc_by_idx(chan, index);
 
 	return 0;
@@ -1324,6 +1370,12 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 
 			if (!s_data)
 				break;
+			if (ctrl->val >= ARRAY_SIZE(switch_ctrl_qmenu)) {
+				dev_err(&chan->video->dev,
+					"%s: update enable override failed due to an invalid value\n",
+					__func__);
+				return -EINVAL;
+			}
 			if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON) {
 				s_data->override_enable = true;
 				dev_dbg(&chan->video->dev,
@@ -1343,6 +1395,12 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 				&chan->fmtinfo->bpp, 0);
 		break;
 	case TEGRA_CAMERA_CID_VI_SIZE_ALIGN:
+		if (ctrl->val >= ARRAY_SIZE(size_align_ctrl_qmenu)) {
+			dev_err(&chan->video->dev,
+				"%s: update size alignment failed due to an invalid value\n",
+				__func__);
+			return -EINVAL;
+		}
 		chan->size_align = size_align_ctrl_qmenu[ctrl->val];
 		tegra_channel_update_format(chan, chan->format.width,
 				chan->format.height,
@@ -2123,8 +2181,13 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 				&pix->width, &pix->height, &pix->bytesperline);
 	pix->sizeimage = get_aligned_buffer_size(chan,
 			pix->bytesperline, pix->height);
-	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
-		pix->sizeimage *= 2;
+	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16) {
+		if (__builtin_umul_overflow(pix->sizeimage, 2, &pix->sizeimage)) {
+			dev_err(chan->vi->dev, "%s: update size image failed due to an overflow\n",
+			__func__);
+			return -EOVERFLOW;
+		}
+	}
 
 	return ret;
 }
@@ -2492,21 +2555,24 @@ static int tegra_channel_csi_init(struct tegra_channel *chan)
 	int idx = 0;
 	struct tegra_mc_vi *vi = chan->vi;
 	int ret = 0;
+	unsigned int portnum = 0;
 
 	chan->gang_mode = CAMERA_NO_GANG_MODE;
 	chan->total_ports = 0;
 	memset(&chan->port[0], INVALID_CSI_PORT, TEGRA_CSI_BLOCKS);
-	memset(&chan->syncpoint_fifo[0], 0, sizeof(chan->syncpoint_fifo));
+	memset(chan->syncpoint_fifo, 0, sizeof(chan->syncpoint_fifo));
 	if (chan->pg_mode) {
 		/* If VI has 4 existing channels, chan->id will start
 		 * from 4 for the first TPG channel, which uses PORT_A(0).
 		 * To get the correct PORT number, subtract existing number of
 		 * channels from chan->id.
 		 */
-		chan->port[0] = (chan->id - vi->num_channels)
-				% NUM_TPG_INSTANCE;
-		chan->virtual_channel =  (chan->id - vi->num_channels)
-				/ NUM_TPG_INSTANCE;
+		if (__builtin_usub_overflow(chan->id, vi->num_channels, &portnum)) {
+			dev_err(vi->dev, "%s: csi init failed due to an overflow\n", __func__);
+			return -EOVERFLOW;
+		}
+		chan->port[0] = portnum % NUM_TPG_INSTANCE;
+		chan->virtual_channel = portnum / NUM_TPG_INSTANCE;
 
 		WARN_ON(chan->port[0] > vi->csi->num_tpg_channels);
 		chan->numlanes = 2;
@@ -2534,6 +2600,7 @@ int tegra_channel_init_video(struct tegra_channel *chan)
 {
 	struct tegra_mc_vi *vi = chan->vi;
 	int ret = 0, len = 0;
+	unsigned int portnum = 0;
 
 	if (chan->video) {
 		dev_err(&chan->video->dev, "video device already allocated\n");
@@ -2541,6 +2608,10 @@ int tegra_channel_init_video(struct tegra_channel *chan)
 	}
 
 	chan->video = video_device_alloc();
+	if (chan->video == NULL) {
+		dev_err(vi->dev, "%s: video device alloc error\n", __func__);
+		return -EINVAL;
+	}
 
 	/* Initialize the media entity... */
 	chan->pad.flags = MEDIA_PAD_FL_SINK;
@@ -2563,9 +2634,18 @@ int tegra_channel_init_video(struct tegra_channel *chan)
 	chan->video->fops = &tegra_channel_fops;
 	chan->video->v4l2_dev = &vi->v4l2_dev;
 	chan->video->queue = &chan->queue;
+	if (chan->pg_mode) {
+		if (__builtin_usub_overflow(chan->id, vi->num_channels, &portnum)) {
+			dev_err(&chan->video->dev,
+				"%s: video device init failed due to an overflow\n", __func__);
+			ret = -EOVERFLOW;
+			goto ctrl_init_error;
+		}
+	} else {
+		portnum = chan->port[0];
+	}
 	len = snprintf(chan->video->name, sizeof(chan->video->name), "%s-%s-%u",
-		dev_name(vi->dev), chan->pg_mode ? "tpg" : "output",
-		chan->pg_mode ? (chan->id - vi->num_channels) : chan->port[0]);
+		dev_name(vi->dev), chan->pg_mode ? "tpg" : "output", portnum);
 	if (len < 0) {
 		ret = -EINVAL;
 		goto ctrl_init_error;
@@ -2585,9 +2665,9 @@ int tegra_channel_init_video(struct tegra_channel *chan)
 	return ret;
 
 ctrl_init_error:
-	video_device_release(chan->video);
 	media_entity_cleanup(&chan->video->entity);
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
+	video_device_release(chan->video);
 	return ret;
 }
 EXPORT_SYMBOL(tegra_channel_init_video);
