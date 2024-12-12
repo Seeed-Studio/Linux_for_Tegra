@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0+
-// SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /* -*- c-file-style: "linux" -*- */
 /*
@@ -62,6 +62,7 @@ MODULE_AUTHOR("Vasily Levin, "
 	      "Stefan Diewald,"
 	      "Anton Novikov"
 	      "et al.");
+MODULE_AUTHOR("NVIDIA Corporation");
 #ifdef SNAPSHOT_VERSION
 MODULE_VERSION(__stringify(SNAPSHOT_VERSION));
 #else
@@ -1868,8 +1869,7 @@ static int vidioc_dqbuf(struct file *file, void *fh, struct v4l2_buffer *buf)
 			  (long long)(opener->read_position - 1), index);
 		if (!(dev->buffers[index].buffer.flags &
 		      V4L2_BUF_FLAG_MAPPED)) {
-			dprintk("trying to return not mapped buf[%d]\n", index);
-			return -EINVAL;
+			dprintk("returning not mapped buf[%d]\n", index);
 		}
 		unset_flags(&dev->buffers[index]);
 		*buf = dev->buffers[index].buffer;
