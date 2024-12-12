@@ -909,39 +909,41 @@ static void rtcpu_trace_isp_falcon_event(struct camrtc_event_struct *event)
 	u8 ispfalcon_tag = (u8) ((event->data.data32[0] & 0xFF) >> 1U);
 	u8 ch = (u8) ((event->data.data32[0] & 0xFF00) >> 8U);
 	u8 seq = (u8) ((event->data.data32[0] & 0xFF0000) >> 16U);
-	u32 tstamp = event->data.data32[1];
-	u32 isp_unit_id = event->data.data32[4];
+	u32 low_bits_ts = event->data.data32[1];
+	u32 high_bits_ts = event->data.data32[2];
+	u64 tstamp = ((u64)high_bits_ts << 32U) | low_bits_ts;
+	u32 isp_unit_id = event->data.data32[5];
 
 	switch (ispfalcon_tag) {
 	case TRACE_ISP_FALCON_EVENT_TS:
 		trace_rtcpu_isp_falcon_tile_start(
 			ch, seq, tstamp, isp_unit_id,
-			(u8) (event->data.data32[3] & 0xFF),
-			(u8) ((event->data.data32[3] & 0xFF00) >> 8U),
-			(u16) (event->data.data32[2] & 0xFFFF),
-			(u16) ((event->data.data32[2] & 0xFFFF0000) >> 16U));
+			(u8) (event->data.data32[4] & 0xFF),
+			(u8) ((event->data.data32[4] & 0xFF00) >> 8U),
+			(u16) (event->data.data32[3] & 0xFFFF),
+			(u16) ((event->data.data32[3] & 0xFFFF0000) >> 16U));
 		break;
 	case TRACE_ISP_FALCON_EVENT_TE:
 		trace_rtcpu_isp_falcon_tile_end(
 			ch, seq, tstamp, isp_unit_id,
-			(u8) (event->data.data32[3] & 0xFF),
-			(u8) ((event->data.data32[3] & 0xFF00) >> 8U));
+			(u8) (event->data.data32[4] & 0xFF),
+			(u8) ((event->data.data32[4] & 0xFF00) >> 8U));
 		break;
 	case TRACE_ISP_FALCON_PROFILE_START:
 		trace_rtcpu_isp_falcon_task_start(
 			ch, tstamp, isp_unit_id,
-			event->data.data32[2]);
+			event->data.data32[3]);
 		break;
 	case TRACE_ISP_FALCON_PROFILE_END:
 		trace_rtcpu_isp_falcon_task_end(
 			tstamp, isp_unit_id,
-			event->data.data32[2]);
+			event->data.data32[3]);
 		break;
 	default:
 		trace_rtcpu_isp_falcon(
 			ispfalcon_tag, ch, seq, tstamp, isp_unit_id,
-			event->data.data32[2],
-			event->data.data32[3]);
+			event->data.data32[3],
+			event->data.data32[4]);
 		break;
 	}
 

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #undef TRACE_SYSTEM
@@ -433,13 +433,13 @@ TRACE_EVENT(rtcpu_nvcsi_intr,
  */
 
 TRACE_EVENT(rtcpu_isp_falcon,
-	TP_PROTO(u8 tag, u8 ch, u8 seq, u32 tstamp, u32 isp_unit_id, u32 data, u32 ext_data),
+	TP_PROTO(u8 tag, u8 ch, u8 seq, u64 tstamp, u32 isp_unit_id, u32 data, u32 ext_data),
 	TP_ARGS(tag, ch, seq, tstamp, isp_unit_id, data, ext_data),
 	TP_STRUCT__entry(
 		__field(u8, tag)
 		__field(u8, ch)
 		__field(u8, seq)
-		__field(u32, tstamp)
+		__field(u64, tstamp)
 		__field(u32, isp_unit_id)
 		__field(u32, data)
 		__field(u32, ext_data)
@@ -454,7 +454,7 @@ TRACE_EVENT(rtcpu_isp_falcon,
 		__entry->ext_data = ext_data;
 	),
 	TP_printk(
-		"tag:0x%x tstamp:%u ch:%u isp:%u seq:%u data:0x%08x ext_data:0x%08x",
+		"tag:0x%x tstamp:%llu ch:%u isp:%u seq:%u data:0x%08x ext_data:0x%08x",
 		__entry->tag, __entry->tstamp, __entry->ch, __entry->isp_unit_id, __entry->seq,
 		__entry->data, __entry->ext_data
 	)
@@ -464,11 +464,11 @@ extern const char * const g_trace_isp_falcon_task_strs[];
 extern const unsigned int g_trace_isp_falcon_task_str_count;
 
 TRACE_EVENT(rtcpu_isp_falcon_task_start,
-	TP_PROTO(u8 ch, u32 tstamp, u32 isp_unit_id, u32 task),
+	TP_PROTO(u8 ch, u64 tstamp, u32 isp_unit_id, u32 task),
 	TP_ARGS(ch, tstamp, isp_unit_id, task),
 	TP_STRUCT__entry(
 		__field(u8, ch)
-		__field(u32, tstamp)
+		__field(u64, tstamp)
 		__field(u32, isp_unit_id)
 		__field(u32, task)
 	),
@@ -479,7 +479,7 @@ TRACE_EVENT(rtcpu_isp_falcon_task_start,
 		__entry->task = task;
 	),
 	TP_printk(
-		"tstamp:%u ch:%u isp:%u task:%s",
+		"tstamp:%llu ch:%u isp:%u task:%s",
 		__entry->tstamp, __entry->ch, __entry->isp_unit_id,
 		(__entry->task < g_trace_isp_falcon_task_str_count) ?
 			g_trace_isp_falcon_task_strs[__entry->task] :
@@ -488,10 +488,10 @@ TRACE_EVENT(rtcpu_isp_falcon_task_start,
 );
 
 TRACE_EVENT(rtcpu_isp_falcon_task_end,
-	TP_PROTO(u32 tstamp, u32 isp_unit_id, u32 task),
+	TP_PROTO(u64 tstamp, u32 isp_unit_id, u32 task),
 	TP_ARGS(tstamp, isp_unit_id, task),
 	TP_STRUCT__entry(
-		__field(u32, tstamp)
+		__field(u64, tstamp)
 		__field(u32, isp_unit_id)
 		__field(u32, task)
 	),
@@ -501,7 +501,7 @@ TRACE_EVENT(rtcpu_isp_falcon_task_end,
 		__entry->task = task;
 	),
 	TP_printk(
-		"tstamp:%u isp:%u task:%s",
+		"tstamp:%llu isp:%u task:%s",
 		__entry->tstamp, __entry->isp_unit_id,
 		(__entry->task < g_trace_isp_falcon_task_str_count) ?
 			g_trace_isp_falcon_task_strs[__entry->task] :
@@ -512,14 +512,14 @@ TRACE_EVENT(rtcpu_isp_falcon_task_end,
 
 TRACE_EVENT(rtcpu_isp_falcon_tile_start,
 	TP_PROTO(
-		u8 ch, u8 seq, u32 tstamp, u32 isp_unit_id,
+		u8 ch, u8 seq, u64 tstamp, u32 isp_unit_id,
 		u8 tile_x, u8 tile_y,
 		u16 tile_w, u16 tile_h),
 	TP_ARGS(ch, seq, tstamp, isp_unit_id, tile_x, tile_y, tile_w, tile_h),
 	TP_STRUCT__entry(
 		__field(u8, ch)
 		__field(u8, seq)
-		__field(u32, tstamp)
+		__field(u64, tstamp)
 		__field(u32, isp_unit_id)
 		__field(u8, tile_x)
 		__field(u8, tile_y)
@@ -538,7 +538,7 @@ TRACE_EVENT(rtcpu_isp_falcon_tile_start,
 		__entry->tile_h = tile_h;
 	),
 	TP_printk(
-		"tstamp:%u ch:%u isp:%u seq:%u tile_x:%u tile_y:%u tile_w:%u tile_h:%u",
+		"tstamp:%llu ch:%u isp:%u seq:%u tile_x:%u tile_y:%u tile_w:%u tile_h:%u",
 		__entry->tstamp, __entry->ch, __entry->isp_unit_id, __entry->seq,
 		__entry->tile_x, __entry->tile_y,
 		__entry->tile_w, __entry->tile_h
@@ -546,12 +546,12 @@ TRACE_EVENT(rtcpu_isp_falcon_tile_start,
 );
 
 TRACE_EVENT(rtcpu_isp_falcon_tile_end,
-	TP_PROTO(u8 ch, u8 seq, u32 tstamp, u32 isp_unit_id, u8 tile_x, u8 tile_y),
+	TP_PROTO(u8 ch, u8 seq, u64 tstamp, u32 isp_unit_id, u8 tile_x, u8 tile_y),
 	TP_ARGS(ch, seq, tstamp, isp_unit_id, tile_x, tile_y),
 	TP_STRUCT__entry(
 		__field(u8, ch)
 		__field(u8, seq)
-		__field(u32, tstamp)
+		__field(u64, tstamp)
 		__field(u32, isp_unit_id)
 		__field(u8, tile_x)
 		__field(u8, tile_y)
@@ -566,7 +566,7 @@ TRACE_EVENT(rtcpu_isp_falcon_tile_end,
 		__entry->tile_y = tile_y;
 	),
 	TP_printk(
-		"tstamp:%u ch:%u isp:%u seq:%u tile_x:%u tile_y:%u",
+		"tstamp:%llu ch:%u isp:%u seq:%u tile_x:%u tile_y:%u",
 		__entry->tstamp, __entry->ch, __entry->isp_unit_id, __entry->seq,
 		__entry->tile_x, __entry->tile_y
 	)
