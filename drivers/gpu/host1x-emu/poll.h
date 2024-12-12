@@ -1,7 +1,5 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #ifndef __HOST1X_EMU_POLL_H
 #define __HOST1X_EMU_POLL_H
 
@@ -10,6 +8,7 @@
 #include <linux/timekeeping.h>
 
 struct host1x;
+struct host1x_syncpt;
 struct host1x_syncpt_fence;
 
 struct host1x_fence_list {
@@ -58,4 +57,8 @@ void host1x_poll_add_fence_locked(struct host1x *host, struct host1x_syncpt_fenc
  */
 bool host1x_poll_remove_fence(struct host1x *host, struct host1x_syncpt_fence *fence);
 
+/**
+ * Description: Check if syncpoint fence expired
+ */
+void host1x_poll_irq_check_syncpt_fence(struct host1x_syncpt  *sp);
 #endif

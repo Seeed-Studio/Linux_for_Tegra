@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2024 NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION.  All rights reserved.
 
 # Enable below flag for hypervisor build configuration
 ifeq ($(NV_BUILD_CONFIGURATION_EMU_SYNCPT),1)
 ccflags-y += -DHOST1X_EMU_HYPERVISOR
 endif
+
+#Enable Tasklet based fence scanning in SyncpointIncr
+#ccflags-y += -DHOST1X_EMU_SYNC_INC_TASKLET
 
 ifeq ($(NV_BUILD_CONFIGURATION_EXPOSING_T26X), 1)
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-emu/include

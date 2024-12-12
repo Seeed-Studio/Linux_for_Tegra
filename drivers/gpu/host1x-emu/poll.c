@@ -1,7 +1,5 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "dev.h"
 #include "fence.h"
 #include "poll.h"
@@ -56,28 +54,10 @@ static void host1x_pool_timeout_handler(struct work_struct *work)
     struct host1x_syncpt      *sp;
     struct host1x_syncpt      *tmp_spt;
     struct host1x             *host = pool->host;
-    ktime_t ts = ktime_get();
 
-    spin_lock(&pool->syncpt_list.lock);
-    list_for_each_entry_safe(sp, tmp_spt, &pool->syncpt_list.list, list) {
-        struct host1x_syncpt_fence *fence, *tmp;
-        unsigned int value;
-
-        value = host1x_syncpt_load(sp);
-
-        spin_lock(&sp->fences.lock);
-        list_for_each_entry_safe(fence, tmp, &sp->fences.list, list) {
-            if (((value - fence->threshold) & 0x80000000U) != 0U) {
-                /* Fence is not yet expired, we are done */
-                break;
-            }
-
-            list_del_init(&fence->list);
-            host1x_fence_signal(fence ,ts);
-        }
-        spin_unlock(&sp->fences.lock);
-    }
-    spin_unlock(&pool->syncpt_list.lock);
+	list_for_each_entry_safe(sp, tmp_spt, &pool->syncpt_list.list, list) {
+		host1x_poll_irq_check_syncpt_fence(sp);
+	}
 
     /**
      * TODO: Optimize pool polling mechanism
@@ -116,10 +96,31 @@ int host1x_poll_init(struct host1x *host)
         INIT_LIST_HEAD(&syncpt->list);
 
         /* Add syncpoint to pool list*/
-        list_add(&syncpt->list, &pool->syncpt_list.list);
+	list_add_tail(&syncpt->list, &pool->syncpt_list.list);
     }
 
     return 0;
+}
+
+void host1x_poll_irq_check_syncpt_fence(struct host1x_syncpt  *sp)
+{
+	unsigned int value;
+	unsigned long irqflags;
+	struct host1x_syncpt_fence *fence, *tmp;
+	ktime_t ts = ktime_get();
+
+	value = host1x_syncpt_load(sp);
+	spin_lock_irqsave(&sp->fences.lock, irqflags);
+	list_for_each_entry_safe(fence, tmp, &sp->fences.list, list) {
+		if (((value - fence->threshold) & 0x80000000U) != 0U) {
+			/* Fence is not yet expired, we are done */
+			break;
+		}
+
+		list_del_init(&fence->list);
+		host1x_fence_signal(fence, ts);
+	}
+	spin_unlock_irqrestore(&sp->fences.lock, irqflags);
 }
 
 void host1x_poll_start(struct host1x *host)

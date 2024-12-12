@@ -1,7 +1,5 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
@@ -188,3 +186,9 @@ HOST1X_EMU_EXPORT_DECL(void, host1x_fence_cancel(struct dma_fence *dfence))
     flush_delayed_work(&sf->timeout_work);
 }
 HOST1X_EMU_EXPORT_SYMBOL(host1x_fence_cancel);
+
+HOST1X_EMU_EXPORT_DECL(void, host1x_syncpt_fence_scan(struct host1x_syncpt *sp))
+{
+	host1x_poll_irq_check_syncpt_fence(sp);
+}
+HOST1X_EMU_EXPORT_SYMBOL(host1x_syncpt_fence_scan);

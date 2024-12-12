@@ -1,16 +1,32 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/dma-fence.h>
 #include <linux/slab.h>
 #include <linux/timekeeping.h>
+#include <linux/init.h>
+#include <linux/interrupt.h>
 
 #include "dev.h"
 #include "syncpt.h"
+
+#ifdef HOST1X_EMU_SYNC_INC_TASKLET
+static void tasklet_fn(struct tasklet_struct *unused);
+static DEFINE_PER_CPU(struct host1x_syncpt *, tasklet_sp);
+
+DECLARE_TASKLET(syncpt_tasklet, tasklet_fn);
+
+static void tasklet_fn(struct tasklet_struct *unused)
+{
+	struct host1x_syncpt *sp = NULL;
+
+	sp = this_cpu_read(tasklet_sp);
+	if (sp != NULL)
+		host1x_poll_irq_check_syncpt_fence(sp);
+}
+#endif
 
 static void syncpt_release(struct kref *ref)
 {
@@ -241,7 +257,17 @@ HOST1X_EMU_EXPORT_SYMBOL(host1x_syncpt_read_max);
  */
 HOST1X_EMU_EXPORT_DECL(int, host1x_syncpt_incr(struct host1x_syncpt *sp))
 {
-    return host1x_hw_syncpt_cpu_incr(sp->host, sp);
+	int err;
+
+	err = host1x_hw_syncpt_cpu_incr(sp->host, sp);
+#ifdef HOST1X_EMU_SYNC_INC_TASKLET
+	/*Improve Signaling performance*/
+	this_cpu_write(tasklet_sp, sp);
+	tasklet_schedule(&syncpt_tasklet);
+#else
+	host1x_poll_irq_check_syncpt_fence(sp);
+#endif
+	return err;
 }
 HOST1X_EMU_EXPORT_SYMBOL(host1x_syncpt_incr);
 

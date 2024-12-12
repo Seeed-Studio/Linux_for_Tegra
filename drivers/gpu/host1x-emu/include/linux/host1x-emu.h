@@ -1,7 +1,5 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #ifndef __LINUX_HOST1X_H
 #define __LINUX_HOST1X_H
 
@@ -60,6 +58,8 @@ HOST1X_EMU_EXPORT_DECL(int, host1x_syncpt_incr(struct host1x_syncpt *sp));
 
 HOST1X_EMU_EXPORT_DECL(u32, host1x_syncpt_incr_max(struct host1x_syncpt *sp,
                 u32 incrs));
+
+HOST1X_EMU_EXPORT_DECL(void, host1x_syncpt_fence_scan(struct host1x_syncpt *sp));
 
 HOST1X_EMU_EXPORT_DECL(int, host1x_syncpt_wait_ts(struct host1x_syncpt *sp,
                 u32 thresh, long timeout, u32 *value, ktime_t *ts));
