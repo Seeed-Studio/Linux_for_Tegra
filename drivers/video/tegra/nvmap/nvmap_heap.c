@@ -745,6 +745,7 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 
 	list_add_tail(&heap_block->all_list, &heap->all_list);
 	heap_block->heap = heap;
+	BUG_ON(heap->free_size < len);
 	heap->free_size -= len;
 	heap_block->mem_prot = mem_prot;
 	heap_block->align = align;
