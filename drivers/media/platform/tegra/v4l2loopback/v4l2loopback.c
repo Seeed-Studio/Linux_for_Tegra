@@ -257,7 +257,7 @@ static const struct v4l2_ctrl_config v4l2loopback_ctrl_keepformat = {
 	.min	= 0,
 	.max	= 1,
 	.step	= 1,
-	.def	= 0,
+	.def	= 1,
 	// clang-format on
 };
 static const struct v4l2_ctrl_config v4l2loopback_ctrl_sustainframerate = {
@@ -437,6 +437,13 @@ struct v4l2l_format {
 
 static const unsigned int FORMATS = ARRAY_SIZE(formats);
 
+// Constants for default output format
+static const unsigned int cDefaultWidth = 1280;
+static const unsigned int cDefaultHeight = 720;
+static const unsigned int cDefaultFormat = V4L2_PIX_FMT_BGR32;
+static const unsigned int cDefaultTPFNumerator = 1;
+static const unsigned int cDefaultTPFDenominator = 30;
+
 static char *fourcc2str(unsigned int fourcc, char buf[4])
 {
 	buf[0] = (fourcc >> 0) & 0xFF;
@@ -480,6 +487,19 @@ static void pix_format_set_size(struct v4l2_pix_format *f,
 		f->bytesperline = (width * fmt->depth) >> 3;
 		f->sizeimage = height * f->bytesperline;
 	}
+}
+
+static int set_default_format(struct v4l2_loopback_device *dev)
+{
+	const struct v4l2l_format *format = format_by_fourcc(cDefaultFormat);
+	struct v4l2_pix_format *pix_fmt = &dev->pix_format;
+
+	pix_fmt->width = cDefaultWidth;
+	pix_fmt->height = cDefaultHeight;
+	pix_format_set_size(pix_fmt, format, cDefaultWidth, cDefaultHeight);
+	pix_fmt->pixelformat = format->fourcc;
+	pix_fmt->colorspace = V4L2_COLORSPACE_SRGB;
+	return 0;
 }
 
 static int v4l2l_fill_format(struct v4l2_format *fmt, int capture,
@@ -2533,8 +2553,8 @@ static void init_capture_param(struct v4l2_captureparm *capture_param)
 	capture_param->capturemode = 0;
 	capture_param->extendedmode = 0;
 	capture_param->readbuffers = max_buffers;
-	capture_param->timeperframe.numerator = 1;
-	capture_param->timeperframe.denominator = 30;
+	capture_param->timeperframe.numerator = cDefaultTPFNumerator;
+	capture_param->timeperframe.denominator = cDefaultTPFDenominator;
 }
 
 static void check_timers(struct v4l2_loopback_device *dev)
@@ -2802,7 +2822,9 @@ static int v4l2_loopback_add(struct v4l2_loopback_config *conf, int *ret_nr)
 		V4L2_COLORSPACE_DEFAULT; /* do we need to set this ? */
 	dev->pix_format.field = V4L2_FIELD_NONE;
 
+	set_default_format(dev);
 	dev->buffer_size = PAGE_ALIGN(dev->pix_format.sizeimage);
+	dev->pix_format.sizeimage = dev->buffer_size;
 	dprintk("buffer_size = %ld (=%d)\n", dev->buffer_size,
 		dev->pix_format.sizeimage);
 
