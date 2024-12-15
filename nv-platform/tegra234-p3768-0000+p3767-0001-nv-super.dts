@@ -7,4 +7,5 @@
 
 / {
 	compatible = "nvidia,p3768-0000+p3767-0001-super", "nvidia,p3767-0001", "nvidia,tegra234";
+	model = "NVIDIA Jetson Orin NX Engineering Reference Developer Kit Super";
 };

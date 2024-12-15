@@ -7,6 +7,7 @@
 
 / {
 	compatible = "nvidia,p3768-0000+p3767-0003-super", "nvidia,p3767-0003", "nvidia,tegra234";
+	model = "NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super";
 };
 
 /delete-node/ &{/opp-table-cluster0/opp-1510400000};
