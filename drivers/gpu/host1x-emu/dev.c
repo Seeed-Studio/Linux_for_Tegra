@@ -1,7 +1,5 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include <nvidia/conftest.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -92,6 +90,19 @@ static int host1x_get_assigned_resources(struct host1x *host)
     } else {
         host->polling_intrval = HOST1X_POOL_MSEC_PERIOD;
     }
+
+#ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
+	err = of_property_read_u32_array(np, "nvidia,hr-polling-interval", vals, 1);
+	if (err == 0) {
+		host->hr_polling_intrval = vals[0];
+		if (host->hr_polling_intrval < 50)
+			host->hr_polling_intrval = HRTIMER_TIMEOUT_NSEC;
+	} else {
+		host->hr_polling_intrval = HRTIMER_TIMEOUT_NSEC;
+	}
+	pr_info("Host1x-EMU: HRTimer Resolution :%unsec\n", MONOTONIC_RES_NSEC);
+	pr_info("Host1x-EMU: HRTimer Polling Interval :%unsec\n", host->hr_polling_intrval);
+#endif
 
 #ifdef HOST1X_EMU_HYPERVISOR
     err = of_property_read_u32_array(np, "nvidia,syncpoints-mem", vals, 4);

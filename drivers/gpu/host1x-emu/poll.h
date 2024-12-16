@@ -7,6 +7,11 @@
 #include <linux/kernel.h>
 #include <linux/timekeeping.h>
 
+#ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
+#define HRTIMER_TIMEOUT_NSEC		200000U     /*200usec*/
+#define HRTIMER_TIMEOUT_SEC         0U          /*0sec*/
+#endif /*HOST1X_EMU_HRTIMER_FENCE_SCAN*/
+
 struct host1x;
 struct host1x_syncpt;
 struct host1x_syncpt_fence;

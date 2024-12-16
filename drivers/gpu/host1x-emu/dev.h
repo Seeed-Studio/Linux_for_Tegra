@@ -1,7 +1,5 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #ifndef HOST1X_DEV_H
 #define HOST1X_DEV_H
 
@@ -59,6 +57,9 @@ struct host1x {
     unsigned int syncpt_base;
     unsigned int syncpt_count;
     unsigned int polling_intrval;
+#ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
+	unsigned int hr_polling_intrval;
+#endif
 #ifdef HOST1X_EMU_HYPERVISOR
     void __iomem *syncpt_va_apt;   /* syncpoint apperture mapped in kernel space */
 #else

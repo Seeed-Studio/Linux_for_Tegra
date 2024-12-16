@@ -9,6 +9,9 @@ endif
 #Enable Tasklet based fence scanning in SyncpointIncr
 #ccflags-y += -DHOST1X_EMU_SYNC_INC_TASKLET
 
+# Enable HRTimer based fence scanning
+ccflags-y += -DHOST1X_EMU_HRTIMER_FENCE_SCAN
+
 ifeq ($(NV_BUILD_CONFIGURATION_EXPOSING_T26X), 1)
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-emu/include
 # Enable for verification in VDK. Below allow Emulated Syncpoint driver
