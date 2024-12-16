@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "ether_linux.h"
 
@@ -100,11 +100,10 @@ static void osd_udelay(unsigned long long usec)
  * Algorithm: Invokes OSD function to add sleep.
  *
  * @param[in] umin: Minimum sleep required in micro seconds.
- * @param[in] umax: Maximum sleep required in micro seconds.
  */
-static void osd_usleep_range(unsigned long long umin, unsigned long long umax)
+static void osd_usleep(unsigned long long usec)
 {
-	usleep_range(umin, umax);
+	fsleep(usec);
 }
 
 /**
@@ -926,7 +925,7 @@ void ether_assign_osd_ops(struct osi_core_priv_data *osi_core,
 {
 	osi_core->osd_ops.ops_log = osd_log;
 	osi_core->osd_ops.udelay = osd_udelay;
-	osi_core->osd_ops.usleep_range = osd_usleep_range;
+	osi_core->osd_ops.usleep = osd_usleep;
 	osi_core->osd_ops.padctrl_mii_rx_pins = ether_padctrl_mii_rx_pins;
 #ifdef OSI_DEBUG
 	osi_core->osd_ops.printf = osd_core_printf;
