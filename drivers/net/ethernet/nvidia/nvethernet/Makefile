@@ -1,10 +1,11 @@
 #SPDX-License-Identifier: GPL-2.0-only
-#Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 OSI_COMMON := nvethernetrm/osi/common
 OSI_CORE := nvethernetrm/osi/core
 OSI_DMA := nvethernetrm/osi/dma
 OSI_MACSEC := nvethernetrm/osi/nvmacsecrm
+OSI_XPCS := nvethernetrm/osi/nvxpcsrm
 
 obj-m += nvethernet.o
 
@@ -47,6 +48,7 @@ nvethernet-objs:= ether_linux.o \
 		  $(OSI_CORE)/osi_hal.o \
 		  $(OSI_CORE)/common_macsec.o \
 		  $(OSI_MACSEC)/macsec.o \
+		  $(OSI_XPCS)/nvxpcs.o \
 		  $(OSI_DMA)/osi_dma.o \
 		  $(OSI_DMA)/osi_dma_txrx.o \
 		  $(OSI_CORE)/eqos_core.o \
