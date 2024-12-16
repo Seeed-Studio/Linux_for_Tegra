@@ -79,6 +79,7 @@ static bool nvmap_is_big_page(struct nvmap_page_pool *pool,
 	if (pool->pages_per_big_pg <= 1)
 		return false;
 
+	BUG_ON(nr < idx);
 	if (nr - idx < pool->pages_per_big_pg)
 		return false;
 
