@@ -437,17 +437,17 @@ static int __init tegra_pmc_early_init(void)
 	struct resource regs;
 	struct tegra_pmc *pmc;
 	bool invert;
+	int ret = 0;
 
-	while (true) {
-		np = of_find_matching_node_and_match(np, tegra_pmc_match, &match);
-		if (np == NULL) {
-			/* No More Matches */
-			break;
-		}
+	pmc = kzalloc(sizeof(*pmc), GFP_KERNEL);
+	if (!pmc)
+		return -ENOMEM;
 
-		pmc = kzalloc(sizeof(*pmc), GFP_KERNEL);
-		if (!pmc)
-			return -ENOMEM;
+	for_each_matching_node_and_match(np, tegra_pmc_match, &match) {
+		if (!of_device_is_available(np))
+			continue;
+
+		pmc->soc = match->data;
 
 		/*
 		 * Extract information from the device tree if we've found a
@@ -456,31 +456,32 @@ static int __init tegra_pmc_early_init(void)
 		if (of_address_to_resource(np, 0, &regs) < 0) {
 			pr_err("failed to get PMC registers\n");
 			of_node_put(np);
-			return -ENXIO;
+			ret = -ENXIO;
+			goto err;
 		}
 
 		pmc->base = ioremap(regs.start, resource_size(&regs));
 		if (!pmc->base) {
 			pr_err("failed to map PMC registers\n");
 			of_node_put(np);
-			return -ENXIO;
+			ret = -ENXIO;
+			goto err;
 		}
 
-		if (of_device_is_available(np)) {
-			pmc->soc = match->data;
+		/*
+		 * Invert the interrupt polarity if a PMC device tree node
+		 * exists and contains the nvidia,invert-interrupt property.
+		 */
+		invert = of_property_read_bool(np, "nvidia,invert-interrupt");
 
-			/*
-			 * Invert the interrupt polarity if a PMC device tree node
-			 * exists and contains the nvidia,invert-interrupt property.
-			 */
-			invert = of_property_read_bool(np, "nvidia,invert-interrupt");
+		pmc->soc->setup_irq_polarity(pmc, np, invert);
 
-			pmc->soc->setup_irq_polarity(pmc, np, invert);
-		}
-
-		kfree(pmc);
+		iounmap(pmc->base);
 	}
 
-	return 0;
+err:
+	kfree(pmc);
+
+	return ret;
 }
 early_initcall(tegra_pmc_early_init);
