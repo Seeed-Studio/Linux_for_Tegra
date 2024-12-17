@@ -1,9 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2020-2024, NVIDIA Corporation. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/ioctl.h>
 #include <linux/types.h>
-#include <linux/platform_device.h>
 #include <linux/mailbox_client.h>
 #include <linux/debugfs.h>
 #include <linux/fs.h>
@@ -18,7 +17,13 @@
 #define EXT_CFG_SIDTABLE 0x0
 #define EXT_CFG_SIDCONFIG 0x4
 
-#define MBOX_MSG_LEN 64
+#define MBOX_MSG_LEN			64
+#define MBOX_CHAN_AP1_MUTEX		0xc
+#define MBOX_MUTEX_ACQUIRE		BIT(0)
+#define MBOX_MUTEX_RELEASE		BIT(4)
+#define MBOX_MUTEX_STATE		BIT(16)
+#define MBOX_MUTEX_STATE_ACQUIRED	BIT(16)
+#define MBOX_MUTEX_STATE_RELEASED	0x0
 
 #define RX_READY 1
 #define RX_IDLE 0
@@ -73,6 +78,12 @@ enum {
 	PSC_NUM
 };
 
+enum mbox_mutex_cmd {
+	MUTEX_CMD_ACQUIRE = 0,
+	MUTEX_CMD_RELEASE,
+	MUTEX_CMD_NUM
+};
+
 static struct psc_debug_dev debug_devs[PSC_NUM];
 
 static struct dentry *debugfs[PSC_NUM];
@@ -109,6 +120,56 @@ setup_extcfg(struct platform_device *pdev)
 	return 0;
 }
 
+static int psc_mbox_setup_mutex_channel0(struct mbox_controller *mbox,
+					 struct mbox_client *cl,
+					 enum mbox_mutex_cmd cmd)
+{
+	struct device *dev = cl->dev;
+	struct mbox_chan *chan = &mbox->chans[0];
+	struct mbox_vm_chan *vm_chan;
+	u32 mutex_required;
+	u32 value;
+	u32 expected_state;
+
+	if (!dev) {
+		pr_err("%s: device is NULL\n", __func__);
+		return -ENODEV;
+	}
+
+	if (IS_ERR(chan)) {
+		dev_err(dev, "%s: channel [0] has an error\n", __func__);
+		return PTR_ERR(chan);
+	}
+
+	if (cmd >= MUTEX_CMD_NUM)
+		return -EINVAL;
+
+	/* Skip if nvidia,mailbox-mutex is not defined */
+	if (device_property_read_u32(dev, NV(mailbox-mutex), &mutex_required) != 0)
+		return 0;
+
+	/* Skip if mutex is not required for this mailbox */
+	if (mutex_required != 1)
+		return 0;
+
+	if (cmd == MUTEX_CMD_ACQUIRE) {
+		value = MBOX_MUTEX_ACQUIRE;
+		expected_state = MBOX_MUTEX_STATE_ACQUIRED;
+	} else if (cmd == MUTEX_CMD_RELEASE) {
+		value = MBOX_MUTEX_RELEASE;
+		expected_state = MBOX_MUTEX_STATE_RELEASED;
+	}
+
+	vm_chan = chan->con_priv;
+	writel0(value, vm_chan->base + MBOX_CHAN_AP1_MUTEX);
+
+	/* Check if mutex is acquired/released successfully */
+	value = readl0(vm_chan->base + MBOX_CHAN_AP1_MUTEX);
+	if ((value & MBOX_MUTEX_STATE) != expected_state)
+		return -EBUSY;
+
+	return 0;
+}
 
 static int psc_debug_open(struct inode *inode, struct file *file)
 {
@@ -126,6 +187,12 @@ static int psc_debug_open(struct inode *inode, struct file *file)
 	}
 
 	file->private_data = dbg;
+
+	ret = psc_mbox_setup_mutex_channel0(dbg->mbox, &dbg->cl, MUTEX_CMD_ACQUIRE);
+	if (ret != 0) {
+		dev_err(&pdev->dev, "failed to acquire mutex, err %d\n", ret);
+		goto return_unlock;
+	}
 
 	chan = psc_mbox_request_channel0(dbg->mbox, &dbg->cl);
 	if (IS_ERR(chan) && (PTR_ERR(chan) != -EPROBE_DEFER)) {
@@ -148,15 +215,24 @@ return_unlock:
 static int psc_debug_release(struct inode *inode, struct file *file)
 {
 	struct psc_debug_dev *dbg = file->private_data;
+	struct platform_device *pdev = dbg->pdev;
+	int ret = 0;
 
 	mutex_lock(&dbg->lock);
 
 	mbox_free_channel(dbg->chan);
 
+	ret = psc_mbox_setup_mutex_channel0(dbg->mbox, &dbg->cl, MUTEX_CMD_RELEASE);
+	if (ret != 0) {
+		dev_err(&pdev->dev, "failed to release mutex, err %d\n", ret);
+		goto return_unlock;
+	}
+
 	file->private_data = NULL;
 
+return_unlock:
 	mutex_unlock(&dbg->lock);
-	return 0;
+	return ret;
 }
 
 static ssize_t psc_debug_read(struct file *file, char __user *buffer,

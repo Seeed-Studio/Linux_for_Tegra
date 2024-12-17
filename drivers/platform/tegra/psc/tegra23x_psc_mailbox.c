@@ -6,10 +6,8 @@
 #include <linux/acpi.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
-#include <linux/mailbox_controller.h>
 #include <linux/mailbox_client.h>
 
 /* from drivers/mailbox/mailbox.h */
@@ -18,7 +16,6 @@
 
 #include "tegra23x_psc.h"
 
-#define MBOX_NUM	8
 #define MBOX_REG_OFFSET	0x10000
 /* 16 32-bit registers for MBOX_CHAN_IN/OUT */
 #define MBOX_MSG_SIZE	16
@@ -36,23 +33,6 @@
 
 #define MBOX_CHAN_TX	0x800
 #define MBOX_CHAN_RX	0x1000
-
-struct psc_mbox;
-
-struct mbox_vm_chan {
-	unsigned int irq;
-	void __iomem *base;
-	struct psc_mbox *parent;
-};
-
-struct psc_mbox {
-	struct device *dev;
-	void __iomem *vm_chan_base;
-	struct mbox_chan chan[MBOX_NUM];
-	struct mbox_controller mbox;
-	struct mbox_vm_chan vm_chan[MBOX_NUM];
-};
-
 
 #ifdef PSC_HAVE_NUMA
 
