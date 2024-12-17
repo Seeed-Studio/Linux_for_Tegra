@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 /*
  * drivers/soc/tegra/tegra264-pmc.c
- *
- * Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
- *
  */
 
 #define pr_fmt(fmt) "tegra264-pmc: " fmt
@@ -478,8 +476,6 @@ static int __init tegra_pmc_early_init(void)
 			invert = of_property_read_bool(np, "nvidia,invert-interrupt");
 
 			pmc->soc->setup_irq_polarity(pmc, np, invert);
-
-			of_node_put(np);
 		}
 
 		kfree(pmc);
