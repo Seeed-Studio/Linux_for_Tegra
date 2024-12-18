@@ -453,77 +453,131 @@ static bool cam_fsync_can_generate_precise_freq(
 	return is_30hz;
 }
 
+/** @brief TSC edge register offset mask */
+#define EDGE_OFFSET_MASK 0x0FFFFFFFUL
+/** @brief TSC edge registers count */
+#define MAX_EDGE_REGS 8
+/**
+ * @brief Structure to store edge registers values
+ */
+struct edge_reg_info {
+	/* Array to store edge registers values */
+	u32 regs[MAX_EDGE_REGS];
+	/* Number of configured edge registers in the array */
+	int count;
+};
+
+/**
+ * @brief Compute edge register values for TSC generator
+ *
+ * This function calculates the values to be programmed into the edge registers
+ * of a TSC generator. It handles cases where the number of ticks exceeds the
+ * maximum value that can be stored in a single edge register and generates entry
+ * for multiple edge registers if necessary.
+ *
+ * The function performs the following:
+ * 1. Sets up flags for toggle and loop (if applicable)
+ * 2. If ticks exceed EDGE_OFFSET_MASK, it splits them across multiple registers
+ * 3. Stores the computed values in the provided edge_reg_info structure
+ *
+ * @param info  Pointer to the edge register info structure to store results
+ * @param ticks Number of ticks to configure for this edge
+ * @param loop  Flag indicating if this edge should loop back to the start
+ *
+ * @retval	0		On success
+ * @retval	EFAULT	If unable to program edge registers
+ */
+static int compute_edge_regs(struct edge_reg_info *info, u64 ticks, bool loop)
+{
+	u32 const flags = TSC_GENX_EDGEX_TOGGLE | (loop ? TSC_GENX_EDGEX_LOOP : 0);
+	/**
+	 * Program the edge registers for the generator. There are 8 edge registers
+	 * available for each generator. For each period, program the active and
+	 * inactive ticks based on the duty cycle, using 2 edge registers per period.
+	 *
+	 * For T264, the TSC clock is 1ns, and each edge register can hold up to 28 bits
+	 * (0x0FFFFFFF) of ticks. For lower frequencies (e.g., 10Hz), the TSC ticks for
+	 * active or inactive edges may exceed 28 bits. In such cases, we split the ticks
+	 * across multiple edge registers.
+	 * e.g. For 1HZ signal at 25% duty cycle:
+	 * 1. Active tikcs = 250_000_000
+	 * 2. Inactive ticks = 750_000_000
+	 * 3. Max_ticks in one edge register = 0x0FFFFFFF = 268_435_456
+	 * 4. So we need to program 4 egde registers:
+	 *        Active ticks = EDGE_REG_0 = 250_000_000
+	 *        Inactive ticks = EDGE_REG_1 = 268_435_456
+	 *        Inactive ticks = EDGE_REG_2 = 268_435_456
+	 *        Inactive ticks = EDGE_REG_3 = 213_129_088
+	 * 1. The first register stores the maximum 28-bit value (0x0FFFFFFF)
+	 * 2. The second register stores the remaining ticks and includes the toggle flag
+	 */
+	while ((ticks > 0U) && (info->count < MAX_EDGE_REGS)) {
+		u32 const current_ticks = (u32)min(ticks, (u64)EDGE_OFFSET_MASK);
+
+		info->regs[info->count++] = current_ticks;
+		ticks -= current_ticks;
+	}
+
+	/*
+	 * If this happens, we can't fit the ticks in the edge registers for requested frequency
+	 * This technically should never happen as min possible freq is 1HZ and we can accommodate it
+	 * in 4 edge registers.
+	 */
+	if (ticks > 0U)
+		return -EFAULT;
+
+	/** Update the flags for last edge register */
+	info->regs[info->count-1] |= flags;
+	return 0;
+}
+
 static int cam_fsync_program_group_generator_edges(struct fsync_generator_group *group)
 {
 	struct cam_fsync_generator *generator;
 	u32 max_freq_hz_lcm = cam_fsync_find_max_freq_hz_lcm(group);
-	u64 const ticks_per_hz = DIV_ROUND_CLOSEST(NS_PER_SEC,
-			group->features->ns_per_tick);
-	struct cam_fsync_extra_ticks_and_period extra = {0, 1};
+	u64 const ticks_per_hz = DIV_ROUND_CLOSEST(NS_PER_SEC, group->features->ns_per_tick);
 	bool const can_generate_precise_freq = cam_fsync_can_generate_precise_freq(group);
+	struct cam_fsync_extra_ticks_and_period extra = {0, 1};
 
 	list_for_each_entry(generator, &group->generators, list) {
-		u32 ticks_in_period = 0;
-		u32 ticks_active = 0;
-		u32 ticks_inactive = 0;
-		u32 const edge_reg_offset = 8U;
-		u32 i = 0;
+		u64 ref_ticks_in_period = DIV_ROUND_CLOSEST_ULL(ticks_per_hz, max_freq_hz_lcm);
+		u64 ticks_in_period = ref_ticks_in_period *
+								(max_freq_hz_lcm / generator->config.freq_hz);
+		u64 ticks_active = mult_frac(ticks_in_period, generator->config.duty_cycle, 100);
+		u64 ticks_inactive = ticks_in_period - ticks_active;
+		struct edge_reg_info edge_info = {0};
+		u32 i;
+
 		/**
 		 * Generating a freq with period that is not multiple of TSC unit will
 		 * cause the signal to drift over time. To avoid this, if precise signal
 		 * is supported, calculate the extra ticks over the number of periods
-		 * using @ref getextra_ticksAndPeriodFor30Hz() for accurate phase alignment.
+		 * using @ref cam_fsync_get_extra_ticks_and_period_for_30hz() for accurate phase alignment.
 		 * If the signal is not precise, set the extra ticks to 0 and number of
 		 * periods to 1 which is the default case.
 		 */
 		if (can_generate_precise_freq)
 			cam_fsync_get_extra_ticks_and_period_for_30hz(&extra, ticks_per_hz);
 
-		if (group->features->rational_locking.enforced) {
-			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz,
-				max_freq_hz_lcm);
-			ticks_in_period *= max_freq_hz_lcm / generator->config.freq_hz;
-		} else {
-			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz,
-				generator->config.freq_hz);
-		}
-		ticks_active = mult_frac(ticks_in_period, generator->config.duty_cycle, 100);
-		ticks_inactive = ticks_in_period - ticks_active;
-
-		/**
-		 * Program the edge registers for the generator. There are 8 edge registers
-		 * available for each generator. For each period, program the active and
-		 * inactive ticks. If extra ticks are available, apply them over the
-		 * inactive ticks across the number of periods.
-		 * For each period, 2 edge registers are programmed, one for active and one
-		 * for inactive ticks based on the duty cycle.
-		 */
 		for (i = 0; i < extra.num_periods; i++) {
-			u32 flags = TSC_GENX_EDGEX_TOGGLE;
-			u32 extra_ticks = 0;
+			int ret;
+			u64 extra_ticks = (extra.extra_ticks > 0) ? 1 : 0;
 
-			cam_fsync_generator_writel(generator,
-				TSC_GENX_EDGE0 + (i * edge_reg_offset),
-				flags |
-				FIELD_PREP(TSC_GENX_EDGEX_OFFSET, ticks_active));
+			extra.extra_ticks -= (extra_ticks > 0);
 
-			/**
-			 * If it is the last period, set the loop flag for the last edge register
-			 * to loop back to the first edge register.
-			 */
-			if (i == extra.num_periods - 1)
-				flags |= TSC_GENX_EDGEX_LOOP;
-
-			if (extra.extra_ticks) {
-				extra_ticks = 1;
-				extra.extra_ticks--;
-			}
-
-			cam_fsync_generator_writel(generator,
-				TSC_GENX_EDGE1 + (i * edge_reg_offset),
-				flags |
-				FIELD_PREP(TSC_GENX_EDGEX_OFFSET, ticks_inactive + extra_ticks));
+			ret = compute_edge_regs(&edge_info, ticks_active, false);
+			if (ret < 0)
+				return ret;
+			ret = compute_edge_regs(&edge_info,
+									ticks_inactive + extra_ticks,
+									(i == extra.num_periods - 1));
+			if (ret < 0)
+				return ret;
 		}
+
+		for (i = 0; i < edge_info.count; i++)
+			cam_fsync_generator_writel(generator, TSC_GENX_EDGE0 + (i * 4),
+										edge_info.regs[i]);
 	}
 
 	return 0;
