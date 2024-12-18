@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2017-2023 NVIDIA Corporation.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-common.c
@@ -139,11 +139,8 @@ static inline dma_addr_t mapping_iova(
 	for_each_sgtable_dma_sg(pin->sgt, sg, i) {
 		if (mem_offset_adjusted < sg_dma_len(sg)) {
 			iova = (sg_dma_address(sg) == 0) ? sg_phys(sg) : sg_dma_address(sg);
-			iova += mem_offset_adjusted;
-			if (iova < mem_offset_adjusted) {
-				/** It means iova has wrapped */
+			if (check_add_overflow(iova, mem_offset_adjusted, &iova))
 				return 0;
-			}
 			break;
 		}
 		mem_offset_adjusted -=  sg_dma_len(sg);

@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 /*
  * tegracam_utils - tegra camera framework utilities
- *
- * Copyright (c) 2018-2022, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/types.h>
@@ -47,11 +47,18 @@ EXPORT_SYMBOL_GPL(conv_u16_u8arr);
 
 static inline int is_valid_blob(struct sensor_blob *blob, u32 size)
 {
+	u32 blob_size = 0;
+
 	if (!blob)
 		return -EINVAL;
 
-	if ((blob->num_cmds >= MAX_COMMANDS) ||
-		((blob->buf_size + size) >= MAX_BLOB_SIZE))
+	if (blob->num_cmds >= MAX_COMMANDS)
+		return -ENOMEM;
+
+	if (check_add_overflow(blob->buf_size, size, &blob_size))
+		return -EOVERFLOW;
+
+	if (blob_size > MAX_BLOB_SIZE)
 		return -ENOMEM;
 
 	return 0;
@@ -73,7 +80,8 @@ int prepare_write_cmd(struct sensor_blob *blob,
 
 	memcpy(&blob->buf[blob->buf_size], buf, size);
 
-	blob->buf_size += size;
+	if (check_add_overflow(blob->buf_size, size, &blob->buf_size))
+		return -EOVERFLOW;
 
 	return 0;
 }
@@ -93,7 +101,8 @@ int prepare_read_cmd(struct sensor_blob *blob,
 	cmd->opcode = ((SENSOR_OPCODE_READ << 24) | size);
 	cmd->addr = addr;
 
-	blob->buf_size += size;
+	if (check_add_overflow(blob->buf_size, size, &blob->buf_size))
+		return -EOVERFLOW;
 
 	return 0;
 }
@@ -141,6 +150,7 @@ int convert_table_to_blob(struct sensor_blob *blob,
 	int range_start = -1;
 	u32 range_count = 0;
 	u8 buf[16];
+	u16 range_pos = 0;
 
 	for (next = table;; next++) {
 		val = next->val;
@@ -148,8 +158,11 @@ int convert_table_to_blob(struct sensor_blob *blob,
 		if (range_start == -1)
 			range_start = next->addr;
 
+		if (check_add_overflow((u16)range_start, (u16)range_count, &range_pos))
+			return 0;
+
 		if (range_count == 16 ||
-			(addr != (range_start + range_count))) {
+			(addr != range_pos)) {
 			/* write opcode and size for store index*/
 			prepare_write_cmd(blob, range_count,
 						range_start, &buf[0]);

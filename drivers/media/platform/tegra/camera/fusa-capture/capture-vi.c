@@ -1057,15 +1057,14 @@ EXPORT_SYMBOL_GPL(vi_capture_release);
 
 static int vi_capture_control_send_message(
 	struct tegra_vi_channel *chan,
-	const struct CAPTURE_CONTROL_MSG *msg_cpy,
+	struct CAPTURE_CONTROL_MSG *msg_cpy,
 	size_t size)
 {
 	int err = 0;
 	struct vi_capture *capture = chan->capture_data;
-	struct CAPTURE_MSG_HEADER *header;
 	uint32_t resp_id;
 
-	header = (struct CAPTURE_MSG_HEADER *)msg_cpy;
+	struct CAPTURE_MSG_HEADER *header = &msg_cpy->header;
 	header->channel_id = capture->channel_id;
 
 	switch (header->msg_id) {

@@ -461,8 +461,12 @@ static int isp_capture_setup_inputfences(
 	reloc_page_addr = vmap_base;
 
 	for (i = 0; i < req->inputfences_relocs.num_relocs; i++) {
-		inputfences_offset = request_offset +
-					inpfences_relocs[i];
+		if (check_add_overflow(
+			request_offset, (int)inpfences_relocs[i], (int *)(&inputfences_offset))) {
+			err = -EOVERFLOW;
+			goto fail;
+		}
+
 		err = isp_capture_populate_fence_info(chan, inputfences_offset,
 				req->gos_relative, req->sp_relative, reloc_page_addr);
 		if (err < 0) {
@@ -551,8 +555,12 @@ static int isp_capture_setup_prefences(
 	reloc_page_addr = vmap_base;
 
 	for (i = 0; i < req->prefences_relocs.num_relocs; i++) {
-		prefence_offset = request_offset +
-					prefence_relocs[i];
+		if (check_add_overflow(
+			request_offset, (int)prefence_relocs[i], (int *)(&prefence_offset))) {
+			err = -EOVERFLOW;
+			goto fail;
+		}
+
 		err = isp_capture_populate_fence_info(chan, prefence_offset,
 				req->gos_relative, req->sp_relative, reloc_page_addr);
 		if (err < 0) {
@@ -681,6 +689,7 @@ static int isp_capture_program_prepare(
 	struct memoryinfo_surface *meminfo;
 	struct isp_program_descriptor *desc;
 	uint32_t request_offset;
+	uint32_t mem_offset;
 
 	if (capture == NULL) {
 		dev_err(chan->isp_dev,
@@ -743,9 +752,12 @@ static int isp_capture_program_prepare(
 	request_offset = req->buffer_index *
 			capture->program_desc_ctx.request_size;
 
+	if (check_add_overflow((uint32_t)desc->isp_pb1_mem, request_offset, &mem_offset))
+		return -EOVERFLOW;
+
 	err = capture_common_pin_and_get_iova(chan->capture_data->buffer_ctx,
 		(uint32_t)(desc->isp_pb1_mem >> 32U), /* mem handle */
-		((uint32_t)desc->isp_pb1_mem) + request_offset, /* offset */
+		mem_offset, /* offset */
 		&meminfo->base_address,
 		&meminfo->size,
 		&capture->program_desc_ctx.unpins_list[req->buffer_index]);
@@ -849,17 +861,26 @@ static inline void isp_capture_ivc_program_signal(
 	struct isp_capture *capture,
 	uint32_t buffer_index)
 {
+	uint32_t buffer_slot = 0;
+	uint32_t buffer_depth = 0;
+
 	if (capture->is_progress_status_notifier_set) {
+		if (check_add_overflow(buffer_index,
+			capture->capture_desc_ctx.progress_status_buffer_depth, &buffer_slot))
+			return;
+
+		if (check_add_overflow(capture->program_desc_ctx.progress_status_buffer_depth,
+			capture->capture_desc_ctx.progress_status_buffer_depth, &buffer_depth))
+			return;
+
 		/*
 		 * Program status notifiers are after the process status
 		 * notifiers; add the process status buffer depth as an offset.
 		 */
 		(void)capture_common_set_progress_status(
 			&capture->progress_status_notifier,
-			buffer_index +
-			capture->capture_desc_ctx.progress_status_buffer_depth,
-			capture->program_desc_ctx.progress_status_buffer_depth +
-			capture->capture_desc_ctx.progress_status_buffer_depth,
+			buffer_slot,
+			buffer_depth,
 			PROGRESS_STATUS_DONE);
 	} else {
 		/*
@@ -1746,9 +1767,7 @@ static int pin_isp_capture_request_buffers_locked(
 {
 	struct isp_desc_rec *capture_desc_ctx =
 			&chan->capture_data->capture_desc_ctx;
-	struct isp_capture_descriptor *desc = (struct isp_capture_descriptor *)
-		(capture_desc_ctx->requests.va +
-			req->buffer_index * capture_desc_ctx->request_size);
+	struct isp_capture_descriptor *desc;
 
 	struct isp_capture_descriptor_memoryinfo *desc_mem =
 		&((struct isp_capture_descriptor_memoryinfo *)
@@ -1759,14 +1778,32 @@ static int pin_isp_capture_request_buffers_locked(
 			chan->capture_data->buffer_ctx;
 	int i, j;
 	int err = 0;
+	uint32_t desc_offset = 0;
 
 	/* Pushbuffer 2 is located after isp desc, in same ringbuffer */
-	uint32_t request_offset = req->buffer_index *
-			capture_desc_ctx->request_size;
+	uint32_t request_offset = 0;
+	uint32_t isp_pb2_mem_offset = 0;
+
+	if (check_mul_overflow(req->buffer_index, capture_desc_ctx->request_size, &desc_offset)) {
+		err = -EOVERFLOW;
+		goto fail;
+	}
+
+	desc = (struct isp_capture_descriptor *)(capture_desc_ctx->requests.va + desc_offset);
+
+	if (check_mul_overflow(req->buffer_index, capture_desc_ctx->request_size, &request_offset)) {
+		err = -EOVERFLOW;
+		goto fail;
+	}
+
+	if (check_add_overflow((uint32_t)desc->isp_pb2_mem, request_offset, &isp_pb2_mem_offset)) {
+		err = -EOVERFLOW;
+		goto fail;
+	}
 
 	err = capture_common_pin_and_get_iova(buffer_ctx,
 			(uint32_t)(desc->isp_pb2_mem >> 32U),
-			((uint32_t)desc->isp_pb2_mem) + request_offset,
+			isp_pb2_mem_offset,
 			&desc_mem->isp_pb2_mem.base_address,
 			&desc_mem->isp_pb2_mem.size,
 			request_unpins);

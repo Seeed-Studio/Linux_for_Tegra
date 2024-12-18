@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 /*
  * NVIDIA Tegra Video Input Device Driver Core Helpers
- *
- * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/export.h>
@@ -39,8 +39,13 @@ static const struct tegra_video_format tegra_default_format[] = {
 u32 tegra_core_get_fourcc_by_idx(struct tegra_channel *chan,
 				unsigned int index)
 {
+	unsigned int cal_index = 0;
+
+	if (check_sub_overflow(chan->num_video_formats, 1U, &cal_index))
+		return V4L2_PIX_FMT_SGRBG10;
+
 	/* return default fourcc format if the index out of bounds */
-	if (index > (chan->num_video_formats - 1))
+	if (index > cal_index)
 		return V4L2_PIX_FMT_SGRBG10;
 	index = array_index_nospec(index, chan->num_video_formats);
 
@@ -58,7 +63,12 @@ EXPORT_SYMBOL(tegra_core_get_fourcc_by_idx);
 u32 tegra_core_get_word_count(unsigned int frame_width,
 			      const struct tegra_video_format *fmt)
 {
-	return frame_width * fmt->width / 8;
+	unsigned int pixels_num = 0;
+
+	if (check_mul_overflow(frame_width, fmt->width, &pixels_num))
+		return 0;
+
+	return pixels_num / 8;
 }
 
 /**
@@ -177,7 +187,13 @@ EXPORT_SYMBOL(tegra_core_get_format_by_fourcc);
 u32 tegra_core_bytes_per_line(unsigned int width, unsigned int align,
 			      const struct tegra_video_format *fmt)
 {
-	u32 value = ((width * fmt->bpp.numerator) / fmt->bpp.denominator);
+	unsigned int mul_value = 0;
+	unsigned int value = 0;
+
+	if (check_mul_overflow(width, fmt->bpp.numerator, &mul_value))
+		return 0;
+
+	value = (mul_value / fmt->bpp.denominator);
 
 	return roundup(value, align);
 }
