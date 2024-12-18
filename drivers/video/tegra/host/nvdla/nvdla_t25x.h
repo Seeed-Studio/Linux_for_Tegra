@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Device data for T25X simulator
  */
@@ -14,6 +14,7 @@
 #include "dla_t25x_fw_version.h"
 
 static struct nvhost_device_data t25x_nvdla0_info = {
+	.devfs_name		= "nvdla0",
 	.devfs_name_family	= "nvdla",
 #if defined(BUG_4972382) && (BUG_4972382 == 1)
 	.class			= NV_DLA0_SIM_CLASS_ID,
@@ -27,7 +28,7 @@ static struct nvhost_device_data t25x_nvdla0_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.finalize_poweron	= nvdla_finalize_poweron,
 	.prepare_poweroff	= nvdla_prepare_poweroff,
-	.flcn_isr               = nvdla_flcn_isr,
+	.flcn_isr		= nvdla_flcn_isr,
 	.self_config_flcn_isr	= true,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA25X_FW,
@@ -48,6 +49,7 @@ static struct nvhost_device_data t25x_nvdla0_info = {
 };
 
 static struct nvhost_device_data t25x_nvdla1_info = {
+	.devfs_name		= "nvdla1",
 	.devfs_name_family	= "nvdla",
 #if defined(BUG_4972382) && (BUG_4972382 == 1)
 	.class			= NV_DLA1_SIM_CLASS_ID,
@@ -61,7 +63,7 @@ static struct nvhost_device_data t25x_nvdla1_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.finalize_poweron	= nvdla_finalize_poweron,
 	.prepare_poweroff	= nvdla_prepare_poweroff,
-	.flcn_isr               = nvdla_flcn_isr,
+	.flcn_isr		= nvdla_flcn_isr,
 	.self_config_flcn_isr	= true,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA25X_FW,

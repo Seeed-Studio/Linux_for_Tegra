@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * NVDLA device implementation as AXI client.
  */
@@ -70,7 +70,12 @@ static int32_t s_nvdla_module_get_platform_resources(
 		regs = devm_ioremap_resource(&pdev->dev, r);
 		if (IS_ERR(regs)) {
 			err = PTR_ERR(regs);
+#if defined(BUG_5054810) && (BUG_5054810 == 1)
+			nvdla_dbg_err(pdev, "Failed to map the resources. Continuing as WAR.\n");
+			continue;
+#else
 			goto fail;
+#endif
 		}
 
 		pdata->aperture[i] = regs;
@@ -181,16 +186,16 @@ static int32_t s_nvdla_module_device_create(struct platform_device *pdev)
 	struct class *dla_class;
 	dev_t devno;
 
-	err = alloc_chrdev_region(&devno, 0, NVDLA_NUM_CDEV, "nvhost");
+	err = alloc_chrdev_region(&devno, 0, NVDLA_NUM_CDEV, "nvdla");
 	if (err < 0) {
 		nvdla_dbg_err(pdev, "failed to reserve chrdev region\n");
 		goto fail;
 	}
 
 #if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */
-	dla_class = class_create(pdev->dev.of_node->name);
+	dla_class = class_create(pdata->devfs_name);
 #else
-	dla_class = class_create(THIS_MODULE, pdev->dev.of_node->name);
+	dla_class = class_create(THIS_MODULE, pdata->devfs_name);
 #endif
 	if (IS_ERR(dla_class)) {
 		nvdla_dbg_err(pdev, "failed to create class\n");
@@ -212,10 +217,10 @@ static int32_t s_nvdla_module_device_create(struct platform_device *pdev)
 			devno,
 			NULL,
 			"nvhost-ctrl-%s",
-			pdev->dev.of_node->name);
+			pdata->devfs_name);
 	if (IS_ERR(dev)) {
 		nvdla_dbg_err(pdev, "failed to create nvhost-ctrl-%s device\n",
-			pdev->dev.of_node->name);
+			pdata->devfs_name);
 		err = PTR_ERR(dev);
 		goto delete_cdev;
 	}
@@ -272,7 +277,7 @@ int32_t nvdla_module_init(struct platform_device *pdev)
 		goto disable_pm;
 	}
 
-	pdata->debugfs = debugfs_create_dir(pdev->dev.of_node->name, NULL);
+	pdata->debugfs = debugfs_create_dir(pdata->devfs_name, NULL);
 
 	return 0;
 

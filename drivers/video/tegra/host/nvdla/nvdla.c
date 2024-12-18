@@ -6,6 +6,7 @@
 
 #include <nvidia/conftest.h>
 
+#include <linux/acpi.h>
 #include <linux/arm64-barrier.h>
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -928,6 +929,20 @@ static struct of_device_id tegra_nvdla_of_match[] = {
 		.data = (struct nvhost_device_data *)&t264_sim_nvdla0_info },
 	{ },
 };
+
+static struct acpi_device_id tegra_nvdla_acpi_match[] = {
+	{
+		.id = "NVDA200A",
+		.driver_data = 0x0,
+	},
+	{ },
+};
+
+static void *acpi_data[] = {
+	/*0x0*/ &t25x_nvdla0_info,
+	NULL,
+};
+
 #else
 static struct of_device_id tegra_nvdla_of_match[] = {
 	{
@@ -948,8 +963,18 @@ static struct of_device_id tegra_nvdla_of_match[] = {
 		.data = (struct nvhost_device_data *)&t23x_nvdla1_info },
 	{ },
 };
+
+static struct acpi_device_id tegra_nvdla_acpi_match[] = {
+	{ },
+};
+
+static void *acpi_data[] = {
+	NULL,
+};
+
 #endif /* NVDLA_HAVE_CONFIG_AXI */
 MODULE_DEVICE_TABLE(of, tegra_nvdla_of_match);
+MODULE_DEVICE_TABLE(acpi, tegra_nvdla_acpi_match);
 
 static uint32_t num_enabled_dla_instances(uint32_t soft_fuse_ret,
 					int hw_reg_fuse_ret)
@@ -999,6 +1024,13 @@ static int nvdla_probe(struct platform_device *pdev)
 		match = of_match_device(tegra_nvdla_of_match, dev);
 		if (match)
 			pdata = (struct nvhost_device_data *)match->data;
+	} else if (ACPI_HANDLE(&pdev->dev)) {
+		const struct acpi_device_id *match;
+
+		match = acpi_match_device(tegra_nvdla_acpi_match, dev);
+		if (match)
+			pdata = (struct nvhost_device_data *)
+				acpi_data[match->driver_data];
 	} else {
 		pdata = (struct nvhost_device_data *)pdev->dev.platform_data;
 	}
@@ -1074,10 +1106,12 @@ static int nvdla_probe(struct platform_device *pdev)
 		goto err_alloc_nvdla;
 	}
 
-	nvdla_dev->icc_write = devm_of_icc_get(dev, "write");
-	if (IS_ERR(nvdla_dev->icc_write))
-		return dev_err_probe(&pdev->dev, PTR_ERR(nvdla_dev->icc_write),
+	if (pdev->dev.of_node) {
+		nvdla_dev->icc_write = devm_of_icc_get(dev, "write");
+		if (IS_ERR(nvdla_dev->icc_write))
+			return dev_err_probe(&pdev->dev, PTR_ERR(nvdla_dev->icc_write),
 				     "failed to get icc write handle\n");
+	}
 
 	nvdla_dev->dev = dev;
 	nvdla_dev->pdev = pdev;
@@ -1098,7 +1132,10 @@ static int nvdla_probe(struct platform_device *pdev)
 
 	if (pdata->version == FIRMWARE_ENCODE_VERSION(T23X)) {
 		if (num_enabled_dla_instances(soft_fuse_ret, fuse_register_ret) == 1) {
-			pdev->dev.of_node->name = "nvdla0";
+			if (pdev->dev.of_node)
+				pdev->dev.of_node->name = "nvdla0";
+			else
+				pdata->devfs_name = "nvdla0";
 		}
 	}
 
@@ -1348,6 +1385,9 @@ static struct platform_driver nvdla_driver = {
 		.name = "nvdla",
 #ifdef CONFIG_OF
 		.of_match_table = tegra_nvdla_of_match,
+#endif
+#ifdef CONFIG_ACPI
+		.acpi_match_table = ACPI_PTR(tegra_nvdla_acpi_match),
 #endif
 #ifdef CONFIG_PM
 		.pm = &nvdla_module_pm_ops,

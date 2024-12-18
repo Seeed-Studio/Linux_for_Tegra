@@ -29,6 +29,7 @@ ccflags-y += -DNVDLA_HAVE_CONFIG_HSIERRINJ=0
 ccflags-y += -DBUG_4942853=1
 ccflags-y += -DBUG_4960393=1
 ccflags-y += -DBUG_4972382=1
+ccflags-y += -DBUG_5054810=1
 
 NVDLA_OBJS := \
 	$(NVDLA_COMMON_OBJS) \

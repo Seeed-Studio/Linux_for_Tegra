@@ -15,6 +15,7 @@
 #include "dla_t23x_fw_version.h"
 
 static struct nvhost_device_data t23x_nvdla0_info = {
+	.devfs_name		= "nvdla0",
 	.devfs_name_family	= "nvdla",
 	.class			= NV_DLA0_CLASS_ID,
 	.clocks			= {
@@ -24,7 +25,7 @@ static struct nvhost_device_data t23x_nvdla0_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.finalize_poweron	= nvdla_finalize_poweron,
 	.prepare_poweroff	= nvdla_prepare_poweroff,
-	.flcn_isr               = nvdla_flcn_isr,
+	.flcn_isr		= nvdla_flcn_isr,
 	.self_config_flcn_isr	= true,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA234_FW,
@@ -50,6 +51,7 @@ static struct nvhost_device_data t23x_nvdla0_info = {
 };
 
 static struct nvhost_device_data t23x_nvdla1_info = {
+	.devfs_name		= "nvdla1",
 	.devfs_name_family	= "nvdla",
 	.class			= NV_DLA1_CLASS_ID,
 	.clocks			= {
@@ -59,7 +61,7 @@ static struct nvhost_device_data t23x_nvdla1_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.finalize_poweron	= nvdla_finalize_poweron,
 	.prepare_poweroff	= nvdla_prepare_poweroff,
-	.flcn_isr               = nvdla_flcn_isr,
+	.flcn_isr		= nvdla_flcn_isr,
 	.self_config_flcn_isr	= true,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA234_FW,

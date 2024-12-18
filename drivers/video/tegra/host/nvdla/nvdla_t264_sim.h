@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
- * Device data for T264 simulator
+ * Device data for t264 simulator
  */
 
 #ifndef __NVHOST_NVDLA_T264_SIM_H__
@@ -14,6 +14,7 @@
 #include "dla_t25x_fw_version.h"
 
 static struct nvhost_device_data t264_sim_nvdla0_info = {
+	.devfs_name		= "nvdla0",
 	.devfs_name_family	= "nvdla",
 	.class			= NV_DLA0_SIM_CLASS_ID,
 	.clocks			= {
@@ -23,7 +24,7 @@ static struct nvhost_device_data t264_sim_nvdla0_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.finalize_poweron	= nvdla_finalize_poweron,
 	.prepare_poweroff	= nvdla_prepare_poweroff,
-	.flcn_isr               = nvdla_flcn_isr,
+	.flcn_isr		= nvdla_flcn_isr,
 	.self_config_flcn_isr	= true,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA25X_FW,
