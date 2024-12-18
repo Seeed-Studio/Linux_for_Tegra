@@ -44,7 +44,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 {
 	pgprot_t prot;
 	void *vaddr;
-	unsigned long adj_size, sum;
+	unsigned long adj_size;
 	struct page **pages = NULL;
 	int i = 0;
 
@@ -96,10 +96,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 
 	/* carveout - explicitly map the pfns into a vmalloc area */
 	adj_size = nvmap_get_heap_block_base(h->carveout) & ~PAGE_MASK;
-	if (check_add_overflow(adj_size, h->size, &sum))
-		goto dec_kmaps;
-
-	adj_size = sum;
+	adj_size += h->size;
 	adj_size = PAGE_ALIGN(adj_size);
 
 	if (pfn_valid(__phys_to_pfn(nvmap_get_heap_block_base(h->carveout) & PAGE_MASK))) {
@@ -152,7 +149,6 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 out:
 	if (pages)
 		vfree(pages);
-dec_kmaps:
 	nvmap_kmaps_dec(h);
 put_handle:
 	nvmap_handle_put(h);

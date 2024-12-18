@@ -297,18 +297,17 @@ static int nvmap_page_mapcount(struct page *page)
 }
 
 #define PSS_SHIFT 12
-static int nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id)
+static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id)
 {
 	int i;
 	struct rb_node *n;
 	struct nvmap_device *dev = nvmap_dev;
-	u64 sum;
 
 	*total = 0;
 	if (pss)
 		*pss = 0;
 	if (dev == NULL)
-		return 0;
+		return;
 	spin_lock(&dev->handle_lock);
 	n = rb_first(&dev->handles);
 	for (; n != NULL; n = rb_next(n)) {
@@ -323,30 +322,18 @@ static int nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type, int numa_id)
 			numa_id))
 			continue;
 
-		if (check_sub_overflow(*total, (u64)h->size, &sum)) {
-			spin_unlock(&dev->handle_lock);
-			return -EOVERFLOW;
-		}
-
-		*total = sum;
+		*total += h->size;
 		if (!pss)
 			continue;
 
 		for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
 			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
 
-			if (nvmap_page_mapcount(page) > 0) {
-				if (check_sub_overflow(*pss, (u64)PAGE_SIZE, &sum)) {
-				spin_unlock(&dev->handle_lock);
-				return -EOVERFLOW;
-				}
-
+			if (nvmap_page_mapcount(page) > 0)
 				*pss += PAGE_SIZE;
-			}
 		}
 	}
 	spin_unlock(&dev->handle_lock);
-	return 0;
 }
 
 static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
@@ -378,10 +365,7 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 		seq_puts(s, "\n");
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
-	err = nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
-	if (err != 0)
-		return err;
-
+	nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -597,10 +581,7 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
 
-	err = nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
-	if (err != 0)
-		return err;
-
+	nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
 	seq_printf(s, "%-18s %-18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -610,11 +591,11 @@ DEBUGFS_OPEN_FOPS(maps);
 static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 {
 	u64 total;
-	int err;
 	struct nvmap_client *client;
 	struct debugfs_info *debugfs_information = (struct debugfs_info *)s->private;
 	u32 heap_type = nvmap_get_debug_info_heap(debugfs_information);
 	int numa_id = nvmap_get_debug_info_nid(debugfs_information);
+	int err;
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
@@ -631,10 +612,7 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 		seq_printf(s, " %10lluK\n", K(client_total));
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
-	err = nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
-	if (err != 0)
-		return err;
-
+	nvmap_get_total_mss(NULL, &total, heap_type, numa_id);
 	seq_printf(s, "%-18s %18s %8s %10lluK\n", "total", "", "", K(total));
 	return 0;
 }
@@ -855,10 +833,7 @@ static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 	}
 	mutex_unlock(&dev->clients_lock);
 
-	err = nvmap_get_total_mss(&total_pss, &total_memory, NVMAP_HEAP_IOVMM, NUMA_NO_NODE);
-	if (err != 0)
-		return err;
-
+	nvmap_get_total_mss(&total_pss, &total_memory, NVMAP_HEAP_IOVMM, NUMA_NO_NODE);
 	seq_printf(s, "%-18s %18s %8s %10lluK %10lluK\n",
 		"total", "", "", K(total_pss), K(total_memory));
 	return 0;
