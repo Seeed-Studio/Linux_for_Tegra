@@ -930,7 +930,9 @@ static const struct drm_driver tegra_drm_driver = {
 
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
+#if defined(NV_DRM_DRIVER_STRUCT_HAS_DATE) /* Linux v6.14 */
 	.date = DRIVER_DATE,
+#endif
 	.major = DRIVER_MAJOR,
 	.minor = DRIVER_MINOR,
 	.patchlevel = DRIVER_PATCHLEVEL,
