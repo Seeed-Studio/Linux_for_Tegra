@@ -59,6 +59,10 @@ cp -r github/Linux_for_Tegra/* Linux_for_Tegra/
 cd Linux_for_Tegra
 sudo ./apply_binaries.sh
 ```
+make sure system have required libraries (ex: ubuntu-20)
+```
+apt-get update && apt-get install build-essential flex bison libssl-dev
+```
 
 6. prepare work for kernel build
 ```
@@ -71,6 +75,7 @@ export CROSS_COMPILE=`realpath .`/l4t-gcc/aarch64--glibc--stable-2022.08-1/bin/a
 
 7. compile and build kernel
 ```
+cd source
 ./nvbuild.sh
 ```
 
