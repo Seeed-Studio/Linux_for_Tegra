@@ -90,6 +90,41 @@
 
 		i2c@c610000 { /* I2C3 */
 			status = "okay";
+
+			f75308@4d {
+				compatible = "fintek,f75308";
+				reg = <0x4d>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				fan@0 {
+					reg = <0x0>;
+					type = "pwm";
+					duty = "manual_duty";
+					5seg = <100 80 60 40 20>;
+				};
+
+				fan@1 {
+					reg = <0x1>;
+					type = "pwm";
+					duty = "manual_duty";
+					5seg = <100 80 60 40 20>;
+				};
+
+				fan@2 {
+					reg = <0x2>;
+					type = "pwm";
+					duty = "manual_duty";
+					5seg = <100 80 60 40 20>;
+				};
+
+				fan@3 {
+					reg = <0x3>;
+					type = "pwm";
+					duty = "manual_duty";
+					5seg = <100 80 60 40 20>;
+				};
+			};
 		};
 
 		i2c@810c6a0000 { /* I2C9 */
