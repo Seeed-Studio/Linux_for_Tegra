@@ -4140,6 +4140,8 @@
 				clock-names = "vi";
 				nvidia,vi-falcon-device = <&vi0_thi>;
 				iommus = <&smmu0_mmu TEGRA_SID_VI_VM1>;
+				interconnects = <&mc TEGRA264_MEMORY_CLIENT_VIW &emc>;
+				interconnect-names = "write";
 				non-coherent;
 				status = "disabled";
 			};
@@ -4159,6 +4161,8 @@
 				clock-names = "vi";
 				nvidia,vi-falcon-device = <&vi1_thi>;
 				iommus = <&smmu0_mmu TEGRA_SID_VI2_VM1>;
+				interconnects = <&mc TEGRA264_MEMORY_CLIENT_VI1W &emc>;
+				interconnect-names = "write";
 				non-coherent;
 				status = "disabled";
 			};
@@ -8957,6 +8961,10 @@
 
 		nvidia,trace = <&tegra_rtcpu_trace 4 0x70100000 0x100000>;
 		nvidia,ivc-channels = <&camera_ivc_channels 2 0x90000000 0x10000>;
+
+		interconnects = <&mc TEGRA264_MEMORY_CLIENT_RCER &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_RCEW &emc>;
+		interconnect-names = "dma-mem", "write";
 
 		nvidia,autosuspend-delay-ms = <5000>;
 		status = "disabled";
