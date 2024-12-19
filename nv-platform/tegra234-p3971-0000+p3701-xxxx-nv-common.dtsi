@@ -1,0 +1,356 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+#include "nv-soc/tegra234-overlay.dtsi"
+#include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
+#include "nv-soc/tegra234-soc-camera.dtsi"
+
+#include "tegra234-p3971-0000.dtsi"
+
+/ {
+	aliases {
+		serial0 = &tcu;
+		serial1 = &uarta;
+	};
+
+	serial {
+		status = "okay";
+	};
+
+	bus@0 {
+		mc-hwpm@2c10000 {
+			status = "okay";
+		};
+
+		serial@3100000 {
+			compatible = "nvidia,tegra194-hsuart";
+			reset-names = "serial";
+			status = "okay";
+		};
+
+		i2c@3160000 {
+			status = "okay";
+		};
+
+		i2c@3180000 {
+			status = "okay";
+		};
+
+		i2c@3190000 {
+			status = "okay";
+		};
+
+		i2c@31b0000 {
+			status = "okay";
+		};
+
+		i2c@31c0000 {
+			status = "okay";
+
+		};
+
+		i2c@31e0000 {
+			status = "okay";
+		};
+
+		padctl@3520000 {
+			status = "okay";
+
+			pads {
+				usb2 {
+					lanes {
+						usb2-0 {
+							status = "okay";
+						};
+
+						usb2-1 {
+							status = "okay";
+						};
+
+						usb2-2 {
+							status = "okay";
+						};
+
+						usb2-3 {
+							status = "okay";
+						};
+					};
+				};
+
+				usb3 {
+					lanes {
+						usb3-0 {
+							status = "okay";
+						};
+
+						usb3-1 {
+							status = "okay";
+						};
+
+						usb3-2 {
+							status = "okay";
+						};
+					};
+				};
+			};
+
+			ports {
+				usb2-0 {
+					mode = "otg";
+					vbus-supply = <&vdd_5v0_sys>;
+					usb-role-switch;
+					role-switch-default-mode = "peripheral";
+					status = "okay";
+				};
+
+				usb2-1 {
+					mode = "host";
+					vbus-supply = <&vdd_5v0_sys>;
+					status = "okay";
+				};
+
+				usb2-2 {
+					mode = "host";
+					vbus-supply = <&vdd_5v0_sys>;
+					status = "okay";
+				};
+
+				usb2-3 {
+					mode = "host";
+					vbus-supply = <&vdd_5v0_sys>;
+					status = "okay";
+				};
+
+				usb3-0 {
+					nvidia,usb2-companion = <0>;
+					status = "okay";
+				};
+
+				usb3-1 {
+					nvidia,usb2-companion = <3>;
+					status = "okay";
+				};
+
+				usb3-2 {
+					nvidia,usb2-companion = <1>;
+					status = "okay";
+				};
+			};
+		};
+
+		usb@3550000 {
+			status = "okay";
+			phys = <&{/bus@0/padctl@3520000/pads/usb2/lanes/usb2-0}>,
+			     <&{/bus@0/padctl@3520000/pads/usb3/lanes/usb3-0}>;
+			phy-names = "usb2-0", "usb3-0";
+		};
+
+		usb@3610000 {
+			status = "okay";
+			phys = <&{/bus@0/padctl@3520000/pads/usb2/lanes/usb2-0}>,
+			     <&{/bus@0/padctl@3520000/pads/usb2/lanes/usb2-1}>,
+			     <&{/bus@0/padctl@3520000/pads/usb2/lanes/usb2-2}>,
+			     <&{/bus@0/padctl@3520000/pads/usb2/lanes/usb2-3}>,
+			     <&{/bus@0/padctl@3520000/pads/usb3/lanes/usb3-0}>,
+			     <&{/bus@0/padctl@3520000/pads/usb3/lanes/usb3-1}>,
+			     <&{/bus@0/padctl@3520000/pads/usb3/lanes/usb3-2}>;
+			phy-names = "usb2-0", "usb2-1", "usb2-2", "usb2-3", "usb3-0", "usb3-1", "usb3-2";
+		};
+
+		hardware-timestamp@3aa0000 {
+			status = "okay";
+		};
+
+		hsp@3c00000 {
+			status = "okay";
+		};
+
+		hsp@c150000 {
+			status = "okay";
+		};
+
+		hardware-timestamp@c1e0000 {
+			status = "okay";
+		};
+
+		i2c@c240000 {
+			status = "okay";
+		};
+
+		i2c@c250000 {
+			status = "okay";
+		};
+
+		mttcan@c310000 {
+			status = "okay";
+		};
+
+		mttcan@c320000 {
+			status = "okay";
+		};
+
+		actmon@d230000 {
+			status = "okay";
+		};
+
+		hwpm@f100000 {
+			status = "okay";
+		};
+
+		host1x@13e00000 {
+			nvjpg@15380000 {
+				status = "okay";
+			};
+
+			nvdec@15480000 {
+				status = "okay";
+			};
+
+			nvenc@154c0000 {
+				status = "okay";
+			};
+
+			tsec@15500000 {
+				status = "okay";
+			};
+
+			nvjpg@15540000 {
+				status = "okay";
+			};
+
+			se@15810000 {
+				status = "okay";
+			};
+
+			se@15820000 {
+				status = "okay";
+			};
+
+			se@15840000 {
+				status = "okay";
+			};
+
+			nvdla0@15880000 {
+				status = "okay";
+			};
+
+			nvdla1@158c0000 {
+				status = "okay";
+			};
+
+			ofa@15a50000 {
+				status = "okay";
+			};
+
+			pva0@16000000 {
+				status = "okay";
+
+				pva0_niso1_ctx0 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx1 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx2 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx3 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx4 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx5 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx6 {
+					status = "okay";
+				};
+
+				pva0_niso1_ctx7 {
+					status = "okay";
+				};
+			};
+		};
+
+		gpu@17000000 {
+			status = "okay";
+		};
+	};
+
+	tegra-hsp@b950000 {
+		status = "okay";
+	};
+
+	dce@d800000 {
+		status = "okay";
+	};
+
+	tegra_mce@e100000 {
+		status = "okay";
+	};
+
+	display@13800000 {
+		status = "okay";
+	};
+
+	cpus {
+		idle-states {
+			c7 {
+				status = "okay";
+			};
+		};
+	};
+
+	nvpmodel {
+		status = "okay";
+	};
+
+	soctherm-oc-event {
+		status = "okay";
+	};
+
+	sound {
+		status = "okay";
+		compatible = "nvidia,tegra186-audio-graph-card",
+			   "nvidia,tegra186-ape";
+		clocks = <&bpmp TEGRA234_CLK_PLLA>,
+		       <&bpmp TEGRA234_CLK_PLLA_OUT0>,
+		       <&bpmp TEGRA234_CLK_AUD_MCLK>;
+		clock-names = "pll_a", "plla_out0", "extern1";
+		assigned-clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
+		assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLA_OUT0>;
+
+		nvidia-audio-card,name = "NVIDIA IGX500 Orin APE";
+
+		nvidia-audio-card,mclk-fs = <256>;
+
+		nvidia-audio-card,widgets =
+			"Headphone",    "CVB-RT Headphone Jack",
+			"Microphone",   "CVB-RT Mic Jack",
+			"Microphone",   "CVB-RT Int Mic";
+
+		nvidia-audio-card,routing =
+			"CVB-RT Headphone Jack",     "CVB-RT HPOL",
+			"CVB-RT Headphone Jack",     "CVB-RT HPOR",
+			"CVB-RT IN1P",               "CVB-RT Mic Jack",
+			"CVB-RT IN2P",               "CVB-RT Mic Jack",
+			"CVB-RT DMIC1",              "CVB-RT Int Mic",
+			"CVB-RT DMIC2",              "CVB-RT Int Mic";
+
+		/* I2S4 dai node */
+		nvidia-audio-card,dai-link@79 {
+			link-name = "rt5640-playback";
+			codec {
+				sound-dai = <&rt5640 0>;
+				prefix = "CVB-RT";
+			};
+		};
+	};
+};

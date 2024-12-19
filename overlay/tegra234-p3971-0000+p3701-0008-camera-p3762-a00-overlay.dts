@@ -1,0 +1,305 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+#include "dt-bindings/gpio/tegra234-gpio.h"
+#include "dt-bindings/clock/tegra234-clock.h"
+#include "tegra234-camera-p3762-a00.dtsi"
+
+/* camera control gpio definitions */
+#define CAM0_RST_L      TEGRA234_MAIN_GPIO(H, 3)
+#define CAM0_PWDN       TEGRA234_MAIN_GPIO(E, 6)
+#define CAM1_RST_L      TEGRA234_MAIN_GPIO(AC, 1)
+#define CAM1_PWDN       TEGRA234_MAIN_GPIO(AC, 0)
+#define PWR_EN      	TEGRA234_MAIN_GPIO(AC, 7)
+#define GYRO1_IRQ_GPIO  TEGRA234_AON_GPIO(CC, 1)
+#define ACCE1_IRQ_GPIO  TEGRA234_AON_GPIO(CC, 0)
+
+/ {
+	overlay-name = "Jetson Camera Hawk-Owl p3762 module";
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = "nvidia,p3971-0000+p3701-0008";
+
+	fragment-camera-hawk-owl@0 {
+		target-path = "/";
+		__overlay__ {
+			bus@0 {
+				/* set camera gpio direction to output */
+				gpio@2200000 {
+					camera-control-output-low {
+						gpio-hog;
+						output-low;
+						gpios = <CAM0_RST_L 0 CAM0_PWDN 0
+								CAM1_RST_L 0 CAM1_PWDN 0>;
+						label = "cam0-rst", "cam0-pwdn",
+								"cam1-rst", "cam1-pwdn";
+					};
+				};
+				i2c@3180000 {
+					max96712_b@62 {
+						compatible = "nvidia,max96712";
+						reg = <0x62>;
+						channel = "b";
+						pwdn-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
+						status = "okay";
+					};
+					ar0234_i@30 {
+						status = "okay";
+						def-addr = <0x18>;
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						channel = "b";
+						has-eeprom;
+						eeprom-addr = <0x38>;
+						reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
+						pwdn-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
+						pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+					};
+					ar0234_j@32 {
+						status = "okay";
+						def-addr = <0x18>;
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						channel = "b";
+						has-eeprom;
+						eeprom-addr = <0x3a>;
+						reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
+						pwdn-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
+						pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+					};
+					ar0234_k@34 {
+						status = "okay";
+						def-addr = <0x18>;
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						channel = "b";
+						has-eeprom;
+						eeprom-addr = <0x3c>;
+						reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
+						pwdn-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
+						pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+					};
+					ar0234_l@36 {
+						status = "okay";
+						def-addr = <0x18>;
+						/* Define any required hw resources needed by driver */
+						/* ie. clocks, io pins, power sources */
+						clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+								<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+						clock-names = "extperiph1", "pllp_grtba";
+						mclk = "extperiph1";
+						channel = "b";
+						has-eeprom;
+						eeprom-addr = <0x3e>;
+						reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
+						pwdn-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
+						pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+					};
+				};
+				i2c@31e0000 {
+					max96712_a@62 {
+						compatible = "nvidia,max96712";
+						reg = <0x62>;
+						channel = "a";
+						pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+						status = "okay";
+					};
+					virtual_i2c_mux@50 {
+						reg = <0x50>;
+						compatible = "nvidia,virtual-i2c-mux";
+						#address-cells = <1>;
+						#size-cells = <0>;
+						i2c-parent = <&dp_aux_ch3_i2c>;
+						status = "okay";
+
+						i2c@0 {
+							reg = <0>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							bmi088_a@69 {
+								compatible = "bmi,bmi088";
+								reg = <0x69>;
+								accel_i2c_addr = <0x19>;
+								/* Old BMI088 driver uses *_gpio property and the latest
+								 * BMI088 driver uses *-gpios property. Have both versions
+								 * to maintain backward compatibility.
+								 */
+								accel_irq_gpio = <&gpio_aon ACCE1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
+								gyro_irq_gpio = <&gpio_aon GYRO1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
+								accel_irq-gpios = <&gpio_aon ACCE1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
+								gyro_irq-gpios = <&gpio_aon GYRO1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
+								accel_matrix = [01 00 00 00 01 00 00 00 01];
+								gyro_matrix = [01 00 00 00 01 00 00 00 01];
+								gyro_reg_0x18 = <0x81>;
+								timestamps = <&hte_aon ACCE1_IRQ_GPIO>, <&hte_aon GYRO1_IRQ_GPIO>;
+								timestamp-names = "accelerometer", "gyroscope";
+								status = "okay";
+							};
+							ar0234_a@30 {
+								status = "okay";
+								def-addr = <0x10>;
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								has-eeprom;
+								eeprom-addr = <0x40>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+							};
+							ar0234_b@31 {
+								status = "okay";
+								def-addr = <0x18>;
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								has-eeprom;
+								eeprom-addr = <0x40>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+							};
+						};
+						i2c@1 {
+							reg = <1>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+							ar0234_c@32 {
+								status = "okay";
+								def-addr = <0x10>;
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								has-eeprom;
+								eeprom-addr = <0x15>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+							};
+							ar0234_d@33 {
+								status = "okay";
+								def-addr = <0x18>;
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								has-eeprom;
+								eeprom-addr = <0x15>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+							};
+							ar0234_e@34 {
+								status = "okay";
+								def-addr = <0x10>;
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								has-eeprom;
+								eeprom-addr = <0x44>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+							};
+							ar0234_f@35 {
+								status = "okay";
+								def-addr = <0x18>;
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								has-eeprom;
+								eeprom-addr = <0x44>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+							};
+							ar0234_g@36 {
+								status = "okay";
+								def-addr = <0x10>;
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								has-eeprom;
+								eeprom-addr = <0x46>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+							};
+							ar0234_h@37 {
+								status = "okay";
+								def-addr = <0x18>;
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA234_CLK_EXTPERIPH1>,
+										<&bpmp TEGRA234_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								channel = "a";
+								has-eeprom;
+								eeprom-addr = <0x46>;
+								reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								pwr-gpios = <&gpio PWR_EN GPIO_ACTIVE_HIGH>;
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+	fragment-cam-cdi-tsc@0 {
+		target-path = "/";
+		__overlay__ {
+			tsc_sig_gen@c6a0000 {
+				status = "okay";
+				generator@380 {
+					status = "okay";
+				};
+			};
+		};
+	};
+};
