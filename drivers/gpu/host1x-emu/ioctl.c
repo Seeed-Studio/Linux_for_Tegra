@@ -307,6 +307,16 @@ static const struct file_operations host1x_ctrlops = {
 #endif
 };
 
+#if defined(NV_CLASS_STRUCT_DEVNODE_HAS_CONST_DEV_ARG) /* Linux v6.2 */
+static char *host1x_emu_devnode(const struct device *dev, umode_t *mode)
+#else
+static char *host1x_emu_devnode(struct device *dev, umode_t *mode)
+#endif
+{
+	*mode = 0666;
+	return NULL;
+}
+
 int host1x_user_init(struct host1x *host)
 {
     int err;
@@ -328,6 +338,7 @@ int host1x_user_init(struct host1x *host)
         dev_err(host->dev, "failed to reserve chrdev region\n");
         goto fail;
     }
+	host->host1x_class->devnode = host1x_emu_devnode;
 
     host->major = MAJOR(devno);
     host->next_minor += 1;
