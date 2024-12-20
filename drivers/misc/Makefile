@@ -5,6 +5,10 @@
 # MODS is currently broken for Linux v6.11 and later
 ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 obj-m += mods/
+else
+ifdef CONFIG_TEGRA_HDMI_IN
+obj-m += hdmi-in/
+endif
 endif
 obj-m += nvsciipc/
 ifdef CONFIG_PCI
