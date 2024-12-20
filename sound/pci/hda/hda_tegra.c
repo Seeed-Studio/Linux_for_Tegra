@@ -494,7 +494,7 @@ static const struct hda_tegra_soc tegra234_data = {
 };
 
 static const struct hda_tegra_soc tegra264_data = {
-	.has_hda2codec_2x_reset = false,
+	.has_hda2codec_2x_reset = true,
 	.has_hda2hdmi = false,
 	.has_hda2codec_2x = false,
 	.input_stream = false,
@@ -536,29 +536,27 @@ static int hda_tegra_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	if (reset_control_get_count(&pdev->dev) > 0) {
-		hda->resets[hda->nresets++].id = "hda";
+	hda->resets[hda->nresets++].id = "hda";
 
-		/*
-		 * "hda2hdmi" is not applicable for Tegra234. This is because the
-		 * codec is separate IP and not under display SOR partition now.
-		 */
-		if (hda->soc->has_hda2hdmi)
-			hda->resets[hda->nresets++].id = "hda2hdmi";
+	/*
+	 * "hda2hdmi" is not applicable for Tegra234. This is because the
+	 * codec is separate IP and not under display SOR partition now.
+	 */
+	if (hda->soc->has_hda2hdmi)
+		hda->resets[hda->nresets++].id = "hda2hdmi";
 
-		/*
-		 * "hda2codec_2x" reset is not present on Tegra194. Though DT would
-		 * be updated to reflect this, but to have backward compatibility
-		 * below is necessary.
-		 */
-		if (hda->soc->has_hda2codec_2x_reset)
-			hda->resets[hda->nresets++].id = "hda2codec_2x";
+	/*
+	 * "hda2codec_2x" reset is not present on Tegra194. Though DT would
+	 * be updated to reflect this, but to have backward compatibility
+	 * below is necessary.
+	 */
+	if (hda->soc->has_hda2codec_2x_reset)
+		hda->resets[hda->nresets++].id = "hda2codec_2x";
 
-		err = devm_reset_control_bulk_get_exclusive(&pdev->dev, hda->nresets,
+	err = devm_reset_control_bulk_get_exclusive(&pdev->dev, hda->nresets,
 						    hda->resets);
-		if (err)
-			goto out_free;
-	}
+	if (err)
+		goto out_free;
 
 	hda->clocks[hda->nclocks++].id = "hda";
 	if (hda->soc->has_hda2hdmi)
