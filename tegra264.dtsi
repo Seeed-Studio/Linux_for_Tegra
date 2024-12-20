@@ -5879,6 +5879,9 @@
 			interrupts = <GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&bpmp TEGRA264_CLK_AZA_2XBIT>;
 			clock-names = "hda";
+			resets = <&bpmp TEGRA264_RESET_HDA>,
+				 <&bpmp TEGRA264_RESET_HDACODEC>;
+			reset-names = "hda", "hda2codec_2x";
 			interconnects = <&mc TEGRA264_MEMORY_CLIENT_HDAR &emc>,
 					<&mc TEGRA264_MEMORY_CLIENT_HDAW &emc>;
 			interconnect-names = "dma-mem", "write";
