@@ -18,11 +18,13 @@
 #define HVC_NR_READ_HYP_INFO		9
 #define HVC_NR_GUEST_RESET		10
 #define HVC_NR_SYSINFO_IPA		13
+#define HVC_NR_READ_VM_INFO		16
 #define HVC_NR_TRACE_GET_EVENT_MASK		0x8003U
 #define HVC_NR_TRACE_SET_EVENT_MASK		0x8004U
 
 #define GUEST_PRIMARY		0
 #define GUEST_IVC_SERVER	0
+#define MAX_NVLOG_PRODUCERS	32U
 #define HVC_NR_CPU_FREQ		0xC6000022
 
 #define NGUESTS_MAX 16
@@ -32,6 +34,45 @@
 #if defined(__KERNEL__)
 #include <linux/types.h>
 #endif
+
+/*
+ * @brief Structure describing a single NvLog producer. A producer can have
+ * multiple buffers (if it has multiple threads) and the buffers are stored
+ * contiguously in memory as an array. This structure provides the base
+ * address, stride, and length of the array so that the consumer can locate all
+ * of the buffers belonging to the producer.
+ */
+struct nvlog_producer {
+	/* Base IPA of an array of NvLog buffers belonging to the producer. */
+	uint64_t ipa;
+	/* Size of the IPA region containing the NvLog buffer array. */
+	uint64_t region_size;
+	/* Size of a single NvLog buffer. This is the stride of the array of
+	 * NvLog buffers belonging to the producer.
+	 */
+	uint64_t buf_size;
+	/* Number of NvLog buffers belonging to the producer. */
+	uint64_t buf_count;
+	/* Name of the NvLog producer. */
+	char name[32];
+};
+
+/*
+ * Data structure for the VM Information Region.
+ *
+ * The Intermediate Physical Address (IPA) of this structure is returned by the
+ * hyp_read_vm_info Hypercall.
+ */
+struct vm_info_region {
+	/*
+	 * Table of NvLog producers.
+	 *
+	 * This table is only populated for VMs that have the 'log_access' PCT flag
+	 * set. Valid entries in the table have non-zero 'region_ipa', 'buf_size',
+	 * and buf_count' fields.
+	 */
+	struct nvlog_producer nvlog_producers[MAX_NVLOG_PRODUCERS];
+};
 
 struct tegra_hv_queue_data {
 	uint32_t	id;	/* IVC id */
@@ -209,6 +250,21 @@ static inline int hyp_read_nguests(unsigned int *nguests)
 		: "x2", "x3", _X4_X17);
 
 	*nguests = r1;
+	return (int)r0;
+}
+
+__attribute__((no_sanitize_address))
+static inline int hyp_read_vm_info(uint64_t *vm_info_region_pa)
+{
+	register uint64_t r0 asm("x0");
+	register uint64_t r1 asm("x1");
+
+	asm("hvc %2"
+		: "=r"(r0), "=r"(r1)
+		: "i"(HVC_NR_READ_VM_INFO)
+		: "x2", "x3", _X4_X17);
+
+	*vm_info_region_pa = r1;
 	return (int)r0;
 }
 
