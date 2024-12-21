@@ -1,0 +1,105 @@
+variables:
+  CONFIG: "" 
+  BOARDID: ""
+  BOARDSKU: ""
+  FAB: ""
+  IS_CUSTOM: "0" #disable custom image build by default
+  START_TASK: ""
+  INSTALL_NV_JP: "1" #enable install nvidia-jetpack by default
+  JETPACKVER: "4.6.6"
+  JETSONVER: "32.7.6"
+  ROOTFS_NAME: "tegra_linux_sample-root-filesystem_r32.7.6_aarch64.tbz2"
+
+stages:
+  - recomputer-nano-4g
+  - custom-firmware
+
+# common code of building target image
+.build_image: &build_image_script
+  - > 
+    if [ -z "$CONFIG" ]; then echo "Error: CONFIG variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - > 
+    if [ -z "$BOARDID" ]; then echo "Error: BOARDID variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - > 
+    if [ -z "$BOARDSKU" ]; then echo "Error: BOARDSKU variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - > 
+    if [ -z "$FAB" ]; then echo "Error: FAB variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - echo "config details, CONFIG $CONFIG,BOARDID $BOARDID,BOARDSKU $BOARDSKU,FAB $FAB,INSTALL_NV_JP $INSTALL_NV_JP"
+  - git submodule sync
+  - git submodule update --init --recursive
+  - id 
+  - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
+  # clean the rootfs for every image
+  - ls rootfs/ -l
+  - rm -rf rootfs/*
+  - wget  http://192.168.1.77/jetson/$ROOTFS_NAME -q
+  - tar xpf $ROOTFS_NAME -C rootfs
+  # apply necessary changes to rootfs
+  - ./apply_binaries.sh
+  # record the system image name and commit info of seeed to target rootfs.
+  - echo "# Seeed Image Name mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+  - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
+  - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
+  # install user custom package(optional)
+  - >
+    if [ $INSTALL_NV_JP == "1" ]; then
+      sed -i "s/<SOC>/t210/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+      mount --bind /sys ./rootfs/sys
+      mount --bind /dev ./rootfs/dev
+      mount --bind /dev/pts ./rootfs/dev/pts
+      mount --bind /proc ./rootfs/proc
+      cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
+      cp extra_scripts/rootfs_magic.sh rootfs
+      chroot rootfs /rootfs_magic.sh || true
+      umount ./rootfs/sys
+      umount ./rootfs/dev/pts
+      umount ./rootfs/dev
+      umount ./rootfs/proc
+      rm rootfs/rootfs_magic.sh
+      rm rootfs/usr/bin/qemu-aarch64-static
+    fi
+  # package the image for qspi & nvme flash
+  - sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB FUSELEVEL=fuselevel_production ./nvmassflashgen.sh $CONFIG mmcblk0p1
+  - md5sum mfi_$CONFIG.tar.gz > md5sum-$CI_JOB_STAGE-$DATE_STR.txt
+  # upload image of qspi & nvme ssd
+  - mkdir -p deploy
+  - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy 
+  - cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz || true
+  - cp md5sum-$CI_JOB_STAGE-$DATE_STR.txt deploy/ || true
+  - umount deploy
+
+build-recomputer-nano-4g:
+  stage: recomputer-nano-4g 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "jetson-nano-devkit-emmc"
+    BOARDID: "3448"
+    BOARDSKU: "0002"
+    FAB: "400"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-custom-firmare:
+   stage: custom-firmware
+   rules:
+     - if: '$IS_CUSTOM == "1"'
+       when: on_success 
+     - if: '$CI_COMMIT_TAG'
+       when: never 
+   tags:
+     - x86-shell
+
+   script:
+    - echo "Building custom image for $CONFIG"
+    - *build_image_script
+
