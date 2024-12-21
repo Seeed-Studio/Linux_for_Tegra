@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+
+<!-- Nvidia Tegra Partition Layout Version 1.0.0 -->
+
+<partition_layout version="01.00.0000">
+    <device type="spi" instance="0">
+        <partition name="BCT" type="boot_config_table">
+            <allocation_policy> sequential </allocation_policy>
+            <filesystem_type> basic </filesystem_type>
+            <size> 262144 </size>
+            <file_system_attribute> 0 </file_system_attribute>
+            <allocation_attribute> 8 </allocation_attribute>
+            <percent_reserved> 0 </percent_reserved>
+        </partition>
+
+        <partition name="NXC" type="NVCTYPE">
+            <allocation_policy> sequential </allocation_policy>
+            <filesystem_type> basic </filesystem_type>
+            <size> 196608 </size>
+            <file_system_attribute> 0 </file_system_attribute>
+            <allocation_attribute> 8 </allocation_attribute>
+            <percent_reserved> 0 </percent_reserved>
+            <filename> NVCFILE </filename>
+        </partition>
+
+        <partition name="PT" type="partition_table">
+            <allocation_policy> sequential </allocation_policy>
+            <filesystem_type> basic </filesystem_type>
+            <size> 65536 </size>
+            <file_system_attribute> 0 </file_system_attribute>
+            <allocation_attribute> 8 </allocation_attribute>
+            <percent_reserved> 0 </percent_reserved>
+            <filename> flash.xml.bin </filename>
+        </partition>
+
+        <partition name="NXC_R" type="NVCTYPE">
+            <allocation_policy> sequential </allocation_policy>
+            <filesystem_type> basic </filesystem_type>
+            <size> 196608 </size>
+            <file_system_attribute> 0 </file_system_attribute>
+            <allocation_attribute> 8 </allocation_attribute>
+            <percent_reserved> 0 </percent_reserved>
+            <filename> NVCFILE </filename>
+        </partition>
+
+        <partition name="UBENV" type="data">
+            <allocation_policy> sequential </allocation_policy>
+            <filesystem_type> basic </filesystem_type>
+            <start_location> 0x3D8000 </start_location>
+            <size> 32768 </size>
+            <file_system_attribute> 0 </file_system_attribute>
+            <allocation_attribute> 8 </allocation_attribute>
+            <percent_reserved> 0 </percent_reserved>
+            <description> **Required.** Reserved for U-Boot environment. </description>
+        </partition>
+
+        <partition name="VER_b" type="data">
+            <allocation_policy> sequential </allocation_policy>
+            <filesystem_type> basic </filesystem_type>
+            <start_location> 0x3E0000 </start_location>
+            <size> 32768 </size>
+            <file_system_attribute> 0 </file_system_attribute>
+            <partition_attribute> 0 </partition_attribute>
+            <allocation_attribute> 8 </allocation_attribute>
+            <percent_reserved> 0 </percent_reserved>
+            <filename> VERFILE </filename>
+            <description>  **Required.** Contains a redundant copy of BSP version
+              information. </description>
+        </partition>
+
+        <partition name="VER" type="data">
+            <allocation_policy> sequential </allocation_policy>
+            <filesystem_type> basic </filesystem_type>
+            <start_location> 0x3F0000 </start_location>
+            <size> 32768 </size>
+            <file_system_attribute> 0 </file_system_attribute>
+            <partition_attribute> 0 </partition_attribute>
+            <allocation_attribute> 8 </allocation_attribute>
+            <percent_reserved> 0 </percent_reserved>
+            <filename> VERFILE </filename>
+            <description>  **Required.** Contains BSP version information. </description>
+        </partition>
+    </device>
+</partition_layout>

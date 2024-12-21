@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+
+<!-- Nvidia Tegra board info configuration file -->
+
+<board_configs>
+    <board type="proc" id="2595" sku="0000" fab="0" />
+    <board type="display" id="1937" sku="1000"/>
+    <board type="pmu" id="2530" sku="1101" />
+</board_configs>
