@@ -1530,7 +1530,7 @@ static int vidioc_enum_input(struct file *file, void *fh,
 	memset(inp, 0, sizeof(*inp));
 
 	inp->index = index;
-	strscpy(inp->name, "loopback", sizeof(inp->name));
+	strscpy(inp->name, "maxine", sizeof(inp->name));
 	inp->type = V4L2_INPUT_TYPE_CAMERA;
 	inp->audioset = 0;
 	inp->tuner = 0;
