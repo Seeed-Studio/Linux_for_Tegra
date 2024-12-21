@@ -3,6 +3,7 @@ variables:
   BOARDID: ""
   BOARDSKU: ""
   FAB: ""
+  FLASH_NAME: ""
   IS_CUSTOM: "0" #disable custom image build by default
   START_TASK: ""
   INSTALL_NV_JP: "1" #enable install nvidia-jetpack by default
@@ -24,7 +25,9 @@ stages:
     if [ -z "$BOARDSKU" ]; then echo "Error: BOARDSKU variable is empty, Please setup it before enable this CI!"; exit 1; fi
   - > 
     if [ -z "$FAB" ]; then echo "Error: FAB variable is empty, Please setup it before enable this CI!"; exit 1; fi
-  - echo "config details, CONFIG $CONFIG,BOARDID $BOARDID,BOARDSKU $BOARDSKU,FAB $FAB,INSTALL_NV_JP $INSTALL_NV_JP"
+  - > 
+    if [ -z "$FLASH_NAME" ]; then echo "Error: FLASH_NAME variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - echo "config details, CONFIG $CONFIG,BOARDID $BOARDID,BOARDSKU $BOARDSKU,FAB $FAB,FLASH_NAME $FLASH_NAME,INSTALL_NV_JP $INSTALL_NV_JP"
   - git submodule sync
   - git submodule update --init --recursive
   - id 
@@ -59,7 +62,7 @@ stages:
       rm rootfs/usr/bin/qemu-aarch64-static
     fi
   # package the image for qspi & nvme flash
-  - sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB FUSELEVEL=fuselevel_production ./nvmassflashgen.sh $CONFIG mmcblk0p1
+  - sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB FUSELEVEL=fuselevel_production ./nvmassflashgen.sh $CONFIG $FLASH_NAME 
   - md5sum mfi_$CONFIG.tbz2 > md5sum-$CI_JOB_STAGE-$DATE_STR.txt
   # upload image of qspi & nvme ssd
   - mkdir -p deploy
@@ -84,6 +87,7 @@ build-recomputer-nano-4g:
     BOARDID: "3448"
     BOARDSKU: "0002"
     FAB: "400"
+    FLASH_NAME: "mmcblk0p1"
 
   script:
     - echo "Building for $CONFIG"
