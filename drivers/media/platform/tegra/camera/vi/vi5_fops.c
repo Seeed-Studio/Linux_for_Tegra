@@ -345,6 +345,8 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, unsigned int 
 		return -ENOMEM;
 	}
 
+	chan->tegra_vi_channel[vi_port]->capture_data->requests.va = chan->request[vi_port];
+
 	if (chan->is_slvsec) {
 		setup.channel_flags |= CAPTURE_CHANNEL_FLAG_SLVSEC;
 		setup.slvsec_stream_main = SLVSEC_STREAM_MAIN;
@@ -378,6 +380,7 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, unsigned int 
 		dma_free_coherent(chan->tegra_vi_channel[vi_port]->rtcpu_dev,
 				setup.queue_depth * setup.request_size,
 				chan->request, setup.iova);
+		chan->tegra_vi_channel[vi_port]->capture_data->requests.va = NULL;
 		return err;
 	}
 
@@ -1013,6 +1016,7 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 				chan->request[vi_port], chan->request_iova[vi_port]);
 			}
 			chan->request[vi_port] = NULL;
+			chan->tegra_vi_channel[vi_port]->capture_data->requests.va = NULL;
 
 			/* Release emd data buffers */
 			if (chan->emb_buf_size > 0) {
