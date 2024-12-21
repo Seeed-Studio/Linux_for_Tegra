@@ -60,11 +60,11 @@ stages:
     fi
   # package the image for qspi & nvme flash
   - sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB FUSELEVEL=fuselevel_production ./nvmassflashgen.sh $CONFIG mmcblk0p1
-  - md5sum mfi_$CONFIG.tar.gz > md5sum-$CI_JOB_STAGE-$DATE_STR.txt
+  - md5sum mfi_$CONFIG.tbz2 > md5sum-$CI_JOB_STAGE-$DATE_STR.txt
   # upload image of qspi & nvme ssd
   - mkdir -p deploy
   - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy 
-  - cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz || true
+  - cp mfi_$CONFIG.tbz2 deploy/mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tbz2 || true
   - cp md5sum-$CI_JOB_STAGE-$DATE_STR.txt deploy/ || true
   - umount deploy
 
