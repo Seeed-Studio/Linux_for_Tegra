@@ -28435,7 +28435,8 @@ rtl8168_init_one(struct pci_dev *pdev,
         struct rtl8168_private *tp;
         void __iomem *ioaddr = NULL;
         static int board_idx = -1;
-
+	u16 desired_mps = 128;
+	u32 desired_mrrs = 512;
         int rc;
 
         assert(pdev != NULL);
@@ -28597,6 +28598,22 @@ rtl8168_init_one(struct pci_dev *pdev,
         rtl8168_hw_init(dev);
 
         rtl8168_hw_reset(dev);
+
+	/* Set Maximum Payload Size (MPS) */
+	rc = pcie_set_mps(pdev->bus->self, desired_mps);
+	if (rc) {
+		dev_err(&pdev->bus->self->dev, "Failed to set MPS to %u (error %d)\n",
+			desired_mps, rc);
+		return rc;
+	}
+
+	/* Set Maximum Read Request Size (MRRS) */
+	rc = pcie_set_readrq(pdev->bus->self, desired_mrrs);
+	if (rc) {
+		dev_err(&pdev->bus->self->dev, "Failed to set MRRS to %u (error %d)\n",
+			desired_mrrs, rc);
+		return rc;
+	}
 
         /* Get production from EEPROM */
         if (((tp->mcfg == CFG_METHOD_21 || tp->mcfg == CFG_METHOD_22 ||
