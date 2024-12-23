@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Cryptographic API.
@@ -709,11 +709,17 @@ EXPORT_SYMBOL(tegra_hv_vse_get_db);
 
 static int status_to_errno(u32 err)
 {
+	int32_t ret = 0;
+
 	switch (err) {
+	case 0:
+		ret = 0;
+		break;
 	case 1:		/* VSE_MSG_ERR_INVALID_CMD */
 	case 3:		/* VSE_MSG_ERR_INVALID_ARGS */
 	case 11:	/* VSE_MSG_ERR_MAC_INVALID */
-		return -EINVAL;
+		ret = -EINVAL;
+		break;
 	case 4:		/* VSE_MSG_ERR_INVALID_KEY */
 	case 5:		/* VSE_MSG_ERR_CTR_OVERFLOW */
 	case 6:		/* VSE_MSG_ERR_INVALID_SUBKEY */
@@ -721,9 +727,14 @@ static int status_to_errno(u32 err)
 	case 8:		/* VSE_MSG_ERR_GCM_IV_INVALID */
 	case 9:		/* VSE_MSG_ERR_GCM_NONCE_INVALID */
 	case 10:	/* VSE_MSG_ERR_GMAC_INVALID_PARAMS */
-		return -EPERM;
+		ret = -EPERM;
+		break;
+	default:
+		ret = -EINVAL;
+		break;
 	}
-	return err;
+
+	return ret;
 }
 
 static int32_t validate_header(
