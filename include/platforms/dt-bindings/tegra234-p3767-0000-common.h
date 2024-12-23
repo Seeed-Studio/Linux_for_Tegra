@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Definitions for Jetson tegra234-p3767-0000 board.
  */
@@ -11,7 +10,12 @@
                                         "nvidia,p3768-0000+p3767-0001", \
                                         "nvidia,p3768-0000+p3767-0003", \
                                         "nvidia,p3768-0000+p3767-0004", \
-                                        "nvidia,p3768-0000+p3767-0005"
+                                        "nvidia,p3768-0000+p3767-0005", \
+                                        "nvidia,p3768-0000+p3767-0000-super", \
+                                        "nvidia,p3768-0000+p3767-0001-super", \
+                                        "nvidia,p3768-0000+p3767-0003-super", \
+                                        "nvidia,p3768-0000+p3767-0004-super", \
+                                        "nvidia,p3768-0000+p3767-0005-super"
 
 #define JETSON_COMPATIBLE_P3509		"nvidia,p3509-0000+p3767-0000", \
                                         "nvidia,p3509-0000+p3767-0001", \
