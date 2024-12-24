@@ -343,6 +343,11 @@ enum tegra_virtual_se_command {
 	VIRTUAL_SE_AES_GCM_ENC_PROCESS
 };
 
+enum rng_call {
+	HW_RNG = 0x5A5A5A5A,
+	CRYPTODEV_RNG = 0xABABABAB
+};
+
 /* CMAC response */
 struct tegra_vse_cmac_data {
 	u8 status;
@@ -3035,7 +3040,7 @@ static void tegra_hv_vse_safety_rng_drbg_exit(struct crypto_tfm *tfm)
 }
 
 static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *rng_ctx,
-	u8 *rdata, unsigned int dlen)
+	u8 *rdata, unsigned int dlen, enum rng_call is_hw_req)
 {
 	struct tegra_virtual_se_dev *se_dev =
 				g_virtual_se_dev[g_crypto_to_ivc_map[rng_ctx->node_id].engine_id];
@@ -3074,12 +3079,15 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 		return 0;
 	}
 
-	src = tegra_hv_vse_get_dma_buf(rng_ctx->node_id, AES_SRC_BUF_IDX,
+	if (is_hw_req == CRYPTODEV_RNG) {
+		src = tegra_hv_vse_get_dma_buf(rng_ctx->node_id, AES_SRC_BUF_IDX,
 					TEGRA_VIRTUAL_SE_RNG_DT_SIZE);
-	if (!src) {
-		pr_err("%s rng src buf is NULL\n", __func__);
-		return -ENOMEM;
-	}
+		if (!src) {
+			pr_err("%s src is NULL\n", __func__);
+			return -ENOMEM;
+		}
+	} else
+		src = &rng_ctx->hwrng_dma_buf;
 
 	ivc_tx = &ivc_req_msg->tx[0];
 	ivc_hdr = &ivc_req_msg->ivc_hdr;
@@ -3115,8 +3123,7 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 		if (data_len && num_blocks == j) {
 			memcpy(rdata_addr, src->buf_ptr, data_len);
 		} else {
-			memcpy(rdata_addr,
-				src->buf_ptr,
+			memcpy(rdata_addr, src->buf_ptr,
 				TEGRA_VIRTUAL_SE_RNG_DT_SIZE);
 		}
 	}
@@ -3130,7 +3137,7 @@ exit:
 static int tegra_hv_vse_safety_rng_drbg_get_random(struct crypto_rng *tfm,
 	const u8 *src, unsigned int slen, u8 *rdata, unsigned int dlen)
 {
-	return tegra_hv_vse_safety_get_random(crypto_rng_ctx(tfm), rdata, dlen);
+	return tegra_hv_vse_safety_get_random(crypto_rng_ctx(tfm), rdata, dlen, CRYPTODEV_RNG);
 }
 
 static int tegra_hv_vse_safety_rng_drbg_reset(struct crypto_rng *tfm,
@@ -4896,7 +4903,7 @@ static int tegra_hv_vse_safety_hwrng_read(struct hwrng *rng, void *buf, size_t s
 		return 0;
 
 	ctx = (struct tegra_virtual_se_rng_context *)rng->priv;
-	return tegra_hv_vse_safety_get_random(ctx, buf, size);
+	return tegra_hv_vse_safety_get_random(ctx, buf, size, HW_RNG);
 }
 #endif /* CONFIG_HW_RANDOM */
 
@@ -4920,6 +4927,15 @@ static int tegra_hv_vse_safety_register_hwrng(struct tegra_virtual_se_dev *se_de
 	}
 
 	rng_ctx->se_dev = se_dev;
+
+	/* To ensure the memory is not overwritten when hwrng req arrives while
+	 * AES CBC/CMAC or other AES operations are in progress
+	 */
+	rng_ctx->hwrng_dma_buf.buf_ptr = dma_alloc_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_RNG_DT_SIZE,
+		&rng_ctx->hwrng_dma_buf.buf_iova, GFP_KERNEL);
+	if (!rng_ctx->hwrng_dma_buf.buf_ptr)
+		return -ENOMEM;
+
 	vse_hwrng->name = "tegra_hv_vse_safety";
 	vse_hwrng->read = tegra_hv_vse_safety_hwrng_read;
 	vse_hwrng->quality = 1024;
@@ -4928,6 +4944,11 @@ static int tegra_hv_vse_safety_register_hwrng(struct tegra_virtual_se_dev *se_de
 	ret = devm_hwrng_register(se_dev->dev, vse_hwrng);
 out:
 	if (ret) {
+		if (rng_ctx) {
+			dma_free_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_RNG_DT_SIZE,
+			rng_ctx->hwrng_dma_buf.buf_ptr, rng_ctx->hwrng_dma_buf.buf_iova);
+			devm_kfree(se_dev->dev, rng_ctx);
+		}
 		if (vse_hwrng)
 			devm_kfree(se_dev->dev, vse_hwrng);
 	} else {
@@ -4947,6 +4968,9 @@ static void tegra_hv_vse_safety_unregister_hwrng(struct tegra_virtual_se_dev *se
 	if (se_dev->hwrng) {
 		devm_hwrng_unregister(se_dev->dev, se_dev->hwrng);
 		rng_ctx = (struct tegra_virtual_se_rng_context *)se_dev->hwrng->priv;
+
+		dma_free_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_RNG_DT_SIZE,
+			rng_ctx->hwrng_dma_buf.buf_ptr, rng_ctx->hwrng_dma_buf.buf_iova);
 
 		devm_kfree(se_dev->dev, rng_ctx);
 		devm_kfree(se_dev->dev, se_dev->hwrng);

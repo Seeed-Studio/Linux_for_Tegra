@@ -94,6 +94,7 @@ struct tegra_virtual_se_dev {
 struct tegra_virtual_se_rng_context {
 	/* Security Engine device */
 	struct tegra_virtual_se_dev *se_dev;
+	struct tegra_vse_dma_buf hwrng_dma_buf;
 	/*Crypto dev instance*/
 	uint32_t node_id;
 };
