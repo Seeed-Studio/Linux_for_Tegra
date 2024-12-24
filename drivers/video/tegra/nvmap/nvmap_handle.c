@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2009-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2009-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Handle allocation and freeing routines for nvmap
  */
@@ -34,7 +34,7 @@
 #include "nvmap_handle_int.h"
 #include "nvmap_debug.h"
 
-u32 nvmap_max_handle_count;
+static u32 nvmap_max_handle_count;
 
 u32 nvmap_handle_get_max_handle_count(void)
 {
