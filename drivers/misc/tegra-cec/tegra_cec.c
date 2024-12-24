@@ -818,3 +818,9 @@ static struct platform_driver tegra_cec_driver = {
 	.resume = tegra_cec_resume,
 #endif
 };
+
+module_platform_driver(tegra_cec_driver);
+
+MODULE_DESCRIPTION("Tegra CEC Driver");
+MODULE_LICENSE("GPL v2");
+MODULE_AUTHOR("Prafull Suryawanshi <prafulls@nvidia.com>");
