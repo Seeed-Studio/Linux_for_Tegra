@@ -401,6 +401,8 @@ int dce_admin_get_ipc_channel_info(struct tegra_dce *d,
 					struct dce_ipc_queue_info *q_info);
 int dce_admin_send_cmd_echo(struct tegra_dce *d,
 			    struct dce_ipc_message *msg);
+int dce_admin_send_cmd_rm_bootstrap(struct tegra_dce *d,
+			    struct dce_ipc_message *msg);
 int dce_admin_send_cmd_ext_test(struct tegra_dce *d,
 				struct dce_ipc_message *msg);
 int dce_admin_send_prepare_sc7(struct tegra_dce *d,

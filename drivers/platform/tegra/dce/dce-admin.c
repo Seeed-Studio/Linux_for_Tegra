@@ -666,6 +666,46 @@ int dce_admin_get_ipc_channel_info(struct tegra_dce *d,
 }
 
 /**
+ * dce_admin_send_bootstrap2 - Sends DCE_ADMIN_CMD_RM_BOOTSTRAP2 cmd.
+ *
+ * @d - Pointer to tegra_dce struct.
+ * @msg - Pointer to dce_ipc_msg struct.
+ *
+ * Return - 0 if successful
+ */
+int dce_admin_send_cmd_rm_bootstrap(struct tegra_dce *d,
+			    struct dce_ipc_message *msg)
+{
+	int ret = -1;
+	struct dce_admin_ipc_cmd *req_msg;
+	struct dce_admin_ipc_resp *resp_msg;
+
+	if (!msg || !msg->tx.data || !msg->rx.data)
+		goto out;
+
+	/* return if dce bootstrap not completed */
+	if (!dce_is_bootstrap_done(d)) {
+		dce_os_err(d, "Admin Bootstrap not yet done");
+		goto out;
+	}
+
+	req_msg = (struct dce_admin_ipc_cmd *)(msg->tx.data);
+	resp_msg = (struct dce_admin_ipc_resp *) (msg->rx.data);
+
+	req_msg->cmd = (uint32_t)DCE_ADMIN_CMD_RM_BOOTSTRAP2;
+
+	ret = dce_admin_send_msg(d, msg);
+	if ((ret) || (resp_msg->error != DCE_ERR_CORE_SUCCESS)) {
+		dce_os_err(d, "Error sending bootstrap msg : [%d]", ret);
+		ret = ret ? ret : resp_msg->error;
+		goto out;
+	}
+
+out:
+	return ret;
+}
+
+/**
  * dce_admin_send_cmd_echo - Sends DCE_ADMIN_CMD_ECHO cmd.
  *
  * @d - Pointer to tegra_dce struct.

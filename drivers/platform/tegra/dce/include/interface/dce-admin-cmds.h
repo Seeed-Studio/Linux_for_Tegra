@@ -74,8 +74,9 @@
 #define DCE_ADMIN_CMD_PERF_RESULTS	0x16U   // copy out the perf results
 #define DCE_ADMIN_CMD_PERF_GET_EVENTS	0x17U   // get perf events
 #define DCE_ADMIN_CMD_PERF_CLEAR_EVENTS	0x18U   // clear perf events
+#define DCE_ADMIN_CMD_RM_BOOTSTRAP2     0x19U   // tell RM to "bootstrap" display-server
 
-#define DCE_ADMIN_CMD_NEXT		0x19U   // must be last command ID + 1
+#define DCE_ADMIN_CMD_NEXT		0x1AU   // must be last command ID + 1
 
 struct dce_admin_version_info {
 	uint32_t	version;
