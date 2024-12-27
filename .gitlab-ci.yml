@@ -106,23 +106,27 @@ stages:
       umount deploy
     fi
   # install user custom package(optional)
+  - sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+  - mount --bind /sys ./rootfs/sys
+  - mount --bind /dev ./rootfs/dev
+  - mount --bind /dev/pts ./rootfs/dev/pts
+  - mount --bind /proc ./rootfs/proc
+  - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
+  - cp extra_scripts/rootfs_magic.sh rootfs
   - >
     if [ $INSTALL_NV_JP == "1" ]; then
-      sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
-      mount --bind /sys ./rootfs/sys
-      mount --bind /dev ./rootfs/dev
-      mount --bind /dev/pts ./rootfs/dev/pts
-      mount --bind /proc ./rootfs/proc
-      cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
-      cp extra_scripts/rootfs_magic.sh rootfs
       chroot rootfs /rootfs_magic.sh || true
-      umount ./rootfs/sys
-      umount ./rootfs/dev/pts
-      umount ./rootfs/dev
-      umount ./rootfs/proc
-      rm rootfs/rootfs_magic.sh
-      rm rootfs/usr/bin/qemu-aarch64-static
     fi
+  #update kernel module dependencies
+  - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
+  - echo "current kernel number $KER_NUM"
+  - sudo chroot rootfs depmod -a  $KER_NUM
+  - umount ./rootfs/sys
+  - umount ./rootfs/dev/pts
+  - umount ./rootfs/dev
+  - umount ./rootfs/proc
+  - rm rootfs/rootfs_magic.sh
+  - rm rootfs/usr/bin/qemu-aarch64-static
   # package the image for qspi & nvme flash
   - sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB BOARDREV=$BOARDREV CHIP_SKU=$CHIP_SKU ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB -p "-c bootloader/generic/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash --massflash 5 --network usb0 $CONFIG external
   - md5sum mfi_$CONFIG.tar.gz > chksum-$CI_JOB_STAGE-$DATE_STR.txt
