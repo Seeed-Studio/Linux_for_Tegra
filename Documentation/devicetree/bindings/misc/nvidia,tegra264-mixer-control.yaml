@@ -1,0 +1,52 @@
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mixer-controls/nvidia,tegra264-mixer-control.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: FIXME -- add title
+
+maintainers:
+  - FIXME -- add maintainers
+
+description: |
+     the compatability = nvidia,tegra264-mixer-control is mentioned in the following drivers
+        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
+
+     The following nodes use this compatibility
+        - /sound/mixer-controls
+
+select:
+  properties:
+    compatible:
+        minItems: 2
+        maxItems: 2
+        items:
+            enum:
+                - nvidia,tegra264-mixer-control
+                - nvidia,tegra234-mixer-control
+
+  required:
+    - compatible
+
+properties:
+
+required:
+    - compatible
+
+examples:
+    - |
+        mixer-controls {
+            compatible = "nvidia,tegra264-mixer-control",
+                         "nvidia,tegra234-mixer-control";
+        };
