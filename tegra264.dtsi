@@ -8435,6 +8435,7 @@
 			     <GIC_PPI 10 8>,
 			     <GIC_PPI 12 8>;
 		interrupt-parent = <&gic>;
+		arm,no-tick-in-suspend;
 		always-on;
 	};
 
