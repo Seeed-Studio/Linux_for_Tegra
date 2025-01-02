@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * PCIe DMA test framework for Tegra PCIe.
- *
- * Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -366,9 +365,8 @@ static void ep_test_dma_remove(struct pci_dev *pdev)
 }
 
 static const struct pci_device_id ep_pci_tbl[] = {
-	{ PCI_DEVICE(0x10DE, 0x1AD4)},
-	{ PCI_DEVICE(0x10DE, 0x1AD5)},
-	{ PCI_DEVICE(0x10DE, 0x229a)},
+	{ PCI_DEVICE(0x10DE, 0x22D7)},
+	{ PCI_DEVICE(0x10DE, 0x229B)},
 	{},
 };
 
