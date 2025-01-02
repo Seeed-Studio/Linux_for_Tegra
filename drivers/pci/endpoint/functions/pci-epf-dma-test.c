@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * PCIe DMA EPF test framework for Tegra PCIe.
  */
@@ -534,7 +534,7 @@ static int pcie_dma_epf_probe(struct pci_epf *epf)
 	epf->event_ops = &pci_epf_dma_test_event_ops;
 
 	epfnv->header.vendorid = PCI_VENDOR_ID_NVIDIA;
-	epfnv->header.deviceid = 0x1AD4;
+	epfnv->header.deviceid = 0x22D7;
 	epfnv->header.baseclass_code = PCI_BASE_CLASS_MEMORY;
 	epfnv->header.interrupt_pin = PCI_INTERRUPT_INTA;
 	epf->header = &epfnv->header;
