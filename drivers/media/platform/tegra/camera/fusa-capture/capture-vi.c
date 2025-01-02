@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
+// All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-vi.c
@@ -1400,13 +1401,23 @@ static uint32_t vi_capture_get_num_progress(
 	struct vi_capture_req *req)
 {
 	struct vi_capture *capture = chan->capture_data;
-	struct capture_descriptor* desc = (struct capture_descriptor*)
-		(capture->requests.va +
-				req->buffer_index * capture->request_size);
-	struct vi_channel_config* config = &desc->ch_cfg;
 
 	const uint16_t minProgress = 2U;
 	uint16_t numProgress = minProgress;
+
+	struct capture_descriptor *desc;
+	struct vi_channel_config *config;
+
+	unsigned int mul_value = 0;
+
+	if (check_mul_overflow(req->buffer_index, capture->request_size, &mul_value)) {
+		dev_err(chan->dev,
+			"%s:capture descriptor offset failed due to an overflow\n", __func__);
+		return minProgress;
+	}
+
+	desc = (struct capture_descriptor *)(capture->requests.va + mul_value);
+	config = &desc->ch_cfg;
 
 	/* Minimum of two progress fences for PXL_SOF and PXL_EOF */
 	if (config->flush_enable == 0x1UL)
@@ -1433,7 +1444,14 @@ static uint32_t vi_capture_get_num_progress(
 		 */
 		if (((config->frame.frame_y - config->flush_first) % config->flush) == 0U)
 		{
-			numProgress--;
+			if (numProgress < minProgress) {
+				dev_err(chan->dev,
+						"%s:numProgress is less than the minimum value\n",
+						__func__);
+				numProgress = minProgress;
+			} else {
+				numProgress--;
+			}
 		}
 	}
 	return (uint32_t)numProgress;
@@ -1446,6 +1464,7 @@ int vi_capture_request(
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_desc;
 	int err = 0;
+	uint32_t sum_value = 0;
 
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
@@ -1495,7 +1514,12 @@ int vi_capture_request(
 	}
 
 	// Progress syncpoints + 1 for status syncpoint
-	capture->progress_sp.threshold += vi_capture_get_num_progress(chan, req) + 1;
+	if (check_add_overflow(vi_capture_get_num_progress(chan, req), 1U, &sum_value)) {
+		dev_err(chan->dev, "%s: check_sub failed due to an overflow\n", __func__);
+	} else if (check_add_overflow(capture->progress_sp.threshold, sum_value,
+				&capture->progress_sp.threshold)) {
+		dev_err(chan->dev, "%s: procress_sp failed due to an overflow\n", __func__);
+	}
 
 	mutex_unlock(&capture->reset_lock);
 

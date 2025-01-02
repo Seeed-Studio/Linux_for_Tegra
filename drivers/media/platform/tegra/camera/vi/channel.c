@@ -411,6 +411,7 @@ void release_buffer(struct tegra_channel *chan,
 {
 	struct vb2_v4l2_buffer *vbuf = &buf->buf;
 	s64 frame_arrived_ts = 0;
+	unsigned long flags;
 
 	/* release one frame */
 	vbuf->sequence = chan->sequence;
@@ -423,6 +424,7 @@ void release_buffer(struct tegra_channel *chan,
 	vb2_set_plane_payload(&vbuf->vb2_buf,
 		0, chan->format.sizeimage);
 
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	/*
 	 * WAR to force buffer state if capture state is not good
 	 * WAR - After sync point timeout or error frame capture
@@ -431,6 +433,7 @@ void release_buffer(struct tegra_channel *chan,
 	 */
 	if (chan->capture_state != CAPTURE_GOOD || vbuf->sequence < 2)
 		buf->state = VB2_BUF_STATE_ERROR;
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 	if (chan->sequence == 1) {
 		/*
@@ -507,6 +510,7 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 {
 	struct vb2_v4l2_buffer *vbuf;
 	s64 frame_arrived_ts = 0;
+	unsigned long flags;
 
 	spin_lock(&chan->buffer_lock);
 
@@ -529,6 +533,7 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 		vb2_set_plane_payload(&vbuf->vb2_buf,
 			0, chan->format.sizeimage);
 
+		spin_lock_irqsave(&chan->capture_state_lock, flags);
 		/*
 		 * WAR to force buffer state if capture state is not good
 		 * WAR - After sync point timeout or error frame capture
@@ -540,6 +545,7 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 			chan->released_bufs < 2)
 			chan->buffer_state[chan->free_index] =
 						VB2_BUF_STATE_ERROR;
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 		if (chan->sequence == 1) {
 			/*
@@ -587,6 +593,7 @@ static void add_buffer_to_ring(struct tegra_channel *chan,
 static void update_state_to_buffer(struct tegra_channel *chan, int state)
 {
 	int save_index = ((int)chan->save_index - PREVIOUS_BUFFER_DEC_INDEX);
+	unsigned long flags;
 
 	/* save index decrements by 2 as 3 bufs are added in ring buffer */
 	if (save_index < 0)
@@ -594,29 +601,35 @@ static void update_state_to_buffer(struct tegra_channel *chan, int state)
 	/* update state for the previous buffer */
 	chan->buffer_state[save_index] = state;
 
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	/* for timeout/error case update the current buffer state as well */
 	if (chan->capture_state != CAPTURE_GOOD)
 		chan->buffer_state[chan->save_index] = state;
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 }
 
 void tegra_channel_ring_buffer(struct tegra_channel *chan,
 					struct vb2_v4l2_buffer *vb,
 					struct timespec64 *ts, int state)
 {
+	unsigned long flags;
 	if (!chan->bfirst_fstart)
 		chan->bfirst_fstart = true;
 	else
 		update_state_to_buffer(chan, state);
 
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	/* Capture state is not GOOD, release all buffers and re-init state */
 	if (chan->capture_state != CAPTURE_GOOD) {
 		free_ring_buffers(chan, chan->num_buffers);
 		tegra_channel_init_ring_buffer(chan);
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 		return;
 	} else {
 		/* TODO: granular time code information */
 		vb->timecode.seconds = ts->tv_sec;
 	}
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 	/* release buffer N at N+2 frame start event */
 	if (chan->num_buffers >= (chan->capture_queue_depth - 1))

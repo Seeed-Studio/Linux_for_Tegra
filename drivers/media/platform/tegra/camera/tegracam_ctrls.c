@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
+// SPDX-License-Identifier: GPL-2.0-only
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
  * tegracam_ctrls - control framework for tegra camera drivers
  *
- * Copyright (c) 2017-2024, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/nospec.h>
@@ -899,8 +900,35 @@ static int tegracam_check_ctrl_ops(
 			"ERROR: Can not mix normal and extended sensor controls\n");
 		return -EINVAL;
 	}
-	total_ops = sensor_ops + mode_ops + string_ops + default_ops + compound_ops;
-	total_ops += sensor_ex_ops + default_ex_ops;
+
+	if (check_add_overflow(total_ops, sensor_ops, &total_ops)) {
+		dev_err(dev, "%s:sensor ops failed due to an overflow\n", __func__);
+		return -EINVAL;
+	}
+	if (check_add_overflow(total_ops, mode_ops, &total_ops)) {
+		dev_err(dev, "%s:mode ops failed due to an overflow\n", __func__);
+		return -EINVAL;
+	}
+	if (check_add_overflow(total_ops, string_ops, &total_ops)) {
+		dev_err(dev, "%s:string ops failed due to an overflow\n", __func__);
+		return -EINVAL;
+	}
+	if (check_add_overflow(total_ops, default_ops, &total_ops)) {
+		dev_err(dev, "%s:default ops failed due to an overflow\n", __func__);
+		return -EINVAL;
+	}
+	if (check_add_overflow(total_ops, compound_ops, &total_ops)) {
+		dev_err(dev, "%s:compound ops failed due to an overflow\n", __func__);
+		return -EINVAL;
+	}
+	if (check_add_overflow(total_ops, sensor_ex_ops, &total_ops)) {
+		dev_err(dev, "%s:sensor ex ops failed due to an overflow\n", __func__);
+		return -EINVAL;
+	}
+	if (check_add_overflow(total_ops, default_ex_ops, &total_ops)) {
+		dev_err(dev, "%s:default ex ops failed due to an overflow\n", __func__);
+		return -EINVAL;
+	}
 
 	if (total_ops != (ops->numctrls + TEGRACAM_DEF_CTRLS)) {
 		dev_err(dev,
