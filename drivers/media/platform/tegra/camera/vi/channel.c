@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVIDIA Tegra Video Input Device
  */
@@ -1350,7 +1350,12 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 		/* Prevent changing the bypass mode while the device is still streaming */
 		if (vb2_is_busy(&chan->queue))
 			return -EBUSY;
-
+		if ((ctrl->val < 0) || (ctrl->val >= ARRAY_SIZE(switch_ctrl_qmenu))) {
+			dev_err(&chan->video->dev,
+				"%s: update bypass failed due to an invalid value\n",
+				__func__);
+			return -EINVAL;
+		}
 		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON)
 			chan->bypass = true;
 		else if (chan->vi->bypass) {
@@ -1370,7 +1375,7 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 
 			if (!s_data)
 				break;
-			if (ctrl->val >= ARRAY_SIZE(switch_ctrl_qmenu)) {
+			if ((ctrl->val < 0) || (ctrl->val >= ARRAY_SIZE(switch_ctrl_qmenu))) {
 				dev_err(&chan->video->dev,
 					"%s: update enable override failed due to an invalid value\n",
 					__func__);
@@ -1395,7 +1400,7 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 				&chan->fmtinfo->bpp, 0);
 		break;
 	case TEGRA_CAMERA_CID_VI_SIZE_ALIGN:
-		if (ctrl->val >= ARRAY_SIZE(size_align_ctrl_qmenu)) {
+		if ((ctrl->val < 0) || (ctrl->val >= ARRAY_SIZE(size_align_ctrl_qmenu))) {
 			dev_err(&chan->video->dev,
 				"%s: update size alignment failed due to an invalid value\n",
 				__func__);
@@ -2432,6 +2437,12 @@ static int tegra_channel_open(struct file *fp)
 	chan->fh = (struct v4l2_fh *)fp->private_data;
 
 	if (tegra_channel_verify_focuser(chan)) {
+		if ((chan->num_subdevs <= 0) || (chan->num_subdevs > MAX_SUBDEVICES)) {
+			dev_err(chan->vi->dev,
+				"%s: set power failed due to an invalid num_subdevs value\n",
+				__func__);
+			return -EINVAL;
+		}
 		ret = tegra_channel_set_power(chan, true);
 		if (ret < 0)
 			return ret;
