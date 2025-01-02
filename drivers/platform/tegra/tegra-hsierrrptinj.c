@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION. All rights reserved.
 
 /**
  * @file tegra-hsierrrptinj.c
@@ -35,7 +35,7 @@
 #define WRITE_USER 0200 /* S_IWUSR */
 
 /* Max instance of any registred IP */
-#define MAX_INSTANCE 11U
+#define MAX_INSTANCE 20U
 
 /* Timeout in millisec */
 #define TIMEOUT		1000
@@ -68,7 +68,7 @@ struct hsm_error_report_frame {
  * MGBE  - 20
  * PCIE  - 11
  * PSC   - 1
- * I2C   = 10
+ * I2C   = 17
  * QSPI  - 2
  * SDMMC - 9
  * TSEC  - 1
@@ -76,7 +76,7 @@ struct hsm_error_report_frame {
  * SMMU  - 1
  * DLA   - 2
  */
-static unsigned int ip_instances[NUM_IPS] = {1, 1, 5, 20, 11, 1, 10, 2, 9, 1, 1, 1, 2};
+static unsigned int ip_instances[NUM_IPS] = {1, 1, 5, 20, 11, 1, 17, 2, 9, 1, 1, 1, 2};
 
 /* This directory entry will point to `/sys/kernel/debug/tegra_hsierrrptinj`. */
 static struct dentry *hsierrrptinj_debugfs_root;
