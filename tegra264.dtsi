@@ -4680,6 +4680,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLAON>;
 			resets = <&bpmp TEGRA264_RESET_I2C2>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8051>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -4743,6 +4744,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLAON>;
 			resets = <&bpmp TEGRA264_RESET_I2C3>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8052>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -4815,6 +4817,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C14>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8064>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -4878,6 +4881,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C15>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8065>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -4941,6 +4945,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C16>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8066>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5004,6 +5009,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C0>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8054>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5067,6 +5073,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C1>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8050>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5127,6 +5134,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C4>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8053>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5186,6 +5194,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C6>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8055>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5249,6 +5258,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C7>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8056>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5308,6 +5318,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C8>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8057>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5371,6 +5382,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C9>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8058>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5430,6 +5442,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C10>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8059>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5493,6 +5506,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C11>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8061>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
@@ -5556,6 +5570,7 @@
 			assigned-clock-parents = <&bpmp TEGRA264_CLK_PLLP_OUT0>;
 			resets = <&bpmp TEGRA264_RESET_I2C12>;
 			reset-names = "i2c";
+			nvidia,epl-reporter-id = <0x8062>;
 			prod-settings {
 				prod {
 					/* 0xd4, 0xd8, 0xdc, 0xe0 not defined in drivery */
