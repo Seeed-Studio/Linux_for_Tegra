@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-j401-p3768-0000+p3767-0000.dts"
+#include "tegra234-p3768-0000+p3767-xxxx-nv-common.dtsi"
+#include <dt-bindings/tegra234-p3767-0000-common.h>
+
+/ {
+        bus@0 {
+                padctl@3520000 {
+                        ports {
+                                usb2-0 {
+                                       connector {
+                                               compatible = "usb-b-connector", "gpio-usb-b-connector";
+                                               label = "micro-USB";
+                                               type = "micro";
+                                               vbus-gpio = <&gpio TEGRA234_MAIN_GPIO(Z, 1) GPIO_ACTIVE_LOW>;
+                                       };
+                                };
+                        };
+                };
+        };
+};
