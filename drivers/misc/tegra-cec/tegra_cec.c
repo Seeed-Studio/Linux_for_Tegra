@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2012-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/err.h>
@@ -749,14 +751,12 @@ cec_error:
 	return ret;
 }
 
-static int tegra_cec_remove(struct platform_device *pdev)
+static void tegra_cec_remove(struct platform_device *pdev)
 {
 	struct tegra_cec *cec = platform_get_drvdata(pdev);
 
 	misc_deregister(&cec->misc_dev);
 	cancel_work_sync(&cec->work);
-
-	return 0;
 }
 
 #ifdef CONFIG_PM
@@ -803,6 +803,20 @@ static struct of_device_id tegra_cec_of_match[] = {
 	{},
 };
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static void tegra_cec_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_cec_remove(pdev);
+}
+#else
+static int tegra_cec_remove_wrapper(struct platform_device *pdev)
+{
+	tegra_cec_remove(pdev);
+
+	return 0;
+}
+#endif
+
 static struct platform_driver tegra_cec_driver = {
 	.driver = {
 		.name = TEGRA_CEC_NAME,
@@ -811,7 +825,7 @@ static struct platform_driver tegra_cec_driver = {
 		.of_match_table = of_match_ptr(tegra_cec_of_match),
 	},
 	.probe = tegra_cec_probe,
-	.remove = tegra_cec_remove,
+	.remove = tegra_cec_remove_wrapper,
 
 #ifdef CONFIG_PM
 	.suspend = tegra_cec_suspend,

@@ -39,7 +39,6 @@ struct tegra_cec {
 	u8			tx_buf_cnt;
 	struct reset_control    *reset;
 };
-static int tegra_cec_remove(struct platform_device *pdev);
 
 #define TEGRA_CEC_LADDR_BROADCAST   0xF
 #define TEGRA_CEC_LADDR_MASK        0xF
