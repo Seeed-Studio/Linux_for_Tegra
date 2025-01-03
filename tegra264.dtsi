@@ -7720,6 +7720,7 @@
 			status = "disabled";
 
 			nvidia,bpmp-bus-id = <5>;
+			multi-master;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			vrs_pseq: vrs@3c {
