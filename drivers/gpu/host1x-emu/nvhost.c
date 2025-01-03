@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0-only
  */
 #include <nvidia/conftest.h>
@@ -10,24 +10,20 @@
 #include <linux/interrupt.h>
 #include <linux/iommu.h>
 #include <linux/module.h>
+#include <linux/acpi.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/version.h>
-#ifdef CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
-#include <linux/host1x-emu.h>
 #include <linux/nvhost-emu.h>
-#else
-#include <linux/host1x-next.h>
-#include <linux/nvhost.h>
-#include <linux/nvhost_t194.h>
-#endif
+#include <linux/host1x-emu.h>
 
 #include "dev.h"
 
 #define NVHOST_NUM_CDEV 1
+extern struct platform_device  *host1x_def_pdev;
 
 struct nvhost_syncpt_interface {
     dma_addr_t base;
@@ -127,16 +123,22 @@ HOST1X_EMU_EXPORT_SYMBOL(host1x_writel);
 
 HOST1X_EMU_EXPORT_DECL(struct platform_device*, nvhost_get_default_device(void))
 {
-    struct device_node 		*np;
-    struct platform_device 	*host1x_pdev;
+    struct device_node      *np;
+    struct platform_device  *host1x_pdev;
 
     np = of_find_matching_node(NULL, host1x_match);
-    if (!np)
-        return NULL;
-
-    host1x_pdev = of_find_device_by_node(np);
-    if (!host1x_pdev)
-        return NULL;
+    if (np) {
+        host1x_pdev = of_find_device_by_node(np);
+        if (!host1x_pdev)
+            return NULL;
+    } else {
+        if ((host1x_def_pdev != NULL) &&
+                (ACPI_HANDLE(&host1x_def_pdev->dev))) {
+            host1x_pdev = host1x_def_pdev;
+        }
+        else
+            return NULL;
+    }
 
     return host1x_pdev;
 }

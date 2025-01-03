@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
 #include <nvidia/conftest.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -7,6 +9,7 @@
 #include <linux/io.h>
 #include <linux/list.h>
 #include <linux/module.h>
+#include <linux/acpi.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
@@ -35,6 +38,8 @@
 #define HOST1X_POOL_MSEC_PERIOD     70          /*70msec*/
 #define HOST1X_SYNCPT_POOL_BASE(x)  (x*2+0)
 #define HOST1X_SYNCPT_POOL_SIZE(x)  (x*2+1)
+
+struct platform_device  *host1x_def_pdev;
 
 static const struct host1x_info host1xEmu_info = {
     .nb_pts                 = 1024,
@@ -100,6 +105,20 @@ static const struct of_device_id host1x_of_match[] = {
     { },
 };
 MODULE_DEVICE_TABLE(of, host1x_of_match);
+
+static void *acpi_data[] = {
+    (void*)&host1xEmu_info,   /*0x0*/
+    NULL,
+};
+
+static struct acpi_device_id tegra_emu_syncpt_acpi_match[] = {
+    {
+        .id = "NVDA300A",
+        .driver_data = 0,
+    },
+    { },
+};
+MODULE_DEVICE_TABLE(acpi, tegra_emu_syncpt_acpi_match);
 
 void host1x_sync_writel(struct host1x *host1x, u32 v, u32 r)
 {
@@ -219,11 +238,20 @@ static int host1x_get_syncpt_pools(struct host1x *host)
     int ret;
     int i;
 
-    ret = of_property_count_strings(np, "nvidia,syncpoint-pool-names");
-    if (ret < 0) {
-        /* No pools defined, only read only pool*/
-        dev_err(host->dev, "Host1x-EMU: Invalid nvidia,syncpoint-pool-names property: %d\n", ret);
-        ret = 0;
+    if (ACPI_HANDLE(host->dev)) {
+        /*
+         * Set number of R/W pool as 1 for ACPI clients
+         * TODO: Make this based on host->info which is set
+         * based on platform.
+         */
+        ret = 1;
+    } else {
+        ret = of_property_count_strings(np, "nvidia,syncpoint-pool-names");
+        if (ret < 0) {
+            /* No pools defined, only read only pool*/
+            dev_err(host->dev, "Host1x-EMU: Invalid nvidia,syncpoint-pool-names property: %d\n", ret);
+            ret = 0;
+        }
     }
     host->num_pools = ret;
 
@@ -258,22 +286,31 @@ static int host1x_get_syncpt_pools(struct host1x *host)
     for (i = 0; i < host->num_pools; i++) {
         struct host1x_syncpt_pool *pool = &host->pools[i];
 
-        ret = of_property_read_string_index(np, "nvidia,syncpoint-pool-names", i, &pool->name);
-        if (ret) {
-            dev_err(host->dev, "Host1x-EMU: Invalid nvidia,syncpoint-pool-names property: %d\n", ret);
-            return ret;
-        }
-
-        ret = of_property_read_u32_index(np, "nvidia,syncpoint-pools", HOST1X_SYNCPT_POOL_BASE(i), &pool->sp_base);
-        if (!ret) {
-            ret = of_property_read_u32_index(np, "nvidia,syncpoint-pools", HOST1X_SYNCPT_POOL_SIZE(i), &pool->sp_end);
+        if (ACPI_HANDLE(host->dev)) {
+            /*
+             * TODO: Make this based on host->info which is set
+             * based on platform.
+             */
+            pool->sp_base = 0;
+            pool->sp_end  = host->syncpt_count;
+        } else {
+            ret = of_property_read_string_index(np, "nvidia,syncpoint-pool-names", i, &pool->name);
             if (ret) {
-                dev_err(host->dev, "Host1x-EMU: Invalid nvidia,syncpoint-pools property: %d\n", ret);
+                dev_err(host->dev, "Host1x-EMU: Invalid nvidia,syncpoint-pool-names property: %d\n", ret);
                 return ret;
             }
-        } else {
-            dev_err(host->dev, "Host1x-EMU: Error in read, invalid nvidia,syncpoint-pools property: %d\n", ret);
-            return ret;
+
+            ret = of_property_read_u32_index(np, "nvidia,syncpoint-pools", HOST1X_SYNCPT_POOL_BASE(i), &pool->sp_base);
+            if (!ret) {
+                ret = of_property_read_u32_index(np, "nvidia,syncpoint-pools", HOST1X_SYNCPT_POOL_SIZE(i), &pool->sp_end);
+                if (ret) {
+                    dev_err(host->dev, "Host1x-EMU: Invalid nvidia,syncpoint-pools property: %d\n", ret);
+                    return ret;
+                }
+            } else {
+                dev_err(host->dev, "Host1x-EMU: Error in read, invalid nvidia,syncpoint-pools property: %d\n", ret);
+                return ret;
+            }
         }
 
         pool->sp_end = pool->sp_base + pool->sp_end;
@@ -290,10 +327,23 @@ static int host1x_probe(struct platform_device *pdev)
     struct host1x *host;
 
     host = devm_kzalloc(&pdev->dev, sizeof(*host), GFP_KERNEL);
-    if (!host)
+    if (!host) {
         return -ENOMEM;
+    }
 
-    host->info = of_device_get_match_data(&pdev->dev);
+    if (ACPI_HANDLE(&pdev->dev)) {
+        const struct acpi_device_id *match;
+
+        match = acpi_match_device(tegra_emu_syncpt_acpi_match, &pdev->dev);
+        if (match == NULL) {
+            return -ENODEV;
+        }
+        host1x_def_pdev = pdev;
+        host->info = (struct host1x_info *)acpi_data[match->driver_data];
+    }else {
+        host->info = of_device_get_match_data(&pdev->dev);
+    }
+
     if (host->info == NULL) {
         dev_err(&pdev->dev, "Host1x-EMU: platform match data not found\n");
         return -EINVAL;
@@ -345,10 +395,12 @@ static int host1x_probe(struct platform_device *pdev)
     host1x_debug_init(host);
 #endif
 
-    err = devm_of_platform_populate(&pdev->dev);
-    if (err < 0) {
-        pr_info("Host1x-EMU: Failed to populate device from DT\n");
-        goto deinit_debugfs;
+    if (host->dev->of_node) {
+        err = devm_of_platform_populate(&pdev->dev);
+        if (err < 0) {
+            pr_info("Host1x-EMU: Failed to populate device from DT\n");
+            goto deinit_debugfs;
+        }
     }
 
     /* Start pool polling thread*/
@@ -423,6 +475,7 @@ static struct platform_driver tegra_host1x_driver = {
     .driver = {
         .name = "tegra-host1x-emu",
         .of_match_table = host1x_of_match,
+        .acpi_match_table = ACPI_PTR(tegra_emu_syncpt_acpi_match),
         .pm = &host1x_pm_ops,
     },
     .probe  = host1x_probe,
