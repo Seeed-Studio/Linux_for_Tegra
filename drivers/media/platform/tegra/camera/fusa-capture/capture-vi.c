@@ -71,6 +71,11 @@
 #define DEFAULT_VI_CHANNELS	U32_C(64)
 
 /**
+ * @brief Maximum number of VI channels supported by KMD in total
+ */
+#define NUM_VI_CHANNELS	U32_C(72)
+
+/**
  * @brief Maximum number of VI devices supported.
  */
 #define MAX_VI_UNITS	U32_C(0x2)
@@ -1621,6 +1626,7 @@ EXPORT_SYMBOL_GPL(vi_capture_set_progress_status_notifier);
 static int csi_vi_get_mapping_table(struct platform_device *pdev)
 {
 	uint32_t index = 0;
+	int err = 0;
 	struct device *dev = &pdev->dev;
 	struct tegra_capture_vi_data *info = platform_get_drvdata(pdev);
 
@@ -1659,10 +1665,16 @@ static int csi_vi_get_mapping_table(struct platform_device *pdev)
 		uint32_t stream_index = NVCSI_STREAM_INVALID_ID;
 		uint32_t vi_unit_id = INVALID_VI_UNIT_ID;
 
-		(void)of_property_read_u32_index(np,
+		err = of_property_read_u32_index(np,
 			"nvidia,vi-mapping",
 			2 * index,
 			&stream_index);
+		if (err) {
+			dev_err(dev,
+				"%s: ERR %d: missing property nvidia,vi-mapping or csi_stream_id at index %d",
+				__func__, err, index);
+			return err;
+		}
 
 		/* Check for valid/duplicate csi-stream-id */
 		if (stream_index >= MAX_NVCSI_STREAM_IDS ||
@@ -1672,10 +1684,16 @@ static int csi_vi_get_mapping_table(struct platform_device *pdev)
 			return -EINVAL;
 		}
 
-		(void)of_property_read_u32_index(np,
+		err = of_property_read_u32_index(np,
 			"nvidia,vi-mapping",
 			2 * index + 1,
 			&vi_unit_id);
+		if (err) {
+			dev_err(dev,
+				"%s: ERR %d: missing property nvidia,vi-mapping or vi_unit_id at index %d",
+				__func__, err, index);
+			return err;
+		}
 
 		/* check for valid vi-unit-id */
 		if (vi_unit_id >= MAX_VI_UNITS) {
@@ -1713,8 +1731,13 @@ static int capture_vi_probe(struct platform_device *pdev)
 
 	info->num_vi_devices = 0;
 
-	(void)of_property_read_u32(dev->of_node, "nvidia,vi-max-channels",
+	err = of_property_read_u32(dev->of_node, "nvidia,vi-max-channels",
 			&info->max_vi_channels);
+	if (err || info->max_vi_channels > NUM_VI_CHANNELS) {
+		err = -EINVAL;
+		goto cleanup;
+	}
+
 	if (info->max_vi_channels == 0)
 		info->max_vi_channels = DEFAULT_VI_CHANNELS;
 

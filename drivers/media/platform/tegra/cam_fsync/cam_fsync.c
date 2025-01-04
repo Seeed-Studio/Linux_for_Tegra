@@ -1,5 +1,7 @@
-/* Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1174,6 +1176,11 @@ static int cam_fsync_create_default_group(struct cam_fsync_controller *controlle
 			return err;
 		}
 	}
+	err = cam_fsync_group_verify_generators_lcm(group);
+	if (err != 0) {
+		dev_err(controller->dev, "Generator LCM check failed");
+		return err;
+	}
 	list_add_tail(&group->list, &controller->groups);
 
 	return err;
@@ -1238,6 +1245,10 @@ static int cam_fsync_find_and_add_groups(struct cam_fsync_controller *controller
 
 		num_generators = of_property_count_elems_of_size(np, "generators",
 			sizeof(u32));
+		if (num_generators < 0) {
+			dev_err(controller->dev, "Unable to parse generators: %d\n", num_generators);
+			return num_generators;
+		}
 		for (i = 0; i < num_generators; i++) {
 			gen = of_parse_phandle(np, "generators", i);
 			err = cam_fsync_add_generator(group, gen);

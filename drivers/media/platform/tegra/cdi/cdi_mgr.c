@@ -1,5 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (C) 2015-2024 NVIDIA CORPORATION.  All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
 #include <nvidia/conftest.h>
 
@@ -1794,10 +1806,13 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 
 	if (pd->num_pwr_gpios > 0) {
 		for (i = 0; i < pd->num_pwr_gpios; i++) {
-			if (!gpio_is_valid(pd->pwr_gpios[i]))
+			if (!gpio_is_valid(pd->pwr_gpios[i])) {
+				err = -EINVAL;
 				goto err_probe;
+			}
 
-			if (gpio_request(pd->pwr_gpios[i], "pwdn-gpios")) {
+			err = gpio_request(pd->pwr_gpios[i], "pwdn-gpios");
+			if (err) {
 				dev_err(&pdev->dev, "failed to req GPIO: %d\n",
 					pd->pwr_gpios[i]);
 				goto err_probe;
@@ -1905,14 +1920,18 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 		if (child_tca9539 != NULL) {
 			err = of_property_read_u32(child_tca9539, "i2c-bus",
 					&cdi_mgr->tca9539.bus);
-			if (err)
-				cdi_mgr->tca9539.bus = pd->bus;
+			if (err) {
+				dev_err(&pdev->dev, "%s: ERROR %d failed to find IOExpander i2c-bus property\n",
+					__func__, err);
+				goto err_probe;
+			}
 			err = of_property_read_u32(child_tca9539, "addr",
 				&cdi_mgr->tca9539.addr);
 			if (err || !cdi_mgr->tca9539.addr) {
 				dev_err(&pdev->dev, "%s: ERROR %d addr = %d\n",
 					__func__, err,
 					cdi_mgr->tca9539.addr);
+				err = -EINVAL;
 				goto err_probe;
 			}
 			err = of_property_read_u32(child_tca9539, "reg_len",
@@ -1921,6 +1940,7 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 				dev_err(&pdev->dev, "%s: ERROR %d reg_len = %d\n",
 					__func__, err,
 					cdi_mgr->tca9539.reg_len);
+				err = -EINVAL;
 				goto err_probe;
 			}
 			err = of_property_read_u32(child_tca9539, "dat_len",
@@ -1929,6 +1949,7 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 				dev_err(&pdev->dev, "%s: ERROR %d dat_len = %d\n",
 					__func__, err,
 					cdi_mgr->tca9539.dat_len);
+				err = -EINVAL;
 				goto err_probe;
 			}
 			err = of_property_read_u32(child_tca9539->parent,
@@ -1954,11 +1975,19 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 
 			cdi_mgr->tca9539.reg_len /= 8;
 			cdi_mgr->tca9539.dat_len /= 8;
+			if (cdi_mgr->tca9539.reg_len != 1 || cdi_mgr->tca9539.dat_len != 1) {
+				dev_err(&pdev->dev, "%s invalid reg_len = %d or dat_len = %d\n",
+					__func__, cdi_mgr->tca9539.reg_len,
+					cdi_mgr->tca9539.dat_len);
+				err = -EINVAL;
+				goto err_probe;
+			}
 			cdi_mgr->tca9539.enable = 1;
 			cdi_mgr->tca9539.adap = i2c_get_adapter(cdi_mgr->tca9539.bus);
 			if (!cdi_mgr->tca9539.adap) {
 				dev_err(&pdev->dev, "%s no such i2c bus %d\n",
 					__func__, cdi_mgr->tca9539.bus);
+				err = -EINVAL;
 				goto err_probe;
 			}
 
@@ -1969,27 +1998,31 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 			/* the registers in TCA9539 */
 			/* Use the IO expander to control PWDN signals */
 			if (cdi_mgr->cim_ver == 1U) { /* P3714 A01 */
-				if (tca9539_wr(cdi_mgr, 0x6, 0x0E) != 0) {
+				err = tca9539_wr(cdi_mgr, 0x6, 0x0E);
+				if (err != 0) {
 					dev_err(&pdev->dev,
 							"%s: ERR %d: TCA9539: Failed to select PWDN signal source\n",
 							__func__, err);
 					goto err_probe;
 				}
 				/* Output low for AGGA/B/C/D_PWRDN */
-				if (tca9539_wr(cdi_mgr, 0x2, 0x0E) != 0) {
+				err = tca9539_wr(cdi_mgr, 0x2, 0x0E);
+				if (err != 0) {
 					dev_err(&pdev->dev,
 							"%s: ERR %d: TCA9539: Failed to set the output level\n",
 							__func__, err);
 					goto err_probe;
 				}
 			} else if (cdi_mgr->cim_ver == 2U) { /* P3714 A02 */
-				if (tca9539_wr(cdi_mgr, 0x6, 0xC0) != 0) {
+				err = tca9539_wr(cdi_mgr, 0x6, 0xC0);
+				if (err != 0) {
 					dev_err(&pdev->dev,
 							"%s: ERR %d: TCA9539: Failed to select FS selection signal source\n",
 							__func__, err);
 					goto err_probe;
 				}
-				if (tca9539_wr(cdi_mgr, 0x7, 0x70) != 0) {
+				err = tca9539_wr(cdi_mgr, 0x7, 0x70);
+				if (err != 0) {
 					dev_err(&pdev->dev,
 							"%s: ERR %d: TCA9539: Failed to select PWDN signal source\n",
 							__func__, err);
@@ -2002,17 +2035,19 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 						cdi_mgr->cim_frsync[0],
 						cdi_mgr->cim_frsync[1],
 						cdi_mgr->cim_frsync[2]);
-				if (tca9539_wr(cdi_mgr, 0x2,
+				err = tca9539_wr(cdi_mgr, 0x2,
 					(cdi_mgr->cim_frsync[2] << 4) |
 					(cdi_mgr->cim_frsync[1] << 2) |
-					(cdi_mgr->cim_frsync[0])) < 0) {
+					(cdi_mgr->cim_frsync[0]));
+				if (err < 0) {
 					dev_err(&pdev->dev,
 							"%s: ERR %d: TCA9539: Failed to set FRSYNC control logic\n",
 							__func__, err);
 					goto err_probe;
 				}
 				/* Output low for AGGA/B/C/D_PWRDN */
-				if (tca9539_wr(cdi_mgr, 0x3, 0x00) != 0) {
+				err = tca9539_wr(cdi_mgr, 0x3, 0x00);
+				if (err != 0) {
 					dev_err(&pdev->dev,
 							"%s: ERR %d: TCA9539: Failed to set the output level\n",
 							__func__, err);

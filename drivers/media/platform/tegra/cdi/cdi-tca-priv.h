@@ -1,5 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
 #ifndef __CDI_TCA9539_PRIV_H__
 #define __CDI_TCA9539_PRIV_H__
@@ -31,19 +43,15 @@ static int tca9539_raw_wr(
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	if (tca9539->reg_len == 2) {
-		data[0] = (u8)((offset >> 8) & 0xff);
-		data[1] = (u8)(offset & 0xff);
-		data[2] = val;
-		size += 2;
-	} else if (tca9539->reg_len == 1) {
-		data[0] = (u8)(offset & 0xff);
-		data[1] = val;
-		size += 1;
-	} else if ((tca9539->reg_len == 0) ||
-			(tca9539->reg_len > 3)) {
-		return 0;
-	}
+	if (tca9539->dat_len != 1)
+		return -EINVAL;
+
+	if (tca9539->reg_len != 1)
+		return -EINVAL;
+
+	data[0] = (u8)(offset & 0xff);
+	data[1] = val;
+	size += 1;
 
 	num_msgs = size / MAX_MSG_SIZE;
 	num_msgs += (size % MAX_MSG_SIZE) ? 1 : 0;
@@ -96,11 +104,13 @@ static int tca9539_raw_rd(
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	if (tca9539->reg_len == 2) {
-		data[0] = (u8)((offset >> 8) & 0xff);
-		data[1] = (u8)(offset & 0xff);
-	} else if (tca9539->reg_len == 1)
-		data[0] = (u8)(offset & 0xff);
+	if (tca9539->dat_len != 1)
+		return -EINVAL;
+
+	if (tca9539->reg_len != 1)
+		return -EINVAL;
+
+	data[0] = (u8)(offset & 0xff);
 
 	i2cmsg[0].addr = tca9539->addr;
 	i2cmsg[0].len = tca9539->reg_len;

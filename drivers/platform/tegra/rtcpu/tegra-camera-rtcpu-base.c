@@ -1,5 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
 #include <nvidia/conftest.h>
 #include <linux/tegra-camera-rtcpu.h>
@@ -832,7 +844,9 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	}
 
 	name = pdata->name;
-	of_property_read_string(dev->of_node, "nvidia,cpu-name", &name);
+	ret = of_property_read_string(dev->of_node, "nvidia,cpu-name", &name);
+	if (ret)
+		dev_dbg(dev, "no device property, cpu-name, setting to parent name\n");
 
 	dev_dbg(dev, "probing RTCPU on %s\n", name);
 
@@ -854,11 +868,15 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto fail;
 
 	rtcpu->max_reboot_retry = 3;
-	(void)of_property_read_u32(dev->of_node, NV(max-reboot),
+	ret = of_property_read_u32(dev->of_node, NV(max-reboot),
 			&rtcpu->max_reboot_retry);
+	if (ret)
+		dev_dbg(dev, "no device property, max-reboot, setting to default (3)\n");
 	timeout = 2000;
 
-	(void)of_property_read_u32(dev->of_node, "nvidia,cmd-timeout", &timeout);
+	ret = of_property_read_u32(dev->of_node, "nvidia,cmd-timeout", &timeout);
+	if (ret)
+		dev_dbg(dev, "no device property, cmd-timeout, setting to default (2000)\n");
 
 	rtcpu->cmd_timeout = msecs_to_jiffies(timeout);
 

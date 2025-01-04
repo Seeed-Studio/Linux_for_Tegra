@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -271,6 +271,10 @@ int camera_common_parse_clocks(struct device *dev,
 		}
 		err = of_property_read_u32(np, "parent-clk-index",
 					   &parentclk_index);
+		if (err) {
+			dev_err(dev, "Failed to find parent clk index\n");
+			return err;
+		}
 	}
 
 	for (i = 0; i < numclocks; i++) {

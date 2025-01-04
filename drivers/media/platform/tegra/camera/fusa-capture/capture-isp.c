@@ -1,5 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-isp.c
@@ -36,15 +48,18 @@
 #define CAPTURE_CHANNEL_ISP_INVALID_ID	U16_C(0xFFFF)
 
 /**
- * @brief The default number of ISP channels to be used if not specified in
- * the device tree.
+ * @brief Maximum number of ISP channels supported by KMD
  */
-#define DEFAULT_ISP_CHANNELS    U32_C(16)
+#define NUM_ISP_CHANNELS	U32_C(16)
+/**
+ * @brief Maximum number of ISP channels supported by KMD for T26x
+ */
+#define NUM_ISP_CHANNELS_T26x	U32_C(32)
 
 /**
  * @brief Maximum number of ISP devices supported.
  */
-#define MAX_ISP_UNITS   U32_C(0x2)
+#define MAX_ISP_UNITS	U32_C(0x2)
 
 /**
  * @brief The Capture-ISP standalone driver context.
@@ -2330,6 +2345,36 @@ int isp_capture_buffer_request(
 	return err;
 }
 
+/**
+ * @brief Helper to parse isp-devices Chip ID
+ *
+ * @param[in]	of_node	Pointer to @ref device_node
+ *		containing isp-devices phandle
+ * @returns	true	If isp-devices is configured for T26X.
+ * @returns	false	If T26X not mentioned.
+ */
+static inline bool isp_capture_is_t26x(struct device_node *of_node)
+{
+	struct device_node *node;
+	const char *compatible;
+	int ret = 0;
+	bool is_t26x = false;
+
+	node = of_parse_phandle(of_node, "nvidia,isp-devices", 0);
+	if (node == NULL)
+		return false;
+
+	ret = of_property_read_string(node, "compatible", &compatible);
+	if (ret != 0) {
+		of_node_put(node);
+		return false;
+	}
+
+	is_t26x = (strstr(compatible, "tegra26") != NULL);
+	of_node_put(node);
+	return is_t26x;
+}
+
 static int capture_isp_probe(struct platform_device *pdev)
 {
 	uint32_t i;
@@ -2345,10 +2390,23 @@ static int capture_isp_probe(struct platform_device *pdev)
 
 	info->num_isp_devices = 0;
 
-	(void)of_property_read_u32(dev->of_node, "nvidia,isp-max-channels",
+	err = of_property_read_u32(dev->of_node, "nvidia,isp-max-channels",
 			&info->max_isp_channels);
-	if (info->max_isp_channels == 0)
-		info->max_isp_channels = DEFAULT_ISP_CHANNELS;
+	if (err < 0) {
+		err = -EINVAL;
+		goto cleanup;
+	}
+	if (isp_capture_is_t26x(dev->of_node)) {
+		if (info->max_isp_channels > NUM_ISP_CHANNELS_T26x) {
+			err = -EINVAL;
+			goto cleanup;
+		}
+	} else {
+		if ((info->max_isp_channels == 0) || (info->max_isp_channels > NUM_ISP_CHANNELS)) {
+			err = -EINVAL;
+			goto cleanup;
+		}
+	}
 
 	for (i = 0; ; i++) {
 		struct device_node *node;
