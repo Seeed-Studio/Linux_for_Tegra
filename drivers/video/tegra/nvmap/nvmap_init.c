@@ -6,6 +6,7 @@
 #define pr_fmt(fmt) "%s: " fmt, __func__
 
 #include <nvidia/conftest.h>
+#include <linux/acpi.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -45,6 +46,15 @@ static const struct of_device_id nvmap_of_ids[] = {
         { }
 };
 MODULE_DEVICE_TABLE(of, nvmap_of_ids);
+
+static struct acpi_device_id nvmap_acpi_ids[] = {
+	{
+		.id = "NVDA300B",
+		.driver_data = 0,
+	},
+	{ },
+};
+MODULE_DEVICE_TABLE(acpi, nvmap_acpi_ids);
 
 static struct nvmap_platform_carveout nvmap_carveouts[] = {
 	[0] = {
@@ -267,8 +277,9 @@ err:
 
 static int __nvmap_init_dt(struct platform_device *pdev)
 {
-	if (!of_match_device(nvmap_of_ids, &pdev->dev)) {
-		pr_err("Missing DT entry!\n");
+	if (!of_match_device(nvmap_of_ids, &pdev->dev) &&
+		!(acpi_match_device(nvmap_acpi_ids, &pdev->dev))) {
+		pr_err("Missing DT or ACPI entry!\n");
 		return -EINVAL;
 	}
 
@@ -416,7 +427,7 @@ int __init nvmap_init(struct platform_device *pdev)
 		}
 	}
 
-	if (pdev->dev.of_node) {
+	if (pdev->dev.of_node || ACPI_HANDLE(&pdev->dev)) {
 		err = __nvmap_init_dt(pdev);
 		if (err)
 			return err;
@@ -480,6 +491,9 @@ static struct platform_driver __refdata nvmap_driver = {
 		.name	= "tegra-carveouts",
 		.owner	= THIS_MODULE,
 		.of_match_table = nvmap_of_ids,
+#ifdef CONFIG_ACPI
+		.acpi_match_table = nvmap_acpi_ids,
+#endif
 		.suppress_bind_attrs = true,
 	},
 };
