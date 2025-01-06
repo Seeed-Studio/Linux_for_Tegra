@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /*
  * tegra234-soc-camera.dtsi: Camera RTCPU DTSI file.
@@ -78,7 +78,6 @@
 				reset-names = "isp";
 				clocks = <&bpmp TEGRA234_CLK_ISP>;
 				clock-names = "isp";
-				power-domains = <&bpmp TEGRA234_POWER_DOMAIN_ISPA>;
 				nvidia,isp-falcon-device = <&isp_thi>;
 
 				iommus = <&smmu_niso1 TEGRA234_SID_ISP>;
