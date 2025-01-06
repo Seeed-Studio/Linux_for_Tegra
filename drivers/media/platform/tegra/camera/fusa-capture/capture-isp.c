@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-isp.c
@@ -578,6 +578,11 @@ static void isp_capture_request_unpin(
 	}
 
 	mutex_lock(&capture->capture_desc_ctx.unpins_list_lock);
+	if (buffer_index >= capture->program_desc_ctx.queue_depth) {
+		dev_err(chan->isp_dev,
+			"%s: buffer index is out of bound\n", __func__);
+		return;
+	}
 	unpins = &capture->capture_desc_ctx.unpins_list[buffer_index];
 	if (unpins->num_unpins != 0U) {
 		for (i = 0; i < unpins->num_unpins; i++)
@@ -609,6 +614,11 @@ static void isp_capture_program_request_unpin(
 	}
 
 	mutex_lock(&capture->program_desc_ctx.unpins_list_lock);
+	if (buffer_index >= capture->program_desc_ctx.queue_depth) {
+		dev_err(chan->isp_dev,
+			"%s: buffer index is out of bound\n", __func__);
+		return;
+	}
 	unpins = &capture->program_desc_ctx.unpins_list[buffer_index];
 	if (unpins->num_unpins != 0U) {
 		for (i = 0; i < unpins->num_unpins; i++)
@@ -1114,6 +1124,12 @@ void isp_get_nvhost_device(
 
 	struct tegra_capture_isp_data *info =
 		platform_get_drvdata(chan->isp_capture_pdev);
+
+	if (isp_inst >= MAX_ISP_UNITS) {
+		dev_err(chan->isp_dev,
+			"%s: ISP unit index is out of bound\n", __func__);
+		return;
+	}
 
 	chan->isp_dev = &info->isp_pdevices[isp_inst]->dev;
 	chan->ndev = info->isp_pdevices[isp_inst];

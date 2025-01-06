@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-vi-channel.c
@@ -403,7 +403,7 @@ static long vi_channel_ioctl(
 
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(VI_CAPTURE_SETUP): {
-		struct vi_capture_setup setup;
+		struct vi_capture_setup setup = {};
 
 		if (copy_from_user(&setup, ptr, sizeof(setup)))
 			break;
@@ -524,7 +524,7 @@ static long vi_channel_ioctl(
 	}
 
 	case _IOC_NR(VI_CAPTURE_SET_CONFIG): {
-		struct vi_capture_control_msg msg;
+		struct vi_capture_control_msg msg = {};
 
 		if (copy_from_user(&msg, ptr, sizeof(msg)))
 			break;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-isp-channel.c
@@ -335,7 +335,7 @@ static long isp_channel_ioctl(
 
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(ISP_CAPTURE_SETUP): {
-		struct isp_capture_setup setup;
+		struct isp_capture_setup setup = {};
 
 		if (copy_from_user(&setup, ptr, sizeof(setup)))
 			break;
@@ -389,7 +389,7 @@ static long isp_channel_ioctl(
 	}
 
 	case _IOC_NR(ISP_CAPTURE_REQUEST): {
-		struct isp_capture_req req;
+		struct isp_capture_req req = {};
 
 		if (copy_from_user(&req, ptr, sizeof(req)))
 			break;
@@ -413,7 +413,7 @@ static long isp_channel_ioctl(
 	}
 
 	case _IOC_NR(ISP_CAPTURE_PROGRAM_REQUEST): {
-		struct isp_program_req program_req;
+		struct isp_program_req program_req = {};
 
 		if (copy_from_user(&program_req, ptr, sizeof(program_req)))
 			break;
@@ -434,7 +434,7 @@ static long isp_channel_ioctl(
 	}
 
 	case _IOC_NR(ISP_CAPTURE_REQUEST_EX): {
-		struct isp_capture_req_ex req;
+		struct isp_capture_req_ex req = {};
 
 		if (copy_from_user(&req, ptr, sizeof(req)))
 			break;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  *
@@ -579,6 +579,12 @@ void vi_get_nvhost_device(
 
 	struct tegra_capture_vi_data *info =
 		platform_get_drvdata(chan->vi_capture_pdev);
+
+	if (setup->csi_stream_id >= MAX_NVCSI_STREAM_IDS) {
+		dev_err(chan->dev,
+			"%s: csi stream id is out of bound\n", __func__);
+		return;
+	}
 
 	vi_inst = info->vi_instance_table[setup->csi_stream_id];
 
