@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "soc/tegra/camrtc-dbg-messages.h"
 
@@ -124,7 +124,7 @@ static int __init camrtc_dbgfs_rmem_init(struct reserved_mem *rmem)
 	for (i = 0; i < CAMRTC_DBG_NUM_MEM_TEST_MEM; i++) {
 		_camdbg_rmem.mem_ctxs[i].address = curr_address;
 		_camdbg_rmem.mem_ctxs[i].size = ctx_size;
-		curr_address += ctx_size;
+		(void)__builtin_uaddll_overflow(curr_address, ctx_size, &curr_address);
 	}
 
 	_camdbg_rmem.enabled = true;
@@ -345,7 +345,7 @@ static int camrtc_show_ping(struct seq_file *file, void *data)
 		.req_type = CAMRTC_REQ_PING,
 	};
 	struct camrtc_dbg_response resp;
-	u64 sent, recv, tsc;
+	u64 sent, recv, tsc, subRet, mulRet;
 	int ret;
 
 	sent = sched_clock();
@@ -357,17 +357,20 @@ static int camrtc_show_ping(struct seq_file *file, void *data)
 
 	recv = sched_clock();
 	tsc = resp.data.ping_data.ts_resp;
+	(void)__builtin_usubll_overflow(recv, sent, &subRet);
 	seq_printf(file,
 		"roundtrip=%llu.%03llu us "
 		"(sent=%llu.%09llu recv=%llu.%09llu)\n",
-		(recv - sent) / 1000, (recv - sent) % 1000,
+		subRet / 1000, subRet % 1000,
 		sent / 1000000000, sent % 1000000000,
 		recv / 1000000000, recv % 1000000000);
+	(void)__builtin_umulll_overflow(tsc, 32ULL, &mulRet);
+	(void)__builtin_usubll_overflow(mulRet, sent, &subRet);
 	seq_printf(file,
 		"rtcpu tsc=%llu.%09llu offset=%llu.%09llu\n",
 		tsc / (1000000000 / 32), tsc % (1000000000 / 32),
-		(tsc * 32ULL - sent) / 1000000000,
-		(tsc * 32ULL - sent) % 1000000000);
+		subRet / 1000000000,
+		subRet % 1000000000);
 	seq_printf(file, "%.*s\n",
 		(int)sizeof(resp.data.ping_data.data),
 		(char *)resp.data.ping_data.data);
@@ -381,7 +384,7 @@ static int camrtc_show_sm_ping(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
 	struct device *camrtc = camrtc_get_device(ch);
-	u64 sent, recv;
+	u64 sent, recv, subRet;
 	int err;
 
 	err = tegra_ivc_channel_runtime_get(ch);
@@ -397,10 +400,11 @@ static int camrtc_show_sm_ping(struct seq_file *file, void *data)
 	recv = sched_clock();
 	err = 0;
 
+	(void)__builtin_usubll_overflow(recv, sent, &subRet);
 	seq_printf(file,
 		"roundtrip=%llu.%03llu us "
 		"(sent=%llu.%09llu recv=%llu.%09llu)\n",
-		(recv - sent) / 1000, (recv - sent) % 1000,
+		subRet / 1000, subRet % 1000,
 		sent / 1000000000, sent % 1000000000,
 		recv / 1000000000, recv % 1000000000);
 
@@ -511,6 +515,12 @@ static int camrtc_dbgfs_show_freertos_state(struct seq_file *file, void *data)
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_freertos_state,
 		camrtc_dbgfs_show_freertos_state);
 
+static inline uint32_t ToKilobytes(uint32_t x)
+{
+	(void)__builtin_uadd_overflow(x, 1023U, &x);
+	return (x / 1024U);
+}
+
 static int camrtc_dbgfs_show_memstat(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -523,17 +533,21 @@ static int camrtc_dbgfs_show_memstat(struct seq_file *file, void *data)
 	ret = camrtc_ivc_dbg_xact(ch, &req, &resp, 0);
 	if (ret == 0) {
 		const struct camrtc_dbg_mem_usage *m = &resp.data.mem_usage;
-		uint32_t total = m->text + m->bss + m->data + m->heap +
-			m->stack + m->free_mem;
+		uint32_t total, addRet;
+		(void)__builtin_uadd_overflow(m->text, m->bss, &addRet);
+		(void)__builtin_uadd_overflow(addRet, m->data, &addRet);
+		(void)__builtin_uadd_overflow(addRet, m->heap, &addRet);
+		(void)__builtin_uadd_overflow(addRet, m->stack, &addRet);
+		(void)__builtin_uadd_overflow(addRet, m->free_mem, &total);
 
-#define K(x) (((x) + 1023) / 1024)
 		seq_printf(file, "%7s %7s %7s %7s %7s %7s %7s\n",
 			"text", "bss", "data", "heap", "sys", "free", "TOTAL");
 		seq_printf(file, "%7u\t%7u\t%7u\t%7u\t%7u\t%7u\t%7u\n",
 			m->text, m->bss, m->data, m->heap, m->stack, m->free_mem, total);
 		seq_printf(file, "%7u\t%7u\t%7u\t%7u\t%7u\t%7u\t%7u (in kilobytes)\n",
-			K(m->text), K(m->bss), K(m->data), K(m->heap),
-			K(m->stack), K(m->free_mem), K(total));
+			ToKilobytes(m->text), ToKilobytes(m->bss), ToKilobytes(m->data),
+			ToKilobytes(m->heap), ToKilobytes(m->stack),
+			ToKilobytes(m->free_mem), ToKilobytes(total));
 	}
 
 	return ret;
@@ -588,8 +602,10 @@ DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_irqstat, camrtc_dbgfs_show_irqstat);
 static size_t camrtc_dbgfs_get_max_test_size(
 	const struct tegra_ivc_channel *ch)
 {
-	return ch->ivc.frame_size - offsetof(struct camrtc_dbg_request,
-					data.run_mem_test_data.data);
+	size_t ret;
+	(void)__builtin_uaddl_overflow(ch->ivc.frame_size,
+				offsetof(struct camrtc_dbg_request, data.run_mem_test_data.data), &ret);
+	return ret;
 }
 
 static ssize_t camrtc_dbgfs_read_test_case(struct file *file,
@@ -660,11 +676,12 @@ static ssize_t camrtc_dbgfs_write_test_mem(struct file *file,
 		mem, struct camrtc_debug, mem[mem->index]);
 	struct device *mem_dev = camrtc_dbgfs_memory_dev(crd);
 	struct iommu_domain *domain = iommu_get_domain_for_dev(mem_dev);
-	ssize_t ret;
+	ssize_t ret, addRet;
 
-	if ((*f_pos + count) > mem->size) {
+	(void)__builtin_uaddl_overflow(*f_pos, count, &addRet);
+	if (addRet > mem->size) {
 		if (_camdbg_rmem.enabled) {
-			size_t size = round_up(*f_pos + count, 64 * 1024);
+			size_t size = round_up(addRet, 64 * 1024);
 			void *ptr = phys_to_virt(
 				_camdbg_rmem.mem_ctxs[mem->index].address);
 			unsigned long rmem_size =
@@ -690,7 +707,7 @@ static ssize_t camrtc_dbgfs_write_test_mem(struct file *file,
 				return -ENOMEM;
 			}
 		} else {
-			size_t size = round_up(*f_pos + count, 64 * 1024);
+			size_t size = round_up(addRet, 64 * 1024);
 			dma_addr_t iova;
 			void *ptr = dma_alloc_coherent(mem_dev, size, &iova,
 					GFP_KERNEL | __GFP_ZERO);
@@ -756,9 +773,10 @@ static int camrtc_test_run_and_show_result(struct seq_file *file,
 	size_t resp_size = ch->ivc.frame_size;
 	int ret;
 	const char *result = (const void *)resp + data_offset;
-	size_t result_size = resp_size - data_offset;
+	size_t result_size;
 	const char *nul;
 
+	(void)__builtin_usubl_overflow(resp_size, data_offset, &result_size);
 	if (WARN_ON(test_case_size > camrtc_dbgfs_get_max_test_size(ch)))
 		test_case_size = camrtc_dbgfs_get_max_test_size(ch);
 
@@ -1142,10 +1160,16 @@ unmap:
 static int camrtc_dbgfs_show_test_result(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
-	void *mem = kzalloc(2 * ch->ivc.frame_size, GFP_KERNEL | __GFP_ZERO);
-	struct camrtc_dbg_request *req = mem;
-	struct camrtc_dbg_response *resp = mem + ch->ivc.frame_size;
+	size_t mulRet;
+	void *mem;
+	struct camrtc_dbg_request *req;
+	struct camrtc_dbg_response *resp;
 	int ret;
+
+	(void)__builtin_umull_overflow(2UL, ch->ivc.frame_size, &mulRet);
+	mem = kzalloc(mulRet, GFP_KERNEL | __GFP_ZERO);
+	req = mem;
+	resp = mem + ch->ivc.frame_size;
 
 	if (mem == NULL)
 		return -ENOMEM;
@@ -1173,7 +1197,8 @@ static int camrtc_dbgfs_show_test_list(struct seq_file *file, void *data)
 
 	memset(req.data.run_test_data.data, 0,
 		sizeof(req.data.run_test_data.data));
-	strcpy(req.data.run_test_data.data, "list\n");
+	strscpy(req.data.run_test_data.data, "list\n",
+		sizeof(req.data.run_test_data.data));
 
 	ret = camrtc_ivc_dbg_full_frame_xact(ch, &req, sizeof(req),
 					resp, ch->ivc.frame_size, 0);
@@ -1468,10 +1493,11 @@ static void tegra_ast_get_region_info(void __iomem *base,
 			u32 region,
 			struct tegra_ast_region_info *info)
 {
-	u32 offset = region * TEGRA_APS_AST_REGION_STRIDE;
+	u32 offset;
 	u32 vmidx, stream_id, gcontrol, control;
 	u64 lo, hi;
 
+	(void)__builtin_umul_overflow(region, TEGRA_APS_AST_REGION_STRIDE, &offset);
 	control = readl(base + TEGRA_APS_AST_REGION_0_CONTROL + offset);
 	info->control = control;
 
@@ -1855,11 +1881,13 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	struct camrtc_debug *crd;
 	uint32_t bw;
 	uint32_t i;
+	size_t addRet;
 
 	BUG_ON(ch->ivc.frame_size < sizeof(struct camrtc_dbg_request));
 	BUG_ON(ch->ivc.frame_size < sizeof(struct camrtc_dbg_response));
 
-	crd = devm_kzalloc(dev, sizeof(*crd) + ch->ivc.frame_size, GFP_KERNEL);
+	(void)__builtin_uaddl_overflow(sizeof(*crd), ch->ivc.frame_size, &addRet);
+	crd = devm_kzalloc(dev, addRet, GFP_KERNEL);
 	if (unlikely(crd == NULL))
 		return -ENOMEM;
 
