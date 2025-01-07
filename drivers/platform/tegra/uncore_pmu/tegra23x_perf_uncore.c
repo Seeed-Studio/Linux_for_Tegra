@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -499,6 +499,9 @@ static int scf_uncore_event_init(struct perf_event *event)
 
 	uncore_pmu = to_uncore_pmu(event->pmu);
 	pdev = uncore_pmu->pdev;
+
+	if (event->attr.type != event->pmu->type)
+		return -ENOENT;
 
 	/*
 	 * The uncore counters are shared by all CPU cores. Therefore it does not
