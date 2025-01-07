@@ -1,6 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2009-2025, NVIDIA CORPORATION. All rights reserved.
+/* SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-FileCopyrightText: Copyright (c) 2009-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  */
@@ -172,16 +171,6 @@ struct nvmap_cache_op_32 {
 #endif /* CONFIG_COMPAT */
 #endif /* __KERNEL__ */
 
-struct nvmap_cache_op_list {
-	__u64 handles;		/* Ptr to u32 type array, holding handles */
-	__u64 offsets;		/* Ptr to u32 type array, holding offsets
-				 * into handle mem */
-	__u64 sizes;		/* Ptr to u32 type array, holindg sizes of memory
-				 * regions within each handle */
-	__u32 nr;		/* Number of handles */
-	__s32 op;		/* wb/wb_inv/inv */
-};
-
 struct nvmap_debugfs_handles_header {
 	__u8 version;
 };
@@ -306,10 +295,6 @@ struct nvmap_fd_for_range_from_list {
 
 /* Create a new memory handle from file id passed */
 #define NVMAP_IOC_FROM_FD _IOWR(NVMAP_IOC_MAGIC, 16, struct nvmap_create_handle)
-
-/* Perform cache maintenance on a list of handles. */
-#define NVMAP_IOC_CACHE_LIST _IOW(NVMAP_IOC_MAGIC, 17,	\
-				  struct nvmap_cache_op_list)
 
 #define NVMAP_IOC_FROM_IVC_ID _IOWR(NVMAP_IOC_MAGIC, 19, struct nvmap_create_handle)
 #define NVMAP_IOC_GET_IVC_ID _IOWR(NVMAP_IOC_MAGIC, 20, struct nvmap_create_handle)
