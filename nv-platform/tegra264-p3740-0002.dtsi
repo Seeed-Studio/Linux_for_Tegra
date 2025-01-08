@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/input/linux-event-codes.h>
 #include <dt-bindings/input/gpio-keys.h>
@@ -351,6 +351,13 @@
 				gpio = <&gpio_main TEGRA264_MAIN_GPIO(U, 3) GPIO_ACTIVE_HIGH>;
 				regulator-boot-on;
 				enable-active-high;
+	};
+
+	dce@8808000000 {
+		status = "okay";
+		sha-carveout {
+		        status = "okay";
+		};
 	};
 
 	display@8808c00000 {
