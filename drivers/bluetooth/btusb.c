@@ -506,12 +506,10 @@ static const struct usb_device_id quirks_table[] = {
 	/* Realtek 8822CE Bluetooth devices */
 	{ USB_DEVICE(0x0bda, 0xb00c), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
-	{ USB_DEVICE(0x0bda, 0xc822), .driver_info = BTUSB_REALTEK |
-						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x0bda, 0xc822), .driver_info = BTUSB_IGNORE },
 
 	/* Realtek 8822CU Bluetooth devices */
-	{ USB_DEVICE(0x13d3, 0x3549), .driver_info = BTUSB_REALTEK |
-						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x13d3, 0x3549), .driver_info = BTUSB_IGNORE },
 
 	/* Realtek 8852AE Bluetooth devices */
 	{ USB_DEVICE(0x0bda, 0x2852), .driver_info = BTUSB_REALTEK |
