@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef DCE_IPC_H
@@ -165,7 +165,7 @@ void dce_os_ipc_deinit_region_info(struct tegra_dce *d);
 
 int dce_os_ipc_init_region_info(struct tegra_dce *d);
 
-struct tegra_dce *dce_ipc_get_dce_from_ch(u32 ch_type);
+struct tegra_dce *dce_ipc_get_dce_from_ch_unlocked(u32 ch_type);
 
 int dce_ipc_channel_init_unlocked(struct tegra_dce *d, u32 ch_type);
 

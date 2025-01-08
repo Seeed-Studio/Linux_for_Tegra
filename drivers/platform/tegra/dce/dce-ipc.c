@@ -309,7 +309,19 @@ void dce_ipc_channel_deinit_unlocked(struct tegra_dce *d, u32 ch_type)
 
 }
 
-struct tegra_dce *dce_ipc_get_dce_from_ch(u32 ch_type)
+/**
+ * dce_ipc_get_dce_from_ch_unlocked - Get DCE struct from IPC ch type.
+ *
+ * @ch_type : DCE IPC channel type.
+ *
+ * Return : Pointer to tegra dce struct.
+ *
+ * Note: We do not need to acquire a channel lock in this function
+ * as it only retrieves the tegra_dce struct for the channel.
+ * This tegra_dce struct member is initialized and uninitialized in
+ * dce_ipc_channel_init_unlocked() and dce_ipc_channel_deinit_unlocked().
+ */
+struct tegra_dce *dce_ipc_get_dce_from_ch_unlocked(u32 ch_type)
 {
 	struct tegra_dce *d = NULL;
 	struct dce_ipc_channel *ch = NULL;
@@ -319,11 +331,7 @@ struct tegra_dce *dce_ipc_get_dce_from_ch(u32 ch_type)
 
 	ch = &ivc_channels[ch_type];
 
-	dce_os_mutex_lock(&ch->lock);
-
 	d = ch->d;
-
-	dce_os_mutex_unlock(&ch->lock);
 
 out:
 	return d;

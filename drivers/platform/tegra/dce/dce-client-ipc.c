@@ -126,6 +126,27 @@ fail:
 	return;
 }
 
+static inline int dce_client_ipc_wait_bootstrap_complete(struct tegra_dce *d)
+{
+	int ret = 0;
+
+	/*
+	 * Wait for bootstrapping to complete as this is pre-req
+	 * to communicate to DCE-FW.
+	 */
+#define DCE_IPC_REGISTER_BOOT_WAIT	(30U * 1000)
+	ret = DCE_OS_COND_WAIT_INTERRUPTIBLE_TIMEOUT(&d->dce_bootstrap_done,
+						  dce_is_bootstrap_done(d),
+						  DCE_IPC_REGISTER_BOOT_WAIT);
+	if (ret) {
+		dce_os_err(d, "dce boot wait failed (%d)\n", ret);
+		goto out;
+	}
+
+out:
+	return ret;
+}
+
 int tegra_dce_register_ipc_client(u32 type,
 		tegra_dce_client_ipc_callback_t callback_fn,
 		void *data, u32 *handlep)
@@ -150,21 +171,9 @@ int tegra_dce_register_ipc_client(u32 type,
 
 	int_type = dce_interface_type_map[type];
 
-	d = dce_ipc_get_dce_from_ch(int_type);
+	d = dce_ipc_get_dce_from_ch_unlocked(int_type);
 	if (d == NULL) {
 		ret = -EINVAL;
-		goto out;
-	}
-
-	/*
-	 * Wait for bootstrapping to complete before client IPC registration
-	 */
-#define DCE_IPC_REGISTER_BOOT_WAIT	(30U * 1000)
-	ret = DCE_OS_COND_WAIT_INTERRUPTIBLE_TIMEOUT(&d->dce_bootstrap_done,
-						  dce_is_bootstrap_done(d),
-						  DCE_IPC_REGISTER_BOOT_WAIT);
-	if (ret) {
-		dce_os_info(d, "dce boot wait failed (%d)\n", ret);
 		goto out;
 	}
 
@@ -233,6 +242,16 @@ int tegra_dce_client_ipc_send_recv(u32 handle, struct dce_ipc_message *msg)
 		ret = -1;
 		goto out;
 	}
+
+	/**
+	 * This check is moved from tegra_dce_register_ipc_client() to here
+	 * because we share this code with HVRTOS. HVRTOS has restriction on
+	 * having any waits during init phase in which the register function
+	 * is invoked.
+	 */
+	ret = dce_client_ipc_wait_bootstrap_complete(cl->d);
+	if (ret != 0)
+		goto out;
 
 	ret = dce_ipc_send_message_sync(cl->d, cl->int_type, msg);
 
