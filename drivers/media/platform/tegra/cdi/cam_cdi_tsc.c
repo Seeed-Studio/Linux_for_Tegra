@@ -1,5 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0 */
-/* SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All Rights Reserved. */
+// SPDX-License-Identifier: GPL-2.0
+/* SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION.  All rights reserved. */
 /*
  * cam_cdi_tsc.c - tsc driver.
  */
@@ -317,7 +317,14 @@ static int cdi_tsc_program_generator_edges(struct tsc_signal_controller *control
 
 		if (controller->features->rational_locking.enforced) {
 			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz, max_freq_hz_lcm);
-			ticks_in_period *= max_freq_hz_lcm / generator->config.freq_hz;
+			if (check_mul_overflow(ticks_in_period,
+						(max_freq_hz_lcm / generator->config.freq_hz),
+						&ticks_in_period)) {
+				dev_err(controller->dev,
+					"%s: calculate the ticks_in_period due to an overflow\n",
+					__func__);
+				return -EINVAL;
+			}
 		} else {
 			ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz, generator->config.freq_hz);
 		}

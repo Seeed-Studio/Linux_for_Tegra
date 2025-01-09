@@ -516,7 +516,8 @@ static int compute_edge_regs(struct edge_reg_info *info, u64 ticks, bool loop)
 	while ((ticks > 0U) && (info->count < MAX_EDGE_REGS)) {
 		u32 const current_ticks = (u32)min(ticks, (u64)EDGE_OFFSET_MASK);
 
-		info->regs[info->count++] = current_ticks;
+		info->regs[info->count] = current_ticks;
+		info->count++;
 		ticks -= current_ticks;
 	}
 
@@ -528,6 +529,9 @@ static int compute_edge_regs(struct edge_reg_info *info, u64 ticks, bool loop)
 	if (ticks > 0U)
 		return -EFAULT;
 
+	if (info->count > MAX_EDGE_REGS || info->count < 1U) {
+		return -EFAULT;
+	}
 	/** Update the flags for last edge register */
 	info->regs[info->count-1] |= flags;
 	return 0;
@@ -537,18 +541,25 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 {
 	struct cam_fsync_generator *generator;
 	u32 max_freq_hz_lcm = cam_fsync_find_max_freq_hz_lcm(group);
-	u64 const ticks_per_hz = DIV_ROUND_CLOSEST(NS_PER_SEC, group->features->ns_per_tick);
+	u32 const ticks_per_hz = DIV_ROUND_CLOSEST(NS_PER_SEC, group->features->ns_per_tick);
 	bool const can_generate_precise_freq = cam_fsync_can_generate_precise_freq(group);
 	struct cam_fsync_extra_ticks_and_period extra = {0, 1};
 
 	list_for_each_entry(generator, &group->generators, list) {
-		u64 ref_ticks_in_period = DIV_ROUND_CLOSEST_ULL(ticks_per_hz, max_freq_hz_lcm);
-		u64 ticks_in_period = ref_ticks_in_period *
-								(max_freq_hz_lcm / generator->config.freq_hz);
+		u32 ref_ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz, max_freq_hz_lcm);
+		u64 ticks_in_period = (u64)ref_ticks_in_period *
+					(u64)(max_freq_hz_lcm / generator->config.freq_hz);
 		u64 ticks_active = mult_frac(ticks_in_period, generator->config.duty_cycle, 100);
-		u64 ticks_inactive = ticks_in_period - ticks_active;
+		u64 ticks_inactive = 0;
 		struct edge_reg_info edge_info = {0};
 		u32 i;
+
+		if (check_sub_overflow(ticks_in_period, ticks_active, &ticks_inactive)) {
+			dev_err(group->dev,
+					"%s: calculate the ticks_inactive due to an underflow\n",
+					__func__);
+			return -EINVAL;
+		}
 
 		/**
 		 * Generating a freq with period that is not multiple of TSC unit will
@@ -564,15 +575,22 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 		for (i = 0; i < extra.num_periods; i++) {
 			int ret;
 			u64 extra_ticks = (extra.extra_ticks > 0) ? 1 : 0;
+			u64 tmp_ticks = 0;
+
+			if (check_add_overflow(ticks_inactive, extra_ticks, &tmp_ticks)) {
+				dev_err(group->dev,
+					"%s: calculate the ticks due to an underflow\n",
+					__func__);
+				return -EINVAL;
+			}
 
 			extra.extra_ticks -= (extra_ticks > 0);
 
 			ret = compute_edge_regs(&edge_info, ticks_active, false);
 			if (ret < 0)
 				return ret;
-			ret = compute_edge_regs(&edge_info,
-									ticks_inactive + extra_ticks,
-									(i == extra.num_periods - 1));
+			ret = compute_edge_regs(&edge_info, tmp_ticks,
+						(i == extra.num_periods - 1));
 			if (ret < 0)
 				return ret;
 		}
@@ -640,7 +658,13 @@ static u64 cam_fsync_get_default_start_ticks(struct cam_fsync_controller *contro
 	u64 default_start_ticks = mult_frac(
 		TSC_GENX_START_OFFSET_MS, NS_PER_MS,
 		controller->features->ns_per_tick);
-	default_start_ticks += cam_fsync_get_current_tsc_ticks();
+	u64 current_ticks = cam_fsync_get_current_tsc_ticks();
+
+	if (check_add_overflow(default_start_ticks, current_ticks, &default_start_ticks)) {
+		dev_err(controller->dev,
+			"%s: calculate the default start ticks due to an overflow\n", __func__);
+		return 0;
+	}
 	return default_start_ticks;
 }
 

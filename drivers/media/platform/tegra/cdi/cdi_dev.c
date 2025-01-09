@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2015-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2015-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -254,7 +254,12 @@ int cdi_dev_raw_wr(
 	cdi_dev_dump(__func__, info, offset, val, size);
 
 	num_msgs = size / MAX_MSG_SIZE;
-	num_msgs += (size % MAX_MSG_SIZE) ? 1 : 0;
+	if (check_add_overflow(num_msgs,
+				(unsigned int)((size % MAX_MSG_SIZE) ? 1 : 0), &num_msgs)) {
+		dev_err(info->dev, "%s: calculate the num_msgs due to an overflow\n",
+			__func__);
+		return -ENOMEM;
+	}
 
 	i2cmsg = kzalloc((sizeof(struct i2c_msg)*num_msgs), GFP_KERNEL);
 	if (!i2cmsg) {
