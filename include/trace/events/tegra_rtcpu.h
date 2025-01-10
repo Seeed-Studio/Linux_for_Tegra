@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #undef TRACE_SYSTEM
@@ -10,6 +10,7 @@
 #define _TRACE_TEGRA_RTCPU_H
 
 #include <linux/tracepoint.h>
+#include <linux/string.h>
 #include <soc/tegra/camrtc-trace.h>
 
 /*
@@ -119,7 +120,7 @@ TRACE_EVENT(rtcpu_string,
 		__entry->tstamp = tstamp;
 		__entry->id = id;
 		__entry->len = len;
-		strncpy(__entry->data, data, sizeof(__entry->data));
+		strscpy(__entry->data, data, sizeof(__entry->data));
 	),
 	TP_printk("tstamp:%llu id:0x%08x str:\"%.*s\"",
 		__entry->tstamp, __entry->id,
@@ -282,7 +283,8 @@ TRACE_EVENT(rtcpu_vinotify_event,
 		__entry->tstamp,
 		__entry->channel_id,
 		__entry->unit,
-		((__entry->tag_tag >> 1) < g_trace_vinotify_tag_str_count) ?
+		(((__entry->tag_tag >> 1) < g_trace_vinotify_tag_str_count) &&
+		((__entry->tag_tag >> 1) >= 0)) ?
 			g_trace_vinotify_tag_strs[__entry->tag_tag >> 1] :
 			__print_hex(&__entry->tag_tag, 1),
 		__entry->tag_channel, __entry->tag_frame,

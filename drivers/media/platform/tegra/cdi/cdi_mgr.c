@@ -660,7 +660,8 @@ static int cdi_mgr_get_pwr_info(struct cdi_mgr_priv *cdi_mgr,
 		goto pwr_info_end;
 	}
 
-	if (pinfo.pwr_gpio >= pd->num_pwr_gpios || pinfo.pwr_gpio < 0) {
+	if (pinfo.pwr_gpio >= pd->num_pwr_gpios || pinfo.pwr_gpio < 0
+		|| pinfo.pwr_gpio >= MAX_CDI_GPIOS) {
 		dev_err(cdi_mgr->pdev,
 			"%s: invalid power gpio provided\n", __func__);
 		pinfo.pwr_status = -1;
@@ -669,6 +670,14 @@ static int cdi_mgr_get_pwr_info(struct cdi_mgr_priv *cdi_mgr,
 	}
 
 	pinfo.pwr_gpio = array_index_nospec(pinfo.pwr_gpio, pd->num_pwr_gpios);
+
+	if (pinfo.pwr_gpio < 0 || pinfo.pwr_gpio >= ARRAY_SIZE(pd->pwr_gpios)) {
+		dev_err(cdi_mgr->pdev,
+			"%s: set power status failed due to invalid power gpio value\n", __func__);
+		pinfo.pwr_status = -1;
+		err = -EINVAL;
+		goto pwr_info_end;
+	}
 
 	pinfo.pwr_status  = gpio_get_value(pd->pwr_gpios[pinfo.pwr_gpio]);
 	err = 0;
