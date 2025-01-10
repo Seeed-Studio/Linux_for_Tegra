@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra210-adma.c - ADMA driver for Nvidia's Tegra210 ADMA controller.
 
@@ -48,6 +48,9 @@
 #define TEGRA186_ADMA_GLOBAL_PAGE_CHGRP			0x30
 #define TEGRA186_ADMA_GLOBAL_PAGE_RX_REQ		0x70
 #define TEGRA186_ADMA_GLOBAL_PAGE_TX_REQ		0x84
+#define TEGRA264_ADMA_GLOBAL_PAGE_CHGRP			0x44
+#define TEGRA264_ADMA_GLOBAL_PAGE_RX_REQ		0x100
+#define TEGRA264_ADMA_GLOBAL_PAGE_TX_REQ		0x180
 
 #define ADMA_CH_FIFO_CTRL				0x2c
 #define ADMA_CH_TX_FIFO_SIZE_SHIFT			8
@@ -176,8 +179,6 @@ struct tegra_adma {
 	unsigned int			global_cmd;
 	unsigned int			ch_page_no;
 
-	bool is_virtualized;
-
 	const struct tegra_adma_chip_data *cdata;
 
 	/* Last member of the structure */
@@ -252,6 +253,26 @@ static void tegra186_adma_global_page_config(struct tegra_adma *tdma)
 	tdma_write(tdma, TEGRA186_ADMA_GLOBAL_PAGE_CHGRP + (tdma->ch_page_no * 0x4), 0xff);
 	tdma_write(tdma, TEGRA186_ADMA_GLOBAL_PAGE_RX_REQ + (tdma->ch_page_no * 0x4), 0x1ffffff);
 	tdma_write(tdma, TEGRA186_ADMA_GLOBAL_PAGE_TX_REQ + (tdma->ch_page_no * 0x4), 0xffffff);
+}
+
+static void tegra264_adma_global_page_config(struct tegra_adma *tdma)
+{
+	/*
+	 * Clear the default page1 channel group configs and program
+	 * the global registers based on the actual page usage
+	 */
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_CHGRP, 0);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_CHGRP + 0x4, 0);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_RX_REQ, 0);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_RX_REQ + 0x4, 0);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_TX_REQ, 0);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_TX_REQ + 0x4, 0);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_CHGRP + (tdma->ch_page_no * 0x8), 0xffffffff);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_CHGRP + 0x4 + (tdma->ch_page_no * 0x8), 0xffffffff);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_RX_REQ + (tdma->ch_page_no * 0x8), 0xffffffff);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_RX_REQ + 0x4 + (tdma->ch_page_no * 0x8), 0x1);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_TX_REQ + (tdma->ch_page_no * 0x8), 0xffffffff);
+	tdma_write(tdma, TEGRA264_ADMA_GLOBAL_PAGE_TX_REQ + 0x4 + (tdma->ch_page_no * 0x8), 0x1);
 }
 
 static int tegra_adma_init(struct tegra_adma *tdma)
@@ -420,7 +441,7 @@ static void tegra_adma_start(struct tegra_adma_chan *tdc)
 			ch_regs->trg_addr);
 
 	if (tdc->tdma->cdata->has_global_fifo_ctrl) {
-		if (!tdc->tdma->is_virtualized) {
+		if (tdc->tdma->base_addr) {
 			tdma_write(tdc->tdma, ADMA_GLOBAL_CH_FIFO_CTRL, ch_regs->fifo_ctrl);
 			tdma_write(tdc->tdma, ADMA_GLOBAL_CH_CONFIG, ch_regs->global_config);
 		}
@@ -730,7 +751,7 @@ static int tegra_adma_alloc_chan_resources(struct dma_chan *dc)
 	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
 	int ret, flags;
 
-	flags = (tdc->tdma->is_virtualized) ? IRQF_NO_THREAD : 0;
+	flags = (!tdc->tdma->base_addr) ? IRQF_NO_THREAD : 0;
 
 	ret = request_irq(tdc->irq, tegra_adma_isr, flags,
 						dma_chan_name(dc), tdc);
@@ -824,12 +845,12 @@ static int __maybe_unused tegra_adma_runtime_suspend(struct device *dev)
 				ADMA_CH_LOWER_TRG_ADDR - tdma->cdata->ch_fifo_offset);
 		ch_reg->ctrl = tdma_ch_read(tdc, ADMA_CH_CTRL);
 
-		if (tdma->cdata->has_global_fifo_ctrl) {
-			if (!tdma->is_virtualized) {
+		if (tdc->tdma->cdata->has_global_fifo_ctrl) {
+			if (tdc->tdma->base_addr) {
 				ch_reg->fifo_ctrl = tdma_read(tdc->tdma,
-							ADMA_GLOBAL_CH_FIFO_CTRL + i * 4);
+						ADMA_GLOBAL_CH_FIFO_CTRL + i * 4);
 				ch_reg->global_config = tdma_read(tdc->tdma,
-					ADMA_GLOBAL_CH_CONFIG + i * 4);
+						ADMA_GLOBAL_CH_CONFIG + i * 4);
 			}
 		} else
 			ch_reg->fifo_ctrl = tdma_ch_read(tdc, ADMA_CH_FIFO_CTRL);
@@ -882,8 +903,8 @@ static int __maybe_unused tegra_adma_runtime_resume(struct device *dev)
 				ch_reg->trg_addr);
 		tdma_ch_write(tdc, ADMA_CH_CTRL, ch_reg->ctrl);
 
-		if (tdma->cdata->has_global_fifo_ctrl) {
-			if (!tdma->is_virtualized) {
+		if (tdc->tdma->cdata->has_global_fifo_ctrl) {
+			if (tdc->tdma->base_addr) {
 				tdma_write(tdc->tdma, ADMA_GLOBAL_CH_FIFO_CTRL + i * 4,
 						ch_reg->fifo_ctrl);
 				tdma_write(tdc->tdma, ADMA_GLOBAL_CH_CONFIG + i * 4,
@@ -967,6 +988,7 @@ static const struct tegra_adma_chip_data tegra264_chip_data = {
 	.sreq_index_offset	= 0,
 	.has_outstanding_reqs	= false,
 	.ch_fifo_offset		= 4,
+	.set_global_pg_config	= tegra264_adma_global_page_config,
 };
 
 static const struct of_device_id tegra_adma_of_match[] = {
@@ -1071,7 +1093,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 			goto irq_dispose;
 		}
 
-		if (tdma->is_virtualized)
+		if (!tdma->base_addr)
 			tdc->vc.rt_spinlock_fix_enabled = DMA_RT_SPINLOCK_FIX_ENABLED;
 		else
 			tdc->vc.rt_spinlock_fix_enabled = 0;
