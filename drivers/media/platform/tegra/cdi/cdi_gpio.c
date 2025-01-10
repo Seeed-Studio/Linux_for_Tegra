@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -52,12 +52,11 @@ static struct gpio_chip *cdi_gpio_get_chip(struct platform_device *pdev,
 #endif
 	char name[MAX_STR_SIZE];
 
-	if (strlen(pd->gpio_prnt_chip) > MAX_STR_SIZE) {
-		dev_err(&pdev->dev, "%s: gpio chip name is too long: %s\n",
-			__func__, pd->gpio_prnt_chip);
+	if (strscpy(name, pd->gpio_prnt_chip, MAX_STR_SIZE) < 0) {
+		dev_err(&pdev->dev, "%s: gpio chip name is too long: %.*s\n",
+			__func__, MAX_STR_SIZE, pd->gpio_prnt_chip);
 		return NULL;
 	}
-	strcpy(name, pd->gpio_prnt_chip);
 
 #if defined(NV_GPIO_DEVICE_FIND_PRESENT) && \
     defined(NV_GPIO_DEVICE_GET_CHIP_PRESENT) /* Linux 6.7 */
