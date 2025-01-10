@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * tegracam_v4l2 - tegra camera framework for v4l2 support
  */
@@ -255,6 +255,15 @@ int tegracam_v4l2subdev_register(struct tegracam_device *tc_dev,
 		return err;
 	}
 #endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+	sd->state_lock = ctrl_hdl->ctrl_handler.lock;
+	err = v4l2_subdev_init_finalize(sd);
+	if (err < 0) {
+		dev_err(dev, "subdev init error: %d\n", err);
+		return err;
+	}
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) */
 
 #if defined(CONFIG_V4L2_ASYNC)
 	return v4l2_async_register_subdev(sd);
