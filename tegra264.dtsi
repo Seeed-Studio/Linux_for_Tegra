@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/clock/tegra264-clock.h>
 #include <dt-bindings/clock/tegra264-clk.h>
@@ -10583,6 +10583,16 @@
 		 */
 		iommus = <&smmu3_mmu 0x900>;
 		non-coherent;
+
+		/*
+		 * Display driver uses iso_sid and niso_sid to get the SMMU Stream IDs.
+		 * These downstream SID properties have been added because 'iommus'
+		 * property is deleted in few sw stacks (e.g. AV+L) to avoid stage-1
+		 * SMMU mapping.
+		 */
+		iso_sid = <0x900>;
+		niso_sid = <0x901>;
+
 		nvdisplay-niso {
 			compatible = "nvidia,tegra264-display-niso";
 			iommus = <&smmu3_mmu 0x901>;
