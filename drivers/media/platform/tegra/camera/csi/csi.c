@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVIDIA Tegra CSI Device
  */
@@ -1054,8 +1054,9 @@ static int csi_parse_dt(struct tegra_csi_device *csi,
 
 	if (strncmp(node->name, "nvcsi", 5)) {
 		node = of_find_node_by_name(node, "nvcsi");
-		if (sizeof(csi->devname) >= sizeof("nvcsi")) {
-			strncpy(csi->devname, "nvcsi", 6);
+		if (strscpy(csi->devname, "nvcsi", 6) < 0) {
+			dev_err(csi->dev, "Name too long.\n");
+			return -EINVAL;
 		}
 	}
 

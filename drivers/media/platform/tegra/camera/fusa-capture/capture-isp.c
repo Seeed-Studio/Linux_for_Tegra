@@ -1907,14 +1907,28 @@ static uint32_t isp_capture_get_num_progress(
 {
 	struct isp_desc_rec *capture_desc_ctx =
 		&chan->capture_data->capture_desc_ctx;
-	struct isp_capture_descriptor *desc = (struct isp_capture_descriptor *)
-		(capture_desc_ctx->requests.va +
-			req->buffer_index * capture_desc_ctx->request_size);
+	struct isp_capture_descriptor *desc = NULL;
+	uint16_t sliceHeight = 0U;
+	uint16_t height = 0U;
+	uint32_t desc_offset = 0U;
+	uint16_t slice_hight_sub = 1U;
+	uint16_t adjust_slice_height = 0U;
+	uint16_t adjust_height = 0U;
 
-	uint16_t sliceHeight = desc->surface_configs.slice_height;
-	uint16_t height = desc->surface_configs.mr_height;
+	if (check_mul_overflow(req->buffer_index, capture_desc_ctx->request_size, &desc_offset))
+		return 0;
 
-	return ((height + (sliceHeight - 1U)) / sliceHeight);
+	desc = (struct isp_capture_descriptor *)(capture_desc_ctx->requests.va + desc_offset);
+	sliceHeight = desc->surface_configs.slice_height;
+	height = desc->surface_configs.mr_height;
+
+	if (check_sub_overflow(sliceHeight, slice_hight_sub, &adjust_slice_height))
+		return 0;
+
+	if (check_add_overflow(height, adjust_slice_height, &adjust_height))
+		return 0;
+
+	return (adjust_height / sliceHeight);
 }
 
 int isp_capture_request(
