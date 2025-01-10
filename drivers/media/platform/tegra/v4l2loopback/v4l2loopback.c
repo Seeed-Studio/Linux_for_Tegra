@@ -164,7 +164,7 @@ static int debug = 0;
 module_param(debug, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(debug, "debugging level (higher values == more verbose)");
 
-#define V4L2LOOPBACK_DEFAULT_MAX_BUFFERS 2
+#define V4L2LOOPBACK_DEFAULT_MAX_BUFFERS 4
 static int max_buffers = V4L2LOOPBACK_DEFAULT_MAX_BUFFERS;
 module_param(max_buffers, int, S_IRUGO);
 MODULE_PARM_DESC(max_buffers,
