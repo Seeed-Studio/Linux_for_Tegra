@@ -51,6 +51,7 @@ obj-m += misc/
 obj-m += net/
 obj-m += nvpps/
 obj-m += nvpmodel/
+obj-m += nvtzvault/
 obj-m += nv-p2p/
 ifdef CONFIG_PCI
 obj-m += pci/

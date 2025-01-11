@@ -115,6 +115,7 @@ kernel_module(
         "drivers/nv-p2p/nvidia-p2p.ko",
         "drivers/nvpmodel/nvpmodel-clk-cap.ko",
         "drivers/nvpps/nvpps.ko",
+        "drivers/nvtzvault/nvtzvault.ko",
         "drivers/nv-virtio/nv-virtio-console-poc.ko",
         "drivers/pci/controller/pcie-tegra-vf.ko",
         "drivers/pci/controller/private-soc/pcie-tegra264.ko",
