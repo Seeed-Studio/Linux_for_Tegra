@@ -2,7 +2,7 @@
 /*
  * Capture support for syncpoint and GoS management
  *
- * SPDX-FileCopyrightText: Copyright (c) 2017-2024, NVIDIA Corporation.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2025, NVIDIA Corporation.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -24,85 +24,59 @@
 #include <linux/nvhost.h>
 #include <uapi/linux/nvhost_ioctl.h>
 
-int capture_alloc_syncpt(struct platform_device *pdev,
-			const char *name,
-			uint32_t *syncpt_id)
+#ifdef CONFIG_TEGRA_HWPM_CAM
+#include <uapi/linux/tegra-soc-hwpm-uapi.h>
+#include <linux/tegra-camera-rtcpu.h>
+
+static int tegra_cam_hwpm_ip_pm(void *ip_dev, bool disable)
 {
-	uint32_t id;
+	int err = 0;
 
-	if (syncpt_id == NULL) {
-		dev_err(&pdev->dev, "%s: null argument\n", __func__);
+#ifdef CONFIG_MEDIA_SUPPORT
+#ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
+	// check if rtcpu is powered on
+	bool is_powered_on = tegra_camrtc_is_rtcpu_powered();
+
+	if (!is_powered_on)
+		err = -EIO;
+#endif
+#endif
+
+	return err;
+}
+
+static int tegra_cam_hwpm_ip_reg_op(void *ip_dev,
+	enum tegra_soc_hwpm_ip_reg_op reg_op,
+	u32 inst_element_index, u64 reg_offset, u32 *reg_data)
+{
+	struct platform_device *dev = (struct platform_device *)ip_dev;
+
+	if (reg_offset > UINT_MAX)
 		return -EINVAL;
-	}
 
-	id = nvhost_get_syncpt_client_managed(pdev, name);
-	if (id == 0) {
-		dev_err(&pdev->dev, "%s: syncpt allocation failed\n", __func__);
-		return -ENODEV;
-	}
+	dev_err(&dev->dev, "%s:reg_op %d reg_offset %llu", __func__, reg_op, reg_offset);
 
-	*syncpt_id = id;
+	if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_READ)
+		*reg_data = host1x_readl(dev,
+				(unsigned int)reg_offset);
+	else if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_WRITE)
+		host1x_writel(dev, (unsigned int)reg_offset,
+				*reg_data);
+	else
+		return -1;
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(capture_alloc_syncpt);
-
-void capture_release_syncpt(struct platform_device *pdev, uint32_t id)
-{
-	dev_dbg(&pdev->dev, "%s: id=%u\n", __func__, id);
-	nvhost_syncpt_put_ref_ext(pdev, id);
-}
-EXPORT_SYMBOL_GPL(capture_release_syncpt);
-
-void capture_get_gos_table(struct platform_device *pdev,
-				int *gos_count,
-				const dma_addr_t **gos_table)
-{
-	int count = 0;
-	dma_addr_t *table = NULL;
-
-	*gos_count = count;
-	*gos_table = table;
-}
-EXPORT_SYMBOL_GPL(capture_get_gos_table);
-
-int capture_get_syncpt_gos_backing(struct platform_device *pdev,
-			uint32_t id,
-			dma_addr_t *syncpt_addr,
-			uint32_t *gos_index,
-			uint32_t *gos_offset)
-{
-	uint32_t index = GOS_INDEX_INVALID;
-	uint32_t offset = 0;
-	dma_addr_t addr;
-
-	if (id == 0) {
-		dev_err(&pdev->dev, "%s: syncpt id is invalid\n", __func__);
-		return -EINVAL;
-	}
-
-	if (syncpt_addr == NULL || gos_index == NULL || gos_offset == NULL) {
-		dev_err(&pdev->dev, "%s: null arguments\n", __func__);
-		return -EINVAL;
-	}
-
-	addr = nvhost_syncpt_address(pdev, id);
-
-	*syncpt_addr = addr;
-	*gos_index = index;
-	*gos_offset = offset;
-
-	dev_dbg(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
-		__func__, id, addr, index, offset);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(capture_get_syncpt_gos_backing);
+#endif
 
 static int capture_support_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
+#ifdef CONFIG_TEGRA_HWPM_CAM
+	struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
+	uint64_t base_address;
+#endif
 	int err = 0;
 
 	info = (void *)of_device_get_match_data(dev);
@@ -133,6 +107,37 @@ static int capture_support_probe(struct platform_device *pdev)
 	if (err)
 		goto device_release;
 
+#ifdef CONFIG_TEGRA_HWPM_CAM
+	err = of_property_read_u64(dev->of_node, "reg", &base_address);
+	if (err) {
+		err = -ENODEV;
+		goto error;
+	}
+
+	hwpm_ip_ops.ip_dev = (void *)pdev;
+	hwpm_ip_ops.ip_base_address = base_address;
+	if ((strcmp(info->devfs_name, "vi0-thi") == 0U) ||
+		(strcmp(info->devfs_name, "vi1-thi") == 0U)) {
+		hwpm_ip_ops.resource_enum = TEGRA_SOC_HWPM_RESOURCE_VI;
+		dev_info(dev,
+			"%s: hwpm VI address: 0x%llx\n", __func__,
+				base_address);
+	} else if ((strcmp(info->devfs_name, "isp-thi") == 0U) ||
+		(strcmp(info->devfs_name, "isp1-thi") == 0U)) {
+		hwpm_ip_ops.resource_enum = TEGRA_SOC_HWPM_RESOURCE_ISP;
+		dev_info(dev,
+			"%s: hwpm ISP address: 0x%llx\n", __func__,
+				base_address);
+	} else {
+		err = -EINVAL;
+		dev_err(dev, "%s: hwpm: invalid resource name: %s\n", __func__, info->devfs_name);
+		goto device_release;
+	}
+	hwpm_ip_ops.hwpm_ip_pm = &tegra_cam_hwpm_ip_pm;
+	hwpm_ip_ops.hwpm_ip_reg_op = &tegra_cam_hwpm_ip_reg_op;
+	tegra_soc_hwpm_ip_register(&hwpm_ip_ops);
+#endif
+
 	return 0;
 
 device_release:
@@ -145,25 +150,58 @@ error:
 
 static int capture_support_remove(struct platform_device *pdev)
 {
+
+#ifdef CONFIG_TEGRA_HWPM_CAM
+	struct device *dev = &pdev->dev;
+	struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
+	uint64_t base_address;
+	struct nvhost_device_data *info;
+	int err = 0;
+
+	info = (void *)of_device_get_match_data(dev);
+	if (WARN_ON(info == NULL))
+		return -ENODATA;
+
+	err = of_property_read_u64(dev->of_node, "reg", &base_address);
+	if (err) {
+		err = -ENODEV;
+		goto error;
+	}
+
+	hwpm_ip_ops.ip_dev = (void *)pdev;
+	hwpm_ip_ops.ip_base_address = base_address;
+	if ((strcmp(info->devfs_name, "vi0-thi") == 0U) ||
+		(strcmp(info->devfs_name, "vi1-thi") == 0U)) {
+		hwpm_ip_ops.resource_enum = TEGRA_SOC_HWPM_RESOURCE_VI;
+	} else if ((strcmp(info->devfs_name, "isp-thi") == 0U) ||
+		(strcmp(info->devfs_name, "isp1-thi") == 0U)) {
+		hwpm_ip_ops.resource_enum = TEGRA_SOC_HWPM_RESOURCE_ISP;
+	} else {
+		err = -EINVAL;
+		dev_err(dev, "%s: hwpm: invalid resource name: %s\n", __func__, info->devfs_name);
+		goto error;
+	}
+	hwpm_ip_ops.hwpm_ip_pm = NULL;
+	hwpm_ip_ops.hwpm_ip_reg_op = NULL;
+	tegra_soc_hwpm_ip_unregister(&hwpm_ip_ops);
+#endif
+
 	return 0;
+
+#ifdef CONFIG_TEGRA_HWPM_CAM
+error:
+	dev_err(dev, "hwpm unregistration failed: %d\n", err);
+	return err;
+#endif
 }
 
-struct nvhost_device_data t19_isp_thi_info = {
-	.devfs_name		= "isp-thi",
-	.moduleid		= 4, //NVHOST_MODULE_ISP,
-};
-
-struct nvhost_device_data t19_vi_thi_info = {
-	.devfs_name		= "vi-thi",
-	.moduleid		= 2, //NVHOST_MODULE_VI,
-};
-
-struct nvhost_device_data t23x_vi0_thi_info = {
+#ifdef CONFIG_TEGRA_HWPM_CAM
+struct nvhost_device_data t264_vi0_thi_info = {
 	.devfs_name		= "vi0-thi",
 	.moduleid		= 2, //NVHOST_MODULE_VI,
 };
 
-struct nvhost_device_data t23x_vi1_thi_info = {
+struct nvhost_device_data t264_vi1_thi_info = {
 	.devfs_name		= "vi1-thi",
 	.moduleid		= 3, //NVHOST_MODULE_VI2,
 };
@@ -177,27 +215,31 @@ struct nvhost_device_data t264_isp1_thi_info = {
 	.devfs_name             = "isp1-thi",
 	.moduleid               = 5, //NVHOST_MODULE_ISPB
 };
-
+#endif
 
 static const struct of_device_id capture_support_match[] = {
-	{
-		.compatible = "nvidia,tegra194-isp-thi",
-		.data = &t19_isp_thi_info,
-	},
-	{
-		.compatible = "nvidia,tegra194-vi-thi",
-		.data = &t19_vi_thi_info,
-	},
+#ifdef CONFIG_TEGRA_HWPM_CAM
 	{
 		.name = "vi0-thi",
-		.compatible = "nvidia,tegra234-vi-thi",
-		.data = &t23x_vi0_thi_info,
+		.compatible = "nvidia,tegra264-vi-thi",
+		.data = &t264_vi0_thi_info,
 	},
 	{
 		.name = "vi1-thi",
-		.compatible = "nvidia,tegra234-vi-thi",
-		.data = &t23x_vi1_thi_info,
+		.compatible = "nvidia,tegra264-vi-thi",
+		.data = &t264_vi1_thi_info,
 	},
+	{
+		.name = "isp-thi",
+		.compatible = "nvidia,tegra264-isp-thi",
+		.data = &t264_isp_thi_info,
+	},
+	{
+		.name = "isp1-thi",
+		.compatible = "nvidia,tegra264-isp-thi",
+		.data = &t264_isp1_thi_info,
+	},
+#endif
 	{ },
 };
 MODULE_DEVICE_TABLE(of, capture_support_match);
