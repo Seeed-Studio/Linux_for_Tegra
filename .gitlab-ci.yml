@@ -835,6 +835,8 @@ job-orin-nx-j40mini-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
+         - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_mini/orin-seeed-j40mini.dtbo  kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D4  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-j40mini external 
@@ -880,6 +882,8 @@ job-orin-nx-j40mini-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
+         - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_mini/orin-seeed-j40mini.dtbo kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D3 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-j40mini external 
@@ -925,6 +929,8 @@ job-orin-nano-j40mini-4g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
+         - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - cp extra_scripts/recomputer_mini/orin-seeed-j40mini.dtbo kernel/dtb/
@@ -971,6 +977,8 @@ job-orin-nano-j40mini-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
+         - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_mini/orin-seeed-j40mini.dtbo kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6 CHIP_SKU=00:00:00:D5  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-j40mini external 
