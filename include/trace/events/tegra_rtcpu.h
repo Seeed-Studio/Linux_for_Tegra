@@ -120,11 +120,11 @@ TRACE_EVENT(rtcpu_string,
 		__entry->tstamp = tstamp;
 		__entry->id = id;
 		__entry->len = len;
-		strscpy(__entry->data, data, sizeof(__entry->data));
+		(void)strscpy(__entry->data, data, sizeof(__entry->data));
 	),
 	TP_printk("tstamp:%llu id:0x%08x str:\"%.*s\"",
 		__entry->tstamp, __entry->id,
-		(int)__entry->len, __entry->data)
+		(int)(sizeof(__entry->data)), __entry->data)
 );
 
 DEFINE_EVENT(rtcpu__dump, rtcpu_bulk,

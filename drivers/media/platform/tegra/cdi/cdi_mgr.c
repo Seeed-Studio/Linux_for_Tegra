@@ -1299,8 +1299,14 @@ static void cdi_mgr_dev_ins(struct work_struct *work)
 
 	dev_dbg(cdi_mgr->dev, "%s - %s\n", __func__, np->full_name);
 	sname = of_get_property(np, "cdi-dev", NULL);
-	if (sname)
-		strncpy(d_cfg.drv_name, sname, sizeof(d_cfg.drv_name) - 8);
+	if (sname) {
+		ssize_t sz_sname = 0;
+		sz_sname = strscpy(d_cfg.drv_name, sname, sizeof(d_cfg.drv_name) - 8);
+		if (sz_sname < 0) {
+			pr_err("File name too large: %s\n", sname);
+			return;
+		}
+	}
 
 	for_each_child_of_node(np, subdev) {
 		err = of_property_read_u32(subdev, "addr", &val);
