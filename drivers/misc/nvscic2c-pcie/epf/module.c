@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  */
 
@@ -596,12 +596,17 @@ deinit_work(struct work_struct *work)
 {
 	int ret = 0;
 	struct comm_msg msg = {0};
+	struct pci_epc *epc = NULL;
+	struct platform_device *pdev = NULL;
 	struct epf_context_t *epf_ctx =
 		container_of(work, struct epf_context_t, deinitialization_work);
 	struct driver_ctx_t *drv_ctx = (struct driver_ctx_t *)epf_ctx->drv_ctx;
 
 	if (!atomic_read(&drv_ctx->epf_ctx->epf_initialized))
 		return;
+
+	epc = drv_ctx->epf_ctx->epf->epc;
+	pdev = of_find_device_by_node(epc->dev.parent->of_node);
 
 	/* local apps can stop processing if they see this.*/
 	pci_client_change_link_status(drv_ctx->pci_client_h,
@@ -639,6 +644,7 @@ deinit_work(struct work_struct *work)
 	endpoints_release(&drv_ctx->endpoints_h);
 	edma_module_deinit(drv_ctx);
 	vmap_deinit(&drv_ctx->vmap_h);
+	free_msi_data(drv_ctx, pdev);
 	clear_outbound_translation(drv_ctx->epf_ctx->epf, &drv_ctx->peer_mem);
 	atomic_set(&drv_ctx->epf_ctx->epf_initialized, 0);
 }
@@ -657,6 +663,7 @@ static int
 nvscic2c_pcie_epf_core_deinit(struct pci_epf *epf)
 {
 	struct driver_ctx_t *drv_ctx = NULL;
+	struct pci_epc *epc = epf->epc;
 
 	drv_ctx = epf_get_drvdata(epf);
 	if (!drv_ctx)
@@ -670,10 +677,25 @@ nvscic2c_pcie_epf_core_deinit(struct pci_epf *epf)
 		 * If its already scheduled, it won't be scheduled again.
 		 * Wait for deinit work to complete in either case.
 		 */
+		/*
+		 * In Thor pcie_epc_deinit_notify() is called within pci_epc_stop()
+		 * pci_epc_stop() takes mutex epc->lock which is required in
+		 * pci_epc_unmap_addr() and pci_epc_clear_bar() as well.
+		 * This done to align Thor HW with PCIe spec.
+		 * NvSciC2CPcie needs to clear CPU mapping once all the endpoints are closed.
+		 * Hence release mutex before scheduling the work and take back once done.
+		 */
+		if (drv_ctx->chip_id == TEGRA264)
+			mutex_unlock(&epc->lock);
+
 		schedule_work(&drv_ctx->epf_ctx->deinitialization_work);
 		flush_work(&drv_ctx->epf_ctx->deinitialization_work);
 
 		clear_inbound_translation(epf);
+
+		if (drv_ctx->chip_id == TEGRA264)
+			mutex_lock(&epc->lock);
+
 		atomic_set(&drv_ctx->epf_ctx->core_initialized, 0);
 	}
 	wake_up_interruptible_all(&drv_ctx->epf_ctx->core_initialized_waitq);
