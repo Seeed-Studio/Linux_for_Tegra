@@ -1141,12 +1141,13 @@ static long cdi_mgr_ioctl(
 	case CDI_MGR_IOCTL_SIGNAL:
 		switch (arg) {
 		case CDI_MGR_SIGNAL_RESUME:
+			spin_lock_irqsave(&cdi_mgr->spinlock, flags);
 			if (!cdi_mgr->sig_no) {
 				dev_err(cdi_mgr->pdev,
 					"invalid sig_no, setup pid first\n");
+				spin_unlock_irqrestore(&cdi_mgr->spinlock, flags);
 				return -EINVAL;
 			}
-			spin_lock_irqsave(&cdi_mgr->spinlock, flags);
 			cdi_mgr->sinfo.si_signo = cdi_mgr->sig_no;
 			spin_unlock_irqrestore(&cdi_mgr->spinlock, flags);
 			break;

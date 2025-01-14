@@ -1326,6 +1326,8 @@ static int cam_fsync_default(struct cam_fsync_controller *controller)
 		return err;
 
 	group = cam_fsync_get_group_by_id(controller, TSC_DEFAULT_GROUP_ID);
+	if (group == NULL)
+		return -ENXIO;
 	group->abs_start_ticks = cam_fsync_get_default_start_ticks(controller);
 	return cam_fsync_start_group_generators(group);
 }

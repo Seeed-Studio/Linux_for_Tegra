@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -54,6 +54,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(capture_ivc_recv);
 
 #define DEVICE_NAME		"rtcpu-raw-trace"
 #define MAX_READ_SIZE		((ssize_t)(~0U >> 1))
+#define UINT32_MAX (~0U)
 
 /*
  * Private driver data structure
@@ -122,6 +123,27 @@ struct rtcpu_raw_trace_context {
 	bool first_read_call;
 };
 
+/**
+ * @brief addition of two unsigned integers without MISRA C violation
+ *
+ * Adding two u32 values together and wrap in case of overflow
+ *
+ * @param[in] a  u32 value to be added
+ * @param[in] b  u32 value to be added
+ *
+ * @retval the u32 wrapped addition
+ */
+static inline u32 wrap_add_u32(u32 const a, u32 const b)
+{
+	u32 ret = 0U;
+
+	if ((a > 0U) && ((u32)(a - 1U) > ((u32)(UINT32_MAX) - b)))
+		ret = (a - 1U) - ((u32)(UINT32_MAX) - b);
+	else
+		ret = a + b;
+	return ret;
+}
+
 /*
  * Trace memory
  */
@@ -165,20 +187,43 @@ error:
 
 static void rtcpu_trace_init_memory(struct tegra_rtcpu_trace *tracer)
 {
+	u64 add_value = 0;
+	u32 sub_value = 0;
+
+	if (unlikely(check_add_overflow(tracer->dma_handle,
+			(u64)(offsetof(struct camrtc_trace_memory_header,
+				exception_next_idx)),
+			&add_value))) {
+		dev_err(tracer->dev,
+				"%s:dma_handle failed due to an overflow\n", __func__);
+		return;
+	}
+
 	/* memory map */
-	tracer->dma_handle_pointers = tracer->dma_handle +
-	    offsetof(struct camrtc_trace_memory_header, exception_next_idx);
+	tracer->dma_handle_pointers = add_value;
 	tracer->exceptions_base = tracer->trace_memory +
 	    CAMRTC_TRACE_EXCEPTION_OFFSET;
 	tracer->exception_entries = 7;
-	tracer->dma_handle_exceptions = tracer->dma_handle +
-	    CAMRTC_TRACE_EXCEPTION_OFFSET;
+
+	if (unlikely(check_add_overflow(tracer->dma_handle,
+			(u64)(CAMRTC_TRACE_EXCEPTION_OFFSET), &add_value))) {
+		dev_err(tracer->dev,
+				"%s:dma_handle failed due to an overflow\n", __func__);
+		return;
+	}
+
+	tracer->dma_handle_exceptions = add_value;
 	tracer->events = tracer->trace_memory + CAMRTC_TRACE_EVENT_OFFSET;
-	tracer->event_entries =
-	    (tracer->trace_memory_size - CAMRTC_TRACE_EVENT_OFFSET) /
-	    CAMRTC_TRACE_EVENT_SIZE;
-	tracer->dma_handle_events = tracer->dma_handle +
-	    CAMRTC_TRACE_EXCEPTION_OFFSET;
+
+	if (unlikely(check_sub_overflow(tracer->trace_memory_size,
+			CAMRTC_TRACE_EVENT_OFFSET, &sub_value))) {
+		dev_err(tracer->dev,
+				"%s:trace_memory_size failed due to an overflow\n", __func__);
+		return;
+	}
+
+	tracer->event_entries = sub_value / CAMRTC_TRACE_EVENT_SIZE;
+	tracer->dma_handle_events = add_value;
 
 	{
 		struct camrtc_trace_memory_header header = {
@@ -209,16 +254,52 @@ static void rtcpu_trace_invalidate_entries(struct tegra_rtcpu_trace *tracer,
 	dma_addr_t dma_handle, u32 old_next, u32 new_next,
 	u32 entry_size, u32 entry_count)
 {
+	u64 add_value = 0;
+	u32 mul_value_u32 = 0;
+	u32 sub_value = 0;
+	u64 mul_value_u64 = old_next * entry_size;
+
+	if (unlikely(check_add_overflow(dma_handle, mul_value_u64, &add_value))) {
+		dev_err(tracer->dev,
+				"%s:dma_handle failed due to an overflow\n", __func__);
+		return;
+	}
+
 	/* invalidate cache */
 	if (new_next > old_next) {
+		if (unlikely(check_sub_overflow(new_next, old_next, &sub_value))) {
+			dev_err(tracer->dev,
+					"%s:new_next failed due to an overflow\n", __func__);
+			return;
+		}
+
+		if (unlikely(check_mul_overflow(sub_value, entry_size, &mul_value_u32))) {
+			dev_err(tracer->dev,
+				"%s:sub_value failed due to an overflow\n", __func__);
+			return;
+		}
+
 		dma_sync_single_for_cpu(tracer->dev,
-			dma_handle + old_next * entry_size,
-			(new_next - old_next) * entry_size,
+			add_value,
+			mul_value_u32,
 			DMA_FROM_DEVICE);
 	} else {
+		if (unlikely(check_sub_overflow(entry_count, old_next, &sub_value))) {
+			dev_err(tracer->dev,
+					"%s:new_next failed due to an overflow\n", __func__);
+			return;
+		}
+
+		if (unlikely(check_mul_overflow(sub_value, entry_size, &mul_value_u32))) {
+			dev_err(tracer->dev,
+					"%s:(entry_count-entry_size) failed due to an overflow\n",
+					__func__);
+			return;
+		}
+
 		dma_sync_single_for_cpu(tracer->dev,
-			dma_handle + old_next * entry_size,
-			(entry_count - old_next) * entry_size,
+			add_value,
+			mul_value_u32,
 			DMA_FROM_DEVICE);
 		dma_sync_single_for_cpu(tracer->dev,
 			dma_handle, new_next * entry_size,
@@ -317,6 +398,7 @@ static inline void rtcpu_trace_exceptions(struct tegra_rtcpu_trace *tracer)
 	} exc;
 	u32 old_next = tracer->exception_last_idx;
 	u32 new_next = header->exception_next_idx;
+	u64 mul_value = 0;
 
 	if (old_next == new_next)
 		return;
@@ -340,12 +422,14 @@ static inline void rtcpu_trace_exceptions(struct tegra_rtcpu_trace *tracer)
 	while (old_next != new_next) {
 		void *emem;
 		old_next = array_index_nospec(old_next, tracer->exception_entries);
-		emem = tracer->exceptions_base +
-			CAMRTC_TRACE_EXCEPTION_SIZE * old_next;
+		mul_value = CAMRTC_TRACE_EXCEPTION_SIZE * old_next;
+
+		emem = tracer->exceptions_base + mul_value;
 		memcpy(&exc.mem, emem, CAMRTC_TRACE_EXCEPTION_SIZE);
 		rtcpu_trace_exception(tracer, &exc.exc);
-		++tracer->n_exceptions;
-		if (++old_next == tracer->exception_entries)
+		tracer->n_exceptions = wrap_add_u32(tracer->n_exceptions, 1U);
+		old_next = wrap_add_u32(old_next, 1U);
+		if (old_next == tracer->exception_entries)
 			old_next = 0;
 	}
 
@@ -1260,9 +1344,9 @@ static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
 		event = &tracer->events[old_next];
 		last_event = event;
 		rtcpu_trace_event(tracer, event);
-		tracer->n_events++;
-
-		if (++old_next == tracer->event_entries)
+		tracer->n_events = wrap_add_u32(tracer->n_events, 1U);
+		old_next = wrap_add_u32(old_next, 1U);
+		if (old_next == tracer->event_entries)
 			old_next = 0;
 	}
 
@@ -1317,6 +1401,8 @@ static int32_t raw_trace_read_impl(
 
 	uint32_t num_events_to_copy;
 
+	int64_t mul_value = 0;
+
 	if (new_next >= tracer->event_entries) {
 		WARN_ON_ONCE(new_next >= tracer->event_entries);
 		dev_warn_ratelimited(
@@ -1348,10 +1434,18 @@ static int32_t raw_trace_read_impl(
 		num_events_requested > num_events_to_copy ?
 			num_events_to_copy : num_events_requested;
 
+	if (unlikely(check_mul_overflow((int64_t)(*events_copied),
+		(int64_t)(sizeof(struct camrtc_event_struct)),
+		&mul_value))) {
+		dev_err(tracer->dev,
+				"%s:events_copied failed due to an overflow\n", __func__);
+		return -EFAULT;
+	}
+
 	/* No wrap around */
 	if (!buffer_wrapped) {
 		if (copy_to_user(
-			&user_buffer[(*events_copied) * sizeof(struct camrtc_event_struct)],
+			&user_buffer[mul_value],
 			&tracer->events[old_next],
 			num_events_to_copy * sizeof(struct camrtc_event_struct))) {
 			return -EFAULT;
@@ -1371,7 +1465,7 @@ static int32_t raw_trace_read_impl(
 			first_part = num_events_to_copy;
 
 		if (copy_to_user(
-			&user_buffer[(*events_copied) * sizeof(struct camrtc_event_struct)],
+			&user_buffer[mul_value],
 			&tracer->events[old_next],
 			first_part * sizeof(struct camrtc_event_struct)))
 			return -EFAULT;
@@ -1750,7 +1844,10 @@ static int raw_trace_node_drv_register(struct tegra_rtcpu_trace *tracer)
 		return rtcpu_raw_trace_major;
 	}
 
-	devt = MKDEV(rtcpu_raw_trace_major, 0);
+	if (rtcpu_raw_trace_major > MAJOR(INT_MAX))
+		dev_err(tracer->dev, "rtcpu_raw_trace_major Overflow range\n");
+	else
+		devt = MKDEV(rtcpu_raw_trace_major, 0);
 
 	cdev_init(&tracer->s_dev, &rtcpu_raw_trace_fops);
 	tracer->s_dev.owner = THIS_MODULE;
