@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2009-2024 NVIDIA CORPORATION & AFFILIATES. All Rights Reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2009-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef __LINUX_NVHOST_H
 #define __LINUX_NVHOST_H
@@ -222,6 +222,14 @@ int nvhost_syncpt_is_expired_ext(struct platform_device *dev, u32 id,
 dma_addr_t nvhost_syncpt_address(struct platform_device *engine_pdev, u32 id);
 int nvhost_syncpt_unit_interface_init(struct platform_device *pdev);
 void nvhost_syncpt_unit_interface_deinit(struct platform_device *pdev);
+int nvhost_syncpt_unit_interface_get_aperture(
+				struct platform_device *host_pdev,
+				phys_addr_t *base,
+				size_t *size);
+u32 nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id);
+u32 nvhost_syncpt_unit_interface_get_byte_offset_ext(
+				struct platform_device *host_pdev,
+				u32 syncpt_id);
 
 /* public host1x interrupt management APIs */
 int nvhost_intr_register_notifier(struct platform_device *pdev,
