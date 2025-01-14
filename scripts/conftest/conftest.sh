@@ -6534,6 +6534,25 @@ compile_test() {
             compile_check_conftest "$CODE" "NV___ALLOC_DISK_NODE_HAS_LKCLASS_ARG" "" "types"
         ;;
 
+        __alloc_pages_bulk_has_no_page_list_arg)
+            #
+            # Determine if the function __alloc_pages_bulk() has an 'page_list'
+            # argument.
+            #
+            # In Linux v6.14, commit c8b979530f27 ("mm: alloc_pages_bulk_noprof:
+            # drop page_list argument") removes the 'page_list' argument from
+            # __alloc_pages_bulk().
+            #
+            CODE="
+            #include <linux/gfp.h>
+            unsigned long confest_alloc_pages_bulk(gfp_t gfp, int nid, int nr_pages,
+                                                   struct page **page_array) {
+                return __alloc_pages_bulk(gfp, nid, NULL, nr_pages, page_array);
+            }"
+
+            compile_check_conftest "$CODE" "NV__ALLOC_PAGES_BULK_HAS_NO_PAGE_LIST_ARG" "" "types" $1.log
+        ;;
+
         aperture_remove_all_conflicting_devices)
             #
             # Determine if the function aperture_remove_all_conflicting_devices()

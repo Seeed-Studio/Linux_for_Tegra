@@ -89,6 +89,7 @@ endef
 #
 
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += __alloc_disk_node_has_lkclass_arg
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += __alloc_pages_bulk_has_no_page_list_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += __assign_str_has_no_src_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += aperture_remove_all_conflicting_devices
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += bin_attribute_struct_mmap_has_const_bin_attribute_arg
