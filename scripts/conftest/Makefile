@@ -1,6 +1,6 @@
 ###########################################################################
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Makefile file for NVIDIA Linux conftest
 ###########################################################################
@@ -206,6 +206,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += thermal_zone_for_each_trip
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tty_operations_struct_send_xchar_has_u8_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tty_operations_struct_write_has_u8_ptr_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += tty_operations_struct_set_termios_has_const_ktermios_arg
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += ufs_hba_variant_ops_has_set_dma_mask
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += ufs_hba_variant_ops_suspend_has_status_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += ufshcd_quirks_enum_has_ufshcd_quirk_broken_64bit_address
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += ufshcd_quirks_enum_has_ufshcd_quirk_broken_power_seqeunce

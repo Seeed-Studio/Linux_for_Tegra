@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <nvidia/conftest.h>
 
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/dma-mapping.h>
 #include <linux/time.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -1948,6 +1949,7 @@ static int ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	ufs_tegra->enable_auto_hibern8 =
 		of_property_read_bool(np, "nvidia,enable-auto-hibern8");
 
+#if !defined(NV_UFS_HBA_VARIANT_OPS_HAS_SET_DMA_MASK) /* Linux v6.13 */
 	if (ufs_tegra->soc->chip_id >= TEGRA234) {
 #if defined(NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS) /* Linux 6.0 */
 		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS;
@@ -1956,6 +1958,7 @@ static int ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 		return -ENOTSUPP;
 #endif
 	}
+#endif
 
 	return 0;
 }
@@ -2461,6 +2464,18 @@ static void ufs_tegra_exit(struct ufs_hba *hba)
 #endif
 }
 
+#if defined(NV_UFS_HBA_VARIANT_OPS_HAS_SET_DMA_MASK) /* Linux v6.13 */
+static int ufs_tegra_set_dma_mask(struct ufs_hba *hba)
+{
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
+
+	if (ufs_tegra->soc->chip_id >= TEGRA234)
+		return dma_set_mask_and_coherent(hba->dev, DMA_BIT_MASK(32));
+
+	return 0;
+}
+#endif
+
 /**
  * struct ufs_hba_tegra_vops - UFS TEGRA specific variant operations
  *
@@ -2476,6 +2491,9 @@ struct ufs_hba_variant_ops ufs_hba_tegra_vops = {
 	.hce_enable_notify      = ufs_tegra_hce_enable_notify,
 	.link_startup_notify	= ufs_tegra_link_startup_notify,
 	.pwr_change_notify      = ufs_tegra_pwr_change_notify,
+#if defined(NV_UFS_HBA_VARIANT_OPS_HAS_SET_DMA_MASK) /* Linux v6.13 */
+	.set_dma_mask		= ufs_tegra_set_dma_mask,
+#endif
 };
 
 static int ufs_tegra_probe(struct platform_device *pdev)

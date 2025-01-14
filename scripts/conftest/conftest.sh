@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 PATH="${PATH}:/bin:/sbin:/usr/bin"
 
@@ -8495,6 +8495,24 @@ compile_test() {
             };"
 
             compile_check_conftest "$CODE" "NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG" "" "types"
+        ;;
+
+        ufs_hba_variant_ops_has_set_dma_mask)
+            #
+            # Determine if the 'struct ufs_hba_variant_ops' has a 'set_dma_mask'
+            # function pointer.
+            #
+            # In Linux v6.13, commit 78bc671bd150 ("scsi: ufs: core: Make DMA
+            # mask configuration more flexible)" add a 'set_dma_mask' function
+            # pointer to the 'ufs_hba_variant_ops' structure.
+            #
+            CODE="
+            #include <ufs/ufshcd.h>
+	    int conftest_ufs_hba_variant_ops_has_set_dma_mask(void) {
+                return offsetof(struct ufs_hba_variant_ops, set_dma_mask);
+            }"
+
+            compile_check_conftest "$CODE" "NV_UFS_HBA_VARIANT_OPS_HAS_SET_DMA_MASK" "" "types"
         ;;
 
         ufs_hba_variant_ops_suspend_has_status_arg)
