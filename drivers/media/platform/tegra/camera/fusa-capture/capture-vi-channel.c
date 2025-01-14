@@ -322,14 +322,20 @@ static int pin_vi_capture_request_buffers_locked(struct tegra_vi_channel *chan,
 		struct capture_common_unpins *request_unpins)
 {
 	struct vi_capture *capture = chan->capture_data;
-	struct capture_descriptor* desc = (struct capture_descriptor*)
-		(capture->requests.va +
-				req->buffer_index * capture->request_size);
-
+	struct capture_descriptor *desc = NULL;
 	struct capture_descriptor_memoryinfo* desc_mem =
 			&capture->requests_memoryinfo[req->buffer_index];
 	int i;
 	int err = 0;
+	uint32_t buffer_amount = 0;
+
+	if (check_mul_overflow(req->buffer_index, capture->request_size, &buffer_amount)) {
+		dev_err(chan->dev, "%s: Requests memoryinfo overflow\n", __func__);
+		return -EFAULT;
+	}
+
+	desc = (struct capture_descriptor *)
+					(capture->requests.va + buffer_amount);
 
 	/* Buffer count: ATOMP surfaces + engine_surface */
 	BUG_ON(VI_NUM_ATOMP_SURFACES + 1U >= MAX_PIN_BUFFER_PER_REQUEST);
@@ -737,6 +743,11 @@ void vi_channel_drv_unregister(
 
 	WARN_ON(&chan_drv->vi_capture_pdev->dev != dev);
 	mutex_unlock(&chdrv_lock);
+
+	if (vi_channel_major < 0) {
+		pr_err("%s: Invalid major number for VI channel\n", __func__);
+		return;
+	}
 
 	for (i = 0; i < chan_drv->num_channels; i++) {
 		dev_t devt = MKDEV(vi_channel_major, i);

@@ -15,6 +15,7 @@
 #include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/of_platform.h>
+#include <linux/overflow.h>
 #include <linux/nvhost.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
@@ -519,6 +520,11 @@ int isp_channel_drv_register(
 	chdrv_ = chan_drv;
 	mutex_unlock(&chdrv_lock);
 
+	if (isp_channel_major < 0) {
+		pr_err("%s: Invalid major number for ISP channel\n", __func__);
+		return -EINVAL;
+	}
+
 	for (i = 0; i < chan_drv->num_channels; i++) {
 		dev_t devt = MKDEV(isp_channel_major, i);
 
@@ -567,6 +573,11 @@ void isp_channel_drv_unregister(
 	chdrv_ = NULL;
 	WARN_ON(chan_drv->dev != dev);
 	mutex_unlock(&chdrv_lock);
+
+	if (isp_channel_major < 0) {
+		pr_err("%s: Invalid major number for ISP channel\n", __func__);
+		return;
+	}
 
 	for (i = 0; i < chan_drv->num_channels; i++) {
 		dev_t devt = MKDEV(isp_channel_major, i);

@@ -1,12 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * regmap_util.c - utilities for writing regmap tables
- *
- * Copyright (c) 2013-2022, NVIDIA Corporation. All Rights Reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2013-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// regmap_util.c - utilities for writing regmap tables
 
 #include <linux/regmap.h>
 #include <linux/module.h>
+#include <linux/overflow.h>
 #include <media/camera_common.h>
 
 int
@@ -22,6 +20,7 @@ regmap_util_write_table_8(struct regmap *regmap,
 
 	int range_start = -1;
 	unsigned int range_count = 0;
+	int range_end = 0;
 	/* bug 200048392 -
 	 * the vi i2c cannot take a FIFO buffer bigger than 16 bytes
 	 */
@@ -32,7 +31,12 @@ regmap_util_write_table_8(struct regmap *regmap,
 		/* If we have a range open and */
 		/* either the address doesn't match */
 		/* or the temporary storage is full, flush */
-		if  ((next->addr != range_start + range_count) ||
+		if (check_add_overflow(range_start, (int)range_count, &range_end)) {
+			pr_err("%s:regmap_util_write_table overflow", __func__);
+			return -EINVAL;
+		}
+
+		if  ((next->addr != range_end) ||
 		     (next->addr == end_addr) ||
 		     (next->addr == wait_ms_addr) ||
 		     (range_count == max_range_vals)) {
@@ -104,6 +108,7 @@ regmap_util_write_table_16_as_8(struct regmap *regmap,
 
 	int range_start = -1;
 	unsigned int range_count = 0;
+	int range_end = 0;
 	u8 range_vals[256];
 	int max_range_vals = ARRAY_SIZE(range_vals) - 1;
 
@@ -111,7 +116,12 @@ regmap_util_write_table_16_as_8(struct regmap *regmap,
 		/* If we have a range open and */
 		/* either the address doesn't match */
 		/* or the temporary storage is full, flush*/
-		if  ((next->addr != range_start + range_count) ||
+		if (check_add_overflow(range_start, (int)range_count, &range_end)) {
+			pr_err("%s:regmap_util_write_table overflow", __func__);
+			return -EINVAL;
+		}
+
+		if  ((next->addr != range_end) ||
 		     (next->addr == end_addr) ||
 		     (next->addr == wait_ms_addr) ||
 		     (range_count == max_range_vals)) {
@@ -166,4 +176,3 @@ regmap_util_write_table_16_as_8(struct regmap *regmap,
 
 EXPORT_SYMBOL_GPL(regmap_util_write_table_16_as_8);
 MODULE_LICENSE("GPL");
-

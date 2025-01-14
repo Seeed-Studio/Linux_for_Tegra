@@ -1156,10 +1156,16 @@ void isp_get_nvhost_device(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_setup *setup)
 {
-	uint32_t isp_inst = setup->isp_unit;
-
+	uint32_t isp_inst = 0U;
 	struct tegra_capture_isp_data *info =
 		platform_get_drvdata(chan->isp_capture_pdev);
+
+	if (setup == NULL) {
+		dev_err(chan->isp_dev, "%s: Invalid ISP capture request\n", __func__);
+		return;
+	}
+
+	isp_inst = setup->isp_unit;
 
 	if (isp_inst >= MAX_ISP_UNITS) {
 		dev_err(chan->isp_dev,

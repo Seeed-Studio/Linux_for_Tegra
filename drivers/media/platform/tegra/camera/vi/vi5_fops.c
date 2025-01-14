@@ -1,15 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0
-/* SPDX-FileCopyrightText: Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
- *
- * Tegra Video Input 5 device common APIs
- *
- * Author: Frank Chen <frank@nvidia.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Tegra Video Input 5 device common APIs.
 
 #include <linux/errno.h>
 #include <linux/freezer.h>
@@ -264,8 +255,12 @@ static int vi5_channel_open(struct tegra_channel *chan, u32 vi_port)
 			 * by the platform will trigger a ENODEV from the
 			 * VI capture channel driver
 			 */
-			if (err == -EBUSY)
-				channel++;
+			if (err == -EBUSY) {
+				if (check_add_overflow(channel, 1, &channel)) {
+					dev_err(chan->vi->dev, "%s:channel overflow\n", __func__);
+					return -ENODEV;
+				}
+			}
 			else {
 				dev_err(&chan->video->dev,
 					"Error opening VI capture channel node %s with err: %ld\n",
@@ -390,22 +385,38 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, unsigned int 
 static void vi5_setup_surface(struct tegra_channel *chan,
 	struct tegra_channel_buffer *buf, unsigned int descr_index, unsigned int vi_port)
 {
-	dma_addr_t offset = buf->addr + chan->buffer_offset[vi_port];
+	dma_addr_t offset = 0;
 	u32 height = chan->format.height;
 	u32 width = chan->format.width;
 	u32 format = chan->fmtinfo->img_fmt;
 	u32 bpl = chan->format.bytesperline;
 	u32 data_type = chan->fmtinfo->img_dt;
 	u32 nvcsi_stream = chan->port[vi_port];
+	unsigned int range = 0;
 	struct capture_descriptor_memoryinfo *desc_memoryinfo =
 		&chan->tegra_vi_channel[vi_port]->
 		capture_data->requests_memoryinfo[descr_index];
 	struct capture_descriptor *desc = &chan->request[vi_port][descr_index];
 
+	if (check_add_overflow(buf->addr, (dma_addr_t)chan->buffer_offset[vi_port], &offset)) {
+		dev_err(chan->vi->dev, "%s:Buf addr overflow\n", __func__);
+		return;
+	}
+
 	if (chan->valid_ports > NVCSI_STREAM_1) {
 		height = chan->gang_height;
 		width = chan->gang_width;
-		offset = buf->addr + chan->buffer_offset[1 - vi_port];
+
+		if (vi_port > 1) {
+			dev_err(chan->vi->dev, "%s: Invalid VI port number\n", __func__);
+			return;
+		}
+
+		if (check_add_overflow(buf->addr, (dma_addr_t)chan->buffer_offset[1 - vi_port],
+							   &offset)) {
+			dev_err(chan->vi->dev, "%s: Buf addr overflow\n", __func__);
+			return;
+		}
 	}
 
 	memcpy(desc, &capture_template, sizeof(capture_template));
@@ -444,7 +455,11 @@ static void vi5_setup_surface(struct tegra_channel *chan,
 			= chan->embedded_data_width * BPP_MEM;
 	}
 	//capture sequence should increment for each vi channel
-	if ((chan->valid_ports - vi_port) == 1)
+	if (check_sub_overflow(chan->valid_ports, vi_port, &range)) {
+		dev_err(chan->vi->dev, "%s:Chan valid ports overflow\n", __func__);
+		return;
+	}
+	if (range == 1)
 		chan->capture_descr_sequence += 1;
 }
 
@@ -453,7 +468,12 @@ static void vi5_release_buffer(struct tegra_channel *chan,
 {
 	struct vb2_v4l2_buffer *vbuf = &buf->buf;
 
-	vbuf->sequence = chan->sequence++;
+	if (check_add_overflow(chan->sequence, 1U, &chan->sequence)) {
+		dev_err(chan->vi->dev, "%s:chan sequence overflow\n", __func__);
+		return;
+	}
+
+	vbuf->sequence = chan->sequence;
 	vbuf->field = V4L2_FIELD_NONE;
 	vb2_set_plane_payload(&vbuf->vb2_buf, 0, chan->format.sizeimage);
 
@@ -611,6 +631,7 @@ static int vi5_channel_error_recover(struct tegra_channel *chan,
 {
 	int err = 0;
 	unsigned int vi_port = 0;
+	unsigned long flags = 0;
 	struct tegra_channel_buffer *buf;
 	struct tegra_mc_vi *vi = chan->vi;
 	struct v4l2_subdev *csi_subdev;
@@ -679,7 +700,9 @@ static int vi5_channel_error_recover(struct tegra_channel *chan,
 	chan->capture_reqs_enqueued = 0;
 
 	/* clear capture channel error state */
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	chan->capture_state = CAPTURE_IDLE;
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 done:
 	return err;
@@ -739,10 +762,12 @@ static int tegra_channel_kthread_capture_dequeue(void *data)
 	while (1) {
 		try_to_freeze();
 
+		spin_lock_irqsave(&chan->capture_state_lock, flags);
 		wait_event_interruptible(chan->dequeue_wait,
 			(kthread_should_stop()
 				|| !list_empty(&chan->dequeue)
 				|| (chan->capture_state == CAPTURE_ERROR)));
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 		while (!(kthread_should_stop() || list_empty(&chan->dequeue)
 				|| (chan->capture_state == CAPTURE_ERROR))) {

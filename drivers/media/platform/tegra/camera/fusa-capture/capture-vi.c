@@ -1,17 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
- *
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-vi.c
@@ -586,8 +574,7 @@ void vi_get_nvhost_device(
 		platform_get_drvdata(chan->vi_capture_pdev);
 
 	if (setup->csi_stream_id >= MAX_NVCSI_STREAM_IDS) {
-		dev_err(chan->dev,
-			"%s: csi stream id is out of bound\n", __func__);
+		dev_err(&chan->vi_capture_pdev->dev, "CSI stream ID over the limit\n");
 		return;
 	}
 
