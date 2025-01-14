@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All Rights Reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -64,7 +64,6 @@ void host1x_writel(struct platform_device *pdev, u32 r, u32 v)
 EXPORT_SYMBOL(host1x_writel);
 
 static const struct of_device_id host1x_match[] = {
-	{ .compatible = "nvidia,tegra194-host1x", },
 	{ .compatible = "nvidia,tegra234-host1x", },
 	{ .compatible = "nvidia,tegra264-host1x", },
 	{},
@@ -405,12 +404,6 @@ static int nvhost_syncpt_get_aperture(struct device_node *np, u64 *base,
 	struct platform_device *pdev;
 	int numa_node;
 
-	if (of_device_is_compatible(np, "nvidia,tegra194-host1x")) {
-		*base = TEGRA194_SYNCPT_SHIM_BASE;
-		*size = TEGRA194_SYNCPT_SHIM_SIZE;
-		return 0;
-	}
-
 	if (of_device_is_compatible(np, "nvidia,tegra234-host1x")) {
 		*base = TEGRA234_SYNCPT_SHIM_BASE;
 		*size = TEGRA234_SYNCPT_SHIM_SIZE;
@@ -440,11 +433,6 @@ static int nvhost_syncpt_get_aperture(struct device_node *np, u64 *base,
 
 static int nvhost_syncpt_get_page_size(struct device_node *np, uint32_t *size)
 {
-	if (of_device_is_compatible(np, "nvidia,tegra194-host1x")) {
-		*size = TEGRA194_SYNCPT_PAGE_SIZE;
-		return 0;
-	}
-
 	if (of_device_is_compatible(np, "nvidia,tegra234-host1x")) {
 		*size = TEGRA234_SYNCPT_PAGE_SIZE;
 		return 0;
