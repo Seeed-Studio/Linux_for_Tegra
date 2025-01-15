@@ -1,0 +1,293 @@
+/*
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION. All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
+=> PRE-REQUISITES :
+
+1. You must install GStreamer-1.0 on the target board using apt-get, as follows:
+
+   sudo apt-get install gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav
+
+2. To check the running gstreamer version, use the following command before you start using the nvgstcapture application:
+
+   gst-inspect-1.0 --version
+
+3. Execute the following commands on the target board's Ubuntu command line:
+
+   export DISPLAY=:0
+
+=> NvGstCapture Usage:
+
+* The nvgstcapture application can capture video data and encapsulate encoded data in a container file.
+
+* The nvgstcapture application supports both command-line and runtime options.
+
+=> NvGstCapture Application Options:
+
+    Usage: ./nvgstcapture-1.0 --help
+
+* Command-line options for NvArgusCamera:
+
+  --prev-res                        Preview width & height.Range: 2 to 12 (5632x4224) e.g., --prev-res=3
+  --cus-prev-res                    Custom Preview width & height e.g., --cus-prev-res=1920x1080
+  --image-res                       Image width & height. Range: 2 to 12 (5632x4224) e.g., --image-res=3
+  --video-res                       Video width & height. Range: 2 to 9 (3896x2192) e.g., --video-res=3
+  --camsrc                          Camera Source to use (0=v4l2, 1=csi[default], 2=videotest, 3=eglstream)
+  -m, --mode                        Capture mode value (1=still 2=video)
+  -v, --video-enc                   Video encoder type (0=h264[HW] 1=vp8[HW] 2=h265[HW] 3=vp9[HW])
+  -p, --hw-enc-path                 Frame Work type (0=OMX 1=V4L2[Default])
+  -b, --enc-bitrate                 Video encoding Bit-rate(in bytes) e.g., --enc-bitrate=4000000
+  --enc-controlrate                 Video encoding Bit-rate control method 0 = Disable, 1 = variable(Default), 2 = constant e.g., --enc-controlrate=1
+  --enc-EnableTwopassCBR            Enable two pass CBR while encoding 0 = Disable, 1 = Enable e.g., --enc-EnableTwopassCBR=1
+  --enc-profile                     Video encoder profile For H.264: 0=Baseline, 1=Main, 2=High
+  -J, --image-enc                   Image encoder type (0=jpeg_SW[jpegenc] 1=jpeg_HW[nvjpegenc])
+  -k, --file-type                   Container file type (0=mp4 1=3gp 2=mkv)
+  --file-name                       Captured file name. nvcamtest is used by default
+  --color-format                    Color format to use (0=I420,1=NV12[For CSI only and default for CSI], 2=YUY2[For V4L2 only, default for v4l2])
+  --enable-meta                     Enable Sensor MetaData reporting
+  --app-profile                     Enable KPI profiling
+  --kpi-numbers                     Enable KPI measurement
+  --cap-dev-node                    Video capture device node (0=/dev/video0[default], 1=/dev/video1, 2=/dev/video2) e.g., --cap-dev-node=0
+  --svs                             [For USB] (=) chain for video Preview. [For CSI only] use "nvoverlaysink"
+  --eglConfig                       EGL window Coordinates (x_pos y_pos) in that order  e.g., --eglConfig="50 100"
+  --orientation                     Camera sensor orientation value
+  -w, --whitebalance                Capture whitebalance value
+  --timeout                         Capture timeout value
+  --saturation                      Camera Saturation value
+  --sensor-id                       Camera Sensor ID value
+  --exposuretimerange               Property to adjust exposure time range in nanoseconds e.g., --exposuretimerange="34000 358733000"
+  --gainrange                       Property to adjust gain range e.g., --gainrange="1 16"
+  --ispdigitalgainrange             Property to adjust digital gain range e.g., --ispdigitalgainrange="1 8"
+  --aelock                          Enable AE Lock, default is disabled
+  --awblock                         Enable AWB Lock, default is disabled
+  --exposurecompensation            Property to adjust exposure compensation e.g., --exposurecompensation=0.5
+  --aeantibanding                   Property to set the auto exposure antibanding mode e.g., --aeantibanding=2
+  --tnr-mode                        Property to select temporal noise reduction mode e.g., --tnr-mode=2
+  --tnr-strength                    Property to adjust temporal noise reduction strength e.g., --tnr-strength=0.5
+  --ee-mode                         Property to select edge enhancement mode e.g., --ee-mode=2
+  --ee-strength                     Property to adjust edge enhancement strength e.g., --ee-strength=0.5
+  --display-id                      [For nvoverlaysink only] Display ID value
+  --overlayConfig                   Overlay Configuration Options index and coordinates in (index, x_pos, y_pos, width, height) order  e.g. --overlayConfig="0, 0, 0, 1280, 720"
+  -A, --automate                    Run application in automation mode
+  -S, --start-time                  Start capture after specified time in seconds. Default = 5 sec (use with --automate or -A only)
+  -Q, --quit-after                  Quit application once automation is done after specified time in seconds. Default = 0 sec (use with --automate or -A only)
+  -C, --count                       Number of iterations of automation testcase. Default = 1 (use with --automate or -A only)
+  -N, --num-sensors                 Number of sensors  (use with --automate or -A only)
+  --capture-gap                     Number of milliseconds between successive image/video capture. Default = 250 msec (use with --automate and --capture-auto only)
+  --capture-time                    Capture video for specified time in seconds. Default = 10 sec (use with --automate and --capture-auto only)
+  --toggle-mode                     Toggle between still and video capture modes for count number of times (use with --automate or -A only)
+  --capture-auto                    Do image/video capture in automation mode for count number of times(use with --automate or -A only)
+  --toggle-sensor                   Toggle between num_sensors if given otherwise between sensor-id 0 and 1 (use with --automate or -A only)
+  --enum-wb                         Enumerate all white-balance modes for count number of times (use with --automate or -A only)
+  --enum-st                         Enumerate saturation value through 0 to 2 by a step of 0.1 for count number of times (use with --automate or -A only)
+
+
+Supported resolutions in case of NvArgusCamera
+  (2) : 640x480
+  (3) : 1280x720
+  (4) : 1920x1080
+  (5) : 2104x1560
+  (6) : 2592x1944
+  (7) : 2616x1472
+  (8) : 3840x2160
+  (9) : 3896x2192
+  (10): 4208x3120
+  (11): 5632x3168
+  (12): 5632x4224
+
+* Runtime options for NvArgusCamera:
+
+  Help : 'h'
+  Quit : 'q'
+  Set Capture Mode:
+      mo:<val>
+          (1): image
+          (2): video
+  Get Capture Mode:
+      gmo
+  Set sensor orientation:
+      so:<val>
+          (0): none
+          (1): Rotate counter-clockwise 90 degrees
+          (2): Rotate 180 degrees
+          (3): Rotate clockwise 90 degrees
+  Get sensor orientation:
+      gso
+  Set Whitebalance Mode:
+      wb:<val>
+          (0): off
+          (1): auto
+          (2): incandescent
+          (3): fluorescent
+          (4): warm-fluorescent
+          (5): daylight
+          (6): cloudy-daylight
+          (7): twilight
+          (8): shade
+          (9): manual
+  Get Whitebalance Mode:
+      gwb
+  Set Saturation (0 to 2):
+      st:<val> e.g., st:1.25
+  Get Saturation:
+      gst
+  Set Exposure Compensation (-2 to 2):
+      ec:<val> e.g., ec:-2
+  Get Exposure Compensation:
+      gec
+  Set Auto Whitebalance Lock:
+      awbl:<val> e.g., awbl:0
+  Get Auto Whitebalance Lock:
+      awbl
+  Set Auto Exposure Lock:
+      ael:<val> e.g., ael:0
+  Get Auto Exposure Lock:
+      gael
+  Set TNR Mode:
+      tnrm:<val> e.g., tnrm:1
+          (0): DENOISE_MODE_OFF
+          (1): DENOISE_MODE_FAST
+          (2): DENOISE_MODE_HIGH_QUALITY
+  Get TNR Mode:
+      gtnrm
+  Set TNR Strength (-1 to 1):
+      tnrs:<val> e.g., tnrs:0.5
+  Get TNR Strength:
+      gtnrs
+  Set EE Mode:
+      eem:<val> e.g., eem:1
+          (0): EDGE_ENHANCE_MODE_OFF
+          (1): EDGE_ENHANCE_MODE_FAST
+          (2): EDGE_ENHANCE_MODE_HIGH_QUALITY
+  Get EE Mode:
+      geem
+  Set EE Strength (-1 to 1):
+      ees:<val> e.g., ees:0.5
+  Get EE Strength:
+      gees
+  Set Auto Exposure Anti-Banding (0 to 3):
+      aeab:<val> e.g., aeab:2
+          (0): AE_ANTIBANDING_MODE_OFF
+          (1): AE_ANTIBANDING_MODE_AUTO
+          (2): AE_ANTIBANDING_MODE_50HZ
+          (3): AE_ANTIBANDING_MODE_60HZ
+  Get Auto Exposure Anti-Banding:
+      gaeab
+  Set Gain Range:
+      gr:<val><space><val> e.g., gr:1 16
+  Get Gain Range:
+      ggr
+  Set Exposure Time Range:
+      etr:<val><space><val> e.g., etr:34000 35000
+  Get Exposure Time Range:
+      getr
+  Set ISP Digital Gain Range:
+      dgr:<val><space><val> e.g., dgr:2 152
+  Get ISP Digital Gain Range:
+      gdgr
+  Capture: enter 'j' OR
+           followed by a timer (e.g., jx5000, capture after 5 seconds) OR
+           followed by multishot count (e.g., j:6, capture 6 images)
+           timer/multihot values are optional, capture defaults to single shot with timer=0s
+  Start Recording : enter '1'
+  Stop Recording  : enter '0'
+  Video snapshot  : enter '2' (While recording video)
+  Get Preview Resolution:
+      gpcr
+  Get Image Capture Resolution:
+      gicr
+  Get Video Capture Resolution:
+      gvcr
+
+Runtime encoder configuration options:
+
+  Set Encoding Bit-rate(in bytes):
+      br:<val> e.g., br:4000000
+  Get Encoding Bit-rate(in bytes):
+      gbr
+  Set Encoding Profile(only for H.264):
+      ep:<val> e.g., ep:1
+          (0): Baseline
+          (1): Main
+          (2): High
+  Get Encoding Profile(only for H.264):
+      gep
+  Force IDR Frame on video Encoder(only for H.264):
+      Enter 'f'
+
+Runtime encoder configuration options:
+
+  Set Encoding Bit-rate(in bytes):
+      br:<val> e.g., br:4000000
+  Get Encoding Bit-rate(in bytes):
+      gbr
+  Set Encoding Profile(only for H.264):
+      ep:<val> e.g., ep:1
+          (0): Baseline
+          (1): Main
+          (2): High
+  Get Encoding Profile(only for H.264):
+      gep
+  Force IDR Frame on video Encoder(only for H.264):
+      Enter 'f'
+
+NOTES:
+
+1. The nvgstcapture application generates image and video output files in the same directory as the application itself.
+
+2. Filenames for image and video content are in the formats "nvcamtest_<pid>_s<sensor-id>_<capture-count>.jpg" and
+   "nvcamtest_<pid>_s<sensor-id>_<capture-count>.mp4" respectively.
+   where,
+   <pid> is process id,
+   <sensor-id> is camera sensor id
+   <capture-count> is a counter starting from 0 every time you run the application.
+   Rename or move files between runs to avoid overwriting results you want to save.
+
+3. The nvgstcapture application default supports native capture (video only) mode.
+
+4. Advanced features, like setting zoom, brightness, exposure, and whitebalance, are not supported with USB-Camera.
+
+5. The nvgstcapture application sets nvjpegenc[HW] by default for Image encoding.
+
+6. User can specify a sensor supported custom preview resolution. A CSI camera will output at the custom resolution
+   but visible preview will be capped at 1080p max. Command:
+   ./nvgstcapture-1.0 --prev-res=2 --cus-prev-res=1280x960
+
+7. nvgstcapture-1.0 supports automation. Details of the commands can be found in help. Here are example command lines
+   for a few use cases:
+
+   i) Capture 50 images with 1080p resolutions:
+      ./nvgstcapture-1.0 -A -C 50 --capture-auto --image-res=4
+
+  ii) Capture 5 720p videos, each of length 60 seconds, with a gap of 2 seconds between recordings
+      and quit application 10 seconds after that:
+      ./nvgstcapture-1.0 -A -C 5 --capture-auto --video-res=3 --capture-time=60 --mode=2 --capture-gap=2000 --quit-after=10
+
+8. nvhdmioverlaysink has been deprecated. Use nvoverlaysink with the display-id option instead.
+   For example to show video on the display with head=1: ./nvgstcapture-1.0 --display-id=1
+
+9. For a USB camera use "--cap-dev-node" command line option along with "--camsrc=0" to specify the capture node.
+
+10. Hardware encoder support depends on the Jetson platform. Please refer to the following section in Accelerated GStreamer User Guide for supported codecs for your platform:
+    Gstreamer-1.0 Installation and Setup > Gstreamer-1.0 Plugin Reference > gst-omx video encoders
+
+11. The nvgstcapture application uses gst-v4l2 encoders by default.
+

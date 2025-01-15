@@ -1,0 +1,4 @@
+DISTRO="ubuntu"
+VERSION="bionic"
+EABI="aarch64"
+BASE_URL="http://ftp.jaist.ac.jp/pub/Linux/ubuntu-cdimage/ubuntu-base/releases/18.04/release/ubuntu-base-18.04.5-base-arm64.tar.gz"

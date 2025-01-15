@@ -1,0 +1,607 @@
+************************************************************************
+			   Linux for Tegra
+	  Runtime Boot Loader Update Process for Jetson TX1
+				README
+************************************************************************
+
+This document provides guidelines for enabling runtime boot firmware
+updates with data redundancy features to be used as part of a
+failure-tolerant system update procedure. The topics discussed are
+specific to the NVIDIA® Tegra® Linux Driver Package (L4T) releases on
+the Jetson™ TX1 Development Kit. Adaptation of these instructions may
+be required for use on other Tegra X1-based platforms.  Implementation
+of a specific update mechanism or update procedure is outside the scope
+of this document.
+
+Prerequisites
+-----------------------------------------------------------------------
+
+For a description of the Tegra boot flow, see the NVIDIA® Tegra®
+Public Application Notes. This document assumes an understanding of
+the Tegra boot process.
+
+For information on the Linux Tegra Driver Package, refer to the NVIDIA
+Developer Embedded Computing website. This document assumes an
+understanding of the L4T software and the Jetson TX1 Development Kit.
+
+BCT, Tegraboot, and Boot File Set Redundancy
+-----------------------------------------------------------------------
+
+The Tegra BootROM validates the BCT through an integrated checksum or
+RSA signature. If the calculated checksum or RSA signature does not
+match the checksum or signature value within the BCT, the BootROM
+searches for the next BCT and attempts to validate. Up to 64 copies
+of the BCT are searched, at mod-16KiB boundaries. The NVIDIA flashing
+utility, tegraflash, writes up to 64 copies of the BCT based on the
+space allocated for the BCT partition.
+
+A BCT can contain up to four entries for indicating locations (offset
+and size) and checksums or signature of the tegraboot, bootfileset (BFS),
+and kernelfileset (KFS). The BootROM computes and validates the checksum
+or signature for each tegraboot entry. When the first valid checksum or
+signature is located, the BootROM transfers control (jumps) to the
+specified tegraboot.
+
+The tegraboot computes and validates the checksum for its companion
+BFS and KFS. When the checksums for the BFS and KFS are validated and
+signature of each boot and kernel files are verified, the tegraboot
+loads boot files such as tegraboot-cpu, bootloader-DTB, kernel-DTB,
+warmboot-vector, and TOS, and takes proper actions on them. When
+all necessary boot files are verified and loaded, the tegraboot transfers
+control (jumps) to the boot loader such as cboot. The boot loader
+validates and load next level software such as Linux kernel or U-Boot.
+If the tegraboot fails to validate both bootfileset and kernelfileset,
+then it overwrites itself and resets the board so that the BootROM can
+validate and load the next tegraboot, bootfileset, and kernelfiileset
+combination.
+
+Overview
+----------------------------------------------------------------------
+
+The procedures for updating the runtime boot firmware are as follows:
+* Implement Boot Firmware Redundancy:
+  - Modify the Linux kernel to expose the eMMC boot0 and boot1
+    partitions for runtime access.
+  - Generate/Modify the partition configuration file to make the tegraboot
+    and bootfileset partitions specified in the boot0 and boot1 partitions.
+  - Make sure tegraflash scripts are inter-operable with SecureBoot.
+* Deploy devices with boot firmware redundancy.
+* Prepare new boot firmware, BCT, DTB, and kernel images for update:
+  - Either download new L4T BSP or generate new U-Boot.
+  - Extract the BCT from the deployed system for offline modification.
+  - Use offline, host-based tools to regenerate the BCT, BFS, DTB, and
+    kernel images.
+* Download the new BCT, BFS, DTB, and kernel images into the target
+    device.
+* Update the new BCT, BFS and KFS images:
+  - Copy the BCT, BFS, DTB, and kernel images to eMMC partitions.
+  - Reboot to execute the updated boot loader.
+
+NOTE: In L4T r24.2.2 release, The kernel DTB is not part of the BFS image
+      and is not protected by boot firmware redundancy.  Even though it
+      is validated and loaded by the boot loader, the kernel DTB is part of
+      the kernel, which is not part of BFS. Starting in L4T r28.2, all of BFS
+      and KFS files are protected by both checksum and PKC authentication.
+
+========================================================================
+Failure-Tolerant BCT and Boot Firmware Update
+========================================================================
+
+The standard L4T release for Jetson-TX1 does not enable boot firmware
+redundancy features. As part of a failure-tolerant boot firmware update,
+you must first implement and deploy boot firmware redundancy and then
+follow the boot firmware update procedure.
+
+Implementing Boot Firmware Redundancy
+----------------------------------------------------------------------
+
+Enabling boot firmware redundancy requires modification of the following
+components:
+- Kernel eMMC driver
+- Partition configuration file
+- tegraflash script
+
+After these modifications are made, flashed, and deployed, then
+initial boot loader redundancy is enabled.
+
+Modifying the Linux Kernel
+----------------------------------------------------------------------
+
+You must modify the Linux kernel to expose the eMMC boot0 and boot1
+partitions for runtime access. By default, eMMC boot partitions are
+not exposed during runtime by the Linux kernel.
+
+To expose the eMMC boot partitions:
+
+1. Navigate to the kernel driver:
+
+   <kernel>/drivers/mmc/host/sdhci-tegra.c
+
+2. Comment out the following line:
+
+   host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
+
+   Depending on L4T BSP version, the line above may be enclosed in
+   ``if'' statement. In that case, comment out entire ``if'' block.
+
+When the kernel is booted, the write-protected boot partitions are
+visible at:
+
+- /dev/mmcblk0boot0 — BCT, BFS0, and BFS1
+- /dev/mmcblk0boot1 — BFS2 and BFS3
+
+Populating the BFS to the Boot Partitions
+----------------------------------------------------------------------
+
+You must populate all of the BFS to the boot partition configuration
+file either by automatically generating or modifying existing default
+partition configuratin file.
+
+To automatically generate the partition configuration file:
+
+1. cd <L4T BSP>/Linux_for_Tegra/bootloader
+
+2. ./mkbctpart -G <newredundant.xml>
+
+3. replace the standard partition configuration file with
+   <newredundant.xml> as instructed by mkbctpart.
+
+To modify the partition configuration file:
+
+1. Modify the BSP configuration file:
+   bootloader/t210ref/cfg/gnu_linux_fastboot_emmc_full.xml
+
+   The BSP configuration file contains the partitioning information for
+   both the Tegra partition table and the GPT.
+
+   - Partitions defined after GP1 are visible to Linux.
+   - Partition NVC contains the tegraboot.
+   - Partitions NVC-1, NVC-2, and NVC-3 store additional tegraboot
+     instances for redundancy. These partitions must be defined after BCT
+     and before GP1 to be located in boot partitions.
+   - Partitions PT, PT-1, PT-2, and PT-3 contain layout information for
+     each BFS, and indicate the beginning of each BFS.
+   - Partitions TBC, TBC-1, TBC-2, and TBC-3 contain the cpu-portion of
+     tegraboot.
+   - Partitions RP1, RP1-1, RP1-2, and RP1-3 contain tegraboot DTBs.
+   - Partitions EBT, EBT-1, EBT-2, and EBT-3 contain secondary boot
+     loaders such as U-Boot or cboot.
+     (Startgin from R28.1.1, U-Boot is no longer a part of BFS and only
+     cboot is allowed to be located in EBT partitions. The U-Boot can be
+     defined in kernel partition (LNX) as a secondary boot loader)
+   - Partitions WB0, WB0-1, WB0-2, and WB0-3 contain the warmboot vector.
+   - Partitions BPF, BPF-1, BPF-2, and BPF-3 contain BPMP microcode.
+   - Partitions TOS, TOS-1, TOS-2, and TOS-3 contain secure monitor code.
+   - Partitions DTB, DTB-1, DTB-2, and DTB-3 contain kernel DTBs.
+     (Starting from R24.2.2, kernel DTBs should be defined after APP
+     partition because they are not part of BFS).
+   - Partitions LNX, LNX-1, LNX-2, and LNX-3 contain either Linux Kernel
+     or U-Boot depending on user's choice of DFLT_KERNEL_IMAGE in
+     jetson-tx1.conf file.
+   - Partitions EKS, EKS-1, EKS-2, and EKS-3 are optional, and reserved
+     for future use.
+
+2. Verify that each bootfileset is defined immediately after each NVC
+   partition, and the PT partition is the first within each
+   bootfileset. That is, NVC and bootfileset combinations should be
+   defined in the order: NVC, then PT, then the rest.
+
+3. Verify that sum of partitions sizes of one NVC and matching BFS
+   partitions does not exceed (boot0_size – 1 MiB) / 2. (With standard
+   Jetson TX1, it is 1.5 MiB)
+
+4. Modify the gnu_linux_fastboot_emmc_full.xml file to move the APP
+   entry immediately after the GP1 entry, so that the RootFS is on
+   /dev/mmcblk0p1.
+
+5. Verify that each kernelfileset (DTB and LNX) is defined after
+   APP partition and DTB{-1,-2,-3} are the beginning of each kernel
+   file set and LNX{-1,-2,-3} are the ending of each KFS.
+
+6. Modify all partition entry ID=values to be contiguous if and only if
+   the partition configuration file is altered from the original generation
+   by mkbctpart.
+
+The overall layout for the partition configuration file is as follows:
+
+...
+BCT
+NVC
+BFS   -- PT,   TBC,   RP1,   EBT,   WB0,   BPF,   TOS
+NVC-1
+BFS-1 -- PT-1, TBC-1, RP1-1, EBT-1, WB0-1, BPF-1, TOS-1
+NVC-2
+BFS-2 -- PT-2, TBC-2, RP1-2, EBT-2, WB0-2, BPF-2, TOS-2
+NVC-3
+BFS-3 -- PT-3, TBC-3, RP1-3, EBT-3, WB0-3, BPF-3, TOS-3
+GP1
+APP
+KFS   -- DTB, LNX
+KFS-1 -- DTB-1, LNX-1
+KFS-2 -- DTB-2, LNX-2
+KFS-3 -- DTB-3, LNX-3
+...
+
+The following is an example of a complete partition configuration file
+generation:
+
+- cd <L4T BSP>/Linux_for_Tegra/bootloader/t210ref/cfg
+- mv -f gnu_linux_tegraboot_emmc_full.xml gnu_linux_tegraboot_emmc_full.xml.sav
+- cd ../..
+- ./mkbctpart -G new_config.xml
+- modify new_config.xml if and only if necessary.
+- mv -f new_config.xml t210ref/cfg/gnu_linux_tegraboot_emmc_full.xml
+- From this point, perform normal operations such as signing, flashing, etc...
+
+This modification causes the tegraboot and boot file set partitions to
+disappear from Linux as /dev/mmcblk0px, makes other partitions
+visible, and causes the root file system partition to stay as
+/dev/mmcblk0p1. Unlike BFS all KFS partitions are visible from Linux. i.e.
+DTB in /dev/mmcblk0p2, LNX in /dev/mmcblk0p2, DTB-1 in /dev/mmcblk0p5, LNX-1
+in /detc/mmcblk0p6, etc ...
+No further modifications are required to inform boot loader and the Linux
+kernel of the location of the new root file system.
+
+Modifying Tregaflash Script
+----------------------------------------------------------------------
+
+If you are using L4T R28 releases or not using SecureBoot, you may skip
+this section. Enable boot firmware redundancy inter-operability
+with SecureBoot in L4T R24 releases by adding one line of python code
+to the tegraflash script as follows:
+
+1. cd <L4T BSP>/Linux_for_Tegra/bootloader
+
+2. edit tegraflash_internal.py
+
+3. go to the line starting with "def tegraflash_secureflash".
+
+4. From the "def tegraflash_secureflash" line, look down and find a line
+   with "    tegraflash_parse_partitionlayout()".
+
+5. Add a new line "    tegraflash_update_bfs_images()" right under
+   "    tegraflash_parse_partitionlayout()" line. Here, make sure leading
+   4 spaces are enforced to have proper indentation.
+
+6. Now you have the L4T R24.x.x BSP inter-operate with the Secureboot.
+
+Enabling Boot Firmware Redundancy
+-----------------------------------------------------------------------
+
+Flash the Jetson TX1 platform with the above modifications to verify
+proper loading and functioning of boot firmwares, the Linux kernel, and
+the proper location specified for the root file system. To ensure that
+all build components are functional, it is recommended that you verify
+the boot firmwares and kernel independently prior to enabling boot
+firmware redundancy.
+
+Because enabling redundancy makes eMMC boot partitions very crowded,
+you must tell flash.sh to skip the boot partition check by commenting
+out the BOOTPARTSIZE=xxx line in the <device name>.conf file before
+flashing.
+
+For flashing instructions, see the Development Guide for your device.
+
+Preparing New Boot Firmware Set and BCT Images for Update
+----------------------------------------------------------------------
+
+For convenience, this document refers to BCT image names with four
+appended numeric values, which denote the boot firmware version
+described by the BCT image. The numeric versions are arbitrary but
+indicate the boot firmware update process.
+
+For example, after flashing, with initial boot firmware redundancy
+enabled, all boot firmware and kernel file versions are identical and
+referred to as bct_1111. When boot firmware is updated and the BCT is
+modified to contain two new images in slots 0 and 1 (positions 1 and 2),
+the boot version is referred to as bct_2211.
+
+Likewise, for descriptive purposes, a similar numeric value is
+appended to the name of the BCT binary.
+
+Extracting the BCT from the System
+----------------------------------------------------------------------
+
+Before updating the boot firmware, read and maintain a copy of the BCT
+(bct_1111) flashed on the production device. This BCT is used for
+later modifications to update the boot firmware entries (location, size,
+hash, and signature) within the BCT.
+
+To retrieve the binary BCT:
+
+1. Place a production device into forced-recovery mode.  For
+   instructions on how to place a device in recovery mode, see the
+   Setting Up Your Platform topic in the Development Guide for your
+   device.
+
+2. Use the tegraflash utility to read bct_1111 from the device.
+
+   cd <BSP>/Linux_for_Tegra/bootloader/
+
+   For clear system,
+      ./tegraflash.py --bl cboot.bin --chip 0x21 --applet \
+      nvtboot_recovery.bin --cmd "read BCT bct_1111;"
+
+   For PKC protected system,
+      ./tegraflash.py --bl cboot.bin.signed --chip 0x21 --applet \
+      rcm_1_signed.rcm --cmd "read BCT bct_1111" --securedev --skipuid
+
+Preparing New Boot Firmware Set from New L4T BSP
+----------------------------------------------------------------------
+If you want to update boot firmware from newer L4T BSP, you should
+prepare new boot firmware as follow:
+
+1. Download and install new L4T BSP as shown in the Developer Embedded
+   Computing website:
+2. If you want to update U-Boot, then Build new U-Boot for Jetson-tx1
+   and copy u-boot-dtb.bin to:
+   <L4T BSP>/Linux_for_Tegra/bootloader/t210ref/p2371-0000/
+3. Populate all boot firmware binaries in flashable format:
+   For clear system,
+     ./flash.sh --no-flash jetson-tx1 mmcblk0p1
+   For PKC protected system,
+     ./flash.sh --no-flash -x 0x21 -y PKC -u <RSA key> jetson-tx1 mmcblk0p1
+4. cp bct_1111 <New L4T BSP>/Linux_for_Tegra/bootloader/
+
+Regenerating the BCT and Boot Firmware Blob Images
+-----------------------------------------------------------------------
+
+NVIDIA provides a host-based utility, mkbctpart, for offline
+modifications and updates of the BCT. Use mkbctpart to specify a new
+location, size, and hash value for an updated boot loader binary.
+
+The mkbctpart utility generates the updated BCT partition file and
+padded boot loader files from the provided BCT partition file and the
+new boot loader file, as follows:
+
+  a. Reads in the BCT partition file and validates it.
+
+  b. Reads in the new boot firmwares, builds bfsblob{_signed}.bin, and
+     calculates the hashes and signatures.
+
+  c. Updates the boot loader entries in the BCT as specified by the –i option.
+
+     Note: Entries (also known as slots) not specified for modification
+           remain the same, assuming the location, size, and hash and
+           signatures of the boot loader being replaced.
+
+4. Writes out the new updated BCT partition file and bfsblob{_signed}.bin
+   file.
+
+The mkbctpart syntax is as follows:
+
+Usage:  mkbctpart [options] [new BCT file]
+where <options> are:
+    -b|--bctpartition <input BCT file> --------------- default=bct.dump
+    -i|--instances <BFS update entry CSV> ------------ default=0,1
+    -k|--keyfile <RSA Private key file name> --------- default=None
+    -l|--listbcts ------------------------------------ default=N/A
+    -p|--paddedfile <flashable BFS image file> ------- default=<BFSBLOB>
+    -t|--tegratype <Tegra type> ---------------------- default=T210
+    -B|--Bootloader <new BL file name> --------------- default=<tegraboot>
+    -G|--Genconfig <new configuration file name> ----- default=None
+    -V|--Verbose ------------------------------------- default=0
+
+    <new BCT file> is:
+      Output file name for updated BCT partition.
+    <BFSBLOB> is:
+      A blob which includes tegraboot and new BFS image to be downloaded
+      and flashed for Jetson TX1 device. The default name of the BFSBLOB
+      is bfsblob{_signed}.bin.
+    <tegraboot> is:
+      cboot.bin{.signed}
+
+The following shows usage exampls for mkbctpart:
+
+    ./mkbctpart –l –b bct_1111
+    ./mkbctpart -G new_redundant_partition_config.xml
+    ./mkbctpart -b bct_1111 -i 0,1 -V bct_2211
+    ./mkbctpart -k <RSA Key File> -b bct_1111 -i 0,1 -V bct_2211
+
+In the above example, mkbctpart:
+- Takes bct_1111 as input, describing four version 1 BFS blobs
+  originally flashed in the production device.
+- Generates the new BCT file bct_2211, which describes BFS
+  version-2 in slots 0 and 1, and BFS version-1 in slots 2 and 3.
+- Generates a new BFSBLOB named as bfsblob{_signed}.bin. All of
+  bct_2211, bfsblob{_signed}.bin, <DTB file>.dtb.{encrypt|signed}
+  are downloaded to the device prior to the update process.
+
+    NOTE: The mkbctpart utility expects all BFS files either signed
+    or unsigned to exist in the same directory in L4T BSP:
+
+    <BSP>/Linux_for_Tegra/bootloaer/
+
+Preparing New U-Boot on Old L4T BSP
+-----------------------------------------------------------------------
+If you want to just update U-Boot on old L4T BSP, you may do so:
+
+1. Build new U-Boot for Jetson-tx1 and copy u-boot-dtb.bin to
+   <L4T BSP>/Linux_for_Tegra/bootloader/t210ref/p2371-0000/
+
+2. cp bct_1111 <New L4T BSP>/Linux_for_Tegra/bootloader/
+
+3. Populate all boot firmware binaries in flashable format:
+
+   For clear system,
+     cd <L4T BSP>/Linux_for_Tegra
+     ./flash.sh --no-flash jetson-tx1 mmcblk0p1
+     cd bootloader
+     ./mkbctpart -b bct_1111 -i 0,1 -V bct_2211
+   The mkbctpart generates bct_2211 and bfsblob.bin files.
+
+   For PKC protected system,
+     cd <L4T BSP>/Linux_for_Tegra
+     ./flash.sh --no-flash -x 0x21 -y PKC -u <RSA key> jetson-tx1 mmcblk0p1
+     cd bootloader
+     ./mkbctpart -k <RSA Key> -b bct_1111 -i 0,1 -V bct_2211
+   The mkbctpart generates bct_2211 and bfsblob_signed.bin files.
+
+   NOTE: Up on completion, the mkbctpart utility will print out download
+         instruction tell which file to go where on the target.
+
+Downloading the Updated BCT and BFS Blob Images
+----------------------------------------------------------------------
+
+You must copy the updated bct_2211, new kernel dtb file and new boot file
+image bfsblob{_signe}.bin to the target device (e.g., with the scp command,
+on a removable storage device, etc.). The mechanism for performing this
+task is beyond the scope of this document. In case that you want to update
+U-Boot on r28.x.x, you should download boot.img to the target device.
+
+Copying Downloaded BCT and BFS Images Into EMMC
+
+The following provides example target commands to overwrite the BCT
+and bfsblob{_signed}.bin with the updated binaries into BFS instance
+0 and 1. (This example is for the standard Jetson TX1 eMMC device with
+4 MiB boot0 and 4 MiB boot1)
+
+# sudo bash    # enter password and become superuser
+# echo 0 > /sys/block/mmcblk0boot0/force_ro
+# dd if=bct_2211 of=/dev/mmcblk0boot0
+# dd if=bfsblob{_signed}.bin of=/dev/mmcblk0boot0 seek=2048
+# dd if=bfsblob{_signed}.bin of=/dev/mmcblk0boot0 seek=5120
+# dd if=<new kernel dtb>.{encrypt|signed} of=/dev/mmcblk0p2
+# dd if=boot.img.{encrypt|signed} of=/dev/mmcblk0p3
+# dd if=<new kernel dtb>.{encrypt|signed} of=/dev/mmcblk0p5
+# dd if=boot.img.{encrypt|signed} of=/dev/mmcblk0p6
+# sync
+# sync
+# echo 1 >/sys/block/mmcblk0boot0/force_ro
+
+    NOTE: Copying boot.img.{encrypt|signed} step shown in the example
+    above overwites the U-Boot on the target system running L4T r28.1.0
+    or later version. (For L4T r24.x.x, U-Boot is included in the BFSBLOB
+    and additional operations are not necessary.)
+
+    NOTE: The name of KFS files are *.encrypt for non-PKC protected
+    system, and *.signed for PKC protected system.
+
+Executing the Updated Boot Loader
+------------------------------------------------------------------------
+
+To execute the updated BCT and boot loader, you must reboot the system.
+
+Recovering from Error during the Update
+------------------------------------------------------------------------
+
+1. Reboot the target. Even if there was an error during update BFS/KFS
+   0 and 1, BFS/KFS 2 and 3 are intact and must be able to boot.
+2. Just repeat same update. The update process is "stateless" so it can
+   be restartable without knowing previous update status.
+
+Updating BFS/KFS 2 and 3
+------------------------------------------------------------------------
+
+Once the BFS/KFS 0 and 1 are updated successfully, the new BFS/KFS will
+be used in next boot cycle. At this moment, you can leave the target as
+is. I.e. BFS/KFS 0 and 1 are new versions and BFS/KFS 2 and 3 are older
+version. If you want to update BFS/KFS 2 and 3 to the new versions, then
+repeat same update procedure with some numbers changed. The example is
+given as follow:
+
+1. Go to the L4T environment where you built bct_2211.
+2. Build bct_2222.
+
+   For clear system,
+     cd <L4T BSP>/Linux_for_Tegra/bootloader
+     ./mkbctpart -b bct_2211 -i 0,1 -V bct_2222
+   The mkbctpart generates bct_2222 and bfsblob.bin files.
+
+   For PKC protected system,
+     cd <L4T BSP>/Linux_for_Tegra/bootloader
+     ./mkbctpart -k <RSA Key> -b bct_2211 -i 0,1 -V bct_2222
+   The mkbctpart generates bct_2222 and bfsblob_signed.bin files.
+
+3. Download bct_2222, bfsblob{_signed}.bin
+
+4. Flash new binaries to eMMC:
+# sudo bash    # enter password and become superuser
+# echo 0 > /sys/block/mmcblk0boot0/force_ro
+# dd if=bct_2222 of=/dev/mmcblk0boot0
+# echo 0 > /sys/block/mmcblk0boot1/force_ro
+# dd if=bfsblob{_signed}.bin of=/dev/mmcblk0boot1
+# dd if=bfsblob{_signed}.bin of=/dev/mmcblk0boot1 seek=3072
+# dd if=<new kernel dtb>.{encrypt|signed} of=/dev/mmcblk0p8
+# dd if=boot.img.{encrypt|signed} of=/dev/mmcblk0p9
+# dd if=<new kernel dtb>.{encrypt|signed} of=/dev/mmcblk0p11
+# dd if=boot.img.{encrypt|signed} of=/dev/mmcblk0p12
+# sync
+# sync
+# echo 1 >/sys/block/mmcblk0boot0/force_ro
+# echo 1 >/sys/block/mmcblk0boot1/force_ro
+
+Testing BFS/KFS Redundancies
+------------------------------------------------------------------------
+1. Testing BCT redundancy: The BCT partition has 64 identical BCT images
+   and each BCT image behaves as "sub-partition" and, as long as, there
+   is 1 valid BCT image is intact, the boot ROM will detect it and the
+   target system will be configures properly.
+
+# sudo bash    # enter password and become superuser
+# echo 0 > /sys/block/mmcblk0boot0/force_ro
+# dd if=/bin/ls of=/dev/mmcblk0boot0 count=20 # 100KiB of BCT clobbered
+# sync
+# sync
+# <reset the board>
+
+   Even after the first 100KiB of BCT partition clobbered, the boot ROM
+   will quietly detect and use the first healthy BCT and configure the
+   system properly. I.e. you won't see any sign of breakage.
+
+2. Testing BFS0 corruption:
+# sudo bash    # enter password and become superuser
+# echo 0 > /sys/block/mmcblk0boot0/force_ro
+# dd if=/bin/ls of=/dev/mmcblk0boot0 seek=3048 count=1 # BFS0 clobbered
+# sync
+# sync
+# <reset the board>
+
+   You will find following messages in the UART log:
+      ...
+      *** Failing over to BFS1.
+      ...
+      *** Booting BFS1.
+      *** Booting KFS1.
+      ...
+
+3. Testing KFS1 corruption:
+# sudo bash    # enter password and become superuser
+# dd if=/dev/zero of=/dev/mmcblk0p5 count=1	# DTB-1 clobbered
+# sync
+# sync
+# <reset the board>
+
+   You will find following messages in the UART log:
+      ...
+      *** Failing over to KFS2.
+      ...
+      *** Booting BFS2.
+      *** Booting KFS2.
+      ...
+
+4. Testing KFS2 corruption:
+# sudo bash    # enter password and become superuser
+# dd if=/bin/ls of=/dev/mmcblk0p9 count=10	# LNX-2 clobbered
+# sync
+# sync
+# <reset the board>
+
+   You will find following messages in the UART log:
+      ...
+      *** Failing over to KFS3.
+      ...
+      *** Booting BFS3.
+      *** Booting KFS3.
+      ...
+
+4. Testing BFS3 corruption:
+# sudo bash    # enter password and become superuser
+# echo 0 > /sys/block/mmcblk0boot1/force_ro
+# dd if=/bin/ls of=/dev/mmcblk0boot1 seek=3072 count=1 # BFS3 clobbered
+# sync
+# sync
+# <reset the board>
+
+   At this moment, the system is basically hosed because all of 4 BFS/KFS
+   are clobbered. You must re-flash it.
