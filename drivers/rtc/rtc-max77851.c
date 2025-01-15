@@ -242,9 +242,12 @@ static void max77851_rtc_data_to_tm(u8 *data, struct rtc_time *tm,
 	tm->tm_wday = ffs(data[RTC_WEEKDAY] & mask) - 1;
 	tm->tm_mday = data[RTC_DATE] & 0x1f;
 	tm->tm_mon = (data[RTC_MONTH] & 0x0f) - 1;
-	tm->tm_year = (data[RTC_YEAR] & mask) + 100;
+	tm->tm_year = (data[RTC_YEAR] & mask);
 	tm->tm_yday = 0;
 	tm->tm_isdst = 0;
+
+	if (!info->drv_data->alarm_enable_reg)
+		tm->tm_year += 100;
 }
 
 static int max77851_rtc_tm_to_data(struct rtc_time *tm, u8 *data,
