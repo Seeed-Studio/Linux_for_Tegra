@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  */
 
@@ -435,7 +435,7 @@ nvscic2c_pcie_epc_probe(struct pci_dev *pdev,
 	if (ret)
 		goto err_request_region;
 
-	win_size = pci_resource_len(pdev, 0U);
+	win_size = pci_resource_len(pdev, drv_ctx->bar);
 	ret = allocate_inbound_area(pdev, win_size, &drv_ctx->self_mem);
 	if (ret)
 		goto err_alloc_inbound;
