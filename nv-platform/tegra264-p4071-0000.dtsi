@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/input/linux-event-codes.h>
 #include <dt-bindings/input/gpio-keys.h>
@@ -219,20 +219,25 @@
 			status = "okay";
 		};
 
-		/* PCIe C2 for onboard Ethernet */
+		/* PCIe C2 for onboard Ethernet Realtek */
 		pcie@a808420000 {
 			status = "okay";
 			interrupts = <TEGRA264_AON_GPIO(AA, 5) GPIO_ACTIVE_LOW>;
 			interrupt-names = "wakeup";
 		};
 
-		/* C3 M.2 Key M(J1) */
+		/* PCIe C3 is SNN on Jedha */
 		pcie@a808440000 {
-			status = "okay";
+			status = "disabled";
 		};
 
-		/* PCIe C4 2nd M.2 Key M(J103) */
+		/* PCIe C4 is SNN on Jedha */
 		pcie@a808460000 {
+			status = "disabled";
+		};
+
+		/* PCIe C5 to enable NVME */
+		pcie@a808480000 {
 			status = "okay";
 		};
 
