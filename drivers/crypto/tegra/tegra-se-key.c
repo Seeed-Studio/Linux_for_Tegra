@@ -314,3 +314,20 @@ int tegra_key_submit(struct tegra_se *se, const u8 *key, u32 keylen, u32 alg, u3
 
 	return 0;
 }
+
+void tegra_key_invalidate_reserved(struct tegra_se *se, u32 keyid, u32 alg)
+{
+	u8 zkey[AES_MAX_KEY_SIZE] = {0};
+
+	if (!keyid)
+		return;
+
+	/* Overwrite the key with 0s */
+	tegra_key_insert(se, zkey, AES_MAX_KEY_SIZE, keyid, alg);
+}
+
+inline int tegra_key_submit_reserved(struct tegra_se *se, const u8 *key,
+				     u32 keylen, u32 alg, u32 *keyid)
+{
+	return tegra_key_insert(se, key, keylen, *keyid, alg);
+}

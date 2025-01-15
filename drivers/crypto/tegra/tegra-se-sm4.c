@@ -34,6 +34,8 @@ struct tegra_sm4_ctx {
 	u32 ivsize;
 	u32 key1_id;
 	u32 key2_id;
+	u8 key1[AES_MAX_KEY_SIZE];
+	u8 key2[AES_MAX_KEY_SIZE];
 };
 
 struct tegra_sm4_reqctx {
@@ -58,6 +60,7 @@ struct tegra_sm4_gcm_ctx {
 	u32 verify_alg;
 	u32 keylen;
 	u32 key_id;
+	u8 key[AES_MAX_KEY_SIZE];
 };
 
 struct tegra_sm4_gcm_reqctx {
@@ -84,6 +87,8 @@ struct tegra_sm4_cmac_ctx {
 	u32 alg;
 	u32 final_alg;
 	u32 key_id;
+	u32 keylen;
+	u8 key[AES_MAX_KEY_SIZE];
 	struct crypto_shash *fallback_tfm;
 };
 
@@ -199,20 +204,30 @@ static int tegra_sm4_do_one_req(struct crypto_engine *engine, void *areq)
 	iv = (u32 *)req->iv;
 
 	/* Keys in ctx might be stored in KDS. Copy it to request ctx */
-	rctx->key1_id = tegra_key_get_idx(ctx->se, ctx->key1_id);
-	if (!rctx->key1_id) {
-		ret = -ENOMEM;
-		goto out;
+	if (ctx->key1_id)
+		rctx->key1_id = tegra_key_get_idx(ctx->se, ctx->key1_id);
+
+	/* Use reserved keyslots if keyslots are unavailable */
+	if (!ctx->key1_id || !rctx->key1_id) {
+		ret = tegra_key_submit_reserved_aes(ctx->se, ctx->key1,
+					ctx->keylen, ctx->alg, &rctx->key1_id);
+		if (ret)
+			goto out;
 	}
 
 	rctx->key2_id = 0;
 
 	/* If there are 2 keys stored (for XTS), retrieve them both */
-	if (ctx->key2_id) {
-		rctx->key2_id = tegra_key_get_idx(ctx->se, ctx->key2_id);
-		if (!rctx->key2_id) {
-			ret = -ENOMEM;
-			goto key1_free;
+	if (ctx->alg == SE_ALG_SM4_XTS) {
+		if (ctx->key2_id)
+			rctx->key1_id = tegra_key_get_idx(ctx->se, ctx->key1_id);
+
+		/* Use reserved keyslots if keyslots are unavailable */
+		if (!ctx->key2_id || !rctx->key2_id) {
+			ret = tegra_key_submit_reserved_aes(ctx->se, ctx->key2,
+						ctx->keylen, ctx->alg, &rctx->key2_id);
+			if (ret)
+				goto key1_free;
 		}
 	}
 
@@ -255,11 +270,14 @@ static int tegra_sm4_do_one_req(struct crypto_engine *engine, void *areq)
 			  rctx->datbuf.buf, rctx->datbuf.addr);
 
 key2_free:
-	/* Free the keyslots if it is cloned for this request */
-	if (rctx->key2_id != ctx->key2_id)
+	if (tegra_key_is_reserved(rctx->key2_id))
+		tegra_key_invalidate_reserved(ctx->se, rctx->key2_id, ctx->alg);
+	else if (rctx->key2_id != ctx->key2_id)
 		tegra_key_invalidate(ctx->se, rctx->key2_id, ctx->alg);
 key1_free:
-	if (rctx->key1_id != ctx->key1_id)
+	if (tegra_key_is_reserved(rctx->key1_id))
+		tegra_key_invalidate_reserved(ctx->se, rctx->key1_id, ctx->alg);
+	else if (rctx->key1_id != ctx->key1_id)
 		tegra_key_invalidate(ctx->se, rctx->key1_id, ctx->alg);
 out:
 	crypto_finalize_skcipher_request(se->engine, req, ret);
@@ -286,6 +304,7 @@ static int tegra_sm4_cra_init(struct crypto_skcipher *tfm)
 	ctx->se = se_alg->se_dev;
 	ctx->key1_id = 0;
 	ctx->key2_id = 0;
+	ctx->keylen = 0;
 	ctx->ivsize = crypto_skcipher_ivsize(tfm);
 
 	algname = crypto_tfm_alg_name(&tfm->base);
@@ -319,13 +338,20 @@ static int tegra_sm4_setkey(struct crypto_skcipher *tfm,
 			       const u8 *key, u32 keylen)
 {
 	struct tegra_sm4_ctx *ctx = crypto_skcipher_ctx(tfm);
+	int ret;
 
 	if (aes_check_keylen(keylen)) {
 		dev_err(ctx->se->dev, "key length validation failed\n");
 		return -EINVAL;
 	}
 
-	return tegra_key_submit(ctx->se, key, keylen, ctx->alg, &ctx->key1_id);
+	ret = tegra_key_submit(ctx->se, key, keylen, ctx->alg, &ctx->key1_id);
+	if (ret) {
+		ctx->keylen = keylen;
+		memcpy(ctx->key1, key, keylen);
+	}
+
+	return 0;
 }
 
 static int tegra_sm4_xts_setkey(struct crypto_skcipher *tfm,
@@ -343,13 +369,17 @@ static int tegra_sm4_xts_setkey(struct crypto_skcipher *tfm,
 
 	ret = tegra_key_submit(ctx->se, key, len,
 			ctx->alg, &ctx->key1_id);
-	if (ret)
-		return ret;
+	if (ret) {
+		ctx->keylen = len;
+		memcpy(ctx->key1, key, len);
+	}
 
 	ret = tegra_key_submit(ctx->se, key + len, len,
 			ctx->alg, &ctx->key2_id);
-	if (ret)
-		return ret;
+	if (ret) {
+		ctx->keylen = len;
+		memcpy(ctx->key2, key + len, len);
+	}
 
 	return 0;
 }
@@ -950,7 +980,7 @@ static int tegra_sm4_gcm_do_one_req(struct crypto_engine *engine, void *areq)
 	struct tegra_sm4_gcm_ctx *ctx = crypto_aead_ctx(tfm);
 	struct tegra_sm4_gcm_reqctx *rctx = aead_request_ctx(req);
 	struct tegra_se *se = ctx->se;
-	int ret, keyid;
+	int ret;
 
 	rctx->src_sg = req->src;
 	rctx->dst_sg = req->dst;
@@ -963,11 +993,15 @@ static int tegra_sm4_gcm_do_one_req(struct crypto_engine *engine, void *areq)
 		rctx->cryptlen = req->cryptlen - ctx->authsize;
 
 	/* Keys in ctx might be stored in KDS. Copy it to local keyslot */
-	keyid = tegra_key_get_idx(ctx->se, ctx->key_id);
-	if (!keyid)
-		goto out;
+	if (ctx->key_id)
+		rctx->key_id = tegra_key_get_idx(ctx->se, ctx->key_id);
 
-	rctx->key_id = keyid;
+	if (!ctx->key_id || !rctx->key_id) {
+		ret = tegra_key_submit_reserved_aes(ctx->se, ctx->key,
+					ctx->keylen, ctx->alg, &rctx->key_id);
+		if (ret)
+			goto out;
+	}
 
 	rctx->inbuf.size = rctx->assoclen + rctx->authsize + rctx->cryptlen;
 	rctx->inbuf.buf = dma_alloc_coherent(ctx->se->dev, rctx->inbuf.size,
@@ -1016,8 +1050,9 @@ inbuf_free:
 	dma_free_coherent(ctx->se->dev, rctx->inbuf.size,
 			  rctx->inbuf.buf, rctx->inbuf.addr);
 key_free:
-	/* Free the keyslot if it is cloned for this request */
-	if (rctx->key_id != ctx->key_id)
+	if (tegra_key_is_reserved(rctx->key_id))
+		tegra_key_invalidate_reserved(ctx->se, rctx->key_id, ctx->alg);
+	else if (rctx->key_id != ctx->key_id)
 		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
 
 out:
@@ -1042,6 +1077,7 @@ static int tegra_sm4_gcm_cra_init(struct crypto_aead *tfm)
 
 	ctx->se = se_alg->se_dev;
 	ctx->key_id = 0;
+	ctx->keylen = 0;
 	ctx->alg = SE_ALG_SM4_GCM;
 	ctx->final_alg = SE_ALG_SM4_GCM_FINAL;
 	ctx->verify_alg = SE_ALG_SM4_GCM_VERIFY;
@@ -1202,13 +1238,6 @@ static int tegra_sm4_cmac_do_init(struct ahash_request *req)
 	rctx->blk_size = crypto_ahash_blocksize(tfm);
 	rctx->digest.size = crypto_ahash_digestsize(tfm);
 
-	/* Retrieve the key slot for CMAC */
-	if (ctx->key_id) {
-		rctx->key_id = tegra_key_get_idx(ctx->se, ctx->key_id);
-		if (!rctx->key_id)
-			return -ENOMEM;
-	}
-
 	rctx->digest.buf = dma_alloc_coherent(se->dev, rctx->digest.size,
 				&rctx->digest.addr, GFP_KERNEL);
 	if (!rctx->digest.buf)
@@ -1232,9 +1261,6 @@ resbuf_fail:
 	dma_free_coherent(se->dev, rctx->blk_size, rctx->digest.buf,
 				rctx->digest.addr);
 digbuf_fail:
-	if (rctx->key_id != ctx->key_id)
-		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
-
 	return -ENOMEM;
 }
 
@@ -1384,6 +1410,17 @@ static int tegra_sm4_cmac_do_one_req(struct crypto_engine *engine, void *areq)
 		rctx->task &= ~SHA_INIT;
 	}
 
+	/* Retrieve the key slot for CMAC */
+	if (ctx->key_id)
+		rctx->key_id = tegra_key_get_idx(ctx->se, ctx->key_id);
+
+	if (!ctx->key_id || !rctx->key_id) {
+		ret = tegra_key_submit_reserved_aes(ctx->se, ctx->key,
+					ctx->keylen, ctx->alg, &rctx->key_id);
+		if (ret)
+			goto out;
+	}
+
 	if (rctx->task & SHA_UPDATE) {
 		ret = tegra_sm4_cmac_do_update(req);
 		if (ret)
@@ -1401,6 +1438,11 @@ static int tegra_sm4_cmac_do_one_req(struct crypto_engine *engine, void *areq)
 	}
 
 out:
+	if (tegra_key_is_reserved(rctx->key_id))
+		tegra_key_invalidate_reserved(ctx->se, rctx->key_id, ctx->alg);
+	else if (rctx->key_id != ctx->key_id)
+		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
+
 	crypto_finalize_hash_request(se->engine, req, ret);
 
 	return ret;
@@ -1447,13 +1489,20 @@ static int tegra_sm4_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 			     unsigned int keylen)
 {
 	struct tegra_sm4_cmac_ctx *ctx = crypto_ahash_ctx(tfm);
+	int ret;
 
 	if (aes_check_keylen(keylen)) {
 		dev_err(ctx->se->dev, "key length validation failed\n");
 		return -EINVAL;
 	}
 
-	return tegra_key_submit(ctx->se, key, keylen, ctx->alg, &ctx->key_id);
+	ret = tegra_key_submit(ctx->se, key, keylen, ctx->alg, &ctx->key_id);
+	if (ret) {
+		ctx->keylen = keylen;
+		memcpy(ctx->key, key, keylen);
+	}
+
+	return 0;
 }
 
 static int tegra_sm4_cmac_init(struct ahash_request *req)
