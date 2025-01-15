@@ -7,9 +7,9 @@ variables:
   IS_CUSTOM: "0" #disable custom image build by default
   START_TASK: ""
   INSTALL_NV_JP: "1" #enable install nvidia-jetpack by default
-  JETPACKVER: "4.6.6"
-  JETSONVER: "32.7.6"
-  ROOTFS_NAME: "tegra_linux_sample-root-filesystem_r32.7.6_aarch64.tbz2"
+  JETPACKVER: "4.6.3"
+  JETSONVER: "32.7.3"
+  ROOTFS_NAME: "Tegra_Linux_Sample-Root-Filesystem_R32.7.3_aarch64.tbz2"
 
 stages:
   - recomputer-nano-4g
