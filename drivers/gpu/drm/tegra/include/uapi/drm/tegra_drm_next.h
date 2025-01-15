@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT */
-/* Copyright (c) 2012-2020 NVIDIA Corporation */
+/* Copyright (c) 2012-2025 NVIDIA Corporation */
 
 #ifndef _UAPI_TEGRA_DRM_H_
 #define _UAPI_TEGRA_DRM_H_

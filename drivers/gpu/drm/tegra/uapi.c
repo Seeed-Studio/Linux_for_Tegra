@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2020 NVIDIA Corporation */
+/* Copyright (c) 2020-2025 NVIDIA Corporation */
 
 #include <linux/dma-buf.h>
 #include <linux/host1x-next.h>
@@ -12,6 +12,10 @@
 
 #include "drm.h"
 #include "uapi.h"
+
+static bool explicit_syncpt_free;
+module_param(explicit_syncpt_free, bool, 0644);
+MODULE_PARM_DESC(explicit_syncpt_free, "If enabled, syncpoints need to be explicitly freed via IOCTL or they will be left dangling when the fd is closed");
 
 static void tegra_drm_mapping_release(struct kref *ref)
 {
@@ -60,8 +64,16 @@ void tegra_drm_uapi_close_file(struct tegra_drm_file *file)
 	xa_for_each(&file->contexts, id, context)
 		tegra_drm_channel_context_close(context);
 
-	xa_for_each(&file->syncpoints, id, sp)
-		host1x_syncpt_put(sp);
+	/*
+	 * If explicit_syncpt_free is enabled, users must free syncpoints
+	 * explicitly or they will be left dangling. This prevents syncpoints
+	 * from getting in an unexpected state if e.g. the application crashes.
+	 * Obviously only usable on particularly locked down configurations.
+	 */
+	if (!explicit_syncpt_free) {
+		xa_for_each(&file->syncpoints, id, sp)
+			host1x_syncpt_put(sp);
+	}
 
 	xa_destroy(&file->contexts);
 	xa_destroy(&file->syncpoints);
