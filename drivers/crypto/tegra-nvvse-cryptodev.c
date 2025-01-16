@@ -200,6 +200,13 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 			ret = -EAGAIN;
 			goto exit;
 		} else {
+			if (sha_update_ctl->is_first == 0U) {
+				pr_err("%s(): When init_only is true, is_first can not be false\n"
+				, __func__);
+				ret = -EINVAL;
+				goto exit;
+			}
+
 			/*
 			 * Return success as other parameters don't need not be validated for
 			 * init only request.
@@ -227,22 +234,24 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 		goto exit;
 	}
 
-	if ((sha_update_ctl->input_buffer_size == 0U) && (sha_update_ctl->is_last == 0U)) {
-		pr_err("%s(): zero length non-last request is not supported\n", __func__);
+	if (sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE128 && sha_update_ctl->digest_size == 0) {
+		pr_err("%s: Digest Buffer Size is invalid\n", __func__);
 		ret = -EINVAL;
 		goto exit;
+	}
+
+	if (sha_update_ctl->input_buffer_size == 0U) {
+		if (sha_update_ctl->is_last == 0U) {
+			pr_err("%s(): zero length non-last request is not supported\n", __func__);
+			ret = -EINVAL;
+			goto exit;
+		}
 	}
 
 	if (ctx->is_zero_copy_node) {
 		if (sha_update_ctl->b_is_zero_copy == 0U) {
 			pr_err("%s(): only zero copy operation is supported on this node\n",
 									__func__);
-			ret = -EINVAL;
-			goto exit;
-		}
-
-		if ((sha_state->sha_total_msg_length > 0U) && sha_update_ctl->is_last) {
-			pr_err("%s(): Multipart SHA is not supported for zero-copy\n", __func__);
 			ret = -EINVAL;
 			goto exit;
 		}
@@ -260,13 +269,6 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 		if (sha_update_ctl->b_is_zero_copy != 0U) {
 			pr_err("%s(): zero copy operation is not supported on this node\n",
 									__func__);
-			ret = -EINVAL;
-			goto exit;
-		}
-
-		if ((sha_update_ctl->input_buffer_size > 0U) && (sha_update_ctl->in_buff == NULL)) {
-			pr_err("%s(): input buffer address is NULL for non-zero len req\n",
-					__func__);
 			ret = -EINVAL;
 			goto exit;
 		}
@@ -418,19 +420,38 @@ static int tnvvse_crypto_hmac_sha_validate_req(struct tnvvse_crypto_ctx *ctx,
 	struct crypto_sha_state *sha_state = &ctx->sha_state;
 	int32_t ret = 0;
 
+	if (hmac_sha_ctl->hmac_sha_mode != TEGRA_NVVSE_SHA_TYPE_SHA256) {
+		pr_err("%s: Invalid HMAC SHA mode\n", __func__);
+		return -EINVAL;
+	}
+
+	if ((hmac_sha_ctl->hmac_sha_type != TEGRA_NVVSE_HMAC_SHA_SIGN) &&
+		(hmac_sha_ctl->hmac_sha_type != TEGRA_NVVSE_HMAC_SHA_VERIFY)) {
+		pr_err("%s: Invalid HMAC_SHA request TYPE\n", __func__);
+		return -EINVAL;
+	}
+
 	if ((hmac_sha_ctl->is_first != 0)
-			&& (sha_state->hmac_sha_init_done != 0)) {
+		&& (sha_state->hmac_sha_init_done != 0)) {
 		pr_err("%s: HMAC-Sha init already done for this node_id %u\n", __func__,
-				ctx->node_id);
+		ctx->node_id);
 		ret = -EAGAIN;
 		goto exit;
 	}
 
-	if ((hmac_sha_ctl->is_first == 0)
-			&& (sha_state->hmac_sha_init_done == 0)) {
-		pr_err("%s: HMAC-Sha init not done for this node_id %u\n", __func__, ctx->node_id);
-		ret = -EAGAIN;
-		goto exit;
+	if (hmac_sha_ctl->is_last != 0U) {
+		if (hmac_sha_ctl->digest_buffer == NULL) {
+			pr_err("%s: Invalid HMAC SHA digest buffer", __func__);
+			return -EINVAL;
+		}
+	}
+
+	if ((hmac_sha_ctl->is_first == 0U ||
+		hmac_sha_ctl->is_last == 0U)  &&
+		(hmac_sha_ctl->data_length == 0U ||
+		hmac_sha_ctl->src_buffer == NULL)) {
+		pr_err("%s: Invalid HMAC_SHA Input Buffer or size", __func__);
+		return -EINVAL;
 	}
 
 	if (hmac_sha_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
@@ -517,6 +538,8 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	ret = wait_async_op(&hmac_sha_complete, crypto_ahash_init(req));
 	if (ret) {
 		pr_err("%s(): Failed to initialize ahash: %d\n", __func__, ret);
+			sha_state->hmac_sha_init_done = 0;
+			sha_state->hmac_sha_total_msg_length = 0UL;
 		goto free_tfm;
 	}
 
@@ -527,12 +550,16 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		ret = wait_async_op(&hmac_sha_complete, crypto_ahash_update(req));
 		if (ret) {
 			pr_err("%s(): Failed to ahash_update: %d\n", __func__, ret);
+			sha_state->hmac_sha_init_done = 0;
+			sha_state->hmac_sha_total_msg_length = 0UL;
 			goto free_tfm;
 		}
 	} else {
 		ret = wait_async_op(&hmac_sha_complete, crypto_ahash_finup(req));
 		if (ret) {
 			pr_err("%s(): Failed to ahash_finup: %d\n", __func__, ret);
+			sha_state->hmac_sha_init_done = 0;
+			sha_state->hmac_sha_total_msg_length = 0UL;
 			goto free_tfm;
 		}
 
@@ -574,6 +601,12 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	if (aes_cmac_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s(): Input size is (data = %d) is not supported\n",
 					__func__, aes_cmac_ctl->data_length);
+		return -EINVAL;
+	}
+
+	if (aes_cmac_ctl->cmac_type != TEGRA_NVVSE_AES_CMAC_SIGN &&
+		aes_cmac_ctl->cmac_type != TEGRA_NVVSE_AES_CMAC_VERIFY) {
+		pr_err("%s: Invalid value for AES CMAC operations\n", __func__);
 		return -EINVAL;
 	}
 
@@ -673,6 +706,12 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	if (aes_cmac_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
 		pr_err("%s(): Input size is (data = %d) is not supported\n",
 					__func__, aes_cmac_ctl->data_length);
+		return -EINVAL;
+	}
+
+	if (aes_cmac_ctl->cmac_type != TEGRA_NVVSE_AES_CMAC_SIGN &&
+		aes_cmac_ctl->cmac_type != TEGRA_NVVSE_AES_CMAC_VERIFY) {
+		pr_err("%s: Invalid value for AES CMAC operations\n", __func__);
 		return -EINVAL;
 	}
 
@@ -971,7 +1010,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	else
 		gmac_ctx->request_type = TEGRA_HV_VSE_GMAC_VERIFY;
 	gmac_ctx->iv = NULL;
-	gmac_ctx->is_first = gmac_sign_verify_ctl->is_first;
+	gmac_ctx->is_first = (gmac_sign_verify_ctl->is_first != 0);
 
 	if (gmac_sign_verify_ctl->is_last == 0) {
 		ret = wait_async_op(&sha_state->sha_complete,
@@ -1015,6 +1054,49 @@ done:
 	return ret;
 }
 
+static int tnvvse_crypto_validate_aes_enc_dec_params(struct tnvvse_crypto_ctx *ctx,
+					struct tegra_nvvse_aes_enc_dec_ctl *aes_enc_dec_ctl)
+{
+	int ret = 0;
+
+	if (aes_enc_dec_ctl->aes_mode < 0 || aes_enc_dec_ctl->aes_mode >= TEGRA_NVVSE_AES_MODE_MAX) {
+		pr_err("%s(): The requested AES ENC/DEC (%d) is not supported\n",
+		__func__, aes_enc_dec_ctl->aes_mode);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if ((aes_enc_dec_ctl->data_length != 0U && aes_enc_dec_ctl->src_buffer == NULL) ||
+		aes_enc_dec_ctl->dest_buffer == NULL) {
+		pr_err("%s(): pSrcBuffer or pDstBuffer is null for AES Encrypt Decrypt", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (aes_enc_dec_ctl->aes_mode == TEGRA_NVVSE_AES_MODE_GCM) {
+		if (aes_enc_dec_ctl->tag_buffer == NULL) {
+			pr_err("%s(): pTagBuffer can't be NULL for AES-GCM", __func__);
+			ret = -EINVAL;
+			goto out;
+		}
+		if ((aes_enc_dec_ctl->aad_length != 0U) && (aes_enc_dec_ctl->aad_buffer == NULL)) {
+			pr_err("%s(): pAadBuffer can't be NULL for uAadLength as non-zero", __func__);
+			ret = -EINVAL;
+			goto out;
+		}
+	}
+
+	if (aes_enc_dec_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
+		pr_err("%s(): Input size is (data = %d) is not supported\n",
+					__func__, aes_enc_dec_ctl->data_length);
+		ret = -EINVAL;
+		goto out;
+	}
+
+out:
+	return ret;
+}
+
 static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 					struct tegra_nvvse_aes_enc_dec_ctl *aes_enc_dec_ctl)
 {
@@ -1028,17 +1110,9 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	const char *driver_name;
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
 
-	if (aes_enc_dec_ctl->aes_mode >= TEGRA_NVVSE_AES_MODE_MAX) {
-		pr_err("%s(): The requested AES ENC/DEC (%d) is not supported\n",
-					__func__, aes_enc_dec_ctl->aes_mode);
-		ret = -EINVAL;
-		goto out;
-	}
-
-	if (aes_enc_dec_ctl->data_length > ivc_database.max_buffer_size[ctx->node_id]) {
-		pr_err("%s(): Input size is (data = %d) is not supported\n",
-					__func__, aes_enc_dec_ctl->data_length);
-		ret = -EINVAL;
+	ret = tnvvse_crypto_validate_aes_enc_dec_params(ctx, aes_enc_dec_ctl);
+	if (ret) {
+		pr_err("%s(): Failed to validate params: %d\n", __func__, ret);
 		goto out;
 	}
 
@@ -1371,7 +1445,8 @@ static int tnvvse_crypto_get_aes_drng(struct tnvvse_crypto_ctx *ctx,
 	struct crypto_rng *rng;
 	int ret = -ENOMEM;
 
-	if (aes_drng_ctl->data_length > ctx->max_rng_buff) {
+	if ((aes_drng_ctl->data_length > ctx->max_rng_buff) ||
+		(aes_drng_ctl->data_length == 0U)) {
 		pr_err("%s(): unsupported data length(%u)\n", __func__, aes_drng_ctl->data_length);
 		ret = -EINVAL;
 		goto out;
@@ -1666,6 +1741,12 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		}
 
 		ret = tnvvse_crypto_hmac_sha_sign_verify(ctx, hmac_sha_sv_ctl);
+		if (ret) {
+			pr_err("%s(): Failed in tnvvse_crypto_hmac_sha_sign_verify:%d\n", __func__,
+			ret);
+			kfree(hmac_sha_sv_ctl);
+			goto release_lock;
+		}
 
 		if (hmac_sha_sv_ctl->hmac_sha_type == TEGRA_NVVSE_HMAC_SHA_VERIFY) {
 			ret = copy_to_user(&arg_hmac_sha_sv_ctl->result, &hmac_sha_sv_ctl->result,
