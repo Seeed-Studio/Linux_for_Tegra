@@ -516,6 +516,7 @@ struct host1x_memory_context {
 	struct pid *pid;
 
 	refcount_t ref;
+	bool static_alloc;
 
 	struct host1x_hw_memory_context *hw;
 	struct device *context_dev; /* Context device */

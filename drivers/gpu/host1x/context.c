@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2021-2024, NVIDIA Corporation.
+ * Copyright (c) 2021-2025, NVIDIA Corporation.
  */
 
 #include <linux/completion.h>
 #include <linux/device.h>
 #include <linux/kref.h>
 #include <linux/list.h>
+#include <linux/moduleparam.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/pid.h>
@@ -14,6 +15,10 @@
 
 #include "context.h"
 #include "dev.h"
+
+static bool static_context_alloc;
+module_param(static_context_alloc, bool, 0644);
+MODULE_PARM_DESC(static_context_alloc, "If enabled, memory contexts are allocated immediately on channel open and cannot be relinquished while a channel is open");
 
 static void host1x_memory_context_release(struct device *dev)
 {
@@ -160,7 +165,7 @@ static struct host1x_hw_memory_context *host1x_memory_context_alloc_hw_locked(st
 
 	/* Steal */
 
-	if (!can_steal)
+	if (!can_steal || static_context_alloc)
 		return ERR_PTR(-EBUSY);
 
 	list_for_each_entry(ctx, &can_steal->owners, entry) {
@@ -200,6 +205,7 @@ struct host1x_memory_context *host1x_memory_context_alloc(
 {
 	struct host1x_memory_context_list *cdl = &host1x->context_list;
 	struct host1x_memory_context *ctx;
+	int err;
 
 	if (!cdl->len)
 		return ERR_PTR(-EOPNOTSUPP);
@@ -214,6 +220,16 @@ struct host1x_memory_context *host1x_memory_context_alloc(
 
 	refcount_set(&ctx->ref, 1);
 	INIT_LIST_HEAD(&ctx->mappings);
+
+	if (static_context_alloc) {
+		err = host1x_memory_context_active(ctx);
+		if (err) {
+			kfree(ctx);
+			return ERR_PTR(err);
+		}
+
+		ctx->static_alloc = true;
+	}
 
 	return ctx;
 }
@@ -241,6 +257,11 @@ retry:
 		hw = host1x_memory_context_alloc_hw_locked(ctx->host, ctx->dev, ctx->pid);
 		if (PTR_ERR(hw) == -EBUSY) {
 			/* All contexts busy. Wait for free context. */
+			if (static_context_alloc) {
+				dev_warn(ctx->dev, "%s: all memory contexts are busy\n", current->comm);
+				err = -EBUSY;
+				goto unlock;
+			}
 			if (!retrying)
 				dev_warn(ctx->dev, "%s: all memory contexts are busy, waiting\n",
 					current->comm);
@@ -355,12 +376,10 @@ void host1x_memory_context_unmap(struct host1x_context_mapping *m)
 }
 EXPORT_SYMBOL_GPL(host1x_memory_context_unmap);
 
-void host1x_memory_context_inactive(struct host1x_memory_context *ctx)
+static void host1x_memory_context_inactive_locked(struct host1x_memory_context *ctx)
 {
 	struct host1x_memory_context_list *cdl = &ctx->host->context_list;
 	struct hw_alloc_waiter *waiter;
-
-	mutex_lock(&cdl->lock);
 
 	if (--ctx->hw->active == 0) {
 		/* Hardware context becomes eligible for stealing */
@@ -376,6 +395,15 @@ void host1x_memory_context_inactive(struct host1x_memory_context *ctx)
 			 */
 		}
 	}
+}
+
+void host1x_memory_context_inactive(struct host1x_memory_context *ctx)
+{
+	struct host1x_memory_context_list *cdl = &ctx->host->context_list;
+
+	mutex_lock(&cdl->lock);
+
+	host1x_memory_context_inactive_locked(ctx);
 
 	mutex_unlock(&cdl->lock);
 }
@@ -392,6 +420,9 @@ void host1x_memory_context_put(struct host1x_memory_context *ctx)
 	struct host1x_memory_context_list *cdl = &ctx->host->context_list;
 
 	if (refcount_dec_and_mutex_lock(&ctx->ref, &cdl->lock)) {
+		if (ctx->static_alloc)
+			host1x_memory_context_inactive_locked(ctx);
+
 		if (ctx->hw) {
 			list_del(&ctx->entry);
 
