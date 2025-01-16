@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
 
+ifdef CONFIG_I2C
 obj-m += nvmap/
 obj-m += host/nvdla/
 obj-m += host/pva/
@@ -14,3 +15,4 @@ obj-m += host/vi/
 obj-m += host/isp/
 endif
 obj-m += virt/
+endif

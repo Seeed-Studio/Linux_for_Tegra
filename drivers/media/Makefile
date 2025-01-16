@@ -14,5 +14,7 @@ ifdef CONFIG_VIDEOBUF2_DMA_CONTIG
 subdir-ccflags-y += -DCONFIG_VIDEOBUF2_DMA_CONTIG
 endif
 
+ifdef CONFIG_I2C
 obj-m += i2c/
 obj-m += platform/
+endif
