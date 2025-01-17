@@ -655,11 +655,19 @@ static uint32_t isp_capture_get_num_stats_progress(
 	struct tegra_isp_channel *chan,
 	struct isp_program_req *req)
 {
+	uint32_t offset = 0U;
 	struct isp_desc_rec *program_desc_ctx =
 		&chan->capture_data->program_desc_ctx;
-	struct isp5_program *program = (struct isp5_program *)
-		(program_desc_ctx->requests.va + sizeof(struct isp_program_descriptor) +
-		req->buffer_index * program_desc_ctx->request_size);
+	struct isp5_program *program = NULL;
+
+	if (__builtin_umul_overflow(req->buffer_index, program_desc_ctx->request_size, &offset)) {
+		dev_dbg(chan->isp_dev,
+			"%s: calculation of the offset failed due to an overflow\n", __func__);
+		return -EOVERFLOW;
+	}
+
+	program = (struct isp5_program *)
+		(program_desc_ctx->requests.va + sizeof(struct isp_program_descriptor) + offset);
 
 	if (!program) {
 		dev_dbg(chan->isp_dev,

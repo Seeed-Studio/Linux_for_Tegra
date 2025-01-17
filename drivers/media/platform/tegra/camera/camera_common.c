@@ -560,6 +560,9 @@ int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 	struct tegra_channel *chan = v4l2_get_subdev_hostdata(sd);
 	const struct camera_common_colorfmt *sensor_fmt;
 
+	if (s_data == NULL)
+		return -EINVAL;
+
 	sensor_fmt = find_matching_color_fmt(s_data, code->index);
 
 	if (sensor_fmt == NULL)
@@ -578,6 +581,9 @@ int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 {
 	struct camera_common_data *s_data = to_camera_common_data(sd->dev);
 	const struct camera_common_colorfmt *sensor_fmt;
+
+	if (s_data == NULL)
+		return -EINVAL;
 
 	sensor_fmt = find_matching_color_fmt(s_data, index);
 
