@@ -78,6 +78,8 @@ HOST1X_EMU_EXPORT_DECL(struct dma_fence*, host1x_fence_create(struct host1x_sync
 
 HOST1X_EMU_EXPORT_DECL(int, host1x_fence_extract(struct dma_fence *fence, u32 *id, u32 *threshold));
 
+HOST1X_EMU_EXPORT_DECL(int, host1x_fence_get_node(struct dma_fence *fence));
+
 HOST1X_EMU_EXPORT_DECL(void, host1x_fence_cancel(struct dma_fence *fence));
 
 #endif

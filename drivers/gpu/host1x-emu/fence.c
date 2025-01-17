@@ -178,6 +178,20 @@ HOST1X_EMU_EXPORT_DECL(int, host1x_fence_extract(struct dma_fence *dfence, u32 *
 }
 HOST1X_EMU_EXPORT_SYMBOL(host1x_fence_extract);
 
+HOST1X_EMU_EXPORT_DECL(int, host1x_fence_get_node(struct dma_fence *dfence))
+{
+	struct host1x_syncpt_fence *sf;
+	int node;
+
+	if (dfence->ops != &host1x_syncpt_fence_ops)
+		return -EINVAL;
+
+	sf = to_host1x_fence(dfence);
+	node = dev_to_node(sf->sp->host->dev);
+	return node == NUMA_NO_NODE ? 0 : node;
+}
+HOST1X_EMU_EXPORT_SYMBOL(host1x_fence_get_node);
+
 HOST1X_EMU_EXPORT_DECL(void, host1x_fence_cancel(struct dma_fence *dfence))
 {
     struct host1x_syncpt_fence *sf = to_host1x_fence(dfence);

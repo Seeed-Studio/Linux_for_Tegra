@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -36,6 +36,7 @@ static int dev_file_open(struct inode *inode, struct file *file)
 	struct host1x **host1xp;
 
 	static const struct of_device_id host1x_match[] = {
+		{ .compatible = "nvidia,tegraEmu-host1x", },
 		{ .compatible = "nvidia,tegra186-host1x", },
 		{ .compatible = "nvidia,tegra194-host1x", },
 		{ .compatible = "nvidia,tegra234-host1x", },
@@ -544,6 +545,7 @@ unregister_chrdev_region:
 }
 
 static const struct of_device_id host1x_fence_of_match[] = {
+	{ .compatible = "nvidia,tegraEmu-host1x" },
 	{ .compatible = "nvidia,tegra234-host1x" },
 	{ .compatible = "nvidia,tegra264-host1x" },
 	{ },
