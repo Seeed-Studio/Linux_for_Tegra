@@ -498,7 +498,9 @@ void tegra_channel_init_ring_buffer(struct tegra_channel *chan)
 	chan->released_bufs = 0;
 	chan->num_buffers = 0;
 	chan->save_index = 0;
+	spin_lock(&chan->buffer_lock);
 	chan->free_index = 0;
+	spin_unlock(&chan->buffer_lock);
 	chan->bfirst_fstart = false;
 	chan->capture_descr_index = 0;
 	chan->capture_descr_sequence = 0;
@@ -882,7 +884,7 @@ static void tegra_channel_queued_buf_done_multi_thread(
 	spinlock_t *lock = &chan->start_lock;
 	spinlock_t *release_lock = &chan->release_lock;
 	struct list_head *q = &chan->capture;
-	struct list_head *rel_q = &chan->release;
+	struct list_head *rel_q = NULL;
 
 	spin_lock(lock);
 	list_for_each_entry_safe(buf, nbuf, q, queue) {
@@ -893,6 +895,7 @@ static void tegra_channel_queued_buf_done_multi_thread(
 
 	/* delete release list */
 	spin_lock(release_lock);
+	rel_q = &chan->release;
 	list_for_each_entry_safe(buf, nbuf, rel_q, queue) {
 		vb2_buffer_done(&buf->buf.vb2_buf, state);
 		list_del(&buf->queue);
