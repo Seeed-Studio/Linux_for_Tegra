@@ -63,7 +63,12 @@ static struct hyp_shared_memory_info hyp_shared_memory_attrs[HYP_SHM_ID_NUM];
 
 /* Map the HV trace buffer to the calling user process */
 static int nvlog_buffer_mmap(struct file *fp, struct kobject *ko,
-	struct bin_attribute *attr, struct vm_area_struct *vma)
+#if defined(NV_BIN_ATTRIBUTE_STRUCT_MMAP_HAS_CONST_BIN_ATTRIBUTE_ARG) /* Linux v6.13 */
+			     const struct bin_attribute *attr,
+#else
+			     struct bin_attribute *attr,
+#endif
+			     struct vm_area_struct *vma)
 {
 	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, attr);
 
