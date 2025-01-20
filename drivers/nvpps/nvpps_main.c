@@ -93,6 +93,7 @@ struct nvpps_device_data {
 	void (*ptp_tsc_sync_cfg_fn)(struct platform_device *pdata);
 	uint8_t		k_int_val;
 	uint32_t	lock_threshold_val;
+	uint32_t	pps_freq;
 	struct hte_ts_desc	desc;
 	struct gpio_desc	*gpio_in;
 };
@@ -438,7 +439,7 @@ static void tsc_timer_callback(struct timer_list *t)
 	}
 
 	/* set the next expire time */
-	mod_timer(&pdev_data->tsc_timer, jiffies + msecs_to_jiffies(TSC_POLL_TIMER));
+	mod_timer(&pdev_data->tsc_timer, jiffies + msecs_to_jiffies(TSC_POLL_TIMER/pdev_data->pps_freq));
 }
 
 
@@ -964,6 +965,7 @@ static void nvpps_t26x_ptp_tsc_sync_config(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct nvpps_device_data *pdev_data = platform_get_drvdata(pdev);
 	uint32_t reg_val = 0;
+	uint32_t temp = 0;
 
 	/* Configure LOCKING_CONFIGURATION register */
 	/* Select PTX as PPS Source & Rising edge as edge select */
@@ -997,13 +999,17 @@ static void nvpps_t26x_ptp_tsc_sync_config(struct platform_device *pdev)
 	/* Configure LOCKING_FAST_ADJUST_CONFIG register */
 	/* THRESHOLD used in determining when FAST ADJUST Convergence is to be applied by HW */
 #define DEFAULT_T26X_FAST_ADJ_THRSLD		0x64U
-	/* K_INT value used to calculate gain factor */
-#define DEFAULT_T26X_K_INT_VAL				0x2U
-	pdev_data->k_int_val = DEFAULT_T26X_K_INT_VAL;
+	/* Default K_INT nomial value used to calculate gain factor.
+	 * The actual float Knominal value is 2.485, for calculation purpose this is converted to int by multiplying with 1000
+	 */
+#define DEFAULT_T26X_K_INT_NOM_VAL			2485U
+	/* round off the calculated K_int value to nearest integer */
+	temp = ((((DEFAULT_T26X_K_INT_NOM_VAL * pdev_data->pps_freq) % 1000) >= 500) ? 1 : 0);
+	pdev_data->k_int_val =  ((DEFAULT_T26X_K_INT_NOM_VAL * pdev_data->pps_freq) / 1000) + temp;
 
 	/* Set THRESHOLD, K_INT, M and ENABLE bits */
 	reg_val = ((DEFAULT_T26X_FAST_ADJ_THRSLD << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_THRSLD_SHIFT) |
-			   (DEFAULT_T26X_K_INT_VAL << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT) |
+			   (pdev_data->k_int_val << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT) |
 			   (0 << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_M_SHIFT) | /* M = 0 always */
 			   (BIT(TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_EN_SHIFT)));
 
@@ -1011,7 +1017,7 @@ static void nvpps_t26x_ptp_tsc_sync_config(struct platform_device *pdev)
 
 	/* Configure LOCKING_REF_FREQ_CONFIG register */
 #define DEFAULT_T26X_REF_FREQ_INC_1S		1000000000 /* 1s expressed in ns */
-	writel(DEFAULT_T26X_REF_FREQ_INC_1S, pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET);
+	writel((DEFAULT_T26X_REF_FREQ_INC_1S/pdev_data->pps_freq), pdev_data->tsc_reg_map_base + T26X_TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET);
 
 	/* Configure CAPTURE_CONFIGURATION_PTX register */
 	/* Select PPS src MAC */
@@ -1058,10 +1064,13 @@ static void nvpps_t23x_ptp_tsc_sync_config(struct platform_device *pdev)
 
 #define DEFAULT_K_INT_VAL			0x70
 #define DEFAULT_LOCK_THRESHOLD_20US	0x26c
+#define DEFAULT_1PPS_FREQ_VAL		1U
 
 	//Set default K_INT & LOCK Threshold value
 	pdev_data->k_int_val = DEFAULT_K_INT_VAL;
 	pdev_data->lock_threshold_val = DEFAULT_LOCK_THRESHOLD_20US;
+	//Set Default pps_freq until higher freq support is added
+	pdev_data->pps_freq = DEFAULT_1PPS_FREQ_VAL;
 
 	//Override default K_INT value
 	if (of_property_read_u8(np, "ptp_tsc_k_int", &pdev_data->k_int_val) == 0) {
@@ -1148,6 +1157,22 @@ static int nvpps_probe(struct platform_device *pdev)
 			}
 		} else {
 			dev_err(&pdev->dev, "failed to find ethernet mac registers\n");
+		}
+
+		/* Check if ptp-tsc sync disable property is not set and only then read MAC pps_freq property */
+		if ((of_property_read_bool(np, "ptp_tsc_sync_dis")) == false) {
+			index = of_property_read_u32(pdev_data->pri_emac_node, "nvidia,pps_op_ctrl", &pdev_data->pps_freq);
+			if (index < 0) {
+				dev_err(&pdev->dev, "unable to read PPS freq property(nvidia,pps_op_ctrl) from MAC device node\n");
+				return -EINVAL;
+			} else if ((pdev_data->pps_freq > 8U) ||
+					   (pdev_data->pps_freq == 0U) ||
+					   (pdev_data->pps_freq == 3U) ||
+					   (pdev_data->pps_freq == 6U) ||
+					   (pdev_data->pps_freq == 7U)) { // supporting max allow value 1 to 8
+				dev_err(&pdev->dev, "Invalid PPS(%uHz) freq input provided. Supported PPS frequencies are 1, 2, 4, 5 and 8Hz\n", pdev_data->pps_freq);
+				return -EINVAL;
+			}
 		}
 	}
 
