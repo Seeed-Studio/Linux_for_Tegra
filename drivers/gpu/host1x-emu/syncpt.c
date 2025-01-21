@@ -340,7 +340,7 @@ HOST1X_EMU_EXPORT_DECL(struct host1x_syncpt*, host1x_syncpt_alloc(struct host1x 
      * dosen't effectively utilize per pool polling thread.
      */
 	/* FIXME: WAR to allocate syncpoint from index 1, As at client level synpt-id 0 is invalid*/
-	for (i = host->syncpt_base + 1; i < host->syncpt_end; i++, sp++) {
+	for (i = host->syncpt_base + 1, sp = sp + 1; i < host->syncpt_end; i++, sp++) {
 
 		/* Do pool verification if pool selected */
 		if ((pool != NULL) && (sp->pool != pool))
