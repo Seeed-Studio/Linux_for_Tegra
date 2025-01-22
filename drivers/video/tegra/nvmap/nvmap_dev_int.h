@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2010-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2010-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef __NVMAP_DEV_INT_H
 #define __NVMAP_DEV_INT_H
@@ -37,8 +37,6 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 
 int nvmap_ioctl_gup_test(struct file *filp, void __user *arg);
 
-int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg);
-
 int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_get_handle_parameters(struct file *filp, void __user *arg);
@@ -54,11 +52,4 @@ int nvmap_ioctl_query_heap_params_numa(struct file *filp, void __user *arg);
 int nvmap_ioctl_dup_handle(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_get_fd_from_list(struct file *filp, void __user *arg);
-
-int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
-	const char __user *name, u32 len);
-
-int nvmap_remove_tag(struct nvmap_device *dev, u32 tag);
-
-unsigned int nvmap_get_tag_maxlen(void);
 #endif /* __NVMAP_DEV_INT_H */

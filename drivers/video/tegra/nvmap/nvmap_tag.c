@@ -21,11 +21,6 @@ struct nvmap_tag_entry {
 	u32 tag;
 };
 
-unsigned int nvmap_get_tag_maxlen(void)
-{
-	return 63 - sizeof(struct nvmap_tag_entry);
-}
-
 static struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag)
 {
 	struct rb_node *node = root->rb_node;  /* top of the tree */
@@ -42,77 +37,6 @@ static struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 
 			return entry;  /* Found it */
 	}
 	return NULL;
-}
-
-
-static void nvmap_insert_tag_entry(struct rb_root *root,
-		struct nvmap_tag_entry *new)
-{
-	struct rb_node **link = &root->rb_node;
-	struct rb_node *parent = NULL;
-	struct nvmap_tag_entry *entry;
-	u32 tag = new->tag;
-
-	/* Go to the bottom of the tree */
-	while (*link) {
-	    parent = *link;
-	    entry = rb_entry(parent, struct nvmap_tag_entry, node);
-
-	    if (entry->tag > tag)
-		link = &parent->rb_left;
-	    else
-		link = &parent->rb_right;
-	}
-
-	/* Put the new node there */
-	rb_link_node(&new->node, parent, link);
-	rb_insert_color(&new->node, root);
-}
-
-
-int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
-		const char __user *name, u32 len)
-{
-	struct nvmap_tag_entry *new;
-	struct nvmap_tag_entry *old;
-
-	new = kzalloc(sizeof(struct nvmap_tag_entry) + len + 1, GFP_KERNEL);
-	if (new == NULL)
-		return -ENOMEM;
-
-	if (copy_from_user(new + 1, name, len)) {
-		kfree(new);
-		return -EFAULT;
-	}
-
-	new->tag = tag;
-
-	mutex_lock(&dev->tags_lock);
-	old = nvmap_search_tag_entry(&dev->tags, tag);
-	if (old) {
-		rb_replace_node(&old->node, &new->node, &dev->tags);
-		kfree(old);
-	} else {
-		nvmap_insert_tag_entry(&dev->tags, new);
-	}
-	mutex_unlock(&dev->tags_lock);
-
-	return 0;
-}
-
-int nvmap_remove_tag(struct nvmap_device *dev, u32 tag)
-{
-	struct nvmap_tag_entry *old;
-
-	mutex_lock(&dev->tags_lock);
-	old = nvmap_search_tag_entry(&dev->tags, tag);
-	if (old){
-		rb_erase(&old->node, &dev->tags);
-		kfree(old);
-	}
-	mutex_unlock(&dev->tags_lock);
-
-	return 0;
 }
 
 /* must hold tag_lock */

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2011-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * User-space interface to nvmap
  */
@@ -441,10 +441,6 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case NVMAP_IOC_GET_ID:
 		pr_warn("NVMAP_IOC_GET_ID/FROM_ID pair is deprecated. "
 			"Use the pair NVMAP_IOC_GET_FD/FROM_FD.\n");
-		break;
-
-	case NVMAP_IOC_SET_TAG_LABEL:
-		err = nvmap_ioctl_set_tag_label(filp, uarg);
 		break;
 
 	case NVMAP_IOC_GET_AVAILABLE_HEAPS:

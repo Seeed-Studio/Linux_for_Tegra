@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2011-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * User-space interface to nvmap
  */
@@ -862,29 +862,6 @@ put_handle:
 	nvmap_handle_put(handle);
 exit:
 	pr_info("GUP Test %s\n", err ? "failed" : "passed");
-	return err;
-}
-
-int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg)
-{
-	struct nvmap_set_tag_label op;
-	struct nvmap_device *dev = nvmap_dev;
-	int err;
-	unsigned int nvmap_tag_label_maxlen = 0;
-
-	if (copy_from_user(&op, arg, sizeof(op)))
-		return -EFAULT;
-
-	nvmap_tag_label_maxlen = nvmap_get_tag_maxlen();
-	if (op.len > nvmap_tag_label_maxlen)
-		op.len = nvmap_tag_label_maxlen;
-
-	if (op.len)
-		err = nvmap_define_tag(dev, op.tag,
-			(const char __user *)op.addr, op.len);
-	else
-		err = nvmap_remove_tag(dev, op.tag);
-
 	return err;
 }
 

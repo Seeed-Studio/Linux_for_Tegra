@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2009-2024, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  */
@@ -194,13 +194,6 @@ struct nvmap_debugfs_handles_entry {
 	__u64 mapped_size;
 };
 
-struct nvmap_set_tag_label {
-	__u32 tag;
-	__u32 len;		/* in: label length
-				   out: number of characters copied */
-	__u64 addr;		/* in: pointer to label or NULL to remove */
-};
-
 struct nvmap_available_heaps {
 	__u64 heaps;		/* heaps bitmask */
 };
@@ -326,9 +319,6 @@ struct nvmap_fd_for_range_from_list {
 #define NVMAP_IOC_FROM_VA _IOWR(NVMAP_IOC_MAGIC, 22, struct nvmap_create_handle_from_va)
 
 #define NVMAP_IOC_GUP_TEST _IOWR(NVMAP_IOC_MAGIC, 23, struct nvmap_gup_test)
-
-/* Define a label for allocation tag */
-#define NVMAP_IOC_SET_TAG_LABEL	_IOW(NVMAP_IOC_MAGIC, 24, struct nvmap_set_tag_label)
 
 #define NVMAP_IOC_GET_AVAILABLE_HEAPS \
 	_IOR(NVMAP_IOC_MAGIC, 25, struct nvmap_available_heaps)
