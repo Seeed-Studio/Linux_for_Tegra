@@ -644,4 +644,19 @@
 		status = "okay";
 	};
 
+	tegra-capture-coe0 {
+		status = "okay";
+	};
+
+	tegra-capture-coe1 {
+		status = "okay";
+	};
+
+	tegra-capture-coe2 {
+		status = "okay";
+	};
+
+	tegra-capture-coe3 {
+		status = "okay";
+	};
 };
