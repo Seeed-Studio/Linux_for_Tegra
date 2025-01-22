@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -9,6 +9,7 @@
 #include "tsec_comms.h"
 #include "tsec_comms_regs.h"
 #include "tsec_comms_cmds.h"
+#include "tsec_cmds.h"
 
 #define TSEC_QUEUE_POLL_INTERVAL_US (50)
 #define TSEC_QUEUE_POLL_COUNT       (2000)
@@ -71,6 +72,7 @@ shutdown_callback_func_t s_ext_fw_shutdown_cb;
 struct callback_t {
 	callback_func_t cb_func;
 	void            *cb_ctx;
+	u8              cmd_type;
 };
 static struct callback_t s_callbacks[RM_GSP_UNIT_END];
 
@@ -634,6 +636,7 @@ int tsec_comms_send_cmd(void *cmd, u32 queue_id,
 	u32 head;
 	u32 tail;
 	u8  cmd_size;
+	u8  cmd_type;
 	u32 cmd_size_aligned;
 	u32 cmdq_head_reg;
 	u32 cmdq_tail_reg;
@@ -682,13 +685,14 @@ int tsec_comms_send_cmd(void *cmd, u32 queue_id,
 		return -TSEC_EINVAL;
 	}
 
+	cmd_type = ((struct RM_FLCN_CMD_GSP *)cmd)->cmd.hdcp.cmdType;
 	cmd_hdr = (struct RM_FLCN_QUEUE_HDR *)cmd;
 	tsec_plat_acquire_comms_mutex();
 	if (s_callbacks[cmd_hdr->unitId].cb_func) {
-		tsec_plat_release_comms_mutex();
-		plat_print(LVL_ERR, "more than 1 outstanding cmd for unit 0x%x\n",
-			cmd_hdr->unitId);
-		return -TSEC_EINVAL;
+		plat_print(LVL_DBG, "Force sending to Unit:0x%x Cmd:0x%x, \
+			PendingCmd:0x%x",
+			cmd_hdr->unitId, cmd_type,
+			s_callbacks[cmd_hdr->unitId].cmd_type);
 	}
 	tsec_plat_release_comms_mutex();
 	cmd_size = cmd_hdr->size;
@@ -740,8 +744,9 @@ rewind:
 
 enqueue:
 	tsec_plat_acquire_comms_mutex();
-	s_callbacks[cmd_hdr->unitId].cb_func = cb_func;
-	s_callbacks[cmd_hdr->unitId].cb_ctx  = cb_ctx;
+	s_callbacks[cmd_hdr->unitId].cb_func  = cb_func;
+	s_callbacks[cmd_hdr->unitId].cb_ctx   = cb_ctx;
+	s_callbacks[cmd_hdr->unitId].cmd_type = cmd_type;
 	tsec_plat_release_comms_mutex();
 	if (ipc_write(head, (u8 *)cmd, cmd_size)) {
 		tsec_plat_acquire_comms_mutex();

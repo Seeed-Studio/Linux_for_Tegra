@@ -3,5 +3,7 @@
 
 GCOV_PROFILE := y
 
+LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/video/tegra/tsec
+
 obj-m += tsecriscv.o
 tsecriscv-y := tsec_comms/tsec_comms.o tsec_boot.o tsec.o
