@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0-only
  */
 #ifndef __HOST1X_EMU_SYNCPT_H
@@ -49,6 +49,10 @@ struct host1x_syncpt {
      */
     struct list_head list;
 };
+
+#ifndef CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
+HOST1X_EMU_EXPORT_DECL(void, host1x_syncpt_fence_scan(struct host1x_syncpt *sp));
+#endif /*CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL*/
 
 /**
  * Description: Initialize sync point array

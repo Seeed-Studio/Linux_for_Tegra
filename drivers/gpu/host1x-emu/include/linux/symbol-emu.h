@@ -13,8 +13,4 @@
 #define HOST1X_EMU_EXPORT_SYMBOL(f)         EXPORT_SYMBOL(f)
 #endif
 
-#ifndef CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
-HOST1X_EMU_EXPORT_DECL(void, host1x_syncpt_fence_scan(struct host1x_syncpt *sp));
-#endif /*CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL*/
-
 #endif /*__HOST1X_EMU_SYMMBOL_H*/
