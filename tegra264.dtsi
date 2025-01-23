@@ -38,6 +38,7 @@
 		i2c15 = &i2c15;
 		i2c16 = &i2c16;
 		rtc0 = &vrs_pseq;
+		rtc1 = &tegra_rtc;
 		serial0 = &uart0;
 		serial4 = &uart4;
 		serial5 = &uart5;
@@ -3655,7 +3656,7 @@
 			};
 		};
 
-		rtc: rtc@c2c0000 {
+		tegra_rtc: rtc@c2c0000 {
 			compatible = "nvidia,tegra264-rtc",
 				     "nvidia,tegra234-rtc",
 				     "nvidia,tegra20-rtc";
