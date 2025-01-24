@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2011-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * GPU heap allocator.
  */
@@ -222,7 +222,26 @@ int nvmap_query_heap(struct nvmap_query_heap_params *op, bool is_numa_aware)
 	struct nvmap_heap *heap;
 	unsigned int type;
 	int i;
-	int numa_id;
+	/*
+	 * Default value of numa_id will be 0. It can be overwritten by user's
+	 * input only if NvRmMemQueryHeapParamsNuma is called (making
+	 * is_numa_aware true).
+	 * If NvRmMemQueryHeapParamsNuma is called:
+	 *     1. When single numa node present
+	 *         a. Return params for only op->numa_id = 0.
+	 *         b. Return error if op->numa_id is not 0.
+	 *     2. When multiple numa nodes present
+	 *         a. Return params for op->numa_id
+	 * If NvRmMemQueryHeapParams is called:
+	 *     1. When single numa node present
+	 *         a. Return params using system_heap_total_mem &
+	 *            system_heap_free_mem for iovmm carveout.
+	 *         b. Return params for numa id 0 for any other
+	 *            carveout heaps.
+	 *     2. When multiple numa nodes present
+	 *         a. Return params for numa id 0.
+	 */
+	int numa_id = 0;
 	unsigned long free_mem = 0;
 	int ret = 0;
 
@@ -255,9 +274,6 @@ int nvmap_query_heap(struct nvmap_query_heap_params *op, bool is_numa_aware)
 	 * hugetlbfs, so we need to return the HugePages_Total, HugePages_Free values
 	 */
 	if (type & NVMAP_HEAP_CARVEOUT_GPU) {
-		if (!is_numa_aware)
-			numa_id = 0;
-
 		ret = compute_hugetlbfs_stat(&op->total, &op->free, numa_id);
 		if (ret)
 			goto exit;
@@ -267,10 +283,8 @@ int nvmap_query_heap(struct nvmap_query_heap_params *op, bool is_numa_aware)
 	} else if (type & NVMAP_HEAP_CARVEOUT_MASK) {
 		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
 			if ((type & nvmap_get_heap_bit(nvmap_dev->heaps[i])) &&
-				(is_numa_aware ?
 				(numa_id == nvmap_get_heap_nid(nvmap_get_heap_ptr(
-				nvmap_dev->heaps[i]))) :
-				true)) {
+				nvmap_dev->heaps[i])))) {
 				heap = nvmap_get_heap_ptr(nvmap_dev->heaps[i]);
 				op->total = nvmap_query_heap_size(heap);
 				op->free = nvmap_get_heap_free_size(heap);
