@@ -64,22 +64,28 @@ struct host1x_syncpt *host1x_syncpt_alloc(struct host1x *host,
 {
 	struct host1x_syncpt *sp = host->syncpt + host->syncpt_base;
 	struct host1x_syncpt_pool *pool = NULL;
+	const char *pool_name = NULL;
 	char *full_name;
 	unsigned int i;
 
 	if (!name)
 		return NULL;
 
-	if (flags & HOST1X_SYNCPT_GPU) {
+	if (flags & HOST1X_SYNCPT_GPU)
+		pool_name = "gpu";
+	else if (flags & HOST1X_SYNCPT_VI)
+		pool_name = "vi";
+
+	if (pool_name) {
 		for (i = 0; i < host->num_pools; i++) {
-			if (!strcmp(host->pools[i].name, "gpu")) {
+			if (!strcmp(host->pools[i].name, pool_name)) {
 				pool = &host->pools[i];
 				break;
 			}
 		}
-
-		/* If no GPU pool configured, any syncpoint is OK. */
 	}
+
+	/* If no GPU or VI pool configured, any syncpoint is OK. */
 
 	mutex_lock(&host->syncpt_mutex);
 
