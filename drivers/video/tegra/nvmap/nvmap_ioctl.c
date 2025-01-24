@@ -658,6 +658,8 @@ int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg)
 	struct nvmap_create_handle op;
 	struct nvmap_handle *h = NULL;
 
+	BUG_ON(nvmap_dev->support_debug_features == 0);
+
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
@@ -711,6 +713,8 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	size_t size = 0;
 	unsigned int peer;
 	struct nvmap_heap_block *block = NULL;
+
+	BUG_ON(nvmap_dev->support_debug_features == 0);
 
 	/* First create a new handle and then fake carveout allocation */
 	if (copy_from_user(&op, arg, sizeof(op)))

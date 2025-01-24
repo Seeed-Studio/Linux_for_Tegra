@@ -549,6 +549,23 @@ exit:
 	return memory_available;
 }
 
+/*
+ * Read disable-debug-support property from tegra-carveouts DT node.
+ * If the property is present then don't support any extra APIs other than
+ * the APIs mentioned in ICD, by doing BUG_ON in the corresponding ioctls.
+ * So it is necessary to be present in the DT of the respective builds
+ * (e.g. Prod NSR Build).
+ */
+static void nvmap_support_debug_apis(struct platform_device *pdev, struct nvmap_device *dev)
+{
+	struct device_node *np = pdev->dev.of_node;
+
+	if (of_property_read_bool(np, "disable-debug-support"))
+		dev->support_debug_features = 0;
+	else
+		dev->support_debug_features = 1;
+}
+
 int __init nvmap_probe(struct platform_device *pdev)
 {
 	struct nvmap_platform_data *plat;
@@ -653,6 +670,8 @@ int __init nvmap_probe(struct platform_device *pdev)
 			dev->dev_user.name);
 		goto fail_sci_ipc;
 	}
+
+	(void)nvmap_support_debug_apis(pdev, dev);
 	goto finish;
 fail_sci_ipc:
 	nvmap_sci_ipc_exit();

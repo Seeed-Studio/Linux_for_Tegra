@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2009-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2009-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef __NVMAP_DEV_H
 #define __NVMAP_DEV_H
@@ -109,6 +109,7 @@ struct nvmap_device {
 	struct rb_root device_names;
 #endif /* NVMAP_CONFIG_DEBUG_MAPS */
 	u64 serial_id_counter; /* This is global counter common across different client processes */
+	bool support_debug_features;
 };
 
 #define NVMAP_TAG_TRACE(x, ...) 			\
