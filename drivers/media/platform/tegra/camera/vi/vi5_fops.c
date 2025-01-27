@@ -762,12 +762,10 @@ static int tegra_channel_kthread_capture_dequeue(void *data)
 	while (1) {
 		try_to_freeze();
 
-		spin_lock_irqsave(&chan->capture_state_lock, flags);
 		wait_event_interruptible(chan->dequeue_wait,
 			(kthread_should_stop()
 				|| !list_empty(&chan->dequeue)
 				|| (chan->capture_state == CAPTURE_ERROR)));
-		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 		while (!(kthread_should_stop() || list_empty(&chan->dequeue)
 				|| (chan->capture_state == CAPTURE_ERROR))) {
