@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2011-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Handle allocation and freeing routines for nvmap
  */
@@ -179,12 +179,12 @@ static int handle_page_alloc(struct nvmap_client *client,
 			if (pages[i] == NULL)
 				goto fail;
 		}
-
-		if (check_add_overflow(nvmap_big_page_allocs, (u64)nr_page, &result))
-			goto fail;
-
-		nvmap_total_page_allocs = result;
 	}
+
+	if (check_add_overflow(nvmap_total_page_allocs, (u64)nr_page, &result))
+		goto fail;
+
+	nvmap_total_page_allocs = result;
 
 	/*
 	 * Make sure any data in the caches is cleaned out before
