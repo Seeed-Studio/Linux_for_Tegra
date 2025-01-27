@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #ifndef ETHER_LINUX_H
 #define ETHER_LINUX_H
@@ -805,13 +805,11 @@ int ether_conf_eee(struct ether_priv_data *pdata, unsigned int tx_lpi_enable);
 int ether_padctrl_mii_rx_pins(void *priv, unsigned int enable);
 
 #ifndef OSI_STRIPPED_LIB
-void ether_selftest_run(struct net_device *dev,
-			struct ethtool_test *etest, u64 *buf);
 void ether_selftest_get_strings(struct ether_priv_data *pdata, u8 *data);
 int ether_selftest_get_count(struct ether_priv_data *pdata);
 #else
 static inline void ether_selftest_run(struct net_device *dev,
-				      struct ethtool_test *etest, u64 *buf)
+                                     struct ethtool_test *etest, u64 *buf)
 {
 }
 static inline void ether_selftest_get_strings(struct ether_priv_data *pdata,
@@ -839,20 +837,6 @@ static inline int ether_selftest_get_count(struct ether_priv_data *pdata)
 void ether_assign_osd_ops(struct osi_core_priv_data *osi_core,
 			  struct osi_dma_priv_data *osi_dma);
 
-/**
- * @brief osd_ivc_send_cmd - OSD ivc send cmd
- *
- * @param[in] priv: OSD private data
- * @param[in] ivc_buf: ivc_msg_common structure
- * @param[in] len: length of data
- * @note
- * API Group:
- * - Initialization: Yes
- * - Run time: Yes
- * - De-initialization: Yes
- */
-int osd_ivc_send_cmd(void *priv, ivc_msg_common_t *ivc_buf,
-		     unsigned int len);
 
 void ether_set_rx_mode(struct net_device *dev);
 
@@ -920,4 +904,48 @@ void ether_nvgro_purge_timer(struct timer_list *t);
 #ifdef BW_TEST
 void ether_tx_bandwidth_work(struct work_struct *work);
 #endif
+
+#ifdef ETHER_VLAN_VID_SUPPORT
+/**
+ * @brief Adds VLAN ID. This function is invoked by upper
+ * layer when a new VLAN id is registered. This function updates the HW
+ * filter with new VLAN id. New vlan id can be added with vconfig -
+ * vconfig add interface_name  vlan_id
+ *
+ * Algorithm:
+ * 1) Check for hash or perfect filtering.
+ * 2) invoke osi call accordingly.
+ *
+ * @param[in] ndev: Network device structure
+ * @param[in] vlan_proto: VLAN proto VLAN_PROTO_8021Q = 0 VLAN_PROTO_8021AD = 1
+ * @param[in] vid: VLAN ID.
+ *
+ * @note Ethernet interface should be up
+ *
+ * @retval 0 on success
+ * @retval "negative value" on failure.
+ */
+int ether_vlan_rx_add_vid(struct net_device *ndev, __be16 vlan_proto, u16 vid);
+
+/**
+ * @brief Removes VLAN ID. This function is invoked by
+ * upper layer when a new VALN id is removed. This function updates the
+ * HW filter. vlan id can be removed with vconfig -
+ * vconfig rem interface_name vlan_id
+ *
+ * Algorithm:
+ * 1) Check for hash or perfect filtering.
+ * 2) invoke osi call accordingly.
+ *
+ * @param[in] ndev: Network device structure
+ * @param[in] vlan_proto: VLAN proto VLAN_PROTO_8021Q = 0 VLAN_PROTO_8021AD = 1
+ * @param[in] vid: VLAN ID.
+ *
+ * @note Ethernet interface should be up
+ *
+ * @retval 0 on success
+ * @retval "negative value" on failure.
+ */
+int ether_vlan_rx_kill_vid(struct net_device *ndev, __be16 vlan_proto, u16 vid);
+#endif /* ETHER_VLAN_VID_SUPPORT */
 #endif /* ETHER_LINUX_H */

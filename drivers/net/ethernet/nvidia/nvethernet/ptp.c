@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "ether_linux.h"
 
@@ -78,19 +78,7 @@ static inline int ether_get_hw_time(struct net_device *dev,
 	return 0;
 }
 
-/**
- * @brief Adjust MAC hardware time
- *
- * Algorithm: This function is used to shift/adjust the time of the
- * hardware clock.
- *
- * @param[in] ptp: Pointer to ptp_clock_info structure.
- * @param[in] nsec_delta: Desired change in nanoseconds w.r.t System time
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_adjust_time(struct ptp_clock_info *ptp, s64 nsec_delta)
+int ether_adjust_time(struct ptp_clock_info *ptp, s64 nsec_delta)
 {
 	struct ether_priv_data *pdata = container_of(ptp,
 						     struct ether_priv_data,
@@ -116,20 +104,7 @@ static int ether_adjust_time(struct ptp_clock_info *ptp, s64 nsec_delta)
 	return ret;
 }
 
-/**
- * @brief Adjust MAC hardware frequency
- *
- * Algorithm: This function is used to adjust the frequency of the
- * hardware clock.
- *
- * @param[in] ptp: Pointer to ptp_clock_info structure.
- * @param[in] ppb: Desired period change in parts per billion.
- * @param[in] scaled_ppm: Desired period change in parts per million.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_adjust_clock(struct ptp_clock_info *ptp, long scaled_ppm)
+int ether_adjust_clock(struct ptp_clock_info *ptp, long scaled_ppm)
 {
 	struct ether_priv_data *pdata = container_of(ptp,
 						     struct ether_priv_data,
@@ -155,19 +130,7 @@ static int ether_adjust_clock(struct ptp_clock_info *ptp, long scaled_ppm)
 	return ret;
 }
 
-/**
- * @brief Gets current hardware time
- *
- * Algorithm: This function is used to read the current time from the
- * hardware clock
- *
- * @param[in] ptp: Pointer to ptp_clock_info structure.
- * @param[in] ts: Pointer to hole time.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_get_time(struct ptp_clock_info *ptp, struct timespec64 *ts)
+int ether_get_time(struct ptp_clock_info *ptp, struct timespec64 *ts)
 {
 	struct ether_priv_data *pdata = container_of(ptp,
 						     struct ether_priv_data,
@@ -194,20 +157,7 @@ static int ether_get_time(struct ptp_clock_info *ptp, struct timespec64 *ts)
 	return 0;
 }
 
-/**
- * @brief Set current system time to MAC Hardware
- *
- * Algorithm: This function is used to set the current time to the
- * hardware clock.
- *
- * @param[in] ptp: Pointer to ptp_clock_info structure.
- * @param[in] ts: Time value to set.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_set_time(struct ptp_clock_info *ptp,
-		const struct timespec64 *ts)
+int ether_set_time(struct ptp_clock_info *ptp, const struct timespec64 *ts)
 {
 	struct ether_priv_data *pdata = container_of(ptp,
 						     struct ether_priv_data,

@@ -142,18 +142,7 @@ update_skb:
 	return ret;
 }
 
-/**
- * @brief Gets timestamp and update skb
- *
- * Algorithm:
- * - Parse through tx_ts_skb_head.
- * - Issue osi_handle_ioctl(OSI_CMD_GET_TX_TS) to read timestamp.
- * - Update skb with timestamp and give to network stack
- * - Free skb and node.
- *
- * @param[in] work: Work to handle SKB list update
- */
-static void ether_get_tx_ts_work(struct work_struct *work)
+void ether_get_tx_ts_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct ether_priv_data *pdata = container_of(dwork,
@@ -259,17 +248,7 @@ static irqreturn_t ether_common_isr_thread(int irq, void *data)
 }
 #endif
 
-/**
- * @brief Work Queue function to call osi_read_mmc() periodically.
- *
- * Algorithm: call osi_read_mmc in periodic manner to avoid possibility of
- * overrun of 32 bit MMC hw registers.
- *
- * @param[in] work: work structure
- *
- * @note MAC and PHY need to be initialized.
- */
-static inline void ether_stats_work_func(struct work_struct *work)
+void ether_stats_work_func(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct ether_priv_data *pdata = container_of(dwork,
@@ -1229,13 +1208,7 @@ static inline void ether_set_eqos_tx_clk(struct clk *tx_clk,
 		pr_err("%s(): failed to set eqos tx_clk/mac rate\n", __func__);
 }
 
-/**
- * @brief Work Queue function to call set speed.
- *
- * @param[in] work: work structure
- *
- */
-static inline void set_speed_work_func(struct work_struct *work)
+void set_speed_work_func(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct ether_priv_data *pdata = container_of(dwork,
@@ -1380,18 +1353,7 @@ static void ether_en_dis_monitor_clks(struct ether_priv_data *pdata,
 	}
 }
 
-/**
- * @brief Adjust link call back
- *
- * Algorithm: Callback function called by the PHY subsystem
- * whenever there is a link detected or link changed on the
- * physical layer.
- *
- * @param[in] dev: Network device data.
- *
- * @note MAC and PHY need to be initialized.
- */
-static void ether_adjust_link(struct net_device *dev)
+void ether_adjust_link(struct net_device *dev)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	nveu32_t iface_mode = pdata->osi_core->phy_iface_mode;
@@ -1667,34 +1629,7 @@ static int ether_phy_init(struct net_device *dev)
 	return 0;
 }
 
-/**
- * @brief ether_vm_isr - VM based ISR routine.
- *
- * Algorithm:
- * 1) Get global DMA status (common for all VM IRQ's)
- * + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + +
- * + RX7 + TX7 + RX6 + TX6 + . . . . . . . + RX1 + TX1 + RX0 + TX0 +
- * + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + +
- *
- * 2) Mask the channels which are specific to VM in global DMA status.
- * 3) Process all DMA channel interrupts which are triggered the IRQ
- *	a) Find first first set from LSB with ffs
- *	b) The least significant bit is position 1 for ffs. So decremented
- *	by one to start from zero.
- *	c) Get channel number and TX/RX info by using bit position.
- *	d) Invoke OSI layer to clear interrupt source for DMA Tx/Rx at
- *	DMA and wrapper level.
- *	e) Get NAPI instance based on channel number and schedule the same.
- *
- * @param[in] irq: IRQ number.
- * @param[in] data: VM IRQ private data structure.
- *
- * @note MAC and PHY need to be initialized.
- *
- * @retval IRQ_HANDLED on success.
- * @retval IRQ_NONE on failure.
- */
-static irqreturn_t ether_vm_isr(int irq, void *data)
+irqreturn_t ether_vm_isr(int irq, void *data)
 {
 	struct ether_vm_irq_data *vm_irq = (struct ether_vm_irq_data *)data;
 	struct ether_priv_data *pdata = vm_irq->pdata;
@@ -3029,25 +2964,7 @@ exit:
 	return ret;
 }
 
-/**
- * @brief Call back to handle bring up of Ethernet interface
- *
- * Algorithm: This routine takes care of below
- * 1) PHY initialization
- * 2) request tx/rx/common irqs
- * 3) HW initialization
- * 4) OSD private data structure initialization
- * 5) Starting the PHY
- *
- * @param[in] dev: Net device data structure.
- *
- * @note Ethernet driver probe need to be completed successfully
- * with ethernet network device created.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_open(struct net_device *dev)
+int ether_open(struct net_device *dev)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -3406,21 +3323,7 @@ static inline void ether_flush_tx_ts_skb_list(struct ether_priv_data *pdata)
 	raw_spin_unlock_irqrestore(&pdata->txts_lock, flags);
 }
 
-/**
- * @brief Call back to handle bring down of Ethernet interface
- *
- * Algorithm: This routine takes care of below
- * 1) Stopping PHY
- * 2) Freeing tx/rx/common irqs
- *
- * @param[in] ndev: Net device data structure.
- *
- * @note  MAC Interface need to be registered.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_close(struct net_device *ndev)
+int ether_close(struct net_device *ndev)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	unsigned int chan = 0x0;
@@ -3830,24 +3733,9 @@ dma_map_failed:
 	return ret;
 }
 
-/**
- * @brief Select queue based on user priority
- *
- * Algorithm:
- * 1) Select the correct queue index based which has priority of queue
- * same as skb->priority
- * 2) default select queue array index 0
- *
- * @param[in] dev: Network device pointer
- * @param[in] skb: sk_buff pointer, buffer data to send
- * @param[in] accel_priv: private data used for L2 forwarding offload
- * @param[in] fallback: fallback function pointer
- *
- * @retval "transmit queue index"
- */
-static unsigned short ether_select_queue(struct net_device *dev,
-					 struct sk_buff *skb,
-					 struct net_device *sb_dev)
+unsigned short ether_select_queue(struct net_device *dev,
+				  struct sk_buff *skb,
+				  struct net_device *sb_dev)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -3874,22 +3762,7 @@ static unsigned short ether_select_queue(struct net_device *dev,
 	return txqueue_select;
 }
 
-/**
- * @brief Network layer hook for data transmission.
- *
- * Algorithm:
- * 1) Allocate software context (DMA address for the buffer) for the data.
- * 2) Invoke OSI for data transmission.
- *
- * @param[in] skb: SKB data structure.
- * @param[in] ndev: Net device structure.
- *
- * @note  MAC and PHY need to be initialized.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+int ether_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
@@ -4339,23 +4212,7 @@ static int ether_handle_priv_wmdio_ioctl(struct ether_priv_data *pdata,
 				 mii_data->val_in);
 }
 
-/**
- * @brief Network stack IOCTL hook to driver
- *
- * Algorithm:
- * 1) Invokes MII API for phy read/write based on IOCTL command
- * 2) SIOCDEVPRIVATE for private ioctl
- *
- * @param[in] dev: network device structure
- * @param[in] rq: Interface request structure used for socket
- * @param[in] cmd: IOCTL command code
- *
- * @note  Ethernet interface need to be up.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
+int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 {
 	int ret = -EOPNOTSUPP;
 	struct ether_priv_data *pdata;
@@ -4439,8 +4296,8 @@ static int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
-static int ether_siocdevprivate(struct net_device *dev, struct ifreq *rq,
-				void __user *data, int cmd)
+int ether_siocdevprivate(struct net_device *dev, struct ifreq *rq,
+			 void __user *data, int cmd)
 {
 	int ret = -EOPNOTSUPP;
 	struct ether_priv_data *pdata;
@@ -4519,22 +4376,7 @@ static int ether_set_mac_addr(struct net_device *ndev, void *addr)
 	return ret;
 }
 
-/**
- * @brief Change MAC MTU size
- *
- * Algorithm:
- * 1) Check and return if interface is up.
- * 2) Stores new MTU size set by user in OSI core data structure.
- *
- * @param[in] ndev: Network device structure
- * @param[in] new_mtu: New MTU size to set.
- *
- * @note  Ethernet interface need to be down to change MTU size
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_change_mtu(struct net_device *ndev, int new_mtu)
+int ether_change_mtu(struct net_device *ndev, int new_mtu)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -4585,24 +4427,7 @@ static int ether_change_mtu(struct net_device *ndev, int new_mtu)
 	return 0;
 }
 
-/**
- * @brief Change HW features for the given network device.
- *
- * Algorithm:
- * 1) Check if HW supports feature requested to be changed
- * 2) If supported, check the current status of the feature and if it
- * needs to be toggled, do so.
- *
- * @param[in] ndev: Network device structure
- * @param[in] feat: New features to be updated
- *
- * @note  Ethernet interface needs to be up. Stack will enforce
- * the check.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_set_features(struct net_device *ndev, netdev_features_t feat)
+int ether_set_features(struct net_device *ndev, netdev_features_t feat)
 {
 	int ret = 0;
 	struct ether_priv_data *pdata = netdev_priv(ndev);
@@ -4638,27 +4463,7 @@ static int ether_set_features(struct net_device *ndev, netdev_features_t feat)
 }
 
 #ifdef ETHER_VLAN_VID_SUPPORT
-/**
- * @brief Adds VLAN ID. This function is invoked by upper
- * layer when a new VLAN id is registered. This function updates the HW
- * filter with new VLAN id. New vlan id can be added with vconfig -
- * vconfig add interface_name  vlan_id
- *
- * Algorithm:
- * 1) Check for hash or perfect filtering.
- * 2) invoke osi call accordingly.
- *
- * @param[in] ndev: Network device structure
- * @param[in] vlan_proto: VLAN proto VLAN_PROTO_8021Q = 0 VLAN_PROTO_8021AD = 1
- * @param[in] vid: VLAN ID.
- *
- * @note Ethernet interface should be up
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_vlan_rx_add_vid(struct net_device *ndev, __be16 vlan_proto,
-				 u16 vid)
+int ether_vlan_rx_add_vid(struct net_device *ndev, __be16 vlan_proto, u16 vid)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -4682,27 +4487,7 @@ static int ether_vlan_rx_add_vid(struct net_device *ndev, __be16 vlan_proto,
 	return ret;
 }
 
-/**
- * @brief Removes VLAN ID. This function is invoked by
- * upper layer when a new VALN id is removed. This function updates the
- * HW filter. vlan id can be removed with vconfig -
- * vconfig rem interface_name vlan_id
- *
- * Algorithm:
- * 1) Check for hash or perfect filtering.
- * 2) invoke osi call accordingly.
- *
- * @param[in] ndev: Network device structure
- * @param[in] vlan_proto: VLAN proto VLAN_PROTO_8021Q = 0 VLAN_PROTO_8021AD = 1
- * @param[in] vid: VLAN ID.
- *
- * @note Ethernet interface should be up
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_vlan_rx_kill_vid(struct net_device *ndev, __be16 vlan_proto,
-				  u16 vid)
+int ether_vlan_rx_kill_vid(struct net_device *ndev, __be16 vlan_proto, u16 vid)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -4727,24 +4512,8 @@ static int ether_vlan_rx_kill_vid(struct net_device *ndev, __be16 vlan_proto,
 }
 #endif /* ETHER_VLAN_VID_SUPPORT */
 
-/**
- * @brief ether_setup_tc - TC HW offload support
- *
- * Algorithm:
- * 1) Check the TC setup type
- * 2) Call appropriate function based on type.
- *
- * @param[in] ndev: Network device structure
- * @param[in] type: qdisc type
- * @param[in] type_data: void pointer having user passed configuration
- *
- * @note Ethernet interface should be up
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_setup_tc(struct net_device *ndev, enum tc_setup_type type,
-			  void *type_data)
+int ether_setup_tc(struct net_device *ndev, enum tc_setup_type type,
+		   void *type_data)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 
@@ -7392,27 +7161,7 @@ static void ether_init_rss(struct ether_priv_data *pdata,
 }
 #endif /* !OSI_STRIPPED_LIB */
 
-/**
- * @brief Ethernet platform driver probe.
- *
- * Algorithm:
- * 1) Get the number of channels from DT.
- * 2) Allocate the network device for those many channels.
- * 3) Parse MAC and PHY DT.
- * 4) Get all required clks/reset/IRQ's.
- * 5) Register MDIO bus and network device.
- * 6) Initialize spinlock.
- * 7) Update filter value based on HW feature.
- * 8) Update osi_core->hw_feature with pdata->hw_feat pointer
- * 9) Initialize Workqueue to read MMC counters periodically.
- *
- * @param[in] pdev: platform device associated with platform driver.
- *
- * @retval 0 on success
- * @retval "negative value" on failure
- *
- */
-static int ether_probe(struct platform_device *pdev)
+int ether_probe(struct platform_device *pdev)
 {
 	struct ether_priv_data *pdata;
 	unsigned int num_dma_chans, mac, macsec, num_mtl_queues, chan, mac_ver_type;
@@ -7710,17 +7459,7 @@ err_kzalloc:
 	return ret;
 }
 
-/**
- * @brief Ethernet platform driver remove.
- *
- * Alogorithm: Release all the resources
- *
- * @param[in] pdev: Platform device associated with platform driver.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_remove(struct platform_device *pdev)
+int ether_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct ether_priv_data *pdata = netdev_priv(ndev);
@@ -7760,15 +7499,7 @@ static int ether_remove(struct platform_device *pdev)
 	return 0;
 }
 
-/**
- * @brief Ethernet platform driver shutdown.
- *
- * Alogorithm: Stops and Deinits PHY, MAC, DMA and Clks hardware and
- *             release SW allocated resources(buffers, workqueues etc).
- *
- * @param[in] pdev: Platform device associated with platform driver.
- */
-static void ether_shutdown(struct platform_device *pdev)
+void ether_shutdown(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct ether_priv_data *pdata = netdev_priv(ndev);
@@ -7880,19 +7611,7 @@ err_resume:
 	return ret;
 }
 
-/**
- * @brief Ethernet platform driver suspend noirq callback.
- *
- * Alogorithm: Stops all data queues and PHY if the device
- *	does not wake capable. Disable TX and NAPI.
- *	Deinit OSI core, DMA and TX/RX interrupts.
- *
- * @param[in] dev: Platform device associated with platform driver.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_suspend_noirq(struct device *dev)
+int ether_suspend_noirq(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ether_priv_data *pdata = netdev_priv(ndev);
@@ -7954,19 +7673,7 @@ static int ether_suspend_noirq(struct device *dev)
 	return 0;
 }
 
-
-/**
- * @brief Ethernet platform driver resume noirq callback.
- *
- * Alogorithm: Enable clocks and call resume sequence,
- *	refer ether_resume function for resume sequence.
- *
- * @param[in] dev: Platform device associated with platform driver.
- *
- * @retval 0 on success
- * @retval "negative value" on failure.
- */
-static int ether_resume_noirq(struct device *dev)
+int ether_resume_noirq(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ether_priv_data *pdata = netdev_priv(ndev);

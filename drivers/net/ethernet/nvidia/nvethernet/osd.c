@@ -576,28 +576,10 @@ exit:
 }
 #endif
 
-/**
- * @brief Handover received packet to network stack.
- *
- * Algorithm:
- * 1) Unmap the DMA buffer address.
- * 2) Updates socket buffer with len and ether type and handover to
- * Linux network stack.
- * 3) Refill the Rx ring based on threshold.
- *
- * @param[in] priv: OSD private data structure.
- * @param[in] rx_ring: Pointer to DMA channel Rx ring.
- * @param[in] chan: DMA Rx channel number.
- * @param[in] dma_buf_len: Rx DMA buffer length.
- * @param[in] rx_pkt_cx: Received packet context.
- * @param[in] rx_swcx: Received packet sw context.
- *
- * @note Rx completion need to make sure that Rx descriptors processed properly.
- */
-static void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
-			       unsigned int chan, unsigned int dma_buf_len,
-			       const struct osi_rx_pkt_cx *rx_pkt_cx,
-			       struct osi_rx_swcx *rx_swcx)
+void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
+			unsigned int chan, unsigned int dma_buf_len,
+			const struct osi_rx_pkt_cx *rx_pkt_cx,
+			struct osi_rx_swcx *rx_swcx)
 {
 	struct ether_priv_data *pdata = (struct ether_priv_data *)priv;
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -726,25 +708,9 @@ done:
 		ether_realloc_rx_skb(pdata, rx_ring, chan);
 }
 
-/**
- * @brief osd_transmit_complete - Transmit completion routine.
- *
- * Algorithm:
- * 1) Updates stats for linux network stack.
- * 2) unmap and free the buffer DMA address and buffer.
- * 3) Time stamp will be update to stack if available.
- *
- * @param[in] priv: OSD private data structure.
- * @param[in] swcx: Pointer to swcx
- * @param[in] txdone_pkt_cx: Pointer to struct which has tx done status info.
- * This struct has flags to indicate tx error, whether DMA address
- * is mapped from paged/linear buffer.
- *
- * @note Tx completion need to make sure that Tx descriptors processed properly.
- */
-static void osd_transmit_complete(void *priv, const struct osi_tx_swcx *swcx,
-				  const struct osi_txdone_pkt_cx
-				  *txdone_pkt_cx)
+void osd_transmit_complete(void *priv, const struct osi_tx_swcx *swcx,
+			   const struct osi_txdone_pkt_cx
+			   *txdone_pkt_cx)
 {
 	struct ether_priv_data *pdata = (struct ether_priv_data *)priv;
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
@@ -912,7 +878,7 @@ void ether_restart_lane_bringup_task(struct tasklet_struct *t)
 	}
 }
 
-static void osd_restart_lane_bringup(void *priv, unsigned int en_disable)
+void osd_restart_lane_bringup(void *priv, unsigned int en_disable)
 {
 	struct ether_priv_data *pdata = (struct ether_priv_data *)priv;
 

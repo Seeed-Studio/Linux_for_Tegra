@@ -1,23 +1,41 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #ifndef IOCTL_H
 #define IOCTL_H
 
 #include "ether_export.h"
+#include "ether_callback_export.h"
+
+/**
+ * @addtogroup private IOCTL related info
+ *
+ * @{
+ */
+/** Configure loopback mode enable/disable */
+/* Get TX channel/queue count */
+#define EQOS_GET_TX_QCNT		23
+/* Get RX channel/queue count */
+#define EQOS_GET_RX_QCNT		24
+/** Set L2 DA filtering */
+#define EQOS_L2_DA_FILTERING_CMD	35
+#define ETHER_CONFIG_LOOPBACK_MODE	40
+#define ETHER_READ_REG			53
+#define ETHER_WRITE_REG			54
+#ifdef OSI_DEBUG
+#define ETHER_REGISTER_DUMP		56
+#define ETHER_STRUCTURE_DUMP		57
+#endif /* OSI_DEBUG */
+#ifdef OSI_DEBUG
+#define ETHER_DEBUG_INTR_CONFIG		60
+#endif
+/** @} */
+
 /**
  *@addtogroup IOCTL Helper MACROS
  * @{
  */
-#define NUM_BYTES_IN_IPADDR	4
 #define MAX_IP_ADDR_BYTE	0xFFU
-/* PTP offload mode defines */
-#define ETHER_PTP_ORDINARY_SLAVE		1
-#define ETHER_PTP_ORDINARY_MASTER		2
-#define ETHER_PTP_TRASPARENT_SLAVE		3
-#define ETHER_PTP_TRASPARENT_MASTER		4
-#define ETHER_PTP_PEER_TO_PEER_TRANSPARENT	5
-
 /* class E IP4 addr start range, reserved */
 #define CLASS_E_IP4_ADDR_RANGE_START	240U
 /* class D multicast addr range */
@@ -26,73 +44,7 @@
 
 /* Remote wakeup filter */
 #define EQOS_RWK_FILTER_LENGTH		8
-#define ETHER_PRV_TS_IOCTL		(SIOCDEVPRIVATE + 1)
-#define ETHER_PRV_RMDIO_IOCTL		(SIOCDEVPRIVATE + 2)
-#define ETHER_PRV_WMDIO_IOCTL		(SIOCDEVPRIVATE + 3)
-/* private ioctl number*/
-/* TX/RX channel/queue count */
-#define EQOS_GET_TX_QCNT		23
-#define EQOS_GET_RX_QCNT		24
-/** Line speed */
-#define EQOS_GET_CONNECTED_SPEED	25
-/* L3/L4 filter */
-#define EQOS_L3L4_FILTER_CMD		29
-/* VLAN filtering */
-#define EQOS_VLAN_FILTERING_CMD		34
-/* L2 DA filtering */
-#define EQOS_L2_DA_FILTERING_CMD	35
-#define ETHER_CONFIG_ARP_OFFLOAD	36
-#define ETHER_CONFIG_LOOPBACK_MODE	40
-#define ETHER_CONFIG_PTP_OFFLOAD	42
-#define ETHER_PTP_RXQUEUE		48
-#define ETHER_MC_DMA_ROUTE		52
-#define ETHER_READ_REG			53
-#define ETHER_WRITE_REG			54
-#define ETHER_PAD_CALIBRATION		55
-#ifdef OSI_DEBUG
-#define ETHER_REGISTER_DUMP		56
-#define ETHER_STRUCTURE_DUMP		57
-#endif /* OSI_DEBUG */
-#define ETHER_CAP_TSC_PTP		58
-#define ETHER_M2M_TSYNC			59
-#ifdef OSI_DEBUG
-#define ETHER_DEBUG_INTR_CONFIG	60
-#endif
 /** @} */
-
-/**
- * @brief struct arp_offload_param - Parameter to support ARP offload.
- */
-struct arp_offload_param {
-	/** ip_addr: Byte array for decimal representation of IP address.
-	 * For example, 192.168.1.3 is represented as
-	 * ip_addr[0] = '192' ip_addr[1] = '168' ip_addr[2] = '1' 
-	 * ip_addr[3] = '3' */
-	unsigned char ip_addr[NUM_BYTES_IN_IPADDR];
-};
-
-/**
- * @brief struct ptp_offload_param - Parameter to support PTP offload.
- */
-struct ptp_offload_param {
-	int en_dis;
-	int mode;
-	int domain_num;
-	int mc_uc;
-};
-
-/**
- * @brief struct ifr_data_timestamp_struct - common data structure between
- *	driver and application for sharing info through private TS ioctl
- */
-struct ifr_data_timestamp_struct {
-	/** Clock ID */
-	clockid_t clockid;
-	/** Store kernel time */
-	struct timespec64 kernel_ts;
-	/** Store HW time */
-	struct timespec64 hw_ptp_ts;
-};
 
 /**
  * @brief ether_priv_ioctl - Handle private IOCTLs

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1030,21 +1030,9 @@ static const struct ether_stats ether_tstrings_stats[] = {
 #endif /* OSI_STRIPPED_LIB */
 };
 
-/**
- * @brief This function is invoked by kernel when user requests to get the
- *  extended statistics about the device.
- *
- *  Algorithm: read mmc register and create strings
- *
- * @param[in] dev: pointer to net device structure.
- * @param[in] dummy: dummy parameter of ethtool_stats type.
- * @param[in] data: Pointer in which MMC statistics should be put.
- *
- * @note Network device needs to created.
- */
-static void ether_get_ethtool_stats(struct net_device *dev,
-				    struct ethtool_stats *dummy,
-				    u64 *data)
+void ether_get_ethtool_stats(struct net_device *dev,
+			     struct ethtool_stats *dummy,
+			     u64 *data)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -1140,19 +1128,7 @@ static void ether_get_ethtool_stats(struct net_device *dev,
 	}
 }
 
-/**
- * @brief This function gets number of strings
- *
- * Algorithm: return number of strings.
- *
- * @param[in] dev: Pointer to net device structure.
- * @param[in] sset: String set value.
- *
- * @note Network device needs to created.
- *
- * @return Numbers of strings(total length)
- */
-static int ether_get_sset_count(struct net_device *dev, int sset)
+int ether_get_sset_count(struct net_device *dev, int sset)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	int len = 0;
@@ -1203,19 +1179,7 @@ static int ether_get_sset_count(struct net_device *dev, int sset)
 	return len;
 }
 
-/**	
- * @brief This function returns a set of strings that describe
- * the requested objects.
- *
- * Algorithm: return number of strings.
- *
- * @param[in] dev: Pointer to net device structure.
- * @param[in] stringset:  String set value.
- * @param[in] data: Pointer in which requested string should be put.
- *
- * @note Network device needs to created.
- */
-static void ether_get_strings(struct net_device *dev, u32 stringset, u8 *data)
+void ether_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	u8 *p = data;
@@ -1287,18 +1251,8 @@ static void ether_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 }
 
 #ifndef OSI_STRIPPED_LIB
-/**
- * @brief Get pause frame settings
- *
- * Algorithm: Gets pause frame configuration
- *
- * @param[in] ndev: network device instance
- * @param[out] pause: Pause parameters that are set currently
- *
- * @note Network device needs to created.
- */
-static void ether_get_pauseparam(struct net_device *ndev,
-				 struct ethtool_pauseparam *pause)
+void ether_get_pauseparam(struct net_device *ndev,
+			  struct ethtool_pauseparam *pause)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct phy_device *phydev = pdata->phydev;
@@ -1332,21 +1286,8 @@ static void ether_get_pauseparam(struct net_device *ndev,
 	}
 }
 
-/**
- * @brief Set pause frame settings
- *
- * Algorithm: Sets pause frame settings
- *
- * @param[in] ndev: network device instance
- * @param[in] pause: Pause frame settings
- *
- * @note Network device needs to created.
- *
- * @retval 0 on Sucess
- * @retval "negative value" on failure.
- */
-static int ether_set_pauseparam(struct net_device *ndev,
-				struct ethtool_pauseparam *pause)
+int ether_set_pauseparam(struct net_device *ndev,
+			 struct ethtool_pauseparam *pause)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_ioctl ioctl_data = {};
@@ -1889,20 +1830,7 @@ static int ether_set_eee(struct net_device *ndev,
 	return 0;
 }
 
-/**
- * @brief This function is invoked by kernel when user request to set
- * pmt parameters for remote wakeup or magic wakeup
- *
- * Algorithm: Enable or Disable Wake On Lan status based on wol param
- *
- * @param[in] ndev – pointer to net device structure.
- * @param[in] wol – pointer to ethtool_wolinfo structure.
- *
- * @note MAC and PHY need to be initialized.
- *
- * @retval zero on success and -ve number on failure.
- */
-static int ether_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
+int ether_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	int ret;
@@ -1947,21 +1875,7 @@ static int ether_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 	return ret;
 }
 
-/**
- * @brief This function is invoked by kernel when user request to get report
- * whether wake-on-lan is enable or not.
- *
- * Algorithm: Return Wake On Lan status in wol param
- *
- * param[in] ndev – pointer to net device structure.
- * param[in] wol – pointer to ethtool_wolinfo structure.
- *
- * @note MAC and PHY need to be initialized.
- *
- * @retval none
- */
-
-static void ether_get_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
+void ether_get_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 
@@ -1984,23 +1898,9 @@ static void ether_get_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 	phy_ethtool_get_wol(pdata->phydev, wol);
 }
 
-/**
- * @brief Get RX flow classification rules
- *
- * Algorithm: Returns RX flow classification rules.
- *
- * param[in] ndev: Pointer to net device structure.
- * param[in] rxnfc: Pointer to rxflow data
- * param[in] rule_locs: TBD
- *
- * @note MAC and PHY need to be initialized.
- *
- * @retval 0 on success
- * @retval negative on failure
- */
-static int ether_get_rxnfc(struct net_device *ndev,
-			   struct ethtool_rxnfc *rxnfc,
-			   u32 *rule_locs)
+int ether_get_rxnfc(struct net_device *ndev,
+		    struct ethtool_rxnfc *rxnfc,
+		    u32 *rule_locs)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -2016,16 +1916,7 @@ static int ether_get_rxnfc(struct net_device *ndev,
 	return 0;
 }
 
-/**
- * @brief Get the size of the RX flow hash key
- *
- * Algorithm: Returns size of RSS hash key
- *
- * param[in] ndev: Pointer to net device structure.
- *
- * @retval size of RSS Hash key
- */
-static u32 ether_get_rxfh_key_size(struct net_device *ndev)
+u32 ether_get_rxfh_key_size(struct net_device *ndev)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -2033,16 +1924,7 @@ static u32 ether_get_rxfh_key_size(struct net_device *ndev)
 	return sizeof(osi_core->rss.key);
 }
 
-/**
- * @brief Get the size of the RX flow hash indirection table
- *
- * Algorithm: Returns size of the RX flow hash indirection table
- *
- * param[in] ndev: Pointer to net device structure.
- *
- * @retval size of RSS Hash table
- */
-static u32 ether_get_rxfh_indir_size(struct net_device *ndev)
+u32 ether_get_rxfh_indir_size(struct net_device *ndev)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
@@ -2207,14 +2089,14 @@ static int ether_set_ringparam(struct net_device *ndev,
 	return ret;
 }
 
-static unsigned int ether_get_msglevel(struct net_device *ndev)
+unsigned int ether_get_msglevel(struct net_device *ndev)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 
 	return pdata->msg_enable;
 }
 
-static void ether_set_msglevel(struct net_device *ndev, u32 level)
+void ether_set_msglevel(struct net_device *ndev, u32 level)
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 

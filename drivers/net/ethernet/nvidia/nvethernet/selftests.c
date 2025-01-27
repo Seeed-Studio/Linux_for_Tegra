@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #ifndef OSI_STRIPPED_LIB
 #include "ether_linux.h"
@@ -371,16 +371,6 @@ static const struct ether_test {
 	},
 };
 
-/**
- * @brief ether_selftest_run - Ethernet selftests.
- *
- * @param[in] dev: Network device pointer.
- * @param[in] etest: Ethernet ethtool test pointer.
- * @param[in] buf: Buffer pointer to hold test status.
- *
- * @retval zero on success.
- * @retval negative value on failure.
- */
 void ether_selftest_run(struct net_device *dev,
 			struct ethtool_test *etest, u64 *buf)
 {
