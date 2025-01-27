@@ -992,6 +992,7 @@ struct ufs_hba {
 	u16 ee_usr_mask;
 	struct mutex ee_ctrl_mutex;
 	bool is_powered;
+	bool is_ufs_already_enabled;
 	bool shutting_down;
 	struct semaphore host_sem;
 

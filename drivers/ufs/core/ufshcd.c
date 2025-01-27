@@ -4582,6 +4582,11 @@ static int ufshcd_change_power_mode(struct ufs_hba *hba,
 {
 	int ret;
 
+
+	if (hba->is_ufs_already_enabled) {
+		dev_dbg(hba->dev, "%s: power already configured\n", __func__);
+		return 0;
+	}
 	/* if already configured to the requested pwr_mode */
 	if (!hba->force_pmc &&
 	    pwr_mode->gear_rx == hba->pwr_info.gear_rx &&
@@ -4855,6 +4860,44 @@ void ufshcd_hba_stop(struct ufs_hba *hba)
 }
 EXPORT_SYMBOL_GPL(ufshcd_hba_stop);
 
+static int ufshcd_hba_execute_hce_active(struct ufs_hba *hba)
+{
+	int retry_outer = 3;
+	int retry_inner;
+
+start:
+
+	ufshcd_set_link_off(hba);
+
+	ufshcd_vops_hce_enable_notify(hba, PRE_CHANGE);
+
+	ufshcd_delay_us(hba->vps->hba_enable_delay_us, 100);
+
+	/* wait for the host controller to complete initialization */
+	retry_inner = 50;
+	while (!ufshcd_is_hba_active(hba)) {
+		if (retry_inner) {
+			retry_inner--;
+		} else {
+			dev_err(hba->dev,
+				"Controller enable failed\n");
+			if (retry_outer) {
+				retry_outer--;
+				goto start;
+			}
+			return -EIO;
+		}
+		usleep_range(1000, 1100);
+	}
+
+	/* enable UIC related interrupts */
+	ufshcd_enable_intr(hba, UFSHCD_UIC_MASK);
+
+	ufshcd_vops_hce_enable_notify(hba, POST_CHANGE);
+
+	return 0;
+}
+
 /**
  * ufshcd_hba_execute_hce - initialize the controller
  * @hba: per adapter instance
@@ -4871,6 +4914,7 @@ static int ufshcd_hba_execute_hce(struct ufs_hba *hba)
 	int retry_inner;
 
 start:
+	ufshcd_set_eh_in_progress(hba);
 	if (ufshcd_is_hba_active(hba))
 		/* change controller state to "reset state" */
 		ufshcd_hba_stop(hba);
@@ -4916,6 +4960,8 @@ start:
 	ufshcd_enable_intr(hba, UFSHCD_UIC_MASK);
 
 	ufshcd_vops_hce_enable_notify(hba, POST_CHANGE);
+	usleep_range(1000, 1100);
+	ufshcd_clear_eh_in_progress(hba);
 
 	return 0;
 }
@@ -4944,9 +4990,11 @@ int ufshcd_hba_enable(struct ufs_hba *hba)
 
 		ufshcd_vops_hce_enable_notify(hba, POST_CHANGE);
 	} else {
-		ret = ufshcd_hba_execute_hce(hba);
+		if (hba->is_ufs_already_enabled)
+			ret = ufshcd_hba_execute_hce_active(hba);
+		else
+			ret = ufshcd_hba_execute_hce(hba);
 	}
-
 	return ret;
 }
 EXPORT_SYMBOL_GPL(ufshcd_hba_enable);
@@ -5012,7 +5060,7 @@ EXPORT_SYMBOL_GPL(ufshcd_update_evt_hist);
  */
 static int ufshcd_link_startup(struct ufs_hba *hba)
 {
-	int ret;
+	int ret = 0;
 	int retries = DME_LINKSTARTUP_RETRIES;
 	bool link_startup_again = false;
 
@@ -5027,7 +5075,8 @@ link_startup:
 	do {
 		ufshcd_vops_link_startup_notify(hba, PRE_CHANGE);
 
-		ret = ufshcd_dme_link_startup(hba);
+		if (!hba->is_ufs_already_enabled)
+			ret = ufshcd_dme_link_startup(hba);
 
 		/* check if device is detected by inter-connect layer */
 		if (!ret && !ufshcd_is_device_present(hba)) {
