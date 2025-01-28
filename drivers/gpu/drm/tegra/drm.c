@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012 Avionic Design GmbH
- * Copyright (C) 2012-2024 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2012-2025 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -587,6 +587,7 @@ unlock:
 	return err;
 }
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 static int tegra_get_syncpt_base(struct drm_device *drm, void *data,
 				 struct drm_file *file)
 {
@@ -624,6 +625,7 @@ unlock:
 	mutex_unlock(&fpriv->lock);
 	return err;
 }
+#endif
 
 static int tegra_gem_set_tiling(struct drm_device *drm, void *data,
 				struct drm_file *file)
@@ -801,8 +803,10 @@ static const struct drm_ioctl_desc tegra_drm_ioctls[] = {
 			  DRM_RENDER_ALLOW),
 	DRM_IOCTL_DEF_DRV(TEGRA_SUBMIT, tegra_submit,
 			  DRM_RENDER_ALLOW),
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	DRM_IOCTL_DEF_DRV(TEGRA_GET_SYNCPT_BASE, tegra_get_syncpt_base,
 			  DRM_RENDER_ALLOW),
+#endif
 	DRM_IOCTL_DEF_DRV(TEGRA_GEM_SET_TILING, tegra_gem_set_tiling,
 			  DRM_RENDER_ALLOW),
 	DRM_IOCTL_DEF_DRV(TEGRA_GEM_GET_TILING, tegra_gem_get_tiling,
