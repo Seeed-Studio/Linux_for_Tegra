@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * Copyright (c) 2009-2024, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2009-2025, NVIDIA Corporation. All rights reserved.
  */
 
 #ifndef __LINUX_HOST1X_H
@@ -251,8 +251,10 @@ struct host1x_syncpt *host1x_syncpt_alloc(struct host1x *host,
 					  unsigned long flags,
 					  const char *name);
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 struct host1x_syncpt_base *host1x_syncpt_get_base(struct host1x_syncpt *sp);
 u32 host1x_syncpt_base_id(struct host1x_syncpt_base *base);
+#endif
 
 void host1x_syncpt_release_vblank_reservation(struct host1x_client *client,
 					      u32 syncpt_id);

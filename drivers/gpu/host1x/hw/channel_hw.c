@@ -2,7 +2,7 @@
 /*
  * Tegra host1x Channel
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2025, NVIDIA Corporation.
  */
 
 #include <linux/host1x-next.h>
@@ -163,6 +163,7 @@ static void submit_gathers(struct host1x_job *job, struct host1x_job_cmd *cmds, 
 	}
 }
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 static inline void synchronize_syncpt_base(struct host1x_job *job)
 {
 	struct host1x_syncpt *sp = job->syncpt;
@@ -178,6 +179,7 @@ static inline void synchronize_syncpt_base(struct host1x_job *job)
 			 HOST1X_UCLASS_LOAD_SYNCPT_BASE_BASE_INDX_F(id) |
 			 HOST1X_UCLASS_LOAD_SYNCPT_BASE_VALUE_F(value));
 }
+#endif
 
 static void host1x_channel_set_streamid(struct host1x_channel *channel)
 {
@@ -297,9 +299,11 @@ prefences_done:
 					host1x_syncpt_read_max(sp)));
 	}
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	/* Synchronize base register to allow using it for relative waiting */
 	if (sp->base)
 		synchronize_syncpt_base(job);
+#endif
 
 	/* add a setclass for modules that require it */
 	if (job->class)

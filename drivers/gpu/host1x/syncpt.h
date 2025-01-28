@@ -2,7 +2,7 @@
 /*
  * Tegra host1x Syncpoints
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2025, NVIDIA Corporation.
  */
 
 #ifndef __HOST1X_SYNCPT_H
@@ -22,10 +22,12 @@ struct host1x;
 /* Reserved for replacing an expired wait with a NOP */
 #define HOST1X_SYNCPT_RESERVED			0
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 struct host1x_syncpt_base {
 	unsigned int id;
 	bool requested;
 };
+#endif
 
 struct host1x_syncpt {
 	struct kref ref;
@@ -37,7 +39,9 @@ struct host1x_syncpt {
 	const char *name;
 	bool client_managed;
 	struct host1x *host;
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	struct host1x_syncpt_base *base;
+#endif
 	struct host1x_syncpt_pool *pool;
 
 	/* interrupt data */
@@ -60,8 +64,10 @@ void host1x_syncpt_deinit(struct host1x *host);
 /* Return number of sync point supported. */
 unsigned int host1x_syncpt_nb_pts(struct host1x *host);
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 /* Return number of wait bases supported. */
 unsigned int host1x_syncpt_nb_bases(struct host1x *host);
+#endif
 
 /* Return number of mlocks supported. */
 unsigned int host1x_syncpt_nb_mlocks(struct host1x *host);

@@ -2,7 +2,7 @@
 /*
  * Tegra host1x Syncpoints
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation.
+ * Copyright (c) 2010-2025, NVIDIA Corporation.
  */
 
 #include <linux/module.h>
@@ -21,6 +21,7 @@
 #define SYNCPT_CHECK_PERIOD (2 * HZ)
 #define MAX_STUCK_CHECK_COUNT 15
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 static struct host1x_syncpt_base *
 host1x_syncpt_base_request(struct host1x *host)
 {
@@ -43,6 +44,7 @@ static void host1x_syncpt_base_free(struct host1x_syncpt_base *base)
 	if (base)
 		base->requested = false;
 }
+#endif
 
 /**
  * host1x_syncpt_alloc() - allocate a syncpoint
@@ -92,11 +94,13 @@ struct host1x_syncpt *host1x_syncpt_alloc(struct host1x *host,
 	if (i >= host->syncpt_end)
 		goto unlock;
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	if (flags & HOST1X_SYNCPT_HAS_BASE) {
 		sp->base = host1x_syncpt_base_request(host);
 		if (!sp->base)
 			goto unlock;
 	}
+#endif
 
 	full_name = kasprintf(GFP_KERNEL, "%u-%s", sp->id, name);
 	if (!full_name)
@@ -115,8 +119,10 @@ struct host1x_syncpt *host1x_syncpt_alloc(struct host1x *host,
 	return sp;
 
 free_base:
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	host1x_syncpt_base_free(sp->base);
 	sp->base = NULL;
+#endif
 unlock:
 	mutex_unlock(&host->syncpt_mutex);
 	return NULL;
@@ -166,8 +172,10 @@ void host1x_syncpt_restore(struct host1x *host)
 		host1x_hw_syncpt_restore(host, sp_base + i);
 	}
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	for (i = 0; i < host1x_syncpt_nb_bases(host); i++)
 		host1x_hw_syncpt_restore_wait_base(host, sp_base + i);
+#endif
 
 	host1x_hw_syncpt_enable_protection(host);
 
@@ -190,8 +198,10 @@ void host1x_syncpt_save(struct host1x *host)
 			WARN_ON(!host1x_syncpt_idle(sp_base + i));
 	}
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	for (i = 0; i < host1x_syncpt_nb_bases(host); i++)
 		host1x_hw_syncpt_load_wait_base(host, sp_base + i);
+#endif
 }
 
 /*
@@ -316,7 +326,9 @@ bool host1x_syncpt_is_expired(struct host1x_syncpt *sp, u32 thresh)
 
 int host1x_syncpt_init(struct host1x *host)
 {
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	struct host1x_syncpt_base *bases;
+#endif
 	struct host1x_syncpt *syncpt;
 	unsigned int i;
 
@@ -325,10 +337,12 @@ int host1x_syncpt_init(struct host1x *host)
 	if (!syncpt)
 		return -ENOMEM;
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	bases = devm_kcalloc(host->dev, host->info->nb_bases, sizeof(*bases),
 			     GFP_KERNEL);
 	if (!bases)
 		return -ENOMEM;
+#endif
 
 	for (i = 0; i < host->info->nb_pts; i++) {
 		syncpt[i].id = i;
@@ -342,8 +356,10 @@ int host1x_syncpt_init(struct host1x *host)
 		syncpt[i].client_managed = true;
 	}
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	for (i = 0; i < host->info->nb_bases; i++)
 		bases[i].id = i;
+#endif
 
 	for (i = 0; i < host->num_pools; i++) {
 		struct host1x_syncpt_pool *pool = &host->pools[i];
@@ -355,7 +371,9 @@ int host1x_syncpt_init(struct host1x *host)
 
 	mutex_init(&host->syncpt_mutex);
 	host->syncpt = syncpt;
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	host->bases = bases;
+#endif
 
 	/*
 	 * Allocate sync point to use for clearing waits for expired fences.
@@ -404,9 +422,11 @@ static void syncpt_release(struct kref *ref)
 
 	mutex_lock(&sp->host->syncpt_mutex);
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	host1x_syncpt_base_free(sp->base);
-	kfree(sp->name);
 	sp->base = NULL;
+#endif
+	kfree(sp->name);
 	sp->name = NULL;
 	sp->client_managed = false;
 
@@ -484,10 +504,12 @@ unsigned int host1x_syncpt_nb_pts(struct host1x *host)
 	return host->info->nb_pts;
 }
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 unsigned int host1x_syncpt_nb_bases(struct host1x *host)
 {
 	return host->info->nb_bases;
 }
+#endif
 
 unsigned int host1x_syncpt_nb_mlocks(struct host1x *host)
 {
@@ -540,6 +562,7 @@ struct host1x_syncpt *host1x_syncpt_get(struct host1x_syncpt *sp)
 }
 EXPORT_SYMBOL(host1x_syncpt_get);
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 /**
  * host1x_syncpt_get_base() - obtain the wait base associated with a syncpoint
  * @sp: host1x syncpoint
@@ -559,6 +582,7 @@ u32 host1x_syncpt_base_id(struct host1x_syncpt_base *base)
 	return base->id;
 }
 EXPORT_SYMBOL(host1x_syncpt_base_id);
+#endif
 
 static void do_nothing(struct kref *ref)
 {

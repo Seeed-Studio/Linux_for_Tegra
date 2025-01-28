@@ -3,7 +3,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (C) 2011-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -109,6 +109,7 @@ static void show_syncpts(struct host1x *m, struct output *o, bool show_all)
 				    i, m->syncpt[i].name, min, max, waiters);
 	}
 
+#ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	for (i = 0; i < host1x_syncpt_nb_bases(m); i++) {
 		u32 base_val;
 
@@ -117,6 +118,7 @@ static void show_syncpts(struct host1x *m, struct output *o, bool show_all)
 			host1x_debug_output(o, "waitbase id %u val %d\n", i,
 					    base_val);
 	}
+#endif
 
 	pm_runtime_put(m->dev);
 
