@@ -91,9 +91,12 @@ struct nvpps_device_data {
 	bool		support_tsc;
 	uint32_t	soc_id;
 	void (*ptp_tsc_sync_cfg_fn)(struct platform_device *pdata);
+	uint32_t	lck_sts_offset;
+	uint32_t	lck_ctrl_offset;
 	uint8_t		k_int_val;
 	uint32_t	lock_threshold_val;
 	uint32_t	pps_freq;
+	uint32_t	lck_trig_interval;
 	struct hte_ts_desc	desc;
 	struct gpio_desc	*gpio_in;
 };
@@ -208,6 +211,13 @@ static struct device_node *emac_node;
 
 #define _NANO_SECS (1000000000ULL)
 
+/* Macro defines the interval(in PPS edge cnt) at which PTP-TSC lock is triggered */
+#define DEFAULT_TSC_LOCK_TRIGGER_INTERVAL	1U
+/* Macro defines the Min interval(in PPS edge cnt) at which PTP-TSC lock is triggered */
+#define MIN_TSC_LOCK_TRIGGER_INTERVAL		1U
+/* Macro defines the Max interval(in PPS edge cnt) at which PTP-TSC lock is triggered */
+#define MAX_TSC_LOCK_TRIGGER_INTERVAL		8U
+
 enum {
 	NV_SOC_T19X = 0U,
 	NV_SOC_T23X,
@@ -223,6 +233,8 @@ struct tegra_chip_data {
 	bool support_tsc;
 	uint32_t soc_id;
 	void (*ptp_tsc_sync_cfg_fn)(struct platform_device *pdata);
+	uint32_t lck_sts_offset;
+	uint32_t lck_ctrl_offset;
 };
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
@@ -415,31 +427,23 @@ static void tsc_timer_callback(struct timer_list *t)
 {
 	struct nvpps_device_data *pdev_data = (struct nvpps_device_data *)from_timer(pdev_data, t, tsc_timer);
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0) */
-	uint32_t lck_sts_offset = 0;
-	uint32_t lck_ctrl_offset = 0;
 	uint32_t reg_val = 0;
 
-	if (pdev_data->soc_id == NV_SOC_T26X) {
-		lck_sts_offset = T26X_TSC_LOCKING_STATUS_OFFSET;
-		lck_ctrl_offset = T26X_TSC_LOCKING_CONTROL_OFFSET;
-	} else if (pdev_data->soc_id == NV_SOC_T23X) {
-		lck_sts_offset = T23X_TSC_LOCKING_STATUS_OFFSET;
-		lck_ctrl_offset = T23X_TSC_LOCKING_CONTROL_OFFSET;
-	} else {
+	if (pdev_data->soc_id == NV_SOC_T19X) {
 		/* We should not be reaching here */
 		dev_err(pdev_data->dev, "Invalid SOC ID\n");
 		return ;
 	}
 
-	reg_val = readl(pdev_data->tsc_reg_map_base + lck_sts_offset);
+	reg_val = readl(pdev_data->tsc_reg_map_base + pdev_data->lck_sts_offset);
 
 	if ((reg_val & BIT(TSC_LOCKED_STATUS_BIT_OFFSET)) == 0) {
-		writel((BIT(TSC_LOCKED_STATUS_BIT_OFFSET) | BIT(TSC_ALIGNED_STATUS_BIT_OFFSET)), pdev_data->tsc_reg_map_base + lck_sts_offset);
-		writel(BIT(TSC_LOCK_CTRL_ALIGN_BIT_OFFSET), pdev_data->tsc_reg_map_base + lck_ctrl_offset);
+		writel((BIT(TSC_LOCKED_STATUS_BIT_OFFSET) | BIT(TSC_ALIGNED_STATUS_BIT_OFFSET)), pdev_data->tsc_reg_map_base + pdev_data->lck_sts_offset);
+		writel(BIT(TSC_LOCK_CTRL_ALIGN_BIT_OFFSET), pdev_data->tsc_reg_map_base + pdev_data->lck_ctrl_offset);
 	}
 
 	/* set the next expire time */
-	mod_timer(&pdev_data->tsc_timer, jiffies + msecs_to_jiffies(TSC_POLL_TIMER/pdev_data->pps_freq));
+	mod_timer(&pdev_data->tsc_timer, jiffies + msecs_to_jiffies((TSC_POLL_TIMER / pdev_data->pps_freq) * pdev_data->lck_trig_interval));
 }
 
 
@@ -986,7 +990,10 @@ static void nvpps_t26x_ptp_tsc_sync_config(struct platform_device *pdev)
 		if ((pdev_data->lock_threshold_val < MIN_T26X_LOCK_THRESHOLD_1NS) ||
 			(pdev_data->lock_threshold_val > MAX_T26X_LOCK_THRESHOLD_16MS)) {
 			//Use default value
-			dev_warn(&pdev->dev, "ptp_tsc_lock_threshold value should be minimum 1ns(i.e 0x1). Using default value 20us(i.e 20000ns)\n");
+			dev_warn(&pdev->dev,
+					 "Invalid input for ptp_tsc_lock_threshold dt property. Supported range : %u to %u. "
+					 "Using default value 20us(i.e 20000ns)\n",
+					 MIN_T26X_LOCK_THRESHOLD_1NS, MAX_T26X_LOCK_THRESHOLD_16MS);
 			pdev_data->lock_threshold_val = DEFAULT_T26X_LOCK_THRESHOLD_20US;
 		}
 	}
@@ -1192,6 +1199,8 @@ static int nvpps_probe(struct platform_device *pdev)
 	pdev_data->support_tsc = cdata->support_tsc;
 	pdev_data->soc_id = cdata->soc_id;
 	pdev_data->ptp_tsc_sync_cfg_fn = cdata->ptp_tsc_sync_cfg_fn;
+	pdev_data->lck_sts_offset = cdata->lck_sts_offset;
+	pdev_data->lck_ctrl_offset = cdata->lck_ctrl_offset;
 
 	nvpps_fill_default_mac_phc_info(pdev, pdev_data);
 
@@ -1306,6 +1315,22 @@ static int nvpps_probe(struct platform_device *pdev)
 
 		/* skip PTP TSC sync configuration if `ptp_tsc_sync_dis` is set */
 		if ((of_property_read_bool(np, "ptp_tsc_sync_dis")) == false) {
+			/* read tsc lock trigger interval from dt */
+			index = of_property_read_u32(np, "ptp_tsc_sync_trig_interval", &pdev_data->lck_trig_interval);
+			if (index < 0) {
+				dev_info(&pdev->dev,
+						 "using default value 1 for `ptp_tsc_sync_trig_interval` i.e On every PPS edge,"
+						 " Alignment is triggered if TSC is not synchronized to PTP\n");
+				pdev_data->lck_trig_interval = DEFAULT_TSC_LOCK_TRIGGER_INTERVAL;
+			}
+			if ((pdev_data->lck_trig_interval < MIN_TSC_LOCK_TRIGGER_INTERVAL) ||
+			    (pdev_data->lck_trig_interval > MAX_TSC_LOCK_TRIGGER_INTERVAL)) {
+				dev_err(&pdev->dev,
+						"Invalid input provided for ptp_tsc_sync_trig_interval. Allowed range is %u - %u\n",
+						MIN_TSC_LOCK_TRIGGER_INTERVAL, MAX_TSC_LOCK_TRIGGER_INTERVAL);
+				err = -EINVAL;
+				goto error_ret;
+			}
 			if (pdev_data->ptp_tsc_sync_cfg_fn != NULL)
 				pdev_data->ptp_tsc_sync_cfg_fn(pdev);
 		} else {
@@ -1383,16 +1408,22 @@ static const struct tegra_chip_data tegra264_chip_data = {
 	.support_tsc = true,
 	.soc_id = NV_SOC_T26X,
 	.ptp_tsc_sync_cfg_fn = &nvpps_t26x_ptp_tsc_sync_config,
+	.lck_sts_offset = T26X_TSC_LOCKING_STATUS_OFFSET,
+	.lck_ctrl_offset = T26X_TSC_LOCKING_CONTROL_OFFSET,
 };
 static const struct tegra_chip_data tegra234_chip_data = {
 	.support_tsc = true,
 	.soc_id = NV_SOC_T23X,
 	.ptp_tsc_sync_cfg_fn = &nvpps_t23x_ptp_tsc_sync_config,
+	.lck_sts_offset = T23X_TSC_LOCKING_STATUS_OFFSET,
+	.lck_ctrl_offset = T23X_TSC_LOCKING_CONTROL_OFFSET,
 };
 static const struct tegra_chip_data tegra194_chip_data = {
 	.support_tsc = false,
 	.soc_id = NV_SOC_T19X,
 	.ptp_tsc_sync_cfg_fn = NULL,
+	.lck_sts_offset = (uint32_t)(~0),
+	.lck_ctrl_offset = (uint32_t)(~0),
 };
 static const struct of_device_id nvpps_of_table[] = {
 	{ .compatible = "nvidia,tegra194-nvpps", .data = &tegra194_chip_data },
