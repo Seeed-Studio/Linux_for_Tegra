@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012 Avionic Design GmbH
- * SPDX-FileCopyrightText: Copyright (c) 2012-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2012-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -2624,7 +2624,9 @@ static int tegra_dc_init(struct host1x_client *client)
 	 * DC has been reset by now, so VBLANK syncpoint can be released
 	 * for general use.
 	 */
+#ifdef CONFIG_DRM_TEGRA_HAVE_DISPLAY
 	host1x_syncpt_release_vblank_reservation(client, 26 + dc->pipe);
+#endif
 
 	/*
 	 * XXX do not register DCs with no window groups because we cannot

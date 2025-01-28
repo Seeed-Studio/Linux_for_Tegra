@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION.  All rights reserved.
 
 ccflags-$(CONFIG_DRM_TEGRA_DEBUG) += -DDEBUG
 ccflags-y += -I$(srctree.nvidia-oot)/drivers/gpu/drm/tegra/include
@@ -14,9 +14,7 @@ tegra-drm-y := \
 	fb.o \
 	virt.o
 
-ifneq ($(filter y, $(CONFIG_ARCH_TEGRA_2x_SOC) $(CONFIG_ARCH_TEGRA_3x_SOC) \
-	$(CONFIG_ARCH_TEGRA_114_SOC) $(CONFIG_ARCH_TEGRA_124_SOC) $(CONFIG_ARCH_TEGRA_132_SOC) \
-	$(CONFIG_ARCH_TEGRA_210_SOC) $(CONFIG_ARCH_TEGRA_186_SOC) $(CONFIG_ARCH_TEGRA_194_SOC)),)
+ifeq ($(CONFIG_DRM_TEGRA_HAVE_DISPLAY),y)
 tegra-drm-y += \
 	dp.o \
 	hub.o \
