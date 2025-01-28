@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2023-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -12,9 +12,5 @@
 #define _DT_BINDINGS_RESET_TEGRA264_RESET_H
 
 #include <dt-bindings/reset/tegra264-rst.h>
-
-#if (TEGRA_BPMP_FW_DT_VERSION >= DT_VERSION_2)
-#define bpmp_resets SOC_BPMP_LABEL
-#endif
 
 #endif
