@@ -256,8 +256,10 @@ struct host1x_syncpt_base *host1x_syncpt_get_base(struct host1x_syncpt *sp);
 u32 host1x_syncpt_base_id(struct host1x_syncpt_base *base);
 #endif
 
+#ifdef CONFIG_DRM_TEGRA_HAVE_DISPLAY
 void host1x_syncpt_release_vblank_reservation(struct host1x_client *client,
 					      u32 syncpt_id);
+#endif
 
 int host1x_syncpt_get_shim_info(struct host1x *host, phys_addr_t *base, u32 *stride,
 				u32 *num_syncpts);

@@ -2,7 +2,7 @@
 /*
  * Tegra host1x driver
  *
- * SPDX-FileCopyrightText: Copyright (c) 2010-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2010-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -532,7 +532,6 @@ static const struct host1x_info host1x08_info = {
 	.streamid_vm_table = { 0x1004, 128 },
 	.classid_vm_table = { 0x1404, 25 },
 	.mmio_vm_table = { 0x1504, 25 },
-	.reserve_vblank_syncpts = false,
 };
 #endif
 
@@ -670,7 +669,6 @@ static const struct host1x_info host1x09_info = {
 	.streamid_vm_table = { 0x1004, 128 },
 	.classid_vm_table = { 0x1404, 25 },
 	.mmio_vm_table = { 0x1504, 25 },
-	.reserve_vblank_syncpts = false,
 };
 #endif
 
@@ -1369,9 +1367,7 @@ static struct platform_driver tegra_host1x_driver = {
 
 static struct platform_driver * const drivers[] = {
 	&tegra_host1x_driver,
-#if IS_ENABLED(CONFIG_ARCH_TEGRA_2x_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	IS_ENABLED(CONFIG_ARCH_TEGRA_114_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)	|| \
-	IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
+#ifdef CONFIG_DRM_TEGRA_HAVE_DISPLAY
 	&tegra_mipi_driver,
 #endif
 };

@@ -385,10 +385,12 @@ int host1x_syncpt_init(struct host1x *host)
 		syncpt[0].name = kstrdup("reserved", GFP_KERNEL);
 	}
 
+#ifdef CONFIG_DRM_TEGRA_HAVE_DISPLAY
 	if (host->info->reserve_vblank_syncpts) {
 		kref_init(&host->syncpt[26].ref);
 		kref_init(&host->syncpt[27].ref);
 	}
+#endif
 
 	return 0;
 }
@@ -584,6 +586,7 @@ u32 host1x_syncpt_base_id(struct host1x_syncpt_base *base)
 EXPORT_SYMBOL(host1x_syncpt_base_id);
 #endif
 
+#ifdef CONFIG_DRM_TEGRA_HAVE_DISPLAY
 static void do_nothing(struct kref *ref)
 {
 }
@@ -611,6 +614,7 @@ void host1x_syncpt_release_vblank_reservation(struct host1x_client *client,
 	kref_put(&host->syncpt[syncpt_id].ref, do_nothing);
 }
 EXPORT_SYMBOL(host1x_syncpt_release_vblank_reservation);
+#endif
 
 int host1x_syncpt_get_shim_info(struct host1x *host, phys_addr_t *base, u32 *stride,
 				u32 *num_syncpts)
