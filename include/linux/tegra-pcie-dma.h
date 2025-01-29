@@ -1,23 +1,33 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef TEGRA_PCIE_DMA_H
 #define TEGRA_PCIE_DMA_H
 
 /**
- * @brief T264 supports up to 4 channels and T234 supports up to 2 channels. DMA library ignore
- * channel 2 and 3 arguments for T234 and returns error from tegra_pcie_dma_submit_xfer() if
+ * @brief
+ * Number of read channels supported.
+ * NVPCIE_DMA_SOC_T264 supports up to 4 channels and NVPCIE_DMA_SOC_T234 supports up to 2 channels.
+ * DMA library ignore channel 2 and 3 arguments for NVPCIE_DMA_SOC_T234 and returns error from
+ * <a href="#tegra-pcie-dma-submit-xfer">(tegra_pcie_dma_submit_xfer())</a> if
  * these channels are used.
  */
 #define TEGRA_PCIE_DMA_RD_CHNL_NUM	4
+
+/**
+ * @brief
+ * Number of write channels supported.
+ */
 #define TEGRA_PCIE_DMA_WR_CHNL_NUM	4
 
+/** Size of DMA descriptor to allocate */
 #define TEGRA_PCIE_DMA_DESC_SZ		32
 
-/** MSI IRQ vector number to use on T264 SoC for write and read channels */
+/** MSI IRQ vector number to use on NVPCIE_DMA_SOC_T264 SoC for genrating local interrupt */
 #define TEGRA264_PCIE_DMA_MSI_LOCAL_VEC		4
+/** MSI IRQ vector number to use on NVPCIE_DMA_SOC_T264 SoC for generating remote interrupt */
 #define TEGRA264_PCIE_DMA_MSI_REMOTE_VEC	5
 
 #ifndef NV_CONFIG_PCIE_TEGRA_DMA_DISABLE
@@ -27,7 +37,7 @@
 
 /**
  * @brief typedef to define various values for xfer status passed for dma_complete_t or
- * tegra_pcie_dma_submit_xfer()
+ * <a href="#tegra-pcie-dma-submit-xfer">(tegra_pcie_dma_submit_xfer())</a>
  */
 typedef enum {
 	/** On successful completion of DMA TX or if API successfully completed its operation. */
@@ -41,8 +51,10 @@ typedef enum {
 	/** HW abort or SW stop processing in progress. */
 	TEGRA_PCIE_DMA_ABORT,
 	/**
-	 * Status set when DMA is de-initalized via tegra_pcie_dma_deinit(), during
-	 * tegra_pcie_dma_submit_xfer() or already intiialized via tegra_pcie_dma_initialize()
+	 * Status set when DMA is de-initalized via
+	 * <a href="#tegra-pcie-dma-deinit">(tegra_pcie_dma_deinit())</a>, during
+	 * <a href="#tegra-pcie-dma-submit-xfer">(tegra_pcie_dma_submit_xfer())</a> or already
+	 * intiialized via <a href="#tegra-pcie-dma-initialize">(tegra_pcie_dma_initialize())</a>
 	 */
 	TEGRA_PCIE_DMA_DEINIT,
 	/**
@@ -52,7 +64,9 @@ typedef enum {
 	TEGRA_PCIE_DMA_STATUS_INVAL_STATE,
 } tegra_pcie_dma_status_t;
 
-/** @brief typedef to define various values for xfer type passed tegra_pcie_dma_submit_xfer() */
+/** @brief typedef to define various values for xfer type passed
+ *  <a href="#tegra-pcie-dma-submit-xfer">(tegra_pcie_dma_submit_xfer())</a>
+ */
 typedef enum {
 	TEGRA_PCIE_DMA_WRITE = 0,
 	TEGRA_PCIE_DMA_READ,
@@ -68,7 +82,7 @@ typedef enum {
 
 /**
  * @brief typedef to define various supported DMA controller SoCs for channel configuration done
- * in tegra_pcie_dma_initialize()
+ * in <a href="#tegra-pcie-dma-initialize">(tegra_pcie_dma_initialize())</a>
  */
 typedef enum {
 	NVPCIE_DMA_SOC_T234 = 0,
@@ -81,13 +95,19 @@ struct tegra_pcie_dma_desc;
 /** @brief Tx Async callback function pointer */
 typedef void (tegra_pcie_dma_complete_t)(void *priv, tegra_pcie_dma_status_t status);
 
-/** @brief Remote DMA controller details.
- *  @note this is initial revision and expected to be modified.
+/** @brief
+ * Remote DMA controller details.
  */
 struct tegra_pcie_dma_remote_info {
-	/** EP's DMA PHY base address, which is BAR0 for T264 and BAR4 for T234 */
+	/**
+	 * EP's DMA PHY base address, which is BAR0 for NVPCIE_DMA_SOC_T264 and BAR4 for
+	 * NVPCIE_DMA_SOC_T234
+	 */
 	phys_addr_t dma_phy_base;
-	/** EP's DMA register spec size, which is BAR0 size for T264 and BAR4 size for T234 */
+	/**
+	 * EP's DMA register spec size, which is BAR0 size for NVPCIE_DMA_SOC_T264 and BAR4 size
+	 * for NVPCIE_DMA_SOC_T234
+	 */
 	uint32_t dma_size;
 };
 
@@ -103,8 +123,8 @@ struct tegra_pcie_dma_chans_info {
 	uint32_t num_descriptors;
 	/* Below parameter are used, only if remote is present in #tegra_pcie_dma_init_info */
 	/**
-	 * Descriptor PHY base allocated by client which is part of BAR0 in T234 and BAR1 in T264.
-	 * Each descriptor is of size TEGRA_PCIE_DMA_DESC_SZ bytes.
+	 * Descriptor PHY base allocated by client which is part of BAR0 in NVPCIE_DMA_SOC_T234 and
+	 * BAR1 in T264. Each descriptor is of size TEGRA_PCIE_DMA_DESC_SZ bytes.
 	 */
 	phys_addr_t desc_phy_base;
 	/** Abosolute IOVA address of desc of desc_phy_base. */
@@ -134,7 +154,8 @@ struct tegra_pcie_dma_init_info {
 	/**
 	 * MSI IRQ number for getting DMA interrupts.
 	 * Note:
-	 * - This param is applicable only for T264 SoC and ignored for T234 SoC.
+	 * - This param is applicable only for NVPCIE_DMA_SOC_T264 SoC and ignored
+	 *   for NVPCIE_DMA_SOC_T234 SoC.
 	 * - IRQ allocation notes:
 	 *  - For RP SoC, pcieport driver pre allocates MSI using pci_alloc_irq_vectors() and
 	 *    irq vector for the same is TEGRA_PCIE_DMA_MSI_IRQ_VEC.
@@ -154,8 +175,8 @@ struct tegra_pcie_dma_init_info {
 	 * MSI address that needs to be configured on DMA registers
 	 * Note:
 	 * - Applicable to MSI interrupt only.
-	 * - For T264 EP SoC, this data is not available during init, hence pass this data
-	 *   through tegra_pcie_dma_set_msi().
+	 * - For NVPCIE_DMA_SOC_T264 EP SoC, this data is not available during init,
+	 *   hence pass this data through tegra_pcie_dma_set_msi().
 	 */
 	uint64_t msi_addr;
 };
@@ -189,56 +210,184 @@ struct tegra_pcie_dma_xfer_info {
 };
 
 #ifdef CONFIG_PCIE_TEGRA_DMA
+#ifdef DOXYGEN_ICD
 /**
- * @brief API to perform DMA library initialization.
+ * @dir
+ * - forward
+ */
+#endif
+/**
+ * @brief
+ * API to perform DMA SW and HW initialization.
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt: No
+ *  - Signal handler: No
+ *  - Thread-Safe: No
+ *  - Sync/Asyc: Sync
+ *  - Re-entrant: No
+ * - Required Privileges:
+ *  - Memory mapping access to PCIe DMA HW register.
+ * - Operation Mode
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
  *
  * @param[in] info DMA init data structure. Refer struct tegra_pcie_dma_init_info for details.
  * @param[out] cookie DMA cookie double pointer. Must be non NULL. This is populated by API for use
  * in further API calls.
  *
- * @retVal TEGRA_PCIE_DMA_SUCCESS, TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS, TEGRA_PCIE_DMA_FAIL_NOMEM from
- * tegra_pcie_dma_status_t.
+ * @return
+ * - TEGRA_PCIE_DMA_SUCCESS, TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS, TEGRA_PCIE_DMA_FAIL_NOMEM from
+ * <a href="#tegra-pcie-dma-status-t">(tegra_pcie_dma_status_t)</a>.
  */
 tegra_pcie_dma_status_t tegra_pcie_dma_initialize(struct tegra_pcie_dma_init_info *info,
 						  void **cookie);
 
-/* @brief API to set MSI addr and data for EPF driver.
- * Need to call this after initialize API for T264 EP contorller only.
+#ifdef DOXYGEN_ICD
+/**
+ * @dir
+ * - forward
+ */
+#endif
+/**
+ * @brief
+ * API to set MSI addr and data.
  *
- * @param[in] cookie Value at cookie pointer populated in tegra_pcie_dma_initialize().
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt: No
+ *  - Signal handler: No
+ *  - Thread-Safe: No
+ *  - Sync/Asyc: Sync
+ *  - Re-entrant: No
+ * - Required Privileges:
+ *  - Memory mapping access to PCIe DMA HW register.
+ * - Operation Mode
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ *
+ * @pre
+ * Need to call this after <a href="#tegra-pcie-dma-initialize">(tegra_pcie_dma_initialize())</a>
+ * API and applicable for NVPCIE_DMA_SOC_T264 contorller in EP mode only.
+ *
+ * @param[in] cookie Value at cookie pointer populated in
+ * <a href="#tegra-pcie-dma-initialize">(tegra_pcie_dma_initialize())</a>.
  * @param[in] msi_addr Refer tegra_pcie_dma_init_info$msi_addr
  * @param[in] msi_data Refer tegra_pcie_dma_init_info$msi_data
  *
- * @retVal TEGRA_PCIE_DMA_SUCCESS, TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS from tegra_pcie_dma_status_t.
+ * @return
+ * - TEGRA_PCIE_DMA_SUCCESS, TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS from
+ * <a href="#tegra-pcie-dma-status-t">(tegra_pcie_dma_status_t)</a>.
  */
 tegra_pcie_dma_status_t tegra_pcie_dma_set_msi(void *cookie, u64 msi_addr, u32 msi_data);
 
+#ifdef DOXYGEN_ICD
 /**
- * @brief API to perform transfer operation.
+ * @dir
+ * - forward
+ */
+#endif
+/**
+ * @brief
+ * API to perform transfer operation by populating requested data to DMA descriptors and
+ * triggerring the transfer.
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt: No
+ *  - Signal handler: No
+ *  - Thread-Safe: No
+ *  - Sync/Asyc: Sync
+ *  - Re-entrant: No
+ * - Required Privileges: None
+ * - Operation Mode
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ *
  * @param[in] tx_info DMA Tx data structure. Refer struct tegra_pcie_dma_xfer_info for details.
- * @param[in] cookie Value at cookie pointer populated in tegra_pcie_dma_initialize().
- * @retVal Refer enum tegra_pcie_dma_status_t.
+ * @param[in] cookie Value at cookie pointer populated in
+ * <a href="#tegra-pcie-dma-initialize">(tegra_pcie_dma_initialize())</a>.
+ *
+ * @return
+ * - Refer enum <a href="#tegra-pcie-dma-status-t">(tegra_pcie_dma_status_t)</a>.
  */
 tegra_pcie_dma_status_t tegra_pcie_dma_submit_xfer(void *cookie,
 						   struct tegra_pcie_dma_xfer_info *tx_info);
 
+#ifdef DOXYGEN_ICD
 /**
- * @brief API to stop DMA engine,.
- * @param[in] cookie Value at cookie pointer populated in tegra_pcie_dma_initialize().
- * @retVal Returns true on success and false on failure.
+ * @dir
+ * - forward
+ */
+#endif
+/**
+ * @brief
+ * API to stop all on going DMA transfers and accepting new transfers.
+ *
+ * @usage
+ * - Allowed context for the API call
+ *  - Interrupt: No
+ *  - Signal handler: No
+ *  - Thread-Safe: No
+ *  - Sync/Asyc: Sync
+ *  - Re-entrant: No
+ * - Required Privileges: None
+ * - Operation Mode
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ *
+ * @param[in] cookie Value at cookie pointer populated in
+ * <a href="#tegra-pcie-dma-initialize">(tegra_pcie_dma_initialize())</a>.
+ *
+ * @return Returns true on success and false on failure.
+ *
+ * @post
+ * - Only <a href="#tegra-pcie-dma-deinit">(tegra_pcie_dma_deinit())</a> is accessible after
+ *   this API is success.
  */
 /* Note stop API was needed to handle dangling pointer of cookie in EDMA driver. With usage of
- * double pointer cookie in tegra_pcie_dma_initialize(), this API can be deprecated.
+ * double pointer cookie in <a href="#tegra-pcie-dma-initialize">(tegra_pcie_dma_initialize())</a>,
+ * this API can be deprecated.
  */
 bool tegra_pcie_dma_stop(void *cookie);
 
+#ifdef DOXYGEN_ICD
+/**
+ * @dir
+ * - forward
+ */
+#endif
 /**
  * @brief API to perform de-init of DMA library.
  *
- * @param[inout] cookie pointer returned in tegra_pcie_dma_initialize() call. Set *cookie to
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None
+ * - Operation Mode
+ *  - Initialization: Yes
+ *  - Run time: Yes
+ *  - De-initialization: Yes
+ *
+ * @param[inout] cookie pointer returned in
+ * <a href="#tegra-pcie-dma-initialize">(tegra_pcie_dma_initialize())</a> call. Set *cookie to
  * NULL on successful deinit.
  *
- * @retVal TEGRA_PCIE_DMA_SUCCESS, TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS from tegra_pcie_dma_status_t.
+ * @return
+ * - TEGRA_PCIE_DMA_SUCCESS, TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS from
+ *   <a href="#tegra-pcie-dma-status-t">(tegra_pcie_dma_status_t)</a>.
+ *
+ * @outcome
+ * - DMA HW is stopped.
  */
 tegra_pcie_dma_status_t tegra_pcie_dma_deinit(void **cookie);
 #else
