@@ -1882,6 +1882,7 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		if (ret) {
 			pr_err("%s(): Failed to copy_from_user hmac_sha_sv_ctl:%d\n", __func__,
 					ret);
+			kfree(hmac_sha_sv_ctl);
 			goto release_lock;
 		}
 
