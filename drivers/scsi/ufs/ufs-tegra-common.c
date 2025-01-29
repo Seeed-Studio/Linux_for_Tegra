@@ -998,16 +998,20 @@ static int ufs_tegra_ufs_reset_init(struct ufs_tegra_host *ufs_tegra)
 	return ret;
 }
 
-static void ufs_tegra_ufs_deassert_reset(struct ufs_tegra_host *ufs_tegra)
+static void ufs_tegra_ufs_assert_reset(struct ufs_tegra_host *ufs_tegra)
 {
 	reset_control_assert(ufs_tegra->ufs_rst);
 	reset_control_assert(ufs_tegra->ufs_axi_m_rst);
 	reset_control_assert(ufs_tegra->ufshc_lp_rst);
 	ufshcd_delay_us(100, 10);
+}
 
+static void ufs_tegra_ufs_deassert_reset(struct ufs_tegra_host *ufs_tegra)
+{
 	reset_control_deassert(ufs_tegra->ufs_rst);
 	reset_control_deassert(ufs_tegra->ufs_axi_m_rst);
 	reset_control_deassert(ufs_tegra->ufshc_lp_rst);
+	ufshcd_delay_us(100, 10);
 }
 
 static int ufs_tegra_mphy_reset_init(struct ufs_tegra_host *ufs_tegra)
@@ -1283,6 +1287,31 @@ static void ufs_tegra_ufs_aux_prog(struct ufs_tegra_host *ufs_tegra)
 	}
 }
 
+static int ufs_tegra_eq_timeout(struct ufs_tegra_host *ufs_tegra)
+{
+	struct device *dev = ufs_tegra->hba->dev;
+	int err;
+
+	mphy_writel(ufs_tegra->mphy_l0_base, MPHY_EQ_TIMEOUT,
+		    MPHY_RX_APB_VENDOR3B_0_T234);
+	mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT, MPHY_RX_APB_VENDOR2_0_T234);
+	err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, MPHY_RX_APB_VENDOR2_0_T234);
+	if (err) {
+		dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
+		goto end;
+	}
+	if (ufs_tegra->x2config) {
+		mphy_writel(ufs_tegra->mphy_l1_base, MPHY_EQ_TIMEOUT,
+			    MPHY_RX_APB_VENDOR3B_0_T234);
+		mphy_update(ufs_tegra->mphy_l1_base, MPHY_GO_BIT, MPHY_RX_APB_VENDOR2_0_T234);
+		err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, MPHY_RX_APB_VENDOR2_0_T234);
+		if (err)
+			dev_err(dev, "%s: Go bit clear failed for mphy1\n", __func__);
+	}
+end:
+	return err;
+}
+
 #if defined(NV_UFS_HBA_VARIANT_OPS_SUSPEND_HAS_STATUS_ARG)
 static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op,
 			     enum ufs_notify_change_status status)
@@ -1305,8 +1334,11 @@ static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	ufshcd_set_link_off(hba);
 
 	/* TODO: Check why disabling clocks causing crash */
-	if (ufs_tegra->soc->chip_id == TEGRA264)
+	if (ufs_tegra->soc->chip_id == TEGRA264) {
+		hba->is_ufs_already_enabled = false;
+		ufs_tegra->mask_hs_mode_b = false;
 		goto end;
+	}
 
 	/* Clocks are not present on VDK */
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_VDK)
@@ -1341,27 +1373,44 @@ static int ufs_tegra_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	struct ufs_tegra_host *ufs_tegra = hba->priv;
 	struct device *dev = hba->dev;
 	int ret = 0;
+	u32 val;
+	int err;
 
 	if (pm_op != UFS_SYSTEM_PM)
 		return 0;
 
 	ufs_tegra->ufshc_state = UFSHC_RESUME;
+	ufshcd_set_ufs_dev_active(hba);
 
 	ret = ufs_tegra_enable_ufs_clks(ufs_tegra);
 	if (ret)
 		return ret;
 
-	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
-		goto deassert_ufs_clk;
-
 	ret = ufs_tegra_enable_mphylane_clks(ufs_tegra);
 	if (ret)
 		goto out_disable_ufs_clks;
+
+	ufs_tegra_mphy_assert_reset(ufs_tegra);
 	ufs_tegra_mphy_deassert_reset(ufs_tegra);
 
-deassert_ufs_clk:
+	ufs_tegra_ufs_assert_reset(ufs_tegra);
 	ufs_tegra_ufs_deassert_reset(ufs_tegra);
+
+	/* Clean interrupt status */
+	val = ufshcd_readl(hba, REG_INTERRUPT_STATUS);
+	ufshcd_writel(hba, val, REG_INTERRUPT_STATUS);
+
+	err = ufs_tegra_mphy_rx_advgran(ufs_tegra);
+	if (err)
+		goto out_disable_mphy_clks;
+
+	ufs_tegra_ufs_aux_ref_clk_disable(ufs_tegra);
+	ufs_tegra_aux_reset_enable(ufs_tegra);
 	ufs_tegra_ufs_aux_prog(ufs_tegra);
+	ufs_tegra_set_clk_div(hba);
+	err = ufs_tegra_eq_timeout(ufs_tegra);
+	if (err)
+		goto out_disable_ufs_clks;
 
 	if (dev_iommu_fwspec_get(dev)) {
 		writel(UFS_AUX_ADDR_VIRT_CTRL_EN,
@@ -1374,8 +1423,9 @@ deassert_ufs_clk:
 
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		goto end;
-
-	ufs_tegra_set_clk_div(hba);
+	err = ufs_tegra_pwr_change_clk_boost(ufs_tegra);
+	if (err)
+		goto out_disable_ufs_clks;
 
 end:
 	pm_runtime_disable(dev);
@@ -1384,6 +1434,7 @@ end:
 
 	return ret;
 
+out_disable_mphy_clks:
 	ufs_tegra_disable_mphylane_clks(ufs_tegra);
 out_disable_ufs_clks:
 	ufs_tegra_disable_ufs_clks(ufs_tegra);
@@ -1453,6 +1504,10 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 
 	switch (status) {
 	case PRE_CHANGE:
+		/* Return if ufs is already initialised */
+		if (hba->is_ufs_already_enabled)
+			return 0;
+
 		/* Update VS_DebugSaveConfigTime Tref */
 		ufshcd_dme_get(hba, UIC_ARG_MIB(VS_DEBUGSAVECONFIGTIME),
 			       &vs_save_config);
@@ -1539,6 +1594,11 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 		       sizeof(struct ufs_pa_layer_attr));
 		break;
 	case POST_CHANGE:
+
+		/* Return if ufs is already initialised */
+		if (hba->is_ufs_already_enabled)
+			return 0;
+
 		ufs_tegra_print_power_mode_config(hba, dev_req_params);
 		ufshcd_dme_get(hba, UIC_ARG_MIB(PA_SCRAMBLING), &pa_reg_check);
 		if (pa_reg_check & SCREN)
@@ -1560,6 +1620,11 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 
 	switch (status) {
 	case PRE_CHANGE:
+
+		/* Return if ufs is already initialised */
+		if (hba->is_ufs_already_enabled)
+			return 0;
+
 		if (ufs_tegra->soc->chip_id != TEGRA264) {
 			err = ufs_tegra_host_clk_enable(dev,
 							"mphy_force_ls_mode",
@@ -1573,6 +1638,11 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 				   UFSHC_AUX_UFSHC_DEV_CTRL_0);
 		break;
 	case POST_CHANGE:
+
+		/* Return if ufs is already initialised */
+		if (hba->is_ufs_already_enabled)
+			return 0;
+
 		ufs_aux_clear_bits(ufs_tegra->ufs_aux_base,
 				   UFSHC_CG_SYS_CLK_OVR_ON,
 				   UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_0);
@@ -1642,16 +1712,26 @@ static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,
 
 	switch (status) {
 	case PRE_CHANGE:
+		/* Link is initialized by earlier firmware */
+		if (hba->is_ufs_already_enabled)
+			return 0;
+
 		ufs_tegra_mphy_rx_sync_capability(ufs_tegra);
 		ufs_tegra_unipro_pre_linkup(hba);
 		/* Enable TX link calibration */
 		err = ufs_tegra_mphy_tx_calibration_enable(ufs_tegra);
 		break;
 	case POST_CHANGE:
+		/* Link is initialized by earlier firmware */
+		if (hba->is_ufs_already_enabled)
+			return 0;
+
 		/* Check TX link calibration status */
 		err = ufs_tegra_mphy_check_tx_calibration_done_status(ufs_tegra);
-		if (err)
+		if (err) {
+			dev_err(hba->dev, "\n %s Link calibration done failed: %d\n", __func__, err);
 			return err;
+		}
 		/*POST_CHANGE case is called on success of link start-up*/
 		dev_info(hba->dev, "dme-link-startup Successful\n");
 		ufs_tegra_unipro_post_linkup(hba);
@@ -1718,31 +1798,6 @@ static int ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	return 0;
 }
 
-static int ufs_tegra_eq_timeout(struct ufs_tegra_host *ufs_tegra)
-{
-	struct device *dev = ufs_tegra->hba->dev;
-	int err;
-
-	mphy_writel(ufs_tegra->mphy_l0_base, MPHY_EQ_TIMEOUT,
-		    MPHY_RX_APB_VENDOR3B_0_T234);
-	mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT, MPHY_RX_APB_VENDOR2_0_T234);
-	err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, MPHY_RX_APB_VENDOR2_0_T234);
-	if (err) {
-		dev_err(dev, "%s: Go bit clear failed for mphy0\n", __func__);
-		goto end;
-	}
-	if (ufs_tegra->x2config) {
-		mphy_writel(ufs_tegra->mphy_l1_base, MPHY_EQ_TIMEOUT,
-			    MPHY_RX_APB_VENDOR3B_0_T234);
-		mphy_update(ufs_tegra->mphy_l1_base, MPHY_GO_BIT, MPHY_RX_APB_VENDOR2_0_T234);
-		err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, MPHY_RX_APB_VENDOR2_0_T234);
-		if (err)
-			dev_err(dev, "%s: Go bit clear failed for mphy1\n", __func__);
-	}
-end:
-	return err;
-}
-
 #if defined(CONFIG_TEGRA_PROD_LEGACY)
 static void ufs_tegra_prod_settings(struct ufs_tegra_host *ufs_tegra)
 {
@@ -1788,6 +1843,7 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	resource_size_t ufs_virt_base_addr = 0, ufs_virt_addr_range = 0;
 	struct iommu_fwspec *fwspec;
 	u32 virt_ctrl_en = 0;
+	u32 val;
 
 	ufs_tegra = devm_kzalloc(dev, sizeof(*ufs_tegra), GFP_KERNEL);
 	if (!ufs_tegra) {
@@ -1803,6 +1859,7 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	ufs_tegra->ufshc_state = UFSHC_INIT;
 	ufs_tegra->hba = hba;
 	hba->priv = (void *)ufs_tegra;
+	hba->is_ufs_already_enabled = false;
 
 	err = ufs_tegra_config_soc_data(ufs_tegra);
 	if (err)
@@ -1940,9 +1997,20 @@ ufs_clk_deassert:
 	if (err)
 		goto out_disable_mphylane_clks;
 
+	/* Do not issue assert as the state of the controller changes */
 	ufs_tegra_ufs_deassert_reset(ufs_tegra);
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		goto end;
+
+	val = ufshcd_readl(hba, REG_CONTROLLER_ENABLE);
+	if (val) {
+		/* If already initialised, do not configure ufs */
+		hba->is_ufs_already_enabled = true;
+		/* Set HS to Rate-B */
+		ufs_tegra->mask_hs_mode_b = false;
+		/* ufs already initialised. Do not configure ufs */
+		goto end;
+	}
 
 	err = ufs_tegra_mphy_rx_advgran(ufs_tegra);
 	if (err)
