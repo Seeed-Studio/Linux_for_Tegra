@@ -930,6 +930,10 @@ static int host1x_get_assigned_resources(struct host1x *host)
 	if (err == 0) {
 		host->channel_base = vals[0];
 		host->num_channels = vals[1];
+		if (host->channel_base + host->num_channels > host->info->nb_channels) {
+			dev_err(host->dev, "invalid value for nvidia,channels property");
+			return -EINVAL;
+		}
 	} else if (err == -EINVAL) {
 		host->channel_base = 0;
 		host->num_channels = host->info->nb_channels;
@@ -942,6 +946,10 @@ static int host1x_get_assigned_resources(struct host1x *host)
 	if (err == 0) {
 		host->syncpt_base = vals[0];
 		host->syncpt_end = vals[0] + vals[1];
+		if (host->syncpt_end > host->info->nb_pts) {
+			dev_err(host->dev, "invalid value for nvidia,syncpoints property");
+			return -EINVAL;
+		}
 	} else if (err == -EINVAL) {
 		host->syncpt_base = 0;
 		host->syncpt_end = host->info->nb_pts;
