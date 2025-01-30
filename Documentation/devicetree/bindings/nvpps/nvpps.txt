@@ -28,12 +28,15 @@ Optional properties:
 				 or locking TSC time with PTP time domain.
 				 The value is a 8bit hexa-decimal value. If unspecified, NvPPS driver uses
 				 0x70 as default value
+				 This field is not used for Thor based platforms
 - ptp_tsc_lock_threshold: specifies the threshold value which is used by HW to determine
 				 if the TSC PTP sync/Lock is lost. The lock is deemed to be lost if the HW
 				 determined absolute diff between PTP & TSC time exceed this value.
 				 The value is a 16bit hexa-decimal value. The minimum value(0x1F) supported
 				 correspond to 1us and max value(0xFFFF) supported correspond to approx 2.1ms.
 				 If unspecified, NvPPS driver uses 0x26C(corresponding to 20us) by default
+				 On Thor based platforms, Minimum value(1) supported correspond to 1ns and
+				 Max value(16777215) correspond to approx 16.77ms
 - ptp_tsc_sync_dis: boolean flag to indicate if nvpps should disable PTP TSC sync logic.
 					The default behaviour is to keep PTP TSC sync logic enabled.
 - reg: specifies start address and registers count details of TSC module. It is only applicable for Orin.
