@@ -39,6 +39,12 @@ Optional properties:
 				 Max value(16777215) correspond to approx 16.77ms
 - ptp_tsc_sync_dis: boolean flag to indicate if nvpps should disable PTP TSC sync logic.
 					The default behaviour is to keep PTP TSC sync logic enabled.
+- ptp_tsc_sync_trig_interval: Defines interval(in terms of PPS edge count) at which PTP-TSC sync
+				 alignment should be triggered eg: if value 3 is provided, then an attempt is
+				 made to sync TSC with PTP(if not synchronized) on every 3rd PPS edge.
+				 Supported min & max values are 1 & 8 respectively and by default, value
+				 of 1 is used to trigger TSC sync on every PPS edge.
+
 - reg: specifies start address and registers count details of TSC module. It is only applicable for Orin.
 - nvpps-gpios: specifies GPIO number for PPS input signal.
 - timestamps: specifies timestamp for the GPIO provided by HTE.
