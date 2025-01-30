@@ -1157,6 +1157,7 @@ fput:
 }
 EXPORT_SYMBOL_GPL(tegra_drm_get_syncpt);
 
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 static bool host1x_drm_wants_iommu(struct host1x_device *dev)
 {
 	struct host1x *host1x = dev_get_drvdata(dev->dev.parent);
@@ -1202,11 +1203,14 @@ static bool host1x_drm_wants_iommu(struct host1x_device *dev)
 
 	return domain != NULL;
 }
+#endif
 
 static int host1x_drm_probe(struct host1x_device *dev)
 {
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 #if defined(NV_IOMMU_PAGING_DOMAIN_ALLOC_PRESENT) /* Linux v6.11 */
 	struct device *dma_dev = dev->dev.parent;
+#endif
 #endif
 	struct tegra_drm *tegra;
 	struct drm_device *drm;
@@ -1222,6 +1226,7 @@ static int host1x_drm_probe(struct host1x_device *dev)
 		goto put;
 	}
 
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 #if defined(NV_IOMMU_PAGING_DOMAIN_ALLOC_PRESENT) /* Linux v6.11 */
 	if (host1x_drm_wants_iommu(dev) && device_iommu_mapped(dma_dev)) {
 		tegra->domain = iommu_paging_domain_alloc(dma_dev);
@@ -1238,6 +1243,7 @@ static int host1x_drm_probe(struct host1x_device *dev)
 		if (err < 0)
 			goto domain;
 	}
+#endif
 
 	mutex_init(&tegra->clients_lock);
 	INIT_LIST_HEAD(&tegra->clients);
@@ -1272,6 +1278,7 @@ static int host1x_drm_probe(struct host1x_device *dev)
 	tegra->hmask = drm->mode_config.max_width - 1;
 	tegra->vmask = drm->mode_config.max_height - 1;
 
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 	if (tegra->use_explicit_iommu) {
 		u64 carveout_start, carveout_end, gem_start, gem_end;
 		u64 dma_mask = dma_get_mask(&dev->dev);
@@ -1305,6 +1312,7 @@ static int host1x_drm_probe(struct host1x_device *dev)
 		tegra->domain = NULL;
 		iova_cache_put();
 	}
+#endif
 
 #ifdef CONFIG_DRM_TEGRA_HAVE_DISPLAY
 	if (tegra->hub) {
@@ -1360,21 +1368,25 @@ hub:
 		tegra_display_hub_cleanup(tegra->hub);
 device:
 #endif
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 	if (tegra->domain) {
 		mutex_destroy(&tegra->mm_lock);
 		drm_mm_takedown(&tegra->mm);
 		put_iova_domain(&tegra->carveout.domain);
 		iova_cache_put();
 	}
+#endif
 
 	host1x_device_exit(dev);
 poll:
 	drm_kms_helper_poll_fini(drm);
 	drm_mode_config_cleanup(drm);
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 domain:
 	if (tegra->domain)
 		iommu_domain_free(tegra->domain);
 free:
+#endif
 	kfree(tegra);
 put:
 	drm_dev_put(drm);
