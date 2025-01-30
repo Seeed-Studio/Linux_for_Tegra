@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION. All rights reserved.
 /*
  * PCIe EP controller driver for Tegra264 SoC
  *
@@ -28,6 +28,8 @@
 #include <linux/resource.h>
 #include <soc/tegra/bpmp.h>
 #include <soc/tegra/bpmp-abi.h>
+
+#include "pcie-tegra264-ep.h"
 
 /* 5 msec PERST# gpio debounce */
 #define PERST_DEBOUNCE_TIME	5000
