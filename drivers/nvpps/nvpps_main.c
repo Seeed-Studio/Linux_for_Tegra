@@ -976,10 +976,15 @@ static void nvpps_t26x_ptp_tsc_sync_config(struct platform_device *pdev)
 
 	/* Configure LOCKING_DIFF_CONFIGURATION register with lock threshold value */
 #define DEFAULT_T26X_LOCK_THRESHOLD_20US		20000  /* In nanosec */
+#define MIN_T26X_LOCK_THRESHOLD_1NS				0x1
+#define MAX_T26X_LOCK_THRESHOLD_16MS			0xFFFFFF
+
 	pdev_data->lock_threshold_val = DEFAULT_T26X_LOCK_THRESHOLD_20US;
 
 	if (of_property_read_u32(np, "ptp_tsc_lock_threshold", &pdev_data->lock_threshold_val) == 0) {
-		if (pdev_data->lock_threshold_val < 0x1) {
+		/* Locked Threshold is 24bit field value and hence cannot be more than 0xFFFFFF */
+		if ((pdev_data->lock_threshold_val < MIN_T26X_LOCK_THRESHOLD_1NS) ||
+			(pdev_data->lock_threshold_val > MAX_T26X_LOCK_THRESHOLD_16MS)) {
 			//Use default value
 			dev_warn(&pdev->dev, "ptp_tsc_lock_threshold value should be minimum 1ns(i.e 0x1). Using default value 20us(i.e 20000ns)\n");
 			pdev_data->lock_threshold_val = DEFAULT_T26X_LOCK_THRESHOLD_20US;
