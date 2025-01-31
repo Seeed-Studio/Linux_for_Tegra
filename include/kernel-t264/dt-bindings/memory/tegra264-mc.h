@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
  *
  * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
@@ -169,6 +169,13 @@
 #define TEGRA_SID_SE_SHA_VM6       (TEGRA_SID_SE | 23U)
 #define TEGRA_SID_SE_SHA_VM7       (TEGRA_SID_SE | 24U)
 
+/* Stream IDs for GP-SE AES0 data buffers for Camera Apps on VM0 */
+#define TEGRA_SID_SE_AES0_CAMERA_VM0      (TEGRA_SID_SE | 25U)
+/* Stream IDs for GP-SE AES1 data buffers for Camera Apps on VM0 */
+#define TEGRA_SID_SE_AES1_CAMERA_VM0      (TEGRA_SID_SE | 26U)
+/* Stream IDs for GP-SE SHA data buffers for Camera Apps on VM0 */
+#define TEGRA_SID_SE_SHA_CAMERA_VM0       (TEGRA_SID_SE | 27U)
+
 /* Stream IDs for GC-SE1 AES0 data buffers for 8 VMs */
 #define TEGRA_SID_SEU2_AES0_VM0    (TEGRA_SID_SEU2 | 1U)
 #define TEGRA_SID_SEU2_AES0_VM1    (TEGRA_SID_SEU2 | 2U)
@@ -198,6 +205,13 @@
 #define TEGRA_SID_SEU2_SHA_VM5     (TEGRA_SID_SEU2 | 22U)
 #define TEGRA_SID_SEU2_SHA_VM6     (TEGRA_SID_SEU2 | 23U)
 #define TEGRA_SID_SEU2_SHA_VM7     (TEGRA_SID_SEU2 | 24U)
+
+/* Stream IDs for GC-SE1 AES0 data buffers for Camera Apps on VM0 */
+#define TEGRA_SID_SEU2_AES0_CAMERA_VM0      (TEGRA_SID_SEU2 | 25U)
+/* Stream IDs for GC-SE1 AES1 data buffers for Camera Apps on VM0 */
+#define TEGRA_SID_SEU2_AES1_CAMERA_VM0      (TEGRA_SID_SEU2 | 26U)
+/* Stream IDs for GC-SE1 SHA data buffers for Camera Apps on VM0 */
+#define TEGRA_SID_SEU2_SHA_CAMERA_VM0       (TEGRA_SID_SEU2 | 27U)
 
 /* Stream IDs for GC-SE2 AES0 data buffers for 8 VMs */
 #define TEGRA_SID_SEU3_AES0_VM0    (TEGRA_SID_SEU3 | 1U)
