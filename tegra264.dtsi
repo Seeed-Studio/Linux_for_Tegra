@@ -6459,7 +6459,7 @@
 			dma-coherent;
 		};
 
-		ethernet@a808b10000 {
+		mgbe1: ethernet@a808b10000 {
 			compatible = "nvidia,tegra264-mgbe";
 			status = "disabled";
 
@@ -6531,7 +6531,7 @@
 			dma-coherent;
 		};
 
-		ethernet@a808d10000 {
+		mgbe2: ethernet@a808d10000 {
 			compatible = "nvidia,tegra264-mgbe";
 				status = "disabled";
 
@@ -6603,7 +6603,7 @@
 			dma-coherent;
 		};
 
-		ethernet@a808e10000 {
+		mgbe3: ethernet@a808e10000 {
 			compatible = "nvidia,tegra264-mgbe";
 			status = "disabled";
 
@@ -9048,7 +9048,7 @@
 			nvidia,frame-size = <8192>;
 			nvidia,ivc-timeout = <50>;
 			nvidia,test-timeout = <5000>;
-			nvidia,mem-map = <&tegra_rce &vi0 &isp &vi1 &isp1 &mgbe0>;
+			nvidia,mem-map = <&tegra_rce &vi0 &isp &vi1 &isp1>;
 			/* Memory bandwidth in kB/s during tests */
 			nvidia,test-bw = <2400000>;
 			status = "disabled";
@@ -9127,10 +9127,34 @@
 		status = "disabled";
 	};
 
-	tegra-capture-coe {
+	tegra-capture-coe0 {
 		compatible = "nvidia,tegra-camrtc-capture-coe";
 		nvidia,cam_controller = <&tegra_rce>;
 		nvidia,eth_controller = <&mgbe0>;
+		nvidia,eth_dma_chans = /bits/ 8 <7>;
+		status = "disabled";
+	};
+
+	tegra-capture-coe1 {
+		compatible = "nvidia,tegra-camrtc-capture-coe";
+		nvidia,cam_controller = <&tegra_rce>;
+		nvidia,eth_controller = <&mgbe1>;
+		nvidia,eth_dma_chans = /bits/ 8 <7>;
+		status = "disabled";
+	};
+
+	tegra-capture-coe2 {
+		compatible = "nvidia,tegra-camrtc-capture-coe";
+		nvidia,cam_controller = <&tegra_rce>;
+		nvidia,eth_controller = <&mgbe2>;
+		nvidia,eth_dma_chans = /bits/ 8 <7>;
+		status = "disabled";
+	};
+
+	tegra-capture-coe3 {
+		compatible = "nvidia,tegra-camrtc-capture-coe";
+		nvidia,cam_controller = <&tegra_rce>;
+		nvidia,eth_controller = <&mgbe3>;
 		nvidia,eth_dma_chans = /bits/ 8 <7>;
 		status = "disabled";
 	};
