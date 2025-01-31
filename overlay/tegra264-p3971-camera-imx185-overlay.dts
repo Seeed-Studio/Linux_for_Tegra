@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/*
+ * Jetson Device-tree overlay for Camera IMX185 on T264 platforms - new version
+ *
+ */
+/dts-v1/;
+/plugin/;
+
+#include "tegra264-camera-imx185-a00.dtsi"
+#include <dt-bindings/clock/tegra264-clk.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
+
+/* camera control gpio definitions */
+#define CAM0_RST_L	TEGRA264_MAIN_GPIO(V, 2)
+#define CAM0_PWDN	TEGRA264_MAIN_GPIO(AL, 1)
+#define	JETSON_COMPATIBLE	"nvidia,p3971-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264"
+
+/ {
+	overlay-name = "Jetson Camera IMX185";
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment-camera-imx185@0 {
+		target-path = "/";
+
+		board_config {
+			ids = "LPRD-002001", "LPRD-002", "LPRD-001";
+			sw-modules = "kernel";
+		};
+
+		__overlay__ {
+			bus@0 {
+				gpio@810c300000 {
+					camera-control-output-low {
+						gpio-hog;
+						output-low;
+						gpios = <CAM0_RST_L 0 CAM0_PWDN 0>;
+						label = "cam0-rst", "cam0-pwdn";
+					};
+				};
+
+				i2c@810c6d0000 {
+					tca9546@70 {
+						compatible = "nxp,pca9546";
+						reg = <0x70>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						skip_mux_detect = "yes";
+
+						i2c@0 {
+							reg = <0>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+							pca9570_a@24 {
+								compatible = "nxp,pca9570";
+								reg = <0x24>;
+								channel = "a";
+								drive_ic = "DRV8838";
+							};
+
+							imx185_a@1a {
+								/* Define any required hw resources needed by driver */
+								/* ie. clocks, io pins, power sources */
+								clocks = <&bpmp TEGRA264_CLK_EXTPERIPH1>,
+									<&bpmp TEGRA264_CLK_EXTPERIPH1>;
+								clock-names = "extperiph1", "pllp_grtba";
+								mclk = "extperiph1";
+								reset-gpios = <&gpio_main CAM0_RST_L GPIO_ACTIVE_HIGH>;
+								pwdn-gpios = <&gpio_main CAM0_PWDN GPIO_ACTIVE_HIGH>;
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
