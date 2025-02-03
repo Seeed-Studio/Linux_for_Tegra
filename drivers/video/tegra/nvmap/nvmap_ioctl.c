@@ -999,6 +999,11 @@ int nvmap_ioctl_get_sci_ipc_id(struct file *filp, void __user *arg)
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
+	if ((op.flags & (PROT_READ | PROT_WRITE)) == 0) {
+		pr_err("Invalid input flags\n");
+		return -EINVAL;
+	}
+
 	handle = nvmap_handle_get_from_id(client, op.handle);
 	if (IS_ERR_OR_NULL(handle))
 		return -ENODEV;
@@ -1060,6 +1065,11 @@ int nvmap_ioctl_handle_from_sci_ipc_id(struct file *filp, void __user *arg)
 	if (copy_from_user(&op, arg, sizeof(op))) {
 		ret =  -EFAULT;
 		goto exit;
+	}
+
+	if ((op.flags & (PROT_READ | PROT_WRITE)) == 0) {
+		pr_err("Invalid input flags\n");
+		return -EINVAL;
 	}
 
 	ret = nvmap_validate_sci_ipc_params(client, op.auth_token,
@@ -1151,18 +1161,23 @@ int nvmap_ioctl_dup_handle(struct file *filp, void __user *arg)
 	}
 #endif /* NVMAP_CONFIG_ENABLE_FOREIGN_BUFFER && NVMAP_CONFIG_HANDLE_AS_ID */
 
+	if ((op.access_flags & (PROT_READ | PROT_WRITE)) == 0) {
+		pr_err("Invalid input flags\n");
+		return -EINVAL;
+	}
+
 	if (is_nvmap_id_ro(client, op.handle, &is_ro) != 0) {
 		pr_err("Handle ID RO check failed\n");
 		return -EINVAL;
 	}
 
 	/* Don't allow duplicating RW handle from RO handle */
-	if (is_ro && op.access_flags != NVMAP_HANDLE_RO) {
+	if (is_ro && op.access_flags != PROT_READ) {
 		pr_err("Duplicating RW handle from RO handle is not allowed\n");
 		return -EPERM;
 	}
 
-	is_ro = (op.access_flags == NVMAP_HANDLE_RO);
+	is_ro = (op.access_flags == PROT_READ);
 	if (!is_ro)
 		ref = nvmap_create_handle_from_id(client, op.handle);
 	else
