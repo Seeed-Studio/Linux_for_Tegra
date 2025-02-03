@@ -55,7 +55,9 @@ struct virt_engine {
 	struct device *dev;
 	int connection_id;
 	struct tegra_drm_client client;
+#ifdef CONFIG_DEBUG_FS
 	struct dentry *actmon_debugfs_dir;
+#endif
 	struct kobject kobj;
 	struct kobj_attribute powermode_attr;
 	u32 powermode;
@@ -291,6 +293,7 @@ static int virt_engine_power_mode_change(struct virt_engine *virt, u32 ip_op_mod
 	return virt_engine_transfer(&msg, sizeof(msg));
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int mrq_debug_open(struct tegra_bpmp *bpmp, const char *name,
 			  u32 *fd, u32 *len, bool write)
 {
@@ -557,6 +560,7 @@ static void virt_engine_cleanup_actmon_debugfs(struct virt_engine *virt)
 {
 	debugfs_remove_recursive(virt->actmon_debugfs_dir);
 }
+#endif
 
 static ssize_t virt_engine_powermode_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -802,7 +806,9 @@ static int virt_engine_probe(struct platform_device *pdev)
 		goto cleanup_ivc;
 	}
 
+#ifdef CONFIG_DEBUG_FS
 	virt_engine_setup_actmon_debugfs(virt);
+#endif
 	virt_engine_sysfs_init(virt);
 
 #ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
@@ -850,7 +856,9 @@ static int virt_engine_remove(struct platform_device *pdev)
 		tegra_soc_hwpm_ip_unregister(&hwpm_ip_ops);
 	}
 #endif
+#ifdef CONFIG_DEBUG_FS
 	virt_engine_cleanup_actmon_debugfs(virt_engine);
+#endif
 	virt_engine_sysfs_exit(virt_engine);
 	virt_engine_cleanup();
 
