@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
- * Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2022-2025, NVIDIA CORPORATION. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -110,7 +110,10 @@ static unsigned long emc_freq_to_bw_t23x(unsigned long freq)
 
 unsigned long emc_freq_to_bw(unsigned long freq)
 {
-	return ops->emc_freq_to_bw(freq);
+	if (ops && ops->emc_freq_to_bw)
+		return ops->emc_freq_to_bw(freq);
+
+	return -ENODEV;
 }
 EXPORT_SYMBOL(emc_freq_to_bw);
 
@@ -121,7 +124,10 @@ static unsigned long emc_bw_to_freq_t23x(unsigned long bw)
 
 unsigned long emc_bw_to_freq(unsigned long bw)
 {
-	return ops->emc_bw_to_freq(bw);
+	if (ops && ops->emc_bw_to_freq)
+		return ops->emc_bw_to_freq(bw);
+
+	return -ENODEV;
 }
 EXPORT_SYMBOL(emc_bw_to_freq);
 
@@ -138,7 +144,10 @@ static u8 get_dram_num_channels_t26X(void)
 
 u8 get_dram_num_channels(void)
 {
-	return ops->get_dram_num_channels();
+	if (ops && ops->get_dram_num_channels)
+		return ops->get_dram_num_channels();
+
+	return -ENODEV;
 }
 EXPORT_SYMBOL(get_dram_num_channels);
 
@@ -298,8 +307,10 @@ static int __init tegra_mc_utils_init(void)
 		ops = &mc_utils_t26x_ops;
 		return tegra_mc_utils_init_t26x();
 	}
-	pr_err("mc-utils: Not able to find SOC DT node\n");
-	return -ENODEV;
+	pr_debug("%s: Not able to find SOC DT node\n", __func__);
+
+	/* Do not fail driver loading for dependent drivers */
+	return 0;
 }
 module_init(tegra_mc_utils_init);
 
