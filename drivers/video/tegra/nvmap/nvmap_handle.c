@@ -371,6 +371,12 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 	}
 
 	vm_flags = vma->vm_flags;
+	if ((vm_flags & VM_EXEC) != 0) {
+		pr_err("Executable memory is not allowed\n");
+		nvmap_release_mmap_read_lock(mm);
+		return ERR_PTR(-EINVAL);
+	}
+
 	nvmap_release_mmap_read_lock(mm);
 
 	/*
