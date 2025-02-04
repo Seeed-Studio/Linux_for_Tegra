@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 // This file contains the additional parameters which are missing from DT nodes of T234
 // available in base/tegra234.dtsi
@@ -345,10 +345,6 @@
 
 		hardware-timestamp@c1e0000 {
 			status = "disabled";
-		};
-
-		dce-fabric@de00000 {
-			compatible = "nvidia,tegra234-dce-fabric";
 		};
 
 		i2c@3160000 {
