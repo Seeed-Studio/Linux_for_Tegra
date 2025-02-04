@@ -57,63 +57,47 @@
 				  "wake4", "wake5", "wake6";
 		};
 
-		gic: interrupt-controller@f400000 {
-			#address-cells = <2>;
-			#size-cells = <2>;
-		};
-
 		pcie@140a0000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 356 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso1 TEGRA234_SID_PCIE8>;
 		};
 
 		pcie@140c0000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 358 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso0 TEGRA234_SID_PCIE9>;
 		};
 
 		pcie@140e0000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 360 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso1 TEGRA234_SID_PCIE10>;
 		};
 
 		pcie@14100000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso1 TEGRA234_SID_PCIE1>;
 		};
 
 		pcie@14120000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso1 TEGRA234_SID_PCIE2>;
 		};
 
 		pcie@14140000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso1 TEGRA234_SID_PCIE3>;
 		};
 
 		pcie@14160000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso0 TEGRA234_SID_PCIE4>;
 		};
 
 		pcie@14180000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso0 TEGRA234_SID_PCIE0>;
 		};
 
 		pcie@141a0000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso0 TEGRA234_SID_PCIE5>;
 		};
 
 		pcie@141c0000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 352 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso0 TEGRA234_SID_PCIE6>;
 		};
 
 		pcie@141e0000 {
-			interrupt-map = <0 0 0 0 &gic 0 0 GIC_SPI 354 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu_niso1 TEGRA234_SID_PCIE7>;
 		};
 
