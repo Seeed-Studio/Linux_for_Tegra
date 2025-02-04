@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * VI5 driver
  */
@@ -7,6 +7,12 @@
 #include <nvidia/conftest.h>
 
 #include <asm/ioctls.h>
+/*
+ * The host1x-next.h header must be included before the nvhost.h
+ * header, as the nvhost.h header includes the host1x.h header,
+ * which is mutually exclusive with host1x-next.h.
+ */
+#include <linux/host1x-next.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/dma-buf.h>
@@ -71,13 +77,24 @@ static int vi5_alloc_syncpt(struct platform_device *pdev,
 			uint32_t *syncpt_id)
 {
 	uint32_t id;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct host1x_syncpt *sp = NULL;
 
 	if (syncpt_id == NULL) {
 		dev_err(&pdev->dev, "%s: null argument\n", __func__);
 		return -EINVAL;
 	}
 
-	id = nvhost_get_syncpt_client_managed(pdev, name);
+	sp = host1x_syncpt_alloc(pdata->host1x, HOST1X_SYNCPT_CLIENT_MANAGED,
+				name ? name : dev_name(&pdev->dev));
+	if (!sp) {
+		dev_err(&pdev->dev,
+			"%s: allocation of requested sync point failed (name=%s, size=%d)\n",
+					__func__, name ? name : "", GFP_KERNEL);
+		return -ENOMEM;
+	}
+
+	id = host1x_syncpt_id(sp);
 	if (id == 0) {
 		dev_err(&pdev->dev, "%s: syncpt allocation failed\n", __func__);
 		return -ENODEV;
@@ -113,14 +130,35 @@ int nvhost_vi5_aggregate_constraints(struct platform_device *dev,
 
 static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct host1x_syncpt *sp = NULL;
+
 	dev_dbg(&pdev->dev, "%s: id=%u\n", __func__, id);
-	nvhost_syncpt_put_ref_ext(pdev, id);
+
+	sp = host1x_syncpt_get_by_id_noref(pdata->host1x, id);
+	if (WARN_ON(!sp))
+		return;
+
+	host1x_syncpt_put(sp);
 }
 
 static void vi5_fast_forward_syncpt(struct platform_device *pdev, uint32_t id, uint32_t threshold)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct host1x_syncpt *sp = NULL;
+	uint32_t cur;
+
 	dev_dbg(&pdev->dev, "%s: id=%u -> thresh=%u\n", __func__, id, threshold);
-	nvhost_syncpt_set_min_update(pdev, id, threshold);
+
+	sp = host1x_syncpt_get_by_id_noref(pdata->host1x, id);
+	if (WARN_ON(!sp))
+		return;
+
+	cur = host1x_syncpt_read(sp);
+	while (cur++ != threshold)
+		host1x_syncpt_incr(sp);
+
+	host1x_syncpt_read(sp);
 }
 
 static void vi5_get_gos_table(struct platform_device *pdev, int *count,

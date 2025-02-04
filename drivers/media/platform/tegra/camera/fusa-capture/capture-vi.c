@@ -23,6 +23,12 @@
 
 #include <linux/completion.h>
 #include <linux/nospec.h>
+/*
+ * The host1x-next.h header must be included before the nvhost.h
+ * header, as the nvhost.h header includes the host1x.h header,
+ * which is mutually exclusive with host1x-next.h.
+ */
+#include <linux/host1x-next.h>
 #include <linux/nvhost.h>
 #include <linux/of_platform.h>
 #include <linux/printk.h>
@@ -146,6 +152,8 @@ static int vi_capture_setup_syncpt(
 	struct syncpoint_info *sp)
 {
 	struct platform_device *pdev = chan->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct host1x_syncpt *host1x_sp;
 	uint32_t gos_index, gos_offset;
 	int err;
 
@@ -159,9 +167,13 @@ static int vi_capture_setup_syncpt(
 	if (err)
 		return err;
 
-	err = nvhost_syncpt_read_ext_check(pdev, sp->id, &sp->threshold);
-	if (err)
+	host1x_sp = host1x_syncpt_get_by_id_noref(pdata->host1x, sp->id);
+	if (!host1x_sp) {
+		err = -EINVAL;
 		goto cleanup;
+	}
+
+	sp->threshold = host1x_syncpt_read(host1x_sp);
 
 	err = chan->ops->get_syncpt_gos_backing(pdev, sp->id, &sp->shim_addr,
 				&gos_index, &gos_offset);
@@ -287,17 +299,19 @@ static int vi_capture_read_syncpt(
 	struct syncpoint_info *sp,
 	uint32_t *val)
 {
-	int err;
+	struct platform_device *pdev = chan->ndev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct host1x_syncpt *host1x_sp;
 
 	if (sp->id) {
-		err = nvhost_syncpt_read_ext_check(chan->ndev,
-						sp->id, val);
-		if (err < 0) {
+		host1x_sp = host1x_syncpt_get_by_id_noref(pdata->host1x, sp->id);
+		if (!host1x_sp) {
 			dev_err(chan->dev,
 				"%s: get syncpt %i val failed\n", __func__,
 				sp->id);
 			return -EINVAL;
 		}
+		*val = host1x_syncpt_read(host1x_sp);
 	}
 
 	return 0;
