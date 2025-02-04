@@ -339,10 +339,6 @@
 			status = "disabled";
 		};
 
-		sce-fabric@b600000 {
-			status = "disabled";
-		};
-
 		hardware-timestamp@c1e0000 {
 			status = "disabled";
 		};
