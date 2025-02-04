@@ -525,7 +525,7 @@ static __attribute__((always_inline)) inline void hyp_call44(uint16_t id, uint64
 __attribute__((no_sanitize_address))
 static inline int hyp_trace_get_mask(uint64_t *value)
 {
-	uint64_t args[4] = { 0U, 0U, 0U, 0U };
+	uint64_t args[4] = { *value, 0U, 0U, 0U };
 
 	hyp_call44(HVC_NR_TRACE_GET_EVENT_MASK, args);
 	if (args[0] == 0U)
@@ -535,9 +535,9 @@ static inline int hyp_trace_get_mask(uint64_t *value)
 }
 
 __attribute__((no_sanitize_address))
-static inline int hyp_trace_set_mask(uint64_t mask)
+static inline int hyp_trace_set_mask(uint64_t type, uint64_t value)
 {
-	uint64_t args[4] = { mask, 0U, 0U, 0U };
+	uint64_t args[4] = { type, value, 0U, 0U };
 
 	hyp_call44(HVC_NR_TRACE_SET_EVENT_MASK, args);
 	return (int) args[0];
