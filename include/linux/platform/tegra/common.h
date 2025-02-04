@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef __MACH_TEGRA_COMMON_H
@@ -23,10 +23,8 @@ extern phys_addr_t tegra_avp_kernel_start;
 extern phys_addr_t tegra_avp_kernel_size;
 void ahb_gizmo_writel(unsigned long val, void __iomem *reg);
 
-extern struct device tegra_generic_cma_dev;
 extern int tegra_with_secure_firmware;
 
-extern struct device tegra_generic_dev;
 
 u32 tegra_get_bct_strapping(void);
 u32 tegra_get_fuse_opt_subrevision(void);

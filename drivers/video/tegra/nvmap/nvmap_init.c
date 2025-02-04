@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #define pr_fmt(fmt) "%s: " fmt, __func__
@@ -31,13 +31,13 @@
 #include <soc/tegra/virt/syscalls.h>
 #endif
 
-struct device __weak tegra_generic_dev;
+static struct device tegra_generic_dev;
 
-struct device tegra_vpr_dev;
-struct device tegra_vpr1_dev;
+static struct device tegra_vpr_dev;
+static struct device tegra_vpr1_dev;
 
-struct device __weak tegra_generic_cma_dev;
-struct device __weak tegra_vpr_cma_dev;
+static struct device tegra_generic_cma_dev;
+static struct device tegra_vpr_cma_dev;
 
 static struct platform_device *pdev;
 extern ulong nvmap_init_time;
