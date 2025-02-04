@@ -6257,8 +6257,8 @@
 			};
 			pdma_h {
 				nvidia,pdma-chan = <7>;
-				nvidia,num-vdma-channels = <1>;
-				nvidia,vdma-channels = <7>;
+				nvidia,num-vdma-channels = <5>;
+				nvidia,vdma-channels = <7 8 9 10 11>;
 			};
 		};
 
@@ -6286,8 +6286,8 @@
 				nvidia,vm-num = <3>;
 			};
 			vm_irq5 {
-				nvidia,num-vm-channels = <1>;
-				nvidia,vm-channels = <7>;
+				nvidia,num-vm-channels = <5>;
+				nvidia,vm-channels = <7 8 9 10 11>;
 				nvidia,vm-num = <4>;
 			};
 		};
