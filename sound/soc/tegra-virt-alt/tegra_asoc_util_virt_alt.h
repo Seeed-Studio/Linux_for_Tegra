@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only
  *
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef __LINUX_VIRT_UTIL_H
@@ -10,7 +10,7 @@
 
 /* ARAD and Regdump controls are non-functional, hence comment them */
 #define TEGRA_REGDUMP	0
-#define TEGRA_ARAD	0
+#define TEGRA_ARAD	1
 
 #define MIXER_CONFIG_SHIFT_VALUE 16
 #define STREAM_ID_SHIFT_VALUE    16
