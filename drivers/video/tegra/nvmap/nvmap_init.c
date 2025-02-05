@@ -42,7 +42,7 @@ static struct device tegra_vpr_cma_dev;
 static struct platform_device *pdev;
 extern ulong nvmap_init_time;
 
-const struct of_device_id nvmap_of_ids[] = {
+static const struct of_device_id nvmap_of_ids[] = {
 	{ .compatible = "nvidia,carveouts" },
 	{ .compatible = "nvidia,carveouts-t18x" },
 	{ .compatible = "nvidia,carveouts-t19x" },
