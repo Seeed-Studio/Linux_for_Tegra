@@ -32,9 +32,7 @@ tegra-drm-y += \
 	gr3d.o
 endif
 
-ifeq ($(CONFIG_TEGRA_DRM_NATIVE_DIS),y)
-ccflags-y += -DCONFIG_TEGRA_DRM_NATIVE_DIS
-else
+ifneq ($(CONFIG_TEGRA_DRM_NATIVE_DIS),y)
 tegra-drm-y += \
 	falcon.o \
 	hwpm.o \

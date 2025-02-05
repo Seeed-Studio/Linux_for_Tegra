@@ -15,6 +15,11 @@ export CONFIG_DRM_TEGRA_HAVE_DISPLAY=y
 subdir-ccflags-y += -DCONFIG_DRM_TEGRA_HAVE_DISPLAY
 endif
 
+ifeq ($(NV_OOT_NVHOST_NATIVE_DIS),y)
+export CONFIG_TEGRA_DRM_NATIVE_DIS=y
+subdir-ccflags-y += -DCONFIG_TEGRA_DRM_NATIVE_DIS
+endif
+
 ifdef CONFIG_DRM
 obj-m += drm/tegra/
 endif
