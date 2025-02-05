@@ -32,6 +32,46 @@
 	debug_set_trace_event_config(pdev, event_mask,	\
 			DLA_SET_TRACE_EVENT_MASK);		\
 
+static int s_nvdla_get_pdev_from_file(struct file *file, struct platform_device **pdev)
+{
+	struct seq_file *priv_data;
+	struct nvdla_device *nvdla_dev;
+
+	if (!file || !pdev)
+		return -1;
+
+	priv_data = file->private_data;
+	if (!priv_data)
+		return -1;
+
+	nvdla_dev = (struct nvdla_device *) priv_data->private;
+	if (!nvdla_dev)
+		return -1;
+
+	*pdev = nvdla_dev->pdev;
+	if (!*pdev)
+		return -1;
+
+	return 0;
+}
+
+static int s_nvdla_get_pdev_from_seq(struct seq_file *s, struct platform_device **pdev)
+{
+	struct nvdla_device *nvdla_dev;
+
+	if (!s || !s->private || !pdev)
+		return -1;
+
+	nvdla_dev = (struct nvdla_device *) s->private;
+	*pdev = nvdla_dev->pdev;
+
+	if (!*pdev)
+		return -1;
+
+	return 0;
+}
+
+
 static int nvdla_fw_ver_show(struct seq_file *s, void *unused)
 {
 	struct nvdla_device *nvdla_dev;
@@ -109,7 +149,7 @@ static int debug_dla_tracedump_show(struct seq_file *s, void *data)
 
 				/* skip extra new line chars */
 				while ((bufptr[i] == '\n') &&
-				    (cindex < datasize)) {
+					(cindex < datasize)) {
 					i++;
 					i = ((i - offset) %
 						(TRACE_BUFFER_SIZE - offset)) +
@@ -146,12 +186,12 @@ static int debug_dla_eventmask_help_show(struct seq_file *s, void *data)
 	seq_printf(s, "%s\n",
 		"\nDla Firmware has following different tracing categories:");
 	seq_printf(s, "%s\n", "  BIT(0) -  Processor\n"
-			      "  BIT(1) -  Falcon\n"
-			      "  BIT(2) -  Events\n"
-			      "  BIT(3) -  Scheduler Queue\n"
-			      "  BIT(4) -  Operation Cache\n");
+				  "  BIT(1) -  Falcon\n"
+				  "  BIT(2) -  Events\n"
+				  "  BIT(3) -  Scheduler Queue\n"
+				  "  BIT(4) -  Operation Cache\n");
 	seq_printf(s, "%s\n", "To enable all type of tracing events,"
-			      "set all bits ( 0 - 4 ): ");
+				  "set all bits ( 0 - 4 ): ");
 	seq_printf(s, "%s\n\n", "  echo 31 > events_mask");
 	return 0;
 }
@@ -442,6 +482,375 @@ static int debug_dla_fw_ping_show(struct seq_file *s, void *data)
 	return 0;
 }
 
+// fw dvfs show functions
+static int debug_dla_fw_dvfs_mode_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[DVFS] mode show");
+	return 0;
+}
+
+static int debug_dla_fw_dvfs_enable_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[DVFS] enable show");
+	return 0;
+}
+
+static int debug_dla_fw_dvfs_freqlist_khz_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[DVFS] freqlist_khz show");
+	return 0;
+}
+
+static int debug_dla_fw_dvfs_periodicity_ms_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[DVFS] periodicity_ms show");
+	return 0;
+}
+
+static int debug_dla_fw_dvfs_statdump_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[DVFS] statdump show");
+	return 0;
+}
+
+// ctrl clk show functions
+static int debug_dla_ctrl_clk_activetime_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/CLK] activetime_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_clk_enable_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/CLK] enable show");
+	return 0;
+}
+
+static int debug_dla_ctrl_clk_core_khz_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/CLK] core_khz show");
+	return 0;
+}
+
+static int debug_dla_ctrl_clk_mcu_khz_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/CLK] mcu_khz show");
+	return 0;
+}
+
+static int debug_dla_ctrl_clk_idlecount_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/CLK] idlecount show");
+	return 0;
+}
+
+static int debug_dla_ctrl_clk_idledelay_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/CLK] idledelay_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_clk_idletime_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/CLK] idletime_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_clk_statdump_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/CLK] statdump show");
+	return 0;
+}
+
+// ctrl power show functions
+static int debug_dla_ctrl_power_activetime_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] activetime_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_power_enable_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] enable show");
+	return 0;
+}
+
+static int debug_dla_ctrl_power_idlecount_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] idlecount show");
+	return 0;
+}
+
+static int debug_dla_ctrl_power_idledelay_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] idledelay_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_power_idletime_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] idletime_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_power_mode_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] mode show");
+	return 0;
+}
+
+static int debug_dla_ctrl_power_statdump_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] statdump show");
+	return 0;
+}
+
+static int debug_dla_ctrl_power_vftable_mv_khz_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] vftable_mv_khz show");
+	return 0;
+}
+
+static int debug_dla_ctrl_power_voltage_mv_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/POWER] voltage_mv show");
+	return 0;
+}
+
+// ctrl rail show functions
+static int debug_dla_ctrl_rail_activetime_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/RAIL] activetime_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_rail_enable_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/RAIL] enable show");
+	return 0;
+}
+
+static int debug_dla_ctrl_rail_idlecount_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/RAIL] idlecount show");
+	return 0;
+}
+
+static int debug_dla_ctrl_rail_idledelay_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/RAIL] idledelay_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_rail_idletime_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/RAIL] idletime_us show");
+	return 0;
+}
+
+static int debug_dla_ctrl_rail_statdump_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	(void) data;;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		return -1;
+	nvdla_dbg_info(pdev,  "[CTRL/RAIL] statdump show");
+	return 0;
+}
+
 /*
  * When the user calls this debugfs node, the configurable
  * window size value is passed down to the FW
@@ -531,8 +940,6 @@ static ssize_t debug_dla_fw_ping_write(struct file *file,
 		const char __user *buffer, size_t count, loff_t *off)
 {
 	int err;
-	struct seq_file *priv_data;
-	struct nvdla_device *nvdla_dev;
 	struct platform_device *pdev;
 	long write_value;
 
@@ -541,16 +948,8 @@ static ssize_t debug_dla_fw_ping_write(struct file *file,
 	if (err < 0)
 		goto fail;
 
-	priv_data = file->private_data;
-	if (priv_data == NULL)
-		goto fail;
-
-	nvdla_dev = (struct nvdla_device *) priv_data->private;
-	if (nvdla_dev == NULL)
-		goto fail;
-
-	pdev = nvdla_dev->pdev;
-	if (pdev == NULL)
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
 		goto fail;
 
 	if (write_value > 0) {
@@ -581,6 +980,323 @@ static ssize_t debug_dla_fw_ping_write(struct file *file,
 fail:
 	return -1;
 }
+
+static ssize_t debug_dla_fw_dvfs_mode_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[DVFS] mode = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_fw_dvfs_enable_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[DVFS] enable = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_fw_dvfs_freqlist_khz_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[DVFS] freqlist_khz = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_fw_dvfs_periodicity_ms_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[DVFS] periodicity_ms = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+// ctrl clk write functions
+static ssize_t debug_dla_ctrl_clk_enable_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] enable = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_ctrl_clk_core_khz_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] core_khz = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_ctrl_clk_mcu_khz_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] mcu_khz = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_ctrl_clk_idledelay_us_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] idledelay_us = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+// ctrl power write functions
+static ssize_t debug_dla_ctrl_power_enable_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] enable = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_ctrl_power_idledelay_us_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] idledelay_us = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_ctrl_power_mode_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] mode = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+// ctrl rail write functions
+static ssize_t debug_dla_ctrl_rail_enable_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] enable = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_ctrl_rail_idledelay_us_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] idledelay_us = %u\n", (unsigned int) write_value);
+
+	return count;
+
+fail:
+	return -1;
+}
+
+
 
 static int debug_dla_enable_trace_open(struct inode *inode, struct file *file)
 {
@@ -630,6 +1346,147 @@ static int debug_dla_fw_stat_window_open(struct inode *inode, struct file *file)
 static int debug_dla_fw_ping_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, debug_dla_fw_ping_show, inode->i_private);
+}
+
+// fw dvfs open callback functions
+static int debug_dla_fw_dvfs_mode_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_fw_dvfs_mode_show, inode->i_private);
+}
+
+static int debug_dla_fw_dvfs_enable_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_fw_dvfs_enable_show, inode->i_private);
+}
+
+static int debug_dla_fw_dvfs_freqlist_khz_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_fw_dvfs_freqlist_khz_show, inode->i_private);
+}
+
+static int debug_dla_fw_dvfs_periodicity_ms_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_fw_dvfs_periodicity_ms_show, inode->i_private);
+}
+
+static int debug_dla_fw_dvfs_statdump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_fw_dvfs_statdump_show, inode->i_private);
+}
+
+// ctrl clk open callback functions
+static int debug_dla_ctrl_clk_activetime_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_clk_activetime_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_clk_enable_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_clk_enable_show, inode->i_private);
+}
+static int debug_dla_ctrl_clk_core_khz_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_clk_core_khz_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_clk_mcu_khz_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_clk_mcu_khz_show, inode->i_private);
+}
+static int debug_dla_ctrl_clk_idlecount_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_clk_idlecount_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_clk_idledelay_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_clk_idledelay_us_show, inode->i_private);
+}
+static int debug_dla_ctrl_clk_idletime_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_clk_idletime_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_clk_statdump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_clk_statdump_show, inode->i_private);
+}
+
+// ctrl power open callback functions
+static int debug_dla_ctrl_power_activetime_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_activetime_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_enable_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_enable_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_idlecount_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_idlecount_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_idledelay_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_idledelay_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_mode_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_mode_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_idletime_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_idletime_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_statdump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_statdump_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_vftable_mv_khz_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_vftable_mv_khz_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_voltage_mv_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_voltage_mv_show, inode->i_private);
+}
+
+// ctrl rail open callback functions
+static int debug_dla_ctrl_rail_activetime_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_rail_activetime_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_rail_enable_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_rail_enable_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_rail_idlecount_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_rail_idlecount_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_rail_idledelay_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_rail_idledelay_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_rail_idletime_us_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_rail_idletime_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_rail_statdump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_rail_statdump_show, inode->i_private);
 }
 
 static int debug_set_trace_event_config(struct platform_device *pdev,
@@ -942,9 +1799,222 @@ static const struct file_operations debug_dla_ping_fops = {
 		.write		= debug_dla_fw_ping_write,
 };
 
+// fw dvfs file operations
+static const struct file_operations debug_dla_fw_dvfs_mode_fops = {
+		.open		= debug_dla_fw_dvfs_mode_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_fw_dvfs_mode_write,
+};
+
+static const struct file_operations debug_dla_fw_dvfs_enable_fops = {
+		.open		= debug_dla_fw_dvfs_enable_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_fw_dvfs_enable_write,
+};
+
+static const struct file_operations debug_dla_fw_dvfs_freqlist_khz_fops = {
+		.open		= debug_dla_fw_dvfs_freqlist_khz_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_fw_dvfs_freqlist_khz_write,
+};
+
+static const struct file_operations debug_dla_fw_dvfs_periodicity_ms_fops = {
+		.open		= debug_dla_fw_dvfs_periodicity_ms_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_fw_dvfs_periodicity_ms_write,
+};
+
+static const struct file_operations debug_dla_fw_dvfs_statdump_fops = {
+		.open		= debug_dla_fw_dvfs_statdump_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+// ctrl clock file operations
+static const struct file_operations debug_dla_ctrl_clk_activetime_us_fops = {
+		.open		= debug_dla_ctrl_clk_activetime_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_clk_enable_fops = {
+		.open		= debug_dla_ctrl_clk_enable_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_clk_enable_write,
+};
+
+static const struct file_operations debug_dla_ctrl_clk_core_khz_fops = {
+		.open		= debug_dla_ctrl_clk_core_khz_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_clk_core_khz_write,
+};
+
+static const struct file_operations debug_dla_ctrl_clk_mcu_khz_fops = {
+		.open		= debug_dla_ctrl_clk_mcu_khz_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_clk_mcu_khz_write,
+};
+
+static const struct file_operations debug_dla_ctrl_clk_idlecount_fops = {
+		.open		= debug_dla_ctrl_clk_idlecount_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_clk_idledelay_us_fops = {
+		.open		= debug_dla_ctrl_clk_idledelay_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_clk_idledelay_us_write,
+};
+
+static const struct file_operations debug_dla_ctrl_clk_idletime_us_fops = {
+		.open		= debug_dla_ctrl_clk_idletime_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_clk_statdump_fops = {
+		.open		= debug_dla_ctrl_clk_statdump_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+// ctrl power file operations
+static const struct file_operations debug_dla_ctrl_power_activetime_us_fops = {
+		.open		= debug_dla_ctrl_power_activetime_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_power_enable_fops = {
+		.open		= debug_dla_ctrl_power_enable_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_power_enable_write,
+};
+
+static const struct file_operations debug_dla_ctrl_power_idlecount_fops = {
+		.open		= debug_dla_ctrl_power_idlecount_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_power_idledelay_us_fops = {
+		.open		= debug_dla_ctrl_power_idledelay_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_power_idledelay_us_write,
+};
+
+static const struct file_operations debug_dla_ctrl_power_idletime_us_fops = {
+		.open		= debug_dla_ctrl_power_idletime_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_power_mode_fops = {
+		.open		= debug_dla_ctrl_power_mode_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_power_mode_write,
+};
+
+static const struct file_operations debug_dla_ctrl_power_statdump_fops = {
+		.open		= debug_dla_ctrl_power_statdump_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_power_vftable_mv_khz_fops = {
+		.open		= debug_dla_ctrl_power_vftable_mv_khz_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_power_voltage_mv_fops = {
+		.open		= debug_dla_ctrl_power_voltage_mv_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+// ctrl rail file operations
+static const struct file_operations debug_dla_ctrl_rail_activetime_us_fops = {
+		.open		= debug_dla_ctrl_rail_activetime_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_rail_enable_fops = {
+		.open		= debug_dla_ctrl_rail_enable_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_rail_enable_write,
+};
+
+static const struct file_operations debug_dla_ctrl_rail_idlecount_fops = {
+		.open		= debug_dla_ctrl_rail_idlecount_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_rail_idledelay_us_fops = {
+		.open		= debug_dla_ctrl_rail_idledelay_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_rail_idledelay_us_write,
+};
+
+static const struct file_operations debug_dla_ctrl_rail_idletime_us_fops = {
+		.open		= debug_dla_ctrl_rail_idletime_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
+static const struct file_operations debug_dla_ctrl_rail_statdump_fops = {
+		.open		= debug_dla_ctrl_rail_statdump_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
 static void dla_fw_debugfs_init(struct platform_device *pdev)
 {
-	struct dentry *fw_dir, *fw_trace, *events, *fw_gcov;
+	struct dentry *fw_dir, *fw_trace, *events, *fw_gcov, *fw_dvfs;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct dentry *dla_debugfs_root = pdata->debugfs;
@@ -956,78 +2026,147 @@ static void dla_fw_debugfs_init(struct platform_device *pdev)
 	if (!fw_dir)
 		return;
 
-	if (!debugfs_create_file("version", S_IRUGO, fw_dir,
-			nvdla_dev, &nvdla_fw_ver_fops))
-		goto trace_failed;
-
-	if (!debugfs_create_file("reload", 0600, fw_dir,
-			nvdla_dev, &nvdla_fw_reload_fops))
-		goto trace_failed;
-
 	fw_trace = debugfs_create_dir("trace", fw_dir);
 	if (!fw_trace)
-		goto trace_failed;
+		goto cleanup;
 
-	if (!debugfs_create_file("enable", S_IRUGO | S_IWUSR, fw_trace,
-			nvdla_dev, &debug_dla_enable_trace_fops))
-		goto trace_failed;
-
-	if (!debugfs_create_file("text_trace", S_IRUGO, fw_trace,
-			nvdla_dev, &debug_dla_event_trace_fops))
-		goto trace_failed;
-
-	if (!debugfs_create_file("bin_trace", S_IRUGO, fw_trace,
-			nvdla_dev, &debug_dla_bin_event_trace_fops))
-		goto trace_failed;
-
-	events = debugfs_create_dir("events", fw_trace);
-	if (!events)
-		goto event_failed;
-
-	if (!debugfs_create_file("category", S_IWUSR | S_IRUGO, events,
-			nvdla_dev, &debug_dla_eventmask_fops)) {
-		goto event_failed;
+	if (!debugfs_create_file("version", 0444, fw_dir, nvdla_dev,
+							&nvdla_fw_ver_fops) ||
+		!debugfs_create_file("reload", 0600, fw_dir, nvdla_dev,
+							&nvdla_fw_reload_fops) ||
+		!debugfs_create_file("utilization_rate", 0400, fw_dir, nvdla_dev,
+							&debug_dla_resource_util_fops) ||
+		!debugfs_create_file("stat_window_size", 0600, fw_dir, nvdla_dev,
+							&debug_dla_stat_window_fops) ||
+		!debugfs_create_file("ping", 0600, fw_dir, nvdla_dev,
+							&debug_dla_ping_fops) ||
+		!debugfs_create_file("enable", 0644, fw_trace, nvdla_dev,
+							&debug_dla_enable_trace_fops) ||
+		!debugfs_create_file("text_trace", 0444, fw_trace, nvdla_dev,
+							&debug_dla_event_trace_fops) ||
+		!debugfs_create_file("bin_trace", 0444, fw_trace, nvdla_dev,
+							&debug_dla_bin_event_trace_fops)) {
+		goto cleanup;
 	}
 
-	if (!debugfs_create_file("help", S_IRUGO, events,
-			nvdla_dev, &debug_dla_eventmask_help_fops)) {
-		goto event_failed;
+	events = debugfs_create_dir("events", fw_trace);
+	if (!events ||
+		!debugfs_create_file("category", 0644, events, nvdla_dev,
+							&debug_dla_eventmask_fops) ||
+		!debugfs_create_file("help", 0444, events, nvdla_dev,
+							&debug_dla_eventmask_help_fops)) {
+		goto cleanup;
 	}
 
 	fw_gcov = debugfs_create_dir("gcov", fw_dir);
-	if (!fw_gcov)
-		goto gcov_failed;
+	if (!fw_gcov ||
+		!debugfs_create_file("enable", 0644, fw_gcov, nvdla_dev,
+							&debug_dla_en_fw_gcov_fops) ||
+		!debugfs_create_file("gcda", 0444, fw_gcov, nvdla_dev,
+							&debug_dla_fw_gcov_gcda_fops)) {
+		goto cleanup;
+	}
 
-	if (!debugfs_create_file("enable", S_IRUGO | S_IWUSR, fw_gcov,
-			nvdla_dev, &debug_dla_en_fw_gcov_fops))
-		goto gcov_failed;
-
-	if (!debugfs_create_file("gcda", S_IRUGO, fw_gcov,
-			nvdla_dev, &debug_dla_fw_gcov_gcda_fops))
-		goto gcov_failed;
-
-	if (!debugfs_create_file("utilization_rate", S_IRUSR, fw_dir,
-			nvdla_dev, &debug_dla_resource_util_fops))
-		goto trace_failed;
-
-	if (!debugfs_create_file("stat_window_size", S_IRUSR | S_IWUSR, fw_dir,
-			nvdla_dev, &debug_dla_stat_window_fops))
-		goto trace_failed;
-
-	if (!debugfs_create_file("ping", 0600, fw_dir,
-			nvdla_dev, &debug_dla_ping_fops))
-		goto trace_failed;
+	fw_dvfs = debugfs_create_dir("dvfs", fw_dir);
+	if (!fw_dvfs ||
+		!debugfs_create_file("mode", 0600, fw_dvfs, nvdla_dev,
+							&debug_dla_fw_dvfs_mode_fops) ||
+		!debugfs_create_file("enable", 0600, fw_dvfs, nvdla_dev,
+							&debug_dla_fw_dvfs_enable_fops) ||
+		!debugfs_create_file("freqlist_khz", 0600, fw_dvfs, nvdla_dev,
+							&debug_dla_fw_dvfs_freqlist_khz_fops) ||
+		!debugfs_create_file("periodicity_ms", 0600, fw_dvfs, nvdla_dev,
+							&debug_dla_fw_dvfs_periodicity_ms_fops) ||
+		!debugfs_create_file("statdump", 0400, fw_dvfs, nvdla_dev,
+							&debug_dla_fw_dvfs_statdump_fops)) {
+		goto cleanup;
+	}
 
 	return;
 
-gcov_failed:
-	debugfs_remove_recursive(fw_gcov);
-event_failed:
-	debugfs_remove_recursive(events);
-	return;
-
-trace_failed:
+cleanup:
 	debugfs_remove_recursive(fw_dir);
+}
+
+static void dla_ctrl_debugfs_init(struct platform_device *pdev)
+{
+	struct dentry *ctrl_dir, *ctrl_clk, *ctrl_power, *ctrl_rail;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+	struct dentry *dla_debugfs_root = pdata->debugfs;
+
+	if (!dla_debugfs_root)
+		return;
+
+	ctrl_dir = debugfs_create_dir("ctrl", dla_debugfs_root);
+	if (!ctrl_dir)
+		return;
+
+	ctrl_clk = debugfs_create_dir("clk", ctrl_dir);
+	if (!ctrl_clk ||
+		!debugfs_create_file("activetime_us", 0400, ctrl_clk, nvdla_dev,
+							&debug_dla_ctrl_clk_activetime_us_fops) ||
+		!debugfs_create_file("enable", 0600, ctrl_clk, nvdla_dev,
+							&debug_dla_ctrl_clk_enable_fops) ||
+		!debugfs_create_file("core_khz", 0600, ctrl_clk, nvdla_dev,
+							&debug_dla_ctrl_clk_core_khz_fops) ||
+		!debugfs_create_file("mcu_khz", 0600, ctrl_clk, nvdla_dev,
+							&debug_dla_ctrl_clk_mcu_khz_fops) ||
+		!debugfs_create_file("idlecount", 0400, ctrl_clk, nvdla_dev,
+							&debug_dla_ctrl_clk_idlecount_fops) ||
+		!debugfs_create_file("idledelay_us", 0600, ctrl_clk, nvdla_dev,
+							&debug_dla_ctrl_clk_idledelay_us_fops) ||
+		!debugfs_create_file("idletime_us", 0400, ctrl_clk, nvdla_dev,
+							&debug_dla_ctrl_clk_idletime_us_fops) ||
+		!debugfs_create_file("statdump", 0400, ctrl_clk, nvdla_dev,
+							&debug_dla_ctrl_clk_statdump_fops)) {
+		goto cleanup;
+	}
+
+	ctrl_power = debugfs_create_dir("power", ctrl_dir);
+	if (!ctrl_power ||
+		!debugfs_create_file("activetime_us", 0400, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_activetime_us_fops) ||
+		!debugfs_create_file("enable", 0600, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_enable_fops) ||
+		!debugfs_create_file("idlecount", 0400, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_idlecount_fops) ||
+		!debugfs_create_file("idledelay_us", 0600, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_idledelay_us_fops) ||
+		!debugfs_create_file("idletime_us", 0400, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_idletime_us_fops) ||
+		!debugfs_create_file("mode", 0600, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_mode_fops) ||
+		!debugfs_create_file("statdump", 0400, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_statdump_fops) ||
+		!debugfs_create_file("vftable_mv_khz", 0400, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_vftable_mv_khz_fops) ||
+		!debugfs_create_file("voltage_mv", 0400, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_voltage_mv_fops)) {
+		goto cleanup;
+	}
+
+	ctrl_rail = debugfs_create_dir("rail", ctrl_dir);
+	if (!ctrl_rail ||
+		!debugfs_create_file("activetime_us", 0400, ctrl_rail, nvdla_dev,
+							&debug_dla_ctrl_rail_activetime_us_fops) ||
+		!debugfs_create_file("enable", 0600, ctrl_rail, nvdla_dev,
+							&debug_dla_ctrl_rail_enable_fops) ||
+		!debugfs_create_file("idlecount", 0400, ctrl_rail, nvdla_dev,
+							&debug_dla_ctrl_rail_idlecount_fops) ||
+		!debugfs_create_file("idledelay_us", 0600, ctrl_rail, nvdla_dev,
+							&debug_dla_ctrl_rail_idledelay_us_fops) ||
+		!debugfs_create_file("idletime_us", 0400, ctrl_rail, nvdla_dev,
+							&debug_dla_ctrl_rail_idletime_us_fops) ||
+		!debugfs_create_file("statdump", 0400, ctrl_rail, nvdla_dev,
+							&debug_dla_ctrl_rail_statdump_fops)) {
+		goto cleanup;
+	}
+
+	return;
+
+cleanup:
+	debugfs_remove_recursive(ctrl_dir);
 }
 
 #ifdef CONFIG_PM
@@ -1259,14 +2398,14 @@ void nvdla_debug_init(struct platform_device *pdev)
 	if (!de)
 		return;
 
-	debugfs_create_u32("debug_mask", S_IRUGO | S_IWUSR, de,
+	debugfs_create_u32("debug_mask", 0644, de,
 			&nvdla_dev->dbg_mask);
 	debugfs_create_u32("bitbang", 0644, de, &nvdla_dev->bitbang);
 #ifdef CONFIG_TEGRA_NVDLA_TRACE_PRINTK
-	debugfs_create_u32("en_trace", S_IRUGO | S_IWUSR, de,
+	debugfs_create_u32("en_trace", 0644, de,
 			&nvdla_dev->en_trace);
 #endif
-	debugfs_create_u32("submit_mode", S_IRUGO | S_IWUSR, de,
+	debugfs_create_u32("submit_mode", 0644, de,
 			&nvdla_dev->submit_mode);
 
 	/* Check if isolate context enabled if submit mode is CHANNEL */
@@ -1282,4 +2421,5 @@ void nvdla_debug_init(struct platform_device *pdev)
 #endif
 
 	dla_fw_debugfs_init(pdev);
+	dla_ctrl_debugfs_init(pdev);
 }
