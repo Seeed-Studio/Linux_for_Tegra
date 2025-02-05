@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -33,6 +33,14 @@ static const struct dce_platform_data t234_dce_platform_data = {
 	.use_physical_id = false,
 };
 
+static const struct dce_platform_data t256_dce_platform_data = {
+	.stream_id = 0x0,
+	.hsp_id = 0x0,
+	.fw_name = "display-t256-dce.bin",
+	.fw_info_valid = false,
+	.use_physical_id = false,
+};
+
 static const struct dce_platform_data t264_dce_platform_data = {
 	.stream_id = 0x0,
 	.hsp_id = 0x0,
@@ -44,6 +52,10 @@ const struct of_device_id tegra_dce_of_match[] = {
 	{
 		.compatible = "nvidia,tegra234-dce",
 		.data = (struct dce_platform_data *)&t234_dce_platform_data
+	},
+	{
+		.compatible = "nvidia,tegra256-dce",
+		.data = (struct dce_platform_data *)&t256_dce_platform_data
 	},
 	{
 		.compatible = "nvidia,tegra264-dce",
@@ -222,6 +234,9 @@ static int dce_init_hsp_hal_fn(struct platform_device *pdev,
 	if (of_device_is_compatible(node, "nvidia,tegra234-dce")) {
 		dev_info(&pdev->dev, "Setting DCE HSP functions for tegra234-dce");
 		DCE_HSP_INIT_T234(d->hsp);
+	} else if (of_device_is_compatible(node, "nvidia,tegra256-dce")) {
+		dev_info(&pdev->dev, "Setting DCE HSP functions for tegra256-dce");
+		DCE_HSP_INIT_T264(d->hsp);
 	} else if (of_device_is_compatible(node, "nvidia,tegra264-dce")) {
 		dev_info(&pdev->dev, "Setting DCE HSP functions for tegra234-dce");
 		DCE_HSP_INIT_T264(d->hsp);
