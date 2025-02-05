@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -444,6 +444,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	u32 pval = 0;
 	u32 error_threshold;
 	int ret;
+	resource_size_t tmp_u64;
 
 	twdt_t18x = devm_kzalloc(&pdev->dev, sizeof(*twdt_t18x), GFP_KERNEL);
 	if (!twdt_t18x)
@@ -544,8 +545,14 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 
+		/* Check for overflow */
+		if (check_add_overflow(res_wdt->start, (resource_size_t)(pval * 0x1000), &tmp_u64)) {
+			dev_err(dev, "Adjust address for WDT exceeded\n");
+			return -EINVAL;
+		}
+
 		/* Adjust address for WDT */
-		ret = adjust_resource(res_wdt, res_wdt->start + pval * 0x1000,
+		ret = adjust_resource(res_wdt, tmp_u64,
 				      res_wdt->end - res_wdt->start);
 		if (ret < 0) {
 			dev_err(dev, "Cannot adjust address of WDT: %d\n", ret);
