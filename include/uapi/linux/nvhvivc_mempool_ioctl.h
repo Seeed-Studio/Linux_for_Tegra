@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
-#ifndef __UAPI_NVHVIVC_MEMPOOL_IOCTL_H__
-#define __UAPI_NVHVIVC_MEMPOOL_IOCTL_H__
+#ifndef NVHVIVC_MEMPOOL_IOCTL_H
+#define NVHVIVC_MEMPOOL_IOCTL_H
 
 #include <linux/ioctl.h>
 
@@ -19,4 +19,4 @@
 
 #define TEGRA_MPLUSERSPACE_IOCTL_NUMBER_MAX 1
 
-#endif /* __UAPI_NVHVIVC_MEMPOOL_IOCTL_H__ */
+#endif /* NVHVIVC_MEMPOOL_IOCTL_H */
