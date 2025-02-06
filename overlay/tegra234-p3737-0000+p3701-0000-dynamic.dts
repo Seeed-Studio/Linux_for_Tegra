@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 /dts-v1/;
 /plugin/;
@@ -53,7 +53,10 @@
 					"Speaker",	"CVB-RT Int Spk",
 					"Microphone",	"CVB-RT Int Mic";
 
-				routing =
+				routing = /* I2S1 <-> RT5640 */
+					"CVB-RT AIF1 Playback",       "I2S1 DAP-Playback",
+					"I2S1 DAP-Capture",           "CVB-RT AIF1 Capture",
+					/* RT5640 codec controls */
 					"CVB-RT Headphone Jack",     "CVB-RT HPOL",
 					"CVB-RT Headphone Jack",     "CVB-RT HPOR",
 					"CVB-RT IN1P",		     "CVB-RT Mic Jack",

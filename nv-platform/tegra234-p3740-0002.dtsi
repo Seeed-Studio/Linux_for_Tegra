@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
 
@@ -122,6 +122,10 @@
 			"Microphone",   "CVB-RT Int Mic";
 
 		routing =
+			/* I2S4 <-> RT5640 */
+			"CVB-RT AIF1 Playback",       "I2S4 DAP-Playback",
+			"I2S4 DAP-Capture",           "CVB-RT AIF1 Capture",
+			/* RT5640 codec controls */
 			"CVB-RT Headphone Jack",     "CVB-RT HPOL",
 			"CVB-RT Headphone Jack",     "CVB-RT HPOR",
 			"CVB-RT IN1P",               "CVB-RT Mic Jack",

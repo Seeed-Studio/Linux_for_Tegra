@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include "nv-soc/tegra234-overlay.dtsi"
 #include "nv-soc/tegra234-soc-audio-dai-links.dtsi"
@@ -314,43 +314,5 @@
 
 	soctherm-oc-event {
 		status = "okay";
-	};
-
-	sound {
-		status = "okay";
-		compatible = "nvidia,tegra186-audio-graph-card",
-			   "nvidia,tegra186-ape";
-		clocks = <&bpmp TEGRA234_CLK_PLLA>,
-		       <&bpmp TEGRA234_CLK_PLLA_OUT0>,
-		       <&bpmp TEGRA234_CLK_AUD_MCLK>;
-		clock-names = "pll_a", "plla_out0", "extern1";
-		assigned-clocks = <&bpmp TEGRA234_CLK_AUD_MCLK>;
-		assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLA_OUT0>;
-
-		nvidia-audio-card,name = "NVIDIA IGX500 Orin APE";
-
-		nvidia-audio-card,mclk-fs = <256>;
-
-		nvidia-audio-card,widgets =
-			"Headphone",    "CVB-RT Headphone Jack",
-			"Microphone",   "CVB-RT Mic Jack",
-			"Microphone",   "CVB-RT Int Mic";
-
-		nvidia-audio-card,routing =
-			"CVB-RT Headphone Jack",     "CVB-RT HPOL",
-			"CVB-RT Headphone Jack",     "CVB-RT HPOR",
-			"CVB-RT IN1P",               "CVB-RT Mic Jack",
-			"CVB-RT IN2P",               "CVB-RT Mic Jack",
-			"CVB-RT DMIC1",              "CVB-RT Int Mic",
-			"CVB-RT DMIC2",              "CVB-RT Int Mic";
-
-		/* I2S4 dai node */
-		nvidia-audio-card,dai-link@79 {
-			link-name = "rt5640-playback";
-			codec {
-				sound-dai = <&rt5640 0>;
-				prefix = "CVB-RT";
-			};
-		};
 	};
 };

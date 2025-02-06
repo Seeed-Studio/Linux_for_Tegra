@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
 	tegra_sound: sound {
-		nvidia,ahub-c2c-links;
-
 		/* mixer-controls node provide controls to override PCM params */
 		mixer-controls {
 			compatible = "nvidia,tegra234-mixer-control";
