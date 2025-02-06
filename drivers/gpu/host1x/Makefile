@@ -10,8 +10,8 @@ host1x-y = \
 	channel.o \
 	job.o \
 	debug.o \
-	fence.o \
-	actmon.o
+	fence.o
+
 
 ifneq ($(filter y, $(CONFIG_ARCH_TEGRA_2x_SOC) $(CONFIG_ARCH_TEGRA_3x_SOC)),)
 host1x-y += hw/host1x01.o
@@ -25,8 +25,7 @@ host1x-$(CONFIG_ARCH_TEGRA_234_SOC) += hw/host1x08.o
 host1x-$(CONFIG_ARCH_TEGRA_264_SOC) += hw/host1x09.o
 
 host1x-$(CONFIG_DRM_TEGRA_HAVE_DISPLAY) += mipi.o
-
-host1x-$(CONFIG_IOMMU_API) += \
-	context.o
+host1x-$(CONFIG_PM_DEVFREQ) += actmon.o
+host1x-$(CONFIG_IOMMU_API) += context.o
 
 obj-m := host1x.o

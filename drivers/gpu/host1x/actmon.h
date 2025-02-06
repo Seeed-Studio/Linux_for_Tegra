@@ -2,7 +2,7 @@
 /*
  * Tegra host1x Actmon
  *
- * Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef HOST1X_ACTMON_H
@@ -44,6 +44,12 @@ struct host1x_actmon {
 
 struct host1x;
 
+#ifdef CONFIG_PM_DEVFREQ
 void host1x_actmon_handle_interrupt(struct host1x *host, int classid);
+#else
+static inline void host1x_actmon_handle_interrupt(struct host1x *host, int classid)
+{
+}
+#endif
 
 #endif

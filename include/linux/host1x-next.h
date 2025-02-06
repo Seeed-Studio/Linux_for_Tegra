@@ -581,6 +581,7 @@ static inline void host1x_memory_context_unmap(struct host1x_context_mapping *m)
 }
 #endif
 
+#ifdef CONFIG_PM_DEVFREQ
 int host1x_actmon_read_avg_count(struct host1x_client *client);
 int host1x_actmon_register(struct host1x_client *client);
 void host1x_actmon_unregister(struct host1x_client *client);
@@ -597,5 +598,49 @@ void host1x_actmon_update_active_wmark(struct host1x_client *client,
 				       u32 consec_lower_wmark,
 				       bool upper_wmark_enabled,
 				       bool lower_wmark_enabled);
+#else
+static inline int host1x_actmon_read_avg_count(struct host1x_client *client)
+{
+	return -ENODEV;
+}
+
+static inline int host1x_actmon_register(struct host1x_client *client)
+{
+	return -ENODEV;
+}
+
+static inline void host1x_actmon_unregister(struct host1x_client *client)
+{
+}
+
+static inline void host1x_actmon_enable(struct host1x_client *client)
+{
+}
+
+static inline void host1x_actmon_disable(struct host1x_client *client)
+{
+}
+
+static inline void host1x_actmon_update_client_rate(struct host1x_client *client,
+				      unsigned long rate,
+				      u32 *weight)
+{
+}
+
+static inline void host1x_actmon_read_active_norm(struct host1x_client *client, unsigned long *usage)
+{
+	*usage = 0;
+}
+
+static inline void host1x_actmon_update_active_wmark(struct host1x_client *client,
+				       u32 avg_upper_wmark,
+				       u32 avg_lower_wmark,
+				       u32 consec_upper_wmark,
+				       u32 consec_lower_wmark,
+				       bool upper_wmark_enabled,
+				       bool lower_wmark_enabled)
+{
+}
+#endif
 
 #endif
