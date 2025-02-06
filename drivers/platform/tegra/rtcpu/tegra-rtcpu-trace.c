@@ -1881,7 +1881,10 @@ static void raw_trace_node_unregister(
 {
 	dev_t devt;
 
-	devt = MKDEV(rtcpu_raw_trace_major, 0);
+	if (rtcpu_raw_trace_major > MAJOR(INT_MAX))
+		dev_err(tracer->dev, "rtcpu_raw_trace_major Overflow range\n");
+	else
+		devt = MKDEV(rtcpu_raw_trace_major, 0);
 
 	device_destroy(rtcpu_raw_trace_class, devt);
 	cdev_del(&tracer->s_dev);
