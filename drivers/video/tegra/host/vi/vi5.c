@@ -13,6 +13,7 @@
  * which is mutually exclusive with host1x-next.h.
  */
 #include <linux/host1x-next.h>
+#include <linux/iommu.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/dma-buf.h>
@@ -62,6 +63,10 @@ struct host_vi5 {
 	struct vi5_debug {
 		struct debugfs_regset32 ch0;
 	} debug;
+
+	dma_addr_t syncpt_base;
+	size_t syncpt_size;
+	uint32_t syncpt_stride;
 
 	/* WAR: Adding a temp flags to avoid registering to V4L2 and
 	 * tegra camera platform device.
@@ -178,6 +183,8 @@ static int vi5_get_syncpt_gos_backing(struct platform_device *pdev,
 	uint32_t index = GOS_INDEX_INVALID;
 	uint32_t offset = 0;
 	dma_addr_t addr;
+	struct nvhost_device_data *pdata;
+	struct host_vi5 *vi5;
 
 	if (id == 0) {
 		dev_err(&pdev->dev, "%s: syncpt id is invalid\n", __func__);
@@ -189,13 +196,16 @@ static int vi5_get_syncpt_gos_backing(struct platform_device *pdev,
 		return -EINVAL;
 	}
 
-	addr = nvhost_syncpt_address(pdev, id);
+	pdata = platform_get_drvdata(pdev);
+	vi5 = pdata->private_data;
+
+	addr = vi5->syncpt_base + vi5->syncpt_stride * id;
 
 	*syncpt_addr = addr;
 	*gos_index = index;
 	*gos_offset = offset;
 
-	dev_dbg(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
+	dev_info(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
 		__func__, id, addr, index, offset);
 
 	return 0;
@@ -293,6 +303,9 @@ static int vi5_probe(struct platform_device *pdev)
 	struct nvhost_device_data *pdata;
 	struct host_vi5 *vi5;
 	int err;
+	phys_addr_t base;
+	uint32_t stride;
+	uint32_t num_syncpts;
 
 	dev_dbg(dev, "%s: probe %s\n", __func__, pdev->name);
 
@@ -322,9 +335,24 @@ static int vi5_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "%s: client init done\n", __func__);
 
-	err = nvhost_syncpt_unit_interface_init(pdev);
+	err = host1x_syncpt_get_shim_info(pdata->host1x, &base, &stride, &num_syncpts);
 	if (err)
 		goto deinit;
+
+	vi5->syncpt_stride = stride;
+	vi5->syncpt_size = stride * num_syncpts;
+
+	if (iommu_get_domain_for_dev(&pdev->dev)) {
+		vi5->syncpt_base = dma_map_resource(&pdev->dev, base,
+						vi5->syncpt_size, DMA_BIDIRECTIONAL,
+						DMA_ATTR_SKIP_CPU_SYNC);
+		if (dma_mapping_error(&pdev->dev, vi5->syncpt_base)) {
+			err = -ENOMEM;
+			goto error;
+		}
+	} else {
+		vi5->syncpt_base = base;
+	}
 
 	err = vi5_priv_late_probe(pdev);
 	if (err)
