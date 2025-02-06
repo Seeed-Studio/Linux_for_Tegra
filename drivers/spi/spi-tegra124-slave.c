@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (C) 2023-2024 NVIDIA CORPORATION.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (C) 2023-2025 NVIDIA CORPORATION.  All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -27,6 +27,7 @@
 #include <linux/spi/spi-tegra124-slave.h>
 #include <linux/clk/tegra.h>
 #include <linux/version.h>
+#include <linux/overflow.h>
 
 #define SPI_COMMAND1				0x000
 #define SPI_BIT_LENGTH(x)			(((x) & 0x1f) << 0)
@@ -379,7 +380,7 @@ static ssize_t force_unpacked_mode_set(struct device *dev,
 	if (controller) {
 		tspi = spi_controller_get_devdata(controller);
 		if (tspi && count) {
-			tspi->force_unpacked_mode = ((buf[0] - '0')  > 0);
+			tspi->force_unpacked_mode = (buf[0] >= '1' && buf[0] <= '9');
 			return count;
 		}
 	}
@@ -511,10 +512,17 @@ static unsigned int tegra_spi_calculate_curr_xfer_param
 	unsigned int bits_per_word;
 	unsigned int max_len;
 	unsigned int total_fifo_words;
+	unsigned int tmp_result;
 
 	bits_per_word = t->bits_per_word ? t->bits_per_word :
 						spi->bits_per_word;
-	tspi->bytes_per_word = (bits_per_word - 1) / 8 + 1;
+
+	if (check_sub_overflow(bits_per_word, 1U, &tmp_result)) {
+		/* Return total fifo words as zero in error case */
+		return 0;
+	}
+
+	tspi->bytes_per_word = tmp_result / 8 + 1;
 
 	if (!tspi->force_unpacked_mode &&
 			(bits_per_word == 8 || bits_per_word == 16)) {
@@ -530,7 +538,11 @@ static unsigned int tegra_spi_calculate_curr_xfer_param
 		tspi->curr_dma_words = max_len / tspi->bytes_per_word;
 		total_fifo_words = (max_len + 3) / 4;
 	} else {
-		max_word = (remain_len - 1) / tspi->bytes_per_word + 1;
+		if (check_sub_overflow(remain_len, 1U, &tmp_result)) {
+			/* Return total fifo words as zero in error case */
+			return 0;
+		}
+		max_word = tmp_result / tspi->bytes_per_word + 1;
 		max_word = min(max_word, tspi->max_buf_size / 4);
 		tspi->curr_dma_words = max_word;
 		total_fifo_words = max_word;
@@ -554,10 +566,16 @@ static unsigned int tegra_spi_fill_tx_fifo_from_client_txbuf
 			(tegra_spi_readl(tspi, SPI_FIFO_STATUS));
 
 	if (tspi->is_packed) {
-		fifo_words_left = tx_empty_count * tspi->words_per_32bit;
+		if (check_mul_overflow(tx_empty_count, tspi->words_per_32bit,
+				       &fifo_words_left)) {
+			/* Return total fifo words as zero in error case */
+			return 0;
+		}
 		written_words = min(fifo_words_left, tspi->curr_dma_words);
 		nbytes = written_words * tspi->bytes_per_word;
 		max_n_32bit = DIV_ROUND_UP(nbytes, 4);
+		if (!tx_buf)
+			return 0;
 		for (count = 0; count < max_n_32bit; count++) {
 			x = 0;
 			for (i = 0; (i < 4) && nbytes; i++, nbytes--)
@@ -682,7 +700,11 @@ static unsigned int tegra_spi_copy_spi_rxbuf_to_client_rxbuf
 	dma_sync_single_for_cpu(tspi->dev, tspi->rx_dma_phys,
 		tspi->dma_buf_size, DMA_FROM_DEVICE);
 
-	dma_bytes = tspi->words_to_transfer * tspi->bytes_per_word;
+	if (check_mul_overflow(tspi->words_to_transfer, tspi->bytes_per_word,
+			       &dma_bytes)) {
+		/* Return zero in error case */
+		return 0;
+	}
 	npackets = tspi->words_to_transfer;
 	if (tspi->is_packed) {
 		memcpy(t->rx_buf, tspi->rx_dma_buf, dma_bytes);
@@ -702,13 +724,22 @@ static unsigned int tegra_spi_copy_spi_rxbuf_to_client_rxbuf
 				*rx_buf++ = (x >> (i * 8)) & 0xFF;
 		}
 	}
-
-	tspi->words_to_transfer -= npackets;
+	if (check_sub_overflow(tspi->words_to_transfer, npackets,
+			       &tspi->words_to_transfer)) {
+		/* Return zero in error case */
+		return 0;
+	}
 	tspi->rem_len -= npackets * tspi->bytes_per_word;
 	tspi->curr_rx_pos += npackets * tspi->bytes_per_word;
 
-	if (tspi->words_to_transfer)
-		dma_bytes += tegra_spi_read_rx_fifo_to_client_rxbuf(tspi, t);
+	if (tspi->words_to_transfer) {
+		if (check_add_overflow(dma_bytes,
+				       tegra_spi_read_rx_fifo_to_client_rxbuf(tspi, t),
+				       &dma_bytes)) {
+			/* Return zero in error case */
+			return 0;
+		}
+	}
 
 	/* Make the dma buffer to read by dma */
 	dma_sync_single_for_device(tspi->dev, tspi->rx_dma_phys,
@@ -867,13 +898,19 @@ static int tegra_spi_start_dma_based_transfer(struct
 	int ret = 0;
 	int maxburst = 0;
 	struct dma_slave_config dma_sconfig;
+	unsigned int tmp;
 
 	/* Make sure that Rx and Tx fifo are empty */
 	ret = check_and_clear_fifo(tspi);
 	if (ret != 0)
 		return ret;
 
-	val = SPI_DMA_BLK_SET(tspi->curr_dma_words - 1);
+	if (check_sub_overflow(tspi->curr_dma_words, 1U, &tmp)) {
+		dev_err(tspi->dev, "%s Invalid bits_per_word\n", __func__);
+		return -EINVAL;
+	}
+
+	val = SPI_DMA_BLK_SET(tmp);
 	tegra_spi_writel(tspi, val, SPI_DMA_BLK);
 
 	val = 0; /* Reset the variable for reuse */
@@ -1009,6 +1046,7 @@ static int tegra_spi_start_cpu_based_transfer(struct
 	unsigned long val, flags;
 	unsigned long intr_mask;
 	unsigned int cur_words;
+	unsigned int tmp;
 	int ret;
 
 	ret = check_and_clear_fifo(tspi);
@@ -1019,8 +1057,15 @@ static int tegra_spi_start_cpu_based_transfer(struct
 		cur_words = tegra_spi_fill_tx_fifo_from_client_txbuf(tspi, t);
 	else
 		cur_words = tspi->curr_dma_words;
-
-	val = SPI_DMA_BLK_SET(cur_words - 1);
+	if (!cur_words) {
+		dev_err(tspi->dev, "%s Error. Zero words\n", __func__);
+		return -EINVAL;
+	}
+	if (check_sub_overflow(cur_words, 1U, &tmp)) {
+		dev_err(tspi->dev, "%s Invalid words\n", __func__);
+		return -EINVAL;
+	}
+	val = SPI_DMA_BLK_SET(tmp);
 	tegra_spi_writel(tspi, val, SPI_DMA_BLK);
 
 	val = 0;
@@ -1090,11 +1135,21 @@ static int tegra_spi_init_dma_param(struct tegra_spi_data *tspi,
 	}
 
 	if (dma_to_memory) {
-		dma_sconfig.src_addr = tspi->phys + SPI_RX_FIFO;
+		if (check_add_overflow(tspi->phys, (phys_addr_t)SPI_RX_FIFO,
+				       &dma_sconfig.src_addr)) {
+			dev_err(tspi->dev, "%s Invalid src address plus SPI_RX_FIFO\n", __func__);
+			ret = -EINVAL;
+			goto scrub;
+		}
 		dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		dma_sconfig.src_maxburst = tspi->rx_trig_words;
 	} else {
-		dma_sconfig.dst_addr = tspi->phys + SPI_TX_FIFO;
+		if (check_add_overflow(tspi->phys, (phys_addr_t)SPI_TX_FIFO,
+				       &dma_sconfig.dst_addr)) {
+			dev_err(tspi->dev, "%s Invalid dst address plus SPI_TX_FIFO\n", __func__);
+			ret = -EINVAL;
+			goto scrub;
+		}
 		dma_sconfig.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		dma_sconfig.dst_maxburst = tspi->rx_trig_words;
 	}
@@ -1111,7 +1166,7 @@ static int tegra_spi_init_dma_param(struct tegra_spi_data *tspi,
 		tspi->tx_dma_buf = dma_buf;
 		tspi->tx_dma_phys = dma_phys;
 	}
-	return 0;
+	return ret;
 
 scrub:
 	dma_free_coherent(tspi->dev, tspi->dma_buf_size, dma_buf, dma_phys);
@@ -1196,7 +1251,7 @@ static void set_best_clk_source(struct spi_device *spi,
 		unsigned long rate)
 {
 	long new_rate;
-	unsigned long err_rate, crate, prate;
+	unsigned long err_rate, crate, prate, tmp;
 	unsigned int cdiv, fin_err = rate;
 	int ret;
 	struct clk *pclk, *fpclk = NULL;
@@ -1220,6 +1275,14 @@ static void set_best_clk_source(struct spi_device *spi,
 				continue;
 			prate = clk_get_rate(pclk);
 			crate = spi->max_speed_hz;
+			if (check_add_overflow(prate, crate, &tmp)) {
+				dev_err(tspi->dev, "%s Error in setting clock source\n", __func__);
+				return;
+			}
+			if (check_sub_overflow((prate + crate), 1UL, &tmp)) {
+				dev_err(tspi->dev, "%s Error in setting clock source\n", __func__);
+				return;
+			}
 			cdiv = DIV_ROUND_UP(prate, crate);
 			if (cdiv > tspi->min_div)
 				tspi->min_div = cdiv;
@@ -1255,7 +1318,11 @@ static void set_best_clk_source(struct spi_device *spi,
 		if (new_rate < 0)
 			continue;
 
-		err_rate = abs(new_rate - rate);
+		if (check_sub_overflow((unsigned long)new_rate, rate, &tmp)) {
+			dev_err(tspi->dev, "%s Error in setting clock source\n", __func__);
+			return;
+		}
+		err_rate = abs(tmp);
 		if (err_rate < fin_err) {
 			fpclk = pclk;
 			fin_err = err_rate;
@@ -1283,6 +1350,7 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 	int ret;
 	unsigned long command1;
 	int req_mode;
+	u32 tmp;
 
 	bits_per_word = t->bits_per_word;
 	speed = t->speed_hz ? t->speed_hz : spi->max_speed_hz;
@@ -1306,7 +1374,12 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 	if (core_speed > spi->max_speed_hz)
 		core_speed = spi->max_speed_hz;
 
-	if (core_speed < ((speed * 3) >> 1)) {
+	if (check_mul_overflow(speed, 3U, &tmp)) {
+		dev_err(tspi->dev, "Cannot set requested clk freq %d\n", speed);
+		return -EINVAL;
+	}
+
+	if (core_speed < (tmp >> 1)) {
 		dev_err(tspi->dev, "Cannot set requested clk freq %d\n", speed);
 		return -EINVAL;
 	}
@@ -1328,6 +1401,10 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 	tspi->tx_status = 0;
 	tspi->rx_status = 0;
 	total_fifo_words = tegra_spi_calculate_curr_xfer_param(spi, tspi, t);
+	if (!total_fifo_words) {
+		dev_err(tspi->dev, "%s Error. Zero total fifo words\n", __func__);
+		return -EINVAL;
+	}
 
 	ret = tegra_spi_validate_request(spi, tspi, t);
 	if (ret < 0)
@@ -1635,6 +1712,7 @@ static int tegra_spi_handle_message(struct tegra_spi_data *tspi,
 	unsigned long fifo_status;
 	unsigned long word_tfr_status;
 	unsigned long actual_words_xferrd;
+	unsigned int nbytes;
 
 	/* we are here, so no io-error and received the expected num bytes
 	 * expect in variable length case where received <= expected
@@ -1734,7 +1812,12 @@ static int tegra_spi_handle_message(struct tegra_spi_data *tspi,
 					return ret;
 				}
 			}
-			tegra_spi_copy_spi_rxbuf_to_client_rxbuf(tspi, xfer);
+			nbytes = tegra_spi_copy_spi_rxbuf_to_client_rxbuf(tspi, xfer);
+			if (!nbytes) {
+				dev_err(tspi->dev,
+					"%s Invalid number of words to transfer\n", __func__);
+				return -EIO;
+			}
 		}
 	}
 
