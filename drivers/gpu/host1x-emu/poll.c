@@ -3,9 +3,10 @@
 #include "dev.h"
 #include "fence.h"
 #include "poll.h"
+#include <soc/tegra/fuse.h>
+#include <soc/tegra/fuse-helper.h>
 
 #ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
-
 struct host1x  *hr_timer_host;
 static struct hrtimer emu_hr_timer;
 
@@ -167,33 +168,44 @@ void host1x_poll_irq_check_syncpt_fence(struct host1x_syncpt  *sp)
 
 void host1x_poll_start(struct host1x *host)
 {
+#ifdef HOST1X_EMU_KTHREAD_FENCE_SCAN
 	int id;
-#ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
-	ktime_t ktime;
-
-	hr_timer_host = host;
-	ktime = ktime_set(HRTIMER_TIMEOUT_SEC, host->hr_polling_intrval);
-	hrtimer_init(&emu_hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	emu_hr_timer.function = &timer_callback;
-	hrtimer_start(&emu_hr_timer, ktime, HRTIMER_MODE_REL);
 #endif
 
+#ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
+	if (tegra_platform_is_silicon()) {
+		ktime_t ktime;
+
+		hr_timer_host = host;
+		ktime = ktime_set(HRTIMER_TIMEOUT_SEC, host->hr_polling_intrval);
+		hrtimer_init(&emu_hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		emu_hr_timer.function = &timer_callback;
+		hrtimer_start(&emu_hr_timer, ktime, HRTIMER_MODE_REL);
+	}
+#endif
+
+#ifdef HOST1X_EMU_KTHREAD_FENCE_SCAN
 	/*Loop till "host->num_pools + 1" to include Ro-Pool*/
 	for (id = 0; id < host->num_pools + 1; ++id) {
 		struct host1x_syncpt_pool *syncpt_pool = &host->pools[id];
 
 		schedule_delayed_work(&syncpt_pool->pool_work, msecs_to_jiffies(host->polling_intrval));
 	}
+#endif
 }
 
 void host1x_poll_stop(struct host1x *host)
 {
+#ifdef HOST1X_EMU_KTHREAD_FENCE_SCAN
 	int id;
-
-#ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
-    hrtimer_cancel(&emu_hr_timer);
 #endif
 
+#ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
+	if (tegra_platform_is_silicon())
+		hrtimer_cancel(&emu_hr_timer);
+#endif
+
+#ifdef HOST1X_EMU_KTHREAD_FENCE_SCAN
 	/*Loop till "host->num_pools + 1" to include Ro-Pool*/
 	for (id = 0; id < host->num_pools + 1; ++id) {
 		struct host1x_syncpt_pool *syncpt_pool = &host->pools[id];
@@ -205,4 +217,5 @@ void host1x_poll_stop(struct host1x *host)
 		//Cancel the work as it reschedule itself
 		cancel_delayed_work(&syncpt_pool->pool_work);
 	}
+#endif
 }

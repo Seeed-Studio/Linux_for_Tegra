@@ -9,6 +9,9 @@ endif
 #Enable Tasklet based fence scanning in SyncpointIncr
 #ccflags-y += -DHOST1X_EMU_SYNC_INC_TASKLET
 
+# Enable KThread based fence scanning
+ccflags-y += -DHOST1X_EMU_KTHREAD_FENCE_SCAN
+
 # Enable HRTimer based fence scanning
 ccflags-y += -DHOST1X_EMU_HRTIMER_FENCE_SCAN
 
