@@ -933,12 +933,34 @@ static int nvsciipc_remove_wrapper(struct platform_device *pdev)
 }
 #endif
 
+
+#ifdef CONFIG_PM
+static int nvsciipc_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	dev_notice(&pdev->dev, "nvipc: Suspended\n");
+
+	return 0;
+}
+
+static int nvsciipc_resume(struct platform_device *pdev)
+{
+	dev_notice(&pdev->dev, "nvipc: Resuming\n");
+
+	return 0;
+}
+#endif /* CONFIG_PM */
+
 static struct platform_driver nvsciipc_driver = {
 	.probe  = nvsciipc_probe,
 	.remove = nvsciipc_remove_wrapper,
 	.driver = {
 		.name = MODULE_NAME,
 	},
+#ifdef CONFIG_PM
+	.suspend = nvsciipc_suspend,
+	.resume = nvsciipc_resume,
+#endif /* CONFIG_PM */
+
 };
 
 static int __init nvsciipc_module_init(void)
