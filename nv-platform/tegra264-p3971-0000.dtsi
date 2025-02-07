@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/input/linux-event-codes.h>
 #include <dt-bindings/input/gpio-keys.h>
@@ -390,7 +390,7 @@
 
 	nvme_fan: pwm-fan-nvme {
 		compatible = "pwm-fan";
-		pwms = <&pwm3 0 45334>;
+		pwms = <&pwm3 0 9482>;
 		#cooling-cells = <2>;
 	};
 

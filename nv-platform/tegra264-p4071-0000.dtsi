@@ -374,7 +374,7 @@
 
 	nvme_fan: pwm-fan-nvme {
 		compatible = "pwm-fan";
-		pwms = <&pwm3 0 45334>;
+		pwms = <&pwm3 0 9482>;
 		#cooling-cells = <2>;
 	};
 
