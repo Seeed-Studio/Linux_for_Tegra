@@ -377,6 +377,15 @@ static int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	}
 
 	/*
+	 * Don't allow executable mappings.
+	 */
+	if (vma->vm_flags & VM_EXEC) {
+		pr_err("executable mappings not allowed\n");
+		nvmap_handle_put(h);
+		return -EPERM;
+	}
+
+	/*
 	 * If the handle is RO and RW mapping is requested, then
 	 * return error.
 	 */
