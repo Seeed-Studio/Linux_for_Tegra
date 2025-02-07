@@ -1028,7 +1028,7 @@ static int host1x_get_syncpt_shim(struct host1x *host)
 			return err;
 		}
 
-		base = data[1];
+		base = ((u64)data[0] << 32) | data[1];
 		size = data[3];
 	}
 #endif
