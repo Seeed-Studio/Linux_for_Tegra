@@ -285,16 +285,11 @@ int vi5_priv_late_probe(struct platform_device *pdev)
 
 	err = tegra_camera_device_register(&vi_info, vi5);
 	if (err)
-		goto device_release;
+		return err;
 
 	vi5_init_debugfs(vi5);
 
 	return 0;
-
-device_release:
-	nvhost_client_device_release(pdev);
-
-	return err;
 }
 
 static int vi5_probe(struct platform_device *pdev)
@@ -321,23 +316,24 @@ static int vi5_probe(struct platform_device *pdev)
 		return dev_err_probe(&pdev->dev, PTR_ERR(vi5->icc_write),
 				     "failed to get icc write handle\n");
 
-	err = nvhost_client_device_get_resources(pdev);
-	if (err)
+	pdata->host1x = dev_get_drvdata(pdev->dev.parent);
+	if (!pdata->host1x) {
+		err = -ENODEV;
+		dev_err(&pdev->dev, "Error getting host1x data\n");
 		goto error;
+	}
 
 	err = nvhost_module_init(pdev);
 	if (err)
 		goto error;
 
-	err = nvhost_client_device_init(pdev);
-	if (err)
-		goto deinit;
-
 	dev_info(&pdev->dev, "%s: client init done\n", __func__);
 
 	err = host1x_syncpt_get_shim_info(pdata->host1x, &base, &stride, &num_syncpts);
-	if (err)
+	if (err) {
+		dev_err(&pdev->dev, "Failed to get shim info\n");
 		goto deinit;
+	}
 
 	vi5->syncpt_stride = stride;
 	vi5->syncpt_size = stride * num_syncpts;
