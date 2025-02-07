@@ -67,6 +67,7 @@
 struct nvvse_devnode {
 	struct miscdevice *g_misc_devices;
 	struct mutex lock;
+	bool node_in_use;
 } nvvse_devnode[MAX_NUMBER_MISC_DEVICES];
 
 static struct tegra_nvvse_get_ivc_db ivc_database;
@@ -116,6 +117,7 @@ struct tnvvse_crypto_ctx {
 	uint32_t			max_rng_buff;
 	char				*sha_result;
 	uint32_t			node_id;
+	bool				is_zero_copy_node;
 };
 
 #if (KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE)
@@ -240,11 +242,43 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 		}
 	}
 
-	if (sha_update_ctl->input_buffer_size > ivc_database.max_buffer_size[ctx->node_id]) {
-		pr_err("%s(): Msg size is greater than supported size of %d Bytes\n", __func__,
-				ivc_database.max_buffer_size[ctx->node_id]);
-		ret = -EINVAL;
-		goto exit;
+	if (ctx->is_zero_copy_node) {
+		if (sha_update_ctl->b_is_zero_copy == 0U) {
+			pr_err("%s(): only zero copy operation is supported on this node\n",
+									__func__);
+			ret = -EINVAL;
+			goto exit;
+		}
+
+		if ((sha_state->sha_total_msg_length > 0U) && sha_update_ctl->is_last) {
+			pr_err("%s(): Multipart SHA is not supported for zero-copy\n", __func__);
+			ret = -EINVAL;
+			goto exit;
+		}
+
+		if ((sha_type != TEGRA_NVVSE_SHA_TYPE_SHA256)
+				&& (sha_type != TEGRA_NVVSE_SHA_TYPE_SHA384)
+				&& (sha_type != TEGRA_NVVSE_SHA_TYPE_SHA512)
+				&& (sha_type != TEGRA_NVVSE_SHA_TYPE_SHA3_256)
+				&& (sha_type != TEGRA_NVVSE_SHA_TYPE_SHA3_384)
+				&& (sha_type != TEGRA_NVVSE_SHA_TYPE_SHA3_512)) {
+			pr_err("%s(): unsupported SHA req type for zero-copy", __func__);
+			ret = -EINVAL;
+		}
+	} else {
+		if (sha_update_ctl->b_is_zero_copy != 0U) {
+			pr_err("%s(): zero copy operation is not supported on this node\n",
+									__func__);
+			ret = -EINVAL;
+			goto exit;
+		}
+
+		if (sha_update_ctl->input_buffer_size >
+				ivc_database.max_buffer_size[ctx->node_id]) {
+			pr_err("%s(): Msg size is greater than supported size of %d Bytes\n",
+				__func__, ivc_database.max_buffer_size[ctx->node_id]);
+			ret = -EINVAL;
+		}
 	}
 
 exit:
@@ -273,8 +307,14 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	}
 
 	ret = tnvvse_crypto_validate_sha_update_req(ctx, sha_update_ctl);
-	if (ret != 0)
+	if (ret != 0) {
+		if (ret != -EAGAIN) {
+			/* Force reset SHA state and return */
+			sha_state->sha_init_done = 0U;
+			sha_state->sha_total_msg_length = 0U;
+		}
 		goto exit;
+	}
 
 	if (sha_update_ctl->init_only != 0U) {
 		/* Only set state as SHA init done and return */
@@ -317,9 +357,12 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	sha_ctx->digest_size = sha_update_ctl->digest_size;
 	sha_ctx->total_count = sha_state->sha_total_msg_length;
 	sha_ctx->intermediate_digest = sha_state->sha_intermediate_digest;
-
-	sha_ctx->user_src_buf = sha_update_ctl->in_buff;
 	sha_ctx->user_digest_buffer = sha_update_ctl->digest_buffer;
+
+	if (ctx->is_zero_copy_node)
+		sha_ctx->user_src_iova = sha_update_ctl->in_buff_iova;
+	else
+		sha_ctx->user_src_buf = sha_update_ctl->in_buff;
 
 	if (sha_state->sha_total_msg_length == sha_ctx->user_src_buf_size)
 		sha_ctx->is_first = true;
@@ -871,6 +914,22 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	struct ahash_request *req;
 	int ret = -EINVAL;
 
+	if (ctx->is_zero_copy_node) {
+		if (gmac_sign_verify_ctl->b_is_zero_copy == 0U) {
+			pr_err("%s(): only zero copy operation is supported on this node\n",
+									__func__);
+			ret = -EINVAL;
+			goto done;
+		}
+	} else {
+		if (gmac_sign_verify_ctl->b_is_zero_copy != 0U) {
+			pr_err("%s(): zero copy operation is not supported on this node\n",
+									__func__);
+			ret = -EINVAL;
+			goto done;
+		}
+	}
+
 	tfm = crypto_alloc_ahash("gmac-vse(aes)", 0, 0);
 	if (IS_ERR(tfm)) {
 		pr_err("%s(): Failed to load transform for gmac-vse(aes):%ld\n", __func__,
@@ -889,18 +948,15 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		goto free_tfm;
 	}
 
-	gmac_ctx->user_aad_buf = gmac_sign_verify_ctl->src_buffer;
-	gmac_ctx->user_tag_buf = gmac_sign_verify_ctl->tag_buffer;
 	gmac_ctx->user_aad_buf_size = gmac_sign_verify_ctl->data_length;
-
-	if (gmac_ctx->user_aad_buf_size > ivc_database.max_buffer_size[ctx->node_id] ||
-			gmac_ctx->user_aad_buf_size == 0) {
-		pr_err("%s(): Failed due to invalid aad buf size: %d\n", __func__, ret);
-		goto done;
+	if (ctx->is_zero_copy_node) {
+		gmac_ctx->user_aad_iova = gmac_sign_verify_ctl->src_buffer_iova;
+	} else {
+		gmac_ctx->user_aad_buf = gmac_sign_verify_ctl->src_buffer;
 	}
 
-	if (gmac_sign_verify_ctl->is_last &&
-			gmac_sign_verify_ctl->tag_length != TEGRA_NVVSE_AES_GCM_TAG_SIZE) {
+	if ((gmac_sign_verify_ctl->is_last) &&
+			(gmac_sign_verify_ctl->tag_length != TEGRA_NVVSE_AES_GCM_TAG_SIZE)) {
 		pr_err("%s(): Failed due to invalid tag length (%d) invalid", __func__,
 					gmac_sign_verify_ctl->tag_length);
 		goto done;
@@ -928,13 +984,18 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 			goto free_tfm;
 		}
 	} else {
-		if (gmac_sign_verify_ctl->gmac_type ==
-				TEGRA_NVVSE_AES_GMAC_VERIFY) {
-
+		if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_SIGN) {
+			if (ctx->is_zero_copy_node)
+				gmac_ctx->user_tag_iova = gmac_sign_verify_ctl->tag_buffer_iova;
+			else
+				gmac_ctx->user_tag_buf = gmac_sign_verify_ctl->tag_buffer;
+		} else {
+			gmac_ctx->user_tag_buf = gmac_sign_verify_ctl->tag_buffer;
 			memcpy(iv, gmac_sign_verify_ctl->initial_vector,
-					TEGRA_NVVSE_AES_GCM_IV_LEN);
+				TEGRA_NVVSE_AES_GCM_IV_LEN);
 			gmac_ctx->iv = iv;
 		}
+
 		ret = wait_async_op(&sha_state->sha_complete,
 				crypto_ahash_finup(req));
 		if (ret) {
@@ -1373,6 +1434,46 @@ static int tnvvse_crypto_get_ivc_db(struct tegra_nvvse_get_ivc_db *get_ivc_db)
 	return ret;
 }
 
+static int tnvvse_crypto_map_membuf(struct tnvvse_crypto_ctx *ctx,
+		struct tegra_nvvse_map_membuf_ctl *map_membuf_ctl)
+{
+	struct tegra_virtual_se_membuf_context membuf_ctx;
+	int err = 0;
+
+	membuf_ctx.node_id = ctx->node_id;
+	membuf_ctx.fd = map_membuf_ctl->fd;
+
+	err = tegra_hv_vse_safety_map_membuf(&membuf_ctx);
+	if (err) {
+		pr_err("%s(): map membuf failed %d\n", __func__, err);
+		goto exit;
+	}
+
+	map_membuf_ctl->iova = membuf_ctx.iova;
+
+exit:
+	return err;
+}
+
+static int tnvvse_crypto_unmap_membuf(struct tnvvse_crypto_ctx *ctx,
+		struct tegra_nvvse_unmap_membuf_ctl *unmap_membuf_ctl)
+{
+	struct tegra_virtual_se_membuf_context membuf_ctx;
+	int err = 0;
+
+	membuf_ctx.node_id = ctx->node_id;
+	membuf_ctx.fd = unmap_membuf_ctl->fd;
+
+	err = tegra_hv_vse_safety_unmap_membuf(&membuf_ctx);
+	if (err) {
+		pr_err("%s(): unmap membuf failed %d\n", __func__, err);
+		goto exit;
+	}
+
+exit:
+	return err;
+}
+
 static int tnvvse_crypto_dev_open(struct inode *inode, struct file *filp)
 {
 	struct tnvvse_crypto_ctx *ctx = NULL;
@@ -1380,15 +1481,31 @@ static int tnvvse_crypto_dev_open(struct inode *inode, struct file *filp)
 	int ret = 0;
 	uint32_t node_id;
 	struct miscdevice *misc;
+	bool is_zero_copy_node;
 
 	misc = filp->private_data;
 	node_id = misc->this_device->id;
+
+	is_zero_copy_node = tegra_hv_vse_get_db()[node_id].is_zero_copy_node;
+
+	if (is_zero_copy_node) {
+		mutex_lock(&nvvse_devnode[node_id].lock);
+		if (nvvse_devnode[node_id].node_in_use) {
+			mutex_unlock(&nvvse_devnode[node_id].lock);
+			pr_err("%s zero copy node is already opened by another process\n",
+					__func__);
+			return -EPERM;
+		}
+		nvvse_devnode[node_id].node_in_use = true;
+		mutex_unlock(&nvvse_devnode[node_id].lock);
+	}
 
 	ctx = kzalloc(sizeof(struct tnvvse_crypto_ctx), GFP_KERNEL);
 	if (!ctx) {
 		return -ENOMEM;
 	}
 	ctx->node_id = node_id;
+	ctx->is_zero_copy_node = is_zero_copy_node;
 
 	ctx->rng_buff = kzalloc(NVVSE_MAX_RANDOM_NUMBER_LEN_SUPPORTED, GFP_KERNEL);
 	if (!ctx->rng_buff) {
@@ -1431,6 +1548,11 @@ static int tnvvse_crypto_dev_release(struct inode *inode, struct file *filp)
 {
 	struct tnvvse_crypto_ctx *ctx = filp->private_data;
 
+	if (ctx->is_zero_copy_node) {
+		tegra_hv_vse_safety_unmap_all_membufs(ctx->node_id);
+		nvvse_devnode[ctx->node_id].node_in_use = false;
+	}
+
 	kfree(ctx->sha_result);
 	kfree(ctx->rng_buff);
 	kfree(ctx->sha_state.sha_intermediate_digest);
@@ -1459,6 +1581,10 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 	struct tegra_nvvse_aes_gmac_sign_verify_ctl *aes_gmac_sign_verify_ctl;
 	struct tegra_nvvse_get_ivc_db *get_ivc_db;
 	struct tegra_nvvse_tsec_get_keyload_status *tsec_keyload_status;
+	struct tegra_nvvse_map_membuf_ctl __user *arg_map_membuf_ctl;
+	struct tegra_nvvse_map_membuf_ctl *map_membuf_ctl;
+	struct tegra_nvvse_unmap_membuf_ctl __user *arg_unmap_membuf_ctl;
+	struct tegra_nvvse_unmap_membuf_ctl *unmap_membuf_ctl;
 	int ret = 0;
 
 	/*
@@ -1471,6 +1597,37 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 	}
 
 	mutex_lock(&nvvse_devnode[ctx->node_id].lock);
+
+	if (ctx->is_zero_copy_node) {
+		switch (ioctl_num) {
+		case NVVSE_IOCTL_CMDID_UPDATE_SHA:
+		case NVVSE_IOCTL_CMDID_AES_GMAC_INIT:
+		case NVVSE_IOCTL_CMDID_AES_GMAC_SIGN_VERIFY:
+		case NVVSE_IOCTL_CMDID_MAP_MEMBUF:
+		case NVVSE_IOCTL_CMDID_UNMAP_MEMBUF:
+			break;
+		default:
+			pr_err("%s(): unsupported zero copy node command(%08x)\n", __func__,
+					ioctl_num);
+			ret = -EINVAL;
+			break;
+		};
+	} else {
+		switch (ioctl_num) {
+		case NVVSE_IOCTL_CMDID_MAP_MEMBUF:
+		case NVVSE_IOCTL_CMDID_UNMAP_MEMBUF:
+			pr_err("%s(): unsupported node command(%08x)\n", __func__,
+					ioctl_num);
+			ret = -EINVAL;
+			break;
+		default:
+			break;
+		};
+
+	}
+
+	if (ret != 0)
+		goto release_lock;
 
 	switch (ioctl_num) {
 	case NVVSE_IOCTL_CMDID_UPDATE_SHA:
@@ -1778,6 +1935,80 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		}
 
 		kfree(tsec_keyload_status);
+		break;
+
+	case NVVSE_IOCTL_CMDID_MAP_MEMBUF:
+		map_membuf_ctl = kzalloc(sizeof(*map_membuf_ctl), GFP_KERNEL);
+		if (!map_membuf_ctl) {
+			ret = -ENOMEM;
+			goto release_lock;
+		}
+
+		arg_map_membuf_ctl = (void __user *)arg;
+
+		ret = copy_from_user(map_membuf_ctl, arg_map_membuf_ctl,
+					sizeof(*map_membuf_ctl));
+		if (ret) {
+			pr_err("%s(): Failed to copy_from_user map_membuf_ctl:%d\n",
+						__func__, ret);
+			kfree(map_membuf_ctl);
+			goto release_lock;
+		}
+
+		ret = tnvvse_crypto_map_membuf(ctx, map_membuf_ctl);
+		if (ret) {
+			pr_err("%s(): Failed to map membuf status:%d\n", __func__, ret);
+			kfree(map_membuf_ctl);
+			goto release_lock;
+		}
+
+		ret = copy_to_user(arg_map_membuf_ctl, map_membuf_ctl,
+				sizeof(*map_membuf_ctl));
+		if (ret) {
+			pr_err("%s(): Failed to copy_to_user map_membuf_ctl:%d\n",
+					__func__, ret);
+			kfree(map_membuf_ctl);
+			goto release_lock;
+		}
+
+		kfree(map_membuf_ctl);
+		break;
+
+	case NVVSE_IOCTL_CMDID_UNMAP_MEMBUF:
+		unmap_membuf_ctl = kzalloc(sizeof(*unmap_membuf_ctl), GFP_KERNEL);
+		if (!unmap_membuf_ctl) {
+			ret = -ENOMEM;
+			goto release_lock;
+		}
+
+		arg_unmap_membuf_ctl = (void __user *)arg;
+
+		ret = copy_from_user(unmap_membuf_ctl, arg_unmap_membuf_ctl,
+					sizeof(*unmap_membuf_ctl));
+		if (ret) {
+			pr_err("%s(): Failed to copy_from_user unmap_membuf_ctl:%d\n",
+						__func__, ret);
+			kfree(unmap_membuf_ctl);
+			goto release_lock;
+		}
+
+		ret = tnvvse_crypto_unmap_membuf(ctx, unmap_membuf_ctl);
+		if (ret) {
+			pr_err("%s(): Failed to unmap membuf status:%d\n", __func__, ret);
+			kfree(unmap_membuf_ctl);
+			goto release_lock;
+		}
+
+		ret = copy_to_user(arg_unmap_membuf_ctl, unmap_membuf_ctl,
+				sizeof(*unmap_membuf_ctl));
+		if (ret) {
+			pr_err("%s(): Failed to copy_to_user unmap_membuf_ctl:%d\n",
+					__func__, ret);
+			kfree(unmap_membuf_ctl);
+			goto release_lock;
+		}
+
+		kfree(unmap_membuf_ctl);
 		break;
 
 	default:

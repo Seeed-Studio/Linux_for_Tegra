@@ -42,6 +42,7 @@
 #include <linux/kthread.h>
 #include <linux/host1x.h>
 #include <linux/version.h>
+#include <linux/dma-buf.h>
 
 #include "tegra-hv-vse.h"
 
@@ -322,7 +323,6 @@ static struct tegra_vse_node_dma g_node_dma[MAX_NUMBER_MISC_DEVICES];
 
 static bool gcm_supports_dma;
 static struct device *gpcdma_dev;
-static bool s_set_sha_algs;
 
 /* Security Engine Linked List */
 struct tegra_virtual_se_ll {
@@ -660,8 +660,6 @@ enum tsec_buf_idx {
 	TSEC_MAC_BUF_IDX,
 	TSEC_FW_STATUS_BUF_IDX
 };
-
-static struct tegra_virtual_se_dev *g_virtual_se_dev[VIRTUAL_MAX_SE_ENGINE_NUM];
 
 struct crypto_dev_to_ivc_map *tegra_hv_vse_get_db(void)
 {
@@ -1064,7 +1062,7 @@ static int tegra_hv_vse_safety_sha_init(struct ahash_request *req)
 
 	sha_ctx = crypto_ahash_ctx(tfm);
 	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].engine_id;
-	se_dev = g_virtual_se_dev[engine_id];
+	se_dev = g_crypto_to_ivc_map[sha_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -1144,9 +1142,11 @@ static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last)
 	uint32_t engine_id;
 	int err = 0;
 	const struct tegra_vse_dma_buf *plaintext, *hash_result;
+	bool is_zero_copy;
 
 	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].engine_id;
-	se_dev = g_virtual_se_dev[engine_id];
+	se_dev = g_crypto_to_ivc_map[sha_ctx->node_id].se_dev;
+	is_zero_copy = g_crypto_to_ivc_map[sha_ctx->node_id].is_zero_copy_node;
 
 	if (sha_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128 ||
 			sha_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE256) {
@@ -1168,11 +1168,27 @@ static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last)
 
 	g_crypto_to_ivc_map[sha_ctx->node_id].vse_thread_start = true;
 
-	plaintext = tegra_hv_vse_get_dma_buf(sha_ctx->node_id, SHA_SRC_BUF_IDX,
-					sha_ctx->user_src_buf_size);
-	if (!plaintext) {
-		dev_err(se_dev->dev, "%s src_buf is NULL\n", __func__);
-		return -ENOMEM;
+	msg_len = sha_ctx->user_src_buf_size;
+	if (!is_zero_copy) {
+		plaintext = tegra_hv_vse_get_dma_buf(sha_ctx->node_id, SHA_SRC_BUF_IDX,
+						sha_ctx->user_src_buf_size);
+		if (!plaintext) {
+			dev_err(se_dev->dev, "%s src_buf is NULL\n", __func__);
+			return -ENOMEM;
+		}
+
+		if (msg_len > 0) {
+			err = copy_from_user(plaintext->buf_ptr, sha_ctx->user_src_buf, msg_len);
+			if (err) {
+				pr_err("%s(): Failed to copy plaintext: %d\n", __func__, err);
+				goto exit;
+			}
+		}
+	} else {
+		if (g_node_dma[sha_ctx->node_id].mapped_membuf_count == 0U) {
+			dev_err(se_dev->dev, "%s no mapped membuf found\n", __func__);
+			return -ENOMEM;
+		}
 	}
 
 	hash_result = tegra_hv_vse_get_dma_buf(sha_ctx->node_id, SHA_HASH_BUF_IDX,
@@ -1204,15 +1220,6 @@ static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last)
 	if (!sha_ctx->is_first)
 		memcpy(psha->op_hash.hash, sha_ctx->intermediate_digest,
 			sha_ctx->intermediate_digest_size);
-
-	msg_len = sha_ctx->user_src_buf_size;
-	if (msg_len > 0) {
-		err = copy_from_user(plaintext->buf_ptr, sha_ctx->user_src_buf, msg_len);
-		if (err) {
-			pr_err("%s(): Failed to copy plaintext: %d\n", __func__, err);
-			goto exit;
-		}
-	}
 
 	if (is_last == true &&
 			(sha_ctx->mode == VIRTUAL_SE_OP_MODE_SHAKE128 ||
@@ -1246,7 +1253,11 @@ static int tegra_hv_vse_safety_sha_op(struct ahash_request *req, bool is_last)
 		psha->op_hash.msg_total_length[1] = temp_len >> 32;
 	}
 
-	psha->op_hash.src_addr = plaintext->buf_iova;
+	if (!is_zero_copy)
+		psha->op_hash.src_addr = plaintext->buf_iova;
+	else
+		psha->op_hash.src_addr = sha_ctx->user_src_iova;
+
 	psha->op_hash.src_buf_size = msg_len;
 
 	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg.ivc_hdr.tag;
@@ -1310,7 +1321,7 @@ static int tegra_hv_vse_safety_sha_update(struct ahash_request *req)
 	}
 
 	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].engine_id;
-	se_dev = g_virtual_se_dev[engine_id];
+	se_dev = g_crypto_to_ivc_map[sha_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -1348,7 +1359,7 @@ static int tegra_hv_vse_safety_sha_finup(struct ahash_request *req)
 	}
 
 	engine_id = g_crypto_to_ivc_map[sha_ctx->node_id].engine_id;
-	se_dev = g_virtual_se_dev[engine_id];
+	se_dev = g_crypto_to_ivc_map[sha_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -1388,7 +1399,7 @@ static int tegra_hv_vse_safety_hmac_sha_setkey(struct crypto_ahash *tfm, const u
 	if (!ctx)
 		return -EINVAL;
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
 	if (keylen != 32) {
 		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
@@ -1416,34 +1427,35 @@ static int tegra_hv_vse_safety_hmac_sha_init(struct ahash_request *req)
 	struct crypto_ahash *tfm;
 	struct tegra_virtual_se_req_context *req_ctx;
 	struct tegra_virtual_se_hmac_sha_context *hmac_ctx;
-	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_dev *se_dev;
 
 	if (!req) {
-		dev_err(se_dev->dev, "HMAC SHA request not valid\n");
+		pr_err("%s HMAC SHA request not valid\n", __func__);
 		return -EINVAL;
 	}
 
-	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
-		return -ENODEV;
-
 	req_ctx = ahash_request_ctx(req);
 	if (!req_ctx) {
-		dev_err(se_dev->dev, "HMAC SHA req_ctx not valid\n");
+		pr_err("%s HMAC SHA req_ctx not valid\n", __func__);
 		return -EINVAL;
 	}
 
 	tfm = crypto_ahash_reqtfm(req);
 	if (!tfm) {
-		dev_err(se_dev->dev, "HMAC SHA transform not valid\n");
+		pr_err("%s HMAC SHA transform not valid\n", __func__);
 		return -EINVAL;
 	}
 
 	hmac_ctx = crypto_ahash_ctx(tfm);
 	hmac_ctx->digest_size = crypto_ahash_digestsize(tfm);
+	se_dev = g_crypto_to_ivc_map[hmac_ctx->node_id].se_dev;
+
+	/* Return error if engine is in suspended state */
+	if (atomic_read(&se_dev->se_suspended))
+		return -ENODEV;
 
 	if (!hmac_ctx->is_key_slot_allocated) {
-		pr_err("%s key is not allocated\n", __func__);
+		dev_err(se_dev->dev, "%s key is not allocated\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1465,7 +1477,7 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req, bool is
 	struct tegra_virtual_se_hmac_sha_context *hmac_ctx =
 			crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_virtual_se_dev *se_dev =
-			g_virtual_se_dev[g_crypto_to_ivc_map[hmac_ctx->node_id].engine_id];
+			g_crypto_to_ivc_map[hmac_ctx->node_id].se_dev;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_virtual_se_ivc_msg_t ivc_req_msg = {0};
@@ -1764,7 +1776,7 @@ static int tegra_hv_vse_safety_hmac_sha_update(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[hmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[hmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -1805,7 +1817,7 @@ static int tegra_hv_vse_safety_hmac_sha_finup(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[hmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[hmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -2091,7 +2103,7 @@ static int tegra_hv_vse_safety_aes_cbc_encrypt(struct skcipher_request *req)
 
 	req_ctx->encrypt = true;
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].engine_id;
-	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+	req_ctx->se_dev = g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 	if ((req_ctx->se_dev->chipdata->sm_supported == false) && (aes_ctx->b_is_sm4 == 1U)) {
 		pr_err("%s: SM4 CBC is not supported for selected platform\n", __func__);
 		return -EINVAL;
@@ -2124,7 +2136,7 @@ static int tegra_hv_vse_safety_aes_cbc_decrypt(struct skcipher_request *req)
 	req_ctx->encrypt = false;
 
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].engine_id;
-	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+	req_ctx->se_dev = g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 
 	if ((req_ctx->se_dev->chipdata->sm_supported == false) &&
 		(aes_ctx->b_is_sm4 == 1U)) {
@@ -2160,7 +2172,7 @@ static int tegra_hv_vse_safety_aes_ctr_encrypt(struct skcipher_request *req)
 
 	req_ctx->encrypt = true;
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].engine_id;
-	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+	req_ctx->se_dev = g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 	if ((req_ctx->se_dev->chipdata->sm_supported == false) && (aes_ctx->b_is_sm4 == 1U)) {
 		pr_err("%s: SM4 CTR is not supported for selected platform\n", __func__);
 		return -EINVAL;
@@ -2193,7 +2205,7 @@ static int tegra_hv_vse_safety_aes_ctr_decrypt(struct skcipher_request *req)
 	req_ctx->encrypt = false;
 
 	req_ctx->engine_id = g_crypto_to_ivc_map[aes_ctx->node_id].engine_id;
-	req_ctx->se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+	req_ctx->se_dev = g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 	if ((req_ctx->se_dev->chipdata->sm_supported == false) && (aes_ctx->b_is_sm4 == 1U)) {
 		pr_err("%s: SM4 CTR is not supported for selected platform\n", __func__);
 		return -EINVAL;
@@ -2215,7 +2227,7 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req)
 	struct tegra_virtual_se_aes_cmac_context *cmac_ctx =
 			crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_virtual_se_dev *se_dev =
-			g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+			g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
@@ -2380,7 +2392,7 @@ static int tegra_hv_vse_safety_cmac_sv_op_hw_verify_supported(
 	struct tegra_virtual_se_aes_cmac_context *cmac_ctx =
 			crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
@@ -2524,7 +2536,7 @@ static int tegra_hv_vse_safety_cmac_sv_op(struct ahash_request *req, bool is_las
 	struct tegra_virtual_se_aes_cmac_context *cmac_ctx =
 			crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
@@ -2732,7 +2744,7 @@ static int tegra_hv_vse_safety_cmac_init(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -2781,7 +2793,7 @@ static int tegra_hv_vse_safety_cmac_update(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -2809,7 +2821,7 @@ static int tegra_hv_vse_safety_cmac_final(struct ahash_request *req)
 	struct tegra_virtual_se_aes_cmac_context *cmac_ctx =
 					crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_virtual_se_dev *se_dev =
-			g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+			g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -2841,7 +2853,7 @@ static int tegra_hv_vse_safety_cmac_finup(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -2882,7 +2894,7 @@ static int tegra_hv_tsec_safety_cmac_finup(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -2902,7 +2914,7 @@ static int tegra_hv_vse_safety_cmac_digest(struct ahash_request *req)
 	struct tegra_virtual_se_aes_cmac_context *cmac_ctx =
 				crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended))
@@ -2925,7 +2937,7 @@ int tegra_hv_vse_safety_tsec_get_keyload_status(uint32_t node_id, uint32_t *err_
 	if (node_id >= MAX_NUMBER_MISC_DEVICES)
 		return -ENODEV;
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[node_id].se_dev;
 	pivck = g_crypto_to_ivc_map[node_id].ivck;
 
 	ivc_req_msg = devm_kzalloc(se_dev->dev, sizeof(*ivc_req_msg),
@@ -2988,6 +3000,179 @@ free_exit:
 }
 EXPORT_SYMBOL(tegra_hv_vse_safety_tsec_get_keyload_status);
 
+static int tegra_hv_vse_safety_validate_membuf_common(struct tegra_virtual_se_membuf_context *ctx)
+{
+	struct tegra_virtual_se_dev *se_dev = NULL;
+	int err = 0;
+
+	if (!ctx) {
+		pr_err("%s ctx is null\n", __func__);
+		err = -EINVAL;
+		goto exit;
+	}
+
+	if (ctx->node_id >= MAX_NUMBER_MISC_DEVICES) {
+		pr_err("%s node_id is invalid\n", __func__);
+		err = -ENODEV;
+		goto exit;
+	}
+
+	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
+
+	if (ctx->fd < 0) {
+		dev_err(se_dev->dev, "%s fd is invalid\n", __func__);
+		err = -EINVAL;
+		goto exit;
+	}
+
+exit:
+	return err;
+}
+
+int tegra_hv_vse_safety_map_membuf(struct tegra_virtual_se_membuf_context *ctx)
+{
+	struct tegra_virtual_se_dev *se_dev = NULL;
+	struct tegra_vse_membuf_ctx *membuf_ctx = NULL;
+	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attach;
+	struct sg_table *sgt;
+	dma_addr_t dma_addr;
+	dma_addr_t phys_addr;
+	uint32_t i;
+	int err = 0;
+
+	err = tegra_hv_vse_safety_validate_membuf_common(ctx);
+	if (err != 0)
+		return err;
+
+	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
+
+	if (g_node_dma[ctx->node_id].mapped_membuf_count >= MAX_ZERO_COPY_BUFS) {
+		dev_err(se_dev->dev, "%s no free membuf_ctx\n", __func__);
+		return -ENOMEM;
+	}
+
+	for (i = 0U; i < MAX_ZERO_COPY_BUFS; i++) {
+		membuf_ctx = &g_node_dma[ctx->node_id].membuf_ctx[i];
+
+		if (membuf_ctx->fd == -1)
+			break;
+	}
+
+	if (i == MAX_ZERO_COPY_BUFS) {
+		dev_err(se_dev->dev, "%s no free membuf_ctx\n", __func__);
+		return -ENOMEM;
+	}
+
+	dmabuf = dma_buf_get(ctx->fd);
+	if (IS_ERR_OR_NULL(dmabuf)) {
+		dev_err(se_dev->dev, "%s dma_buf_get failed\n", __func__);
+		return -EFAULT;
+	}
+	membuf_ctx->dmabuf = dmabuf;
+
+	attach = dma_buf_attach(dmabuf, se_dev->dev);
+	if (IS_ERR_OR_NULL(attach)) {
+		err = PTR_ERR(dmabuf);
+		dev_err(se_dev->dev, "%s dma_buf_attach failed\n", __func__);
+		goto buf_attach_err;
+	}
+	membuf_ctx->attach = attach;
+
+	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+	if (IS_ERR_OR_NULL(sgt)) {
+		err = PTR_ERR(sgt);
+		dev_err(se_dev->dev, "%s dma_buf_map_attachment failed\n", __func__);
+		goto buf_map_err;
+	}
+
+	phys_addr = sg_phys(sgt->sgl);
+	dma_addr = sg_dma_address(sgt->sgl);
+
+	if (!dma_addr)
+		dma_addr = phys_addr;
+
+	ctx->iova = dma_addr;
+	membuf_ctx->fd = ctx->fd;
+	g_node_dma[ctx->node_id].mapped_membuf_count += 1U;
+
+	return err;
+
+buf_map_err:
+	dma_buf_detach(dmabuf, attach);
+buf_attach_err:
+	dma_buf_put(dmabuf);
+	membuf_ctx->fd = -1;
+
+	return err;
+}
+EXPORT_SYMBOL(tegra_hv_vse_safety_map_membuf);
+
+void tegra_hv_vse_safety_unmap_all_membufs(uint32_t node_id)
+{
+	struct tegra_vse_membuf_ctx *membuf_ctx = NULL;
+	uint32_t i;
+
+	if (node_id >= MAX_NUMBER_MISC_DEVICES) {
+		pr_err("%s node_id is invalid\n", __func__);
+		return;
+	}
+
+	for (i = 0U; i < MAX_ZERO_COPY_BUFS; i++) {
+		membuf_ctx = &g_node_dma[node_id].membuf_ctx[i];
+
+		if (membuf_ctx->fd == -1)
+			continue;
+
+		dma_buf_detach(membuf_ctx->dmabuf, membuf_ctx->attach);
+		dma_buf_put(membuf_ctx->dmabuf);
+		membuf_ctx->fd = -1;
+	}
+
+	g_node_dma[node_id].mapped_membuf_count = 0U;
+}
+EXPORT_SYMBOL(tegra_hv_vse_safety_unmap_all_membufs);
+
+int tegra_hv_vse_safety_unmap_membuf(struct tegra_virtual_se_membuf_context *ctx)
+{
+	struct tegra_virtual_se_dev *se_dev;
+	struct tegra_vse_membuf_ctx *membuf_ctx = NULL;
+	uint32_t i;
+	int err = 0;
+
+	err = tegra_hv_vse_safety_validate_membuf_common(ctx);
+	if (err != 0)
+		return err;
+
+	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
+
+	if (g_node_dma[ctx->node_id].mapped_membuf_count == 0U) {
+		dev_err(se_dev->dev, "%s no mapped membuf to free\n", __func__);
+		return -EINVAL;
+	}
+
+
+	for (i = 0U; i < MAX_ZERO_COPY_BUFS; i++) {
+		membuf_ctx = &g_node_dma[ctx->node_id].membuf_ctx[i];
+
+		if (membuf_ctx->fd == ctx->fd)
+			break;
+	}
+
+	if (i == MAX_ZERO_COPY_BUFS) {
+		dev_err(se_dev->dev, "%s fd not found\n", __func__);
+		return -EINVAL;
+	}
+
+	dma_buf_detach(membuf_ctx->dmabuf, membuf_ctx->attach);
+	dma_buf_put(membuf_ctx->dmabuf);
+	membuf_ctx->fd = -1;
+	g_node_dma[ctx->node_id].mapped_membuf_count -= 1U;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_hv_vse_safety_unmap_membuf);
+
 static int tegra_hv_vse_safety_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		unsigned int keylen)
 {
@@ -3001,7 +3186,7 @@ static int tegra_hv_vse_safety_cmac_setkey(struct crypto_ahash *tfm, const u8 *k
 	if (!ctx)
 		return -EINVAL;
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
 	if ((keylen != 16) && (keylen != 32)) {
 		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
@@ -3049,7 +3234,7 @@ static int tegra_hv_vse_safety_aes_setkey(struct crypto_skcipher *tfm,
 	if (!ctx)
 		return -EINVAL;
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
 	if ((keylen != 16) && (keylen != 32)) {
 		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
@@ -3086,7 +3271,7 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 	u8 *rdata, unsigned int dlen, enum rng_call is_hw_req)
 {
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[rng_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[rng_ctx->node_id].se_dev;
 	u8 *rdata_addr;
 	int err = 0, j, num_blocks, data_len = 0;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
@@ -3202,7 +3387,7 @@ static int tegra_vse_aes_gcm_setkey(struct crypto_aead *tfm, const u8 *key,
 	if (!ctx)
 		return -EINVAL;
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
 	if ((keylen != 16) && (keylen != 32)) {
 		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
@@ -3256,7 +3441,7 @@ static int tegra_vse_aes_gcm_check_params(struct aead_request *req, bool encrypt
 	struct crypto_aead *tfm = crypto_aead_reqtfm(req);
 	struct tegra_virtual_se_aes_context *aes_ctx = crypto_aead_ctx(tfm);
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 
 	if (aes_ctx->user_tag_buf_size != TEGRA_VIRTUAL_SE_AES_GCM_TAG_SIZE) {
 		dev_err(se_dev->dev,
@@ -3298,7 +3483,7 @@ static int tegra_vse_aes_gcm_enc_dec(struct aead_request *req, bool encrypt)
 	struct crypto_aead *tfm = crypto_aead_reqtfm(req);
 	struct tegra_virtual_se_aes_context *aes_ctx = crypto_aead_ctx(tfm);
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg = NULL;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
@@ -3533,7 +3718,7 @@ static int tegra_vse_aes_gcm_enc_dec_hw_support(struct aead_request *req, bool e
 	struct crypto_aead *tfm = crypto_aead_reqtfm(req);
 	struct tegra_virtual_se_aes_context *aes_ctx = crypto_aead_ctx(tfm);
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg = NULL;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
@@ -3751,7 +3936,7 @@ static int tegra_vse_aes_gcm_encrypt(struct aead_request *req)
 
 	tfm = crypto_aead_reqtfm(req);
 	aes_ctx = crypto_aead_ctx(tfm);
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 
 	if (se_dev->chipdata->gcm_hw_iv_supported)
 		err = tegra_vse_aes_gcm_enc_dec_hw_support(req, true);
@@ -3777,7 +3962,7 @@ static int tegra_vse_aes_gcm_decrypt(struct aead_request *req)
 
 	tfm = crypto_aead_reqtfm(req);
 	aes_ctx = crypto_aead_ctx(tfm);
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[aes_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 
 	if (g_crypto_to_ivc_map[aes_ctx->node_id].gcm_dec_supported == GCM_DEC_OP_SUPPORTED) {
 		if (se_dev->chipdata->gcm_hw_iv_supported)
@@ -3822,7 +4007,7 @@ static int tegra_hv_vse_aes_gmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		goto exit;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
 	if ((keylen != 16) && (keylen != 32)) {
 		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
@@ -3887,7 +4072,7 @@ static int tegra_hv_vse_aes_gmac_sv_init(struct ahash_request *req)
 		goto exit;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[gmac_ctx->node_id].se_dev;
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended)) {
 		dev_err(se_dev->dev, "%s: engine is in suspended state", __func__);
@@ -3998,7 +4183,7 @@ static int tegra_vse_aes_gmac_sv_check_params(struct ahash_request *req)
 	struct tegra_virtual_se_aes_gmac_context *gmac_ctx =
 					crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[gmac_ctx->node_id].se_dev;
 	int err = 0;
 
 	/* Validate aad buf len */
@@ -4030,7 +4215,7 @@ static int tegra_hv_vse_aes_gmac_sv_op(struct ahash_request *req, bool is_last)
 		goto exit;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[gmac_ctx->node_id].se_dev;
 	pivck = g_crypto_to_ivc_map[gmac_ctx->node_id].ivck;
 
 	err = tegra_vse_aes_gmac_sv_check_params(req);
@@ -4202,6 +4387,9 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req, boo
 	u32 match_code = SE_HW_VALUE_MATCH_CODE;
 	u32 mismatch_code = SE_HW_VALUE_MISMATCH_CODE;
 	const struct tegra_vse_dma_buf *aad, *tag, *comp;
+	dma_addr_t aad_addr = 0UL;
+	dma_addr_t tag_addr = 0UL;
+	bool is_zero_copy;
 
 	gmac_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	if (!gmac_ctx) {
@@ -4210,33 +4398,56 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req, boo
 		goto exit;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[gmac_ctx->node_id].se_dev;
 	pivck = g_crypto_to_ivc_map[gmac_ctx->node_id].ivck;
+	is_zero_copy = g_crypto_to_ivc_map[gmac_ctx->node_id].is_zero_copy_node;
 
 	err = tegra_vse_aes_gmac_sv_check_params(req);
 	if (err != 0)
 		goto exit;
 
-	aad = tegra_hv_vse_get_dma_buf(gmac_ctx->node_id, AES_AAD_BUF_IDX,
-		gmac_ctx->user_aad_buf_size);
-	if (!aad) {
-		pr_err("%s aad buf is NULL\n", __func__);
-		return -ENOMEM;
-	}
-	if (gmac_ctx->user_aad_buf_size > 0) {
-		err = copy_from_user(aad->buf_ptr, gmac_ctx->user_aad_buf,
+	if (!is_zero_copy) {
+		aad = tegra_hv_vse_get_dma_buf(gmac_ctx->node_id, AES_AAD_BUF_IDX,
 			gmac_ctx->user_aad_buf_size);
-		if (err) {
-			pr_err("%s(): Failed to copy aad_buf: %d\n", __func__, err);
-			goto exit;
+		if (!aad) {
+			pr_err("%s aad buf is NULL\n", __func__);
+			return -ENOMEM;
 		}
+		if (gmac_ctx->user_aad_buf_size > 0) {
+			err = copy_from_user(aad->buf_ptr, gmac_ctx->user_aad_buf,
+				gmac_ctx->user_aad_buf_size);
+			if (err) {
+				pr_err("%s(): Failed to copy aad_buf: %d\n", __func__, err);
+				goto exit;
+			}
+		}
+		aad_addr = aad->buf_iova;
+
+		if (gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_SIGN) {
+			tag = tegra_hv_vse_get_dma_buf(gmac_ctx->node_id,
+					AES_TAG_BUF_IDX, gmac_ctx->authsize);
+			if (!tag) {
+				pr_err("%s tag buf is NULL\n", __func__);
+				return -ENOMEM;
+			}
+			tag_addr = tag->buf_iova;
+		}
+	} else {
+		if (g_node_dma[gmac_ctx->node_id].mapped_membuf_count == 0U) {
+			dev_err(se_dev->dev, "%s no mapped membuf found\n", __func__);
+			return -ENOMEM;
+		}
+
+		aad_addr = gmac_ctx->user_aad_iova;
+		if (gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_SIGN)
+			tag_addr = gmac_ctx->user_tag_iova;
 	}
 
-	if (gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_SIGN) {
-		tag = tegra_hv_vse_get_dma_buf(gmac_ctx->node_id,
-				AES_TAG_BUF_IDX, gmac_ctx->authsize);
-		if (!tag) {
-			pr_err("%s tag buf is NULL\n", __func__);
+	if (gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_VERIFY) {
+		comp = tegra_hv_vse_get_dma_buf(gmac_ctx->node_id, AES_COMP_BUF_IDX,
+							RESULT_COMPARE_BUF_SIZE);
+		if (!comp) {
+			pr_err("%s mac comp buf is NULL\n", __func__);
 			return -ENOMEM;
 		}
 	}
@@ -4252,13 +4463,6 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req, boo
 	if (!ivc_req_msg) {
 		err = -ENOMEM;
 		goto free_exit;
-	}
-
-	comp = tegra_hv_vse_get_dma_buf(gmac_ctx->node_id, AES_COMP_BUF_IDX,
-						RESULT_COMPARE_BUF_SIZE);
-	if (!comp) {
-		pr_err("%s mac comp buf is NULL\n", __func__);
-		return -ENOMEM;
 	}
 
 	ivc_tx = &ivc_req_msg->tx[0];
@@ -4283,11 +4487,11 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req, boo
 	memcpy(ivc_tx->aes.op_gcm.keyslot, gmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
 	ivc_tx->aes.op_gcm.key_length = gmac_ctx->keylen;
 	ivc_tx->aes.op_gcm.aad_buf_size = gmac_ctx->user_aad_buf_size;
-	ivc_tx->aes.op_gcm.aad_addr = (u32)(aad->buf_iova & U32_MAX);
+	ivc_tx->aes.op_gcm.aad_addr = aad_addr;
 
 	if (gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_SIGN) {
 		ivc_tx->aes.op_gcm.tag_buf_size = gmac_ctx->authsize;
-		ivc_tx->aes.op_gcm.tag_addr = (u32)(tag->buf_iova & U32_MAX);
+		ivc_tx->aes.op_gcm.tag_addr = tag_addr;
 	}
 
 	if (gmac_ctx->is_first)
@@ -4333,10 +4537,12 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req, boo
 				priv->rx_status);
 		err = status_to_errno(priv->rx_status);
 		goto free_exit;
-	} else {
-		if (is_last && gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_SIGN) {
+	}
+
+	if (is_last) {
+		if (gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_SIGN) {
 			/* copy tag to req for last GMAC_SIGN requests */
-			if (gmac_ctx->authsize > 0) {
+			if (!is_zero_copy && (gmac_ctx->authsize > 0)) {
 				err = copy_to_user(gmac_ctx->user_tag_buf, tag->buf_ptr,
 					gmac_ctx->authsize);
 				if (err) {
@@ -4344,17 +4550,16 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req, boo
 					goto free_exit;
 				}
 			}
+		} else {
+			if (memcmp(comp->buf_ptr, &match_code, 4) == 0)
+				gmac_ctx->result = 0;
+			else if (memcmp(comp->buf_ptr, &mismatch_code, 4) == 0)
+				gmac_ctx->result = 1;
+			else
+				err = -EINVAL;
 		}
 	}
 
-	if (is_last && gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_VERIFY) {
-		if (memcmp(comp->buf_ptr, &match_code, 4) == 0)
-			gmac_ctx->result = 0;
-		else if (memcmp(comp->buf_ptr, &mismatch_code, 4) == 0)
-			gmac_ctx->result = 1;
-		else
-			err = -EINVAL;
-	}
 
 free_exit:
 	if (ivc_req_msg)
@@ -4386,7 +4591,7 @@ static int tegra_hv_vse_aes_gmac_sv_update(struct ahash_request *req)
 		goto exit;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[gmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended)) {
@@ -4424,7 +4629,7 @@ static int tegra_hv_vse_aes_gmac_sv_finup(struct ahash_request *req)
 		goto exit;
 	}
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[gmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended)) {
@@ -4450,7 +4655,7 @@ static int tegra_hv_vse_aes_gmac_sv_final(struct ahash_request *req)
 	struct tegra_virtual_se_aes_gmac_context *gmac_ctx =
 					crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_virtual_se_dev *se_dev =
-				g_virtual_se_dev[g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id];
+				g_crypto_to_ivc_map[gmac_ctx->node_id].se_dev;
 
 	dev_err(se_dev->dev, "%s: final not supported", __func__);
 	return -EPERM;
@@ -4846,6 +5051,7 @@ static const struct tegra_vse_soc_info t194_vse_sinfo = {
 	.sm_supported = false,
 	.gcm_hw_iv_supported = false,
 	.hmac_verify_hw_support = false,
+	.zero_copy_supported = false,
 };
 
 static const struct tegra_vse_soc_info t234_vse_sinfo = {
@@ -4854,6 +5060,7 @@ static const struct tegra_vse_soc_info t234_vse_sinfo = {
 	.sm_supported = false,
 	.gcm_hw_iv_supported = false,
 	.hmac_verify_hw_support = false,
+	.zero_copy_supported = false,
 };
 
 static const struct tegra_vse_soc_info se_51_vse_sinfo = {
@@ -4862,6 +5069,7 @@ static const struct tegra_vse_soc_info se_51_vse_sinfo = {
 	.sm_supported = true,
 	.gcm_hw_iv_supported = true,
 	.hmac_verify_hw_support = true,
+	.zero_copy_supported = true,
 };
 
 static const struct of_device_id tegra_hv_vse_safety_of_match[] = {
@@ -4895,7 +5103,7 @@ static int tegra_vse_kthread(void *data)
 	size_t size_ivc_msg = sizeof(struct tegra_virtual_se_ivc_msg_t);
 	enum ivc_irq_state *irq_state;
 
-	se_dev = g_virtual_se_dev[g_crypto_to_ivc_map[node_id].engine_id];
+	se_dev = g_crypto_to_ivc_map[node_id].se_dev;
 
 	ivc_msg = devm_kzalloc(se_dev->dev, size_ivc_msg, GFP_KERNEL);
 	if (!ivc_msg)
@@ -5276,7 +5484,7 @@ static int tegra_hv_vse_allocate_se_dma_bufs(struct tegra_vse_node_dma *node_dma
 	node_dma->se_dev = se_dev;
 	for (i = 0; i < MAX_SE_DMA_BUFS; i++) {
 		if (buf_sizes[i] == 0U)
-			break;
+			continue;
 
 		node_dma->se_dma_buf[i].buf_ptr = dma_alloc_coherent(se_dev,
 						buf_sizes[i],
@@ -5370,6 +5578,11 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 	struct tegra_vse_soc_info *pdata = NULL;
 	static uint32_t s_node_id;
 	uint32_t ivc_cnt, cnt, instance_id;
+	bool has_zero_copy_prop;
+	static bool s_aes_alg_register_done;
+	static bool s_sha_alg_register_done;
+	static bool s_tsec_alg_register_done;
+	bool is_aes_alg, is_sha_alg, is_tsec_alg;
 
 	gcm_supports_dma = of_property_read_bool(pdev->dev.of_node, "nvidia,gcm-dma-support");
 
@@ -5387,6 +5600,8 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 		}
 		return 0;
 	}
+
+	has_zero_copy_prop = of_property_read_bool(pdev->dev.of_node, "#zero-copy");
 
 	se_dev = devm_kzalloc(&pdev->dev,
 				sizeof(struct tegra_virtual_se_dev),
@@ -5415,7 +5630,28 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	g_virtual_se_dev[engine_id] = se_dev;
+	switch (engine_id) {
+	case VIRTUAL_SE_AES0:
+	case VIRTUAL_SE_AES1:
+	case VIRTUAL_GCSE1_AES0:
+	case VIRTUAL_GCSE1_AES1:
+	case VIRTUAL_GCSE2_AES0:
+	case VIRTUAL_GCSE2_AES1:
+		is_aes_alg = true;
+		break;
+	case VIRTUAL_SE_SHA:
+	case VIRTUAL_GCSE1_SHA:
+	case VIRTUAL_GCSE2_SHA:
+		is_sha_alg = true;
+		break;
+	case VIRTUAL_SE_TSEC:
+		is_tsec_alg = true;
+		break;
+	default:
+		dev_err(se_dev->dev, "%s unsupported engine id %u\n", __func__, engine_id);
+		err = -EINVAL;
+		goto exit;
+	}
 
 	/* read ivccfg from dts */
 	err = of_property_read_u32_index(np, "nvidia,ivccfg_cnt", 0, &ivc_cnt);
@@ -5464,12 +5700,6 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 			goto exit;
 		}
 
-		if (instance_id >= ivc_cnt) {
-			pr_err("%s Error: invalid instance id %u\n", __func__, instance_id);
-			err = -EINVAL;
-			goto exit;
-		}
-
 		crypto_dev = &g_crypto_to_ivc_map[s_node_id];
 
 		err = of_property_read_u32_index(np, "nvidia,ivccfg", cnt * TEGRA_IVCCFG_ARRAY_LEN
@@ -5488,6 +5718,7 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 		crypto_dev->ivc_id = ivc_id;
 		crypto_dev->node_id = s_node_id;
 		crypto_dev->instance_id = instance_id;
+		crypto_dev->se_dev = se_dev;
 		crypto_dev->node_in_use = true;
 
 		err = of_property_read_u32_index(np, "nvidia,ivccfg", cnt * TEGRA_IVCCFG_ARRAY_LEN
@@ -5518,6 +5749,23 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 			pr_err("Error: invalid max buffer size. err %d\n", err);
 			err = -ENODEV;
 			goto exit;
+		}
+
+		if (has_zero_copy_prop) {
+			if (!se_dev->chipdata->zero_copy_supported) {
+				pr_err("Error: zero copy is not supported on this platform\n");
+				err = -ENODEV;
+				goto exit;
+			}
+
+			if (crypto_dev->max_buffer_size > 0U) {
+				pr_err("Error: max buffer size must be 0 if 0-copy is supported\n");
+				err = -ENODEV;
+				goto exit;
+			}
+			crypto_dev->is_zero_copy_node = true;
+		} else {
+			crypto_dev->is_zero_copy_node = false;
 		}
 
 		err = of_property_read_u32_index(np, "nvidia,ivccfg", cnt * TEGRA_IVCCFG_ARRAY_LEN
@@ -5645,7 +5893,7 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 		s_node_id++;
 	}
 
-	if (engine_id == VIRTUAL_SE_AES0) {
+	if (is_aes_alg && !s_aes_alg_register_done) {
 		err = crypto_register_ahash(&cmac_alg);
 		if (err) {
 			dev_err(&pdev->dev,
@@ -5674,17 +5922,12 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 			goto release_bufs;
 		}
 
-	}
-
-	if (engine_id == VIRTUAL_SE_AES1) {
-
 		err = crypto_register_skciphers(aes_algs, ARRAY_SIZE(aes_algs));
 		if (err) {
 			dev_err(&pdev->dev, "aes alg register failed: %d\n",
 				err);
 			goto release_bufs;
 		}
-
 
 		if (se_dev->chipdata->gcm_decrypt_supported) {
 			err = crypto_register_aeads(aead_algs, ARRAY_SIZE(aead_algs));
@@ -5694,12 +5937,11 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 				goto release_bufs;
 			}
 		}
+
+		s_aes_alg_register_done = true;
 	}
 
-	if ((engine_id == VIRTUAL_SE_SHA ||
-		engine_id == VIRTUAL_GCSE1_SHA ||
-		engine_id == VIRTUAL_GCSE2_SHA) &&
-		s_set_sha_algs == false) {
+	if (is_sha_alg && !s_sha_alg_register_done) {
 		for (i = 0; i < ARRAY_SIZE(sha_algs); i++) {
 			err = crypto_register_ahash(&sha_algs[i]);
 			if (err) {
@@ -5708,15 +5950,19 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 				goto release_bufs;
 			}
 		}
-		s_set_sha_algs = true;
+
+		s_sha_alg_register_done = true;
 	}
-	if (engine_id == VIRTUAL_SE_TSEC) {
+
+	if (is_tsec_alg && !s_tsec_alg_register_done) {
 		err = crypto_register_ahash(&tsec_alg);
 		if (err) {
 			dev_err(&pdev->dev,
 				"Tsec alg register failed. Err %d\n", err);
 			goto release_bufs;
 		}
+
+		s_tsec_alg_register_done = true;
 	}
 	se_dev->engine_id = engine_id;
 
@@ -5836,10 +6082,13 @@ static struct platform_driver tegra_hv_vse_safety_driver = {
 
 static int __init tegra_hv_vse_safety_module_init(void)
 {
-	uint32_t i;
+	uint32_t i, j;
 
-	for (i = 0U; i < MAX_NUMBER_MISC_DEVICES; i++)
+	for (i = 0U; i < MAX_NUMBER_MISC_DEVICES; i++) {
 		g_crypto_to_ivc_map[i].node_in_use = false;
+		for (j = 0; j < MAX_ZERO_COPY_BUFS; j++)
+			g_node_dma[i].membuf_ctx[j].fd = -1;
+	}
 
 	return platform_driver_register(&tegra_hv_vse_safety_driver);
 }
@@ -5851,6 +6100,12 @@ static void __exit tegra_hv_vse_safety_module_exit(void)
 
 module_init(tegra_hv_vse_safety_module_init);
 module_exit(tegra_hv_vse_safety_module_exit);
+
+#if defined(NV_MODULE_IMPORT_NS_CALLS_STRINGIFY)
+MODULE_IMPORT_NS(DMA_BUF);
+#else
+MODULE_IMPORT_NS("DMA_BUF");
+#endif
 
 MODULE_AUTHOR("Mallikarjun Kasoju <mkasoju@nvidia.com>");
 MODULE_DESCRIPTION("Virtual Security Engine driver over Tegra Hypervisor IVC channel");

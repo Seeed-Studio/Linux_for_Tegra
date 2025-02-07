@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * Cryptographic API.
@@ -30,6 +30,8 @@
 #define TEGRA_NVVSE_CMDID_TSEC_SIGN_VERIFY		13
 #define TEGRA_NVVSE_CMDID_TSEC_GET_KEYLOAD_STATUS	14
 #define TEGRA_NVVSE_CMDID_HMAC_SHA_SIGN_VERIFY		15
+#define TEGRA_NVVSE_CMDID_MAP_MEMBUF			17
+#define TEGRA_NVVSE_CMDID_UNMAP_MEMBUF			18
 
 /** Defines the length of the AES-CBC Initial Vector */
 #define TEGRA_NVVSE_AES_IV_LEN				16U
@@ -142,6 +144,15 @@ struct tegra_nvvse_sha_update_ctl {
 	uint8_t	*digest_buffer;
 	/** Holds the size of the digest buffer */
 	uint32_t digest_size;
+	/** [in] Flag to indicate Zero copy request.
+	 * 0 indicates non-Zero Copy request
+	 * non-zero indicates Zero copy request
+	 */
+	uint8_t  b_is_zero_copy;
+	/** [in] Holds the Input buffer IOVA address
+	 * Not used when b_is_zero_copy flag is 0.
+	 */
+	uint64_t in_buff_iova;
 };
 #define NVVSE_IOCTL_CMDID_UPDATE_SHA _IOW(TEGRA_NVVSE_IOC_MAGIC, TEGRA_NVVSE_CMDID_UPDATE_SHA, \
 						struct tegra_nvvse_sha_update_ctl)
@@ -353,6 +364,19 @@ struct tegra_nvvse_aes_gmac_sign_verify_ctl {
 	 * - Non-zero value indicates GMAC verification failure.
 	 */
 	uint8_t  result;
+	/** [in] Flag to indicate Zero copy request.
+	 * 0 indicates non-Zero Copy request
+	 * non-zero indicates Zero copy request
+	 */
+	uint8_t  b_is_zero_copy;
+	/** [in] Holds the Source buffer IOVA address
+	 * Not used when b_is_zero_copy flag is 0.
+	 */
+	uint64_t src_buffer_iova;
+	/** [in] Holds the Tag buffer IOVA address
+	 * Not used when b_is_zero_copy flag is 0.
+	 */
+	uint64_t tag_buffer_iova;
 	/** [in] Flag to indicate SM4 request.
 	 * 0 indicates non-SM4 request
 	 * non-zero indicates SM4 request
@@ -440,6 +464,34 @@ struct tegra_nvvse_tsec_get_keyload_status {
 #define NVVSE_IOCTL_CMDID_TSEC_GET_KEYLOAD_STATUS _IOWR(TEGRA_NVVSE_IOC_MAGIC, \
 						TEGRA_NVVSE_CMDID_TSEC_GET_KEYLOAD_STATUS, \
 						struct tegra_nvvse_tsec_get_keyload_status)
+
+/**
+ * \brief Holds Map Membuf request parameters
+ */
+struct tegra_nvvse_map_membuf_ctl {
+	/** [in] Holds File descriptor ID
+	 * Needs to be non-negative/non-zero value.
+	 */
+	int32_t fd;
+	/** [out] Holds IOVA corresponding to mapped memory buffer */
+	uint64_t iova;
+};
+#define NVVSE_IOCTL_CMDID_MAP_MEMBUF _IOWR(TEGRA_NVVSE_IOC_MAGIC, \
+					TEGRA_NVVSE_CMDID_MAP_MEMBUF, \
+					struct tegra_nvvse_map_membuf_ctl)
+
+/**
+ * \brief Holds the Unmap Membuf request parameters
+ */
+struct tegra_nvvse_unmap_membuf_ctl {
+	/** [in] Holds File descriptor ID
+	 * Needs to be a value greater than 0.
+	 */
+	int32_t fd;
+};
+#define NVVSE_IOCTL_CMDID_UNMAP_MEMBUF _IOWR(TEGRA_NVVSE_IOC_MAGIC, \
+					TEGRA_NVVSE_CMDID_UNMAP_MEMBUF, \
+					struct tegra_nvvse_unmap_membuf_ctl)
 
 /**
  * brief Holds IVC databse

@@ -11,6 +11,7 @@
 #define KEYSLOT_OFFSET_BYTES		8
 #define MAX_SE_DMA_BUFS	4
 #define TEGRA_HV_VSE_AES_IV_LEN		16U
+#define MAX_ZERO_COPY_BUFS		6U
 
 struct tegra_vse_soc_info {
 	bool gcm_decrypt_supported;
@@ -18,6 +19,7 @@ struct tegra_vse_soc_info {
 	bool sm_supported;
 	bool gcm_hw_iv_supported;
 	bool hmac_verify_hw_support;
+	bool zero_copy_supported;
 };
 
 /* GCM Operation Supported Flag */
@@ -38,11 +40,19 @@ struct tegra_vse_dma_buf {
 	uint32_t buf_len;
 };
 
+struct tegra_vse_membuf_ctx {
+	int fd;
+	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attach;
+};
+
 struct tegra_vse_node_dma {
 	struct device *se_dev;
 	struct device *gpcdma_dev;
 	struct tegra_vse_dma_buf se_dma_buf[MAX_SE_DMA_BUFS];
 	struct tegra_vse_dma_buf gpc_dma_buf;
+	struct tegra_vse_membuf_ctx membuf_ctx[MAX_ZERO_COPY_BUFS];
+	uint32_t mapped_membuf_count;
 };
 
 struct crypto_dev_to_ivc_map {
@@ -74,6 +84,8 @@ struct crypto_dev_to_ivc_map {
 	struct mutex irq_state_lock;
 	struct tegra_vse_dma_buf mempool;
 	bool node_in_use;
+	bool is_zero_copy_node;
+	struct tegra_virtual_se_dev *se_dev;
 };
 
 struct tegra_virtual_se_dev {
@@ -186,6 +198,8 @@ struct tegra_virtual_se_aes_gmac_context {
 	bool is_first;
 	/* For GMAC_VERIFY tag comparison result */
 	uint8_t result;
+	uint64_t user_aad_iova;
+	uint64_t user_tag_iova;
 };
 
 /* Security Engine SHA context */
@@ -205,6 +219,7 @@ struct tegra_virtual_se_sha_context {
 	uint8_t *user_src_buf;
 	uint8_t *user_digest_buffer;
 	uint32_t user_src_buf_size;
+	uint64_t user_src_iova;
 };
 
 enum hmac_sha_request_type {
@@ -237,6 +252,12 @@ struct tegra_virtual_se_hmac_sha_context {
 	uint8_t result;
 };
 
+struct tegra_virtual_se_membuf_context {
+	int fd;
+	int64_t iova;
+	uint32_t node_id;
+};
+
 
 /* Security Engine request context */
 struct tegra_virtual_se_req_context {
@@ -252,5 +273,14 @@ struct crypto_dev_to_ivc_map *tegra_hv_vse_get_db(void);
 
 /* API to get tsec keyload status from vse driver */
 int tegra_hv_vse_safety_tsec_get_keyload_status(uint32_t node_id, uint32_t *err_code);
+
+/* API to Map memory buffer corresponding to an FD and return IOVA */
+int tegra_hv_vse_safety_map_membuf(struct tegra_virtual_se_membuf_context *ctx);
+
+/* API to Unmap memory buffer corresponding to an FD */
+int tegra_hv_vse_safety_unmap_membuf(struct tegra_virtual_se_membuf_context *ctx);
+
+/* API to Unmap all memory buffers corresponding to a node id */
+void tegra_hv_vse_safety_unmap_all_membufs(uint32_t node_id);
 
 #endif /*__TEGRA_HV_VSE_H*/
