@@ -351,6 +351,56 @@ static const unsigned int heap_policy_excl[] = {
 	0,
 };
 
+static int nvmap_page_from_vma(struct vm_area_struct *vma, ulong vaddr, struct page **page)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+	unsigned long pfn;
+	struct follow_pfnmap_args args = {
+		.vma = vma,
+		.address = vaddr,
+	};
+
+	if (follow_pfnmap_start(&args)) {
+		pr_err("follow_pfnmap_start failed\n");
+		goto fail;
+	}
+
+	pfn = args.pfn;
+	if (!pfn_is_map_memory(pfn)) {
+		follow_pfnmap_end(&args);
+		pr_err("pfn_is_map_memory failed\n");
+		goto fail;
+	}
+
+	*page = pfn_to_page(pfn);
+	get_page(*page);
+	follow_pfnmap_end(&args);
+	return 0;
+
+fail:
+	return -EINVAL;
+#else
+	unsigned long pfn;
+
+	if (follow_pfn(vma, vaddr, &pfn)) {
+		pr_err("follow_pfn failed\n");
+		goto fail;
+	}
+
+	if (!pfn_is_map_memory(pfn)) {
+		pr_err("no-map memory not allowed\n");
+		goto fail;
+	}
+
+	*page = pfn_to_page(pfn);
+	get_page(*page);
+	return 0;
+
+fail:
+	return -EINVAL;
+#endif
+}
+
 /* must be called with mmap_sem held for read or write */
 int nvmap_get_user_pages(ulong vaddr,
 				size_t nr_page, struct page **pages,
@@ -393,6 +443,26 @@ int nvmap_get_user_pages(ulong vaddr,
 				user_pages);
 		while (--user_pages >= 0)
 			put_page(pages[user_pages]);
+
+		/*
+		 * OpenRM case: When buffer is mapped using remap_pfn_range
+		 */
+		if (vma->vm_flags & VM_PFNMAP) {
+			user_pages = 0;
+			while (user_pages < nr_page) {
+				ret = nvmap_page_from_vma(vma, vaddr, &pages[user_pages]);
+				if (ret)
+					break;
+
+				vaddr += PAGE_SIZE;
+				user_pages++;
+			}
+
+			if (ret) {
+				while (--user_pages >= 0)
+					put_page(pages[user_pages]);
+			}
+		}
 	}
 
 	return ret;
