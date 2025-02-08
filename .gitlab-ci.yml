@@ -96,12 +96,13 @@ stages:
     if [ $BUILD_QSPI_IMG == "1" ]; then
       # package the image for qspi flash
       sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB BOARDREV=$BOARDREV CHIP_SKU=$CHIP_SKU ./tools/kernel_flash/l4t_initrd_flash.sh -p "-c bootloader/generic/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash --massflash 5 --network usb0 $CONFIG external
-      md5sum mfi_$CONFIG.tar.gz > md5sum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt
+      md5sum mfi_$CONFIG.tar.gz > chksum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt
+      sha256sum mfi_$CONFIG.tar.gz >> chksum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt
       # upload image of qspi
       mkdir -p deploy
       mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
       cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-qspiflash-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz || true
-      cp md5sum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt deploy/ || true
+      cp chksum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt deploy/ || true
       umount deploy
     fi
   # install user custom package(optional)
@@ -124,12 +125,13 @@ stages:
     fi
   # package the image for qspi & nvme flash
   - sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB BOARDREV=$BOARDREV CHIP_SKU=$CHIP_SKU ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB -p "-c bootloader/generic/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash --massflash 5 --network usb0 $CONFIG external
-  - md5sum mfi_$CONFIG.tar.gz > md5sum-$CI_JOB_STAGE-$DATE_STR.txt
+  - md5sum mfi_$CONFIG.tar.gz > chksum-$CI_JOB_STAGE-$DATE_STR.txt
+  - sha256sum mfi_$CONFIG.tar.gz >> chksum-$CI_JOB_STAGE-$DATE_STR.txt
   # upload image of qspi & nvme ssd
   - mkdir -p deploy
   - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy 
   - cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz || true
-  - cp md5sum-$CI_JOB_STAGE-$DATE_STR.txt deploy/ || true
+  - cp chksum-$CI_JOB_STAGE-$DATE_STR.txt deploy/ || true
   - umount deploy
 
 build-reserver-industrial-orin-nano-4g-j401:
