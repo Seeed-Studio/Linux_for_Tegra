@@ -11,6 +11,7 @@
 #include <linux/iommu.h>
 #include <linux/kref.h>
 #include <linux/module.h>
+#include <linux/overflow.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
@@ -35,9 +36,10 @@ struct host1x_job *host1x_job_alloc(struct host1x_channel *ch,
 
 	enable_firewall = IS_ENABLED(CONFIG_TEGRA_HOST1X_FIREWALL) && !skip_firewall;
 
-	if (!enable_firewall)
-		num_unpins += num_cmdbufs;
-
+	if (!enable_firewall) {
+		if (check_add_overflow(num_unpins, num_cmdbufs, &num_unpins))
+			return NULL;
+	}
 	/* Check that we're not going to overflow */
 	total = sizeof(struct host1x_job) +
 		(u64)num_relocs * sizeof(struct host1x_reloc) +
@@ -559,7 +561,8 @@ static inline int copy_gathers(struct device *host, struct host1x_job *job,
 
 		g = &job->cmds[i].gather;
 
-		size += g->words * sizeof(u32);
+		if (check_add_overflow(size, g->words * sizeof(u32), &size))
+			return -EOVERFLOW;
 	}
 
 	/*
