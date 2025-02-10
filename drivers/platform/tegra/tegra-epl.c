@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -333,6 +333,7 @@ static int epl_client_probe(struct platform_device *pdev)
 	const struct device_node *np = dev->of_node;
 	int iterator = 0;
 	char name[32] = "client-misc-sw-generic-err";
+	bool is_misc_ec_mapped = false;
 
 	hs_state = HANDSHAKE_PENDING;
 
@@ -359,6 +360,8 @@ static int epl_client_probe(struct platform_device *pdev)
 				ret = -1;
 				dev_err(&pdev->dev, "error in mapping misc err register for err #%d\n",
 						iterator);
+			} else {
+				is_misc_ec_mapped = true;
 			}
 		} else {
 			pr_info("Misc Sw Generic Err %d not configured for any client\n", iterator);
@@ -374,11 +377,13 @@ static int epl_client_probe(struct platform_device *pdev)
 
 	dev_info(dev, "handshake-retry-count %u\n", handshake_retry_count);
 
-	mission_err_status_va = devm_platform_ioremap_resource(pdev, NUM_SW_GENERIC_ERR * 2);
-	if (IS_ERR(mission_err_status_va)) {
-		isAddrMappOk = false;
-		dev_err(&pdev->dev, "error in mapping mission error status register\n");
-		return PTR_ERR(mission_err_status_va);
+	if (is_misc_ec_mapped == true) {
+		mission_err_status_va = devm_platform_ioremap_resource(pdev, NUM_SW_GENERIC_ERR * 2);
+		if (IS_ERR(mission_err_status_va)) {
+			isAddrMappOk = false;
+			dev_err(&pdev->dev, "error in mapping mission error status register\n");
+			return PTR_ERR(mission_err_status_va);
+		}
 	}
 
 	if (ret == 0) {
