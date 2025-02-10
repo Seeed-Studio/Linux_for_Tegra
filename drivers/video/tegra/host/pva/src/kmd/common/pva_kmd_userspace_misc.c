@@ -1,0 +1,148 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.  Any
+ * use, reproduction, disclosure or distribution of this software and related
+ * documentation without an express license agreement from NVIDIA Corporation
+ * is strictly prohibited.
+ */
+#include "pva_kmd_mutex.h"
+#include "pva_kmd_utils.h"
+#include "pva_kmd_thread_sema.h"
+#include "pva_kmd_device_memory.h"
+#include <pthread.h>
+#include <time.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
+
+enum pva_error pva_kmd_mutex_init(pva_kmd_mutex_t *m)
+{
+	int ret = pthread_mutex_init(m, NULL);
+	ASSERT(ret == 0);
+
+	return PVA_SUCCESS;
+}
+
+void pva_kmd_mutex_lock(pva_kmd_mutex_t *m)
+{
+	int ret = pthread_mutex_lock(m);
+	ASSERT(ret == 0);
+}
+
+void pva_kmd_mutex_unlock(pva_kmd_mutex_t *m)
+{
+	int ret = pthread_mutex_unlock(m);
+	ASSERT(ret == 0);
+}
+
+void pva_kmd_mutex_deinit(pva_kmd_mutex_t *m)
+{
+	int ret = pthread_mutex_destroy(m);
+	ASSERT(ret == 0);
+}
+
+void *pva_kmd_zalloc(uint64_t size)
+{
+	return calloc(1, size);
+}
+
+void pva_kmd_free(void *ptr)
+{
+	free(ptr);
+}
+
+void pva_kmd_fault(void)
+{
+	abort();
+}
+
+void pva_kmd_sema_init(pva_kmd_sema_t *sem, uint32_t val)
+{
+	int ret;
+
+	ret = sem_init(sem, 0 /* Only sharing in threads */, val);
+	ASSERT(ret == 0);
+}
+
+enum pva_error pva_kmd_sema_wait_timeout(pva_kmd_sema_t *sem,
+					 uint32_t timeout_ms)
+{
+	struct timespec ts;
+	int ret;
+	ret = clock_gettime(CLOCK_REALTIME, &ts);
+	ASSERT(ret == 0);
+
+	/* Add timeout (specified in milliseconds) to the current time */
+	ts.tv_sec += timeout_ms / 1000;
+	ts.tv_nsec += (timeout_ms % 1000) * 1000000;
+
+	/* Handle case where nanoseconds exceed 1 second */
+	if (ts.tv_nsec >= 1000000000) {
+		ts.tv_nsec -= 1000000000;
+		ts.tv_sec += 1;
+	}
+
+wait_again:
+	ret = sem_timedwait(sem, &ts);
+	if (ret != 0) {
+		if (errno == ETIMEDOUT) {
+			pva_kmd_log_err("pva_kmd_sema_wait_timeout Timed out");
+			return PVA_TIMEDOUT;
+		} else if (errno == EINTR) {
+			goto wait_again;
+		} else {
+			FAULT("Unexpected sem_timedwait error");
+		}
+	}
+
+	return PVA_SUCCESS;
+}
+
+void pva_kmd_sema_deinit(pva_kmd_sema_t *sem)
+{
+	int ret = sem_destroy(sem);
+	ASSERT(ret == 0);
+}
+
+void pva_kmd_sema_post(pva_kmd_sema_t *sem)
+{
+	int ret = sem_post(sem);
+	ASSERT(ret == 0);
+}
+
+struct pva_kmd_device_memory *
+pva_kmd_device_memory_alloc_map(uint64_t size, struct pva_kmd_device *pva,
+				uint32_t iova_access_flags,
+				uint32_t smmu_ctx_idx)
+{
+	struct pva_kmd_device_memory *mem;
+	enum pva_error err;
+
+	mem = pva_kmd_device_memory_alloc(size);
+
+	if (mem == NULL) {
+		goto err_out;
+	}
+
+	err = pva_kmd_device_memory_iova_map(mem, pva, iova_access_flags,
+					     smmu_ctx_idx);
+	if (err != PVA_SUCCESS) {
+		goto free_mem;
+	}
+
+	err = pva_kmd_device_memory_cpu_map(mem);
+	if (err != PVA_SUCCESS) {
+		goto iova_unmap;
+	}
+
+	return mem;
+iova_unmap:
+	pva_kmd_device_memory_iova_unmap(mem);
+free_mem:
+	pva_kmd_device_memory_free(mem);
+err_out:
+	return NULL;
+}

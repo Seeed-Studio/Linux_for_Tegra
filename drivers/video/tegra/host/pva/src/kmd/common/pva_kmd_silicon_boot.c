@@ -1,0 +1,317 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.  Any
+ * use, reproduction, disclosure or distribution of this software and related
+ * documentation without an express license agreement from NVIDIA Corporation
+ * is strictly prohibited.
+ */
+
+#include "pva_kmd_device.h"
+#include "pva_fw_address_map.h"
+#include "pva_fw_hyp.h"
+#include "pva_kmd_thread_sema.h"
+#include "pva_kmd_constants.h"
+#include "pva_kmd_silicon_isr.h"
+#include "pva_kmd_silicon_boot.h"
+#include "pva_kmd_shim_silicon.h"
+
+static inline void pva_kmd_set_sema(struct pva_kmd_device *pva,
+				    uint32_t sema_idx, uint32_t val)
+{
+	uint32_t gap = PVA_REG_HSP_SS1_SET_ADDR - PVA_REG_HSP_SS0_SET_ADDR;
+	gap = safe_mulu32(gap, sema_idx);
+	pva_kmd_write(pva, safe_addu32(PVA_REG_HSP_SS0_SET_ADDR, gap), val);
+}
+
+static void init_fw_print_buffer(struct pva_kmd_fw_print_buffer *print_buffer,
+				 void *debug_buffer_va)
+{
+	print_buffer->buffer_info = pva_offset_pointer(
+		debug_buffer_va,
+		FW_TRACE_BUFFER_SIZE + FW_CODE_COVERAGE_BUFFER_SIZE);
+	print_buffer->size =
+		FW_DEBUG_LOG_BUFFER_SIZE - sizeof(*print_buffer->buffer_info);
+	print_buffer->head = 0;
+	print_buffer->content = pva_offset_pointer(
+		print_buffer->buffer_info, sizeof(*print_buffer->buffer_info));
+}
+
+static void disable_sec_mission_error_reporting(struct pva_kmd_device *pva)
+{
+	pva_kmd_write(pva, PVA_REG_SEC_ERRSLICE0_MISSIONERR_ENABLE_ADDR, 0U);
+	pva_kmd_write(pva, PVA_REG_SEC_ERRSLICE1_MISSIONERR_ENABLE_ADDR, 0U);
+	pva_kmd_write(pva, PVA_REG_SEC_ERRSLICE2_MISSIONERR_ENABLE_ADDR, 0U);
+	pva_kmd_write(pva, PVA_REG_SEC_ERRSLICE3_MISSIONERR_ENABLE_ADDR, 0U);
+}
+
+static void disable_sec_latent_error_reporting(struct pva_kmd_device *pva)
+{
+	pva_kmd_write(pva, PVA_REG_SEC_ERRSLICE0_LATENTERR_ENABLE_ADDR, 0U);
+	pva_kmd_write(pva, PVA_REG_SEC_ERRSLICE1_LATENTERR_ENABLE_ADDR, 0U);
+	pva_kmd_write(pva, PVA_REG_SEC_ERRSLICE2_LATENTERR_ENABLE_ADDR, 0U);
+	pva_kmd_write(pva, PVA_REG_SEC_ERRSLICE3_LATENTERR_ENABLE_ADDR, 0U);
+}
+
+void pva_kmd_config_evp_seg_regs(struct pva_kmd_device *pva)
+{
+	uint64_t seg_reg_value;
+	/* EVP */
+	pva_kmd_write(pva, PVA_REG_EVP_RESET_ADDR, EVP_RESET_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_UNDEF_ADDR,
+		      EVP_UNDEFINED_INSTRUCTION_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_SWI_ADDR, EVP_SVC_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_PREFETCH_ABORT_ADDR,
+		      EVP_PREFETCH_ABORT_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_DATA_ABORT_ADDR, EVP_DATA_ABORT_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_RSVD_ADDR, EVP_RESERVED_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_IRQ_ADDR, EVP_IRQ_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_FIQ_ADDR, EVP_FIQ_VECTOR);
+	/* R5 regions are defined as:
+	 * - PRIV1 region for firmware code and data.
+	 * - PRIV2 region for debug printf data.
+	 * - Remaining region for resource table, queues, etc.
+	 */
+	pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_start,
+		      FW_CODE_DATA_START_ADDR);
+	pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_end,
+		      FW_CODE_DATA_END_ADDR);
+	pva_kmd_write(pva, pva->regspec.cfg_priv_ar2_start,
+		      FW_DEBUG_DATA_START_ADDR);
+	pva_kmd_write(pva, pva->regspec.cfg_priv_ar2_end,
+		      FW_DEBUG_DATA_END_ADDR);
+	/* Firmware expects R5 virtual address FW_CODE_DATA_START_ADDR to be
+ 	* mapped to the beginning of firmware binary. Therefore, we adjust
+ 	* segment registers accordingly
+ 	*
+ 	* */
+	if (pva->load_from_gsc) {
+		if (pva->is_hv_mode) {
+			/* Loading from GSC with HV (i.e AV+L or AV+Q case).
+			 * This will be trapped by HV
+			 */
+			pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_lsegreg,
+				      0xFFFFFFFFU);
+			pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_usegreg,
+				      0xFFFFFFFFU);
+		} else {
+			/* Loading from GSC without HV i.e L4T case.
+			 * TODO: Program Segment regsites using the GSC Careveout
+			 * fetched from DT file. Till then, ASSERT here.
+			 */
+			ASSERT(false);
+		}
+	} else {
+		/* Loading from file.
+		 * In HV case, traps should be bypassed in HV
+		 */
+		seg_reg_value =
+			pva->fw_bin_mem->iova -
+			FW_CODE_DATA_START_ADDR; /* underflow is totally OK */
+		pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_lsegreg,
+			      iova_lo(seg_reg_value));
+		pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_usegreg,
+			      iova_hi(seg_reg_value));
+	}
+}
+
+void pva_kmd_config_scr_regs(struct pva_kmd_device *pva)
+{
+	pva_kmd_write(pva, PVA_REG_EVP_SCR_ADDR, PVA_EVP_SCR_VAL);
+	pva_kmd_write(pva, PVA_CFG_SCR_STATUS_CNTL, PVA_STATUS_CTL_SCR_VAL);
+	pva_kmd_write(pva, PVA_CFG_SCR_PRIV, PVA_PRIV_SCR_VAL);
+	pva_kmd_write(pva, PVA_CFG_SCR_CCQ_CNTL, PVA_CCQ_SCR_VAL);
+}
+
+void pva_kmd_config_sid(struct pva_kmd_device *pva)
+{
+	uint32_t addr;
+	uint32_t i;
+	uint32_t offset;
+	uint8_t priv1_sid;
+	uint8_t priv_sid;
+	priv_sid = pva->stream_ids[PVA_R5_SMMU_CONTEXT_ID] & 0xFF;
+	priv1_sid = pva->stream_ids[pva->r5_image_smmu_context_id] & 0xFF;
+	/* Priv SIDs */
+	if (pva->load_from_gsc) {
+		pva_kmd_write(pva, pva->regspec.cfg_priv_sid,
+			      PVA_INSERT(priv_sid, 7, 0) |
+				      PVA_INSERT(priv1_sid, 15, 8) |
+				      PVA_INSERT(priv_sid, 23, 16));
+	} else {
+		pva_kmd_write(pva, pva->regspec.cfg_priv_sid,
+			      PVA_INSERT(priv_sid, 7, 0) |
+				      PVA_INSERT(priv_sid, 15, 8) |
+				      PVA_INSERT(priv_sid, 23, 16));
+	}
+	/* VPS SIDs  */
+	if ((pva->hw_consts.hw_gen == PVA_HW_GEN3) && pva->load_from_gsc) {
+		pva_kmd_write(pva, pva->regspec.cfg_vps_sid,
+			      PVA_INSERT(priv1_sid, 7, 0) |
+				      PVA_INSERT(priv1_sid, 15, 8));
+	} else {
+		pva_kmd_write(pva, pva->regspec.cfg_vps_sid,
+			      PVA_INSERT(priv_sid, 7, 0) |
+				      PVA_INSERT(priv_sid, 15, 8));
+	}
+	/* User SIDs */
+	offset = 0;
+	for (i = 1; i < pva->hw_consts.n_smmu_contexts - 1; i++) {
+		addr = safe_addu32(pva->regspec.cfg_user_sid_base, offset);
+		pva_kmd_write(pva, addr, pva->stream_ids[i]);
+		offset = safe_addu32(offset, 4U);
+	}
+}
+
+enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
+{
+	uint64_t seg_reg_value;
+	uint32_t debug_data_size;
+	uint32_t boot_sema = 0;
+	enum pva_error err = PVA_SUCCESS;
+
+	/* Load firmware */
+	if (!pva->load_from_gsc) {
+		err = pva_kmd_read_fw_bin(pva);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err(
+				"Failed to read firmware from filesystem");
+			goto out;
+		}
+	}
+
+	debug_data_size = (uint32_t)safe_pow2_roundup_u32(
+		FW_DEBUG_DATA_TOTAL_SIZE, SIZE_4KB);
+	pva->fw_debug_mem = pva_kmd_device_memory_alloc_map(
+		debug_data_size, pva, PVA_ACCESS_RW, PVA_R5_SMMU_CONTEXT_ID);
+	if (pva->fw_debug_mem == NULL) {
+		err = PVA_NOMEM;
+		goto free_fw_mem;
+	}
+	init_fw_print_buffer(&pva->fw_print_buffer, pva->fw_debug_mem->va);
+
+	/* Program SCRs */
+	pva_kmd_write(pva, PVA_SEC_SCR_SECEXT_INTR_EVENT,
+		      PVA_SEC_SCR_SECEXT_INTR_EVENT_VAL);
+	pva_kmd_write(pva, PVA_PROC_SCR_PROC, PVA_PROC_SCR_PROC_VAL);
+
+	pva_kmd_config_evp_seg_scr_regs(pva);
+
+	/* Write IOVA address of debug buffer to mailbox and FW will program
+	 * PRIV2 segment register properly such that the debug buffer is located
+	 * at R5 virtual address FW_DEBUG_DATA_START_ADDR */
+	seg_reg_value = pva->fw_debug_mem->iova;
+
+	/* When GSC is enabled, KMD cannot write directly to segment registers,
+	 * therefore we write to mailbox registers and FW will program by
+	 * itself.
+	 * pva_kmd_writel(pva, pva->regspec.cfg_priv_ar2_lsegreg,
+	 *	       iova_lo(seg_reg_value));
+	 * pva_kmd_writel(pva, pva->regspec.cfg_priv_ar2_usegreg,
+	 *             iova_hi(seg_reg_value));
+	 */
+	pva_kmd_write_mailbox(pva, PVA_MBOXID_PRIV2SEG_L,
+			      iova_lo(seg_reg_value));
+	pva_kmd_write_mailbox(pva, PVA_MBOXID_PRIV2SEG_H,
+			      iova_hi(seg_reg_value));
+
+	/* Write shared memory allocation start address to mailbox and FW will
+	 * program user segment register accordingly so that virtual address
+	 * PVA_SHARED_MEMORY_START will point to the allocation start address.
+	 *
+	 * We deliberately also choose PVA_SHARED_MEMORY_START as the allocation
+	 * start address so that the net result is that user segment register
+	 * will be programmed to 0.
+	 */
+	seg_reg_value = FW_SHARED_MEMORY_START;
+	pva_kmd_write_mailbox(pva, PVA_MBOXID_USERSEG_L,
+			      iova_lo(seg_reg_value));
+	pva_kmd_write_mailbox(pva, PVA_MBOXID_USERSEG_H,
+			      iova_hi(seg_reg_value));
+
+	/* Boot parameters  */
+	if (pva->bl_sector_pack_format == PVA_BL_XBAR_RAW) {
+		boot_sema = PVA_BOOT_SEMA_USE_XBAR_RAW;
+	}
+	pva_kmd_set_sema(pva, PVA_BOOT_SEMA, boot_sema);
+
+	pva_kmd_write(pva, PVA_REG_HSP_SS2_SET_ADDR,
+		      pva_kmd_get_syncpt_ro_offset(pva));
+	pva_kmd_write(pva, PVA_REG_HSP_SS3_SET_ADDR,
+		      pva_kmd_get_syncpt_rw_offset(pva));
+
+	pva_kmd_config_sid_regs(pva);
+
+	/* Enable LIC INTR line for HSP1 and WDT */
+	pva_kmd_write(pva, pva->regspec.sec_lic_intr_enable,
+		      PVA_BIT(0) /*Watchdog*/
+			      | PVA_INSERT(0x1, 4, 1) /* HSP1 */
+			      | PVA_INSERT(0x7, 7, 5) /* All H1X errors */);
+
+	/* Bind interrupts */
+	err = pva_kmd_bind_intr_handler(pva, PVA_KMD_INTR_LINE_SEC_LIC,
+					pva_kmd_hyp_isr, pva);
+	if (err != PVA_SUCCESS) {
+		goto free_fw_debug_mem;
+	}
+	err = pva_kmd_bind_intr_handler(pva, PVA_KMD_INTR_LINE_CCQ0,
+					pva_kmd_isr, pva);
+	if (err != PVA_SUCCESS) {
+		goto free_sec_lic;
+	}
+
+	/* Take R5 out of reset */
+	pva_kmd_write(pva, PVA_REG_PROC_CPUHALT_ADDR, 0x1);
+
+	/* Wait until fw boots */
+	err = pva_kmd_sema_wait_timeout(&pva->fw_boot_sema,
+					PVA_KMD_FW_BOOT_TIMEOUT_MS);
+
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Waiting for FW boot timed out.");
+		goto free_ccq0;
+	}
+
+	return err;
+
+free_ccq0:
+	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_CCQ0);
+free_sec_lic:
+	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
+free_fw_debug_mem:
+	pva_kmd_drain_fw_print(&pva->fw_print_buffer);
+	pva_kmd_device_memory_free(pva->fw_debug_mem);
+free_fw_mem:
+	if (!pva->load_from_gsc) {
+		pva_kmd_device_memory_free(pva->fw_bin_mem);
+	}
+out:
+	return err;
+}
+
+void pva_kmd_deinit_fw(struct pva_kmd_device *pva)
+{
+	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_CCQ0);
+	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
+	pva_kmd_drain_fw_print(&pva->fw_print_buffer);
+
+	/*
+	 * Before powering off PVA, disable SEC error reporting.
+	 * While powering off, PVA might generate (unexplained) error interrupts
+	 * This causes HSM to read some PVA SEC registers. However, since PVA might
+	 * already be powergated by this time, access to PVA SEC registers from HSM
+	 * fails. This was discussed in Bug 3785498.
+	 *
+	 * Note: we do not explicity enable these errors during power on since
+	 *	 'enable' is their reset value
+	 */
+	disable_sec_mission_error_reporting(pva);
+	disable_sec_latent_error_reporting(pva);
+
+	pva_kmd_device_memory_free(pva->fw_debug_mem);
+	if (!pva->load_from_gsc) {
+		pva_kmd_device_memory_free(pva->fw_bin_mem);
+	}
+}

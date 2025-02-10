@@ -1,0 +1,135 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.  Any
+ * use, reproduction, disclosure or distribution of this software and related
+ * documentation without an express license agreement from NVIDIA Corporation
+ * is strictly prohibited.
+ */
+#ifndef PVA_KMD_REGS_H
+#define PVA_KMD_REGS_H
+
+#include "pva_api.h"
+#include "pva_constants.h"
+
+/* Exception vectors */
+#define PVA_REG_EVP_RESET_ADDR 0x20
+#define PVA_REG_EVP_UNDEF_ADDR 0x24
+#define PVA_REG_EVP_SWI_ADDR 0x28
+#define PVA_REG_EVP_PREFETCH_ABORT_ADDR 0x2c
+#define PVA_REG_EVP_DATA_ABORT_ADDR 0x30
+#define PVA_REG_EVP_RSVD_ADDR 0x34
+#define PVA_REG_EVP_IRQ_ADDR 0x38
+#define PVA_REG_EVP_FIQ_ADDR 0x3c
+
+/* R5 */
+#define PVA_REG_PROC_CPUHALT_ADDR 0x30000
+
+/* SCRs */
+#define PVA_SEC_SCR_SECEXT_INTR_EVENT 0x28804
+#define PVA_PROC_SCR_PROC 0x30800
+
+#define PVA_REG_EVP_SCR_ADDR 0x40 //PVA_EVP_SCR_EVP_0
+#define PVA_CFG_SCR_STATUS_CNTL 0x258000 //PVA_CFG_SCR_STATUS_CNTL_0
+#define PVA_CFG_SCR_PRIV 0x258008 //PVA_CFG_SCR_PRIV_0
+#define PVA_CFG_SCR_CCQ_CNTL 0x258010 //PVA_CFG_SCR_CCQ_CNTL_0
+
+/* HSP */
+#define PVA_REG_HSP_COMMON_ADDR 0x160000
+#define PVA_REG_HSP_INT_IE0_ADDR 0x160100
+#define PVA_REG_HSP_INT_IE1_ADDR 0x160104
+#define PVA_REG_HSP_INT_IE2_ADDR 0x160108
+#define PVA_REG_HSP_INT_IE3_ADDR 0x16010c
+#define PVA_REG_HSP_INT_IE4_ADDR 0x160110
+#define PVA_REG_HSP_INT_EXTERNAL_ADDR 0x160300
+#define PVA_REG_HSP_INT_INTERNAL_ADDR 0x160304
+#define PVA_REG_HSP_SM0_ADDR 0x170000
+#define PVA_REG_HSP_SM1_ADDR 0x178000
+#define PVA_REG_HSP_SM2_ADDR 0x180000
+#define PVA_REG_HSP_SM3_ADDR 0x188000
+#define PVA_REG_HSP_SM4_ADDR 0x190000
+#define PVA_REG_HSP_SM5_ADDR 0x198000
+#define PVA_REG_HSP_SM6_ADDR 0x1a0000
+#define PVA_REG_HSP_SM7_ADDR 0x1a8000
+#define PVA_REG_HSP_SS0_STATE_ADDR 0x1b0000
+#define PVA_REG_HSP_SS0_SET_ADDR 0x1b0004
+#define PVA_REG_HSP_SS0_CLR_ADDR 0x1b0008
+#define PVA_REG_HSP_SS1_STATE_ADDR 0x1c0000
+#define PVA_REG_HSP_SS1_SET_ADDR 0x1c0004
+#define PVA_REG_HSP_SS1_CLR_ADDR 0x1c0008
+#define PVA_REG_HSP_SS2_STATE_ADDR 0x1d0000
+#define PVA_REG_HSP_SS2_SET_ADDR 0x1d0004
+#define PVA_REG_HSP_SS2_CLR_ADDR 0x1d0008
+#define PVA_REG_HSP_SS3_STATE_ADDR 0x1e0000
+#define PVA_REG_HSP_SS3_SET_ADDR 0x1e0004
+#define PVA_REG_HSP_SS3_CLR_ADDR 0x1e0008
+
+/* SEC */
+#define PVA_REG_SEC_ERRSLICE0_MISSIONERR_ENABLE_ADDR 0x20030
+#define PVA_REG_SEC_ERRSLICE1_MISSIONERR_ENABLE_ADDR 0x20060
+#define PVA_REG_SEC_ERRSLICE2_MISSIONERR_ENABLE_ADDR 0x20090
+#define PVA_REG_SEC_ERRSLICE3_MISSIONERR_ENABLE_ADDR 0x200c0
+#define PVA_REG_SEC_ERRSLICE0_LATENTERR_ENABLE_ADDR 0x20040
+#define PVA_REG_SEC_ERRSLICE1_LATENTERR_ENABLE_ADDR 0x20070
+#define PVA_REG_SEC_ERRSLICE2_LATENTERR_ENABLE_ADDR 0x200a0
+#define PVA_REG_SEC_ERRSLICE3_LATENTERR_ENABLE_ADDR 0x200d0
+
+/* SEC_LIC_INTR_STATUS */
+#define PVA_REG_SEC_LIC_INTR_H1X_MSB 7
+#define PVA_REG_SEC_LIC_INTR_H1X_LSB 5
+#define PVA_REG_SEC_LIC_INTR_HSP_MSB 4
+#define PVA_REG_SEC_LIC_INTR_HSP_LSB 1
+#define PVA_REG_SEC_LIC_INTR_WDT_MSB 0
+#define PVA_REG_SEC_LIC_INTR_WDT_LSB 0
+
+/* CCQ status 2  */
+#define PVA_REG_CCQ_STATUS2_INTR_OVERFLOW_BIT PVA_BIT(28)
+#define PVA_REG_CCQ_STATUS2_INTR_STATUS8_BIT PVA_BIT(24)
+#define PVA_REG_CCQ_STATUS2_INTR_STATUS7_BIT PVA_BIT(20)
+#define PVA_REG_CCQ_STATUS2_INTR_ALL_BITS                                      \
+	(PVA_REG_CCQ_STATUS2_INTR_OVERFLOW_BIT |                               \
+	 PVA_REG_CCQ_STATUS2_INTR_STATUS8_BIT |                                \
+	 PVA_REG_CCQ_STATUS2_INTR_STATUS7_BIT)
+#define PVA_REG_CCQ_STATUS2_NUM_ENTRIES_MSB 4
+#define PVA_REG_CCQ_STATUS2_NUM_ENTRIES_LSB 0
+
+struct pva_kmd_ccq_regspec {
+	uint32_t status_count;
+	uint32_t status[PVA_CFG_CCQ_STATUS_COUNT];
+	uint32_t fifo;
+};
+
+struct pva_kmd_regspec {
+	uint32_t sec_lic_intr_enable;
+	uint32_t sec_lic_intr_status;
+	uint32_t cfg_r5user_lsegreg;
+	uint32_t cfg_r5user_usegreg;
+	uint32_t cfg_priv_ar1_lsegreg;
+	uint32_t cfg_priv_ar1_usegreg;
+	uint32_t cfg_priv_ar2_lsegreg;
+	uint32_t cfg_priv_ar2_usegreg;
+	uint32_t cfg_priv_ar1_start;
+	uint32_t cfg_priv_ar1_end;
+	uint32_t cfg_priv_ar2_start;
+	uint32_t cfg_priv_ar2_end;
+	uint32_t cfg_user_sid_base;
+	uint32_t cfg_priv_sid;
+	uint32_t cfg_vps_sid;
+	uint32_t cfg_perf_mon;
+
+	uint32_t cfg_scr_priv_0;
+
+	uint32_t ccq_count;
+	uint32_t vpu_dbg_instr_reg_offset[PVA_NUM_ENGINES];
+	struct pva_kmd_ccq_regspec ccq_regs[PVA_MAX_NUM_CCQ];
+};
+
+enum pva_kmd_reg_aperture {
+	PVA_KMD_APERTURE_PVA_CLUSTER = 0,
+	PVA_KMD_APERTURE_VPU_DEBUG,
+	PVA_KMD_APERTURE_COUNT,
+};
+
+#endif // PVA_KMD_REGS_H

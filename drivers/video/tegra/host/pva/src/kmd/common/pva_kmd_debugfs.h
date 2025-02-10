@@ -1,0 +1,56 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2025, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.  Any
+ * use, reproduction, disclosure or distribution of this software and related
+ * documentation without an express license agreement from NVIDIA Corporation
+ * is strictly prohibited.
+ */
+#ifndef PVA_KMD_DEBUGFS_H
+#define PVA_KMD_DEBUGFS_H
+#include "pva_kmd.h"
+#include "pva_kmd_shim_debugfs.h"
+#include "pva_kmd_fw_profiler.h"
+
+#define NUM_VPU_BLOCKS 2U
+
+/**
+ * Maximum length of file operation
+ */
+#define MAX_FILE_LEN 256U
+
+struct pva_kmd_file_ops {
+	int (*open)(struct pva_kmd_device *dev);
+	int (*release)(struct pva_kmd_device *dev);
+	int64_t (*read)(struct pva_kmd_device *dev, void *file_data,
+			uint8_t *data, uint64_t offset, uint64_t size);
+	int64_t (*write)(struct pva_kmd_device *dev, void *file_data,
+			 const uint8_t *data, uint64_t offset, uint64_t size);
+	void *pdev;
+	void *file_data;
+};
+
+struct pva_kmd_debugfs_context {
+	bool stats_enable;
+	bool vpu_debug;
+	bool vpu_print_enable;
+	char *allowlist_path;
+	uint32_t profile_level;
+	struct pva_kmd_file_ops vpu_fops;
+	struct pva_kmd_file_ops allowlist_fops;
+	struct pva_kmd_file_ops hwpm_fops;
+	void *data_hwpm;
+	struct pva_kmd_file_ops vpu_ocd_fops[NUM_VPU_BLOCKS];
+	struct pva_kmd_fw_profiling_config g_fw_profiling_config;
+};
+
+void pva_kmd_debugfs_create_nodes(struct pva_kmd_device *dev);
+void pva_kmd_debugfs_destroy_nodes(struct pva_kmd_device *dev);
+int64_t update_vpu_stats(struct pva_kmd_device *dev, void *file_data,
+			 uint8_t *out_buffer, uint64_t offset, uint64_t size);
+int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
+			     const uint8_t *in_buffer, uint64_t offset,
+			     uint64_t size);
+#endif //PVA_KMD_DEBUGFS_H

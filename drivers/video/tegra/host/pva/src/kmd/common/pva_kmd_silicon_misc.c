@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.  Any
+ * use, reproduction, disclosure or distribution of this software and related
+ * documentation without an express license agreement from NVIDIA Corporation
+ * is strictly prohibited.
+ */
+
+#include "pva_kmd_silicon_utils.h"
+#include "pva_kmd_device.h"
+#include "pva_math_utils.h"
+
+void pva_kmd_ccq_push(struct pva_kmd_device *pva, uint8_t ccq_id,
+		      uint64_t ccq_entry)
+{
+	pva_kmd_write(pva, pva->regspec.ccq_regs[ccq_id].fifo,
+		      PVA_EXTRACT64(ccq_entry, 31, 0, uint32_t));
+	pva_kmd_write(pva, pva->regspec.ccq_regs[ccq_id].fifo,
+		      PVA_EXTRACT64(ccq_entry, 63, 32, uint32_t));
+}
+
+uint32_t pva_kmd_get_ccq_space(struct pva_kmd_device *pva, uint8_t ccq_id)
+{
+	uint32_t status2 =
+		pva_kmd_read(pva, pva->regspec.ccq_regs[ccq_id].status[2]);
+	uint32_t len =
+		PVA_EXTRACT(status2, PVA_REG_CCQ_STATUS2_NUM_ENTRIES_MSB,
+			    PVA_REG_CCQ_STATUS2_NUM_ENTRIES_LSB, uint32_t);
+	return safe_subu32((uint32_t)PVA_CCQ_DEPTH, len) / 2U;
+}

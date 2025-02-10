@@ -1,0 +1,104 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.  Any
+ * use, reproduction, disclosure or distribution of this software and related
+ * documentation without an express license agreement from NVIDIA Corporation
+ * is strictly prohibited.
+ */
+
+#ifndef PVA_KMD_CONTEXT_H
+#define PVA_KMD_CONTEXT_H
+#include "pva_api.h"
+#include "pva_constants.h"
+#include "pva_kmd_block_allocator.h"
+#include "pva_kmd_resource_table.h"
+#include "pva_kmd_queue.h"
+#include "pva_kmd_mutex.h"
+#include "pva_kmd_submitter.h"
+
+struct pva_kmd_device;
+
+/**
+ * @brief This struct manages a user context in KMD.
+ *
+ * One KMD user context is uniquely mapped to a UMD user context. Each context
+ * is assigned a unique CCQ block and, on QNX and Linux, a unique file
+ * descriptor.
+ */
+struct pva_kmd_context {
+	struct pva_kmd_device *pva;
+	uint8_t resource_table_id;
+	uint8_t ccq_id;
+	uint8_t smmu_ctx_id;
+
+	bool inited;
+
+	pva_kmd_mutex_t resource_table_lock;
+	struct pva_kmd_resource_table ctx_resource_table;
+
+	struct pva_kmd_submitter submitter;
+	/** The lock protects the submission to the queue, including
+	 * incrementing the post fence */
+	pva_kmd_mutex_t submit_lock;
+	/** Privileged queue owned by this context. It uses the privileged
+	 * resource table (ID 0). */
+	struct pva_kmd_device_memory *ctx_queue_mem;
+
+	/** Privileged queue owned by the context */
+	struct pva_kmd_queue ctx_queue;
+	/** Pointer to the ccq0 lock owned by device*/
+	pva_kmd_mutex_t *ccq0_lock_ptr;
+
+	/** memory needed for submission: including command buffer chunks and fences */
+	struct pva_kmd_device_memory *submit_memory;
+	/** Resource ID of the submission memory, registered with the privileged resource table (ID 0) */
+	uint32_t submit_memory_resource_id;
+	uint64_t fence_offset; /**< fence offset within submit_memory*/
+
+	pva_kmd_mutex_t chunk_pool_lock;
+	struct pva_kmd_cmdbuf_chunk_pool chunk_pool;
+
+	uint32_t max_n_queues;
+	void *queue_allocator_mem;
+	struct pva_kmd_block_allocator queue_allocator;
+
+	/** This lock protects the context's own CCQ access. We don't really use
+	 * it because we don't do user queue submission in KMD.
+	 */
+	pva_kmd_mutex_t ccq_lock;
+	void *plat_data;
+	uint64_t ccq_shm_handle;
+
+	/** Index of block of syncpoints allocated for this context */
+	uint32_t syncpt_block_index;
+	uint32_t syncpt_ids[PVA_NUM_RW_SYNCPTS_PER_CONTEXT];
+};
+
+/**
+ * @brief Allocate a KMD context.
+ */
+struct pva_kmd_context *pva_kmd_context_create(struct pva_kmd_device *pva);
+
+/**
+ * @brief Destroy a KMD context.
+ */
+void pva_kmd_context_destroy(struct pva_kmd_context *client);
+
+/**
+ * @brief Initialize a KMD context.
+ *
+ * The user provides a CCQ range (inclusive on both ends) and the KMD will pick
+ * one CCQ from this range.
+ */
+enum pva_error pva_kmd_context_init(struct pva_kmd_context *ctx,
+				    uint32_t res_table_capacity);
+
+void pva_kmd_context_deinit(struct pva_kmd_context *ctx);
+
+struct pva_kmd_context *pva_kmd_get_context(struct pva_kmd_device *pva,
+					    uint8_t alloc_id);
+
+#endif // PVA_KMD_CONTEXT_H

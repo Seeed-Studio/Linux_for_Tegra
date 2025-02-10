@@ -1,0 +1,363 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.  Any
+ * use, reproduction, disclosure or distribution of this software and related
+ * documentation without an express license agreement from NVIDIA Corporation
+ * is strictly prohibited.
+ */
+
+#include "pva_kmd_utils.h"
+#include "pva_constants.h"
+#include "pva_api_cmdbuf.h"
+#include "pva_kmd_resource_table.h"
+#include "pva_kmd_device.h"
+#include "pva_kmd_queue.h"
+#include "pva_kmd_context.h"
+#include "pva_kmd_constants.h"
+
+struct pva_kmd_context *pva_kmd_context_create(struct pva_kmd_device *pva)
+{
+	uint32_t alloc_id;
+	enum pva_error err;
+	struct pva_kmd_context *ctx;
+
+	ctx = pva_kmd_zalloc_block(&pva->context_allocator, &alloc_id);
+	if (ctx == NULL) {
+		goto err_out;
+	}
+	ctx->ccq_id = alloc_id;
+	ctx->resource_table_id = ctx->ccq_id;
+	ctx->smmu_ctx_id = ctx->ccq_id;
+	ctx->pva = pva;
+	ctx->max_n_queues = PVA_MAX_NUM_QUEUES_PER_CONTEXT;
+	ctx->ccq0_lock_ptr = &pva->ccq0_lock;
+	pva_kmd_mutex_init(&ctx->ccq_lock);
+	pva_kmd_mutex_init(&ctx->resource_table_lock);
+	ctx->queue_allocator_mem = pva_kmd_zalloc(sizeof(struct pva_kmd_queue) *
+						  ctx->max_n_queues);
+	if (ctx->queue_allocator_mem == NULL) {
+		goto free_ctx;
+	}
+
+	err = pva_kmd_block_allocator_init(&ctx->queue_allocator,
+					   ctx->queue_allocator_mem, 0,
+					   sizeof(struct pva_kmd_queue),
+					   ctx->max_n_queues);
+	if (err != PVA_SUCCESS) {
+		goto free_queue_mem;
+	}
+
+	return ctx;
+free_queue_mem:
+	pva_kmd_free(ctx->queue_allocator_mem);
+free_ctx:
+	pva_kmd_free(ctx);
+err_out:
+	return NULL;
+}
+
+static enum pva_error notify_fw_context_init(struct pva_kmd_context *ctx)
+{
+	struct pva_kmd_cmdbuf_builder builder;
+	struct pva_kmd_submitter *dev_submitter = &ctx->pva->submitter;
+	struct pva_cmd_init_resource_table *res_cmd;
+	struct pva_cmd_init_queue *queue_cmd;
+	struct pva_cmd_update_resource_table *update_cmd;
+	struct pva_resource_entry entry = { 0 };
+	uint32_t fence_val;
+	enum pva_error err;
+
+	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+	res_cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*res_cmd));
+	ASSERT(res_cmd != NULL);
+
+	pva_kmd_set_cmd_init_resource_table(
+		res_cmd, ctx->resource_table_id,
+		ctx->ctx_resource_table.table_mem->iova,
+		ctx->ctx_resource_table.n_entries);
+
+	queue_cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*queue_cmd));
+	ASSERT(queue_cmd != NULL);
+
+	pva_kmd_set_cmd_init_queue(
+		queue_cmd, PVA_PRIV_CCQ_ID,
+		ctx->ccq_id, /* For privileged queues, queue ID == user CCQ ID*/
+		ctx->ctx_queue.queue_memory->iova,
+		ctx->ctx_queue.max_num_submit);
+
+	update_cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*update_cmd));
+	ASSERT(update_cmd != NULL);
+
+	err = pva_kmd_make_resource_entry(&ctx->pva->dev_resource_table,
+					  ctx->submit_memory_resource_id,
+					  &entry);
+	ASSERT(err == PVA_SUCCESS);
+
+	pva_kmd_set_cmd_update_resource_table(update_cmd,
+					      0, /* KMD's resource table ID */
+					      ctx->submit_memory_resource_id,
+					      &entry);
+
+	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
+	if (err != PVA_SUCCESS) {
+		// Error is either QUEUE_FULL or TIMEDOUT
+		goto cancel_builder;
+	}
+
+	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
+				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				     PVA_KMD_WAIT_FW_TIMEOUT_US);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"Waiting for FW timed out when initializing context");
+		goto err_out;
+	}
+
+	return PVA_SUCCESS;
+
+cancel_builder:
+	pva_kmd_cmdbuf_builder_cancel(&builder);
+err_out:
+	return err;
+}
+
+static enum pva_error notify_fw_context_deinit(struct pva_kmd_context *ctx)
+{
+	struct pva_kmd_cmdbuf_builder builder;
+	struct pva_kmd_submitter *dev_submitter = &ctx->pva->submitter;
+	struct pva_cmd_deinit_resource_table *deinit_table_cmd;
+	struct pva_cmd_deinit_queue *deinit_queue_cmd;
+	uint32_t fence_val;
+	enum pva_error err;
+
+	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+
+	deinit_queue_cmd =
+		pva_kmd_reserve_cmd_space(&builder, sizeof(*deinit_queue_cmd));
+	ASSERT(deinit_queue_cmd != NULL);
+	pva_kmd_set_cmd_deinit_queue(
+		deinit_queue_cmd, PVA_PRIV_CCQ_ID,
+		ctx->ccq_id /* For privileged queues, queue ID == user CCQ ID*/
+	);
+
+	deinit_table_cmd =
+		pva_kmd_reserve_cmd_space(&builder, sizeof(*deinit_table_cmd));
+	ASSERT(deinit_table_cmd != NULL);
+	pva_kmd_set_cmd_deinit_resource_table(deinit_table_cmd,
+					      ctx->resource_table_id);
+
+	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
+	if (err != PVA_SUCCESS) {
+		goto cancel_builder;
+	}
+
+	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
+				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				     PVA_KMD_WAIT_FW_TIMEOUT_US);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"Waiting for FW timed out when deinitializing context");
+		goto err_out;
+	}
+
+	return PVA_SUCCESS;
+cancel_builder:
+	pva_kmd_cmdbuf_builder_cancel(&builder);
+err_out:
+	return err;
+}
+
+enum pva_error pva_kmd_context_init(struct pva_kmd_context *ctx,
+				    uint32_t res_table_capacity)
+{
+	enum pva_error err;
+	uint32_t queue_mem_size;
+	uint64_t chunk_mem_size;
+	struct pva_fw_postfence post_fence = { 0 };
+	struct pva_syncpt_rw_info *syncpts;
+	uint64_t size;
+
+	/* Power on PVA if not already */
+	err = pva_kmd_device_busy(ctx->pva);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+
+	/* Allocate RW syncpoints for this context */
+	syncpts = (struct pva_syncpt_rw_info *)pva_kmd_alloc_block(
+		&ctx->pva->syncpt_allocator, &ctx->syncpt_block_index);
+	ASSERT(syncpts != NULL);
+
+	/* Init resource table for this context */
+	err = pva_kmd_resource_table_init(&ctx->ctx_resource_table, ctx->pva,
+					  ctx->smmu_ctx_id, res_table_capacity,
+					  res_table_capacity);
+	if (err != PVA_SUCCESS) {
+		goto drop_device;
+	}
+
+	/* Init privileged queue for this context */
+	queue_mem_size = pva_get_submission_queue_memory_size(
+		PVA_KMD_MAX_NUM_PRIV_SUBMITS);
+	ctx->ctx_queue_mem =
+		pva_kmd_device_memory_alloc_map(queue_mem_size, ctx->pva,
+						PVA_ACCESS_RW,
+						PVA_R5_SMMU_CONTEXT_ID);
+	if (ctx->ctx_queue_mem == NULL) {
+		err = PVA_NOMEM;
+		goto deinit_table;
+	}
+
+	pva_kmd_queue_init(
+		&ctx->ctx_queue, ctx->pva, PVA_PRIV_CCQ_ID,
+		ctx->ccq_id, /* Context's PRIV queue ID is identical to CCQ ID */
+		&ctx->pva->ccq0_lock, ctx->ctx_queue_mem,
+		PVA_KMD_MAX_NUM_PRIV_SUBMITS);
+
+	/* Allocate memory for submission */
+	chunk_mem_size = pva_kmd_cmdbuf_pool_get_required_mem_size(
+		PVA_MAX_CMDBUF_CHUNK_SIZE, PVA_KMD_MAX_NUM_PRIV_CHUNKS);
+	/* Allocate one post fence at the end. This memory will be added to
+	 * KMD's own resource table. We don't need to explicitly free it. It
+	 * will be freed after we drop the resource. */
+	size = safe_addu64(chunk_mem_size, (uint64_t)sizeof(uint32_t));
+	ctx->submit_memory = pva_kmd_device_memory_alloc_map(
+		size, ctx->pva, PVA_ACCESS_RW, PVA_R5_SMMU_CONTEXT_ID);
+	if (ctx->submit_memory == NULL) {
+		err = PVA_NOMEM;
+		goto queue_deinit;
+	}
+
+	/* Add submit memory to resource table */
+	pva_kmd_mutex_lock(&ctx->pva->resource_table_lock);
+	err = pva_kmd_add_dram_buffer_resource(&ctx->pva->dev_resource_table,
+					       ctx->submit_memory,
+					       &ctx->submit_memory_resource_id);
+	pva_kmd_mutex_unlock(&ctx->pva->resource_table_lock);
+	if (err != PVA_SUCCESS) {
+		goto free_submit_memory;
+	}
+
+	/* Init chunk pool */
+	err = pva_kmd_cmdbuf_chunk_pool_init(
+		&ctx->chunk_pool, ctx->submit_memory_resource_id,
+		0 /* offset */, chunk_mem_size, PVA_MAX_CMDBUF_CHUNK_SIZE,
+		PVA_KMD_MAX_NUM_PRIV_CHUNKS, ctx->submit_memory->va);
+	if (err != PVA_SUCCESS) {
+		goto free_dram_buffer_resource;
+	}
+
+	/* Init fence */
+	ctx->fence_offset = chunk_mem_size;
+
+	/* Init submitter */
+	pva_kmd_mutex_init(&ctx->submit_lock);
+	pva_kmd_mutex_init(&ctx->chunk_pool_lock);
+	post_fence.resource_id = ctx->submit_memory_resource_id;
+	post_fence.offset_lo = iova_lo(ctx->fence_offset);
+	post_fence.offset_hi = iova_hi(ctx->fence_offset);
+	post_fence.ts_resource_id = PVA_RESOURCE_ID_INVALID;
+	pva_kmd_submitter_init(
+		&ctx->submitter, &ctx->ctx_queue, &ctx->submit_lock,
+		&ctx->chunk_pool, &ctx->chunk_pool_lock,
+		pva_offset_pointer(ctx->submit_memory->va, ctx->fence_offset),
+		&post_fence);
+
+	/* Use KMD's queue to inform FW */
+	err = notify_fw_context_init(ctx);
+	if (err != PVA_SUCCESS) {
+		goto deinit_submitter;
+	}
+	ctx->inited = true;
+
+	return PVA_SUCCESS;
+
+deinit_submitter:
+	pva_kmd_mutex_deinit(&ctx->chunk_pool_lock);
+	pva_kmd_mutex_deinit(&ctx->submit_lock);
+	pva_kmd_cmdbuf_chunk_pool_deinit(&ctx->chunk_pool);
+free_dram_buffer_resource:
+	pva_kmd_drop_resource(&ctx->pva->dev_resource_table,
+			      ctx->submit_memory_resource_id);
+free_submit_memory:
+	pva_kmd_device_memory_free(ctx->submit_memory);
+queue_deinit:
+	pva_kmd_queue_deinit(&ctx->ctx_queue);
+	pva_kmd_device_memory_free(ctx->ctx_queue_mem);
+deinit_table:
+	pva_kmd_resource_table_deinit(&ctx->ctx_resource_table);
+drop_device:
+	pva_kmd_device_idle(ctx->pva);
+err_out:
+	return err;
+}
+
+void pva_kmd_context_deinit(struct pva_kmd_context *ctx)
+{
+	enum pva_error err;
+
+	if (ctx->inited) {
+		err = notify_fw_context_deinit(ctx);
+		ASSERT(err == PVA_SUCCESS);
+		pva_kmd_verify_all_resources_free(&ctx->ctx_resource_table);
+		pva_kmd_device_idle(ctx->pva);
+		pva_kmd_mutex_deinit(&ctx->submit_lock);
+		pva_kmd_mutex_deinit(&ctx->chunk_pool_lock);
+		pva_kmd_cmdbuf_chunk_pool_deinit(&ctx->chunk_pool);
+		pva_kmd_mutex_lock(&ctx->pva->resource_table_lock);
+		pva_kmd_drop_resource(&ctx->pva->dev_resource_table,
+				      ctx->submit_memory_resource_id);
+		pva_kmd_mutex_unlock(&ctx->pva->resource_table_lock);
+		pva_kmd_queue_deinit(&ctx->ctx_queue);
+		pva_kmd_device_memory_free(ctx->ctx_queue_mem);
+		pva_kmd_resource_table_deinit(&ctx->ctx_resource_table);
+		pva_kmd_free_block(&ctx->pva->syncpt_allocator,
+				   ctx->syncpt_block_index);
+		ctx->inited = false;
+	}
+}
+
+static void pva_kmd_destroy_all_queues(struct pva_kmd_context *ctx)
+{
+	enum pva_error err;
+	struct pva_kmd_queue_destroy_in_args args;
+
+	for (uint32_t queue_id = 0u; queue_id < ctx->max_n_queues; queue_id++) {
+		struct pva_kmd_queue *queue =
+			pva_kmd_get_block(&ctx->queue_allocator, queue_id);
+		if (queue != NULL) {
+			args.queue_id = queue_id;
+			err = pva_kmd_queue_destroy(ctx, &args);
+			ASSERT(err == PVA_SUCCESS);
+		}
+	}
+}
+
+void pva_kmd_context_destroy(struct pva_kmd_context *ctx)
+{
+	enum pva_error err;
+
+	pva_kmd_destroy_all_queues(ctx);
+	pva_kmd_context_deinit(ctx);
+	pva_kmd_block_allocator_deinit(&ctx->queue_allocator);
+	pva_kmd_free(ctx->queue_allocator_mem);
+	pva_kmd_mutex_deinit(&ctx->ccq_lock);
+	pva_kmd_mutex_deinit(&ctx->resource_table_lock);
+	err = pva_kmd_free_block(&ctx->pva->context_allocator, ctx->ccq_id);
+	ASSERT(err == PVA_SUCCESS);
+}
+
+struct pva_kmd_context *pva_kmd_get_context(struct pva_kmd_device *pva,
+					    uint8_t alloc_id)
+{
+	return pva_kmd_get_block(&pva->context_allocator, alloc_id);
+}

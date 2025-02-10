@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
+ *
+ * NVIDIA Corporation and its licensors retain all intellectual property and
+ * proprietary rights in and to this software and related documentation.  Any
+ * use, reproduction, disclosure or distribution of this software and related
+ * documentation without an express license agreement from NVIDIA Corporation
+ * is strictly prohibited.
+ */
+
+#ifndef PVA_KMD_SUBMITTER_H
+#define PVA_KMD_SUBMITTER_H
+#include "pva_kmd_cmdbuf.h"
+#include "pva_kmd_mutex.h"
+#include "pva_kmd_queue.h"
+
+/** A thread-safe submitter utility */
+struct pva_kmd_submitter {
+	/** The lock protects the submission to the queue, including
+	 * incrementing the post fence */
+	pva_kmd_mutex_t *submit_lock;
+	struct pva_kmd_queue *queue;
+	uint32_t *post_fence_va;
+	struct pva_fw_postfence post_fence;
+	uint32_t fence_future_value;
+
+	/** This lock protects the use of the chunk_pool*/
+	pva_kmd_mutex_t *chunk_pool_lock;
+	struct pva_kmd_cmdbuf_chunk_pool *chunk_pool;
+};
+
+void pva_kmd_submitter_init(struct pva_kmd_submitter *submitter,
+			    struct pva_kmd_queue *queue,
+			    pva_kmd_mutex_t *submit_lock,
+			    struct pva_kmd_cmdbuf_chunk_pool *chunk_pool,
+			    pva_kmd_mutex_t *chunk_pool_lock,
+			    uint32_t *post_fence_va,
+			    struct pva_fw_postfence const *post_fence);
+
+enum pva_error
+pva_kmd_submitter_prepare(struct pva_kmd_submitter *submitter,
+			  struct pva_kmd_cmdbuf_builder *builder);
+
+enum pva_error pva_kmd_submitter_submit(struct pva_kmd_submitter *submitter,
+					struct pva_kmd_cmdbuf_builder *builder,
+					uint32_t *out_fence_val);
+enum pva_error pva_kmd_submitter_wait(struct pva_kmd_submitter *submitter,
+				      uint32_t fence_val,
+				      uint32_t poll_interval_ms,
+				      uint32_t timeout_ms);
+enum pva_error
+pva_kmd_submitter_submit_with_fence(struct pva_kmd_submitter *submitter,
+				    struct pva_kmd_cmdbuf_builder *builder,
+				    struct pva_fw_postfence *fence);
+
+/* prepare submission */
+/* add cmd */
+/* add cmd */
+/* do submit -> fence value */
+/* wait for fence */
+
+/* prepare submission */
+/* add cmd */
+/* add cmd */
+/* do submit with fence (provide a fence) */
+
+#endif // PVA_KMD_SUBMITTER_H
