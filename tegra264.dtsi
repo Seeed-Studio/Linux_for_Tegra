@@ -8440,7 +8440,6 @@
 	};
 
 	sound {
-		nvidia,ahub-c2c-links;
 		compatible = "nvidia,tegra264-audio-graph-card";
 
 		clocks = <&bpmp TEGRA264_CLK_PLLA1>,

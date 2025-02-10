@@ -588,11 +588,9 @@
 			  "Microphone",	"CVB-RT MIC",
 			  "Headphone",	"CVB-RT HP Jack";
 
-		routing = /* TODO: Enable I2S4 <-> RT5640, once Bug 4596841 is fixed */
-			  /*
-			   * "CVB-RT AIF1 Playback",	"I2S4 DAP-Playback",
-			   * "I2S4 DAP-Capture",	"CVB-RT AIF1 Capture",
-                           */
+		routing = /* Enable I2S4 <-> RT5640 */
+			  "CVB-RT AIF1 Playback",	"I2S4 DAP-Playback",
+			  "I2S4 DAP-Capture",		"CVB-RT AIF1 Capture",
 			  /* RT5640 codec controls */
 			  "CVB-RT HP Jack",		"CVB-RT HPOL",
 			  "CVB-RT HP Jack",		"CVB-RT HPOR",
