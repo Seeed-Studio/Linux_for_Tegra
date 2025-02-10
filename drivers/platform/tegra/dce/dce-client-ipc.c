@@ -76,11 +76,16 @@ out:
 static struct tegra_dce_client_ipc *dce_client_ipc_lookup_handle(u32 handle)
 {
 	struct tegra_dce_client_ipc *cl = NULL;
+	u32 index = 0U;
 
 	if (!is_client_handle_valid(handle))
 		goto out;
 
-	cl = &client_handles[client_handle_to_index(handle)];
+	index = client_handle_to_index(handle);
+	if (index >= DCE_CLIENT_IPC_TYPE_MAX)
+		goto out;
+
+	cl = &client_handles[index];
 
 out:
 	return cl;
@@ -174,6 +179,7 @@ int tegra_dce_register_ipc_client(u32 type,
 	struct tegra_dce *d = NULL;
 	struct tegra_dce_client_ipc *cl = NULL;
 	u32 handle = DCE_CLIENT_IPC_HANDLE_INVALID;
+	u32 index = 0U;
 
 	if (handlep == NULL) {
 		dce_os_err(d, "Invalid handle pointer");
@@ -199,7 +205,14 @@ int tegra_dce_register_ipc_client(u32 type,
 	if (ret)
 		goto out;
 
-	cl = &client_handles[client_handle_to_index(handle)];
+	index = client_handle_to_index(handle);
+	if (index >= DCE_CLIENT_IPC_TYPE_MAX) {
+		dce_os_err(d, "Invalid client handle index: %u", index);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	cl = &client_handles[index];
 
 	cl->d = d;
 	cl->type = type;
