@@ -23,12 +23,6 @@ Optional properties:
 - memmap_phc_regs: boolean flag to indicate MAC PHC regs to be memory mapped
 				   for getting PTP time. If not defined ptp notifer method will
 				   be used with selected interface
-- ptp_tsc_k_int: Specifies the integer part of the factor used to calculate the delta to
-				 apply to NUM when the fast convergence algorithm is enabled when syncing
-				 or locking TSC time with PTP time domain.
-				 The value is a 8bit hexa-decimal value. If unspecified, NvPPS driver uses
-				 0x70 as default value
-				 This field is not used for Thor based platforms
 - ptp_tsc_lock_threshold: specifies the threshold value which is used by HW to determine
 				 if the TSC PTP sync/Lock is lost. The lock is deemed to be lost if the HW
 				 determined absolute diff between PTP & TSC time exceed this value.
@@ -116,7 +110,6 @@ nvpps {
 	primary-emac = <&mgbe0>;
 	sec-emac = <&mgbe0>;
 	reg = <0x0 0xc6a0000 0x0 0x1000>;
-	ptp_tsc_k_int = /bits/ 8 <0x70>;
 	ptp_tsc_lock_threshold = /bits/ 16 <0x26C>;
 	ptp_tsc_sync_dis;
 };
