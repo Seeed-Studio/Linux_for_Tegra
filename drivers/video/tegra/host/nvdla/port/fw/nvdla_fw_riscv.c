@@ -372,9 +372,6 @@ static int32_t s_riscv_finalize_poweron(struct platform_device *pdev)
 		nvdla_dbg_err(pdev, "firmware load err: %d\n", err);
 		goto fail;
 	}
-	/* Falcon will use ctxdma 2 to access ucode imem/dmem */
-	nvdla_device_register_write(pdev, pdata->transcfg_addr,
-		pdata->transcfg_val);
 
 #if defined(BUG_4960393) && (BUG_4960393 == 1)
 	if ((pdata->class == NV_DLA0_SIM_CLASS_ID) ||
@@ -392,6 +389,10 @@ static int32_t s_riscv_finalize_poweron(struct platform_device *pdev)
 #endif /* BUG_4960393 */
 
 	if (!skip_boot) {
+		/* Falcon will use ctxdma 2 to access ucode imem/dmem */
+		nvdla_device_register_write(pdev, pdata->transcfg_addr,
+			pdata->transcfg_val);
+
 		err = s_riscv_boot(riscv);
 		if (err < 0) {
 			nvdla_dbg_err(pdev, "boot err: %d\n", err);

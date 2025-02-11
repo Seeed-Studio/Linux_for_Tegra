@@ -43,7 +43,11 @@ static struct nvhost_device_data t25x_nvdla0_info = {
 	.engine_can_cg		= false,
 	.can_powergate		= true,
 	.icc_id			= TEGRA_ICC_DLA_0,
+#if defined(NVDLA_HAVE_CONFIG_FIREWALL) && (NVDLA_HAVE_CONFIG_FIREWALL == 1)
+	.transcfg_addr		= 0x2244,
+#else
 	.transcfg_addr		= 0x0444,
+#endif /* NVDLA_HAVE_CONFIG_FIREWALL */
 	.transcfg_val		= 0x201,
 	.firmware_not_in_subdir = true,
 };
@@ -78,7 +82,11 @@ static struct nvhost_device_data t25x_nvdla1_info = {
 	.engine_can_cg		= false,
 	.can_powergate		= true,
 	.icc_id			= TEGRA_ICC_DLA_1,
+#if defined(NVDLA_HAVE_CONFIG_FIREWALL) && (NVDLA_HAVE_CONFIG_FIREWALL == 1)
+	.transcfg_addr		= 0x2244,
+#else
 	.transcfg_addr		= 0x0444,
+#endif /* NVDLA_HAVE_CONFIG_FIREWALL */
 	.transcfg_val		= 0x201,
 	.firmware_not_in_subdir = true,
 };
