@@ -13,6 +13,7 @@ dtb-y += tegra234-p3768-0000+p3767-0005.dtb
 dtb-y += tegra234-j401-p3768-0000+p3767-0000.dtb
 dtb-y += tegra234-j401-indu-p3768-0000+p3767-0000.dtb
 dtb-y += tegra234-j201-p3768-0000+p3767-0000.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0000.dtb
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))

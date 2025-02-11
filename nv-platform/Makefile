@@ -40,6 +40,10 @@ dtb-y += tegra234-j201-p3768-0000+p3767-0000-recomputer-indu.dtb
 dtb-y += tegra234-j201-p3768-0000+p3767-0001-recomputer-indu.dtb
 dtb-y += tegra234-j201-p3768-0000+p3767-0004-recomputer-indu.dtb
 dtb-y += tegra234-j201-p3768-0000+p3767-0003-recomputer-indu.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0000-recomputer.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0001-recomputer.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0003-recomputer.dtb
+dtb-y += tegra234-j40mini-p3768-0000+p3767-0004-recomputer.dtb
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
