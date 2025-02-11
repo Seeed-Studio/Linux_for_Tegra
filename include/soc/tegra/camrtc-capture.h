@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2016-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 /**
@@ -2858,6 +2858,16 @@ struct nvcsi_brick_config {
 } CAPTURE_IVC_ALIGN;
 
 /**
+ * @defgroup NvCsi2dShmoo control
+ * @{
+ */
+/** 2D shmoo mode disabled */
+#define NVCSI_2D_SHMOO_DISABLED	MK_U32(0)
+/** 2D shmoo mode enabled. */
+#define NVCSI_2D_SHMOO_ENABLED	MK_U32(1)
+/** @} */
+
+/**
  * @brief NvCSI CIL configuration for a brick partition.
  */
 struct nvcsi_cil_config {
@@ -2901,8 +2911,22 @@ struct nvcsi_cil_config {
 	 */
 	uint32_t mipi_clock_rate;
 
+	/** Non-safety build, 2D Shmoo tuning parameters. */
+	struct {
+		/**
+		 * Control register @a control [0,255]
+		 * See @ref NvCsi2dShmoo
+		 */
+		uint8_t control;
+		/** @a afe_hf_gain [0,16] */
+		uint8_t afe_hf_gain;
+		/** @a edge_delay [-10,9] */
+		int8_t edge_delay;
+	} tuning;
+
 	/** Reserved */
-	uint32_t pad32__;
+	uint8_t pad8__;
+
 } CAPTURE_IVC_ALIGN;
 
 /**
@@ -3203,7 +3227,7 @@ struct vi_hsm_csimux_error_mask_config {
 /** Mask for the bits in @ref NVCSI_CIL_INTR0_FLAGS */
 #define NVCSI_INTR_CONFIG_MASK_CIL_INTR0	MK_U32(0x1fd801ff)
 
-/** Mask for the bits in @ref NVCSI_CIL_INTR1_FLAGS */ 
+/** Mask for the bits in @ref NVCSI_CIL_INTR1_FLAGS */
 #define NVCSI_INTR_CONFIG_MASK_CIL_INTR1	MK_U32(0x7ff)
 /** @} */
 
@@ -4280,7 +4304,7 @@ struct isp_program_descriptor {
 	uint32_t isp_program_offset;
 
 	/**
-	 * Size of isp program structure. Must be >= sizeof(@ref isp5_program) 
+	 * Size of isp program structure. Must be >= sizeof(@ref isp5_program)
 	 * and a multiple of @ref CAPTURE_DESCRIPTOR_ALIGN.
 	 */
 	uint32_t isp_program_size;
