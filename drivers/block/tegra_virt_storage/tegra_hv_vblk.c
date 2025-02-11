@@ -73,6 +73,22 @@ static inline uint64_t _arch_counter_get_cntvct(void)
 	return cval;
 }
 
+static void print_erase_op_supported(struct device *dev, uint32_t ops)
+{
+	const char *op;
+	if (ops & VS_BLK_DISCARD_OP_F) {
+		op = "DISCARD";
+	} else if (ops & VS_BLK_SECURE_ERASE_OP_F) {
+		op = "SECURE_ERASE";
+	} else if (ops & VS_BLK_ERASE_OP_F) {
+		op = "ERASE";
+	} else {
+		op = "Unknown";
+	}
+	dev_info(dev, "UFS supports erase operation type - %s. So, DISCARD and  SECURE ERASE are mapped to %s",
+			op, op);
+}
+
 /**
  * vblk_get_req: Get a handle to free vsc request.
  */
@@ -1390,6 +1406,9 @@ static void setup_device(struct vblk_dev *vblkdev)
 		 * FIXME: Support for Linux v5.19+ kernels
 		 */
 		blk_queue_flag_set(QUEUE_FLAG_SECERASE, vblkdev->queue);
+#else
+		blk_queue_max_secure_erase_sectors(vblkdev->queue,
+			vblkdev->config.blk_config.max_erase_blks_per_io);
 #endif
 
 	if ((vblkdev->config.blk_config.req_ops_supported & VS_BLK_DISCARD_OP_F)
@@ -1406,6 +1425,8 @@ static void setup_device(struct vblk_dev *vblkdev)
 			vblkdev->config.blk_config.max_erase_blks_per_io);
 		vblkdev->queue->limits.discard_granularity =
 			vblkdev->config.blk_config.hardblk_size;
+		print_erase_op_supported(vblkdev->device,
+				vblkdev->config.blk_config.req_ops_supported);
 	}
 
 	/* And the gendisk structure. */
@@ -1460,6 +1481,7 @@ static void setup_device(struct vblk_dev *vblkdev)
 		}
 	}
 
+	dev_info(vblkdev->device, "device name is %s\n", vblkdev->gd->disk_name);
 	set_capacity(vblkdev->gd, (vblkdev->size / SECTOR_SIZE));
 #if defined(NV_DEVICE_ADD_DISK_HAS_INT_RETURN_TYPE) /* Linux v5.15 */
 	if (device_add_disk(vblkdev->device, vblkdev->gd, NULL)) {
