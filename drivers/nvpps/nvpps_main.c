@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1011,7 +1011,7 @@ static void nvpps_t26x_ptp_tsc_sync_config(struct platform_device *pdev)
 	/* Configure LOCKING_FAST_ADJUST_CONFIG register */
 	/* THRESHOLD used in determining when FAST ADJUST Convergence is to be applied by HW */
 #define DEFAULT_T26X_FAST_ADJ_THRSLD		0x64U
-	/* Default K_INT nomial value used to calculate gain factor.
+	/* Default K_INT nominal value used to calculate gain factor.
 	 * The actual float Knominal value is 2.485, for calculation purpose this is converted to int by multiplying with 1000
 	 */
 #define DEFAULT_T26X_K_INT_NOM_VAL			2485U
@@ -1073,21 +1073,27 @@ static void nvpps_t23x_ptp_tsc_sync_config(struct platform_device *pdev)
 	uint32_t tsc_config_ptx_0;
 	struct nvpps_device_data *pdev_data = platform_get_drvdata(pdev);
 	u16 lock_threshold_val;
+	uint32_t k = 0, m = 0;
 
-#define DEFAULT_K_INT_VAL			0x70
 #define DEFAULT_LOCK_THRESHOLD_20US	0x26c
-#define DEFAULT_1PPS_FREQ_VAL		1U
-
-	//Set default K_INT & LOCK Threshold value
-	pdev_data->k_int_val = DEFAULT_K_INT_VAL;
+	//Set default LOCK Threshold value
 	pdev_data->lock_threshold_val = DEFAULT_LOCK_THRESHOLD_20US;
-	//Set Default pps_freq until higher freq support is added
-	pdev_data->pps_freq = DEFAULT_1PPS_FREQ_VAL;
 
-	//Override default K_INT value
-	if (of_property_read_u8(np, "ptp_tsc_k_int", &pdev_data->k_int_val) == 0) {
-		dev_info(&pdev->dev, "Using K_INT value : 0x%x\n", pdev_data->k_int_val);
+	/* Default K_INT nominal value used to calculate gain factor */
+#define DEFAULT_T23X_K_INT_NOM_VAL	371U
+
+	/* k is calculated as below and is coded as k = (K_INT << M) */
+	k = DEFAULT_T23X_K_INT_NOM_VAL * pdev_data->pps_freq;
+
+#define T23X_MAX_K_INT_VAL	0xFF
+#define T23X_MAX_M_VAL		0x3
+
+	while ((k > T23X_MAX_K_INT_VAL) && (m < T23X_MAX_M_VAL)) {
+		k = k >> 1;
+		m++;
 	}
+
+	pdev_data->k_int_val = k;
 
 	//Override default Lock Threshold value
 	if (of_property_read_u16(np, "ptp_tsc_lock_threshold", &lock_threshold_val) == 0) {
@@ -1106,11 +1112,15 @@ static void nvpps_t23x_ptp_tsc_sync_config(struct platform_device *pdev)
 	writel(0x119, pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_CONFIGURATION_OFFSET);
 	writel(pdev_data->lock_threshold_val, pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_DIFF_CONFIGURATION_OFFSET);
 	writel(0x1, pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_CONTROL_OFFSET);
-	writel((0x50011 | (pdev_data->k_int_val << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT)),
+	writel((0x50001 | (pdev_data->k_int_val << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_K_INT_SHIFT) |
+			(m << TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET_M_SHIFT)),
 		   pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_FAST_ADJUST_CONFIGURATION_OFFSET);
 	writel(0x67, pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_ADJUST_DELTA_CONTROL_OFFSET);
 	writel(0x313, pdev_data->tsc_reg_map_base + T23X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 	writel(0x1, pdev_data->tsc_reg_map_base + T23X_TSC_STSCRSR_OFFSET);
+	/* Configure LOCKING_REF_FREQ_CONFIG register */
+#define DEFAULT_T23X_REF_FREQ_INC_1S		0x1DCD650 /* 1s expressed in tick count */
+	writel((DEFAULT_T23X_REF_FREQ_INC_1S/pdev_data->pps_freq), pdev_data->tsc_reg_map_base + T23X_TSC_LOCKING_REF_FREQUENCY_CONFIGURATION_OFFSET);
 
 	tsc_config_ptx_0 = readl(pdev_data->tsc_reg_map_base + T23X_TSC_CAPTURE_CONFIGURATION_PTX_OFFSET);
 	/* clear and set the ptp src based on ethernet interface passed
@@ -1153,6 +1163,13 @@ static int nvpps_probe(struct platform_device *pdev)
 
 	emac_node = NULL;
 
+	cdata = of_device_get_match_data(&pdev->dev);
+	pdev_data->support_tsc = cdata->support_tsc;
+	pdev_data->soc_id = cdata->soc_id;
+	pdev_data->ptp_tsc_sync_cfg_fn = cdata->ptp_tsc_sync_cfg_fn;
+	pdev_data->lck_sts_offset = cdata->lck_sts_offset;
+	pdev_data->lck_ctrl_offset = cdata->lck_ctrl_offset;
+
 	pdev_data->pri_emac_node = of_parse_phandle(np, "primary-emac", 0);
 	if (pdev_data->pri_emac_node == NULL) {
 		dev_err(&pdev->dev, "primary-emac node not found\n");
@@ -1177,12 +1194,19 @@ static int nvpps_probe(struct platform_device *pdev)
 			if (index < 0) {
 				dev_err(&pdev->dev, "unable to read PPS freq property(nvidia,pps_op_ctrl) from MAC device node\n");
 				return -EINVAL;
-			} else if ((pdev_data->pps_freq > 8U) ||
-					   (pdev_data->pps_freq == 0U) ||
-					   (pdev_data->pps_freq == 3U) ||
-					   (pdev_data->pps_freq == 6U) ||
-					   (pdev_data->pps_freq == 7U)) { // supporting max allow value 1 to 8
+			} else if ((pdev_data->soc_id == NV_SOC_T26X) &&
+					   ((pdev_data->pps_freq > 8U) ||
+						(pdev_data->pps_freq == 0U) ||
+						(pdev_data->pps_freq == 3U) ||
+						(pdev_data->pps_freq == 6U) ||
+						(pdev_data->pps_freq == 7U))) { // supporting max allow value 1 to 8
 				dev_err(&pdev->dev, "Invalid PPS(%uHz) freq input provided. Supported PPS frequencies are 1, 2, 4, 5 and 8Hz\n", pdev_data->pps_freq);
+				return -EINVAL;
+			} else if ((pdev_data->soc_id == NV_SOC_T23X) &&
+					   ((pdev_data->pps_freq > 4U) ||
+						(pdev_data->pps_freq == 0U) ||
+						(pdev_data->pps_freq == 3U))) { // supporting max allow value 1 to 4
+				dev_err(&pdev->dev, "Invalid PPS(%uHz) freq input provided. Supported PPS frequencies are 1, 2, and 4Hz\n", pdev_data->pps_freq);
 				return -EINVAL;
 			}
 		}
@@ -1194,13 +1218,6 @@ static int nvpps_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "sec-emac node not found\n");
 		pdev_data->sec_emac_node = pdev_data->pri_emac_node;
 	}
-
-	cdata = of_device_get_match_data(&pdev->dev);
-	pdev_data->support_tsc = cdata->support_tsc;
-	pdev_data->soc_id = cdata->soc_id;
-	pdev_data->ptp_tsc_sync_cfg_fn = cdata->ptp_tsc_sync_cfg_fn;
-	pdev_data->lck_sts_offset = cdata->lck_sts_offset;
-	pdev_data->lck_ctrl_offset = cdata->lck_ctrl_offset;
 
 	nvpps_fill_default_mac_phc_info(pdev, pdev_data);
 
