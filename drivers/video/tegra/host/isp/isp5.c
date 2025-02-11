@@ -10,6 +10,7 @@
  * which is mutually exclusive with host1x-next.h.
  */
 #include <linux/host1x-next.h>
+#include <linux/iommu.h>
 #include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
@@ -48,6 +49,9 @@
 struct host_isp5 {
 	struct platform_device *pdev;
 	struct clk *clk;
+	dma_addr_t syncpt_base;
+	size_t syncpt_size;
+	uint32_t syncpt_stride;
 };
 
 static int isp5_alloc_syncpt(struct platform_device *pdev,
@@ -125,6 +129,8 @@ static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
 	uint32_t index = GOS_INDEX_INVALID;
 	uint32_t offset = 0;
 	dma_addr_t addr;
+	struct nvhost_device_data *pdata;
+	struct host_isp5 *isp5;
 
 	if (id == 0) {
 		dev_err(&pdev->dev, "%s: syncpt id is invalid\n", __func__);
@@ -136,13 +142,16 @@ static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
 		return -EINVAL;
 	}
 
-	addr = nvhost_syncpt_address(pdev, id);
+	pdata = platform_get_drvdata(pdev);
+	isp5 = pdata->private_data;
+
+	addr = isp5->syncpt_base + isp5->syncpt_stride * id;
 
 	*syncpt_addr = addr;
 	*gos_index = index;
 	*gos_offset = offset;
 
-	dev_dbg(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
+	dev_info(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
 		__func__, id, addr, index, offset);
 
 	return 0;
@@ -254,6 +263,9 @@ static int isp5_probe(struct platform_device *pdev)
 	struct nvhost_device_data *pdata;
 	struct host_isp5 *isp5;
 	int err = 0;
+	phys_addr_t base;
+	uint32_t stride;
+	uint32_t num_syncpts;
 
 	err = isp5_priv_early_probe(pdev);
 	if (err)
@@ -282,9 +294,24 @@ static int isp5_probe(struct platform_device *pdev)
 		goto error;
 	}
 
-	err = nvhost_syncpt_unit_interface_init(pdev);
+	err = host1x_syncpt_get_shim_info(pdata->host1x, &base, &stride, &num_syncpts);
 	if (err)
 		goto error;
+
+	isp5->syncpt_stride = stride;
+	isp5->syncpt_size = stride * num_syncpts;
+
+	if (iommu_get_domain_for_dev(&pdev->dev)) {
+		isp5->syncpt_base = dma_map_resource(&pdev->dev, base,
+						isp5->syncpt_size, DMA_BIDIRECTIONAL,
+						DMA_ATTR_SKIP_CPU_SYNC);
+		if (dma_mapping_error(&pdev->dev, isp5->syncpt_base)) {
+			err = -ENOMEM;
+			goto error;
+		}
+	} else {
+		isp5->syncpt_base = base;
+	}
 
 	err = isp5_priv_late_probe(pdev);
 	if (err)
