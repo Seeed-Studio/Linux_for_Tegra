@@ -157,6 +157,7 @@ kernel_module(
         "drivers/spi/spi-tegra210-quad.ko",
         "drivers/thermal/max77851_thermal.ko",
         "drivers/tty/serial/wch_35x/wch.ko",
+        "drivers/tty/serial/tegra_hv_comm.ko",
         "drivers/usb/typec/fusb301.ko",
         "drivers/video/tegra/camera/tegra_camera_platform.ko",
         "drivers/video/tegra/dc/bridge/maxim_gmsl_dp_serializer.ko",

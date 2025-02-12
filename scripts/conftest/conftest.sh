@@ -8810,6 +8810,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_TTY_OPERATIONS_STRUCT_SET_TERMIOS_HAS_CONST_KTERMIOS_ARG" "" "types"
         ;;
 
+        uart_state_has_xmit)
+            #
+            # Determine if the struct uart_state has a xmit member.
+            #
+            # Commit 1788cf6 ("tty: serial: switch from circ_buf to kfifo") in
+            # Linux 6.10 removed this member.
+            #
+            CODE="
+            #include <linux/serial_core.h>
+            int conftest_uart_state_has_xmit(void) {
+                return offsetof(struct uart_state, xmit);
+            }"
+
+            compile_check_conftest "$CODE" "NV_UART_STATE_HAS_XMIT" "" "types"
+        ;;
+
         ufs_hba_variant_ops_has_set_dma_mask)
             #
             # Determine if the 'struct ufs_hba_variant_ops' has a 'set_dma_mask'
