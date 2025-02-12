@@ -991,6 +991,7 @@ static const struct tegra_adma_chip_data tegra264_chip_data = {
 	.ch_fifo_size_mask	= 0x7f,
 	/* All ADMAIF channel FIFO size is same i.e. 2, so no differentiation required */
 	.sreq_index_offset	= 0,
+	.max_page		= 10,
 	.has_outstanding_reqs	= false,
 	.ch_fifo_offset		= 4,
 	.set_global_pg_config	= tegra264_adma_global_page_config,
