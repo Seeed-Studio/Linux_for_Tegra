@@ -11,6 +11,7 @@
 #include <uapi/misc/tegra_cec.h>
 
 #define TEGRA_CEC_FRAME_MAX_LENGTH  16
+#define TEGRA_CEC_RX_FIFO_LENGTH    64
 
 struct tegra_cec {
 	struct device		*dev;
@@ -29,6 +30,7 @@ struct tegra_cec {
 	atomic_t		init_cancel;
 #endif
 	u16			logical_addr;
+	u16			physical_addr;
 	struct work_struct	work;
 	unsigned int		rx_wake;
 	unsigned int		tx_wake;
@@ -38,6 +40,9 @@ struct tegra_cec {
 	u8			tx_buf_cur;
 	u8			tx_buf_cnt;
 	struct reset_control    *reset;
+	bool			is_tegra_cec_suspended;
+	u16			rx_fifo[TEGRA_CEC_RX_FIFO_LENGTH];
+	u16			rx_fifo_data;
 };
 
 #define TEGRA_CEC_LADDR_BROADCAST   0xF
@@ -69,7 +74,7 @@ struct tegra_cec {
 #define TEGRA_CEC_RX_BUFFER_AFULL_CFG_0 0x04c
 #define TEGRA_CEC_RX_BUFFER_STAT_0      0x050
 #define TEGRA_CEC_RX_TIMING_3_0         0x054
-#define TEGRA_CEC_MESSAGE_FILTER_CTRL   0X058
+#define TEGRA_CEC_MESSAGE_FILTER_CTRL_0 0X058
 #define TEGRA_CEC_RX_PHYSICAL_ADDR_0    0X05C
 #define TEGRA_CEC_RX_OPCODE_0           0x060
 #define TEGRA_CEC_RX_OPCODE_1           0x064

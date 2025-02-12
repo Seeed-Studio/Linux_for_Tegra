@@ -65,6 +65,15 @@ static ssize_t cec_logical_addr_show(struct device *dev,
 static DEVICE_ATTR(cec_logical_addr_config, S_IWUSR | S_IRUGO,
 		cec_logical_addr_show, cec_logical_addr_store);
 
+static ssize_t cec_physical_addr_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
+
+static ssize_t cec_physical_addr_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
+
+static DEVICE_ATTR(cec_physical_addr_config, S_IWUSR | S_IRUGO,
+		cec_physical_addr_show, cec_physical_addr_store);
+
 /* keeping this for debug support to track register read/writes */
 struct tegra_cec *tegra_cec_global;
 
@@ -213,8 +222,6 @@ static ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 	struct tegra_cec *cec = file->private_data;
 	ssize_t ret;
 
-	count = sizeof(cec->rx_buffer);
-
 	ret = wait_event_interruptible(cec->init_waitq,
 	    atomic_read(&cec->init_done) == 1);
 	if (ret)
@@ -228,11 +235,22 @@ static ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 	if (ret)
 		return ret;
 
-	if (copy_to_user(buffer, &(cec->rx_buffer), count))
-		return -EFAULT;
+	if (cec->rx_fifo_data != 0) {
+		count = sizeof(cec->rx_fifo[0]) * (cec->rx_fifo_data);
+		if (copy_to_user(buffer, &(cec->rx_fifo_data), count))
+			return -EFAULT;
 
-	dev_dbg(cec->dev, "%s: %*phC", __func__, (int)count,
-		&(cec->rx_buffer));
+		dev_dbg(cec->dev, "%s: %*phC", __func__, (int)count,
+			&(cec->rx_fifo[0]));
+	} else {
+		count = sizeof(cec->rx_buffer);
+		if (copy_to_user(buffer, &(cec->rx_buffer), count))
+			return -EFAULT;
+
+		dev_dbg(cec->dev, "%s: %*phC", __func__, (int)count,
+			&(cec->rx_buffer));
+	}
+
 	cec->rx_buffer = 0x0;
 	cec->rx_wake = 0;
 	return count;
@@ -242,7 +260,7 @@ static irqreturn_t tegra_cec_irq_handler(int irq, void *data)
 {
 	struct device *dev = data;
 	struct tegra_cec *cec = dev_get_drvdata(dev);
-	u32 status, mask;
+	u32 status, mask, i;
 
 	status = tegra_cec_readl(cec->cec_base + TEGRA_CEC_INT_STAT);
 	mask = tegra_cec_readl(cec->cec_base + TEGRA_CEC_INT_MASK);
@@ -316,9 +334,26 @@ static irqreturn_t tegra_cec_irq_handler(int irq, void *data)
 	} else if (status & TEGRA_CEC_INT_STAT_RX_REGISTER_FULL) {
 		tegra_cec_writel(TEGRA_CEC_INT_STAT_RX_REGISTER_FULL,
 			cec->cec_base + TEGRA_CEC_INT_STAT);
-		cec->rx_buffer = tegra_cec_readl(cec->cec_base + TEGRA_CEC_RX_REGISTER);
-		cec->rx_wake = 1;
-		wake_up_interruptible(&cec->rx_waitq);
+			if (cec->is_tegra_cec_suspended) {
+				/*
+				 Read TEGRA_CEC_RX_BUFFER_STAT_0 which have total number of blocks,
+				 then read every block continuously from TEGRA_CEC_RX_REGISTER.
+				 TEGRA_CEC_INT_STAT_RX_REGISTER_FULL sets only once and not for
+				 every block if there are more than 1 block in FIFO.
+				 */
+				cec->rx_fifo_data =
+					tegra_cec_readl(cec->cec_base + TEGRA_CEC_RX_BUFFER_STAT_0);
+				for (i = 0; i < cec->rx_fifo_data; i++) {
+					cec->rx_fifo[i] =
+						readw(cec->cec_base + TEGRA_CEC_RX_REGISTER);
+				}
+				pm_wakeup_event(dev, 0);
+			} else {
+				cec->rx_buffer = readw(cec->cec_base + TEGRA_CEC_RX_REGISTER);
+				cec->rx_fifo_data = 0;
+			}
+			cec->rx_wake = 1;
+			wake_up_interruptible(&cec->rx_waitq);
 	}
 
 out:
@@ -462,6 +497,8 @@ static int tegra_cec_send_one_touch_play(struct tegra_cec *cec)
 		return 0;
 	}
 
+	cec->physical_addr = (phy_address[1] << 8) | (phy_address[0]);
+
 	active_source_command[2] = phy_address[0];
 	active_source_command[3] = phy_address[1];
 
@@ -511,8 +548,6 @@ static void tegra_cec_init(struct tegra_cec *cec)
 	tegra_cec_writel(TEGRA_CEC_HWCTRL_RX_LADDR(cec->logical_addr),
 		cec->cec_base + TEGRA_CEC_HW_CONTROL);
 
-	tegra_cec_writel(0x1, cec->cec_base + TEGRA_CEC_MESSAGE_FILTER_CTRL);
-
 	state = (0xff << TEGRA_CEC_RX_TIMING_1_RX_DATA_BIT_MAX_LO_TIME_MASK) |
 		(0x22 << TEGRA_CEC_RX_TIMING_1_RX_DATA_BIT_SAMPLE_TIME_MASK) |
 		(0xe0 << TEGRA_CEC_RX_TIMING_1_RX_DATA_BIT_MAX_DURATION_MASK) |
@@ -557,6 +592,43 @@ static void tegra_cec_init_worker(struct work_struct *work)
 	struct tegra_cec *cec = container_of(work, struct tegra_cec, work);
 
 	tegra_cec_init(cec);
+}
+
+static ssize_t cec_physical_addr_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct tegra_cec *cec = dev_get_drvdata(dev);
+
+	if (!atomic_read(&cec->init_done))
+		return -EAGAIN;
+
+	if (buf)
+		return sprintf(buf, "0x%x\n", (u32)cec->physical_addr);
+	return 1;
+}
+
+static ssize_t cec_physical_addr_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	ssize_t ret;
+	u16 addr;
+	struct tegra_cec *cec;
+
+	if (!buf || !count)
+		return -EINVAL;
+
+	cec = dev_get_drvdata(dev);
+	if (!atomic_read(&cec->init_done))
+		return -EAGAIN;
+
+	ret = kstrtou16(buf, 0, &addr);
+	if (ret)
+		return ret;
+
+	dev_info(dev, "set physical address: 0x%x\n", (u32)addr);
+	cec->physical_addr = addr;
+
+	return count;
 }
 
 static ssize_t cec_logical_addr_show(struct device *dev,
@@ -742,6 +814,14 @@ static int tegra_cec_probe(struct platform_device *pdev)
 		goto cec_error;
 	}
 
+	ret = sysfs_create_file(
+		&pdev->dev.kobj, &dev_attr_cec_physical_addr_config.attr);
+	dev_info(&pdev->dev, "cec_add_sysfs ret=%d\n", ret);
+	if (ret != 0) {
+		dev_err(&pdev->dev, "Failed to add sysfs: %d\n", ret);
+		goto cec_error;
+	}
+
 	dev_notice(&pdev->dev, "probed\n");
 
 	return 0;
@@ -763,7 +843,7 @@ static void tegra_cec_remove(struct platform_device *pdev)
 static int tegra_cec_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct tegra_cec *cec = platform_get_drvdata(pdev);
-
+	u16 physical_addr;
 	atomic_set(&cec->init_cancel, 1);
 	wmb();
 
@@ -778,7 +858,29 @@ static int tegra_cec_suspend(struct platform_device *pdev, pm_message_t state)
 	 * Wakeup from SC7 on CEC is broken for T234 in HW.
 	 * Don't do anything for this while going to suspend.
 	 */
+
+	/* exchange higher and lower byte in physical address */
+	physical_addr =
+		((cec->physical_addr & 0xFF00) >> 8) | ((cec->physical_addr & 0x00FF) << 8);
+	/* Re-set the filter control */
+	tegra_cec_writel(0x0, cec->cec_base + TEGRA_CEC_MESSAGE_FILTER_CTRL_0);
+	tegra_cec_writel(0x1, cec->cec_base + TEGRA_CEC_MESSAGE_FILTER_CTRL_0);
+	/* Set wake mask enable only for packet filter*/
+	tegra_cec_writel(0x40000, cec->cec_base + TEGRA_CEC_WAKE_MASK_0);
+	/* Clear wake stat */
+	tegra_cec_writel(0xFFFFFFFF, cec->cec_base + TEGRA_CEC_WAKE_STAT_0);
+	/* write opcode which needs to filter for wake up - set stream path */
+	tegra_cec_writel(0x80000086, cec->cec_base + TEGRA_CEC_RX_OPCODE_0);
+	/* write opcode which needs to filter for wake up - set routing change */
+	tegra_cec_writel(0x80000080, cec->cec_base + TEGRA_CEC_RX_OPCODE_1);
+	/* Program physical address - Write higher byte first and then lower byte */
+	tegra_cec_writel(physical_addr, cec->cec_base + TEGRA_CEC_RX_PHYSICAL_ADDR_0);
+	/* Increase FIFO depth to receive as many as packet till cec driver resumes */
+	tegra_cec_writel(0x40, cec->cec_base + TEGRA_CEC_RX_BUFFER_AFULL_CFG_0);
+	enable_irq_wake(cec->tegra_cec_irq);
+
 	dev_notice(&pdev->dev, "suspended\n");
+	cec->is_tegra_cec_suspended = true;
 	return 0;
 }
 
@@ -788,18 +890,21 @@ static int tegra_cec_resume(struct platform_device *pdev)
 
 	dev_notice(&pdev->dev, "Resuming\n");
 
+	disable_irq_wake(cec->tegra_cec_irq);
+
 	/*
 	 * Wakeup from SC7 on CEC is broken for T234 in HW.
 	 * Don't do anything after exiting suspend.
 	 */
 	schedule_work(&cec->work);
-
+	cec->is_tegra_cec_suspended = false;
 	return 0;
 }
 #endif
 
 static struct of_device_id tegra_cec_of_match[] = {
 	{ .compatible = "nvidia,tegra234-cec"},
+	{ .compatible = "nvidia,tegra239-cec"},
 	{},
 };
 
