@@ -1154,6 +1154,11 @@ static struct fsync_generator_group *cam_fsync_group_init(
 	if (IS_ERR(group))
 		return group;
 
+	if (group == NULL) {
+		dev_err(controller->dev, "Pointer to newly create group struct is NULL\n");
+		return NULL;
+	}
+
 	INIT_LIST_HEAD(&group->generators);
 	INIT_LIST_HEAD(&group->list);
 	group->id = group_id;
@@ -1177,6 +1182,11 @@ static int cam_fsync_create_default_group(struct cam_fsync_controller *controlle
 	int err = 0;
 	struct fsync_generator_group *group = cam_fsync_group_init(controller,
 		TSC_DEFAULT_GROUP_ID);
+
+	if (group == NULL) {
+		dev_err(controller->dev, "Pointer to newly create group struct is NULL\n");
+		return -EINVAL;
+	}
 
 	if (IS_ERR(group))
 		return PTR_ERR(group);

@@ -230,7 +230,7 @@ struct tegra_vi_channel *vi_channel_open_ex(
 		goto rcu_err;
 	}
 
-	rcu_assign_pointer(chan_drv->channels[channel], chan);
+	rcu_assign_pointer(chan_drv->channels[channel], (void *)chan);
 	mutex_unlock(&chan_drv->lock);
 
 	return chan;

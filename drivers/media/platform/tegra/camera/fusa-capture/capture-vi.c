@@ -1252,6 +1252,11 @@ int vi_capture_control_message_from_user(
 		return -ENODEV;
 	}
 
+	if (msg == NULL) {
+		dev_err(NULL, "%s: NULL vi capture control message received\n", __func__);
+		return -EINVAL;
+	}
+
 	nv_camera_log(chan->ndev,
 		__arch_counter_get_cntvct(),
 		NVHOST_CAMERA_VI_CAPTURE_SET_CONFIG);

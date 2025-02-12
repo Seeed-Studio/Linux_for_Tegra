@@ -522,6 +522,12 @@ static int isp_capture_setup_prefences(
 		return -ENODEV;
 	}
 
+	if (req == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: NULL isp capture received\n", __func__);
+		return -ENODEV;
+	}
+
 	/* It is valid not to have prefences for given frame capture */
 	if (!req->prefences_relocs.num_relocs)
 		return 0;

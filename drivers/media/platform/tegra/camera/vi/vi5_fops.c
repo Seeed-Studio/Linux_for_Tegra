@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // Tegra Video Input 5 device common APIs.
 
 #include <linux/errno.h>
@@ -749,6 +749,18 @@ static int tegra_channel_kthread_capture_enqueue(void *data)
 	return 0;
 }
 
+static enum channel_capture_state get_capture_state(
+		struct tegra_channel *chan)
+{
+	enum channel_capture_state capture_state;
+	unsigned long flags;
+
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
+	capture_state = chan->capture_state;
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+	return capture_state;
+}
+
 static int tegra_channel_kthread_capture_dequeue(void *data)
 {
 	int err = 0;
@@ -765,7 +777,7 @@ static int tegra_channel_kthread_capture_dequeue(void *data)
 		wait_event_interruptible(chan->dequeue_wait,
 			(kthread_should_stop()
 				|| !list_empty(&chan->dequeue)
-				|| (chan->capture_state == CAPTURE_ERROR)));
+				|| (get_capture_state(chan) == CAPTURE_ERROR)));
 
 		while (!(kthread_should_stop() || list_empty(&chan->dequeue)
 				|| (chan->capture_state == CAPTURE_ERROR))) {

@@ -257,7 +257,7 @@ static void rtcpu_trace_invalidate_entries(struct tegra_rtcpu_trace *tracer,
 	u64 add_value = 0;
 	u32 mul_value_u32 = 0;
 	u32 sub_value = 0;
-	u64 mul_value_u64 = old_next * entry_size;
+	u64 mul_value_u64 = (u64)old_next * (u64)entry_size;
 
 	if (unlikely(check_add_overflow(dma_handle, mul_value_u64, &add_value))) {
 		dev_err(tracer->dev,
@@ -1523,6 +1523,7 @@ rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_
 	u32 num_events_requested;
 	struct camrtc_trace_memory_header *header;
 	ssize_t events_copied = 0;
+	ssize_t events_amount = 0;
 
 	bool blocking_call = !(file->f_flags & O_NONBLOCK);
 
@@ -1602,7 +1603,13 @@ rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_
 	fd_context->raw_trace_last_read_event_idx = last_read_event_idx;
 	file->private_data = fd_context;
 
-	return events_copied * sizeof(struct camrtc_event_struct);
+	if (check_mul_overflow(events_copied,
+		(ssize_t)sizeof(struct camrtc_event_struct), &events_amount)) {
+		dev_err(tracer->dev, "Events copy failed due to an overflow\n");
+		return -EINVAL;
+	}
+
+	return events_amount;
 }
 
 static ssize_t rtcpu_raw_trace_write(
