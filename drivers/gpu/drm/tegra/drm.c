@@ -12,6 +12,7 @@
 #include <linux/idr.h>
 #include <linux/iommu.h>
 #include <linux/module.h>
+#include <linux/overflow.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/version.h>
@@ -229,7 +230,8 @@ int tegra_drm_submit(struct tegra_drm_context *context,
 	 * Track referenced BOs so that they can be unreferenced after the
 	 * submission is complete.
 	 */
-	num_refs = num_cmdbufs + num_relocs * 2;
+	if (check_add_overflow(num_cmdbufs, num_relocs * 2, &num_refs))
+		return -EINVAL;
 
 	refs = kmalloc_array(num_refs, sizeof(*refs), GFP_KERNEL);
 	if (!refs) {
@@ -354,8 +356,8 @@ int tegra_drm_submit(struct tegra_drm_context *context,
 	args->fence = job->syncpt_end;
 
 fail:
-	while (num_refs--)
-		drm_gem_object_put(refs[num_refs]);
+	while (num_refs > 0)
+		drm_gem_object_put(refs[--num_refs]);
 
 	kfree(refs);
 
