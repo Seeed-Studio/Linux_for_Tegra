@@ -35,6 +35,7 @@
 #include <media/tegra_camera_platform.h>
 #include <soc/tegra/camrtc-capture.h>
 #include <soc/tegra/fuse-helper.h>
+#include <linux/cdev.h>
 
 #include "isp5.h"
 #include <uapi/linux/nvhost_isp_ioctl.h>
@@ -247,14 +248,90 @@ int isp5_priv_late_probe(struct platform_device *pdev)
 
 	err = tegra_camera_device_register(&isp_info, isp5);
 	if (err)
-		goto device_release;
+		return err;
 
 	return 0;
+}
 
-device_release:
-	nvhost_client_device_release(pdev);
+static struct device *isp5_client_device_create(struct platform_device *pdev,
+		struct cdev *cdev,
+		const char *cdev_name,
+		dev_t devno,
+		const struct file_operations *ops)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct device *dev;
+	int err;
 
-	return err;
+#if	defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4	*/
+	pdata->nvhost_class = class_create(pdev->dev.of_node->name);
+#else
+	pdata->nvhost_class = class_create(THIS_MODULE, pdev->dev.of_node->name);
+#endif
+	if (IS_ERR(pdata->nvhost_class)) {
+		dev_err(&pdev->dev, "failed to create class\n");
+		return ERR_CAST(pdata->nvhost_class);
+	}
+
+	cdev_init(cdev, ops);
+	cdev->owner = THIS_MODULE;
+
+	err = cdev_add(cdev, devno, 1);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to add cdev\n");
+		class_destroy(pdata->nvhost_class);
+		return ERR_PTR(err);
+	}
+
+	dev = device_create(pdata->nvhost_class, &pdev->dev, devno, NULL,
+				(pdev->id <= 0) ? "nvhost-%s%s" : "nvhost-%s%s.%d",
+				cdev_name, pdev->dev.of_node->name, pdev->id);
+
+	if (IS_ERR(dev)) {
+		dev_err(&pdev->dev, "failed to create %s device\n", cdev_name);
+		class_destroy(pdata->nvhost_class);
+		cdev_del(cdev);
+	}
+
+	return dev;
+}
+
+static int isp5_client_device_init(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	dev_t devno;
+	int	err;
+
+	err = alloc_chrdev_region(&devno, 0, 1, "nvhost");
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to reserve chrdev region\n");
+		return err;
+	}
+
+	pdata->ctrl_node = isp5_client_device_create(pdev, &pdata->ctrl_cdev,
+				"ctrl-", devno,
+				pdata->ctrl_ops);
+	if (IS_ERR(pdata->ctrl_node)) {
+		unregister_chrdev_region(devno, 1);
+		return PTR_ERR(pdata->ctrl_node);
+	}
+
+	pdata->cdev_region = devno;
+
+	return 0;
+}
+
+static void	isp5_client_device_release(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	if (!IS_ERR_OR_NULL(pdata->ctrl_node)) {
+		device_destroy(pdata->nvhost_class, pdata->ctrl_cdev.dev);
+		cdev_del(&pdata->ctrl_cdev);
+		class_destroy(pdata->nvhost_class);
+	}
+
+	unregister_chrdev_region(pdata->cdev_region, 1);
 }
 
 static int isp5_probe(struct platform_device *pdev)
@@ -280,23 +357,26 @@ static int isp5_probe(struct platform_device *pdev)
 		return PTR_ERR(isp5->clk);
 	}
 
-	err = nvhost_client_device_get_resources(pdev);
-	if (err)
-		goto error;
-
-	err = nvhost_module_init(pdev);
-	if (err)
-		goto error;
-
-	err = nvhost_client_device_init(pdev);
-	if (err) {
-		nvhost_module_deinit(pdev);
+	pdata->host1x = dev_get_drvdata(pdev->dev.parent);
+	if (!pdata->host1x) {
+		err = -ENODEV;
+		dev_err(&pdev->dev, "Error getting host1x data\n");
 		goto error;
 	}
 
-	err = host1x_syncpt_get_shim_info(pdata->host1x, &base, &stride, &num_syncpts);
+	err = nvhost_module_init(pdev);
 	if (err)
-		goto error;
+		goto deinit;
+
+	err = isp5_client_device_init(pdev);
+	if (err)
+		goto deinit;
+
+	err = host1x_syncpt_get_shim_info(pdata->host1x, &base, &stride, &num_syncpts);
+	if (err) {
+		dev_err(&pdev->dev, "Failed to get shim info\n");
+		goto release_client;
+	}
 
 	isp5->syncpt_stride = stride;
 	isp5->syncpt_size = stride * num_syncpts;
@@ -307,7 +387,7 @@ static int isp5_probe(struct platform_device *pdev)
 						DMA_ATTR_SKIP_CPU_SYNC);
 		if (dma_mapping_error(&pdev->dev, isp5->syncpt_base)) {
 			err = -ENOMEM;
-			goto error;
+			goto release_client;
 		}
 	} else {
 		isp5->syncpt_base = base;
@@ -315,10 +395,12 @@ static int isp5_probe(struct platform_device *pdev)
 
 	err = isp5_priv_late_probe(pdev);
 	if (err)
-		goto error;
+		goto release_client;
 
 	return 0;
 
+release_client:
+	isp5_client_device_release(pdev);
 error:
 	if (err != -EPROBE_DEFER)
 		dev_err(&pdev->dev, "probe failed: %d\n", err);
@@ -390,7 +472,7 @@ static int isp5_remove(struct platform_device *pdev)
 	struct host_isp5 *isp5 = (struct host_isp5 *)pdata->private_data;
 
 	tegra_camera_device_unregister(isp5);
-
+	isp5_client_device_release(pdev);
 	isp_channel_drv_unregister(&pdev->dev);
 
 	return 0;
