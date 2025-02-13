@@ -8,7 +8,7 @@
 #include <nvidia/conftest.h>
 
 #include "capture-support.h"
-
+#include <linux/host1x-next.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/export.h>
@@ -28,18 +28,20 @@
 #include <uapi/linux/tegra-soc-hwpm-uapi.h>
 #include <linux/tegra-camera-rtcpu.h>
 
+struct host_capture_data {
+	void __iomem *reg_base;
+};
+
 static int tegra_cam_hwpm_ip_pm(void *ip_dev, bool disable)
 {
 	int err = 0;
 
-#ifdef CONFIG_MEDIA_SUPPORT
-#ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
+#if defined(CONFIG_MEDIA_SUPPORT) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
 	// check if rtcpu is powered on
 	bool is_powered_on = tegra_camrtc_is_rtcpu_powered();
 
 	if (!is_powered_on)
 		err = -EIO;
-#endif
 #endif
 
 	return err;
@@ -50,18 +52,28 @@ static int tegra_cam_hwpm_ip_reg_op(void *ip_dev,
 	u32 inst_element_index, u64 reg_offset, u32 *reg_data)
 {
 	struct platform_device *dev = (struct platform_device *)ip_dev;
+	struct nvhost_device_data *info;
+	struct host_capture_data *capture_data;
+	void __iomem *addr;
 
 	if (reg_offset > UINT_MAX)
 		return -EINVAL;
 
+	info = (struct nvhost_device_data *)platform_get_drvdata(dev);
+
+	if (!info)
+		return -1;
+
+	capture_data = (struct host_capture_data *)(info->private_data);
+
+	addr = capture_data->reg_base + (reg_offset);
+
 	dev_err(&dev->dev, "%s:reg_op %d reg_offset %llu", __func__, reg_op, reg_offset);
 
 	if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_READ)
-		*reg_data = host1x_readl(dev,
-				(unsigned int)reg_offset);
+		*reg_data = readl(addr);
 	else if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_WRITE)
-		host1x_writel(dev, (unsigned int)reg_offset,
-				*reg_data);
+		writel(*reg_data, addr);
 	else
 		return -1;
 
@@ -76,8 +88,10 @@ static int capture_support_probe(struct platform_device *pdev)
 #ifdef CONFIG_TEGRA_HWPM_CAM
 	struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
 	uint64_t base_address;
-#endif
+	struct host_capture_data *capture_data;
+	struct resource *r;
 	int err = 0;
+#endif
 
 	info = (void *)of_device_get_match_data(dev);
 	if (WARN_ON(info == NULL))
@@ -89,30 +103,28 @@ static int capture_support_probe(struct platform_device *pdev)
 
 	(void) dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(39));
 
-	err = nvhost_client_device_get_resources(pdev);
-	if (err)
-		goto error;
-
-	err = nvhost_module_init(pdev);
-	if (err)
-		goto error;
-
-	err = nvhost_client_device_init(pdev);
-	if (err) {
-		nvhost_module_deinit(pdev);
-		goto error;
-	}
-
-	err = nvhost_syncpt_unit_interface_init(pdev);
-	if (err)
-		goto device_release;
-
 #ifdef CONFIG_TEGRA_HWPM_CAM
 	err = of_property_read_u64(dev->of_node, "reg", &base_address);
 	if (err) {
 		err = -ENODEV;
 		goto error;
 	}
+
+	capture_data = (struct host_capture_data *) devm_kzalloc(dev,
+			sizeof(*capture_data), GFP_KERNEL);
+	if (!capture_data) {
+		err = -ENOMEM;
+		goto error;
+	}
+
+	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	capture_data->reg_base = devm_ioremap_resource(&pdev->dev, r);
+	if (IS_ERR(capture_data->reg_base)) {
+		err = PTR_ERR(capture_data->reg_base);
+		goto error;
+	}
+
+	info->private_data = capture_data;
 
 	hwpm_ip_ops.ip_dev = (void *)pdev;
 	hwpm_ip_ops.ip_base_address = base_address;
@@ -131,7 +143,7 @@ static int capture_support_probe(struct platform_device *pdev)
 	} else {
 		err = -EINVAL;
 		dev_err(dev, "%s: hwpm: invalid resource name: %s\n", __func__, info->devfs_name);
-		goto device_release;
+		goto error;
 	}
 	hwpm_ip_ops.hwpm_ip_pm = &tegra_cam_hwpm_ip_pm;
 	hwpm_ip_ops.hwpm_ip_reg_op = &tegra_cam_hwpm_ip_reg_op;
@@ -140,12 +152,12 @@ static int capture_support_probe(struct platform_device *pdev)
 
 	return 0;
 
-device_release:
-	nvhost_client_device_release(pdev);
+#ifdef CONFIG_TEGRA_HWPM_CAM
 error:
 	if (err != -EPROBE_DEFER)
 		dev_err(dev, "probe failed: %d\n", err);
 	return err;
+#endif
 }
 
 static int capture_support_remove(struct platform_device *pdev)
