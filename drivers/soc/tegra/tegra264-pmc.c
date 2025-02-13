@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION. All rights reserved.
 /*
  * drivers/soc/tegra/tegra264-pmc.c
  */
@@ -372,6 +372,14 @@ static const char * const tegra264_reset_sources[] = {
 static const struct tegra_wake_event tegra264_wake_events[] = {
 	TEGRA_WAKE_IRQ("pmu", 0, 727),
 	TEGRA_WAKE_IRQ("rtc", 65, 548),
+	TEGRA_WAKE_IRQ("usb3_port_0", 79, 965),
+	TEGRA_WAKE_IRQ("usb3_port_1", 80, 965),
+	TEGRA_WAKE_IRQ("usb3_port_2", 81, 965),
+	TEGRA_WAKE_IRQ("usb3_port_3", 82, 965),
+	TEGRA_WAKE_IRQ("usb2_port_0", 83, 965),
+	TEGRA_WAKE_IRQ("usb2_port_1", 84, 965),
+	TEGRA_WAKE_IRQ("usb2_port_2", 85, 965),
+	TEGRA_WAKE_IRQ("usb2_port_3", 86, 965),
 	TEGRA_WAKE_GPIO("power_btn", 5, 1, TEGRA264_AON_GPIO(AA, 5)),
 };
 
