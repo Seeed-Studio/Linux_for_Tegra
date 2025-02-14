@@ -36,6 +36,8 @@ NVDLA_OBJS := \
 	$(NVDLA_COMMON_OBJS) \
 	port/device/nvdla_device_axi.o \
 	port/fw/nvdla_fw_riscv.o \
+	port/pm/nvdla_pm_hfrp.o \
+	port/pm/nvdla_pm_hfrp_cmd_v1_2.o \
 	port/sync/nvdla_sync_syncpt_emu.o
 
 # Duplicate source file for forcing compilation.

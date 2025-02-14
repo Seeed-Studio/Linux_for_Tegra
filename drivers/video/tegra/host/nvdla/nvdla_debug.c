@@ -4,6 +4,7 @@
  * NVDLA debug utils
  */
 
+#include <linux/arm64-barrier.h>
 #include <linux/platform_device.h>
 #include <linux/debugfs.h>
 #include "port/nvdla_host_wrapper.h"
@@ -17,6 +18,7 @@
 #include "nvdla_debug.h"
 #include "port/nvdla_fw.h"
 #include "port/nvdla_device.h"
+#include "port/nvdla_pm.h"
 
 /*
  * Header in ring buffer consist (start, end) two uint32_t values.
@@ -31,6 +33,35 @@
 #define dla_set_trace_event_mask(pdev, event_mask)		\
 	debug_set_trace_event_config(pdev, event_mask,	\
 			DLA_SET_TRACE_EVENT_MASK);		\
+
+static LIST_HEAD(s_debug_ctrl_list);
+static DEFINE_MUTEX(s_debug_ctrl_list_lock);
+
+struct nvdla_debug_ctrl {
+	struct platform_device *pdev;
+
+	uint32_t clock_idledelay_us;
+	uint32_t power_idledelay_us;
+	uint32_t rail_idledelay_us;
+
+	struct list_head list;
+};
+
+static struct nvdla_debug_ctrl *s_nvdla_debug_ctrl_get_by_pdev(
+	struct platform_device *pdev)
+{
+	struct nvdla_debug_ctrl *ctrl = NULL;
+
+	mutex_lock(&s_debug_ctrl_list_lock);
+	list_for_each_entry(ctrl, &s_debug_ctrl_list, list) {
+		if (ctrl->pdev == pdev)
+			break;
+	}
+	spec_bar(); /* break_spec_p#5_1 */
+	mutex_unlock(&s_debug_ctrl_list_lock);
+
+	return ctrl;
+}
 
 static int s_nvdla_get_pdev_from_file(struct file *file, struct platform_device **pdev)
 {
@@ -544,7 +575,7 @@ static int nvdla_get_dvfs_statdump(struct nvdla_device *nvdla_dev)
 
 	/* prepare command data */
 	cmd_data.method_id = DLA_CMD_GET_STATISTICS2;
-    /* method data is not used for this command, passing 0U */
+	/* method data is not used for this command, passing 0U */
 	cmd_data.method_data = ALIGNED_DMA(0U);
 	cmd_data.wait = true;
 
@@ -628,39 +659,86 @@ static int debug_dla_ctrl_clk_enable_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	bool gated;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/CLK] enable show");
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to get pdev. err: %d", err);
+		goto fail;
+	}
+	nvdla_dbg_info(pdev, "[CTRL/CLK] enable show");
+
+	err = nvdla_pm_clock_is_gated(pdev, &gated);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to get status. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%x\n", (int) !gated);
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_clk_core_khz_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	uint32_t freq_khz;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
+	if (err < 0) {
+		nvdla_dbg_err(pdev,  "failed to fetch pdev\n");
+		goto fail;
+	}
 	nvdla_dbg_info(pdev,  "[CTRL/CLK] core_khz show");
+
+	err = nvdla_pm_clock_get_core_freq(pdev, &freq_khz);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to fetch frequency. err: %d\n",
+			err);
+		goto fail;
+	}
+
+	seq_printf(s, "%u\n", freq_khz);
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_clk_mcu_khz_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	uint32_t freq_khz;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
+	if (err < 0) {
+		nvdla_dbg_err(pdev,  "failed to fetch pdev\n");
+		goto fail;
+	}
 	nvdla_dbg_info(pdev,  "[CTRL/CLK] mcu_khz show");
+
+	err = nvdla_pm_clock_get_mcu_freq(pdev, &freq_khz);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to fetch frequency. err: %d\n",
+			err);
+		goto fail;
+	}
+
+	seq_printf(s, "%u\n", freq_khz);
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_clk_idlecount_show(struct seq_file *s, void *data)
@@ -680,13 +758,30 @@ static int debug_dla_ctrl_clk_idledelay_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_debug_ctrl *ctrl;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to fetch pdev\n");
+		goto fail;
+	}
+
 	nvdla_dbg_info(pdev,  "[CTRL/CLK] idledelay_us show");
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	seq_printf(s, "%x\n", (uint32_t) ctrl->clock_idledelay_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_clk_idletime_us_show(struct seq_file *s, void *data)
@@ -733,13 +828,28 @@ static int debug_dla_ctrl_power_enable_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	bool gated;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] enable show");
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to get pdev. err: %d", err);
+		goto fail;
+	}
+	nvdla_dbg_info(pdev, "[CTRL/POWER] enable show");
+
+	err = nvdla_pm_power_is_gated(pdev, &gated);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to get status. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%x\n", (int) !gated);
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_power_idlecount_show(struct seq_file *s, void *data)
@@ -759,13 +869,30 @@ static int debug_dla_ctrl_power_idledelay_us_show(struct seq_file *s, void *data
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_debug_ctrl *ctrl;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to fetch pdev\n");
+		goto fail;
+	}
+
 	nvdla_dbg_info(pdev,  "[CTRL/POWER] idledelay_us show");
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	seq_printf(s, "%x\n", (uint32_t) ctrl->power_idledelay_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_power_idletime_us_show(struct seq_file *s, void *data)
@@ -851,13 +978,28 @@ static int debug_dla_ctrl_rail_enable_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	bool gated;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/RAIL] enable show");
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to get pdev. err: %d", err);
+		goto fail;
+	}
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] enable show");
+
+	err = nvdla_pm_rail_is_gated(pdev, &gated);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to get status. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%x\n", (int) !gated);
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_rail_idlecount_show(struct seq_file *s, void *data)
@@ -877,13 +1019,30 @@ static int debug_dla_ctrl_rail_idledelay_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_debug_ctrl *ctrl;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to fetch pdev\n");
+		goto fail;
+	}
+
 	nvdla_dbg_info(pdev,  "[CTRL/RAIL] idledelay_us show");
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	seq_printf(s, "%x\n", (uint32_t) ctrl->rail_idledelay_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_rail_idletime_us_show(struct seq_file *s, void *data)
@@ -1145,6 +1304,7 @@ static ssize_t debug_dla_ctrl_clk_enable_write(struct file *file,
 	int err;
 	struct platform_device *pdev;
 	long write_value;
+	struct nvdla_debug_ctrl *ctrl;
 
 	/* Fetch user requested write-value. */
 	err = kstrtol_from_user(buffer, count, 10, &write_value);
@@ -1156,6 +1316,17 @@ static ssize_t debug_dla_ctrl_clk_enable_write(struct file *file,
 		goto fail;
 
 	nvdla_dbg_info(pdev, "[CTRL/CLK] enable = %u\n", (unsigned int) write_value);
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		goto fail;
+	}
+
+	if (write_value > 0U)
+		err = nvdla_pm_clock_ungate(pdev);
+	else
+		err = nvdla_pm_clock_gate(pdev, ctrl->clock_idledelay_us, false);
 
 	return count;
 
@@ -1179,50 +1350,13 @@ static ssize_t debug_dla_ctrl_clk_core_khz_write(struct file *file,
 	if (err < 0)
 		goto fail;
 
-	nvdla_dbg_info(pdev, "[CTRL/CLK] core_khz = %u\n", (unsigned int) write_value);
+	nvdla_dbg_info(pdev, "[CTRL/CLK] core_khz = %u\n",
+		(unsigned int) write_value);
 
 	return count;
 
 fail:
 	return -1;
-}
-
-static int nvdla_set_mcu_freq_khz(struct nvdla_device *nvdla_dev, uint32_t mcu_freq_khz)
-{
-	int err = 0;
-	struct nvdla_cmd_data cmd_data;
-	struct platform_device *pdev;
-
-	/* prepare command data */
-	cmd_data.method_id = DLA_CMD_SET_CLOCK_FREQ;
-	cmd_data.method_data = mcu_freq_khz;
-	cmd_data.wait = true;
-
-	pdev = nvdla_dev->pdev;
-	if (pdev == NULL) {
-		err = -EFAULT;
-		goto fail_no_dev;
-	}
-
-	/* make sure that device is powered on */
-	err = nvdla_module_busy(pdev);
-	if (err != 0) {
-		nvdla_dbg_err(pdev, "failed to power on\n");
-		err = -ENODEV;
-		goto fail_no_dev;
-	}
-
-	/* pass set debug command to falcon */
-	err = nvdla_fw_send_cmd(pdev, &cmd_data);
-	if (err != 0) {
-		nvdla_dbg_err(pdev, "failed to send set mcu freq command");
-		goto fail_to_send_cmd;
-	}
-
-fail_to_send_cmd:
-	nvdla_module_idle(pdev);
-fail_no_dev:
-	return err;
 }
 
 static ssize_t debug_dla_ctrl_clk_mcu_khz_write(struct file *file,
@@ -1254,7 +1388,7 @@ static ssize_t debug_dla_ctrl_clk_mcu_khz_write(struct file *file,
 	if (write_value > UINT_MAX)
 		goto fail;
 
-	err = nvdla_set_mcu_freq_khz(nvdla_dev, write_value);
+	err = nvdla_pm_clock_set_mcu_freq(pdev, write_value);
 	if (err != 0) {
 		nvdla_dbg_err(pdev, "Failed to send set mcu freq command");
 		goto fail;
@@ -1272,6 +1406,7 @@ static ssize_t debug_dla_ctrl_clk_idledelay_us_write(struct file *file,
 	int err;
 	struct platform_device *pdev;
 	long write_value;
+	struct nvdla_debug_ctrl *ctrl;
 
 	/* Fetch user requested write-value. */
 	err = kstrtol_from_user(buffer, count, 10, &write_value);
@@ -1283,6 +1418,14 @@ static ssize_t debug_dla_ctrl_clk_idledelay_us_write(struct file *file,
 		goto fail;
 
 	nvdla_dbg_info(pdev, "[CTRL/CLK] idledelay_us = %u\n", (unsigned int) write_value);
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		goto fail;
+	}
+
+	ctrl->clock_idledelay_us = (uint32_t) write_value;
 
 	return count;
 
@@ -1297,6 +1440,7 @@ static ssize_t debug_dla_ctrl_power_enable_write(struct file *file,
 	int err;
 	struct platform_device *pdev;
 	long write_value;
+	struct nvdla_debug_ctrl *ctrl;
 
 	/* Fetch user requested write-value. */
 	err = kstrtol_from_user(buffer, count, 10, &write_value);
@@ -1307,7 +1451,19 @@ static ssize_t debug_dla_ctrl_power_enable_write(struct file *file,
 	if (err < 0)
 		goto fail;
 
-	nvdla_dbg_info(pdev, "[CTRL/POWER] enable = %u\n", (unsigned int) write_value);
+	nvdla_dbg_info(pdev, "[CTRL/POWER] enable = %u\n",
+		(unsigned int) write_value);
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		goto fail;
+	}
+
+	if (write_value > 0U)
+		err = nvdla_pm_power_ungate(pdev);
+	else
+		err = nvdla_pm_power_gate(pdev, ctrl->power_idledelay_us, false);
 
 	return count;
 
@@ -1321,6 +1477,7 @@ static ssize_t debug_dla_ctrl_power_idledelay_us_write(struct file *file,
 	int err;
 	struct platform_device *pdev;
 	long write_value;
+	struct nvdla_debug_ctrl *ctrl;
 
 	/* Fetch user requested write-value. */
 	err = kstrtol_from_user(buffer, count, 10, &write_value);
@@ -1332,6 +1489,14 @@ static ssize_t debug_dla_ctrl_power_idledelay_us_write(struct file *file,
 		goto fail;
 
 	nvdla_dbg_info(pdev, "[CTRL/POWER] idledelay_us = %u\n", (unsigned int) write_value);
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		goto fail;
+	}
+
+	ctrl->power_idledelay_us = (uint32_t) write_value;
 
 	return count;
 
@@ -1370,6 +1535,7 @@ static ssize_t debug_dla_ctrl_rail_enable_write(struct file *file,
 	int err;
 	struct platform_device *pdev;
 	long write_value;
+	struct nvdla_debug_ctrl *ctrl;
 
 	/* Fetch user requested write-value. */
 	err = kstrtol_from_user(buffer, count, 10, &write_value);
@@ -1380,7 +1546,19 @@ static ssize_t debug_dla_ctrl_rail_enable_write(struct file *file,
 	if (err < 0)
 		goto fail;
 
-	nvdla_dbg_info(pdev, "[CTRL/RAIL] enable = %u\n", (unsigned int) write_value);
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] enable = %u...\n",
+		(unsigned int) write_value);
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		goto fail;
+	}
+
+	if (write_value > 0U)
+		err = nvdla_pm_rail_ungate(pdev);
+	else
+		err = nvdla_pm_rail_gate(pdev, ctrl->rail_idledelay_us, false);
 
 	return count;
 
@@ -1394,6 +1572,7 @@ static ssize_t debug_dla_ctrl_rail_idledelay_us_write(struct file *file,
 	int err;
 	struct platform_device *pdev;
 	long write_value;
+	struct nvdla_debug_ctrl *ctrl;
 
 	/* Fetch user requested write-value. */
 	err = kstrtol_from_user(buffer, count, 10, &write_value);
@@ -1405,6 +1584,14 @@ static ssize_t debug_dla_ctrl_rail_idledelay_us_write(struct file *file,
 		goto fail;
 
 	nvdla_dbg_info(pdev, "[CTRL/RAIL] idledelay_us = %u\n", (unsigned int) write_value);
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		goto fail;
+	}
+
+	ctrl->rail_idledelay_us = (uint32_t) write_value;
 
 	return count;
 
@@ -2509,10 +2696,20 @@ void nvdla_debug_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
+	struct nvdla_debug_ctrl *ctrl;
 	struct dentry *de = pdata->debugfs;
 
 	if (!de)
 		return;
+
+	ctrl = devm_kzalloc(&pdev->dev, sizeof(*ctrl), GFP_KERNEL);
+	if (!ctrl)
+		return;
+
+	ctrl->pdev = pdev;
+	mutex_lock(&s_debug_ctrl_list_lock);
+	list_add_tail(&ctrl->list, &s_debug_ctrl_list);
+	mutex_unlock(&s_debug_ctrl_list_lock);
 
 	debugfs_create_u32("debug_mask", 0644, de,
 			&nvdla_dev->dbg_mask);

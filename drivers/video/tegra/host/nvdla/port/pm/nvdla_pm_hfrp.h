@@ -1,0 +1,223 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
+ */
+
+#ifndef __NVDLA_PM_HFRP_H_
+#define __NVDLA_PM_HFRP_H_
+
+#include <linux/completion.h>
+#include <linux/io.h>
+#include <linux/mutex.h>
+#include <linux/platform_device.h>
+
+/* Header and Payload Defines */
+#define DLA_HFRP_CMD_PAYLOAD_MAX_LEN            32U
+#define DLA_HFRP_RESP_PAYLOAD_MAX_LEN           32U
+
+/* Circular buffer size */
+#define DLA_HFRP_CMD_BUFFER_SIZE                116U
+#define DLA_HFRP_RESP_BUFFER_SIZE               116U
+
+/* This is reasonable number given command buffer size 116 bytes */
+#define DLA_HFRP_MAX_NUM_SEQ                    64U
+struct hfrp_cmd_sequence {
+	struct hfrp *hfrp;
+
+#define DLA_HFRP_SEQUENCE_ID_ASYNC 0x3ffU
+	uint32_t seqid;
+	uint32_t cmdid;
+	struct completion completion;
+
+	/* Node pointer to be part of HFRP free list */
+	struct list_head list;
+};
+
+struct hfrp {
+	/* General */
+	struct platform_device *pdev;
+	void __iomem *regs;
+	int irq;
+
+	/* HFRP command management */
+	struct mutex cmd_lock;
+
+	struct hfrp_cmd_sequence *sequence_pool;
+	uint32_t nsequences;
+	struct list_head seq_freelist;
+
+	/* Cache latest response for quick accesses */
+	bool rail_gated;
+	bool power_gated;
+	bool clock_gated;
+
+	uint32_t core_freq_khz;
+
+	/* Node pointer to be a part of a list. */
+	struct list_head list;
+};
+
+static inline void hfrp_reg_write1B(struct hfrp *hfrp,
+	uint8_t value,
+	uint32_t offset)
+{
+	uint32_t write_value;
+
+	write_value = readl(hfrp->regs + ((offset >> 2U) << 2U));
+	write_value &= ~(((uint32_t) 0xffU) << ((offset % 4U) * 8U));
+	write_value |= (((uint32_t) value) << ((offset % 4U) * 8U));
+
+	writel(write_value, hfrp->regs + ((offset >> 2U) << 2U));
+}
+
+static inline uint8_t hfrp_reg_read1B(struct hfrp *hfrp,
+	uint32_t offset)
+{
+	uint32_t read_value;
+
+	read_value = readl(hfrp->regs + ((offset >> 2U) << 2U));
+	read_value = read_value >> ((offset % 4U) * 8U);
+	read_value = read_value & 0xffU;
+
+	return (uint8_t) read_value;
+}
+
+static inline void hfrp_reg_write(struct hfrp *hfrp,
+	uint32_t value,
+	uint32_t offset)
+{
+	writel(value, hfrp->regs + offset);
+}
+
+static inline uint32_t hfrp_reg_read(struct hfrp *hfrp, uint32_t offset)
+{
+	return readl(hfrp->regs + offset);
+}
+
+/* Command and Response Headers */
+static inline uint32_t hfrp_buffer_cmd_header_size_f(uint32_t v)
+{
+	/* BUFFER_CMD_HEADER_SIZE 0:7 */
+	return (v & 0xffU);
+}
+
+static inline uint32_t hfrp_buffer_cmd_header_size_v(uint32_t r)
+{
+	/* BUFFER_CMD_HEADER_SIZE 0:7 */
+	return (r & 0xffU);
+}
+
+static inline uint32_t hfrp_buffer_cmd_header_seqid_f(uint32_t v)
+{
+	/* BUFFER_CMD_HEADER_SEQUENCE_ID 17:8 */
+	return ((v & 0x3ffU) << 8);
+}
+
+static inline uint32_t hfrp_buffer_cmd_header_seqid_v(uint32_t r)
+{
+	/* BUFFER_CMD_HEADER_SEQUENCE_ID 17:8 */
+	return ((r >> 8) & 0x3ffU);
+}
+
+static inline uint32_t hfrp_buffer_cmd_header_cmdid_f(uint32_t v)
+{
+	/* BUFFER_CMD_HEADER_COMMAND_ID 27:18 */
+	return ((v & 0x3ffU) << 18);
+}
+
+static inline uint32_t hfrp_buffer_cmd_header_cmdid_v(uint32_t r)
+{
+	/* BUFFER_CMD_HEADER_COMMAND_ID 27:18 */
+	return ((r >> 18) & 0x3ffU);
+}
+
+static inline uint32_t hfrp_buffer_resp_header_size_f(uint32_t v)
+{
+	/* BUFFER_RESPONSE_HEADER_SIZE 0:7 */
+	return (v & 0xffU);
+}
+
+static inline uint32_t hfrp_buffer_resp_header_size_v(uint32_t r)
+{
+	/* BUFFER_RESPONSE_HEADER_SIZE 0:7 */
+	return (r & 0xffU);
+}
+
+static inline uint32_t hfrp_buffer_resp_header_seqid_f(uint32_t v)
+{
+	/* BUFFER_RESPONSE_HEADER_SEQUENCE_ID 17:8 */
+	return ((v & 0x3ffU) << 8);
+}
+
+static inline uint32_t hfrp_buffer_resp_header_seqid_v(uint32_t r)
+{
+	/* BUFFER_RESPONSE_HEADER_SEQUENCE_ID 17:8 */
+	return ((r >> 8) & 0x3ffU);
+}
+
+static inline uint32_t hfrp_buffer_resp_header_respid_f(uint32_t v)
+{
+	/* BUFFER_RESPONSE_HEADER_RESPONSE_ID 27:18 */
+	return ((v & 0x3ffU) << 18);
+}
+
+static inline uint32_t hfrp_buffer_resp_header_respid_v(uint32_t r)
+{
+	/* BUFFER_RESPONSE_HEADER_RESPONSE_ID 27:18 */
+	return ((r >> 18) & 0x3ffU);
+}
+
+/**
+ * HFRP Communication protocol
+ **/
+int32_t hfrp_send_cmd(struct hfrp *hfrp,
+	uint32_t cmd,
+	uint8_t *payload,
+	uint32_t payload_size,
+	bool blocking);
+
+/**
+ * DLA-HFRP Command Request and Response Policy
+ **/
+void hfrp_handle_response(struct hfrp *hfrp,
+	uint32_t cmd,
+	uint8_t *payload,
+	uint32_t payload_size);
+
+/* For gating and ungating of Clock, Power, and Rail */
+struct nvdla_hfrp_cmd_power_ctrl {
+	bool power_on;
+	bool power_off;
+	bool power_delayed_off;
+	bool rail_on;
+	bool rail_off;
+	bool rail_delayed_off;
+	bool clock_on;
+	bool clock_off;
+	bool clock_delayed_off;
+	int8_t pps;
+};
+
+int32_t nvdla_hfrp_send_cmd_power_ctrl(struct hfrp *hfrp,
+	struct nvdla_hfrp_cmd_power_ctrl *cmd,
+	bool blocking);
+
+/* For configuration of delay value in the event of delayed gating */
+struct nvdla_hfrp_cmd_config {
+	uint16_t cg_delay_ms;
+	uint16_t pg_delay_ms;
+	uint16_t rg_delay_ms;
+
+	uint32_t pg_entry_freq_khz;
+	uint32_t pg_exit_freq_khz;
+};
+
+int32_t nvdla_hfrp_send_cmd_config(struct hfrp *hfrp,
+	struct nvdla_hfrp_cmd_config *cmd,
+	bool blocking);
+
+/* For getting the current frequency */
+int32_t nvdla_hfrp_send_cmd_get_current_freq(struct hfrp *hfrp,
+	bool blocking);
+
+#endif /* __NVDLA_PM_HFRP_H_ */

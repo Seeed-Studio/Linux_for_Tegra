@@ -23,6 +23,7 @@ nvhost-nvdla-objs += \
 		$(NVDLA_COMMON_OBJS) \
 		port/device/nvdla_device_host1x.o \
 		port/fw/nvdla_fw_flcn.o \
+		port/pm/nvdla_pm_stub.o \
 		port/sync/nvdla_sync_syncpt.o \
 		port/fw/nvdla_falcon.o
 

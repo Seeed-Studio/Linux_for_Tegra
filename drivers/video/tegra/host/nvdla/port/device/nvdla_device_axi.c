@@ -7,6 +7,7 @@
 #include <nvidia/conftest.h>
 
 #include "../nvdla_device.h"
+#include "../nvdla_pm.h"
 
 #include "../../dla_queue.h"
 #include "../../nvdla_debug.h"
@@ -277,10 +278,20 @@ int32_t nvdla_module_init(struct platform_device *pdev)
 		goto disable_pm;
 	}
 
+	if (pdev->num_resources > 1U) {
+		err = nvdla_pm_init(pdev);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "failed to init pm. err %d\n", err);
+			goto destroy_device;
+		}
+	}
+
 	pdata->debugfs = debugfs_create_dir(pdata->devfs_name, NULL);
 
 	return 0;
 
+destroy_device:
+	s_nvdla_module_device_destroy(pdev);
 disable_pm:
 	s_nvdla_module_pm_disable(pdev);
 fail:
@@ -294,6 +305,7 @@ void nvdla_module_deinit(struct platform_device *pdev)
 	if ((pdata != NULL) && (pdata->debugfs != NULL))
 		debugfs_remove_recursive(pdata->debugfs);
 
+	nvdla_pm_deinit(pdev);
 	s_nvdla_module_device_destroy(pdev);
 	s_nvdla_module_pm_disable(pdev);
 }
