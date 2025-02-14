@@ -9,6 +9,26 @@
 
 #define RCR_VHT_ACK		BIT(26)
 
+struct rtw8821cu_efuse {
+	u8 res4[4];			/* 0xd0 */
+	u8 usb_optional_function;
+	u8 res5[0x1e];
+	u8 res6[2];
+	u8 serial[0x0b];		/* 0xf5 */
+	u8 vid;				/* 0x100 */
+	u8 res7;
+	u8 pid;
+	u8 res8[4];
+	u8 mac_addr[ETH_ALEN];		/* 0x107 */
+	u8 res9[2];
+	u8 vendor_name[0x07];
+	u8 res10[2];
+	u8 device_name[0x14];
+	u8 res11[0xcf];
+	u8 package_type;		/* 0x1fb */
+	u8 res12[0x4];
+};
+
 struct rtw8821ce_efuse {
 	u8 mac_addr[ETH_ALEN];		/* 0xd0 */
 	u8 vender_id[2];
@@ -45,6 +65,11 @@ struct rtw8821ce_efuse {
 	u8 res7;
 };
 
+struct rtw8821cs_efuse {
+	u8 res4[0x4a];			/* 0xd0 */
+	u8 mac_addr[ETH_ALEN];		/* 0x11a */
+} __packed;
+
 struct rtw8821c_efuse {
 	__le16 rtl_id;
 	u8 res0[0x0e];
@@ -73,6 +98,8 @@ struct rtw8821c_efuse {
 	u8 res[3];
 	union {
 		struct rtw8821ce_efuse e;
+		struct rtw8821cu_efuse u;
+		struct rtw8821cs_efuse s;
 	};
 };
 
@@ -83,6 +110,8 @@ _rtw_write32s_mask(struct rtw_dev *rtwdev, u32 addr, u32 mask, u32 data)
 	rtw_write32_mask(rtwdev, addr, mask, data);
 	rtw_write32_mask(rtwdev, addr + 0x200, mask, data);
 }
+
+extern const struct rtw_chip_info rtw8821c_hw_spec;
 
 #define rtw_write32s_mask(rtwdev, addr, mask, data)			       \
 	do {								       \
@@ -148,6 +177,14 @@ _rtw_write32s_mask(struct rtw_dev *rtwdev, u32 addr, u32 mask, u32 data)
 /* phy status page0 */
 #define GET_PHY_STAT_P0_PWDB(phy_stat)                                         \
 	le32_get_bits(*((__le32 *)(phy_stat) + 0x00), GENMASK(15, 8))
+#define GET_PHY_STAT_P0_VGA(phy_stat)                                          \
+	le32_get_bits(*((__le32 *)(phy_stat) + 0x03), GENMASK(12, 8))
+#define GET_PHY_STAT_P0_LNA_L(phy_stat)                                        \
+	le32_get_bits(*((__le32 *)(phy_stat) + 0x03), GENMASK(15, 13))
+#define GET_PHY_STAT_P0_LNA_H(phy_stat)                                        \
+	le32_get_bits(*((__le32 *)(phy_stat) + 0x03), BIT(23))
+#define BIT_LNA_H_MASK BIT(3)
+#define BIT_LNA_L_MASK GENMASK(2, 0)
 
 /* phy status page1 */
 #define GET_PHY_STAT_P1_PWDB_A(phy_stat)                                       \
@@ -173,6 +210,8 @@ _rtw_write32s_mask(struct rtw_dev *rtwdev, u32 addr, u32 mask, u32 data)
 #define GET_PHY_STAT_P1_RXSNR_B(phy_stat)                                      \
 	le32_get_bits(*((__le32 *)(phy_stat) + 0x06), GENMASK(15, 8))
 
+#define REG_SYS_CTRL	0x000
+#define BIT_FEN_EN	BIT(26)
 #define REG_INIRTS_RATE_SEL 0x0480
 #define REG_HTSTFWT	0x800
 #define REG_RXPSEL	0x808
@@ -199,11 +238,17 @@ _rtw_write32s_mask(struct rtw_dev *rtwdev, u32 addr, u32 mask, u32 data)
 #define REG_RXSB	0xa00
 #define REG_ADCINI	0xa04
 #define REG_PWRTH	0xa08
+#define REG_CCA_FLTR	0xa20
 #define REG_TXSF2	0xa24
 #define REG_TXSF6	0xa28
 #define REG_FA_CCK	0xa5c
 #define REG_RXDESC	0xa2c
 #define REG_ENTXCCK	0xa80
+#define BTG_LNA		0xfc84
+#define WLG_LNA		0x7532
+#define REG_ENRXCCA	0xa84
+#define BTG_CCA		0x0e
+#define WLG_CCA		0x12
 #define REG_PWRTH2	0xaa8
 #define REG_CSRATIO	0xaaa
 #define REG_TXFILTER	0xaac
@@ -217,6 +262,11 @@ _rtw_write32s_mask(struct rtw_dev *rtwdev, u32 addr, u32 mask, u32 data)
 #define REG_RFESEL0	0xcb0
 #define REG_RFESEL8	0xcb4
 #define REG_RFECTL	0xcb8
+#define B_BTG_SWITCH	BIT(16)
+#define B_CTRL_SWITCH	BIT(18)
+#define B_WL_SWITCH	(BIT(20) | BIT(22))
+#define B_WLG_SWITCH	BIT(21)
+#define B_WLA_SWITCH	BIT(23)
 #define REG_RFEINV	0xcbc
 #define REG_AGCTR_B	0xe08
 #define REG_RXIGI_B	0xe50
@@ -227,12 +277,12 @@ _rtw_write32s_mask(struct rtw_dev *rtwdev, u32 addr, u32 mask, u32 data)
 #define REG_CCA_OFDM	0xf08
 #define REG_FA_OFDM	0xf48
 #define REG_CCA_CCK	0xfcc
+#define REG_DMEM_CTRL	0x1080
+#define BIT_WL_RST	BIT(16)
 #define REG_ANTWT	0x1904
 #define REG_IQKFAILMSK	0x1bf0
 #define BIT_MASK_R_RFE_SEL_15	GENMASK(31, 28)
 #define BIT_SDIO_INT BIT(18)
-#define SAMPLE_RATE_MASK GENMASK(5, 0)
-#define SAMPLE_RATE	0x5
 #define BT_CNT_ENABLE	0x1
 #define BIT_BCN_QUEUE	BIT(3)
 #define BCN_PRI_EN	0x1
