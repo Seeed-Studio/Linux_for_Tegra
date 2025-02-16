@@ -6724,6 +6724,44 @@ compile_test() {
                     "NV_BLOCK_DEVICE_OPERATIONS_RELEASE_HAS_NO_MODE_ARG" "" "types"
         ;;
 
+        blk_mq_f_should_merge)
+            #
+            # Determine if the BLK_MQ_F_SHOULD_MERGE is present.
+            #
+            # In Linux v6.14, commit cc76ace465d6 ("block: remove BLK_MQ_F_SHOULD_MERGE")
+            # removed the definition BLK_MQ_F_SHOULD_MERGE.
+            #
+            CODE="
+            #include <linux/blk-mq.h>
+            int conftest_blk_mq_f_should_merge(void) {
+                return BLK_MQ_F_SHOULD_MERGE;
+            }"
+
+            compile_check_conftest "$CODE" \
+		    "NV_BLK_MQ_F_SHOULD_MERGE" "" "types"
+        ;;
+
+        queue_limits_struct_has_features)
+	    #
+            # Determine if the 'queue_limits' needs to use
+            # the latest set of API's
+	    # The queue_limit set has 2 situations:
+	    #  1. The API queue_limits_set is present but
+	    #  queue_limits.features is not present.
+	    #  2. Both the API and queue_limits.features
+	    # are present.
+	    #
+	    # Another macro is derived from this macro
+	    # in nv_hv_vblk.c
+            CODE="
+            #include <linux/blkdev.h>
+            int conftest_set_queue_limits(void) {
+	         return offsetof(struct queue_limits, features);
+            }"
+            compile_check_conftest "$CODE" \
+		    "NV_QUEUE_LIMITS_STRUCT_HAS_FEATURES" "" "types"
+	;;
+
         bus_type_struct_match_has_const_drv_arg)
             #
             # Determine if the 'match' callback from the 'bus_type' structure

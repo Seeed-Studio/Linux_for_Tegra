@@ -17,7 +17,6 @@
 #include <linux/kdev_t.h>
 #include <linux/vmalloc.h>
 #include <linux/interrupt.h>
-#include <linux/version.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <uapi/linux/sched/types.h>
@@ -35,10 +34,16 @@
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
 #include <linux/version.h>
+#include <linux/blkdev.h>
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 #include <linux/tegra-hsierrrptinj.h>
 #endif
 #include "tegra_vblk.h"
+
+#if defined(NV_QUEUE_LIMITS_STRUCT_HAS_FEATURES) \
+	&& (NV_IS_EXPORT_SYMBOL_PRESENT_queue_limits_set == 1)
+#define NV_BLOCK_USE_QUEUE_LIMITS_SET
+#endif
 
 #define DISCARD_ERASE_SECERASE_MASK	(VS_BLK_DISCARD_OP_F | \
 					VS_BLK_SECURE_ERASE_OP_F | \
@@ -1103,14 +1108,18 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 {
 	int ret;
 
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+	struct queue_limits limits;
+#endif
 	memset(&vblkdev->ioctl_tag_set, 0, sizeof(vblkdev->tag_set));
 	vblkdev->ioctl_tag_set.ops = &vblk_mq_ops;
 	vblkdev->ioctl_tag_set.nr_hw_queues = 1;
 	vblkdev->ioctl_tag_set.nr_maps = 1;
 	vblkdev->ioctl_tag_set.queue_depth = 16;
 	vblkdev->ioctl_tag_set.numa_node = NUMA_NO_NODE;
+#if defined(NV_BLK_MQ_F_SHOULD_MERGE) /* Linux 6.14 */
 	vblkdev->ioctl_tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
-
+#endif
 	ret = blk_mq_alloc_tag_set(&vblkdev->ioctl_tag_set);
 	if (ret) {
 		dev_err(vblkdev->device, "failed to allocate tag set\n");
@@ -1130,12 +1139,24 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 
 	vblkdev->ioctl_queue->queuedata = vblkdev;
 
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+	limits.physical_block_size = vblkdev->config.blk_config.hardblk_size;
+	limits.logical_block_size = vblkdev->config.blk_config.hardblk_size;
+	limits.io_min = vblkdev->config.blk_config.hardblk_size;
+	limits.io_opt = vblkdev->config.blk_config.hardblk_size;
+
+	if (queue_limits_set(vblkdev->ioctl_queue, &limits) != 0) {
+		dev_err(vblkdev->device, "failed to set queue limits\n");
+		blk_mq_free_tag_set(&vblkdev->ioctl_tag_set);
+		return;
+	}
+#else
 	blk_queue_logical_block_size(vblkdev->ioctl_queue,
 		vblkdev->config.blk_config.hardblk_size);
 	blk_queue_physical_block_size(vblkdev->ioctl_queue,
 		vblkdev->config.blk_config.hardblk_size);
-
 	blk_queue_flag_set(QUEUE_FLAG_NONROT, vblkdev->ioctl_queue);
+#endif
 
 	/* And the gendisk structure. */
 #if defined(NV_BLK_MQ_ALLOC_DISK_FOR_QUEUE_PRESENT) /* Linux v6.0 */
@@ -1179,6 +1200,10 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 /* Set up virtual device. */
 static void setup_device(struct vblk_dev *vblkdev)
 {
+
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+	struct queue_limits limits;
+#endif
 	uint32_t max_io_bytes;
 	uint32_t req_id;
 	uint32_t max_requests;
@@ -1200,8 +1225,9 @@ static void setup_device(struct vblk_dev *vblkdev)
 	vblkdev->tag_set.nr_maps = 1;
 	vblkdev->tag_set.queue_depth = 16;
 	vblkdev->tag_set.numa_node = NUMA_NO_NODE;
+#if defined(NV_BLK_MQ_F_SHOULD_MERGE) /* Linux 6.14 */
 	vblkdev->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
-
+#endif
 	ret = blk_mq_alloc_tag_set(&vblkdev->tag_set);
 	if (ret)
 		return;
@@ -1219,13 +1245,26 @@ static void setup_device(struct vblk_dev *vblkdev)
 
 	vblkdev->queue->queuedata = vblkdev;
 
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+	limits.physical_block_size = vblkdev->config.blk_config.hardblk_size;
+	limits.logical_block_size = vblkdev->config.blk_config.hardblk_size;
+	limits.io_min = vblkdev->config.blk_config.hardblk_size;
+	limits.io_opt = vblkdev->config.blk_config.hardblk_size;
+#else
 	blk_queue_logical_block_size(vblkdev->queue,
 		vblkdev->config.blk_config.hardblk_size);
 	blk_queue_physical_block_size(vblkdev->queue,
 		vblkdev->config.blk_config.hardblk_size);
+#endif
 
 	if (vblkdev->config.blk_config.req_ops_supported & VS_BLK_FLUSH_OP_F) {
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+		limits.features |= (BLK_FEAT_WRITE_CACHE &
+				!(BLK_FLAG_WRITE_CACHE_DISABLED) &
+				!(BLK_FEAT_FUA));
+#else
 		blk_queue_write_cache(vblkdev->queue, true, false);
+#endif
 	}
 
 	if (vblkdev->config.blk_config.max_read_blks_per_io !=
@@ -1243,6 +1282,60 @@ static void setup_device(struct vblk_dev *vblkdev)
 		dev_err(vblkdev->device, "Maximum io bytes value is 0!\n");
 		return;
 	}
+
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET) && defined(NV_BLK_QUEUE_MAX_HW_SECTORS_PRESENT)
+	limits.max_hw_sectors = max_io_bytes / SECTOR_SIZE;
+#elif defined(NV_BLK_QUEUE_MAX_HW_SECTORS_PRESENT) /* Removed in Linux v6.10 */
+	blk_queue_max_hw_sectors(vblkdev->queue, max_io_bytes / SECTOR_SIZE);
+#endif
+
+	if ((vblkdev->config.blk_config.req_ops_supported & VS_BLK_SECURE_ERASE_OP_F)
+	     || (vblkdev->config.blk_config.req_ops_supported & VS_BLK_ERASE_OP_F)) {
+#if defined(QUEUE_FLAG_SECERASE) /* Removed in Linux 5.19 */
+		/*
+		 * FIXME: Support for Linux v5.19+ kernels
+		 */
+		blk_queue_flag_set(QUEUE_FLAG_SECERASE, vblkdev->queue);
+#elif defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+		limits.max_secure_erase_sectors = vblkdev->config.blk_config.max_erase_blks_per_io;
+#else
+		blk_queue_max_secure_erase_sectors(vblkdev->queue,
+			vblkdev->config.blk_config.max_erase_blks_per_io);
+#endif
+	}
+
+	if ((vblkdev->config.blk_config.req_ops_supported & VS_BLK_DISCARD_OP_F)
+	  || (((vblkdev->config.blk_config.req_ops_supported & VS_BLK_SECURE_ERASE_OP_F)
+	  || (vblkdev->config.blk_config.req_ops_supported & VS_BLK_ERASE_OP_F))
+	  && vblkdev->config.phys_dev == VSC_DEV_UFS)) {
+#if defined(QUEUE_FLAG_DISCARD) /* Removed in Linux v5.19 */
+		/*
+		 * FIXME: Support for Linux v5.19+ kernels
+		 */
+		blk_queue_flag_set(QUEUE_FLAG_DISCARD, vblkdev->queue);
+#endif
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+		limits.max_discard_segments = vblkdev->config.blk_config.max_erase_blks_per_io;
+		limits.discard_granularity = vblkdev->config.blk_config.hardblk_size;
+#else
+		blk_queue_max_discard_sectors(vblkdev->queue,
+			vblkdev->config.blk_config.max_erase_blks_per_io);
+		vblkdev->queue->limits.discard_granularity =
+			vblkdev->config.blk_config.hardblk_size;
+#endif
+		print_erase_op_supported(vblkdev->device,
+				vblkdev->config.blk_config.req_ops_supported);
+
+	}
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+	if (queue_limits_set(vblkdev->queue, &limits) != 0) {
+		dev_err(vblkdev->device, "failed to set queue limits\n");
+		blk_mq_free_tag_set(&vblkdev->tag_set);
+		return;
+	}
+#else
+	 blk_queue_flag_set(QUEUE_FLAG_NONROT, vblkdev->queue);
+#endif
 
 	/* reserve mempool for eMMC device and for ufs device
 	 * with pass through support
@@ -1394,40 +1487,6 @@ static void setup_device(struct vblk_dev *vblkdev)
 
 	vblkdev->max_requests = max_requests;
 	vblkdev->max_ioctl_requests = max_ioctl_requests;
-#if defined(NV_BLK_QUEUE_MAX_HW_SECTORS_PRESENT) /* Removed in Linux v6.10 */
-	blk_queue_max_hw_sectors(vblkdev->queue, max_io_bytes / SECTOR_SIZE);
-#endif
-	blk_queue_flag_set(QUEUE_FLAG_NONROT, vblkdev->queue);
-
-	if ((vblkdev->config.blk_config.req_ops_supported & VS_BLK_SECURE_ERASE_OP_F)
-	     || (vblkdev->config.blk_config.req_ops_supported & VS_BLK_ERASE_OP_F))
-#if defined(QUEUE_FLAG_SECERASE) /* Removed in Linux 5.19 */
-		/*
-		 * FIXME: Support for Linux v5.19+ kernels
-		 */
-		blk_queue_flag_set(QUEUE_FLAG_SECERASE, vblkdev->queue);
-#else
-		blk_queue_max_secure_erase_sectors(vblkdev->queue,
-			vblkdev->config.blk_config.max_erase_blks_per_io);
-#endif
-
-	if ((vblkdev->config.blk_config.req_ops_supported & VS_BLK_DISCARD_OP_F)
-	  || (((vblkdev->config.blk_config.req_ops_supported & VS_BLK_SECURE_ERASE_OP_F)
-	  || (vblkdev->config.blk_config.req_ops_supported & VS_BLK_ERASE_OP_F))
-	  && vblkdev->config.phys_dev == VSC_DEV_UFS)) {
-#if defined(QUEUE_FLAG_DISCARD) /* Removed in Linux v5.19 */
-		/*
-		 * FIXME: Support for Linux v5.19+ kernels
-		 */
-		blk_queue_flag_set(QUEUE_FLAG_DISCARD, vblkdev->queue);
-#endif
-		blk_queue_max_discard_sectors(vblkdev->queue,
-			vblkdev->config.blk_config.max_erase_blks_per_io);
-		vblkdev->queue->limits.discard_granularity =
-			vblkdev->config.blk_config.hardblk_size;
-		print_erase_op_supported(vblkdev->device,
-				vblkdev->config.blk_config.req_ops_supported);
-	}
 
 	/* And the gendisk structure. */
 #if defined(NV_BLK_MQ_ALLOC_DISK_FOR_QUEUE_PRESENT) /* Linux v6.0 */
