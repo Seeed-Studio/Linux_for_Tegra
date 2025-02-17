@@ -9,6 +9,9 @@
 #include <linux/tegra-camera-rtcpu.h>
 
 #include <asm/ioctls.h>
+#include <linux/host1x-next.h>
+#include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/device.h>
 #include <linux/export.h>
 #include <linux/fs.h>
@@ -107,6 +110,78 @@ static int t194_nvcsi_release(struct inode *inode, struct file *file)
 
 	return 0;
 }
+
+static int t194_nvcsi_module_init(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	unsigned int i;
+	int err;
+
+	err = devm_clk_bulk_get_all(&pdev->dev, &pdata->clks);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to get clocks %d\n", err);
+		return err;
+	}
+	pdata->num_clks = err;
+
+	for (i = 0; i < pdata->num_clks; i++) {
+		err = clk_set_rate(pdata->clks[i].clk, ULONG_MAX);
+		if (err < 0) {
+			dev_err(&pdev->dev, "failed to set clock rate!\n");
+			return err;
+		}
+	}
+
+	pdata->reset_control = devm_reset_control_get_exclusive_released(
+					&pdev->dev, NULL);
+	if (IS_ERR(pdata->reset_control)) {
+		dev_err(&pdev->dev, "failed to get reset\n");
+		return PTR_ERR(pdata->reset_control);
+	}
+
+	reset_control_acquire(pdata->reset_control);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to acquire reset: %d\n", err);
+		return err;
+	}
+
+	err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
+	if (err < 0) {
+		reset_control_release(pdata->reset_control);
+		dev_err(&pdev->dev, "failed to enabled clocks: %d\n", err);
+		return err;
+	}
+
+	reset_control_reset(pdata->reset_control);
+	clk_bulk_disable_unprepare(pdata->num_clks, pdata->clks);
+	reset_control_release(pdata->reset_control);
+
+	if (pdata->autosuspend_delay) {
+		pm_runtime_set_autosuspend_delay(&pdev->dev,
+			pdata->autosuspend_delay);
+		pm_runtime_use_autosuspend(&pdev->dev);
+	}
+
+	pm_runtime_enable(&pdev->dev);
+	if (!pm_runtime_enabled(&pdev->dev))
+		return -EOPNOTSUPP;
+
+	pdata->debugfs = debugfs_create_dir(pdev->dev.of_node->name,
+					    NULL);
+
+	return 0;
+
+}
+
+static void t194_nvcsi_module_deinit(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	pm_runtime_disable(&pdev->dev);
+
+	debugfs_remove_recursive(pdata->debugfs);
+}
+
 
 const struct file_operations tegra194_nvcsi_ctrl_ops = {
 	.owner = THIS_MODULE,
@@ -207,30 +282,18 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 		return PTR_ERR(nvcsi->clk);
 	}
 
-	err = nvhost_client_device_get_resources(pdev);
+	err = t194_nvcsi_module_init(pdev);
 	if (err)
 		return err;
-
-	err = nvhost_module_init(pdev);
-	if (err)
-		return err;
-
-	err = nvhost_client_device_init(pdev);
-	if (err) {
-		nvhost_module_deinit(pdev);
-		goto err_client_device_init;
-	}
 
 	err = t194_nvcsi_late_probe(pdev);
 	if (err)
-		goto err_mediacontroller_init;
+		goto deinit;
 
 	return 0;
 
-err_mediacontroller_init:
-	nvhost_client_device_release(pdev);
-err_client_device_init:
-	pdata->private_data = NULL;
+deinit:
+	t194_nvcsi_module_deinit(pdev);
 	return err;
 }
 
