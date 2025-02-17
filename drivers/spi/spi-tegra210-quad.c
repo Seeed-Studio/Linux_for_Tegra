@@ -1709,7 +1709,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->irq = qspi_irq;
 
 	if (!has_acpi_companion(tqspi->dev)) {
-		tqspi->clk = devm_clk_get(&pdev->dev, "qspi");
+		tqspi->clk = devm_clk_get(&pdev->dev, "qspi_out");
 		if (IS_ERR(tqspi->clk)) {
 			ret = PTR_ERR(tqspi->clk);
 			dev_err(&pdev->dev, "failed to get clock: %d\n", ret);
