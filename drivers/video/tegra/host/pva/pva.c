@@ -913,7 +913,14 @@ static int nvpva_write_hwid(struct platform_device *pdev)
 		id_idx = vm_regs_sid_idx_t234;
 		reg_idx = vm_regs_reg_idx_t234;
 	} else {
-		id_idx = vm_regs_sid_idx_t264;
+		if (!tegra_platform_is_silicon())
+			id_idx = vm_regs_sid_idx_t264_cod;
+		else
+#if  defined(CONFIG_PVA_CO_DISABLED_T264)
+			id_idx = vm_regs_sid_idx_t264_cod;
+#else
+			id_idx = vm_regs_sid_idx_t264_co;
+#endif
 		reg_idx = vm_regs_reg_idx_t264;
 	}
 
@@ -1463,6 +1470,9 @@ static int pva_probe(struct platform_device *pdev)
 	else
 		pva->boot_from_file = false;
 
+	if (!tegra_platform_is_silicon())
+		pva->boot_from_file = true;
+
 #if  defined(CONFIG_PVA_CO_DISABLED_T264)
 	if (pdata->version == PVA_HW_GEN3)
 		pva->boot_from_file = true;
@@ -1472,6 +1482,7 @@ static int pva_probe(struct platform_device *pdev)
 	if (pdata->version == PVA_HW_GEN2)
 		pva->boot_from_file = true;
 #endif
+
 #ifdef __linux__
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 #if KERNEL_VERSION(4, 15, 0) > LINUX_VERSION_CODE
