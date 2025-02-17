@@ -431,7 +431,7 @@ void dce_ipc_channel_reset(struct tegra_dce *d, u32 ch_type)
 	do {
 		if (dce_ipc_channel_is_ready(d, ch_type) == true)
 			break;
-
+		dce_os_usleep_range(10, 20);
 	} while (true);
 
 	dce_os_mutex_lock(&ch->lock);
