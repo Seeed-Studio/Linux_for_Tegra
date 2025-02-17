@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION. All rights reserved.
 /*
  * PCIe host controller driver for Tegra264 SoC
  *
@@ -33,24 +33,6 @@ extern int of_get_pci_domain_nr(struct device_node *node);
 #define PCIE_LINK_UP_DELAY	10000	/* 10 msec */
 #define PCIE_LINK_UP_TIMEOUT	1000000	/* 1 s */
 
-/* XAL registers */
-#define XAL_RC_IO_BASE_HI			0xc
-#define XAL_RC_IO_BASE_LO			0x10
-#define XAL_RC_IO_LIMIT_HI			0x14
-#define XAL_RC_IO_LIMIT_LO			0x18
-#define XAL_RC_MEM_32BIT_BASE_HI		0x1c
-#define XAL_RC_MEM_32BIT_BASE_LO		0x20
-#define XAL_RC_MEM_32BIT_LIMIT_HI		0x24
-#define XAL_RC_MEM_32BIT_LIMIT_LO		0x28
-#define XAL_RC_MEM_64BIT_BASE_HI		0x2c
-#define XAL_RC_MEM_64BIT_BASE_LO		0x30
-#define XAL_RC_MEM_64BIT_LIMIT_HI		0x34
-#define XAL_RC_MEM_64BIT_LIMIT_LO		0x38
-#define XAL_RC_BAR_CNTL_STANDARD		0x40
-#define XAL_RC_BAR_CNTL_STANDARD_IOBAR_EN	BIT(0)
-#define XAL_RC_BAR_CNTL_STANDARD_32B_BAR_EN	BIT(1)
-#define XAL_RC_BAR_CNTL_STANDARD_64B_BAR_EN	BIT(2)
-
 /* XTL registers */
 #define XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS		0x58
 #define XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE	BIT(29)
@@ -67,7 +49,6 @@ struct tegra264_pcie {
 	struct pci_host_bridge *bridge;
 	struct gpio_desc *pex_wake_gpiod;
 	unsigned int pex_wake_irq;
-	void __iomem *xal_base;
 	void __iomem *xtl_pri_base;
 	void __iomem *ecam_base;
 	u64 prefetch_mem_base;
@@ -141,29 +122,6 @@ static void tegra264_pcie_bpmp_set_rp_state(struct tegra264_pcie *pcie)
 static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 {
 	u32 val;
-
-	/* Program XAL */
-	writel(upper_32_bits(pcie->io_base), pcie->xal_base + XAL_RC_IO_BASE_HI);
-	writel(lower_32_bits(pcie->io_base), pcie->xal_base + XAL_RC_IO_BASE_LO);
-
-	writel(upper_32_bits(pcie->io_limit), pcie->xal_base + XAL_RC_IO_LIMIT_HI);
-	writel(lower_32_bits(pcie->io_limit), pcie->xal_base + XAL_RC_IO_LIMIT_LO);
-
-	writel(upper_32_bits(pcie->mem_base), pcie->xal_base + XAL_RC_MEM_32BIT_BASE_HI);
-	writel(lower_32_bits(pcie->mem_base), pcie->xal_base + XAL_RC_MEM_32BIT_BASE_LO);
-
-	writel(upper_32_bits(pcie->mem_limit), pcie->xal_base + XAL_RC_MEM_32BIT_LIMIT_HI);
-	writel(lower_32_bits(pcie->mem_limit), pcie->xal_base + XAL_RC_MEM_32BIT_LIMIT_LO);
-
-	writel(upper_32_bits(pcie->prefetch_mem_base), pcie->xal_base + XAL_RC_MEM_64BIT_BASE_HI);
-	writel(lower_32_bits(pcie->prefetch_mem_base), pcie->xal_base + XAL_RC_MEM_64BIT_BASE_LO);
-
-	writel(upper_32_bits(pcie->prefetch_mem_limit), pcie->xal_base + XAL_RC_MEM_64BIT_LIMIT_HI);
-	writel(lower_32_bits(pcie->prefetch_mem_limit), pcie->xal_base + XAL_RC_MEM_64BIT_LIMIT_LO);
-
-	val = XAL_RC_BAR_CNTL_STANDARD_IOBAR_EN | XAL_RC_BAR_CNTL_STANDARD_32B_BAR_EN |
-		XAL_RC_BAR_CNTL_STANDARD_64B_BAR_EN;
-	writel(val, pcie->xal_base + XAL_RC_BAR_CNTL_STANDARD);
 
 	/* Setup bus numbers */
 	val = readl(pcie->ecam_base + PCI_PRIMARY_BUS);
@@ -271,13 +229,6 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 		dev_printk(level, dev,
 			   dev_fmt("Failed to parse device tree: %d\n"),
 			   ret);
-		return ret;
-	}
-
-	pcie->xal_base = devm_platform_ioremap_resource_byname(pdev, "xal");
-	if (IS_ERR(pcie->xal_base)) {
-		ret = PTR_ERR(pcie->xal_base);
-		dev_err(dev, "failed to map xal memory: %d\n", ret);
 		return ret;
 	}
 
