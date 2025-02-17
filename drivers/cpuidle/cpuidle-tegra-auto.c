@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -156,6 +156,11 @@ static int __init tegra_auto_idle_init_cpu(int cpu)
 {
 	int ret = 0;
 	struct cpuidle_driver *drv;
+
+	if (cpu < 0 || cpu >= nr_cpu_ids) {
+		pr_err("Invalid CPU index: %d\n", cpu);
+		return -EINVAL;
+	}
 
 	drv = kmemdup(&tegra_auto_idle_driver, sizeof(*drv), GFP_KERNEL);
 	if (!drv)
