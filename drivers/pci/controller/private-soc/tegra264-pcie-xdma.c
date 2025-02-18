@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved. */
 
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -16,6 +16,7 @@
 #include <linux/slab.h>
 #include <linux/tegra-pcie-dma.h>
 
+#include "tegra-pcie-dma-irq.h"
 #include "tegra264-pcie-xdma-osi.h"
 
 /** Default number of descriptors used */
@@ -225,7 +226,7 @@ process_abort:
 		process_r_idx(ch, TEGRA_PCIE_DMA_ABORT, ch->w_idx);
 }
 
-static irqreturn_t xdma_irq(int irq, void *cookie)
+irqreturn_t xdma_irq(int irq, void *cookie)
 {
 	/* Disable irq before wake thread handler */
 	disable_irq_nosync((u32)(irq & INT_MAX));
@@ -233,7 +234,7 @@ static irqreturn_t xdma_irq(int irq, void *cookie)
 	return IRQ_WAKE_THREAD;
 }
 
-static irqreturn_t xdma_irq_handler(int irq, void *cookie)
+irqreturn_t xdma_irq_handler(int irq, void *cookie)
 {
 	struct xdma_prv *prv = (struct xdma_prv *)cookie;
 	int bit = 0;
@@ -311,7 +312,7 @@ static irqreturn_t xdma_irq_handler(int irq, void *cookie)
 	return IRQ_HANDLED;
 }
 
-void *tegra264_pcie_xdma_initialize(struct tegra_pcie_dma_init_info *info)
+void *tegra264_pcie_xdma_initialize(struct tegra_pcie_dma_init_info *info, void *priv_dma)
 {
 	struct xdma_prv *prv;
 	struct resource *dma_res;
@@ -461,8 +462,8 @@ void *tegra264_pcie_xdma_initialize(struct tegra_pcie_dma_init_info *info)
 	if (!prv->irq_name)
 		goto free_ring;
 
-	ret = request_threaded_irq(prv->irq, xdma_irq, xdma_irq_handler, IRQF_SHARED,
-				   prv->irq_name, prv);
+	ret = request_threaded_irq(prv->irq, tegra_pcie_dma_irq, tegra_pcie_dma_irq_handler,
+				   IRQF_SHARED, prv->irq_name, priv_dma);
 	if (ret < 0) {
 		dev_err(prv->dev, "failed to request irq: %d err: %d\n", prv->irq, ret);
 		goto free_irq_name;
@@ -704,7 +705,7 @@ bool tegra264_pcie_xdma_stop(void *cookie)
 	return true;
 }
 
-void tegra264_pcie_xdma_deinit(void *cookie)
+void tegra264_pcie_xdma_deinit(void *cookie, void *priv_dma)
 {
 	struct xdma_prv *prv = (struct xdma_prv *)cookie;
 	struct xdma_chan *chan[2], *ch;
@@ -716,7 +717,7 @@ void tegra264_pcie_xdma_deinit(void *cookie)
 
 	xdma_stop(prv, TEGRA_PCIE_DMA_DEINIT);
 
-	free_irq(prv->irq, prv);
+	free_irq(prv->irq, priv_dma);
 	kfree(prv->irq_name);
 
 	chan[0] = &prv->tx[0];

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved. */
 
 #ifndef TEGRA264_PCIE_XDMA_OSI_H
 #define TEGRA264_PCIE_XDMA_OSI_H
@@ -115,10 +115,13 @@ static inline unsigned int xdma_channel_rd(void __iomem *p, unsigned char c, u32
 	return readl((0x4 * c) + p + offset);
 }
 
-void *tegra264_pcie_xdma_initialize(struct tegra_pcie_dma_init_info *info);
+irqreturn_t xdma_irq(int irq, void *cookie);
+irqreturn_t xdma_irq_handler(int irq, void *cookie);
+
+void *tegra264_pcie_xdma_initialize(struct tegra_pcie_dma_init_info *info, void *priv_dma);
 tegra_pcie_dma_status_t tegra264_pcie_xdma_set_msi(void *cookie, u64 msi_addr, u32 msi_data);
 tegra_pcie_dma_status_t tegra264_pcie_xdma_submit_xfer(void *cookie,
 						       struct tegra_pcie_dma_xfer_info *tx_info);
 bool tegra264_pcie_xdma_stop(void *cookie);
-void tegra264_pcie_xdma_deinit(void *cookie);
+void tegra264_pcie_xdma_deinit(void *cookie, void *priv_dma);
 #endif // TEGRA264_PCIE_XDMA_OSI_H

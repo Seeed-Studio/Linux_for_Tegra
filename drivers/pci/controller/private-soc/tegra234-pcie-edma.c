@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved. */
 
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -14,6 +14,7 @@
 #include <linux/slab.h>
 #include <linux/tegra-pcie-dma.h>
 
+#include "tegra-pcie-dma-irq.h"
 #include "tegra234-pcie-edma-osi.h"
 
 #define DMA_WR_CHNL_NUM	4
@@ -321,7 +322,7 @@ process_abort:
 		process_r_idx(ch, TEGRA_PCIE_DMA_ABORT, ch->w_idx);
 }
 
-static irqreturn_t edma_irq(int irq, void *cookie)
+irqreturn_t edma_irq(int irq, void *cookie)
 {
 	/* Disable irq before wake thread handler */
 	disable_irq_nosync((u32)(irq & INT_MAX));
@@ -347,7 +348,7 @@ static void edma_check_and_ring_db(struct edma_prv *prv, u8 bit, u32 ctrl_off, u
 		dma_common_wr(prv->edma_base, bit, db_off);
 }
 
-static irqreturn_t edma_irq_handler(int irq, void *cookie)
+irqreturn_t edma_irq_handler(int irq, void *cookie)
 {
 	struct edma_prv *prv = (struct edma_prv *)cookie;
 	int bit = 0;
@@ -420,7 +421,7 @@ static irqreturn_t edma_irq_handler(int irq, void *cookie)
 	return IRQ_HANDLED;
 }
 
-void *tegra234_pcie_edma_initialize(struct tegra_pcie_dma_init_info *info)
+void *tegra234_pcie_edma_initialize(struct tegra_pcie_dma_init_info *info, void *priv_dma)
 {
 	struct edma_prv *prv;
 	struct resource *dma_res;
@@ -577,8 +578,8 @@ void *tegra234_pcie_edma_initialize(struct tegra_pcie_dma_init_info *info)
 	if (!prv->irq_name)
 		goto free_ring;
 
-	ret = request_threaded_irq(prv->irq, edma_irq, edma_irq_handler,
-				   IRQF_SHARED, prv->irq_name, prv);
+	ret = request_threaded_irq(prv->irq, tegra_pcie_dma_irq, tegra_pcie_dma_irq_handler,
+				   IRQF_SHARED, prv->irq_name, priv_dma);
 	if (ret < 0) {
 		dev_err(prv->dev, "failed to request \"intr\" irq\n");
 		goto free_irq_name;
@@ -829,7 +830,7 @@ bool tegra234_pcie_edma_stop(void *cookie)
 	return true;
 }
 
-void tegra234_pcie_edma_deinit(void *cookie)
+void tegra234_pcie_edma_deinit(void *cookie, void *priv_dma)
 {
 	struct edma_prv *prv = (struct edma_prv *)cookie;
 	struct edma_chan *chan[2], *ch;
@@ -841,7 +842,7 @@ void tegra234_pcie_edma_deinit(void *cookie)
 
 	edma_stop(prv, TEGRA_PCIE_DMA_DEINIT);
 
-	free_irq(prv->irq, prv);
+	free_irq(prv->irq, priv_dma);
 	kfree(prv->irq_name);
 
 	chan[0] = &prv->tx[0];

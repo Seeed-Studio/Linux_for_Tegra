@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved. */
 
 #ifndef TEGRA234_PCIE_EDMA_OSI_H
 #define TEGRA234_PCIE_EDMA_OSI_H
@@ -140,9 +140,12 @@ static inline unsigned int dma_channel_rd(void __iomem *p, unsigned char c, u32 
 	return readl((0x200 * (c + 1)) + p + offset);
 }
 
-void *tegra234_pcie_edma_initialize(struct tegra_pcie_dma_init_info *info);
+irqreturn_t edma_irq(int irq, void *cookie);
+irqreturn_t edma_irq_handler(int irq, void *cookie);
+
+void *tegra234_pcie_edma_initialize(struct tegra_pcie_dma_init_info *info, void *priv_dma);
 tegra_pcie_dma_status_t tegra234_pcie_edma_submit_xfer(void *cookie,
 						       struct tegra_pcie_dma_xfer_info *tx_info);
 bool tegra234_pcie_edma_stop(void *cookie);
-void tegra234_pcie_edma_deinit(void *cookie);
+void tegra234_pcie_edma_deinit(void *cookie, void *priv_dma);
 #endif // TEGRA234_PCIE_EDMA_OSI_H
