@@ -372,6 +372,7 @@ static void tegra264_pcie_ep_unmap_addr(struct pci_epc *epc, u8 func_no,
 #endif
 					phys_addr_t addr);
 
+#ifndef DOXYGEN_ICD
 /** MSI is expected not to be decomposed, hence no ICD documentation planned yet */
 static int tegra264_pcie_ep_set_msi(struct pci_epc *epc, u8 fn,
 #if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
@@ -384,6 +385,7 @@ static int tegra264_pcie_ep_get_msi(struct pci_epc *epc,
 				    u8 fn, u8 vfn);
 #else
 				    u8 fn);
+#endif
 #endif
 
 static int tegra264_pcie_ep_raise_irq(struct pci_epc *epc, u8 fn,
