@@ -780,7 +780,7 @@ static int tegra_channel_kthread_capture_dequeue(void *data)
 				|| (get_capture_state(chan) == CAPTURE_ERROR)));
 
 		while (!(kthread_should_stop() || list_empty(&chan->dequeue)
-				|| (chan->capture_state == CAPTURE_ERROR))) {
+				|| (get_capture_state(chan) == CAPTURE_ERROR))) {
 
 			buf = dequeue_dequeue_buffer(chan);
 			if (!buf)
