@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2016-2023, NVIDIA Corporation.  All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * NVDLA OS Interface
  */
@@ -171,6 +170,22 @@ enum dla_commands {
 	 * Gets stat window size
 	 */
 	DLA_CMD_GET_STAT_WINDOW_SIZE	= 16U,
+	/**
+	 * Sets init config
+	 */
+	DLA_CMD_SET_INIT_CONFIG			= 17U,
+	/**
+	 * Preeempts a task
+	 */
+	DLA_CMD_PREEMPT					= 18U,
+	/**
+	 * Sets clock freq
+	 */
+	DLA_CMD_SET_CLOCK_FREQ			= 19U,
+	/**
+	 * Gets dvfs statdump
+	 */
+	DLA_CMD_GET_STATISTICS2			= 20U,
 };
 
 /**

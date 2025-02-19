@@ -487,7 +487,7 @@ static int debug_dla_fw_dvfs_mode_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
@@ -501,7 +501,7 @@ static int debug_dla_fw_dvfs_enable_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -514,7 +514,7 @@ static int debug_dla_fw_dvfs_freqlist_khz_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -527,7 +527,7 @@ static int debug_dla_fw_dvfs_periodicity_ms_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -536,17 +536,78 @@ static int debug_dla_fw_dvfs_periodicity_ms_show(struct seq_file *s, void *data)
 	return 0;
 }
 
+static int nvdla_get_dvfs_statdump(struct nvdla_device *nvdla_dev)
+{
+	int err = 0;
+	struct nvdla_cmd_data cmd_data;
+	struct platform_device *pdev;
+
+	/* prepare command data */
+	cmd_data.method_id = DLA_CMD_GET_STATISTICS2;
+    /* method data is not used for this command, passing 0U */
+	cmd_data.method_data = ALIGNED_DMA(0U);
+	cmd_data.wait = true;
+
+	pdev = nvdla_dev->pdev;
+	if (pdev == NULL) {
+		err = -EFAULT;
+		goto fail_no_dev;
+	}
+
+	/* make sure that device is powered on */
+	err = nvdla_module_busy(pdev);
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "failed to power on\n");
+		err = -ENODEV;
+		goto fail_no_dev;
+	}
+
+	/* pass set debug command to falcon */
+	err = nvdla_fw_send_cmd(pdev, &cmd_data);
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "failed to send get dvfs statdump command");
+		goto fail_to_send_cmd;
+	}
+
+fail_to_send_cmd:
+	nvdla_module_idle(pdev);
+fail_no_dev:
+	return err;
+}
+
 static int debug_dla_fw_dvfs_statdump_show(struct seq_file *s, void *data)
 {
 	int err;
+	struct nvdla_device *nvdla_dev;
 	struct platform_device *pdev;
-	(void) data;;
 
-	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[DVFS] statdump show");
+	if (s == NULL) {
+		err = -EFAULT;
+		goto fail;
+	}
+
+	nvdla_dev = (struct nvdla_device *) s->private;
+	if (nvdla_dev == NULL) {
+		err = -EFAULT;
+		goto fail;
+	}
+
+	pdev = nvdla_dev->pdev;
+	if (pdev == NULL) {
+		err = -EFAULT;
+		goto fail;
+	}
+
+	err = nvdla_get_dvfs_statdump(nvdla_dev);
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "Failed to get dvfs statdump");
+		goto fail;
+	}
+
 	return 0;
+
+fail:
+	return err;
 }
 
 // ctrl clk show functions
@@ -554,7 +615,7 @@ static int debug_dla_ctrl_clk_activetime_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -567,7 +628,7 @@ static int debug_dla_ctrl_clk_enable_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -580,7 +641,7 @@ static int debug_dla_ctrl_clk_core_khz_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -593,7 +654,7 @@ static int debug_dla_ctrl_clk_mcu_khz_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -606,7 +667,7 @@ static int debug_dla_ctrl_clk_idlecount_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -619,7 +680,7 @@ static int debug_dla_ctrl_clk_idledelay_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -632,7 +693,7 @@ static int debug_dla_ctrl_clk_idletime_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -645,7 +706,7 @@ static int debug_dla_ctrl_clk_statdump_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -659,7 +720,7 @@ static int debug_dla_ctrl_power_activetime_us_show(struct seq_file *s, void *dat
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -672,7 +733,7 @@ static int debug_dla_ctrl_power_enable_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -685,7 +746,7 @@ static int debug_dla_ctrl_power_idlecount_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -698,7 +759,7 @@ static int debug_dla_ctrl_power_idledelay_us_show(struct seq_file *s, void *data
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -711,7 +772,7 @@ static int debug_dla_ctrl_power_idletime_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -724,7 +785,7 @@ static int debug_dla_ctrl_power_mode_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -737,7 +798,7 @@ static int debug_dla_ctrl_power_statdump_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -750,7 +811,7 @@ static int debug_dla_ctrl_power_vftable_mv_khz_show(struct seq_file *s, void *da
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -763,7 +824,7 @@ static int debug_dla_ctrl_power_voltage_mv_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -777,7 +838,7 @@ static int debug_dla_ctrl_rail_activetime_us_show(struct seq_file *s, void *data
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -790,7 +851,7 @@ static int debug_dla_ctrl_rail_enable_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -803,7 +864,7 @@ static int debug_dla_ctrl_rail_idlecount_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -816,7 +877,7 @@ static int debug_dla_ctrl_rail_idledelay_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -829,7 +890,7 @@ static int debug_dla_ctrl_rail_idletime_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -842,7 +903,7 @@ static int debug_dla_ctrl_rail_statdump_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
-	(void) data;;
+	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
@@ -1126,10 +1187,50 @@ fail:
 	return -1;
 }
 
+static int nvdla_set_mcu_freq_khz(struct nvdla_device *nvdla_dev, uint32_t mcu_freq_khz)
+{
+	int err = 0;
+	struct nvdla_cmd_data cmd_data;
+	struct platform_device *pdev;
+
+	/* prepare command data */
+	cmd_data.method_id = DLA_CMD_SET_CLOCK_FREQ;
+	cmd_data.method_data = mcu_freq_khz;
+	cmd_data.wait = true;
+
+	pdev = nvdla_dev->pdev;
+	if (pdev == NULL) {
+		err = -EFAULT;
+		goto fail_no_dev;
+	}
+
+	/* make sure that device is powered on */
+	err = nvdla_module_busy(pdev);
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "failed to power on\n");
+		err = -ENODEV;
+		goto fail_no_dev;
+	}
+
+	/* pass set debug command to falcon */
+	err = nvdla_fw_send_cmd(pdev, &cmd_data);
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "failed to send set mcu freq command");
+		goto fail_to_send_cmd;
+	}
+
+fail_to_send_cmd:
+	nvdla_module_idle(pdev);
+fail_no_dev:
+	return err;
+}
+
 static ssize_t debug_dla_ctrl_clk_mcu_khz_write(struct file *file,
 		const char __user *buffer, size_t count, loff_t *off)
 {
 	int err;
+	struct seq_file *priv_data;
+	struct nvdla_device *nvdla_dev;
 	struct platform_device *pdev;
 	long write_value;
 
@@ -1138,11 +1239,26 @@ static ssize_t debug_dla_ctrl_clk_mcu_khz_write(struct file *file,
 	if (err < 0)
 		goto fail;
 
-	err = s_nvdla_get_pdev_from_file(file, &pdev);
-	if (err < 0)
+	priv_data = file->private_data;
+	if (priv_data == NULL)
 		goto fail;
 
-	nvdla_dbg_info(pdev, "[CTRL/CLK] mcu_khz = %u\n", (unsigned int) write_value);
+	nvdla_dev = (struct nvdla_device *) priv_data->private;
+	if (nvdla_dev == NULL)
+		goto fail;
+
+	pdev = nvdla_dev->pdev;
+	if (pdev == NULL)
+		goto fail;
+
+	if (write_value > UINT_MAX)
+		goto fail;
+
+	err = nvdla_set_mcu_freq_khz(nvdla_dev, write_value);
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "Failed to send set mcu freq command");
+		goto fail;
+	}
 
 	return count;
 
