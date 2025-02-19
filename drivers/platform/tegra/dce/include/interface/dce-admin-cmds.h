@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * Copyright (c) 2018-2024 NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -14,7 +14,7 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
@@ -36,7 +36,7 @@
  * To keep things simple, this value should be incremented by 1 each
  * time changes are made.
  */
-#define DCE_ADMIN_VERSION				3
+#define DCE_ADMIN_VERSION				4
 
 #define DCE_ADMIN_CMD_SIZE	sizeof(struct dce_admin_ipc_cmd)
 #define DCE_ADMIN_RESP_SIZE	sizeof(struct dce_admin_ipc_resp)
@@ -102,9 +102,48 @@ struct dce_admin_ext_test_args {
 	uint32_t	test_cmd;
 };
 
+/** Flags used for various set log ops */
+#define DCE_ADMIN_LOG_FL_CLEAR_BUFFER     1U
+#define DCE_ADMIN_LOG_FL_SET_IOVA_ADDR    2U
+#define DCE_ADMIN_LOG_FL_SET_LOG_LVL      4U
+
+struct dce_admin_set_log_info {
+	/** Flag with bits indicating below various ops to perform
+	 *   in set log call:
+	 *
+	 *   - Clear log buffer
+	 *   - Set IOVA addr
+	 *   - Set log level
+	 */
+	uint32_t    flags;
+	/** IOVA of DRAM region to be mapped */
+	dce_iova    iova;
+	/** Size of complete buffer */
+	uint32_t    buff_size;
+	/** Log level value to set */
+	uint32_t    log_level;
+	/** Stream-id to be used by the region */
+	uint32_t    stream_id;
+};
+
+struct dce_admin_get_log_info {
+	/** Number of bytes written */
+	uint64_t    bytes_written;
+	/** Offset from where circular region of buffer is starting */
+	uint32_t    offset;
+};
+
 struct dce_admin_log_args {
-	uint32_t	log_enable;
-	uint32_t	log_level;
+	/**
+	 * Struct containing info used by set admin cmd call for
+	 * setting up logging buffer.
+	 */
+	struct dce_admin_set_log_info set_log_info;
+	/**
+	 * Struct containing info used by get admin cmd call to
+	 * retrieve data from logging buffer.
+	 */
+	struct dce_admin_get_log_info get_log_info;
 };
 
 struct dce_admin_mem_args {
