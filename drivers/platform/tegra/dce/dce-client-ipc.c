@@ -318,7 +318,7 @@ int dce_client_init(struct tegra_dce *d)
 	}
 
 fail_work_init:
-	if (ret) {
+	if (ret && (i > 0)) {
 		uint8_t j = 0;
 
 		for (j = i - 1; j >= 0; j--)  {
