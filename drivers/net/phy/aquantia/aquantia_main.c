@@ -683,7 +683,9 @@ int aqr_wait_reset_complete(struct phy_device *phydev)
 {
 	int ret, val;
 
-	ret = read_poll_timeout(phy_read_mmd, val, val != 0,
+	ret = read_poll_timeout(phy_read_mmd, val,
+				((val & VEND1_GLOBAL_FW_ID_MASK) != 0 &&
+				 (val & VEND1_GLOBAL_FW_ID_MASK) != VEND1_GLOBAL_FW_ID_MASK),
 				AQR_FW_WAIT_SLEEP_US, AQR_FW_WAIT_TIMEOUT_US,
 				false, phydev, MDIO_MMD_VEND1,
 				VEND1_GLOBAL_FW_ID);
