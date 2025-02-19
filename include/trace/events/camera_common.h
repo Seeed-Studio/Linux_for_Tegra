@@ -1,5 +1,17 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
 #include <nvidia/conftest.h>
 
@@ -11,6 +23,9 @@
 
 #include <linux/version.h>
 #include <linux/tracepoint.h>
+
+#ifdef NV_IS_L4T
+#include <media/mc_common.h>
 
 struct tegra_channel;
 struct timespec64;
@@ -139,6 +154,8 @@ DEFINE_EVENT(frame, tegra_channel_capture_done,
 	TP_PROTO(const char *str, struct timespec64 *ts),
 	TP_ARGS(str, ts)
 );
+
+#endif /* NV_IS_L4T */
 
 TRACE_EVENT(vi_task_submit,
 	TP_PROTO(u32 class_id, u32 channel_id, u32 syncpt_id,

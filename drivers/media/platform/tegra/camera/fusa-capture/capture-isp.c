@@ -29,6 +29,10 @@
 #include <linux/vmalloc.h>
 #include <linux/tegra-capture-ivc.h>
 #include <linux/tegra-camera-rtcpu.h>
+#include <linux/io.h>
+#include <linux/iosys-map.h>
+#include <linux/dma-buf.h>
+#include <linux/of.h>
 #include <asm/arch_timer.h>
 #include <soc/tegra/fuse.h>
 
@@ -36,7 +40,6 @@
 #include <uapi/linux/nvhost_events.h>
 #include "soc/tegra/camrtc-capture.h"
 #include "soc/tegra/camrtc-capture-messages.h"
-#include <media/mc_common.h>
 #include <media/fusa-capture/capture-isp-channel.h>
 #include <media/fusa-capture/capture-common.h>
 #include <media/fusa-capture/capture-isp.h>

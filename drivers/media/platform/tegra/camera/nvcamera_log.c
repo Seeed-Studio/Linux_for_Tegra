@@ -1,12 +1,21 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * nvcamera_log.c - general tracing function for vi and isp API calls
+// SPDX-License-Identifier: GPL-2.0-only
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
- * Copyright (c) 2018-2023, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  */
 
 
 #include "nvcamera_log.h"
+#define CREATE_TRACE_POINTS
 #include "trace/events/camera_common.h"
 #include <linux/nvhost.h>
 #include <linux/platform_device.h>

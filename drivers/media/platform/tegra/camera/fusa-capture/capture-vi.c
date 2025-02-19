@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
-// All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
 
 /**
  * @file drivers/media/platform/tegra/camera/fusa-capture/capture-vi.c
@@ -16,6 +27,8 @@
 #include <linux/of_platform.h>
 #include <linux/printk.h>
 #include <linux/vmalloc.h>
+#include <linux/dma-mapping.h>
+#include <linux/of.h>
 #include <linux/tegra-capture-ivc.h>
 #include <linux/tegra-camera-rtcpu.h>
 
@@ -28,10 +41,12 @@
 #include <media/fusa-capture/capture-common.h>
 
 #include <media/fusa-capture/capture-vi.h>
+#ifdef NV_IS_L4T
 #include <media/vi.h>
 #include <media/mc_common.h>
 #include <media/tegra_camera_platform.h>
 #include "camera/vi/vi5_fops.h"
+#endif
 
 /**
  * @brief Invalid VI channel ID; the channel is not initialized.
@@ -100,7 +115,9 @@ static const char * const vi_mapping_elements[] = {
  * @brief The Capture-VI standalone driver context.
  */
 struct tegra_capture_vi_data {
+#ifdef NV_IS_L4T
 	struct vi vi_common; /**< VI device context */
+#endif
 	uint32_t num_vi_devices; /**< Number of available VI devices */
 	struct platform_device *vi_pdevices[MAX_VI_UNITS];
 		/**< VI nvhost client platform device for each VI instance */
@@ -1806,7 +1823,7 @@ static int capture_vi_probe(struct platform_device *pdev)
 		vi_channel_drv_exit();
 		goto cleanup;
 	}
-
+#ifdef NV_IS_L4T
 	info->vi_common.mc_vi.vi = &info->vi_common;
 	info->vi_common.mc_vi.fops = &vi5_fops;
 	err = tegra_capture_vi_media_controller_init(
@@ -1815,7 +1832,7 @@ static int capture_vi_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "media controller init failed\n");
 		err = 0;
 	}
-
+#endif
 	memset(channels, 0 , sizeof(channels));
 
 	return 0;
@@ -1842,7 +1859,9 @@ static int capture_vi_remove(struct platform_device *pdev)
 		put_device(&info->vi_pdevices[ii]->dev);
 
 	vi_channel_drv_unregister(&pdev->dev);
+#ifdef NV_IS_L4T
 	tegra_vi_media_controller_cleanup(&info->vi_common.mc_vi);
+#endif
 	vi_channel_drv_exit();
 
 	return 0;

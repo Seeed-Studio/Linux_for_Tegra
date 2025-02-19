@@ -2153,4 +2153,4 @@ MODULE_DESCRIPTION("tegra auto cdi manager driver");
 MODULE_AUTHOR("Songhee Baek <sbeak@nvidia.com>");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:cdi_mgr");
-MODULE_SOFTDEP("pre: cdi_pwm");
+MODULE_SOFTDEP("pre: cdi_dev");

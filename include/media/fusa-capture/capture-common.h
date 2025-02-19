@@ -1,19 +1,23 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2017-2022 NVIDIA Corporation.  All rights reserved.
- */
-
-/**
- * @file include/media/fusa-capture/capture-common.h
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
  *
- * @brief VI/ISP channel common operations header for the T186/T194 Camera RTCPU
- * platform.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  */
 
 #ifndef __FUSA_CAPTURE_COMMON_H__
 #define __FUSA_CAPTURE_COMMON_H__
-
+#ifdef NV_IS_L4T
 #include <media/mc_common.h>
+#endif
 
 struct capture_buffer_table;
 struct capture_mapping;
