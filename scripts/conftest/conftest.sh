@@ -8668,6 +8668,31 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_UFS_HBA_VARIANT_OPS_HAS_SET_DMA_MASK" "" "types"
         ;;
 
+        ufs_hba_variant_ops_pwr_change_notify_has_const_arg)
+            #
+            # Determine if the 3rd argument of pwr_change_notify() is const.
+            #
+            # In Linux v6.15, commit 3bcd901e4257 ("scsi: ufs: Constify the third
+            # pwr_change_notify() argument") updated the pwr_change_notify()
+            # function making the 3rd argument of type const.
+            #
+            CODE="
+            #if defined(NV_UFS_UFSHCD_H_PRESENT)
+            #include <ufs/ufshcd.h>
+            #else
+            #include \"../drivers/scsi/ufs/ufshcd.h\"
+            #endif
+            void conftest(struct ufs_hba_variant_ops *ops) {
+                    int (*fn)(struct ufs_hba *hba,
+                              enum ufs_notify_change_status status,
+                              const struct ufs_pa_layer_attr *desired_pwr_mode,
+                              struct ufs_pa_layer_attr *final_params) = ops->pwr_change_notify;
+            }"
+
+            compile_check_conftest "$CODE" \
+                "NV_UFS_HBA_VARIANT_OPS_PWR_CHANGE_NOTIFY_HAS_CONST_ARG" "" "types"
+        ;;
+
         ufs_hba_variant_ops_suspend_has_status_arg)
             #
             # Determine if the 'suspend' function for the
