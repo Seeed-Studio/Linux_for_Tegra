@@ -133,9 +133,14 @@ static int virt_engine_can_use_memory_ctx(struct tegra_drm_client *client, bool 
 	return 0;
 }
 
-static int virt_engine_has_job_timestamping(struct tegra_drm_client *client, bool *supported)
+static int virt_engine_has_job_timestamping(struct tegra_drm_client *client, bool *supported,
+				    u32 *timestamp_shift)
 {
 	*supported = true;
+	*timestamp_shift = 5;
+
+	if (of_machine_is_compatible("nvidia,tegra264"))
+		*timestamp_shift = 0;
 
 	return 0;
 }

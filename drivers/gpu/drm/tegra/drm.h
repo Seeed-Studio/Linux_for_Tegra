@@ -88,7 +88,8 @@ struct tegra_drm_client_ops {
 		      struct drm_file *file);
 	int (*get_streamid_offset)(struct tegra_drm_client *client, u32 *offset);
 	int (*can_use_memory_ctx)(struct tegra_drm_client *client, bool *supported);
-	int (*has_job_timestamping)(struct tegra_drm_client *client, bool *supported);
+	int (*has_job_timestamping)(struct tegra_drm_client *client, bool *supported,
+		      u32 *timestamp_shift);
 	int (*skip_bl_swizzling)(struct tegra_drm_client *client, bool *skip);
 };
 

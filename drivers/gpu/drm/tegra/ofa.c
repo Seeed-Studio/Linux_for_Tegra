@@ -511,9 +511,11 @@ static int ofa_can_use_memory_ctx(struct tegra_drm_client *client, bool *support
 	return 0;
 }
 
-static int ofa_has_job_timestamping(struct tegra_drm_client *client, bool *supported)
+static int ofa_has_job_timestamping(struct tegra_drm_client *client, bool *supported,
+				    u32 *timestamp_shift)
 {
 	*supported = true;
+	*timestamp_shift = 5;
 
 	return 0;
 }

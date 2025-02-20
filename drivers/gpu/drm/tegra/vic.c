@@ -65,6 +65,7 @@ struct vic_config {
 	u32 actmon_active_borps;
 	u32 actmon_active_weight;
 	bool skip_bl_swizzling;
+	u32 timestamp_shift;
 };
 
 struct vic {
@@ -800,11 +801,13 @@ static int vic_can_use_memory_ctx(struct tegra_drm_client *client, bool *support
 	return 0;
 }
 
-static int vic_has_job_timestamping(struct tegra_drm_client *client, bool *supported)
+static int vic_has_job_timestamping(struct tegra_drm_client *client, bool *supported,
+			    u32 *timestamp_shift)
 {
 	struct vic *vic = to_vic(client);
 
 	*supported = vic->config->supports_timestamping;
+	*timestamp_shift = vic->config->timestamp_shift;
 
 	return 0;
 }
@@ -867,6 +870,7 @@ static const struct vic_config vic_t194_config = {
 	.actmon_active_mask = 0x204c,
 	.actmon_active_borps = 0x2050,
 	.actmon_active_weight = 0x2054,
+	.timestamp_shift = 5,
 };
 
 #define NVIDIA_TEGRA_234_VIC_FIRMWARE "nvidia/tegra234/vic.bin"
@@ -881,6 +885,7 @@ static const struct vic_config vic_t234_config = {
 	.actmon_active_mask = 0x204c,
 	.actmon_active_borps = 0x2050,
 	.actmon_active_weight = 0x2054,
+	.timestamp_shift = 5,
 };
 
 #define NVIDIA_TEGRA_264_VIC_FIRMWARE "nvidia/tegra264/vic.bin"
@@ -897,6 +902,7 @@ static const struct vic_config vic_t264_config = {
 	.actmon_active_borps = 0x2250,
 	.actmon_active_weight = 0x2254,
 	.skip_bl_swizzling = true,
+	.timestamp_shift = 0,
 };
 
 static const struct of_device_id tegra_vic_of_match[] = {

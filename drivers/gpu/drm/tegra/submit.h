@@ -18,6 +18,7 @@ struct tegra_drm_submit_data {
 		struct device *dev;
 		dma_addr_t iova;
 		void *virt;
+		u32 timestamp_shift;
 	} timestamps;
 };
 

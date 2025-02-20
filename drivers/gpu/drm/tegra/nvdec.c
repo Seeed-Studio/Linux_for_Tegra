@@ -714,11 +714,13 @@ static int nvdec_can_use_memory_ctx(struct tegra_drm_client *client, bool *suppo
 	return 0;
 }
 
-static int nvdec_has_job_timestamping(struct tegra_drm_client *client, bool *supported)
+static int nvdec_has_job_timestamping(struct tegra_drm_client *client, bool *supported,
+				    u32 *timestamp_shift)
 {
 	struct nvdec *nvdec = to_nvdec(client);
 
 	*supported = nvdec->config->supports_timestamping;
+	*timestamp_shift = 5;
 
 	return 0;
 }

@@ -538,9 +538,11 @@ static void release_job(struct host1x_job *job)
 
 	if (IS_ENABLED(CONFIG_TRACING) && job_data->timestamps.virt) {
 		u64 *timestamps = job_data->timestamps.virt;
+		u32 shift = job_data->timestamps.timestamp_shift;
 
 		if (timestamps[0] != 0)
-			trace_job_timestamps(job_data->id, timestamps[0] >> 5, timestamps[1] >> 5);
+			trace_job_timestamps(job_data->id, timestamps[0] >> shift,
+					timestamps[1] >> shift);
 
 		dma_free_coherent(job_data->timestamps.dev, 256, job_data->timestamps.virt,
 				  job_data->timestamps.iova);
@@ -568,12 +570,14 @@ static int submit_init_profiling(struct tegra_drm_context *context,
 {
 	struct device *mem_dev = tegra_drm_context_get_memory_device(context);
 	bool has_timestamping = false;
+	u32 timestamp_shift;
 	int err;
 
 	if (!context->client->ops->has_job_timestamping)
 		return 0;
 
-	err = context->client->ops->has_job_timestamping(context->client, &has_timestamping);
+	err = context->client->ops->has_job_timestamping(context->client, &has_timestamping,
+			&timestamp_shift);
 	if (err)
 		return err;
 
@@ -586,6 +590,7 @@ static int submit_init_profiling(struct tegra_drm_context *context,
 		return -ENOMEM;
 
 	job_data->timestamps.dev = mem_dev;
+	job_data->timestamps.timestamp_shift = timestamp_shift;
 
 	return 0;
 }

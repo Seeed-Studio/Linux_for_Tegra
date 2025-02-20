@@ -557,11 +557,13 @@ static int nvjpg_can_use_memory_ctx(struct tegra_drm_client *client, bool *suppo
 	return 0;
 }
 
-static int nvjpg_has_job_timestamping(struct tegra_drm_client *client, bool *supported)
+static int nvjpg_has_job_timestamping(struct tegra_drm_client *client, bool *supported,
+				   u32 *timestamp_shift)
 {
 	struct nvjpg *nvjpg = to_nvjpg(client);
 
 	*supported = nvjpg->config->supports_timestamping;
+	*timestamp_shift = 5;
 
 	return 0;
 }
