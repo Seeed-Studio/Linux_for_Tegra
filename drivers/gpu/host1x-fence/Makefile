@@ -6,6 +6,10 @@
 ccflags-y += -DCONFIG_TEGRA_HOST1X
 ccflags-y += -Werror
 
-host1x-fence-objs = dev.o
+LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-fence/include
+
+host1x-fence-objs += \
+	dev.o \
+	dispatch.o
 
 obj-m += host1x-fence.o

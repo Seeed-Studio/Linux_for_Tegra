@@ -20,6 +20,7 @@ filegroup(
     name = "host1x.includes",
     srcs = glob([
         "drivers/gpu/host1x/include/**/*.h",
+        "drivers/gpu/host1x-fence/include/**/*.h",
     ]),
 )
 

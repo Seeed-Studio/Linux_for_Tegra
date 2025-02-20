@@ -15,15 +15,17 @@ ccflags-y += -DHOST1X_EMU_KTHREAD_FENCE_SCAN
 # Enable HRTimer based fence scanning
 ccflags-y += -DHOST1X_EMU_HRTIMER_FENCE_SCAN
 
-ifeq ($(NV_BUILD_CONFIGURATION_EXPOSING_T26X), 1)
-LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-emu/include
 # Enable for verification in VDK. Below allow Emulated Syncpoint driver
 # to co-exits with "Host1x" driver by exporting modified kernel symbol.
 ccflags-y += -DCONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
 
+ifeq ($(NV_BUILD_CONFIGURATION_EXPOSING_T26X), 1)
 # Enable debug
 CONFIG_TEGRA_HOST1X_EMU_SYNCPT_DEBUG := 1
 endif
+
+LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-emu/include
+LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-fence/include
 
 host1x-emu-y += \
 	dev.o \

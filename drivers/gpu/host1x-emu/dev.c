@@ -12,6 +12,15 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 
+#ifdef CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
+#include <linux/host1x-emu.h>
+#include <linux/nvhost-emu.h>
+#else
+#include <linux/host1x-next.h>
+#include <linux/nvhost.h>
+#include <linux/nvhost_t194.h>
+#endif
+
 #if IS_ENABLED(CONFIG_ARM_DMA_USE_IOMMU)
 #include <asm/dma-iommu.h>
 #endif
@@ -21,6 +30,7 @@
 #include "dev.h"
 #include "debug.h"
 #include "hw/host1xEMU.h"
+#include <linux/host1x-dispatch_type.h>
 
 #define HOST1X_POOL_MSEC_PERIOD     70          /*70msec*/
 #define HOST1X_SYNCPT_POOL_BASE(x)  (x*2+0)
@@ -30,6 +40,58 @@ static const struct host1x_info host1xEmu_info = {
     .nb_pts                 = 1024,
     .init                   = host1xEMU_init,
     .dma_mask               = DMA_BIT_MASK(40),
+};
+
+struct host1x_interface_ops  host1x_emu_api = {
+    .host1x_fence_create            = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_fence_create),
+    .host1x_fence_extract           = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_fence_extract),
+    .host1x_fence_cancel            = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_fence_cancel),
+    .host1x_fence_get_node          = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_fence_get_node),
+    .host1x_get_dma_mask            = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_get_dma_mask),
+    .host1x_syncpt_get              = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_get),
+    .host1x_syncpt_get_by_id        = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_get_by_id),
+    .host1x_syncpt_get_by_id_noref  = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_get_by_id_noref),
+    .host1x_syncpt_read             = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_read),
+    .host1x_syncpt_read_min         = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_read_min),
+    .host1x_syncpt_read_max         = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_read_max),
+    .host1x_syncpt_incr             = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_incr),
+    .host1x_syncpt_incr_max         = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_incr_max),
+    .host1x_syncpt_alloc            = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_alloc),
+    .host1x_syncpt_put              = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_put),
+    .host1x_syncpt_id               = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_id),
+    .host1x_syncpt_wait_ts          = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_wait_ts),
+    .host1x_syncpt_wait             = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_wait),
+
+//nvhost.h Interface
+    .host1x_writel                      = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_writel),
+    .nvhost_get_default_device          = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_get_default_device),
+    .nvhost_get_host1x                  = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_get_host1x),
+    .nvhost_client_device_get_resources = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_client_device_get_resources),
+    .nvhost_client_device_init          = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_client_device_init),
+    .nvhost_client_device_release       = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_client_device_release),
+    .nvhost_get_syncpt_host_managed     = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_get_syncpt_host_managed),
+    .nvhost_get_syncpt_client_managed   = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_get_syncpt_client_managed),
+    .nvhost_get_syncpt_gpu_managed      = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_get_syncpt_gpu_managed),
+    .nvhost_syncpt_put_ref_ext          = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_put_ref_ext),
+    .nvhost_syncpt_is_valid_pt_ext      = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_is_valid_pt_ext),
+    .nvhost_syncpt_is_expired_ext       = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_is_expired_ext),
+    .nvhost_syncpt_set_min_update       = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_set_min_update),
+    .nvhost_syncpt_read_ext_check       = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_read_ext_check),
+    .nvhost_syncpt_read_maxval          = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_read_maxval),
+    .nvhost_syncpt_incr_max_ext         = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_incr_max_ext),
+    .nvhost_syncpt_unit_interface_get_byte_offset_ext = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_unit_interface_get_byte_offset_ext),
+    .nvhost_syncpt_unit_interface_get_byte_offset   = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_unit_interface_get_byte_offset),
+    .nvhost_syncpt_unit_interface_get_aperture      = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_unit_interface_get_aperture),
+    .nvhost_syncpt_unit_interface_init      = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_unit_interface_init),
+    .nvhost_syncpt_unit_interface_deinit    = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_unit_interface_deinit),
+    .nvhost_syncpt_address              = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_syncpt_address),
+    .nvhost_intr_register_notifier      = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_intr_register_notifier),
+    .nvhost_module_init                 = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_module_init),
+    .nvhost_module_deinit               = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_module_deinit),
+    .nvhost_module_reset                = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_module_reset),
+    .nvhost_module_busy                 = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_module_busy),
+    .nvhost_module_idle                 = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_module_idle),
+    .nvhost_module_idle_mult            = HOST1X_EMU_EXPORT_SYMBOL_NAME(nvhost_module_idle_mult),
 };
 
 static const struct of_device_id host1x_of_match[] = {
@@ -308,6 +370,9 @@ static int host1x_probe(struct platform_device *pdev)
 
     /* Start pool polling thread*/
     host1x_poll_start(host);
+
+    /* Register Host1x-EMU Interface*/
+    host1x_wrapper_register_interface(&host1x_emu_api);
 
     pr_info("Host1x-EMU: Probe Done\n");
     return 0;

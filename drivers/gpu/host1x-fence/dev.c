@@ -7,7 +7,6 @@
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <linux/fs.h>
-#include <linux/host1x-next.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
@@ -15,10 +14,13 @@
 #include <linux/poll.h>
 #include <linux/slab.h>
 #include <linux/sync_file.h>
+#include <linux/host1x-dispatch.h>
 
 #include "include/uapi/linux/host1x-fence.h"
 
 #define HOST1X_INSTANCE_MAX		2
+
+bool host1x_wrapper_init(void);
 
 static struct host1x_uapi {
 	struct class *class;
@@ -527,10 +529,20 @@ static int host1x_uapi_init(struct host1x_uapi *uapi)
 		err = PTR_ERR(uapi->dev);
 		goto del_cdev;
 	}
-
 	cdev_add(&uapi->cdev, dev_num, 1);
 
 	uapi->dev_num = dev_num;
+
+	host1x_wrapper_init();
+
+	/*
+	 * Don't allow the kernel module to be unloaded. Unloading adds complexity
+	 * during GVS verification. Resolving is not worth the effort in this case
+	 */
+	if (!try_module_get(THIS_MODULE)) {
+		pr_info("Host1x-Fence: Get Module Failed\n");
+		goto del_cdev;
+	}
 
 	return 0;
 

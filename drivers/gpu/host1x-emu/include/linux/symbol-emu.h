@@ -4,13 +4,15 @@
 #define __HOST1X_EMU_SYMMBOL_H
 
 #ifdef CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
-#define HOST1X_EMU_EXPORT_CALL(...)         Dbg_ ## __VA_ARGS__
-#define HOST1X_EMU_EXPORT_DECL(ret, ...)    ret Dbg_ ## __VA_ARGS__
-#define HOST1X_EMU_EXPORT_SYMBOL(f)         EXPORT_SYMBOL(Dbg_## f)
+#define HOST1X_EMU_EXPORT_CALL(...)         Emu_ ## __VA_ARGS__
+#define HOST1X_EMU_EXPORT_DECL(ret, ...)    ret Emu_ ## __VA_ARGS__
+#define HOST1X_EMU_EXPORT_SYMBOL(f)         EXPORT_SYMBOL(Emu_## f)
+#define HOST1X_EMU_EXPORT_SYMBOL_NAME(f)    Emu_## f
 #else
 #define HOST1X_EMU_EXPORT_CALL(...)         __VA_ARGS__
 #define HOST1X_EMU_EXPORT_DECL(ret, ...)    ret __VA_ARGS__
 #define HOST1X_EMU_EXPORT_SYMBOL(f)         EXPORT_SYMBOL(f)
+#define HOST1X_EMU_EXPORT_SYMBOL_NAME(f)    f
 #endif
 
 #endif /*__HOST1X_EMU_SYMMBOL_H*/
