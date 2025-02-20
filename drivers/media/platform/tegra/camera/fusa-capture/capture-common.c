@@ -52,6 +52,7 @@ union capture_surface {
  */
 struct capture_mapping {
 	struct hlist_node hnode; /**< Hash table node struct */
+	struct list_head free_list;   /* List for cleanup */
 	atomic_t refcnt; /**< Capture mapping reference count */
 	struct dma_buf *buf; /** Capture mapping dma_buf */
 	struct dma_buf_attachment *atch;
@@ -346,23 +347,38 @@ void destroy_buffer_table(
 {
 	size_t bkt;
 	struct hlist_node *next;
-	struct capture_mapping *pin;
+	struct capture_mapping *pin, *temp;
+	struct list_head tmp_list;
 
 	if (unlikely(tab == NULL))
 		return;
 
+	/* First acquire write lock and build list of entries to free */
+	write_lock(&tab->hlock);
+
+	INIT_LIST_HEAD(&tmp_list);
 
 	hash_for_each_safe(tab->hhead, bkt, next, pin, hnode) {
-		write_lock(&tab->hlock);
+		/* Remove from hash table but keep pin structure */
 		hash_del(&pin->hnode);
-		write_unlock(&tab->hlock);
+		/* Add to our free list */
+		list_add(&pin->free_list, &tmp_list);
+	}
+
+	/* Release lock - hash table is now empty */
+	write_unlock(&tab->hlock);
+
+	/* Now safe to free all the entries without holding lock */
+	list_for_each_entry_safe(pin, temp, &tmp_list, free_list) {
+		list_del(&pin->free_list);
+
+		/* Free the mapping resources */
 		dma_buf_unmap_attachment(
 			pin->atch, pin->sgt, flag_dma_direction(pin->flag));
 		dma_buf_detach(pin->buf, pin->atch);
 		dma_buf_put(pin->buf);
 		kmem_cache_free(tab->cache, pin);
 	}
-
 
 	kmem_cache_destroy(tab->cache);
 	kfree(tab);
