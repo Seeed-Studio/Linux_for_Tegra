@@ -227,19 +227,10 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 		goto exit;
 	}
 
-	if (sha_update_ctl->input_buffer_size == 0U) {
-		if (sha_update_ctl->is_last == 0U) {
-			pr_err("%s(): zero length non-last request is not supported\n", __func__);
-			ret = -EINVAL;
-			goto exit;
-		}
-	} else {
-		if (sha_update_ctl->in_buff == NULL) {
-			pr_err("%s(): input buffer address is NULL for non-zero len req\n",
-					__func__);
-			ret = -EINVAL;
-			goto exit;
-		}
+	if ((sha_update_ctl->input_buffer_size == 0U) && (sha_update_ctl->is_last == 0U)) {
+		pr_err("%s(): zero length non-last request is not supported\n", __func__);
+		ret = -EINVAL;
+		goto exit;
 	}
 
 	if (ctx->is_zero_copy_node) {
@@ -269,6 +260,13 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 		if (sha_update_ctl->b_is_zero_copy != 0U) {
 			pr_err("%s(): zero copy operation is not supported on this node\n",
 									__func__);
+			ret = -EINVAL;
+			goto exit;
+		}
+
+		if ((sha_update_ctl->input_buffer_size > 0U) && (sha_update_ctl->in_buff == NULL)) {
+			pr_err("%s(): input buffer address is NULL for non-zero len req\n",
+					__func__);
 			ret = -EINVAL;
 			goto exit;
 		}
