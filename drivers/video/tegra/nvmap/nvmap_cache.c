@@ -75,6 +75,9 @@ void nvmap_clean_cache(struct page **pages, int numpages)
 					sizeof(*td_array));
 		int created_threads = 0, j;
 		size_t set_size, last_set_size;
+		size_t sub_total_pages;
+		size_t rem_pages;
+		size_t temp;
 
 		if (!td_array) {
 			pr_err("td_array allocation failed\n");
@@ -95,8 +98,18 @@ void nvmap_clean_cache(struct page **pages, int numpages)
 		 * pages, as numpages may not be always divisible by
 		 * number of online_cpus.
 		 */
-		last_set_size = (unsigned long long) (numpages - (set_size
-							* (online_cpus - 1))) << PAGE_SHIFT;
+		if (check_mul_overflow(set_size, (size_t)(online_cpus - 1), &sub_total_pages)) {
+			vunmap(vaddr);
+			nvmap_altfree(td_array, online_cpus * sizeof(*td_array));
+			goto page_by_page_flush;
+		}
+
+		if (check_sub_overflow((size_t)numpages, sub_total_pages, &rem_pages)) {
+			vunmap(vaddr);
+			nvmap_altfree(td_array, online_cpus * sizeof(*td_array));
+			goto page_by_page_flush;
+		}
+		last_set_size = rem_pages << PAGE_SHIFT;
 
 		for (i = 0; i < online_cpus; i++) {
 			td_array[i] = nvmap_altalloc(sizeof(struct nvmap_cache_thread));
@@ -107,12 +120,18 @@ void nvmap_clean_cache(struct page **pages, int numpages)
 
 			td_array[i]->thread_id = i + 1;
 			td_array[i]->size = (i == online_cpus - 1) ? last_set_size : set_size;
-			td_array[i]->va_start = vaddr + i * set_size;
+			if (check_mul_overflow((size_t)i, set_size, &temp)) {
+				nvmap_altfree(td_array[i], sizeof(struct nvmap_cache_thread));
+				goto stop_threads;
+			}
+
+			td_array[i]->va_start = vaddr + temp;
 			td_array[i]->task = kthread_run(
 						threaded_cache_flush, td_array[i],
 						"nvmap_cache_flush_thread_%d", i);
 			if (IS_ERR(td_array[i]->task)) {
 				pr_err("failed to create kernel thread:%d\n", i);
+				nvmap_altfree(td_array[i], sizeof(struct nvmap_cache_thread));
 				goto stop_threads;
 			}
 
