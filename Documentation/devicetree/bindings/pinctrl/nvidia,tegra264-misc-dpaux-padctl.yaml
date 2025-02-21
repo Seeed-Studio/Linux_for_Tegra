@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/miscreg-dpaux@00100000/nvidia,tegra264-misc-dpaux-padctl.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra dpaux pinctrl driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,tegra264-misc-dpaux-padctl is mentioned in the following drivers

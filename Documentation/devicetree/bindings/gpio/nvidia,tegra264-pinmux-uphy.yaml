@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/pinmux@a8082e0000/nvidia,tegra264-pinmux-uphy.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra PINMUX driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,tegra264-pinmux-uphy is mentioned in the following drivers

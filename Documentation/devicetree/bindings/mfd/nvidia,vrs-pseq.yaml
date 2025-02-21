@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/vrs@3c/nvidia,vrs-pseq.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Voltage Regulator Spec Power Sequencer Multi Function Device Core Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Subhi Garg
 
 description: |
      the compatability = nvidia,vrs-pseq is mentioned in the following drivers

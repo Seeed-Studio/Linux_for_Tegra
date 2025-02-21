@@ -14,15 +14,13 @@
 $id: http://devicetree.org/schemas/tegra_soc_hwpm@1604000/nvidia,t264-soc-hwpm.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra SOC-HWPM
 
 maintainers:
-  - FIXME -- add maintainers
+  - Besar Wicaksono
+  - Vasuki Shankar
 
 description: |
-     the compatability = nvidia,t264-soc-hwpm is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /bus@0/tegra_soc_hwpm@1604000
 

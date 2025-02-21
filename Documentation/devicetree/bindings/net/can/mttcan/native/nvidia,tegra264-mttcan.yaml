@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/mttcan@81102f0000/nvidia,tegra264-mttcan.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Platform CAN bus driver for Bosch M_TTCAN controller
 
 maintainers:
-  - FIXME -- add maintainers
+  - Shubhi Garg
 
 description: |
      the compatability = nvidia,tegra264-mttcan is mentioned in the following drivers

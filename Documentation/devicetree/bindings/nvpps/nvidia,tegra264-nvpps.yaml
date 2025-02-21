@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/nvpps/nvidia,tegra264-nvpps.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVidia Tegra PPS Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Vijay Mishra
 
 description: |
      the compatability = nvidia,tegra264-nvpps is mentioned in the following drivers
@@ -34,7 +34,6 @@ select:
         items:
             enum:
                 - nvidia,tegra264-nvpps
-
   required:
     - compatible
 

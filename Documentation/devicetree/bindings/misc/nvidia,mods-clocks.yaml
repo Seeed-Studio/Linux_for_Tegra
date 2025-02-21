@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/mods-clocks/nvidia,mods-clocks.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Mods Clocks Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Chris Dragan
 
 description: |
-     the compatability = nvidia,mods-clocks is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /mods-simple-bus/mods-clocks
 

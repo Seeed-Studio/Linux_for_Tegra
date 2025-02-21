@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/vi0@8188400000/nvidia,tegra234-vi.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra Video Interface Module
 
 maintainers:
-  - FIXME -- add maintainers
+  - Chinniah Poosapadi
 
 description: |
      the compatability = nvidia,tegra234-vi is mentioned in the following drivers

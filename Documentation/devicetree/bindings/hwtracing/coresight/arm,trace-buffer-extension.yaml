@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/trbe/arm,trace-buffer-extension.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Arm Trace Buffer Extension (TRBE) driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Eric Funsten
 
 description: |
      the compatability = arm,trace-buffer-extension is mentioned in the following drivers

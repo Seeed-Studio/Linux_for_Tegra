@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/usb@a80ab60000/nvidia,tegra264-xusb-vf4.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra XUSB xHCI host-controller driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Sing HanChen
 
 description: |
      the compatability = nvidia,tegra264-xusb-vf4 is mentioned in the following drivers

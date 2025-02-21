@@ -14,10 +14,11 @@
 $id: http://devicetree.org/schemas/memory-controller-hwpm@8108020000/nvidia,tegra-t264-mc-hwpm.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra264 MC-HWPM driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Pritesh Raithatha
+  - Ketan Patil
 
 description: |
      the compatability = nvidia,tegra-t264-mc-hwpm is mentioned in the following drivers

@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/l2-cache-0/cache.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Cache Storage Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Rich Wiley
 
 description: |
      the compatability = cache is mentioned in the following drivers

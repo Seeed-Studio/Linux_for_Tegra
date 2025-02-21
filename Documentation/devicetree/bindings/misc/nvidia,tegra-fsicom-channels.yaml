@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/FsiComIvc/nvidia,tegra-fsicom-channels.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: FSI Communication IVC Node
 
 maintainers:
-  - FIXME -- add maintainers
+  - Rahul Bedarkar
 
 description: |
-     the compatability = nvidia,tegra-fsicom-channels is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /FsiComIvc
 

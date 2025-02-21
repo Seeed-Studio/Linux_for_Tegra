@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/sys-cbb-fabric@800000/nvidia,tegra264-sys-cbb-fabric.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Control Backbone 2.0 error handling driver for Tegra
 
 maintainers:
-  - FIXME -- add maintainers
+  - Sumit Gupta
 
 description: |
      the compatability = nvidia,tegra264-sys-cbb-fabric is mentioned in the following drivers

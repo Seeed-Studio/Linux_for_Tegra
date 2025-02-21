@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/pmc@c800000/nvidia,tegra264-pmc.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra PMC Module
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,tegra264-pmc is mentioned in the following drivers

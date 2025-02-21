@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/pmu/arm,armv8-pmuv3.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra Power Management Unit Module
 
 maintainers:
-  - FIXME -- add maintainers
+  - Besar Wicaksono
 
 description: |
-     the compatability = arm,armv8-pmuv3 is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /pmu
 

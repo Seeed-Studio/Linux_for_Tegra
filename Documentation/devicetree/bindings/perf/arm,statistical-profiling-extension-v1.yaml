@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/spe-pmu/arm,statistical-profiling-extension-v1.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Perf driver for the ARMv8.2 Statistical Profiling Extension
 
 maintainers:
-  - FIXME -- add maintainers
+  - Besar Wicaksono
 
 description: |
      the compatability = arm,statistical-profiling-extension-v1 is mentioned in the following drivers

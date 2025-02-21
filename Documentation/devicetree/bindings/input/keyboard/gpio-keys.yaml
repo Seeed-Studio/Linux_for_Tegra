@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/gpio-keys/gpio-keys.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Keyboard driver for GPIOs
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = gpio-keys is mentioned in the following drivers
@@ -55,4 +55,6 @@ required:
 examples:
     - |
         gpio-keys {
+            compatible = "gpio-keys";
+            status = "okay";
         };

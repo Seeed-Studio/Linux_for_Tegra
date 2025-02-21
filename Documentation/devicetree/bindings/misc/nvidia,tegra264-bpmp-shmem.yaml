@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/bpmp-shmem@0/nvidia,tegra264-bpmp-shmem.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra T264 BPMP Shared Memory Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Sandipan Patra
 
 description: |
-     the compatability = nvidia,tegra264-bpmp-shmem is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /reserved-memory/bpmp-shmem@0
 

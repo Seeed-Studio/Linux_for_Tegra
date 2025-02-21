@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/actmon@d3f0000/nvidia,tegra264-cactmon-mc-all.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra MC_ALL Central Activity Monitor
 
 maintainers:
-  - FIXME -- add maintainers
+  - Johnny Liu
 
 description: |
      the compatability = nvidia,tegra264-cactmon-mc-all is mentioned in the following drivers

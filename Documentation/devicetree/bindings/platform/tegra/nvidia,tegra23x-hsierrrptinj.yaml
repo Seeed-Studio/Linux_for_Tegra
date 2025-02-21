@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/hsierrrptinj/nvidia,tegra23x-hsierrrptinj.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra HSI Error Report Injection driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Harshraj Rao
 
 description: |
      the compatability = nvidia,tegra23x-hsierrrptinj is mentioned in the following drivers

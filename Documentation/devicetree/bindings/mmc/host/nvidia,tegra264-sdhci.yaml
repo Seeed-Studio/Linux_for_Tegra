@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/sdhci@810c570000/nvidia,tegra264-sdhci.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: SDHCI driver for Tegra
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,tegra264-sdhci is mentioned in the following drivers

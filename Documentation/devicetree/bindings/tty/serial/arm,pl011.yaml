@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/serial@810c500000/arm,pl011.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: ARM AMBA serial port driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = arm,pl011 is mentioned in the following drivers

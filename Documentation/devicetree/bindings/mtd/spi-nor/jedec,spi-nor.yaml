@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/flash@0/jedec,spi-nor.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Framework for SPI NOR
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = jedec,spi-nor is mentioned in the following drivers

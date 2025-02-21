@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/adsp1@9180000/nvidia,tegra264-adsp1.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra Host ADSP Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Mohan Kumar
 
 description: |
      the compatability = nvidia,tegra264-adsp1 is mentioned in the following drivers

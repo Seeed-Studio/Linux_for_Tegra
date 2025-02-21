@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/safetyservices_epl_client@110000/nvidia,tegra234-epl-client.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra Error Propagation Library driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Rahul Bedarkar
 
 description: |
      the compatability = nvidia,tegra234-epl-client is mentioned in the following drivers

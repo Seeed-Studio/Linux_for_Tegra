@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/hardware-timestamp@8380000/nvidia,tegra264-gte-lic.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra HTE (Hardware Timestamping Engine) Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Dipen Patel
 
 description: |
      the compatability = nvidia,tegra264-gte-lic is mentioned in the following drivers

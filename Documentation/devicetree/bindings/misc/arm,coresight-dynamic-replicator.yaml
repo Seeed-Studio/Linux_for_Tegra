@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/replicator_soc@10060000/arm,coresight-dynamic-replicator.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Coresight Dynamic Replicator Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Rich Wiley
 
 description: |
-     the compatability = arm,coresight-dynamic-replicator is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /replicator_soc@10060000
 

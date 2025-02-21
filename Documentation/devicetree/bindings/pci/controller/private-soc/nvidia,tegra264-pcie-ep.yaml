@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/pcie-ep@a808420000/nvidia,tegra264-pcie-ep.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra264 PCIe EP controller driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Manikanta Madireddy
 
 description: |
      the compatability = nvidia,tegra264-pcie-ep is mentioned in the following drivers

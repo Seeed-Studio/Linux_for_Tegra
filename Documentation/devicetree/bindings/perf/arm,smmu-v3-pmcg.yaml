@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/pmu_tcu_smmu0@810a000000/arm,smmu-v3-pmcg.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: PMU driver for ARM SMMUv3 Performance Monitors Extension
 
 maintainers:
-  - FIXME -- add maintainers
+  - Sachin Nikam
 
 description: |
      the compatability = arm,smmu-v3-pmcg is mentioned in the following drivers

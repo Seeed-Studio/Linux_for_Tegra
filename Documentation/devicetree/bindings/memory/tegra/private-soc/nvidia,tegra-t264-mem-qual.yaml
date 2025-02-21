@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/memqual@f020000/nvidia,tegra-t264-mem-qual.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Mem Qual IOVA Mapping Provider
 
 maintainers:
-  - FIXME -- add maintainers
+  - Ketan Patil
 
 description: |
      the compatability = nvidia,tegra-t264-mem-qual is mentioned in the following drivers

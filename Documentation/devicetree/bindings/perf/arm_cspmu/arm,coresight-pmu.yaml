@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/ucf_uapmu@140c0000/arm,coresight-pmu.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Coresight Performance Monitoring Unit (PMU)
 
 maintainers:
-  - FIXME -- add maintainers
+  - Besar Wicaksono
 
 description: |
      the compatability = arm,coresight-pmu is mentioned in the following drivers

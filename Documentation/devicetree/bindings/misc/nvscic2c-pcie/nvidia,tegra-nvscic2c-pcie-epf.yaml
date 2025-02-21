@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/nvscic2c-pcie-s0-c4-epf/nvidia,tegra-nvscic2c-pcie-epf.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Chip-to-Chip transfer module for PCIeEP
 
 maintainers:
-  - FIXME -- add maintainers
+  - Manikanta Maddireddy
 
 description: |
      the compatability = nvidia,tegra-nvscic2c-pcie-epf is mentioned in the following drivers

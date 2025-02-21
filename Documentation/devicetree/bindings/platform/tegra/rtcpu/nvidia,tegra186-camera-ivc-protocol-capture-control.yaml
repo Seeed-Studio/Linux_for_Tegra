@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/ivccontrol@3/nvidia,tegra186-camera-ivc-protocol-capture-control.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra Capture IVC driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Evgeny Kornev
 
 description: |
      the compatability = nvidia,tegra186-camera-ivc-protocol-capture-control is mentioned in the following drivers

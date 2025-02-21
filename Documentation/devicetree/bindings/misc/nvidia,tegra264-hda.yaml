@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/hda@88090b0000/nvidia,tegra264-hda.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra T264 HDA Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Mohan Kumar
 
 description: |
-     the compatability = nvidia,tegra264-hda is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /bus@0/hda@88090b0000
 

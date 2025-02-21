@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/virt-alt-pcm-oot/nvidia,tegra264-virt-pcm-oot.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Virtual Pulse Code Modulator
 
 maintainers:
-  - FIXME -- add maintainers
+  - Mohan Kumar
 
 description: |
-     the compatability = nvidia,tegra264-virt-pcm-oot is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /virt-alt-pcm-oot
 

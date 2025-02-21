@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/tegra-carveouts/nvidia,carveouts-t19x.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra Memory Management Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Ketan Patil
 
 description: |
      the compatability = nvidia,carveouts-t19x is mentioned in the following drivers

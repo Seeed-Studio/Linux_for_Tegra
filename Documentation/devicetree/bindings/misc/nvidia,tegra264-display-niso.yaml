@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/nvdisplay-niso/nvidia,tegra264-display-niso.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra Display Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Mihir Pradeep Garude
 
 description: |
-     the compatability = nvidia,tegra264-display-niso is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /display@8808c00000/nvdisplay-niso
 

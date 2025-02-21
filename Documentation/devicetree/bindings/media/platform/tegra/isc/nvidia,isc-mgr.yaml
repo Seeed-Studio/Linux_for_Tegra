@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/isc-mgr.0/nvidia,isc-mgr.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra Autotive ISC Manager Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Frank Chen
 
 description: |
      the compatability = nvidia,isc-mgr is mentioned in the following drivers
@@ -88,4 +88,11 @@ required:
 examples:
     - |
         isc-mgr.0 {
+            compatible = "nvidia,isc-mgr";                                                                                                                          7095 »   »   i2c-bus = <0x7>;
+            csi-port = <0x0>;
+            cphy-map-trio0 = "A_B_C";
+            cphy-map-trio1 = "C_A_B";
+            cphy-map-trio2 = "A_B_C";
+            cphy-map-trio3 = "C_A_B";
+            status = "okay";
         };

@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/ramoops_carveout/ramoops.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Ramoops
 
 maintainers:
-  - FIXME -- add maintainers
+  - Pritesh Raithatha
 
 description: |
      the compatability = ramoops is mentioned in the following drivers

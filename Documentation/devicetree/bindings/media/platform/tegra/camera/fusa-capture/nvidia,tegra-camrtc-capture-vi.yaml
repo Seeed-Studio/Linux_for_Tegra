@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/tegra-capture-vi/nvidia,tegra-camrtc-capture-vi.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra Capture-ISP driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Evgeny Kornev
 
 description: |
      the compatability = nvidia,tegra-camrtc-capture-vi is mentioned in the following drivers

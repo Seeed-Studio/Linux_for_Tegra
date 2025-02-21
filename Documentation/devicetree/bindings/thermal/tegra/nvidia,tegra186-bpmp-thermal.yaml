@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/thermal/nvidia,tegra186-bpmp-thermal.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra BPMP thermal sensor driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Yi-Wei Wang
 
 description: |
      the compatability = nvidia,tegra186-bpmp-thermal is mentioned in the following drivers

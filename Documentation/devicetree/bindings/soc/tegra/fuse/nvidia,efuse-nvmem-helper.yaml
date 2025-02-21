@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/efuse-helper/nvidia,efuse-nvmem-helper.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra efuse Memory Helper
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,efuse-nvmem-helper is mentioned in the following drivers

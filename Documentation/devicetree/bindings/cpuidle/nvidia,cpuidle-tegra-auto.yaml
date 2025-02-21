@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/cpuidle/nvidia,cpuidle-tegra-auto.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra Automotive cpuidle Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Manish Bhardwaj
 
 description: |
      the compatability = nvidia,cpuidle-tegra-auto is mentioned in the following drivers
@@ -46,4 +46,6 @@ required:
 examples:
     - |
         cpuidle {
+            compatible = "nvidia,cpuidle-tegra-auto";
+            status = "okay";
         };

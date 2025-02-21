@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/spi@0/tegra-spidev.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: User mode SPI device interface
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = tegra-spidev is mentioned in the following drivers

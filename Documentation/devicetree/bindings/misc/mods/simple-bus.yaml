@@ -14,10 +14,11 @@
 $id: http://devicetree.org/schemas/bus@0/simple-bus.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Mods Simple Bus Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Chris Dragan
+  - Kiran Kasamsetty
 
 description: |
      the compatability = simple-bus is mentioned in the following drivers

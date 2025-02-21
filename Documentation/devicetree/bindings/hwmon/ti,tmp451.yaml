@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/temp-sensor@4c/ti,tmp451.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: LM90/ADM1032 driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Yi-Wei Wang
 
 description: |
      the compatability = ti,tmp451 is mentioned in the following drivers

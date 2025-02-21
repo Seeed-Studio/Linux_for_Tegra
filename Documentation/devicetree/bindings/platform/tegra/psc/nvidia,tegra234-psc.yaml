@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/psc@d8e0000/nvidia,tegra234-psc.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra PSC driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Andy Sobczyk
 
 description: |
      the compatability = nvidia,tegra234-psc is mentioned in the following drivers

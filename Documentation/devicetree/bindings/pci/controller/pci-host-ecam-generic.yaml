@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/pcie@a8b0000000/pci-host-ecam-generic.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Generic PCI Host Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Krishna Thota
 
 description: |
      the compatability = pci-host-ecam-generic is mentioned in the following drivers

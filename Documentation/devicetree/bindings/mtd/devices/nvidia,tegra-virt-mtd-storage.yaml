@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/tegra_virt_storage83/nvidia,tegra-virt-mtd-storage.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra t264 Hypervisor MTD Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Sreenivas Velpula
 
 description: |
      the compatability = nvidia,tegra-virt-mtd-storage is mentioned in the following drivers

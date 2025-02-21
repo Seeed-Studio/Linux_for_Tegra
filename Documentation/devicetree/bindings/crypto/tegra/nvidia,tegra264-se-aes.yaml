@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/crypto@8188120000/nvidia,tegra264-se-aes.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra Security Engine Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,tegra264-se-aes is mentioned in the following drivers

@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/vpr1-carveout/nvidia,vpr1-carveout.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra Memory Management Driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Ketan Patil
 
 description: |
      the compatability = nvidia,vpr1-carveout is mentioned in the following drivers

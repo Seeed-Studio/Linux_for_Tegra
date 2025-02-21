@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/SS_ErrorReportingConfig/nvidia,tegra-SafetyServiceConfig.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Safety Service Configuration
 
 maintainers:
-  - FIXME -- add maintainers
+  - Rahul Bedarkar
 
 description: |
-     the compatability = nvidia,tegra-SafetyServiceConfig is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /SS_ErrorReportingConfig
 

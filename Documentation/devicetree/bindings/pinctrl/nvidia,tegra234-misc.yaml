@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/misc@100000/nvidia,tegra234-misc.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra dpaux pinctrl driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,tegra234-misc is mentioned in the following drivers

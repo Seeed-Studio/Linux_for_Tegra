@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/hsp-vm1/nvidia,tegra-camrtc-hsp-vm.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Tegra Hypervisor HSP Client Mailbox
 
 maintainers:
-  - FIXME -- add maintainers
+  - Evgeny Kornev
 
 description: |
      the compatability = nvidia,tegra-camrtc-hsp-vm is mentioned in the following drivers

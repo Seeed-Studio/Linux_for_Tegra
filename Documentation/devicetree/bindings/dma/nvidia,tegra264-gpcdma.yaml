@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/dma-controller@8400000/nvidia,tegra264-gpcdma.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra GPC DMA Controller driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,tegra264-gpcdma is mentioned in the following drivers

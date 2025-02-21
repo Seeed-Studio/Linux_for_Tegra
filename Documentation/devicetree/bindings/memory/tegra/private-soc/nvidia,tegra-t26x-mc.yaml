@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/mc_carveout@8108020000/nvidia,tegra-t26x-mc.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: NVIDIA Tegra Memory Controller driver
 
 maintainers:
-  - FIXME -- add maintainers
+  - Ashish Mhetre
 
 description: |
      the compatability = nvidia,tegra-t26x-mc is mentioned in the following drivers

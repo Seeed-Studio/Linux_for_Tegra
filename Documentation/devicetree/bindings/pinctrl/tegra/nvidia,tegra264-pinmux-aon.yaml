@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/pinmux@c7a2000/nvidia,tegra264-pinmux-aon.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Pinctrl data for the NVIDIA Tegra234 pinmux
 
 maintainers:
-  - FIXME -- add maintainers
+  - Suresh Mangipudi
 
 description: |
      the compatability = nvidia,tegra264-pinmux-aon is mentioned in the following drivers

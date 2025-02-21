@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/FsiComQnxAppChConfAppGR/nvidia,tegra-fsicom-sampleAppGR.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: QNX FSI Communication Application Configuration
 
 maintainers:
-  - FIXME -- add maintainers
+  - Rahul Bedarkar
 
 description: |
-     the compatability = nvidia,tegra-fsicom-sampleAppGR is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /FsiComQnxAppChConfAppGR
 

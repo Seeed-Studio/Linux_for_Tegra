@@ -14,10 +14,10 @@
 $id: http://devicetree.org/schemas/memory-controller@8108020000/nvidia,tegra264-mc.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: MC utility provider module
 
 maintainers:
-  - FIXME -- add maintainers
+  - Ashish Mhetre
 
 description: |
      the compatability = nvidia,tegra264-mc is mentioned in the following drivers

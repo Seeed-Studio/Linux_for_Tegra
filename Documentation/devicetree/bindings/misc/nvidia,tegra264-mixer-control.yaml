@@ -14,15 +14,12 @@
 $id: http://devicetree.org/schemas/mixer-controls/nvidia,tegra264-mixer-control.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: FIXME -- add title
+title: Nvidia Tegra t264 Audio Mixer
 
 maintainers:
-  - FIXME -- add maintainers
+  - Mohan Kumar
 
 description: |
-     the compatability = nvidia,tegra264-mixer-control is mentioned in the following drivers
-        - <TOP>/kernel/nvidia-oot/drivers/misc/driver.c
-
      The following nodes use this compatibility
         - /sound/mixer-controls
 
