@@ -862,7 +862,14 @@ job-orin-nx-j40mini-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/Image kernel/
+         - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
+         - mkdir -p rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
+         - cp extra_kernel_modules/mcp251xfd/*.ko rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
          - chroot rootfs /rootfs_magic.sh
+         # update kernel module dependencies
+         - echo "current kernel number $KER_NUM"
+         - sudo chroot rootfs depmod -a  $KER_NUM
          - umount ./rootfs/sys
          - umount ./rootfs/dev/pts
          - umount ./rootfs/dev
@@ -909,7 +916,14 @@ job-orin-nx-j40mini-16g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/Image kernel/
+         - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
+         - mkdir -p rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
+         - cp extra_kernel_modules/mcp251xfd/*.ko rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
          - chroot rootfs /rootfs_magic.sh
+         # update kernel module dependencies
+         - echo "current kernel number $KER_NUM"
+         - sudo chroot rootfs depmod -a  $KER_NUM
          - umount ./rootfs/sys
          - umount ./rootfs/dev/pts
          - umount ./rootfs/dev
@@ -956,8 +970,16 @@ job-orin-nano-j40mini-4g:
          - mount --bind /dev/pts ./rootfs/dev/pts
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
+         - cp extra_scripts/Image kernel/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/Image kernel/
+         - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
+         - mkdir -p rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
+         - cp extra_kernel_modules/mcp251xfd/*.ko rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
          - chroot rootfs /rootfs_magic.sh
+         # update kernel module dependencies
+         - echo "current kernel number $KER_NUM"
+         - sudo chroot rootfs depmod -a  $KER_NUM
          - umount ./rootfs/sys
          - umount ./rootfs/dev/pts
          - umount ./rootfs/dev
@@ -1004,7 +1026,14 @@ job-orin-nano-j40mini-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
+         - cp extra_scripts/Image kernel/
+         - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
+         - mkdir -p rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
+         - cp extra_kernel_modules/mcp251xfd/*.ko rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
          - chroot rootfs /rootfs_magic.sh
+         # update kernel module dependencies
+         - echo "current kernel number $KER_NUM"
+         - sudo chroot rootfs depmod -a  $KER_NUM
          - umount ./rootfs/sys
          - umount ./rootfs/dev/pts
          - umount ./rootfs/dev
