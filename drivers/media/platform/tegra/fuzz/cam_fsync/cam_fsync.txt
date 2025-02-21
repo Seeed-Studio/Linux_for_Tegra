@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+include <uapi/linux/fcntl.h>
+include "cam_fsync.h"
+
+resource fd_cam_fsync[fd]
+
+openat$cam_fsync(fd const[AT_FDCWD], file ptr[in, string["/dev/fsync-group"]], flags flags[open_flags], mode const[0]) fd_cam_fsync
+
+ioctl$CAM_FSYNC_GRP_ABS_START_VAL(fd fd_cam_fsync, cmd const[CAM_FSYNC_GRP_ABS_START_VAL], arg ptr[in, cam_sync_start_args])
+
+ioctl$CAM_FSYNC_GRP_STOP(fd fd_cam_fsync, cmd const[CAM_FSYNC_GRP_STOP], arg ptr[in, int32[0:100]])
+
+ioctl$CAM_FSYNC_GEN_RECONFIGURE(fd fd_cam_fsync, cmd const[CAM_FSYNC_GEN_RECONFIGURE], arg ptr[in, cam_sync_gen_reconfig_args])
+
+cam_sync_start_args {
+	group_id		int32[0:100]
+	start_tsc_ticks	int64[0:0x7FFFFFFFFFFFFFFF, 0x1000000000000000]
+}
+
+cam_sync_gen_reconfig_args {
+	group_id		int32[0:100]
+	generator_id	int32[0:121]
+	freqHz			int32[0:100]
+	dutyCycle		int32[1:0x7FFFFFFF]
+	offsetMs		int32[-1000:1000]
+}

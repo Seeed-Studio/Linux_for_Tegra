@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+include <uapi/linux/fcntl.h>
+include <linux/types.h>
+include <linux/nvcapture_ioctl.h>
+include <nvtypes.h>
+
+resource fd_isp_channel[fd]
+openat$isp_channel(fd const[AT_FDCWD], dev ptr[in, string["/dev/capture-isp-channel0"]], flags flags[fd_open_flags]) fd_isp_channel
+syz_open_dev$isp_channel(dev ptr[in, string["/dev/capture-isp-channel#"]], id intptr[0:16], flags flags[open_flags])fd_isp_channel
+
+ioctl$ISP_CAPTURE_SETUP(fd fd_isp_channel, cmd const[ISP_CAPTURE_SETUP], arg ptr[in, isp_capture_setup])
+ioctl$ISP_CAPTURE_RELEASE(fd fd_isp_channel, cmd const[ISP_CAPTURE_RELEASE], arg ptr[in, int32])
+ioctl$ISP_CAPTURE_RESET(fd fd_isp_channel, cmd const[ISP_CAPTURE_RESET], arg ptr[in, int32])
+ioctl$ISP_CAPTURE_GET_INFO(fd fd_isp_channel, cmd const[ISP_CAPTURE_GET_INFO], arg ptr[out, isp_capture_info])
+ioctl$ISP_CAPTURE_REQUEST(fd fd_isp_channel, cmd const[ISP_CAPTURE_REQUEST], arg ptr[in, isp_capture_req])
+ioctl$ISP_CAPTURE_STATUS(fd fd_isp_channel, cmd const[ISP_CAPTURE_STATUS], arg ptr[in, int32])
+ioctl$ISP_CAPTURE_PROGRAM_REQUEST(fd fd_isp_channel, cmd const[ISP_CAPTURE_PROGRAM_REQUEST], arg ptr[in, isp_program_req])
+ioctl$ISP_CAPTURE_PROGRAM_STATUS(fd fd_isp_channel, cmd const[ISP_CAPTURE_PROGRAM_STATUS], arg ptr[in, int32])
+ioctl$ISP_CAPTURE_REQUEST_EX(fd fd_isp_channel, cmd const[ISP_CAPTURE_REQUEST_EX], arg ptr[in, isp_capture_req_ex])
+ioctl$ISP_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER(fd fd_isp_channel, cmd const[ISP_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER], arg ptr[in, isp_capture_progress_status_req])
+ioctl$ISP_CAPTURE_BUFFER_REQUEST(fd fd_isp_channel, cmd const[ISP_CAPTURE_BUFFER_REQUEST], arg ptr[in, isp_buffer_req])
+
+isp_capture_reloc {
+    num_relocs  int32
+    __pad       int32
+    reloc_relatives int64
+}
+
+isp_capture_setup {
+    channel_flags       int32
+    isp_unit            int8
+    __pad           array[int8, 3]
+    queue_depth     int32
+    request_size        int32
+    mem         int32
+    isp_program_queue_depth int32
+    isp_program_request_size    int32
+    isp_program_mem     int32
+    error_mask_correctable  int32
+    error_mask_uncorrectable    int32
+}
+
+isp_capture_syncpts {
+	progress_syncpt			int32
+	progress_syncpt_val		int32
+	stats_progress_syncpt		int32
+	stats_progress_syncpt_val	int32
+}
+
+isp_capture_info {
+    syncpts     isp_capture_syncpts
+    channel_id  int64
+}
+
+isp_capture_req  {
+    buffer_index    int32
+    __pad       int32
+    isp_relocs      isp_capture_reloc
+    inputfences_relocs  isp_capture_reloc
+    gos_relative    int32
+    sp_relative     int32
+    prefences_relocs    isp_capture_reloc
+}
+
+isp_program_req {
+    buffer_index    int32
+    __pad       int32
+    isp_program_relocs  isp_capture_reloc
+}
+
+isp_capture_req_ex {
+    capture_req isp_capture_req
+    program_req isp_program_req
+    __pad       array[int32, 4]
+}
+
+isp_capture_progress_status_req {
+    mem         int32
+    mem_offset      int32
+    process_buffer_depth    int32
+    program_buffer_depth    int32
+    __pad           array[int32, 4]
+}
+
+isp_buffer_req {
+    mem int32
+    flag    int32
+}

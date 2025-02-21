@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+include <uapi/linux/fcntl.h>
+include <uapi/media/cdi-dev.h>
+
+resource fd_cdi_dev[fd]
+
+cdi_dev_dev_file_list = "cdi-dev.0.29", "cdi-dev.2.29", "cdi-dev.3.29", "cdi-dev.7.29"
+openat$cdi_dev(fd const[AT_FDCWD], file ptr[in, string[cdi_dev_dev_file_list]], flags flags[open_flags], mode const[0]) fd_cdi_dev
+
+ioctl$CDI_DEV_IOCTL_RW(fd fd_cdi_dev, cmd const[CDI_DEV_IOCTL_RW], arg ptr[in, cdi_dev_package])
+ioctl$CDI_DEV_IOCTL_GET_PWR_INFO(fd fd_cdi_dev, cmd const[CDI_DEV_IOCTL_GET_PWR_INFO], arg ptr[inout, cdi_dev_pwr_ctrl_info])
+ioctl$CDI_DEV_IOCTL_FRSYNC_MUX(fd fd_cdi_dev, cmd const[CDI_DEV_IOCTL_FRSYNC_MUX], arg ptr[in, cdi_dev_fsync_mux])
+
+close$cdi_dev(fd fd_cdi_dev)
+
+cdi_dev_package {
+	offset			int16
+	offset_len		int16[0:2]
+	size			len[buffer, int32]
+	flags			int32
+	buffer			ptr[inout, array[const[0, int8], 34]]
+}
+
+cdi_dev_pwr_ctrl_info {
+	cam_pwr_method		int8
+	am_pwr_i2c_addr		int8
+	cam_pwr_links		array[int8, 4]
+}
+
+cdi_dev_fsync_mux {
+	mux_sel			int8
+	cam_grp			int8
+}

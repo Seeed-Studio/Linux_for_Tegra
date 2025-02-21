@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+include <uapi/linux/fcntl.h>
+include <uapi/media/cdi-mgr.h>
+
+resource fd_cdi_mgr[fd]
+
+cdi_mgr_dev_file_list = "/dev/cdi-mgr.0.a", "/dev/cdi-mgr.2.e", "/dev/cdi-mgr.3.c", "/dev/cdi-mgr.7.g"
+openat$cdi_mgr(fd const[AT_FDCWD], file ptr[in, string[cdi_mgr_dev_file_list]], flags flags[open_flags], mode const[0]) fd_cdi_mgr
+
+ioctl$CDI_MGR_IOCTL_PWR_DN(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_PWR_DN], arg intptr[0:8])
+
+ioctl$CDI_MGR_IOCTL_PWR_UP(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_PWR_UP], arg intptr[0:8])
+
+ioctl$CDI_MGR_IOCTL_SET_PID(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_SET_PID], arg ptr[in, cdi_mgr_sinfo])
+
+ioctl$CDI_MGR_IOCTL_SIGNAL(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_SIGNAL], arg intptr[0:2])
+
+ioctl$CDI_MGR_IOCTL_DEV_ADD(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_DEV_ADD], arg ptr[in, cdi_mgr_dev])
+
+ioctl$CDI_MGR_IOCTL_DEV_DEL(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_DEV_DEL], arg intptr[0:5])
+
+ioctl$CDI_MGR_IOCTL_PWR_INFO(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_PWR_INFO], arg ptr[inout, cdi_mgr_pwr_info])
+
+ioctl$CDI_MGR_IOCTL_PWM_ENABLE(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_PWM_ENABLE], arg intptr[0:3])
+
+ioctl$CDI_MGR_IOCTL_PWM_CONFIG(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_PWM_CONFIG], arg ptr[in, cdi_mgr_pwm_info])
+
+ioctl$CDI_MGR_IOCTL_INTR_CONFIG(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_INTR_CONFIG], arg ptr[in, cdi_mgr_gpio_info])
+
+ioctl$CDI_MGR_IOCTL_INTR_ENABLE(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_INTR_ENABLE], arg const[0])
+
+ioctl$CDI_MGR_IOCTL_INTR_WAIT(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_INTR_WAIT], arg ptr[out, cdi_mgr_gpio_intr])
+
+ioctl$CDI_MGR_IOCTL_INTR_WAIT_ABORT(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_INTR_WAIT_ABORT], arg const[0])
+
+ioctl$CDI_MGR_IOCTL_GET_PWR_INFO(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_GET_PWR_INFO], arg ptr[inout, cdi_mgr_pwr_ctrl_info])
+
+ioctl$CDI_MGR_IOCTL_ENABLE_DES_POWER(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_ENABLE_DES_POWER], arg const[0])
+
+ioctl$CDI_MGR_IOCTL_DISABLE_DES_POWER(fd fd_cdi_mgr, cmd const[CDI_MGR_IOCTL_DISABLE_DES_POWER], arg const[0])
+
+close$cdi_mgr(fd fd_cdi_mgr)
+
+cdi_mgr_dev {
+	addr			flags[dev_addr, int16]
+	reg_bits		flags[dev_reg_bits, int8]
+	val_bits		flags[dev_val_bits, int8]
+	drv_name		string["/dev/cdi-dev"]
+}[align[8]]
+
+dev_addr = 0x00, 0x20, 0x40, 0x60, 0x80
+dev_reg_bits = 0, 8, 16
+dev_val_bits = 0, 4, 8, 12, 16
+
+cdi_mgr_sinfo {
+	pid			int32[0:10]
+	sig_no			int32[31:65]
+	context			int64
+}[align[8]]
+
+cdi_mgr_pwr_info {
+	pwr_gpio		int32[-1:8]
+	pwr_status		int32
+}[align[8]]
+
+cdi_mgr_pwr_ctrl_info {
+	des_pwr_method		int8
+	des_pwr_i2c_addr	int8
+}[align[8]]
+
+cdi_mgr_gpio_info {
+	idx			int32[0:8]
+	timeout_ms		int32[0:2000000]
+}[align[8]]
+
+cdi_mgr_gpio_intr {
+	idx			int32
+	code			int32
+}[align[8]]
+
+cdi_mgr_pwm_info {
+	duty_ns			int64[150000:200000, 0x4000]
+	period_ns		int64[32:128, 8]
+}[align[8]]
