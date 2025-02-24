@@ -7702,6 +7702,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_IOMMU_MAP_HAS_GFP_ARG" "" "types"
         ;;
 
+        ioremap_prot_has_pgprot_t_arg)
+            #
+            # Determine if pgprot_t is passed to ioremap_prot()
+            #
+            # In Linux v6.15, commit 86758b504864 ("mm/ioremap: pass pgprot_t to
+            # ioremap_prot() instead of unsigned long") updated ioremap_prot() to
+            # pass pgprot_t.
+            #
+            CODE="
+            #include <linux/io.h>
+            void conftest_ioremap_prot_has_pgprot_t_arg(phys_addr_t phys_addr,
+                                                        size_t size, pgprot_t prot) {
+                ioremap_prot(phys_addr, size, prot);
+            }"
+
+            compile_check_conftest "$CODE" "NV_IOREMAP_PROT_HAS_PGPROT_T_ARG" "" "types" $1
+        ;;
+
         iio_dev_opaque_has_mlock)
             #
             # Determine if the 'iio_dev_opaque' structure has 'mlock' field.

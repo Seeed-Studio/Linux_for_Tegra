@@ -120,12 +120,17 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 		vaddr = vmap(pages, nr_pages, VM_MAP, prot);
 	} else {
 #if defined(CONFIG_GENERIC_IOREMAP)
+#if defined(NV_IOREMAP_PROT_HAS_PGPROT_T_ARG) /* Linux v6.15 */
+		vaddr = (__force void *)ioremap_prot(nvmap_get_heap_block_base(h->carveout),
+						adj_size, prot);
+#else
 		vaddr = (__force void *)ioremap_prot(nvmap_get_heap_block_base(h->carveout),
 						adj_size, pgprot_val(prot));
+#endif /* NV_IOREMAP_PROT_HAS_PGPROT_T_ARG */
 #else
 		vaddr = (__force void *)__ioremap(nvmap_get_heap_block_base(h->carveout),
 						adj_size, prot);
-#endif
+#endif /* CONFIG_GENERIC_IOREMAP */
 	}
 	if (vaddr == NULL)
 		goto out;
