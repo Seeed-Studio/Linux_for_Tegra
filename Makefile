@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: GPL-2.0
-# Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 this_makefile_path := $(abspath $(shell dirname $(lastword $(MAKEFILE_LIST))))
 
@@ -28,10 +28,6 @@ LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
 
 subdir-ccflags-y += -Werror
 subdir-ccflags-y += -Wmissing-prototypes
-
-ifeq ($(CONFIG_TEGRA_VIRTUALIZATION),y)
-subdir-ccflags-y += -DCONFIG_TEGRA_VIRTUALIZATION
-endif
 
 ifeq ($(CONFIG_TEGRA_SYSTEM_TYPE_ACK),y)
 subdir-ccflags-y += -DCONFIG_TEGRA_SYSTEM_TYPE_ACK

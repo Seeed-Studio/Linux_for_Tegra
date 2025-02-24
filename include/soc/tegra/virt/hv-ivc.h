@@ -1,7 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef __TEGRA_HV_IVC_H
 #define __TEGRA_HV_IVC_H
@@ -32,7 +30,6 @@ struct tegra_hv_ivm_cookie {
 	void *reserved;
 };
 
-#if defined(CONFIG_TEGRA_VIRTUALIZATION)
 bool is_tegra_hypervisor_mode(void);
 
 /**
@@ -306,151 +303,5 @@ int tegra_hv_ivc_get_info(struct tegra_hv_ivc_cookie *ivck, uint64_t *pa,
 void tegra_hv_ivc_notify(struct tegra_hv_ivc_cookie *ivck);
 
 struct tegra_ivc *tegra_hv_ivc_convert_cookie(struct tegra_hv_ivc_cookie *ivck);
-#else
-static inline bool is_tegra_hypervisor_mode(void)
-{
-	return false;
-}
-
-static inline struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(
-		struct device_node *dn, int id,
-		const struct tegra_hv_ivc_ops *ops)
-{
-	return ERR_PTR(-ENOTSUPP);
-};
-
-static inline int tegra_hv_ivc_unreserve(struct tegra_hv_ivc_cookie *ivck)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_write(struct tegra_hv_ivc_cookie *ivck,
-				     const void *buf, int size)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_write_user(struct tegra_hv_ivc_cookie *ivck,
-					  const void __user *buf, int size)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_read(struct tegra_hv_ivc_cookie *ivck, void *buf,
-				    int size)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_read_user(struct tegra_hv_ivc_cookie *ivck,
-					 void __user *buf, int size)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_can_read(struct tegra_hv_ivc_cookie *ivck)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_can_write(struct tegra_hv_ivc_cookie *ivck)
-{
-	return -ENOTSUPP;
-};
-
-static inline uint32_t tegra_hv_ivc_tx_frames_available(
-		struct tegra_hv_ivc_cookie *ivck)
-{
-	return 0;
-};
-
-static inline int tegra_hv_ivc_tx_empty(struct tegra_hv_ivc_cookie *ivck)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_set_loopback(struct tegra_hv_ivc_cookie *ivck,
-					    int mode)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_dump(struct tegra_hv_ivc_cookie *ivck)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_read_peek(struct tegra_hv_ivc_cookie *ivck,
-					 void *buf, int off, int count)
-{
-	return -ENOTSUPP;
-};
-
-static inline void *tegra_hv_ivc_read_get_next_frame(
-		struct tegra_hv_ivc_cookie *ivck)
-{
-	return ERR_PTR(-ENOTSUPP);
-};
-
-static inline int tegra_hv_ivc_read_advance(struct tegra_hv_ivc_cookie *ivck)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_write_poke(struct tegra_hv_ivc_cookie *ivck,
-					  const void *buf, int off, int count)
-{
-	return -ENOTSUPP;
-};
-
-static inline void *tegra_hv_ivc_write_get_next_frame(
-		struct tegra_hv_ivc_cookie *ivck)
-{
-	return ERR_PTR(-ENOTSUPP);
-};
-
-static inline int tegra_hv_ivc_write_advance(struct tegra_hv_ivc_cookie *ivck)
-{
-	return -ENOTSUPP;
-};
-
-static inline struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(unsigned id)
-{
-	return ERR_PTR(-ENOTSUPP);
-};
-
-static inline int tegra_hv_mempool_unreserve(struct tegra_hv_ivm_cookie *ck)
-{
-	return -ENOTSUPP;
-};
-
-static inline int tegra_hv_ivc_channel_notified(
-		struct tegra_hv_ivc_cookie *ivck)
-{
-	return -ENOTSUPP;
-};
-
-static inline void tegra_hv_ivc_channel_reset(struct tegra_hv_ivc_cookie *ivck)
-{
-	return;
-};
-
-static inline int tegra_hv_ivc_get_info(struct tegra_hv_ivc_cookie *ivck,
-					uint64_t *pa, uint64_t *size)
-{
-	return -ENOTSUPP;
-};
-
-static inline void tegra_hv_ivc_notify(struct tegra_hv_ivc_cookie *ivck)
-{
-	return;
-};
-
-static inline struct tegra_ivc *tegra_hv_ivc_convert_cookie(
-		struct tegra_hv_ivc_cookie *ivck)
-{
-	return ERR_PTR(-ENOTSUPP);
-};
-#endif /* defined(CONFIG_TEGRA_VIRTUALIZATION) */
 
 #endif /* __TEGRA_HV_IVC_H */

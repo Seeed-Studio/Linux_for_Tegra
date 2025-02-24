@@ -26,10 +26,8 @@
 #include "nvmap_handle.h"
 #include "nvmap_dev_int.h"
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 #include <soc/tegra/virt/hv-ivc.h>
 #include <soc/tegra/virt/syscalls.h>
-#endif
 
 static struct device tegra_generic_dev;
 
@@ -141,7 +139,6 @@ found:
 	return NULL;
 }
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 static int __init nvmap_populate_ivm_carveout(struct device *dev)
 {
 	char *name;
@@ -243,7 +240,6 @@ err:
 	return ret;
 
 }
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 /*
  * This requires proper kernel arguments to have been passed.
@@ -426,9 +422,7 @@ int __init nvmap_init(struct platform_device *pdev)
 			goto end;
 	}
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 	err = nvmap_populate_ivm_carveout(&pdev->dev);
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 end:
 	return err;

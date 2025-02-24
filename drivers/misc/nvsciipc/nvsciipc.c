@@ -27,11 +27,9 @@
 #include <linux/error-injection.h>
 #endif /* CONFIG_FUNCTION_ERROR_INJECTION && CONFIG_BPF_KPROBE_OVERRIDE */
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 #include <soc/tegra/virt/syscalls.h>
 #include <soc/tegra/virt/hv-ivc.h>
 #include <uapi/linux/tegra-ivc-dev.h>
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 #include "nvsciipc.h"
 
@@ -48,9 +46,7 @@ DEFINE_MUTEX(nvsciipc_mutex);
 
 static struct platform_device *nvsciipc_pdev;
 static struct nvsciipc *ctx;
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 static int32_t s_guestid = -1;
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 	unsigned long arg);
@@ -580,7 +576,6 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 		}
 	}
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (s_guestid != -1) {
 		struct nvsciipc_config_entry *entry;
 		union nvsciipc_vuid_64 vuid64;
@@ -605,7 +600,6 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 			}
 		}
 	}
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 	kfree(entry_ptr);
 
@@ -713,14 +707,10 @@ long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 		ret = nvsciipc_ioctl_map_vuid(ctx, cmd, arg);
 		break;
 	case NVSCIIPC_IOCTL_GET_VMID:
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 		if (copy_to_user((void __user *) arg, &s_guestid,
 			sizeof(s_guestid))) {
 			ret = -EFAULT;
 		}
-#else
-		ret = -EFAULT;
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 		break;
 	default:
 		ERR("unrecognised ioctl cmd: 0x%x\n", cmd);
@@ -846,18 +836,14 @@ static int nvsciipc_probe(struct platform_device *pdev)
 	}
 	dev_set_drvdata(ctx->device, ctx);
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-	{
-		if (is_tegra_hypervisor_mode()) {
-			ret = hyp_read_gid(&s_guestid);
-			if (ret != 0) {
-				ERR("Failed to read guest id\n");
-				goto error;
-			}
-			INFO("guestid: %d\n", s_guestid);
+	if (is_tegra_hypervisor_mode()) {
+		ret = hyp_read_gid(&s_guestid);
+		if (ret != 0) {
+			ERR("Failed to read guest id\n");
+			goto error;
 		}
+		INFO("guestid: %d\n", s_guestid);
 	}
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 	INFO("loaded module\n");
 

@@ -522,7 +522,6 @@ static void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
 EXPORT_SYMBOL(nvmap_dma_alloc_attrs);
 #endif /* !NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX */
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 static void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 					dma_addr_t device_addr, size_t size)
 {
@@ -590,14 +589,12 @@ static void nvmap_dma_mark_declared_memory_unoccupied(struct device *dev,
 	bitmap_clear(mem->bitmap, pos, alloc_size);
 	spin_unlock_irqrestore(&mem->spinlock, flags);
 }
-#endif /* CONFIG_TEGRA_VIRTUALIZATION */
 
 static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 				   phys_addr_t *start)
 {
 	phys_addr_t pa = DMA_MAPPING_ERROR;
 	struct device *dev = h->dma_dev;
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 	phys_addr_t sum;
 
 	if (start && h->is_ivm) {
@@ -612,9 +609,7 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 					&pa, len);
 			return DMA_ERROR_CODE;
 		}
-	} else
-#endif
-	{
+	} else {
 		(void)nvmap_dma_alloc_attrs(dev, len, &pa,
 				GFP_KERNEL, DMA_ATTR_ALLOC_EXACT_SIZE);
 		if (!dma_mapping_error(dev, pa)) {
@@ -699,12 +694,9 @@ static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 
 	dev_dbg(dev, "Free base (%pa) size (%zu)\n", &base, len);
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (h->is_ivm && !h->can_alloc) {
 		nvmap_dma_mark_declared_memory_unoccupied(dev, base, len);
-	} else
-#endif
-	{
+	} else {
 		nvmap_dma_free_attrs(dev, len,
 				     (void *)(uintptr_t)base,
 				     (dma_addr_t)base,
