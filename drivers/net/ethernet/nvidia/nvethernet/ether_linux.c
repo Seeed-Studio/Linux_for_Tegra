@@ -1,5 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <nvidia/conftest.h>
 #include <linux/version.h>
@@ -2868,6 +2881,26 @@ static int ether_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 			"%s:No clks available, skipping PHY write\n", __func__);
 		return -ENODEV;
 	}
+	if (pdata->phy_str != NULL) {
+	// For MV-Q3244 0x401e002a is pointing to 0x407C2780 value pointed by Sau Loh from Mrvl
+		if (strcmp(pdata->phy_str, "MVQ3244") == 0) {
+			if ((phyreg == MACSEC_REG_MVQ3244) && ((phydata & OSI_BIT(1)) == 0U)) {
+				dev_err(pdata->dev,
+					"restricting access to enable macsec in MVQ3244 PHY \n");
+				return -ENODEV;
+			}
+	// For 88Q2221M dev 0x1F and Register 0xa008 is pointed to 0x401fa008
+		} else if (strcmp(pdata->phy_str, "88Q2221M") == 0) {
+			if ((phyaddr == MACSEC_REG_88Q2221M) &&
+			    (((phydata & OSI_BIT(5)) == 0U) || ((phydata & OSI_BIT(6)) == 0U))) {
+				dev_err(pdata->dev,
+					"restricting access to enable macsec in 88Q221M PHY \n");
+				return -ENODEV;
+			}
+		} else {
+				/** Do Nothing for other PHY types */
+		}
+	}
 
 	return osi_write_phy_reg(pdata->osi_core, (unsigned int)phyaddr,
 				 (unsigned int)phyreg, phydata);
@@ -4272,6 +4305,29 @@ static int ether_handle_priv_wmdio_ioctl(struct ether_priv_data *pdata,
 		prtad = mdio_phy_id_prtad(mii_data->phy_id);
 		devad = mdio_phy_id_devad(mii_data->phy_id);
 		devad = ether_mdio_c45_addr(devad, mii_data->reg_num);
+
+	if (pdata->phy_str != NULL) {
+	// For MV-Q3244 0x401e002a is pointing to 0x407C2780 value pointed by Sau Loh from Mrvl
+		if (strcmp(pdata->phy_str, "MVQ3244") == 0) {
+			if ((devad == MACSEC_REG_MVQ3244) &&
+			    ((mii_data->val_in & OSI_BIT(1)) == 0U)) {
+				dev_err(pdata->dev,
+					"restricting access to enable macsec in MVQ3244 PHY \n");
+				return -ENODEV;
+			}
+	// For 88Q2221M dev 0x1F and Register 0xa008 is pointed to 0x401fa008
+		} else if (strcmp(pdata->phy_str, "88Q2221M") == 0) {
+			if ((devad == MACSEC_REG_88Q2221M) &&
+			    (((mii_data->val_in & OSI_BIT(5)) == 0U) ||
+			     ((mii_data->val_in & OSI_BIT(6)) == 0U))) {
+				dev_err(pdata->dev,
+					"restricting access to enable macsec in 88Q2221M PHY \n");
+				return -ENODEV;
+			}
+		} else {
+			/** Do Nothing for other PHY types */
+		}
+	}
 	} else {
 		prtad = mii_data->phy_id;
 		devad = mii_data->reg_num;
@@ -7403,6 +7459,9 @@ int ether_probe(struct platform_device *pdev)
 		}
 	}
 
+	/* Read PHY type from DT */
+	(void)of_property_read_string(pdata->dev->of_node,
+				      "nvidia,phy_type", &pdata->phy_str);
 	/* Set netdev features based on hw features */
 	ether_set_ndev_features(ndev, pdata);
 

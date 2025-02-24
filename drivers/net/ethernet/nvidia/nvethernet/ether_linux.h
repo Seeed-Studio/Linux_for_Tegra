@@ -1,5 +1,18 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef ETHER_LINUX_H
 #define ETHER_LINUX_H
@@ -249,6 +262,12 @@
  * @brief Invalid MDIO address for fixed link
  */
 #define FIXED_PHY_INVALID_MDIO_ADDR	0xFFU
+
+/**
+ * @brief PHY register address to enable MACSEc feature in PHY
+ */
+#define MACSEC_REG_MVQ3244		0x401e002aU
+#define MACSEC_REG_88Q2221M		0x401fa008U
 
 #define ETHER_ADDRESS_32BIT		0
 #define ETHER_ADDRESS_40BIT		1
@@ -662,6 +681,8 @@ struct ether_priv_data {
 	int phy_reset_post_delay;
 	/** PHY reset duration delay */
 	int phy_reset_duration;
+	/** Pointer to the phy type being used */
+	const char *phy_str;
 #ifdef ETHER_NVGRO
 	/** Master queue */
 	struct sk_buff_head mq;
