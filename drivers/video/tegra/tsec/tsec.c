@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -21,6 +21,8 @@ static struct tsec_device_data t23x_tsec_data = {
 	.riscv_desc_bin		= "tegra23x/nvhost_tsec_desc.fw",
 	.riscv_image_bin	= "tegra23x/nvhost_tsec_riscv.fw",
 };
+MODULE_FIRMWARE("tegra23x/nvhost_tsec_riscv.fw");
+MODULE_FIRMWARE("tegra23x/nvhost_tsec_desc.fw");
 
 static struct tsec_device_data t239_tsec_data = {
 	.rate = {192000000, 0, 204000000},
