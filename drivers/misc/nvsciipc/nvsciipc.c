@@ -916,7 +916,7 @@ static int nvsciipc_remove(struct platform_device *pdev)
 	nvsciipc_cleanup(ctx);
 
 exit:
-	INFO("Unloaded module\n");
+	ERR("Unloaded module\n");
 
 	return 0;
 }
@@ -933,6 +933,11 @@ static int nvsciipc_remove_wrapper(struct platform_device *pdev)
 }
 #endif
 
+static void nvsciipc_shutdown(struct platform_device *pdev)
+{
+	dev_err(&pdev->dev, "nvipc: Shutting down");
+	nvsciipc_remove(pdev);
+}
 
 #ifdef CONFIG_PM
 static int nvsciipc_suspend(struct platform_device *pdev, pm_message_t state)
@@ -953,6 +958,7 @@ static int nvsciipc_resume(struct platform_device *pdev)
 static struct platform_driver nvsciipc_driver = {
 	.probe  = nvsciipc_probe,
 	.remove = nvsciipc_remove_wrapper,
+	.shutdown = nvsciipc_shutdown,
 	.driver = {
 		.name = MODULE_NAME,
 	},
