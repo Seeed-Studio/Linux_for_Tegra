@@ -22,6 +22,11 @@
 #define NVSCIIPC_BACKEND_C2C_NPM	4U
 #define NVSCIIPC_BACKEND_UNKNOWN	0xFFFFFFFFU
 
+struct nvsciipc_res_stat {
+	int reserved;
+	pid_t owner_pid;
+};
+
 struct nvsciipc {
 	struct device *dev;
 
@@ -34,6 +39,7 @@ struct nvsciipc {
 	int num_eps;
 	struct nvsciipc_config_entry **db;
 	volatile bool set_db_f;
+	struct nvsciipc_res_stat **stat;
 };
 
 struct vuid_bitfield_64 {

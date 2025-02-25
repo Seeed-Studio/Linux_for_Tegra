@@ -42,7 +42,8 @@
  */
 #define DEBUG_VALIDATE_TOKEN 0
 
-DEFINE_MUTEX(nvsciipc_mutex);
+static DEFINE_MUTEX(nvsciipc_mutex);
+static DEFINE_MUTEX(ep_mutex);
 
 static struct platform_device *nvsciipc_pdev;
 static struct nvsciipc *s_ctx;
@@ -214,10 +215,13 @@ static void nvsciipc_free_db(struct nvsciipc *ctx)
 	int i;
 
 	if ((ctx->num_eps != 0) && (ctx->set_db_f == true)) {
-		for (i = 0; i < ctx->num_eps; i++)
+		for (i = 0; i < ctx->num_eps; i++) {
 			kfree(ctx->db[i]);
+			kfree(ctx->stat[i]);
+		}
 
 		kfree(ctx->db);
+		kfree(ctx->stat);
 	}
 
 	ctx->num_eps = 0;
@@ -330,6 +334,109 @@ static int nvsciipc_ioctl_get_db_by_idx(struct nvsciipc *ctx, unsigned int cmd,
 	get_db.entry = *ctx->db[get_db.idx];
 
 	if (copy_to_user((void __user *)arg, &get_db, _IOC_SIZE(cmd))) {
+		ERR("%s : copy_to_user failed\n", __func__);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int nvsciipc_ioctl_reserve_ep(struct nvsciipc *ctx, unsigned int cmd,
+		unsigned long arg)
+{
+	struct nvsciipc_reserve_ep reserve_ep;
+	pid_t current_pid = task_pid_nr(current);
+	int i;
+
+	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
+		ERR("%s[%d] need to set endpoint database first\n", __func__,
+			get_current()->pid);
+		return -EPERM;
+	}
+
+	if (copy_from_user(&reserve_ep, (void __user *)arg, _IOC_SIZE(cmd))) {
+		ERR("%s : copy_from_user failed\n", __func__);
+		return -EFAULT;
+	}
+
+	/* read operation */
+	for (i = 0; i < ctx->num_eps; i++) {
+		if (!strncmp(reserve_ep.ep_name, ctx->db[i]->ep_name,
+		NVSCIIPC_MAX_EP_NAME)) {
+// FIXME: consider android
+#if defined(CONFIG_ANDROID) || defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+			/* Authenticate the client process with valid UID */
+			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
+			(current_cred()->uid.val != 0) &&
+			(current_cred()->uid.val != ctx->db[i]->uid)) {
+				ERR("%s[Client_UID = %d] : "
+					"Unauthorized access to endpoint\n",
+					__func__, current_cred()->uid.val);
+				return -EPERM;
+			}
+#endif /* CONFIG_ANDROID || CONFIG_TEGRA_SYSTEM_TYPE_ACK */
+			mutex_lock(&ep_mutex);
+			/* reserve */
+			if (reserve_ep.action == NVSCIIPC_EP_RESERVE) {
+				struct task_struct *task;
+				struct pid *pid_struct;
+
+				pid_struct = find_get_pid(ctx->stat[i]->owner_pid);
+				task = pid_task(pid_struct, PIDTYPE_PID);
+
+				/* endpoint is reserved and process is running */
+				if (ctx->stat[i]->reserved && task) {
+					ERR("%s:RES %s is already reserved by %d\n", __func__,
+						reserve_ep.ep_name, ctx->stat[i]->owner_pid);
+					mutex_unlock(&ep_mutex);
+					return -EBUSY;
+				}
+				if (!task && (ctx->stat[i]->owner_pid != 0)) {
+					INFO("%s:RES pid(%d) for %s is NOT running\n", __func__,
+					    ctx->stat[i]->owner_pid, reserve_ep.ep_name);
+				}
+
+				ctx->stat[i]->reserved = NVSCIIPC_EP_RESERVE;
+				ctx->stat[i]->owner_pid = current_pid;
+			}
+			/* release */
+			else if (reserve_ep.action == NVSCIIPC_EP_RELEASE) {
+				struct task_struct *task;
+				struct pid *pid_struct;
+
+				pid_struct = find_get_pid(ctx->stat[i]->owner_pid);
+				task = pid_task(pid_struct, PIDTYPE_PID);
+
+				if (ctx->stat[i]->reserved &&
+				((ctx->stat[i]->owner_pid != current_pid) && task)) {
+					ERR("%s:REL %s is already reserved by %d\n", __func__,
+						reserve_ep.ep_name, ctx->stat[i]->owner_pid);
+					mutex_unlock(&ep_mutex);
+					return -EPERM;
+				}
+				if (!task && (ctx->stat[i]->owner_pid != 0)) {
+					INFO("%s:REL pid(%d) for %s is NOT running\n", __func__,
+					ctx->stat[i]->owner_pid, reserve_ep.ep_name);
+				}
+
+				ctx->stat[i]->reserved = NVSCIIPC_EP_RELEASE;
+				ctx->stat[i]->owner_pid = 0;
+			}
+			/* unknown action command */
+			else {
+				mutex_unlock(&ep_mutex);
+				return -EINVAL;
+			}
+			mutex_unlock(&ep_mutex);
+			break;
+		}
+	}
+
+	if (i == ctx->num_eps) {
+		INFO("%s: no entry (%s)\n", __func__, reserve_ep.ep_name);
+		return -ENOENT;
+	} else if (copy_to_user((void __user *)arg, &reserve_ep,
+				_IOC_SIZE(cmd))) {
 		ERR("%s : copy_to_user failed\n", __func__);
 		return -EFAULT;
 	}
@@ -541,6 +648,16 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 		goto ptr_error;
 	}
 
+	ctx->stat = (struct nvsciipc_res_stat **)
+		kzalloc(ctx->num_eps * sizeof(struct nvsciipc_res_stat *),
+			GFP_KERNEL);
+
+	if (ctx->stat == NULL) {
+		ERR("memory allocation for ctx->stat failed\n");
+		ret = -EFAULT;
+		goto ptr_error;
+	}
+
 	for (i = 0; i < ctx->num_eps; i++) {
 		ctx->db[i] = (struct nvsciipc_config_entry *)
 			kzalloc(sizeof(struct nvsciipc_config_entry),
@@ -556,6 +673,16 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 				sizeof(struct nvsciipc_config_entry));
 		if (ret < 0) {
 			ERR("copying config entry failed\n");
+			ret = -EFAULT;
+			goto ptr_error;
+		}
+
+		ctx->stat[i] = (struct nvsciipc_res_stat *)
+			kzalloc(sizeof(struct nvsciipc_res_stat),
+				GFP_KERNEL);
+
+		if (ctx->stat[i] == NULL) {
+			ERR("memory allocation for ctx->stat[%d] failed\n", i);
 			ret = -EFAULT;
 			goto ptr_error;
 		}
@@ -604,6 +731,18 @@ ptr_error:
 		}
 
 		kfree(ctx->db);
+		ctx->db = NULL;
+	}
+
+	if (ctx->stat != NULL) {
+		for (i = 0; i < ctx->num_eps; i++) {
+			if (ctx->stat[i] != NULL) {
+				memset(ctx->stat[i], 0, sizeof(struct nvsciipc_res_stat));
+				kfree(ctx->stat[i]);
+			}
+		}
+
+		kfree(ctx->stat);
 		ctx->db = NULL;
 	}
 
@@ -670,6 +809,9 @@ long nvsciipc_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVSCIIPC_IOCTL_GET_DB_BY_NAME:
 		ret = nvsciipc_ioctl_get_db_by_name(ctx, cmd, arg);
 		break;
+	case NVSCIIPC_IOCTL_RESERVE_EP:
+		ret = nvsciipc_ioctl_reserve_ep(ctx, cmd, arg);
+		break;
 	case NVSCIIPC_IOCTL_GET_DB_BY_VUID:
 		ret = nvsciipc_ioctl_get_db_by_vuid(ctx, cmd, arg);
 		break;
@@ -712,7 +854,7 @@ static ssize_t nvsciipc_dbg_read(struct file *filp, char __user *buf,
 
 	/* check root user */
 	if ((current_cred()->uid.val != 0) &&
-	(current_cred()->uid.val != 2000)) {
+	(current_cred()->uid.val != s_nvsciipc_uid)) {
 		ERR("no permission to read db\n");
 		return -EPERM;
 	}
@@ -723,18 +865,23 @@ static ssize_t nvsciipc_dbg_read(struct file *filp, char __user *buf,
 		return -EPERM;
 	}
 
+	mutex_lock(&nvsciipc_mutex);
+	mutex_lock(&ep_mutex);
 	for (i = 0; i < ctx->num_eps; i++) {
-		INFO("EP[%03d]: ep_name: %s, dev_name: %s, backend: %u, nframes: %u, ",
+		INFO("EP[%03d]: ep_name:%s, dev_name:%s, backend:%u, nframes:%u, frame_size:%u, id:%u, noti:%d(TRAP:1,MSI:2), uid:%d, res:%d, pid:%d\n",
 			i, ctx->db[i]->ep_name,
 			ctx->db[i]->dev_name,
 			ctx->db[i]->backend,
-			ctx->db[i]->nframes);
-		INFO("frame_size: %u, id: %u, noti:%d(TRAP:1,MSI:2), uid: %d\n",
+			ctx->db[i]->nframes,
 			ctx->db[i]->frame_size,
 			ctx->db[i]->id,
 			ctx->db[i]->noti_type,
-			ctx->db[i]->uid);
+			ctx->db[i]->uid,
+			ctx->stat[i]->reserved,
+			ctx->stat[i]->owner_pid);
 	}
+	mutex_unlock(&ep_mutex);
+	mutex_unlock(&nvsciipc_mutex);
 
 	return 0;
 }
@@ -976,6 +1123,7 @@ static int nvsciipc_resume(struct platform_device *pdev)
 	return 0;
 }
 #endif /* CONFIG_PM */
+
 
 static struct platform_driver nvsciipc_driver = {
 	.probe  = nvsciipc_probe,

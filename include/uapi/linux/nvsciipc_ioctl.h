@@ -10,6 +10,9 @@
 #define NVSCIIPC_MAX_RDMA_NAME	64U
 #define NVSCIIPC_MAX_IP_NAME	16U
 
+#define NVSCIIPC_EP_RESERVE 1U
+#define NVSCIIPC_EP_RELEASE 0U
+
 struct nvsciipc_config_entry {
 	/* endpoint name */
 	char ep_name[NVSCIIPC_MAX_EP_NAME];
@@ -82,6 +85,11 @@ struct nvsciipc_map_vuid {
 	uint64_t peer_vuid;
 };
 
+struct nvsciipc_reserve_ep {
+	char ep_name[NVSCIIPC_MAX_EP_NAME];
+	uint32_t action;
+};
+
 /* IOCTL magic number - seen available in ioctl-number.txt*/
 #define NVSCIIPC_IOCTL_MAGIC    0xC3
 
@@ -112,6 +120,9 @@ struct nvsciipc_map_vuid {
 #define NVSCIIPC_IOCTL_GET_DB_BY_IDX \
 	_IOWR(NVSCIIPC_IOCTL_MAGIC, 9, struct nvsciipc_get_db_by_idx)
 
-#define NVSCIIPC_IOCTL_NUMBER_MAX 9
+#define NVSCIIPC_IOCTL_RESERVE_EP \
+	_IOWR(NVSCIIPC_IOCTL_MAGIC, 10, struct nvsciipc_reserve_ep)
+
+#define NVSCIIPC_IOCTL_NUMBER_MAX 10
 
 #endif /* __NVSCIIPC_IOCTL_H__ */
