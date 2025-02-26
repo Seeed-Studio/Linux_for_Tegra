@@ -8,7 +8,8 @@
 #define __NVDLA_HOST_WRAPPER_H__
 
 #if defined(NVDLA_HAVE_CONFIG_AXI) && (NVDLA_HAVE_CONFIG_AXI == 1)
-#include <linux/nvhost-emu.h>
+#include <linux/nvhost-emu-type.h>
+#include <linux/host1x-dispatch.h>
 
 struct nvhost_notification {
 	struct {            /* 0000- */

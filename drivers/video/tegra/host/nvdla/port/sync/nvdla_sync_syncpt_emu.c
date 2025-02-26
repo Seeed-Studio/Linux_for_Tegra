@@ -38,7 +38,7 @@ struct nvdla_sync_device *nvdla_sync_device_create_syncpoint(
 		goto fail;
 	}
 
-	err = HOST1X_EMU_EXPORT_CALL(nvhost_syncpt_unit_interface_init(pdev));
+	err = nvhost_syncpt_unit_interface_init(pdev);
 	if (err < 0) {
 		nvdla_dbg_err(pdev, "failed to init syncpt interface. err=%d\n",
 			err);
@@ -63,8 +63,7 @@ void nvdla_sync_device_destroy(struct nvdla_sync_device *device)
 	if (device->pdev == NULL)
 		goto free_device;
 
-	HOST1X_EMU_EXPORT_CALL(
-		nvhost_syncpt_unit_interface_deinit(device->pdev));
+	nvhost_syncpt_unit_interface_deinit(device->pdev);
 
 free_device:
 	device->pdev = NULL;
@@ -80,9 +79,7 @@ dma_addr_t nvdla_sync_get_address_by_syncptid(
 	dma_addr_t address = 0ULL;
 
 	if (device != NULL)
-		address = HOST1X_EMU_EXPORT_CALL(
-					nvhost_syncpt_address(device->pdev,
-						syncptid));
+		address = nvhost_syncpt_address(device->pdev, syncptid);
 
 	return address;
 }
@@ -102,11 +99,9 @@ struct nvdla_sync_context *nvdla_sync_create(struct nvdla_sync_device *device)
 		goto fail;
 	}
 
-	context->syncptid = HOST1X_EMU_EXPORT_CALL(
-		nvhost_get_syncpt_host_managed(device->pdev, 0U, NULL));
+	context->syncptid = nvhost_get_syncpt_host_managed(device->pdev, 0U, NULL);
 
-	context->address = HOST1X_EMU_EXPORT_CALL(
-		nvhost_syncpt_address(device->pdev, context->syncptid));
+	context->address = nvhost_syncpt_address(device->pdev, context->syncptid);
 	context->device = device;
 
 	return context;
@@ -124,8 +119,7 @@ void nvdla_sync_destroy(struct nvdla_sync_context *context)
 		goto free_context;
 
 	/* Release the syncpoint ID */
-	HOST1X_EMU_EXPORT_CALL(nvhost_syncpt_put_ref_ext(context->device->pdev,
-		context->syncptid));
+	nvhost_syncpt_put_ref_ext(context->device->pdev, context->syncptid);
 
 free_context:
 	context->device = NULL;
@@ -152,10 +146,9 @@ uint32_t nvdla_sync_increment_max_value(struct nvdla_sync_context *context,
 	if ((context == NULL) || (context->device == NULL))
 		goto fail;
 
-	maxval = HOST1X_EMU_EXPORT_CALL(
-				nvhost_syncpt_incr_max_ext(context->device->pdev,
+	maxval = nvhost_syncpt_incr_max_ext(context->device->pdev,
 					context->syncptid,
-					increment));
+					increment);
 
 fail:
 	return maxval;
@@ -168,9 +161,8 @@ uint32_t nvdla_sync_get_max_value(struct nvdla_sync_context *context)
 	if ((context == NULL) || (context->device == NULL))
 		goto fail;
 
-	maxval = HOST1X_EMU_EXPORT_CALL(
-				nvhost_syncpt_read_maxval(context->device->pdev,
-					context->syncptid));
+	maxval = nvhost_syncpt_read_maxval(context->device->pdev,
+					context->syncptid);
 
 fail:
 	return maxval;
@@ -191,10 +183,9 @@ int32_t nvdla_sync_wait(struct nvdla_sync_context *context,
 
 	device = context->device;
 	if (timeout == 0ULL) {
-		wait_complete = HOST1X_EMU_EXPORT_CALL(
-			nvhost_syncpt_is_expired_ext(device->pdev,
+		wait_complete = nvhost_syncpt_is_expired_ext(device->pdev,
 				context->syncptid,
-				threshold));
+				threshold);
 		if (wait_complete == 0) {
 			nvdla_dbg_err(device->pdev,
 				"Wait on sp[%u] for threshold[%u] timedout\n",
@@ -224,10 +215,9 @@ int32_t nvdla_sync_signal(struct nvdla_sync_context *context,
 		goto fail;
 	}
 
-	HOST1X_EMU_EXPORT_CALL(
-		nvhost_syncpt_set_min_update(context->device->pdev,
+	nvhost_syncpt_set_min_update(context->device->pdev,
 			context->syncptid,
-			signal_value));
+			signal_value);
 
 fail:
 	return err;

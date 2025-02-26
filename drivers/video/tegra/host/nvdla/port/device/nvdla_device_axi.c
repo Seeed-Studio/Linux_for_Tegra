@@ -14,10 +14,11 @@
 #include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/errno.h>
-#include <linux/nvhost-emu.h>
 #include <linux/of.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
+#include <linux/nvhost-emu-type.h>
+#include <linux/host1x-dispatch.h>
 
 #define NVDLA_NUM_CDEV 1
 
@@ -49,7 +50,7 @@ static int32_t s_nvdla_module_get_platform_resources(
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	int32_t i;
 
-	pdata->host1x = HOST1X_EMU_EXPORT_CALL(nvhost_get_host1x(pdev));
+	pdata->host1x = nvhost_get_host1x(pdev);
 	if (pdata->host1x == NULL) {
 		nvdla_dbg_err(pdev, "Failed to get private data\n");
 		err = -ENODEV;

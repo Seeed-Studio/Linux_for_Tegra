@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#ifndef __HOST1X_EMU_SYMMBOL_H
-#define __HOST1X_EMU_SYMMBOL_H
+#ifndef __LINUX_HOST1X_SYMMBOL_EMU_H
+#define __LINUX_HOST1X_SYMMBOL_EMU_H
 
 #ifdef CONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
 #define HOST1X_EMU_EXPORT_CALL(...)         Emu_ ## __VA_ARGS__
@@ -15,4 +15,4 @@
 #define HOST1X_EMU_EXPORT_SYMBOL_NAME(f)    f
 #endif
 
-#endif /*__HOST1X_EMU_SYMMBOL_H*/
+#endif /*__LINUX_HOST1X_SYMMBOL_EMU_H*/

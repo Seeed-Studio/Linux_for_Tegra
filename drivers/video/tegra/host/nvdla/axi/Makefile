@@ -15,8 +15,9 @@ ccflags-y += -I$(srctree.nvidia-oot)/drivers/video/tegra/host/nvdla
 ccflags-y += -I$(srctree.nvidia-oot)/drivers/video/tegra/host/nvdla/port/fw
 endif
 
+#required to get the nvhost_device struture definitions
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-emu/include
-ccflags-y += -DCONFIG_TEGRA_HOST1X_EMU_DBG_SYMBL
+LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x-fence/include
 
 #
 # axi-nvdla.ko
