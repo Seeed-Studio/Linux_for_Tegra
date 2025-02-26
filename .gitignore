@@ -192,6 +192,12 @@ source/kernel/kernel-jammy-src/rust-project.json
 !kernel/dtb/tegra234-j40mini-p3768-0000+p3767-0001-recomputer.dtb
 !kernel/dtb/tegra234-j40mini-p3768-0000+p3767-0003-recomputer.dtb
 !kernel/dtb/tegra234-j40mini-p3768-0000+p3767-0004-recomputer.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0004-reserver.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0005-reserver.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0000-reserver.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0004-reserver-gmsl.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0005-reserver-gmsl.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0000-reserver-gmsl.dtb
 
 #CI file
 !.gitlab-ci.yml
