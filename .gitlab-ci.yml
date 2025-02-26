@@ -34,6 +34,10 @@ stages:
   - recomputer-mini-orin-nx-16g-j40
   - recomputer-mini-orin-nano-4g-j40
   - recomputer-mini-orin-nano-8g-j40
+  - reserver-agx-orin-32g-j501
+  - reserver-agx-orin-32g-j501-gmsl
+  - reserver-agx-orin-64g-j501
+  - reserver-agx-orin-64g-j501-gmsl
   - custom-firmware
 
 # common code of building target image
@@ -640,6 +644,84 @@ build-recomputer-mini-orin-nx-8g-j40:
   script:
     - echo "Building for $CONFIG"
     - *build_image_script
+
+reserver-agx-orin-32g-j501:
+  stage: reserver-agx-orin-32g-j501
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-agx-orin-j501x"
+    BOARDID: "3701"
+    BOARDSKU: "0004"
+    FAB: "500"
+    BOARDREV: "J.0"
+    CHIP_SKU: "00:00:00:D2"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+reserver-agx-orin-32g-j501-gmsl:
+  stage: reserver-agx-orin-32g-j501-gmsl
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-agx-orin-j501x-gmsl"
+    BOARDID: "3701"
+    BOARDSKU: "0004"
+    FAB: "500"
+    BOARDREV: "J.0"
+    CHIP_SKU: "00:00:00:D2"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+reserver-agx-orin-64g-j501:
+  stage: reserver-agx-orin-64g-j501
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-agx-orin-j501x"
+    BOARDID: "3701"
+    BOARDSKU: "0005"
+    FAB: "500"
+    BOARDREV: "M.0"
+    CHIP_SKU: "00:00:00:D0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+reserver-agx-orin-64g-j501-gmsl:
+  stage: reserver-agx-orin-64g-j501-gmsl
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-agx-orin-j501x-gmsl"
+    BOARDID: "3701"
+    BOARDSKU: "0005"
+    FAB: "500"
+    BOARDREV: "M.0"
+    CHIP_SKU: "00:00:00:D0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
 
 build-custom-firmare:
    stage: custom-firmware
