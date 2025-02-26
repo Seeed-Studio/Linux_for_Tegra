@@ -1,5 +1,12 @@
 #!/bin/bash
 
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0004-reserver.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0005-reserver.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0000-reserver.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0004-reserver-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0005-reserver-gmsl.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0000-reserver-gmsl.dtb ../kernel/dtb/
+
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0000-recomputer.dtb ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0001-recomputer.dtb ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0003-recomputer.dtb ../kernel/dtb/
