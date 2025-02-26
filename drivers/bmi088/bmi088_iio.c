@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -222,7 +222,11 @@ static ssize_t bmi_iio_attr_store(struct device *dev,
 			      struct device_attribute *attr,
 			      const char *buf, size_t count)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+
+	if (!indio_dev)
+		return -EINVAL;
+
 	struct bmi_iio_state *st = iio_priv(indio_dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	char *str;
@@ -230,7 +234,7 @@ static ssize_t bmi_iio_attr_store(struct device *dev,
 	unsigned int new;
 	int ret;
 
-	if (!indio_dev || !st || !this_attr)
+	if (!st || !this_attr)
 		return -EINVAL;
 
 	mutex_lock(BMI_MUTEX(indio_dev));
@@ -275,13 +279,17 @@ static ssize_t bmi_iio_attr_store(struct device *dev,
 static ssize_t bmi_iio_attr_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+
+	if (!indio_dev)
+		return -EINVAL;
+
 	struct bmi_iio_state *st = iio_priv(indio_dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	ssize_t t = 0;
 	unsigned int i;
 
-	if (!indio_dev || !st || !this_attr)
+	if (!st || !this_attr)
 		return -EINVAL;
 
 	switch (this_attr->address) {

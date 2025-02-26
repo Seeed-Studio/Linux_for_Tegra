@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 /* Device tree example:
  *
@@ -1500,10 +1500,12 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 
 #if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int bmi_probe(struct i2c_client *client)
+{
+	const struct i2c_device_id *id = i2c_match_id(bmi_i2c_device_ids, client);
 #else
 static int bmi_probe(struct i2c_client *client, const struct i2c_device_id *id)
-#endif
 {
+#endif
 	struct bmi_state *st;
 	int ret;
 
@@ -1513,11 +1515,7 @@ static int bmi_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	i2c_set_clientdata(client, st);
 	st->i2c = client;
-#if KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE
-	ret = bmi_init(st, NULL);
-#else
 	ret = bmi_init(st, id);
-#endif
 	if (ret) {
 		bmi_remove(client);
 		return ret;
