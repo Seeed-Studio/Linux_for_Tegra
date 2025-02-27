@@ -23,7 +23,8 @@ nvhost-nvdla-objs += \
 		$(NVDLA_COMMON_OBJS) \
 		port/device/nvdla_device_host1x.o \
 		port/fw/nvdla_fw_flcn.o \
-		port/sync/nvdla_sync_syncpt.o
+		port/sync/nvdla_sync_syncpt.o \
+		port/fw/nvdla_falcon.o
 
 ifdef CONFIG_TEGRA_GRHOST
 nvhost-nvdla-objs += dla_channel.o

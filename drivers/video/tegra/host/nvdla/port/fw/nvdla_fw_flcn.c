@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * NVDLA KMD-FALCON implementation
  */
@@ -12,6 +12,7 @@
 #include "../../nvdla.h"
 #include "../../nvdla_debug.h"
 #include "../../nvdla_hw_flcn.h"
+#include "nvdla_falcon.h"
 
 #include <linux/completion.h>
 #include <linux/errno.h>
@@ -35,7 +36,7 @@ int32_t nvdla_fw_poweron(struct platform_device *pdev)
 	pdata = platform_get_drvdata(pdev);
 	nvdla_dev = pdata->private_data;
 
-	err = nvhost_flcn_finalize_poweron(pdev);
+	err = nvdla_flcn_finalize_poweron(pdev);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to poweron\n");
 		goto fail;
@@ -69,7 +70,7 @@ int32_t nvdla_fw_poweron(struct platform_device *pdev)
 	return 0;
 
 poweroff:
-	(void) nvhost_flcn_prepare_poweroff(pdev);
+	(void) nvdla_flcn_prepare_poweroff(pdev);
 fail:
 	return err;
 }
@@ -83,7 +84,7 @@ int32_t nvdla_fw_poweroff(struct platform_device *pdev)
 		goto fail;
 	}
 
-	err = nvhost_flcn_prepare_poweroff(pdev);
+	err = nvdla_flcn_prepare_poweroff(pdev);
 
 fail:
 	return err;
@@ -94,7 +95,7 @@ int32_t nvdla_fw_init(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
 	if (pdata->flcn_isr)
-		flcn_intr_init(pdev);
+		nvdla_flcn_intr_init(pdev);
 
 	return 0;
 }
@@ -106,7 +107,7 @@ void nvdla_fw_deinit(struct platform_device *pdev)
 
 int32_t nvdla_fw_reload(struct platform_device *pdev)
 {
-	return flcn_reload_fw(pdev);
+	return nvdla_flcn_reload_fw(pdev);
 }
 
 int32_t nvdla_fw_send_cmd(struct platform_device *pdev,
