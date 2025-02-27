@@ -6,6 +6,6 @@
 ccflags-y += -DCONFIG_TEGRA_HOST1X
 ccflags-y += -Werror
 
-host1x-nvhost-objs = nvhost.o falcon.o
+host1x-nvhost-objs = nvhost.o
 
 obj-m += host1x-nvhost.o

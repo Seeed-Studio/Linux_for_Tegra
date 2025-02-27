@@ -20,8 +20,7 @@
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/version.h>
-
-#include "falcon.h"
+#include <linux/firmware.h>
 
 #define TEGRA194_SYNCPT_PAGE_SIZE 0x1000
 #define TEGRA194_SYNCPT_SHIM_BASE 0x60000000
@@ -38,6 +37,35 @@
 #define THI_STREAMID1	0x00000034
 
 #define NVHOST_NUM_CDEV 1
+
+struct falcon_firmware_section {
+	unsigned long offset;
+	size_t size;
+};
+
+struct falcon_firmware {
+	/* Firmware after it is read but not loaded */
+	const struct firmware *firmware;
+
+	/* Raw firmware data */
+	dma_addr_t iova;
+	dma_addr_t phys;
+	void *virt;
+	size_t size;
+
+	/* Parsed firmware information */
+	struct falcon_firmware_section bin_data;
+	struct falcon_firmware_section data;
+	struct falcon_firmware_section code;
+};
+
+struct falcon {
+	/* Set by falcon client */
+	struct device *dev;
+	void __iomem *regs;
+
+	struct falcon_firmware firmware;
+};
 
 struct nvhost_syncpt_interface {
 	dma_addr_t base;
@@ -551,166 +579,6 @@ dma_addr_t nvhost_syncpt_address(struct platform_device *pdev, u32 id)
 }
 EXPORT_SYMBOL(nvhost_syncpt_address);
 
-static irqreturn_t flcn_isr(int irq, void *dev_id)
-{
-	struct platform_device *pdev = (struct platform_device *)(dev_id);
-	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
-
-	if (pdata->flcn_isr)
-		pdata->flcn_isr(pdev);
-
-	return IRQ_HANDLED;
-}
-
-int flcn_intr_init(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
-	int ret = 0;
-
-	pdata->irq = platform_get_irq(pdev, 0);
-	if (pdata->irq < 0) {
-		dev_err(&pdev->dev, "failed to get IRQ\n");
-		return -ENXIO;
-	}
-
-	ret = devm_request_irq(&pdev->dev, pdata->irq, flcn_isr, 0,
-			       dev_name(&pdev->dev), pdev);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to request irq. err %d\n", ret);
-		return ret;
-	}
-
-	/* keep irq disabled */
-	disable_irq(pdata->irq);
-
-	return 0;
-}
-EXPORT_SYMBOL(flcn_intr_init);
-
-int flcn_reload_fw(struct platform_device *pdev)
-{
-	/* TODO: Used by debugfs */
-	return -EOPNOTSUPP;
-}
-EXPORT_SYMBOL(flcn_reload_fw);
-
-static int nvhost_flcn_init(struct platform_device *pdev,
-			    struct nvhost_device_data *pdata)
-{
-	struct falcon *falcon;
-
-	falcon = devm_kzalloc(&pdev->dev, sizeof(*falcon), GFP_KERNEL);
-	if (!falcon)
-		return -ENOMEM;
-
-	falcon->dev = &pdev->dev;
-	falcon->regs = pdata->aperture[0];
-
-	falcon_init(falcon);
-
-	pdata->falcon_data = falcon;
-
-	return 0;
-}
-
-int nvhost_flcn_prepare_poweroff(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-
-	if (pdata->flcn_isr)
-		disable_irq(pdata->irq);
-
-	return 0;
-}
-EXPORT_SYMBOL(nvhost_flcn_prepare_poweroff);
-
-static int nvhost_flcn_load_firmware(struct platform_device *pdev,
-				     struct falcon *falcon,
-				     char *firmware_name)
-{
-	dma_addr_t iova;
-	size_t size;
-	void *virt;
-	int err;
-
-	if (falcon->firmware.virt)
-		return 0;
-
-	err = falcon_read_firmware(falcon, firmware_name);
-	if (err < 0)
-		return err;
-
-	size = falcon->firmware.size;
-	virt = dma_alloc_coherent(&pdev->dev, size, &iova, GFP_KERNEL);
-	if (!virt)
-		return -ENOMEM;
-
-	falcon->firmware.virt = virt;
-	falcon->firmware.iova = iova;
-
-	err = falcon_load_firmware(falcon);
-	if (err < 0)
-		goto cleanup;
-
-	return 0;
-
-cleanup:
-	dma_free_coherent(&pdev->dev, size, virt, iova);
-
-	return err;
-}
-
-int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-#ifdef CONFIG_IOMMU_API
-	struct iommu_fwspec *spec = dev_iommu_fwspec_get(&pdev->dev);
-#endif
-	struct falcon *falcon;
-	int err;
-	u32 value;
-
-	if (!pdata->falcon_data) {
-		err = nvhost_flcn_init(pdev, pdata);
-		if (err < 0)
-			return -ENOMEM;
-	}
-
-	falcon = pdata->falcon_data;
-
-	err = nvhost_flcn_load_firmware(pdev, falcon, pdata->firmware_name);
-	if (err < 0)
-		return err;
-
-#ifdef CONFIG_IOMMU_API
-	if (spec) {
-		host1x_writel(pdev, pdata->transcfg_addr, pdata->transcfg_val);
-
-		if (spec->num_ids > 0) {
-			value = spec->ids[0] & 0xffff;
-			host1x_writel(pdev, THI_STREAMID0, value);
-			host1x_writel(pdev, THI_STREAMID1, value);
-		}
-	}
-#endif
-
-	err = falcon_boot(falcon);
-	if (err < 0)
-		return err;
-
-	err = falcon_wait_idle(falcon);
-	if (err < 0) {
-		dev_err(&pdev->dev, "falcon boot timed out\n");
-		return err;
-	}
-
-	if (pdata->flcn_isr)
-		enable_irq(pdata->irq);
-
-	return 0;
-}
-EXPORT_SYMBOL(nvhost_flcn_finalize_poweron);
-
 struct nvhost_host1x_cb {
 	struct dma_fence_cb cb;
 	struct work_struct work;
@@ -781,6 +649,12 @@ int nvhost_intr_register_notifier(struct platform_device *pdev,
 	return err;
 }
 EXPORT_SYMBOL(nvhost_intr_register_notifier);
+
+static void falcon_exit(struct falcon *falcon)
+{
+	if (falcon->firmware.firmware)
+		release_firmware(falcon->firmware.firmware);
+}
 
 void nvhost_module_deinit(struct platform_device *pdev)
 {

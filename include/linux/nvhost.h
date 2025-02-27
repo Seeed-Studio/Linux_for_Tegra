@@ -178,11 +178,6 @@ struct nvhost_device_data *nvhost_get_devdata(struct platform_device *pdev)
 	return (struct nvhost_device_data *)platform_get_drvdata(pdev);
 }
 
-int flcn_intr_init(struct platform_device *pdev);
-int flcn_reload_fw(struct platform_device *pdev);
-int nvhost_flcn_prepare_poweroff(struct platform_device *pdev);
-int nvhost_flcn_finalize_poweron(struct platform_device *dev);
-
 /* public api to return platform_device ptr to the default host1x instance */
 struct platform_device *nvhost_get_default_device(void);
 struct platform_device *nvhost_get_host1x_device(int instance);
