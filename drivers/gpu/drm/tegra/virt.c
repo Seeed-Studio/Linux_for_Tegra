@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -288,16 +288,6 @@ static int virt_engine_resume(struct device *dev)
 	return virt_engine_transfer(&msg, sizeof(msg));
 }
 
-static int virt_engine_power_mode_change(struct virt_engine *virt, u32 ip_op_mode)
-{
-	struct tegra_vhost_cmd_msg msg = { 0 };
-	struct tegra_vhost_power_mode_change_params *p = &msg.pw_mode;
-
-	msg.cmd = TEGRA_VHOST_CMD_POWER_MODE_CHANGE;
-	p->ip_op_mode = ip_op_mode;
-	return virt_engine_transfer(&msg, sizeof(msg));
-}
-
 #ifdef CONFIG_DEBUG_FS
 static int mrq_debug_open(struct tegra_bpmp *bpmp, const char *name,
 			  u32 *fd, u32 *len, bool write)
@@ -567,6 +557,17 @@ static void virt_engine_cleanup_actmon_debugfs(struct virt_engine *virt)
 }
 #endif
 
+#ifdef CONFIG_TEGRA_HOST1X_POWERMODE_CONTROL
+static int virt_engine_power_mode_change(struct virt_engine *virt, u32 ip_op_mode)
+{
+	struct tegra_vhost_cmd_msg msg = { 0 };
+	struct tegra_vhost_power_mode_change_params *p = &msg.pw_mode;
+
+	msg.cmd = TEGRA_VHOST_CMD_POWER_MODE_CHANGE;
+	p->ip_op_mode = ip_op_mode;
+	return virt_engine_transfer(&msg, sizeof(msg));
+}
+
 static ssize_t virt_engine_powermode_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 	struct virt_engine *virt = container_of(kobj, struct virt_engine, kobj);
@@ -625,6 +626,7 @@ static void virt_engine_sysfs_exit(struct virt_engine *virt)
 	sysfs_remove_file(&virt->kobj, &virt->powermode_attr.attr);
 	kobject_put(&virt->kobj);
 }
+#endif
 
 static const struct of_device_id tegra_virt_engine_of_match[] = {
 	{ .compatible = "nvidia,tegra234-host1x-virtual-engine" },
@@ -814,7 +816,10 @@ static int virt_engine_probe(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	virt_engine_setup_actmon_debugfs(virt);
 #endif
+
+#ifdef CONFIG_TEGRA_HOST1X_POWERMODE_CONTROL
 	virt_engine_sysfs_init(virt);
+#endif
 
 #ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 	hwpm_ip_index = virt_engine_get_ip_index(pdev->name);
@@ -864,7 +869,10 @@ static int virt_engine_remove(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	virt_engine_cleanup_actmon_debugfs(virt_engine);
 #endif
+
+#ifdef CONFIG_TEGRA_HOST1X_POWERMODE_CONTROL
 	virt_engine_sysfs_exit(virt_engine);
+#endif
 	virt_engine_cleanup();
 
 	host1x_client_unregister(&virt_engine->client.base);
