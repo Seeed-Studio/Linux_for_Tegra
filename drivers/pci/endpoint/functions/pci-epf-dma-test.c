@@ -148,12 +148,236 @@ static int edmalib_test_ob(struct seq_file *s, void *data)
 	return ret;
 }
 
+static void validate_api_status(char *api, char *cond, tegra_pcie_dma_status_t act,
+				tegra_pcie_dma_status_t exp)
+{
+	if (act == exp)
+		pr_info("%s() condition -%s- Passed with expected val %d\n", api, cond, act);
+	else
+		pr_err("%s() condition -%s- Failed actual %d expected %d\n", api, cond, act, exp);
+}
+
+static void sanitize_dma_info(struct tegra_pcie_dma_init_info *info, struct pcie_epf_dma *epfnv)
+{
+	info->soc = NVPCIE_DMA_SOC_T264;
+	info->tx[0].ch_type = TEGRA_PCIE_DMA_CHAN_XFER_ASYNC;
+	info->tx[0].num_descriptors = 4096;
+	info->dev = epfnv->cdev;
+	info->msi_irq = epfnv->edma.msi_irq;
+}
+
+static void sanitize_dma_xfer(struct tegra_pcie_dma_xfer_info *xfer,
+			      struct tegra_pcie_dma_desc *desc)
+{
+	xfer->channel_num = 0;
+	xfer->complete = edma_complete;
+	xfer->nents = 100;
+	xfer->desc = desc;
+}
+
+static int dma_neg_test(struct seq_file *s, void *data)
+{
+	struct pcie_epf_dma *epfnv = (struct pcie_epf_dma *)dev_get_drvdata(s->private);
+	struct pcie_epf_bar *epf_bar = (struct pcie_epf_bar *)epfnv->bar_virt;
+	struct tegra_pcie_dma_init_info info = {};
+	tegra_pcie_dma_status_t status;
+	struct tegra_pcie_dma_xfer_info xfer = {};
+	struct tegra_pcie_dma_desc desc = {};
+	void *prv;
+
+	if ((epfnv->chip_id == TEGRA234) || (!epf_bar->rp_phy_addr)) {
+		dev_err(epfnv->fdev, "%s: Not supported for T234 or Link is not up\n", __func__);
+		return -EOPNOTSUPP;
+	}
+
+	sanitize_dma_info(&info, epfnv);
+	status = tegra_pcie_dma_initialize(NULL, &prv);
+	validate_api_status("tegra_pcie_dma_initialize", "init NULL", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_info(&info, epfnv);
+	info.tx[0].num_descriptors = 0;
+	status = tegra_pcie_dma_initialize(&info, &prv);
+	validate_api_status("tegra_pcie_dma_initialize", "No channel enabled", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_info(&info, epfnv);
+	info.tx[0].num_descriptors = 15;
+	status = tegra_pcie_dma_initialize(&info, &prv);
+	validate_api_status("tegra_pcie_dma_initialize", "Descriptors not power of 2", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_info(&info, epfnv);
+	info.tx[0].num_descriptors = 0x80000000;
+	status = tegra_pcie_dma_initialize(&info, &prv);
+	validate_api_status("tegra_pcie_dma_initialize", "Max num descriptor check", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_info(&info, epfnv);
+	status = tegra_pcie_dma_initialize(&info, NULL);
+	validate_api_status("tegra_pcie_dma_initialize", "Cookie is NULL", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_info(&info, epfnv);
+	info.dev = NULL;
+	status = tegra_pcie_dma_initialize(&info, &prv);
+	validate_api_status("tegra_pcie_dma_initialize", "dev param is NULL", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_info(&info, epfnv);
+	info.soc = 0xFF; /* Invalid SoC type */
+	status = tegra_pcie_dma_initialize(&info, &prv);
+	validate_api_status("tegra_pcie_dma_initialize", "Invalid SoC type", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_info(&info, epfnv);
+	status = tegra_pcie_dma_initialize(&info, &prv);
+	validate_api_status("tegra_pcie_dma_initialize", "All valid params", status,
+			    TEGRA_PCIE_DMA_SUCCESS);
+
+	status = tegra_pcie_dma_set_msi(NULL, 0, 0);
+	validate_api_status("tegra_pcie_dma_set_msi", "NULL cookie", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_xfer(&xfer, &desc);
+	xfer.channel_num = 1;
+	status = tegra_pcie_dma_submit_xfer(prv, &xfer);
+	validate_api_status("tegra_pcie_dma_submit_xfer", "Invalid channel", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_xfer(&xfer, &desc);
+	xfer.complete = NULL;
+	status = tegra_pcie_dma_submit_xfer(prv, &xfer);
+	validate_api_status("tegra_pcie_dma_submit_xfer", "NULL complete", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_xfer(&xfer, &desc);
+	xfer.nents = 0;
+	status = tegra_pcie_dma_submit_xfer(prv, &xfer);
+	validate_api_status("tegra_pcie_dma_submit_xfer", "no nents", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	sanitize_dma_xfer(&xfer, &desc);
+	status = tegra_pcie_dma_submit_xfer(NULL, &xfer);
+	validate_api_status("tegra_pcie_dma_submit_xfer", "NULL cookie", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	status = tegra_pcie_dma_submit_xfer(prv, NULL);
+	validate_api_status("tegra_pcie_dma_submit_xfer", "NULL xfer", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	status = tegra_pcie_dma_stop(NULL);
+	validate_api_status("tegra_pcie_dma_stop", "NULL cookie", status,
+			    (tegra_pcie_dma_status_t)false);
+
+	status = tegra_pcie_dma_deinit(NULL);
+	validate_api_status("tegra_pcie_dma_deinit", "NULL cookie", status,
+			    TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS);
+
+	status = tegra_pcie_dma_stop(prv);
+	validate_api_status("tegra_pcie_dma_stop", "Valid param", status,
+			    (tegra_pcie_dma_status_t)true);
+
+	status = tegra_pcie_dma_deinit(&prv);
+	validate_api_status("tegra_pcie_dma_deinit", "Valid param", status, TEGRA_PCIE_DMA_SUCCESS);
+
+	return 0;
+}
+
+static void validate_bar(struct pcie_epf_dma *epfnv, struct pci_epf_bar *bar, char *err_str)
+{
+	int ret = lpci_epc_set_bar(epfnv->epc, epfnv->epf->func_no, bar);
+
+	if (ret < 0)
+		dev_err(epfnv->fdev, "%s - Passed: %d\n", err_str, ret);
+	else
+		dev_err(epfnv->fdev, "%s - Failed\n", err_str);
+}
+
+static void sanitize_bar(struct pci_epf_bar *bar)
+{
+	bar->barno = BAR_1;
+	bar->size = SZ_64M;
+	bar->flags = PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH;
+}
+
+static int bar_neg_test(struct seq_file *s, void *data)
+{
+	struct pcie_epf_dma *epfnv = (struct pcie_epf_dma *)dev_get_drvdata(s->private);
+	struct pcie_epf_bar *epf_bar = (struct pcie_epf_bar *)epfnv->bar_virt;
+	struct pci_epf_bar bar = {};
+
+	if (epfnv->chip_id == TEGRA234) {
+		dev_err(epfnv->fdev, "%s: Not supported for T234 or when Link is already up\n",
+			__func__);
+		return -EOPNOTSUPP;
+	}
+
+	bar.phys_addr = epf_bar->rp_phy_addr;
+
+	if (epf_bar->rp_phy_addr) {
+		sanitize_bar(&bar);
+		validate_bar(epfnv, &bar, "set_bar post link up");
+		return 0;
+	}
+	sanitize_bar(&bar);
+	bar.flags = PCI_BASE_ADDRESS_MEM_TYPE_32 | PCI_BASE_ADDRESS_MEM_PREFETCH;
+	validate_bar(epfnv, &bar, "non 64-bit bar check");
+
+	sanitize_bar(&bar);
+	bar.size = SZ_32;
+	validate_bar(epfnv, &bar, "BAR1 less than 64M size check");
+
+	sanitize_bar(&bar);
+	bar.size = SZ_64 - 1;
+	validate_bar(epfnv, &bar, "BAR1 non power of 2 check");
+
+	sanitize_bar(&bar);
+	bar.barno = BAR_2;
+	validate_bar(epfnv, &bar, "BAR2 non 32 MB check");
+
+	sanitize_bar(&bar);
+	bar.size = (SZ_32G * 2) + 1;
+	validate_bar(epfnv, &bar, "BAR1 64 GB+1 check");
+
+	sanitize_bar(&bar);
+	bar.barno = BAR_3;
+	validate_bar(epfnv, &bar, "BAR3 non supported check");
+	return 0;
+}
+
+static int clear_bar(struct seq_file *s, void *data)
+{
+	struct pcie_epf_dma *epfnv = (struct pcie_epf_dma *)dev_get_drvdata(s->private);
+	struct pcie_epf_bar *epf_bar = (struct pcie_epf_bar *)epfnv->bar_virt;
+	struct pci_epf_bar *bar = &epfnv->epf->bar[BAR_2];
+
+	if ((epfnv->chip_id == TEGRA234) || (!epf_bar->rp_phy_addr)) {
+		dev_err(epfnv->fdev, "%s: Not supported for T234 or when Link is not up\n",
+			__func__);
+		return -EOPNOTSUPP;
+	}
+
+	lpci_epc_clear_bar(epfnv->epc, epfnv->epf->func_no, bar);
+	dev_err(epfnv->fdev, "%s:  EPF BAR_2 Clear attempted. Check BAR0/1 access\n",
+		__func__);
+
+	return 0;
+}
+
 static void init_debugfs(struct pcie_epf_dma *epfnv)
 {
 	debugfs_create_devm_seqfile(epfnv->fdev, "edmalib_test", epfnv->debugfs, edmalib_test);
 
 	debugfs_create_devm_seqfile(epfnv->fdev, "edmalib_test_ob", epfnv->debugfs,
 				    edmalib_test_ob);
+
+	debugfs_create_devm_seqfile(epfnv->fdev, "dma_neg_test", epfnv->debugfs, dma_neg_test);
+
+	debugfs_create_devm_seqfile(epfnv->fdev, "bar_neg_test", epfnv->debugfs, bar_neg_test);
+
+	debugfs_create_devm_seqfile(epfnv->fdev, "clear_bar", epfnv->debugfs, clear_bar);
+
 
 	debugfs_create_u32("dma_size", 0644, epfnv->debugfs, &epfnv->dma_size);
 	epfnv->dma_size = SZ_1M;
