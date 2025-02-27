@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2014-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -2202,7 +2202,7 @@ static void _nvadsp_get_os_version(struct nvadsp_handle *nvadsp_handle,
 #ifdef CONFIG_DEBUG_FS
 static int show_os_version(struct seq_file *s, void *data)
 {
-	struct nvadsp_os_data *priv = data;
+	struct nvadsp_os_data *priv = s->private;
 	struct nvadsp_drv_data *drv_data;
 	struct nvadsp_handle *nvadsp_handle;
 	char ver_buf[MAX_OS_VERSION_BUF] = "";
