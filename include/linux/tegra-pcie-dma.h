@@ -6,6 +6,7 @@
 #ifndef TEGRA_PCIE_DMA_H
 #define TEGRA_PCIE_DMA_H
 
+#ifndef DOXYGEN_ICD
 /**
  * @brief
  * Number of read channels supported.
@@ -15,20 +16,22 @@
  * these channels are used.
  */
 #define TEGRA_PCIE_DMA_RD_CHNL_NUM	4
+#endif
 
 /**
  * @brief
  * Number of write channels supported.
  */
 #define TEGRA_PCIE_DMA_WR_CHNL_NUM	4
-
 /** Size of DMA descriptor to allocate */
 #define TEGRA_PCIE_DMA_DESC_SZ		32
 
 /** MSI IRQ vector number to use on NVPCIE_DMA_SOC_T264 SoC for genrating local interrupt */
 #define TEGRA264_PCIE_DMA_MSI_LOCAL_VEC		4
+#ifndef DOXYGEN_ICD
 /** MSI IRQ vector number to use on NVPCIE_DMA_SOC_T264 SoC for generating remote interrupt */
 #define TEGRA264_PCIE_DMA_MSI_REMOTE_VEC	5
+#endif
 
 #ifndef NV_CONFIG_PCIE_TEGRA_DMA_DISABLE
 /** Enable generic PCIe DMA driver */
@@ -69,14 +72,18 @@ typedef enum {
  */
 typedef enum {
 	TEGRA_PCIE_DMA_WRITE = 0,
+#ifndef DOXYGEN_ICD
 	TEGRA_PCIE_DMA_READ,
+#endif
 } tegra_pcie_dma_xfer_type_t;
 
 /**
- * @brief typedef to define various supported SoC's for DMA
+ * @brief typedef to define various channel type for DMA
  */
 typedef enum {
+#ifndef DOXYGEN_ICD
 	TEGRA_PCIE_DMA_CHAN_XFER_SYNC = 0,
+#endif
 	TEGRA_PCIE_DMA_CHAN_XFER_ASYNC,
 } tegra_pcie_dma_chan_type_t;
 
@@ -95,6 +102,7 @@ struct tegra_pcie_dma_desc;
 /** @brief Tx Async callback function pointer */
 typedef void (tegra_pcie_dma_complete_t)(void *priv, tegra_pcie_dma_status_t status);
 
+#ifndef DOXYGEN_ICD
 /** @brief
  * Remote DMA controller details.
  */
@@ -110,10 +118,11 @@ struct tegra_pcie_dma_remote_info {
 	 */
 	uint32_t dma_size;
 };
+#endif
 
 /** @brief details of DMA Tx channel configuration */
 struct tegra_pcie_dma_chans_info {
-	/** Variable to specify if corresponding channel should run in Sync/Async mode. */
+	/** Variable to specify if corresponding channel type should run. */
 	tegra_pcie_dma_chan_type_t ch_type;
 	/** Number of descriptors that needs to be configured for this channel. Max value 32K.
 	 *  @note
@@ -121,6 +130,7 @@ struct tegra_pcie_dma_chans_info {
 	 *   - else it must be power of 2.
 	 */
 	uint32_t num_descriptors;
+#ifndef DOXYGEN_ICD
 	/* Below parameter are used, only if remote is present in #tegra_pcie_dma_init_info */
 	/**
 	 * Descriptor PHY base allocated by client which is part of BAR0 in NVPCIE_DMA_SOC_T234 and
@@ -129,12 +139,14 @@ struct tegra_pcie_dma_chans_info {
 	phys_addr_t desc_phy_base;
 	/** Abosolute IOVA address of desc of desc_phy_base. */
 	dma_addr_t desc_iova;
+#endif
 };
 
 /** @brief init data structure to be used for tegra_pcie_dma_init() API */
 struct tegra_pcie_dma_init_info {
 	/** configuration details for dma Tx channels */
 	struct tegra_pcie_dma_chans_info tx[TEGRA_PCIE_DMA_WR_CHNL_NUM];
+#ifndef DOXYGEN_ICD
 	/** configuration details for dma Rx channels */
 	struct tegra_pcie_dma_chans_info rx[TEGRA_PCIE_DMA_RD_CHNL_NUM];
 	/**
@@ -142,6 +154,7 @@ struct tegra_pcie_dma_init_info {
 	 * else uses local controller DMA engine.
 	 */
 	struct tegra_pcie_dma_remote_info *remote;
+#endif
 	/**
 	 * device node for corresponding dma controller.
 	 * This contains &pci_dev.dev pointer of RP's pci_dev for RP DMA write.
