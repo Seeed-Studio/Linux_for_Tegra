@@ -236,7 +236,7 @@ static int tegra264_pcie_ep_write_header(struct pci_epc *epc, u8 fn,
  *
  * @return
  * - 0 on If Bar details are in range..
- * - -EINVAL if Bar configuration is not supported
+ * - -EINVAL if Bar configuration is not supported or called once link is established.
  */
 static int tegra264_pcie_ep_set_bar(struct pci_epc *epc, u8 fn,
 #if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
@@ -324,7 +324,8 @@ static void tegra264_pcie_ep_clear_bar(struct pci_epc *epc, u8 fn,
  *   if called before controller is initialized.
  *
  * @outcome
- * - On success, mapping details in Tegra264 EP controller register is updated.
+ * - On success, outbound address is mapped to controller aperture and caller can access
+ *   remote memory.
  */
 static int tegra264_pcie_ep_map_addr(struct pci_epc *epc, u8 func_no,
 #if defined(NV_PCI_EPC_WRITE_HEADER_HAS_VFN_ARG)
