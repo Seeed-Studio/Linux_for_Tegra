@@ -10,7 +10,7 @@
 
 /* camera control gpio definitions */
 #define CAM0_RST_L	TEGRA264_MAIN_GPIO(V, 2)
-#define	JETSON_COMPATIBLE	"nvidia,p3971-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264"
+#define JETSON_COMPATIBLE	"nvidia,p3971-0089+p3834-0008", "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264"
 
 / {
 	overlay-name = "Jetson Camera IMX390 sensor 0x21";
