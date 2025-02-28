@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,10 @@ maintainers:
   - Mihir Pradeep Garude
 
 description: |
+     The compatibility = nvidia,tegra264-display is mentioned in the following drivers
+        - For DisplayServer <TOP>/display/drivers/drivers/
+        - For OpenRM <TOP>/gpu/drv/
+
      The following nodes use this compatibility
         - /display@8808c00000
 
@@ -288,27 +292,18 @@ properties:
             enum:
                 - read-1
 
-
-    iommus:
-        $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
-        description: |
-            iommus are given by a tuple of 2 values:
-                - Phandle to the device
-                - Device ID
-        items:
-            minItems: 2
-            maxItems: 2
-            items:
-                - $ref: "/schemas/types.yaml#/definitions/uint32"
-                - $ref: "/schemas/types.yaml#/definitions/uint32"
-                  minimum: 0x900
-                  maximum: 0x900
-
     non-coherent:
         $ref: "/schemas/types.yaml#/definitions/flag"
 
-    single_stage_iso_smmu:
-        $ref: "/schemas/types.yaml#/definitions/flag"
+    iso_sid:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x900
+        maximum: 0x900
+
+    niso_sid:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x901
+        maximum: 0x901
 
 required:
     - compatible

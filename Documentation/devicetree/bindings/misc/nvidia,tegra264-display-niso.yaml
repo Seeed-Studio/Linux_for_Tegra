@@ -20,6 +20,10 @@ maintainers:
   - Mihir Pradeep Garude
 
 description: |
+     The compatibility = nvidia,tegra264-display-niso is mentioned in the following drivers
+        - For DisplayServer <TOP>/display/drivers/drivers/
+        - For OpenRM <TOP>/gpu/drv/
+
      The following nodes use this compatibility
         - /display@8808c00000/nvdisplay-niso
 
