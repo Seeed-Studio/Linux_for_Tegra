@@ -12,8 +12,8 @@
 #define CAM1_PWDN       TEGRA264_MAIN_GPIO(Q, 2)
 
 /* Not used - #define PWR_EN          TEGRA264_MAIN_GPIO(AC, 7) */
-/* disabled for now - #define GYRO1_IRQ_GPIO  TEGRA264_AON_GPIO(CC, 1) */
-/* disabled for now - #define ACCE1_IRQ_GPIO  TEGRA264_AON_GPIO(CC, 0) */
+#define ACCE1_IRQ_GPIO  TEGRA264_AON_GPIO(CC, 7)
+#define GYRO1_IRQ_GPIO  TEGRA264_AON_GPIO(DD, 0)
 
 / {
 	fragment-camera-hawk-owl@0 {
@@ -124,12 +124,12 @@
 								compatible = "bmi,bmi088";
 								reg = <0x69>;
 								accel_i2c_addr = <0x19>;
-								/* accel_irq-gpios = <&gpio_main_aon ACCE1_IRQ_GPIO GPIO_ACTIVE_HIGH>; */
-								/* gyro_irq-gpios = <&gpio_main_aon GYRO1_IRQ_GPIO GPIO_ACTIVE_HIGH>; */
+								accel_irq-gpios = <&gpio_aon ACCE1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
+								gyro_irq-gpios = <&gpio_aon GYRO1_IRQ_GPIO GPIO_ACTIVE_HIGH>;
 								accel_matrix = [01 00 00 00 01 00 00 00 01];
 								gyro_matrix = [01 00 00 00 01 00 00 00 01];
 								gyro_reg_0x18 = <0x81>;
-								/* timestamps = <&hte_aon ACCE1_IRQ_GPIO>, <&hte_aon GYRO1_IRQ_GPIO>; */
+								timestamps = <&hte_aon ACCE1_IRQ_GPIO>, <&hte_aon GYRO1_IRQ_GPIO>;
 								timestamp-names = "accelerometer", "gyroscope";
 								status = "disabled";
 							};

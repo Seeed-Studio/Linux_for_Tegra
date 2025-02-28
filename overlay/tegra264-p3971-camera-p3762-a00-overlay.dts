@@ -8,16 +8,6 @@
 #include <dt-bindings/gpio/tegra264-gpio.h>
 #include <dt-bindings/clock/tegra264-clk.h>
 
-/* camera control gpio definitions */
-#define CAM0_RST_L      TEGRA264_MAIN_GPIO(V, 2)
-#define CAM0_PWDN       TEGRA264_MAIN_GPIO(AL, 1)
-#define CAM1_RST_L      TEGRA264_MAIN_GPIO(Q, 3)
-#define CAM1_PWDN       TEGRA264_MAIN_GPIO(Q, 2)
-
-/* Not used - #define PWR_EN          TEGRA264_MAIN_GPIO(AC, 7) */
-/* #define GYRO1_IRQ_GPIO  TEGRA264_AON_GPIO(CC, 1) */
-/* #define ACCE1_IRQ_GPIO  TEGRA264_AON_GPIO(CC, 0) */
-
 / {
 	overlay-name = "Jetson Camera Hawk-Owl p3762 module";
 	jetson-header-name = "Jetson AGX CSI Connector";
@@ -52,17 +42,7 @@
 						status = "okay";
 						i2c@0 {
 							bmi088_a@69 {
-								compatible = "bmi,bmi088";
-								reg = <0x69>;
-								accel_i2c_addr = <0x19>;
-								/* accel_irq-gpios = <&gpio_aon ACCE1_IRQ_GPIO GPIO_ACTIVE_HIGH>; */
-								/* gyro_irq-gpios = <&gpio_aon GYRO1_IRQ_GPIO GPIO_ACTIVE_HIGH>; */
-								accel_matrix = [01 00 00 00 01 00 00 00 01];
-								gyro_matrix = [01 00 00 00 01 00 00 00 01];
-								gyro_reg_0x18 = <0x81>;
-								/* timestamps = <&hte_aon ACCE1_IRQ_GPIO>, <&hte_aon GYRO1_IRQ_GPIO>; */
-								timestamp-names = "accelerometer", "gyroscope";
-								status = "disabled";
+								status = "okay";
 							};
 							ar0234_a@30 {
 								status = "okay";
