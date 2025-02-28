@@ -7480,6 +7480,40 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_FOLIO_ENTIRE_MAPCOUNT_PRESENT" "" "functions"
         ;;
 
+        follow_pfn)
+            #
+            # Determine if function follow_pfn() is present.
+            #
+            # Commit cb10c28ac82c9 ("mm: remove follow_pfn")
+            # remove follow_pfn() in Linux v6.10.
+            #
+            CODE="
+            #include <linux/mm.h>
+            int conftest(void)
+            {
+                return follow_pfn();
+            }"
+
+            compile_check_conftest "$CODE" "NV_FOLLOW_PFN_PRESENT" "" "functions"
+        ;;
+
+        follow_pfnmap_start)
+            #
+            # Determine if function follow_pfnmap_start() is present.
+            #
+            # Commit 6da8e9634bb7e3 ("mm: new follow_pfnmap API")
+            # add follow_pfnmap_start() in Linux v6.12.
+            #
+            CODE="
+            #include <linux/mm.h>
+            int conftest(void)
+            {
+                return follow_pfnmap_start();
+            }"
+
+            compile_check_conftest "$CODE" "NV_FOLLOW_PFNMAP_START_PRESENT" "" "functions"
+        ;;
+
         fop_unsigned_offset)
             #
             # Determine if definition FOP_UNSIGNED_OFFSET is present.

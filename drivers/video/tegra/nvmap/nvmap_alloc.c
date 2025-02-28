@@ -353,7 +353,7 @@ static const unsigned int heap_policy_excl[] = {
 
 static int nvmap_page_from_vma(struct vm_area_struct *vma, ulong vaddr, struct page **page)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+#if defined(NV_FOLLOW_PFNMAP_START_PRESENT)
 	unsigned long pfn;
 	struct follow_pfnmap_args args = {
 		.vma = vma,
@@ -379,7 +379,7 @@ static int nvmap_page_from_vma(struct vm_area_struct *vma, ulong vaddr, struct p
 
 fail:
 	return -EINVAL;
-#else
+#elif defined(NV_FOLLOW_PFN_PRESENT)
 	unsigned long pfn;
 
 	if (follow_pfn(vma, vaddr, &pfn)) {
@@ -397,6 +397,33 @@ fail:
 	return 0;
 
 fail:
+	return -EINVAL;
+#else
+	unsigned long pfn;
+	spinlock_t *ptl;
+	pte_t *ptep;
+
+	mmap_read_lock(current->mm);
+	if (follow_pte(vma, vaddr, &ptep, &ptl)) {
+		pr_err("follow_pte failed\n");
+		goto fail;
+	}
+
+	pfn = pte_pfn(ptep_get(ptep));
+	if (!pfn_is_map_memory(pfn)) {
+		pr_err("no-map memory not allowed\n");
+		pte_unmap_unlock(ptep, ptl);
+		goto fail;
+	}
+
+	*page = pfn_to_page(pfn);
+	get_page(*page);
+	pte_unmap_unlock(ptep, ptl);
+	mmap_read_unlock(current->mm);
+	return 0;
+
+fail:
+	mmap_read_unlock(current->mm);
 	return -EINVAL;
 #endif
 }
