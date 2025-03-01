@@ -1333,9 +1333,10 @@ static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	 */
 	ufshcd_set_link_off(hba);
 
-	/* TODO: Check why disabling clocks causing crash */
 	if (ufs_tegra->soc->chip_id == TEGRA264) {
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 		hba->is_ufs_already_enabled = false;
+#endif
 		ufs_tegra->mask_hs_mode_b = false;
 		goto end;
 	}
@@ -1504,10 +1505,11 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 
 	switch (status) {
 	case PRE_CHANGE:
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 		/* Return if ufs is already initialised */
 		if (hba->is_ufs_already_enabled)
 			return 0;
-
+#endif
 		/* Update VS_DebugSaveConfigTime Tref */
 		ufshcd_dme_get(hba, UIC_ARG_MIB(VS_DEBUGSAVECONFIGTIME),
 			       &vs_save_config);
@@ -1594,11 +1596,11 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 		       sizeof(struct ufs_pa_layer_attr));
 		break;
 	case POST_CHANGE:
-
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 		/* Return if ufs is already initialised */
 		if (hba->is_ufs_already_enabled)
 			return 0;
-
+#endif
 		ufs_tegra_print_power_mode_config(hba, dev_req_params);
 		ufshcd_dme_get(hba, UIC_ARG_MIB(PA_SCRAMBLING), &pa_reg_check);
 		if (pa_reg_check & SCREN)
@@ -1620,11 +1622,11 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 
 	switch (status) {
 	case PRE_CHANGE:
-
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 		/* Return if ufs is already initialised */
 		if (hba->is_ufs_already_enabled)
 			return 0;
-
+#endif
 		if (ufs_tegra->soc->chip_id != TEGRA264) {
 			err = ufs_tegra_host_clk_enable(dev,
 							"mphy_force_ls_mode",
@@ -1638,11 +1640,11 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 				   UFSHC_AUX_UFSHC_DEV_CTRL_0);
 		break;
 	case POST_CHANGE:
-
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 		/* Return if ufs is already initialised */
 		if (hba->is_ufs_already_enabled)
 			return 0;
-
+#endif
 		ufs_aux_clear_bits(ufs_tegra->ufs_aux_base,
 				   UFSHC_CG_SYS_CLK_OVR_ON,
 				   UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_0);
@@ -1712,20 +1714,22 @@ static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,
 
 	switch (status) {
 	case PRE_CHANGE:
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 		/* Link is initialized by earlier firmware */
 		if (hba->is_ufs_already_enabled)
 			return 0;
-
+#endif
 		ufs_tegra_mphy_rx_sync_capability(ufs_tegra);
 		ufs_tegra_unipro_pre_linkup(hba);
 		/* Enable TX link calibration */
 		err = ufs_tegra_mphy_tx_calibration_enable(ufs_tegra);
 		break;
 	case POST_CHANGE:
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 		/* Link is initialized by earlier firmware */
 		if (hba->is_ufs_already_enabled)
 			return 0;
-
+#endif
 		/* Check TX link calibration status */
 		err = ufs_tegra_mphy_check_tx_calibration_done_status(ufs_tegra);
 		if (err) {
@@ -1843,8 +1847,9 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	resource_size_t ufs_virt_base_addr = 0, ufs_virt_addr_range = 0;
 	struct iommu_fwspec *fwspec;
 	u32 virt_ctrl_en = 0;
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 	u32 val;
-
+#endif
 	ufs_tegra = devm_kzalloc(dev, sizeof(*ufs_tegra), GFP_KERNEL);
 	if (!ufs_tegra) {
 		err = -ENOMEM;
@@ -1859,7 +1864,9 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	ufs_tegra->ufshc_state = UFSHC_INIT;
 	ufs_tegra->hba = hba;
 	hba->priv = (void *)ufs_tegra;
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 	hba->is_ufs_already_enabled = false;
+#endif
 
 	err = ufs_tegra_config_soc_data(ufs_tegra);
 	if (err)
@@ -2002,6 +2009,7 @@ ufs_clk_deassert:
 	if (tegra_sku_info.platform == TEGRA_PLATFORM_SYSTEM_FPGA)
 		goto end;
 
+#if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 	val = ufshcd_readl(hba, REG_CONTROLLER_ENABLE);
 	if (val) {
 		/* If already initialised, do not configure ufs */
@@ -2011,7 +2019,7 @@ ufs_clk_deassert:
 		/* ufs already initialised. Do not configure ufs */
 		goto end;
 	}
-
+#endif
 	err = ufs_tegra_mphy_rx_advgran(ufs_tegra);
 	if (err)
 		goto out_disable_mphylane_clks;

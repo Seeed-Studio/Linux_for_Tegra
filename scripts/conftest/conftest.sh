@@ -8783,6 +8783,21 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_UFSHCD_QUIRKS_ENUM_HAS_UFSHCD_QUIRK_BROKEN_POWER_SEQUENCE" "" "types"
         ;;
 
+        ufshcd_ufs_hba_struct_has_bool_is_ufs_already_enabled)
+            #
+            # Determine if the 'ufs_hba' structure has
+            # bool 'is_ufs_already_enabled'.
+            #
+            #
+            CODE="
+            #include <ufs/ufshcd.h>
+            int ufshcd_ufs_hba_struct_has_bool_is_ufs_already_enabled(void) {
+                return offsetof(struct ufs_hba, is_ufs_already_enabled);
+            }"
+
+            compile_check_conftest "$CODE" "NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED" "" "types"
+        ;;
+
         v4l2_async_connection_struct_present)
             #
             # Determine if the 'struct v4l2_async_connection' present or not.
