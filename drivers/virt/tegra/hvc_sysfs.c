@@ -11,6 +11,7 @@
 #include <linux/mm.h>
 #include <linux/bug.h>
 #include <linux/io.h>
+#include <linux/overflow.h>
 #include <soc/tegra/virt/syscalls.h>
 #include <soc/tegra/virt/hv-ivc.h>
 #define TEGRA_HV_ERR(...) pr_err("hvc_sysfs: " __VA_ARGS__)
@@ -61,12 +62,18 @@ static int nvlog_buffer_mmap(struct file *fp, struct kobject *ko,
 			     struct vm_area_struct *vma)
 {
 	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, attr);
+	unsigned long result;
 
 	if ((info->ipa == 0) || (info->region_size == 0))
 		return -EINVAL;
 
 
-	if ((vma->vm_end - vma->vm_start) != attr->size)
+	if (check_sub_overflow(vma->vm_end, vma->vm_start, &result)) {
+		pr_err("%s: operation got overflown.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (result != attr->size)
 		return -EINVAL;
 
 	return remap_pfn_range(
@@ -202,8 +209,8 @@ static int hyp_nvlog_buffer_init(void)
 				goto fail;
 			}
 
-			strncpy(dir_name, nvlog_shmem_attrs[cntr].node_name, MAX_NAME_SIZE);
-			strncat(dir_name, "_dir", 4);
+			strscpy(dir_name, nvlog_shmem_attrs[cntr].node_name, MAX_NAME_SIZE);
+			strlcat(dir_name, "_dir", MAX_NAME_SIZE);
 			nvlog_shmem_attrs[cntr].kobj = kobject_create_and_add(dir_name, parent);
 			if (nvlog_shmem_attrs[cntr].kobj == NULL) {
 				TEGRA_HV_INFO("failed to add kobject\n");
@@ -243,12 +250,18 @@ static int hvc_sysfs_mmap(struct file *fp, struct kobject *ko,
 {
 	struct hyp_shared_memory_info *hyp_shm_info =
 		container_of(attr, struct hyp_shared_memory_info, attr);
+	unsigned long result;
 
 	if ((hyp_shm_info->ipa == 0) || (hyp_shm_info->size == 0))
 		return -EINVAL;
 
 
-	if ((vma->vm_end - vma->vm_start) != attr->size)
+	if (check_sub_overflow(vma->vm_end, vma->vm_start, &result)) {
+		pr_err("%s: operation got overflown.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (result != attr->size)
 		return -EINVAL;
 
 	return remap_pfn_range(
@@ -280,18 +293,29 @@ static int hvc_create_sysfs(
 static ssize_t log_mask_read(struct file *fp, struct kobject *ko,
 	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
 {
+	uint64_t value = 0;
+
 	/* Kernel checks for validity of buf, no need to check here. */
-	*(uint64_t *)buf = EventType;
-	if (size == sizeof(uint64_t))
-		hyp_trace_get_mask((uint64_t *)buf);
+	value = EventType;
+
+	if (size == sizeof(uint64_t)) {
+		hyp_trace_get_mask(&value);
+		memcpy(buf, &value, sizeof(value));
+	}
+
 	return size;
 }
 
 static ssize_t log_mask_write(struct file *fp, struct kobject *ko,
 	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
 {
+	uint64_t type, value;
+
+	memcpy(&type, buf, sizeof(uint64_t));
+	memcpy(&value, buf + sizeof(uint64_t), sizeof(uint64_t));
+
 	if (size == 2 * sizeof(uint64_t))
-		hyp_trace_set_mask(*(uint64_t *)buf, *((uint64_t *)buf + 1));
+		hyp_trace_set_mask(type, value);
 	else
 		EventType = *buf;
 
