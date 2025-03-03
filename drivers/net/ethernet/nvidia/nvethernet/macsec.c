@@ -14,8 +14,6 @@ static bool macsec_enable = true;
 module_param(macsec_enable, bool, 0644);
 MODULE_PARM_DESC(macsec_enable, "Enable Macsec for nvethernet module");
 
-static int macsec_get_tx_next_pn(struct sk_buff *skb, struct genl_info *info);
-
 #ifndef MACSEC_KEY_PROGRAM
 static int macsec_tz_kt_config(struct ether_priv_data *pdata,
 			unsigned char cmd,
@@ -429,7 +427,7 @@ static struct macsec_supplicant_data *macsec_get_supplicant(
 	return NULL;
 }
 
-static int macsec_set_cipher(struct sk_buff *skb, struct genl_info *info)
+int macsec_set_cipher(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata;
@@ -544,7 +542,7 @@ static int parse_sa_config(struct nlattr **attrs, struct nlattr **tb_sa,
 	return 0;
 }
 
-static int macsec_dis_rx_sa(struct sk_buff *skb, struct genl_info *info)
+int macsec_dis_rx_sa(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata;
@@ -660,7 +658,7 @@ static int hkey_generation(nveu8_t *sak, nveu8_t *hkey)
 }
 #endif /* MACSEC_KEY_PROGRAM */
 
-static int macsec_create_rx_sa(struct sk_buff *skb, struct genl_info *info)
+int macsec_create_rx_sa(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata;
@@ -759,7 +757,7 @@ exit:
 	return ret;
 }
 
-static int macsec_en_rx_sa(struct sk_buff *skb, struct genl_info *info)
+int macsec_en_rx_sa(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata;
@@ -812,7 +810,7 @@ exit:
 	return ret;
 }
 
-static int macsec_dis_tx_sa(struct sk_buff *skb, struct genl_info *info)
+int macsec_dis_tx_sa(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata;
@@ -894,7 +892,7 @@ exit:
 	return ret;
 }
 
-static int macsec_create_tx_sa(struct sk_buff *skb, struct genl_info *info)
+int macsec_create_tx_sa(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata;
@@ -991,7 +989,7 @@ exit:
 	return ret;
 }
 
-static int macsec_en_tx_sa(struct sk_buff *skb, struct genl_info *info)
+int macsec_en_tx_sa(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata;
@@ -1045,7 +1043,7 @@ exit:
 	return ret;
 }
 
-static int macsec_deinit(struct sk_buff *skb, struct genl_info *info)
+int macsec_deinit(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata = NULL;
@@ -1116,7 +1114,7 @@ exit:
 	return ret;
 }
 
-static int macsec_init(struct sk_buff *skb, struct genl_info *info)
+int macsec_init(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata = NULL;
@@ -1190,7 +1188,7 @@ exit:
 	return ret;
 }
 
-static int macsec_set_replay_prot(struct sk_buff *skb, struct genl_info *info)
+int macsec_set_replay_prot(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	unsigned int replay_prot, window;
@@ -1623,7 +1621,7 @@ fail:
 }
 #endif /* MACSEC_KEY_PROGRAM */
 
-static int macsec_get_tx_next_pn(struct sk_buff *skb, struct genl_info *info)
+int macsec_get_tx_next_pn(struct sk_buff *skb, struct genl_info *info)
 {
 	struct nlattr **attrs = info->attrs;
 	struct macsec_priv_data *macsec_pdata;

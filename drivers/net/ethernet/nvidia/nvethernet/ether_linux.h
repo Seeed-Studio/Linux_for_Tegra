@@ -48,6 +48,7 @@
 #include <linux/hrtimer.h>
 #include <linux/version.h>
 #include <linux/list.h>
+#include <net/genetlink.h>
 #include <net/pkt_sched.h>
 #include <soc/tegra/virt/hv-ivc.h>
 #include <soc/tegra/fuse.h>

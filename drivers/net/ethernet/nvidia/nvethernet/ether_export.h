@@ -192,4 +192,33 @@ struct ether_exported_ifr_data {
 	void *ptr;
 };
 
+enum nv_macsec_nl_commands {
+	/** MACSEC netlink command for MACSEC HW initilization */
+	NV_MACSEC_CMD_INIT,
+	/** MACSEC netlink command to get next PN */
+	NV_MACSEC_CMD_GET_TX_NEXT_PN,
+	/** MACSEC netlink command to set replay protection */
+	NV_MACSEC_CMD_SET_REPLAY_PROT,
+	/** MACSEC netlink command to set Cipher */
+	NV_MACSEC_CMD_SET_CIPHER,
+	/** MACSEC netlink command to create TX SA */
+	NV_MACSEC_CMD_CREATE_TX_SA,
+	/** MACSEC netlink command to enable TX SA */
+	NV_MACSEC_CMD_EN_TX_SA,
+	/** MACSEC netlink command to disable TX SA */
+	NV_MACSEC_CMD_DIS_TX_SA,
+	/** MACSEC netlink command to create RX SA */
+	NV_MACSEC_CMD_CREATE_RX_SA,
+	/** MACSEC netlink command to enable RX SA */
+	NV_MACSEC_CMD_EN_RX_SA,
+	/** MACSEC netlink command to disable RX SA */
+	NV_MACSEC_CMD_DIS_RX_SA,
+	/**MACSEC netlink command to TZ config */
+	NV_MACSEC_CMD_TZ_CONFIG,
+	/**MACSEC netlink command to TZ reset */
+	NV_MACSEC_CMD_TZ_KT_RESET,
+	/** MACSEC netlink command to de-initialize the MACSEC HW */
+	NV_MACSEC_CMD_DEINIT,
+};
+
 #endif /* ETHER_EXPORT_H */

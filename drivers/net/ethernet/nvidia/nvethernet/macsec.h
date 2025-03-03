@@ -6,7 +6,6 @@
 
 #include <osi_macsec.h>
 #include <linux/random.h>
-#include <net/genetlink.h>
 #include <crypto/internal/cipher.h>
 
 /**
@@ -177,21 +176,6 @@ static const struct nla_policy nv_macsec_genl_policy[NUM_NV_MACSEC_ATTR] = {
 	[NV_MACSEC_ATTR_TZ_KT_RESET] = { .type = NLA_NESTED },
 };
 
-enum nv_macsec_nl_commands {
-	NV_MACSEC_CMD_INIT,
-	NV_MACSEC_CMD_GET_TX_NEXT_PN,
-	NV_MACSEC_CMD_SET_REPLAY_PROT,
-	NV_MACSEC_CMD_SET_CIPHER,
-	NV_MACSEC_CMD_CREATE_TX_SA,
-	NV_MACSEC_CMD_EN_TX_SA,
-	NV_MACSEC_CMD_DIS_TX_SA,
-	NV_MACSEC_CMD_CREATE_RX_SA,
-	NV_MACSEC_CMD_EN_RX_SA,
-	NV_MACSEC_CMD_DIS_RX_SA,
-	NV_MACSEC_CMD_TZ_CONFIG,
-	NV_MACSEC_CMD_TZ_KT_RESET,
-	NV_MACSEC_CMD_DEINIT,
-};
 
 /**
  * @brief MACsec supplicant data structure

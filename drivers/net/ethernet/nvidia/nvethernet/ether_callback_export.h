@@ -25,7 +25,7 @@
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: Yes
  *      - Run time: No
  *      - De-initialization: No
@@ -81,7 +81,7 @@ int ether_probe(struct platform_device *pdev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: No
  *      - De-initialization: Yes
@@ -124,7 +124,7 @@ int ether_remove(struct platform_device *pdev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: No
  *      - De-initialization: Yes
@@ -165,7 +165,7 @@ void ether_shutdown(struct platform_device *pdev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: No
  *      - De-initialization: Yes
@@ -212,7 +212,7 @@ int ether_suspend_noirq(struct device *dev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: Yes
  *      - Run time: No
  *      - De-initialization: No
@@ -259,7 +259,7 @@ int ether_resume_noirq(struct device *dev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: Yes
  *      - Run time: No
  *      - De-initialization: No
@@ -316,7 +316,7 @@ int ether_open(struct net_device *dev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: No
  *      - De-initialization: Yes
@@ -364,7 +364,7 @@ int ether_close(struct net_device *ndev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -409,7 +409,7 @@ int ether_start_xmit(struct sk_buff *skb, struct net_device *ndev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -482,7 +482,7 @@ irqreturn_t ether_vm_isr(int irq, void *data);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -543,7 +543,7 @@ int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -607,7 +607,7 @@ int ether_siocdevprivate(struct net_device *dev, struct ifreq *rq,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -661,7 +661,7 @@ int ether_setup_tc(struct net_device *ndev, enum tc_setup_type type,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -708,7 +708,7 @@ int ether_change_mtu(struct net_device *ndev, int new_mtu);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -754,7 +754,7 @@ int ether_set_features(struct net_device *ndev, netdev_features_t feat);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -799,7 +799,7 @@ void ether_set_rx_mode(struct net_device *dev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -852,7 +852,7 @@ unsigned short ether_select_queue(struct net_device *dev,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -892,7 +892,7 @@ void ether_get_strings(struct net_device *dev, u32 stringset, u8 *data);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -940,7 +940,7 @@ void ether_adjust_link(struct net_device *dev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -984,7 +984,7 @@ void ether_get_ethtool_stats(struct net_device *dev,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1034,7 +1034,7 @@ int ether_get_sset_count(struct net_device *dev, int sset);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1078,7 +1078,7 @@ void ether_get_wol(struct net_device *ndev, struct ethtool_wolinfo *wol);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1126,7 +1126,7 @@ int ether_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1173,7 +1173,7 @@ void ether_selftest_run(struct net_device *dev,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1220,7 +1220,7 @@ int ether_get_rxnfc(struct net_device *ndev,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1266,7 +1266,7 @@ void ether_get_pauseparam(struct net_device *ndev,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1310,7 +1310,7 @@ int ether_set_pauseparam(struct net_device *ndev,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1353,7 +1353,7 @@ u32 ether_get_rxfh_key_size(struct net_device *ndev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1396,7 +1396,7 @@ u32 ether_get_rxfh_indir_size(struct net_device *ndev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1441,7 +1441,7 @@ unsigned int ether_get_msglevel(struct net_device *ndev);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1484,7 +1484,7 @@ void ether_set_msglevel(struct net_device *ndev, u32 level);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1527,7 +1527,7 @@ void ether_stats_work_func(struct work_struct *work);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1566,7 +1566,7 @@ void set_speed_work_func(struct work_struct *work);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1609,7 +1609,7 @@ void ether_get_tx_ts_work(struct work_struct *work);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1648,7 +1648,7 @@ void ether_restart_lane_bringup_task(struct tasklet_struct *t);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1690,7 +1690,7 @@ int ether_adjust_clock(struct ptp_clock_info *ptp, long scaled_ppm);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1732,7 +1732,7 @@ int ether_adjust_time(struct ptp_clock_info *ptp, s64 nsec_delta);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1775,7 +1775,7 @@ int ether_get_time(struct ptp_clock_info *ptp, struct timespec64 *ts);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1819,7 +1819,7 @@ int ether_set_time(struct ptp_clock_info *ptp, const struct timespec64 *ts);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1852,7 +1852,7 @@ void osd_restart_lane_bringup(void *priv, unsigned int en_disable);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1887,7 +1887,7 @@ int ether_padctrl_mii_rx_pins(void *priv, unsigned int enable);
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: Yes
  *      - Run time: Yes
  *      - De-initialization: Yes
@@ -1931,7 +1931,7 @@ int osd_ivc_send_cmd(void *priv, ivc_msg_common_t *ivc_buf,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -1974,7 +1974,7 @@ void osd_transmit_complete(void *priv, const struct osi_tx_swcx *swcx,
  *    - Sync/Asyc: Sync
  *    - Re-entrant: No
  * - Required Privileges: None.
- * - Operation Mode
+ * - API Group:
  *      - Initialization: No
  *      - Run time: Yes
  *      - De-initialization: No
@@ -2002,5 +2002,389 @@ void osd_receive_packet(void *priv, struct osi_rx_ring *rx_ring,
 			const struct osi_rx_pkt_cx *rx_pkt_cx,
 			struct osi_rx_swcx *rx_swcx);
 
+/* MACSEC Callbacks */
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_INIT netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: Yes
+ *      - Run time: No
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_init(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_SET_REPLAY_PROT netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_set_replay_prot(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_SET_CIPHER netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_set_cipher(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_DEINIT netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: No
+ *      - De-initialization: Yes
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_deinit(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_EN_TX_SA netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_en_tx_sa(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_CREATE_TX_SA netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_create_tx_sa(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_DIS_TX_SA netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_dis_tx_sa(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_EN_RX_SA netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_en_rx_sa(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_CREATE_RX_SA netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_create_rx_sa(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_DIS_RX_SA netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_dis_rx_sa(struct sk_buff *skb, struct genl_info *info);
+
+/**
+ * @brief
+ * Description:
+ * - Implementing the callback for
+ *   NVETHERNET_LINUX_PIF$NV_MACSEC_CMD_GET_TX_NEXT_PN netlink command.
+ *
+ * @param[in] skb:
+ *  - SKB data structure.
+ *  - Used Structure variables: None
+ * @param[in] info:
+ *  - Pointer to the genl_info structure.
+ *  - Used Structure variables: info->attrs
+ *
+ * @usage
+ * - Allowed context for the API call
+ *    - Interrupt: No
+ *    - Signal handler: No
+ *    - Thread-Safe: No
+ *    - Sync/Asyc: Sync
+ *    - Re-entrant: No
+ * - Required Privileges: None.
+ * - API Group:
+ *      - Initialization: No
+ *      - Run time: Yes
+ *      - De-initialization: No
+ *
+ * @pre This should be invoked following a successful
+ *   execution of the NVETHERNET_LINUX_PIF#ether_open event.
+ *
+ * @dir
+ * - forward
+ *
+ */
+int macsec_get_tx_next_pn(struct sk_buff *skb, struct genl_info *info);
 
 #endif /* ETHER_CALLBACK_EXPORT_H */
