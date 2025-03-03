@@ -103,6 +103,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	struct page **pages;
 	gfp_t gfp = GFP_NVMAP | __GFP_ZERO;
 	u64 result;
+	size_t tot_size;
 #ifdef CONFIG_ARM64_4K_PAGES
 	int cc_index = 0;
 #ifdef NVMAP_CONFIG_PAGE_POOLS
@@ -112,7 +113,10 @@ static int handle_page_alloc(struct nvmap_client *client,
 #endif
 #endif /* CONFIG_ARM64_4K_PAGES */
 
-	pages = nvmap_altalloc(nr_page * sizeof(*pages));
+	if (check_mul_overflow(nr_page, sizeof(*pages), &tot_size))
+		return -EOVERFLOW;
+
+	pages = nvmap_altalloc(tot_size);
 	if (!pages)
 		return -ENOMEM;
 
@@ -212,7 +216,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 fail:
 	while (i--)
 		__free_page(pages[i]);
-	nvmap_altfree(pages, nr_page * sizeof(*pages));
+	nvmap_altfree(pages, tot_size);
 	wmb();
 	return -ENOMEM;
 }
