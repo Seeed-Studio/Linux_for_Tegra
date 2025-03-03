@@ -1,28 +1,13 @@
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the terms and conditions of the GNU General Public License,
-# version 2, as published by the Free Software Foundation.
-#
-# This program is distributed in the hope it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-# more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-
+# SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/media/platform/tegra
 
-nvhost-nvcsi-objs  = \
-		nvcsi.o \
-		deskew.o
+nvhost-nvcsi-objs  := nvcsi.o
+
+ifneq ($(NV_BUILD_SYSTEM_TYPE),embedded-linux)
+ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
+nvhost-nvcsi-objs += nvhost-csi.o
+endif
+endif
 
 obj-m += nvhost-nvcsi.o
-ifneq ($(NV_BUILD_SYSTEM_TYPE),embedded-linux)
-nvhost-nvcsi-t194-objs = nvcsi-t194.o
-ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
-obj-m += nvhost-nvcsi-t194.o
-endif
-endif

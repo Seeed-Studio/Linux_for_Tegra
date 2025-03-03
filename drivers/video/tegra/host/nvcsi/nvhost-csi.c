@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
-#include "nvcsi-t194.h"
+#include "nvhost-csi.h"
 
 #include <uapi/linux/nvhost_nvcsi_ioctl.h>
 #include <linux/tegra-camera-rtcpu.h>
@@ -48,14 +48,14 @@
 #define CSIH				(1 << 27)
 
 static struct tegra_csi_device *mc_csi;
-struct t194_nvcsi {
+struct tegra_nvcsi {
 	struct platform_device *pdev;
 	struct tegra_csi_device csi;
 	struct dentry *dir;
 	struct clk *clk;
 };
 
-struct nvhost_device_data t19_nvcsi_info = {
+struct nvhost_device_data tegra_nvcsi_info = {
 	.moduleid		= 14, //NVHOST_MODULE_NVCSI,
 	.clocks			= {
 		{"nvcsi", 400000000},
@@ -65,31 +65,31 @@ struct nvhost_device_data t19_nvcsi_info = {
 	.can_powergate = true,
 };
 
-static const struct of_device_id tegra194_nvcsi_of_match[] = {
+static const struct of_device_id tegra_nvcsi_of_match[] = {
 	{
 		.compatible = "nvidia,tegra194-nvcsi",
-		.data = &t19_nvcsi_info,
+		.data = &tegra_nvcsi_info,
 	},
 	{ },
 };
-MODULE_DEVICE_TABLE(of, tegra194_nvcsi_of_match);
+MODULE_DEVICE_TABLE(of, tegra_nvcsi_of_match);
 
-struct t194_nvcsi_file_private {
+struct tegra_nvcsi_file_private {
 	struct platform_device *pdev;
 };
 
-static long t194_nvcsi_ioctl(struct file *file, unsigned int cmd,
+static long tegra_nvcsi_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)
 {
 	return -ENOIOCTLCMD;
 }
 
-static int t194_nvcsi_open(struct inode *inode, struct file *file)
+static int tegra_nvcsi_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
 					struct nvhost_device_data, ctrl_cdev);
 	struct platform_device *pdev = pdata->pdev;
-	struct t194_nvcsi_file_private *filepriv;
+	struct tegra_nvcsi_file_private *filepriv;
 
 	filepriv = kzalloc(sizeof(*filepriv), GFP_KERNEL);
 	if (unlikely(filepriv == NULL))
@@ -102,16 +102,16 @@ static int t194_nvcsi_open(struct inode *inode, struct file *file)
 	return nonseekable_open(inode, file);
 }
 
-static int t194_nvcsi_release(struct inode *inode, struct file *file)
+static int tegra_nvcsi_release(struct inode *inode, struct file *file)
 {
-	struct t194_nvcsi_file_private *filepriv = file->private_data;
+	struct tegra_nvcsi_file_private *filepriv = file->private_data;
 
 	kfree(filepriv);
 
 	return 0;
 }
 
-static int t194_nvcsi_module_init(struct platform_device *pdev)
+static int tegra_nvcsi_module_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	unsigned int i;
@@ -173,7 +173,7 @@ static int t194_nvcsi_module_init(struct platform_device *pdev)
 
 }
 
-static void t194_nvcsi_module_deinit(struct platform_device *pdev)
+static void tegra_nvcsi_module_deinit(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
@@ -183,23 +183,23 @@ static void t194_nvcsi_module_deinit(struct platform_device *pdev)
 }
 
 
-const struct file_operations tegra194_nvcsi_ctrl_ops = {
+const struct file_operations tegra_nvcsi_ctrl_fops = {
 	.owner = THIS_MODULE,
 #if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
 #endif
-	.unlocked_ioctl = t194_nvcsi_ioctl,
+	.unlocked_ioctl = tegra_nvcsi_ioctl,
 #ifdef CONFIG_COMPAT
-	.compat_ioctl = t194_nvcsi_ioctl,
+	.compat_ioctl = tegra_nvcsi_ioctl,
 #endif
-	.open = t194_nvcsi_open,
-	.release = t194_nvcsi_release,
+	.open = tegra_nvcsi_open,
+	.release = tegra_nvcsi_release,
 };
 
-int t194_nvcsi_early_probe(struct platform_device *pdev)
+static int tegra_nvcsi_early_probe(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata;
-	struct t194_nvcsi *nvcsi;
+	struct tegra_nvcsi *nvcsi;
 
 	pdata = (void *)of_device_get_match_data(&pdev->dev);
 	if (unlikely(pdata == NULL)) {
@@ -222,22 +222,22 @@ int t194_nvcsi_early_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int t194_nvcsi_set_rate(struct tegra_camera_dev_info *cdev_info, unsigned long rate)
+static int tegra_nvcsi_set_rate(struct tegra_camera_dev_info *cdev_info, unsigned long rate)
 {
 	struct nvhost_device_data *info = platform_get_drvdata(cdev_info->pdev);
-	struct t194_nvcsi *nvcsi = info->private_data;
+	struct tegra_nvcsi *nvcsi = info->private_data;
 
 	return clk_set_rate(nvcsi->clk, rate);
 }
 
-static struct tegra_camera_dev_ops t194_nvcsi_cdev_ops = {
-	.set_rate = t194_nvcsi_set_rate,
+static struct tegra_camera_dev_ops tegra_nvcsi_cdev_ops = {
+	.set_rate = tegra_nvcsi_set_rate,
 };
 
-int t194_nvcsi_late_probe(struct platform_device *pdev)
+static int tegra_nvcsi_late_probe(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct t194_nvcsi *nvcsi = pdata->private_data;
+	struct tegra_nvcsi *nvcsi = pdata->private_data;
 	struct tegra_camera_dev_info csi_info;
 	int err;
 
@@ -248,7 +248,7 @@ int t194_nvcsi_late_probe(struct platform_device *pdev)
 	csi_info.bus_width = CSI_BUS_WIDTH;
 	csi_info.lane_num = NUM_LANES;
 	csi_info.pg_clk_rate = PG_CLK_RATE;
-	csi_info.ops = &t194_nvcsi_cdev_ops;
+	csi_info.ops = &tegra_nvcsi_cdev_ops;
 
 	err = tegra_camera_device_register(&csi_info, nvcsi);
 	if (err)
@@ -261,14 +261,14 @@ int t194_nvcsi_late_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int t194_nvcsi_probe(struct platform_device *pdev)
+static int tegra_nvcsi_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *pdata;
-	struct t194_nvcsi *nvcsi;
+	struct tegra_nvcsi *nvcsi;
 	int err;
 
-	err = t194_nvcsi_early_probe(pdev);
+	err = tegra_nvcsi_early_probe(pdev);
 	if (err)
 		return err;
 
@@ -282,25 +282,25 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 		return PTR_ERR(nvcsi->clk);
 	}
 
-	err = t194_nvcsi_module_init(pdev);
+	err = tegra_nvcsi_module_init(pdev);
 	if (err)
 		return err;
 
-	err = t194_nvcsi_late_probe(pdev);
+	err = tegra_nvcsi_late_probe(pdev);
 	if (err)
 		goto deinit;
 
 	return 0;
 
 deinit:
-	t194_nvcsi_module_deinit(pdev);
+	tegra_nvcsi_module_deinit(pdev);
 	return err;
 }
 
-static int __exit t194_nvcsi_remove(struct platform_device *dev)
+static int __exit tegra_nvcsi_remove(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct t194_nvcsi *nvcsi = pdata->private_data;
+	struct tegra_nvcsi *nvcsi = pdata->private_data;
 
 	tegra_camera_device_unregister(nvcsi);
 	mc_csi = NULL;
@@ -309,7 +309,7 @@ static int __exit t194_nvcsi_remove(struct platform_device *dev)
 	return 0;
 }
 
-static int t194_nvcsi_runtime_suspend(struct device *dev)
+static int tegra_nvcsi_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_device_data *info = platform_get_drvdata(pdev);
@@ -319,7 +319,7 @@ static int t194_nvcsi_runtime_suspend(struct device *dev)
 	return 0;
 }
 
-static int t194_nvcsi_runtime_resume(struct device *dev)
+static int tegra_nvcsi_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
@@ -334,36 +334,36 @@ static int t194_nvcsi_runtime_resume(struct device *dev)
 	return 0;
 }
 
-const struct dev_pm_ops t194_nvcsi_pm_ops = {
-	SET_RUNTIME_PM_OPS(t194_nvcsi_runtime_suspend, t194_nvcsi_runtime_resume, NULL)
+const struct dev_pm_ops tegra_nvcsi_pm_ops = {
+	SET_RUNTIME_PM_OPS(tegra_nvcsi_runtime_suspend, tegra_nvcsi_runtime_resume, NULL)
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
-static void t194_nvcsi_remove_wrapper(struct platform_device *pdev)
+static void tegra_nvcsi_remove_wrapper(struct platform_device *pdev)
 {
-	t194_nvcsi_remove(pdev);
+	tegra_nvcsi_remove(pdev);
 }
 #else
-static int t194_nvcsi_remove_wrapper(struct platform_device *pdev)
+static int tegra_nvcsi_remove_wrapper(struct platform_device *pdev)
 {
-	return t194_nvcsi_remove(pdev);
+	return tegra_nvcsi_remove(pdev);
 }
 #endif
 
-static struct platform_driver t194_nvcsi_driver = {
-	.probe = t194_nvcsi_probe,
-	.remove = __exit_p(t194_nvcsi_remove_wrapper),
+static struct platform_driver nvcsi_driver = {
+	.probe = tegra_nvcsi_probe,
+	.remove = __exit_p(tegra_nvcsi_remove_wrapper),
 	.driver = {
 		.owner = THIS_MODULE,
-		.name = "t194-nvcsi",
+		.name = "tegra-nvcsi",
 #ifdef CONFIG_OF
-		.of_match_table = tegra194_nvcsi_of_match,
+		.of_match_table = tegra_nvcsi_of_match,
 #endif
 #ifdef CONFIG_PM
-		.pm = &t194_nvcsi_pm_ops,
+		.pm = &tegra_nvcsi_pm_ops,
 #endif
 	},
 };
 
-module_platform_driver(t194_nvcsi_driver);
+module_platform_driver(nvcsi_driver);
 MODULE_LICENSE("GPL");

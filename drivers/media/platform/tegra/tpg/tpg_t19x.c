@@ -1,10 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- *
- * Tegra VI test pattern generator driver
- *
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* Tegra VI test pattern generator driver */
 
 #include <linux/init.h>
 #include <linux/export.h>
@@ -14,7 +10,6 @@
 #include <media/mc_common.h>
 #include <media/csi.h>
 
-#include "nvcsi/nvcsi.h"
 #include <linux/host1x.h>
 #include "soc/tegra/camrtc-capture-messages.h"
 

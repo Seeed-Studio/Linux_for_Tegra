@@ -29,7 +29,7 @@
 #include <asm/barrier.h>
 #include "soc/tegra/camrtc-capture.h"
 #include <uapi/linux/nvhost_nvcsi_ioctl.h>
-#include "nvcsi/deskew.h"
+#include "deskew.h"
 
 #define DEFAULT_NUM_TPG_CHANNELS 6
 

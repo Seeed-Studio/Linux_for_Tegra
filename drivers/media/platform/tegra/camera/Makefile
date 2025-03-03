@@ -37,6 +37,7 @@ tegra-camera-objs += vi/graph.o
 tegra-camera-objs += vi/channel.o
 tegra-camera-objs += vi/core.o
 tegra-camera-objs += csi/csi.o
+tegra-camera-objs += csi/deskew.o
 tegra-camera-objs += nvcsi/csi5_fops.o
 endif
 

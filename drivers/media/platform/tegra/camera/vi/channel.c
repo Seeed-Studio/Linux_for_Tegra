@@ -53,8 +53,7 @@
 #include "mipical/mipi_cal.h"
 
 #include <uapi/linux/nvhost_nvcsi_ioctl.h>
-#include "nvcsi/nvcsi.h"
-#include "nvcsi/deskew.h"
+#include "camera/csi/deskew.h"
 
 #define TPG_CSI_GROUP_ID	10
 #define HDMI_IN_RATE 550000000

@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Deskew driver
- *
- * Copyright (c) 2014-2022, NVIDIA Corporation.  All rights reserved.
- */
-
+// SPDX-FileCopyrightText: Copyright (c) 2014-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* Deskew driver */
 #include "deskew.h"
 
 #include <linux/mutex.h>
@@ -26,8 +22,6 @@
 #include <linux/nvhost.h>
 
 #include <media/mc_common.h>
-
-//#include "camera/nvcsi/csi5_fops.h"
 
 static struct tegra_csi_device *mc_csi;
 static struct mutex deskew_lock;
@@ -742,4 +736,3 @@ void deskew_dbgfs_deskew_stats(struct seq_file *s)
 				debugfs_deskew_data_stats_low[i]);
 	}
 }
-

@@ -25,7 +25,6 @@
 #include <media/tegra_v4l2_camera.h>
 #include <media/mc_common.h>
 #include <media/csi.h>
-#include "nvcsi/nvcsi.h"
 
 /* -----------------------------------------------------------------------------
  * Graph Management

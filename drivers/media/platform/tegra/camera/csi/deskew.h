@@ -1,9 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Deskew driver
- *
- * Copyright (c) 2018-2022 NVIDIA Corporation.  All rights reserved.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. */
+/* All rights reserved. */
+/* Deskew driver */
 
 
 #ifndef __DESKEW_H__

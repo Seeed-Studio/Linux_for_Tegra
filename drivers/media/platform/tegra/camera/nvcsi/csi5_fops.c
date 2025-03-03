@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (c) 2016-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- *
- * Tegra CSI5 device common APIs
- */
+// SPDX-FileCopyrightText: Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* Tegra CSI5 device common APIs */
 
 #include <media/csi.h>
 #include <media/mc_common.h>
 #include <media/csi5_registers.h>
-#include "nvcsi/nvcsi.h"
 #include "csi5_fops.h"
 #include <linux/nospec.h>
 #include <linux/nvhost.h>

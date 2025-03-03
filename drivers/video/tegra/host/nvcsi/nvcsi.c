@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-/*
- * NVCSI driver
- */
-
+// SPDX-FileCopyrightText: Copyright (c) 2014-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+/* NVCSI driver */
 #include <nvidia/conftest.h>
 
 #include <linux/device.h>
@@ -27,9 +24,6 @@
 #include <media/csi.h>
 #include <media/tegra_camera_platform.h>
 
-//#include "camera/nvcsi/csi5_fops.h"
-
-#include "deskew.h"
 #include "nvcsi.h"
 
 #define PG_CLK_RATE	102000000
@@ -52,7 +46,6 @@ static struct tegra_csi_device *mc_csi;
 
 struct nvcsi_private {
 	struct platform_device *pdev;
-	struct nvcsi_deskew_context deskew_ctx;
 };
 
 int nvcsi_cil_sw_reset(int lanes, int enable)
@@ -78,32 +71,6 @@ int nvcsi_cil_sw_reset(int lanes, int enable)
 }
 EXPORT_SYMBOL_GPL(nvcsi_cil_sw_reset);
 
-static long nvcsi_ioctl(struct file *file, unsigned int cmd,
-			unsigned long arg)
-{
-	struct nvcsi_private *priv = file->private_data;
-	int ret;
-
-	switch (cmd) {
-	// sensor must be turned on before calling this ioctl, and streaming
-	// should be started shortly after.
-	case NVHOST_NVCSI_IOCTL_DESKEW_SETUP: {
-		unsigned int active_lanes;
-
-		dev_dbg(mc_csi->dev, "ioctl: deskew_setup\n");
-		priv->deskew_ctx.deskew_lanes = get_user(active_lanes,
-				(long __user *)arg);
-		ret = nvcsi_deskew_setup(&priv->deskew_ctx);
-		return ret;
-		}
-	case NVHOST_NVCSI_IOCTL_DESKEW_APPLY: {
-		dev_dbg(mc_csi->dev, "ioctl: deskew_apply\n");
-		ret = nvcsi_deskew_apply_check(&priv->deskew_ctx);
-		return ret;
-		}
-	}
-	return -ENOIOCTLCMD;
-}
 
 static int nvcsi_open(struct inode *inode, struct file *file)
 {
@@ -134,10 +101,6 @@ const struct file_operations tegra_nvcsi_ctrl_ops = {
 	.owner = THIS_MODULE,
 #if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
-#endif
-	.unlocked_ioctl = nvcsi_ioctl,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl = nvcsi_ioctl,
 #endif
 	.open = nvcsi_open,
 	.release = nvcsi_release,
