@@ -8454,7 +8454,7 @@
 	};
 
 	tegra-carveouts {
-		compatible = "nvidia,carveouts-t19x";
+		compatible = "nvidia,carveouts";
 		memory-region = <&vpr &fsi_reserved &vpr1>;
 		status = "disabled";
 	};
