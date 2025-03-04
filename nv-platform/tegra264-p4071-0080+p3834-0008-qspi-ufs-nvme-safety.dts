@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p4071-0080+p3834-0008-qspi-ufs-nvme.dts"
+
+/ {
+    model = "NVIDIA IGX500 Thor";
+    compatible = "nvidia,p4071-0080+p3834-0008", "safety", "nvidia,p4071-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+
+};

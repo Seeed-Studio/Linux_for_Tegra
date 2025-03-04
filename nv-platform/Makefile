@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 DTC_FLAGS += -@
 
@@ -15,6 +15,7 @@ dtb-y += tegra264-p3971-0080+p3834-0008-qspi-nvme.dtb
 dtb-y += tegra264-p3971-0089+p3834-0008-qspi-ufs.dtb
 dtb-y += tegra264-p3740-0002+p3834-0008-qspi-nvme.dtb
 dtb-y += tegra264-p4071-0080+p3834-0008-qspi-ufs-nvme.dtb
+dtb-y += tegra264-p4071-0080+p3834-0008-qspi-ufs-nvme-safety.dtb
 dtbo-y += tegra264-p3740-0002+p3834-0008-pcie-disable-in-uefi-dynamic.dtbo
 dtbo-y += tegra264-p3971-0000+p3834-xxxx-dynamic.dtbo
 dtbo-y += tegra264-android.dtbo
