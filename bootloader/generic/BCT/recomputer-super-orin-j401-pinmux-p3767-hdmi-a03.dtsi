@@ -531,7 +531,7 @@
 
 			pex_l9_rst_n_pag5 {
 				nvidia,pins = "pex_l9_rst_n_pag5";
-				nvidia,function = "pe9";
+				nvidia,function = "rsvd1";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
