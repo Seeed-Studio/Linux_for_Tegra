@@ -1084,11 +1084,13 @@ void ether_get_ethtool_stats(struct net_device *dev,
 		}
 
 #ifdef MACSEC_SUPPORT
-		ret = osi_macsec_read_mmc(osi_core);
-		if (ret == -1) {
-			dev_err(pdata->dev,
-				"Fail to read macsec stats\n");
-			return;
+		if (pdata->macsec_pdata) {
+			ret = osi_macsec_read_mmc(osi_core);
+			if (ret == -1) {
+				dev_err(pdata->dev,
+					"Fail to read macsec stats\n");
+				return;
+			}
 		}
 #endif /* MACSEC_SUPPORT */
 
