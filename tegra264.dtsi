@@ -6276,8 +6276,8 @@
 			};
 			pdma_h {
 				nvidia,pdma-chan = <7>;
-				nvidia,num-vdma-channels = <5>;
-				nvidia,vdma-channels = <7 8 9 10 11>;
+				nvidia,num-vdma-channels = <2>;
+				nvidia,vdma-channels = <7 8>;
 			};
 		};
 
@@ -6285,28 +6285,28 @@
 	        mgbe_vm_irq_config: mgbe-vm-irq-config {
 			nvidia,num-vm-irqs = <5>;
 			vm_irq1 {
-				nvidia,num-vm-channels = <2>;
-				nvidia,vm-channels = <0 1>;
+				nvidia,num-vm-channels = <1>;
+				nvidia,vm-channels = <0>;
 				nvidia,vm-num = <0>;
 			};
 			vm_irq2 {
-				nvidia,num-vm-channels = <2>;
-				nvidia,vm-channels = <2 3>;
+				nvidia,num-vm-channels = <1>;
+				nvidia,vm-channels = <1>;
 				nvidia,vm-num = <1>;
 			};
 			vm_irq3 {
-				nvidia,num-vm-channels = <2>;
-				nvidia,vm-channels = <4 5>;
+				nvidia,num-vm-channels = <1>;
+				nvidia,vm-channels = <2>;
 				nvidia,vm-num = <2>;
 			};
 			vm_irq4 {
 				nvidia,num-vm-channels = <1>;
-				nvidia,vm-channels = <6>;
+				nvidia,vm-channels = <3>;
 				nvidia,vm-num = <3>;
 			};
 			vm_irq5 {
 				nvidia,num-vm-channels = <5>;
-				nvidia,vm-channels = <7 8 9 10 11>;
+				nvidia,vm-channels = <4 5 6 7 8>;
 				nvidia,vm-num = <4>;
 			};
 		};
@@ -6447,8 +6447,8 @@
 			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
 				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
 				      "rx-pcs-m", "utmi_pll1_clk", "pll_bpmpcam", "tx_ser", "rx_ser";
-			nvidia,num-dma-chans = <8>;
-			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
+			nvidia,num-dma-chans = <9>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8>;
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE0_VF0>;
 			nvidia,num-mtl-queues = <10>;
 			nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
@@ -6469,8 +6469,8 @@
 			nvidia,tx_frames = <16>;
 			nvidia,phy-iface-mode = <2>; /* Use fixed 10G USXGMII mode */
 			nvidia,promisc_mode = <1>;
-			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
-			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
 			nvidia,ptp_ref_clock_speed = <312500000>;
 			nvidia,instance_id = <0>; /* MGBE0 instance */
 			nvidia,ptp-rx-queue = <3>;
@@ -6521,8 +6521,8 @@
 				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
 				      "rx-pcs-m", "utmi_pll1_clk", "pll_bpmpcam", "tx_ser", "rx_ser";
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE1_VF0>;
-			nvidia,num-dma-chans = <8>;
-			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
+			nvidia,num-dma-chans = <9>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8>;
 			nvidia,num-mtl-queues = <10>;
 			nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
 			nvidia,tc-mapping = <0 1 2 3 4 5 6 7 0 1>;
@@ -6541,8 +6541,8 @@
 			nvidia,tx_usecs = <256>;
 			nvidia,tx_frames = <16>;
 			nvidia,promisc_mode = <1>;
-			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
-			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
 			nvidia,ptp_ref_clock_speed = <312500000>;
 			nvidia,instance_id = <1>; /* MGBE1 instance */
 			nvidia,ptp-rx-queue = <3>;
@@ -6593,8 +6593,8 @@
 				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
 				      "rx-pcs-m", "utmi_pll1_clk", "pll_bpmpcam", "tx_ser", "rx_ser";
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE2_VF0>;
-			nvidia,num-dma-chans = <8>;
-			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
+			nvidia,num-dma-chans = <9>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8>;
 			nvidia,num-mtl-queues = <10>;
 			nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
 			nvidia,tc-mapping = <0 1 2 3 4 5 6 7 0 1>;
@@ -6613,8 +6613,8 @@
 			nvidia,tx_usecs = <256>;
 			nvidia,tx_frames = <16>;
 			nvidia,promisc_mode = <1>;
-			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
-			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
 			nvidia,ptp_ref_clock_speed = <312500000>;
 			nvidia,instance_id = <2>; /* MGBE2 instance */
 			nvidia,ptp-rx-queue = <3>;
@@ -6665,8 +6665,8 @@
 				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
 				      "rx-pcs-m", "utmi_pll1_clk", "pll_bpmpcam", "tx_ser", "rx_ser";
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE3_VF0>;
-			nvidia,num-dma-chans = <8>;
-			nvidia,dma-chans = <0 1 2 3 4 5 6 7>;
+			nvidia,num-dma-chans = <9>;
+			nvidia,dma-chans = <0 1 2 3 4 5 6 7 8>;
 			nvidia,num-mtl-queues = <10>;
 			nvidia,mtl-queues = <0 1 2 3 4 5 6 7 8 9>;
 			nvidia,tc-mapping = <0 1 2 3 4 5 6 7 0 1>;
@@ -6685,8 +6685,8 @@
 			nvidia,tx_usecs = <256>;
 			nvidia,tx_frames = <16>;
 			nvidia,promisc_mode = <1>;
-			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
-			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
+			nvidia,slot_num_check = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0>;
+			nvidia,slot_intvl_vals = <0x0 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D 0x7D>;
 			nvidia,ptp_ref_clock_speed = <312500000>;
 			nvidia,instance_id = <3>; /* MGBE3 instance */
 			nvidia,ptp-rx-queue = <3>;
@@ -9163,7 +9163,7 @@
 		compatible = "nvidia,tegra-camrtc-capture-coe";
 		nvidia,cam_controller = <&tegra_rce>;
 		nvidia,eth_controller = <&mgbe0>;
-		nvidia,eth_dma_chans = /bits/ 8 <7>;
+		nvidia,eth_dma_chans = /bits/ 8 <4 5 6 7 8>;
 		status = "disabled";
 	};
 
@@ -9171,7 +9171,7 @@
 		compatible = "nvidia,tegra-camrtc-capture-coe";
 		nvidia,cam_controller = <&tegra_rce>;
 		nvidia,eth_controller = <&mgbe1>;
-		nvidia,eth_dma_chans = /bits/ 8 <7>;
+		nvidia,eth_dma_chans = /bits/ 8 <4 5 6 7 8>;
 		status = "disabled";
 	};
 
@@ -9179,7 +9179,7 @@
 		compatible = "nvidia,tegra-camrtc-capture-coe";
 		nvidia,cam_controller = <&tegra_rce>;
 		nvidia,eth_controller = <&mgbe2>;
-		nvidia,eth_dma_chans = /bits/ 8 <7>;
+		nvidia,eth_dma_chans = /bits/ 8 <4 5 6 7 8>;
 		status = "disabled";
 	};
 
@@ -9187,7 +9187,7 @@
 		compatible = "nvidia,tegra-camrtc-capture-coe";
 		nvidia,cam_controller = <&tegra_rce>;
 		nvidia,eth_controller = <&mgbe3>;
-		nvidia,eth_dma_chans = /bits/ 8 <7>;
+		nvidia,eth_dma_chans = /bits/ 8 <4 5 6 7 8>;
 		status = "disabled";
 	};
 
