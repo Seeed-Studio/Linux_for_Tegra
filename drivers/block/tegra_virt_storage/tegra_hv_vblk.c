@@ -1297,10 +1297,13 @@ static void setup_device(struct vblk_dev *vblkdev)
 		 */
 		blk_queue_flag_set(QUEUE_FLAG_SECERASE, vblkdev->queue);
 #elif defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
-		limits.max_secure_erase_sectors = vblkdev->config.blk_config.max_erase_blks_per_io;
+		limits.max_secure_erase_sectors =
+			(vblkdev->config.blk_config.max_erase_blks_per_io *
+			 vblkdev->config.blk_config.hardblk_size) / SECTOR_SIZE;
 #else
 		blk_queue_max_secure_erase_sectors(vblkdev->queue,
-			vblkdev->config.blk_config.max_erase_blks_per_io);
+			((vblkdev->config.blk_config.max_erase_blks_per_io *
+			  vblkdev->config.blk_config.hardblk_size) / SECTOR_SIZE));
 #endif
 	}
 
@@ -1315,11 +1318,28 @@ static void setup_device(struct vblk_dev *vblkdev)
 		blk_queue_flag_set(QUEUE_FLAG_DISCARD, vblkdev->queue);
 #endif
 #if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
-		limits.max_discard_segments = vblkdev->config.blk_config.max_erase_blks_per_io;
+		/* H/W supports single contiguous range of discard. So set max_discard_segments to 1.
+		 *
+		 * Ex:
+		 * For 4KB block size(vblkdev->config.blk_config.hardblk_size)
+		 * and 64MB(vblkdev->config.blk_config.max_erase_blks_per_io) max discard:
+		 * Block size = 4KB = 8 sectors
+		 * max_discard_sectors = 131072 sectors (64MB)
+		 * max_discard_segments = 1 (one contiguous range)
+		 *
+		 * Segment structure:
+		 * [Block 0] [Block 1] ... [Block 16383]  = One segment
+		 * |--8 sectors--| ... up to 131072 sectors total
+		 */
+		limits.max_discard_segments = 1;
+		limits.max_discard_sectors =
+			((vblkdev->config.blk_config.max_erase_blks_per_io *
+			  vblkdev->config.blk_config.hardblk_size) / SECTOR_SIZE);
 		limits.discard_granularity = vblkdev->config.blk_config.hardblk_size;
 #else
 		blk_queue_max_discard_sectors(vblkdev->queue,
-			vblkdev->config.blk_config.max_erase_blks_per_io);
+			((vblkdev->config.blk_config.max_erase_blks_per_io *
+			  vblkdev->config.blk_config.hardblk_size) / SECTOR_SIZE));
 		vblkdev->queue->limits.discard_granularity =
 			vblkdev->config.blk_config.hardblk_size;
 #endif
