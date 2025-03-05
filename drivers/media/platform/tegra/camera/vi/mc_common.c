@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Tegra Video Input device common APIs
  */
@@ -226,7 +226,14 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 		if (!item)
 			goto channel_init_error;
 
-		item->id = num_pre_channels + i;
+
+		if ((__builtin_add_overflow(num_pre_channels, i, &item->id))) {
+			devm_kfree(mc_vi->dev, item);
+			dev_err(mc_vi->dev, "failed to add channel id\n");
+			err = -EOVERFLOW;
+			goto channel_init_error;
+		}
+
 		item->pg_mode = pg_mode;
 		item->vi = mc_vi;
 

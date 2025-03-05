@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "reset-group.h"
 
@@ -37,6 +37,7 @@ struct camrtc_reset_group *camrtc_reset_group_get(
 	size_t group_name_len;
 	int index;
 	int ret;
+	size_t sum = 0U;
 
 	if (!dev || !dev->of_node)
 		return ERR_PTR(-EINVAL);
@@ -50,9 +51,20 @@ struct camrtc_reset_group *camrtc_reset_group_get(
 	if (ret < 0)
 		return ERR_PTR(-ENOENT);
 
+	if (__builtin_add_overflow(offsetof(struct camrtc_reset_group, resets[ret]),
+			group_name_len, &sum)) {
+		dev_err(dev, "Reset group size overflow\n");
+		return ERR_PTR(-EOVERFLOW);
+	}
+
+
+	if (__builtin_add_overflow(sum, 1U, &sum)) {
+		dev_err(dev, "Reset group size overflow\n");
+		return ERR_PTR(-EOVERFLOW);
+	}
+
 	grp = devres_alloc(camrtc_reset_group_release,
-			offsetof(struct camrtc_reset_group, resets[ret]) +
-			group_name_len + 1,
+			sum,
 			GFP_KERNEL);
 	if (!grp)
 		return ERR_PTR(-ENOMEM);

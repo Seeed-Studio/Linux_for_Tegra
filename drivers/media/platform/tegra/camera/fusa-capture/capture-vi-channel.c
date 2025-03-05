@@ -691,7 +691,7 @@ int vi_channel_drv_register(
 	mutex_unlock(&chdrv_lock);
 
 	for (i = 0; i < chan_drv->num_channels; i++) {
-		dev_t devt = MKDEV(vi_channel_major, i);
+		dev_t devt = MKDEV((unsigned long)vi_channel_major, i);
 
 		struct device *dev = &chan_drv->vi_capture_pdev->dev;
 		device_create(vi_channel_class, dev, devt, NULL,

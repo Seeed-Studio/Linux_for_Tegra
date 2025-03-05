@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -477,8 +477,10 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 	INIT_LIST_HEAD(&civc->avl_ctx_list);
 
 	/* Add the transaction cb-contexts to the available list */
+	mutex_lock(&civc->cb_ctx_lock);
 	for (i = TRANS_ID_START_IDX; i < ARRAY_SIZE(civc->cb_ctx); i++)
 		list_add_tail(&civc->cb_ctx[i].node, &civc->avl_ctx_list);
+	mutex_unlock(&civc->cb_ctx_lock);
 
 	tegra_ivc_channel_set_drvdata(chan, civc);
 

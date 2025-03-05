@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -97,6 +97,7 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	u32 version, channel_group, nframes, frame_size, queue_size;
 	const char *service;
 	int ret;
+	u32 mul = 0U, sum = 0U;
 
 	struct tegra_ivc_channel *chan = kzalloc(sizeof(*chan), GFP_KERNEL);
 	if (unlikely(chan == NULL))
@@ -151,14 +152,38 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		goto error;
 	}
 
-	if (region->config_size + sizeof(*tlv) > CAMRTC_IVC_CONFIG_SIZE) {
+	if (__builtin_add_overflow(region->config_size, sizeof(*tlv), &sum)) {
+		dev_err(&chan->dev, "IVC config size overflow\n");
+		ret = -EOVERFLOW;
+		goto error;
+	}
+
+	if (sum > CAMRTC_IVC_CONFIG_SIZE) {
 		dev_err(&chan->dev, "IVC config size exceeded\n");
 		ret = -ENOSPC;
 		goto error;
 	}
 
-	queue_size = tegra_ivc_total_queue_size(nframes * frame_size);
-	if (region->ivc_size + 2 * queue_size > region->size) {
+	if (__builtin_mul_overflow(nframes, frame_size, &mul)) {
+		dev_err(&chan->dev, "IVC frame size overflow\n");
+		ret = -EOVERFLOW;
+		goto error;
+	}
+	queue_size = tegra_ivc_total_queue_size(mul);
+
+	if (__builtin_mul_overflow(2U, queue_size, &mul)) {
+		dev_err(&chan->dev, "IVC queue size overflow\n");
+		ret = -EOVERFLOW;
+		goto error;
+	}
+
+	if (__builtin_add_overflow(region->ivc_size, mul, &sum)) {
+		dev_err(&chan->dev, "IVC size overflow\n");
+		ret = -EOVERFLOW;
+		goto error;
+	}
+
+	if (sum > region->size) {
 		dev_err(&chan->dev, "buffers exceed IVC region\n");
 		ret = -ENOSPC;
 		goto error;
@@ -217,10 +242,20 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 
 	tlv->tag = CAMRTC_TAG_IVC_SETUP;
 	tlv->len = sizeof(*tlv);
-	tlv->rx_iova = region->iova + start.rx;
+	if (__builtin_add_overflow(region->iova, start.rx, &tlv->rx_iova)) {
+		dev_err(&chan->dev, "IVC setup overflow\n");
+		ret = -EOVERFLOW;
+		goto error;
+	}
+
 	tlv->rx_frame_size = frame_size;
 	tlv->rx_nframes = nframes;
-	tlv->tx_iova = region->iova + start.tx;
+	if (__builtin_add_overflow(region->iova, start.tx, &tlv->tx_iova)) {
+		dev_err(&chan->dev, "IVC setup overflow\n");
+		ret = -EOVERFLOW;
+		goto error;
+	}
+
 	tlv->tx_frame_size = frame_size;
 	tlv->tx_nframes = nframes;
 	tlv->channel_group = channel_group;
@@ -507,6 +542,7 @@ static int tegra_ivc_bus_parse_regions(struct tegra_ivc_bus *bus,
 {
 	struct of_phandle_args reg_spec;
 	int i;
+	u32 mul = 0U, sum = 0U;
 
 	/* Parse out all regions in a node */
 	for (i = 0;
@@ -543,8 +579,20 @@ static int tegra_ivc_bus_parse_regions(struct tegra_ivc_bus *bus,
 				break;
 			}
 
-			size += 2 * tegra_ivc_total_queue_size(nframes *
-							frame_size);
+			if (__builtin_mul_overflow(nframes, frame_size, &mul)) {
+				dev_err(&bus->dev, "IVC frame size overflow\n");
+				break;
+			}
+
+			if (__builtin_mul_overflow(2U, tegra_ivc_total_queue_size(mul), &mul)) {
+				dev_err(&bus->dev, "IVC queue size overflow\n");
+				break;
+			}
+
+			if (__builtin_add_overflow(size, mul, &size)) {
+				dev_err(&bus->dev, "IVC size overflow\n");
+				break;
+			}
 		}
 		of_node_put(reg_spec.np);
 
@@ -562,8 +610,10 @@ static int tegra_ivc_bus_parse_regions(struct tegra_ivc_bus *bus,
 		region->config_size = 0;
 		region->ivc_size = CAMRTC_IVC_CONFIG_SIZE;
 
+		(void)(__builtin_add_overflow(region->iova, size, &sum));
+		(void)(__builtin_sub_overflow(sum, 1U, &sum));
 		dev_info(&bus->dev, "region %u: iova=0x%x-0x%x size=%u\n",
-			i, (u32)region->iova, (u32)region->iova + size - 1,
+			i, (u32)region->iova, sum,
 			size);
 	}
 
