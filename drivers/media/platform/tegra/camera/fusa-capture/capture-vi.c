@@ -143,12 +143,30 @@ struct tegra_capture_vi_data {
 /**
  * @brief Initialize a VI syncpoint and get its GoS backing.
  *
- * @param[in]	chan	VI channel context
- * @param[in]	name	Syncpoint name
- * @param[in]	enable	Whether to initialize or just clear @a sp
- * @param[out]	sp	Syncpoint handle
+ * This function performs the following operations:
+ * - Clears the syncpoint handle if enable is false.
+ * - Allocates a syncpoint with the given name using
+ *   @ref struct syncpoint_info::ops::alloc_syncpt().
+ * - Gets the syncpoint handle using @ref host1x_syncpt_get_by_id_noref().
+ * - Reads the syncpoint value using @ref host1x_syncpt_read().
+ * - Gets the GoS backing for the syncpoint using
+ *   @ref struct syncpoint_info::ops::get_gos_backing().
+ * - In case of failure during any step, releases the allocated syncpoint and clears
+ *   the handle using @ref struct syncpoint_info::ops::release_syncpt().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in] chan       VI channel context.
+ *                       Valid value: non-NULL
+ * @param[in] name       Syncpoint name.
+ *                       Valid value: non-NULL
+ * @param[in] enable     Whether to initialize or just clear the syncpoint.
+ *                       Valid range: [true, false]
+ * @param[out] sp        Syncpoint handle to initialize.
+ *                       Valid value: non-NULL
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Error returned from @ref host1x_syncpt_get_by_id_noref().
+ * @retval (int)    Error codes returned from @ref struct syncpoint_info::ops::alloc_syncpt() or
+ *                  @ref struct syncpoint_info::ops::get_syncpt_gos_backing().
  */
 static int vi_capture_setup_syncpt(
 	struct tegra_vi_channel *chan,
@@ -200,7 +218,12 @@ cleanup:
 /**
  * @brief Fast forward a VI syncpoint to its threshold value.
  *
- * @param[in]	chan	VI channel context
+ * This function performs the following operation:
+ * - If progress syncpoint exists, calls @ref struct syncpoint_info::ops::fast_forward_syncpt() to advance the
+ *   syncpoint to its threshold value.
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
  */
 static void vi_capture_fastforward_syncpt(
 	struct tegra_vi_channel *chan)
@@ -216,8 +239,14 @@ static void vi_capture_fastforward_syncpt(
 /**
  * @brief Release a VI syncpoint and clear its handle.
  *
- * @param[in]	chan	VI channel context
- * @param[out]	sp	Syncpoint handle
+ * This function performs the following operations:
+ * - If syncpoint ID exists, releases it using @ref struct syncpoint_info::ops::release_syncpt().
+ * - Clears the syncpoint handle structure.
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ * @param[out] sp   Syncpoint handle to release.
+ *                  Valid value: non-NULL.
  */
 static void vi_capture_release_syncpt(
 	struct tegra_vi_channel *chan,
@@ -230,10 +259,15 @@ static void vi_capture_release_syncpt(
 }
 
 /**
- * @brief Release the VI channel progress, embedded data and line timer
- * syncpoints.
+ * @brief Release the VI channel progress, embedded data and line timer syncpoints.
  *
- * @param[in]	chan	VI channel context
+ * This function performs the following operations:
+ * - Releases the progress syncpoint using @ref vi_capture_release_syncpt()
+ * - Releases the embedded data syncpoint using @ref vi_capture_release_syncpt()
+ * - Releases the line timer syncpoint using @ref vi_capture_release_syncpt()
+ *
+ * @param[in] chan  VI channel context
+ *                  Valid value: non-NULL
  */
 static void vi_capture_release_syncpts(
 	struct tegra_vi_channel *chan)
@@ -246,14 +280,22 @@ static void vi_capture_release_syncpts(
 }
 
 /**
- * @brief Set up the VI channel progress, embedded data and line timer
- * syncpoints.
+ * @brief Set up the VI channel progress, embedded data and line timer syncpoints.
  *
- * @param[in]	chan	VI channel context
- * @param[in]	flags	Bitmask for channel flags, see
- *			@ref CAPTURE_CHANNEL_FLAGS
+ * This function performs the following operations:
+ * - Gets the GoS table using @ref struct tegra_vi_channel::ops::get_gos_table().
+ * - Sets up the progress syncpoint using @ref vi_capture_setup_syncpt().
+ * - Sets up the embedded data syncpoint if enabled using @ref vi_capture_setup_syncpt().
+ * - Sets up the line timer syncpoint if enabled using @ref vi_capture_setup_syncpt().
+ * - In case of failure, releases all allocated syncpoints using @ref vi_capture_release_syncpts().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in] chan         VI channel context.
+ *                        Valid value: non-NULL
+ * @param[in] flags       Bitmask for channel flags.
+ *                        Valid range: @ref CAPTURE_CHANNEL_FLAGS
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Error returned from @ref vi_capture_setup_syncpt().
  */
 static int vi_capture_setup_syncpts(
 	struct tegra_vi_channel *chan,
@@ -293,11 +335,19 @@ fail:
 /**
  * @brief Read the value of a VI channel syncpoint.
  *
- * @param[in]	chan	VI channel context
- * @param[in]	sp	Syncpoint handle
- * @param[out]	val	Syncpoint value
+ * This function performs the following operation:
+ * - If syncpoint ID exists, gets the syncpoint handle using @ref host1x_syncpt_get_by_id_noref().
+ * - If handle is valid, reads its value using @ref host1x_syncpt_read().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL
+ * @param[in] sp    Syncpoint handle.
+ *                  Valid value: non-NULL
+ * @param[out] val  Syncpoint value.
+ *                  Valid value: non-NULL
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Error returned from @ref host1x_syncpt_get_by_id_noref().
  */
 static int vi_capture_read_syncpt(
 	struct tegra_vi_channel *chan,
@@ -323,10 +373,20 @@ static int vi_capture_read_syncpt(
 }
 
 /**
- * @brief VI channel callback function for @em capture IVC messages.
+ * @brief VI channel callback function for capture IVC messages.
  *
- * @param[in]	ivc_resp	IVC @ref CAPTURE_MSG from RCE
- * @param[in]	pcontext	VI channel capture context
+ * This function performs the following operations:
+ * - Validates input parameters.
+ * - For CAPTURE_STATUS_IND messages:
+ *   - Unpins memory if pinned using @ref vi_capture_request_unpin().
+ *   - Synchronizes DMA memory using @ref dma_sync_single_range_for_cpu().
+ *   - Updates progress status using @ref capture_common_set_progress_status() if enabled.
+ *   - Otherwise completes the capture response using @ref complete().
+ *
+ * @param[in] ivc_resp  IVC @ref CAPTURE_MSG from RCE.
+ *                      Valid value: non-NULL.
+ * @param[in] pcontext  VI channel capture context.
+ *                      Valid value: non-NULL.
  */
 static void vi_capture_ivc_status_callback(
 	const void *ivc_resp,
@@ -382,15 +442,28 @@ static void vi_capture_ivc_status_callback(
 }
 
 /**
- * @brief Send a @em capture-control IVC message to RCE on a VI channel, and
- * block w/ timeout, waiting for the RCE response.
+ * @brief Send a capture-control IVC message to RCE on a VI channel.
  *
- * @param[in]	chan	VI channel context
- * @param[in]	msg	IVC message payload
- * @param[in]	size	Size of @a msg [byte]
- * @param[in]	resp_id	IVC message identifier, see @CAPTURE_MSG_IDS
+ * This function performs the following operations:
+ * - Locks the control message mutex using @ref mutex_lock().
+ * - Submits the capture control message using @ref tegra_capture_ivc_control_submit().
+ * - Waits for the response with timeout using @ref wait_for_completion_timeout().
+ * - Validates the response header matches the request using @ref memcmp().
+ * - Unlocks the control message mutex using @ref mutex_unlock().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in] chan      VI channel context.
+ *                      Valid value: non-NULL.
+ * @param[in] msg       IVC message payload.
+ *                      Valid value: non-NULL
+ * @param[in] size      Size of message in bytes.
+ *                      Valid value: non-zero.
+ * @param[in] resp_id   IVC message identifier.
+ *                      Valid range: @ref CAPTURE_MSG_IDS.
+ *
+ * @retval 0         Operation completed successfully.
+ * @retval -EINVAL   Response header validation failed.
+ * @retval -ETIMEDOUT Response timed out.
+ * @retval (int)     Error codes returned from @ref tegra_capture_ivc_control_submit().
  */
 static int vi_capture_ivc_send_control(
 	struct tegra_vi_channel *chan,
@@ -443,11 +516,18 @@ fail:
 }
 
 /**
- * @brief VI channel callback function for @em capture-control IVC messages,
- * this unblocks the channel's @em capture-control completion.
+ * @brief VI channel callback function for capture-control IVC messages.
  *
- * @param[in]	ivc_resp	IVC @ref CAPTURE_CONTROL_MSG from RCE
- * @param[in]	pcontext	VI channel capture context
+ * This function performs the following operations:
+ * - Validates input parameters.
+ * - For supported control message responses:
+ *   - Copies the response message to the channel's control response buffer using @ref memcpy().
+ *   - Completes the control response wait using @ref complete().
+ *
+ * @param[in] ivc_resp  IVC @ref CAPTURE_CONTROL_MSG from RCE.
+ *                      Valid value: non-NULL.
+ * @param[in] pcontext  VI channel capture context.
+ *                      Valid value: non-NULL.
  */
 static void vi_capture_ivc_control_callback(
 	const void *ivc_resp,
@@ -499,6 +579,27 @@ static void vi_capture_ivc_control_callback(
 	}
 }
 
+/**
+ * @brief Initialize a VI capture channel.
+ *
+ * This function performs the following operations:
+ * - Finds and validates the RTCPU device node using @ref of_find_node_by_path().
+ * - Checks device availability using @ref of_device_is_available().
+ * - Gets platform device using @ref of_find_device_by_node().
+ * - Allocates and initializes the VI capture channel context using @ref kzalloc().
+ * - Initializes completion objects using @ref init_completion().
+ * - Initializes mutex locks using @ref mutex_init().
+ * - Sets up initial channel state.
+ *
+ * @param[in] chan           VI channel context.
+ *                          Valid value: non-NULL.
+ * @param[in] is_mem_pinned  Whether memory is pinned.
+ *                          Valid range: [true, false].
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -ENODEV  RTCPU device node not found or invalid.
+ * @retval -ENOMEM  Failed to allocate capture channel context from @ref kzalloc().
+ */
 int vi_capture_init(
 	struct tegra_vi_channel *chan,
 	bool is_mem_pinned)
@@ -552,6 +653,22 @@ int vi_capture_init(
 }
 EXPORT_SYMBOL_GPL(vi_capture_init);
 
+/**
+ * @brief Shutdown and cleanup a VI capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters.
+ * - Resets the channel using @ref vi_capture_reset() if active.
+ * - Releases CSI stream using @ref csi_stream_release() if active.
+ * - Releases the channel using @ref vi_capture_release().
+ * - Unpins memory using @ref vi_capture_request_unpin() if memory was pinned.
+ * - Unpins capture requests using @ref capture_common_unpin_memory().
+ * - Destroys buffer table using @ref destroy_buffer_table() if exists.
+ * - Frees allocated resources using @ref kfree() and @ref vfree().
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ */
 void vi_capture_shutdown(
 	struct tegra_vi_channel *chan)
 {
@@ -601,6 +718,22 @@ void vi_capture_shutdown(
 }
 EXPORT_SYMBOL_GPL(vi_capture_shutdown);
 
+/**
+ * @brief Get the nvhost device for a VI channel based on CSI stream ID.
+ *
+ * This function performs the following operations:
+ * - Retrieves the platform driver data for the channel's capture device
+ *   using @ref platform_get_drvdata().
+ * - Gets the VI instance from the mapping table using CSI stream ID.
+ * - Validates the VI instance ID.
+ * - Applies array bounds check using @ref array_index_nospec().
+ * - Sets the channel's device and nvhost device pointers from platform device.
+ *
+ * @param[in] chan   VI channel context.
+ *                   Valid value: non-NULL.
+ * @param[in] setup  VI capture setup parameters.
+ *                   Valid value: non-NULL.
+ */
 void vi_get_nvhost_device(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_setup *setup)
@@ -630,6 +763,23 @@ void vi_get_nvhost_device(
 }
 EXPORT_SYMBOL_GPL(vi_get_nvhost_device);
 
+/**
+ * @brief Get the nvhost device for a given CSI stream ID.
+ *
+ * This function performs the following operations:
+ * - Retrieves the platform driver data for the channel's capture device
+ *   using @ref platform_get_drvdata().
+ * - Gets the VI instance ID from the mapping table using CSI stream ID.
+ * - Returns the corresponding platform device.
+ *
+ * @param[in] pdev          Platform device pointer.
+ *                          Valid value: non-NULL.
+ * @param[in] csi_stream_id CSI stream identifier.
+ *                          Valid range: [0, MAX_NVCSI_STREAM_IDS - 1].
+ *
+ * @retval device*  Pointer to the nvhost device on success.
+ * @retval NULL     If CSI stream ID is invalid.
+ */
 struct device *vi_csi_stream_to_nvhost_device(
 	struct platform_device *pdev,
 	uint32_t csi_stream_id)
@@ -647,6 +797,44 @@ struct device *vi_csi_stream_to_nvhost_device(
 }
 EXPORT_SYMBOL(vi_csi_stream_to_nvhost_device);
 
+/**
+ * @brief Set up a VI capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters and channel state.
+ * - Retrieves the platform driver data for the channel's capture device
+ *   using @ref platform_get_drvdata().
+ * - Gets the VI instance from mapping table using CSI stream ID.
+ * - If the channel's device is NULL, gets the nvhost device for the channel
+ *   using @ref vi_get_nvhost_device().
+ * - Validates setup parameters and capture channel ID.
+ * - Copies setup parameters to channel context.
+ * - Sets up channel syncpoints using @ref vi_capture_setup_syncpts().
+ * - Registers control callback using @ref tegra_capture_ivc_register_control_cb().
+ * - Allocates memory for memoryinfo ring buffer using @ref dma_alloc_coherent().
+ * - Allocates memory for unpins list using @ref vzalloc().
+ * - If @ref HAVE_VI_GOS_TABLES is defined, copies GoS tables to config.
+ * - Sends channel setup request using @ref vi_capture_ivc_send_control().
+ * - Updates channel state with response info.
+ * - Updates control callback with capture channel ID using
+ *   @ref tegra_capture_ivc_notify_capture_cb().
+ * - Registers capture callback using @ref tegra_capture_ivc_register_capture_cb().
+ * - Updates global channels array.
+ * - In case of failure, releases allocated resources using @ref vfree(),
+ *   @ref dma_free_coherent(), @ref tegra_capture_ivc_unregister_control_cb(),
+ *   and @ref vi_capture_release_syncpts().
+ *
+ * @param[in] chan   VI channel context.
+ *                   Valid value: non-NULL.
+ * @param[in] setup  VI capture setup parameters.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Invalid input parameters or response.
+ * @retval -EEXIST  Channel already set up.
+ * @retval -ENODEV  Capture channel is not initialized.
+ * @retval (int)    Error codes from helper functions.
+ */
 int vi_capture_setup(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_setup *setup)
@@ -908,6 +1096,20 @@ syncpt_fail:
 }
 EXPORT_SYMBOL_GPL(vi_capture_setup);
 
+/**
+ * @brief Get a VI channel handle for a given CSI stream and virtual channel ID.
+ *
+ * This function performs the following operation:
+ * - Returns the VI channel handle from the global channels array if valid IDs.
+ *
+ * @param[in] stream_id           CSI stream identifier.
+ *                                Valid range: [0, MAX_NVCSI_STREAM_IDS - 1].
+ * @param[in] virtual_channel_id  Virtual channel identifier.
+ *                                Valid range: [0, MAX_VIRTUAL_CHANNEL_PER_STREAM - 1].
+ *
+ * @retval tegra_vi_channel*  VI channel handle if found.
+ * @retval NULL               If IDs are invalid or no channel exists.
+ */
 struct tegra_vi_channel *get_tegra_vi_channel(
 	unsigned int stream_id,
 	unsigned int virtual_channel_id)
@@ -918,6 +1120,30 @@ struct tegra_vi_channel *get_tegra_vi_channel(
 	return channels[stream_id][virtual_channel_id];
 }
 
+/**
+ * @brief Reset a VI capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters and channel state.
+ * - Locks the reset lock using @ref mutex_lock().
+ * - If @ref CAPTURE_RESET_BARRIER_IND is defined, sends reset barrier
+ *   indication using @ref tegra_capture_ivc_capture_submit().
+ * - Sends channel reset request using @ref vi_capture_ivc_send_control().
+ * - If @ref CAPTURE_RESET_BARRIER_IND is defined, checks reset response.
+ * - Fast forwards syncpoints using @ref vi_capture_fastforward_syncpt().
+ * - Unlocks the reset lock using @ref mutex_unlock().
+ *
+ * @param[in] chan         VI channel context.
+ *                         Valid value: non-NULL.
+ * @param[in] reset_flags  Channel reset flags.
+ *                         Valid range: @ref CAPTURE_CHANNEL_RESET_FLAGS.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -ENODEV  Channel not initialized.
+ * @retval -EAGAIN  Reset timed out.
+ * @retval -EINVAL  Invalid response from RCE.
+ * @retval (int)    Error codes from helper functions.
+ */
 int vi_capture_reset(
 	struct tegra_vi_channel *chan,
 	uint32_t reset_flags)
@@ -992,6 +1218,33 @@ submit_fail:
 }
 EXPORT_SYMBOL_GPL(vi_capture_reset);
 
+/**
+ * @brief Release a VI capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters and channel state.
+ * - Sends channel release request using @ref vi_capture_ivc_send_control().
+ * - If returns error, reboots the RTCPU using @ref tegra_camrtc_reboot().
+ * - Frees memory info ringbuffer using @ref dma_free_coherent() if allocated.
+ * - Unregisters callbacks using @ref tegra_capture_ivc_unregister_capture_cb()
+ *   and @ref tegra_capture_ivc_unregister_control_cb().
+ * - Completes any pending capture responses using @ref complete().
+ * - Releases syncpoints using @ref vi_capture_release_syncpts().
+ * - Clears channel state and removes from global channels array.
+ * - Releases progress status notifier using @ref capture_common_release_progress_status_notifier()
+ *   if set.
+ *
+ * @param[in] chan         VI channel context.
+ *                         Valid value: non-NULL.
+ * @param[in] reset_flags  Channel reset flags.
+ *                         Valid range: @ref CAPTURE_CHANNEL_RESET_FLAGS.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -ENODEV  Channel not initialized.
+ * @retval -EIO     @ref vi_capture_ivc_send_control() failed or response is not CAPTURE_OK.
+ * @retval (int)    Error codes from @ref tegra_capture_ivc_unregister_capture_cb()
+ *                  and @ref tegra_capture_ivc_unregister_control_cb().
+ */
 int vi_capture_release(
 	struct tegra_vi_channel *chan,
 	uint32_t reset_flags)
@@ -1094,6 +1347,30 @@ int vi_capture_release(
 }
 EXPORT_SYMBOL_GPL(vi_capture_release);
 
+/**
+ * @brief Send a control message to RCE through IVC for a VI channel.
+ *
+ * This function performs the following operations:
+ * - Sets the channel ID in the message header.
+ * - Determines the expected response message ID based on request type.
+ * - For PHY stream open requests, checks channel stream is not already opened
+ *   and copies stream ID and CSI port to channel context.
+ * - For PHY stream close requests, checks channel stream is opened.
+ * - For TPG start requests, copies virtual channel ID to channel context.
+ * - Sends the control message using @ref vi_capture_ivc_send_control().
+ * - Updates stream state for PHY stream operations.
+ *
+ * @param[in] chan      VI channel context.
+ *                      Valid value: non-NULL.
+ * @param[in] msg_cpy   Control message to send.
+ *                      Valid value: non-NULL.
+ * @param[in] size      Size of message in bytes.
+ *                      Valid value: non-zero.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Invalid message ID or response ID.
+ * @retval (int)    Error codes from @ref vi_capture_ivc_send_control().
+ */
 static int vi_capture_control_send_message(
 	struct tegra_vi_channel *chan,
 	struct CAPTURE_CONTROL_MSG *msg_cpy,
@@ -1196,9 +1473,17 @@ static int vi_capture_control_send_message(
 /**
  * @brief Disable the VI channel's NVCSI TPG stream in RCE.
  *
- * @param[in]	chan	VI channel context
+ * This function performs the following operations:
+ * - Prepares TPG stop request message.
+ * - Sends request to RCE using @ref vi_capture_ivc_send_control().
+ * - Validates response from RCE.
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Invalid response from RCE.
+ * @retval (int)    Error codes from @ref vi_capture_ivc_send_control().
  */
 static int csi_stream_tpg_disable(
 	struct tegra_vi_channel *chan)
@@ -1226,11 +1511,19 @@ static int csi_stream_tpg_disable(
 }
 
 /**
- * @brief Disable the VI channel's NVCSI stream in RCE.
+ * @brief Close the VI channel's NVCSI stream in RCE.
  *
- * @param[in]	chan	VI channel context
+ * This function performs the following operations:
+ * - Prepares stream close request message.
+ * - Sends request to RCE using @ref vi_capture_control_send_message().
+ * - Validates response from RCE.
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Invalid response from RCE.
+ * @retval (int)    Error codes from @ref vi_capture_control_send_message().
  */
 static int csi_stream_close(
 	struct tegra_vi_channel *chan)
@@ -1256,6 +1549,20 @@ static int csi_stream_close(
 	return 0;
 }
 
+/**
+ * @brief Release the VI channel's NVCSI stream resources.
+ *
+ * This function performs the following operations:
+ * - If stream ID is invalid, returns success.
+ * - If TPG virtual channel is active, disables it using @ref csi_stream_tpg_disable().
+ * - If stream is open, closes it using @ref csi_stream_close().
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval (int)    Error codes from @ref csi_stream_tpg_disable() or @ref csi_stream_close().
+ */
 int csi_stream_release(
 	struct tegra_vi_channel *chan)
 {
@@ -1287,6 +1594,27 @@ int csi_stream_release(
 	return err;
 }
 
+/**
+ * @brief Process a VI capture control message from userspace.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters.
+ * - Copies message from userspace using @ref kzalloc() and @ref copy_from_user().
+ * - Sends control message using @ref vi_capture_control_send_message().
+ * - Copies response back to userspace using @ref copy_to_user().
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ * @param[in] msg   Control message from userspace.
+ *                  Valid value: non-NULL with valid pointers.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -ENODEV  Channel not initialized.
+ * @retval -EINVAL  Invalid message parameters.
+ * @retval -ENOMEM  Failed to allocate message copy buffer from @ref kzalloc().
+ * @retval (int)    Error codes from @ref vi_capture_control_send_message(), @ref copy_to_user(),
+ *                  or @ref copy_from_user().
+ */
 int vi_capture_control_message_from_user(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_control_msg *msg)
@@ -1352,6 +1680,27 @@ fail:
 }
 EXPORT_SYMBOL_GPL(vi_capture_control_message_from_user);
 
+/**
+ * @brief Process a VI capture control message from kernel space.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters.
+ * - Copies message from kernel buffer using @ref kzalloc() and @ref memcpy().
+ * - Sends control message using @ref vi_capture_control_send_message().
+ * - Copies response to output buffer using @ref memcpy().
+ * - Frees message copy buffer using @ref kfree().
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ * @param[in] msg   Control message from kernel.
+ *                  Valid value: non-NULL with valid pointers.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -ENODEV  Channel not initialized.
+ * @retval -EINVAL  Invalid message parameters.
+ * @retval -ENOMEM  Failed to allocate message copy buffer from @ref kzalloc().
+ * @retval (int)    Error codes from @ref vi_capture_control_send_message().
+ */
 int vi_capture_control_message(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_control_msg *msg)
@@ -1401,6 +1750,27 @@ fail:
 	return err;
 }
 
+/**
+ * @brief Get information about a VI capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters and channel state.
+ * - Retrieves syncpoint IDs and values using @ref vi_capture_read_syncpt().
+ * - Returns channel configuration information including:
+ *   - Progress, embedded data and line timer syncpoints.
+ *   - Hardware channel ID.
+ *   - VI channel masks.
+ *
+ * @param[in] chan   VI channel context.
+ *                   Valid value: non-NULL.
+ * @param[out] info  Capture channel information structure.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -ENODEV  Channel not initialized.
+ * @retval -EINVAL  Invalid info parameter.
+ * @retval (int)    Error codes from @ref vi_capture_read_syncpt().
+ */
 int vi_capture_get_info(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_info *info)
@@ -1452,6 +1822,24 @@ int vi_capture_get_info(
 }
 EXPORT_SYMBOL_GPL(vi_capture_get_info);
 
+/**
+ * @brief Calculate number of progress syncpoints needed for a capture request.
+ *
+ * This function performs the following operations:
+ * - Gets capture descriptor for the given buffer index using @ref check_mul_overflow().
+ * - Calculates required progress syncpoints based on:
+ *   - Minimum of 2 for PXL_SOF and PXL_EOF.
+ *   - Additional points for flush operations if enabled.
+ *   - Adjusts count if HEIGHT is divisible by TRIPLINE.
+ * - Handles overflow conditions in calculations.
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ * @param[in] req   Capture request parameters.
+ *                  Valid value: non-NULL.
+ *
+ * @retval (uint32_t)  Number of progress syncpoints needed.
+ */
 static uint32_t vi_capture_get_num_progress(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_req *req)
@@ -1513,6 +1901,29 @@ static uint32_t vi_capture_get_num_progress(
 	return (uint32_t)numProgress;
 }
 
+/**
+ * @brief Submit a capture request to a VI channel.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters and channel state.
+ * - Locks the reset lock using @ref mutex_lock().
+ * - Prepares capture request message.
+ * - Logs the capture request using @ref nv_camera_log_vi_submit().
+ * - Submits request using @ref tegra_capture_ivc_capture_submit().
+ * - Calculates progress points using @ref vi_capture_get_num_progress().
+ * - Updates progress syncpoint threshold using @ref check_add_overflow().
+ * - Unlocks the reset lock using @ref mutex_unlock().
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ * @param[in] req   Capture request parameters.
+ *                  Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -ENODEV  Channel not initialized.
+ * @retval -EINVAL  Invalid request parameter.
+ * @retval (int)    Error codes from @ref tegra_capture_ivc_capture_submit().
+ */
 int vi_capture_request(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_req *req)
@@ -1583,6 +1994,28 @@ int vi_capture_request(
 }
 EXPORT_SYMBOL_GPL(vi_capture_request);
 
+/**
+ * @brief Wait for capture status completion on a VI channel.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters and channel state.
+ * - Waits for capture completion with specified timeout using
+ *   @ref wait_for_completion_interruptible() if selected timtout is negative,
+ *   or @ref wait_for_completion_timeout() otherwise.
+ * - Convert timeout value to jiffies using @ref msecs_to_jiffies().
+ *
+ * @param[in] chan         VI channel context.
+ *                         Valid value: non-NULL.
+ * @param[in] timeout_ms   Timeout in milliseconds.
+ *                         Valid range: [-1, INT_MAX].
+ *                         -1 means wait forever.
+ *
+ * @retval 0           Operation completed successfully.
+ * @retval -ENODEV     Channel not initialized.
+ * @retval -ETIMEDOUT  Wait timed out.
+ * @retval (int)       Error codes from @ref wait_for_completion_interruptible()
+ *                     or @ref wait_for_completion_timeout().
+ */
 int vi_capture_status(
 	struct tegra_vi_channel *chan,
 	int32_t timeout_ms)
@@ -1638,6 +2071,25 @@ int vi_capture_status(
 }
 EXPORT_SYMBOL_GPL(vi_capture_status);
 
+/**
+ * @brief Set up progress status notification for a VI channel.
+ *
+ * This function performs the following operations:
+ * - Validates input parameters and channel state.
+ * - Verifies buffer depth is sufficient for queue depth.
+ * - Sets up progress status notifier using @ref capture_common_setup_progress_status_notifier().
+ * - Updates channel state for progress status notification.
+ *
+ * @param[in] chan  VI channel context.
+ *                  Valid value: non-NULL.
+ * @param[in] req   Progress status request parameters.
+ *                  Valid value: non-NULL with valid memory parameters.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Invalid request parameters.
+ * @retval -ENODEV  Channel not initialized.
+ * @retval -EFAULT  Error from @ref capture_common_setup_progress_status_notifier().
+ */
 int vi_capture_set_progress_status_notifier(
 	struct tegra_vi_channel *chan,
 	struct vi_capture_progress_status_req *req)
@@ -1689,6 +2141,27 @@ int vi_capture_set_progress_status_notifier(
 }
 EXPORT_SYMBOL_GPL(vi_capture_set_progress_status_notifier);
 
+/**
+ * @brief Read CSI-to-VI mapping table from device tree.
+ *
+ * This function performs the following operations:
+ * - Reads mapping table size using @ref of_property_read_u32().
+ * - Ensures mapping table size is within valid range.
+ * - Validates mapping element names using @ref of_property_count_strings().
+ * - Checks element order using @ref of_property_match_string().
+ * - Reads and validates CSI stream ID and VI unit ID pairs using
+ *   @ref of_property_read_u32_index().
+ * - Checks each CSI stream ID is unique and within valid range.
+ * - Checks each VI unit ID is within valid range.
+ * - Populates VI instance mapping table.
+ *
+ * @param[in] pdev  Platform device pointer.
+ *                  Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -EINVAL  Invalid mapping parameters or device tree entries.
+ * @retval (int)    Error codes from @ref of_property_read_u32_index().
+ */
 static int csi_vi_get_mapping_table(struct platform_device *pdev)
 {
 	uint32_t index = 0;
@@ -1781,6 +2254,34 @@ static int csi_vi_get_mapping_table(struct platform_device *pdev)
 	return 0;
 }
 
+/**
+ * @brief Probe function for VI capture driver.
+ *
+ * This function performs the following operations:
+ * - Allocates and initializes driver data using @ref devm_kzalloc().
+ * - Reads maximum VI channels using @ref of_property_read_u32().
+ * - Validates maximum VI channels is less than @ref NUM_VI_CHANNELS.
+ * - Gets VI device nodes using @ref of_parse_phandle().
+ * - Gets platform devices using @ref of_find_device_by_node().
+ * - Release each VI device node using @ref of_node_put().
+ * - Sets driver data using @ref platform_set_drvdata().
+ * - If more than one VI device, reads CSI-VI mapping using @ref csi_vi_get_mapping_table().
+ * - Registers VI channel driver using @ref vi_channel_drv_register().
+ * - If error, exits VI channel driver subsystem using @ref vi_channel_drv_exit().
+ * - Initializes media controller using @ref tegra_capture_vi_media_controller_init().
+ *
+ * @param[in] pdev  Platform device pointer.
+ *                  Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval -ENOMEM  Memory allocation failed from @ref devm_kzalloc().
+ * @retval -EINVAL  Invalid device tree parameters or error from @ref of_property_read_u32().
+ * @retval -ENODEV  Required devices not found from @ref of_parse_phandle() or
+ *                  @ref of_find_device_by_node().
+ * @retval (int)    Error codes from @ref csi_vi_get_mapping_table(),
+ *                  @ref vi_channel_drv_register(),
+ *                  or @ref tegra_capture_vi_media_controller_init().
+ */
 static int capture_vi_probe(struct platform_device *pdev)
 {
 	uint32_t ii;
@@ -1880,6 +2381,21 @@ cleanup:
 	return err;
 }
 
+/**
+ * @brief Remove function for VI capture driver.
+ *
+ * This function performs the following operations:
+ * - Retrieves capture driver data using @ref platform_get_drvdata().
+ * - Releases VI device references using @ref put_device().
+ * - Unregisters VI channel driver using @ref vi_channel_drv_unregister().
+ * - Cleans up media controller using @ref tegra_vi_media_controller_cleanup().
+ * - Exits VI channel driver using @ref vi_channel_drv_exit().
+ *
+ * @param[in] pdev  Platform device pointer.
+ *                  Valid value: non-NULL.
+ *
+ * @retval 0        Operation completed successfully.
+ */
 static int capture_vi_remove(struct platform_device *pdev)
 {
 	struct tegra_capture_vi_data *info;
@@ -1909,11 +2425,33 @@ static const struct of_device_id capture_vi_of_match[] = {
 MODULE_DEVICE_TABLE(of, capture_vi_of_match);
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+/**
+ * @brief Wrapper function for VI capture driver removal (void return version).
+ *
+ * This function performs the following operations:
+ * - Calls @ref capture_vi_remove() to perform actual driver cleanup.
+ * - Used for Linux kernel version 6.11 and later where remove returns void.
+ *
+ * @param[in] pdev  Platform device pointer.
+ *                  Valid value: non-NULL.
+ */
 static void capture_vi_remove_wrapper(struct platform_device *pdev)
 {
 	capture_vi_remove(pdev);
 }
 #else
+/**
+ * @brief Wrapper function for VI capture driver removal (int return version).
+ *
+ * This function performs the following operations:
+ * - Calls @ref capture_vi_remove() to perform actual driver cleanup.
+ * - Used for Linux kernel versions before 6.11 where remove returns int.
+ *
+ * @param[in] pdev  Platform device pointer.
+ *                  Valid value: non-NULL.
+ *
+ * @retval (int)  Return value from @ref capture_vi_remove().
+ */
 static int capture_vi_remove_wrapper(struct platform_device *pdev)
 {
 	return capture_vi_remove(pdev);
@@ -1930,6 +2468,17 @@ static struct platform_driver capture_vi_driver = {
 	}
 };
 
+/**
+ * @brief Module initialization function for VI capture driver.
+ *
+ * This function performs the following operations:
+ * - Initializes VI channel driver subsystem using @ref vi_channel_drv_init().
+ * - Registers platform driver using @ref platform_driver_register().
+ * - If error, exits VI channel driver subsystem using @ref vi_channel_drv_exit().
+ *
+ * @retval 0        Operation completed successfully.
+ * @retval (int)    Error codes from @ref vi_channel_drv_init() or @ref platform_driver_register().
+ */
 static int __init capture_vi_init(void)
 {
 	int err;
@@ -1945,6 +2494,14 @@ static int __init capture_vi_init(void)
 
 	return 0;
 }
+
+/**
+ * @brief Module exit function for VI capture driver.
+ *
+ * This function performs the following operations:
+ * - Exits VI channel driver subsystem using @ref vi_channel_drv_exit().
+ * - Unregisters platform driver using @ref platform_driver_unregister().
+ */
 static void __exit capture_vi_exit(void)
 {
 	vi_channel_drv_exit();

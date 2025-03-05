@@ -162,12 +162,33 @@ struct isp_capture {
 /**
  * @brief Initialize an ISP syncpoint and get its GoS backing.
  *
- * @param[in]	chan	ISP channel context
- * @param[in]	name	Syncpoint name
- * @param[in]	enable	Whether to initialize or just clear @a sp
- * @param[out]	sp	Syncpoint handle
+ * This function performs the following operations:
+ * - Initializes the @a sp structure to zeroes.
+ * - If @a enable is false, returns success.
+ * - Allocates a synchronization point by calling
+ *   @ref struct tegra_isp_channel::ops::alloc_syncpt().
+ * - Gets the syncpoint handle using @ref host1x_syncpt_get_by_id_noref().
+ * - Reads the syncpoint value using @ref host1x_syncpt_read().
+ * - Retrieves GOS backing information by calling
+ *   @ref struct tegra_isp_channel::ops::get_syncpt_gos_backing().
+ * - Sets the GOS index and offset in the @a sp structure.
+ * - On failure after allocation, releases the synchronization point with
+ *   @ref struct tegra_isp_channel::ops::release_syncpt() and re-initializes the @a sp
+ *   structure.
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan    Pointer to the @ref tegra_isp_channel structure.
+ *                     Valid Value: non-NULL.
+ * @param[in]  name    Name of the synchronization point.
+ *                     Valid Value: non-NULL.
+ * @param[in]  enable  Flag to enable or disable the synchronization point setup.
+ *                     Valid Value: true or false.
+ * @param[out] sp      Pointer to the @ref syncpoint_info structure to be populated.
+ *                     Valid Value: non-NULL.
+ *
+ * @retval 0              On successful setup or if @a enable is false.
+ * @retval -EINVAL        If @ref host1x_syncpt_get_by_id_noref() fails.
+ * @retval (int)          If @ref struct tegra_isp_channel::ops::alloc_syncpt() or
+ *                        @ref struct tegra_isp_channel::ops::get_syncpt_gos_backing() fails.
  */
 static int isp_capture_setup_syncpt(
 	struct tegra_isp_channel *chan,
@@ -217,6 +238,19 @@ cleanup:
 	return err;
 }
 
+/**
+ * @brief Fast-forwards a synchronization point in the ISP channel.
+ *
+ * This function performs the following operations:
+ * - Validates the synchronization point ID.
+ * - If the ID is valid, invokes @ref struct tegra_isp_channel::ops::fast_forward_syncpt()
+ *   with the device handle, synchronization point ID, and threshold.
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  sp    Pointer to the @ref syncpoint_info structure.
+ *                   Valid value: non-NULL.
+ */
 static void isp_capture_fastforward_syncpt(
 	struct tegra_isp_channel *chan,
 	struct syncpoint_info *sp)
@@ -225,6 +259,19 @@ static void isp_capture_fastforward_syncpt(
 		chan->ops->fast_forward_syncpt(chan->ndev, sp->id, sp->threshold);
 }
 
+/**
+ * @brief Fast-forwards synchronization points in the ISP capture process.
+ *
+ * This function performs the following operations:
+ * - Retrieves the @ref isp_capture structure from the provided channel.
+ * - Invokes @ref isp_capture_fastforward_syncpt() with the channel and the
+ *   progress synchronization point.
+ * - Invokes @ref isp_capture_fastforward_syncpt() with the channel and the
+ *   statistics progress synchronization point.
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ */
 static void isp_capture_fastforward_syncpts(
 	struct tegra_isp_channel *chan)
 {
@@ -235,10 +282,20 @@ static void isp_capture_fastforward_syncpts(
 }
 
 /**
- * @brief Release an ISP syncpoint and clear its handle.
+ * @brief Releases a synchronization point in the ISP channel and clears its
+ *        associated information.
  *
- * @param[in]	chan	ISP channel context
- * @param[out]	sp	Syncpoint handle
+ * This function performs the following operations:
+ * - Validates the synchronization point ID.
+ * - If the ID is valid, invokes @ref struct tegra_isp_channel::ops::release_syncpt() with the
+ *   device handle and synchronization point ID.
+ * - Resets the synchronization point information by clearing the structure
+ *   using @ref memset().
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  sp    Pointer to the @ref syncpoint_info structure.
+ *                   Valid value: non-NULL.
  */
 static void isp_capture_release_syncpt(
 	struct tegra_isp_channel *chan,
@@ -251,11 +308,19 @@ static void isp_capture_release_syncpt(
 }
 
 /**
- * @brief Release the ISP channel progress and stats progress syncpoints.
+ * @brief Releases synchronization points in the ISP capture process.
  *
- * @param[in]	chan	ISP channel context
+ * This function performs the following operations:
+ * - Retrieves the @ref isp_capture structure from the provided channel.
+ * - Checks if the capture structure is valid.
+ *   If invalid, returns early.
+ * - Invokes @ref isp_capture_release_syncpt() with the channel and the
+ *   progress synchronization point.
+ * - Invokes @ref isp_capture_release_syncpt() with the channel and the
+ *   statistics progress synchronization point.
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
  */
 static void isp_capture_release_syncpts(
 	struct tegra_isp_channel *chan)
@@ -271,11 +336,26 @@ static void isp_capture_release_syncpts(
 }
 
 /**
- * @brief Set up the ISP channel progress and stats progress syncpoints.
+ * @brief Sets up synchronization points for the ISP capture channel.
  *
- * @param[in]	chan	ISP channel context
+ * This function performs the following operations:
+ * - Validates the capture data associated with the ISP channel.
+ * - If @ref HAVE_ISP_GOS_TABLES is defined, retrieves the GOS tables by calling
+ *   @ref struct tegra_isp_channel::ops::get_gos_table().
+ * - Calls @ref isp_capture_setup_syncpt() to set up the "progress" synchronization
+ *   point.
+ * - Calls @ref isp_capture_setup_syncpt() to set up the "stats_progress" synchronization
+ *   point.
+ * - In case of any failure during setup, releases all synchronization points by calling
+ *   @ref isp_capture_release_syncpts().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0           On successful setup of all synchronization points.
+ * @retval -ENODEV     If the capture data is uninitialized.
+ * @retval (int)       If @ref isp_capture_setup_syncpt() fails for any synchronization
+ *                     point or if @ref isp_capture_release_syncpts() fails during error handling.
  */
 static int isp_capture_setup_syncpts(
 	struct tegra_isp_channel *chan)
@@ -313,13 +393,23 @@ fail:
 }
 
 /**
- * @brief Read the value of an ISP channel syncpoint.
+ * @brief Reads the value of a synchronization point in the ISP channel.
  *
- * @param[in]	chan	ISP channel context
- * @param[in]	sp	Syncpoint handle
- * @param[out]	val	Syncpoint value
+ * This function performs the following operations:
+ * - Checks if the synchronization point ID is valid.
+ * - If valid, gets the syncpoint handle using @ref host1x_syncpt_get_by_id_noref().
+ * - If handle is valid, reads its value using @ref host1x_syncpt_read().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  sp    Pointer to the @ref syncpoint_info structure.
+ *                   Valid value: non-NULL.
+ * @param[out] val   Pointer to a variable where the synchronization point value
+ *                   will be stored.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0        On successful reading of the synchronization point value.
+ * @retval -EINVAL  If @ref host1x_syncpt_get_by_id_noref() fails.
  */
 static int isp_capture_read_syncpt(
 	struct tegra_isp_channel *chan,
@@ -345,17 +435,40 @@ static int isp_capture_read_syncpt(
 }
 
 /**
- * @brief Patch the descriptor GoS SID (@a gos_relative) and syncpoint shim
- * address (@a sp_relative) with the ISP IOVA-mapped addresses of a syncpoint
- * (@a fence_offset).
+ * @brief Populates fence information for ISP capture using synchronization points.
  *
- * @param[in]	chan		ISP channel context
- * @param[in]	fence_offset	Syncpoint offset from process descriptor queue
- *				[byte]
- * @param[in]	gos_relative	GoS SID offset from @a fence_offset [byte]
- * @param[in]	sp_relative	Shim address from @a fence_offset [byte]
+ * This function performs the following operations:
+ * - Adjusts the relocation page address using @a fence_offset, @a reloc_page_addr and
+ *   @ref PAGE_MASK.
+ * - Validates the relocation page address.
+ * - Reads the raw synchronization point value from the ISP IOVA-mapped relocation address using
+ *   @ref __raw_readq().
+ * - Extracts the synchronization point ID from the raw syncpoint.
+ * - Calls @ref struct tegra_isp_channel::ops::get_syncpt_gos_backing() with the channel device,
+ *   synchronization point ID, and retrieves synchronization point address, GoS index,
+ *   and GoS offset.
+ * - Combines GoS index and GoS offset in a GoS information buffer.
+ * - Updates the relocation page address for GoS information.
+ * - Writes the GoS information to the updated relocation page address using @ref __raw_writeq().
+ * - Updates the relocation page address for synchronization point information.
+ * - Writes the synchronization point address to the updated relocation page address using
+ *   @ref __raw_writeq().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan             Pointer to the @ref tegra_isp_channel structure.
+ *                              Valid value: non-NULL.
+ * @param[in]  fence_offset     Offset value for the fence.
+ *                              Valid range: [0 .. UINT16_MAX].
+ * @param[in]  gos_relative     Relative byte offset for GoS.
+ *                              Valid range: non-negative.
+ * @param[in]  sp_relative      Relative byte offset for synchronization point.
+ *                              Valid range: non-negative.
+ * @param[in]  reloc_page_addr  Pointer to the relocation page address.
+ *                              Valid value: non-NULL.
+ *
+ * @retval 0          On successful completion.
+ * @retval -ENOMEM    If the relocation page address is invalid.
+ * @retval (int)      Errors returned from invocation of
+ *                    @ref struct tegra_isp_channel::ops::get_syncpt_gos_backing().
  */
 static int isp_capture_populate_fence_info(
 	struct tegra_isp_channel *chan,
@@ -409,15 +522,37 @@ ret:
 }
 
 /**
- * @brief Patch the inputfence syncpoints of a process descriptor w/ ISP
- * IOVA-mapped addresses.
+ * @brief Sets up input fence syncpoints for ISP capture requests.
  *
- * @param[in]	chan		ISP channel context
- * @param[in]	req		ISP process request
- * @param[in]	request_offset	Descriptor offset from process descriptor queue
- *				[byte]
+ * This function performs the following operations:
+ * - Validates the capture data within the provided channel.
+ * - Checks if input fences are present for the given capture request.
+ * - Allocates memory for input fence relocations by calling @ref kcalloc().
+ * - Copies input fence relocation data from user space using @ref copy_from_user().
+ * - Maps the DMA buffer using @ref dma_buf_vmap() and retrieves the mapped address.
+ * - Iterates through each input fence relocation:
+ *   - Calculates the input fence offset, handling overflow using @ref check_add_overflow().
+ *   - Calls @ref isp_capture_populate_fence_info() with the channel, calculated
+ *     offset, GoS relative offset, synchronization point relative offset, and
+ *     relocation page address.
+ * - Unmaps the DMA buffer using @ref dma_buf_vunmap() and frees allocated memory
+ *   in case of failure.
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan            Pointer to the @ref tegra_isp_channel structure.
+ *                             Valid value: non-NULL.
+ * @param[in]  req             Pointer to the @ref isp_capture_req structure.
+ *                             Valid value: non-NULL.
+ * @param[in]  request_offset  Offset value for the capture request.
+ *                             Valid range: depends on context.
+ *
+ * @retval 0           On successful completion.
+ * @retval -ENODEV     If the ISP capture is uninitialized.
+ * @retval -ENOMEM     If memory allocation via @ref kcalloc() or buffer mapping
+ *                     via @ref dma_buf_vmap() fails.
+ * @retval -EFAULT     If copying from user space fails via @ref copy_from_user().
+ * @retval -EOVERFLOW  If input fence offset calculation results in overflow via
+ *                     @ref check_add_overflow().
+ * @retval (int)       Errors returned from invocation of @ref isp_capture_populate_fence_info().
  */
 static int isp_capture_setup_inputfences(
 	struct tegra_isp_channel *chan,
@@ -504,15 +639,40 @@ fail:
 }
 
 /**
- * @brief Patch the prefence syncpoints of a process descriptor w/ ISP
- * IOVA-mapped addresses.
+ * @brief Sets up prefence syncpoints for ISP capture requests.
  *
- * @param[in]	chan		ISP channel context
- * @param[in]	req		ISP process request
- * @param[in]	request_offset	Descriptor offset from process descriptor queue
- *				[byte]
+ * This function performs the following operations:
+ * - Validates the capture data within the provided channel is not NULL.
+ * - Validates the capture request structure.
+ * - Checks if prefences are present for the given capture request.
+ * - Allocates memory for prefence relocations by calling @ref kcalloc().
+ * - Copies prefence relocation data from user space using @ref copy_from_user().
+ * - Maps the DMA buffer by calling @ref dma_buf_vmap() and retrieves the mapped address.
+ * - Iterates through each prefence relocation entry:
+ *   - Calculates the prefence offset, handling overflow using @ref check_add_overflow().
+ *   - Calls @ref isp_capture_populate_fence_info() with the channel, calculated
+ *     offset, GoS relative offset, synchronization point relative offset, and
+ *     relocation page address.
+ * - Implements a speculative barrier using @ref spec_bar().
+ * - On failure, unmaps the DMA buffer using @ref dma_buf_vunmap() and frees allocated
+ *   memory.
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan            Pointer to the @ref tegra_isp_channel structure.
+ *                             Valid value: non-NULL.
+ * @param[in]  req             Pointer to the @ref isp_capture_req structure.
+ *                             Valid value: non-NULL.
+ * @param[in]  request_offset  Byte offset value for the capture request.
+ *                             Valid range: [0 .. UINT16_MAX].
+ *
+ * @retval 0                On successful setup or if no prefences are configured.
+ * @retval -ENODEV          If the ISP capture data is uninitialized or the request is NULL.
+ * @retval -ENOMEM          If memory allocation via @ref kcalloc() or buffer mapping
+ *                          via @ref dma_buf_vmap() fails.
+ * @retval -EFAULT          If copying data from user space fails via @ref copy_from_user().
+ * @retval -EOVERFLOW       If prefence offset calculation results in overflow via
+ *                          @ref check_add_overflow().
+ * @retval (int)            Errors returned from invocation of
+ *                          @ref isp_capture_populate_fence_info().
  */
 static int isp_capture_setup_prefences(
 	struct tegra_isp_channel *chan,
@@ -603,11 +763,24 @@ fail:
 }
 
 /**
- * @brief Unpin and free the list of pinned capture_mapping's associated with an
- * ISP process request.
+ * @brief Unpins buffers for a specified capture request in the ISP channel.
  *
- * @param[in]	chan		ISP channel context
- * @param[in]	buffer_index	Process descriptor queue index
+ * This function performs the following operations:
+ * - Retrieves the capture data from the provided channel.
+ * - Validates that the capture data is initialized. If not, returns immediately.
+ * - Acquires the unpins list lock using @ref mutex_lock().
+ * - Validates the buffer index against the queue depth.
+ *   If invalid, returns immediately.
+ * - Retrieves the list of unpins for the specified buffer index.
+ * - If there are unpins, iterates through them:
+ *   - Calls @ref put_mapping() for each unpin entry.
+ *   - Resets the unpins list using @ref memset().
+ * - Releases the unpins list lock using @ref mutex_unlock().
+ *
+ * @param[in]  chan          Pointer to the @ref tegra_isp_channel structure.
+ *                           Valid Value: non-NULL.
+ * @param[in]  buffer_index  Index of the buffer to unpin.
+ *                           Valid range: [0 .. (queue_depth - 1)].
  */
 static void isp_capture_request_unpin(
 	struct tegra_isp_channel *chan,
@@ -639,11 +812,24 @@ static void isp_capture_request_unpin(
 }
 
 /**
- * @brief Unpin and free the list of pinned capture_mapping's associated with an
- * ISP program request.
+ * @brief Unpins buffers for a specified ISP program request in the ISP channel.
  *
- * @param[in]	chan		ISP channel context
- * @param[in]	buffer_index	Program descriptor queue index
+ * This function performs the following operations:
+ * - Retrieves the capture data from the provided channel.
+ * - Validates that the capture data is initialized. If not, returns immediately.
+ * - Acquires the unpins list lock using @ref mutex_lock().
+ * - Validates the buffer index against the queue depth.
+ *   If invalid, returns immediately.
+ * - Retrieves the list of unpins for the specified buffer index.
+ * - If there are unpins, iterates through them:
+ *   - Calls @ref put_mapping() for each unpin entry.
+ *   - Resets the unpins list using @ref memset().
+ * - Releases the unpins list lock using @ref mutex_unlock().
+ *
+ * @param[in]  chan          Pointer to the @ref tegra_isp_channel structure.
+ *                           Valid value: non-NULL.
+ * @param[in]  buffer_index  Index of the buffer to unpin.
+ *                           Valid range: [0 .. (queue_depth - 1)].
  */
 static void isp_capture_program_request_unpin(
 	struct tegra_isp_channel *chan,
@@ -674,6 +860,28 @@ static void isp_capture_program_request_unpin(
 	mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);
 }
 
+/**
+ * @brief Retrieves the number of statistical progress flags set in a program request.
+ *
+ * This function performs the following operations:
+ * - Calculates the offset by multiplying the buffer index with the request size
+ *   using @ref __builtin_umul_overflow().
+ * - Creates a program handle by adding the offset to the base address of the requests.
+ * - Checks if the program handle is valid.
+ * - Computes and returns the number of set bits in the stats_aidx_flag field of
+ *   the program using @ref hweight32().
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  req   Pointer to the @ref isp_program_req structure.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0           If the program handle could not be created.
+ * @retval -EOVERFLOW  If the calculation of the offset overflows using
+ *                     @ref __builtin_umul_overflow().
+ * @retval (int)       Number of set bits in the @c stats_aidx_flag field, as
+ *                     computed by @ref hweight32().
+ */
 static uint32_t isp_capture_get_num_stats_progress(
 	struct tegra_isp_channel *chan,
 	struct isp_program_req *req)
@@ -702,14 +910,44 @@ static uint32_t isp_capture_get_num_stats_progress(
 }
 
 /**
- * @brief Prepare and submit a pin and relocation request for a program
- * descriptor, the resultant mappings are added to the channel program
- * descriptor queue's @em unpins_list.
+ * @brief Prepares a program request for ISP capture.
  *
- * @param[in]	chan	ISP channel context
- * @param[in]	req	ISP program request
+ * This function performs the following operations:
+ * - Validates the capture data within the provided channel.
+ * - Checks if the ISP channel is properly set up by checking that channel
+ *   ID is not @ref CAPTURE_CHANNEL_ISP_INVALID_ID.
+ * - Validates the program request structure.
+ * - Ensures that the unpins list is initialized.
+ * - Verifies that the requested buffer index is within the queue depth.
+ * - Executes a speculative barrier using @ref spec_bar().
+ * - Acquires the reset lock using @ref mutex_lock().
+ * - Processes any pending completions if a reset flag is set using
+ *   @ref try_wait_for_completion().
+ * - Sets reset flag to false.
+ * - Releases the reset lock after processing using @ref mutex_unlock().
+ * - Acquires the unpins list lock using @ref mutex_lock().
+ * - Checks if the program request is still in use.
+ * - Retrieves memory information for the specified buffer index.
+ * - Calculates the request offset based on the buffer index and request size.
+ * - Checks for overflow in the offset calculation using @ref check_add_overflow().
+ * - Calls @ref capture_common_pin_and_get_iova() to pin memory and obtain IOVA.
+ * - Releases the unpins list lock using @ref mutex_unlock().
+ * - Retrieves the number of statistical progress flags by calling
+ *   @ref isp_capture_get_num_stats_progress().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan          Pointer to the @ref tegra_isp_channel structure.
+ *                           Valid value: non-NULL.
+ * @param[in]  req           Pointer to the @ref isp_program_req structure.
+ *                           Valid value: non-NULL.
+ *
+ * @retval 0                On successful preparation of the program request.
+ * @retval -ENODEV          If the ISP capture is uninitialized or the channel setup is invalid.
+ * @retval -EINVAL          If the program request is invalid, the unpins list is incomplete,
+ *                          or the buffer index is out of bounds.
+ * @retval -EOVERFLOW       If the offset calculation overflows via @ref check_add_overflow().
+ * @retval -EBUSY           If the program request is still in use.
+ * @retval (int)            Errors returned from invocation of
+ *                          @ref capture_common_pin_and_get_iova().
  */
 static int isp_capture_program_prepare(
 	struct tegra_isp_channel *chan,
@@ -800,10 +1038,19 @@ static int isp_capture_program_prepare(
 }
 
 /**
- * @brief Unpin an ISP process request and flush the memory.
+ * @brief Cleans up IVC capture by unpinning buffers and synchronizing DMA.
  *
- * @param[in]	capture		ISP channel capture context
- * @param[in]	buffer_index	Process descriptor queue index
+ * This function performs the following operations:
+ * - Retrieves the ISP channel from the capture structure.
+ * - Validates the ISP channel; if invalid, returns.
+ * - Calls @ref isp_capture_request_unpin() with the channel and buffer index.
+ * - Synchronizes the DMA buffer range for CPU access by calling
+ *   @ref dma_sync_single_range_for_cpu().
+ *
+ * @param[in]  capture        Pointer to the @ref isp_capture structure.
+ *                            Valid value: non-NULL.
+ * @param[in]  buffer_index   Index of the buffer to clean up.
+ *                            Valid range: [0 .. (queue_depth - 1)].
  */
 static inline void isp_capture_ivc_capture_cleanup(
 	struct isp_capture *capture,
@@ -825,14 +1072,19 @@ static inline void isp_capture_ivc_capture_cleanup(
 }
 
 /**
- * @brief Signal completion or write progress status to notifier for ISP capture
- * indication from RCE.
+ * @brief Signals capture progress status or completes the capture response.
  *
- * If the ISP channel's progress status notifier is not set, the capture
- * completion will be signalled.
+ * This function performs the following operations:
+ * - Checks if the progress status notifier is set.
+ * - If set, calls @ref capture_common_set_progress_status() with the progress
+ *   status notifier, buffer index, progress status buffer depth, and completion
+ *   status.
+ * - Otherwise, completes the capture response by calling @ref complete().
  *
- * @param[in]	capture		ISP channel capture context
- * @param[in]	buffer_index	Process descriptor queue index
+ * @param[in]  capture        Pointer to the @ref isp_capture structure.
+ *                            Valid value: non-NULL.
+ * @param[in]  buffer_index   Index of the buffer to signal.
+ *                            Valid range: [0 .. (queue_depth - 1)].
  */
 static inline void isp_capture_ivc_capture_signal(
 	struct isp_capture *capture,
@@ -854,10 +1106,19 @@ static inline void isp_capture_ivc_capture_signal(
 }
 
 /**
- * @brief Unpin an ISP program request and flush the memory.
+ * @brief Cleans up program resources for a specified ISP capture buffer.
  *
- * @param[in]	capture		ISP channel capture context
- * @param[in]	buffer_index	Program descriptor queue index
+ * This function performs the following operations:
+ * - Retrieves the ISP channel from the capture structure.
+ * - Validates the ISP channel; if invalid, returns early.
+ * - Calls @ref isp_capture_program_request_unpin() with the channel and buffer index.
+ * - Synchronizes the DMA buffer range for CPU access by calling
+ *   @ref dma_sync_single_range_for_cpu().
+ *
+ * @param[in]  capture        Pointer to the @ref isp_capture structure.
+ *                            Valid value: non-NULL.
+ * @param[in]  buffer_index   Index of the buffer to clean up.
+ *                            Valid range: [0 .. (queue_depth - 1)].
  */
 static inline void isp_capture_ivc_program_cleanup(
 	struct isp_capture *capture,
@@ -879,14 +1140,26 @@ static inline void isp_capture_ivc_program_cleanup(
 }
 
 /**
- * @brief Signal completion or write progress status to notifier for ISP program
- * indication from RCE.
+ * @brief Signals ISP program progress status or completes the program response.
  *
- * If the ISP channel's progress status notifier is not set, the program
- * completion will be signalled.
+ * This function performs the following operations:
+ * - Checks if the progress status notifier is set.
+ * - If set:
+ *   - Finds the buffer slot by summing buffer index and progress status buffer depth
+ *     and checks for overflow by calling @ref check_add_overflow().
+ *   - Finds the buffer depth by summing the the program status buffer depth and
+ *     progress status buffer depth and checks for overflow by calling
+ *     @ref check_add_overflow().
+ *   - Returns immediately in case of overflow.
+ *   - Calls @ref capture_common_set_progress_status() with the progress status
+ *     notifier, the two above sums, and @ref PROGRESS_STATUS_DONE.
+ * - Otherwise:
+ *   - Completes the program response by calling @ref complete().
  *
- * @param[in]	capture		ISP channel capture context
- * @param[in]	buffer_index	Program descriptor queue index
+ * @param[in]  capture        Pointer to the @ref isp_capture structure.
+ *                            Valid value: non-NULL.
+ * @param[in]  buffer_index   Index of the program descriptor buffer to signal.
+ *                            Valid range: [0 .. (queue_depth - 1)].
  */
 static inline void isp_capture_ivc_program_signal(
 	struct isp_capture *capture,
@@ -923,10 +1196,33 @@ static inline void isp_capture_ivc_program_signal(
 }
 
 /**
- * @brief ISP channel callback function for @em capture IVC messages.
+ * @brief Handles IVC status callbacks for ISP capture.
  *
- * @param[in]	ivc_resp	IVC @ref CAPTURE_MSG from RCE
- * @param[in]	pcontext	ISP channel capture context
+ * This function performs the following operations:
+ * - Casts @a ivc_resp to a @ref CAPTURE_MSG type.
+ * - Casts @a pcontext to a @ref isp_capture type.
+ * - Validates that the @ref CAPTURE_MSG, @ref isp_capture, and ISP channel are
+ *   initialized. If invalid, returns immediately.
+ * - Processes the status message based on the message ID:
+ *   - For @ref CAPTURE_ISP_STATUS_IND:
+ *     - Retrieves the buffer index.
+ *     - Calls @ref isp_capture_ivc_capture_cleanup() and
+ *       @ref isp_capture_ivc_capture_signal().
+ *   - For @ref CAPTURE_ISP_PROGRAM_STATUS_IND:
+ *     - Retrieves the buffer index.
+ *     - Calls @ref isp_capture_ivc_program_cleanup() and
+ *       @ref isp_capture_ivc_program_signal().
+ *   - For @ref CAPTURE_ISP_EX_STATUS_IND:
+ *     - Retrieves the process buffer index and program buffer index.
+ *     - Calls @ref isp_capture_ivc_program_cleanup(),
+ *       @ref isp_capture_ivc_capture_cleanup(), and
+ *       @ref isp_capture_ivc_capture_signal().
+ *   - For unknown message IDs, logs an error.
+ *
+ * @param[in]  ivc_resp       Pointer to the IVC response data.
+ *                            Valid value: non-NULL.
+ * @param[in]  pcontext       Pointer to the ISP channel capture context structure.
+ *                            Valid value: non-NULL.
  */
 static void isp_capture_ivc_status_callback(
 	const void *ivc_resp,
@@ -995,15 +1291,39 @@ static void isp_capture_ivc_status_callback(
 }
 
 /**
- * @brief Send a @em capture-control IVC message to RCE on an ISP channel, and
- * block w/ timeout, waiting for the RCE response.
+ * @brief Sends a @em capture-control message over IVC for ISP capture.
  *
- * @param[in]	chan	ISP channel context
- * @param[in]	msg	IVC message payload
- * @param[in]	size	Size of @a msg [byte]
- * @param[in]	resp_id	IVC message identifier, see @CAPTURE_MSG_IDS
+ * This function performs the following operations:
+ * - Retrieves the capture data from the provided channel.
+ * - Validates that the capture data is initialized.
+ * - Logs a debug message indicating the message being sent using @ref dev_dbg().
+ * - Sets the response message ID to the provided @a resp_id.
+ * - Acquires the control message lock using @ref mutex_lock().
+ * - Sends the control message by calling @ref tegra_capture_ivc_control_submit().
+ * - Waits for the capture response with a timeout by calling
+ *   @ref wait_for_completion_timeout().
+ * - Compares the response header with the expected header using @ref memcmp().
+ * - Releases the control message lock using @ref mutex_unlock().
+ * - Logs a debug message indicating the received response using @ref dev_dbg().
  *
- * @returns	0 (success), neg. errno (failure)
+ * @param[in]  chan         Pointer to the @ref tegra_isp_channel structure.
+ *                          Valid value: non-NULL.
+ * @param[in]  msg          Pointer to the @ref CAPTURE_CONTROL_MSG structure.
+ *                          Valid value: non-NULL.
+ * @param[in]  size         Size of the control message in bytes.
+ *                          Valid range: depends on context.
+ * @param[in]  resp_id      Response message ID to set.
+ *                          Valid range: depends on context.
+ *
+ * @retval 0               On successful sending of the control message and
+ *                         receiving the expected response.
+ * @retval -ENODEV         If the ISP capture context is invalid.
+ * @retval -ETIMEDOUT      If waiting for the capture response times out using
+ *                         @ref wait_for_completion_timeout().
+ * @retval -EINVAL         If the response received is unexpected as determined by
+ *                         @ref memcmp().
+ * @retval (int)           Errors returned from invocation of
+ *                         @ref tegra_capture_ivc_control_submit().
  */
 static int isp_capture_ivc_send_control(struct tegra_isp_channel *chan,
 		const struct CAPTURE_CONTROL_MSG *msg, size_t size,
@@ -1060,11 +1380,26 @@ fail:
 }
 
 /**
- * @brief ISP channel callback function for @em capture-control IVC messages,
- * this unblocks the channel's @em capture-control completion.
+ * @brief Handles control callbacks for ISP capture over IVC.
  *
- * @param[in]	ivc_resp	IVC @ref CAPTURE_CONTROL_MSG from RCE
- * @param[in]	pcontext	ISP channel capture context
+ * This function performs the following operations:
+ * - Casts @a ivc_resp to a @ref CAPTURE_CONTROL_MSG type.
+ * - Casts @a pcontext to a @ref isp_capture type.
+ * - Validates that the @ref CAPTURE_CONTROL_MSG, @ref isp_capture, and ISP channel are
+ *   initialized. If not, returns immediately.
+ * - Retrieves the ISP channel from the capture structure.
+ * - Processes the control message based on the message ID:
+ *   - For @ref CAPTURE_CHANNEL_ISP_SETUP_RESP, @ref CAPTURE_CHANNEL_ISP_RESET_RESP, and
+ *     @ref CAPTURE_CHANNEL_ISP_RELEASE_RESP:
+ *     - Copies the control message to the capture response message using @ref memcpy().
+ *     - Completes the capture response by calling @ref complete().
+ *   - For unknown message IDs:
+ *     - Logs an error using @ref dev_err().
+ *
+ * @param[in]  ivc_resp  Pointer to the IVC response data.
+ *                       Valid value: non-NULL.
+ * @param[in]  pcontext  Pointer to the context structure.
+ *                       Valid value: non-NULL.
  */
 static void isp_capture_ivc_control_callback(
 	const void *ivc_resp,
@@ -1105,6 +1440,33 @@ static void isp_capture_ivc_control_callback(
 	}
 }
 
+/**
+ * @brief Initializes the ISP capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel pointer is not NULL.
+ * - Calls @ref of_find_node_by_path() to locate the rtcpu device node.
+ * - Checks the availability of the device node using @ref of_device_is_available().
+ * - Calls @ref of_find_device_by_node() to obtain the rtcpu platform device.
+ * - Allocates memory for the ISP capture structure using @ref kzalloc().
+ * - Initializes completion variables with @ref init_completion().
+ * - Initializes mutexes using @ref mutex_init().
+ * - Associates the capture structure with the provided channel.
+ * - Sets channel ID to @ref CAPTURE_CHANNEL_ISP_INVALID_ID.
+ * - Sets reset flags to false.
+ *
+ * @param[in]  chan    Pointer to the @ref tegra_isp_channel structure.
+ *                      Valid value: non-NULL.
+ *
+ * @retval 0           On successful initialization.
+ * @retval -ENODEV     If the channel context is invalid,
+ *                     @ref of_find_node_by_path(),
+ *                     @ref of_device_is_available(),
+ *                     @ref of_find_device_by_node(),
+ *                     @ref init_completion(), or
+ *                     @ref mutex_init() fails.
+ * @retval -ENOMEM     If memory allocation via @ref kzalloc() fails.
+ */
 int isp_capture_init(
 	struct tegra_isp_channel *chan)
 {
@@ -1157,6 +1519,21 @@ int isp_capture_init(
 	return 0;
 }
 
+/**
+ * @brief Shuts down the ISP capture functionality for a given channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel is non-NULL.
+ * - Retrieves the capture data from the channel.
+ * - If the capture channel ID is valid:
+ *   - Calls @ref isp_capture_reset().
+ *   - Calls @ref isp_capture_release().
+ * - Frees the capture structure using @ref kfree().
+ * - Sets the channel's capture data pointer to NULL.
+ *
+ * @param[in]  chan          Pointer to the @ref tegra_isp_channel structure.
+ *                           Valid Value: non-NULL.
+ */
 void isp_capture_shutdown(
 	struct tegra_isp_channel *chan)
 {
@@ -1183,6 +1560,21 @@ void isp_capture_shutdown(
 	chan->capture_data = NULL;
 }
 
+/**
+ * @brief Initializes the NvHost device for the ISP capture channel.
+ *
+ * This function performs the following operations:
+ * - Retrieves driver data using @ref platform_get_drvdata().
+ * - Validates the ISP capture setup structure by checking if @a setup is non-NULL.
+ * - Extracts the ISP unit index from the setup structure.
+ * - Checks if the ISP unit index is within the valid range.
+ * - Assigns the NvHost device and corresponding node to the ISP channel.
+ *
+ * @param[in]  chan          Pointer to the @ref tegra_isp_channel structure.
+ *                           Valid value: non-NULL.
+ * @param[in]  setup         Pointer to the @ref isp_capture_setup structure.
+ *                           Valid value: non-NULL.
+ */
 void isp_get_nvhost_device(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_setup *setup)
@@ -1208,6 +1600,38 @@ void isp_get_nvhost_device(
 	chan->ndev = info->isp_pdevices[isp_inst];
 }
 
+/**
+ * @brief Initializes capture descriptors for the ISP channel.
+ *
+ * This function performs the following operations:
+ * - Pins the process descriptor ring buffer to RTCPU by calling
+ *   @ref capture_common_pin_memory().
+ * - Pins the process descriptor ring buffer to ISP by calling
+ *   @ref capture_buffer_add().
+ * - Caches ISP capture descriptor ring buffer details.
+ * - Allocates the unpins list based on the queue depth using @ref vzalloc().
+ *   - If allocation fails, unpins the memory using @ref capture_common_unpin_memory()
+ *     and frees allocated memory with @ref vfree().
+ * - Allocates memory info ring buffer for ISP capture descriptors using
+ *   @ref dma_alloc_coherent().
+ *   - If allocation fails, frees the unpins list using @ref vfree()
+ *     and unpins the memory with @ref capture_common_unpin_memory().
+ *
+ * @param[in]  chan        Pointer to the @ref tegra_isp_channel structure.
+ *                         Valid value: non-NULL.
+ * @param[in]  capture     Pointer to the @ref isp_capture structure.
+ *                         Valid value: non-NULL.
+ * @param[in]  setup       Pointer to the @ref isp_capture_setup structure.
+ *                         Valid value: non-NULL.
+ * @param[in]  buffer_ctx  Pointer to the @ref capture_buffer_table structure.
+ *                         Valid value: non-NULL.
+ *
+ * @retval 0                On successful setup of capture descriptors.
+ * @retval -ENOMEM          If memory allocation with @ref vzalloc() or
+ *                          @ref dma_alloc_coherent() fails.
+ * @retval (int)            If @ref capture_common_pin_memory() or
+ *                          @ref capture_buffer_add() fails.
+ */
 static int setup_capture_descriptors(
 	struct tegra_isp_channel *chan,
 	struct isp_capture *capture,
@@ -1268,6 +1692,43 @@ static int setup_capture_descriptors(
 	return 0;
 }
 
+/**
+ * @brief Sets up program descriptors for the ISP channel.
+ *
+ * This function performs the following operations:
+ * - Pins the ISP program descriptor ring buffer to RTCPU by calling
+ *   @ref capture_common_pin_memory().
+ * - Pins the ISP program descriptor ring buffer to ISP by calling
+ *   @ref capture_buffer_add().
+ *   - If the memory setup fails, unpins memory using
+ *     @ref capture_common_unpin_memory().
+ * - Caches ISP program descriptor ring buffer details to ISP channel capture context.
+ * - Allocates the ISP program unpin list based on the queue depth using
+ *   @ref vzalloc().
+ *   - If allocation fails, unpins memory using
+ *     @ref capture_common_unpin_memory() and frees the unpins list with
+ *     @ref vfree().
+ * - Allocates memory info ring buffer for ISP program descriptors using
+ *   @ref dma_alloc_coherent().
+ *   - If allocation fails, frees the unpins list with @ref vfree() and
+ *     unpins memory using @ref capture_common_unpin_memory().
+ *
+ *
+ * @param[in]      chan        Pointer to the @ref tegra_isp_channel structure.
+ *                             Valid Value: non-NULL.
+ * @param[in, out] capture     Pointer to the @ref isp_capture structure.
+ *                             Valid Value: non-NULL.
+ * @param[in]      setup       Pointer to the @ref isp_capture_setup structure.
+ *                             Valid Value: non-NULL.
+ * @param[in, out] buffer_ctx  Pointer to the @ref capture_buffer_table structure.
+ *                             Valid Value: non-NULL.
+ *
+ * @retval 0                On successful setup of program descriptors.
+ * @retval -ENOMEM          If memory allocation with @ref vzalloc() or
+ *                          @ref dma_alloc_coherent() fails.
+ * @retval (int)            If @ref capture_common_pin_memory() or
+ *                          @ref capture_buffer_add() fails.
+ */
 static int setup_program_descriptors(
 	struct tegra_isp_channel *chan,
 	struct isp_capture *capture,
@@ -1334,6 +1795,68 @@ static int setup_program_descriptors(
 	return 0;
 }
 
+/**
+ * @brief Initializes the ISP capture setup for the given channel.
+ *
+ * This function performs the following operations:
+ * - Retrieves driver data by calling @ref platform_get_drvdata().
+ * - Validates that the provided channel is initialized.
+ * - Retrieves and validates the capture data from the channel.
+ * - Checks if the capture channel is already set up by verifying channel ID.
+ * - Validates setup parameters including channel flags, queue depth, and request size are
+ *   non-zero, and ISP unit ID is within the number of configured ISP devices.
+ * - Creates a buffer table by calling @ref create_buffer_table().
+ * - Sets up capture descriptors by calling @ref setup_capture_descriptors().
+ * - Sets up program descriptors by calling @ref setup_program_descriptors().
+ * - Sets up synchronization points by calling @ref isp_capture_setup_syncpts().
+ * - Registers a control callback by calling @ref tegra_capture_ivc_register_control_cb().
+ * - Initializes the control message structure.
+ * - Populates a @ref capture_channel_isp_config configuration structure using properties of
+ *   input @ref isp_capture_setup structure.
+ * - If ISP GOS tables are enabled, configures them accordingly.
+ *   - Iterates through configured GOS tables and assigns ISP GOS tables in the capture channel
+ *     to ISP GOS tables in the channel configuration structure.
+ * - Sends the control message by calling @ref isp_capture_ivc_send_control().
+ * - Checks the response message is successful.
+ * - Sets the channel ID based on the response message.
+ * - Notifies the channel ID by calling @ref tegra_capture_ivc_notify_chan_id().
+ * - Registers a capture callback by calling @ref tegra_capture_ivc_register_capture_cb().
+ * - Assigns the buffer context to the capture structure.
+ * - In case of any failure, releases resources by invoking:
+ *   - @ref isp_capture_release() to release input @ref tegra_isp_channel structure in case of
+ *     callback update or registration failure.
+ *   - @ref destroy_buffer_table() to destroy buffer table.
+ *   - @ref tegra_capture_ivc_unregister_control_cb() to unregister the control callback.
+ *   - @ref dma_free_coherent() to free memory info ring buffers.
+ *   - @ref vfree() to free allocated unpins lists.
+ *   - @ref capture_common_unpin_memory() to unpin the program and capture descriptor requests
+ *     memory.
+ *
+ * @param[in]  chan        Pointer to the @ref tegra_isp_channel structure.
+ *                         Valid value: non-NULL.
+ * @param[in]  setup       Pointer to the @ref isp_capture_setup structure.
+ *                         Valid value: non-NULL.
+ *
+ * @retval 0                On successful setup of capture descriptors.
+ * @retval -ENODEV          If the channel is NULL, capture is uninitialized, or external
+ *                          functions such as @ref platform_get_drvdata() fail.
+ * @retval -EEXIST          If the capture channel is already set up.
+ * @retval -EINVAL          If the capture setup parameters are invalid.
+ * @retval -ENOMEM          If memory allocation with @ref create_buffer_table(),
+ *                          @ref setup_capture_descriptors(), @ref setup_program_descriptors(),
+ *                          @ref vzalloc(), or @ref dma_alloc_coherent() fails.
+ * @retval -EIO             If the capture response is unexpected via
+ *                          @ref isp_capture_ivc_send_control().
+ * @retval (int)            Errors returned from external functions such as
+ *                          @ref capture_common_pin_memory(),
+ *                          @ref capture_buffer_add(),
+ *                          @ref setup_capture_descriptors(),
+ *                          @ref setup_program_descriptors(),
+ *                          @ref isp_capture_setup_syncpts(),
+ *                          @ref tegra_capture_ivc_register_control_cb(),
+ *                          @ref tegra_capture_ivc_notify_chan_id(),
+ *                          or @ref tegra_capture_ivc_register_capture_cb().
+ */
 int isp_capture_setup(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_setup *setup)
@@ -1518,6 +2041,67 @@ pin_fail:
 	return err;
 }
 
+/**
+ * @brief Releases ISP capture resources and cleans up the capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel by checking if it is non-NULL.
+ * - Retrieves and validates the capture data from the channel.
+ * - Logs the capture release event using @ref nv_camera_log().
+ * - Checks if the channel is set up by verifying channel ID is not
+ *   @ref CAPTURE_CHANNEL_ISP_INVALID_ID.
+ * - Initializes the control message structure using @ref memset().
+ * - Configures the control message with the release request by setting
+ *   msg_id, channel_id, and reset_flags.
+ * - Sends the control message by calling @ref isp_capture_ivc_send_control().
+ *   - If sending fails, reboots the RTCPU device using @ref tegra_camrtc_reboot().
+ * - Checks the response message's result for success.
+ * - Unregisters the capture callback by calling @ref tegra_capture_ivc_unregister_capture_cb().
+ * - Unregisters the control callback by calling @ref tegra_capture_ivc_unregister_control_cb().
+ * - Iterates through the program descriptor queue:
+ *   - Completes the program response using @ref complete().
+ *   - Unpins the program request using @ref isp_capture_program_request_unpin().
+ * - Unpins the program descriptor requests memory by calling @ref capture_common_unpin_memory().
+ * - Iterates through the capture descriptor queue:
+ *   - Completes the capture response using @ref complete().
+ *   - Unpins the capture request using @ref isp_capture_request_unpin().
+ * - Executes a speculative barrier using @ref spec_bar().
+ * - Releases synchronization points by calling @ref isp_capture_release_syncpts().
+ * - Unpins the capture descriptor requests memory using @ref capture_common_unpin_memory().
+ * - Frees the unpins lists using @ref vfree() and sets the pointers to NULL.
+ * - Frees memory info ring buffers by calling @ref dma_free_coherent().
+ * - Releases the progress status notifier if set by calling
+ *   @ref capture_common_release_progress_status_notifier().
+ * - Destroys the buffer table using @ref destroy_buffer_table() and sets
+ *   the buffer context to NULL.
+ * - Invalidates the channel ID by setting channel ID to @ref CAPTURE_CHANNEL_ISP_INVALID_ID.
+ * - Returns the accumulated error code.
+ *
+ *
+ * @param[in]  chan         Pointer to the @ref tegra_isp_channel structure.
+ *                          Valid value: non-NULL.
+ * @param[in]  reset_flags  Reset flags for the capture release.
+ *                          Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval 0               On successful release of ISP capture resources.
+ * @retval -ENODEV         If the channel is NULL, capture is uninitialized,
+ *                         or the channel is not set up.
+ * @retval -EIO            If sending the control message fails or the response
+ *                         is invalid, involving @ref isp_capture_ivc_send_control()
+ *                         or @ref tegra_camrtc_reboot().
+ * @retval -ETIMEDOUT      If waiting for the capture response times out via
+ *                         @ref wait_for_completion_timeout().
+ * @retval -EINVAL         If the response received from @ref isp_capture_ivc_send_control()
+ *                         is not successful.
+ * @retval -ENOMEM         If memory allocation fails during cleanup operations.
+ * @retval (int)           Errors returned from external functions such as
+ *                         @ref tegra_capture_ivc_unregister_capture_cb(),
+ *                         @ref tegra_capture_ivc_unregister_control_cb(),
+ *                         @ref isp_capture_release_syncpts(),
+ *                         @ref capture_common_unpin_memory(),
+ *                         @ref dma_free_coherent(),
+ *                         @ref vfree(), or @ref destroy_buffer_table().
+ */
 int isp_capture_release(
 	struct tegra_isp_channel *chan,
 	uint32_t reset_flags)
@@ -1636,6 +2220,58 @@ int isp_capture_release(
 	return err;
 }
 
+/**
+ * @brief Resets the ISP capture channel with specified reset flags.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel by checking if it is non-NULL.
+ * - Retrieves and validates the capture data from the channel.
+ * - Logs the capture reset event using @ref nv_camera_log().
+ * - Checks if the channel is set up by verifying the channel ID.
+ * - Acquires the reset lock using @ref mutex_lock().
+ * - Sets the reset flags for both program and capture operations.
+ * - If @ref CAPTURE_ISP_RESET_BARRIER_IND is defined:
+ *   - Initializes the capture message structure using @ref memset().
+ *   - Configures the capture message with the reset request by setting
+ *     msg_id and channel_id.
+ *   - Submits the capture reset message by calling @ref tegra_capture_ivc_capture_submit().
+ * - Initializes the control message structure using @ref memset().
+ * - Configures the control message with the reset request by setting
+ *   msg_id, channel_id, and reset_flags.
+ * - Sends the control message by calling @ref isp_capture_ivc_send_control().
+ * - If @ref CAPTURE_ISP_RESET_BARRIER_IND is defined:
+ *   - Checks the response result for timeout.
+ * - Checks the response result for success.
+ * - Fast-forwards synchronization points by calling @ref isp_capture_fastforward_syncpts().
+ *
+ * Error Handling:
+ * - Iterates through the program descriptor queue:
+ *   - Unpins the program request using @ref isp_capture_program_request_unpin().
+ *   - Completes the program response using @ref complete().
+ * - Executes a speculative barrier using @ref spec_bar().
+ * - Iterates through the capture descriptor queue:
+ *   - Unpins the capture request using @ref isp_capture_request_unpin().
+ *   - Completes the capture response using @ref complete().
+ * - Executes another speculative barrier using @ref spec_bar().
+ * - Releases the reset lock using @ref mutex_unlock().
+ *
+ * @param[in]  chan          Pointer to the @ref tegra_isp_channel structure.
+ *                           Valid value: non-NULL.
+ * @param[in]  reset_flags   Reset flags for the capture reset.
+ *                           Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval 0               On successful reset of the ISP capture channel.
+ * @retval -ENODEV         If the channel is NULL, capture is uninitialized,
+ *                         or the channel is not set up.
+ * @retval -EAGAIN         If the ISP reset operation times out, involving
+ *                         @ref tegra_capture_ivc_capture_submit().
+ * @retval -EINVAL         If the response received from @ref isp_capture_ivc_send_control()
+ *                         is not successful.
+ * @retval -EIO            If sending the control message fails or the RTCPU device
+ *                         needs to reboot, involving @ref isp_capture_ivc_send_control()
+ *                         or @ref tegra_camrtc_reboot().
+ * @retval (int)           If @ref tegra_capture_ivc_capture_submit() fails.
+ */
 int isp_capture_reset(
 	struct tegra_isp_channel *chan,
 	uint32_t reset_flags)
@@ -1738,6 +2374,33 @@ error:
 	return err;
 }
 
+/**
+ * @brief Retrieves information about the ISP capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel by checking if it is non-NULL.
+ * - Retrieves and validates the capture data from the channel.
+ * - Logs the capture get_info event using @ref nv_camera_log().
+ * - Checks if the channel is set up by verifying the channel ID.
+ * - Validates the output info parameter by checking if it is non-NULL.
+ * - Assigns the channel ID to the info structure.
+ * - Assigns the progress and stats progress syncpoint IDs to the info structure.
+ * - Reads the current value of the progress syncpoint by calling
+ *   @ref isp_capture_read_syncpt().
+ * - Reads the current value of the stats progress syncpoint by calling
+ *   @ref isp_capture_read_syncpt().
+ *
+ * @param[in]  chan    Pointer to the @ref tegra_isp_channel structure.
+ *                     Valid value: non-NULL.
+ * @param[out] info    Pointer to the @ref isp_capture_info structure to be filled.
+ *                     Valid value: non-NULL.
+ *
+ * @retval 0            On successful retrieval of capture information.
+ * @retval -ENODEV      If the channel is NULL, capture data is uninitialized,
+ *                      or the channel is not set up.
+ * @retval -EINVAL      If the output info parameter is NULL.
+ * @retval (int)        Errors returned from invocation of @ref isp_capture_read_syncpt().
+ */
 int isp_capture_get_info(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_info *info)
@@ -1794,8 +2457,38 @@ int isp_capture_get_info(
 }
 
 /**
- * Pin/map buffers and save iova boundaries into corresponding
- * memoryinfo struct.
+ * @brief Pins and maps ISP capture request buffers and save IOVA boundaries.
+ *
+ * This function performs the following operations:
+ * - Retrieves the capture descriptor context from the channel structure.
+ * - Calculates descriptor and request offsets, checking for overflow using
+ *   @ref check_mul_overflow() and @ref check_add_overflow().
+ * - Retrieves the capture descriptor based on the calculated descriptor offset.
+ * - Calculates the ISP pushbuffer2 memory offset, ensuring no overflow occurs.
+ * - Pins the pushbuffer2 memory region by calling
+ *   @ref capture_common_pin_and_get_iova().
+ * - Iterates through input surfaces and pins each using
+ *   @ref capture_common_pin_and_get_iova().
+ * - Iterates through output surfaces and pins each using
+ *   @ref capture_common_pin_and_get_iova().
+ * - Pins statistics surfaces by iterating through predefined arrays and
+ *   calling @ref capture_common_pin_and_get_iova() for each surface.
+ * - Pins the engine status surface using @ref capture_common_pin_and_get_iova().
+ * - In case of any error during the above steps, unpin cleanup is handled by
+ *   @ref isp_capture_request_unpin().
+ *
+ * @param[in]      chan            Pointer to the @ref tegra_isp_channel structure.
+ *                                 Valid value: non-NULL.
+ * @param[in]      req             Pointer to the @ref isp_capture_req structure.
+ *                                 Valid value: non-NULL.
+ * @param[in, out] request_unpins  Pointer to the @ref capture_common_unpins structure
+ *                                 used for managing unpin operations.
+ *                                 Valid value: non-NULL.
+ *
+ * @retval 0           On successful pinning of all request buffers.
+ * @retval -EOVERFLOW  If an overflow is detected during offset calculations via
+ *                     @ref check_mul_overflow() or @ref check_add_overflow().
+ * @retval (int)       Errors propagated from @ref capture_common_pin_and_get_iova().
  */
 static int pin_isp_capture_request_buffers_locked(
 		struct tegra_isp_channel *chan,
@@ -1932,6 +2625,31 @@ fail:
 	return err;
 }
 
+/**
+ * @brief Retrieves the number of progress steps for a capture request.
+ *
+ * This function performs the following operations:
+ * - Calculates the descriptor offset by multiplying the buffer index with the
+ *   request size using @ref check_mul_overflow().
+ * - Retrieves the capture descriptor from the calculated offset.
+ * - Extracts the slice height and height from the descriptor's surface configurations.
+ * - Adjusts the slice height by subtracting 1 using @ref check_sub_overflow().
+ * - Adjusts the height by adding the adjusted slice height using @ref check_add_overflow().
+ * - Calculates and returns the number of progress steps by dividing the adjusted
+ *   height by the slice height.
+ *
+ * In case of any overflow during calculations, the function returns 0.
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  req   Pointer to the @ref isp_capture_req structure.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0          If any overflow check fails via @ref check_mul_overflow(),
+ *                    @ref check_sub_overflow(), or @ref check_add_overflow().
+ * @retval (int)      The number of progress steps, calculated by dividing the
+ *                    adjusted height by the slice height.
+ */
 static uint32_t isp_capture_get_num_progress(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_req *req)
@@ -1962,6 +2680,50 @@ static uint32_t isp_capture_get_num_progress(
 	return (adjust_height / sliceHeight);
 }
 
+/**
+ * @brief Submits a capture request to the ISP channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel and capture request are not null.
+ * - Ensures the capture channel is initialized and valid.
+ * - Ensures buffer index is not out of bounds of configured queue depth.
+ * - If reset capture flag is set, waits for any pending completions before proceeding
+ *   using @ref try_wait_for_completion().
+ * - Calculates the request offset based on the buffer index.
+ * - Calls @ref isp_capture_setup_inputfences() and @ref isp_capture_setup_prefences()
+ *   to configure input and pre-fences for the capture request.
+ * - Checks if descriptor unpins list for the buffer index is empty, or if it is still
+ *   in use by RTCPU.
+ * - Checks and pins the request buffers using
+ *   @ref pin_isp_capture_request_buffers_locked().
+ * - Submits the capture message via @ref tegra_capture_ivc_capture_submit().
+ * - Updates synchronization points upon successful submission incrementing
+ *   @ref isp_capture_get_num_progress().
+ * - In case of an error, unpins the request buffers using @ref isp_capture_request_unpin().
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure representing
+ *                   the ISP channel.
+ *                   Valid value: non-NULL.
+ * @param[in]  req   Pointer to the @ref isp_capture_req structure containing
+ *                   the capture request details.
+ *                   Valid value: non-NULL and must reference a valid buffer index
+ *                   within the queue depth of the capture context.
+ *
+ * @retval 0               On successful submission of the capture request.
+ * @retval -ENODEV         If the channel context is invalid, capture is
+ *                         uninitialized, or the capture channel is not set up.
+ * @retval -EINVAL         If the capture request is invalid, the capture
+ *                         descriptor context is incomplete, or the buffer
+ *                         index is out of bounds.
+ * @retval -EBUSY          If the descriptor for the buffer index is still
+ *                         in use by RTCPU.
+ * @retval (int)           If any external function such as
+ *                         @ref isp_capture_setup_inputfences(),
+ *                         @ref isp_capture_setup_prefences(),
+ *                         @ref pin_isp_capture_request_buffers_locked(),
+ *                         or @ref tegra_capture_ivc_capture_submit()
+ *                         fails, the corresponding error code is returned.
+ */
 int isp_capture_request(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_req *req)
@@ -2088,6 +2850,39 @@ fail:
 	return err;
 }
 
+/**
+ * @brief Retrieves the capture status for the specified ISP channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel context.
+ * - Retrieves the capture data from the channel structure.
+ * - Checks if the capture data is not null and capture channel is valid.
+ * - If given timeout is negative, waits for capture response completion
+ *   using @ref wait_for_completion_killable().
+ * - Otherwise, waits using @ref wait_for_completion_killable_timeout().
+ * - Acquires the capture channel reset lock using @ref mutex_lock().
+ * - Checks if a reset capture flag is set.
+ * - Releases the capture channel reset lock using @ref mutex_unlock().
+ * - Returns any errors encountered during the wait operations via
+ *   @ref wait_for_completion_killable() or @ref wait_for_completion_killable_timeout().
+ * - On successful completion, returns 0.
+ *
+ * @param[in]  chan        Pointer to the @ref tegra_isp_channel structure.
+ *                         Valid value: non-NULL.
+ * @param[in]  timeout_ms  Timeout in milliseconds to wait for capture status.
+ *                         Valid range: Negative value indicates wait forever,
+ *                         non-negative values specify waiting duration.
+ *
+ * @retval 0             On successful completion.
+ * @retval -ENODEV       If the channel context is invalid, capture data is
+ *                       uninitialized, or the channel is not properly set up.
+ * @retval -ETIMEDOUT    If waiting for capture status timed out via
+ *                       @ref wait_for_completion_killable_timeout().
+ * @retval -EIO          If a reset capture flag is detected via
+ *                       @ref mutex_lock() and @ref mutex_unlock().
+ * @retval (int)         Errors propagated from @ref wait_for_completion_killable()
+ *                       or @ref wait_for_completion_killable_timeout().
+ */
 int isp_capture_status(
 	struct tegra_isp_channel *chan,
 	int32_t timeout_ms)
@@ -2147,6 +2942,36 @@ int isp_capture_status(
 	return 0;
 }
 
+/**
+ * @brief Submits a program capture request to the ISP channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel context is not null.
+ * - Retrieves the capture data from the channel structure.
+ * - Validates the program capture request is not null.
+ * - Calls @ref isp_capture_program_prepare() to prepare the program request data.
+ * - Initializes a capture message structure.
+ * - Sets header message ID to @ref CAPTURE_ISP_PROGRAM_REQUEST_REQ.
+ * - Sets necessary fields in the capture message based on the request based on
+ *   request and input @a chan.
+ * - Submits the capture message via @ref tegra_capture_ivc_capture_submit().
+ * - If submission fails, calls @ref isp_capture_program_request_unpin() to
+ *   unpin the request buffer.
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  req   Pointer to the @ref isp_program_req structure containing
+ *                   the program capture request details.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0               On successful submission of the program capture request.
+ * @retval -ENODEV         If the channel context is invalid or capture data is
+ *                         uninitialized.
+ * @retval -EINVAL         If the program request is invalid.
+ * @retval (int)           If @ref isp_capture_program_prepare() or
+ *                         @ref tegra_capture_ivc_capture_submit() fails, the
+ *                         corresponding error code is returned.
+ */
 int isp_capture_program_request(
 	struct tegra_isp_channel *chan,
 	struct isp_program_req *req)
@@ -2204,6 +3029,28 @@ int isp_capture_program_request(
 	return 0;
 }
 
+/**
+ * @brief Retrieves the program capture status for the specified ISP channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel context.
+ * - Retrieves the capture data from the channel.
+ * - Validates that capture data and channel ID.
+ * - Waits for the capture program response using @ref wait_for_completion_killable().
+ * - Acquires capture channel reset lock using @ref mutex_lock().
+ * - Checks if a reset capture program flag is set.
+ * - Releases capture channel reset lock using @ref mutex_unlock().
+ * - Returns the status of the operations.
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0          On successful completion.
+ * @retval -ENODEV    If the channel context is invalid, capture data is
+ *                    uninitialized, or the channel is not properly set up.
+ * @retval -EIO       If a reset capture program flag is detected.
+ * @retval (int)      Errors returned from @ref wait_for_completion_killable().
+ */
 int isp_capture_program_status(
 	struct tegra_isp_channel *chan)
 {
@@ -2252,6 +3099,33 @@ int isp_capture_program_status(
 	return 0;
 }
 
+/**
+ * @brief Submits extended (joint program and capture) request to the ISP channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel and extended capture request.
+ * - If the buffer index in the request is set to its maximum value,
+ *   forwards the request to @ref isp_capture_request().
+ * - Otherwise, calls @ref isp_capture_program_prepare() to prepare
+ *   the program request data.
+ * - Submits the capture request by calling @ref isp_capture_request().
+ * - If submitting the capture request fails, calls @ref
+ *   isp_capture_program_request_unpin() to unpin the prepared program.
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  req   Pointer to the @ref isp_capture_req_ex structure containing
+ *                   the extended capture request details.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0            On successful submission of the extended capture request.
+ * @retval -ENODEV      If the channel context is invalid or capture is
+ *                      uninitialized.
+ * @retval -EINVAL      If the extended capture request is invalid.
+ * @retval (int)        If @ref isp_capture_program_prepare() or
+ *                      @ref isp_capture_request() fails, the corresponding error
+ *                      code is returned.
+ */
 int isp_capture_request_ex(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_req_ex *req)
@@ -2296,6 +3170,33 @@ int isp_capture_request_ex(
 	return err;
 }
 
+/**
+ * @brief Sets the progress status notifier for the ISP capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel and progress status request.
+ *   - Ensures input channel, capture data, and request are non-null.
+ *   - Ensures program and process request buffer depths are valid.
+ * - Logs the progress status setup using @ref nv_camera_log().
+ * - Calls @ref capture_common_setup_progress_status_notifier() to configure
+ *   the progress status notifier.
+ * - Sets the progress status buffer depths for capture and program contexts.
+ * - Marks the progress status notifier as set.
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  req   Pointer to the @ref isp_capture_progress_status_req structure
+ *                   containing the progress status request details.
+ *                   Valid value: non-NULL, with valid memory and buffer depths.
+ *
+ * @retval 0               On successful setup of the progress status notifier.
+ * @retval -ENODEV         If the channel context is invalid or capture is
+ *                         uninitialized.
+ * @retval -EINVAL         If the progress status request is invalid, including
+ *                         invalid memory or buffer depth parameters.
+ * @retval -EFAULT         If @ref capture_common_setup_progress_status_notifier()
+ *                         fails, indicating a fault in setting up the notifier.
+ */
 int isp_capture_set_progress_status_notifier(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_progress_status_req *req)
@@ -2403,6 +3304,29 @@ int isp_capture_set_progress_status_notifier(
 	return err;
 }
 
+/**
+ * @brief Submits a buffer request to the ISP capture channel.
+ *
+ * This function performs the following operations:
+ * - Validates the input channel context.
+ * - Validates the buffer request parameter.
+ * - Retrieves the capture data from the channel structure.
+ * - Calls @ref capture_buffer_request() to submit the buffer request with the
+ *   specified memory and flags.
+ *
+ * @param[in]  chan  Pointer to the @ref tegra_isp_channel structure.
+ *                   Valid value: non-NULL.
+ * @param[in]  req   Pointer to the @ref isp_buffer_req structure containing
+ *                   the buffer request details.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0            On successful submission of the buffer request.
+ * @retval -ENODEV      If the channel context is invalid or capture data is
+ *                      uninitialized.
+ * @retval -EINVAL      If the buffer request is invalid.
+ * @retval (int)        If @ref capture_buffer_request() fails, the corresponding
+ *                      error code is returned.
+ */
 int isp_capture_buffer_request(
 	struct tegra_isp_channel *chan,
 	struct isp_buffer_req *req)
@@ -2434,12 +3358,23 @@ int isp_capture_buffer_request(
 }
 
 /**
- * @brief Helper to parse isp-devices Chip ID
+ * @brief Determines if the ISP capture device chip ID is a Tegra T26x.
  *
- * @param[in]	of_node	Pointer to @ref device_node
- *		containing isp-devices phandle
- * @returns	true	If isp-devices is configured for T26X.
- * @returns	false	If T26X not mentioned.
+ * This function performs the following operations:
+ * - Parses the device tree phandle "nvidia,isp-devices" using @ref of_parse_phandle().
+ * - Reads the "compatible" property from the node using @ref of_property_read_string().
+ * - If reading the property fails, releases the node with @ref of_node_put().
+ * - Checks if the "compatible" string contains "tegra26" using @ref strstr().
+ * - Releases the node using @ref of_node_put().
+ * - Determines if "tegra26" is found in the compatible string.
+ *
+ * @param[in]  of_node  Pointer to the @ref device_node structure representing the device.
+ *                      Valid value: non-NULL.
+ *
+ * @retval true       If the ISP capture device is identified as Tegra T26x.
+ * @retval false      If @ref of_parse_phandle(), @ref of_property_read_string(),
+ *                    @ref of_node_put(), or @ref strstr() fails to identify the
+ *                    device as Tegra T26x.
  */
 static inline bool isp_capture_is_t26x(struct device_node *of_node)
 {
@@ -2463,6 +3398,38 @@ static inline bool isp_capture_is_t26x(struct device_node *of_node)
 	return is_t26x;
 }
 
+/**
+ * @brief Probes and initializes ISP capture devices for the platform.
+ *
+ * This function performs the following operations:
+ * - Allocates memory for @ref tegra_capture_isp_data using @ref devm_kzalloc().
+ * - Reads the "nvidia,isp-max-channels" property from the device tree using
+ *   @ref of_property_read_u32().
+ * - Determines if the device is Tegra T26x by calling @ref isp_capture_is_t26x().
+ * - Validates the maximum number of ISP channels based on the device type.
+ * - Iterates through the "nvidia,isp-devices" nodes using @ref of_parse_phandle()
+ *   and finds corresponding devices using @ref of_find_device_by_node().
+ * - Releases device tree nodes after finding devices using @ref of_node_put().
+ * - Associates the allocated data with the platform device using
+ *   @ref platform_set_drvdata().
+ * - Registers ISP channels by calling @ref isp_channel_drv_register().
+ * - In case of any error after allocation, releases allocated devices using
+ *   @ref put_device().
+ *
+ * @param[in]  pdev
+ *                    Pointer to the @ref platform_device structure.
+ *
+ *                    Valid value: non-NULL.
+ *
+ * @retval 0               On successful probing and initialization of ISP capture devices.
+ * @retval -ENOMEM         If memory allocation via @ref devm_kzalloc() fails.
+ * @retval -EINVAL         If reading device property via @ref of_property_read_u32() fails,
+ *                         max channels read via @ref of_property_read_u32() exceeds
+ *                         channel limits, iterating "nvidia,isp-devices" nodes exceeds
+ *                         array size, or no ISP devices are found.
+ * @retval -ENODEV         If ISP devices are not found using @ref of_find_device_by_node().
+ * @retval (int)           On failure of @ref isp_channel_drv_register().
+ */
 static int capture_isp_probe(struct platform_device *pdev)
 {
 	uint32_t i;
@@ -2543,6 +3510,22 @@ cleanup:
 	return err;
 }
 
+/**
+ * @brief Removes and cleans up ISP capture devices for the platform.
+ *
+ * This function performs the following operations:
+ * - Logs the removal process using @ref dev_dbg().
+ * - Retrieves the capture data associated with the platform device using
+ *   @ref platform_get_drvdata().
+ * - Iterates through all ISP devices and releases each device using
+ *   @ref put_device().
+ * - Returns a success status upon completion.
+ *
+ * @param[in]  pdev  Pointer to the @ref platform_device structure.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0         On successful removal and cleanup of ISP capture devices.
+ */
 static int capture_isp_remove(struct platform_device *pdev)
 {
 	struct tegra_capture_isp_data *info;
@@ -2565,11 +3548,34 @@ static const struct of_device_id capture_isp_of_match[] = {
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+/**
+ * @brief Wrapper function to remove and clean up ISP capture devices.
+ *
+ * This function performs the following operations:
+ * - Calls @ref capture_isp_remove() to remove and clean up ISP capture
+ *   devices associated with the platform device.
+ *
+ * @param[in]  pdev  Pointer to the @ref platform_device structure.
+ *                   Valid value: non-NULL.
+ */
 static void capture_isp_remove_wrapper(struct platform_device *pdev)
 {
 	capture_isp_remove(pdev);
 }
 #else
+/**
+ * @brief Wrapper function to remove the ISP capture device.
+ *
+ * This function performs the following operations:
+ * - Calls @ref capture_isp_remove() to remove the ISP capture device.
+ * - Returns the status of the remove operation.
+ *
+ * @param[in]  pdev  Pointer to the @ref platform_device structure.
+ *                   Valid value: non-NULL.
+ *
+ * @retval 0            On successful removal of the ISP capture device.
+ * @retval (int)        Errors returned from @ref capture_isp_remove().
+ */
 static int capture_isp_remove_wrapper(struct platform_device *pdev)
 {
 	return capture_isp_remove(pdev);
@@ -2586,6 +3592,19 @@ static struct platform_driver capture_isp_driver = {
 	}
 };
 
+/**
+ * @brief Initializes and registers the ISP capture driver.
+ *
+ * This function performs the following operations:
+ * - Calls @ref isp_channel_drv_init() to initialize the ISP channel driver.
+ * - Calls @ref platform_driver_register() to register the capture ISP platform driver.
+ * - If registration fails, calls @ref isp_channel_drv_exit() to clean up.
+ *
+ * @retval 0            On successful initialization and registration of the ISP
+ *                      capture driver.
+ * @retval (int)        If @ref isp_channel_drv_init() or @ref platform_driver_register()
+ *                      fails, the corresponding error code is returned.
+ */
 static int __init capture_isp_init(void)
 {
 	int err;
@@ -2600,6 +3619,15 @@ static int __init capture_isp_init(void)
 	}
 	return 0;
 }
+
+/**
+ * @brief Cleans up and unregisters the ISP capture driver.
+ *
+ * This function performs the following operations:
+ * - Calls @ref isp_channel_drv_exit() to clean up the ISP channel driver.
+ * - Calls @ref platform_driver_unregister() to unregister the capture ISP platform
+ *   driver.
+ */
 static void __exit capture_isp_exit(void)
 {
 	isp_channel_drv_exit();

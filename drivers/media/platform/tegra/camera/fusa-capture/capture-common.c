@@ -62,13 +62,19 @@ struct capture_mapping {
 };
 
 /**
- * @brief Determine whether all the bits of @a other are set in @a self.
+ * @brief Determines if all flags in @a other are set in @a self.
  *
- * @param[in]	self	Bitmask flag to be compared
- * @param[in]	other	Bitmask value(s) to compare
+ * This function performs the following operations:
+ * - Computes the bitwise AND of @a self and @a other.
+ * - Compares the result with @a other to determine compatibility.
  *
- * @retval	true	compatible
- * @retval	false	not compatible
+ * @param[in]  self   The source flags to be checked.
+ *                    Valid range: [0 .. UINT32_MAX].
+ * @param[in]  other  The flags to verify against @a self.
+ *                    Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval true   All flags in @a other are set in @a self.
+ * @retval false  Not all flags in @a other are set in @a self.
  */
 static inline bool flag_compatible(
 	unsigned int self,
@@ -78,12 +84,20 @@ static inline bool flag_compatible(
 }
 
 /**
- * @brief Determine whether BUFFER_RDWR is set in @a flag.
+ * @brief Extracts the access mode from the provided flag.
  *
- * @param[in]	flag	Bitmask flag to be compared
+ * This function performs the following operations:
+ * - Applies a bitmask to the input flag to isolate the access mode bits using
+ *   @ref BUFFER_RDWR.
  *
- * @retval	true	BUFFER_RDWR set
- * @retval	false	BUFFER_RDWR not set
+ * @param[in]  flag    The input flags containing access mode information.
+ *                     Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval 0                                       No access mode flags are set.
+ * @retval @ref BUFFER_READ                        Read access mode is set.
+ * @retval @ref BUFFER_WRITE                       Write access mode is set.
+ * @retval (@ref BUFFER_READ | @ref BUFFER_WRITE)  Both read and write access
+ *                                                 modes are set.
  */
 static inline unsigned int flag_access_mode(
 	unsigned int flag)
@@ -92,11 +106,22 @@ static inline unsigned int flag_access_mode(
 }
 
 /**
- * @brief Map capture common buffer access flag to a Linux dma_data_direction.
+ * @brief Determines the DMA data direction based on the provided flag.
  *
- * @param[in]	flag	Bitmask access flag of capture common buffer
+ * This function performs the following operations:
+ * - Calls @ref flag_access_mode() to determine the access mode from @a flag.
+ * - Uses the access mode to index into a predefined array mapping to the corresponding
+ *   @ref dma_data_direction.
  *
- * @returns	@ref dma_data_direction mapping
+ * @param[in]  flag    Flag indicating the desired DMA data direction.
+ *                     Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval DMA_BIDIRECTIONAL  Returned when @ref flag_access_mode() indicates
+ *                            bidirectional access.
+ * @retval DMA_TO_DEVICE      Returned when @ref flag_access_mode() indicates
+ *                            write access.
+ * @retval DMA_FROM_DEVICE    Returned when @ref flag_access_mode() indicates
+ *                            read access.
  */
 static inline enum dma_data_direction flag_dma_direction(
 	unsigned int flag)
@@ -112,11 +137,36 @@ static inline enum dma_data_direction flag_dma_direction(
 }
 
 /**
- * @brief Retrieve the scatterlist IOVA address of the capture surface mapping.
+ * @brief Maps a capture mapping and memory offset to a DMA IOVA address.
  *
- * @param[in]	pin	The capture_mapping of the buffer
+ * This inline function calculates the I/O Virtual Address (IOVA) based on a given
+ * capture mapping and a memory offset. The implementation varies depending
+ * on the Linux kernel version:
  *
- * @returns	Physical address of scatterlist mapping
+ * - **For Linux versions below 5.10.0:**
+ *   - Retrieves the DMA address from the scatter-gather table using @ref sg_dma_address().
+ *   - If @ref sg_dma_address() returns 0, obtains the physical address using @ref sg_phys().
+ *   - Adds the provided @a mem_offset to the obtained address.
+ *
+ * - **For Linux versions 5.10.0 and above:**
+ *   - Traverses the scatterlist using @ref for_each_sgtable_dma_sg().
+ *   - For each scatterlist entry, obtains the length using @ref sg_dma_len().
+ *   - Retrieves the address using @ref sg_dma_address() or @ref sg_phys().
+ *   - Checks for overflow using @ref check_add_overflow().
+ *   - If an overflow is detected or no suitable scatterlist entry is found, returns 0.
+ *
+ * @param[in]  pin         Pointer to the @ref capture_mapping structure.
+ *                         Valid value: non-null.
+ * @param[in]  mem_offset  Memory offset to be added to the base address.
+ *                         Valid range: [0 .. UINT64_MAX].
+ *
+ * @retval (dma_addr_t)  The calculated IOVA address based on @a pin and @a mem_offset.
+ * @retval 0             Indicates either:
+ *                         - An overflow occurred during address calculation as detected by
+ *                           @ref check_add_overflow().
+ *                         - No suitable scatterlist entry was found using
+ *                           @ref for_each_sgtable_dma_sg(), @ref sg_phys(), or
+ *                           @ref sg_dma_address().
  */
 static inline dma_addr_t mapping_iova(
 	const struct capture_mapping *pin,
@@ -152,11 +202,16 @@ static inline dma_addr_t mapping_iova(
 }
 
 /**
- * @brief Retrieve the dma_buf pointer of a capture surface mapping.
+ * @brief Retrieves the DMA buffer from a capture mapping.
  *
- * @param[in]	pin	The capture_mapping of the buffer
+ * This function performs the following operations:
+ * - Accesses the @a buf member of the provided @ref capture_mapping structure.
  *
- * @returns	Pointer to the capture_mapping @ref dma_buf
+ * @param[in]  pin    Pointer to the @ref capture_mapping structure.
+ *                    Valid value: non-null.
+ *
+ * @retval (dma_buf *)  Pointer to the @ref dma_buf structure contained in @a pin.
+ * @retval NULL         If the @a buf member in @a pin is not set.
  */
 static inline struct dma_buf *mapping_buf(
 	const struct capture_mapping *pin)
@@ -165,13 +220,17 @@ static inline struct dma_buf *mapping_buf(
 }
 
 /**
- * @brief Determine whether BUFFER_ADD is set in the capture surface mapping's
- * access flag.
+ * @brief Checks if the mapping is preserved based on the BUFFER_ADD flag.
  *
- * @param[in]	pin	The capture_mapping of the buffer
+ * This function performs the following operations:
+ * - Validates the input parameter.
+ * - Checks if the BUFFER_ADD flag is set in the provided @ref capture_mapping structure.
  *
- * @retval	true	BUFFER_ADD set
- * @retval	false	BUFFER_ADD not set
+ * @param[in]  pin         Pointer to the @ref capture_mapping structure.
+ *                         Valid value: non-null.
+ *
+ * @retval true   Indicates that the BUFFER_ADD flag is set, preserving the mapping.
+ * @retval false  Indicates that the BUFFER_ADD flag is not set, not preserving the mapping.
  */
 static inline bool mapping_preserved(
 	const struct capture_mapping *pin)
@@ -180,14 +239,24 @@ static inline bool mapping_preserved(
 }
 
 /**
- * @brief Set or unset the BUFFER_ADD bit in the capture surface mapping's
- * access flag, and correspondingly increment or decrement the mapping's refcnt.
+ * @brief Sets or clears the BUFFER_ADD flag and updates the reference count.
  *
- * @param[in]	pin	The capture_mapping of the buffer
- * @param[in]	val	The capture_mapping of the buffer
+ * This inline function modifies the BUFFER_ADD flag within the provided
+ * @ref capture_mapping structure based on the boolean value provided. It also
+ * updates the reference count accordingly:
  *
- * @retval	true	BUFFER_ADD set
- * @retval	false	BUFFER_ADD not set
+ * - If @a val is `true`:
+ *   - Sets the BUFFER_ADD flag in the @a pin structure.
+ *   - Increments the reference count using @ref atomic_inc().
+ *
+ * - If @a val is `false`:
+ *   - Clears the BUFFER_ADD flag in the @a pin structure.
+ *   - Decrements the reference count using @ref atomic_dec().
+ *
+ * @param[in, out] pin  Pointer to the @ref capture_mapping structure.
+ *                      Valid value: non-null.
+ * @param[in]      val  lean value indicating whether to preserve mapping.
+ *                      Valid value: `true` or `false`.
  */
 static inline void set_mapping_preservation(
 	struct capture_mapping *pin,
@@ -203,16 +272,34 @@ static inline void set_mapping_preservation(
 }
 
 /**
- * @brief Iteratively search a capture buffer management table to find the entry
- * with @a buf, and @a flag bits set in the capture mapping.
+ * @brief Searches for a capture mapping in the buffer table matching the specified buffer and flag.
  *
- * On success, the capture mapping is incremented by one if it is non-zero.
+ * This function performs the following operations:
+ * - Acquires a read lock on the buffer table using @ref read_lock().
+ * - Iterates over possible hash entries using @ref hash_for_each_possible() to find a
+ *   matching @ref capture_mapping.
+ * - For each entry, checks if the buffer matches and the flags are compatible using
+ *   @ref flag_compatible().
+ * - If a match is found, attempts to increment the reference count using
+ *   @ref atomic_inc_not_zero().
+ * - If the reference count is successfully incremented, releases the read lock using
+ *   @ref read_unlock() and returns the matching @ref capture_mapping.
+ * - Releases the read lock using @ref read_unlock() if no matching mapping is found
+ *   or the reference count cannot be incremented.
  *
- * @param[in]	tab	The capture buffer management table
- * @param[in]	buf	The mapping dma_buf pointer to match
- * @param[in]	flag	The mapping bitmask access flag to compare
+ * @param[in]  tab    Pointer to the @ref capture_buffer_table structure.
+ *                    Valid value: non-null.
+ * @param[in]  buf    Pointer to the @ref dma_buf structure to search for.
+ *                    Valid value: non-null.
+ * @param[in]  flag   Flags to match against the capture mappings.
+ *                    Valid range: [0 .. UINT32_MAX].
  *
- * @returns	@ref capture_mapping pointer (success), NULL (failure)
+ * @retval (capture_mapping *)  Pointer to the matching @ref capture_mapping structure if found.
+ * @retval NULL                 No matching capture mapping was found or
+ *                              @ref atomic_inc_not_zero() failed, influenced by
+ *                              @ref read_lock(), @ref hash_for_each_possible(),
+ *                              @ref flag_compatible(), @ref atomic_inc_not_zero() or
+ *                              @ref read_unlock().
  */
 static struct capture_mapping *find_mapping(
 	struct capture_buffer_table *tab,
@@ -243,14 +330,41 @@ static struct capture_mapping *find_mapping(
 }
 
 /**
- * @brief Add an NvRm buffer to the buffer management table and initialize its
- * refcnt to 1.
+ * @brief Retrieves or creates a capture mapping for a given file descriptor and flags.
  *
- * @param[in]	tab	The capture buffer management table
- * @param[in]	fd	The NvRm handle
- * @param[in]	flag	The mapping bitmask access flag to set
+ * This function performs the following operations:
+ *   - Checks if the input parameter @a tab is non-null.
+ *   - Calls @ref dma_buf_get() to obtain a @ref dma_buf structure for the provided file
+ *     descriptor @a fd.
+ *   - Calls @ref find_mapping() to search for an existing @ref capture_mapping that matches
+ *     the buffer @a buf and flags @a flag.
+ *   - If a matching mapping is found, calls @ref dma_buf_put() to release the buffer and returns
+ *     the existing mapping.
+ *   - Allocates a new @ref capture_mapping structure using @ref kmem_cache_alloc().
+ *   - Calls @ref dma_buf_attach() to attach the buffer @a buf to the device associated with
+ *     @a tab.
+ *     - If @ref dma_buf_attach() fails, frees the allocated mapping with @ref kmem_cache_free().
+ *   - Determines the DMA data direction by calling @ref flag_dma_direction() with @a flag.
+ *   - Calls @ref dma_buf_map_attachment() to map the DMA buffer.
+ *     - If @ref dma_buf_map_attachment() fails, detaches the buffer with @ref dma_buf_detach().
+ *   - Initializes the @ref capture_mapping structure with the provided flags and buffer.
+ *   - Sets the reference count to 1 and initializes the hash node.
+ *   - Acquires a write lock on the buffer table using @ref write_lock().
+ *   - Adds the new mapping to the buffer table's hash using @ref hash_add().
+ *   - Releases the write lock using @ref write_unlock().
  *
- * @returns	@ref capture_mapping pointer (success), PTR_ERR (failure)
+ * @param[in]  tab   Pointer to the @ref capture_buffer_table structure.
+ *                   Valid value: non-null.
+ * @param[in]  fd    File descriptor associated with the DMA buffer.
+ *                   Valid range: [0 .. UINT32_MAX].
+ * @param[in]  flag  Flags indicating the desired DMA data direction.
+ *                   Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval (capture_mapping *)       Pointer to the matching or newly created @ref capture_mapping.
+ * @retval @ref ERR_PTR(-EINVAL)     If @a tab is `NULL`.
+ * @retval @ref ERR_CAST(buf)        If @ref dma_buf_get() fails.
+ * @retval @ref ERR_PTR(-ENOMEM)     If memory allocation via @ref kmem_cache_alloc() fails.
+ * @retval @ref ERR_PTR()            If @ref dma_buf_attach() or @ref dma_buf_map_attachment() fails.
  */
 static struct capture_mapping *get_mapping(
 	struct capture_buffer_table *tab,
@@ -318,6 +432,24 @@ err0:
 	return err;
 }
 
+/**
+ * @brief Creates and initializes a capture buffer table for the specified device.
+ *
+ * This function performs the following operations:
+ * - Allocates memory for a @ref capture_buffer_table structure using @ref kmalloc().
+ * - Initializes a memory cache for @ref capture_mapping structures using @ref KMEM_CACHE().
+ *   - If @ref KMEM_CACHE() fails, frees the allocated table using @ref kfree().
+ * - Sets the device pointer within the table to the provided @a dev.
+ * - Initializes the hash table using @ref hash_init().
+ * - Initializes the read-write lock using @ref rwlock_init().
+ *
+ * @param[in]  dev   Pointer to the @ref device structure.
+ *                   Valid value: non-null.
+ *
+ * @retval (capture_buffer_table *)  Pointer to the newly created @ref capture_buffer_table.
+ * @retval NULL                      If memory allocation via @ref kmalloc() or cache creation via
+ *                                   @ref KMEM_CACHE() fails.
+ */
 struct capture_buffer_table *create_buffer_table(
 	struct device *dev)
 {
@@ -342,6 +474,28 @@ struct capture_buffer_table *create_buffer_table(
 }
 EXPORT_SYMBOL_GPL(create_buffer_table);
 
+/**
+ * @brief Destroys and frees the specified capture buffer table.
+ *
+ * This function performs the following operations:
+ * - Checks if the input parameter @a tab is non-null.
+ * - Iterates over all capture mappings in the buffer table using
+ *   @ref hash_for_each_safe().
+ *   - For each @ref capture_mapping:
+ *     - Acquires a write lock on the buffer table using @ref write_lock().
+ *     - Removes the mapping from the hash table using @ref hash_del().
+ *     - Releases the write lock using @ref write_unlock().
+ *     - Unmaps the DMA attachment using @ref dma_buf_unmap_attachment().
+ *     - Detaches the DMA buffer using @ref dma_buf_detach().
+ *     - Releases the DMA buffer using @ref dma_buf_put().
+ *     - Frees the capture mapping structure using @ref kmem_cache_free().
+ * - Destroys the memory cache for capture mappings using
+ *   @ref kmem_cache_destroy().
+ * - Frees the buffer table using @ref kfree().
+ *
+ * @param[in]  tab  Pointer to the @ref capture_buffer_table structure.
+ *                  Valid value: non-null.
+ */
 void destroy_buffer_table(
 	struct capture_buffer_table *tab)
 {
@@ -387,6 +541,43 @@ EXPORT_SYMBOL_GPL(destroy_buffer_table);
 
 static DEFINE_MUTEX(req_lock);
 
+/**
+ * @brief Requests to add or remove a buffer in the capture buffer table.
+ *
+ * This function performs the following operations:
+ * - Validates the input parameters.
+ * - Acquires the request mutex lock using @ref mutex_lock().
+ * - If adding a buffer:
+ *   - Calls @ref get_mapping() to retrieve the mapping for the given @a memfd and access
+ *     mode obtained from @ref flag_access_mode().
+ *   - Checks if @ref get_mapping() returned an error using @ref IS_ERR().
+ *   - Checks if the mapping is already preserved using @ref mapping_preserved().
+ * - If removing a buffer:
+ *   - Calls @ref dma_buf_get() to obtain the DMA buffer for the given @a memfd.
+ *   - Checks if @ref dma_buf_get() returned an error using @ref IS_ERR().
+ *   - Calls @ref find_mapping() to find the corresponding capture mapping.
+ *   - Calls @ref dma_buf_put() to release the DMA buffer reference.
+ * - Sets the mapping preservation state by calling @ref set_mapping_preservation().
+ * - Releases the capture mapping by calling @ref put_mapping().
+ * - Releases the request mutex lock using @ref mutex_unlock().
+ *
+ * In case of any errors during the operations, the function ensures that the mutex
+ * lock is released before returning the error code.
+ *
+ * @param[in]  tab    Pointer to the @ref capture_buffer_table structure.
+ *                    Valid value: non-null.
+ * @param[in]  memfd  File descriptor associated with the buffer.
+ *                    Valid range: [0 .. UINT32_MAX].
+ * @param[in]  flag   Flags indicating the operation to perform.
+ *                    Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval 0            Operation completed successfully.
+ * @retval -EINVAL      If the input buffer table @a tab is NULL.
+ * @retval -EEXIST      If attempting to add a buffer that already exists, as determined
+ *                      by @ref mapping_preserved().
+ * @retval -ENOENT      If attempting to remove a buffer that does not exist in the table.
+ * @retval (int)        Errors returned by @ref get_mapping() or @ref dma_buf_get().
+ */
 int capture_buffer_request(
 	struct capture_buffer_table *tab,
 	uint32_t memfd,
@@ -449,6 +640,22 @@ end:
 }
 EXPORT_SYMBOL_GPL(capture_buffer_request);
 
+/**
+ * @brief Adds a buffer to the capture buffer table with read-write permissions.
+ *
+ * This function performs the following operations:
+ * - Calls @ref capture_buffer_request() to request the addition of a buffer identified
+ *   by @a fd to the capture buffer table @a t with flags BUFFER_ADD | BUFFER_RDWR.
+ *   - The flags indicate that the buffer should be added and have read-write access.
+ *
+ * @param[in]  t   Pointer to the @ref capture_buffer_table structure.
+ *                 Valid value: non-null.
+ * @param[in]  fd  File descriptor representing the buffer to be added.
+ *                 Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval 0            Buffer added successfully.
+ * @retval (int)        Errors returned by @ref capture_buffer_request().
+ */
 int capture_buffer_add(
 	struct capture_buffer_table *t,
 	uint32_t fd)
@@ -457,6 +664,30 @@ int capture_buffer_add(
 }
 EXPORT_SYMBOL_GPL(capture_buffer_add);
 
+/**
+ * @brief Releases a capture mapping and cleans up if it is no longer referenced.
+ *
+ * This function performs the following operations:
+ * - Decrements the reference count of the @ref capture_mapping structure using
+ *   @ref atomic_dec_and_test().
+ * - If the reference count reaches zero:
+ *   - Checks if the mapping is preserved using @ref mapping_preserved().
+ *     - If the mapping is preserved, increments the reference count using
+ *       @ref atomic_inc().
+ *   - Otherwise:
+ *     - Acquires a write lock on the buffer table using @ref write_lock().
+ *     - Removes the mapping from the hash table using @ref hash_del().
+ *     - Releases the write lock using @ref write_unlock().
+ *     - Unmaps the DMA attachment using @ref dma_buf_unmap_attachment().
+ *     - Detaches the DMA buffer using @ref dma_buf_detach().
+ *     - Releases the DMA buffer using @ref dma_buf_put().
+ *     - Frees the capture mapping structure using @ref kmem_cache_free().
+ *
+ * @param[in]  t    Pointer to the @ref capture_buffer_table structure.
+ *                  Valid value: non-null.
+ * @param[in]  pin  Pointer to the @ref capture_mapping structure.
+ *                  Valid value: non-null.
+ */
 void put_mapping(
 	struct capture_buffer_table *t,
 	struct capture_mapping *pin)
@@ -485,6 +716,46 @@ void put_mapping(
 }
 EXPORT_SYMBOL_GPL(put_mapping);
 
+/**
+ * @brief Pins a memory buffer and retrieves its IOVA address based on the handle and offset.
+ *
+ * This function performs the following operations:
+ * - Checks if the memory handle @a mem_handle is zero.
+ * - Validates that the number of unpins in @a unpins does not exceed
+ *   @ref MAX_PIN_BUFFER_PER_REQUEST.
+ * - Calls @ref get_mapping() to retrieve or create a @ref capture_mapping based on
+ *   the buffer context @a buf_ctx and memory handle @a mem_handle with flags
+ *   @ref BUFFER_RDWR.
+ * - Calls @ref mapping_buf() to obtain the @ref dma_buf associated with the mapping.
+ * - Retrieves the size of the DMA buffer.
+ * - Validates that the memory offset @a mem_offset is within the bounds of the buffer size.
+ * - Calls @ref mapping_iova() to compute the IOVA address for the given memory offset.
+ * - Updates the memory information base address and size using @a meminfo_base_address and
+ *   @a meminfo_size with the computed IOVA and remaining size.
+ * - Adds the @ref capture_mapping to the @a unpins structure and increments the
+ *   unpins count.
+ *
+ * @param[in]      buf_ctx              Pointer to the @ref capture_buffer_table structure.
+ *                                      Valid value: non-null.
+ * @param[in]      mem_handle           File descriptor associated with the memory buffer.
+ *                                      Valid range: [1 .. UINT32_MAX].
+ * @param[in]      mem_offset           Memory offset within the buffer.
+ *                                      Valid range: [0 .. UINT64_MAX].
+ * @param[out]     meminfo_base_address Pointer to store the IOVA base address.
+ *                                      Valid value: non-null.
+ * @param[out]     meminfo_size         Pointer to store the size of the memory region.
+ *                                      Valid value: non-null.
+ * @param[in, out] unpins               Pointer to the @ref capture_common_unpins structure.
+ *                                      Valid value: non-null.
+ *
+ * @retval 0         No buffer was processed (mem_handle is zero) or the operation
+ *                   succeeded.
+ * @retval -ENOMEM   The number of unpins exceeded @c MAX_PIN_BUFFER_PER_REQUEST.
+ *                   Influenced by the check on @p unpins->num_unpins.
+ * @retval -EINVAL   Failed to retrieve a valid mapping using @ref get_mapping(),
+ *                   the memory offset is out of bounds, or an invalid IOVA was
+ *                   computed using @ref mapping_iova().
+ */
 int capture_common_pin_and_get_iova(struct capture_buffer_table *buf_ctx,
 		uint32_t mem_handle, uint64_t mem_offset,
 		uint64_t *meminfo_base_address, uint64_t *meminfo_size,
@@ -534,6 +805,41 @@ int capture_common_pin_and_get_iova(struct capture_buffer_table *buf_ctx,
 }
 EXPORT_SYMBOL_GPL(capture_common_pin_and_get_iova);
 
+/**
+ * @brief Sets up a progress status notifier by mapping a DMA buffer and initializing
+ *        the notifier structure.
+ *
+ * This function performs the following operations:
+ * - Acquires a DMA buffer reference using @ref dma_buf_get().
+ * - Validates that the combined @a buffer_size and @a mem_offset do not exceed the
+ *   maximum allowable size.
+ * - Checks that the sum of @a buffer_size and @a mem_offset does not exceed the size
+ *   of the DMA buffer.
+ *   - If it does, releases the DMA buffer using @ref dma_buf_put().
+ * - Maps the DMA buffer using @ref dma_buf_vmap().
+ *   - If @ref dma_buf_vmap() fails, releases the DMA buffer using @ref dma_buf_put().
+ * - Clears the mapped memory region using @ref memset().
+ * - Initializes the @ref capture_common_status_notifier structure with the DMA buffer,
+ *   virtual address, and memory offset.
+ *
+ * In case of any errors during the operations, the function ensures that the DMA buffer
+ * reference is released before returning the error code.
+ *
+ * @param[in, out]  status_notifier   Pointer to the @ref capture_common_status_notifier structure.
+ *                                    Valid value: non-null.
+ * @param[in]       mem               Memory handle representing the buffer.
+ *                                    Valid range: [0 .. UINT32_MAX].
+ * @param[in]       buffer_size       Size of the buffer to be mapped.
+ *                                    Valid range: [0 .. UINT32_MAX - mem_offset].
+ * @param[in]       mem_offset        Offset within the buffer.
+ *                                    Valid range: [0 .. UINT32_MAX].
+ *
+ * @retval 0           Operation completed successfully.
+ * @retval -EINVAL     The combined buffer size and memory offset exceed allowable limits,
+ *                     or the memory offset is out of bounds.
+ * @retval -ENOMEM     Failed to map the DMA buffer using @ref dma_buf_vmap().
+ * @retval (int)       Errors returned by @ref dma_buf_get() or @ref PTR_ERR_OR_ZERO().
+ */
 int capture_common_setup_progress_status_notifier(
 	struct capture_common_status_notifier *status_notifier,
 	uint32_t mem,
@@ -583,6 +889,29 @@ int capture_common_setup_progress_status_notifier(
 }
 EXPORT_SYMBOL_GPL(capture_common_setup_progress_status_notifier);
 
+/**
+ * @brief Releases the progress status notifier by unmapping the DMA buffer and
+ *        clearing the notifier structure.
+ *
+ * This function performs the following operations:
+ * - Retrieves the DMA buffer and virtual address from the provided
+ *   @ref capture_common_status_notifier structure.
+ * - Initializes the appropriate DMA buffer map structure based on the
+ *   compilation configuration.
+ *   - If NV_LINUX_IOSYS_MAP_H_PRESENT is defined, initializes the @ref iosys_map structure
+ *     calling @ref IOSYS_MAP_INIT_VADDR() given the status notifier virtual address.
+ *   - Else, initializes the @ref dma_buf_map structure using @ref DMA_BUF_MAP_INIT_VADDR().
+ * - If the DMA buffer is not NULL:
+ *   - If the virtual address is not NULL, calls @ref dma_buf_vunmap() to unmap the DMA buffer.
+ *   - Calls @ref dma_buf_put() to release the DMA buffer reference.
+ * - Resets the @ref capture_common_status_notifier structure members to NULL or 0.
+ *
+ * @param[in, out]  progress_status_notifier  Pointer to the
+ *                                            @ref capture_common_status_notifier structure.
+ *                                            Valid value: non-null.
+ *
+ * @retval 0    Operation completed successfully.
+ */
 int capture_common_release_progress_status_notifier(
 	struct capture_common_status_notifier *progress_status_notifier)
 {
@@ -609,6 +938,30 @@ int capture_common_release_progress_status_notifier(
 }
 EXPORT_SYMBOL_GPL(capture_common_release_progress_status_notifier);
 
+/**
+ * @brief Sets the progress status for a specific buffer slot.
+ *
+ * This function performs the following operations:
+ * - Calculates the status notifier address by adding the memory offset to the virtual address.
+ * - Validates that the provided @a buffer_slot is within the range of @a buffer_depth.
+ * - Sanitizes @a buffer_slot using @ref array_index_nospec().
+ * - Inserts a memory barrier using @ref wmb() to ensure proper memory ordering.
+ * - Updates the progress status notifier buffer at the sanitized @a buffer_slot with @a new_val.
+ *
+ * @param[in, out]  progress_status_notifier  Pointer to the
+ *                                           @ref capture_common_status_notifier structure.
+ *                                           Valid value: non-null.
+ * @param[in]       buffer_slot               Index of the buffer slot to set the status.
+ *                                           Valid range: [0 .. buffer_depth - 1].
+ * @param[in]       buffer_depth              Total number of buffer slots.
+ *                                           Valid range: [1 .. UINT32_MAX].
+ * @param[in]       new_val                   New value to set in the progress status.
+ *                                           Valid range: [0 .. UINT8_MAX].
+ *
+ * @retval 0           Operation completed successfully.
+ * @retval -EINVAL     If @a buffer_slot is out of range as validated by @ref array_index_nospec()
+ *                     or if the memory offset is invalid.
+ */
 int capture_common_set_progress_status(
 	struct capture_common_status_notifier *progress_status_notifier,
 	uint32_t buffer_slot,
@@ -638,6 +991,35 @@ int capture_common_set_progress_status(
 }
 EXPORT_SYMBOL_GPL(capture_common_set_progress_status);
 
+/**
+ * @brief Pins a memory buffer and retrieves its IOVA address and associated data.
+ *
+ * This function performs the following operations:
+ * - Obtains a reference to the DMA buffer using @ref dma_buf_get() with the memory handle @a mem.
+ * - Attaches the DMA buffer to the device @a dev using @ref dma_buf_attach().
+ * - Maps the DMA buffer attachment with bidirectional access using @ref dma_buf_map_attachment().
+ * - Checks if the DMA scatter-gather list DMA address is zero using @ref sg_dma_address().
+ *   - If zero, retrieves the physical address using @ref sg_phys() and updates the DMA address.
+ * - Maps the DMA buffer into the virtual address space using @ref dma_buf_vmap().
+ *   - If @ref dma_buf_vmap() fails, sets @ref unpin_data virtual address to NULL.
+ * - Clears the mapped memory region using @ref memset().
+ * - Initializes the @ref capture_common_buf structure with the DMA buffer, virtual address,
+ *   IOVA address, attachment, and scatter-gather table.
+ * - If any step fails, cleans up by calling @ref capture_common_unpin_memory().
+ *
+ * @param[in]      dev          Pointer to the @ref device structure.
+ *                              Valid value: non-null.
+ * @param[in]      mem          Memory handle representing the buffer.
+ *                              Valid range: [1 .. UINT32_MAX].
+ * @param[in, out] unpin_data   Pointer to the @ref capture_common_buf structure to populate.
+ *                              Valid value: non-null.
+ *
+ * @retval 0          Operation completed successfully.
+ * @retval -EINVAL    If the buffer handle is invalid or buffer offset exceeds buffer size.
+ * @retval -ENOMEM    Failed to map the DMA buffer using @ref dma_buf_vmap().
+ * @retval (int)      Errors returned by @ref dma_buf_get(), @ref dma_buf_attach(),
+ *                    or @ref dma_buf_map_attachment(), as retrieved by @ref PTR_ERR().
+ */
 int capture_common_pin_memory(
 	struct device *dev,
 	uint32_t mem,
@@ -694,6 +1076,30 @@ fail:
 }
 EXPORT_SYMBOL_GPL(capture_common_pin_memory);
 
+/**
+ * @brief Unpins previously pinned memory and performs necessary cleanup.
+ *
+ * This function performs the following operations:
+ * - Initializes a mapping structure based on the presence of
+ *   NV_LINUX_IOSYS_MAP_H_PRESENT.
+ *   - If present, initialize mapping structure by calling @ref IOSYS_MAP_INIT_VADDR()
+ *     with the virtual address of the provided @ref capture_common_buf.
+ *   - Else, initialize mapping structure by calling @ref DMA_BUF_MAP_INIT_VADDR()
+ *     with the virtual address of the provided @ref capture_common_buf.
+ * - If the virtual address of @a unpin_data is non-null, calls @ref dma_buf_vunmap()
+ *   to unmap the virtual address.
+ * - If the scatter gather table of @a unpin_data is non-null, calls
+ *   @ref dma_buf_unmap_attachment() to unmap the DMA attachment with the @ref DMA_BIDIRECTIONAL
+ *   flag.
+ * - If the buffer attattchment of @a unpin_data is non-null, calls @ref dma_buf_detach()
+ *   to detach the DMA buffer from the device.
+ * - If DMA buffer of @a unpin_data is non-null, calls @ref dma_buf_put()
+ *   to release the DMA buffer.
+ * - Resets all fields in the @ref capture_common_buf structure to NULL or zero.
+ *
+ * @param[in, out]  unpin_data  Pointer to the @ref capture_common_buf structure to be cleaned up.
+ *                              Valid value: non-null.
+ */
 void capture_common_unpin_memory(
 	struct capture_common_buf *unpin_data)
 {

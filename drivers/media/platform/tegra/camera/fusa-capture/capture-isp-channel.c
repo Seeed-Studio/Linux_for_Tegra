@@ -199,19 +199,41 @@ static struct isp_channel_drv *chdrv_;
 static DEFINE_MUTEX(chdrv_lock);
 
 /**
- * @brief Open an ISP channel character device node, power on the camera
- * subsystem and initialize the channel driver context.
+ * @brief Opens an ISP channel for the given @a inode and @a file.
  *
- * The act of opening an ISP channel character device node does not entail the
+ * This function handles the opening of an Image Signal Processor (ISP) channel by performing
+ * the following steps:
+ * - Acquires the channel driver lock using @ref mutex_lock_interruptible().
+ * - Retrieves the channel number from the provided @ref inode.
+ * - Validates the availability of the channel driver and the specified channel number.
+ * - Releases the channel driver lock using @ref mutex_unlock().
+ * - Allocates and initializes a new @ref tegra_isp_channel structure.
+ * - Initializes the capture process by calling @ref isp_capture_init().
+ * - Acquires the channel driver lock using @ref mutex_lock().
+ * - Registers the channel within the channel driver's channel array.
+ * - Releases the channel driver lock using @ref mutex_unlock().
+ * - Associates the channel with the opened file by setting private data for provided @ref file.
+ * - Opens the file in a non-seekable mode using @ref nonseekable_open().
+ *
+ * If any step fails, the function performs necessary cleanup, including shutting down the
+ * capture process by calling @ref isp_capture_shutdown() and freeing allocated memory
+ * by calling @ref kfree().
+ *
+ * @note The act of opening an ISP channel character device node does not entail the
  * reservation of an ISP channel, ISP_CAPTURE_SETUP must be called afterwards
  * to request an allocation by RCE.
  *
- * This is the @a open file operation handler for an ISP channel node.
+ * @param[in] inode  Pointer to the @ref inode structure representing the file inode.
+ *                   Valid Value: non-NULL.
+ * @param[in] file   Pointer to the @ref file structure representing the opened file.
+ *                   Valid Value: non-NULL.
  *
- * @param[in]	inode	ISP channel character device inode struct
- * @param[in]	file	ISP channel character device file struct
- *
- * @returns	0 (success), neg. errno (failure)
+ * @retval 0                        Successfully opened the ISP channel.
+ * @retval -ENOMEM                  Memory allocation @ref kzalloc() for the channel failed.
+ * @retval -ENODEV                  Channel driver is unavailable or the channel number is invalid.
+ * @retval -EBUSY                   The requested channel is already in use.
+ * @retval -ERESTARTSYS             The lock acquisition was interrupted.
+ * @retval (int)                    Initialization or file opening failed.
  */
 static int isp_channel_open(
 	struct inode *inode,
@@ -270,18 +292,23 @@ init_err:
 }
 
 /**
- * @brief Release an ISP channel character device node, power off the camera
- * subsystem and free the ISP channel driver context.
+ * @brief Releases an ISP channel and performs necessary cleanup.
  *
- * Under normal operation, ISP_CAPTURE_RESET followed by ISP_CAPTURE_RELEASE
- * should be called before releasing the file handle on the device node.
+ * This function releases the ISP channel associated with the provided @a file and @a inode.
+ * It performs the following operations:
+ * - Calls @ref isp_capture_shutdown() to shut down the ISP capture process.
+ * - Acquires the channel driver's lock by invoking @ref mutex_lock().
+ * - Verifies that the channel being released matches the registered channel using @ref WARN_ON().
+ * - Removes the channel from the driver's channel array by setting the corresponding entry to NULL.
+ * - Releases the channel driver's lock by calling @ref mutex_unlock().
+ * - Frees the memory allocated for the channel using @ref kfree().
  *
- * This is the @a release file operation handler for an ISP channel node.
+ * @param[in]  inode  Pointer to the @ref inode structure representing the file's inode.
+ *                    Valid Value: non-NULL.
+ * @param[in]  file   Pointer to the @ref file structure representing the opened file.
+ *                    Valid Value: non-NULL.
  *
- * @param[in]	inode	ISP channel character device inode struct
- * @param[in]	file	ISP channel character device file struct
- *
- * @returns	0
+ * @retval 0    Successfully released the ISP channel and performed cleanup.
  */
 static int isp_channel_release(
 	struct inode *inode,
@@ -319,6 +346,79 @@ static int isp_channel_release(
  * @param[in,out]	arg	IOCTL argument; numerical value or pointer
  *
  * @returns		0 (success), neg. errno (failure)
+ */
+/**
+ * @brief Handles ioctl commands for the ISP channel.
+ *
+ * This function performs the following operations:
+ * - Retrieves the ISP channel associated with the opened file.
+ * - Validates the existence of the channel.
+ * - Extracts the ioctl command number using @ref _IOC_NR().
+ * - Executes the corresponding operation based on the command number:
+ *   - For ISP_CAPTURE_SETUP:
+ *     - Copies the @ref isp_capture_setup structure from user space using
+ *       @ref copy_from_user().
+ *     - Calls @ref isp_get_nvhost_device() to obtain the NVHost device.
+ *     - Ensures the ISP device is valid.
+ *     - Invokes @ref isp_capture_setup() with the setup data.
+ *   - For ISP_CAPTURE_RESET:
+ *     - Copies the reset parameter from user space using @ref copy_from_user().
+ *     - Calls @ref isp_capture_reset() with the reset value.
+ *   - For ISP_CAPTURE_RELEASE:
+ *     - Copies the release parameter from user space using @ref copy_from_user().
+ *     - Invokes @ref isp_capture_release() to release the capture.
+ *   - For ISP_CAPTURE_GET_INFO:
+ *     - Initializes the @ref isp_capture_info structure.
+ *     - Calls @ref isp_capture_get_info() to retrieve capture information.
+ *     - Copies the information back to user space using @ref copy_to_user().
+ *   - For ISP_CAPTURE_REQUEST:
+ *     - Copies the capture request data from user space using
+ *       @ref copy_from_user().
+ *     - Calls @ref isp_capture_request() to process the capture request.
+ *   - For ISP_CAPTURE_STATUS:
+ *     - Copies the timeout value from user space using @ref copy_from_user().
+ *     - Invokes @ref isp_capture_status() with the timeout.
+ *   - For ISP_CAPTURE_PROGRAM_REQUEST:
+ *     - Copies the program request data from user space using
+ *       @ref copy_from_user().
+ *     - Calls @ref isp_capture_program_request() to submit the program request.
+ *   - For ISP_CAPTURE_PROGRAM_STATUS:
+ *     - Invokes @ref isp_capture_program_status() to get program status.
+ *   - For ISP_CAPTURE_REQUEST_EX:
+ *     - Copies the extended request data from user space using
+ *       @ref copy_from_user().
+ *     - Calls @ref isp_capture_request_ex() to submit the extended request.
+ *   - For ISP_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER:
+ *     - Copies the notifier data from user space using
+ *       @ref copy_from_user().
+ *     - Invokes @ref isp_capture_set_progress_status_notifier() to set the notifier.
+ *   - For ISP_CAPTURE_BUFFER_REQUEST:
+ *     - Copies the buffer request data from user space using
+ *       @ref copy_from_user().
+ *     - Calls @ref isp_capture_buffer_request() to request buffers.
+ * - Handles errors by setting appropriate error codes.
+ *
+ * @param[in]  file  Pointer to the @ref file structure representing the opened file.
+ *                   Valid Value: non-NULL.
+ * @param[in]  cmd   Ioctl command number.
+ *                   Valid Range: Defined in @ref ISP_CHANNEL_IOCTLS.
+ * @param[in]  arg   Argument for the ioctl command, typically a pointer to user data.
+ *                   Valid Value: Depends on @a cmd.
+ *
+ * @retval  0                           Successfully executed the ioctl command.
+ * @retval -EINVAL                      If the channel is invalid or the channel
+ *                                      device is NULL, potentially due to @ref
+ *                                      _IOC_NR() or @ref isp_get_nvhost_device().
+ * @retval -EFAULT                      If copying data from/to user space fails
+ *                                      using @ref copy_from_user() or @ref copy_to_user().
+ * @retval -ENOIOCTLCMD                 If an unknown ioctl command is received.
+ * @retval (int)                        Errors returned by @ref isp_capture_setup(),
+ *                                      @ref isp_capture_reset(), @ref isp_capture_release(),
+ *                                      @ref isp_capture_get_info(), @ref isp_capture_request(),
+ *                                      @ref isp_capture_status(), @ref isp_capture_program_request(),
+ *                                      @ref isp_capture_program_status(), @ref isp_capture_request_ex(),
+ *                                      @ref isp_capture_set_progress_status_notifier(),
+ *                                      or @ref isp_capture_buffer_request().
  */
 static long isp_channel_ioctl(
 	struct file *file,
@@ -501,6 +601,39 @@ static const struct file_operations isp_channel_fops = {
 static struct class *isp_channel_class;
 static int isp_channel_major = -1;
 
+/**
+ * @brief Registers and initializes the ISP channel driver.
+ *
+ * This function performs the following operations:
+ * - Allocates memory for the @ref isp_channel_drv structure with space for
+ *   the specified maximum number of ISP channels using @ref kzalloc().
+ * - Initializes the driver structure fields, including setting the platform
+ *   device TO @a ndev and the maximum number of channels to @a max_isp_channels.
+ * - Initializes the driver mutex lock using @ref mutex_init().
+ * - Acquires the global channel driver lock by invoking @ref mutex_lock().
+ * - Checks if a channel driver is already registered using @ref WARN_ON().
+ *   If a driver is already registered, it releases the lock and frees the allocated
+ *   memory with @ref kfree().
+ * - Sets the global channel driver reference to the newly allocated driver and
+ *   releases the global lock using @ref mutex_unlock.
+ * - Validates the ISP channel major number is not negative.
+ * - Iterates over the number of channels and creates device nodes for each
+ *   channel using @ref device_create().
+ *
+ * @param[in]  ndev              Pointer to the @ref platform_device structure representing the
+ *                               platform device.
+ *                               Valid Value: non-NULL.
+ * @param[in]  max_isp_channels  Maximum number of ISP channels to support.
+ *                               Valid Range: [0 .. UINT32_MAX].
+ *
+ * @retval  0                       Successfully registered and initialized the ISP channel driver.
+ * @retval -ENOMEM                  If memory allocation for the driver structure fails,
+ *                                  as indicated by @ref kzalloc().
+ * @retval -EBUSY                   If an ISP channel driver is already registered, detected via
+ *                                  @ref WARN_ON().
+ * @retval -EINVAL                  If the ISP channel major number is invalid, as checked before
+ *                                  device creation.
+ */
 int isp_channel_drv_register(
 	struct platform_device *ndev,
 	unsigned int max_isp_channels)
@@ -544,6 +677,27 @@ int isp_channel_drv_register(
 }
 EXPORT_SYMBOL(isp_channel_drv_register);
 
+/**
+ * @brief Registers file operations for the ISP channel driver.
+ *
+ * This function performs the following operations:
+ * - Retrieves the global ISP channel driver instance.
+ * - Checks if the channel driver is initialized by verifying the global driver reference.
+ * - Acquires the global channel driver lock using @ref mutex_lock().
+ * - If the driver operations are not set, assigns the provided operations.
+ * - If the operations are already registered, logs a debug message using
+ *   @ref dev_dbg().
+ * - Releases the global channel driver lock using @ref mutex_unlock().
+ * - Returns a status code based on the operation outcome.
+ *
+ * @param[in]  ops  Pointer to the @ref isp_channel_drv_ops structure containing the
+ *                  file operations to be registered.
+ *                  Valid Value: non-NULL.
+ *
+ * @retval  0                      Successfully registered the file operations.
+ * @retval -EPROBE_DEFER           The ISP channel driver is not yet initialized,
+ *                                 as indicated by @ref chdrv_ being NULL.
+ */
 int isp_channel_drv_fops_register(
 	const struct isp_channel_drv_ops *ops)
 {
@@ -570,6 +724,24 @@ error:
 }
 EXPORT_SYMBOL(isp_channel_drv_fops_register);
 
+/**
+ * @brief Unregisters the ISP channel driver and performs cleanup.
+ *
+ * This function performs the following operations:
+ * - Acquires the global channel driver lock using @ref mutex_lock().
+ * - Retrieves the current ISP channel driver instance from the global reference.
+ * - Clears the global channel driver reference to indicate that it is no longer registered.
+ * - Validates that the provided device matches the driver's device using @ref WARN_ON().
+ * - Releases the global channel driver lock using @ref mutex_unlock().
+ * - Checks if the ISP channel major number is valid. If invalid, logs an error using
+ *   @ref pr_err() and exits.
+ * - Iterates over all registered channels and destroys each device node using
+ *   @ref device_destroy().
+ * - Frees the memory allocated for the ISP channel driver using @ref kfree().
+ *
+ * @param[in] dev  Pointer to the @ref device structure representing the device to unregister.
+ *                 Valid Value: non-NULL.
+ */
 void isp_channel_drv_unregister(
 	struct device *dev)
 {
@@ -598,9 +770,18 @@ void isp_channel_drv_unregister(
 EXPORT_SYMBOL(isp_channel_drv_unregister);
 
 /**
- * @brief Initialize the ISP channel driver device (major).
+ * @brief Initializes and registers the ISP channel driver.
  *
- * @returns	0 (success), PTR_ERR or neg. ISP channel major no. (failuure)
+ * This function performs the following operations:
+ * - Creates the ISP channel device class using @ref class_create().
+ * - Registers a character device for the ISP channel with @ref register_chrdev().
+ * - If registration fails, destroys the created device class using
+ *   @ref class_destroy().
+ * - Returns status based on the operation outcomes.
+ *
+ * @retval 0      Successfully initialized and registered the ISP channel driver.
+ * @retval (int)  Error returned by @ref PTR_ERR() if @ref class_create() fails or by
+ *                @ref register_chrdev() if character device registration fails.
  */
 int isp_channel_drv_init(void)
 {
@@ -624,7 +805,12 @@ int isp_channel_drv_init(void)
 EXPORT_SYMBOL(isp_channel_drv_init);
 
 /**
- * @brief De-initialize the ISP channel driver device (major).
+ * @brief Cleans up and unregisters the ISP channel driver.
+ *
+ * This function performs the following operations:
+ * - Calls @ref unregister_chrdev() to unregister the character device associated
+ *   with the ISP channel driver.
+ * - Calls @ref class_destroy() to destroy the device class for ISP channels.
  */
 void isp_channel_drv_exit(void)
 {

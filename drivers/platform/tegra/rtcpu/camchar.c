@@ -44,6 +44,29 @@ static DEFINE_SPINLOCK(tegra_camchar_lock);
 static dev_t tegra_camchar_major_number;
 static struct class *tegra_camchar_class;
 
+/**
+ * @brief Opens the Tegra camera character device.
+ *
+ * This function performs the following operations:
+ * - Retrieves the device-specific data from the provided @ref inode structure
+ *   using @ref container_of().
+ * - Checks if the device is already open.
+ * - Calls @ref tegra_ivc_channel_runtime_get() to obtain a runtime reference
+ *   to the channel.
+ * - Marks the device as open and the connection as not established.
+ * - Assigns the channel to the file's private data.
+ * - Calls @ref nonseekable_open() to complete the open operation.
+ *
+ * @param[in]  in      Pointer to the @ref inode structure representing the device.
+ *                     Valid value: non-null.
+ * @param[in, out]  f  Pointer to the @ref file structure for the device file.
+ *                     Valid value: non-null.
+ *
+ * @retval EOK      Successfully opened the device.
+ * @retval -EBUSY   The device is already open.
+ * @retval (int)    Returned errors from @ref tegra_ivc_channel_runtime_get() or
+ *                  @ref nonseekable_open().
+ */
 static int tegra_camchar_open(struct inode *in, struct file *f)
 {
 	struct tegra_camchar_data *data;
@@ -64,6 +87,23 @@ static int tegra_camchar_open(struct inode *in, struct file *f)
 	return nonseekable_open(in, f);
 }
 
+/**
+ * @brief Releases the Tegra camera character device.
+ *
+ * This function performs the following operations:
+ * - Retrieves the channel from the file's private data.
+ * - Obtains the device-specific data by calling @ref tegra_ivc_channel_get_drvdata().
+ * - Calls @ref tegra_ivc_channel_runtime_put() to release the runtime reference
+ *   to the channel.
+ * - Marks the device as closed.
+ *
+ * @param[in] in  Pointer to the @ref inode structure representing the device.
+ *                Valid value: non-null.
+ * @param[in] fp  Pointer to the @ref file structure for the device file.
+ *                Valid value: non-null.
+ *
+ * @retval EOK    Successfully released the device.
+ */
 static int tegra_camchar_release(struct inode *in, struct file *fp)
 {
 	struct tegra_ivc_channel *ch = fp->private_data;
@@ -76,6 +116,31 @@ static int tegra_camchar_release(struct inode *in, struct file *fp)
 	return 0;
 }
 
+/**
+ * @brief Polls the Tegra CamChar device for I/O readiness.
+ *
+ * This function performs the following operations:
+ * - Retrieves the driver data associated with the file pointer using
+ *   @ref tegra_ivc_channel_get_drvdata().
+ * - Waits for events on the device's wait queue by calling @ref poll_wait().
+ * - Locks the I/O lock using @ref mutex_lock() to ensure exclusive access.
+ * - Checks if the device can be read by invoking @ref tegra_ivc_can_read().
+ * - Checks if the device can be written by invoking @ref tegra_ivc_can_write().
+ * - Unlocks the I/O lock using @ref mutex_unlock() after the checks.
+ * - Sets the appropriate event flags in the return value based on readability and writability.
+ *
+ * @param[in] fp  Pointer to the @ref file structure.
+ *                Valid value: non-null.
+ * @param[in] pt  Pointer to the @ref poll_table_struct.
+ *                Valid value: non-null.
+ *
+ * @retval 0                                                 No events are available for
+ *                                                           reading or writing.
+ * @retval (EPOLLIN | EPOLLRDNORM)                           Data is available for reading.
+ * @retval (EPOLLOUT | EPOLLWRNORM)                          Space is available for writing.
+ * @retval (EPOLLIN | EPOLLRDNORM | EPOLLOUT | EPOLLWRNORM)  Data is available for both
+ *                                                           reading and writing.
+ */
 static __poll_t tegra_camchar_poll(struct file *fp, struct poll_table_struct *pt)
 {
 	__poll_t ret = 0;
@@ -94,6 +159,45 @@ static __poll_t tegra_camchar_poll(struct file *fp, struct poll_table_struct *pt
 	return ret;
 }
 
+/**
+ * @brief Reads data from the Tegra camera character device.
+ *
+ * This function performs the following operations:
+ * - Retrieves the channel from the file's private data.
+ * - Obtains the device-specific data by calling @ref tegra_ivc_channel_get_drvdata().
+ * - Checks if the channel is ready by verifying the @ref tegra_ivc_channel.is_ready flag.
+ * - Limits the read length to the minimum of the requested length and the channel's
+ *   frame size using @ref min_t().
+ * - If the adjusted length is zero, returns immediately with no data to read.
+ * - Attempts to acquire the I/O lock interruptibly by calling @ref mutex_lock_interruptible().
+ * - Prepares to wait on the device's wait queue by calling @ref prepare_to_wait().
+ * - Calls @ref tegra_ivc_read() to perform the actual read operation.
+ * - Releases the I/O lock using @ref mutex_unlock().
+ * - Exit read operation if @ref tegra_ivc_read() returns @ref -ENOMEM and:
+ *   - A signal is pending based on @ref signal_pending().
+ *   - If the file is opened with @ref O_NONBLOCK flag enabled.
+ * - Otherwise, retries the read operation.
+ * - Cleans up the wait by calling @ref finish_wait().
+ *
+ * @param[in]        fp      Pointer to the @ref file structure.
+ *                           Valid value: non-null.
+ * @param[out]       buffer  User-space buffer to store the read data.
+ *                           Valid value: non-null.
+ * @param[in]        len     Number of bytes to read.
+ *                           Valid range: [0 .. channel's frame size].
+ * @param[in, out]   offset  File position offset.
+ *                           Valid value: non-null.
+ *
+ * @retval -EIO        If the channel is not ready.
+ * @retval 0           If the adjusted read length is zero.
+ * @retval -EINTR      If the read operation was interrupted by a signal,
+ *                     as determined by @ref signal_pending().
+ * @retval -EAGAIN     If the file is opened with @ref O_NONBLOCK and no data is available,
+ *                     as determined by @ref tegra_ivc_read().
+ * @retval (ssize_t)   If postive, number of bytes successfully read. If negative, error
+ *                     codes returned from @ref tegra_ivc_read() or
+ *                     @ref mutex_lock_interruptible().
+ */
 static ssize_t tegra_camchar_read(struct file *fp, char __user *buffer, size_t len,
 					loff_t *offset)
 {
@@ -134,6 +238,58 @@ static ssize_t tegra_camchar_read(struct file *fp, char __user *buffer, size_t l
 	return ret;
 }
 
+/**
+ * @brief Writes data to the Tegra CamChar device.
+ *
+ * This function performs the following operations:
+ * - Retrieves the channel from the file's private data.
+ * - Obtains the device-specific data by calling
+ *   @ref tegra_ivc_channel_get_drvdata().
+ * - Defines a wait queue using @ref DEFINE_WAIT().
+ * - Checks if the channel is ready using @ref WARN_ON().
+ * - Limits the write length to the minimum of the requested length and the
+ *   channel's frame size using @ref min_t().
+ * - If the adjusted length is zero, returns 0 indicating no data to write.
+ * - Enters a loop to attempt the write operation:
+ *   - Acquires the I/O lock interruptibly by calling
+ *     @ref mutex_lock_interruptible().
+ *   - If the lock acquisition is interrupted, breaks the loop.
+ *   - Prepares to wait on the device's wait queue by calling
+ *     @ref prepare_to_wait().
+ *   - Calls @ref tegra_ivc_write() to perform the actual write operation.
+ *   - Releases the I/O lock using @ref mutex_unlock().
+ *   - If the write operation is successful, marks the connection as established.
+ *   - Handles specific error conditions:
+ *     - If @ref tegra_ivc_write() returns @ref -ENOMEM or @ref ECONNRESET,
+ *       and a signal is pending as determined by @ref signal_pending().
+ *     - If the file is opened with @c O_NONBLOCK and no data can be written.
+ *     - Otherwise, calls @ref schedule() to retry the write operation.
+ * - Cleans up the wait by calling @ref finish_wait().
+ * - If a connection reset occurs and the connection was established, breaks
+ *   the loop.
+ *
+ * @param[in]        fp      Pointer to the @ref file structure.
+ *                           Valid Value: non-NULL.
+ * @param[in]        buffer  User-space buffer containing the data to write.
+ *                           Valid Value: non-NULL.
+ * @param[in]        len     Number of bytes to write.
+ *                           Valid Range: [0 .. channel's frame size].
+ * @param[in, out]   offset  File position offset.
+ *                           Valid Value: non-NULL.
+ *
+ * @retval -EIO        If the channel is not ready, as determined by
+ *                     @ref WARN_ON().
+ * @retval 0           If the adjusted write length is zero.
+ * @retval -EINTR      If the write operation was interrupted by a signal,
+ *                     as determined by @ref mutex_lock_interruptible()
+ *                     or @ref signal_pending().
+ * @retval -EAGAIN     If the file is opened with @ref O_NONBLOCK and no data
+ *                     can be written, as determined by @ref tegra_ivc_write().
+ * @retval (ssize_t)   If positive, number of bytes successfully written. If negative,
+ *                     error codes returned from @ref tegra_ivc_write(),
+ *                     @ref mutex_lock_interruptible(), or other internal
+ *                     mechanisms such as @ref schedule() or @ref finish_wait().
+ */
 static ssize_t tegra_camchar_write(struct file *fp, const char __user *buffer,
 					size_t len, loff_t *offset)
 {
@@ -182,6 +338,36 @@ static ssize_t tegra_camchar_write(struct file *fp, const char __user *buffer,
 	return ret;
 }
 
+/**
+ * @brief Handles ioctl commands for the Tegra camera character device.
+ *
+ * This function performs the following operations:
+ * - Retrieves the channel from the file's private data.
+ * - Obtains the device-specific data by calling @ref tegra_ivc_channel_get_drvdata().
+ * - Acquires the I/O lock by calling @ref mutex_lock().
+ * - Processes the ioctl command @a cmd using a switch statement:
+ *   - For the @ref FIONREAD command:
+ *     - Checks if the device can be read by invoking @ref tegra_ivc_can_read().
+ *     - Copies channel frame size to user space by calling @ref put_user().
+ *   - For the @ref CCIOGNFRAMES command:
+ *     - Copies the number of frames in the channel to user space by calling @ref put_user().
+ *   - For the @ref CCIOGNBYTES command:
+ *     - Copies the channel's frame size to user space by calling @ref put_user().
+ * - Releases the I/O lock by calling @ref mutex_unlock().
+ *
+ * @param[in]        fp      Pointer to the @ref file structure.
+ *                           Valid value: non-null.
+ * @param[in]        cmd     Ioctl command number.
+ *                           Valid value: Supported ioctl commands such as
+ *                           @ref FIONREAD, @ref CCIOGNFRAMES, and @ref CCIOGNBYTES.
+ * @param[in]        arg     User-space pointer where the ioctl result will be stored.
+ *                           Valid value: Valid user-space address.
+ *
+ * @retval 0          Successfully handled the @c FIONREAD command and data is copied
+ *                    to user space.
+ * @retval -ENOTTY    The ioctl command @a cmd is not supported.
+ * @retval (long)     Error codes returned from @ref mutex_lock() or @ref put_user().
+ */
 static long tegra_camchar_ioctl(struct file *fp, unsigned int cmd,
 				unsigned long arg)
 {
@@ -231,6 +417,32 @@ static const struct file_operations tegra_camchar_fops = {
 #endif
 };
 
+/**
+ * @brief Initializes the Tegra camera character device driver.
+ *
+ * This function performs the following operations:
+ * - Allocates a range of character device numbers by calling
+ *   @ref alloc_chrdev_region().
+ * - Extracts the major number from the allocated device number using @ref MAJOR().
+ * - Creates a device class for the character device by calling
+ *   @ref class_create() or @ref class_create().
+ * - Checks if class creation was successful. If it fails:
+ *   - Unregisters the allocated device numbers by calling
+ *     @ref unregister_chrdev_region().
+ * - Registers the IVC driver by calling @ref tegra_ivc_driver_register().
+ * - Checks if driver registration was successful. If it fails:
+ *   - Destroys the created class using @ref class_destroy().
+ *   - Unregisters the allocated device numbers by calling
+ *     @ref unregister_chrdev_region().
+ * - Logs an informational message indicating successful loading of the driver.
+ *
+ * @param[in]  drv  Pointer to the @ref tegra_ivc_driver structure.
+ *                  Valid value: non-null.
+ *
+ * @retval 0          Successfully initialized the device driver.
+ * @retval (int)      Error returned from @ref alloc_chrdev_region(), @ref class_create(),
+ *                    @ref PTR_ERR(), or @ref tegra_ivc_driver_register().
+ */
 static int __init tegra_camchar_init(struct tegra_ivc_driver *drv)
 {
 	int ret;
@@ -270,6 +482,21 @@ init_err_class:
 	return ret;
 }
 
+/**
+ * @brief Exits and cleans up the Tegra camera character device driver.
+ *
+ * This function performs the following operations:
+ * - Creates a device number using @ref MKDEV() with the major number and minor number 0.
+ * - Unregisters the IVC driver by calling @ref tegra_ivc_driver_unregister().
+ * - Destroys the device class by calling @ref class_destroy().
+ * - Unregisters the allocated character device numbers by calling
+ *   @ref unregister_chrdev_region().
+ * - Resets the major number to 0.
+ * - Logs an informational message indicating successful unloading of the driver.
+ *
+ * @param[in]  drv  Pointer to the @ref tegra_ivc_driver structure.
+ *                 Valid value: non-null.
+ */
 static void __exit tegra_camchar_exit(struct tegra_ivc_driver *drv)
 {
 	dev_t num = MKDEV(tegra_camchar_major_number, 0);
@@ -282,6 +509,17 @@ static void __exit tegra_camchar_exit(struct tegra_ivc_driver *drv)
 	pr_info("camchar: unloaded rtcpu character device driver\n");
 }
 
+/**
+ * @brief Notifies the Tegra camera character device of an event.
+ *
+ * This function performs the following operations:
+ * - Obtains the device-specific data by calling @ref tegra_ivc_channel_get_drvdata().
+ * - Wakes up any processes waiting on the device's wait queue by calling
+ *   @ref wake_up_interruptible().
+ *
+ * @param[in]  ch  Pointer to the @ref tegra_ivc_channel structure.
+ *                 Valid value: non-null.
+ */
 static void tegra_camchar_notify(struct tegra_ivc_channel *ch)
 {
 	struct tegra_camchar_data *dev_data = tegra_ivc_channel_get_drvdata(ch);
@@ -289,6 +527,19 @@ static void tegra_camchar_notify(struct tegra_ivc_channel *ch)
 	wake_up_interruptible(&dev_data->waitq);
 }
 
+/**
+ * @brief Allocates and returns the first available minor number for the CamChar device.
+ *
+ * This function performs the following operations:
+ * - Acquires the spinlock by calling @ref spin_lock().
+ * - Finds the first available minor number by calling @ref find_first_zero_bit().
+ * - If an available minor number is found:
+ *   - Marks it as used by calling @ref set_bit().
+ * - Releases the spinlock by calling @ref spin_unlock().
+ *
+ * @retval (int)     An available minor number, determined by @ref find_first_zero_bit().
+ * @retval -ENODEV   If no available minor number was found.
+ */
 static int tegra_camchar_get_minor(void)
 {
 	int minor;
@@ -306,6 +557,19 @@ static int tegra_camchar_get_minor(void)
 	return minor;
 }
 
+/**
+ * @brief Releases a minor number for the Tegra camera character device.
+ *
+ * This function performs the following operations:
+ * - Acquires the spinlock by calling @ref spin_lock().
+ * - Checks if the provided minor number is within the valid range.
+ * - If valid, clears the corresponding bit in @ref tegra_camchar_minor_map
+ *   using @ref clear_bit().
+ * - Releases the spinlock by calling @ref spin_unlock().
+ *
+ * @param[in]  minor   Minor number to release.
+ *                     Valid range: [0 .. @ref DEVICE_COUNT - 1].
+ */
 static void tegra_camchar_put_minor(unsigned minor)
 {
 	spin_lock(&tegra_camchar_lock);
@@ -316,6 +580,37 @@ static void tegra_camchar_put_minor(unsigned minor)
 	spin_unlock(&tegra_camchar_lock);
 }
 
+/**
+ * @brief Probes and initializes the Tegra CamChar device.
+ *
+ * This function performs the following operations:
+ * - Retrieves the device name from the device tree by invoking @ref of_device_get_match_data()
+ *   with the provided @ref ch.dev.
+ *   - If device name is NULL, read string from device tree property "nvidia,devname" using
+ *     @ref of_property_read_string().
+ * - Allocates memory for device data using @ref devm_kzalloc().
+ * - Initializes the character device structure using @ref cdev_init().
+ * - Sets the owner of the character device to @ref THIS_MODULE.
+ * - Initializes the wait queue head using @ref init_waitqueue_head().
+ * - Initializes the I/O mutex using @ref mutex_init().
+ * - Associates the device data with the provided @ref tegra_ivc_channel using
+ *   @ref tegra_ivc_channel_set_drvdata().
+ * - Allocates a minor number retrieved using @ref tegra_camchar_get_minor().
+ * - Creates a device number using @ref MKDEV().
+ * - Adds the character device to the system using @ref cdev_add().
+ *   - In case of failure, release minor number using @ref tegra_camchar_put_minor().
+ * - Creates the device in sysfs using @ref device_create().
+ *   - In case of failure, release minor number using @ref tegra_camchar_put_minor().
+ *
+ * @param[in]  ch  Pointer to the @ref tegra_ivc_channel structure.
+ *                 Valid value: non-null.
+ *
+ * @retval EOK        Successfully probed and initialized the device.
+ * @retval -ENOMEM    @ref devm_kzalloc() failed.
+ * @retval -ENODEV    No available minor number was found using @ref tegra_camchar_get_minor().
+ * @retval (int)      Other error codes indicating failure during device initialization originating
+ *                    from @ref cdev_add(), @ref device_create, or @ref of_property_read_string().
+ */
 static int tegra_camchar_probe(struct tegra_ivc_channel *ch)
 {
 	const char *devname;
@@ -369,6 +664,21 @@ static int tegra_camchar_probe(struct tegra_ivc_channel *ch)
 	return ret;
 }
 
+/**
+ * @brief Removes the Tegra CamChar device.
+ *
+ * This function performs the following operations:
+ * - Retrieves the device-specific data by calling
+ *   @ref tegra_ivc_channel_get_drvdata().
+ * - Obtains the device number from the device data.
+ * - Destroys the device by calling @ref device_destroy().
+ * - Deletes the character device by calling @ref cdev_del().
+ * - Releases the allocated minor number by calling
+ *   @ref tegra_camchar_put_minor().
+ *
+ * @param[in]  ch  Pointer to the @ref tegra_ivc_channel structure.
+ *                 Valid Value: non-NULL.
+ */
 static void tegra_camchar_remove(struct tegra_ivc_channel *ch)
 {
 	struct tegra_camchar_data *data = tegra_ivc_channel_get_drvdata(ch);
