@@ -1593,6 +1593,14 @@ static int tegra_vse_validate_sha_params(struct tegra_virtual_se_sha_context *sh
 		goto exit;
 	}
 
+	if (is_last) {
+		if (sha_ctx->user_digest_buffer == NULL) {
+			VSE_ERR("%s: user digest buffer is NULL\n", __func__);
+			ret = -EINVAL;
+			goto exit;
+		}
+	}
+
 	if (sha_ctx->blk_size == 0U) {
 		VSE_ERR("SHA blk_size is invalid\n");
 		ret = -EINVAL;
@@ -2321,11 +2329,6 @@ static int tegra_hv_vse_safety_hmac_sha_finup(struct ahash_request *req)
 	if (ret) {
 		VSE_ERR("%s: invalid HMAC SHA params\n", __func__);
 		return ret;
-	}
-
-	if (!hmac_ctx->is_key_slot_allocated) {
-		VSE_ERR("%s key is not allocated\n", __func__);
-		return -EINVAL;
 	}
 
 	se_dev = g_crypto_to_ivc_map[hmac_ctx->node_id].se_dev;
@@ -4472,6 +4475,12 @@ static int tegra_vse_aes_gmac_sv_check_params(struct ahash_request *req, bool is
 	int err = 0;
 	bool is_zero_copy;
 
+	if ((gmac_ctx->request_type != TEGRA_HV_VSE_GMAC_SIGN) &&
+		(gmac_ctx->request_type != TEGRA_HV_VSE_GMAC_VERIFY)) {
+		dev_err(se_dev->dev, "%s: Invalid request type\n", __func__);
+		err = -EINVAL;
+	}
+
 	if (gmac_ctx->node_id >= MAX_NUMBER_MISC_DEVICES) {
 		dev_err(se_dev->dev, "%s: Node id is not valid\n", __func__);
 		err = -EINVAL;
@@ -4482,7 +4491,6 @@ static int tegra_vse_aes_gmac_sv_check_params(struct ahash_request *req, bool is
 		err = -EINVAL;
 	}
 
-	/* Validate aad buf len */
 	if (gmac_ctx->user_aad_buf_size > TEGRA_VIRTUAL_SE_MAX_SUPPORTED_BUFLEN) {
 		dev_err(se_dev->dev, "%s: aad buf length exceeds max supported size\n", __func__);
 		err = -EINVAL;
@@ -4494,9 +4502,6 @@ static int tegra_vse_aes_gmac_sv_check_params(struct ahash_request *req, bool is
 			dev_err(se_dev->dev, "%s: aad buf is NULL\n", __func__);
 			err = -EINVAL;
 		}
-	}
-
-	if (gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_VERIFY) {
 		if (is_last != 0U) {
 			if (gmac_ctx->authsize > 0 && gmac_ctx->user_tag_buf == NULL) {
 				dev_err(se_dev->dev,
@@ -4504,8 +4509,14 @@ static int tegra_vse_aes_gmac_sv_check_params(struct ahash_request *req, bool is
 				err = -EINVAL;
 			}
 		}
+	} else {
+		if (gmac_ctx->request_type == TEGRA_HV_VSE_GMAC_SIGN) {
+			if (is_last == 1U && gmac_ctx->user_tag_iova == 0) {
+				dev_err(se_dev->dev, "%s: user tag iova is invalid\n", __func__);
+				err = -EINVAL;
+			}
+		}
 	}
-
 	return err;
 }
 
@@ -5028,7 +5039,6 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req,
 		}
 	}
 
-
 free_exit:
 	if (ivc_req_msg)
 		devm_kfree(se_dev->dev, ivc_req_msg);
@@ -5056,6 +5066,11 @@ static int tegra_hv_vse_aes_gmac_sv_update(struct ahash_request *req)
 	}
 
 	gmac_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	if (gmac_ctx == NULL) {
+		VSE_ERR("%s: gmac_ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
 	if (!gmac_ctx->req_context_initialized) {
 		VSE_ERR("%s Request ctx not initialized\n", __func__);
 		ret = -EPERM;
@@ -5100,6 +5115,11 @@ static int tegra_hv_vse_aes_gmac_sv_finup(struct ahash_request *req)
 	}
 
 	gmac_ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+	if (gmac_ctx == NULL) {
+		VSE_ERR("%s: gmac_ctx is NULL\n", __func__);
+		return -EINVAL;
+	}
+
 	if (!gmac_ctx->req_context_initialized) {
 		VSE_ERR("%s: Request ctx not initialized\n", __func__);
 		ret = -EPERM;

@@ -267,6 +267,20 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 	enum tegra_nvvse_sha_type sha_type = sha_update_ctl->sha_type;
 	int32_t ret = 0;
 
+	if ((sha_type < TEGRA_NVVSE_SHA_TYPE_SHA256) || (sha_type >= TEGRA_NVVSE_SHA_TYPE_MAX)) {
+		CRYPTODEV_ERR("%s(): SHA Type requested %d is not supported\n", __func__, sha_type);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	if ((sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE128 ||
+		sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE256) &&
+		sha_update_ctl->digest_size == 0) {
+		CRYPTODEV_ERR("%s: Digest Buffer Size is invalid\n", __func__);
+		ret = -EINVAL;
+		goto exit;
+	}
+
 	if (sha_update_ctl->init_only != 0U) {
 		if (sha_state->sha_init_done != 0U) {
 			CRYPTODEV_INFO("%s(): SHA init is already done\n", __func__);
@@ -295,27 +309,19 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 		goto exit;
 	}
 
-	if ((sha_state->sha_init_done == 0U) && (sha_update_ctl->is_first == 0U)) {
-		CRYPTODEV_ERR("%s(): SHA First req is not yet received\n", __func__);
-		ret = -EINVAL;
-		goto exit;
-	}
-
-	if ((sha_type < TEGRA_NVVSE_SHA_TYPE_SHA256) || (sha_type >= TEGRA_NVVSE_SHA_TYPE_MAX)) {
-		CRYPTODEV_ERR("%s(): SHA Type requested %d is not supported\n", __func__, sha_type);
-		ret = -EINVAL;
-		goto exit;
-	}
-
-	if (sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE128 && sha_update_ctl->digest_size == 0) {
-		CRYPTODEV_ERR("%s: Digest Buffer Size is invalid\n", __func__);
-		ret = -EINVAL;
-		goto exit;
-	}
-
 	if (sha_update_ctl->input_buffer_size == 0U) {
 		if (sha_update_ctl->is_last == 0U) {
-			CRYPTODEV_ERR("%s(): zero length non-last request is not supported\n", __func__);
+			CRYPTODEV_ERR("%s(): zero length non-last request is not supported\n",
+			__func__);
+			ret = -EINVAL;
+			goto exit;
+		}
+	}
+
+	if (sha_update_ctl->is_last == 0U) {
+		if (sha_update_ctl->do_reset == 1U) {
+			CRYPTODEV_ERR("%s(): do_reset is not supported for non-last request\n",
+			__func__);
 			ret = -EINVAL;
 			goto exit;
 		}
@@ -361,7 +367,7 @@ exit:
 static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 				struct tegra_nvvse_sha_update_ctl *sha_update_ctl)
 {
-	struct crypto_sha_state *sha_state = &ctx->sha_state;
+	struct crypto_sha_state *sha_state;
 	struct tegra_virtual_se_sha_context *sha_ctx;
 	struct crypto_ahash *tfm = NULL;
 	struct ahash_request *req = NULL;
@@ -369,15 +375,7 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	enum tegra_nvvse_sha_type sha_type;
 	int ret = -ENOMEM;
 
-	sha_type = sha_update_ctl->sha_type;
-
-	if (sha_update_ctl->do_reset != 0U) {
-		/* Force reset SHA state and return */
-		sha_state->sha_init_done = 0U;
-		sha_state->sha_total_msg_length = 0U;
-		ret = 0;
-		goto exit;
-	}
+	sha_state = &ctx->sha_state;
 
 	ret = tnvvse_crypto_validate_sha_update_req(ctx, sha_update_ctl);
 	if (ret != 0) {
@@ -386,6 +384,16 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 			sha_state->sha_init_done = 0U;
 			sha_state->sha_total_msg_length = 0U;
 		}
+		goto exit;
+	}
+
+	sha_type = sha_update_ctl->sha_type;
+
+	if (sha_update_ctl->do_reset != 0U) {
+		/* Force reset SHA state and return */
+		sha_state->sha_init_done = 0U;
+		sha_state->sha_total_msg_length = 0U;
+		ret = 0;
 		goto exit;
 	}
 
@@ -445,6 +453,8 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	ret = wait_async_op(&sha_complete, crypto_ahash_init(req));
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to initialize ahash: %d\n", __func__, ret);
+		sha_state->sha_init_done = 0;
+		sha_state->sha_total_msg_length = 0;
 		goto free_tfm;
 	}
 
@@ -452,12 +462,16 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 		ret = wait_async_op(&sha_complete, crypto_ahash_update(req));
 		if (ret) {
 			CRYPTODEV_ERR("%s(): Failed to ahash_update: %d\n", __func__, ret);
+			sha_state->sha_init_done = 0;
+			sha_state->sha_total_msg_length = 0;
 			goto free_tfm;
 		}
 	} else {
 		ret = wait_async_op(&sha_complete, crypto_ahash_finup(req));
 		if (ret) {
 			CRYPTODEV_ERR("%s(): Failed to ahash_finup: %d\n", __func__, ret);
+			sha_state->sha_init_done = 0;
+			sha_state->sha_total_msg_length = 0;
 			goto free_tfm;
 		}
 
@@ -550,8 +564,11 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	int ret = -ENOMEM;
 
 	ret = tnvvse_crypto_hmac_sha_validate_req(ctx, hmac_sha_ctl);
-	if (ret != 0)
+	if (ret != 0) {
+		sha_state->hmac_sha_init_done = 0;
+		sha_state->hmac_sha_total_msg_length = 0;
 		goto exit;
+	}
 
 	tfm = crypto_alloc_ahash("hmac-sha256-vse", 0, 0);
 	if (IS_ERR(tfm)) {
@@ -1066,6 +1083,13 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		CRYPTODEV_ERR("%s(): Failed due to invalid tag length (%d) invalid", __func__,
 					gmac_sign_verify_ctl->tag_length);
 		goto free_req;
+	}
+
+	if ((gmac_sign_verify_ctl->gmac_type != TEGRA_NVVSE_AES_GMAC_SIGN) &&
+		(gmac_sign_verify_ctl->gmac_type != TEGRA_NVVSE_AES_GMAC_VERIFY)) {
+		CRYPTODEV_ERR("%s: Invalid request type\n", __func__);
+		ret = -EINVAL;
+		goto done;
 	}
 
 	ret = tnvvse_crypto_aes_gmac_sign_verify_init(ctx, gmac_sign_verify_ctl, req);
