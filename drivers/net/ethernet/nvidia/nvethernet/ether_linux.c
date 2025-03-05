@@ -7671,6 +7671,51 @@ void ether_shutdown(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+static s32 ether_handle_rx_buffers(struct ether_priv_data *pdata,
+				   uint32_t suspend)
+{
+	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_MAX_NUM_CHANS,
+		OSI_MGBE_T23X_MAX_NUM_CHANS,
+		OSI_MGBE_MAX_NUM_CHANS
+	};
+	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
+	struct osi_rx_ring *rx_ring = NULL;
+	u32 i, chan, clean_idx;
+	s32 ret = 0;
+
+	for (i = 0; i < max_dma_chan[osi_dma->mac]; i++) {
+		rx_ring = osi_dma->rx_ring[i];
+		chan = osi_dma->dma_chans[i];
+
+		if (!rx_ring || !rx_ring->rx_swcx)
+			continue;
+
+		if (suspend) {
+			ether_free_rx_skbs(rx_ring->rx_swcx, pdata,
+					   osi_dma->rx_buf_len,
+					   pdata->resv_buf_virt_addr, chan);
+		} else {
+			ret = ether_allocate_rx_buffers(pdata, rx_ring, chan);
+			if (ret < 0) {
+				/* Clean up already allocated buffers */
+				for (clean_idx = 0; clean_idx < i; clean_idx++) {
+					if (osi_dma->rx_ring[clean_idx] &&
+					    osi_dma->rx_ring[clean_idx]->rx_swcx) {
+						ether_free_rx_skbs(osi_dma->rx_ring[clean_idx]->rx_swcx,
+								   pdata, osi_dma->rx_buf_len,
+								   pdata->resv_buf_virt_addr,
+								   osi_dma->dma_chans[clean_idx]);
+					}
+				}
+				goto fail;
+			}
+		}
+	}
+fail:
+	return ret;
+}
+
 /**
  * @brief Ethernet platform driver resume call.
  *
@@ -7718,7 +7763,7 @@ static int ether_resume(struct ether_priv_data *pdata)
 	}
 	osi_set_rx_buf_len(osi_dma);
 
-	ret = ether_allocate_dma_resources(pdata);
+	ret = ether_handle_rx_buffers(pdata, OSI_DISABLE);
 	if (ret < 0) {
 		dev_err(dev, "failed to allocate dma resources\n");
 		return ret;
@@ -7821,7 +7866,8 @@ int ether_suspend_noirq(struct device *dev)
 				    OSI_DMA_INTR_DISABLE);
 	}
 
-	free_dma_resources(pdata);
+	if (ether_handle_rx_buffers(pdata, OSI_ENABLE) != 0)
+		dev_err(dev, "Failed to free the Rx buffers\n");
 
 	if (osi_core->mac != OSI_MAC_HW_EQOS)
 		pm_runtime_put_sync(pdata->dev);
