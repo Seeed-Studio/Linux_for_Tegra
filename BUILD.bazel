@@ -60,6 +60,7 @@ kernel_module(
         "drivers/crypto/tegra/tegra-se-kds.ko",
         "drivers/crypto/tegra/tegra-se.ko",
         "drivers/devfreq/governor_pod_scaling.ko",
+        "drivers/devfreq/tegra_wmark.ko",
         "drivers/firmware/tegra/ivc_ext.ko",
         "drivers/firmware/tegra/tegra_bpmp.ko",
         "drivers/gpio/gpio-max77851.ko",
