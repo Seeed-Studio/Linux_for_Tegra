@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
  * tegracam_core - tegra camera framework initialization
  *
- * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
  */
 #include <linux/list.h>
 #include <linux/mutex.h>
@@ -153,7 +155,11 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 		s_data->frmfmt[mode_idx].size.width;
 	s_data->def_height = s_data->fmt_height =
 		s_data->frmfmt[mode_idx].size.height;
-	s_data->def_clk_freq = signal_props->mclk_freq * 1000;
+
+	if (check_mul_overflow(signal_props->mclk_freq, 1000U, (u32 *)(&(s_data->def_clk_freq)))) {
+		dev_err(dev, "%s: mclk freq overflow\n", __func__);
+		return -EINVAL;
+	}
 
 	/* add version info to identify the right feature set */
 	tc_dev->version = tegracam_version(TEGRACAM_MAJOR_VERSION,

@@ -1787,7 +1787,8 @@ static int capture_vi_probe(struct platform_device *pdev)
 	if (info->max_vi_channels == 0)
 		info->max_vi_channels = DEFAULT_VI_CHANNELS;
 
-	for (ii = 0; ; ii++) {
+	ii = 0U;
+	do {
 		struct device_node *np;
 		struct platform_device *pvidev;
 
@@ -1812,7 +1813,7 @@ static int capture_vi_probe(struct platform_device *pdev)
 
 		info->vi_pdevices[ii] = pvidev;
 		info->num_vi_devices++;
-	}
+	} while (!check_add_overflow(ii, 1U, &ii));
 
 	if (info->num_vi_devices < 1)
 		return -EINVAL;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -65,6 +65,8 @@ static int sensor_common_parse_signal_props(
 	u64 val64 = 0;
 	u64 rate;
 	int depth;
+	u64 lane_rate;
+	u64 symbol_rate;
 
 	err = of_property_read_string(node, "phy_mode", &temp_str);
 	if (err) {
@@ -137,14 +139,22 @@ static int sensor_common_parse_signal_props(
 	}
 
 	/* Convert pixel rate to lane data rate */
-	rate = rate * depth / signal->num_lanes;
+	if (check_mul_overflow(rate, (u64)depth, &lane_rate)) {
+		dev_err(dev, "%s: convert pixel rate to lane data rate overflow\n", __func__);
+		return -EINVAL;
+	}
+	rate = lane_rate / signal->num_lanes;
 
 	if (signal->phy_mode == CSI_PHY_MODE_DPHY) {
 		/* MIPI clock rate */
 		signal->mipi_clock.val = rate / 2;
 	} else if (signal->phy_mode == CSI_PHY_MODE_CPHY) {
 		/* Symbol rate */
-		signal->mipi_clock.val = rate * 7 / 16;
+		if (check_mul_overflow(rate, 7ULL, &symbol_rate)) {
+			dev_err(dev, "%s: symbol rate overflow\n", __func__);
+			return -EINVAL;
+		}
+		signal->mipi_clock.val = symbol_rate / 16;
 	} else {
 		/* Data rate */
 		signal->mipi_clock.val = rate;

@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVIDIA Media controller graph management
  *
- * Copyright (c) 2015-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -651,7 +651,10 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 		entity->asd.match.fwnode = of_fwnode_handle(remote);
 #endif
 		list_add_tail(&entity->list, &chan->entities);
-		chan->num_subdevs++;
+		if (check_add_overflow(chan->num_subdevs, 1U, &chan->num_subdevs)) {
+			dev_err(vi->dev, "%s: num subdevs overflow\n", __func__);
+			break;
+		}
 		chan->notifier.ops = chan->notifier.ops ? chan->notifier.ops : &vi_chan_notify_ops;
 
 		/* Parse and add entities on this enpoint/channel */

@@ -259,8 +259,12 @@ int camera_common_parse_clocks(struct device *dev,
 
 	/* find length of clock-names string array */
 	for (i = 0; i < proplen; i++) {
-		if (prop[i] == '\0')
-			numclocks++;
+		if (prop[i] == '\0') {
+			if (check_add_overflow(numclocks, 1, &numclocks)) {
+				dev_err(dev, "%s: numclocks overflow\n", __func__);
+				return -EINVAL;
+			}
+		}
 	}
 
 	if (numclocks > 1) {

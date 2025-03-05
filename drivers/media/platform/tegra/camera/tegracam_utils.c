@@ -214,7 +214,10 @@ int write_sensor_blob(struct regmap *regmap, struct sensor_blob *blob)
 					&blob->buf[buf_index], size);
 			if (err)
 				return err;
-			buf_index += size;
+			if (check_add_overflow(buf_index, size, &buf_index)) {
+				pr_err("buffer index overflow\n");
+				return -EINVAL;
+			}
 		} else {
 			pr_err("blob has been packaged with errors\n");
 			return -EINVAL;

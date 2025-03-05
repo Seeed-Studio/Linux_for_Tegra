@@ -2496,7 +2496,8 @@ static int capture_isp_probe(struct platform_device *pdev)
 		}
 	}
 
-	for (i = 0; ; i++) {
+	i = 0U;
+	do {
 		struct device_node *node;
 		struct platform_device *ispdev;
 
@@ -2521,7 +2522,7 @@ static int capture_isp_probe(struct platform_device *pdev)
 
 		info->isp_pdevices[i] = ispdev;
 		info->num_isp_devices++;
-	}
+	} while (!check_add_overflow(i, 1U, &i));
 
 	if (info->num_isp_devices < 1)
 		return -EINVAL;
