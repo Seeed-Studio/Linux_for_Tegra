@@ -44,8 +44,6 @@ extern ulong nvmap_init_time;
 
 static const struct of_device_id nvmap_of_ids[] = {
 	{ .compatible = "nvidia,carveouts" },
-	{ .compatible = "nvidia,carveouts-t18x" },
-	{ .compatible = "nvidia,carveouts-t19x" },
         { }
 };
 MODULE_DEVICE_TABLE(of, nvmap_of_ids);
