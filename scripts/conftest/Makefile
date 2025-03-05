@@ -123,6 +123,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += disk_check_media_change
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += dma_slave_config_struct_has_slave_id
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_aperture_remove_framebuffers
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_connector_helper_funcs_struct_mode_valid_has_const_arg
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_connector_has_override_edid
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_debugfs_remove_files_has_root_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_display_info_struct_has_source_physical_address
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_driver_has_fbdev_probe
@@ -274,6 +275,8 @@ NV_HEADER_PRESENCE_TESTS = \
   drm/dp/drm_dp_aux_bus.h \
   drm/dp/drm_dp_helper.h \
   drm/drm_client_setup.h \
+  drm/drm_connector.h \
+  drm/drm_crtc.h \
   drm/drm_dp_aux_bus.h \
   drm/drm_eld.h \
   generated/autoconf.h \
