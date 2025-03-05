@@ -1285,6 +1285,10 @@ static int cam_fsync_find_and_add_groups(struct cam_fsync_controller *controller
 		}
 		for (i = 0; i < num_generators; i++) {
 			gen = of_parse_phandle(np, "generators", i);
+			if (gen == NULL) {
+				dev_err(controller->dev, "Failed to parse generators: %d\n", err);
+				return -EINVAL;
+			}
 			err = cam_fsync_add_generator(group, gen);
 			if (err != 0) {
 				dev_err(controller->dev, "Failed to add generator %s : %d\n",
