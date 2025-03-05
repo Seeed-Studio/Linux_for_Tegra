@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
 #ifndef INCLUDE_CAMRTC_TRACE_H
@@ -49,6 +49,15 @@
 #define CAMRTC_TRACE_EXCEPTION_OFFSET	MK_U32(0x01000)
 #define CAMRTC_TRACE_EVENT_OFFSET	MK_U32(0x10000)
 
+/**
+ * @brief Number of entries in the snapshot section
+ *
+ * The snapshot section stores system state captures that can be
+ * used for debugging and diagnostics. The size is set to 0x400
+ * entries to balance memory usage with debug information coverage.
+ */
+#define CAMRTC_TRACE_SNAPSHOT_ENTRIES	MK_U32(0x400)
+
 /* Size of each entry */
 #define CAMRTC_TRACE_EXCEPTION_SIZE	MK_SIZE(1024)
 #define CAMRTC_TRACE_EVENT_SIZE		MK_SIZE(64)
@@ -87,13 +96,16 @@ struct camrtc_trace_memory_header {
 	uint32_t event_offset;
 	uint32_t event_size;
 	uint32_t event_entries;
-	uint32_t reserved3;
-	uint32_t reserved4[0xc8 / 4];
+	uint32_t snapshot_offset;
+	uint32_t snapshot_size;
+	uint32_t snapshot_entries;
+	uint32_t reserved4[0xc0 / 4];
 
 	/* pointer: offset 0x100 */
 	uint32_t exception_next_idx;
 	uint32_t event_next_idx;
-	uint32_t reserved_ptrs[0x38 / 4];
+	uint32_t snapshot_next_idx;
+	uint32_t reserved_ptrs[0x34 / 4];
 } CAMRTC_TRACE_ALIGN;
 
 /*

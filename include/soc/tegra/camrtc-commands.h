@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  */
 
 /**
@@ -575,6 +575,31 @@
  * @endrst
  */
 #define CAMRTC_HSP_BOOT_COMPLETE  MK_U32(0x4B)
+
+/**
+ * @brief PANIC message
+ *
+ * The CAMRTC_HSP_PANIC message message is a unidirectional message from RCE to client
+ * to log that RCE is about to go into a bad state. This typically occurs when RCE
+ * detects a critical hardware error or encounters an unrecoverable firmware state.
+ *
+ * Upon receiving this message, the client should dump out the trace buffer snapshot
+ * section for debugging purposes.
+ *
+ * @pre @ref CAMRTC_HSP_HELLO exchange has been completed.
+ *
+ * @par Response
+ * @rststar
+ * +-------+---------------------------------------------------+
+ * | Bits  | Description                                       |
+ * +=======+===================================================+
+ * | 30:24 | CAMRTC_HSP_PANIC                                  |
+ * +-------+---------------------------------------------------+
+ * | 23:0  | 0x000000                                          |
+ * +-------+---------------------------------------------------+
+ * @endrst
+ */
+#define CAMRTC_HSP_PANIC		MK_U32(0x4C)
 
 /** Reserved, not to be used. */
 #define CAMRTC_HSP_RESERVED_5E		MK_U32(0x5E) /* bug 200395605 */
