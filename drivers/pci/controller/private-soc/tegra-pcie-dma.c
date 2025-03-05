@@ -54,6 +54,11 @@ tegra_pcie_dma_status_t tegra_pcie_dma_initialize(struct tegra_pcie_dma_init_inf
 {
 	struct tegra_pcie_dma_priv *prv;
 
+	if (!info || !cookie) {
+		pr_err("%s: NULL info or cookie param\n", __func__);
+		return TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS;
+	}
+
 	prv = kzalloc(sizeof(*prv), GFP_KERNEL);
 	if (!prv) {
 		pr_err("Failed to allocate memory for dma_prv\n");
@@ -129,20 +134,23 @@ EXPORT_SYMBOL_GPL(tegra_pcie_dma_submit_xfer);
 bool tegra_pcie_dma_stop(void *cookie)
 {
 	struct tegra_pcie_dma_priv *prv = (struct tegra_pcie_dma_priv *)cookie;
+	bool st = false;
 
 	if (!cookie) {
 		pr_err("%s: cookie is null\n", __func__);
-		return TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS;
+		goto end;
 	}
 
 	if (prv->soc == NVPCIE_DMA_SOC_T234) {
-		return tegra234_pcie_edma_stop(prv->soc_cookie);
+		st = tegra234_pcie_edma_stop(prv->soc_cookie);
 	} else if (prv->soc == NVPCIE_DMA_SOC_T264) {
-		return tegra264_pcie_xdma_stop(prv->soc_cookie);
+		st = tegra264_pcie_xdma_stop(prv->soc_cookie);
 	} else {
 		pr_err("%s: invalid soc id: %d\n", __func__, prv->soc);
-		return TEGRA_PCIE_DMA_FAIL_INVAL_INPUTS;
 	}
+
+end:
+	return st;
 }
 EXPORT_SYMBOL_GPL(tegra_pcie_dma_stop);
 

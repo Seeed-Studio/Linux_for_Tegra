@@ -458,6 +458,11 @@ void *tegra264_pcie_xdma_initialize(struct tegra_pcie_dma_init_info *info, void 
 		}
 	}
 
+	if (prv->ch_init == 0U) {
+		dev_err(prv->dev, "No channel enabled to initialize\n");
+		goto free_ring;
+	}
+
 	prv->irq_name = kasprintf(GFP_KERNEL, "%s_xdma_lib", dev_name(prv->dev));
 	if (!prv->irq_name)
 		goto free_ring;
