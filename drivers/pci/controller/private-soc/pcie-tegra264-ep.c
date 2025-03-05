@@ -302,6 +302,11 @@ static int tegra264_pcie_ep_set_bar(struct pci_epc *epc, u8 fn,
 		return -EINVAL;
 	}
 
+	if (pcie->ep_state == EP_STATE_ENABLED) {
+		dev_err(pcie->dev, "%s: Allowed only when link is not up\n", __func__);
+		return -EINVAL;
+	}
+
 	if (bar == BAR_1) {
 		/* Fail set BAR if size is not power of 2 or out of [64MB,64GB] range */
 		if (!((size >= SZ_64M && size <= (SZ_32G * 2)) && !(size & (size - 1)))) {
@@ -365,6 +370,11 @@ static int tegra264_pcie_ep_map_addr(struct pci_epc *epc, u8 func_no,
 	phys_addr_t limit = addr + size - 1;
 	u32 free_win;
 
+	if (pcie->ep_state != EP_STATE_ENABLED) {
+		dev_err(pcie->dev, "%s: Allowed only when link is up\n", __func__);
+		return -EINVAL;
+	}
+
 	free_win = find_first_zero_bit(pcie->ob_window_map, NUM_OB_WINDOWS);
 	if (free_win >= NUM_OB_WINDOWS) {
 		dev_err(pcie->dev, "No free outbound window\n");
@@ -398,6 +408,11 @@ static void tegra264_pcie_ep_unmap_addr(struct pci_epc *epc, u8 func_no,
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
 	u32 ob_idx;
+
+	if (pcie->ep_state != EP_STATE_ENABLED) {
+		dev_err(pcie->dev, "%s: Allowed only when link is up\n", __func__);
+		return;
+	}
 
 	for (ob_idx = 0; ob_idx < NUM_OB_WINDOWS; ob_idx++) {
 		if (pcie->ob_addr[ob_idx] != addr)
