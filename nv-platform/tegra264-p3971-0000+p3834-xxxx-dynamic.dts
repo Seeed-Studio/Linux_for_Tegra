@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 /dts-v1/;
 /plugin/;
 
@@ -83,6 +83,19 @@
 					full-duplex;
 					speed = <10000>;
 				};
+			};
+		};
+	};
+
+	fragment-t264-p3971-0000-p3834-xxxx-pcie-c4-ep@1 {
+		target-path = "/bus@0/gpio@810c300000";
+		board_config {
+			odm-data = "pcie-c4-endpoint-enable";
+			ids = ">=3971-0000-TS3";
+		};
+		__overlay__ {
+			pcie_refclk_sel {
+				status = "okay";
 			};
 		};
 	};

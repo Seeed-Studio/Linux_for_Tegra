@@ -60,6 +60,16 @@
 			};
 		};
 
+		gpio@810c300000 {
+			pcie_refclk_sel {
+				gpio-hog;
+				output-high;
+				gpios = <TEGRA264_MAIN_GPIO(H, 4) GPIO_ACTIVE_HIGH>;
+				label = "pcie_refclk_sel";
+				status = "disabled";
+			};
+		};
+
 		hda@88090b0000 {
 			nvidia,model = "NVIDIA Jetson Thor AGX HDA";
 			status = "okay";
