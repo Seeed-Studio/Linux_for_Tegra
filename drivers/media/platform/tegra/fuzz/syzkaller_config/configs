@@ -1,0 +1,115 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+{
+    # URL that will display information about the running syz-manager process (e.g. "localhost:50000").
+    "http": "127.0.0.1:50000",
+
+    # TCP address to serve RPC for fuzzer processes (optional).
+    "rpc":  "127.0.0.1:50002",
+
+    # Number of parallel test processes inside of each VM.
+    # Allowed values are 1-32, recommended range is ~4-8, default value is 6.
+    # It should be chosen to saturate CPU inside of the VM and maximize number of test executions,
+    # but to not oversubscribe CPU and memory too severe to not cause OOMs and false hangs/stalls.
+    "procs": 1,
+
+    # Type of sandbox to use during fuzzing:
+    # "none": test under root;
+    #      don't do anything special beyond resource sandboxing,
+    #      gives the most coverage, default
+    "sandbox": "none",
+
+    # Location (on the host machine) of a root SSH identity to use for communicating with
+    # the target device.
+    "sshkey" : "/home/<user>/.ssh/id_ecdsa",
+
+    # Location of the syzkaller checkout, syz-manager will look
+    # for binaries in bin subdir (does not have to be syzkaller checkout as
+    # long as it preserves `bin` dir structure)
+    "syzkaller": "/home/<user>/syzkaller/syzkaller",
+
+    # Target OS/arch, e.g. "linux/arm64" or "linux/amd64/386" (amd64 OS with 386 test process).
+    "target": "linux/arm64",
+
+    # Reproduce, localize and minimize crashers (default: true).
+    "reproduce": false,
+
+    # Use KCOV coverage (default: true).
+    "cover": true,
+
+    # Experimental options.
+    "experimental": {
+        # Hash adjacent PCs to form fuzzing feedback signal, otherwise use PCs as signal (default: true).
+        "cover_edges": false
+    },
+
+    # For each prog in the corpus, remember the raw array of PCs obtained from the kernel.
+    # It can be useful for debugging syzkaller descriptions and syzkaller itself.
+    # Disabled by default as it slows down fuzzing.
+    "raw_cover": true,
+
+    # Type of virtual machine to use, e.g. "qemu", "gce", "android", "isolated", etc.
+    "type": "isolated",
+
+    # VM-type-specific parameters.
+    "vm": {
+        # target machines: (hostname|ip)(:port)
+        "targets" : [ "127.0.0.1:20000" ],
+
+        # use crashlogs from pstore
+        "pstore": false,
+
+        # directory to copy/run on target
+        "target_dir" : "/tmp/syzkaller",
+
+        # reboot target on repair
+        "target_reboot" : false
+    },
+
+    # Kernel source directory (if not set defaults to KernelObj).
+    "kernel_src": "/home/<user>/<repo-path>/kernel/kernel-oot",
+
+    # Directory with kernel object files (e.g. `vmlinux` for linux)
+    # (used for report symbolization, coverage reports and in tree modules finding, optional).
+    "kernel_obj": "/home/<user>/<repo-path>/out/embedded-linux-generic-debug-none/nvidia/kernel-oot/kernel-rt_patches/",
+
+    # Directories with out-of-tree kernel module object files for coverage report generation (optional).
+    # KernelObj is also scanned for in-tree kernel modules and does not need to be duplicated here.
+    # Note: the modules need to be unstripped and contain debug info.
+    "module_obj": [
+        "/home/<user>/<repo-path>/out/embedded-linux-generic-debug-none/nvidia/kernel-oot/kernel-rt_patches-nvidia-oot/nvidia-oot/drivers/media/platform/tegra"
+    ],
+
+    # Location of a working directory for the syz-manager process. Outputs here include:
+    # - <workdir>/crashes/: crash output files
+    # - <workdir>/corpus.db: corpus with interesting programs
+    # - <workdir>/instance-x: per VM instance temporary files
+    "workdir":"/home/<user>/<repo-path>/workdir",
+
+    # List of syscalls to test (optional). For example:
+    #   "enable_syscalls": [ "mmap", "openat$ashmem", "ioctl$ASHMEM*" ]
+    "enable_syscalls" : [
+        "openat$cam_fsync",
+        "ioctl$CAM_FSYNC_*",
+        "openat$cdi_mgr",
+        "ioctl$CDI_MGR_IOCTL_*",
+        "openat$cdi_dev",
+        "ioctl$CDI_DEV_IOCTL_*",
+        "syz_open_dev$isp_channel",
+        "ioctl$ISP_CAPTURE_*",
+        "syz_open_dev$capture_vi_channel",
+        "ioctl$VI_CAPTURE_*"
+    ],
+
+    # List of syscalls that should not be mutated by the fuzzer (optional).
+    "no_mutate_syscalls" : [
+        "ioctl$VI_CAPTURE_SET_CONFIG",
+        "ioctl$CDI_MGR_IOCTL_INTR_CONFIG"
+    ],
+
+    # List of system calls that should be treated as disabled (optional).
+    "disable_syscalls" : [
+        "ioctl$CDI_MGR_IOCTL_DISABLE_DES_POWER"
+    ]
+}
