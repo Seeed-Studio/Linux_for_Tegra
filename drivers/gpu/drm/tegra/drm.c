@@ -399,21 +399,6 @@ static int tegra_gem_mmap(struct drm_device *drm, void *data,
 	return 0;
 }
 
-static int tegra_syncpt_read(struct drm_device *drm, void *data,
-			     struct drm_file *file)
-{
-	struct host1x *host = dev_get_drvdata(drm->dev->parent);
-	struct drm_tegra_syncpt_read *args = data;
-	struct host1x_syncpt *sp;
-
-	sp = host1x_syncpt_get_by_id_noref(host, args->id);
-	if (!sp)
-		return -EINVAL;
-
-	args->value = host1x_syncpt_read_min(sp);
-	return 0;
-}
-
 static int tegra_syncpt_incr(struct drm_device *drm, void *data,
 			     struct drm_file *file)
 {
@@ -426,161 +411,6 @@ static int tegra_syncpt_incr(struct drm_device *drm, void *data,
 		return -EINVAL;
 
 	return host1x_syncpt_incr(sp);
-}
-
-static int tegra_syncpt_wait(struct drm_device *drm, void *data,
-			     struct drm_file *file)
-{
-	struct host1x *host1x = dev_get_drvdata(drm->dev->parent);
-	struct drm_tegra_syncpt_wait *args = data;
-	struct host1x_syncpt *sp;
-
-	sp = host1x_syncpt_get_by_id_noref(host1x, args->id);
-	if (!sp)
-		return -EINVAL;
-
-	return host1x_syncpt_wait(sp, args->thresh,
-				  msecs_to_jiffies(args->timeout),
-				  &args->value);
-}
-
-static int tegra_client_open(struct tegra_drm_file *fpriv,
-			     struct tegra_drm_client *client,
-			     struct tegra_drm_context *context)
-{
-	int err;
-
-	err = pm_runtime_resume_and_get(client->base.dev);
-	if (err)
-		return err;
-
-	err = client->ops->open_channel(client, context);
-	if (err < 0) {
-		pm_runtime_put(client->base.dev);
-		return err;
-	}
-
-	err = idr_alloc(&fpriv->legacy_contexts, context, 1, 0, GFP_KERNEL);
-	if (err < 0) {
-		client->ops->close_channel(context);
-		pm_runtime_put(client->base.dev);
-		return err;
-	}
-
-	context->client = client;
-	context->id = err;
-
-	return 0;
-}
-
-static int tegra_open_channel(struct drm_device *drm, void *data,
-			      struct drm_file *file)
-{
-	struct tegra_drm_file *fpriv = file->driver_priv;
-	struct tegra_drm *tegra = drm->dev_private;
-	struct drm_tegra_open_channel *args = data;
-	struct tegra_drm_context *context;
-	struct tegra_drm_client *client;
-	int err = -ENODEV;
-
-	context = kzalloc(sizeof(*context), GFP_KERNEL);
-	if (!context)
-		return -ENOMEM;
-
-	mutex_lock(&fpriv->lock);
-
-	list_for_each_entry(client, &tegra->clients, list)
-		if (client->base.class == args->client) {
-			err = tegra_client_open(fpriv, client, context);
-			if (err < 0)
-				break;
-
-			args->context = context->id;
-			break;
-		}
-
-	if (err < 0)
-		kfree(context);
-
-	mutex_unlock(&fpriv->lock);
-	return err;
-}
-
-static int tegra_close_channel(struct drm_device *drm, void *data,
-			       struct drm_file *file)
-{
-	struct tegra_drm_file *fpriv = file->driver_priv;
-	struct drm_tegra_close_channel *args = data;
-	struct tegra_drm_context *context;
-	int err = 0;
-
-	mutex_lock(&fpriv->lock);
-
-	context = idr_find(&fpriv->legacy_contexts, args->context);
-	if (!context) {
-		err = -EINVAL;
-		goto unlock;
-	}
-
-	idr_remove(&fpriv->legacy_contexts, context->id);
-	tegra_drm_context_free(context);
-
-unlock:
-	mutex_unlock(&fpriv->lock);
-	return err;
-}
-
-static int tegra_get_syncpt(struct drm_device *drm, void *data,
-			    struct drm_file *file)
-{
-	struct tegra_drm_file *fpriv = file->driver_priv;
-	struct drm_tegra_get_syncpt *args = data;
-	struct tegra_drm_context *context;
-	struct host1x_syncpt *syncpt;
-	int err = 0;
-
-	mutex_lock(&fpriv->lock);
-
-	context = idr_find(&fpriv->legacy_contexts, args->context);
-	if (!context) {
-		err = -ENODEV;
-		goto unlock;
-	}
-
-	if (args->index >= context->client->base.num_syncpts) {
-		err = -EINVAL;
-		goto unlock;
-	}
-
-	syncpt = context->client->base.syncpts[args->index];
-	args->id = host1x_syncpt_id(syncpt);
-
-unlock:
-	mutex_unlock(&fpriv->lock);
-	return err;
-}
-
-static int tegra_submit(struct drm_device *drm, void *data,
-			struct drm_file *file)
-{
-	struct tegra_drm_file *fpriv = file->driver_priv;
-	struct drm_tegra_submit *args = data;
-	struct tegra_drm_context *context;
-	int err;
-
-	mutex_lock(&fpriv->lock);
-
-	context = idr_find(&fpriv->legacy_contexts, args->context);
-	if (!context) {
-		err = -ENODEV;
-		goto unlock;
-	}
-
-	err = context->client->ops->submit(context, args, drm, file);
-
-unlock:
-	mutex_unlock(&fpriv->lock);
-	return err;
 }
 
 #ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
@@ -787,19 +617,7 @@ static const struct drm_ioctl_desc tegra_drm_ioctls[] = {
 
 	DRM_IOCTL_DEF_DRV(TEGRA_GEM_CREATE, tegra_gem_create, DRM_RENDER_ALLOW),
 	DRM_IOCTL_DEF_DRV(TEGRA_GEM_MMAP, tegra_gem_mmap, DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(TEGRA_SYNCPT_READ, tegra_syncpt_read,
-			  DRM_RENDER_ALLOW),
 	DRM_IOCTL_DEF_DRV(TEGRA_SYNCPT_INCR, tegra_syncpt_incr,
-			  DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(TEGRA_SYNCPT_WAIT, tegra_syncpt_wait,
-			  DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(TEGRA_OPEN_CHANNEL, tegra_open_channel,
-			  DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(TEGRA_CLOSE_CHANNEL, tegra_close_channel,
-			  DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(TEGRA_GET_SYNCPT, tegra_get_syncpt,
-			  DRM_RENDER_ALLOW),
-	DRM_IOCTL_DEF_DRV(TEGRA_SUBMIT, tegra_submit,
 			  DRM_RENDER_ALLOW),
 #ifdef CONFIG_HOST1X_HAVE_SYNCPT_BASE
 	DRM_IOCTL_DEF_DRV(TEGRA_GET_SYNCPT_BASE, tegra_get_syncpt_base,
