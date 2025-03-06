@@ -1085,6 +1085,7 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
 	const u32 *cids = NULL;
 	u32 numctrls = 0;
+	u32 cid = 0;
 	u8 compound_control_default_byte_value = 0xff;
 	int i, j;
 	int err = 0;
@@ -1107,7 +1108,15 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 	err = v4l2_ctrl_handler_init(&handler->ctrl_handler, numctrls);
 
 	for (i = 0, j = 0; i < numctrls; i++) {
-		u32 cid = i < ops->numctrls ? cids[i] : tegracam_def_cids[j++];
+		if (i < ops->numctrls) {
+			cid = cids[i];
+		} else {
+			cid = tegracam_def_cids[j];
+			if (check_add_overflow(j, 1, &j)) {
+				dev_err(dev, "Error wrapped in loop\n");
+				return -EINVAL;
+			}
+		}
 		int index = tegracam_get_ctrl_index(cid);
 		int size = 0;
 		if (index >= ARRAY_SIZE(ctrl_cfg_list)) {

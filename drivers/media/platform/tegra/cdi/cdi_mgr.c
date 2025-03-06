@@ -1805,7 +1805,7 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 	if (root_node) {
 		model = of_get_property(root_node, "model", NULL);
 		dev_info(&pdev->dev, "platform name: %s\n", model);
-		if (!strcmp(model, "p3898-0010"))
+		if (model != NULL && !strcmp(model, "p3898-0010"))
 			cdi_mgr->isP3898 = true;
 	}
 
