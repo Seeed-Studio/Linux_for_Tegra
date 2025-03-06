@@ -389,12 +389,6 @@
 		#cooling-cells = <2>;
 	};
 
-	nvme_fan: pwm-fan-nvme {
-		compatible = "pwm-fan";
-		pwms = <&pwm3 0 9482>;
-		#cooling-cells = <2>;
-	};
-
 	gpio-keys {
 		compatible = "gpio-keys";
 

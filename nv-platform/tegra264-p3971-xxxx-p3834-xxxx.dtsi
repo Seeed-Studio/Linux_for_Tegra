@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
 	pwm-fan {
@@ -8,6 +8,20 @@
 
 	thermal-zones {
 		tj-thermal {
+			trips {
+				tj_trip_active0: active-0 {
+					temperature = <90000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+
+				tj_trip_active1: active-1 {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "active";
+				};
+			};
+
 			cooling-maps {
 				map-active-0 {
 					cooling-device = <&soc_fan 0 1>;

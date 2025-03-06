@@ -467,29 +467,6 @@
 		};
 	};
 
-	thermal-zones {
-		tj-thermal {
-			status = "okay";
-
-			polling-delay = <1000>;
-			polling-delay-passive = <500>;
-
-			trips {
-				tj_trip_active0: active-0 {
-					temperature = <75000>;
-					hysteresis = <4000>;
-					type = "active";
-				};
-
-				tj_trip_active1: active-1 {
-					temperature = <95000>;
-					hysteresis = <4000>;
-					type = "active";
-				};
-			};
-		};
-	};
-
 	smmu_test {
 		status = "okay";
 	};
