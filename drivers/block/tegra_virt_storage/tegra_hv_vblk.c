@@ -677,11 +677,7 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 	} else {
 		if (vblkdev->config.blk_config.req_ops_supported & VS_BLK_IOCTL_OP_F
 			&& !vblk_prep_ioctl_req(vblkdev,
-#if defined(NV_REQUEST_STRUCT_HAS_COMPLETION_DATA_ARG) /* Removed in Linux v6.5 */
-			(struct vblk_ioctl_req *)bio_req->completion_data,
-#else
-			NULL,
-#endif
+			vblkdev->ioctl_req,
 			vsc_req)) {
 			vblkdev->inflight_ioctl_reqs++;
 		} else if (!(vblkdev->config.blk_config.req_ops_supported & VS_BLK_IOCTL_OP_F)) {
@@ -916,14 +912,7 @@ static const struct block_device_operations vblk_ops_no_ioctl = {
 	.open            = vblk_open,
 	.release         = vblk_release,
 	.getgeo          = vblk_getgeo,
-#if defined(NV_REQUEST_STRUCT_HAS_COMPLETION_DATA_ARG) /* Removed in Linux v6.5 */
-	/*
-	 * FIXME: ioctl is not supported for Linux v6.5 where the
-	 * 'completion_data' member has been removed from the
-	 * 'request' structure.
-	 */
-	.ioctl           = vblk_ioctl_not_supported
-#endif
+	.ioctl           = vblk_ioctl
 };
 
 /* The device operations structure. */
@@ -932,14 +921,7 @@ static const struct block_device_operations vblk_ops_ioctl = {
 	.open            = vblk_ioctl_open,
 	.release         = vblk_ioctl_release,
 	.getgeo          = vblk_getgeo,
-#if defined(NV_REQUEST_STRUCT_HAS_COMPLETION_DATA_ARG) /* Removed in Linux v6.5 */
-	/*
-	 * FIXME: ioctl is not supported for Linux v6.5 where the
-	 * 'completion_data' member has been removed from the
-	 * 'request' structure.
-	 */
 	.ioctl           = vblk_ioctl
-#endif
 };
 
 static ssize_t

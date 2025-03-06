@@ -8161,23 +8161,6 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_REGISTER_SHRINKER_HAS_FMT_ARG" "" "types"
         ;;
 
-        request_struct_has_completion_data_arg)
-            #
-            # Determine if the 'struct request' has the 'completion_data' member.
-            #
-            # In Linux v6.5, commit dc8cbb65dc17 ("block: remove dead struc
-            # request->completion_data field") removes the 'completion_data' member
-            # from the 'struct request'.
-            #
-            CODE="
-            #include <linux/blk-mq.h>
-            int conftest_request_struct_has_completion_data_arg(void) {
-                return offsetof(struct request, completion_data);
-            }"
-
-            compile_check_conftest "$CODE" "NV_REQUEST_STRUCT_HAS_COMPLETION_DATA_ARG" "" "types"
-        ;;
-
         shrinker_alloc)
             #
             # Determine if the shrinker alloc present or not.

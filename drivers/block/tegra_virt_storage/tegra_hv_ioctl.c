@@ -1,7 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #include <nvidia/conftest.h>
 
@@ -136,10 +134,7 @@ int vblk_submit_ioctl_req(struct block_device *bdev,
 		err = PTR_ERR(rq);
 		goto free_ioctl_req;
 	}
-
-#if defined(NV_REQUEST_STRUCT_HAS_COMPLETION_DATA_ARG) /* Removed in Linux v6.5 */
-	rq->completion_data = (void *)ioctl_req;
-#endif
+	vblkdev->ioctl_req = ioctl_req;
 
 #if defined(NV_BLK_EXECUTE_RQ_HAS_NO_GENDISK_ARG) /* Linux v5.17 */
 	blk_execute_rq(rq, 0);

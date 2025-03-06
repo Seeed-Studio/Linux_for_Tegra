@@ -130,6 +130,7 @@ struct vblk_dev {
 	/* partition specific task struct */
 	struct task_struct *vblk_kthread;
 	struct completion complete;
+	struct vblk_ioctl_req *ioctl_req;
 };
 
 int vblk_complete_ioctl_req(struct vblk_dev *vblkdev,
