@@ -540,6 +540,7 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	int handle;
 	bool is_ro = false;
 
+	BUG_ON(nvmap_dev->support_debug_features == 0);
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 	addr = op.addr;
