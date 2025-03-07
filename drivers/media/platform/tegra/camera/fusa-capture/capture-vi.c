@@ -106,6 +106,11 @@
 #define MAX_VIRTUAL_CHANNEL_PER_STREAM  U32_C(16)
 
 /**
+ * @brief Maximum number of NVCSI ports supported.
+ */
+#define MAX_NVCSI_PORT_IDS              U32_C(0x8)
+
+/**
  * @brief A 2-D array for storing all possible tegra_vi_channel struct pointers.
  */
 static struct tegra_vi_channel *channels[MAX_NVCSI_STREAM_IDS][MAX_VIRTUAL_CHANNEL_PER_STREAM];
@@ -674,6 +679,13 @@ int vi_capture_setup(
 			"%s: channel capture device is NULL", __func__);
 		return -EINVAL;
 	}
+
+#ifndef NV_IS_L4T
+	if (setup->csi_port >= MAX_NVCSI_PORT_IDS) {
+		dev_err(dev, "Invalid csi port\n");
+		return -EINVAL;
+	}
+#endif
 
 	info = platform_get_drvdata(chan->vi_capture_pdev);
 	vi_inst = info->vi_instance_table[setup->csi_stream_id];
