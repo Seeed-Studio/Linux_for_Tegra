@@ -1676,6 +1676,7 @@ irqreturn_t ether_vm_isr(int irq, void *data)
 	(void)osi_get_global_dma_status(osi_dma, dma_status);
 	for (i = 0U; i < global_dma_status_reg_cnt[osi_dma->mac]; i++) {
 		dma_status[i] &= vm_irq->chan_mask[i];
+		// pr_alert_ratelimited("VMISR: i=%u 0x%x\n", i, dma_status[i]);
 		while (dma_status[i]) {
 			temp = ffs(dma_status[i]);
 			temp--;

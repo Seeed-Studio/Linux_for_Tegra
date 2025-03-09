@@ -257,6 +257,8 @@ int macsec_open(struct macsec_priv_data *macsec_pdata,
 		dev_info(dev, "%s: requested ns_irq %d: %s\n", __func__,
 			 macsec_pdata->ns_irq, macsec_pdata->irq_name[1]);
 		macsec_pdata->is_irq_allocated |= OSI_BIT(1);
+		disable_irq(macsec_pdata->s_irq);
+		disable_irq(macsec_pdata->ns_irq);
 	}
 	/* Invoke OSI HW initialization, initialize standard BYP entries */
 	ret = osi_macsec_init(pdata->osi_core, pdata->osi_core->mtu,
