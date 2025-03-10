@@ -1274,6 +1274,11 @@ static int cam_fsync_find_and_add_groups(struct cam_fsync_controller *controller
 		}
 
 		group = cam_fsync_group_init(controller, group_id);
+		if (group == NULL) {
+			dev_err(controller->dev, "Pointer to newly create group struct is NULL\n");
+			return -EINVAL;
+		}
+
 		if (IS_ERR(group))
 			return PTR_ERR(group);
 
