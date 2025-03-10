@@ -1108,6 +1108,9 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 	err = v4l2_ctrl_handler_init(&handler->ctrl_handler, numctrls);
 
 	for (i = 0, j = 0; i < numctrls; i++) {
+		int index;
+		int size = 0;
+
 		if (i < ops->numctrls) {
 			cid = cids[i];
 		} else {
@@ -1117,8 +1120,8 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 				return -EINVAL;
 			}
 		}
-		int index = tegracam_get_ctrl_index(cid);
-		int size = 0;
+
+		index = tegracam_get_ctrl_index(cid);
 		if (index >= ARRAY_SIZE(ctrl_cfg_list)) {
 			dev_err(dev, "unsupported control in the list\n");
 			return -ENOTTY;
