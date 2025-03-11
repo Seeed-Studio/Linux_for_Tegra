@@ -5384,6 +5384,7 @@ static int ether_get_mac_address(struct ether_priv_data *pdata)
 	unsigned char local_addr[ETH_ALEN] = {0};
 	/* Default choesn node property name for MAC address */
 	char str_mac_address[ETH_MAC_STR_LEN] = "nvidia,ether-mac";
+	unsigned int use_random_mac_addr = 0x0;
 	unsigned int offset = 0;
 	unsigned int mac_addr_idx = 0x0;
 	int ret = 0;
@@ -5415,6 +5416,9 @@ static int ether_get_mac_address(struct ether_priv_data *pdata)
 		sprintf(str_mac_address, "nvidia,ether-mac%d", offset);
 	}
 
+	if (of_property_read_u32(np, "nvidia,use-random-mac-addr", &use_random_mac_addr) < 0)
+		use_random_mac_addr = OSI_DISABLE;
+
 	ret = ether_get_mac_address_dtb("/chosen", str_mac_address, mac_addr);
 	/* If return value is valid update eth_mac_addr */
 	if (ret == 0) {
@@ -5430,8 +5434,7 @@ static int ether_get_mac_address(struct ether_priv_data *pdata)
 		ret = of_get_mac_address(np, addr);
 		if (ret < 0) {
 			dev_err(dev, "No Mac address local DT!\n");
-			//TBD: use local mac addr for T264 bring up
-			if (osi_core->pre_sil == OSI_ENABLE) {
+			if (use_random_mac_addr == OSI_ENABLE) {
 				dev_err(dev, "Using local random mac addr!\n");
 				eth_random_addr(local_addr);
 				addr = local_addr;
