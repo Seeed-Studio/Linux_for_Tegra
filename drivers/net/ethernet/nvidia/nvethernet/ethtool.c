@@ -2058,12 +2058,24 @@ static void ether_get_ringparam(struct net_device *ndev,
 				struct ethtool_ringparam *ring)
 #endif
 {
-	struct ether_priv_data *pdata = netdev_priv(ndev);
-	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
-	unsigned int max_supported_sz[] = {1024, 4096};
+	static const unsigned int tx_max_supported_sz[] = { 1024, 4096, 4096 };
+	static const unsigned int rx_max_supported_sz[] = { 1024, 16384, 16384 };
+	struct osi_dma_priv_data *osi_dma;
+	struct ether_priv_data *pdata;
 
-	ring->rx_max_pending = max_supported_sz[osi_dma->mac];
-	ring->tx_max_pending = max_supported_sz[osi_dma->mac];
+	if (!ndev || !ring)
+		return;
+
+	pdata = netdev_priv(ndev);
+	if (!pdata || !pdata->osi_dma)
+		return;
+
+	osi_dma = pdata->osi_dma;
+	if (osi_dma->mac >= ARRAY_SIZE(tx_max_supported_sz))
+		return;
+
+	ring->tx_max_pending = tx_max_supported_sz[osi_dma->mac];
+	ring->rx_max_pending = rx_max_supported_sz[osi_dma->mac];
 	ring->rx_pending = osi_dma->rx_ring_sz;
 	ring->tx_pending = osi_dma->tx_ring_sz;
 }
@@ -2078,11 +2090,22 @@ static int ether_set_ringparam(struct net_device *ndev,
 			       struct ethtool_ringparam *ring)
 #endif
 {
-	struct ether_priv_data *pdata = netdev_priv(ndev);
-	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
-	unsigned int tx_ring_sz_max[] = {1024, 4096};
-	unsigned int rx_ring_sz_max[] = {1024, 16384};
+	static const unsigned int tx_ring_sz_max[] = { 1024, 4096, 4096 };
+	static const unsigned int rx_ring_sz_max[] = { 1024, 16384, 16384 };
+	struct ether_priv_data *pdata;
+	struct osi_dma_priv_data *osi_dma;
 	int ret = 0;
+
+	if (!ndev || !ring)
+		return -EINVAL;
+
+	pdata = netdev_priv(ndev);
+	if (!pdata || !pdata->osi_dma)
+		return -EINVAL;
+
+	osi_dma = pdata->osi_dma;
+	if (osi_dma->mac >= ARRAY_SIZE(tx_ring_sz_max))
+		return -EINVAL;
 
 	if (ring->rx_mini_pending ||
 	    ring->rx_jumbo_pending ||
@@ -2097,8 +2120,11 @@ static int ether_set_ringparam(struct net_device *ndev,
 	/* Stop the network device */
 	if (netif_running(ndev) &&
 	    ndev->netdev_ops &&
-	    ndev->netdev_ops->ndo_stop)
-		ndev->netdev_ops->ndo_stop(ndev);
+	    ndev->netdev_ops->ndo_stop) {
+		ret = ndev->netdev_ops->ndo_stop(ndev);
+		if (ret)
+			return ret;
+	}
 
 	osi_dma->rx_ring_sz = ring->rx_pending;
 	osi_dma->tx_ring_sz = ring->tx_pending;
@@ -2106,8 +2132,14 @@ static int ether_set_ringparam(struct net_device *ndev,
 	/* Start the network device */
 	if (netif_running(ndev) &&
 	    ndev->netdev_ops &&
-	    ndev->netdev_ops->ndo_open)
+	    ndev->netdev_ops->ndo_open) {
 		ret = ndev->netdev_ops->ndo_open(ndev);
+		if (ret) {
+			/* Restore original ring sizes on failure */
+			osi_dma->rx_ring_sz = ring->rx_pending;
+			osi_dma->tx_ring_sz = ring->tx_pending;
+		}
+	}
 
 	return ret;
 }
