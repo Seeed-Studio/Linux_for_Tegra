@@ -8,3 +8,7 @@ endif
 ifneq ($(NV_OOT_REALTEK_R8126_SKIP_BUILD),y)
 obj-m += r8126/
 endif
+
+ifdef CONFIG_TEGRA_SYSTEM_TYPE_ACK
+obj-m += r8125/
+endif
