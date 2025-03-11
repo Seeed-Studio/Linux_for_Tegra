@@ -952,6 +952,7 @@ fail:
 int tegra_camrtc_reboot(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	int err = 0;
 	int ret;
 
 	if (pm_runtime_suspended(dev)) {
@@ -973,6 +974,20 @@ int tegra_camrtc_reboot(struct device *dev)
 	pm_runtime_mark_last_busy(dev);
 
 	tegra_camrtc_set_online(dev, false);
+
+	/* Signal CAMRTC to suspend its operations.
+	 * Incompleted memory operations by CAMRTC can cause a memory fabric
+	 * error if the reset signal is asserted in middle of shared memory
+	 * transaction.
+	 */
+	if (rtcpu->hsp)
+		err = camrtc_hsp_bye(rtcpu->hsp);
+
+	/* Wait for the core to enter WFI before asserting the reset.
+	 * Don't bother if the core was unresponsive.
+	 */
+	if (err == 0)
+		tegra_camrtc_wait_for_idle(dev);
 
 	tegra_camrtc_assert_resets(dev);
 
