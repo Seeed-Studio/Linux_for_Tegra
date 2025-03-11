@@ -374,8 +374,7 @@ static int32_t s_riscv_finalize_poweron(struct platform_device *pdev)
 	}
 
 #if defined(BUG_4960393) && (BUG_4960393 == 1)
-	if ((pdata->class == NV_DLA0_SIM_CLASS_ID) ||
-		(pdata->class == NV_DLA1_SIM_CLASS_ID)) {
+	{
 		uint32_t bcr_ctrl;
 
 		bcr_ctrl = s_riscv_read(riscv, riscv_bcr_ctrl_r());
@@ -447,9 +446,7 @@ int32_t nvdla_fw_poweron(struct platform_device *pdev)
 		err = -EINVAL;
 		goto fail;
 	}
-	nvdla_dbg_err(pdev, "Pdata: %p\n", pdata);
 	nvdla_dev = pdata->private_data;
-	nvdla_dbg_err(pdev, "nvdla_dev: %p\n", nvdla_dev);
 	err = s_riscv_finalize_poweron(pdev);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to poweron\n");
@@ -632,6 +629,8 @@ int32_t nvdla_fw_send_cmd(struct platform_device *pdev,
 	timeout = msecs_to_jiffies(CMD_TIMEOUT_MSEC);
 
 	if (!wait_for_completion_timeout(&nvdla_dev->cmd_completion, timeout)) {
+		nvdla_dbg_err(pdev, "Command %u timedout\n",
+			method_id);
 		ret = -ETIMEDOUT;
 		goto unlock_cmd;
 	}

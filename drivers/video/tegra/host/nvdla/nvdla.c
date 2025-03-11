@@ -54,6 +54,7 @@
 #include "dla_os_interface.h"
 #include "port/nvdla_device.h"
 #include "port/nvdla_fw.h"
+#include "port/nvdla_pm.h"
 
 #if defined(NVDLA_HAVE_CONFIG_HSIERRINJ) && (NVDLA_HAVE_CONFIG_HSIERRINJ == 1)
 int nvdla_error_inj_handler(unsigned int instance_id,
@@ -174,6 +175,24 @@ static void nvdla_reset_handler_init(struct nvdla_device *nvdla_dev)
 	INIT_WORK(&nvdla_dev->reset_work, nvdla_reset_handler);
 }
 
+static void nvdla_poweroff_handler(struct work_struct *work)
+{
+	struct nvdla_device *nvdla_dev = container_of(work,
+					struct nvdla_device, poweroff_work);
+
+	struct platform_device *pdev = nvdla_dev->pdev;
+
+	/* poweroff engine */
+	nvdla_module_idle(pdev);
+
+	nvdla_dbg_info(pdev, "Engine poweroff done\n");
+}
+
+static void nvdla_poweroff_handler_init(struct nvdla_device *nvdla_dev)
+{
+	INIT_WORK(&nvdla_dev->poweroff_work, nvdla_poweroff_handler);
+}
+
 int nvdla_flcn_isr(struct platform_device *pdev)
 {
 	uint32_t message;
@@ -206,6 +225,11 @@ int nvdla_flcn_isr(struct platform_device *pdev)
 						DLA_RESPONSE_ERROR_MASK;
 		nvdla_dev->waiting = 0;
 		complete(&nvdla_dev->cmd_completion);
+	}
+
+	if (message == DLA_MSG_IDLE_TIMEOUT) {
+		nvdla_dbg_info(pdev, "Idle notification detected");
+		schedule_work(&nvdla_dev->poweroff_work);
 	}
 
 clear_interrupt:
@@ -568,43 +592,129 @@ fail_to_alloc_debug_dump:
 }
 
 /* power management API */
+static int32_t s_nvdla_poweron(struct platform_device *pdev)
+{
+	int32_t err;
+
+	err = nvdla_pm_clock_ungate(pdev);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to ungate power, err=%d\n", err);
+		goto fail;
+	}
+
+	err = nvdla_pm_rail_ungate(pdev);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to ungate power, err=%d\n", err);
+		goto clockoff;
+	}
+
+	err = nvdla_pm_power_ungate(pdev);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to ungate power, err=%d\n", err);
+		goto railoff;
+	}
+
+	return 0;
+
+railoff:
+	(void) nvdla_pm_rail_gate(pdev, true);
+clockoff:
+	(void) nvdla_pm_clock_gate(pdev, true);
+fail:
+	return err;
+}
+
+static int32_t s_nvdla_poweroff(struct platform_device *pdev)
+{
+	int32_t err;
+
+	err = nvdla_pm_power_gate(pdev, true);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to gate power, err=%d\n", err);
+		goto fail;
+	}
+
+	err = nvdla_pm_rail_gate(pdev, true);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to gate power, err=%d\n", err);
+		goto poweron;
+	}
+
+	err = nvdla_pm_clock_gate(pdev, true);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to gate power, err=%d\n", err);
+		goto railon;
+	}
+
+	return 0;
+
+railon:
+	(void) nvdla_pm_rail_ungate(pdev);
+poweron:
+	(void) nvdla_pm_power_ungate(pdev);
+fail:
+	return err;
+}
+
+
 int nvdla_finalize_poweron(struct platform_device *pdev)
 {
 	int ret;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
+	bool available;
 
 	nvdla_dbg_fn(pdev, "");
 
-	ret = nvdla_fw_poweron(pdev);
+	ret = s_nvdla_poweron(pdev);
 	if (ret) {
 		nvdla_dbg_err(pdev, "failed to poweron\n");
 		goto fail;
+	}
+
+	ret = nvdla_fw_poweron(pdev);
+	if (ret) {
+		nvdla_dbg_err(pdev, "failed to fw poweron\n");
+		goto poweroff;
 	}
 
 	/**
 	 * At this point, the falcon & hardware is available to use.
 	 **/
 	mutex_lock(&nvdla_dev->cmd_lock);
+	available = nvdla_dev->available;
 	nvdla_dev->available = true;
 	mutex_unlock(&nvdla_dev->cmd_lock);
 
 	ret = nvdla_alloc_dump_region(pdev);
 	if (ret) {
 		nvdla_dbg_err(pdev, "fail alloc dump region\n");
-		goto poweroff;
+		goto restore_device_availability_and_fw_poweroff;
 	}
 
 	ret = nvdla_alloc_trace_region(pdev);
 	if (ret) {
 		nvdla_dbg_err(pdev, "fail alloc trace region\n");
-		goto poweroff;
+		goto restore_device_availability_and_fw_poweroff;
+	}
+
+	ret = nvdla_pm_reset(pdev);
+	if (ret) {
+		nvdla_dbg_err(pdev, "fail to reset pm\n");
+		goto restore_device_availability_and_fw_poweroff;
 	}
 
 	return 0;
 
+restore_device_availability_and_fw_poweroff:
+	/* Mark the device to be unavailable. */
+	mutex_lock(&nvdla_dev->cmd_lock);
+	nvdla_dev->available = available;
+	mutex_unlock(&nvdla_dev->cmd_lock);
+
+	(void) nvdla_fw_poweroff(pdev);
 poweroff:
-	nvdla_prepare_poweroff(pdev);
+	(void) s_nvdla_poweroff(pdev);
 fail:
 	return ret;
 }
@@ -615,21 +725,38 @@ int nvdla_prepare_poweroff(struct platform_device *pdev)
 
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
+	bool available;
 
 	nvdla_dbg_fn(pdev, "");
 
 	/* Mark the device to be unavailable. */
 	mutex_lock(&nvdla_dev->cmd_lock);
+	available = nvdla_dev->available;
 	nvdla_dev->available = false;
 	mutex_unlock(&nvdla_dev->cmd_lock);
 
 	ret = nvdla_fw_poweroff(pdev);
 	if (ret) {
-		nvdla_dbg_err(pdev, "failed to poweroff\n");
-		goto out;
+		nvdla_dbg_err(pdev, "failed to fw poweroff\n");
+		goto restore_device_availability;
 	}
 
-out:
+	ret = s_nvdla_poweroff(pdev);
+	if (ret) {
+		nvdla_dbg_err(pdev, "failed to poweroff\n");
+		goto fw_poweron;
+	}
+
+	return 0;
+
+fw_poweron:
+	(void) nvdla_fw_poweron(pdev);
+restore_device_availability:
+	/* Mark the device to be available. */
+	mutex_lock(&nvdla_dev->cmd_lock);
+	nvdla_dev->available = available;
+	mutex_unlock(&nvdla_dev->cmd_lock);
+
 	return ret;
 }
 
@@ -1153,6 +1280,9 @@ static int nvdla_probe(struct platform_device *pdev)
 
 	/* init reset handler workqueue */
 	nvdla_reset_handler_init(nvdla_dev);
+
+	/* init poweroff handler workqueue */
+	nvdla_poweroff_handler_init(nvdla_dev);
 
 	nvdla_dev->sync_dev = nvdla_sync_device_create_syncpoint(pdev);
 #if defined(BUG_4942853) && (BUG_4942853 == 1)

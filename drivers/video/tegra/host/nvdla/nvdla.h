@@ -308,6 +308,7 @@ struct nvdla_device {
 	bool available;
 	u32 bitbang;
 	struct nvdla_sync_device *sync_dev;
+	struct work_struct poweroff_work;
 };
 
 /**

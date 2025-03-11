@@ -117,30 +117,31 @@ static int32_t s_nvdla_module_pm_enable(struct platform_device *pdev)
 		}
 	}
 
-	pdata->reset_control = devm_reset_control_get_exclusive_released(
-					&pdev->dev, NULL);
-	if (IS_ERR(pdata->reset_control)) {
-		nvdla_dbg_err(pdev, "failed to get reset\n");
-		err = PTR_ERR(pdata->reset_control);
-		goto fail;
-	}
 
-	err = reset_control_acquire(pdata->reset_control);
-	if (err < 0) {
-		nvdla_dbg_err(pdev, "failed to acquire reset: %d\n", err);
-		goto fail;
-	}
+	pdata->reset_control =
+		devm_reset_control_get_optional_exclusive_released(
+				&pdev->dev, NULL);
+	if (!pdata->reset_control)
+		nvdla_dbg_warn(pdev, "No reset controller.\n");
 
-	err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
-	if (err < 0) {
+	if (pdata->reset_control && pdata->num_clks > 0U) {
+		err = reset_control_acquire(pdata->reset_control);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "failed to acquire reset: %d\n", err);
+			goto fail;
+		}
+
+		err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
+		if (err < 0) {
+			reset_control_release(pdata->reset_control);
+			nvdla_dbg_err(pdev, "failed to enable clocks: %d\n", err);
+			goto fail;
+		}
+
+		reset_control_reset(pdata->reset_control);
+		clk_bulk_disable_unprepare(pdata->num_clks, pdata->clks);
 		reset_control_release(pdata->reset_control);
-		nvdla_dbg_err(pdev, "failed to enable clocks: %d\n", err);
-		goto fail;
 	}
-
-	reset_control_reset(pdata->reset_control);
-	clk_bulk_disable_unprepare(pdata->num_clks, pdata->clks);
-	reset_control_release(pdata->reset_control);
 
 	if (pdata->autosuspend_delay) {
 		pm_runtime_set_autosuspend_delay(&pdev->dev,
@@ -350,10 +351,23 @@ int32_t nvdla_module_busy(struct platform_device *pdev)
 		goto fail;
 	}
 
+#if defined(NVDLA_HAVE_CONFIG_FWSUSPEND) && (NVDLA_HAVE_CONFIG_FWSUSPEND == 1)
+	if (atomic_read(&pdev->dev.power.usage_count) == 0) {
+		/* Make sure that to hold reference for FW driven autosuspend */
+		err = pm_runtime_get_sync(&pdev->dev);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "failed to get ref + resume (err=%d)\n",
+					err);
+			pm_runtime_put_noidle(&pdev->dev);
+			goto fail;
+		}
+	}
+#endif /* NVDLA_HAVE_CONFIG_FWSUSPEND */
+
 	err = pm_runtime_get_sync(&pdev->dev);
 	if (err < 0) {
 		nvdla_dbg_err(pdev, "failed to get ref + resume (err=%d)\n",
-			err);
+				err);
 		pm_runtime_put_noidle(&pdev->dev);
 		goto fail;
 	}
@@ -411,21 +425,25 @@ static void nvdla_module_load_regs(struct platform_device *pdev, bool prod)
 void nvdla_module_reset(struct platform_device *pdev, bool reboot)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	int err;
 
 	if (reboot)
 		if (pdata->prepare_poweroff)
 			pdata->prepare_poweroff(pdev);
 
-	mutex_lock(&pdata->lock);
-	err = reset_control_acquire(pdata->reset_control);
-	if (err < 0) {
-		dev_err(&pdev->dev, "failed to acquire reset: %d\n", err);
-	} else {
-		reset_control_reset(pdata->reset_control);
-		reset_control_release(pdata->reset_control);
+	if (pdata->reset_control) {
+		int err;
+
+		mutex_lock(&pdata->lock);
+		err = reset_control_acquire(pdata->reset_control);
+		if (err < 0) {
+			dev_err(&pdev->dev, "failed to acquire reset: %d\n",
+				err);
+		} else {
+			reset_control_reset(pdata->reset_control);
+			reset_control_release(pdata->reset_control);
+		}
+		mutex_unlock(&pdata->lock);
 	}
-	mutex_unlock(&pdata->lock);
 
 	if (reboot) {
 		/* Load clockgating registers */
@@ -450,8 +468,8 @@ int nvdla_module_runtime_suspend(struct device *dev)
 		}
 	}
 
-	if ((pdata->class != NV_DLA0_SIM_CLASS_ID) ||
-		(pdata->class == NV_DLA1_SIM_CLASS_ID))
+	if ((pdata->class != NV_DLA0_SIM_CLASS_ID) &&
+		(pdata->class != NV_DLA1_SIM_CLASS_ID))
 		clk_bulk_disable_unprepare(pdata->num_clks, pdata->clks);
 
 	return 0;
@@ -462,16 +480,17 @@ fail:
 
 int nvdla_module_runtime_resume(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	int err = 0;
 
-	if ((pdata->class != NV_DLA0_SIM_CLASS_ID) ||
-		(pdata->class == NV_DLA1_SIM_CLASS_ID)) {
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+
+	if ((pdata->class != NV_DLA0_SIM_CLASS_ID) &&
+		(pdata->class != NV_DLA1_SIM_CLASS_ID)) {
 		err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
 		if (err < 0) {
 			dev_err(&pdev->dev, "failed to enabled clocks: %d\n", err);
-			return err;
+			goto fail;
 		}
 	}
 
@@ -481,9 +500,18 @@ int nvdla_module_runtime_resume(struct device *dev)
 	/* Load clockgating registers */
 	nvdla_module_load_regs(pdev, pdata->engine_can_cg);
 
-	if (pdata->finalize_poweron)
+	if (pdata->finalize_poweron) {
 		err = pdata->finalize_poweron(pdev);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "Failed to power-on, err=%d\n",
+				err);
+			goto fail;
+		}
+	}
 
+	return 0;
+
+fail:
 	return err;
 }
 

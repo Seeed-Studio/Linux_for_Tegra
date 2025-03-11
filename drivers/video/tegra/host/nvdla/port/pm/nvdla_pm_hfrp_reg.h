@@ -46,7 +46,7 @@ static inline uint32_t hfrp_mailbox0_mode_r(void)
 
 static inline uint32_t hfrp_mailbox0_mode_circular_v(void)
 {
-	/* MAILBOX0_MODE_CIRCULAR (0:31) */
+	/* MAILBOX0_MODE_CIRCULAR (31:0) */
 	return 0x00000001U;
 }
 
@@ -58,7 +58,7 @@ static inline uint32_t hfrp_irq_in_set_r(void)
 
 static inline uint32_t hfrp_irq_in_set_doorbell_f(uint32_t v)
 {
-	/* IRQ_IN_SET_DOOR_BELL (1:1) */
+	/* IRQ_IN_SET_DOORBELL (1:1) */
 	return ((v & 0x1) << 1);
 }
 
@@ -68,18 +68,53 @@ static inline uint32_t hfrp_irq_out_set_r(void)
 	return 0x00000104U;
 }
 
-static inline uint32_t hfrp_irq_out_set_doorbell_v(uint32_t r)
-{
-	/* IRQ_OUT_SET_DOOR_BELL (1:1) */
-	return (r >> 1) & 0x1;
-}
-
 static inline uint32_t hfrp_irq_out_set_reset_v(uint32_t r)
 {
 	/* IRQ_OUT_SET_RESET (0:0) */
 	return r & 0x1;
 }
 
+static inline uint32_t hfrp_irq_out_set_doorbell_v(uint32_t r)
+{
+	/* IRQ_OUT_SET_DOORBELL (1:1) */
+	return (r >> 1) & 0x1;
+}
+
+static inline uint32_t hfrp_irq_out_set_cgstart_v(uint32_t r)
+{
+	/* IRQ_OUT_SET_CGSTART (26:26) */
+	return (r >> 26) & 0x1;
+}
+
+static inline uint32_t hfrp_irq_out_set_cgend_v(uint32_t r)
+{
+	/* IRQ_OUT_SET_CGEND (27:27) */
+	return (r >> 27) & 0x1;
+}
+
+static inline uint32_t hfrp_irq_out_set_pgstart_v(uint32_t r)
+{
+	/* IRQ_OUT_SET_PGSTART (28:28) */
+	return (r >> 28) & 0x1;
+}
+
+static inline uint32_t hfrp_irq_out_set_pgend_v(uint32_t r)
+{
+	/* IRQ_OUT_SET_PGEND (29:29) */
+	return (r >> 29) & 0x1;
+}
+
+static inline uint32_t hfrp_irq_out_set_rgstart_v(uint32_t r)
+{
+	/* IRQ_OUT_SET_RGSTART (30:30) */
+	return (r >> 30) & 0x1;
+}
+
+static inline uint32_t hfrp_irq_out_set_rgend_v(uint32_t r)
+{
+	/* IRQ_OUT_SET_RGEND (31:31) */
+	return (r >> 31) & 0x1;
+}
 
 static inline uint32_t hfrp_irq_in_clr_r(void)
 {
@@ -93,16 +128,52 @@ static inline uint32_t hfrp_irq_out_clr_r(void)
 	return 0x0000010cU;
 }
 
-static inline uint32_t hfrp_irq_out_clr_doorbell_f(uint32_t v)
-{
-	/* IRQ_OUT_CLR_DOOR_BELL (1:1) */
-	return ((v & 0x1) << 1);
-}
-
 static inline uint32_t hfrp_irq_out_clr_reset_f(uint32_t v)
 {
 	/* IRQ_OUT_CLR_RESET (0:0) */
+	return (v & 0x1);
+}
+
+static inline uint32_t hfrp_irq_out_clr_doorbell_f(uint32_t v)
+{
+	/* IRQ_OUT_CLR_DOORBELL (1:1) */
 	return ((v & 0x1) << 1);
+}
+
+static inline uint32_t hfrp_irq_out_clr_cgstart_f(uint32_t v)
+{
+	/* IRQ_OUT_CLR_CGSTART (26:26) */
+	return ((v & 0x1) << 26);
+}
+
+static inline uint32_t hfrp_irq_out_clr_cgend_f(uint32_t v)
+{
+	/* IRQ_OUT_CLR_CGEND (27:27) */
+	return ((v & 0x1) << 27);
+}
+
+static inline uint32_t hfrp_irq_out_clr_pgstart_f(uint32_t v)
+{
+	/* IRQ_OUT_CLR_PGSTART (28:28) */
+	return ((v & 0x1) << 28);
+}
+
+static inline uint32_t hfrp_irq_out_clr_pgend_f(uint32_t v)
+{
+	/* IRQ_OUT_CLR_PGEND (29:29) */
+	return ((v & 0x1) << 29);
+}
+
+static inline uint32_t hfrp_irq_out_clr_rgstart_f(uint32_t v)
+{
+	/* IRQ_OUT_CLR_RGSTART (30:30) */
+	return ((v & 0x1) << 30);
+}
+
+static inline uint32_t hfrp_irq_out_clr_rgend_f(uint32_t v)
+{
+	/* IRQ_OUT_CLR_RGEND (31:31) */
+	return ((v & 0x1) << 31);
 }
 
 static inline uint32_t hfrp_buffer_clientoffs_r(void)
@@ -113,37 +184,37 @@ static inline uint32_t hfrp_buffer_clientoffs_r(void)
 
 static inline uint32_t hfrp_buffer_clientoffs_cmd_head_m(void)
 {
-	/* BUFFER_CLIENTOFFS_CMD_HEAD 0:7 */
+	/* BUFFER_CLIENTOFFS_CMD_HEAD 7:0 */
 	return 0xffU;
 }
 
 static inline uint32_t hfrp_buffer_clientoffs_resp_tail_m(void)
 {
-	/* BUFFER_CLIENTOFFS_RESPONSE_TAIL 8:15 */
+	/* BUFFER_CLIENTOFFS_RESPONSE_TAIL 15:8 */
 	return (0xffU << 8);
 }
 
 static inline uint32_t hfrp_buffer_clientoffs_cmd_head_f(uint32_t v)
 {
-	/* BUFFER_CLIENTOFFS_CMD_HEAD 0:7 */
+	/* BUFFER_CLIENTOFFS_CMD_HEAD 7:0 */
 	return (v & 0xffU);
 }
 
 static inline uint32_t hfrp_buffer_clientoffs_cmd_head_v(uint32_t r)
 {
-	/* BUFFER_CLIENTOFFS_CMD_HEAD 0:7 */
+	/* BUFFER_CLIENTOFFS_CMD_HEAD 7:0 */
 	return (r & 0xffU);
 }
 
 static inline uint32_t hfrp_buffer_clientoffs_resp_tail_f(uint32_t v)
 {
-	/* BUFFER_CLIENTOFFS_RESPONSE_TAIL 8:15 */
+	/* BUFFER_CLIENTOFFS_RESPONSE_TAIL 15:8 */
 	return ((v & 0xffU) << 8);
 }
 
 static inline uint32_t hfrp_buffer_clientoffs_resp_tail_v(uint32_t r)
 {
-	/* BUFFER_CLIENTOFFS_RESPONSE_TAIL 8:15 */
+	/* BUFFER_CLIENTOFFS_RESPONSE_TAIL 15:8 */
 	return ((r >> 8) & 0xffU);
 }
 
@@ -155,13 +226,13 @@ static inline uint32_t hfrp_buffer_serveroffs_r(void)
 
 static inline uint32_t hfrp_buffer_serveroffs_resp_head_v(uint32_t r)
 {
-	/* BUFFER_SERVEROFFS_RESPONSE_HEAD 0:7 */
+	/* BUFFER_SERVEROFFS_RESPONSE_HEAD 7:0 */
 	return (r & 0xffU);
 }
 
 static inline uint32_t hfrp_buffer_serveroffs_cmd_tail_v(uint32_t r)
 {
-	/* BUFFER_SERVEROFFS_CMD_TAIL 8:15 */
+	/* BUFFER_SERVEROFFS_CMD_TAIL 15:8 */
 	return ((r >> 8) & 0xffU);
 }
 

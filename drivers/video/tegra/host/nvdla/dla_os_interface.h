@@ -186,6 +186,14 @@ enum dla_commands {
 	 * Gets dvfs statdump
 	 */
 	DLA_CMD_GET_STATISTICS2			= 20U,
+	/**
+	 * Sets LPWR config
+	 */
+	DLA_CMD_SET_LPWR_CONFIG			= 23U,
+	/**
+	 * Gets LPWR config
+	 */
+	DLA_CMD_GET_LPWR_CONFIG			= 24U,
 };
 
 /**
@@ -223,6 +231,10 @@ enum dla_msgs {
 	DLA_MSG_UNUSED			= 6U,
 	DLA_MSG_DEBUG_PRINT		= 7U,
 	DLA_MSG_TASK_TIMEOUT		= 8U,
+	DLA_MSG_SMMU_FAULT		= 9U,
+	DLA_MSG_TASK_ERROR		= 10U,
+	DLA_MSG_PREEMPTED		= 11U,
+	DLA_MSG_IDLE_TIMEOUT		= 12U,
 };
 
 /**
@@ -293,6 +305,16 @@ struct dla_task_descriptor {
 	uint64_t reserved1;
 	uint64_t reserved2;
 } __attribute__ ((packed, aligned(4)));
+
+struct dla_lpwr_config {
+#define DLA_LPWR_VERSION  1U
+	uint8_t version;
+#define DLA_IDLE_NOTIFICATION_ENABLE 1U
+#define DLA_IDLE_NOTIFICATION_DISABLE 2U
+	uint8_t idle_notification_enable;
+	uint32_t idledelay_us;
+	uint8_t reserved[34];
+} __packed __aligned(4);
 
 /**
  * Struct dla_action_list

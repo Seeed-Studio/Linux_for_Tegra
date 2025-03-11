@@ -16,11 +16,7 @@
 static struct nvhost_device_data t25x_nvdla0_info = {
 	.devfs_name		= "nvdla0",
 	.devfs_name_family	= "nvdla",
-#if defined(BUG_4972382) && (BUG_4972382 == 1)
-	.class			= NV_DLA0_SIM_CLASS_ID,
-#else
 	.class			= NV_DLA0_CLASS_ID,
-#endif /* BUG_4972382 */
 	.clocks			= {
 		{"nvdla0", UINT_MAX},
 		{"nvdla0_flcn", UINT_MAX}
@@ -33,7 +29,11 @@ static struct nvhost_device_data t25x_nvdla0_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA25X_FW,
 	.version		= FIRMWARE_ENCODE_VERSION(T25X),
+#if defined(NVDLA_HAVE_CONFIG_FWSUSPEND) && (NVDLA_HAVE_CONFIG_FWSUSPEND == 1)
+	.autosuspend_delay      = 0,
+#else
 	.autosuspend_delay      = 500,
+#endif /* NVDLA_HAVE_CONFIG_FWSUSPEND */
 	.keepalive		= true,
 	.poweron_reset		= true,
 	.serialize		= true,
@@ -55,11 +55,7 @@ static struct nvhost_device_data t25x_nvdla0_info = {
 static struct nvhost_device_data t25x_nvdla1_info = {
 	.devfs_name		= "nvdla1",
 	.devfs_name_family	= "nvdla",
-#if defined(BUG_4972382) && (BUG_4972382 == 1)
-	.class			= NV_DLA1_SIM_CLASS_ID,
-#else
 	.class			= NV_DLA1_CLASS_ID,
-#endif /* BUG_4972382 */
 	.clocks			= {
 		{"nvdla1", UINT_MAX},
 		{"nvdla1_flcn", UINT_MAX}
@@ -72,7 +68,11 @@ static struct nvhost_device_data t25x_nvdla1_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= NV_DLA_TEGRA25X_FW,
 	.version		= FIRMWARE_ENCODE_VERSION(T25X),
+#if defined(NVDLA_HAVE_CONFIG_FWSUSPEND) && (NVDLA_HAVE_CONFIG_FWSUSPEND == 1)
+	.autosuspend_delay      = 0,
+#else
 	.autosuspend_delay      = 500,
+#endif /* NVDLA_HAVE_CONFIG_FWSUSPEND */
 	.keepalive		= true,
 	.poweron_reset		= true,
 	.serialize		= true,

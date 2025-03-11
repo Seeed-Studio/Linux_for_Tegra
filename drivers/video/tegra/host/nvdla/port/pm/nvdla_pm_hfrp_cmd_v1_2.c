@@ -85,6 +85,11 @@ static int32_t s_nvdla_hfrp_send_cmd_clock_gate(struct hfrp *hfrp,
 	payload[0] |= (((uint32_t)(cmd->clock_off)) << 1);
 	payload[0] |= (((uint32_t)(cmd->clock_off)) << 2);
 
+	if (cmd->clock_off)
+		hfrp_handle_cg_entry_start(hfrp);
+	else
+		hfrp_handle_cg_exit_start(hfrp);
+
 	err = (hfrp_send_cmd(hfrp, DLA_HFRP_CMD_CLOCK_GATE,
 			(uint8_t *) payload, payload_size, blocking));
 
@@ -110,7 +115,7 @@ static int32_t s_nvdla_hfrp_send_cmd_power_ctrl(struct hfrp *hfrp,
 	 * RAIL ON 3:3
 	 * MTCMOS DELAYED_OFF 4:4
 	 * RAIL DELAYED_OFF 5:5
-	 * PPS 8:15
+	 * PPS 15:8
 	 **/
 	payload[0] |= (((uint32_t)(cmd->power_off)) << 0);
 	payload[0] |= (((uint32_t)(cmd->rail_off)) << 1);
@@ -119,6 +124,19 @@ static int32_t s_nvdla_hfrp_send_cmd_power_ctrl(struct hfrp *hfrp,
 	payload[0] |= (((uint32_t)(cmd->power_delayed_off)) << 4);
 	payload[0] |= (((uint32_t)(cmd->rail_delayed_off)) << 5);
 	payload[0] |= (((uint32_t)(cmd->pps) & 0xffU) << 8);
+
+	/* Run some preactions prior to command execution. */
+	if (cmd->power_off)
+		hfrp_handle_pg_entry_start(hfrp);
+
+	if (cmd->power_on)
+		hfrp_handle_pg_exit_start(hfrp);
+
+	if (cmd->rail_off)
+		hfrp_handle_rg_entry_start(hfrp);
+
+	if (cmd->rail_on)
+		hfrp_handle_rg_exit_start(hfrp);
 
 	err = (hfrp_send_cmd(hfrp, DLA_HFRP_CMD_POWER_CONTROL,
 			(uint8_t *) payload, payload_size, blocking));
@@ -146,7 +164,7 @@ int32_t nvdla_hfrp_send_cmd_power_ctrl(struct hfrp *hfrp,
 
 	if (cmd->power_off || cmd->power_on || cmd->power_delayed_off ||
 			cmd->rail_off || cmd->rail_on ||
-				cmd->rail_delayed_off) {
+			cmd->rail_delayed_off) {
 		err = s_nvdla_hfrp_send_cmd_power_ctrl(hfrp, cmd, blocking);
 		if (err < 0) {
 			nvdla_dbg_err(pdev, "Failed to send power ctrl. err %d",
@@ -207,15 +225,21 @@ static void s_nvdla_hfrp_handle_response_clock_gate(struct hfrp *hfrp,
 	uint32_t payload_size)
 {
 	uint32_t *response = (uint32_t *) payload;
+	bool gated;
 
 	/**
 	 * Core 0:0
 	 * MCU 1:1
 	 * CFG 2:2
 	 **/
-	hfrp->clock_gated = ((response[0]) & 0x1U);
-	hfrp->clock_gated = hfrp->clock_gated || ((response[0] >> 1) & 0x1U);
-	hfrp->clock_gated = hfrp->clock_gated || ((response[0] >> 2) & 0x1U);
+	gated = ((response[0]) & 0x1U);
+	gated = gated || ((response[0] >> 1) & 0x1U);
+	gated = gated || ((response[0] >> 2) & 0x1U);
+
+	if (gated)
+		hfrp_handle_cg_entry(hfrp);
+	else
+		hfrp_handle_cg_exit(hfrp);
 }
 
 static void s_nvdla_hfrp_handle_response_power_ctrl(struct hfrp *hfrp,
@@ -224,6 +248,11 @@ static void s_nvdla_hfrp_handle_response_power_ctrl(struct hfrp *hfrp,
 {
 	uint32_t *response = (uint32_t *) payload;
 
+	bool power_off;
+	bool power_on;
+	bool rail_off;
+	bool rail_on;
+
 	/**
 	 * MTCMOS OFF 0:0
 	 * RAIL OFF 1:1
@@ -231,21 +260,30 @@ static void s_nvdla_hfrp_handle_response_power_ctrl(struct hfrp *hfrp,
 	 * RAIL ON 3:3
 	 * MTCMOS DELAYED_OFF 4:4
 	 * RAIL DELAYED_OFF 5:5
-	 * PPS 8:15
+	 * PPS 15:8
 	 **/
 
-	/* Gated if off or delayed off, Ungated if on. */
-	if (((response[0]) & 0x1U) || ((response[0] >> 4) & 0x1U))
-		hfrp->power_gated = true;
-	if (((response[0] >> 2) & 0x1U))
-		hfrp->power_gated = false;
+	power_off   = ((response[0]) & 0x1u);
+	rail_off    = ((response[0] >> 1) & 0x1u);
+	power_on    = ((response[0] >> 2) & 0x1u);
+	rail_on     = ((response[0] >> 3) & 0x1u);
 
-	if (((response[0] >> 1) & 0x1U) || ((response[0] >> 5) & 0x1U))
-		hfrp->rail_gated = true;
-	if (((response[0] >> 3) & 0x1U))
-		hfrp->rail_gated = false;
+	/**
+	 * gated if off , ungated if on.
+	 * delayed-off is asynchronous and is notified in separate interrupt.
+	 * pps is unused currently but hfrp shall be extended in the future.
+	 **/
+	if (power_off)
+		hfrp_handle_pg_entry(hfrp);
 
-	/* PPS is unused currently but hfrp shall be extended in the future */
+	if (power_on)
+		hfrp_handle_pg_exit(hfrp);
+
+	if (rail_off)
+		hfrp_handle_rg_entry(hfrp);
+
+	if (rail_on)
+		hfrp_handle_rg_exit(hfrp);
 }
 
 static void s_nvdla_hfrp_handle_response_get_current_freq(struct hfrp *hfrp,
@@ -260,13 +298,35 @@ static void s_nvdla_hfrp_handle_response_get_current_freq(struct hfrp *hfrp,
 	hfrp->core_freq_khz = response[0];
 }
 
+static void s_nvdla_hfrp_handle_response_config(struct hfrp *hfrp,
+	uint8_t *payload,
+	uint32_t payload_size)
+{
+	uint32_t *response = (uint32_t *) payload;
+	uint32_t pg_delay_ms;
+	uint32_t rg_delay_ms;
+
+	/**
+	 * PG_DELAY 15:0
+	 * RG_DELAY 31:16
+	 **/
+	pg_delay_ms = (response[0] & 0xffffU);
+	rg_delay_ms = ((response[0] >> 16) & 0xffffU);
+
+	if (pg_delay_ms > 0)
+		hfrp->pg_delay_us = pg_delay_ms * 1000U;
+
+	if (rg_delay_ms > 0)
+		hfrp->rg_delay_us = rg_delay_ms * 1000U;
+}
+
 void hfrp_handle_response(struct hfrp *hfrp,
 	uint32_t cmd,
 	uint8_t *payload,
 	uint32_t payload_size)
 {
 	// Expects payload to be 4byte aligned. Eases out the parsing.
-	BUG_ON(payload_size % 4U != 0U);
+	WARN_ON(payload_size % 4U != 0U);
 
 	switch (cmd) {
 	case DLA_HFRP_CMD_POWER_CONTROL: {
@@ -281,6 +341,11 @@ void hfrp_handle_response(struct hfrp *hfrp,
 	}
 	case DLA_HFRP_CMD_GET_CURRENT_CLOCK_FREQ: {
 		s_nvdla_hfrp_handle_response_get_current_freq(hfrp,
+			payload, payload_size);
+		break;
+	}
+	case DLA_HFRP_CMD_CONFIG: {
+		s_nvdla_hfrp_handle_response_config(hfrp,
 			payload, payload_size);
 		break;
 	}

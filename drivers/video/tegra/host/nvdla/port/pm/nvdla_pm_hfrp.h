@@ -27,7 +27,7 @@ struct hfrp_cmd_sequence {
 #define DLA_HFRP_SEQUENCE_ID_ASYNC 0x3ffU
 	uint32_t seqid;
 	uint32_t cmdid;
-	struct completion completion;
+	struct completion cmd_completion;
 
 	/* Node pointer to be part of HFRP free list */
 	struct list_head list;
@@ -39,6 +39,9 @@ struct hfrp {
 	void __iomem *regs;
 	int irq;
 
+	struct dla_lpwr_config *lpwr_config_va;
+	dma_addr_t lpwr_config_pa;
+
 	/* HFRP command management */
 	struct mutex cmd_lock;
 
@@ -46,12 +49,61 @@ struct hfrp {
 	uint32_t nsequences;
 	struct list_head seq_freelist;
 
-	/* Cache latest response for quick accesses */
-	bool rail_gated;
-	bool power_gated;
+	/* Cache latest response & stats for quick accesses */
 	bool clock_gated;
-
+	uint32_t cg_delay_us;
+	struct completion cg_delayed_completion;
+	uint64_t clock_idle_count;
+	uint64_t clock_idle_time_us;
+	uint64_t cg_entry_start_timestamp_ns;
+	uint64_t cg_entry_timestamp_ns;
+	uint64_t cg_entry_latency_us_min;
+	uint64_t cg_entry_latency_us_max;
+	uint64_t cg_entry_latency_us_total;
+	uint64_t clock_active_count;
+	uint64_t clock_active_time_us;
+	uint64_t cg_exit_start_timestamp_ns;
+	uint64_t cg_exit_timestamp_ns;
+	uint64_t cg_exit_latency_us_min;
+	uint64_t cg_exit_latency_us_max;
+	uint64_t cg_exit_latency_us_total;
 	uint32_t core_freq_khz;
+
+	bool power_gated;
+	uint32_t pg_delay_us;
+	struct completion pg_delayed_completion;
+	uint64_t power_idle_count;
+	uint64_t power_idle_time_us;
+	uint64_t pg_entry_start_timestamp_ns;
+	uint64_t pg_entry_timestamp_ns;
+	uint64_t pg_entry_latency_us_min;
+	uint64_t pg_entry_latency_us_max;
+	uint64_t pg_entry_latency_us_total;
+	uint64_t power_active_count;
+	uint64_t power_active_time_us;
+	uint64_t pg_exit_start_timestamp_ns;
+	uint64_t pg_exit_timestamp_ns;
+	uint64_t pg_exit_latency_us_min;
+	uint64_t pg_exit_latency_us_max;
+	uint64_t pg_exit_latency_us_total;
+
+	bool rail_gated;
+	uint32_t rg_delay_us;
+	struct completion rg_delayed_completion;
+	uint64_t rail_idle_count;
+	uint64_t rail_idle_time_us;
+	uint64_t rg_entry_start_timestamp_ns;
+	uint64_t rg_entry_timestamp_ns;
+	uint64_t rg_entry_latency_us_min;
+	uint64_t rg_entry_latency_us_max;
+	uint64_t rg_entry_latency_us_total;
+	uint64_t rail_active_count;
+	uint64_t rail_active_time_us;
+	uint64_t rg_exit_start_timestamp_ns;
+	uint64_t rg_exit_timestamp_ns;
+	uint64_t rg_exit_latency_us_min;
+	uint64_t rg_exit_latency_us_max;
+	uint64_t rg_exit_latency_us_total;
 
 	/* Node pointer to be a part of a list. */
 	struct list_head list;
@@ -97,13 +149,13 @@ static inline uint32_t hfrp_reg_read(struct hfrp *hfrp, uint32_t offset)
 /* Command and Response Headers */
 static inline uint32_t hfrp_buffer_cmd_header_size_f(uint32_t v)
 {
-	/* BUFFER_CMD_HEADER_SIZE 0:7 */
+	/* BUFFER_CMD_HEADER_SIZE 7:0 */
 	return (v & 0xffU);
 }
 
 static inline uint32_t hfrp_buffer_cmd_header_size_v(uint32_t r)
 {
-	/* BUFFER_CMD_HEADER_SIZE 0:7 */
+	/* BUFFER_CMD_HEADER_SIZE 7:0 */
 	return (r & 0xffU);
 }
 
@@ -133,13 +185,13 @@ static inline uint32_t hfrp_buffer_cmd_header_cmdid_v(uint32_t r)
 
 static inline uint32_t hfrp_buffer_resp_header_size_f(uint32_t v)
 {
-	/* BUFFER_RESPONSE_HEADER_SIZE 0:7 */
+	/* BUFFER_RESPONSE_HEADER_SIZE 7:0 */
 	return (v & 0xffU);
 }
 
 static inline uint32_t hfrp_buffer_resp_header_size_v(uint32_t r)
 {
-	/* BUFFER_RESPONSE_HEADER_SIZE 0:7 */
+	/* BUFFER_RESPONSE_HEADER_SIZE 7:0 */
 	return (r & 0xffU);
 }
 
@@ -183,6 +235,22 @@ void hfrp_handle_response(struct hfrp *hfrp,
 	uint32_t cmd,
 	uint8_t *payload,
 	uint32_t payload_size);
+
+/**
+ * Handle clock, power, rail entries and exits.
+ **/
+void hfrp_handle_cg_entry_start(struct hfrp *hfrp);
+void hfrp_handle_cg_entry(struct hfrp *hfrp);
+void hfrp_handle_cg_exit_start(struct hfrp *hfrp);
+void hfrp_handle_cg_exit(struct hfrp *hfrp);
+void hfrp_handle_pg_entry_start(struct hfrp *hfrp);
+void hfrp_handle_pg_entry(struct hfrp *hfrp);
+void hfrp_handle_pg_exit_start(struct hfrp *hfrp);
+void hfrp_handle_pg_exit(struct hfrp *hfrp);
+void hfrp_handle_rg_entry_start(struct hfrp *hfrp);
+void hfrp_handle_rg_entry(struct hfrp *hfrp);
+void hfrp_handle_rg_exit_start(struct hfrp *hfrp);
+void hfrp_handle_rg_exit(struct hfrp *hfrp);
 
 /* For gating and ungating of Clock, Power, and Rail */
 struct nvdla_hfrp_cmd_power_ctrl {

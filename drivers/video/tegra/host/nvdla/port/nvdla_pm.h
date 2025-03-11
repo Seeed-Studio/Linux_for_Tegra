@@ -8,6 +8,42 @@
 #define __NVDLA_PM_H_
 
 #include <linux/platform_device.h>
+#include "../dla_os_interface.h"
+
+struct nvdla_pm_stat {
+	uint64_t clock_idle_count;
+	uint64_t clock_idle_time_us;
+	uint64_t cg_entry_latency_us_min;
+	uint64_t cg_entry_latency_us_max;
+	uint64_t cg_entry_latency_us_total;
+	uint64_t clock_active_count;
+	uint64_t clock_active_time_us;
+	uint64_t cg_exit_latency_us_min;
+	uint64_t cg_exit_latency_us_max;
+	uint64_t cg_exit_latency_us_total;
+
+	uint64_t power_idle_count;
+	uint64_t power_idle_time_us;
+	uint64_t pg_entry_latency_us_min;
+	uint64_t pg_entry_latency_us_max;
+	uint64_t pg_entry_latency_us_total;
+	uint64_t power_active_count;
+	uint64_t power_active_time_us;
+	uint64_t pg_exit_latency_us_min;
+	uint64_t pg_exit_latency_us_max;
+	uint64_t pg_exit_latency_us_total;
+
+	uint64_t rail_idle_count;
+	uint64_t rail_idle_time_us;
+	uint64_t rg_entry_latency_us_min;
+	uint64_t rg_entry_latency_us_max;
+	uint64_t rg_entry_latency_us_total;
+	uint64_t rail_active_count;
+	uint64_t rail_active_time_us;
+	uint64_t rg_exit_latency_us_min;
+	uint64_t rg_exit_latency_us_max;
+	uint64_t rg_exit_latency_us_total;
+};
 
 /**
  * @brief Initializes power management unit
@@ -28,10 +64,13 @@ int32_t nvdla_pm_init(struct platform_device *pdev);
 void nvdla_pm_deinit(struct platform_device *pdev);
 
 /**
- * @brief Triggers request to rail gate after specified 'timeout_us'.
+ * @brief Triggers request to rail gate after 'delay_us'.
+ *
+ * The delay_us is configured through nvdla_pm_rail_gate_set_delay_us API. In
+ * the event of ungating request within delay_us, the outstanding gating
+ * requests are cancelled.
  *
  * @param[in] pdev Platform device that is to be rail gated.
- * @param[in] timeout_us Timeout after which DLA must be rail gated.
  * @param[in] blocking if set, waits for the gating to complete.
  *
  * @return
@@ -39,7 +78,6 @@ void nvdla_pm_deinit(struct platform_device *pdev);
  * - non-zero, otherwise
  **/
 int32_t nvdla_pm_rail_gate(struct platform_device *pdev,
-	uint32_t timeout_us,
 	bool blocking);
 
 /**
@@ -67,10 +105,39 @@ int32_t nvdla_pm_rail_is_gated(struct platform_device *pdev,
 	bool *gated);
 
 /**
- * @brief Triggers request to power gate after specified 'timeout_us'.
+ * @brief Sets delay (in us) for rail gating
+ *
+ * @param[in] pdev Platform device.
+ * @param[in] delay_us Delay after which DLA must be rail gated if requested.
+ *
+ * @return
+ * - zero, up on successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_rail_gate_set_delay_us(struct platform_device *pdev,
+	uint32_t delay_us);
+
+/**
+ * @brief Gets delay (in us) for rail gating
+ *
+ * @param[in] pdev Platform device.
+ * @param[out] delay_us Rail gating delay in us.
+ *
+ * @return
+ * - zero, up on successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_rail_gate_get_delay_us(struct platform_device *pdev,
+	uint32_t *delay_us);
+
+/**
+ * @brief Triggers request to power gate after 'delay_us'.
+ *
+ * The delay_us is configured through nvdla_pm_power_gate_set_delay_us API. In
+ * the event of ungating request within delay_us, the outstanding gating
+ * requests are cancelled.
  *
  * @param[in] pdev Platform device that is to be power gated.
- * @param[in] timeout_us Timeout after which DLA must be power gated.
  * @param[in] blocking if set, waits for the gating to complete.
  *
  * @return
@@ -78,7 +145,6 @@ int32_t nvdla_pm_rail_is_gated(struct platform_device *pdev,
  * - non-zero, otherwise
  **/
 int32_t nvdla_pm_power_gate(struct platform_device *pdev,
-	uint32_t timeout_us,
 	bool blocking);
 
 /**
@@ -106,10 +172,39 @@ int32_t nvdla_pm_power_is_gated(struct platform_device *pdev,
 	bool *gated);
 
 /**
- * @brief Triggers request to clock gate after specified 'timeout_us'.
+ * @brief Sets delay (in us) for power gating
+ *
+ * @param[in] pdev Platform device.
+ * @param[in] delay_us Delay after which DLA must be power gated if requested.
+ *
+ * @return
+ * - zero, up on successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_power_gate_set_delay_us(struct platform_device *pdev,
+	uint32_t delay_us);
+
+/**
+ * @brief Gets delay (in us) for power gating
+ *
+ * @param[in] pdev Platform device.
+ * @param[out] delay_us Rail gating delay in us.
+ *
+ * @return
+ * - zero, up on successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_power_gate_get_delay_us(struct platform_device *pdev,
+	uint32_t *delay_us);
+
+/**
+ * @brief Triggers request to clock gate after 'delay_us'.
+ *
+ * The delay_us is configured through nvdla_pm_clock_gate_set_delay_us API. In
+ * the event of ungating request within delay_us, the outstanding gating
+ * requests are cancelled.
  *
  * @param[in] pdev Platform device that is to be clock gated.
- * @param[in] timeout_us Timeout after which DLA must be clock gated.
  * @param[in] blocking if set, waits for the gating to complete.
  *
  * @return
@@ -117,7 +212,6 @@ int32_t nvdla_pm_power_is_gated(struct platform_device *pdev,
  * - non-zero, otherwise
  **/
 int32_t nvdla_pm_clock_gate(struct platform_device *pdev,
-	uint32_t timeout_us,
 	bool blocking);
 
 /**
@@ -143,6 +237,32 @@ int32_t nvdla_pm_clock_ungate(struct platform_device *pdev);
  **/
 int32_t nvdla_pm_clock_is_gated(struct platform_device *pdev,
 	bool *gated);
+
+/**
+ * @brief Sets delay (in us) for clock gating
+ *
+ * @param[in] pdev Platform device.
+ * @param[in] delay_us Delay after which DLA must be clock gated if requested.
+ *
+ * @return
+ * - zero, up on successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_clock_gate_set_delay_us(struct platform_device *pdev,
+	uint32_t delay_us);
+
+/**
+ * @brief Gets delay (in us) for clock gating
+ *
+ * @param[in] pdev Platform device.
+ * @param[out] delay_us Rail gating delay in us.
+ *
+ * @return
+ * - zero, up on successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_clock_gate_get_delay_us(struct platform_device *pdev,
+	uint32_t *delay_us);
 
 /**
  * @brief Sets DLA MCU frequency.
@@ -195,5 +315,55 @@ int32_t nvdla_pm_clock_set_core_freq(struct platform_device *pdev,
  **/
 int32_t nvdla_pm_clock_get_core_freq(struct platform_device *pdev,
 	uint32_t *freq_khz);
+
+/**
+ * @brief Gets the PM stats
+ *
+ * @param[in] pdev platform device.
+ * @param[out] stat Location where the statistics are dumped.
+ *
+ * @return
+ * - zero, with successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_get_stat(struct platform_device *pdev,
+	struct nvdla_pm_stat *stat);
+
+/**
+ * @brief Sets LPWR config
+ *
+ * @param[in] pdev platform device.
+ * @param[in] config Low power configuration that is to be set.
+ *
+ * @return
+ * - zero, with successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_set_lpwr_config(struct platform_device *pdev,
+	struct dla_lpwr_config *config);
+
+/**
+ * @brief Gets LPWR config
+ *
+ * @param[in] pdev platform device.
+ * @param[out] config Location where the config is outputted.
+ *
+ * @return
+ * - zero, with successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_get_lpwr_config(struct platform_device *pdev,
+	struct dla_lpwr_config *config);
+
+/**
+ * @brief Reset configurations upon poweron
+ *
+ * @param[in] pdev platform device to reset PM.
+ *
+ * @return
+ * - zero, with successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_reset(struct platform_device *pdev);
 
 #endif /* __NVDLA_PM_H_ */

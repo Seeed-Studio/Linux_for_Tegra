@@ -27,6 +27,7 @@ ccflags-y += -DNVDLA_HAVE_CONFIG_AXI=1
 ccflags-y += -DNVDLA_HAVE_CONFIG_SYNCPTFD=0
 ccflags-y += -DNVDLA_HAVE_CONFIG_HSIERRINJ=0
 ccflags-y += -DNVDLA_HAVE_CONFIG_FIREWALL=0
+ccflags-y += -DNVDLA_HAVE_CONFIG_FWSUSPEND=1
 ccflags-y += -DBUG_4942853=1
 ccflags-y += -DBUG_4960393=1
 ccflags-y += -DBUG_4972382=1

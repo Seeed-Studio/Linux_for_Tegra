@@ -40,9 +40,10 @@ static DEFINE_MUTEX(s_debug_ctrl_list_lock);
 struct nvdla_debug_ctrl {
 	struct platform_device *pdev;
 
-	uint32_t clock_idledelay_us;
-	uint32_t power_idledelay_us;
-	uint32_t rail_idledelay_us;
+	/**
+	 * Members that are local to this debugfs and that is to be persisted
+	 * shall be part of this debug control node
+	 **/
 
 	struct list_head list;
 };
@@ -524,7 +525,7 @@ static int debug_dla_fw_dvfs_mode_show(struct seq_file *s, void *data)
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
 		return -1;
-	nvdla_dbg_info(pdev,  "[DVFS] mode show");
+	nvdla_dbg_info(pdev, "[DVFS] mode show");
 	return 0;
 }
 
@@ -537,7 +538,7 @@ static int debug_dla_fw_dvfs_enable_show(struct seq_file *s, void *data)
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
 		return -1;
-	nvdla_dbg_info(pdev,  "[DVFS] enable show");
+	nvdla_dbg_info(pdev, "[DVFS] enable show");
 	return 0;
 }
 
@@ -550,7 +551,7 @@ static int debug_dla_fw_dvfs_freqlist_khz_show(struct seq_file *s, void *data)
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
 		return -1;
-	nvdla_dbg_info(pdev,  "[DVFS] freqlist_khz show");
+	nvdla_dbg_info(pdev, "[DVFS] freqlist_khz show");
 	return 0;
 }
 
@@ -563,7 +564,7 @@ static int debug_dla_fw_dvfs_periodicity_ms_show(struct seq_file *s, void *data)
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
 		return -1;
-	nvdla_dbg_info(pdev,  "[DVFS] periodicity_ms show");
+	nvdla_dbg_info(pdev, "[DVFS] periodicity_ms show");
 	return 0;
 }
 
@@ -646,13 +647,27 @@ static int debug_dla_ctrl_clk_activetime_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/CLK] activetime_us show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] activetime_us show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%llu\n", stat.clock_active_time_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_clk_enable_show(struct seq_file *s, void *data)
@@ -692,11 +707,10 @@ static int debug_dla_ctrl_clk_core_khz_show(struct seq_file *s, void *data)
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0) {
-		nvdla_dbg_err(pdev,  "failed to fetch pdev\n");
+	if (err < 0)
 		goto fail;
-	}
-	nvdla_dbg_info(pdev,  "[CTRL/CLK] core_khz show");
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] core_khz show");
 
 	err = nvdla_pm_clock_get_core_freq(pdev, &freq_khz);
 	if (err < 0) {
@@ -721,11 +735,10 @@ static int debug_dla_ctrl_clk_mcu_khz_show(struct seq_file *s, void *data)
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0) {
-		nvdla_dbg_err(pdev,  "failed to fetch pdev\n");
+	if (err < 0)
 		goto fail;
-	}
-	nvdla_dbg_info(pdev,  "[CTRL/CLK] mcu_khz show");
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] mcu_khz show");
 
 	err = nvdla_pm_clock_get_mcu_freq(pdev, &freq_khz);
 	if (err < 0) {
@@ -745,13 +758,27 @@ static int debug_dla_ctrl_clk_idlecount_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/CLK] idlecount show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] idlecount show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%llu\n", stat.clock_idle_count);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_clk_idledelay_us_show(struct seq_file *s, void *data)
@@ -759,15 +786,16 @@ static int debug_dla_ctrl_clk_idledelay_us_show(struct seq_file *s, void *data)
 	int err;
 	struct platform_device *pdev;
 	struct nvdla_debug_ctrl *ctrl;
+	uint32_t delay_us;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0) {
-		nvdla_dbg_err(pdev, "failed to fetch pdev\n");
+	if (err < 0)
 		goto fail;
-	}
 
-	nvdla_dbg_info(pdev,  "[CTRL/CLK] idledelay_us show");
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] idledelay_us show");
 
 	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
 	if (ctrl == NULL) {
@@ -776,7 +804,13 @@ static int debug_dla_ctrl_clk_idledelay_us_show(struct seq_file *s, void *data)
 		goto fail;
 	}
 
-	seq_printf(s, "%x\n", (uint32_t) ctrl->clock_idledelay_us);
+	err = nvdla_pm_clock_gate_get_delay_us(pdev, &delay_us);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to get delay us. err: %d\n", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%u\n", (uint32_t) delay_us);
 
 	return 0;
 
@@ -788,26 +822,77 @@ static int debug_dla_ctrl_clk_idletime_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/CLK] idletime_us show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] idletime_us show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%llu\n", stat.clock_idle_time_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_clk_statdump_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/CLK] statdump show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/CLK] statdump show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_puts(s, "CG entry latency in us (max/min/total): ");
+	if (stat.cg_entry_latency_us_total > 0) {
+		seq_printf(s, "%llu / %llu / %llu\n",
+			stat.cg_entry_latency_us_max,
+			stat.cg_entry_latency_us_min,
+			stat.cg_entry_latency_us_total);
+	} else {
+		/* Data not available */
+		seq_puts(s, "- / - / -\n");
+	}
+
+	seq_puts(s, "CG exit latency in us (max/min/total): ");
+	if (stat.cg_exit_latency_us_total > 0) {
+		seq_printf(s, "%llu / %llu / %llu\n",
+			stat.cg_exit_latency_us_max,
+			stat.cg_exit_latency_us_min,
+			stat.cg_exit_latency_us_total);
+	} else {
+		/* Data not available */
+		seq_puts(s, "- / - / -\n");
+	}
+
+	seq_printf(s, "CG Entry count: %llu\n", stat.clock_idle_count);
+	seq_printf(s, "CG Exit count: %llu\n", stat.clock_active_count - 1U);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 // ctrl power show functions
@@ -815,13 +900,27 @@ static int debug_dla_ctrl_power_activetime_us_show(struct seq_file *s, void *dat
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] activetime_us show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] activetime_us show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%llu\n", stat.power_active_time_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_power_enable_show(struct seq_file *s, void *data)
@@ -856,29 +955,47 @@ static int debug_dla_ctrl_power_idlecount_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] idlecount show");
-	return 0;
-}
+		goto fail;
 
-static int debug_dla_ctrl_power_idledelay_us_show(struct seq_file *s, void *data)
-{
-	int err;
-	struct platform_device *pdev;
-	struct nvdla_debug_ctrl *ctrl;
-	(void) data;
+	nvdla_dbg_info(pdev, "[CTRL/POWER] idlecount show");
 
-	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	err = nvdla_pm_get_stat(pdev, &stat);
 	if (err < 0) {
-		nvdla_dbg_err(pdev, "failed to fetch pdev\n");
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
 		goto fail;
 	}
 
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] idledelay_us show");
+	seq_printf(s, "%llu\n", stat.power_idle_count);
+
+	return 0;
+
+fail:
+	return err;
+}
+
+static int debug_dla_ctrl_power_autosuspenddelay_us_show(struct seq_file *s,
+	void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	struct nvhost_device_data *pdata;
+	struct nvdla_debug_ctrl *ctrl;
+	struct dla_lpwr_config config;
+	uint32_t delay_us;
+
+	(void) data;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		goto fail;
+
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] autosuspenddelay_us show");
 
 	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
 	if (ctrl == NULL) {
@@ -887,7 +1004,64 @@ static int debug_dla_ctrl_power_idledelay_us_show(struct seq_file *s, void *data
 		goto fail;
 	}
 
-	seq_printf(s, "%x\n", (uint32_t) ctrl->power_idledelay_us);
+#if defined(NVDLA_HAVE_CONFIG_FWSUSPEND) && (NVDLA_HAVE_CONFIG_FWSUSPEND == 1)
+	err = nvdla_pm_get_lpwr_config(pdev, &config);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to get config. err: %d", err);
+		goto fail;
+	}
+
+	delay_us = config.idledelay_us;
+	(void) pdata;
+#else
+	pdata = platform_get_drvdata(pdev);
+	if (pdata == NULL) {
+		err = -EINVAL;
+		goto fail;
+	}
+
+	delay_us = pdata->autosuspend_delay;
+	(void) config;
+#endif /* NVDLA_HAVE_CONFIG_FWSUSPEND */
+
+	seq_printf(s, "%u\n", (uint32_t) delay_us);
+
+	return 0;
+
+fail:
+	return err;
+}
+
+static int debug_dla_ctrl_power_idledelay_us_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	struct nvdla_debug_ctrl *ctrl;
+	uint32_t delay_us;
+
+	(void) data;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		goto fail;
+
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] idledelay_us show");
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	err = nvdla_pm_power_gate_get_delay_us(pdev, &delay_us);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to get delay us. err: %d\n", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%u\n", (uint32_t) delay_us);
 
 	return 0;
 
@@ -899,39 +1073,121 @@ static int debug_dla_ctrl_power_idletime_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] idletime_us show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] idletime_us show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%llu\n", stat.power_idle_time_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_power_mode_show(struct seq_file *s, void *data)
 {
 	int err;
+
 	struct platform_device *pdev;
+	struct dla_lpwr_config config;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] mode show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] mode show");
+
+#if defined(NVDLA_HAVE_CONFIG_FWSUSPEND) && (NVDLA_HAVE_CONFIG_FWSUSPEND == 1)
+	err = nvdla_pm_get_lpwr_config(pdev, &config);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to get config. err: %d", err);
+		goto fail;
+	}
+
+	switch (config.idle_notification_enable) {
+	case DLA_IDLE_NOTIFICATION_DISABLE: {
+		seq_puts(s, "alwayson\n");
+		break;
+	}
+	case DLA_IDLE_NOTIFICATION_ENABLE: {
+		seq_puts(s, "auto\n");
+		break;
+	}
+	default:
+		break;
+	}
+#endif
+
+	(void) config;
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_power_statdump_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] statdump show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] statdump show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_puts(s, "PG entry latency in us (max/min/total): ");
+	if (stat.pg_entry_latency_us_total > 0) {
+		seq_printf(s, "%llu / %llu / %llu\n",
+			stat.pg_entry_latency_us_max,
+			stat.pg_entry_latency_us_min,
+			stat.pg_entry_latency_us_total);
+	} else {
+		/* Data not available */
+		seq_puts(s, "- / - / -\n");
+	}
+
+	seq_puts(s, "PG exit latency in us (max/min/total): ");
+	if (stat.pg_exit_latency_us_total > 0) {
+		seq_printf(s, "%llu / %llu / %llu\n",
+			stat.pg_exit_latency_us_max,
+			stat.pg_exit_latency_us_min,
+			stat.pg_exit_latency_us_total);
+	} else {
+		/* Data not available */
+		seq_puts(s, "- / - / -\n");
+	}
+
+	seq_printf(s, "PG Entry count: %llu\n", stat.power_idle_count);
+	seq_printf(s, "PG Exit count: %llu\n", stat.power_active_count - 1U);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_power_vftable_mv_khz_show(struct seq_file *s, void *data)
@@ -943,7 +1199,7 @@ static int debug_dla_ctrl_power_vftable_mv_khz_show(struct seq_file *s, void *da
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
 		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] vftable_mv_khz show");
+	nvdla_dbg_info(pdev, "[CTRL/POWER] vftable_mv_khz show");
 	return 0;
 }
 
@@ -956,7 +1212,7 @@ static int debug_dla_ctrl_power_voltage_mv_show(struct seq_file *s, void *data)
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
 		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/POWER] voltage_mv show");
+	nvdla_dbg_info(pdev, "[CTRL/POWER] voltage_mv show");
 	return 0;
 }
 
@@ -965,13 +1221,27 @@ static int debug_dla_ctrl_rail_activetime_us_show(struct seq_file *s, void *data
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/RAIL] activetime_us show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] activetime_us show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%llu\n", stat.rail_active_time_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_rail_enable_show(struct seq_file *s, void *data)
@@ -1006,13 +1276,27 @@ static int debug_dla_ctrl_rail_idlecount_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/RAIL] idlecount show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] idlecount show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%llu\n", stat.rail_idle_count);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_rail_idledelay_us_show(struct seq_file *s, void *data)
@@ -1020,15 +1304,16 @@ static int debug_dla_ctrl_rail_idledelay_us_show(struct seq_file *s, void *data)
 	int err;
 	struct platform_device *pdev;
 	struct nvdla_debug_ctrl *ctrl;
+	uint32_t delay_us;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
-	if (err < 0) {
-		nvdla_dbg_err(pdev, "failed to fetch pdev\n");
+	if (err < 0)
 		goto fail;
-	}
 
-	nvdla_dbg_info(pdev,  "[CTRL/RAIL] idledelay_us show");
+
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] idledelay_us show");
 
 	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
 	if (ctrl == NULL) {
@@ -1037,7 +1322,13 @@ static int debug_dla_ctrl_rail_idledelay_us_show(struct seq_file *s, void *data)
 		goto fail;
 	}
 
-	seq_printf(s, "%x\n", (uint32_t) ctrl->rail_idledelay_us);
+	err = nvdla_pm_rail_gate_get_delay_us(pdev, &delay_us);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to get delay us. err: %d\n", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%u\n", (uint32_t) delay_us);
 
 	return 0;
 
@@ -1049,26 +1340,77 @@ static int debug_dla_ctrl_rail_idletime_us_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/RAIL] idletime_us show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] idletime_us show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%llu\n", stat.rail_idle_time_us);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_rail_statdump_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_stat stat;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
-	nvdla_dbg_info(pdev,  "[CTRL/RAIL] statdump show");
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/RAIL] statdump show");
+
+	err = nvdla_pm_get_stat(pdev, &stat);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to fetch stat. err: %d", err);
+		goto fail;
+	}
+
+	seq_puts(s, "RG entry latency in us (max/min/total): ");
+	if (stat.rg_entry_latency_us_total > 0) {
+		seq_printf(s, "%llu / %llu / %llu\n",
+			stat.rg_entry_latency_us_max,
+			stat.rg_entry_latency_us_min,
+			stat.rg_entry_latency_us_total);
+	} else {
+		/* Data not available */
+		seq_puts(s, "- / - / -\n");
+	}
+
+	seq_puts(s, "RG exit latency in us (max/min/total): ");
+	if (stat.rg_exit_latency_us_total > 0) {
+		seq_printf(s, "%llu / %llu / %llu\n",
+			stat.rg_exit_latency_us_max,
+			stat.rg_exit_latency_us_min,
+			stat.rg_exit_latency_us_total);
+	} else {
+		/* Data not available */
+		seq_puts(s, "- / - / -\n");
+	}
+
+	seq_printf(s, "RG Entry count: %llu\n", stat.rail_idle_count);
+	seq_printf(s, "RG Exit count: %llu\n", stat.rail_active_count - 1U);
+
 	return 0;
+
+fail:
+	return err;
 }
 
 /*
@@ -1326,7 +1668,7 @@ static ssize_t debug_dla_ctrl_clk_enable_write(struct file *file,
 	if (write_value > 0U)
 		err = nvdla_pm_clock_ungate(pdev);
 	else
-		err = nvdla_pm_clock_gate(pdev, ctrl->clock_idledelay_us, false);
+		err = nvdla_pm_clock_gate(pdev, false);
 
 	return count;
 
@@ -1425,7 +1767,11 @@ static ssize_t debug_dla_ctrl_clk_idledelay_us_write(struct file *file,
 		goto fail;
 	}
 
-	ctrl->clock_idledelay_us = (uint32_t) write_value;
+	err = nvdla_pm_clock_gate_set_delay_us(pdev, (uint32_t) write_value);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to set delay us. err: %d\n", err);
+		goto fail;
+	}
 
 	return count;
 
@@ -1460,10 +1806,91 @@ static ssize_t debug_dla_ctrl_power_enable_write(struct file *file,
 		goto fail;
 	}
 
-	if (write_value > 0U)
+	if (write_value > 0U) {
+		/* Ungate for any non-zero value */
+		bool was_gated;
+		err = nvdla_pm_power_is_gated(pdev, &was_gated);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "failed to get status. err: %d", err);
+			goto fail;
+		}
+
 		err = nvdla_pm_power_ungate(pdev);
-	else
-		err = nvdla_pm_power_gate(pdev, ctrl->power_idledelay_us, false);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "power ungating failed.\n");
+			goto fail;
+		}
+
+		if (was_gated) {
+			err = nvdla_fw_poweron(pdev);
+			if (err < 0) {
+				nvdla_dbg_err(pdev, "Fw poweron failed.\n");
+			}
+		}
+	} else {
+		/* Ungate for any zero value */
+		err = nvdla_pm_power_gate(pdev, false);
+	}
+
+	return count;
+
+fail:
+	return -1;
+}
+
+static ssize_t debug_dla_ctrl_power_autosuspenddelay_us_write(struct file *file,
+		const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct platform_device *pdev;
+	long write_value;
+	struct nvdla_debug_ctrl *ctrl;
+	struct dla_lpwr_config config;
+	struct nvhost_device_data *pdata;
+
+	/* Fetch user requested write-value. */
+	err = kstrtol_from_user(buffer, count, 10, &write_value);
+	if (err < 0)
+		goto fail;
+
+	err = s_nvdla_get_pdev_from_file(file, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] autosuspenddelay_us = %u\n", (unsigned int) write_value);
+
+	ctrl = s_nvdla_debug_ctrl_get_by_pdev(pdev);
+	if (ctrl == NULL) {
+		nvdla_dbg_err(pdev, "No ctrl node available\n");
+		goto fail;
+	}
+
+#if defined(NVDLA_HAVE_CONFIG_FWSUSPEND) && (NVDLA_HAVE_CONFIG_FWSUSPEND == 1)
+	/* Update the low power config to the power gate delay */
+	err = nvdla_pm_get_lpwr_config(pdev, &config);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to get config. err: %d", err);
+		goto fail;
+	}
+
+	config.idledelay_us = (uint32_t) write_value;
+
+	err = nvdla_pm_set_lpwr_config(pdev, &config);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to set config. err: %d", err);
+		goto fail;
+	}
+	(void) pdata;
+#else
+	pdata = platform_get_drvdata(pdev);
+	if (pdata == NULL) {
+		err = -EINVAL;
+		goto fail;
+	}
+
+	pdata->autosuspend_delay = (uint32_t) write_value;
+	(void) config;
+#endif /* NVDLA_HAVE_CONFIG_FWSUSPEND */
 
 	return count;
 
@@ -1496,7 +1923,11 @@ static ssize_t debug_dla_ctrl_power_idledelay_us_write(struct file *file,
 		goto fail;
 	}
 
-	ctrl->power_idledelay_us = (uint32_t) write_value;
+	err = nvdla_pm_power_gate_set_delay_us(pdev, (uint32_t) write_value);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to set delay us. err: %d\n", err);
+		goto fail;
+	}
 
 	return count;
 
@@ -1504,28 +1935,64 @@ fail:
 	return -1;
 }
 
+#define NVDLA_DEBUG_POWER_MODE_MAX_LEN 256U
 static ssize_t debug_dla_ctrl_power_mode_write(struct file *file,
 		const char __user *buffer, size_t count, loff_t *off)
 {
-	int err;
+	int32_t err;
+
 	struct platform_device *pdev;
-	long write_value;
+	char mode[NVDLA_DEBUG_POWER_MODE_MAX_LEN];
+	int32_t mode_length;
+
+	struct dla_lpwr_config config;
 
 	/* Fetch user requested write-value. */
-	err = kstrtol_from_user(buffer, count, 10, &write_value);
-	if (err < 0)
-		goto fail;
+	mode_length = simple_write_to_buffer(mode,
+					(NVDLA_DEBUG_POWER_MODE_MAX_LEN - 1U),
+					off,
+					buffer,
+					count);
+	mode[mode_length] = '\0';
 
 	err = s_nvdla_get_pdev_from_file(file, &pdev);
 	if (err < 0)
 		goto fail;
 
-	nvdla_dbg_info(pdev, "[CTRL/POWER] mode = %u\n", (unsigned int) write_value);
+	nvdla_dbg_info(pdev, "[CTRL/POWER] mode = %s\n", mode);
+
+#if defined(NVDLA_HAVE_CONFIG_FWSUSPEND) && (NVDLA_HAVE_CONFIG_FWSUSPEND == 1)
+	err = nvdla_pm_get_lpwr_config(pdev, &config);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to get config. err: %d", err);
+		goto fail;
+	}
+
+	if (strcmp(mode, "auto") == 0) {
+		/* This will ensure that, the DLA fw will notify idle */
+		config.idle_notification_enable = DLA_IDLE_NOTIFICATION_ENABLE;
+	} else if (strcmp(mode, "alwayson") == 0) {
+		/* This will ensure that, the DLA fw will not notify idle */
+		config.idle_notification_enable = DLA_IDLE_NOTIFICATION_DISABLE;
+	} else {
+		err = -EINVAL;
+		nvdla_dbg_err(pdev, "Invalid power mode: %s", mode);
+		goto fail;
+	}
+
+	err = nvdla_pm_set_lpwr_config(pdev, &config);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to set power mode. err: %d", err);
+		goto fail;
+	}
+#endif /* NVDLA_HAVE_CONFIG_FWSUSPEND */
+
+	(void) config;
 
 	return count;
 
 fail:
-	return -1;
+	return err;
 }
 
 // ctrl rail write functions
@@ -1558,7 +2025,7 @@ static ssize_t debug_dla_ctrl_rail_enable_write(struct file *file,
 	if (write_value > 0U)
 		err = nvdla_pm_rail_ungate(pdev);
 	else
-		err = nvdla_pm_rail_gate(pdev, ctrl->rail_idledelay_us, false);
+		err = nvdla_pm_rail_gate(pdev, false);
 
 	return count;
 
@@ -1591,7 +2058,11 @@ static ssize_t debug_dla_ctrl_rail_idledelay_us_write(struct file *file,
 		goto fail;
 	}
 
-	ctrl->rail_idledelay_us = (uint32_t) write_value;
+	err = nvdla_pm_rail_gate_set_delay_us(pdev, (uint32_t) write_value);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "Failed to set delay us. err: %d\n", err);
+		goto fail;
+	}
 
 	return count;
 
@@ -1734,6 +2205,13 @@ static int debug_dla_ctrl_power_idlecount_open(struct inode *inode, struct file 
 static int debug_dla_ctrl_power_idledelay_us_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, debug_dla_ctrl_power_idledelay_us_show, inode->i_private);
+}
+
+static int debug_dla_ctrl_power_autosuspenddelay_us_open(struct inode *inode,
+	struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_autosuspenddelay_us_show,
+				inode->i_private);
 }
 
 static int debug_dla_ctrl_power_mode_open(struct inode *inode, struct file *file)
@@ -2234,6 +2712,14 @@ static const struct file_operations debug_dla_ctrl_power_idledelay_us_fops = {
 		.write		= debug_dla_ctrl_power_idledelay_us_write,
 };
 
+static const struct file_operations debug_dla_ctrl_power_autosuspenddelay_us_fops = {
+		.open		= debug_dla_ctrl_power_autosuspenddelay_us_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_ctrl_power_autosuspenddelay_us_write,
+};
+
 static const struct file_operations debug_dla_ctrl_power_idletime_us_fops = {
 		.open		= debug_dla_ctrl_power_idletime_us_open,
 		.read		= seq_read,
@@ -2430,6 +2916,9 @@ static void dla_ctrl_debugfs_init(struct platform_device *pdev)
 	if (!ctrl_power ||
 		!debugfs_create_file("activetime_us", 0400, ctrl_power, nvdla_dev,
 							&debug_dla_ctrl_power_activetime_us_fops) ||
+		!debugfs_create_file("autosuspenddelay_us", 0600, ctrl_power,
+			nvdla_dev,
+			&debug_dla_ctrl_power_autosuspenddelay_us_fops) ||
 		!debugfs_create_file("enable", 0600, ctrl_power, nvdla_dev,
 							&debug_dla_ctrl_power_enable_fops) ||
 		!debugfs_create_file("idlecount", 0400, ctrl_power, nvdla_dev,
