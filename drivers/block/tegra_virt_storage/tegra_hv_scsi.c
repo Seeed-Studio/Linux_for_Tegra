@@ -41,6 +41,8 @@ int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 	void *ioctl_buf = NULL;
 	uint32_t max_sb_len;
 	uint8_t *cdb;
+	uint32_t alignment_add;
+	uint32_t temp_sum;
 
 	hp = kmalloc(header_len, GFP_KERNEL);
 	if (hp == NULL) {
@@ -77,9 +79,33 @@ int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 		goto free_hp;
 	}
 
+	/* Check for subtraction overflow */
+	if (check_sub_overflow(vblkdev->config.blk_config.hardblk_size, 1U, &alignment_add)) {
+		/* True means overflow would occur */
+		err = -EINVAL;
+		goto free_hp;
+	}
+
+	/* Check for overflow in alignment calculation */
+	if (check_add_overflow(data_buf_offset, alignment_add, &temp_sum)) {
+		/* True means overflow would occur */
+		err = -EMSGSIZE;
+		goto free_hp;
+	}
+
+	/* Safe to perform alignment as no overflow detected */
 	data_buf_offset_aligned = ALIGN(data_buf_offset,
 			vblkdev->config.blk_config.hardblk_size);
+
+	/* Verify alignment result */
 	if (data_buf_offset_aligned < data_buf_offset) {
+		err = -EMSGSIZE;
+		goto free_hp;
+	}
+
+	/* Check for overflow in alignment calculation */
+	if (check_add_overflow(hp->dxfer_len, alignment_add, &temp_sum)) {
+		/* True means overflow would occur */
 		err = -EMSGSIZE;
 		goto free_hp;
 	}
@@ -204,6 +230,13 @@ int vblk_complete_sg_io(struct vblk_dev *vblkdev,
 		err = ioctl_req->status;
 		if (ioctl_req->ioctl_buf)
 			kfree(ioctl_req->ioctl_buf);
+		goto exit;
+	}
+
+	/* Validate ioctl buffer */
+	if (!ioctl_req->ioctl_buf ||
+			ioctl_req->ioctl_len < sizeof(struct vblk_sg_io_hdr)) {
+		err = -EINVAL;
 		goto exit;
 	}
 

@@ -101,6 +101,8 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 {
 	struct vsc_request *req = NULL;
 	unsigned long bit;
+	unsigned long timeout = 30*HZ;
+	unsigned long new_jiffies;
 
 	if (vblkdev->queue_state != VBLK_QUEUE_ACTIVE)
 		goto exit;
@@ -111,7 +113,18 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 		req->vs_req.req_id = bit;
 		set_bit(bit, vblkdev->pending_reqs);
 		vblkdev->inflight_reqs++;
-		mod_timer(&req->timer, jiffies + 30*HZ);
+
+		if (check_add_overflow(jiffies, timeout, &new_jiffies)) {
+			/*
+			 * with 64-bit jiffies, the timer will not overflow for a very long time.
+			 * In case it does, Calculate remaining ticks after wraparound and set the timer
+			 *   - ULONG_MAX - jiffies is the remaining ticks after wraparound
+			 *   - -1 is to count the wraparound point as one tick.
+			 */
+			unsigned long remaining = timeout - (ULONG_MAX - jiffies) - 1;
+			new_jiffies = remaining;
+		}
+		mod_timer(&req->timer, new_jiffies);
 	}
 
 exit:
@@ -203,7 +216,7 @@ static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 	}
 	vs_req = (struct vs_request *)
 		tegra_hv_ivc_write_get_next_frame(vblkdev->ivck);
-	if (IS_ERR_OR_NULL(vs_req)) {
+	if ((vs_req == NULL) || (IS_ERR(vs_req))) {
 		dev_err(vblkdev->device, "no empty frame for write\n");
 		return -EIO;
 	}
@@ -262,11 +275,20 @@ static int vblk_get_configinfo(struct vblk_dev *vblkdev)
 
 static void req_error_handler(struct vblk_dev *vblkdev, struct request *breq)
 {
+	uint64_t pos;
+
+	/* Safely multiply using check_mul_overflow */
+	if (check_mul_overflow(blk_rq_pos(breq), (uint64_t)SECTOR_SIZE, &pos)) {
+		/* Handle overflow - use max possible value */
+		pos = U64_MAX;
+		dev_err(vblkdev->device, "Position calculation overflow!\n");
+	}
+
 	dev_err(vblkdev->device,
-		"Error for request pos %llx type %llx size %x\n",
-		(blk_rq_pos(breq) * (uint64_t)SECTOR_SIZE),
-		(uint64_t)req_op(breq),
-		blk_rq_bytes(breq));
+			"Error for request pos %llx type %llx size %x\n",
+			pos,
+			(uint64_t)req_op(breq),
+			blk_rq_bytes(breq));
 
 	blk_mq_end_request(breq, BLK_STS_IOERR);
 }
@@ -873,10 +895,14 @@ static void vblk_ioctl_release(struct gendisk *disk, fmode_t mode)
 #endif
 {
 	struct vblk_dev *vblkdev = disk->private_data;
+	short val = 1;
 
 	spin_lock(&vblkdev->lock);
 
-	vblkdev->ioctl_users--;
+	/* Use check_sub_overflow to safely decrement */
+	if (check_sub_overflow(vblkdev->ioctl_users, val, &vblkdev->ioctl_users)) {
+		dev_warn(vblkdev->device, "ioctl_users counter underflow prevented\n");
+	}
 
 	spin_unlock(&vblkdev->lock);
 }
@@ -888,10 +914,14 @@ static void vblk_release(struct gendisk *disk, fmode_t mode)
 #endif
 {
 	struct vblk_dev *vblkdev = disk->private_data;
+	short val = 1;
 
 	spin_lock(&vblkdev->lock);
 
-	vblkdev->users--;
+	/* Use check_sub_overflow to safely decrement */
+	if (check_sub_overflow(vblkdev->users, val, &vblkdev->users)) {
+		dev_warn(vblkdev->device, "users counter underflow prevented\n");
+	}
 
 	spin_unlock(&vblkdev->lock);
 }
@@ -1160,7 +1190,7 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 	vblkdev->ioctl_gd->queue = vblkdev->ioctl_queue;
 	vblkdev->ioctl_gd->private_data = vblkdev;
 #if defined(GENHD_FL_EXT_DEVT) /* Removed in Linux v5.17 */
-	vblkdev->gd->flags |= GENHD_FL_EXT_DEVT;
+	vblkdev->ioctl_gd->flags |= GENHD_FL_EXT_DEVT;
 #endif
 
 	if (snprintf(vblkdev->ioctl_gd->disk_name, 32, "vblkdev%d.ctl",
@@ -1197,9 +1227,13 @@ static void setup_device(struct vblk_dev *vblkdev)
 	int err;
 #endif
 
-	vblkdev->size =
-		vblkdev->config.blk_config.num_blks *
-			vblkdev->config.blk_config.hardblk_size;
+	/* Calculate total size safely */
+	if ((check_mul_overflow(vblkdev->config.blk_config.num_blks,
+						  ((uint64_t)vblkdev->config.blk_config.hardblk_size),
+						  &vblkdev->size)) == true) {
+		dev_err(vblkdev->device, "Size calculation overflow!\n");
+		return;  /* Fail device setup */
+	}
 
 	memset(&vblkdev->tag_set, 0, sizeof(vblkdev->tag_set));
 	vblkdev->tag_set.ops = &vblk_mq_ops;
@@ -1582,7 +1616,12 @@ static void setup_device(struct vblk_dev *vblkdev)
 	if (vblkdev->config.phys_dev == VSC_DEV_EMMC) {
 		vblkdev->epl_id = IP_SDMMC;
 		vblkdev->epl_reporter_id = HSI_SDMMC4_REPORT_ID;
-		vblkdev->instance_id = total_instance_id++;
+		/* Check for overflow before incrementing */
+		if ((check_add_overflow(total_instance_id, 1U, &total_instance_id)) == true) {
+			dev_err(vblkdev->device, "Instance ID counter overflow!\n");
+			return;  /* Fail device setup */
+		}
+		vblkdev->instance_id = total_instance_id;
 	}
 
 	if (vblkdev->epl_id == IP_SDMMC) {
@@ -1605,6 +1644,7 @@ static void vblk_init_device(struct work_struct *ws)
 	struct sched_attr attr = {0};
 	char vblk_comm[VBLK_DEV_THREAD_NAME_LEN];
 	int ret = 0;
+	size_t remaining_space;
 
 	mutex_lock(&vblkdev->ivc_lock);
 	if (tegra_hv_ivc_can_read(vblkdev->ivck) && !vblkdev->initialized) {
@@ -1622,7 +1662,25 @@ static void vblk_init_device(struct work_struct *ws)
 		}
 
 		if (vblkdev->schedulable_vcpu_number != num_possible_cpus()) {
-			strncat(vblk_comm, ":%u", 3);
+
+			/* Safely calculate remaining buffer space */
+			if (check_sub_overflow((size_t)VBLK_DEV_THREAD_NAME_LEN,
+						strlen(vblk_comm), &remaining_space)) {
+				dev_err(vblkdev->device,
+						"String length calculation overflow\n");
+				mutex_unlock(&vblkdev->ivc_lock);
+				return;
+			}
+
+			/* Safely append to string using snprintf */
+			ret = snprintf(vblk_comm + strlen(vblk_comm),
+					VBLK_DEV_THREAD_NAME_LEN - strlen(vblk_comm),
+					":%u", vblkdev->schedulable_vcpu_number);
+			if (ret < 0) {
+				dev_err(vblkdev->device, "String append failed\n");
+				mutex_unlock(&vblkdev->ivc_lock);
+				return;
+			}
 
 			/* create partition specific worker thread */
 			vblkdev->vblk_kthread = kthread_create_on_cpu(&vblk_request_worker, vblkdev,
