@@ -32,6 +32,8 @@
 #define TEGRA_NVVSE_CMDID_HMAC_SHA_SIGN_VERIFY		15
 #define TEGRA_NVVSE_CMDID_MAP_MEMBUF			17
 #define TEGRA_NVVSE_CMDID_UNMAP_MEMBUF			18
+#define TEGRA_NVVSE_CMDID_ALLOCATE_KEY_SLOT		19
+#define TEGRA_NVVSE_CMDID_RELEASE_KEY_SLOT		20
 
 /** Defines the length of the AES-CBC Initial Vector */
 #define TEGRA_NVVSE_AES_IV_LEN				16U
@@ -122,6 +124,28 @@ enum tegra_nvvse_cmac_type {
 	TEGRA_NVVSE_AES_CMAC_VERIFY,
 };
 
+struct tegra_nvvse_allocate_key_slot_ctl {
+	/** [in] Holds the key id */
+	uint8_t key_id[KEYSLOT_SIZE_BYTES];
+	/** [in] Holds the token id */
+	uint8_t token_id;
+	/** [out] Holds the Key instance index */
+	uint32_t key_instance_idx;
+};
+#define NVVSE_IOCTL_CMDID_ALLOCATE_KEY_SLOT _IOWR(TEGRA_NVVSE_IOC_MAGIC, \
+						TEGRA_NVVSE_CMDID_ALLOCATE_KEY_SLOT, \
+						struct tegra_nvvse_allocate_key_slot_ctl)
+
+struct tegra_nvvse_release_key_slot_ctl {
+	/** [in] Holds the key id */
+	uint8_t key_id[KEYSLOT_SIZE_BYTES];
+	/** [in] Holds the Key instance index */
+	uint32_t key_instance_idx;
+};
+#define NVVSE_IOCTL_CMDID_RELEASE_KEY_SLOT _IOWR(TEGRA_NVVSE_IOC_MAGIC, \
+						TEGRA_NVVSE_CMDID_RELEASE_KEY_SLOT, \
+						struct tegra_nvvse_release_key_slot_ctl)
+
 /**
  * \brief Holds SHA Update Header Params
  */
@@ -176,10 +200,8 @@ struct tegra_nvvse_hmac_sha_sv_ctl {
 	uint8_t  is_last;
 	/** [in] Holds a keyslot handle which is used for HMAC-SHA operation */
 	uint8_t	key_slot[KEYSLOT_SIZE_BYTES];
-	/** [in] Holds the Key length
-	 * Supported keylength is only 16 bytes and 32 bytes
-	 */
-	uint8_t  key_length;
+	/** [in] Holds the token id */
+	uint8_t token_id;
 	/** [in] Holds a pointer to the input source buffer for which
 	 *  HMAC-SHA is to be calculated/verified.
 	 */
@@ -219,11 +241,15 @@ struct  tegra_nvvse_aes_enc_dec_ctl {
 	uint8_t		is_non_first_call;
 	/** [in] Holds a keyslot number */
 	uint8_t	key_slot[KEYSLOT_SIZE_BYTES];
-	/** [in] Holds the Key length */
-	/** Supported keylengths are 16 and 32 bytes */
-	uint8_t		key_length;
-	/** [in] Holds whether key configuration is required or not, 0 means do key configuration */
-	uint8_t		skip_key;
+	/** [in] Holds the token id */
+	uint8_t token_id;
+	/** [inout] Holds the Key instance index
+	 *  This field is programmed by SE server and returned by NVVSE RM to client during
+	 *  key slot allocation call (NvVseAllocateKeySlot()).
+	 */
+	uint32_t key_instance_idx;
+	/** [in] Holds the release key flag */
+	uint32_t release_key_flag;
 	/** [in] Holds an AES Mode */
 	enum		tegra_nvvse_aes_mode aes_mode;
 	/** [in] Holds a Boolean that specifies nonce is passed by user or not.
@@ -295,9 +321,8 @@ struct  tegra_nvvse_aes_enc_dec_ctl {
 struct tegra_nvvse_aes_gmac_init_ctl {
 	/** [in] Holds a keyslot number */
 	uint8_t	key_slot[KEYSLOT_SIZE_BYTES];
-	/** [in] Holds the Key length */
-	/** Supported keylengths are 16 and 32 bytes */
-	uint8_t   key_length;
+	/** [in] Holds the key instance index */
+	uint32_t key_instance_idx;
 	/** [out] Initial Vector (IV) used for GMAC Sign and Verify */
 	uint8_t   IV[TEGRA_NVVSE_AES_GCM_IV_LEN];
 };
@@ -325,10 +350,10 @@ struct tegra_nvvse_aes_gmac_sign_verify_ctl {
 	uint8_t  is_last;
 	/** [in] Holds a keyslot handle which is used for GMAC operation */
 	uint8_t	key_slot[KEYSLOT_SIZE_BYTES];
-	/** [in] Holds the Key length
-	 * Supported keylength is only 16 bytes and 32 bytes
-	 */
-	uint8_t  key_length;
+	/** [in] Holds the key instance index */
+	uint32_t key_instance_idx;
+	/** [in] Holds the release key flag */
+	uint32_t release_key_flag;
 	/** [in] Holds the Length of the input source buffer.
 	 * data_length shall not be "0" supported for single part sign and verify
 	 * data_length shall be multiple of 16 bytes if it is not the last chunk
@@ -407,10 +432,8 @@ struct tegra_nvvse_aes_cmac_sign_verify_ctl {
 	uint8_t  is_last;
 	/** [in] Holds a keyslot handle which is used for CMAC operation */
 	uint8_t	key_slot[KEYSLOT_SIZE_BYTES];
-	/** [in] Holds the Key length
-	 * Supported keylength is only 16 bytes and 32 bytes
-	 */
-	uint8_t  key_length;
+	/** [in] Holds the token id */
+	uint8_t token_id;
 	/** [in] Holds the Length of the input source buffer.
 	 * data_length shall not be "0" supported for single part sign and verify
 	 * data_length shall be multiple of 16 bytes if it is not the last chunk

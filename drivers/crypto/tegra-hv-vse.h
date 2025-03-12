@@ -19,6 +19,7 @@ struct tegra_vse_soc_info {
 	bool gcm_hw_iv_supported;
 	bool hmac_verify_hw_support;
 	bool zero_copy_supported;
+	bool allocate_key_slot_supported;
 };
 
 /* GCM Operation Supported Flag */
@@ -43,6 +44,13 @@ struct tegra_vse_membuf_ctx {
 	int fd;
 	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attach;
+};
+
+struct tegra_vse_key_slot_ctx {
+	uint8_t key_id[KEYSLOT_SIZE_BYTES];
+	uint8_t token_id;
+	uint32_t key_instance_idx;
+	uint32_t key_grp_id;
 };
 
 struct tegra_vse_node_dma {
@@ -118,10 +126,15 @@ struct tegra_virtual_se_aes_context {
 	/* Security Engine device */
 	struct tegra_virtual_se_dev *se_dev;
 	struct skcipher_request *req;
-	/* Security Engine key slot */
-	u8 aes_keyslot[KEYSLOT_SIZE_BYTES];
-	/* key length in bytes */
-	u32 keylen;
+	/** [in] Holds the key id */
+	uint8_t key_slot[KEYSLOT_SIZE_BYTES];
+	/** [in] Holds the token id */
+	uint8_t token_id;
+	/** [inout] Holds the Key instance index */
+	uint32_t key_instance_idx;
+	/** [in] Holds the release key flag */
+	uint32_t release_key_flag;
+
 	/* AES operation mode */
 	u32 op_mode;
 	/* Is key slot */
@@ -154,9 +167,10 @@ struct tegra_virtual_se_aes_cmac_context {
 	unsigned int digest_size;
 	bool is_first;			/* Represents first block */
 	bool req_context_initialized;	/* Mark initialization status */
-	u8 aes_keyslot[KEYSLOT_SIZE_BYTES];
-	/* key length in bits */
-	u32 keylen;
+	/** [in] Holds the key id */
+	uint8_t key_slot[KEYSLOT_SIZE_BYTES];
+	/** [in] Holds the token id */
+	uint8_t token_id;
 	bool is_key_slot_allocated;
 	/*Crypto dev instance*/
 	uint32_t node_id;
@@ -182,9 +196,13 @@ struct tegra_virtual_se_aes_gmac_context {
 	u32 authsize;
 	/* Mark initialization status */
 	bool req_context_initialized;
-	u8 aes_keyslot[KEYSLOT_SIZE_BYTES];
-	/* key length in bits */
-	u32 keylen;
+	/** [in] Holds the key id */
+	uint8_t key_slot[KEYSLOT_SIZE_BYTES];
+	/** [inout] Holds the Key instance index */
+	uint32_t key_instance_idx;
+	/** [in] Holds the release key flag */
+	uint32_t release_key_flag;
+	/* Flag to indicate if key slot is allocated*/
 	bool is_key_slot_allocated;
 	/*Crypto dev instance*/
 	uint32_t node_id;
@@ -240,10 +258,10 @@ struct tegra_virtual_se_hmac_sha_context {
 	/* Represents first block */
 	bool is_first;
 	bool is_key_slot_allocated;
-	/* Keyslot for HMAC-SHA request */
-	u8 aes_keyslot[KEYSLOT_SIZE_BYTES];
-	/* key length in bits */
-	u32 keylen;
+	/** [in] Holds the key id */
+	uint8_t key_slot[KEYSLOT_SIZE_BYTES];
+	/** [in] Holds the token id */
+	uint8_t token_id;
 	/*Crypto dev instance*/
 	uint32_t node_id;
 	uint8_t *user_src_buf;
@@ -283,5 +301,11 @@ int tegra_hv_vse_safety_unmap_membuf(struct tegra_virtual_se_membuf_context *ctx
 
 /* API to Unmap all memory buffers corresponding to a node id */
 void tegra_hv_vse_safety_unmap_all_membufs(uint32_t node_id);
+
+int tegra_hv_vse_allocate_keyslot(struct tegra_vse_key_slot_ctx *key_slot_params, uint32_t node_id);
+
+int tegra_hv_vse_release_keyslot(struct tegra_vse_key_slot_ctx *key_slot_params, uint32_t node_id);
+
+int tegra_hv_vse_close_keyslot(uint32_t node_id, uint32_t key_grp_id);
 
 #endif /*__TEGRA_HV_VSE_H*/

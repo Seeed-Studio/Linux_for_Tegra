@@ -138,6 +138,10 @@
 #define TEGRA_VIRTUAL_SE_CMD_AES_SET_KEY			0xF1
 #define TEGRA_VIRTUAL_SE_CMD_AES_ALLOC_KEY			0xF0
 
+#define TEGRA_VIRTUAL_SE_CMD_ALLOC_KEY				0x00040001U
+#define TEGRA_VIRTUAL_SE_CMD_RELEASE_KEY			0x00040002U
+#define TEGRA_VIRTUAL_SE_CMD_RELEASE_KEY_USING_GRIP	0x00040003U
+
 #define TEGRA_VIRTUAL_SE_CMD_AES_ENCRYPT_INIT    (TEGRA_VIRTUAL_SE_CMD_ENG_AES \
         | TEGRA_VIRTUAL_SE_CMD_CATEGORY_ENC_DEC \
         | TEGRA_VIRTUAL_SE_CMD_SET_AES_ENC_DEC \
@@ -393,6 +397,13 @@ struct tegra_virtual_se_addr64_buf_size {
 	u32 buf_size;
 };
 
+struct key_args {
+	uint8_t keyslot[KEYSLOT_SIZE_BYTES];
+	uint32_t key_instance;
+	uint32_t key_grp_id;
+	uint32_t token_id;
+};
+
 union tegra_virtual_se_aes_args {
 	struct keyiv {
 		u8 slot[KEYSLOT_SIZE_BYTES];
@@ -404,6 +415,8 @@ union tegra_virtual_se_aes_args {
 	} key;
 	struct aes_encdec {
 		u8 keyslot[KEYSLOT_SIZE_BYTES];
+		uint32_t key_instance;
+		uint32_t release_keyslot;
 		u32 mode;
 		u32 ivsel;
 		u8 lctr[TEGRA_VIRTUAL_SE_AES_LCTR_SIZE];
@@ -412,7 +425,6 @@ union tegra_virtual_se_aes_args {
 		u32 src_buf_size;
 		u64 dst_addr;
 		u32 dst_buf_size;
-		u32 key_length;
 	} op;
 	struct aes_gcm {
 
@@ -422,6 +434,9 @@ union tegra_virtual_se_aes_args {
 		 */
 		uint8_t keyslot[KEYSLOT_SIZE_BYTES];
 
+		uint32_t key_instance;
+		uint32_t token_id;
+		uint32_t release_keyslot;
 		uint64_t dst_addr;
 		uint32_t dst_buf_size;
 		uint64_t src_addr;
@@ -435,12 +450,6 @@ union tegra_virtual_se_aes_args {
 
 		/* TODO: ESLC-6207: use lctr instead*/
 		uint8_t iv[12];
-		/**
-		 * Key length in bytes.
-		 *
-		 * Supported key length is 16 bytes
-		 */
-		uint32_t key_length;
 		/* Config for AES-GMAC request */
 		uint32_t config;
 		u8 expected_tag[TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE];
@@ -449,12 +458,12 @@ union tegra_virtual_se_aes_args {
 	} op_gcm;
 	struct aes_cmac_sv {
 		u8 keyslot[KEYSLOT_SIZE_BYTES];
+		uint32_t token_id;
 		u32 config;
 		u32 lastblock_len;
 		u8 lastblock[TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE];
 		u64 src_addr;
 		u32 src_buf_size;
-		u32 key_length;
 		u8 cmac_result[TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE];
 		u64 mac_addr;
 		u64 mac_comp_res_addr;
@@ -480,6 +489,7 @@ union tegra_virtual_se_sha_args {
 
 struct tegra_virtual_se_hmac_sha_args {
 	u8 keyslot[KEYSLOT_SIZE_BYTES];
+	uint32_t token_id;
 	u32 mode;
 	u32 lastblock_len;
 	u8 lastblock[TEGRA_VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT];
@@ -555,6 +565,7 @@ struct tegra_virtual_se_ivc_tx_msg_t {
 	u32 tag;
 	u32 cmd;
 	union {
+		struct key_args keys;
 		union tegra_virtual_se_aes_args aes;
 		union tegra_virtual_se_sha_args sha;
 		struct tegra_virtual_tsec_args tsec[TEGRA_HV_VSE_MAX_TSEC_TASKS_PER_SUBMIT];
@@ -1037,6 +1048,293 @@ static const struct tegra_vse_dma_buf *tegra_hv_vse_get_dma_buf(
 	}
 	return &g_node_dma[node_id].se_dma_buf[buf_idx];
 }
+
+int tegra_hv_vse_allocate_keyslot(struct tegra_vse_key_slot_ctx *key_slot,
+	uint32_t node_id)
+{
+	struct tegra_virtual_se_dev *se_dev = NULL;
+	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg = NULL;
+	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
+	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
+	struct tegra_hv_ivc_cookie *pivck;
+	struct tegra_vse_priv_data *priv = NULL;
+	struct tegra_vse_tag *priv_data_ptr;
+	int err = 0;
+
+	if (node_id >= MAX_NUMBER_MISC_DEVICES) {
+		VSE_ERR("%s: node_id is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	se_dev = g_crypto_to_ivc_map[node_id].se_dev;
+	if (!se_dev) {
+		VSE_ERR("%s: se_dev is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!se_dev->chipdata->allocate_key_slot_supported) {
+		dev_err(se_dev->dev, "%s: Allocate Keyslot is not supported\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!key_slot) {
+		dev_err(se_dev->dev, "%s: key slot params is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (atomic_read(&se_dev->se_suspended)) {
+		dev_err(se_dev->dev, "Engine is in suspended state\n");
+		return -ENODEV;
+	}
+
+	pivck = g_crypto_to_ivc_map[node_id].ivck;
+	if (!pivck) {
+		dev_err(se_dev->dev, "No IVC channel\n");
+		return -ENODEV;
+	}
+
+	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	ivc_req_msg = devm_kzalloc(se_dev->dev, sizeof(*ivc_req_msg), GFP_KERNEL);
+	if (!ivc_req_msg) {
+		err = -ENOMEM;
+		goto free_priv;
+	}
+
+	ivc_tx = &ivc_req_msg->tx[0];
+	ivc_hdr = &ivc_req_msg->ivc_hdr;
+	ivc_hdr->num_reqs = 1;
+	ivc_hdr->header_magic[0] = 'N';
+	ivc_hdr->header_magic[1] = 'V';
+	ivc_hdr->header_magic[2] = 'D';
+	ivc_hdr->header_magic[3] = 'A';
+	ivc_hdr->engine = g_crypto_to_ivc_map[node_id].engine_id;
+
+	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
+	priv_data_ptr->priv_data = (unsigned int *)priv;
+	priv->cmd = VIRTUAL_SE_KEY_SLOT;
+	priv->se_dev = se_dev;
+
+	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_ALLOC_KEY;
+	memcpy(ivc_tx->keys.keyslot, key_slot->key_id, KEYSLOT_SIZE_BYTES);
+
+	ivc_tx->keys.key_grp_id = key_slot->key_grp_id;
+	ivc_tx->keys.token_id = key_slot->token_id;
+	g_crypto_to_ivc_map[node_id].vse_thread_start = true;
+	init_completion(&priv->alg_complete);
+
+	err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, priv, ivc_req_msg,
+		sizeof(struct tegra_virtual_se_ivc_msg_t), node_id);
+	if (err) {
+		dev_err(se_dev->dev, "Failed to send IVC message: %d\n", err);
+		goto free_mem;
+	}
+
+	if (priv->rx_status) {
+		dev_err(se_dev->dev, "Key slot allocation failed with error: %d\n",
+		priv->rx_status);
+		err = -EINVAL;
+		goto free_mem;
+	}
+
+	key_slot->key_instance_idx = priv->slot_num;
+
+free_mem:
+	devm_kfree(se_dev->dev, ivc_req_msg);
+free_priv:
+	devm_kfree(se_dev->dev, priv);
+	return err;
+}
+EXPORT_SYMBOL(tegra_hv_vse_allocate_keyslot);
+
+int tegra_hv_vse_close_keyslot(uint32_t node_id, uint32_t key_grp_id)
+{
+	struct tegra_virtual_se_dev *se_dev = NULL;
+	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg = NULL;
+	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
+	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
+	struct tegra_hv_ivc_cookie *pivck;
+	struct tegra_vse_priv_data *priv = NULL;
+	struct tegra_vse_tag *priv_data_ptr;
+	int err = 0;
+
+	if (node_id >= MAX_NUMBER_MISC_DEVICES) {
+		VSE_ERR("%s: node_id is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	se_dev = g_crypto_to_ivc_map[node_id].se_dev;
+	if (!se_dev) {
+		VSE_ERR("%s: se_dev is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!se_dev->chipdata->allocate_key_slot_supported) {
+		dev_err(se_dev->dev, "%s: allocate_key_slot_supported is not supported\n", __func__);
+		return -EINVAL;
+	}
+
+	if (atomic_read(&se_dev->se_suspended)) {
+		dev_err(se_dev->dev, "Engine is in suspended state\n");
+		return -ENODEV;
+	}
+
+	pivck = g_crypto_to_ivc_map[node_id].ivck;
+	if (!pivck) {
+		dev_err(se_dev->dev, "No IVC channel\n");
+		return -ENODEV;
+	}
+
+	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	ivc_req_msg = devm_kzalloc(se_dev->dev, sizeof(*ivc_req_msg), GFP_KERNEL);
+	if (!ivc_req_msg) {
+		err = -ENOMEM;
+		goto free_priv;
+	}
+
+	ivc_tx = &ivc_req_msg->tx[0];
+	ivc_hdr = &ivc_req_msg->ivc_hdr;
+	ivc_hdr->num_reqs = 1;
+	ivc_hdr->header_magic[0] = 'N';
+	ivc_hdr->header_magic[1] = 'V';
+	ivc_hdr->header_magic[2] = 'D';
+	ivc_hdr->header_magic[3] = 'A';
+
+	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_RELEASE_KEY_USING_GRIP;
+	ivc_tx->keys.key_grp_id = key_grp_id;
+
+	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
+	priv_data_ptr->priv_data = (unsigned int *)priv;
+	priv->cmd = VIRTUAL_SE_KEY_SLOT;
+	priv->se_dev = se_dev;
+
+	g_crypto_to_ivc_map[node_id].vse_thread_start = true;
+	init_completion(&priv->alg_complete);
+
+	err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, priv, ivc_req_msg,
+		sizeof(struct tegra_virtual_se_ivc_msg_t), node_id);
+	if (err) {
+		dev_err(se_dev->dev, "Failed to send IVC message: %d\n", err);
+		goto free_mem;
+	}
+
+	if (priv->rx_status) {
+		dev_err(se_dev->dev, "Key slot release failed with error: %d\n",
+		priv->rx_status);
+		err = -EINVAL;
+	}
+
+free_mem:
+	devm_kfree(se_dev->dev, ivc_req_msg);
+free_priv:
+	devm_kfree(se_dev->dev, priv);
+
+	return err;
+}
+EXPORT_SYMBOL(tegra_hv_vse_close_keyslot);
+
+int tegra_hv_vse_release_keyslot(struct tegra_vse_key_slot_ctx *key_slot, uint32_t node_id)
+{
+	struct tegra_virtual_se_dev *se_dev = NULL;
+	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg = NULL;
+	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
+	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
+	struct tegra_hv_ivc_cookie *pivck;
+	struct tegra_vse_priv_data *priv = NULL;
+	struct tegra_vse_tag *priv_data_ptr;
+	int err = 0;
+
+	if (node_id >= MAX_NUMBER_MISC_DEVICES) {
+		VSE_ERR("%s: node_id is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	se_dev = g_crypto_to_ivc_map[node_id].se_dev;
+	if (!se_dev) {
+		VSE_ERR("%s: se_dev is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!se_dev->chipdata->allocate_key_slot_supported) {
+		dev_err(se_dev->dev, "%s: allocate_key_slot_supported is not supported\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!key_slot) {
+		dev_err(se_dev->dev, "%s: key slot params is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Return error if engine is in suspended state */
+	if (atomic_read(&se_dev->se_suspended)) {
+		dev_err(se_dev->dev, "Engine is in suspended state\n");
+		return -ENODEV;
+	}
+
+	pivck = g_crypto_to_ivc_map[node_id].ivck;
+	if (!pivck) {
+		dev_err(se_dev->dev, "No IVC channel\n");
+		return -ENODEV;
+	}
+
+	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	ivc_req_msg = devm_kzalloc(se_dev->dev, sizeof(*ivc_req_msg), GFP_KERNEL);
+	if (!ivc_req_msg) {
+		err = -ENOMEM;
+		goto free_priv;
+	}
+
+	ivc_tx = &ivc_req_msg->tx[0];
+	ivc_hdr = &ivc_req_msg->ivc_hdr;
+	ivc_hdr->num_reqs = 1;
+	ivc_hdr->header_magic[0] = 'N';
+	ivc_hdr->header_magic[1] = 'V';
+	ivc_hdr->header_magic[2] = 'D';
+	ivc_hdr->header_magic[3] = 'A';
+	ivc_hdr->engine = g_crypto_to_ivc_map[node_id].engine_id;
+
+	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
+	priv_data_ptr->priv_data = (unsigned int *)priv;
+	priv->cmd = VIRTUAL_SE_KEY_SLOT;
+	priv->se_dev = se_dev;
+
+	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_RELEASE_KEY;
+	memcpy(ivc_tx->keys.keyslot, key_slot->key_id, KEYSLOT_SIZE_BYTES);
+	ivc_tx->keys.token_id = key_slot->token_id;
+	ivc_tx->keys.key_instance = key_slot->key_instance_idx;
+
+	g_crypto_to_ivc_map[node_id].vse_thread_start = true;
+	init_completion(&priv->alg_complete);
+
+	err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, priv, ivc_req_msg,
+		sizeof(struct tegra_virtual_se_ivc_msg_t), node_id);
+	if (err) {
+		dev_err(se_dev->dev, "Failed to send IVC message: %d\n", err);
+		goto free_mem;
+	}
+
+	if (priv->rx_status) {
+		dev_err(se_dev->dev, "Key slot release failed with error: %d\n",
+		priv->rx_status);
+		err = -EINVAL;
+	}
+
+free_mem:
+	devm_kfree(se_dev->dev, ivc_req_msg);
+free_priv:
+	devm_kfree(se_dev->dev, priv);
+
+	return err;
+}
+EXPORT_SYMBOL(tegra_hv_vse_release_keyslot);
 
 static int tegra_vse_validate_hmac_sha_params(struct tegra_virtual_se_hmac_sha_context *hmac_ctx,
 		bool is_last)
@@ -1619,18 +1917,13 @@ static int tegra_hv_vse_safety_hmac_sha_setkey(struct crypto_ahash *tfm, const u
 
 	se_dev = g_crypto_to_ivc_map[hmac_ctx->node_id].se_dev;
 
-	if (keylen != 32) {
-		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
-		return -EINVAL;
-	}
-
 	/* format: 'NVSEAES 1234567\0' */
 	is_keyslot_label = sscanf(key, "%s", label) == 1 &&
 		!strcmp(label, TEGRA_VIRTUAL_SE_AES_KEYSLOT_LABEL);
 
 	if (is_keyslot_label) {
-		hmac_ctx->keylen = keylen;
-		memcpy(hmac_ctx->aes_keyslot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
+		memcpy(hmac_ctx->key_slot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
+
 		hmac_ctx->is_key_slot_allocated = true;
 	} else {
 		dev_err(se_dev->dev, "%s: Invalid keyslot label %s\n", __func__, key);
@@ -1771,7 +2064,9 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req,
 	phmac->msg_total_length[3] = 0;
 	phmac->msg_left_length[2] = 0;
 	phmac->msg_left_length[3] = 0;
-	memcpy(phmac->keyslot, hmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
+	memcpy(phmac->keyslot, hmac_ctx->key_slot, KEYSLOT_SIZE_BYTES);
+	if (se_dev->chipdata->allocate_key_slot_supported)
+		phmac->token_id = hmac_ctx->token_id;
 	phmac->src_addr = src->buf_iova;
 
 	if (hmac_ctx->request_type == TEGRA_HV_VSE_HMAC_SHA_SIGN)
@@ -2054,6 +2349,7 @@ static int tegra_hv_vse_safety_hmac_sha_finup(struct ahash_request *req)
 		dev_err(se_dev->dev, "tegra_se_hmac_sha_finup failed - %d\n", ret);
 
 	hmac_ctx->is_key_slot_allocated = false;
+
 	req_ctx->req_context_initialized = false;
 
 	return ret;
@@ -2115,8 +2411,9 @@ static void tegra_hv_vse_safety_prepare_cmd(struct tegra_virtual_se_dev *se_dev,
 	else
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_DECRYPT;
 
-	memcpy(aes->op.keyslot, aes_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	aes->op.key_length = aes_ctx->keylen;
+	memcpy(aes->op.keyslot, aes_ctx->key_slot, KEYSLOT_SIZE_BYTES);
+	aes->op.release_keyslot = aes_ctx->release_key_flag;
+	aes->op.key_instance = aes_ctx->key_instance_idx;
 	aes->op.mode = req_ctx->op_mode;
 	aes->op.ivsel = AES_ORIGINAL_IV;
 	memcpy(aes->op.lctr, aes_ctx->iv,
@@ -2146,8 +2443,8 @@ static int tegra_hv_vse_safety_aes_gen_random_iv(
 
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_ENCRYPT_INIT;
 	priv->cmd = VIRTUAL_SE_PROCESS;
-	memcpy(aes->op.keyslot, aes_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	aes->op.key_length = aes_ctx->keylen;
+	memcpy(aes->op.keyslot, aes_ctx->key_slot, KEYSLOT_SIZE_BYTES);
+	aes->op.key_instance = aes_ctx->key_instance_idx;
 	pivck = g_crypto_to_ivc_map[aes_ctx->node_id].ivck;
 
 	init_completion(&priv->alg_complete);
@@ -2550,7 +2847,7 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req,
 	ivc_tx->tsec[0U].dst_addr = mac->buf_iova;
 	ivc_tx->tsec[0U].fw_status_addr = fw_status->buf_iova;
 	ivc_tx->tsec[0U].src_buf_size = cmac_ctx->user_src_buf_size;
-	ivc_tx->tsec[0U].keyslot = *((uint64_t *)cmac_ctx->aes_keyslot);
+	ivc_tx->tsec[0U].keyslot = *((uint64_t *)cmac_ctx->key_slot);
 
 	if (cmac_ctx->request_type == TEGRA_HV_VSE_CMAC_SIGN) {
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_TSEC_SIGN;
@@ -2710,8 +3007,8 @@ static int tegra_hv_vse_safety_cmac_sv_op_hw_verify_supported(
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_CMAC_VERIFY;
 		ivc_tx->aes.op_cmac_sv.mac_comp_res_addr = comp->buf_iova;
 	}
-	memcpy(ivc_tx->aes.op_cmac_sv.keyslot, cmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	ivc_tx->aes.op_cmac_sv.key_length = cmac_ctx->keylen;
+	memcpy(ivc_tx->aes.op_cmac_sv.keyslot, cmac_ctx->key_slot, KEYSLOT_SIZE_BYTES);
+	ivc_tx->aes.op_cmac_sv.token_id = cmac_ctx->token_id;
 	ivc_tx->aes.op_cmac_sv.config = 0;
 
 	if (cmac_ctx->b_is_sm4 == 1U)
@@ -2867,8 +3164,7 @@ static int tegra_hv_vse_safety_cmac_sv_op(struct ahash_request *req,
 	else
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_CMAC_VERIFY;
 
-	memcpy(ivc_tx->aes.op_cmac_sv.keyslot, cmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	ivc_tx->aes.op_cmac_sv.key_length = cmac_ctx->keylen;
+	memcpy(ivc_tx->aes.op_cmac_sv.keyslot, cmac_ctx->key_slot, KEYSLOT_SIZE_BYTES);
 	ivc_tx->aes.op_cmac_sv.src_buf_size = blocks_to_process * TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE;
 	ivc_tx->aes.op_cmac_sv.config = 0;
 	if (is_last == true)
@@ -3423,18 +3719,12 @@ static int tegra_hv_vse_safety_cmac_setkey(struct crypto_ahash *tfm, const u8 *k
 
 	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
-	if ((keylen != 16) && (keylen != 32)) {
-		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
-		return -EINVAL;
-	}
-
 	/* format: 'NVSEAES 1234567\0' */
 	is_keyslot_label = sscanf(key, "%s", label) == 1 &&
 		!strcmp(label, TEGRA_VIRTUAL_SE_AES_KEYSLOT_LABEL);
 
 	if (is_keyslot_label) {
-		ctx->keylen = keylen;
-		memcpy(ctx->aes_keyslot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
+		memcpy(ctx->key_slot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
 		ctx->is_key_slot_allocated = true;
 	} else {
 		dev_err(se_dev->dev, "%s: Invalid keyslot label %s\n", __func__, key);
@@ -3471,18 +3761,12 @@ static int tegra_hv_vse_safety_aes_setkey(struct crypto_skcipher *tfm,
 
 	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
-	if ((keylen != 16) && (keylen != 32)) {
-		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
-		return -EINVAL;
-	}
-
 	/* format: 'NVSEAES 1234567\0' */
 	is_keyslot_label = sscanf(key, "%s", label) == 1 &&
 		!strcmp(label, TEGRA_VIRTUAL_SE_AES_KEYSLOT_LABEL);
 
 	if (is_keyslot_label) {
-		ctx->keylen = keylen;
-		memcpy(ctx->aes_keyslot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
+		memcpy(ctx->key_slot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
 		ctx->is_key_slot_allocated = true;
 	} else {
 		dev_err(se_dev->dev, "%s: Invalid keyslot label %s", __func__, key);
@@ -3629,18 +3913,12 @@ static int tegra_vse_aes_gcm_setkey(struct crypto_aead *tfm, const u8 *key,
 
 	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
-	if ((keylen != 16) && (keylen != 32)) {
-		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
-		return -EINVAL;
-	}
-
 	/* format: 'NVSEAES 1234567\0' */
 	is_keyslot_label = sscanf(key, "%s", label) == 1 &&
 		!strcmp(label, TEGRA_VIRTUAL_SE_AES_KEYSLOT_LABEL);
 
 	if (is_keyslot_label) {
-		ctx->keylen = keylen;
-		memcpy(ctx->aes_keyslot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
+		memcpy(ctx->key_slot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
 		ctx->is_key_slot_allocated = true;
 	} else {
 		dev_err(se_dev->dev, "%s: Invalid keyslot label %s\n", __func__, key);
@@ -3813,8 +4091,7 @@ static int tegra_vse_aes_gcm_enc_dec(struct aead_request *req,
 
 	g_crypto_to_ivc_map[aes_ctx->node_id].vse_thread_start = true;
 
-	memcpy(ivc_tx->aes.op_gcm.keyslot, aes_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	ivc_tx->aes.op_gcm.key_length = aes_ctx->keylen;
+	memcpy(ivc_tx->aes.op_gcm.keyslot, aes_ctx->key_slot, KEYSLOT_SIZE_BYTES);
 
 	if (encrypt) {
 		/*
@@ -4036,8 +4313,8 @@ static int tegra_vse_aes_gcm_enc_dec_hw_support(struct aead_request *req,
 
 	g_crypto_to_ivc_map[aes_ctx->node_id].vse_thread_start = true;
 
-	memcpy(ivc_tx->aes.op_gcm.keyslot, aes_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	ivc_tx->aes.op_gcm.key_length = aes_ctx->keylen;
+	memcpy(ivc_tx->aes.op_gcm.keyslot, aes_ctx->key_slot, KEYSLOT_SIZE_BYTES);
+	ivc_tx->aes.op_gcm.token_id = aes_ctx->token_id;
 
 	if (encrypt) {
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_GCM_CMD_ENCRYPT;
@@ -4288,19 +4565,12 @@ static int tegra_hv_vse_aes_gmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	se_dev = g_crypto_to_ivc_map[ctx->node_id].se_dev;
 
-	if ((keylen != 16) && (keylen != 32)) {
-		dev_err(se_dev->dev, "%s: Unsupported key length: %d", __func__, keylen);
-		err = -EINVAL;
-		goto exit;
-	}
-
 	/* format: 'NVSEAES 1234567\0' */
 	is_keyslot_label = sscanf(key, "%s", label) == 1 &&
 		(!strcmp(label, TEGRA_VIRTUAL_SE_AES_KEYSLOT_LABEL));
 
 	if (is_keyslot_label) {
-		ctx->keylen = keylen;
-		memcpy(ctx->aes_keyslot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
+		memcpy(ctx->key_slot, key + KEYSLOT_OFFSET_BYTES, KEYSLOT_SIZE_BYTES);
 		ctx->is_key_slot_allocated = true;
 	} else {
 		dev_err(se_dev->dev,
@@ -4393,8 +4663,8 @@ static int tegra_hv_vse_aes_gmac_sv_init(struct ahash_request *req)
 	priv->se_dev = se_dev;
 
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_GMAC_CMD_INIT;
-	memcpy(ivc_tx->aes.op_gcm.keyslot, gmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	ivc_tx->aes.op_gcm.key_length = gmac_ctx->keylen;
+	memcpy(ivc_tx->aes.op_gcm.keyslot, gmac_ctx->key_slot, KEYSLOT_SIZE_BYTES);
+	ivc_tx->aes.op_gcm.key_instance = gmac_ctx->key_instance_idx;
 
 	g_crypto_to_ivc_map[gmac_ctx->node_id].vse_thread_start = true;
 	pivck = g_crypto_to_ivc_map[gmac_ctx->node_id].ivck;
@@ -4415,6 +4685,7 @@ static int tegra_hv_vse_aes_gmac_sv_init(struct ahash_request *req)
 	}
 
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_CMD_GET_GMAC_IV;
+	ivc_tx->aes.op_gcm.key_instance = gmac_ctx->key_instance_idx;
 	priv->cmd = VIRTUAL_SE_AES_GCM_ENC_PROCESS;
 	init_completion(&priv->alg_complete);
 	err = tegra_hv_vse_safety_send_ivc_wait(se_dev, pivck, priv, ivc_req_msg,
@@ -4519,8 +4790,7 @@ static int tegra_hv_vse_aes_gmac_sv_op(struct ahash_request *req,
 	else
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_GMAC_CMD_VERIFY;
 
-	memcpy(ivc_tx->aes.op_gcm.keyslot, gmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	ivc_tx->aes.op_gcm.key_length = gmac_ctx->keylen;
+	memcpy(ivc_tx->aes.op_gcm.keyslot, gmac_ctx->key_slot, KEYSLOT_SIZE_BYTES);
 	ivc_tx->aes.op_gcm.aad_buf_size = gmac_ctx->user_aad_buf_size;
 	ivc_tx->aes.op_gcm.aad_addr = (u32)(aad->buf_iova & U32_MAX);
 
@@ -4709,8 +4979,9 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req,
 	else
 		ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_GMAC_CMD_VERIFY;
 
-	memcpy(ivc_tx->aes.op_gcm.keyslot, gmac_ctx->aes_keyslot, KEYSLOT_SIZE_BYTES);
-	ivc_tx->aes.op_gcm.key_length = gmac_ctx->keylen;
+	memcpy(ivc_tx->aes.op_gcm.keyslot, gmac_ctx->key_slot, KEYSLOT_SIZE_BYTES);
+	ivc_tx->aes.op_gcm.key_instance = gmac_ctx->key_instance_idx;
+	ivc_tx->aes.op_gcm.release_keyslot = gmac_ctx->release_key_flag;
 	ivc_tx->aes.op_gcm.aad_buf_size = gmac_ctx->user_aad_buf_size;
 	ivc_tx->aes.op_gcm.aad_addr = aad_addr;
 
@@ -5289,6 +5560,7 @@ static const struct tegra_vse_soc_info t234_vse_sinfo = {
 	.gcm_hw_iv_supported = false,
 	.hmac_verify_hw_support = false,
 	.zero_copy_supported = false,
+	.allocate_key_slot_supported = false,
 };
 
 static const struct tegra_vse_soc_info se_51_vse_sinfo = {
@@ -5297,6 +5569,7 @@ static const struct tegra_vse_soc_info se_51_vse_sinfo = {
 	.gcm_hw_iv_supported = true,
 	.hmac_verify_hw_support = true,
 	.zero_copy_supported = true,
+	.allocate_key_slot_supported = true,
 };
 
 static const struct of_device_id tegra_hv_vse_safety_of_match[] = {

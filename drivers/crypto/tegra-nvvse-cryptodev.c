@@ -124,6 +124,8 @@ struct tnvvse_crypto_ctx {
 	char				*sha_result;
 	uint32_t			node_id;
 	bool				is_zero_copy_node;
+	uint32_t			allocated_key_slot_count;
+	uint32_t			key_grp_id;
 };
 
 #if (KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE)
@@ -191,6 +193,71 @@ static int update_counter(uint8_t *pctr_be, uint32_t size)
 
 fail:
 	return status;
+}
+
+static int tnvvse_crypto_allocate_key_slot(struct tnvvse_crypto_ctx *ctx,
+	struct tegra_nvvse_allocate_key_slot_ctl *key_slot_allocate_ctl)
+{
+	struct tegra_vse_key_slot_ctx key_slot_params;
+	int err = 0;
+
+	if (!ctx || !key_slot_allocate_ctl) {
+		CRYPTODEV_ERR("%s: Invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	ctx->key_grp_id = current->pid;
+	memset(&key_slot_params, 0, sizeof(key_slot_params));
+	memcpy(key_slot_params.key_id, key_slot_allocate_ctl->key_id, KEYSLOT_SIZE_BYTES);
+	key_slot_params.token_id = key_slot_allocate_ctl->token_id;
+	key_slot_params.key_grp_id = ctx->key_grp_id;
+	err = tegra_hv_vse_allocate_keyslot(&key_slot_params, ctx->node_id);
+	if (err) {
+		CRYPTODEV_ERR("%s: Failed to allocate key slot, error: %d\n",
+		__func__, err);
+		return err;
+	}
+
+	ctx->allocated_key_slot_count += 1U;
+
+	key_slot_allocate_ctl->key_instance_idx = key_slot_params.key_instance_idx;
+
+	return 0;
+}
+
+static int tnvvse_crypto_release_key_slot(struct tnvvse_crypto_ctx *ctx,
+	struct tegra_nvvse_release_key_slot_ctl *key_slot_release_ctl)
+{
+	int err = 0;
+	struct tegra_vse_key_slot_ctx vse_key_slot;
+
+	if (!ctx) {
+		CRYPTODEV_ERR("%s: Invalid context\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!key_slot_release_ctl) {
+		CRYPTODEV_ERR("Key slot release ctl is NULL\n");
+		return -EINVAL;
+	}
+	if (ctx->allocated_key_slot_count == 0) {
+		CRYPTODEV_ERR("No key slots allocated to release\n");
+		return -EINVAL;
+	}
+
+	memset(&vse_key_slot, 0, sizeof(vse_key_slot));
+	memcpy(vse_key_slot.key_id, key_slot_release_ctl->key_id, sizeof(vse_key_slot.key_id));
+	vse_key_slot.key_instance_idx = key_slot_release_ctl->key_instance_idx;
+
+	err = tegra_hv_vse_release_keyslot(&vse_key_slot, ctx->node_id);
+	if (err) {
+		CRYPTODEV_ERR("Failed to release key slot: %d\n", err);
+		return err;
+	}
+
+	ctx->allocated_key_slot_count -= 1U;
+
+	return 0;
 }
 
 static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
@@ -514,8 +581,7 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	(void)snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, hmac_sha_ctl->key_slot,
 		KEYSLOT_SIZE_BYTES);
-
-	ret = crypto_ahash_setkey(tfm, key_as_keyslot, hmac_sha_ctl->key_length);
+	ret = crypto_ahash_setkey(tfm, key_as_keyslot, KEYSLOT_SIZE_BYTES);
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to set keys for hmac: %d\n", __func__, ret);
 		goto free_tfm;
@@ -535,6 +601,7 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	sha_state->hmac_sha_total_msg_length += hmac_sha_ctl->data_length;
 	sha_state->hmac_sha_init_done = 1;
 	hmac_ctx->total_count = sha_state->hmac_sha_total_msg_length;
+	hmac_ctx->token_id = hmac_sha_ctl->token_id;
 
 	if (hmac_sha_ctl->is_first == 1)
 		hmac_ctx->is_first = true;
@@ -656,7 +723,7 @@ static int tnvvtsec_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, aes_cmac_ctl->key_slot, KEYSLOT_SIZE_BYTES);
 
 	cmac_ctx->result = 0;
-	ret = crypto_ahash_setkey(tfm, key_as_keyslot, aes_cmac_ctl->key_length);
+	ret = crypto_ahash_setkey(tfm, key_as_keyslot, KEYSLOT_SIZE_BYTES);
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to set keys for cmac-tsec(aes): %d\n", __func__, ret);
 		ret = -EINVAL;
@@ -762,9 +829,9 @@ static int tnvvse_crypto_aes_cmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 
 	ret = snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, aes_cmac_ctl->key_slot, KEYSLOT_SIZE_BYTES);
-
+	cmac_ctx->token_id = aes_cmac_ctl->token_id;
 	cmac_ctx->result = 0;
-	ret = crypto_ahash_setkey(tfm, key_as_keyslot, aes_cmac_ctl->key_length);
+	ret = crypto_ahash_setkey(tfm, key_as_keyslot, KEYSLOT_SIZE_BYTES);
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to set keys for cmac-vse(aes): %d\n", __func__, ret);
 		goto free_req;
@@ -807,7 +874,7 @@ static int tnvvse_crypto_aes_gmac_init(struct tnvvse_crypto_ctx *ctx,
 	struct ahash_request *req;
 	const char *driver_name;
 	uint8_t iv[TEGRA_NVVSE_AES_GCM_IV_LEN];
-	int ret = -ENOMEM, klen;
+	int ret = -ENOMEM;
 
 	tfm = crypto_alloc_ahash("gmac-vse(aes)", 0, 0);
 	if (IS_ERR(tfm)) {
@@ -842,8 +909,7 @@ static int tnvvse_crypto_aes_gmac_init(struct tnvvse_crypto_ctx *ctx,
 	ret = snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, gmac_init_ctl->key_slot, KEYSLOT_SIZE_BYTES);
 
-	klen = gmac_init_ctl->key_length;
-	ret = crypto_ahash_setkey(tfm, key_as_keyslot, klen);
+	ret = crypto_ahash_setkey(tfm, key_as_keyslot, KEYSLOT_SIZE_BYTES);
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to set keys for gmac-vse(aes): %d\n", __func__, ret);
 		goto free_req;
@@ -851,6 +917,7 @@ static int tnvvse_crypto_aes_gmac_init(struct tnvvse_crypto_ctx *ctx,
 
 	memset(iv, 0, TEGRA_NVVSE_AES_GCM_IV_LEN);
 	gmac_ctx->request_type = TEGRA_HV_VSE_GMAC_INIT;
+	gmac_ctx->key_instance_idx = gmac_init_ctl->key_instance_idx;
 	gmac_ctx->iv = iv;
 
 	ret = wait_async_op(&sha_state->sha_complete, crypto_ahash_init(req));
@@ -878,7 +945,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	char key_as_keyslot[AES_KEYSLOT_NAME_SIZE] = {0,};
 	struct crypto_ahash *tfm;
 	const char *driver_name;
-	int ret = -EINVAL, klen;
+	int ret = -EINVAL;
 
 	if (!req) {
 		CRYPTODEV_ERR("%s AES-GMAC request not valid\n", __func__);
@@ -894,6 +961,8 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	gmac_ctx = crypto_ahash_ctx(tfm);
 	gmac_ctx->node_id = ctx->node_id;
 	gmac_ctx->b_is_sm4 = gmac_sign_verify_ctl->b_is_sm4;
+	gmac_ctx->release_key_flag = gmac_sign_verify_ctl->release_key_flag;
+	gmac_ctx->key_instance_idx = gmac_sign_verify_ctl->key_instance_idx;
 
 	driver_name = crypto_tfm_alg_driver_name(crypto_ahash_tfm(tfm));
 	if (driver_name == NULL) {
@@ -911,9 +980,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	ret = snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, gmac_sign_verify_ctl->key_slot,
 		KEYSLOT_SIZE_BYTES);
-
-	klen = gmac_sign_verify_ctl->key_length;
-	ret = crypto_ahash_setkey(tfm, key_as_keyslot, klen);
+	ret = crypto_ahash_setkey(tfm, key_as_keyslot, KEYSLOT_SIZE_BYTES);
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to set keys for gmac-vse(aes): %d\n", __func__, ret);
 		goto out;
@@ -1007,6 +1074,9 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		goto free_req;
 	}
 
+	gmac_ctx->release_key_flag = gmac_sign_verify_ctl->release_key_flag;
+	gmac_ctx->key_instance_idx = gmac_sign_verify_ctl->key_instance_idx;
+
 	if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_SIGN)
 		gmac_ctx->request_type = TEGRA_HV_VSE_GMAC_SIGN;
 	else
@@ -1043,6 +1113,9 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 			goto free_req;
 		}
 	}
+
+	if (gmac_sign_verify_ctl->release_key_flag)
+		ctx->allocated_key_slot_count -= 1;
 
 	if (gmac_sign_verify_ctl->is_last) {
 		if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_VERIFY)
@@ -1135,6 +1208,8 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	aes_ctx = crypto_skcipher_ctx(tfm);
 	aes_ctx->node_id = ctx->node_id;
 	aes_ctx->user_nonce = aes_enc_dec_ctl->user_nonce;
+	aes_ctx->release_key_flag = aes_enc_dec_ctl->release_key_flag;
+
 	if (aes_enc_dec_ctl->is_non_first_call != 0U)
 		aes_ctx->b_is_first = 0U;
 	else {
@@ -1158,16 +1233,6 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	pr_debug("%s(): The skcipher driver name is %s for %s\n",
 				__func__, driver_name, aes_algo[aes_enc_dec_ctl->aes_mode]);
 
-	if (((aes_enc_dec_ctl->key_length & CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_128_SIZE) &&
-		((aes_enc_dec_ctl->key_length & CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_192_SIZE) &&
-		((aes_enc_dec_ctl->key_length & CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_256_SIZE) &&
-		((aes_enc_dec_ctl->key_length & CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_512_SIZE)) {
-		ret = -EINVAL;
-		CRYPTODEV_ERR("%s(): crypt_req keylen(%d) invalid",
-		__func__, aes_enc_dec_ctl->key_length);
-		goto free_req;
-	}
-
 	crypto_skcipher_clear_flags(tfm, ~0);
 
 	ret = snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
@@ -1181,14 +1246,14 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		goto free_req;
 	}
 
-	ret = crypto_skcipher_setkey(tfm, key_as_keyslot, aes_enc_dec_ctl->key_length);
+	ret = crypto_skcipher_setkey(tfm, key_as_keyslot, KEYSLOT_SIZE_BYTES);
 	if (ret < 0) {
 		CRYPTODEV_ERR("%s(): Failed to set key: %d\n", __func__, ret);
 		goto free_req;
 	}
 
 	aes_ctx->user_src_buf_size = aes_enc_dec_ctl->data_length;
-
+	aes_ctx->key_instance_idx = aes_enc_dec_ctl->key_instance_idx;
 	init_completion(&tcrypt_complete.restart);
 
 	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
@@ -1284,6 +1349,9 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		}
 	}
 
+	if (aes_enc_dec_ctl->release_key_flag)
+		ctx->allocated_key_slot_count -= 1;
+
 free_req:
 	skcipher_request_free(req);
 
@@ -1349,15 +1417,6 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 	pr_debug("%s(): The aead driver name is %s for gcm-vse(aes)\n",
 						__func__, driver_name);
 
-	if ((aes_enc_dec_ctl->key_length != TEGRA_CRYPTO_KEY_128_SIZE) &&
-		(aes_enc_dec_ctl->key_length != TEGRA_CRYPTO_KEY_192_SIZE) &&
-		(aes_enc_dec_ctl->key_length != TEGRA_CRYPTO_KEY_256_SIZE)) {
-		ret = -EINVAL;
-		CRYPTODEV_ERR("%s(): crypt_req keylen(%d) invalid",
-		__func__, aes_enc_dec_ctl->key_length);
-		goto free_req;
-	}
-
 	if (aes_enc_dec_ctl->tag_length != TEGRA_NVVSE_AES_GCM_TAG_SIZE) {
 		ret = -EINVAL;
 		CRYPTODEV_ERR("%s(): crypt_req taglen(%d) invalid",
@@ -1371,7 +1430,7 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, aes_enc_dec_ctl->key_slot,
 		KEYSLOT_SIZE_BYTES);
 
-	ret = crypto_aead_setkey(tfm, key_as_keyslot, aes_enc_dec_ctl->key_length);
+	ret = crypto_aead_setkey(tfm, key_as_keyslot, KEYSLOT_SIZE_BYTES);
 	if (ret < 0) {
 		CRYPTODEV_ERR("%s(): Failed to set key: %d\n", __func__, ret);
 		goto free_req;
@@ -1410,7 +1469,7 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 	aes_ctx->user_src_buf = aes_enc_dec_ctl->src_buffer;
 	aes_ctx->user_tag_buf = aes_enc_dec_ctl->tag_buffer;
 	aes_ctx->user_dst_buf = aes_enc_dec_ctl->dest_buffer;
-
+	aes_ctx->token_id = aes_enc_dec_ctl->token_id;
 	/* this field is unused by VSE driver and is being set only to pass the validation
 	 * check in crypto_aead_decrypt.
 	 */
@@ -1590,6 +1649,7 @@ static int tnvvse_crypto_dev_open(struct inode *inode, struct file *filp)
 		return -ENOMEM;
 	}
 	ctx->node_id = node_id;
+	ctx->allocated_key_slot_count = 0;
 	ctx->is_zero_copy_node = is_zero_copy_node;
 
 	ctx->rng_buff = kzalloc(NVVSE_MAX_RANDOM_NUMBER_LEN_SUPPORTED, GFP_KERNEL);
@@ -1638,6 +1698,9 @@ static int tnvvse_crypto_dev_release(struct inode *inode, struct file *filp)
 		nvvse_devnode[ctx->node_id].node_in_use = false;
 	}
 
+	if (ctx->allocated_key_slot_count > 0)
+		tegra_hv_vse_close_keyslot(ctx->node_id, ctx->key_grp_id);
+
 	kfree(ctx->sha_result);
 	kfree(ctx->rng_buff);
 	kfree(ctx->sha_state.sha_intermediate_digest);
@@ -1669,6 +1732,10 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 	struct tegra_nvvse_map_membuf_ctl *map_membuf_ctl;
 	struct tegra_nvvse_unmap_membuf_ctl __user *arg_unmap_membuf_ctl;
 	struct tegra_nvvse_unmap_membuf_ctl *unmap_membuf_ctl;
+	struct tegra_nvvse_allocate_key_slot_ctl __user *arg_key_slot_allocate_ctl;
+	struct tegra_nvvse_allocate_key_slot_ctl *key_slot_allocate_ctl;
+	struct tegra_nvvse_release_key_slot_ctl __user *arg_key_slot_release_ctl;
+	struct tegra_nvvse_release_key_slot_ctl *key_slot_release_ctl;
 	int ret = 0;
 
 	/*
@@ -1689,6 +1756,8 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		case NVVSE_IOCTL_CMDID_AES_GMAC_SIGN_VERIFY:
 		case NVVSE_IOCTL_CMDID_MAP_MEMBUF:
 		case NVVSE_IOCTL_CMDID_UNMAP_MEMBUF:
+		case NVVSE_IOCTL_CMDID_ALLOCATE_KEY_SLOT:
+		case NVVSE_IOCTL_CMDID_RELEASE_KEY_SLOT:
 			break;
 		default:
 			CRYPTODEV_ERR("%s(): unsupported zero copy node command(%08x)\n", __func__,
@@ -2079,8 +2148,84 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		kfree(unmap_membuf_ctl);
 		break;
 
+	case NVVSE_IOCTL_CMDID_ALLOCATE_KEY_SLOT:
+		key_slot_allocate_ctl = kzalloc(sizeof(*key_slot_allocate_ctl), GFP_KERNEL);
+		if (!key_slot_allocate_ctl) {
+			CRYPTODEV_ERR("%s(): failed to allocate memory\n", __func__);
+			ret = -ENOMEM;
+			goto release_lock;
+		}
+
+		arg_key_slot_allocate_ctl = (void __user *)arg;
+
+		ret = copy_from_user(key_slot_allocate_ctl, arg_key_slot_allocate_ctl,
+			sizeof(*key_slot_allocate_ctl));
+		if (ret) {
+			CRYPTODEV_ERR("%s(): Failed to copy_from_user key_slot_allocate_ctl:%d\n",
+			__func__, ret);
+			kfree(key_slot_allocate_ctl);
+			goto release_lock;
+		}
+
+		ret = tnvvse_crypto_allocate_key_slot(ctx, key_slot_allocate_ctl);
+		if (ret) {
+			CRYPTODEV_ERR("%s(): Failed to allocate key slot:%d\n", __func__, ret);
+			kfree(key_slot_allocate_ctl);
+			goto release_lock;
+		}
+
+		ret = copy_to_user(arg_key_slot_allocate_ctl, key_slot_allocate_ctl,
+			sizeof(*key_slot_allocate_ctl));
+		if (ret) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user key_slot_allocate_ctl:%d\n",
+			__func__, ret);
+			kfree(key_slot_allocate_ctl);
+			goto release_lock;
+		}
+
+		kfree(key_slot_allocate_ctl);
+		break;
+
+	case NVVSE_IOCTL_CMDID_RELEASE_KEY_SLOT:
+		key_slot_release_ctl = kzalloc(sizeof(*key_slot_release_ctl), GFP_KERNEL);
+		if (!key_slot_release_ctl) {
+			CRYPTODEV_ERR("%s(): failed to allocate memory\n", __func__);
+			ret = -ENOMEM;
+			goto release_lock;
+		}
+
+		arg_key_slot_release_ctl = (void __user *)arg;
+		ret = copy_from_user(key_slot_release_ctl, arg_key_slot_release_ctl,
+			sizeof(*key_slot_release_ctl));
+		if (ret) {
+			CRYPTODEV_ERR("%s(): Failed to copy_from_user key_slot_release_ctl:%d\n",
+			__func__, ret);
+			kfree(key_slot_release_ctl);
+			goto release_lock;
+		}
+
+		ret = tnvvse_crypto_release_key_slot(ctx, key_slot_release_ctl);
+		if (ret) {
+			CRYPTODEV_ERR("%s(): Failed to release key slot:%d\n", __func__, ret);
+			kfree(key_slot_release_ctl);
+			goto release_lock;
+		}
+
+		ret = copy_to_user(arg_key_slot_release_ctl, key_slot_release_ctl,
+			sizeof(*key_slot_release_ctl));
+		if (ret) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user key_slot_release_ctl:%d\n",
+			__func__, ret);
+			kfree(key_slot_release_ctl);
+			goto release_lock;
+		}
+
+		kfree(key_slot_release_ctl);
+		break;
+
 	default:
-		CRYPTODEV_ERR("%s(): invalid ioctl code(%d[0x%08x])", __func__, ioctl_num, ioctl_num);
+		CRYPTODEV_ERR("%s(): invalid ioctl code(%d[0x%08x])",
+		__func__, ioctl_num, ioctl_num);
 		ret = -EINVAL;
 		break;
 	}
