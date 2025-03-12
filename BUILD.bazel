@@ -31,6 +31,13 @@ filegroup(
     ]),
 )
 
+filegroup(
+    name = "pci.includes",
+    srcs = glob([
+        "drivers/pci/endpoint/functions/*.h",
+    ]),
+)
+
 kernel_module(
     name = "nvoot",
     srcs = glob(
