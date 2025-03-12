@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_utils.h"
 #include "pva_fw.h"
 #include "pva_kmd_device_memory.h"
@@ -159,8 +151,10 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 
 			/**Initialize resource table */
 			for (uint32_t j = 0; j < ctx->max_n_queues; j++) {
-				queue = pva_kmd_get_block(&ctx->queue_allocator,
-							  j);
+				pva_kmd_mutex_lock(
+					&ctx->queue_allocator.allocator_lock);
+				queue = pva_kmd_get_block_unsafe(
+					&ctx->queue_allocator, j);
 				if (queue != NULL) {
 					pva_dbg_printf(
 						"PVA: Resume queue for context %d, queue %d\n",
@@ -180,6 +174,8 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 						queue->queue_memory->iova,
 						queue->max_num_submit);
 				}
+				pva_kmd_mutex_unlock(
+					&ctx->queue_allocator.allocator_lock);
 			}
 		}
 	}

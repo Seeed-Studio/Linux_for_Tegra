@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_kmd_device.h"
 #include "pva_fw_address_map.h"
@@ -32,9 +24,11 @@ static void init_fw_print_buffer(struct pva_kmd_fw_print_buffer *print_buffer,
 	print_buffer->buffer_info = pva_offset_pointer(
 		debug_buffer_va,
 		FW_TRACE_BUFFER_SIZE + FW_CODE_COVERAGE_BUFFER_SIZE);
-	print_buffer->size =
+	print_buffer->buffer_info->size =
 		FW_DEBUG_LOG_BUFFER_SIZE - sizeof(*print_buffer->buffer_info);
-	print_buffer->head = 0;
+	print_buffer->buffer_info->head = 0;
+	print_buffer->buffer_info->tail = 0;
+	print_buffer->buffer_info->flags = 0;
 	print_buffer->content = pva_offset_pointer(
 		print_buffer->buffer_info, sizeof(*print_buffer->buffer_info));
 }
@@ -165,6 +159,36 @@ void pva_kmd_config_sid(struct pva_kmd_device *pva)
 	}
 }
 
+static uint32_t pva_kmd_get_syncpt_ro_offset(struct pva_kmd_device *pva)
+{
+	if (pva->num_syncpts > 0U) {
+		uint64_t offset;
+		offset = safe_subu64(pva->syncpt_ro_iova,
+				     pva_kmd_get_r5_iova_start());
+
+		ASSERT(offset <= UINT32_MAX);
+		return (uint32_t)offset;
+	} else {
+		// This is only for SIM mode where syncpoints are not supported.
+		return PVA_R5_SYNCPT_REGION_IOVA_OFFSET_NOT_SET;
+	}
+}
+
+static uint32_t pva_kmd_get_syncpt_rw_offset(struct pva_kmd_device *pva)
+{
+	if (pva->num_syncpts > 0U) {
+		uint64_t offset;
+		offset = safe_subu64(pva->syncpt_rw_iova,
+				     pva_kmd_get_r5_iova_start());
+
+		ASSERT(offset <= UINT32_MAX);
+		return (uint32_t)offset;
+	} else {
+		// This is only for SIM mode where syncpoints are not supported.
+		return PVA_R5_SYNCPT_REGION_IOVA_OFFSET_NOT_SET;
+	}
+}
+
 enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
 {
 	uint64_t seg_reg_value;
@@ -220,12 +244,8 @@ enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
 	/* Write shared memory allocation start address to mailbox and FW will
 	 * program user segment register accordingly so that virtual address
 	 * PVA_SHARED_MEMORY_START will point to the allocation start address.
-	 *
-	 * We deliberately also choose PVA_SHARED_MEMORY_START as the allocation
-	 * start address so that the net result is that user segment register
-	 * will be programmed to 0.
 	 */
-	seg_reg_value = FW_SHARED_MEMORY_START;
+	seg_reg_value = pva_kmd_get_r5_iova_start();
 	pva_kmd_write_mailbox(pva, PVA_MBOXID_USERSEG_L,
 			      iova_lo(seg_reg_value));
 	pva_kmd_write_mailbox(pva, PVA_MBOXID_USERSEG_H,
@@ -248,18 +268,13 @@ enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
 	pva_kmd_write(pva, pva->regspec.sec_lic_intr_enable,
 		      PVA_BIT(0) /*Watchdog*/
 			      | PVA_INSERT(0x1, 4, 1) /* HSP1 */
-			      | PVA_INSERT(0x7, 7, 5) /* All H1X errors */);
+			      | PVA_INSERT(0x3, 7, 5) /* All H1X errors */);
 
 	/* Bind interrupts */
 	err = pva_kmd_bind_intr_handler(pva, PVA_KMD_INTR_LINE_SEC_LIC,
 					pva_kmd_hyp_isr, pva);
 	if (err != PVA_SUCCESS) {
 		goto free_fw_debug_mem;
-	}
-	err = pva_kmd_bind_intr_handler(pva, PVA_KMD_INTR_LINE_CCQ0,
-					pva_kmd_isr, pva);
-	if (err != PVA_SUCCESS) {
-		goto free_sec_lic;
 	}
 
 	/* Take R5 out of reset */
@@ -271,13 +286,12 @@ enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
 
 	if (err != PVA_SUCCESS) {
 		pva_kmd_log_err("Waiting for FW boot timed out.");
-		goto free_ccq0;
+		goto free_sec_lic;
 	}
+	pva->recovery = false;
 
 	return err;
 
-free_ccq0:
-	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_CCQ0);
 free_sec_lic:
 	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
 free_fw_debug_mem:
@@ -293,7 +307,6 @@ out:
 
 void pva_kmd_deinit_fw(struct pva_kmd_device *pva)
 {
-	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_CCQ0);
 	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
 	pva_kmd_drain_fw_print(&pva->fw_print_buffer);
 

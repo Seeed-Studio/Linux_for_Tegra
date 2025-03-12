@@ -1,18 +1,10 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
-#include <linux/nvhost.h>
 #include "pva_kmd_device.h"
 #include "pva_kmd_linux_device.h"
 #include "pva_kmd_linux_isr.h"
+#include "pva_kmd_linux_device_api.h"
 
 static struct pva_kmd_isr_data *get_isr(struct pva_kmd_device *pva,
 					enum pva_kmd_intr_line intr_line)
@@ -29,7 +21,7 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 {
 	struct pva_kmd_isr_data *isr_data = (struct pva_kmd_isr_data *)dev_id;
 
-	isr_data->handler(isr_data->handler_data);
+	isr_data->handler(isr_data->handler_data, isr_data->intr_line);
 	return IRQ_HANDLED;
 }
 
@@ -42,12 +34,13 @@ enum pva_error pva_kmd_bind_intr_handler(struct pva_kmd_device *pva,
 	struct pva_kmd_linux_device_data *plat_data =
 		pva_kmd_linux_device_get_data(pva);
 	struct pva_kmd_isr_data *isr_data = &plat_data->isr[intr_line];
-	struct nvhost_device_data *props = plat_data->pva_device_properties;
+	struct nvpva_device_data *props = plat_data->pva_device_properties;
 
 	isr_data->irq = platform_get_irq(props->pdev, intr_line);
 	isr_data->handler = handler;
 	isr_data->handler_data = data;
 	isr_data->binded = true;
+	isr_data->intr_line = intr_line;
 	err = request_threaded_irq(isr_data->irq, NULL, pva_isr, IRQF_ONESHOT,
 				   "pva-isr", isr_data);
 

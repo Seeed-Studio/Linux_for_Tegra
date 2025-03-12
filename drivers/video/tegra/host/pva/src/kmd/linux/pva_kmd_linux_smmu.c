@@ -1,14 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
-/* Auto-detected configuration depending kernel version */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include <nvidia/conftest.h>
 
 /* Linux headers */
@@ -158,8 +149,9 @@ void pva_kmd_linux_device_smmu_contexts_init(struct pva_kmd_device *pva_device)
 	//      Question: Is it necessary that priv SID is the last one?
 	pva_device->stream_ids[0] = g_smmu_ctxs[sid_idx].sid;
 	device_data->smmu_contexts[0] = g_smmu_ctxs[sid_idx].pdev;
-	dma_set_mask_and_coherent(&device_data->smmu_contexts[0]->dev,
-				  DMA_BIT_MASK(32));
+	dma_set_mask_and_coherent(
+		&device_data->smmu_contexts[0]->dev,
+		DMA_BIT_MASK(31)); //only 2GB R5 space is accessible
 }
 
 struct platform_driver pva_kmd_linux_smmu_context_driver = {

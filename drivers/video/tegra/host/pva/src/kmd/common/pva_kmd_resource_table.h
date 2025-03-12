@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 #ifndef PVA_KMD_RESOURCE_TABLE_H
 #define PVA_KMD_RESOURCE_TABLE_H
 #include "pva_fw.h"
@@ -85,13 +77,11 @@ struct pva_kmd_resource_table {
 	 * allocation shared by all DMA configs */
 	struct pva_kmd_dma_resource_aux *dma_aux;
 
-	/** Pointer to syncpt_allocator in pva_kmd_device created during kmd boot */
-	struct pva_kmd_block_allocator *syncpt_allocator;
-
 	/** Memory for resource records */
 	void *records_mem;
 	struct pva_kmd_block_allocator resource_record_allocator;
 	struct pva_kmd_device *pva;
+	pva_kmd_mutex_t resource_table_lock;
 };
 
 enum pva_error
@@ -132,6 +122,10 @@ pva_kmd_add_dma_config_resource(struct pva_kmd_resource_table *resource_table,
  * TODO: make use and drop thread safe.
  * */
 struct pva_kmd_resource_record *
+pva_kmd_use_resource_unsafe(struct pva_kmd_resource_table *resource_table,
+			    uint32_t resource_id);
+
+struct pva_kmd_resource_record *
 pva_kmd_use_resource(struct pva_kmd_resource_table *resource_table,
 		     uint32_t resource_id);
 
@@ -142,12 +136,17 @@ pva_kmd_peek_resource(struct pva_kmd_resource_table *resource_table,
 void pva_kmd_drop_resource(struct pva_kmd_resource_table *resource_table,
 			   uint32_t resource_id);
 
+void pva_kmd_drop_resource_unsafe(struct pva_kmd_resource_table *resource_table,
+				  uint32_t resource_id);
+
 enum pva_error
 pva_kmd_make_resource_entry(struct pva_kmd_resource_table *resource_table,
 			    uint32_t resource_id,
 			    struct pva_resource_entry *entry);
 
-void pva_kmd_verify_all_resources_free(
-	struct pva_kmd_resource_table *resource_table);
+void pva_kmd_resource_table_lock(struct pva_kmd_device *pva,
+				 uint8_t res_table_id);
 
+void pva_kmd_resource_table_unlock(struct pva_kmd_device *pva,
+				   uint8_t res_table_id);
 #endif // PVA_KMD_RESOURCE_TABLE_H

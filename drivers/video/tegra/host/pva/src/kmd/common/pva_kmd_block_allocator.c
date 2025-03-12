@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_block_allocator.h"
 #include "pva_kmd_utils.h"
 #include "pva_api.h"
@@ -34,7 +26,7 @@ pva_kmd_block_allocator_init(struct pva_kmd_block_allocator *allocator,
 		err = PVA_NOMEM;
 		goto err_out;
 	}
-
+	pva_kmd_mutex_init(&allocator->allocator_lock);
 	return PVA_SUCCESS;
 err_out:
 	return err;
@@ -43,6 +35,7 @@ err_out:
 void pva_kmd_block_allocator_deinit(struct pva_kmd_block_allocator *allocator)
 {
 	pva_kmd_free(allocator->slot_in_use);
+	pva_kmd_mutex_deinit(&allocator->allocator_lock);
 }
 
 static inline void *get_block(struct pva_kmd_block_allocator *allocator,
@@ -66,6 +59,7 @@ void *pva_kmd_alloc_block(struct pva_kmd_block_allocator *allocator,
 	void *block = NULL;
 	uint32_t slot = INVALID_ID;
 
+	pva_kmd_mutex_lock(&allocator->allocator_lock);
 	if (allocator->free_slot_head != INVALID_ID) {
 		slot = allocator->free_slot_head;
 		allocator->free_slot_head =
@@ -75,15 +69,17 @@ void *pva_kmd_alloc_block(struct pva_kmd_block_allocator *allocator,
 			slot = allocator->next_free_slot;
 			allocator->next_free_slot++;
 		} else {
-			goto err_out;
+			goto unlock;
 		}
 	}
 	allocator->slot_in_use[slot] = true;
+	pva_kmd_mutex_unlock(&allocator->allocator_lock);
 
 	*out_id = slot + allocator->base_id;
 	block = get_block(allocator, slot);
 	return block;
-err_out:
+unlock:
+	pva_kmd_mutex_unlock(&allocator->allocator_lock);
 	return NULL;
 }
 
@@ -97,13 +93,13 @@ static bool is_slot_valid(struct pva_kmd_block_allocator *allocator,
 	return allocator->slot_in_use[slot];
 }
 
-void *pva_kmd_get_block(struct pva_kmd_block_allocator *allocator, uint32_t id)
+void *pva_kmd_get_block_unsafe(struct pva_kmd_block_allocator *allocator,
+			       uint32_t id)
 {
 	uint32_t slot = id - allocator->base_id;
 	if (!is_slot_valid(allocator, slot)) {
 		return NULL;
 	}
-
 	return get_block(allocator, slot);
 }
 
@@ -112,8 +108,11 @@ enum pva_error pva_kmd_free_block(struct pva_kmd_block_allocator *allocator,
 {
 	uint32_t slot = id - allocator->base_id;
 	uint32_t *next;
+	enum pva_error err = PVA_SUCCESS;
+	pva_kmd_mutex_lock(&allocator->allocator_lock);
 	if (!is_slot_valid(allocator, slot)) {
-		return PVA_INVAL;
+		err = PVA_INVAL;
+		goto unlock;
 	}
 
 	allocator->slot_in_use[slot] = false;
@@ -121,5 +120,7 @@ enum pva_error pva_kmd_free_block(struct pva_kmd_block_allocator *allocator,
 	*next = allocator->free_slot_head;
 	allocator->free_slot_head = slot;
 
-	return PVA_SUCCESS;
+unlock:
+	pva_kmd_mutex_unlock(&allocator->allocator_lock);
+	return err;
 }

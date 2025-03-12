@@ -1,15 +1,8 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_resource_table.h"
 #include "pva_kmd_device.h"
+#include "pva_kmd_context.h"
 #include "pva_kmd_constants.h"
 
 static uint32_t get_max_dma_config_size(struct pva_kmd_device *pva)
@@ -71,6 +64,7 @@ pva_kmd_resource_table_init(struct pva_kmd_resource_table *res_table,
 	ASSERT(res_table->table_mem != NULL);
 
 	pva_kmd_sema_init(&res_table->resource_semaphore, n_entries);
+	pva_kmd_mutex_init(&res_table->resource_table_lock);
 
 	size = (uint64_t)safe_mulu32(sizeof(struct pva_kmd_resource_record),
 				     n_entries);
@@ -103,20 +97,9 @@ pva_kmd_resource_table_init(struct pva_kmd_resource_table *res_table,
 	return PVA_SUCCESS;
 }
 
-void pva_kmd_resource_table_deinit(struct pva_kmd_resource_table *res_table)
-{
-	pva_kmd_free(res_table->dma_aux);
-	pva_kmd_block_allocator_deinit(&res_table->dma_config_allocator);
-	pva_kmd_device_memory_free(res_table->dma_config_mem);
-	pva_kmd_block_allocator_deinit(&res_table->resource_record_allocator);
-	pva_kmd_free(res_table->records_mem);
-	pva_kmd_sema_deinit(&res_table->resource_semaphore);
-	pva_kmd_device_memory_free(res_table->table_mem);
-}
-
 static struct pva_kmd_resource_record *
-pva_kmd_alloc_resource(struct pva_kmd_resource_table *resource_table,
-		       uint32_t *out_resource_id)
+pva_kmd_alloc_resource_id(struct pva_kmd_resource_table *resource_table,
+			  uint32_t *out_resource_id)
 {
 	enum pva_error err;
 	struct pva_kmd_resource_record *rec = NULL;
@@ -128,7 +111,10 @@ pva_kmd_alloc_resource(struct pva_kmd_resource_table *resource_table,
 	}
 
 	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err("Failed to wait for resource IDs");
+		pva_dbg_printf(
+			"kmd: allocation failed. ctx_id = %u, n_entries = %u\n",
+			resource_table->user_smmu_ctx_id,
+			resource_table->n_entries);
 		goto out;
 	}
 
@@ -140,8 +126,9 @@ out:
 	return rec;
 }
 
-static void pva_kmd_free_resource(struct pva_kmd_resource_table *resource_table,
-				  uint32_t resource_id)
+static void
+pva_kmd_free_resource_id(struct pva_kmd_resource_table *resource_table,
+			 uint32_t resource_id)
 {
 	enum pva_error err;
 
@@ -152,22 +139,62 @@ static void pva_kmd_free_resource(struct pva_kmd_resource_table *resource_table,
 	pva_kmd_sema_post(&resource_table->resource_semaphore);
 }
 
+static void
+pva_kmd_release_resource(struct pva_kmd_resource_table *resource_table,
+			 uint32_t resource_id)
+{
+	enum pva_error err;
+	struct pva_kmd_resource_record *rec = pva_kmd_get_block_unsafe(
+		&resource_table->resource_record_allocator, resource_id);
+
+	ASSERT(rec != NULL);
+
+	switch (rec->type) {
+	case PVA_RESOURCE_TYPE_DRAM:
+		if (rec->dram.syncpt != true) {
+			pva_kmd_device_memory_free(rec->dram.mem);
+		}
+		break;
+	case PVA_RESOURCE_TYPE_EXEC_BIN:
+		pva_kmd_unload_executable(&rec->vpu_bin.symbol_table,
+					  rec->vpu_bin.metainfo_mem,
+					  rec->vpu_bin.sections_mem);
+		break;
+	case PVA_RESOURCE_TYPE_DMA_CONFIG: {
+		struct pva_kmd_dma_resource_aux *dma_aux;
+		dma_aux = &resource_table->dma_aux[rec->dma_config.block_index];
+		pva_kmd_unload_dma_config_unsafe(dma_aux);
+		err = pva_kmd_free_block(&resource_table->dma_config_allocator,
+					 rec->dma_config.block_index);
+		ASSERT(err == PVA_SUCCESS);
+		break;
+	}
+
+	default:
+		FAULT("Unsupported resource type");
+	}
+
+	pva_kmd_free_resource_id(resource_table, resource_id);
+}
+
 enum pva_error
 pva_kmd_add_syncpt_resource(struct pva_kmd_resource_table *resource_table,
 			    struct pva_kmd_device_memory *dev_mem,
 			    uint32_t *out_resource_id)
 {
 	struct pva_kmd_resource_record *rec =
-		pva_kmd_alloc_resource(resource_table, out_resource_id);
+		pva_kmd_alloc_resource_id(resource_table, out_resource_id);
 
 	if (rec == NULL) {
 		pva_kmd_log_err("No more resource id");
 		return PVA_NO_RESOURCE_ID;
 	}
 
+	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
 	if (*out_resource_id > resource_table->curr_max_resource_id) {
 		resource_table->curr_max_resource_id = *out_resource_id;
 	}
+	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);
 
 	rec->type = PVA_RESOURCE_TYPE_DRAM;
 	rec->dram.mem = dev_mem;
@@ -183,16 +210,18 @@ pva_kmd_add_dram_buffer_resource(struct pva_kmd_resource_table *resource_table,
 				 uint32_t *out_resource_id)
 {
 	struct pva_kmd_resource_record *rec =
-		pva_kmd_alloc_resource(resource_table, out_resource_id);
+		pva_kmd_alloc_resource_id(resource_table, out_resource_id);
 
 	if (rec == NULL) {
 		pva_kmd_log_err("No more resource id");
 		return PVA_NO_RESOURCE_ID;
 	}
 
+	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
 	if (*out_resource_id > resource_table->curr_max_resource_id) {
 		resource_table->curr_max_resource_id = *out_resource_id;
 	}
+	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);
 
 	rec->type = PVA_RESOURCE_TYPE_DRAM;
 	rec->dram.mem = dev_mem;
@@ -213,15 +242,22 @@ get_fw_resource(struct pva_kmd_resource_table *res_table, uint32_t resource_id)
 	return &entries[index];
 }
 
+/** Since this API is called only during init time no need to add lock for resource entry */
 void pva_kmd_update_fw_resource_table(struct pva_kmd_resource_table *res_table)
 {
 	uint32_t id;
+	struct pva_kmd_resource_record *rec;
+	uint32_t max_resource_id;
 
-	for (id = PVA_RESOURCE_ID_BASE; id <= res_table->curr_max_resource_id;
-	     id++) {
+	/** This lock is unnecessary but added to avoid painful process of proving false positive on coverity */
+	pva_kmd_mutex_lock(&res_table->resource_table_lock);
+	max_resource_id = res_table->curr_max_resource_id;
+	pva_kmd_mutex_unlock(&res_table->resource_table_lock);
+
+	for (id = PVA_RESOURCE_ID_BASE; id <= max_resource_id; id++) {
 		struct pva_resource_entry *entry =
 			get_fw_resource(res_table, id);
-		struct pva_kmd_resource_record *rec = pva_kmd_get_block(
+		rec = pva_kmd_get_block_unsafe(
 			&res_table->resource_record_allocator, id);
 		if (rec == NULL) {
 			continue;
@@ -246,10 +282,10 @@ void pva_kmd_update_fw_resource_table(struct pva_kmd_resource_table *res_table)
 }
 
 struct pva_kmd_resource_record *
-pva_kmd_use_resource(struct pva_kmd_resource_table *res_table,
-		     uint32_t resource_id)
+pva_kmd_use_resource_unsafe(struct pva_kmd_resource_table *res_table,
+			    uint32_t resource_id)
 {
-	struct pva_kmd_resource_record *rec = pva_kmd_get_block(
+	struct pva_kmd_resource_record *rec = pva_kmd_get_block_unsafe(
 		&res_table->resource_record_allocator, resource_id);
 
 	if (rec == NULL) {
@@ -261,10 +297,30 @@ pva_kmd_use_resource(struct pva_kmd_resource_table *res_table,
 }
 
 struct pva_kmd_resource_record *
+pva_kmd_use_resource(struct pva_kmd_resource_table *res_table,
+		     uint32_t resource_id)
+{
+	struct pva_kmd_resource_record *rec;
+	pva_kmd_mutex_lock(&res_table->resource_table_lock);
+	rec = pva_kmd_get_block_unsafe(&res_table->resource_record_allocator,
+				       resource_id);
+
+	if (rec == NULL) {
+		pva_kmd_mutex_unlock(&res_table->resource_table_lock);
+		return NULL;
+	}
+
+	rec->ref_count = safe_addu32(rec->ref_count, 1U);
+	pva_kmd_mutex_unlock(&res_table->resource_table_lock);
+	return rec;
+}
+
+/** This API is not thread safe but only used inside pva_kmd_load_dma_config which is already protected */
+struct pva_kmd_resource_record *
 pva_kmd_peek_resource(struct pva_kmd_resource_table *res_table,
 		      uint32_t resource_id)
 {
-	struct pva_kmd_resource_record *rec = pva_kmd_get_block(
+	struct pva_kmd_resource_record *rec = pva_kmd_get_block_unsafe(
 		&res_table->resource_record_allocator, resource_id);
 
 	return rec;
@@ -273,46 +329,26 @@ pva_kmd_peek_resource(struct pva_kmd_resource_table *res_table,
 void pva_kmd_drop_resource(struct pva_kmd_resource_table *resource_table,
 			   uint32_t resource_id)
 {
+	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
+	pva_kmd_drop_resource_unsafe(resource_table, resource_id);
+	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);
+}
+
+void pva_kmd_drop_resource_unsafe(struct pva_kmd_resource_table *resource_table,
+				  uint32_t resource_id)
+{
 	struct pva_kmd_resource_record *rec;
 
-	rec = pva_kmd_get_block(&resource_table->resource_record_allocator,
-				resource_id);
+	rec = pva_kmd_get_block_unsafe(
+		&resource_table->resource_record_allocator, resource_id);
 
-	ASSERT(rec != NULL);
+	if (rec == NULL) {
+		return;
+	}
 
 	rec->ref_count = safe_subu32(rec->ref_count, 1U);
 	if (rec->ref_count == 0) {
-		pva_dbg_printf("Dropping resource %u of type %u\n", resource_id,
-			       rec->type);
-		switch (rec->type) {
-		case PVA_RESOURCE_TYPE_DRAM:
-			if (rec->dram.syncpt != true) {
-				pva_kmd_device_memory_free(rec->dram.mem);
-			}
-			break;
-		case PVA_RESOURCE_TYPE_EXEC_BIN:
-			pva_kmd_unload_executable(&rec->vpu_bin.symbol_table,
-						  rec->vpu_bin.metainfo_mem,
-						  rec->vpu_bin.sections_mem);
-			break;
-		case PVA_RESOURCE_TYPE_DMA_CONFIG: {
-			struct pva_kmd_dma_resource_aux *dma_aux;
-			dma_aux =
-				&resource_table
-					 ->dma_aux[rec->dma_config.block_index];
-			pva_kmd_unload_dma_config(dma_aux);
-			pva_kmd_free_block(
-				&resource_table->dma_config_allocator,
-				rec->dma_config.block_index);
-			break;
-		}
-
-		default:
-			pva_kmd_log_err("Unsupported resource type");
-			pva_kmd_fault();
-		}
-
-		pva_kmd_free_resource(resource_table, resource_id);
+		pva_kmd_release_resource(resource_table, resource_id);
 	}
 }
 
@@ -323,7 +359,7 @@ pva_kmd_add_vpu_bin_resource(struct pva_kmd_resource_table *resource_table,
 {
 	uint32_t res_id;
 	struct pva_kmd_resource_record *rec =
-		pva_kmd_alloc_resource(resource_table, &res_id);
+		pva_kmd_alloc_resource_id(resource_table, &res_id);
 	enum pva_error err;
 	struct pva_kmd_vpu_bin_resource *vpu_bin;
 
@@ -341,9 +377,11 @@ pva_kmd_add_vpu_bin_resource(struct pva_kmd_resource_table *resource_table,
 		goto free_block;
 	}
 
+	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
 	if (res_id > resource_table->curr_max_resource_id) {
 		resource_table->curr_max_resource_id = res_id;
 	}
+	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);
 
 	rec->type = PVA_RESOURCE_TYPE_EXEC_BIN;
 	rec->ref_count = 1;
@@ -351,7 +389,7 @@ pva_kmd_add_vpu_bin_resource(struct pva_kmd_resource_table *resource_table,
 
 	return PVA_SUCCESS;
 free_block:
-	pva_kmd_free_resource(resource_table, res_id);
+	pva_kmd_free_resource_id(resource_table, res_id);
 err_out:
 	return err;
 }
@@ -361,8 +399,8 @@ pva_kmd_make_resource_entry(struct pva_kmd_resource_table *resource_table,
 			    uint32_t resource_id,
 			    struct pva_resource_entry *entry)
 {
-	struct pva_kmd_resource_record *rec =
-		pva_kmd_use_resource(resource_table, resource_id);
+	struct pva_kmd_resource_record *rec;
+	rec = pva_kmd_use_resource(resource_table, resource_id);
 	if (rec == NULL) {
 		return PVA_NO_RESOURCE_ID;
 	}
@@ -426,22 +464,26 @@ enum pva_error pva_kmd_add_dma_config_resource(
 
 	dma_aux = &resource_table->dma_aux[block_idx];
 
+	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
 	err = pva_kmd_load_dma_config(resource_table, dma_config_payload,
 				      dma_config_size, dma_aux, fw_dma_cfg,
 				      &fw_fetch_size);
+	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);
 	if (err != PVA_SUCCESS) {
 		goto free_block;
 	}
 
-	rec = pva_kmd_alloc_resource(resource_table, &res_id);
+	rec = pva_kmd_alloc_resource_id(resource_table, &res_id);
 	if (rec == NULL) {
 		err = PVA_NO_RESOURCE_ID;
 		goto unload_dma;
 	}
 
+	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
 	if (res_id > resource_table->curr_max_resource_id) {
 		resource_table->curr_max_resource_id = res_id;
 	}
+	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);
 
 	rec->type = PVA_RESOURCE_TYPE_DMA_CONFIG;
 	rec->ref_count = 1;
@@ -457,21 +499,60 @@ enum pva_error pva_kmd_add_dma_config_resource(
 
 	return PVA_SUCCESS;
 unload_dma:
-	pva_kmd_unload_dma_config(dma_aux);
+	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
+	pva_kmd_unload_dma_config_unsafe(dma_aux);
+	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);
 free_block:
 	pva_kmd_free_block(&resource_table->dma_config_allocator, block_idx);
 err_out:
 	return err;
 }
 
-void pva_kmd_verify_all_resources_free(
-	struct pva_kmd_resource_table *resource_table)
+static enum pva_error
+pva_kmd_release_all_resources(struct pva_kmd_resource_table *res_table)
 {
-	enum pva_error err;
-	for (uint32_t i = 0; i < resource_table->n_entries; i++) {
-		err = pva_kmd_sema_wait_timeout(
-			&resource_table->resource_semaphore,
-			PVA_KMD_TIMEOUT_RESOURCE_SEMA_MS);
-		ASSERT(err == PVA_SUCCESS);
+	uint32_t id;
+
+	pva_kmd_mutex_lock(&res_table->resource_table_lock);
+
+	// Iterate through all possible resource IDs
+	for (id = PVA_RESOURCE_ID_BASE; id <= res_table->curr_max_resource_id;
+	     id++) {
+		struct pva_kmd_resource_record *rec =
+			pva_kmd_peek_resource(res_table, id);
+		if (rec != NULL) {
+			pva_kmd_release_resource(res_table, id);
+		}
 	}
+	pva_kmd_mutex_unlock(&res_table->resource_table_lock);
+	return PVA_SUCCESS;
+}
+
+void pva_kmd_resource_table_deinit(struct pva_kmd_resource_table *res_table)
+{
+	pva_kmd_release_all_resources(res_table);
+	pva_kmd_free(res_table->dma_aux);
+	pva_kmd_block_allocator_deinit(&res_table->dma_config_allocator);
+	pva_kmd_device_memory_free(res_table->dma_config_mem);
+	pva_kmd_block_allocator_deinit(&res_table->resource_record_allocator);
+	pva_kmd_free(res_table->records_mem);
+	pva_kmd_mutex_deinit(&res_table->resource_table_lock);
+	pva_kmd_sema_deinit(&res_table->resource_semaphore);
+	pva_kmd_device_memory_free(res_table->table_mem);
+}
+
+void pva_kmd_resource_table_lock(struct pva_kmd_device *pva,
+				 uint8_t res_table_id)
+{
+	struct pva_kmd_context *ctx = pva_kmd_get_context(pva, res_table_id);
+
+	pva_kmd_mutex_lock(&ctx->ctx_resource_table.resource_table_lock);
+}
+
+void pva_kmd_resource_table_unlock(struct pva_kmd_device *pva,
+				   uint8_t res_table_id)
+{
+	struct pva_kmd_context *ctx = pva_kmd_get_context(pva, res_table_id);
+
+	pva_kmd_mutex_unlock(&ctx->ctx_resource_table.resource_table_lock);
 }

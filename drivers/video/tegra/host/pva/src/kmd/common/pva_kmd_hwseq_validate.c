@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_kmd_hwseq_validate.h"
 #include "pva_api_dma.h"
@@ -228,17 +220,6 @@ static enum pva_error validate_cb_tiles(struct pva_hwseq_priv *hwseq,
 			      subs64((int64_t)ty, 1LL, &math_err), &math_err),
 		       (int64_t)tx, &math_err);
 
-	end_addr = adds64(end_addr,
-			  muls64((int64_t)head_desc->src.rpt1,
-				 head_desc->dst.adv1, &math_err),
-			  &math_err);
-
-	if ((head_desc->dst.adv2 > 0) && (end_addr > head_desc->dst.adv2)) {
-		pva_kmd_log_err(
-			"Tile voxel size exceeds destination advance amount on dim2");
-		return PVA_INVAL;
-	}
-
 	end_addr = muls64(end_addr,
 			  convert_to_signed_s64(1ULL
 						<< (head_desc->log2_pixel_size &
@@ -412,7 +393,7 @@ static enum pva_error validate_dst_vmem(struct pva_hwseq_priv *hwseq,
 
 	num_bytes = convert_to_signed_s64(
 		1ULL << (head_desc->log2_pixel_size & MAX_BYTES_PER_PIXEL));
-	offset = convert_to_signed_s64(head_desc->src.offset);
+	offset = convert_to_signed_s64(head_desc->dst.offset);
 
 	*vmem_tile_count = get_vmem_tile_count(&head_desc->dst, has_dim3);
 
@@ -578,18 +559,7 @@ static enum pva_error validate_src_vmem(struct pva_hwseq_priv *hwseq,
 		       (int64_t)tx, &math_err);
 
 	if (0U != head_desc->src.cb_enable) {
-		end_addr = adds64(muls64((int64_t)head_desc->dst.rpt1,
-					 head_desc->src.adv1, &math_err),
-				  end_addr, &math_err);
-
-		if ((head_desc->src.adv2 > 0) &&
-		    (end_addr > head_desc->src.adv2)) {
-			pva_kmd_log_err(
-				"Tile voxel size exceeds source advance amount on dim2");
-			return PVA_INVAL;
-		}
 		end_addr = muls64(end_addr, num_bytes, &math_err);
-
 		hwseq->access_sizes[head_desc_id].src.start_addr =
 			mins64(end_addr, 0LL);
 		hwseq->access_sizes[head_desc_id].src.end_addr =

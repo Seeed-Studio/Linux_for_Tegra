@@ -1,13 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
@@ -18,12 +11,12 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
-#include <linux/nvhost.h>
 
 #include <uapi/linux/tegra-soc-hwpm-uapi.h>
 #include "pva_kmd_linux.h"
 #include "pva_kmd_linux_device.h"
 #include "pva_kmd_debugfs.h"
+#include "pva_kmd_linux_device_api.h"
 
 static int pva_handle_fops(struct seq_file *s, void *data)
 {
@@ -70,10 +63,18 @@ out:
 static long int debugfs_node_read(struct file *file, char *data,
 				  long unsigned int size, long long int *offset)
 {
-	int64_t retval;
+	int64_t retval = 0;
+	pva_math_error math_flag = MATH_OP_SUCCESS;
 	struct pva_kmd_file_ops *fops = file_inode(file)->i_private;
-	retval = fops->read(fops->pdev, fops->file_data, data, *offset, size);
-
+	if (fops->read != NULL) {
+		retval = fops->read(fops->pdev, fops->file_data, data, *offset,
+				    size);
+		*offset = adds64(*offset, retval, &math_flag);
+		if (math_flag != MATH_OP_SUCCESS) {
+			pva_kmd_log_err("debugfs_node_read overflow");
+			retval = -EFAULT;
+		}
+	}
 	return retval;
 }
 
@@ -81,10 +82,18 @@ static long int debugfs_node_write(struct file *file, const char *data,
 				   long unsigned int size,
 				   long long int *offset)
 {
-	long int retval;
+	long int retval = size;
+	pva_math_error math_flag = MATH_OP_SUCCESS;
 	struct pva_kmd_file_ops *fops = file_inode(file)->i_private;
-	retval = fops->write(fops->pdev, fops->file_data, data, *offset, size);
-
+	if (fops->write != NULL) {
+		retval = fops->write(fops->pdev, fops->file_data, data, *offset,
+				     size);
+		*offset = adds64(*offset, retval, &math_flag);
+		if (math_flag != MATH_OP_SUCCESS) {
+			pva_kmd_log_err("debugfs_node_write overflow");
+			retval = -EFAULT;
+		}
+	}
 	return retval;
 }
 
@@ -100,7 +109,7 @@ void pva_kmd_debugfs_create_bool(struct pva_kmd_device *pva, const char *name,
 {
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
-	struct nvhost_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *props = device_data->pva_device_properties;
 	struct dentry *de = props->debugfs;
 
 	debugfs_create_bool(name, 0644, de, pdata);
@@ -110,7 +119,7 @@ void pva_kmd_debugfs_create_u32(struct pva_kmd_device *pva, const char *name,
 {
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
-	struct nvhost_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *props = device_data->pva_device_properties;
 	struct dentry *de = props->debugfs;
 
 	debugfs_create_u32(name, 0644, de, pdata);
@@ -121,7 +130,7 @@ void pva_kmd_debugfs_create_file(struct pva_kmd_device *pva, const char *name,
 {
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
-	struct nvhost_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *props = device_data->pva_device_properties;
 	struct dentry *de = props->debugfs;
 	struct file_operations *fops =
 		(struct file_operations *)&pva_linux_debugfs_fops;
@@ -135,7 +144,7 @@ void pva_kmd_debugfs_remove_nodes(struct pva_kmd_device *pva)
 {
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
-	struct nvhost_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *props = device_data->pva_device_properties;
 	struct dentry *de = props->debugfs;
 
 	debugfs_lookup_and_remove("stats_enable", de);

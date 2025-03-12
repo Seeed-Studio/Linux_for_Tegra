@@ -1,18 +1,10 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_kmd_shim_vpu_app_auth.h"
 #include "pva_kmd_linux_device.h"
+#include "pva_kmd_linux_device_api.h"
 #include <linux/firmware.h>
-#include <linux/nvhost.h>
 
 /**
  * Default path (including filename) of pva vpu elf authentication allowlist file
@@ -45,7 +37,7 @@ enum pva_error pva_kmd_auth_allowlist_load(struct pva_kmd_device *pva,
 	int32_t kerr = 0;
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
-	struct nvhost_device_data *device_props =
+	struct nvpva_device_data *device_props =
 		device_data->pva_device_properties;
 
 	const struct firmware *pallow_list;

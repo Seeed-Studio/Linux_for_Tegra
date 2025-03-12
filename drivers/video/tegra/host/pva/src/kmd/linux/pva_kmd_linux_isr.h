@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef PVA_KMD_LINUX_ISR_H
 #define PVA_KMD_LINUX_ISR_H
@@ -26,6 +18,7 @@ struct pva_kmd_isr_data {
 
 	pva_kmd_intr_handler_t handler;
 	void *handler_data;
+	enum pva_kmd_intr_line intr_line;
 };
 
 #endif //PVA_KMD_LINUX_ISR_H

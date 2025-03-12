@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_api_cmdbuf.h"
 #include "pva_api_types.h"
 #include "pva_bit.h"
@@ -17,6 +9,7 @@
 #include "pva_kmd_constants.h"
 #include "pva_utils.h"
 #include "pva_kmd_fw_profiler.h"
+#include "pva_kmd_shared_buffer.h"
 
 // TODO: This is here temporarily just for testing. Should be moved to a common header
 #define CMD_ID(x) PVA_EXTRACT(x, 6, 0, uint8_t)
@@ -97,47 +90,12 @@ static inline const char *pva_fw_get_cmd_name(uint32_t opcode)
 
 void pva_kmd_device_init_profiler(struct pva_kmd_device *pva)
 {
-	enum pva_error err = PVA_SUCCESS;
-	const uint32_t profiling_buffer_size = PVA_KMD_FW_PROFILING_BUFFER_SIZE;
-
-	struct pva_kmd_fw_profiling_buffer *fw_profiling_buffer =
-		&pva->fw_profiling_buffer;
-
-	// Event message should be 32-bit to keep logging latency low
-	ASSERT(sizeof(struct pva_fw_event_message) == sizeof(uint32_t));
-
-	pva->fw_profiling_buffer_memory =
-		pva_kmd_device_memory_alloc_map(profiling_buffer_size, pva,
-						PVA_ACCESS_RW,
-						PVA_R5_SMMU_CONTEXT_ID);
-	ASSERT(pva->fw_profiling_buffer_memory != NULL);
-
-	/* Add profiling memory to resource table */
-	err = pva_kmd_add_dram_buffer_resource(
-		&pva->dev_resource_table, pva->fw_profiling_buffer_memory,
-		&pva->fw_profiling_buffer_resource_id);
-	ASSERT(err == PVA_SUCCESS);
-	pva_kmd_update_fw_resource_table(&pva->dev_resource_table);
-
-	fw_profiling_buffer->buffer_info =
-		(struct pva_fw_profiling_buffer_header *)
-			pva->fw_profiling_buffer_memory->va;
-	fw_profiling_buffer->content =
-		pva_offset_pointer(pva->fw_profiling_buffer_memory->va,
-				   sizeof(*fw_profiling_buffer->buffer_info));
-	fw_profiling_buffer->size = pva->fw_profiling_buffer_memory->size;
-	fw_profiling_buffer->head = 0U;
-	fw_profiling_buffer->buffer_info->flags = 0U;
-	fw_profiling_buffer->buffer_info->tail = 0U;
-
 	pva->debugfs_context.g_fw_profiling_config.enabled = false;
 	pva->debugfs_context.g_fw_profiling_config.filter = 0x0;
 }
 
 void pva_kmd_device_deinit_profiler(struct pva_kmd_device *pva)
 {
-	pva_kmd_drop_resource(&pva->dev_resource_table,
-			      pva->fw_profiling_buffer_resource_id);
 	pva->debugfs_context.g_fw_profiling_config.enabled = false;
 }
 
@@ -146,12 +104,18 @@ enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
 	struct pva_kmd_cmdbuf_builder builder;
 	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
 	struct pva_cmd_enable_fw_profiling *cmd;
-	uint64_t buffer_offset = 0U;
 	uint32_t filter = 0U;
 	uint8_t timestamp_type = TIMESTAMP_TYPE_CYCLE_COUNT;
 	uint32_t fence_val;
 	enum pva_error err;
 
+	struct pva_kmd_shared_buffer *profiling_buffer =
+		&pva->kmd_fw_buffers[PVA_PRIV_CCQ_ID];
+
+	// Ensure that the DRAM buffer that backs FW profiling was allocated
+	if (profiling_buffer->resource_memory == NULL) {
+		return PVA_INVALID_RESOURCE;
+	}
 	// filter |= PVA_FW_EVENT_DO_CMD;
 	filter |= PVA_FW_EVENT_RUN_VPU;
 
@@ -159,20 +123,13 @@ enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
 		return PVA_SUCCESS;
 	}
 
-	pva->fw_profiling_buffer.head = 0U;
-	pva->fw_profiling_buffer.buffer_info->flags = 0U;
-	pva->fw_profiling_buffer.buffer_info->tail = 0U;
-
 	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
 	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
 	ASSERT(cmd != NULL);
-	pva_kmd_set_cmd_enable_fw_profiling(
-		cmd, pva->fw_profiling_buffer_resource_id,
-		pva->fw_profiling_buffer.size, buffer_offset, filter,
-		timestamp_type);
+	pva_kmd_set_cmd_enable_fw_profiling(cmd, filter, timestamp_type);
 
 	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
 	if (err != PVA_SUCCESS) {
@@ -281,58 +238,43 @@ static void decode_and_print_event(unsigned long walltime,
 	}
 }
 
-void pva_kmd_drain_fw_profiling_buffer(
-	struct pva_kmd_device *pva,
-	struct pva_kmd_fw_profiling_buffer *profiling_buffer)
+enum pva_error pva_kmd_process_fw_profiling_message(void *context,
+						    uint8_t interface,
+						    uint8_t *element)
 {
+	struct pva_kmd_device *pva = (struct pva_kmd_device *)context;
+
+	uint64_t timestamp = 0;
 	char msg_string[200] = { '\0' };
 	struct pva_fw_event_message message;
-	uint64_t prev_walltime = 0U;
-	uint64_t timestamp = 0U;
+	static uint64_t prev_walltime = 0U;
 	uint64_t relative_time = 0U;
-	uint32_t buffer_space;
 
 	// TODO: R5 frequency is hard-coded for now. Get this at runtime.
 	static const uint32_t r5_freq = 716800000U;
-	static const unsigned long r5_cycle_duration = 1000000000000 / r5_freq;
-	unsigned long walltime = 0U; // in nanoseconds
-	uint64_t walltime_diff;
+	static const uint64_t r5_cycle_duration = 1000000000000 / r5_freq;
+	uint64_t walltime = 0U; // in nanoseconds
 
-	const uint32_t message_size =
-		sizeof(message) +
-		pva->debugfs_context.g_fw_profiling_config.timestamp_size;
-	uint32_t *profiling_buffer_head = &profiling_buffer->head;
-	uint32_t profiling_buffer_tail = profiling_buffer->buffer_info->tail;
-	while (*profiling_buffer_head < profiling_buffer_tail) {
-		buffer_space = safe_addu32(*profiling_buffer_head,
-					   safe_subu32(message_size, 1U));
-		ASSERT(buffer_space <= profiling_buffer_tail);
-		memcpy(&message,
-		       &profiling_buffer->content[*profiling_buffer_head],
-		       sizeof(message));
-		memcpy(&timestamp,
-		       &profiling_buffer->content[*profiling_buffer_head +
-						  sizeof(message)],
-		       pva->debugfs_context.g_fw_profiling_config
-			       .timestamp_size);
+	memcpy(&message, element, sizeof(message));
+	memcpy(&timestamp, &element[sizeof(message)],
+	       pva->debugfs_context.g_fw_profiling_config.timestamp_size);
 
-		if (pva->debugfs_context.g_fw_profiling_config.timestamp_type ==
-		    TIMESTAMP_TYPE_TSE) {
-			walltime = (timestamp << 5);
-		} else if (pva->debugfs_context.g_fw_profiling_config
-				   .timestamp_type ==
-			   TIMESTAMP_TYPE_CYCLE_COUNT) {
-			timestamp = PVA_LOW32(timestamp);
-			walltime = (r5_cycle_duration * timestamp) / 1000U;
-		}
-		walltime_diff = safe_subu64((uint64_t)walltime, prev_walltime);
-		relative_time = (prev_walltime == 0U) ? 0U : walltime_diff;
-		decode_and_print_event(walltime, relative_time, message,
-				       &msg_string[0]);
-		pva_kmd_print_str(msg_string);
-		*profiling_buffer_head = *profiling_buffer_head + message_size;
-		prev_walltime = walltime;
+	if (pva->debugfs_context.g_fw_profiling_config.timestamp_type ==
+	    TIMESTAMP_TYPE_TSE) {
+		walltime = (timestamp << 5);
+	} else if (pva->debugfs_context.g_fw_profiling_config.timestamp_type ==
+		   TIMESTAMP_TYPE_CYCLE_COUNT) {
+		timestamp = PVA_LOW32(timestamp);
+		walltime = safe_mulu64(r5_cycle_duration, timestamp);
+		walltime = walltime / 1000U;
 	}
+	relative_time = (prev_walltime > walltime) ?
+				      0U :
+				      safe_subu64(walltime, prev_walltime);
+	decode_and_print_event(walltime, relative_time, message,
+			       &msg_string[0]);
+	pva_kmd_print_str(msg_string);
+	prev_walltime = walltime;
 
-	return;
+	return PVA_SUCCESS;
 }

@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef PVA_FW_H
 #define PVA_FW_H
@@ -198,12 +190,15 @@ static inline uint32_t pva_fw_queue_space(uint32_t head, uint32_t tail,
 #define PVA_FW_MSG_R5_READY_TIME_LO_IDX 3
 #define PVA_FW_MSG_R5_READY_TIME_HI_IDX 4
 
+#define PVA_MAX_DEBUG_LOG_MSG_CHARACTERS 100
 /* Parameters for message FLUSH PRINT */
 struct pva_fw_print_buffer_header {
 #define PVA_FW_PRINT_BUFFER_OVERFLOWED (1 << 0)
 #define PVA_FW_PRINT_FAILURE (1 << 1)
 	uint32_t flags;
+	uint32_t head;
 	uint32_t tail;
+	uint32_t size;
 	/* Followed by print content */
 };
 
@@ -276,15 +271,31 @@ enum pva_fw_timestamp_t {
 	TIMESTAMP_TYPE_TSE = 0,
 	TIMESTAMP_TYPE_CYCLE_COUNT = 1
 };
-
-struct pva_fw_profiling_buffer_header {
-#define PVA_FW_PROFILING_BUFFER_OVERFLOWED (1 << 0)
-#define PVA_FW_PROFILING_FAILURE (1 << 1)
-	uint32_t flags;
-	uint32_t tail;
-	/* Followed by print content */
-};
 /* End of PVA FW Event profiling definitions */
+
+/*
+ * The buffers shared between KMD and FW may contain a mixture of different
+ * types of messages. Each message type may have a different packing and size.
+ * However, to keep processing of messages simple and efficient, we will
+ * enforce enqueuing and dequeuing of fixed size messages only. The size of
+ * each element in the buffer would be equal to the size of the largest possible
+ * message. KMD can further parse these messages to extract the exact size of the
+ * message.
+ */
+#define PVA_KMD_FW_BUF_ELEMENT_SIZE (sizeof(uint32_t) + sizeof(uint64_t))
+
+// TODO: remove element size and buffer size fields from this struct.
+//	 This struct is shared between KMD and FW. FW should not be able to change
+//	 buffer size properties as KMD might use this for validation of buffer accesses.
+//	 If FW somehow corrupts 'size', KMD might end up accessing out of bounds.
+struct pva_fw_shared_buffer_header {
+#define PVA_KMD_FW_BUF_FLAG_OVERFLOW (1 << 0)
+#define PVA_KMD_FW_BUF_FLAG_ERROR (1 << 1)
+	uint32_t flags;
+	uint32_t element_size;
+	uint32_t head;
+	uint32_t tail;
+};
 
 struct pva_kmd_fw_tegrastats {
 	uint64_t window_start_time;

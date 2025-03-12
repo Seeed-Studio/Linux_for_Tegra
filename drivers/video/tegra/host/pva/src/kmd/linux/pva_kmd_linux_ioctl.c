@@ -1,14 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
-/* Auto-detected configuration depending kernel version */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include <nvidia/conftest.h>
 
 #include <linux/err.h>
@@ -19,11 +10,11 @@
 #include <linux/slab.h>
 #include <linux/mm.h>
 #include <linux/version.h>
-#include <linux/nvhost.h>
 
 #include "pva_kmd_linux.h"
 #include "pva_kmd_linux_device.h"
 #include "pva_kmd_op_handler.h"
+#include "pva_kmd_linux_device_api.h"
 
 /**
  * Struct to hold context pertaining to open/close/ioctl calls
@@ -67,9 +58,11 @@ static long pva_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 	}
 
+	pva_kmd_mutex_lock(&ocb->kmd_ctx->ocb_lock);
 	hdr = (struct pva_kmd_linux_ioctl_header *)(void *)buf;
 	if (!is_ioctl_header_valid(hdr)) {
-		return -EINVAL;
+		err = -EINVAL;
+		goto unlock;
 	}
 
 	req_ok = access_ok((void __user *)hdr->request.addr,
@@ -78,13 +71,15 @@ static long pva_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			    (unsigned long)hdr->response.size);
 
 	if ((req_ok != 1) || (resp_ok != 1)) {
-		return -EFAULT;
+		err = -EFAULT;
+		goto unlock;
 	}
 
 	err = copy_from_user(ocb->req_buffer, (void __user *)hdr->request.addr,
 			     hdr->request.size);
-	if (err) {
-		return err;
+	if (err != 0) {
+		err = -EFAULT;
+		goto unlock;
 	}
 
 	op_err = pva_kmd_ops_handler(ocb->kmd_ctx, ocb->req_buffer,
@@ -94,8 +89,6 @@ static long pva_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	if (op_err != PVA_SUCCESS) {
 		if (op_err == PVA_NO_RESOURCE_ID || op_err == PVA_NOMEM) {
 			err = -ENOMEM;
-		} else {
-			err = -EFAULT;
 		}
 	}
 
@@ -105,6 +98,8 @@ static long pva_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 
 	err = (err == 0) ? ret_err : err;
+unlock:
+	pva_kmd_mutex_unlock(&ocb->kmd_ctx->ocb_lock);
 	return err;
 }
 
@@ -112,8 +107,8 @@ static int pva_open(struct inode *inode, struct file *file)
 {
 	int err = 0;
 
-	struct nvhost_device_data *props = container_of(
-		inode->i_cdev, struct nvhost_device_data, ctrl_cdev);
+	struct nvpva_device_data *props = container_of(
+		inode->i_cdev, struct nvpva_device_data, ctrl_cdev);
 	struct pva_kmd_device *kmd_device = props->private_data;
 	struct pva_kmd_linux_ocb *ocb = NULL;
 

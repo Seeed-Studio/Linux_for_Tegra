@@ -1,18 +1,11 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_kmd_silicon_isr.h"
 #include "pva_kmd_device.h"
 #include "pva_fw_hyp.h"
 #include "pva_kmd_msg.h"
+#include "pva_kmd_abort.h"
 
 struct pva_fw_msg {
 	uint8_t len;
@@ -33,11 +26,13 @@ static void read_hyp_msg(struct pva_kmd_device *pva, struct pva_fw_msg *msg)
 	}
 }
 
-void pva_kmd_hyp_isr(void *data)
+void pva_kmd_hyp_isr(void *data, enum pva_kmd_intr_line intr_line)
 {
 	struct pva_kmd_device *pva = data;
 	uint32_t intr_status;
 	uint32_t wdt_val, hsp_val, h1x_val;
+
+	(void)intr_line;
 
 	intr_status = pva_kmd_read(pva, pva->regspec.sec_lic_intr_status);
 
@@ -54,8 +49,8 @@ void pva_kmd_hyp_isr(void *data)
 			      intr_status &
 				      PVA_MASK(PVA_REG_SEC_LIC_INTR_WDT_MSB,
 					       PVA_REG_SEC_LIC_INTR_WDT_LSB));
-		/* TODO: reboot firmware when we can */
-		FAULT("PVA watchdog timeout!");
+		pva_kmd_log_err("PVA watchdog timeout!");
+		pva_kmd_abort(pva);
 	}
 
 	if (h1x_val != 0) {
@@ -65,6 +60,7 @@ void pva_kmd_hyp_isr(void *data)
 			      intr_status &
 				      PVA_MASK(PVA_REG_SEC_LIC_INTR_H1X_MSB,
 					       PVA_REG_SEC_LIC_INTR_H1X_LSB));
+		pva_kmd_abort(pva);
 	}
 
 	if (hsp_val != 0) {
@@ -81,55 +77,50 @@ void pva_kmd_hyp_isr(void *data)
 	}
 }
 
-static uint32_t read_ccq0_status(struct pva_kmd_device *pva, uint8_t status_id)
+static uint32_t read_ccq_status(struct pva_kmd_device *pva, uint8_t ccq_id,
+				uint8_t status_id)
 {
-	return pva_kmd_read(pva, pva->regspec.ccq_regs[0].status[status_id]);
+	return pva_kmd_read(pva,
+			    pva->regspec.ccq_regs[ccq_id].status[status_id]);
 }
 
-static void write_ccq0_status(struct pva_kmd_device *pva, uint8_t status_id,
-			      uint32_t value)
+static void write_ccq_status(struct pva_kmd_device *pva, uint8_t ccq_id,
+			     uint8_t status_id, uint32_t value)
 {
-	pva_kmd_write(pva, pva->regspec.ccq_regs[0].status[status_id], value);
-}
-
-static void read_ccq_msg(struct pva_kmd_device *pva, struct pva_fw_msg *msg)
-{
-	uint32_t i;
-
-	msg->data[0] = read_ccq0_status(pva, PVA_FW_MSG_STATUS_LAST);
-	msg->len = PVA_EXTRACT(msg->data[0], PVA_FW_MSG_LEN_MSB,
-			       PVA_FW_MSG_LEN_LSB, uint8_t);
-	ASSERT(msg->len <= PVA_ARRAY_SIZE(msg->data));
-	for (i = 1; i < msg->len; i++) {
-		msg->data[i] =
-			read_ccq0_status(pva, PVA_FW_MSG_STATUS_BASE + i - 1);
-	}
+	pva_kmd_write(pva, pva->regspec.ccq_regs[ccq_id].status[status_id],
+		      value);
 }
 
 /* Handle interrupt from CCQ0 */
-void pva_kmd_isr(void *data)
+void pva_kmd_isr(void *data, enum pva_kmd_intr_line intr_line)
 {
 	struct pva_kmd_device *pva = data;
 	uint32_t intr_status;
+	uint8_t intr_interface = intr_line - PVA_KMD_INTR_LINE_CCQ0;
 
-	intr_status =
-		read_ccq0_status(pva, 2) & PVA_REG_CCQ_STATUS2_INTR_ALL_BITS;
-	pva_dbg_printf("CCQ0_INTR_STATUS 0x%x\n", intr_status);
+	intr_status = read_ccq_status(pva, intr_interface, 2) &
+		      PVA_REG_CCQ_STATUS2_INTR_ALL_BITS;
+
 	/* Clear interupt status This must be done prior to ack CCQ messages
 	 * otherwise we risk losing CCQ messages.
 	 */
-	write_ccq0_status(pva, 2, intr_status);
+	write_ccq_status(pva, intr_interface, 2, intr_status);
 
 	if (intr_status & PVA_REG_CCQ_STATUS2_INTR_STATUS8_BIT) {
-		struct pva_fw_msg msg;
-
-		read_ccq_msg(pva, &msg);
-
-		pva_kmd_handle_msg(pva, &msg.data[0], msg.len);
-
-		/* Ack through status1 write. */
-		write_ccq0_status(pva, 1, 0 /* Value doesn't matter for now */);
+		pva_kmd_shared_buffer_process(pva, intr_interface);
 	}
+}
 
-	/* We don't care about Status7 or CCQ overflow interrupt */
+enum pva_error pva_kmd_bind_shared_buffer_handler(void *pva_dev,
+						  uint8_t interface, void *data)
+{
+	struct pva_kmd_device *pva = (struct pva_kmd_device *)pva_dev;
+	return pva_kmd_bind_intr_handler(
+		pva, PVA_KMD_INTR_LINE_CCQ0 + interface, pva_kmd_isr, data);
+}
+
+void pva_kmd_release_shared_buffer_handler(void *pva_dev, uint8_t interface)
+{
+	struct pva_kmd_device *pva = (struct pva_kmd_device *)pva_dev;
+	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_CCQ0 + interface);
 }

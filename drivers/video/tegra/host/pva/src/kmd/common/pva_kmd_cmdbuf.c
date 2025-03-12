@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_cmdbuf.h"
 #include "pva_api_cmdbuf.h"
 #include "pva_kmd_utils.h"
@@ -66,11 +58,13 @@ enum pva_error pva_kmd_cmdbuf_chunk_pool_init(
 	err = pva_kmd_block_allocator_init(&cmdbuf_chunk_pool->block_allocator,
 					   mem_base_va, 0, chunk_size,
 					   num_chunks);
+	pva_kmd_mutex_init(&cmdbuf_chunk_pool->chunk_state_lock);
 	return err;
 }
 
 void pva_kmd_cmdbuf_chunk_pool_deinit(struct pva_kmd_cmdbuf_chunk_pool *pool)
 {
+	pva_kmd_mutex_deinit(&pool->chunk_state_lock);
 	pva_kmd_block_allocator_deinit(&pool->block_allocator);
 }
 
@@ -124,6 +118,7 @@ pva_kmd_alloc_cmdbuf_chunk(struct pva_kmd_cmdbuf_chunk_pool *pool,
 	enum pva_error err = PVA_SUCCESS;
 	void *chunk;
 
+	pva_kmd_mutex_lock(&pool->chunk_state_lock);
 	chunk = pva_kmd_alloc_block(&pool->block_allocator, out_chunk_id);
 	if (chunk == NULL) {
 		if (recycle_chunks(pool)) {
@@ -134,7 +129,7 @@ pva_kmd_alloc_cmdbuf_chunk(struct pva_kmd_cmdbuf_chunk_pool *pool,
 			err = PVA_NOMEM;
 		}
 	}
-
+	pva_kmd_mutex_unlock(&pool->chunk_state_lock);
 	return err;
 }
 

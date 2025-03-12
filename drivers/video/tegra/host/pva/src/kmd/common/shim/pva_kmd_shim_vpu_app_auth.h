@@ -1,7 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2021-2023, NVIDIA Corporation.  All rights reserved.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef PVA_KMD_SHIM_VPU_APP_AUTH_H
 #define PVA_KMD_SHIM_VPU_APP_AUTH_H

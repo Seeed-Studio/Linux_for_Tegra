@@ -1,13 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include "pva_kmd_resource_table.h"
 #include "pva_kmd_device_memory.h"
 #include "pva_kmd_hwseq_validate.h"
@@ -341,7 +334,7 @@ pva_kmd_dma_use_resources(struct pva_dma_config const *dma_cfg,
 	if (dma_cfg->header.vpu_exec_resource_id != PVA_RESOURCE_ID_INVALID) {
 		struct pva_kmd_resource_record *vpu_bin_rec;
 
-		vpu_bin_rec = pva_kmd_use_resource(
+		vpu_bin_rec = pva_kmd_use_resource_unsafe(
 			dma_aux->res_table,
 			dma_cfg->header.vpu_exec_resource_id);
 		if (vpu_bin_rec == NULL) {
@@ -371,8 +364,8 @@ pva_kmd_dma_use_resources(struct pva_dma_config const *dma_cfg,
 		if (slot_buf->type == PVA_DMA_STATIC_BINDING_DRAM) {
 			struct pva_kmd_resource_record *rec;
 
-			rec = pva_kmd_use_resource(dma_aux->res_table,
-						   slot_buf->dram.resource_id);
+			rec = pva_kmd_use_resource_unsafe(
+				dma_aux->res_table, slot_buf->dram.resource_id);
 			if (rec == NULL) {
 				pva_kmd_log_err(
 					"DRAM buffers used by DMA config do not exist");
@@ -415,13 +408,13 @@ pva_kmd_dma_use_resources(struct pva_dma_config const *dma_cfg,
 	return PVA_SUCCESS;
 drop_dram:
 	for (i = 0; i < dma_aux->dram_res_count; i++) {
-		pva_kmd_drop_resource(dma_aux->res_table,
-				      dma_aux->static_dram_res_ids[i]);
+		pva_kmd_drop_resource_unsafe(dma_aux->res_table,
+					     dma_aux->static_dram_res_ids[i]);
 	}
 drop_vpu_bin:
 	if (dma_aux->vpu_bin_res_id != PVA_RESOURCE_ID_INVALID) {
-		pva_kmd_drop_resource(dma_aux->res_table,
-				      dma_aux->vpu_bin_res_id);
+		pva_kmd_drop_resource_unsafe(dma_aux->res_table,
+					     dma_aux->vpu_bin_res_id);
 	}
 err_out:
 	return err;
@@ -630,6 +623,7 @@ static enum pva_error get_access_size(struct pva_dma_descriptor *desc,
 	int32_t dim_offset = 0;
 	uint32_t dim_offset_U = 0U;
 	uint32_t num_bytes = 0U;
+	int64_t offset_to_add = 0;
 	enum pva_error err = PVA_SUCCESS;
 	pva_math_error math_err = MATH_OP_SUCCESS;
 
@@ -658,6 +652,7 @@ static enum pva_error get_access_size(struct pva_dma_descriptor *desc,
 		pva_kmd_log_err("Offset is too large");
 		goto err_out;
 	}
+	offset_to_add = convert_to_signed_s64(attr->offset);
 
 	dim_offset_U = mulu32((uint32_t)(attr->line_pitch),
 			      subu32(ty, 1U, &math_err), &math_err);
@@ -674,6 +669,7 @@ static enum pva_error get_access_size(struct pva_dma_descriptor *desc,
 		}
 		start = 0LL;
 		end = (int64_t)attr->cb_size;
+		offset_to_add = 0;
 		goto end;
 	}
 
@@ -706,11 +702,8 @@ static enum pva_error get_access_size(struct pva_dma_descriptor *desc,
 
 end:
 	entry->start_addr =
-		adds64(mins64(start, end), convert_to_signed_s64(attr->offset),
-		       &math_err);
-	entry->end_addr =
-		adds64(maxs64(start, end), convert_to_signed_s64(attr->offset),
-		       &math_err);
+		adds64(mins64(start, end), offset_to_add, &math_err);
+	entry->end_addr = adds64(maxs64(start, end), offset_to_add, &math_err);
 
 	if (is_dst) {
 		dst2->start_addr =
@@ -743,7 +736,7 @@ pva_kmd_compute_dma_access(struct pva_dma_config const *dma_cfg,
 		 * Check if DMA descriptor has been used in HW Sequencer.
 		 * If used, skip_swseq_size_compute = true
 		 * else skip_swseq_size_compute = false
-		 * 
+		 *
 		 * If skip_swseq_size_compute == true then set access_sizes to 0
 		 * else go ahead with access_sizes calculation.access_sizes
 		 */

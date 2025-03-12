@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef PVA_API_CMDBUF_H
 #define PVA_API_CMDBUF_H
@@ -532,7 +524,12 @@ struct pva_cmd_retire_barrier_group {
 	struct pva_cmd_header header;
 };
 
-#define PVA_CMD_OPCODE_COUNT 37U
+struct pva_cmd_gr_check {
+#define PVA_CMD_OPCODE_GR_CHECK 37U
+	struct pva_cmd_header header;
+};
+
+#define PVA_CMD_OPCODE_COUNT 38U
 
 struct pva_cmd_init_resource_table {
 #define PVA_CMD_OPCODE_INIT_RESOURCE_TABLE (0U | PVA_CMD_PRIV_OPCODE_FLAG)
@@ -584,12 +581,8 @@ struct pva_cmd_deinit_queue {
 struct pva_cmd_enable_fw_profiling {
 #define PVA_CMD_OPCODE_ENABLE_FW_PROFILING (5U | PVA_CMD_PRIV_OPCODE_FLAG)
 	struct pva_cmd_header header;
-	uint8_t buffer_offset_hi;
 	uint8_t timestamp_type;
-	uint8_t pad[2];
-	uint32_t buffer_resource_id;
-	uint32_t buffer_size;
-	uint32_t buffer_offset_lo;
+	uint8_t pad[3];
 	uint32_t filter;
 };
 
@@ -619,7 +612,30 @@ struct pva_cmd_resume_fw {
 	struct pva_cmd_header header;
 };
 
-#define PVA_CMD_PRIV_OPCODE_COUNT 10U
+struct pva_cmd_init_shared_dram_buffer {
+#define PVA_CMD_OPCODE_INIT_SHARED_DRAM_BUFFER (10U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t interface;
+	uint8_t buffer_iova_hi;
+	uint8_t pad[2];
+	uint32_t buffer_iova_lo;
+	uint32_t buffer_size;
+};
+
+struct pva_cmd_deinit_shared_dram_buffer {
+#define PVA_CMD_OPCODE_DEINIT_SHARED_DRAM_BUFFER                               \
+	(11U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t interface;
+	uint8_t pad[3];
+};
+struct pva_cmd_set_debug_log_level {
+#define PVA_CMD_OPCODE_SET_DEBUG_LOG_LEVEL (12U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint32_t log_level;
+};
+
+#define PVA_CMD_PRIV_OPCODE_COUNT 13U
 
 #define PVA_MAX_CMDBUF_CHUNK_LEN 1024
 #define PVA_MAX_CMDBUF_CHUNK_SIZE (sizeof(uint32_t) * PVA_MAX_CMDBUF_CHUNK_LEN)

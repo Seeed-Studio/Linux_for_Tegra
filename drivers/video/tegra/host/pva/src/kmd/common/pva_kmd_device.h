@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef PVA_KMD_DEVICE_H
 #define PVA_KMD_DEVICE_H
@@ -25,6 +17,7 @@
 #include "pva_kmd_shim_init.h"
 #include "pva_kmd_shim_ccq.h"
 #include "pva_kmd_fw_profiler.h"
+#include "pva_kmd_fw_debug.h"
 #include "pva_kmd_constants.h"
 #include "pva_kmd_debugfs.h"
 
@@ -76,7 +69,6 @@ struct pva_kmd_device {
 	void *context_mem;
 	struct pva_kmd_block_allocator context_allocator;
 
-	pva_kmd_mutex_t resource_table_lock;
 	struct pva_kmd_resource_table dev_resource_table;
 
 	struct pva_kmd_submitter submitter;
@@ -100,12 +92,24 @@ struct pva_kmd_device {
 
 	/** ISR post this semaphore when FW completes boot */
 	pva_kmd_sema_t fw_boot_sema;
+	bool recovery;
 
 	struct pva_kmd_device_memory *fw_debug_mem;
 	struct pva_kmd_device_memory *fw_bin_mem;
-	struct pva_kmd_device_memory *fw_profiling_buffer_memory;
-	uint32_t fw_profiling_buffer_resource_id;
-	struct pva_kmd_fw_profiling_buffer fw_profiling_buffer;
+
+	// 'kmd_fw_buffers' holds DRAM buffers shared between KMD and FW
+	// - Today, we have 1 buffer per CCQ. This may need to be extended in future
+	//   to support buffered communication through mailbox
+	// - Buffers will be used for the following purposes
+	//   - CCQ 0: Communications common to a VM
+	//		-- example, FW profiling data and NSIGHT data
+	//   - CCQ 1-8: Communications specific to each context
+	//		-- example, resource unregistration requests
+	// In the future, we may want to extend this to support communications between
+	// FW and Hypervisor
+	struct pva_kmd_shared_buffer kmd_fw_buffers[PVA_MAX_NUM_CCQ];
+
+	uint32_t fw_debug_log_level;
 	struct pva_kmd_fw_print_buffer fw_print_buffer;
 
 	struct pva_kmd_device_memory *tegra_stats_memory;
@@ -155,4 +159,6 @@ void pva_kmd_send_resource_table_info_by_ccq(
 
 void pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
 				    struct pva_kmd_queue *queue);
+
+bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva);
 #endif // PVA_KMD_DEVICE_H

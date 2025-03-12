@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+
 #ifndef PVA_KMD_VPU_APP_AUTH_H
 #define PVA_KMD_VPU_APP_AUTH_H
 
@@ -68,6 +70,7 @@ struct pva_vpu_auth {
 };
 
 enum pva_error pva_kmd_init_vpu_app_auth(struct pva_kmd_device *pva, bool ena);
+void pva_kmd_deinit_vpu_app_auth(struct pva_kmd_device *pva);
 
 enum pva_error pva_kmd_verify_exectuable_hash(struct pva_kmd_device *pva,
 					      uint8_t *dataptr, size_t size);

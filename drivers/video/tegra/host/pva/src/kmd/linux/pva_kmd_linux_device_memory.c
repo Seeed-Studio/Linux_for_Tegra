@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_device_memory.h"
 #include "pva_kmd_utils.h"
 #include "pva_kmd_linux_device.h"
@@ -221,4 +213,9 @@ void pva_kmd_device_memory_iova_unmap(struct pva_kmd_device_memory *memory)
 				 DMA_BIDIRECTIONAL);
 	dma_buf_detach(mem_impl->dmabuf, mem_impl->dmabuf_attch);
 	memory->iova = 0;
+}
+
+uint64_t pva_kmd_get_r5_iova_start(void)
+{
+	return 0;
 }

@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
+/* SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef PVA_MATH_UTILS_H
 #define PVA_MATH_UTILS_H
@@ -627,6 +628,56 @@ static inline uint8_t wrap_add_u8(uint8_t a, uint8_t b, uint8_t size)
 static inline uint8_t wrap_add_pow2(uint8_t a, uint8_t b, uint8_t size)
 {
 	return (a + b) & (size - 1);
+}
+
+static inline uint64_t wraparound_sub_u64(uint64_t minuend, uint64_t subtrahend)
+{
+	if (minuend >= subtrahend) {
+		return minuend - subtrahend;
+	} else {
+		// Calculate the wrap-around value for underflow
+		return (UINT64_MAX - subtrahend + minuend + 1U);
+	}
+}
+
+/**
+ * @brief Simple counter increment with wrap-around to zero when reaching UINT32_MAX.
+ *
+ * This function safely increments a counter by 1 with wrap-around to zero
+ * when reaching UINT32_MAX.
+ *
+ * @param counter The current counter value.
+ * @return uint32_t The incremented counter value with wrap-around if needed.
+ */
+static inline uint32_t safe_wraparound_inc_u32(uint32_t counter)
+{
+	uint64_t result;
+
+	result = ((uint64_t)counter + (uint64_t)1U);
+
+	return (uint32_t)(result & MAX_UINT32);
+}
+
+/**
+ * @brief Simple counter decrement with wrap-around to UINT32_MAX when reaching zero.
+ *
+ * This function safely decrements a counter by 1 with wrap-around to UINT32_MAX
+ * when reaching zero.
+ *
+ * @param counter The current counter value.
+ * @return uint32_t The decremented counter value with wrap-around if needed.
+ */
+static inline uint32_t safe_wraparound_dec_u32(uint32_t counter)
+{
+	uint32_t result;
+
+	if (counter == (uint32_t)0U) {
+		result = (uint32_t)MAX_UINT32;
+	} else {
+		result = counter - (uint32_t)1U;
+	}
+
+	return result;
 }
 
 #define SAT_ADD_DEFINE(a, b, name, type)                                       \

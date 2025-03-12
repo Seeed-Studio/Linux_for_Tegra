@@ -1,14 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
-/* Auto-detected configuration depending kernel version */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include <nvidia/conftest.h>
 
 /* Linux headers */
@@ -23,7 +14,6 @@
 #include <linux/moduleparam.h>
 #include <linux/platform_device.h>
 #include <linux/atomic.h>
-#include <linux/nvhost.h>
 #include <linux/version.h>
 #include <linux/iommu.h>
 #include <uapi/linux/tegra-soc-hwpm-uapi.h>
@@ -45,6 +35,7 @@
 #include "pva_kmd_debugfs.h"
 #include "pva_kmd_silicon_hwpm.h"
 #include "pva_kmd_pm.h"
+#include "pva_kmd_linux_device_api.h"
 
 #define PVA_KMD_LINUX_DRIVER_NAME "pva_kmd"
 #if PVA_DEV_MAIN_COMPATIBLE == 1
@@ -66,7 +57,7 @@ MODULE_PARM_DESC(load_from_gsc, "Load V3 FW from GSC");
 module_param(app_authenticate, bool, 0);
 MODULE_PARM_DESC(app_authenticate, "Enable app authentication");
 
-struct nvhost_device_data t23x_pva0_props = {
+struct nvpva_device_data t23x_pva0_props = {
 	.version = PVA_CHIP_T23X,
 	.ctrl_ops = &tegra_pva_ctrl_ops,
 	.class = NV_PVA0_CLASS_ID,
@@ -78,7 +69,7 @@ struct nvhost_device_data t23x_pva0_props = {
 	.firmware_name = PVA_KMD_LINUX_T23X_FIRMWARE_NAME
 };
 
-struct nvhost_device_data t26x_pva0_props = {
+struct nvpva_device_data t26x_pva0_props = {
 	.version = PVA_CHIP_T26X,
 	.ctrl_ops = &tegra_pva_ctrl_ops,
 	.class = NV_PVA0_CLASS_ID,
@@ -94,13 +85,13 @@ struct nvhost_device_data t26x_pva0_props = {
 static struct of_device_id tegra_pva_of_match[] = {
 	{ .name = "pva0",
 	  .compatible = "nvidia,tegra234-pva",
-	  .data = (struct nvhost_device_data *)&t23x_pva0_props },
+	  .data = (struct nvpva_device_data *)&t23x_pva0_props },
 	{ .name = "pva0",
 	  .compatible = "nvidia,tegra234-pva-hv",
-	  .data = (struct nvhost_device_data *)&t23x_pva0_props },
+	  .data = (struct nvpva_device_data *)&t23x_pva0_props },
 	{ .name = "pva0",
 	  .compatible = "nvidia,tegra264-pva",
-	  .data = (struct nvhost_device_data *)&t26x_pva0_props },
+	  .data = (struct nvpva_device_data *)&t26x_pva0_props },
 	{},
 };
 
@@ -146,8 +137,8 @@ static void pva_kmd_linux_unregister_hwpm(struct pva_kmd_device *pva)
 static ssize_t clk_cap_store(struct kobject *kobj, struct kobj_attribute *attr,
 			     const char *buf, size_t count)
 {
-	struct nvhost_device_data *pdata =
-		container_of(kobj, struct nvhost_device_data, clk_cap_kobj);
+	struct nvpva_device_data *pdata =
+		container_of(kobj, struct nvpva_device_data, clk_cap_kobj);
 	/* i is indeed 'index' here after type conversion */
 	int ret, i = attr - pdata->clk_cap_attrs;
 	struct clk_bulk_data *clks = &pdata->clks[i];
@@ -183,8 +174,8 @@ static ssize_t clk_cap_store(struct kobject *kobj, struct kobj_attribute *attr,
 static ssize_t clk_cap_show(struct kobject *kobj, struct kobj_attribute *attr,
 			    char *buf)
 {
-	struct nvhost_device_data *pdata =
-		container_of(kobj, struct nvhost_device_data, clk_cap_kobj);
+	struct nvpva_device_data *pdata =
+		container_of(kobj, struct nvpva_device_data, clk_cap_kobj);
 	/* i is indeed 'index' here after type conversion */
 	int i = attr - pdata->clk_cap_attrs;
 	struct clk_bulk_data *clks = &pdata->clks[i];
@@ -207,7 +198,7 @@ static int pva_probe(struct platform_device *pdev)
 	int err = 0U;
 	struct device *dev = &pdev->dev;
 	struct pva_kmd_linux_device_data *pva_device_data;
-	struct nvhost_device_data *pva_props;
+	struct nvpva_device_data *pva_props;
 	const struct of_device_id *device_id;
 	struct pva_kmd_device *pva_device;
 	struct kobj_attribute *attr = NULL;
@@ -221,7 +212,7 @@ static int pva_probe(struct platform_device *pdev)
 		return -ENODATA;
 	}
 
-	pva_props = (struct nvhost_device_data *)device_id->data;
+	pva_props = (struct nvpva_device_data *)device_id->data;
 	WARN_ON(!pva_props);
 	if (!pva_props) {
 		dev_info(dev, "no platform data\n");
@@ -268,16 +259,16 @@ static int pva_probe(struct platform_device *pdev)
 	pva_device_data->pva_device_properties = pva_props;
 
 	/* Map MMIO range to kernel space */
-	err = nvhost_client_device_get_resources(pdev);
+	err = nvpva_device_get_resources(pdev);
 	if (err < 0) {
-		dev_err(dev, "nvhost_client_device_get_resources failed\n");
+		dev_err(dev, "nvpva_device_get_resources failed\n");
 		goto err_get_resources;
 	}
 
 	/* Get clocks */
-	err = nvhost_module_init(pdev);
+	err = nvpva_module_init(pdev);
 	if (err < 0) {
-		dev_err(dev, "nvhost_module_init failed\n");
+		dev_err(dev, "nvpva_module_init failed\n");
 		goto err_get_car;
 	}
 
@@ -285,9 +276,9 @@ static int pva_probe(struct platform_device *pdev)
 	 * Add this to nvhost device list, initialize scaling,
 	 * setup memory management for the device, create dev nodes
 	 */
-	err = nvhost_client_device_init(pdev);
+	err = nvpva_device_init(pdev);
 	if (err < 0) {
-		dev_err(dev, "nvhost_client_device_init failed\n");
+		dev_err(dev, "nvpva_client_device_init failed\n");
 		goto err_cdev_init;
 	}
 
@@ -340,9 +331,9 @@ err_cleanup_sysfs:
 	/* kobj of nvpva_kobj_ktype cleans up sysfs entries automatically */
 	kobject_put(&pva_props->clk_cap_kobj);
 err_cdev_init:
-	nvhost_client_device_release(pdev);
+	nvpva_device_release(pdev);
 err_get_car:
-	nvhost_module_deinit(pdev);
+	nvpva_module_deinit(pdev);
 err_get_resources:
 	pva_kmd_device_destroy(pva_device);
 
@@ -351,7 +342,7 @@ err_get_resources:
 
 static int __exit pva_remove(struct platform_device *pdev)
 {
-	struct nvhost_device_data *pva_props = platform_get_drvdata(pdev);
+	struct nvpva_device_data *pva_props = platform_get_drvdata(pdev);
 	struct pva_kmd_device *pva_device = pva_props->private_data;
 	struct kobj_attribute *attr = NULL;
 	int i;
@@ -366,10 +357,10 @@ static int __exit pva_remove(struct platform_device *pdev)
 		kobject_put(&pva_props->clk_cap_kobj);
 	}
 
-	nvhost_client_device_release(pdev);
+	nvpva_device_release(pdev);
 	pva_kmd_debugfs_destroy_nodes(pva_device);
 	pva_kmd_linux_unregister_hwpm(pva_device);
-	nvhost_module_deinit(pdev);
+	nvpva_module_deinit(pdev);
 	pva_kmd_device_destroy(pva_device);
 
 	return 0;
@@ -378,7 +369,7 @@ static int __exit pva_remove(struct platform_device *pdev)
 static int pva_kmd_linux_device_runtime_resume(struct device *dev)
 {
 	int err;
-	struct nvhost_device_data *props = dev_get_drvdata(dev);
+	struct nvpva_device_data *props = dev_get_drvdata(dev);
 
 	dev_info(dev, "PVA: Calling runtime resume");
 	reset_control_acquire(props->reset_control);
@@ -398,7 +389,7 @@ static int pva_kmd_linux_device_runtime_resume(struct device *dev)
 
 static int pva_kmd_linux_device_runtime_suspend(struct device *dev)
 {
-	struct nvhost_device_data *props = dev_get_drvdata(dev);
+	struct nvpva_device_data *props = dev_get_drvdata(dev);
 
 	dev_info(dev, "PVA: Calling runtime suspend");
 
@@ -428,7 +419,7 @@ static int pva_kmd_linux_device_resume(struct device *dev)
 {
 	enum pva_error status = PVA_SUCCESS;
 	int err = 0;
-	struct nvhost_device_data *props = dev_get_drvdata(dev);
+	struct nvpva_device_data *props = dev_get_drvdata(dev);
 	struct pva_kmd_device *pva_device = props->private_data;
 
 	if (pva_device->is_suspended == false) {
@@ -461,7 +452,7 @@ fail_not_in_suspend:
 static int pva_kmd_linux_device_suspend(struct device *dev)
 {
 	int err = 0;
-	struct nvhost_device_data *props = dev_get_drvdata(dev);
+	struct nvpva_device_data *props = dev_get_drvdata(dev);
 	struct pva_kmd_device *pva_device = props->private_data;
 
 	if (pva_device->refcount != 0u) {
@@ -483,7 +474,7 @@ fail_nvhost_module_suspend:
 
 static int pva_kmd_linux_device_prepare_suspend(struct device *dev)
 {
-	struct nvhost_device_data *props = dev_get_drvdata(dev);
+	struct nvpva_device_data *props = dev_get_drvdata(dev);
 	struct pva_kmd_device *pva_device = props->private_data;
 	enum pva_error status = PVA_SUCCESS;
 	int err = 0;
@@ -509,7 +500,7 @@ fail:
 static void pva_kmd_linux_device_complete_resume(struct device *dev)
 {
 	enum pva_error status = PVA_SUCCESS;
-	struct nvhost_device_data *props = dev_get_drvdata(dev);
+	struct nvpva_device_data *props = dev_get_drvdata(dev);
 	struct pva_kmd_device *pva_device = props->private_data;
 
 	dev_info(dev, "PVA: Completing resume");

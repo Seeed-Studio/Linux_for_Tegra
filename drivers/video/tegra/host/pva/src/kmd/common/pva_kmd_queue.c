@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_utils.h"
 #include "pva_fw.h"
 #include "pva_kmd_device_memory.h"
@@ -117,7 +109,9 @@ static enum pva_error notify_fw_queue_deinit(struct pva_kmd_context *ctx,
 	err = pva_kmd_submitter_wait(&ctx->submitter, fence_val,
 				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	ASSERT(err == PVA_SUCCESS);
+	if (err != PVA_SUCCESS) {
+		goto end;
+	}
 	return PVA_SUCCESS;
 cancel_submitter:
 	pva_kmd_cmdbuf_builder_cancel(&builder);
@@ -164,13 +158,6 @@ pva_kmd_queue_create(struct pva_kmd_context *ctx,
 					     PVA_R5_SMMU_CONTEXT_ID);
 	if (err != PVA_SUCCESS) {
 		goto err_free_kmd_memory;
-	}
-
-	if (submission_mem_kmd->iova < FW_SHARED_MEMORY_START) {
-		pva_kmd_log_err(
-			"Not able to map memory in the R5 shared region");
-		err = PVA_NOMEM;
-		goto unmap_iova;
 	}
 
 	err = pva_kmd_submitter_prepare(&ctx->submitter, &builder);
@@ -230,14 +217,20 @@ pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
 	 * Send command to FW to stop queue usage. Wait for ack.
 	 * This call needs to be added after syncpoint and ccq functions are ready.
 	 */
-	queue = pva_kmd_get_block(&ctx->queue_allocator, in_args->queue_id);
+	pva_kmd_mutex_lock(&ctx->queue_allocator.allocator_lock);
+	queue = pva_kmd_get_block_unsafe(&ctx->queue_allocator,
+					 in_args->queue_id);
 	if (queue == NULL) {
+		pva_kmd_mutex_unlock(&ctx->queue_allocator.allocator_lock);
 		return PVA_INVAL;
 	}
-
-	err = notify_fw_queue_deinit(ctx, queue);
-	if (err != PVA_SUCCESS) {
-		return err;
+	if (!ctx->pva->recovery) {
+		err = notify_fw_queue_deinit(ctx, queue);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_mutex_unlock(
+				&ctx->queue_allocator.allocator_lock);
+			return err;
+		}
 	}
 
 	pva_kmd_device_memory_iova_unmap(queue->queue_memory);
@@ -245,6 +238,7 @@ pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
 	pva_kmd_device_memory_free(queue->queue_memory);
 
 	pva_kmd_queue_deinit(queue);
+	pva_kmd_mutex_unlock(&ctx->queue_allocator.allocator_lock);
 
 	err = pva_kmd_free_block(&ctx->queue_allocator, in_args->queue_id);
 	ASSERT(err == PVA_SUCCESS);

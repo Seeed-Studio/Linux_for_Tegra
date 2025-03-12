@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef PVA_KMD_CONTEXT_H
 #define PVA_KMD_CONTEXT_H
@@ -36,7 +28,6 @@ struct pva_kmd_context {
 
 	bool inited;
 
-	pva_kmd_mutex_t resource_table_lock;
 	struct pva_kmd_resource_table ctx_resource_table;
 
 	struct pva_kmd_submitter submitter;
@@ -75,6 +66,7 @@ struct pva_kmd_context {
 	/** Index of block of syncpoints allocated for this context */
 	uint32_t syncpt_block_index;
 	uint32_t syncpt_ids[PVA_NUM_RW_SYNCPTS_PER_CONTEXT];
+	pva_kmd_mutex_t ocb_lock;
 };
 
 /**

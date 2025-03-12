@@ -25,6 +25,7 @@ PVA_SYS_ABSDIR := $(srctree.nvidia-oot)/drivers/video/tegra/host/pva
 
 ###### Begin generated section ######
 pva_objs += \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_abort.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_block_allocator.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_cmdbuf.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_context.o \
@@ -43,6 +44,7 @@ pva_objs += \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_queue.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_resource_table.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_sha256.o \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_shared_buffer.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_silicon_boot.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_silicon_elf_parser.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_silicon_executable.o \
@@ -58,6 +60,7 @@ pva_objs += \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_vpu_ocd.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_debugfs.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_device.o \
+    $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_device_api.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_device_memory.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_driver.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_ioctl.o \

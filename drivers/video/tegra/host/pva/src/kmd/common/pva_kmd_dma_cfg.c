@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_dma_cfg.h"
 #include "pva_utils.h"
 #include "pva_kmd_resource_table.h"
@@ -15,18 +7,18 @@
 
 #define PVA_KMD_INVALID_CH_IDX 0xFF
 
-void pva_kmd_unload_dma_config(struct pva_kmd_dma_resource_aux *dma_aux)
+void pva_kmd_unload_dma_config_unsafe(struct pva_kmd_dma_resource_aux *dma_aux)
 {
 	uint32_t i;
 
 	for (i = 0; i < dma_aux->dram_res_count; i++) {
-		pva_kmd_drop_resource(dma_aux->res_table,
-				      dma_aux->static_dram_res_ids[i]);
+		pva_kmd_drop_resource_unsafe(dma_aux->res_table,
+					     dma_aux->static_dram_res_ids[i]);
 	}
 
 	if (dma_aux->vpu_bin_res_id != PVA_RESOURCE_ID_INVALID) {
-		pva_kmd_drop_resource(dma_aux->res_table,
-				      dma_aux->vpu_bin_res_id);
+		pva_kmd_drop_resource_unsafe(dma_aux->res_table,
+					     dma_aux->vpu_bin_res_id);
 	}
 }
 
@@ -142,7 +134,7 @@ pva_kmd_load_dma_config(struct pva_kmd_resource_table *resource_table,
 
 	return PVA_SUCCESS;
 drop_res:
-	pva_kmd_unload_dma_config(dma_aux);
+	pva_kmd_unload_dma_config_unsafe(dma_aux);
 err_out:
 	return err;
 }

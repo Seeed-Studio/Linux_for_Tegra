@@ -1,16 +1,9 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_kmd_submitter.h"
 #include "pva_kmd_utils.h"
+#include "pva_kmd_abort.h"
 
 void pva_kmd_submitter_init(struct pva_kmd_submitter *submitter,
 			    struct pva_kmd_queue *queue,
@@ -121,13 +114,15 @@ enum pva_error pva_kmd_submitter_submit(struct pva_kmd_submitter *submitter,
 			    PVA_CMDBUF_FLAGS_ENGINE_AFFINITY_LSB);
 
 	pva_kmd_mutex_lock(submitter->submit_lock);
-	submitter->fence_future_value += 1U;
+	submitter->fence_future_value =
+		safe_wraparound_inc_u32(submitter->fence_future_value);
 	submit_info.postfences[0].value = submitter->fence_future_value;
 	err = pva_kmd_queue_submit(submitter->queue, &submit_info);
 	if (err == PVA_SUCCESS) {
 		*out_fence_val = submitter->fence_future_value;
 	} else {
-		submitter->fence_future_value -= 1U;
+		submitter->fence_future_value =
+			safe_wraparound_dec_u32(submitter->fence_future_value);
 		pva_kmd_cmdbuf_builder_cancel(builder);
 	}
 	pva_kmd_mutex_unlock(submitter->submit_lock);
@@ -148,6 +143,7 @@ enum pva_error pva_kmd_submitter_wait(struct pva_kmd_submitter *submitter,
 		time_spent = safe_addu32(time_spent, poll_interval_us);
 		if (time_spent >= timeout_us) {
 			pva_kmd_log_err("pva_kmd_submitter_wait Timed out");
+			pva_kmd_abort(submitter->queue->pva);
 			return PVA_TIMEDOUT;
 		}
 	}

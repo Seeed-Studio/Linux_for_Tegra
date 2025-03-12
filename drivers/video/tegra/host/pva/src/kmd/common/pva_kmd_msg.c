@@ -1,21 +1,13 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_kmd_msg.h"
 #include "pva_fw.h"
 #include "pva_kmd_utils.h"
 #include "pva_kmd_thread_sema.h"
-#include "pva_kmd_fw_debug.h"
 #include "pva_kmd_device.h"
 #include "pva_kmd_context.h"
+#include "pva_kmd_abort.h"
 
 static uint8_t get_msg_type(uint32_t hdr)
 {
@@ -58,6 +50,7 @@ void pva_kmd_handle_hyp_msg(void *pva_dev, uint32_t const *data, uint8_t len)
 		memcpy(abort_msg + 2, &data[1], size);
 		abort_msg[PVA_FW_MSG_ABORT_STR_MAX_LEN] = '\0';
 		pva_kmd_log_err(abort_msg);
+		pva_kmd_abort(pva);
 	} break;
 	case PVA_FW_MSG_TYPE_FLUSH_PRINT:
 		pva_kmd_drain_fw_print(&pva->fw_print_buffer);
@@ -68,31 +61,31 @@ void pva_kmd_handle_hyp_msg(void *pva_dev, uint32_t const *data, uint8_t len)
 	}
 }
 
-void pva_kmd_handle_msg(void *pva_dev, uint32_t const *data, uint8_t len)
+enum pva_error pva_kmd_handle_msg_resource_unreg(void *context,
+						 uint8_t interface,
+						 uint8_t *element)
 {
-	struct pva_kmd_device *pva = pva_dev;
+	// TODO: if the mapping of CCQ_ID to interface is not 1:1, we need to
+	//	 find the CCQ_ID/table_id from interface
+	uint8_t table_id = interface;
+	struct pva_kmd_device *pva;
+	struct pva_kmd_context *ctx;
+	uint32_t resource_id;
 
-	uint8_t type = get_msg_type(data[0]);
-	switch (type) {
-	case PVA_FW_MSG_TYPE_RESOURCE_UNREGISTER: {
-		uint8_t table_id =
-			PVA_EXTRACT(data[0], PVA_FW_MSG_RESOURCE_TABLE_ID_MSB,
-				    PVA_FW_MSG_RESOURCE_TABLE_ID_LSB, uint8_t);
-		/* Resource table ID equals context id */
-		struct pva_kmd_context *ctx =
-			pva_kmd_get_context(pva, table_id);
-		uint32_t i;
+	ASSERT(context != NULL);
+	pva = (struct pva_kmd_device *)context;
+	ctx = pva_kmd_get_context(pva, table_id);
 
-		pva_kmd_mutex_lock(&ctx->resource_table_lock);
-		for (i = 1; i < len; i++) {
-			pva_kmd_drop_resource(&ctx->ctx_resource_table,
-					      data[i]);
-		}
-		pva_kmd_mutex_unlock(&ctx->resource_table_lock);
-		break;
-	}
-	default:
-		FAULT("Unexpected CCQ msg type from FW");
-		break;
-	}
+	ASSERT(ctx != NULL);
+	ASSERT(element != NULL);
+
+	/* Resource table ID equals context id */
+	memcpy(&resource_id, element, sizeof(resource_id));
+
+	// We do not lock the resource table here because this function is intended
+	// to be called from the shared buffer processing function which should acquire
+	// the required lock.
+	pva_kmd_drop_resource_unsafe(&ctx->ctx_resource_table, resource_id);
+
+	return PVA_SUCCESS;
 }

@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 #ifndef PVA_KMD_DMA_CFG_H
 #define PVA_KMD_DMA_CFG_H
 
@@ -135,5 +127,5 @@ pva_kmd_load_dma_config(struct pva_kmd_resource_table *resource_table,
 			struct pva_kmd_dma_resource_aux *dma_aux,
 			void *fw_dma_cfg, uint32_t *out_fw_fetch_size);
 
-void pva_kmd_unload_dma_config(struct pva_kmd_dma_resource_aux *dma_aux);
+void pva_kmd_unload_dma_config_unsafe(struct pva_kmd_dma_resource_aux *dma_aux);
 #endif // PVA_KMD_DMA_CFG_H

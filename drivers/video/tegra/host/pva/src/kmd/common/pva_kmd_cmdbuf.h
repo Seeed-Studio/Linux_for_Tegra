@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 #ifndef PVA_KMD_CMDBUF_H
 #define PVA_KMD_CMDBUF_H
 #include "pva_fw.h"
@@ -37,6 +29,7 @@ struct pva_kmd_cmdbuf_chunk_pool {
 	uint64_t chunk_states_offset;
 	void *mem_base_va;
 	struct pva_kmd_block_allocator block_allocator;
+	pva_kmd_mutex_t chunk_state_lock;
 };
 
 static inline uint64_t
@@ -213,16 +206,10 @@ pva_kmd_set_cmd_unregister_resource(struct pva_cmd_unregister_resource *cmd,
 
 static inline void
 pva_kmd_set_cmd_enable_fw_profiling(struct pva_cmd_enable_fw_profiling *cmd,
-				    uint32_t buffer_resource_id,
-				    uint32_t buffer_size, uint64_t offset,
 				    uint32_t filter, uint8_t timestamp_type)
 {
 	cmd->header.opcode = PVA_CMD_OPCODE_ENABLE_FW_PROFILING;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
-	cmd->buffer_resource_id = buffer_resource_id;
-	cmd->buffer_offset_hi = iova_hi(offset);
-	cmd->buffer_offset_lo = iova_lo(offset);
-	cmd->buffer_size = buffer_size;
 	cmd->filter = filter;
 	cmd->timestamp_type = timestamp_type;
 }
@@ -247,6 +234,15 @@ static inline void pva_kmd_set_cmd_get_tegra_stats(
 	cmd->enabled = enabled;
 }
 
+static inline void
+pva_kmd_set_cmd_set_debug_log_level(struct pva_cmd_set_debug_log_level *cmd,
+				    uint32_t log_level)
+{
+	cmd->header.opcode = PVA_CMD_OPCODE_SET_DEBUG_LOG_LEVEL;
+	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
+	cmd->log_level = log_level;
+}
+
 static inline void pva_kmd_set_cmd_suspend_fw(struct pva_cmd_suspend_fw *cmd)
 {
 	uint64_t len = (sizeof(*cmd) / sizeof(uint32_t));
@@ -261,5 +257,25 @@ static inline void pva_kmd_set_cmd_resume_fw(struct pva_cmd_resume_fw *cmd)
 	cmd->header.opcode = PVA_CMD_OPCODE_RESUME_FW;
 	ASSERT(len <= 255u);
 	cmd->header.len = (uint8_t)(len);
+}
+
+static inline void pva_kmd_set_cmd_init_shared_dram_buffer(
+	struct pva_cmd_init_shared_dram_buffer *cmd, uint8_t interface,
+	uint32_t buffer_iova, uint32_t buffer_size)
+{
+	cmd->header.opcode = PVA_CMD_OPCODE_INIT_SHARED_DRAM_BUFFER;
+	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
+	cmd->buffer_iova_hi = iova_hi(buffer_iova);
+	cmd->buffer_iova_lo = iova_lo(buffer_iova);
+	cmd->buffer_size = buffer_size;
+	cmd->interface = interface;
+}
+
+static inline void pva_kmd_set_cmd_deinit_shared_dram_buffer(
+	struct pva_cmd_deinit_shared_dram_buffer *cmd, uint8_t interface)
+{
+	cmd->header.opcode = PVA_CMD_OPCODE_DEINIT_SHARED_DRAM_BUFFER;
+	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
+	cmd->interface = interface;
 }
 #endif // PVA_KMD_CMDBUF_H

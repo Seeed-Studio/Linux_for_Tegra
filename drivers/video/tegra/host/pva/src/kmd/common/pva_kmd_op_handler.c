@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_op_handler.h"
 #include "pva_kmd_resource_table.h"
 #include "pva_kmd_device_memory.h"
@@ -101,18 +93,8 @@ pva_kmd_op_memory_register_async(struct pva_kmd_context *ctx,
 		goto release;
 	}
 
-	if ((smmu_ctx_id == PVA_R5_SMMU_CONTEXT_ID) &&
-	    (dev_mem->iova < FW_SHARED_MEMORY_START)) {
-		pva_kmd_log_err(
-			"Not able to map memory in the R5 shared region");
-		err = PVA_NOMEM;
-		goto unmap;
-	}
-
-	pva_kmd_mutex_lock(&ctx->resource_table_lock);
 	err = pva_kmd_add_dram_buffer_resource(&ctx->ctx_resource_table,
 					       dev_mem, &resource_id);
-	pva_kmd_mutex_unlock(&ctx->resource_table_lock);
 	if (err != PVA_SUCCESS) {
 		goto unmap;
 	}
@@ -195,7 +177,6 @@ static enum pva_error pva_kmd_op_executable_register_async(
 		goto err_out;
 	}
 
-	pva_kmd_mutex_lock(&ctx->resource_table_lock);
 	err = pva_kmd_add_vpu_bin_resource(&ctx->ctx_resource_table, exec_data,
 					   args->size, &resource_id);
 	if (err == PVA_SUCCESS) {
@@ -205,7 +186,6 @@ static enum pva_error pva_kmd_op_executable_register_async(
 		num_symbols = rec->vpu_bin.symbol_table.n_symbols;
 		pva_kmd_drop_resource(&ctx->ctx_resource_table, resource_id);
 	}
-	pva_kmd_mutex_unlock(&ctx->resource_table_lock);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
@@ -272,14 +252,12 @@ pva_kmd_op_dma_register_async(struct pva_kmd_context *ctx,
 	// Discard the data we are about to pass to pva_kmd_add_dma_config_resource
 	read_data(in_buffer, dma_cfg_payload_size);
 
-	pva_kmd_mutex_lock(&ctx->resource_table_lock);
 	dma_config_size =
 		safe_addu32(dma_cfg_payload_size,
 			    (uint32_t)sizeof(args->dma_config_header));
 	err = pva_kmd_add_dma_config_resource(&ctx->ctx_resource_table,
 					      dma_cfg_data, dma_config_size,
 					      &resource_id);
-	pva_kmd_mutex_unlock(&ctx->resource_table_lock);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
@@ -467,10 +445,8 @@ pva_kmd_op_syncpt_register_async(struct pva_kmd_context *ctx,
 	dev_mem.size = ctx->pva->syncpt_offset * ctx->pva->num_syncpts;
 	dev_mem.pva = ctx->pva;
 	dev_mem.smmu_ctx_idx = PVA_R5_SMMU_CONTEXT_ID;
-	pva_kmd_mutex_lock(&ctx->resource_table_lock);
 	err = pva_kmd_add_syncpt_resource(&ctx->ctx_resource_table, &dev_mem,
 					  &resource_id);
-	pva_kmd_mutex_unlock(&ctx->resource_table_lock);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
@@ -486,7 +462,8 @@ pva_kmd_op_syncpt_register_async(struct pva_kmd_context *ctx,
 		update_cmd, ctx->resource_table_id, resource_id, &entry);
 
 	/* Register RW syncpts */
-	syncpts = (struct pva_syncpt_rw_info *)pva_kmd_get_block(
+	pva_kmd_mutex_lock(&ctx->pva->syncpt_allocator.allocator_lock);
+	syncpts = (struct pva_syncpt_rw_info *)pva_kmd_get_block_unsafe(
 		&ctx->pva->syncpt_allocator, ctx->syncpt_block_index);
 	ASSERT(syncpts != NULL);
 
@@ -496,20 +473,18 @@ pva_kmd_op_syncpt_register_async(struct pva_kmd_context *ctx,
 	}
 
 	dev_mem.iova = syncpts[0].syncpt_iova;
+	pva_kmd_mutex_unlock(&ctx->pva->syncpt_allocator.allocator_lock);
 	dev_mem.va = 0;
 	dev_mem.size = ctx->pva->syncpt_offset * PVA_NUM_RW_SYNCPTS_PER_CONTEXT;
 	dev_mem.pva = ctx->pva;
 	dev_mem.smmu_ctx_idx = PVA_R5_SMMU_CONTEXT_ID;
-	pva_kmd_mutex_lock(&ctx->resource_table_lock);
 	err = pva_kmd_add_syncpt_resource(&ctx->ctx_resource_table, &dev_mem,
 					  &resource_id);
-	pva_kmd_mutex_unlock(&ctx->resource_table_lock);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
 	syncpt_register_out.syncpt_rw_res_id = resource_id;
 	syncpt_register_out.synpt_size = ctx->pva->syncpt_offset;
-	ctx->ctx_resource_table.syncpt_allocator = &ctx->pva->syncpt_allocator;
 	update_cmd =
 		pva_kmd_reserve_cmd_space(cmdbuf_builder, sizeof(*update_cmd));
 	ASSERT(update_cmd != NULL);
@@ -556,6 +531,7 @@ static enum pva_error pva_kmd_op_queue_create(struct pva_kmd_context *ctx,
 		err = PVA_INVAL;
 		goto err_out;
 	}
+
 	pva_kmd_read_syncpt_val(ctx->pva, ctx->syncpt_ids[queue_id],
 				&queue_out_args.syncpt_fence_counter);
 
@@ -616,7 +592,6 @@ pva_kmd_op_executable_get_symbols(struct pva_kmd_context *ctx,
 
 	sym_in_args = read_data(
 		in_arg, sizeof(struct pva_kmd_executable_get_symbols_in_args));
-
 	rec = pva_kmd_use_resource(&ctx->ctx_resource_table,
 				   sym_in_args->exec_resource_id);
 	if (rec == NULL) {
@@ -693,8 +668,10 @@ pva_kmd_op_synced_submit(struct pva_kmd_context *ctx,
 	err = pva_kmd_submitter_wait(&ctx->submitter, fence_val,
 				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	/* TODO: handle this error when FW reboot is supported */
-	ASSERT(err == PVA_SUCCESS);
+
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
 
 	return PVA_SUCCESS;
 cancel_submit:
@@ -710,12 +687,19 @@ static enum pva_error pva_kmd_sync_ops_handler(struct pva_kmd_context *ctx,
 	enum pva_error err = PVA_SUCCESS;
 	struct pva_kmd_op_header *header;
 
+	if (ctx->pva->recovery) {
+		pva_kmd_log_err("In Recovery state, do not accept ops");
+		err = PVA_INVAL;
+		goto out;
+	}
+
 	if (!access_ok(in_arg, sizeof(struct pva_kmd_op_header))) {
 		err = PVA_INVAL;
 		goto out;
 	}
 
 	header = read_data(in_arg, sizeof(struct pva_kmd_op_header));
+
 	switch (header->op_type) {
 	case PVA_KMD_OP_CONTEXT_INIT:
 		err = pva_kmd_op_context_init(ctx, in_arg, out_arg);

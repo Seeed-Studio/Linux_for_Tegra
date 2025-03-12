@@ -1,13 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_api_types.h"
 #include "pva_kmd_vpu_app_auth.h"
@@ -23,7 +15,8 @@ enum pva_error pva_kmd_init_vpu_app_auth(struct pva_kmd_device *pva, bool ena)
 	struct pva_vpu_auth *pva_auth = pva_kmd_zalloc(sizeof(*pva_auth));
 	if (pva_auth == NULL) {
 		pva_kmd_log_err("Unable to allocate memory");
-		return PVA_NOMEM;
+		err = PVA_NOMEM;
+		goto error;
 	}
 
 	pva->pva_auth = pva_auth;
@@ -37,12 +30,24 @@ enum pva_error pva_kmd_init_vpu_app_auth(struct pva_kmd_device *pva, bool ena)
 	 * Either of the 2 conditions if satisfied will enable authentication
 	 */
 	pva_auth->pva_auth_enable = ena;
+	err = pva_kmd_mutex_init(&pva_auth->allow_list_lock);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Failed to initialize allow list lock");
+		goto free;
+	}
+
 	default_path_len = strnlen(default_path, ALLOWLIST_FILE_LEN);
 	if (default_path_len > 0U) {
 		(void)memcpy(pva_auth->pva_auth_allowlist_path, default_path,
 			     default_path_len);
 	}
 
+	return PVA_SUCCESS;
+
+free:
+	pva_kmd_free(pva_auth);
+error:
+	pva->pva_auth = NULL;
 	return err;
 }
 
@@ -365,4 +370,21 @@ enum pva_error pva_kmd_allowlist_parse(struct pva_kmd_device *pva)
 
 fail:
 	return err;
+}
+
+void pva_kmd_deinit_vpu_app_auth(struct pva_kmd_device *pva)
+{
+	struct pva_vpu_auth *pva_auth;
+
+	if (pva == NULL)
+		return;
+
+	pva_auth = pva->pva_auth;
+	if (pva_auth == NULL)
+		return;
+
+	pva_kmd_allowlist_destroy(pva_auth);
+	pva_kmd_mutex_deinit(&pva_auth->allow_list_lock);
+	pva_kmd_free(pva_auth);
+	pva->pva_auth = NULL;
 }

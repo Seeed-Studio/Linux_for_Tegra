@@ -1,15 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include "pva_api_types.h"
-#include "pva_kmd_fw_debug.h"
 #include "pva_kmd_utils.h"
 #include "pva_api_cmdbuf.h"
 #include "pva_api.h"
@@ -25,12 +17,15 @@
 #include "pva_kmd_regs.h"
 #include "pva_kmd_device_memory.h"
 #include "pva_kmd_fw_profiler.h"
+#include "pva_kmd_fw_debug.h"
 #include "pva_kmd_vpu_app_auth.h"
 #include "pva_utils.h"
 #include "pva_kmd_debugfs.h"
 #include "pva_kmd_tegra_stats.h"
 #include "pva_kmd_shim_silicon.h"
+#include "pva_kmd_shared_buffer.h"
 
+#include "pva_kmd_abort.h"
 /**
  * @brief Send address and size of the resource table to FW through CCQ.
  *
@@ -192,7 +187,6 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 	pva->max_n_contexts = PVA_MAX_NUM_USER_CONTEXTS;
 	pva_kmd_mutex_init(&pva->powercycle_lock);
 	pva_kmd_mutex_init(&pva->ccq0_lock);
-	pva_kmd_mutex_init(&pva->resource_table_lock);
 	pva_kmd_sema_init(&pva->fw_boot_sema, 0);
 	size = safe_mulu32((uint32_t)sizeof(struct pva_kmd_context),
 			   pva->max_n_contexts);
@@ -229,6 +223,7 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 	ASSERT(err == PVA_SUCCESS);
 
 	pva->is_suspended = false;
+	pva->fw_debug_log_level = 0U;
 
 	return pva;
 }
@@ -260,9 +255,8 @@ void pva_kmd_device_destroy(struct pva_kmd_device *pva)
 	pva_kmd_block_allocator_deinit(&pva->context_allocator);
 	pva_kmd_free(pva->context_mem);
 	pva_kmd_mutex_deinit(&pva->ccq0_lock);
-	pva_kmd_mutex_deinit(&pva->resource_table_lock);
 	pva_kmd_mutex_deinit(&pva->powercycle_lock);
-	pva_kmd_free(pva->pva_auth);
+	pva_kmd_deinit_vpu_app_auth(pva);
 	pva_kmd_free(pva);
 }
 
@@ -290,7 +284,22 @@ enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 		pva_kmd_send_resource_table_info_by_ccq(
 			pva, &pva->dev_resource_table);
 		pva_kmd_send_queue_info_by_ccq(pva, &pva->dev_queue);
+
+		// TODO: need better error handling here
+		err = pva_kmd_shared_buffer_init(
+			pva, PVA_PRIV_CCQ_ID, PVA_KMD_FW_BUF_ELEMENT_SIZE,
+			PVA_KMD_FW_PROFILING_BUF_NUM_ELEMENTS,
+			pva_kmd_process_fw_profiling_message, NULL, NULL);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err_u64(
+				"pva kmd buffer initialization failed for interface ",
+				PVA_PRIV_CCQ_ID);
+			goto unlock;
+		}
 		pva_kmd_notify_fw_enable_profiling(pva);
+		/* Set FW debug log level */
+		pva_kmd_notify_fw_set_debug_log_level(pva,
+						      pva->fw_debug_log_level);
 	}
 	pva->refcount = safe_addu32(pva->refcount, 1U);
 
@@ -301,15 +310,22 @@ unlock:
 
 void pva_kmd_device_idle(struct pva_kmd_device *pva)
 {
+	enum pva_error err = PVA_SUCCESS;
+
 	pva_kmd_mutex_lock(&pva->powercycle_lock);
 	ASSERT(pva->refcount > 0);
 	pva->refcount--;
 	if (pva->refcount == 0) {
-		/* Disable FW profiling */
-		/* TODO: once debugfs is up, move these calls */
-		// pva_kmd_notify_fw_disable_profiling(pva);
-		// pva_kmd_drain_fw_profiling_buffer(pva,
-		// 				  &pva->fw_profiling_buffer);
+		if (!pva->recovery) {
+			/* Disable FW profiling */
+			/* TODO: once debugfs is up, move these calls */
+			pva_kmd_notify_fw_disable_profiling(pva);
+		}
+		// TOOD: need better error handling here
+		err = pva_kmd_shared_buffer_deinit(pva, PVA_PRIV_CCQ_ID);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err("pva_kmd_shared_buffer_deinit failed");
+		}
 		pva_kmd_deinit_fw(pva);
 		pva_kmd_power_off(pva);
 	}
@@ -326,6 +342,7 @@ enum pva_error pva_kmd_ccq_push_with_timeout(struct pva_kmd_device *pva,
 		if (timeout_us == 0) {
 			pva_kmd_log_err(
 				"pva_kmd_ccq_push_with_timeout Timed out");
+			pva_kmd_abort(pva);
 			return PVA_TIMEDOUT;
 		}
 		pva_kmd_sleep_us(sleep_interval_us);
@@ -335,4 +352,16 @@ enum pva_error pva_kmd_ccq_push_with_timeout(struct pva_kmd_device *pva,
 	pva_kmd_ccq_push(pva, ccq_id, ccq_entry);
 
 	return PVA_SUCCESS;
+}
+
+bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva)
+{
+	bool device_on = false;
+
+	pva_kmd_mutex_lock(&pva->powercycle_lock);
+	if (pva->refcount > 0) {
+		device_on = true;
+	}
+	pva_kmd_mutex_unlock(&pva->powercycle_lock);
+	return device_on;
 }

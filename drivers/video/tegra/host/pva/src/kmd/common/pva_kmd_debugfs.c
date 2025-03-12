@@ -1,13 +1,6 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2025, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include "pva_kmd_device.h"
 #include "pva_kmd_debugfs.h"
 #include "pva_kmd_fw_profiler.h"
@@ -15,6 +8,7 @@
 #include "pva_kmd_vpu_ocd.h"
 #include "pva_kmd_tegra_stats.h"
 #include "pva_kmd_vpu_app_auth.h"
+#include "pva_kmd_shared_buffer.h"
 
 void pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
 {
@@ -47,10 +41,18 @@ void pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
 			&pva->debugfs_context.vpu_ocd_fops[i]);
 	}
 
+	pva->debugfs_context.allowlist_fops.read = &get_vpu_allowlist_enabled;
 	pva->debugfs_context.allowlist_fops.write = &update_vpu_allowlist;
 	pva->debugfs_context.allowlist_fops.pdev = pva;
 	pva_kmd_debugfs_create_file(pva, "vpu_app_authentication",
 				    &pva->debugfs_context.allowlist_fops);
+
+	pva->debugfs_context.fw_debug_log_level_fops.write =
+		&update_fw_debug_log_level;
+	pva->debugfs_context.fw_debug_log_level_fops.pdev = pva;
+	pva_kmd_debugfs_create_file(
+		pva, "fw_debug_log_level",
+		&pva->debugfs_context.fw_debug_log_level_fops);
 
 	pva_kmd_device_init_profiler(pva);
 	pva_kmd_device_init_tegra_stats(pva);
@@ -63,8 +65,26 @@ void pva_kmd_debugfs_destroy_nodes(struct pva_kmd_device *pva)
 	pva_kmd_debugfs_remove_nodes(pva);
 }
 
+static uint64_t read_from_buffer_to_user(void *to, uint64_t count,
+					 uint64_t offset, const void *from,
+					 uint64_t available)
+{
+	if (offset >= available || !count) {
+		return 0;
+	}
+	if (count > available - offset) {
+		count = available - offset;
+	}
+	if (pva_kmd_copy_data_to_user(to, (uint8_t *)from + offset, count)) {
+		pva_kmd_log_err("failed to copy read buffer to user");
+		return 0;
+	}
+	return count;
+}
+
 static int64_t print_vpu_stats(struct pva_kmd_tegrastats *kmd_tegra_stats,
-			       uint8_t *out_buffer, uint64_t len)
+			       uint8_t *out_buffer, uint64_t offset,
+			       uint64_t len)
 {
 	char kernel_buffer[256];
 	int64_t formatted_len;
@@ -90,19 +110,13 @@ static int64_t print_vpu_stats(struct pva_kmd_tegrastats *kmd_tegra_stats,
 	}
 
 	// Copy the formatted string from kernel buffer to user buffer
-	if (pva_kmd_copy_data_to_user(out_buffer, kernel_buffer,
-				      formatted_len)) {
-		pva_kmd_log_err("failed to copy read buffer to user");
-		return 0;
-	}
-
-	return formatted_len;
+	return read_from_buffer_to_user(out_buffer, len, offset, kernel_buffer,
+					formatted_len);
 }
 
 int64_t update_vpu_stats(struct pva_kmd_device *dev, void *file_data,
 			 uint8_t *out_buffer, uint64_t offset, uint64_t size)
 {
-	uint64_t size_read = 0U;
 	struct pva_kmd_tegrastats kmd_tegra_stats;
 
 	kmd_tegra_stats.window_start_time = 0;
@@ -113,9 +127,23 @@ int64_t update_vpu_stats(struct pva_kmd_device *dev, void *file_data,
 	pva_kmd_log_err("Reading VPU stats");
 	pva_kmd_notify_fw_get_tegra_stats(dev, &kmd_tegra_stats);
 
-	size_read = print_vpu_stats(&kmd_tegra_stats, out_buffer, size);
+	return print_vpu_stats(&kmd_tegra_stats, out_buffer, offset, size);
+}
 
-	return size_read;
+int64_t get_vpu_allowlist_enabled(struct pva_kmd_device *pva, void *file_data,
+				  uint8_t *out_buffer, uint64_t offset,
+				  uint64_t size)
+{
+	// 1 byte for '0' or '1' and another 1 byte for the Null character
+	char out_str[2];
+	pva_kmd_mutex_lock(&(pva->pva_auth->allow_list_lock));
+	snprintf(out_str, sizeof(out_str), "%d",
+		 (int)pva->pva_auth->pva_auth_enable);
+	pva_kmd_mutex_unlock(&(pva->pva_auth->allow_list_lock));
+
+	// Copy the formatted string from kernel buffer to user buffer
+	return read_from_buffer_to_user(out_buffer, size, offset, out_str,
+					sizeof(out_str));
 }
 
 int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
@@ -123,20 +151,70 @@ int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
 			     uint64_t size)
 {
 	char strbuf[2]; // 1 byte for '0' or '1' and another 1 byte for the Null character
+	uint32_t base = 10;
 	uint32_t pva_auth_enable;
 	unsigned long retval;
+
+	if (size == 0) {
+		pva_kmd_log_err("Write failed, no data provided");
+		return -1;
+	}
+
+	// Copy a single character, ignore the rest
+	retval = pva_kmd_copy_data_from_user(strbuf, in_buffer, 1);
+	if (retval != 0u) {
+		pva_kmd_log_err("Failed to copy write buffer from user");
+		return -1;
+	}
+
+	// Explicitly null terminate the string for conversion
+	strbuf[1] = '\0';
+	pva_auth_enable = pva_kmd_strtol(strbuf, base);
+
+	pva_kmd_mutex_lock(&(pva->pva_auth->allow_list_lock));
+	pva->pva_auth->pva_auth_enable = (pva_auth_enable == 1) ? true : false;
+
+	if (pva->pva_auth->pva_auth_enable)
+		pva->pva_auth->pva_auth_allow_list_parsed = false;
+
+	pva_kmd_mutex_unlock(&(pva->pva_auth->allow_list_lock));
+	return size;
+}
+
+int64_t update_fw_debug_log_level(struct pva_kmd_device *pva, void *file_data,
+				  const uint8_t *in_buffer, uint64_t offset,
+				  uint64_t size)
+{
+	uint32_t log_level;
+	unsigned long retval;
+	char strbuf[11]; // 10 bytes for the highest 32bit value and another 1 byte for the Null character
+	uint32_t base = 10;
+
 	retval = pva_kmd_copy_data_from_user(strbuf, in_buffer, sizeof(strbuf));
 	if (retval != 0u) {
 		pva_kmd_log_err("Failed to copy write buffer from user");
 		return -1;
 	}
 
-	pva_auth_enable = pva_kmd_strtol(strbuf, 16);
+	log_level = pva_kmd_strtol(strbuf, base);
 
-	pva->pva_auth->pva_auth_enable = (pva_auth_enable == 1) ? true : false;
+	pva_kmd_print_str_u64("Setting debug log level to", log_level);
+	pva->fw_debug_log_level = log_level;
 
-	if (pva->pva_auth->pva_auth_enable)
-		pva->pva_auth->pva_auth_allow_list_parsed = false;
+	/* If device is on, busy the device and set the debug log level */
+	if (pva_kmd_device_maybe_on(pva) == true) {
+		enum pva_error err;
+		err = pva_kmd_device_busy(pva);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err(
+				"pva_kmd_device_busy failed when submitting set debug log level cmd");
+			goto err_end;
+		}
 
-	return 2;
+		pva_kmd_notify_fw_set_debug_log_level(pva, log_level);
+
+		pva_kmd_device_idle(pva);
+	}
+err_end:
+	return strlen(strbuf);
 }

@@ -1,13 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2024, NVIDIA Corporation.  All Rights Reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.  Any
- * use, reproduction, disclosure or distribution of this software and related
- * documentation without an express license agreement from NVIDIA Corporation
- * is strictly prohibited.
- */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef PVA_KMD_CONSTANTS_H
 #define PVA_KMD_CONSTANTS_H
@@ -38,8 +30,8 @@
 
 #define PVA_KMD_TIMEOUT(val) (val * PVA_KMD_TIMEOUT_FACTOR)
 
-#define PVA_KMD_TIMEOUT_RESOURCE_SEMA_MS PVA_KMD_TIMEOUT(100) /*< 100 ms */
-#define PVA_KMD_WAIT_FW_TIMEOUT_US PVA_KMD_TIMEOUT(1000000) /*< 1 second*/
+#define PVA_KMD_TIMEOUT_RESOURCE_SEMA_MS PVA_KMD_TIMEOUT(400) /*< 100 ms */
+#define PVA_KMD_WAIT_FW_TIMEOUT_US PVA_KMD_TIMEOUT(100000) /*< 100 ms */
 #define PVA_KMD_WAIT_FW_POLL_INTERVAL_US PVA_KMD_TIMEOUT(100) /*< 100 us*/
 #define PVA_KMD_FW_BOOT_TIMEOUT_MS PVA_KMD_TIMEOUT(1000) /*< 1 seconds */
 
@@ -58,5 +50,7 @@
     #define PVA_KMD_APP_AUTH_DEFAULT false
 #endif
 // clang-format on
+
+#define PVA_KMD_MAX_NUM_USER_DMA_CONFIG 1024
 
 #endif // PVA_KMD_CONSTANTS_H
