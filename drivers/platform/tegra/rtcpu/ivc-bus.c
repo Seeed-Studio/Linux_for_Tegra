@@ -98,6 +98,7 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	const char *service;
 	int ret;
 	u32 mul = 0U, sum = 0U;
+	dma_addr_t rx_phys = 0U, tx_phys = 0U;
 
 	struct tegra_ivc_channel *chan = kzalloc(sizeof(*chan), GFP_KERNEL);
 	if (unlikely(chan == NULL))
@@ -197,6 +198,18 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	region->ivc_size += queue_size;
 	end.tx = region->ivc_size;
 
+	if (__builtin_add_overflow(region->iova, start.rx, &rx_phys)) {
+		dev_err(&chan->dev, "rx phys overflow\n");
+		ret = -EOVERFLOW;
+		goto error;
+	}
+
+	if (__builtin_add_overflow(region->iova, start.tx, &tx_phys)) {
+		dev_err(&chan->dev, "tx phys overflow\n");
+		ret = -EOVERFLOW;
+		goto error;
+	}
+
 #if defined(NV_TEGRA_IVC_STRUCT_HAS_IOSYS_MAP)
 	iosys_map_set_vaddr(&rx_map, (void *)(region->base + start.rx));
 	iosys_map_set_vaddr(&tx_map, (void *)(region->base + start.tx));
@@ -205,9 +218,9 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	ret = tegra_ivc_init(&chan->ivc,
 			NULL,
 			&rx_map,
-			region->iova + start.rx,
+			rx_phys,
 			&tx_map,
-			region->iova + start.tx,
+			tx_phys,
 			nframes, frame_size,
 			tegra_ivc_channel_ring,
 			(void *)camhsp);
@@ -216,9 +229,9 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	ret = tegra_ivc_init(&chan->ivc,
 			NULL,
 			(void *)(region->base + start.rx),
-			region->iova + start.rx,
+			rx_phys,
 			(void *)(region->base + start.tx),
-			region->iova + start.tx,
+			tx_phys,
 			nframes, frame_size,
 			tegra_ivc_channel_ring,
 			(void *)camhsp);
