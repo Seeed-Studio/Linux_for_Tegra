@@ -712,6 +712,14 @@ int vi_capture_setup(
 		return -EEXIST;
 	}
 
+#ifndef NV_IS_L4T
+	if (channels[setup->csi_stream_id][setup->virtual_channel_id] != NULL) {
+		dev_err(chan->dev,
+			"%s: channel already setup\n", __func__);
+		return -EEXIST;
+	}
+#endif
+
 	dev_dbg(chan->dev, "chan flags %u\n", setup->channel_flags);
 	dev_dbg(chan->dev, "chan mask %llx\n", setup->vi_channel_mask);
 	dev_dbg(chan->dev, "queue depth %u\n", setup->queue_depth);
