@@ -448,9 +448,7 @@ static int __init hvc_sysfs_register(void)
 	}
 
 	ret = hyp_trace_buffer_init();
-	if (ret != 0)
-		TEGRA_HV_ERR("Error: Hypervisor trace buffer init failed\n");
-	else
+	if (ret == 0)
 		TEGRA_HV_INFO("Hypervisor trace buffer initialized successfully\n");
 
 	ret = hyp_nvlog_buffer_init();
