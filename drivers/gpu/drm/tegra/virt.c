@@ -266,28 +266,6 @@ static int virt_engine_connect(struct virt_engine *virt, u32 module_id)
 	return msg.connect.connection_id;
 }
 
-static int virt_engine_suspend(struct device *dev)
-{
-	struct virt_engine *virt = dev_get_drvdata(dev);
-	struct tegra_vhost_cmd_msg msg = { 0 };
-
-	msg.cmd = TEGRA_VHOST_CMD_SUSPEND;
-	msg.connection_id = virt->connection_id;
-
-	return virt_engine_transfer(&msg, sizeof(msg));
-}
-
-static int virt_engine_resume(struct device *dev)
-{
-	struct virt_engine *virt = dev_get_drvdata(dev);
-	struct tegra_vhost_cmd_msg msg = { 0 };
-
-	msg.cmd = TEGRA_VHOST_CMD_RESUME;
-	msg.connection_id = virt->connection_id;
-
-	return virt_engine_transfer(&msg, sizeof(msg));
-}
-
 #ifdef CONFIG_DEBUG_FS
 static int mrq_debug_open(struct tegra_bpmp *bpmp, const char *name,
 			  u32 *fd, u32 *len, bool write)
@@ -880,14 +858,6 @@ static int virt_engine_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct dev_pm_ops virt_engine_pm_ops = {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
-	SYSTEM_SLEEP_PM_OPS(virt_engine_suspend, virt_engine_resume)
-#else
-	SET_SYSTEM_SLEEP_PM_OPS(virt_engine_suspend, virt_engine_resume)
-#endif
-};
-
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
 static void virt_engine_remove_wrapper(struct platform_device *pdev)
 {
@@ -904,7 +874,6 @@ struct platform_driver tegra_virt_engine_driver = {
 	.driver = {
 		.name = "tegra-host1x-virtual-engine",
 		.of_match_table = tegra_virt_engine_of_match,
-		.pm = &virt_engine_pm_ops,
 	},
 	.probe = virt_engine_probe,
 	.remove = virt_engine_remove_wrapper,
