@@ -9,6 +9,7 @@
 #include "../../dla_queue.h"
 #include "../../nvdla_debug.h"
 
+#include <linux/host1x-next.h>
 #include <linux/clk.h>
 #include <linux/nvhost.h>
 #include <linux/of.h>

@@ -11,6 +11,15 @@
 #include <linux/errno.h>
 #include <linux/string.h>
 #include <linux/vmalloc.h>
+#include <linux/iommu.h>
+#include <linux/dma-mapping.h>
+
+/* Local definition of nvhost_syncpt_interface structure */
+struct nvhost_syncpt_interface {
+	dma_addr_t base;
+	size_t size;
+	u32 page_size;
+};
 
 struct nvdla_sync_device {
 	struct platform_device *pdev;
@@ -25,8 +34,13 @@ struct nvdla_sync_context {
 struct nvdla_sync_device *nvdla_sync_device_create_syncpoint(
 	struct platform_device *pdev)
 {
-	int32_t err;
+	struct nvhost_device_data *pdata = NULL;
+	struct nvhost_syncpt_interface *syncpt_if = NULL;
 	struct nvdla_sync_device *device = NULL;
+	phys_addr_t base;
+	u32 stride;
+	u32 num_syncpts;
+	int32_t err;
 
 	if (pdev == NULL)
 		goto fail;
@@ -38,17 +52,48 @@ struct nvdla_sync_device *nvdla_sync_device_create_syncpoint(
 		goto fail;
 	}
 
-	err = nvhost_syncpt_unit_interface_init(pdev);
-	if (err < 0) {
-		nvdla_dbg_err(pdev, "failed to init syncpt interface. err=%d\n",
-			err);
+	/* Replace nvhost_syncpt_unit_interface_init with host1x_syncpt_get_shim_info */
+	pdata = platform_get_drvdata(pdev);
+	syncpt_if = devm_kzalloc(&pdev->dev, sizeof(*syncpt_if), GFP_KERNEL);
+	if (!syncpt_if) {
+		err = -ENOMEM;
 		goto free_device;
 	}
+
+	err = host1x_syncpt_get_shim_info(pdata->host1x, &base, &stride, &num_syncpts);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to get syncpt shim info. err=%d\n", err);
+		goto free_syncpt_if;
+	}
+
+	syncpt_if->base = base;
+	syncpt_if->size = stride * num_syncpts;
+	syncpt_if->page_size = stride;
+
+	/* If IOMMU is enabled, map it into the device memory */
+	if (iommu_get_domain_for_dev(&pdev->dev)) {
+		syncpt_if->base = dma_map_resource(&pdev->dev, base,
+						syncpt_if->size,
+						DMA_BIDIRECTIONAL,
+						DMA_ATTR_SKIP_CPU_SYNC);
+		if (dma_mapping_error(&pdev->dev, syncpt_if->base)) {
+			err = -ENOMEM;
+			goto free_syncpt_if;
+		}
+	}
+
+	pdata->syncpt_unit_interface = syncpt_if;
+
+	dev_info(&pdev->dev,
+		"syncpt_unit_base %llx syncpt_unit_size %zx size %x\n",
+		base, syncpt_if->size, syncpt_if->page_size);
 
 	device->pdev = pdev;
 
 	return device;
 
+free_syncpt_if:
+	devm_kfree(&pdev->dev, syncpt_if);
 free_device:
 	vfree(device);
 fail:
@@ -57,13 +102,31 @@ fail:
 
 void nvdla_sync_device_destroy(struct nvdla_sync_device *device)
 {
+	struct nvhost_syncpt_interface *syncpt_if;
+	struct nvhost_device_data *pdata;
+	struct platform_device *pdev;
+
 	if (device == NULL)
 		goto done;
 
 	if (device->pdev == NULL)
 		goto free_device;
 
-	nvhost_syncpt_unit_interface_deinit(device->pdev);
+	pdev = device->pdev;
+	pdata = platform_get_drvdata(pdev);
+	syncpt_if = pdata->syncpt_unit_interface;
+
+	if (syncpt_if) {
+		/* Unmap IOMMU resources if needed */
+		if (iommu_get_domain_for_dev(&pdev->dev)) {
+			dma_unmap_resource(&pdev->dev, syncpt_if->base, syncpt_if->size,
+					DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
+		}
+
+		/* Free the syncpt_if memory */
+		devm_kfree(&pdev->dev, syncpt_if);
+		pdata->syncpt_unit_interface = NULL;
+	}
 
 free_device:
 	device->pdev = NULL;

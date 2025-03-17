@@ -20,6 +20,7 @@ struct nvhost_notification {
 };
 
 #else
+#include <linux/host1x-next.h>
 #include <linux/nvhost.h>
 #endif /* NVDLA_HAVE_CONFIG_AXI */
 
