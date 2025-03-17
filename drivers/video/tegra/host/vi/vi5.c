@@ -515,21 +515,18 @@ static int vi_runtime_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_device_data *info = platform_get_drvdata(pdev);
 	struct host_vi5 *vi5 = info->private_data;
-	int err;
+	int err = 0;
 
-	if (nvhost_module_pm_ops.runtime_suspend != NULL) {
-		err = nvhost_module_pm_ops.runtime_suspend(dev);
-		if (!err && vi5->icc_write) {
-			err = icc_set_bw(vi5->icc_write, 0, 0);
-			if (err)
-				dev_warn(dev,
-					 "failed to set icc_write bw: %d\n", err);
-			return 0;
-		}
-		return err;
+	clk_bulk_disable_unprepare(info->num_clks, info->clks);
+
+	if (vi5->icc_write) {
+		err = icc_set_bw(vi5->icc_write, 0, 0);
+		if (err)
+			dev_warn(dev,
+			"failed to set icc_write bw: %d\n", err);
 	}
 
-	return -EOPNOTSUPP;
+	return err;
 }
 
 static int vi_runtime_resume(struct device *dev)
@@ -537,21 +534,23 @@ static int vi_runtime_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct host_vi5 *vi5 = pdata->private_data;
-	int err;
+	int err = 0;
 
-	if (nvhost_module_pm_ops.runtime_resume != NULL) {
-		err = nvhost_module_pm_ops.runtime_resume(dev);
-		if (!err && vi5->icc_write) {
-			err = icc_set_bw(vi5->icc_write, 0, UINT_MAX);
-			if (err)
-				dev_warn(dev,
-					 "failed to set icc_write bw: %d\n", err);
-			return 0;
-		}
+
+	err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
+	if (err) {
+		dev_warn(dev, "failed to enable clocks: %d\n", err);
 		return err;
 	}
 
-	return -EOPNOTSUPP;
+	if (vi5->icc_write) {
+		err = icc_set_bw(vi5->icc_write, 0, UINT_MAX);
+		if (err)
+			dev_warn(dev,
+			"failed to set icc_write bw: %d\n", err);
+	}
+
+	return err;
 }
 
 const struct dev_pm_ops vi_pm_ops = {
