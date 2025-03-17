@@ -32,6 +32,8 @@ endif
 
 obj-m += nvhost-nvdla.o
 
+ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
 ifeq ($(NV_BUILD_CONFIGURATION_EXPOSING_T26X), 1)
 obj-m += axi/
+endif
 endif
