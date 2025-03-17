@@ -32,6 +32,7 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include <linux/nvhost.h>
+#include <linux/reset.h>
 #include <media/fusa-capture/capture-isp-channel.h>
 #include <media/tegra_camera_platform.h>
 #include <soc/tegra/camrtc-capture.h>
@@ -611,6 +612,37 @@ static const struct of_device_id tegra_isp5_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_isp5_of_match);
 
+static int isp_runtime_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+
+	clk_bulk_disable_unprepare(info->num_clks, info->clks);
+
+	return 0;
+}
+
+static int isp_runtime_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
+
+	err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
+	if (err) {
+		dev_warn(dev, "failed to enable clocks: %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
+const struct dev_pm_ops isp_pm_ops = {
+	SET_RUNTIME_PM_OPS(isp_runtime_suspend, isp_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+				pm_runtime_force_resume)
+};
+
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
 static void isp5_remove_wrapper(struct platform_device *pdev)
 {
@@ -633,7 +665,7 @@ static struct platform_driver isp5_driver = {
 		.of_match_table = tegra_isp5_of_match,
 #endif
 #ifdef CONFIG_PM
-		.pm = &nvhost_module_pm_ops,
+		.pm = &isp_pm_ops,
 #endif
 	},
 };
