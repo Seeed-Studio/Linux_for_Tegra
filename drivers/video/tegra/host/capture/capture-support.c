@@ -23,6 +23,8 @@
 #include <soc/tegra/fuse.h>
 #include <linux/nvhost.h>
 #include <uapi/linux/nvhost_ioctl.h>
+#include <linux/reset.h>
+#include <linux/clk.h>
 
 #ifdef CONFIG_TEGRA_HWPM_CAM
 #include <uapi/linux/tegra-soc-hwpm-uapi.h>
@@ -256,6 +258,35 @@ static const struct of_device_id capture_support_match[] = {
 };
 MODULE_DEVICE_TABLE(of, capture_support_match);
 
+static int capture_support_runtime_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+
+	clk_bulk_disable_unprepare(info->num_clks, info->clks);
+
+	return 0;
+}
+
+static int capture_support_runtime_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
+
+	err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
+	if (err) {
+		dev_warn(dev, "failed to enable clocks: %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
+const struct dev_pm_ops capture_support_pm_ops = {
+	SET_RUNTIME_PM_OPS(capture_support_runtime_suspend, capture_support_runtime_resume, NULL)
+};
+
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
 static void capture_support_remove_wrapper(struct platform_device *pdev)
 {
@@ -275,7 +306,7 @@ static struct platform_driver capture_support_driver = {
 		/* Only suitable name for dummy falcon driver */
 		.name = "scare-pigeon",
 		.of_match_table = capture_support_match,
-		.pm = &nvhost_module_pm_ops,
+		.pm = &capture_support_pm_ops,
 	},
 };
 
