@@ -309,6 +309,35 @@ static int __exit t194_nvcsi_remove(struct platform_device *dev)
 	return 0;
 }
 
+static int t194_nvcsi_runtime_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+
+	clk_bulk_disable_unprepare(info->num_clks, info->clks);
+
+	return 0;
+}
+
+static int t194_nvcsi_runtime_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err;
+
+	err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
+	if (err) {
+		dev_warn(dev, "failed to enable clocks: %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
+const struct dev_pm_ops t194_nvcsi_pm_ops = {
+	SET_RUNTIME_PM_OPS(t194_nvcsi_runtime_suspend, t194_nvcsi_runtime_resume, NULL)
+};
+
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
 static void t194_nvcsi_remove_wrapper(struct platform_device *pdev)
 {
@@ -331,7 +360,7 @@ static struct platform_driver t194_nvcsi_driver = {
 		.of_match_table = tegra194_nvcsi_of_match,
 #endif
 #ifdef CONFIG_PM
-		.pm = &nvhost_module_pm_ops,
+		.pm = &t194_nvcsi_pm_ops,
 #endif
 	},
 };
