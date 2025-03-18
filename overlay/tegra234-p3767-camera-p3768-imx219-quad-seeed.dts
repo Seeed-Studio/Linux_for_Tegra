@@ -159,47 +159,6 @@
 					};
 				};
 
-				//cam_i2cmux{
-				//	status = "okay";
-				//	compatible = "i2c-mux-gpio";
-				//	#address-cells = <1>;
-				//	#size-cells = <0>;
-				//	i2c-parent = <&cam_i2c>;
-				//	mux-gpios = <&gpio_aon CAM_I2C_MUX GPIO_ACTIVE_HIGH>;
-				//	i2c@0 {
-				//		status = "okay";
-				//		reg = <0>;
-				//		#address-cells = <1>;
-				//		#size-cells = <0>;
-				//		rbpcv2_imx219_a@10 {
-				//			reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
-				//			mode0 {
-				//				tegra_sinterface = "serial_a";
-				//			};
-				//			mode1 {
-				//				tegra_sinterface = "serial_a";
-				//			};
-				//			mode2 {
-				//				tegra_sinterface = "serial_a";
-				//			};
-				//			mode3 {
-				//				tegra_sinterface = "serial_a";
-				//			};
-				//			mode4 {
-				//				tegra_sinterface = "serial_a";
-				//			};
-				//		};
-				//	};
-				//	i2c@1 {
-				//		status = "okay";
-				//		reg = <1>;
-				//		#address-cells = <1>;
-				//		#size-cells = <0>;
-				//		rbpcv2_imx219_c@10 {
-				//			reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
-				//		};
-				//	};
-				//};
 				cam_i2cmux {
 					status = "okay";
 					compatible = "i2c-mux-gpio";
@@ -807,13 +766,6 @@
 						};
 					};
 				};
-				//lens_imx219@RBPCV2 {
-				//	min_focus_distance = "0.0";
-				//	hyper_focal = "0.0";
-				//	focal_length = "3.04";
-				//	f_number = "2.0";
-				//	aperture = "0.0";
-				//};
 
 				cam_i2cmux2 {
 					status = "okay";
