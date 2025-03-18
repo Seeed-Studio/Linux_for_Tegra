@@ -1433,8 +1433,8 @@
 				 */
 				modules {
 					cam_module0: module0 {
-						badge = "jakku_front_RBP194";
-						position = "front";
+						badge = "topleft_RBP194";
+						position = "topleft";
 						orientation = "1";
 						cam_module0_drivernode0: drivernode0 {
 							pcl_id = "v4l2_sensor";
@@ -1447,8 +1447,8 @@
 						};
 					};
 					cam_module1: module1 {
-						badge = "jakku_rear_RBP194";
-						position = "rear";
+						badge = "topright_RBP194";
+						position = "topright";
 						orientation = "1";
 						cam_module1_drivernode0: drivernode0 {
 							pcl_id = "v4l2_sensor";
@@ -1461,8 +1461,8 @@
 						};
 					};
 					cam_module2: module2 {
-						badge = "jakku_left_RBP194";
-						position = "left";
+						badge = "bottomleft_RBP194";
+						position = "bottomleft";
 						orientation = "1";
 						cam_module0_drivernode2: drivernode0 {
 							pcl_id = "v4l2_sensor";
@@ -1475,8 +1475,8 @@
 						};
 					};
 					cam_module3: module3 {
-						badge = "jakku_right_RBP194";
-						position = "right";
+						badge = "bottomright_RBP194";
+						position = "bottomright";
 						orientation = "1";
 						cam_module1_drivernode2: drivernode0 {
 							pcl_id = "v4l2_sensor";
