@@ -46,11 +46,6 @@ struct nvsciipc_get_vuid {
 	uint64_t vuid;
 };
 
-struct nvsciipc_get_db_by_id {
-	uint32_t id; // IVC qid
-	struct nvsciipc_config_entry entry;
-};
-
 struct nvsciipc_get_db_by_name {
 	char ep_name[NVSCIIPC_MAX_EP_NAME];
 	struct nvsciipc_config_entry entry;
