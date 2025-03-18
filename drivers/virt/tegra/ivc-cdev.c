@@ -240,9 +240,6 @@ static int ivc_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 	return ret;
 }
 
-/* Need this temporarily to get the change merged. Will be removed later */
-#define NVIPC_IVC_IOCTL_GET_INFO_LEGACY 0xC018AA01
-#define NVIPC_IVC_IOCTL_NOTIFY_REMOTE_LEGACY 0xC018AA02
 long ivc_dev_ioctl(struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
@@ -272,7 +269,6 @@ long ivc_dev_ioctl(struct file *filp, unsigned int cmd,
 
 	switch (cmd) {
 	case NVIPC_IVC_IOCTL_GET_INFO:
-	case NVIPC_IVC_IOCTL_GET_INFO_LEGACY:
 		ret = tegra_hv_ivc_get_info(ivcd->ivck, &ivc_area_ipa,
 				&ivc_area_size);
 		if (ret < 0) {
@@ -321,18 +317,6 @@ long ivc_dev_ioctl(struct file *filp, unsigned int cmd,
 				sizeof(struct nvipc_ivc_info) - 16)) {
 				ret = -EFAULT;
 			}
-		}
-		break;
-
-	case NVIPC_IVC_IOCTL_NOTIFY_REMOTE:
-	case NVIPC_IVC_IOCTL_NOTIFY_REMOTE_LEGACY:
-		tegra_hv_ivc_notify(ivcd->ivck);
-		break;
-
-	case NVIPC_IVC_IOCTL_GET_VMID:
-		if (copy_to_user((void __user *) arg, &s_guestid,
-			sizeof(s_guestid))) {
-			ret = -EFAULT;
 		}
 		break;
 
