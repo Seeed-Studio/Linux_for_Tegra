@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -68,9 +68,7 @@ properties:
     interrupts:
         $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
         description: |
-            Interrupts are give by a tuple of 3 values:
-                - interrupt specifier (GIC_SPI = 0, GIC_PPI = 1)
-                  definitions in dt-bindings/interrupt-controller/arm-gic.h
+            Interrupts are give by a tuple of 2 values with interrupt-parent phandle:
                 - interrupt number
                 - trigger type (rising edge, falling edge, both, etc)
                   definitions in dt-bindings/interrupt-controller/irq.h

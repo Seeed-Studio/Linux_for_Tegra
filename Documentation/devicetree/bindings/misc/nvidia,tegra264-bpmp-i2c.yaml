@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -42,6 +42,11 @@ properties:
         $ref: "/schemas/types.yaml#/definitions/uint32"
         minimum: 0x5
         maximum: 0x5
+
+    multi-master:
+        $ref: "/schemas/types.yaml#/definitions/flag"
+        description: Enables retries if arbitration is lost. Currently, the
+                     functionality is supported only by the Tegra264 BPMP firmware.
 
     '#address-cells':
         $ref: "/schemas/types.yaml#/definitions/uint32"

@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -47,12 +47,10 @@ properties:
     reg:
         $ref: "/schemas/types.yaml#/definitions/uint32-matrix"
         description: |
-            Registers are given by a tuple of two values:
-                - register address:
-                - register block size.
+            Register is specified as a value.
         items:
-            minItems: 4
-            maxItems: 4
+            minItems: 1
+            maxItems: 1
             items:
                 - $ref: "/schemas/types.yaml#/definitions/uint32"
                   minimum: 0x0
@@ -70,4 +68,7 @@ required:
 examples:
     - |
         spi@0 {
+            compatible = "tegra-spidev";
+            reg = <0x0>;
+            spi-max-frequency = <0x2faf080>;
         };

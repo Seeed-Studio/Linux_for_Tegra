@@ -1,4 +1,4 @@
-# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -206,7 +206,7 @@ required:
 examples:
     - |
         spi@810c460000 {
-            compatible = "nvidia,tegra234-spi, nvidia,tegra210-spi";
+            compatible = "nvidia,tegra186-spi-slave";
             status = "disabled";
             reg = <0x81 0x0c460000 0x0 0x10000>;
             interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
