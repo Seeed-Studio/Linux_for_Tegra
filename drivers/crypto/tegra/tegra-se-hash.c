@@ -44,7 +44,6 @@ struct tegra_sha_reqctx {
 	unsigned int blk_size;
 	unsigned int task;
 	u32 key_id;
-	u32 *cmdbuf;
 	u32 result[HASH_RESULT_REG_COUNT];
 	struct ahash_request fallback_req;
 };
@@ -306,7 +305,7 @@ static int tegra_sha_do_update(struct ahash_request *req)
 	struct tegra_sha_ctx *ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
 	struct tegra_sha_reqctx *rctx = ahash_request_ctx(req);
 	unsigned int nblks, nresidue, size, ret;
-	u32 *cpuvaddr = rctx->cmdbuf;
+	u32 *cpuvaddr = ctx->se->cmdbuf->addr;
 
 	nresidue = (req->nbytes + rctx->residue.size) % rctx->blk_size;
 	nblks = (req->nbytes + rctx->residue.size) / rctx->blk_size;
@@ -367,7 +366,7 @@ static int tegra_sha_do_update(struct ahash_request *req)
 
 	size = tegra_sha_prep_cmd(ctx->se, cpuvaddr, rctx);
 
-	ret = tegra_se_host1x_submit(ctx->se, rctx->cmdbuf, size);
+	ret = tegra_se_host1x_submit(ctx->se, size);
 
 	/*
 	 * If this is not the final update, copy the intermediate results
@@ -389,7 +388,7 @@ static int tegra_sha_do_final(struct ahash_request *req)
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct tegra_sha_ctx *ctx = crypto_ahash_ctx(tfm);
 	struct tegra_se *se = ctx->se;
-	u32 *cpuvaddr = rctx->cmdbuf;
+	u32 *cpuvaddr = se->cmdbuf->addr;
 	int size, ret = 0;
 
 	rctx->datbuf.size = rctx->residue.size;
@@ -410,7 +409,7 @@ static int tegra_sha_do_final(struct ahash_request *req)
 	}
 
 	size = tegra_sha_prep_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, rctx->cmdbuf, size);
+	ret = tegra_se_host1x_submit(se, size);
 	if (ret)
 		goto out;
 
@@ -426,8 +425,6 @@ out_free:
 			  rctx->residue.buf, rctx->residue.addr);
 	dma_free_coherent(se->dev, rctx->digest.size, rctx->digest.buf,
 			  rctx->digest.addr);
-	kfree(rctx->cmdbuf);
-
 	return ret;
 }
 
@@ -552,10 +549,6 @@ static int tegra_sha_init(struct ahash_request *req)
 	rctx->blk_size = crypto_ahash_blocksize(tfm);
 	rctx->digest.size = crypto_ahash_digestsize(tfm);
 
-	rctx->cmdbuf = kzalloc(SE_MAX_CMDLEN, GFP_KERNEL);
-	if (!rctx->cmdbuf)
-		return -ENOMEM;
-
 	rctx->digest.buf = dma_alloc_coherent(se->dev, rctx->digest.size,
 					      &rctx->digest.addr, GFP_KERNEL);
 	if (!rctx->digest.buf)
@@ -572,8 +565,6 @@ resbuf_fail:
 	dma_free_coherent(se->dev, rctx->digest.size, rctx->digest.buf,
 			  rctx->digest.addr);
 digbuf_fail:
-	kfree(rctx->cmdbuf);
-
 	return -ENOMEM;
 }
 

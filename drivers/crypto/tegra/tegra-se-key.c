@@ -115,11 +115,11 @@ static int tegra_key_insert(struct tegra_se *se, const u8 *key,
 			    u32 keylen, u16 slot, u32 alg)
 {
 	const u32 *keyval = (u32 *)key;
-	u32 addr[100], size;
+	u32 *addr = se->cmdbuf->addr, size;
 
 	size = tegra_key_prep_ins_cmd(se, addr, keyval, keylen, slot, alg);
 
-	return tegra_se_host1x_submit(se, addr, size);
+	return tegra_se_host1x_submit(se, size);
 }
 
 void tegra_key_invalidate(struct tegra_se *se, u32 keyid, u32 alg)

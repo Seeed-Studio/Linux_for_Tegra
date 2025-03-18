@@ -23,7 +23,6 @@
 #define SE_OWNERSHIP_UID(x)				FIELD_GET(GENMASK(7, 0), x)
 #define TEGRA_GPSE_ID					3
 
-#define SE_MAX_CMDLEN					(100 * 4) /* max 100 commands of 4 bytes each */
 #define SE_STREAM_ID					0x90
 
 #define SE_SHA_CFG					0x4004
@@ -442,6 +441,7 @@ struct tegra_se {
 	const struct tegra_se_hw *hw;
 	struct host1x_client client;
 	struct host1x_channel *channel;
+	struct tegra_se_cmdbuf *cmdbuf;
 	struct crypto_engine *engine;
 	struct host1x_syncpt *syncpt;
 	struct device *dev;
@@ -524,7 +524,7 @@ void tegra_deinit_hash(struct tegra_se *se);
 int tegra_key_submit(struct tegra_se *se, const u8 *key,
 		     u32 keylen, u32 alg, u32 *keyid);
 void tegra_key_invalidate(struct tegra_se *se, u32 keyid, u32 alg);
-int tegra_se_host1x_submit(struct tegra_se *se, u32 *cpuvaddr, u32 size);
+int tegra_se_host1x_submit(struct tegra_se *se, u32 size);
 
 /* HOST1x OPCODES */
 static inline u32 host1x_opcode_setpayload(unsigned int payload)
