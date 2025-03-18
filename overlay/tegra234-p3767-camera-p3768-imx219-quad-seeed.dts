@@ -119,7 +119,7 @@
 							ports {
 								#address-cells = <1>;
 								#size-cells = <0>;
-								csi_chan0_port2: port@2 {
+								csi_chan0_port2: port@0 {
 									reg = <0>;
 									rbpcv2_imx219_csi_in2: endpoint@4 {
 										port-index = <2>;
@@ -127,7 +127,7 @@
 										remote-endpoint = <&rbpcv2_imx219_out2>;
 									};
 								};
-								csi_chan0_port3: port@3 {
+								csi_chan0_port3: port@1 {
 									reg = <1>;
 									rbpcv2_imx219_csi_out2: endpoint@5 {
 										remote-endpoint = <&rbpcv2_imx219_vi_in2>;
@@ -140,7 +140,7 @@
 							ports {
 								#address-cells = <1>;
 								#size-cells = <0>;
-								csi_chan1_port2: port@2 {
+								csi_chan1_port2: port@0 {
 									reg = <0>;
 									rbpcv2_imx219_csi_in3: endpoint@6 {
 										port-index = <3>;
@@ -148,7 +148,7 @@
 										remote-endpoint = <&rbpcv2_imx219_out3>;
 									};
 								};
-								csi_chan1_port3: port@3 {
+								csi_chan1_port3: port@1 {
 									reg = <1>;
 									rbpcv2_imx219_csi_out3: endpoint@7 {
 										remote-endpoint = <&rbpcv2_imx219_vi_in3>;
