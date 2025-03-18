@@ -34,7 +34,6 @@ struct tegra_cec {
 	struct work_struct	work;
 	unsigned int		rx_wake;
 	unsigned int		tx_wake;
-	u16			rx_buffer;
 	long			tx_error;
 	u32			tx_buf[TEGRA_CEC_FRAME_MAX_LENGTH];
 	u8			tx_buf_cur;
@@ -90,6 +89,7 @@ struct tegra_cec {
 #define TEGRA_CEC_HWCTRL_RX_SNOOP	(1<<15)
 #define TEGRA_CEC_HWCTRL_RX_NAK_MODE	(1<<16)
 #define TEGRA_CEC_HWCTRL_TX_NAK_MODE	(1<<24)
+#define TEGRA_CEC_HWCTRL_AUTO_CLR_TX_EMPTY_INTR	(1<<29)
 #define TEGRA_CEC_HWCTRL_FAST_SIM_MODE	(1<<30)
 #define TEGRA_CEC_HWCTRL_TX_RX_MODE	(1<<31)
 
