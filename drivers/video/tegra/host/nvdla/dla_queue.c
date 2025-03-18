@@ -12,16 +12,88 @@
 #include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
 #include <linux/debugfs.h>
+#include <linux/dma-fence.h>
+#include <linux/workqueue.h>
 
 #include "port/nvdla_host_wrapper.h"
-
-#if IS_ENABLED(CONFIG_TEGRA_NVDLA_CHANNEL)
-#include "nvhost_job.h"
-#endif
-
 #include "dla_channel.h"
 #include "dla_queue.h"
 #include "nvdla_debug.h"
+
+#if IS_ENABLED(CONFIG_TEGRA_NVDLA_CHANNEL)
+#include "nvhost_job.h"
+
+/* Add host1x host1x_cb structures and functions needed for handling callbacks */
+struct nvdla_host1x_cb {
+	struct dma_fence_cb cb;
+	struct work_struct work;
+	void (*notifier)(void *data);
+	void *notifier_data;
+};
+
+static void nvdla_host1x_cb_func(struct dma_fence *f, struct dma_fence_cb *cb)
+{
+	struct nvdla_host1x_cb *host1x_cb;
+
+	host1x_cb = container_of(cb, struct nvdla_host1x_cb, cb);
+	schedule_work(&host1x_cb->work);
+	dma_fence_put(f);
+}
+
+static void nvdla_intr_do_work(struct work_struct *work)
+{
+	struct nvdla_host1x_cb *host1x_cb;
+
+	host1x_cb = container_of(work, struct nvdla_host1x_cb, work);
+	host1x_cb->notifier(host1x_cb->notifier_data);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0))
+	kfree_rcu_mightsleep(host1x_cb);
+#else
+	kfree_rcu(host1x_cb);
+#endif
+}
+
+static int nvdla_intr_register_notifier(struct platform_device *pdev,
+								u32 id, u32 thresh,
+								void (*callback)(void *data),
+								void *private_data)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct dma_fence *fence;
+	struct nvdla_host1x_cb *cb;
+	struct host1x_syncpt *sp;
+	int err;
+
+	sp = host1x_syncpt_get_by_id_noref(pdata->host1x, id);
+	if (!sp)
+		return -EINVAL;
+
+	fence = host1x_fence_create(sp, thresh, true);
+	if (IS_ERR(fence)) {
+		pr_err("error %d during construction of fence!",
+			(int)PTR_ERR(fence));
+		return PTR_ERR(fence);
+	}
+
+	cb = kzalloc(sizeof(*cb), GFP_KERNEL);
+	if (!cb) {
+		dma_fence_put(fence);
+		return -ENOMEM;
+	}
+
+	INIT_WORK(&cb->work, nvdla_intr_do_work);
+	cb->notifier = callback;
+	cb->notifier_data = private_data;
+
+	err = dma_fence_add_callback(fence, &cb->cb, nvdla_host1x_cb_func);
+	if (err < 0) {
+		dma_fence_put(fence);
+		kfree(cb);
+	}
+
+	return err;
+}
+#endif
 
 #define CMDBUF_SIZE	4096
 
@@ -553,7 +625,7 @@ int nvdla_queue_submit_to_host1x(struct nvdla_queue *queue,
 	*task_syncpt_threshold = job->sp->fence;
 
 	/* Register a callback function for releasing resources */
-	err = nvhost_intr_register_notifier(host1x_pdev,
+	err = nvdla_intr_register_notifier(host1x_pdev,
 					    queue->syncpt_id,
 					    job->sp->fence,
 					    queue_task_update, task);
