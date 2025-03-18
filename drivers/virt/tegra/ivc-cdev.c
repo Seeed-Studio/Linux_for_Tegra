@@ -193,14 +193,20 @@ static int ivc_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	WARN_ON(!ivcd);
 
+	if (vma->vm_end >= vma->vm_start) {
+		/* fail if userspace attempts to partially map the mempool */
+		map_region_sz = vma->vm_end - vma->vm_start;
+	} else {
+		dev_err(ivcd->device, "%s: mmap addr is invalid\n", __func__);
+		return -EINVAL;
+	}
+
 	ret = tegra_hv_ivc_get_info(ivcd->ivck, &ivc_area_ipa, &ivc_area_size);
 	if (ret < 0) {
 		dev_err(ivcd->device, "%s: get_info failed\n", __func__);
 		return ret;
 	}
 
-	/* fail if userspace attempts to partially map the mempool */
-	map_region_sz = vma->vm_end - vma->vm_start;
 
 	if (((vma->vm_pgoff == 0) && (map_region_sz == ivc_area_size))) {
 
