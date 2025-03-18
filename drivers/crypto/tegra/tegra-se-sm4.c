@@ -2,7 +2,7 @@
 /*
  * Crypto driver for NVIDIA Security Engine for block cipher operations.
  *
- * Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -45,7 +45,6 @@ struct tegra_sm4_reqctx {
 	u32 crypto_cfg;
 	u32 key1_id;
 	u32 key2_id;
-	u32 *cmdbuf;
 };
 
 struct tegra_sm4_gcm_ctx {
@@ -60,7 +59,6 @@ struct tegra_sm4_gcm_ctx {
 	u32 verify_alg;
 	u32 keylen;
 	u32 key_id;
-	u32 *cmdbuf;
 };
 
 struct tegra_sm4_gcm_reqctx {
@@ -75,7 +73,6 @@ struct tegra_sm4_gcm_reqctx {
 	u32 config;
 	u32 crypto_config;
 	u32 key_id;
-	u32 *cmdbuf;
 	u32 iv[4];
 	u8 authdata[16];
 };
@@ -103,7 +100,6 @@ struct tegra_sm4_cmac_reqctx {
 	u32 crypto_config;
 	u32 key_id;
 	u32 result[CMAC_RESULT_REG_COUNT];
-	u32 *cmdbuf;
 	u32 *iv;
 };
 
@@ -229,7 +225,7 @@ static int tegra_sm4_do_one_req(struct crypto_engine *engine, void *areq)
 		goto key2_free;
 	}
 
-	cpuvaddr = rctx->cmdbuf;
+	cpuvaddr = se->cmdbuf->addr;
 	len = req->cryptlen;
 
 	/* Pad input to AES block size */
@@ -249,7 +245,7 @@ static int tegra_sm4_do_one_req(struct crypto_engine *engine, void *areq)
 	size = tegra_sm4_prep_cmd(se, cpuvaddr, iv, len, rctx->datbuf.addr,
 					 config, crypto_config);
 
-	ret = tegra_se_host1x_submit(se, rctx->cmdbuf, size);
+	ret = tegra_se_host1x_submit(se, size);
 
 	/* Copy the result */
 	dst_nents = sg_nents(req->dst);
@@ -267,7 +263,6 @@ key1_free:
 	if (rctx->key1_id != ctx->key1_id)
 		tegra_key_invalidate(ctx->se, rctx->key1_id, ctx->alg);
 out:
-	kfree(rctx->cmdbuf);
 	crypto_finalize_skcipher_request(se->engine, req, ret);
 
 	return ret;
@@ -506,10 +501,6 @@ static int tegra_sm4_encrypt(struct skcipher_request *req)
 	rctx = skcipher_request_ctx(req);
 	rctx->encrypt = true;
 
-	rctx->cmdbuf = kzalloc(SE_MAX_CMDLEN, GFP_KERNEL);
-	if (!rctx->cmdbuf)
-		return -ENOMEM;
-
 	return crypto_transfer_skcipher_request_to_engine(ctx->se->engine, req);
 }
 
@@ -521,10 +512,6 @@ static int tegra_sm4_decrypt(struct skcipher_request *req)
 	ctx  = crypto_skcipher_ctx(crypto_skcipher_reqtfm(req));
 	rctx = skcipher_request_ctx(req);
 	rctx->encrypt = false;
-
-	rctx->cmdbuf = kzalloc(SE_MAX_CMDLEN, GFP_KERNEL);
-	if (!rctx->cmdbuf)
-		return -ENOMEM;
 
 	return crypto_transfer_skcipher_request_to_engine(ctx->se->engine, req);
 }
@@ -842,7 +829,7 @@ static int tegra_sm4_gcm_prep_final_cmd(struct tegra_se *se, u32 *cpuvaddr,
 static int tegra_sm4_gcm_do_gmac(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm4_gcm_reqctx *rctx)
 {
 	struct tegra_se *se = ctx->se;
-	u32 *cpuvaddr = rctx->cmdbuf;
+	u32 *cpuvaddr = se->cmdbuf->addr;
 	unsigned int nents, size;
 
 	nents = sg_nents(rctx->src_sg);
@@ -855,13 +842,13 @@ static int tegra_sm4_gcm_do_gmac(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm4
 
 	size = tegra_sm4_gmac_prep_cmd(se, cpuvaddr, rctx);
 
-	return tegra_se_host1x_submit(se, cpuvaddr, size);
+	return tegra_se_host1x_submit(se, size);
 }
 
 static int tegra_sm4_gcm_do_crypt(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm4_gcm_reqctx *rctx)
 {
 	struct tegra_se *se = ctx->se;
-	u32 *cpuvaddr = rctx->cmdbuf;
+	u32 *cpuvaddr = se->cmdbuf->addr;
 	int size, ret;
 
 	scatterwalk_map_and_copy(rctx->inbuf.buf, rctx->src_sg,
@@ -873,7 +860,7 @@ static int tegra_sm4_gcm_do_crypt(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm
 
 	/* Prepare command and submit */
 	size = tegra_sm4_gcm_crypt_prep_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, cpuvaddr, size);
+	ret = tegra_se_host1x_submit(se, size);
 	if (ret)
 		return ret;
 
@@ -887,7 +874,7 @@ static int tegra_sm4_gcm_do_crypt(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm
 static int tegra_sm4_gcm_do_final(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm4_gcm_reqctx *rctx)
 {
 	struct tegra_se *se = ctx->se;
-	u32 *cpuvaddr = rctx->cmdbuf;
+	u32 *cpuvaddr = se->cmdbuf->addr;
 	int size, ret, off;
 
 	rctx->config = se->regcfg->cfg(ctx->final_alg, rctx->encrypt);
@@ -896,7 +883,7 @@ static int tegra_sm4_gcm_do_final(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm
 
 	/* Prepare command and submit */
 	size = tegra_sm4_gcm_prep_final_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, cpuvaddr, size);
+	ret = tegra_se_host1x_submit(se, size);
 	if (ret)
 		return ret;
 
@@ -913,7 +900,7 @@ static int tegra_sm4_gcm_do_final(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm
 static int tegra_sm4_gcm_hw_verify(struct tegra_sm4_gcm_ctx *ctx, struct tegra_sm4_gcm_reqctx *rctx, u8 *mac)
 {
 	struct tegra_se *se = ctx->se;
-	u32 result, *cpuvaddr = rctx->cmdbuf;
+	u32 result, *cpuvaddr = se->cmdbuf->addr;
 	int size, ret;
 
 	memcpy(rctx->inbuf.buf, mac, rctx->authsize);
@@ -925,7 +912,7 @@ static int tegra_sm4_gcm_hw_verify(struct tegra_sm4_gcm_ctx *ctx, struct tegra_s
 
 	/* Prepare command and submit */
 	size = tegra_sm4_gcm_prep_final_cmd(se, cpuvaddr, rctx);
-	ret = tegra_se_host1x_submit(se, cpuvaddr, size);
+	ret = tegra_se_host1x_submit(se, size);
 	if (ret)
 		return ret;
 
@@ -1035,7 +1022,6 @@ key_free:
 		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
 
 out:
-	kfree(rctx->cmdbuf);
 	crypto_finalize_aead_request(se->engine, req, ret);
 
 	return 0;
@@ -1098,10 +1084,6 @@ static int tegra_sm4_gcm_crypt(struct aead_request *req, bool encrypt)
 	struct tegra_sm4_gcm_reqctx *rctx = aead_request_ctx(req);
 
 	rctx->encrypt = encrypt;
-
-	rctx->cmdbuf = kzalloc(SE_MAX_CMDLEN, GFP_KERNEL);
-	if (!rctx->cmdbuf)
-		return -ENOMEM;
 
 	return crypto_transfer_aead_request_to_engine(ctx->se->engine, req);
 }
@@ -1244,9 +1226,9 @@ static int tegra_sm4_cmac_do_update(struct ahash_request *req)
 	/* Update residue value with the residue after current block */
 	rctx->residue.size = nresidue;
 
-	size = tegra_sm4_cmac_prep_cmd(se, rctx->cmdbuf, rctx);
+	size = tegra_sm4_cmac_prep_cmd(se, se->cmdbuf->addr, rctx);
 
-	return tegra_se_host1x_submit(se, rctx->cmdbuf, size);
+	return tegra_se_host1x_submit(se, size);
 }
 
 static int tegra_sm4_cmac_do_final(struct ahash_request *req)
@@ -1273,8 +1255,8 @@ static int tegra_sm4_cmac_do_final(struct ahash_request *req)
 	}
 
 	/* Prepare command and submit */
-	size = tegra_sm4_cmac_prep_cmd(se, rctx->cmdbuf, rctx);
-	ret = tegra_se_host1x_submit(se, rctx->cmdbuf, size);
+	size = tegra_sm4_cmac_prep_cmd(se, se->cmdbuf->addr, rctx);
+	ret = tegra_se_host1x_submit(se, size);
 	if (ret)
 		goto out;
 
@@ -1296,8 +1278,6 @@ out_free:
 			rctx->residue.buf, rctx->residue.addr);
 	dma_free_coherent(se->dev, rctx->digest.size, rctx->digest.buf,
 			rctx->digest.addr);
-
-	kfree(rctx->cmdbuf);
 
 	return ret;
 }
@@ -1386,19 +1366,15 @@ static int tegra_sm4_cmac_init(struct ahash_request *req)
 			return -ENOMEM;
 	}
 
-	rctx->cmdbuf = kzalloc(SE_MAX_CMDLEN, GFP_KERNEL);
-	if (!rctx->cmdbuf)
-		goto key_free;
-
 	rctx->digest.buf = dma_alloc_coherent(se->dev, rctx->digest.size,
 				&rctx->digest.addr, GFP_KERNEL);
 	if (!rctx->digest.buf)
-		goto cmdbuf_free;
+		goto digbuf_fail;
 
 	rctx->residue.buf = dma_alloc_coherent(se->dev, rctx->blk_size * 2,
 					&rctx->residue.addr, GFP_KERNEL);
 	if (!rctx->residue.buf)
-		goto digbuf_free;
+		goto resbuf_fail;
 
 	rctx->residue.size = 0;
 	rctx->datbuf.size = 0;
@@ -1409,12 +1385,10 @@ static int tegra_sm4_cmac_init(struct ahash_request *req)
 
 	return 0;
 
-digbuf_free:
+resbuf_fail:
 	dma_free_coherent(se->dev, rctx->blk_size, rctx->digest.buf,
 				rctx->digest.addr);
-cmdbuf_free:
-	kfree(rctx->cmdbuf);
-key_free:
+digbuf_fail:
 	if (rctx->key_id != ctx->key_id)
 		tegra_key_invalidate(ctx->se, rctx->key_id, ctx->alg);
 
