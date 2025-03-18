@@ -152,6 +152,19 @@ static int falcon_init(struct falcon *falcon)
 	return 0;
 }
 
+/**
+ * falcon_exit() - Release resources used by falcon
+ *
+ * @falcon: Pointer to falcon structure
+ *
+ * This function releases firmware resources for falcon
+ */
+void falcon_exit(struct falcon *falcon)
+{
+	if (falcon->firmware.firmware)
+		release_firmware(falcon->firmware.firmware);
+}
+
 static int falcon_boot(struct falcon *falcon)
 {
 	unsigned long offset;

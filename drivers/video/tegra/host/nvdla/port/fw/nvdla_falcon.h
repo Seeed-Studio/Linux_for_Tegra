@@ -116,5 +116,6 @@ int nvdla_flcn_intr_init(struct platform_device *pdev);
 int nvdla_flcn_reload_fw(struct platform_device *pdev);
 int nvdla_flcn_prepare_poweroff(struct platform_device *pdev);
 int nvdla_flcn_finalize_poweron(struct platform_device *pdev);
+void falcon_exit(struct falcon *falcon);
 
 #endif /* _NVDLA_PORT_FW_FALCON_H_ */
