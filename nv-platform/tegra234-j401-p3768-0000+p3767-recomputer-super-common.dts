@@ -14,12 +14,12 @@
                         #size-cells = <0>;
 
                         eeprom@57 {
-                                compatible = "atmel,24c02";
+                                compatible = "atmel,24c256";
                                 reg = <0x57>;
                                 /*16 bit*/
-                                address-width = <0x08>;
+                                address-width = <0x10>;
                                 /*32768 bytes */
-                                size = <0x100>;
+                                size = <0x8000>;
 				/delete-property/ read-only;
                         };
                 };
