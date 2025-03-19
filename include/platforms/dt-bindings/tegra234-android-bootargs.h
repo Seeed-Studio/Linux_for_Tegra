@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved. */
 
 // Definitions for tegra234 android bootargs
 
@@ -15,4 +15,4 @@
 
 #define ANDROID_FIRESPRAY_KDUMP_BOOTARGS "bootconfig console=ttyTCU0,115200 rootfstype=ext4 mminit_loglevel=4 enforcing=0 loop.max_part=7 firmware_class.path=/vendor/firmware crashkernel=512M"
 
-#define ANDROID_FIRESPRAY_BOOTCONFIG "androidboot.boot_devices=bus@0/3460000.mmc\nandroidboot.hypervisor=disabled\nandroidboot.xudc=3550000.usb\nandroidboot.hardware=t234ref\nandroidboot.selinux=permissive\nandroidboot.serialno=1423522020643\n"
+#define ANDROID_FIRESPRAY_BOOTCONFIG "androidboot.boot_devices=bus@0/3460000.mmc\nandroidboot.hypervisor=disabled\nandroidboot.xudc=3550000.usb\nandroidboot.hardware=t234ref\n"
