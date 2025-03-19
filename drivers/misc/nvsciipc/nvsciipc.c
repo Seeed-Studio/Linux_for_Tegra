@@ -613,8 +613,8 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 		return -EFAULT;
 	}
 
-	if (user_db.num_eps <= 0) {
-		ERR("invalid value passed for num_eps\n");
+	if ((user_db.num_eps <= 0) || (user_db.num_eps > NVSCIIPC_MAX_EP_COUNT)) {
+		ERR("invalid value passed for num_eps: %d\n", user_db.num_eps);
 		return -EINVAL;
 	}
 
@@ -626,6 +626,13 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 
 	if (entry_ptr == NULL) {
 		ERR("memory allocation for entry_ptr failed\n");
+		ret = -EFAULT;
+		goto ptr_error;
+	}
+
+	if (!access_ok(user_db.entry, ctx->num_eps *
+		sizeof(struct nvsciipc_config_entry *))) {
+		ERR("invalid user-space pointer: %p\n", user_db.entry);
 		ret = -EFAULT;
 		goto ptr_error;
 	}

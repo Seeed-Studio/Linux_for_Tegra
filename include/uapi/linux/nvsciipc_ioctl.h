@@ -6,6 +6,14 @@
 
 #include <linux/ioctl.h>
 
+/*
+ * inter-thread: 2000
+ * inter-process: 16384
+ * inter-vm: 512
+ * inter-chip-pcie: 32
+ */
+#define NVSCIIPC_MAX_EP_COUNT 18928
+
 #define NVSCIIPC_MAX_EP_NAME	64U
 #define NVSCIIPC_MAX_RDMA_NAME	64U
 #define NVSCIIPC_MAX_IP_NAME	16U
