@@ -211,10 +211,6 @@
 			};
 		};
 
-		ethernet@A808910000 {
-			status = "disabled";
-		};
-
 		/* MGBE 0 */
 		ethernet@a808a10000 {
 			status = "okay";
@@ -222,6 +218,7 @@
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
+			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 
 			fixed-link {
 				full-duplex;
@@ -236,6 +233,7 @@
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
+			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 
 			fixed-link {
 				full-duplex;
@@ -250,6 +248,7 @@
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
+			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 
 			fixed-link {
 				full-duplex;
@@ -264,6 +263,7 @@
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
+			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 
 			fixed-link {
 				full-duplex;
