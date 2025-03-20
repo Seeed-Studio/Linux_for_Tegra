@@ -78,6 +78,11 @@ int wrap_host1x_syncpt_wait_ts(struct host1x_syncpt *sp,
 int wrap_host1x_syncpt_wait(struct host1x_syncpt *sp,
                        u32 thresh, long timeout, u32 *value);
 
+int wrap_host1x_syncpt_get_shim_info(struct host1x *host,
+				phys_addr_t *base,
+				u32 *stride,
+				u32 *num_syncpts);
+
 int wrap_host1x_fence_get_node(struct dma_fence *fence);
 
 //nvhost.h

@@ -26,7 +26,8 @@
 #define  host1x_syncpt_id					wrap_host1x_syncpt_id
 #define  host1x_syncpt_wait_ts				wrap_host1x_syncpt_wait_ts
 #define  host1x_syncpt_wait					wrap_host1x_syncpt_wait
-#define  host1x_fence_get_node				wrap_host1x_fence_get_node
+#define  host1x_fence_get_node			    wrap_host1x_fence_get_node
+#define  host1x_syncpt_get_shim_info		wrap_host1x_syncpt_get_shim_info
 //nvhost.h
 
 #define  host1x_writel										wrap_host1x_writel

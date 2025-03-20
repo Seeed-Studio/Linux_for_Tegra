@@ -61,6 +61,7 @@ struct host1x_interface_ops  host1x_emu_api = {
     .host1x_syncpt_id               = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_id),
     .host1x_syncpt_wait_ts          = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_wait_ts),
     .host1x_syncpt_wait             = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_wait),
+	.host1x_syncpt_get_shim_info    = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_syncpt_get_shim_info),
 
 //nvhost.h Interface
     .host1x_writel                      = HOST1X_EMU_EXPORT_SYMBOL_NAME(host1x_writel),

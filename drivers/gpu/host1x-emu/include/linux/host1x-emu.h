@@ -82,4 +82,9 @@ HOST1X_EMU_EXPORT_DECL(int, host1x_fence_get_node(struct dma_fence *fence));
 
 HOST1X_EMU_EXPORT_DECL(void, host1x_fence_cancel(struct dma_fence *fence));
 
+HOST1X_EMU_EXPORT_DECL(int, host1x_syncpt_get_shim_info(struct host1x *host,
+				phys_addr_t *base,
+				u32 *stride,
+				u32 *num_syncpts));
+
 #endif

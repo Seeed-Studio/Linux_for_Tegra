@@ -486,6 +486,30 @@ HOST1X_EMU_EXPORT_DECL(int, host1x_syncpt_wait_ts(struct host1x_syncpt *sp,
 HOST1X_EMU_EXPORT_SYMBOL(host1x_syncpt_wait_ts);
 
 /**
+ * @brief Get the physical address of the syncpoint aperture, stride and number of syncpoints
+ *
+ * @param host: host1x instance
+ * @param base: physical address of syncpoint aperture
+ * @param stride: stride between syncpoints
+ * @param num_syncpts: number of syncpoints
+ *
+ * @return 0 if successful
+ */
+HOST1X_EMU_EXPORT_DECL(int, host1x_syncpt_get_shim_info(struct host1x *host,
+			phys_addr_t *base, u32 *stride, u32 *num_syncpts))
+{
+	if (!host || !base || !stride || !num_syncpts)
+		return -EINVAL;
+
+	*base = host->syncpt_phy_apt;
+	*stride = host->syncpt_page_size;
+	*num_syncpts = host->syncpt_count;
+
+	return 0;
+}
+HOST1X_EMU_EXPORT_SYMBOL(host1x_syncpt_get_shim_info);
+
+/**
  * @brief Wait for a syncpoint to reach a given threshold value
  *
  * @sp: host1x syncpoint

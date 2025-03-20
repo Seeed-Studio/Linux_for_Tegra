@@ -29,6 +29,7 @@ static bool host1x_wrapper_init_default_interface(void)
 	host1x_api_table.host1x_syncpt_id                   = host1x_syncpt_id;
 	host1x_api_table.host1x_syncpt_wait_ts              = host1x_syncpt_wait_ts;
 	host1x_api_table.host1x_syncpt_wait                 = host1x_syncpt_wait;
+	host1x_api_table.host1x_syncpt_get_shim_info        = host1x_syncpt_get_shim_info;
 	// Interface for nvhost.h
 	host1x_api_table.host1x_writel                      = host1x_writel;
 	host1x_api_table.nvhost_get_default_device          = nvhost_get_default_device;
@@ -191,9 +192,23 @@ EXPORT_SYMBOL(wrap_host1x_syncpt_wait_ts);
 int wrap_host1x_syncpt_wait(struct host1x_syncpt *sp,
 						u32 thresh, long timeout, u32 *value)
 {
-	return host1x_api_table.host1x_syncpt_wait(sp, thresh, timeout, value);
+	if (host1x_api_table.host1x_syncpt_wait != NULL)
+		return host1x_api_table.host1x_syncpt_wait(sp, thresh, timeout, value);
+	return -ENOSYS;
 }
 EXPORT_SYMBOL(wrap_host1x_syncpt_wait);
+
+/**
+ * Wrapper function for host1x_syncpt_get_shim_info
+ */
+int wrap_host1x_syncpt_get_shim_info(struct host1x *host,
+						 phys_addr_t *base, u32 *stride, u32 *num_syncpts)
+{
+
+	return host1x_api_table.host1x_syncpt_get_shim_info(host, base, stride, num_syncpts);
+	return -ENOSYS;
+}
+EXPORT_SYMBOL(wrap_host1x_syncpt_get_shim_info);
 
 // nvhost.c
 void wrap_host1x_writel(struct platform_device *pdev, u32 r, u32 v)

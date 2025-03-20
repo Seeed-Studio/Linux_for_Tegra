@@ -37,6 +37,8 @@ void (*host1x_syncpt_put)(struct host1x_syncpt *sp);
 u32 (*host1x_syncpt_id)(struct host1x_syncpt *sp);
 int (*host1x_syncpt_wait_ts)(struct host1x_syncpt *sp, u32 thresh, long timeout, u32 *value, ktime_t *ts);
 int (*host1x_syncpt_wait)(struct host1x_syncpt *sp, u32 thresh, long timeout,u32 *value);
+int (*host1x_syncpt_get_shim_info)(struct host1x *host, phys_addr_t *base,
+				u32 *stride, u32 *num_syncpts);
 
 //nvhost.h Interface
 void (*host1x_writel)(struct platform_device *pdev, u32 r, u32 v);
