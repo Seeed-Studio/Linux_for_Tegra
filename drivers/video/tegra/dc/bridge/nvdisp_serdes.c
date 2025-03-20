@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVDISP SERDES driver for Display Serializers and DeSerializers
  *
- * Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved.
  */
 #include <nvidia/conftest.h>
 
@@ -23,6 +23,16 @@
 #include <linux/of_device.h>
 #include <linux/of.h>
 #include <linux/version.h>
+
+#ifdef CONFIG_TEGRA_EPL
+#include <linux/tegra-epl.h>
+#endif
+
+/**
+ * @brief EPL reporter ID for NVDISP SERDES.
+ * This ID is used when reporting errors to FSI via EPL.
+ */
+#define NVDISP_SERDES_EPL_REPORTER_ID 0x8103
 
 /**
  * @brief I2C opcode data structure sizes.
@@ -505,6 +515,24 @@ static int read_opcode_props(struct i2c_client *client,
 	return 0;
 }
 
+static void nvdisp_serdes_epl_report_error(uint32_t error_code)
+{
+#ifdef CONFIG_TEGRA_EPL
+	struct epl_error_report_frame error_report;
+	u64 time;
+
+	asm volatile("mrs %0, cntvct_el0" : "=r" (time));
+
+	error_report.error_code = error_code;
+	error_report.error_attribute = 0x0;
+	error_report.reporter_id = NVDISP_SERDES_EPL_REPORTER_ID;
+	error_report.timestamp = (u32) time;
+
+	epl_report_error(error_report);
+#endif
+	return;
+}
+
 static irqreturn_t nvdisp_serdes_irq_handler(int irq, void *dev_id)
 {
 	struct nvdisp_serdes_priv *priv = dev_id;
@@ -530,6 +558,7 @@ static irqreturn_t nvdisp_serdes_irq_handler(int irq, void *dev_id)
 		}
 	}
 
+	nvdisp_serdes_epl_report_error(0x0);
 done:
 	return IRQ_HANDLED;
 }
