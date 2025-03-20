@@ -2869,6 +2869,26 @@ static void tegra_xhci_disable_phy_sleepwalk(struct tegra_xusb *tegra)
 	}
 }
 
+static void tegra_xhci_program_utmi_power_lp0_enter(struct tegra_xusb *tegra)
+{
+	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
+	struct phy *phy;
+	unsigned int i;
+	u32 portsc;
+
+	for (i = 0; i < xhci->usb2_rhub.num_ports; i++) {
+		if (!xhci->usb2_rhub.ports[i])
+			continue;
+		portsc = readl(xhci->usb2_rhub.ports[i]->addr);
+		tegra->lp0_utmi_pad_mask &= ~BIT(i);
+		if (((portsc & PORT_PLS_MASK) == XDEV_U3) || ((portsc & DEV_SPEED_MASK) == XDEV_FS)) {
+			tegra->lp0_utmi_pad_mask |= BIT(i);
+			phy = tegra_xusb_get_phy(tegra, "usb2", i);
+			tegra_phy_xusb_utmi_pad_power_down(phy);
+		}
+	}
+}
+
 static void tegra_xhci_program_utmi_power_lp0_exit(struct tegra_xusb *tegra)
 {
 	unsigned int i, index_to_usb2;
@@ -2899,7 +2919,6 @@ static int tegra_xusb_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 	unsigned int i;
 	int err;
 	u32 usbcmd;
-	u32 portsc;
 
 	dev_dbg(dev, "entering ELPG\n");
 
@@ -2913,14 +2932,7 @@ static int tegra_xusb_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 		goto out;
 	}
 
-	for (i = 0; i < xhci->usb2_rhub.num_ports; i++) {
-		if (!xhci->usb2_rhub.ports[i])
-			continue;
-		portsc = readl(xhci->usb2_rhub.ports[i]->addr);
-		tegra->lp0_utmi_pad_mask &= ~BIT(i);
-		if (((portsc & PORT_PLS_MASK) == XDEV_U3) || ((portsc & DEV_SPEED_MASK) == XDEV_FS))
-			tegra->lp0_utmi_pad_mask |= BIT(i);
-	}
+	tegra_xhci_program_utmi_power_lp0_enter(tegra);
 
 	err = xhci_suspend(xhci, wakeup);
 	if (err < 0) {
@@ -3017,8 +3029,8 @@ static int tegra_xusb_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 
 		phy_power_on(tegra->phys[i]);
 	}
-	if (tegra->suspended)
-		tegra_xhci_program_utmi_power_lp0_exit(tegra);
+
+	tegra_xhci_program_utmi_power_lp0_exit(tegra);
 
 	tegra_xusb_config(tegra);
 	tegra_xusb_restore_context(tegra);
@@ -3563,28 +3575,9 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req, u16 value, 
 
 	rhub = &xhci->usb2_rhub;
 	bus_state = &rhub->bus_state;
-	if (bus_state->resuming_ports && hcd->speed == HCD_USB2) {
-		ports = rhub->ports;
-		i = rhub->num_ports;
-		while (i--) {
-			if (!test_bit(i, &bus_state->resuming_ports))
-				continue;
-			portsc = readl(ports[i]->addr);
-			if ((portsc & PORT_PLS_MASK) == XDEV_RESUME)
-				tegra_phy_xusb_utmi_pad_power_on(
-					tegra_xusb_get_phy(tegra, "usb2", (int) i));
-		}
-	}
 
 	if (hcd->speed == HCD_USB2) {
 		phy = tegra_xusb_get_phy(tegra, "usb2", port);
-		if ((type_req == ClearPortFeature) && (value == USB_PORT_FEAT_SUSPEND)) {
-			if (!index || index > rhub->num_ports) {
-				ret = -EPIPE;
-				goto out;
-			}
-			tegra_phy_xusb_utmi_pad_power_on(phy);
-		}
 		if ((type_req == SetPortFeature) && (value == USB_PORT_FEAT_RESET)) {
 			if (!index || index > rhub->num_ports) {
 				ret = -EPIPE;
@@ -3603,11 +3596,6 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req, u16 value, 
 
 	if (hcd->speed == HCD_USB2) {
 		/* Use phy where we set previously */
-		if ((type_req == SetPortFeature) && (value == USB_PORT_FEAT_SUSPEND))
-			/* We don't suspend the PAD while HNP role swap happens on the OTG port */
-			if (!((hcd->self.otg_port == (port + 1)) && hcd->self.b_hnp_enable))
-				tegra_phy_xusb_utmi_pad_power_down(phy);
-
 		if ((type_req == ClearPortFeature) && (value == USB_PORT_FEAT_C_CONNECTION)) {
 			ports = rhub->ports;
 			portsc = readl(ports[port]->addr);
