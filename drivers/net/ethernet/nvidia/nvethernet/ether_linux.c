@@ -3525,48 +3525,42 @@ static int ether_handle_tso(struct device *dev,
 			    struct osi_tx_pkt_cx *tx_pkt_cx,
 			    struct sk_buff *skb)
 {
+	unsigned int transport_offset;
+	unsigned int udp_size;
 	int ret = 1;
 
 	if (skb_is_gso(skb) == 0) {
+		/* return since the packet is not GSO */
 		ret = 0;
 		goto func_exit;
 	}
 
-	if (skb_header_cloned(skb)) {
-		ret = pskb_expand_head(skb, 0, 0, GFP_ATOMIC);
-		if (ret != 0) {
-			goto func_exit;
-		}
-	}
-
 	/* Start filling packet details in Tx_pkt_cx */
-	if (skb_shinfo(skb)->gso_type & (SKB_GSO_UDP_L4)) {
-		tx_pkt_cx->tcp_udp_hdrlen = sizeof(struct udphdr);
-		tx_pkt_cx->mss = skb_shinfo(skb)->gso_size -
-			sizeof(struct udphdr);
+	udp_size = (unsigned int)sizeof(struct udphdr);
+	transport_offset = (unsigned int)skb_transport_offset(skb);
+
+	if ((skb_shinfo(skb)->gso_type & SKB_GSO_UDP_L4) != 0U) {
+		tx_pkt_cx->tcp_udp_hdrlen = udp_size;
+		tx_pkt_cx->mss = skb_shinfo(skb)->gso_size - udp_size;
 	} else {
-		tx_pkt_cx->tcp_udp_hdrlen = tcp_hdrlen(skb);
+		tx_pkt_cx->tcp_udp_hdrlen = (unsigned int)tcp_hdrlen(skb);
 		tx_pkt_cx->mss = skb_shinfo(skb)->gso_size;
 	}
-	if ((UINT_MAX - skb_transport_offset(skb)) < tx_pkt_cx->tcp_udp_hdrlen) {
-		dev_err(dev, "Unexpected udp hdr length\n");
-		ret = -EINVAL; // return failure in boundary condition
+
+	if (((UINT_MAX - transport_offset) < tx_pkt_cx->tcp_udp_hdrlen) ||
+	    ((transport_offset + tx_pkt_cx->tcp_udp_hdrlen) > (unsigned int)skb->len)) {
+		dev_err(dev, "Invalid header length calculations\n");
+		ret = -EINVAL;
 		goto func_exit;
-	}
-	tx_pkt_cx->total_hdrlen = skb_transport_offset(skb) +
-			tx_pkt_cx->tcp_udp_hdrlen;
-	if (tx_pkt_cx->total_hdrlen > skb->len) {
-		dev_err(dev, "Unexpected total hdr length\n");
-		ret = -EINVAL; // return failure in boundary condition
-		goto func_exit;
-	} else {
-		tx_pkt_cx->payload_len = (skb->len - tx_pkt_cx->total_hdrlen);
 	}
 
-	netdev_dbg(skb->dev, "mss           =%u\n", tx_pkt_cx->mss);
-	netdev_dbg(skb->dev, "payload_len   =%u\n", tx_pkt_cx->payload_len);
-	netdev_dbg(skb->dev, "tcp_udp_hdrlen=%u\n", tx_pkt_cx->tcp_udp_hdrlen);
-	netdev_dbg(skb->dev, "total_hdrlen  =%u\n", tx_pkt_cx->total_hdrlen);
+	tx_pkt_cx->total_hdrlen = transport_offset + tx_pkt_cx->tcp_udp_hdrlen;
+	tx_pkt_cx->payload_len = (unsigned int)skb->len - tx_pkt_cx->total_hdrlen;
+
+	netdev_dbg(skb->dev,
+		   "mss=%u, payload_len=%u, tcp_udp_hdrlen=%u, total_hdrlen=%u\n",
+		   tx_pkt_cx->mss, tx_pkt_cx->payload_len,
+		   tx_pkt_cx->tcp_udp_hdrlen, tx_pkt_cx->total_hdrlen);
 
 func_exit:
 	return ret;
