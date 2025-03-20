@@ -307,7 +307,7 @@ bind_static_vmem_slot(struct pva_dma_config_resource *dma_config,
 
 			desc->frda =
 				((uint16_t)(buffer_addr >> 6U) + desc->frda) &
-				0x3FFF;
+				0x7FFF;
 		}
 	}
 

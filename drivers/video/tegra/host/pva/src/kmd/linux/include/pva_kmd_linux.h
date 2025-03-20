@@ -24,8 +24,10 @@ struct nvpva_ioctl_part {
  * The header of request to KMD
  */
 struct pva_kmd_linux_ioctl_header {
+	enum pva_ops_submit_mode mode;
 	struct nvpva_ioctl_part request;
 	struct nvpva_ioctl_part response;
+	struct pva_fw_postfence postfence;
 };
 
 #endif // PVA_KMD_LINUX_H

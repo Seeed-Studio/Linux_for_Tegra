@@ -30,10 +30,12 @@ struct pva_kmd_shared_buffer {
 	uint32_t resource_offset;
 };
 
-enum pva_error pva_kmd_shared_buffer_init(
-	struct pva_kmd_device *pva, uint8_t interface, uint32_t element_size,
-	uint32_t buffer_size, shared_buffer_process_element_cb process_cb,
-	shared_buffer_lock_cb lock_cb, shared_buffer_lock_cb unlock_cb);
+enum pva_error pva_kmd_shared_buffer_init(struct pva_kmd_device *pva,
+					  uint8_t interface,
+					  uint32_t element_size,
+					  uint32_t buffer_size,
+					  shared_buffer_lock_cb lock_cb,
+					  shared_buffer_lock_cb unlock_cb);
 
 enum pva_error pva_kmd_shared_buffer_deinit(struct pva_kmd_device *pva,
 					    uint8_t interface);

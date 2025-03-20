@@ -2,6 +2,7 @@
 /* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 #ifndef PVA_KMD_RESOURCE_TABLE_H
 #define PVA_KMD_RESOURCE_TABLE_H
+#include "pva_api_ops.h"
 #include "pva_fw.h"
 #include "pva_bit.h"
 #include "pva_resource.h"
@@ -108,13 +109,13 @@ pva_kmd_add_dram_buffer_resource(struct pva_kmd_resource_table *resource_table,
 
 enum pva_error
 pva_kmd_add_vpu_bin_resource(struct pva_kmd_resource_table *resource_table,
-			     void *executable, uint32_t executable_size,
+			     const void *executable, uint32_t executable_size,
 			     uint32_t *out_resource_id);
 
-enum pva_error
-pva_kmd_add_dma_config_resource(struct pva_kmd_resource_table *resource_table,
-				void *dma_config, uint32_t dma_config_size,
-				uint32_t *out_resource_id);
+enum pva_error pva_kmd_add_dma_config_resource(
+	struct pva_kmd_resource_table *resource_table,
+	const struct pva_ops_dma_config_register *dma_cfg_hdr,
+	uint32_t dma_config_size, uint32_t *out_resource_id);
 
 /**
  * Increment reference count of the resources

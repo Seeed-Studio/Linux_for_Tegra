@@ -63,6 +63,7 @@ pva_objs += \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_device_api.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_device_memory.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_driver.o \
+    $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_event_trace.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_ioctl.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_isr.o \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_misc.o \

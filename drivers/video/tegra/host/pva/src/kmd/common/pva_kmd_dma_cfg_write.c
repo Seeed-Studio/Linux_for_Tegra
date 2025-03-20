@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include "pva_kmd_resource_table.h"
 #include "pva_kmd_device_memory.h"
 #include "pva_api.h"
@@ -131,7 +132,7 @@ static void write_dma_descriptor(struct pva_dma_descriptor const *desc,
 	/* DMA_DESC_PY */
 	fw_desc->py = desc->py;
 	/* DMA_DESC_FRDA */
-	fw_desc->frda = ((desc->dst2_offset >> 6U) & 0x3FFF);
+	fw_desc->frda = ((desc->dst2_offset >> 6U) & 0x7FFF);
 
 	/* DMA_DESC_NDTM_CNTL0 */
 	fw_desc->cb_ext = (((desc->src.cb_start >> 16) & 0x1) << 0) |

@@ -74,3 +74,10 @@ const char *pva_kmd_get_default_allowlist(void)
 {
 	return PVA_AUTH_ALLOW_LIST_DEFAULT;
 }
+
+void pva_kmd_update_allowlist_path(struct pva_kmd_device *pva,
+				   const char *allowlist_path)
+{
+	//Stub definition
+	pva_dbg_printf("Allow list path update ignored in linux");
+}

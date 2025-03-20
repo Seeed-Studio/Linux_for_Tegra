@@ -277,10 +277,11 @@ enum pva_error pva_kmd_context_init(struct pva_kmd_context *ctx,
 		goto deinit_submitter;
 	}
 
-	err = pva_kmd_shared_buffer_init(
-		ctx->pva, ctx->ccq_id, PVA_KMD_FW_BUF_ELEMENT_SIZE,
-		res_table_capacity, pva_kmd_handle_msg_resource_unreg,
-		pva_kmd_resource_table_lock, pva_kmd_resource_table_unlock);
+	err = pva_kmd_shared_buffer_init(ctx->pva, ctx->ccq_id,
+					 PVA_KMD_FW_BUF_ELEMENT_SIZE,
+					 res_table_capacity,
+					 pva_kmd_resource_table_lock,
+					 pva_kmd_resource_table_unlock);
 	if (err != PVA_SUCCESS) {
 		goto deinit_submitter;
 	}
@@ -337,18 +338,17 @@ void pva_kmd_context_deinit(struct pva_kmd_context *ctx)
 static void pva_kmd_destroy_all_queues(struct pva_kmd_context *ctx)
 {
 	enum pva_error err;
-	struct pva_kmd_queue_destroy_in_args args;
-	struct pva_kmd_queue *queue;
 
 	for (uint32_t queue_id = 0u; queue_id < ctx->max_n_queues; queue_id++) {
+		struct pva_kmd_queue *queue;
+
 		pva_kmd_mutex_lock(&ctx->queue_allocator.allocator_lock);
 		queue = pva_kmd_get_block_unsafe(&ctx->queue_allocator,
 						 queue_id);
 		if (queue != NULL) {
 			pva_kmd_mutex_unlock(
 				&ctx->queue_allocator.allocator_lock);
-			args.queue_id = queue_id;
-			err = pva_kmd_queue_destroy(ctx, &args);
+			err = pva_kmd_queue_destroy(ctx, queue_id);
 			ASSERT(err == PVA_SUCCESS);
 		} else {
 			pva_kmd_mutex_unlock(

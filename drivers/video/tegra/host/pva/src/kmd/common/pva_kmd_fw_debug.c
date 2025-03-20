@@ -31,7 +31,6 @@ enum pva_error pva_kmd_notify_fw_set_debug_log_level(struct pva_kmd_device *pva,
 	ASSERT(cmd != NULL);
 
 	pva_kmd_set_cmd_set_debug_log_level(cmd, log_level);
-	pva_kmd_print_str_u64("set debug log level cmd:", cmd->log_level);
 
 	err = pva_kmd_submitter_submit(submitter, &builder, &fence_val);
 	if (err != PVA_SUCCESS) {

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+
 #ifndef PVA_KMD_DMA_CFG_H
 #define PVA_KMD_DMA_CFG_H
 
@@ -11,6 +12,18 @@
 
 /* Right shift value for moving GOB offset value extracted from surface address to LSB  */
 #define PVA_DMA_BL_GOB_OFFSET_MASK_RSH 6U
+
+#define MAX_DESC_ID 0x3FU
+
+enum pva_dma_frame_rep {
+	REPLICATION_NONE = 0,
+	REPLICATION_TWO_WAY,
+	REPLICATION_FOUR_WAY,
+	REPLICATION_EIGHT_WAY,
+	REPLICATION_SIXTEEN_WAY,
+	REPLICATION_THIRTYTWO_WAY,
+	REPLICATION_FULL
+};
 
 struct pva_kmd_dma_access_entry {
 	int64_t start_addr;
@@ -47,7 +60,8 @@ struct pva_kmd_dma_resource_aux {
 };
 
 enum pva_error
-pva_kmd_parse_dma_config(void *dma_config, uint32_t dma_config_size,
+pva_kmd_parse_dma_config(const struct pva_ops_dma_config_register *dma_cfg_hdr,
+			 uint32_t dma_config_size,
 			 struct pva_dma_config *out_cfg,
 			 struct pva_kmd_hw_constants const *hw_consts);
 
@@ -123,7 +137,8 @@ void pva_kmd_write_fw_dma_config(struct pva_dma_config const *dma_cfg,
  */
 enum pva_error
 pva_kmd_load_dma_config(struct pva_kmd_resource_table *resource_table,
-			void *dma_config, uint32_t dma_config_size,
+			const struct pva_ops_dma_config_register *dma_cfg_hdr,
+			uint32_t dma_config_size,
 			struct pva_kmd_dma_resource_aux *dma_aux,
 			void *fw_dma_cfg, uint32_t *out_fw_fetch_size);
 

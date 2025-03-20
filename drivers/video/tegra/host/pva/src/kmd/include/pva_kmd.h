@@ -8,29 +8,40 @@
 #include "pva_constants.h"
 #include "pva_math_utils.h"
 
+#define PVA_OPS_PRIVATE_OPCODE_FLAG (1U << 31U)
+
 /* KMD API: context init */
-struct pva_kmd_context_init_in_args {
+struct pva_ops_context_init {
+#define PVA_OPS_OPCODE_CONTEXT_INIT (1U | PVA_OPS_PRIVATE_OPCODE_FLAG)
+	struct pva_ops_header header;
 	uint32_t resource_table_capacity;
+	uint32_t pad;
 };
 
-struct pva_kmd_context_init_out_args {
+struct pva_ops_response_context_init {
 	enum pva_error error;
 	uint64_t ccq_shm_hdl;
 };
 
-struct pva_kmd_syncpt_register_out_args {
+struct pva_ops_syncpt_register {
+#define PVA_OPS_OPCODE_SYNCPT_REGISTER (2U | PVA_OPS_PRIVATE_OPCODE_FLAG)
+	struct pva_ops_header header;
+};
+
+struct pva_ops_response_syncpt_register {
 	enum pva_error error;
 	uint32_t syncpt_ro_res_id;
 	uint32_t syncpt_rw_res_id;
 	uint32_t synpt_size;
 	uint32_t synpt_ids[PVA_NUM_RW_SYNCPTS_PER_CONTEXT];
 	uint32_t num_ro_syncpoints;
+	uint32_t pad;
 };
 
 /**
  * Calculates the total memory size required for a PVA submission queue.
  * This includes the size of the queue header and the combined size of all command buffer submission info structures.
- * 
+ *
  * @param x The number of command buffer submission info structures.
  * @return The total memory size in bytes.
  */
@@ -45,132 +56,110 @@ static inline uint32_t pva_get_submission_queue_memory_size(uint32_t x)
 }
 
 /* KMD API: queue create */
-struct pva_kmd_queue_create_in_args {
+struct pva_ops_queue_create {
+#define PVA_OPS_OPCODE_QUEUE_CREATE (3U | PVA_OPS_PRIVATE_OPCODE_FLAG)
+	struct pva_ops_header header;
 	uint32_t max_submission_count;
 	uint64_t queue_memory_handle;
 	uint64_t queue_memory_offset;
 };
 
-struct pva_kmd_queue_create_out_args {
+struct pva_ops_response_queue_create {
 	enum pva_error error;
 	uint32_t queue_id;
 	uint32_t syncpt_fence_counter;
 };
 
 /* KMD API: queue destroy */
-struct pva_kmd_queue_destroy_in_args {
+struct pva_ops_queue_destroy {
+#define PVA_OPS_OPCODE_QUEUE_DESTROY (4U | PVA_OPS_PRIVATE_OPCODE_FLAG)
+	struct pva_ops_header header;
 	uint32_t queue_id;
+	uint32_t pad;
 };
 
-struct pva_kmd_queue_destroy_out_args {
+struct pva_ops_response_queue_destroy {
 	enum pva_error error;
+	uint32_t pad;
 };
 
-struct pva_kmd_memory_register_in_args {
-	enum pva_memory_segment segment;
-	uint32_t access_flags;
-	uint64_t memory_handle;
-	uint64_t offset;
-	uint64_t size;
-};
-
-/* KMD API: executable */
-struct pva_kmd_executable_register_in_args {
-	uint32_t size;
-};
-
-struct pva_kmd_executable_get_symbols_in_args {
+struct pva_ops_executable_get_symbols {
+#define PVA_OPS_OPCODE_EXECUTABLE_GET_SYMBOLS (5U | PVA_OPS_PRIVATE_OPCODE_FLAG)
+	struct pva_ops_header header;
 	uint32_t exec_resource_id;
+	uint32_t pad;
 };
 
-struct pva_kmd_executable_get_symbols_out_args {
+struct pva_ops_response_executable_get_symbols {
 	enum pva_error error;
 	uint32_t num_symbols;
 	/* Followed by <num_symbols> of struct pva_symbol_info */
 };
 
-/* KMD API: DMA config */
-struct pva_kmd_dma_config_register_in_args {
-	struct pva_dma_config_header dma_config_header;
-	/* Followed by hwseq words, channels, descriptors, etc. */
-};
-
-struct pva_kmd_register_out_args {
-	enum pva_error error;
-	uint32_t resource_id;
-};
-
-struct pva_kmd_exec_register_out_args {
-	enum pva_error error;
-	uint32_t resource_id;
-	uint32_t num_symbols;
-};
-
-struct pva_kmd_unregister_in_args {
-	uint32_t resource_id;
-};
-
-enum pva_kmd_op_type {
-	PVA_KMD_OP_CONTEXT_INIT,
-	PVA_KMD_OP_QUEUE_CREATE,
-	PVA_KMD_OP_QUEUE_DESTROY,
-	PVA_KMD_OP_EXECUTABLE_GET_SYMBOLS,
-	PVA_KMD_OP_MEMORY_REGISTER,
-	PVA_KMD_OP_SYNPT_REGISTER,
-	PVA_KMD_OP_EXECUTABLE_REGISTER,
-	PVA_KMD_OP_DMA_CONFIG_REGISTER,
-	PVA_KMD_OP_UNREGISTER,
-	PVA_KMD_OP_MAX,
+/**
+ * @brief Structure for memory registration operation.
+ */
+struct pva_ops_memory_register {
+#define PVA_OPS_OPCODE_MEMORY_REGISTER (6U | PVA_OPS_PRIVATE_OPCODE_FLAG)
+	struct pva_ops_header header; /**< Operation header */
+	enum pva_memory_segment segment; /**< Memory segment to register */
+	uint32_t access_flags; /**< Memory access flags */
+	uint64_t import_id; /**< Import ID of the memory */
+	uint64_t offset; /**< Offset into the memory */
+	uint64_t size; /**< Size of memory to register */
 };
 
 /**
- * The header of a KMD operation
+ * @brief Response structure for memory registration operation.
  */
-struct pva_kmd_op_header {
-	enum pva_kmd_op_type op_type; /**< Type of the KMD operation */
+struct pva_ops_response_register {
+	enum pva_error error; /**< Operation result status */
+	uint32_t resource_id; /**< Assigned resource ID */
 };
 
 /**
- * The header of a KMD response
+ * @brief Structure for resource unregistration operation.
  */
-struct pva_kmd_response_header {
-	uint32_t rep_size; /** Size of the response, including the header */
-};
-
-enum pva_kmd_ops_mode {
-	/**
-	* Only one operation is allowed. The
-	* operation will be done synchronously.
-	* KMD will wait for the fence if
-	* necessary. */
-	PVA_KMD_OPS_MODE_SYNC,
-	/**
-	* A list of registration operations are allowed. These operations will
-	* trigger a post fence. KMD will not wait for the fence.
-	*/
-	PVA_KMD_OPS_MODE_ASYNC,
+struct pva_ops_unregister {
+#define PVA_OPS_OPCODE_UNREGISTER (7U | PVA_OPS_PRIVATE_OPCODE_FLAG)
+	struct pva_ops_header header; /**< Operation header */
+	uint32_t resource_id; /**< ID of resource to unregister */
+	uint32_t pad; /**< Padding for 8 bytes alignment */
 };
 
 /**
- * A buffer contains a list of KMD operations and a post fence.
- *
- * In general, the list of KMD operations contain jobs that need to be done by
- * the KMD and FW. KMD will first perform its part and then submit a privileged
- * command buffer to FW. FW will trigger the provided post fence when done.
- *
- * NOTE: Starting address of every struct/array in the buffer must be aligned to
- * 8 bytes.
+ * @brief Response structure for executable registration operation.
  */
-struct pva_kmd_operations {
-	enum pva_kmd_ops_mode mode;
-	struct pva_fw_postfence postfence;
-	/** Followed by a list of KMD operation(s) */
+struct pva_ops_response_executable_register {
+	enum pva_error error; /**< Operation result status */
+	uint32_t resource_id; /**< Assigned resource ID */
+	uint32_t num_symbols; /**< Number of symbols in executable */
+	uint32_t pad; /**< Padding for 8 bytes alignment */
 };
 
-/* Max op buffer sizer is 8 MB */
-#define PVA_KMD_MAX_OP_BUFFER_SIZE (8 * 1024 * 1024)
+/**
+ * @brief Response structure for unregister operation.
+ */
+struct pva_ops_response_unregister {
+	enum pva_error error; /**< Operation result status */
+	uint32_t pad; /**< Padding for 8 bytes alignment */
+};
 
-/* Max respone size is 8 KB */
-#define PVA_KMD_MAX_RESP_BUFFER_SIZE (8 * 1024)
+enum pva_ops_submit_mode {
+	PVA_OPS_SUBMIT_MODE_SYNC,
+	PVA_OPS_SUBMIT_MODE_ASYNC,
+};
+
+struct pva_dma_config {
+	struct pva_dma_config_header header;
+	const uint32_t *hwseq_words;
+	const struct pva_dma_channel *channels;
+	const struct pva_dma_descriptor *descriptors;
+	const struct pva_dma_static_binding *static_bindings;
+};
+
+#define PVA_OPS_CONTEXT_BUFFER_SIZE (1U * 1024U * 1024U) //1MB
+#define PVA_KMD_MAX_OP_BUFFER_SIZE (8 * 1024 * 1024) //8MB
+#define PVA_KMD_MAX_RESP_BUFFER_SIZE (8 * 1024) //8KB
 
 #endif // PVA_KMD_H

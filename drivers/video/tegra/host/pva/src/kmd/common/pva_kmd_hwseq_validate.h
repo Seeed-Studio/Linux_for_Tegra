@@ -220,7 +220,7 @@ struct hw_seq_blob_entry {
 
 /**
  * TODO: Separate out pva_hwseq_priv to be more modular
- * 
+ *
  * Items in pva_hwseq_main
  * 	- dma_config
  * 	- hw_gen
@@ -299,11 +299,11 @@ struct pva_hwseq_priv {
 	/**
 	 * Pointer to the Head Descriptor of type \ref nvpva_dma_descriptor in the HW Sequencer
 	 */
-	struct pva_dma_descriptor *head_desc;
+	const struct pva_dma_descriptor *head_desc;
 	/**
 	 * Pointer to the Tail Descriptor of type \ref nvpva_dma_descriptor in the HW Sequencer
 	 */
-	struct pva_dma_descriptor *tail_desc;
+	const struct pva_dma_descriptor *tail_desc;
 	/**
 	 * DMA Descriptor information obtained from HW Sequencer Blob of type
 	 * \ref pva_dma_hwseq_desc_entry_t

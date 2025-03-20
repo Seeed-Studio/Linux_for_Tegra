@@ -40,6 +40,7 @@ enum pva_error pva_kmd_init_vpu_app_auth(struct pva_kmd_device *pva, bool ena)
 	if (default_path_len > 0U) {
 		(void)memcpy(pva_auth->pva_auth_allowlist_path, default_path,
 			     default_path_len);
+		pva_auth->pva_auth_allowlist_path[default_path_len] = '\0';
 	}
 
 	return PVA_SUCCESS;
@@ -259,7 +260,8 @@ fail:
 }
 
 enum pva_error pva_kmd_verify_exectuable_hash(struct pva_kmd_device *pva,
-					      uint8_t *dataptr, size_t size)
+					      const uint8_t *dataptr,
+					      size_t size)
 {
 	enum pva_error err = PVA_SUCCESS;
 	struct pva_vpu_auth *pva_auth;
@@ -271,15 +273,15 @@ enum pva_error pva_kmd_verify_exectuable_hash(struct pva_kmd_device *pva,
 
 	pva_kmd_mutex_lock(&pva_auth->allow_list_lock);
 	if (pva_auth->pva_auth_enable) {
-		pva_dbg_printf("App authentication enabled");
+		pva_dbg_printf("App authentication enabled\n");
 		if (pva_auth->pva_auth_allow_list_parsed == false) {
 			err = pva_kmd_allowlist_parse(pva);
 			if (err == PVA_SUCCESS) {
 				pva_dbg_printf(
-					"App authentication allowlist parsing successfull");
+					"App authentication allowlist parsing successfull\n");
 			} else {
 				pva_dbg_printf(
-					"App authentication allowlist parsing failed");
+					"App authentication allowlist parsing failed\n");
 			}
 		}
 
@@ -289,14 +291,15 @@ enum pva_error pva_kmd_verify_exectuable_hash(struct pva_kmd_device *pva,
 				size);
 			if (err == PVA_SUCCESS) {
 				pva_dbg_printf(
-					"App authentication successfull");
+					"App authentication successfull\n");
 			} else {
-				pva_dbg_printf("App authentication failed : %d",
-					       err);
+				pva_dbg_printf(
+					"App authentication failed : %d\n",
+					err);
 			}
 		}
 	} else {
-		pva_dbg_printf("App authentication disabled");
+		pva_dbg_printf("App authentication disabled\n");
 	}
 
 	pva_kmd_mutex_unlock(&pva_auth->allow_list_lock);
@@ -328,9 +331,12 @@ enum pva_error pva_kmd_allowlist_parse(struct pva_kmd_device *pva)
 	//Destroy previously parsed allowlist data
 	pva_kmd_allowlist_destroy(pva_auth);
 
+	pva_dbg_printf("Allowlist path: %s\n",
+		       pva_auth->pva_auth_allowlist_path);
 	err = pva_kmd_auth_allowlist_load(
 		pva, pva_auth->pva_auth_allowlist_path, &data, &size);
 	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Failed to load allowlist\n");
 		if (data != NULL) {
 			pva_kmd_free(data);
 		}

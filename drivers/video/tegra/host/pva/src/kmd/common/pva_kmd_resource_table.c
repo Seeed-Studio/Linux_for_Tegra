@@ -343,6 +343,7 @@ void pva_kmd_drop_resource_unsafe(struct pva_kmd_resource_table *resource_table,
 		&resource_table->resource_record_allocator, resource_id);
 
 	if (rec == NULL) {
+		pva_kmd_log_err_u64("Unexpected resource ID drop", resource_id);
 		return;
 	}
 
@@ -354,7 +355,7 @@ void pva_kmd_drop_resource_unsafe(struct pva_kmd_resource_table *resource_table,
 
 enum pva_error
 pva_kmd_add_vpu_bin_resource(struct pva_kmd_resource_table *resource_table,
-			     void *executable, uint32_t executable_size,
+			     const void *executable, uint32_t executable_size,
 			     uint32_t *out_resource_id)
 {
 	uint32_t res_id;
@@ -441,7 +442,8 @@ pva_kmd_make_resource_entry(struct pva_kmd_resource_table *resource_table,
 }
 
 enum pva_error pva_kmd_add_dma_config_resource(
-	struct pva_kmd_resource_table *resource_table, void *dma_config_payload,
+	struct pva_kmd_resource_table *resource_table,
+	const struct pva_ops_dma_config_register *dma_cfg_hdr,
 	uint32_t dma_config_size, uint32_t *out_resource_id)
 {
 	enum pva_error err = PVA_SUCCESS;
@@ -465,7 +467,7 @@ enum pva_error pva_kmd_add_dma_config_resource(
 	dma_aux = &resource_table->dma_aux[block_idx];
 
 	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
-	err = pva_kmd_load_dma_config(resource_table, dma_config_payload,
+	err = pva_kmd_load_dma_config(resource_table, dma_cfg_hdr,
 				      dma_config_size, dma_aux, fw_dma_cfg,
 				      &fw_fetch_size);
 	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);

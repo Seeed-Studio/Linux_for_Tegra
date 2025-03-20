@@ -73,7 +73,8 @@ enum pva_error pva_kmd_init_vpu_app_auth(struct pva_kmd_device *pva, bool ena);
 void pva_kmd_deinit_vpu_app_auth(struct pva_kmd_device *pva);
 
 enum pva_error pva_kmd_verify_exectuable_hash(struct pva_kmd_device *pva,
-					      uint8_t *dataptr, size_t size);
+					      const uint8_t *dataptr,
+					      size_t size);
 
 enum pva_error pva_kmd_allowlist_parse(struct pva_kmd_device *pva);
 

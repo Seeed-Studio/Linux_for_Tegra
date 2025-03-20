@@ -4,6 +4,7 @@
 #include <linux/gfp.h>
 #include <linux/delay.h>
 #include <linux/mm.h>
+#include <linux/version.h>
 #include "pva_kmd_mutex.h"
 #include "pva_kmd_thread_sema.h"
 #include "pva_kmd_utils.h"
@@ -85,4 +86,16 @@ void pva_kmd_sema_deinit(pva_kmd_sema_t *sem)
 void pva_kmd_sema_post(pva_kmd_sema_t *sem)
 {
 	up(sem);
+}
+
+uint64_t pva_kmd_get_time_tsc(void)
+{
+	uint64_t timestamp;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+	timestamp = arch_timer_read_counter();
+#else
+	timestamp = arch_counter_get_cntvct();
+#endif
+	return timestamp;
 }

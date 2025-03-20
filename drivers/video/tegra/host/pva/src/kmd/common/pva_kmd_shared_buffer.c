@@ -3,6 +3,8 @@
 
 #include "pva_kmd_abort.h"
 #include "pva_kmd_device.h"
+#include "pva_kmd_context.h"
+#include "pva_kmd_shim_trace_event.h"
 #include "pva_kmd_shared_buffer.h"
 
 static void
@@ -81,10 +83,12 @@ err_out:
 	return err;
 }
 
-enum pva_error pva_kmd_shared_buffer_init(
-	struct pva_kmd_device *pva, uint8_t interface, uint32_t element_size,
-	uint32_t num_entries, shared_buffer_process_element_cb process_cb,
-	shared_buffer_lock_cb lock_cb, shared_buffer_lock_cb unlock_cb)
+enum pva_error pva_kmd_shared_buffer_init(struct pva_kmd_device *pva,
+					  uint8_t interface,
+					  uint32_t element_size,
+					  uint32_t num_entries,
+					  shared_buffer_lock_cb lock_cb,
+					  shared_buffer_lock_cb unlock_cb)
 {
 	enum pva_error err = PVA_SUCCESS;
 
@@ -114,7 +118,6 @@ enum pva_error pva_kmd_shared_buffer_init(
 	buffer->header->tail = 0U;
 	buffer->body =
 		(pva_offset_pointer(buffer->header, sizeof(*buffer->header)));
-	buffer->process_cb = process_cb;
 	buffer->lock_cb = lock_cb;
 	buffer->unlock_cb = unlock_cb;
 	buffer->resource_offset = 0U;
@@ -165,6 +168,69 @@ enum pva_error pva_kmd_shared_buffer_deinit(struct pva_kmd_device *pva,
 	buffer->resource_memory = NULL;
 
 	return err;
+}
+
+static void shared_buffer_process_msg(struct pva_kmd_device *pva,
+				      uint8_t interface, void *msg)
+{
+	enum pva_error err = PVA_SUCCESS;
+	struct pva_kmd_fw_buffer_msg_header header;
+	struct pva_kmd_fw_msg_vpu_trace vpu_trace;
+	struct pva_kmd_fw_msg_res_unreg unreg_data;
+	struct pva_kmd_context *ctx = NULL;
+	void *msg_body;
+
+	ASSERT(msg != NULL);
+
+	// Copy the header
+	memcpy(&header, msg, sizeof(header));
+	uint32_t msg_size = safe_subu32(header.size, sizeof(header));
+	msg_body = (uint8_t *)msg + sizeof(header);
+
+	switch (header.type) {
+	case PVA_KMD_FW_BUF_MSG_TYPE_FW_EVENT: {
+		// TODO: This must be updated once profiler config is exposed through debugfs.
+		//	 KMD must use the same timestamp size as the FW. It is possible that the user
+		//	 changes the timestamp size through debugfs after FW logged the event.
+		//	 FW must log the type of timestamp it used to capture the event.
+		ASSERT(msg_size ==
+		       sizeof(struct pva_fw_event_message) +
+			       pva->debugfs_context.g_fw_profiling_config
+				       .timestamp_size);
+
+		err = pva_kmd_process_fw_event(pva, msg_body, msg_size);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err("Failed to process FW event");
+		}
+		break;
+	}
+	case PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE: {
+		ASSERT(msg_size == sizeof(struct pva_kmd_fw_msg_vpu_trace));
+		memcpy(&vpu_trace, msg_body, sizeof(vpu_trace));
+		// We do not check the profiling level here. FW checks profiling level while logging
+		// the trace event. If the profiling level was high enough for FW to log the event,
+		// KMD should trace it. The profiling level might have changed since FW logged the event.
+		pva_kmd_shim_add_trace_vpu_exec(pva, &vpu_trace);
+		break;
+	}
+	case PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG: {
+		ASSERT(msg_size == sizeof(struct pva_kmd_fw_msg_res_unreg));
+		memcpy(&unreg_data, msg_body, sizeof(unreg_data));
+		ctx = pva_kmd_get_context(pva, interface);
+
+		ASSERT(ctx != NULL);
+
+		// We do not lock the resource table here because this function is intended
+		// to be called from the shared buffer processing function which should acquire
+		// the required lock.
+		pva_kmd_drop_resource_unsafe(&ctx->ctx_resource_table,
+					     unreg_data.resource_id);
+		break;
+	}
+	default:
+		FAULT("Unexpected message type while processing shared buffer");
+		break;
+	}
 }
 
 void pva_kmd_shared_buffer_process(void *pva_dev, uint8_t interface)
@@ -236,7 +302,7 @@ void pva_kmd_shared_buffer_process(void *pva_dev, uint8_t interface)
 		current_element = (void *)&buffer_body[*buffer_head];
 
 		// Call the user-provided callback with the current element and context
-		fw_buffer->process_cb(pva, interface, current_element);
+		shared_buffer_process_msg(pva, interface, current_element);
 
 		// Advance the head pointer in a circular buffer fashion
 		*buffer_head = (*buffer_head + element_size) % buffer_size;

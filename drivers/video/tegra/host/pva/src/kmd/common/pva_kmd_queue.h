@@ -22,14 +22,12 @@ void pva_kmd_queue_init(struct pva_kmd_queue *queue, struct pva_kmd_device *pva,
 			pva_kmd_mutex_t *ccq_lock,
 			struct pva_kmd_device_memory *queue_memory,
 			uint32_t max_num_submit);
-enum pva_error
-pva_kmd_queue_create(struct pva_kmd_context *ctx,
-		     struct pva_kmd_queue_create_in_args *in_args,
-		     uint32_t *queue_id);
+enum pva_error pva_kmd_queue_create(struct pva_kmd_context *ctx,
+				    const struct pva_ops_queue_create *in_args,
+				    uint32_t *queue_id);
 
-enum pva_error
-pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
-		      struct pva_kmd_queue_destroy_in_args *in_args);
+enum pva_error pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
+				     uint32_t queue_id);
 
 enum pva_error
 pva_kmd_queue_submit(struct pva_kmd_queue *queue,

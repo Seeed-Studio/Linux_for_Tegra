@@ -9,11 +9,6 @@
 
 #define NUM_VPU_BLOCKS 2U
 
-/**
- * Maximum length of file operation
- */
-#define MAX_FILE_LEN 256U
-
 struct pva_kmd_file_ops {
 	int (*open)(struct pva_kmd_device *dev);
 	int (*release)(struct pva_kmd_device *dev);
@@ -30,10 +25,12 @@ struct pva_kmd_debugfs_context {
 	bool vpu_debug;
 	bool vpu_print_enable;
 	char *allowlist_path;
-	uint32_t profile_level;
+	uint32_t profiling_level;
 	struct pva_kmd_file_ops vpu_fops;
-	struct pva_kmd_file_ops allowlist_fops;
+	struct pva_kmd_file_ops allowlist_ena_fops;
+	struct pva_kmd_file_ops allowlist_path_fops;
 	struct pva_kmd_file_ops hwpm_fops;
+	struct pva_kmd_file_ops profiling_level_fops;
 	void *data_hwpm;
 	struct pva_kmd_file_ops vpu_ocd_fops[NUM_VPU_BLOCKS];
 	struct pva_kmd_fw_profiling_config g_fw_profiling_config;
@@ -42,14 +39,20 @@ struct pva_kmd_debugfs_context {
 
 void pva_kmd_debugfs_create_nodes(struct pva_kmd_device *dev);
 void pva_kmd_debugfs_destroy_nodes(struct pva_kmd_device *dev);
-int64_t update_vpu_stats(struct pva_kmd_device *dev, void *file_data,
-			 uint8_t *out_buffer, uint64_t offset, uint64_t size);
+int64_t get_vpu_stats(struct pva_kmd_device *dev, void *file_data,
+		      uint8_t *out_buffer, uint64_t offset, uint64_t size);
 int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
 			     const uint8_t *in_buffer, uint64_t offset,
 			     uint64_t size);
 int64_t get_vpu_allowlist_enabled(struct pva_kmd_device *pva, void *file_data,
 				  uint8_t *out_buffer, uint64_t offset,
 				  uint64_t size);
+int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
+				  const uint8_t *in_buffer, uint64_t offset,
+				  uint64_t size);
+int64_t get_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
+			       uint8_t *out_buffer, uint64_t offset,
+			       uint64_t size);
 int64_t update_fw_debug_log_level(struct pva_kmd_device *dev, void *file_data,
 				  const uint8_t *in_buffer, uint64_t offset,
 				  uint64_t size);

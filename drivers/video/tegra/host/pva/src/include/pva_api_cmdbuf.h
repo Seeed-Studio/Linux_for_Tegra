@@ -635,7 +635,13 @@ struct pva_cmd_set_debug_log_level {
 	uint32_t log_level;
 };
 
-#define PVA_CMD_PRIV_OPCODE_COUNT 13U
+struct pva_cmd_set_profiling_level {
+#define PVA_CMD_OPCODE_SET_PROFILING_LEVEL (13U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint32_t level;
+};
+
+#define PVA_CMD_PRIV_OPCODE_COUNT 14U
 
 #define PVA_MAX_CMDBUF_CHUNK_LEN 1024
 #define PVA_MAX_CMDBUF_CHUNK_SIZE (sizeof(uint32_t) * PVA_MAX_CMDBUF_CHUNK_LEN)

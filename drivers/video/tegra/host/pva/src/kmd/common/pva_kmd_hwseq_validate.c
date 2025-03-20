@@ -7,7 +7,6 @@
 //TODO: Use nv_speculate barrier
 //#include "nv_speculation_barrier.h"
 
-#define MAX_DESC_ID 0x3FU
 #define HWSEQ_MIN_WORDS 5U
 
 static inline const void *read_hwseq_blob(struct pva_hwseq_buffer *buffer,
@@ -287,7 +286,8 @@ check_vmem_setup(struct pva_dma_transfer_attr const *attr,
  * 	- PVA_SUCCESS if valid source/destination pair is found
  * 	- PVA_INVAL if invalid source/destination pair is found
  */
-static enum pva_error validate_xfer_mode(struct pva_dma_descriptor *dma_desc)
+static enum pva_error
+validate_xfer_mode(const struct pva_dma_descriptor *dma_desc)
 {
 	enum pva_error err = PVA_SUCCESS;
 
@@ -386,8 +386,8 @@ static enum pva_error validate_dst_vmem(struct pva_hwseq_priv *hwseq,
 	int64_t end_addr = 0LL;
 	int64_t num_bytes = 0LL;
 	int64_t offset = 0LL;
-	struct pva_dma_descriptor *head_desc = hwseq->head_desc;
-	struct pva_dma_descriptor *tail_desc = hwseq->tail_desc;
+	const struct pva_dma_descriptor *head_desc = hwseq->head_desc;
+	const struct pva_dma_descriptor *tail_desc = hwseq->tail_desc;
 	uint8_t head_desc_id = get_head_desc_did(hwseq);
 	pva_math_error math_err = MATH_OP_SUCCESS;
 
@@ -518,8 +518,8 @@ static enum pva_error validate_src_vmem(struct pva_hwseq_priv *hwseq,
 					uint32_t *vmem_tile_count,
 					bool has_dim3)
 {
-	struct pva_dma_descriptor *head_desc = hwseq->head_desc;
-	struct pva_dma_descriptor *tail_desc = hwseq->tail_desc;
+	const struct pva_dma_descriptor *head_desc = hwseq->head_desc;
+	const struct pva_dma_descriptor *tail_desc = hwseq->tail_desc;
 	uint8_t head_desc_id = get_head_desc_did(hwseq);
 	uint32_t tx = 0U;
 	uint32_t ty = 0U;
@@ -840,8 +840,9 @@ swap_frame_boundaries(struct pva_hwseq_frame_info *frame_info)
  * 	- PVA_SUCCESS if above checks pass
  * 	- PVA_INVAL if any of the above checks fail
  */
-static enum pva_error check_padding_tiles(struct pva_dma_descriptor *head_desc,
-					  struct pva_dma_descriptor *tail_desc)
+static enum pva_error
+check_padding_tiles(const struct pva_dma_descriptor *head_desc,
+		    const struct pva_dma_descriptor *tail_desc)
 {
 	if ((head_desc->px != 0U) || (head_desc->py != 0U) ||
 	    (head_desc->desc_reload_enable != 0U)) {
@@ -1053,7 +1054,7 @@ static enum pva_error check_tile_offset(struct pva_hwseq_priv *hwseq)
 static void get_sequencing_and_dim3(struct pva_hwseq_priv *hwseq,
 				    bool *sequencing_to_vmem, bool *has_dim3)
 {
-	struct pva_dma_descriptor *head_desc = hwseq->head_desc;
+	const struct pva_dma_descriptor *head_desc = hwseq->head_desc;
 	*sequencing_to_vmem = (head_desc->dst.transfer_mode ==
 			       (uint8_t)PVA_DMA_TRANS_MODE_VMEM);
 	// Check if this a 3D tensor transfer.
@@ -1102,8 +1103,8 @@ validate_dma_boundaries(struct pva_hwseq_priv *hwseq,
 	uint16_t frame_line_pitch = 0U;
 	int64_t frame_buffer_offset = 0;
 	struct pva_hwseq_frame_info frame_info = { 0 };
-	struct pva_dma_descriptor *head_desc = hwseq->head_desc;
-	struct pva_dma_descriptor *tail_desc = hwseq->tail_desc;
+	const struct pva_dma_descriptor *head_desc = hwseq->head_desc;
+	const struct pva_dma_descriptor *tail_desc = hwseq->tail_desc;
 
 	err = check_tile_offset(hwseq);
 	if (err != PVA_SUCCESS) {
@@ -1493,8 +1494,8 @@ static enum pva_error validate_hwseq_blob(struct pva_hwseq_priv *hwseq_info,
 }
 
 static enum pva_error
-validate_channel_accesses(struct pva_dma_channel const *ch,
-			  struct pva_dma_config_header const *header,
+validate_channel_accesses(const struct pva_dma_channel *ch,
+			  const struct pva_dma_config_header *header,
 			  enum pva_hw_gen hw_gen,
 			  struct hw_seq_blob_entry *entry)
 {
@@ -1530,7 +1531,7 @@ enum pva_error validate_hwseq(struct pva_dma_config const *dma_config,
 	uint32_t i = 0U;
 	struct pva_hwseq_priv hwseq_info = { 0 };
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_dma_channel *ch = NULL;
+	const struct pva_dma_channel *ch = NULL;
 	struct hw_seq_blob_entry entries[PVA_MAX_NUM_DMA_CHANNELS] = { 0 };
 	uint8_t num_hwseqs = 0U;
 	uint8_t num_channels = dma_config->header.num_channels;
@@ -1553,20 +1554,17 @@ enum pva_error validate_hwseq(struct pva_dma_config const *dma_config,
 	}
 
 	for (i = 0U; i < num_hwseqs; i++) {
-		uint32_t start_address = entries[i].hwseq_start;
-		uint32_t end_address = entries[i].hwseq_end + 1U;
-		uint32_t curr_offset = start_address << 2U;
-		uint32_t size = 0U;
+		uint32_t start_index = entries[i].hwseq_start;
+		uint32_t end_index = entries[i].hwseq_end + 1U;
+		uint32_t curr_offset = start_index << 2U;
+		uint32_t len = 0U;
 		//Populate hwseq blob
 		hwseq_info.blob.data =
 			(uint8_t *)((uintptr_t)(dma_config->hwseq_words) +
 				    (curr_offset));
 
-		size = safe_subu32(end_address, start_address);
-		if (size > (hw_consts->n_hwseq_words >> 2U)) {
-			return PVA_ERR_HWSEQ_INVALID;
-		}
-		hwseq_info.blob.bytes_left = size << 2U;
+		len = safe_subu32(end_index, start_index);
+		hwseq_info.blob.bytes_left = (len << 2U);
 
 		err = validate_hwseq_blob(&hwseq_info, &entries[i],
 					  hw_dma_descs_mask);

@@ -48,7 +48,8 @@ void pva_kmd_free(void *ptr)
 
 void pva_kmd_fault(void)
 {
-	abort();
+	pva_kmd_log_err("PVA KMD fault");
+	exit(1);
 }
 
 void pva_kmd_sema_init(pva_kmd_sema_t *sem, uint32_t val)

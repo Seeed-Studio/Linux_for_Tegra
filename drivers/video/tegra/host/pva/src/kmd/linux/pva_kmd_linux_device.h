@@ -12,7 +12,6 @@
 #include "pva_kmd_device.h"
 #include "pva_kmd_linux_isr.h"
 
-#define NV_PVA0_CLASS_ID 0xF1
 #define PVA_KMD_LINUX_MAX_IORESOURCE_MEM 5
 
 extern const struct file_operations tegra_pva_ctrl_ops;

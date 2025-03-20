@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include "pva_kmd_dma_cfg.h"
 #include "pva_utils.h"
 #include "pva_kmd_resource_table.h"
@@ -26,8 +27,8 @@ static void trace_dma_channels(struct pva_dma_config const *dma_config,
 			       uint8_t *desc_to_ch)
 {
 	uint32_t ch_index;
-	struct pva_dma_config_header const *cfg_hdr = &dma_config->header;
-	struct pva_dma_channel *channel;
+	const struct pva_dma_config_header *cfg_hdr = &dma_config->header;
+	const struct pva_dma_channel *channel;
 	uint32_t num_descs = dma_config->header.num_descriptors;
 
 	for (ch_index = 0; ch_index < cfg_hdr->num_channels; ch_index++) {
@@ -51,7 +52,8 @@ static void trace_dma_channels(struct pva_dma_config const *dma_config,
 
 enum pva_error
 pva_kmd_load_dma_config(struct pva_kmd_resource_table *resource_table,
-			void *dma_config_payload, uint32_t dma_config_size,
+			const struct pva_ops_dma_config_register *dma_cfg_hdr,
+			uint32_t dma_config_size,
 			struct pva_kmd_dma_resource_aux *dma_aux,
 			void *fw_dma_cfg, uint32_t *out_fw_fetch_size)
 {
@@ -75,7 +77,7 @@ pva_kmd_load_dma_config(struct pva_kmd_resource_table *resource_table,
 		access_sizes, 0,
 		(PVA_MAX_NUM_DMA_DESC * sizeof(struct pva_kmd_dma_access)));
 
-	err = pva_kmd_parse_dma_config(dma_config_payload, dma_config_size,
+	err = pva_kmd_parse_dma_config(dma_cfg_hdr, dma_config_size,
 				       &dma_config,
 				       &resource_table->pva->hw_consts);
 	if (err != PVA_SUCCESS) {

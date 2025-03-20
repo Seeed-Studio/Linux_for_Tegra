@@ -60,32 +60,3 @@ void pva_kmd_handle_hyp_msg(void *pva_dev, uint32_t const *data, uint8_t len)
 		FAULT("Unknown message type from firmware");
 	}
 }
-
-enum pva_error pva_kmd_handle_msg_resource_unreg(void *context,
-						 uint8_t interface,
-						 uint8_t *element)
-{
-	// TODO: if the mapping of CCQ_ID to interface is not 1:1, we need to
-	//	 find the CCQ_ID/table_id from interface
-	uint8_t table_id = interface;
-	struct pva_kmd_device *pva;
-	struct pva_kmd_context *ctx;
-	uint32_t resource_id;
-
-	ASSERT(context != NULL);
-	pva = (struct pva_kmd_device *)context;
-	ctx = pva_kmd_get_context(pva, table_id);
-
-	ASSERT(ctx != NULL);
-	ASSERT(element != NULL);
-
-	/* Resource table ID equals context id */
-	memcpy(&resource_id, element, sizeof(resource_id));
-
-	// We do not lock the resource table here because this function is intended
-	// to be called from the shared buffer processing function which should acquire
-	// the required lock.
-	pva_kmd_drop_resource_unsafe(&ctx->ctx_resource_table, resource_id);
-
-	return PVA_SUCCESS;
-}

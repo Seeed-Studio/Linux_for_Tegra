@@ -102,6 +102,11 @@ static const struct file_operations pva_linux_debugfs_fops = {
 	.read = debugfs_node_read,
 	.write = debugfs_node_write,
 	.release = debugfs_node_release,
+	// TODO: maybe we should provide our own llseek implementation
+	//       The problem with default_llseek is that the default handling
+	//	 of SET_END may not work unless file size is specified while opening
+	//	 the file.
+	.llseek = default_llseek,
 };
 
 void pva_kmd_debugfs_create_bool(struct pva_kmd_device *pva, const char *name,
@@ -147,8 +152,8 @@ void pva_kmd_debugfs_remove_nodes(struct pva_kmd_device *pva)
 	struct nvpva_device_data *props = device_data->pva_device_properties;
 	struct dentry *de = props->debugfs;
 
-	debugfs_lookup_and_remove("stats_enable", de);
+	debugfs_lookup_and_remove("stats_enabled", de);
 	debugfs_lookup_and_remove("vpu_debug", de);
-	debugfs_lookup_and_remove("profile_level", de);
+	debugfs_lookup_and_remove("profiling_level", de);
 	debugfs_lookup_and_remove("vpu_stats", de);
 }

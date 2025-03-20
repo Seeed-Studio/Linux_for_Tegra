@@ -86,7 +86,6 @@ pva_kmd_device_memory_acquire(uint64_t memory_handle, uint64_t offset,
 	mem_impl->dmabuf = dma_buf;
 	mem_impl->dev_mem.size = size;
 	mem_impl->offset = offset;
-	close_fd(memory_handle);
 	return &mem_impl->dev_mem;
 
 put_dmabuf:
@@ -113,6 +112,7 @@ void pva_kmd_device_memory_free(struct pva_kmd_device_memory *mem)
 		}
 
 		dma_buf_put(mem_impl->dmabuf);
+		mem_impl->dmabuf = NULL;
 	} else {
 		/* This memory comes from dma_alloc_coherent */
 		dev = get_context_device(mem_impl->dev_mem.pva,

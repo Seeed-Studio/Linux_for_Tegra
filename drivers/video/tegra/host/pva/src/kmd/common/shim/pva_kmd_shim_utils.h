@@ -61,4 +61,6 @@ static inline uint32_t array_index_nospec(uint32_t index, uint32_t size)
 }
 #endif
 
+uint64_t pva_kmd_get_time_tsc(void);
+
 #endif // PVA_KMD_SHIM_UTILS_H

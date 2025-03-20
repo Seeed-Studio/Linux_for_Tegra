@@ -12,6 +12,7 @@ extern "C" {
 #include "pva_api_dma.h"
 #include "pva_api_vpu.h"
 #include "pva_api_cmdbuf.h"
+#include "pva_api_ops.h"
 
 /* Core APIs */
 
@@ -131,135 +132,6 @@ enum pva_error pva_executable_get_symbols(struct pva_context *ctx,
 					  struct pva_symbol_info *out_info,
 					  uint32_t max_num_symbols);
 
-/**
- * @brief Submit a list of asynchronous registration operations to KMD.
- *
- * The operations can be:
- * - Memory registration
- * - Executable registration
- * - DMA config registration
- *
- * The response buffer will contain the resource IDs of the registered
- * resources. Any command buffers that use these resources should wait on the
- * returned post fence.
- *
- * @param[in] ctx Pointer to the context.
- * @param[in] fence Pointer to the post fence to wait on. If NULL, it means the
- * caller is not interested in waiting. This usually only applies to unregister
- * operations.
- * @param[in] Input buffer containing the list of operations.
- * @param[out] Output buffer to store the response.
- *
- * @note Input and output buffer may be the same buffer.
- */
-enum pva_error pva_ops_submit_async(struct pva_context *ctx,
-				    struct pva_fence *fence,
-				    struct pva_ops_buffer const *input_buffer,
-				    struct pva_ops_buffer *output_buffer);
-
-/**
- * @brief Perform a list of registration operations synchronously.
- *
- * The operations can be:
- * - Memory registration
- * - Executable registration
- * - DMA config registration
- *
- * The response buffer will contain the resource IDs of the registered
- * resources.
- *
- * @param[in] ctx Pointer to the context.
- * @param[in] Input buffer containing the list of operations.
- * @param[out] Output buffer to store the response.
- *
- * @note Input and output buffer may be the same buffer.
- *
- */
-enum pva_error pva_ops_submit(struct pva_context *ctx,
-			      struct pva_ops_buffer const *input_buffer,
-			      struct pva_ops_buffer *output_buffer);
-
-/** Size of the ops buffer header. When user allocates memory for ops buffer,
- * this size needs to be added. */
-#define PVA_OPS_BUFFER_HEADER_SIZE 64
-/**
- * @brief Initialize pva_ops_buffer to keep track of the state of
- * operations buffer during preparation.
- *
- * @param[out] buf_handle Pointer to the pva_ops_buffer object to initialize.
- * @param[in] buf Pointer to the buffer that will store the operations.
- * @param[in] size Size of the buffer.
- */
-enum pva_error pva_ops_buffer_init(struct pva_ops_buffer *buf_handle, void *buf,
-				   uint32_t size);
-
-#define PVA_OPS_MEMORY_REG_SIZE 64
-/**
- * @brief Append a memory registration operation to the operations buffer.
- *
- * @param[in] ctx Pointer to the context.
- * @param[in] mem Pointer to the memory to register.
- * @param[in] segment Memory segment to register.
- * @param[in] access_flags Access flags for the memory.
- * @param[out] op_buf Pointer to the operations buffer.
- */
-enum pva_error pva_ops_append_memory_register(struct pva_context *ctx,
-					      struct pva_memory *mem,
-					      enum pva_memory_segment segment,
-					      uint32_t access_flags,
-					      struct pva_ops_buffer *op_buf);
-#define PVA_OPS_EXEC_REG_HEADER_SIZE 16
-/**
- * @brief Append an executable registration operation to the operations.
- *
- * @param[in] ctx Pointer to the context.
- * @param[in] executable Pointer to the executable binary content.
- * @param[in] executable_size Size of the executable.
- * @param[out] op_buf Pointer to the operations buffer.
- */
-enum pva_error pva_ops_append_executable_register(
-	struct pva_context *ctx, void const *executable,
-	uint32_t executable_size, struct pva_ops_buffer *op_buf);
-
-#define PVA_OPS_DMA_CONFIG_REG_SIZE (24 * 1024)
-/**
- * @brief Append a DMA config registration operation to the operations.
- * @param[in] ctx Pointer to the context.
- * @param[in] dma_config Pointer to the DMA config.
- * @param[out] op_buf Pointer to the operations buffer.
- */
-enum pva_error
-pva_ops_append_dma_config_register(struct pva_context *ctx,
-				   struct pva_dma_config const *dma_config,
-				   struct pva_ops_buffer *op_buf);
-
-#define PVA_OPS_UNREG_SIZE 16
-enum pva_error pva_ops_append_unregister(struct pva_context *ctx,
-					 uint32_t resource_id,
-					 struct pva_ops_buffer *op_buf);
-
-/**
- * @brief Parse the response buffer to get the resource ID of the registered
- * memory or DMA configuration.
- *
- * @param[in] resp_buf Pointer to the response buffer.
- * @param[out] resource_id output resource ID.
- */
-enum pva_error pva_ops_parse_register_resp(struct pva_ops_buffer *resp_buf,
-					   uint32_t *resource_id);
-
-/**
- * @brief Parse the response buffer to get the resource ID of the registered
- * executable.
- *
- * @param[in] resp_buf Pointer to the response buffer.
- * @param[out] num_symbols Number of symbols in the executable.
- * @param[out] resource_id output resource ID.
- */
-enum pva_error pva_ops_parse_exec_register_resp(struct pva_ops_buffer *op_buf,
-						uint32_t *num_symbols,
-						uint32_t *resource_id);
-
 #define PVA_DATA_CHANNEL_HEADER_SIZE 32
 /**
  * @brief Initialize VPU print buffer
@@ -307,6 +179,26 @@ enum pva_error pva_memory_duplicate(struct pva_memory *src,
  */
 void pva_memory_get_attrs(struct pva_memory const *mem,
 			  struct pva_memory_attrs *out_attrs);
+
+/**
+ * @brief Create an import ID for memory registration.
+ *
+ * The ID must be destroyed after registration.
+ *
+ * @param[in] ctx Pointer to the context.
+ * @param[in] mem Pointer to the memory.
+ * @param[out] out_import_id Pointer to the import ID.
+ */
+enum pva_error pva_memory_import_id_create(struct pva_context *ctx,
+					   struct pva_memory *mem,
+					   uint64_t *out_import_id);
+
+/**
+ * @brief Destroy an import ID.
+ *
+ * @param[in] import_id Import ID to destroy.
+ */
+enum pva_error pva_memory_import_id_destroy(uint64_t import_id);
 
 /** \brief Specifies the PVA system software major version. */
 #define PVA_SYSSW_MAJOR_VERSION (2U)

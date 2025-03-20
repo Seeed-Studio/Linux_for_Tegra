@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_op_handler.h"
+#include "pva_api.h"
+#include "pva_api_dma.h"
+#include "pva_api_types.h"
+#include "pva_kmd.h"
 #include "pva_kmd_resource_table.h"
 #include "pva_kmd_device_memory.h"
 #include "pva_kmd_cmdbuf.h"
@@ -12,34 +16,39 @@
 #include "pva_kmd_vpu_app_auth.h"
 #include "pva_math_utils.h"
 
-struct pva_kmd_buffer {
+struct pva_kmd_ops_buffer {
 	void const *base;
 	uint32_t offset;
 	uint32_t size;
 };
 
 /* Offset will always be multiple of 8 bytes */
-static void incr_offset(struct pva_kmd_buffer *buf, uint32_t incr)
+static void incr_offset(struct pva_kmd_ops_buffer *buf, uint32_t incr)
 {
 	buf->offset = safe_addu32(buf->offset, incr);
 	buf->offset =
 		safe_pow2_roundup_u32(buf->offset, (uint32_t)sizeof(uint64_t));
 }
 
-static bool access_ok(struct pva_kmd_buffer const *buf, uint32_t size)
+static bool access_ok(struct pva_kmd_ops_buffer const *buf, uint32_t size)
 {
 	return safe_addu32(buf->offset, size) <= buf->size;
 }
 
-static void *read_data(struct pva_kmd_buffer *buf, uint32_t size)
+static const void *peek_data(struct pva_kmd_ops_buffer *buf)
 {
-	void *data = (void *)((uint8_t *)buf->base + buf->offset);
+	return (const void *)((uint8_t *)buf->base + buf->offset);
+}
+
+static const void *consume_data(struct pva_kmd_ops_buffer *buf, uint32_t size)
+{
+	const void *data = peek_data(buf);
 	incr_offset(buf, size);
 	return data;
 }
 
-static void write_data(struct pva_kmd_buffer *buf, void const *data,
-		       uint32_t size)
+static void produce_data(struct pva_kmd_ops_buffer *buf, void const *data,
+			 uint32_t size)
 {
 	memcpy((uint8_t *)buf->base + buf->offset, data, size);
 	incr_offset(buf, size);
@@ -47,35 +56,32 @@ static void write_data(struct pva_kmd_buffer *buf, void const *data,
 
 static enum pva_error
 pva_kmd_op_memory_register_async(struct pva_kmd_context *ctx,
-				 struct pva_kmd_buffer *in_buffer,
-				 struct pva_kmd_buffer *out_buffer,
+				 const void *input_buffer, uint32_t size,
+				 struct pva_kmd_ops_buffer *out_buffer,
 				 struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
 {
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_kmd_memory_register_in_args *args;
-	struct pva_kmd_register_out_args out_args = { 0 };
+	const struct pva_ops_memory_register *args;
+	struct pva_ops_response_register out_args = { 0 };
 	struct pva_kmd_device_memory *dev_mem;
 	struct pva_cmd_update_resource_table *update_cmd;
 	struct pva_resource_entry entry = { 0 };
 	uint8_t smmu_ctx_id;
-
 	uint32_t resource_id = 0;
 
-	if (!access_ok(out_buffer, sizeof(struct pva_kmd_register_out_args))) {
+	if (!access_ok(out_buffer, sizeof(struct pva_ops_response_register))) {
 		return PVA_INVAL;
 	}
 
-	if (!access_ok(in_buffer,
-		       sizeof(struct pva_kmd_memory_register_in_args))) {
-		err = PVA_INVAL;
-		goto err_out;
+	if (size != sizeof(struct pva_ops_memory_register)) {
+		pva_kmd_log_err("Memory register size is not correct");
+		return PVA_INVAL;
 	}
 
-	args = read_data(in_buffer,
-			 sizeof(struct pva_kmd_memory_register_in_args));
+	args = (const struct pva_ops_memory_register *)input_buffer;
 
-	dev_mem = pva_kmd_device_memory_acquire(args->memory_handle,
-						args->offset, args->size, ctx);
+	dev_mem = pva_kmd_device_memory_acquire(args->import_id, args->offset,
+						args->size, ctx);
 	if (dev_mem == NULL) {
 		err = PVA_NOMEM;
 		goto err_out;
@@ -118,8 +124,9 @@ pva_kmd_op_memory_register_async(struct pva_kmd_context *ctx,
 
 	out_args.error = PVA_SUCCESS;
 	out_args.resource_id = resource_id;
-	write_data(out_buffer, &out_args, sizeof(out_args));
-	return err;
+	produce_data(out_buffer, &out_args, sizeof(out_args));
+	return PVA_SUCCESS;
+
 free_cmdbuf:
 	pva_kmd_cmdbuf_builder_cancel(cmdbuf_builder);
 free_dram_buffer_resource:
@@ -130,55 +137,57 @@ release:
 	pva_kmd_device_memory_free(dev_mem);
 err_out:
 	out_args.error = err;
-	write_data(out_buffer, &out_args, sizeof(out_args));
-	return err;
+	produce_data(out_buffer, &out_args, sizeof(out_args));
+	return PVA_SUCCESS;
 }
-
 static enum pva_error pva_kmd_op_executable_register_async(
-	struct pva_kmd_context *ctx, struct pva_kmd_buffer *in_buffer,
-	struct pva_kmd_buffer *out_buffer,
+	struct pva_kmd_context *ctx, const void *input_buffer, uint32_t size,
+	struct pva_kmd_ops_buffer *out_buffer,
 	struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
 {
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_kmd_executable_register_in_args *args;
-	struct pva_kmd_exec_register_out_args out_args = { 0 };
+	struct pva_ops_executable_register *args;
+	struct pva_ops_response_executable_register out_args = { 0 };
 	struct pva_cmd_update_resource_table *update_cmd;
 	struct pva_resource_entry entry = { 0 };
 	struct pva_kmd_resource_record *rec;
 	uint32_t num_symbols = 0;
-	void *exec_data;
+	const void *exec_data;
 
 	uint32_t resource_id = 0;
 
 	if (!access_ok(out_buffer,
-		       sizeof(struct pva_kmd_exec_register_out_args))) {
+		       sizeof(struct pva_ops_response_executable_register))) {
+		pva_kmd_log_err("Response buffer too small");
 		return PVA_INVAL;
 	}
 
-	if (!access_ok(in_buffer,
-		       sizeof(struct pva_kmd_executable_register_in_args))) {
-		err = PVA_INVAL;
-		goto err_out;
+	if (size < sizeof(struct pva_ops_executable_register)) {
+		pva_kmd_log_err("Executable register size is not correct");
+		return PVA_INVAL;
 	}
 
-	args = read_data(in_buffer,
-			 sizeof(struct pva_kmd_executable_register_in_args));
-
-	if (!access_ok(in_buffer, args->size)) {
-		err = PVA_INVAL;
-		goto err_out;
+	args = (struct pva_ops_executable_register *)input_buffer;
+	if (args->exec_size + sizeof(struct pva_ops_executable_register) >
+	    size) {
+		pva_kmd_log_err("Executable register payload size too small");
+		return PVA_INVAL;
 	}
 
-	exec_data = read_data(in_buffer, args->size);
-
-	err = pva_kmd_verify_exectuable_hash(ctx->pva, (uint8_t *)exec_data,
-					     args->size);
+	exec_data = (uint8_t *)(pva_offset_const_ptr(
+		input_buffer, sizeof(struct pva_ops_executable_register)));
+	err = pva_kmd_verify_exectuable_hash(
+		ctx->pva,
+		(uint8_t *)(pva_offset_const_ptr(
+			input_buffer,
+			sizeof(struct pva_ops_executable_register))),
+		args->exec_size);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
 
 	err = pva_kmd_add_vpu_bin_resource(&ctx->ctx_resource_table, exec_data,
-					   args->size, &resource_id);
+					   args->exec_size, &resource_id);
 	if (err == PVA_SUCCESS) {
 		rec = pva_kmd_use_resource(&ctx->ctx_resource_table,
 					   resource_id);
@@ -209,55 +218,40 @@ static enum pva_error pva_kmd_op_executable_register_async(
 	out_args.error = PVA_SUCCESS;
 	out_args.resource_id = resource_id;
 	out_args.num_symbols = num_symbols;
-	write_data(out_buffer, &out_args, sizeof(out_args));
-	return err;
+	produce_data(out_buffer, &out_args, sizeof(out_args));
+	return PVA_SUCCESS;
 drop_resource:
 	pva_kmd_drop_resource(&ctx->ctx_resource_table, resource_id);
 err_out:
 	out_args.error = err;
-	write_data(out_buffer, &out_args, sizeof(out_args));
-	return err;
+	produce_data(out_buffer, &out_args, sizeof(out_args));
+	return PVA_SUCCESS;
 }
 
-static enum pva_error
-pva_kmd_op_dma_register_async(struct pva_kmd_context *ctx,
-			      struct pva_kmd_buffer *in_buffer,
-			      struct pva_kmd_buffer *out_buffer,
-			      struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
+static enum pva_error pva_kmd_op_dma_register_async(
+	struct pva_kmd_context *ctx, const void *input_buffer,
+	uint32_t input_buffer_size, struct pva_kmd_ops_buffer *out_buffer,
+	struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
 {
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_kmd_dma_config_register_in_args *args;
-	struct pva_kmd_register_out_args out_args = { 0 };
+	const struct pva_ops_dma_config_register *args;
+	struct pva_ops_response_register out_args = { 0 };
 	struct pva_cmd_update_resource_table *update_cmd;
 	struct pva_resource_entry entry = { 0 };
-	void *dma_cfg_data;
-	uint32_t dma_cfg_payload_size;
 	uint32_t resource_id = 0;
-	uint32_t dma_config_size = 0;
 
-	if (!access_ok(out_buffer, sizeof(struct pva_kmd_register_out_args))) {
+	if (!access_ok(out_buffer, sizeof(struct pva_ops_response_register))) {
 		return PVA_INVAL;
 	}
 
-	if (!access_ok(in_buffer,
-		       sizeof(struct pva_kmd_dma_config_register_in_args))) {
+	if (input_buffer_size < sizeof(struct pva_ops_dma_config_register)) {
+		pva_kmd_log_err("DMA ops size too small");
 		return PVA_INVAL;
 	}
 
-	args = read_data(in_buffer,
-			 sizeof(struct pva_kmd_dma_config_register_in_args));
-
-	dma_cfg_data = &args->dma_config_header;
-	dma_cfg_payload_size = in_buffer->size - in_buffer->offset;
-	// Discard the data we are about to pass to pva_kmd_add_dma_config_resource
-	read_data(in_buffer, dma_cfg_payload_size);
-
-	dma_config_size =
-		safe_addu32(dma_cfg_payload_size,
-			    (uint32_t)sizeof(args->dma_config_header));
-	err = pva_kmd_add_dma_config_resource(&ctx->ctx_resource_table,
-					      dma_cfg_data, dma_config_size,
-					      &resource_id);
+	args = (const struct pva_ops_dma_config_register *)input_buffer;
+	err = pva_kmd_add_dma_config_resource(&ctx->ctx_resource_table, args,
+					      input_buffer_size, &resource_id);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
@@ -278,34 +272,38 @@ pva_kmd_op_dma_register_async(struct pva_kmd_context *ctx,
 
 	out_args.error = PVA_SUCCESS;
 	out_args.resource_id = resource_id;
-	write_data(out_buffer, &out_args, sizeof(out_args));
+	produce_data(out_buffer, &out_args, sizeof(out_args));
 
 	return PVA_SUCCESS;
 drop_dma_config:
 	pva_kmd_drop_resource(&ctx->ctx_resource_table, resource_id);
 err_out:
 	out_args.error = err;
-	write_data(out_buffer, &out_args, sizeof(out_args));
+	produce_data(out_buffer, &out_args, sizeof(out_args));
 	/* Error is reported in the output buffer. So we return success here.  */
 	return PVA_SUCCESS;
 }
 
-static enum pva_error
-pva_kmd_op_unregister_async(struct pva_kmd_context *ctx,
-			    struct pva_kmd_buffer *in_buffer,
-			    struct pva_kmd_buffer *out_buffer,
-			    struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
+static enum pva_error pva_kmd_op_unregister_async(
+	struct pva_kmd_context *ctx, const void *input_buffer,
+	uint32_t input_buffer_size, struct pva_kmd_ops_buffer *out_buffer,
+	struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
 {
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_kmd_unregister_in_args *args;
+	const struct pva_ops_unregister *args;
 	struct pva_cmd_unregister_resource *unreg_cmd;
 
-	if (!access_ok(in_buffer, sizeof(struct pva_kmd_unregister_in_args))) {
-		err = PVA_INVAL;
-		goto err_out;
+	if (input_buffer_size != sizeof(struct pva_ops_unregister)) {
+		pva_kmd_log_err("Unregister size is not correct");
+		return PVA_INVAL;
 	}
 
-	args = read_data(in_buffer, sizeof(struct pva_kmd_unregister_in_args));
+	if (!access_ok(out_buffer,
+		       sizeof(struct pva_ops_response_unregister))) {
+		return PVA_INVAL;
+	}
+
+	args = (const struct pva_ops_unregister *)input_buffer;
 
 	unreg_cmd =
 		pva_kmd_reserve_cmd_space(cmdbuf_builder, sizeof(*unreg_cmd));
@@ -325,11 +323,12 @@ err_out:
 
 static enum pva_error pva_kmd_async_ops_handler(
 	struct pva_kmd_context *ctx, struct pva_fw_postfence *post_fence,
-	struct pva_kmd_buffer *in_arg, struct pva_kmd_buffer *out_arg)
+	struct pva_kmd_ops_buffer *in_arg, struct pva_kmd_ops_buffer *out_arg)
 {
 	struct pva_kmd_cmdbuf_builder cmdbuf_builder;
 	enum pva_error err = PVA_SUCCESS;
 	uint32_t wait_time = 0;
+	enum pva_error submit_error = PVA_SUCCESS;
 
 	//first check if we have space in queue
 	while (pva_kmd_queue_space(&ctx->ctx_queue) == 0) {
@@ -346,32 +345,47 @@ static enum pva_error pva_kmd_async_ops_handler(
 		goto out;
 	}
 
-	while (access_ok(in_arg, sizeof(struct pva_kmd_op_header))) {
-		struct pva_kmd_op_header *header =
-			read_data(in_arg, sizeof(struct pva_kmd_op_header));
+	while (access_ok(in_arg, sizeof(struct pva_ops_header))) {
+		const struct pva_ops_header *header = peek_data(in_arg);
+		const void *input_buffer;
 
-		if (header->op_type >= PVA_KMD_OP_MAX) {
+		if (!access_ok(in_arg, header->size)) {
+			pva_kmd_log_err(
+				"Ops header size is bigger than buffer");
 			err = PVA_INVAL;
 			goto out;
 		}
 
-		switch (header->op_type) {
-		case PVA_KMD_OP_MEMORY_REGISTER:
+		input_buffer = consume_data(in_arg, header->size);
+		if (header->size % sizeof(uint64_t) != 0) {
+			pva_kmd_log_err(
+				"PVA operation size is not a multiple of 8");
+			err = PVA_INVAL;
+			goto exit_loop;
+		}
+
+		switch (header->opcode) {
+		case PVA_OPS_OPCODE_MEMORY_REGISTER:
 			err = pva_kmd_op_memory_register_async(
-				ctx, in_arg, out_arg, &cmdbuf_builder);
+				ctx, input_buffer, header->size, out_arg,
+				&cmdbuf_builder);
 			break;
 
-		case PVA_KMD_OP_EXECUTABLE_REGISTER:
+		case PVA_OPS_OPCODE_EXECUTABLE_REGISTER:
 			err = pva_kmd_op_executable_register_async(
-				ctx, in_arg, out_arg, &cmdbuf_builder);
+				ctx, input_buffer, header->size, out_arg,
+				&cmdbuf_builder);
 			break;
 
-		case PVA_KMD_OP_DMA_CONFIG_REGISTER:
-			err = pva_kmd_op_dma_register_async(
-				ctx, in_arg, out_arg, &cmdbuf_builder);
+		case PVA_OPS_OPCODE_DMA_CONFIG_REGISTER:
+			err = pva_kmd_op_dma_register_async(ctx, input_buffer,
+							    header->size,
+							    out_arg,
+							    &cmdbuf_builder);
 			break;
-		case PVA_KMD_OP_UNREGISTER:
-			err = pva_kmd_op_unregister_async(ctx, in_arg, out_arg,
+		case PVA_OPS_OPCODE_UNREGISTER:
+			err = pva_kmd_op_unregister_async(ctx, input_buffer,
+							  header->size, out_arg,
 							  &cmdbuf_builder);
 			break;
 
@@ -385,51 +399,51 @@ static enum pva_error pva_kmd_async_ops_handler(
 		}
 	}
 
+exit_loop:
 	/* This fence comes from user, so set the flag to inform FW */
 	post_fence->flags |= PVA_FW_POSTFENCE_FLAGS_USER_FENCE;
-	err = pva_kmd_submitter_submit_with_fence(&ctx->submitter,
-						  &cmdbuf_builder, post_fence);
-	ASSERT(err == PVA_SUCCESS);
+	submit_error = pva_kmd_submitter_submit_with_fence(
+		&ctx->submitter, &cmdbuf_builder, post_fence);
+	ASSERT(submit_error == PVA_SUCCESS);
 
 out:
 	return err;
 }
 
-static enum pva_error pva_kmd_op_context_init(struct pva_kmd_context *ctx,
-					      struct pva_kmd_buffer *in_buffer,
-					      struct pva_kmd_buffer *out_buffer)
+static enum pva_error
+pva_kmd_op_context_init(struct pva_kmd_context *ctx, const void *input_buffer,
+			uint32_t input_buffer_size,
+			struct pva_kmd_ops_buffer *out_buffer)
 {
-	struct pva_kmd_context_init_in_args *ctx_init_args;
-	struct pva_kmd_context_init_out_args ctx_init_out = { 0 };
+	const struct pva_ops_context_init *ctx_init_args;
+	struct pva_ops_response_context_init ctx_init_out = { 0 };
 	enum pva_error err;
 
-	if (!access_ok(in_buffer,
-		       sizeof(struct pva_kmd_context_init_in_args))) {
+	if (input_buffer_size != sizeof(struct pva_ops_context_init)) {
+		pva_kmd_log_err("Context init size is not correct");
 		return PVA_INVAL;
 	}
 
 	if (!access_ok(out_buffer,
-		       sizeof(struct pva_kmd_context_init_out_args))) {
+		       sizeof(struct pva_ops_response_context_init))) {
 		return PVA_INVAL;
 	}
 
-	ctx_init_args = read_data(in_buffer,
-				  sizeof(struct pva_kmd_context_init_in_args));
+	ctx_init_args = (const struct pva_ops_context_init *)input_buffer;
 
 	err = pva_kmd_context_init(ctx, ctx_init_args->resource_table_capacity);
 	ctx_init_out.error = err;
 	ctx_init_out.ccq_shm_hdl = (uint64_t)ctx->ccq_shm_handle;
 
-	write_data(out_buffer, &ctx_init_out, sizeof(ctx_init_out));
+	produce_data(out_buffer, &ctx_init_out, sizeof(ctx_init_out));
 
-	return err;
+	return PVA_SUCCESS;
 }
 
-static enum pva_error
-pva_kmd_op_syncpt_register_async(struct pva_kmd_context *ctx,
-				 struct pva_kmd_buffer *in_buffer,
-				 struct pva_kmd_buffer *out_buffer,
-				 struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
+static enum pva_error pva_kmd_op_syncpt_register_async(
+	struct pva_kmd_context *ctx, const void *input_buffer,
+	uint32_t input_buffer_size, struct pva_kmd_ops_buffer *out_buffer,
+	struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
 {
 	enum pva_error err;
 	struct pva_syncpt_rw_info *syncpts;
@@ -437,7 +451,17 @@ pva_kmd_op_syncpt_register_async(struct pva_kmd_context *ctx,
 	uint32_t resource_id = 0;
 	struct pva_cmd_update_resource_table *update_cmd;
 	struct pva_resource_entry entry = { 0 };
-	struct pva_kmd_syncpt_register_out_args syncpt_register_out = { 0 };
+	struct pva_ops_response_syncpt_register syncpt_register_out = { 0 };
+
+	if (input_buffer_size != sizeof(struct pva_ops_syncpt_register)) {
+		pva_kmd_log_err("Syncpt register size is not correct");
+		return PVA_INVAL;
+	}
+
+	if (!access_ok(out_buffer,
+		       sizeof(struct pva_ops_response_syncpt_register))) {
+		return PVA_INVAL;
+	}
 
 	/* Register RO syncpts */
 	dev_mem.iova = ctx->pva->syncpt_ro_iova;
@@ -496,108 +520,109 @@ pva_kmd_op_syncpt_register_async(struct pva_kmd_context *ctx,
 
 err_out:
 	syncpt_register_out.error = err;
-	write_data(out_buffer, &syncpt_register_out,
-		   sizeof(syncpt_register_out));
-	return err;
-}
-
-static enum pva_error pva_kmd_op_queue_create(struct pva_kmd_context *ctx,
-					      struct pva_kmd_buffer *in_arg,
-					      struct pva_kmd_buffer *out_arg)
-{
-	struct pva_kmd_queue_create_in_args *queue_create_args;
-	struct pva_kmd_queue_create_out_args queue_out_args = { 0 };
-	uint32_t queue_id = PVA_INVALID_QUEUE_ID;
-	enum pva_error err = PVA_SUCCESS;
-
-	if (!access_ok(in_arg, sizeof(struct pva_kmd_queue_create_in_args))) {
-		return PVA_INVAL;
-	}
-
-	if (!access_ok(out_arg, sizeof(struct pva_kmd_queue_create_out_args))) {
-		return PVA_INVAL;
-	}
-
-	queue_create_args =
-		read_data(in_arg, sizeof(struct pva_kmd_queue_create_in_args));
-	queue_out_args.error =
-		pva_kmd_queue_create(ctx, queue_create_args, &queue_id);
-	if (queue_out_args.error == PVA_SUCCESS) {
-		queue_out_args.queue_id = queue_id;
-	}
-
-	if (queue_id >= PVA_MAX_NUM_QUEUES_PER_CONTEXT) {
-		pva_kmd_log_err("pva_kmd_op_queue_create invalid queue id");
-		err = PVA_INVAL;
-		goto err_out;
-	}
-
-	pva_kmd_read_syncpt_val(ctx->pva, ctx->syncpt_ids[queue_id],
-				&queue_out_args.syncpt_fence_counter);
-
-	write_data(out_arg, &queue_out_args,
-		   sizeof(struct pva_kmd_queue_create_out_args));
-
-err_out:
-	return err;
-}
-
-static enum pva_error pva_kmd_op_queue_destroy(struct pva_kmd_context *ctx,
-					       struct pva_kmd_buffer *in_arg,
-					       struct pva_kmd_buffer *out_arg)
-{
-	struct pva_kmd_queue_destroy_in_args *queue_destroy_args;
-	struct pva_kmd_queue_destroy_out_args queue_out_args = { 0 };
-
-	if (!access_ok(in_arg, sizeof(struct pva_kmd_queue_destroy_in_args))) {
-		return PVA_INVAL;
-	}
-
-	if (!access_ok(out_arg,
-		       sizeof(struct pva_kmd_queue_destroy_out_args))) {
-		return PVA_INVAL;
-	}
-
-	queue_destroy_args =
-		read_data(in_arg, sizeof(struct pva_kmd_queue_destroy_in_args));
-	queue_out_args.error = pva_kmd_queue_destroy(ctx, queue_destroy_args);
-
-	write_data(out_arg, &queue_out_args,
-		   sizeof(struct pva_kmd_queue_destroy_out_args));
-
+	produce_data(out_buffer, &syncpt_register_out,
+		     sizeof(syncpt_register_out));
 	return PVA_SUCCESS;
 }
 
 static enum pva_error
-pva_kmd_op_executable_get_symbols(struct pva_kmd_context *ctx,
-				  struct pva_kmd_buffer *in_arg,
-				  struct pva_kmd_buffer *out_arg)
+pva_kmd_op_queue_create(struct pva_kmd_context *ctx, const void *input_buffer,
+			uint32_t input_buffer_size,
+			struct pva_kmd_ops_buffer *out_buffer)
 {
-	struct pva_kmd_executable_get_symbols_in_args *sym_in_args;
-	struct pva_kmd_executable_get_symbols_out_args sym_out_args = { 0 };
+	const struct pva_ops_queue_create *queue_create_args;
+	struct pva_ops_response_queue_create queue_out_args = { 0 };
+	uint32_t queue_id = PVA_INVALID_QUEUE_ID;
+	enum pva_error err = PVA_SUCCESS;
+
+	if (input_buffer_size != sizeof(struct pva_ops_queue_create)) {
+		pva_kmd_log_err("Queue create size is not correct");
+		return PVA_INVAL;
+	}
+
+	if (!access_ok(out_buffer,
+		       sizeof(struct pva_ops_response_queue_create))) {
+		return PVA_INVAL;
+	}
+
+	queue_create_args = (const struct pva_ops_queue_create *)input_buffer;
+	err = pva_kmd_queue_create(ctx, queue_create_args, &queue_id);
+
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Failed to create queue");
+		goto out;
+	}
+
+	queue_out_args.error = err;
+	queue_out_args.queue_id = queue_id;
+	pva_kmd_read_syncpt_val(ctx->pva, ctx->syncpt_ids[queue_id],
+				&queue_out_args.syncpt_fence_counter);
+
+out:
+	produce_data(out_buffer, &queue_out_args,
+		     sizeof(struct pva_ops_response_queue_create));
+	return PVA_SUCCESS;
+}
+
+static enum pva_error
+pva_kmd_op_queue_destroy(struct pva_kmd_context *ctx, const void *input_buffer,
+			 uint32_t input_buffer_size,
+			 struct pva_kmd_ops_buffer *out_buffer)
+{
+	const struct pva_ops_queue_destroy *queue_destroy_args;
+	struct pva_ops_response_queue_destroy queue_out_args = { 0 };
+
+	if (input_buffer_size != sizeof(struct pva_ops_queue_destroy)) {
+		pva_kmd_log_err("Queue destroy size is not correct");
+		return PVA_INVAL;
+	}
+
+	if (!access_ok(out_buffer,
+		       sizeof(struct pva_ops_response_queue_destroy))) {
+		return PVA_INVAL;
+	}
+
+	queue_destroy_args = (const struct pva_ops_queue_destroy *)input_buffer;
+	queue_out_args.error =
+		pva_kmd_queue_destroy(ctx, queue_destroy_args->queue_id);
+
+	produce_data(out_buffer, &queue_out_args,
+		     sizeof(struct pva_ops_response_queue_destroy));
+
+	return PVA_SUCCESS;
+}
+
+static enum pva_error pva_kmd_op_executable_get_symbols(
+	struct pva_kmd_context *ctx, const void *input_buffer,
+	uint32_t input_buffer_size, struct pva_kmd_ops_buffer *out_buffer)
+{
+	const struct pva_ops_executable_get_symbols *sym_in_args;
+	struct pva_ops_response_executable_get_symbols sym_out_args = { 0 };
 	struct pva_kmd_resource_record *rec;
 	enum pva_error err = PVA_SUCCESS;
 	uint32_t table_size = 0;
 	uint32_t size = 0;
 
-	if (!access_ok(in_arg,
-		       sizeof(struct pva_kmd_executable_get_symbols_in_args))) {
+	if (input_buffer_size !=
+	    sizeof(struct pva_ops_executable_get_symbols)) {
+		pva_kmd_log_err("Executable get symbols size is not correct");
 		return PVA_INVAL;
 	}
 
-	if (!access_ok(out_arg,
-		       sizeof(struct pva_kmd_executable_get_symbols_out_args))) {
+	if (!access_ok(out_buffer,
+		       sizeof(struct pva_ops_response_executable_get_symbols))) {
 		return PVA_INVAL;
 	}
 
-	sym_in_args = read_data(
-		in_arg, sizeof(struct pva_kmd_executable_get_symbols_in_args));
+	sym_in_args =
+		(const struct pva_ops_executable_get_symbols *)input_buffer;
+
 	rec = pva_kmd_use_resource(&ctx->ctx_resource_table,
 				   sym_in_args->exec_resource_id);
 	if (rec == NULL) {
 		err = PVA_INVAL;
-		pva_kmd_log_err("pva_kmd_use_resource failed");
-		goto err_out;
+		pva_kmd_log_err("Invalid resource ID");
+		goto err_response;
 	}
 	if (rec->type != PVA_RESOURCE_TYPE_EXEC_BIN) {
 		err = PVA_INVAL;
@@ -609,41 +634,40 @@ pva_kmd_op_executable_get_symbols(struct pva_kmd_context *ctx,
 				 sizeof(struct pva_symbol_info));
 	size = safe_addu32(
 		table_size,
-		sizeof(struct pva_kmd_executable_get_symbols_out_args));
-	if (!access_ok(out_arg, size)) {
+		sizeof(struct pva_ops_response_executable_get_symbols));
+	if (!access_ok(out_buffer, size)) {
 		err = PVA_INVAL;
 		goto err_drop;
 	}
 
-	sym_out_args.error = err;
+	sym_out_args.error = PVA_SUCCESS;
 	sym_out_args.num_symbols = rec->vpu_bin.symbol_table.n_symbols;
-	write_data(out_arg, &sym_out_args, sizeof(sym_out_args));
-	write_data(out_arg, rec->vpu_bin.symbol_table.symbols, table_size);
-
+	produce_data(out_buffer, &sym_out_args, sizeof(sym_out_args));
+	produce_data(out_buffer, rec->vpu_bin.symbol_table.symbols, table_size);
 	pva_kmd_drop_resource(&ctx->ctx_resource_table,
 			      sym_in_args->exec_resource_id);
-
 	return PVA_SUCCESS;
 
 err_drop:
 	pva_kmd_drop_resource(&ctx->ctx_resource_table,
 			      sym_in_args->exec_resource_id);
 
-err_out:
+err_response:
 	sym_out_args.error = err;
-	write_data(out_arg, &sym_out_args, sizeof(sym_out_args));
-	return err;
+	sym_out_args.num_symbols = 0;
+	produce_data(out_buffer, &sym_out_args, sizeof(sym_out_args));
+	return PVA_SUCCESS;
 }
 
 typedef enum pva_error (*pva_kmd_async_op_func_t)(
-	struct pva_kmd_context *ctx, struct pva_kmd_buffer *in_buffer,
-	struct pva_kmd_buffer *out_buffer,
+	struct pva_kmd_context *ctx, const void *input_buffer,
+	uint32_t input_buffer_size, struct pva_kmd_ops_buffer *out_buffer,
 	struct pva_kmd_cmdbuf_builder *cmdbuf_builder);
 
 static enum pva_error
-pva_kmd_op_synced_submit(struct pva_kmd_context *ctx,
-			 struct pva_kmd_buffer *in_buffer,
-			 struct pva_kmd_buffer *out_buffer,
+pva_kmd_op_synced_submit(struct pva_kmd_context *ctx, const void *input_buffer,
+			 uint32_t input_buffer_size,
+			 struct pva_kmd_ops_buffer *out_buffer,
 			 pva_kmd_async_op_func_t async_op_func)
 {
 	enum pva_error err = PVA_SUCCESS;
@@ -655,7 +679,8 @@ pva_kmd_op_synced_submit(struct pva_kmd_context *ctx,
 		goto err_out;
 	}
 
-	err = async_op_func(ctx, in_buffer, out_buffer, &cmdbuf_builder);
+	err = async_op_func(ctx, input_buffer, input_buffer_size, out_buffer,
+			    &cmdbuf_builder);
 	if (err != PVA_SUCCESS) {
 		goto cancel_submit;
 	}
@@ -680,58 +705,77 @@ err_out:
 	return err;
 }
 
-static enum pva_error pva_kmd_sync_ops_handler(struct pva_kmd_context *ctx,
-					       struct pva_kmd_buffer *in_arg,
-					       struct pva_kmd_buffer *out_arg)
+static enum pva_error
+pva_kmd_sync_ops_handler(struct pva_kmd_context *ctx,
+			 struct pva_kmd_ops_buffer *in_arg,
+			 struct pva_kmd_ops_buffer *out_arg)
 {
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_kmd_op_header *header;
+	const struct pva_ops_header *header;
+	const void *input_buffer;
+	uint32_t input_buffer_size;
 
-	if (ctx->pva->recovery) {
-		pva_kmd_log_err("In Recovery state, do not accept ops");
+	if (!access_ok(in_arg, sizeof(struct pva_ops_header))) {
 		err = PVA_INVAL;
 		goto out;
 	}
 
-	if (!access_ok(in_arg, sizeof(struct pva_kmd_op_header))) {
+	header = peek_data(in_arg);
+
+	if (!access_ok(in_arg, header->size)) {
 		err = PVA_INVAL;
 		goto out;
 	}
 
-	header = read_data(in_arg, sizeof(struct pva_kmd_op_header));
+	input_buffer = consume_data(in_arg, header->size);
+	input_buffer_size = header->size;
 
-	switch (header->op_type) {
-	case PVA_KMD_OP_CONTEXT_INIT:
-		err = pva_kmd_op_context_init(ctx, in_arg, out_arg);
+	if (input_buffer_size % sizeof(uint64_t) != 0) {
+		pva_kmd_log_err("PVA operation size is not a multiple of 8");
+		err = PVA_INVAL;
+		goto out;
+	}
+
+	switch (header->opcode) {
+	case PVA_OPS_OPCODE_CONTEXT_INIT:
+		err = pva_kmd_op_context_init(ctx, input_buffer,
+					      input_buffer_size, out_arg);
 		break;
-	case PVA_KMD_OP_QUEUE_CREATE:
-		err = pva_kmd_op_queue_create(ctx, in_arg, out_arg);
+	case PVA_OPS_OPCODE_QUEUE_CREATE:
+		err = pva_kmd_op_queue_create(ctx, input_buffer,
+					      input_buffer_size, out_arg);
 		break;
-	case PVA_KMD_OP_QUEUE_DESTROY:
-		err = pva_kmd_op_queue_destroy(ctx, in_arg, out_arg);
+	case PVA_OPS_OPCODE_QUEUE_DESTROY:
+		err = pva_kmd_op_queue_destroy(ctx, input_buffer,
+					       input_buffer_size, out_arg);
 		break;
-	case PVA_KMD_OP_EXECUTABLE_GET_SYMBOLS:
-		err = pva_kmd_op_executable_get_symbols(ctx, in_arg, out_arg);
+	case PVA_OPS_OPCODE_EXECUTABLE_GET_SYMBOLS:
+		err = pva_kmd_op_executable_get_symbols(
+			ctx, input_buffer, input_buffer_size, out_arg);
 		break;
-	case PVA_KMD_OP_MEMORY_REGISTER:
+	case PVA_OPS_OPCODE_MEMORY_REGISTER:
 		err = pva_kmd_op_synced_submit(
-			ctx, in_arg, out_arg, pva_kmd_op_memory_register_async);
+			ctx, input_buffer, input_buffer_size, out_arg,
+			pva_kmd_op_memory_register_async);
 		break;
-	case PVA_KMD_OP_SYNPT_REGISTER:
+	case PVA_OPS_OPCODE_SYNCPT_REGISTER:
 		err = pva_kmd_op_synced_submit(
-			ctx, in_arg, out_arg, pva_kmd_op_syncpt_register_async);
+			ctx, input_buffer, input_buffer_size, out_arg,
+			pva_kmd_op_syncpt_register_async);
 		break;
-	case PVA_KMD_OP_EXECUTABLE_REGISTER:
+	case PVA_OPS_OPCODE_EXECUTABLE_REGISTER:
 		err = pva_kmd_op_synced_submit(
-			ctx, in_arg, out_arg,
+			ctx, input_buffer, input_buffer_size, out_arg,
 			pva_kmd_op_executable_register_async);
 		break;
-	case PVA_KMD_OP_DMA_CONFIG_REGISTER:
-		err = pva_kmd_op_synced_submit(ctx, in_arg, out_arg,
+	case PVA_OPS_OPCODE_DMA_CONFIG_REGISTER:
+		err = pva_kmd_op_synced_submit(ctx, input_buffer,
+					       input_buffer_size, out_arg,
 					       pva_kmd_op_dma_register_async);
 		break;
-	case PVA_KMD_OP_UNREGISTER:
-		err = pva_kmd_op_synced_submit(ctx, in_arg, out_arg,
+	case PVA_OPS_OPCODE_UNREGISTER:
+		err = pva_kmd_op_synced_submit(ctx, input_buffer,
+					       input_buffer_size, out_arg,
 					       pva_kmd_op_unregister_async);
 		break;
 	default:
@@ -744,38 +788,28 @@ out:
 }
 
 enum pva_error pva_kmd_ops_handler(struct pva_kmd_context *ctx,
+				   enum pva_ops_submit_mode mode,
+				   struct pva_fw_postfence *postfence,
 				   void const *ops_buffer, uint32_t ops_size,
-				   void *response,
-				   uint32_t response_buffer_size,
+				   void *resp_buffer, uint32_t resp_buffer_size,
 				   uint32_t *out_response_size)
+
 {
-	struct pva_kmd_operations *ops;
-	struct pva_kmd_buffer in_buffer = { 0 }, out_buffer = { 0 };
+	struct pva_kmd_ops_buffer in_buffer = { 0 }, out_buffer = { 0 };
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_kmd_response_header *resp_hdr;
+
+	if (ctx->pva->recovery) {
+		pva_kmd_log_err("PVA firmware aborted. No KMD ops allowed.");
+		return PVA_ERR_FW_ABORTED;
+	}
 
 	in_buffer.base = ops_buffer;
 	in_buffer.size = ops_size;
 
-	out_buffer.base = response;
-	out_buffer.size = response_buffer_size;
+	out_buffer.base = resp_buffer;
+	out_buffer.size = resp_buffer_size;
 
-	if (!access_ok(&in_buffer, sizeof(struct pva_kmd_operations))) {
-		err = PVA_INVAL;
-		goto out;
-	}
-
-	if (!access_ok(&out_buffer, sizeof(struct pva_kmd_response_header))) {
-		err = PVA_INVAL;
-		goto out;
-	}
-
-	resp_hdr =
-		read_data(&out_buffer, sizeof(struct pva_kmd_response_header));
-
-	ops = read_data(&in_buffer, sizeof(struct pva_kmd_operations));
-
-	if (ops->mode == PVA_KMD_OPS_MODE_SYNC) {
+	if (mode == PVA_OPS_SUBMIT_MODE_SYNC) {
 		/* Process one sync operation */
 		err = pva_kmd_sync_ops_handler(ctx, &in_buffer, &out_buffer);
 
@@ -786,13 +820,10 @@ enum pva_error pva_kmd_ops_handler(struct pva_kmd_context *ctx,
 		 * - DMA configuration registration
 		 * - unregister
 		 */
-		err = pva_kmd_async_ops_handler(ctx, &ops->postfence,
-						&in_buffer, &out_buffer);
+		err = pva_kmd_async_ops_handler(ctx, postfence, &in_buffer,
+						&out_buffer);
 	}
-	//Update the size of the responses in the response header.
-	// This size also include the header size.
-	resp_hdr->rep_size = out_buffer.offset;
-out:
+
 	*out_response_size = out_buffer.offset;
 	return err;
 }

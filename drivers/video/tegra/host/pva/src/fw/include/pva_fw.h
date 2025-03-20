@@ -65,6 +65,7 @@ struct pva_fw_cmdbuf_submit_info {
 	uint32_t execution_timeout_ms;
 	struct pva_fw_memory_addr output_statuses[PVA_MAX_NUM_OUTPUT_STATUS];
 	struct pva_fw_postfence postfences[PVA_MAX_NUM_POSTFENCES];
+	uint64_t submit_id;
 };
 
 /* This is the header of the circular buffer */
@@ -282,7 +283,7 @@ enum pva_fw_timestamp_t {
  * message. KMD can further parse these messages to extract the exact size of the
  * message.
  */
-#define PVA_KMD_FW_BUF_ELEMENT_SIZE (sizeof(uint32_t) + sizeof(uint64_t))
+#define PVA_KMD_FW_BUF_ELEMENT_SIZE sizeof(struct pva_kmd_fw_msg_vpu_trace)
 
 // TODO: remove element size and buffer size fields from this struct.
 //	 This struct is shared between KMD and FW. FW should not be able to change
@@ -295,6 +296,47 @@ struct pva_fw_shared_buffer_header {
 	uint32_t element_size;
 	uint32_t head;
 	uint32_t tail;
+};
+
+struct pva_kmd_fw_buffer_msg_header {
+#define PVA_KMD_FW_BUF_MSG_TYPE_FW_EVENT 0
+#define PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE 1
+#define PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG 2
+	uint32_t type : 8;
+	// Size of payload in bytes. Includes the size of the header.
+	uint32_t size : 24;
+};
+
+// Tracing information for NSIGHT
+struct pva_kmd_fw_msg_vpu_trace {
+	// VPU ID on which the job was executed
+	uint8_t engine_id;
+	// CCQ ID through which the job was submitted
+	uint8_t ccq_id;
+	// Queue ID through which the job was submitted
+	// This is not relative to a context. It ranges from 0 to 55
+	uint8_t queue_id;
+	// Number of prefences in the cmdbuf
+	uint8_t num_prefences;
+	// Program ID of the VPU program executed.
+	// Not supported today as CUPVA does not fully support this yet.
+	// The intent is to for user applications to be able to assign
+	// an identification to a VPU kernel. This ID will then be forwarded
+	// by the FW to the KMD for tracing.
+	uint64_t prog_id;
+	// Start time of the VPU execution
+	uint64_t vpu_start_time;
+	// End time of the VPU execution
+	uint64_t vpu_end_time;
+	// Submit ID of the cmdbuf
+	// User applications can assign distinct identifiers to command buffers.
+	// FW will forward this identifier to the KMD for tracing.
+	uint64_t submit_id;
+};
+
+// Resource unregister message
+struct pva_kmd_fw_msg_res_unreg {
+	uint32_t resource_id;
 };
 
 struct pva_kmd_fw_tegrastats {

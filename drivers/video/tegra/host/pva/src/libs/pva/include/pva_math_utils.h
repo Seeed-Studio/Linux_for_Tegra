@@ -193,6 +193,15 @@ static inline uint8_t safe_add_u8(uint8_t addend1, uint8_t addend2,
 	return (uint8_t)sum;
 }
 
+static inline uint32_t align8_u32(uint32_t val, pva_math_error *err)
+{
+	if (val > (UINT32_MAX - 7u)) {
+		*err = MATH_OP_ERROR;
+		return 0u;
+	}
+	return (val + 7u) & ~(uint32_t)7u;
+}
+
 #define safe_addu64(addend1, addend2)                                          \
 	safe_add_u64((addend1), (addend2), __FILE__, __LINE__)
 

@@ -20,6 +20,10 @@
 #include "pva_kmd_fw_debug.h"
 #include "pva_kmd_constants.h"
 #include "pva_kmd_debugfs.h"
+#include "pva_kmd_co.h"
+
+#define NV_PVA0_CLASS_ID 0xF1
+#define NV_PVA1_CLASS_ID 0xF2
 
 struct pva_syncpt_rw_info {
 	/** Dont switch order since syncpt_id and syncpt_iova is prefilled during kmd boot
@@ -138,6 +142,9 @@ struct pva_kmd_device {
 
 	struct pva_vpu_auth *pva_auth;
 	bool is_suspended;
+
+	/** Carveout info for FW */
+	struct pva_co_info fw_carveout;
 };
 
 struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
@@ -161,4 +168,13 @@ void pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
 				    struct pva_kmd_queue *queue);
 
 bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva);
+
+static inline uint32_t pva_kmd_get_device_class_id(struct pva_kmd_device *pva)
+{
+	if (pva->device_index == 0) {
+		return NV_PVA0_CLASS_ID;
+	} else {
+		return NV_PVA1_CLASS_ID;
+	}
+}
 #endif // PVA_KMD_DEVICE_H

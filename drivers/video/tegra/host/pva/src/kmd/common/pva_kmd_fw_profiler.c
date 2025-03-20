@@ -238,15 +238,12 @@ static void decode_and_print_event(unsigned long walltime,
 	}
 }
 
-enum pva_error pva_kmd_process_fw_profiling_message(void *context,
-						    uint8_t interface,
-						    uint8_t *element)
+enum pva_error pva_kmd_process_fw_event(struct pva_kmd_device *pva,
+					uint8_t *data, uint32_t data_size)
 {
-	struct pva_kmd_device *pva = (struct pva_kmd_device *)context;
-
 	uint64_t timestamp = 0;
 	char msg_string[200] = { '\0' };
-	struct pva_fw_event_message message;
+	struct pva_fw_event_message event_header;
 	static uint64_t prev_walltime = 0U;
 	uint64_t relative_time = 0U;
 
@@ -255,8 +252,14 @@ enum pva_error pva_kmd_process_fw_profiling_message(void *context,
 	static const uint64_t r5_cycle_duration = 1000000000000 / r5_freq;
 	uint64_t walltime = 0U; // in nanoseconds
 
-	memcpy(&message, element, sizeof(message));
-	memcpy(&timestamp, &element[sizeof(message)],
+	if (data_size <
+	    (sizeof(event_header) +
+	     pva->debugfs_context.g_fw_profiling_config.timestamp_size)) {
+		return PVA_INVAL;
+	}
+
+	memcpy(&event_header, data, sizeof(event_header));
+	memcpy(&timestamp, &data[sizeof(event_header)],
 	       pva->debugfs_context.g_fw_profiling_config.timestamp_size);
 
 	if (pva->debugfs_context.g_fw_profiling_config.timestamp_type ==
@@ -271,7 +274,7 @@ enum pva_error pva_kmd_process_fw_profiling_message(void *context,
 	relative_time = (prev_walltime > walltime) ?
 				      0U :
 				      safe_subu64(walltime, prev_walltime);
-	decode_and_print_event(walltime, relative_time, message,
+	decode_and_print_event(walltime, relative_time, event_header,
 			       &msg_string[0]);
 	pva_kmd_print_str(msg_string);
 	prev_walltime = walltime;

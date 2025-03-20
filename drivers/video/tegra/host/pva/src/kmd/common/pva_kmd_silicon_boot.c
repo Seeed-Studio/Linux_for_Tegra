@@ -81,29 +81,23 @@ void pva_kmd_config_evp_seg_regs(struct pva_kmd_device *pva)
  	* segment registers accordingly
  	*
  	* */
-	if (pva->load_from_gsc) {
-		if (pva->is_hv_mode) {
-			/* Loading from GSC with HV (i.e AV+L or AV+Q case).
-			 * This will be trapped by HV
-			 */
-			pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_lsegreg,
-				      0xFFFFFFFFU);
-			pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_usegreg,
-				      0xFFFFFFFFU);
-		} else {
-			/* Loading from GSC without HV i.e L4T case.
-			 * TODO: Program Segment regsites using the GSC Careveout
-			 * fetched from DT file. Till then, ASSERT here.
-			 */
-			ASSERT(false);
-		}
-	} else {
-		/* Loading from file.
-		 * In HV case, traps should be bypassed in HV
+	if (pva->load_from_gsc && pva->is_hv_mode) {
+		/* Loading from GSC with HV (i.e AV+L or AV+Q case).
+		 * This will be trapped by HV
 		 */
+		pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_lsegreg,
+			      0xFFFFFFFFU);
+		pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_usegreg,
+			      0xFFFFFFFFU);
+	} else {
+		/* underflow is totally OK */
 		seg_reg_value =
-			pva->fw_bin_mem->iova -
-			FW_CODE_DATA_START_ADDR; /* underflow is totally OK */
+			pva->load_from_gsc ?
+				      pva->fw_carveout.base_va -
+					FW_CODE_DATA_START_ADDR : /* Load from GSC in L4T case */
+				      pva->fw_bin_mem->iova -
+					FW_CODE_DATA_START_ADDR; /* Boot from File case */
+
 		pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_lsegreg,
 			      iova_lo(seg_reg_value));
 		pva_kmd_write(pva, pva->regspec.cfg_priv_ar1_usegreg,

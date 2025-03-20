@@ -82,9 +82,10 @@ static long pva_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		goto unlock;
 	}
 
-	op_err = pva_kmd_ops_handler(ocb->kmd_ctx, ocb->req_buffer,
-				     hdr->request.size, ocb->resp_buffer,
-				     hdr->response.size, &resp_size);
+	op_err = pva_kmd_ops_handler(ocb->kmd_ctx, hdr->mode, &hdr->postfence,
+				     ocb->req_buffer, hdr->request.size,
+				     ocb->resp_buffer, hdr->response.size,
+				     &resp_size);
 
 	if (op_err != PVA_SUCCESS) {
 		if (op_err == PVA_NO_RESOURCE_ID || op_err == PVA_NOMEM) {

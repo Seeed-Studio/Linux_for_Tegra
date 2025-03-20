@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_api_types.h"
+#include "pva_kmd_shim_init.h"
 #include "pva_kmd_utils.h"
 #include "pva_api_cmdbuf.h"
 #include "pva_api.h"
@@ -223,7 +224,12 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 	ASSERT(err == PVA_SUCCESS);
 
 	pva->is_suspended = false;
+
+#if PVA_IS_DEBUG == 1
+	pva->fw_debug_log_level = 255U;
+#else
 	pva->fw_debug_log_level = 0U;
+#endif
 
 	return pva;
 }
@@ -260,6 +266,44 @@ void pva_kmd_device_destroy(struct pva_kmd_device *pva)
 	pva_kmd_free(pva);
 }
 
+static enum pva_error
+pva_kmd_notify_fw_set_profiling_level(struct pva_kmd_device *pva,
+				      uint32_t level)
+{
+	struct pva_kmd_cmdbuf_builder builder;
+	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
+	struct pva_cmd_set_profiling_level *cmd;
+	uint32_t fence_val;
+	enum pva_error err;
+
+	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+
+	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
+	ASSERT(cmd != NULL);
+	pva_kmd_set_cmd_set_profiling_level(cmd, level);
+
+	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+
+	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
+				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				     PVA_KMD_WAIT_FW_TIMEOUT_US);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"Waiting for FW timed out when setting profiling level");
+		goto err_out;
+	}
+
+	return PVA_SUCCESS;
+
+err_out:
+	return err;
+}
 enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 {
 	enum pva_error err = PVA_SUCCESS;
@@ -275,7 +319,7 @@ enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 
 		err = pva_kmd_init_fw(pva);
 		if (err != PVA_SUCCESS) {
-			goto unlock;
+			goto poweroff;
 		}
 		/* Reset KMD queue */
 		pva->dev_queue.queue_header->cb_head = 0;
@@ -288,21 +332,32 @@ enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 		// TODO: need better error handling here
 		err = pva_kmd_shared_buffer_init(
 			pva, PVA_PRIV_CCQ_ID, PVA_KMD_FW_BUF_ELEMENT_SIZE,
-			PVA_KMD_FW_PROFILING_BUF_NUM_ELEMENTS,
-			pva_kmd_process_fw_profiling_message, NULL, NULL);
+			PVA_KMD_FW_PROFILING_BUF_NUM_ELEMENTS, NULL, NULL);
 		if (err != PVA_SUCCESS) {
 			pva_kmd_log_err_u64(
 				"pva kmd buffer initialization failed for interface ",
 				PVA_PRIV_CCQ_ID);
-			goto unlock;
+			goto deinit_fw;
 		}
 		pva_kmd_notify_fw_enable_profiling(pva);
+
 		/* Set FW debug log level */
 		pva_kmd_notify_fw_set_debug_log_level(pva,
 						      pva->fw_debug_log_level);
+
+		// If the user had set profiling level before power-on, send the update to FW
+		pva_kmd_notify_fw_set_profiling_level(
+			pva, pva->debugfs_context.profiling_level);
 	}
 	pva->refcount = safe_addu32(pva->refcount, 1U);
 
+	pva_kmd_mutex_unlock(&pva->powercycle_lock);
+	return PVA_SUCCESS;
+
+deinit_fw:
+	pva_kmd_deinit_fw(pva);
+poweroff:
+	pva_kmd_power_off(pva);
 unlock:
 	pva_kmd_mutex_unlock(&pva->powercycle_lock);
 	return err;

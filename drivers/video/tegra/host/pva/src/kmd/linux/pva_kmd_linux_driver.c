@@ -20,6 +20,7 @@
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
+#include <linux/dma-mapping.h>
 
 #if KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE
 #include <linux/tegra-ivc.h>
@@ -189,6 +190,72 @@ static ssize_t clk_cap_show(struct kobject *kobj, struct kobj_attribute *attr,
 	return snprintf(buf, PAGE_SIZE, "%ld\n", max_rate);
 }
 
+static enum pva_error pva_kmd_get_co_info(struct platform_device *pdev)
+{
+	struct device_node *np;
+	const char *status = NULL;
+	uint32_t reg[4] = { 0 };
+	enum pva_error err = PVA_SUCCESS;
+	struct nvpva_device_data *pva_props = platform_get_drvdata(pdev);
+	struct pva_kmd_device *pva = pva_props->private_data;
+
+	np = of_find_compatible_node(NULL, NULL, "nvidia,pva-carveout");
+	if (np == NULL) {
+		dev_err(&pdev->dev, "find node failed\n");
+		goto err_out;
+	}
+
+	if (of_property_read_string(np, "status", &status)) {
+		dev_err(&pdev->dev, "read status failed\n");
+		goto err_out;
+	}
+
+	if (strcmp(status, "okay")) {
+		dev_err(&pdev->dev, "status compare failed\n");
+		goto err_out;
+	}
+
+	if (of_property_read_u32_array(np, "reg", reg, 4)) {
+		dev_err(&pdev->dev, "read_32_array failed\n");
+		goto err_out;
+	}
+
+	pva->fw_carveout.base_pa = ((u64)reg[0] << 32 | (u64)reg[1]);
+	pva->fw_carveout.size = ((u64)reg[2] << 32 | (u64)reg[3]);
+
+	if (iommu_get_domain_for_dev(&pdev->dev)) {
+		pva->fw_carveout.base_va =
+			dma_map_resource(&pdev->dev, pva->fw_carveout.base_pa,
+					 pva->fw_carveout.size,
+					 DMA_BIDIRECTIONAL,
+					 DMA_ATTR_SKIP_CPU_SYNC);
+		if (dma_mapping_error(&pdev->dev, pva->fw_carveout.base_va)) {
+			dev_err(&pdev->dev, "Failed to pin fw_bin_mem CO\n");
+			goto err_out;
+		}
+	} else {
+		pva->fw_carveout.base_va = pva->fw_carveout.base_pa;
+	}
+
+	printk(KERN_INFO "Allocated pva->fw_carveout\n");
+	return err;
+
+err_out:
+	dev_err(&pdev->dev, "get co fail\n");
+	return PVA_INVAL;
+}
+
+static void pva_kmd_free_co_mem(struct platform_device *pdev)
+{
+	struct nvpva_device_data *pva_props = platform_get_drvdata(pdev);
+	struct pva_kmd_device *pva = pva_props->private_data;
+	if (iommu_get_domain_for_dev(&pdev->dev)) {
+		dma_unmap_resource(&pdev->dev, pva->fw_carveout.base_va,
+				   pva->fw_carveout.size, DMA_BIDIRECTIONAL,
+				   DMA_ATTR_SKIP_CPU_SYNC);
+	}
+}
+
 static struct kobj_type nvpva_kobj_ktype = {
 	.sysfs_ops = &kobj_sysfs_ops,
 };
@@ -238,7 +305,8 @@ static int pva_probe(struct platform_device *pdev)
 
 	pva_device->is_hv_mode = is_tegra_hypervisor_mode();
 
-	/*Force to always boot from file in case of L4T*/
+	/* On L4T, forcing boot from file */
+	/* If needed to load from GSC, remove the below block */
 	if (!pva_device->is_hv_mode) {
 		load_from_gsc = false;
 	}
@@ -286,6 +354,14 @@ static int pva_probe(struct platform_device *pdev)
 
 	pva_kmd_debugfs_create_nodes(pva_device);
 	pva_kmd_linux_register_hwpm(pva_device);
+
+	if (!pva_device->is_hv_mode && pva_device->load_from_gsc) {
+		err = pva_kmd_get_co_info(pdev);
+		if (err != PVA_SUCCESS) {
+			dev_err(dev, "Failed to get CO info\n");
+			goto err_cdev_init;
+		}
+	}
 
 	if (pva_props->num_clks > 0) {
 		err = kobject_init_and_add(&pva_props->clk_cap_kobj,
@@ -355,6 +431,10 @@ static int __exit pva_remove(struct platform_device *pdev)
 		}
 
 		kobject_put(&pva_props->clk_cap_kobj);
+	}
+
+	if (!pva_device->is_hv_mode && pva_device->load_from_gsc) {
+		pva_kmd_free_co_mem(pdev);
 	}
 
 	nvpva_device_release(pdev);

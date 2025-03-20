@@ -235,8 +235,7 @@ void pva_kmd_power_off(struct pva_kmd_device *pva)
 		pva_kmd_linux_device_get_data(pva);
 	struct nvpva_device_data *props = device_data->pva_device_properties;
 
-	pm_runtime_mark_last_busy(&props->pdev->dev);
-	pm_runtime_put(&props->pdev->dev);
+	// Set reset line before cutting off power
 
 	/* Power management operation is asynchronous. We don't control when PVA
 	 * will really be powered down. However, we need to free memories after
@@ -245,6 +244,9 @@ void pva_kmd_power_off(struct pva_kmd_device *pva)
 	reset_control_acquire(props->reset_control);
 	reset_control_assert(props->reset_control);
 	reset_control_release(props->reset_control);
+
+	pm_runtime_mark_last_busy(&props->pdev->dev);
+	pm_runtime_put(&props->pdev->dev);
 }
 
 void pva_kmd_fw_reset_assert(struct pva_kmd_device *pva)
@@ -253,8 +255,8 @@ void pva_kmd_fw_reset_assert(struct pva_kmd_device *pva)
 		pva_kmd_linux_device_get_data(pva);
 	struct nvpva_device_data *props = device_data->pva_device_properties;
 
-	/* FW Reset recovery operation is asynchronous. 
-	 * we need to free memories after this call. 
+	/* FW Reset recovery operation is asynchronous.
+	 * we need to free memories after this call.
 	 * Therefore, we assert the reset line to stop PVA from any
 	 * further activity. */
 	reset_control_acquire(props->reset_control);

@@ -117,6 +117,7 @@
 	ACT(PVA_ERR_PPE_ILLEGAL_INSTR)                                         \
 	ACT(PVA_ERR_MATH_OP)                                                   \
 	ACT(PVA_ERR_HWSEQ_INVALID)                                             \
+	ACT(PVA_ERR_FW_ABORTED)                                                \
 	ACT(PVA_ERR_CODE_COUNT)
 
 enum pva_error {
@@ -324,6 +325,8 @@ struct pva_cmdbuf_submit_info {
 	uint16_t first_chunk_size;
 	/** Resource ID of the first chunk */
 	uint32_t first_chunk_resource_id;
+	/** User provided submission identifier */
+	uint64_t submit_id;
 	/** Offset of the first chunk within the resource */
 	uint64_t first_chunk_offset;
 #define PVA_EXEC_TIMEOUT_REUSE 0xFFFFFFFFU
@@ -335,12 +338,6 @@ struct pva_cmdbuf_submit_info {
 	struct pva_dram_addr input_statuses[PVA_MAX_NUM_INPUT_STATUS];
 	struct pva_dram_addr output_statuses[PVA_MAX_NUM_OUTPUT_STATUS];
 	struct pva_dram_addr timestamps[PVA_MAX_NUM_TIMESTAMPS];
-};
-
-struct pva_ops_buffer {
-	void *base; /**< Buffer holding a list of async operations */
-	uint32_t offset; /**< First unused byte in the buffer */
-	uint32_t size; /**< Size of the buffer */
 };
 
 struct pva_cmdbuf_status {

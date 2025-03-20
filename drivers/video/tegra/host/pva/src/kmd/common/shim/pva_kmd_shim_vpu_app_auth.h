@@ -11,5 +11,6 @@ enum pva_error pva_kmd_auth_allowlist_load(struct pva_kmd_device *pva,
 					   const char *file_name,
 					   uint8_t **hash_keys_data,
 					   uint64_t *psize);
-
+void pva_kmd_update_allowlist_path(struct pva_kmd_device *pva,
+				   const char *allowlist_path);
 #endif

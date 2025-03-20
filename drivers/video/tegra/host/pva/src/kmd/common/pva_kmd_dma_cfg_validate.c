@@ -9,6 +9,7 @@
 #include "pva_api_dma.h"
 #include "pva_kmd_device.h"
 #include "pva_math_utils.h"
+#include "pva_utils.h"
 
 struct pva_fw_dma_reloc_slot_info {
 	struct pva_fw_dma_slot *slots;
@@ -21,13 +22,31 @@ struct pva_fw_dma_reloc_slots {
 	struct pva_fw_dma_reloc_slot_info static_slot;
 };
 
+static enum pva_error check_replication(struct pva_dma_config const *out_cfg,
+					struct pva_dma_channel const *channel)
+{
+	enum pva_error err = PVA_SUCCESS;
+	switch (channel->ch_rep_factor) {
+	case (uint8_t)REPLICATION_NONE:
+	case (uint8_t)REPLICATION_FULL:
+		break;
+	default: {
+		pva_kmd_log_err("Invalid Channel Replication Factor");
+		err = PVA_INVAL;
+	} break;
+	}
+
+	return err;
+}
+
 static enum pva_error
 validate_channel_mapping(struct pva_dma_config const *out_cfg,
 			 struct pva_kmd_hw_constants const *hw_consts)
 {
-	struct pva_dma_channel *channel;
+	const struct pva_dma_channel *channel;
 	struct pva_dma_config_header const *cfg_hdr = &out_cfg->header;
 	pva_math_error math_err = MATH_OP_SUCCESS;
+	enum pva_error err = PVA_SUCCESS;
 
 	for (uint8_t i = 0U; i < cfg_hdr->num_channels; i++) {
 		channel = &out_cfg->channels[i];
@@ -47,6 +66,11 @@ validate_channel_mapping(struct pva_dma_config const *out_cfg,
 			pva_kmd_log_err("ERR: Invalid ADB Buff Size or Offset");
 			return PVA_INVAL;
 		}
+		err = check_replication(out_cfg, channel);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err("Invalid Channel Replication Factor");
+			return err;
+		}
 	}
 	if (math_err != MATH_OP_SUCCESS) {
 		pva_kmd_log_err("validate_channel_mapping math error");
@@ -56,7 +80,7 @@ validate_channel_mapping(struct pva_dma_config const *out_cfg,
 	return PVA_SUCCESS;
 }
 
-static enum pva_error validate_padding(struct pva_dma_descriptor *desc)
+static enum pva_error validate_padding(const struct pva_dma_descriptor *desc)
 {
 	if ((desc->px != 0U) && (desc->px >= desc->tx)) {
 		return PVA_INVAL;
@@ -69,7 +93,7 @@ static enum pva_error validate_padding(struct pva_dma_descriptor *desc)
 	return PVA_SUCCESS;
 }
 
-static bool is_valid_vpu_trigger_mode(struct pva_dma_descriptor *desc)
+static bool is_valid_vpu_trigger_mode(const struct pva_dma_descriptor *desc)
 {
 	bool valid = true;
 	if (desc->trig_event_mode != 0U) {
@@ -119,7 +143,7 @@ static bool is_valid_vpu_trigger_mode(struct pva_dma_descriptor *desc)
 	return valid;
 }
 
-static bool validate_src_dst_adv_val(struct pva_dma_descriptor *desc,
+static bool validate_src_dst_adv_val(const struct pva_dma_descriptor *desc,
 				     bool relax_dim3_check)
 {
 	uint8_t is_any_rpt_zero = 0U;
@@ -150,7 +174,7 @@ static bool validate_src_dst_adv_val(struct pva_dma_descriptor *desc,
 }
 
 static enum pva_error
-validate_dma_desc_trans_cntl2(struct pva_dma_descriptor *desc)
+validate_dma_desc_trans_cntl2(const struct pva_dma_descriptor *desc)
 {
 	if ((desc->prefetch_enable != 0U) &&
 	    ((desc->tx == 0U) || (desc->ty == 0U) ||
@@ -162,7 +186,7 @@ validate_dma_desc_trans_cntl2(struct pva_dma_descriptor *desc)
 }
 
 static enum pva_error
-validate_descriptor(struct pva_dma_descriptor *desc,
+validate_descriptor(const struct pva_dma_descriptor *desc,
 		    struct pva_dma_config_header const *cfg_hdr)
 {
 	enum pva_error err = PVA_SUCCESS;
@@ -202,10 +226,29 @@ validate_descriptor(struct pva_dma_descriptor *desc,
 	return PVA_SUCCESS;
 }
 
+struct pva_kmd_offset_pairs {
+	uint32_t start;
+	uint32_t end;
+};
+
+#define PVA_KMD_DMA_CONFIG_ARRAY_COUNT 4U
+
 static bool
-is_dma_config_header_valid(struct pva_dma_config_header const *cfg_hdr,
+is_dma_config_header_valid(struct pva_ops_dma_config_register const *ops_hdr,
+			   uint32_t dma_config_size,
 			   struct pva_kmd_hw_constants const *hw_consts)
 {
+	struct pva_kmd_offset_pairs offsets[PVA_KMD_DMA_CONFIG_ARRAY_COUNT];
+	struct pva_dma_config_header const *cfg_hdr;
+	pva_math_error math_err = MATH_OP_SUCCESS;
+
+	if (dma_config_size < sizeof(*ops_hdr)) {
+		pva_kmd_log_err("DMA configuration too small");
+		return PVA_INVAL;
+	}
+
+	cfg_hdr = &ops_hdr->dma_config_header;
+
 	if (((cfg_hdr->base_descriptor + cfg_hdr->num_descriptors) >
 	     hw_consts->n_dma_descriptors) ||
 	    ((cfg_hdr->base_channel + cfg_hdr->num_channels) >
@@ -217,61 +260,98 @@ is_dma_config_header_valid(struct pva_dma_config_header const *cfg_hdr,
 	    (cfg_hdr->base_channel == 0U)) {
 		return false;
 	}
+
+	offsets[0].start = ops_hdr->channels_offset;
+	offsets[0].end = addu32(
+		ops_hdr->channels_offset,
+		align8_u32(mulu32(cfg_hdr->num_channels,
+				  sizeof(struct pva_dma_channel), &math_err),
+			   &math_err),
+		&math_err);
+
+	offsets[1].start = ops_hdr->descriptors_offset;
+	offsets[1].end = addu32(
+		ops_hdr->descriptors_offset,
+		align8_u32(mulu32(cfg_hdr->num_descriptors,
+				  sizeof(struct pva_dma_descriptor), &math_err),
+			   &math_err),
+		&math_err);
+
+	offsets[2].start = ops_hdr->hwseq_words_offset;
+	offsets[2].end = addu32(ops_hdr->hwseq_words_offset,
+				align8_u32(mulu32(cfg_hdr->num_hwseq_words,
+						  sizeof(uint32_t), &math_err),
+					   &math_err),
+				&math_err);
+
+	offsets[3].start = ops_hdr->static_bindings_offset;
+	offsets[3].end =
+		addu32(ops_hdr->static_bindings_offset,
+		       align8_u32(mulu32(cfg_hdr->num_static_slots,
+					 sizeof(struct pva_dma_static_binding),
+					 &math_err),
+				  &math_err),
+		       &math_err);
+
+	if (math_err != MATH_OP_SUCCESS) {
+		pva_kmd_log_err("DMA config field offset math error");
+		return false;
+	}
+	//Validate:
+	// 1. All start offsets are aligned to 8 bytes
+	// 2. All end offsets are within the dma_config_size
+	// Note: We do not check if the ranges overlap because we do not modify the buffer in place.
+	for (uint32_t i = 0; i < PVA_KMD_DMA_CONFIG_ARRAY_COUNT; i++) {
+		if (offsets[i].start % 8 != 0) {
+			pva_kmd_log_err(
+				"DMA config field offset is not aligned to 8 bytes");
+			return false;
+		}
+		if (offsets[i].end > dma_config_size) {
+			pva_kmd_log_err("DMA config field is out of bounds");
+			return false;
+		}
+	}
+
 	return true;
 }
 
 enum pva_error
-pva_kmd_parse_dma_config(void *dma_config, uint32_t dma_config_size,
+pva_kmd_parse_dma_config(const struct pva_ops_dma_config_register *ops_hdr,
+			 uint32_t dma_config_size,
 			 struct pva_dma_config *out_cfg,
 			 struct pva_kmd_hw_constants const *hw_consts)
 {
-	struct pva_dma_config_header const *cfg_hdr = dma_config;
-	uintptr_t offset = 0;
-
-	if (dma_config_size < sizeof(*cfg_hdr)) {
-		pva_kmd_log_err("DMA configuration too small");
-		return PVA_INVAL;
-	}
-
-	out_cfg->header = *cfg_hdr;
-	if (!(is_dma_config_header_valid(cfg_hdr, hw_consts))) {
+	if (!(is_dma_config_header_valid(ops_hdr, dma_config_size,
+					 hw_consts))) {
 		pva_kmd_log_err("Invalid PVA DMA Configuration Header");
 		return PVA_INVAL;
 	}
 
-	offset += PVA_ALIGN8(sizeof(*cfg_hdr));
+	out_cfg->header = ops_hdr->dma_config_header;
 
-	out_cfg->hwseq_words = pva_offset_pointer(dma_config, offset);
-	offset += PVA_ALIGN8(cfg_hdr->num_hwseq_words *
-			     sizeof(*out_cfg->hwseq_words));
+	out_cfg->hwseq_words =
+		pva_offset_const_ptr(ops_hdr, ops_hdr->hwseq_words_offset);
 
-	out_cfg->channels = pva_offset_pointer(dma_config, offset);
-	offset +=
-		PVA_ALIGN8(cfg_hdr->num_channels * sizeof(*out_cfg->channels));
+	out_cfg->channels =
+		pva_offset_const_ptr(ops_hdr, ops_hdr->channels_offset);
 
-	out_cfg->descriptors = pva_offset_pointer(dma_config, offset);
-	offset += PVA_ALIGN8(cfg_hdr->num_descriptors *
-			     sizeof(*out_cfg->descriptors));
+	out_cfg->descriptors =
+		pva_offset_const_ptr(ops_hdr, ops_hdr->descriptors_offset);
 
-	out_cfg->static_bindings = pva_offset_pointer(dma_config, offset);
-	offset += PVA_ALIGN8(cfg_hdr->num_static_slots *
-			     sizeof(*out_cfg->static_bindings));
-
-	if (offset > dma_config_size) {
-		pva_kmd_log_err("DMA configuration is smaller than expected");
-		return PVA_INVAL;
-	}
+	out_cfg->static_bindings =
+		pva_offset_const_ptr(ops_hdr, ops_hdr->static_bindings_offset);
 
 	return PVA_SUCCESS;
 }
 
 static enum pva_error
-validate_descriptors(struct pva_dma_config const *dma_config)
+validate_descriptors(const struct pva_dma_config *dma_config)
 {
 	uint32_t i = 0U;
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_dma_config_header const *cfg_hdr = &dma_config->header;
-	struct pva_dma_descriptor *desc;
+	const struct pva_dma_config_header *cfg_hdr = &dma_config->header;
+	const struct pva_dma_descriptor *desc;
 
 	for (i = 0; i < cfg_hdr->num_descriptors; i++) {
 		if (pva_is_reserved_desc(i)) {
@@ -474,7 +554,7 @@ static void count_relocs(struct pva_dma_config const *dma_cfg,
 			 uint16_t num_dyn_slots)
 {
 	uint8_t i;
-	struct pva_dma_descriptor *desc;
+	const struct pva_dma_descriptor *desc;
 
 	for (i = 0U; i < dma_cfg->header.num_descriptors; i++) {
 		if (pva_is_reserved_desc(i)) {
@@ -543,14 +623,14 @@ static void handle_reloc(uint16_t slot, uint8_t transfer_mode,
 	}
 }
 
-static void write_relocs(struct pva_dma_config const *dma_cfg,
+static void write_relocs(const struct pva_dma_config *dma_cfg,
 			 struct pva_kmd_dma_access const *access_sizes,
 			 struct pva_fw_dma_reloc_slots *rel_info,
 			 uint8_t const *desc_to_ch)
 {
 	uint32_t i;
 	uint16_t start_idx = 0U;
-	struct pva_dma_descriptor *desc = NULL;
+	const struct pva_dma_descriptor *desc = NULL;
 	uint8_t ch_index = 0U;
 
 	for (i = 0U; i < rel_info->dyn_slot.num_slots; i++) {
@@ -587,7 +667,7 @@ static void write_relocs(struct pva_dma_config const *dma_cfg,
 }
 
 static enum pva_error
-validate_descriptor_tile_and_padding(struct pva_dma_descriptor *desc,
+validate_descriptor_tile_and_padding(const struct pva_dma_descriptor *desc,
 				     bool is_dst)
 {
 	enum pva_error err = PVA_SUCCESS;
@@ -608,13 +688,13 @@ validate_descriptor_tile_and_padding(struct pva_dma_descriptor *desc,
 	return PVA_SUCCESS;
 }
 
-static enum pva_error get_access_size(struct pva_dma_descriptor *desc,
+static enum pva_error get_access_size(const struct pva_dma_descriptor *desc,
 				      struct pva_kmd_dma_access_entry *entry,
 				      bool is_dst,
 				      struct pva_kmd_dma_access_entry *dst2)
 
 {
-	struct pva_dma_transfer_attr *attr = NULL;
+	const struct pva_dma_transfer_attr *attr = NULL;
 	uint32_t tx = 0U;
 	uint32_t ty = 0U;
 	uint64_t tile_size = 0U;
@@ -727,7 +807,7 @@ pva_kmd_compute_dma_access(struct pva_dma_config const *dma_cfg,
 			   uint64_t *hw_dma_descs_mask)
 {
 	uint32_t i;
-	struct pva_dma_descriptor *desc = NULL;
+	const struct pva_dma_descriptor *desc = NULL;
 	enum pva_error err = PVA_SUCCESS;
 	bool skip_swseq_size_compute = false;
 
@@ -764,7 +844,6 @@ pva_kmd_compute_dma_access(struct pva_dma_config const *dma_cfg,
 		//Calculate dst_size
 		err = get_access_size(desc, &access_sizes[i].dst, true,
 				      &access_sizes[i].dst2);
-
 		if (err != PVA_SUCCESS) {
 			goto out;
 		}

@@ -35,6 +35,26 @@ void pva_kmd_device_deinit_tegra_stats(struct pva_kmd_device *pva)
 			      pva->tegra_stats_resource_id);
 }
 
+static uint64_t calc_vpu_utilization(uint64_t total_utilization,
+				     uint64_t duration)
+{
+	if (duration == 0) {
+		return 0;
+	} else {
+		/* tegrastats expects 10000 scale */
+		pva_math_error err = MATH_OP_SUCCESS;
+		uint64_t util =
+			mulu64(10000ULL, total_utilization, &err) / duration;
+
+		if (err != MATH_OP_SUCCESS) {
+			pva_kmd_log_err(
+				"Overflow when computing VPU utilization");
+		}
+
+		return util;
+	}
+}
+
 enum pva_error
 pva_kmd_notify_fw_get_tegra_stats(struct pva_kmd_device *pva,
 				  struct pva_kmd_tegrastats *kmd_tegra_stats)
@@ -44,22 +64,31 @@ pva_kmd_notify_fw_get_tegra_stats(struct pva_kmd_device *pva,
 	struct pva_cmd_get_tegra_stats *cmd;
 	uint64_t buffer_offset = 0U;
 	uint32_t fence_val;
-	enum pva_error err;
-	struct pva_kmd_fw_tegrastats *fw_tegra_stats;
+	enum pva_error err = PVA_SUCCESS;
+	struct pva_kmd_fw_tegrastats fw_tegra_stats = { 0 };
 	bool stats_enabled = pva->debugfs_context.stats_enable;
 	uint64_t duration = 0U;
+
+	if (stats_enabled == false) {
+		pva_kmd_log_err("Tegra stats are disabled");
+		goto err_out;
+	}
+
+	if (!pva_kmd_device_maybe_on(pva)) {
+		goto out;
+	}
 
 	/* Power on PVA if not already */
 	err = pva_kmd_device_busy(pva);
 	if (err != PVA_SUCCESS) {
 		pva_kmd_log_err(
 			"pva_kmd_device_busy failed when submitting tegra stats cmd");
-		return err;
+		goto err_out;
 	}
 
 	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		goto dev_idle;
 	}
 	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
 	ASSERT(cmd != NULL);
@@ -80,54 +109,30 @@ pva_kmd_notify_fw_get_tegra_stats(struct pva_kmd_device *pva,
 	if (err != PVA_SUCCESS) {
 		pva_kmd_log_err(
 			"Waiting for FW timed out when getting tegra stats");
-		goto err_out;
+		goto dev_idle;
 	}
 
-	if (stats_enabled == false)
-		goto err_out;
+	memcpy(&fw_tegra_stats, pva->tegra_stats_memory->va,
+	       sizeof(fw_tegra_stats));
 
-	fw_tegra_stats =
-		(struct pva_kmd_fw_tegrastats *)(pva->tegra_stats_memory->va);
+	pva_kmd_device_idle(pva);
 
-	duration = safe_subu64(fw_tegra_stats->window_end_time,
-			       fw_tegra_stats->window_start_time);
-	if (duration == 0) {
-		pva_kmd_print_str("VPU Stats: Duration is zero");
-		goto err_out;
-	}
+out:
+	duration = sat_sub64(fw_tegra_stats.window_end_time,
+			     fw_tegra_stats.window_start_time);
 
-	pva_kmd_print_str("VPU Stats");
-	pva_kmd_print_str_u64("Window Start Time",
-			      fw_tegra_stats->window_start_time);
-	pva_kmd_print_str_u64("Window End Time",
-			      fw_tegra_stats->window_end_time);
-	pva_kmd_print_str_u64("Total utilization VPU 0",
-			      fw_tegra_stats->total_utilization[0]);
-	pva_kmd_print_str_u64("Total utilization VPU 1",
-			      fw_tegra_stats->total_utilization[1]);
-	pva_kmd_print_str_u64(
-		"VPU 0 percent utilization",
-		safe_mulu64(100ULL, fw_tegra_stats->total_utilization[0]) /
-			duration);
-	pva_kmd_print_str_u64(
-		"VPU 1 percent utilization",
-		safe_mulu64(100ULL, fw_tegra_stats->total_utilization[1]) /
-			duration);
+	kmd_tegra_stats->average_vpu_utilization[0] = calc_vpu_utilization(
+		fw_tegra_stats.total_utilization[0], duration);
+	kmd_tegra_stats->average_vpu_utilization[1] = calc_vpu_utilization(
+		fw_tegra_stats.total_utilization[1], duration);
+	kmd_tegra_stats->window_start_time = fw_tegra_stats.window_start_time;
+	kmd_tegra_stats->window_end_time = fw_tegra_stats.window_end_time;
 
-	kmd_tegra_stats->average_vpu_utilization[0] =
-		safe_mulu64(100ULL, fw_tegra_stats->total_utilization[0]) /
-		duration;
-	kmd_tegra_stats->average_vpu_utilization[1] =
-		safe_mulu64(100ULL, fw_tegra_stats->total_utilization[1]) /
-		duration;
-	kmd_tegra_stats->window_start_time = fw_tegra_stats->window_start_time;
-	kmd_tegra_stats->window_end_time = fw_tegra_stats->window_end_time;
-
-	err = PVA_SUCCESS;
-
+	return PVA_SUCCESS;
 cancel_builder:
 	pva_kmd_cmdbuf_builder_cancel(&builder);
-err_out:
+dev_idle:
 	pva_kmd_device_idle(pva);
+err_out:
 	return err;
 }

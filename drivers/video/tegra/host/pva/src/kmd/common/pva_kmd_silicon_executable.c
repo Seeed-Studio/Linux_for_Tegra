@@ -775,7 +775,7 @@ out:
 }
 
 enum pva_error
-pva_kmd_load_executable(void *executable_data, uint32_t executable_size,
+pva_kmd_load_executable(const void *executable_data, uint32_t executable_size,
 			struct pva_kmd_device *pva, uint8_t dma_smmu_id,
 			struct pva_kmd_exec_symbol_table *out_symbol_table,
 			struct pva_kmd_device_memory **out_metainfo,

@@ -20,9 +20,4 @@ void pva_kmd_handle_hyp_msg(void *pva_dev, uint32_t const *data, uint8_t len);
  * These messages come from CCQ0 statues registers.
  */
 void pva_kmd_handle_msg(void *pva_dev, uint32_t const *data, uint8_t len);
-
-// TODO: move to a better location OR consolidate handling of all message types here
-enum pva_error pva_kmd_handle_msg_resource_unreg(void *context,
-						 uint8_t interface,
-						 uint8_t *element);
 #endif // PVA_KMD_MSG_H

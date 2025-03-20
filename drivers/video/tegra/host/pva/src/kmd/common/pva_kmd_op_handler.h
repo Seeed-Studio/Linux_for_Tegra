@@ -27,10 +27,13 @@
 *                          response will be written.
 *
 * @return pva_error indicating the success or failure of the operation.
+*
+* @Note that the input buffer and output buffer should never alias.
 */
-enum pva_error pva_kmd_ops_handler(struct pva_kmd_context *ctx, void const *ops,
-				   uint32_t ops_size, void *response,
-				   uint32_t response_buffer_size,
-				   uint32_t *out_response_size);
+enum pva_error
+pva_kmd_ops_handler(struct pva_kmd_context *ctx, enum pva_ops_submit_mode mode,
+		    struct pva_fw_postfence *postfence, void const *ops_buffer,
+		    uint32_t ops_size, void *response,
+		    uint32_t response_buffer_size, uint32_t *out_response_size);
 
 #endif // PVA_KMD_OP_HANDLER_H

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#include "pva_kmd.h"
 #include "pva_kmd_utils.h"
 #include "pva_fw.h"
 #include "pva_kmd_device_memory.h"
@@ -119,10 +120,9 @@ end:
 	return err;
 }
 
-enum pva_error
-pva_kmd_queue_create(struct pva_kmd_context *ctx,
-		     struct pva_kmd_queue_create_in_args *in_args,
-		     uint32_t *queue_id)
+enum pva_error pva_kmd_queue_create(struct pva_kmd_context *ctx,
+				    const struct pva_ops_queue_create *in_args,
+				    uint32_t *queue_id)
 {
 	struct pva_kmd_device_memory *submission_mem_kmd = NULL;
 	struct pva_kmd_queue *queue = NULL;
@@ -205,9 +205,8 @@ err_out:
 	return err;
 }
 
-enum pva_error
-pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
-		      struct pva_kmd_queue_destroy_in_args *in_args)
+enum pva_error pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
+				     uint32_t queue_id)
 {
 	struct pva_kmd_queue *queue;
 	enum pva_error err = PVA_SUCCESS;
@@ -218,8 +217,7 @@ pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
 	 * This call needs to be added after syncpoint and ccq functions are ready.
 	 */
 	pva_kmd_mutex_lock(&ctx->queue_allocator.allocator_lock);
-	queue = pva_kmd_get_block_unsafe(&ctx->queue_allocator,
-					 in_args->queue_id);
+	queue = pva_kmd_get_block_unsafe(&ctx->queue_allocator, queue_id);
 	if (queue == NULL) {
 		pva_kmd_mutex_unlock(&ctx->queue_allocator.allocator_lock);
 		return PVA_INVAL;
@@ -240,7 +238,7 @@ pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
 	pva_kmd_queue_deinit(queue);
 	pva_kmd_mutex_unlock(&ctx->queue_allocator.allocator_lock);
 
-	err = pva_kmd_free_block(&ctx->queue_allocator, in_args->queue_id);
+	err = pva_kmd_free_block(&ctx->queue_allocator, queue_id);
 	ASSERT(err == PVA_SUCCESS);
 	return PVA_SUCCESS;
 }

@@ -278,4 +278,13 @@ static inline void pva_kmd_set_cmd_deinit_shared_dram_buffer(
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->interface = interface;
 }
+
+static inline void
+pva_kmd_set_cmd_set_profiling_level(struct pva_cmd_set_profiling_level *cmd,
+				    uint32_t level)
+{
+	cmd->header.opcode = PVA_CMD_OPCODE_SET_PROFILING_LEVEL;
+	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
+	cmd->level = level;
+}
 #endif // PVA_KMD_CMDBUF_H

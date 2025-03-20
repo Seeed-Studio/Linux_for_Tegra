@@ -18,9 +18,8 @@ void pva_kmd_device_init_profiler(struct pva_kmd_device *pva);
 
 void pva_kmd_device_deinit_profiler(struct pva_kmd_device *pva);
 
-enum pva_error pva_kmd_process_fw_profiling_message(void *context,
-						    uint8_t interface,
-						    uint8_t *element);
+enum pva_error pva_kmd_process_fw_event(struct pva_kmd_device *pva,
+					uint8_t *data, uint32_t data_size);
 
 enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva);
 

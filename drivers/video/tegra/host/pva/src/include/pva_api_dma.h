@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+
 #ifndef PVA_API_DMA_H
 #define PVA_API_DMA_H
 #include "pva_api_types.h"
@@ -282,15 +283,6 @@ struct pva_dma_config_header {
 	uint16_t base_hwseq_word;
 	uint16_t num_hwseq_words;
 	uint32_t vpu_exec_resource_id;
-
-	/* For serialized version of pva_dma_config, the following fields follow
-	 * immediately after this header. The starting addresses of these fields
-	 * must be aligned to 8 bytes */
-
-	/* An array of hwseq words */
-	/* An array of pva_dma_channel */
-	/* An array of pva_dma_descriptor */
-	/* An array of pva_dma_slot_buffer */
 };
 
 enum pva_dma_static_binding_type {
@@ -322,14 +314,6 @@ struct pva_dma_static_binding {
 		struct pva_dma_dram_binding dram;
 		struct pva_dma_vmem_binding vmem;
 	};
-};
-
-struct pva_dma_config {
-	struct pva_dma_config_header header;
-	uint32_t *hwseq_words;
-	struct pva_dma_channel *channels;
-	struct pva_dma_descriptor *descriptors;
-	struct pva_dma_static_binding *static_bindings;
 };
 
 #endif // PVA_API_DMA_H
