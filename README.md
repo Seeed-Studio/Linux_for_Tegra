@@ -1,10 +1,11 @@
-- [Linux_for_Tegra](#Linux_for_Tegra)
-    - [Supported hardware](#supported-hardware)
-    - [Getting Started](#getting-started)
-    - [Introduction to the software](#introduction-to-the-software)
-        - [Directory structure](directory-structure)
-        - [CI/CD](#cicd)
-    - [Summary](#summary)
+- [Linux\_for\_Tegra](#linux_for_tegra)
+  - [Supported hardware](#supported-hardware)
+  - [Getting Started](#getting-started)
+    - [Flash commands samples](#flash-commands-samples)
+  - [Introduction to the software](#introduction-to-the-software)
+    - [Directory structure](#directory-structure)
+    - [CI/CD](#cicd)
+  - [Summary](#summary)
 
 # Linux_for_Tegra
 
@@ -60,15 +61,15 @@ cp -r github/Linux_for_Tegra/* Linux_for_Tegra/
 cd Linux_for_Tegra
 sudo ./apply_binaries.sh
 ```
-make sure system have required libraries (ex: ubuntu-20)
-```
-sudo apt-get update
-sudo apt-get install build-essential flex bison libssl-dev
-```
-if You do not have `qemu`, install it using command
-```bash
-sudo apt-get install qemu-user-static
-```
+* make sure system have required libraries (ex: ubuntu-20)
+   ```
+   sudo apt-get update
+   sudo apt-get install build-essential flex bison libssl-dev
+   ```
+* if You do not have qemu, install it using command
+   ```bash
+   sudo apt-get install qemu-user-static
+   ```
 
 6. prepare work for kernel build
 ```
@@ -92,12 +93,25 @@ export INSTALL_MOD_PATH=`realpath ../rootfs/`
 ./nvbuild.sh -i
 ```
 
-9. flash the device(take recomputer-orin-j401 for example)
-```
+9. flash the device (take `recomputer-orin-j401` for example)
+```bash
 sudo ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1   -c tools/kernel_flash/flash_l4t_t234_nvme.xml -p "-c bootloader/generic/cfg/flash_t234_qspi.xml"   --showlogs --network usb0 recomputer-orin-j401 internal
 ```
+* make sure you have programs useful for flashing
+    ```bash
+    sudo apt-get install sshpass
+    sudo apt-get install abootimg
+    sudo apt-get install nfs-kernel-server
+    sudo apt-get install libxml2-utils
+    ```
 
 **Note:** For more flashing methods, please follow our [reComputer Industrial](https://wiki.seeedstudio.com/reComputer_Industrial_Getting_Started/#different-methods-of-flashing) and [reServer Industrial](https://wiki.seeedstudio.com/reServer_Industrial_Getting_Started/#different-methods-of-flashing) wiki documents.
+
+### Flash commands samples
+* For `reComputer Industrial J4012`, using nvme disk as primary storage:
+    ```bash
+    sudo ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1   -c tools/kernel_flash/flash_l4t_t234_nvme.xml -p "-c bootloader/generic/cfg/flash_t234_qspi.xml"   --showlogs --network usb0 recomputer-industrial-orin-j201 internal
+    ```
 
 ## Introduction to the software
 
