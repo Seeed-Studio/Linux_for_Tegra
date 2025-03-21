@@ -2,7 +2,7 @@
 /*
  * PCIe DMA EPF Library for Tegra PCIe
  *
- * Copyright (C) 2022-2024 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2022-2025 NVIDIA Corporation. All rights reserved.
  */
 
 #ifndef TEGRA_PCIE_EDMA_TEST_COMMON_H
@@ -32,6 +32,8 @@ static inline void dma_common_wr(void __iomem *p, u32 val, u32 offset)
 #define EDMA_UNALIGN_SRC_TEST_EN	(edma->edma_ch & 0x02000000)
 #define EDMA_UNALIGN_DST_TEST_EN	(edma->edma_ch & 0x01000000)
 #define EDMA_UNALIGN_SRC_DST_TEST_EN	(edma->edma_ch & 0x00800000)
+#define DMA_ABORT_SWITS_TEST_EN	(edma->edma_ch & 0x00400000)
+#define DMA_STOP_SWITS_TEST_EN	(edma->edma_ch & 0x00200000)
 #define IS_EDMA_CH_ENABLED(i)	(edma->edma_ch & ((BIT(i) << 4)))
 #define IS_EDMA_CH_ASYNC(i)	(edma->edma_ch & BIT(i))
 #define EDMA_PERF (edma->tsz / (diff / 1000))
@@ -199,6 +201,11 @@ static int edmalib_common_test(struct edmalib_common *edma)
 
 	l_edma = edma;
 
+	if (DMA_ABORT_SWITS_TEST_EN || DMA_STOP_SWITS_TEST_EN) {
+		edma->edma_ch &= ~0xFF;
+		/* All channels in ASYNC, where chan 2 async gets aborted */
+		edma->edma_ch |= 0x11;
+	}
 	if (EDMA_ABORT_TEST_EN || EDMA_STOP_TEST_EN) {
 		edma->edma_ch &= ~0xFF;
 		/* All channels in ASYNC, where chan 2 async gets aborted */
@@ -373,7 +380,7 @@ static int edmalib_common_test(struct edmalib_common *edma)
 
 	edma->tsz = (u64)edma->stress_count * (nents_per_ch) * (u64)edma->dma_size * 8UL;
 
-	if (!edma->cookie || (edma->prev_edma_ch != edma->edma_ch)) {
+	if (!edma->cookie || ((edma->prev_edma_ch & 0xFF) != edma->edma_ch)) {
 		dev_info(edma->fdev, "%s: re-init edma lib prev_ch(%x) != current chans(%x)\n",
 			 __func__, edma->prev_edma_ch, edma->edma_ch);
 		ret = tegra_pcie_dma_initialize(&info, &edma->cookie);
@@ -431,6 +438,12 @@ static int edmalib_common_test(struct edmalib_common *edma)
 						(((u64)l_r) << EDMA_PRIV_LR_OFF) |
 						(((u64)ch) << EDMA_PRIV_CH_OFF);
 			tx_info.priv = &edma->priv_iter[ch];
+			/* Set second desc as 0 to trigger DECERR for T264 */
+			if (DMA_ABORT_SWITS_TEST_EN && (k == 1) &&
+				(edma->chip_id == NVPCIE_DMA_SOC_T264)) {
+				dev_info(edma->fdev, "Configuring Src DMA as 0 to trigger DECERR\n");
+				tx_info.desc[0].src = 0;
+			}
 			ret = tegra_pcie_dma_submit_xfer(edma->cookie, &tx_info);
 			if (ret == TEGRA_PCIE_DMA_FAIL_NOMEM) {
 				/** Retry after 20 msec */
@@ -462,6 +475,13 @@ static int edmalib_common_test(struct edmalib_common *edma)
 			}
 			dev_dbg(edma->fdev, "%s: LL EDMA LIB %d, SZ: %u B CH: %d iter %d\n",
 				__func__, xfer_type, edma->dma_size, ch, i);
+		}
+		if (DMA_STOP_SWITS_TEST_EN) {
+			bool stop_status;
+
+			stop_status = tegra_pcie_dma_stop(edma->cookie);
+			dev_info(edma->fdev, "%s: EDMA LIB, status of stop DMA is %d", __func__,
+				 stop_status);
 		}
 		if (i == 2) {
 			if (EDMA_ABORT_TEST_EN) {
