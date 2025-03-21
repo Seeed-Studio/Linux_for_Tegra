@@ -61,7 +61,8 @@ sudo ./apply_binaries.sh
 ```
 make sure system have required libraries (ex: ubuntu-20)
 ```
-apt-get update && apt-get install build-essential flex bison libssl-dev
+sudo apt-get update
+sudo apt-get install build-essential flex bison libssl-dev
 ```
 
 6. prepare work for kernel build
