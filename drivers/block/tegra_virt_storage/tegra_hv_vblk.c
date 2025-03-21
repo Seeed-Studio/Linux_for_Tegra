@@ -824,48 +824,6 @@ static int vblk_open(struct block_device *device, fmode_t mode)
 	return 0;
 }
 
-static void check_ioctl_permission(bool *allow_ffu_passthrough_cmds,
-		bool *allow_rest_of_passthrough_cmds)
-{
-	kgid_t group = current_egid();
-	struct group_info *group_info;
-	kgid_t ffu_gid;
-	kgid_t rest_gid;
-	kgid_t root_gid;
-	int i;
-	struct user_namespace *user_ns = current_user_ns();
-
-	*allow_ffu_passthrough_cmds = false;
-	*allow_rest_of_passthrough_cmds = false;
-	ffu_gid = make_kgid(user_ns, FFU_PASS_THROUGH_CMDS_GID);
-	rest_gid = make_kgid(user_ns, REST_OF_PASS_THROUGH_CMDS_GID);
-	root_gid = make_kgid(user_ns, 0);
-
-	if (gid_eq(root_gid, group)) {
-		*allow_ffu_passthrough_cmds = true;
-		*allow_rest_of_passthrough_cmds = true;
-		return;
-	}
-
-	if (gid_eq(ffu_gid, group))
-		*allow_ffu_passthrough_cmds = true;
-
-	if (gid_eq(rest_gid, group))
-		*allow_rest_of_passthrough_cmds = true;
-
-	group_info = get_current_groups();
-	for (i = 0; i < group_info->ngroups; i++) {
-		kgid_t gid = group_info->gid[i];
-		if (gid_eq(ffu_gid, gid))
-			*allow_ffu_passthrough_cmds = true;
-
-		if (gid_eq(rest_gid, gid))
-			*allow_rest_of_passthrough_cmds = true;
-
-	}
-	put_group_info(group_info);
-}
-
 #if defined(NV_BLOCK_DEVICE_OPERATIONS_OPEN_HAS_GENDISK_ARG) /* Linux v6.5 */
 static int vblk_ioctl_open(struct gendisk *disk, fmode_t mode)
 {
@@ -876,8 +834,6 @@ static int vblk_ioctl_open(struct block_device *device, fmode_t mode)
 	struct vblk_dev *vblkdev = device->bd_disk->private_data;
 #endif
 	spin_lock(&vblkdev->lock);
-	check_ioctl_permission(&vblkdev->allow_ffu_passthrough_cmds,
-			&vblkdev->allow_rest_of_passthrough_cmds);
 
 	if (!vblkdev->ioctl_users) {
 #if defined(NV_DISK_CHECK_MEDIA_CHANGE_PRESENT) /* Linux v6.5 */
@@ -887,7 +843,31 @@ static int vblk_ioctl_open(struct block_device *device, fmode_t mode)
 #endif
 	}
 	vblkdev->ioctl_users++;
+	vblkdev->allow_ffu_passthrough_cmds = false;
 
+	spin_unlock(&vblkdev->lock);
+	return 0;
+}
+
+#if defined(NV_BLOCK_DEVICE_OPERATIONS_OPEN_HAS_GENDISK_ARG)
+static int vblk_ffu_open(struct gendisk *disk, fmode_t mode)
+{
+	struct vblk_dev *vblkdev = disk->private_data;
+#else
+static int vblk_ffu_open(struct block_device *device, fmode_t mode)
+{
+	struct vblk_dev *vblkdev = device->bd_disk->private_data;
+#endif
+	spin_lock(&vblkdev->lock);
+	if (!vblkdev->ffu_users) {
+#if defined(NV_DISK_CHECK_MEDIA_CHANGE_PRESENT)
+		disk_check_media_change(disk);
+#else
+		bdev_check_media_change(device);
+#endif
+	}
+	vblkdev->ffu_users++;
+	vblkdev->allow_ffu_passthrough_cmds = false;
 	spin_unlock(&vblkdev->lock);
 	return 0;
 }
@@ -910,6 +890,22 @@ static void vblk_ioctl_release(struct gendisk *disk, fmode_t mode)
 
 	spin_unlock(&vblkdev->lock);
 }
+
+#if defined(NV_BLOCK_DEVICE_OPERATIONS_RELEASE_HAS_NO_MODE_ARG)
+static void vblk_ffu_release(struct gendisk *disk)
+#else
+static void vblk_ffu_release(struct gendisk *disk, fmode_t mode)
+#endif
+{
+	struct vblk_dev *vblkdev = disk->private_data;
+	short val = 1;
+
+	spin_lock(&vblkdev->lock);
+	if (check_sub_overflow(vblkdev->ffu_users, val, &vblkdev->ffu_users))
+		dev_warn(vblkdev->device, "ffu_users counter underflow prevented\n");
+	spin_unlock(&vblkdev->lock);
+}
+
 
 #if defined(NV_BLOCK_DEVICE_OPERATIONS_RELEASE_HAS_NO_MODE_ARG) /* Linux v6.5 */
 static void vblk_release(struct gendisk *disk)
@@ -956,6 +952,15 @@ static const struct block_device_operations vblk_ops_ioctl = {
 	.release         = vblk_ioctl_release,
 	.getgeo          = vblk_getgeo,
 	.ioctl           = vblk_ioctl
+};
+
+/* The device operations structure for FFU operations */
+static const struct block_device_operations vblk_ops_ffu = {
+	.owner           = THIS_MODULE,
+	.open            = vblk_ffu_open,
+	.release         = vblk_ffu_release,
+	.getgeo          = vblk_getgeo,
+	.ioctl           = vblk_ffu_ioctl
 };
 
 static ssize_t
@@ -1119,8 +1124,114 @@ static int vblk_inject_err_fsi(unsigned int inst_id, struct epl_error_report_fra
 }
 #endif
 
+static int setup_ffu_device(struct vblk_dev *vblkdev)
+{
+	int ret;
+
+	memset(&vblkdev->ffu_tag_set, 0, sizeof(vblkdev->ffu_tag_set));
+	vblkdev->ffu_tag_set.ops = &vblk_mq_ops;
+	vblkdev->ffu_tag_set.nr_hw_queues = 1;
+	vblkdev->ffu_tag_set.nr_maps = 1;
+	vblkdev->ffu_tag_set.queue_depth = 16;
+	vblkdev->ffu_tag_set.numa_node = NUMA_NO_NODE;
+#if defined(NV_BLK_MQ_F_SHOULD_MERGE)
+	vblkdev->ffu_tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
+#endif
+	ret = blk_mq_alloc_tag_set(&vblkdev->ffu_tag_set);
+	if (ret) {
+		dev_err(vblkdev->device, "failed to allocate FFU tag set\n");
+		return ret;
+	}
+
+#if defined(NV_BLK_MQ_ALLOC_QUEUE_PRESENT)
+	vblkdev->ffu_queue = blk_mq_alloc_queue(&vblkdev->ffu_tag_set, NULL, NULL);
+#else
+	vblkdev->ffu_queue = blk_mq_init_queue(&vblkdev->ffu_tag_set);
+#endif
+	if (IS_ERR(vblkdev->ffu_queue)) {
+		dev_err(vblkdev->device, "failed to init FFU blk queue\n");
+		blk_mq_free_tag_set(&vblkdev->ffu_tag_set);
+		return PTR_ERR(vblkdev->ffu_queue);
+	}
+
+	vblkdev->ffu_queue->queuedata = vblkdev;
+
+#if defined(NV_BLOCK_USE_QUEUE_LIMITS_SET)
+	struct queue_limits limits;
+	limits.physical_block_size = vblkdev->config.blk_config.hardblk_size;
+	limits.logical_block_size = vblkdev->config.blk_config.hardblk_size;
+	limits.io_min = vblkdev->config.blk_config.hardblk_size;
+	limits.io_opt = vblkdev->config.blk_config.hardblk_size;
+
+	if (queue_limits_set(vblkdev->ffu_queue, &limits) != 0) {
+		dev_err(vblkdev->device, "failed to set FFU queue limits\n");
+		ret = -EINVAL;
+		goto cleanup_queue;
+	}
+#else
+	blk_queue_logical_block_size(vblkdev->ffu_queue,
+			vblkdev->config.blk_config.hardblk_size);
+	blk_queue_physical_block_size(vblkdev->ffu_queue,
+			vblkdev->config.blk_config.hardblk_size);
+	blk_queue_flag_set(QUEUE_FLAG_NONROT, vblkdev->ffu_queue);
+#endif
+
+#if defined(NV_BLK_MQ_ALLOC_DISK_FOR_QUEUE_PRESENT)
+	vblkdev->ffu_gd = blk_mq_alloc_disk_for_queue(vblkdev->ffu_queue, NULL);
+#elif defined(NV___ALLOC_DISK_NODE_HAS_LKCLASS_ARG)
+	vblkdev->ffu_gd = __alloc_disk_node(vblkdev->ffu_queue, NUMA_NO_NODE, NULL);
+#else
+	vblkdev->ffu_gd = __alloc_disk_node(VBLK_MINORS, NUMA_NO_NODE);
+#endif
+	if (!vblkdev->ffu_gd) {
+		dev_err(vblkdev->device, "alloc_disk failure for FFU\n");
+		ret = -ENOMEM;
+		goto cleanup_queue;
+	}
+
+	vblkdev->ffu_gd->major = vblk_major;
+	vblkdev->ffu_gd->first_minor = (vblkdev->devnum * VBLK_MINORS) + (VBLK_MINORS/4);
+	vblkdev->ffu_gd->minors = VBLK_MINORS;
+	vblkdev->ffu_gd->fops = &vblk_ops_ffu;
+	vblkdev->ffu_gd->queue = vblkdev->ffu_queue;
+	vblkdev->ffu_gd->private_data = vblkdev;
+#if defined(GENHD_FL_EXT_DEVT)
+	vblkdev->ffu_gd->flags |= GENHD_FL_EXT_DEVT;
+#endif
+
+	if (snprintf(vblkdev->ffu_gd->disk_name, 32, "vblkdev%d.ffu",
+				vblkdev->devnum) < 0) {
+		dev_err(vblkdev->device, "Error while updating disk_name for FFU!\n");
+		ret = -EINVAL;
+		goto cleanup_disk;
+	}
+
+#if defined(NV_DEVICE_ADD_DISK_HAS_INT_RETURN_TYPE)
+	if (device_add_disk(vblkdev->device, vblkdev->ffu_gd, NULL)) {
+		dev_err(vblkdev->device, "Error adding FFU disk!\n");
+		ret = -EINVAL;
+		goto cleanup_disk;
+	}
+#else
+	device_add_disk(vblkdev->device, vblkdev->ffu_gd, NULL);
+#endif
+
+	return 0;
+
+cleanup_disk:
+	put_disk(vblkdev->ffu_gd);
+cleanup_queue:
+#if defined(NV_BLK_MQ_DESTROY_QUEUE_PRESENT) /* Linux v6.0 */
+	blk_mq_destroy_queue(vblkdev->ffu_queue);
+#else
+	blk_cleanup_queue(vblkdev->ffu_queue);
+#endif
+	blk_mq_free_tag_set(&vblkdev->ffu_tag_set);
+	return ret;
+}
+
 /* Set up ioctl virtual device. */
-static void setup_ioctl_device(struct vblk_dev *vblkdev)
+static int setup_ioctl_device(struct vblk_dev *vblkdev)
 {
 	int ret;
 
@@ -1139,7 +1250,7 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 	ret = blk_mq_alloc_tag_set(&vblkdev->ioctl_tag_set);
 	if (ret) {
 		dev_err(vblkdev->device, "failed to allocate tag set\n");
-		return;
+		return ret;
 	}
 
 #if defined(NV_BLK_MQ_ALLOC_QUEUE_PRESENT)
@@ -1150,7 +1261,7 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 	if (IS_ERR(vblkdev->ioctl_queue)) {
 		dev_err(vblkdev->device, "failed to init ioctl blk queue\n");
 		blk_mq_free_tag_set(&vblkdev->ioctl_tag_set);
-		return;
+		return PTR_ERR(vblkdev->ioctl_queue);
 	}
 
 	vblkdev->ioctl_queue->queuedata = vblkdev;
@@ -1163,8 +1274,8 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 
 	if (queue_limits_set(vblkdev->ioctl_queue, &limits) != 0) {
 		dev_err(vblkdev->device, "failed to set queue limits\n");
-		blk_mq_free_tag_set(&vblkdev->ioctl_tag_set);
-		return;
+		ret = -EINVAL;
+		goto cleanup_queue;
 	}
 #else
 	blk_queue_logical_block_size(vblkdev->ioctl_queue,
@@ -1184,7 +1295,8 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 #endif
 	if (!vblkdev->ioctl_gd) {
 		dev_err(vblkdev->device, "alloc_disk failure forl ioctl\n");
-		return;
+		ret = -ENOMEM;
+		goto cleanup_queue;
 	}
 	vblkdev->ioctl_gd->major = vblk_major;
 	vblkdev->ioctl_gd->first_minor =
@@ -1200,17 +1312,32 @@ static void setup_ioctl_device(struct vblk_dev *vblkdev)
 	if (snprintf(vblkdev->ioctl_gd->disk_name, 32, "vblkdev%d.ctl",
 				vblkdev->devnum) < 0) {
 		dev_err(vblkdev->device, "Error while updating disk_name for ioctl!\n");
-		return;
+		ret = -EINVAL;
+		goto cleanup_disk;
 	}
 
 #if defined(NV_DEVICE_ADD_DISK_HAS_INT_RETURN_TYPE) /* Linux v5.15 */
 	if (device_add_disk(vblkdev->device, vblkdev->ioctl_gd, NULL)) {
 		dev_err(vblkdev->device, "Error adding ioctl disk!\n");
-		return;
+		ret = -EINVAL;
+		goto cleanup_disk;
 	}
 #else
 	device_add_disk(vblkdev->device, vblkdev->ioctl_gd, NULL);
 #endif
+
+	return 0;
+
+cleanup_disk:
+    put_disk(vblkdev->ioctl_gd);
+cleanup_queue:
+#if defined(NV_BLK_MQ_DESTROY_QUEUE_PRESENT) /* Linux v6.0 */
+		blk_mq_destroy_queue(vblkdev->ioctl_queue);
+#else
+		blk_cleanup_queue(vblkdev->ioctl_queue);
+#endif
+    blk_mq_free_tag_set(&vblkdev->ioctl_tag_set);
+    return ret;
 }
 
 /* Set up virtual device. */
@@ -1637,9 +1764,18 @@ static void setup_device(struct vblk_dev *vblkdev)
 	}
 #endif
 
-	if (vblkdev->config.blk_config.req_ops_supported & VS_BLK_IOCTL_OP_F)
-		setup_ioctl_device(vblkdev);
-
+	if (vblkdev->config.blk_config.req_ops_supported & VS_BLK_IOCTL_OP_F) {
+		ret = setup_ioctl_device(vblkdev);
+		if (ret) {
+			dev_err(vblkdev->device, "Failed to setup ioctl device\n");
+			return;
+		}
+		ret = setup_ffu_device(vblkdev);
+		if (ret) {
+			dev_err(vblkdev->device, "Failed to setup ffu device\n");
+			return;
+		}
+	}
 }
 
 static void vblk_init_device(struct work_struct *ws)
@@ -1896,8 +2032,19 @@ static int tegra_hv_vblk_remove(struct platform_device *pdev)
 		blk_mq_destroy_queue(vblkdev->queue);
 #else
 		blk_cleanup_queue(vblkdev->queue);
+#endif
 	if (vblkdev->ioctl_queue)
+#if defined(NV_BLK_MQ_DESTROY_QUEUE_PRESENT) /* Linux v6.0 */
+		blk_mq_destroy_queue(vblkdev->ioctl_queue);
+#else
 		blk_cleanup_queue(vblkdev->ioctl_queue);
+#endif
+
+	if (vblkdev->ffu_queue)
+#if defined(NV_BLK_MQ_DESTROY_QUEUE_PRESENT) /* Linux v6.0 */
+		blk_mq_destroy_queue(vblkdev->ffu_queue);
+#else
+		blk_cleanup_queue(vblkdev->ffu_queue);
 #endif
 
 	tegra_hv_ivc_unreserve(vblkdev->ivck);

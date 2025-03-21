@@ -86,14 +86,18 @@ struct vblk_dev {
 	uint64_t size;                   /* Device size in bytes */
 	short users;                     /* How many users */
 	short ioctl_users;               /* How many ioctl users */
+	short ffu_users;                 /* How many ffu users */
 	short media_change;              /* Flag a media change? */
 	spinlock_t lock;                 /* For mutual exclusion */
 	struct request_queue *queue;     /* The device request queue */
 	struct request_queue *ioctl_queue;/* The device request queue */
+	struct request_queue *ffu_queue;/* The device request queue */
 	struct gendisk *ioctl_gd;        /* The ioctl gendisk structure */
 	struct gendisk *gd;              /* The gendisk structure */
+	struct gendisk *ffu_gd;          /* The ffu gendisk structure */
 	struct blk_mq_tag_set tag_set;
 	struct blk_mq_tag_set ioctl_tag_set;
+	struct blk_mq_tag_set ffu_tag_set;
 	struct list_head req_list;	/* List containing req */
 	uint32_t ivc_id;
 	uint32_t ivm_id;
@@ -125,7 +129,6 @@ struct vblk_dev {
 	enum vblk_queue_state queue_state;
 	struct completion req_queue_empty;
 	bool allow_ffu_passthrough_cmds;
-	bool allow_rest_of_passthrough_cmds;
 
 	/* partition specific task struct */
 	struct task_struct *vblk_kthread;
@@ -167,11 +170,13 @@ int vblk_complete_ufs_combo_ioc(struct vblk_dev *vblkdev,
 		void __user *user,
 		uint32_t cmd);
 
-int vblk_submit_ioctl_req(struct block_device *bdev,
+int vblk_submit_ioctl_req(struct vblk_dev *vblkdev,
 		unsigned int cmd, void __user *user);
 
 int vblk_ioctl(struct block_device *bdev, fmode_t mode,
 	unsigned int cmd, unsigned long arg);
 int vblk_ioctl_not_supported(struct block_device *bdev, fmode_t mode,
+	unsigned int cmd, unsigned long arg);
+int vblk_ffu_ioctl(struct block_device *bdev, fmode_t mode,
 	unsigned int cmd, unsigned long arg);
 #endif

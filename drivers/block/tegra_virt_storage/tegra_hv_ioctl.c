@@ -77,10 +77,9 @@ int vblk_prep_ioctl_req(struct vblk_dev *vblkdev,
 	return ret;
 }
 
-int vblk_submit_ioctl_req(struct block_device *bdev,
+int vblk_submit_ioctl_req(struct vblk_dev *vblkdev,
 		unsigned int cmd, void __user *user)
 {
-	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
 	struct vblk_ioctl_req *ioctl_req = NULL;
 	struct request *rq;
 	int err;
@@ -90,8 +89,7 @@ int vblk_submit_ioctl_req(struct block_device *bdev,
 	 * whole block device, not on a partition.  This prevents overspray
 	 * between sibling partitions.
 	 */
-	if ((!capable(CAP_SYS_RAWIO)) ||
-			!(vblkdev->allow_rest_of_passthrough_cmds)) {
+	if ((!capable(CAP_SYS_RAWIO))) {
 		dev_err(vblkdev->device,
 			"Permission denied for passthrough cmds\n");
 		return -EPERM;
@@ -172,25 +170,52 @@ free_ioctl_req:
 }
 
 /* The ioctl() implementation */
-int vblk_ioctl(struct block_device *bdev, fmode_t mode,
-	unsigned int cmd, unsigned long arg)
+static int vblk_common_ioctl(struct vblk_dev *vblkdev, fmode_t mode,
+		unsigned int cmd, unsigned long arg)
 {
 	int ret;
-	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
 
-	mutex_lock(&vblkdev->ioctl_lock);
 	switch (cmd) {
 	case MMC_IOC_MULTI_CMD:
 	case MMC_IOC_CMD:
 	case SG_IO:
 	case UFS_IOCTL_COMBO_QUERY:
-		ret = vblk_submit_ioctl_req(bdev, cmd,
+		ret = vblk_submit_ioctl_req(vblkdev, cmd,
 			(void __user *)arg);
 		break;
 	default:  /* unknown command */
 		ret = -ENOTTY;
 		break;
 	}
+
+	return ret;
+}
+
+
+int vblk_ffu_ioctl(struct block_device *bdev, fmode_t mode,
+    unsigned int cmd, unsigned long arg)
+{
+	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
+	int ret;
+
+	mutex_lock(&vblkdev->ioctl_lock);
+	vblkdev->allow_ffu_passthrough_cmds = true;
+	ret = vblk_common_ioctl(vblkdev, mode, cmd, arg);
+	vblkdev->allow_ffu_passthrough_cmds = false;
+	mutex_unlock(&vblkdev->ioctl_lock);
+
+	return ret;
+}
+
+/* The ioctl() implementation */
+int vblk_ioctl(struct block_device *bdev, fmode_t mode,
+		unsigned int cmd, unsigned long arg)
+{
+	int ret;
+	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
+
+	mutex_lock(&vblkdev->ioctl_lock);
+	ret = vblk_common_ioctl(vblkdev, mode, cmd, arg);
 	mutex_unlock(&vblkdev->ioctl_lock);
 
 	return ret;
