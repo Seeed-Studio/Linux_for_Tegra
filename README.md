@@ -46,6 +46,7 @@ sudo tar xpf Tegra_Linux_Sample-Root-Filesystem_R36.4.0_aarch64.tbz2 -C Linux_fo
 cd Linux_for_Tegra/source/
 ./source_sync.sh -t jetson_36.4
 ```
+
 4. clone this repo and overwrite the original source code
 ```
 cd ../..
@@ -63,6 +64,10 @@ make sure system have required libraries (ex: ubuntu-20)
 ```
 sudo apt-get update
 sudo apt-get install build-essential flex bison libssl-dev
+```
+if You do not have `qemu`, install it using command
+```bash
+sudo apt-get install qemu-user-static
 ```
 
 6. prepare work for kernel build
