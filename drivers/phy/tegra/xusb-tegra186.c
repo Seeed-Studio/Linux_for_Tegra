@@ -989,15 +989,11 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	}
 
 skip_fuse_calibration:
-	tegra186_utmi_pad_power_on(phy);
-
 	return 0;
 }
 
 static int tegra186_utmi_phy_power_off(struct phy *phy)
 {
-	tegra186_utmi_pad_power_down(phy);
-
 	return 0;
 }
 
