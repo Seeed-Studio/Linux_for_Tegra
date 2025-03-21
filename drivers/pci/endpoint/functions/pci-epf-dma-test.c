@@ -127,13 +127,18 @@ static int edmalib_test_ob(struct seq_file *s, void *data)
 				*((u64 *) ((u8 *)dst_va[i] + PCIE_EP_OB_OFFSET)), i);
 			break;
 		}
+		if (i == 0)
+			dev_info(epfnv->fdev, "condition -EP OB validation- Passed\n");
+
 	}
 
 	if (i == 8) {
-		dev_info(epfnv->fdev, "Eight outbound channel mapping success\n");
+		dev_info(epfnv->fdev, "condition -All outbound channel mapping- Passed\n");
 		ret = 0;
 	} else {
-		dev_info(epfnv->fdev, "Outbound channel mapping failed at ch: %d\n", i);
+		dev_info(epfnv->fdev, "condition -All outbound channel mapping- Failed at ch: %d\n", i);
+		if (i == 0)
+			dev_info(epfnv->fdev, "condition -EP OB validation- Failed\n");
 		ret = -1;
 	}
 
@@ -142,6 +147,8 @@ static int edmalib_test_ob(struct seq_file *s, void *data)
 			lpci_epc_unmap_addr(epc, 0, dst_pci_addr[i]);
 		if (dst_va[i])
 			pci_epc_mem_free_addr(epc, dst_pci_addr[i], dst_va[i], SZ_64K);
+		if (i == 1)
+			dev_info(epfnv->fdev, "condition -Clear outbound mapping- Passed\n");
 		i--;
 	}
 
@@ -152,9 +159,9 @@ static void validate_api_status(char *api, char *cond, tegra_pcie_dma_status_t a
 				tegra_pcie_dma_status_t exp)
 {
 	if (act == exp)
-		pr_info("%s() condition -%s- Passed with expected val %d\n", api, cond, act);
+		pr_info("DMA test condition -%s:%s- Passed with expected val %d\n", api, cond, act);
 	else
-		pr_err("%s() condition -%s- Failed actual %d expected %d\n", api, cond, act, exp);
+		pr_err("DMA test condition -%s:%s- Failed actual %d expected %d\n", api, cond, act, exp);
 }
 
 static void sanitize_dma_info(struct tegra_pcie_dma_init_info *info, struct pcie_epf_dma *epfnv)
@@ -289,9 +296,9 @@ static void validate_bar(struct pcie_epf_dma *epfnv, struct pci_epf_bar *bar, ch
 	int ret = lpci_epc_set_bar(epfnv->epc, epfnv->epf->func_no, bar);
 
 	if (ret < 0)
-		dev_err(epfnv->fdev, "%s - Passed: %d\n", err_str, ret);
+		dev_err(epfnv->fdev, "Set BAR test condition -%s- Passed: %d\n", err_str, ret);
 	else
-		dev_err(epfnv->fdev, "%s - Failed\n", err_str);
+		dev_err(epfnv->fdev, "Set BAR test condition -%s- Failed\n", err_str);
 }
 
 static void sanitize_bar(struct pci_epf_bar *bar)
@@ -321,8 +328,12 @@ static int bar_neg_test(struct seq_file *s, void *data)
 		return 0;
 	}
 	sanitize_bar(&bar);
+	bar.flags = PCI_BASE_ADDRESS_MEM_TYPE_64;
+	validate_bar(epfnv, &bar, "non pre_fetch bar check");
+
+	sanitize_bar(&bar);
 	bar.flags = PCI_BASE_ADDRESS_MEM_TYPE_32 | PCI_BASE_ADDRESS_MEM_PREFETCH;
-	validate_bar(epfnv, &bar, "non 64-bit bar check");
+	validate_bar(epfnv, &bar, "non 64_bit bar check");
 
 	sanitize_bar(&bar);
 	bar.size = SZ_32;
@@ -462,6 +473,7 @@ static int pcie_dma_epf_core_init(struct pci_epf *epf)
 		return ret;
 	}
 
+	dev_info(fdev, "%s received\n", __func__);
 	return 0;
 }
 
@@ -473,12 +485,14 @@ static int pcie_dma_epf_core_deinit(struct pci_epf *epf)
 	void *cookie = epfnv->edma.cookie;
 	struct pcie_epf_bar *epf_bar_virt = (struct pcie_epf_bar *)epfnv->bar_virt;
 	struct pci_epc *epc = epf->epc;
+	struct device *fdev = &epf->dev;
 	struct pci_epf_bar *epf_bar;
 	enum pci_barno bar;
 
 	if (epfnv->chip_id == TEGRA234)
 		bar = BAR_0;
 
+	dev_info(fdev, "%s received\n", __func__);
 	epf_bar = &epf->bar[bar];
 	epfnv->edma.cookie = NULL;
 	epf_bar_virt->rp_phy_addr = 0;
