@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
 
 #include <nvidia/conftest.h>
 #include "ether_linux.h"
@@ -10,6 +10,8 @@ int ether_tc_setup_taprio(struct ether_priv_data *pdata,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	unsigned int fpe_required = OSI_DISABLE;
 	struct osi_ioctl tc_ioctl_data = {};
+	struct osi_est_config *est = (struct osi_est_config *)&tc_ioctl_data.data.est;
+	struct osi_fpe_config *fpe = (struct osi_fpe_config *)&tc_ioctl_data.data.fpe;
 	unsigned long cycle_time = 0x0U;
 	/* Hardcode width base on current HW config, input parameter validation
 	 * will be done by OSI code any way
@@ -53,8 +55,8 @@ int ether_tc_setup_taprio(struct ether_priv_data *pdata,
 		goto done;
 	}
 
-	memset(&tc_ioctl_data.est, 0x0, sizeof(struct osi_est_config));
-	memset(&tc_ioctl_data.fpe, 0x0, sizeof(struct osi_fpe_config));
+	memset(est, 0x0, sizeof(struct osi_est_config));
+	memset(fpe, 0x0, sizeof(struct osi_fpe_config));
 
 	/* This code is to disable TSN, User space is asking to disable
 	 */
@@ -66,23 +68,23 @@ int ether_tc_setup_taprio(struct ether_priv_data *pdata,
 		goto disable;
 	}
 
-	tc_ioctl_data.est.llr = qopt->num_entries;
+	est->llr = qopt->num_entries;
 #if defined(NV_TC_TAPRIO_QOPT_OFFLOAD_STRUCT_HAS_CMD) /* Linux v6.4.5 */
 	switch (qopt->cmd) {
 	case TAPRIO_CMD_REPLACE:
-		tc_ioctl_data.est.en_dis = true;
+		est->en_dis = true;
 		break;
 	case TAPRIO_CMD_DESTROY:
-		tc_ioctl_data.est.en_dis = false;
+		est->en_dis = false;
 		break;
 	default:
 		return -EOPNOTSUPP;
 	}
 #else
-	tc_ioctl_data.est.en_dis = qopt->enable;
+	est->en_dis = qopt->enable;
 #endif //NV_TC_TAPRIO_QOPT_OFFLOAD_STRUCT_HAS_CMD
 
-	for (i = 0U; i < tc_ioctl_data.est.llr; i++) {
+	for (i = 0U; i < est->llr; i++) {
 		cycle_time = qopt->entries[i].interval;
 		gates = qopt->entries[i].gate_mask;
 
@@ -109,8 +111,8 @@ int ether_tc_setup_taprio(struct ether_priv_data *pdata,
 			goto done;
 		}
 
-		tc_ioctl_data.est.gcl[i] = cycle_time | (gates << wid);
-		if (tc_ioctl_data.est.gcl[i] > wid_val) {
+		est->gcl[i] = cycle_time | (gates << wid);
+		if (est->gcl[i] > wid_val) {
 			netdev_err(pdata->ndev, "invalid GCL creation\n");
 			ret = -EINVAL;
 			goto done;
@@ -121,14 +123,14 @@ int ether_tc_setup_taprio(struct ether_priv_data *pdata,
 	 * some offset to avoid BTRE
 	 */
 	time = ktime_to_timespec64(qopt->base_time);
-	tc_ioctl_data.est.btr[0] = (unsigned int)time.tv_nsec;
-	tc_ioctl_data.est.btr[1] = (unsigned int)time.tv_sec;
-	tc_ioctl_data.est.btr_offset[0] = 0;
-	tc_ioctl_data.est.btr_offset[1] = 0;
+	est->btr[0] = (unsigned int)time.tv_nsec;
+	est->btr[1] = (unsigned int)time.tv_sec;
+	est->btr_offset[0] = 0;
+	est->btr_offset[1] = 0;
 
 	ctr = qopt->cycle_time;
-	tc_ioctl_data.est.ctr[0] = do_div(ctr, NSEC_PER_SEC);
-	tc_ioctl_data.est.ctr[1] = (unsigned int)ctr;
+	est->ctr[0] = do_div(ctr, NSEC_PER_SEC);
+	est->ctr[1] = (unsigned int)ctr;
 
 	if ((!pdata->hw_feat.fpe_sel) && (fpe_required == OSI_ENABLE)) {
 		netdev_err(pdata->ndev, "FPE not supported in HW\n");
@@ -137,8 +139,8 @@ int ether_tc_setup_taprio(struct ether_priv_data *pdata,
 	}
 
 	if (fpe_required == OSI_ENABLE) {
-		tc_ioctl_data.fpe.rq = osi_core->residual_queue;
-		tc_ioctl_data.fpe.tx_queue_preemption_enable = 0x1;
+		fpe->rq = osi_core->residual_queue;
+		fpe->tx_queue_preemption_enable = 0x1;
 		tc_ioctl_data.cmd = OSI_CMD_CONFIG_FPE;
 		ret = osi_handle_ioctl(osi_core, &tc_ioctl_data);
 		if (ret < 0) {
@@ -161,11 +163,11 @@ int ether_tc_setup_taprio(struct ether_priv_data *pdata,
 	return 0;
 
 disable:
-	tc_ioctl_data.est.en_dis = false;
+	est->en_dis = false;
 	tc_ioctl_data.cmd = OSI_CMD_CONFIG_EST;
 	ret = osi_handle_ioctl(osi_core, &tc_ioctl_data);
 	if ((ret >= 0) && (fpe_required == OSI_ENABLE)) {
-		tc_ioctl_data.fpe.tx_queue_preemption_enable = 0x0;
+		fpe->tx_queue_preemption_enable = 0x0;
 		tc_ioctl_data.cmd = OSI_CMD_CONFIG_FPE;
 		ret = osi_handle_ioctl(osi_core, &tc_ioctl_data);
 	}
@@ -180,6 +182,7 @@ int ether_tc_setup_cbs(struct ether_priv_data *pdata,
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct phy_device *phydev = pdata->phydev;
 	struct osi_ioctl ioctl_data = {};
+	struct osi_core_avb_algorithm *avb = (struct osi_core_avb_algorithm *)&ioctl_data.data.avb;
 	int queue = qopt->queue;
 	unsigned int multiplier, speed_div;
 	unsigned long  value;
@@ -223,34 +226,34 @@ int ether_tc_setup_cbs(struct ether_priv_data *pdata,
 		return -EINVAL;
 	}
 
-	ioctl_data.avb.qindex = (unsigned int)queue;
-	ioctl_data.avb.tcindex = (unsigned int)queue;
+	avb->qindex = (unsigned int)queue;
+	avb->tcindex = (unsigned int)queue;
 
 	if (qopt->enable) {
-		ioctl_data.avb.algo = OSI_MTL_TXQ_AVALG_CBS;
-		ioctl_data.avb.oper_mode = OSI_MTL_QUEUE_AVB;
-		ioctl_data.avb.credit_control = OSI_ENABLE;
+		avb->algo = OSI_MTL_TXQ_AVALG_CBS;
+		avb->oper_mode = OSI_MTL_QUEUE_AVB;
+		avb->credit_control = OSI_ENABLE;
 	} else {
 	/* For EQOS harware library code use internally SP(0) and
 	   For MGBE harware library code use internally ETS(2) if
 	   algo != CBS. */
-		ioctl_data.avb.algo = OSI_MTL_TXQ_AVALG_SP;
-		ioctl_data.avb.oper_mode = OSI_MTL_QUEUE_ENABLE;
-		ioctl_data.avb.credit_control = OSI_DISABLE;
+		avb->algo = OSI_MTL_TXQ_AVALG_SP;
+		avb->oper_mode = OSI_MTL_QUEUE_ENABLE;
+		avb->credit_control = OSI_DISABLE;
 	}
 
 	/* Final adjustments for HW */
 	value = div_s64(qopt->idleslope * 1024ll * multiplier, speed_div);
-	ioctl_data.avb.idle_slope = (unsigned long)value;
+	avb->idle_slope = (unsigned long)value;
 
 	value = div_s64(-qopt->sendslope * 1024ll * multiplier, speed_div);
-	ioctl_data.avb.send_slope = (unsigned long)value;
+	avb->send_slope = (unsigned long)value;
 
 	value = qopt->hicredit * 1024ll * 8;
-	ioctl_data.avb.hi_credit = (unsigned long)value;
+	avb->hi_credit = (unsigned long)value;
 
 	value = qopt->locredit * 1024ll * 8;
-	ioctl_data.avb.low_credit = (unsigned long)value;
+	avb->low_credit = (unsigned long)value;
 
 	ioctl_data.cmd = OSI_CMD_SET_AVB;
 

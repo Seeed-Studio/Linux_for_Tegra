@@ -59,7 +59,7 @@ static inline int ether_get_hw_time(struct net_device *dev,
 			raw_spin_unlock_irqrestore(&pdata->ptp_lock, flags);
 			return ret;
 		}
-		memcpy(&local_ts, &ioctl_data.ptp_tsc,
+		memcpy(&local_ts, &ioctl_data.data.ptp_tsc,
 		       sizeof(struct osi_core_ptp_tsc_data));
 
 		((struct ptp_tsc_data *)ts)->ptp_ts = local_ts.ptp_low_bits +
@@ -294,23 +294,24 @@ static void ether_config_slot_function(struct ether_priv_data *pdata, u32 set)
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	unsigned int ret, i, chan, qinx;
 	struct osi_ioctl ioctl_data = {};
+	struct osi_core_avb_algorithm *avb = (struct osi_core_avb_algorithm *)&ioctl_data.data.avb;
 
 	/* Configure TXQ AVB mode */
 	for (i = 0; i < osi_dma->num_dma_chans; i++) {
 		chan = osi_dma->dma_chans[i];
 		if (osi_dma->slot_enabled[chan] == OSI_ENABLE) {
 			/* Set TXQ AVB info */
-			memset(&ioctl_data.avb, 0,
+			memset(avb, 0,
 			       sizeof(struct osi_core_avb_algorithm));
 			qinx = osi_core->mtl_queues[i];
-			ioctl_data.avb.qindex = qinx;
+			avb->qindex = qinx;
 			/* For EQOS harware library code use internally SP(0) and
 			   For MGBE harware library code use internally ETS(2) if
 			   algo != CBS. */
-			ioctl_data.avb.algo = OSI_MTL_TXQ_AVALG_SP;
-			ioctl_data.avb.oper_mode = (set == OSI_ENABLE) ?
-						    OSI_MTL_QUEUE_AVB :
-						    OSI_MTL_QUEUE_ENABLE;
+			avb->algo = OSI_MTL_TXQ_AVALG_SP;
+			avb->oper_mode = (set == OSI_ENABLE) ?
+					  OSI_MTL_QUEUE_AVB :
+					  OSI_MTL_QUEUE_ENABLE;
 
 			ioctl_data.cmd = OSI_CMD_SET_AVB;
 			ret = osi_handle_ioctl(osi_core, &ioctl_data);

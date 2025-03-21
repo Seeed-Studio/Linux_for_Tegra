@@ -1941,18 +1941,16 @@ int ether_get_rxnfc(struct net_device *ndev,
 
 u32 ether_get_rxfh_key_size(struct net_device *ndev)
 {
-	struct ether_priv_data *pdata = netdev_priv(ndev);
-	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_ioctl ioctl_data = {};
 
-	return sizeof(osi_core->rss.key);
+	return sizeof(ioctl_data.data.rss.key);
 }
 
 u32 ether_get_rxfh_indir_size(struct net_device *ndev)
 {
-	struct ether_priv_data *pdata = netdev_priv(ndev);
-	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_ioctl ioctl_data = {};
 
-	return ARRAY_SIZE(osi_core->rss.table);
+	return ARRAY_SIZE(ioctl_data.data.rss.table);
 }
 
 /**
@@ -1976,28 +1974,40 @@ static int ether_get_rxfh(struct net_device *ndev, u32 *indir, u8 *key,
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_ioctl ioctl_data = {};
+	struct osi_core_rss *rss = (struct osi_core_rss *)&ioctl_data.data.rss;
 #if defined(NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS)
 	u32 *indir = rxfh->indir;
 	u8 *hfunc = &rxfh->hfunc;
 	u8 *key = rxfh->key;
 #endif
 	int i;
+	int ret = 0;
 
-	if (indir) {
-		for (i = 0; i < ARRAY_SIZE(osi_core->rss.table); i++)
-			indir[i] = osi_core->rss.table[i];
+	ioctl_data.cmd = OSI_CMD_GET_RSS;
+	ret = osi_handle_ioctl(osi_core, &ioctl_data);
+	if (ret != 0) {
+		dev_err(pdata->dev, "Failed to get RSS info from registers\n");
+		return ret;
 	}
 
-	if (key)
-		memcpy(key, osi_core->rss.key, sizeof(osi_core->rss.key));
+	if (indir) {
+		for (i = 0; i < ARRAY_SIZE(rss->table); i++)
+			indir[i] = rss->table[i];
+	}
+
+	if (key) {
+		memcpy(key, rss->key, sizeof(rss->key));
+	}
+
 	if (hfunc)
 		*hfunc = ETH_RSS_HASH_TOP;
 
-	return 0;
+	return ret;
 }
 
 /**
- * @brief Set the contents of the RX flow hash indirection table, hash key
+ * @b	rief Set the contents of the RX flow hash indirection table, hash key
  * and/or hash function
  *
  * param[in] ndev: Pointer to net device structure.
@@ -2018,14 +2028,15 @@ static int ether_set_rxfh(struct net_device *ndev, const u32 *indir,
 #endif
 {
 	struct ether_priv_data *pdata = netdev_priv(ndev);
-	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_ioctl ioctl_data = {};
+	struct osi_core_rss *rss = (struct osi_core_rss *)&ioctl_data.data.rss;
 #if defined(NV_ETHTOOL_OPS_GET_SET_RXFH_HAS_RXFH_PARAM_ARGS)
 	u32 *indir = rxfh->indir;
 	u8 hfunc = rxfh->hfunc;
 	u8 *key = rxfh->key;
 #endif
 	int i;
+	int ret = 0;
 
 	if (!netif_running(ndev)) {
 		netdev_err(pdata->ndev, "interface must be up\n");
@@ -2035,17 +2046,27 @@ static int ether_set_rxfh(struct net_device *ndev, const u32 *indir,
 	if ((hfunc != ETH_RSS_HASH_NO_CHANGE) && (hfunc != ETH_RSS_HASH_TOP))
 		return -EOPNOTSUPP;
 
-	if (indir) {
-		for (i = 0; i < ARRAY_SIZE(osi_core->rss.table); i++)
-			osi_core->rss.table[i] = indir[i];
+	/* First get current RSS configuration and update what ever required */
+	ioctl_data.cmd = OSI_CMD_GET_RSS;
+	ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
+	if (ret != 0) {
+		dev_err(pdata->dev, "Failed to get current RSS configuration\n");
+	        return ret;
 	}
 
-	if (key)
-		memcpy(osi_core->rss.key, key, sizeof(osi_core->rss.key));
+	if (indir) {
+		for (i = 0; i < ARRAY_SIZE(rss->table); i++)
+			rss->table[i] = indir[i];
+	}
+
+	if (key) {
+		memcpy(rss->key, key, sizeof(rss->key));
+	}
+	/* RSS need to be enabled for applying the settings */
+	rss->enable = 1;
 
 	ioctl_data.cmd = OSI_CMD_CONFIG_RSS;
 	return osi_handle_ioctl(pdata->osi_core, &ioctl_data);
-
 }
 
 #if defined(NV_ETHTOOL_OPS_GET_SET_RINGPARAM_HAS_RINGPARAM_AND_EXTACT_ARGS) /* Linux v5.17 */

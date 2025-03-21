@@ -72,6 +72,7 @@ int ether_get_tx_ts(struct ether_priv_data *pdata)
 	struct list_head *tstamp_head, *temp_tstamp_head;
 	struct skb_shared_hwtstamps shhwtstamp;
 	struct osi_ioctl ioctl_data = {};
+	struct osi_core_tx_ts *tx_ts = (struct osi_core_tx_ts *)&ioctl_data.data.tx_ts;
 	unsigned long long nsec = 0x0;
 	struct ether_tx_ts_skb_list *pnode;
 	struct ether_timestamp_skb_list *tnode;
@@ -98,15 +99,15 @@ int ether_get_tx_ts(struct ether_priv_data *pdata)
 				   list_head);
 
 		ioctl_data.cmd = OSI_CMD_GET_TX_TS;
-		ioctl_data.tx_ts.pkt_id = pnode->pktid;
-		ioctl_data.tx_ts.vdma_id = pnode->vdmaid;
+		tx_ts->pkt_id = pnode->pktid;
+		tx_ts->vdma_id = pnode->vdmaid;
 		ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
 		if (ret == 0) {
 			/* get time stamp form ethernet server */
 			dev_dbg(pdata->dev,"%s() pktid = %x, skb = %p\n, vdmaid=%x",
 				__func__, pnode->pktid, pnode->skb, pnode->vdmaid);
 
-			if ((ioctl_data.tx_ts.nsec & OSI_MAC_TCR_TXTSSMIS) ==
+			if ((tx_ts->nsec & OSI_MAC_TCR_TXTSSMIS) ==
 			    OSI_MAC_TCR_TXTSSMIS) {
 				dev_warn(pdata->dev,
 					 "No valid time for skb, removed\n");
@@ -117,8 +118,7 @@ int ether_get_tx_ts(struct ether_priv_data *pdata)
 				goto update_skb;
 			}
 
-			nsec = ioctl_data.tx_ts.sec * ETHER_ONESEC_NENOSEC +
-			       ioctl_data.tx_ts.nsec;
+			nsec = tx_ts->sec * ETHER_ONESEC_NENOSEC + tx_ts->nsec;
 
 			if (pnode->skb != NULL) {
 				idx = ether_get_free_timestamp_node(pdata);
@@ -2811,6 +2811,7 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
 	nveu32_t dma_channel = osi_dma->dma_chans[0];
 	unsigned char bc_addr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	struct osi_filter *l2_filter = (struct osi_filter *)&ioctl_data->data.l2_filter;
 	unsigned int MAC_index[OSI_MAX_MAC_IP_TYPES] = {
 		ETHER_MAC_ADDRESS_INDEX,
 		ETHER_MAC_ADDRESS_INDEX,
@@ -2829,38 +2830,37 @@ static int ether_update_mac_addr_filter(struct ether_priv_data *pdata,
 		return -1;
 	}
 
-	memset(&ioctl_data->l2_filter, 0x0, sizeof(struct osi_filter));
+	memset(l2_filter, 0x0, sizeof(struct osi_filter));
 	/* Set MAC address with DCS set to route all legacy Rx
 	 * packets from RxQ0 to default DMA at index 0.
 	 */
-	ioctl_data->l2_filter.oper_mode = (OSI_OPER_EN_PERFECT |
-					   OSI_OPER_DIS_PROMISC |
-					   OSI_OPER_DIS_ALLMULTI);
+	l2_filter->oper_mode = (OSI_OPER_EN_PERFECT |
+				OSI_OPER_DIS_PROMISC |
+				OSI_OPER_DIS_ALLMULTI);
 	if (en_dis == OSI_ENABLE) {
-		ioctl_data->l2_filter.oper_mode |= OSI_OPER_ADDR_UPDATE;
+		l2_filter->oper_mode |= OSI_OPER_ADDR_UPDATE;
 	} else {
-		ioctl_data->l2_filter.oper_mode |= OSI_OPER_ADDR_DEL;
+		l2_filter->oper_mode |= OSI_OPER_ADDR_DEL;
 	}
 
 	if (uc_bc == ETHER_ADDRESS_MAC) {
-		ioctl_data->l2_filter.index = MAC_index[osi_core->mac];
-		memcpy(ioctl_data->l2_filter.mac_addr, osi_core->mac_addr,
-		       ETH_ALEN);
+		l2_filter->index = MAC_index[osi_core->mac];
+		memcpy(l2_filter->mac_addr, osi_core->mac_addr, ETH_ALEN);
 	} else {
 		if (osi_dma->num_dma_chans > 1) {
 			dma_channel = osi_dma->dma_chans[1];
 		} else {
 			dma_channel = osi_dma->dma_chans[0];
 		}
-		ioctl_data->l2_filter.index = BC_index[osi_core->mac];
-		memcpy(ioctl_data->l2_filter.mac_addr, bc_addr, ETH_ALEN);
-		ioctl_data->l2_filter.pkt_dup = OSI_ENABLE;
-		ioctl_data->l2_filter.dma_chansel = OSI_BIT_64(dma_channel);
+		l2_filter->index = BC_index[osi_core->mac];
+		memcpy(l2_filter->mac_addr, bc_addr, ETH_ALEN);
+		l2_filter->pkt_dup = OSI_ENABLE;
+		l2_filter->dma_chansel = OSI_BIT_64(dma_channel);
 	}
-	ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
-	ioctl_data->l2_filter.dma_chan = dma_channel;
-	ioctl_data->l2_filter.addr_mask = OSI_AMASK_DISABLE;
-	ioctl_data->l2_filter.src_dest = OSI_DA_MATCH;
+	l2_filter->dma_routing = OSI_ENABLE;
+	l2_filter->dma_chan = dma_channel;
+	l2_filter->addr_mask = OSI_AMASK_DISABLE;
+	l2_filter->src_dest = OSI_DA_MATCH;
 	ioctl_data->cmd = OSI_CMD_L2_FILTER;
 
 	return osi_handle_ioctl(osi_core, ioctl_data);
@@ -3028,6 +3028,49 @@ exit:
 	return ret;
 }
 
+#ifndef OSI_STRIPPED_LIB
+/**
+ * @brief ether_init_rss - Init OSI RSS structure
+ *
+ * Algorithm: Populates RSS hash key and table in OSI core structure.
+ *
+ * @param[in] pdata: Ethernet private data
+ * @param[in] features: Netdev features
+ */
+static void ether_init_rss(struct ether_priv_data *pdata,
+			   netdev_features_t features)
+{
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_ioctl ioctl_data = {};
+	struct osi_core_rss *rss = (struct osi_core_rss *)&ioctl_data.data.rss;
+	unsigned int num_q = osi_core->num_mtl_queues;
+	unsigned int i = 0;
+
+	if ((features & NETIF_F_RXHASH) == NETIF_F_RXHASH) {
+		rss->enable = 1;
+	} else {
+		rss->enable = 0;
+		return;
+	}
+
+	/* generate random key */
+	netdev_rss_key_fill(rss->key, sizeof(rss->key));
+
+	/* In T26x mgbe default 8 VDMA channels enabled */
+	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
+		num_q = pdata->osi_dma->num_dma_chans;
+	}
+	/* initialize hash table */
+	for (i = 0; i < OSI_RSS_MAX_TABLE_SIZE; i++)
+		rss->table[i] = ethtool_rxfh_indir_default(i, num_q);
+
+	ioctl_data.cmd = OSI_CMD_CONFIG_RSS;
+	if (osi_handle_ioctl(osi_core, &ioctl_data)) {
+		pr_err("Failed to configure RSS\n");
+	}
+}
+#endif /* !OSI_STRIPPED_LIB */
+
 int ether_open(struct net_device *dev)
 {
 	struct ether_priv_data *pdata = netdev_priv(dev);
@@ -3108,6 +3151,11 @@ int ether_open(struct net_device *dev)
 			__func__, ret);
 		goto err_hw_init;
 	}
+
+#ifndef OSI_STRIPPED_LIB
+	/* RSS init */
+	ether_init_rss(pdata, pdata->ndev->features);
+#endif /* !OSI_STRIPPED_LIB */
 
 	ret = ether_update_mac_addr_filter(pdata, &ioctl_data, OSI_ENABLE,
 					   ETHER_ADDRESS_MAC);
@@ -3311,16 +3359,17 @@ static inline void ether_delete_l2_filter(struct ether_priv_data *pdata)
 {
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_ioctl ioctl_data = {};
+	struct osi_filter *l2_filter = (struct osi_filter *)&ioctl_data.data.l2_filter;
 	int ret, i;
 
-	memset(&ioctl_data.l2_filter, 0x0, sizeof(struct osi_filter));
+	memset(l2_filter, 0x0, sizeof(struct osi_filter));
 	ret = ether_update_mac_addr_filter(pdata, &ioctl_data, OSI_DISABLE,
 					   ETHER_ADDRESS_MAC);
 	if (ret < 0) {
 		dev_err(pdata->dev, "issue in deleting MAC address\n");
 	}
 
-	memset(&ioctl_data.l2_filter, 0x0, sizeof(struct osi_filter));
+	memset(l2_filter, 0x0, sizeof(struct osi_filter));
 	ret = ether_update_mac_addr_filter(pdata, &ioctl_data, OSI_DISABLE,
 					   ETHER_ADDRESS_BC);
 	if (ret < 0) {
@@ -3331,15 +3380,15 @@ static inline void ether_delete_l2_filter(struct ether_priv_data *pdata)
 	for (i = ETHER_MAC_ADDRESS_INDEX + 1; i < pdata->last_filter_index;
 	     i++) {
 		/* Reset the filter structure to avoid any old value */
-		memset(&ioctl_data.l2_filter, 0x0, sizeof(struct osi_filter));
-		ioctl_data.l2_filter.oper_mode = OSI_OPER_ADDR_DEL;
-		ioctl_data.l2_filter.index = i;
-		ioctl_data.l2_filter.dma_routing = OSI_ENABLE;
-		memcpy(ioctl_data.l2_filter.mac_addr,
+		memset(l2_filter, 0x0, sizeof(struct osi_filter));
+		l2_filter->oper_mode = OSI_OPER_ADDR_DEL;
+		l2_filter->index = i;
+		l2_filter->dma_routing = OSI_ENABLE;
+		memcpy(l2_filter->mac_addr,
 		       pdata->mac_addr[i].addr, ETH_ALEN);
-		ioctl_data.l2_filter.dma_chan = pdata->mac_addr[i].dma_chan;
-		ioctl_data.l2_filter.addr_mask = OSI_AMASK_DISABLE;
-		ioctl_data.l2_filter.src_dest = OSI_DA_MATCH;
+		l2_filter->dma_chan = pdata->mac_addr[i].dma_chan;
+		l2_filter->addr_mask = OSI_AMASK_DISABLE;
+		l2_filter->src_dest = OSI_DA_MATCH;
 		ioctl_data.cmd = OSI_CMD_L2_FILTER;
 
 		ret = osi_handle_ioctl(osi_core, &ioctl_data);
@@ -3957,6 +4006,7 @@ static int ether_prepare_mc_list(struct net_device *dev,
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
+	struct osi_filter *l2_filter = (struct osi_filter *)&ioctl_data->data.l2_filter;
 	struct netdev_hw_addr *ha;
 	unsigned int i = *mac_addr_idx;
 	int ret = -1;
@@ -3966,15 +4016,15 @@ static int ether_prepare_mc_list(struct net_device *dev,
 		return ret;
 	}
 
-	memset(&ioctl_data->l2_filter, 0x0, sizeof(struct osi_filter));
+	memset(l2_filter, 0x0, sizeof(struct osi_filter));
 
 #ifndef OSI_STRIPPED_LIB
 	if (pdata->l2_filtering_mode == OSI_HASH_FILTER_MODE) {
 		dev_err(pdata->dev,
 			"HASH FILTERING for mc addresses not Supported in SW\n");
-		ioctl_data->l2_filter.oper_mode = (OSI_OPER_EN_PERFECT |
-						   OSI_OPER_DIS_PROMISC |
-						   OSI_OPER_DIS_ALLMULTI);
+		l2_filter->oper_mode = (OSI_OPER_EN_PERFECT |
+					OSI_OPER_DIS_PROMISC |
+					OSI_OPER_DIS_ALLMULTI);
 		ioctl_data->cmd = OSI_CMD_L2_FILTER;
 		return osi_handle_ioctl(osi_core, ioctl_data);
 	/* address 0 is used for DUT DA so compare with
@@ -3984,9 +4034,9 @@ static int ether_prepare_mc_list(struct net_device *dev,
 #endif /* !OSI_STRIPPED_LIB */
 	if (netdev_mc_count(dev) > (pdata->num_mac_addr_regs - 1)) {
 		/* switch to PROMISCUOUS mode */
-		ioctl_data->l2_filter.oper_mode = (OSI_OPER_DIS_PERFECT |
-						   OSI_OPER_EN_PROMISC |
-						   OSI_OPER_DIS_ALLMULTI);
+		l2_filter->oper_mode = (OSI_OPER_DIS_PERFECT |
+					OSI_OPER_EN_PROMISC |
+					OSI_OPER_DIS_ALLMULTI);
 		dev_dbg(pdata->dev, "enabling Promiscuous mode\n");
 
 		ioctl_data->cmd = OSI_CMD_L2_FILTER;
@@ -3996,29 +4046,27 @@ static int ether_prepare_mc_list(struct net_device *dev,
 			"select PERFECT FILTERING for mc addresses, mc_count = %d, num_mac_addr_regs = %d\n",
 			netdev_mc_count(dev), pdata->num_mac_addr_regs);
 
-		ioctl_data->l2_filter.oper_mode = (OSI_OPER_EN_PERFECT |
-						   OSI_OPER_ADDR_UPDATE |
-						   OSI_OPER_DIS_PROMISC |
-						   OSI_OPER_DIS_ALLMULTI);
+		l2_filter->oper_mode = (OSI_OPER_EN_PERFECT |
+					OSI_OPER_ADDR_UPDATE |
+					OSI_OPER_DIS_PROMISC |
+					OSI_OPER_DIS_ALLMULTI);
 		netdev_for_each_mc_addr(ha, dev) {
 			dev_dbg(pdata->dev,
 				"mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
 				i, ha->addr[0], ha->addr[1], ha->addr[2],
 				ha->addr[3], ha->addr[4], ha->addr[5]);
-			ioctl_data->l2_filter.index = i;
-			memcpy(ioctl_data->l2_filter.mac_addr, ha->addr,
+			l2_filter->index = i;
+			memcpy(l2_filter->mac_addr, ha->addr,
 			       ETH_ALEN);
-			ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
+			l2_filter->dma_routing = OSI_ENABLE;
 			if (osi_dma->num_dma_chans > 1) {
-				ioctl_data->l2_filter.dma_chan =
-							  osi_dma->dma_chans[1];
+				l2_filter->dma_chan = osi_dma->dma_chans[1];
 			} else {
-				ioctl_data->l2_filter.dma_chan =
-							  osi_dma->dma_chans[0];
+				l2_filter->dma_chan =  osi_dma->dma_chans[0];
 			}
-			ioctl_data->l2_filter.addr_mask = OSI_AMASK_DISABLE;
-			ioctl_data->l2_filter.src_dest = OSI_DA_MATCH;
-			ioctl_data->l2_filter.pkt_dup = OSI_ENABLE;
+			l2_filter->addr_mask = OSI_AMASK_DISABLE;
+			l2_filter->src_dest = OSI_DA_MATCH;
+			l2_filter->pkt_dup = OSI_ENABLE;
 			ioctl_data->cmd = OSI_CMD_L2_FILTER;
 			ret = osi_handle_ioctl(pdata->osi_core, ioctl_data);
 			if (ret < 0) {
@@ -4028,7 +4076,7 @@ static int ether_prepare_mc_list(struct net_device *dev,
 			}
 
 			memcpy(pdata->mac_addr[i].addr, ha->addr, ETH_ALEN);
-			pdata->mac_addr[i].dma_chan = ioctl_data->l2_filter.dma_chan;
+			pdata->mac_addr[i].dma_chan = l2_filter->dma_chan;
 
 			if (i == EQOS_MAX_MAC_ADDRESS_FILTER - 1) {
 				dev_err(pdata->dev, "Configured max number of supported MAC, ignoring it\n");
@@ -4063,6 +4111,7 @@ static int ether_prepare_uc_list(struct net_device *dev,
 	struct ether_priv_data *pdata = netdev_priv(dev);
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
+	struct osi_filter *l2_filter = (struct osi_filter *)&ioctl_data->data.l2_filter;
 	/* last valid MC/MAC DA + 1 should be start of UC addresses */
 	unsigned int i = *mac_addr_idx;
 	struct netdev_hw_addr *ha;
@@ -4073,16 +4122,16 @@ static int ether_prepare_uc_list(struct net_device *dev,
 		goto exit_func;
 	}
 
-	memset(&ioctl_data->l2_filter, 0x0, sizeof(struct osi_filter));
+	memset(l2_filter, 0x0, sizeof(struct osi_filter));
 
 #ifndef OSI_STRIPPED_LIB
 	if (pdata->l2_filtering_mode == OSI_HASH_FILTER_MODE) {
 		dev_err(pdata->dev,
 			"HASH FILTERING for uc addresses not Supported in SW\n");
 		/* Perfect filtering for multicast */
-		ioctl_data->l2_filter.oper_mode = (OSI_OPER_EN_PERFECT |
-						   OSI_OPER_DIS_PROMISC |
-						   OSI_OPER_DIS_ALLMULTI);
+		l2_filter->oper_mode = (OSI_OPER_EN_PERFECT |
+					OSI_OPER_DIS_PROMISC |
+					OSI_OPER_DIS_ALLMULTI);
 		ioctl_data->cmd = OSI_CMD_L2_FILTER;
 		return osi_handle_ioctl(osi_core, ioctl_data);
 	}
@@ -4094,9 +4143,9 @@ static int ether_prepare_uc_list(struct net_device *dev,
 	}
 	if (netdev_uc_count(dev) > (pdata->num_mac_addr_regs - i)) {
 		/* switch to PROMISCUOUS mode */
-		ioctl_data->l2_filter.oper_mode = (OSI_OPER_DIS_PERFECT |
-						   OSI_OPER_EN_PROMISC |
-						   OSI_OPER_DIS_ALLMULTI);
+		l2_filter->oper_mode = (OSI_OPER_DIS_PERFECT |
+					OSI_OPER_EN_PROMISC |
+					OSI_OPER_DIS_ALLMULTI);
 		dev_dbg(pdata->dev, "enabling Promiscuous mode\n");
 		ioctl_data->cmd = OSI_CMD_L2_FILTER;
 		return osi_handle_ioctl(osi_core, ioctl_data);
@@ -4105,28 +4154,25 @@ static int ether_prepare_uc_list(struct net_device *dev,
 				"select PERFECT FILTERING for uc addresses: uc_count = %d\n",
 			netdev_uc_count(dev));
 
-		ioctl_data->l2_filter.oper_mode = (OSI_OPER_EN_PERFECT |
-						   OSI_OPER_ADDR_UPDATE |
-						   OSI_OPER_DIS_PROMISC |
-						   OSI_OPER_DIS_ALLMULTI);
+		l2_filter->oper_mode = (OSI_OPER_EN_PERFECT |
+						     OSI_OPER_ADDR_UPDATE |
+						     OSI_OPER_DIS_PROMISC |
+						     OSI_OPER_DIS_ALLMULTI);
 		netdev_for_each_uc_addr(ha, dev) {
 			dev_dbg(pdata->dev,
 				"uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
 				i, ha->addr[0], ha->addr[1], ha->addr[2],
 				ha->addr[3], ha->addr[4], ha->addr[5]);
-			ioctl_data->l2_filter.index = i;
-			memcpy(ioctl_data->l2_filter.mac_addr, ha->addr,
-			       ETH_ALEN);
-			ioctl_data->l2_filter.dma_routing = OSI_ENABLE;
+			l2_filter->index = i;
+			memcpy(l2_filter->mac_addr, ha->addr, ETH_ALEN);
+			l2_filter->dma_routing = OSI_ENABLE;
 			if (osi_dma->num_dma_chans > 1) {
-				ioctl_data->l2_filter.dma_chan =
-							  osi_dma->dma_chans[1];
+				l2_filter->dma_chan = osi_dma->dma_chans[1];
 			} else {
-				ioctl_data->l2_filter.dma_chan =
-							  osi_dma->dma_chans[0];
+				l2_filter->dma_chan = osi_dma->dma_chans[0];
 			}
-			ioctl_data->l2_filter.addr_mask = OSI_AMASK_DISABLE;
-			ioctl_data->l2_filter.src_dest = OSI_DA_MATCH;
+			l2_filter->addr_mask = OSI_AMASK_DISABLE;
+			l2_filter->src_dest = OSI_DA_MATCH;
 
 			ioctl_data->cmd = OSI_CMD_L2_FILTER;
 			ret = osi_handle_ioctl(pdata->osi_core, ioctl_data);
@@ -4138,7 +4184,7 @@ static int ether_prepare_uc_list(struct net_device *dev,
 			}
 
 			memcpy(pdata->mac_addr[i].addr, ha->addr, ETH_ALEN);
-			pdata->mac_addr[i].dma_chan = ioctl_data->l2_filter.dma_chan;
+			pdata->mac_addr[i].dma_chan = l2_filter->dma_chan;
 
 			if (i == EQOS_MAX_MAC_ADDRESS_FILTER - 1) {
 				dev_err(pdata->dev, "Already MAX MAC added\n");
@@ -4169,16 +4215,16 @@ void ether_set_rx_mode(struct net_device *dev)
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
 	/* store last call last_uc_filter_index in temporary variable */
 	struct osi_ioctl ioctl_data = {};
+	struct osi_filter *l2_filter = (struct osi_filter *)&ioctl_data.data.l2_filter;
 	unsigned int mac_addr_idx = ETHER_MAC_ADDRESS_INDEX + 1U, i;
 	int ret = -1;
 
-	memset(&ioctl_data.l2_filter, 0x0, sizeof(struct osi_filter));
+	memset(l2_filter, 0x0, sizeof(struct osi_filter));
 	if ((dev->flags & IFF_PROMISC) == IFF_PROMISC) {
 		if (pdata->promisc_mode == OSI_ENABLE) {
-			ioctl_data.l2_filter.oper_mode =
-							(OSI_OPER_DIS_PERFECT |
-							 OSI_OPER_EN_PROMISC |
-							 OSI_OPER_DIS_ALLMULTI);
+			l2_filter->oper_mode = (OSI_OPER_DIS_PERFECT |
+						OSI_OPER_EN_PROMISC |
+						OSI_OPER_DIS_ALLMULTI);
 			dev_dbg(pdata->dev, "enabling Promiscuous mode\n");
 			ioctl_data.cmd = OSI_CMD_L2_FILTER;
 			ret = osi_handle_ioctl(osi_core, &ioctl_data);
@@ -4192,9 +4238,9 @@ void ether_set_rx_mode(struct net_device *dev)
 		}
 		return;
 	} else if ((dev->flags & IFF_ALLMULTI) == IFF_ALLMULTI) {
-		ioctl_data.l2_filter.oper_mode = (OSI_OPER_EN_ALLMULTI |
-						  OSI_OPER_DIS_PERFECT |
-						  OSI_OPER_DIS_PROMISC);
+		l2_filter->oper_mode = (OSI_OPER_EN_ALLMULTI |
+					OSI_OPER_DIS_PERFECT |
+					OSI_OPER_DIS_PROMISC);
 		dev_dbg(pdata->dev, "pass all multicast pkt\n");
 		ioctl_data.cmd = OSI_CMD_L2_FILTER;
 		ret = osi_handle_ioctl(osi_core, &ioctl_data);
@@ -4220,15 +4266,14 @@ void ether_set_rx_mode(struct net_device *dev)
 	if (pdata->last_filter_index > mac_addr_idx) {
 		for (i = mac_addr_idx; i < pdata->last_filter_index; i++) {
 			/* Reset the filter structure to avoid any old value */
-			memset(&ioctl_data.l2_filter, 0x0, sizeof(struct osi_filter));
-			ioctl_data.l2_filter.oper_mode = OSI_OPER_ADDR_DEL;
-			ioctl_data.l2_filter.index = i;
-			ioctl_data.l2_filter.dma_routing = OSI_ENABLE;
-			memcpy(ioctl_data.l2_filter.mac_addr,
-			       pdata->mac_addr[i].addr, ETH_ALEN);
-			ioctl_data.l2_filter.dma_chan = pdata->mac_addr[i].dma_chan;
-			ioctl_data.l2_filter.addr_mask = OSI_AMASK_DISABLE;
-			ioctl_data.l2_filter.src_dest = OSI_DA_MATCH;
+			memset(l2_filter, 0x0, sizeof(struct osi_filter));
+			l2_filter->oper_mode = OSI_OPER_ADDR_DEL;
+			l2_filter->index = i;
+			l2_filter->dma_routing = OSI_ENABLE;
+			memcpy(l2_filter->mac_addr, pdata->mac_addr[i].addr, ETH_ALEN);
+			l2_filter->dma_chan = pdata->mac_addr[i].dma_chan;
+			l2_filter->addr_mask = OSI_AMASK_DISABLE;
+			l2_filter->src_dest = OSI_DA_MATCH;
 			ioctl_data.cmd = OSI_CMD_L2_FILTER;
 
 			ret = osi_handle_ioctl(osi_core, &ioctl_data);
@@ -4244,10 +4289,10 @@ void ether_set_rx_mode(struct net_device *dev)
 	/* Set default MAC configuration because if this path is called
 	 * only when flag for promiscuous or all_multi is not set.
 	 */
-	memset(&ioctl_data.l2_filter, 0x0, sizeof(struct osi_filter));
-	ioctl_data.l2_filter.oper_mode = (OSI_OPER_EN_PERFECT |
-					  OSI_OPER_DIS_PROMISC |
-					  OSI_OPER_DIS_ALLMULTI);
+	memset(l2_filter, 0x0, sizeof(struct osi_filter));
+	l2_filter->oper_mode = (OSI_OPER_EN_PERFECT |
+				OSI_OPER_DIS_PROMISC |
+				OSI_OPER_DIS_ALLMULTI);
 	ioctl_data.cmd = OSI_CMD_L2_FILTER;
 
 	ret = osi_handle_ioctl(osi_core, &ioctl_data);
@@ -7295,42 +7340,6 @@ static void init_filter_values(struct ether_priv_data *pdata)
 	}
 }
 
-#ifndef OSI_STRIPPED_LIB
-/**
- * @brief ether_init_rss - Init OSI RSS structure
- *
- * Algorithm: Populates RSS hash key and table in OSI core structure.
- *
- * @param[in] pdata: Ethernet private data
- * @param[in] features: Netdev features
- */
-static void ether_init_rss(struct ether_priv_data *pdata,
-			   netdev_features_t features)
-{
-	struct osi_core_priv_data *osi_core = pdata->osi_core;
-	unsigned int num_q = osi_core->num_mtl_queues;
-	unsigned int i = 0;
-
-	if ((features & NETIF_F_RXHASH) == NETIF_F_RXHASH) {
-		osi_core->rss.enable = 1;
-	} else {
-		osi_core->rss.enable = 0;
-		return;
-	}
-
-	/* generate random key */
-	netdev_rss_key_fill(osi_core->rss.key, sizeof(osi_core->rss.key));
-
-	/* In T26x mgbe default 8 VDMA channels enabled */
-	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
-		num_q = pdata->osi_dma->num_dma_chans;
-	}
-	/* initialize hash table */
-	for (i = 0; i < OSI_RSS_MAX_TABLE_SIZE; i++)
-		osi_core->rss.table[i] = ethtool_rxfh_indir_default(i, num_q);
-}
-#endif /* !OSI_STRIPPED_LIB */
-
 int ether_probe(struct platform_device *pdev)
 {
 	struct ether_priv_data *pdata;
@@ -7455,7 +7464,7 @@ int ether_probe(struct platform_device *pdev)
 		goto err_dma_mask;
 	}
 	osi_core->mac_ver = ioctl_data->arg1_u32;
-	memcpy(&pdata->hw_feat, &ioctl_data->hw_feat,
+	memcpy(&pdata->hw_feat, &ioctl_data->data.hw_feat,
 	       sizeof(struct osi_hw_features));
 
 	ret = ether_get_mac_address(pdata);
@@ -7484,11 +7493,6 @@ int ether_probe(struct platform_device *pdev)
 				      "nvidia,phy_type", &pdata->phy_str);
 	/* Set netdev features based on hw features */
 	ether_set_ndev_features(ndev, pdata);
-
-#ifndef OSI_STRIPPED_LIB
-	/* RSS init */
-	ether_init_rss(pdata, ndev->features);
-#endif /* !OSI_STRIPPED_LIB */
 
 	ret = ether_get_irqs(pdev, pdata, num_dma_chans);
 	if (ret < 0) {
