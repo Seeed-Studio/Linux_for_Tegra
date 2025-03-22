@@ -13,7 +13,7 @@
 
 #define KEYSLOT_SIZE_BYTES				16
 #define TEGRA_NVVSE_IOC_MAGIC				0x98
-#define MAX_NUMBER_MISC_DEVICES				46U
+#define MAX_NUMBER_MISC_DEVICES				70U
 
 /* Command ID for various IO Control */
 #define TEGRA_NVVSE_CMDID_AES_SET_KEY			1
