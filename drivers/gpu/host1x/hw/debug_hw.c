@@ -235,7 +235,7 @@ static void show_channel_gathers(struct output *o, struct host1x_cdma *cdma)
 					    &g->base, g->offset, g->words);
 
 			show_gather(o, g->base + g->offset, g->words, NULL,
-				    g->base, mapped);
+				    g->base, (u32 *)mapped);
 
 			if (!job->gather_copy_mapped)
 				host1x_bo_munmap(g->bo, mapped);
