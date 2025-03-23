@@ -18,7 +18,7 @@
 #define NVTZVAULT_TA_UUID_LEN		(16U)
 #define NVTZVAULT_TA_DEVICE_NAME_LEN	(17U)
 #define NVTZVAULT_BUFFER_SIZE		(8192U)
-#define NVTZVAULT_MAX_SESSIONS		(32U)
+#define NVTZVAULT_MAX_SESSIONS		(72U)
 
 enum nvtzvault_session_op_type {
 	NVTZVAULT_SESSION_OP_OPEN,
@@ -51,6 +51,8 @@ struct nvtzvault_dev {
 	struct device *dev;
 	struct mutex lock;
 	void *data_buf;
+	atomic_t in_suspend_state;
+	atomic_t total_active_session_count;
 } g_nvtzvault_dev;
 
 struct nvtzvault_ctx {
@@ -61,48 +63,6 @@ struct nvtzvault_ctx {
 	uint32_t task_opcode;
 	uint32_t driver_id;
 };
-
-static int nvtzvault_ta_dev_open(struct inode *inode, struct file *filp)
-{
-	struct miscdevice *misc;
-	struct nvtzvault_ctx *ctx = NULL;
-	int32_t ret;
-
-	misc = filp->private_data;
-
-	ctx = kzalloc(sizeof(struct nvtzvault_ctx), GFP_KERNEL);
-	if (!ctx) {
-		NVTZVAULT_ERR("%s: Failed to allocate context memory\n", __func__);
-		return -ENOMEM;
-	}
-
-	ctx->node_id = misc->this_device->id;
-	ctx->task_opcode = g_nvtzvault_dev.ta[ctx->node_id].task_opcode;
-	ctx->driver_id = g_nvtzvault_dev.ta[ctx->node_id].driver_id;
-	ctx->is_session_open = false;
-
-	ret = nvtzvault_tee_buf_context_init(&ctx->buf_ctx, g_nvtzvault_dev.data_buf,
-			NVTZVAULT_BUFFER_SIZE);
-	if (ret != 0) {
-		NVTZVAULT_ERR("%s: Failed to initialize buffer context\n", __func__);
-		kfree(ctx);
-		return ret;
-	}
-	memset(ctx->session_bitmap, 0, sizeof(ctx->session_bitmap));
-
-	filp->private_data = ctx;
-
-	return 0;
-}
-
-static int nvtzvault_ta_dev_release(struct inode *inode, struct file *filp)
-{
-	struct nvtzvault_ctx *ctx = filp->private_data;
-
-	kfree(ctx);
-
-	return 0;
-}
 
 static bool is_session_open(struct nvtzvault_ctx *ctx, uint32_t session_id)
 {
@@ -128,6 +88,7 @@ static void set_session_open(struct nvtzvault_ctx *ctx, uint32_t session_id)
 	}
 
 	ctx->session_bitmap[byte_idx] |= (1U << bit_idx);
+	atomic_inc(&g_nvtzvault_dev.total_active_session_count);
 }
 
 static void set_session_closed(struct nvtzvault_ctx *ctx, uint32_t session_id)
@@ -141,6 +102,8 @@ static void set_session_closed(struct nvtzvault_ctx *ctx, uint32_t session_id)
 	}
 
 	ctx->session_bitmap[byte_idx] &= ~(1U << bit_idx);
+
+	atomic_dec(&g_nvtzvault_dev.total_active_session_count);
 }
 
 static int nvtzvault_write_process_name(struct nvtzvault_tee_buf_context *ctx)
@@ -381,6 +344,59 @@ static int nvtzvault_close_session(struct nvtzvault_ctx *ctx,
 	return ret;
 }
 
+static int nvtzvault_ta_dev_open(struct inode *inode, struct file *filp)
+{
+	struct miscdevice *misc;
+	struct nvtzvault_ctx *ctx = NULL;
+	int32_t ret;
+
+	misc = filp->private_data;
+
+	ctx = kzalloc(sizeof(struct nvtzvault_ctx), GFP_KERNEL);
+	if (!ctx) {
+		NVTZVAULT_ERR("%s: Failed to allocate context memory\n", __func__);
+		return -ENOMEM;
+	}
+
+	ctx->node_id = misc->this_device->id;
+	ctx->task_opcode = g_nvtzvault_dev.ta[ctx->node_id].task_opcode;
+	ctx->driver_id = g_nvtzvault_dev.ta[ctx->node_id].driver_id;
+	ctx->is_session_open = false;
+
+	ret = nvtzvault_tee_buf_context_init(&ctx->buf_ctx, g_nvtzvault_dev.data_buf,
+			NVTZVAULT_BUFFER_SIZE);
+	if (ret != 0) {
+		NVTZVAULT_ERR("%s: Failed to initialize buffer context\n", __func__);
+		kfree(ctx);
+		return ret;
+	}
+	memset(ctx->session_bitmap, 0, sizeof(ctx->session_bitmap));
+
+	filp->private_data = ctx;
+
+	return 0;
+}
+
+static int nvtzvault_ta_dev_release(struct inode *inode, struct file *filp)
+{
+	struct nvtzvault_ctx *ctx = filp->private_data;
+	struct nvtzvault_close_session_ctl close_session_ctl;
+
+	if (atomic_read(&g_nvtzvault_dev.total_active_session_count) > 0) {
+		for (uint32_t i = 0; i < NVTZVAULT_MAX_SESSIONS; i++) {
+			if (is_session_open(ctx, i)) {
+				NVTZVAULT_ERR("%s: closing session %u\n", __func__, i);
+				close_session_ctl.session_id = i;
+				nvtzvault_close_session(ctx, &close_session_ctl);
+			}
+		}
+	}
+
+	kfree(ctx);
+
+	return 0;
+}
+
 static long nvtzvault_ta_dev_ioctl(struct file *filp, unsigned int ioctl_num, unsigned long arg)
 {
 	struct nvtzvault_ctx *ctx = filp->private_data;
@@ -392,6 +408,11 @@ static long nvtzvault_ta_dev_ioctl(struct file *filp, unsigned int ioctl_num, un
 	if (!ctx) {
 		NVTZVAULT_ERR("%s(): ctx not allocated\n", __func__);
 		return -EPERM;
+	}
+
+	if (atomic_read(&g_nvtzvault_dev.in_suspend_state)) {
+		NVTZVAULT_ERR("%s(): device is in suspend state\n", __func__);
+		return -EBUSY;
 	}
 
 	mutex_lock(&g_nvtzvault_dev.lock);
@@ -606,6 +627,8 @@ static int nvtzvault_probe(struct platform_device *pdev)
 	int len, i;
 	int ret;
 
+	dev_info(dev, "probe start\n");
+
 	if (!nvtzvault_node)
 		return -ENODEV;
 
@@ -695,8 +718,6 @@ static int nvtzvault_probe(struct platform_device *pdev)
 		ta->task_opcode = task_opcode;
 		ta->driver_id = driver_id;
 
-		dev_info(dev, "TA ID: %u, UUID: %16ph\n", ta_id, ta_uuid);
-
 		ret = nvtzvault_ta_create_dev_node(ta->dev, ta->id);
 		if (ret != 0)
 			goto fail;
@@ -711,7 +732,11 @@ static int nvtzvault_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	atomic_set(&g_nvtzvault_dev.total_active_session_count, 0);
+
 	mutex_init(&g_nvtzvault_dev.lock);
+
+	dev_info(dev, "probe success\n");
 
 	return 0;
 
@@ -758,6 +783,47 @@ static int nvtzvault_remove_wrapper(struct platform_device *pdev)
 }
 #endif
 
+static void nvtzvault_shutdown(struct platform_device *pdev)
+{
+	atomic_set(&g_nvtzvault_dev.in_suspend_state, 1);
+}
+
+#if defined(CONFIG_PM)
+static int nvtzvault_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+
+	/* Add print to log in nvlog buffer  */
+	dev_err(dev, "%s start\n", __func__);
+
+	if (atomic_read(&g_nvtzvault_dev.total_active_session_count) > 0)
+		return -EBUSY;
+
+	nvtzvault_shutdown(pdev);
+
+	/* Add print to log in nvlog buffer  */
+	dev_err(dev, "%s done\n", __func__);
+
+	return 0;
+}
+
+static int nvtzvault_resume(struct device *dev)
+{
+	/* Add print to log in nvlog buffer  */
+	dev_err(dev, "%s start\n", __func__);
+	atomic_set(&g_nvtzvault_dev.in_suspend_state, 0);
+	/* Add print to log in nvlog buffer  */
+	dev_err(dev, "%s done\n", __func__);
+	return 0;
+}
+static const struct dev_pm_ops nvtzvault_pm_ops = {
+	.suspend = nvtzvault_suspend,
+	.resume = nvtzvault_resume,
+};
+
+#endif /* CONFIG_PM */
+
+
 static const struct of_device_id nvtzvault_match[] = {
 	{.compatible = "nvidia,nvtzvault"},
 	{}
@@ -767,10 +833,12 @@ MODULE_DEVICE_TABLE(of, nvtzvault_match);
 static struct platform_driver nvtzvault_driver = {
 	.probe		= nvtzvault_probe,
 	.remove		= nvtzvault_remove_wrapper,
+	.shutdown	= nvtzvault_shutdown,
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= "nvtzvault",
 		.of_match_table = of_match_ptr(nvtzvault_match),
+		.pm = &nvtzvault_pm_ops,
 	}
 };
 

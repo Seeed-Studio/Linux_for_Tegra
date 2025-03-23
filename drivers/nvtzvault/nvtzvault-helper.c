@@ -187,21 +187,13 @@ int nvtzvault_tee_check_overflow_and_write(struct nvtzvault_tee_buf_context *ctx
 		goto end;
 	}
 
-	local_buf = kzalloc(size, GFP_KERNEL);
-	if (!local_buf) {
-		NVTZVAULT_ERR("Failed to allocate memory\n");
-		result = -ENOMEM;
-		goto end;
-	}
-
 	if (is_user_space) {
-		result = copy_from_user(local_buf, (void __user *)data, size);
+		result = copy_from_user(&ctx->buf_ptr[ctx->current_offset],
+				(void __user *)data, size);
 		if (result != 0) {
 			NVTZVAULT_ERR("%s(): Failed to copy_from_user %d\n", __func__, result);
 			goto end;
 		}
-		for (i = 0U; i < size; i++)
-			ctx->buf_ptr[ctx->current_offset + i] = ((uint8_t *)local_buf)[i];
 	} else {
 		for (i = 0U; i < size; i++)
 			ctx->buf_ptr[ctx->current_offset + i] = ((uint8_t *)data)[i];
