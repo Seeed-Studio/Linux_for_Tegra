@@ -71,7 +71,7 @@ struct host1x_job *host1x_job_alloc(struct host1x_channel *ch,
 	job->addr_phys = num_unpins ? mem : NULL;
 
 	job->reloc_addr_phys = job->addr_phys;
-	job->gather_addr_phys = &job->addr_phys[num_relocs];
+	job->gather_addr_phys = num_unpins ? &job->addr_phys[num_relocs] : NULL;
 
 	return job;
 }
@@ -282,7 +282,8 @@ static unsigned int pin_job(struct host1x *host, struct host1x_job *job)
 		job->unpins[job->num_unpins].map = map;
 		job->num_unpins++;
 
-		job->gather_addr_phys[i] = map->phys;
+		if (job->gather_addr_phys)
+			job->gather_addr_phys[i] = map->phys;
 	}
 
 	return 0;
@@ -644,8 +645,12 @@ int host1x_job_pin(struct host1x_job *job, struct device *dev)
 			continue;
 
 		/* copy_gathers() sets gathers base if firewall is enabled */
-		if (!job->enable_firewall)
-			g->base = job->gather_addr_phys[i];
+		if (!job->enable_firewall) {
+			if (job->gather_addr_phys)
+				g->base = job->gather_addr_phys[i];
+			else
+				continue;
+		}
 
 		for (j = i + 1; j < job->num_cmds; j++) {
 			if (job->cmds[i].type == HOST1X_JOB_CMD_GATHER &&
