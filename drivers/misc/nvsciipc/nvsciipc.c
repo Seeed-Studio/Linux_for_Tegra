@@ -34,7 +34,7 @@
 #include "nvsciipc.h"
 
 #if defined(CONFIG_ANDROID) || defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
-#define SYSTEM_GID 1000
+#define SYSTEM_GID 1000U
 #endif /* CONFIG_ANDROID || CONFIG_TEGRA_SYSTEM_TYPE_ACK */
 
 /* enable it to debug auth API via ioctl.
@@ -483,13 +483,16 @@ static int nvsciipc_ioctl_get_db_by_name(struct nvsciipc *ctx, unsigned int cmd,
 			NVSCIIPC_MAX_EP_NAME)) {
 // FIXME: consider android
 #if !defined(CONFIG_ANDROID) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+			struct cred const *cred = get_current_cred();
+			uid_t const uid = cred->uid.val;
+
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
-			(current_cred()->uid.val != 0) &&
-			(current_cred()->uid.val != ctx->db[i]->uid)) {
+			(uid != 0) &&
+			(uid != ctx->db[i]->uid)) {
 				ERR("%s[Client_UID = %d] : "
 					"Unauthorized access to endpoint\n",
-					__func__, current_cred()->uid.val);
+					__func__, uid);
 				return -EPERM;
 			}
 #endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
@@ -533,12 +536,15 @@ static int nvsciipc_ioctl_get_db_by_vuid(struct nvsciipc *ctx, unsigned int cmd,
 		if (get_db.vuid == ctx->db[i]->vuid) {
 // FIXME: consider android
 #if !defined(CONFIG_ANDROID) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+			struct cred const *cred = get_current_cred();
+			uid_t const uid = cred->uid.val;
+
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
-			(current_cred()->uid.val != 0) &&
-			(current_cred()->uid.val != ctx->db[i]->uid)) {
+			(uid != 0) &&
+			(uid != ctx->db[i]->uid)) {
 				ERR("%s[Client_UID = %d] : Unauthorized access to endpoint\n",
-					__func__, current_cred()->uid.val);
+					__func__, uid);
 				return -EPERM;
 			}
 #endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
@@ -616,20 +622,22 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 	struct nvsciipc_config_entry **entry_ptr;
 	int ret = 0;
 	int i;
+	struct cred const *cred = get_current_cred();
+	uid_t const uid = cred->uid.val;
 
 	INFO("set_db start\n");
 
 #if defined(CONFIG_ANDROID) || defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
-	if ((current_cred()->uid.val != SYSTEM_GID) &&
-	(current_cred()->uid.val != 0) &&
-	(current_cred()->uid.val != s_nvsciipc_uid)) {
+	if ((uid != SYSTEM_GID) &&
+	(uid != 0) &&
+	(uid != s_nvsciipc_uid)) {
 		ERR("no permission to set db\n");
 		return -EPERM;
 	}
 #else
 	/* check root or nvsciipc user */
-	if ((current_cred()->uid.val != 0) &&
-	(current_cred()->uid.val != s_nvsciipc_uid)) {
+	if ((uid != 0) &&
+	(uid != s_nvsciipc_uid)) {
 		ERR("no permission to set db\n");
 		return -EPERM;
 	}
@@ -891,10 +899,11 @@ static ssize_t nvsciipc_dbg_read(struct file *filp, char __user *buf,
 {
 	struct nvsciipc *ctx = filp->private_data;
 	int i;
+	struct cred const *cred = get_current_cred();
+	uid_t const uid = cred->uid.val;
 
 	/* check root user */
-	if ((current_cred()->uid.val != 0) &&
-	(current_cred()->uid.val != s_nvsciipc_uid)) {
+	if ((uid != 0) && (uid != s_nvsciipc_uid)) {
 		ERR("no permission to read db\n");
 		return -EPERM;
 	}
