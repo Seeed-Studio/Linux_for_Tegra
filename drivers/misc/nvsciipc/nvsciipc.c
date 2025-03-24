@@ -321,6 +321,22 @@ static int nvsciipc_ioctl_get_db_by_idx(struct nvsciipc *ctx, unsigned int cmd,
 		return -EPERM;
 	}
 
+#if defined(CONFIG_ANDROID) || defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+	if ((current_cred()->uid.val != SYSTEM_GID) &&
+	    (current_cred()->uid.val != 0) &&
+	    (current_cred()->uid.val != s_nvsciipc_uid)) {
+		ERR("no permission to set db\n");
+		return -EPERM;
+	}
+#else
+	/* check root or nvsciipc user */
+	if ((current_cred()->uid.val != 0) &&
+	    (current_cred()->uid.val != s_nvsciipc_uid)) {
+		ERR("no permission to set db\n");
+		return -EPERM;
+	}
+#endif /* CONFIG_ANDROID || CONFIG_TEGRA_SYSTEM_TYPE_ACK */
+
 	if (copy_from_user(&get_db, (void __user *)arg, _IOC_SIZE(cmd))) {
 		ERR("%s : copy_from_user failed\n", __func__);
 		return -EFAULT;
@@ -565,6 +581,17 @@ static int nvsciipc_ioctl_get_vuid(struct nvsciipc *ctx, unsigned int cmd,
 	for (i = 0; i < ctx->num_eps; i++) {
 		if (!strncmp(get_vuid.ep_name, ctx->db[i]->ep_name,
 			NVSCIIPC_MAX_EP_NAME)) {
+// FIXME: consider android
+#if !defined(CONFIG_ANDROID) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+			/* Authenticate the client process with valid UID */
+			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
+			    (current_cred()->uid.val != 0) &&
+			    (current_cred()->uid.val != ctx->db[i]->uid)) {
+				ERR("%s[Client_UID = %d] : Unauthorized access to endpoint\n",
+					__func__, current_cred()->uid.val);
+				return -EPERM;
+			}
+#endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
 			get_vuid.vuid = ctx->db[i]->vuid;
 			break;
 		}
