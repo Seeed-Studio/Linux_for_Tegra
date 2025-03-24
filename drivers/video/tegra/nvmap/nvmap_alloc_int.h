@@ -14,19 +14,6 @@
 #define NVMAP_PP_BIG_PAGE_SIZE           (0x10000)
 #endif /* CONFIG_ARM64_4K_PAGES */
 
-/*
- * Indicate the threshold number of pages after which
- * the multithreaded cache flush will be used.
- */
-#define THRESHOLD_PAGES_CACHE_FLUSH 32768
-
-struct nvmap_cache_thread {
-	pid_t thread_id;
-	void *va_start;
-	size_t size;
-	struct task_struct *task;
-};
-
 struct dma_coherent_mem_replica {
 	void		*virt_base;
 	dma_addr_t	device_base;
