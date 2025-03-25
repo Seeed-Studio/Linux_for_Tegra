@@ -17,7 +17,6 @@
 #include <linux/pm_opp.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
-#include <linux/version.h>
 
 #include <soc/tegra/common.h>
 #include <soc/tegra/pmc.h>
@@ -390,11 +389,7 @@ static int gr3d_init_power(struct device *dev, struct gr3d *gr3d)
 		.num_pd_names = 2,
 	};
 #else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	static const char * const opp_genpd_names[] = { "3d0", "3d1", NULL };
-#else
-	static const char *opp_genpd_names[] = { "3d0", "3d1", NULL };
-#endif
 	const u32 link_flags = DL_FLAG_STATELESS | DL_FLAG_PM_RUNTIME;
 	struct device **opp_virt_devs, *pd_dev;
 	struct device_link *link;

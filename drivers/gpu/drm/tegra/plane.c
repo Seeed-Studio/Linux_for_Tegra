@@ -6,7 +6,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/iommu.h>
 #include <linux/interconnect.h>
-#include <linux/version.h>
 
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -116,11 +115,7 @@ static bool tegra_plane_format_mod_supported(struct drm_plane *plane,
 		return true;
 
 	/* check for the sector layout bit */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 	if (fourcc_mod_is_vendor(modifier, NVIDIA)) {
-#else
-	if ((modifier >> 56) == DRM_FORMAT_MOD_VENDOR_NVIDIA) {
-#endif
 		if (modifier & DRM_FORMAT_MOD_NVIDIA_SECTOR_LAYOUT) {
 			if (!tegra_plane_supports_sector_layout(plane))
 				return false;

@@ -15,7 +15,6 @@
 #include <linux/overflow.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/version.h>
 
 #if defined(NV_APERTURE_REMOVE_ALL_CONFLICTING_DEVICES_PRESENT) /* Linux v6.0 */
 #include <linux/aperture.h>
@@ -1376,10 +1375,8 @@ static int __init host1x_drm_init(void)
 {
 	int err;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
 	if (drm_firmware_drivers_only())
 		return -ENODEV;
-#endif
 
 	err = host1x_driver_register(&host1x_drm_driver);
 	if (err < 0)

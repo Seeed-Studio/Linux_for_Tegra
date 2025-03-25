@@ -19,7 +19,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
-#include <linux/version.h>
 #include <linux/workqueue.h>
 
 #if defined(NV_DRM_DISPLAY_DRM_DP_HELPER_H_PRESENT) /* Linux v5.19 */
@@ -586,13 +585,11 @@ static int tegra_dpaux_probe(struct platform_device *pdev)
 	list_add_tail(&dpaux->list, &dpaux_list);
 	mutex_unlock(&dpaux_lock);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	err = devm_of_dp_aux_populate_ep_devices(&dpaux->aux);
 	if (err < 0) {
 		dev_err(dpaux->dev, "failed to populate AUX bus: %d\n", err);
 		return err;
 	}
-#endif
 
 	return 0;
 }

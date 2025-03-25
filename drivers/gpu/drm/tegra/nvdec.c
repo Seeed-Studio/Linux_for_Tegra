@@ -23,7 +23,6 @@
 #include <linux/pm_opp.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
-#include <linux/version.h>
 
 #include <soc/tegra/mc.h>
 

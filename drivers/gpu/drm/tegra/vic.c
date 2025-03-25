@@ -21,7 +21,6 @@
 #include <linux/pm_opp.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
-#include <linux/version.h>
 
 #include <nvidia/conftest.h>
 
@@ -1071,14 +1070,8 @@ static int vic_remove(struct platform_device *pdev)
 }
 
 static const struct dev_pm_ops vic_pm_ops = {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	RUNTIME_PM_OPS(vic_runtime_suspend, vic_runtime_resume, NULL)
 	SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
-#else
-	SET_RUNTIME_PM_OPS(vic_runtime_suspend, vic_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
-#endif
 };
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */

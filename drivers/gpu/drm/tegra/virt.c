@@ -14,7 +14,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/seq_file.h>
-#include <linux/version.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 

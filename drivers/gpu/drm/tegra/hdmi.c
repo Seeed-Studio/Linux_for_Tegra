@@ -17,7 +17,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
-#include <linux/version.h>
 
 #include <soc/tegra/common.h>
 #include <sound/hdmi-codec.h>
@@ -1250,11 +1249,7 @@ static void tegra_hdmi_encoder_enable(struct drm_encoder *encoder)
 	h_back_porch = mode->htotal - mode->hsync_end;
 	h_front_porch = mode->hsync_start - mode->hdisplay;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 	err = dev_pm_opp_set_rate(hdmi->dev, hdmi->pixel_clock);
-#else
-	err = clk_set_rate(hdmi->clk, hdmi->pixel_clock);
-#endif
 	if (err < 0) {
 		dev_err(hdmi->dev, "failed to set HDMI clock frequency: %d\n",
 			err);
