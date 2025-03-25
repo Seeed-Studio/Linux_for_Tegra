@@ -591,8 +591,12 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 		}
 		sg_init_table(vsc_req->sg_lst,
 			bio_req->nr_phys_segments);
+#if defined(NV_BLK_RQ_MAP_SG_HAS_NO_QUEUE_ARG) /* Linux v6.15 */
+		sg_cnt = blk_rq_map_sg(bio_req, vsc_req->sg_lst);
+#else
 		sg_cnt = blk_rq_map_sg(vblkdev->queue, bio_req,
 				vsc_req->sg_lst);
+#endif
 		vsc_req->sg_num_ents = sg_nents(vsc_req->sg_lst);
 		if (dma_map_sg(vblkdev->device, vsc_req->sg_lst,
 			vsc_req->sg_num_ents, DMA_BIDIRECTIONAL) == 0) {

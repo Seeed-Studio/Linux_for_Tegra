@@ -98,6 +98,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_mq_alloc_disk_for_queue
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_mq_alloc_queue
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_mq_destroy_queue
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_queue_max_hw_sectors
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += blk_rq_map_sg_has_no_queue_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += block_device_operations_open_has_gendisk_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += block_device_operations_release_has_no_mode_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += queue_limits_struct_has_features

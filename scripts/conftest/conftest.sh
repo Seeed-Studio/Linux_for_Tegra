@@ -6733,6 +6733,25 @@ compile_test() {
 		    "NV_BLK_MQ_F_SHOULD_MERGE" "" "types"
         ;;
 
+        blk_rq_map_sg_has_no_queue_arg)
+            #
+            # Determine if blk_rq_map_sg() no longer takes a request_queue parameter.
+            #
+            # Commit 75618ac6e98f ("block: remove unused parameter 'q' parameter
+            # in __blk_rq_map_sg()") removed the 'request_queue' parameter from the
+            # function blk_rq_map_sg() in Linux v6.15.
+            #
+            CODE="
+            #include <linux/blk-mq.h>
+
+            int conftest_blk_rq_map_sg_has_no_queue_arg(struct request *rq,
+                                                        struct scatterlist *sg) {
+                return blk_rq_map_sg(rq, sg);
+            }"
+
+            compile_check_conftest "$CODE" "NV_BLK_RQ_MAP_SG_HAS_NO_QUEUE_ARG" "" "types"
+        ;;
+
         queue_limits_struct_has_features)
 	    #
             # Determine if the 'queue_limits' needs to use
