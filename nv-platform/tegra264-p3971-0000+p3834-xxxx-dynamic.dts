@@ -99,4 +99,29 @@
 			};
 		};
 	};
+
+	/* PCIe C5 */
+	fragment-t264-p3971-0000-p3834-xxxx-pcie-c5-rc@2 {
+		target-path = "/bus@0";
+		board_config {
+			odm-data = "pcie-c5-rc-enable";
+			ids = ">=3971-0000-TS3";
+		};
+		__overlay__ {
+			/* Disable C4 RC */
+			pcie@a808460000 {
+				status = "disabled";
+			};
+
+			/* Disable C4 EP */
+			pcie-ep@a808460000 {
+				status = "disabled";
+			};
+
+			/* Enable C5 RC */
+			pcie@a808480000 {
+				status = "okay";
+			};
+		};
+	};
 };
