@@ -23,6 +23,13 @@
 // clang-format off
 #if PVA_BUILD_MODE == PVA_BUILD_MODE_SIM
     #define PVA_KMD_TIMEOUT_FACTOR 100
+#elif (PVA_BUILD_MODE == PVA_BUILD_MODE_NATIVE) && (PVA_IS_DEBUG == 1)
+    // On native builds, the FW calls the KMD's shared buffer handler in its
+    // own thread. In debug builds, if there are a large number of messages
+    // (prints, unregister, etc.), this handler might take a while to execute,
+    // making the FW and delay the processing of command buffers. This could
+    // lead to submission timeouts in KMD.
+    #define PVA_KMD_TIMEOUT_FACTOR 10
 #else
     #define PVA_KMD_TIMEOUT_FACTOR 1
 #endif

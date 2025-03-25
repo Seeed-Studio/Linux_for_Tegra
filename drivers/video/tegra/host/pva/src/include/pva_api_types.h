@@ -345,7 +345,7 @@ struct pva_cmdbuf_status {
 	uint64_t timestamp;
 	/** Additional status information for the engine state */
 	uint32_t info32;
-	/** Additional status information for the engine state */
+	/** Index of cmd that resulted in error */
 	uint16_t info16;
 	/** Error code. Type: enum pva_error */
 	uint16_t status;
