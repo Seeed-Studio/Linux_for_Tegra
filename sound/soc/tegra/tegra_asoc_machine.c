@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2014-2025 NVIDIA CORPORATION. All rights reserved.
 //
 // tegra_asoc_machine.c - Tegra DAI links parser
 
@@ -97,10 +97,10 @@ static int tegra_machine_codec_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
 		fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
 		master_mode <<= ffs(SND_SOC_DAIFMT_MASTER_MASK) - 1;
 
-		if (master_mode == SND_SOC_DAIFMT_CBM_CFM)
-			fmt |= SND_SOC_DAIFMT_CBM_CFM;
+		if (master_mode == SND_SOC_DAIFMT_CBP_CFP)
+			fmt |= SND_SOC_DAIFMT_CBP_CFP;
 		else
-			fmt |= SND_SOC_DAIFMT_CBS_CFS;
+			fmt |= SND_SOC_DAIFMT_CBC_CFC;
 	}
 
 	ret = snd_soc_runtime_set_dai_fmt(rtd, fmt);
