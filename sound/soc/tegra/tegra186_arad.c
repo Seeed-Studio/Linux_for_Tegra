@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra186_arad.c - Tegra186 ARAD driver
 
@@ -431,15 +431,21 @@ static ARAD_MUX_ENUM_CTRL_DECL(denominator6,
 		0, 0xffff, 0, tegra186_arad_get_prescalar, \
 		tegra186_arad_put_prescalar)
 
+#if defined(NV_SOC_SINGLE_VALUE_HAS_XMIN_ARG) /* Linux v6.15 */
+#define ARAD_SINGLE_VALUE(xreg, xmax) SOC_SINGLE_VALUE(xreg, 0, 0, xmax, 0, 0)
+#else
+#define ARAD_SINGLE_VALUE(xreg, xmax) SOC_SINGLE_VALUE(xreg, 0, xmax, 0, 0)
+#endif
+
 #define ARAD_LINE_RATIO_INT(id) { \
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, \
 	.name = "Lane"#id" Ratio Int", \
 	.access = SNDRV_CTL_ELEM_ACCESS_READ | SNDRV_CTL_ELEM_ACCESS_VOLATILE, \
 	.info = tegra186_arad_get_info, \
 	.get = tegra186_arad_get_ratio_int, \
-	.private_value = SOC_SINGLE_VALUE( \
-		TEGRA186_ARAD_LANE##id##_RATIO_INTEGER_PART, 0, \
-		TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK, 0, 0) }
+	.private_value = ARAD_SINGLE_VALUE( \
+		TEGRA186_ARAD_LANE##id##_RATIO_INTEGER_PART, \
+		TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK) }
 
 #define ARAD_LINE_RATIO_FRAC(id) { \
 	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,\
@@ -447,9 +453,9 @@ static ARAD_MUX_ENUM_CTRL_DECL(denominator6,
 	.access = SNDRV_CTL_ELEM_ACCESS_READ | SNDRV_CTL_ELEM_ACCESS_VOLATILE,\
 	.info = tegra186_arad_get_info, \
 	.get = tegra186_arad_get_ratio_frac,\
-	.private_value = SOC_SINGLE_VALUE(\
-		TEGRA186_ARAD_LANE##id##_RATIO_FRACTIONAL_PART, 0, \
-		TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0, 0) }
+	.private_value = ARAD_SINGLE_VALUE(\
+		TEGRA186_ARAD_LANE##id##_RATIO_FRACTIONAL_PART, \
+		TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK) }
 
 static const struct snd_kcontrol_new tegra186_arad_controls[] = {
 	SOC_SINGLE_EXT("Lane1 enable", TEGRA186_ARAD_LANE_ENABLE, 0, 1, 0,
