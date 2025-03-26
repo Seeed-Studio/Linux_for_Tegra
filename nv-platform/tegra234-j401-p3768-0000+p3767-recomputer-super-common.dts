@@ -22,6 +22,23 @@
                                 size = <0x8000>;
 				/delete-property/ read-only;
                         };
+
+			seeed_io_exp:io_exp@38 {
+				compatible = "nxp,pca9554";
+				reg = <0x38>;
+				status = "okay";
+				gpio-controller;
+				#gpio-cells = <2>;
+
+				interrupt-parent = <&gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(AG, 4) IRQ_TYPE_LEVEL_LOW>;
+
+				gpio-line-names =
+				"CSI3_PWDN"	,"CAM_MUX1_SEL",
+				"M2B_PCIe_Reset","PCIe_ETH_Reset",
+				"CSI1_PWDN"	,"not_used",
+				"not_used"	,"not_used";
+			};
                 };
         };
 };
