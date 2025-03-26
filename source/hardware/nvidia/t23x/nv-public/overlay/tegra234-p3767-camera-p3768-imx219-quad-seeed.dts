@@ -9,14 +9,15 @@
 #define CAM1_PWDN	TEGRA234_MAIN_GPIO(AC, 0)
 #define CAM_I2C_MUX 	TEGRA234_AON_GPIO(CC, 3)
 
-#define CAM2_PWDN	TEGRA234_MAIN_GPIO(Q, 6)
-#define CAM3_PWDN	TEGRA234_MAIN_GPIO(G, 6)
-#define CAM_I2C_MUX2 	TEGRA234_MAIN_GPIO(H, 0)
+#define CAM2_PWDN	4
+#define CAM3_PWDN	0
+#define CAM_I2C_MUX2 	1
 
 #include <dt-bindings/clock/tegra234-clock.h>
 #include <dt-bindings/gpio/tegra234-gpio.h>
 #include <dt-bindings/tegra234-p3767-0000-common.h>
 //#include "tegra234-camera-rbpcv2-imx219.dtsi"
+#include <dt-bindings/interrupt-controller/irq.h>
 
 / {
 	overlay-name = "Camera IMX219 Quad Seeed";
@@ -24,6 +25,32 @@
 	compatible = JETSON_COMPATIBLE_P3768;
 
 	fragment-camera@0 {
+		target-path = "/";
+		__overlay__ {
+			bus@0 {
+				i2c@3160000 {
+					seeed_io_exp:io_exp@38 {
+						compatible = "nxp,pca9554";
+						reg = <0x38>;
+						status = "okay";
+						gpio-controller;
+						#gpio-cells = <2>;
+
+						interrupt-parent = <&gpio>;
+						interrupts = <TEGRA234_MAIN_GPIO(AG, 4) IRQ_TYPE_LEVEL_LOW>;
+
+						gpio-line-names =
+						"CSI3_PWDN"	,"CAM_MUX1_SEL",
+						"M2B_PCIe_Reset","PCIe_ETH_Reset",
+						"CSI1_PWDN"	,"not_used",
+						"not_used"	,"not_used";
+					};
+				};
+			};
+		};
+	};
+
+	fragment-camera@1 {
 		target-path = "/";
 		__overlay__ {
 			tegra-capture-vi  {
@@ -773,7 +800,7 @@
 					#address-cells = <1>;
 					#size-cells = <0>;
 					i2c-parent = <&gen2_i2c>;
-					mux-gpios = <&gpio CAM_I2C_MUX2 GPIO_ACTIVE_HIGH>;
+					mux-gpios = <&seeed_io_exp CAM_I2C_MUX2 GPIO_ACTIVE_HIGH>;
 
 					i2c@0 {
 						status = "okay";
@@ -782,7 +809,7 @@
 						#size-cells = <0>;
 
 						imx219_cam2: rbpcv2_imx219_b@10 {
-							reset-gpios = <&gpio CAM2_PWDN GPIO_ACTIVE_HIGH>;
+							reset-gpios = <&seeed_io_exp CAM2_PWDN GPIO_ACTIVE_HIGH>;
 							compatible = "sony,imx219";
 							/* I2C device address */
 							reg = <0x10>;
@@ -1085,7 +1112,7 @@
 						#size-cells = <0>;
 
 						imx219_cam3: rbpcv2_imx219_d@10 {
-							reset-gpios = <&gpio CAM3_PWDN GPIO_ACTIVE_HIGH>;
+							reset-gpios = <&seeed_io_exp CAM3_PWDN GPIO_ACTIVE_HIGH>;
 							compatible = "sony,imx219";
 							/* I2C device address */
 							reg = <0x10>;
