@@ -848,6 +848,7 @@ static int tegra186_utmi_phy_set_mode(struct phy *phy, enum phy_mode mode,
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	struct tegra_xusb_usb2_port *port = tegra_xusb_find_usb2_port(padctl,
 								lane->index);
+	u32 value;
 	int err = 0;
 
 	mutex_lock(&padctl->lock);
@@ -863,11 +864,11 @@ static int tegra186_utmi_phy_set_mode(struct phy *phy, enum phy_mode mode,
 			tegra186_xusb_padctl_vbus_override(padctl, true);
 		} else if (submode == USB_ROLE_NONE) {
 			/*
-			 * When port is peripheral only or role transitions to
-			 * USB_ROLE_NONE from USB_ROLE_DEVICE, regulator is not
-			 * enabled.
+			 * The regulator is disabled only when the role transitions
+			 * from USB_ROLE_HOST to USB_ROLE_NONE.
 			 */
-			if (regulator_is_enabled(port->supply))
+			value = padctl_readl(padctl, USB2_VBUS_ID);
+			if (!(value & ID_OVERRIDE_FLOATING))
 				regulator_disable(port->supply);
 
 			tegra186_xusb_padctl_id_override(padctl, false);
