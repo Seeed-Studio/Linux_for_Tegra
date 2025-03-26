@@ -103,34 +103,32 @@ MODULE_DEVICE_TABLE(of, host1x_of_match);
 
 void host1x_sync_writel(struct host1x *host1x, u32 v, u32 r)
 {
-#ifdef HOST1X_EMU_HYPERVISOR
-    void __iomem *sync_mem = host1x->syncpt_va_apt;
-    writel(v, (void __iomem*)((u8*)sync_mem + r));
-#else
-    unsigned int *sync_mem = (unsigned int*)((u8*)host1x->syncpt_va_apt + r);
-    *sync_mem = v;
-#endif
+    if (host1x->hv_syncpt_mem == true) {
+        void __iomem *sync_mem = host1x->syncpt_va_apt;
+        writel(v, (void __iomem*)((u8*)sync_mem + r));
+    } else {
+        unsigned int *sync_mem = (unsigned int*)((u8*)host1x->syncpt_va_apt + r);
+        *sync_mem = v;
+    }
 }
 
 u32 host1x_sync_readl(struct host1x *host1x, u32 r)
 {
-#ifdef HOST1X_EMU_HYPERVISOR
-    void __iomem *sync_mem = host1x->syncpt_va_apt;
-    return readl((void __iomem*)((u8*)sync_mem + r));
-#else
-    unsigned int *sync_mem = (unsigned int*)((u8*)host1x->syncpt_va_apt + r);
-    return(*sync_mem);
-#endif
+    if (host1x->hv_syncpt_mem == true) {
+        void __iomem *sync_mem = host1x->syncpt_va_apt;
+        return readl((void __iomem*)((u8*)sync_mem + r));
+    } else {
+        unsigned int *sync_mem = (unsigned int*)((u8*)host1x->syncpt_va_apt + r);
+        return(*sync_mem);
+    }
 }
 
 static int host1x_get_assigned_resources(struct host1x *host)
 {
     int err;
     u32 vals[4];
-#ifndef HOST1X_EMU_HYPERVISOR
     unsigned long   page_addr = 0;
     unsigned int    syncpt_pwr_2;
-#endif
     struct device_node  *np = host->dev->of_node;
 
     err = of_property_read_u32_array(np, "nvidia,syncpoints", vals, 2);
@@ -163,67 +161,51 @@ static int host1x_get_assigned_resources(struct host1x *host)
 	} else {
 		host->hr_polling_intrval = HRTIMER_TIMEOUT_NSEC;
 	}
+	pr_info("Host1x-EMU: OS Scheduling resolution :%u\n", HZ);
 	pr_info("Host1x-EMU: HRTimer Resolution :%unsec\n", MONOTONIC_RES_NSEC);
 	pr_info("Host1x-EMU: HRTimer Polling Interval :%unsec\n", host->hr_polling_intrval);
 #endif
 
-#ifdef HOST1X_EMU_HYPERVISOR
     err = of_property_read_u32_array(np, "nvidia,syncpoints-mem", vals, 4);
     if (err == 0) {
         host->syncpt_phy_apt  = ((uint64_t)vals[0] << 32U) | ((uint64_t)vals[1]);
         host->syncpt_page_size = vals[2];
         host->syncpt_count     = vals[3];
-#ifdef HOST1X_EMU_SYNCPT_DEGUB
-        /**
-         * TODO: Remove debug prints
-         */
-        pr_info("Host1x-EMU: Syncpoint Physical Addr:%llx\n", host->syncpt_phy_apt);
-        pr_info("Host1x-EMU: Syncpoint Page Size :%u\n", vals[2]);
-        pr_info("Host1x-EMU: Syncpoint Count :%u\n", vals[3]);
-        pr_info("Host1x-EMU: Syncpoint Pooling Interval :%u\n", host->polling_intrval);
-        pr_info("Host1x-EMU: OS Scheduling resolution :%u\n", HZ);
-#endif
+        host->hv_syncpt_mem    = true;
+
+        if ((host->syncpt_end + host->syncpt_base) > host->syncpt_count) {
+            dev_err(host->dev,
+                "Host1x-EMU: Invalid syncpoint property, Syncpoint excedes range: %d\n", -EINVAL );
+            return -EINVAL ;
+        }
+
+        host->syncpt_va_apt = devm_ioremap(host->dev, host->syncpt_phy_apt,
+                                    (host->syncpt_count*host->syncpt_page_size));
+        if (IS_ERR(host->syncpt_va_apt)) {
+            return PTR_ERR(host->syncpt_va_apt);
+        }
     } else {
-        dev_err(host->dev,
-            "Host1x-EMU:invalid nvidia,syncpoints-mem property: %d\n", err);
-        return err;
+        host->hv_syncpt_mem = false;
+        host->syncpt_count  = host->syncpt_end;
+
+        syncpt_pwr_2 = order_base_2(host->syncpt_count);
+        page_addr = __get_free_pages(GFP_KERNEL, syncpt_pwr_2);
+        if (unlikely((void*)page_addr == NULL)) {
+            dev_err(host->dev,
+                "Host1x-EMU: Syncpoint Carveout allocation failed: %d\n", (-ENOMEM));
+            return -ENOMEM;
+        }
+        host->syncpt_phy_apt   = __pa(page_addr);
+        host->syncpt_va_apt    = (void*)page_addr;
+        host->syncpt_page_size  = PAGE_SIZE;
+        /*Resetting pool to zero value*/
+        memset((void*)page_addr, 0, PAGE_SIZE << syncpt_pwr_2);
     }
 
-    if ((host->syncpt_end + host->syncpt_base) > host->syncpt_count) {
-        dev_err(host->dev,
-            "Host1x-EMU: Invalid syncpoint property, Syncpoint excedes range: %d\n", -EINVAL );
-        return -EINVAL ;
-    }
-
-    host->syncpt_va_apt = devm_ioremap(host->dev, host->syncpt_phy_apt,
-                                (host->syncpt_count*host->syncpt_page_size));
-    if (IS_ERR(host->syncpt_va_apt)) {
-        return PTR_ERR(host->syncpt_va_apt);
-    }
-#else
-    /**
-     * TODO: Check if we can set this from DT.
-     * Currently for native OS using static value for number of syncpoint
-     */
-    host->syncpt_count = host->info->nb_pts;
-    if ((host->syncpt_end + host->syncpt_base) > host->syncpt_count) {
-        dev_err(host->dev,
-            "Host1x-EMU: Invalid syncpoint property, Syncpoint excedes range: %d\n", -EINVAL );
-        return -EINVAL;
-    }
-
-    syncpt_pwr_2 = order_base_2(host->syncpt_count);
-    page_addr = __get_free_pages(GFP_KERNEL, syncpt_pwr_2);
-    if (unlikely((void*)page_addr == NULL)) {
-        dev_err(host->dev,
-            "Host1x-EMU: Syncpoint Carveout allocation failed: %d\n", (-ENOMEM));
-        return -ENOMEM;
-    }
-    host->syncpt_phy_apt   = __pa(page_addr);
-    host->syncpt_va_apt    = (void*)page_addr;
-    host->syncpt_page_size  = PAGE_SIZE;
-    /*Resetting pool to zero value*/
-    memset((void*)page_addr, 0, PAGE_SIZE << syncpt_pwr_2);
+#ifdef HOST1X_EMU_SYNCPT_DEGUB
+    pr_info("Host1x-EMU: Syncpoint Physical Addr:%llx\n", host->syncpt_phy_apt);
+    pr_info("Host1x-EMU: Syncpoint Page Size :%u\n", host->syncpt_page_size);
+    pr_info("Host1x-EMU: Syncpoint Pooling Interval :%u\n", host->polling_intrval);
 #endif
 
     pr_info("Host1x-EMU: Syncpoint-Base:%d Syncpoint-End:%d Syncpoint-Count:%d\n",

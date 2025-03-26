@@ -60,6 +60,7 @@ struct host1x {
 #ifdef HOST1X_EMU_HRTIMER_FENCE_SCAN
 	unsigned int hr_polling_intrval;
 #endif
+    bool hv_syncpt_mem;
 #ifdef HOST1X_EMU_HYPERVISOR
     void __iomem *syncpt_va_apt;   /* syncpoint apperture mapped in kernel space */
 #else
