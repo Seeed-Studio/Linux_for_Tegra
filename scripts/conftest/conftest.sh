@@ -5326,9 +5326,7 @@ compile_test() {
             # interconnect API")
             #
             CODE="
-            #if defined(NV_LINUX_INTERCONNECT_H_PRESENT)
             #include <linux/interconnect.h>
-            #endif
             void conftest_icc_get(void)
             {
                 icc_get();
@@ -5346,9 +5344,7 @@ compile_test() {
             # exported API for user interconnect API")
             #
             CODE="
-            #if defined(NV_LINUX_INTERCONNECT_H_PRESENT)
             #include <linux/interconnect.h>
-            #endif
             void conftest_devm_of_icc_get(void)
             {
                 devm_of_icc_get();
@@ -5366,9 +5362,7 @@ compile_test() {
             # interconnect API")
             #
             CODE="
-            #if defined(NV_LINUX_INTERCONNECT_H_PRESENT)
             #include <linux/interconnect.h>
-            #endif
             void conftest_icc_set_bw(void)
             {
                 icc_set_bw();
@@ -5386,9 +5380,7 @@ compile_test() {
             # interconnect API")
             #
             CODE="
-            #if defined(NV_LINUX_INTERCONNECT_H_PRESENT)
             #include <linux/interconnect.h>
-            #endif
             void conftest_icc_put(void)
             {
                 icc_put();
