@@ -53,7 +53,8 @@
 			};
 		};
 
-		i2c@c240000 {
+		i2c@c250000 {
+        	        status = "okay";
 			#address-cells = <1>;
 			#size-cells = <0>;
 
