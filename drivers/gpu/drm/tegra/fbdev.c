@@ -10,6 +10,7 @@
 #include <nvidia/conftest.h>
 
 #include <linux/console.h>
+#include <linux/fb.h>
 #include <linux/vmalloc.h>
 
 #include <drm/drm_drv.h>
@@ -161,7 +162,8 @@ static int tegra_fbdev_probe(struct drm_fb_helper *helper,
 #if defined(NV_DRM_MODE_CONFIG_STRUCT_HAS_FB_BASE_ARG) /* Linux v6.2 */
 	drm->mode_config.fb_base = (resource_size_t)bo->iova;
 #endif
-	info->screen_base = (void __iomem *)bo->vaddr + offset;
+	info->flags |= FBINFO_VIRTFB;
+	info->screen_buffer = bo->vaddr + offset;
 	info->screen_size = size;
 	info->fix.smem_start = (unsigned long)(bo->iova + offset);
 	info->fix.smem_len = size;

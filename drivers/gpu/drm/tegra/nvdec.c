@@ -18,7 +18,6 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
-#include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_opp.h>
 #include <linux/pm_runtime.h>
@@ -501,6 +500,8 @@ static int nvdec_load_falcon_firmware(struct nvdec *nvdec)
 			return err;
 	} else {
 		virt = tegra_drm_alloc(tegra, size, &iova);
+		if (IS_ERR(virt))
+			return PTR_ERR(virt);
 	}
 
 	nvdec->falcon.firmware.virt = virt;
@@ -955,7 +956,6 @@ static int nvdec_remove(struct platform_device *pdev)
 	host1x_actmon_unregister(&nvdec->client.base);
 
 	host1x_client_unregister(&nvdec->client.base);
-
 	falcon_exit(&nvdec->falcon);
 
 	return 0;

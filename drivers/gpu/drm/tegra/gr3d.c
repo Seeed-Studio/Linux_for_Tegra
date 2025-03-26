@@ -11,6 +11,7 @@
 #include <linux/host1x-next.h>
 #include <linux/iommu.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
@@ -570,7 +571,6 @@ static int gr3d_remove(struct platform_device *pdev)
 	struct gr3d *gr3d = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(&pdev->dev);
-
 	host1x_client_unregister(&gr3d->client.base);
 
 	return 0;

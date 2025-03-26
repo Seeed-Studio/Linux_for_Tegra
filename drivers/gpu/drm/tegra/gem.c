@@ -183,21 +183,30 @@ static void *tegra_bo_mmap(struct host1x_bo *bo)
 {
 	struct tegra_bo *obj = host1x_to_tegra_bo(bo);
 #if defined(NV_LINUX_IOSYS_MAP_H_PRESENT)
-	struct iosys_map map = {0};
+	struct iosys_map map = { 0 };
 #else
-	struct dma_buf_map map = {0};
+	struct dma_buf_map map = { 0 };
 #endif
+	void *vaddr;
 	int ret;
 
-	if (obj->vaddr) {
+	if (obj->vaddr)
 		return obj->vaddr;
-	} else if (obj->dma_buf) {
+
+	if (obj->dma_buf) {
 		ret = dma_buf_vmap(obj->dma_buf, &map);
-		return ret ? NULL : map.vaddr;
-	} else {
-		return vmap(obj->pages, obj->num_pages, VM_MAP,
-			    pgprot_writecombine(PAGE_KERNEL));
+		if (ret < 0)
+			return ERR_PTR(ret);
+
+		return map.vaddr;
 	}
+
+	vaddr = vmap(obj->pages, obj->num_pages, VM_MAP,
+		     pgprot_writecombine(PAGE_KERNEL));
+	if (!vaddr)
+		return ERR_PTR(-ENOMEM);
+
+	return vaddr;
 }
 
 static void tegra_bo_munmap(struct host1x_bo *bo, void *addr)
@@ -211,10 +220,11 @@ static void tegra_bo_munmap(struct host1x_bo *bo, void *addr)
 
 	if (obj->vaddr)
 		return;
-	else if (obj->dma_buf)
+
+	if (obj->dma_buf)
 		dma_buf_vunmap(obj->dma_buf, &map);
-	else
-		vunmap(addr);
+
+	vunmap(addr);
 }
 
 static struct host1x_bo *tegra_bo_get(struct host1x_bo *bo)

@@ -13,6 +13,7 @@
 #include <linux/iommu.h>
 #include <linux/interconnect.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
@@ -2397,7 +2398,6 @@ static int tegra_crtc_calculate_memory_bandwidth(struct drm_crtc *crtc,
 	const struct tegra_plane_state *tegra_state;
 	const struct drm_plane_state *plane_state;
 	struct tegra_dc *dc = to_tegra_dc(crtc);
-	const struct drm_crtc_state *old_state;
 	struct drm_crtc_state *new_state;
 	struct tegra_plane *tegra;
 	struct drm_plane *plane;
@@ -2412,7 +2412,6 @@ static int tegra_crtc_calculate_memory_bandwidth(struct drm_crtc *crtc,
 		return 0;
 
 	new_state = drm_atomic_get_new_crtc_state(state, crtc);
-	old_state = drm_atomic_get_old_crtc_state(state, crtc);
 
 	/*
 	 * For overlapping planes pixel's data is fetched for each plane at

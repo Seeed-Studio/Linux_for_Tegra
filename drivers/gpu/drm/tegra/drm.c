@@ -814,7 +814,8 @@ int host1x_client_iommu_attach(struct host1x_client *client)
 	 * not the shared IOMMU domain, don't try to attach it to a different
 	 * domain. This allows using the IOMMU-backed DMA API.
 	 */
-	if (domain && domain != tegra->domain)
+	if (domain && domain->type != IOMMU_DOMAIN_IDENTITY &&
+	    domain != tegra->domain)
 		return 0;
 
 	if (tegra->domain) {
@@ -983,6 +984,10 @@ static bool host1x_drm_wants_iommu(struct host1x_device *dev)
 {
 	struct host1x *host1x = dev_get_drvdata(dev->dev.parent);
 	struct iommu_domain *domain;
+
+	/* Our IOMMU usage policy doesn't currently play well with GART */
+	if (of_machine_is_compatible("nvidia,tegra20"))
+		return false;
 
 	/*
 	 * If the Tegra DRM clients are backed by an IOMMU, push buffers are
@@ -1161,6 +1166,15 @@ static int host1x_drm_probe(struct host1x_device *dev)
 
 	drm_mode_config_reset(drm);
 
+	/*
+	 * Only take over from a potential firmware framebuffer if any CRTCs
+	 * have been registered. This must not be a fatal error because there
+	 * are other accelerators that are exposed via this driver.
+	 *
+	 * Another case where this happens is on Tegra234 where the display
+	 * hardware is no longer part of the host1x complex, so this driver
+	 * will not expose any modesetting features.
+	 */
 	if (drm->mode_config.num_crtc > 0) {
 #if defined(NV_APERTURE_REMOVE_ALL_CONFLICTING_DEVICES_PRESENT) /* Linux v6.0 */
 		err = aperture_remove_all_conflicting_devices(tegra_drm_driver.name);
@@ -1173,6 +1187,12 @@ static int host1x_drm_probe(struct host1x_device *dev)
 #endif
 		if (err < 0)
 			goto hub;
+	} else {
+		/*
+		 * Indicate to userspace that this doesn't expose any display
+		 * capabilities.
+		 */
+		drm->driver_features &= ~(DRIVER_MODESET | DRIVER_ATOMIC);
 	}
 
 	err = drm_dev_register(drm, 0);

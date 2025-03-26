@@ -298,7 +298,6 @@ static int gr2d_remove(struct platform_device *pdev)
 	struct gr2d *gr2d = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(&pdev->dev);
-
 	host1x_client_unregister(&gr2d->client.base);
 
 	return 0;
