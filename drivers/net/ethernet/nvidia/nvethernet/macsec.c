@@ -1471,10 +1471,8 @@ int macsec_probe(struct ether_priv_data *pdata)
 			ret = -1;
 			goto genl_err;
 		} else {
-			strncpy(macsec_pdata->nv_macsec_fam.name,
-				netdev_name(pdata->ndev), GENL_NAMSIZ - 1);
-			// Explicit null-termination to fix CERT STR07-C
-			macsec_pdata->nv_macsec_fam.name[GENL_NAMSIZ - 1] = '\0';
+			snprintf(macsec_pdata->nv_macsec_fam.name, GENL_NAMSIZ,
+				 netdev_name(pdata->ndev));
 		}
 		ret = genl_register_family(&macsec_pdata->nv_macsec_fam);
 			if (ret) {

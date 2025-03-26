@@ -3600,8 +3600,8 @@ static int ether_handle_tso(struct device *dev,
 		tx_pkt_cx->mss = skb_shinfo(skb)->gso_size;
 	}
 
-	if (((UINT_MAX - transport_offset) < tx_pkt_cx->tcp_udp_hdrlen) ||
-	    ((transport_offset + tx_pkt_cx->tcp_udp_hdrlen) > (unsigned int)skb->len)) {
+	if (unlikely(((UINT_MAX - transport_offset) < tx_pkt_cx->tcp_udp_hdrlen) ||
+	    ((transport_offset + tx_pkt_cx->tcp_udp_hdrlen) > (unsigned int)skb->len))) {
 		dev_err(dev, "Invalid header length calculations\n");
 		ret = -EINVAL;
 		goto func_exit;
@@ -3642,11 +3642,15 @@ static void ether_tx_swcx_rollback(struct ether_priv_data *pdata,
 	struct osi_tx_swcx *tx_swcx = NULL;
 
 	while (count > 0) {
-		if ((pdata->osi_dma->tx_ring_sz == 0U) || (cur_tx_idx == 0U)) {
+		if (unlikely(pdata->osi_dma->tx_ring_sz == 0U)) {
 			dev_err(dev, "Invalid Tx ring size or index\n");
 			break;
 		}
-		DECR_TX_DESC_INDEX(cur_tx_idx, pdata->osi_dma->tx_ring_sz);
+		if (cur_tx_idx != 0U) {
+			DECR_TX_DESC_INDEX(cur_tx_idx, pdata->osi_dma->tx_ring_sz);
+		} else {
+			cur_tx_idx = pdata->osi_dma->tx_ring_sz - 1U;
+		}
 		tx_swcx = tx_ring->tx_swcx + cur_tx_idx;
 		if (tx_swcx->buf_phy_addr) {
 			if ((tx_swcx->flags & OSI_PKT_CX_PAGED_BUF) ==
@@ -3728,7 +3732,7 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 		tx_pkt_cx->flags |= OSI_PKT_CX_PTP;
 	}
 
-	if (pdata->osi_dma->tx_ring_sz == 0U) {
+	if (unlikely(pdata->osi_dma->tx_ring_sz == 0U)) {
 		dev_err(dev, "Invalid Tx ring size\n");
 		goto exit_func;
 	}
@@ -3783,7 +3787,7 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 		tx_swcx->len = size;
 		len -= size;
 		offset += size;
-		if (cnt == (int)INT_MAX) {
+		if (unlikely(cnt == (int)INT_MAX)) {
 			dev_err(dev, "Reached Max desc count\n");
 			ret = -ENOMEM;
 			goto dma_map_failed;
@@ -3827,7 +3831,7 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 				goto dma_map_failed;
 			}
 			offset += size;
-			if (cnt == (int)INT_MAX) {
+			if (unlikely(cnt == (int)INT_MAX)) {
 				dev_err(dev, "Reached Max desc count\n");
 				ret = -ENOMEM;
 				goto dma_map_failed;
@@ -3850,7 +3854,7 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 			}
 
 			size = min(len, max_data_len_per_txd);
-			if (skb_frag_off(frag) > UINT_MAX - offset) {
+			if (unlikely(skb_frag_off(frag) > UINT_MAX - offset)) {
 				dev_err(dev, "Offset addition overflow detected:"
 					"frag offset = %u, offset = %u\n",
 					skb_frag_off(frag), offset);
@@ -3873,7 +3877,7 @@ static int ether_tx_swcx_alloc(struct ether_priv_data *pdata,
 			tx_swcx->len = size;
 			len -= size;
 			offset += size;
-			if (cnt == (int)INT_MAX) {
+			if (unlikely(cnt == (int)INT_MAX)) {
 				dev_err(dev, "Reached Max desc count\n");
 				ret = -ENOMEM;
 				goto dma_map_failed;
@@ -7908,7 +7912,9 @@ int ether_suspend_noirq(struct device *dev)
 
 #ifdef CONFIG_DEBUG_FS
 	t1 = ether_get_systime_us();
-	pdata->suspend_profile_time = (t1 - t0);
+	if (t1 >= t0) {
+		pdata->suspend_profile_time = (t1 - t0);
+	}
 #endif
 	return 0;
 }
@@ -7943,7 +7949,9 @@ int ether_resume_noirq(struct device *dev)
 
 #ifdef CONFIG_DEBUG_FS
 	t1 = ether_get_systime_us();
-	pdata->resume_profile_time = (t1 - t0);
+	if (t1 >= t0) {
+		pdata->resume_profile_time = (t1 - t0);
+	}
 #endif
 	return 0;
 }

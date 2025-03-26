@@ -338,14 +338,19 @@ static inline bool valid_tx_len(unsigned int length)
 static inline int ether_avail_txdesc_cnt(struct osi_dma_priv_data *osi_dma,
 					 struct osi_tx_ring *tx_ring)
 {
-	int ret = -EINVAL;
-
-	if ((osi_dma->tx_ring_sz == 0U) || (tx_ring->cur_tx_idx == 0U) ||
-	    (tx_ring->clean_idx < (tx_ring->cur_tx_idx - 1U))) {
-		return ret;
+	if (unlikely((osi_dma->tx_ring_sz == 0U) ||
+		     (tx_ring->cur_tx_idx >= osi_dma->tx_ring_sz))) {
+		return -EINVAL;
 	}
-	return ((tx_ring->clean_idx - tx_ring->cur_tx_idx - 1U) &
-		(osi_dma->tx_ring_sz - 1U));
+
+	if (tx_ring->clean_idx > (tx_ring->cur_tx_idx + 1U)) {
+		return ((tx_ring->clean_idx - (tx_ring->cur_tx_idx + 1U)) &
+			(osi_dma->tx_ring_sz - 1U));
+	} else {
+		return (((tx_ring->clean_idx + osi_dma->tx_ring_sz) -
+			(tx_ring->cur_tx_idx + 1U)) &
+			(osi_dma->tx_ring_sz - 1U));
+	}
 }
 
 /**
