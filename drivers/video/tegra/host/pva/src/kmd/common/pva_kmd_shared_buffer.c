@@ -179,12 +179,13 @@ static void shared_buffer_process_msg(struct pva_kmd_device *pva,
 	struct pva_kmd_fw_msg_res_unreg unreg_data;
 	struct pva_kmd_context *ctx = NULL;
 	void *msg_body;
+	uint32_t msg_size;
 
 	ASSERT(msg != NULL);
 
 	// Copy the header
 	memcpy(&header, msg, sizeof(header));
-	uint32_t msg_size = safe_subu32(header.size, sizeof(header));
+	msg_size = safe_subu32(header.size, sizeof(header));
 	msg_body = (uint8_t *)msg + sizeof(header);
 
 	switch (header.type) {
