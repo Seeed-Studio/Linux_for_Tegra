@@ -86,6 +86,7 @@ struct crypto_dev_to_ivc_map {
 	bool node_in_use;
 	bool is_zero_copy_node;
 	struct tegra_virtual_se_dev *se_dev;
+	struct tegra_vse_priv_data *priv;
 };
 
 struct tegra_virtual_se_dev {
@@ -108,6 +109,7 @@ struct tegra_virtual_se_rng_context {
 	/* Security Engine device */
 	struct tegra_virtual_se_dev *se_dev;
 	struct tegra_vse_dma_buf hwrng_dma_buf;
+	struct tegra_vse_priv_data *priv;
 	/*Crypto dev instance*/
 	uint32_t node_id;
 };

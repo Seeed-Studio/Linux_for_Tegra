@@ -894,7 +894,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	driver_name = crypto_tfm_alg_driver_name(crypto_ahash_tfm(tfm));
 	if (driver_name == NULL) {
 		CRYPTODEV_ERR("%s(): Failed to get driver name\n", __func__);
-		goto free_tfm;
+		goto out;
 	}
 	pr_debug("%s(): Algo name gmac-vse(aes), driver name %s\n", __func__, driver_name);
 
@@ -912,7 +912,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	ret = crypto_ahash_setkey(tfm, key_as_keyslot, klen);
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to set keys for gmac-vse(aes): %d\n", __func__, ret);
-		goto free_buf;
+		goto out;
 	}
 
 	if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_SIGN)
@@ -924,7 +924,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to ahash_init for gmac-vse(aes): ret=%d\n",
 					__func__, ret);
-		goto free_buf;
+		goto out;
 	}
 
 	sha_state->req = req;
@@ -934,12 +934,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify_init(struct tnvvse_crypto_ctx *ctx
 	memset(sha_state->result_buff, 0, TEGRA_NVVSE_AES_GCM_TAG_SIZE);
 
 	ret = 0;
-	goto out;
 
-free_buf:
-	kfree(sha_state->in_buf);
-free_tfm:
-	crypto_free_ahash(tfm);
 out:
 	return ret;
 }
@@ -951,7 +946,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	struct tegra_virtual_se_aes_gmac_context *gmac_ctx;
 	struct crypto_ahash *tfm;
 	uint8_t iv[TEGRA_NVVSE_AES_GCM_IV_LEN];
-	struct ahash_request *req;
+	struct ahash_request *req = NULL;
 	int ret = -EINVAL;
 
 	if (ctx->is_zero_copy_node) {
@@ -999,13 +994,13 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 			(gmac_sign_verify_ctl->tag_length != TEGRA_NVVSE_AES_GCM_TAG_SIZE)) {
 		CRYPTODEV_ERR("%s(): Failed due to invalid tag length (%d) invalid", __func__,
 					gmac_sign_verify_ctl->tag_length);
-		goto done;
+		goto free_req;
 	}
 
 	ret = tnvvse_crypto_aes_gmac_sign_verify_init(ctx, gmac_sign_verify_ctl, req);
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to init: %d\n", __func__, ret);
-		goto done;
+		goto free_req;
 	}
 
 	if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_SIGN)
@@ -1021,7 +1016,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		if (ret) {
 			CRYPTODEV_ERR("%s(): Failed to ahash_update for gmac-vse(aes): %d\n",
 					__func__, ret);
-			goto free_tfm;
+			goto free_req;
 		}
 	} else {
 		if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_SIGN) {
@@ -1041,7 +1036,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		if (ret) {
 			CRYPTODEV_ERR("%s(): Failed to ahash_finup for gmac-vse(aes): %d\n",
 					__func__, ret);
-			goto free_tfm;
+			goto free_req;
 		}
 	}
 
@@ -1049,6 +1044,9 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_VERIFY)
 			gmac_sign_verify_ctl->result = gmac_ctx->result;
 	}
+
+free_req:
+	ahash_request_free(req);
 
 free_tfm:
 	crypto_free_ahash(tfm);
