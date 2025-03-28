@@ -12,6 +12,7 @@ variables:
   JETPACKVER: "6.2"
   JETSONVER: "36.4.3"
   ROOTFS_NAME: "Tegra_Linux_Sample-Root-Filesystem_r36.4.3_aarch64.tbz2"
+  UPDATE_DRV_DEPEND: "1"
 
 stages:
   - reserver-industrial-orin-nano-4g-j401
@@ -127,8 +128,11 @@ stages:
     fi
   #update kernel module dependencies
   - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
-  - echo "current kernel number $KER_NUM"
-  - sudo chroot rootfs depmod -a  $KER_NUM
+  - >
+    if [ $UPDATE_DRV_DEPEND == "1" ]; then
+      echo "current kernel number $KER_NUM"
+      sudo chroot rootfs depmod -a  $KER_NUM
+    fi
   - umount ./rootfs/sys
   - umount ./rootfs/dev/pts
   - umount ./rootfs/dev
@@ -670,6 +674,7 @@ build-recomputer-super-orin-nano-4g-j401:
     FAB: "300"
     BOARDREV: "N.2"
     CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"
@@ -695,6 +700,7 @@ build-recomputer-super-orin-nano-8g-j401:
     FAB: "300"
     BOARDREV: "N.2"
     CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"
@@ -720,6 +726,7 @@ build-recomputer-super-orin-nx-16g-j401:
     FAB: "300"
     BOARDREV: "G.3"
     CHIP_SKU: "00:00:00:D3"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"
@@ -745,6 +752,7 @@ build-recomputer-super-orin-nx-8g-j401:
     FAB: "300"
     BOARDREV: "M.3"
     CHIP_SKU: "00:00:00:D4"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"
@@ -770,6 +778,7 @@ build-recomputer-robo-orin-nano-4g-j401:
     FAB: "300"
     BOARDREV: "N.2"
     CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"
@@ -795,6 +804,7 @@ build-recomputer-robo-orin-nano-8g-j401:
     FAB: "300"
     BOARDREV: "N.2"
     CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"
@@ -820,6 +830,7 @@ build-recomputer-robo-orin-nx-16g-j401:
     FAB: "300"
     BOARDREV: "G.3"
     CHIP_SKU: "00:00:00:D3"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"
@@ -845,6 +856,7 @@ build-recomputer-robo-orin-nx-8g-j401:
     FAB: "300"
     BOARDREV: "M.3"
     CHIP_SKU: "00:00:00:D4"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"
