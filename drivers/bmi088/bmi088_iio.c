@@ -223,16 +223,17 @@ static ssize_t bmi_iio_attr_store(struct device *dev,
 			      const char *buf, size_t count)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
-
-	if (!indio_dev)
-		return -EINVAL;
-
-	struct bmi_iio_state *st = iio_priv(indio_dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	struct bmi_iio_state *st;
 	char *str;
 	s8 matrix[9];
 	unsigned int new;
 	int ret;
+
+	if (!indio_dev)
+		return -EINVAL;
+
+	st = iio_priv(indio_dev);
 
 	if (!st || !this_attr)
 		return -EINVAL;
@@ -280,14 +281,15 @@ static ssize_t bmi_iio_attr_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
+	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	struct bmi_iio_state *st;
+	ssize_t t = 0;
+	unsigned int i;
 
 	if (!indio_dev)
 		return -EINVAL;
 
-	struct bmi_iio_state *st = iio_priv(indio_dev);
-	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
-	ssize_t t = 0;
-	unsigned int i;
+	st = iio_priv(indio_dev);
 
 	if (!st || !this_attr)
 		return -EINVAL;
