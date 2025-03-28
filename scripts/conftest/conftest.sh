@@ -8166,6 +8166,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_IRQ_INTX" "" "types"
         ;;
 
+        phy_loopback_has_speed_arg)
+            #
+            # Determine if phy_loopback() has 'speed' argument.
+            #
+            # Commit 0d60fd50328a ("net: phy: Support speed selection for PHY
+            # loopback") add a 'speed' argument to phy_loopback() in Linux
+            # v6.15.
+            #
+            CODE="
+            #include <linux/phy.h>
+            int conftest_phy_loopback_has_speed_arg(struct phy_device *phydev) {
+                return phy_loopback(phydev, true, 0);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PHY_LOOPBACK_HAS_SPEED_ARG" "" "types"
+        ;;
+
         platform_driver_struct_remove_returns_void)
             #
             # Determine if the 'platform_driver' structure 'remove' function
