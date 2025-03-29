@@ -659,7 +659,7 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 
 	if (!access_ok(user_db.entry, ctx->num_eps *
 		sizeof(struct nvsciipc_config_entry *))) {
-		ERR("invalid user-space pointer: %p\n", user_db.entry);
+		ERR("invalid user-space DB entry ptr: %p\n", user_db.entry);
 		ret = -EFAULT;
 		goto ptr_error;
 	}
@@ -699,6 +699,12 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 
 		if (ctx->db[i] == NULL) {
 			ERR("memory allocation for ctx->db[%d] failed\n", i);
+			ret = -EFAULT;
+			goto ptr_error;
+		}
+
+		if (!access_ok(entry_ptr[i], sizeof(struct nvsciipc_config_entry))) {
+			ERR("invalid user-space CFG entry ptr: %p\n", entry_ptr[i]);
 			ret = -EFAULT;
 			goto ptr_error;
 		}
