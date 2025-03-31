@@ -1050,12 +1050,119 @@ static void camera_diag_channel_deinit(struct camera_diag_channel *ch)
 	dev_dbg(&ch->dev, "Camera diagnostics channel deinitialization complete\n");
 }
 
-/* Create the device attribute */
+/**
+ * @brief Sysfs store function for controlling diagnostic state.
+ *
+ * This function is called when the user writes to the 'control' sysfs attribute.
+ * It allows toggling the ISP SDL diagnostics on and off without deallocating memory.
+ * Accepted values: "start" to start diagnostics, "stop" to stop diagnostics.
+ *
+ * @param[in]  dev   Device pointer.
+ * @param[in]  attr  Device attribute descriptor.
+ * @param[in]  buf   Buffer containing the user command.
+ * @param[in]  count Size of the buffer.
+ *
+ * @return Number of bytes processed on success, negative error code on failure.
+ */
+static ssize_t control_store(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct camera_diag_channel *ch = dev_get_drvdata(dev);
+	struct camrtc_diag_isp5_sdl_status_resp status;
+	int err = 0;
+	bool is_running = false;
+
+	if (ch == NULL || !ch->is_initialized)
+		return -EINVAL;
+
+
+	/* Get current status first */
+	err = camera_diag_isp_sdl_status(ch, &status, 0);
+	if (err == 0)
+		is_running = (status.running != 0);
+
+	/* Check for "stop" command */
+	if (strncmp(buf, "stop", 4) == 0) {
+		if (!is_running) {
+			dev_info(&ch->dev, "ISP SDL diagnostics already stopped\n");
+			return count;
+		}
+
+		dev_info(&ch->dev, "Stopping ISP SDL diagnostics\n");
+		err = camera_diag_isp_sdl_release(ch);
+		if (err != 0) {
+			dev_err(&ch->dev, "Failed to stop ISP SDL diagnostics: %d\n", err);
+			return err;
+		}
+		return count;
+	}
+
+	/* Check for "start" command */
+	if (strncmp(buf, "start", 5) == 0) {
+		if (is_running) {
+			dev_info(&ch->dev, "ISP SDL diagnostics already running\n");
+			return count;
+		}
+
+		dev_info(&ch->dev, "Starting ISP SDL diagnostics\n");
+		err = camera_diag_isp_sdl_setup(ch);
+		if (err != 0) {
+			dev_err(&ch->dev, "Failed to start ISP SDL diagnostics: %d\n", err);
+			return err;
+		}
+		return count;
+	}
+
+	/* If we get here, the command was not recognized */
+	dev_err(&ch->dev, "Unknown command: %.*s\n", (int)count, buf);
+	return -EINVAL;
+}
+
+/**
+ * @brief Sysfs show function for diagnostic control state.
+ *
+ * This function is called when the user reads the 'control' sysfs attribute.
+ * It shows the current state of the ISP SDL diagnostics and available commands.
+ *
+ * @param[in]  dev   Device pointer.
+ * @param[in]  attr  Device attribute descriptor.
+ * @param[out] buf   Buffer to write the state information to.
+ *
+ * @return Number of bytes written to buffer on success, negative error code on failure.
+ */
+static ssize_t control_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct camera_diag_channel *ch = dev_get_drvdata(dev);
+	struct camrtc_diag_isp5_sdl_status_resp status;
+	int err;
+	bool is_running = false;
+
+	if (ch == NULL || !ch->is_initialized)
+		return -EINVAL;
+
+	/* Try to get status for primary ISP instance */
+	err = camera_diag_isp_sdl_status(ch, &status, 0);
+	if (err == 0)
+		is_running = (status.running != 0);
+
+	return sprintf(buf,
+		"Camera diagnostic control\n"
+		"Current state: %s\n"
+		"\n"
+		"Available commands:\n"
+		"  start - Start ISP SDL diagnostics\n"
+		"  stop  - Stop ISP SDL diagnostics\n",
+		is_running ? "RUNNING" : "STOPPED");
+}
+
+/* Create the device attributes */
 static DEVICE_ATTR_RO(status);
+static DEVICE_ATTR_RW(control);
 
 /* Define the attribute group */
 static struct attribute *camera_diag_attrs[] = {
 	&dev_attr_status.attr,
+	&dev_attr_control.attr,
 	NULL,
 };
 
