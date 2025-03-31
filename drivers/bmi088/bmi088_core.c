@@ -17,7 +17,6 @@
 #include <nvidia/conftest.h>
 
 #include <linux/device.h>
-#include <linux/version.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/slab.h>

@@ -15,7 +15,6 @@
 #include <linux/iio/sysfs.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/kfifo_buf.h>
-#include <linux/version.h>
 #include "bmi_iio.h"
 
 enum BMI_ATTR {
