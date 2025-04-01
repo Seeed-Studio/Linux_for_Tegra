@@ -380,9 +380,9 @@ static int edmalib_common_test(struct edmalib_common *edma)
 
 	edma->tsz = (u64)edma->stress_count * (nents_per_ch) * (u64)edma->dma_size * 8UL;
 
-	if (!edma->cookie || ((edma->prev_edma_ch & 0xFF) != edma->edma_ch)) {
-		dev_info(edma->fdev, "%s: re-init edma lib prev_ch(%x) != current chans(%x)\n",
-			 __func__, edma->prev_edma_ch, edma->edma_ch);
+	if (!edma->cookie || ((edma->prev_edma_ch & 0xFF) != (edma->edma_ch & 0xFF))) {
+		dev_info(edma->fdev, "%s: re-init edma lib prev_ch(%x) != current chans(%x); edma cookie:%p\n",
+			 __func__, edma->prev_edma_ch, edma->edma_ch, edma->cookie);
 		ret = tegra_pcie_dma_initialize(&info, &edma->cookie);
 		if (ret != TEGRA_PCIE_DMA_SUCCESS) {
 			dev_info(edma->fdev, "%s: tegra_pcie_dma_initialize() fail: %d\n",
@@ -524,6 +524,7 @@ static int edmalib_common_test(struct edmalib_common *edma)
 			dev_err(edma->fdev, "CRC check pass\n");
 	}
 
+	dev_info(edma->fdev, "%s: return success, coockie %p\n", __func__, edma->cookie);
 	return 0;
 fail:
 	if (ret != TEGRA_PCIE_DMA_DEINIT) {
