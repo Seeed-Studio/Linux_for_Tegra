@@ -309,6 +309,10 @@
 	(((u32)(rx_latency)) & 0x0000FFFF)
 #define PTP_CAP_INFO				(0x0A60)
 #define PTP_CAP_INFO_TX_TS_CNT_GET_(reg_val)	(((reg_val) & 0x00000070) >> 4)
+#define PTP_RX_TS_CFG				(0x0A68)
+#define PTP_RX_TS_CFG_SYNC_MSG_                 BIT(0)
+#define PTP_RX_TS_CFG_DELAY_REQ_MSG_            BIT(1)
+#define PTP_RX_TS_CFG_EVENT_MSGS_               GENMASK(3, 0)
 
 #define PTP_TX_MOD				(0x0AA4)
 #define PTP_TX_MOD_TX_PTP_SYNC_TS_INSERT_	(0x10000000)
@@ -330,6 +334,8 @@
 #define DMAC_CFG				(0xC00)
 #define DMAC_CFG_COAL_EN_			BIT(16)
 #define DMAC_CFG_CH_ARB_SEL_RX_HIGH_		(0x00000000)
+#define DMAC_CFG_CH_ARB_SEL_ROUND_ROBIN_ (0x3 << 10)  
+
 #define DMAC_CFG_MAX_READ_REQ_MASK_		(0x00000070)
 #define DMAC_CFG_MAX_READ_REQ_SET_(val)	\
 	((((u32)(val)) << 4) & DMAC_CFG_MAX_READ_REQ_MASK_)
@@ -391,6 +397,7 @@
 
 #define RX_CFG_B(channel)			(0xC44 + ((channel) << 6))
 #define RX_CFG_B_TS_ALL_RX_			BIT(29)
+#define RX_CFG_B_TS_DESCR_EN_			BIT(28)
 #define RX_CFG_B_RX_PAD_MASK_			(0x03000000)
 #define RX_CFG_B_RX_PAD_0_			(0x00000000)
 #define RX_CFG_B_RX_PAD_2_			(0x02000000)
@@ -668,7 +675,8 @@ struct lan743x_tx {
 
 	struct napi_struct napi;
 
-	struct sk_buff *overflow_skb;
+	// struct sk_buff *overflow_skb;
+	u32 rqd_descriptors;
 };
 
 void lan743x_tx_set_timestamping_mode(struct lan743x_tx *tx,
@@ -702,7 +710,8 @@ struct lan743x_rx {
 
 	struct sk_buff *skb_head, *skb_tail;
 };
-
+int lan743x_rx_set_tstamp_mode(struct lan743x_adapter *adapter,
+				       int rx_filter);
 struct lan743x_adapter {
 	struct net_device       *netdev;
 	struct mii_bus		*mdiobus;
@@ -749,7 +758,8 @@ struct lan743x_adapter {
 #define DMA_DESCRIPTOR_SPACING_32       (32)
 #define DMA_DESCRIPTOR_SPACING_64       (64)
 #define DMA_DESCRIPTOR_SPACING_128      (128)
-#define DEFAULT_DMA_DESCRIPTOR_SPACING  (L1_CACHE_BYTES)
+// #define DEFAULT_DMA_DESCRIPTOR_SPACING  (L1_CACHE_BYTES)
+#define DEFAULT_DMA_DESCRIPTOR_SPACING  (DMA_DESCRIPTOR_SPACING_16)
 
 #define DMAC_CHANNEL_STATE_SET(start_bit, stop_bit) \
 	(((start_bit) ? 2 : 0) | ((stop_bit) ? 1 : 0))
@@ -794,7 +804,7 @@ struct lan743x_tx_buffer_info {
 	unsigned int    buffer_length;
 };
 
-#define LAN743X_TX_RING_SIZE    (50)
+#define LAN743X_TX_RING_SIZE    (128)
 
 /* OWN bit is set. ie, Descs are owned by RX DMAC */
 #define RX_DESC_DATA0_OWN_                (0x00008000)
@@ -830,7 +840,7 @@ struct lan743x_rx_buffer_info {
 	unsigned int    buffer_length;
 };
 
-#define LAN743X_RX_RING_SIZE        (65)
+#define LAN743X_RX_RING_SIZE        (128)
 
 #define RX_PROCESS_RESULT_NOTHING_TO_DO     (0)
 #define RX_PROCESS_RESULT_BUFFER_RECEIVED   (1)
