@@ -64,9 +64,11 @@ static u32 syncpt_load(struct host1x_syncpt *sp)
 	} while ((u32)atomic_cmpxchg(&sp->min_val, old, live) != old);
 
 	if (!host1x_syncpt_check_max(sp, live))
-		dev_err(host->dev, "%s failed: id=%u, min=%d, max=%d\n",
-			__func__, sp->id, host1x_syncpt_read_min(sp),
-			host1x_syncpt_read_max(sp));
+		dev_err(host->dev,
+			"%s failed: id=%u, name=%s, min=%d, max=%d, current process=%s\n",
+			__func__, sp->id, sp->name,
+			host1x_syncpt_read_min(sp), host1x_syncpt_read_max(sp),
+			current->comm);
 
 	return live;
 }
