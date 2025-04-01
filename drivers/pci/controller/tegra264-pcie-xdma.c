@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved. */
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION. All rights reserved.
 
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -229,11 +229,31 @@ irqreturn_t xdma_irq(int irq, void *cookie)
 	return IRQ_WAKE_THREAD;
 }
 
+static void tegra_pcie_xdma_reset_channel(struct xdma_prv *prv, struct xdma_chan *ch, int bit, u32 i)
+{
+	u32 mode_cnt[2] = {TEGRA_PCIE_DMA_WR_CHNL_NUM, TEGRA_PCIE_DMA_RD_CHNL_NUM};
+	int channel_num = bit + (i * mode_cnt[0]);
+
+	ch->st = TEGRA_PCIE_DMA_ABORT;
+	xdma_hw_deinit(prv, channel_num);
+
+	/* wait until existing xfer submit completed */
+	mutex_lock(&ch->lock);
+	mutex_unlock(&ch->lock);
+
+	process_ch_irq(prv, channel_num, ch, i);
+
+	xdma_ch_init(prv, ch, channel_num);
+
+	xdma_ll_ch_init(prv->xdma_base, channel_num,
+			ch->dma_iova, (i == 0), prv->is_remote_dma);
+}
+
 irqreturn_t xdma_irq_handler(int irq, void *cookie)
 {
 	struct xdma_prv *prv = (struct xdma_prv *)cookie;
-	int bit = 0;
-	u32 val, i = 0;
+	int bit = 0, err;
+	u32 val, debug_reg, i = 0;
 	struct xdma_chan *chan[2] = {&prv->tx[0], &prv->rx[0]};
 	struct xdma_chan *ch;
 	u32 mode_cnt[2] = {TEGRA_PCIE_DMA_WR_CHNL_NUM, TEGRA_PCIE_DMA_RD_CHNL_NUM};
@@ -272,19 +292,7 @@ irqreturn_t xdma_irq_handler(int irq, void *cookie)
 				dev_info(prv->dev, "MSI error %x seen for channel %d for mode %d\n",
 					 temp, bit, i);
 
-				ch->st = TEGRA_PCIE_DMA_ABORT;
-				xdma_hw_deinit(prv, bit + (i * mode_cnt[0]));
-
-				/** wait until exisitng xfer submit completed */
-				mutex_lock(&ch->lock);
-				mutex_unlock(&ch->lock);
-
-				process_ch_irq(prv, bit + (i * mode_cnt[0]), ch, i);
-
-				xdma_ch_init(prv, ch, bit + (i * mode_cnt[0]));
-
-				xdma_ll_ch_init(prv->xdma_base, bit + (i * mode_cnt[0]),
-						ch->dma_iova, (i == 0), prv->is_remote_dma);
+				tegra_pcie_xdma_reset_channel(prv, ch, bit, i);
 			/*
 			 * If both xfer_valid and err_status are set, error recovery process
 			 * channel(process_ch_irq()), so we can skip else part when both xfer_valid
@@ -292,6 +300,14 @@ irqreturn_t xdma_irq_handler(int irq, void *cookie)
 			 */
 			} else {
 				process_ch_irq(prv, bit + (i * mode_cnt[0]), ch, i);
+			}
+
+			/* Polling for the MSI_DISP_FSM to be set to 0 */
+			err = readl_poll_timeout_atomic(prv->xdma_base + XDMA_CHANNEL_DEBUG_REGISTER_4, debug_reg,
+					(debug_reg & XDMA_CHANNEL_DEBUG_REGISTER_4_INTR_ENGINE_MSI_CHAN_MSI_DISP_FSM) == 0, 1, 100);
+			if (err) {
+				dev_err(prv->dev, "MSI ack is not received on channel: 0 st: 0x%x\n", debug_reg);
+				tegra_pcie_xdma_reset_channel(prv, ch, bit, i);
 			}
 		}
 	}
