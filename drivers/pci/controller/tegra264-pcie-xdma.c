@@ -122,7 +122,7 @@ static inline void xdma_hw_deinit(void *cookie, u32 ch)
 {
 	struct xdma_prv *prv = (struct xdma_prv *)cookie;
 	int err;
-	u32 val = 0;
+	u32 val = 0, debug_reg_b4_poll;
 
 	val = xdma_channel_rd(prv->xdma_base, ch, XDMA_CHANNEL_CTRL);
 	val &= ~XDMA_CHANNEL_CTRL_EN;
@@ -133,12 +133,8 @@ static inline void xdma_hw_deinit(void *cookie, u32 ch)
 	if (err)
 		dev_err(prv->dev, "failed to reset dma channel: %d st: 0x%x\n", ch, val);
 
-	/*
-	 * FIXME DEBUG regiser access is failing due to PLM issue in backdoor boot, verify and
-	 * enable on silicon
-	 */
-#if 0
-	dev_err(prv->dev, "poll on ch channel: %d dis done st: 0x%x\n", ch, val);
+	/* Store the value before polling to print post polling status for fail case */
+	debug_reg_b4_poll = xdma_channel_rd(prv->xdma_base, ch, XDMA_CHANNEL_DEBUG_REGISTER_4);
 
 	err = readl_poll_timeout_atomic(prv->xdma_base + XDMA_CHANNEL_DEBUG_REGISTER_4, val,
 			(val & (XDMA_CHANNEL_DEBUG_REGISTER_4_INTR_ENGINE_MSI_CHAN_ISR_INPROG_FSM |
@@ -147,9 +143,8 @@ static inline void xdma_hw_deinit(void *cookie, u32 ch)
 				XDMA_CHANNEL_DEBUG_REGISTER_4_INTR_ENGINE_MSI_CHAN_MSI_DISP_SHADOW_GEN_STATUS_MSI |
 				XDMA_CHANNEL_DEBUG_REGISTER_4_INTR_ENGINE_MSI_CHAN_MSI_DISP_SHADOW_FUNC_ERR_DETECTED)) == 0, 1, 10000);
 	if (err)
-		dev_err(prv->dev, "failed to reset msi channel: 0 st: 0x%x\n", val);
-	dev_err(prv->dev, "poll on msi disable done channel: %d st: 0x%x\n", ch, val);
-#endif
+		dev_err(prv->dev, "failed to reset msi channel:%d. B4 poll st:0x%x Post poll st:0x%x\n",
+			ch, debug_reg_b4_poll, val);
 }
 
 /** From OSI */
