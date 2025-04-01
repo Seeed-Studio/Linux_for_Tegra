@@ -326,7 +326,7 @@ static int tegra_aes_do_one_req(struct crypto_engine *engine, void *areq)
 		goto key2_free;
 	}
 
-	rctx->iv = (u32 *)req->iv;
+	rctx->iv = (ctx->alg == SE_ALG_ECB) ? NULL : (u32 *)req->iv;
 	rctx->len = req->cryptlen;
 
 	/* Pad input to AES Block size */
