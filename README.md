@@ -1,10 +1,10 @@
 - [Linux_for_Tegra](#Linux_for_Tegra)
     - [Supported hardware](#supported-hardware)
     - [Getting Started](#getting-started)
-      - [Flash commands samples](#flash-commands-samples)
+        - [Flash commands samples](#flash-commands-samples)
     - [Introduction to the software](#introduction-to-the-software)
-      - [Directory structure](#directory-structure)
-      - [CI/CD](#cicd)
+        - [Directory structure](#directory-structure)
+        - [CI/CD](#cicd)
     - [Summary](#summary)
 
 # Linux_for_Tegra
