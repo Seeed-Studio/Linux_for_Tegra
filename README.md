@@ -1,4 +1,4 @@
-- [Linux_for_Tegra](#linux_for_tegra)
+- [Linux_for_Tegra](#Linux_for_Tegra)
     - [Supported hardware](#supported-hardware)
     - [Getting Started](#getting-started)
       - [Flash commands samples](#flash-commands-samples)
