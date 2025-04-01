@@ -15,6 +15,8 @@
 #include <linux/cpumask.h>
 #include <linux/delay.h>
 #include <linux/smp.h>
+#include <linux/limits.h>
+#include <linux/minmax.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpuidle_debugfs_ftrace.h>
@@ -198,6 +200,23 @@ static void coordinated_forced_idle_work_func(struct work_struct *work)
 	}
 }
 
+static int min_residency_read(void *data, u64 *val)
+{
+	struct cpuidle_state *idle_state = (struct cpuidle_state *) data;
+
+	*val = idle_state->target_residency;
+	return 0;
+}
+
+static int min_residency_write(void *data, u64 val)
+{
+	struct cpuidle_state *idle_state = (struct cpuidle_state *) data;
+
+	idle_state->target_residency = min_t(u64, val, S64_MAX/1000);
+	idle_state->target_residency_ns = min_t(u64, val*1000, S64_MAX);
+	return 0;
+}
+
 static int forced_idle_write(void *data, u64 val)
 {
 	struct cpuidle_state *idle_state = (struct cpuidle_state *) data;
@@ -297,6 +316,7 @@ DEFINE_SIMPLE_ATTRIBUTE(idle_state_fops, NULL, forced_idle_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(coordinated_idle_state_fops, NULL, coordinated_forced_idle_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(ipi_wake_coordinated_idle_state_fops, NULL,
 	ipi_wake_coordinated_forced_idle_write, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(min_residency_fops, min_residency_read, min_residency_write, "%llu\n");
 
 static const struct file_operations set_ipi_dest_cpumask_fops = {
 	.owner		= THIS_MODULE,
@@ -324,6 +344,8 @@ static int init_debugfs(void)
 	char coordinated_wake_file[20];
 	/* ipi_wake_coordinated_ (27) + state-name (up to 7) + \0 (1) */
 	char ipi_wake_file[35];
+	/* min_residency_ (14) + state-name (up to 7) + \0 (1) */
+	char min_residency_file[22];
 
 	cpuidle_debugfs_node = debugfs_create_dir("cpuidle_debug", NULL);
 	if (!cpuidle_debugfs_node)
@@ -350,6 +372,7 @@ static int init_debugfs(void)
 	for (i = 0; i < drv->state_count; i++) {
 		snprintf(coordinated_wake_file, 20, "coordinated_%s", drv->states[i].name);
 		snprintf(ipi_wake_file, 35, "ipi_wake_coordinated_%s", drv->states[i].name);
+		snprintf(min_residency_file, 22, "min_residency_%s", drv->states[i].name);
 		debugfs_create_file(drv->states[i].name, 0200,
 			cpuidle_debugfs_node, &(drv->states[i]), &idle_state_fops);
 		debugfs_create_file(coordinated_wake_file, 0200,
@@ -357,6 +380,8 @@ static int init_debugfs(void)
 		debugfs_create_file(ipi_wake_file, 0200,
 			coordinated_debugfs_node, &(drv->states[i]),
 			&ipi_wake_coordinated_idle_state_fops);
+		debugfs_create_file(min_residency_file, 0600,
+			cpuidle_debugfs_node, &(drv->states[i]), &min_residency_fops);
 	}
 	return 0;
 
