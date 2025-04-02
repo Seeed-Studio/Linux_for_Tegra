@@ -1,0 +1,594 @@
+************************************************************************
+             Examples of How to Use Image-Based OTA Update
+************************************************************************
+This file provides several examples of how to use an image-based OTA update for
+specific use cases.
+
+1. Generating an OTA payload package for OTA updates from R35.5.0 to the latest R36 version.
+The following examples show you how to generate an OTA payload package for different
+cases. Please export "BASE_BSP=<R35.5.0 BSP>/Linux_for_Tegra" as an environment
+variable before running the following commands.
+Note: Currently, the latest version of R36 is R36.4.0.
+
+Case 1: an OTA update from R35.5.0 to the latest R36 version on the jetson-agx-orin-devkit.
+Currently the R35 latest version is R36.4.0.
+$ sudo -E ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  jetson-agx-orin-devkit R35-5
+
+Case 2: an OTA update from R35.5.0 to the latest R36 version on the jetson-agx-orin-devkit-industrial.
+$ sudo -E ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  jetson-agx-orin-devkit-industrial R35-5
+
+Case 3: an OTA update from R35.5.0 to the latest R36 version on jetson-orin-nano-devkit with
+booting from an NVMe storage device. The size of the APP partition on an NVMe storage device
+is 24GiB.
+$ sudo -E ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  --external-device nvme0n1 -S 24GiB jetson-orin-nano-devkit R35-5
+Note: The size of the APP partition will be overwritten by user's actual size.
+
+Case 4: an OTA update from R35.5.0 to the latest R36 version on the jetson-agx-orin-devkit with
+disk encryption enabled.
+$ sudo -E ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  -i ekb.key jetson-agx-orin-devkit R35-5
+The "ekb.key" is the key used for disk encryption. It must be the same as the one used to
+flash R35.5.0 to the device.
+
+Case 5: an OTA update from R35.5.0 to the latest R36 version on the jetson-agx-orin-devkit-industrial
+with rootfs A/B enabled.
+$ sudo -E ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  jetson-agx-orin-devkit-industrial R35-5
+
+Case 6: an OTA update from R35.5.0 to the latest R36 version on jetson-orin-nano-devkit, booting
+from an NVMe storage device. The rootfs A/B and disk encryption are enabled. The size of
+the APP partition on an NVMe storage device is 24GiB.
+$ sudo -E ROOTFS_AB=1 ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  --external-device nvme0n1 -S 24GiB -i ekb.key jetson-orin-nano-devkit R35-5
+
+2. OTA update from R35.5.0 to the latest R36 version
+When applying an OTA update from R35.5.0 to the latest R36 version, you need to update both bootloader
+chains and both rootfs chains if rootfs A/B is enabled to the latest R36 version. The ESP, recovery,
+and recovery-dtb partitions are unique for both A/B chains.
+
+The following examples show you the steps to perform an OTA update from R35.5.0 to the latest R36 version:
+
+Case 7: to perform an OTA update from R35.5.0 to the latest R36 version on jetson-agx-orin-devkit, complete the following steps:
+  a. Download the latest R36 BSP, sample rootfs, and OTA tools package, and then extract them.
+  b. Generate the OTA payload package from R35.5.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo BASE_BSP=<R35.5.0 BSP>/Linux_for_Tegra ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       jetson-agx-orin-devkit R35-5
+  c. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  d. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  e. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0
+  f. Generate the OTA payload package that updates the bootloader only from R36.4.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -b jetson-agx-orin-devkit R36-4
+     Note: The purpose of this step is to update the other boot chains to R36. It is not supported
+     using R35 boot chains to boot the R36 kernel/root FS.
+  g. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  h. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  i. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0.
+     Now both bootloader chains and the rootfs are upgraded to R36.4.0
+
+Case 8: to perform an OTA update from R35.5.0 to the latest R36 version on jetson-orin-nano-devkit booting from an NVMe with rootfs A/B and
+  disk encryption enabled, and 24GiB APP/APP_b partitions, complete the following steps:
+  a. Download the latest R36 BSP, sample rootfs, and OTA tools package, and then extract them.
+  b. Generate the OTA payload package from R35.5.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo ROOTFS_AB=1 ROOTFS_ENC=1 BASE_BSP=<R35.5.0 BSP>/Linux_for_Tegra \
+       ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -i ekb.ky --external-device nvme0n1 -S 24GiB jetson-orin-nano-devkit R35-5
+  c. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  d. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  e. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0
+  f. Generate the OTA payload package from R36.4.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo ROOTFS_AB=1 ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -i ekb.key --external-device nvme0n1 -S 24GiB jetson-orin-nano-devkit R36-4
+  g. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  h. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  i. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0.
+     Now both bootloader chains and both rootfs on the NVMe storage device are upgraded to R36.4.0
+
+3. OTA update from a version earlier than R35.5.0 to the latest R36 version
+The image-based OTA scripts do not support an OTA update from a version earlier than
+R35.5.0 to the latest R36 version directly. To upgrade from such version, which includes
+R35.2.1, R35.3.1 and R35.4.1, you need to upgrade to R35.5.0 first, then upgrade to the
+latest R36 version.
+
+The following examples show you the steps to perform an OTA update from an early R35 version to the latest
+R36 version:
+
+Case 9: to perform an OTA update from R35.2.1 to the latest R36 version on jetson-agx-orin-devkit, complete the following steps:
+  a. Download R35.5.0 BSP, sample rootfs, and OTA tools package, and then extract them.
+  b. Generate the OTA payload package from R35.2.1 to R35.5.0:
+     $ cd Linux_for_Tegra
+     $ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       jetson-agx-orin-devkit R35-2
+  c. Copy the OTA tools package "ota_tools_R35.5.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  d. Extract "ota_tools_R35.5.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R35.5.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  e. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R35.5.0
+  f. Download the latest R36 BSP, sample rootfs, and OTA tools package, and then extract them.
+  g. Generate the OTA payload package from R35.5.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo BASE_BSP=<R35.5.0 BSP>/Linux_for_Tegra ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       jetson-agx-orin-devkit R35-5
+  h. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  i. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  j. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0
+  k. Generate the OTA payload package that updates the bootloader only from R36.4.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -b jetson-agx-orin-devkit R36-4
+     Note: The purpose of this step is to update the other boot chains to R36. It is not supported
+     using R35 boot chains to boot the R36 kernel/root FS.
+  l. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  m. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  n. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0.
+     Now both bootloader chains and the rootfs are upgraded to R36.4.0
+
+Case 10: to perform an OTA update from R35.2.1 to the latest R36 version on jetson-agx-orin-devkit with rootfs A/B and
+  disk encryption enabled, complete the following steps:
+  a. Download R35.5.0 BSP, sample rootfs, and OTA tools package, and then extract them.
+  b. Generate the OTA payload package from R35.2.1 to R35.5.0:
+     $ cd Linux_for_Tegra
+     $ sudo ROOTFS_AB=1 ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -i ekb.key jetson-agx-orin-devkit R35-2
+  c. Copy the OTA tools package "ota_tools_R35.5.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  d. Extract "ota_tools_R35.5.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R35.5.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  e. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R35.5.0
+  f. Download the latest R36 BSP, sample rootfs, and OTA tools package, and then extract them.
+  g. Generate the OTA payload package from R35.5.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo ROOTFS_AB=1 ROOTFS_ENC=1 BASE_BSP=<R35.5.0 BSP>/Linux_for_Tegra \
+       ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -i ekb.key jetson-agx-orin-devkit R35-5
+  h. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  i. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  j. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0
+  k. Generate the OTA payload package from R36.4.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo ROOTFS_AB=1 ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -i ekb.key jetson-agx-orin-devkit R36-4
+  l. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  m. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  n. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0.
+     Now both bootloader chains and both rootfs are upgraded to R36.4.0
+
+Case 11: to perform an OTA update from R35.4.1 to the latest R36 version on jetson-orin-nano-devkit booting from an NVMe with rootfs A/B and
+  disk encryption enabled, and 24GiB APP/APP_b partitions, complete the following steps:
+  a. Download R35.5.0 BSP, sample rootfs, and OTA tools package, and then extract them.
+  b. Generate the OTA payload package from R35.4.1 to R35.5.0:
+     $ cd Linux_for_Tegra
+     $ sudo ROOTFS_AB=1 ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -i ekb.key --external-device nvme0n1 -S 24GiB jetson-orin-nano-devkit R35-4
+  c. Copy the OTA tools package "ota_tools_R35.5.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  d. Extract "ota_tools_R35.5.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R35.5.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  e. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R35.5.0
+  f. Download the latest R36 BSP, sample rootfs, and OTA tools package, and then extract them.
+  g. Generate the OTA payload package from R35.5.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo ROOTFS_AB=1 ROOTFS_ENC=1 BASE_BSP=<R35.5.0 BSP>/Linux_for_Tegra \
+       ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -i ekb.ky --external-device nvme0n1 -S 24GiB jetson-orin-nano-devkit R35-5
+  h. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  i. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  j. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0
+  k. Generate the OTA payload package from R36.4.0 to R36.4.0:
+     $ cd Linux_for_Tegra
+     $ sudo ROOTFS_AB=1 ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -i ekb.key --external-device nvme0n1 -S 24GiB jetson-orin-nano-devkit R36-4
+  l. Copy the OTA tools package "ota_tools_R36.4.0_aarch64.tbz2" and the generated OTA payload
+     package "ota_payload_package.tar.gz" to the device, for example, put them in the "~/" directory.
+  m. Extract "ota_tools_R36.4.0_aarch64.tbz2" and trigger the OTA update:
+     $ cd ~/
+     $ tar xjpf ota_tools_R36.4.0_aarch64.tbz2
+     $ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+     $ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
+  n. Reboot the device.
+     The Capsule update is to be executed once the device boots to UEFI. After the Capsule update is finished,
+     the device is automatically rebooted and then boots from the chain that was newly upgraded to R36.4.0.
+     Now both bootloader chains and both rootfs on the NVMe storage device are upgraded to R36.4.0
+
+4. Using golden image in OTA update.
+Customers might flash a device with the latest released BSP and then make a golden image
+dependent on this device. They can deploy the golden image on other devices that were
+flashed with the previously released BSP through an OTA update.
+
+The "l4t_generate_ota_package.sh" script includes the "-f" and "-o" options so that
+customers can use their own rootfs updater and update the rootfs partition with their
+own rootfs image (for example, a golden image).
+
+However, for some customers, the golden image is a raw partition image that is
+directly obtained from rootfs partition. (These customers might not
+want to write their own rootfs updater.)
+
+The following examples provide the steps for using this golden image in an image-based OTA.
+
+Case 12: rootfs A/B disabled, disk encryption disabled:
+  a. Put the target device into recovery mode.
+  b. Boot the device to initrd by running the following command:
+     $ sudo ./tools/kernel_flash/l4t_initrd_flash.sh --initrd <target board> mmcblk0p1
+  c. Enter bash shell on the target device.
+  d. Mount a USB drive or network storage on the target device.
+  e. Generate golden image in the mounted storage device by running the
+     following command:
+     $ sudo dd if=<rootfs partition> of=<mount ponint>/golden.img.raw
+     The "<rootfs partition>" is /dev/mmcblk0p1 for the internal eMMC storage device
+     or /dev/nvme0n1p1 for the external NVMe storage device.
+  f. Copy the golden image into the TARGET_BSP directory on the host machine by running
+     the following command:
+     $ sudo cp golden.img.raw ${TARGET_BSP}/bootloader/system.img.raw
+  g. Add the "-s" option when generating the OTA payload package.
+     For the internal eMMC storage device, running the following command:
+     $ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -s <target board> <base version>
+     For the external NVMe storage device, running the following command:
+     $ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -s --external-device nvme0n1 -S <rootfs size > <target board> <base version>
+
+Case 13: rootfs A/B enabled, disk encryption disabled:
+  a. Put the target device into recovery mode.
+  b. Boot the device to initrd by running the following command:
+     $ sudo ./tools/kernel_flash/l4t_initrd_flash.sh --initrd <target board> mmcblk0p1
+  c. Enter bash shell on the target device.
+  d. Mount a USB drive or network storage on the target device.
+  e. Generate golden images in the mounted storage device by running the
+     following commands:
+     $ sudo dd if=<rootfs partition A> of=<mount ponint>/golden_a.img.raw
+     $ sudo dd if=<rootfs partition B> of=<mount ponint>/golden_b.img.raw
+     The "<rootfs partition A>" is /dev/mmcblk0p1 for the internal eMMC storage
+     device or /dev/nvme0n1p1 for the external NVMe storage device, and the "<rootfs partition B>"
+     is /dev/mmcblk0p2 for the internal eMMC storage device or /dev/nvme0n1p2 for the external NVMe
+     storage device.
+  f. Copy the golden images into the TARGET_BSP directory on the host machine by running
+     the following commands:
+     $ sudo cp golden_a.img.raw ${TARGET_BSP}/bootloader/system.img.raw
+     $ sudo cp golden_b.img.raw ${TARGET_BSP}/bootloader/system.img_b.raw
+  g. Add the "-s" option when generating the OTA payload package.
+     For the internal eMMC storage device, running the following command:
+     $ sudo ROOTFSA_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -s <target board> <base version>
+     For the external NVMe storage device, running the following command
+     $ sudo ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -s --external-device nvme0n1 -S <rootfs size> <target board> <base version>
+
+Case 14: rootfs A/B disabled, disk encryption enabled:
+  a. Put the target device into recovery mode.
+  b. Boot the device to initrd by running the following command:
+     $ sudo ./tools/kernel_flash/l4t_initrd_flash.sh --initrd <target board> mmcblk0p1
+  c. Enter bash shell on the target device.
+  d. Mount a USB drive or network storage on the target device.
+  e. Generate golden image in the mounted storage device by running the
+     following command:
+     $ sudo dd if=<rootfs partition> of=<mount ponint>/golden.img.raw
+     The "<rootfs partition>" is /dev/mmcblk0p2 for the internal eMMC storage device
+     or /dev/nvme0n1p2 for the external NVMe storage device.
+  f. Copy the golden image into the TARGET_BSP directory on the host machine.
+     For the internal eMMC storage device, running the following command:
+     $ sudo cp golden.img.raw ${TARGET_BSP}/bootloader/system_root_encrypted.img.raw
+     For the external NVMe storage device, running the following command:
+     $ sudo cp golden.img.raw ${TARGET_BSP}/bootloader/system_root_encrypted.img_ext.raw
+     In the following steps, use ${golden_img} to specify the path of this golden image.
+  g. Put the target device into recovery mode and dump ECID by running the
+     following command:
+     $ sudo ./flash.sh --no-flash --no-systemimg -Z <target board> internal
+     You can get the ECID from the output.
+  h. Dump UUID of the golden image by running the command:
+     $ uuid="$(sudo cryptsetup luksUUID "${golden_img}")"
+  i. Generate the unique passphrase and store it into a temporary file by
+     running the following command:
+     $ ./tools/disk_encryption/gen_luks_passphrase.py -u -e <ECID> \
+       -k <disk encryption key> -c "${uuid}" | awk '{printf "%s", $0}' >/tmp/passphrase_unique.tmp
+     The <disk encryption key> is the key used to enable disk encryption
+     when flashing the device.
+  j. Generate the generic passphrase and store it into a temporary file by
+     running the following command:
+     $ ./tools/disk_encryption/gen_luks_passphrase.py -g \
+       -k <disk encryption key> -c "${uuid}" | awk '{printf "%s", $0}' >/tmp/passphrase_generic.tmp
+  k. Add generic passphrase on the golden image by running the following command:
+     $ sudo cryptsetup luksAddKey --key-file /tmp/passphrase_unique.tmp \
+       "${golden_img}" /tmp/passphrase_generic.tmp
+  l. Add the "-s" option when generating the OTA payload package.
+     For the internal eMMC storage device, running the following command:
+     $ sudo ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -s -i <disk encryption key> <target board> <base version>
+     For the external NVMe storage device, running the following command:
+     $ sudo ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -s --external-device nvme0n1 -S <rootfs size > -i <disk encryption key> <target board> <base version>
+
+Case 15: rootfs A/B enabled, disk encryption enabled:
+  a. Put the target device into recovery mode.
+  b. Boot the device to initrd by running the following command:
+     $ sudo ./tools/kernel_flash/l4t_initrd_flash.sh --initrd <target board> mmcblk0p1
+  c. Enter bash shell on the target device.
+  d. Mount a USB drive or network storage on the target device.
+  e. Generate golden images in the mounted storage device by running the
+     following commands:
+     $ sudo dd if=<rootfs partition A> of=<mount ponint>/golden_a.img.raw
+     $ sudo dd if=<rootfs partition B> of=<mount ponint>/golden_b.img.raw
+     The "<rootfs partition A>" is /dev/mmcblk0p3 for the internal eMMC storage
+     device or /dev/nvme0n1p3 for the external NVMe storage device, and the "<rootfs partition B>"
+     is /dev/mmcblk0p4 for the internal eMMC storage device or /dev/nvme0n1p4 for the external NVMe
+     storage device.
+  f. Copy the golden images into the TARGET_BSP directory on the host machine.
+     For the internal eMMC storage device, running the following commands:
+     $ sudo cp golden_a.img.raw ${TARGET_BSP}/bootloader/system_root_encrypted.img.raw
+     $ sudo cp golden_b.img.raw ${TARGET_BSP}/bootloader/system_root_encrypted.img_b.raw
+     For the external NVMe storage device, running the following commands:
+     $ sudo cp golden_a.img.raw ${TARGET_BSP}/bootloader/system_root_encrypted.img_ext.raw
+     $ sudo cp golden_b.img.raw ${TARGET_BSP}/bootloader/system_root_encrypted.img_ext_b.raw
+     In the following steps, use ${golden_a_img} and ${golden_b_img} to specify the paths of
+     golden images for rootfs A and rootfs B respectively.
+  g. Put the target device into recovery mode and dump ECID by running the
+     following command:
+     $ sudo ./flash.sh --no-flash --no-systemimg -Z <target board> internal
+     You can get the ECID from the output.
+  h. Dump UUID of the golden images by running the command:
+     $ uuid_a="$(sudo cryptsetup luksUUID "${golden_a_img}")"
+     $ uuid_b="$(sudo cryptsetup luksUUID "${golden_b_img}")"
+  i. Generate the unique passphrase and store it into a temporary file by
+     running the following commands:
+     $ ./tools/disk_encryption/gen_luks_passphrase.py -u -e <ECID> \
+       -k <disk encryption key> -c "${uuid_a}" | awk '{printf "%s", $0}' >/tmp/passphrase_unique_a.tmp
+     $ ./tools/disk_encryption/gen_luks_passphrase.py -u -e <ECID> \
+       -k <disk encryption key> -c "${uuid_b}" | awk '{printf "%s", $0}' >/tmp/passphrase_unique_b.tmp
+     The <disk encryption key> is the key used to enable disk encryption
+     when flashing the device.
+  j. Generate the generic passphrase and store it into a temporary file by
+     running the following commands:
+     $ ./tools/disk_encryption/gen_luks_passphrase.py -g \
+       -k <disk encryption key> -c "${uuid_a}" | awk '{printf "%s", $0}' >/tmp/passphrase_generic_a.tmp
+     $ ./tools/disk_encryption/gen_luks_passphrase.py -g \
+       -k <disk encryption key> -c "${uuid_b}" | awk '{printf "%s", $0}' >/tmp/passphrase_generic_b.tmp
+  k. Add generic passphrase on the golden images by running the following commands:
+     $ sudo cryptsetup luksAddKey --key-file /tmp/passphrase_unique_a.tmp \
+       "${golden_a_img}" /tmp/passphrase_generic_a.tmp
+     $ sudo cryptsetup luksAddKey --key-file /tmp/passphrase_unique_b.tmp \
+       "${golden_b_img}" /tmp/passphrase_generic_b.tmp
+  l. Add the "-s" option when generating the OTA payload package.
+     For the internal eMMC storage device, running the following command:
+     $ sudo ROOTFS_ENC=1 ROOTFSA_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -s -i <disk encryption key> <target board> <base version>
+     For the external NVMe storage device, running the following command:
+     $ sudo ROOTFS_ENC=1 ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+       -s --external-device nvme0n1 -S <rootfs size> -i <disk encryption key> <target board> <base version>
+
+The content of golden image is now packed into the OTA payload package and then extracted
+into the corresponding rootfs partition by the default rootfs updater provided by NVIDIA
+during the OTA update.
+
+5. Applying OTA with UEFI secure boot enabled
+
+Note: The steps below are used for reference only.
+
+There are three entities involved in the OTA: the host machine that generates the OTA package,
+the OTA server that responds to the OTA request, and the target device that issues OTA request
+and does the OTA on the device.
+
+----------------        --------------         -----------------
+| Host Machine |        | OTA Server |         | Target Device |
+----------------        --------------         -----------------
+       |                       |                       |
+       |     OTA packages      |                       |
+       |---------------------->|                       |
+       |         (1)           |                       |
+       |                       |    OTA request with   |
+       |                       |      unique UUIDs     |
+       |                       |<----------------------|
+       |                       |          (2)          |
+       |      Unique UUIDs     |                       |
+       |<----------------------|                       |
+       |         (3)           |                       |
+       |                       |                       |
+       |    UEFI secure boot   |                       |
+       |    overlay package    |                       |
+       |---------------------->|                       |
+       |         (4)           |                       |
+       |                       |      OTA packages     |
+       |                       |---------------------->|
+       |                       |          (5)          |
+       |                       |                       |
+
+The host machine generates OTA packages and sends them to the OTA server. The
+OTA packages include the OTA payload package ("ota_payload_package.tar.gz"),
+UEFI secure boot overlay package ("uefi_secureboot_overlay_multi_specs.tar.gz"),
+and OTA tools package ("ota_tools_<version>_aarch64.tbz2").
+The UEFI secure boot overlay package can be either generated along with other packages
+during OTA package creation or dynamically creating after receiving a request
+from the OTA server with specific UUIDs provided by the OTA request target device.
+
+The OTA server stores and sends the OTA packages to the target device upon receiving
+an OTA request. The OTA server may receive the device UUIDs from the target device when
+received OTA request. If these UUIDs do not match the UUIDs in the pre-generated UEFI
+secure boot overlay package, the OTA server forwards the UUIDs to the host machine
+so that a device-specific UEFI secure boot overlay package can be generated on the fly.
+
+The target device sends its unique UUIDs in an OTA request to the OTA server,
+receives the necessary OTA packages, and then triggers the OTA process.
+
+- Example commands to generate OTA payload package with UEFI secure boot enabled
+on the host machine
+
+You can use the "l4t_generate_ota_package.sh" to generate OTA packages for UEFI secure
+boot. The following are example commands with sample values:
+a. The UEFI secure boot is enabled on the target device.
+b. The UUID of the APP (or APP_ENC for disk encryption eanbled) partition is 11111111-1111-1111-111111111111.
+c. The UUID of the APP_b (or APP_ENC_b for disk encryption enabled) partition is 22222222-2222-2222-222222222222.
+d. The UUID of the UDA partition that is encrypted is 33333333-3333-3333-333333333333.
+e. The UEFI keys configuration file is "Linux_for_Tegra/uefi_keys/uefi_keys.conf".
+f. The UEFI encryption key is "Linux_for_Tegra/uefi_enc.key".
+
+Case 16: Jetson AGX Orin Devkit, UEFI payloads signed only, and a base version of R35.5.0:
+$ sudo -E ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  --uefi-keys ./uefi_keys/uefi_keys.conf \
+  --rootfs-uuid 11111111-1111-1111-111111111111 \
+  jetson-agx-orin-devkit R35-5
+
+Case 17: Jetson AGX Orin Devkit, UEFI payloads signed and encrypted, rootfs A/B enabled,
+and a base version of R36.3.0:
+$ sudo ROOTFS_AB=1 -E ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  --uefi-keys ./uefi_keys/uefi_keys.conf \
+  --uefi-enc ./uefi_enc.key --chipid 0x23 \
+  --rootfs-uuid 11111111-1111-1111-111111111111 \
+  --rootfs-b-uuid 22222222-2222-2222-222222222222 \
+  jetson-agx-orin-devkit R36-3
+
+Case 18: Jetson Orin NX/Nano (NVMe storage device), UEFI payloads signed only, disk encryption enabled,
+and a base version of R35.5.0:
+$ sudo ROOTFS_ENC=1 -E ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh\
+  --external-device nvme0n1 \
+  --uefi-keys ./uefi_keys/uefi_keys.conf \
+  --rootfs-uuid 11111111-1111-1111-111111111111 \
+  --uda-uuid 33333333-3333-3333-333333333333 \
+  jetson-orin-nano-devkit R35-5
+
+Case 19: Jetson Orin NX/Nano (NVMe storage device), UEFI payloads signed and encrypted, rootfs A/B enabled,
+disk encryption enabled, and a base version of R36.3.0:
+$ sudo ROOTFS_AB=1 ROOTFS_ENC=1 -E ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  --external-device nvme0n1 \
+  --uefi-keys ./uefi_keys/uefi_keys.conf \
+  --uefi-enc ./uefi_enc.key --chipid 0x23 \
+  --rootfs-uuid 11111111-1111-1111-111111111111 \
+  --rootfs-b-uuid 22222222-2222-2222-222222222222 \
+  --uda-uuid 33333333-3333-3333-333333333333 \
+  jetson-orin-nano-devkit R36-3
+
+- Example of the OTA update flow
+
+This example assumes the following scenario:
+a. The host machine also plays the role of the OTA server.
+b. The files necessary for OTA are transferred through an SSH session.
+c. The IP address of the target device is 192.168.55.1.
+d. The IP address of the host machine is 192.168.55.100.
+e. The target device is a Jetson AGX Orin Devkit, and its base version is R36.3.0
+
+Case 20: the OTA update flow is as follows:
+a. The host machine runs "l4t_generate_ota_package.sh" with given UUIDs to generate
+"ota_payload_package.tar.gz", "uefi_secureboot_overlay_multi_specs.tar.gz", and
+"uefi_base_multi_specs.tar.gz".
+$ sudo -E ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+  --uefi-keys ./uefi_keys/uefi_keys.conf \
+  --uefi-enc ./uefi_enc.key --chipid 0x23 \
+  --rootfs-uuid 11111111-1111-1111-111111111111 \
+  jetson-agx-orin-devkit R36-3
+
+b. The target device runs a command to collect necessary UUIDs and store the results to
+file "uuids.txt". Then sends OTA request along with "uuids.txt" to the host machine.
+$ rootfs_a_uuid="$(lsblk -P -n -o PARTLABEL,UUID /dev/mmcblk0 \
+  | grep APP | cut -d\  -f 2 | cut -d= -f 2 | sed 's/^\"\(.*\)\"$/\1/')"
+$ echo "rootfs_a_uuid:${rootfs_a_uuid}" >"uuids.txt"
+$ scp uuids.txt nvidia@192.168.55.100:~/
+
+For more details, refer to the demo script
+"Linux_for_Tegra/tools/ota_tools/version_upgrade/demo_target_ota_uefi_sb.sh".
+
+c. The host machine gets UUIDs from the received "uuids.txt" and executes the script
+"l4t_ota_sign_uefi_base.sh" to generate "uefi_secureboot_overlay_multi_specs.tar.gz"
+with obtained UUIDs as input parameters. Afterward, the host machine sends the
+"ota_tools_<version>_aarch64.tbz2", "ota_payload_package.tar.gz", and
+"uefi_secureboot_overlay_multi_specs.tar.gz" archives to the target device.
+$ rootfs_a_uuid="$(grep "rootfs_a_uuid" ~/uuids.txt | cut -d: -f 2 || true)"
+$ sudo ./tools/ota_tools/version_upgrade/l4t_ota_sign_enc_uefi_base.sh \
+  --uefi-keys uefi_keys/uefi_keys.conf \
+  --uefi-enc ./uefi_enc.key --chipid 0x23 \
+  --rootfs-uuid "${rootfs_a_uuid}"
+$ scp ../ota_tools_<version>_aarch64.tbz2 nvidia@192.168.55.1:~/
+$ scp ./bootloader/jetson-agx-orin-devkit/ota_payload_package.tar.gz \
+  nvidia@192.168.55.1:~/
+$ scp ./bootloader/uefi_overlay/uefi_secureboot_overlay_multi_specs.tar.gz \
+  nvidia@192.168.55.1:~/
+
+For more details, refer to the demo script
+"Linux_for_Tegra/tools/ota_tools/version_upgrade/demo_host_ota_uefi_sb.sh"
+
+d. The target device receives all OTA packages, extracts "ota_tools_<version>_aarch64.tbz2",
+and triggers the OTA update.
+$ tar xjpf ota_tools_<version>_aarch64.tbz2
+$ cd Linux_for_Tegra/tools/ota_tools/version_upgrade
+$ sudo ./nv_ota_start.sh ~/ota_payload_package.tar.gz
