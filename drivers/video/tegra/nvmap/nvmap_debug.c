@@ -95,8 +95,8 @@ next_page:
 			}
 
 			seq_printf(s,
-				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %6u %6u %6u %8pK %s\n",
-				"", "",
+				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %6u %6u %6u %8pK %6u %s\n"
+				, "", "",
 				(unsigned long long)base, size,
 				handle->userflags,
 				atomic_read(&handle->ref),
@@ -106,6 +106,7 @@ next_page:
 				atomic_read(&handle->umap_count),
 				atomic_read(&handle->share_count),
 				handle,
+				handle->has_hugetlbfs_pages,
 				__nvmap_tag_name(dev, handle->userflags >> 16));
 
 			if ((heap_type == NVMAP_HEAP_CARVEOUT_VPR) && handle->heap_pgalloc) {
@@ -358,9 +359,9 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	mutex_lock(&nvmap_dev->clients_lock);
 	seq_printf(s, "%-18s %18s %8s %11s\n",
 		"CLIENT", "PROCESS", "PID", "SIZE");
-	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s %6s %6s %6s %8s\n",
+	seq_printf(s, "%-18s %18s %8s %11s %8s %6s %6s %6s %6s %6s %6s %8s %6s\n",
 			"", "", "BASE", "SIZE", "FLAGS", "REFS",
-			"DUPES", "PINS", "KMAPS", "UMAPS", "SHARE", "UID");
+			"DUPES", "PINS", "KMAPS", "UMAPS", "SHARE", "UID", "FROM_HUGETLBFS");
 	list_for_each_entry(client, &nvmap_dev->clients, list) {
 		u64 client_total;
 
@@ -444,9 +445,9 @@ static int nvmap_debug_all_allocations_show(struct seq_file *s, void *unused)
 	struct rb_node *n;
 
 	spin_lock(&nvmap_dev->handle_lock);
-	seq_printf(s, "%8s %11s %9s %6s %6s %6s %6s %8s\n",
+	seq_printf(s, "%8s %11s %9s %6s %6s %6s %6s %8s %6s\n",
 			"BASE", "SIZE", "USERFLAGS", "REFS",
-			"KMAPS", "UMAPS", "SHARE", "UID");
+			"KMAPS", "UMAPS", "SHARE", "UID", "FROM_HUGETLBFS");
 
 	/* for each handle */
 	n = rb_first(&nvmap_dev->handles);
@@ -473,14 +474,15 @@ next_page:
 			}
 
 			seq_printf(s,
-				"%8llx %10zuK %9x %6u %6u %6u %6u %8p\n",
+				"%8llx %10zuK %9x %6u %6u %6u %6u %8p %6u\n",
 				(unsigned long long)base, K(handle->size),
 				handle->userflags,
 				atomic_read(&handle->ref),
 				atomic_read(&handle->kmap_count),
 				atomic_read(&handle->umap_count),
 				atomic_read(&handle->share_count),
-				handle);
+				handle,
+				handle->has_hugetlbfs_pages);
 
 			if ((heap_type == NVMAP_HEAP_CARVEOUT_VPR) && handle->heap_pgalloc) {
 				i++;
