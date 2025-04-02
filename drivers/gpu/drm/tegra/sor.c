@@ -33,6 +33,7 @@
 #endif
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_debugfs.h>
+#include <drm/drm_edid.h>
 #if defined(NV_DRM_DRM_ELD_H_PRESENT)
 #include <drm/drm_eld.h>
 #endif

@@ -4,10 +4,13 @@
  * Copyright (C) 2012 NVIDIA CORPORATION.  All rights reserved.
  */
 
+#include <nvidia/conftest.h>
+
 #include <linux/i2c.h>
 #include <linux/of.h>
 
 #include <drm/drm_atomic_helper.h>
+#include <drm/drm_edid.h>
 #include <drm/drm_of.h>
 #include <drm/drm_panel.h>
 #include <drm/drm_simple_kms_helper.h>
@@ -20,7 +23,11 @@
 int tegra_output_connector_get_modes(struct drm_connector *connector)
 {
 	struct tegra_output *output = connector_to_output(connector);
+#if defined(NV_USE_DRM_EDID)
+	const struct drm_edid *drm_edid = NULL;
+#else
 	struct edid *edid = NULL;
+#endif
 	int err = 0;
 
 	/*
@@ -33,6 +40,19 @@ int tegra_output_connector_get_modes(struct drm_connector *connector)
 			return err;
 	}
 
+#if defined(NV_USE_DRM_EDID)
+	if (output->drm_edid)
+		drm_edid = drm_edid_dup(output->drm_edid);
+	else if (output->ddc)
+		drm_edid = drm_edid_read_ddc(connector, output->ddc);
+
+	drm_edid_connector_update(connector, drm_edid);
+	cec_notifier_set_phys_addr(output->cec,
+				   connector->display_info.source_physical_address);
+
+	err = drm_edid_connector_add_modes(connector);
+	drm_edid_free(drm_edid);
+#else
 	if (output->edid)
 		edid = kmemdup(output->edid, sizeof(*edid), GFP_KERNEL);
 	else if (output->ddc)
@@ -45,6 +65,7 @@ int tegra_output_connector_get_modes(struct drm_connector *connector)
 		err = drm_add_edid_modes(connector, edid);
 		kfree(edid);
 	}
+#endif
 
 	return err;
 }
@@ -97,6 +118,9 @@ static irqreturn_t hpd_irq(int irq, void *data)
 int tegra_output_probe(struct tegra_output *output)
 {
 	struct device_node *ddc, *panel;
+#if defined(NV_USE_DRM_EDID)
+	const void *edid;
+#endif
 	unsigned long flags;
 	int err, size;
 
@@ -123,7 +147,9 @@ int tegra_output_probe(struct tegra_output *output)
 			return PTR_ERR(output->panel);
 	}
 
+#if !defined(NV_USE_DRM_EDID)
 	output->edid = of_get_property(output->of_node, "nvidia,edid", &size);
+#endif
 
 	ddc = of_parse_phandle(output->of_node, "nvidia,ddc-i2c-bus", 0);
 	if (ddc) {
@@ -136,14 +162,21 @@ int tegra_output_probe(struct tegra_output *output)
 		}
 	}
 
+#if defined(NV_USE_DRM_EDID)
+	edid = of_get_property(output->of_node, "nvidia,edid", &size);
+	output->drm_edid = drm_edid_alloc(edid, size);
+#endif
+
 	output->hpd_gpio = devm_fwnode_gpiod_get(output->dev,
 					of_fwnode_handle(output->of_node),
 					"nvidia,hpd",
 					GPIOD_IN,
 					"HDMI hotplug detect");
 	if (IS_ERR(output->hpd_gpio)) {
-		if (PTR_ERR(output->hpd_gpio) != -ENOENT)
-			return PTR_ERR(output->hpd_gpio);
+		if (PTR_ERR(output->hpd_gpio) != -ENOENT) {
+			err = PTR_ERR(output->hpd_gpio);
+			goto put_i2c;
+		}
 
 		output->hpd_gpio = NULL;
 	}
@@ -152,7 +185,7 @@ int tegra_output_probe(struct tegra_output *output)
 		err = gpiod_to_irq(output->hpd_gpio);
 		if (err < 0) {
 			dev_err(output->dev, "gpiod_to_irq(): %d\n", err);
-			return err;
+			goto put_i2c;
 		}
 
 		output->hpd_irq = err;
@@ -165,7 +198,7 @@ int tegra_output_probe(struct tegra_output *output)
 		if (err < 0) {
 			dev_err(output->dev, "failed to request IRQ#%u: %d\n",
 				output->hpd_irq, err);
-			return err;
+			goto put_i2c;
 		}
 
 		output->connector.polled = DRM_CONNECTOR_POLL_HPD;
@@ -179,6 +212,16 @@ int tegra_output_probe(struct tegra_output *output)
 	}
 
 	return 0;
+
+put_i2c:
+	if (output->ddc)
+		i2c_put_adapter(output->ddc);
+
+#if defined(NV_USE_DRM_EDID)
+	drm_edid_free(output->drm_edid);
+#endif
+
+	return err;
 }
 
 void tegra_output_remove(struct tegra_output *output)
@@ -188,6 +231,10 @@ void tegra_output_remove(struct tegra_output *output)
 
 	if (output->ddc)
 		i2c_put_adapter(output->ddc);
+
+#if defined(NV_USE_DRM_EDID)
+	drm_edid_free(output->drm_edid);
+#endif
 }
 
 int tegra_output_init(struct drm_device *drm, struct tegra_output *output)

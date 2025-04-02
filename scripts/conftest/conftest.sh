@@ -7146,6 +7146,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DRM_DEBUGFS_REMOVE_FILES_HAS_ROOT_ARG" "" "types"
         ;;
 
+        drm_display_info_struct_has_source_physical_address)
+            #
+            # Determine if the 'drm_display_info' structure has a 'source_physical_address' field.
+            #
+            # This change was made by commit 82b599ece3b8 ("drm/edid: parse source physical
+            # address") in Linux v6.7.
+            #
+            CODE="
+            #include <drm/drm_connector.h>
+            int conftest_drm_display_info_struct_has_source_physical_address(void) {
+                return offsetof(struct drm_display_info, source_physical_address);
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_DISPLAY_INFO_STRUCT_HAS_SOURCE_PHYSICAL_ADDRESS" "" "types"
+        ;;
+
         drm_driver_struct_has_date)
             #
             # Determine if the 'drm_driver' structure has a 'date' field.
@@ -7179,6 +7195,25 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_DRM_DRIVER_STRUCT_HAS_IRQ_ENABLED_ARG" "" "types"
+        ;;
+
+        drm_edid_connector_add_modes)
+            #
+            # Determine if the function 'drm_edid_connector_add_modes' is present.
+            #
+            # In Linux v6.3, commit c533b5167c7e ("drm/edid: add separate
+            # drm_edid_connector_add_modes()") added the function
+            # drm_edid_connector_add_modes().
+            #
+            CODE="
+            #undef CONFIG_ACPI
+            #include <drm/drm_edid.h>
+            void conftest_drm_edid_connector_add_modes(void)
+            {
+                    drm_edid_connector_add_modes();
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_EDID_CONNECTOR_ADD_MODES_PRESENT" "" "functions"
         ;;
 
         drm_fb_helper_alloc_info)

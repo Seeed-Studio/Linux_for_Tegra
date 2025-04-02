@@ -7,6 +7,8 @@
 #ifndef HOST1X_DRM_H
 #define HOST1X_DRM_H 1
 
+#include <nvidia/conftest.h>
+
 #include <linux/host1x-next.h>
 #include <linux/iova.h>
 #include <linux/gpio/consumer.h>
@@ -14,7 +16,6 @@
 #include <drm/drm_atomic.h>
 #ifdef CONFIG_DRM_TEGRA_HAVE_DISPLAY
 #include <drm/drm_bridge.h>
-#include <drm/drm_edid.h>
 #include <drm/drm_encoder.h>
 #endif
 #include <drm/drm_fixed.h>
@@ -27,9 +28,15 @@
 #endif
 #include <trace/events/trace.h>
 
+#if defined(NV_DRM_EDID_CONNECTOR_ADD_MODES_PRESENT) && /* Linux v6.3 */ \
+    defined(NV_DRM_DISPLAY_INFO_STRUCT_HAS_SOURCE_PHYSICAL_ADDRESS) /* Linux v6.7 */
+#define NV_USE_DRM_EDID
+#endif
+
 /* XXX move to include/uapi/drm/drm_fourcc.h? */
 #define DRM_FORMAT_MOD_NVIDIA_SECTOR_LAYOUT BIT_ULL(22)
 
+struct edid;
 struct reset_control;
 
 struct tegra_drm {
@@ -152,7 +159,11 @@ struct tegra_output {
 	struct drm_bridge *bridge;
 	struct drm_panel *panel;
 	struct i2c_adapter *ddc;
+#if defined(NV_USE_DRM_EDID)
+	const struct drm_edid *drm_edid;
+#else
 	const struct edid *edid;
+#endif
 	struct cec_notifier *cec;
 	unsigned int hpd_irq;
 	struct gpio_desc *hpd_gpio;
