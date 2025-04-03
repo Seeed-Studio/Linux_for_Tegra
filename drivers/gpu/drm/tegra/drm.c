@@ -23,6 +23,9 @@
 #endif
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
+#if defined(NV_DRM_DRM_CLIENT_SETUP_H_PRESENT) /* Linux v6.13 */
+#include <drm/drm_client_setup.h>
+#endif
 #include <drm/drm_debugfs.h>
 #include <drm/drm_drv.h>
 #include <drm/drm_fourcc.h>
@@ -743,6 +746,10 @@ static const struct drm_driver tegra_drm_driver = {
 
 	.dumb_create = tegra_bo_dumb_create,
 
+#if defined(NV_DRM_DRIVER_HAS_FBDEV_PROBE) /* Linux v6.13 */
+	TEGRA_FBDEV_DRIVER_OPS,
+#endif
+
 	.ioctls = tegra_drm_ioctls,
 	.num_ioctls = ARRAY_SIZE(tegra_drm_ioctls),
 	.fops = &tegra_drm_fops,
@@ -1199,7 +1206,11 @@ static int host1x_drm_probe(struct host1x_device *dev)
 	if (err < 0)
 		goto hub;
 
+#if defined(NV_DRM_DRIVER_HAS_FBDEV_PROBE) /* Linux v6.13 */
+	drm_client_setup(drm, NULL);
+#else
 	tegra_fbdev_setup(drm);
+#endif
 
 	return 0;
 

@@ -7162,6 +7162,25 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DRM_DISPLAY_INFO_STRUCT_HAS_SOURCE_PHYSICAL_ADDRESS" "" "types"
         ;;
 
+        drm_driver_has_fbdev_probe)
+            #
+            # Determine if the 'drm_driver' structure has an 'fbdev_probe'
+            # function pointer.
+            #
+            # In Linux v6.13, commit 5d08c44e47b9 ("drm/fbdev: Add
+            # memory-agnostic fbdev client") added an 'fbdev_probe' callback
+            # to the drm_driver structure.
+            #
+            CODE="
+            #include <drm/drm_drv.h>
+
+            int conftest_drm_driver_has_fbdev_probe(void) {
+                return offsetof(struct drm_driver, fbdev_probe);
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_DRIVER_HAS_FBDEV_PROBE" "" "types"
+        ;;
+
         drm_driver_struct_has_date)
             #
             # Determine if the 'drm_driver' structure has a 'date' field.
