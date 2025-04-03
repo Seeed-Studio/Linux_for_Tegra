@@ -144,10 +144,22 @@ static inline u32 wrap_add_u32(u32 const a, u32 const b)
 	return ret;
 }
 
-/*
- * Trace memory
+/**
+ * @brief Sets up memory for RTCPU trace
+ *
+ * This function sets up memory for the RTCPU trace
+ * - Reads memory specifications from device tree using @ref of_parse_phandle_with_fixed_args()
+ * - Allocates coherent DMA memory using @ref dma_alloc_coherent()
+ * - Initializes the trace memory header with appropriate configuration values
+ * - In case of error, @ref of_node_put() is called to release the reference to the device node
+ *
+ * @param[in/out] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                        Valid Range: Non-NULL pointer.
+ *
+ * @retval 0 on success
+ * @retval -EINVAL if invalid trace entry is found in device tree
+ * @retval -ENOMEM if memory allocation fails
  */
-
 static int rtcpu_trace_setup_memory(struct tegra_rtcpu_trace *tracer)
 {
 	struct device *dev = tracer->dev;
@@ -185,6 +197,25 @@ error:
 	return ret;
 }
 
+/**
+ * @brief Initializes the trace memory
+ *
+ * This function initializes the trace memory by mapping the DMA handle to the trace memory
+ * and setting up the exception base and exception entries.
+ * - Checks for overflow in the DMA handle and exception base using @ref check_add_overflow() and
+ *   @ref offsetof()
+ * - Maps the DMA handle to the trace memory using @ref dma_handle_pointers
+ * - Sets up the exception base and exception entries
+ * - Initializes the trace memory header with appropriate configuration values
+ * - Checks for overflow in the DMA handle and event entries using @ref check_add_overflow() and
+ *   @ref check_sub_overflow()
+ * - Sets up the event entries and DMA handle events
+ * - Copies the trace memory header to the trace memory using @ref memcpy()
+ * - Synchronizes the trace memory header for device using @ref dma_sync_single_for_device()
+ *
+ * @param[in/out] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                        Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_init_memory(struct tegra_rtcpu_trace *tracer)
 {
 	u64 add_value = 0;
@@ -246,10 +277,28 @@ static void rtcpu_trace_init_memory(struct tegra_rtcpu_trace *tracer)
 	}
 }
 
-/*
- * Worker
+/**
+ * @brief Invalidates cache entries for RTCPU trace
+ *
+ * This function invalidates cache entries for the RTCPU trace
+ * - If the new next is greater than the old next, it invalidates the cache entries for the device
+ *   using @ref dma_sync_single_for_cpu()
+ * - Checks for overflow in the DMA handle and event entries using @ref check_add_overflow() and
+ *   @ref check_sub_overflow()
+ * - Synchronizes the trace memory header for device using @ref dma_sync_single_for_cpu()
+ *
+ * @param[in] tracer  Pointer to the tegra_rtcpu_trace structure.
+ * 						Valid Range: Non-NULL pointer.
+ * @param[in] dma_handle  DMA handle for the trace memory.
+ * @param[in] old_next  Old next value for the trace memory.
+ * 						Valid Range: 0 to UINT32_MAX
+ * @param[in] new_next  New next value for the trace memory.
+ * 						Valid Range: 0 to UINT32_MAX
+ * @param[in] entry_size  Entry size for the trace memory.
+ * 						Valid Range: 0 to UINT32_MAX
+ * @param[in] entry_count  Entry count for the trace memory.
+ * 						Valid Range: 0 to UINT32_MAX
  */
-
 static void rtcpu_trace_invalidate_entries(struct tegra_rtcpu_trace *tracer,
 	dma_addr_t dma_handle, u32 old_next, u32 new_next,
 	u32 entry_size, u32 entry_count)
@@ -307,6 +356,22 @@ static void rtcpu_trace_invalidate_entries(struct tegra_rtcpu_trace *tracer,
 	}
 }
 
+/**
+ * @brief Prints the exception trace
+ *
+ * This function prints the exception trace
+ * - constructs the sequence buffer using @ref seq_buf_init()
+ * - prints the exception type using @ref seq_buf_printf()
+ * - prints the exception registers using @ref seq_buf_printf()
+ * - prints the exception callstack using @ref seq_buf_printf()
+ * - If exception length is greater than the exception size, it prints multiple lines
+ *   using @ref seq_buf_printf()
+ *
+ * @param[in] tracer  Pointer to the tegra_rtcpu_trace structure.
+ * 						Valid Range: Non-NULL pointer.
+ * @param[in] exc  Pointer to the camrtc_trace_armv7_exception structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_trace_armv7_exception *exc)
 {
@@ -389,6 +454,25 @@ static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 		" ", " ", header, buf, trailer, " ", " ");
 }
 
+/**
+ * @brief Prints the exception trace
+ *
+ * This function prints the exception trace
+ * - Gets the old and new next values from the trace memory header
+ * - Checks if the old and new next values are the same, if so, return
+ * - Checks if the new next value is greater than the exception entries, if so, print a warning and
+ *   return
+ * - Sets the new next value to the exception entries using @ref array_index_nospec()
+ * - Invalidates the cache entries for the device using @ref rtcpu_trace_invalidate_entries
+ * - Copies the exception to the exception structure using @ref memcpy()
+ * - Prints the exception trace using @ref rtcpu_trace_exception()
+ * - Increments the exception count using @ref wrap_add_u32()
+ * - Increments the old next value using @ref wrap_add_u32()
+ * - Sets the exception last index to the new next value
+ *
+ * @param[in/out] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                        Valid Range: Non-NULL pointer.
+ */
 static inline void rtcpu_trace_exceptions(struct tegra_rtcpu_trace *tracer)
 {
 	const struct camrtc_trace_memory_header *header = tracer->trace_memory;
@@ -436,6 +520,21 @@ static inline void rtcpu_trace_exceptions(struct tegra_rtcpu_trace *tracer)
 	tracer->exception_last_idx = new_next;
 }
 
+/**
+ * @brief Calculates the length of the event
+ *
+ * This function calculates the length of the event
+ * - If the length is greater than the event size, it sets the length to the
+ *   @ref CAMRTC_TRACE_EVENT_SIZE minus @ref CAMRTC_TRACE_EVENT_HEADER_SIZE
+ * - If the length is greater than the header size, it sets the length to the
+ *   length minus the @ref CAMRTC_TRACE_EVENT_HEADER_SIZE
+ * - Otherwise, it sets the length to 0
+ *
+ * @param[in] event  Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ *
+ * @retval (uint16_t) The length of the event.
+ */
 static uint16_t rtcpu_trace_event_len(const struct camrtc_event_struct *event)
 {
 	uint16_t len = event->header.len;
@@ -450,6 +549,16 @@ static uint16_t rtcpu_trace_event_len(const struct camrtc_event_struct *event)
 	return len;
 }
 
+/**
+ * @brief Prints the unknown trace event
+ *
+ * This function prints the unknown trace event
+ * - Gets the id and length of the event
+ * - Prints the unknown trace event using @ref trace_rtcpu_unknown()
+ *
+ * @param[in] event  Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_unknown_trace_event(struct camrtc_event_struct *event)
 {
 	uint32_t id = event->header.id;
@@ -459,6 +568,20 @@ static void rtcpu_unknown_trace_event(struct camrtc_event_struct *event)
 	trace_rtcpu_unknown(tstamp, id, len, &event->data.data8[0]);
 }
 
+/**
+ * @brief Prints the base trace event
+ *
+ * This function prints the base trace event
+ * - Gets the id of the event
+ * - If the id is @ref camrtc_trace_base_target_init, it prints the base trace event using
+ *   @ref trace_rtcpu_target_init()
+ * - If the id is @ref camrtc_trace_base_start_scheduler, it prints the base trace event using
+ *   @ref trace_rtcpu_start_scheduler()
+ * - Otherwise, it prints the unknown trace event using @ref rtcpu_unknown_trace_event()
+ *
+ * @param[in] event  Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_base_event(struct camrtc_event_struct *event)
 {
 	switch (event->header.id) {
@@ -474,6 +597,142 @@ static void rtcpu_trace_base_event(struct camrtc_event_struct *event)
 	}
 }
 
+/**
+ * @brief Prints the RTOS trace event
+ *
+ * This function prints the RTOS trace event
+ * - Gets the id of the event
+ * - If the id is @ref camrtc_trace_rtos_task_switched_in, it prints the RTOS trace event using
+ *   @ref trace_rtos_task_switched_in()
+ * - If the id is @ref camrtc_trace_rtos_increase_tick_count, it prints the RTOS trace event using
+ *   @ref trace_rtos_increase_tick_count()
+ * - If the id is @ref camrtc_trace_rtos_low_power_idle_begin, it prints the RTOS trace event using
+ *   @ref trace_rtos_low_power_idle_begin()
+ * - If the id is @ref camrtc_trace_rtos_low_power_idle_end, it prints the RTOS trace event using
+ *   @ref trace_rtos_low_power_idle_end()
+ * - If the id is @ref camrtc_trace_rtos_task_switched_out, it prints the RTOS trace event using
+ *   @ref trace_rtos_task_switched_out()
+ * - If the id is @ref camrtc_trace_rtos_task_priority_inherit, it prints the RTOS trace event using
+ *   @ref trace_rtos_task_priority_inherit()
+ * - If the id is @ref camrtc_trace_rtos_task_priority_disinherit, it prints the RTOS trace event
+ *   using @ref trace_rtos_task_priority_disinherit()
+ * - If the id is @ref camrtc_trace_rtos_blocking_on_queue_receive, it prints the RTOS trace event
+ *   using @ref trace_rtos_blocking_on_queue_receive()
+ * - If the id is @ref camrtc_trace_rtos_blocking_on_queue_send, it prints the RTOS trace event
+ *   using @ref trace_rtos_blocking_on_queue_send()
+ * - If the id is @ref camrtc_trace_rtos_moved_task_to_ready_state, it prints the RTOS trace event
+ *   using @ref trace_rtos_moved_task_to_ready_state()
+ * - If the id is @ref camrtc_trace_rtos_queue_create, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_create()
+ * - If the id is @ref camrtc_trace_rtos_queue_create_failed, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_create_failed()
+ * - If the id is @ref camrtc_trace_rtos_create_mutex, it prints the RTOS trace event using
+ *   @ref trace_rtos_create_mutex()
+ * - If the id is @ref camrtc_trace_rtos_create_mutex_failed, it prints the RTOS trace event using
+ *   @ref trace_rtos_create_mutex_failed()
+ * - If the id is @ref camrtc_trace_rtos_give_mutex_recursive, it prints the RTOS trace event
+ *   using @ref trace_rtos_give_mutex_recursive()
+ * - If the id is @ref camrtc_trace_rtos_give_mutex_recursive_failed, it prints the RTOS trace event
+ *   using @ref trace_rtos_give_mutex_recursive_failed()
+ * - If the id is @ref camrtc_trace_rtos_take_mutex_recursive, it prints the RTOS trace event using
+ *   @ref trace_rtos_take_mutex_recursive()
+ * - If the id is @ref camrtc_trace_rtos_take_mutex_recursive_failed, it prints the RTOS trace
+ *   event using @ref trace_rtos_take_mutex_recursive_failed()
+ * - If the id is @ref camrtc_trace_rtos_create_counting_semaphore, it prints the RTOS trace event using
+ *   @ref trace_rtos_create_counting_semaphore()
+ * - If the id is @ref camrtc_trace_rtos_create_counting_semaphore_failed, it prints the RTOS trace
+ *   event using @ref trace_rtos_create_counting_semaphore_failed()
+ * - If the id is @ref camrtc_trace_rtos_queue_send, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_send()
+ * - If the id is @ref camrtc_trace_rtos_queue_send_failed, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_send_failed()
+ * - If the id is @ref camrtc_trace_rtos_queue_receive, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_receive()
+ * - If the id is @ref camrtc_trace_rtos_queue_peek, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_peek()
+ * - If the id is @ref camrtc_trace_rtos_queue_peek_from_isr, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_peek_from_isr()
+ * - If the id is @ref camrtc_trace_rtos_queue_receive_failed, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_receive_failed()
+ * - If the id is @ref camrtc_trace_rtos_queue_send_from_isr, it prints the RTOS trace event using
+ *   @ref trace_rtos_queue_send_from_isr()
+ * - If the id is @ref camrtc_trace_rtos_queue_send_from_isr_failed, it prints the RTOS trace event
+ *   using @ref trace_rtos_queue_send_from_isr_failed()
+ * - If the id is @ref camrtc_trace_rtos_queue_receive_from_isr, it prints the RTOS trace event
+ *   using @ref trace_rtos_queue_receive_from_isr()
+ * - If the id is @ref camrtc_trace_rtos_queue_receive_from_isr_failed, it prints the RTOS trace
+ *   event using @ref trace_rtos_queue_receive_from_isr_failed()
+ * - If the id is @ref camrtc_trace_rtos_queue_peek_from_isr_failed, it prints the RTOS trace event
+ *   using @ref trace_rtos_queue_peek_from_isr_failed()
+ * - If the id is @ref camrtc_trace_rtos_queue_delete, it prints the RTOS trace event
+ *   using @ref trace_rtos_queue_delete()
+ * - If the id is @ref camrtc_trace_rtos_task_create, it prints the RTOS trace event
+ *   using @ref trace_rtos_task_create()
+ * - If the id is @ref camrtc_trace_rtos_task_create_failed, it prints the RTOS trace event
+ using @ref trace_rtos_task_create_failed()
+ * - If the id is @ref camrtc_trace_rtos_task_delete, it prints the RTOS trace event
+ using @ref trace_rtos_task_delete()
+ * - If the id is @ref camrtc_trace_rtos_task_delay_until, it prints the RTOS trace event
+ using @ref trace_rtos_task_delay_until()
+ * - If the id is @ref camrtc_trace_rtos_task_delay, it prints the RTOS trace event
+ using @ref trace_rtos_task_delay()
+ * - If the id is @ref camrtc_trace_rtos_task_priority_set, it prints the RTOS trace event
+ using @ref trace_rtos_task_priority_set()
+ * - If the id is @ref camrtc_trace_rtos_task_suspend, it prints the RTOS trace event
+ using @ref trace_rtos_task_suspend()
+ * - If the id is @ref camrtc_trace_rtos_task_resume, it prints the RTOS trace event
+ using @ref trace_rtos_task_resume()
+ * - If the id is @ref camrtc_trace_rtos_task_resume_from_isr, it prints the RTOS trace event
+ using @ref trace_rtos_task_resume_from_isr()
+ * - If the id is @ref camrtc_trace_rtos_task_increment_tick, it prints the RTOS trace event
+ using @ref trace_rtos_task_increment_tick()
+ * - If the id is @ref camrtc_trace_rtos_timer_create, it prints the RTOS trace event
+ using @ref trace_rtos_timer_create()
+ * - If the id is @ref camrtc_trace_rtos_timer_create_failed, it prints the RTOS trace event
+ using @ref trace_rtos_timer_create_failed()
+ * - If the id is @ref camrtc_trace_rtos_timer_command_send, it prints the RTOS trace event
+ using @ref trace_rtos_timer_command_send()
+ * - If the id is @ref camrtc_trace_rtos_timer_expired, it prints the RTOS trace event
+ using @ref trace_rtos_timer_expired()
+ * - If the id is @ref camrtc_trace_rtos_timer_command_received, it prints the RTOS trace event
+ using @ref trace_rtos_timer_command_received()
+ * - If the id is @ref camrtc_trace_rtos_malloc, it prints the RTOS trace event
+ using @ref trace_rtos_malloc()
+ * - If the id is @ref camrtc_trace_rtos_free, it prints the RTOS trace event
+  using @ref trace_rtos_free()
+ * - If the id is @ref camrtc_trace_rtos_event_group_create, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_create()
+ * - If the id is @ref camrtc_trace_rtos_event_group_create_failed, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_create_failed()
+ * - If the id is @ref camrtc_trace_rtos_event_group_sync_block, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_sync_block()
+ * - If the id is @ref camrtc_trace_rtos_event_group_sync_end, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_sync_end()
+ * - If the id is @ref camrtc_trace_rtos_event_group_wait_bits_block, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_wait_bits_block()
+ * - If the id is @ref camrtc_trace_rtos_event_group_wait_bits_end, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_wait_bits_end()
+ * - If the id is @ref camrtc_trace_rtos_event_group_clear_bits, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_clear_bits()
+ * - If the id is @ref camrtc_trace_rtos_event_group_clear_bits_from_isr, it prints the RTOS
+ trace event using @ref trace_rtos_event_group_clear_bits_from_isr()
+ * - If the id is @ref camrtc_trace_rtos_event_group_set_bits, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_set_bits()
+ * - If the id is @ref camrtc_trace_rtos_event_group_set_bits_from_isr, it prints the RTOS trace
+ event using @ref trace_rtos_event_group_set_bits_from_isr()
+ * - If the id is @ref camrtc_trace_rtos_event_group_delete, it prints the RTOS trace event
+ using @ref trace_rtos_event_group_delete()
+ * - If the id is @ref camrtc_trace_rtos_pend_func_call, it prints the RTOS trace event
+ using @ref trace_rtos_pend_func_call()
+ * - If the id is @ref camrtc_trace_rtos_pend_func_call_from_isr, it prints the RTOS trace event
+ using @ref trace_rtos_pend_func_call_from_isr()
+ * - If the id is @ref camrtc_trace_rtos_queue_registry_add, it prints the RTOS trace event
+ using @ref trace_rtos_queue_registry_add()
+ * - If id is not found, it prints the unknown trace event using @ref rtcpu_unknown_trace_event()
+ *
+ * @param[in] event  Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_rtos_event(struct camrtc_event_struct *event)
 {
 	switch (event->header.id) {
@@ -799,6 +1058,23 @@ const char * const g_trace_vinotify_tag_strs[] = {
 const unsigned int g_trace_vinotify_tag_str_count =
 	ARRAY_SIZE(g_trace_vinotify_tag_strs);
 
+/**
+ * @brief Trace VINOTIFY events
+ *
+ * This function traces VINOTIFY events based on the event ID.
+ *  - It handles different VINOTIFY event types and their corresponding trace functions.
+ *  - If the event ID is not found, it prints the unknown trace event using
+ *    @ref rtcpu_unknown_trace_event()
+ *  - If event ID is @ref camrtc_trace_vinotify_event_ts64, it prints the VINOTIFY trace event using
+ *    @ref trace_rtcpu_vinotify_event_ts64()
+ *  - If event ID is @ref camrtc_trace_vinotify_event, it prints the VINOTIFY trace event using
+ *    @ref trace_rtcpu_vinotify_event()
+ *  - If event ID is @ref camrtc_trace_vinotify_error, it prints the VINOTIFY trace event using
+ *    @ref trace_rtcpu_vinotify_error()
+ *
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 {
 	switch (event->header.id) {
@@ -828,6 +1104,24 @@ static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 	}
 }
 
+/**
+ * @brief Trace VI frame events
+ *
+ * This function traces VI frame events based on the event ID.
+ *  - Gets the platform device data for the VI unit using @ref platform_get_drvdata()
+ *  - If the platform device data is not found, it returns
+ *  - If the event ID is not found, it prints the unknown trace event using
+ *    @ref rtcpu_unknown_trace_event()
+ *  - If event ID is @ref camrtc_trace_vi_frame_begin, it prints the VI frame begin trace event using
+ *    @ref trace_vi_frame_begin()
+ *  - If event ID is @ref camrtc_trace_vi_frame_end, it prints the VI frame end trace event using
+ *    @ref trace_vi_frame_end() and @ref trace_task_fence()
+ *
+ * @param[in] tracer Pointer to the tegra_rtcpu_trace structure.
+ * 						Valid Range: Non-NULL pointer.
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_vi_frame_event(struct tegra_rtcpu_trace *tracer,
 				struct camrtc_event_struct *event)
 {
@@ -888,6 +1182,20 @@ static void rtcpu_trace_vi_frame_event(struct tegra_rtcpu_trace *tracer,
 	}
 }
 
+/**
+ * @brief Trace VI events
+ *
+ * This function traces VI events based on the event ID.
+ *  - If the event ID is @ref camrtc_trace_vi_frame_begin or @ref camrtc_trace_vi_frame_end,
+ *    it prints the VI frame event using @ref rtcpu_trace_vi_frame_event()
+ *  - If the event ID is not found, it prints the unknown trace event using
+ *    @ref rtcpu_unknown_trace_event()
+ *
+ * @param[in] tracer Pointer to the tegra_rtcpu_trace structure.
+ * 						Valid Range: Non-NULL pointer.
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 				struct camrtc_event_struct *event)
 {
@@ -921,6 +1229,21 @@ const unsigned int g_trace_isp_falcon_task_str_count =
 #define TRACE_ISP_FALCON_PROFILE_START    16U
 #define TRACE_ISP_FALCON_PROFILE_END      17U
 
+/**
+ * @brief Trace ISP task events
+ *
+ * This function traces ISP task events based on the event ID.
+ *  - It handles different ISP task event types and their corresponding trace functions.
+ *  - If event ID is @ref camrtc_trace_isp_task_begin, it prints the ISP task begin trace event
+ *    using @ref trace_isp_task_begin() and @ref trace_task_fence()
+ *  - If event ID is @ref camrtc_trace_isp_task_end, it prints the ISP task end trace event using
+ *    @ref trace_isp_task_end() and @ref trace_task_fence()
+ *
+ * @param[in] tracer Pointer to the tegra_rtcpu_trace structure.
+ * 						Valid Range: Non-NULL pointer.
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_isp_task_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
@@ -988,6 +1311,25 @@ static void rtcpu_trace_isp_task_event(struct tegra_rtcpu_trace *tracer,
 	}
 }
 
+/**
+ * @brief Trace ISP Falcon events
+ *
+ * This function traces ISP Falcon events based on the event ID.
+ *  - It handles different ISP Falcon event types and their corresponding trace functions.
+ *  - If event ID is @ref TRACE_ISP_FALCON_EVENT_TS, it prints the ISP Falcon tile start trace
+ *    event using @ref trace_rtcpu_isp_falcon_tile_start()
+ *  - If event ID is @ref TRACE_ISP_FALCON_EVENT_TE, it prints the ISP Falcon tile end trace event
+ *    using @ref trace_rtcpu_isp_falcon_tile_end()
+ *  - If event ID is @ref TRACE_ISP_FALCON_PROFILE_START, it prints the ISP Falcon task start trace
+ *    event using @ref trace_rtcpu_isp_falcon_task_start()
+ *  - If event ID is @ref TRACE_ISP_FALCON_PROFILE_END, it prints the ISP Falcon task end trace
+ *    event using @ref trace_rtcpu_isp_falcon_task_end()
+ *  - If event ID is not found, it prints the unknown trace event using
+ *    @ref trace_rtcpu_isp_falcon()
+ *
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_isp_falcon_event(struct camrtc_event_struct *event)
 {
 	u8 ispfalcon_tag = (u8) ((event->data.data32[0] & 0xFF) >> 1U);
@@ -1033,6 +1375,22 @@ static void rtcpu_trace_isp_falcon_event(struct camrtc_event_struct *event)
 
 }
 
+/**
+ * @brief Trace ISP events
+ *
+ * This function traces ISP events based on the event ID.
+ *  - If the event ID is @ref camrtc_trace_isp_task_begin or @ref camrtc_trace_isp_task_end,
+ *    it prints the ISP task event using @ref rtcpu_trace_isp_task_event()
+ *  - If the event ID is @ref camrtc_trace_isp_falcon_traces_event, it prints the ISP Falcon
+ *    traces event using @ref rtcpu_trace_isp_falcon_event()
+ *  - If the event ID is not found, it prints the unknown trace event using
+ *    @ref rtcpu_unknown_trace_event()
+ *
+ * @param[in] tracer Pointer to the tegra_rtcpu_trace structure.
+ * 						Valid Range: Non-NULL pointer.
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_isp_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
@@ -1067,6 +1425,18 @@ const char * const g_trace_nvcsi_intr_type_strs[] = {
 const unsigned int g_trace_nvcsi_intr_type_str_count =
 	ARRAY_SIZE(g_trace_nvcsi_intr_type_strs);
 
+/**
+ * @brief Trace NVCSI events
+ *
+ * This function traces NVCSI events based on the event ID.
+ *  - If the event ID is @ref camrtc_trace_nvcsi_intr, it prints the NVCSI interrupt trace
+ *    event using @ref trace_rtcpu_nvcsi_intr()
+ *  - If the event ID is not found, it prints the unknown trace event using
+ *    @ref rtcpu_unknown_trace_event()
+ *
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_nvcsi_event(struct camrtc_event_struct *event)
 {
 	u64 ts_tsc = ((u64)event->data.data32[5] << 32) |
@@ -1108,6 +1478,39 @@ struct capture_event {
 	};
 };
 
+/**
+ * @brief Trace capture events
+ *
+ * This function traces capture events based on the event ID.
+ *  - If the event ID is @ref camrtc_trace_capture_event_sof, it prints the capture start of frame
+ *    trace event using @ref trace_capture_event_sof()
+ *  - If the event ID is @ref camrtc_trace_capture_event_eof, it prints the capture end of frame
+ *    trace event using @ref trace_capture_event_eof()
+ *  - If the event ID is @ref camrtc_trace_capture_event_error, it prints the capture error trace
+ *    event using @ref trace_capture_event_error()
+ *  - If the event ID is @ref camrtc_trace_capture_event_reschedule, it prints the capture
+ *    reschedule trace event using @ref trace_capture_event_reschedule()
+ *  - If the event ID is @ref camrtc_trace_capture_event_reschedule_isp, it prints the capture
+ *    reschedule ISP trace event using @ref trace_capture_event_reschedule_isp()
+ *  - If the event ID is @ref camrtc_trace_capture_event_isp_done, it prints the capture ISP
+ *    done trace event using @ref trace_capture_event_isp_done()
+ *  - If the event ID is @ref camrtc_trace_capture_event_isp_error, it prints the capture ISP error
+ *    trace event using @ref trace_capture_event_isp_error()
+ *  - If the event ID is @ref camrtc_trace_capture_event_wdt, it prints the capture WDT trace
+ *    event using @ref trace_capture_event_wdt()
+ *  - If the event ID is @ref camrtc_trace_capture_event_report_program, it prints the capture
+ *    report program trace event using @ref trace_capture_event_report_program()
+ *  - If the event ID is @ref camrtc_trace_capture_event_suspend, it prints the capture suspend
+ *    trace event using @ref trace_capture_event_suspend()
+ *  - If the event ID is @ref camrtc_trace_capture_event_suspend_isp, it prints the capture suspend
+ *    ISP trace event using @ref trace_capture_event_suspend_isp()
+ *  - If the event ID is @ref camrtc_trace_capture_event_inject or
+ *    @ref camrtc_trace_capture_event_sensor or unknown, it prints the unknown trace event using
+ *    @ref rtcpu_unknown_trace_event()
+ *
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_capture_event(struct camrtc_event_struct *event)
 {
 	const struct capture_event *ev = (const void *)&event->data;
@@ -1166,6 +1569,20 @@ static void rtcpu_trace_capture_event(struct camrtc_event_struct *event)
 	}
 }
 
+/**
+ * @brief Trace performance events
+ *
+ * This function traces performance events based on the event ID.
+ *  - If the event ID is @ref camrtc_trace_perf_reset, it prints the performance reset trace
+ *    event using @ref trace_rtcpu_perf_reset()
+ *  - If the event ID is @ref camrtc_trace_perf_counters, it prints the performance counters
+ *    trace event using @ref trace_rtcpu_perf_counters()
+ *  - If the event ID is not found, it prints the unknown trace event using
+ *    @ref rtcpu_unknown_trace_event()
+ *
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_perf_event(struct camrtc_event_struct *event)
 {
 	const struct camrtc_trace_perf_counter_data *perf = (const void *)&event->data;
@@ -1184,6 +1601,38 @@ static void rtcpu_trace_perf_event(struct camrtc_event_struct *event)
 	}
 }
 
+/**
+ * @brief Trace array events
+ *
+ * This function traces array events based on the event ID.
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_BASE, it parses the base event using
+ *    @ref rtcpu_trace_base_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_RTOS, it parses the RTOS event using
+ *    @ref rtcpu_trace_rtos_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_DBG, it parses the debug event using
+ *    @ref rtcpu_trace_dbg_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_VINOTIFY, it parses the VINOTIFY event
+ *    using @ref rtcpu_trace_vinotify_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_I2C, it parses the I2C event using
+ *    @ref rtcpu_trace_i2c_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_VI, it parses the VI event using
+ *    @ref rtcpu_trace_vi_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_ISP, it parses the ISP event using
+ *    @ref rtcpu_trace_isp_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_NVCSI, it parses the NVCSI event using
+ *    @ref rtcpu_trace_nvcsi_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_CAPTURE, it parses the capture event using
+ *    @ref rtcpu_trace_capture_event()
+ *  - If the event ID is @ref CAMRTC_EVENT_MODULE_PERF, it parses the performance event using
+ *    @ref rtcpu_trace_perf_event()
+ *  - If the event ID is not found, it prints the unknown trace event using
+ *    @ref rtcpu_unknown_trace_event()
+ *
+ * @param[in] tracer Pointer to the tegra_rtcpu_trace structure.
+ * 						Valid Range: Non-NULL pointer.
+ * @param[in] event Pointer to the camrtc_event_struct structure.
+ * 						Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_array_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
@@ -1223,6 +1672,30 @@ static void rtcpu_trace_array_event(struct tegra_rtcpu_trace *tracer,
 	}
 }
 
+/**
+ * @brief Trace log events
+ *
+ * This function traces log events.
+ *  - If the id is not @ref camrtc_trace_type_string, it returns.
+ *  - If the length is greater than @ref CAMRTC_TRACE_EVENT_PAYLOAD_SIZE, it ignores the NULs at
+ *    the end of the buffer.
+ *  - If the used is greater than the printk buffer size, it prints the log event using
+ *    @ref pr_info()
+ *  - Copies the log event to the printk buffer using @ref memcpy()
+ *  - Updates the used with the length of the log event
+ *  - Logs the log event using @ref tracer->printk()
+ *  - If end is '\r' or '\n', it prints the log event using @ref tracer->printk()
+ *  - Update @ref tracer->printk_used with the used
+ *
+ * @param[in/out] tracer Pointer to the tegra_rtcpu_trace structure.
+ *                        Valid Range: Non-NULL pointer.
+ * @param[in] id Event ID.
+ *               Valid Range: @ref camrtc_trace_type_string.
+ * @param[in] len Length of the log event.
+ *                Valid Range: @ref CAMRTC_TRACE_EVENT_PAYLOAD_SIZE.
+ * @param[in] data8 Pointer to the log event.
+ *                  Valid Range: Non-NULL pointer.
+ */
 static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
 		uint32_t id, uint32_t len, const uint8_t *data8)
 {
@@ -1273,6 +1746,29 @@ static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
 	tracer->printk_used = used;
 }
 
+/**
+ * @brief Processes a single RTCPU trace event
+ *
+ * This function processes a single RTCPU trace event based on its type
+ * - Gets the event id using @ref event->header.id
+ * - Extracts the event type using @ref CAMRTC_EVENT_TYPE_FROM_ID
+ * - Gets the event length using @ref rtcpu_trace_event_len
+ * - Gets a pointer to the event data
+ * - Based on event type, calls appropriate handler:
+ *   - If type is @ref CAMRTC_EVENT_TYPE_ARRAY, calls @ref rtcpu_trace_array_event
+ *   - If type is @ref CAMRTC_EVENT_TYPE_ARMV7_EXCEPTION, calls @ref trace_rtcpu_armv7_exception
+ *   - If type is @ref CAMRTC_EVENT_TYPE_PAD, ignores the event
+ *   - If type is @ref CAMRTC_EVENT_TYPE_START, calls @ref trace_rtcpu_start
+ *   - If type is @ref CAMRTC_EVENT_TYPE_STRING, calls @ref trace_rtcpu_string and
+ *     optionally @ref trace_rtcpu_log if printk is enabled
+ *   - If type is @ref CAMRTC_EVENT_TYPE_BULK, calls @ref trace_rtcpu_bulk
+ *   - For any other type, calls @ref rtcpu_unknown_trace_event
+ *
+ * @param[in] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                    Valid Range: Non-NULL pointer.
+ * @param[in] event   Pointer to the camrtc_event_struct structure.
+ *                    Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
@@ -1309,6 +1805,30 @@ static void rtcpu_trace_event(struct tegra_rtcpu_trace *tracer,
 	}
 }
 
+/**
+ * @brief Processes RTCPU trace events
+ *
+ * This function processes multiple RTCPU trace events
+ * - Gets the memory header from @ref tracer->trace_memory
+ * - Gets the old and new next index values
+ * - Checks if the new next index is valid (less than @ref tracer->event_entries)
+ * - Uses @ref array_index_nospec to validate the new next index
+ * - If old and new indices are the same, returns (no new events)
+ * - Wakes up polling processes using @ref wake_up_all
+ * - Invalidates cache entries using @ref rtcpu_trace_invalidate_entries
+ * - Processes events in the range between old and new indices:
+ *   - Uses @ref array_index_nospec to validate the old next index
+ *   - Gets a pointer to the event
+ *   - Processes the event using @ref rtcpu_trace_event
+ *   - Increments the events counter using @ref wrap_add_u32
+ *   - Increments the old next index using @ref wrap_add_u32
+ *   - Handles wraparound of the index at the end of the buffer
+ * - Updates @ref tracer->event_last_idx with the new next index
+ * - Makes a copy of the last event
+ *
+ * @param[in/out] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                        Valid Range: Non-NULL pointer.
+ */
 static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
 {
 	const struct camrtc_trace_memory_header *header = tracer->trace_memory;
@@ -1354,6 +1874,20 @@ static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
 	tracer->copy_last_event = *last_event;
 }
 
+/**
+ * @brief Flushes the RTCPU trace buffer
+ *
+ * This function flushes the RTCPU trace buffer by processing all available trace events
+ * - Checks if @ref tracer is NULL, returns if it is
+ * - Locks the tracer mutex using @ref mutex_lock
+ * - Invalidates the cache line for pointers using @ref dma_sync_single_for_cpu
+ * - Processes exceptions using @ref rtcpu_trace_exceptions
+ * - Processes events using @ref rtcpu_trace_events
+ * - Unlocks the mutex using @ref mutex_unlock
+ *
+ * @param[in] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                    Valid Range: NULL or valid pointer.
+ */
 void tegra_rtcpu_trace_flush(struct tegra_rtcpu_trace *tracer)
 {
 	if (tracer == NULL)
@@ -1373,6 +1907,17 @@ void tegra_rtcpu_trace_flush(struct tegra_rtcpu_trace *tracer)
 }
 EXPORT_SYMBOL(tegra_rtcpu_trace_flush);
 
+/**
+ * @brief Worker function for periodic trace processing
+ *
+ * This function is executed periodically as a delayed work item
+ * - Retrieves the tracer structure using @ref container_of
+ * - Flushes the trace buffer using @ref tegra_rtcpu_trace_flush
+ * - Reschedules itself using @ref schedule_delayed_work
+ *
+ * @param[in] work  Pointer to the work_struct within the tracer.
+ *                  Valid Range: Non-NULL pointer.
+ */
 static void rtcpu_trace_worker(struct work_struct *work)
 {
 	struct tegra_rtcpu_trace *tracer;
@@ -1385,6 +1930,42 @@ static void rtcpu_trace_worker(struct work_struct *work)
 	schedule_delayed_work(&tracer->work, tracer->work_interval_jiffies);
 }
 
+/**
+ * @brief Implementation for reading raw trace events
+ *
+ * This function implements the raw trace reading mechanism
+ * - Gets the memory header from @ref tracer->trace_memory
+ * - Gets the old and new next index values
+ * - Validates that the new next index is within range
+ * - Uses @ref array_index_nospec to validate indices
+ * - If old and new indices are the same, returns (no new events)
+ * - Invalidates cache entries using @ref rtcpu_trace_invalidate_entries
+ * - Determines if buffer has wrapped around
+ * - Calculates number of events to copy based on available events and requested amount
+ * - Checks for multiplication overflow using @ref check_mul_overflow
+ * - Handles copying events to user space with or without buffer wraparound:
+ *   - For non-wrapped buffer, copies events directly using @ref copy_to_user
+ *   - For wrapped buffer, copies events in two parts using @ref copy_to_user
+ *     - First part from old_next to end of buffer
+ *     - Second part from beginning of buffer
+ * - Updates the last read event index
+ * - Updates the number of events copied
+ *
+ * @param[in] tracer Pointer to the tegra_rtcpu_trace structure.
+ *                   Valid Range: Non-NULL pointer.
+ * @param[in] user_buffer User space buffer to copy events to.
+ *                   Valid Range: Valid user space pointer.
+ * @param[in,out] events_copied Pointer to number of events already copied.
+ *                   Valid Range: Non-NULL pointer.
+ * @param[in,out] last_read_event_idx Pointer to the last read event index.
+ *                   Valid Range: Non-NULL pointer.
+ * @param[in] num_events_requested Number of events requested to be read.
+ *                   Valid Range: > 0.
+ *
+ * @retval 0 Success
+ * @retval -EIO Invalid trace entry
+ * @retval -EFAULT Error copying data to user space or overflow
+ */
 static int32_t raw_trace_read_impl(
 	struct tegra_rtcpu_trace *tracer,
 	char __user *user_buffer,
@@ -1488,6 +2069,25 @@ static int32_t raw_trace_read_impl(
 	return 0;
 }
 
+/**
+ * @brief Checks if new trace events are available for reading
+ *
+ * This function determines if there are new events available since the last read
+ * - Gets the last read event index from @ref fd_context
+ * - Gets the memory header from @ref tracer->trace_memory
+ * - For first read call, handles special case when buffer has wrapped:
+ *   - If @ref header->wrapped_counter is greater than 0, sets read index to next position
+ *   - Handles wraparound at the end of the buffer
+ * - Compares the current event index with last read index to determine if new events exist
+ *
+ * @param[in] fd_context Pointer to the rtcpu_raw_trace_context structure.
+ *                      Valid Range: Non-NULL pointer.
+ * @param[in] tracer    Pointer to the tegra_rtcpu_trace structure.
+ *                      Valid Range: Non-NULL pointer.
+ *
+ * @retval true  New events are available
+ * @retval false No new events are available
+ */
 static bool check_event_availability(
 	struct rtcpu_raw_trace_context *fd_context,
 	struct tegra_rtcpu_trace *tracer)
@@ -1515,6 +2115,38 @@ static bool check_event_availability(
 	return ret;
 }
 
+/**
+ * @brief Implements the read file operation for the RTCPU raw trace device
+ *
+ * This function reads trace events from the RTCPU trace buffer into a user-supplied buffer
+ *  - Gets the file descriptor context from @ref file->private_data
+ *  - Validates file context and tracer, returns error if either is invalid
+ *  - Handles special case for first read when buffer has wrapped around
+ *  - Truncates requested buffer size if it exceeds @ref MAX_READ_SIZE
+ *  - Calculates number of requested events based on buffer size
+ *  - Validates user buffer address using @ref access_ok
+ *  - Reads events using @ref raw_trace_read_impl in a loop:
+ *    - For non-blocking calls, performs a single read attempt
+ *    - For blocking calls, waits for events using @ref wait_event_interruptible
+ *      and @ref check_event_availability until requested number of events is read
+ *  - Updates the file context with last read event index
+ *  - Calculates total bytes read using @ref check_mul_overflow
+ *
+ * @param[in] file         Pointer to the file structure.
+ *                         Valid Range: Non-NULL pointer.
+ * @param[out] user_buffer User space buffer to copy events to.
+ *                         Valid Range: Valid user space pointer.
+ * @param[in] buffer_size  Size of the user buffer in bytes.
+ *                         Valid Range: > sizeof(struct camrtc_event_struct).
+ * @param[in,out] ppos     Pointer to the file position (ignored).
+ *                         Valid Range: Any.
+ *
+ * @retval >0 Number of bytes successfully read
+ * @retval -ENODEV File descriptor context or tracer not set
+ * @retval -ENOMEM Requested buffer size too small for even one event
+ * @retval -EINVAL Invalid user buffer address or multiplication overflow
+ * @retval (int) Return code propagated from raw_trace_read_impl or wait_event_interruptible
+ */
 static ssize_t
 rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_size, loff_t *ppos)
 {
@@ -1612,6 +2244,29 @@ rtcpu_raw_trace_read(struct file *file, char __user *user_buffer, size_t buffer_
 	return events_amount;
 }
 
+/**
+ * @brief Implements the write file operation for the RTCPU raw trace device
+ *
+ * This function is called when a user writes to the raw trace device file
+ * - Gets the file context from @ref file->private_data
+ * - Validates file context and tracer
+ * - Gets the memory header from @ref tracer->trace_memory
+ * - Updates the last read event index to the current event next index
+ * - Updates the file context in @ref file->private_data
+ * - Returns the buffer size (write is effectively a reset operation)
+ *
+ * @param[in/out] file         Pointer to the file structure.
+ *                         Valid Range: Non-NULL pointer.
+ * @param[in] user_buffer  User space buffer (not used).
+ *                         Valid Range: Any.
+ * @param[in] buffer_size  Size of the user buffer in bytes.
+ *                         Valid Range: Any.
+ * @param[in,out] ppos     Pointer to the file position (not used).
+ *                         Valid Range: Any.
+ *
+ * @retval buffer_size Size of the input buffer (always successful)
+ * @retval -ENODEV File descriptor context or tracer not set
+ */
 static ssize_t rtcpu_raw_trace_write(
 	struct file *file, const char __user *user_buffer, size_t buffer_size, loff_t *ppos)
 {
@@ -1639,6 +2294,26 @@ static ssize_t rtcpu_raw_trace_write(
 	return buffer_size;
 }
 
+/**
+ * @brief Implements the poll file operation for the RTCPU raw trace device
+ *
+ * This function is called when a user polls the raw trace device file
+ * - Gets the file context from @ref file->private_data
+ * - Validates file context and tracer
+ * - Checks for event availability using @ref check_event_availability
+ * - If events are available, returns POLLIN and POLLRDNORM flags
+ * - If no events are available, registers the wait queue using @ref poll_wait
+ * - Wait queue will be woken up by @ref rtcpu_trace_events when new events arrive
+ *
+ * @param[in] file  Pointer to the file structure.
+ *                  Valid Range: Non-NULL pointer.
+ * @param[in] wait  Pointer to the poll_table structure.
+ *                  Valid Range: May be NULL.
+ *
+ * @retval 0 No events available
+ * @retval POLLIN|POLLRDNORM Events are available for reading
+ * @retval -ENODEV File descriptor context or tracer not set
+ */
 static unsigned int rtcpu_raw_trace_poll(struct file *file, poll_table *wait)
 {
 	struct tegra_rtcpu_trace *tracer;
@@ -1670,6 +2345,29 @@ static unsigned int rtcpu_raw_trace_poll(struct file *file, poll_table *wait)
 	return ret;
 }
 
+/**
+ * @brief Implements the open file operation for the RTCPU raw trace device
+ *
+ * This function is called when a user opens the raw trace device file
+ * - Allocates a new file descriptor context using @ref kzalloc
+ * - Retrieves the tracer using @ref container_of from the inode's cdev
+ * - Validates the tracer
+ * - Initializes the file descriptor context:
+ *   - Sets the tracer reference
+ *   - Sets the last read event index to 0
+ *   - Sets first_read_call to true to handle special first read case
+ * - Stores the context in @ref file->private_data for future operations
+ * - Calls @ref nonseekable_open to complete the file opening
+ *
+ * @param[in] inode  Pointer to the inode structure.
+ *                   Valid Range: Non-NULL pointer.
+ * @param[in] file   Pointer to the file structure.
+ *                   Valid Range: Non-NULL pointer.
+ *
+ * @retval (int) Return code propagated from @ref nonseekable_open()
+ * @retval -ENOMEM Failed to allocate file descriptor context
+ * @retval -ENODEV Failed to retrieve tracer
+ */
 static int rtcpu_raw_trace_open(struct inode *inode, struct file *file)
 {
 	struct tegra_rtcpu_trace *tracer;
@@ -1695,6 +2393,20 @@ static int rtcpu_raw_trace_open(struct inode *inode, struct file *file)
 	return nonseekable_open(inode, file);
 }
 
+/**
+ * @brief Implements the release file operation for the RTCPU raw trace device
+ *
+ * This function is called when a user closes the raw trace device file
+ * - Frees the file descriptor context using @ref kfree
+ * - The context contains references to the tracer and read position state
+ *
+ * @param[in] inode  Pointer to the inode structure (not used).
+ *                   Valid Range: Any.
+ * @param[in] file   Pointer to the file structure containing private_data.
+ *                   Valid Range: Non-NULL pointer with valid private_data.
+ *
+ * @retval 0 Always successful
+ */
 static int rtcpu_raw_trace_release(struct inode *inode, struct file *file)
 {
 	kfree(file->private_data);
@@ -1841,6 +2553,24 @@ failed_create:
 /* Character device */
 static struct class *rtcpu_raw_trace_class;
 static int rtcpu_raw_trace_major;
+
+/**
+ * @brief Registers the RTCPU raw trace device driver
+ *
+ * This function registers the character device driver for the raw trace device
+ * - Registers a character device using @ref register_chrdev
+ * - Creates a device number using @ref MKDEV
+ * - Initializes the character device using @ref cdev_init
+ * - Adds the character device to the system using @ref cdev_add
+ * - Creates a device class using @ref class_create
+ * - Creates a device node using @ref device_create
+ *
+ * @param[in] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                    Valid Range: Non-NULL pointer.
+ *
+ * @retval 0 Success
+ * @retval <0 Error code from register_chrdev, cdev_add, or class_create
+ */
 static int raw_trace_node_drv_register(struct tegra_rtcpu_trace *tracer)
 {
 	dev_t devt;
@@ -1883,6 +2613,19 @@ static int raw_trace_node_drv_register(struct tegra_rtcpu_trace *tracer)
 	return 0;
 }
 
+/**
+ * @brief Unregisters the RTCPU raw trace device driver
+ *
+ * This function cleans up the character device driver registration
+ * - Creates a device number using @ref MKDEV
+ * - Destroys the device node using @ref device_destroy
+ * - Deletes the character device using @ref cdev_del
+ * - Destroys the device class using @ref class_destroy
+ * - Unregisters the character device using @ref unregister_chrdev
+ *
+ * @param[in] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                    Valid Range: Non-NULL pointer.
+ */
 static void raw_trace_node_unregister(
 	struct tegra_rtcpu_trace *tracer)
 {
@@ -1903,6 +2646,30 @@ static void raw_trace_node_unregister(
  * Init/Cleanup
  */
 
+/**
+ * @brief Creates and initializes a new RTCPU trace structure
+ *
+ * This function allocates and initializes all resources needed for tracing
+ * - Allocates memory for the trace structure using @ref kzalloc
+ * - Initializes the mutex using @ref mutex_init
+ * - Sets up trace memory using @ref rtcpu_trace_setup_memory
+ * - Initializes trace memory using @ref rtcpu_trace_init_memory
+ * - Initializes debugfs entries using @ref rtcpu_trace_debugfs_init
+ * - Gets camera devices using @ref camrtc_device_get_byname for ISP and VI
+ * - Initializes the wait queue using @ref init_waitqueue_head
+ * - Reads device tree properties for configuration
+ * - Initializes and schedules the worker using @ref INIT_DELAYED_WORK and
+ *   @ref schedule_delayed_work
+ * - Registers the character device driver using @ref raw_trace_node_drv_register
+ *
+ * @param[in] dev             Pointer to the device structure.
+ *                            Valid Range: Non-NULL pointer.
+ * @param[in] camera_devices  Pointer to the camera device group structure.
+ *                            Valid Range: NULL or valid pointer.
+ *
+ * @retval Non-NULL pointer to tegra_rtcpu_trace structure on success
+ * @retval NULL if memory allocation, device tree reading, or device registration fails
+ */
 struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 	struct camrtc_device_group *camera_devices)
 {
@@ -2003,6 +2770,19 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 }
 EXPORT_SYMBOL(tegra_rtcpu_trace_create);
 
+/**
+ * @brief Synchronizes the RTCPU trace memory with the device
+ *
+ * This function sets up the I/O virtual memory mapping for RTCPU trace buffer
+ * in the RTCPU memory space. This must be called after the RTCPU has booted
+ * to ensure the trace buffer is visible to the RTCPU.
+ *
+ * @param[in] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                    Valid Range: NULL or valid pointer.
+ *
+ * @retval 0 Success or tracer was NULL
+ * @retval -EIO IOVM setup error
+ */
 int tegra_rtcpu_trace_boot_sync(struct tegra_rtcpu_trace *tracer)
 {
 	int ret;
@@ -2020,6 +2800,23 @@ int tegra_rtcpu_trace_boot_sync(struct tegra_rtcpu_trace *tracer)
 }
 EXPORT_SYMBOL(tegra_rtcpu_trace_boot_sync);
 
+/**
+ * @brief Cleans up and destroys an RTCPU trace structure
+ *
+ * This function frees all resources allocated for the RTCPU trace structure
+ * - Validates the tracer pointer is not NULL or ERR_PTR
+ * - Releases platform devices references using @ref platform_device_put
+ * - Releases device tree node using @ref of_node_put
+ * - Cancels and flushes the periodic worker using @ref cancel_delayed_work_sync
+ *   and @ref flush_delayed_work
+ * - Unregisters the character device driver using @ref raw_trace_node_unregister
+ * - Cleans up debugfs entries using @ref rtcpu_trace_debugfs_deinit
+ * - Frees DMA memory using @ref dma_free_coherent
+ * - Frees the tracer structure using @ref kfree
+ *
+ * @param[in/out] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                    Valid Range: NULL, ERR_PTR, or valid pointer.
+ */
 void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer)
 {
 	if (IS_ERR_OR_NULL(tracer))

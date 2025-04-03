@@ -214,6 +214,21 @@ static struct attribute_group attr_group = {
 
 static struct kobject *kobj;
 
+/**
+ * @brief Initialize operating point sysfs entries
+ *
+ * This function creates sysfs entries for controlling the operating point.
+ * - Initializes the operating_point variable to 0 using assignment
+ * - Creates a kobject under kernel_kobj named "operating_point" using @ref kobject_create_and_add()
+ * - Checks if the kobject creation was successful
+ * - Returns -ENOMEM if kobject creation fails
+ * - Creates a sysfs attribute group using @ref sysfs_create_group()
+ * - Cleans up the kobject if attribute group creation fails using @ref kobject_put()
+ * - Returns the result (success or error) of the operations
+ *
+ * @retval -ENOMEM   If kobject creation fails
+ * @retval (int)     Value returned by @ref sysfs_create_group()
+ */
 static int init_operating_point_sysfs(void)
 {
 	int ret;
@@ -229,11 +244,33 @@ static int init_operating_point_sysfs(void)
 	return ret;
 }
 
+/**
+ * @brief Clean up operating point sysfs entries
+ *
+ * This function removes the sysfs entries for controlling the operating point.
+ * - Releases the kobject created by @ref init_operating_point_sysfs() using @ref kobject_put()
+ */
 static void deinit_operating_point_sysfs(void)
 {
 	kobject_put(kobj);
 }
 
+/**
+ * @brief Map a device resource to an ioremap
+ *
+ * This function maps a device resource to an ioremap
+ * - Retrieves the resource from the device tree using @ref of_address_to_resource()
+ * - Returns an error pointer if the resource retrieval fails
+ * - Maps the resource using @ref devm_ioremap_resource()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] index Index of the resource to map
+ *                  Valid value: [INT_MIN, INT_MAX]
+ *
+ * @retval (void *) Return value from @ref devm_ioremap_resource()
+ * @retval IOMEM_ERR_PTR(int) If the resource retrieval fails
+ */
 static void __iomem *tegra_cam_ioremap(struct device *dev, int index)
 {
 	struct resource mem;
@@ -245,6 +282,22 @@ static void __iomem *tegra_cam_ioremap(struct device *dev, int index)
 	return devm_ioremap_resource(dev, &mem);
 }
 
+/**
+ * @brief Map a device resource by name
+ *
+ * This function maps a device resource by name
+ * - Retrieves the index of the resource from the device tree using @ref of_property_match_string()
+ * - Returns an error pointer if the resource retrieval fails
+ * - Maps the resource using @ref tegra_cam_ioremap()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] name  Name of the resource to map
+ *                  Valid value: non-NULL
+ *
+ * @retval (void *) Return value from @ref tegra_cam_ioremap()
+ * @retval IOMEM_ERR_PTR(-ENOENT) If the resource retrieval fails
+ */
 static void __iomem *tegra_cam_ioremap_byname(struct device *dev,
 					const char *name)
 {
@@ -254,6 +307,26 @@ static void __iomem *tegra_cam_ioremap_byname(struct device *dev,
 	return tegra_cam_ioremap(dev, index);
 }
 
+/**
+ * @brief Get resources for the camera RTCPU
+ *
+ * This function gets the resources for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the platform data for the device using @ref rtcpu->pdata
+ * - Retrieves the clocks for the device using @ref camrtc_clk_group_get()
+ * - Retrieves the device group for the device using @ref camrtc_device_group_get()
+ * - Retrieves the reset group for the device using @ref camrtc_reset_group_get()
+ * - Retrieves the registers for the device using @ref tegra_cam_ioremap_byname()
+ * - Returns an error if the resource retrieval fails
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval 0         On successful resource retrieval
+ * @retval PTR_ERR(err) If error from @ref camrtc_reset_group_get() or
+ * @ref camrtc_device_group_get()
+ * @retval -EPROBE_DEFER If the resource retrieval fails
+ */
 static int tegra_camrtc_get_resources(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -328,6 +401,18 @@ static int tegra_camrtc_get_resources(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Enable the clocks for the camera RTCPU
+ *
+ * This function enables the clocks for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the clocks for the device using @ref camrtc_clk_group_enable()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref camrtc_clk_group_enable()
+ */
 static int tegra_camrtc_enable_clks(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -335,6 +420,18 @@ static int tegra_camrtc_enable_clks(struct device *dev)
 	return camrtc_clk_group_enable(rtcpu->clocks);
 }
 
+/**
+ * @brief Disable the clocks for the camera RTCPU
+ *
+ * This function disables the clocks for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the clocks for the device using @ref camrtc_clk_group_disable()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref camrtc_clk_group_disable()
+ */
 static void tegra_camrtc_disable_clks(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -342,6 +439,17 @@ static void tegra_camrtc_disable_clks(struct device *dev)
 	return camrtc_clk_group_disable(rtcpu->clocks);
 }
 
+/**
+ * @brief Assert the resets for the camera RTCPU
+ *
+ * This function asserts the resets for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the platform data for the device using @ref rtcpu->pdata
+ * - Calls the platform data's assert_resets function
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ */
 static void tegra_camrtc_assert_resets(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -350,6 +458,19 @@ static void tegra_camrtc_assert_resets(struct device *dev)
 		rtcpu->pdata->assert_resets(dev);
 }
 
+/**
+ * @brief Deassert the resets for the camera RTCPU
+ *
+ * This function deasserts the resets for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the platform data for the device using @ref rtcpu->pdata
+ * - Calls the platform data's @ref deassert_resets function
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref camrtc_reset_group_deassert()
+ */
 static int tegra_camrtc_deassert_resets(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -367,6 +488,22 @@ static int tegra_camrtc_deassert_resets(struct device *dev)
 #define CAMRTC_MAX_BW (0xFFFFFFFFU)
 #define RCE_MAX_BW_MBPS (160)
 
+/**
+ * @brief Initialize the ICC for the camera RTCPU
+ *
+ * This function initializes the ICC for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - If the bandwidth is CAMRTC_MAX_BW, sets the memory bandwidth to RCE_MAX_BW_MBPS using
+ *   @ref MBps_to_icc()
+ * - Otherwise, sets the memory bandwidth to the provided bandwidth
+ * - Retrieves the ICC path for the device using @ref devm_of_icc_get()
+ * - Sets the icc path to NULL if the retrieval fails
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] bw    Memory bandwidth to set
+ *                  Valid value: [0, CAMRTC_MAX_BW]
+ */
 static void tegra_camrtc_init_icc(struct device *dev, u32 bw)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -387,11 +524,33 @@ static void tegra_camrtc_init_icc(struct device *dev, u32 bw)
 	dev_dbg(dev, "using icc rate %u for power-on\n", rtcpu->mem_bw);
 }
 
+/**
+ * @brief Initialize the memory bandwidth for the camera RTCPU
+ *
+ * This function initializes the memory bandwidth for the camera RTCPU
+ * - Calls @ref tegra_camrtc_init_icc() with CAMRTC_MAX_BW
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ */
 static void tegra_camrtc_init_membw(struct device *dev)
 {
 	tegra_camrtc_init_icc(dev, CAMRTC_MAX_BW);
 }
 
+/**
+ * @brief Set the full memory bandwidth for the camera RTCPU
+ *
+ * This function sets the full memory bandwidth for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the ICC path for the device using @ref rtcpu->icc_path
+ * - If the ICC path is not NULL, sets the memory bandwidth to the provided bandwidth using
+ *   @ref icc_set_bw()
+ * - Returns an error if the memory bandwidth setting fails
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ */
 static void tegra_camrtc_full_mem_bw(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -406,6 +565,17 @@ static void tegra_camrtc_full_mem_bw(struct device *dev)
 	}
 }
 
+/**
+ * @brief Set the slow memory bandwidth for the camera RTCPU
+ *
+ * This function sets the slow memory bandwidth for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the ICC path for the device using @ref rtcpu->icc_path
+ * - If the ICC path is not NULL, sets the memory bandwidth to 0 using @ref icc_set_bw()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ */
 static void tegra_camrtc_slow_mem_bw(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -414,6 +584,21 @@ static void tegra_camrtc_slow_mem_bw(struct device *dev)
 		(void)icc_set_bw(rtcpu->icc_path, 0, 0);
 }
 
+/**
+ * @brief Set the fwloaddone flag for the camera RTCPU
+ *
+ * This function sets the fwloaddone flag for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the PM base for the device using @ref rtcpu->pm_base
+ * - Reads the PM R5 control register using @ref readl()
+ * - If the fwloaddone flag is true, sets the TEGRA_PM_FWLOADDONE bit using @ref writel()
+ * - Otherwise, clears the TEGRA_PM_FWLOADDONE bit using @ref writel()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] fwloaddone   FWLOADDONE flag to set
+ *                  Valid value: true or false
+ */
 static void tegra_camrtc_set_fwloaddone(struct device *dev, bool fwloaddone)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -430,6 +615,24 @@ static void tegra_camrtc_set_fwloaddone(struct device *dev, bool fwloaddone)
 	}
 }
 
+/**
+ * @brief Wait for the camera RTCPU to be idle
+ *
+ * This function waits for the camera RTCPU to be idle
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the PM base for the device using @ref rtcpu->pm_base
+ * - Reads the PM power status register using @ref readl()
+ * - If the PM power status register is not NULL, polls for the WFI assert using @ref readl()
+ * - If the timeout is less than 0, returns -EBUSY
+ * - Calls @ref msleep() with a delay stride of HZ / 50
+ * - Returns 0 on success
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval 0  If @ref rtcpu->pm_base is NULL or successful
+ * @retval -EBUSY  If timeout occurs
+ */
 static int tegra_rce_cam_wait_for_idle(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -458,6 +661,23 @@ static int tegra_rce_cam_wait_for_idle(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Set the operating point for the camera RTCPU
+ *
+ * This function sets the operating point for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the HSP for the device using @ref rtcpu->hsp
+ * - Returns 0 if the HSP is not NULL
+ * - Returns the return value from @ref camrtc_hsp_set_operating_point()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] op    Operating point to set
+ *                  Valid value: [0, UINT32_MAX]
+ *
+ * @retval (int) Return value from @ref camrtc_hsp_set_operating_point()
+ * @retval 0 if the HSP is NULL
+ */
 static int tegra_camrtc_fw_set_operating_point(struct device *dev, uint32_t op)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -468,6 +688,21 @@ static int tegra_camrtc_fw_set_operating_point(struct device *dev, uint32_t op)
 	return camrtc_hsp_set_operating_point(rtcpu->hsp, op);
 }
 
+/**
+ * @brief Deassert the resets for the camera RTCPU
+ *
+ * This function deasserts the resets for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the reset group for the device using @ref camrtc_reset_group_deassert()
+ * - Returns an error if the reset group deassertion fails
+ * - Sets the fwloaddone flag to true using @ref tegra_camrtc_set_fwloaddone()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref camrtc_reset_group_deassert()
+ * @retval 0 On successful reset group deassertion
+ */
 static int tegra_rce_cam_deassert_resets(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -483,6 +718,16 @@ static int tegra_rce_cam_deassert_resets(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Assert the resets for the camera RTCPU
+ *
+ * This function asserts the resets for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the reset group for the device using @ref camrtc_reset_group_assert()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ */
 static void tegra_rce_cam_assert_resets(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -490,6 +735,20 @@ static void tegra_rce_cam_assert_resets(struct device *dev)
 	camrtc_reset_group_assert(rtcpu->resets[0]);
 }
 
+/**
+ * @brief Wait for the camera RTCPU to be idle
+ *
+ * This function waits for the camera RTCPU to be idle
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Retrieves the wait_for_idle function from the platform data using
+ *   @ref rtcpu->pdata->wait_for_idle
+ * - Returns the return value from @ref rtcpu->pdata->wait_for_idle
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref rtcpu->pdata->wait_for_idle
+ */
 static int tegra_camrtc_wait_for_idle(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -497,6 +756,21 @@ static int tegra_camrtc_wait_for_idle(struct device *dev)
 	return rtcpu->pdata->wait_for_idle(dev);
 }
 
+/**
+ * @brief Suspend the camera RTCPU
+ *
+ * This function suspends the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the fw_active flag is true and the HSP is not NULL
+ * - Sets the fw_active flag to false
+ * - Calls @ref camrtc_hsp_suspend() to suspend the RTCPU
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref camrtc_hsp_suspend()
+ * @retval 0  if the fw_active flag is false or the HSP is NULL
+ */
 static int tegra_camrtc_fw_suspend(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -509,6 +783,19 @@ static int tegra_camrtc_fw_suspend(struct device *dev)
 	return camrtc_hsp_suspend(rtcpu->hsp);
 }
 
+/**
+ * @brief Setup the shared memory for the camera RTCPU
+ *
+ * This function sets up the shared memory for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref tegra_rtcpu_trace_boot_sync() to set up the trace
+ * - Calls @ref tegra_ivc_bus_boot_sync() to set up the IVC services
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref tegra_ivc_bus_boot_sync()
+ */
 static int tegra_camrtc_setup_shared_memory(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -531,6 +818,22 @@ static int tegra_camrtc_setup_shared_memory(struct device *dev)
 	return ret;
 }
 
+/**
+ * @brief Set the online status for the camera RTCPU
+ *
+ * This function sets the online status for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the online status is already set
+ * - If the online status is already set, returns
+ * - If the online status is not set, calls @ref tegra_camrtc_setup_shared_memory()
+ *   to set up the shared memory
+ * - Sets the online status to the provided status
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] online   Online status to set
+ *                  Valid value: true or false
+ */
 static void tegra_camrtc_set_online(struct device *dev, bool online)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -550,6 +853,22 @@ static void tegra_camrtc_set_online(struct device *dev, bool online)
 	}
 }
 
+/**
+ * @brief Ping the camera RTCPU
+ *
+ * This function pings the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref camrtc_hsp_ping() to ping the RTCPU
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] data   Data to ping the RTCPU with
+ *                  Valid value: [0, UINT32_MAX]
+ * @param[in] timeout   Timeout for the ping
+ *                  Valid value: [0, UINT32_MAX]
+ *
+ * @retval (int) Return value from @ref camrtc_hsp_ping()
+ */
 int tegra_camrtc_ping(struct device *dev, u32 data, long timeout)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -558,6 +877,19 @@ int tegra_camrtc_ping(struct device *dev, u32 data, long timeout)
 }
 EXPORT_SYMBOL(tegra_camrtc_ping);
 
+/**
+ * @brief Notify the camera RTCPU
+ *
+ * This function notifies the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the IVC bus is not NULL
+ * - Calls @ref tegra_ivc_bus_notify() to notify the RTCPU
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] group   Group to notify the RTCPU with
+ *                  Valid value: [0, UINT16_MAX]
+ */
 static void tegra_camrtc_ivc_notify(struct device *dev, u16 group)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -566,6 +898,26 @@ static void tegra_camrtc_ivc_notify(struct device *dev, u16 group)
 		tegra_ivc_bus_notify(rtcpu->ivc, group);
 }
 
+/**
+ * @brief Power on the camera RTCPU
+ *
+ * This function powers on the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the RTCPU is already powered
+ * - If the RTCPU is already powered, returns 0
+ * - If the RTCPU is not powered, calls @ref tegra_camrtc_enable_clks() to enable the clocks
+ * - Calls @ref tegra_camrtc_deassert_resets() to deassert the resets
+ * - Sets the powered flag to true
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] full_speed   Full speed flag to set
+ *                  Valid value: true or false
+ *
+ * @retval (int) Return value from @ref tegra_camrtc_enable_clks() or
+ * @ref tegra_camrtc_deassert_resets()
+ * @retval 0 On successful power on
+ */
 static int tegra_camrtc_poweron(struct device *dev, bool full_speed)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -597,6 +949,20 @@ static int tegra_camrtc_poweron(struct device *dev, bool full_speed)
 	return 0;
 }
 
+/**
+ * @brief Power off the camera RTCPU
+ *
+ * This function powers off the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the RTCPU is already powered
+ * - If the RTCPU is not powered, returns
+ * - Calls @ref tegra_camrtc_assert_resets() to assert the resets
+ * - Calls @ref tegra_camrtc_disable_clks() to disable the clocks
+ * - Sets the powered flag to false
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ */
 static void tegra_camrtc_poweroff(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -612,6 +978,23 @@ static void tegra_camrtc_poweroff(struct device *dev)
 	tegra_camrtc_disable_clks(dev);
 }
 
+/**
+ * @brief Boot sync the camera RTCPU
+ *
+ * This function boots syncs the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the boot sync is already done
+ * - If the boot sync is already done, returns
+ * - Calls @ref camrtc_hsp_sync() to sync the RTCPU
+ * - Sets the boot sync done flag to true
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref camrtc_hsp_sync() or
+ * @ref camrtc_hsp_resume()
+ * @retval 0 On successful boot sync
+ */
 static int tegra_camrtc_boot_sync(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -637,8 +1020,23 @@ static int tegra_camrtc_boot_sync(struct device *dev)
 	return 0;
 }
 
-/*
- * RTCPU boot sequence
+/**
+ * @brief Boot the camera RTCPU
+ *
+ * This function boots the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref tegra_camrtc_poweron() to power on the RTCPU
+ * - Calls @ref tegra_camrtc_full_mem_bw() to set the full memory bandwidth
+ * - Loops until the RTCPU is online
+ * - If the RTCPU is online, breaks the loop
+ * - If the RTCPU is not online, retries the boot sequence
+ * - If the RTCPU is not online after the max number of retries, breaks the loop
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref tegra_camrtc_poweron()
+ * @retval 0 On successful boot
  */
 static int tegra_camrtc_boot(struct device *dev)
 {
@@ -675,6 +1073,20 @@ static int tegra_camrtc_boot(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Setup the IOVM for the camera RTCPU
+ *
+ * This function sets up the IOVM for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref camrtc_hsp_ch_setup() to setup the IOVM
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] iova   IOVA to setup the IOVM with
+ *                  Valid value: [0, UINT64_MAX]
+ *
+ * @retval (int) Return value from @ref camrtc_hsp_ch_setup()
+ */
 int tegra_camrtc_iovm_setup(struct device *dev, dma_addr_t iova)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -683,6 +1095,24 @@ int tegra_camrtc_iovm_setup(struct device *dev, dma_addr_t iova)
 }
 EXPORT_SYMBOL(tegra_camrtc_iovm_setup);
 
+/**
+ * @brief Print the version of the camera RTCPU
+ *
+ * This function prints the version of the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref seq_buf_init() to initialize the sequence buffer
+ * - Calls @ref seq_buf_printf() to print the version of the RTCPU
+ * - Returns the number of bytes printed
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] buf   Buffer to print the version to
+ *                  Valid value: non-NULL
+ * @param[in] size   Size of the buffer
+ *                  Valid value: [0, UINT32_MAX]
+ *
+ * @retval (ssize_t) Number of bytes printed using @ref seq_buf_used()
+ */
 ssize_t tegra_camrtc_print_version(struct device *dev,
 					char *buf, size_t size)
 {
@@ -701,6 +1131,16 @@ ssize_t tegra_camrtc_print_version(struct device *dev,
 }
 EXPORT_SYMBOL(tegra_camrtc_print_version);
 
+/**
+ * @brief Log the firmware version of the camera RTCPU
+ *
+ * This function logs the firmware version of the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref tegra_camrtc_print_version() to print the version of the RTCPU
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ */
 static void tegra_camrtc_log_fw_version(struct device *dev)
 {
 	char version[TEGRA_CAMRTC_VERSION_LEN];
@@ -710,6 +1150,17 @@ static void tegra_camrtc_log_fw_version(struct device *dev)
 	dev_info(dev, "firmware %s\n", version);
 }
 
+/**
+ * @brief Start the PM of the camera RTCPU
+ *
+ * This function starts the PM of the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] op   Operation to log
+ *                  Valid value: non-NULL
+ */
 static void tegra_camrtc_pm_start(struct device *dev, char const *op)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -719,6 +1170,19 @@ static void tegra_camrtc_pm_start(struct device *dev, char const *op)
 		rtcpu->fw_active, rtcpu->online);
 }
 
+/**
+ * @brief Done the PM of the camera RTCPU
+ *
+ * This function done the PM of the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] op   Operation to log
+ *                  Valid value: non-NULL
+ * @param[in] err   Error code
+ *                  Valid value: [0, INT32_MAX]
+ */
 static void tegra_camrtc_pm_done(struct device *dev, char const *op, int err)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -728,6 +1192,22 @@ static void tegra_camrtc_pm_done(struct device *dev, char const *op, int err)
 		rtcpu->fw_active, rtcpu->online);
 }
 
+/**
+ * @brief Runtime suspend the camera RTCPU
+ *
+ * This function runtime suspends the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref tegra_camrtc_pm_start() to start the PM
+ * - Calls @ref tegra_camrtc_fw_suspend() to suspend the RTCPU
+ * - If the RTCPU suspend fails, resets the RTCPU
+ * - Calls @ref tegra_camrtc_poweroff() to power off the RTCPU
+ * - Sets the online flag to false
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval 0 On successful runtime suspend
+ */
 static int tegra_cam_rtcpu_runtime_suspend(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -755,6 +1235,21 @@ static int tegra_cam_rtcpu_runtime_suspend(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Runtime resume the camera RTCPU
+ *
+ * This function runtime resumes the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref tegra_camrtc_pm_start() to start the PM
+ * - Calls @ref tegra_camrtc_boot() to boot the RTCPU
+ * - Calls @ref tegra_camrtc_pm_done() to done the PM
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref tegra_camrtc_boot()
+ * @retval 0 On successful runtime resume
+ */
 static int tegra_cam_rtcpu_runtime_resume(struct device *dev)
 {
 	int err;
@@ -768,6 +1263,18 @@ static int tegra_cam_rtcpu_runtime_resume(struct device *dev)
 	return err;
 }
 
+/**
+ * @brief Runtime idle the camera RTCPU
+ *
+ * This function runtime idles the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref pm_runtime_mark_last_busy() to mark the last busy time
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) 0
+ */
 static int tegra_cam_rtcpu_runtime_idle(struct device *dev)
 {
 	pm_runtime_mark_last_busy(dev);
@@ -775,6 +1282,23 @@ static int tegra_cam_rtcpu_runtime_idle(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Initialize the HSP for the camera RTCPU
+ *
+ * This function initializes the HSP for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the HSP is already initialized
+ * - If the HSP is already initialized, returns 0
+ * - Calls @ref camrtc_hsp_create() to create the HSP
+ * - If the HSP creation fails, returns the error code
+ * - Sets the HSP to the driver data
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref camrtc_hsp_create()
+ * @retval 0 On successful HSP initialization or if the HSP is already initialized
+ */
 static int tegra_camrtc_hsp_init(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -794,6 +1318,30 @@ static int tegra_camrtc_hsp_init(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Remove the camera RTCPU
+ *
+ * This function removes the camera RTCPU
+ * - Retrieves the driver data for the device using @ref platform_get_drvdata()
+ * - Checks if the HSP is already initialized
+ * - If the HSP is initialized, calls @ref camrtc_hsp_bye() to bye the HSP
+ * - Calls @ref camrtc_hsp_free() to free the HSP
+ * - Sets the HSP to NULL
+ * - Destroys the tracer using @ref tegra_rtcpu_trace_destroy()
+ * - Sets the tracer to NULL
+ * - Powers off the device using @ref tegra_camrtc_poweroff()
+ * - Sets the ICC path to NULL
+ * - Removes the device from the PM genpd using @ref pm_genpd_remove_device()
+ * - Destroys the monitor using @ref tegra_cam_rtcpu_mon_destroy()
+ * - Destroys the IVC bus using @ref tegra_ivc_bus_destroy()
+ * - Sets the DMA parameters to NULL
+ * - Deinitializes the operating point sysfs using @ref deinit_operating_point_sysfs()
+ *
+ * @param[in] pdev   Pointer to the platform device
+ *                  Valid value: non-NULL
+ *
+ * @retval 0 On successful removal
+ */
 static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *rtcpu = platform_get_drvdata(pdev);
@@ -830,6 +1378,48 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 	return 0;
 }
 
+/**
+ * @brief Probe the camera RTCPU
+ *
+ * This function probes the camera RTCPU
+ * - Retrieves the driver data for the device using @ref of_device_get_match_data()
+ * - Reads the device name from the device tree using @ref of_property_read_string()
+ * - Reads the device properties using @ref of_property_read_u32()
+ * - Allocates memory for the camera RTCPU using @ref devm_kzalloc()
+ * - Sets the driver data for the device using @ref platform_set_drvdata()
+ * - Sets the DMA parameters for the device using @ref dma_set_mask_and_coherent()
+ * - Enables runtime power management for the device using @ref pm_runtime_enable()
+ * - Retrieves the resources for the device using @ref tegra_camrtc_get_resources()
+ * - Sets the reboot retry count using @ref of_property_read_u32()
+ * - Reads the command timeout using @ref of_property_read_u32()
+ * - Reads the autosuspend delay using @ref of_property_read_u32()
+ * - Sets the autosuspend delay using @ref pm_runtime_set_autosuspend_delay()
+ * - Initializes the memory bandwidth for the device using @ref tegra_camrtc_init_membw()
+ * - Sets the DMA parameters for the device using @ref dev->dma_parms
+ * - Sets the tracer for the device using @ref tegra_rtcpu_trace_create()
+ * - Initializes the HSP for the device using @ref tegra_camrtc_hsp_init()
+ * - Powers on the device using @ref pm_runtime_get_sync()
+ * - Creates the IVC bus for the device using @ref tegra_ivc_bus_create()
+ * - Creates the monitor for the device using @ref tegra_camrtc_mon_create()
+ * - Reads the firmware hash using @ref camrtc_hsp_get_fw_hash()
+ * - Logs the firmware version using @ref tegra_camrtc_log_fw_version()
+ * - Sets the online flag to true using @ref tegra_camrtc_set_online()
+ * - Puts the device using @ref pm_runtime_put()
+ * - Sets the device to the global variable s_dev
+ * - Initializes the operating point sysfs using @ref init_operating_point_sysfs()
+ * - In case of failure, call @ref pm_runtime_dont_use_autosuspend() and
+ *   @ref pm_runtime_put_sync_suspend()
+ * - In case of failure, call @ref tegra_cam_rtcpu_remove()
+ *
+ * @param[in] pdev   Pointer to the platform device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref tegra_camrtc_get_resources()
+ * or @ref tegra_camrtc_hsp_init() or @ref pm_runtime_get_sync() or @ref camrtc_hsp_get_fw_hash()
+ * @retval -ENOMEM On memory allocation failure
+ * @retval -ENODEV On device match failure
+ * @retval 0 On successful probe
+ */
 static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *rtcpu;
@@ -949,6 +1539,29 @@ fail:
 	return ret;
 }
 
+/**
+ * @brief Reboot the camera RTCPU
+ *
+ * This function reboots the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the device is suspended using @ref pm_runtime_suspended()
+ * - Checks if the RTCPU is powered using @ref rtcpu->powered
+ * - Sets the rebooting flag to 1 using @ref atomic_cmpxchg()
+ * - Calls @ref tegra_camrtc_pm_start() to start the PM operation
+ * - Calls @ref tegra_camrtc_set_online() to set the online flag to false
+ * - Calls @ref tegra_camrtc_wait_for_idle() to wait for the RTCPU to enter WFI
+ * - Calls @ref tegra_camrtc_assert_resets() to assert the resets
+ * - Sets the powered flag to false using @ref rtcpu->powered
+ * - Calls @ref tegra_camrtc_boot() to boot the RTCPU
+ * - Sets the rebooting flag to 0 using @ref atomic_set()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref tegra_camrtc_boot()
+ * @retval -EIO On device suspended or RTCPU not powered
+ * @retval -EBUSY On rebooting flag already set
+ */
 int tegra_camrtc_reboot(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -1001,6 +1614,22 @@ int tegra_camrtc_reboot(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_camrtc_reboot);
 
+/**
+ * @brief Restore the camera RTCPU
+ *
+ * This function restores the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the monitor is not NULL using @ref rtcpu->monitor
+ * - Calls @ref tegra_camrtc_mon_restore_rtcpu() to restore the RTCPU
+ * - Returns the return value from @ref tegra_camrtc_mon_restore_rtcpu()
+ * - If the monitor is NULL, calls @ref tegra_camrtc_reboot() to reboot the RTCPU
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref tegra_camrtc_mon_restore_rtcpu() or
+ *   @ref tegra_camrtc_reboot()
+ */
 int tegra_camrtc_restore(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -1012,6 +1641,18 @@ int tegra_camrtc_restore(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_camrtc_restore);
 
+/**
+ * @brief Check if the camera RTCPU is alive
+ *
+ * This function checks if the camera RTCPU is alive
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Returns the online flag from @ref rtcpu->online
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (bool) Value of @ref rtcpu->online
+ */
 bool tegra_camrtc_is_rtcpu_alive(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -1020,6 +1661,19 @@ bool tegra_camrtc_is_rtcpu_alive(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_camrtc_is_rtcpu_alive);
 
+/**
+ * @brief Check if the camera RTCPU is powered
+ *
+ * This function checks if the camera RTCPU is powered
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Returns the powered flag from @ref rtcpu->powered
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (bool) Value of @ref rtcpu->powered
+ * @retval false if the device is not found
+ */
 bool tegra_camrtc_is_rtcpu_powered(void)
 {
 	struct tegra_cam_rtcpu *rtcpu;
@@ -1033,6 +1687,16 @@ bool tegra_camrtc_is_rtcpu_powered(void)
 }
 EXPORT_SYMBOL(tegra_camrtc_is_rtcpu_powered);
 
+/**
+ * @brief Flush the trace for the camera RTCPU
+ *
+ * This function flushes the trace for the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Calls @ref tegra_rtcpu_trace_flush() to flush the trace
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ */
 void tegra_camrtc_flush_trace(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -1041,6 +1705,24 @@ void tegra_camrtc_flush_trace(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_camrtc_flush_trace);
 
+/**
+ * @brief Halt the camera RTCPU
+ *
+ * This function halts the camera RTCPU
+ * - Retrieves the driver data for the device using @ref dev_get_drvdata()
+ * - Checks if the online flag is true using @ref rtcpu->online
+ * - Calls @ref tegra_camrtc_pm_start() to start the PM operation
+ * - Calls @ref tegra_camrtc_set_online() to set the online flag to false
+ * - Checks if the powered flag is false using @ref rtcpu->powered
+ * - Calls @ref tegra_camrtc_pm_done() to finish the PM operation
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ * @param[in] op   Operation to perform
+ *                  Valid value: non-NULL
+ *
+ * @retval 0 if the RTCPU is not powered or the operation is successful
+ */
 static int tegra_camrtc_halt(struct device *dev, char const *op)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -1075,11 +1757,38 @@ static int tegra_camrtc_halt(struct device *dev, char const *op)
 	return 0;
 }
 
+/**
+ * @brief Suspend the camera RTCPU
+ *
+ * This function suspends the camera RTCPU
+ * - Calls @ref tegra_camrtc_halt() to halt the RTCPU
+ * - Returns the return value from @ref tegra_camrtc_halt()
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref tegra_camrtc_halt()
+ */
 static int tegra_camrtc_suspend(struct device *dev)
 {
 	return tegra_camrtc_halt(dev, "suspend");
 }
 
+/**
+ * @brief Resume the camera RTCPU
+ *
+ * This function resumes the camera RTCPU
+ * - Calls @ref tegra_camrtc_pm_start() to start the PM operation
+ * - Calls @ref pm_runtime_mark_last_busy() to mark the device as busy
+ * - Calls @ref pm_runtime_resume() to resume the device
+ * - Calls @ref tegra_camrtc_pm_done() to finish the PM operation
+ *
+ * @param[in] dev   Pointer to the device
+ *                  Valid value: non-NULL
+ *
+ * @retval (int) Return value from @ref pm_runtime_resume() or
+ * @ref tegra_camrtc_boot()
+ */
 static int tegra_camrtc_resume(struct device *dev)
 {
 	int err;
@@ -1099,6 +1808,16 @@ static int tegra_camrtc_resume(struct device *dev)
 	return err;
 }
 
+/**
+ * @brief Shutdown the camera RTCPU
+ *
+ * This function shuts down the camera RTCPU
+ * - Calls @ref tegra_camrtc_halt() to halt the RTCPU
+ * - Returns the return value from @ref tegra_camrtc_halt()
+ *
+ * @param[in] pdev   Pointer to the platform device
+ *                  Valid value: non-NULL
+ */
 static void tegra_cam_rtcpu_shutdown(struct platform_device *pdev)
 {
 	tegra_camrtc_halt(&pdev->dev, "shutdown");
@@ -1123,6 +1842,15 @@ static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 	.runtime_idle = tegra_cam_rtcpu_runtime_idle,
 };
 
+/**
+ * @brief Remove the camera RTCPU
+ *
+ * This function removes the camera RTCPU
+ * - Calls @ref tegra_cam_rtcpu_remove() to remove the RTCPU
+ *
+ * @param[in] pdev   Pointer to the platform device
+ *                  Valid value: non-NULL
+ */
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
 static void tegra_cam_rtcpu_remove_wrapper(struct platform_device *pdev)
 {

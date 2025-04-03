@@ -112,6 +112,22 @@ struct camrtc_dbgfs_rmem {
 
 static struct camrtc_dbgfs_rmem _camdbg_rmem;
 
+/**
+ * @brief Initializes the camera debug reserved memory
+ *
+ * This function initializes the camera debug reserved memory area by dividing it into
+ * equal-sized memory contexts. It performs the following operations:
+ * - Stores the base address and total size of the reserved memory
+ * - Divides the memory into CAMRTC_DBG_NUM_MEM_TEST_MEM equal contexts
+ * - Sets up each memory context with its address and size
+ * - Uses @ref __builtin_uaddll_overflow to safely compute addresses
+ * - Enables the reserved memory flag
+ *
+ * @param[in] rmem  Pointer to the reserved memory descriptor
+ *                  Valid value: non-NULL
+ *
+ * @retval 0  Operation successful
+ */
 static int __init camrtc_dbgfs_rmem_init(struct reserved_mem *rmem)
 {
 	int i;
@@ -135,7 +151,21 @@ static int __init camrtc_dbgfs_rmem_init(struct reserved_mem *rmem)
 RESERVEDMEM_OF_DECLARE(tegra_cam_rtcpu,
 		"nvidia,camdbg_carveout", camrtc_dbgfs_rmem_init);
 
-/* Get a camera-rtcpu device */
+/**
+ * @brief Gets the camera-rtcpu device from an IVC channel
+ *
+ * This function retrieves the camera-rtcpu device associated with an IVC channel.
+ * It performs the following operations:
+ * - Checks if the channel pointer is valid using @ref unlikely()
+ * - Verifies both parent and grandparent device pointers exist using @ref BUG_ON()
+ * - Returns the grandparent device which is the camera-rtcpu device
+ *
+ * @param[in] ch  Pointer to the IVC channel
+ *                Valid value: non-NULL (NULL check handled internally)
+ *
+ * @retval (struct device *) Pointer to the camera-rtcpu device
+ * @retval NULL if channel is NULL
+ */
 static struct device *camrtc_get_device(struct tegra_ivc_channel *ch)
 {
 	if (unlikely(ch == NULL))
@@ -161,6 +191,22 @@ static int _fops_ ## _open(struct inode *inode, struct file *file) \
 } \
 static const struct file_operations _fops_ = INIT_OPEN_FOPS(_fops_ ## _open)
 
+/**
+ * @brief Outputs the camera-rtcpu version information
+ *
+ * This function retrieves and displays the camera-rtcpu version.
+ * It performs the following operations:
+ * - Gets the camera-rtcpu device using @ref camrtc_get_device()
+ * - Calls @ref tegra_camrtc_print_version() to get the version string
+ * - Writes the version string to the sequence file using @ref seq_puts()
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0  Operation successful
+ */
 static int camrtc_show_version(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -177,6 +223,25 @@ static int camrtc_show_version(struct seq_file *file, void *data)
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_version, camrtc_show_version);
 
+/**
+ * @brief Reboots the camera-rtcpu and shows the result
+ *
+ * This function reboots the camera-rtcpu and writes the result to the sequence file.
+ * It performs the following operations:
+ * - Gets the camera-rtcpu device using @ref camrtc_get_device()
+ * - Brings rtcpu online using @ref tegra_ivc_channel_runtime_get()
+ * - Reboots the rtcpu using @ref tegra_camrtc_reboot()
+ * - Outputs "0" to the sequence file on success using @ref seq_puts()
+ * - Releases the runtime reference using @ref tegra_ivc_channel_runtime_put()
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0       Reboot successful
+ * @retval negative Error code from @ref tegra_ivc_channel_runtime_get() or @ref tegra_camrtc_reboot()
+ */
 static int camrtc_show_reboot(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -201,6 +266,17 @@ error:
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_reboot, camrtc_show_reboot);
 
+/**
+ * @brief Notifies waiting threads about IVC activity
+ *
+ * This function wakes up all threads waiting on the debug wait queue.
+ * It performs the following operations:
+ * - Retrieves the camera debug data from the IVC channel using @ref tegra_ivc_channel_get_drvdata()
+ * - Wakes up all waiting threads using @ref wake_up_all()
+ *
+ * @param[in] ch  Pointer to the IVC channel
+ *                Valid value: non-NULL
+ */
 static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
@@ -208,6 +284,25 @@ static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 	wake_up_all(&crd->waitq);
 }
 
+/**
+ * @brief Forces a reset and restore of the camera-rtcpu
+ *
+ * This function forces a reset and restore of the camera-rtcpu and shows the result.
+ * It performs the following operations:
+ * - Gets the camera-rtcpu device using @ref camrtc_get_device()
+ * - Brings rtcpu online using @ref tegra_ivc_channel_runtime_get()
+ * - Restores the rtcpu using @ref tegra_camrtc_restore()
+ * - Outputs "0" to the sequence file on success using @ref seq_puts()
+ * - Releases the runtime reference using @ref tegra_ivc_channel_runtime_put()
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0       Restore operation successful
+ * @retval negative Error code from @ref tegra_ivc_channel_runtime_get() or @ref tegra_camrtc_restore()
+ */
 static int camrtc_show_forced_reset_restore(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -233,6 +328,41 @@ error:
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_forced_reset_restore,
 			camrtc_show_forced_reset_restore);
 
+/**
+ * @brief Performs a full-frame transaction with the camera-rtcpu debug interface
+ *
+ * This function sends a request to the camera-rtcpu and waits for a response.
+ * It performs the following operations:
+ * - Validates input parameters and acquires mutex lock using @ref mutex_lock_interruptible()
+ * - Gets runtime reference using @ref tegra_ivc_channel_runtime_get()
+ * - Verifies IVC channel is online with @ref tegra_ivc_channel_online_check()
+ * - Flushes any stray responses by calling @ref tegra_ivc_read_advance()
+ * - Waits for write availability using @ref wait_event_interruptible_timeout()
+ * - Writes request using @ref tegra_ivc_write()
+ * - Waits for and reads response using @ref tegra_ivc_read_peek()
+ * - Verifies response matches request type
+ * - Releases resources and lock using @ref tegra_ivc_channel_runtime_put() and @ref mutex_unlock()
+ *
+ * @param[in] ch         Pointer to the IVC channel
+ *                       Valid value: non-NULL
+ * @param[in] req        Pointer to the debug request structure
+ *                       Valid value: non-NULL
+ * @param[in] req_size   Size of the request in bytes
+ *                       Valid range: > 0
+ * @param[out] resp      Pointer to the debug response structure
+ *                       Valid value: non-NULL
+ * @param[in] resp_size  Size of the response in bytes
+ *                       Valid range: > 0
+ * @param[in] timeout    Timeout in milliseconds, 0 for default
+ *                       Valid range: >= 0
+ *
+ * @retval 0          Transaction successful
+ * @retval -ENOMEM    Input parameters invalid
+ * @retval -EINTR     Interrupted while waiting
+ * @retval -ETIMEDOUT Timeout occurred
+ * @retval -ECONNRESET IVC channel was reset
+ * @retval negative   Other error
+ */
 static int camrtc_ivc_dbg_full_frame_xact(
 	struct tegra_ivc_channel *ch,
 	struct camrtc_dbg_request *req,
@@ -327,6 +457,25 @@ unlock:
 	return ret;
 }
 
+/**
+ * @brief Performs a standard transaction with the camera-rtcpu debug interface
+ *
+ * This function is a wrapper around @ref camrtc_ivc_dbg_full_frame_xact that uses
+ * standard structure sizes for requests and responses.
+ * It performs the following operations:
+ * - Calls @ref camrtc_ivc_dbg_full_frame_xact with sizeof(*req) and sizeof(*resp)
+ *
+ * @param[in] ch      Pointer to the IVC channel
+ *                    Valid value: non-NULL
+ * @param[in] req     Pointer to the debug request structure
+ *                    Valid value: non-NULL
+ * @param[out] resp   Pointer to the debug response structure
+ *                    Valid value: non-NULL
+ * @param[in] timeout Timeout in milliseconds, 0 for default
+ *                    Valid range: >= 0
+ *
+ * @retval (int)  Return value from @ref camrtc_ivc_dbg_full_frame_xact
+ */
 static inline int camrtc_ivc_dbg_xact(
 	struct tegra_ivc_channel *ch,
 	struct camrtc_dbg_request *req,
@@ -338,6 +487,26 @@ static inline int camrtc_ivc_dbg_xact(
 					timeout);
 }
 
+/**
+ * @brief Pings the camera-rtcpu and displays timing information
+ *
+ * This function sends a ping request to the camera-rtcpu and measures
+ * the round-trip time. It performs the following operations:
+ * - Gets current time using @ref sched_clock()
+ * - Prepares ping request with timestamp
+ * - Sends request using @ref camrtc_ivc_dbg_xact()
+ * - Calculates round-trip time and offset
+ * - Displays formatted timing information using @ref seq_printf()
+ * - Displays any response data
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0  Ping successful
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_xact()
+ */
 static int camrtc_show_ping(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -380,6 +549,26 @@ static int camrtc_show_ping(struct seq_file *file, void *data)
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_ping, camrtc_show_ping);
 
+/**
+ * @brief Pings the camera-rtcpu using shared memory interface and displays timing information
+ *
+ * This function sends a ping request to the camera-rtcpu using the shared memory interface
+ * and measures the round-trip time. It performs the following operations:
+ * - Gets the camera-rtcpu device using @ref camrtc_get_device()
+ * - Acquires runtime reference using @ref tegra_ivc_channel_runtime_get()
+ * - Gets current time using @ref sched_clock()
+ * - Sends ping using @ref tegra_camrtc_ping()
+ * - Calculates and displays round-trip time using @ref seq_printf()
+ * - Releases runtime reference using @ref tegra_ivc_channel_runtime_put()
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0  Ping successful
+ * @retval (int)) Error code from @ref tegra_ivc_channel_runtime_get() or @ref tegra_camrtc_ping()
+ */
 static int camrtc_show_sm_ping(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -416,6 +605,25 @@ error:
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_sm_ping, camrtc_show_sm_ping);
 
+/**
+ * @brief Gets the current log level of the camera-rtcpu
+ *
+ * This function retrieves the current log level setting from the camera-rtcpu.
+ * It performs the following operations:
+ * - Prepares a GET_LOGLEVEL request
+ * - Sends request using @ref camrtc_ivc_dbg_xact()
+ * - Verifies response status is OK
+ * - Sets the output parameter to the current log level
+ *
+ * @param[in] data  Private data pointer (IVC channel)
+ *                  Valid value: non-NULL
+ * @param[out] val  Pointer to store the retrieved log level
+ *                  Valid value: non-NULL
+ *
+ * @retval 0  Operation successful
+ * @retval -EPROTO Response status not OK
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_xact()
+ */
 static int camrtc_dbgfs_show_loglevel(void *data, u64 *val)
 {
 	struct tegra_ivc_channel *ch = data;
@@ -437,6 +645,26 @@ static int camrtc_dbgfs_show_loglevel(void *data, u64 *val)
 	return 0;
 }
 
+/**
+ * @brief Sets the log level of the camera-rtcpu
+ *
+ * This function sets a new log level for the camera-rtcpu.
+ * It performs the following operations:
+ * - Validates the input value can be represented as a u32
+ * - Prepares a SET_LOGLEVEL request with the new level
+ * - Sends request using @ref camrtc_ivc_dbg_xact()
+ * - Handles different response status codes
+ *
+ * @param[in] data  Private data pointer (IVC channel)
+ *                  Valid value: non-NULL
+ * @param[in] val   New log level value
+ *                  Valid range: Can be represented as u32
+ *
+ * @retval 0  Log level set successfully
+ * @retval -EINVAL Value out of range or invalid parameter
+ * @retval -EPROTO Unexpected response status
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_xact()
+ */
 static int camrtc_dbgfs_store_loglevel(void *data, u64 val)
 {
 	struct tegra_ivc_channel *ch = data;
@@ -468,6 +696,25 @@ DEFINE_SIMPLE_ATTRIBUTE(camrtc_dbgfs_fops_loglevel,
 			camrtc_dbgfs_store_loglevel,
 			"%lld\n");
 
+/**
+ * @brief Executes a MODS test on the camera-rtcpu and displays the result
+ *
+ * This function runs a MODS (Modular Operational Diagnostic Suite) test
+ * on the camera-rtcpu and shows the status code.
+ * It performs the following operations:
+ * - Retrieves test parameters from the debug structure
+ * - Prepares a MODS_TEST request with case, loops, and DMA channels
+ * - Sends request using @ref camrtc_ivc_dbg_xact() with adjusted timeout
+ * - Outputs status code to the sequence file using @ref seq_printf()
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0  Test executed successfully
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_xact()
+ */
 static int camrtc_show_mods_result(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -493,6 +740,24 @@ static int camrtc_show_mods_result(struct seq_file *file, void *data)
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_mods_result, camrtc_show_mods_result);
 
+/**
+ * @brief Retrieves and displays the FreeRTOS state from the camera-rtcpu
+ *
+ * This function retrieves the current state of the FreeRTOS running on the
+ * camera-rtcpu and displays it in the sequence file.
+ * It performs the following operations:
+ * - Prepares an RTOS_STATE request
+ * - Sends request using @ref camrtc_ivc_dbg_xact()
+ * - Outputs the RTOS state information to the sequence file using @ref seq_printf()
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0  State retrieved and displayed successfully
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_xact()
+ */
 static int camrtc_dbgfs_show_freertos_state(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -515,12 +780,46 @@ static int camrtc_dbgfs_show_freertos_state(struct seq_file *file, void *data)
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_freertos_state,
 		camrtc_dbgfs_show_freertos_state);
 
+/**
+ * @brief Converts a byte count to kilobytes, rounding up
+ *
+ * This function converts a byte count to kilobytes, rounding up to the
+ * nearest kilobyte.
+ * It performs the following operations:
+ * - Adds 1023 to the input value using @ref __builtin_uadd_overflow for
+ *   safe arithmetic with overflow checking
+ * - Divides by 1024 to convert bytes to kilobytes with ceiling rounding
+ *
+ * @param[in] x  Byte count to convert to kilobytes
+ *                Valid range: Any uint32_t value
+ *
+ * @retval (uint32_t) The input value in kilobytes, rounded up
+ */
 static inline uint32_t ToKilobytes(uint32_t x)
 {
 	(void)__builtin_uadd_overflow(x, 1023U, &x);
 	return (x / 1024U);
 }
 
+/**
+ * @brief Retrieves and displays memory usage statistics from the camera-rtcpu
+ *
+ * This function retrieves memory usage information from the camera-rtcpu
+ * and formats it for display. It performs the following operations:
+ * - Prepares a GET_MEM_USAGE request
+ * - Sends request using @ref camrtc_ivc_dbg_xact()
+ * - Calculates total memory usage using @ref __builtin_uadd_overflow for safe arithmetic
+ * - Formats and displays memory usage statistics using @ref seq_printf()
+ * - Displays values in bytes and kilobytes using @ref ToKilobytes()
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0  Statistics retrieved and displayed successfully
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_xact()
+ */
 static int camrtc_dbgfs_show_memstat(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -555,6 +854,29 @@ static int camrtc_dbgfs_show_memstat(struct seq_file *file, void *data)
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_memstat, camrtc_dbgfs_show_memstat);
 
+/**
+ * @brief Retrieves and displays interrupt statistics from the camera-rtcpu
+ *
+ * This function retrieves interrupt statistics from the camera-rtcpu
+ * and formats them for display. It performs the following operations:
+ * - Checks if IRQ statistics are supported in the build (CAMRTC_REQ_GET_IRQ_STAT)
+ * - Allocates memory for the response using @ref kzalloc()
+ * - Prepares a GET_IRQ_STAT request
+ * - Sends request using @ref camrtc_ivc_dbg_full_frame_xact()
+ * - Formats and displays IRQ statistics including count, runtime, and names using @ref seq_printf()
+ * - Tracks maximum runtime across all interrupts
+ * - Displays total statistics
+ * - Frees allocated memory using @ref kfree()
+ *
+ * @param[in] file  Pointer to sequence file for output
+ *                  Valid value: non-NULL
+ * @param[in] data  Private data pointer
+ *                  Valid value: any value
+ *
+ * @retval 0  Statistics retrieved and displayed successfully
+ * @retval -ENOMSG  IRQ statistics not supported or enabled
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_full_frame_xact()
+ */
 static int camrtc_dbgfs_show_irqstat(struct seq_file *file, void *data)
 {
 	int ret = -ENOMSG;
@@ -599,6 +921,20 @@ done:
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_irqstat, camrtc_dbgfs_show_irqstat);
 
+/**
+ * @brief Calculates the maximum size available for test data
+ *
+ * This function determines the maximum amount of data that can be included
+ * in a test request. It performs the following operations:
+ * - Uses @ref __builtin_uaddl_overflow to safely add the IVC frame size to the
+ *   offset of the test data field in the request structure
+ * - Returns the calculated maximum size
+ *
+ * @param[in] ch  Pointer to the IVC channel
+ *                Valid value: non-NULL
+ *
+ * @retval (size_t) Maximum size in bytes that can be used for test data
+ */
 static size_t camrtc_dbgfs_get_max_test_size(
 	const struct tegra_ivc_channel *ch)
 {
@@ -608,6 +944,26 @@ static size_t camrtc_dbgfs_get_max_test_size(
 	return ret;
 }
 
+/**
+ * @brief Reads test case data from the debugfs file
+ *
+ * This function implements the read file operation for test case data.
+ * It performs the following operations:
+ * - Retrieves the camera debug data for the IVC channel
+ * - Uses @ref simple_read_from_buffer to copy data from the test case buffer
+ *   to user space
+ *
+ * @param[in] file   Pointer to the file object
+ *                   Valid value: non-NULL
+ * @param[out] buf   User space buffer to read into
+ *                   Valid value: non-NULL
+ * @param[in] count  Number of bytes to read
+ *                   Valid range: >= 0
+ * @param[in,out] f_pos  Pointer to file position
+ *                       Valid value: non-NULL
+ *
+ * @retval (ssize_t) Number of bytes read on success, or negative error code
+ */
 static ssize_t camrtc_dbgfs_read_test_case(struct file *file,
 		char __user *buf, size_t count, loff_t *f_pos)
 {
@@ -619,6 +975,28 @@ static ssize_t camrtc_dbgfs_read_test_case(struct file *file,
 				crd->parameters.test_case_size);
 }
 
+/**
+ * @brief Writes test case data to the debugfs file
+ *
+ * This function implements the write file operation for test case data.
+ * It performs the following operations:
+ * - Retrieves the camera debug data for the IVC channel
+ * - Validates the maximum size for the test case
+ * - Uses @ref simple_write_to_buffer to copy data from user space to the test case buffer
+ * - Updates the test case size with the current file position
+ * - Marks all input memory buffers as empty
+ *
+ * @param[in] file   Pointer to the file object
+ *                   Valid value: non-NULL
+ * @param[in] buf    User space buffer to write from
+ *                   Valid value: non-NULL
+ * @param[in] count  Number of bytes to write
+ *                   Valid range: >= 0
+ * @param[in,out] f_pos  Pointer to file position
+ *                       Valid value: non-NULL
+ *
+ * @retval (ssize_t) Number of bytes written on success, or negative error code
+ */
 static ssize_t camrtc_dbgfs_write_test_case(struct file *file,
 		const char __user *buf, size_t count, loff_t *f_pos)
 {
@@ -646,6 +1024,23 @@ static const struct file_operations camrtc_dbgfs_fops_test_case = {
 	.write = camrtc_dbgfs_write_test_case,
 };
 
+/**
+ * @brief Gets the appropriate device for memory allocations
+ *
+ * This function determines the appropriate device to use for memory allocations.
+ * It performs the following operations:
+ * - Checks if the VI device is available (mem_devices[1])
+ * - If VI is available, returns the VI device for consistent allocations
+ * - Otherwise, falls back to the primary memory device (mem_devices[0])
+ *
+ * This selection is necessary because if VI misses stage-1 SMMU translation,
+ * allocations need to be contiguous. Using VI ensures compatibility across contexts.
+ *
+ * @param[in] crd  Pointer to the camera debug structure
+ *                 Valid value: non-NULL
+ *
+ * @retval (struct device *) Pointer to the appropriate device for memory allocations
+ */
 static struct device *camrtc_dbgfs_memory_dev(
 	const struct camrtc_debug *crd)
 {
@@ -660,6 +1055,25 @@ static struct device *camrtc_dbgfs_memory_dev(
 		return crd->mem_devices[0];
 }
 
+/**
+ * @brief Reads test memory data from the debugfs file
+ *
+ * This function implements the read file operation for test memory data.
+ * It performs the following operations:
+ * - Retrieves the test memory structure for the specific memory region
+ * - Uses @ref simple_read_from_buffer to copy data from the memory buffer to user space
+ *
+ * @param[in] file   Pointer to the file object
+ *                   Valid value: non-NULL
+ * @param[out] buf   User space buffer to read into
+ *                   Valid value: non-NULL
+ * @param[in] count  Number of bytes to read
+ *                   Valid range: >= 0
+ * @param[in,out] f_pos  Pointer to file position
+ *                       Valid value: non-NULL
+ *
+ * @retval (ssize_t) Number of bytes read on success, or negative error code
+ */
 static ssize_t camrtc_dbgfs_read_test_mem(struct file *file,
 		char __user *buf, size_t count, loff_t *f_pos)
 {
@@ -668,6 +1082,31 @@ static ssize_t camrtc_dbgfs_read_test_mem(struct file *file,
 	return simple_read_from_buffer(buf, count, f_pos, mem->ptr, mem->used);
 }
 
+/**
+ * @brief Writes data to test memory through the debugfs file
+ *
+ * This function implements the write file operation for test memory.
+ * It performs the following operations:
+ * - Retrieves the test memory structure and camera debug container
+ * - Gets the appropriate memory device and IOMMU domain
+ * - Expands the memory buffer if needed, handling both reserved memory and normal allocation
+ * - For reserved memory, maps the physical address to IOVA using @ref dma_map_single()
+ * - For normal allocation, uses @ref dma_alloc_coherent() and copies existing content
+ * - Updates the physical address based on IOMMU state
+ * - Writes data to memory using @ref simple_write_to_buffer()
+ * - Updates usage information and handles cleanup on zero usage
+ *
+ * @param[in] file   Pointer to the file object
+ *                   Valid value: non-NULL
+ * @param[in] buf    User space buffer to write from
+ *                   Valid value: non-NULL
+ * @param[in] count  Number of bytes to write
+ *                   Valid range: >= 0
+ * @param[in,out] f_pos  Pointer to file position
+ *                       Valid value: non-NULL
+ *
+ * @retval (ssize_t) Number of bytes written on success, or negative error code
+ */
 static ssize_t camrtc_dbgfs_write_test_mem(struct file *file,
 		const char __user *buf, size_t count, loff_t *f_pos)
 {
@@ -750,6 +1189,15 @@ static ssize_t camrtc_dbgfs_write_test_mem(struct file *file,
 	return ret;
 }
 
+/**
+ * @brief File operations for test memory
+ *
+ * This structure defines the file operations for test memory in the debugfs
+ * interface, providing read and write access to the memory buffers used for
+ * testing the camera-rtcpu.
+ * - read: Implemented by @ref camrtc_dbgfs_read_test_mem
+ * - write: Implemented by @ref camrtc_dbgfs_write_test_mem
+ */
 static const struct file_operations camrtc_dbgfs_fops_test_mem = {
 	.read = camrtc_dbgfs_read_test_mem,
 	.write = camrtc_dbgfs_write_test_mem,
@@ -758,6 +1206,28 @@ static const struct file_operations camrtc_dbgfs_fops_test_mem = {
 #define BUILD_BUG_ON_MISMATCH(s1, f1, s2, f2) \
 	BUILD_BUG_ON(offsetof(s1, data.f1) != offsetof(s2, data.f2))
 
+/**
+ * @brief Runs a test and displays the result
+ *
+ * This function executes a test on the camera-rtcpu by sending the test case data
+ * via IVC channel and writes the test results to the sequence file. It performs
+ * the following operations:
+ * - Copies the test case data to the request buffer
+ * - Calculates the timeout in nanoseconds
+ * - Executes the transaction using @ref camrtc_ivc_dbg_full_frame_xact
+ * - Flushes the trace buffer using @ref tegra_camrtc_flush_trace
+ * - Displays the test result status and runtime
+ * - Writes the result text to the sequence file
+ *
+ * @param[in] file         Pointer to the sequence file
+ * @param[in] req          Pointer to the debug request structure
+ * @param[out] resp        Pointer to the debug response structure
+ * @param[in] data_offset  Offset in the request/response structure where data begins
+ *
+ * @retval 0 on success
+ * @retval (int) Return code from @ref camrtc_ivc_dbg_full_frame_xact() or
+ * @ref tegra_ivc_channel_runtime_get()
+ */
 static int camrtc_test_run_and_show_result(struct seq_file *file,
 				struct camrtc_dbg_request *req,
 				struct camrtc_dbg_response *resp,
@@ -832,6 +1302,22 @@ runtime_put:
 	return ret;
 }
 
+/**
+ * @brief Unmaps all or selected DMA mappings for a test memory buffer
+ *
+ * This function unmaps DMA mappings previously created for a test memory buffer
+ * across multiple devices. It performs the following operations:
+ * - Checks if the memory buffer is mapped (ptr is not NULL)
+ * - Iterates through all mapped devices in the memory structure
+ * - Unmaps the memory from each device using @ref dma_unmap_single
+ * - Optionally keeps the primary memory device mapping if 'all' is false
+ *
+ * @param[in] crd  Pointer to the camera debug structure
+ * @param[in] mem  Pointer to the test memory structure containing mappings
+ * @param[in] all  Flag to indicate if all mappings should be unmapped
+ *                 - true: unmap all device mappings
+ *                 - false: keep the primary memory device mapping
+ */
 static void camrtc_run_rmem_unmap_all(struct camrtc_debug *crd,
 		struct camrtc_test_mem *mem, bool all)
 {
@@ -858,8 +1344,40 @@ static void camrtc_run_rmem_unmap_all(struct camrtc_debug *crd,
 	}
 }
 
+/**
+ * @brief Maximum value for a signed integer
+ *
+ * This macro defines the maximum value that can be stored in a signed integer.
+ * It represents (2^31 - 1) for typical 32-bit systems.
+ */
 #define INT_MAX ((int)(~0U >> 1))
 
+/**
+ * @brief Maps a memory buffer for DMA access from a specific device
+ *
+ * This function maps a memory buffer for DMA access from a given device,
+ * handling the mapping differently based on whether the target device is
+ * the same as the memory device or using reserved memory. It performs
+ * the following operations:
+ * - Validates that the device index hasn't exceeded maximum allowed devices
+ * - If mapping to the memory device, reuses the existing IOVA and syncs
+ * - For reserved memory, creates a new DMA mapping with @ref dma_map_single
+ * - For non-reserved memory, creates a scatter-gather table and maps it
+ * - Records the device and IOVA in the memory structure
+ *
+ * @param[in] ch           Pointer to the IVC channel
+ * @param[in] mem_dev      Pointer to the primary memory device
+ * @param[in] dev          Pointer to the target device for mapping
+ * @param[in] sgt          Pointer to the scatter-gather table
+ * @param[in,out] mem      Pointer to the test memory structure
+ * @param[out] return_iova Pointer to store the resulting IOVA address
+ *
+ * @retval 0 on success
+ * @retval (int) Error code from @ref dma_get_sgtable
+ * @retval -ENOMEM if device list exhausted or failed to allocate memory with @ref dma_map_single()
+ * @retval -ENXIO if failed to map memory
+ * @retval -EINVAL if sync operation failed
+ */
 static int camrtc_run_mem_map(struct tegra_ivc_channel *ch,
 		struct device *mem_dev,
 		struct device *dev,
@@ -926,6 +1444,18 @@ done:
 	return ret;
 }
 
+/**
+ * @brief Sets the memory bandwidth for camera operation
+ *
+ * This function configures the memory bandwidth through the interconnect
+ * controller path for camera operations. It performs the following operations:
+ * - Checks if an interconnect path is available
+ * - Sets the bandwidth using @ref icc_set_bw with the provided value
+ * - Logs success or failure of the bandwidth setting operation
+ *
+ * @param[in] crd  Pointer to the camera debug structure
+ * @param[in] bw   Bandwidth value to set in bytes per second
+ */
 static void camrtc_membw_set(struct camrtc_debug *crd, u32 bw)
 {
 	int ret;
@@ -940,6 +1470,27 @@ static void camrtc_membw_set(struct camrtc_debug *crd, u32 bw)
 	}
 }
 
+/**
+ * @brief Runs a memory test on the camera-rtcpu
+ *
+ * This function executes a memory test by setting up memory mappings across
+ * multiple devices (RCE, VI, ISP, VI2, ISP1), sending test data to the camera-rtcpu,
+ * and processing the results. It performs the following operations:
+ * - Sets the memory bandwidth using @ref camrtc_membw_set
+ * - Allocates scratch memory if not already allocated
+ * - Maps memory across multiple camera devices using @ref camrtc_run_mem_map
+ * - Runs the test and displays results using @ref camrtc_test_run_and_show_result
+ * - Synchronizes memory for CPU access
+ * - Cleans up by unmapping memory and resetting mapping information
+ *
+ * @param[in] file       Pointer to the sequence file
+ * @param[in,out] req    Pointer to the debug request structure
+ * @param[out] resp      Pointer to the debug response structure
+ *
+ * @retval 0 on success
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_full_frame_xact()
+ * @retval -ENOMEM if failed to map memory with @ref dma_map_single() or @ref dma_alloc_coherent()
+ */
 static int camrtc_run_mem_test(struct seq_file *file,
 			struct camrtc_dbg_request *req,
 			struct camrtc_dbg_response *resp)
@@ -1157,6 +1708,20 @@ unmap:
 	return ret;
 }
 
+/**
+ * @brief Show function for test result debugfs file
+ *
+ * This function is called when the test result debugfs file is read.
+ * It allocates memory for request and response structures, runs the
+ * memory test using @ref camrtc_run_mem_test, and displays the results.
+ *
+ * @param[in] file  Pointer to the sequence file
+ * @param[in] data  Private data pointer (unused)
+ *
+ * @retval 0 on success
+ * @retval (int) Error code from @ref camrtc_run_mem_test
+ * @retval -ENOMEM if failed to allocate memory with @ref kzalloc()
+ */
 static int camrtc_dbgfs_show_test_result(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -1180,8 +1745,33 @@ static int camrtc_dbgfs_show_test_result(struct seq_file *file, void *data)
 	return ret;
 }
 
+/**
+ * @brief File operations for test result
+ *
+ * This macro defines the file operations for the test result debugfs file.
+ * It specifies that @ref camrtc_dbgfs_show_test_result should be called
+ * when the file is read.
+ */
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_test_result, camrtc_dbgfs_show_test_result);
 
+/**
+ * @brief Show function for test list debugfs file
+ *
+ * This function is called when the test list debugfs file is read.
+ * It sends a request to the camera-rtcpu to retrieve the list of available
+ * tests and displays the results in the sequence file. It performs the
+ * following operations:
+ * - Prepares a request to run the "list" test
+ * - Executes the transaction using @ref camrtc_ivc_dbg_full_frame_xact
+ * - Formats and writes the test list to the sequence file
+ *
+ * @param[in] file  Pointer to the sequence file
+ * @param[in] data  Private data pointer (unused)
+ *
+ * @retval 0 on success
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_full_frame_xact()
+ * @retval -ENOMEM if failed to allocate memory with @ref kzalloc()
+ */
 static int camrtc_dbgfs_show_test_list(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -1225,8 +1815,34 @@ static int camrtc_dbgfs_show_test_list(struct seq_file *file, void *data)
 	return ret;
 }
 
+/**
+ * @brief File operations for test list
+ *
+ * This macro defines the file operations for the test list debugfs file.
+ * It specifies that @ref camrtc_dbgfs_show_test_list should be called
+ * when the file is read.
+ */
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_test_list, camrtc_dbgfs_show_test_list);
 
+/**
+ * @brief Sends a coverage control message to the camera-rtcpu
+ *
+ * This function sends a message to control the Falcon coverage functionality.
+ * It performs the following operations:
+ * - Prepares a request with coverage control parameters
+ * - Executes the transaction using @ref camrtc_ivc_dbg_xact
+ * - Handles error cases and status checking
+ *
+ * @param[in] cov    Pointer to the Falcon coverage structure
+ * @param[out] resp  Pointer to the debug response structure
+ * @param[in] flush  Flag to indicate if coverage data should be flushed
+ * @param[in] reset  Flag to indicate if coverage data should be reset
+ *
+ * @retval 0 on success
+ * @retval (int) Error code from @ref camrtc_ivc_dbg_xact
+ * @retval -ENODEV if IVC error or bad status
+ * @retval -EOVERFLOW if coverage buffer is full
+ */
 static int camrtc_coverage_msg(struct camrtc_falcon_coverage *cov,
 			struct camrtc_dbg_response *resp,
 			bool flush, bool reset)
@@ -1259,6 +1875,17 @@ static int camrtc_coverage_msg(struct camrtc_falcon_coverage *cov,
 	return ret;
 }
 
+/**
+ * @brief Checks if Falcon coverage is supported
+ *
+ * This function determines whether the Falcon coverage functionality is
+ * supported by sending a test message to the camera-rtcpu.
+ *
+ * @param[in] cov  Pointer to the Falcon coverage structure
+ *
+ * @retval true if coverage is supported
+ * @retval false otherwise
+ */
 static bool camrtc_coverage_is_supported(struct camrtc_falcon_coverage *cov)
 {
 	struct camrtc_dbg_response resp;
@@ -1268,6 +1895,26 @@ static bool camrtc_coverage_is_supported(struct camrtc_falcon_coverage *cov)
 	return (resp.status == CAMRTC_STATUS_OK);
 }
 
+/**
+ * @brief Read callback for Falcon coverage debugfs file
+ *
+ * This function is called when the Falcon coverage debugfs file is read.
+ * It retrieves coverage data from the Falcon processor and copies it to
+ * user space. It performs the following operations:
+ * - Checks if coverage is enabled
+ * - Flushes coverage data from the Falcon if at the beginning of the file
+ * - Synchronizes memory for CPU access
+ * - Copies data to user space using @ref simple_read_from_buffer
+ *
+ * @param[in] file   Pointer to the file structure
+ * @param[out] buf   User space buffer
+ * @param[in] count  Number of bytes to read
+ * @param[in,out] f_pos  File position pointer
+ *
+ * @retval (ssize_t) Number of bytes read on success
+ * @retval (int) Error code from @ref simple_read_from_buffer or @ref camrtc_coverage_msg
+ * @retval -ENODEV if coverage is not enabled
+ */
 static ssize_t camrtc_read_falcon_coverage(struct file *file,
 		char __user *buf, size_t count, loff_t *f_pos)
 {
@@ -1300,6 +1947,23 @@ done:
 	return ret;
 }
 
+/**
+ * @brief Write callback for Falcon coverage debugfs file
+ *
+ * This function is called when the Falcon coverage debugfs file is written.
+ * Writing to this file resets the coverage data. It performs the following operations:
+ * - Checks if coverage is enabled
+ * - Clears the coverage memory buffer
+ * - Sends a reset message to the Falcon using @ref camrtc_coverage_msg
+ *
+ * @param[in] file   Pointer to the file structure
+ * @param[in] buf    User space buffer (content ignored)
+ * @param[in] count  Number of bytes written
+ * @param[in,out] f_pos  File position pointer
+ *
+ * @retval (ssize_t) Number of bytes written on success
+ * @retval -ENODEV if coverage is not enabled
+ */
 static ssize_t camrtc_write_falcon_coverage(struct file *file,
 		const char __user *buf, size_t count, loff_t *f_pos)
 {
@@ -1319,11 +1983,36 @@ static ssize_t camrtc_write_falcon_coverage(struct file *file,
 
 	return ret;
 }
+
+/**
+ * @brief File operations for Falcon coverage
+ *
+ * This structure defines the file operations for the Falcon coverage debugfs file.
+ * - read: Implemented by @ref camrtc_read_falcon_coverage
+ * - write: Implemented by @ref camrtc_write_falcon_coverage
+ */
 static const struct file_operations camrtc_dbgfs_fops_falcon_coverage = {
 	.read = camrtc_read_falcon_coverage,
 	.write = camrtc_write_falcon_coverage,
 };
 
+/**
+ * @brief Enables Falcon coverage functionality
+ *
+ * This function enables the coverage functionality for a Falcon processor.
+ * It performs the following operations:
+ * - Checks if coverage is already enabled
+ * - Verifies coverage is supported using @ref camrtc_coverage_is_supported
+ * - Allocates memory for coverage data using @ref dma_alloc_coherent
+ * - Maps the memory to the Falcon processor using @ref camrtc_run_mem_map
+ * - Acquires runtime PM reference to keep rtcpu alive
+ *
+ * @param[in,out] cov  Pointer to the Falcon coverage structure
+ *
+ * @retval 0 on success
+ * @retval (int) Error code from @ref tegra_ivc_channel_runtime_get()
+ * @retval -ENODEV if coverage is not supported
+ */
 static int camrtc_falcon_coverage_enable(struct camrtc_falcon_coverage *cov)
 {
 	struct tegra_ivc_channel *ch = cov->ch;
@@ -1387,6 +2076,19 @@ error:
 	return ret;
 }
 
+/**
+ * @brief Disables Falcon coverage functionality
+ *
+ * This function disables the coverage functionality for a Falcon processor
+ * and releases associated resources. It performs the following operations:
+ * - Checks if coverage is already disabled
+ * - Disables coverage by sending a control message to the Falcon
+ * - Unmaps DMA memory from the Falcon processor
+ * - Frees the coverage memory using @ref dma_free_coherent
+ * - Releases the runtime PM reference
+ *
+ * @param[in,out] cov  Pointer to the Falcon coverage structure
+ */
 static void camrtc_falcon_coverage_disable(struct camrtc_falcon_coverage *cov)
 {
 	struct tegra_ivc_channel *ch = cov->ch;
@@ -1416,6 +2118,17 @@ static void camrtc_falcon_coverage_disable(struct camrtc_falcon_coverage *cov)
 	tegra_ivc_channel_runtime_put(ch);
 }
 
+/**
+ * @brief Show callback for coverage enable debugfs file
+ *
+ * This function is called when the coverage enable debugfs file is read.
+ * It returns the current enabled state of the Falcon coverage.
+ *
+ * @param[in] data  Private data pointer (Falcon coverage structure)
+ * @param[out] val  Pointer to store the enabled state (1 = enabled, 0 = disabled)
+ *
+ * @retval 0 on success
+ */
 static int camrtc_dbgfs_show_coverage_enable(void *data, u64 *val)
 {
 	struct camrtc_falcon_coverage *cov = data;
@@ -1425,6 +2138,18 @@ static int camrtc_dbgfs_show_coverage_enable(void *data, u64 *val)
 	return 0;
 }
 
+/**
+ * @brief Store callback for coverage enable debugfs file
+ *
+ * This function is called when the coverage enable debugfs file is written.
+ * It enables or disables the Falcon coverage based on the written value.
+ *
+ * @param[in] data  Private data pointer (Falcon coverage structure)
+ * @param[in] val   Value to set (non-zero = enable, zero = disable)
+ *
+ * @retval 0 on success
+ * @retval (int) Error code from @ref camrtc_falcon_coverage_enable
+ */
 static int camrtc_dbgfs_store_coverage_enable(void *data, u64 val)
 {
 	struct camrtc_falcon_coverage *cov = data;
@@ -1489,6 +2214,21 @@ struct tegra_ast_region_info {
 	u32 control;
 };
 
+/**
+ * @brief Gets AST region configuration information
+ *
+ * This function reads the configuration of an AST region from hardware
+ * registers and populates a region information structure. It performs
+ * the following operations:
+ * - Reads control register and extracts flags
+ * - Reads stream ID configuration
+ * - Reads slave, mask, and master address values
+ * - Formats the information into the provided structure
+ *
+ * @param[in] base   Base address of the AST registers
+ * @param[in] region Region number to retrieve
+ * @param[out] info  Pointer to store the region information
+ */
 static void tegra_ast_get_region_info(void __iomem *base,
 			u32 region,
 			struct tegra_ast_region_info *info)
@@ -1542,6 +2282,20 @@ static void tegra_ast_get_region_info(void __iomem *base,
 	info->master = ((hi << 32U) + lo) & AST_ADDR_MASK64;
 }
 
+/**
+ * @brief Maps I/O memory by name from device tree
+ *
+ * This function maps I/O memory based on a register name from the device tree.
+ * It performs the following operations:
+ * - Looks up the register index by name in the device tree
+ * - Maps the I/O memory using @ref of_iomap if found
+ *
+ * @param[in] dev   Pointer to the device structure
+ * @param[in] name  Name of the register to map
+ *
+ * @retval (void __iomem *) Mapped I/O memory address on success
+ * @retval (void __iomem *) Error pointer on failure
+ */
 static void __iomem *iomap_byname(struct device *dev, const char *name)
 {
 	int index = of_property_match_string(dev->of_node, "reg-names", name);
@@ -1551,6 +2305,26 @@ static void __iomem *iomap_byname(struct device *dev, const char *name)
 	return of_iomap(dev->of_node, index);
 }
 
+/**
+ * @brief Show function for AST region debugfs file
+ *
+ * This function displays information about an AST (Address Space Translator) region
+ * in a sequence file. It performs the following operations:
+ * - Gets the region configuration using @ref tegra_ast_get_region_info
+ * - Displays whether the region is enabled or disabled
+ * - If enabled, displays details about the region's configuration:
+ *   - Slave and master addresses
+ *   - Region size
+ *   - Security flags (lock, snoop, non-secure, etc.)
+ *   - Carveout settings
+ *   - VPR settings
+ *   - VM index and physical mode
+ *   - Stream ID information
+ *
+ * @param[in] file  Pointer to the sequence file for output
+ * @param[in] base  Base address of the AST registers
+ * @param[in] index AST region index to display
+ */
 static void camrtc_dbgfs_show_ast_region(struct seq_file *file,
 						void __iomem *base, u32 index)
 {
@@ -1582,12 +2356,37 @@ static void camrtc_dbgfs_show_ast_region(struct seq_file *file,
 		info.stream_id, info.stream_id_enabled);
 }
 
+/**
+ * @brief Structure to hold information about an AST node in debugfs
+ *
+ * This structure represents an AST (Address Space Translator) node
+ * in the debugfs interface, containing references to the IVC channel,
+ * name of the AST, and a bitmask of regions to display.
+ */
 struct camrtc_dbgfs_ast_node {
-	struct tegra_ivc_channel *ch;
-	const char *name;
-	uint8_t mask;
+	struct tegra_ivc_channel *ch;  /**< IVC channel for the AST */
+	const char *name;              /**< Name of the AST */
+	uint8_t mask;                  /**< Bitmask of regions to display */
 };
 
+/**
+ * @brief Show function for AST debugfs file
+ *
+ * This function is called when an AST debugfs file is read.
+ * It displays information about the specified AST regions.
+ * It performs the following operations:
+ * - Gets the AST node from the private data
+ * - Maps the AST registers using @ref iomap_byname
+ * - Iterates through the regions specified in the mask
+ * - Displays each region using @ref camrtc_dbgfs_show_ast_region
+ * - Unmaps the registers with @ref iounmap
+ *
+ * @param[in] file  Pointer to the sequence file
+ * @param[in] data  Private data pointer (unused)
+ *
+ * @retval 0 on success
+ * @retval -ENOMEM if @ref iomap_byname fails
+ */
 static int camrtc_dbgfs_show_ast(struct seq_file *file,
 				void *data)
 {
@@ -1613,8 +2412,21 @@ static int camrtc_dbgfs_show_ast(struct seq_file *file,
 	return 0;
 }
 
+/**
+ * @brief File operations for AST
+ *
+ * This macro defines the file operations for the AST debugfs file.
+ * It specifies that @ref camrtc_dbgfs_show_ast should be called
+ * when the file is read.
+ */
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_ast, camrtc_dbgfs_show_ast);
 
+/**
+ * @brief Common AST register definitions
+ *
+ * This array defines the common registers in the AST (Address Space Translator)
+ * that are displayed in the debugfs interface.
+ */
 static const struct debugfs_reg32 ast_common_regs[] = {
 	{ .name = "control", 0x0 },
 	{ .name = "error_status", 0x4 },
@@ -1640,6 +2452,12 @@ static const struct debugfs_reg32 ast_common_regs[] = {
 	{ .name = "read_block_status", 0x64 },
 };
 
+/**
+ * @brief AST region register definitions
+ *
+ * This array defines the registers for each AST region that are
+ * displayed in the debugfs interface.
+ */
 static const struct debugfs_reg32 ast_region_regs[] = {
 	{ .name = "slave_lo", 0x100 },
 	{ .name = "slave_hi", 0x104 },
@@ -1650,6 +2468,23 @@ static const struct debugfs_reg32 ast_region_regs[] = {
 	{ .name = "control", 0x118 },
 };
 
+/**
+ * @brief Creates debugfs files for AST registers
+ *
+ * This function creates debugfs files to display AST registers.
+ * It performs the following operations:
+ * - Maps the AST registers using @ref iomap_byname
+ * - Sets up the common registers debugfs file
+ * - Creates a debugfs file for each region's registers
+ *
+ * @param[in] ch       Pointer to the IVC channel
+ * @param[in] dir      Parent debugfs directory
+ * @param[in] ars      Pointer to the AST regset structure
+ * @param[in] ast_name Name of the AST
+ *
+ * @retval 0 on success
+ * @retval -ENOMEM if @ref iomap_byname fails
+ */
 static int ast_regset_create_files(struct tegra_ivc_channel *ch,
 				struct dentry *dir,
 				struct ast_regset *ars,
@@ -1683,6 +2518,23 @@ static int ast_regset_create_files(struct tegra_ivc_channel *ch,
 	return 0;
 }
 
+/**
+ * @brief Populates the debugfs directory with camera RTCPU debug files
+ *
+ * This function creates the debugfs directory structure and files for
+ * camera RTCPU debugging. It performs the following operations:
+ * - Creates the main debugfs directory with name from device tree or default "camrtc"
+ * - Creates coverage directories for VI and ISP
+ * - Creates files for falcon coverage data and enable controls
+ * - Creates files for version, reboot, ping, SM-ping, log-level, etc.
+ * - Sets up timeout, test case, and test memory debugfs files
+ * - Creates AST debugfs files if AST is available
+ *
+ * @param[in] ch  Pointer to the IVC channel
+ *
+ * @retval 0 on success
+ * @retval -ENOMEM if @ref debugfs_create_dir fails
+ */
 static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
@@ -1854,6 +2706,23 @@ error:
 	return -ENOMEM;
 }
 
+/**
+ * @brief Gets a linked device from device tree
+ *
+ * This function retrieves a device linked through a phandle in the device tree.
+ * It performs the following operations:
+ * - Gets the device node using @ref of_parse_phandle
+ * - Checks if the node exists
+ * - Finds the platform device using @ref of_find_device_by_node
+ * - Returns the device pointer or NULL if not found
+ *
+ * @param[in] dev    Pointer to the parent device
+ * @param[in] name   Name of the phandle property
+ * @param[in] index  Index in the phandle array
+ *
+ * @retval (struct device *) Pointer to the linked device on success
+ * @retval NULL if not found
+ */
 static struct device *camrtc_get_linked_device(
 	struct device *dev, char const *name, int index)
 {
@@ -1875,6 +2744,28 @@ static struct device *camrtc_get_linked_device(
 	return &pdev->dev;
 }
 
+/**
+ * @brief Probe function for camera RTCPU debug driver
+ *
+ * This function initializes the camera RTCPU debug driver.
+ * It performs the following operations:
+ * - Validates IVC frame sizes using @ref BUG_ON
+ * - Allocates memory for the debug structure using @ref devm_kzalloc
+ * - Initializes parameters with default values
+ * - Reads configuration from device tree
+ * - Initializes mutex and wait queue
+ * - Sets up memory devices using @ref camrtc_get_linked_device
+ * - Configures falcon coverage structures
+ * - Gets the interconnect path for bandwidth control using @ref devm_of_icc_get
+ * - Populates the debugfs interface using @ref camrtc_debug_populate
+ *
+ * @param[in] ch  Pointer to the IVC channel
+ *
+ * @retval 0 on success
+ * @retval -ENOMEM if @ref devm_kzalloc fails
+ * @retval -ENOMEM if @ref camrtc_debug_populate fails
+ * @retval (int) Error code from @ref dev_err_probe()
+ */
 static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 {
 	struct device *dev = &ch->dev;
@@ -1947,6 +2838,18 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	return 0;
 }
 
+/**
+ * @brief Remove function for camera RTCPU debug driver
+ *
+ * This function cleans up resources when the camera RTCPU debug driver is removed.
+ * It performs the following operations:
+ * - Disables falcon coverage using @ref camrtc_falcon_coverage_disable
+ * - Frees all allocated test memory using @ref dma_free_coherent
+ * - Releases references to memory devices using @ref put_device
+ * - Removes all debugfs entries using @ref debugfs_remove_recursive
+ *
+ * @param[in] ch  Pointer to the IVC channel
+ */
 static void camrtc_debug_remove(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
@@ -1974,18 +2877,37 @@ static void camrtc_debug_remove(struct tegra_ivc_channel *ch)
 	debugfs_remove_recursive(crd->root);
 }
 
+/**
+ * @brief IVC channel operations for camera RTCPU debug driver
+ *
+ * This structure defines the operations for the camera RTCPU debug driver.
+ * - probe: @ref camrtc_debug_probe - Called when the driver is probed
+ * - remove: @ref camrtc_debug_remove - Called when the driver is removed
+ * - notify: @ref camrtc_debug_notify - Called when IVC notification is received
+ */
 static const struct tegra_ivc_channel_ops tegra_ivc_channel_debug_ops = {
 	.probe	= camrtc_debug_probe,
 	.remove	= camrtc_debug_remove,
 	.notify	= camrtc_debug_notify,
 };
 
+/**
+ * @brief Device tree compatible strings for camera RTCPU debug driver
+ *
+ * This array defines the compatible strings that match this driver.
+ */
 static const struct of_device_id camrtc_debug_of_match[] = {
 	{ .compatible = "nvidia,tegra186-camera-ivc-protocol-debug" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, camrtc_debug_of_match);
 
+/**
+ * @brief IVC driver structure for camera RTCPU debug driver
+ *
+ * This structure defines the IVC driver for camera RTCPU debugging.
+ * It includes basic driver information, device type, and operations.
+ */
 static struct tegra_ivc_driver camrtc_debug_driver = {
 	.driver = {
 		.owner	= THIS_MODULE,

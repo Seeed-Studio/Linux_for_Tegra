@@ -42,6 +42,19 @@ struct tegra_ivc_bus {
 	struct tegra_ivc_region regions[];
 };
 
+/**
+ * @brief Notification callback for IVC channel ring events
+ *
+ * This function is called when an IVC ring event occurs. It retrieves the channel
+ * context and notifies the HSP group.
+ * - Gets the channel context using @ref container_of()
+ * - Notifies the HSP group using @ref camrtc_hsp_group_ring()
+ *
+ * @param[in] ivc   Pointer to the IVC channel
+ *                  Valid value: non-NULL
+ * @param[in] data  Pointer to the HSP context
+ *                  Valid value: non-NULL
+ */
 static void tegra_ivc_channel_ring(struct tegra_ivc *ivc, void *data)
 {
 	struct tegra_ivc_channel *chan =
@@ -56,6 +69,19 @@ struct device_type tegra_ivc_channel_type = {
 };
 EXPORT_SYMBOL(tegra_ivc_channel_type);
 
+/**
+ * @brief Gets a runtime PM reference for an IVC channel
+ *
+ * This function gets a runtime PM reference for the specified IVC channel.
+ * It ensures the channel is powered on and ready for use.
+ * - Validates the channel pointer using @ref BUG_ON()
+ * - Gets a runtime PM reference using @ref pm_runtime_get_sync()
+ *
+ * @param[in] ch  Pointer to the IVC channel
+ *                Valid value: non-NULL
+ *
+ * @retval (int)  return value from @ref pm_runtime_get_sync()
+ */
 int tegra_ivc_channel_runtime_get(struct tegra_ivc_channel *ch)
 {
 	BUG_ON(ch == NULL);
@@ -64,6 +90,17 @@ int tegra_ivc_channel_runtime_get(struct tegra_ivc_channel *ch)
 }
 EXPORT_SYMBOL(tegra_ivc_channel_runtime_get);
 
+/**
+ * @brief Releases a runtime PM reference for an IVC channel
+ *
+ * This function releases a runtime PM reference for the specified IVC channel.
+ * It allows the channel to be powered down when not in use.
+ * - Validates the channel pointer using @ref BUG_ON()
+ * - Releases the runtime PM reference using @ref pm_runtime_put()
+ *
+ * @param[in] ch  Pointer to the IVC channel
+ *                Valid value: non-NULL
+ */
 void tegra_ivc_channel_runtime_put(struct tegra_ivc_channel *ch)
 {
 	BUG_ON(ch == NULL);
@@ -72,6 +109,18 @@ void tegra_ivc_channel_runtime_put(struct tegra_ivc_channel *ch)
 }
 EXPORT_SYMBOL(tegra_ivc_channel_runtime_put);
 
+/**
+ * @brief Releases resources associated with an IVC channel device
+ *
+ * This function is called when an IVC channel device is being destroyed.
+ * It performs cleanup of allocated resources.
+ * - Gets the channel context using @ref container_of()
+ * - Releases the device node using @ref of_node_put()
+ * - Frees the channel memory using @ref kfree()
+ *
+ * @param[in] dev  Pointer to the device being released
+ *                 Valid value: non-NULL
+ */
 static void tegra_ivc_channel_release(struct device *dev)
 {
 	struct tegra_ivc_channel *chan =
@@ -81,6 +130,37 @@ static void tegra_ivc_channel_release(struct device *dev)
 	kfree(chan);
 }
 
+/**
+ * @brief Creates and initializes a new IVC channel
+ *
+ * This function creates and initializes a new IVC channel with the specified parameters.
+ * It performs the following operations:
+ * - Validates the bus, channel node, region, and camhsp pointers
+ * - Sets the device name using @ref dev_set_name()
+ * - Initializes device properties and runtime PM using @ref pm_runtime_no_callbacks() and @ref pm_runtime_enable()
+ * - Reads channel configuration from device tree using @ref of_property_read_string(), @ref of_property_read_u32(), and @ref fls()
+ * - Check for overflows in size calculations using @ref __builtin_add_overflow() and @ref __builtin_mul_overflow()
+ * - Calculates total queue size using @ref tegra_ivc_total_queue_size()
+ * - Checks if buffers exceed IVC region using @ref __builtin_add_overflow()
+ * - Initializes IVC communication using @ref tegra_ivc_init()
+ * - Reset IVC communication using @ref tegra_ivc_reset()
+ * - Add device using @ref device_add()
+ *
+ * @param[in] bus       Pointer to the IVC bus
+ *                      Valid value: non-NULL
+ * @param[in] ch_node   Pointer to the device tree node
+ *                      Valid value: non-NULL
+ * @param[in] region    Pointer to the IVC region
+ *                      Valid value: non-NULL
+ * @param[in] camhsp    Pointer to the camera HSP context
+ *                      Valid value: non-NULL
+ *
+ * @retval (struct tegra_ivc_channel *) Pointer to the created IVC channel on success
+ * @retval ERR_PTR(-ENOMEM) If memory allocation fails
+ * @retval ERR_PTR(-ENOSPC) If buffers exceed IVC region
+ * @retval ERR_PTR(-EOVERFLOW) If size calculations overflow
+ * @retval ERR_PTR(-EIO) If IVC initialization fails
+ */
 static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		struct tegra_ivc_bus *bus, struct device_node *ch_node,
 		struct tegra_ivc_region *region,
@@ -297,6 +377,20 @@ error:
 	return ERR_PTR(ret);
 }
 
+/**
+ * @brief Notifies a channel of an IVC event
+ *
+ * This function handles notification of IVC events for a specific channel.
+ * It performs the following operations:
+ * - Checks if the channel has been notified using @ref tegra_ivc_channel_notified() or @ref tegra_ivc_notified()
+ * - Verifies if the channel is ready using @ref chan->is_ready
+ * - Uses RCU locking to safely access channel operations using @ref rcu_read_lock() and @ref rcu_dereference()
+ * - Calls the channel's notify callback if available using @ref ops->notify()
+ * - Unlocks the RCU using @ref rcu_read_unlock()
+ *
+ * @param[in] chan  Pointer to the IVC channel
+ *                  Valid value: non-NULL
+ */
 static void tegra_ivc_channel_notify(struct tegra_ivc_channel *chan)
 {
 	const struct tegra_ivc_channel_ops *ops;
@@ -319,6 +413,19 @@ static void tegra_ivc_channel_notify(struct tegra_ivc_channel *chan)
 	rcu_read_unlock();
 }
 
+/**
+ * @brief Notifies all channels in a group of an IVC event
+ *
+ * This function iterates through all channels in the IVC bus and notifies
+ * those belonging to the specified group of an IVC event.
+ * - Iterates through all channels using a linked list
+ * - For each channel in the specified group, calls @ref tegra_ivc_channel_notify()
+ *
+ * @param[in] bus    Pointer to the IVC bus
+ *                   Valid value: non-NULL
+ * @param[in] group  Group identifier to notify
+ *                   Valid value: any 16-bit value
+ */
 void tegra_ivc_bus_notify(struct tegra_ivc_bus *bus, u16 group)
 {
 	struct tegra_ivc_channel *chan;
@@ -335,6 +442,19 @@ struct device_type tegra_ivc_bus_dev_type = {
 };
 EXPORT_SYMBOL(tegra_ivc_bus_dev_type);
 
+/**
+ * @brief Releases resources associated with an IVC bus device
+ *
+ * This function is called when an IVC bus device is being destroyed.
+ * It performs cleanup of allocated resources.
+ * - Gets the bus context using @ref container_of()
+ * - Releases the device node using @ref of_node_put()
+ * - Frees DMA memory for each region using @ref dma_free_coherent()
+ * - Frees the bus memory using @ref kfree()
+ *
+ * @param[in] dev  Pointer to the device being released
+ *                 Valid value: non-NULL
+ */
 static void tegra_ivc_bus_release(struct device *dev)
 {
 	struct tegra_ivc_bus *bus =
@@ -355,6 +475,23 @@ static void tegra_ivc_bus_release(struct device *dev)
 	kfree(bus);
 }
 
+/**
+ * @brief Matches an IVC bus device with a driver
+ *
+ * This function determines if a driver can handle a specific IVC bus device.
+ * It performs the following operations:
+ * - Gets the IVC driver using @ref to_tegra_ivc_driver()
+ * - Checks if device type matches driver type
+ * - Uses @ref of_driver_match_device() for device tree matching
+ *
+ * @param[in] dev  Pointer to the device to match
+ *                 Valid value: non-NULL
+ * @param[in] drv  Pointer to the driver to match
+ *                 Valid value: non-NULL
+ *
+ * @retval 1  If the driver matches the device
+ * @retval 0  If the driver does not match the device
+ */
 #if defined(NV_BUS_TYPE_STRUCT_MATCH_HAS_CONST_DRV_ARG)
 static int tegra_ivc_bus_match(struct device *dev, const struct device_driver *drv)
 #else
@@ -368,6 +505,19 @@ static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
 	return of_driver_match_device(dev, drv);
 }
 
+/**
+ * @brief Stops and cleans up all channels in an IVC bus
+ *
+ * This function stops all IVC channels associated with a bus and releases their resources.
+ * It performs the following operations:
+ * - Iterates through all channels in the linked list
+ * - Disables runtime PM for each channel using @ref pm_runtime_disable()
+ * - Unregisters each channel device using @ref device_unregister()
+ * - Updates the linked list as channels are removed
+ *
+ * @param[in] bus  Pointer to the IVC bus
+ *                 Valid value: non-NULL
+ */
 static void tegra_ivc_bus_stop(struct tegra_ivc_bus *bus)
 {
 	while (bus->chans != NULL) {
@@ -379,6 +529,25 @@ static void tegra_ivc_bus_stop(struct tegra_ivc_bus *bus)
 	}
 }
 
+/**
+ * @brief Starts all channels in an IVC bus
+ *
+ * This function initializes and starts all IVC channels associated with a bus.
+ * It performs the following operations:
+ * - Iterates through device tree nodes to find channel specifications
+ * - Checks if each channel is enabled in the device tree
+ * - Creates each channel using @ref tegra_ivc_channel_create()
+ * - Adds each channel to the linked list of channels in the bus
+ * - Cleans up on error using @ref tegra_ivc_bus_stop()
+ *
+ * @param[in] bus     Pointer to the IVC bus
+ *                    Valid value: non-NULL
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval 0        On successful startup
+ * @retval (int)   Error code from @ref tegra_ivc_channel_create()
+ */
 static int tegra_ivc_bus_start(struct tegra_ivc_bus *bus,
 	struct camrtc_hsp *camhsp)
 {
@@ -426,9 +595,23 @@ error:
 	return ret;
 }
 
-/*
- * This is called during RTCPU boot to synchronize
- * (or re-synchronize in the case of PM resume).
+/**
+ * @brief Synchronizes IVC bus during RTCPU boot or PM resume
+ *
+ * This function is called during RTCPU boot to synchronize or re-synchronize
+ * the IVC bus in the case of PM resume. It sets up the IOVM for each
+ * IVC region.
+ * - Checks if the bus is valid using @ref IS_ERR_OR_NULL()
+ * - Iterates through all regions in the bus
+ * - Calls the provided IOVM setup function for each region
+ *
+ * @param[in] bus         Pointer to the IVC bus
+ *                        Valid value: any value including NULL or error pointer
+ * @param[in] iovm_setup  Function pointer to set up IOVM mappings
+ *                        Valid value: non-NULL function pointer
+ *
+ * @retval 0      On successful synchronization or if bus is NULL/error
+ * @retval -EIO   If IOVM setup fails
  */
 int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus,
 	int (*iovm_setup)(struct device*, dma_addr_t))
@@ -451,6 +634,25 @@ int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus,
 }
 EXPORT_SYMBOL(tegra_ivc_bus_boot_sync);
 
+/**
+ * @brief Probes an IVC bus device
+ *
+ * This function is called when a device is added to the IVC bus.
+ * It initializes the device and calls the driver's probe function.
+ * Currently, it only supports IVC channel devices.
+ * - Checks if the device is an IVC channel using its type
+ * - Gets the driver and channel from the device
+ * - Initializes the channel's mutex
+ * - Calls the driver's probe function if available
+ * - Sets up the RCU-protected operations pointer
+ *
+ * @param[in] dev  Pointer to the device to probe
+ *                 Valid value: non-NULL
+ *
+ * @retval 0        On successful probe
+ * @retval -ENXIO   If the device is not supported
+ * @retval (int)    Error code from driver's probe function
+ */
 static int tegra_ivc_bus_probe(struct device *dev)
 {
 	int ret = -ENXIO;
@@ -477,6 +679,22 @@ static int tegra_ivc_bus_probe(struct device *dev)
 	return ret;
 }
 
+/**
+ * @brief Removes an IVC bus device
+ *
+ * This function is called when a device is removed from the IVC bus.
+ * It cleans up the device and calls the driver's remove function.
+ * Currently, it only supports IVC channel devices.
+ * - Checks if the device is an IVC channel using its type
+ * - Gets the driver and channel from the device
+ * - Safely removes the RCU-protected operations pointer
+ * - Calls the driver's remove function if available
+ *
+ * @param[in] dev  Pointer to the device to remove
+ *                 Valid value: non-NULL
+ *
+ * @retval 0  On successful removal (for Linux v5.15+ only)
+ */
 #if defined(NV_BUS_TYPE_STRUCT_REMOVE_HAS_INT_RETURN_TYPE) /* Linux v5.15 */
 static int tegra_ivc_bus_remove(struct device *dev)
 #else
@@ -502,6 +720,26 @@ static void tegra_ivc_bus_remove(struct device *dev)
 #endif
 }
 
+/**
+ * @brief Sets the ready state for a child device in the IVC bus
+ *
+ * This function is called for each child device in the IVC bus to set its ready state.
+ * It notifies the driver about the readiness of the device.
+ * - Gets the driver for the device using @ref to_tegra_ivc_driver()
+ * - Processes ready state from the data parameter
+ * - If the device is an IVC channel, gets the channel using @ref to_tegra_ivc_channel()
+ * - Updates the ready flag and resets counter using @ref atomic_inc() and @ref smp_wmb()
+ * - If the driver is not NULL, reads the RCU-protected operations pointer using @ref rcu_read_lock() and @ref rcu_dereference()
+ * - Calls the driver's ready callback if available using @ref ops->ready()
+ * - Releases the RCU read lock using @ref rcu_read_unlock()
+ *
+ * @param[in] dev   Pointer to the child device
+ *                  Valid value: non-NULL
+ * @param[in] data  Pointer to the ready state data (boolean)
+ *                  Valid value: NULL (interpreted as true) or pointer to boolean
+ *
+ * @retval 0  Always returns success
+ */
 static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
 {
 	struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
@@ -538,18 +776,60 @@ struct bus_type tegra_ivc_bus_type = {
 };
 EXPORT_SYMBOL(tegra_ivc_bus_type);
 
+/**
+ * @brief Registers an IVC driver with the IVC bus
+ *
+ * This function registers a driver with the IVC bus system.
+ * It allows the driver to handle IVC channel devices.
+ * - Calls @ref driver_register() to register the driver with the kernel
+ *
+ * @param[in] drv  Pointer to the IVC driver to register
+ *                 Valid value: non-NULL
+ *
+ * @retval (int)    return value from @ref driver_register()
+ */
 int tegra_ivc_driver_register(struct tegra_ivc_driver *drv)
 {
 	return driver_register(&drv->driver);
 }
 EXPORT_SYMBOL(tegra_ivc_driver_register);
 
+/**
+ * @brief Unregisters an IVC driver from the IVC bus
+ *
+ * This function unregisters a driver from the IVC bus system.
+ * It removes the driver's ability to handle IVC channel devices.
+ * - Calls @ref driver_unregister() to unregister the driver from the kernel
+ *
+ * @param[in] drv  Pointer to the IVC driver to unregister
+ *                 Valid value: non-NULL
+ */
 void tegra_ivc_driver_unregister(struct tegra_ivc_driver *drv)
 {
 	return driver_unregister(&drv->driver);
 }
 EXPORT_SYMBOL(tegra_ivc_driver_unregister);
 
+/**
+ * @brief Parses IVC regions from device tree
+ *
+ * This function parses IVC region specifications from the device tree.
+ * It allocates memory for each region and initializes region parameters.
+ * - Iterates through device tree nodes to find channel specifications
+ * - Validates region specifications
+ * - Counts frames and calculates sizes
+ * - Allocates DMA-coherent memory for each region
+ * - Initializes region parameters
+ *
+ * @param[in] bus       Pointer to the IVC bus
+ *                      Valid value: non-NULL
+ * @param[in] dev_node  Pointer to the device tree node
+ *                      Valid value: non-NULL
+ *
+ * @retval 0        On successful parsing
+ * @retval -EINVAL  If region specification is invalid
+ * @retval -ENOMEM  If memory allocation fails
+ */
 static int tegra_ivc_bus_parse_regions(struct tegra_ivc_bus *bus,
 					struct device_node *dev_node)
 {
@@ -633,6 +913,17 @@ static int tegra_ivc_bus_parse_regions(struct tegra_ivc_bus *bus,
 	return 0;
 }
 
+/**
+ * @brief Counts the number of IVC regions in a device tree node
+ *
+ * This function counts the number of IVC regions specified in a device tree node.
+ * It uses @ref of_parse_phandle_with_fixed_args() to iterate through all ivc-channels.
+ *
+ * @param[in] dev_node  Pointer to the device tree node
+ *                      Valid value: non-NULL
+ *
+ * @retval (unsigned)  The number of IVC regions found
+ */
 static unsigned tegra_ivc_bus_count_regions(const struct device_node *dev_node)
 {
 	unsigned i;
@@ -644,6 +935,27 @@ static unsigned tegra_ivc_bus_count_regions(const struct device_node *dev_node)
 	return i;
 }
 
+/**
+ * @brief Creates and initializes an IVC bus
+ *
+ * This function creates and initializes an IVC bus with the specified parameters.
+ * It performs the following operations:
+ * - Counts the number of regions using @ref tegra_ivc_bus_count_regions()
+ * - Allocates memory for the bus and regions using @ref kzalloc()
+ * - Initializes bus properties and device parameters
+ * - Parses regions using @ref tegra_ivc_bus_parse_regions()
+ * - Adds the device using @ref device_add()
+ * - Starts the bus using @ref tegra_ivc_bus_start()
+ *
+ * @param[in] dev     Pointer to the parent device
+ *                    Valid value: non-NULL
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval struct tegra_ivc_bus*  Pointer to the created IVC bus on success
+ * @retval ERR_PTR(-ENOMEM)       If memory allocation fails
+ * @retval ERR_PTR(ret)           Error code from one of the called functions
+ */
 struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev,
 	struct camrtc_hsp *camhsp)
 {
@@ -694,8 +1006,19 @@ error:
 }
 EXPORT_SYMBOL(tegra_ivc_bus_create);
 
-/*
- * Communicate RTCPU UP/DOWN state to IVC devices.
+/**
+ * @brief Communicates RTCPU UP/DOWN state to IVC devices
+ *
+ * This function communicates the RTCPU UP/DOWN state to IVC devices.
+ * It notifies all child devices of the bus about the RTCPU state.
+ * - Checks if the bus is valid using @ref IS_ERR_OR_NULL()
+ * - Calls @ref device_for_each_child() with @ref tegra_ivc_bus_ready_child()
+ * - If online, notifies all channels using @ref tegra_ivc_bus_notify()
+ *
+ * @param[in] bus     Pointer to the IVC bus
+ *                    Valid value: any value including NULL or error pointer
+ * @param[in] online  Boolean indicating if RTCPU is online (true) or offline (false)
+ *                    Valid value: true or false
  */
 void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus, bool online)
 {
@@ -709,6 +1032,19 @@ void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus, bool online)
 }
 EXPORT_SYMBOL(tegra_ivc_bus_ready);
 
+/**
+ * @brief Destroys an IVC bus
+ *
+ * This function destroys an IVC bus and releases all associated resources.
+ * It performs the following operations:
+ * - Checks if the bus is valid using @ref IS_ERR_OR_NULL() and returns if invalid
+ * - Disables runtime PM for the device using @ref pm_runtime_disable()
+ * - Stops all channels using @ref tegra_ivc_bus_stop()
+ * - Unregisters the device using @ref device_unregister()
+ *
+ * @param[in] bus  Pointer to the IVC bus
+ *                 Valid value: any value including NULL or error pointer
+ */
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 {
 	if (IS_ERR_OR_NULL(bus))
@@ -720,11 +1056,26 @@ void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 }
 EXPORT_SYMBOL(tegra_ivc_bus_destroy);
 
+/**
+ * @brief Initializes the Tegra IVC bus subsystem
+ *
+ * This function initializes the IVC bus subsystem by registering the IVC bus type using
+ * @ref bus_register()
+ * @pre It is called during module initialization.
+ *
+ * @retval (int)    return value from @ref bus_register()
+ */
 static __init int tegra_ivc_bus_init(void)
 {
 	return bus_register(&tegra_ivc_bus_type);
 }
 
+/**
+ * @brief Cleans up the Tegra IVC bus subsystem
+ *
+ * This function performs cleanup of the IVC bus subsystem by unregistering the IVC bus type using @ref bus_unregister()
+ * @pre It is called during module exit.
+ */
 static __exit void tegra_ivc_bus_exit(void)
 {
 	bus_unregister(&tegra_ivc_bus_type);

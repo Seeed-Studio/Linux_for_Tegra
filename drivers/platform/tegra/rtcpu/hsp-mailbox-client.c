@@ -54,6 +54,26 @@ struct camrtc_hsp_op {
 	int (*set_operating_point)(struct camrtc_hsp *, u32 operating_point, long *timeout);
 };
 
+/**
+ * @brief Sends a request message over the HSP mailbox
+ *
+ * This function sends a request message over the HSP mailbox and handles error reporting.
+ * It acts as a wrapper for the implementation-specific send operation.
+ * - Calls the implementation-specific send operation using @ref camhsp->op->send()
+ * - Performs error reporting using @ref dev_err() or @ref dev_dbg() based on the return value
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ * @param[in] request Request message to send
+ *                    Valid value: any integer value
+ * @param[in,out] timeout Pointer to timeout value in jiffies
+ *                       Valid value: non-NULL
+ *
+ * @retval >=0      On successful transmission
+ * @retval -ETIME   If the mailbox is not empty within the timeout period
+ * @retval -EINVAL  If the mailbox channel is invalid
+ * @retval -ENOBUFS If there is no space left in the mailbox message queue
+ */
 static int camrtc_hsp_send(struct camrtc_hsp *camhsp,
 		int request, long *timeout)
 {
@@ -75,6 +95,26 @@ static int camrtc_hsp_send(struct camrtc_hsp *camhsp,
 	return ret;
 }
 
+/**
+ * @brief Receives a response message from the HSP mailbox
+ *
+ * This function waits for a response message from the HSP mailbox within
+ * the specified timeout period.
+ * - Waits for a response using @ref wait_event_timeout()
+ * - Atomically exchanges the response value using @ref atomic_xchg()
+ * - Reports a timeout error using @ref dev_err() if no response is received
+ * - Logs the response using @ref dev_dbg()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ * @param[in] command The original command sent
+ *                    Valid value: any integer value
+ * @param[in,out] timeout Pointer to timeout value in jiffies
+ *                       Valid value: non-NULL
+ *
+ * @retval >=0         The response value on success
+ * @retval -ETIMEDOUT  If no response is received within the timeout period
+ */
 static int camrtc_hsp_recv(struct camrtc_hsp *camhsp,
 		int command, long *timeout)
 {
@@ -96,6 +136,23 @@ static int camrtc_hsp_recv(struct camrtc_hsp *camhsp,
 	return response;
 }
 
+/**
+ * @brief Sends a command and waits for a response from the HSP mailbox
+ *
+ * This function combines sending a command and receiving a response in a single call.
+ * - Sends the command using @ref camrtc_hsp_send()
+ * - If the send operation is successful, waits for a response using @ref camrtc_hsp_recv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in] command  Command to send
+ *                     Valid value: any integer value
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval >=0         The response value on success
+ * @retval <0          Error code from @ref camrtc_hsp_send() or @ref camrtc_hsp_recv()
+ */
 static int camrtc_hsp_sendrecv(struct camrtc_hsp *camhsp,
 		int command, long *timeout)
 {
@@ -110,6 +167,23 @@ static int camrtc_hsp_sendrecv(struct camrtc_hsp *camhsp,
 /* ---------------------------------------------------------------------- */
 /* Protocol nvidia,tegra-camrtc-hsp-vm */
 
+/**
+ * @brief Handles notification of mailbox receive events
+ *
+ * This function is called by the mailbox framework when data is received.
+ * It processes the received message and performs the appropriate action:
+ * - Retrieves the HSP context using @ref dev_get_drvdata()
+ * - Extracts status and group information from the message
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Handles unknown messages using @ref dev_dbg()
+ * - Calls the group notification callback if a group notification is received
+ * - For response messages, sets the response and wakes up waiters using @ref atomic_set() and @ref wake_up()
+ *
+ * @param[in] cl    Pointer to the mailbox client
+ *                  Valid value: non-NULL
+ * @param[in] data  Received message data
+ *                  Valid value: any value
+ */
 static void camrtc_hsp_rx_full_notify(mbox_client *cl, void *data)
 {
 	struct camrtc_hsp *camhsp = dev_get_drvdata(cl->dev);
@@ -142,6 +216,20 @@ static void camrtc_hsp_rx_full_notify(mbox_client *cl, void *data)
 	}
 }
 
+/**
+ * @brief Handles notification of mailbox transmit completion
+ *
+ * This function is called by the mailbox framework when the transmit queue
+ * is emptied. It signals completion to any waiting threads.
+ * - Completes the "emptied" completion using @ref complete()
+ *
+ * @param[in] cl          Pointer to the mailbox client
+ *                        Valid value: non-NULL
+ * @param[in] data        Data from the mailbox controller
+ *                        Valid value: any value
+ * @param[in] empty_value Completion status
+ *                        Valid value: any value
+ */
 static void camrtc_hsp_tx_empty_notify(mbox_client *cl, void *data, int empty_value)
 {
 	struct camrtc_hsp *camhsp = dev_get_drvdata(cl->dev);
@@ -183,6 +271,25 @@ static const struct camrtc_hsp_op camrtc_hsp_vm_ops = {
 	.set_operating_point = camrtc_hsp_vm_set_operating_point,
 };
 
+/**
+ * @brief Sends a message over the VM HSP mailbox
+ *
+ * This function sends a message over the VM HSP mailbox using the provided channel.
+ * It performs the following operations:
+ * - Acquires the send lock using @ref spin_lock_irqsave()
+ * - Clears any previous response using @ref atomic_set()
+ * - Sends the message using @ref mbox_send_message()
+ * - Releases the send lock using @ref spin_unlock_irqrestore()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in] request  Message to send
+ *                     Valid value: any integer value
+ * @param[in,out] timeout Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval (int) response from @ref mbox_send_message()
+ */
 static int camrtc_hsp_vm_send(struct camrtc_hsp *camhsp,
 		int request, long *timeout)
 {
@@ -197,12 +304,37 @@ static int camrtc_hsp_vm_send(struct camrtc_hsp *camhsp,
 	return response;
 }
 
+/**
+ * @brief Rings a group doorbell by sending an IRQ message
+ *
+ * This function rings a group doorbell by sending an IRQ message to the RTCPU.
+ * It performs the following operations:
+ * - Calls @ref camrtc_hsp_vm_send_irqmsg() to send an IRQ message
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ * @param[in] group   Group identifier to ring the doorbell for
+ *                    Valid value: any 16-bit value
+ */
 static void camrtc_hsp_vm_group_ring(struct camrtc_hsp *camhsp,
 		u16 group)
 {
 	camrtc_hsp_vm_send_irqmsg(camhsp);
 }
 
+/**
+ * @brief Sends an IRQ message to the RTCPU via HSP
+ *
+ * This function sends an interrupt request message to the RTCPU over the HSP
+ * mailbox. It performs the following operations:
+ * - Creates an IRQ message with parameter value 1 using @ref CAMRTC_HSP_MSG()
+ * - Acquires a spinlock to ensure thread safety using @ref spin_lock_irqsave()
+ * - Sends the message using @ref mbox_send_message()
+ * - Releases the spinlock using @ref spin_unlock_irqrestore()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ */
 static void camrtc_hsp_vm_send_irqmsg(struct camrtc_hsp *camhsp)
 {
 	int irqmsg = CAMRTC_HSP_MSG(CAMRTC_HSP_IRQ, 1);
@@ -214,6 +346,28 @@ static void camrtc_hsp_vm_send_irqmsg(struct camrtc_hsp *camhsp)
 	spin_unlock_irqrestore(&camhsp->sendlock, flags);
 }
 
+/**
+ * @brief Sends a message and waits for a response over the VM HSP mailbox
+ *
+ * This function sends a message and waits for a response using the common
+ * send/receive function. It performs additional validation on the response
+ * message to ensure it matches the request. The operations include:
+ * - Calls @ref camrtc_hsp_sendrecv() to send the message and receive a response
+ * - Validates that the message ID in the response matches the request using @ref CAMRTC_HSP_MSG_ID()
+ * - Reports errors using @ref dev_err() if the response doesn't match the request
+ * - Extracts and returns only the parameter portion of the response using @ref CAMRTC_HSP_MSG_PARAM()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in] request  Request message to send
+ *                     Valid value: any integer value
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval >=0        The parameter portion of the response message
+ * @retval <0         Error code from @ref camrtc_hsp_sendrecv()
+ * @retval -EIO       If the response message ID doesn't match the request
+ */
 static int camrtc_hsp_vm_sendrecv(struct camrtc_hsp *camhsp,
 		int request, long *timeout)
 {
@@ -233,6 +387,23 @@ static int camrtc_hsp_vm_sendrecv(struct camrtc_hsp *camhsp,
 	return CAMRTC_HSP_MSG_PARAM(response);
 }
 
+/**
+ * @brief Reads boot log messages from the RTCPU
+ *
+ * This function reads and processes boot log messages from the RTCPU during
+ * the initialization process. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Uses @ref camrtc_hsp_recv() to wait for and receive boot log messages
+ * - Processes different types of boot messages (complete, stage, error)
+ * - Logs messages at appropriate log levels using @ref dev_info(), @ref dev_dbg(), and @ref dev_err()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval 0          On successful completion of the boot log reading
+ * @retval -ETIMEDOUT If timed out waiting for boot messages
+ * @retval -EINVAL    If received a boot error message or invalid HSP context
+ */
 static int camrtc_hsp_vm_read_boot_log(struct camrtc_hsp *camhsp)
 {
 	uint32_t boot_log;
@@ -273,6 +444,25 @@ static int camrtc_hsp_vm_read_boot_log(struct camrtc_hsp *camhsp)
 	return 0U;
 }
 
+/**
+ * @brief Synchronizes with the RTCPU via HSP
+ *
+ * This function performs the initial handshake with the RTCPU by reading
+ * boot logs and establishing communication. It performs the following operations:
+ * - Reads boot logs using @ref camrtc_hsp_vm_read_boot_log()
+ * - Logs a warning if boot logs cannot be read but continues with handshake
+ * - Sends a hello message using @ref camrtc_hsp_vm_hello() to establish communication
+ * - Stores the cookie (response) returned from hello message
+ * - Negotiates protocol version using @ref camrtc_hsp_vm_protocol()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval >=0        On successful synchronization (protocol version)
+ * @retval <0         Error code from @ref camrtc_hsp_vm_hello() or @ref camrtc_hsp_vm_protocol()
+ */
 static int camrtc_hsp_vm_sync(struct camrtc_hsp *camhsp, long *timeout)
 {
 	int response;
@@ -295,6 +485,18 @@ static int camrtc_hsp_vm_sync(struct camrtc_hsp *camhsp, long *timeout)
 	return response;
 }
 
+/**
+ * @brief Generates a cookie value for HSP handshake
+ *
+ * This function generates a 24-bit cookie value used for handshake and
+ * subsequent communication with the RTCPU. The cookie serves as an
+ * identifier for the session. It performs the following operations:
+ * - Uses @ref sched_clock() to get a timestamp
+ * - Extracts the lower bits using @ref CAMRTC_HSP_MSG_PARAM()
+ * - Ensures the cookie is never zero by incrementing if needed
+ *
+ * @return u32 Cookie value (non-zero 24-bit value)
+ */
 static u32 camrtc_hsp_vm_cookie(void)
 {
 	u32 value = CAMRTC_HSP_MSG_PARAM(sched_clock() >> 5U);
@@ -305,6 +507,24 @@ static u32 camrtc_hsp_vm_cookie(void)
 	return value;
 }
 
+/**
+ * @brief Sends a HELLO message to the RTCPU and waits for echo
+ *
+ * This function initiates communication with the RTCPU by sending a HELLO
+ * message with a unique cookie and waiting for the same message to be echoed
+ * back. It performs the following operations:
+ * - Creates a HELLO message with a unique cookie using @ref CAMRTC_HSP_MSG() and @ref camrtc_hsp_vm_cookie()
+ * - Sends the message using @ref camrtc_hsp_send()
+ * - Repeatedly calls @ref camrtc_hsp_recv() until the echoed message is received or timeout
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval request  On successful handshake (value of the HELLO message with cookie)
+ * @retval <0       Error code from @ref camrtc_hsp_send() or @ref camrtc_hsp_recv()
+ */
 static int camrtc_hsp_vm_hello(struct camrtc_hsp *camhsp, long *timeout)
 {
 	int request = CAMRTC_HSP_MSG(CAMRTC_HSP_HELLO, camrtc_hsp_vm_cookie());
@@ -328,6 +548,22 @@ static int camrtc_hsp_vm_hello(struct camrtc_hsp *camhsp, long *timeout)
 	return response;
 }
 
+/**
+ * @brief Negotiates protocol version with RTCPU
+ *
+ * This function negotiates the protocol version to use for communication with
+ * the RTCPU. It performs the following operations:
+ * - Creates a protocol message with the driver's version using @ref CAMRTC_HSP_MSG()
+ * - Sends the message and waits for response using @ref camrtc_hsp_vm_sendrecv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval >=0        On successful negotiation (protocol version)
+ * @retval <0         Error code from @ref camrtc_hsp_vm_sendrecv()
+ */
 static int camrtc_hsp_vm_protocol(struct camrtc_hsp *camhsp, long *timeout)
 {
 	int request = CAMRTC_HSP_MSG(CAMRTC_HSP_PROTOCOL,
@@ -336,6 +572,21 @@ static int camrtc_hsp_vm_protocol(struct camrtc_hsp *camhsp, long *timeout)
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+/**
+ * @brief Resumes the RTCPU firmware
+ *
+ * This function resumes the RTCPU firmware by sending a RESUME message with
+ * the current cookie value. It performs the following operations:
+ * - Creates a RESUME message with the current cookie using @ref CAMRTC_HSP_MSG()
+ * - Sends the message and waits for response using @ref camrtc_hsp_vm_sendrecv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval (int)      Error code from @ref camrtc_hsp_vm_sendrecv()
+ */
 static int camrtc_hsp_vm_resume(struct camrtc_hsp *camhsp, long *timeout)
 {
 	int request = CAMRTC_HSP_MSG(CAMRTC_HSP_RESUME, camhsp->cookie);
@@ -343,6 +594,21 @@ static int camrtc_hsp_vm_resume(struct camrtc_hsp *camhsp, long *timeout)
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+/**
+ * @brief Suspends the RTCPU firmware
+ *
+ * This function suspends the RTCPU firmware by sending a SUSPEND message with
+ * a zero cookie value. It performs the following operations:
+ * - Creates a SUSPEND message with a zero cookie using @ref CAMRTC_HSP_MSG()
+ * - Sends the message and waits for response using @ref camrtc_hsp_vm_sendrecv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval (int)      Error code from @ref camrtc_hsp_vm_sendrecv()
+ */
 static int camrtc_hsp_vm_suspend(struct camrtc_hsp *camhsp, long *timeout)
 {
 	u32 request = CAMRTC_HSP_MSG(CAMRTC_HSP_SUSPEND, 0);
@@ -350,6 +616,21 @@ static int camrtc_hsp_vm_suspend(struct camrtc_hsp *camhsp, long *timeout)
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+/**
+ * @brief Sends a BYE message to the RTCPU
+ *
+ * This function sends a BYE message to the RTCPU to terminate the communication
+ * session. It performs the following operations:
+ * - Creates a BYE message with a zero cookie using @ref CAMRTC_HSP_MSG()
+ * - Sends the message and waits for response using @ref camrtc_hsp_vm_sendrecv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval (int)      Error code from @ref camrtc_hsp_vm_sendrecv()
+ */
 static int camrtc_hsp_vm_bye(struct camrtc_hsp *camhsp, long *timeout)
 {
 	u32 request = CAMRTC_HSP_MSG(CAMRTC_HSP_BYE, 0);
@@ -359,6 +640,23 @@ static int camrtc_hsp_vm_bye(struct camrtc_hsp *camhsp, long *timeout)
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+/**
+ * @brief Sets up the channel for communication with the RTCPU
+ *
+ * This function sets up the channel for communication with the RTCPU by sending
+ * a CH_SETUP message with the provided IOVA value. It performs the following operations:
+ * - Creates a CH_SETUP message with the IOVA value using @ref CAMRTC_HSP_MSG()
+ * - Sends the message and waits for response using @ref camrtc_hsp_vm_sendrecv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in] iova     IOVA value to set up the channel with
+ *                     Valid value: any DMA address
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval (int)      Error code from @ref camrtc_hsp_vm_sendrecv()
+ */
 static int camrtc_hsp_vm_ch_setup(struct camrtc_hsp *camhsp,
 		dma_addr_t iova, long *timeout)
 {
@@ -367,6 +665,23 @@ static int camrtc_hsp_vm_ch_setup(struct camrtc_hsp *camhsp,
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+/**
+ * @brief Pings the RTCPU
+ *
+ * This function pings the RTCPU by sending a PING message with the provided data.
+ * It performs the following operations:
+ * - Creates a PING message with the provided data using @ref CAMRTC_HSP_MSG()
+ * - Sends the message and waits for response using @ref camrtc_hsp_vm_sendrecv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in] data     Data to send in the PING message
+ *                     Valid value: any 32-bit value
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval (int)      Error code from @ref camrtc_hsp_vm_sendrecv()
+ */
 static int camrtc_hsp_vm_ping(struct camrtc_hsp *camhsp, u32 data,
 		long *timeout)
 {
@@ -375,6 +690,23 @@ static int camrtc_hsp_vm_ping(struct camrtc_hsp *camhsp, u32 data,
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+/**
+ * @brief Gets the firmware hash from the RTCPU
+ *
+ * This function gets the firmware hash from the RTCPU by sending a FW_HASH
+ * message with the provided index. It performs the following operations:
+ * - Creates a FW_HASH message with the provided index using @ref CAMRTC_HSP_MSG()
+ * - Sends the message and waits for response using @ref camrtc_hsp_vm_sendrecv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in] index    Index of the firmware hash to get
+ *                     Valid value: any 32-bit value
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval (int)      Error code from @ref camrtc_hsp_vm_sendrecv()
+ */
 static int camrtc_hsp_vm_get_fw_hash(struct camrtc_hsp *camhsp, u32 index,
 		long *timeout)
 {
@@ -383,6 +715,23 @@ static int camrtc_hsp_vm_get_fw_hash(struct camrtc_hsp *camhsp, u32 index,
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+/**
+ * @brief Sets the operating point for the RTCPU
+ *
+ * This function sets the operating point for the RTCPU by sending a SET_OP_POINT
+ * message with the provided operating point value. It performs the following operations:
+ * - Creates a SET_OP_POINT message with the provided operating point value using @ref CAMRTC_HSP_MSG()
+ * - Sends the message and waits for response using @ref camrtc_hsp_vm_sendrecv()
+ *
+ * @param[in] camhsp   Pointer to the camera HSP context
+ *                     Valid value: non-NULL
+ * @param[in] operating_point  Operating point value to set
+ *                     Valid value: any 32-bit value
+ * @param[in,out] timeout  Pointer to timeout value in jiffies
+ *                        Valid value: non-NULL
+ *
+ * @retval (int)      Error code from @ref camrtc_hsp_vm_sendrecv()
+ */
 static int camrtc_hsp_vm_set_operating_point(struct camrtc_hsp *camhsp, u32 operating_point,
 		long *timeout)
 {
@@ -391,6 +740,23 @@ static int camrtc_hsp_vm_set_operating_point(struct camrtc_hsp *camhsp, u32 oper
 	return camrtc_hsp_vm_sendrecv(camhsp, request, timeout);
 }
 
+/**
+ * @brief Probes for a VM HSP device
+ *
+ * This function probes for a VM HSP device by searching through the device tree
+ * for a compatible node with the name "nvidia,tegra-camrtc-hsp-vm". It performs
+ * the following operations:
+ * - Gets the parent device node using @ref of_node_get()
+ * - Searches for a child node with the compatible string "nvidia,tegra-camrtc-hsp-vm"
+ * - Returns the first available child node if found
+ * - Returns NULL if no compatible node is found
+ *
+ * @param[in] parent  Pointer to the parent device node
+ *                    Valid value: non-NULL
+ *
+ * @retval Pointer to the available child node if found
+ * @retval NULL if no compatible node is found
+ */
 static struct device_node *hsp_vm_get_available(const struct device_node *parent)
 {
 	const char *compatible = "nvidia,tegra-camrtc-hsp-vm";
@@ -404,6 +770,24 @@ static struct device_node *hsp_vm_get_available(const struct device_node *parent
 	return child;
 }
 
+/**
+ * @brief Probes and initializes an HSP VM device
+ *
+ * This function probes and initializes a VM HSP device. It performs the following operations:
+ * - Gets an available HSP VM device node using @ref hsp_vm_get_available()
+ * - Requests mailbox channels for RX and TX using @ref mbox_request_channel_byname()
+ * - Sets up the operations structure and device name using @ref dev_set_name()
+ * - Reports errors using @ref dev_err() if channel requests fail
+ * - Releases resources on failure using @ref of_node_put()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval 0           On successful probe
+ * @retval -ENOTSUPP   If no compatible HSP VM device is found
+ * @retval -EPROBE_DEFER  If probe should be deferred
+ * @retval (int)       Error code from @ref mbox_request_channel_byname()
+ */
 static int camrtc_hsp_vm_probe(struct camrtc_hsp *camhsp)
 {
 	struct device_node *np = camhsp->dev.parent->of_node;
@@ -450,6 +834,19 @@ fail:
 /* ---------------------------------------------------------------------- */
 /* Public interface */
 
+/**
+ * @brief Rings a group doorbell
+ *
+ * This function rings a group doorbell by calling the group_ring operation
+ * on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Calls the group_ring operation on the HSP context using @ref group_ring()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ * @param[in] group   Group identifier to ring the doorbell for
+ *                    Valid value: any 16-bit value
+ */
 void camrtc_hsp_group_ring(struct camrtc_hsp *camhsp,
 		u16 group)
 {
@@ -458,8 +855,21 @@ void camrtc_hsp_group_ring(struct camrtc_hsp *camhsp,
 }
 EXPORT_SYMBOL(camrtc_hsp_group_ring);
 
-/*
- * Synchronize the HSP
+/**
+ * @brief Synchronizes the HSP
+ *
+ * This function synchronizes the HSP by calling the sync operation
+ * on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Locks the mutex using @ref mutex_lock()
+ * - Calls the sync operation on the HSP context using @ref sync()
+ * - Unlocks the mutex using @ref mutex_unlock()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval (int)      Return code from @ref sync()
+ * @retval -EINVAL    If the HSP context is NULL
  */
 int camrtc_hsp_sync(struct camrtc_hsp *camhsp)
 {
@@ -478,8 +888,21 @@ int camrtc_hsp_sync(struct camrtc_hsp *camhsp)
 }
 EXPORT_SYMBOL(camrtc_hsp_sync);
 
-/*
- * Resume: resume the firmware
+/**
+ * @brief Resumes the HSP
+ *
+ * This function resumes the HSP by calling the resume operation
+ * on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Locks the mutex using @ref mutex_lock()
+ * - Calls the resume operation on the HSP context using @ref resume()
+ * - Unlocks the mutex using @ref mutex_unlock()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval (int)      Return code from @ref resume()
+ * @retval -EINVAL    If the HSP context is NULL
  */
 int camrtc_hsp_resume(struct camrtc_hsp *camhsp)
 {
@@ -498,8 +921,22 @@ int camrtc_hsp_resume(struct camrtc_hsp *camhsp)
 }
 EXPORT_SYMBOL(camrtc_hsp_resume);
 
-/*
- * Suspend: set firmware to idle.
+/**
+ * @brief Suspends the HSP
+ *
+ * This function suspends the HSP by calling the suspend operation
+ * on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Locks the mutex using @ref mutex_lock()
+ * - Calls the suspend operation on the HSP context using @ref suspend()
+ * - Unlocks the mutex using @ref mutex_unlock()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval (int)      Return code from @ref suspend()
+ * @retval -EINVAL    If the HSP context is NULL
+ * @retval -EIO       If the suspend operation fails
  */
 int camrtc_hsp_suspend(struct camrtc_hsp *camhsp)
 {
@@ -522,8 +959,24 @@ int camrtc_hsp_suspend(struct camrtc_hsp *camhsp)
 }
 EXPORT_SYMBOL(camrtc_hsp_suspend);
 
-/*
- * Set Operating Point: set operating point
+/**
+ * @brief Sets the operating point for the HSP
+ *
+ * This function sets the operating point for the HSP by calling the set_operating_point
+ * operation on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Locks the mutex using @ref mutex_lock()
+ * - Calls the set_operating_point operation on the HSP context using @ref set_operating_point()
+ * - Unlocks the mutex using @ref mutex_unlock()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ * @param[in] operating_point  Operating point value to set
+ *                    Valid value: any 32-bit value
+ *
+ * @retval (int)      Return code from @ref set_operating_point()
+ * @retval -EINVAL    If the HSP context is NULL
+ * @retval -EIO       If the set_operating_point operation fails
  */
 int camrtc_hsp_set_operating_point(struct camrtc_hsp *camhsp, uint32_t operating_point)
 {
@@ -546,8 +999,21 @@ int camrtc_hsp_set_operating_point(struct camrtc_hsp *camhsp, uint32_t operating
 }
 EXPORT_SYMBOL(camrtc_hsp_set_operating_point);
 
-/*
- * Bye: tell firmware that VM mappings are going away
+/**
+ * @brief Sends a BYE message to the HSP
+ *
+ * This function sends a BYE message to the HSP by calling the bye operation
+ * on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Locks the mutex using @ref mutex_lock()
+ * - Calls the bye operation on the HSP context using @ref bye()
+ * - Unlocks the mutex using @ref mutex_unlock()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval (int)      Return code from @ref bye()
+ * @retval -EINVAL    If the HSP context is NULL
  */
 int camrtc_hsp_bye(struct camrtc_hsp *camhsp)
 {
@@ -569,6 +1035,24 @@ int camrtc_hsp_bye(struct camrtc_hsp *camhsp)
 }
 EXPORT_SYMBOL(camrtc_hsp_bye);
 
+/**
+ * @brief Sets up the HSP channel
+ *
+ * This function sets up the HSP channel by calling the ch_setup operation
+ * on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Locks the mutex using @ref mutex_lock()
+ * - Calls the ch_setup operation on the HSP context using @ref ch_setup()
+ * - Unlocks the mutex using @ref mutex_unlock()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ * @param[in] iova    IOVA value to set
+ *                    Valid value: any 32-bit value
+ *
+ * @retval (int)      Error code from @ref ch_setup()
+ * @retval -EINVAL    If the HSP context is NULL or the IOVA is invalid
+ */
 int camrtc_hsp_ch_setup(struct camrtc_hsp *camhsp, dma_addr_t iova)
 {
 	long timeout;
@@ -595,6 +1079,26 @@ int camrtc_hsp_ch_setup(struct camrtc_hsp *camhsp, dma_addr_t iova)
 }
 EXPORT_SYMBOL(camrtc_hsp_ch_setup);
 
+/**
+ * @brief Pings the HSP
+ *
+ * This function pings the HSP by calling the ping operation
+ * on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Locks the mutex using @ref mutex_lock()
+ * - Calls the ping operation on the HSP context using @ref ping()
+ * - Unlocks the mutex using @ref mutex_unlock()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ * @param[in] data    Data value to ping
+ *                    Valid value: any 32-bit value
+ * @param[in] timeout Timeout value to use
+ *                    Valid value: any 32-bit value
+ *
+ * @retval (int)      Error code from @ref ping()
+ * @retval -EINVAL    If the HSP context is NULL
+ */
 int camrtc_hsp_ping(struct camrtc_hsp *camhsp, u32 data, long timeout)
 {
 	long left = timeout;
@@ -614,6 +1118,28 @@ int camrtc_hsp_ping(struct camrtc_hsp *camhsp, u32 data, long timeout)
 }
 EXPORT_SYMBOL(camrtc_hsp_ping);
 
+/**
+ * @brief Gets the firmware hash for the HSP
+ *
+ * This function gets the firmware hash for the HSP by calling the get_fw_hash operation
+ * on the HSP context. It performs the following operations:
+ * - Validates the HSP context using @ref WARN_ON()
+ * - Locks the mutex using @ref mutex_lock()
+ * - Calls the get_fw_hash operation on the HSP context using @ref get_fw_hash()
+ * - Unlocks the mutex using @ref mutex_unlock()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ * @param[in] hash    Hash value to get
+ *                    Valid value: any 32-bit value
+ * @param[in] hash_size  Size of the hash value
+ *                    Valid value: any 32-bit value
+ *
+ * @retval (int)      Error code from @ref get_fw_hash()
+ * @retval -EINVAL    If the HSP context is NULL
+ * @retval -EIO       If the get_fw_hash operation fails
+ * @retval 0          On success
+ */
 int camrtc_hsp_get_fw_hash(struct camrtc_hsp *camhsp,
 		u8 hash[], size_t hash_size)
 {
@@ -652,6 +1178,19 @@ static const struct device_type camrtc_hsp_combo_dev_type = {
 	.name	= "camrtc-hsp-protocol",
 };
 
+/**
+ * @brief Releases resources for a camera HSP combo device
+ *
+ * This function is called when a camera HSP combo device is being destroyed.
+ * It performs the following operations:
+ * - Gets the camera HSP context using @ref container_of()
+ * - Frees the RX and TX mailbox channels using @ref mbox_free_channel() if they exist
+ * - Releases the device node using @ref of_node_put()
+ * - Frees the camera HSP context using @ref kfree()
+ *
+ * @param[in] dev  Pointer to the device being released
+ *                 Valid value: non-NULL
+ */
 static void camrtc_hsp_combo_dev_release(struct device *dev)
 {
 	struct camrtc_hsp *camhsp = container_of(dev, struct camrtc_hsp, dev);
@@ -665,6 +1204,23 @@ static void camrtc_hsp_combo_dev_release(struct device *dev)
 	kfree(camhsp);
 }
 
+/**
+ * @brief Probes for a camera HSP device
+ *
+ * This function attempts to probe for a camera HSP device by trying different
+ * probe methods. Currently, it only tries the VM HSP probe method.
+ * It performs the following operations:
+ * - Calls @ref camrtc_hsp_vm_probe() to attempt VM HSP probe
+ * - Returns success if VM probe succeeds
+ * - Returns -ENODEV if no supported HSP device is found
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ *
+ * @retval 0          On successful probe
+ * @retval -ENODEV    If no supported HSP device is found
+ * @retval (int)      Error code from @ref camrtc_hsp_vm_probe()
+ */
 static int camrtc_hsp_probe(struct camrtc_hsp *camhsp)
 {
 	int ret;
@@ -676,6 +1232,47 @@ static int camrtc_hsp_probe(struct camrtc_hsp *camhsp)
 	return -ENODEV;
 }
 
+/**
+ * @brief Creates a camera HSP device
+ *
+ * This function creates a camera HSP device by allocating memory for the HSP context
+ * and initializing its fields. It performs the following operations:
+ * - Allocates memory for the HSP context using @ref kzalloc()
+ * - Initializes the HSP context fields
+ * - Sets the parent device using @ref dev_set_parent()
+ * - Sets the group notify function using @ref camrtc_hsp_set_group_notify()
+ * - Sets the command timeout using @ref camrtc_hsp_set_cmd_timeout()
+ * - Initializes the mutex using @ref mutex_init()
+ * - Initializes the send lock using @ref spin_lock_init()
+ * - Initializes the response wait queue using @ref init_waitqueue_head()
+ * - Initializes the emptied completion using @ref init_completion()
+ * - Sets the response atomic variable to -1 using @ref atomic_set()
+ * - Sets the device type using @ref camrtc_hsp_combo_dev_type
+ * - Sets the device release function using @ref camrtc_hsp_combo_dev_release()
+ * - Initializes the device using @ref device_initialize()
+ * - Sets the device name using @ref dev_set_name()
+ * - Disables runtime PM using @ref pm_runtime_no_callbacks()
+ * - Enables runtime PM using @ref pm_runtime_enable()
+ * - Sets the TX client block flag to false
+ * - Sets the RX callback function using @ref camrtc_hsp_rx_full_notify()
+ * - Sets the TX done function using @ref camrtc_hsp_tx_empty_notify()
+ * - Sets the TX and RX client device using @ref camhsp->tx.client.dev
+ * - Sets the device driver data using @ref dev_set_drvdata()
+ * - Calls @ref camrtc_hsp_probe() to attempt HSP probe
+ * - Adds the device using @ref device_add()
+ *
+ * @param[in] dev  Pointer to the device creating the HSP
+ *                 Valid value: non-NULL
+ * @param[in] group_notify  Function pointer to the group notify function
+ *                          Valid value: non-NULL
+ * @param[in] cmd_timeout  Command timeout value
+ *                         Valid value: any 32-bit value
+ *
+ * @retval (struct camrtc_hsp *)  Pointer to the HSP context on success
+ * @retval ERR_PTR(-ENOMEM)       If memory allocation fails
+ * @retval ERR_PTR(-EINVAL)       If the HSP context is NULL
+ * @retval ERR_PTR(int)           Error code from @ref camrtc_hsp_probe() or @ref device_add()
+ */
 struct camrtc_hsp *camrtc_hsp_create(
 	struct device *dev,
 	void (*group_notify)(struct device *dev, u16 group),
@@ -728,6 +1325,20 @@ fail:
 }
 EXPORT_SYMBOL(camrtc_hsp_create);
 
+/**
+ * @brief Frees a camera HSP device
+ *
+ * This function frees a camera HSP device by disabling runtime PM, unregistering
+ * the device, and releasing the device structure. It performs the following operations:
+ * - Checks if the HSP context is valid using @ref IS_ERR_OR_NULL()
+ * - Disables runtime PM using @ref pm_runtime_disable()
+ * - Checks if the device driver data is not NULL using @ref dev_get_drvdata()
+ * - Unregisters the device using @ref device_unregister()
+ * - Releases the device using @ref put_device()
+ *
+ * @param[in] camhsp  Pointer to the camera HSP context
+ *                    Valid value: non-NULL
+ */
 void camrtc_hsp_free(struct camrtc_hsp *camhsp)
 {
 	if (IS_ERR_OR_NULL(camhsp))

@@ -17,6 +17,27 @@ struct camrtc_device_group {
 	struct platform_device *devices[];
 };
 
+/**
+ * @brief Gets a platform device from a device tree node
+ *
+ * This function retrieves a platform device from a device tree node specified by
+ * a phandle property. It performs the following operations:
+ * 1. Gets the device node using @ref of_parse_phandle()
+ * 2. Checks if the device is available using @ref of_device_is_available()
+ * 3. Finds the platform device using @ref of_find_device_by_node()
+ * 4. Stores the device in the group's device array
+ *
+ * @param[in] grp   Pointer to the device group
+ *                  Valid value: non-NULL
+ * @param[in] dev   Pointer to the parent device
+ *                  Valid value: non-NULL
+ * @param[in] name  Name of the phandle property
+ *                  Valid value: non-NULL
+ * @param[in] index Index in the phandle array
+ *                  Valid range: >= 0
+ *
+ * @retval 0 Device retrieved successfully or skipped if disabled
+ */
 static int get_grouped_device(struct camrtc_device_group *grp,
 			struct device *dev, char const *name, int index)
 {
@@ -46,6 +67,20 @@ static int get_grouped_device(struct camrtc_device_group *grp,
 	return 0;
 }
 
+/**
+ * @brief Releases resources associated with a device group
+ *
+ * This function is called to release resources when a device group is being destroyed.
+ * It performs the following operations:
+ * 1. Releases the reference to the parent device using @ref put_device()
+ * 2. Iterates through all devices in the group
+ * 3. Releases each platform device using @ref platform_device_put()
+ *
+ * @param[in] dev  Pointer to the parent device
+ *                 Valid value: non-NULL
+ * @param[in] res  Pointer to the device group resource
+ *                 Valid value: non-NULL
+ */
 static void camrtc_device_group_release(struct device *dev, void *res)
 {
 	const struct camrtc_device_group *grp = res;
@@ -57,6 +92,31 @@ static void camrtc_device_group_release(struct device *dev, void *res)
 		platform_device_put(grp->devices[i]);
 }
 
+/**
+ * @brief Gets a device group based on device tree properties
+ *
+ * This function creates and initializes a device group based on device tree properties.
+ * It performs the following operations:
+ * 1. Validates the device and its device tree node
+ * 2. Counts phandle arguments using @ref of_count_phandle_with_args()
+ * 3. Allocates memory for the device group using @ref devres_alloc()
+ * 4. Gets device references using @ref get_device()
+ * 5. Retrieves each device in the group using @ref get_grouped_device()
+ * 6. Adds the device group to device resources using @ref devres_add()
+ *
+ * @param[in] dev                  Pointer to the parent device
+ *                                Valid value: non-NULL with valid device tree node
+ * @param[in] property_name       Name of the device tree property containing device phandles
+ *                                Valid value: non-NULL
+ * @param[in] names_property_name Name of the device tree property containing device names
+ *                                Valid value: non-NULL
+ *
+ * @retval struct camrtc_device_group* Device group on success
+ * @retval ERR_PTR(-EINVAL)          If device or device tree node is invalid
+ * @retval ERR_PTR(-ENOENT)          If no devices are found
+ * @retval ERR_PTR(-ENOMEM)          If memory allocation fails
+ * @retval ERR_PTR(err)              If device retrieval fails
+ */
 struct camrtc_device_group *camrtc_device_group_get(
 	struct device *dev,
 	char const *property_name,
@@ -97,6 +157,17 @@ struct camrtc_device_group *camrtc_device_group_get(
 }
 EXPORT_SYMBOL(camrtc_device_group_get);
 
+/**
+ * @brief Gets a reference to a platform device
+ *
+ * This function gets a reference to a platform device by incrementing its
+ * reference count using @ref get_device() if the device is not NULL.
+ *
+ * @param[in] pdev  Pointer to the platform device
+ *                  Valid value: any value including NULL
+ *
+ * @retval struct platform_device* The input platform device pointer
+ */
 static inline struct platform_device *platform_device_get(
 	struct platform_device *pdev)
 {
@@ -105,6 +176,26 @@ static inline struct platform_device *platform_device_get(
 	return pdev;
 }
 
+/**
+ * @brief Gets a platform device from a device group by name
+ *
+ * This function retrieves a platform device from a device group by matching
+ * the device name in the device tree property. It performs the following operations:
+ * 1. Validates the device group
+ * 2. Checks if the names property exists
+ * 3. Finds the device index using @ref of_property_match_string()
+ * 4. Gets a reference to the device using @ref platform_device_get()
+ *
+ * @param[in] grp          Pointer to the device group
+ *                         Valid value: non-NULL
+ * @param[in] device_name  Name of the device to find
+ *                         Valid value: non-NULL
+ *
+ * @retval struct platform_device* Device pointer on success
+ * @retval ERR_PTR(-EINVAL)       If device group is NULL
+ * @retval ERR_PTR(-ENOENT)       If names property is not found
+ * @retval ERR_PTR(-ENODEV)       If device is not found or index is invalid
+ */
 struct platform_device *camrtc_device_get_byname(
 	struct camrtc_device_group *grp,
 	const char *device_name)
