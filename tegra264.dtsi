@@ -4198,7 +4198,7 @@
 			isp_thi: isp-thi@8188b00000 {
 				compatible = "nvidia,tegra264-isp-thi";
 				reg = <0x81 0x88b00000 0x0 0x00100000>;
-				resets = <&bpmp TEGRA264_RESET_ISP1>;
+				resets = <&bpmp TEGRA264_RESET_ISP>;
 				reset-names = "isp_thi";
 				status = "disabled";
 			};
