@@ -262,6 +262,7 @@ $(obj)/conftest/patches.h: $(NV_CONFTEST_SCRIPT)
 # Each of these headers is checked for presence with a test #include; a
 # corresponding #define will be generated in conftest/headers.h.
 NV_HEADER_PRESENCE_TESTS = \
+  drm/clients/drm_client_setup.h \
   drm/display/drm_dp_aux_bus.h \
   drm/display/drm_dp_helper.h \
   drm/display/drm_scdc_helper.h \

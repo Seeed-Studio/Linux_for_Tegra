@@ -21,11 +21,13 @@
 #else
 #include <drm/drm_aperture.h>
 #endif
-#include <drm/drm_atomic.h>
-#include <drm/drm_atomic_helper.h>
-#if defined(NV_DRM_DRM_CLIENT_SETUP_H_PRESENT) /* Linux v6.13 */
+#if defined(NV_DRM_CLIENTS_DRM_CLIENT_SETUP_H_PRESENT) /* Linux v6.14 */
+#include <drm/clients/drm_client_setup.h>
+#elif defined(NV_DRM_DRM_CLIENT_SETUP_H_PRESENT) /* Linux v6.13 */
 #include <drm/drm_client_setup.h>
 #endif
+#include <drm/drm_atomic.h>
+#include <drm/drm_atomic_helper.h>
 #include <drm/drm_debugfs.h>
 #include <drm/drm_drv.h>
 #include <drm/drm_fourcc.h>
