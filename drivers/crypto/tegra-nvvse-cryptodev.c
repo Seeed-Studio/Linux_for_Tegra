@@ -65,12 +65,16 @@
 #define MISC_DEVICE_NAME_LEN		33U
 
 #define CRYPTODEV_ERR(...) pr_err("tegra_nvvse_cryptodev " __VA_ARGS__)
+#define CRYPTODEV_INFO(...) pr_info("tegra_nvvse_cryptodev " __VA_ARGS__)
 
 struct nvvse_devnode {
 	struct miscdevice *g_misc_devices;
 	struct mutex lock;
 	bool node_in_use;
 } nvvse_devnode[MAX_NUMBER_MISC_DEVICES];
+
+/* Info device node support */
+static struct miscdevice *nvvse_info_device;
 
 static struct tegra_nvvse_get_ivc_db ivc_database;
 
@@ -198,7 +202,7 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 
 	if (sha_update_ctl->init_only != 0U) {
 		if (sha_state->sha_init_done != 0U) {
-			CRYPTODEV_ERR("%s(): SHA init is already done\n", __func__);
+			CRYPTODEV_INFO("%s(): SHA init is already done\n", __func__);
 			ret = -EAGAIN;
 			goto exit;
 		} else {
@@ -1660,7 +1664,6 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 	struct tegra_nvvse_aes_drng_ctl *aes_drng_ctl;
 	struct tegra_nvvse_aes_gmac_init_ctl *aes_gmac_init_ctl;
 	struct tegra_nvvse_aes_gmac_sign_verify_ctl *aes_gmac_sign_verify_ctl;
-	struct tegra_nvvse_get_ivc_db *get_ivc_db;
 	struct tegra_nvvse_tsec_get_keyload_status *tsec_keyload_status;
 	struct tegra_nvvse_map_membuf_ctl __user *arg_map_membuf_ctl;
 	struct tegra_nvvse_map_membuf_ctl *map_membuf_ctl;
@@ -1940,30 +1943,6 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		kfree(aes_drng_ctl);
 		break;
 
-	case NVVSE_IOCTL_CMDID_GET_IVC_DB:
-		get_ivc_db = kzalloc(sizeof(*get_ivc_db), GFP_KERNEL);
-		if (!get_ivc_db) {
-			CRYPTODEV_ERR("%s(): failed to allocate memory\n", __func__);
-			ret = -ENOMEM;
-			goto release_lock;
-		}
-
-		ret = tnvvse_crypto_get_ivc_db(get_ivc_db);
-		if (ret) {
-			CRYPTODEV_ERR("%s(): Failed to get ivc database get_ivc_db:%d\n", __func__, ret);
-			kfree(get_ivc_db);
-			goto release_lock;
-		}
-
-		ret = copy_to_user((void __user *)arg, &ivc_database, sizeof(ivc_database));
-		if (ret) {
-			CRYPTODEV_ERR("%s(): Failed to copy_to_user ivc_database:%d\n", __func__, ret);
-			kfree(get_ivc_db);
-			goto release_lock;
-		}
-
-		kfree(get_ivc_db);
-		break;
 
 	case NVVSE_IOCTL_CMDID_TSEC_SIGN_VERIFY:
 		aes_cmac_sign_verify_ctl = kzalloc(sizeof(*aes_cmac_sign_verify_ctl), GFP_KERNEL);
@@ -2119,6 +2098,63 @@ static const struct file_operations tnvvse_crypto_fops = {
 	.unlocked_ioctl		= tnvvse_crypto_dev_ioctl,
 };
 
+static int tnvvse_crypto_info_dev_open(struct inode *inode, struct file *filp)
+{
+	/* No context needed for the info device */
+	return 0;
+}
+
+static int tnvvse_crypto_info_dev_release(struct inode *inode, struct file *filp)
+{
+	/* No cleanup needed for the info device */
+	return 0;
+}
+
+static long tnvvse_crypto_info_dev_ioctl(struct file *filp,
+	unsigned int ioctl_num, unsigned long arg)
+{
+	struct tegra_nvvse_get_ivc_db *get_ivc_db;
+	int ret = 0;
+
+	if (ioctl_num == NVVSE_IOCTL_CMDID_GET_IVC_DB) {
+		get_ivc_db = kzalloc(sizeof(*get_ivc_db), GFP_KERNEL);
+		if (!get_ivc_db) {
+			CRYPTODEV_ERR("%s(): failed to allocate memory\n", __func__);
+			ret = -ENOMEM;
+			goto end;
+		}
+
+		ret = tnvvse_crypto_get_ivc_db(get_ivc_db);
+		if (ret) {
+			CRYPTODEV_ERR("%s(): Failed to get ivc database get_ivc_db:%d\n", __func__, ret);
+			kfree(get_ivc_db);
+			goto end;
+		}
+
+		ret = copy_to_user((void __user *)arg, &ivc_database, sizeof(ivc_database));
+		if (ret) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user ivc_database:%d\n", __func__, ret);
+			kfree(get_ivc_db);
+			goto end;
+		}
+
+		kfree(get_ivc_db);
+	} else {
+		CRYPTODEV_ERR("%s(): invalid ioctl code(%d[0x%08x])", __func__, ioctl_num, ioctl_num);
+		ret = -EINVAL;
+	}
+
+end:
+	return ret;
+}
+
+static const struct file_operations tnvvse_crypto_info_fops = {
+	.owner			= THIS_MODULE,
+	.open			= tnvvse_crypto_info_dev_open,
+	.release		= tnvvse_crypto_info_dev_release,
+	.unlocked_ioctl		= tnvvse_crypto_info_dev_ioctl,
+};
+
 static int __init tnvvse_crypto_device_init(void)
 {
 	uint32_t cnt, ctr;
@@ -2145,9 +2181,29 @@ static int __init tnvvse_crypto_device_init(void)
 	char *node_name;
 	uint32_t str_len;
 
+	CRYPTODEV_INFO("%s(): init start\n", __func__);
+
 	/* get ivc databse */
 	tnvvse_crypto_get_ivc_db(&ivc_database);
 	ivc_db = tegra_hv_vse_get_db();
+
+	/* Register the info device node */
+	nvvse_info_device = kzalloc(sizeof(struct miscdevice), GFP_KERNEL);
+	if (nvvse_info_device == NULL) {
+		CRYPTODEV_ERR("%s(): failed to allocate memory for info device\n", __func__);
+		return -ENOMEM;
+	}
+
+	nvvse_info_device->minor = MISC_DYNAMIC_MINOR;
+	nvvse_info_device->fops = &tnvvse_crypto_info_fops;
+	nvvse_info_device->name = "tegra-nvvse-crypto-info";
+
+	ret = misc_register(nvvse_info_device);
+	if (ret != 0) {
+		CRYPTODEV_ERR("%s: info device registration failed err %d\n", __func__, ret);
+		kfree(nvvse_info_device);
+		return ret;
+	}
 
 	for (cnt = 0; cnt < MAX_NUMBER_MISC_DEVICES; cnt++) {
 
@@ -2157,12 +2213,14 @@ static int __init tnvvse_crypto_device_init(void)
 		/* Dynamic initialisation of misc device */
 		misc = kzalloc(sizeof(struct miscdevice), GFP_KERNEL);
 		if (misc == NULL) {
+			CRYPTODEV_ERR("%s(): failed to allocate memory for misc device\n", __func__);
 			ret = -ENOMEM;
 			goto fail;
 		}
 
 		node_name = kzalloc(MISC_DEVICE_NAME_LEN, GFP_KERNEL);
 		if (node_name == NULL) {
+			CRYPTODEV_ERR("%s(): failed to allocate memory for node name\n", __func__);
 			ret = -ENOMEM;
 			goto fail;
 		}
@@ -2215,14 +2273,24 @@ static int __init tnvvse_crypto_device_init(void)
 		mutex_init(&nvvse_devnode[cnt].lock);
 	}
 
+	CRYPTODEV_INFO("%s(): init success\n", __func__);
+
 	return ret;
 
 fail:
+	/* Cleanup the info device if needed */
+	if (nvvse_info_device) {
+		misc_deregister(nvvse_info_device);
+		kfree(nvvse_info_device);
+		nvvse_info_device = NULL;
+	}
+
 	for (ctr = 0; ctr < cnt; ctr++) {
 		misc_deregister(nvvse_devnode[ctr].g_misc_devices);
 		kfree(nvvse_devnode[ctr].g_misc_devices->name);
 		kfree(nvvse_devnode[ctr].g_misc_devices);
 		nvvse_devnode[ctr].g_misc_devices = NULL;
+		mutex_destroy(&nvvse_devnode[ctr].lock);
 	}
 	return ret;
 }
@@ -2231,6 +2299,13 @@ module_init(tnvvse_crypto_device_init);
 static void __exit tnvvse_crypto_device_exit(void)
 {
 	uint32_t ctr;
+
+	/* Unregister the info device node */
+	if (nvvse_info_device != NULL) {
+		misc_deregister(nvvse_info_device);
+		kfree(nvvse_info_device);
+		nvvse_info_device = NULL;
+	}
 
 	for (ctr = 0; ctr < MAX_NUMBER_MISC_DEVICES; ctr++) {
 		if (nvvse_devnode[ctr].g_misc_devices != NULL) {

@@ -939,6 +939,7 @@ static int tegra_hv_vse_safety_send_ivc_wait(
 
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended)) {
+		dev_err(se_dev->dev, "Engine is in suspended state\n");
 		err = -ENODEV;
 		goto exit;
 	}
@@ -1149,8 +1150,10 @@ static int tegra_vse_validate_cmac_params(struct tegra_virtual_se_aes_cmac_conte
 
 static int tegra_vse_validate_aes_rng_param(struct tegra_virtual_se_rng_context *rng_ctx)
 {
-	if (rng_ctx == NULL)
+	if (rng_ctx == NULL) {
+		VSE_ERR("%s: rng_ctx is NULL\n", __func__);
 		return -EINVAL;
+	}
 
 	if (rng_ctx->node_id >= MAX_NUMBER_MISC_DEVICES) {
 		VSE_ERR("%s: Node id is not valid\n", __func__);
@@ -1511,8 +1514,10 @@ static int tegra_hv_vse_safety_sha_update(struct ahash_request *req)
 	se_dev = g_crypto_to_ivc_map[sha_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
+	if (atomic_read(&se_dev->se_suspended)) {
+		VSE_ERR("%s: Engine is in suspended state\n", __func__);
 		return -ENODEV;
+	}
 
 	ret = tegra_hv_vse_safety_sha_op(sha_ctx, false);
 	if (ret)
@@ -1576,12 +1581,14 @@ static int tegra_hv_vse_safety_sha_finup(struct ahash_request *req)
 static int tegra_hv_vse_safety_sha_final(struct ahash_request *req)
 {
 	// Unsupported
+	VSE_ERR("%s: This callback is not supported\n", __func__);
 	return -EINVAL;
 }
 
 static int tegra_hv_vse_safety_sha_digest(struct ahash_request *req)
 {
 	// Unsupported
+	VSE_ERR("%s: This callback is not supported\n", __func__);
 	return -EINVAL;
 }
 
@@ -1600,8 +1607,10 @@ static int tegra_hv_vse_safety_hmac_sha_setkey(struct crypto_ahash *tfm, const u
 	}
 
 	hmac_ctx = crypto_tfm_ctx(crypto_ahash_tfm(tfm));
-	if (!hmac_ctx)
+	if (!hmac_ctx) {
+		VSE_ERR("%s: HMAC SHA ctx not valid\n", __func__);
 		return -EINVAL;
+	}
 
 	if (hmac_ctx->node_id >= MAX_NUMBER_MISC_DEVICES) {
 		VSE_ERR("%s: Node id is not valid\n", __func__);
@@ -1910,7 +1919,7 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req,
 				if (priv->rx_status == 0) {
 					hmac_ctx->result = 0;
 				} else if (priv->rx_status == TEGRA_VIRTUAL_SE_ERR_MAC_INVALID) {
-					dev_dbg(se_dev->dev, "%s: tag mismatch", __func__);
+					dev_info(se_dev->dev, "%s: tag mismatch", __func__);
 					hmac_ctx->result = 1;
 				} else {
 					err = status_to_errno(priv->rx_status);
@@ -1921,7 +1930,7 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req,
 				if (memcmp(match->buf_ptr, &matchcode, 4) == 0) {
 					hmac_ctx->result = 0;
 				} else if (memcmp(match->buf_ptr, &mismatch_code, 4) == 0) {
-					dev_dbg(se_dev->dev, "%s: tag mismatch", __func__);
+					dev_info(se_dev->dev, "%s: tag mismatch", __func__);
 					hmac_ctx->result = 1;
 				} else {
 					dev_err(se_dev->dev, "%s: invalid tag match code",
@@ -1980,8 +1989,10 @@ static int tegra_hv_vse_safety_hmac_sha_update(struct ahash_request *req)
 	se_dev = g_crypto_to_ivc_map[hmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
+	if (atomic_read(&se_dev->se_suspended)) {
+		VSE_ERR("%s: Engine is in suspended state\n", __func__);
 		return -ENODEV;
+	}
 
 	ret = tegra_hv_vse_safety_hmac_sha_sv_op(req, hmac_ctx, false);
 	if (ret)
@@ -2033,8 +2044,10 @@ static int tegra_hv_vse_safety_hmac_sha_finup(struct ahash_request *req)
 	se_dev = g_crypto_to_ivc_map[hmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
+	if (atomic_read(&se_dev->se_suspended)) {
+		VSE_ERR("%s: Engine is in suspended state\n", __func__);
 		return -ENODEV;
+	}
 
 	ret = tegra_hv_vse_safety_hmac_sha_sv_op(req, hmac_ctx, true);
 	if (ret)
@@ -2049,12 +2062,14 @@ static int tegra_hv_vse_safety_hmac_sha_finup(struct ahash_request *req)
 static int tegra_hv_vse_safety_hmac_sha_final(struct ahash_request *req)
 {
 	// Unsupported
+	VSE_ERR("%s: This callback is not supported\n", __func__);
 	return -EINVAL;
 }
 
 static int tegra_hv_vse_safety_hmac_sha_digest(struct ahash_request *req)
 {
 	// Unsupported
+	VSE_ERR("%s: This callback is not supported\n", __func__);
 	return -EINVAL;
 }
 
@@ -2968,8 +2983,10 @@ static int tegra_hv_vse_safety_cmac_init(struct ahash_request *req)
 	se_dev = g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
+	if (atomic_read(&se_dev->se_suspended)) {
+		VSE_ERR("%s: Engine is in suspended state\n", __func__);
 		return -ENODEV;
+	}
 
 	cmac_ctx->digest_size = crypto_ahash_digestsize(tfm);
 	cmac_ctx->is_first = true;
@@ -3018,8 +3035,10 @@ static int tegra_hv_vse_safety_cmac_update(struct ahash_request *req)
 	se_dev = g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
+	if (atomic_read(&se_dev->se_suspended)) {
+		VSE_ERR("%s: Engine is in suspended state\n", __func__);
 		return -ENODEV;
+	}
 	/* Do not process data in given request */
 	if (se_dev->chipdata->cmac_hw_verify_supported)
 		ret = tegra_hv_vse_safety_cmac_sv_op_hw_verify_supported(req, cmac_ctx, false);
@@ -3115,8 +3134,10 @@ static int tegra_hv_tsec_safety_cmac_finup(struct ahash_request *req)
 	se_dev = g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
+	if (atomic_read(&se_dev->se_suspended)) {
+		VSE_ERR("%s: Engine is in suspended state\n", __func__);
 		return -ENODEV;
+	}
 
 	ret = tegra_hv_vse_safety_tsec_sv_op(req, cmac_ctx);
 	if (ret)
@@ -3135,8 +3156,10 @@ static int tegra_hv_vse_safety_cmac_digest(struct ahash_request *req)
 				g_crypto_to_ivc_map[cmac_ctx->node_id].se_dev;
 
 	/* Return error if engine is in suspended state */
-	if (atomic_read(&se_dev->se_suspended))
+	if (atomic_read(&se_dev->se_suspended)) {
+		VSE_ERR("%s: Engine is in suspended state\n", __func__);
 		return -ENODEV;
+	}
 
 	return tegra_hv_vse_safety_cmac_init(req) ?: tegra_hv_vse_safety_cmac_final(req);
 }
@@ -3494,10 +3517,13 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 	struct tegra_vse_tag *priv_data_ptr;
 	const struct tegra_vse_dma_buf *src;
 
-	if (atomic_read(&se_dev->se_suspended))
+	if (atomic_read(&se_dev->se_suspended)) {
+		VSE_ERR("%s: Engine is in suspended state\n", __func__);
 		return -ENODEV;
+	}
 
 	if (dlen == 0) {
+		VSE_ERR("%s: Zero Data length is not supported\n", __func__);
 		return -EINVAL;
 	}
 
@@ -4098,7 +4124,7 @@ static int tegra_vse_aes_gcm_enc_dec_hw_support(struct aead_request *req,
 	} else {
 		if (memcmp(comp->buf_ptr, &match_code, 4) != 0) {
 			if (memcmp(comp->buf_ptr, &mismatch_code, 4) == 0)
-				dev_dbg(se_dev->dev, "%s: tag mismatch\n", __func__);
+				dev_info(se_dev->dev, "%s: tag mismatch\n", __func__);
 			err = -EINVAL;
 			goto free_exit;
 		}
@@ -4566,9 +4592,10 @@ static int tegra_hv_vse_aes_gmac_sv_op(struct ahash_request *req,
 		}
 
 		if (priv->rx_status != 0) {
-			if (priv->rx_status == 11U)
+			if (priv->rx_status == TEGRA_VIRTUAL_SE_ERR_MAC_INVALID) {
+				dev_info(se_dev->dev, "%s: tag mismatch", __func__);
 				gmac_ctx->result = 1;
-			else
+			} else
 				err = status_to_errno(priv->rx_status);
 		} else {
 			gmac_ctx->result = 0;
@@ -4752,10 +4779,13 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req,
 		} else {
 			if (memcmp(comp->buf_ptr, &match_code, 4) == 0)
 				gmac_ctx->result = 0;
-			else if (memcmp(comp->buf_ptr, &mismatch_code, 4) == 0)
+			else if (memcmp(comp->buf_ptr, &mismatch_code, 4) == 0) {
+				dev_info(se_dev->dev, "%s: tag mismatch", __func__);
 				gmac_ctx->result = 1;
-			else
+			} else {
+				dev_err(se_dev->dev, "%s: invalid tag match code", __func__);
 				err = -EINVAL;
+			}
 		}
 	}
 
@@ -5787,6 +5817,8 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 	static bool s_tsec_alg_register_done;
 	bool is_aes_alg, is_sha_alg, is_tsec_alg;
 
+	dev_info(&pdev->dev, "probe start\n");
+
 	gcm_supports_dma = of_property_read_bool(pdev->dev.of_node, "nvidia,gcm-dma-support");
 
 	if (gcm_supports_dma) {
@@ -6180,6 +6212,8 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 	/* Set Engine suspended state to false*/
 	atomic_set(&se_dev->se_suspended, 0);
 	platform_set_drvdata(pdev, se_dev);
+
+	dev_info(&pdev->dev, "probe success\n");
 
 	return 0;
 release_bufs:
