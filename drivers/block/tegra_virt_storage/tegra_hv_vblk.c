@@ -755,6 +755,47 @@ bio_exit:
 	return false;
 }
 
+/**
+ * @defgroup vscd_request_worker LinuxVSCD::Request Worker
+ *
+ * @ingroup vscd_request_worker
+ * @{
+ */
+
+/**
+ * @brief Worker thread that handles block device requests and completions
+ *
+ * This worker thread is responsible for:
+ * 1. Processing completed block I/O requests from the virtual storage server
+ * 2. Submitting new block I/O requests to the virtual storage server
+ * 3. Managing the request queue and IVC communication
+ *
+ * The worker runs in a loop waiting for requests to be queued. When woken up, it:
+ * - Acquires the IVC lock to synchronize access to the IVC channel
+ * - Processes any completed requests from the server via complete_bio_req()
+ * - Submits new pending requests to the server via submit_bio_req()
+ * - Continues processing until no more requests are pending
+ *
+ * @param[in] data Pointer to the vblk_dev device structure
+ * @param[out] None
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - vblk device must be initialized
+ * - IVC channel must be established
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Async
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static int vblk_request_worker(void *data)
 {
 	struct vblk_dev *vblkdev = (struct vblk_dev *)data;
@@ -782,9 +823,45 @@ static int vblk_request_worker(void *data)
 	return 0;
 }
 
-/* The simple form of the request function. */
+/**
+ * @brief Block request handler callback for multi-queue block device
+ *
+ * This function is the main request handler for the virtual block device driver.
+ * When the block layer submits I/O requests, this callback:
+ * 1. Marks the request as started using blk_mq_start_request()
+ * 2. Allocates a new request entry structure
+ * 3. Adds the request to the device's pending request list
+ * 4. Wakes up the worker thread to process the request
+ *
+ * The actual I/O processing is done asynchronously by the worker thread, which:
+ * - Submits requests to the virtual storage server via IVC
+ * - Handles completions and error cases
+ * - Manages the request lifecycle
+ *
+ * @param[in] hctx Block multi-queue hardware context
+ * @param[in] bd Block request data containing the request to process
+ *
+ * @return BLK_STS_OK on success, BLK_STS_IOERR on failure
+ *
+ * @pre
+ * - Block device must be initialized
+ * - Request queue must be setup
+ * - Worker thread must be running
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Async
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static blk_status_t vblk_request(struct blk_mq_hw_ctx *hctx,
-			const struct blk_mq_queue_data *bd)
+		const struct blk_mq_queue_data *bd)
 {
 	struct req_entry *entry;
 	struct request *req = bd->rq;
@@ -813,8 +890,43 @@ static blk_status_t vblk_request(struct blk_mq_hw_ctx *hctx,
 
 	return BLK_STS_OK;
 }
+/** @} */
 
 /* Open and release */
+/**
+ * @defgroup vscd_open_release LinuxVSCD::Open/Release
+ *
+ * @ingroup vscd_open_release
+ * @{
+ */
+
+/**
+ * @brief Opens a virtual block device for normal I/O operations
+ *
+ * This function is called when a block device is opened for I/O operations.
+ * It increments the user count and checks for media changes if this is the first user.
+ * The media change check ensures the device state is current before allowing access.
+ *
+ * @param[in] disk Pointer to the gendisk structure representing the block device
+ * @param[in] mode File mode flags indicating how the device should be opened
+ * @return 0 on success
+ *
+ * @pre
+ * - Device must be initialized
+ * - Disk structure must be valid
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 #if defined(NV_BLOCK_DEVICE_OPERATIONS_OPEN_HAS_GENDISK_ARG) /* Linux v6.5 */
 static int vblk_open(struct gendisk *disk, fmode_t mode)
 {
@@ -839,6 +951,33 @@ static int vblk_open(struct block_device *device, fmode_t mode)
 	return 0;
 }
 
+/**
+ * @brief Opens a virtual block device for IOCTL operations
+ *
+ * This function is called when opening the IOCTL-specific device node.
+ * It increments the IOCTL user count, checks for media changes if first user,
+ * and initializes FFU passthrough command permissions to disabled state.
+ *
+ * @param[in] disk Pointer to the gendisk structure representing the block device
+ * @param[in] mode File mode flags indicating how the device should be opened
+ * @return 0 on success
+ *
+ * @pre
+ * - Device must be initialized
+ * - Disk structure must be valid
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 #if defined(NV_BLOCK_DEVICE_OPERATIONS_OPEN_HAS_GENDISK_ARG) /* Linux v6.5 */
 static int vblk_ioctl_open(struct gendisk *disk, fmode_t mode)
 {
@@ -864,6 +1003,33 @@ static int vblk_ioctl_open(struct block_device *device, fmode_t mode)
 	return 0;
 }
 
+/**
+ * @brief Opens a virtual block device for firmware update operations
+ *
+ * This function is called when opening the FFU-specific device node.
+ * It increments the FFU user count, checks for media changes if first user,
+ * and initializes FFU passthrough command permissions to disabled state.
+ *
+ * @param[in] disk Pointer to the gendisk structure representing the block device
+ * @param[in] mode File mode flags indicating how the device should be opened
+ * @return 0 on success
+ *
+ * @pre
+ * - Device must be initialized
+ * - Disk structure must be valid
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 #if defined(NV_BLOCK_DEVICE_OPERATIONS_OPEN_HAS_GENDISK_ARG)
 static int vblk_ffu_open(struct gendisk *disk, fmode_t mode)
 {
@@ -887,6 +1053,33 @@ static int vblk_ffu_open(struct block_device *device, fmode_t mode)
 	return 0;
 }
 
+/**
+ * @brief Releases a virtual block device after IOCTL operations
+ *
+ * This function is called when closing the IOCTL-specific device node.
+ * It safely decrements the IOCTL user count using overflow checking to prevent underflow.
+ * The IOCTL interface remains available for other users if count is non-zero.
+ *
+ * @param[in] disk Pointer to the gendisk structure representing the block device
+ * @param[in] mode File mode flags indicating how the device was opened
+ *
+ * @pre
+ * - Device must be initialized
+ * - Disk structure must be valid
+ * - Device must have been previously opened for IOCTL operations
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: Yes
+ */
 #if defined(NV_BLOCK_DEVICE_OPERATIONS_RELEASE_HAS_NO_MODE_ARG) /* Linux v6.5 */
 static void vblk_ioctl_release(struct gendisk *disk)
 #else
@@ -906,6 +1099,33 @@ static void vblk_ioctl_release(struct gendisk *disk, fmode_t mode)
 	spin_unlock(&vblkdev->lock);
 }
 
+/**
+ * @brief Releases a virtual block device after firmware update operations
+ *
+ * This function is called when closing the FFU-specific device node.
+ * It safely decrements the FFU user count using overflow checking to prevent underflow.
+ * The FFU interface remains available for other users if count is non-zero.
+ *
+ * @param[in] disk Pointer to the gendisk structure representing the block device
+ * @param[in] mode File mode flags indicating how the device was opened
+ *
+ * @pre
+ * - Device must be initialized
+ * - Disk structure must be valid
+ * - Device must have been previously opened for FFU operations
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: Yes
+ */
 #if defined(NV_BLOCK_DEVICE_OPERATIONS_RELEASE_HAS_NO_MODE_ARG)
 static void vblk_ffu_release(struct gendisk *disk)
 #else
@@ -921,7 +1141,33 @@ static void vblk_ffu_release(struct gendisk *disk, fmode_t mode)
 	spin_unlock(&vblkdev->lock);
 }
 
-
+/**
+ * @brief Releases a virtual block device after normal I/O operations
+ *
+ * This function is called when a block device is closed after I/O operations.
+ * It safely decrements the user count using overflow checking to prevent underflow.
+ * The device remains operational for other users if the count is non-zero.
+ *
+ * @param[in] disk Pointer to the gendisk structure representing the block device
+ * @param[in] mode File mode flags indicating how the device was opened
+ *
+ * @pre
+ * - Device must be initialized
+ * - Disk structure must be valid
+ * - Device must have been previously opened
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: Yes
+ */
 #if defined(NV_BLOCK_DEVICE_OPERATIONS_RELEASE_HAS_NO_MODE_ARG) /* Linux v6.5 */
 static void vblk_release(struct gendisk *disk)
 #else
@@ -941,6 +1187,33 @@ static void vblk_release(struct gendisk *disk, fmode_t mode)
 	spin_unlock(&vblkdev->lock);
 }
 
+/**
+ * @brief Gets the geometry information for the virtual block device
+ *
+ * This function returns the logical geometry (heads, sectors, cylinders) for the block device.
+ * It uses fixed values for heads and sectors, and calculates cylinders based on device capacity.
+ * This information is used by legacy tools that expect disk geometry information.
+ *
+ * @param[in] device Pointer to the block device structure
+ * @param[out] geo Pointer to hd_geometry structure to fill with geometry information
+ * @return 0 on success
+ *
+ * @pre
+ * - Device must be initialized
+ * - Block device structure must be valid
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static int vblk_getgeo(struct block_device *device, struct hd_geometry *geo)
 {
 	geo->heads = VS_LOG_HEADS;
@@ -950,6 +1223,7 @@ static int vblk_getgeo(struct block_device *device, struct hd_geometry *geo)
 
 	return 0;
 }
+/** @} */
 
 /* The device operations structure. */
 static const struct block_device_operations vblk_ops_no_ioctl = {
@@ -978,9 +1252,45 @@ static const struct block_device_operations vblk_ops_ffu = {
 	.ioctl           = vblk_ffu_ioctl
 };
 
-static ssize_t
-vblk_phys_dev_show(struct device *dev, struct device_attribute *attr,
-			 char *buf)
+/**
+ * @defgroup vscd_sysfs LinuxVSCD::Sysfs
+ *
+ * @ingroup vscd_sysfs
+ * @{
+ */
+
+/**
+ * @brief Shows the physical device type (EMMC/UFS) backing this virtual block device
+ *
+ * This function implements the sysfs show function for the "phys_dev" attribute.
+ * It reads the physical device type from the vblk device configuration and returns
+ * a string indicating whether the underlying storage device is EMMC or UFS.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to the device attribute structure
+ * @param[out] buf Buffer to store the attribute value string
+ *
+ * @return Number of bytes written to buffer on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be valid
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
+static ssize_t vblk_phys_dev_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
 {
 	struct gendisk *disk = dev_to_disk(dev);
 	struct vblk_dev *vblk = disk->private_data;
@@ -993,9 +1303,39 @@ vblk_phys_dev_show(struct device *dev, struct device_attribute *attr,
 		return snprintf(buf, 16, "Unknown\n");
 }
 
-static ssize_t
-vblk_phys_base_show(struct device *dev, struct device_attribute *attr,
-			 char *buf)
+/**
+ * @brief Shows the physical base address of the storage device
+ *
+ * This function implements the sysfs show function for the "phys_base" attribute.
+ * It reads the physical base address from the vblk device configuration and formats
+ * it as a hexadecimal string. This represents the base address of the physical
+ * storage device in memory.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to the device attribute structure
+ * @param[out] buf Buffer to store the attribute value string
+ *
+ * @return Number of bytes written to buffer on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be valid
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
+static ssize_t vblk_phys_base_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
 {
 	struct gendisk *disk = dev_to_disk(dev);
 	struct vblk_dev *vblk = disk->private_data;
@@ -1003,9 +1343,39 @@ vblk_phys_base_show(struct device *dev, struct device_attribute *attr,
 	return snprintf(buf, 16, "0x%llx\n", vblk->config.phys_base);
 }
 
-static ssize_t
-vblk_storage_type_show(struct device *dev, struct device_attribute *attr,
-			 char *buf)
+/**
+ * @brief Shows the storage type/partition (RPMB, BOOT, LUNx) of this virtual block device
+ *
+ * This function implements the sysfs show function for the "storage_type" attribute.
+ * It reads the storage type from the vblk device configuration and returns a string
+ * indicating the type of storage partition this device represents (e.g. RPMB, BOOT,
+ * or one of the logical unit numbers LUN0-LUN7).
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to the device attribute structure
+ * @param[out] buf Buffer to store the attribute value string
+ *
+ * @return Number of bytes written to buffer on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be valid
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
+static ssize_t vblk_storage_type_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
 {
 	struct gendisk *disk = dev_to_disk(dev);
 	struct vblk_dev *vblk = disk->private_data;
@@ -1038,9 +1408,39 @@ vblk_storage_type_show(struct device *dev, struct device_attribute *attr,
 	return snprintf(buf, 16, "Unknown\n");
 }
 
-static ssize_t
-vblk_speed_mode_show(struct device *dev, struct device_attribute *attr,
-			 char *buf)
+/**
+ * @brief Shows the speed mode configuration of the storage device
+ *
+ * This function implements the sysfs show function for the "speed_mode" attribute.
+ * It reads the speed mode string from the vblk device configuration and returns it.
+ * The speed mode indicates the operating speed configuration of the underlying
+ * physical storage device (e.g. HS400, HS200 for eMMC or HS-G3 for UFS).
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to the device attribute structure
+ * @param[out] buf Buffer to store the attribute value string
+ *
+ * @return Number of bytes written to buffer on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be valid
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
+static ssize_t vblk_speed_mode_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
 {
 	struct gendisk *disk = dev_to_disk(dev);
 	struct vblk_dev *vblk = disk->private_data;
@@ -1068,6 +1468,7 @@ static const struct blk_mq_ops vblk_mq_ops = {
 	.queue_rq	= vblk_request,
 };
 
+/** @} */
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 
 /* Error report injection test support is included */
@@ -1874,6 +2275,51 @@ static void vblk_init_device(struct work_struct *ws)
 	mutex_unlock(&vblkdev->ivc_lock);
 }
 
+/**
+ * @defgroup vscd_irq_timer LinuxVSCD::IRQ/Timer
+ *
+ * @ingroup vscd_irq_timer
+ * @{
+ */
+
+/**
+ * @brief Interrupt handler for IVC (Inter-VM Communication) events
+ *
+ * This function handles interrupts from the IVC channel for the virtual block device.
+ * It performs two key tasks depending on device initialization state:
+ *
+ * 1. For initialized devices:
+ *    - Wakes up the worker thread by completing the worker completion
+ *    - Worker thread then processes any pending IVC messages/requests
+ *
+ * 2. For uninitialized devices:
+ *    - Schedules initialization work on appropriate CPU
+ *    - CPU selection based on schedulable_vcpu_number if specified, else uses default CPU
+ *    - Initialization includes setting up device config, queues and other resources
+ *
+ * The handler ensures proper synchronization between interrupt context and worker thread
+ * for processing IVC messages.
+ *
+ * @param[in] irq Interrupt number
+ * @param[in] data Pointer to the virtual block device structure (struct vblk_dev)
+ * @return IRQ_HANDLED to indicate interrupt was processed
+ *
+ * @pre
+ * - IVC channel must be configured
+ * - Device structure must be allocated and basic init done
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: Yes
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Async
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static irqreturn_t ivc_irq_handler(int irq, void *data)
 {
 	struct vblk_dev *vblkdev = (struct vblk_dev *)data;
@@ -1888,6 +2334,49 @@ static irqreturn_t ivc_irq_handler(int irq, void *data)
 	}
 	return IRQ_HANDLED;
 }
+
+/**
+ * @brief Timer callback function to handle block I/O request timeouts
+ *
+ * This function is called when a block I/O request timer expires, indicating that
+ * the request has taken longer than expected to complete. It handles timeout
+ * conditions by:
+ * 1. Converting the timer structure back to the request structure using container_of
+ * 2. Logging an error message with:
+ *    - The request ID that timed out
+ *    - Current system counter value
+ *    - Original request schedule time
+ * This helps identify stuck or slow I/O requests for debugging purposes.
+ *
+ * @param[in] timer Pointer to the timer_list structure that expired
+ *
+ * @pre
+ * - Timer must be initialized and started for a valid vsc_request
+ * - vblkdev device structure must be valid
+ * - Request must be in-flight when timer expires
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: Yes
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Async
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
+static void bio_request_timeout_callback(struct timer_list *timer)
+{
+	struct vsc_request *req = from_timer(req, timer, timer);
+
+	dev_err(req->vblkdev->device, "Request id %d timed out. curr ctr: %llu sched ctr: %llu\n",
+						req->id, _arch_counter_get_cntvct(), req->time);
+
+}
+
+/** @} */
 
 static void vblk_request_config(struct work_struct *ws)
 {
@@ -1922,15 +2411,6 @@ free_ivc:
 	tegra_hv_ivc_unreserve(vblkdev->ivck);
 }
 
-static void bio_request_timeout_callback(struct timer_list *timer)
-{
-	struct vsc_request *req = from_timer(req, timer, timer);
-
-	dev_err(req->vblkdev->device, "Request id %d timed out. curr ctr: %llu sched ctr: %llu\n",
-						req->id, _arch_counter_get_cntvct(), req->time);
-
-}
-
 static void tegra_create_timers(struct vblk_dev *vblkdev)
 {
 	uint32_t i;
@@ -1940,6 +2420,45 @@ static void tegra_create_timers(struct vblk_dev *vblkdev)
 
 }
 
+/**
+ * @defgroup vscd_probe_remove LinuxVSCD::Probe/Remove
+ *
+ * @ingroup vscd_probe_remove
+ * @{
+ */
+
+/**
+ * @brief Probe function to initialize and setup virtual block device driver
+ *
+ * This function initializes a virtual block device that provides virtualized storage access
+ * in a hypervisor environment. It performs the following key steps:
+ * 1. Allocates and initializes the virtual block device structure
+ * 2. Sets up IVC (Inter-VM Communication) channel for storage commands
+ * 3. Configures the block device parameters like size, operations etc.
+ * 4. Creates block device nodes:
+ *    - Main block device for regular I/O
+ *    - IOCTL device node for control operations
+ *    - FFU (Firmware Field Update) device node
+ * 5. Initializes request queues and work queues
+ * 6. Sets up device attributes
+ *
+ * @param[in] dev Platform device pointer from device tree
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre Platform must be running in virtualized environment with hypervisor
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: Yes
+ *   - Runtime: No
+ *   - De-Init: No
+ */
 static int tegra_hv_vblk_probe(struct platform_device *pdev)
 {
 	static struct device_node *vblk_node;
@@ -2034,6 +2553,34 @@ fail:
 	return ret;
 }
 
+/**
+ * @brief Remove function to cleanup and remove virtual block device driver
+ *
+ * This function performs cleanup when the virtual block device is removed.
+ * Key cleanup steps include:
+ * 1. Waits for pending requests to complete
+ * 2. Removes block device nodes (main, ioctl and ffu)
+ * 3. Cleans up request queues
+ * 4. Frees IVC channels and shared memory
+ * 5. Frees device structures and resources
+ *
+ * @param[in] dev Platform device pointer for the device being removed
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre Device must have been previously probed successfully
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: No
+ *   - De-Init: Yes
+ */
 static int tegra_hv_vblk_remove(struct platform_device *pdev)
 {
 	struct vblk_dev *vblkdev = platform_get_drvdata(pdev);
@@ -2079,7 +2626,50 @@ static int tegra_hv_vblk_remove(struct platform_device *pdev)
 	return 0;
 }
 
+/** @} */
+
+/**
+ * @defgroup vscd_suspend_resume LinuxVSCD::Suspend/Resume
+ *
+ * @ingroup vscd_suspend_resume
+ * @{
+ */
+
 #ifdef CONFIG_PM_SLEEP
+/**
+ * @brief Suspends the virtual block device driver
+ *
+ * This function handles the suspend operation for the virtual block device by:
+ * 1. Stopping hardware request queues for both regular I/O and IOCTL operations
+ * 2. Setting queue state to suspended
+ * 3. Waiting for any inflight requests to complete
+ * 4. Disabling IVC interrupts once queue is empty
+ *
+ * The function ensures clean suspension by:
+ * - Using spinlocks to safely stop queues
+ * - Tracking inflight requests via completion mechanism
+ * - Properly handling both regular and IOCTL queues
+ * - Disabling interrupts only after all requests complete
+ *
+ * @param[in] dev Pointer to device structure
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - Driver must be in active state
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static int tegra_hv_vblk_suspend(struct device *dev)
 {
 	struct vblk_dev *vblkdev = dev_get_drvdata(dev);
@@ -2111,6 +2701,41 @@ static int tegra_hv_vblk_suspend(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Resumes the virtual block device driver
+ *
+ * This function handles the resume operation for the virtual block device by:
+ * 1. Setting queue state back to active
+ * 2. Reinitializing completion tracking
+ * 3. Re-enabling IVC interrupts
+ * 4. Restarting hardware request queues for both regular I/O and IOCTL operations
+ * 5. Waking up worker thread to process any pending requests
+ *
+ * The function ensures clean resume by:
+ * - Using spinlocks to safely restart queues
+ * - Properly handling both regular and IOCTL queues
+ * - Re-enabling interrupts before processing requests
+ * - Signaling worker thread to check for pending work
+ *
+ * @param[in] dev Pointer to device structure
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - Driver must be in suspended state
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static int tegra_hv_vblk_resume(struct device *dev)
 {
 	struct vblk_dev *vblkdev = dev_get_drvdata(dev);
@@ -2140,6 +2765,8 @@ static int tegra_hv_vblk_resume(struct device *dev)
 
 	return 0;
 }
+
+/** @} */
 
 static const struct dev_pm_ops tegra_hv_vblk_pm_ops = {
 	.suspend = tegra_hv_vblk_suspend,
@@ -2180,6 +2807,40 @@ static struct platform_driver tegra_hv_vblk_driver = {
 	},
 };
 
+/**
+ * @defgroup vscd_module_init_exit LinuxVSCD::Module Init/Exit
+ *
+ * @ingroup vscd_module_init_exit
+ * @{
+ */
+
+/**
+ * @brief Initialize the Tegra Hypervisor Virtual Block Device driver
+ *
+ * This function initializes the virtual block device driver that enables storage
+ * virtualization in Tegra Hypervisor environments. It performs the following:
+ * - Registers the block device driver with the kernel
+ * - Allocates major number for block devices
+ * - Initializes the virtual block device framework
+ * - Sets up IVC (Inter-VM Communication) channels for storage operations
+ * - Creates sysfs entries for device attributes
+ *
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre None
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: Yes
+ *   - Runtime: No
+ *   - De-Init: No
+ */
 static int __init tegra_hv_vblk_driver_init(void)
 {
 	vblk_major = 0;
@@ -2193,12 +2854,42 @@ static int __init tegra_hv_vblk_driver_init(void)
 }
 module_init(tegra_hv_vblk_driver_init);
 
+/**
+ * @brief Cleanup and remove the Tegra Hypervisor Virtual Block Device driver
+ *
+ * This function performs cleanup when the virtual block device driver is removed.
+ * It handles:
+ * - Unregistering the block device driver
+ * - Freeing allocated major number
+ * - Cleaning up IVC channels
+ * - Removing sysfs entries
+ * - Freeing allocated resources
+ *
+ * @return None
+ *
+ * @pre Driver must have been initialized via tegra_hv_vblk_driver_init()
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: No
+ *   - De-Init: Yes
+ */
 static void __exit tegra_hv_vblk_driver_exit(void)
 {
 	unregister_blkdev(vblk_major, "vblk");
 	platform_driver_unregister(&tegra_hv_vblk_driver);
 }
 module_exit(tegra_hv_vblk_driver_exit);
+/**
+ * @}
+ */
 
 MODULE_AUTHOR("Dilan Lee <dilee@nvidia.com>");
 MODULE_DESCRIPTION("Virtual storage device over Tegra Hypervisor IVC channel");

@@ -191,7 +191,42 @@ static int vblk_common_ioctl(struct vblk_dev *vblkdev, fmode_t mode,
 	return ret;
 }
 
-
+/**
+ * @defgroup vscd_ioctl LinuxVSCD::IOCTL
+ *
+ * @ingroup vscd_ioctl
+ * @{
+ */
+/**
+ * @brief Handles IOCTL commands for firmware update operations
+ *
+ * This function processes IOCTL commands specifically for firmware updates.
+ * It temporarily enables FFU passthrough command permissions, processes the IOCTL,
+ * then disables FFU permissions again. This provides controlled access to firmware
+ * update capabilities through a dedicated interface.
+ *
+ * @param[in] bdev Pointer to the block device structure
+ * @param[in] mode File mode flags
+ * @param[in] cmd IOCTL command code
+ * @param[in] arg Command-specific argument
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - Block device must be opened through FFU interface
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 int vblk_ffu_ioctl(struct block_device *bdev, fmode_t mode,
     unsigned int cmd, unsigned long arg)
 {
@@ -207,7 +242,37 @@ int vblk_ffu_ioctl(struct block_device *bdev, fmode_t mode,
 	return ret;
 }
 
-/* The ioctl() implementation */
+/**
+ * @brief Handles IOCTL commands for normal block device operations
+ *
+ * This function processes IOCTL commands for the block device, supporting:
+ * - MMC IOC commands (single and multi)
+ * - SCSI generic (SG_IO) commands
+ * - UFS combo query commands
+ * The function validates permissions and delegates to specific handlers.
+ *
+ * @param[in] bdev Pointer to the block device structure
+ * @param[in] mode File mode flags
+ * @param[in] cmd IOCTL command code
+ * @param[in] arg Command-specific argument
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - Block device must be opened
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 int vblk_ioctl(struct block_device *bdev, fmode_t mode,
 		unsigned int cmd, unsigned long arg)
 {
@@ -221,7 +286,35 @@ int vblk_ioctl(struct block_device *bdev, fmode_t mode,
 	return ret;
 }
 
-/* The ioctl() implementation for block device node */
+/**
+ * @brief Handles IOCTL commands for non-control device nodes
+ *
+ * This function rejects IOCTL commands that are only supported on the control device node.
+ * It returns -ENOTTY for MMC, SCSI, and UFS commands when called on regular block device nodes.
+ * This enforces access control by requiring privileged operations to use the control node.
+ *
+ * @param[in] bdev Pointer to the block device structure
+ * @param[in] mode File mode flags
+ * @param[in] cmd IOCTL command code
+ * @param[in] arg Command-specific argument
+ * @return -ENOTTY to indicate command is not supported
+ *
+ * @pre
+ * - Device must be initialized
+ * - Block device must be opened
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 int vblk_ioctl_not_supported(struct block_device *bdev, fmode_t mode,
 	unsigned int cmd, unsigned long arg)
 {
@@ -245,3 +338,4 @@ int vblk_ioctl_not_supported(struct block_device *bdev, fmode_t mode,
 
 	return ret;
 }
+/** @} */

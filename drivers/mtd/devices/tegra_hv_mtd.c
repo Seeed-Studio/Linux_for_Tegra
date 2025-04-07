@@ -69,6 +69,46 @@ static inline struct vmtd_dev *mtd_to_vmtd(struct mtd_info *mtd)
 	return container_of(mtd, struct vmtd_dev, mtd);
 }
 
+/**
+ * @defgroup vscd_mtd_irq_timer LinuxMtdVSCD::IRQ/Timer
+ *
+ * @ingroup vscd_mtd_irq_timer
+ * @{
+ */
+/**
+ * @brief Interrupt handler for IVC (Inter-VM Communication) channel
+ *
+ * This function serves as the interrupt service routine for the IVC channel.
+ * When an IVC interrupt occurs, it:
+ * 1. Signals completion of an IVC transaction by calling complete()
+ * 2. Wakes up any threads waiting on IVC communication
+ * 3. Enables further IVC communication to proceed
+ *
+ * The handler is essential for the asynchronous nature of IVC communication,
+ * allowing the driver to efficiently handle command/response sequences without
+ * busy waiting.
+ *
+ * @param[in] irq The interrupt number being handled
+ * @param[in] data Pointer to the vmtd_dev structure (passed as void*)
+ * @return IRQ_HANDLED indicating successful handling of the interrupt
+ *
+ * @pre
+ * - IVC channel must be properly initialized
+ * - Completion structure must be initialized
+ * - IRQ must be properly registered with this handler
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: Yes
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: Yes
+ *   - Runtime: Yes
+ *   - De-Init: Yes
+ */
 static irqreturn_t ivc_irq_handler(int irq, void *data)
 {
 	struct vmtd_dev *vmtddev = (struct vmtd_dev *)data;
@@ -76,6 +116,9 @@ static irqreturn_t ivc_irq_handler(int irq, void *data)
 	complete(&vmtddev->msg_complete);
 	return IRQ_HANDLED;
 }
+/**
+ * @}
+ */
 
 static int vmtd_send_cmd(struct vmtd_dev *vmtddev, struct vs_request *vs_req)
 {
@@ -206,9 +249,48 @@ static int vmtd_get_configinfo(struct vmtd_dev *vmtddev,
 	return 0;
 }
 
-/*
- * Read an address range from the flash chip.  The address range
- * may be any size provided it is within the physical boundaries.
+/**
+ * @defgroup vscd_mtd_request_handler LinuxMtdVSCD::Request Handler
+ *
+ * @ingroup vscd_mtd_request_handler
+ * @{
+ */
+/**
+ * @brief Reads data from the virtual MTD device
+ *
+ * This function reads data from the virtual MTD device by:
+ * 1. Validating read boundaries against device size
+ * 2. Breaking down large reads into smaller chunks based on max_read_bytes_per_io
+ * 3. For each chunk:
+ *    - Preparing VS_MTD_READ request
+ *    - Sending request through IVC channel
+ *    - Waiting for response from physical device
+ *    - Copying data from shared buffer to user buffer
+ * 4. Maintaining thread safety through mutex locking
+ *
+ * @param[in] mtd Pointer to MTD device information structure
+ * @param[in] from Starting offset in the device to read from
+ * @param[in] len Number of bytes to read
+ * @param[out] retlen Pointer to store number of bytes actually read
+ * @param[out] buf Buffer to store read data
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - IVC channel must be operational
+ * - Shared memory buffer must be mapped
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
  */
 static int vmtd_read(struct mtd_info *mtd, loff_t from, size_t len,
 		size_t *retlen, u_char *buf)
@@ -264,9 +346,44 @@ fail:
 	return ret;
 }
 
-/*
- * Write an address range from the flash chip.  The address range
- * may be any size provided it is within the physical boundaries.
+/**
+ * @brief Writes data to the virtual MTD device
+ *
+ * This function writes data to the virtual MTD device by:
+ * 1. Validating write boundaries against device size
+ * 2. Breaking down large writes into smaller chunks based on max_write_bytes_per_io
+ * 3. For each chunk:
+ *    - Copying data from user buffer to shared memory
+ *    - Preparing VS_MTD_WRITE request
+ *    - Sending request through IVC channel
+ *    - Waiting for write confirmation
+ * 4. Maintaining thread safety through mutex locking
+ * 5. Handling write failures and partial writes
+ *
+ * @param[in] mtd Pointer to MTD device information structure
+ * @param[in] to Starting offset in the device to write to
+ * @param[in] len Number of bytes to write
+ * @param[out] retlen Pointer to store number of bytes actually written
+ * @param[in] buf Buffer containing data to write
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - IVC channel must be operational
+ * - Shared memory buffer must be mapped
+ * - Device must not be in read-only mode
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
  */
 static int vmtd_write(struct mtd_info *mtd, loff_t to, size_t len,
 		size_t *retlen, const u_char *buf)
@@ -323,9 +440,42 @@ fail:
 	return ret;
 }
 
-/*
- * Erase an address range from the flash chip.  The address range
- * may be any size provided it is within the physical boundaries.
+/**
+ * @brief Erases a region of the virtual MTD device
+ *
+ * This function erases a specified region of the virtual MTD device by:
+ * 1. Validating erase boundaries against device size
+ * 2. Preparing VS_MTD_ERASE request with:
+ *    - Starting address (instr->addr)
+ *    - Length of region to erase (instr->len)
+ * 3. Sending single erase command through IVC channel
+ * 4. Waiting for erase completion confirmation
+ * 5. Maintaining thread safety through mutex locking
+ * 6. Handling erase failures
+ *
+ * @param[in] mtd Pointer to MTD device information structure
+ * @param[in] instr Erase instruction structure containing:
+ *                  - Address to start erasing from
+ *                  - Length of region to erase
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - Device must be initialized
+ * - IVC channel must be operational
+ * - Device must not be in read-only mode
+ * - Erase region must be aligned to erase block size
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
  */
 static int vmtd_erase(struct mtd_info *mtd, struct erase_info *instr)
 {
@@ -366,8 +516,51 @@ static int vmtd_erase(struct mtd_info *mtd, struct erase_info *instr)
 fail:
 	return ret;
 }
+/**
+ * @}
+ */
+
+
+/**
+ * @defgroup vscd_mtd_suspend_resume LinuxMtdVSCD::Suspend/Resume
+ *
+ * @ingroup vscd_mtd_suspend_resume
+ * @{
+ */
 
 #ifdef CONFIG_PM_SLEEP
+
+/**
+ * @brief Suspends the virtual MTD device operations
+ *
+ * This function performs the following operations during system suspend:
+ * 1. Checks if the device is properly set up
+ * 2. Acquires the device mutex to prevent concurrent access
+ * 3. Disables the IVC interrupt to prevent further communications
+ * 4. Resets the IVC channel to ensure clean state during suspend
+ *
+ * The function ensures that all ongoing MTD operations are properly halted
+ * and the communication channel with the hypervisor is safely suspended.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @return 0 on success
+ *
+ * @pre
+ * - Device must be initialized
+ * - System must be in suspend transition
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static int tegra_virt_mtd_suspend(struct device *dev)
 {
 	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
@@ -379,6 +572,37 @@ static int tegra_virt_mtd_suspend(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Resumes the virtual MTD device operations
+ *
+ * This function performs the following operations during system resume:
+ * 1. Checks if the device was properly set up before suspend
+ * 2. Re-enables the IVC interrupt to restore communication
+ * 3. Releases the device mutex to allow MTD operations
+ *
+ * The function restores the device to operational state after system resume,
+ * re-establishing the communication channel with the hypervisor and
+ * allowing MTD operations to proceed.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @return 0 on success
+ *
+ * @pre
+ * - Device must have been previously suspended
+ * - System must be in resume transition
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static int tegra_virt_mtd_resume(struct device *dev)
 {
 	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
@@ -396,6 +620,10 @@ static const struct dev_pm_ops tegra_hv_vmtd_pm_ops = {
 
 };
 #endif /* CONFIG_PM_SLEEP */
+
+/**
+ * @}
+ */
 
 static int vmtd_setup_device(struct vmtd_dev *vmtddev)
 {
@@ -449,6 +677,41 @@ static int vmtd_setup_device(struct vmtd_dev *vmtddev)
 			NULL, 0);
 }
 
+/**
+ * @defgroup vscd_mtd_sysfs LinuxMtdVSCD::Sysfs
+ *
+ * @ingroup vscd_mtd_sysfs
+ * @{
+ */
+/**
+ * @brief Shows the physical device type of the virtual MTD device
+ *
+ * This function retrieves and displays the physical device type that underlies
+ * the virtual MTD device. Currently, it checks if the device is a QSPI device
+ * and returns the appropriate string representation. If the device type is not
+ * recognized, it returns "unknown!".
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to device attribute structure
+ * @param[out] buf Buffer to store the device type string
+ * @return Number of characters written to the buffer
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be properly set up
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t vmtd_phys_dev_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -461,6 +724,34 @@ static ssize_t vmtd_phys_dev_show(struct device *dev,
 }
 static DEVICE_ATTR(phys_dev, 0444, vmtd_phys_dev_show, NULL);
 
+/**
+ * @brief Shows the physical base address of the virtual MTD device
+ *
+ * This function retrieves and displays the physical base address of the underlying
+ * MTD device in hexadecimal format. This address represents the starting memory
+ * location of the physical flash device in the system's memory map.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to device attribute structure
+ * @param[out] buf Buffer to store the base address string
+ * @return Number of characters written to the buffer
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be properly set up
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t vmtd_phys_base_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -470,6 +761,34 @@ static ssize_t vmtd_phys_base_show(struct device *dev,
 }
 static DEVICE_ATTR(phys_base, 0444, vmtd_phys_base_show, NULL);
 
+/**
+ * @brief Shows the manufacturer ID of the MTD device
+ *
+ * This function retrieves and displays the manufacturer ID of the flash device
+ * in hexadecimal format. The manufacturer ID is a unique identifier that
+ * indicates the company that manufactured the flash memory chip.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to device attribute structure
+ * @param[out] buf Buffer to store the manufacturer ID string
+ * @return Number of characters written to the buffer
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be properly set up
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t manufacturer_id_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -479,6 +798,34 @@ static ssize_t manufacturer_id_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(manufacturer_id);
 
+/**
+ * @brief Shows the device ID of the MTD device
+ *
+ * This function retrieves and displays the device ID of the flash device
+ * in hexadecimal format. The device ID is a unique identifier that
+ * specifies the particular model or variant of the flash memory chip.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to device attribute structure
+ * @param[out] buf Buffer to store the device ID string
+ * @return Number of characters written to the buffer
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be properly set up
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t device_id_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -488,6 +835,34 @@ static ssize_t device_id_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(device_id);
 
+/**
+ * @brief Shows the QSPI device size in bytes
+ *
+ * This function retrieves and displays the total size of the QSPI flash device
+ * in bytes. This represents the total storage capacity of the physical flash
+ * memory device that is being virtualized.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to device attribute structure
+ * @param[out] buf Buffer to store the device size string
+ * @return Number of characters written to the buffer
+ *
+ * @pre
+ * - Device must be initialized
+ * - Configuration must be properly set up
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t qspi_device_size_bytes_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -497,6 +872,39 @@ static ssize_t qspi_device_size_bytes_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(qspi_device_size_bytes);
 
+/**
+ * @brief Shows the ECC (Error Correction Code) status of the MTD device
+ *
+ * This function performs an ECC status check and returns the current ECC state.
+ * It sends a VS_MTD_ECC request to the physical device and interprets the response.
+ * Possible status values are:
+ * - ECC_NO_ERROR: No errors detected
+ * - ECC_ONE_BIT_CORRECTED: Single-bit error detected and corrected
+ * - ECC_TWO_BIT_ERROR: Double-bit error detected (uncorrectable)
+ * - ECC_DISABLED: ECC functionality is disabled
+ * - ECC_REQUEST_FAILED: Failed to get ECC status
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to device attribute structure
+ * @param[out] buf Buffer to store the ECC status string
+ * @return Number of characters written to the buffer
+ *
+ * @pre
+ * - Device must be initialized
+ * - IVC channel must be operational
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t ecc_status_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -538,6 +946,35 @@ static ssize_t ecc_status_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(ecc_status);
 
+/**
+ * @brief Shows the address of the chunk where ECC failure occurred
+ *
+ * This function retrieves and displays the memory address of the chunk where
+ * the last ECC error was detected. The address is displayed in hexadecimal format.
+ * After reading the address, it resets the stored address to 0 to prepare for
+ * the next ECC error detection.
+ *
+ * @param[in] dev Pointer to the device structure
+ * @param[in] attr Pointer to device attribute structure
+ * @param[out] buf Buffer to store the failure chunk address string
+ * @return Number of characters written to the buffer
+ *
+ * @pre
+ * - Device must be initialized
+ * - ECC status should have been checked previously
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t failure_chunk_addr_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -551,6 +988,9 @@ static ssize_t failure_chunk_addr_show(struct device *dev,
 
 }
 static DEVICE_ATTR_RO(failure_chunk_addr);
+/**
+ * @}
+ */
 
 static const struct attribute *vmtd_storage_attrs[] = {
 	&dev_attr_phys_dev.attr,
@@ -685,6 +1125,46 @@ static int32_t vmtd_init_device(struct vmtd_dev *vmtddev)
 	return ret;
 }
 
+/**
+ * @defgroup vscd_mtd_probe_remove LinuxMtdVSCD::Probe/Remove
+ *
+ * @ingroup vscd_mtd_probe_remove
+ * @{
+ */
+
+/**
+ * @brief Probes and initializes the virtual MTD device driver
+ *
+ * This function performs the following initialization steps:
+ * 1. Verifies hypervisor mode and device tree node
+ * 2. Allocates and initializes vmtd device structure
+ * 3. Reserves IVC channel for command/response communication
+ * 4. Reserves IVM memory pool for data transfer
+ * 5. Maps shared memory buffer for data transfer
+ * 6. Sets up interrupt handling for IVC communication
+ * 7. Initializes the virtual MTD device with configuration from physical device
+ * 8. Creates sysfs entries for device attributes
+ * 9. Registers error injection callbacks if enabled
+ *
+ * @param[in] pdev Platform device structure containing device information
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre
+ * - System must be running in Tegra hypervisor mode
+ * - Valid device tree node must be present
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: Yes
+ *   - Runtime: No
+ *   - De-Init: No
+ */
 static int tegra_virt_mtd_probe(struct platform_device *pdev)
 {
 	struct device_node __maybe_unused *np;
@@ -816,7 +1296,38 @@ static struct of_device_id tegra_virt_mtd_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_virt_mtd_match);
 #endif /* CONFIG_OF */
 
-#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+/**
+ * @brief Removes and cleans up the virtual MTD device driver
+ *
+ * This function performs the following cleanup steps:
+ * 1. Unreserves the IVC channel used for command/response communication
+ * 2. Unreserves the IVM memory pool used for data transfer
+ * 3. Deregisters error injection callbacks if enabled
+ * 4. Frees allocated resources
+ *
+ * The function exists in two variants based on kernel version:
+ * - Returns void for Linux v6.11 and later
+ * - Returns int for earlier versions
+ *
+ * @param[in] pdev Platform device structure containing device information
+ * @return void or 0 depending on kernel version
+ *
+ * @pre
+ * - Driver must be successfully probed and initialized
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: No
+ *   - De-Init: Yes
+ */
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID)  /* Linux v6.11 */
 static void tegra_virt_mtd_remove_wrapper(struct platform_device *pdev)
 {
 	tegra_virt_mtd_remove(pdev);
@@ -827,6 +1338,9 @@ static int tegra_virt_mtd_remove_wrapper(struct platform_device *pdev)
 	return tegra_virt_mtd_remove(pdev);
 }
 #endif
+/**
+ * @}
+ */
 
 static struct platform_driver tegra_virt_mtd_driver = {
 	.probe	= tegra_virt_mtd_probe,

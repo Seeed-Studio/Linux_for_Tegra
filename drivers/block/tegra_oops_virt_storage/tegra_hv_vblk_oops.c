@@ -127,6 +127,42 @@ static int32_t wait_for_fops_completion(struct vblk_dev *vblkdev_oops, bool is_r
 	return retry;
 }
 
+/**
+ * @defgroup oops_driver_read_write OOPSDriver::Read/Write
+ *
+ * @ingroup oops_driver_read_write
+ * @{
+ */
+
+/**
+ * @brief Read data from virtual block device
+ *
+ * Reads data from virtual block device by:
+ * 1. Validating read parameters and context
+ * 2. Calculating block position and count
+ * 3. Preparing read request for Storage Server
+ * 4. Sending request via IVC
+ * 5. Waiting for response and copying data
+ *
+ * @param[out] buf Buffer to read data into
+ * @param[in] bytes Number of bytes to read
+ * @param[in] pos Starting position to read from
+ * @return Number of bytes read on success, negative errno on failure
+ *
+ * @pre Device must be initialized and IVC channel ready
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t vblk_oops_read(char *buf, size_t bytes, loff_t pos)
 {
 	struct vsc_request *vsc_req;
@@ -221,6 +257,35 @@ fail:
 	return -ENOMSG;
 }
 
+/**
+ * @brief Write data to virtual block device
+ *
+ * Writes data to virtual block device by:
+ * 1. Validating write parameters and context
+ * 2. Calculating block position and count
+ * 3. Preparing write request for Storage Server
+ * 4. Sending request via IVC
+ * 5. Waiting for response and verifying completion
+ *
+ * @param[in] buf Buffer containing data to write
+ * @param[in] bytes Number of bytes to write
+ * @param[in] pos Starting position to write to
+ * @return Number of bytes written on success, negative errno on failure
+ *
+ * @pre Device must be initialized and IVC channel ready
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: Yes
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t vblk_oops_write(const char *buf, size_t bytes,
 		loff_t pos)
 {
@@ -241,7 +306,8 @@ static ssize_t vblk_oops_write(const char *buf, size_t bytes,
 	 */
 	if (in_atomic()) {
 		dev_warn(vblkdev_oops->device,
-			"%s invoked in atomic context..aborting\n", __func__);
+		"%s invoked in atomic context..returning EBUSY to retry from workqueue\n",
+		__func__);
 		return -EBUSY;
 	}
 
@@ -334,6 +400,35 @@ fail:
  * - no need to check for VSC response.  Send request and assume it is all good
  *   since the caller is not going to do anything meaningful if we report error
  */
+
+/**
+ * @brief Write data to virtual block device during panic
+ *
+ * Best-effort write during system panic by:
+ * 1. Validating basic parameters
+ * 2. Calculating block position and count
+ * 3. Preparing write request for Storage Server
+ * 4. Sending request via IVC without waiting for response
+ *
+ * @param[in] buf Buffer containing data to write
+ * @param[in] bytes Number of bytes to write
+ * @param[in] pos Starting position to write to
+ * @return Number of bytes written on success, 0 on failure
+ *
+ * @pre Device must be initialized, system in panic state
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: Yes
+ *   - Signal handler: Yes
+ *   - Thread-safe: No
+ *   - Async/Sync: Async
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static ssize_t vblk_oops_panic_write(const char *buf, size_t bytes,
 		loff_t pos)
 {
@@ -415,6 +510,7 @@ static ssize_t vblk_oops_panic_write(const char *buf, size_t bytes,
 	 */
 	return bytes;
 }
+/** @} */
 
 /* Set up virtual device. */
 static void setup_device(struct vblk_dev *vblkdev)
@@ -683,6 +779,39 @@ static int vblk_oops_get_configinfo(struct vblk_dev *vblkdev)
 	return 0;
 }
 
+/**
+ * @defgroup oops_driver_request_handler OOPSDriver::Request Handler
+ *
+ * @ingroup oops_driver_request_handler
+ * @{
+ */
+/**
+ * @brief Initialize the OOPS virtual block device
+ *
+ * Initializes the virtual block device by:
+ * 1. Checking if IVC channel reset is complete
+ * 2. If reset complete and data can be read from IVC channel:
+ *    - Gets device configuration from Storage Server
+ *    - Sets up device parameters
+ *    - Registers with pstore_zone
+ *
+ * @param[in] ws Work structure pointer containing device info
+ * @return None
+ *
+ * @pre Device structure must be allocated and work structure initialized
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Async
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: Yes
+ *   - Runtime: No
+ *   - De-Init: No
+ */
 static void vblk_oops_init_device(struct work_struct *ws)
 {
 	struct vblk_dev *vblkdev = container_of(ws, struct vblk_dev, init.work);
@@ -709,6 +838,40 @@ static void vblk_oops_init_device(struct work_struct *ws)
 	}
 }
 
+/**@} */
+
+/**
+ * @defgroup oops_driver_probe OOPSDriver::Probe
+ *
+ * @ingroup oops_driver_probe
+ * @{
+ */
+/**
+ * @brief Probe function to initialize OOPS storage device driver
+ *
+ * Sets up virtual block device for storing kernel crash dumps by:
+ * - Allocating device structure
+ * - Reading device tree properties
+ * - Setting up IVC channel
+ * - Configuring pstore parameters
+ *
+ * @param[in] pdev Platform device pointer from device tree
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre Platform must be running in virtualized environment with hypervisor
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: Yes
+ *   - Runtime: No
+ *   - De-Init: No
+ */
 static int tegra_hv_vblk_oops_probe(struct platform_device *pdev)
 {
 	static struct device_node *vblk_node;
@@ -804,6 +967,8 @@ fail:
 	return ret;
 }
 
+/**@} */
+
 static int tegra_hv_vblk_oops_remove(struct platform_device *pdev)
 {
 	struct vblk_dev *vblkdev = platform_get_drvdata(pdev);
@@ -815,7 +980,36 @@ static int tegra_hv_vblk_oops_remove(struct platform_device *pdev)
 	return 0;
 }
 
+/**
+ * @defgroup oops_driver_suspend_resume OOPSDriver::Suspend/Resume
+ *
+ * @ingroup oops_driver_suspend_resume
+ * @{
+ */
+
 #ifdef CONFIG_PM_SLEEP
+/**
+ * @brief Suspend the OOPS storage device
+ *
+ * Resets the IVC channel during system suspend.
+ *
+ * @param[in] dev Device structure pointer
+ * @return 0 on success
+ *
+ * @pre Device must be initialized and active
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static int tegra_hv_vblk_oops_suspend(struct device *dev)
 {
 	/* Reset the channel */
@@ -826,6 +1020,28 @@ static int tegra_hv_vblk_oops_suspend(struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Resume the OOPS storage device
+ *
+ * Waits for IVC channel reset completion during system resume.
+ *
+ * @param[in] dev Device structure pointer
+ * @return 0 on success, -EIO on timeout
+ *
+ * @pre Device must be in suspended state
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: Yes
+ *   - De-Init: No
+ */
 static int tegra_hv_vblk_oops_resume(struct device *dev)
 {
 	int i = 0;
@@ -841,11 +1057,14 @@ static int tegra_hv_vblk_oops_resume(struct device *dev)
 	return 0;
 }
 
+
 static const struct dev_pm_ops tegra_hv_vblk_oops_pm_ops = {
 	.suspend_noirq = tegra_hv_vblk_oops_suspend,
 	.resume_noirq = tegra_hv_vblk_oops_resume,
 };
 #endif /* CONFIG_PM_SLEEP */
+
+/** @} */
 
 #ifdef CONFIG_OF
 static const struct of_device_id tegra_hv_vblk_oops_match[] = {
@@ -855,6 +1074,34 @@ static const struct of_device_id tegra_hv_vblk_oops_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_hv_vblk_oops_match);
 #endif /* CONFIG_OF */
 
+/**
+ * @defgroup oops_driver_module_init_exit OOPSDriver::Module Init/Exit
+ *
+ * @ingroup oops_driver_module_init_exit
+ * @{
+ */
+/**
+ * @brief Function for OOPS device removal
+ *
+ * Unreserves the IVC channel and mempool during device removal.
+ *
+ * @param[in] pdev Platform device pointer
+ * @return void or int depending on kernel version
+ *
+ * @pre Device must have been previously probed successfully
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: No
+ *   - De-Init: Yes
+ */
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
 static void tegra_hv_vblk_oops_remove_wrapper(struct platform_device *pdev)
 {
@@ -880,18 +1127,62 @@ static struct platform_driver tegra_hv_vblk_oops_driver = {
 	},
 };
 
+/**
+ * @brief Initialize the Tegra Hypervisor Virtual OOPS Block Device driver
+ *
+ * Initializes the virtual block device driver for storing kernel crash dumps.
+ * Registers the platform driver for OOPS storage functionality.
+ *
+ * @return 0 on success, negative errno on failure
+ *
+ * @pre None
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: Yes
+ *   - Runtime: No
+ *   - De-Init: No
+ */
 static int __init tegra_hv_vblk_driver_init(void)
 {
 	return platform_driver_register(&tegra_hv_vblk_oops_driver);
 }
 module_init(tegra_hv_vblk_driver_init);
 
+/**
+ * @brief Cleanup and remove the Tegra Hypervisor Virtual OOPS Block Device driver
+ *
+ * Unregisters the platform driver for OOPS storage functionality.
+ *
+ * @return None
+ *
+ * @pre Driver must have been initialized via tegra_hv_vblk_driver_init()
+ *
+ * @usage
+ * - Allowed context for the API call
+ *   - Interrupt handler: No
+ *   - Signal handler: No
+ *   - Thread-safe: Yes
+ *   - Async/Sync: Sync
+ *   - Re-entrant: No
+ * - API Group
+ *   - Init: No
+ *   - Runtime: No
+ *   - De-Init: Yes
+ */
 static void __exit tegra_hv_vblk_driver_exit(void)
 {
 	platform_driver_unregister(&tegra_hv_vblk_oops_driver);
 }
 module_exit(tegra_hv_vblk_driver_exit);
 
+/** @} */
 MODULE_AUTHOR("Haribabu Narayanan <hnarayanan@nvidia.com>");
 MODULE_DESCRIPTION("Virtual OOPS storage device over Tegra Hypervisor IVC channel");
 MODULE_LICENSE("GPL");
