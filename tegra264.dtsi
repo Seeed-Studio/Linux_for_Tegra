@@ -22,6 +22,7 @@
 
 	aliases {
 		efuse0 = &tegra_efuse0;
+		efuse2 = &tegra_efuse2;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -75,9 +76,15 @@
 				     "nvidia,tegra234-efuse";
 			status = "disabled";
 
-			reg = <0x0 0x01000000 0x0 0x20000>;
+			reg = <0x0 0x01000000 0x0 0x1f054>;
 			clocks = <&bpmp TEGRA264_CLK_FUSE>;
 			clock-names = "fuse";
+		};
+
+		tegra_efuse2: efuse@101f054 {
+			compatible = "nvidia,tegra264-efuse-ecid";
+			status = "disabled";
+			reg = <0x0 0x0101f054 0x0 0x40>;
 		};
 
 		efuse-helper {
