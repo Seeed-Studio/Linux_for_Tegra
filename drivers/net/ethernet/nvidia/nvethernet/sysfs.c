@@ -2306,7 +2306,7 @@ static void dump_sa_state_lut(char **buf_p, unsigned short ctlr_sel,
 			if ((lut_config.flags & OSI_LUT_FLAGS_ENTRY_VALID) ==
 			    OSI_LUT_FLAGS_ENTRY_VALID) {
 				buf += scnprintf(buf, PAGE_SIZE,
-					"%d.\tnext_pn: %u\n", i,
+					"%d.\tnpn: %u\n", i,
 					lut_config.sa_state_out.next_pn);
 			} else {
 				buf += scnprintf(buf, PAGE_SIZE,
@@ -2315,7 +2315,7 @@ static void dump_sa_state_lut(char **buf_p, unsigned short ctlr_sel,
 			break;
 		case OSI_CTLR_SEL_RX:
 			buf += scnprintf(buf, PAGE_SIZE,
-				"%d.\tnext_pn: %u lowest_pn: %u\n", i,
+				"%d.\tnpn: %u lpn: %u\n", i,
 				lut_config.sa_state_out.next_pn,
 				lut_config.sa_state_out.lowest_pn);
 			break;
@@ -2329,15 +2329,15 @@ exit:
 }
 
 /**
- * @brief Shows the current SA state LUT configuration
+ * @brief Shows the TX current SA state LUT configuration
  *
  * @param[in] dev: Device data.
  * @param[in] attr: Device attribute
  * @param[in] buf: Buffer to print the current LUT configuration
  */
-static ssize_t macsec_sa_state_lut_show(struct device *dev,
-					struct device_attribute *attr,
-					char *buf)
+static ssize_t macsec_sa_state_lut_tx_show(struct device *dev,
+					   struct device_attribute *attr,
+					   char *buf)
 {
 	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
 	struct ether_priv_data *pdata = netdev_priv(ndev);
@@ -2352,11 +2352,43 @@ static ssize_t macsec_sa_state_lut_show(struct device *dev,
 	buf += scnprintf(buf, PAGE_SIZE, "Tx:\n");
 	dump_sa_state_lut(&buf, OSI_CTLR_SEL_TX, osi_core);
 
+	return (buf - start);
+}
+
+static DEVICE_ATTR(macsec_sa_state_lut_tx, (S_IRUGO | S_IWUSR),
+		   macsec_sa_state_lut_tx_show,
+		   NULL);
+
+/**
+ * @brief Shows the RX current SA state LUT configuration
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current LUT configuration
+ */
+static ssize_t macsec_sa_state_lut_rx_show(struct device *dev,
+					   struct device_attribute *attr,
+					   char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	char *start = buf;
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
 	buf += scnprintf(buf, PAGE_SIZE, "Rx:\n");
 	dump_sa_state_lut(&buf, OSI_CTLR_SEL_RX, osi_core);
 
 	return (buf - start);
 }
+
+static DEVICE_ATTR(macsec_sa_state_lut_rx, (S_IRUGO | S_IWUSR),
+		   macsec_sa_state_lut_rx_show,
+		   NULL);
 
 /**
  * @brief Set the SA state LUT configuration
@@ -2425,7 +2457,7 @@ exit:
  *
  */
 static DEVICE_ATTR(macsec_sa_state_lut, (S_IRUGO | S_IWUSR),
-		   macsec_sa_state_lut_show,
+		   NULL,
 		   macsec_sa_state_lut_store);
 
 
@@ -3489,6 +3521,8 @@ static struct attribute *ether_sysfs_attrs[] = {
 #endif /* MACSEC_KEY_PROGRAM */
 	&dev_attr_macsec_sc_state_lut.attr,
 	&dev_attr_macsec_sa_state_lut.attr,
+	&dev_attr_macsec_sa_state_lut_tx.attr,
+	&dev_attr_macsec_sa_state_lut_rx.attr,
 	&dev_attr_macsec_sc_param_lut.attr,
 	&dev_attr_macsec_sc_param_tx_lut.attr,
 	&dev_attr_macsec_sc_param_tx_lut_2.attr,
