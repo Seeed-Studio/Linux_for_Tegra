@@ -873,7 +873,8 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
 	struct camera_diag_channel *ch = dev_get_drvdata(dev);
 	struct camrtc_diag_isp5_sdl_status_resp status;
 	int err, i;
-	unsigned long start_time;
+	unsigned long start_time, end_time;
+	bool all_tests_pass;
 	ssize_t pos = 0;
 
 	if (ch == NULL)
@@ -894,7 +895,7 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
 		start_time = jiffies;
 		err = camera_diag_isp_sdl_status(ch, &status, i);
 
-		unsigned long end_time = 0U;
+		end_time = 0U;
 		(void)__builtin_add_overflow(start_time, msecs_to_jiffies(1000), &end_time);
 		if (time_after(jiffies, end_time) || err != 0) {
 			pos += sprintf(buf + pos, "\nISP%d: Error getting diagnostic status: %d\n", i, err);
@@ -902,7 +903,7 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
 		}
 
 		/* Calculate diagnostic status */
-		bool all_tests_pass = (status.executed > 0 && status.passed == status.executed);
+		all_tests_pass = (status.executed > 0 && status.passed == status.executed);
 
 		/* Print detailed status information for this ISP */
 		pos += sprintf(buf + pos,
