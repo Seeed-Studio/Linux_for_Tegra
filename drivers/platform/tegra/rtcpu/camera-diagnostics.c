@@ -888,14 +888,17 @@ static ssize_t status_show(struct device *dev, struct device_attribute *attr, ch
 	for (i = 0; i < ch->num_isp_instances; i++) {
 		/* Skip second instance if not enabled */
 		if (i > 0 && !ISP_SECOND_INSTANCE_ENABLED) {
-			pos += sprintf(buf + pos, "\nISP%d: DISABLED\n", i);
+			int len = sprintf(buf + pos, "\nISP%d: DISABLED\n", i);
+			(void)__builtin_add_overflow(pos, len, &pos);
 			continue;
 		}
 
 		start_time = jiffies;
 		err = camera_diag_isp_sdl_status(ch, &status, i);
 
-		if (time_after(jiffies, start_time + msecs_to_jiffies(1000)) || err != 0) {
+		unsigned long end_time = 0U;
+		(void)__builtin_add_overflow(start_time, msecs_to_jiffies(1000), &end_time);
+		if (time_after(jiffies, end_time) || err != 0) {
 			pos += sprintf(buf + pos, "\nISP%d: Error getting diagnostic status: %d\n", i, err);
 			continue;
 		}
