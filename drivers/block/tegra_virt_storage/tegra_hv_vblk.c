@@ -942,7 +942,7 @@ static const struct block_device_operations vblk_ops_no_ioctl = {
 	.open            = vblk_open,
 	.release         = vblk_release,
 	.getgeo          = vblk_getgeo,
-	.ioctl           = vblk_ioctl
+	.ioctl           = vblk_ioctl_not_supported
 };
 
 /* The device operations structure. */
