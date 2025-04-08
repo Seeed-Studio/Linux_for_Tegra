@@ -12,13 +12,12 @@
 
 
 	bus@0{
-
-		i2c@810c630000 {
+		i2c@810c630000 { /* I2C0 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -40,10 +39,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -56,12 +56,12 @@
 			};
 		};
 
-		i2c@810c640000 {
+		i2c@810c640000 { /* I2C1 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -83,10 +83,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -99,12 +100,12 @@
 			};
 		};
 
-		i2c@c600000 {
+		i2c@c600000 { /* I2C2 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000808              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -112,21 +113,21 @@
 				};
 				prod_c_fm {
 					prod = <
-						0 0x0000006c 0xffff0000 0x00190000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffff0000 0x00180000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_fmplus {
 					prod = <
-						0 0x0000006c 0xffff0000 0x000a0000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffff0000 0x00090000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x00180002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
 						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
@@ -142,12 +143,12 @@
 			};
 		};
 
-		i2c@c610000 {
+		i2c@c610000 { /* I2C3 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000808              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -155,21 +156,21 @@
 				};
 				prod_c_fm {
 					prod = <
-						0 0x0000006c 0xffff0000 0x00190000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffff0000 0x00180000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_fmplus {
 					prod = <
-						0 0x0000006c 0xffff0000 0x000a0000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffff0000 0x00090000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x00180002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
 						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
@@ -185,12 +186,12 @@
 			};
 		};
 
-		i2c@810c650000 {
+		i2c@810c650000 { /* I2C4 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -212,10 +213,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -228,12 +230,14 @@
 			};
 		};
 
-		i2c@810c660000 {
+
+
+		i2c@810c670000 { /* I2C6 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -255,10 +259,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -271,12 +276,12 @@
 			};
 		};
 
-		i2c@810c670000 {
+		i2c@810c680000 { /* I2C7 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -298,10 +303,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -314,12 +320,12 @@
 			};
 		};
 
-		i2c@810c680000 {
+		i2c@810c690000 { /* I2C8 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -341,10 +347,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -357,12 +364,12 @@
 			};
 		};
 
-		i2c@810c690000 {
+		i2c@810c6a0000 { /* I2C9 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -384,10 +391,54 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
+				};
+				prod_c_sm {
+					prod = <
+						0 0x0000006c 0xffff0000 0x001d0000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x00000094 0x0000ffff 0x00000708              //I2C_I2C_INTERFACE_TIMING_0_0
+						0 0x00000098 0xffffffff 0x08080808              //I2C_I2C_INTERFACE_TIMING_1_0
+						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
+				};
+			};
+		};
+		i2c@810c6b0000 { /* I2C10 */
+			prod-settings {
+				#prod-cells = <4>;
+				prod {
+					prod = <
+
+						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
+						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
+						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
+						0 0x000000e0 0x0000ffff 0x00000002>;            //I2C_I2C_SLV_DATA_CAPTURE_TIMING_0
+				};
+				prod_c_fm {
+					prod = <
+						0 0x0000006c 0xffff0000 0x00150000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
+						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
+						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
+				};
+				prod_c_fmplus {
+					prod = <
+						0 0x0000006c 0xffff0000 0x00080000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
+						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
+						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
+				};
+				prod_c_hs {
+					prod = <
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
+						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -400,12 +451,12 @@
 			};
 		};
 
-		i2c@810c6b0000 {
+		i2c@810c6c0000 { /* I2C11 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -427,10 +478,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -443,12 +495,12 @@
 			};
 		};
 
-		i2c@810c6c0000 {
+		i2c@810c6d0000 { /* I2C12 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -470,10 +522,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -486,12 +539,12 @@
 			};
 		};
 
-		i2c@810c6d0000 {
+		i2c@810c410000 { /* I2C14 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -513,10 +566,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -529,12 +583,12 @@
 			};
 		};
 
-		i2c@810c410000 {
+		i2c@810c420000 { /* I2C15 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -556,10 +610,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -572,12 +627,12 @@
 			};
 		};
 
-		i2c@810c420000 {
+		i2c@810c430000 { /* I2C16 */
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
 					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+
 						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
 						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
 						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
@@ -599,10 +654,11 @@
 				};
 				prod_c_hs {
 					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
+						0 0x0000006c 0xffffffff 0x001d0002              //I2C_I2C_CLK_DIVISOR_REGISTER_0
 						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
 						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
+						0 0x0000009c 0x0000ffff 0x00000102              //I2C_I2C_HS_INTERFACE_TIMING_0_0
+						0 0x000000a0 0x00ffffff 0x00040404              //I2C_I2C_HS_INTERFACE_TIMING_1_0
 						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
 				};
 				prod_c_sm {
@@ -615,91 +671,7 @@
 			};
 		};
 
-		i2c@810c430000 {
-			prod-settings {
-				#prod-cells = <4>;
-				prod {
-					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
-						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
-						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
-						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
-						0 0x000000e0 0x0000ffff 0x00000002>;            //I2C_I2C_SLV_DATA_CAPTURE_TIMING_0
-				};
-				prod_c_fm {
-					prod = <
-						0 0x0000006c 0xffff0000 0x00150000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
-						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
-						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
-				};
-				prod_c_fmplus {
-					prod = <
-						0 0x0000006c 0xffff0000 0x00080000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
-						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
-						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
-				};
-				prod_c_hs {
-					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
-						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
-						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
-						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
-				};
-				prod_c_sm {
-					prod = <
-						0 0x0000006c 0xffff0000 0x001d0000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
-						0 0x00000094 0x0000ffff 0x00000708              //I2C_I2C_INTERFACE_TIMING_0_0
-						0 0x00000098 0xffffffff 0x08080808              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
-				};
-			};
-		};
-
-		i2c@810c6a0000 {
-			prod-settings {
-				#prod-cells = <4>;
-				prod {
-					prod = <
-						0 0x0000009c 0x0000ffff 0x00000204              //I2C_I2C_HS_INTERFACE_TIMING_0_0
-						0 0x000000d4 0x000000ff 0x00000000              //I2C_I2C_INTERFACE_TIMING_2_0
-						0 0x000000d8 0x000000ff 0x00000000              //I2C_I2C_HS_INTERFACE_TIMING_2_0
-						0 0x000000dc 0x0000ffff 0x00000001              //I2C_I2C_MSTR_DATA_CAPTURE_TIMING_0
-						0 0x000000e0 0x0000ffff 0x00000002>;            //I2C_I2C_SLV_DATA_CAPTURE_TIMING_0
-				};
-				prod_c_fm {
-					prod = <
-						0 0x0000006c 0xffff0000 0x00150000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
-						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
-						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
-				};
-				prod_c_fmplus {
-					prod = <
-						0 0x0000006c 0xffff0000 0x00080000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
-						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
-						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
-				};
-				prod_c_hs {
-					prod = <
-						0 0x0000006c 0xffffffff 0x00160001              //I2C_I2C_CLK_DIVISOR_REGISTER_0
-						0 0x00000094 0x0000ffff 0x00000202              //I2C_I2C_INTERFACE_TIMING_0_0
-						0 0x00000098 0xffffffff 0x02020202              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000a0 0x00ffffff 0x00090909              //I2C_I2C_HS_INTERFACE_TIMING_1_0
-						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
-				};
-				prod_c_sm {
-					prod = <
-						0 0x0000006c 0xffff0000 0x001d0000              //I2C_I2C_CLK_DIVISOR_REGISTER_0
-						0 0x00000094 0x0000ffff 0x00000708              //I2C_I2C_INTERFACE_TIMING_0_0
-						0 0x00000098 0xffffffff 0x08080808              //I2C_I2C_INTERFACE_TIMING_1_0
-						0 0x000000e8 0x000000ff 0x00000040>;            //I2C_I2C_FAIRNESS_ARBITRATION_0
-				};
-			};
-		};
+	
 
 		qspi@db50000 {
 			prod-settings {
