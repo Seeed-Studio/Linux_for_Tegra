@@ -193,7 +193,11 @@ static void vblk_put_req(struct vsc_request *req)
 			(vblkdev->queue_state == VBLK_QUEUE_SUSPENDED)) {
 			complete(&vblkdev->req_queue_empty);
 		}
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+		timer_delete(&req->timer);
+#else
 		del_timer(&req->timer);
+#endif
 	}
 }
 

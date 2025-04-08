@@ -139,9 +139,14 @@ static int tegra_hv_vcpu_yield_open(struct inode *inode, struct file *filp)
 
 	mutex_unlock(&data->mutex_lock);
 
+#if defined(NV_HRTIMER_SETUP_PRESENT) /* Linux v6.13 */
+	hrtimer_setup(&data->yield_timer, &timer_callback_func,
+		      CLOCK_MONOTONIC, HRTIMER_MODE_REL_PINNED);
+#else
 	hrtimer_init(&data->yield_timer, CLOCK_MONOTONIC,
 		HRTIMER_MODE_REL_PINNED);
 	data->yield_timer.function = &timer_callback_func;
+#endif
 
 out:
 	return ret;

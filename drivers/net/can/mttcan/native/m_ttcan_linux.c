@@ -1,7 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1954,7 +1952,11 @@ static int mttcan_remove(struct platform_device *pdev)
 
 	dev_info(&dev->dev, "%s\n", __func__);
 
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+	timer_delete_sync(&priv->timer);
+#else
 	del_timer_sync(&priv->timer);
+#endif
 	mttcan_delete_sys_files(&dev->dev);
 	unregister_mttcan_dev(dev);
 	mttcan_unprepare_clock(priv);

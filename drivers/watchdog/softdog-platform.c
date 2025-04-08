@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2014-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * A platform based Software Watchdog Device
- *
- * SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -186,7 +185,11 @@ static int softdog_platform_probe(struct platform_device *pdev)
 reboot_unreg:
 	unregister_reboot_notifier(&swdt->nb);
 timer_del:
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+	timer_delete_sync(&swdt->watchdog_ticktock);
+#else
 	del_timer_sync(&swdt->watchdog_ticktock);
+#endif
 	return ret;
 }
 
@@ -194,7 +197,11 @@ static int softdog_platform_remove(struct platform_device *pdev)
 {
 	struct softdog_platform_wdt *swdt = platform_get_drvdata(pdev);
 
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+	timer_delete_sync(&swdt->watchdog_ticktock);
+#else
 	del_timer_sync(&swdt->watchdog_ticktock);
+#endif
 	watchdog_unregister_device(&swdt->wdt_dev);
 	unregister_reboot_notifier(&swdt->nb);
 	return 0;
@@ -204,7 +211,11 @@ static void softdog_platform_shutdown(struct platform_device *pdev)
 {
 	struct softdog_platform_wdt *swdt = platform_get_drvdata(pdev);
 
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+	timer_delete_sync(&swdt->watchdog_ticktock);
+#else
 	del_timer_sync(&swdt->watchdog_ticktock);
+#endif
 }
 
 #ifdef CONFIG_PM_SLEEP

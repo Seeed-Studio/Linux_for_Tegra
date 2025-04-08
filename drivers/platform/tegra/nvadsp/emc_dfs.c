@@ -1,21 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2014-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
- * emc_dfs.c
- *
  * Emc dynamic frequency scaling due to APE
- *
- * Copyright (C) 2014-2020, NVIDIA Corporation. All rights reserved.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
  */
 
+#include <nvidia/conftest.h>
 #include <linux/tegra_nvadsp.h>
 #include <linux/tick.h>
 #include <linux/timer.h>
@@ -193,7 +182,11 @@ static void emc_dfs_disable(void)
 	einfo->rd_cnt = read64((u32)ABRIDGE_STATS_READ_0);
 	einfo->wr_cnt = read64((u32)ABRIDGE_STATS_WRITE_0);
 
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+	timer_delete_sync(&einfo->cnt_timer);
+#else
 	del_timer_sync(&einfo->cnt_timer);
+#endif
 }
 
 #ifdef CONFIG_DEBUG_FS

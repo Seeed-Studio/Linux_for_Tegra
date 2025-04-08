@@ -36,6 +36,8 @@
 #include <linux/miscdevice.h>
 #include "v4l2loopback.h"
 
+#include <nvidia/conftest.h>
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0)
 #error This module is not supported on kernels before 4.0.0.
 #endif
@@ -1706,8 +1708,13 @@ static int vidioc_querybuf(struct file *file, void *fh, struct v4l2_buffer *b)
 static void buffer_written(struct v4l2_loopback_device *dev,
 			   struct v4l2l_buffer *buf)
 {
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+	timer_delete_sync(&dev->sustain_timer);
+	timer_delete_sync(&dev->timeout_timer);
+#else
 	del_timer_sync(&dev->sustain_timer);
 	del_timer_sync(&dev->timeout_timer);
+#endif
 
 	spin_lock_bh(&dev->list_lock);
 	list_move_tail(&buf->list_head, &dev->outbufs_list);
@@ -2274,8 +2281,13 @@ static int v4l2_loopback_close(struct file *file)
 
 	atomic_dec(&dev->open_count);
 	if (dev->open_count.counter == 0) {
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+		timer_delete_sync(&dev->sustain_timer);
+		timer_delete_sync(&dev->timeout_timer);
+#else
 		del_timer_sync(&dev->sustain_timer);
 		del_timer_sync(&dev->timeout_timer);
+#endif
 	}
 	try_free_buffers(dev);
 

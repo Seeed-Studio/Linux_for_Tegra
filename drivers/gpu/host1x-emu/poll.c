@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <nvidia/conftest.h>
+
 #include "dev.h"
 #include "fence.h"
 #include "poll.h"
@@ -178,8 +181,13 @@ void host1x_poll_start(struct host1x *host)
 
 		hr_timer_host = host;
 		ktime = ktime_set(HRTIMER_TIMEOUT_SEC, host->hr_polling_intrval);
+#if defined(NV_HRTIMER_SETUP_PRESENT) /* Linux v6.13 */
+		hrtimer_setup(&emu_hr_timer, &timer_callback, CLOCK_MONOTONIC,
+			      HRTIMER_MODE_REL);
+#else
 		hrtimer_init(&emu_hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		emu_hr_timer.function = &timer_callback;
+#endif
 		hrtimer_start(&emu_hr_timer, ktime, HRTIMER_MODE_REL);
 	}
 #endif

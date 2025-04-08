@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
-#include <nvidia/conftest.h>
+// SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -267,7 +265,11 @@ static ssize_t lpm_write_proc(struct file *file, const char __user *buffer,
 			bluedroid_pm_gpio_set_value(
 				bluedroid_pm->ext_wake, 1);
 			__pm_stay_awake(&bluedroid_pm->wake_lock);
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+			timer_delete(&bluedroid_pm_timer);
+#else
 			del_timer(&bluedroid_pm_timer);
+#endif
 			set_bit(BT_WAKE, &bluedroid_pm->flags);
 		} else {
 			kfree(buf);
@@ -507,7 +509,11 @@ static int bluedroid_pm_remove(struct platform_device *pdev)
 	if ((bluedroid_pm->ext_wake)) {
 		wakeup_source_destroy(&bluedroid_pm->wake_lock);
 		remove_bt_proc_interface();
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+		timer_delete(&bluedroid_pm_timer);
+#else
 		del_timer(&bluedroid_pm_timer);
+#endif
 	}
 	if (((bluedroid_pm->gpio_reset)) ||
 		((bluedroid_pm->gpio_shutdown)) ||

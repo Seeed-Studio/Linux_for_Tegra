@@ -7682,6 +7682,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_GPIO_DEVICE_GET_CHIP_PRESENT" "" "functions"
         ;;
 
+        hrtimer_setup)
+            #
+            # Determine if the function hrtimer_setup() is present.
+            #
+            # This change was made in Linux v6.13 by commit 908a1d775422
+            # ("hrtimers: Introduce hrtimer_setup() to replace hrtimer_init()").
+            #
+            CODE="
+            #include <linux/hrtimer.h>
+            bool conftest_hrtimer_setup(void) {
+                return hrtimer_setup();
+            }"
+
+            compile_check_conftest "$CODE" "NV_HRTIMER_SETUP_PRESENT" "" "functions"
+        ;;
+
         netif_set_tso_max_size)
             #
             # Determine if netif_set_tso_max_size() function is present
@@ -8678,6 +8694,22 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_TEGRA_DEV_IOMMU_GET_STREAM_ID_PRESENT" "" "functions"
+        ;;
+
+        timer_delete)
+            #
+            # Determine if the function timer_delete() is present.
+            #
+            # This change was made in Linux v6.15 by commit 8fa7292fee5c
+            # ("treewide: Switch/rename to timer_delete[_sync]()").
+            #
+            CODE="
+            #include <linux/timer.h>
+            bool conftest_timer_delete(void) {
+                return timer_delete();
+            }"
+
+            compile_check_conftest "$CODE" "NV_TIMER_DELETE_PRESENT" "" "functions"
         ;;
 
         tty_operations_struct_send_xchar_has_u8_arg)
