@@ -154,7 +154,7 @@ static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
 	*gos_index = index;
 	*gos_offset = offset;
 
-	dev_info(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
+	dev_dbg(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
 		__func__, id, addr, index, offset);
 
 	return 0;
