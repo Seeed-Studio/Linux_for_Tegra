@@ -164,7 +164,6 @@
 
 #define PROFILE_SPI_SLAVE	/* profile spi sw overhead */
 #define VERBOSE_DUMP_REGS	/* register dumps */
-#define TEGRA_SPI_SLAVE_DEBUG	/* to enable debug interfaces, sysfs ... */
 
 #ifdef VERBOSE_DUMP_REGS
 #define dump_regs(_log, _t, _f, ...)				\
@@ -368,42 +367,6 @@ static int tegra_spi_runtime_resume(struct device *dev);
 static int tegra_spi_validate_request(struct spi_device *spi,
 			struct tegra_spi_data *tspi, struct spi_transfer *t);
 static int tegra_spi_ext_clk_enable(bool enable, struct tegra_spi_data *tspi);
-
-#ifdef TEGRA_SPI_SLAVE_DEBUG
-static ssize_t force_unpacked_mode_set(struct device *dev,
-				  struct device_attribute *attr,
-				  const char *buf, size_t count)
-{
-	struct tegra_spi_data *tspi;
-	struct spi_controller *controller = dev_get_drvdata(dev);
-
-	if (controller) {
-		tspi = spi_controller_get_devdata(controller);
-		if (tspi && count) {
-			tspi->force_unpacked_mode = (buf[0] >= '1' && buf[0] <= '9');
-			return count;
-		}
-	}
-	return -ENODEV;
-}
-
-static ssize_t force_unpacked_mode_show(struct device *dev,
-				   struct device_attribute *attr,
-				   char *buf)
-{
-	struct tegra_spi_data *tspi;
-	struct spi_controller *controller = dev_get_drvdata(dev);
-
-	if (controller) {
-		tspi = spi_controller_get_devdata(controller);
-		return sprintf(buf, "%d", tspi->force_unpacked_mode);
-	}
-	return -ENODEV;
-}
-
-static DEVICE_ATTR(force_unpacked_mode, 0644, force_unpacked_mode_show,
-						force_unpacked_mode_set);
-#endif
 
 static inline unsigned long tegra_spi_readl(struct tegra_spi_data *tspi,
 		unsigned long reg)
@@ -2266,17 +2229,6 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		goto exit_pm_disable;
 	}
 
-#ifdef TEGRA_SPI_SLAVE_DEBUG
-	ret = device_create_file(&pdev->dev, &dev_attr_force_unpacked_mode);
-	if (ret != 0)
-		goto exit_unregister_controller;
-
-	return ret;
-
-exit_unregister_controller:
-	spi_unregister_controller(controller);
-
-#endif
 	return ret;
 
 exit_pm_disable:
@@ -2299,9 +2251,6 @@ static int tegra_spi_remove(struct platform_device *pdev)
 	struct spi_controller *controller = dev_get_drvdata(&pdev->dev);
 	struct tegra_spi_data	*tspi = spi_controller_get_devdata(controller);
 
-#ifdef TEGRA_SPI_SLAVE_DEBUG
-	device_remove_file(&pdev->dev, &dev_attr_force_unpacked_mode);
-#endif
 	free_irq(tspi->irq, tspi);
 	spi_unregister_controller(controller);
 
