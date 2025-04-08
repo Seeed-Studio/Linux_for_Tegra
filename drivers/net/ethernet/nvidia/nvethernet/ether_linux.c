@@ -6075,10 +6075,6 @@ static int ether_configure_car(struct platform_device *pdev,
 	struct device *dev = pdata->dev;
 	struct device_node *np = dev->of_node;
 	struct osi_core_priv_data *osi_core = pdata->osi_core;
-#ifndef OSI_STRIPPED_LIB
-	unsigned long csr_clk_rate = 0;
-	struct osi_ioctl ioctl_data = {};
-#endif /* !OSI_STRIPPED_LIB */
 	int ret = 0;
 
 
@@ -6161,24 +6157,7 @@ static int ether_configure_car(struct platform_device *pdev,
 		}
 	}
 
-#ifndef OSI_STRIPPED_LIB
-	csr_clk_rate = clk_get_rate(pdata->axi_cbb_clk);
-	ioctl_data.cmd = OSI_CMD_MDC_CONFIG;
-	ioctl_data.arg5_u64 = csr_clk_rate;
-	ret = osi_handle_ioctl(osi_core, &ioctl_data);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to configure MDC\n");
-		goto err_mdc;
-	}
-#endif /* !OSI_STRIPPED_LIB */
-
 	return ret;
-#ifndef OSI_STRIPPED_LIB
-err_mdc:
-	if (pdata->mac_rst) {
-		reset_control_assert(pdata->mac_rst);
-	}
-#endif /* !OSI_STRIPPED_LIB */
 err_rst:
 	ether_disable_clks(pdata);
 err_enable_clks:
@@ -6501,6 +6480,11 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 	unsigned int dt_pad_calibration_enable;
 	unsigned int dt_pad_auto_cal_pu_offset;
 	unsigned int dt_pad_auto_cal_pd_offset;
+	const uint32_t def_mdc_cr[OSI_MAX_MAC_IP_TYPES] = {
+		OSI_EQOS_DEFAULT_MDC_CR,
+		OSI_MGBE_DEFAULT_MDC_CR,
+		OSI_MGBE_DEFAULT_MDC_CR
+	};
 	/* This variable is for DT entry which should not fail bootup */
 	int ret_val = 0;
 
@@ -7089,6 +7073,12 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 				 "DT instance_id missing, setting default to MGBE0\n");
 			osi_core->instance_id = 0;
 		}
+	}
+
+	ret_val = of_property_read_u32(np, "nvidia,mdc-cr", &osi_core->mdc_cr);
+	if ((ret_val < 0) || (osi_core->mdc_cr > OSI_MAX_MDC_CR)) {
+		dev_info(dev, "failed to read or invalid MDC CR - default to %d\n", def_mdc_cr[osi_core->mac]);
+		osi_core->mdc_cr = def_mdc_cr[osi_core->mac];
 	}
 
 exit:
