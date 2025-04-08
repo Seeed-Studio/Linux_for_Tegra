@@ -4164,7 +4164,7 @@
 				compatible = "nvidia,tegra234-vi";
 				resets = <&bpmp TEGRA264_RESET_VI1>;
 				reset-names = "vi2";
-				clocks = <&bpmp TEGRA264_CLK_VI>;
+				clocks = <&bpmp TEGRA264_CLK_VI1>;
 				clock-names = "vi";
 				nvidia,vi-falcon-device = <&vi1_thi>;
 				iommus = <&smmu0_mmu TEGRA_SID_VI2_VM1>;
