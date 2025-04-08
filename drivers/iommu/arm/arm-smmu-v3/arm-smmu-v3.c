@@ -4058,13 +4058,32 @@ static int __maybe_unused arm_smmu_runtime_resume(struct device *dev)
 {
 	struct arm_smmu_device *smmu = dev_get_drvdata(dev);
 
+	dev_dbg(dev, "Resuming\n");
 	arm_smmu_device_reset(smmu, smmu->bypass);
 
 	return 0;
 }
 
+static int __maybe_unused arm_smmu_runtime_suspend(struct device *dev)
+{
+	struct arm_smmu_device *smmu = dev_get_drvdata(dev);
+	struct arm_smmu_cmdq_ent cmd;
+
+	cmd.opcode = CMDQ_OP_CFGI_ALL;
+	arm_smmu_cmdq_issue_cmd_with_sync(smmu, &cmd);
+
+	cmd.opcode = CMDQ_OP_TLBI_NSNH_ALL;
+	arm_smmu_cmdq_issue_cmd_with_sync(smmu, &cmd);
+
+	dev_dbg(dev, "Disabling\n");
+	arm_smmu_device_disable(smmu);
+
+	dev_dbg(dev, "Suspending\n");
+	return 0;
+}
+
 static const struct dev_pm_ops arm_smmu_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(NULL, arm_smmu_runtime_resume)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(arm_smmu_runtime_suspend, arm_smmu_runtime_resume)
 };
 
 static struct platform_driver arm_smmu_driver = {
