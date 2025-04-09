@@ -2,7 +2,7 @@
 /*
  * NVIDIA Tegra XUSB device mode controller
  *
- * SPDX-FileCopyrightText: Copyright (c) 2013-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2013-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (c) 2015, Google Inc.
  */
 
@@ -1565,12 +1565,6 @@ static int __tegra_xudc_ep_set_halt(struct tegra_xudc_ep *ep, bool halt)
 		ep_ctx_write_state(ep->context, EP_STATE_RUNNING);
 		ep_ctx_write_seq_num(ep->context, 0);
 		ep_reload(xudc, ep->index);
-		return 0;
-	}
-
-	if (!!(xudc_readl(xudc, EP_HALT) & BIT(ep->index)) == halt) {
-		dev_dbg(xudc->dev, "EP %u already %s\n", ep->index,
-			halt ? "halted" : "not halted");
 		return 0;
 	}
 
