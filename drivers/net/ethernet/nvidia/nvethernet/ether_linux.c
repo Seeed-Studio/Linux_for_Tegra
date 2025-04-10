@@ -4383,6 +4383,25 @@ int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 		return -EINVAL;
 	}
 
+	/* Check capabilities for privileged IOCTL operations */
+	switch (cmd) {
+	case SIOCGMIIPHY:
+	case SIOCGMIIREG:
+	case SIOCSMIIREG:
+	case ETHER_PRV_RMDIO_IOCTL:
+	case ETHER_PRV_WMDIO_IOCTL:
+	case SIOCSHWTSTAMP:
+		if (!capable(CAP_NET_ADMIN)) {
+			dev_info(pdata->dev,
+				 "error: admin permission is required for ioctl: %d\n",
+				 cmd);
+			return -EPERM;
+		}
+		break;
+	default:
+		break;
+	}
+
 	switch (cmd) {
 	case SIOCGMIIPHY:
 		if (pdata->mdio_addr != FIXED_PHY_INVALID_MDIO_ADDR) {
@@ -4466,6 +4485,21 @@ int ether_siocdevprivate(struct net_device *dev, struct ifreq *rq,
 	if (!netif_running(dev)) {
 		dev_err(pdata->dev, "%s: Interface not up\n", __func__);
 		return -EINVAL;
+	}
+
+	/* Check capabilities for privileged IOCTL operations */
+	switch (cmd) {
+	case ETHER_PRV_RMDIO_IOCTL:
+	case ETHER_PRV_WMDIO_IOCTL:
+		if (!capable(CAP_NET_ADMIN)) {
+			dev_info(pdata->dev,
+				 "error: admin permission is required for ioctl: %d\n",
+				 cmd);
+			return -EPERM;
+		}
+		break;
+	default:
+		break;
 	}
 
 	switch (cmd) {

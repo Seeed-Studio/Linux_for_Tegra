@@ -1,5 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "ether_linux.h"
 
@@ -394,7 +407,7 @@ static bool ether_is_bc_addr(unsigned char *bc_addr)
  *
  * @param[in] pdata: OS dependent private data structure.
  * @param[in] ifrd_p: Interface request private data pointer.
- * 
+ *
  * @note Interface should be running (enforced by caller).
  *
  * @retval 0 on Success
@@ -819,7 +832,7 @@ static int ether_pad_calibration(struct net_device *ndev,
  *	disabled.
  *
  * @note MAC and PHY need to be initialized.
- * 
+ *
  * @retval 0 on Success
  * @retval "negative value" on Failure
  */
@@ -1099,17 +1112,35 @@ int ether_handle_priv_ioctl(struct net_device *ndev,
 	/* Enforce admin permission check */
 	switch (ifdata.ifcmd) {
 	case ETHER_AVB_ALGORITHM:
-	case EQOS_L3L4_FILTER_CMD:
-	case EQOS_VLAN_FILTERING_CMD:
-	case EQOS_L2_DA_FILTERING_CMD:
+#ifndef OSI_STRIPPED_LIB
 	case ETHER_CONFIG_ARP_OFFLOAD:
+	case ETHER_PTP_RXQUEUE:
+	case ETHER_CONFIG_PTP_OFFLOAD:
 	case ETHER_CONFIG_LOOPBACK_MODE:
+	case EQOS_VLAN_FILTERING_CMD:
 	case ETHER_PAD_CALIBRATION:
+	case EQOS_L2_DA_FILTERING_CMD:
+	case ETHER_MC_DMA_ROUTE:
+	case ETHER_READ_REG:
+	case ETHER_WRITE_REG:
+#endif /* !OSI_STRIPPED_LIB */
+	case EQOS_L3L4_FILTER_CMD:
+	case ETHER_CONFIG_FRP_CMD:
+	case ETHER_CONFIG_EST:
+	case ETHER_CONFIG_FPE:
+#ifdef OSI_DEBUG
+	case ETHER_REGISTER_DUMP:
+	case ETHER_STRUCTURE_DUMP:
+	case ETHER_DEBUG_INTR_CONFIG:
+#endif /* OSI_DEBUG */
+	case ETHER_CAP_TSC_PTP:
+	case ETHER_M2M_TSYNC:
+	case ETHER_L2_ADDR:
 		if (!capable(CAP_NET_ADMIN)) {
 			ret = -EPERM;
 			dev_info(pdata->dev,
-				 "%s(): error: requires admin permission!\n",
-				 __func__);
+				 "error: admin permission is required for priv ioctl: %d\n",
+				 ifdata.ifcmd);
 			goto err;
 		}
 		break;
