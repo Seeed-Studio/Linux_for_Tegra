@@ -216,3 +216,30 @@ int32_t nvdla_pm_reset(struct platform_device *pdev)
 
 	return 0;
 }
+
+int32_t nvdla_pm_get_current_voltage(struct platform_device *pdev,
+	uint32_t *voltage_mV)
+{
+	(void) pdev;
+	(void) voltage_mV;
+
+	return 0;
+}
+
+int32_t nvdla_pm_get_current_power_draw(struct platform_device *pdev,
+	uint32_t *power_draw_mW)
+{
+	(void) pdev;
+	(void) power_draw_mW;
+
+	return 0;
+}
+
+int32_t nvdla_pm_get_info(struct platform_device *pdev,
+	struct nvdla_pm_info *info)
+{
+	(void) pdev;
+	(void) info;
+
+	return 0;
+}

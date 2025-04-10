@@ -11,6 +11,9 @@
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
 
+#include "../../dla_os_interface.h"
+#include "../nvdla_pm.h"
+
 /* Header and Payload Defines */
 #define DLA_HFRP_CMD_PAYLOAD_MAX_LEN            32U
 #define DLA_HFRP_RESP_PAYLOAD_MAX_LEN           32U
@@ -86,6 +89,8 @@ struct hfrp {
 	uint64_t pg_exit_latency_us_min;
 	uint64_t pg_exit_latency_us_max;
 	uint64_t pg_exit_latency_us_total;
+	uint32_t power_draw_mW;
+	uint32_t voltage_mV;
 
 	bool rail_gated;
 	uint32_t rg_delay_us;
@@ -104,6 +109,9 @@ struct hfrp {
 	uint64_t rg_exit_latency_us_min;
 	uint64_t rg_exit_latency_us_max;
 	uint64_t rg_exit_latency_us_total;
+
+	/* vf curve and other info */
+	struct nvdla_pm_info info;
 
 	/* Node pointer to be a part of a list. */
 	struct list_head list;
@@ -286,6 +294,18 @@ int32_t nvdla_hfrp_send_cmd_config(struct hfrp *hfrp,
 
 /* For getting the current frequency */
 int32_t nvdla_hfrp_send_cmd_get_current_freq(struct hfrp *hfrp,
+	bool blocking);
+
+/* For getting the current voltage */
+int32_t nvdla_hfrp_send_cmd_get_current_voltage(struct hfrp *hfrp,
+	bool blocking);
+
+/* For getting the current power draw */
+int32_t nvdla_hfrp_send_cmd_get_current_power_draw(struct hfrp *hfrp,
+	bool blocking);
+
+/* For getting the vf curve */
+int32_t nvdla_hfrp_send_cmd_get_vfcurve(struct hfrp *hfrp,
 	bool blocking);
 
 #endif /* __NVDLA_PM_HFRP_H_ */

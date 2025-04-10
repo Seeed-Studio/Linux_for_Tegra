@@ -45,6 +45,13 @@ struct nvdla_pm_stat {
 	uint64_t rg_exit_latency_us_total;
 };
 
+struct nvdla_pm_info {
+#define NVDLA_PM_MAX_VFTABLE_ENTRIES 8U
+	uint32_t num_vftable_entries;
+	uint32_t vftable_freq_kHz[NVDLA_PM_MAX_VFTABLE_ENTRIES];
+	uint32_t vftable_voltage_mV[NVDLA_PM_MAX_VFTABLE_ENTRIES];
+};
+
 /**
  * @brief Initializes power management unit
  *
@@ -366,4 +373,43 @@ int32_t nvdla_pm_get_lpwr_config(struct platform_device *pdev,
  **/
 int32_t nvdla_pm_reset(struct platform_device *pdev);
 
+/**
+ * @brief Gets the current voltage
+ *
+ * @param[in] pdev platform device.
+ * @param[out] voltage_mV Location where voltage (in mV) is dumped.
+ *
+ * @return
+ * - zero, with successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_get_current_voltage(struct platform_device *pdev,
+	uint32_t *voltage_mV);
+
+/**
+ * @brief Gets the current power_draw
+ *
+ * @param[in] pdev platform device.
+ * @param[out] power_draw_mW Location where power_draw (in mW) is dumped.
+ *
+ * @return
+ * - zero, with successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_get_current_power_draw(struct platform_device *pdev,
+	uint32_t *power_draw_mW);
+
+
+/**
+ * @brief Gets the static information - VF Curve
+ *
+ * @param[in] pdev platform device
+ * @param[out] info Location where the info is dumped.
+ *
+ * @return
+ * - zero, with successful operation.
+ * - non-zero, otherwise
+ **/
+int32_t nvdla_pm_get_info(struct platform_device *pdev,
+	struct nvdla_pm_info *info);
 #endif /* __NVDLA_PM_H_ */

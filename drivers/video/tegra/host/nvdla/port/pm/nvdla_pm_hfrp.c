@@ -1276,7 +1276,7 @@ fail:
 	return err;
 }
 
-int32_t nvdla_pm_clock_set_mcu_freq(struct platform_device *pdev,
+int32_t nvdla_pm_clock_set_core_freq(struct platform_device *pdev,
 	uint32_t freq_khz)
 {
 	int32_t err = 0;
@@ -1303,7 +1303,7 @@ int32_t nvdla_pm_clock_set_mcu_freq(struct platform_device *pdev,
 	/* pass set debug command to falcon */
 	err = nvdla_fw_send_cmd(pdev, &cmd_data);
 	if (err != 0) {
-		nvdla_dbg_err(pdev, "failed to send set mcu freq command");
+		nvdla_dbg_err(pdev, "failed to send set freq command");
 		goto fail_to_send_cmd;
 	}
 
@@ -1333,15 +1333,15 @@ fail:
 	return err;
 }
 
-int32_t nvdla_pm_clock_set_core_freq(struct platform_device *pdev,
+int32_t nvdla_pm_clock_set_mcu_freq(struct platform_device *pdev,
 	uint32_t freq_khz)
 {
 	int32_t err;
 
 	/* Core frequency is twice the MCU frequency. */
-	err = nvdla_pm_clock_set_mcu_freq(pdev, (freq_khz >> 1));
+	err = nvdla_pm_clock_set_core_freq(pdev, (freq_khz << 1));
 	if (err < 0) {
-		nvdla_dbg_err(pdev, "failed to get mcu freq. err: %d\n", err);
+		nvdla_dbg_err(pdev, "failed to get freq. err: %d\n", err);
 		goto fail;
 	}
 
@@ -1618,6 +1618,112 @@ int32_t nvdla_pm_reset(struct platform_device *pdev)
 		nvdla_dbg_err(pdev, "failed to reset lpwr config");
 		goto fail;
 	}
+
+	return 0;
+
+fail:
+	return err;
+}
+
+int32_t nvdla_pm_get_current_voltage(struct platform_device *pdev,
+	uint32_t *voltage_mV)
+{
+	int32_t err;
+
+	struct hfrp *hfrp;
+
+	hfrp = s_hfrp_get_by_pdev(pdev);
+	if (hfrp == NULL) {
+		err = -EINVAL;
+		nvdla_dbg_err(pdev, "failed to get hfrp\n");
+		goto fail;
+	}
+
+	if (voltage_mV == NULL) {
+		err = -EINVAL;
+		nvdla_dbg_err(pdev, "Invalid input\n");
+		goto fail;
+	}
+
+	err = nvdla_hfrp_send_cmd_get_current_voltage(hfrp, true);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to get voltage. err: %d\n", err);
+		goto fail;
+	}
+
+	*voltage_mV = hfrp->voltage_mV;
+
+	return 0;
+
+fail:
+	return err;
+}
+
+int32_t nvdla_pm_get_current_power_draw(struct platform_device *pdev,
+	uint32_t *power_draw_mW)
+{
+	int32_t err;
+
+	struct hfrp *hfrp;
+
+	hfrp = s_hfrp_get_by_pdev(pdev);
+	if (hfrp == NULL) {
+		err = -EINVAL;
+		nvdla_dbg_err(pdev, "failed to get hfrp\n");
+		goto fail;
+	}
+
+	if (power_draw_mW == NULL) {
+		err = -EINVAL;
+		nvdla_dbg_err(pdev, "Invalid input\n");
+		goto fail;
+	}
+
+	err = nvdla_hfrp_send_cmd_get_current_power_draw(hfrp, true);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to get power_draw. err: %d\n", err);
+		goto fail;
+	}
+
+	*power_draw_mW = hfrp->power_draw_mW;
+
+	return 0;
+
+fail:
+	return err;
+}
+
+int32_t nvdla_pm_get_info(struct platform_device *pdev,
+	struct nvdla_pm_info *info)
+{
+	int32_t err;
+
+	struct hfrp *hfrp;
+
+	hfrp = s_hfrp_get_by_pdev(pdev);
+	if (hfrp == NULL) {
+		err = -EINVAL;
+		nvdla_dbg_err(pdev, "failed to get hfrp\n");
+		goto fail;
+	}
+
+	if (info == NULL) {
+		err = -EINVAL;
+		nvdla_dbg_err(pdev, "Invalid input\n");
+		goto fail;
+	}
+
+	/* Fetch the information if not cached already */
+	if (hfrp->info.num_vftable_entries == 0U) {
+		err = nvdla_hfrp_send_cmd_get_vfcurve(hfrp, true);
+		if (err < 0) {
+			nvdla_dbg_err(pdev, "failed to get vfcurve. err: %d\n",
+				err);
+			goto fail;
+		}
+	}
+
+	(void) memcpy(info, &hfrp->info, sizeof(struct nvdla_pm_info));
 
 	return 0;
 

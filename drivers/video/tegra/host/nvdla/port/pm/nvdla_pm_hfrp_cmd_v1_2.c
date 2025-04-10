@@ -40,8 +40,8 @@
 
 #define DLA_HFRP_CMD_POWER_CONTROL_SZ               2U
 #define DLA_HFRP_CMD_CONFIG_SZ                      12U
-#define DLA_HFRP_CMD_GET_CURRENT_VOLTAGE_SZ         4U
-#define DLA_HFRP_CMD_GET_CURRENT_POWER_DRAW_SZ      4U
+#define DLA_HFRP_CMD_GET_CURRENT_VOLTAGE_SZ         0U
+#define DLA_HFRP_CMD_GET_CURRENT_POWER_DRAW_SZ      0U
 #define DLA_HFRP_CMD_SET_POWER_DRAW_CAP_SZ          4U
 #define DLA_HFRP_CMD_GET_POWER_DRAW_CAP_SZ          4U
 #define DLA_HFRP_CMD_SET_POWER_CONTROL_TUNING_SZ    36U
@@ -220,6 +220,39 @@ int32_t nvdla_hfrp_send_cmd_get_current_freq(struct hfrp *hfrp,
 	return err;
 }
 
+int32_t nvdla_hfrp_send_cmd_get_current_voltage(struct hfrp *hfrp,
+	bool blocking)
+{
+	int32_t err;
+
+	/* No payload */
+	err = hfrp_send_cmd(hfrp, DLA_HFRP_CMD_GET_CURRENT_VOLTAGE, NULL,
+			SZ(DLA_HFRP_CMD_GET_CURRENT_VOLTAGE), blocking);
+
+	return err;
+}
+
+int32_t nvdla_hfrp_send_cmd_get_current_power_draw(struct hfrp *hfrp,
+	bool blocking)
+{
+	int32_t err;
+
+	/* No payload */
+	err = hfrp_send_cmd(hfrp, DLA_HFRP_CMD_GET_CURRENT_POWER_DRAW, NULL,
+			SZ(DLA_HFRP_CMD_GET_CURRENT_POWER_DRAW), blocking);
+
+	return err;
+}
+
+int32_t nvdla_hfrp_send_cmd_get_vfcurve(struct hfrp *hfrp,
+	bool blocking)
+{
+	(void) hfrp;
+	(void) blocking;
+
+	return -EINVAL;
+}
+
 static void s_nvdla_hfrp_handle_response_clock_gate(struct hfrp *hfrp,
 	uint8_t *payload,
 	uint32_t payload_size)
@@ -320,6 +353,36 @@ static void s_nvdla_hfrp_handle_response_config(struct hfrp *hfrp,
 		hfrp->rg_delay_us = rg_delay_ms * 1000U;
 }
 
+static void s_nvdla_hfrp_handle_response_current_voltage(struct hfrp *hfrp,
+	uint8_t *payload,
+	uint32_t payload_size)
+{
+	uint32_t *response = (uint32_t *) payload;
+	uint32_t voltage;
+
+	/**
+	 * VOLTAGE 31:0
+	 **/
+	voltage = response[0];
+
+	hfrp->voltage_mV = voltage;
+}
+
+static void s_nvdla_hfrp_handle_response_current_power_draw(struct hfrp *hfrp,
+	uint8_t *payload,
+	uint32_t payload_size)
+{
+	uint32_t *response = (uint32_t *) payload;
+	uint32_t power_draw;
+
+	/**
+	 * POWER_DRAW 31:0
+	 **/
+	power_draw = response[0];
+
+	hfrp->power_draw_mW = power_draw;
+}
+
 void hfrp_handle_response(struct hfrp *hfrp,
 	uint32_t cmd,
 	uint8_t *payload,
@@ -346,6 +409,16 @@ void hfrp_handle_response(struct hfrp *hfrp,
 	}
 	case DLA_HFRP_CMD_CONFIG: {
 		s_nvdla_hfrp_handle_response_config(hfrp,
+			payload, payload_size);
+		break;
+	}
+	case DLA_HFRP_CMD_GET_CURRENT_VOLTAGE: {
+		s_nvdla_hfrp_handle_response_current_voltage(hfrp,
+			payload, payload_size);
+		break;
+	}
+	case DLA_HFRP_CMD_GET_CURRENT_POWER_DRAW: {
+		s_nvdla_hfrp_handle_response_current_power_draw(hfrp,
 			payload, payload_size);
 		break;
 	}

@@ -1194,26 +1194,88 @@ static int debug_dla_ctrl_power_vftable_mv_khz_show(struct seq_file *s, void *da
 {
 	int err;
 	struct platform_device *pdev;
+	struct nvdla_pm_info info;
+	uint32_t ii;
+
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
+		goto fail;
+
 	nvdla_dbg_info(pdev, "[CTRL/POWER] vftable_mv_khz show");
+
+	err = nvdla_pm_get_info(pdev, &info);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to fetch pm info. err: %d", err);
+		goto fail;
+	}
+
+	seq_puts(s, "Voltage(mV)\tFrequency(kHz)\n");
+	for (ii = 0U; ii < info.num_vftable_entries; ii++) {
+		/* Tab separated for pretty alignment */
+		seq_printf(s, "%5u\t%5u\n", info.vftable_voltage_mV[ii],
+			info.vftable_freq_kHz[ii]);
+	}
+
 	return 0;
+
+fail:
+	return err;
 }
 
 static int debug_dla_ctrl_power_voltage_mv_show(struct seq_file *s, void *data)
 {
 	int err;
 	struct platform_device *pdev;
+	uint32_t voltage;
 	(void) data;
 
 	err = s_nvdla_get_pdev_from_seq(s, &pdev);
 	if (err < 0)
-		return -1;
+		goto fail;
+
 	nvdla_dbg_info(pdev, "[CTRL/POWER] voltage_mv show");
+
+	err = nvdla_pm_get_current_voltage(pdev, &voltage);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to fetch voltage. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%u\n", voltage);
+
 	return 0;
+
+fail:
+	return err;
+}
+
+static int debug_dla_ctrl_power_draw_mw_show(struct seq_file *s, void *data)
+{
+	int err;
+	struct platform_device *pdev;
+	uint32_t power_draw;
+	(void) data;
+
+	err = s_nvdla_get_pdev_from_seq(s, &pdev);
+	if (err < 0)
+		goto fail;
+
+	nvdla_dbg_info(pdev, "[CTRL/POWER] power_draw_mw show");
+
+	err = nvdla_pm_get_current_power_draw(pdev, &power_draw);
+	if (err < 0) {
+		nvdla_dbg_err(pdev, "failed to fetch power_draw. err: %d", err);
+		goto fail;
+	}
+
+	seq_printf(s, "%u\n", power_draw);
+
+	return 0;
+
+fail:
+	return err;
 }
 
 // ctrl rail show functions
@@ -2239,6 +2301,10 @@ static int debug_dla_ctrl_power_voltage_mv_open(struct inode *inode, struct file
 	return single_open(file, debug_dla_ctrl_power_voltage_mv_show, inode->i_private);
 }
 
+static int debug_dla_ctrl_power_draw_mw_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_ctrl_power_draw_mw_show, inode->i_private);
+}
 // ctrl rail open callback functions
 static int debug_dla_ctrl_rail_activetime_us_open(struct inode *inode, struct file *file)
 {
@@ -2756,6 +2822,13 @@ static const struct file_operations debug_dla_ctrl_power_voltage_mv_fops = {
 		.release	= single_release,
 };
 
+static const struct file_operations debug_dla_ctrl_power_draw_mw_fops = {
+		.open		= debug_dla_ctrl_power_draw_mw_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
 // ctrl rail file operations
 static const struct file_operations debug_dla_ctrl_rail_activetime_us_fops = {
 		.open		= debug_dla_ctrl_rail_activetime_us_open,
@@ -2931,9 +3004,11 @@ static void dla_ctrl_debugfs_init(struct platform_device *pdev)
 							&debug_dla_ctrl_power_mode_fops) ||
 		!debugfs_create_file("statdump", 0400, ctrl_power, nvdla_dev,
 							&debug_dla_ctrl_power_statdump_fops) ||
-		!debugfs_create_file("vftable_mv_khz", 0400, ctrl_power, nvdla_dev,
+		!debugfs_create_file("vftable_mV_kHz", 0400, ctrl_power, nvdla_dev,
 							&debug_dla_ctrl_power_vftable_mv_khz_fops) ||
-		!debugfs_create_file("voltage_mv", 0400, ctrl_power, nvdla_dev,
+		!debugfs_create_file("power_mW", 0400, ctrl_power, nvdla_dev,
+							&debug_dla_ctrl_power_draw_mw_fops) ||
+		!debugfs_create_file("voltage_mV", 0400, ctrl_power, nvdla_dev,
 							&debug_dla_ctrl_power_voltage_mv_fops)) {
 		goto cleanup;
 	}
