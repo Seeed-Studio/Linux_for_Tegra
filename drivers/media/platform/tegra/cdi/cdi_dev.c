@@ -181,6 +181,13 @@ int cdi_dev_raw_rd(
 	if (!offset_len)
 		offset_len = info->reg_len;
 
+	if (offset_len > 2) {
+		dev_err(info->dev, "%s: offset_len %u exceeds maximum supported length of 2\n",
+			__func__, offset_len);
+		mutex_unlock(&info->mutex);
+		return -EINVAL;
+	}
+
 	if (offset_len == 2) {
 		data[0] = (u8)((offset >> 8) & 0xff);
 		data[1] = (u8)(offset & 0xff);
@@ -258,6 +265,7 @@ int cdi_dev_raw_wr(
 				(unsigned int)((size % MAX_MSG_SIZE) ? 1 : 0), &num_msgs)) {
 		dev_err(info->dev, "%s: calculate the num_msgs due to an overflow\n",
 			__func__);
+		mutex_unlock(&info->mutex);
 		return -ENOMEM;
 	}
 
@@ -369,7 +377,7 @@ static int cdi_dev_get_package(
 		return -EINVAL;
 	}
 
-	if (!info->rw_pkg.size) {
+	if (!info->rw_pkg.size || info->rw_pkg.size > MAX_MSG_SIZE) {
 		dev_err(info->dev, "%s invalid package size %d\n",
 			__func__, info->rw_pkg.size);
 		return -EINVAL;

@@ -253,6 +253,12 @@ static int isp_channel_open(
 		mutex_unlock(&chdrv_lock);
 		return -ENODEV;
 	}
+
+	if (chan_drv->isp_capture_pdev == NULL) {
+		mutex_unlock(&chdrv_lock);
+		return -ENODEV;
+	}
+
 	mutex_unlock(&chdrv_lock);
 
 	chan = kzalloc(sizeof(*chan), GFP_KERNEL);
@@ -433,6 +439,11 @@ static long isp_channel_ioctl(
 
 	if (unlikely(chan == NULL)) {
 		pr_err("%s: invalid channel\n", __func__);
+		return -EINVAL;
+	}
+
+	if (unlikely(ptr == NULL)) {
+		pr_err("%s: invalid argument user pointer\n", __func__);
 		return -EINVAL;
 	}
 
@@ -641,6 +652,11 @@ int isp_channel_drv_register(
 {
 	struct isp_channel_drv *chan_drv;
 	unsigned int i;
+	int err = 0;
+	struct device *dev;
+
+	if (unlikely(ndev == NULL))
+		return -ENOMEM;
 
 	chan_drv = kzalloc(offsetof(struct isp_channel_drv,
 			channels[max_isp_channels]), GFP_KERNEL);
@@ -657,25 +673,44 @@ int isp_channel_drv_register(
 	if (chdrv_ != NULL) {
 		dev_warn(chan_drv->dev, "%s: dev is busy\n", __func__);
 		mutex_unlock(&chdrv_lock);
-		kfree(chan_drv);
-		return -EBUSY;
+		err = -EBUSY;
+		goto error;
 	}
 	chdrv_ = chan_drv;
 	mutex_unlock(&chdrv_lock);
 
 	if (isp_channel_major < 0) {
 		pr_err("%s: Invalid major number for ISP channel\n", __func__);
-		return -EINVAL;
+		err = -EINVAL;
+		goto error;
 	}
 
 	for (i = 0; i < chan_drv->num_channels; i++) {
 		dev_t devt = MKDEV(isp_channel_major, i);
-
-		device_create(isp_channel_class, &chan_drv->isp_capture_pdev->dev, devt, NULL,
+		dev = device_create(isp_channel_class, &chan_drv->isp_capture_pdev->dev, devt, NULL,
 				"capture-isp-channel%u", i);
+		if (IS_ERR(dev)) {
+			pr_err("%s: Failed to create device\n", __func__);
+			err = PTR_ERR(dev);
+			goto error_destroy;
+		}
 	}
 
 	return 0;
+
+error_destroy:
+	while (i--) {
+		dev_t devt = MKDEV(isp_channel_major, i);
+
+		device_destroy(isp_channel_class, devt);
+	}
+
+error:
+	mutex_lock(&chdrv_lock);
+	chdrv_ = NULL;
+	mutex_unlock(&chdrv_lock);
+	kfree(chan_drv);
+	return err;
 }
 EXPORT_SYMBOL(isp_channel_drv_register);
 

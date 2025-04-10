@@ -513,15 +513,38 @@ static int __cdi_create_dev(
 	};
 
 	int err = 0;
+	if (cdi_mgr == NULL || new_dev == NULL) {
+		pr_err("%s: invalid dev params\n", __func__);
+		return -EINVAL;
+	}
 
-	if (new_dev->addr >= 0x80 || new_dev->drv_name[0] == '\0' ||
-		(new_dev->val_bits != 8 && new_dev->val_bits != 16) ||
-		(new_dev->reg_bits != 0 && new_dev->reg_bits != 8 &&
-		new_dev->reg_bits != 16)) {
+	if (new_dev->addr >= 0x80) {
 		dev_err(cdi_mgr->dev,
-			"%s: invalid cdi dev params: %s %x %d %d\n",
-			__func__, new_dev->drv_name, new_dev->addr,
-			new_dev->reg_bits, new_dev->val_bits);
+			  "%s: invalid cdi dev addr: %x\n", __func__, new_dev->addr);
+		return -EINVAL;
+	}
+
+	if (new_dev->drv_name[0] == '\0') {
+		dev_err(cdi_mgr->dev,
+			  "%s: invalid cdi dev name: %s\n", __func__, new_dev->drv_name);
+		return -EINVAL;
+	}
+
+	if (new_dev->val_bits != 8 && new_dev->val_bits != 16) {
+		dev_err(cdi_mgr->dev,
+			  "%s: invalid cdi dev val_bits: %d\n", __func__, new_dev->val_bits);
+		return -EINVAL;
+	}
+
+	if (new_dev->reg_bits != 0 && new_dev->reg_bits != 8 &&
+		new_dev->reg_bits != 16) {
+		dev_err(cdi_mgr->dev,
+			  "%s: invalid cdi dev reg_bits: %d\n", __func__, new_dev->reg_bits);
+		return -EINVAL;
+	}
+
+	if (cdi_mgr->adap == NULL) {
+		dev_err(cdi_mgr->dev, "%s: i2c adapter not found\n", __func__);
 		return -EINVAL;
 	}
 
@@ -558,11 +581,11 @@ static int __cdi_create_dev(
 	brd.addr = cdi_dev->cfg.addr;
 	brd.platform_data = &cdi_dev->pdata;
 	cdi_dev->client = i2c_new_client_device(cdi_mgr->adap, &brd);
-	if (!cdi_dev->client) {
+	if (IS_ERR(cdi_dev->client)) {
+		err = PTR_ERR(cdi_dev->client);
 		dev_err(cdi_mgr->dev,
-			"%s cannot allocate client: %s bus %d, %x\n", __func__,
-			cdi_dev->pdata.drv_name, cdi_mgr->adap->nr, brd.addr);
-		err = -EINVAL;
+			"%s cannot allocate client: %s bus %d, %x, err: %d\n", __func__,
+			cdi_dev->pdata.drv_name, cdi_mgr->adap->nr, brd.addr, err);
 		goto dev_create_err;
 	}
 

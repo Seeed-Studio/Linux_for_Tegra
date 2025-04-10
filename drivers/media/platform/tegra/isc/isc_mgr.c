@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -305,11 +305,11 @@ static int __isc_create_dev(
 	brd.addr = isc_dev->cfg.addr;
 	brd.platform_data = &isc_dev->pdata;
 	isc_dev->client = i2c_new_client_device(isc_mgr->adap, &brd);
-	if (!isc_dev->client) {
+	if (IS_ERR(isc_dev->client)) {
+		err = PTR_ERR(isc_dev->client);
 		dev_err(isc_mgr->dev,
-			"%s cannot allocate client: %s bus %d, %x\n", __func__,
-			isc_dev->pdata.drv_name, isc_mgr->adap->nr, brd.addr);
-		err = -EINVAL;
+			"%s cannot allocate client: %s bus %d, %x, err: %d\n", __func__,
+			isc_dev->pdata.drv_name, isc_mgr->adap->nr, brd.addr, err);
 		goto dev_create_err;
 	}
 

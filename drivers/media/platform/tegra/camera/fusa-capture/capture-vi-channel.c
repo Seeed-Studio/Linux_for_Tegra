@@ -262,7 +262,7 @@ struct tegra_vi_channel *vi_channel_open_ex(
 	}
 	mutex_unlock(&chdrv_lock);
 
-	chan = kzalloc(sizeof(*chan), GFP_KERNEL);
+	chan = kzalloc(sizeof(*chan), GFP_KERNEL | GFP_NOWAIT);
 	if (unlikely(chan == NULL))
 		return ERR_PTR(-ENOMEM);
 
@@ -598,6 +598,7 @@ static long vi_channel_ioctl(
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(VI_CAPTURE_SETUP): {
 		struct vi_capture_setup setup = {};
+		struct capture_buffer_table *buffer_ctx;
 
 		if (copy_from_user(&setup, ptr, sizeof(setup)))
 			break;
@@ -621,10 +622,10 @@ static long vi_channel_ioctl(
 			return -EFAULT;
 		}
 
-		capture->buf_ctx = create_buffer_table(chan->dev);
-		if (capture->buf_ctx == NULL) {
+		buffer_ctx = create_buffer_table(chan->dev);
+		if (buffer_ctx == NULL) {
 			dev_err(chan->dev, "vi buffer setup failed");
-			break;
+			return -ENOMEM;
 		}
 
 		/* pin the capture descriptor ring buffer */
@@ -633,8 +634,8 @@ static long vi_channel_ioctl(
 		if (err < 0) {
 			dev_err(chan->dev,
 				"%s: memory setup failed\n", __func__);
-			destroy_buffer_table(capture->buf_ctx);
-			capture->buf_ctx = NULL;
+			destroy_buffer_table(buffer_ctx);
+			buffer_ctx = NULL;
 			return -EFAULT;
 		}
 
@@ -645,8 +646,8 @@ static long vi_channel_ioctl(
 				"%s: descriptor buffer is too small for given queue depth\n",
 				__func__);
 			capture_common_unpin_memory(&capture->requests);
-			destroy_buffer_table(capture->buf_ctx);
-			capture->buf_ctx = NULL;
+			destroy_buffer_table(buffer_ctx);
+			buffer_ctx = NULL;
 			return -ENOMEM;
 		}
 
@@ -655,10 +656,12 @@ static long vi_channel_ioctl(
 		if (err < 0) {
 			dev_err(chan->dev, "vi capture setup failed\n");
 			capture_common_unpin_memory(&capture->requests);
-			destroy_buffer_table(capture->buf_ctx);
-			capture->buf_ctx = NULL;
+			destroy_buffer_table(buffer_ctx);
+			buffer_ctx = NULL;
 			return err;
 		}
+
+		capture->buf_ctx = buffer_ctx;
 		break;
 	}
 
@@ -694,8 +697,12 @@ static long vi_channel_ioctl(
 			for (i = 0; i < capture->queue_depth; i++)
 				vi_capture_request_unpin(chan, i);
 			capture_common_unpin_memory(&capture->requests);
-			destroy_buffer_table(capture->buf_ctx);
-			capture->buf_ctx = NULL;
+
+			if (capture->buf_ctx != NULL) {
+				destroy_buffer_table(capture->buf_ctx);
+				capture->buf_ctx = NULL;
+			}
+
 			vfree(capture->unpins_list);
 			capture->unpins_list = NULL;
 		}
@@ -813,6 +820,11 @@ static long vi_channel_ioctl(
 
 		if (copy_from_user(&req, ptr, sizeof(req)) != 0U)
 			break;
+
+		if (capture->buf_ctx == NULL) {
+			dev_err(chan->dev, "vi buffer setup not done\n");
+			break;
+		}
 
 		err = capture_buffer_request(
 			capture->buf_ctx, req.mem, req.flag);

@@ -1584,18 +1584,21 @@ void isp_get_nvhost_device(
 		platform_get_drvdata(chan->isp_capture_pdev);
 
 	if (setup == NULL) {
-		dev_err(chan->isp_dev, "%s: Invalid ISP capture request\n", __func__);
+		pr_err("%s: Invalid ISP capture request\n", __func__);
 		return;
 	}
 
 	isp_inst = setup->isp_unit;
 
 	if (isp_inst >= MAX_ISP_UNITS) {
-		dev_err(chan->isp_dev,
-			"%s: ISP unit index is out of bound\n", __func__);
+		pr_err("%s: ISP unit index is out of bound\n", __func__);
 		return;
 	}
 
+	if (info->isp_pdevices[isp_inst] == NULL) {
+		pr_err("%s:ISP devices[%u] is NULL\n", __func__, isp_inst);
+		return;
+	}
 	chan->isp_dev = &info->isp_pdevices[isp_inst]->dev;
 	chan->ndev = info->isp_pdevices[isp_inst];
 }
@@ -3435,7 +3438,18 @@ static int capture_isp_probe(struct platform_device *pdev)
 	uint32_t i;
 	int err = 0;
 	struct tegra_capture_isp_data *info;
-	struct device *dev = &pdev->dev;
+	struct device *dev;
+
+	if (pdev == NULL) {
+		pr_err("%s: Invalid platform device\n", __func__);
+		return -EINVAL;
+	}
+
+	dev = &pdev->dev;
+	if (dev == NULL) {
+		pr_err("%s: Invalid device\n", __func__);
+		return -EINVAL;
+	}
 
 	dev_dbg(dev, "%s:tegra-camrtc-capture-isp probe\n", __func__);
 
@@ -3444,6 +3458,11 @@ static int capture_isp_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	info->num_isp_devices = 0;
+
+	if (dev->of_node == NULL) {
+		dev_err(dev, "No device tree node found\n");
+		return -EINVAL;
+	}
 
 	err = of_property_read_u32(dev->of_node, "nvidia,isp-max-channels",
 			&info->max_isp_channels);
@@ -3462,6 +3481,8 @@ static int capture_isp_probe(struct platform_device *pdev)
 			goto cleanup;
 		}
 	}
+
+	memset(info->isp_pdevices, 0, sizeof(info->isp_pdevices));
 
 	i = 0U;
 	do {

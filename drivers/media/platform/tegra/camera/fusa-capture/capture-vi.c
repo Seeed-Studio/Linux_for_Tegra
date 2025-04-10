@@ -1624,6 +1624,7 @@ int vi_capture_control_message_from_user(
 	void *msg_cpy;
 	struct CAPTURE_CONTROL_MSG *resp_msg;
 	int err = 0;
+	size_t copy_size = 0;
 
 	if (chan == NULL) {
 		dev_err(NULL, "%s: NULL VI channel received\n", __func__);
@@ -1655,16 +1656,18 @@ int vi_capture_control_message_from_user(
 	msg_ptr = (const void __user *)(uintptr_t)msg->ptr;
 	response = (void __user *)(uintptr_t)msg->response;
 
-	msg_cpy = kzalloc(msg->size, GFP_KERNEL);
+	msg_cpy = kzalloc(sizeof(struct CAPTURE_CONTROL_MSG), GFP_KERNEL);
 	if (unlikely(msg_cpy == NULL))
 		return -ENOMEM;
 
-	err = copy_from_user(msg_cpy, msg_ptr, msg->size) ? -EFAULT : 0;
+	copy_size = min_t(size_t, msg->size, sizeof(struct CAPTURE_CONTROL_MSG));
+
+	err = copy_from_user(msg_cpy, msg_ptr, copy_size) ? -EFAULT : 0;
 	if (err < 0)
 		goto fail;
 
 
-	err = vi_capture_control_send_message(chan, msg_cpy, msg->size);
+	err = vi_capture_control_send_message(chan, msg_cpy, copy_size);
 	if (err < 0)
 		goto fail;
 
