@@ -10,14 +10,8 @@
 
 struct soc_dev_data;
 
-enum {
-	NV_SOC_T23X = 0U,
-	NV_SOC_T26X,
-};
-
 /*
  * chip specific ops
- * @soc_id: chip id (NV_SOC_T23X or NV_SOC_T26X)
  * @ptp_tsc_sync_cfg_fn: function pointer for PTP-TSC sync related TSC HW configuration
  * @ptp_tsc_synchronize_fn: function pointer for triggering PTP-TSC synchronization
  * @ptp_tsc_get_is_locked_fn: function pointer to get PTP-TSC sync status, return boolean true if PTP & TSC are synced else return boolean false
@@ -29,7 +23,6 @@ enum {
  * @get_ptp_ts_ns_fn: function pointer to get PTP timestamp in nanoseconds, This API can be called in isr context
  */
 struct chip_ops {
-	uint32_t soc_id;
 	int32_t (*ptp_tsc_sync_cfg_fn)(struct soc_dev_data *soc_data);
 	void (*ptp_tsc_synchronize_fn)(struct soc_dev_data *soc_data);
 	bool (*ptp_tsc_get_is_locked_fn)(struct soc_dev_data *soc_data);

@@ -267,7 +267,6 @@ fail:
 }
 
 const struct chip_ops tegra234_chip_ops = {
-	.soc_id = NV_SOC_T23X,
 	.ptp_tsc_sync_cfg_fn = &nvpps_t23x_ptp_tsc_sync_config,
 	.ptp_tsc_synchronize_fn = &nvpps_t23x_ptp_tsc_synchronize,
 	.ptp_tsc_get_is_locked_fn = &nvpps_t23x_ptp_tsc_get_is_locked,
