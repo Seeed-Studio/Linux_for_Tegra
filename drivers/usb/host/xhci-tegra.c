@@ -3560,7 +3560,6 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req, u16 value, 
 	struct xhci_hub *rhub;
 	struct xhci_bus_state *bus_state;
 	int port = (index & 0xff) - 1;
-	unsigned int i;
 	struct xhci_port **ports;
 	u32 portsc;
 	int ret;
