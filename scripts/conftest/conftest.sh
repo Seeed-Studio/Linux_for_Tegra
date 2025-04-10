@@ -7131,6 +7131,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DISK_CHECK_MEDIA_CHANGE_PRESENT" "" "functions"
         ;;
 
+        dma_buf_ops_has_cache_sgt_mapping)
+            #
+            # Determine if the 'dma_buf_ops' structure has 'cache_sgt_mapping' member.
+            #
+            # In Linux v6.16, commit b72f66f22c0e ("dma-buf: drop caching of sg_tables")
+            # removed the 'cache_sgt_mapping' member from the 'dma_buf_ops' structure.
+            #
+            CODE="
+            #include <linux/dma-buf.h>
+            int conftest_dma_buf_ops_has_cache_sgt_mapping(void) {
+                return offsetof(struct dma_buf_ops, cache_sgt_mapping);
+            }"
+
+            compile_check_conftest "$CODE" "NV_DMA_BUF_OPS_HAS_CACHE_SGT_MAPPING" "" "types"
+        ;;
+
         dma_slave_config_struct_has_slave_id)
             #
             # Determine if 'struct dma_slave_config' has the 'slave_id' member.

@@ -489,8 +489,9 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.mmap		= nvmap_dmabuf_mmap,
 	.vmap		= nvmap_dmabuf_vmap,
 	.vunmap		= nvmap_dmabuf_vunmap,
+#if defined(NV_DMA_BUF_OPS_HAS_CACHE_SGT_MAPPING)
 	.cache_sgt_mapping = true,
-
+#endif
 };
 
 static char dmabuf_name[] = "nvmap_dmabuf";
