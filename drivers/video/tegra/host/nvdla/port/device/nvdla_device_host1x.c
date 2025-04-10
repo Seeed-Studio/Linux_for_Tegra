@@ -396,14 +396,6 @@ static int nvdla_resume(struct device *dev)
 	return nvdla_runtime_resume(dev);
 }
 
-/* Create our own PM operations structure */
-static const struct dev_pm_ops nvdla_pm_ops = {
-	.runtime_suspend = nvdla_runtime_suspend,
-	.runtime_resume = nvdla_runtime_resume,
-	.suspend = nvdla_suspend,
-	.resume = nvdla_resume,
-};
-
 /* Module runtime suspend implementation */
 int nvdla_module_runtime_suspend(struct device *dev)
 {
@@ -547,7 +539,6 @@ void nvdla_module_complete_resume(struct device *dev)
 static struct host1x_driver host1x_nvdla_driver = {
 	.driver = {
 		.name = "host1x-nvdla",
-		.pm = &nvdla_pm_ops,
 	},
 };
 
