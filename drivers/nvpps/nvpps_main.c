@@ -13,10 +13,8 @@
 #include <linux/poll.h>
 #include <linux/gpio.h>
 #include <linux/list.h>
-#include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/time.h>
-#include <linux/version.h>
 #include <uapi/linux/nvpps_ioctl.h>
 #include <linux/hte.h>
 #include <linux/nvpps.h>
@@ -24,9 +22,7 @@
 #include <linux/of_address.h>
 
 #include "nvpps_common.h"
-#include "nvpps_t23x.h"
-#include "nvpps_t26x.h"
-
+#include "nvpps_platforms.h"
 
 #define MAX_NVPPS_SOURCES	1
 #define NVPPS_DEF_MODE		NVPPS_MODE_GPIO
@@ -1120,13 +1116,6 @@ static int nvpps_resume(struct platform_device *pdev)
 }
 #endif /* CONFIG_PM */
 
-
-static const struct of_device_id nvpps_of_table[] = {
-	{ .compatible = "nvidia,tegra234-nvpps", .data = &tegra234_chip_ops },
-	{ .compatible = "nvidia,tegra264-nvpps", .data = &tegra264_chip_ops },
-	{ /* sentinel */ }
-};
-MODULE_DEVICE_TABLE(of, nvpps_of_table);
 
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */

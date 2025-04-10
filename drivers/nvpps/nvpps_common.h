@@ -4,7 +4,6 @@
 #ifndef __NVPPS_COMMON_H__
 #define __NVPPS_COMMON_H__
 
-#include <linux/version.h>
 #include <linux/device.h>
 #include <asm/arch_timer.h>
 #include <linux/platform/tegra/ptp-notifier.h>
