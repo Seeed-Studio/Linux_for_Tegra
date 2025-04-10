@@ -289,15 +289,9 @@ static irqreturn_t nvpps_gpio_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
-static void tsc_timer_callback(unsigned long data)
-{
-	struct nvpps_device_data        *pdev_data = (struct nvpps_device_data *)data;
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0) */
 static void tsc_timer_callback(struct timer_list *t)
 {
 	struct nvpps_device_data *pdev_data = (struct nvpps_device_data *)from_timer(pdev_data, t, tsc_timer);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0) */
 
 	if (pdev_data->soc_data.ops->ptp_tsc_get_is_locked_fn) {
 		/* check and trigger sync if PTP-TSC is unlocked */
@@ -313,15 +307,10 @@ static void tsc_timer_callback(struct timer_list *t)
 }
 
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
-static void nvpps_timer_callback(unsigned long data)
-{
-	struct nvpps_device_data        *pdev_data = (struct nvpps_device_data *)data;
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0) */
 static void nvpps_timer_callback(struct timer_list *t)
 {
-        struct nvpps_device_data        *pdev_data = (struct nvpps_device_data *)from_timer(pdev_data, t, timer);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0) */
+	struct nvpps_device_data        *pdev_data = (struct nvpps_device_data *)from_timer(pdev_data, t, timer);
+
 	/* get timestamps for this event */
 	nvpps_get_ts(pdev_data, 0);
 
@@ -335,15 +324,10 @@ static void nvpps_timer_callback(struct timer_list *t)
  locking process if its not locked in the handler */
 static int set_mode_tsc(struct nvpps_device_data *pdev_data)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
-	setup_timer(&pdev_data->tsc_timer,
-			tsc_timer_callback,
-			(unsigned long)pdev_data);
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0) */
 	timer_setup(&pdev_data->tsc_timer,
 			tsc_timer_callback,
 			0);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0) */
+
 	mod_timer(&pdev_data->tsc_timer, jiffies + msecs_to_jiffies(1000));
 
 	return 0;
@@ -410,15 +394,9 @@ static int set_mode(struct nvpps_device_data *pdev_data, u32 mode)
 				 * already then initialize it
 				 */
 				if (!pdev_data->timer_inited) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
-					setup_timer(&pdev_data->timer,
-							nvpps_timer_callback,
-							(unsigned long)pdev_data);
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0) */
 					timer_setup(&pdev_data->timer,
 							nvpps_timer_callback,
 							0);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0) */
 					pdev_data->timer_inited = true;
 					/* setup timer interval to 1000 msecs */
 					mod_timer(&pdev_data->timer, jiffies + msecs_to_jiffies(pdev_data->ts_capture_interval_ms));
@@ -435,13 +413,8 @@ static int set_mode(struct nvpps_device_data *pdev_data, u32 mode)
 
 
 /* Character device stuff */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
-static unsigned int  nvpps_poll(struct file *file, poll_table *wait)
-{
-#else
 static __poll_t nvpps_poll(struct file *file, poll_table *wait)
 {
-#endif
 	struct nvpps_file_data		*pfile_data = (struct nvpps_file_data *)file->private_data;
 	struct nvpps_device_data	*pdev_data = pfile_data->pdev_data;
 
@@ -591,18 +564,10 @@ static long nvpps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			mutex_lock(&pdev_data->ts_lock);
 			switch (time_stamp.clockid) {
 			case CLOCK_REALTIME:
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
-				ktime_get_real_ts(&time_stamp.kernel_ts);
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0) */
 				ktime_get_real_ts64(&time_stamp.kernel_ts);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0) */
 				break;
 
 			case CLOCK_MONOTONIC:
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
-				ktime_get_ts(&time_stamp.kernel_ts);
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0) */
-
 				/* read TSC counter value */
 				err = pdev_data->soc_data.ops->get_monotonic_tsc_ts_fn(&pdev_data->soc_data, &tsc_ts);
 				if (err != 0) {
@@ -616,7 +581,6 @@ static long nvpps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				/* split TSC TS in seconds & nanoseconds */
 				time_stamp.kernel_ts.tv_sec = tsc_ts / _NANO_SECS;
 				time_stamp.kernel_ts.tv_nsec = (tsc_ts - (time_stamp.kernel_ts.tv_sec * _NANO_SECS));
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0) */
 				break;
 
 			default:

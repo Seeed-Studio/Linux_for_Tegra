@@ -215,17 +215,6 @@ fail:
 	return ret;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
-static inline u64 __arch_counter_get_cntvct(void)
-{
-	u64 cval;
-
-	asm volatile("mrs %0, cntvct_el0" : "=r" (cval));
-
-	return cval;
-}
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0) */
-
 static int32_t nvpps_t23x_get_monotonic_tsc_ts(struct soc_dev_data *soc_data, uint64_t *tsc_ts)
 {
 	int32_t ret = -EINVAL;
