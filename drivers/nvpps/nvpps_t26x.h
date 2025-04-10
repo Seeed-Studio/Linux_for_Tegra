@@ -6,8 +6,6 @@
 
 #include "nvpps_common.h"
 
-#ifndef NVPPS_NO_DT
 extern const struct chip_ops tegra264_chip_ops;
-#endif
 
 #endif /* __NVPPS_T26X_H__ */

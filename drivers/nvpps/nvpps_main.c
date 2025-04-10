@@ -953,7 +953,6 @@ static int nvpps_probe(struct platform_device *pdev)
 	}
 
 	/* character device setup */
-#ifndef NVPPS_NO_DT
 #if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */
 	s_nvpps_class = class_create("nvpps");
 #else
@@ -970,7 +969,6 @@ static int nvpps_probe(struct platform_device *pdev)
 		class_destroy(s_nvpps_class);
 		return err;
 	}
-#endif /* !NVPPS_NO_DT */
 
 	/* get an idr for the device */
 	mutex_lock(&s_nvpps_lock);
@@ -1080,9 +1078,7 @@ static int nvpps_probe(struct platform_device *pdev)
 
 error_ret2:
 	device_destroy(s_nvpps_class, pdev_data->dev->devt);
-#ifndef NVPPS_NO_DT
 	class_destroy(s_nvpps_class);
-#endif
 
 error_ret:
 	of_node_put(pdev_data->pri_emac_node);
@@ -1123,11 +1119,9 @@ static int nvpps_remove(struct platform_device *pdev)
 	of_node_put(pdev_data->pri_emac_node);
 	of_node_put(pdev_data->sec_emac_node);
 
-#ifndef NVPPS_NO_DT
 	class_unregister(s_nvpps_class);
 	class_destroy(s_nvpps_class);
 	unregister_chrdev_region(s_nvpps_devt, MAX_NVPPS_SOURCES);
-#endif /* !NVPPS_NO_DT */
 	return 0;
 }
 
@@ -1163,14 +1157,12 @@ static int nvpps_resume(struct platform_device *pdev)
 #endif /* CONFIG_PM */
 
 
-#ifndef NVPPS_NO_DT
 static const struct of_device_id nvpps_of_table[] = {
 	{ .compatible = "nvidia,tegra234-nvpps", .data = &tegra234_chip_ops },
 	{ .compatible = "nvidia,tegra264-nvpps", .data = &tegra264_chip_ops },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, nvpps_of_table);
-#endif /* !NVPPS_NO_DT */
 
 
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
@@ -1189,9 +1181,7 @@ static struct platform_driver nvpps_plat_driver = {
 	.driver = {
 		.name = KBUILD_MODNAME,
 		.owner = THIS_MODULE,
-#ifndef NVPPS_NO_DT
 		.of_match_table = of_match_ptr(nvpps_of_table),
-#endif /* !NVPPS_NO_DT */
 	},
 	.probe = nvpps_probe,
 	.remove = nvpps_remove_wrapper,
@@ -1201,60 +1191,7 @@ static struct platform_driver nvpps_plat_driver = {
 #endif /* CONFIG_PM */
 };
 
-
-#ifdef NVPPS_NO_DT
-/* module init
- */
-static int __init nvpps_init(void)
-{
-	int err;
-
-	printk("%s\n", __FUNCTION__);
-
-#if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */
-	s_nvpps_class = class_create("nvpps");
-#else
-	s_nvpps_class = class_create(THIS_MODULE, "nvpps");
-#endif
-	if (IS_ERR(s_nvpps_class)) {
-		printk("nvpps: failed to allocate class\n");
-		return PTR_ERR(s_nvpps_class);
-	}
-
-	err = alloc_chrdev_region(&s_nvpps_devt, 0, MAX_NVPPS_SOURCES, "nvpps");
-	if (err < 0) {
-		printk("nvpps: failed to allocate char device region\n");
-		class_destroy(s_nvpps_class);
-		return err;
-	}
-
-	printk("nvpps registered\n");
-
-	return platform_driver_register(&nvpps_plat_driver);
-}
-
-
-/* module fini
- */
-static void __exit nvpps_exit(void)
-{
-	printk("%s\n", __FUNCTION__);
-	platform_driver_unregister(&nvpps_plat_driver);
-
-	class_unregister(s_nvpps_class);
-	class_destroy(s_nvpps_class);
-	unregister_chrdev_region(s_nvpps_devt, MAX_NVPPS_SOURCES);
-}
-
-#endif /* NVPPS_NO_DT */
-
-
-#ifdef NVPPS_NO_DT
-module_init(nvpps_init);
-module_exit(nvpps_exit);
-#else /* !NVPPS_NO_DT */
 module_platform_driver(nvpps_plat_driver);
-#endif /* NVPPS_NO_DT */
 
 MODULE_DESCRIPTION("NVidia Tegra PPS Driver");
 MODULE_AUTHOR("David Tao tehyut@nvidia.com");

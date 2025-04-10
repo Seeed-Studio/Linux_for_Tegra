@@ -318,7 +318,6 @@ fail:
 	return ret;
 }
 
-#ifndef NVPPS_NO_DT
 /* Define the tegra264_chip_data structure */
 const struct chip_ops tegra264_chip_ops = {
 	.soc_id = NV_SOC_T26X,
@@ -332,4 +331,3 @@ const struct chip_ops tegra264_chip_ops = {
 	.get_ptp_ts_ns_fn = &nvpps_t26x_get_ptp_ts_ns,
 	.get_ptp_tsc_concurrent_ts_ns_fn = &nvpps_t26x_get_ptp_tsc_concurrent_ts_ns,
 };
-#endif /* NVPPS_NO_DT */

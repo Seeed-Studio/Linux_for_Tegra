@@ -277,7 +277,6 @@ fail:
 	return ret;
 }
 
-#ifndef NVPPS_NO_DT
 const struct chip_ops tegra234_chip_ops = {
 	.soc_id = NV_SOC_T23X,
 	.ptp_tsc_sync_cfg_fn = &nvpps_t23x_ptp_tsc_sync_config,
@@ -290,4 +289,3 @@ const struct chip_ops tegra234_chip_ops = {
 	.get_ptp_ts_ns_fn = &nvpps_t23x_get_ptp_ts_ns,
 	.get_ptp_tsc_concurrent_ts_ns_fn = &nvpps_t23x_get_ptp_tsc_concurrent_ts_ns,
 };
-#endif /* NVPPS_NO_DT */
