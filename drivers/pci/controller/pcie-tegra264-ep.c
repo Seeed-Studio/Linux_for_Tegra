@@ -183,10 +183,6 @@ static void tegra264_pcie_ep_rst_assert(struct tegra264_pcie_ep *pcie)
 	if (pcie->ep_state == EP_STATE_DISABLED)
 		return;
 
-	/* Endpoint is going away, assert PRSNT# to mask EP from RP until it is ready link up */
-	if (pcie->pex_prsnt_gpiod)
-		gpiod_set_value_cansleep(pcie->pex_prsnt_gpiod, 0);
-
 #if defined(NV_PCI_EPC_DEINIT_NOTIFY_PRESENT) /* Linux v6.11 */
 	pci_epc_deinit_notify(pcie->epc);
 #else
