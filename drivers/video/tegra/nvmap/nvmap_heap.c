@@ -178,7 +178,16 @@ static int compute_hugetlbfs_stat(u64 *total, u64 *free, int numa_id)
 	bool total_found = false, free_found = false;
 	int nid, rc;
 
-	sprintf(meminfo_path, "/sys/devices/system/node/node%d/meminfo", numa_id);
+	if (num_online_nodes() > 1) {
+		sprintf(meminfo_path, "/sys/devices/system/node/node%d/meminfo", numa_id);
+	} else {
+		if (numa_id != 0) {
+			pr_err("Incorrect input for numa_id:%d\n", numa_id);
+			return -EINVAL;
+		}
+		sprintf(meminfo_path, "/proc/meminfo");
+	}
+
 	file = filp_open(meminfo_path, O_RDONLY, 0);
 	if (IS_ERR(file)) {
 		pr_err("Could not open file:%s\n", meminfo_path);
@@ -200,10 +209,17 @@ static int compute_hugetlbfs_stat(u64 *total, u64 *free, int numa_id)
 	while ((ptr = strsep(&buffer, "\n")) != NULL) {
 		if (!ptr[0])
 			continue;
-		else if (sscanf(ptr, "Node %d HugePages_Total: %u\n", &nid, &huge_total) == 2)
-			total_found = true;
-		else if (sscanf(ptr, "Node %d HugePages_Free: %u\n", &nid, &huge_free) == 2)
-			free_found = true;
+		if (num_online_nodes() > 1) {
+			if (sscanf(ptr, "Node %d HugePages_Total: %u\n", &nid, &huge_total) == 2)
+				total_found = true;
+			else if (sscanf(ptr, "Node %d HugePages_Free: %u\n", &nid, &huge_free) == 2)
+				free_found = true;
+		} else {
+			if (sscanf(ptr, "HugePages_Total: %u\n", &huge_total) == 1)
+				total_found = true;
+			else if (sscanf(ptr, "HugePages_Free: %u\n", &huge_free) == 1)
+				free_found = true;
+		}
 	}
 
 	nvmap_altfree(buf, MEMINFO_SIZE * sizeof(*buf));
