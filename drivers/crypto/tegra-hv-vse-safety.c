@@ -4176,17 +4176,12 @@ static int tegra_vse_aes_gcm_decrypt(struct aead_request *req)
 
 	se_dev = g_crypto_to_ivc_map[aes_ctx->node_id].se_dev;
 
-	if (g_crypto_to_ivc_map[aes_ctx->node_id].gcm_dec_supported == GCM_DEC_OP_SUPPORTED) {
-		if (se_dev->chipdata->gcm_hw_iv_supported)
-			err = tegra_vse_aes_gcm_enc_dec_hw_support(req, aes_ctx, false);
-		else
-			err = tegra_vse_aes_gcm_enc_dec(req, aes_ctx, false);
-		if (err)
-			dev_err(se_dev->dev, "%s failed %d\n", __func__, err);
-	} else {
-		err = -EACCES;
-		dev_err(se_dev->dev, "%s failed for node_id %u\n", __func__, aes_ctx->node_id);
-	}
+	if (se_dev->chipdata->gcm_hw_iv_supported)
+		err = tegra_vse_aes_gcm_enc_dec_hw_support(req, aes_ctx, false);
+	else
+		err = tegra_vse_aes_gcm_enc_dec(req, aes_ctx, false);
+	if (err)
+		dev_err(se_dev->dev, "%s failed %d\n", __func__, err);
 
 	return err;
 }
@@ -5258,17 +5253,7 @@ static struct ahash_alg sha_algs[] = {
 	}
 };
 
-static const struct tegra_vse_soc_info t194_vse_sinfo = {
-	.gcm_decrypt_supported = false,
-	.cmac_hw_verify_supported = false,
-	.sm_supported = false,
-	.gcm_hw_iv_supported = false,
-	.hmac_verify_hw_support = false,
-	.zero_copy_supported = false,
-};
-
 static const struct tegra_vse_soc_info t234_vse_sinfo = {
-	.gcm_decrypt_supported = true,
 	.cmac_hw_verify_supported = false,
 	.sm_supported = false,
 	.gcm_hw_iv_supported = false,
@@ -5277,7 +5262,6 @@ static const struct tegra_vse_soc_info t234_vse_sinfo = {
 };
 
 static const struct tegra_vse_soc_info se_51_vse_sinfo = {
-	.gcm_decrypt_supported = true,
 	.cmac_hw_verify_supported = true,
 	.sm_supported = true,
 	.gcm_hw_iv_supported = true,
@@ -5286,7 +5270,6 @@ static const struct tegra_vse_soc_info se_51_vse_sinfo = {
 };
 
 static const struct of_device_id tegra_hv_vse_safety_of_match[] = {
-	{ .compatible = "nvidia,tegra194-hv-vse-safety", .data = &t194_vse_sinfo, },
 	{ .compatible = "nvidia,tegra234-hv-vse-safety", .data = &t234_vse_sinfo, },
 	{ .compatible = "nvidia,tegra-se-5.1-hv-vse-safety", .data = &se_51_vse_sinfo, },
 	{},
@@ -6159,13 +6142,11 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 			goto release_bufs;
 		}
 
-		if (se_dev->chipdata->gcm_decrypt_supported) {
-			err = crypto_register_aeads(aead_algs, ARRAY_SIZE(aead_algs));
-			if (err) {
-				dev_err(&pdev->dev, "aead alg register failed: %d\n",
-					err);
-				goto release_bufs;
-			}
+		err = crypto_register_aeads(aead_algs, ARRAY_SIZE(aead_algs));
+		if (err) {
+			dev_err(&pdev->dev, "aead alg register failed: %d\n",
+				err);
+			goto release_bufs;
 		}
 
 		s_aes_alg_register_done = true;
