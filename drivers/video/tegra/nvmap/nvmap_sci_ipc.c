@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * mapping between nvmap_hnadle and sci_ipc entery
  */
@@ -367,6 +367,7 @@ unlock:
 				is_ro ? "RO" : "RW");
 
 		if (!IS_ERR_OR_NULL(ref))
+			/* coverity[FORWARD_NULL]; FP-BUG_4598544 */
 			atomic_dec(&ref->dupes);
 	}
 
