@@ -49,7 +49,7 @@ struct tegra_vse_membuf_ctx {
 struct tegra_vse_key_slot_ctx {
 	uint8_t key_id[KEYSLOT_SIZE_BYTES];
 	uint8_t token_id;
-	uint32_t key_instance_idx;
+	uint8_t key_instance_idx;
 	uint32_t key_grp_id;
 };
 
@@ -102,7 +102,7 @@ struct tegra_virtual_se_dev {
 	unsigned int engine_id;
 	/* Engine suspend state */
 	atomic_t se_suspended;
-	struct tegra_vse_soc_info *chipdata;
+	const struct tegra_vse_soc_info *chipdata;
 #if defined(CONFIG_HW_RANDOM)
 	/* Integration with hwrng framework */
 	struct hwrng *hwrng;
@@ -273,7 +273,7 @@ struct tegra_virtual_se_hmac_sha_context {
 
 struct tegra_virtual_se_membuf_context {
 	int fd;
-	int64_t iova;
+	uint64_t iova;
 	uint32_t node_id;
 };
 

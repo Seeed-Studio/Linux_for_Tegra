@@ -206,7 +206,13 @@ static int tnvvse_crypto_allocate_key_slot(struct tnvvse_crypto_ctx *ctx,
 		return -EINVAL;
 	}
 
-	ctx->key_grp_id = current->pid;
+	if (current->pid >= 0) {
+		ctx->key_grp_id = (uint32_t)current->pid;
+	} else {
+		CRYPTODEV_ERR("%s(): Invalid PID\n", __func__);
+		return -EINVAL;
+	}
+
 	memset(&key_slot_params, 0, sizeof(key_slot_params));
 	memcpy(key_slot_params.key_id, key_slot_allocate_ctl->key_id, KEYSLOT_SIZE_BYTES);
 	key_slot_params.token_id = key_slot_allocate_ctl->token_id;
@@ -240,13 +246,19 @@ static int tnvvse_crypto_release_key_slot(struct tnvvse_crypto_ctx *ctx,
 		CRYPTODEV_ERR("Key slot release ctl is NULL\n");
 		return -EINVAL;
 	}
-	if (ctx->allocated_key_slot_count == 0) {
+	if (ctx->allocated_key_slot_count == 0U) {
 		CRYPTODEV_ERR("No key slots allocated to release\n");
 		return -EINVAL;
 	}
 
 	memset(&vse_key_slot, 0, sizeof(vse_key_slot));
 	memcpy(vse_key_slot.key_id, key_slot_release_ctl->key_id, sizeof(vse_key_slot.key_id));
+
+	if (key_slot_release_ctl->key_instance_idx > 255) {
+		CRYPTODEV_ERR("key_instance_idx value %u exceeds maximum allowed value 255\n",
+			key_slot_release_ctl->key_instance_idx);
+		return -EINVAL;
+	}
 	vse_key_slot.key_instance_idx = key_slot_release_ctl->key_instance_idx;
 
 	err = tegra_hv_vse_release_keyslot(&vse_key_slot, ctx->node_id);
@@ -282,7 +294,7 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 	}
 
 	if (sha_update_ctl->init_only != 0U) {
-		if (sha_state->sha_init_done != 0U) {
+		if (sha_state->sha_init_done != 0) {
 			CRYPTODEV_INFO("%s(): SHA init is already done\n", __func__);
 			ret = -EAGAIN;
 			goto exit;
@@ -305,6 +317,20 @@ static int tnvvse_crypto_validate_sha_update_req(struct tnvvse_crypto_ctx *ctx,
 
 	if ((sha_update_ctl->is_first != 0U) && (sha_state->sha_total_msg_length > 0U)) {
 		CRYPTODEV_ERR("%s(): SHA First request is already received\n", __func__);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	if ((sha_state->sha_init_done == 0) && (sha_update_ctl->is_first == 0U)) {
+		CRYPTODEV_ERR("%s(): SHA First req is not yet received\n", __func__);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	if (((sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE128) ||
+		(sha_type == TEGRA_NVVSE_SHA_TYPE_SHAKE256)) &&
+		sha_update_ctl->digest_size == 0) {
+		CRYPTODEV_ERR("%s: Digest Buffer Size is invalid\n", __func__);
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -407,8 +433,14 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	if (sha_update_ctl->is_first != 0U)
 		sha_state->sha_init_done = 1U;
 
+	if ((sha_type < TEGRA_NVVSE_SHA_TYPE_SHA256) || (sha_type >= TEGRA_NVVSE_SHA_TYPE_MAX)) {
+		CRYPTODEV_ERR("%s(): SHA Type requested %d is not supported\n", __func__, sha_type);
+		ret = -EINVAL;
+		goto exit;
+	}
+
 	tfm = crypto_alloc_ahash(sha_alg_names[sha_type], 0, 0);
-	if (IS_ERR(tfm)) {
+	if (!tfm || IS_ERR(tfm)) {
 		CRYPTODEV_ERR("%s(): Failed to load transform for %s:%ld\n",
 				__func__, sha_alg_names[sha_type], PTR_ERR(tfm));
 		ret = PTR_ERR(tfm);
@@ -421,7 +453,7 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 		crypto_free_ahash(tfm);
 		CRYPTODEV_ERR("%s(): Failed to allocate request\n", __func__);
 		ret = -ENOMEM;
-		goto exit;
+		goto free_tfm;
 	}
 
 	sha_ctx = crypto_ahash_ctx(tfm);
@@ -432,6 +464,11 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 				   tnvvse_crypto_complete, &sha_complete);
 
+	if (sha_state->sha_total_msg_length > (ULONG_MAX - sha_ctx->user_src_buf_size)) {
+		CRYPTODEV_ERR("%s(): Total message length overflow\n", __func__);
+		ret = -EINVAL;
+		goto free_req;
+	}
 	sha_ctx->user_src_buf_size = sha_update_ctl->input_buffer_size;
 	sha_state->sha_total_msg_length += sha_ctx->user_src_buf_size;
 
@@ -453,26 +490,26 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 	ret = wait_async_op(&sha_complete, crypto_ahash_init(req));
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to initialize ahash: %d\n", __func__, ret);
-		sha_state->sha_init_done = 0;
-		sha_state->sha_total_msg_length = 0;
-		goto free_tfm;
+		sha_state->sha_init_done = 0U;
+		sha_state->sha_total_msg_length = 0U;
+		goto free_req;
 	}
 
-	if (sha_update_ctl->is_last == 0) {
+	if (sha_update_ctl->is_last == 0U) {
 		ret = wait_async_op(&sha_complete, crypto_ahash_update(req));
 		if (ret) {
 			CRYPTODEV_ERR("%s(): Failed to ahash_update: %d\n", __func__, ret);
-			sha_state->sha_init_done = 0;
-			sha_state->sha_total_msg_length = 0;
-			goto free_tfm;
+			sha_state->sha_init_done = 0U;
+			sha_state->sha_total_msg_length = 0U;
+			goto free_req;
 		}
 	} else {
 		ret = wait_async_op(&sha_complete, crypto_ahash_finup(req));
 		if (ret) {
 			CRYPTODEV_ERR("%s(): Failed to ahash_finup: %d\n", __func__, ret);
-			sha_state->sha_init_done = 0;
-			sha_state->sha_total_msg_length = 0;
-			goto free_tfm;
+			sha_state->sha_init_done = 0U;
+			sha_state->sha_total_msg_length = 0U;
+			goto free_req;
 		}
 
 		if ((sha_type != TEGRA_NVVSE_SHA_TYPE_SHAKE128)
@@ -482,18 +519,19 @@ static int tnvvse_crypto_sha_update(struct tnvvse_crypto_ctx *ctx,
 					__func__, sha_alg_names[sha_type],
 					sha_update_ctl->digest_size);
 				ret = -EINVAL;
-				goto free_tfm;
+				goto free_req;
 			}
 		}
 
 		/* Reset sha state */
-		sha_state->sha_init_done = 0;
-		sha_state->sha_total_msg_length = 0;
+		sha_state->sha_init_done = 0U;
+		sha_state->sha_total_msg_length = 0U;
 	}
 
-free_tfm:
+free_req:
 	if (req)
 		ahash_request_free(req);
+free_tfm:
 	if (tfm)
 		crypto_free_ahash(tfm);
 
@@ -571,7 +609,7 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	}
 
 	tfm = crypto_alloc_ahash("hmac-sha256-vse", 0, 0);
-	if (IS_ERR(tfm)) {
+	if (!tfm || IS_ERR(tfm)) {
 		ret = PTR_ERR(tfm);
 		CRYPTODEV_ERR("%s(): Failed to allocate ahash for hmac-sha256-vse: %d\n",
 				__func__, ret);
@@ -587,7 +625,7 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		crypto_free_ahash(tfm);
 		CRYPTODEV_ERR("%s(): Failed to allocate request for cmac-vse(aes)\n", __func__);
 		ret = -ENOMEM;
-		goto exit;
+		goto free_tfm;
 	}
 
 	init_completion(&hmac_sha_complete.restart);
@@ -601,7 +639,7 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	ret = crypto_ahash_setkey(tfm, key_as_keyslot, KEYSLOT_SIZE_BYTES);
 	if (ret) {
 		CRYPTODEV_ERR("%s(): Failed to set keys for hmac: %d\n", __func__, ret);
-		goto free_tfm;
+		goto free_req;
 	}
 
 	hmac_ctx->user_src_buf_size = hmac_sha_ctl->data_length;
@@ -615,6 +653,17 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 
 	hmac_ctx->result = 0;
 
+	if (sha_state->hmac_sha_total_msg_length > (ULONG_MAX - hmac_sha_ctl->data_length)) {
+		CRYPTODEV_ERR("%s(): Total message length would overflow\n", __func__);
+		ret = -EOVERFLOW;
+		goto free_req;
+	}
+
+	if (sha_state->hmac_sha_total_msg_length > (ULONG_MAX - hmac_sha_ctl->data_length)) {
+		CRYPTODEV_ERR("%s(): Total message length would overflow\n", __func__);
+		ret = -EOVERFLOW;
+		goto free_tfm;
+	}
 	sha_state->hmac_sha_total_msg_length += hmac_sha_ctl->data_length;
 	sha_state->hmac_sha_init_done = 1;
 	hmac_ctx->total_count = sha_state->hmac_sha_total_msg_length;
@@ -630,7 +679,7 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		CRYPTODEV_ERR("%s(): Failed to initialize ahash: %d\n", __func__, ret);
 			sha_state->hmac_sha_init_done = 0;
 			sha_state->hmac_sha_total_msg_length = 0UL;
-		goto free_tfm;
+		goto free_req;
 	}
 
 	hmac_ctx->user_src_buf = hmac_sha_ctl->src_buffer;
@@ -642,7 +691,7 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 			CRYPTODEV_ERR("%s(): Failed to ahash_update: %d\n", __func__, ret);
 			sha_state->hmac_sha_init_done = 0;
 			sha_state->hmac_sha_total_msg_length = 0UL;
-			goto free_tfm;
+			goto free_req;
 		}
 	} else {
 		ret = wait_async_op(&hmac_sha_complete, crypto_ahash_finup(req));
@@ -650,7 +699,7 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 			CRYPTODEV_ERR("%s(): Failed to ahash_finup: %d\n", __func__, ret);
 			sha_state->hmac_sha_init_done = 0;
 			sha_state->hmac_sha_total_msg_length = 0UL;
-			goto free_tfm;
+			goto free_req;
 		}
 
 		if (hmac_sha_ctl->hmac_sha_type == TEGRA_NVVSE_HMAC_SHA_VERIFY)
@@ -660,9 +709,10 @@ static int tnvvse_crypto_hmac_sha_sign_verify(struct tnvvse_crypto_ctx *ctx,
 		sha_state->hmac_sha_total_msg_length = 0;
 	}
 
-free_tfm:
+free_req:
 	if (req)
 		ahash_request_free(req);
+free_tfm:
 	if (tfm)
 		crypto_free_ahash(tfm);
 
@@ -1139,7 +1189,7 @@ static int tnvvse_crypto_aes_gmac_sign_verify(struct tnvvse_crypto_ctx *ctx,
 	}
 
 	if (gmac_sign_verify_ctl->release_key_flag)
-		ctx->allocated_key_slot_count -= 1;
+		ctx->allocated_key_slot_count -= 1U;
 
 	if (gmac_sign_verify_ctl->is_last) {
 		if (gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_VERIFY)
@@ -1207,6 +1257,7 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	struct crypto_skcipher *tfm;
 	struct skcipher_request *req = NULL;
 	int ret = 0;
+	uint64_t err = 0;
 	struct tnvvse_crypto_completion tcrypt_complete;
 	struct tegra_virtual_se_aes_context *aes_ctx;
 	char aes_algo[5][20] = {"cbc-vse(aes)", "ctr-vse(aes)", "gcm-vse(aes)", "cbc-vse(aes)",
@@ -1257,7 +1308,7 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 	pr_debug("%s(): The skcipher driver name is %s for %s\n",
 				__func__, driver_name, aes_algo[aes_enc_dec_ctl->aes_mode]);
 
-	crypto_skcipher_clear_flags(tfm, ~0);
+	crypto_skcipher_clear_flags(tfm, ~0U);
 
 	ret = snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, aes_enc_dec_ctl->key_slot,
@@ -1332,10 +1383,12 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		crypto_skcipher_decrypt(req);
 	if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
 		/* crypto driver is asynchronous */
-		ret = wait_for_completion_timeout(&tcrypt_complete.restart,
+		err = wait_for_completion_timeout(&tcrypt_complete.restart,
 				msecs_to_jiffies(5000));
-		if (ret == 0)
+		if (err == 0) {
+			ret = -ETIMEDOUT;
 			goto free_req;
+		}
 
 		if (tcrypt_complete.req_err < 0) {
 			ret = tcrypt_complete.req_err;
@@ -1373,8 +1426,8 @@ static int tnvvse_crypto_aes_enc_dec(struct tnvvse_crypto_ctx *ctx,
 		}
 	}
 
-	if (aes_enc_dec_ctl->release_key_flag)
-		ctx->allocated_key_slot_count -= 1;
+	if (aes_enc_dec_ctl->release_key_flag && ctx->allocated_key_slot_count > 0U)
+		ctx->allocated_key_slot_count -= 1U;
 
 free_req:
 	skcipher_request_free(req);
@@ -1392,6 +1445,7 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 	struct crypto_aead *tfm;
 	struct aead_request *req = NULL;
 	int32_t ret = 0;
+	uint64_t err = 0;
 	struct tnvvse_crypto_completion tcrypt_complete;
 	struct tegra_virtual_se_aes_context *aes_ctx;
 	const char *driver_name;
@@ -1448,7 +1502,7 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 		goto free_req;
 	}
 
-	crypto_aead_clear_flags(tfm, ~0);
+	crypto_aead_clear_flags(tfm, ~0U);
 
 	ret = snprintf(key_as_keyslot, AES_KEYSLOT_NAME_SIZE, "NVSEAES ");
 	memcpy(key_as_keyslot + KEYSLOT_OFFSET_BYTES, aes_enc_dec_ctl->key_slot,
@@ -1502,10 +1556,12 @@ static int tnvvse_crypto_aes_enc_dec_gcm(struct tnvvse_crypto_ctx *ctx,
 	ret =  enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
 	if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
 		/* crypto driver is asynchronous */
-		ret = wait_for_completion_timeout(&tcrypt_complete.restart,
+		err = wait_for_completion_timeout(&tcrypt_complete.restart,
 					msecs_to_jiffies(5000));
-		if (ret == 0)
+		if (err == 0) {
+			ret = -ETIMEDOUT;
 			goto free_req;
+		}
 
 		if (tcrypt_complete.req_err < 0) {
 			ret = tcrypt_complete.req_err;
@@ -1537,6 +1593,7 @@ static int tnvvse_crypto_get_aes_drng(struct tnvvse_crypto_ctx *ctx,
 	struct tegra_virtual_se_rng_context *rng_ctx;
 	struct crypto_rng *rng;
 	int ret = -ENOMEM;
+	uint64_t err = 0;
 
 	if ((aes_drng_ctl->data_length > ctx->max_rng_buff) ||
 		(aes_drng_ctl->data_length == 0U)) {
@@ -1565,12 +1622,14 @@ static int tnvvse_crypto_get_aes_drng(struct tnvvse_crypto_ctx *ctx,
 		goto free_rng;
 	}
 
-	ret = copy_to_user((void __user *)aes_drng_ctl->dest_buff,
+	err = copy_to_user((void __user *)aes_drng_ctl->dest_buff,
 				(const void *)ctx->rng_buff, aes_drng_ctl->data_length);
-	if (ret) {
-		CRYPTODEV_ERR("%s(): Failed to copy_to_user for length %d: %d\n",
-				__func__, aes_drng_ctl->data_length, ret);
-	}
+	if (err) {
+		CRYPTODEV_ERR("%s(): Failed to copy_to_user for length %d\n",
+				__func__, aes_drng_ctl->data_length);
+		ret = -EFAULT;
+	} else
+		ret = 0;
 
 free_rng:
 	crypto_free_rng(rng);
@@ -1673,7 +1732,7 @@ static int tnvvse_crypto_dev_open(struct inode *inode, struct file *filp)
 		return -ENOMEM;
 	}
 	ctx->node_id = node_id;
-	ctx->allocated_key_slot_count = 0;
+	ctx->allocated_key_slot_count = 0U;
 	ctx->is_zero_copy_node = is_zero_copy_node;
 
 	ctx->rng_buff = kzalloc(NVVSE_MAX_RANDOM_NUMBER_LEN_SUPPORTED, GFP_KERNEL);
@@ -1722,7 +1781,7 @@ static int tnvvse_crypto_dev_release(struct inode *inode, struct file *filp)
 		nvvse_devnode[ctx->node_id].node_in_use = false;
 	}
 
-	if (ctx->allocated_key_slot_count > 0)
+	if (ctx->allocated_key_slot_count > 0U)
 		tegra_hv_vse_close_keyslot(ctx->node_id, ctx->key_grp_id);
 
 	kfree(ctx->sha_result);
@@ -1761,6 +1820,7 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 	struct tegra_nvvse_release_key_slot_ctl __user *arg_key_slot_release_ctl;
 	struct tegra_nvvse_release_key_slot_ctl *key_slot_release_ctl;
 	int ret = 0;
+	uint64_t err = 0;
 
 	/*
 	 * Avoid processing ioctl if the file has been closed.
@@ -1823,6 +1883,15 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 			goto release_lock;
 		}
 
+		if ((sha_update_ctl->sha_type < TEGRA_NVVSE_SHA_TYPE_SHA256) ||
+			(sha_update_ctl->sha_type > TEGRA_NVVSE_SHA_TYPE_MAX)) {
+			CRYPTODEV_ERR("%s(): Invalid sha_type value: %d\n", __func__,
+			sha_update_ctl->sha_type);
+			kfree(sha_update_ctl);
+			ret = -EINVAL;
+			goto release_lock;
+		}
+
 		ret = tnvvse_crypto_sha_update(ctx, sha_update_ctl);
 
 		kfree(sha_update_ctl);
@@ -1857,7 +1926,7 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 			ret = copy_to_user(&arg_hmac_sha_sv_ctl->result, &hmac_sha_sv_ctl->result,
 					sizeof(uint8_t));
 			if (ret)
-				CRYPTODEV_ERR("%s(): Failed to copy_to_user:%d\n", __func__, ret);
+				CRYPTODEV_ERR("%s(): Failed to copy_to_user\n", __func__);
 		}
 
 		kfree(hmac_sha_sv_ctl);
@@ -1903,7 +1972,7 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 							aes_enc_dec_ctl->initial_counter,
 							sizeof(aes_enc_dec_ctl->initial_counter));
 			if (ret) {
-				CRYPTODEV_ERR("%s(): Failed to copy_to_user:%d\n", __func__, ret);
+				CRYPTODEV_ERR("%s(): Failed to copy_to_user\n", __func__);
 				kfree(aes_enc_dec_ctl);
 				goto release_lock;
 			}
@@ -1936,10 +2005,11 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		}
 
 		/* Copy IV returned by VSE */
-		ret = copy_to_user(arg_aes_gmac_init_ctl->IV, aes_gmac_init_ctl->IV,
+		err = copy_to_user(arg_aes_gmac_init_ctl->IV, aes_gmac_init_ctl->IV,
 							sizeof(aes_gmac_init_ctl->IV));
-		if (ret) {
-			CRYPTODEV_ERR("%s(): Failed to copy_to_user:%d\n", __func__, ret);
+		if (err) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user\n", __func__);
+			ret = -EFAULT;
 			kfree(aes_gmac_init_ctl);
 			goto release_lock;
 		}
@@ -1972,11 +2042,15 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 		}
 
 		if (aes_gmac_sign_verify_ctl->gmac_type == TEGRA_NVVSE_AES_GMAC_VERIFY) {
-			ret = copy_to_user(&arg_aes_gmac_sign_verify_ctl->result,
+			err = copy_to_user(&arg_aes_gmac_sign_verify_ctl->result,
 						&aes_gmac_sign_verify_ctl->result,
 								sizeof(uint8_t));
-			if (ret)
-				CRYPTODEV_ERR("%s(): Failed to copy_to_user:%d\n", __func__, ret);
+			if (err) {
+				CRYPTODEV_ERR("%s(): Failed to copy_to_user\n", __func__);
+				ret = -EFAULT;
+				kfree(aes_gmac_sign_verify_ctl);
+				goto release_lock;
+			}
 		}
 
 		kfree(aes_gmac_sign_verify_ctl);
@@ -2123,11 +2197,12 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 			goto release_lock;
 		}
 
-		ret = copy_to_user(arg_map_membuf_ctl, map_membuf_ctl,
+		err = copy_to_user(arg_map_membuf_ctl, map_membuf_ctl,
 				sizeof(*map_membuf_ctl));
-		if (ret) {
-			CRYPTODEV_ERR("%s(): Failed to copy_to_user map_membuf_ctl:%d\n",
-					__func__, ret);
+		if (err) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user map_membuf_ctl\n",
+					__func__);
+			ret = -EFAULT;
 			kfree(map_membuf_ctl);
 			goto release_lock;
 		}
@@ -2160,11 +2235,12 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 			goto release_lock;
 		}
 
-		ret = copy_to_user(arg_unmap_membuf_ctl, unmap_membuf_ctl,
+		err = copy_to_user(arg_unmap_membuf_ctl, unmap_membuf_ctl,
 				sizeof(*unmap_membuf_ctl));
-		if (ret) {
-			CRYPTODEV_ERR("%s(): Failed to copy_to_user unmap_membuf_ctl:%d\n",
-					__func__, ret);
+		if (err) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user unmap_membuf_ctl\n",
+					__func__);
+			ret = -EFAULT;
 			kfree(unmap_membuf_ctl);
 			goto release_lock;
 		}
@@ -2198,11 +2274,12 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 			goto release_lock;
 		}
 
-		ret = copy_to_user(arg_key_slot_allocate_ctl, key_slot_allocate_ctl,
+		err = copy_to_user(arg_key_slot_allocate_ctl, key_slot_allocate_ctl,
 			sizeof(*key_slot_allocate_ctl));
-		if (ret) {
-			CRYPTODEV_ERR("%s(): Failed to copy_to_user key_slot_allocate_ctl:%d\n",
-			__func__, ret);
+		if (err) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user key_slot_allocate_ctl\n",
+			__func__);
+			ret = -EFAULT;
 			kfree(key_slot_allocate_ctl);
 			goto release_lock;
 		}
@@ -2235,11 +2312,12 @@ static long tnvvse_crypto_dev_ioctl(struct file *filp,
 			goto release_lock;
 		}
 
-		ret = copy_to_user(arg_key_slot_release_ctl, key_slot_release_ctl,
+		err = copy_to_user(arg_key_slot_release_ctl, key_slot_release_ctl,
 			sizeof(*key_slot_release_ctl));
-		if (ret) {
-			CRYPTODEV_ERR("%s(): Failed to copy_to_user key_slot_release_ctl:%d\n",
-			__func__, ret);
+		if (err) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user key_slot_release_ctl\n",
+			__func__);
+			ret = -EFAULT;
 			kfree(key_slot_release_ctl);
 			goto release_lock;
 		}
@@ -2284,6 +2362,7 @@ static long tnvvse_crypto_info_dev_ioctl(struct file *filp,
 {
 	struct tegra_nvvse_get_ivc_db *get_ivc_db;
 	int ret = 0;
+	uint64_t err = 0;
 
 	if (ioctl_num == NVVSE_IOCTL_CMDID_GET_IVC_DB) {
 		get_ivc_db = kzalloc(sizeof(*get_ivc_db), GFP_KERNEL);
@@ -2300,10 +2379,11 @@ static long tnvvse_crypto_info_dev_ioctl(struct file *filp,
 			goto end;
 		}
 
-		ret = copy_to_user((void __user *)arg, &ivc_database, sizeof(ivc_database));
-		if (ret) {
-			CRYPTODEV_ERR("%s(): Failed to copy_to_user ivc_database:%d\n", __func__, ret);
+		err = copy_to_user((void __user *)arg, &ivc_database, sizeof(ivc_database));
+		if (err) {
+			CRYPTODEV_ERR("%s(): Failed to copy_to_user ivc_database\n", __func__);
 			kfree(get_ivc_db);
+			ret = -EFAULT;
 			goto end;
 		}
 
@@ -2348,7 +2428,7 @@ static int __init tnvvse_crypto_device_init(void)
 	};
 	char const numbers[] = "0123456789";
 	char *node_name;
-	uint32_t str_len;
+	size_t str_len;
 
 	CRYPTODEV_INFO("%s(): init start\n", __func__);
 
@@ -2420,7 +2500,7 @@ static int __init tnvvse_crypto_device_init(void)
 		}
 
 		str_len = strlen(node_prefix[ivc_db[cnt].engine_id]);
-		if (str_len > (MISC_DEVICE_NAME_LEN - 3U)) {
+		if (str_len > (MISC_DEVICE_NAME_LEN - 3)) {
 			CRYPTODEV_ERR("%s: buffer overflown for misc dev %u\n", __func__, cnt);
 			ret = -EINVAL;
 			goto fail;
@@ -2461,6 +2541,9 @@ fail:
 		nvvse_devnode[ctr].g_misc_devices = NULL;
 		mutex_destroy(&nvvse_devnode[ctr].lock);
 	}
+
+	kfree(misc);
+
 	return ret;
 }
 module_init(tnvvse_crypto_device_init);
