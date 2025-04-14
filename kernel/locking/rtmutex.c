@@ -241,7 +241,7 @@ static __always_inline void mark_rt_mutex_waiters(struct rt_mutex_base *lock)
 
 	do {
 		owner = *p;
-	} while (cmpxchg(p, owner,
+	} while (cmpxchg_relaxed(p, owner,
 				 owner | RT_MUTEX_HAS_WAITERS) != owner);
 
 	/*
