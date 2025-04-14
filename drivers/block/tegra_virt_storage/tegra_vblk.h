@@ -70,6 +70,7 @@ struct vsc_request {
 	/* Timer to track bio request completion*/
 	struct timer_list timer;
 	uint64_t time;
+	enum dma_data_direction dma_direction;
 };
 
 enum vblk_queue_state {

@@ -360,7 +360,7 @@ end:
 			dma_unmap_sg(vblkdev->device,
 				vsc_req->sg_lst,
 				vsc_req->sg_num_ents,
-				DMA_BIDIRECTIONAL);
+				vsc_req->dma_direction);
 			devm_kfree(vblkdev->device, vsc_req->sg_lst);
 		}
 	}
@@ -531,6 +531,16 @@ static enum blk_cmd_op cleanup_op_supported(struct vblk_dev *vblkdev, uint32_t o
 	return cleanup_op;
 }
 
+static enum dma_data_direction get_dma_data_direction(struct request *bio_req)
+{
+	if (req_op(bio_req) == REQ_OP_READ)
+		return DMA_FROM_DEVICE;
+	else if (req_op(bio_req) == REQ_OP_WRITE)
+		return DMA_TO_DEVICE;
+	else
+		return DMA_NONE;
+}
+
 /**
  * submit_bio_req: Fetch a bio request and submit it to
  * server for processing.
@@ -602,8 +612,9 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 				vsc_req->sg_lst);
 #endif
 		vsc_req->sg_num_ents = sg_nents(vsc_req->sg_lst);
+		vsc_req->dma_direction = get_dma_data_direction(bio_req);
 		if (dma_map_sg(vblkdev->device, vsc_req->sg_lst,
-			vsc_req->sg_num_ents, DMA_BIDIRECTIONAL) == 0) {
+			vsc_req->sg_num_ents, vsc_req->dma_direction) == 0) {
 			dev_err(vblkdev->device, "dma_map_sg failed\n");
 			goto bio_exit;
 		}
