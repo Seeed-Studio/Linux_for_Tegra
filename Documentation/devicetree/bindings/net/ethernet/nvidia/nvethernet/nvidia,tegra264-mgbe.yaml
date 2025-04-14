@@ -579,6 +579,11 @@ properties:
         minimum: 0x8
         maximum: 0x8
 
+    nvidia,mdc-cr:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        minimum: 0x0
+        maximum: 0xF
+
 required:
     - compatible
     - reg
