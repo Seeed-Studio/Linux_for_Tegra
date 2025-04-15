@@ -5,10 +5,10 @@
 
 #include "ufs-provision.h"
 #include "ufs-tegra.h"
+#include "ufshcd-priv.h"
 #ifdef CONFIG_DEBUG_FS
 
 #include <ufs/ufshcd.h>
-#include <drivers-private/scsi/ufs/ufshcd-priv.h>
 
 #define CHECK_NULL(expr) \
 	{ \

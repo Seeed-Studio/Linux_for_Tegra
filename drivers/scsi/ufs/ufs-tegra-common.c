@@ -27,13 +27,13 @@
 
 #include <linux/debugfs.h>
 
-#include <drivers-private/scsi/ufs/ufshcd-pltfrm.h>
 #include <ufs/ufshcd.h>
 #include <ufs/unipro.h>
 #include <ufs/ufshci.h>
 
 #include "ufs-tegra.h"
 #include "ufs-provision.h"
+#include "ufshcd-pltfrm.h"
 
 /* Fuse register offset to know if chip is RDL part or not */
 #define TEGRA_FUSE_OPT_LOT_CODE_0_0	0x108U
