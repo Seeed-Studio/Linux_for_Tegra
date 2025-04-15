@@ -1050,6 +1050,7 @@ endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 {
 	u16 i = 0;
 	int ret = 0;
+	int retval = 0;
 	struct endpoint_t *endpoint = NULL;
 	struct endpoint_prop_t *ep_prop = NULL;
 	struct endpoint_drv_ctx_t *eps_ctx = NULL;
@@ -1073,7 +1074,11 @@ endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 
 	eps_ctx->nr_endpoint = drv_ctx->drv_param.nr_endpoint;
 	eps_ctx->of_node = drv_ctx->drv_param.of_node;
-	strcpy(eps_ctx->drv_name, drv_ctx->drv_name);
+	retval = snprintf(eps_ctx->drv_name, NAME_MAX, "%s", drv_ctx->drv_name);
+	if (retval < 0) {
+		ret = -EINVAL;
+		goto err;
+	}
 	init_waitqueue_head(&eps_ctx->eps_close_waitq);
 
 	/* allocate the whole chardev range */
@@ -1108,7 +1113,11 @@ endpoints_setup(struct driver_ctx_t *drv_ctx, void **endpoints_h)
 		stream_ext_params = &endpoint->stream_ext_params;
 
 		/* copy the parameters from nvscic2c-pcie driver ctx.*/
-		strcpy(endpoint->name, ep_prop->name);
+		retval = snprintf(endpoint->name, NAME_MAX, "%s", ep_prop->name);
+		if (retval < 0) {
+			ret = -EINVAL;
+			goto err;
+		}
 		endpoint->chip_id = drv_ctx->chip_id;
 		endpoint->minor = ep_prop->id;
 		endpoint->nframes = ep_prop->nframes;

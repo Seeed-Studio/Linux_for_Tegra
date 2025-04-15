@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  */
 
@@ -498,6 +498,7 @@ static int
 parse_endpoint_db(struct driver_param_t *drv_param)
 {
 	int ret = 0;
+	int retval = 0;
 	u8 nr_endpoint = 0;
 	struct device_node *np = NULL;
 
@@ -562,7 +563,11 @@ parse_endpoint_db(struct driver_param_t *drv_param)
 				       name, (NAME_MAX - 1));
 				break;
 			}
-			strcpy(ep_prop->name, name);
+			retval = snprintf(ep_prop->name, NAME_MAX, "%s", name);
+			if (retval < 0) {
+				ret = -EINVAL;
+				break;
+			}
 
 			/* parse number of frames.*/
 			ret = tokenize_u8(&inp, ",", base, &ep_prop->nframes);

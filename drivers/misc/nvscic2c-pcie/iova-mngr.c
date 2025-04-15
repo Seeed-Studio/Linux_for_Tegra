@@ -298,6 +298,7 @@ int
 iova_mngr_init(char *name, u64 base_address, size_t size, void **mngr_handle)
 {
 	int ret = 0;
+	int retval = 0;
 	struct block_t *block = NULL;
 	struct mngr_ctx_t *ctx = NULL;
 
@@ -328,7 +329,12 @@ iova_mngr_init(char *name, u64 base_address, size_t size, void **mngr_handle)
 		pr_err("name: (%s) long, max char:(%u)\n", name, (NAME_MAX - 1));
 		goto err;
 	}
-	strcpy(ctx->name, name);
+	retval = snprintf(ctx->name, NAME_MAX, "%s", name);
+	if (retval < 0) {
+		ret = -EINVAL;
+		goto err;
+	}
+
 	INIT_LIST_HEAD(ctx->reserved_list);
 	INIT_LIST_HEAD(ctx->free_list);
 	mutex_init(&ctx->lock);

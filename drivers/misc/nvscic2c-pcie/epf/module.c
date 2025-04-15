@@ -54,6 +54,8 @@ static const struct pci_epf_device_id nvscic2c_pcie_epf_ids[] = {
 };
 
 #if defined(NV_PLATFORM_MSI_DOMAIN_ALLOC_IRQS_PRESENT)
+#define MSI_MSG_DATA_OFFSET \
+	((TEGRA264_PCIE_DMA_MSI_REMOTE_VEC + 2) - TEGRA264_PCIE_DMA_MSI_LOCAL_VEC)
 static void
 nvscic2c_dma_epf_write_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
 {
@@ -65,8 +67,11 @@ nvscic2c_dma_epf_write_msi_msg(struct msi_desc *desc, struct msi_msg *msg)
 		 * First information received is for CRC MSI. So subtract the same to get base and
 		 * add WR local vector
 		 */
-		msi_data = msg->data -  (TEGRA264_PCIE_DMA_MSI_REMOTE_VEC + 2) +
-				TEGRA264_PCIE_DMA_MSI_LOCAL_VEC;
+		if (msg->data < MSI_MSG_DATA_OFFSET) {
+			pr_err("Invalid MSI MSG data\n");
+			return;
+		}
+		msi_data = msg->data - MSI_MSG_DATA_OFFSET;
 	}
 }
 #endif
@@ -305,8 +310,10 @@ clear_inbound_translation(struct pci_epf *epf)
 	struct pci_epf_bar *epf_bar = NULL;
 
 	drv_ctx = epf_get_drvdata(epf);
-	if (!drv_ctx)
+	if (!drv_ctx) {
 		pr_err("epf_get_drvdata() failed\n");
+		return;
+	}
 
 	epf_bar = &epf->bar[drv_ctx->bar];
 	pci_epc_clear_bar(epf->epc, epf->func_no, epf->vfunc_no, epf_bar);
