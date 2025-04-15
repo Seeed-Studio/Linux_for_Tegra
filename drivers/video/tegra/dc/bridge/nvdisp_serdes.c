@@ -99,6 +99,7 @@ typedef struct {
 } opcode_descriptor_t;
 
 static int32_t op_i2c_write_byte(struct i2c_client *client, struct nvdisp_serdes_priv *priv, u8 *payload);
+static int32_t op_i2c_read_after_write_byte(struct i2c_client *client, struct nvdisp_serdes_priv *priv, u8 *payload);
 static int32_t op_i2c_read_byte_and_poll(struct i2c_client *client, struct nvdisp_serdes_priv *priv, u8 *payload);
 static int32_t op_i2c_read_byte_compare_print(struct i2c_client *client, struct nvdisp_serdes_priv *priv, u8 *payload);
 static int32_t op_i2c_update_byte(struct i2c_client *client, struct nvdisp_serdes_priv *priv, u8 *payload);
@@ -113,6 +114,12 @@ opcode_descriptor_t opcode_desc_table[] = {
 		.opcode = 0x10,
 		.payload_size = SIZE_PAYLOAD_I2C_WRITE_8_SINGLE,
 		.dispatcher = op_i2c_write_byte,
+	},
+	{
+		.description = "i2c read after write single byte",
+		.opcode = 0x11,
+		.payload_size = SIZE_PAYLOAD_I2C_WRITE_8_SINGLE,
+		.dispatcher = op_i2c_read_after_write_byte,
 	},
 	{
 		.description = "i2c read single byte",
@@ -219,6 +226,39 @@ static int32_t op_i2c_write_byte(struct i2c_client *client, struct nvdisp_serdes
 	u32 reg_addr = (payload[OPCODE_OFFSET_I2C_REG_ADDR_LOW]) | (payload[OPCODE_OFFSET_I2C_REG_ADDR_HIGH] << 0x8);
 
 	return nvdisp_serdes_write(priv, slave_addr, reg_addr, payload[OPCODE_OFFSET_I2C_REG_DATA]);
+}
+
+static int32_t op_i2c_read_after_write_byte(struct i2c_client *client, struct nvdisp_serdes_priv *priv, u8 *payload)
+{
+	u8 slave_addr = payload[OPCODE_OFFSET_I2C_SLAVE_ADDR_LOW];
+	u32 reg_addr = (payload[OPCODE_OFFSET_I2C_REG_ADDR_LOW]) | (payload[OPCODE_OFFSET_I2C_REG_ADDR_HIGH] << 0x8);
+	u8 reg_val;
+	int32_t ret;
+
+	ret = nvdisp_serdes_write(priv, slave_addr, reg_addr, payload[OPCODE_OFFSET_I2C_REG_DATA]);
+	if (ret < 0) {
+		dev_err(&priv->client->dev,
+			"%s: nvdisp_serdes_write 0x%02x failed (%d)\n",
+			__func__, reg_addr, ret);
+		return ret;
+	}
+
+	/* Read back the value to verify write operation */
+	ret = nvdisp_serdes_read(priv, slave_addr, reg_addr, &reg_val);
+	if (ret < 0) {
+		dev_err(&priv->client->dev,
+			"%s: nvdisp_serdes_read 0x%02x failed (%d)\n",
+			__func__, reg_addr, ret);
+		return ret;
+	}
+
+	if (reg_val != payload[OPCODE_OFFSET_I2C_REG_DATA]) {
+		dev_err(&priv->client->dev,
+			"%s: readback verification failed. Expected 0x%02x, got 0x%02x\n",
+			__func__, payload[OPCODE_OFFSET_I2C_REG_DATA], reg_val);
+	}
+
+	return 0;
 }
 
 #define OPCODE_90_OFFSET_POLL_COUNT               5
