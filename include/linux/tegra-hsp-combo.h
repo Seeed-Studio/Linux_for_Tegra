@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef INCLUDE_RTCPU_HSP_COMBO_H
@@ -31,6 +31,9 @@ int camrtc_hsp_get_fw_hash(struct camrtc_hsp *camhsp,
 		u8 hash[], size_t hash_size);
 int camrtc_hsp_set_operating_point(struct camrtc_hsp *camhsp,
 		uint32_t operating_point);
+
+int camrtc_hsp_set_panic_callback(struct camrtc_hsp *camhsp,
+		void (*panic_callback)(struct device *dev));
 
 
 #endif	/* INCLUDE_RTCPU_HSP_COMBO_H */

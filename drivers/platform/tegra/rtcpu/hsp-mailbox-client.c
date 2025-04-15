@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "linux/tegra-hsp-combo.h"
 
@@ -39,6 +39,8 @@ struct camrtc_hsp {
 	wait_queue_head_t response_waitq;
 	atomic_t response;
 	long timeout;
+	/* callback function for panic message */
+	void (*panic_callback)(struct device *dev);
 };
 
 struct camrtc_hsp_op {
@@ -53,6 +55,35 @@ struct camrtc_hsp_op {
 	int (*get_fw_hash)(struct camrtc_hsp *, u32 index, long *timeout);
 	int (*set_operating_point)(struct camrtc_hsp *, u32 operating_point, long *timeout);
 };
+
+/**
+ * @brief Registers a callback function to be called when a panic message is received
+ *
+ * This function registers a callback function that will be called when a panic message
+ * is received from the RCE.
+ * - Validates the HSP context pointer
+ * - Sets the panic_callback function pointer
+ *
+ * @param[in] camhsp         Pointer to the camera HSP context
+ *                           Valid value: non-NULL
+ * @param[in] panic_callback Function to be called when a panic message is received
+ *                           Valid value: non-NULL function pointer or NULL to clear
+ *
+ * @retval 0         On successful registration
+ * @retval -EINVAL   If the HSP context is NULL
+ */
+int camrtc_hsp_set_panic_callback(struct camrtc_hsp *camhsp,
+		void (*panic_callback)(struct device *dev))
+{
+	if (camhsp == NULL) {
+		dev_err(&camhsp->dev, "%s: camhsp is NULL!\n", __func__);
+		return -EINVAL;
+	}
+
+	camhsp->panic_callback = panic_callback;
+	return 0;
+}
+EXPORT_SYMBOL(camrtc_hsp_set_panic_callback);
 
 /**
  * @brief Sends a request message over the HSP mailbox
@@ -209,9 +240,15 @@ static void camrtc_hsp_rx_full_notify(mbox_client *cl, void *data)
 
 	if (CAMRTC_HSP_MSG_ID(msg) == CAMRTC_HSP_IRQ) {
 		/* We are done here */
+	} else if (CAMRTC_HSP_MSG_ID(msg) == CAMRTC_HSP_PANIC) {
+		dev_err(&camhsp->dev, "%s: receive CAMRTC_HSP_PANIC message!\n", __func__);
+		if (camhsp->panic_callback != NULL) {
+			camhsp->panic_callback(camhsp->dev.parent);
+		} else {
+			dev_warn(&camhsp->dev, "%s: No panic callback function is registered.\n", __func__);
+		}
 	} else if (CAMRTC_HSP_MSG_ID(msg) < CAMRTC_HSP_HELLO) {
 		/* Rest of the unidirectional messages are now ignored */
-		dev_info(&camhsp->dev, "unknown message 0x%08x\n", msg);
 	} else {
 		atomic_set(&camhsp->response, msg);
 		wake_up(&camhsp->response_waitq);
@@ -1315,6 +1352,7 @@ struct camrtc_hsp *camrtc_hsp_create(
 	init_waitqueue_head(&camhsp->response_waitq);
 	init_completion(&camhsp->emptied);
 	atomic_set(&camhsp->response, -1);
+	camhsp->panic_callback = NULL;
 
 	camhsp->dev.type = &camrtc_hsp_combo_dev_type;
 	camhsp->dev.release = camrtc_hsp_combo_dev_release;

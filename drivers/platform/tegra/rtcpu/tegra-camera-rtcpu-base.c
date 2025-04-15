@@ -1283,6 +1283,44 @@ static int tegra_cam_rtcpu_runtime_idle(struct device *dev)
 }
 
 /**
+ * @brief Callback function triggered upon receiving CAMRTC_HSP_PANIC message.
+ *
+ * This function is registered with the HSP mailbox client. When an RCE panic
+ * occurs, this callback retrieves the RTCPU tracer associated with the device
+ * and flushes the snapshot portion of the trace buffer to capture RCE state
+ * at the time of panic.
+ *
+ * Checks for NULL input parameters (`dev`, `rtcpu`, `tracer`) before proceeding.
+ *
+ * @param[in] dev Pointer to the parent device associated with the HSP client.
+ *                Must not be NULL. Used to retrieve driver data.
+ */
+void rtcpu_trace_panic_callback(struct device *dev)
+{
+	struct tegra_cam_rtcpu *rtcpu = NULL;
+	struct tegra_rtcpu_trace *tracer =  NULL;
+	if (dev == NULL) {
+		dev_err(dev, "%s: input dev handle is null\n", __func__);
+		return;
+	}
+
+	rtcpu = dev_get_drvdata(dev);
+	if (rtcpu == NULL) {
+		dev_err(dev, "%s: input rtcpu handle is null\n", __func__);
+		return;
+	}
+
+	tracer = rtcpu->tracer;
+	if (tracer == NULL) {
+		dev_err(dev, "%s: input tracer handle is null\n", __func__);
+		return;
+	}
+
+	rtcpu_trace_snapshot(tracer);
+}
+EXPORT_SYMBOL(rtcpu_trace_panic_callback);
+
+/**
  * @brief Initialize the HSP for the camera RTCPU
  *
  * This function initializes the HSP for the camera RTCPU
@@ -1312,7 +1350,17 @@ static int tegra_camrtc_hsp_init(struct device *dev)
 	if (IS_ERR(rtcpu->hsp)) {
 		err = PTR_ERR(rtcpu->hsp);
 		rtcpu->hsp = NULL;
+		dev_err(dev, "%s: failed to create hsp, err=%d\n", __func__, err);
 		return err;
+	}
+
+	/* Register panic callback to capture trace on RCE panic */
+	if (rtcpu->hsp && rtcpu->tracer) {
+		err = camrtc_hsp_set_panic_callback(rtcpu->hsp, rtcpu_trace_panic_callback);
+		if (err < 0)
+			dev_err(dev, "%s: failed to set panic callback, err=%d\n", __func__, err);
+	} else {
+		dev_err(dev, "%s: cannot register RCE panic callback.\n", __func__);
 	}
 
 	return 0;

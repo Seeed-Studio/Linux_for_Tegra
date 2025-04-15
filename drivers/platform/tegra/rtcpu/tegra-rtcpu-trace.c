@@ -73,19 +73,23 @@ struct tegra_rtcpu_trace {
 	/* pointers to each block */
 	void *exceptions_base;
 	struct camrtc_event_struct *events;
+	struct camrtc_event_struct *snapshot_events;
 	dma_addr_t dma_handle_pointers;
 	dma_addr_t dma_handle_exceptions;
 	dma_addr_t dma_handle_events;
+	dma_addr_t dma_handle_snapshots;
 
 	/* limit */
 	u32 exception_entries;
 	u32 event_entries;
+	u32 snapshot_entries;
 
 	/* exception pointer */
 	u32 exception_last_idx;
 
 	/* last pointer */
 	u32 event_last_idx;
+	u32 snapshot_last_idx;
 
 	/* worker */
 	struct delayed_work work;
@@ -94,6 +98,7 @@ struct tegra_rtcpu_trace {
 	/* statistics */
 	u32 n_exceptions;
 	u64 n_events;
+	u32 n_snapshots;
 
 	/* copy of the latest exception and event */
 	char last_exception_str[EXCEPTION_STR_LENGTH];
@@ -172,7 +177,7 @@ static int rtcpu_trace_setup_memory(struct tegra_rtcpu_trace *tracer)
 	ret = of_parse_phandle_with_fixed_args(dev->of_node, NV(trace),
 		3, 0, &reg_spec);
 	if (unlikely(ret != 0)) {
-		dev_err(dev, "Cannot find trace entry\n");
+		dev_err(dev, "%s: cannot find trace entry\n", __func__);
 		return -EINVAL;
 	}
 
@@ -220,6 +225,7 @@ static void rtcpu_trace_init_memory(struct tegra_rtcpu_trace *tracer)
 {
 	u64 add_value = 0;
 	u32 sub_value = 0;
+	u32 CAMRTC_TRACE_SNAPSHOT_OFFSET = 0;
 
 	if (unlikely(check_add_overflow(tracer->dma_handle,
 			(u64)(offsetof(struct camrtc_trace_memory_header,
@@ -232,6 +238,8 @@ static void rtcpu_trace_init_memory(struct tegra_rtcpu_trace *tracer)
 
 	/* memory map */
 	tracer->dma_handle_pointers = add_value;
+
+	// exception section setup
 	tracer->exceptions_base = tracer->trace_memory +
 	    CAMRTC_TRACE_EXCEPTION_OFFSET;
 	tracer->exception_entries = 7;
@@ -244,17 +252,47 @@ static void rtcpu_trace_init_memory(struct tegra_rtcpu_trace *tracer)
 	}
 
 	tracer->dma_handle_exceptions = add_value;
-	tracer->events = tracer->trace_memory + CAMRTC_TRACE_EVENT_OFFSET;
 
-	if (unlikely(check_sub_overflow(tracer->trace_memory_size,
+	// event section setup
+	tracer->events = tracer->trace_memory + CAMRTC_TRACE_EVENT_OFFSET;
+	CAMRTC_TRACE_SNAPSHOT_OFFSET =
+		tracer->trace_memory_size - (CAMRTC_TRACE_SNAPSHOT_ENTRIES * CAMRTC_TRACE_EVENT_SIZE);
+	if (unlikely(check_sub_overflow(CAMRTC_TRACE_SNAPSHOT_OFFSET,
 			CAMRTC_TRACE_EVENT_OFFSET, &sub_value))) {
 		dev_err(tracer->dev,
 				"%s:trace_memory_size failed due to an overflow\n", __func__);
 		return;
 	}
-
 	tracer->event_entries = sub_value / CAMRTC_TRACE_EVENT_SIZE;
+
+	if (unlikely(check_add_overflow(tracer->dma_handle,
+			(u64)(CAMRTC_TRACE_EVENT_OFFSET), &add_value))) {
+		dev_err(tracer->dev,
+				"%s:dma_handle failed due to an overflow\n", __func__);
+		return;
+	}
 	tracer->dma_handle_events = add_value;
+
+	// snapshot section setup
+	dev_dbg(tracer->dev, "%s: setup snapshot section\n", __func__);
+	tracer->snapshot_events = tracer->trace_memory + CAMRTC_TRACE_SNAPSHOT_OFFSET;
+
+	tracer->snapshot_entries = CAMRTC_TRACE_SNAPSHOT_ENTRIES;
+	if (unlikely(check_add_overflow(tracer->dma_handle,
+			(u64)(CAMRTC_TRACE_SNAPSHOT_OFFSET), &add_value))) {
+		dev_err(tracer->dev,
+				"%s:dma_handle for snapshots failed due to an overflow\n", __func__);
+		return;
+	}
+	tracer->dma_handle_snapshots = add_value;
+
+	dev_dbg(tracer->dev, "%s: exception section: offset=%x, size=%u, entries=%u\n", __func__,
+		CAMRTC_TRACE_EXCEPTION_OFFSET, CAMRTC_TRACE_EXCEPTION_SIZE, tracer->exception_entries);
+	dev_dbg(tracer->dev, "%s: event section: offset=%x, size=%u, entries=%u\n", __func__,
+		CAMRTC_TRACE_EVENT_OFFSET, CAMRTC_TRACE_EVENT_SIZE, tracer->event_entries);
+	dev_dbg(tracer->dev, "%s: snapshot section: offset=%x, size=%u, entries=%u\n", __func__,
+		CAMRTC_TRACE_SNAPSHOT_OFFSET, CAMRTC_TRACE_EVENT_SIZE, tracer->snapshot_entries);
+	dev_dbg(tracer->dev, "%s: total trace memory size=%u\n", __func__, tracer->trace_memory_size);
 
 	{
 		struct camrtc_trace_memory_header header = {
@@ -267,6 +305,9 @@ static void rtcpu_trace_init_memory(struct tegra_rtcpu_trace *tracer)
 			.event_offset = CAMRTC_TRACE_EVENT_OFFSET,
 			.event_size = CAMRTC_TRACE_EVENT_SIZE,
 			.event_entries = tracer->event_entries,
+			.snapshot_offset = CAMRTC_TRACE_SNAPSHOT_OFFSET,
+			.snapshot_size = CAMRTC_TRACE_EVENT_SIZE,
+			.snapshot_entries = tracer->snapshot_entries,
 		};
 
 		memcpy(tracer->trace_memory, &header, sizeof(header));
@@ -1873,6 +1914,90 @@ static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
 }
 
 /**
+ * @brief Processes RTCPU snapshot trace events from shared memory.
+ *
+ * This function reads and processes snapshot trace events recorded by the RTCPU
+ * into a dedicated circular buffer in shared memory. It is similar to
+ * rtcpu_trace_events but operates on the snapshot buffer.
+ *
+ * - Acquires the tracer mutex lock.
+ * - Reads the current snapshot write index (@ref snapshot_next_idx) from the
+ *   shared memory header.
+ * - Compares it with the last processed index (@ref tracer->snapshot_last_idx)
+ *   to find new events.
+ * - Returns early if the tracer is NULL or no new events are found.
+ * - Validates the new index using @ref array_index_nospec.
+ * - Invalidates CPU cache for the relevant memory range using
+ *   @ref rtcpu_trace_invalidate_entries to ensure visibility of RTCPU writes.
+ * - Iterates through new events from the old index up to (but not including)
+ *   the new index, handling potential buffer wrap-around.
+ * - For each event:
+ *   - Validates the index using @ref array_index_nospec.
+ *   - Gets a pointer to the event structure in the snapshot buffer.
+ *   - Processes the event using @ref rtcpu_trace_event.
+ *   - Increments the snapshot event counter (@ref tracer->n_snapshots).
+ *   - Advances the index, handling wrap-around.
+ * - Updates the last processed snapshot index (@ref tracer->snapshot_last_idx).
+ * - Releases the tracer mutex lock.
+ *
+ * @param[in/out] tracer  Pointer to the tegra_rtcpu_trace structure.
+ *                        Valid Range: Non-NULL pointer.
+ */
+void rtcpu_trace_snapshot(struct tegra_rtcpu_trace *tracer)
+{
+	const struct camrtc_trace_memory_header *header = NULL;
+	u32 old_next = 0U;
+	u32 new_next = 0U;
+	struct camrtc_event_struct *event = NULL;
+
+	if (tracer == NULL)
+		return;
+
+	mutex_lock(&tracer->lock);
+
+	header = tracer->trace_memory;
+	old_next = tracer->snapshot_last_idx;
+	new_next = header->snapshot_next_idx;
+
+	if (new_next >= tracer->snapshot_entries) {
+		dev_warn_ratelimited(tracer->dev,
+			"trace entry %u outside range 0..%u\n",
+			new_next, tracer->snapshot_entries - 1);
+		mutex_unlock(&tracer->lock);
+		return;
+	}
+
+	new_next = array_index_nospec(new_next, tracer->snapshot_entries);
+
+	if (old_next == new_next) {
+		mutex_unlock(&tracer->lock);
+		return;
+	}
+
+	rtcpu_trace_invalidate_entries(tracer,
+				tracer->dma_handle_snapshots,
+				old_next, new_next,
+				CAMRTC_TRACE_EVENT_SIZE,
+				tracer->snapshot_entries);
+
+	dev_err(tracer->dev, "%s: dump snapshot start at %u, end at %u\n",
+		__func__, old_next, new_next);
+	while (old_next != new_next) {
+		old_next = array_index_nospec(old_next, tracer->snapshot_entries);
+		event = &tracer->snapshot_events[old_next];
+		rtcpu_trace_event(tracer, event);
+		tracer->n_snapshots = wrap_add_u32(tracer->n_snapshots, 1U);
+		old_next = wrap_add_u32(old_next, 1U);
+		if (old_next == tracer->snapshot_entries)
+			old_next = 0;
+	}
+
+	tracer->snapshot_last_idx = new_next;
+	mutex_unlock(&tracer->lock);
+}
+EXPORT_SYMBOL(rtcpu_trace_snapshot);
+
+/**
  * @brief Flushes the RTCPU trace buffer
  *
  * This function flushes the RTCPU trace buffer by processing all available trace events
@@ -2441,8 +2566,8 @@ static int rtcpu_trace_debugfs_stats_read(
 {
 	struct tegra_rtcpu_trace *tracer = file->private;
 
-	seq_printf(file, "Exceptions: %u\nEvents: %llu\n",
-			tracer->n_exceptions, tracer->n_events);
+	seq_printf(file, "Exceptions: %u\nEvents: %llu\nSnapshots: %u\n",
+			tracer->n_exceptions, tracer->n_events, tracer->n_snapshots);
 
 	return 0;
 }
@@ -2673,8 +2798,10 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 	int ret;
 
 	tracer = kzalloc(sizeof(*tracer), GFP_KERNEL);
-	if (unlikely(tracer == NULL))
+	if (unlikely(tracer == NULL)) {
+		dev_err(dev, "%s: failed to allocate tracer\n", __func__);
 		return NULL;
+	}
 
 	tracer->dev = dev;
 	mutex_init(&tracer->lock);
@@ -2682,7 +2809,7 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 	/* Get the trace memory */
 	ret = rtcpu_trace_setup_memory(tracer);
 	if (ret) {
-		dev_err(dev, "Trace memory setup failed: %d\n", ret);
+		dev_err(dev, "%s: failed to setup trace memory, err=%d\n", __func__, ret);
 		kfree(tracer);
 		return NULL;
 	}
@@ -2729,7 +2856,7 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 	/* Worker */
 	param = WORK_INTERVAL_DEFAULT;
 	if (of_property_read_u32(tracer->of_node, NV(interval-ms), &param)) {
-		dev_err(dev, "interval-ms property not present\n");
+		dev_err(dev, "%s: interval-ms property not present\n", __func__);
 		kfree(tracer);
 		return NULL;
 	}
@@ -2740,7 +2867,7 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 	tracer->log_prefix = "[RTCPU]";
 	if (of_property_read_string(tracer->of_node, NV(log-prefix),
 				&tracer->log_prefix)) {
-		dev_err(dev, "RTCPU property not present\n");
+		dev_err(dev, "%s: RTCPU property not present\n", __func__);
 		kfree(tracer);
 		return NULL;
 	}
@@ -2756,7 +2883,7 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 
 	ret = raw_trace_node_drv_register(tracer);
 	if (ret) {
-		dev_err(dev, "Failed to register device node\n");
+		dev_err(dev, "%s: failed to register device node, err=%d\n", __func__, ret);
 		kfree(tracer);
 		return NULL;
 	}
