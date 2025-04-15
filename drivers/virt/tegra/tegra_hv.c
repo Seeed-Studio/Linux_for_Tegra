@@ -482,6 +482,19 @@ static int tegra_hv_setup(struct tegra_hv_data *hvd)
 		return -ENOMEM;
 	}
 
+	if ((hvd->info->nr_queues == 0U) || (hvd->info->nr_queues > PCT_MAX_NUM_IVC_QUEUES)) {
+		ERR("Invalid nr_queues: %u\n", hvd->info->nr_queues);
+		return -EINVAL;
+	}
+	if (hvd->info->nr_areas > MAX_NUM_GUESTS) {
+		ERR("Invalid nr_areas: %u\n", hvd->info->nr_areas);
+		return -EINVAL;
+	}
+	if (hvd->info->nr_mempools > PCT_MAX_NUM_MEMPOOLS) {
+		ERR("Invalid nr_mempools: %u\n", hvd->info->nr_mempools);
+		return -EINVAL;
+	}
+
 	/*
 	 *  Map IVC Trap MMIO Notification region
 	 */
