@@ -264,12 +264,6 @@
  */
 #define FIXED_PHY_INVALID_MDIO_ADDR	0xFFU
 
-/**
- * @brief PHY register address to enable MACSEc feature in PHY
- */
-#define MACSEC_REG_MVQ3244		0x401e002aU
-#define MACSEC_REG_88Q2221M		0x401fa008U
-
 #define ETHER_ADDRESS_32BIT		0
 #define ETHER_ADDRESS_40BIT		1
 #define ETHER_ADDRESS_48BIT		2
@@ -691,8 +685,6 @@ struct ether_priv_data {
 	int phy_reset_post_delay;
 	/** PHY reset duration delay */
 	int phy_reset_duration;
-	/** Pointer to the phy type being used */
-	const char *phy_str;
 #ifdef ETHER_NVGRO
 	/** Master queue */
 	struct sk_buff_head mq;
