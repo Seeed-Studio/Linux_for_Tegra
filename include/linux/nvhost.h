@@ -9,6 +9,8 @@
 #include <linux/types.h>
 #include <linux/host1x.h>
 #include <linux/platform_device.h>
+#include <linux/of.h>
+#include <linux/of_platform.h>
 
 struct nvhost_ctrl_sync_fence_info;
 struct nvhost_fence;
@@ -178,10 +180,6 @@ struct nvhost_device_data *nvhost_get_devdata(struct platform_device *pdev)
 	return (struct nvhost_device_data *)platform_get_drvdata(pdev);
 }
 
-/* public api to return platform_device ptr to the default host1x instance */
-struct platform_device *nvhost_get_default_device(void);
-struct platform_device *nvhost_get_host1x_device(int instance);
-
 /* common runtime pm and power domain APIs */
 int nvhost_module_init(struct platform_device *ndev);
 void nvhost_module_deinit(struct platform_device *dev);
@@ -232,8 +230,80 @@ int nvhost_intr_register_notifier(struct platform_device *pdev,
 				  void (*callback)(void *),
 				  void *private_data);
 
-/* public host1x sync-point management APIs */
-struct host1x *nvhost_get_host1x(struct platform_device *pdev);
+/* host1x sync-point management APIs */
+
+/* Return platform_device ptr to the default host1x instance */
+static inline struct platform_device *nvhost_get_default_device(void)
+{
+	struct platform_device *host1x_pdev;
+	struct device_node *np;
+	static const struct of_device_id host1x_match[] = {
+		{ .compatible = "nvidia,tegra234-host1x", },
+		{ .compatible = "nvidia,tegra264-host1x", },
+		{},
+	};
+
+	np = of_find_matching_node(NULL, host1x_match);
+	if (!np)
+		return NULL;
+
+	host1x_pdev = of_find_device_by_node(np);
+	if (!host1x_pdev)
+		return NULL;
+
+	return host1x_pdev;
+}
+
+static inline struct platform_device *nvhost_get_host1x_device(int instance)
+{
+	struct platform_device *host1x_pdev;
+	struct device_node *np;
+	int numa_node;
+	static const struct of_device_id host1x_match[] = {
+		{ .compatible = "nvidia,tegra234-host1x", },
+		{ .compatible = "nvidia,tegra264-host1x", },
+		{},
+	};
+
+	for_each_matching_node(np, host1x_match) {
+		host1x_pdev = of_find_device_by_node(np);
+		if (host1x_pdev) {
+			numa_node = dev_to_node(&host1x_pdev->dev);
+			if (numa_node == NUMA_NO_NODE || numa_node == instance)
+				return host1x_pdev;
+		}
+	}
+
+	return NULL;
+}
+
+static inline struct host1x *nvhost_get_host1x(struct platform_device *client_pdev)
+{
+	struct platform_device *host1x_pdev;
+	struct host1x *host1x;
+	int numa_node = NUMA_NO_NODE;
+
+	if (client_pdev)
+		numa_node = dev_to_node(&client_pdev->dev);
+
+	if (numa_node == NUMA_NO_NODE)
+		host1x_pdev = nvhost_get_default_device();
+	else
+		host1x_pdev = nvhost_get_host1x_device(numa_node);
+
+	if (!host1x_pdev) {
+		dev_dbg(&client_pdev->dev, "host1x device not available\n");
+		return NULL;
+	}
+
+	host1x = platform_get_drvdata(host1x_pdev);
+	if (!host1x) {
+		dev_warn(&client_pdev->dev, "No platform data for host1x!\n");
+		return NULL;
+	}
+
+	return host1x;
+}
 
 static inline int nvhost_module_set_rate(struct platform_device *dev, void *priv,
 			   unsigned long constraint, int index,
