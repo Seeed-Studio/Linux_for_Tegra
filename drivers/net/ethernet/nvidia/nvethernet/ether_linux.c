@@ -1861,9 +1861,9 @@ static void ether_free_irqs(struct ether_priv_data *pdata)
 	unsigned int i;
 	unsigned int chan;
 
-	if (pdata->common_irq_alloc_mask & 1U) {
-		if ((pdata->osi_core->mac != OSI_MAC_HW_EQOS) &&
-		    (pdata->osi_core->use_virtualization == OSI_DISABLE)) {
+	if ((pdata->osi_core->use_virtualization == OSI_DISABLE) &&
+	    (pdata->common_irq_alloc_mask & 1U)) {
+		if (pdata->osi_core->mac != OSI_MAC_HW_EQOS) {
 			irq_set_affinity_hint(pdata->common_irq, NULL);
 		}
 		devm_free_irq(pdata->dev, pdata->common_irq, pdata);
@@ -2010,36 +2010,37 @@ static int ether_request_irqs(struct ether_priv_data *pdata)
 	int ret = 0, i, j = 1;
 	unsigned int chan;
 
-	snprintf(pdata->irq_names[0], ETHER_IRQ_NAME_SZ, "%s.common_irq",
-		 netdev_name(pdata->ndev));
+	if (osi_core->use_virtualization == OSI_DISABLE) {
+		snprintf(pdata->irq_names[0], ETHER_IRQ_NAME_SZ, "%s.common_irq",
+			 netdev_name(pdata->ndev));
 
 #ifdef HSI_SUPPORT
-	ret = devm_request_threaded_irq(pdata->dev,
-					(unsigned int)pdata->common_irq,
-					ether_common_isr,
-					ether_common_isr_thread,
-					IRQF_SHARED | IRQF_ONESHOT,
-					pdata->irq_names[0], pdata);
+		ret = devm_request_threaded_irq(pdata->dev,
+						(unsigned int)pdata->common_irq,
+						ether_common_isr,
+						ether_common_isr_thread,
+						IRQF_SHARED | IRQF_ONESHOT,
+						pdata->irq_names[0], pdata);
 #else
-	ret = devm_request_irq(pdata->dev, (unsigned int)pdata->common_irq,
-			       ether_common_isr, IRQF_SHARED,
-			       pdata->irq_names[0], pdata);
+		ret = devm_request_irq(pdata->dev, (unsigned int)pdata->common_irq,
+				       ether_common_isr, IRQF_SHARED,
+				       pdata->irq_names[0], pdata);
 #endif
-	if (unlikely(ret < 0)) {
-		dev_err(pdata->dev, "failed to register common interrupt: %d\n",
-			pdata->common_irq);
-		return ret;
-	}
+		if (unlikely(ret < 0)) {
+			dev_err(pdata->dev, "failed to register common interrupt: %d\n",
+				pdata->common_irq);
+			return ret;
+		}
 
-	pdata->common_irq_alloc_mask = 1;
+		pdata->common_irq_alloc_mask = 1;
 
-	if ((osi_core->mac != OSI_MAC_HW_EQOS) &&
-	    (cpu_online(pdata->common_isr_cpu_id)) &&
-	    (osi_core->use_virtualization == OSI_DISABLE)) {
-		cpumask_set_cpu(pdata->common_isr_cpu_id,
-				&pdata->common_isr_cpu_mask);
-		irq_set_affinity_hint(pdata->common_irq,
-				      &pdata->common_isr_cpu_mask);
+		if ((osi_core->mac != OSI_MAC_HW_EQOS) &&
+		    (cpu_online(pdata->common_isr_cpu_id))) {
+			cpumask_set_cpu(pdata->common_isr_cpu_id,
+					&pdata->common_isr_cpu_mask);
+			irq_set_affinity_hint(pdata->common_irq,
+					      &pdata->common_isr_cpu_mask);
+		}
 	}
 
 	if (osi_core->mac_ver > OSI_EQOS_MAC_5_00 ||
@@ -5258,12 +5259,15 @@ static int ether_get_irqs(struct platform_device *pdev,
 	unsigned int i, j;
 	int ret = -1;
 
-	/* get common IRQ*/
-	pdata->common_irq = platform_get_irq(pdev, 0);
-	if (pdata->common_irq < 0) {
-		dev_err(&pdev->dev, "failed to get common IRQ number\n");
-		return pdata->common_irq;
+	if (pdata->osi_core->use_virtualization == OSI_DISABLE) {
+		/* get common IRQ*/
+		pdata->common_irq = platform_get_irq(pdev, 0);
+		if (pdata->common_irq < 0) {
+			dev_err(&pdev->dev, "failed to get common IRQ number\n");
+			return pdata->common_irq;
+		}
 	}
+
 	if (osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
 		ret = ether_get_vdma_mapping(pdev, pdata);
 		if (ret < 0) {
@@ -5271,6 +5275,7 @@ static int ether_get_irqs(struct platform_device *pdev,
 			return ret;
 		}
 	}
+
 	if ((osi_core->mac_ver > OSI_EQOS_MAC_5_00) ||
 	    (osi_core->mac != OSI_MAC_HW_EQOS)) {
 		ret = ether_get_vm_irq_data(pdev, pdata);
@@ -6446,6 +6451,16 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 	int ret_val = 0;
 
 	osi_core->pre_sil = tegra_platform_is_vdk();
+
+	/* Allow to set non zero DMA channel for virtualization */
+	if (!ether_init_ivc(pdata)) {
+		osi_core->use_virtualization = OSI_ENABLE;
+		dev_info(dev, "Virtualization is enabled\n");
+	} else {
+		dev_info(dev, "Virtualization is not enabled\n");
+		osi_core->use_virtualization = OSI_DISABLE;
+	}
+
 	/* Read flag to skip MAC reset on platform */
 	ret = of_property_read_u32(np, "nvidia,skip_mac_reset",
 				   &pdata->skip_mac_reset);
@@ -6608,14 +6623,6 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 			dev_err(dev, "Q0 Must be enabled for rx path\n");
 			return -EINVAL;
 		}
-	}
-
-	/* Allow to set non zero DMA channel for virtualization */
-	if (!ether_init_ivc(pdata)) {
-		osi_core->use_virtualization = OSI_ENABLE;
-		dev_info(dev, "Virtualization is enabled\n");
-	} else {
-		ret = -1;
 	}
 
 	ret = of_property_read_u32_array(np, "nvidia,rxq_enable_ctrl",
