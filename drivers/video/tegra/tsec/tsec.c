@@ -20,6 +20,7 @@ static struct tsec_device_data t23x_tsec_data = {
 	.rate = {192000000, 0, 204000000},
 	.riscv_desc_bin		= "tegra23x/nvhost_tsec_desc.fw",
 	.riscv_image_bin	= "tegra23x/nvhost_tsec_riscv.fw",
+	.dma_mask_bits		= 39,
 };
 MODULE_FIRMWARE("tegra23x/nvhost_tsec_riscv.fw");
 MODULE_FIRMWARE("tegra23x/nvhost_tsec_desc.fw");
@@ -28,6 +29,14 @@ static struct tsec_device_data t239_tsec_data = {
 	.rate = {192000000, 0, 204000000},
 	.riscv_desc_bin		= "tegra239/nvhost_tsec_desc.fw",
 	.riscv_image_bin	= "tegra239/nvhost_tsec_riscv.fw",
+	.dma_mask_bits		= 39,
+};
+
+static struct tsec_device_data t264_tsec_data = {
+	.rate = {192000000, 0, 204000000},
+	.riscv_desc_bin		= "tegra264/nvhost_tsec_desc.fw",
+	.riscv_image_bin	= "tegra264/nvhost_tsec_riscv.fw",
+	.dma_mask_bits		= 48,
 };
 
 /*
@@ -317,7 +326,7 @@ static int tsec_module_init(struct platform_device *dev)
 	void __iomem *regs = NULL;
 
 	/* Initialize dma parameters */
-	dma_set_mask_and_coherent(&dev->dev, DMA_BIT_MASK(39));
+	dma_set_mask_and_coherent(&dev->dev, DMA_BIT_MASK(pdata->dma_mask_bits));
 	dev->dev.dma_parms = &pdata->dma_parms;
 	dma_set_max_seg_size(&dev->dev, UINT_MAX);
 
@@ -412,6 +421,8 @@ static const struct of_device_id tsec_of_match[] = {
 		.data = (struct tsec_device_data *)&t23x_tsec_data },
 	{ .compatible = "nvidia,tegra239-tsec",
 		.data = (struct tsec_device_data *)&t239_tsec_data },
+	{ .compatible = "nvidia,tegra264-tsec",
+		.data = (struct tsec_device_data *)&t264_tsec_data },
 	{ },
 };
 

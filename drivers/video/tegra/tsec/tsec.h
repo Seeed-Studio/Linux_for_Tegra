@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -51,6 +51,9 @@ struct tsec_device_data {
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debug_root;
 #endif /* CONFIG_DEBUG_FS */
+
+	/* Number of bits for DMA mask - IOVA/PA number of bits */
+	u8 dma_mask_bits;
 };
 
 /*
