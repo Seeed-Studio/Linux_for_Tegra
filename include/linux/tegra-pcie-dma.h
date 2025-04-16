@@ -225,6 +225,10 @@ struct tegra_pcie_dma_xfer_info {
  * @brief
  * API to perform DMA SW and HW initialization.
  *
+ * @calib
+ *  For NVPCIE_DMA_SOC_T264 in info->soc, "xdma" reg-name in "dev" parameter from
+ *  struct tegra_pcie_dma_init_info is used. Refer CAL_NET_PIF$CalPcieEpLinux.
+ *
  * @usage
  * - Allowed context for the API call
  *  - Interrupt: No
