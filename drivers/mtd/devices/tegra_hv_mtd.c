@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -468,7 +468,7 @@ static ssize_t vmtd_phys_base_show(struct device *dev,
 {
 	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
 
-	return snprintf(buf, 16, "0x%x\n", vmtddev->config.phys_base);
+	return snprintf(buf, 16, "0x%llx\n", vmtddev->config.phys_base);
 }
 static DEVICE_ATTR(phys_base, 0444, vmtd_phys_base_show, NULL);
 

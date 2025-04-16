@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef _TEGRA_VIRT_STORAGE_SPEC_H_
@@ -270,7 +270,7 @@ struct vs_config_info {
 		struct vs_mtd_dev_config mtd_config;
 	};
 	uint32_t phys_dev;
-	uint32_t phys_base;
+	uint64_t phys_base;
 	uint32_t storage_type;
 	uint32_t priority;
 	uint8_t speed_mode[SPEED_MODE_MAX_LEN];

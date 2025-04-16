@@ -989,7 +989,7 @@ vblk_phys_base_show(struct device *dev, struct device_attribute *attr,
 	struct gendisk *disk = dev_to_disk(dev);
 	struct vblk_dev *vblk = disk->private_data;
 
-	return snprintf(buf, 16, "0x%x\n", vblk->config.phys_base);
+	return snprintf(buf, 16, "0x%llx\n", vblk->config.phys_base);
 }
 
 static ssize_t
