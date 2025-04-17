@@ -7691,8 +7691,8 @@ compile_test() {
             #
             CODE="
             #include <linux/hrtimer.h>
-            bool conftest_hrtimer_setup(void) {
-                return hrtimer_setup();
+            void conftest_hrtimer_setup(void) {
+                hrtimer_setup();
             }"
 
             compile_check_conftest "$CODE" "NV_HRTIMER_SETUP_PRESENT" "" "functions"
@@ -8705,7 +8705,7 @@ compile_test() {
             #
             CODE="
             #include <linux/timer.h>
-            bool conftest_timer_delete(void) {
+            int conftest_timer_delete(void) {
                 return timer_delete();
             }"
 
