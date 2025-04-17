@@ -401,7 +401,7 @@ static int nvsciipc_ioctl_reserve_ep(struct nvsciipc *ctx, unsigned int cmd,
 
 				/* endpoint is reserved and process is running */
 				if (ctx->stat[i]->reserved && task) {
-					ERR("%s:RES %s is already reserved by %d\n", __func__,
+					INFO("%s:RES %s is already reserved by %d\n", __func__,
 						reserve_ep.ep_name, ctx->stat[i]->owner_pid);
 					mutex_unlock(&ep_mutex);
 					return -EBUSY;
@@ -424,7 +424,7 @@ static int nvsciipc_ioctl_reserve_ep(struct nvsciipc *ctx, unsigned int cmd,
 
 				if (ctx->stat[i]->reserved &&
 				((ctx->stat[i]->owner_pid != current_pid) && task)) {
-					ERR("%s:REL %s is already reserved by %d\n", __func__,
+					INFO("%s:REL %s is already reserved by %d\n", __func__,
 						reserve_ep.ep_name, ctx->stat[i]->owner_pid);
 					mutex_unlock(&ep_mutex);
 					return -EPERM;
