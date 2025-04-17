@@ -20,6 +20,11 @@ export CONFIG_TEGRA_DRM_NATIVE_DIS=y
 subdir-ccflags-y += -DCONFIG_TEGRA_DRM_NATIVE_DIS
 endif
 
+ifeq ($(NV_OOT_NVHOST_DISABLE_LEGACY_IOCTL),y)
+export CONFIG_TEGRA_DRM_DISABLE_LEGACY_IOCTL=y
+subdir-ccflags-y += -DCONFIG_TEGRA_DRM_DISABLE_LEGACY_IOCTL
+endif
+
 ifdef CONFIG_DRM
 obj-m += drm/tegra/
 endif

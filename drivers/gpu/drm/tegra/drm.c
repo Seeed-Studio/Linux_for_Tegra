@@ -412,6 +412,10 @@ static int tegra_syncpt_incr(struct drm_device *drm, void *data,
 	struct drm_tegra_syncpt_incr *args = data;
 	struct host1x_syncpt *sp;
 
+	/* Legacy IOCTL is not supported on tegra264 */
+	if (of_machine_is_compatible("nvidia,tegra264"))
+		return -EINVAL;
+
 	sp = host1x_syncpt_get_by_id_noref(host1x, args->id);
 	if (!sp)
 		return -EINVAL;
