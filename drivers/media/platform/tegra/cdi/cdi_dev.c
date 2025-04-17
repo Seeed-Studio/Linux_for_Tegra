@@ -436,7 +436,6 @@ static int cdi_dev_set_fsync_mux(
 	void __user *arg)
 {
 	u8 val, shift;
-	u8 cam_grp;
 	struct cdi_dev_fsync_mux fsync_mux;
 
 	if (copy_from_user(&fsync_mux, arg, sizeof(fsync_mux))) {
@@ -451,14 +450,9 @@ static int cdi_dev_set_fsync_mux(
 		 * P05:P04 for the camera group D. cam_grp 3.
 		 */
 		if ((fsync_mux.cam_grp > 0U) && (fsync_mux.cam_grp < 4U)) {
-			if (info->tca9539.fsync_ctrl_port != -1)
-				cam_grp = info->tca9539.fsync_ctrl_port;
-			else
-				cam_grp = fsync_mux.cam_grp;
-
 			if (tca9539_rd(info, 0x02, &val) != 0)
 				return -EFAULT;
-			switch (cam_grp) {
+			switch (fsync_mux.cam_grp) {
 			case 1U:
 				shift = 0U;
 				break;
@@ -467,6 +461,34 @@ static int cdi_dev_set_fsync_mux(
 				break;
 			case 3U:
 				shift = 4U;
+				break;
+			default:
+				shift = 0U;
+				break;
+			}
+
+			val &= ~(0x3 << shift);
+			val |= (fsync_mux.mux_sel << shift);
+			if (tca9539_wr(info, 0x02, val) != 0)
+				return -EFAULT;
+		}
+	} else if (info->cim_ver == 3U) {
+		/* P01:P00 for the camera group A. cam_grp 1.
+		 * P03:P02 for the camera group B. cam_grp 3.
+		 * P05:P04 for the camera group D. cam_grp 2.
+		 */
+		if ((fsync_mux.cam_grp > 0U) && (fsync_mux.cam_grp < 4U)) {
+			if (tca9539_rd(info, 0x02, &val) != 0)
+				return -EFAULT;
+			switch (fsync_mux.cam_grp) {
+			case 1U:
+				shift = 0U;
+				break;
+			case 2U:
+				shift = 4U;
+				break;
+			case 3U:
+				shift = 2U;
 				break;
 			default:
 				shift = 0U;
@@ -567,10 +589,16 @@ static void cdi_dev_get_cim_ver(struct device_node *np, struct cdi_dev_info *inf
 					dev_info(info->dev,
 						"CIM A01\n");
 					info->cim_ver = 1U;
-				} else {
+				} else if (!strncmp(cim_ver,
+					"cim_ver_a02",
+					sizeof("cim_ver_a02"))) {
 					dev_info(info->dev,
 						"CIM A02\n");
 					info->cim_ver = 2U;
+				} else {
+					dev_info(info->dev,
+						"CIM A03\n");
+					info->cim_ver = 3U;
 				}
 			}
 		}
@@ -592,7 +620,6 @@ static int cdi_dev_probe(struct i2c_client *client,
 	int err;
 	int numLinks = 0;
 	int i;
-	u32 fsync_ctrl_port;
 
 	dev_dbg(&client->dev, "%s: initializing link @%x-%04x\n",
 		__func__, client->adapter->nr, client->addr);
@@ -690,7 +717,7 @@ static int cdi_dev_probe(struct i2c_client *client,
 			}
 		}
 
-		if (info->cim_ver == 2U) {
+		if ((info->cim_ver == 2U) || (info->cim_ver == 3U)) {
 			/* get the I/O expander information */
 			child_tca9539 = of_get_child_by_name(child, "tca9539");
 			if (child_tca9539 != NULL) {
@@ -738,17 +765,6 @@ static int cdi_dev_probe(struct i2c_client *client,
 						__func__, err,
 						info->tca9539.power_port);
 					return -ENODEV;
-				}
-				info->tca9539.fsync_ctrl_port = -1;
-				err = of_property_read_u32(child_tca9539,
-					"fsync_ctrl_port",
-					&fsync_ctrl_port);
-				if (err == 0) {
-					if ((fsync_ctrl_port >= 0) &&
-						(fsync_ctrl_port <= 3)) {
-						info->tca9539.fsync_ctrl_port =
-							fsync_ctrl_port;
-					}
 				}
 				info->tca9539.reg_len /= 8;
 				info->tca9539.dat_len /= 8;

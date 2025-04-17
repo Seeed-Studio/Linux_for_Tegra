@@ -27,7 +27,6 @@ struct tca9539_priv {
 	u32 dat_len;
 	u8 init_val[12];
 	u32 power_port;
-	u32 fsync_ctrl_port;
 	bool enable;
 };
 

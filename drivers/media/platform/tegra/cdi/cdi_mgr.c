@@ -1732,9 +1732,17 @@ static void cdi_mgr_get_cim_ver(struct device *dev, struct cdi_mgr_priv *cdi_mgr
 						"CIM A01\n");
 					cdi_mgr->cim_ver = 1U;
 				} else {
-					dev_info(dev,
-						"CIM A02\n");
-					cdi_mgr->cim_ver = 2U;
+					if (!strncmp(cim_ver,
+					"cim_ver_a02",
+					sizeof("cim_ver_a02"))) {
+						dev_info(dev,
+							"CIM A02\n");
+						cdi_mgr->cim_ver = 2U;
+					} else {
+						dev_info(dev,
+							"CIM A03\n");
+						cdi_mgr->cim_ver = 3U;
+					}
 					if (of_property_read_u32_array(cim,
 						"cim_frsync_src",
 						cdi_mgr->cim_frsync,
@@ -1760,7 +1768,6 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 	struct device_node *child_tca9539 = NULL;
 	struct device_node *root_node = NULL;
 	const char *model;
-	u32 fsync_ctrl_port;
 
 	dev_info(&pdev->dev, "%sing...\n", __func__);
 
@@ -1993,17 +2000,6 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 					cdi_mgr->tca9539.power_port);
 				goto err_probe;
 			}
-			cdi_mgr->tca9539.fsync_ctrl_port = -1;
-			err = of_property_read_u32(child_tca9539,
-					"fsync_ctrl_port",
-					&fsync_ctrl_port);
-			if (err == 0) {
-				if ((fsync_ctrl_port >= 0) &&
-					(fsync_ctrl_port <= 3)) {
-					cdi_mgr->tca9539.fsync_ctrl_port =
-						fsync_ctrl_port;
-				}
-			}
 
 			cdi_mgr->tca9539.reg_len /= 8;
 			cdi_mgr->tca9539.dat_len /= 8;
@@ -2082,6 +2078,38 @@ static int cdi_mgr_probe(struct platform_device *pdev)
 				if (err != 0) {
 					dev_err(&pdev->dev,
 							"%s: ERR %d: TCA9539: Failed to set the output level\n",
+							__func__, err);
+					goto err_probe;
+				}
+			} else if (cdi_mgr->cim_ver == 3U) { /* P3966 */
+				err = tca9539_wr(cdi_mgr, 0x6, 0xC0);
+				if (err != 0) {
+					dev_err(&pdev->dev,
+							"%s: ERR %d: TCA9539: Failed to select FS selection signal source\n",
+							__func__, err);
+					goto err_probe;
+				}
+				err = tca9539_wr(cdi_mgr, 0x7, 0x70);
+				if (err != 0) {
+					dev_err(&pdev->dev,
+							"%s: ERR %d: TCA9539: Failed to select PWDN signal source\n",
+							__func__, err);
+					goto err_probe;
+				}
+
+				/* Configure FRSYNC logic */
+				dev_info(&pdev->dev,
+						"FRSYNC source: %d %d %d\n",
+						cdi_mgr->cim_frsync[0],
+						cdi_mgr->cim_frsync[1],
+						cdi_mgr->cim_frsync[2]);
+				err = tca9539_wr(cdi_mgr, 0x2,
+					(cdi_mgr->cim_frsync[2] << 4) |
+					(cdi_mgr->cim_frsync[1] << 2) |
+					(cdi_mgr->cim_frsync[0]));
+				if (err < 0) {
+					dev_err(&pdev->dev,
+							"%s: ERR %d: TCA9539: Failed to set FRSYNC control logic\n",
 							__func__, err);
 					goto err_probe;
 				}
