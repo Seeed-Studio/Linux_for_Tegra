@@ -2,7 +2,8 @@
 /*
  * IOMMU API for ARM architected SMMUv3 implementations.
  *
- * Copyright (C) 2015 ARM Limited
+ * SPDX-FileCopyrightText: Copyright (C) 2015 ARM Limited
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Will Deacon <will.deacon@arm.com>
  *
@@ -23,6 +24,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/pci.h>
 #include <linux/pci-ats.h>
 #include <linux/platform_device.h>
@@ -3813,6 +3815,9 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev,
 	struct device *dev = &pdev->dev;
 	u32 cells;
 	int ret = -EINVAL;
+
+	if (!of_reserved_mem_device_init(dev))
+		dev_info(dev, "using device-specific reserved memory\n");
 
 	if (of_property_read_u32(dev->of_node, "#iommu-cells", &cells))
 		dev_err(dev, "missing #iommu-cells property\n");
