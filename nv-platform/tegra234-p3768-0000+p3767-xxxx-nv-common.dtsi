@@ -294,5 +294,3 @@
 		status = "okay";
 	};
 };
-
-/delete-node/ &{/gpio-keys/key-suspend};
