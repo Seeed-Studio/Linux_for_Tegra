@@ -391,7 +391,7 @@ static void camera_diag_notify(struct tegra_ivc_channel *chan)
  * @retval -EINVAL       Invalid parameters
  * @retval -ENOMEM       Failed to allocate memory
  * @retval -ENODEV       Failed to find ISP device node
- * @retval -EPROBE_DEFER ISP or IOMMU domain not ready yet
+ * @retval -EPROBE_DEFER ISP or IOMMU not yet mapped
  */
 static int camera_diag_channel_init(struct camera_diag_channel *ch)
 {
@@ -400,7 +400,6 @@ static int camera_diag_channel_init(struct camera_diag_channel *ch)
 	struct platform_device *isp_pdev;
 	struct device *isp_dev = NULL;
 	int ret, i;
-	struct iommu_domain *domain;
 	struct sg_table sgt;
 	int chip_id = __tegra_get_chip_id();
 	int max_allowed_instances;
@@ -492,10 +491,9 @@ static int camera_diag_channel_init(struct camera_diag_channel *ch)
 
 		isp_dev = &isp_pdev->dev;
 
-		/* Check if ISP device has an IOMMU domain attached */
-		domain = iommu_get_domain_for_dev(isp_dev);
-		if (!domain) {
-			dev_dbg(&ch->dev, "ISP%d IOMMU domain not ready yet, deferring probe\n", i);
+		/* Check if ISP device has an IOMMU mapped */
+		if (!device_iommu_mapped(isp_dev)) {
+			dev_dbg(&ch->dev, "ISP%d IOMMU not mapped yet, deferring probe\n", i);
 			put_device(&isp_pdev->dev);
 			of_node_put(isp_node);
 			if (i == 0) {
