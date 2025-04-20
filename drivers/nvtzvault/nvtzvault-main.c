@@ -79,29 +79,49 @@ static bool is_session_open(struct nvtzvault_ctx *ctx, uint32_t session_id)
 
 static void set_session_open(struct nvtzvault_ctx *ctx, uint32_t session_id)
 {
-	uint32_t byte_idx = session_id / 8U;
-	uint32_t bit_idx = session_id % 8U;
+	uint32_t byte_idx;
+	uint32_t bit_idx;
+	uint32_t bitmap_val;
 
 	if (session_id >= NVTZVAULT_MAX_SESSIONS) {
 		pr_err("%s: invalid session id %u\n", __func__, session_id);
 		return;
 	}
 
-	ctx->session_bitmap[byte_idx] |= (1U << bit_idx);
+	byte_idx = session_id / 8U;
+	bit_idx = session_id % 8U;
+	bitmap_val = (1U << bit_idx);
+
+	if (bitmap_val > UINT8_MAX) {
+		pr_err("%s: bitmap_val overflow %u\n", __func__, bitmap_val);
+		return;
+	}
+
+	ctx->session_bitmap[byte_idx] |= (uint8_t)bitmap_val;
 	atomic_inc(&g_nvtzvault_dev.total_active_session_count);
 }
 
 static void set_session_closed(struct nvtzvault_ctx *ctx, uint32_t session_id)
 {
-	uint32_t byte_idx = session_id / 8U;
-	uint32_t bit_idx = session_id % 8U;
+	uint32_t byte_idx;
+	uint32_t bit_idx;
+	uint32_t bitmap_val;
 
 	if (session_id >= NVTZVAULT_MAX_SESSIONS) {
 		pr_err("%s: invalid session id %u\n", __func__, session_id);
 		return;
 	}
 
-	ctx->session_bitmap[byte_idx] &= ~(1U << bit_idx);
+	byte_idx = session_id / 8U;
+	bit_idx = session_id % 8U;
+	bitmap_val = (1U << bit_idx);
+
+	if (bitmap_val > UINT8_MAX) {
+		pr_err("%s: bitmap_val overflow %u\n", __func__, bitmap_val);
+		return;
+	}
+
+	ctx->session_bitmap[byte_idx] &= ~((uint8_t)bitmap_val);
 
 	atomic_dec(&g_nvtzvault_dev.total_active_session_count);
 }
@@ -176,9 +196,10 @@ static int nvtzvault_open_session(struct nvtzvault_ctx *ctx,
 	}
 
 	ret = nvtzvault_tee_translate_saerror_to_syserror(
-			(enum nvtzvault_tzv_error)resp_hdr.result);
+			resp_hdr.result);
 	if (ret != 0) {
-		NVTZVAULT_ERR("%s: SA returned error: %d\n", __func__, resp_hdr.result);
+		NVTZVAULT_ERR("%s: SA returned error: %d(%x)\n", __func__, resp_hdr.result,
+				resp_hdr.result);
 		return ret;
 	}
 
@@ -261,9 +282,10 @@ static int nvtzvault_invoke_cmd(struct nvtzvault_ctx *ctx,
 	}
 
 	ret = nvtzvault_tee_translate_saerror_to_syserror(
-			(enum nvtzvault_tzv_error)resp_hdr.result);
+			resp_hdr.result);
 	if (ret != 0) {
-		NVTZVAULT_ERR("%s: SA returned error: %d\n", __func__, resp_hdr.result);
+		NVTZVAULT_ERR("%s: SA returned error: %d(%x)\n", __func__, resp_hdr.result,
+				resp_hdr.result);
 		return ret;
 	}
 
@@ -333,12 +355,13 @@ static int nvtzvault_close_session(struct nvtzvault_ctx *ctx,
 	}
 
 	ret = nvtzvault_tee_translate_saerror_to_syserror(
-			(enum nvtzvault_tzv_error)resp_hdr.result);
+			resp_hdr.result);
 	if (ret == 0) {
 		// Only clear session if close was successful
 		set_session_closed(ctx, close_session_ctl->session_id);
 	} else {
-		NVTZVAULT_ERR("%s: SA returned error: %d\n", __func__, ret);
+		NVTZVAULT_ERR("%s: SA returned error: %d(%x)\n", __func__, resp_hdr.result,
+				resp_hdr.result);
 	}
 
 	return ret;
@@ -404,6 +427,7 @@ static long nvtzvault_ta_dev_ioctl(struct file *filp, unsigned int ioctl_num, un
 	struct nvtzvault_invoke_cmd_ctl *invoke_cmd_ctl;
 	struct nvtzvault_close_session_ctl *close_session_ctl;
 	int ret = 0;
+	uint64_t result;
 
 	if (!ctx) {
 		NVTZVAULT_ERR("%s(): ctx not allocated\n", __func__);
@@ -442,9 +466,9 @@ static long nvtzvault_ta_dev_ioctl(struct file *filp, unsigned int ioctl_num, un
 			goto release_lock;
 		}
 
-		ret = copy_to_user((void __user *)arg, open_session_ctl,
+		result = copy_to_user((void __user *)arg, open_session_ctl,
 				sizeof(*open_session_ctl));
-		if (ret) {
+		if (result != 0UL) {
 			NVTZVAULT_ERR("%s(): Failed to copy_from_user open_session_ctl:%d\n",
 					__func__, ret);
 			kfree(open_session_ctl);
@@ -475,8 +499,8 @@ static long nvtzvault_ta_dev_ioctl(struct file *filp, unsigned int ioctl_num, un
 			goto release_lock;
 		}
 
-		ret = copy_to_user((void __user *)arg, invoke_cmd_ctl, sizeof(*invoke_cmd_ctl));
-		if (ret) {
+		result = copy_to_user((void __user *)arg, invoke_cmd_ctl, sizeof(*invoke_cmd_ctl));
+		if (result != 0UL) {
 			NVTZVAULT_ERR("%s(): Failed to copy_from_user invoke_cmd_ctl:%d\n",
 					__func__, ret);
 			kfree(invoke_cmd_ctl);
@@ -508,9 +532,9 @@ static long nvtzvault_ta_dev_ioctl(struct file *filp, unsigned int ioctl_num, un
 			goto release_lock;
 		}
 
-		ret = copy_to_user((void __user *)arg, close_session_ctl,
+		result = copy_to_user((void __user *)arg, close_session_ctl,
 				sizeof(*close_session_ctl));
-		if (ret) {
+		if (result != 0UL) {
 			NVTZVAULT_ERR("%s(): Failed to copy_from_user close_session_ctl:%d\n",
 					__func__, ret);
 			kfree(close_session_ctl);
@@ -576,10 +600,17 @@ static int nvtzvault_ta_create_dev_node(struct miscdevice *dev, uint32_t id)
 	const char * const node_prefix = "nvtzvault-ta-";
 	char *node_name;
 	char const numbers[] = "0123456789";
+	uint64_t result = 0UL;
 	uint32_t str_len;
 	int32_t ret;
 
-	str_len = strlen(node_prefix);
+	result = strlen(node_prefix);
+	if (result > UINT32_MAX) {
+		NVTZVAULT_ERR("%s: device name length is invalid", __func__);
+		return -EINVAL;
+	}
+
+	str_len = (uint32_t)result;
 	if (str_len > (NVTZVAULT_TA_DEVICE_NAME_LEN - 3U)) {
 		NVTZVAULT_ERR("%s: device name length exceeds supported size", __func__);
 		return -ENOMEM;
@@ -644,7 +675,7 @@ static int nvtzvault_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	if ((len % 2) != 0U) {
+	if ((len % 2) != 0) {
 		dev_err(dev, "ta-mapping property has invalid format\n");
 		return -EINVAL;
 	}
@@ -722,7 +753,7 @@ static int nvtzvault_probe(struct platform_device *pdev)
 		if (ret != 0)
 			goto fail;
 
-		g_nvtzvault_dev.ta_count++;
+		g_nvtzvault_dev.ta_count = (i + 1U);
 	}
 
 	g_nvtzvault_dev.data_buf = kzalloc(NVTZVAULT_BUFFER_SIZE, GFP_KERNEL);
@@ -791,15 +822,13 @@ static void nvtzvault_shutdown(struct platform_device *pdev)
 #if defined(CONFIG_PM)
 static int nvtzvault_suspend(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-
 	/* Add print to log in nvlog buffer  */
 	dev_err(dev, "%s start\n", __func__);
 
 	if (atomic_read(&g_nvtzvault_dev.total_active_session_count) > 0)
 		return -EBUSY;
 
-	nvtzvault_shutdown(pdev);
+	atomic_set(&g_nvtzvault_dev.in_suspend_state, 1);
 
 	/* Add print to log in nvlog buffer  */
 	dev_err(dev, "%s done\n", __func__);

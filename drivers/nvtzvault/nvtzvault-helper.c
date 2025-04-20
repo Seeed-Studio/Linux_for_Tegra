@@ -17,24 +17,24 @@
 #define NVTZVAULT_TEE_PARAM_TYPE_MEMREF_OUTPUT   7U
 #define NVTZVAULT_TEE_PARAM_TYPE_MEMREF_INOUT    7U
 
-int nvtzvault_tee_translate_saerror_to_syserror(const enum nvtzvault_tzv_error tzv_error)
+int nvtzvault_tee_translate_saerror_to_syserror(const uint32_t tzv_error)
 {
-	const enum nvtzvault_tzv_error tzv_error_array[] = {
-			TZVaultSuccess, TZVaultPending,
-			TZVaultErrorGeneric, TZVaultErrorAccessConflict,
-			TZVaultErrorAccessDenied, TZVaultErrorAgain,
-			TZVaultErrorBadFormat, TZVaultErrorBadParameters,
-			TZVaultErrorBadState, TZVaultErrorBusy,
-			TZVaultErrorCancel, TZVaultErrorCommunication,
-			TZVaultErrorExcessData, TZVaultErrorItemNotFound,
-			TZVaultErrorMacInvalid, TZVaultErrorNoData,
-			TZVaultErrorNoMessage, TZVaultErrorNoResource,
-			TZVaultErrorNotImplemented, TZVaultErrorNotSupported,
-			TZVaultErrorOutOfMemory, TZVaultErrorOverflow,
-			TZVaultErrorSecurity, TZVaultErrorShortBuffer,
-			TZVaultErrorSignatureInvalid, TZVaultErrorStorageNoSpace,
-			TZVaultErrorTargetDead, TZVaultErrorTimeNeedsReset,
-			TZVaultErrorTimeNotSet, TZVaultErrorTimeout };
+	const uint32_t tzv_error_array[] = {
+			TZVAULT_SUCCESS, TZVAULT_PENDING,
+			TZVAULT_ERROR_GENERIC, TZVAULT_ERROR_ACCESS_CONFLICT,
+			TZVAULT_ERROR_ACCESS_DENIED, TZVAULT_ERROR_AGAIN,
+			TZVAULT_ERROR_BAD_FORMAT, TZVAULT_ERROR_BAD_PARAMETERS,
+			TZVAULT_ERROR_BAD_STATE, TZVAULT_ERROR_BUSY,
+			TZVAULT_ERROR_CANCEL, TZVAULT_ERROR_COMMUNICATION,
+			TZVAULT_ERROR_EXCESS_DATA, TZVAULT_ERROR_ITEM_NOT_FOUND,
+			TZVAULT_ERROR_MAC_INVALID, TZVAULT_ERROR_NO_DATA,
+			TZVAULT_ERROR_NO_MESSAGE, TZVAULT_ERROR_NO_RESOURCE,
+			TZVAULT_ERROR_NOT_IMPLEMENTED, TZVAULT_ERROR_NOT_SUPPORTED,
+			TZVAULT_ERROR_OUT_OF_MEMORY, TZVAULT_ERROR_OVERFLOW,
+			TZVAULT_ERROR_SECURITY, TZVAULT_ERROR_SHORT_BUFFER,
+			TZVAULT_ERROR_SIGNATURE_INVALID, TZVAULT_ERROR_STORAGE_NO_SPACE,
+			TZVAULT_ERROR_TARGET_DEAD, TZVAULT_ERROR_TIME_NEEDS_RESET,
+			TZVAULT_ERROR_TIME_NOT_SET, TZVAULT_ERROR_TIMEOUT };
 	const int sys_error_array[] = {
 			0, -EINPROGRESS,
 			-EUSERS, -EFAULT,
@@ -54,7 +54,7 @@ int nvtzvault_tee_translate_saerror_to_syserror(const enum nvtzvault_tzv_error t
 
    // sizeof operator is used to calculate the number of elements in tzv_error_array
 	const uint64_t num_tzv_errors =
-			sizeof(tzv_error_array) / sizeof(const enum nvtzvault_tzv_error);
+			sizeof(tzv_error_array) / sizeof(uint32_t);
 	int sys_error = 0;
 	uint64_t index = 0ULL;
 
@@ -210,6 +210,7 @@ int nvtzvault_tee_check_overflow_and_read(struct nvtzvault_tee_buf_context *ctx,
 			const uint32_t size, bool is_user_space)
 {
 	int result = 0;
+	uint64_t ret = 0UL;
 	uint32_t i;
 
 	if (size == 0)
@@ -228,10 +229,11 @@ int nvtzvault_tee_check_overflow_and_read(struct nvtzvault_tee_buf_context *ctx,
 	}
 
 	if (is_user_space) {
-		result = copy_to_user((void __user *)data, &ctx->buf_ptr[ctx->current_offset],
+		ret = copy_to_user((void __user *)data, &ctx->buf_ptr[ctx->current_offset],
 				size);
-		if (result != 0) {
-			NVTZVAULT_ERR("%s(): Failed to copy_to_user %d\n", __func__, result);
+		if (ret != 0UL) {
+			NVTZVAULT_ERR("%s(): Failed to copy_to_user %llu\n", __func__, ret);
+			result = -EFAULT;
 			goto end;
 		}
 	} else {
@@ -297,7 +299,13 @@ static int nvtzvault_tee_write_memref(struct nvtzvault_tee_buf_context *ctx,
 		goto end;
 	}
 
-	size = param->memref.size;
+	if (param->memref.size > UINT32_MAX) {
+		result = -EOVERFLOW;
+		NVTZVAULT_ERR("Invalid memref size\n");
+		goto end;
+	}
+
+	size = (uint32_t)param->memref.size;
 
 	if (skip)
 		result = nvtzvault_tee_check_overflow_and_skip_bytes(ctx, size);
@@ -326,7 +334,13 @@ static int nvtzvault_tee_read_memref(struct nvtzvault_tee_buf_context *ctx,
 		goto end;
 	}
 
-	size = param->memref.size;
+	if (param->memref.size > UINT32_MAX) {
+		result = -EOVERFLOW;
+		NVTZVAULT_ERR("Invalid memref size\n");
+		goto end;
+	}
+
+	size = (uint32_t)param->memref.size;
 
 	if (skip)
 		result = nvtzvault_tee_check_overflow_and_skip_bytes(ctx, size);

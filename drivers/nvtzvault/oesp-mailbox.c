@@ -89,7 +89,7 @@ int32_t oesp_mailbox_send_and_read(void *buf_ptr, uint32_t buf_len, uint32_t tas
 	for (int i = 0; i < buf_len; i++)
 		((uint8_t *)g_mbox_ctx.hpse_carveout_base_va)[i] = ((uint8_t *)buf_ptr)[i];
 
-	req.hpse_carveout_iova_lsb = g_mbox_ctx.hpse_carveout_base_iova & 0xFFFFFFFFU;
+	req.hpse_carveout_iova_lsb = g_mbox_ctx.hpse_carveout_base_iova & UINT32_MAX;
 	writel(req.hpse_carveout_iova_lsb, oesp_reg_mem_ptr + IOVA_LOW_OFFSET);
 
 	req.hpse_carveout_iova_msb = g_mbox_ctx.hpse_carveout_base_iova >> 32U;

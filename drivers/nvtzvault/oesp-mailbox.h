@@ -8,6 +8,9 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 
+#define UINT8_MAX (0xFFU)
+#define UINT32_MAX (0xFFFFFFFFU)
+
 /**
  * @brief Context structure for OESP mailbox operations
  *

@@ -7,76 +7,77 @@
 #include <linux/types.h>
 #include <uapi/misc/nvtzvault-ioctl.h>
 
+#define UINT8_MAX (0xFFU)
+#define UINT32_MAX (0xFFFFFFFFU)
+
 #define NVTZVAULT_TEE_PARAM_MAX_COUNT	(8U)
 
 /**
  * @brief Error codes returned by SA operations
  *
- * Enumeration of all possible error codes that can be returned
+ * Defines all possible error codes that can be returned
  * by SA operations, which are then translated to system error codes.
  */
-enum nvtzvault_tzv_error {
-	/** @brief Operation completed successfully */
-	TZVaultSuccess = 0x0U,
-	/** @brief Operation is in pending state */
-	TZVaultPending = 0x1000U,
-	/** @brief Generic error occurred */
-	TZVaultErrorGeneric = 0x2000U,
-	/** @brief Access conflict detected */
-	TZVaultErrorAccessConflict = 0x2001U,
-	/** @brief Access denied to requested resource */
-	TZVaultErrorAccessDenied = 0x2002U,
-	/** @brief Operation needs to be retried */
-	TZVaultErrorAgain = 0x2003U,
-	/** @brief Data format is invalid */
-	TZVaultErrorBadFormat = 0x2004U,
-	/** @brief Invalid parameters provided */
-	TZVaultErrorBadParameters = 0x2005U,
-	/** @brief System is in invalid state for operation */
-	TZVaultErrorBadState = 0x2006U,
-	/** @brief Resource is busy */
-	TZVaultErrorBusy = 0x2007U,
-	/** @brief Operation was cancelled */
-	TZVaultErrorCancel = 0x2008U,
-	/** @brief Communication error occurred */
-	TZVaultErrorCommunication = 0x2009U,
-	/** @brief Too much data provided */
-	TZVaultErrorExcessData = 0x200AU,
-	/** @brief Requested item not found */
-	TZVaultErrorItemNotFound = 0x200BU,
-	/** @brief MAC verification failed */
-	TZVaultErrorMacInvalid = 0x200CU,
-	/** @brief No data available */
-	TZVaultErrorNoData = 0x200DU,
-	/** @brief No message available */
-	TZVaultErrorNoMessage = 0x200EU,
-	/** @brief Resource not available */
-	TZVaultErrorNoResource = 0x200FU,
-	/** @brief Feature not implemented */
-	TZVaultErrorNotImplemented = 0x2010U,
-	/** @brief Operation not supported */
-	TZVaultErrorNotSupported = 0x2011U,
-	/** @brief Memory allocation failed */
-	TZVaultErrorOutOfMemory = 0x2012U,
-	/** @brief Buffer overflow occurred */
-	TZVaultErrorOverflow = 0x2013U,
-	/** @brief Security violation detected */
-	TZVaultErrorSecurity = 0x2014U,
-	/** @brief Provided buffer too small */
-	TZVaultErrorShortBuffer = 0x2015U,
-	/** @brief Signature verification failed */
-	TZVaultErrorSignatureInvalid = 0x2016U,
-	/** @brief No storage space available */
-	TZVaultErrorStorageNoSpace = 0x2017U,
-	/** @brief Target system is dead */
-	TZVaultErrorTargetDead = 0x2018U,
-	/** @brief System time needs to be reset */
-	TZVaultErrorTimeNeedsReset = 0x2019U,
-	/** @brief System time not set */
-	TZVaultErrorTimeNotSet = 0x201AU,
-	/** @brief Operation timed out */
-	TZVaultErrorTimeout = 0x201BU,
-};
+/** @brief Operation completed successfully */
+#define TZVAULT_SUCCESS                  0x0U
+/** @brief Operation is in pending state */
+#define TZVAULT_PENDING                  0x1000U
+/** @brief Generic error occurred */
+#define TZVAULT_ERROR_GENERIC             0x2000U
+/** @brief Access conflict detected */
+#define TZVAULT_ERROR_ACCESS_CONFLICT      0x2001U
+/** @brief Access denied to requested resource */
+#define TZVAULT_ERROR_ACCESS_DENIED        0x2002U
+/** @brief Operation needs to be retried */
+#define TZVAULT_ERROR_AGAIN               0x2003U
+/** @brief Data format is invalid */
+#define TZVAULT_ERROR_BAD_FORMAT           0x2004U
+/** @brief Invalid parameters provided */
+#define TZVAULT_ERROR_BAD_PARAMETERS       0x2005U
+/** @brief System is in invalid state for operation */
+#define TZVAULT_ERROR_BAD_STATE            0x2006U
+/** @brief Resource is busy */
+#define TZVAULT_ERROR_BUSY                0x2007U
+/** @brief Operation was cancelled */
+#define TZVAULT_ERROR_CANCEL              0x2008U
+/** @brief Communication error occurred */
+#define TZVAULT_ERROR_COMMUNICATION       0x2009U
+/** @brief Too much data provided */
+#define TZVAULT_ERROR_EXCESS_DATA          0x200AU
+/** @brief Requested item not found */
+#define TZVAULT_ERROR_ITEM_NOT_FOUND        0x200BU
+/** @brief MAC verification failed */
+#define TZVAULT_ERROR_MAC_INVALID          0x200CU
+/** @brief No data available */
+#define TZVAULT_ERROR_NO_DATA              0x200DU
+/** @brief No message available */
+#define TZVAULT_ERROR_NO_MESSAGE           0x200EU
+/** @brief Resource not available */
+#define TZVAULT_ERROR_NO_RESOURCE          0x200FU
+/** @brief Feature not implemented */
+#define TZVAULT_ERROR_NOT_IMPLEMENTED      0x2010U
+/** @brief Operation not supported */
+#define TZVAULT_ERROR_NOT_SUPPORTED        0x2011U
+/** @brief Memory allocation failed */
+#define TZVAULT_ERROR_OUT_OF_MEMORY         0x2012U
+/** @brief Buffer overflow occurred */
+#define TZVAULT_ERROR_OVERFLOW            0x2013U
+/** @brief Security violation detected */
+#define TZVAULT_ERROR_SECURITY            0x2014U
+/** @brief Provided buffer too small */
+#define TZVAULT_ERROR_SHORT_BUFFER         0x2015U
+/** @brief Signature verification failed */
+#define TZVAULT_ERROR_SIGNATURE_INVALID    0x2016U
+/** @brief No storage space available */
+#define TZVAULT_ERROR_STORAGE_NO_SPACE      0x2017U
+/** @brief Target system is dead */
+#define TZVAULT_ERROR_TARGET_DEAD          0x2018U
+/** @brief System time needs to be reset */
+#define TZVAULT_ERROR_TIME_NEEDS_RESET      0x2019U
+/** @brief System time not set */
+#define TZVAULT_ERROR_TIME_NOT_SET          0x201AU
+/** @brief Operation timed out */
+#define TZVAULT_ERROR_TIMEOUT             0x201BU
 
 /**
  * @brief Context structure for TEE buffer operations
@@ -101,7 +102,7 @@ struct nvtzvault_tee_buf_context {
  * @return The corresponding system error code (negative errno value)
  *         0 on success, negative error code on failure
  */
-int nvtzvault_tee_translate_saerror_to_syserror(const enum nvtzvault_tzv_error tzv_error);
+int nvtzvault_tee_translate_saerror_to_syserror(const uint32_t tzv_error);
 
 /**
  * @brief Writes data to the buffer context with overflow checking
