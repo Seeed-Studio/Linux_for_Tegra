@@ -538,7 +538,6 @@ static irqreturn_t nvdisp_serdes_irq_handler(int irq, void *dev_id)
 	struct nvdisp_serdes_priv *priv = dev_id;
 	struct device *dev = &priv->client->dev;
 	int32_t errb_pos = 0;
-	struct i2c_client *client = to_i2c_client(dev);
 	int ret;
 
 	dev_dbg(dev, "%s: errb interrupt triggered\n", __func__);
@@ -550,7 +549,8 @@ static irqreturn_t nvdisp_serdes_irq_handler(int irq, void *dev_id)
 
 	/* opcode dispatcher code */
 	while (errb_pos < priv->errb_seq.length) {
-		ret = dispatch_opcode(client, priv, priv->errb_seq.payload, &errb_pos, priv->errb_seq.length);
+		ret = dispatch_opcode(priv->client, priv, priv->errb_seq.payload,
+						&errb_pos, priv->errb_seq.length);
 		if (ret < 0) {
 			dev_err(dev, "%s: dispatch_opcode failed (%d) at errb_pos = %d\n",
 			__func__, ret, errb_pos);
