@@ -114,6 +114,8 @@ struct camera_diag_channel {
 	char isp_file[256];
 	/* Number of ISP instances */
 	int num_isp_instances;
+	/* Flag to track whether diagnostics were running before suspend */
+	bool diag_was_running;
 };
 
 /* Static CRC table to avoid recalculation */
@@ -1314,6 +1316,105 @@ static void camera_diag_remove(struct tegra_ivc_channel *chan)
 	dev_info(&chan->dev, "Camera diagnostics driver removed\n");
 }
 
+/**
+ * @brief Suspend function for camera-diagnostics driver.
+ *
+ * This function is called when the system is suspending. It stops
+ * any active ISP SDL diagnostics and saves the current state to
+ * restore it on resume.
+ *
+ * Uses the same stop API function (camera_diag_isp_sdl_release) that
+ * is called when user writes "stop" to the sysfs control interface.
+ *
+ * @param[in] dev Device to suspend.
+ *
+ * @retval 0        Success
+ * @retval Other    Error codes from camera_diag_isp_sdl_release
+ */
+static int camera_diag_pm_suspend(struct device *dev)
+{
+	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+	struct camera_diag_channel *ch = tegra_ivc_channel_get_drvdata(chan);
+	struct camrtc_diag_isp5_sdl_status_resp status;
+	int err = 0;
+
+	dev_dbg(dev, "Suspending camera diagnostics driver\n");
+
+	if (ch == NULL || !ch->is_initialized) {
+		dev_err(dev, "Invalid channel handle or not initialized\n");
+		return 0; /* Continue with suspend process */
+	}
+
+	/* Check if diagnostics are running */
+	ch->diag_was_running = false;
+	if (ch->num_isp_instances > 0) {
+		err = camera_diag_isp_sdl_status(ch, &status, 0);
+		if (err == 0 && status.running != 0) {
+			ch->diag_was_running = true;
+
+			/* Stop diagnostics using the same API as sysfs control interface */
+			dev_info(dev, "Stopping ISP SDL diagnostics for suspend\n");
+			err = camera_diag_isp_sdl_release(ch);
+			if (err != 0) {
+				dev_err(dev, "Failed to stop ISP SDL diagnostics for suspend: %d\n", err);
+				/* Continue with suspend process even if this fails */
+			}
+		}
+	}
+
+	dev_dbg(dev, "Camera diagnostics suspended (was_running=%d)\n",
+		ch->diag_was_running);
+	return 0;
+}
+
+/**
+ * @brief Resume function for camera-diagnostics driver.
+ *
+ * This function is called when the system is resuming. It restarts
+ * ISP SDL diagnostics if they were running before suspend.
+ *
+ * Uses the same start API function (camera_diag_isp_sdl_setup) that
+ * is called when user writes "start" to the sysfs control interface.
+ *
+ * @param[in] dev Device to resume.
+ *
+ * @retval 0        Success
+ * @retval Other    Error codes from camera_diag_isp_sdl_setup
+ */
+static int camera_diag_pm_resume(struct device *dev)
+{
+	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+	struct camera_diag_channel *ch = tegra_ivc_channel_get_drvdata(chan);
+	int err = 0;
+
+	dev_dbg(dev, "Resuming camera diagnostics driver\n");
+
+	if (ch == NULL || !ch->is_initialized) {
+		dev_err(dev, "Invalid channel handle or not initialized\n");
+		return 0; /* Continue with resume process */
+	}
+
+	/* Restart diagnostics if they were running before suspend */
+	if (ch->diag_was_running) {
+		/* Start diagnostics using the same API as sysfs control interface */
+		dev_info(dev, "Restarting ISP SDL diagnostics after resume\n");
+		err = camera_diag_isp_sdl_setup(ch);
+		if (err != 0) {
+			dev_err(dev, "Failed to restart ISP SDL diagnostics after resume: %d\n", err);
+			/* Continue with resume process even if this fails */
+		}
+	}
+
+	dev_dbg(dev, "Camera diagnostics resumed\n");
+	return 0;
+}
+
+/* Define PM callbacks */
+static const struct dev_pm_ops camera_diag_pm_ops = {
+	.suspend = camera_diag_pm_suspend,
+	.resume = camera_diag_pm_resume,
+};
+
 /* Operations for camera-diagnostics IVC channel */
 static const struct tegra_ivc_channel_ops camera_diag_ops = {
 	.probe = camera_diag_probe,
@@ -1335,6 +1436,7 @@ static struct tegra_ivc_driver camera_diag_driver = {
 		.bus = &tegra_ivc_bus_type,
 		.name = "camera-diagnostics",
 		.of_match_table = camera_diag_of_match,
+		.pm = &camera_diag_pm_ops,
 	},
 	.dev_type = &tegra_ivc_channel_type,
 	.ops.channel = &camera_diag_ops,
