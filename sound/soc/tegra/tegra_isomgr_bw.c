@@ -22,7 +22,7 @@ int tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
 	struct tegra_adma_isomgr *adma_isomgr = admaif->adma_isomgr;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_pcm *pcm = substream->pcm;
-	u32 type = substream->stream, bandwidth = 0, pcm_id;
+	u32 type = substream->stream, bandwidth = 0;
 	int sample_bytes;
 
 	if (!adma_isomgr)
@@ -41,8 +41,8 @@ int tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
 	 * No action if  stream is running and bandwidth is already set or
 	 * stream is not running and bandwidth is already reset
 	 */
-	if ((adma_isomgr->bw_per_dev[type][pcm_id] && is_running) ||
-	    (!adma_isomgr->bw_per_dev[type][pcm_id] && !is_running))
+	if ((adma_isomgr->bw_per_dev[type][pcm->device] && is_running) ||
+	    (!adma_isomgr->bw_per_dev[type][pcm->device] && !is_running))
 		return 0;
 
 	if (is_running) {
@@ -63,12 +63,12 @@ int tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
 
 		adma_isomgr->current_bandwidth += bandwidth;
 	} else {
-		adma_isomgr->current_bandwidth -= adma_isomgr->bw_per_dev[type][pcm_id];
+		adma_isomgr->current_bandwidth -= adma_isomgr->bw_per_dev[type][pcm->device];
 	}
 
 	mutex_unlock(&adma_isomgr->mutex);
 
-	adma_isomgr->bw_per_dev[type][pcm_id] = bandwidth;
+	adma_isomgr->bw_per_dev[type][pcm->device] = bandwidth;
 
 	dev_dbg(dev, "Setting up bandwidth to %d KBps\n", adma_isomgr->current_bandwidth);
 
