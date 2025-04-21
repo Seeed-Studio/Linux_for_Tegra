@@ -10,6 +10,10 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 
+#define TEGRA_EFUSE_ODM_0_OFFSET	0x408
+#define TEGRA_EFUSE_ODM_1_OFFSET	0x40c
+#define TEGRA_EFUSE_ODM_INFO_OFFSET	0x29c
+
 struct tegra_efuse_soc {
 	int				size;
 	const struct nvmem_cell_lookup	*lookups;
@@ -25,6 +29,12 @@ struct tegra_efuse {
 
 	struct nvmem_device		*nvmem;
 	const struct tegra_efuse_soc	*soc;
+	/* sysfs attribute for odm-id_0 */
+	struct device_attribute          efuse_attr_odm_id_0;
+	/* sysfs attribute for odm-id_1 */
+	struct device_attribute          efuse_attr_odm_id_1;
+	/* sysfs attribute for odm info */
+	struct device_attribute          efuse_attr_odm_info;
 };
 
 static int tegra_efuse_readl(struct tegra_efuse *efuse, unsigned int offset)
@@ -43,6 +53,47 @@ static int tegra_efuse_read(void *priv, unsigned int offset, void *value, size_t
 
 	return 0;
 }
+static ssize_t tegra_efuse_odm_id_0_data_show(struct device *dev,
+				    struct device_attribute *attr,
+				    char *buf)
+{
+	struct tegra_efuse *efuse = dev_get_drvdata(dev);
+	int i, count = 0;
+	u32 val;
+
+	val = tegra_efuse_readl(efuse, TEGRA_EFUSE_ODM_0_OFFSET);
+	count = scnprintf(buf, PAGE_SIZE, "0x%08x\n", val);
+
+	return count;
+}
+
+static ssize_t tegra_efuse_odm_id_1_data_show(struct device *dev,
+				    struct device_attribute *attr,
+				    char *buf)
+{
+	struct tegra_efuse *efuse = dev_get_drvdata(dev);
+	int i, count = 0;
+	u32 val;
+
+	val = tegra_efuse_readl(efuse, TEGRA_EFUSE_ODM_1_OFFSET);
+	count = scnprintf(buf, PAGE_SIZE, "0x%08x\n", val);
+
+	return count;
+}
+
+static ssize_t tegra_efuse_odm_info_show(struct device *dev,
+				    struct device_attribute *attr,
+				    char *buf)
+{
+	struct tegra_efuse *efuse = dev_get_drvdata(dev);
+	int i, count = 0;
+	u32 val;
+
+	val = tegra_efuse_readl(efuse, TEGRA_EFUSE_ODM_INFO_OFFSET);
+	count = scnprintf(buf, PAGE_SIZE, "0x%08x\n", val);
+
+	return count;
+}
 
 static int tegra_efuse_probe(struct platform_device *pdev)
 {
@@ -50,6 +101,7 @@ static int tegra_efuse_probe(struct platform_device *pdev)
 	struct nvmem_config nvmem;
 	struct resource *res;
 	int id;
+	int err;
 
 	id = of_alias_get_id(pdev->dev.of_node, "efuse");
 	if (id < 0)
@@ -90,12 +142,51 @@ static int tegra_efuse_probe(struct platform_device *pdev)
 	if (IS_ERR(efuse->nvmem))
 		return dev_err_probe(&pdev->dev, PTR_ERR(efuse->nvmem),
 				     "failed to register NVMEM device\n");
+	/* Create sysfs odm-id-0 attribute */
+	sysfs_attr_init(&efuse->efuse_attr_odm_id_0.attr);
+	efuse->efuse_attr_odm_id_0.attr.name = "efuse_odm_id_0";
+	efuse->efuse_attr_odm_id_0.attr.mode = 0444;  /* read-only */
+	efuse->efuse_attr_odm_id_0.show = tegra_efuse_odm_id_0_data_show;
+	efuse->efuse_attr_odm_id_0.store = NULL;  /* read-only attribute */
 
+	err = device_create_file(&pdev->dev, &efuse->efuse_attr_odm_id_0);
+	if (err)
+		return dev_err_probe(&pdev->dev, err,
+				    "failed to create odm_id_0 sysfs attribute\n");
+
+	/* Create sysfs odm-id-1 attribute */
+	sysfs_attr_init(&efuse->efuse_attr_odm_id_1.attr);
+	efuse->efuse_attr_odm_id_1.attr.name = "efuse_odm_id_1";
+	efuse->efuse_attr_odm_id_1.attr.mode = 0444;  /* read-only */
+	efuse->efuse_attr_odm_id_1.show = tegra_efuse_odm_id_1_data_show;
+	efuse->efuse_attr_odm_id_1.store = NULL;  /* read-only attribute */
+
+	err = device_create_file(&pdev->dev, &efuse->efuse_attr_odm_id_1);
+	if (err)
+		return dev_err_probe(&pdev->dev, err,
+				    "failed to create odm_id_1 sysfs attribute\n");
+
+	/* Create sysfs odm-data attribute */
+	sysfs_attr_init(&efuse->efuse_attr_odm_info.attr);
+	efuse->efuse_attr_odm_info.attr.name = "efuse_odm_info";
+	efuse->efuse_attr_odm_info.attr.mode = 0444;  /* read-only */
+	efuse->efuse_attr_odm_info.show = tegra_efuse_odm_info_show;
+	efuse->efuse_attr_odm_info.store = NULL;  /* read-only attribute */
+
+	err = device_create_file(&pdev->dev, &efuse->efuse_attr_odm_info);
+	if (err)
+		return dev_err_probe(&pdev->dev, err,
+				    "failed to create odm_info sysfs attribute\n");
 	return 0;
 }
 
 static int tegra_efuse_remove(struct platform_device *pdev)
 {
+	struct tegra_efuse *efuse = platform_get_drvdata(pdev);
+
+	device_remove_file(&pdev->dev, &efuse->efuse_attr_odm_id_0);
+	device_remove_file(&pdev->dev, &efuse->efuse_attr_odm_id_1);
+	device_remove_file(&pdev->dev, &efuse->efuse_attr_odm_info);
 	return 0;
 }
 
@@ -125,6 +216,8 @@ static const struct nvmem_keepout tegra264_efuse_keepouts[] = {
 	{ .start = 0x00060, .end = 0x00064 },
 	{ .start = 0x00080, .end = 0x00088 },
 	{ .start = 0x000a4, .end = 0x00100 },
+	{ .start = 0x0029c, .end = 0x002a0 },
+	{ .start = 0x00408, .end = 0x00410 },
 	{ .start = 0x0042c, .end = 0x00434 },
 	{ .start = 0x00450, .end = 0x00454 },
 	{ .start = 0x00594, .end = 0x0059c },
