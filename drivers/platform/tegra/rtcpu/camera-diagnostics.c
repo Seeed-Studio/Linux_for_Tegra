@@ -1057,7 +1057,7 @@ static void camera_diag_channel_deinit(struct camera_diag_channel *ch)
 /**
  * @brief Sysfs store function for controlling diagnostic state.
  *
- * This function is called when the user writes to the 'control' sysfs attribute.
+ * This function is called when the user writes to the 'diag_control' sysfs attribute.
  * It allows toggling the ISP SDL diagnostics on and off without deallocating memory.
  * Accepted values: "start" to start diagnostics, "stop" to stop diagnostics.
  *
@@ -1068,7 +1068,7 @@ static void camera_diag_channel_deinit(struct camera_diag_channel *ch)
  *
  * @return Number of bytes processed on success, negative error code on failure.
  */
-static ssize_t control_store(struct device *dev, struct device_attribute *attr,
+static ssize_t diag_control_store(struct device *dev, struct device_attribute *attr,
 				const char *buf, size_t count)
 {
 	struct camera_diag_channel *ch = dev_get_drvdata(dev);
@@ -1125,7 +1125,7 @@ static ssize_t control_store(struct device *dev, struct device_attribute *attr,
 /**
  * @brief Sysfs show function for diagnostic control state.
  *
- * This function is called when the user reads the 'control' sysfs attribute.
+ * This function is called when the user reads the 'diag_control' sysfs attribute.
  * It shows the current state of the ISP SDL diagnostics and available commands.
  *
  * @param[in]  dev   Device pointer.
@@ -1134,7 +1134,7 @@ static ssize_t control_store(struct device *dev, struct device_attribute *attr,
  *
  * @return Number of bytes written to buffer on success, negative error code on failure.
  */
-static ssize_t control_show(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t diag_control_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct camera_diag_channel *ch = dev_get_drvdata(dev);
 	struct camrtc_diag_isp5_sdl_status_resp status;
@@ -1161,12 +1161,12 @@ static ssize_t control_show(struct device *dev, struct device_attribute *attr, c
 
 /* Create the device attributes */
 static DEVICE_ATTR_RO(status);
-static DEVICE_ATTR_RW(control);
+static DEVICE_ATTR_RW(diag_control);
 
 /* Define the attribute group */
 static struct attribute *camera_diag_attrs[] = {
 	&dev_attr_status.attr,
-	&dev_attr_control.attr,
+	&dev_attr_diag_control.attr,
 	NULL,
 };
 
