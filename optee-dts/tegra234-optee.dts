@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2021-2024, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION. All rights reserved.
  */
 
 /dts-v1/;
@@ -18,6 +18,21 @@
 	 *	reg = <xxx xxx xxx xxx>;
 	 * };
 	 */
+
+	secure-chosen {
+		stdout-path = "stdout";
+	};
+
+	aliases {
+		stdout = &console;
+	};
+
+	console: serial@0c198000 {
+		compatible = "nvidia,tegra234-tcu";
+		reg = <0x0 0x0c198000 0x0 0x1000>;
+		secure-status = "okay";
+		status = "disabled";
+	};
 
 	reserved-memory {
 		#address-cells = <2>;
