@@ -79,7 +79,7 @@ NvSciError NvSciIpcEndpointValidateAuthTokenLinuxCurrent(
 	struct fd f;
 	struct file *filp;
 	int i, ret, devlen;
-	char node[NVSCIIPC_MAX_EP_NAME+16];
+	char node[NVSCIIPC_MAX_EP_NAME + 16];
 
 	if ((s_ctx == NULL) || (s_ctx->set_db_f != true)) {
 		ERR("not initialized\n");
@@ -373,23 +373,24 @@ static int nvsciipc_ioctl_reserve_ep(struct nvsciipc *ctx, unsigned int cmd,
 		ERR("%s : copy_from_user failed\n", __func__);
 		return -EFAULT;
 	}
+	reserve_ep.ep_name[NVSCIIPC_MAX_EP_NAME - 1] = '\0';
 
 	/* read operation */
 	for (i = 0; i < ctx->num_eps; i++) {
 		if (!strncmp(reserve_ep.ep_name, ctx->db[i]->ep_name,
 		NVSCIIPC_MAX_EP_NAME)) {
-// FIXME: consider android
-#if defined(CONFIG_ANDROID) || defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+#if !defined(CONFIG_ANDROID) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
+			struct cred const *cred = get_current_cred();
+			uid_t const uid = cred->uid.val;
+
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
-			(current_cred()->uid.val != 0) &&
-			(current_cred()->uid.val != ctx->db[i]->uid)) {
-				ERR("%s[Client_UID = %d] : "
-					"Unauthorized access to endpoint\n",
-					__func__, current_cred()->uid.val);
-				return -EPERM;
+			    (uid != 0) && (uid != ctx->db[i]->uid)) {
+				ERR("%s[client_UID: %d]: Unauthorized access to %s\n",
+					__func__, uid, reserve_ep.ep_name);
+				return -EACCES;
 			}
-#endif /* CONFIG_ANDROID || CONFIG_TEGRA_SYSTEM_TYPE_ACK */
+#endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
 			mutex_lock(&ep_mutex);
 			/* reserve */
 			if (reserve_ep.action == NVSCIIPC_EP_RESERVE) {
@@ -475,24 +476,22 @@ static int nvsciipc_ioctl_get_db_by_name(struct nvsciipc *ctx, unsigned int cmd,
 		ERR("%s : copy_from_user failed\n", __func__);
 		return -EFAULT;
 	}
+	get_db.ep_name[NVSCIIPC_MAX_EP_NAME - 1] = '\0';
 
 	/* read operation */
 	for (i = 0; i < ctx->num_eps; i++) {
 		if (!strncmp(get_db.ep_name, ctx->db[i]->ep_name,
 			NVSCIIPC_MAX_EP_NAME)) {
-// FIXME: consider android
 #if !defined(CONFIG_ANDROID) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
 			struct cred const *cred = get_current_cred();
 			uid_t const uid = cred->uid.val;
 
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
-			(uid != 0) &&
-			(uid != ctx->db[i]->uid)) {
-				ERR("%s[Client_UID = %d] : "
-					"Unauthorized access to endpoint\n",
-					__func__, uid);
-				return -EPERM;
+			    (uid != 0) && (uid != ctx->db[i]->uid)) {
+				ERR("%s[client_UID: %d]: Unauthorized access to %s\n",
+					__func__, uid, get_db.ep_name);
+				return -EACCES;
 			}
 #endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
 			get_db.entry = *ctx->db[i];
@@ -533,18 +532,16 @@ static int nvsciipc_ioctl_get_db_by_vuid(struct nvsciipc *ctx, unsigned int cmd,
 	/* read operation */
 	for (i = 0; i < ctx->num_eps; i++) {
 		if (get_db.vuid == ctx->db[i]->vuid) {
-// FIXME: consider android
 #if !defined(CONFIG_ANDROID) && !defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
 			struct cred const *cred = get_current_cred();
 			uid_t const uid = cred->uid.val;
 
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
-			(uid != 0) &&
-			(uid != ctx->db[i]->uid)) {
-				ERR("%s[Client_UID = %d] : Unauthorized access to endpoint\n",
-					__func__, uid);
-				return -EPERM;
+			    (uid != 0) && (uid != ctx->db[i]->uid)) {
+				ERR("%s[client_UID: %d]: Unauthorized access to endpoint(0x%llx)\n",
+					__func__, uid, get_db.vuid);
+				return -EACCES;
 			}
 #endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
 			get_db.entry = *ctx->db[i];
@@ -581,6 +578,7 @@ static int nvsciipc_ioctl_get_vuid(struct nvsciipc *ctx, unsigned int cmd,
 		ERR("%s : copy_from_user failed\n", __func__);
 		return -EFAULT;
 	}
+	get_vuid.ep_name[NVSCIIPC_MAX_EP_NAME - 1] = '\0';
 
 	/* read operation */
 	for (i = 0; i < ctx->num_eps; i++) {
@@ -594,9 +592,9 @@ static int nvsciipc_ioctl_get_vuid(struct nvsciipc *ctx, unsigned int cmd,
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
 			    (uid != 0) && (uid != ctx->db[i]->uid)) {
-				ERR("%s[Client_UID = %d] : Unauthorized access to endpoint\n",
-					__func__, uid);
-				return -EPERM;
+				ERR("%s[client_UID: %d]: Unauthorized access to %s\n",
+					__func__, uid, get_vuid.ep_name);
+				return -EACCES;
 			}
 #endif /* !CONFIG_ANDROID && !CONFIG_TEGRA_SYSTEM_TYPE_ACK */
 			get_vuid.vuid = ctx->db[i]->vuid;
