@@ -48,6 +48,7 @@ struct tegra_vse_membuf_ctx {
 
 struct tegra_vse_key_slot_ctx {
 	uint8_t key_id[KEYSLOT_SIZE_BYTES];
+	uint8_t key_usage;
 	uint8_t token_id;
 	uint8_t key_instance_idx;
 	uint32_t key_grp_id;

@@ -215,6 +215,7 @@ static int tnvvse_crypto_allocate_key_slot(struct tnvvse_crypto_ctx *ctx,
 
 	memset(&key_slot_params, 0, sizeof(key_slot_params));
 	memcpy(key_slot_params.key_id, key_slot_allocate_ctl->key_id, KEYSLOT_SIZE_BYTES);
+	key_slot_params.key_usage = key_slot_allocate_ctl->key_usage;
 	key_slot_params.token_id = key_slot_allocate_ctl->token_id;
 	key_slot_params.key_grp_id = ctx->key_grp_id;
 	err = tegra_hv_vse_allocate_keyslot(&key_slot_params, ctx->node_id);

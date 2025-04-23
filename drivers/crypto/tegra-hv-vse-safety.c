@@ -396,6 +396,7 @@ struct tegra_virtual_se_addr64_buf_size {
 
 struct key_args {
 	uint8_t keyslot[KEYSLOT_SIZE_BYTES];
+	uint32_t key_usage;
 	uint32_t key_instance;
 	uint32_t key_grp_id;
 	uint32_t token_id;
@@ -1110,6 +1111,7 @@ int tegra_hv_vse_allocate_keyslot(struct tegra_vse_key_slot_ctx *key_slot,
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_ALLOC_KEY;
 	memcpy(ivc_tx->keys.keyslot, key_slot->key_id, KEYSLOT_SIZE_BYTES);
 
+	ivc_tx->keys.key_usage = key_slot->key_usage;
 	ivc_tx->keys.key_grp_id = key_slot->key_grp_id;
 	ivc_tx->keys.token_id = key_slot->token_id;
 	g_crypto_to_ivc_map[node_id].vse_thread_start = true;

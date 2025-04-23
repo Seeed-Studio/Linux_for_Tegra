@@ -127,6 +127,8 @@ enum tegra_nvvse_cmac_type {
 struct tegra_nvvse_allocate_key_slot_ctl {
 	/** [in] Holds the key id */
 	uint8_t key_id[KEYSLOT_SIZE_BYTES];
+	/** [in] Holds the key usage */
+	uint8_t key_usage;
 	/** [in] Holds the token id */
 	uint8_t token_id;
 	/** [out] Holds the Key instance index */
