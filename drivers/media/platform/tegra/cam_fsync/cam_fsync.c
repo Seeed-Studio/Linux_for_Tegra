@@ -541,12 +541,12 @@ static int cam_fsync_program_group_generator_edges(struct fsync_generator_group 
 {
 	struct cam_fsync_generator *generator;
 	u32 max_freq_hz_lcm = cam_fsync_find_max_freq_hz_lcm(group);
-	u32 const ticks_per_hz = DIV_ROUND_CLOSEST(NS_PER_SEC, group->features->ns_per_tick);
+	u32 const ticks_per_hz = DIV_ROUND_DOWN_ULL(NS_PER_SEC, group->features->ns_per_tick);
 	bool const can_generate_precise_freq = cam_fsync_can_generate_precise_freq(group);
 	struct cam_fsync_extra_ticks_and_period extra = {0, 1};
 
 	list_for_each_entry(generator, &group->generators, list) {
-		u32 ref_ticks_in_period = DIV_ROUND_CLOSEST(ticks_per_hz, max_freq_hz_lcm);
+		u32 ref_ticks_in_period = DIV_ROUND_DOWN_ULL(ticks_per_hz, max_freq_hz_lcm);
 		u64 ticks_in_period = (u64)ref_ticks_in_period *
 					(u64)(max_freq_hz_lcm / generator->config.freq_hz);
 		u64 ticks_active = mult_frac(ticks_in_period, generator->config.duty_cycle, 100);
