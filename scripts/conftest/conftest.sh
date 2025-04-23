@@ -7181,6 +7181,26 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DRM_DRIVER_HAS_FBDEV_PROBE" "" "types"
         ;;
 
+        drm_connector_helper_funcs_struct_mode_valid_has_const_arg)
+            #
+            # Determine if the 'mode_valid' function pointer of the
+            # drm_connector_helper_funcs structure has a const mode argument.
+            #
+            # In Linux v6.15, commit 26d6fd81916e ("drm/connector: make
+            # mode_valid take a const struct drm_display_mode") updated the
+            # 'mode_valid' function pointer of the drm_connector_helper_funcs
+            # structure to make the mode argument const.
+            #
+            CODE="
+            #include <drm/drm_modeset_helper_vtables.h>
+            void conftest(struct drm_connector_helper_funcs *f) {
+                    enum drm_mode_status (*fn)(struct drm_connector *connector,
+                                               const struct drm_display_mode *mode) = f->mode_valid;
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_CONNECTOR_HELPER_FUNCS_STRUCT_MODE_VALID_HAS_CONST_ARG" "" "types"
+        ;;
+
         drm_driver_struct_has_date)
             #
             # Determine if the 'drm_driver' structure has a 'date' field.
@@ -7348,6 +7368,25 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_DRM_MODE_CONFIG_STRUCT_HAS_FB_BASE_ARG" "" "types"
+        ;;
+
+        drm_plane_helper_funcs_struct_atomic_async_check_has_bool_arg)
+            #
+            # Determine if the 'atomic_async_check' function pointer has a bool argument.
+            #
+            # In Linux v6.15, commit fd40a63c63a1 ("drm/atomic: Let drivers decide
+            # which planes to async flip") updated the 'atomic_async_check' function
+            # pointer of the drm_plane_helper_funcs structure adding a boolean
+            # argument.
+            #
+            CODE="
+            #include <drm/drm_modeset_helper_vtables.h>
+            void conftest(struct drm_plane_helper_funcs *f) {
+                    int (*fn)(struct drm_plane *plane,
+                              struct drm_atomic_state *state, bool flip) = f->atomic_async_check;
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_PLANE_HELPER_FUNCS_STRUCT_ATOMIC_ASYNC_CHECK_HAS_BOOL_ARG" "" "types"
         ;;
 
         drm_scdc_get_set_has_struct_drm_connector_arg)

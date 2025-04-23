@@ -1810,8 +1810,13 @@ static int tegra_sor_connector_get_modes(struct drm_connector *connector)
 }
 
 static enum drm_mode_status
+#if defined(NV_DRM_CONNECTOR_HELPER_FUNCS_STRUCT_MODE_VALID_HAS_CONST_ARG) /* Linux v6.15 */
+tegra_sor_connector_mode_valid(struct drm_connector *connector,
+			       const struct drm_display_mode *mode)
+#else
 tegra_sor_connector_mode_valid(struct drm_connector *connector,
 			       struct drm_display_mode *mode)
+#endif
 {
 	return MODE_OK;
 }

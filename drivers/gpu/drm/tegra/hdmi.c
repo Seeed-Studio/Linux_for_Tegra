@@ -1145,8 +1145,13 @@ static const struct drm_connector_funcs tegra_hdmi_connector_funcs = {
 };
 
 static enum drm_mode_status
+#if defined(NV_DRM_CONNECTOR_HELPER_FUNCS_STRUCT_MODE_VALID_HAS_CONST_ARG) /* Linux v6.15 */
+tegra_hdmi_connector_mode_valid(struct drm_connector *connector,
+				const struct drm_display_mode *mode)
+#else
 tegra_hdmi_connector_mode_valid(struct drm_connector *connector,
 				struct drm_display_mode *mode)
+#endif
 {
 	struct tegra_output *output = connector_to_output(connector);
 	struct tegra_hdmi *hdmi = to_hdmi(output);
