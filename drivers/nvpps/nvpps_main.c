@@ -70,6 +70,7 @@ struct nvpps_device_data {
 	u32			tsc_mode;
 
 	struct timer_list	timer;
+	u32			ts_capture_interval_ms;
 	struct timer_list	tsc_timer;
 
 	volatile bool		timer_inited;
@@ -217,6 +218,10 @@ static struct device_node *emac_node;
 #define MIN_TSC_LOCK_TRIGGER_INTERVAL		1U
 /* Macro defines the Max interval(in PPS edge cnt) at which PTP-TSC lock is triggered */
 #define MAX_TSC_LOCK_TRIGGER_INTERVAL		8U
+
+/* Define bounds for ts-capture-interval property in device tree */
+#define TS_CAPTURE_INTERVAL_MIN_MS	100
+#define TS_CAPTURE_INTERVAL_MAX_MS	1000
 
 enum {
 	NV_SOC_T19X = 0U,
@@ -461,7 +466,7 @@ static void nvpps_timer_callback(struct timer_list *t)
 
 	/* set the next expire time */
 	if (pdev_data->timer_inited) {
-		mod_timer(&pdev_data->timer, jiffies + msecs_to_jiffies(1000));
+		mod_timer(&pdev_data->timer, jiffies + msecs_to_jiffies(pdev_data->ts_capture_interval_ms));
 	}
 }
 
@@ -555,7 +560,7 @@ static int set_mode(struct nvpps_device_data *pdev_data, u32 mode)
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0) */
 					pdev_data->timer_inited = true;
 					/* setup timer interval to 1000 msecs */
-					mod_timer(&pdev_data->timer, jiffies + msecs_to_jiffies(1000));
+					mod_timer(&pdev_data->timer, jiffies + msecs_to_jiffies(pdev_data->ts_capture_interval_ms));
 				}
 				break;
 
@@ -1235,6 +1240,25 @@ static int nvpps_probe(struct platform_device *pdev)
 	pdev_data->tsc_res_ns = (_PICO_SECS / (u64)arch_timer_get_cntfrq()) / 1000;
 	#undef _PICO_SECS
 	dev_info(&pdev->dev, "tsc_res_ns(%llu)\n", pdev_data->tsc_res_ns);
+
+	/* Get ts-capture-interval from device tree, default to 1000ms if not specified */
+	err = of_property_read_u32(np, "ts-capture-interval", &pdev_data->ts_capture_interval_ms);
+	if (err < 0) {
+		pdev_data->ts_capture_interval_ms = TS_CAPTURE_INTERVAL_MAX_MS;
+		dev_info(&pdev->dev, "ts-capture-interval not specified, using default %ums\n",
+				 pdev_data->ts_capture_interval_ms);
+	} else {
+		dev_info(&pdev->dev, "ts-capture-interval set to %ums\n",
+				 pdev_data->ts_capture_interval_ms);
+	}
+
+	/* Validate ts_capture_interval_ms is within valid range */
+	if ((pdev_data->ts_capture_interval_ms < TS_CAPTURE_INTERVAL_MIN_MS) ||
+	    (pdev_data->ts_capture_interval_ms > TS_CAPTURE_INTERVAL_MAX_MS)) {
+		dev_err(&pdev->dev, "timestamp capture interval %ums is invalid. Please refer to binding doc for valid range\n",
+				pdev_data->ts_capture_interval_ms);
+		return -ERANGE;
+	}
 
 	/* Set up GPIO and HTE */
 	err = nvpps_gpio_hte_setup(pdev_data);
