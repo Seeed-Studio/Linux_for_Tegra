@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2025, NVIDIA CORPORATION.  All rights reserved. */
 
 #include "mods_internal.h"
 
@@ -1249,7 +1249,7 @@ static int map_system_mem(struct mods_client    *client,
 						   p_mem_info->cache_type,
 						   vma->vm_page_prot);
 
-#ifdef MODS_HAS_PGPROT_DECRYPT
+#ifdef MODS_HAS_PGPROT_DECRYPTED
 	if (p_mem_info->decrypted_mmap)
 		prot = pgprot_decrypted(prot);
 #endif
@@ -2288,6 +2288,10 @@ static long mods_krnl_ioctl(struct file  *fp,
 	case MODS_ESC_FREE_PAGES:
 		MODS_IOCTL(MODS_ESC_FREE_PAGES,
 			   esc_mods_free_pages, MODS_FREE_PAGES);
+		break;
+
+	case MODS_ESC_SET_CACHE_ATTR:
+		MODS_IOCTL_NORETVAL(MODS_ESC_SET_CACHE_ATTR, esc_mods_set_cache_attr, MODS_SET_CACHE_ATTR);
 		break;
 
 	case MODS_ESC_MERGE_PAGES:

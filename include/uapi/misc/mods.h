@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2025, NVIDIA CORPORATION.  All rights reserved. */
 
 #ifndef _UAPI_MODS_H_
 #define _UAPI_MODS_H_
@@ -8,7 +8,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 4
-#define MODS_DRIVER_VERSION_MINOR 28
+#define MODS_DRIVER_VERSION_MINOR 31
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR / 10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR % 10))
@@ -205,6 +205,20 @@ struct MODS_MERGE_PAGES {
 
 	/* OUT */
 	__u64 memory_handle;
+};
+
+/* Used by MODS_ESC_SET_CACHE_ATTR ioctl.
+ *
+ * Modifies caching attributes after the allocation.
+ *
+ * The allocation must be allocated with MODS_ALLOC_CACHED and cannot be dma-mapped.
+ *
+ * The flags field must be either MODS_ALLOC_UNCACHED or MODS_ALLOC_WRITECOMBINE.
+ */
+struct MODS_SET_CACHE_ATTR {
+	/* IN */
+	__u64 memory_handle;
+	__u32 flags;
 };
 
 /* Used by legacy ioctls:
@@ -1972,8 +1986,7 @@ struct MODS_IDLE {
  *
  * MODS_ESC_RESERVE_ALLOCATION permits the reservation of a memory allocation
  * specified by 'memory_handle' with the tag 'tag'. The 'tag' can take on
- * values between 1 and MODS_MEM_MAX_RESERVATIONS and is used to index
- * reservations.
+ * any values other than 0.
  *
  * MODS_ESC_GET_RESERVED_ALLOCATION is used to claim ownership of a reservation
  * specified by 'tag'. If an unclaimed reservation is found using 'tag',
@@ -1982,8 +1995,8 @@ struct MODS_IDLE {
  * MODS_ESC_RELEASE_RESERVED_ALLOCATION is used to completely free and stop the
  * usage of a memory reservation made through MODS_ESC_RESERVE_ALLOCATION or
  * obtained through MODS_ESC_GET_RESERVED_ALLOCATION. The 'tag' is accepted as
- * an input to identify the reservation to release. For this ioctl,
- * 'memory_handle' is unused.
+ * an input to identify the reservation to release.  'memory_handle' field can
+ * be either 0 or it can be the specific memory handle which has this tag.
  *
  * Limitations include:
  *  - Only one client may own a reservation at any given time
@@ -2219,5 +2232,6 @@ struct MODS_RESERVE_ALLOCATION {
 #define MODS_ESC_RESERVE_ALLOCATION MODSIO(W, 148, MODS_RESERVE_ALLOCATION)
 #define MODS_ESC_GET_RESERVED_ALLOCATION MODSIO(WR, 149, MODS_RESERVE_ALLOCATION)
 #define MODS_ESC_RELEASE_RESERVED_ALLOCATION MODSIO(W, 150, MODS_RESERVE_ALLOCATION)
+#define MODS_ESC_SET_CACHE_ATTR MODSIO(W, 151, MODS_SET_CACHE_ATTR)
 
 #endif /* _UAPI_MODS_H_  */

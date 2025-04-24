@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2025, NVIDIA CORPORATION.  All rights reserved. */
 
 #ifndef _MODS_INTERNAL_H_
 #define _MODS_INTERNAL_H_
@@ -142,6 +142,7 @@ struct MODS_MEM_INFO {
 	 */
 	struct list_head dma_map_list;
 
+	u64 reservation_tag;            /* zero if not reserved */
 	u32 num_pages;                  /* total number of allocated pages */
 	u32 num_chunks;                 /* number of allocated contig chunks */
 	int numa_node;                  /* numa node for the allocation */
@@ -151,7 +152,7 @@ struct MODS_MEM_INFO {
 	u8  no_free_opt    : 1;         /* true/false */
 	u8  dma_pages      : 1;         /* true/false */
 	u8  decrypted_mmap : 1;         /* true/false */
-	u8  reservation_tag;            /* zero if not reserved */
+	u8  large_aux      : 1;         /* true/false */
 
 	struct pci_dev     *dev;        /* (optional) pci_dev this allocation is for. */
 	unsigned long      *wc_bitmap;  /* marks which chunks use WC/UC */
@@ -161,6 +162,9 @@ struct MODS_MEM_INFO {
 					 * consists of 2^n contiguous pages
 					 */
 };
+
+/* Size for MODS_MEM_INFO struct allocation which requires vzalloc() */
+#define MODS_LARGE_AUX_ALLOC_SIZE 0x10000U
 
 static inline u32 get_num_chunks(const struct MODS_MEM_INFO *p_mem_info)
 {
@@ -432,6 +436,8 @@ int esc_mods_alloc_pages_2(struct mods_client        *client,
 			   struct MODS_ALLOC_PAGES_2 *p);
 int esc_mods_free_pages(struct mods_client     *client,
 			struct MODS_FREE_PAGES *p);
+int esc_mods_set_cache_attr(struct mods_client         *client,
+			    struct MODS_SET_CACHE_ATTR *p);
 int esc_mods_merge_pages(struct mods_client      *client,
 			 struct MODS_MERGE_PAGES *p);
 int esc_mods_set_mem_type(struct mods_client      *client,

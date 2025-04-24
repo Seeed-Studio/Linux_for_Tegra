@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2008-2024, NVIDIA CORPORATION.  All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2008-2025, NVIDIA CORPORATION.  All rights reserved. */
 
 #ifndef _MODS_CONFIG_H_
 #define _MODS_CONFIG_H_
@@ -80,10 +80,6 @@
 
 #if KERNEL_VERSION(4, 14, 0) <= MODS_KERNEL_VERSION
 #       define MODS_HAS_KERNEL_WRITE
-#endif
-
-#if KERNEL_VERSION(4, 14, 0) <= MODS_KERNEL_VERSION && \
-	defined(CONFIG_X86)
 #       define MODS_HAS_PGPROT_DECRYPTED
 #endif
 
