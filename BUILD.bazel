@@ -77,6 +77,7 @@ kernel_module(
         "drivers/gpu/host1x/host1x.ko",
         "drivers/gpu/host1x-nvhost/host1x-nvhost.ko",
         "drivers/hwmon/f75308.ko",
+        "drivers/hwmon/ina232.ko",
         "drivers/i2c/busses/i2c-nvvrs11.ko",
         "drivers/i2c/busses/i2c-tegra-slave-byte.ko",
         "drivers/media/i2c/max9295.ko",

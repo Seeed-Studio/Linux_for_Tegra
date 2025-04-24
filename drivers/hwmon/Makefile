@@ -3,4 +3,9 @@
 
 ifdef CONFIG_I2C
 obj-m += f75308.o
+
+ifdef CONFIG_TEGRA_SYSTEM_TYPE_ACK
+obj-m += ina232.o
+endif
+
 endif
