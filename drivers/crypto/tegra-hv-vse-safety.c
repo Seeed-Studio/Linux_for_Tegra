@@ -3775,13 +3775,16 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 	struct tegra_virtual_se_dev *se_dev =
 				g_crypto_to_ivc_map[rng_ctx->node_id].se_dev;
 	u8 *rdata_addr;
-	int err = 0, j, num_blocks, data_len = 0;
+	int err = 0;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[rng_ctx->node_id].ivck;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr = NULL;
 	struct tegra_vse_priv_data *priv = NULL;
 	const struct tegra_vse_dma_buf *src;
+	unsigned int chunk_size, aligned_size, copy_size;
+	unsigned int bytes_remaining;
+	unsigned int offset = 0;
 
 	if (atomic_read(&se_dev->se_suspended)) {
 		VSE_ERR("%s: Engine is in suspended state\n", __func__);
@@ -3793,11 +3796,6 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 		return -EINVAL;
 	}
 
-	num_blocks = (dlen / TEGRA_VIRTUAL_SE_RNG_DT_SIZE);
-	data_len = (dlen % TEGRA_VIRTUAL_SE_RNG_DT_SIZE);
-	if (data_len == 0)
-		num_blocks = num_blocks - 1;
-
 	ivc_req_msg = devm_kzalloc(se_dev->dev,
 				sizeof(*ivc_req_msg),
 				GFP_KERNEL);
@@ -3805,11 +3803,24 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 		return -ENOMEM;
 
 	if (is_hw_req == CRYPTODEV_RNG) {
-		src = tegra_hv_vse_get_dma_buf(rng_ctx->node_id, AES_SRC_BUF_IDX,
-					TEGRA_VIRTUAL_SE_RNG_DT_SIZE);
+		if ((dlen % TEGRA_VIRTUAL_SE_RNG_DT_SIZE) == 0)
+			aligned_size = dlen;
+		else
+			aligned_size = dlen - (dlen % TEGRA_VIRTUAL_SE_RNG_DT_SIZE) +
+				TEGRA_VIRTUAL_SE_RNG_DT_SIZE;
+		/* calculate aligned size to the next multiple of TEGRA_VIRTUAL_SE_RNG_DT_SIZE */
+		src = tegra_hv_vse_get_dma_buf(rng_ctx->node_id, AES_SRC_BUF_IDX, aligned_size);
 		if (!src) {
-			dev_err(se_dev->dev, "%s src is NULL\n", __func__);
-			return -ENOMEM;
+			aligned_size -= TEGRA_VIRTUAL_SE_RNG_DT_SIZE;
+		/* If the aligned size is greater than the max dma_buf,
+		 * decrease the aligned size by one alignment unit.
+		 */
+			src = tegra_hv_vse_get_dma_buf(rng_ctx->node_id,
+				AES_SRC_BUF_IDX, aligned_size);
+			if (!src) {
+				dev_err(se_dev->dev, "%s src is NULL\n", __func__);
+				return -ENOMEM;
+			}
 		}
 		priv = g_crypto_to_ivc_map[rng_ctx->node_id].priv;
 	} else {
@@ -3828,13 +3839,23 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 	ivc_hdr->tag.priv_data = priv;
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
-
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_AES_RNG_DBRG;
 
-	for (j = 0; j <= num_blocks; j++) {
+	bytes_remaining = dlen;
+
+	while (bytes_remaining > 0) {
+		if (is_hw_req == CRYPTODEV_RNG)
+			chunk_size = bytes_remaining;
+		else
+			chunk_size = min(bytes_remaining, rng_ctx->hwrng_dma_buf.buf_len);
+
+		aligned_size = chunk_size & ~(TEGRA_VIRTUAL_SE_RNG_DT_SIZE - 1);
+
+		if (aligned_size < TEGRA_VIRTUAL_SE_RNG_DT_SIZE)
+			aligned_size = TEGRA_VIRTUAL_SE_RNG_DT_SIZE;
+
 		ivc_tx->aes.op_rng.dst_addr.lo = src->buf_iova & 0xFFFFFFFF;
-		ivc_tx->aes.op_rng.dst_addr.hi = (src->buf_iova >> 32)
-				| TEGRA_VIRTUAL_SE_RNG_DT_SIZE;
+		ivc_tx->aes.op_rng.dst_addr.hi = (src->buf_iova >> 32) | aligned_size;
 		init_completion(&priv->alg_complete);
 		g_crypto_to_ivc_map[rng_ctx->node_id].vse_thread_start = true;
 
@@ -3845,15 +3866,13 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 			goto exit;
 		}
 
-		rdata_addr =
-			(rdata + (j * TEGRA_VIRTUAL_SE_RNG_DT_SIZE));
-		if (data_len && num_blocks == j) {
-			memcpy(rdata_addr, src->buf_ptr, data_len);
-		} else {
-			memcpy(rdata_addr, src->buf_ptr,
-				TEGRA_VIRTUAL_SE_RNG_DT_SIZE);
-		}
+		copy_size = min(bytes_remaining, aligned_size);
+		rdata_addr = (rdata + offset);
+		memcpy(rdata_addr, src->buf_ptr, copy_size);
+		bytes_remaining -= copy_size;
+		offset += copy_size;
 	}
+
 exit:
 	devm_kfree(se_dev->dev, ivc_req_msg);
 
