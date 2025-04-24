@@ -147,14 +147,14 @@ struct nvmap_handle_param_32 {
 #endif /* __KERNEL__ */
 
 struct nvmap_cache_op {
-	unsigned long addr;	/* user pointer*/
+	__u64 addr;		/* user pointer*/
 	__u32 handle;		/* nvmap handle */
 	__u32 len;		/* bytes to flush */
 	__s32 op;		/* wb/wb_inv/inv */
 };
 
 struct nvmap_cache_op_64 {
-	unsigned long addr;	/* user pointer*/
+	__u64 addr;		/* user pointer*/
 	__u32 handle;		/* nvmap handle */
 	__u64 len;		/* bytes to flush */
 	__s32 op;		/* wb/wb_inv/inv */
