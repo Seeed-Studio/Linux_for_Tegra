@@ -53,13 +53,12 @@ static inline uint32_t next_slot(struct pva_kmd_block_allocator *allocator,
 	return *next;
 }
 
-void *pva_kmd_alloc_block(struct pva_kmd_block_allocator *allocator,
-			  uint32_t *out_id)
+void *pva_kmd_alloc_block_unsafe(struct pva_kmd_block_allocator *allocator,
+				 uint32_t *out_id)
 {
 	void *block = NULL;
 	uint32_t slot = INVALID_ID;
 
-	pva_kmd_mutex_lock(&allocator->allocator_lock);
 	if (allocator->free_slot_head != INVALID_ID) {
 		slot = allocator->free_slot_head;
 		allocator->free_slot_head =
@@ -69,18 +68,24 @@ void *pva_kmd_alloc_block(struct pva_kmd_block_allocator *allocator,
 			slot = allocator->next_free_slot;
 			allocator->next_free_slot++;
 		} else {
-			goto unlock;
+			return NULL;
 		}
 	}
 	allocator->slot_in_use[slot] = true;
-	pva_kmd_mutex_unlock(&allocator->allocator_lock);
-
 	*out_id = slot + allocator->base_id;
 	block = get_block(allocator, slot);
 	return block;
-unlock:
+}
+
+void *pva_kmd_alloc_block(struct pva_kmd_block_allocator *allocator,
+			  uint32_t *out_id)
+{
+	void *block = NULL;
+
+	pva_kmd_mutex_lock(&allocator->allocator_lock);
+	block = pva_kmd_alloc_block_unsafe(allocator, out_id);
 	pva_kmd_mutex_unlock(&allocator->allocator_lock);
-	return NULL;
+	return block;
 }
 
 static bool is_slot_valid(struct pva_kmd_block_allocator *allocator,
@@ -103,16 +108,15 @@ void *pva_kmd_get_block_unsafe(struct pva_kmd_block_allocator *allocator,
 	return get_block(allocator, slot);
 }
 
-enum pva_error pva_kmd_free_block(struct pva_kmd_block_allocator *allocator,
-				  uint32_t id)
+enum pva_error
+pva_kmd_free_block_unsafe(struct pva_kmd_block_allocator *allocator,
+			  uint32_t id)
 {
 	uint32_t slot = id - allocator->base_id;
 	uint32_t *next;
-	enum pva_error err = PVA_SUCCESS;
-	pva_kmd_mutex_lock(&allocator->allocator_lock);
+
 	if (!is_slot_valid(allocator, slot)) {
-		err = PVA_INVAL;
-		goto unlock;
+		return PVA_INVAL;
 	}
 
 	allocator->slot_in_use[slot] = false;
@@ -120,7 +124,16 @@ enum pva_error pva_kmd_free_block(struct pva_kmd_block_allocator *allocator,
 	*next = allocator->free_slot_head;
 	allocator->free_slot_head = slot;
 
-unlock:
+	return PVA_SUCCESS;
+}
+
+enum pva_error pva_kmd_free_block(struct pva_kmd_block_allocator *allocator,
+				  uint32_t id)
+{
+	enum pva_error err = PVA_SUCCESS;
+
+	pva_kmd_mutex_lock(&allocator->allocator_lock);
+	err = pva_kmd_free_block_unsafe(allocator, id);
 	pva_kmd_mutex_unlock(&allocator->allocator_lock);
 	return err;
 }

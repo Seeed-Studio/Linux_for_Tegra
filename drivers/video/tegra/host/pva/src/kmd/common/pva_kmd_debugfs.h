@@ -37,24 +37,7 @@ struct pva_kmd_debugfs_context {
 	struct pva_kmd_file_ops fw_debug_log_level_fops;
 };
 
-void pva_kmd_debugfs_create_nodes(struct pva_kmd_device *dev);
+enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *dev);
 void pva_kmd_debugfs_destroy_nodes(struct pva_kmd_device *dev);
-int64_t get_vpu_stats(struct pva_kmd_device *dev, void *file_data,
-		      uint8_t *out_buffer, uint64_t offset, uint64_t size);
-int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
-			     const uint8_t *in_buffer, uint64_t offset,
-			     uint64_t size);
-int64_t get_vpu_allowlist_enabled(struct pva_kmd_device *pva, void *file_data,
-				  uint8_t *out_buffer, uint64_t offset,
-				  uint64_t size);
-int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
-				  const uint8_t *in_buffer, uint64_t offset,
-				  uint64_t size);
-int64_t get_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
-			       uint8_t *out_buffer, uint64_t offset,
-			       uint64_t size);
-int64_t update_fw_debug_log_level(struct pva_kmd_device *dev, void *file_data,
-				  const uint8_t *in_buffer, uint64_t offset,
-				  uint64_t size);
 
 #endif //PVA_KMD_DEBUGFS_H

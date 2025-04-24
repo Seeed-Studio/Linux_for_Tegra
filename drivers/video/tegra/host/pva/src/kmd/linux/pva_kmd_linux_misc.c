@@ -11,7 +11,12 @@
 
 void *pva_kmd_zalloc(uint64_t size)
 {
-	return kvzalloc(size, GFP_KERNEL);
+	void *ptr = kvzalloc(size, GFP_KERNEL);
+
+	if (IS_ERR_OR_NULL(ptr)) {
+		return NULL;
+	}
+	return ptr;
 }
 
 void pva_kmd_free(void *ptr)

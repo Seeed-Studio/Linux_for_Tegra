@@ -14,12 +14,12 @@
 #include "pva_kmd_dma_cfg.h"
 #include "pva_kmd_mutex.h"
 #include "pva_kmd_thread_sema.h"
+#include "pva_kmd_devmem_pool.h"
 
 struct pva_kmd_device;
 
 struct pva_kmd_dram_resource {
 	struct pva_kmd_device_memory *mem;
-	bool syncpt;
 };
 
 struct pva_kmd_vpu_bin_resource {
@@ -29,7 +29,8 @@ struct pva_kmd_vpu_bin_resource {
 };
 
 struct pva_kmd_dma_config_resource {
-	uint32_t block_index;
+	struct pva_kmd_devmem_element devmem;
+	struct pva_kmd_dma_resource_aux *aux_mem;
 	uint64_t size;
 	uint64_t iova_addr;
 };
@@ -70,13 +71,8 @@ struct pva_kmd_resource_table {
 	/** Memory for resource table entries, in R5 segment */
 	struct pva_kmd_device_memory *table_mem;
 
-	/** Memory for fw dma configs, in DMA segment */
-	struct pva_kmd_device_memory *dma_config_mem;
-	struct pva_kmd_block_allocator dma_config_allocator;
-
-	/** Memory for tracking resources used by DMA configuration. Single
-	 * allocation shared by all DMA configs */
-	struct pva_kmd_dma_resource_aux *dma_aux;
+	/** Pool for FW DMA configurations */
+	struct pva_kmd_devmem_pool dma_config_pool;
 
 	/** Memory for resource records */
 	void *records_mem;
@@ -88,19 +84,13 @@ struct pva_kmd_resource_table {
 enum pva_error
 pva_kmd_resource_table_init(struct pva_kmd_resource_table *res_table,
 			    struct pva_kmd_device *pva,
-			    uint8_t user_smmu_ctx_id, uint32_t n_entries,
-			    uint32_t max_num_dma_configs);
+			    uint8_t user_smmu_ctx_id, uint32_t n_entries);
 void pva_kmd_resource_table_deinit(struct pva_kmd_resource_table *res_table);
 
 /** KMD only writes to FW resource table during init time. Once the address of
  * the resource table is sent to FW, all updates should be done through commands.
  */
 void pva_kmd_update_fw_resource_table(struct pva_kmd_resource_table *res_table);
-
-enum pva_error
-pva_kmd_add_syncpt_resource(struct pva_kmd_resource_table *resource_table,
-			    struct pva_kmd_device_memory *dev_mem,
-			    uint32_t *out_resource_id);
 
 enum pva_error
 pva_kmd_add_dram_buffer_resource(struct pva_kmd_resource_table *resource_table,

@@ -50,9 +50,10 @@ struct pva_kmd_dma_resource_aux {
 	uint32_t dram_res_count;
 	/** DRAM buffers statically referenced by the DMA configuration */
 	uint32_t static_dram_res_ids[PVA_KMD_MAX_NUM_DMA_DRAM_SLOTS];
+};
 
-	/* Below are work buffers need during DMA configuration loading. They
-	 * don't fit on stack. */
+/* Scratch buffers needed during DMA configuration loading. They don't fit on stack. */
+struct pva_kmd_dma_scratch_buffer {
 	struct pva_fw_dma_slot static_slots[PVA_KMD_MAX_NUM_DMA_SLOTS];
 	struct pva_fw_dma_reloc static_relocs[PVA_KMD_MAX_NUM_DMA_SLOTS];
 	struct pva_kmd_dma_access access_sizes[PVA_MAX_NUM_DMA_DESC];

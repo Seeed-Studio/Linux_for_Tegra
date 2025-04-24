@@ -62,42 +62,41 @@ pva_kmd_load_dma_config(struct pva_kmd_resource_table *resource_table,
 	struct pva_dma_config dma_config;
 	struct pva_fw_dma_slot *dyn_slots;
 	struct pva_fw_dma_reloc *dyn_relocs;
-	struct pva_fw_dma_slot *static_slots = dma_aux->static_slots;
-	struct pva_fw_dma_reloc *static_relocs = dma_aux->static_relocs;
-	struct pva_kmd_dma_access *access_sizes = dma_aux->access_sizes;
+	struct pva_kmd_dma_scratch_buffer *scratch_buf;
 	// Mapping descriptor index to channel index
 	uint8_t desc_to_ch[PVA_MAX_NUM_DMA_DESC];
+
+	scratch_buf = pva_kmd_zalloc(sizeof(*scratch_buf));
+	if (scratch_buf == NULL) {
+		err = PVA_NOMEM;
+		goto err_out;
+	}
 
 	for (uint32_t i = 0; i < PVA_MAX_NUM_DMA_DESC; i++) {
 		desc_to_ch[i] = PVA_KMD_INVALID_CH_IDX;
 	}
 
-	//set access_sizes to 0 by default
-	(void)memset(
-		access_sizes, 0,
-		(PVA_MAX_NUM_DMA_DESC * sizeof(struct pva_kmd_dma_access)));
-
 	err = pva_kmd_parse_dma_config(dma_cfg_hdr, dma_config_size,
 				       &dma_config,
 				       &resource_table->pva->hw_consts);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		goto free_scratch_buf;
 	}
 
 	err = pva_kmd_validate_dma_config(&dma_config,
 					  &resource_table->pva->hw_consts,
-					  access_sizes,
-					  dma_aux->hw_dma_descs_mask);
+					  scratch_buf->access_sizes,
+					  scratch_buf->hw_dma_descs_mask);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		goto free_scratch_buf;
 	}
 
 	trace_dma_channels(&dma_config, desc_to_ch);
 
-	err = pva_kmd_compute_dma_access(&dma_config, access_sizes,
-					 dma_aux->hw_dma_descs_mask);
+	err = pva_kmd_compute_dma_access(&dma_config, scratch_buf->access_sizes,
+					 scratch_buf->hw_dma_descs_mask);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		goto free_scratch_buf;
 	}
 
 	dyn_slots = pva_offset_pointer(fw_dma_cfg,
@@ -107,9 +106,10 @@ pva_kmd_load_dma_config(struct pva_kmd_resource_table *resource_table,
 					dma_config.header.num_dynamic_slots *
 						sizeof(*dyn_slots));
 
-	pva_kmd_collect_relocs(&dma_config, access_sizes, static_slots,
+	pva_kmd_collect_relocs(&dma_config, scratch_buf->access_sizes,
+			       scratch_buf->static_slots,
 			       dma_config.header.num_static_slots,
-			       static_relocs, dyn_slots,
+			       scratch_buf->static_relocs, dyn_slots,
 			       dma_config.header.num_dynamic_slots, dyn_relocs,
 			       desc_to_ch);
 
@@ -117,26 +117,27 @@ pva_kmd_load_dma_config(struct pva_kmd_resource_table *resource_table,
 		&dma_config, fw_dma_cfg, &fw_fetch_size,
 		resource_table->pva->support_hwseq_frame_linking);
 
-	dma_aux->res_table = resource_table;
 	err = pva_kmd_dma_use_resources(&dma_config, dma_aux);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		goto free_scratch_buf;
 	}
 
-	err = pva_kmd_bind_static_buffers(fw_dma_cfg, dma_aux, static_slots,
-					  dma_config.header.num_static_slots,
-					  static_relocs,
-					  dma_config.static_bindings,
-					  dma_config.header.num_static_slots);
+	err = pva_kmd_bind_static_buffers(
+		fw_dma_cfg, dma_aux, scratch_buf->static_slots,
+		dma_config.header.num_static_slots, scratch_buf->static_relocs,
+		dma_config.static_bindings, dma_config.header.num_static_slots);
 	if (err != PVA_SUCCESS) {
 		goto drop_res;
 	}
 
 	*out_fw_fetch_size = fw_fetch_size;
 
+	pva_kmd_free(scratch_buf);
 	return PVA_SUCCESS;
 drop_res:
 	pva_kmd_unload_dma_config_unsafe(dma_aux);
+free_scratch_buf:
+	pva_kmd_free(scratch_buf);
 err_out:
 	return err;
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#include "pva_constants.h"
 #include "pva_kmd.h"
 #include "pva_kmd_utils.h"
 #include "pva_fw.h"
@@ -74,48 +75,23 @@ pva_kmd_queue_submit(struct pva_kmd_queue *queue,
 
 	return err;
 }
-
-void pva_kmd_queue_deinit(struct pva_kmd_queue *queue)
-{
-	queue->queue_memory = NULL;
-	queue->ccq_id = PVA_INVALID_QUEUE_ID;
-	queue->max_num_submit = 0;
-}
-
 static enum pva_error notify_fw_queue_deinit(struct pva_kmd_context *ctx,
 					     struct pva_kmd_queue *queue)
 {
-	enum pva_error err = PVA_SUCCESS;
-	struct pva_kmd_cmdbuf_builder builder;
-	struct pva_cmd_deinit_queue *queue_cmd;
-	uint32_t fence_val;
+	struct pva_cmd_deinit_queue cmd = { 0 };
+	enum pva_error err;
 
-	err = pva_kmd_submitter_prepare(&ctx->submitter, &builder);
+	pva_kmd_set_cmd_deinit_queue(&cmd, queue->ccq_id, queue->queue_id);
+
+	err = pva_kmd_submit_cmd_sync(&ctx->submitter, &cmd, sizeof(cmd),
+				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
 		goto end;
 	}
 
-	queue_cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*queue_cmd));
-	if (queue_cmd == NULL) {
-		err = PVA_NOMEM;
-		goto cancel_submitter;
-	}
-	pva_kmd_set_cmd_deinit_queue(queue_cmd, queue->ccq_id, queue->queue_id);
-
-	err = pva_kmd_submitter_submit(&ctx->submitter, &builder, &fence_val);
-	if (err != PVA_SUCCESS) {
-		goto cancel_submitter;
-	}
-
-	err = pva_kmd_submitter_wait(&ctx->submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err != PVA_SUCCESS) {
-		goto end;
-	}
 	return PVA_SUCCESS;
-cancel_submitter:
-	pva_kmd_cmdbuf_builder_cancel(&builder);
+
 end:
 	return err;
 }
@@ -126,10 +102,9 @@ enum pva_error pva_kmd_queue_create(struct pva_kmd_context *ctx,
 {
 	struct pva_kmd_device_memory *submission_mem_kmd = NULL;
 	struct pva_kmd_queue *queue = NULL;
-	struct pva_kmd_cmdbuf_builder builder;
-	struct pva_cmd_init_queue *queue_cmd;
-	uint32_t fence_val;
+	struct pva_cmd_init_queue cmd = { 0 };
 	enum pva_error err, tmperr;
+	const struct pva_syncpt_rw_info *syncpt_info;
 
 	queue = pva_kmd_zalloc_block(&ctx->queue_allocator, queue_id);
 	if (queue == NULL) {
@@ -160,42 +135,26 @@ enum pva_error pva_kmd_queue_create(struct pva_kmd_context *ctx,
 		goto err_free_kmd_memory;
 	}
 
-	err = pva_kmd_submitter_prepare(&ctx->submitter, &builder);
+	syncpt_info = pva_kmd_queue_get_rw_syncpt_info(ctx, queue->queue_id);
+	pva_kmd_set_cmd_init_queue(&cmd, queue->ccq_id, queue->queue_id,
+				   queue->queue_memory->iova,
+				   queue->max_num_submit,
+				   syncpt_info->syncpt_id,
+				   syncpt_info->syncpt_iova);
+
+	err = pva_kmd_submit_cmd_sync(&ctx->submitter, &cmd, sizeof(cmd),
+				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
 		goto unmap_iova;
 	}
 
-	queue_cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*queue_cmd));
-	if (queue_cmd == NULL) {
-		err = PVA_NOMEM;
-		goto cancel_submitter;
-	}
-	ASSERT(queue_cmd != NULL);
-	pva_kmd_set_cmd_init_queue(queue_cmd, queue->ccq_id, queue->queue_id,
-				   queue->queue_memory->iova,
-				   queue->max_num_submit);
-
-	err = pva_kmd_submitter_submit(&ctx->submitter, &builder, &fence_val);
-	if (err != PVA_SUCCESS) {
-		goto cancel_submitter;
-	}
-
-	err = pva_kmd_submitter_wait(&ctx->submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err != PVA_SUCCESS) {
-		goto cancel_submitter;
-	}
-
 	return PVA_SUCCESS;
 
-cancel_submitter:
-	pva_kmd_cmdbuf_builder_cancel(&builder);
 unmap_iova:
 	pva_kmd_device_memory_iova_unmap(submission_mem_kmd);
 err_free_kmd_memory:
 	pva_kmd_device_memory_free(queue->queue_memory);
-	pva_kmd_queue_deinit(queue);
 err_free_queue:
 	tmperr = pva_kmd_free_block(&ctx->queue_allocator, *queue_id);
 	ASSERT(tmperr == PVA_SUCCESS);
@@ -210,35 +169,40 @@ enum pva_error pva_kmd_queue_destroy(struct pva_kmd_context *ctx,
 {
 	struct pva_kmd_queue *queue;
 	enum pva_error err = PVA_SUCCESS;
+	enum pva_error tmp_err;
 
-	/*
-	 * TODO :
-	 * Send command to FW to stop queue usage. Wait for ack.
-	 * This call needs to be added after syncpoint and ccq functions are ready.
-	 */
 	pva_kmd_mutex_lock(&ctx->queue_allocator.allocator_lock);
 	queue = pva_kmd_get_block_unsafe(&ctx->queue_allocator, queue_id);
 	if (queue == NULL) {
-		pva_kmd_mutex_unlock(&ctx->queue_allocator.allocator_lock);
-		return PVA_INVAL;
+		pva_kmd_log_err("Destroying non-existent queue");
+		err = PVA_INVAL;
+		goto unlock;
 	}
-	if (!ctx->pva->recovery) {
-		err = notify_fw_queue_deinit(ctx, queue);
-		if (err != PVA_SUCCESS) {
-			pva_kmd_mutex_unlock(
-				&ctx->queue_allocator.allocator_lock);
-			return err;
-		}
+
+	err = notify_fw_queue_deinit(ctx, queue);
+	if (err != PVA_SUCCESS) {
+		//Might happen if FW is aborted. It's safe to keep going.
+		pva_kmd_log_err("Failed to notify FW to destroy queue");
 	}
 
 	pva_kmd_device_memory_iova_unmap(queue->queue_memory);
-
 	pva_kmd_device_memory_free(queue->queue_memory);
-
-	pva_kmd_queue_deinit(queue);
+	tmp_err = pva_kmd_free_block_unsafe(&ctx->queue_allocator, queue_id);
+	// This cannot fail as we have already checked for queue existence and we
+	// are still holding the lock
+	ASSERT(tmp_err == PVA_SUCCESS);
+unlock:
 	pva_kmd_mutex_unlock(&ctx->queue_allocator.allocator_lock);
+	return err;
+}
 
-	err = pva_kmd_free_block(&ctx->queue_allocator, queue_id);
-	ASSERT(err == PVA_SUCCESS);
-	return PVA_SUCCESS;
+const struct pva_syncpt_rw_info *
+pva_kmd_queue_get_rw_syncpt_info(struct pva_kmd_context *ctx, uint8_t queue_id)
+{
+	uint8_t ctx_offset =
+		safe_mulu32(ctx->ccq_id, PVA_NUM_RW_SYNCPTS_PER_CONTEXT);
+	uint32_t syncpt_index = safe_addu32(ctx_offset, queue_id);
+
+	ASSERT(syncpt_index < PVA_NUM_RW_SYNCPTS);
+	return &ctx->pva->rw_syncpts[syncpt_index];
 }

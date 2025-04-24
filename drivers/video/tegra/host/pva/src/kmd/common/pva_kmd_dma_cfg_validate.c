@@ -218,7 +218,7 @@ validate_descriptor(const struct pva_dma_descriptor *desc,
 	/* DMA_DESC_LDID */
 	if ((desc->link_desc_id > cfg_hdr->num_descriptors) ||
 	    ((desc->link_desc_id != 0) &&
-	     pva_is_reserved_desc(desc->link_desc_id - PVA_DMA_DESC0))) {
+	     pva_is_reserved_desc(desc->link_desc_id - PVA_DMA_DESC_ID_BASE))) {
 		pva_kmd_log_err("ERR: Invalid linker Desc ID");
 		return PVA_INVAL;
 	}
@@ -423,6 +423,8 @@ pva_kmd_dma_use_resources(struct pva_dma_config const *dma_cfg,
 			err = PVA_INVAL;
 			goto err_out;
 		}
+		dma_aux->vpu_bin_res_id = dma_cfg->header.vpu_exec_resource_id;
+
 		if (vpu_bin_rec->type != PVA_RESOURCE_TYPE_EXEC_BIN) {
 			pva_kmd_log_err(
 				"Invalid VPU exec resource id used by DMA config");
@@ -432,9 +434,6 @@ pva_kmd_dma_use_resources(struct pva_dma_config const *dma_cfg,
 		vpu_bin = &vpu_bin_rec->vpu_bin;
 	}
 
-	dma_aux->vpu_bin_res_id = dma_cfg->header.vpu_exec_resource_id;
-
-	dma_aux->dram_res_count = 0;
 	/* Increment reference count for all static DRAM buffers; For static
 	 * VMEM buffers, check that symbol ID is valid. */
 	for (i = 0; i < dma_cfg->header.num_static_slots; i++) {
@@ -455,7 +454,8 @@ pva_kmd_dma_use_resources(struct pva_dma_config const *dma_cfg,
 
 			dma_aux->static_dram_res_ids[dma_aux->dram_res_count] =
 				slot_buf->dram.resource_id;
-			dma_aux->dram_res_count += 1;
+			dma_aux->dram_res_count =
+				safe_addu32(dma_aux->dram_res_count, 1U);
 
 			if (rec->type != PVA_RESOURCE_TYPE_DRAM) {
 				pva_kmd_log_err(
@@ -505,9 +505,10 @@ static uint16_t get_slot_id(uint16_t slot)
 	return slot & PVA_DMA_SLOT_ID_MASK;
 }
 
-static uint8_t get_slot_flag(uint8_t transfer_mode, bool cb_enable)
+static uint16_t get_slot_flag(uint8_t transfer_mode, bool cb_enable,
+			      bool is_dst)
 {
-	uint8_t flags = 0;
+	uint16_t flags = 0;
 	if (transfer_mode == PVA_DMA_TRANS_MODE_VMEM) {
 		flags |= PVA_FW_DMA_SLOT_FLAG_VMEM_DATA;
 	} else if (transfer_mode == PVA_DMA_TRANS_MODE_L2SRAM) {
@@ -521,6 +522,15 @@ static uint8_t get_slot_flag(uint8_t transfer_mode, bool cb_enable)
 	if (cb_enable) {
 		flags |= PVA_FW_DMA_SLOT_FLAG_CB;
 	}
+	if (is_dst) {
+		flags |= PVA_INSERT(PVA_ACCESS_WO,
+				    PVA_FW_DMA_SLOT_FLAG_ACCESS_MSB,
+				    PVA_FW_DMA_SLOT_FLAG_ACCESS_LSB);
+	} else {
+		flags |= PVA_INSERT(PVA_ACCESS_RO,
+				    PVA_FW_DMA_SLOT_FLAG_ACCESS_MSB,
+				    PVA_FW_DMA_SLOT_FLAG_ACCESS_LSB);
+	}
 	return flags;
 }
 
@@ -529,7 +539,7 @@ static void update_reloc_count(uint16_t slot, uint8_t transfer_mode,
 			       struct pva_fw_dma_slot *out_static_slots,
 			       uint16_t num_static_slots,
 			       struct pva_fw_dma_slot *out_dyn_slots,
-			       uint16_t num_dyn_slots)
+			       uint16_t num_dyn_slots, bool is_dst)
 {
 	uint8_t slot_id = get_slot_id(slot);
 
@@ -537,13 +547,12 @@ static void update_reloc_count(uint16_t slot, uint8_t transfer_mode,
 		out_dyn_slots[slot_id].reloc_count =
 			safe_addu16(out_dyn_slots[slot_id].reloc_count, 1U);
 		out_dyn_slots[slot_id].flags |=
-			get_slot_flag(transfer_mode, cb_enable);
+			get_slot_flag(transfer_mode, cb_enable, is_dst);
 	} else if (slot & PVA_DMA_STATIC_SLOT) {
 		out_static_slots[slot_id].reloc_count =
 			safe_addu16(out_static_slots[slot_id].reloc_count, 1U);
-		;
 		out_static_slots[slot_id].flags |=
-			get_slot_flag(transfer_mode, cb_enable);
+			get_slot_flag(transfer_mode, cb_enable, is_dst);
 	}
 }
 
@@ -567,17 +576,17 @@ static void count_relocs(struct pva_dma_config const *dma_cfg,
 		update_reloc_count(desc->src.slot, desc->src.transfer_mode,
 				   desc->src.cb_enable, out_static_slots,
 				   num_static_slots, out_dyn_slots,
-				   num_dyn_slots);
+				   num_dyn_slots, false);
 
 		update_reloc_count(desc->dst.slot, desc->dst.transfer_mode,
 				   desc->dst.cb_enable, out_static_slots,
 				   num_static_slots, out_dyn_slots,
-				   num_dyn_slots);
+				   num_dyn_slots, true);
 
 		update_reloc_count(desc->dst2_slot, desc->dst.transfer_mode,
 				   desc->dst.cb_enable, out_static_slots,
 				   num_static_slots, out_dyn_slots,
-				   num_dyn_slots);
+				   num_dyn_slots, true);
 	}
 }
 
@@ -866,10 +875,6 @@ void pva_kmd_collect_relocs(struct pva_dma_config const *dma_cfg,
 	struct pva_fw_dma_reloc_slots rel_info = { 0 };
 	uint8_t static_reloc_off[PVA_MAX_NUM_DMA_DESC * 3];
 	uint8_t dyn_reloc_off[PVA_MAX_NUM_DMA_DESC * 3];
-
-	memset(out_static_slots, 0,
-	       num_static_slots * sizeof(*out_static_slots));
-	memset(out_dyn_slots, 0, num_dyn_slots * sizeof(*out_dyn_slots));
 
 	/* First pass: count the number of relocates for each slot */
 	count_relocs(dma_cfg, out_static_slots, num_static_slots, out_dyn_slots,

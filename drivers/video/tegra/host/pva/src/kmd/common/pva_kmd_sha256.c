@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_kmd_sha256.h"
+#include "pva_math_utils.h"
 
 #define ROTLEFT(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
 #define ROTRIGHT(a, b) (((a) >> (b)) | ((a) << (32 - (b))))
@@ -58,9 +59,11 @@ static void sha256_transform(struct sha256_ctx *ctx, const void *data_in)
 		m[i] = SWAP32(data[i]);
 	}
 	for (i = 0; i < U32(64) - U32(16); ++i) {
-		/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-		m[i + U32(16)] = SIG1(m[U32(14) + i]) + m[U32(9) + i] +
-				 SIG0(m[U32(1) + i]) + m[i];
+		m[i + U32(16)] = safe_wrap_add_u32(
+			safe_wrap_add_u32(safe_wrap_add_u32(SIG1(m[U32(14) + i]),
+							    m[U32(9) + i]),
+					  SIG0(m[U32(1) + i])),
+			m[i]);
 	}
 
 	a = ctx->state[0];
@@ -73,38 +76,32 @@ static void sha256_transform(struct sha256_ctx *ctx, const void *data_in)
 	h = ctx->state[7];
 
 	for (i = 0; i < U32(64); ++i) {
-		/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-		t1 = h + SHA_EP1(e) + CH(e, f, g) + k[i] + m[i];
-		/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-		t2 = SHA_EP0(a) + MAJ(a, b, c);
+		t1 = safe_wrap_add_u32(
+			safe_wrap_add_u32(
+				safe_wrap_add_u32(safe_wrap_add_u32(h,
+								    SHA_EP1(e)),
+						  CH(e, f, g)),
+				k[i]),
+			m[i]);
+		t2 = safe_wrap_add_u32(SHA_EP0(a), MAJ(a, b, c));
 		h = g;
 		g = f;
 		f = e;
-		/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-		e = d + t1;
+		e = safe_wrap_add_u32(d, t1);
 		d = c;
 		c = b;
 		b = a;
-		/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-		a = t1 + t2;
+		a = safe_wrap_add_u32(t1, t2);
 	}
 
-	/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-	ctx->state[0] += a;
-	/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-	ctx->state[1] += b;
-	/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-	ctx->state[2] += c;
-	/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-	ctx->state[3] += d;
-	/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-	ctx->state[4] += e;
-	/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-	ctx->state[5] += f;
-	/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-	ctx->state[6] += g;
-	/* coverity[cert_int30_c_violation]; Deviation-MOD32_DEVIATION_ID */
-	ctx->state[7] += h;
+	ctx->state[0] = safe_wrap_add_u32(ctx->state[0], a);
+	ctx->state[1] = safe_wrap_add_u32(ctx->state[1], b);
+	ctx->state[2] = safe_wrap_add_u32(ctx->state[2], c);
+	ctx->state[3] = safe_wrap_add_u32(ctx->state[3], d);
+	ctx->state[4] = safe_wrap_add_u32(ctx->state[4], e);
+	ctx->state[5] = safe_wrap_add_u32(ctx->state[5], f);
+	ctx->state[6] = safe_wrap_add_u32(ctx->state[6], g);
+	ctx->state[7] = safe_wrap_add_u32(ctx->state[7], h);
 }
 
 void sha256_init(struct sha256_ctx *ctx)
@@ -127,7 +124,8 @@ void sha256_update(struct sha256_ctx *ctx, const void *data, size_t len)
 	for (i = 0; i < len; i += U32(64)) {
 		ctx->bitlen &= U32(0xffffffff);
 		sha256_transform(ctx, ((const uint8_t *)data) + i);
-		ctx->bitlen += U32(512);
+		ctx->bitlen =
+			safe_wrap_add_u32((uint32_t)ctx->bitlen, U32(512));
 	}
 }
 
@@ -148,7 +146,9 @@ void sha256_finalize(struct sha256_ctx *ctx, const void *input,
 
 	/* the false of this condition is illegal for this API agreement */
 	/* this check is here only for Coverity INT30-C */
-	ctx->bitlen += input_size * U32(8);
+	ctx->bitlen = safe_wrap_add_u32((uint32_t)ctx->bitlen,
+					safe_wrap_mul_u32((uint32_t)input_size,
+							  U32(8)));
 	(void)memcpy(p, input, input_size);
 	data[input_size] = 0x80;
 

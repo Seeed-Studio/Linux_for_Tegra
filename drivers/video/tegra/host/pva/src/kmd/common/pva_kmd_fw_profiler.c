@@ -10,6 +10,7 @@
 #include "pva_utils.h"
 #include "pva_kmd_fw_profiler.h"
 #include "pva_kmd_shared_buffer.h"
+#include "pva_api_private.h"
 
 // TODO: This is here temporarily just for testing. Should be moved to a common header
 #define CMD_ID(x) PVA_EXTRACT(x, 6, 0, uint8_t)
@@ -101,13 +102,11 @@ void pva_kmd_device_deinit_profiler(struct pva_kmd_device *pva)
 
 enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_cmdbuf_builder builder;
 	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
-	struct pva_cmd_enable_fw_profiling *cmd;
+	struct pva_cmd_enable_fw_profiling cmd = { 0 };
 	uint32_t filter = 0U;
 	uint8_t timestamp_type = TIMESTAMP_TYPE_CYCLE_COUNT;
-	uint32_t fence_val;
-	enum pva_error err;
+	enum pva_error err = PVA_SUCCESS;
 
 	struct pva_kmd_shared_buffer *profiling_buffer =
 		&pva->kmd_fw_buffers[PVA_PRIV_CCQ_ID];
@@ -123,26 +122,14 @@ enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
 		return PVA_SUCCESS;
 	}
 
-	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
-	ASSERT(cmd != NULL);
-	pva_kmd_set_cmd_enable_fw_profiling(cmd, filter, timestamp_type);
+	pva_kmd_set_cmd_enable_fw_profiling(&cmd, filter, timestamp_type);
 
-	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
+	err = pva_kmd_submit_cmd_sync(dev_submitter, &cmd, sizeof(cmd),
+				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-
-	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"Waiting for FW timed out when initializing context");
-		goto err_out;
+		pva_kmd_log_err("Failed to submit command");
+		goto out;
 	}
 
 	pva->debugfs_context.g_fw_profiling_config.enabled = true;
@@ -155,38 +142,22 @@ enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
 			      8 :
 			      4;
 
-	return PVA_SUCCESS;
-err_out:
+out:
 	return err;
 }
 
 enum pva_error pva_kmd_notify_fw_disable_profiling(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_cmdbuf_builder builder;
-	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
-	struct pva_cmd_disable_fw_profiling *cmd;
-	uint32_t fence_val;
+	struct pva_cmd_disable_fw_profiling cmd = { 0 };
 	enum pva_error err;
 
-	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
-	ASSERT(cmd != NULL);
-	pva_kmd_set_cmd_disable_fw_profiling(cmd);
+	pva_kmd_set_cmd_disable_fw_profiling(&cmd);
 
-	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
+	err = pva_kmd_submit_cmd_sync(&pva->submitter, &cmd, sizeof(cmd),
+				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-
-	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"Waiting for FW timed out when initializing context");
+		pva_kmd_log_err("Failed to submit command");
 		goto err_out;
 	}
 
@@ -194,6 +165,7 @@ enum pva_error pva_kmd_notify_fw_disable_profiling(struct pva_kmd_device *pva)
 	pva->debugfs_context.g_fw_profiling_config.filter = 0x0;
 
 	return PVA_SUCCESS;
+
 err_out:
 	return err;
 }

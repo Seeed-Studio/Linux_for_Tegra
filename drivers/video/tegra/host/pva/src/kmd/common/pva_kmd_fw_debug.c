@@ -16,42 +16,23 @@
 enum pva_error pva_kmd_notify_fw_set_debug_log_level(struct pva_kmd_device *pva,
 						     uint32_t log_level)
 {
-	struct pva_kmd_submitter *submitter = &pva->submitter;
-	struct pva_kmd_cmdbuf_builder builder;
-	struct pva_cmd_set_debug_log_level *cmd;
-	uint32_t fence_val;
-	enum pva_error err;
+	struct pva_cmd_set_debug_log_level cmd = { 0 };
+	pva_kmd_set_cmd_set_debug_log_level(&cmd, log_level);
 
-	err = pva_kmd_submitter_prepare(submitter, &builder);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
+	return pva_kmd_submit_cmd_sync(&pva->submitter, &cmd, sizeof(cmd),
+				       PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				       PVA_KMD_WAIT_FW_TIMEOUT_US);
+}
 
-	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
-	ASSERT(cmd != NULL);
+enum pva_error pva_kmd_notify_fw_set_profiling_level(struct pva_kmd_device *pva,
+						     uint32_t level)
+{
+	struct pva_cmd_set_profiling_level cmd = { 0 };
+	pva_kmd_set_cmd_set_profiling_level(&cmd, level);
 
-	pva_kmd_set_cmd_set_debug_log_level(cmd, log_level);
-
-	err = pva_kmd_submitter_submit(submitter, &builder, &fence_val);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err("set debug log level cmd submission failed");
-		goto cancel_builder;
-	}
-
-	err = pva_kmd_submitter_wait(submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"Waiting for FW timed out when setting debug log level");
-		goto err_out;
-	}
-
-cancel_builder:
-	pva_kmd_cmdbuf_builder_cancel(&builder);
-
-err_out:
-	return err;
+	return pva_kmd_submit_cmd_sync(&pva->submitter, &cmd, sizeof(cmd),
+				       PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				       PVA_KMD_WAIT_FW_TIMEOUT_US);
 }
 
 void pva_kmd_drain_fw_print(struct pva_kmd_fw_print_buffer *print_buffer)

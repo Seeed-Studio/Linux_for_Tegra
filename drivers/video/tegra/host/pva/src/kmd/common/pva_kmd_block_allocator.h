@@ -24,6 +24,8 @@ pva_kmd_block_allocator_init(struct pva_kmd_block_allocator *allocator,
 
 void *pva_kmd_alloc_block(struct pva_kmd_block_allocator *allocator,
 			  uint32_t *out_id);
+void *pva_kmd_alloc_block_unsafe(struct pva_kmd_block_allocator *allocator,
+				 uint32_t *out_id);
 static inline void *
 pva_kmd_zalloc_block(struct pva_kmd_block_allocator *allocator,
 		     uint32_t *out_id)
@@ -47,6 +49,9 @@ void *pva_kmd_get_block_unsafe(struct pva_kmd_block_allocator *allocator,
 			       uint32_t id);
 enum pva_error pva_kmd_free_block(struct pva_kmd_block_allocator *allocator,
 				  uint32_t id);
+enum pva_error
+pva_kmd_free_block_unsafe(struct pva_kmd_block_allocator *allocator,
+			  uint32_t id);
 
 void pva_kmd_block_allocator_deinit(struct pva_kmd_block_allocator *allocator);
 

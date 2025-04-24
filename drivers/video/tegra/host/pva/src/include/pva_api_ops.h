@@ -11,7 +11,7 @@
  */
 struct pva_ops_memory {
 	uint32_t handle; /**< Memory handle */
-	uint32_t size; /**< Size of memory */
+	uint64_t size; /**< Size of memory */
 	void *va; /**< Virtual address */
 };
 
@@ -27,8 +27,8 @@ struct pva_ops_memory {
  */
 struct pva_ops_buffer {
 	struct pva_ops_memory *memory; /**< Pointer to buffer memory */
-	uint32_t start_offset; /**< Start offset in buffer memory */
-	uint32_t end_offset; /**< End offset (exclusive) in buffer memory */
+	uint64_t start_offset; /**< Start offset in buffer memory */
+	uint64_t end_offset; /**< End offset (exclusive) in buffer memory */
 };
 
 /**
@@ -45,9 +45,9 @@ struct pva_ops_buffer {
  * @brief Header structure for PVA operations.
  */
 struct pva_ops_header {
-	uint32_t opcode; /**< Operation code identifying the operation type */
+	uint64_t opcode; /**< Operation code identifying the operation type */
 	/** Size of the operation in bytes. This size must be a multiple of 8 bytes. */
-	uint32_t size;
+	uint64_t size;
 };
 
 /**
@@ -56,8 +56,7 @@ struct pva_ops_header {
 struct pva_ops_executable_register {
 #define PVA_OPS_OPCODE_EXECUTABLE_REGISTER 1U
 	struct pva_ops_header header; /**< Operation header */
-	uint32_t exec_size; /**< Size of executable data */
-	uint32_t pad; /**< Padding for 8 bytes alignment */
+	uint64_t exec_size; /**< Size of executable data */
 	//followed by executable data
 };
 
@@ -144,7 +143,7 @@ enum pva_error pva_ops_parse_unregister_resp(struct pva_ops_buffer *resp_buf);
  *
  * @return PVA_SUCCESS on success, appropriate error code otherwise.
  */
-enum pva_error pva_ops_memory_alloc(struct pva_context *ctx, uint32_t size,
+enum pva_error pva_ops_memory_alloc(struct pva_context *ctx, uint64_t size,
 				    struct pva_ops_memory *ops_buf);
 
 /**

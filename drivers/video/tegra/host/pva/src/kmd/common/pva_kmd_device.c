@@ -33,10 +33,11 @@
  * Initialization through CCQ is only intended for KMD's own resource table (the
  * first resource table created).
  */
-void pva_kmd_send_resource_table_info_by_ccq(
+static enum pva_error pva_kmd_send_resource_table_info_by_ccq(
 	struct pva_kmd_device *pva, struct pva_kmd_resource_table *res_table)
 {
 	enum pva_error err;
+
 	uint64_t addr = res_table->table_mem->iova;
 	uint32_t n_entries = res_table->n_entries;
 	uint64_t ccq_entry =
@@ -51,8 +52,9 @@ void pva_kmd_send_resource_table_info_by_ccq(
 	err = pva_kmd_ccq_push_with_timeout(pva, PVA_PRIV_CCQ_ID, ccq_entry,
 					    PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 					    PVA_KMD_WAIT_FW_TIMEOUT_US);
-	ASSERT(err == PVA_SUCCESS);
 	pva_kmd_mutex_unlock(&pva->ccq0_lock);
+
+	return err;
 }
 
 /**
@@ -61,8 +63,9 @@ void pva_kmd_send_resource_table_info_by_ccq(
  * Initialization through CCQ is only intended for KMD's own queue (the first
  * queue created).
  */
-void pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
-				    struct pva_kmd_queue *queue)
+static enum pva_error
+pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
+			       struct pva_kmd_queue *queue)
 {
 	enum pva_error err;
 	uint64_t addr = queue->queue_memory->iova;
@@ -78,8 +81,9 @@ void pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
 	err = pva_kmd_ccq_push_with_timeout(pva, PVA_PRIV_CCQ_ID, ccq_entry,
 					    PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 					    PVA_KMD_WAIT_FW_TIMEOUT_US);
-	ASSERT(err == PVA_SUCCESS);
 	pva_kmd_mutex_unlock(&pva->ccq0_lock);
+
+	return err;
 }
 
 /**
@@ -113,13 +117,13 @@ static void pva_kmd_device_init_submission(struct pva_kmd_device *pva)
 	/* Init KMD's resource table */
 	err = pva_kmd_resource_table_init(&pva->dev_resource_table, pva,
 					  PVA_R5_SMMU_CONTEXT_ID,
-					  PVA_KMD_MAX_NUM_KMD_RESOURCES,
-					  PVA_KMD_MAX_NUM_KMD_DMA_CONFIGS);
+					  PVA_KMD_MAX_NUM_KMD_RESOURCES);
 	ASSERT(err == PVA_SUCCESS);
 
 	/* Allocate memory for submission*/
 	chunk_mem_size = pva_kmd_cmdbuf_pool_get_required_mem_size(
-		PVA_MAX_CMDBUF_CHUNK_SIZE, PVA_KMD_MAX_NUM_KMD_CHUNKS);
+		pva_kmd_get_max_cmdbuf_chunk_size(pva),
+		PVA_KMD_MAX_NUM_KMD_CHUNKS);
 
 	size = safe_addu64(chunk_mem_size, (uint64_t)sizeof(uint32_t));
 	/* Allocate one post fence at the end. We don't need to free this memory
@@ -138,7 +142,7 @@ static void pva_kmd_device_init_submission(struct pva_kmd_device *pva)
 	/* Init chunk pool */
 	pva_kmd_cmdbuf_chunk_pool_init(
 		&pva->chunk_pool, pva->submit_memory_resource_id, 0,
-		chunk_mem_size, PVA_MAX_CMDBUF_CHUNK_SIZE,
+		chunk_mem_size, pva_kmd_get_max_cmdbuf_chunk_size(pva),
 		PVA_KMD_MAX_NUM_KMD_CHUNKS, pva->submit_memory->va);
 
 	/* Init fence */
@@ -167,21 +171,25 @@ static void pva_kmd_device_deinit_submission(struct pva_kmd_device *pva)
 	pva_kmd_drop_resource(&pva->dev_resource_table,
 			      pva->submit_memory_resource_id);
 	pva_kmd_resource_table_deinit(&pva->dev_resource_table);
-	pva_kmd_queue_deinit(&pva->dev_queue);
 	pva_kmd_device_memory_free(pva->queue_memory);
 }
 
 struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 					     uint32_t device_index,
-					     bool app_authenticate)
+					     bool app_authenticate,
+					     bool test_mode)
 {
 	struct pva_kmd_device *pva;
 	enum pva_error err;
-	uint32_t chunk_size;
 	uint32_t size;
+
+	if (test_mode) {
+		pva_kmd_log_err("Test mode is enabled");
+	}
 
 	pva = pva_kmd_zalloc_nofail(sizeof(*pva));
 
+	pva->test_mode = test_mode;
 	pva->device_index = device_index;
 	pva->load_from_gsc = false;
 	pva->is_hv_mode = true;
@@ -210,13 +218,6 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 	}
 
 	pva_kmd_device_plat_init(pva);
-
-	chunk_size = safe_mulu32((uint32_t)sizeof(struct pva_syncpt_rw_info),
-				 (uint32_t)PVA_NUM_RW_SYNCPTS_PER_CONTEXT);
-	err = pva_kmd_block_allocator_init(&pva->syncpt_allocator,
-					   pva->syncpt_rw, 0, chunk_size,
-					   PVA_MAX_NUM_USER_CONTEXTS);
-	ASSERT(err == PVA_SUCCESS);
 
 	pva_kmd_device_init_submission(pva);
 
@@ -257,7 +258,6 @@ void pva_kmd_device_destroy(struct pva_kmd_device *pva)
 	pva_kmd_wait_for_active_contexts(pva);
 	pva_kmd_device_deinit_submission(pva);
 	pva_kmd_device_plat_deinit(pva);
-	pva_kmd_block_allocator_deinit(&pva->syncpt_allocator);
 	pva_kmd_block_allocator_deinit(&pva->context_allocator);
 	pva_kmd_free(pva->context_mem);
 	pva_kmd_mutex_deinit(&pva->ccq0_lock);
@@ -266,44 +266,71 @@ void pva_kmd_device_destroy(struct pva_kmd_device *pva)
 	pva_kmd_free(pva);
 }
 
-static enum pva_error
-pva_kmd_notify_fw_set_profiling_level(struct pva_kmd_device *pva,
-				      uint32_t level)
+static enum pva_error config_fw_by_cmds(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_cmdbuf_builder builder;
-	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
-	struct pva_cmd_set_profiling_level *cmd;
-	uint32_t fence_val;
-	enum pva_error err;
+	enum pva_error err = PVA_SUCCESS;
 
-	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
+	err = pva_kmd_notify_fw_enable_profiling(pva);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
 
-	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
-	ASSERT(cmd != NULL);
-	pva_kmd_set_cmd_set_profiling_level(cmd, level);
-
-	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
+	/* Set FW debug log level */
+	err = pva_kmd_notify_fw_set_debug_log_level(pva,
+						    pva->fw_debug_log_level);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
 
-	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
+	// If the user had set profiling level before power-on, send the update to FW
+	err = pva_kmd_notify_fw_set_profiling_level(
+		pva, pva->debugfs_context.profiling_level);
 	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"Waiting for FW timed out when setting profiling level");
 		goto err_out;
 	}
-
-	return PVA_SUCCESS;
 
 err_out:
 	return err;
 }
+
+enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva)
+{
+	enum pva_error err = PVA_SUCCESS;
+
+	/* Reset KMD queue */
+	pva->dev_queue.queue_header->cb_head = 0;
+	pva->dev_queue.queue_header->cb_tail = 0;
+
+	err = pva_kmd_send_resource_table_info_by_ccq(pva,
+						      &pva->dev_resource_table);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+	err = pva_kmd_send_queue_info_by_ccq(pva, &pva->dev_queue);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+
+	err = pva_kmd_shared_buffer_init(pva, PVA_PRIV_CCQ_ID,
+					 PVA_KMD_FW_BUF_ELEMENT_SIZE,
+					 PVA_KMD_FW_PROFILING_BUF_NUM_ELEMENTS,
+					 NULL, NULL);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err_u64(
+			"pva kmd buffer initialization failed for interface ",
+			PVA_PRIV_CCQ_ID);
+		goto err_out;
+	}
+
+	err = config_fw_by_cmds(pva);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+
+err_out:
+	return err;
+}
+
 enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 {
 	enum pva_error err = PVA_SUCCESS;
@@ -321,36 +348,26 @@ enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 		if (err != PVA_SUCCESS) {
 			goto poweroff;
 		}
-		/* Reset KMD queue */
-		pva->dev_queue.queue_header->cb_head = 0;
-		pva->dev_queue.queue_header->cb_tail = 0;
 
-		pva_kmd_send_resource_table_info_by_ccq(
-			pva, &pva->dev_resource_table);
-		pva_kmd_send_queue_info_by_ccq(pva, &pva->dev_queue);
-
-		// TODO: need better error handling here
-		err = pva_kmd_shared_buffer_init(
-			pva, PVA_PRIV_CCQ_ID, PVA_KMD_FW_BUF_ELEMENT_SIZE,
-			PVA_KMD_FW_PROFILING_BUF_NUM_ELEMENTS, NULL, NULL);
+		err = pva_kmd_config_fw_after_boot(pva);
 		if (err != PVA_SUCCESS) {
-			pva_kmd_log_err_u64(
-				"pva kmd buffer initialization failed for interface ",
-				PVA_PRIV_CCQ_ID);
 			goto deinit_fw;
 		}
-		pva_kmd_notify_fw_enable_profiling(pva);
-
-		/* Set FW debug log level */
-		pva_kmd_notify_fw_set_debug_log_level(pva,
-						      pva->fw_debug_log_level);
-
-		// If the user had set profiling level before power-on, send the update to FW
-		pva_kmd_notify_fw_set_profiling_level(
-			pva, pva->debugfs_context.profiling_level);
+	} else {
+		// Once firwmare is aborted, we no longer allow incrementing PVA
+		// refcount. This makes sure refcount will eventually reach 0 and allow
+		// device to be powered off.
+		if (pva->recovery) {
+			pva_kmd_log_err_u64(
+				"PVA firmware aborted. "
+				"Waiting for active PVA uses to finish. Remaining",
+				pva->refcount);
+			err = PVA_ERR_FW_ABORTED;
+			goto unlock;
+		}
 	}
-	pva->refcount = safe_addu32(pva->refcount, 1U);
 
+	pva->refcount = safe_addu32(pva->refcount, 1U);
 	pva_kmd_mutex_unlock(&pva->powercycle_lock);
 	return PVA_SUCCESS;
 
@@ -371,15 +388,15 @@ void pva_kmd_device_idle(struct pva_kmd_device *pva)
 	ASSERT(pva->refcount > 0);
 	pva->refcount--;
 	if (pva->refcount == 0) {
-		if (!pva->recovery) {
-			/* Disable FW profiling */
-			/* TODO: once debugfs is up, move these calls */
-			pva_kmd_notify_fw_disable_profiling(pva);
+		err = pva_kmd_notify_fw_disable_profiling(pva);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err(
+				"pva_kmd_notify_fw_disable_profiling failed during device idle");
 		}
-		// TOOD: need better error handling here
 		err = pva_kmd_shared_buffer_deinit(pva, PVA_PRIV_CCQ_ID);
 		if (err != PVA_SUCCESS) {
-			pva_kmd_log_err("pva_kmd_shared_buffer_deinit failed");
+			pva_kmd_log_err(
+				"pva_kmd_shared_buffer_deinit failed during device idle");
 		}
 		pva_kmd_deinit_fw(pva);
 		pva_kmd_power_off(pva);
@@ -397,8 +414,11 @@ enum pva_error pva_kmd_ccq_push_with_timeout(struct pva_kmd_device *pva,
 		if (timeout_us == 0) {
 			pva_kmd_log_err(
 				"pva_kmd_ccq_push_with_timeout Timed out");
-			pva_kmd_abort(pva);
+			pva_kmd_abort_fw(pva);
 			return PVA_TIMEDOUT;
+		}
+		if (pva->recovery) {
+			return PVA_ERR_FW_ABORTED;
 		}
 		pva_kmd_sleep_us(sleep_interval_us);
 		timeout_us = sat_sub64(timeout_us, sleep_interval_us);

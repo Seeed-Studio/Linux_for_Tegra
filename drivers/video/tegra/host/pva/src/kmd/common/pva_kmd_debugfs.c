@@ -27,45 +27,6 @@ static uint64_t read_from_buffer_to_user(void *to, uint64_t count,
 	return count;
 }
 
-static enum pva_error
-pva_kmd_notify_fw_set_profiling_level(struct pva_kmd_device *pva,
-				      uint32_t level)
-{
-	struct pva_kmd_cmdbuf_builder builder;
-	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
-	struct pva_cmd_set_profiling_level *cmd;
-	uint32_t fence_val;
-	enum pva_error err;
-
-	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-
-	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
-	ASSERT(cmd != NULL);
-	pva_kmd_set_cmd_set_profiling_level(cmd, level);
-
-	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-
-	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"Waiting for FW timed out when setting profiling level");
-		goto err_out;
-	}
-
-	return PVA_SUCCESS;
-
-err_out:
-	return err;
-}
-
 static int64_t profiling_level_read(struct pva_kmd_device *dev, void *file_data,
 				    uint8_t *out_buffer, uint64_t offset,
 				    uint64_t size)
@@ -118,90 +79,18 @@ static int64_t profiling_level_write(struct pva_kmd_device *dev,
 				"pva_kmd_device_busy failed when submitting set profiling level cmd");
 			return 0;
 		}
+
 		err = pva_kmd_notify_fw_set_profiling_level(dev, value);
+		pva_kmd_device_idle(dev);
+
 		if (err != PVA_SUCCESS) {
 			pva_kmd_log_err(
 				"Failed to notify FW about profiling level change");
 			return 0;
 		}
-		pva_kmd_device_idle(dev);
 	}
+
 	return size;
-}
-
-void pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
-{
-	static const char *vpu_ocd_names[NUM_VPU_BLOCKS] = { "ocd_vpu0_v3",
-							     "ocd_vpu1_v3" };
-	struct pva_kmd_file_ops *profiling_fops;
-
-	pva_kmd_debugfs_create_bool(pva, "stats_enabled",
-				    &pva->debugfs_context.stats_enable);
-	pva_kmd_debugfs_create_bool(pva, "vpu_debug",
-				    &pva->debugfs_context.vpu_debug);
-
-	// Create profiling_level file operations
-	profiling_fops = &pva->debugfs_context.profiling_level_fops;
-	profiling_fops->read = profiling_level_read;
-	profiling_fops->write = profiling_level_write;
-	profiling_fops->open = NULL;
-	profiling_fops->release = NULL;
-	profiling_fops->pdev = pva;
-	pva_kmd_debugfs_create_file(pva, "profiling_level", profiling_fops);
-
-	pva->debugfs_context.vpu_fops.read = &get_vpu_stats;
-	pva->debugfs_context.vpu_fops.write = NULL;
-	pva->debugfs_context.vpu_fops.pdev = pva;
-	pva_kmd_debugfs_create_file(pva, "vpu_stats",
-				    &pva->debugfs_context.vpu_fops);
-	for (uint32_t i = 0; i < NUM_VPU_BLOCKS; i++) {
-		pva->debugfs_context.vpu_ocd_fops[i].open =
-			&pva_kmd_vpu_ocd_open;
-		pva->debugfs_context.vpu_ocd_fops[i].release =
-			&pva_kmd_vpu_ocd_release;
-		pva->debugfs_context.vpu_ocd_fops[i].read =
-			&pva_kmd_vpu_ocd_read;
-		pva->debugfs_context.vpu_ocd_fops[i].write =
-			&pva_kmd_vpu_ocd_write;
-		pva->debugfs_context.vpu_ocd_fops[i].pdev = pva;
-		pva->debugfs_context.vpu_ocd_fops[i].file_data =
-			(void *)&pva->regspec.vpu_dbg_instr_reg_offset[i];
-		pva_kmd_debugfs_create_file(
-			pva, vpu_ocd_names[i],
-			&pva->debugfs_context.vpu_ocd_fops[i]);
-	}
-
-	pva->debugfs_context.allowlist_ena_fops.read =
-		&get_vpu_allowlist_enabled;
-	pva->debugfs_context.allowlist_ena_fops.write = &update_vpu_allowlist;
-	pva->debugfs_context.allowlist_ena_fops.pdev = pva;
-	pva_kmd_debugfs_create_file(pva, "vpu_app_authentication",
-				    &pva->debugfs_context.allowlist_ena_fops);
-
-	pva->debugfs_context.allowlist_path_fops.read = &get_vpu_allowlist_path;
-	pva->debugfs_context.allowlist_path_fops.write =
-		&update_vpu_allowlist_path;
-	pva->debugfs_context.allowlist_path_fops.pdev = pva;
-	pva_kmd_debugfs_create_file(pva, "allowlist_path",
-				    &pva->debugfs_context.allowlist_path_fops);
-
-	pva->debugfs_context.fw_debug_log_level_fops.write =
-		&update_fw_debug_log_level;
-	pva->debugfs_context.fw_debug_log_level_fops.read = NULL;
-	pva->debugfs_context.fw_debug_log_level_fops.pdev = pva;
-	pva_kmd_debugfs_create_file(
-		pva, "fw_debug_log_level",
-		&pva->debugfs_context.fw_debug_log_level_fops);
-
-	pva_kmd_device_init_profiler(pva);
-	pva_kmd_device_init_tegra_stats(pva);
-}
-
-void pva_kmd_debugfs_destroy_nodes(struct pva_kmd_device *pva)
-{
-	pva_kmd_device_deinit_tegra_stats(pva);
-	pva_kmd_device_deinit_profiler(pva);
-	pva_kmd_debugfs_remove_nodes(pva);
 }
 
 static int64_t print_vpu_stats(struct pva_kmd_tegrastats *kmd_tegra_stats,
@@ -236,8 +125,9 @@ static int64_t print_vpu_stats(struct pva_kmd_tegrastats *kmd_tegra_stats,
 					formatted_len);
 }
 
-int64_t get_vpu_stats(struct pva_kmd_device *dev, void *file_data,
-		      uint8_t *out_buffer, uint64_t offset, uint64_t size)
+static int64_t get_vpu_stats(struct pva_kmd_device *dev, void *file_data,
+			     uint8_t *out_buffer, uint64_t offset,
+			     uint64_t size)
 {
 	struct pva_kmd_tegrastats kmd_tegra_stats;
 
@@ -251,9 +141,9 @@ int64_t get_vpu_stats(struct pva_kmd_device *dev, void *file_data,
 	return print_vpu_stats(&kmd_tegra_stats, out_buffer, offset, size);
 }
 
-int64_t get_vpu_allowlist_enabled(struct pva_kmd_device *pva, void *file_data,
-				  uint8_t *out_buffer, uint64_t offset,
-				  uint64_t size)
+static int64_t get_vpu_allowlist_enabled(struct pva_kmd_device *pva,
+					 void *file_data, uint8_t *out_buffer,
+					 uint64_t offset, uint64_t size)
 {
 	// 1 byte for '0' or '1' and another 1 byte for the Null character
 	char out_str[2];
@@ -267,9 +157,9 @@ int64_t get_vpu_allowlist_enabled(struct pva_kmd_device *pva, void *file_data,
 					sizeof(out_str));
 }
 
-int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
-			     const uint8_t *in_buffer, uint64_t offset,
-			     uint64_t size)
+static int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
+				    const uint8_t *in_buffer, uint64_t offset,
+				    uint64_t size)
 {
 	char strbuf[2]; // 1 byte for '0' or '1' and another 1 byte for the Null character
 	uint32_t base = 10;
@@ -302,9 +192,9 @@ int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
 	return size;
 }
 
-int64_t get_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
-			       uint8_t *out_buffer, uint64_t offset,
-			       uint64_t size)
+static int64_t get_vpu_allowlist_path(struct pva_kmd_device *pva,
+				      void *file_data, uint8_t *out_buffer,
+				      uint64_t offset, uint64_t size)
 {
 	uint64_t len;
 	pva_kmd_mutex_lock(&(pva->pva_auth->allow_list_lock));
@@ -317,12 +207,17 @@ int64_t get_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
 	return len;
 }
 
-int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
-				  const uint8_t *in_buffer, uint64_t offset,
-				  uint64_t size)
+static int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva,
+					 void *file_data,
+					 const uint8_t *in_buffer,
+					 uint64_t offset, uint64_t size)
 {
 	char buffer[ALLOWLIST_FILE_LEN];
 	unsigned long retval;
+
+	if (size == 0) {
+		return 0;
+	}
 
 	if (size > sizeof(buffer)) {
 		pva_kmd_log_err_u64(
@@ -338,7 +233,7 @@ int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
 	}
 
 	//Replacing last character from new-line to null terminator
-	buffer[safe_subu64(size, 1u)] = '\0';
+	buffer[size - 1u] = '\0';
 
 	pva_kmd_mutex_lock(&(pva->pva_auth->allow_list_lock));
 	pva_kmd_update_allowlist_path(pva, buffer);
@@ -347,9 +242,10 @@ int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva, void *file_data,
 	return size;
 }
 
-int64_t update_fw_debug_log_level(struct pva_kmd_device *pva, void *file_data,
-				  const uint8_t *in_buffer, uint64_t offset,
-				  uint64_t size)
+static int64_t update_fw_debug_log_level(struct pva_kmd_device *pva,
+					 void *file_data,
+					 const uint8_t *in_buffer,
+					 uint64_t offset, uint64_t size)
 {
 	uint32_t log_level;
 	unsigned long retval;
@@ -387,10 +283,143 @@ int64_t update_fw_debug_log_level(struct pva_kmd_device *pva, void *file_data,
 			goto err_end;
 		}
 
-		pva_kmd_notify_fw_set_debug_log_level(pva, log_level);
-
+		err = pva_kmd_notify_fw_set_debug_log_level(pva, log_level);
 		pva_kmd_device_idle(pva);
+
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err(
+				"Failed to notify FW about debug log level change");
+		}
 	}
 err_end:
 	return copy_size;
+}
+
+static int64_t get_fw_debug_log_level(struct pva_kmd_device *dev,
+				      void *file_data, uint8_t *out_buffer,
+				      uint64_t offset, uint64_t size)
+{
+	char print_buffer[64];
+	int formatted_len;
+
+	formatted_len = snprintf(print_buffer, sizeof(print_buffer), "%u\n",
+				 dev->fw_debug_log_level);
+
+	if (formatted_len <= 0) {
+		return -1;
+	}
+
+	return read_from_buffer_to_user(out_buffer, size, offset, print_buffer,
+					(uint64_t)formatted_len);
+}
+
+enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
+{
+	static const char *vpu_ocd_names[NUM_VPU_BLOCKS] = { "ocd_vpu0_v3",
+							     "ocd_vpu1_v3" };
+	struct pva_kmd_file_ops *profiling_fops;
+	enum pva_error err;
+
+	pva_kmd_debugfs_create_bool(pva, "stats_enabled",
+				    &pva->debugfs_context.stats_enable);
+	pva_kmd_debugfs_create_bool(pva, "vpu_debug",
+				    &pva->debugfs_context.vpu_debug);
+
+	// Create profiling_level file operations
+	profiling_fops = &pva->debugfs_context.profiling_level_fops;
+	profiling_fops->read = profiling_level_read;
+	profiling_fops->write = profiling_level_write;
+	profiling_fops->open = NULL;
+	profiling_fops->release = NULL;
+	profiling_fops->pdev = pva;
+	err = pva_kmd_debugfs_create_file(pva, "profiling_level",
+					  profiling_fops);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"Failed to create profiling_level debugfs file");
+		return err;
+	}
+
+	pva->debugfs_context.vpu_fops.read = &get_vpu_stats;
+	pva->debugfs_context.vpu_fops.write = NULL;
+	pva->debugfs_context.vpu_fops.pdev = pva;
+	err = pva_kmd_debugfs_create_file(pva, "vpu_stats",
+					  &pva->debugfs_context.vpu_fops);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Failed to create vpu_stats debugfs file");
+		return err;
+	}
+
+	for (uint32_t i = 0; i < NUM_VPU_BLOCKS; i++) {
+		pva->debugfs_context.vpu_ocd_fops[i].open =
+			&pva_kmd_vpu_ocd_open;
+		pva->debugfs_context.vpu_ocd_fops[i].release =
+			&pva_kmd_vpu_ocd_release;
+		pva->debugfs_context.vpu_ocd_fops[i].read =
+			&pva_kmd_vpu_ocd_read;
+		pva->debugfs_context.vpu_ocd_fops[i].write =
+			&pva_kmd_vpu_ocd_write;
+		pva->debugfs_context.vpu_ocd_fops[i].pdev = pva;
+		pva->debugfs_context.vpu_ocd_fops[i].file_data =
+			(void *)&pva->regspec.vpu_dbg_instr_reg_offset[i];
+		err = pva_kmd_debugfs_create_file(
+			pva, vpu_ocd_names[i],
+			&pva->debugfs_context.vpu_ocd_fops[i]);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err(
+				"Failed to create vpu_ocd debugfs file");
+			return err;
+		}
+	}
+
+	pva->debugfs_context.allowlist_ena_fops.read =
+		&get_vpu_allowlist_enabled;
+	pva->debugfs_context.allowlist_ena_fops.write = &update_vpu_allowlist;
+	pva->debugfs_context.allowlist_ena_fops.pdev = pva;
+	err = pva_kmd_debugfs_create_file(
+		pva, "vpu_app_authentication",
+		&pva->debugfs_context.allowlist_ena_fops);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"Failed to create vpu_app_authentication debugfs file");
+		return err;
+	}
+
+	pva->debugfs_context.allowlist_path_fops.read = &get_vpu_allowlist_path;
+	pva->debugfs_context.allowlist_path_fops.write =
+		&update_vpu_allowlist_path;
+	pva->debugfs_context.allowlist_path_fops.pdev = pva;
+	err = pva_kmd_debugfs_create_file(
+		pva, "allowlist_path",
+		&pva->debugfs_context.allowlist_path_fops);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Failed to create allowlist_path debugfs file");
+		return err;
+	}
+
+	pva->debugfs_context.fw_debug_log_level_fops.write =
+		&update_fw_debug_log_level;
+	pva->debugfs_context.fw_debug_log_level_fops.read =
+		&get_fw_debug_log_level;
+	pva->debugfs_context.fw_debug_log_level_fops.pdev = pva;
+	err = pva_kmd_debugfs_create_file(
+		pva, "fw_debug_log_level",
+		&pva->debugfs_context.fw_debug_log_level_fops);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"Failed to create fw_debug_log_level debugfs file");
+		return err;
+	}
+
+	pva_kmd_device_init_profiler(pva);
+	pva_kmd_device_init_tegra_stats(pva);
+
+	return PVA_SUCCESS;
+}
+
+void pva_kmd_debugfs_destroy_nodes(struct pva_kmd_device *pva)
+{
+	pva_kmd_device_deinit_tegra_stats(pva);
+	pva_kmd_device_deinit_profiler(pva);
+	pva_kmd_debugfs_remove_nodes(pva);
 }

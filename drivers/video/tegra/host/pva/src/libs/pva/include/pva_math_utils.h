@@ -689,6 +689,21 @@ static inline uint32_t safe_wraparound_dec_u32(uint32_t counter)
 	return result;
 }
 
+static inline uint32_t safe_wrap_add_u32(uint32_t a, uint32_t b)
+{
+	return (uint32_t)(((uint64_t)a + (uint64_t)b) & 0xFFFFFFFFU);
+}
+
+static inline uint32_t safe_wrap_sub_u32(uint32_t a, uint32_t b)
+{
+	return (uint32_t)(((uint64_t)a - (uint64_t)b) & 0xFFFFFFFFU);
+}
+
+static inline uint32_t safe_wrap_mul_u32(uint32_t a, uint32_t b)
+{
+	return (uint32_t)(((uint64_t)a * (uint64_t)b) & 0xFFFFFFFFU);
+}
+
 #define SAT_ADD_DEFINE(a, b, name, type)                                       \
 	static inline type sat_add##name(type a, type b)                       \
 	{                                                                      \

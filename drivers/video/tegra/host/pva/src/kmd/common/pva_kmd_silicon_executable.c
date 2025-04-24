@@ -748,9 +748,11 @@ load_metainfo(struct pva_kmd_device *pva, uint64_t section_iova,
 	metainfo->num_vmem_buffers = n_symbols;
 
 	data_sections_mem = pva_offset_pointer(metainfo, sizeof(*metainfo));
-	memcpy(data_sections_mem, section_infos,
-	       mulu32(n_data_sections, (uint32_t)sizeof(*section_infos),
-		      &math_err));
+	if (n_data_sections > 0U && section_infos != NULL) {
+		memcpy(data_sections_mem, section_infos,
+		       mulu32(n_data_sections, (uint32_t)sizeof(*section_infos),
+			      &math_err));
+	}
 
 	vmem_buffers_mem = pva_offset_pointer(
 		data_sections_mem,

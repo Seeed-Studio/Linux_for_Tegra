@@ -11,6 +11,138 @@
 
 /* The sizes of these structs must be explicitly padded to align to 4 bytes */
 
+#define PVA_CMD_PRIV_OPCODE_FLAG (1U << 7U)
+
+#define PVA_RESOURCE_ID_BASE 1U
+struct pva_resource_entry {
+	uint8_t access_flags : 2; // 1: RO, 2: WO, 3: RW
+	uint8_t reserved : 4;
+#define PVA_RESOURCE_TYPE_INVALID 0U
+#define PVA_RESOURCE_TYPE_DRAM 1U
+#define PVA_RESOURCE_TYPE_EXEC_BIN 2U
+#define PVA_RESOURCE_TYPE_DMA_CONFIG 3U
+	uint8_t type : 2;
+	uint8_t smmu_context_id;
+	uint8_t addr_hi;
+	uint8_t size_hi;
+	uint32_t addr_lo;
+	uint32_t size_lo;
+};
+
+struct pva_cmd_init_resource_table {
+#define PVA_CMD_OPCODE_INIT_RESOURCE_TABLE (0U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	/**< Resource table id is from 0 to 7, 0 is the device's resource table,
+	 * 1-7 are users'. */
+	uint8_t resource_table_id;
+	uint8_t resource_table_addr_hi;
+	uint8_t pad[2];
+	uint32_t resource_table_addr_lo;
+	uint32_t max_n_entries;
+};
+
+struct pva_cmd_deinit_resource_table {
+#define PVA_CMD_OPCODE_DEINIT_RESOURCE_TABLE (1U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t resource_table_id;
+	uint8_t pad[3];
+};
+
+struct pva_cmd_update_resource_table {
+#define PVA_CMD_OPCODE_UPDATE_RESOURCE_TABLE (2U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t resource_table_id;
+	uint8_t pad[3];
+	uint32_t resource_id;
+	struct pva_resource_entry entry;
+};
+
+struct pva_cmd_init_queue {
+#define PVA_CMD_OPCODE_INIT_QUEUE (3U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t ccq_id;
+	uint8_t queue_id;
+	uint8_t queue_addr_hi;
+	uint8_t syncpt_addr_hi;
+	uint32_t queue_addr_lo;
+	uint32_t max_n_submits;
+	uint32_t syncpt_addr_lo;
+	uint32_t syncpt_id;
+};
+
+struct pva_cmd_deinit_queue {
+#define PVA_CMD_OPCODE_DEINIT_QUEUE (4U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t ccq_id;
+	uint8_t queue_id;
+	uint8_t pad[2];
+};
+
+struct pva_cmd_enable_fw_profiling {
+#define PVA_CMD_OPCODE_ENABLE_FW_PROFILING (5U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t timestamp_type;
+	uint8_t pad[3];
+	uint32_t filter;
+};
+
+struct pva_cmd_disable_fw_profiling {
+#define PVA_CMD_OPCODE_DISABLE_FW_PROFILING (6U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+};
+
+struct pva_cmd_get_tegra_stats {
+#define PVA_CMD_OPCODE_GET_TEGRA_STATS (7U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t buffer_offset_hi;
+	bool enabled;
+	uint8_t pad[2];
+	uint32_t buffer_resource_id;
+	uint32_t buffer_size;
+	uint32_t buffer_offset_lo;
+};
+
+struct pva_cmd_suspend_fw {
+#define PVA_CMD_OPCODE_SUSPEND_FW (8U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+};
+
+struct pva_cmd_resume_fw {
+#define PVA_CMD_OPCODE_RESUME_FW (9U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+};
+
+struct pva_cmd_init_shared_dram_buffer {
+#define PVA_CMD_OPCODE_INIT_SHARED_DRAM_BUFFER (10U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t interface;
+	uint8_t buffer_iova_hi;
+	uint8_t pad[2];
+	uint32_t buffer_iova_lo;
+	uint32_t buffer_size;
+};
+
+struct pva_cmd_deinit_shared_dram_buffer {
+#define PVA_CMD_OPCODE_DEINIT_SHARED_DRAM_BUFFER                               \
+	(11U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t interface;
+	uint8_t pad[3];
+};
+struct pva_cmd_set_debug_log_level {
+#define PVA_CMD_OPCODE_SET_DEBUG_LOG_LEVEL (12U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint32_t log_level;
+};
+
+struct pva_cmd_set_profiling_level {
+#define PVA_CMD_OPCODE_SET_PROFILING_LEVEL (13U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint32_t level;
+};
+
+#define PVA_CMD_PRIV_OPCODE_COUNT 14U
+
 struct pva_fw_prefence {
 	uint8_t offset_hi;
 	uint8_t pad0[3];
@@ -301,7 +433,8 @@ struct pva_fw_shared_buffer_header {
 struct pva_kmd_fw_buffer_msg_header {
 #define PVA_KMD_FW_BUF_MSG_TYPE_FW_EVENT 0
 #define PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE 1
-#define PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG 2
+#define PVA_KMD_FW_BUF_MSG_TYPE_FENCE_TRACE 2
+#define PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG 3
 	uint32_t type : 8;
 	// Size of payload in bytes. Includes the size of the header.
 	uint32_t size : 24;
@@ -334,6 +467,27 @@ struct pva_kmd_fw_msg_vpu_trace {
 	uint64_t submit_id;
 };
 
+struct pva_kmd_fw_msg_fence_trace {
+	uint64_t submit_id;
+	uint64_t timestamp;
+	// For syncpt fences, fence_id is the syncpt index
+	// For semaphore fences, fence_id is the serial ID of the semaphore NvRM memory
+	uint64_t fence_id;
+	// 'offset' is the offset into the semaphore memory where the value is stored
+	// This is only valid for semaphore fences
+	// Note: Trace APIs in KMD only support 32-bit offset
+	uint32_t offset;
+	uint32_t value;
+	uint8_t ccq_id;
+	uint8_t queue_id;
+#define PVA_KMD_FW_BUF_MSG_FENCE_ACTION_WAIT 0U
+#define PVA_KMD_FW_BUF_MSG_FENCE_ACTION_SIGNAL 1U
+	uint8_t action;
+#define PVA_KMD_FW_BUF_MSG_FENCE_TYPE_SYNCPT 0U
+#define PVA_KMD_FW_BUF_MSG_FENCE_TYPE_SEMAPHORE 1U
+	uint8_t type;
+};
+
 // Resource unregister message
 struct pva_kmd_fw_msg_res_unreg {
 	uint32_t resource_id;
@@ -344,5 +498,12 @@ struct pva_kmd_fw_tegrastats {
 	uint64_t window_end_time;
 	uint64_t total_utilization[PVA_NUM_PVE];
 };
+
+#define PVA_MAX_CMDBUF_CHUNK_LEN 1024
+#define PVA_MAX_CMDBUF_CHUNK_SIZE (sizeof(uint32_t) * PVA_MAX_CMDBUF_CHUNK_LEN)
+
+#define PVA_TEST_MODE_MAX_CMDBUF_CHUNK_LEN 256
+#define PVA_TEST_MODE_MAX_CMDBUF_CHUNK_SIZE                                    \
+	(sizeof(uint32_t) * PVA_TEST_MODE_MAX_CMDBUF_CHUNK_LEN)
 
 #endif // PVA_FW_H

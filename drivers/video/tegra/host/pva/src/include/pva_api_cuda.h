@@ -11,14 +11,14 @@ extern "C" {
 #include "cuda.h"
 #include "pva_api_types.h"
 
-/**
- *  @brief Structure for cuExtend queue data needed for command submission.
- */
-struct pva_cuextend_queue_data {
-	/*! Holds a pointer to pva queue object */
-	struct pva_queue *queue;
-	/*! Holds engine affinity for command submission*/
-	uint32_t affinity;
+#define PVA_CUEXTEND_MAX_NUM_PREFENCES 16
+#define PVA_CUEXTEND_MAX_NUM_POSTFENCES 16
+
+struct pva_cuextend_submit_events {
+	struct pva_fence prefences[PVA_CUEXTEND_MAX_NUM_PREFENCES];
+	struct pva_fence postfences[PVA_CUEXTEND_MAX_NUM_POSTFENCES];
+	uint32_t num_prefences;
+	uint32_t num_postfences;
 };
 
 /**
@@ -71,27 +71,16 @@ typedef enum pva_error (*pva_cuextend_stream_unregister)(void *callback_args,
 							 uint64_t flags);
 
 /**
- *  @brief Function type for cuExtend acquire queue callback.
+ * @brief Function type for submitting a batch of command buffers via a CUDA stream.
  *
  * @param[in] callback_args Pointer to the callback arguments provided by client during cuExtend initialization.
  * @param[in] stream_payload Client data returned by \ref pva_cuextend_stream_register.
- * @param[out] queue_data Output pointer to a pva_cuextend_queue_data object.
- * @return \ref pva_error The completion status of acquire queue operation.
+ * @param[in] submit_payload Pointer to the submit payload.
+ * @return \ref pva_error The completion status of the submit operation.
  */
-typedef enum pva_error (*pva_cuextend_queue_acquire)(
-	void *callback_args, void *stream_payload,
-	struct pva_cuextend_queue_data **queue_data);
-
-/**
- *  @brief Function type for cuExtend release queue callback.
- *
- * @param[in] callback_args Pointer to the callback arguments provided by client during cuExtend initialization.
- * @param[in] stream_payload Client data returned by \ref pva_cuextend_stream_register.
- * @return \ref pva_error The completion status of release  queue operation.
- */
-typedef enum pva_error (*pva_cuextend_queue_release)(void *callback_args,
-						     void *stream_payload,
-						     void *queue_data);
+typedef enum pva_error (*pva_cuextend_stream_submit)(
+	void *callback_args, void *stream_payload, void *submit_payload,
+	struct pva_cuextend_submit_events *submit_events);
 
 /**
  * @brief Function type for retrieving error code from cuExtend.
@@ -128,12 +117,10 @@ struct pva_cuextend_callbacks {
 	pva_cuextend_stream_register stream_reg;
 	/*! Holds the unregister stream callback */
 	pva_cuextend_stream_unregister stream_unreg;
-	/*! Holds the acquire queue callback */
-	pva_cuextend_queue_acquire queue_acquire;
-	/*! Holds the release queue callback */
-	pva_cuextend_queue_release queue_release;
 	/*! Holds the teardown callback */
 	pva_cuextend_teardown teardown;
+	/*! Holds the stream submit callback */
+	pva_cuextend_stream_submit stream_submit;
 	/*! Pointer to the callback arguments provided by client during cuExtend initialization */
 	void *args;
 };
@@ -188,22 +175,32 @@ enum pva_error pva_cuextend_memory_import(struct pva_context *ctx,
 /**
  * @brief Submit a batch of command buffers via a CUDA stream.
  *
- * @param[in] queue Pointer to the queue. If queue is not NULL, this API will try to submit the client tasks to this queue directly.
- *                  Otherwise, it will call queue_acquire callback to query a pva_queue object from stream payload, and then submit
- *                  the tasks to the queried queue.
- * @param[in] stream A CUDA stream.
- * @param[in] submit_infos Array of submit info structures.
- * @param[in] count Number of submit info structures.
- * @param[in] timeout_ms Timeout in milliseconds. PVA_TIMEOUT_INF for infinite.
+ * @param[in] ctx Pointer to the PVA context.
+ * @param[in] cuStream A CUDA stream.
+ * @param[in] client_stream A client stream.
+ * @param[in] submit_payload Pointer to the submit payload.
  * @return \ref pva_error The completion status of the submit operation.
- *
- * @note Concurrent submission to the same queue needs to be serialized by the
- *       caller.
  */
-enum pva_error
-pva_cuextend_cmdbuf_batch_submit(struct pva_queue *queue, CUstream stream,
-				 struct pva_cmdbuf_submit_info *submit_infos,
-				 uint32_t count, uint64_t timeout_ms);
+enum pva_error pva_cuextend_cmdbuf_batch_submit(struct pva_context *ctx,
+						CUstream cuStream,
+						void *client_stream,
+						void *submit_payload);
+
+/**
+ * @brief Get the payload associated with a CUDA stream.
+ *
+ * Returns the payload which was associated with the CUDA stream during registration callback.
+ *
+ * @param[in] ctx Pointer to the PVA context.
+ * @param[in] cuStream A CUDA stream.
+ * @param[out] stream_payload Pointer to the stream payload.
+ * @return PVA_SUCCESS if the stream payload is successfully retrieved
+ *         PVA_BAD_PARAMETER_ERROR if any of the parameters are NULL
+ *         PVA_CUDA_INIT_FAILED if the cuExtend was not initialized for the context
+ */
+enum pva_error pva_cuextend_get_stream_payload(struct pva_context *ctx,
+					       CUstream cuStream,
+					       void **stream_payload);
 
 #ifdef __cplusplus
 }

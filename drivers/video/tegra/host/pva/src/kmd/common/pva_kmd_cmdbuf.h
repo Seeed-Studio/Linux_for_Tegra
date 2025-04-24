@@ -143,6 +143,7 @@ static inline void pva_kmd_set_cmd_init_resource_table(
 	struct pva_cmd_init_resource_table *cmd, uint8_t resource_table_id,
 	uint64_t iova_addr, uint32_t max_num_entries)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_INIT_RESOURCE_TABLE;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->resource_table_id = resource_table_id;
@@ -155,6 +156,7 @@ static inline void
 pva_kmd_set_cmd_deinit_resource_table(struct pva_cmd_deinit_resource_table *cmd,
 				      uint8_t resource_table_id)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_DEINIT_RESOURCE_TABLE;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->resource_table_id = resource_table_id;
@@ -162,22 +164,29 @@ pva_kmd_set_cmd_deinit_resource_table(struct pva_cmd_deinit_resource_table *cmd,
 
 static inline void pva_kmd_set_cmd_init_queue(struct pva_cmd_init_queue *cmd,
 					      uint8_t ccq_id, uint8_t queue_id,
-					      uint64_t iova_addr,
-					      uint32_t max_num_submit)
+					      uint64_t queue_addr,
+					      uint32_t max_num_submit,
+					      uint32_t syncpt_id,
+					      uint64_t syncpt_addr)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_INIT_QUEUE;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->ccq_id = ccq_id;
 	cmd->queue_id = queue_id;
-	cmd->queue_addr_lo = iova_lo(iova_addr);
-	cmd->queue_addr_hi = iova_hi(iova_addr);
+	cmd->queue_addr_lo = iova_lo(queue_addr);
+	cmd->queue_addr_hi = iova_hi(queue_addr);
 	cmd->max_n_submits = max_num_submit;
+	cmd->syncpt_id = syncpt_id;
+	cmd->syncpt_addr_lo = iova_lo(syncpt_addr);
+	cmd->syncpt_addr_hi = iova_hi(syncpt_addr);
 }
 
 static inline void
 pva_kmd_set_cmd_deinit_queue(struct pva_cmd_deinit_queue *cmd, uint8_t ccq_id,
 			     uint8_t queue_id)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_DEINIT_QUEUE;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->ccq_id = ccq_id;
@@ -188,6 +197,7 @@ static inline void pva_kmd_set_cmd_update_resource_table(
 	struct pva_cmd_update_resource_table *cmd, uint32_t resource_table_id,
 	uint32_t resource_id, struct pva_resource_entry const *entry)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_UPDATE_RESOURCE_TABLE;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->resource_table_id = resource_table_id;
@@ -199,6 +209,7 @@ static inline void
 pva_kmd_set_cmd_unregister_resource(struct pva_cmd_unregister_resource *cmd,
 				    uint32_t resource_id)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_UNREGISTER_RESOURCE;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->resource_id = resource_id;
@@ -208,6 +219,7 @@ static inline void
 pva_kmd_set_cmd_enable_fw_profiling(struct pva_cmd_enable_fw_profiling *cmd,
 				    uint32_t filter, uint8_t timestamp_type)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_ENABLE_FW_PROFILING;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->filter = filter;
@@ -217,6 +229,7 @@ pva_kmd_set_cmd_enable_fw_profiling(struct pva_cmd_enable_fw_profiling *cmd,
 static inline void
 pva_kmd_set_cmd_disable_fw_profiling(struct pva_cmd_disable_fw_profiling *cmd)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_DISABLE_FW_PROFILING;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 }
@@ -225,6 +238,7 @@ static inline void pva_kmd_set_cmd_get_tegra_stats(
 	struct pva_cmd_get_tegra_stats *cmd, uint32_t buffer_resource_id,
 	uint32_t buffer_size, uint64_t offset, bool enabled)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_GET_TEGRA_STATS;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->buffer_resource_id = buffer_resource_id;
@@ -238,6 +252,7 @@ static inline void
 pva_kmd_set_cmd_set_debug_log_level(struct pva_cmd_set_debug_log_level *cmd,
 				    uint32_t log_level)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_SET_DEBUG_LOG_LEVEL;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->log_level = log_level;
@@ -245,24 +260,23 @@ pva_kmd_set_cmd_set_debug_log_level(struct pva_cmd_set_debug_log_level *cmd,
 
 static inline void pva_kmd_set_cmd_suspend_fw(struct pva_cmd_suspend_fw *cmd)
 {
-	uint64_t len = (sizeof(*cmd) / sizeof(uint32_t));
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_SUSPEND_FW;
-	ASSERT(len <= 255u);
-	cmd->header.len = (uint8_t)(len);
+	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 }
 
 static inline void pva_kmd_set_cmd_resume_fw(struct pva_cmd_resume_fw *cmd)
 {
-	uint64_t len = (sizeof(*cmd) / sizeof(uint32_t));
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_RESUME_FW;
-	ASSERT(len <= 255u);
-	cmd->header.len = (uint8_t)(len);
+	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 }
 
 static inline void pva_kmd_set_cmd_init_shared_dram_buffer(
 	struct pva_cmd_init_shared_dram_buffer *cmd, uint8_t interface,
 	uint32_t buffer_iova, uint32_t buffer_size)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_INIT_SHARED_DRAM_BUFFER;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->buffer_iova_hi = iova_hi(buffer_iova);
@@ -274,6 +288,7 @@ static inline void pva_kmd_set_cmd_init_shared_dram_buffer(
 static inline void pva_kmd_set_cmd_deinit_shared_dram_buffer(
 	struct pva_cmd_deinit_shared_dram_buffer *cmd, uint8_t interface)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_DEINIT_SHARED_DRAM_BUFFER;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->interface = interface;
@@ -283,8 +298,12 @@ static inline void
 pva_kmd_set_cmd_set_profiling_level(struct pva_cmd_set_profiling_level *cmd,
 				    uint32_t level)
 {
+	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_SET_PROFILING_LEVEL;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->level = level;
 }
+
+#define CMD_LEN(cmd_type) (sizeof(cmd_type) / sizeof(uint32_t))
+
 #endif // PVA_KMD_CMDBUF_H

@@ -53,15 +53,6 @@ void pva_kmd_read_syncpt_val(struct pva_kmd_device *pva, uint32_t syncpt_id,
 	}
 }
 
-void pva_kmd_get_syncpt_iova(struct pva_kmd_device *pva, uint32_t syncpt_id,
-			     uint64_t *syncpt_iova)
-{
-	uint32_t offset = 0;
-
-	offset = nvpva_syncpt_unit_interface_get_byte_offset_ext(syncpt_id);
-	*syncpt_iova = safe_addu64(pva->syncpt_ro_iova, (uint64_t)offset);
-}
-
 void pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 {
 	phys_addr_t base;
@@ -69,7 +60,6 @@ void pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 	int err = 0;
 	uint32_t stride, num_syncpts;
 	uint32_t syncpt_page_size;
-	uint32_t syncpt_offset[PVA_NUM_RW_SYNCPTS];
 	dma_addr_t sp_start;
 	struct device *dev;
 	struct pva_kmd_linux_device_data *device_data =
@@ -92,53 +82,38 @@ void pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 	syncpt_page_size = nvpva_syncpt_unit_interface_get_byte_offset_ext(1);
 	dev = &device_data->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
 	if (iommu_get_domain_for_dev(dev)) {
-		sp_start = dma_map_resource(dev, base, size, DMA_TO_DEVICE,
+		sp_start = dma_map_resource(dev, base, size, DMA_BIDIRECTIONAL,
 					    DMA_ATTR_SKIP_CPU_SYNC);
 		if (dma_mapping_error(dev, sp_start)) {
-			FAULT("Failed to pin RO syncpoints\n");
+			FAULT("Failed to pin syncpoints\n");
 		}
 	} else {
-		FAULT("Failed to pin RO syncpoints\n");
+		FAULT("Failed to pin syncpoints\n");
 	}
-	pva->syncpt_ro_iova = sp_start;
-	pva->syncpt_offset = syncpt_page_size;
-	pva->num_syncpts = (size / syncpt_page_size);
+	pva->ro_syncpt_base_iova = sp_start;
+	pva->syncpt_page_size = syncpt_page_size;
+	pva->num_ro_syncpts = num_syncpts;
+
+	// The same region is also used for RW syncpts...
+	pva->rw_syncpt_base_iova = sp_start;
+	pva->rw_syncpt_region_size = size;
 
 	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
-		pva->syncpt_rw[i].syncpt_id = nvpva_get_syncpt_client_managed(
-			props->pdev, "pva_syncpt");
-		if (pva->syncpt_rw[i].syncpt_id == 0) {
+		uint32_t syncpt_id;
+		uint64_t syncpt_iova;
+
+		syncpt_id = nvpva_get_syncpt_client_managed(props->pdev,
+							    "pva_syncpt");
+		if (syncpt_id == 0) {
 			FAULT("Failed to get syncpt\n");
 		}
-		syncpt_offset[i] =
+		syncpt_iova = safe_addu64(
+			sp_start,
 			nvpva_syncpt_unit_interface_get_byte_offset_ext(
-				pva->syncpt_rw[i].syncpt_id);
-		err = nvpva_syncpt_read_ext_check(
-			props->pdev, pva->syncpt_rw[i].syncpt_id,
-			&pva->syncpt_rw[i].syncpt_value);
-		if (err < 0) {
-			FAULT("Failed to read syncpoint value\n");
-		}
-	}
+				syncpt_id));
 
-	pva->syncpt_rw_iova =
-		dma_map_resource(dev,
-				 safe_addu64(base, (uint64_t)syncpt_offset[0]),
-				 safe_mulu64((uint64_t)pva->syncpt_offset,
-					     (uint64_t)PVA_NUM_RW_SYNCPTS),
-				 DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
-	if (dma_mapping_error(dev, pva->syncpt_rw_iova)) {
-		FAULT("Failed to pin RW syncpoints\n");
-	}
-	pva->syncpt_rw[0].syncpt_iova = pva->syncpt_rw_iova;
-	for (uint32_t i = 1; i < PVA_NUM_RW_SYNCPTS; i++) {
-		if (safe_addu32(syncpt_offset[i - 1], pva->syncpt_offset) !=
-		    syncpt_offset[i]) {
-			FAULT("RW syncpts are not contiguous\n");
-		}
-		pva->syncpt_rw[i].syncpt_iova = safe_addu64(
-			pva->syncpt_rw_iova,
-			safe_mulu64((uint64_t)pva->syncpt_offset, (uint64_t)i));
+		pva->rw_syncpts[i].syncpt_iova = syncpt_iova;
+		pva->rw_syncpts[i].syncpt_id = syncpt_id;
 	}
 }
 
@@ -166,25 +141,19 @@ void pva_kmd_linux_host1x_deinit(struct pva_kmd_device *pva)
 
 	dev = &device_data->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
 	if (iommu_get_domain_for_dev(dev)) {
-		dma_unmap_resource(dev, pva->syncpt_ro_iova, size,
-				   DMA_TO_DEVICE, DMA_ATTR_SKIP_CPU_SYNC);
-		dma_unmap_resource(dev, pva->syncpt_rw_iova,
-				   safe_mulu64((uint64_t)pva->syncpt_offset,
-					       (uint64_t)PVA_NUM_RW_SYNCPTS),
+		dma_unmap_resource(dev, pva->ro_syncpt_base_iova, size,
 				   DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
 	} else {
 		FAULT("Failed to unmap syncpts\n");
 	}
 	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
 		nvpva_syncpt_put_ref_ext(props->pdev,
-					 pva->syncpt_rw[i].syncpt_id);
-		pva->syncpt_rw[i].syncpt_id = 0;
-		pva->syncpt_rw[i].syncpt_iova = 0;
-		pva->syncpt_rw[i].syncpt_value = 0;
+					 pva->rw_syncpts[i].syncpt_id);
+		pva->rw_syncpts[i].syncpt_id = 0;
+		pva->rw_syncpts[i].syncpt_iova = 0;
 	}
-	pva->syncpt_ro_iova = 0;
-	pva->syncpt_rw_iova = 0;
-	pva->syncpt_offset = 0;
+	pva->ro_syncpt_base_iova = 0;
+	pva->syncpt_page_size = 0;
 	nvpva_syncpt_unit_interface_deinit(props->pdev);
 }
 
@@ -235,21 +204,11 @@ void pva_kmd_power_off(struct pva_kmd_device *pva)
 		pva_kmd_linux_device_get_data(pva);
 	struct nvpva_device_data *props = device_data->pva_device_properties;
 
-	// Set reset line before cutting off power
-
-	/* Power management operation is asynchronous. We don't control when PVA
-	 * will really be powered down. However, we need to free memories after
-	 * this call. Therefore, we assert the reset line to stop PVA from any
-	 * further activity. */
-	reset_control_acquire(props->reset_control);
-	reset_control_assert(props->reset_control);
-	reset_control_release(props->reset_control);
-
 	pm_runtime_mark_last_busy(&props->pdev->dev);
 	pm_runtime_put(&props->pdev->dev);
 }
 
-void pva_kmd_fw_reset_assert(struct pva_kmd_device *pva)
+void pva_kmd_set_reset_line(struct pva_kmd_device *pva)
 {
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);

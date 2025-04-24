@@ -94,9 +94,20 @@ bind_static_dram_slot(struct pva_dma_config_resource *dma_config,
 	int64_t slot_access_end_addr = 0LL;
 	uint64_t slot_surface_combined_offset = 0ULL;
 	pva_math_error math_error = MATH_OP_SUCCESS;
+	uint8_t slot_access_flags =
+		PVA_EXTRACT16(slot->flags, PVA_FW_DMA_SLOT_FLAG_ACCESS_MSB,
+			      PVA_FW_DMA_SLOT_FLAG_ACCESS_LSB, uint8_t);
 
 	if ((slot->flags & PVA_FW_DMA_SLOT_FLAG_DRAM) == 0) {
 		pva_kmd_log_err("Binding DRAM buffer to incompatible slot");
+		err = PVA_INVALID_BINDING;
+		goto out;
+	}
+
+	if ((slot_access_flags & dram_res->mem->iova_access_flags) !=
+	    slot_access_flags) {
+		pva_kmd_log_err(
+			"DRAM buffer does not have the required access permissions");
 		err = PVA_INVALID_BINDING;
 		goto out;
 	}

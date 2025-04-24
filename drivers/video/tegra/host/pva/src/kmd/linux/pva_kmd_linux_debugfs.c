@@ -130,8 +130,9 @@ void pva_kmd_debugfs_create_u32(struct pva_kmd_device *pva, const char *name,
 	debugfs_create_u32(name, 0644, de, pdata);
 }
 
-void pva_kmd_debugfs_create_file(struct pva_kmd_device *pva, const char *name,
-				 struct pva_kmd_file_ops *pvafops)
+enum pva_error pva_kmd_debugfs_create_file(struct pva_kmd_device *pva,
+					   const char *name,
+					   struct pva_kmd_file_ops *pvafops)
 {
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
@@ -142,7 +143,12 @@ void pva_kmd_debugfs_create_file(struct pva_kmd_device *pva, const char *name,
 	struct dentry *file;
 
 	file = debugfs_create_file(name, 0644, de, pvafops, fops);
-	ASSERT(file != NULL);
+	if (file == NULL) {
+		pva_kmd_log_err("Failed to create debugfs file");
+		return PVA_INVAL;
+	}
+
+	return PVA_SUCCESS;
 }
 
 void pva_kmd_debugfs_remove_nodes(struct pva_kmd_device *pva)

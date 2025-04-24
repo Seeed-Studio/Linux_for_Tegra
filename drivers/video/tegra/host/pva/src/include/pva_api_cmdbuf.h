@@ -5,13 +5,9 @@
 #define PVA_API_CMDBUF_H
 #include "pva_api_types.h"
 
-//Maximum number of slots for maintaining Timestamps
-#define PVA_MAX_QUERY_SLOTS_COUNT 32U
-
 /** The common header for all commands.
  */
 struct pva_cmd_header {
-#define PVA_CMD_PRIV_OPCODE_FLAG (1U << 7U)
 	/** Opcode for the command. MSB of opcode indicates whether this command is
 	 * privileged or not */
 	uint8_t opcode;
@@ -33,6 +29,26 @@ struct pva_cmd_header {
 	uint8_t barrier_group;
 	/** Length in 4-bytes, including this header. */
 	uint8_t len;
+};
+
+struct pva_dma_misr_config {
+#define PVA_DMA_FLAG_MISR_ENABLE 1u
+	uint8_t enabled;
+	uint8_t reserved;
+	uint16_t channel_mask;
+	uint32_t seed_crc0;
+	uint32_t seed_crc1;
+	uint32_t ref_addr;
+	uint32_t ref_data_1;
+	uint32_t ref_data_2;
+	uint32_t misr_timeout;
+};
+
+struct pva_dma_misr {
+	uint32_t slot_mask_low0;
+	uint32_t slot_mask_low1;
+	uint32_t slot_mask_high;
+	struct pva_dma_misr_config misr_config;
 };
 
 struct pva_user_dma_allowance {
@@ -189,11 +205,6 @@ struct pva_cmd_set_vpu_parameter_with_buffer {
 	uint32_t src_dram_offset_lo;
 };
 
-/** For set_vpu_parameter_with_address command, set this flag in header.flags to
- * indicate that the target symbol is the legacy pointer symbol type:
- * pva_fw_vpu_legacy_ptr_symbol, which only supports 32bit offset and 32bit
- * size. */
-#define PVA_CMD_FLAGS_USE_LEGACY_POINTER 0x1
 /** Copy the address of a DRAM buffer to a VPU variable. The variable must be
  * laid out exactly according to pva_fw_vpu_ptr_symbol
  */
@@ -208,7 +219,6 @@ struct pva_cmd_set_vpu_parameter_with_address {
 };
 
 #define PVA_MAX_DMA_SETS_PER_DMA_ENGINE 4
-#define PVA_DMA_CONFIG_FETCH_BUFFER_PER_DMA_ENGINE 1
 
 /** This command first acquires the TCM scratch and then fetches DMA configuration
  * into the scratch. The command does not modify DMA
@@ -291,17 +301,7 @@ struct pva_cmd_run_ppe {
 	uint32_t entry_point_index;
 };
 
-#define PVA_BARRIER_GROUP_0 0U
-#define PVA_BARRIER_GROUP_1 1U
-#define PVA_BARRIER_GROUP_2 2U
-#define PVA_BARRIER_GROUP_3 3U
-#define PVA_BARRIER_GROUP_4 4U
-#define PVA_BARRIER_GROUP_5 5U
-#define PVA_BARRIER_GROUP_6 6U
-#define PVA_BARRIER_GROUP_7 7U
-
 #define PVA_MAX_BARRIER_GROUPS 8U
-
 #define PVA_BARRIER_GROUP_INVALID 0xFFU
 
 /**
@@ -464,29 +464,15 @@ struct pva_cmd_set_vpu_instance_parameter {
 	uint32_t symbol_id;
 };
 
-struct pva_cmd_run_unit_tests {
-#define PVA_CMD_OPCODE_RUN_UNIT_TESTS 30U
+struct pva_cmd_set_vpu_print_buffer {
+#define PVA_CMD_OPCODE_SET_VPU_PRINT_BUFFER 30U
 	struct pva_cmd_header header;
-#define PVA_FW_UTESTS_MAX_ARGC 16U
-	uint8_t argc;
-	uint8_t pad[3];
-	uint32_t in_resource_id;
-	uint32_t in_offset;
-	uint32_t in_size;
-	uint32_t out_resource_id;
-	uint32_t out_offset;
-	uint32_t out_size;
-};
-
-struct pva_cmd_set_vpu_print_cb {
-#define PVA_CMD_OPCODE_SET_VPU_PRINT_CB 31U
-	struct pva_cmd_header header;
-	uint32_t cb_resource_id;
-	uint32_t cb_offset;
+	uint32_t resource_id;
+	uint32_t offset;
 };
 
 struct pva_cmd_invalidate_l2sram {
-#define PVA_CMD_OPCODE_INVALIDATE_L2SRAM 32U
+#define PVA_CMD_OPCODE_INVALIDATE_L2SRAM 31U
 	struct pva_cmd_header header;
 	uint8_t dram_offset_hi;
 	uint8_t pad[3];
@@ -496,19 +482,18 @@ struct pva_cmd_invalidate_l2sram {
 };
 
 struct pva_cmd_flush_l2sram {
-#define PVA_CMD_OPCODE_FLUSH_L2SRAM 33U
+#define PVA_CMD_OPCODE_FLUSH_L2SRAM 32U
 	struct pva_cmd_header header;
+	uint8_t dram_offset_hi;
+	uint8_t pad[3];
+	uint32_t dram_resource_id;
+	uint32_t dram_offset_lo;
+	uint32_t l2sram_size;
 	struct pva_user_dma_allowance user_dma;
 };
 
-struct pva_cmd_err_inject {
-#define PVA_CMD_OPCODE_ERR_INJECT 34U
-	struct pva_cmd_header header;
-	enum pva_error_inject_codes err_inject_code;
-};
-
 struct pva_cmd_patch_l2sram_offset {
-#define PVA_CMD_OPCODE_PATCH_L2SRAM_OFFSET 35U
+#define PVA_CMD_OPCODE_PATCH_L2SRAM_OFFSET 33U
 	struct pva_cmd_header header;
 	uint8_t dma_set_id;
 	uint8_t slot_id;
@@ -520,130 +505,16 @@ struct pva_cmd_patch_l2sram_offset {
  * mapped to a new logical barrier group. This allows re-using barrier ids within a command buffer.
  */
 struct pva_cmd_retire_barrier_group {
-#define PVA_CMD_OPCODE_RETIRE_BARRIER_GROUP 36U
+#define PVA_CMD_OPCODE_RETIRE_BARRIER_GROUP 34U
 	struct pva_cmd_header header;
 };
 
-struct pva_cmd_gr_check {
-#define PVA_CMD_OPCODE_GR_CHECK 37U
+struct pva_cmd_setup_misr {
+#define PVA_CMD_OPCODE_SETUP_MISR 35U
 	struct pva_cmd_header header;
+	struct pva_dma_misr misr_params;
 };
 
-#define PVA_CMD_OPCODE_COUNT 38U
-
-struct pva_cmd_init_resource_table {
-#define PVA_CMD_OPCODE_INIT_RESOURCE_TABLE (0U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	/**< Resource table id is from 0 to 7, 0 is the device's resource table,
-	 * 1-7 are users'. */
-	uint8_t resource_table_id;
-	uint8_t resource_table_addr_hi;
-	uint8_t pad[2];
-	uint32_t resource_table_addr_lo;
-	uint32_t max_n_entries;
-};
-
-struct pva_cmd_deinit_resource_table {
-#define PVA_CMD_OPCODE_DEINIT_RESOURCE_TABLE (1U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint8_t resource_table_id;
-	uint8_t pad[3];
-};
-
-struct pva_cmd_update_resource_table {
-#define PVA_CMD_OPCODE_UPDATE_RESOURCE_TABLE (2U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint8_t resource_table_id;
-	uint8_t pad[3];
-	uint32_t resource_id;
-	struct pva_resource_entry entry;
-};
-
-struct pva_cmd_init_queue {
-#define PVA_CMD_OPCODE_INIT_QUEUE (3U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint8_t ccq_id;
-	uint8_t queue_id;
-	uint8_t queue_addr_hi;
-	uint8_t pad;
-	uint32_t queue_addr_lo;
-	uint32_t max_n_submits;
-};
-
-struct pva_cmd_deinit_queue {
-#define PVA_CMD_OPCODE_DEINIT_QUEUE (4U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint8_t ccq_id;
-	uint8_t queue_id;
-	uint8_t pad[2];
-};
-
-struct pva_cmd_enable_fw_profiling {
-#define PVA_CMD_OPCODE_ENABLE_FW_PROFILING (5U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint8_t timestamp_type;
-	uint8_t pad[3];
-	uint32_t filter;
-};
-
-struct pva_cmd_disable_fw_profiling {
-#define PVA_CMD_OPCODE_DISABLE_FW_PROFILING (6U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-};
-
-struct pva_cmd_get_tegra_stats {
-#define PVA_CMD_OPCODE_GET_TEGRA_STATS (7U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint8_t buffer_offset_hi;
-	bool enabled;
-	uint8_t pad[2];
-	uint32_t buffer_resource_id;
-	uint32_t buffer_size;
-	uint32_t buffer_offset_lo;
-};
-
-struct pva_cmd_suspend_fw {
-#define PVA_CMD_OPCODE_SUSPEND_FW (8U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-};
-
-struct pva_cmd_resume_fw {
-#define PVA_CMD_OPCODE_RESUME_FW (9U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-};
-
-struct pva_cmd_init_shared_dram_buffer {
-#define PVA_CMD_OPCODE_INIT_SHARED_DRAM_BUFFER (10U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint8_t interface;
-	uint8_t buffer_iova_hi;
-	uint8_t pad[2];
-	uint32_t buffer_iova_lo;
-	uint32_t buffer_size;
-};
-
-struct pva_cmd_deinit_shared_dram_buffer {
-#define PVA_CMD_OPCODE_DEINIT_SHARED_DRAM_BUFFER                               \
-	(11U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint8_t interface;
-	uint8_t pad[3];
-};
-struct pva_cmd_set_debug_log_level {
-#define PVA_CMD_OPCODE_SET_DEBUG_LOG_LEVEL (12U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint32_t log_level;
-};
-
-struct pva_cmd_set_profiling_level {
-#define PVA_CMD_OPCODE_SET_PROFILING_LEVEL (13U | PVA_CMD_PRIV_OPCODE_FLAG)
-	struct pva_cmd_header header;
-	uint32_t level;
-};
-
-#define PVA_CMD_PRIV_OPCODE_COUNT 14U
-
-#define PVA_MAX_CMDBUF_CHUNK_LEN 1024
-#define PVA_MAX_CMDBUF_CHUNK_SIZE (sizeof(uint32_t) * PVA_MAX_CMDBUF_CHUNK_LEN)
+#define PVA_CMD_OPCODE_MAX 36U
 
 #endif // PVA_API_CMDBUF_H

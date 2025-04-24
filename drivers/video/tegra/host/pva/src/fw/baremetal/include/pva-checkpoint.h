@@ -224,6 +224,11 @@
 #define PVA_ABORT_NOC_BIST (0xfcU)
 //! @endcond
 
+/**
+ * @brief Minor code for abort in case of FSP abort.
+ */
+#define PVA_ABORT_FSP 0x42U
+
 /** @} */
 
 /**
@@ -298,5 +303,37 @@
 #if (0 == DOXYGEN_DOCUMENTATION)
 #define PVA_ABORT_IRQ_TEST_HOST (0xE002U)
 #endif
+/** @} */
+
+/**
+ * @defgroup PVA_ABORT_ARGUMENTS_FSP Argument to pva_abort() from FSP abort
+ * @ingroup PVA_ABORT_ARGUMENTS
+ * @{
+ */
+
+/**
+ * @brief Minor Code for FSP aborts because of safertos errors
+ */
+#define PVA_ABORT_FSP_SAFERTOS (0xE001U)
+
+/**
+ * @brief Minor Code for FSP aborts because of asserts in fsp
+ */
+#define PVA_ABORT_FSP_ASSERT (0xE002U)
+
+/**
+ * @brief Minor Code for FSP aborts because of exception in fsp
+ */
+#define PVA_ABORT_FSP_EXCEPTION (0xE003U)
+
+/**
+ * @brief Minor Code for FSP aborts because of stack guard failure
+ */
+#define PVA_ABORT_FSP_STACK (0xE004U)
+
+/**
+ * @brief Minor Code for Unknown FSP aborts
+ */
+#define PVA_ABORT_FSP_UNKNOWN (0xE005U)
 /** @} */
 #endif

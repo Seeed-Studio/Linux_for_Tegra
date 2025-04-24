@@ -21,6 +21,7 @@ struct pva_kmd_device_memory {
 	uint64_t size; /**< Size of the mapping. */
 	struct pva_kmd_device *pva; /**< The PVA this memory is mapped to. */
 	uint32_t smmu_ctx_idx; /**< The SMMU context this memory is mapped to. */
+	uint32_t iova_access_flags; /**< Access flags for the memory. RO - 1/WO - 2/RW - 3 */
 };
 
 /**

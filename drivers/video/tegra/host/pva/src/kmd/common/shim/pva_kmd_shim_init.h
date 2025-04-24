@@ -14,9 +14,6 @@ void pva_kmd_device_plat_deinit(struct pva_kmd_device *pva);
 void pva_kmd_read_syncpt_val(struct pva_kmd_device *pva, uint32_t syncpt_id,
 			     uint32_t *syncpt_value);
 
-void pva_kmd_get_syncpt_iova(struct pva_kmd_device *pva, uint32_t syncpt_id,
-			     uint64_t *syncpt_iova);
-
 void pva_kmd_allocate_syncpts(struct pva_kmd_device *pva);
 
 /**
@@ -34,7 +31,7 @@ void pva_kmd_power_off(struct pva_kmd_device *pva);
  * user submission halted. This is requied for host1x
  * watchdog, or kmd submission timeout failures.
  */
-void pva_kmd_fw_reset_assert(struct pva_kmd_device *pva);
+void pva_kmd_freeze_fw(struct pva_kmd_device *pva);
 
 /**
  * @brief Initialize firmware.
@@ -60,4 +57,18 @@ enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva);
  * @param pva pointer to the PVA device to de-initialize
  */
 void pva_kmd_deinit_fw(struct pva_kmd_device *pva);
+
+/**
+ * @brief Disable all interrupts without waiting for running interrupt handlers
+ * to complete.
+ *
+ * We don't wait for running interrupt handlers to complete because we want to
+ * be able to call this function from interrupt handles themselves.
+ *
+ * This function is to be called when PVA enters bad state and we want to
+ * protect KMD from potential interrupt floods from PVA (particularly watchdog
+ * interrupt that will trigger repeatedly by HW).
+ */
+void pva_kmd_disable_all_interrupts_nosync(struct pva_kmd_device *pva);
+
 #endif // PVA_KMD_SHIM_INIT_H

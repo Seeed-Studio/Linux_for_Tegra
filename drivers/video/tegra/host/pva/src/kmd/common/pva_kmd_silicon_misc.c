@@ -23,3 +23,10 @@ uint32_t pva_kmd_get_ccq_space(struct pva_kmd_device *pva, uint8_t ccq_id)
 			    PVA_REG_CCQ_STATUS2_NUM_ENTRIES_LSB, uint32_t);
 	return safe_subu32((uint32_t)PVA_CCQ_DEPTH, len) / 2U;
 }
+
+void pva_kmd_disable_all_interrupts_nosync(struct pva_kmd_device *pva)
+{
+	for (int i = 0; i < PVA_KMD_INTR_LINE_COUNT; i++) {
+		pva_kmd_disable_intr_nosync(pva, (enum pva_kmd_intr_line)i);
+	}
+}

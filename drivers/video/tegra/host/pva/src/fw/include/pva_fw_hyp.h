@@ -49,7 +49,9 @@
  * |    23-21     |  Reserved             |  Reserved for future use                                                                                                                                  |
  * |     20       |  CG DISABLE           |  To indicate the PVA R5 FW should disable the clock gating feature                                                                                        |
  * |     19       |  VMEM RD WAR DISABLE  |  To disable the VMEM Read fail workaround feature                                                                                                         |
- * |    18-16     |  Reserved             |  Reserved for future use                                                                                                                                  |
+ * |     18       |  TEST_MODE_ENABLE     |  To enter test mode. See Documentation.                                                                                                                   |
+ * |     17       |  USE_XBAR_RAW         |  Reserved for future use                                                                                                                                  |
+ * |     16       |  Reserved             |  Reserved for future use                                                                                                                                  |
  *
  * The table below shows the mapping which is sent by FW to KMD
  *
@@ -72,11 +74,20 @@
 #define PVA_BOOT_SEMA_CG_DISABLE PVA_BIT(20U)
 //! @cond DISABLE_DOCUMENTATION
 
+/** Tell firmware to enter test mode */
+#define PVA_BOOT_SEMA_TEST_MODE_ENABLE PVA_BIT(18U)
+
 /** Tell firmware that block linear surfaces are in XBAR_RAW format instead of
  * TEGRA_RAW format */
 #define PVA_BOOT_SEMA_USE_XBAR_RAW PVA_BIT(17U)
 
+/** Tell firmware to enable test mode */
+#define PVA_BOOT_SEMA_TEST_MODE PVA_BIT(16U)
+
 #define PVA_BOOT_SEMA 0U
+#define PVA_RO_SYNC_BASE_SEMA 1U
+#define PVA_RW_SYNC_BASE_SEMA 2U
+#define PVA_RW_SYNC_SIZE_SEMA 3U
 
 /**
  * @brief This macro has the value to be set by KMD in the shared semaphores

@@ -50,7 +50,7 @@ void pva_kmd_handle_hyp_msg(void *pva_dev, uint32_t const *data, uint8_t len)
 		memcpy(abort_msg + 2, &data[1], size);
 		abort_msg[PVA_FW_MSG_ABORT_STR_MAX_LEN] = '\0';
 		pva_kmd_log_err(abort_msg);
-		pva_kmd_abort(pva);
+		pva_kmd_abort_fw(pva);
 	} break;
 	case PVA_FW_MSG_TYPE_FLUSH_PRINT:
 		pva_kmd_drain_fw_print(&pva->fw_print_buffer);

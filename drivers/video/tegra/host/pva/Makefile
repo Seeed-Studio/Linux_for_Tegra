@@ -22,6 +22,7 @@ pva_objs += \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_context.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_debugfs.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_device.o \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_devmem_pool.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_dma_cfg.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_dma_cfg_binding.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_dma_cfg_validate.o \
@@ -70,6 +71,7 @@ pva_inc_flags += \
     -I$(PVA_SYS_ABSDIR)/src/kmd/include \
     -I$(PVA_SYS_ABSDIR)/src/kmd/linux/include \
     -I$(PVA_SYS_ABSDIR)/src/libs/pva/include \
+    -I$(PVA_SYS_ABSDIR)/src/private_api \
 
 pva_def_flags += \
     -DPVA_BUILD_MODE=PVA_BUILD_MODE_L4T \

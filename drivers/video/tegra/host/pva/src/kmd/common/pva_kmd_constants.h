@@ -23,7 +23,7 @@
 // clang-format off
 #if PVA_BUILD_MODE == PVA_BUILD_MODE_SIM
     #define PVA_KMD_TIMEOUT_FACTOR 100
-#elif (PVA_BUILD_MODE == PVA_BUILD_MODE_NATIVE) && (PVA_IS_DEBUG == 1)
+#elif (PVA_BUILD_MODE == PVA_BUILD_MODE_NATIVE)
     // On native builds, the FW calls the KMD's shared buffer handler in its
     // own thread. In debug builds, if there are a large number of messages
     // (prints, unregister, etc.), this handler might take a while to execute,
@@ -42,22 +42,16 @@
 #define PVA_KMD_WAIT_FW_POLL_INTERVAL_US PVA_KMD_TIMEOUT(100) /*< 100 us*/
 #define PVA_KMD_FW_BOOT_TIMEOUT_MS PVA_KMD_TIMEOUT(1000) /*< 1 seconds */
 
-#define PVA_NUM_RW_SYNCPTS 56
+#define PVA_NUM_RW_SYNCPTS (PVA_MAX_NUM_CCQ * PVA_NUM_RW_SYNCPTS_PER_CONTEXT)
 
 // clang-format off
 #if PVA_DEV_MAIN_COMPATIBLE == 1
     #define PVA_KMD_LOAD_FROM_GSC_DEFAULT true
-    #if PVA_SAFETY == 1
-        #define PVA_KMD_APP_AUTH_DEFAULT true
-    #else
-        #define PVA_KMD_APP_AUTH_DEFAULT false
-    #endif
 #else
     #define PVA_KMD_LOAD_FROM_GSC_DEFAULT false
-    #define PVA_KMD_APP_AUTH_DEFAULT false
 #endif
 // clang-format on
 
-#define PVA_KMD_MAX_NUM_USER_DMA_CONFIG 1024
+#define PVA_KMD_DMA_CONFIG_POOL_INCR 256
 
 #endif // PVA_KMD_CONSTANTS_H

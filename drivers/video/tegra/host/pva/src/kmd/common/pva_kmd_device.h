@@ -4,6 +4,7 @@
 #ifndef PVA_KMD_DEVICE_H
 #define PVA_KMD_DEVICE_H
 #include "pva_constants.h"
+#include "pva_fw.h"
 #include "pva_kmd_cmdbuf.h"
 #include "pva_kmd_utils.h"
 #include "pva_kmd_mutex.h"
@@ -26,9 +27,6 @@
 #define NV_PVA1_CLASS_ID 0xF2
 
 struct pva_syncpt_rw_info {
-	/** Dont switch order since syncpt_id and syncpt_iova is prefilled during kmd boot
-	 * and first field gets updated by pva_kmd_allocator everytime its freed */
-	uint32_t syncpt_value;
 	uint32_t syncpt_id;
 	uint64_t syncpt_iova;
 };
@@ -127,12 +125,13 @@ struct pva_kmd_device {
 	uint8_t bl_sector_pack_format;
 
 	/** Offset between 2 syncpoints */
-	uint32_t syncpt_offset;
-	uint64_t syncpt_ro_iova;
-	uint64_t syncpt_rw_iova;
-	uint32_t num_syncpts;
-	struct pva_syncpt_rw_info syncpt_rw[PVA_NUM_RW_SYNCPTS];
-	struct pva_kmd_block_allocator syncpt_allocator;
+	uint32_t syncpt_page_size;
+	uint64_t ro_syncpt_base_iova;
+	uint32_t num_ro_syncpts;
+
+	uint64_t rw_syncpt_base_iova;
+	uint32_t rw_syncpt_region_size;
+	struct pva_syncpt_rw_info rw_syncpts[PVA_NUM_RW_SYNCPTS];
 
 	struct vmem_region *vmem_regions_tab;
 	bool support_hwseq_frame_linking;
@@ -145,11 +144,14 @@ struct pva_kmd_device {
 
 	/** Carveout info for FW */
 	struct pva_co_info fw_carveout;
+
+	bool test_mode;
 };
 
 struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 					     uint32_t device_index,
-					     bool app_authenticate);
+					     bool app_authenticate,
+					     bool test_mode);
 
 void pva_kmd_device_destroy(struct pva_kmd_device *pva);
 
@@ -161,11 +163,7 @@ enum pva_error pva_kmd_ccq_push_with_timeout(struct pva_kmd_device *pva,
 					     uint64_t sleep_interval_us,
 					     uint64_t timeout_us);
 
-void pva_kmd_send_resource_table_info_by_ccq(
-	struct pva_kmd_device *pva, struct pva_kmd_resource_table *res_table);
-
-void pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
-				    struct pva_kmd_queue *queue);
+enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva);
 
 bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva);
 
@@ -175,6 +173,16 @@ static inline uint32_t pva_kmd_get_device_class_id(struct pva_kmd_device *pva)
 		return NV_PVA0_CLASS_ID;
 	} else {
 		return NV_PVA1_CLASS_ID;
+	}
+}
+
+static inline uint16_t
+pva_kmd_get_max_cmdbuf_chunk_size(struct pva_kmd_device *pva)
+{
+	if (pva->test_mode) {
+		return PVA_TEST_MODE_MAX_CMDBUF_CHUNK_SIZE;
+	} else {
+		return PVA_MAX_CMDBUF_CHUNK_SIZE;
 	}
 }
 #endif // PVA_KMD_DEVICE_H

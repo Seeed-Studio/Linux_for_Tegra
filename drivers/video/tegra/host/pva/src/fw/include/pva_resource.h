@@ -62,8 +62,10 @@ struct pva_fw_dma_slot {
  * to block linear surface. */
 #define PVA_FW_DMA_SLOT_FLAG_CB (1u << 4u)
 #define PVA_FW_DMA_SLOT_FLAG_BOUND (1u << 5u)
-	uint8_t flags;
-	uint8_t pad;
+#define PVA_FW_DMA_SLOT_FLAG_MASKED (1u << 6u)
+#define PVA_FW_DMA_SLOT_FLAG_ACCESS_LSB 7u
+#define PVA_FW_DMA_SLOT_FLAG_ACCESS_MSB 8u
+	uint16_t flags;
 	/** Bitmask of channels that use this slot */
 	uint16_t ch_use_mask;
 

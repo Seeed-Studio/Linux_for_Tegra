@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include "pva_kmd_submitter.h"
+#include "pva_api_types.h"
 #include "pva_kmd_utils.h"
 #include "pva_kmd_abort.h"
 
@@ -70,6 +71,7 @@ pva_kmd_submitter_submit_with_fence(struct pva_kmd_submitter *submitter,
 	submit_info.first_chunk_offset_lo = iova_lo(first_chunk_offset);
 	submit_info.first_chunk_offset_hi = iova_hi(first_chunk_offset);
 	submit_info.first_chunk_size = first_chunk_size;
+	submit_info.execution_timeout_ms = PVA_EXEC_TIMEOUT_INF;
 
 	pva_kmd_mutex_lock(submitter->submit_lock);
 	err = pva_kmd_queue_submit(submitter->queue, &submit_info);
@@ -108,6 +110,7 @@ enum pva_error pva_kmd_submitter_submit(struct pva_kmd_submitter *submitter,
 	submit_info.first_chunk_offset_lo = iova_lo(first_chunk_offset);
 	submit_info.first_chunk_offset_hi = iova_hi(first_chunk_offset);
 	submit_info.first_chunk_size = first_chunk_size;
+	submit_info.execution_timeout_ms = PVA_EXEC_TIMEOUT_INF;
 	/* TODO: remove these flags after FW execute command buffer with no engines. */
 	submit_info.flags =
 		PVA_INSERT8(0x3, PVA_CMDBUF_FLAGS_ENGINE_AFFINITY_MSB,
@@ -137,16 +140,63 @@ enum pva_error pva_kmd_submitter_wait(struct pva_kmd_submitter *submitter,
 {
 	uint32_t volatile *fence_addr = submitter->post_fence_va;
 	uint32_t time_spent = 0;
+	struct pva_kmd_device *pva = submitter->queue->pva;
 
 	while (*fence_addr < fence_val) {
+		if (pva->recovery) {
+			return PVA_ERR_FW_ABORTED;
+		}
 		pva_kmd_sleep_us(poll_interval_us);
 		time_spent = safe_addu32(time_spent, poll_interval_us);
 		if (time_spent >= timeout_us) {
 			pva_kmd_log_err("pva_kmd_submitter_wait Timed out");
-			pva_kmd_abort(submitter->queue->pva);
+			pva_kmd_abort_fw(submitter->queue->pva);
 			return PVA_TIMEDOUT;
 		}
 	}
 
 	return PVA_SUCCESS;
+}
+
+enum pva_error pva_kmd_submit_cmd_sync(struct pva_kmd_submitter *submitter,
+				       void *cmds, uint32_t size,
+				       uint32_t poll_interval_us,
+				       uint32_t timeout_us)
+{
+	struct pva_kmd_cmdbuf_builder builder = { 0 };
+	enum pva_error err;
+	void *cmd_dst = NULL;
+	uint32_t fence_val = 0;
+
+	err = pva_kmd_submitter_prepare(submitter, &builder);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
+
+	cmd_dst = pva_kmd_reserve_cmd_space(&builder, size);
+	if (cmd_dst == NULL) {
+		err = PVA_INVAL;
+		pva_kmd_log_err(
+			"Trying to submit too many commands using pva_kmd_submit_cmd_sync.");
+		goto cancel_builder;
+	}
+
+	memcpy(cmd_dst, cmds, size);
+	err = pva_kmd_submitter_submit(submitter, &builder, &fence_val);
+	if (err != PVA_SUCCESS) {
+		goto cancel_builder;
+	}
+
+	err = pva_kmd_submitter_wait(submitter, fence_val, poll_interval_us,
+				     timeout_us);
+	if (err != PVA_SUCCESS) {
+		goto cancel_builder;
+	}
+
+	return err;
+
+cancel_builder:
+	pva_kmd_cmdbuf_builder_cancel(&builder);
+err_out:
+	return err;
 }

@@ -57,4 +57,11 @@ pva_kmd_submitter_submit_with_fence(struct pva_kmd_submitter *submitter,
 /* add cmd */
 /* do submit with fence (provide a fence) */
 
+/* Helper function to submit several commands and wait for them to complete.
+Total size must be smaller than a chunk. */
+enum pva_error pva_kmd_submit_cmd_sync(struct pva_kmd_submitter *submitter,
+				       void *cmds, uint32_t size,
+				       uint32_t poll_interval_us,
+				       uint32_t timeout_us);
+
 #endif // PVA_KMD_SUBMITTER_H

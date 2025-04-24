@@ -42,6 +42,7 @@ int pva_kmd_hwpm_ip_pm(void *ip_dev, bool disable)
 {
 	struct pva_kmd_device *dev = ip_dev;
 	enum pva_error err = PVA_SUCCESS;
+	int ret = 0;
 
 	if (disable) {
 		err = pva_kmd_device_busy(dev);
@@ -51,5 +52,10 @@ int pva_kmd_hwpm_ip_pm(void *ip_dev, bool disable)
 	} else {
 		pva_kmd_device_idle(dev);
 	}
-	return err;
+
+	if (err != PVA_SUCCESS) {
+		ret = -1;
+	}
+
+	return ret;
 }

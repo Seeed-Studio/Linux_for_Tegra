@@ -20,22 +20,8 @@ struct pva_ops_context_init {
 
 struct pva_ops_response_context_init {
 	enum pva_error error;
+	uint16_t max_cmdbuf_chunk_size;
 	uint64_t ccq_shm_hdl;
-};
-
-struct pva_ops_syncpt_register {
-#define PVA_OPS_OPCODE_SYNCPT_REGISTER (2U | PVA_OPS_PRIVATE_OPCODE_FLAG)
-	struct pva_ops_header header;
-};
-
-struct pva_ops_response_syncpt_register {
-	enum pva_error error;
-	uint32_t syncpt_ro_res_id;
-	uint32_t syncpt_rw_res_id;
-	uint32_t synpt_size;
-	uint32_t synpt_ids[PVA_NUM_RW_SYNCPTS_PER_CONTEXT];
-	uint32_t num_ro_syncpoints;
-	uint32_t pad;
 };
 
 /**
@@ -67,7 +53,8 @@ struct pva_ops_queue_create {
 struct pva_ops_response_queue_create {
 	enum pva_error error;
 	uint32_t queue_id;
-	uint32_t syncpt_fence_counter;
+	uint32_t syncpt_id;
+	uint32_t syncpt_current_value;
 };
 
 /* KMD API: queue destroy */

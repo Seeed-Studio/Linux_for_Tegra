@@ -86,7 +86,6 @@ pva_kmd_op_memory_register_async(struct pva_kmd_context *ctx,
 		err = PVA_NOMEM;
 		goto err_out;
 	}
-
 	if (args->segment == PVA_MEMORY_SEGMENT_R5) {
 		smmu_ctx_id = PVA_R5_SMMU_CONTEXT_ID;
 	} else {
@@ -168,8 +167,8 @@ static enum pva_error pva_kmd_op_executable_register_async(
 	}
 
 	args = (struct pva_ops_executable_register *)input_buffer;
-	if (args->exec_size + sizeof(struct pva_ops_executable_register) >
-	    size) {
+	if (args->exec_size >
+	    (size - sizeof(struct pva_ops_executable_register))) {
 		pva_kmd_log_err("Executable register payload size too small");
 		return PVA_INVAL;
 	}
@@ -404,8 +403,10 @@ exit_loop:
 	post_fence->flags |= PVA_FW_POSTFENCE_FLAGS_USER_FENCE;
 	submit_error = pva_kmd_submitter_submit_with_fence(
 		&ctx->submitter, &cmdbuf_builder, post_fence);
-	ASSERT(submit_error == PVA_SUCCESS);
 
+	if (err == PVA_SUCCESS) {
+		err = submit_error;
+	}
 out:
 	return err;
 }
@@ -434,94 +435,11 @@ pva_kmd_op_context_init(struct pva_kmd_context *ctx, const void *input_buffer,
 	err = pva_kmd_context_init(ctx, ctx_init_args->resource_table_capacity);
 	ctx_init_out.error = err;
 	ctx_init_out.ccq_shm_hdl = (uint64_t)ctx->ccq_shm_handle;
+	ctx_init_out.max_cmdbuf_chunk_size =
+		pva_kmd_get_max_cmdbuf_chunk_size(ctx->pva);
 
 	produce_data(out_buffer, &ctx_init_out, sizeof(ctx_init_out));
 
-	return PVA_SUCCESS;
-}
-
-static enum pva_error pva_kmd_op_syncpt_register_async(
-	struct pva_kmd_context *ctx, const void *input_buffer,
-	uint32_t input_buffer_size, struct pva_kmd_ops_buffer *out_buffer,
-	struct pva_kmd_cmdbuf_builder *cmdbuf_builder)
-{
-	enum pva_error err;
-	struct pva_syncpt_rw_info *syncpts;
-	struct pva_kmd_device_memory dev_mem;
-	uint32_t resource_id = 0;
-	struct pva_cmd_update_resource_table *update_cmd;
-	struct pva_resource_entry entry = { 0 };
-	struct pva_ops_response_syncpt_register syncpt_register_out = { 0 };
-
-	if (input_buffer_size != sizeof(struct pva_ops_syncpt_register)) {
-		pva_kmd_log_err("Syncpt register size is not correct");
-		return PVA_INVAL;
-	}
-
-	if (!access_ok(out_buffer,
-		       sizeof(struct pva_ops_response_syncpt_register))) {
-		return PVA_INVAL;
-	}
-
-	/* Register RO syncpts */
-	dev_mem.iova = ctx->pva->syncpt_ro_iova;
-	dev_mem.va = 0;
-	dev_mem.size = ctx->pva->syncpt_offset * ctx->pva->num_syncpts;
-	dev_mem.pva = ctx->pva;
-	dev_mem.smmu_ctx_idx = PVA_R5_SMMU_CONTEXT_ID;
-	err = pva_kmd_add_syncpt_resource(&ctx->ctx_resource_table, &dev_mem,
-					  &resource_id);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-	syncpt_register_out.syncpt_ro_res_id = resource_id;
-	syncpt_register_out.num_ro_syncpoints = ctx->pva->num_syncpts;
-	update_cmd =
-		pva_kmd_reserve_cmd_space(cmdbuf_builder, sizeof(*update_cmd));
-	ASSERT(update_cmd != NULL);
-	err = pva_kmd_make_resource_entry(&ctx->ctx_resource_table, resource_id,
-					  &entry);
-	ASSERT(err == PVA_SUCCESS);
-	pva_kmd_set_cmd_update_resource_table(
-		update_cmd, ctx->resource_table_id, resource_id, &entry);
-
-	/* Register RW syncpts */
-	pva_kmd_mutex_lock(&ctx->pva->syncpt_allocator.allocator_lock);
-	syncpts = (struct pva_syncpt_rw_info *)pva_kmd_get_block_unsafe(
-		&ctx->pva->syncpt_allocator, ctx->syncpt_block_index);
-	ASSERT(syncpts != NULL);
-
-	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS_PER_CONTEXT; i++) {
-		ctx->syncpt_ids[i] = syncpts[i].syncpt_id;
-		syncpt_register_out.synpt_ids[i] = syncpts[i].syncpt_id;
-	}
-
-	dev_mem.iova = syncpts[0].syncpt_iova;
-	pva_kmd_mutex_unlock(&ctx->pva->syncpt_allocator.allocator_lock);
-	dev_mem.va = 0;
-	dev_mem.size = ctx->pva->syncpt_offset * PVA_NUM_RW_SYNCPTS_PER_CONTEXT;
-	dev_mem.pva = ctx->pva;
-	dev_mem.smmu_ctx_idx = PVA_R5_SMMU_CONTEXT_ID;
-	err = pva_kmd_add_syncpt_resource(&ctx->ctx_resource_table, &dev_mem,
-					  &resource_id);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-	syncpt_register_out.syncpt_rw_res_id = resource_id;
-	syncpt_register_out.synpt_size = ctx->pva->syncpt_offset;
-	update_cmd =
-		pva_kmd_reserve_cmd_space(cmdbuf_builder, sizeof(*update_cmd));
-	ASSERT(update_cmd != NULL);
-	err = pva_kmd_make_resource_entry(&ctx->ctx_resource_table, resource_id,
-					  &entry);
-	ASSERT(err == PVA_SUCCESS);
-	pva_kmd_set_cmd_update_resource_table(
-		update_cmd, ctx->resource_table_id, resource_id, &entry);
-
-err_out:
-	syncpt_register_out.error = err;
-	produce_data(out_buffer, &syncpt_register_out,
-		     sizeof(syncpt_register_out));
 	return PVA_SUCCESS;
 }
 
@@ -532,6 +450,7 @@ pva_kmd_op_queue_create(struct pva_kmd_context *ctx, const void *input_buffer,
 {
 	const struct pva_ops_queue_create *queue_create_args;
 	struct pva_ops_response_queue_create queue_out_args = { 0 };
+	const struct pva_syncpt_rw_info *syncpt_info;
 	uint32_t queue_id = PVA_INVALID_QUEUE_ID;
 	enum pva_error err = PVA_SUCCESS;
 
@@ -553,10 +472,12 @@ pva_kmd_op_queue_create(struct pva_kmd_context *ctx, const void *input_buffer,
 		goto out;
 	}
 
+	syncpt_info = pva_kmd_queue_get_rw_syncpt_info(ctx, queue_id);
 	queue_out_args.error = err;
 	queue_out_args.queue_id = queue_id;
-	pva_kmd_read_syncpt_val(ctx->pva, ctx->syncpt_ids[queue_id],
-				&queue_out_args.syncpt_fence_counter);
+	queue_out_args.syncpt_id = syncpt_info->syncpt_id;
+	pva_kmd_read_syncpt_val(ctx->pva, syncpt_info->syncpt_id,
+				&queue_out_args.syncpt_current_value);
 
 out:
 	produce_data(out_buffer, &queue_out_args,
@@ -687,15 +608,16 @@ pva_kmd_op_synced_submit(struct pva_kmd_context *ctx, const void *input_buffer,
 
 	err = pva_kmd_submitter_submit(&ctx->submitter, &cmdbuf_builder,
 				       &fence_val);
-	/* TODO: handle this error */
-	ASSERT(err == PVA_SUCCESS);
+	if (err != PVA_SUCCESS) {
+		goto cancel_submit;
+	}
 
 	err = pva_kmd_submitter_wait(&ctx->submitter, fence_val,
 				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 				     PVA_KMD_WAIT_FW_TIMEOUT_US);
 
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		goto cancel_submit;
 	}
 
 	return PVA_SUCCESS;
@@ -758,11 +680,6 @@ pva_kmd_sync_ops_handler(struct pva_kmd_context *ctx,
 			ctx, input_buffer, input_buffer_size, out_arg,
 			pva_kmd_op_memory_register_async);
 		break;
-	case PVA_OPS_OPCODE_SYNCPT_REGISTER:
-		err = pva_kmd_op_synced_submit(
-			ctx, input_buffer, input_buffer_size, out_arg,
-			pva_kmd_op_syncpt_register_async);
-		break;
 	case PVA_OPS_OPCODE_EXECUTABLE_REGISTER:
 		err = pva_kmd_op_synced_submit(
 			ctx, input_buffer, input_buffer_size, out_arg,
@@ -797,11 +714,6 @@ enum pva_error pva_kmd_ops_handler(struct pva_kmd_context *ctx,
 {
 	struct pva_kmd_ops_buffer in_buffer = { 0 }, out_buffer = { 0 };
 	enum pva_error err = PVA_SUCCESS;
-
-	if (ctx->pva->recovery) {
-		pva_kmd_log_err("PVA firmware aborted. No KMD ops allowed.");
-		return PVA_ERR_FW_ABORTED;
-	}
 
 	in_buffer.base = ops_buffer;
 	in_buffer.size = ops_size;

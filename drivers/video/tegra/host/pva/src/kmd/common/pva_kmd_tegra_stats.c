@@ -59,11 +59,8 @@ enum pva_error
 pva_kmd_notify_fw_get_tegra_stats(struct pva_kmd_device *pva,
 				  struct pva_kmd_tegrastats *kmd_tegra_stats)
 {
-	struct pva_kmd_cmdbuf_builder builder;
-	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
-	struct pva_cmd_get_tegra_stats *cmd;
+	struct pva_cmd_get_tegra_stats cmd = { 0 };
 	uint64_t buffer_offset = 0U;
-	uint32_t fence_val;
 	enum pva_error err = PVA_SUCCESS;
 	struct pva_kmd_fw_tegrastats fw_tegra_stats = { 0 };
 	bool stats_enabled = pva->debugfs_context.stats_enable;
@@ -86,29 +83,15 @@ pva_kmd_notify_fw_get_tegra_stats(struct pva_kmd_device *pva,
 		goto err_out;
 	}
 
-	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
-	if (err != PVA_SUCCESS) {
-		goto dev_idle;
-	}
-	cmd = pva_kmd_reserve_cmd_space(&builder, sizeof(*cmd));
-	ASSERT(cmd != NULL);
-
-	pva_kmd_set_cmd_get_tegra_stats(cmd, pva->tegra_stats_resource_id,
+	pva_kmd_set_cmd_get_tegra_stats(&cmd, pva->tegra_stats_resource_id,
 					pva->tegra_stats_buf_size,
 					buffer_offset, stats_enabled);
 
-	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
+	err = pva_kmd_submit_cmd_sync(&pva->submitter, &cmd, sizeof(cmd),
+				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
 		pva_kmd_log_err("tegra stats cmd submission failed");
-		goto cancel_builder;
-	}
-
-	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"Waiting for FW timed out when getting tegra stats");
 		goto dev_idle;
 	}
 
@@ -129,8 +112,7 @@ out:
 	kmd_tegra_stats->window_end_time = fw_tegra_stats.window_end_time;
 
 	return PVA_SUCCESS;
-cancel_builder:
-	pva_kmd_cmdbuf_builder_cancel(&builder);
+
 dev_idle:
 	pva_kmd_device_idle(pva);
 err_out:

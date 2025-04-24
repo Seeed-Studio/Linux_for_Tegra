@@ -23,7 +23,7 @@ struct pva_kmd_device_memory_impl {
 	struct pva_kmd_device_memory dev_mem;
 	struct dma_buf *dmabuf;
 	struct iosys_map iosysmap;
-	struct dma_buf_attachment *dmabuf_attch;
+	struct dma_buf_attachment *dmabuf_attach;
 	struct sg_table *sgt;
 	uint64_t offset;
 };
@@ -36,11 +36,20 @@ pva_kmd_device_memory_alloc_map(uint64_t size, struct pva_kmd_device *pva,
 	struct device *dev = get_context_device(pva, smmu_ctx_idx);
 	dma_addr_t pa = 0U;
 	void *va = NULL;
+	struct pva_kmd_device_memory_impl *mem_impl;
 
-	struct pva_kmd_device_memory_impl *mem_impl =
-		pva_kmd_zalloc(sizeof(struct pva_kmd_device_memory_impl));
+	mem_impl = pva_kmd_zalloc(sizeof(struct pva_kmd_device_memory_impl));
+	if (mem_impl == NULL) {
+		goto err_out;
+	}
+
+	if (size == 0u) {
+		pva_kmd_log_err("Invalid allocation size");
+		goto free_mem;
+	}
+
 	va = dma_alloc_coherent(dev, size, &pa, GFP_KERNEL);
-	if (va == NULL) {
+	if (IS_ERR_OR_NULL(va)) {
 		pva_kmd_log_err("dma_alloc_coherent failed");
 		goto free_mem;
 	}
@@ -49,12 +58,13 @@ pva_kmd_device_memory_alloc_map(uint64_t size, struct pva_kmd_device *pva,
 	mem_impl->dev_mem.size = size;
 	mem_impl->dev_mem.pva = pva;
 	mem_impl->dev_mem.smmu_ctx_idx = smmu_ctx_idx;
+	mem_impl->dev_mem.iova_access_flags = iova_access_flags;
 	mem_impl->dmabuf = NULL;
 
 	return &mem_impl->dev_mem;
-
 free_mem:
 	pva_kmd_free(mem_impl);
+err_out:
 	return NULL;
 }
 
@@ -66,13 +76,16 @@ struct pva_kmd_device_memory *
 pva_kmd_device_memory_acquire(uint64_t memory_handle, uint64_t offset,
 			      uint64_t size, struct pva_kmd_context *ctx)
 {
-	struct pva_kmd_device_memory_impl *mem_impl =
-		(struct pva_kmd_device_memory_impl *)pva_kmd_zalloc(
-			sizeof(struct pva_kmd_device_memory_impl));
-
 	struct dma_buf *dma_buf;
+	struct pva_kmd_device_memory_impl *mem_impl;
+
+	mem_impl = pva_kmd_zalloc(sizeof(struct pva_kmd_device_memory_impl));
+	if (mem_impl == NULL) {
+		goto err_out;
+	}
+
 	dma_buf = dma_buf_get(memory_handle);
-	if (dma_buf == NULL) {
+	if (IS_ERR_OR_NULL(dma_buf)) {
 		pva_kmd_log_err("Failed to acquire memory");
 		goto free_mem;
 	}
@@ -92,6 +105,7 @@ put_dmabuf:
 	dma_buf_put(dma_buf);
 free_mem:
 	pva_kmd_free(mem_impl);
+err_out:
 	return NULL;
 }
 
@@ -103,7 +117,7 @@ void pva_kmd_device_memory_free(struct pva_kmd_device_memory *mem)
 
 	if (mem_impl->dmabuf != NULL) {
 		/* This memory comes from dma_buf_get */
-		if (mem->iova != 0U) {
+		if (mem_impl->dmabuf_attach != NULL) {
 			pva_kmd_device_memory_iova_unmap(mem);
 		}
 
@@ -160,14 +174,28 @@ pva_kmd_device_memory_iova_map(struct pva_kmd_device_memory *memory,
 	pva_math_error math_err = MATH_OP_SUCCESS;
 	struct pva_kmd_device_memory_impl *mem_impl = container_of(
 		memory, struct pva_kmd_device_memory_impl, dev_mem);
-
-	// struct pva_kmd_linux_device_plat_data *plat_data =
-	// 	pva_kmd_linux_device_get_plat_data(pva);
-	// struct device *dev = plat_data->dev[smmu_ctx_idx];
 	struct device *dev = get_context_device(pva, smmu_ctx_idx);
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 	enum pva_error err = PVA_SUCCESS;
+	enum dma_data_direction dma_direction;
+	uint64_t iova;
+
+	switch (access_flags) {
+	case PVA_ACCESS_RO: // Read-Only
+		dma_direction = DMA_TO_DEVICE;
+		break;
+	case PVA_ACCESS_WO: // Write-Only
+		dma_direction = DMA_FROM_DEVICE;
+		break;
+	case PVA_ACCESS_RW: // Read-Write
+		dma_direction = DMA_BIDIRECTIONAL;
+		break;
+	default:
+		pva_kmd_log_err("Invalid access flags\n");
+		err = PVA_INVAL;
+		goto err_out;
+	}
 
 	attach = dma_buf_attach(mem_impl->dmabuf, dev);
 	if (IS_ERR_OR_NULL(attach)) {
@@ -176,28 +204,32 @@ pva_kmd_device_memory_iova_map(struct pva_kmd_device_memory *memory,
 		goto err_out;
 	}
 
-	mem_impl->dmabuf_attch = attach;
-	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+	sgt = dma_buf_map_attachment(attach, dma_direction);
 	if (IS_ERR_OR_NULL(sgt)) {
 		err = PVA_INVAL;
 		pva_kmd_log_err("Failed to map attachment\n");
 		goto detach;
 	}
-	mem_impl->sgt = sgt;
-	mem_impl->dev_mem.iova =
-		addu64(sg_dma_address(sgt->sgl), mem_impl->offset, &math_err);
+	iova = addu64(sg_dma_address(sgt->sgl), mem_impl->offset, &math_err);
 	if (math_err != MATH_OP_SUCCESS) {
 		err = PVA_INVAL;
 		pva_kmd_log_err(
 			"pva_kmd_device_memory_iova_map Invalid DMA address\n");
-		goto detach;
+		goto unmap;
 	}
+
+	mem_impl->sgt = sgt;
+	mem_impl->dmabuf_attach = attach;
+	mem_impl->dev_mem.iova = iova;
 	mem_impl->dev_mem.pva = pva;
 	mem_impl->dev_mem.smmu_ctx_idx = smmu_ctx_idx;
+	mem_impl->dev_mem.iova_access_flags = access_flags;
 	return PVA_SUCCESS;
 
+unmap:
+	dma_buf_unmap_attachment(attach, sgt, dma_direction);
 detach:
-	dma_buf_detach(mem_impl->dmabuf, mem_impl->dmabuf_attch);
+	dma_buf_detach(mem_impl->dmabuf, attach);
 err_out:
 	return err;
 }
@@ -209,10 +241,11 @@ void pva_kmd_device_memory_iova_unmap(struct pva_kmd_device_memory *memory)
 
 	ASSERT(mem_impl->dmabuf != NULL);
 
-	dma_buf_unmap_attachment(mem_impl->dmabuf_attch, mem_impl->sgt,
+	dma_buf_unmap_attachment(mem_impl->dmabuf_attach, mem_impl->sgt,
 				 DMA_BIDIRECTIONAL);
-	dma_buf_detach(mem_impl->dmabuf, mem_impl->dmabuf_attch);
-	memory->iova = 0;
+	dma_buf_detach(mem_impl->dmabuf, mem_impl->dmabuf_attach);
+	mem_impl->sgt = NULL;
+	mem_impl->dmabuf_attach = NULL;
 }
 
 uint64_t pva_kmd_get_r5_iova_start(void)

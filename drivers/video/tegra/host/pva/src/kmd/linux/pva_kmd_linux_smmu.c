@@ -132,12 +132,16 @@ void pva_kmd_linux_device_smmu_contexts_init(struct pva_kmd_device *pva_device)
 	     sid_idx < safe_subu32(pva_device->hw_consts.n_smmu_contexts, 2U);
 	     sid_idx++) {
 		uint32_t smmu_ctx_idx = safe_addu32(sid_idx, 1U);
-		pva_device->stream_ids[smmu_ctx_idx] = g_smmu_ctxs[sid_idx].sid;
-		device_data->smmu_contexts[smmu_ctx_idx] =
-			g_smmu_ctxs[sid_idx].pdev;
-		dma_set_mask_and_coherent(
-			&device_data->smmu_contexts[smmu_ctx_idx]->dev,
-			DMA_BIT_MASK(39));
+		struct pva_kmd_linux_smmu_ctx *smmu_ctx = &g_smmu_ctxs[sid_idx];
+
+		pva_device->stream_ids[smmu_ctx_idx] = smmu_ctx->sid;
+		device_data->smmu_contexts[smmu_ctx_idx] = smmu_ctx->pdev;
+		dma_set_mask_and_coherent(&smmu_ctx->pdev->dev,
+					  DMA_BIT_MASK(39));
+		//set max segment size to UINT_MAX to avoid creating scatterlist >= 4GB
+		//during IOVA mapping, which will overflow the scatterlist length field,
+		//causing IOVA leak
+		dma_set_max_seg_size(&smmu_ctx->pdev->dev, UINT_MAX);
 	}
 
 	/* Configure SMMU contexts for privileged operations */

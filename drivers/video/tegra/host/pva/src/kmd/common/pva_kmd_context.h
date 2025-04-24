@@ -63,9 +63,6 @@ struct pva_kmd_context {
 	void *plat_data;
 	uint64_t ccq_shm_handle;
 
-	/** Index of block of syncpoints allocated for this context */
-	uint32_t syncpt_block_index;
-	uint32_t syncpt_ids[PVA_NUM_RW_SYNCPTS_PER_CONTEXT];
 	pva_kmd_mutex_t ocb_lock;
 };
 

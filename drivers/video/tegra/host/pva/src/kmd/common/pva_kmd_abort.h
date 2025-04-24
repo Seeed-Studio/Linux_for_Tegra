@@ -5,6 +5,6 @@
 #include "pva_kmd_device.h"
 #include "pva_kmd_utils.h"
 
-void pva_kmd_abort(struct pva_kmd_device *pva);
+void pva_kmd_abort_fw(struct pva_kmd_device *pva);
 
 #endif //PVA_KMD_ABORT_H

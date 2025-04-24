@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include "pva_kmd_utils.h"
 #include "pva_fw.h"
 #include "pva_kmd_device_memory.h"
@@ -14,11 +15,8 @@
 
 enum pva_error pva_kmd_prepare_suspend(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_cmdbuf_builder builder;
-	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_cmd_suspend_fw *fw_suspend;
-	uint32_t fence_val;
+	struct pva_cmd_suspend_fw cmd = { 0 };
 
 	pva_kmd_mutex_lock(&pva->powercycle_lock);
 	if (pva->refcount == 0u) {
@@ -27,43 +25,15 @@ enum pva_error pva_kmd_prepare_suspend(struct pva_kmd_device *pva)
 		goto err_out;
 	}
 
-	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
+	pva_kmd_set_cmd_suspend_fw(&cmd);
+
+	err = pva_kmd_submit_cmd_sync(&pva->submitter, &cmd, sizeof(cmd),
+				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"PVA: Prepare submitter for FW suspend command failed\n");
+		pva_kmd_log_err("PVA: Failed to submit FW suspend command\n");
 		goto err_out;
 	}
-
-	//Build args
-	fw_suspend = pva_kmd_reserve_cmd_space(&builder, sizeof(*fw_suspend));
-	if (fw_suspend == NULL) {
-		pva_kmd_log_err(
-			"PVA: Memory alloc for FW suspend command failed\n");
-		err = PVA_NOMEM;
-		goto cancel_submit;
-	}
-
-	pva_kmd_set_cmd_suspend_fw(fw_suspend);
-
-	//Submit
-	err = pva_kmd_submitter_submit(dev_submitter, &builder, &fence_val);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"PVA: Submission for FW suspend command failed\n");
-		goto cancel_submit;
-	}
-
-	err = pva_kmd_submitter_wait(dev_submitter, fence_val,
-				     PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-				     PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err(
-			"PVA: Waiting for FW timed out when preparing for suspend state\n");
-		goto err_out;
-	}
-
-cancel_submit:
-	pva_kmd_cmdbuf_builder_cancel(&builder);
 
 err_out:
 	pva_kmd_mutex_unlock(&pva->powercycle_lock);
@@ -77,9 +47,11 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 	struct pva_cmd_init_resource_table *res_cmd;
 	struct pva_cmd_init_queue *queue_cmd;
 	struct pva_cmd_resume_fw *fw_resume;
+	struct pva_cmd_init_shared_dram_buffer *shared_buf_cmd;
 	enum pva_error err;
 	uint32_t fence_val;
 	struct pva_kmd_queue *queue;
+	const struct pva_syncpt_rw_info *syncpt_info;
 
 	pva_kmd_mutex_lock(&pva->powercycle_lock);
 	if (pva->refcount == 0u) {
@@ -89,8 +61,10 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 		goto err_out;
 	}
 
-	pva_kmd_send_resource_table_info_by_ccq(pva, &pva->dev_resource_table);
-	pva_kmd_send_queue_info_by_ccq(pva, &pva->dev_queue);
+	err = pva_kmd_config_fw_after_boot(pva);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
+	}
 
 	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
 	if (err != PVA_SUCCESS) {
@@ -140,14 +114,38 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 				goto cancel_builder;
 			}
 
+			/* Initialize shared buffer */
+			shared_buf_cmd = pva_kmd_reserve_cmd_space(
+				&builder, sizeof(*shared_buf_cmd));
+			if (shared_buf_cmd == NULL) {
+				pva_kmd_log_err(
+					"PVA: Memory alloc for shared buffer registration in FW resume command failed\n");
+				err = PVA_NOMEM;
+				goto cancel_builder;
+			}
+
+			pva_dbg_printf(
+				"PVA: Resume shared buffer for context %d\n",
+				ctx->ccq_id);
+			pva_kmd_set_cmd_init_shared_dram_buffer(
+				shared_buf_cmd, ctx->ccq_id,
+				pva->kmd_fw_buffers[ctx->ccq_id]
+					.resource_memory->iova,
+				pva->kmd_fw_buffers[ctx->ccq_id]
+					.resource_memory->size);
+
 			pva_dbg_printf(
 				"PVA: Resume priv queue for context %d\n",
 				ctx->ccq_id);
+			syncpt_info = pva_kmd_queue_get_rw_syncpt_info(
+				PVA_PRIV_CCQ_ID, ctx->ccq_id);
 			pva_kmd_set_cmd_init_queue(
 				queue_cmd, PVA_PRIV_CCQ_ID,
 				ctx->ccq_id, /* For privileged queues, queue ID == user CCQ ID*/
 				ctx->ctx_queue.queue_memory->iova,
-				ctx->ctx_queue.max_num_submit);
+				ctx->ctx_queue.max_num_submit,
+				syncpt_info->syncpt_id,
+				syncpt_info->syncpt_iova);
 
 			/**Initialize resource table */
 			for (uint32_t j = 0; j < ctx->max_n_queues; j++) {
@@ -168,11 +166,16 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 						goto cancel_builder;
 					}
 
+					syncpt_info =
+						pva_kmd_queue_get_rw_syncpt_info(
+							ctx, queue->queue_id);
 					pva_kmd_set_cmd_init_queue(
 						queue_cmd, queue->ccq_id,
 						queue->queue_id,
 						queue->queue_memory->iova,
-						queue->max_num_submit);
+						queue->max_num_submit,
+						syncpt_info->syncpt_id,
+						syncpt_info->syncpt_iova);
 				}
 				pva_kmd_mutex_unlock(
 					&ctx->queue_allocator.allocator_lock);
@@ -194,8 +197,11 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 	if (err != PVA_SUCCESS) {
 		pva_kmd_log_err(
 			"Waiting for FW timed out when resuming from suspend state");
-		goto err_out;
+		goto cancel_builder;
 	}
+
+	pva_kmd_mutex_unlock(&pva->powercycle_lock);
+	return PVA_SUCCESS;
 
 cancel_builder:
 	pva_kmd_cmdbuf_builder_cancel(&builder);

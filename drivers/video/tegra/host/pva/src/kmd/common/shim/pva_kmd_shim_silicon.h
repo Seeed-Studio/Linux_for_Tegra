@@ -81,10 +81,10 @@ void pva_kmd_enable_intr(struct pva_kmd_device *pva,
 			 enum pva_kmd_intr_line intr_line);
 
 /**
- * @brief Disable an interrupt line.
+ * @brief Disable an interrupt line without waiting for running interrupt handlers to complete.
  */
-void pva_kmd_disable_intr(struct pva_kmd_device *pva,
-			  enum pva_kmd_intr_line intr_line);
+void pva_kmd_disable_intr_nosync(struct pva_kmd_device *pva,
+				 enum pva_kmd_intr_line intr_line);
 
 /**
  * @brief Free an interrupt line.
@@ -103,13 +103,6 @@ void pva_kmd_free_intr(struct pva_kmd_device *pva,
  * KMD will free pva->fw_bin_mem during firmware deinit.
  */
 enum pva_error pva_kmd_read_fw_bin(struct pva_kmd_device *pva);
-
-/**
- * @brief Reset assert FW so it can be in recovery and
- * user submission halted. This is requied for host1x
- * watchdog, or kmd submission timeout failures.
- */
-void pva_kmd_fw_reset_assert(struct pva_kmd_device *pva);
 
 /**
  * @brief Get starting IOVA of the memory shared by R5 and KMD.
@@ -140,5 +133,10 @@ void pva_kmd_config_evp_seg_scr_regs(struct pva_kmd_device *pva);
  * @param pva Pointer to the PVA device.
  */
 void pva_kmd_config_sid_regs(struct pva_kmd_device *pva);
+
+/**
+ * @brief Set the PVA HW reset line.
+ */
+void pva_kmd_set_reset_line(struct pva_kmd_device *pva);
 
 #endif // PVA_KMD_SHIM_SILICON_H

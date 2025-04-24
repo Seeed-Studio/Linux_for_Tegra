@@ -24,73 +24,8 @@ enum pva_gpio_bit {
 	GPIO_WRITE6_BIT = 29U
 };
 
-enum pva_dma_descriptor_id {
-	PVA_DMA_DESC_NONE = 0,
-	PVA_DMA_DESC0 = 1,
-	PVA_DMA_DESC1 = 2,
-	PVA_DMA_DESC2 = 3,
-	PVA_DMA_DESC3 = 4,
-	PVA_DMA_DESC4 = 5,
-	PVA_DMA_DESC5 = 6,
-	PVA_DMA_DESC6 = 7,
-	PVA_DMA_DESC7 = 8,
-	PVA_DMA_DESC8 = 9,
-	PVA_DMA_DESC9 = 10,
-	PVA_DMA_DESC10 = 11,
-	PVA_DMA_DESC11 = 12,
-	PVA_DMA_DESC12 = 13,
-	PVA_DMA_DESC13 = 14,
-	PVA_DMA_DESC14 = 15,
-	PVA_DMA_DESC15 = 16,
-	PVA_DMA_DESC16 = 17,
-	PVA_DMA_DESC17 = 18,
-	PVA_DMA_DESC18 = 19,
-	PVA_DMA_DESC19 = 20,
-	PVA_DMA_DESC20 = 21,
-	PVA_DMA_DESC21 = 22,
-	PVA_DMA_DESC22 = 23,
-	PVA_DMA_DESC23 = 24,
-	PVA_DMA_DESC24 = 25,
-	PVA_DMA_DESC25 = 26,
-	PVA_DMA_DESC26 = 27,
-	PVA_DMA_DESC27 = 28,
-	PVA_DMA_DESC28 = 29,
-	PVA_DMA_DESC29 = 30,
-	PVA_DMA_DESC30 = 31,
-	PVA_DMA_DESC31 = 32,
-	PVA_DMA_DESC32 = 33,
-	PVA_DMA_DESC33 = 34,
-	PVA_DMA_DESC34 = 35,
-	PVA_DMA_DESC35 = 36,
-	PVA_DMA_DESC36 = 37,
-	PVA_DMA_DESC37 = 38,
-	PVA_DMA_DESC38 = 39,
-	PVA_DMA_DESC39 = 40,
-	PVA_DMA_DESC40 = 41,
-	PVA_DMA_DESC41 = 42,
-	PVA_DMA_DESC42 = 43,
-	PVA_DMA_DESC43 = 44,
-	PVA_DMA_DESC44 = 45,
-	PVA_DMA_DESC45 = 46,
-	PVA_DMA_DESC46 = 47,
-	PVA_DMA_DESC47 = 48,
-	PVA_DMA_DESC48 = 49,
-	PVA_DMA_DESC49 = 50,
-	PVA_DMA_DESC50 = 51,
-	PVA_DMA_DESC51 = 52,
-	PVA_DMA_DESC52 = 53,
-	PVA_DMA_DESC53 = 54,
-	PVA_DMA_DESC54 = 55,
-	PVA_DMA_DESC55 = 56,
-	PVA_DMA_DESC56 = 57,
-	PVA_DMA_DESC57 = 58,
-	PVA_DMA_DESC58 = 59,
-	PVA_DMA_DESC59 = 60,
-	PVA_DMA_DESC60 = 61,
-	PVA_DMA_DESC61 = 62,
-	PVA_DMA_DESC62 = 63,
-	PVA_DMA_DESC63 = 64
-};
+#define PVA_DMA_DESC_ID_NULL 0
+#define PVA_DMA_DESC_ID_BASE 1
 
 /**
  * The values of the enum members conform to the definitions of DMA descriptors'
@@ -266,8 +201,6 @@ struct pva_dma_config_header {
  * means that every allocation of descriptors will start at an alignment of 4. The following
  * macros control the alignment/grouping requirement of DMA resources.
  */
-// TODO: Add compile time asserts to ensure the following alignment requirments don't result
-//	 in fractional resource partitions?
 #define PVA_DMA_CHANNEL_ALIGNMENT 1
 #define PVA_DMA_DESCRIPTOR_ALIGNMENT 4
 #define PVA_DMA_ADB_ALIGNMENT 16

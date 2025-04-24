@@ -6,6 +6,11 @@
 #include "trace/events/nvpva_ftrace.h"
 #include <linux/nvhost.h>
 
+static uint32_t get_job_id(uint32_t queue_id, uint64_t submit_id)
+{
+	return (queue_id & 0x000000FF) << 24 | (submit_id & 0xFFFFFFU);
+}
+
 void pva_kmd_shim_add_trace_vpu_exec(
 	struct pva_kmd_device *pva,
 	struct pva_kmd_fw_msg_vpu_trace const *trace_info)
@@ -38,7 +43,8 @@ void pva_kmd_shim_add_trace_vpu_exec(
 	// In V2, Job ID is a 32-bit value with the top 8 bits being the queue ID
 	// and the bottom 24 bits being a per-task counter. In V3, we only use the
 	// queue ID.
-	uint32_t job_id = (trace_info->queue_id & 0x000000FF) << 24;
+	uint32_t job_id =
+		get_job_id(trace_info->queue_id, trace_info->submit_id);
 
 	trace_pva_job_ext_event(job_id, trace_info->ccq_id,
 				0, // syncpt_thresh,
@@ -49,4 +55,43 @@ void pva_kmd_shim_add_trace_vpu_exec(
 	trace_job_submit(NULL, pva_kmd_get_device_class_id(pva), job_id,
 			 trace_info->num_prefences, trace_info->prog_id,
 			 trace_info->submit_id, vpu_start);
+}
+
+void pva_kmd_shim_add_trace_fence(
+	struct pva_kmd_device *pva,
+	struct pva_kmd_fw_msg_fence_trace const *trace_info)
+{
+	uint32_t job_id;
+
+	// We want to log events only for user workloads
+	if (trace_info->ccq_id == PVA_PRIV_CCQ_ID) {
+		return;
+	}
+
+	job_id = get_job_id(trace_info->queue_id, trace_info->submit_id);
+
+	if (trace_info->action == PVA_KMD_FW_BUF_MSG_FENCE_ACTION_WAIT) {
+		if (trace_info->type == PVA_KMD_FW_BUF_MSG_FENCE_TYPE_SYNCPT) {
+			trace_job_prefence(job_id, trace_info->fence_id,
+					   trace_info->value);
+		} else if (trace_info->type ==
+			   PVA_KMD_FW_BUF_MSG_FENCE_TYPE_SEMAPHORE) {
+			trace_job_prefence_semaphore(job_id,
+						     trace_info->fence_id,
+						     trace_info->offset,
+						     trace_info->value);
+		}
+	} else if (trace_info->action ==
+		   PVA_KMD_FW_BUF_MSG_FENCE_ACTION_SIGNAL) {
+		if (trace_info->type == PVA_KMD_FW_BUF_MSG_FENCE_TYPE_SYNCPT) {
+			trace_job_postfence(job_id, trace_info->fence_id,
+					    trace_info->value);
+		} else if (trace_info->type ==
+			   PVA_KMD_FW_BUF_MSG_FENCE_TYPE_SEMAPHORE) {
+			trace_job_postfence_semaphore(job_id,
+						      trace_info->fence_id,
+						      trace_info->offset,
+						      trace_info->value);
+		}
+	}
 }

@@ -23,113 +23,10 @@ struct pva_vpu_instance_data {
 };
 
 /**
- * @defgroup PVA_VPU_SYSCALL
- *
- * @brief PVA VPU SYS call IDs for each type of
- * SYS call.
- * @{
+ * @brief Used to store VPU Syscall IDs, that represent the
+ *        vpu syscall id between FW and VPU kernel.
  */
-
-//! @cond DISABLE_DOCUMENTATION
-
-/**
- * @brief VPU Syscall id for vpu printf write.
- */
-#define PVA_FW_PE_SYSCALL_ID_WRITE (1U)
-//! @endcond
-/**
- * @brief VPU Syscall id for Icache prefetch.
- */
-#define PVA_FW_PE_SYSCALL_ID_ICACHE_PREFETCH (2U)
-
-/**
- * @brief VPU Syscall id for masking exceptions.
- */
-#define PVA_FW_PE_SYSCALL_ID_MASK_EXCEPTION (3U)
-
-/**
- * @brief VPU Syscall id for unmasking exceptions.
- */
-#define PVA_FW_PE_SYSCALL_ID_UNMASK_EXCEPTION (4U)
-//! @cond DISABLE_DOCUMENTATION
-/**
- * @brief VPU Syscall id for sampling VPU performance counters
- */
-#define PVA_FW_PE_SYSCALL_ID_PERFMON_SAMPLE (5U)
-//! @endcond
-/** @} */
-
-/**
- * @defgroup PVA_PPE_SYSCALL
- *
- * @brief PVA PPE SYS call IDs for each type of
- * SYS call.
- * @{
- */
-
-//! @cond DISABLE_DOCUMENTATION
-
-/**
- * @brief PPE Syscall id for ppe printf write.
- */
-#define PVA_FW_PPE_SYSCALL_ID_WRITE (1U)
-
-/**
- * @brief PPE Syscall id for masking exceptions.
- */
-#define PVA_FW_PPE_SYSCALL_ID_MASK_EXCEPTION (2U)
-
-/**
- * @brief PPE Syscall id for unmasking exceptions.
- */
-#define PVA_FW_PPE_SYSCALL_ID_UNMASK_EXCEPTION (3U)
-
-/**
- * @brief VPU Syscall id for sampling VPU performance counters
- */
-#define PVA_FW_PPE_SYSCALL_ID_PERFMON_SAMPLE (4U)
-/**
- * @brief PPE Syscall id for Icache prefetch.
- */
-#define PVA_FW_PPE_SYSCALL_ID_ICACHE_PREFETCH (5U)
-
-//! @endcond
-/** @} */
-
-/**
- * @brief Lookup table to convert PPE syscall IDs to VPU syscall IDs
- * Index is PPE syscall ID, value is corresponding VPU syscall ID
- */
-#define PVA_FW_PPE_TO_VPU_SYSCALL_LUT                                                          \
-	{                                                                                      \
-		0U, /* Index 0: Invalid */                                                     \
-			PVA_FW_PE_SYSCALL_ID_WRITE, /* Index 1: Write */                       \
-			PVA_FW_PE_SYSCALL_ID_MASK_EXCEPTION, /* Index 2: Mask Exception */     \
-			PVA_FW_PE_SYSCALL_ID_UNMASK_EXCEPTION, /* Index 3: Unmask Exception */ \
-			PVA_FW_PE_SYSCALL_ID_PERFMON_SAMPLE, /* Index 4: Perfmon Sample */     \
-			PVA_FW_PE_SYSCALL_ID_ICACHE_PREFETCH /* Index 5: ICache Prefetch */    \
-	}
-
-/**
- * @brief Maximum valid PPE syscall ID
- */
-#define PVA_FW_PPE_SYSCALL_ID_MAX PVA_FW_PPE_SYSCALL_ID_ICACHE_PREFETCH
-
-/**
- * @defgroup PVA_VPU_SYSCALL_WRITE_PARAM_GROUP
- *
- * @brief Parameter specification for syscall write
- */
-
-/**
- * @defgroup PVA_VPU_SYSCALL_COMMAND_FIELDS_GROUP
- *
- * @brief The command format to be used while issuing vpu syscall command from VPU kernel to R5.
- * The fields mentioned in this group is used for submitting the command
- * through the Signal_R5 interface from VPU kernel.
- *
- * @{
- */
+typedef uint32_t pva_vpu_syscall_id_t;
 
 /**
  * @brief The most significant bit of the vpu syscall ID field in
@@ -154,17 +51,56 @@ struct pva_vpu_instance_data {
  * the vpu syscall command interface
  */
 #define PVA_FW_PE_SYSCALL_PARAM_LSB (0U)
-/** @} */
 
 /**
- * @defgroup PVA_VPU_SYSCALL_ICACHE_PREFETCH_PARAM_FIELDS_GROUP
- *
- * @brief The parameter format to be used while issuing vpu syscall command from VPU kernel to R5 for syscall icache prefetch.
- * The fields mentioned in this group is used for submitting the icache prefetch command
- * through the Signal_R5 interface from VPU kernel.
- *
- * @{
+ * @brief VPU Syscall id for vpu printf write.
  */
+#define PVA_FW_PE_SYSCALL_ID_WRITE (1U)
+
+/**
+ * @brief VPU Syscall id for Icache prefetch.
+ */
+#define PVA_FW_PE_SYSCALL_ID_ICACHE_PREFETCH (2U)
+
+/**
+ * @brief VPU Syscall id for masking exceptions.
+ */
+#define PVA_FW_PE_SYSCALL_ID_MASK_EXCEPTION (3U)
+
+/**
+ * @brief VPU Syscall id for unmasking exceptions.
+ */
+#define PVA_FW_PE_SYSCALL_ID_UNMASK_EXCEPTION (4U)
+
+/**
+ * @brief VPU Syscall id for sampling VPU performance counters
+ */
+#define PVA_FW_PE_SYSCALL_ID_PERFMON_SAMPLE (5U)
+
+/**
+ * @brief PPE Syscall id for ppe printf write.
+ */
+#define PVA_FW_PPE_SYSCALL_ID_WRITE (1U)
+
+/**
+ * @brief PPE Syscall id for Icache prefetch.
+ */
+#define PVA_FW_PPE_SYSCALL_ID_ICACHE_PREFETCH (2U)
+
+/**
+ * @brief PPE Syscall id for masking exceptions.
+ */
+#define PVA_FW_PPE_SYSCALL_ID_MASK_EXCEPTION (3U)
+
+/**
+ * @brief PPE Syscall id for unmasking exceptions.
+ */
+#define PVA_FW_PPE_SYSCALL_ID_UNMASK_EXCEPTION (4U)
+
+/**
+ * @brief PPE Syscall id for sampling PPE performance counters
+ */
+#define PVA_FW_PPE_SYSCALL_ID_PERFMON_SAMPLE (5U)
 
 /**
  * @brief The most significant bit of the prefetch cache line count field in
@@ -189,23 +125,146 @@ struct pva_vpu_instance_data {
  * the vpu syscall command interface
  */
 #define PVA_FW_PE_SYSCALL_PREFETCH_ADDR_LSB (0U)
-/** @} */
-
-/**
- * @defgroup PVA_VPU_SYSCALL_MASK_UNMASK_PARAM_FIELDS_GROUP
- *
- * @brief The parameter format to be used while issuing vpu syscall command from VPU kernel
- * to R5 for masking or unmasking FP NaN Exception.
- * The fields mentioned in this group is used for submitting the mask and unmask FP NaN eception command
- * through the Signal_R5 interface from VPU kernel.
- *
- * @{
- */
 
 /**
  * @brief Parameter specification for syscall mask/unmask exceptions
  */
+#define PVA_FW_PE_MASK_DIV_BY_0 (1U << 1U)
 #define PVA_FW_PE_MASK_FP_INV_NAN (1U << 2U)
-/** @} */
+
+/**
+ * @breif Write syscall parameter will be a pointer to this struct
+ */
+union pva_fw_pe_syscall_write {
+	struct {
+		uint32_t addr;
+		uint32_t size;
+	} in;
+	struct {
+		uint32_t written_size;
+	} out;
+};
+
+/**
+ * @brief Perfmon sample syscall parameter will be a pointer to this struct
+ */
+struct pva_fw_pe_syscall_perfmon_sample {
+	/** counter_mask[0] is for ID: 0-31; counter_mask[1] is for ID: 32-63 */
+	uint32_t counter_mask[2];
+	uint32_t output_addr;
+};
+
+/**
+ * @brief Index for t26x performance counters for VPU
+ */
+#define PERFMON_COUNTER_ID_VPS_STALL_ID_NO_VAL_INSTR_T26X (0U)
+#define PERFMON_COUNTER_ID_VPS_ID_VALID_T26X (1U)
+#define PERFMON_COUNTER_ID_VPS_STALL_ID_REG_DEPEND_T26X (2U)
+#define PERFMON_COUNTER_ID_VPS_STALL_ID_ONLY_T26X (3U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX1_ONLY_T26X (4U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX4_RSC_HZRD_T26X (5U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX4_DATA_HZRD_T26X (6U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX4_RAMIC_HI_PRI_T26X (7U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX5_APB_T26X (8U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX8_RSC_HZRD_T26X (9U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX8_RAMIC_HI_PRI_T26X (10U)
+#define PERFMON_COUNTER_ID_VPS_WFE_GPI_EX_STATE_T26X (11U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_RD_REQ_L01_T26X (12U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_RD_REQ_ACT_L01_T26X (13U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_RD_REQ_L23_T26X (14U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_RD_REQ_ACT_L23_T26X (15U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_WR_REQ_L01_T26X (16U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_WR_REQ_ACT_L01_T26X (17U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_WR_REQ_L23_T26X (18U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_WR_REQ_ACT_L23_T26X (19U)
+#define PERFMON_COUNTER_ID_VPS_ICACHE_FETCH_REQ_T26X (20U)
+#define PERFMON_COUNTER_ID_VPS_ICACHE_MISS_T26X (21U)
+#define PERFMON_COUNTER_ID_VPS_ICACHE_PREEMPT_T26X (22U)
+#define PERFMON_COUNTER_ID_VPS_ICACHE_PREFETCH_LINES_T26X (23U)
+#define PERFMON_COUNTER_ID_VPS_ICACHE_MISS_DUR_T26X (24U)
+#define PERFMON_COUNTER_ID_VPS_ICACHE_PREFETCH_DUR_T26X (25U)
+#define PERFMON_COUNTER_ID_DLUT_BUSY_T26X (26U)
+#define PERFMON_COUNTER_ID_DLUT_VPU_BOTH_BUSY_T26X (27U)
+#define PERFMON_COUNTER_ID_VPU_WAIT_FOR_DLUT_T26X (28U)
+#define PERFMON_COUNTER_ID_DLUT_WAIT_FOR_VPU_T26X (29U)
+#define PERFMON_COUNTER_ID_DLUT_IDX_TRANS_T26X (30U)
+#define PERFMON_COUNTER_ID_DLUT_LUT_TRANS_T26X (31U)
+#define PERFMON_COUNTER_ID_DLUT_OUT_TRANS_T26X (32U)
+#define PERFMON_COUNTER_ID_DLUT_IDX_REQ_ACT_T26X (33U)
+#define PERFMON_COUNTER_ID_DLUT_LUT_REQ_ACT_T26X (34U)
+#define PERFMON_COUNTER_ID_DLUT_OUT_REQ_ACT_T26X (35U)
+#define PERFMON_COUNTER_ID_DLUT_NULL_GROUPS_T26X (36U)
+
+/**
+ * @brief Index for t23x performance counters
+ */
+#define PERFMON_COUNTER_ID_VPS_STALL_ID_NO_VAL_INSTR_T23X (0U)
+#define PERFMON_COUNTER_ID_VPS_ID_VALID_T23X (1U)
+#define PERFMON_COUNTER_ID_VPS_STALL_ID_REG_DEPEND_T23X (2U)
+#define PERFMON_COUNTER_ID_VPS_STALL_ID_ONLY_T23X (3U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX1_ONLY_T23X (4U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX4_RSC_HZRD_T23X (5U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX4_DATA_HZRD_T23X (6U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX4_RAMIC_HI_PRI_T23X (7U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX5_APB_T23X (8U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX8_RSC_HZRD_T23X (9U)
+#define PERFMON_COUNTER_ID_VPS_STALL_EX8_RAMIC_HI_PRI_T23X (10U)
+#define PERFMON_COUNTER_ID_VPS_WFE_GPI_EX_STATE_T23X (11U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_RD_REQ_L01_T23X (12U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_RD_REQ_ACT_L01_T23X (13U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_RD_REQ_L23_T23X (14U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_RD_REQ_ACT_L23_T23X (15U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_WR_REQ_L01_T23X (16U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_WR_REQ_ACT_L01_T23X (17U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_WR_REQ_L23_T23X (18U)
+#define PERFMON_COUNTER_ID_VMEMIF_RAMIC_WR_REQ_ACT_L23_T23X (19U)
+#define PERFMON_COUNTER_ID_ICACHE_FETCH_REQ_T23X (20U)
+#define PERFMON_COUNTER_ID_ICACHE_MISS_T23X (21U)
+#define PERFMON_COUNTER_ID_ICACHE_PREEMP_T23X (22U)
+#define PERFMON_COUNTER_ID_ICACHE_PREFETCH_LINES_T23X (23U)
+#define PERFMON_COUNTER_ID_ICACHE_MISS_DUR_T23X (24U)
+#define PERFMON_COUNTER_ID_ICACHE_PREFETCH_DUR_T23X (25U)
+#define PERFMON_COUNTER_ID_DLUT_BUSY_T23X (26U)
+#define PERFMON_COUNTER_ID_DLUT_VPU_BOTH_BUSY_T23X (27U)
+#define PERFMON_COUNTER_ID_VPU_WAIT_FOR_DLUT_T23X (28U)
+#define PERFMON_COUNTER_ID_DLUT_WAIT_FOR_VPU_T23X (29U)
+#define PERFMON_COUNTER_ID_DLUT_IDX_TRANS_T23X (30U)
+#define PERFMON_COUNTER_ID_DLUT_LUT_TRANS_T23X (31U)
+#define PERFMON_COUNTER_ID_DLUT_OUT_TRANS_T23X (32U)
+#define PERFMON_COUNTER_ID_DLUT_IDX_REQ_ACT_T23X (33U)
+#define PERFMON_COUNTER_ID_DLUT_LUT_REQ_ACT_T23X (34U)
+#define PERFMON_COUNTER_ID_DLUT_OUT_REQ_ACT_T23X (35U)
+#define PERFMON_COUNTER_ID_DLUT_NULL_GROUPS_T23X (36U)
+
+/**
+ * @brief Index for t26x performance counters for PPE
+ */
+#define PERFMON_COUNTER_ID_PPS_STALL_ID_NO_VAL_INSTR_T26X (0U)
+#define PERFMON_COUNTER_ID_PPS_ID_VALID_T26X (1U)
+#define PERFMON_COUNTER_ID_PPS_STALL_ID_REG_DEPEND_T26X (2U)
+#define PERFMON_COUNTER_ID_PPS_STALL_ID_ONLY_T26X (3U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX1_ONLY_T26X (4U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_IORF_LD_DEPENDENCY_T26X (5U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_IORF_ST_DEPENDENCY_T26X (6U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_IORF_DEPENDENCY_T26X (7U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_STRM_STORE_FLUSH_T26X (8U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_SCALAR_STORE_FLUSH_T26X (9U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_STORE_FLUSH_T26X (10U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_STREAM_START_LD_T26X (11U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_STREAM_START_ST_T26X (12U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_STREAM_START_T26X (13U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_SCALAR_LD_T26X (14U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_SCALAR_ST_T26X (15U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_SCALAR_LDST_T26X (16U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_LDQ_PUSHBACK_T26X (17U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_STQ_PUSHBACK_T26X (18U)
+#define PERFMON_COUNTER_ID_PPS_STALL_EX3_LDQ_FLUSH_T26X (19U)
+#define PERFMON_COUNTER_ID_PPS_WFE_GPI_EX_STATE_T26X (20U)
+#define PERFMON_COUNTER_ID_PPS_ICACHE_FETCH_REQ_T26X (21U)
+#define PERFMON_COUNTER_ID_PPS_ICACHE_MISS_T26X (22U)
+#define PERFMON_COUNTER_ID_PPS_ICACHE_PREEMPT_T26X (23U)
+#define PERFMON_COUNTER_ID_PPS_ICACHE_PREFETCH_LINES_T26X (24U)
+#define PERFMON_COUNTER_ID_PPS_ICACHE_MISS_DUR_T26X (25U)
+#define PERFMON_COUNTER_ID_PPS_ICACHE_PREFETCH_DUR_T26X (26U)
 
 #endif // PVA_API_VPU_H

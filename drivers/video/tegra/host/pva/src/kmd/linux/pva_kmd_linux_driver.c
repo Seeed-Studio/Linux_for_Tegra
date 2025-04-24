@@ -50,13 +50,13 @@
 extern struct platform_driver pva_kmd_linux_smmu_context_driver;
 extern atomic_t g_num_smmu_ctxs;
 static bool load_from_gsc = PVA_KMD_LOAD_FROM_GSC_DEFAULT;
-static bool app_authenticate = PVA_KMD_APP_AUTH_DEFAULT;
+static bool pva_test_mode; //false by default
 
 module_param(load_from_gsc, bool, 0);
 MODULE_PARM_DESC(load_from_gsc, "Load V3 FW from GSC");
 
-module_param(app_authenticate, bool, 0);
-MODULE_PARM_DESC(app_authenticate, "Enable app authentication");
+module_param(pva_test_mode, bool, 0);
+MODULE_PARM_DESC(pva_test_mode, "Enable test mode");
 
 struct nvpva_device_data t23x_pva0_props = {
 	.version = PVA_CHIP_T23X,
@@ -112,10 +112,14 @@ static int pva_get_gsc_priv_hwid(struct platform_device *pdev)
 	return fwspec->ids[0] & 0xffff;
 }
 
-static void pva_kmd_linux_register_hwpm(struct pva_kmd_device *pva)
+static int pva_kmd_linux_register_hwpm(struct pva_kmd_device *pva)
 {
 	struct tegra_soc_hwpm_ip_ops *hwpm_ip_ops =
 		pva_kmd_zalloc(sizeof(*hwpm_ip_ops));
+
+	if (hwpm_ip_ops == NULL) {
+		return -ENOMEM;
+	}
 
 	hwpm_ip_ops->ip_dev = pva;
 	hwpm_ip_ops->ip_base_address = safe_addu64(
@@ -125,6 +129,7 @@ static void pva_kmd_linux_register_hwpm(struct pva_kmd_device *pva)
 	hwpm_ip_ops->hwpm_ip_reg_op = &pva_kmd_hwpm_ip_reg_op;
 	tegra_soc_hwpm_ip_register(hwpm_ip_ops);
 	pva->debugfs_context.data_hwpm = hwpm_ip_ops;
+	return 0;
 }
 
 static void pva_kmd_linux_unregister_hwpm(struct pva_kmd_device *pva)
@@ -256,9 +261,56 @@ static void pva_kmd_free_co_mem(struct platform_device *pdev)
 	}
 }
 
+static bool pva_kmd_in_test_mode(struct device *dev, bool param_test_mode)
+{
+	const char *dt_test_mode = NULL;
+
+	if (of_property_read_string(dev->of_node, "nvidia,test_mode_enable",
+				    &dt_test_mode)) {
+		return param_test_mode;
+	}
+
+	if (strcmp(dt_test_mode, "true")) {
+		return param_test_mode;
+	}
+
+	return true;
+}
+
 static struct kobj_type nvpva_kobj_ktype = {
 	.sysfs_ops = &kobj_sysfs_ops,
 };
+
+/**
+ * Read VPU authentication property from device tree
+ *
+ * @param dev Pointer to the device structure
+ * @return true if authentication should be enabled, false otherwise
+ */
+static bool pva_kmd_linux_read_vpu_auth(const struct device *dev)
+{
+	bool auth_enabled = false;
+	int len;
+	const __be32 *val;
+
+	val = of_get_property(dev->of_node, "nvidia,vpu-auth", &len);
+	if ((val != NULL) && (len >= (int)sizeof(__be32))) {
+		u32 value = (u32)be32_to_cpu(*val);
+		if (value != 0U) {
+			auth_enabled = true;
+			dev_dbg(dev, "VPU authentication enabled\n");
+		} else {
+			auth_enabled = false;
+			dev_dbg(dev, "VPU authentication disabled\n");
+		}
+	} else {
+		dev_dbg(dev,
+			"No VPU authentication property found, using default: %d\n",
+			auth_enabled);
+	}
+
+	return auth_enabled;
+}
 
 static int pva_probe(struct platform_device *pdev)
 {
@@ -273,6 +325,9 @@ static int pva_probe(struct platform_device *pdev)
 	struct clk_bulk_data *clks;
 	struct clk *c;
 
+	bool pva_enter_test_mode = false;
+	bool app_authenticate;
+
 	device_id = of_match_device(tegra_pva_of_match, dev);
 	if (!device_id) {
 		dev_err(dev, "no match for pva dev\n");
@@ -285,6 +340,8 @@ static int pva_probe(struct platform_device *pdev)
 		dev_info(dev, "no platform data\n");
 		return -ENODATA;
 	}
+
+	app_authenticate = pva_kmd_linux_read_vpu_auth(dev);
 
 	/* Create devices for child nodes of this device */
 	of_platform_default_populate(dev->of_node, NULL, dev);
@@ -300,16 +357,11 @@ static int pva_probe(struct platform_device *pdev)
 
 	pva_props->pdev = pdev;
 	mutex_init(&pva_props->lock);
-	pva_device =
-		pva_kmd_device_create(pva_props->version, 0, app_authenticate);
+	pva_enter_test_mode = pva_kmd_in_test_mode(dev, pva_test_mode);
+	pva_device = pva_kmd_device_create(
+		pva_props->version, 0, app_authenticate, pva_enter_test_mode);
 
 	pva_device->is_hv_mode = is_tegra_hypervisor_mode();
-
-	/* On L4T, forcing boot from file */
-	/* If needed to load from GSC, remove the below block */
-	if (!pva_device->is_hv_mode) {
-		load_from_gsc = false;
-	}
 
 	pva_device->load_from_gsc = load_from_gsc;
 	pva_device->stream_ids[pva_device->r5_image_smmu_context_id] =
@@ -352,8 +404,17 @@ static int pva_probe(struct platform_device *pdev)
 
 	pva_kmd_linux_host1x_init(pva_device);
 
-	pva_kmd_debugfs_create_nodes(pva_device);
-	pva_kmd_linux_register_hwpm(pva_device);
+	err = pva_kmd_debugfs_create_nodes(pva_device);
+	if (err != PVA_SUCCESS) {
+		dev_err(dev, "debugfs creation failed\n");
+		goto err_cdev_init;
+	}
+
+	err = pva_kmd_linux_register_hwpm(pva_device);
+	if (err != PVA_SUCCESS) {
+		dev_err(dev, "pva_kmd_linux_register_hwpm failed\n");
+		goto err_cdev_init;
+	}
 
 	if (!pva_device->is_hv_mode && pva_device->load_from_gsc) {
 		err = pva_kmd_get_co_info(pdev);

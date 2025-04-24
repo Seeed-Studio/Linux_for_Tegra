@@ -16,6 +16,7 @@ extern "C" {
 
 /* Core APIs */
 
+#define PVA_MAX_NUM_RESOURCES_PER_CONTEXT (16U * 1024U)
 /**
  * @brief Create a PVA context.
  *
@@ -37,6 +38,18 @@ enum pva_error pva_context_create(uint32_t pva_index,
  */
 void pva_context_destroy(struct pva_context *ctx);
 
+/**
+ * @brief Get the value of a context attribute.
+ *
+ * @param[in] ctx Pointer to the context.
+ * @param[in] attr Attribute to get.
+ * @param[out] out_value Pointer to the value of the attribute.
+ * @param[size] size of the attribute structure
+ */
+enum pva_error pva_get_attribute(struct pva_context *ctx, enum pva_attr attr,
+				 void *out_value, uint64_t size);
+
+#define PVA_MAX_NUM_SUBMISSIONS_PER_QUEUE (8U * 1024U)
 /**
  * @brief Create a PVA queue.
  *
@@ -97,7 +110,7 @@ void pva_memory_free(struct pva_memory *mem);
  * @param[in] ctx Pointer to the context.
  * @param[in] syncpiont_id Syncpoint ID to wait on.
  * @param[in] value Value to wait for.
- * @param[in] timeout_us Timeout in microseconds. PVA_TIMEOUT_INF for infinite.
+ * @param[in] timeout_us Timeout in microseconds. PVA_SUBMIT_TIMEOUT_INF for infinite.
  */
 enum pva_error pva_syncpoint_wait(struct pva_context *ctx,
 				  uint32_t syncpiont_id, uint32_t value,
@@ -109,7 +122,7 @@ enum pva_error pva_syncpoint_wait(struct pva_context *ctx,
  * @param[in] queue Pointer to the queue.
  * @param[in] submit_infos Array of submit info structures.
  * @param[in] count Number of submit info structures.
- * @param[in] timeout_us Timeout in microseconds. PVA_TIMEOUT_INF for infinite.
+ * @param[in] timeout_us Timeout in microseconds. PVA_SUBMIT_TIMEOUT_INF for infinite.
  *
  * @note Concurrent submission to the same queue needs to be serialized by the
  *       caller.
@@ -205,26 +218,6 @@ enum pva_error pva_memory_import_id_destroy(uint64_t import_id);
 
 /** \brief Specifies the PVA system software minor version. */
 #define PVA_SYSSW_MINOR_VERSION (7U)
-
-/**
- * @brief Get PVA system software version.
- *
- * PVA system software version is defined as the latest version of cuPVA which is fully supported
- * by this version of the PVA system software.
- *
- * @param[out] version version of currently running system SW, computed as:
- 	       (PVA_SYSSW_MAJOR_VERSION * 1000) + PVA_SYSSW_MINOR_VERSION
- * @return PVA_SUCCESS on success, else error code indicating the failure.
- */
-enum pva_error pva_get_version(uint32_t *version);
-
-/**
- * @brief Get the hardware characteristics of the PVA.
- *
- * @param[out] pva_hw_char Pointer to the hardware characteristics.
- */
-enum pva_error
-pva_get_hw_characteristics(struct pva_characteristics *pva_hw_char);
 
 #ifdef __cplusplus
 }

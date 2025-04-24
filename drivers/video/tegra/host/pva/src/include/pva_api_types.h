@@ -118,6 +118,16 @@
 	ACT(PVA_ERR_MATH_OP)                                                   \
 	ACT(PVA_ERR_HWSEQ_INVALID)                                             \
 	ACT(PVA_ERR_FW_ABORTED)                                                \
+	ACT(PVA_ERR_PPE_DIVIDE_BY_0)                                           \
+	ACT(PVA_ERR_PPE_FP_NAN)                                                \
+	ACT(PVA_ERR_INVALID_ACCESS_MODE_COMBINATION)                           \
+	ACT(PVA_ERR_CMD_TCM_BUF_OUT_OF_RANGE)                                  \
+	ACT(PVA_ERR_MISR_NOT_RUN)                                              \
+	ACT(PVA_ERR_MISR_DATA)                                                 \
+	ACT(PVA_ERR_MISR_ADDR)                                                 \
+	ACT(PVA_ERR_MISR_NOT_DONE)                                             \
+	ACT(PVA_ERR_MISR_ADDR_DATA)                                            \
+	ACT(PVA_ERR_MISR_TIMEOUT)                                              \
 	ACT(PVA_ERR_CODE_COUNT)
 
 enum pva_error {
@@ -207,12 +217,6 @@ struct pva_fw_vpu_ptr_symbol {
 	uint64_t size;
 };
 
-struct pva_fw_vpu_legacy_ptr_symbol {
-	uint64_t base;
-	uint32_t offset;
-	uint32_t size;
-};
-
 enum pva_surface_format {
 	PVA_SURF_FMT_PITCH_LINEAR = 0,
 	PVA_SURF_FMT_BLOCK_LINEAR
@@ -243,25 +247,6 @@ enum pva_symbol_type {
 	PVA_SYM_TYPE_MAX,
 };
 
-/**
- * \brief Holds PVA Sync Client Type.
- * Currently NvSciSync supports NvSciSyncFences with syncpoint primitive type only.
- */
-enum pva_sync_client_type {
-	/*! For a given SyncObj PVA acts as a signaler. This type corresponds to
-      * postfences from PVA. */
-	PVA_SYNC_CLIENT_TYPE_SIGNALER,
-	/*! For a given SyncObj PVA acts as a waiter. This type corresponds to
-      * prefences to PVA. */
-	PVA_SYNC_CLIENT_TYPE_WAITER,
-	/*! For a given SyncObj PVA acts as both signaler and waiter. */
-	PVA_SYNC_CLIENT_TYPE_SIGNALER_WAITER,
-	/*! Specifies the non inclusive upper bound of valid values. */
-	PVA_SYNC_CLIENT_TYPE_MAX,
-	/*! Reserved bound of valid values. */
-	PVA_SYNC_CLIENT_TYPE_RESERVED = 0x7FFFFFFF,
-};
-
 #define PVA_SYMBOL_ID_INVALID 0U
 #define PVA_SYMBOL_ID_BASE 1U
 #define PVA_MAX_SYMBOL_NAME_LEN 64U
@@ -275,19 +260,6 @@ struct pva_symbol_info {
 };
 
 #define PVA_RESOURCE_ID_INVALID 0U
-#define PVA_RESOURCE_ID_BASE 1U
-struct pva_resource_entry {
-#define PVA_RESOURCE_TYPE_INVALID 0U
-#define PVA_RESOURCE_TYPE_DRAM 1U
-#define PVA_RESOURCE_TYPE_EXEC_BIN 2U
-#define PVA_RESOURCE_TYPE_DMA_CONFIG 3U
-	uint8_t type;
-	uint8_t smmu_context_id;
-	uint8_t addr_hi;
-	uint8_t size_hi;
-	uint32_t addr_lo;
-	uint32_t size_lo;
-};
 
 /** \brief Maximum number of queues per context */
 #define PVA_MAX_QUEUES_PER_CONTEXT (8)
@@ -300,7 +272,8 @@ struct pva_resource_entry {
 #define PVA_ACCESS_RW                                                          \
 	(PVA_ACCESS_RO | PVA_ACCESS_WO) /**< Read and write access */
 
-#define PVA_TIMEOUT_INF UINT64_MAX /**< Infinite timeout */
+// unify timeout to uint64_t, in microseconds
+#define PVA_SUBMIT_TIMEOUT_INF UINT64_MAX /**< Infinite timeout */
 
 #define PVA_MAX_NUM_INPUT_STATUS 2 /**< Maximum number of input statuses */
 #define PVA_MAX_NUM_OUTPUT_STATUS 2 /**< Maximum number of output statuses */
@@ -329,8 +302,9 @@ struct pva_cmdbuf_submit_info {
 	uint64_t submit_id;
 	/** Offset of the first chunk within the resource */
 	uint64_t first_chunk_offset;
-#define PVA_EXEC_TIMEOUT_REUSE 0xFFFFFFFFU
-#define PVA_EXEC_TIMEOUT_INF 0U
+/** Execution timeout is in ms */
+#define PVA_EXEC_TIMEOUT_INF UINT32_MAX
+#define PVA_EXEC_TIMEOUT_REUSE (UINT32_MAX - 1)
 	/** Execution Timeout */
 	uint32_t execution_timeout_ms;
 	struct pva_fence prefences[PVA_MAX_NUM_PREFENCES];
@@ -351,13 +325,13 @@ struct pva_cmdbuf_status {
 	uint16_t status;
 };
 
-/** \brief Holds the PVA capabilities. */
+/** @brief Holds the PVA capabilities. */
 struct pva_characteristics {
-	/*! Holds the number of PVA engines. */
+	/** Holds the number of PVA engines. */
 	uint32_t pva_engine_count;
-	/*! Holds the number of VPUs per PVA engine. */
+	/** Holds the number of VPUs per PVA engine. */
 	uint32_t pva_pve_count;
-	/*! Holds the PVA generation information */
+	/** Holds the PVA generation information */
 	enum pva_hw_gen hw_version;
 	uint16_t max_desc_count;
 	uint16_t max_ch_count;
@@ -370,16 +344,27 @@ struct pva_characteristics {
 	uint16_t reserved_adb_count;
 };
 
-enum pva_error_inject_codes {
-	PVA_ERR_INJECT_WDT_HW_ERR, // watchdog Hardware error
-	PVA_ERR_INJECT_WDT_TIMEOUT, // watchdog Timeout error
-};
-
 /*
  * !!!! DO NOT MODIFY !!!!!!
  * These values are defined as per DriveOS guidelines
  */
 #define PVA_INPUT_STATUS_SUCCESS (0)
 #define PVA_INPUT_STATUS_INVALID (0xFFFF)
+
+/**
+ * @brief Context attribute keys.
+ */
+enum pva_attr {
+	PVA_CONTEXT_ATTR_MAX_CMDBUF_CHUNK_SIZE,
+	PVA_ATTR_HW_CHARACTERISTICS,
+	PVA_ATTR_VERSION
+};
+
+/**
+ * @brief Maximum size of a command buffer chunk.
+ */
+struct pva_ctx_attr_max_cmdbuf_chunk_size {
+	uint16_t max_size;
+};
 
 #endif // PVA_API_TYPES_H

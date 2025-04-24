@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 #ifndef PVA_ERRORS_H
 #define PVA_ERRORS_H
 
@@ -154,15 +154,6 @@ typedef uint16_t pva_errors_t;
  */
 
 //! @cond DISABLE_DOCUMENTATION
-/**
- * @brief Error in case of Floating point NAN.
- */
-#define PVA_ERR_PPE_DIVIDE_BY_0 (0x34U)
-/**
- * @brief Error in case of Floating point NAN.
- */
-#define PVA_ERR_PPE_ILLEGAL_DEBUG (0x36U)
-
 #define PVA_ERR_PPE_ILLEGAL_INSTR_ALIGN (0x37U)
 
 /**
@@ -270,40 +261,6 @@ typedef uint16_t pva_errors_t;
  * more than HW Seq RAM size.
  */
 #define PVA_ERR_DMA_HWSEQ_PROGRAM_TOO_LONG (0x217U)
-/** @} */
-
-/**
- * @defgroup PVA_MISR_ERRORS
- *
- * @brief MISR error codes used across PVA.
- * @{
- */
-/**
- * @brief Error status when DMA MISR test is not run.
- */
-#define PVA_ERR_MISR_NOT_RUN (0x280U)
-/**
- * @brief Error status when DMA MISR test did not complete.
- */
-#define PVA_ERR_MISR_NOT_DONE (0x281U)
-/**
- * @brief Error status when DMA MISR test timed out.
- */
-#define PVA_ERR_MISR_TIMEOUT (0x282U)
-/**
- * @brief Error status in case of DMA MISR test address failure.
- */
-#define PVA_ERR_MISR_ADDR (0x283U)
-/**
- * @brief Error status in case of DMA MISR test data failure.
- */
-#define PVA_ERR_MISR_DATA (0x284U)
-/**
- * @brief Error status in case of DMA MISR test data and address failure.
- */
-#define PVA_ERR_MISR_ADDR_DATA (0x285U)
-/** @} */
-
 /**
  * @defgroup PVA_VPU_ISR_ERRORS
  *

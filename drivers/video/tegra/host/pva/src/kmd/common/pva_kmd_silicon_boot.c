@@ -4,6 +4,7 @@
 #include "pva_kmd_device.h"
 #include "pva_fw_address_map.h"
 #include "pva_fw_hyp.h"
+#include "pva_kmd_shim_init.h"
 #include "pva_kmd_thread_sema.h"
 #include "pva_kmd_constants.h"
 #include "pva_kmd_silicon_isr.h"
@@ -153,27 +154,12 @@ void pva_kmd_config_sid(struct pva_kmd_device *pva)
 	}
 }
 
-static uint32_t pva_kmd_get_syncpt_ro_offset(struct pva_kmd_device *pva)
+static uint32_t get_syncpt_offset(struct pva_kmd_device *pva,
+				  uint64_t syncpt_iova)
 {
-	if (pva->num_syncpts > 0U) {
+	if (pva->num_ro_syncpts > 0U) {
 		uint64_t offset;
-		offset = safe_subu64(pva->syncpt_ro_iova,
-				     pva_kmd_get_r5_iova_start());
-
-		ASSERT(offset <= UINT32_MAX);
-		return (uint32_t)offset;
-	} else {
-		// This is only for SIM mode where syncpoints are not supported.
-		return PVA_R5_SYNCPT_REGION_IOVA_OFFSET_NOT_SET;
-	}
-}
-
-static uint32_t pva_kmd_get_syncpt_rw_offset(struct pva_kmd_device *pva)
-{
-	if (pva->num_syncpts > 0U) {
-		uint64_t offset;
-		offset = safe_subu64(pva->syncpt_rw_iova,
-				     pva_kmd_get_r5_iova_start());
+		offset = safe_subu64(syncpt_iova, pva_kmd_get_r5_iova_start());
 
 		ASSERT(offset <= UINT32_MAX);
 		return (uint32_t)offset;
@@ -249,12 +235,17 @@ enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
 	if (pva->bl_sector_pack_format == PVA_BL_XBAR_RAW) {
 		boot_sema = PVA_BOOT_SEMA_USE_XBAR_RAW;
 	}
+	if (pva->test_mode) {
+		boot_sema |= PVA_BOOT_SEMA_TEST_MODE;
+	}
 	pva_kmd_set_sema(pva, PVA_BOOT_SEMA, boot_sema);
 
-	pva_kmd_write(pva, PVA_REG_HSP_SS2_SET_ADDR,
-		      pva_kmd_get_syncpt_ro_offset(pva));
-	pva_kmd_write(pva, PVA_REG_HSP_SS3_SET_ADDR,
-		      pva_kmd_get_syncpt_rw_offset(pva));
+	pva_kmd_set_sema(pva, PVA_RO_SYNC_BASE_SEMA,
+			 get_syncpt_offset(pva, pva->ro_syncpt_base_iova));
+	pva_kmd_set_sema(pva, PVA_RW_SYNC_BASE_SEMA,
+			 get_syncpt_offset(pva, pva->rw_syncpt_base_iova));
+	pva_kmd_set_sema(pva, PVA_RW_SYNC_SIZE_SEMA,
+			 pva->rw_syncpt_region_size);
 
 	pva_kmd_config_sid_regs(pva);
 
@@ -290,6 +281,7 @@ free_sec_lic:
 	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
 free_fw_debug_mem:
 	pva_kmd_drain_fw_print(&pva->fw_print_buffer);
+	pva_kmd_freeze_fw(pva);
 	pva_kmd_device_memory_free(pva->fw_debug_mem);
 free_fw_mem:
 	if (!pva->load_from_gsc) {
@@ -299,23 +291,31 @@ out:
 	return err;
 }
 
-void pva_kmd_deinit_fw(struct pva_kmd_device *pva)
+void pva_kmd_freeze_fw(struct pva_kmd_device *pva)
 {
-	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
-	pva_kmd_drain_fw_print(&pva->fw_print_buffer);
-
 	/*
-	 * Before powering off PVA, disable SEC error reporting.
-	 * While powering off, PVA might generate (unexplained) error interrupts
-	 * This causes HSM to read some PVA SEC registers. However, since PVA might
-	 * already be powergated by this time, access to PVA SEC registers from HSM
-	 * fails. This was discussed in Bug 3785498.
+	 * Before freezing PVA, disable SEC error reporting.
+	 * While setting the reset line, PVA might generate (unexplained) error
+	 * interrupts This causes HSM to read some PVA SEC registers. However,
+	 * since PVA might already be powergated by this time, access to PVA SEC
+	 * registers from HSM fails. This was discussed in Bug 3785498.
 	 *
 	 * Note: we do not explicity enable these errors during power on since
 	 *	 'enable' is their reset value
 	 */
 	disable_sec_mission_error_reporting(pva);
 	disable_sec_latent_error_reporting(pva);
+
+	pva_kmd_set_reset_line(pva);
+}
+
+void pva_kmd_deinit_fw(struct pva_kmd_device *pva)
+{
+	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
+	pva_kmd_drain_fw_print(&pva->fw_print_buffer);
+
+	// FW so that we can free memory
+	pva_kmd_freeze_fw(pva);
 
 	pva_kmd_device_memory_free(pva->fw_debug_mem);
 	if (!pva->load_from_gsc) {
