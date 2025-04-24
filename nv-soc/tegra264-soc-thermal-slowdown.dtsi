@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 #include <dt-bindings/thermal/thermal.h>
 
@@ -9,19 +9,27 @@
 		pcie@d0b0000000 {
 			status = "okay";
 			pci@0,0 {
-				/* Register devfreq cdevs to tj-thermal zone */
+				/* Register devfreq cdevs to desired zones */
 				gpu@0,0 {
-					nvidia,thermal-zones = "tj-thermal";
-					nvidia,cooling-device = <THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+					nvidia,thermal-zones =
+						"cpu-thermal",
+						"gpu-thermal",
+						"soc012-thermal",
+						"soc345-thermal";
+					nvidia,cooling-device =
+						<THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
 		};
 	};
 
 	thermal-zones {
-		tj-thermal {
+		cpu-thermal {
 			trips {
-				tj_sw_slowdown: tj-sw-slowdown {
+				cpu_sw_slowdown: cpu-sw-slowdown {
 					temperature = <109000>;
 					hysteresis = <0>;
 					type = "passive";
@@ -30,7 +38,79 @@
 
 			cooling-maps {
 				map-cpufreq {
-					trip = <&tj_sw_slowdown>;
+					trip = <&cpu_sw_slowdown>;
+					/* CPU-pairs share the same clock-source */
+					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_8 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_10 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_12 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+
+		gpu-thermal {
+			trips {
+				gpu_sw_slowdown: gpu-sw-slowdown {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-cpufreq {
+					trip = <&gpu_sw_slowdown>;
+					/* CPU-pairs share the same clock-source */
+					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_8 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_10 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_12 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+
+		soc012-thermal {
+			trips {
+				soc012_sw_slowdown: soc012-sw-slowdown {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-cpufreq {
+					trip = <&soc012_sw_slowdown>;
+					/* CPU-pairs share the same clock-source */
+					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_8 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_10 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							 <&cpu_12 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+
+		soc345-thermal {
+			trips {
+				soc345_sw_slowdown: soc345-sw-slowdown {
+					temperature = <109000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-cpufreq {
+					trip = <&soc345_sw_slowdown>;
 					/* CPU-pairs share the same clock-source */
 					cooling-device = <&cpu_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
 							 <&cpu_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,

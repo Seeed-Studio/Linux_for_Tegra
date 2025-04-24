@@ -20,7 +20,19 @@
 	};
 };
 
-&tj_sw_slowdown {
+&cpu_sw_slowdown {
+	temperature = <99000>;
+};
+
+&gpu_sw_slowdown {
+	temperature = <99000>;
+};
+
+&soc012_sw_slowdown {
+	temperature = <99000>;
+};
+
+&soc345_sw_slowdown {
 	temperature = <99000>;
 };
 
