@@ -43,6 +43,10 @@ Optional properties:
 - nvpps-gpios: specifies GPIO number for PPS input signal.
 - timestamps: specifies timestamp for the GPIO provided by HTE.
 - timestamp-names: specifies name for GPIO timestamp.
+- ts-capture-interval: Defines the interval between timestamp captures in milliseconds.
+                      Valid range is from 100ms to 1000ms. This property determines how often
+                      the driver collects timestamp data. If this property is not specified,
+                      the driver will collect timestamps every 1000ms(1s) by default.
 
 Example: Timer mode on Orin.
 
@@ -112,4 +116,5 @@ nvpps {
 	reg = <0x0 0xc6a0000 0x0 0x1000>;
 	ptp_tsc_lock_threshold = /bits/ 16 <0x26C>;
 	ptp_tsc_sync_dis;
+	ts-capture-interval = <1000>;
 };
