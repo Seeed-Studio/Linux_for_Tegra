@@ -984,11 +984,6 @@ static struct attribute_group nvsciipc_uid_group = {
 	.attrs = nvsciipc_uid_attrs,
 };
 
-static const struct attribute_group *nvsciipc_uid_groups[] = {
-	&nvsciipc_uid_group,
-	NULL,
-};
-
 static const struct file_operations nvsciipc_fops = {
 	.owner		= THIS_MODULE,
 	.open		= nvsciipc_dev_open,
@@ -1033,12 +1028,14 @@ static int nvsciipc_probe(struct platform_device *pdev)
 		goto error;
 	}
 
+	dev_info(&pdev->dev, "creating nvsciipc_uid sysfs group\n");
 	ret = sysfs_create_group(&pdev->dev.kobj, &nvsciipc_uid_group);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "%s: Failed to reate sysfs group, %d\n",
 			__func__, ret);
 		goto error;
 	}
+	dev_info(&pdev->dev, "nvsciipc_uid sysfs group: done\n");
 
 	ret = alloc_chrdev_region(&(s_ctx->dev_t), 0, 1, MODULE_NAME);
 	if (ret != 0) {
@@ -1186,7 +1183,6 @@ static struct platform_driver nvsciipc_driver = {
 	.shutdown = nvsciipc_shutdown,
 	.driver = {
 		.name = MODULE_NAME,
-		.groups = nvsciipc_uid_groups,
 	},
 #ifdef CONFIG_PM
 	.suspend = nvsciipc_suspend,
