@@ -13,6 +13,9 @@
 #include <linux/of_irq.h>
 #include <linux/memory.h>
 
+#define MBOX_FORMAT_FLAG 	(0x1+(0x0<<8)+('P'<<16)+('S'<<24))
+
+
 /* Mailbox Request register offsets */
 #define REQ_OPCODE_OFFSET		0x800U
 #define REQ_FORMAT_FLAG_OFFSET	0x804U
@@ -41,14 +44,6 @@
 
 static DECLARE_COMPLETION(mbox_completion);
 
-struct mbox_ctx {
-	void *hpse_carveout_base_va;
-	uint64_t hpse_carveout_base_iova;
-	uint64_t hpse_carveout_size;
-	void *oesp_mbox_reg_base_va;
-	uint64_t oesp_mbox_reg_size;
-} g_mbox_ctx;
-
 struct mbox_req {
 	u32 task_opcode;
 	u32 format_flag;
@@ -64,11 +59,20 @@ struct mbox_resp {
 	u32 status;
 };
 
+struct mbox_ctx {
+	void *hpse_carveout_base_va;
+	uint64_t hpse_carveout_base_iova;
+	uint64_t hpse_carveout_size;
+	void *oesp_mbox_reg_base_va;
+	uint64_t oesp_mbox_reg_size;
+	spinlock_t lock;
+	struct mbox_resp resp;
+} g_mbox_ctx;
+
 int32_t oesp_mailbox_send_and_read(void *buf_ptr, uint32_t buf_len, uint32_t task_opcode,
 			uint32_t driver_id)
 {
 	struct mbox_req req;
-	struct mbox_resp resp;
 	u8 *oesp_reg_mem_ptr = g_mbox_ctx.oesp_mbox_reg_base_va;
 	volatile u32 reg_val;
 	int32_t ret = 0;
@@ -80,7 +84,7 @@ int32_t oesp_mailbox_send_and_read(void *buf_ptr, uint32_t buf_len, uint32_t tas
 	req.task_opcode = task_opcode;
 	writel(req.task_opcode, oesp_reg_mem_ptr + REQ_OPCODE_OFFSET);
 
-	req.format_flag = 0x1+(0x0<<8)+('P'<<16)+('S'<<24);
+	req.format_flag = MBOX_FORMAT_FLAG;
 	writel(req.format_flag, oesp_reg_mem_ptr + REQ_FORMAT_FLAG_OFFSET);
 
 	req.tos_driver_id = driver_id;
@@ -116,14 +120,24 @@ int32_t oesp_mailbox_send_and_read(void *buf_ptr, uint32_t buf_len, uint32_t tas
 		ret = -ETIMEDOUT;
 		goto end;
 	}
-	/* Read response registers */
-	resp.task_opcode = readl(oesp_reg_mem_ptr + RESP_OPCODE_OFFSET);
-	resp.format_flag = readl(oesp_reg_mem_ptr + RESP_FORMAT_FLAG_OFFSET);
-	resp.status = readl(oesp_reg_mem_ptr + RESP_STATUS_OFFSET);
 
-	if (resp.status != 0x0U) {
-		NVTZVAULT_ERR("%s resp.status %u\n", __func__, resp.status);
+	if (g_mbox_ctx.resp.status != 0U) {
 		ret = -EINVAL;
+		NVTZVAULT_ERR("%s resp.status %u\n", __func__, g_mbox_ctx.resp.status);
+		goto end;
+	}
+
+	if (g_mbox_ctx.resp.format_flag != MBOX_FORMAT_FLAG) {
+		ret = -EINVAL;
+		NVTZVAULT_ERR("%s invalid format flag %x\n", __func__,
+				g_mbox_ctx.resp.format_flag);
+		goto end;
+	}
+
+	if (g_mbox_ctx.resp.task_opcode != task_opcode) {
+		ret = -EINVAL;
+		NVTZVAULT_ERR("%s invalid opcode %x\n", __func__,
+				g_mbox_ctx.resp.task_opcode);
 		goto end;
 	}
 
@@ -132,11 +146,6 @@ int32_t oesp_mailbox_send_and_read(void *buf_ptr, uint32_t buf_len, uint32_t tas
 		((uint8_t *)buf_ptr)[i] = ((uint8_t *)g_mbox_ctx.hpse_carveout_base_va)[i];
 
 end:
-	/* Set MBOX_OUT_DONE to acknowledge response */
-	reg_val = readl(oesp_reg_mem_ptr + EXT_CTRL_OFFSET);
-	reg_val |= MBOX_OUT_DONE;
-	writel(reg_val, oesp_reg_mem_ptr + EXT_CTRL_OFFSET);
-
 	return ret;
 }
 
@@ -156,6 +165,8 @@ static irqreturn_t tegra_hpse_irq_handler(int irq, void *dev_id)
 {
 	volatile u32 reg_val;
 	u8 *oesp_reg_mem_ptr = g_mbox_ctx.oesp_mbox_reg_base_va;
+	volatile struct mbox_resp *resp = &g_mbox_ctx.resp;
+	unsigned long flags;
 
 	/* Read PSC control register to check interrupt status */
 	reg_val = readl(oesp_reg_mem_ptr + PSC_CTRL_REG_OFFSET);
@@ -164,8 +175,22 @@ static irqreturn_t tegra_hpse_irq_handler(int irq, void *dev_id)
 	if ((reg_val & MBOX_OUT_VALID) == 0U)
 		return IRQ_NONE;
 
+	spin_lock_irqsave(&g_mbox_ctx.lock, flags);
+
+	/* Read response registers */
+	resp->task_opcode = readl(oesp_reg_mem_ptr + RESP_OPCODE_OFFSET);
+	resp->format_flag = readl(oesp_reg_mem_ptr + RESP_FORMAT_FLAG_OFFSET);
+	resp->status = readl(oesp_reg_mem_ptr + RESP_STATUS_OFFSET);
+
+	/* Set MBOX_OUT_DONE to acknowledge response */
+	reg_val = readl(oesp_reg_mem_ptr + EXT_CTRL_OFFSET);
+	reg_val |= MBOX_OUT_DONE;
+	writel(reg_val, oesp_reg_mem_ptr + EXT_CTRL_OFFSET);
+
 	/* Signal completion to waiting thread */
 	complete(&mbox_completion);
+
+	spin_unlock_irqrestore(&g_mbox_ctx.lock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -246,6 +271,14 @@ int32_t oesp_mailbox_init(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	g_mbox_ctx.hpse_carveout_base_va = hpse_carveout_base_va;
+	g_mbox_ctx.hpse_carveout_base_iova = hpse_carveout_base_iova;
+	g_mbox_ctx.hpse_carveout_size = hpse_carveout_size;
+	g_mbox_ctx.oesp_mbox_reg_base_va = oesp_mbox_reg_base_va;
+	g_mbox_ctx.oesp_mbox_reg_size = oesp_mbox_reg_size;
+
+	spin_lock_init(&g_mbox_ctx.lock);
+
 	/* Get IRQ from tegra-hpse node */
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
@@ -259,12 +292,6 @@ int32_t oesp_mailbox_init(struct platform_device *pdev)
 		dev_err(dev, "Failed to request IRQ %d: %d\n", irq, ret);
 		return ret;
 	}
-
-	g_mbox_ctx.hpse_carveout_base_va = hpse_carveout_base_va;
-	g_mbox_ctx.hpse_carveout_base_iova = hpse_carveout_base_iova;
-	g_mbox_ctx.hpse_carveout_size = hpse_carveout_size;
-	g_mbox_ctx.oesp_mbox_reg_base_va = oesp_mbox_reg_base_va;
-	g_mbox_ctx.oesp_mbox_reg_size = oesp_mbox_reg_size;
 
 	return 0;
 }
