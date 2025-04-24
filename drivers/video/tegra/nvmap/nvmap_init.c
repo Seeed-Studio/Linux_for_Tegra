@@ -277,7 +277,6 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 	return 0;
 }
 
-#ifndef NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX
 struct device *nvmap_get_vpr_dev(void)
 {
 	struct device_node *dn = of_find_compatible_node(NULL, NULL, "nvidia,vpr-carveout");
@@ -311,7 +310,6 @@ struct device *nvmap_get_vpr1_dev(void)
 	return &tegra_vpr1_dev;
 }
 EXPORT_SYMBOL(nvmap_get_vpr1_dev);
-#endif /* !NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX */
 
 static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 					struct device *dev)

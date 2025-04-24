@@ -491,15 +491,9 @@ err:
 	return NULL;
 }
 
-#ifndef NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX
 void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
 			    dma_addr_t *dma_handle,
 			    gfp_t flag, unsigned long attrs)
-#else
-static void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
-			    dma_addr_t *dma_handle,
-			    gfp_t flag, unsigned long attrs)
-#endif /* NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX */
 {
 	union dma_coherent_mem_block dma_coherent_mem_type;
 	struct dma_coherent_mem_replica *mem;
@@ -518,9 +512,7 @@ static void *nvmap_dma_alloc_attrs(struct device *dev, size_t size,
 	return __nvmap_dma_alloc_from_coherent(dev, mem, size, dma_handle,
 						   attrs, 0);
 }
-#ifndef NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX
 EXPORT_SYMBOL(nvmap_dma_alloc_attrs);
-#endif /* !NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX */
 
 static void *nvmap_dma_mark_declared_memory_occupied(struct device *dev,
 					dma_addr_t device_addr, size_t size)
@@ -621,13 +613,8 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 	return pa;
 }
 
-#ifndef NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX
 void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 			  dma_addr_t dma_handle, unsigned long attrs)
-#else
-static void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
-			  dma_addr_t dma_handle, unsigned long attrs)
-#endif /* NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX */
 {
 	void *mem_addr;
 	unsigned long flags;
@@ -683,9 +670,7 @@ static void nvmap_dma_free_attrs(struct device *dev, size_t size, void *cpu_addr
 		spin_unlock_irqrestore(&mem->spinlock, flags);
 	}
 }
-#ifndef NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX
 EXPORT_SYMBOL(nvmap_dma_free_attrs);
-#endif /* !NV_CONFIG_NVMAP_IN_EMBEDDED_LINUX */
 
 static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 			   size_t len)
