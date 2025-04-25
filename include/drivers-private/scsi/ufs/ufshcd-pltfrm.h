@@ -1,17 +1,11 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2015-2023, The Linux Foundation. All rights reserved.
- */
+/* Copyright (c) 2015-2023, The Linux Foundation. All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved. */
 
 #ifndef UFSHCD_PLTFRM_H_
 #define UFSHCD_PLTFRM_H_
 
-#include <nvidia/conftest.h>
-
-#if defined(NV_UFS_UFSHCD_H_PRESENT)
 #include <ufs/ufshcd.h>
-#else
-#include "ufshcd.h"
-#endif
 
 #define UFS_PWM_MODE 1
 #define UFS_HS_MODE  2

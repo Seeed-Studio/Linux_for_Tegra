@@ -281,8 +281,7 @@ NV_HEADER_PRESENCE_TESTS = \
   linux/iosys-map.h \
   linux/tegra_prod.h \
   net/gso.h \
-  net/page_pool.h \
-  ufs/ufshcd.h
+  net/page_pool.h
 
 # Filename to store the define for the header in $(1); this is only consumed by
 # the rule below that concatenates all of these together.

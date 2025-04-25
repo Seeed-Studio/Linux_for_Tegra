@@ -8837,11 +8837,7 @@ compile_test() {
             # function making the 3rd argument of type const.
             #
             CODE="
-            #if defined(NV_UFS_UFSHCD_H_PRESENT)
             #include <ufs/ufshcd.h>
-            #else
-            #include \"../drivers/scsi/ufs/ufshcd.h\"
-            #endif
             void conftest(struct ufs_hba_variant_ops *ops) {
                     int (*fn)(struct ufs_hba *hba,
                               enum ufs_notify_change_status status,
@@ -8864,11 +8860,7 @@ compile_test() {
             # 'struct ufs_hba_variant_ops'.
             #
             CODE="
-            #if defined(NV_UFS_UFSHCD_H_PRESENT)
             #include <ufs/ufshcd.h>
-            #else
-            #include \"../drivers/scsi/ufs/ufshcd.h\"
-            #endif
             void conftest_ufs_hba_variant_ops_suspend_has_status_arg(
                 struct ufs_hba_variant_ops *ops) {
                     int (*fn)(struct ufs_hba *, enum ufs_pm_op,
