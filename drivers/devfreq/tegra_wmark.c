@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -15,7 +13,7 @@
 #include <linux/slab.h>
 #include <linux/version.h>
 
-#include <drivers-private/devfreq/governor.h>
+#include <devfreq/governor.h>
 
 /**
  * struct tegra_wmark_data - governor private data stored in struct devfreq

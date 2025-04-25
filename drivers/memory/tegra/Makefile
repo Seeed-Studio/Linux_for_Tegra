@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
-obj-m += private-soc/
+obj-m += mc-t26x.o
+obj-m += tegra264-mc-hwpm.o
+obj-m += smmu-hwpm.o
+obj-m += mem-qual.o

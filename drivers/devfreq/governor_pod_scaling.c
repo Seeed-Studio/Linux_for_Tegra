@@ -15,7 +15,7 @@
 #include <linux/types.h>
 #include <linux/version.h>
 
-#include <drivers-private/devfreq/governor.h>
+#include <devfreq/governor.h>
 
 
 #define DEFINE_ATTR_LOAD_STORE(name, limit)				\

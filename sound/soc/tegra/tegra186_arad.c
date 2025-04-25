@@ -23,7 +23,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
-#include <drivers-private/sound/soc/tegra/tegra_cif.h>
+#include <sound/soc/tegra/tegra_cif.h>
 
 #include "tegra186_arad.h"
 

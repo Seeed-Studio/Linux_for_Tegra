@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2014-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2014-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra210_afc.c - Tegra210 AFC driver
 
@@ -19,7 +19,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
-#include <drivers-private/sound/soc/tegra/tegra_cif.h>
+#include <sound/soc/tegra/tegra_cif.h>
 
 #include "tegra210_afc.h"
 
