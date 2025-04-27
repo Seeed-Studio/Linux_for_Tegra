@@ -170,6 +170,11 @@ static int ivc_mempool_mmap(struct file *filp, struct vm_area_struct *vma)
 			(mempooldev->mpool_cookie != NULL))))
 		return -EFAULT;
 
+	if (vma->vm_flags & VM_EXEC) {
+		pr_err("%s: ivc mempools can't have executable permission.\n", __func__);
+		return -EINVAL;
+	}
+
 	/* fail if userspace attempts to partially map the mempool */
 	map_region_sz = vma->vm_end - vma->vm_start;
 

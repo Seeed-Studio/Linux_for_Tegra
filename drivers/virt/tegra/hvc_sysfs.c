@@ -76,6 +76,11 @@ static int nvlog_buffer_mmap(struct file *fp, struct kobject *ko,
 	if (result != attr->size)
 		return -EINVAL;
 
+	if (vma->vm_flags & VM_EXEC) {
+		pr_err("%s: nvlog buffers can't have executable permission.\n", __func__);
+		return -EINVAL;
+	}
+
 	return remap_pfn_range(
 		vma, vma->vm_start,
 		info->ipa >> PAGE_SHIFT,
