@@ -1149,11 +1149,10 @@ int ether_handle_priv_ioctl(struct net_device *ndev,
 		ivc_buf->args.arguments[0] = ifdata.mac_id;
 		ivc_buf->args.arguments[1] = ifdata.qinx;
 		ret = osd_ivc_send_cmd(pdata->osi_core, ivc_buf, sizeof(*ivc_buf));
-		if (ret != 0) {
+		if (ret < 0) {
 			dev_err(pdata->dev, "Failed to get AVB perf info\n");
 			goto err;
 		}
-		ret = ivc_buf->status;
 		break;
 	case ETHER_VERIFY_TS:
 		ivc_buf->cmd = nvethmgr_verify_ts;
@@ -1164,7 +1163,6 @@ int ether_handle_priv_ioctl(struct net_device *ndev,
 			dev_err(pdata->dev, "Failed to verify timestamp\n");
 			goto err;
 		}
-		ret = ivc_buf->status;
 		break;
 	case ETHER_GET_STATUS:
 		ivc_buf->cmd = nvethmgr_get_status;
@@ -1174,7 +1172,6 @@ int ether_handle_priv_ioctl(struct net_device *ndev,
 			dev_err(pdata->dev, "Failed to get status for registers\n");
 			goto err;
 		}
-		ret = ivc_buf->status;
 		break;
 
 #ifndef OSI_STRIPPED_LIB

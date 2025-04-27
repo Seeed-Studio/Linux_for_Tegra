@@ -1897,6 +1897,7 @@ int ether_padctrl_mii_rx_pins(void *priv, unsigned int enable);
  *
  * @return
  * - EOK on success
+ * - Data bandwidth on success for NVETHERNET_LINUX_PIF#ether_ioctl$ETHER_GET_AVB_PERF
  * - "-ETIMEDOUT" on readx_poll_timeout_atomic() timeout.
  * - Return vlaues of tegra_hv_ivc_read() on IVC read fail.
  * - Return vlaues of tegra_hv_ivc_write() on IVC write fail.
