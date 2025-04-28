@@ -123,7 +123,7 @@ static int nvlog_create_sysfs_nodes(struct nvlog_shmem_info *info)
 
 	sysfs_bin_attr_init((struct bin_attribute *)&info->attr);
 	info->attr.attr.name = info->node_name;
-	info->attr.attr.mode = 0600;
+	info->attr.attr.mode = 0400;
 	info->attr.size = info->region_size;
 	info->attr.mmap = nvlog_buffer_mmap;
 	ret = sysfs_create_bin_file(info->kobj, &info->attr);
