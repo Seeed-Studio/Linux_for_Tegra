@@ -116,12 +116,14 @@ stages:
     fi
   # install user custom package(optional)
   - sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+  - sudo sed -i 's|^ExecStart=/usr/lib/bluetooth/bluetoothd -d --noplugin=audio,a2dp,avrcp$|ExecStart=/usr/lib/bluetooth/bluetoothd -d|' rootfs/lib/systemd/system/bluetooth.service.d/nv-bluetooth-service.conf
   - mount --bind /sys ./rootfs/sys
   - mount --bind /dev ./rootfs/dev
   - mount --bind /dev/pts ./rootfs/dev/pts
   - mount --bind /proc ./rootfs/proc
   - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
   - cp extra_scripts/rootfs_magic.sh rootfs
+  - cp extra_scripts/bluetooth-auto-trust_1.0-1.deb rootfs
   - >
     if [ $INSTALL_NV_JP == "1" ]; then
       chroot rootfs /rootfs_magic.sh || true
