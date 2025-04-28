@@ -212,13 +212,14 @@
 		};
 
 		/* MGBE 0 */
-		ethernet@a808a10000 {
+		mgbe0: ethernet@a808a10000 {
 			status = "okay";
 			nvidia,mac-addr-idx = <1>;
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
+			nvidia,pps_op_ctrl = <8>;
 
 			fixed-link {
 				full-duplex;
@@ -227,13 +228,14 @@
 		};
 
 		/* MGBE 1 */
-	        ethernet@a808b10000 {
+	        mgbe1: ethernet@a808b10000 {
 			status = "okay";
 			nvidia,mac-addr-idx = <2>;
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
+			nvidia,pps_op_ctrl = <8>;
 
 			fixed-link {
 				full-duplex;
@@ -242,13 +244,14 @@
 		};
 
 		/* MGBE 2 */
-	        ethernet@a808d10000 {
+	        mgbe2: ethernet@a808d10000 {
 			status = "okay";
 			nvidia,mac-addr-idx = <3>;
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
+			nvidia,pps_op_ctrl = <8>;
 
 			fixed-link {
 				full-duplex;
@@ -257,18 +260,31 @@
 		};
 
 		/* MGBE 3 */
-	        ethernet@a808e10000 {
+	        mgbe3: ethernet@a808e10000 {
 			status = "okay";
 			nvidia,mac-addr-idx = <4>;
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
+			nvidia,pps_op_ctrl = <8>;
 
 			fixed-link {
 				full-duplex;
 				speed = <10000>;
 			};
+		};
+
+		nvpps {
+			compatible = "nvidia,tegra264-nvpps";
+			reg = <0x0 0x0c230000 0x0 0x238>;
+			primary-emac = <&mgbe0>;
+			sec-emac = <&mgbe1>;
+			ptp_tsc_sync_trig_interval = <3>;
+			ptp_tsc_lock_threshold = <20000>; //20us
+			ts-capture-interval = <1000>;
+			nvpps-event-mode-init = <2>; /* 1: GPIO mode, 2: TIMER mode */
+			status = "okay";
 		};
 
 		/* PCIe C1 for M.2 Key E(J505) */
