@@ -3,6 +3,8 @@
 /dts-v1/;
 /plugin/;
 
+#include "../overlay/tegra264-p3971-camera-modules.dtsi"
+
 / {
 	overlay-name = "Tegra264 p3971-0000+p3834-xxxx Dynamic Overlay";
 

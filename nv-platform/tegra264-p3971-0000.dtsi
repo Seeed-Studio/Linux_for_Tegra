@@ -406,6 +406,22 @@
 				label = "cvb";
 			};
 		};
+
+		bus@1 {
+			i2c-bus = <&i2c12>;
+			eeprom@0 {
+					slave-address = <0x54>;
+					label = "sensor0";
+			};
+			eeprom@1 {
+					slave-address = <0x57>;
+					label = "sensor1";
+			};
+			eeprom@2 {
+					slave-address = <0x52>;
+					label = "sensor2";
+			};
+		};
 	};
 
 	soc_fan: pwm-fan {

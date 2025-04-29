@@ -41,8 +41,8 @@
 				};
 			};
 			tegra-camera-platform {
+				status = "okay";
 				compatible = "nvidia, tegra-camera-platform";
-
 				modules {
 					status = "okay";
 					module0 {

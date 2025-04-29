@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+#include <dt-bindings/clock/tegra264-clk.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
+
+/* camera control gpio definitions */
+#define CAM0_RST_L	TEGRA264_MAIN_GPIO(V, 2)
 
 / {
-	fragment-camera-imx185@0 {
+	fragment@0 {
 		target-path = "/";
 		__overlay__ {
 			tegra-capture-vi {
@@ -20,33 +26,6 @@
 					};
 				};
 			};
-
-			tegra-camera-platform {
-				compatible = "nvidia, tegra-camera-platform";
-
-				/**
-				* The general guideline for naming badge_info contains 3 parts, and is as follows,
-				* The first part is the camera_board_id for the module; if the module is in a FFD
-				* platform, then use the platform name for this part.
-				* The second part contains the position of the module, ex. "rear" or "front".
-				* The third part contains the last 6 characters of a part number which is found
-				* in the module's specsheet from the vender.
-				*/
-				modules {
-					module0 {
-						badge = "imx185_bottom_liimx185";
-						position = "bottom";
-						orientation = "0";
-						drivernode0 {
-							/* Declare PCL support driver (classically known as guid)  */
-							pcl_id = "v4l2_sensor";
-							/* Declare the device-tree hierarchy to driver instance */
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6d0000/tca9546@70/i2c@0/imx185_a@1a";
-						};
-					};
-				};
-			};
-
 			bus@0 {
 				host1x@8181200000 {
 					nvcsi@8188000000 {
@@ -76,9 +55,35 @@
 						};
 					};
 				};
+				gpio@810c300000 {
+					camera-control-output-low {
+						gpio-hog;
+						output-low;
+						gpios = <CAM0_RST_L 0>;
+						label = "cam0-rst";
+					};
+				};
+
 				i2c@810c6d0000 {
 					tca9546@70 {
+						compatible = "nxp,pca9546";
+						reg = <0x70>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						skip_mux_detect = "yes";
+
 						i2c@0 {
+							reg = <0>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+							pca9570_a@24 {
+								compatible = "nxp,pca9570";
+								reg = <0x24>;
+								channel = "a";
+								drive_ic = "DRV8838";
+							};
+
 							imx185_a@1a {
 								compatible = "sony,imx185";
 								reg = <0x1a>;
@@ -411,6 +416,30 @@
 									};
 								};
 							};
+						};
+					};
+				};
+			};
+			tegra-camera-platform {
+				compatible = "nvidia, tegra-camera-platform";
+				/**
+				* The general guideline for naming badge_info contains 3 parts, and is as follows,
+				* The first part is the camera_board_id for the module; if the module is in a FFD
+				* platform, then use the platform name for this part.
+				* The second part contains the position of the module, ex. "rear" or "front".
+				* The third part contains the last 6 characters of a part number which is found
+				* in the module's specsheet from the vender.
+				*/
+				modules {
+					module0 {
+						badge = "imx185_bottom_liimx185";
+						position = "bottom";
+						orientation = "0";
+						drivernode0 {
+							/* Declare PCL support driver (classically known as guid)  */
+							pcl_id = "v4l2_sensor";
+							/* Declare the device-tree hierarchy to driver instance */
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6d0000/tca9546@70/i2c@0/imx185_a@1a";
 						};
 					};
 				};

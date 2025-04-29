@@ -31,6 +31,7 @@
 		__overlay__ {
 			tegra-capture-vi {
 				num-channels = <6>;
+				status = "okay";
 				ports {
 					status = "okay";
 					port@0 {
@@ -91,6 +92,7 @@
 			};
 
 			tegra-camera-platform {
+				status = "okay";
 				compatible = "nvidia, tegra-camera-platform";
 				modules {
 					status = "okay";
@@ -384,6 +386,7 @@
 						#size-cells = <0>;
 						skip_mux_detect;
 						i2c@0 {
+							status = "okay";
 							reg = <0>;
 							i2c-mux,deselect-on-exit;
 							#address-cells = <1>;
@@ -412,6 +415,7 @@
 							};
 						};
 						i2c@1 {
+							status = "okay";
 							reg = <1>;
 							i2c-mux,deselect-on-exit;
 							#address-cells = <1>;
@@ -440,6 +444,7 @@
 							};
 						};
 						i2c@2 {
+							status = "okay";
 							reg = <2>;
 							i2c-mux,deselect-on-exit;
 							#address-cells = <1>;
@@ -468,6 +473,7 @@
 							};
 						};
 						i2c@3 {
+							status = "okay";
 							reg = <3>;
 							i2c-mux,deselect-on-exit;
 							#address-cells = <1>;
@@ -496,6 +502,7 @@
 							};
 						};
 						i2c@4 {
+							status = "okay";
 							reg = <4>;
 							i2c-mux,deselect-on-exit;
 							#address-cells = <1>;
@@ -524,6 +531,7 @@
 							};
 						};
 						i2c@5 {
+							status = "okay";
 							reg = <5>;
 							i2c-mux,deselect-on-exit;
 							#address-cells = <1>;

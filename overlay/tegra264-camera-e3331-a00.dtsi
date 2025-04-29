@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
+#include <dt-bindings/clock/tegra264-clk.h>
+#include <dt-bindings/gpio/tegra264-gpio.h>
+
 / {
-	fragment-camera@0 {
+	fragment@0 {
 		target-path = "/";
 		__overlay__ {
 			tegra-capture-vi {
@@ -69,87 +72,87 @@
 
 								has-eeprom;
 
-                                                                /**
-                                                                * ==== Modes ====
-                                                                * A modeX node is required to support v4l2 driver
-                                                                * implementation with NVIDIA camera software stack
-                                                                *
-                                                                * == Signal properties ==
-                                                                *
-                                                                * phy_mode = "";
-                                                                * PHY mode used by the MIPI lanes for this device
-                                                                *
-                                                                * tegra_sinterface = "";
-                                                                * CSI Serial interface connected to tegra
-                                                                * Incase of virtual HW devices, use virtual
-                                                                * For SW emulated devices, use host
-                                                                *
-                                                                * pix_clk_hz = "";
-                                                                * Sensor pixel clock used for calculations like exposure and framerate
-                                                                *
-                                                                * readout_orientation = "0";
-                                                                * Based on camera module orientation.
-                                                                * Only change readout_orientation if you specifically
-                                                                * Program a different readout order for this mode
-                                                                *
-                                                                * == Image format Properties ==
-                                                                *
-                                                                * active_w = "";
-                                                                * Pixel active region width
-                                                                *
-                                                                * active_h = "";
-                                                                * Pixel active region height
-                                                                *
-                                                                * pixel_t = "";
-                                                                * The sensor readout pixel pattern
-                                                                *
-                                                                * line_length = "";
-                                                                * Pixel line length (width) for sensor mode.
-                                                                *
-                                                                * == Source Control Settings ==
-                                                                *
-                                                                * Gain factor used to convert fixed point integer to float
-                                                                * Gain range [min_gain/gain_factor, max_gain/gain_factor]
-                                                                * Gain step [step_gain/gain_factor is the smallest step that can be configured]
-                                                                * Default gain [Default gain to be initialized for the control.
-                                                                *     use min_gain_val as default for optimal results]
-                                                                * Framerate factor used to convert fixed point integer to float
-                                                                * Framerate range [min_framerate/framerate_factor, max_framerate/framerate_factor]
-                                                                * Framerate step [step_framerate/framerate_factor is the smallest step that can be configured]
-                                                                * Default Framerate [Default framerate to be initialized for the control.
-                                                                *     use max_framerate to get required performance]
-                                                                * Exposure factor used to convert fixed point integer to float
-                                                                * For convenience use 1 sec = 1000000us as conversion factor
-                                                                * Exposure range [min_exp_time/exposure_factor, max_exp_time/exposure_factor]
-                                                                * Exposure step [step_exp_time/exposure_factor is the smallest step that can be configured]
-                                                                * Default Exposure Time [Default exposure to be initialized for the control.
-                                                                *     Set default exposure based on the default_framerate for optimal exposure settings]
-                                                                *
-                                                                * gain_factor = ""; (integer factor used for floating to fixed point conversion)
-                                                                * min_gain_val = ""; (ceil to integer)
-                                                                * max_gain_val = ""; (ceil to integer)
-                                                                * step_gain_val = ""; (ceil to integer)
-                                                                * default_gain = ""; (ceil to integer)
-                                                                * Gain limits for mode
-                                                                *
-                                                                * exposure_factor = ""; (integer factor used for floating to fixed point conversion)
-                                                                * min_exp_time = ""; (ceil to integer)
-                                                                * max_exp_time = ""; (ceil to integer)
-                                                                * step_exp_time = ""; (ceil to integer)
-                                                                * default_exp_time = ""; (ceil to integer)
-                                                                * Exposure Time limits for mode (sec)
-                                                                *
-                                                                * framerate_factor = ""; (integer factor used for floating to fixed point conversion)
-                                                                * min_framerate = ""; (ceil to integer)
-                                                                * max_framerate = ""; (ceil to integer)
-                                                                * step_framerate = ""; (ceil to integer)
-                                                                * default_framerate = ""; (ceil to integer)
-                                                                * Framerate limits for mode (fps)
-                                                                *
-                                                                * embedded_metadata_height = "";
-                                                                * Sensor embedded metadata height in units of rows.
-                                                                * If sensor does not support embedded metadata value should be 0.
-                                                                */
+								/**
+								* ==== Modes ====
+								* A modeX node is required to support v4l2 driver
+								* implementation with NVIDIA camera software stack
+								*
+								* == Signal properties ==
+								*
+								* phy_mode = "";
+								* PHY mode used by the MIPI lanes for this device
+								*
+								* tegra_sinterface = "";
+								* CSI Serial interface connected to tegra
+								* Incase of virtual HW devices, use virtual
+								* For SW emulated devices, use host
+								*
+								* pix_clk_hz = "";
+								* Sensor pixel clock used for calculations like exposure and framerate
+								*
+								* readout_orientation = "0";
+								* Based on camera module orientation.
+								* Only change readout_orientation if you specifically
+								* Program a different readout order for this mode
+								*
+								* == Image format Properties ==
+								*
+								* active_w = "";
+								* Pixel active region width
+								*
+								* active_h = "";
+								* Pixel active region height
+								*
+								* pixel_t = "";
+								* The sensor readout pixel pattern
+								*
+								* line_length = "";
+								* Pixel line length (width) for sensor mode.
+								*
+								* == Source Control Settings ==
+								*
+								* Gain factor used to convert fixed point integer to float
+								* Gain range [min_gain/gain_factor, max_gain/gain_factor]
+								* Gain step [step_gain/gain_factor is the smallest step that can be configured]
+								* Default gain [Default gain to be initialized for the control.
+								*     use min_gain_val as default for optimal results]
+								* Framerate factor used to convert fixed point integer to float
+								* Framerate range [min_framerate/framerate_factor, max_framerate/framerate_factor]
+								* Framerate step [step_framerate/framerate_factor is the smallest step that can be configured]
+								* Default Framerate [Default framerate to be initialized for the control.
+								*     use max_framerate to get required performance]
+								* Exposure factor used to convert fixed point integer to float
+								* For convenience use 1 sec = 1000000us as conversion factor
+								* Exposure range [min_exp_time/exposure_factor, max_exp_time/exposure_factor]
+								* Exposure step [step_exp_time/exposure_factor is the smallest step that can be configured]
+								* Default Exposure Time [Default exposure to be initialized for the control.
+								*     Set default exposure based on the default_framerate for optimal exposure settings]
+								*
+								* gain_factor = ""; (integer factor used for floating to fixed point conversion)
+								* min_gain_val = ""; (ceil to integer)
+								* max_gain_val = ""; (ceil to integer)
+								* step_gain_val = ""; (ceil to integer)
+								* default_gain = ""; (ceil to integer)
+								* Gain limits for mode
+								*
+								* exposure_factor = ""; (integer factor used for floating to fixed point conversion)
+								* min_exp_time = ""; (ceil to integer)
+								* max_exp_time = ""; (ceil to integer)
+								* step_exp_time = ""; (ceil to integer)
+								* default_exp_time = ""; (ceil to integer)
+								* Exposure Time limits for mode (sec)
+								*
+								* framerate_factor = ""; (integer factor used for floating to fixed point conversion)
+								* min_framerate = ""; (ceil to integer)
+								* max_framerate = ""; (ceil to integer)
+								* step_framerate = ""; (ceil to integer)
+								* default_framerate = ""; (ceil to integer)
+								* Framerate limits for mode (fps)
+								*
+								* embedded_metadata_height = "";
+								* Sensor embedded metadata height in units of rows.
+								* If sensor does not support embedded metadata value should be 0.
+								*/
 								mode0 { /*IMX318_MODE_5488X4112_30FPS*/
 									mclk_khz = "24000";
 									num_lanes = "3";
@@ -210,7 +213,6 @@
 
 			tegra-camera-platform {
 				compatible = "nvidia, tegra-camera-platform";
-
 				/**
 				* The general guideline for naming badge_info contains 3 parts, and is as follows,
 				* The first part is the camera_board_id for the module; if the module is in a FFD

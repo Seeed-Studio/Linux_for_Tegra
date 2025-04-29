@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /dts-v1/;
 
 #include "tegra264-p3834-0008.dtsi"
 #include "tegra264-p3971-0089.dtsi"
 #include "tegra264-p3971-xxxx-p3834-xxxx.dtsi"
-#include "tegra264-p3971-0000-camera-imx274-dual.dtsi"
 
 / {
 	model = "NVIDIA Jetson Thor Developer Kit";
