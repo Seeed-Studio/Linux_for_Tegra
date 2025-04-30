@@ -15,6 +15,9 @@ CONFIG_BINFMT_MISC                              note<'LP: #2080908'>
 CONFIG_DMATEST                                  policy<{'arm64': 'm'}>
 CONFIG_DMATEST                                  note<'LP: #2060337'>
 
+CONFIG_FRAME_WARN                               policy<{'arm64': '2048'}>
+CONFIG_FRAME_WARN                               note<'LP: #2109728'>
+
 CONFIG_ISO9660_FS                               policy<{'arm64': 'y'}>
 CONFIG_ISO9660_FS                               note<'LP: #2080908'>
 
