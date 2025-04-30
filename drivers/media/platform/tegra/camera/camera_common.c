@@ -1,20 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
- * All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -1052,12 +1037,12 @@ int camera_common_get_mbus_config(struct v4l2_subdev *sd,
 	 *  then return an error
 	 */
 	cfg->type = V4L2_MBUS_CSI2_DPHY;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0)
+#if defined(NV_V4L2_FWNODE_ENDPOINT_STRUCT_HAS_V4L2_MBUS_CONFIG_MIPI_CSI2) /* Linux v5.18 */
+	cfg->bus.mipi_csi2.num_data_lanes = 4;
+#else
 	cfg->flags = V4L2_MBUS_CSI2_4_LANE |
 		V4L2_MBUS_CSI2_CHANNEL_0 |
 		V4L2_MBUS_CSI2_CONTINUOUS_CLOCK;
-#else
-	cfg->bus.mipi_csi2.num_data_lanes = 4;
 #endif
 
 	return 0;

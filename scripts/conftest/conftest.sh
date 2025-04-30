@@ -9014,6 +9014,25 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_V4L2_ASYNC_NF_ADD_SUBDEV_PRESENT" "" "functions"
         ;;
 
+        v4l2_fwnode_endpoint_struct_has_v4l2_mbus_config_mipi_csi2)
+            #
+            # Determine if struct 'v4l2_fwnode_endpoint' has a
+            # 'v4l2_mbus_config_mipi_csi2' member.
+            #
+            # Commit 94d964e58ad6 ("media: v4l2-fwnode: Move bus config
+            # structure to v4l2_mediabus.h") added this in Linux v5.18.
+            #
+            CODE="
+            #define _LINUX_EFI_H
+            #include <media/v4l2-fwnode.h>
+            struct v4l2_mbus_config_mipi_csi2 *conftest(struct v4l2_fwnode_endpoint *endpoint) {
+		return &endpoint->bus.mipi_csi2;
+            }
+            "
+            compile_check_conftest "$CODE" \
+                    "NV_V4L2_FWNODE_ENDPOINT_STRUCT_HAS_V4L2_MBUS_CONFIG_MIPI_CSI2" "" "types"
+        ;;
+
         v4l2_subdev_pad_ops_struct_has_get_set_frame_interval)
             #
             # Determine if struct v4l2_subdev_pad_ops has the 'get_frame_interval'
