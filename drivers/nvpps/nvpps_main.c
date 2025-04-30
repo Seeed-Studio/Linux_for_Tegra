@@ -1157,6 +1157,7 @@ static int nvpps_probe(struct platform_device *pdev)
 	const struct tegra_chip_data    *cdata = NULL;
 	struct resource			res;
 	int				index;
+	uint32_t			initial_mode;
 
 	dev_info(&pdev->dev, "%s\n", __FUNCTION__);
 
@@ -1265,6 +1266,37 @@ static int nvpps_probe(struct platform_device *pdev)
 	if (err < 0)
 		return err;
 
+	/* Get initial operating mode from device tree, default to timer mode if not specified */
+	err = of_property_read_u32(np, "nvpps-event-mode-init", &initial_mode);
+	if (err < 0) {
+		if (pdev_data->only_timer_mode == true) {
+			dev_warn(&pdev->dev, "nvpps-event-mode-init property not specified err(%d), using default value 2 (TIMER mode)\n", err);
+			initial_mode = NVPPS_MODE_TIMER;
+		} else {
+			dev_warn(&pdev->dev, "nvpps-event-mode-init property not specified err(%d), using default value 1 (GPIO mode)\n", err);
+			initial_mode = NVPPS_MODE_GPIO;
+		}
+	}
+
+	/* Validate initial operation mode selected is valid */
+	if (initial_mode == NVPPS_MODE_GPIO) {
+		/* Validate if initial operation mode selected(GPIO) can be supported.
+		 * If nvpps-gpios property is not specified, only_timer_mode is true and
+		 * GPIO mode cannot be selected.
+		 */
+		if (pdev_data->only_timer_mode == true) {
+			dev_err(&pdev->dev, "GPIO mode as initial operating mode cannot be selected without defining nvpps-gpios property\n");
+			return -EINVAL;
+		}
+		dev_info(&pdev->dev, "Initial operating mode selected as GPIO\n");
+	} else if (initial_mode == NVPPS_MODE_TIMER) {
+		dev_info(&pdev->dev, "Initial operating mode selected as TIMER\n");
+	} else {
+		dev_err(&pdev->dev, "Invalid initial operating mode %u specified. Valid values are 1 (GPIO) and 2 (TIMER)\n",
+				initial_mode);
+		return -EINVAL;
+	}
+
 	/* character device setup */
 #ifndef NVPPS_NO_DT
 #if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */
@@ -1327,14 +1359,13 @@ static int nvpps_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pdev_data);
 
 	/* setup PPS event hndler */
-	err = set_mode(pdev_data,
-				   (pdev_data->only_timer_mode) ? NVPPS_MODE_TIMER : NVPPS_MODE_GPIO);
+	err = set_mode(pdev_data, initial_mode);
 	if (err) {
 		dev_err(&pdev->dev, "set_mode failed err = %d\n", err);
 		device_destroy(s_nvpps_class, pdev_data->dev->devt);
 		goto error_ret;
 	}
-	pdev_data->evt_mode = (pdev_data->only_timer_mode) ? NVPPS_MODE_TIMER : NVPPS_MODE_GPIO;
+	pdev_data->evt_mode = initial_mode;
 
 	if (pdev_data->support_tsc) {
 		struct resource *tsc_mem;
