@@ -591,6 +591,36 @@
 			  "CVB-RT DMIC2",		"CVB-RT MIC";
 	};
 
+	rtcpu@81893d0000 {
+		status = "okay";
+
+		hsp-vm1 {
+			status = "okay";
+		};
+	};
+
+	camera-ivc-channels {
+		echo@0 {
+			status = "okay";
+		};
+
+		dbg@1 {
+			status = "okay";
+		};
+
+		dbg@2 {
+			status = "okay";
+		};
+
+		ivccontrol@3 {
+			status = "okay";
+		};
+
+		ivccapture@4 {
+			status = "okay";
+		};
+	};
+
 	tegra-rtcpu-trace {
 		status = "okay";
 	};
