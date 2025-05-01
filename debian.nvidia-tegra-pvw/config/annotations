@@ -93,6 +93,15 @@ CONFIG_NETFILTER_XT_MATCH_RECENT                note<'EMBARGOED'>
 CONFIG_NETFILTER_XT_MATCH_STATISTIC             policy<{'arm64': 'm'}>
 CONFIG_NETFILTER_XT_MATCH_STATISTIC             note<'EMBARGOED'>
 
+CONFIG_NFT_COMPAT                               policy<{'arm64': 'm'}>
+CONFIG_NFT_COMPAT                               note<'EMBARGOED'>
+
+CONFIG_NFT_MASQ                                 policy<{'arm64': 'm'}>
+CONFIG_NFT_MASQ                                 note<'EMBARGOED'>
+
+CONFIG_NFT_NAT                                  policy<{'arm64': 'm'}>
+CONFIG_NFT_NAT                                  note<'EMBARGOED'>
+
 CONFIG_PSTORE_BLK                               policy<{'arm64': 'y'}>
 CONFIG_PSTORE_BLK                               note<'EMBARGOED'>
 
