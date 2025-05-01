@@ -174,7 +174,7 @@ static int camrtc_hsp_sendrecv(struct camrtc_hsp *camhsp,
  * It processes the received message and performs the appropriate action:
  * - Retrieves the HSP context using @ref dev_get_drvdata()
  * - Extracts status and group information from the message
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context
  * - Handles unknown messages using @ref dev_dbg()
  * - Calls the group notification callback if a group notification is received
  * - For response messages, sets the response and wakes up waiters using @ref atomic_set() and @ref wake_up()
@@ -194,8 +194,10 @@ static void camrtc_hsp_rx_full_notify(mbox_client *cl, void *data)
 	status >>= CAMRTC_HSP_SS_FW_SHIFT;
 	group = status & CAMRTC_HSP_SS_IVC_MASK;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		dev_warn(cl->dev, "%s: camhsp is NULL!\n", __func__);
 		return;
+	}
 
 	if (CAMRTC_HSP_MSG_ID(msg) == CAMRTC_HSP_UNKNOWN)
 		dev_dbg(&camhsp->dev, "request message unknown 0x%08x\n", msg);
@@ -392,7 +394,7 @@ static int camrtc_hsp_vm_sendrecv(struct camrtc_hsp *camhsp,
  *
  * This function reads and processes boot log messages from the RTCPU during
  * the initialization process. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Uses @ref camrtc_hsp_recv() to wait for and receive boot log messages
  * - Processes different types of boot messages (complete, stage, error)
  * - Logs messages at appropriate log levels using @ref dev_info(), @ref dev_dbg(), and @ref dev_err()
@@ -409,8 +411,10 @@ static int camrtc_hsp_vm_read_boot_log(struct camrtc_hsp *camhsp)
 	uint32_t boot_log;
 	long msg_timeout;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		pr_warn("%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	msg_timeout = camhsp->timeout;
 
@@ -839,7 +843,7 @@ fail:
  *
  * This function rings a group doorbell by calling the group_ring operation
  * on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Calls the group_ring operation on the HSP context using @ref group_ring()
  *
  * @param[in] camhsp  Pointer to the camera HSP context
@@ -850,7 +854,9 @@ fail:
 void camrtc_hsp_group_ring(struct camrtc_hsp *camhsp,
 		u16 group)
 {
-	if (!WARN_ON(camhsp == NULL))
+	if (camhsp == NULL)
+		pr_warn("%s: camhsp is NULL!\n", __func__);
+	else
 		camhsp->op->group_ring(camhsp, group);
 }
 EXPORT_SYMBOL(camrtc_hsp_group_ring);
@@ -860,7 +866,7 @@ EXPORT_SYMBOL(camrtc_hsp_group_ring);
  *
  * This function synchronizes the HSP by calling the sync operation
  * on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Locks the mutex using @ref mutex_lock()
  * - Calls the sync operation on the HSP context using @ref sync()
  * - Unlocks the mutex using @ref mutex_unlock()
@@ -876,8 +882,10 @@ int camrtc_hsp_sync(struct camrtc_hsp *camhsp)
 	long timeout;
 	int response;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		pr_warn("%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	timeout = camhsp->timeout;
 	mutex_lock(&camhsp->mutex);
@@ -893,7 +901,7 @@ EXPORT_SYMBOL(camrtc_hsp_sync);
  *
  * This function resumes the HSP by calling the resume operation
  * on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Locks the mutex using @ref mutex_lock()
  * - Calls the resume operation on the HSP context using @ref resume()
  * - Unlocks the mutex using @ref mutex_unlock()
@@ -909,8 +917,10 @@ int camrtc_hsp_resume(struct camrtc_hsp *camhsp)
 	long timeout;
 	int response;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		pr_warn("%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	timeout = camhsp->timeout;
 	mutex_lock(&camhsp->mutex);
@@ -926,7 +936,7 @@ EXPORT_SYMBOL(camrtc_hsp_resume);
  *
  * This function suspends the HSP by calling the suspend operation
  * on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Locks the mutex using @ref mutex_lock()
  * - Calls the suspend operation on the HSP context using @ref suspend()
  * - Unlocks the mutex using @ref mutex_unlock()
@@ -943,8 +953,10 @@ int camrtc_hsp_suspend(struct camrtc_hsp *camhsp)
 	long timeout;
 	int response;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		pr_warn("%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	timeout = camhsp->timeout;
 	mutex_lock(&camhsp->mutex);
@@ -964,7 +976,7 @@ EXPORT_SYMBOL(camrtc_hsp_suspend);
  *
  * This function sets the operating point for the HSP by calling the set_operating_point
  * operation on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Locks the mutex using @ref mutex_lock()
  * - Calls the set_operating_point operation on the HSP context using @ref set_operating_point()
  * - Unlocks the mutex using @ref mutex_unlock()
@@ -983,8 +995,10 @@ int camrtc_hsp_set_operating_point(struct camrtc_hsp *camhsp, uint32_t operating
 	long timeout;
 	int response;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		pr_warn("%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	timeout = camhsp->timeout;
 	mutex_lock(&camhsp->mutex);
@@ -1004,7 +1018,7 @@ EXPORT_SYMBOL(camrtc_hsp_set_operating_point);
  *
  * This function sends a BYE message to the HSP by calling the bye operation
  * on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Locks the mutex using @ref mutex_lock()
  * - Calls the bye operation on the HSP context using @ref bye()
  * - Unlocks the mutex using @ref mutex_unlock()
@@ -1020,8 +1034,10 @@ int camrtc_hsp_bye(struct camrtc_hsp *camhsp)
 	long timeout;
 	int response;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		pr_warn("%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	timeout = camhsp->timeout;
 	mutex_lock(&camhsp->mutex);
@@ -1040,7 +1056,7 @@ EXPORT_SYMBOL(camrtc_hsp_bye);
  *
  * This function sets up the HSP channel by calling the ch_setup operation
  * on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Locks the mutex using @ref mutex_lock()
  * - Calls the ch_setup operation on the HSP context using @ref ch_setup()
  * - Unlocks the mutex using @ref mutex_unlock()
@@ -1058,8 +1074,10 @@ int camrtc_hsp_ch_setup(struct camrtc_hsp *camhsp, dma_addr_t iova)
 	long timeout;
 	int response;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		pr_warn("%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	if (iova >= BIT_ULL(32) || (iova & 0xffU) != 0) {
 		dev_warn(&camhsp->dev,
@@ -1084,7 +1102,7 @@ EXPORT_SYMBOL(camrtc_hsp_ch_setup);
  *
  * This function pings the HSP by calling the ping operation
  * on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Locks the mutex using @ref mutex_lock()
  * - Calls the ping operation on the HSP context using @ref ping()
  * - Unlocks the mutex using @ref mutex_unlock()
@@ -1104,8 +1122,10 @@ int camrtc_hsp_ping(struct camrtc_hsp *camhsp, u32 data, long timeout)
 	long left = timeout;
 	int response;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		dev_warn(&camhsp->dev, "%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	if (left == 0L)
 		left = camhsp->timeout;
@@ -1123,7 +1143,7 @@ EXPORT_SYMBOL(camrtc_hsp_ping);
  *
  * This function gets the firmware hash for the HSP by calling the get_fw_hash operation
  * on the HSP context. It performs the following operations:
- * - Validates the HSP context using @ref WARN_ON()
+ * - Validates the HSP context is non-NULL
  * - Locks the mutex using @ref mutex_lock()
  * - Calls the get_fw_hash operation on the HSP context using @ref get_fw_hash()
  * - Unlocks the mutex using @ref mutex_unlock()
@@ -1147,8 +1167,10 @@ int camrtc_hsp_get_fw_hash(struct camrtc_hsp *camhsp,
 	int ret = 0;
 	long timeout;
 
-	if (WARN_ON(camhsp == NULL))
+	if (camhsp == NULL) {
+		dev_warn(&camhsp->dev, "%s: camhsp is NULL!\n", __func__);
 		return -EINVAL;
+	}
 
 	memset(hash, 0, hash_size);
 	timeout = camhsp->timeout;

@@ -324,7 +324,9 @@ int vi_channel_close_ex(
 
 	mutex_lock(&chan_drv->lock);
 
-	WARN_ON(rcu_access_pointer(chan_drv->channels[channel]) != chan);
+	if (rcu_access_pointer(chan_drv->channels[channel]) != chan)
+		dev_warn(chan_drv->dev, "%s: dev does not match\n", __func__);
+
 	RCU_INIT_POINTER(chan_drv->channels[channel], NULL);
 
 	mutex_unlock(&chan_drv->lock);
@@ -894,7 +896,7 @@ int vi_channel_drv_register(
 	mutex_lock(&chdrv_lock);
 	if (chdrv_ != NULL) {
 		mutex_unlock(&chdrv_lock);
-		WARN_ON(1);
+		dev_warn(chdrv_->dev, "%s: chdrv is busy\n", __func__);
 		err = -EBUSY;
 		goto error;
 	}
@@ -985,8 +987,8 @@ void vi_channel_drv_unregister(
 	mutex_lock(&chdrv_lock);
 	chan_drv = chdrv_;
 	chdrv_ = NULL;
-
-	WARN_ON(&chan_drv->vi_capture_pdev->dev != dev);
+	if (chan_drv->dev != dev)
+		dev_warn(chan_drv->dev, "%s: dev does not match\n", __func__);
 	mutex_unlock(&chdrv_lock);
 
 	if (vi_channel_major < 0) {

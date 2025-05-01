@@ -298,7 +298,7 @@ init_err:
  * It performs the following operations:
  * - Calls @ref isp_capture_shutdown() to shut down the ISP capture process.
  * - Acquires the channel driver's lock by invoking @ref mutex_lock().
- * - Verifies that the channel being released matches the registered channel using @ref WARN_ON().
+ * - Verifies that the channel being released matches the registered channel.
  * - Removes the channel from the driver's channel array by setting the corresponding entry to NULL.
  * - Releases the channel driver's lock by calling @ref mutex_unlock().
  * - Frees the memory allocated for the channel using @ref kfree().
@@ -322,7 +322,9 @@ static int isp_channel_release(
 
 	mutex_lock(&chan_drv->lock);
 
-	WARN_ON(chan_drv->channels[channel] != chan);
+	if (chan_drv->channels[channel] != chan)
+		dev_warn(chan_drv->dev, "%s: dev does not match!\n", __func__);
+
 	chan_drv->channels[channel] = NULL;
 
 	mutex_unlock(&chan_drv->lock);
@@ -611,7 +613,7 @@ static int isp_channel_major = -1;
  *   device TO @a ndev and the maximum number of channels to @a max_isp_channels.
  * - Initializes the driver mutex lock using @ref mutex_init().
  * - Acquires the global channel driver lock by invoking @ref mutex_lock().
- * - Checks if a channel driver is already registered using @ref WARN_ON().
+ * - Checks if a channel driver is already registered.
  *   If a driver is already registered, it releases the lock and frees the allocated
  *   memory with @ref kfree().
  * - Sets the global channel driver reference to the newly allocated driver and
@@ -629,8 +631,7 @@ static int isp_channel_major = -1;
  * @retval  0                       Successfully registered and initialized the ISP channel driver.
  * @retval -ENOMEM                  If memory allocation for the driver structure fails,
  *                                  as indicated by @ref kzalloc().
- * @retval -EBUSY                   If an ISP channel driver is already registered, detected via
- *                                  @ref WARN_ON().
+ * @retval -EBUSY                   If an ISP channel driver is already registered.
  * @retval -EINVAL                  If the ISP channel major number is invalid, as checked before
  *                                  device creation.
  */
@@ -653,7 +654,8 @@ int isp_channel_drv_register(
 	mutex_init(&chan_drv->lock);
 
 	mutex_lock(&chdrv_lock);
-	if (WARN_ON(chdrv_ != NULL)) {
+	if (chdrv_ != NULL) {
+		dev_warn(chan_drv->dev, "%s: dev is busy\n", __func__);
 		mutex_unlock(&chdrv_lock);
 		kfree(chan_drv);
 		return -EBUSY;
@@ -731,7 +733,7 @@ EXPORT_SYMBOL(isp_channel_drv_fops_register);
  * - Acquires the global channel driver lock using @ref mutex_lock().
  * - Retrieves the current ISP channel driver instance from the global reference.
  * - Clears the global channel driver reference to indicate that it is no longer registered.
- * - Validates that the provided device matches the driver's device using @ref WARN_ON().
+ * - Validates that the provided device matches the driver's device.
  * - Releases the global channel driver lock using @ref mutex_unlock().
  * - Checks if the ISP channel major number is valid. If invalid, logs an error using
  *   @ref pr_err() and exits.
@@ -751,7 +753,10 @@ void isp_channel_drv_unregister(
 	mutex_lock(&chdrv_lock);
 	chan_drv = chdrv_;
 	chdrv_ = NULL;
-	WARN_ON(chan_drv->dev != dev);
+
+	if (chan_drv->dev != dev)
+		dev_warn(chan_drv->dev, "%s: dev does not match\n", __func__);
+
 	mutex_unlock(&chdrv_lock);
 
 	if (isp_channel_major < 0) {

@@ -488,7 +488,6 @@ static inline void rtcpu_trace_exceptions(struct tegra_rtcpu_trace *tracer)
 		return;
 
 	if (new_next >= tracer->exception_entries) {
-		WARN_ON_ONCE(new_next >= tracer->exception_entries);
 		dev_warn_ratelimited(tracer->dev,
 			"exception entry %u outside range 0..%u\n",
 			new_next, tracer->exception_entries - 1);
@@ -1837,7 +1836,6 @@ static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
 	struct camrtc_event_struct *event, *last_event;
 
 	if (new_next >= tracer->event_entries) {
-		WARN_ON_ONCE(new_next >= tracer->event_entries);
 		dev_warn_ratelimited(tracer->dev,
 			"trace entry %u outside range 0..%u\n",
 			new_next, tracer->event_entries - 1);
@@ -1985,12 +1983,9 @@ static int32_t raw_trace_read_impl(
 	int64_t mul_value = 0;
 
 	if (new_next >= tracer->event_entries) {
-		WARN_ON_ONCE(new_next >= tracer->event_entries);
-		dev_warn_ratelimited(
-			tracer->dev,
+		dev_warn_ratelimited(tracer->dev,
 			"trace entry %u outside range 0..%u\n",
-			new_next,
-			tracer->event_entries - 1);
+			new_next, tracer->event_entries - 1);
 		return -EIO;
 	}
 

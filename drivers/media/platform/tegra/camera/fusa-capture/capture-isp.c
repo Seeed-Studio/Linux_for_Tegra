@@ -2148,7 +2148,7 @@ int isp_capture_release(
 	if (err < 0) {
 		dev_err(chan->isp_dev,
 				"%s: release channel IVC failed\n", __func__);
-		WARN_ON("RTCPU is in a bad state. Reboot to recover");
+		pr_warn("RTCPU is in a bad state. Reboot to recover");
 
 		tegra_camrtc_reboot(capture->rtcpu_dev);
 
@@ -3482,7 +3482,7 @@ static int capture_isp_probe(struct platform_device *pdev)
 		of_node_put(node);
 
 		if (ispdev == NULL) {
-			dev_WARN(dev, "isp node %u has no device\n", i);
+			dev_warn(dev, "isp node %u has no device\n", i);
 			err = -ENODEV;
 			goto cleanup;
 		}

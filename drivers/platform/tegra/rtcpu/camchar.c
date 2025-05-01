@@ -206,8 +206,10 @@ static ssize_t tegra_camchar_read(struct file *fp, char __user *buffer, size_t l
 	DEFINE_WAIT(wait);
 	ssize_t ret;
 
-	if (WARN_ON(!ch->is_ready))
+	if (!ch->is_ready) {
+		dev_warn(&ch->dev, "%s: dev is not ready!\n", __func__);
 		return -EIO;
+	}
 
 	len = min_t(size_t, len, ch->ivc.frame_size);
 	if (len == 0)
@@ -246,7 +248,7 @@ static ssize_t tegra_camchar_read(struct file *fp, char __user *buffer, size_t l
  * - Obtains the device-specific data by calling
  *   @ref tegra_ivc_channel_get_drvdata().
  * - Defines a wait queue using @ref DEFINE_WAIT().
- * - Checks if the channel is ready using @ref WARN_ON().
+ * - Checks if the channel is ready.
  * - Limits the write length to the minimum of the requested length and the
  *   channel's frame size using @ref min_t().
  * - If the adjusted length is zero, returns 0 indicating no data to write.
@@ -277,8 +279,7 @@ static ssize_t tegra_camchar_read(struct file *fp, char __user *buffer, size_t l
  * @param[in, out]   offset  File position offset.
  *                           Valid Value: non-NULL.
  *
- * @retval -EIO        If the channel is not ready, as determined by
- *                     @ref WARN_ON().
+ * @retval -EIO        If the channel is not ready.
  * @retval 0           If the adjusted write length is zero.
  * @retval -EINTR      If the write operation was interrupted by a signal,
  *                     as determined by @ref mutex_lock_interruptible()
@@ -298,8 +299,10 @@ static ssize_t tegra_camchar_write(struct file *fp, const char __user *buffer,
 	DEFINE_WAIT(wait);
 	ssize_t ret;
 
-	if (WARN_ON(!ch->is_ready))
+	if (!ch->is_ready) {
+		dev_warn(&ch->dev, "%s: dev is not ready!\n", __func__);
 		return -EIO;
+	}
 
 	len = min_t(size_t, len, ch->ivc.frame_size);
 	if (len == 0)

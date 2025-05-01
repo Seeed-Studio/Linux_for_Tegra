@@ -54,8 +54,11 @@ static int tegra_capture_ivc_tx_(struct tegra_capture_ivc *civc,
 	int ret;
 
 	chan = civc->chan;
-	if (chan == NULL || WARN_ON(!chan->is_ready))
+	if (chan == NULL || !chan->is_ready) {
+		if (chan != NULL)
+			dev_warn(&chan->dev, "%s: dev is not ready!\n", __func__);
 		return -EIO;
+	}
 
 	ret = mutex_lock_interruptible(&civc->ivc_wr_lock);
 	if (unlikely(ret == -EINTR))
@@ -143,8 +146,10 @@ static int tegra_capture_ivc_tx(struct tegra_capture_ivc *civc,
  */
 int tegra_capture_ivc_control_submit(const void *control_desc, size_t len)
 {
-	if (WARN_ON(__scivc_control == NULL))
+	if (__scivc_control == NULL) {
+		pr_warn("%s: __scivc_control is NULL!\n", __func__);
 		return -ENODEV;
+	}
 
 	return tegra_capture_ivc_tx(__scivc_control, control_desc, len);
 }
@@ -167,8 +172,10 @@ EXPORT_SYMBOL(tegra_capture_ivc_control_submit);
  */
 int tegra_capture_ivc_capture_submit(const void *capture_desc, size_t len)
 {
-	if (WARN_ON(__scivc_capture == NULL))
+	if (__scivc_capture == NULL) {
+		pr_warn("%s: __scivc_capture is NULL!\n", __func__);
 		return -ENODEV;
+	}
 
 	return tegra_capture_ivc_tx(__scivc_capture, capture_desc, len);
 }
@@ -218,12 +225,20 @@ int tegra_capture_ivc_register_control_cb(
 	int ret;
 
 	/* Check if inputs are valid */
-	if (WARN(control_resp_cb == NULL, "callback function is NULL"))
+	if (control_resp_cb == NULL) {
+		pr_warn("%s: callback function is NULL!\n", __func__);
 		return -EINVAL;
-	if (WARN(trans_id == NULL, "return value trans_id is NULL"))
+	}
+
+	if (trans_id == NULL) {
+		pr_warn("%s: return value trans_id is NULL!\n", __func__);
 		return -EINVAL;
-	if (WARN_ON(!__scivc_control))
+	}
+
+	if (!__scivc_control) {
+		pr_warn("%s: invalid __scivc_control\n", __func__);
 		return -ENODEV;
+	}
 
 	civc = __scivc_control;
 
@@ -247,16 +262,16 @@ int tegra_capture_ivc_register_control_cb(
 
 	ctx_id = cb_ctx - &civc->cb_ctx[0];
 
-	if (WARN(ctx_id < TRANS_ID_START_IDX ||
-			ctx_id >= ARRAY_SIZE(civc->cb_ctx),
-			"invalid cb_ctx %zu", ctx_id)) {
+	if (ctx_id < TRANS_ID_START_IDX ||
+			ctx_id >= ARRAY_SIZE(civc->cb_ctx)) {
 		ret = -EIO;
 		goto fail;
 	}
 
 	mutex_lock(&civc->cb_ctx_lock);
 
-	if (WARN(cb_ctx->cb_func != NULL, "cb_ctx is busy")) {
+	if (cb_ctx->cb_func != NULL) {
+		pr_warn("%s: cb_ctx is not NULL\n", __func__);
 		ret = -EIO;
 		goto locked_fail;
 	}
@@ -312,13 +327,21 @@ int tegra_capture_ivc_notify_chan_id(uint32_t chan_id, uint32_t trans_id)
 {
 	struct tegra_capture_ivc *civc;
 
-	if (WARN(chan_id >= NUM_CAPTURE_CHANNELS, "invalid chan_id"))
+	if (chan_id >= NUM_CAPTURE_CHANNELS) {
+		pr_warn("%s: invalid chan_id\n", __func__);
 		return -EINVAL;
-	if (WARN(trans_id < TRANS_ID_START_IDX ||
-			trans_id >= TOTAL_CHANNELS, "invalid trans_id"))
+	}
+
+	if (trans_id < TRANS_ID_START_IDX ||
+			trans_id >= TOTAL_CHANNELS) {
+		pr_warn("%s: invalid trans_id\n", __func__);
 		return -EINVAL;
-	if (WARN_ON(!__scivc_control))
+	}
+
+	if (!__scivc_control) {
+		pr_warn("%s: invalid __scivc_control\n", __func__);
 		return -ENODEV;
+	}
 
 	chan_id  = array_index_nospec(chan_id,  NUM_CAPTURE_CHANNELS);
 	trans_id = array_index_nospec(trans_id, TOTAL_CHANNELS);
@@ -327,14 +350,14 @@ int tegra_capture_ivc_notify_chan_id(uint32_t chan_id, uint32_t trans_id)
 
 	mutex_lock(&civc->cb_ctx_lock);
 
-	if (WARN(civc->cb_ctx[trans_id].cb_func == NULL,
-			"transaction context at %u is idle", trans_id)) {
+	if (civc->cb_ctx[trans_id].cb_func == NULL) {
+		pr_warn("%s: transaction context at %u is idle\n", __func__, trans_id);
 		mutex_unlock(&civc->cb_ctx_lock);
 		return -EBADF;
 	}
 
-	if (WARN(civc->cb_ctx[chan_id].cb_func != NULL,
-			"channel context at %u is busy", chan_id)) {
+	if (civc->cb_ctx[chan_id].cb_func != NULL) {
+		pr_warn("%s: channel context at %u is busy\n", __func__, chan_id);
 		mutex_unlock(&civc->cb_ctx_lock);
 		return -EBUSY;
 	}
@@ -393,12 +416,15 @@ int tegra_capture_ivc_register_capture_cb(
 	struct tegra_capture_ivc *civc;
 	int ret;
 
-	if (WARN(capture_status_ind_cb == NULL, "callback function is NULL"))
+	if (capture_status_ind_cb == NULL) {
+		pr_warn("%s: callback function is NULL\n", __func__);
 		return -EINVAL;
+	}
 
-	if (WARN(chan_id >= NUM_CAPTURE_CHANNELS,
-			"invalid channel id %u", chan_id))
+	if (chan_id >= NUM_CAPTURE_CHANNELS) {
+		pr_warn("%s: invalid channel id %u\n", __func__, chan_id);
 		return -EINVAL;
+	}
 	chan_id = array_index_nospec(chan_id, NUM_CAPTURE_CHANNELS);
 
 	if (!__scivc_capture)
@@ -412,8 +438,8 @@ int tegra_capture_ivc_register_capture_cb(
 
 	mutex_lock(&civc->cb_ctx_lock);
 
-	if (WARN(civc->cb_ctx[chan_id].cb_func != NULL,
-			"capture channel %u is busy", chan_id)) {
+	if (civc->cb_ctx[chan_id].cb_func != NULL) {
+		pr_warn("%s: capture channel %u is busy\n", __func__, chan_id);
 		ret = -EBUSY;
 		goto fail;
 	}
@@ -460,10 +486,14 @@ int tegra_capture_ivc_unregister_control_cb(uint32_t id)
 	struct tegra_capture_ivc *civc;
 
 	/* id could be temporary trans_id or rtcpu-allocated chan_id */
-	if (WARN(id >= TOTAL_CHANNELS, "invalid id %u", id))
+	if (id >= TOTAL_CHANNELS) {
+		pr_warn("%s: invalid id %u\n", __func__, id);
 		return -EINVAL;
-	if (WARN_ON(!__scivc_control))
+	}
+	if (!__scivc_control) {
+		pr_warn("%s: __scivc_control is not exist!\n", __func__);
 		return -ENODEV;
+	}
 
 	id = array_index_nospec(id, TOTAL_CHANNELS);
 
@@ -471,8 +501,8 @@ int tegra_capture_ivc_unregister_control_cb(uint32_t id)
 
 	mutex_lock(&civc->cb_ctx_lock);
 
-	if (WARN(civc->cb_ctx[id].cb_func == NULL,
-			"control channel %u is idle", id)) {
+	if (civc->cb_ctx[id].cb_func == NULL) {
+		pr_warn("%s: control channel %u is idle\n", __func__, id);
 		mutex_unlock(&civc->cb_ctx_lock);
 		return -EBADF;
 	}
@@ -535,8 +565,8 @@ int tegra_capture_ivc_unregister_capture_cb(uint32_t chan_id)
 
 	mutex_lock(&civc->cb_ctx_lock);
 
-	if (WARN(civc->cb_ctx[chan_id].cb_func == NULL,
-			"capture channel %u is idle", chan_id)) {
+	if (civc->cb_ctx[chan_id].cb_func == NULL) {
+		pr_warn("%s: capture channel %u is idle\n", __func__, chan_id);
 		mutex_unlock(&civc->cb_ctx_lock);
 		return -EBADF;
 	}
@@ -632,7 +662,7 @@ static inline void tegra_capture_ivc_recv(struct tegra_capture_ivc *civc)
 			id = array_index_nospec(id, TOTAL_CHANNELS);
 			tegra_capture_ivc_recv_msg(civc, id, msg);
 		} else {
-			dev_WARN(dev, "Invalid rtcpu channel id %u", id);
+			dev_warn(dev, "Invalid rtcpu channel id %u", id);
 		}
 
 		tegra_ivc_read_advance(ivc);
@@ -646,7 +676,7 @@ static inline void tegra_capture_ivc_recv(struct tegra_capture_ivc *civc)
  * - Retrieves the capture IVC context from the work structure using @ref container_of()
  * - Acquires a runtime PM reference to prevent suspended operation using
  *   @ref pm_runtime_get_if_in_use()
- * - If channel is not ready, logs a warning using @ref WARN_ON()
+ * - If channel is not ready, logs a warning.
  * - Verifies that the channel is ready using @ref chan->is_ready
  * - Calls @ref tegra_capture_ivc_recv() to process all pending messages
  * - Releases the runtime PM reference using @ref pm_runtime_put()
@@ -668,7 +698,9 @@ static void tegra_capture_ivc_worker(struct kthread_work *work)
 	 * notify when RCE resumes and IVC bus gets set up.
 	 */
 	if (pm_runtime_get_if_in_use(&chan->dev) > 0) {
-		WARN_ON(!chan->is_ready);
+		if (!chan->is_ready) {
+			dev_warn(&chan->dev, "channel not ready\n");
+		}
 
 		tegra_capture_ivc_recv(civc);
 
@@ -726,10 +758,10 @@ static void tegra_capture_ivc_notify(struct tegra_ivc_channel *chan)
  * - Unlocks the callback context lock using @ref mutex_unlock()
  * - Associates the context with the IVC channel using @ref tegra_ivc_channel_set_drvdata()
  * - Checks if the service type is "capture-control" using @ref strcmp()
- * - Verifies that no control channel already exists using @ref WARN_ON()
+ * - Verifies that no control channel already exists
  * - Registers the context as a control service by setting @ref __scivc_control
  * - If not control, checks if service type is "capture" using @ref strcmp()
- * - Verifies that no capture channel already exists using @ref WARN_ON()
+ * - Verifies that no capture channel already exists
  * - Registers the context as a capture service by setting @ref __scivc_capture
  * - Returns error if service type is neither control nor capture
  * - Stops the worker thread using @ref kthread_stop() if an error occurs
@@ -798,13 +830,15 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 	tegra_ivc_channel_set_drvdata(chan, civc);
 
 	if (!strcmp("capture-control", service)) {
-		if (WARN_ON(__scivc_control != NULL)) {
+		if (__scivc_control != NULL) {
+			dev_warn(&chan->dev, "%s: __scivc_control already exists!\n", __func__);
 			ret = -EEXIST;
 			goto err_service;
 		}
 		__scivc_control = civc;
 	} else if (!strcmp("capture", service)) {
-		if (WARN_ON(__scivc_capture != NULL)) {
+		if (__scivc_capture != NULL) {
+			dev_warn(&chan->dev, "%s: __scivc_capture already exists!\n", __func__);
 			ret = -EEXIST;
 			goto err_service;
 		}

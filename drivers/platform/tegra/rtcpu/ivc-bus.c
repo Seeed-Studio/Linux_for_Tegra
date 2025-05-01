@@ -706,7 +706,8 @@ static void tegra_ivc_bus_remove(struct device *dev)
 		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
 		const struct tegra_ivc_channel_ops *ops = drv->ops.channel;
 
-		WARN_ON(rcu_access_pointer(chan->ops) != ops);
+		if (rcu_access_pointer(chan->ops) != ops)
+			dev_warn(dev, "dev ops does not match!\n");
 		RCU_INIT_POINTER(chan->ops, NULL);
 		synchronize_rcu();
 

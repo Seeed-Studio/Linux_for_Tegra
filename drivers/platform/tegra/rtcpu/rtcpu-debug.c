@@ -1247,8 +1247,10 @@ static int camrtc_test_run_and_show_result(struct seq_file *file,
 	const char *nul;
 
 	(void)__builtin_usubl_overflow(resp_size, data_offset, &result_size);
-	if (WARN_ON(test_case_size > camrtc_dbgfs_get_max_test_size(ch)))
+	if (test_case_size > camrtc_dbgfs_get_max_test_size(ch)) {
+		dev_warn(&ch->dev, "%s: test_case_size > camrtc_dbgfs_get_max_test_size(ch)\n", __func__);
 		test_case_size = camrtc_dbgfs_get_max_test_size(ch);
+	}
 
 	memcpy((char *)req + data_offset, test_case, test_case_size);
 
@@ -1633,7 +1635,9 @@ static int camrtc_run_mem_test(struct seq_file *file,
 			continue;
 
 		testmem = &resp->data.run_mem_test_data.mem[i];
-		if (!WARN_ON(testmem->size > mem->size))
+		if (testmem->size > mem->size)
+			dev_warn(mem_dev, "%s: testmem->size > mem->size\n", __func__);
+		else
 			mem->used = testmem->size;
 
 		if (_camdbg_rmem.enabled) {

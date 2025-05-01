@@ -928,16 +928,16 @@ int vi_capture_setup(
 	dev_dbg(chan->dev, "vi unit id %u\n", vi_inst);
 	dev_dbg(chan->dev, "vi2 chan mask %llx\n", setup->vi2_channel_mask);
 
-	if (WARN_ON(vi_inst == VI_UNIT_VI &&
+	if ((vi_inst == VI_UNIT_VI &&
 		setup->vi_channel_mask == CAPTURE_CHANNEL_INVALID_MASK) ||
-		WARN_ON(vi_inst == VI_UNIT_VI2 &&
+		(vi_inst == VI_UNIT_VI2 &&
 		setup->vi2_channel_mask == CAPTURE_CHANNEL_INVALID_MASK) ||
-		WARN_ON(setup->channel_flags == 0) ||
-		WARN_ON(setup->queue_depth == 0) ||
-		WARN_ON(setup->request_size == 0) ||
-		WARN_ON(setup->csi_stream_id == NVCSI_STREAM_INVALID_ID)) {
+		setup->channel_flags == 0 ||
+		setup->queue_depth == 0 ||
+		setup->request_size == 0 ||
+		setup->csi_stream_id == NVCSI_STREAM_INVALID_ID) {
 
-		dev_err(chan->dev, "%s: invalid setup parameters\n", __func__);
+		dev_warn(chan->dev, "%s: invalid setup parameters\n", __func__);
 		return -EINVAL;
 	}
 
@@ -978,15 +978,16 @@ int vi_capture_setup(
 		goto memoryinfo_alloc_fail;
 	}
 
-	WARN_ON(capture->unpins_list != NULL);
+	if (capture->unpins_list != NULL)
+		dev_warn(chan->dev, "%s: unpins_list is not NULL\n", __func__);
 
 	capture->unpins_list =
 		vzalloc(setup->queue_depth * sizeof(*capture->unpins_list));
 
 	if (!capture->unpins_list) {
-		dev_err(chan->dev,
-			"%s: channel_unpins alloc failed\n", __func__);
-		goto unpin_alloc_fail;
+			dev_err(chan->dev,
+				"%s: channel_unpins alloc failed\n", __func__);
+			goto unpin_alloc_fail;
 	}
 
 	config->requests_memoryinfo = capture->requests_memoryinfo_iova;
@@ -1288,10 +1289,8 @@ int vi_capture_release(
 	err = vi_capture_ivc_send_control(chan, &control_desc,
 			sizeof(control_desc), CAPTURE_CHANNEL_RELEASE_RESP);
 	if (err < 0) {
-		dev_err(chan->dev,
-				"%s: release channel IVC failed\n", __func__);
-		WARN_ON("RTCPU is in a bad state. Reboot to recover");
-
+		dev_warn(chan->dev,
+				"%s: release channel IVC failed, reboot RTCPU to recover\n", __func__);
 		tegra_camrtc_reboot(chan->rtcpu_dev);
 
 		err = -EIO;
@@ -2327,7 +2326,7 @@ static int capture_vi_probe(struct platform_device *pdev)
 		of_node_put(np);
 
 		if (pvidev == NULL) {
-			dev_WARN(dev, "vi node %d has no device\n", ii);
+			dev_warn(dev, "vi node %d has no device\n", ii);
 			err = -ENODEV;
 			goto cleanup;
 		}
