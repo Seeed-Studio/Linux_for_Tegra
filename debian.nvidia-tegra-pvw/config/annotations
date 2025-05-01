@@ -27,8 +27,14 @@ CONFIG_CRYPTO_USER_API_RNG                      note<'EMBARGOED'>
 CONFIG_CRYPTO_USER_API_SKCIPHER                 policy<{'arm64': 'm'}>
 CONFIG_CRYPTO_USER_API_SKCIPHER                 note<'EMBARGOED'>
 
+CONFIG_DRM_SIMPLEDRM                            policy<{'arm64': 'n'}>
+CONFIG_DRM_SIMPLEDRM                            note<'EMBARGOED, disable for CONFIG_FB_SIMPLE'>
+
 CONFIG_EXFAT_FS                                 policy<{'arm64': 'y'}>
 CONFIG_EXFAT_FS                                 note<'EMBARGOED'>
+
+CONFIG_FB_SIMPLE                                policy<{'arm64': 'y'}>
+CONFIG_FB_SIMPLE                                note<'EMBARGOED'>
 
 CONFIG_INFINIBAND                               policy<{'arm64': 'm'}>
 CONFIG_INFINIBAND                               note<'EMBARGOED'>
@@ -124,6 +130,7 @@ CONFIG_ZRAM                                     note<'EMBARGOED'>
 # ---- Annotations without notes ----
 
 CONFIG_ARCH_TEGRA_264_SOC                       policy<{'arm64': 'y'}>
+CONFIG_DRM_GEM_SHMEM_HELPER                     policy<{'arm64': 'm'}>
 CONFIG_PINCTRL_TEGRA264                         policy<{'arm64': 'y'}>
 CONFIG_PSTORE_BLK_CONSOLE_SIZE                  policy<{'arm64': '64'}>
 CONFIG_PSTORE_ZONE                              policy<{'arm64': 'y'}>
