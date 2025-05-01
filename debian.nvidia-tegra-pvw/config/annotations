@@ -9,6 +9,9 @@ include "../../debian.nvidia-tegra/config/annotations"
 CONFIG_ARM_FFA_TRANSPORT                        policy<{'arm64': 'y'}>
 CONFIG_ARM_FFA_TRANSPORT                        note<'EMBARGOED'>
 
+CONFIG_BACKLIGHT_CLASS_DEVICE                   policy<{'arm64': 'y'}>
+CONFIG_BACKLIGHT_CLASS_DEVICE                   note<'EMBARGOED'>
+
 CONFIG_CFS_BANDWIDTH                            policy<{'arm64': 'y'}>
 CONFIG_CFS_BANDWIDTH                            note<'EMBARGOED'>
 
