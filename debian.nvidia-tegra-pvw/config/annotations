@@ -102,6 +102,9 @@ CONFIG_QFMT_V2                                  note<'EMBARGOED'>
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 policy<{'arm64': 'y'}>
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'EMBARGOED'>
 
+CONFIG_TEGRA_HV_DRIVER                          policy<{'arm64': 'y'}>
+CONFIG_TEGRA_HV_DRIVER                          note<'EMBARGOED'>
+
 CONFIG_UIO                                      policy<{'arm64': 'm'}>
 CONFIG_UIO                                      note<'EMBARGOED'>
 
