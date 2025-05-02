@@ -336,10 +336,6 @@ struct tegra_virtual_se_ll {
 	u32 data_len; /* Data length in DMA buffer */
 };
 
-struct tegra_vse_tag {
-	unsigned int *priv_data;
-};
-
 /* Tegra Virtual Security Engine commands */
 enum tegra_virtual_se_command {
 	VIRTUAL_SE_AES_CRYPTO,
@@ -573,11 +569,18 @@ struct tegra_virtual_se_ivc_tx_msg_t {
 	};
 };
 
+struct tegra_virtual_se_ivc_hdr_tag {
+	struct tegra_vse_priv_data *priv_data;
+	uint8_t unused[16U - sizeof(struct tegra_vse_priv_data *)];
+} __attribute__((__packed__));
+
+static_assert(sizeof(struct tegra_virtual_se_ivc_hdr_tag) == 16U);
+
 struct tegra_virtual_se_ivc_hdr_t {
 	u8 header_magic[4];
 	u32 num_reqs;
 	u32 engine;
-	u8 tag[0x10];
+	struct tegra_virtual_se_ivc_hdr_tag tag;
 	u32 status;
 };
 
@@ -782,7 +785,6 @@ static int read_and_validate_valid_msg(
 	struct tegra_hv_ivc_cookie *pivck,
 	uint32_t node_id, bool *is_dummy, bool waited)
 {
-	struct tegra_vse_tag *p_dat;
 	struct tegra_vse_priv_data *priv;
 	struct tegra_virtual_se_ivc_msg_t *ivc_msg;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr;
@@ -819,8 +821,7 @@ static int read_and_validate_valid_msg(
 		dev_err(se_dev->dev, "%s(): Wrong response sequence\n", __func__);
 		goto deinit;
 	}
-	p_dat = (struct tegra_vse_tag *)ivc_msg->ivc_hdr.tag;
-	priv = (struct tegra_vse_priv_data *)p_dat->priv_data;
+	priv = ivc_msg->ivc_hdr.tag.priv_data;
 	if (!priv) {
 		dev_err(se_dev->dev, "%s no call back info\n", __func__);
 		goto deinit;
@@ -1058,7 +1059,6 @@ int tegra_hv_vse_allocate_keyslot(struct tegra_vse_key_slot_ctx *key_slot,
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_hv_ivc_cookie *pivck;
 	struct tegra_vse_priv_data *priv = NULL;
-	struct tegra_vse_tag *priv_data_ptr;
 	int err = 0;
 
 	if (node_id >= MAX_NUMBER_MISC_DEVICES) {
@@ -1111,9 +1111,8 @@ int tegra_hv_vse_allocate_keyslot(struct tegra_vse_key_slot_ctx *key_slot,
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[node_id].engine_id;
+	ivc_hdr->tag.priv_data = priv;
 
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 	priv->cmd = VIRTUAL_SE_KEY_SLOT;
 	priv->se_dev = se_dev;
 
@@ -1157,7 +1156,6 @@ int tegra_hv_vse_close_keyslot(uint32_t node_id, uint32_t key_grp_id)
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_hv_ivc_cookie *pivck;
 	struct tegra_vse_priv_data *priv = NULL;
-	struct tegra_vse_tag *priv_data_ptr;
 	int err = 0;
 
 	if (node_id >= MAX_NUMBER_MISC_DEVICES) {
@@ -1204,12 +1202,11 @@ int tegra_hv_vse_close_keyslot(uint32_t node_id, uint32_t key_grp_id)
 	ivc_hdr->header_magic[1] = 'V';
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
+	ivc_hdr->tag.priv_data = priv;
 
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_RELEASE_KEY_USING_GRIP;
 	ivc_tx->keys.key_grp_id = key_grp_id;
 
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 	priv->cmd = VIRTUAL_SE_KEY_SLOT;
 	priv->se_dev = se_dev;
 
@@ -1246,7 +1243,6 @@ int tegra_hv_vse_release_keyslot(struct tegra_vse_key_slot_ctx *key_slot, uint32
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_hv_ivc_cookie *pivck;
 	struct tegra_vse_priv_data *priv = NULL;
-	struct tegra_vse_tag *priv_data_ptr;
 	int err = 0;
 
 	if (node_id >= MAX_NUMBER_MISC_DEVICES) {
@@ -1300,16 +1296,15 @@ int tegra_hv_vse_release_keyslot(struct tegra_vse_key_slot_ctx *key_slot, uint32
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[node_id].engine_id;
-
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
-	priv->cmd = VIRTUAL_SE_KEY_SLOT;
-	priv->se_dev = se_dev;
+	ivc_hdr->tag.priv_data = priv;
 
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_RELEASE_KEY;
 	memcpy(ivc_tx->keys.keyslot, key_slot->key_id, KEYSLOT_SIZE_BYTES);
 	ivc_tx->keys.token_id = key_slot->token_id;
 	ivc_tx->keys.key_instance = key_slot->key_instance_idx;
+
+	priv->cmd = VIRTUAL_SE_KEY_SLOT;
+	priv->se_dev = se_dev;
 
 	g_crypto_to_ivc_map[node_id].vse_thread_start = true;
 	init_completion(&priv->alg_complete);
@@ -1622,7 +1617,6 @@ static int tegra_hv_vse_safety_sha_op(struct tegra_virtual_se_sha_context *sha_c
 	union tegra_virtual_se_sha_args *psha;
 	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[sha_ctx->node_id].ivck;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[sha_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	u64 msg_len = 0, temp_len = 0;
 	uint32_t engine_id;
 	int err = 0;
@@ -1682,6 +1676,7 @@ static int tegra_hv_vse_safety_sha_op(struct tegra_virtual_se_sha_context *sha_c
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = VIRTUAL_SE_SHA;
+	ivc_hdr->tag.priv_data = priv;
 	ivc_tx->cmd = TEGRA_VIRTUAL_SE_CMD_SHA_HASH;
 
 	psha = &(ivc_tx->sha);
@@ -1736,8 +1731,6 @@ static int tegra_hv_vse_safety_sha_op(struct tegra_virtual_se_sha_context *sha_c
 
 	psha->op_hash.src_buf_size = msg_len;
 
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg.ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 	init_completion(&priv->alg_complete);
@@ -1995,7 +1988,6 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req,
 	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[hmac_ctx->node_id].ivck;
 	int err = 0;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[hmac_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	const struct tegra_vse_dma_buf *src, *hash, *match;
 
 	u32 cmd = 0;
@@ -2056,6 +2048,7 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req,
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = VIRTUAL_SE_SHA;
+	ivc_hdr->tag.priv_data = priv;
 	ivc_tx->cmd = cmd;
 
 	phmac = &(ivc_tx->hmac);
@@ -2176,8 +2169,6 @@ static int tegra_hv_vse_safety_hmac_sha_sv_op(struct ahash_request *req,
 		}
 	}
 
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg.ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 	init_completion(&priv->alg_complete);
@@ -2476,7 +2467,6 @@ static int tegra_hv_vse_safety_process_aes_req(struct tegra_virtual_se_dev *se_d
 	int err = 0;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg = NULL;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[aes_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	union tegra_virtual_se_aes_args *aes;
 	const struct tegra_vse_dma_buf *src;
 
@@ -2517,9 +2507,8 @@ static int tegra_hv_vse_safety_process_aes_req(struct tegra_virtual_se_dev *se_d
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[aes_ctx->node_id].engine_id;
+	ivc_hdr->tag.priv_data = priv;
 
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_hdr->tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 	priv->se_dev = se_dev;
 	g_crypto_to_ivc_map[aes_ctx->node_id].vse_thread_start = true;
 
@@ -2796,7 +2785,6 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req,
 	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[cmac_ctx->node_id].ivck;
 	int err = 0;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[cmac_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	uint32_t tsec_fw_err;
 	const struct tegra_vse_dma_buf *src, *mac, *fw_status;
 
@@ -2813,6 +2801,7 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req,
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[cmac_ctx->node_id].engine_id;
+	ivc_hdr->tag.priv_data = priv;
 
 	g_crypto_to_ivc_map[cmac_ctx->node_id].vse_thread_start = true;
 
@@ -2862,9 +2851,6 @@ static int tegra_hv_vse_safety_tsec_sv_op(struct ahash_request *req,
 			goto free_mem;
 		}
 	}
-
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
@@ -2947,7 +2933,6 @@ static int tegra_hv_vse_safety_cmac_sv_op_hw_verify_supported(
 	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[cmac_ctx->node_id].ivck;
 	int err = 0;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[cmac_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	u32 match_code = SE_HW_VALUE_MATCH_CODE;
 	u32 mac_buf_size = 16;
 	const struct tegra_vse_dma_buf *src, *mac, *comp;
@@ -3032,8 +3017,7 @@ static int tegra_hv_vse_safety_cmac_sv_op_hw_verify_supported(
 		cmac_ctx->is_first = false;
 	}
 	ivc_tx->aes.op_cmac_sv.mac_addr = mac->buf_iova;
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
+	ivc_hdr->tag.priv_data = priv;
 	priv->cmd = VIRTUAL_CMAC_PROCESS;
 
 	priv->se_dev = se_dev;
@@ -3086,7 +3070,6 @@ static int tegra_hv_vse_safety_cmac_sv_op(struct ahash_request *req,
 	unsigned int total_len;
 	int err = 0;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[cmac_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	const struct tegra_vse_dma_buf *src;
 
 	ivc_req_msg = devm_kzalloc(se_dev->dev,
@@ -3114,6 +3097,7 @@ static int tegra_hv_vse_safety_cmac_sv_op(struct ahash_request *req,
 	ivc_hdr->header_magic[1] = 'V';
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
+	ivc_hdr->tag.priv_data = priv;
 
 	g_crypto_to_ivc_map[cmac_ctx->node_id].vse_thread_start = true;
 
@@ -3185,10 +3169,8 @@ static int tegra_hv_vse_safety_cmac_sv_op(struct ahash_request *req,
 		cmac_ctx->is_first = false;
 	}
 
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
-	priv->cmd = VIRTUAL_SE_PROCESS;
 
+	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 	init_completion(&priv->alg_complete);
 
@@ -3468,7 +3450,6 @@ int tegra_hv_vse_safety_tsec_get_keyload_status(uint32_t node_id, uint32_t *err_
 	struct tegra_hv_ivc_cookie *pivck = NULL;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg = NULL;
 	struct tegra_vse_priv_data *priv = NULL;
-	struct tegra_vse_tag *priv_data_ptr = NULL;
 	int err = 0;
 
 	if (node_id >= MAX_NUMBER_MISC_DEVICES)
@@ -3491,15 +3472,13 @@ int tegra_hv_vse_safety_tsec_get_keyload_status(uint32_t node_id, uint32_t *err_
 	ivc_hdr->header_magic[1] = 'V';
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
+	ivc_hdr->tag.priv_data = priv;
 
 	g_crypto_to_ivc_map[node_id].vse_thread_start = true;
 
 	ivc_hdr->engine = g_crypto_to_ivc_map[node_id].engine_id;
 	ivc_tx->cmd = TEGRA_VIRTUAL_TSEC_CMD_GET_KEYLOAD_STATUS;
 
-	priv_data_ptr =
-		(struct tegra_vse_tag *)ivc_req_msg->ivc_hdr.tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 	init_completion(&priv->alg_complete);
@@ -3798,7 +3777,6 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr = NULL;
 	struct tegra_vse_priv_data *priv = NULL;
-	struct tegra_vse_tag *priv_data_ptr;
 	const struct tegra_vse_dma_buf *src;
 
 	if (atomic_read(&se_dev->se_suspended)) {
@@ -3843,8 +3821,7 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[rng_ctx->node_id].engine_id;
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_hdr->tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
+	ivc_hdr->tag.priv_data = priv;
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 
@@ -4016,7 +3993,6 @@ static int tegra_vse_aes_gcm_enc_dec(struct aead_request *req,
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[aes_ctx->node_id].ivck;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[aes_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	int err = 0;
 	const struct tegra_vse_dma_buf *src, *aad, *tag;
 
@@ -4084,8 +4060,7 @@ static int tegra_vse_aes_gcm_enc_dec(struct aead_request *req,
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[aes_ctx->node_id].engine_id;
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_hdr->tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
+	ivc_hdr->tag.priv_data = priv;
 
 	priv->se_dev = se_dev;
 
@@ -4237,7 +4212,6 @@ static int tegra_vse_aes_gcm_enc_dec_hw_support(struct aead_request *req,
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_hv_ivc_cookie *pivck = g_crypto_to_ivc_map[aes_ctx->node_id].ivck;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[aes_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	int err = 0;
 	u32 match_code = SE_HW_VALUE_MATCH_CODE;
 	u32 mismatch_code = SE_HW_VALUE_MISMATCH_CODE;
@@ -4306,8 +4280,7 @@ static int tegra_vse_aes_gcm_enc_dec_hw_support(struct aead_request *req,
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[aes_ctx->node_id].engine_id;
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_hdr->tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
+	ivc_hdr->tag.priv_data = priv;
 
 	priv->se_dev = se_dev;
 
@@ -4591,7 +4564,6 @@ static int tegra_hv_vse_aes_gmac_sv_init(struct ahash_request *req)
 	struct tegra_virtual_se_ivc_hdr_t *ivc_hdr = NULL;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
 	struct tegra_hv_ivc_cookie *pivck;
-	struct tegra_vse_tag *priv_data_ptr = NULL;
 	struct tegra_vse_priv_data *priv = NULL;
 	int err = 0;
 
@@ -4657,8 +4629,7 @@ static int tegra_hv_vse_aes_gmac_sv_init(struct ahash_request *req)
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id;
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_hdr->tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
+	ivc_hdr->tag.priv_data = priv;
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 
@@ -4730,7 +4701,6 @@ static int tegra_hv_vse_aes_gmac_sv_op(struct ahash_request *req,
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_hv_ivc_cookie *pivck;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[gmac_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	int err = 0;
 	const struct tegra_vse_dma_buf *aad, *tag;
 
@@ -4779,9 +4749,8 @@ static int tegra_hv_vse_aes_gmac_sv_op(struct ahash_request *req,
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id;
+	ivc_hdr->tag.priv_data = priv;
 
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_hdr->tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 
@@ -4889,7 +4858,6 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req,
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
 	struct tegra_hv_ivc_cookie *pivck;
 	struct tegra_vse_priv_data *priv = g_crypto_to_ivc_map[gmac_ctx->node_id].priv;
-	struct tegra_vse_tag *priv_data_ptr;
 	int err = 0;
 	u32 match_code = SE_HW_VALUE_MATCH_CODE;
 	u32 mismatch_code = SE_HW_VALUE_MISMATCH_CODE;
@@ -4968,9 +4936,8 @@ static int tegra_hv_vse_aes_gmac_sv_op_hw_support(struct ahash_request *req,
 	ivc_hdr->header_magic[2] = 'D';
 	ivc_hdr->header_magic[3] = 'A';
 	ivc_hdr->engine = g_crypto_to_ivc_map[gmac_ctx->node_id].engine_id;
+	ivc_hdr->tag.priv_data = priv;
 
-	priv_data_ptr = (struct tegra_vse_tag *)ivc_hdr->tag;
-	priv_data_ptr->priv_data = (unsigned int *)priv;
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 
