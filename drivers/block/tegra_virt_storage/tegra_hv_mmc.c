@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/kernel.h> /* printk() */
 #include <linux/vmalloc.h>   /* kmalloc() */
@@ -36,7 +36,7 @@ int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 	uint8_t *tmpaddr;
 	void *ioctl_buf;
 
-	ioctl_buf = vmalloc(ioctl_bytes);
+	ioctl_buf = vzalloc(ioctl_bytes);
 	if (ioctl_buf == NULL)
 		return -ENOMEM;
 

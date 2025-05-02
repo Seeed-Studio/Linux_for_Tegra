@@ -375,8 +375,6 @@ static int tegra_virt_mtd_suspend(struct device *dev)
 	if (vmtddev->is_setup) {
 		mutex_lock(&vmtddev->lock);
 		disable_irq(vmtddev->ivck->irq);
-		/* Reset the channel */
-		tegra_hv_ivc_channel_reset(vmtddev->ivck);
 	}
 	return 0;
 }
@@ -751,6 +749,7 @@ static int tegra_virt_mtd_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto free_mempool;
 	}
+	memset(vmtddev->shared_buffer, 0, ivmk->size);
 
 	if (vmtddev->ivck->frame_size < sizeof(struct vs_request)) {
 		dev_err(dev, "Frame size %d less than ivc_req %ld!\n",
@@ -760,7 +759,7 @@ static int tegra_virt_mtd_probe(struct platform_device *pdev)
 		goto free_mempool;
 	}
 
-	vmtddev->cmd_frame = devm_kmalloc(vmtddev->device,
+	vmtddev->cmd_frame = devm_kzalloc(vmtddev->device,
 			vmtddev->ivck->frame_size, GFP_KERNEL);
 	if (vmtddev->cmd_frame == NULL) {
 		ret = -ENOMEM;

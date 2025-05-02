@@ -793,7 +793,7 @@ static blk_status_t vblk_request(struct blk_mq_hw_ctx *hctx,
 	blk_mq_start_request(req);
 
 	/* malloc for req list entry */
-	entry = kmalloc(sizeof(struct req_entry), GFP_ATOMIC);
+	entry = kzalloc(sizeof(struct req_entry), GFP_ATOMIC);
 	if (entry == NULL) {
 		dev_err(vblkdev->device, "Failed to allocate memory\n");
 		return BLK_STS_IOERR;
@@ -1548,6 +1548,7 @@ static void setup_device(struct vblk_dev *vblkdev)
 			tegra_hv_mempool_unreserve(vblkdev->ivmk);
 			return;
 		}
+		memset(vblkdev->shared_buffer, 0, ivmk->size);
 	}
 
 	/* If IOVA feature is enabled for virt partition, then set max_requests

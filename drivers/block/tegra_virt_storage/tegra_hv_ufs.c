@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/vmalloc.h>   /* kmalloc() */
 #include <linux/errno.h> /* error codes */
@@ -146,7 +146,7 @@ int vblk_prep_ufs_combo_ioc(struct vblk_dev *vblkdev,
 	size_t data_len = 0;
 	bool w_flag = false;
 
-	ioctl_buf = vmalloc(ioctl_bytes);
+	ioctl_buf = vzalloc(ioctl_bytes);
 	if (ioctl_buf == NULL)
 		return -ENOMEM;
 

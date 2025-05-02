@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -44,7 +44,7 @@ int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 	uint32_t alignment_add;
 	uint32_t temp_sum;
 
-	hp = kmalloc(header_len, GFP_KERNEL);
+	hp = kzalloc(header_len, GFP_KERNEL);
 	if (hp == NULL) {
 		return -ENOMEM;
 	}
@@ -133,7 +133,7 @@ int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 		goto free_hp;
 	}
 
-	ioctl_buf = kmalloc(ioctl_len, GFP_KERNEL);
+	ioctl_buf = kzalloc(ioctl_len, GFP_KERNEL);
 	if (ioctl_buf == NULL) {
 		err = -ENOMEM;
 		goto free_hp;
@@ -240,7 +240,7 @@ int vblk_complete_sg_io(struct vblk_dev *vblkdev,
 		goto exit;
 	}
 
-	hp = kmalloc(header_len, GFP_KERNEL);
+	hp = kzalloc(header_len, GFP_KERNEL);
 	if (hp == NULL) {
 		return -ENOMEM;
 	}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -468,6 +468,7 @@ static void setup_device(struct vblk_dev *vblkdev)
 			tegra_hv_mempool_unreserve(vblkdev->ivmk);
 			return;
 		}
+		memset(vblkdev->shared_buffer, 0, ivmk->size);
 
 		max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
 
@@ -669,6 +670,8 @@ static int vblk_oops_get_configinfo(struct vblk_dev *vblkdev)
 			dev_err(vblkdev->device, "allocate buffer failed\n");
 			return -ENOMEM;
 		}
+		memset(vblkdev->ufs_buf, 0,
+				PAGE_SIZE << (get_order(vblkdev_oops->pstore_kmsg_size)));
 		vblkdev->ufs_iova = dma_map_single(vblkdev->device, vblkdev->ufs_buf,
 				vblkdev_oops->pstore_kmsg_size, DMA_BIDIRECTIONAL);
 		if (dma_mapping_error(vblkdev->device, vblkdev->ufs_iova)) {
