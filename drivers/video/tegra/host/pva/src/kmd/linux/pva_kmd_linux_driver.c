@@ -402,7 +402,11 @@ static int pva_probe(struct platform_device *pdev)
 		goto err_cdev_init;
 	}
 
-	pva_kmd_linux_host1x_init(pva_device);
+	err = pva_kmd_linux_host1x_init(pva_device);
+	if (err < 0) {
+		dev_err(dev, "pva_kmd_linux_host1x_init failed\n");
+		goto err_cdev_init;
+	}
 
 	err = pva_kmd_debugfs_create_nodes(pva_device);
 	if (err != PVA_SUCCESS) {

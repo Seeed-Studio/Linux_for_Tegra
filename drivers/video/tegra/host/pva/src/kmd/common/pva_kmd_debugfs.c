@@ -100,6 +100,12 @@ static int64_t print_vpu_stats(struct pva_kmd_tegrastats *kmd_tegra_stats,
 	char kernel_buffer[256];
 	int64_t formatted_len;
 
+	// We don't support partial reads for vpu stats because we cannot mix two
+	// reads at different times together.
+	if (offset != 0) {
+		return 0;
+	}
+
 	formatted_len = snprintf(
 		kernel_buffer, sizeof(kernel_buffer),
 		"%llu\n%llu\n%llu\n%llu\n",

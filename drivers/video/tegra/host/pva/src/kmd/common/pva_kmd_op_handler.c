@@ -329,6 +329,13 @@ static enum pva_error pva_kmd_async_ops_handler(
 	uint32_t wait_time = 0;
 	enum pva_error submit_error = PVA_SUCCESS;
 
+	if (ctx->inited == false) {
+		pva_kmd_log_err(
+			"pva_kmd_async_ops_handler: Context is not initialized");
+		err = PVA_INVAL;
+		goto out;
+	}
+
 	//first check if we have space in queue
 	while (pva_kmd_queue_space(&ctx->ctx_queue) == 0) {
 		pva_kmd_sleep_us(PVA_KMD_WAIT_FW_POLL_INTERVAL_US);

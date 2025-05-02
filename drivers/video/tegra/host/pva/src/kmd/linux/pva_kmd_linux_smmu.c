@@ -120,6 +120,7 @@ bool pva_kmd_linux_smmu_contexts_initialized(enum pva_chip_id chip_id)
 void pva_kmd_linux_device_smmu_contexts_init(struct pva_kmd_device *pva_device)
 {
 	uint32_t sid_idx;
+	struct device *dev;
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva_device);
 
@@ -134,14 +135,14 @@ void pva_kmd_linux_device_smmu_contexts_init(struct pva_kmd_device *pva_device)
 		uint32_t smmu_ctx_idx = safe_addu32(sid_idx, 1U);
 		struct pva_kmd_linux_smmu_ctx *smmu_ctx = &g_smmu_ctxs[sid_idx];
 
+		dev = &smmu_ctx->pdev->dev;
 		pva_device->stream_ids[smmu_ctx_idx] = smmu_ctx->sid;
 		device_data->smmu_contexts[smmu_ctx_idx] = smmu_ctx->pdev;
-		dma_set_mask_and_coherent(&smmu_ctx->pdev->dev,
-					  DMA_BIT_MASK(39));
+		dma_set_mask_and_coherent(dev, DMA_BIT_MASK(39));
 		//set max segment size to UINT_MAX to avoid creating scatterlist >= 4GB
 		//during IOVA mapping, which will overflow the scatterlist length field,
 		//causing IOVA leak
-		dma_set_max_seg_size(&smmu_ctx->pdev->dev, UINT_MAX);
+		dma_set_max_seg_size(dev, UINT_MAX);
 	}
 
 	/* Configure SMMU contexts for privileged operations */
@@ -153,9 +154,10 @@ void pva_kmd_linux_device_smmu_contexts_init(struct pva_kmd_device *pva_device)
 	//      Question: Is it necessary that priv SID is the last one?
 	pva_device->stream_ids[0] = g_smmu_ctxs[sid_idx].sid;
 	device_data->smmu_contexts[0] = g_smmu_ctxs[sid_idx].pdev;
+	dev = &device_data->smmu_contexts[0]->dev;
 	dma_set_mask_and_coherent(
-		&device_data->smmu_contexts[0]->dev,
-		DMA_BIT_MASK(31)); //only 2GB R5 space is accessible
+		dev, DMA_BIT_MASK(31)); //only 2GB R5 space is accessible
+	dma_set_max_seg_size(dev, UINT_MAX);
 }
 
 struct platform_driver pva_kmd_linux_smmu_context_driver = {

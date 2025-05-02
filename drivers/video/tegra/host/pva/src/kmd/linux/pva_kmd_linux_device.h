@@ -4,9 +4,11 @@
 #ifndef PVA_KMD_LINUX_DEVICE_H
 #define PVA_KMD_LINUX_DEVICE_H
 
+#include "pva_kmd_constants.h"
 #include <linux/types.h>
 #include <linux/platform_device.h>
 #include <linux/cdev.h>
+#include <linux/scatterlist.h>
 
 #include "pva_api.h"
 #include "pva_kmd_device.h"
@@ -26,6 +28,8 @@ struct pva_kmd_linux_device_data {
 	/* Global states required by a PVA device instance go here */
 	struct platform_device *smmu_contexts[PVA_MAX_NUM_SMMU_CONTEXTS];
 	struct pva_kmd_isr_data isr[PVA_KMD_INTR_LINE_COUNT];
+
+	struct scatterlist syncpt_sg[PVA_NUM_RW_SYNCPTS];
 };
 
 struct pva_kmd_linux_device_data *
@@ -34,7 +38,7 @@ pva_kmd_linux_device_get_data(struct pva_kmd_device *device);
 void pva_kmd_linux_device_set_data(struct pva_kmd_device *device,
 				   struct pva_kmd_linux_device_data *data);
 
-void pva_kmd_linux_host1x_init(struct pva_kmd_device *pva);
+int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva);
 void pva_kmd_linux_host1x_deinit(struct pva_kmd_device *pva);
 
 struct nvpva_device_data *

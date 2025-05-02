@@ -7,6 +7,7 @@
 #include <linux/debugfs.h>
 #include <linux/firmware.h>
 #include <linux/version.h>
+#include <linux/mm.h>
 #include <linux/iommu.h>
 #include <linux/dma-mapping.h>
 #include <soc/tegra/virt/syscalls.h>
@@ -53,68 +54,142 @@ void pva_kmd_read_syncpt_val(struct pva_kmd_device *pva, uint32_t syncpt_id,
 	}
 }
 
-void pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
+int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 {
-	phys_addr_t base;
-	size_t size;
+	phys_addr_t syncpt_phys_base;
+	size_t all_syncpt_size;
 	int err = 0;
 	uint32_t stride, num_syncpts;
 	uint32_t syncpt_page_size;
 	dma_addr_t sp_start;
-	struct device *dev;
+	int count;
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
 	struct nvpva_device_data *props = device_data->pva_device_properties;
+	struct device *dev =
+		&device_data->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
+
+	if (iommu_get_domain_for_dev(dev) == NULL) {
+		dev_err(dev, "Cannot use syncpt without IOMMU");
+		err = -EFAULT;
+		goto err_out;
+	}
+
 	props->host1x = nvpva_device_to_host1x(props->pdev);
 
 	err = nvpva_syncpt_unit_interface_init(props->pdev);
 	if (err < 0) {
-		FAULT("Failed syncpt unit interface init\n");
+		dev_err(dev, "Failed syncpt unit interface init");
+		goto err_out;
 	}
 
-	err = host1x_syncpt_get_shim_info(props->host1x, &base, &stride,
-					  &num_syncpts);
+	err = host1x_syncpt_get_shim_info(props->host1x, &syncpt_phys_base,
+					  &stride, &num_syncpts);
 	if (err < 0) {
-		FAULT("Failed to get syncpt shim_info\n");
+		dev_err(dev, "Failed to get syncpt shim_info");
+		goto err_out;
 	}
-	size = stride * num_syncpts;
-	/** Get page size of a syncpoint */
+
+	all_syncpt_size = stride * num_syncpts;
 	syncpt_page_size = nvpva_syncpt_unit_interface_get_byte_offset_ext(1);
-	dev = &device_data->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
-	if (iommu_get_domain_for_dev(dev)) {
-		sp_start = dma_map_resource(dev, base, size, DMA_BIDIRECTIONAL,
-					    DMA_ATTR_SKIP_CPU_SYNC);
-		if (dma_mapping_error(dev, sp_start)) {
-			FAULT("Failed to pin syncpoints\n");
-		}
-	} else {
-		FAULT("Failed to pin syncpoints\n");
+	sp_start = dma_map_resource(dev, syncpt_phys_base, all_syncpt_size,
+				    DMA_TO_DEVICE, DMA_ATTR_SKIP_CPU_SYNC);
+	if (dma_mapping_error(dev, sp_start)) {
+		dev_err(dev, "Failed to map RO syncpoints");
+		goto err_out;
 	}
+
 	pva->ro_syncpt_base_iova = sp_start;
 	pva->syncpt_page_size = syncpt_page_size;
 	pva->num_ro_syncpts = num_syncpts;
 
-	// The same region is also used for RW syncpts...
-	pva->rw_syncpt_base_iova = sp_start;
-	pva->rw_syncpt_region_size = size;
+	dev_info(dev, "PVA RO syncpt iova: %llx, size: %lx\n",
+		 pva->ro_syncpt_base_iova, all_syncpt_size);
+
+	// Create a scatterlist to store all physical addresses of syncpts.
+	// They may be non-contiguous so we prepare one scatterlist entry per syncpt.
+	// Later, we map the scatterlist into a contiguous IOVA region.
+	sg_init_table(device_data->syncpt_sg, PVA_NUM_RW_SYNCPTS);
 
 	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
 		uint32_t syncpt_id;
-		uint64_t syncpt_iova;
+		phys_addr_t syncpt_phys_addr;
 
 		syncpt_id = nvpva_get_syncpt_client_managed(props->pdev,
 							    "pva_syncpt");
 		if (syncpt_id == 0) {
-			FAULT("Failed to get syncpt\n");
+			dev_err(dev, "Failed to allocate RW syncpt");
+			err = -EFAULT;
+			goto free_syncpts;
 		}
-		syncpt_iova = safe_addu64(
-			sp_start,
+
+		pva->rw_syncpts[i].syncpt_id = syncpt_id;
+
+		syncpt_phys_addr = safe_addu64(
+			syncpt_phys_base,
 			nvpva_syncpt_unit_interface_get_byte_offset_ext(
 				syncpt_id));
-
-		pva->rw_syncpts[i].syncpt_iova = syncpt_iova;
-		pva->rw_syncpts[i].syncpt_id = syncpt_id;
+		//Store the syncpt physical address in the scatterlist. Since the
+		//scatterlist API only takes struct page as input, so we first convert
+		//the physical address to a struct page address.
+		sg_set_page(&device_data->syncpt_sg[i],
+			    phys_to_page(syncpt_phys_addr), syncpt_page_size,
+			    0);
 	}
+
+	count = dma_map_sg_attrs(dev, device_data->syncpt_sg,
+				 PVA_NUM_RW_SYNCPTS, DMA_BIDIRECTIONAL,
+				 DMA_ATTR_SKIP_CPU_SYNC);
+	ASSERT(count > 0);
+	{
+		//Validate that syncpt IOVAs are contiguous
+		//This is an assertion and should never fail
+		uint64_t prev_iova = 0;
+		uint64_t prev_len = 0;
+		for (uint32_t i = 0; i < count; i++) {
+			if (prev_iova != 0) {
+				if (safe_addu64(prev_iova, prev_len) !=
+				    sg_dma_address(
+					    &device_data->syncpt_sg[i])) {
+					dev_err(dev,
+						"RW syncpt IOVAs are not contiguous. This should never happen!");
+					err = -EFAULT;
+					goto free_syncpts;
+				}
+				prev_iova = sg_dma_address(
+					&device_data->syncpt_sg[i]);
+				prev_len =
+					sg_dma_len(&device_data->syncpt_sg[i]);
+			}
+		}
+	}
+
+	pva->rw_syncpt_base_iova = sg_dma_address(&device_data->syncpt_sg[0]);
+	pva->rw_syncpt_region_size =
+		safe_mulu32(syncpt_page_size, PVA_NUM_RW_SYNCPTS);
+
+	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
+		pva->rw_syncpts[i].syncpt_iova =
+			safe_addu64(pva->rw_syncpt_base_iova,
+				    safe_mulu32(i, syncpt_page_size));
+	}
+
+	dev_info(dev, "PVA RW syncpt iova: %llx, size: %x\n",
+		 pva->rw_syncpt_base_iova, pva->rw_syncpt_region_size);
+
+	return 0;
+
+free_syncpts:
+	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
+		if (pva->rw_syncpts[i].syncpt_id != 0) {
+			nvpva_syncpt_put_ref_ext(props->pdev,
+						 pva->rw_syncpts[i].syncpt_id);
+			pva->rw_syncpts[i].syncpt_id = 0;
+		}
+	}
+
+err_out:
+	return err;
 }
 
 void pva_kmd_allocate_syncpts(struct pva_kmd_device *pva)
@@ -127,25 +202,31 @@ void pva_kmd_linux_host1x_deinit(struct pva_kmd_device *pva)
 	phys_addr_t base;
 	size_t size;
 	uint32_t stride, num_syncpts;
-	struct device *dev;
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
 	struct nvpva_device_data *props = device_data->pva_device_properties;
+	struct device *dev =
+		&device_data->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
+
+	if (iommu_get_domain_for_dev(dev) == NULL) {
+		dev_err(dev, "Cannot use syncpt without IOMMU");
+		return;
+	}
 
 	err = host1x_syncpt_get_shim_info(props->host1x, &base, &stride,
 					  &num_syncpts);
 	if (err < 0) {
-		FAULT("Failed to get syncpt shim_info\n");
+		dev_err(dev, "Failed to get syncpt shim_info when deiniting");
+		return;
 	}
 	size = stride * num_syncpts;
 
-	dev = &device_data->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
-	if (iommu_get_domain_for_dev(dev)) {
-		dma_unmap_resource(dev, pva->ro_syncpt_base_iova, size,
-				   DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
-	} else {
-		FAULT("Failed to unmap syncpts\n");
-	}
+	dma_unmap_resource(dev, pva->ro_syncpt_base_iova, size, DMA_TO_DEVICE,
+			   DMA_ATTR_SKIP_CPU_SYNC);
+
+	dma_unmap_sg_attrs(dev, device_data->syncpt_sg, PVA_NUM_RW_SYNCPTS,
+			   DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
+
 	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
 		nvpva_syncpt_put_ref_ext(props->pdev,
 					 pva->rw_syncpts[i].syncpt_id);
