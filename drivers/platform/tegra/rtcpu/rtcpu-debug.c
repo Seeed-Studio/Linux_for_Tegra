@@ -28,6 +28,7 @@
 #include <linux/tegra-ivc-bus.h>
 #include <linux/platform/tegra/common.h>
 #include <soc/tegra/fuse.h>
+#include <linux/tegra-rtcpu-trace.h>
 
 #define CAMRTC_TEST_CAM_DEVICES 5
 
@@ -338,8 +339,11 @@ DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_forced_reset_restore,
  * - Verifies IVC channel is online with @ref tegra_ivc_channel_online_check()
  * - Flushes any stray responses by calling @ref tegra_ivc_read_advance()
  * - Waits for write availability using @ref wait_event_interruptible_timeout()
+ * - If the wait times out log the RCE snapshot by calling @ref rtcpu_trace_panic_callback().
  * - Writes request using @ref tegra_ivc_write()
  * - Waits for and reads response using @ref tegra_ivc_read_peek()
+ * - If the response is not received within the timeout,
+ *   log the RCE snapshot by calling @ref rtcpu_trace_panic_callback().
  * - Verifies response matches request type
  * - Releases resources and lock using @ref tegra_ivc_channel_runtime_put() and @ref mutex_unlock()
  *
@@ -404,6 +408,7 @@ static int camrtc_ivc_dbg_full_frame_xact(
 			tegra_ivc_channel_has_been_reset(ch) ||
 			tegra_ivc_can_write(&ch->ivc), timeout);
 	if (timeout <= 0) {
+		rtcpu_trace_panic_callback(camrtc_get_device(ch));
 		ret = timeout ?: -ETIMEDOUT;
 		goto out;
 	}
@@ -424,6 +429,7 @@ static int camrtc_ivc_dbg_full_frame_xact(
 				tegra_ivc_can_read(&ch->ivc),
 				timeout);
 		if (timeout <= 0) {
+			rtcpu_trace_panic_callback(camrtc_get_device(ch));
 			ret = timeout ?: -ETIMEDOUT;
 			break;
 		}

@@ -37,6 +37,7 @@
 #include <linux/of.h>
 #include <linux/tegra-capture-ivc.h>
 #include <linux/tegra-camera-rtcpu.h>
+#include <linux/tegra-rtcpu-trace.h>
 
 #include <asm/arch_timer.h>
 #include <uapi/linux/nvhost_events.h>
@@ -448,6 +449,8 @@ static void vi_capture_ivc_status_callback(
  * - Locks the control message mutex using @ref mutex_lock().
  * - Submits the capture control message using @ref tegra_capture_ivc_control_submit().
  * - Waits for the response with timeout using @ref wait_for_completion_timeout().
+ * - If the response is not received within the timeout,
+ *   log the RCE snapshot by calling @ref rtcpu_trace_panic_callback().
  * - Validates the response header matches the request using @ref memcmp().
  * - Unlocks the control message mutex using @ref mutex_unlock().
  *
@@ -492,6 +495,7 @@ static int vi_capture_ivc_send_control(
 	if (timeout <= 0) {
 		dev_err(chan->dev,
 			"capture control message timed out\n");
+		rtcpu_trace_panic_callback(capture->rtcpu_dev);
 		err = -ETIMEDOUT;
 		goto fail;
 	}
@@ -2004,6 +2008,8 @@ EXPORT_SYMBOL_GPL(vi_capture_request);
  * - Waits for capture completion with specified timeout using
  *   @ref wait_for_completion_interruptible() if selected timtout is negative,
  *   or @ref wait_for_completion_timeout() otherwise.
+ * - If the response is not received within the timeout,
+ *   log the RCE snapshot by calling @ref rtcpu_trace_panic_callback().
  * - Convert timeout value to jiffies using @ref msecs_to_jiffies().
  *
  * @param[in] chan         VI channel context.
@@ -2050,6 +2056,7 @@ int vi_capture_status(
 		if (ret == -ERESTARTSYS) {
 			dev_dbg(chan->dev,
 				"capture status interrupted\n");
+			rtcpu_trace_panic_callback(capture->rtcpu_dev);
 			return -ETIMEDOUT;
 		}
 	} else {
@@ -2059,6 +2066,7 @@ int vi_capture_status(
 		if (ret == 0) {
 			dev_dbg(chan->dev,
 				"capture status timed out\n");
+			rtcpu_trace_panic_callback(capture->rtcpu_dev);
 			return -ETIMEDOUT;
 		}
 	}

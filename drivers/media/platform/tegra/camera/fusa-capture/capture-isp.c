@@ -50,6 +50,7 @@
 #include <media/fusa-capture/capture-common.h>
 #include <media/fusa-capture/capture-isp.h>
 #include <linux/arm64-barrier.h>
+#include <linux/tegra-rtcpu-trace.h>
 
 /**
  * @brief Invalid ISP channel ID; the channel is not initialized.
@@ -1322,6 +1323,8 @@ static void isp_capture_ivc_status_callback(
  * - Sends the control message by calling @ref tegra_capture_ivc_control_submit().
  * - Waits for the capture response with a timeout by calling
  *   @ref wait_for_completion_timeout().
+ * - If the response is not received within the timeout,
+ *   log the RCE snapshot by calling @ref rtcpu_trace_panic_callback().
  * - Compares the response header with the expected header using @ref memcmp().
  * - Releases the control message lock using @ref mutex_unlock().
  * - Logs a debug message indicating the received response using @ref dev_dbg().
@@ -1376,6 +1379,7 @@ static int isp_capture_ivc_send_control(struct tegra_isp_channel *chan,
 	if (timeout <= 0) {
 		dev_err(chan->isp_dev,
 			"isp capture control message timed out\n");
+		rtcpu_trace_panic_callback(capture->rtcpu_dev);
 		err = -ETIMEDOUT;
 		goto fail;
 	}
@@ -2883,6 +2887,8 @@ fail:
  * - If given timeout is negative, waits for capture response completion
  *   using @ref wait_for_completion_killable().
  * - Otherwise, waits using @ref wait_for_completion_killable_timeout().
+ * - If the response is not received within the timeout,
+ *   log the RCE snapshot by calling @ref rtcpu_trace_panic_callback().
  * - Acquires the capture channel reset lock using @ref mutex_lock().
  * - Checks if a reset capture flag is set.
  * - Releases the capture channel reset lock using @ref mutex_unlock().
@@ -2945,6 +2951,7 @@ int isp_capture_status(
 		if (err == 0) {
 			dev_dbg(chan->isp_dev,
 				"isp capture status timed out\n");
+			rtcpu_trace_panic_callback(capture->rtcpu_dev);
 			return -ETIMEDOUT;
 		}
 	}
