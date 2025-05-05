@@ -40,6 +40,8 @@
 static uint32_t total_instance_id;
 #endif
 
+#define DEFAULT_INIT_VCPU (0U)
+
 struct vmtd_dev {
 	struct vs_config_info config;
 	uint64_t size;                   /* Device size in bytes */
@@ -54,6 +56,8 @@ struct vmtd_dev {
 	void *cmd_frame;
 	struct mtd_info mtd;
 	bool is_setup;
+	uint32_t schedulable_vcpu_number;
+	struct work_struct init;
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 	uint32_t epl_id;
 	uint32_t epl_reporter_id;
@@ -1043,8 +1047,9 @@ static int vmtd_inject_err_fsi(unsigned int inst_id, struct epl_error_report_fra
 }
 #endif
 
-static int32_t vmtd_init_device(struct vmtd_dev *vmtddev)
+static void  vmtd_init_device(struct work_struct *ws)
 {
+	struct vmtd_dev *vmtddev = container_of(ws, struct vmtd_dev, init);
 	struct vs_request *vs_req = (struct vs_request *)vmtddev->cmd_frame;
 	uint32_t i = 0;
 	int32_t ret = 0;
@@ -1052,12 +1057,20 @@ static int32_t vmtd_init_device(struct vmtd_dev *vmtddev)
 	int err;
 #endif
 
+	if (devm_request_irq(vmtddev->device, vmtddev->ivck->irq,
+		ivc_irq_handler, 0, "vmtd", vmtddev)) {
+		dev_err(vmtddev->device, "Failed to request irq %d\n", vmtddev->ivck->irq);
+		return;
+	}
+
+	tegra_hv_ivc_channel_reset(vmtddev->ivck);
+
 	/* This while loop exits as long as the remote endpoint cooperates. */
 	pr_notice("vmtd: send_config wait for ivc channel notified\n");
 	while (tegra_hv_ivc_channel_notified(vmtddev->ivck) != 0) {
 		if (i++ > IVC_RESET_RETRIES) {
 			dev_err(vmtddev->device, "ivc reset timeout\n");
-			return -ENOMEDIUM;
+			return;
 		}
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(msecs_to_jiffies(1));
@@ -1071,31 +1084,31 @@ static int32_t vmtd_init_device(struct vmtd_dev *vmtddev)
 	if (ret != 0) {
 		dev_err(vmtddev->device, "Sending %d failed!\n",
 				vs_req->type);
-		return ret;
+		return;
 	}
 
 	ret = vmtd_get_configinfo(vmtddev, &vmtddev->config);
 	if (ret != 0) {
 		dev_err(vmtddev->device, "fetching configinfo failed!\n");
-		return ret;
+		return;
 	}
 
 	if (vmtddev->config.type != VS_MTD_DEV) {
 		dev_err(vmtddev->device,
 			"Non mtd Config not supported - unexpected response!\n");
-		return -EINVAL;
+		return;
 	}
 
 	if (vmtddev->config.mtd_config.size == 0) {
 		dev_err(vmtddev->device, "virtual storage device size 0!\n");
-		return -EINVAL;
+		return;
 	}
 
 	ret = vmtd_setup_device(vmtddev);
 	if (ret != 0) {
 		dev_err(vmtddev->device,
 			"Setting up vmtd devices failed!\n");
-		return ret;
+		return;
 	}
 
 	if (sysfs_create_files(&vmtddev->device->kobj,
@@ -1121,8 +1134,6 @@ static int32_t vmtd_init_device(struct vmtd_dev *vmtddev)
 #endif
 
 	vmtddev->is_setup = true;
-
-	return ret;
 }
 
 /**
@@ -1172,6 +1183,8 @@ static int tegra_virt_mtd_probe(struct platform_device *pdev)
 	struct vmtd_dev *vmtddev;
 	struct tegra_hv_ivm_cookie *ivmk;
 	int ret;
+	struct device_node *schedulable_vcpu_number_node;
+	bool is_cpu_bound = true;
 
 	if (!is_tegra_hypervisor_mode()) {
 		dev_err(dev, "Not running on Drive Hypervisor!\n");
@@ -1246,22 +1259,35 @@ static int tegra_virt_mtd_probe(struct platform_device *pdev)
 		goto free_mempool;
 	}
 
+	schedulable_vcpu_number_node = of_find_node_by_name(NULL,
+			"virt-storage-request-submit-cpu-mapping");
+	/* read lcpu_affinity from dts */
+	if (schedulable_vcpu_number_node == NULL) {
+		dev_err(dev, "%s: virt-storage-request-submit-cpu-mapping DT not found\n",
+				__func__);
+		is_cpu_bound = false;
+	} else if (of_property_read_u32(schedulable_vcpu_number_node, "lcpu2tovcpu",
+				&(vmtddev->schedulable_vcpu_number)) != 0) {
+		dev_err(dev, "%s: lcpu2tovcpu affinity is not found\n", __func__);
+		is_cpu_bound = false;
+	}
+	if (vmtddev->schedulable_vcpu_number >= num_online_cpus()) {
+		dev_err(dev, "%s: cpu affinity (%d) > online cpus (%d)\n", __func__,
+				vmtddev->schedulable_vcpu_number, num_online_cpus());
+		is_cpu_bound = false;
+	}
+	if (false == is_cpu_bound) {
+		dev_err(dev, "%s: WARN: CPU is unbound\n", __func__);
+		vmtddev->schedulable_vcpu_number = num_possible_cpus();
+	}
+
 	init_completion(&vmtddev->msg_complete);
 
-	if (devm_request_irq(vmtddev->device, vmtddev->ivck->irq,
-		ivc_irq_handler, 0, "vmtd", vmtddev)) {
-		dev_err(dev, "Failed to request irq %d\n", vmtddev->ivck->irq);
-		ret = -EINVAL;
-		goto free_mempool;
-	}
+	INIT_WORK(&vmtddev->init, vmtd_init_device);
 
-	tegra_hv_ivc_channel_reset(vmtddev->ivck);
+	schedule_work_on(((is_cpu_bound == false) ? DEFAULT_INIT_VCPU :
+				vmtddev->schedulable_vcpu_number), &vmtddev->init);
 
-	if (vmtd_init_device(vmtddev) != 0) {
-		dev_err(dev, "Failed to initialize mtd device\n");
-		ret = -EINVAL;
-		goto free_mempool;
-	}
 
 	return 0;
 

@@ -2389,13 +2389,14 @@ static void vblk_request_config(struct work_struct *ws)
 		vblkdev->ivck = NULL;
 		return;
 	}
-	tegra_hv_ivc_channel_reset(vblkdev->ivck);
 
 	if (devm_request_irq(vblkdev->device, vblkdev->ivck->irq,
 		ivc_irq_handler, 0, "vblk", vblkdev)) {
 		dev_err(vblkdev->device, "Failed to request irq %d\n", vblkdev->ivck->irq);
 		goto free_ivc;
 	}
+
+	tegra_hv_ivc_channel_reset(vblkdev->ivck);
 
 	mutex_lock(&vblkdev->ivc_lock);
 	if (vblk_send_config_cmd(vblkdev)) {
