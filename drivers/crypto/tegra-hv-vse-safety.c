@@ -841,6 +841,7 @@ static int read_and_validate_valid_msg(
 		}
 		break;
 	case VIRTUAL_SE_KEY_SLOT:
+		priv->rx_status = ivc_msg->rx[0].status;
 		ivc_rx = &ivc_msg->rx[0];
 		priv->slot_num = ivc_rx->keyslot;
 		break;
