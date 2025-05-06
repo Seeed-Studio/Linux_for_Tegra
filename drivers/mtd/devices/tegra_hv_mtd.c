@@ -41,6 +41,7 @@ static uint32_t total_instance_id;
 #endif
 
 #define DEFAULT_INIT_VCPU (0U)
+#define IVC_TIMEOUT_MS (30000)
 
 struct vmtd_dev {
 	struct vs_config_info config;
@@ -124,14 +125,31 @@ static irqreturn_t ivc_irq_handler(int irq, void *data)
  * @}
  */
 
-static int vmtd_send_cmd(struct vmtd_dev *vmtddev, struct vs_request *vs_req)
+static int vmtd_send_cmd(struct vmtd_dev *vmtddev, struct vs_request *vs_req, bool use_timeout)
 {
-	/* This while loop exits as long as the remote endpoint cooperates. */
-	while (tegra_hv_ivc_channel_notified(vmtddev->ivck) != 0)
-		wait_for_completion(&vmtddev->msg_complete);
+	while (tegra_hv_ivc_channel_notified(vmtddev->ivck) != 0) {
+		if (use_timeout) {
+			if ((wait_for_completion_timeout(&vmtddev->msg_complete,
+				msecs_to_jiffies(IVC_TIMEOUT_MS)) == 0)) {
+				dev_err(vmtddev->device, "Request sending timeout - 1!\n");
+				return -EIO;
+			}
+		} else {
+			wait_for_completion(&vmtddev->msg_complete);
+		}
+	}
 
-	while (!tegra_hv_ivc_can_write(vmtddev->ivck))
-		wait_for_completion(&vmtddev->msg_complete);
+	while (!tegra_hv_ivc_can_write(vmtddev->ivck)) {
+		if (use_timeout) {
+			if ((wait_for_completion_timeout(&vmtddev->msg_complete,
+			msecs_to_jiffies(IVC_TIMEOUT_MS)) == 0)) {
+				dev_err(vmtddev->device, "Request sending timeout - 2!\n");
+				return -EIO;
+			}
+		} else {
+			wait_for_completion(&vmtddev->msg_complete);
+		}
+	}
 
 	if (tegra_hv_ivc_write(vmtddev->ivck, vs_req,
 		sizeof(struct vs_request)) != sizeof(struct vs_request)) {
@@ -142,14 +160,32 @@ static int vmtd_send_cmd(struct vmtd_dev *vmtddev, struct vs_request *vs_req)
 	return 0;
 }
 
-static int vmtd_get_resp(struct vmtd_dev *vmtddev, struct vs_request *vs_req)
+static int vmtd_get_resp(struct vmtd_dev *vmtddev, struct vs_request *vs_req, bool use_timeout)
 {
-	/* This while loop exits as long as the remote endpoint cooperates. */
-	while (tegra_hv_ivc_channel_notified(vmtddev->ivck) != 0)
-		wait_for_completion(&vmtddev->msg_complete);
 
-	while (!tegra_hv_ivc_can_read(vmtddev->ivck))
-		wait_for_completion(&vmtddev->msg_complete);
+	while (tegra_hv_ivc_channel_notified(vmtddev->ivck) != 0) {
+		if (use_timeout) {
+			if ((wait_for_completion_timeout(&vmtddev->msg_complete,
+				msecs_to_jiffies(IVC_TIMEOUT_MS)) == 0)) {
+				dev_err(vmtddev->device, "Response fetching timeout - 1!\n");
+				return -EIO;
+			}
+		} else {
+			wait_for_completion(&vmtddev->msg_complete);
+		}
+	}
+
+	while (!tegra_hv_ivc_can_read(vmtddev->ivck)) {
+		if (use_timeout) {
+			if ((wait_for_completion_timeout(&vmtddev->msg_complete,
+				msecs_to_jiffies(IVC_TIMEOUT_MS)) == 0)) {
+				dev_err(vmtddev->device, "Response fetching timeout - 2!\n");
+				return -EIO;
+			}
+		} else {
+			wait_for_completion(&vmtddev->msg_complete);
+		}
+	}
 
 	if (tegra_hv_ivc_read(vmtddev->ivck, vs_req,
 		sizeof(struct vs_request)) != sizeof(struct vs_request)) {
@@ -161,7 +197,7 @@ static int vmtd_get_resp(struct vmtd_dev *vmtddev, struct vs_request *vs_req)
 }
 
 static int vmtd_process_request(struct vmtd_dev *vmtddev,
-	struct vs_request *vs_req)
+	struct vs_request *vs_req, bool use_timeout)
 {
 #if (IS_ENABLED(CONFIG_TEGRA_HSIERRRPTINJ))
 	uint32_t num_bytes;
@@ -179,7 +215,7 @@ static int vmtd_process_request(struct vmtd_dev *vmtddev,
 	}
 #endif
 
-	ret = vmtd_send_cmd(vmtddev, vs_req);
+	ret = vmtd_send_cmd(vmtddev, vs_req, use_timeout);
 	if (ret != 0) {
 		dev_err(vmtddev->device,
 			"Sending %d failed!\n",
@@ -188,7 +224,7 @@ static int vmtd_process_request(struct vmtd_dev *vmtddev,
 	}
 
 	vs_req = (struct vs_request *)vmtddev->cmd_frame;
-	ret = vmtd_get_resp(vmtddev, vs_req);
+	ret = vmtd_get_resp(vmtddev, vs_req, use_timeout);
 	if (ret != 0) {
 		dev_err(vmtddev->device,
 			"fetching response failed!\n");
@@ -330,7 +366,7 @@ static int vmtd_read(struct mtd_info *mtd, loff_t from, size_t len,
 		vs_req->mtddev_req.mtd_req.data_offset = 0;
 		vs_req->req_id = 0;
 
-		ret = vmtd_process_request(vmtddev, vs_req);
+		ret = vmtd_process_request(vmtddev, vs_req, true);
 		if (ret != 0) {
 			dev_err(vmtddev->device,
 				"Read for offset %llx size %lx failed!\n",
@@ -425,7 +461,7 @@ static int vmtd_write(struct mtd_info *mtd, loff_t to, size_t len,
 
 		memcpy(vmtddev->shared_buffer, buf_addr, write_size);
 
-		ret = vmtd_process_request(vmtddev, vs_req);
+		ret = vmtd_process_request(vmtddev, vs_req, true);
 		if (ret != 0) {
 			dev_err(vmtddev->device,
 				"write for offset %llx size %lx failed!\n",
@@ -507,7 +543,11 @@ static int vmtd_erase(struct mtd_info *mtd, struct erase_info *instr)
 	vs_req->mtddev_req.mtd_req.data_offset = 0;
 	vs_req->req_id = 0;
 
-	ret = vmtd_process_request(vmtddev, vs_req);
+	/* FIXME: Erase timeout is not needed as the User is expected to have timeout for operations
+	 *  To have timeout for erase, there should be a max_erase_bytes attribute in vs_mtd_info
+	 *  and the timeout should be tuned to match this attribute value.
+	 */
+	ret = vmtd_process_request(vmtddev, vs_req, false);
 	if (ret != 0) {
 		dev_err(vmtddev->device,
 			"Erase for offset %llx size %llx failed!\n",
@@ -926,7 +966,7 @@ static ssize_t ecc_status_show(struct device *dev,
 	/* FIXME: Need to choose request id based on some logic instead of 0 */
 	vs_req->req_id = 0;
 
-	ret = vmtd_process_request(vmtddev, vs_req);
+	ret = vmtd_process_request(vmtddev, vs_req, true);
 	if (ret != 0) {
 		dev_err(vmtddev->device, "Read ECC Failed\n");
 		return sprintf(buf, "0x%x\n", ECC_REQUEST_FAILED);
@@ -1036,7 +1076,7 @@ static int vmtd_inject_err_fsi(unsigned int inst_id, struct epl_error_report_fra
 	vs_req->type = VS_ERR_INJECT;
 	vs_req->error_inject_req.error_id = err_rpt_frame.error_code;
 
-	ret = vmtd_process_request(vmtddev, vs_req);
+	ret = vmtd_process_request(vmtddev, vs_req, true);
 	if (ret != 0)
 		dev_err(vmtddev->device,
 			"Error injection failed for mtd device\n");
@@ -1080,7 +1120,7 @@ static void  vmtd_init_device(struct work_struct *ws)
 	dev_info(vmtddev->device, "send config cmd to ivc #%d\n",
 		vmtddev->ivc_id);
 
-	ret = vmtd_send_cmd(vmtddev, vs_req);
+	ret = vmtd_send_cmd(vmtddev, vs_req, true);
 	if (ret != 0) {
 		dev_err(vmtddev->device, "Sending %d failed!\n",
 				vs_req->type);
