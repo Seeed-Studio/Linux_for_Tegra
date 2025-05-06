@@ -356,6 +356,8 @@ static void __init cleanup_ivc_mempool(void)
 				device_del(ivcmempooldev->device);
 			}
 		}
+		memset(ivc_mempool_dev_array, 0,
+				guest_ivc_info->nr_mempools * sizeof(struct ivc_mempool_dev));
 		kfree(ivc_mempool_dev_array);
 		ivc_mempool_dev_array = NULL;
 	}

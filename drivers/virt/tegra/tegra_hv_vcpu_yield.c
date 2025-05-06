@@ -260,6 +260,8 @@ static int tegra_hv_vcpu_yield_remove(struct platform_device *pdev)
 				device_destroy(vcpu_yield_class, vcpu_yield->dev);
 
 			}
+			memset(vcpu_yield_dev_list, 0,
+					vcpu_yield_pdev->vmid_count * sizeof(*vcpu_yield_dev_list));
 			kfree(vcpu_yield_dev_list);
 		}
 
@@ -272,6 +274,7 @@ static int tegra_hv_vcpu_yield_remove(struct platform_device *pdev)
 			vcpu_yield_pdev->vcpu_yield_dev = 0;
 		}
 
+		memset(vcpu_yield_pdev, 0, sizeof(*vcpu_yield_pdev));
 		kfree(vcpu_yield_pdev);
 		dev_set_drvdata(&pdev->dev, NULL);
 	}
@@ -449,6 +452,7 @@ static int tegra_hv_vcpu_yield_probe(struct platform_device *pdev)
 	}
 
 out:
+	memset(dt_array_mem, 0, 3 * MAX_YIELD_VM_COUNT * sizeof(int));
 	kfree(dt_array_mem);
 
 	if (result)
