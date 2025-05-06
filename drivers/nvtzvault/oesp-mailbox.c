@@ -65,7 +65,6 @@ struct mbox_ctx {
 	uint64_t hpse_carveout_size;
 	void *oesp_mbox_reg_base_va;
 	uint64_t oesp_mbox_reg_size;
-	spinlock_t lock;
 	struct mbox_resp resp;
 } g_mbox_ctx;
 
@@ -166,7 +165,6 @@ static irqreturn_t tegra_hpse_irq_handler(int irq, void *dev_id)
 	volatile u32 reg_val;
 	u8 *oesp_reg_mem_ptr = g_mbox_ctx.oesp_mbox_reg_base_va;
 	volatile struct mbox_resp *resp = &g_mbox_ctx.resp;
-	unsigned long flags;
 
 	/* Read PSC control register to check interrupt status */
 	reg_val = readl(oesp_reg_mem_ptr + PSC_CTRL_REG_OFFSET);
@@ -175,12 +173,13 @@ static irqreturn_t tegra_hpse_irq_handler(int irq, void *dev_id)
 	if ((reg_val & MBOX_OUT_VALID) == 0U)
 		return IRQ_NONE;
 
-	spin_lock_irqsave(&g_mbox_ctx.lock, flags);
-
 	/* Read response registers */
 	resp->task_opcode = readl(oesp_reg_mem_ptr + RESP_OPCODE_OFFSET);
 	resp->format_flag = readl(oesp_reg_mem_ptr + RESP_FORMAT_FLAG_OFFSET);
 	resp->status = readl(oesp_reg_mem_ptr + RESP_STATUS_OFFSET);
+
+	/* Ensure register read is complete before acknowledging response */
+	rmb();
 
 	/* Set MBOX_OUT_DONE to acknowledge response */
 	reg_val = readl(oesp_reg_mem_ptr + EXT_CTRL_OFFSET);
@@ -189,8 +188,6 @@ static irqreturn_t tegra_hpse_irq_handler(int irq, void *dev_id)
 
 	/* Signal completion to waiting thread */
 	complete(&mbox_completion);
-
-	spin_unlock_irqrestore(&g_mbox_ctx.lock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -276,8 +273,6 @@ int32_t oesp_mailbox_init(struct platform_device *pdev)
 	g_mbox_ctx.hpse_carveout_size = hpse_carveout_size;
 	g_mbox_ctx.oesp_mbox_reg_base_va = oesp_mbox_reg_base_va;
 	g_mbox_ctx.oesp_mbox_reg_size = oesp_mbox_reg_size;
-
-	spin_lock_init(&g_mbox_ctx.lock);
 
 	/* Get IRQ from tegra-hpse node */
 	irq = platform_get_irq(pdev, 0);

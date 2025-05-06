@@ -198,7 +198,7 @@ static int nvtzvault_open_session(struct nvtzvault_ctx *ctx,
 	ret = nvtzvault_tee_translate_saerror_to_syserror(
 			resp_hdr.result);
 	if (ret != 0) {
-		NVTZVAULT_ERR("%s: SA returned error: %d(%x)\n", __func__, resp_hdr.result,
+		NVTZVAULT_ERR("%s: SA returned error: %d(0x%x)\n", __func__, resp_hdr.result,
 				resp_hdr.result);
 		return ret;
 	}
@@ -284,7 +284,7 @@ static int nvtzvault_invoke_cmd(struct nvtzvault_ctx *ctx,
 	ret = nvtzvault_tee_translate_saerror_to_syserror(
 			resp_hdr.result);
 	if (ret != 0) {
-		NVTZVAULT_ERR("%s: SA returned error: %d(%x)\n", __func__, resp_hdr.result,
+		NVTZVAULT_ERR("%s: SA returned error: %d(0x%x)\n", __func__, resp_hdr.result,
 				resp_hdr.result);
 		return ret;
 	}
@@ -360,7 +360,7 @@ static int nvtzvault_close_session(struct nvtzvault_ctx *ctx,
 		// Only clear session if close was successful
 		set_session_closed(ctx, close_session_ctl->session_id);
 	} else {
-		NVTZVAULT_ERR("%s: SA returned error: %d(%x)\n", __func__, resp_hdr.result,
+		NVTZVAULT_ERR("%s: SA returned error: %d(0x%x)\n", __func__, resp_hdr.result,
 				resp_hdr.result);
 	}
 
@@ -406,13 +406,14 @@ static int nvtzvault_ta_dev_release(struct inode *inode, struct file *filp)
 	struct nvtzvault_close_session_ctl close_session_ctl;
 
 	if (atomic_read(&g_nvtzvault_dev.total_active_session_count) > 0) {
+		mutex_lock(&g_nvtzvault_dev.lock);
 		for (uint32_t i = 0; i < NVTZVAULT_MAX_SESSIONS; i++) {
 			if (is_session_open(ctx, i)) {
-				NVTZVAULT_ERR("%s: closing session %u\n", __func__, i);
 				close_session_ctl.session_id = i;
 				nvtzvault_close_session(ctx, &close_session_ctl);
 			}
 		}
+		mutex_unlock(&g_nvtzvault_dev.lock);
 	}
 
 	kfree(ctx);
@@ -434,12 +435,13 @@ static long nvtzvault_ta_dev_ioctl(struct file *filp, unsigned int ioctl_num, un
 		return -EPERM;
 	}
 
+	mutex_lock(&g_nvtzvault_dev.lock);
+
 	if (atomic_read(&g_nvtzvault_dev.in_suspend_state)) {
 		NVTZVAULT_ERR("%s(): device is in suspend state\n", __func__);
-		return -EBUSY;
+		ret = -EBUSY;
+		goto release_lock;
 	}
-
-	mutex_lock(&g_nvtzvault_dev.lock);
 
 	switch (ioctl_num) {
 	case NVTZVAULT_IOCTL_OPEN_SESSION:
@@ -825,10 +827,16 @@ static int nvtzvault_suspend(struct device *dev)
 	/* Add print to log in nvlog buffer  */
 	dev_err(dev, "%s start\n", __func__);
 
-	if (atomic_read(&g_nvtzvault_dev.total_active_session_count) > 0)
+	mutex_lock(&g_nvtzvault_dev.lock);
+
+	if (atomic_read(&g_nvtzvault_dev.total_active_session_count) > 0) {
+		mutex_unlock(&g_nvtzvault_dev.lock);
 		return -EBUSY;
+	}
 
 	atomic_set(&g_nvtzvault_dev.in_suspend_state, 1);
+
+	mutex_unlock(&g_nvtzvault_dev.lock);
 
 	/* Add print to log in nvlog buffer  */
 	dev_err(dev, "%s done\n", __func__);
