@@ -667,6 +667,59 @@ done:
 	return;
 }
 
+enum pva_error pva_kmd_simulate_enter_sc7(struct pva_kmd_device *pva)
+{
+	struct pva_kmd_linux_device_data *device_data;
+	struct nvpva_device_data *device_props;
+	struct device *dev;
+	int ret;
+
+	device_data = pva_kmd_linux_device_get_data(pva);
+	device_props = device_data->pva_device_properties;
+	dev = &device_props->pdev->dev;
+
+	// The PM core increases the device usage count before calling prepare, so
+	// we need to emulate this behavior as well.
+	pm_runtime_get_noresume(dev);
+
+	ret = pva_kmd_linux_device_prepare_suspend(dev);
+	if (ret != 0) {
+		pva_kmd_log_err("SC7 simulation: prepare suspend failed");
+		return PVA_INTERNAL;
+	}
+	ret = pva_kmd_linux_device_suspend(dev);
+	if (ret != 0) {
+		pva_kmd_log_err("SC7 simulation: suspend failed");
+		return PVA_INTERNAL;
+	}
+
+	return PVA_SUCCESS;
+}
+
+enum pva_error pva_kmd_simulate_exit_sc7(struct pva_kmd_device *pva)
+{
+	struct pva_kmd_linux_device_data *device_data =
+		pva_kmd_linux_device_get_data(pva);
+	struct nvpva_device_data *device_props =
+		device_data->pva_device_properties;
+	struct device *dev = &device_props->pdev->dev;
+	int ret;
+
+	ret = pva_kmd_linux_device_resume(dev);
+	if (ret != 0) {
+		pva_kmd_log_err("SC7 simulation: resume failed");
+		return PVA_INTERNAL;
+	}
+
+	pva_kmd_linux_device_complete_resume(dev);
+
+	// The PM core decreases the device usage count after calling complete, so
+	// we need to emulate this behavior as well.
+	pm_runtime_put(dev);
+
+	return PVA_SUCCESS;
+}
+
 static const struct dev_pm_ops pva_kmd_linux_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(pva_kmd_linux_device_suspend,
 				pva_kmd_linux_device_resume)

@@ -19,4 +19,7 @@ unsigned long pva_kmd_copy_data_to_user(void *to, const void *from,
 					unsigned long size);
 unsigned long pva_kmd_strtol(const char *str, int base);
 
+enum pva_error pva_kmd_simulate_enter_sc7(struct pva_kmd_device *pva);
+enum pva_error pva_kmd_simulate_exit_sc7(struct pva_kmd_device *pva);
+
 #endif //PVA_KMD_SHIM_DEBUGFS_H

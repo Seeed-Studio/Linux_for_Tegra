@@ -319,6 +319,60 @@ static int64_t get_fw_debug_log_level(struct pva_kmd_device *dev,
 					(uint64_t)formatted_len);
 }
 
+static int64_t write_simulate_sc7(struct pva_kmd_device *pva, void *file_data,
+				  const uint8_t *in_buffer, uint64_t offset,
+				  uint64_t size)
+{
+	uint8_t buf = 0;
+	enum pva_error err;
+	unsigned long ret;
+
+	if ((offset != 0) || (size < 1)) {
+		return -EINVAL;
+	}
+
+	ret = pva_kmd_copy_data_from_user(&buf, in_buffer, 1);
+	if (ret != 0) {
+		pva_kmd_log_err(
+			"SC7 simulation: failed to copy data from user");
+		return -EFAULT;
+	}
+
+	if (buf == '1') {
+		if (pva->debugfs_context.entered_sc7 == 0) {
+			err = pva_kmd_simulate_enter_sc7(pva);
+			if (err != PVA_SUCCESS) {
+				return -EFAULT;
+			}
+			pva->debugfs_context.entered_sc7 = 1;
+		}
+	} else if (buf == '0') {
+		if (pva->debugfs_context.entered_sc7 == 1) {
+			err = pva_kmd_simulate_exit_sc7(pva);
+			if (err != PVA_SUCCESS) {
+				return -EFAULT;
+			}
+			pva->debugfs_context.entered_sc7 = 0;
+		}
+	} else {
+		pva_kmd_log_err(
+			"SC7 simulation: invalid input; Must be 0 or 1");
+		return -EINVAL;
+	}
+
+	return size;
+}
+
+static int64_t read_simulate_sc7(struct pva_kmd_device *pva, void *file_data,
+				 uint8_t *out_buffer, uint64_t offset,
+				 uint64_t size)
+{
+	char buf;
+	buf = pva->debugfs_context.entered_sc7 ? '1' : '0';
+
+	return read_from_buffer_to_user(out_buffer, size, offset, &buf, 1);
+}
+
 enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
 {
 	static const char *vpu_ocd_names[NUM_VPU_BLOCKS] = { "ocd_vpu0_v3",
@@ -419,6 +473,16 @@ enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
 
 	pva_kmd_device_init_profiler(pva);
 	pva_kmd_device_init_tegra_stats(pva);
+
+	pva->debugfs_context.simulate_sc7_fops.read = &read_simulate_sc7;
+	pva->debugfs_context.simulate_sc7_fops.write = &write_simulate_sc7;
+	pva->debugfs_context.simulate_sc7_fops.pdev = pva;
+	err = pva_kmd_debugfs_create_file(
+		pva, "simulate_sc7", &pva->debugfs_context.simulate_sc7_fops);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Failed to create simulate_sc7 debugfs file");
+		return err;
+	}
 
 	return PVA_SUCCESS;
 }

@@ -24,6 +24,7 @@ struct pva_kmd_debugfs_context {
 	bool stats_enable;
 	bool vpu_debug;
 	bool vpu_print_enable;
+	bool entered_sc7;
 	char *allowlist_path;
 	uint32_t profiling_level;
 	struct pva_kmd_file_ops vpu_fops;
@@ -35,6 +36,7 @@ struct pva_kmd_debugfs_context {
 	struct pva_kmd_file_ops vpu_ocd_fops[NUM_VPU_BLOCKS];
 	struct pva_kmd_fw_profiling_config g_fw_profiling_config;
 	struct pva_kmd_file_ops fw_debug_log_level_fops;
+	struct pva_kmd_file_ops simulate_sc7_fops;
 };
 
 enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *dev);

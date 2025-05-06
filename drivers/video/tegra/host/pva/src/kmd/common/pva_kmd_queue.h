@@ -35,6 +35,7 @@ pva_kmd_queue_submit(struct pva_kmd_queue *queue,
 uint32_t pva_kmd_queue_space(struct pva_kmd_queue *queue);
 
 const struct pva_syncpt_rw_info *
-pva_kmd_queue_get_rw_syncpt_info(struct pva_kmd_context *ctx, uint8_t queue_id);
+pva_kmd_queue_get_rw_syncpt_info(struct pva_kmd_device *pva, uint8_t ccq_id,
+				 uint8_t queue_id);
 
 #endif // PVA_KMD_QUEUE_H

@@ -479,7 +479,8 @@ pva_kmd_op_queue_create(struct pva_kmd_context *ctx, const void *input_buffer,
 		goto out;
 	}
 
-	syncpt_info = pva_kmd_queue_get_rw_syncpt_info(ctx, queue_id);
+	syncpt_info = pva_kmd_queue_get_rw_syncpt_info(ctx->pva, ctx->ccq_id,
+						       queue_id);
 	queue_out_args.error = err;
 	queue_out_args.queue_id = queue_id;
 	queue_out_args.syncpt_id = syncpt_info->syncpt_id;

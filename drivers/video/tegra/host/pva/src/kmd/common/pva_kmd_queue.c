@@ -135,7 +135,8 @@ enum pva_error pva_kmd_queue_create(struct pva_kmd_context *ctx,
 		goto err_free_kmd_memory;
 	}
 
-	syncpt_info = pva_kmd_queue_get_rw_syncpt_info(ctx, queue->queue_id);
+	syncpt_info = pva_kmd_queue_get_rw_syncpt_info(ctx->pva, ctx->ccq_id,
+						       queue->queue_id);
 	pva_kmd_set_cmd_init_queue(&cmd, queue->ccq_id, queue->queue_id,
 				   queue->queue_memory->iova,
 				   queue->max_num_submit,
@@ -197,12 +198,13 @@ unlock:
 }
 
 const struct pva_syncpt_rw_info *
-pva_kmd_queue_get_rw_syncpt_info(struct pva_kmd_context *ctx, uint8_t queue_id)
+pva_kmd_queue_get_rw_syncpt_info(struct pva_kmd_device *pva, uint8_t ccq_id,
+				 uint8_t queue_id)
 {
 	uint8_t ctx_offset =
-		safe_mulu32(ctx->ccq_id, PVA_NUM_RW_SYNCPTS_PER_CONTEXT);
+		safe_mulu32(ccq_id, PVA_NUM_RW_SYNCPTS_PER_CONTEXT);
 	uint32_t syncpt_index = safe_addu32(ctx_offset, queue_id);
 
 	ASSERT(syncpt_index < PVA_NUM_RW_SYNCPTS);
-	return &ctx->pva->rw_syncpts[syncpt_index];
+	return &pva->rw_syncpts[syncpt_index];
 }

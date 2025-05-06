@@ -4,7 +4,6 @@
 #include "pva_kmd_linux_device.h"
 #define CREATE_TRACE_POINTS
 #include "trace/events/nvpva_ftrace.h"
-#include <linux/nvhost.h>
 
 static uint32_t get_job_id(uint32_t queue_id, uint64_t submit_id)
 {

@@ -138,7 +138,7 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 				"PVA: Resume priv queue for context %d\n",
 				ctx->ccq_id);
 			syncpt_info = pva_kmd_queue_get_rw_syncpt_info(
-				PVA_PRIV_CCQ_ID, ctx->ccq_id);
+				pva, PVA_PRIV_CCQ_ID, ctx->ccq_id);
 			pva_kmd_set_cmd_init_queue(
 				queue_cmd, PVA_PRIV_CCQ_ID,
 				ctx->ccq_id, /* For privileged queues, queue ID == user CCQ ID*/
@@ -168,7 +168,8 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 
 					syncpt_info =
 						pva_kmd_queue_get_rw_syncpt_info(
-							ctx, queue->queue_id);
+							pva, ctx->ccq_id,
+							queue->queue_id);
 					pva_kmd_set_cmd_init_queue(
 						queue_cmd, queue->ccq_id,
 						queue->queue_id,

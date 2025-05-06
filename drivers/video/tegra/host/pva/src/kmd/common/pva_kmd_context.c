@@ -96,7 +96,8 @@ static enum pva_error notify_fw_context_init(struct pva_kmd_context *ctx)
 		ctx->ctx_resource_table.table_mem->iova,
 		ctx->ctx_resource_table.n_entries);
 
-	syncpt_info = pva_kmd_queue_get_rw_syncpt_info(ctx, ctx->ccq_id);
+	syncpt_info = pva_kmd_queue_get_rw_syncpt_info(
+		ctx->pva, PVA_PRIV_CCQ_ID, ctx->ccq_id);
 	pva_kmd_set_cmd_init_queue(
 		queue_cmd, PVA_PRIV_CCQ_ID,
 		ctx->ccq_id, /* For privileged queues, queue ID == user CCQ ID*/
