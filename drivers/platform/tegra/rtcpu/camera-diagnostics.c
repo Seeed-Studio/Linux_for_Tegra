@@ -1447,4 +1447,4 @@ tegra_ivc_subsys_driver_default(camera_diag_driver);
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_DESCRIPTION("NVIDIA Tegra Camera Diagnostics driver");
 MODULE_LICENSE("GPL v2");
-MODULE_SOFTDEP("pre: tegra194-isp5");
+MODULE_SOFTDEP("pre: nvhost_isp5");
