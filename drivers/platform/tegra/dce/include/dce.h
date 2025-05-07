@@ -114,6 +114,14 @@
 #define DCE_WAIT_LOG			4
 #define DCE_MAX_WAIT			5
 
+/**
+ * DCE IPC timeout values.
+ * This is for avoiding kernel lockup due to infinite wait on ipc channel.
+ * Max SHA calculation time is 2sec upon SC7 entry request.
+ * Host wait time must be larger than this.
+ */
+#define DCE_IPC_TIMEOUT_MS_MAX		10000		/* Max timeout, 10 seconds */
+
 struct tegra_dce;
 
 /**

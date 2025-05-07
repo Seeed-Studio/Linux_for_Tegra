@@ -124,12 +124,10 @@ int dce_handle_boot_complete_requested_event(struct tegra_dce *d, void *params)
 
 	dce_os_debug(d, "Waiting for dce fw to boot...");
 
-	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_BOOT_COMPLETE], true, 0);
+	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_BOOT_COMPLETE], true,
+						0);
 	if (ret) {
-		/**
-		 * TODO: Add error handling for abort and retry
-		 */
-		dce_os_err(d, "dce boot wait was interrupted with err:%d", ret);
+		dce_os_err(d, "dce boot wait, interrupted:%d", ret);
 	}
 
 boot_done:
@@ -388,13 +386,10 @@ static int dce_mailbox_wait_boot_interface(struct tegra_dce *d)
 	u32 status;
 	int ret;
 
-	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_BOOT_CMD], true, 0);
-	if (ret) {
-		/**
-		 * TODO: Add error handling for abort and retry
-		 */
-		dce_os_err(d, "dce mbox wait was interrupted with err:%d", ret);
-	}
+	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_BOOT_CMD], true,
+						DCE_IPC_TIMEOUT_MS_MAX);
+	if (ret)
+		dce_os_err(d, "dce mbox wait was interrupted or timedout:%d", ret);
 
 	status = dce_mailbox_get_interface_status(d,
 				DCE_MAILBOX_BOOT_INTERFACE);
@@ -405,8 +400,8 @@ static int dce_mailbox_wait_boot_interface(struct tegra_dce *d)
 			status);
 		return -EBADE;
 	}
-
-	return 0;
+	/* if boot failure flag is not available, return ETIMEOUT or ERESTARTSYS */
+	return ret;
 }
 
 /**

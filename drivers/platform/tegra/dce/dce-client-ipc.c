@@ -369,7 +369,7 @@ int dce_client_ipc_wait(struct tegra_dce *d, u32 int_type)
 	}
 
 retry_wait:
-	ret = dce_wait_cond_wait_interruptible(d, &cl->recv_wait, true, 0);
+	ret = dce_wait_cond_wait_interruptible(d, &cl->recv_wait, true, DCE_IPC_TIMEOUT_MS_MAX);
 	if (ret) {
 		if (ret == -ERESTARTSYS) { /* Interrupt. */
 			dce_os_debug(d, "Client [%u] wait interrupted: retrying.", type);

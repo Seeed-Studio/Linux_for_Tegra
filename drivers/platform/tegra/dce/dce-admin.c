@@ -36,22 +36,18 @@
  *
  * @d :  Pointer to tegra_dce struct.
  *
- * Return : 0 if successful
+ * Return : 0 if successful, -ETIMEOUT if timeout, -ERESTARTSYS if interrupted by signal
  */
 int dce_admin_ipc_wait(struct tegra_dce *d)
 {
 	int ret = 0;
 
-	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_ADMIN_IPC], true, 0);
+	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_ADMIN_IPC], true,
+						DCE_IPC_TIMEOUT_MS_MAX);
 	if (ret) {
-		/**
-		 * TODO: Add error handling for abort and retry
-		 */
-		dce_os_err(d, "Admin IPC wait was interrupted with err:%d", ret);
-		goto out;
+		dce_os_err(d, "Admin IPC wait, interrupted or timedout:%d", ret);
 	}
 
-out:
 	return ret;
 }
 
@@ -899,10 +895,10 @@ int dce_admin_send_enter_sc7(struct tegra_dce *d,
 	}
 
 	/* Wait for SC7 Enter done */
-	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_SC7_ENTER], true, 0);
+	ret = dce_wait_cond_wait_interruptible(d, &d->ipc_waits[DCE_WAIT_SC7_ENTER], true,
+						DCE_IPC_TIMEOUT_MS_MAX);
 	if (ret) {
-		dce_os_err(d, "SC7 Enter wait was interrupted with err:%d", ret);
-		goto out;
+		dce_os_err(d, "SC7 Enter wait, interrupted or timedout:%d", ret);
 	}
 
 out:

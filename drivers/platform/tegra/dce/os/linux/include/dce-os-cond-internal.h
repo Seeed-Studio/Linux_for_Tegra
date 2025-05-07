@@ -32,8 +32,8 @@ struct dce_os_cond {
 				condition, msecs_to_jiffies(timeout_ms)); \
 		if (_ret == 0) \
 			ret = -ETIMEDOUT; \
-		else if (_ret == -ERESTARTSYS) \
-			ret = -ERESTARTSYS; \
+		else if (_ret < 0) \
+			ret = _ret; \
 	} else { \
 		ret = wait_event_interruptible((c)->wq, condition); \
 	} \
