@@ -243,7 +243,7 @@ static int nvsciipc_ioctl_validate_auth_token(struct nvsciipc *ctx,
 
 	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		ret = -EPERM;
 		goto exit;
 	}
@@ -281,7 +281,7 @@ static int nvsciipc_ioctl_map_vuid(struct nvsciipc *ctx, unsigned int cmd,
 
 	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		ret = -EPERM;
 		goto exit;
 	}
@@ -319,7 +319,7 @@ static int nvsciipc_ioctl_get_db_by_idx(struct nvsciipc *ctx, unsigned int cmd,
 
 	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		return -EPERM;
 	}
 
@@ -360,12 +360,12 @@ static int nvsciipc_ioctl_reserve_ep(struct nvsciipc *ctx, unsigned int cmd,
 		unsigned long arg)
 {
 	struct nvsciipc_reserve_ep reserve_ep;
-	pid_t current_pid = task_pid_nr(current);
+	pid_t current_pid = current->tgid;
 	int i;
 
 	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		return -EPERM;
 	}
 
@@ -467,7 +467,7 @@ static int nvsciipc_ioctl_get_db_by_name(struct nvsciipc *ctx, unsigned int cmd,
 
 	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		return -EPERM;
 	}
 
@@ -521,7 +521,7 @@ static int nvsciipc_ioctl_get_db_by_vuid(struct nvsciipc *ctx, unsigned int cmd,
 
 	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		return -EPERM;
 	}
 
@@ -573,7 +573,7 @@ static int nvsciipc_ioctl_get_vuid(struct nvsciipc *ctx, unsigned int cmd,
 
 	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		return -EPERM;
 	}
 
@@ -810,7 +810,7 @@ static int nvsciipc_ioctl_get_dbsize(struct nvsciipc *ctx, unsigned int cmd,
 
 	if (ctx->set_db_f != true) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		ret = -EPERM;
 		goto exit;
 	}
@@ -911,7 +911,7 @@ static ssize_t nvsciipc_dbg_read(struct file *filp, char __user *buf,
 
 	if (ctx->set_db_f != true) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
-			get_current()->pid);
+			get_current()->tgid);
 		return -EPERM;
 	}
 
