@@ -65,7 +65,6 @@ dtbo-y += tegra234-p3767-camera-p3768-imx219-A.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-imx477.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-C.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-A.dtbo
-dtbo-y += tegra234-camera-quad-g300-overlay.dtbo 
 dtbo-y += tegra234-camera-g300-overlay.dtbo  # orbbec add
 dtbo-y += tegra234-camera-g300-cti-overlay.dtbo  # orbbec add
 dtbo-y += tegra234-camera-g300-nomtd-overlay.dtbo  # orbbec add
