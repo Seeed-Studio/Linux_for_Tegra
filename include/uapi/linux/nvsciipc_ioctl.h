@@ -8,11 +8,13 @@
 
 /*
  * inter-thread: 2000
- * inter-process: 16384
+ * inter-process: 16384 + 2048
+ *                16384 : reserved for DriveAV/customer
+ *                2048  : reserved for DriveOS.
  * inter-vm: 512
  * inter-chip-pcie: 32
  */
-#define NVSCIIPC_MAX_EP_COUNT 18928
+#define NVSCIIPC_MAX_EP_COUNT 21040
 
 #define NVSCIIPC_MAX_EP_NAME	64U
 #define NVSCIIPC_MAX_RDMA_NAME	64U
