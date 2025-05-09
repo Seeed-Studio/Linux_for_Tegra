@@ -16,7 +16,7 @@ menuconfig TEGRA_PLATFORM_DEVICES
 if TEGRA_PLATFORM_DEVICES
 
 config TEGRA_EPL
-	bool "Tegra Error Propagation Layer Driver"
+	tristate "Tegra Error Propagation Layer Driver"
 	depends on MAILBOX
 	help
 	  The tegra-epl driver provides interface for reporting software detected

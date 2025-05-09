@@ -22,9 +22,6 @@
 /* Macro indicating total number of Misc Sw generic errors in Misc EC */
 #define NUM_SW_GENERIC_ERR 5U
 
-/* Error index offset in mission status register */
-#define ERROR_INDEX_OFFSET	24U
-
 /* signature code for HSP pm notify data */
 #define PM_STATE_UNI_CODE	0xFDEF
 
@@ -59,6 +56,9 @@ struct epl_misc_sw_err_cfg {
 	void __iomem *err_assert_va;
 	const char *dev_configured;
 };
+
+/* Error index offset in mission status register */
+static uint32_t error_index_offset = 3;
 
 static int device_file_major_number;
 static const char device_name[] = "epdaemon";
@@ -153,7 +153,7 @@ int epl_get_misc_ec_err_status(struct device *dev, uint8_t err_number, bool *sta
 		if (strcmp(dev_str, miscerr_cfg[err_number].dev_configured) != 0)
 			return -EACCES;
 
-		mask = (1U << ((ERROR_INDEX_OFFSET + err_number) % 32U));
+		mask = (1U << ((error_index_offset + err_number) % 32U));
 		mission_err_status = readl(mission_err_status_va);
 
 		if ((mission_err_status & mask) != 0U)
@@ -277,6 +277,7 @@ static SIMPLE_DEV_PM_OPS(epl_client_pm, epl_client_suspend, epl_client_resume);
 
 static const struct of_device_id epl_client_dt_match[] = {
 	{ .compatible = "nvidia,tegra234-epl-client"},
+	{ .compatible = "nvidia,tegra264-epl-client"},
 	{}
 };
 
@@ -376,6 +377,15 @@ static int epl_client_probe(struct platform_device *pdev)
 	}
 
 	dev_info(dev, "handshake-retry-count %u\n", handshake_retry_count);
+
+	if (of_device_is_compatible(np, "nvidia,tegra234-epl-client")) {
+		error_index_offset = 24;
+	} else if (of_device_is_compatible(np, "nvidia,tegra264-epl-client")) {
+		error_index_offset = 3;
+	} else {
+		pr_err("tegra-epl: valid dt compatible string not found\n");
+		ret = -1;
+	}
 
 	if (is_misc_ec_mapped == true) {
 		mission_err_status_va = devm_platform_ioremap_resource(pdev, NUM_SW_GENERIC_ERR * 2);

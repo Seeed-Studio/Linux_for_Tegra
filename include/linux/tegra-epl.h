@@ -25,7 +25,7 @@ struct epl_error_report_frame {
 	uint16_t reporter_id;
 };
 
-#ifdef CONFIG_TEGRA_EPL
+#if IS_ENABLED(CONFIG_TEGRA_EPL)
 /**
  * @brief API to check if SW error can be reported via Misc EC
  *        by reading and checking Misc EC error status register value.
