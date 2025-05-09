@@ -10041,7 +10041,7 @@
 		status = "disabled";
         };
 	safetyservices_epl_client@110000 {
-		compatible = "nvidia,tegra234-epl-client";
+		compatible = "nvidia,tegra264-epl-client";
 #if TEGRA_HSP_DT_VERSION >= DT_VERSION_2
 		mboxes = <&top_hsp3 (TEGRA_HSP_MBOX_TYPE_SM | TEGRA_HSP_MBOX_TYPE_SM_128BIT) TEGRA_HSP_SM_TX(0)>;
 #else
