@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * Copyright (c) 2022-2025, NVIDIA CORPORATION. All rights reserved.
- */
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -137,11 +135,6 @@ static u8 get_dram_num_channels_t23x(void)
 	return ch_num;
 }
 
-static u8 get_dram_num_channels_t26X(void)
-{
-	return ch_num;
-}
-
 u8 get_dram_num_channels(void)
 {
 	if (ops && ops->get_dram_num_channels)
@@ -190,7 +183,7 @@ static struct mc_utils_ops mc_utils_t23x_ops = {
 static struct mc_utils_ops mc_utils_t26x_ops = {
 	.emc_freq_to_bw = emc_freq_to_bw_t23x,
 	.emc_bw_to_freq = emc_bw_to_freq_t23x,
-	.get_dram_num_channels = get_dram_num_channels_t26X,
+	.get_dram_num_channels = get_dram_num_channels_t23x,
 };
 
 static int __init tegra_mc_utils_init_t26x(void)
