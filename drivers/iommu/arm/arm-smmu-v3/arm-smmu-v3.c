@@ -1,9 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0
 /*
  * IOMMU API for ARM architected SMMUv3 implementations.
  *
  * Copyright (C) 2015 ARM Limited
- * Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Will Deacon <will.deacon@arm.com>
  *
@@ -80,15 +79,6 @@ DEFINE_MUTEX(arm_smmu_asid_lock);
  * disabling it.
  */
 struct arm_smmu_ctx_desc quiet_cd = { 0 };
-
-static inline void local_writeq_relaxed(u64 val, volatile void __iomem *virt_addr)
-{
-	writel_relaxed((u32)val, virt_addr);
-	writel_relaxed((u32)(val >> 32), virt_addr + 4);
-}
-
-#undef writeq_relaxed
-#define writeq_relaxed local_writeq_relaxed
 
 static struct arm_smmu_option_prop arm_smmu_options[] = {
 	{ ARM_SMMU_OPT_SKIP_PREFETCH, "hisilicon,broken-prefetch-cmd" },
