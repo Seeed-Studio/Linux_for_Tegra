@@ -1,5 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved */
+/* SPDX-License-Identifier: GPL-2.0-only*/
+/* SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.*/
 
 #ifndef PCIE_TEGRAT264_EP_H
 #define PCIE_TEGRAT264_EP_H
@@ -438,6 +438,7 @@ static int tegra264_pcie_ep_raise_irq(struct pci_epc *epc, u8 fn,
  *   - reset GPIO is already de-asserted.
  *   - pre-conditions met.
  * - pex-prsnt GPIO is de-asserted if specified in CAL_NET_PIF$CalPcieEp.
+ * - pex-rst-irq is enabled.
  */
 static int tegra264_pcie_ep_start(struct pci_epc *epc);
 
@@ -468,6 +469,7 @@ static int tegra264_pcie_ep_start(struct pci_epc *epc);
  *  - De-initialization: Yes
  *
  * @outcome
+ * - pex-rst-irq is disabled.
  * - pex-prsnt GPIO is de-asserted if specified in CAL_NET_PIF$CalPcieEp.
  * - Tegra264 EP controller is de-initialized, if controller is initialized.
  */

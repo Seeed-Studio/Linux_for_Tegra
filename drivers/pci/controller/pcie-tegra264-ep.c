@@ -545,12 +545,15 @@ static int tegra264_pcie_ep_start(struct pci_epc *epc)
 		gpiod_set_value_cansleep(pcie->pex_prsnt_gpiod, 1);
 	}
 
+	enable_irq(pcie->pex_rst_irq);
+
 	return 0;
 }
 
 static void tegra264_pcie_ep_stop(struct pci_epc *epc)
 {
 	struct tegra264_pcie_ep *pcie = epc_get_drvdata(epc);
+	disable_irq(pcie->pex_rst_irq);
 
 	if (pcie->pex_prsnt_gpiod) {
 		dev_dbg(pcie->dev, "Asserting PRSNT\n");
@@ -717,6 +720,7 @@ static int tegra264_pcie_ep_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to request IRQ for PERST: %d\n", ret);
 		return ret;
 	}
+	disable_irq(pcie->pex_rst_irq);
 
 	pcie->xal_base = devm_platform_ioremap_resource_byname(pdev, "xal");
 	if (IS_ERR(pcie->xal_base)) {
