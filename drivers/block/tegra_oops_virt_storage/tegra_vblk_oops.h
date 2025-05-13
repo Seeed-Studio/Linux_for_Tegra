@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef _TEGRA_VBLK_H_
@@ -31,6 +31,8 @@
 /* PSTORE defaults */
 #define PSTORE_KMSG_RECORD_SIZE (64*1024)
 
+/* Default VCPU to run the init work */
+#define DEFAULT_INIT_VCPU (0U)
 
 struct vsc_request {
 	struct vs_request vs_req;
@@ -71,6 +73,8 @@ struct vblk_dev {
 	bool use_vm_address; /* whether it's on UFS */
 	void *ufs_buf; /* buffer used for UFS DMA, size equals pstore_kmsg_size */
 	dma_addr_t ufs_iova; /* IOVA of ufs_buf */
+	uint32_t schedulable_vcpu_number;
+	bool is_cpu_bound;
 };
 
 #endif

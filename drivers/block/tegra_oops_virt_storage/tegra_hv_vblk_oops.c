@@ -181,7 +181,8 @@ static ssize_t vblk_oops_read(char *buf, size_t bytes, loff_t pos)
 	 */
 	if (in_atomic()) {
 		dev_warn(vblkdev_oops->device,
-			"%s invoked in atomic context..aborting\n", __func__);
+		    "%s invoked in atomic context..returning EBUSY to retry from workqueue\n",
+		    __func__);
 		return -EBUSY;
 	}
 
@@ -768,6 +769,7 @@ static int vblk_oops_get_configinfo(struct vblk_dev *vblkdev)
 		}
 		memset(vblkdev->ufs_buf, 0,
 				PAGE_SIZE << (get_order(vblkdev_oops->pstore_kmsg_size)));
+
 		vblkdev->ufs_iova = dma_map_single(vblkdev->device, vblkdev->ufs_buf,
 				vblkdev_oops->pstore_kmsg_size, DMA_BIDIRECTIONAL);
 		if (dma_mapping_error(vblkdev->device, vblkdev->ufs_iova)) {
@@ -822,8 +824,10 @@ static void vblk_oops_init_device(struct work_struct *ws)
 	if (tegra_hv_ivc_channel_notified(vblkdev->ivck) != 0) {
 		dev_warn(vblkdev->device,
 			"%s: IVC channel reset not complete...retry\n", __func__);
-		schedule_delayed_work(&vblkdev->init,
-					msecs_to_jiffies(VSC_RESPONSE_WAIT_MS));
+		schedule_delayed_work_on(((vblkdev->is_cpu_bound == false) ? DEFAULT_INIT_VCPU :
+					vblkdev_oops->schedulable_vcpu_number),
+				&vblkdev_oops->init,
+				msecs_to_jiffies(VSC_RESPONSE_WAIT_MS));
 		return;
 	}
 
@@ -877,6 +881,8 @@ static int tegra_hv_vblk_oops_probe(struct platform_device *pdev)
 	static struct device_node *vblk_node;
 	struct device *dev = &pdev->dev;
 	int ret;
+	struct device_node *schedulable_vcpu_number_node;
+	bool is_cpu_bound = true;
 
 	if (!is_tegra_hypervisor_mode()) {
 		dev_err(dev, "Hypervisor is not present\n");
@@ -937,6 +943,30 @@ static int tegra_hv_vblk_oops_probe(struct platform_device *pdev)
 		/* defer alignment and minimum size check for later */
 	}
 
+	schedulable_vcpu_number_node = of_find_node_by_name(NULL,
+			"virt-storage-request-submit-cpu-mapping");
+	/* read lcpu_affinity from dts */
+	if (schedulable_vcpu_number_node == NULL) {
+		dev_err(dev, "%s: virt-storage-request-submit-cpu-mapping DT not found\n",
+				__func__);
+		is_cpu_bound = false;
+	} else if (of_property_read_u32(schedulable_vcpu_number_node, "lcpu2tovcpu",
+				&(vblkdev_oops->schedulable_vcpu_number)) != 0) {
+		dev_err(dev, "%s: lcpu2tovcpu affinity is not found\n", __func__);
+		is_cpu_bound = false;
+	}
+	if (vblkdev_oops->schedulable_vcpu_number >= num_online_cpus()) {
+		dev_err(dev, "%s: cpu affinity (%d) > online cpus (%d)\n", __func__,
+				vblkdev_oops->schedulable_vcpu_number, num_online_cpus());
+		is_cpu_bound = false;
+	}
+	if (false == is_cpu_bound) {
+		dev_err(dev, "%s: WARN: CPU is unbound\n", __func__);
+		vblkdev_oops->schedulable_vcpu_number = num_possible_cpus();
+	}
+
+	vblkdev_oops->is_cpu_bound = is_cpu_bound;
+
 	vblkdev_oops->ivck = tegra_hv_ivc_reserve(NULL, vblkdev_oops->ivc_id, NULL);
 	if (IS_ERR_OR_NULL(vblkdev_oops->ivck)) {
 		dev_err(dev, "Failed to reserve IVC channel %d\n",
@@ -958,7 +988,8 @@ static int tegra_hv_vblk_oops_probe(struct platform_device *pdev)
 	}
 
 	/* postpone init work that needs response */
-	schedule_delayed_work(&vblkdev_oops->init,
+	schedule_delayed_work_on(((is_cpu_bound == false) ? DEFAULT_INIT_VCPU :
+				vblkdev_oops->schedulable_vcpu_number), &vblkdev_oops->init,
 				msecs_to_jiffies(VSC_RESPONSE_WAIT_MS));
 
 	return 0;
@@ -991,7 +1022,7 @@ static int tegra_hv_vblk_oops_remove(struct platform_device *pdev)
 /**
  * @brief Suspend the OOPS storage device
  *
- * Resets the IVC channel during system suspend.
+ * No Operation is done during system suspend.
  *
  * @param[in] dev Device structure pointer
  * @return 0 on success
@@ -1012,11 +1043,7 @@ static int tegra_hv_vblk_oops_remove(struct platform_device *pdev)
  */
 static int tegra_hv_vblk_oops_suspend(struct device *dev)
 {
-	/* Reset the channel */
-	mutex_lock(&vblkdev_oops->ivc_lock);
-	tegra_hv_ivc_channel_reset(vblkdev_oops->ivck);
-	mutex_unlock(&vblkdev_oops->ivc_lock);
-
+	/* No Op */
 	return 0;
 }
 
