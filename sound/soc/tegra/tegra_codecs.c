@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra_codecs.c - External audio codec setup
 
@@ -281,6 +281,9 @@ int tegra_codecs_runtime_setup(struct snd_soc_pcm_runtime *rtd,
 
 	vrtd = find_rtd(rtd, "rt565x-codec-sysclk-bclk1");
 	if (vrtd) {
+		props = simple_priv_to_props(simple, vrtd->num);
+		aud_mclk = props->mclk_fs * srate;
+
 		err = set_pll_sysclk(vrtd, RT5659_PLL1_S_BCLK1, RT5659_SCLK_S_PLL1,
 				     srate, channels, width, aud_mclk);
 		if (err < 0)
@@ -290,6 +293,9 @@ int tegra_codecs_runtime_setup(struct snd_soc_pcm_runtime *rtd,
 
 	vrtd = find_rtd(rtd, "rt5640-codec-sysclk-bclk1");
 	if (vrtd) {
+		props = simple_priv_to_props(simple, vrtd->num);
+		aud_mclk = props->mclk_fs * srate;
+
 		err = set_pll_sysclk(vrtd, RT5640_PLL1_S_BCLK1, RT5640_SCLK_S_PLL1,
 				     srate, channels, width, aud_mclk);
 		if (err < 0)
