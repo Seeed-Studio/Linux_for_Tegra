@@ -71,6 +71,16 @@
 #define MAX_ISP_UNITS	U32_C(0x2)
 
 /**
+ * @brief Maximum surfaces ISP can read on its input port.
+ */
+#define MAX_ISP_INPUT_SURFACES	U32_C(3)
+
+/**
+ * @brief Maximum number of ISP input prefences.
+ */
+#define MAX_ISP_INPUT_PREFENCES	U32_C(14)
+
+/**
  * @brief The Capture-ISP standalone driver context.
  */
 struct tegra_capture_isp_data {
@@ -584,6 +594,11 @@ static int isp_capture_setup_inputfences(
 	if (!req->inputfences_relocs.num_relocs)
 		return 0;
 
+	if (req->inputfences_relocs.num_relocs > MAX_ISP_INPUT_SURFACES) {
+		dev_err(chan->isp_dev, "inputfences num exceeds max allowed\n");
+		return -EINVAL;
+	}
+
 	inpfences_reloc_user = (uint32_t __user *)
 			(uintptr_t)req->inputfences_relocs.reloc_relatives;
 
@@ -708,6 +723,11 @@ static int isp_capture_setup_prefences(
 	/* It is valid not to have prefences for given frame capture */
 	if (!req->prefences_relocs.num_relocs)
 		return 0;
+
+	if (req->prefences_relocs.num_relocs > MAX_ISP_INPUT_PREFENCES) {
+		dev_err(chan->isp_dev, "prefences num exceeds max allowed\n");
+		return -EINVAL;
+	}
 
 	prefence_reloc_user = (uint32_t __user *)
 			(uintptr_t)req->prefences_relocs.reloc_relatives;

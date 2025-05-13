@@ -507,14 +507,6 @@ static long isp_channel_ioctl(
 
 		if (copy_from_user(&req, ptr, sizeof(req)))
 			break;
-		if (!req.inputfences_relocs.num_relocs) {
-			dev_err(chan->isp_dev, "req.inputfences_relocs.num_relocs invalid");
-			break;
-		}
-		if (!req.prefences_relocs.num_relocs) {
-			dev_err(chan->isp_dev, "req.prefences_relocs.num_relocs invalid");
-			break;
-		}
 		err = isp_capture_request(chan, &req);
 		if (err)
 			dev_err(chan->isp_dev,
