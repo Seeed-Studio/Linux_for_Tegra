@@ -132,6 +132,7 @@ int tegra_hv_ivc_can_read(struct tegra_hv_ivc_cookie *ivck);
  */
 int tegra_hv_ivc_can_write(struct tegra_hv_ivc_cookie *ivck);
 
+#ifndef CONFIG_BUILD_PROD
 /**
  * tegra_ivc_tx_frames_available - gets number of free entries in tx queue
  * @ivc/@ivck	IVC channel or cookie
@@ -153,21 +154,6 @@ uint32_t tegra_hv_ivc_tx_frames_available(struct tegra_hv_ivc_cookie *ivck);
  */
 int tegra_hv_ivc_tx_empty(struct tegra_hv_ivc_cookie *ivck);
 
-/**
- * ivc_hv_ivc_loopback - Sets (or clears) loopback mode
- * @ivck	IVC cookie of the queue
- * @mode	Set loopback on/off (1 = on, 0 = off)
- *
- * Sets or clears loopback mode accordingly.
- *
- * When loopback is active any writes are ignored, while
- * reads do not return data.
- * Incoming data are copied immediately to the tx queue.
- *
- * Returns 0 on success, a negative error code otherwise
- */
-int tegra_hv_ivc_set_loopback(struct tegra_hv_ivc_cookie *ivck, int mode);
-
 /* debugging aid */
 int tegra_hv_ivc_dump(struct tegra_hv_ivc_cookie *ivck);
 
@@ -186,6 +172,7 @@ int tegra_hv_ivc_dump(struct tegra_hv_ivc_cookie *ivck);
 int tegra_hv_ivc_read_peek(struct tegra_hv_ivc_cookie *ivck,
 		void *buf, int off, int count);
 
+#endif
 /**
  * ivc_hv_ivc_read_get_next_frame - Peek at the next frame to receive
  * @ivck	IVC cookie of the queue
@@ -206,21 +193,6 @@ void *tegra_hv_ivc_read_get_next_frame(struct tegra_hv_ivc_cookie *ivck);
  * Returns 0, or a negative error value if failed.
  */
 int tegra_hv_ivc_read_advance(struct tegra_hv_ivc_cookie *ivck);
-
-/**
- * ivc_hv_ivc_write_poke - Poke data to a frame to be transmitted
- * @ivck	IVC cookie of the queue
- * @buf		Buffer to the data
- * @off		Offset in the frame
- * @count	Count of bytes to copy
- *
- * Copy data to a transmit frame, copying from buf, without advancing
- * the the transmit queue.
- *
- * Returns 0 on success, a negative error code otherwise
- */
-int tegra_hv_ivc_write_poke(struct tegra_hv_ivc_cookie *ivck,
-		const void *buf, int off, int count);
 
 /**
  * ivc_hv_ivc_write_get_next_frame - Poke at the next frame to transmit

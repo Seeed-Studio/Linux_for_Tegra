@@ -4,6 +4,10 @@
 #
 # Makefile for Hypervisor interface
 #
+ifeq ($(CONFIG_LOCALVERSION), -prod)
+ccflags-y += -DCONFIG_BUILD_PROD
+endif
+
 ifneq ($(NV_OOT_TEGRA_HV_SKIP_BUILD),y)
 obj-m		+= tegra_hv.o
 else
