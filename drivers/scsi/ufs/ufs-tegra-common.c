@@ -1633,6 +1633,10 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 				   UFSHC_AUX_UFSHC_DEV_CTRL_0);
 		break;
 	case POST_CHANGE:
+		/* Enable auto hibernate */
+		if (ufs_tegra->enable_auto_hibern8)
+			ufs_aux_writel(ufs_tegra->ufs_aux_base, 0x4,
+			       UFSHC_AUX_UFSHC_CARD_DET_LP_PWR_CTRL_0);
 #if defined(NV_UFS_HBA_STRUCT_HAS_BOOL_IS_UFS_ALREADY_ENABLED)
 		/* Return if ufs is already initialised */
 		if (hba->is_ufs_already_enabled)
@@ -1646,10 +1650,6 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 		if (ufs_tegra->soc->chip_id != TEGRA264)
 			clk_disable_unprepare(ufs_tegra->mphy_force_ls_mode);
 		ufs_tegra_ufs_mmio_axi(hba);
-		/* Enable auto hibernate */
-		if (ufs_tegra->enable_auto_hibern8)
-			ufs_aux_writel(ufs_tegra->ufs_aux_base, 0x4,
-				       UFSHC_AUX_UFSHC_CARD_DET_LP_PWR_CTRL_0);
 		break;
 	default:
 		break;
