@@ -4,7 +4,7 @@
 
 # Linux_for_Tegra
 
-This software is the source code of the default shipping firmware of Seeed Jetson reComputer, reServer and other products. It is built on NVIDIA Jetpack 6.0. On this basis, additional hardware drivers and boards are added, which is convenient for users to develop their own software and build other Jetson systems, such as Yocto, buildroot, etc.
+This software is the source code of the default shipping firmware of Seeed Jetson products. It is built on NVIDIA Jetpack 4.6.6 On this basis, additional hardware drivers and boards are added, which is convenient for users to develop their own software and build other Jetson systems, such as Yocto, buildroot, etc.
 
 ## Getting Started
 
