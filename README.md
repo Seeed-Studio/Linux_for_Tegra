@@ -14,7 +14,8 @@ wget https://developer.nvidia.com/downloads/embedded/l4t/r32_release_v7.6/t210/t
 ```
 then
 ```
-sudo tar xpf Tegra_Linux_Sample-Root-Filesystem_r32.7.6_aarch64.tbz2 -C rootfs/
+rm -rf rootfs/*
+sudo tar xpf tegra_linux_sample-root-filesystem_r32.7.6_aarch64.tbz2 -C rootfs/
 ```
 
 2. apply necessary changes to rootfs
