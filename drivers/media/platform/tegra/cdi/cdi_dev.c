@@ -23,7 +23,8 @@
 
 /* i2c payload size is only 12 bit */
 #define MAX_MSG_SIZE	(0xFFF - 1)
-
+/* max buffer size for cdi_dev_package */
+#define MAX_CDI_DEV_PACKAGE_BUFFER_SIZE	(0xFFFF - 1)
 /*#define DEBUG_I2C_TRAFFIC*/
 
 /* CDI Dev Debugfs functions
@@ -377,7 +378,7 @@ static int cdi_dev_get_package(
 		return -EINVAL;
 	}
 
-	if (!info->rw_pkg.size || info->rw_pkg.size > MAX_MSG_SIZE) {
+	if (!info->rw_pkg.size || info->rw_pkg.size > MAX_CDI_DEV_PACKAGE_BUFFER_SIZE) {
 		dev_err(info->dev, "%s invalid package size %d\n",
 			__func__, info->rw_pkg.size);
 		return -EINVAL;
