@@ -15,6 +15,8 @@
 #include <linux/slab.h>
 #include <linux/sync_file.h>
 #include <linux/host1x-dispatch.h>
+#include <linux/dma-fence.h>
+#include <linux/dma-fence-chain.h>
 
 #include "include/uapi/linux/host1x-fence.h"
 
@@ -141,14 +143,169 @@ static int dev_file_ioctl_create_fence(struct host1x **host1xp, void __user *dat
 	return 0;
 }
 
+/**
+ * fence_extract - Extract fence information from a single dma_fence
+ * @fence: The input dma_fence to extract from
+ * @max_fences: Maximum number of fences to copy to userspace (0 or 1)
+ * @fences_user_ptr: Userspace pointer to copy extracted fence information to
+ * @num_extracted: Output parameter to store the number of valid fences extracted
+ *
+ * This function extracts syncpoint information from a single dma_fence
+ * and copies it to userspace if max_fences > 0. For single fences,
+ * num_extracted will be either 0 (for signaled stub fences) or 1.
+ *
+ * Return: 0 on success, negative error code on failure
+ */
+static int fence_extract(struct dma_fence *fence, uint32_t max_fences,
+			struct host1x_fence_extract_fence __user *fences_user_ptr,
+			uint32_t *num_extracted)
+{
+	struct host1x_fence_extract_fence f;
+	int instance, err;
+	unsigned long copy_err;
+
+	err = host1x_fence_extract(fence, &f.id, &f.threshold);
+	if (err == -EINVAL && dma_fence_is_signaled(fence)) {
+		/* Likely stub fence */
+		*num_extracted = 0;
+		return 0;
+	} else if (err) {
+		return err;
+	}
+
+	/* Convert to global id before giving to userspace */
+	instance = host1x_fence_get_node(fence);
+	if (instance < HOST1X_INSTANCE_MAX && instance >= 0)
+		f.id = HOST1X_LOCAL_TO_GLOBAL_SYNCPOINT(f.id, instance);
+
+	if (max_fences > 0) {
+		copy_err = copy_to_user(fences_user_ptr, &f, sizeof(f));
+		if (copy_err)
+			return -EFAULT;
+	}
+
+	*num_extracted = 1;
+	return 0;
+}
+
+/**
+ * fence_array_extract - Extract fence information from a dma_fence_array
+ * @array: The input dma_fence_array to extract from
+ * @max_fences: Maximum number of fences to copy to userspace
+ * @fences_user_ptr: Userspace pointer to copy extracted fence information to
+ * @num_extracted: Output parameter to store the total number of valid fences extracted
+ *
+ * This function traverses a dma_fence_array, extracts syncpoint information from
+ * each fence in the array, and copies it to userspace. The function will
+ * count all valid fences in the array but only copy up to @max_fences to userspace.
+ *
+ * Return: 0 on success, negative error code on failure
+ */
+static int fence_array_extract(struct dma_fence_array *array, uint32_t max_fences,
+				struct host1x_fence_extract_fence __user *fences_user_ptr,
+				uint32_t *num_extracted)
+{
+	unsigned int i, j = 0;
+	int err;
+	struct host1x_fence_extract_fence f;
+	int instance;
+	unsigned long copy_err;
+
+	for (i = 0; i < array->num_fences; i++) {
+		err = host1x_fence_extract(array->fences[i], &f.id, &f.threshold);
+		if (err == -EINVAL && dma_fence_is_signaled(array->fences[i])) {
+			/* Likely stub fence */
+			continue;
+		} else if (err) {
+			return err;
+		}
+
+		if (j < max_fences) {
+			/* Convert to global id before giving to userspace */
+			instance = host1x_fence_get_node(array->fences[i]);
+			if (instance < HOST1X_INSTANCE_MAX && instance >= 0)
+				f.id = HOST1X_LOCAL_TO_GLOBAL_SYNCPOINT(f.id, instance);
+			copy_err = copy_to_user(fences_user_ptr + j, &f, sizeof(f));
+			if (copy_err)
+				return -EFAULT;
+		}
+		j++;
+	}
+
+	*num_extracted = j;
+	return 0;
+}
+
+/**
+ * fence_chain_extract - Extract fence information from a dma_fence chain
+ * @fence: The input dma_fence chain to extract from
+ * @max_fences: Maximum number of fences to copy to userspace
+ * @fences_user_ptr: Userspace pointer to copy extracted fence information to
+ * @num_extracted: Output parameter to store the total number of valid fences extracted
+ *
+ * This function traverses a dma_fence chain, extracts syncpoint information from
+ * each child fence, and copies it to userspace. It optimizes memory usage by
+ * processing fences directly without intermediate allocation. The function will
+ * count all valid fences in the chain but only copy up to @max_fences to userspace.
+ *
+ * Return: 0 on success, negative error code on failure
+ */
+static int fence_chain_extract(struct dma_fence *fence, uint32_t max_fences,
+				struct host1x_fence_extract_fence __user *fences_user_ptr,
+				uint32_t *num_extracted)
+{
+	struct dma_fence *iter, *child;
+	unsigned int count = 0;
+	int err = 0;
+	struct host1x_fence_extract_fence f;
+	int instance;
+	unsigned long copy_err;
+
+	/* Traverse chain and extract fences directly */
+	dma_fence_chain_for_each(iter, fence) {
+		child = dma_fence_chain_contained(iter);
+		if (!child) {
+			dma_fence_put(iter);
+			continue;
+		}
+
+		err = host1x_fence_extract(child, &f.id, &f.threshold);
+		if (err == -EINVAL && dma_fence_is_signaled(child)) {
+			/* Likely stub fence */
+			dma_fence_put(iter);
+			continue;
+		} else if (err) {
+			dma_fence_put(iter);
+			return err;
+		}
+
+		if (count < max_fences) {
+			/* Convert to global id before giving to userspace */
+			instance = host1x_fence_get_node(child);
+			if (instance < HOST1X_INSTANCE_MAX && instance >= 0)
+				f.id = HOST1X_LOCAL_TO_GLOBAL_SYNCPOINT(f.id, instance);
+			copy_err = copy_to_user(fences_user_ptr + count, &f, sizeof(f));
+			if (copy_err) {
+				dma_fence_put(iter);
+				return -EFAULT;
+			}
+		}
+		count++;
+		dma_fence_put(iter);
+	}
+
+	*num_extracted = count;
+	return 0;
+}
+
 static int dev_file_ioctl_fence_extract(struct host1x **host1xp, void __user *data)
 {
 	struct host1x_fence_extract_fence __user *fences_user_ptr;
-	struct dma_fence *fence, **fences;
+	struct dma_fence *fence;
 	struct host1x_fence_extract args;
 	struct dma_fence_array *array;
-	unsigned int num_fences, i, j;
 	unsigned long copy_err;
+	uint32_t num_extracted = 0;
 	int err;
 
 	copy_err = copy_from_user(&args, data, sizeof(args));
@@ -164,58 +321,27 @@ static int dev_file_ioctl_fence_extract(struct host1x **host1xp, void __user *da
 	if (!fence)
 		return -EINVAL;
 
-	array = to_dma_fence_array(fence);
-	if (array) {
-		fences = array->fences;
-		num_fences = array->num_fences;
+	if (dma_fence_is_array(fence)) {
+		array = to_dma_fence_array(fence);
+		err = fence_array_extract(array, args.num_fences, fences_user_ptr, &num_extracted);
+	} else if (dma_fence_is_chain(fence)) {
+		err = fence_chain_extract(fence, args.num_fences, fences_user_ptr, &num_extracted);
 	} else {
-		fences = &fence;
-		num_fences = 1;
+		err = fence_extract(fence, args.num_fences, fences_user_ptr, &num_extracted);
 	}
 
-	for (i = 0, j = 0; i < num_fences; i++) {
-		struct host1x_fence_extract_fence f;
-		int instance;
-
-		err = host1x_fence_extract(fences[i], &f.id, &f.threshold);
-		if (err == -EINVAL && dma_fence_is_signaled(fences[i])) {
-			/* Likely stub fence */
-			continue;
-		} else if (err) {
-			goto put_fence;
-		}
-
-		if (j < args.num_fences) {
-			/* Convert to global id before giving to userspace */
-			instance = host1x_fence_get_node(fences[i]);
-			if (instance < HOST1X_INSTANCE_MAX && instance >= 0)
-				f.id = HOST1X_LOCAL_TO_GLOBAL_SYNCPOINT(f.id, instance);
-
-			copy_err = copy_to_user(fences_user_ptr + j, &f, sizeof(f));
-			if (copy_err) {
-				err = -EFAULT;
-				goto put_fence;
-			}
-		}
-
-		j++;
+	if (err == 0) {
+		args.num_fences = num_extracted;
+		copy_err = copy_to_user(data, &args, sizeof(args));
+		if (copy_err)
+			err = -EFAULT;
 	}
 
-	args.num_fences = j;
-
-	copy_err = copy_to_user(data, &args, sizeof(args));
-	if (copy_err) {
-		err = -EFAULT;
-		goto put_fence;
-	}
+    /* If the fence is a chain, we have not taken the reference to the chain */
+	if (dma_fence_is_chain(fence))
+		return err;
 
 	dma_fence_put(fence);
-
-	return 0;
-
-put_fence:
-	dma_fence_put(fence);
-
 	return err;
 }
 
