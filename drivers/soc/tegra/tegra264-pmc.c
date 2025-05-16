@@ -374,7 +374,6 @@ static const struct tegra_wake_event tegra264_wake_events[] = {
 	TEGRA_WAKE_IRQ("rtc", 65, 548),
 	TEGRA_WAKE_IRQ("usb3_port_0", 79, 965),
 	TEGRA_WAKE_IRQ("usb3_port_1", 80, 965),
-	TEGRA_WAKE_IRQ("usb3_port_2", 81, 965),
 	TEGRA_WAKE_IRQ("usb3_port_3", 82, 965),
 	TEGRA_WAKE_IRQ("usb2_port_0", 83, 965),
 	TEGRA_WAKE_IRQ("usb2_port_1", 84, 965),
