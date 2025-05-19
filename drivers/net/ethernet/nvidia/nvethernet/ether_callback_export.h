@@ -473,6 +473,7 @@ irqreturn_t ether_vm_isr(int irq, void *data);
  *  - SIOCGMIIREG: read register from the specified PHY.
  *  - SIOCSMIIREG: set a register on the specified PHY.
  *  - SIOCSHWTSTAMP: Configure hardware time stamping.
+ *  - SIOCGHWTSTAMP: Get hardware time stamp configuration.
  *
  * @usage
  * - Allowed context for the API call

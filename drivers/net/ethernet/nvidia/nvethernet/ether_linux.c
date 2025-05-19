@@ -4369,6 +4369,7 @@ int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 	int ret = -EOPNOTSUPP;
 	struct ether_priv_data *pdata;
 	struct mii_ioctl_data *mii_data;
+	struct hwtstamp_config *config;
 
 	if (!dev || !rq) {
 		pr_err("%s: Invalid arg\n", __func__);
@@ -4452,7 +4453,10 @@ int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 	case SIOCSHWTSTAMP:
 		ret = ether_handle_hwtstamp_ioctl(pdata, rq);
 		break;
-
+	case SIOCGHWTSTAMP:
+		config = &pdata->ptp_config;
+		ret = copy_to_user(rq->ifr_data, config, sizeof(*config)) ? -EFAULT : 0;
+		break;
 	default:
 		netdev_err(dev, "%s: Unsupported ioctl %d\n",
 			   __func__, cmd);
