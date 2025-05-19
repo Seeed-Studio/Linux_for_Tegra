@@ -84,4 +84,10 @@ u32 tsec_readl(struct tsec_device_data *pdata, u32 r);
 int tsec_poweron(struct device *dev);
 int tsec_poweroff(struct device *dev);
 
+/*
+ * TSEC StreamID Register Programming Operation
+ */
+void tsec_set_streamid_regs(struct device *dev,
+	struct tsec_device_data *pdata);
+
 #endif /* TSEC_H */

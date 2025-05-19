@@ -11,6 +11,7 @@
 #include "tsec.h"
 #include "tsec_boot.h"
 #include "tsec_regs.h"
+#include "tsec_t264.h"
 
 
 /*
@@ -113,23 +114,6 @@ static void tsec_assert_reset(struct tsec_device_data *pdata)
 	reset_control_release(pdata->reset_control);
 }
 
-static void tsec_set_streamid_regs(struct device *dev,
-	struct tsec_device_data *pdata)
-{
-	struct iommu_fwspec *fwspec;
-	int streamid;
-	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
-	/* Get the StreamID value */
-	fwspec = dev_iommu_fwspec_get(dev);
-	if (fwspec && fwspec->num_ids)
-		streamid = fwspec->ids[0] & 0xffff;
-	else
-		streamid = 0x7F; /* bypass hwid */
-
-	/* Update the StreamID value */
-	tsec_writel(pdata, reg_off->THI_STREAMID0_0, streamid);
-	tsec_writel(pdata, reg_off->THI_STREAMID1_0, streamid);
-}
 
 static void tsec_set_cg_regs(struct tsec_device_data *pdata)
 {
@@ -269,6 +253,37 @@ static void tsec_module_deinit_debugfs(struct platform_device *dev)
 #endif /* CONFIG_DEBUG_FS */
 
 /*
+ * TSEC StreamID Register Programming Operation
+ */
+void tsec_set_streamid_regs(struct device *dev,
+	struct tsec_device_data *pdata)
+{
+	struct iommu_fwspec *fwspec;
+	int streamid;
+	struct tsec_reg_offsets_t *reg_off = pdata->tsec_reg_offsets;
+	/* Get the StreamID value */
+	switch (pdata->soc) {
+	case TSEC_ON_T26x:
+		streamid = 0x7F; /* bypass hwid */
+		break;
+	default:
+		fwspec = dev_iommu_fwspec_get(dev);
+		if (fwspec && fwspec->num_ids)
+			streamid = fwspec->ids[0] & 0xffff;
+		else
+			streamid = 0x7F; /* bypass hwid */
+		break;
+	}
+
+	/* Update the StreamID value */
+	tsec_writel(pdata, reg_off->THI_STREAMID0_0, streamid);
+	tsec_writel(pdata, reg_off->THI_STREAMID1_0, streamid);
+
+	/* Indicate that streamid programming is done */
+	tsec_writel(pdata, reg_off->MAILBOX0, TSEC_RISCV_STREAMID_SET_DONE);
+}
+
+/*
  * TSEC Power Management Operations
  */
 
@@ -328,7 +343,13 @@ static int tsec_module_suspend(struct device *dev)
 
 static int tsec_module_resume(struct device *dev)
 {
-	return tsec_poweron(dev);
+	struct tsec_device_data *pdata = dev_get_drvdata(dev);
+	switch (pdata->soc) {
+	case TSEC_ON_T26x:
+		return tsec_t264_init(to_platform_device(dev));
+	default:
+		return tsec_poweron(dev);
+	}
 }
 
 /*
@@ -358,6 +379,11 @@ static int tsec_module_init(struct platform_device *dev)
 		return err;
 	}
 	pdata->reg_aperture = regs;
+
+	/* skip enabling clocks for T26x since PSC already does it*/
+	if (pdata->soc == TSEC_ON_T26x) {
+		return 0;
+	}
 
 	/* Get interrupt */
 	pdata->irq = platform_get_irq(dev, 0);
@@ -476,7 +502,16 @@ static int tsec_probe(struct platform_device *dev)
 	}
 #endif /* CONFIG_DEBUG_FS */
 
-	return tsec_kickoff_boot(dev);
+	switch (pdata->soc) {
+	case TSEC_ON_T26x:
+		err = tsec_t264_init(dev);
+		break;
+	default:
+		err = tsec_kickoff_boot(dev);
+		break;
+	}
+
+	return err;
 }
 
 static int tsec_remove(struct platform_device *dev)

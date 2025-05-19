@@ -7,6 +7,9 @@
 
 #include <vdso/bits.h>                     /* for BIT(x) macro */
 #include "tsec_regs.h"
+#include "tsec_t264.h"
+#include "tsec_boot.h"
+#include "tsec.h"
 
 struct tsec_reg_offsets_t t264_reg_offsets = {
 	.QUEUE_HEAD_0 = 0x4c00,
@@ -48,6 +51,8 @@ struct tsec_reg_offsets_t t264_reg_offsets = {
 	.RISCV_BCR_DMACFG_SEC_GSCID = 0x1f,
 	.FALCON_MAILBOX0 = 0x1040,
 	.FALCON_MAILBOX1 = 0x1044,
+	.MAILBOX0 = 0x4804,
+	.MAILBOX1 = 0x4808,
 	.RISCV_CPUCTL = 0x2388,
 	.RISCV_CPUCTL_STARTCPU_TRUE = BIT(0),
 	.RISCV_CPUCTL_ACTIVE_STAT = 7,
@@ -59,3 +64,34 @@ struct tsec_reg_offsets_t t264_reg_offsets = {
 	.FALCON_DMEMD_0 = 0x11c4,
 	.DMEM_LOGBUF_OFFSET = 0x14000,
 };
+
+int tsec_t264_init(struct platform_device *dev)
+{
+	int err = 0;
+	struct tsec_device_data *pdata = platform_get_drvdata(dev);
+	void __iomem *mailbox0_addr;
+	u32 val;
+
+	mailbox0_addr = pdata->reg_aperture + t264_reg_offsets.MAILBOX0;
+
+	/* Program StreamID registers */
+	tsec_set_streamid_regs(&dev->dev, pdata);
+
+	/* Wait for tsec to convey the boot success status */
+	err  = readl_poll_timeout(mailbox0_addr, val,
+		(val == TSEC_RISCV_INIT_SUCCESS),
+		RISCV_IDLE_CHECK_PERIOD_LONG,
+		RISCV_IDLE_TIMEOUT_LONG);
+	if (err) {
+		dev_err(&dev->dev, "tsec boot failure, timeout! val=0x%x\n", val);
+		return err;
+	}
+
+	/* set poweron to true to enable debugfs */
+	pdata->power_on = true;
+
+	dev_info(&dev->dev, "T264 TSEC init done\n");
+
+	return err;
+}
+

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
  *
  * Tegra TSEC Module Support
  */
@@ -12,6 +12,11 @@
 #define RISCV_IDLE_TIMEOUT_LONG       2000000 /* 2 seconds */
 #define RISCV_IDLE_CHECK_PERIOD       10      /* 10 usec */
 #define RISCV_IDLE_CHECK_PERIOD_LONG  1000    /* 1 milliseconds */
+
+/* TSEC RISCV boot status values */
+#define TSEC_RISCV_INIT_SUCCESS		(0xa5a5a5a5)
+#define TSEC_RISCV_SMMU_STREAMID1	BIT_ULL(40)
+#define TSEC_RISCV_STREAMID_SET_DONE	(0xa6a6a6a6)
 
 /* Image descriptor format */
 struct RM_RISCV_UCODE_DESC {

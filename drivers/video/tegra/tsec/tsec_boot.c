@@ -18,8 +18,7 @@
 #define NUM_OF_CMDS_TO_TEST (5)
 #endif
 
-#define TSEC_RISCV_INIT_SUCCESS		(0xa5a5a5a5)
-#define TSEC_RISCV_SMMU_STREAMID1	BIT_ULL(40)
+
 
 /* Set this to 1 to force backdoor boot */
 #define TSEC_FORCE_BACKDOOR_BOOT	(0)
