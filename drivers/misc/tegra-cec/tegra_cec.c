@@ -343,6 +343,11 @@ static irqreturn_t tegra_cec_irq_handler(int irq, void *data)
 				readw(cec->cec_base + TEGRA_CEC_RX_REGISTER);
 		}
 
+		if (cec->rx_fifo_data == 0) {
+			dev_info(dev, "rx_fifo_data is empty.\n");
+			readw(cec->cec_base + TEGRA_CEC_RX_REGISTER);
+		}
+
 		tegra_cec_writel(TEGRA_CEC_INT_STAT_RX_REGISTER_FULL,
 			cec->cec_base + TEGRA_CEC_INT_STAT);
 
