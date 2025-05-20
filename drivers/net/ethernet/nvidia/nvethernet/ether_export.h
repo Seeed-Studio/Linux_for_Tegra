@@ -13,8 +13,6 @@
  * SIOCDEVPRIVATE custom ioctl command.
  * @{
  */
-/** Net device private IOCTL number for time stamp */
-#define ETHER_PRV_TS_IOCTL		(SIOCDEVPRIVATE + 1)
 /** Private IOCTL number for reading MDIO in the network device. */
 #define ETHER_PRV_RMDIO_IOCTL		(SIOCDEVPRIVATE + 2)
 /** Private IOCTL number for writing MDIO in the network device. */
@@ -118,21 +116,6 @@ struct ptp_offload_param {
          *   - 1 for unicast and multicast */
 	int mc_uc;
 };
-
-/**
- * @brief struct ifr_data_timestamp_struct - common data structure between
- *	driver and application for sharing info through private TS ioctl
- */
-struct ifr_data_timestamp_struct {
-	/** Clock ID
-	 * - Expected values are CLOCK_REALTIME or CLOCK_MONOTONIC */
-	clockid_t clockid;
-	/** Store kernel time */
-	struct timespec64 kernel_ts;
-	/** Store HW time */
-	struct timespec64 hw_ptp_ts;
-};
-
 
 /**
  * @brief Structure for L2 filters NVETHERNET_LINUX_PIF$ETHER_L2_ADDR command

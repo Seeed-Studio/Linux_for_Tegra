@@ -826,8 +826,6 @@ void ether_ptp_remove(struct ether_priv_data *pdata);
  */
 int ether_handle_hwtstamp_ioctl(struct ether_priv_data *pdata,
 				struct ifreq *ifr);
-int ether_handle_priv_ts_ioctl(struct ether_priv_data *pdata,
-			       struct ifreq *ifr);
 #ifndef OSI_STRIPPED_LIB
 int ether_conf_eee(struct ether_priv_data *pdata, unsigned int tx_lpi_enable);
 #endif /* !OSI_STRIPPED_LIB */

@@ -531,7 +531,6 @@ int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
  * @param[in] cmd:
  *  - Net device IOCTL command, valid values:
  *     - SIOCDEVPRIVATE: For Net device private IOCTLs
- *     - NVETHERNET_LINUX_PIF$ETHER_PRV_TS_IOCTL
  *     - NVETHERNET_LINUX_PIF$ETHER_PRV_RMDIO_IOCTL
  *     - NVETHERNET_LINUX_PIF$ETHER_PRV_WMDIO_IOCTL
  *
@@ -562,7 +561,6 @@ int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
  *   with the NVETHERNET_LINUX_PIF$ether_exported_ifr_data.ifcmd in the "rd" input parameter.
  * - Return values of NVETHERNETRM_PIF#osi_read_phy_reg for the cmd value ETHER_PRV_RMDIO_IOCTL.
  * - Return values of NVETHERNETRM_PIF#osi_write_phy_reg for the cmd value ETHER_PRV_WMDIO_IOCTL.
- * - Return values of NVETHERNETRM_PIF#osi_dma_get_systime_from_mac for the cmd value ETHER_PRV_TS_IOCTL.
  *
  * @dir
  * - forward

@@ -4,12 +4,6 @@
 #include "ether_linux.h"
 
 /**
- * @brief DEFINE_RAW_SPINLOCK: raw spinlock to get HW PTP time and kernel time atomically
- *
- */
-static DEFINE_RAW_SPINLOCK(ether_ts_lock);
-
-/**
  * @brief Function used to get PTP time
  * @param[in] data: OSI core private data structure
  *
@@ -554,79 +548,4 @@ int ether_handle_hwtstamp_ioctl(struct ether_priv_data *pdata,
 skip:
 	return (copy_to_user(ifr->ifr_data, &config,
 			     sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
-}
-
-/**
- * @brief Function to handle PTP private IOCTL
- *
- * Algorithm: This function is used to query hardware time and
- * the kernel time simultaneously.
- *
- * @param [in] pdata: Pointer to private data structure.
- * @param [in] ifr: Interface request structure used for socket ioctl
- *
- * @note PTP clock driver need to be successfully registered during
- *	initialization and HW need to support PTP functionality.
- *
- * @retval 0 on success.
- * @retval "negative value" on failure.
- */
-
-int ether_handle_priv_ts_ioctl(struct ether_priv_data *pdata,
-			       struct ifreq *ifr)
-{
-	struct ifr_data_timestamp_struct req;
-	struct osi_dma_priv_data *osi_dma = pdata->osi_dma;
-	unsigned long flags;
-	unsigned int sec, nsec;
-	int ret = -1;
-
-	if (ifr->ifr_data == NULL) {
-		dev_err(pdata->dev, "%s: Invalid data for priv ioctl\n",
-			__func__);
-		return -EFAULT;
-	}
-
-	if (copy_from_user(&req, ifr->ifr_data, sizeof(req))) {
-		dev_err(pdata->dev, "%s: Data copy from user failed\n",
-			__func__);
-		return -EFAULT;
-	}
-
-	raw_spin_lock_irqsave(&ether_ts_lock, flags);
-	switch (req.clockid) {
-	case CLOCK_REALTIME:
-		ktime_get_real_ts64(&req.kernel_ts);
-		break;
-
-	case CLOCK_MONOTONIC:
-		ktime_get_ts64(&req.kernel_ts);
-		break;
-
-	default:
-		dev_err(pdata->dev, "Unsupported clockid\n");
-	}
-
-	ret = osi_dma_get_systime_from_mac(osi_dma, &sec, &nsec);
-	if (ret != 0) {
-		dev_err(pdata->dev, "%s: Failed to read systime from MAC %d\n",
-			__func__, ret);
-		raw_spin_unlock_irqrestore(&ether_ts_lock, flags);
-		return ret;
-	}
-	req.hw_ptp_ts.tv_sec = sec;
-	req.hw_ptp_ts.tv_nsec = nsec;
-
-	raw_spin_unlock_irqrestore(&ether_ts_lock, flags);
-
-	dev_dbg(pdata->dev, "tv_sec = %lld, tv_nsec = %ld\n",
-		req.hw_ptp_ts.tv_sec, req.hw_ptp_ts.tv_nsec);
-
-	if (copy_to_user(ifr->ifr_data, &req, sizeof(req))) {
-		dev_err(pdata->dev, "%s: Data copy to user failed\n",
-			__func__);
-		return -EFAULT;
-	}
-
-	return ret;
 }
