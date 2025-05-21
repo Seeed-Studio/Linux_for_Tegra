@@ -243,7 +243,8 @@ static void camrtc_hsp_rx_full_notify(mbox_client *cl, void *data)
 	} else if (CAMRTC_HSP_MSG_ID(msg) == CAMRTC_HSP_PANIC) {
 		dev_err(&camhsp->dev, "%s: receive CAMRTC_HSP_PANIC message!\n", __func__);
 		if (camhsp->panic_callback != NULL) {
-			camhsp->panic_callback(camhsp->dev.parent);
+			// disable panic_callback as the workaround for https://nvbugspro.nvidia.com/bug/5293085
+			//camhsp->panic_callback(camhsp->dev.parent);
 		} else {
 			dev_warn(&camhsp->dev, "%s: No panic callback function is registered.\n", __func__);
 		}
