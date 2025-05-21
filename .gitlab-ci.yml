@@ -842,6 +842,7 @@ build-recomputer-robo-orin-nx-16g-j401:
     CHIP_SKU: "00:00:00:D3"
     UPDATE_DRV_DEPEND: "0"
 
+
   script:
     - echo "Building for $CONFIG"
     - *build_image_script
@@ -879,10 +880,6 @@ build-recomputer-robo-orin-nx-8g-j401-gmsl:
   rules:
     - if: '$CI_COMMIT_TAG' 
       when: on_success
-    - if: '$START_TASK == "recomputer-robo-orin"'
-      when: on_success
-    - if: '$START_TASK == "recomputer-robo-orin-nx"'
-      when: on_success
     - if: '$START_TASK == "recomputer-robo-orin-gmsl"'
       when: on_success
     - if: '$START_TASK == $CI_JOB_STAGE'
@@ -908,10 +905,6 @@ build-recomputer-robo-orin-nx-16g-j401-gmsl:
   stage: recomputer-robo-orin-nx-16g-j401-gmsl
   rules:
     - if: '$CI_COMMIT_TAG' 
-      when: on_success
-    - if: '$START_TASK == "recomputer-robo-orin"'
-      when: on_success
-    - if: '$START_TASK == "recomputer-robo-orin-nx"'
       when: on_success
     - if: '$START_TASK == "recomputer-robo-orin-gmsl"'
       when: on_success
@@ -939,10 +932,6 @@ build-recomputer-robo-orin-nano-4g-j401-gmsl:
   rules:
     - if: '$CI_COMMIT_TAG' 
       when: on_success
-    - if: '$START_TASK == "recomputer-robo-orin"'
-      when: on_success
-    - if: '$START_TASK == "recomputer-robo-orin-nano"'
-      when: on_success
     - if: '$START_TASK == "recomputer-robo-orin-gmsl"'
       when: on_success
     - if: '$START_TASK == $CI_JOB_STAGE'
@@ -967,10 +956,6 @@ build-recomputer-robo-orin-nano-8g-j401-gmsl:
   stage: recomputer-robo-orin-nano-8g-j401-gmsl
   rules:
     - if: '$CI_COMMIT_TAG' 
-      when: on_success
-    - if: '$START_TASK == "recomputer-robo-orin"'
-      when: on_success
-    - if: '$START_TASK == "recomputer-robo-orin-nano"'
       when: on_success
     - if: '$START_TASK == "recomputer-robo-orin-gmsl"'
       when: on_success
