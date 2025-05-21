@@ -120,6 +120,9 @@ struct tegra_rtcpu_trace {
 
 	struct cdev s_dev;
 	wait_queue_head_t wait_queue;
+
+	/* flag to indicate a panic occurred */
+	atomic_t panic_flag;
 };
 
 struct rtcpu_raw_trace_context {
@@ -1917,10 +1920,9 @@ static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
  * @brief Processes RTCPU snapshot trace events from shared memory.
  *
  * This function reads and processes snapshot trace events recorded by the RTCPU
- * into a dedicated circular buffer in shared memory. It is similar to
- * rtcpu_trace_events but operates on the snapshot buffer.
+ * into a dedicated circular buffer in shared memory. Similar to rtcpu_trace_events
+ * it assumes the caller to lock the mutex.
  *
- * - Acquires the tracer mutex lock.
  * - Reads the current snapshot write index (@ref snapshot_next_idx) from the
  *   shared memory header.
  * - Compares it with the last processed index (@ref tracer->snapshot_last_idx)
@@ -1938,12 +1940,11 @@ static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
  *   - Increments the snapshot event counter (@ref tracer->n_snapshots).
  *   - Advances the index, handling wrap-around.
  * - Updates the last processed snapshot index (@ref tracer->snapshot_last_idx).
- * - Releases the tracer mutex lock.
  *
  * @param[in/out] tracer  Pointer to the tegra_rtcpu_trace structure.
  *                        Valid Range: Non-NULL pointer.
  */
-void rtcpu_trace_snapshot(struct tegra_rtcpu_trace *tracer)
+static inline void rtcpu_trace_snapshot(struct tegra_rtcpu_trace *tracer)
 {
 	const struct camrtc_trace_memory_header *header = NULL;
 	u32 old_next = 0U;
@@ -1953,8 +1954,6 @@ void rtcpu_trace_snapshot(struct tegra_rtcpu_trace *tracer)
 	if (tracer == NULL)
 		return;
 
-	mutex_lock(&tracer->lock);
-
 	header = tracer->trace_memory;
 	old_next = tracer->snapshot_last_idx;
 	new_next = header->snapshot_next_idx;
@@ -1963,16 +1962,13 @@ void rtcpu_trace_snapshot(struct tegra_rtcpu_trace *tracer)
 		dev_warn_ratelimited(tracer->dev,
 			"trace entry %u outside range 0..%u\n",
 			new_next, tracer->snapshot_entries - 1);
-		mutex_unlock(&tracer->lock);
 		return;
 	}
 
 	new_next = array_index_nospec(new_next, tracer->snapshot_entries);
 
-	if (old_next == new_next) {
-		mutex_unlock(&tracer->lock);
+	if (old_next == new_next)
 		return;
-	}
 
 	rtcpu_trace_invalidate_entries(tracer,
 				tracer->dma_handle_snapshots,
@@ -1980,8 +1976,6 @@ void rtcpu_trace_snapshot(struct tegra_rtcpu_trace *tracer)
 				CAMRTC_TRACE_EVENT_SIZE,
 				tracer->snapshot_entries);
 
-	dev_err(tracer->dev, "%s: dump snapshot start at %u, end at %u\n",
-		__func__, old_next, new_next);
 	while (old_next != new_next) {
 		old_next = array_index_nospec(old_next, tracer->snapshot_entries);
 		event = &tracer->snapshot_events[old_next];
@@ -1993,9 +1987,7 @@ void rtcpu_trace_snapshot(struct tegra_rtcpu_trace *tracer)
 	}
 
 	tracer->snapshot_last_idx = new_next;
-	mutex_unlock(&tracer->lock);
 }
-EXPORT_SYMBOL(rtcpu_trace_snapshot);
 
 /**
  * @brief Flushes the RTCPU trace buffer
@@ -2006,6 +1998,8 @@ EXPORT_SYMBOL(rtcpu_trace_snapshot);
  * - Invalidates the cache line for pointers using @ref dma_sync_single_for_cpu
  * - Processes exceptions using @ref rtcpu_trace_exceptions
  * - Processes events using @ref rtcpu_trace_events
+ * - If panic_flag was 1, atomically set it to 0 by calling @ref atomic_cmpxchg
+ *   and take a snapshot by calling @ref rtcpu_trace_snapshot
  * - Unlocks the mutex using @ref mutex_unlock
  *
  * @param[in] tracer  Pointer to the tegra_rtcpu_trace structure.
@@ -2025,6 +2019,10 @@ void tegra_rtcpu_trace_flush(struct tegra_rtcpu_trace *tracer)
 	/* process exceptions and events */
 	rtcpu_trace_exceptions(tracer);
 	rtcpu_trace_events(tracer);
+
+	if (atomic_cmpxchg(&tracer->panic_flag, 1, 0) == 1) {
+		rtcpu_trace_snapshot(tracer);
+	}
 
 	mutex_unlock(&tracer->lock);
 }
@@ -2956,6 +2954,25 @@ void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer)
 	kfree(tracer);
 }
 EXPORT_SYMBOL(tegra_rtcpu_trace_destroy);
+
+/**
+ * @brief Sets the panic_flag in the tracer structure to indicate a panic.
+ *
+ * This function does the following:
+ * - Checks if the tracer is NULL, returns if it is.
+ * - Set the panic_flag to 1 by calling @ref atomic_cmpxchg
+ *
+ * @param[in] tracer Pointer to the tegra_rtcpu_trace structure.
+ */
+void tegra_rtcpu_trace_set_panic_flag(struct tegra_rtcpu_trace *tracer)
+{
+	if (tracer == NULL)
+		return;
+
+	/* Atomically set panic_flag to 1 if it is currently 0 */
+	atomic_cmpxchg(&tracer->panic_flag, 0, 1);
+}
+EXPORT_SYMBOL(tegra_rtcpu_trace_set_panic_flag);
 
 MODULE_DESCRIPTION("NVIDIA Tegra RTCPU trace driver");
 MODULE_LICENSE("GPL v2");

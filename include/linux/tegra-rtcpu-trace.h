@@ -17,7 +17,7 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(
 int tegra_rtcpu_trace_boot_sync(struct tegra_rtcpu_trace *tracer);
 void tegra_rtcpu_trace_flush(struct tegra_rtcpu_trace *tracer);
 void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer);
-void rtcpu_trace_snapshot(struct tegra_rtcpu_trace *tracer);
 void rtcpu_trace_panic_callback(struct device *dev);
+void tegra_rtcpu_trace_set_panic_flag(struct tegra_rtcpu_trace *tracer);
 
 #endif

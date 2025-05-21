@@ -1316,7 +1316,8 @@ void rtcpu_trace_panic_callback(struct device *dev)
 		return;
 	}
 
-	rtcpu_trace_snapshot(tracer);
+	/* Call the accessor function to set panic flag */
+	tegra_rtcpu_trace_set_panic_flag(tracer);
 }
 EXPORT_SYMBOL(rtcpu_trace_panic_callback);
 
