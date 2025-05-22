@@ -127,6 +127,7 @@ stages:
   - mount --bind /dev ./rootfs/dev
   - mount --bind /dev/pts ./rootfs/dev/pts
   - mount --bind /proc ./rootfs/proc
+  - cp -r extra_scripts/glib/ rootfs/
   - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
   - cp extra_scripts/rootfs_magic.sh rootfs
   - cp extra_scripts/bluetooth-auto-trust_1.0-1.deb rootfs
@@ -149,6 +150,7 @@ stages:
   - rm rootfs/rootfs_magic.sh
   - rm rootfs/usr/bin/qemu-aarch64-static
   - rm rootfs/bluetooth-auto-trust_1.0-1.deb
+  - rm rootfs/glib -rf
   # package the image for qspi & nvme flash
   - sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB BOARDREV=$BOARDREV CHIP_SKU=$CHIP_SKU ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB -p "-c bootloader/generic/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash --massflash 5 --network usb0 $CONFIG external
   - md5sum mfi_$CONFIG.tar.gz > chksum-$CI_JOB_STAGE-$DATE_STR.txt
