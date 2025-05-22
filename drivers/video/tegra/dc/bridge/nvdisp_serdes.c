@@ -65,6 +65,8 @@ struct nvdisp_serdes_priv {
 	struct mutex mutex;
 	struct regmap *regmap;
 	int serdes_errb;
+	int serdes_pwrdn;       /* GPIO number for power down pin */
+	struct gpio_desc *gpiod_pwrdn;  /* GPIO descriptor for power pin */
 	unsigned int ser_irq;
 	struct opcode_sequence init_seq, deinit_seq, errb_seq;
 };
@@ -674,6 +676,24 @@ done:
 	return ret;
 }
 
+static int nvdisp_serdes_power_on(struct nvdisp_serdes_priv *priv)
+{
+	struct device *dev = &priv->client->dev;
+	int ret = 0;
+
+	if (priv->gpiod_pwrdn) {
+		dev_info(dev, "%s: Setting nvdisp-serdes-pwrdn pin high to power on serializer\n", __func__);
+		gpiod_set_value_cansleep(priv->gpiod_pwrdn, 1);
+	} else if (gpio_is_valid(priv->serdes_pwrdn)) {
+		dev_info(dev, "%s: Setting nvdisp-serdes-pwrdn pin high to power on serializer\n", __func__);
+		gpio_set_value_cansleep(priv->serdes_pwrdn, 1);
+	} else {
+		dev_info(dev, "%s: No valid nvdisp-serdes-pwrdn pin available\n", __func__);
+	}
+
+	return ret;
+}
+
 static int nvdisp_serdes_init(struct device *dev)
 {
 	struct nvdisp_serdes_priv *priv;
@@ -683,6 +703,13 @@ static int nvdisp_serdes_init(struct device *dev)
 
 	client = to_i2c_client(dev);
 	priv = i2c_get_clientdata(client);
+
+	/* First power on the serializer */
+	ret = nvdisp_serdes_power_on(priv);
+	if (ret != 0) {
+		dev_err(dev, "%s: Failed to power on serializer\n", __func__);
+		return ret;
+	}
 
 	/* opcode dispatcher code */
 	while (init_pos < priv->init_seq.length) {
@@ -710,6 +737,7 @@ static int nvdisp_serdes_probe(struct i2c_client *client)
 
 	priv->client = client;
 	i2c_set_clientdata(client, priv);
+	priv->gpiod_pwrdn = NULL;  /* Initialize to NULL for safety */
 
 	dev = &priv->client->dev;
 
@@ -723,6 +751,29 @@ static int nvdisp_serdes_probe(struct i2c_client *client)
 	if (ret < 0) {
 		dev_err(dev, "%s: nvdisp serdes boot failed\n", __func__);
 		return -EFAULT;
+	}
+
+	/* Get the PWRDN GPIO pin */
+	priv->serdes_pwrdn = of_get_named_gpio(ser, "nvdisp-serdes-pwrdn", 0);
+	if (!gpio_is_valid(priv->serdes_pwrdn)) {
+		dev_err(dev, "%s: nvdisp-serdes-pwrdn GPIO not valid\n", __func__);
+		/* Continue even if GPIO is not valid - don't return error */
+	} else {
+		/* Request the GPIO pin with initial state LOW (powered down) */
+		ret = devm_gpio_request_one(&client->dev, priv->serdes_pwrdn,
+				      GPIOF_OUT_INIT_LOW, "GPIO_PWRDN_NVDISP_SERDES");
+		if (ret < 0) {
+			dev_err(dev, "%s: devm_gpio_request_one for nvdisp-serdes-pwrdn failed ret: %d\n",
+				__func__, ret);
+			/* Continue even if GPIO request fails - don't return error */
+		} else {
+			/* Create GPIO descriptor for later use */
+			priv->gpiod_pwrdn = gpio_to_desc(priv->serdes_pwrdn);
+			if (!priv->gpiod_pwrdn) {
+				dev_err(dev, "%s: Failed to get GPIO descriptor for nvdisp-serdes-pwrdn\n",
+				__func__);
+			}
+		}
 	}
 
 	ret = nvdisp_serdes_init(&client->dev);
