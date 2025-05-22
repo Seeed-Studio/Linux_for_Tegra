@@ -846,7 +846,6 @@ int tegra_hv_ivc_can_write(struct tegra_hv_ivc_cookie *ivck)
 }
 EXPORT_SYMBOL(tegra_hv_ivc_can_write);
 
-#ifndef CONFIG_BUILD_PROD
 int tegra_hv_ivc_tx_empty(struct tegra_hv_ivc_cookie *ivck)
 {
 	struct hv_ivc *ivc = cookie_to_ivc_dev(ivck);
@@ -859,6 +858,7 @@ int tegra_hv_ivc_tx_empty(struct tegra_hv_ivc_cookie *ivck)
 }
 EXPORT_SYMBOL(tegra_hv_ivc_tx_empty);
 
+#ifndef CONFIG_BUILD_PROD
 uint32_t tegra_hv_ivc_tx_frames_available(struct tegra_hv_ivc_cookie *ivck)
 {
 	struct hv_ivc *ivc = cookie_to_ivc_dev(ivck);
