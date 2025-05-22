@@ -317,6 +317,7 @@ static int nvsciipc_ioctl_get_db_by_idx(struct nvsciipc *ctx, unsigned int cmd,
 	struct cred const *cred = get_current_cred();
 	uid_t const uid = cred->uid.val;
 
+	put_cred(cred);
 	if ((ctx->num_eps == 0) || (ctx->set_db_f != true)) {
 		ERR("%s[%d] need to set endpoint database first\n", __func__,
 			get_current()->tgid);
@@ -383,6 +384,7 @@ static int nvsciipc_ioctl_reserve_ep(struct nvsciipc *ctx, unsigned int cmd,
 			struct cred const *cred = get_current_cred();
 			uid_t const uid = cred->uid.val;
 
+			put_cred(cred);
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
 			    (uid != 0) && (uid != ctx->db[i]->uid)) {
@@ -486,6 +488,7 @@ static int nvsciipc_ioctl_get_db_by_name(struct nvsciipc *ctx, unsigned int cmd,
 			struct cred const *cred = get_current_cred();
 			uid_t const uid = cred->uid.val;
 
+			put_cred(cred);
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
 			    (uid != 0) && (uid != ctx->db[i]->uid)) {
@@ -536,6 +539,7 @@ static int nvsciipc_ioctl_get_db_by_vuid(struct nvsciipc *ctx, unsigned int cmd,
 			struct cred const *cred = get_current_cred();
 			uid_t const uid = cred->uid.val;
 
+			put_cred(cred);
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
 			    (uid != 0) && (uid != ctx->db[i]->uid)) {
@@ -589,6 +593,7 @@ static int nvsciipc_ioctl_get_vuid(struct nvsciipc *ctx, unsigned int cmd,
 			struct cred const *cred = get_current_cred();
 			uid_t const uid = cred->uid.val;
 
+			put_cred(cred);
 			/* Authenticate the client process with valid UID */
 			if ((ctx->db[i]->uid != 0xFFFFFFFF) &&
 			    (uid != 0) && (uid != ctx->db[i]->uid)) {
@@ -624,6 +629,7 @@ static int nvsciipc_ioctl_set_db(struct nvsciipc *ctx, unsigned int cmd,
 	struct cred const *cred = get_current_cred();
 	uid_t const uid = cred->uid.val;
 
+	put_cred(cred);
 	INFO("set_db start\n");
 
 #if defined(CONFIG_ANDROID) || defined(CONFIG_TEGRA_SYSTEM_TYPE_ACK)
@@ -901,6 +907,7 @@ static ssize_t nvsciipc_dbg_read(struct file *filp, char __user *buf,
 	struct cred const *cred = get_current_cred();
 	uid_t const uid = cred->uid.val;
 
+	put_cred(cred);
 	/* check root user */
 	if ((uid != 0) && (uid != s_nvsciipc_uid)) {
 		ERR("no permission to read db\n");
