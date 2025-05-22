@@ -113,6 +113,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += clk_hw_determine_rate_no_reparent
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += define_semaphore_has_number_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += devfreq_dev_profile_has_is_cooling_device
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += devfreq_has_freq_table
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += devfreq_has_suspend_freq
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += device_add_disk_has_int_return_type
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += devm_pm_domain_attach_list
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += devm_of_icc_get

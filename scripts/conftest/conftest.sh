@@ -6956,6 +6956,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DEVFREQ_HAS_FREQ_TABLE" "" "types"
         ;;
 
+	devfreq_has_suspend_freq)
+            #
+            # Determine if the 'devfreq' structure has 'suspend_freq'
+            #
+            # Commit 83f8ca45afbf ("PM / devfreq: add support for
+            # suspend/resume of a devfreq device") updated the devfreq
+            # and add the suspend_freq field in v5.0.
+            #
+            CODE="
+            #include <linux/devfreq.h>
+            int conftest_devfreq_has_suspend_freq(void) {
+                return offsetof(struct devfreq, suspend_freq);
+            }
+            "
+            compile_check_conftest "$CODE" "NV_DEVFREQ_HAS_SUSPEND_FREQ" "" "types"
+        ;;
+
         device_add_disk_has_int_return_type)
             #
             # Determine if the function device_add_disk() returns an integer.
