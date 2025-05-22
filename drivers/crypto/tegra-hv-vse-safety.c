@@ -864,6 +864,7 @@ static int read_and_validate_valid_msg(
 	default:
 		dev_err(se_dev->dev, "Unknown command\n");
 		waited = false;
+		err = -EINVAL;
 	}
 	if (waited)
 		complete(&priv->alg_complete);
@@ -1005,7 +1006,7 @@ static int tegra_hv_vse_safety_send_ivc_wait(
 	}
 
 	/* If this is not last request then wait using nvhost API*/
-	if (priv->syncpt_id_valid) {
+	if (priv->syncpt_id_valid && priv->rx_status == 0) {
 		sp = host1x_syncpt_get_by_id_noref(host1x, priv->syncpt_id);
 		if (!sp) {
 			dev_err(se_dev->dev, "No syncpt for syncpt id %d\n", priv->syncpt_id);
@@ -3833,6 +3834,13 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 			goto exit;
 		}
 
+		if (priv->rx_status != 0) {
+			err = status_to_errno(priv->rx_status);
+			dev_err(se_dev->dev, "%s: SE server returned error %u\n",
+					__func__, priv->rx_status);
+			goto exit;
+		}
+
 		copy_size = min(bytes_remaining, aligned_size);
 		rdata_addr = (rdata + offset);
 		memcpy(rdata_addr, src->buf_ptr, copy_size);
@@ -3840,13 +3848,14 @@ static int tegra_hv_vse_safety_get_random(struct tegra_virtual_se_rng_context *r
 		if (offset > UINT_MAX - copy_size) {
 			dev_err(se_dev->dev, "%s: offset %u is greater than UINT_MAX\n",
 				__func__, offset);
+			err = -EINVAL;
 			goto exit;
 		} else
 			offset += copy_size;
 	}
 
 exit:
-	return dlen;
+	return err;
 }
 
 static int tegra_hv_vse_safety_rng_drbg_get_random(struct crypto_rng *tfm,
@@ -6228,11 +6237,19 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 			goto exit;
 		}
 
-		err = of_property_read_u32_index(np, "nvidia,ivccfg", cnt * TEGRA_IVCCFG_ARRAY_LEN
-				 + TEGRA_MAX_BUFFER_SIZE, &crypto_dev->max_buffer_size);
+		err = of_property_read_u32_index(np, "nvidia,ivccfg",
+				cnt * TEGRA_IVCCFG_ARRAY_LEN + TEGRA_MAX_BUFFER_SIZE,
+				&crypto_dev->max_buffer_size);
 		if (err) {
 			dev_err(se_dev->dev, "Error: invalid max buffer size. err %d\n", err);
 			err = -ENODEV;
+			goto exit;
+		}
+
+		if (crypto_dev->max_buffer_size >= TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE) {
+			dev_err(se_dev->dev, "Error: max buffer size must be less than %u\n",
+			TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE);
+			err = -EINVAL;
 			goto exit;
 		}
 
@@ -6269,12 +6286,20 @@ static int tegra_hv_vse_safety_probe(struct platform_device *pdev)
 			goto exit;
 		}
 
-		err = of_property_read_u32_index(np, "nvidia,ivccfg", cnt * TEGRA_IVCCFG_ARRAY_LEN
-				 + TEGRA_GCM_DEC_BUFFER_SIZE, &crypto_dev->gcm_dec_buffer_size);
+		err = of_property_read_u32_index(np, "nvidia,ivccfg",
+				cnt * TEGRA_IVCCFG_ARRAY_LEN + TEGRA_GCM_DEC_BUFFER_SIZE,
+				&crypto_dev->gcm_dec_buffer_size);
 		if (err || (crypto_dev->gcm_dec_supported != GCM_DEC_OP_SUPPORTED &&
 				crypto_dev->gcm_dec_buffer_size != 0)) {
-			dev_err(se_dev->dev, "Error: invalid gcm decrypt buffer size. err %d\n", err);
+			dev_err(se_dev->dev,
+				"Error: invalid gcm decrypt buffer size. err %d\n", err);
 			err = -ENODEV;
+			goto exit;
+		}
+		if (crypto_dev->gcm_dec_buffer_size >= TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE) {
+			dev_err(se_dev->dev, "Error: gcm decrypt buffer size must be less than %u\n",
+			TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE);
+			err = -EINVAL;
 			goto exit;
 		}
 

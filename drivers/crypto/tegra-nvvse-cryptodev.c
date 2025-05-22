@@ -1711,7 +1711,16 @@ static int tnvvse_crypto_dev_open(struct inode *inode, struct file *filp)
 	bool is_zero_copy_node;
 
 	misc = filp->private_data;
+	if (!misc) {
+		CRYPTODEV_ERR("%s(): misc is NULL\n", __func__);
+		return -EPERM;
+	}
+
 	node_id = misc->this_device->id;
+	if (node_id >= MAX_NUMBER_MISC_DEVICES) {
+		CRYPTODEV_ERR("%s(): node_id is out of range\n", __func__);
+		return -EPERM;
+	}
 
 	is_zero_copy_node = tegra_hv_vse_get_db()[node_id].is_zero_copy_node;
 
@@ -2433,8 +2442,16 @@ static int __init tnvvse_crypto_device_init(void)
 	CRYPTODEV_INFO("%s(): init start\n", __func__);
 
 	/* get ivc databse */
-	tnvvse_crypto_get_ivc_db(&ivc_database);
+	ret = tnvvse_crypto_get_ivc_db(&ivc_database);
+	if (ret) {
+		CRYPTODEV_ERR("%s(): tnvvse_crypto_get_ivc_db failed\n", __func__);
+		return ret;
+	}
 	ivc_db = tegra_hv_vse_get_db();
+	if (!ivc_db) {
+		CRYPTODEV_ERR("%s(): tegra_hv_vse_get_db returned NULL\n", __func__);
+		return -EINVAL;
+	}
 
 	/* Register the info device node */
 	nvvse_info_device = kzalloc(sizeof(struct miscdevice), GFP_KERNEL);
