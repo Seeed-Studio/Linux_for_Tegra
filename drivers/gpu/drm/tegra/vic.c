@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (C) 2015-2024 NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (C) 2015-2025 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/bitops.h>
@@ -966,8 +966,8 @@ static int vic_probe(struct platform_device *pdev)
 		vic->riscv.regs = vic->regs;
 
 		vic->riscv.os_desc.code_offset = 0x0;
-		vic->riscv.os_desc.code_size = 0x1200;
-		vic->riscv.os_desc.data_offset = 0x1200;
+		vic->riscv.os_desc.code_size = 0x1300;
+		vic->riscv.os_desc.data_offset = 0x1300;
 		vic->riscv.os_desc.data_size = 0xa00;
 
 		err = tegra_drm_riscv_init(&vic->riscv);
