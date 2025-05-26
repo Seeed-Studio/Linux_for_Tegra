@@ -18,6 +18,7 @@ dtb-y += tegra264-p4071-0080+p3834-0008-qspi-ufs-nvme.dtb
 dtb-y += tegra264-p4071-0080+p3834-0008-qspi-ufs-nvme-safety.dtb
 dtbo-y += tegra264-p3740-0002+p3834-0008-pcie-disable-in-uefi-dynamic.dtbo
 dtbo-y += tegra264-p3971-0000+p3834-xxxx-dynamic.dtbo
+dtbo-y += tegra264-p4071-0000+p3834-xxxx-dynamic.dtbo
 dtbo-y += tegra264-android.dtbo
 dtbo-y += tegra264-ufs-provision.dtbo
 

@@ -426,6 +426,15 @@
 		mttcan@8110340000 {
 			status = "okay";
 		};
+
+		i2c@c600000 {
+			ina238@44 {
+				compatible = "ti,ina238";
+				reg = <0x44>;
+				shunt-resistor = <2000>;
+				status = "disabled";
+			};
+		};
 	};
 
 	eeprom-manager {
