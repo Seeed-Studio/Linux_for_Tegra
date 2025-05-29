@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION. All rights reserved.
 /*
  * drivers/soc/tegra/pmc.c
  *
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2018-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@google.com>
@@ -4143,6 +4143,13 @@ static const struct tegra_wake_event tegra234_wake_events[] = {
 	TEGRA_WAKE_GPIO("power", 29, 1, TEGRA234_AON_GPIO(EE, 4)),
 	TEGRA_WAKE_GPIO("mgbe", 56, 0, TEGRA234_MAIN_GPIO(Y, 3)),
 	TEGRA_WAKE_IRQ("rtc", 73, 10),
+	TEGRA_WAKE_IRQ("usb3_port_0", 76, 167),
+	TEGRA_WAKE_IRQ("usb3_port_1", 77, 167),
+	TEGRA_WAKE_IRQ("usb3_port_2_3", 78, 167),
+	TEGRA_WAKE_IRQ("usb2_port_0", 79, 167),
+	TEGRA_WAKE_IRQ("usb2_port_1", 80, 167),
+	TEGRA_WAKE_IRQ("usb2_port_2", 81, 167),
+	TEGRA_WAKE_IRQ("usb2_port_3", 82, 167),
 	TEGRA_WAKE_IRQ("sw-wake", SW_WAKE_ID, 179),
 	TEGRA_WAKE_GPIO("eqos", 20, 0, TEGRA234_MAIN_GPIO(G, 4)),
 };
