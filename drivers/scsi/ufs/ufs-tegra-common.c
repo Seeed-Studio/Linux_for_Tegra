@@ -1284,8 +1284,10 @@ static int ufs_tegra_eq_timeout(struct ufs_tegra_host *ufs_tegra)
 {
 	struct device *dev = ufs_tegra->hba->dev;
 	int err;
+	uint32_t mphy_eq_timeout = (ufs_tegra->soc->chip_id >= TEGRA264) ?
+					MPHY_EQ_TIMEOUT_T264 : MPHY_EQ_TIMEOUT;
 
-	mphy_writel(ufs_tegra->mphy_l0_base, MPHY_EQ_TIMEOUT,
+	mphy_writel(ufs_tegra->mphy_l0_base, mphy_eq_timeout,
 		    MPHY_RX_APB_VENDOR3B_0_T234);
 	mphy_update(ufs_tegra->mphy_l0_base, MPHY_GO_BIT, MPHY_RX_APB_VENDOR2_0_T234);
 	err = mphy_go_bit_status(ufs_tegra->mphy_l0_base, MPHY_RX_APB_VENDOR2_0_T234);
@@ -1294,7 +1296,7 @@ static int ufs_tegra_eq_timeout(struct ufs_tegra_host *ufs_tegra)
 		goto end;
 	}
 	if (ufs_tegra->x2config) {
-		mphy_writel(ufs_tegra->mphy_l1_base, MPHY_EQ_TIMEOUT,
+		mphy_writel(ufs_tegra->mphy_l1_base, mphy_eq_timeout,
 			    MPHY_RX_APB_VENDOR3B_0_T234);
 		mphy_update(ufs_tegra->mphy_l1_base, MPHY_GO_BIT, MPHY_RX_APB_VENDOR2_0_T234);
 		err = mphy_go_bit_status(ufs_tegra->mphy_l1_base, MPHY_RX_APB_VENDOR2_0_T234);
