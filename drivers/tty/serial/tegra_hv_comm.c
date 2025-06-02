@@ -12,6 +12,9 @@
  */
 
 #undef DEBUG
+
+#include <nvidia/conftest.h>
+
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -113,7 +116,11 @@ static void xmit_timer_setup(struct tegra_hv_comm *pp, int in_timer)
 		if (pp->tx_en) {
 			pp->tx_en = 0;
 			if (!in_timer)
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+				timer_delete(&pp->tx_timer);
+#else
 				del_timer(&pp->tx_timer);
+#endif
 		}
 	}
 }
@@ -238,7 +245,11 @@ static void tegra_hv_comm_stop_tx(struct uart_port *port)
 
 	if (pp->tx_en) {
 		pp->tx_en = 0;
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+		timer_delete_sync(&pp->tx_timer);
+#else
 		del_timer_sync(&pp->tx_timer);
+#endif
 	}
 }
 
@@ -413,7 +424,11 @@ static void tegra_hv_comm_shutdown(struct uart_port *port)
 	pp->rx_en = 0;
 	if (pp->tx_en) {
 		pp->tx_en = 0;
+#if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
+		timer_delete(&pp->tx_timer);
+#else
 		del_timer(&pp->tx_timer);
+#endif
 	}
 	spin_unlock_irqrestore(&port->lock, flags);
 }
