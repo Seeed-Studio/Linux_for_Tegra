@@ -498,21 +498,9 @@ static int __cdi_create_dev(
 	struct cdi_mgr_priv *cdi_mgr, struct cdi_mgr_new_dev *new_dev)
 {
 	struct cdi_mgr_client *cdi_dev;
-	struct i2c_board_info brd = {
-		.type = "cdi-dev",
-		.flags = 0U,
-		.addr = 0U,
-		.dev_name = NULL,
-		.platform_data = NULL,
-		.of_node = NULL,
-		.fwnode = NULL,
-		.swnode = NULL,
-		.resources = NULL,
-		.num_resources = 0U,
-		.irq = 0
-	};
-
+	struct i2c_board_info brd;
 	int err = 0;
+
 	if (cdi_mgr == NULL || new_dev == NULL) {
 		pr_err("%s: invalid dev params\n", __func__);
 		return -EINVAL;
@@ -578,6 +566,8 @@ static int __cdi_create_dev(
 	mutex_init(&cdi_dev->mutex);
 	INIT_LIST_HEAD(&cdi_dev->list);
 
+	memset(&brd, 0, sizeof(brd));
+	strncpy(brd.type, "cdi-dev", sizeof(brd.type));
 	brd.addr = cdi_dev->cfg.addr;
 	brd.platform_data = &cdi_dev->pdata;
 	cdi_dev->client = i2c_new_client_device(cdi_mgr->adap, &brd);
