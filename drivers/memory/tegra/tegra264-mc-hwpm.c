@@ -140,7 +140,7 @@ static int tegra_mc_hwpm_hwpm_probe(struct platform_device *pdev)
 static struct platform_driver mc_hwpm_driver = {
 	.driver = {
 		.name	= "tegra264-mc-hwpm",
-		.of_match_table = mc_hwpm_of_ids,
+		.of_match_table = of_match_ptr(mc_hwpm_of_ids),
 		.owner	= THIS_MODULE,
 	},
 
@@ -149,9 +149,21 @@ static struct platform_driver mc_hwpm_driver = {
 
 static int __init tegra_mc_hwpm_init(void)
 {
-	return platform_driver_register(&mc_hwpm_driver);
+	int ret = platform_driver_register(&mc_hwpm_driver);
+
+	if (ret) {
+		pr_err("Failed to register MC-HWPM driver\n");
+	}
+
+	return ret;
 }
 module_init(tegra_mc_hwpm_init);
+
+static void __exit tegra_mc_hwpm_exit(void)
+{
+	platform_driver_unregister(&mc_hwpm_driver);
+}
+module_exit(tegra_mc_hwpm_exit);
 
 MODULE_AUTHOR("Ashish Mhetre <amhetre@nvidia.com>");
 MODULE_DESCRIPTION("Tegra264 MC-HWPM driver");
