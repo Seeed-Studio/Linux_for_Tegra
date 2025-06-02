@@ -6832,6 +6832,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_BUS_TYPE_STRUCT_UEVENT_HAS_CONST_DEV_ARG" "" "types"
         ;;
 
+        can_priv_struct_has_struct_data_bittiming_params)
+            #
+            # Determine if the 'can_priv' structure has a member of type
+            # 'structure data_bittiming_params'.
+            #
+            # In Linux v6.16, commit b803c4a4f788 ("can: dev: add struct
+            # data_bittiming_params to group FD parameters") added the
+            # 'data_bittiming_params' structure to the 'can_priv' structure.
+            #
+            CODE="
+            #include <linux/can/dev.h>
+            int conftest_can_priv_struct_has_struct_data_bittiming_params(void) {
+                return offsetof(struct can_priv, fd);
+            }"
+
+            compile_check_conftest "$CODE" "NV_CAN_PRIV_STRUCT_HAS_STRUCT_DATA_BITTIMING_PARAMS" "" "types"
+        ;;
+
         class_attribute_struct_has_const_struct_class_attribute)
             #
             # Determine if struct class_attribute function has const type "struct class_attribute"

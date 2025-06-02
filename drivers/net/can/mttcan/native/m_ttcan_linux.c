@@ -988,7 +988,11 @@ static int mttcan_do_set_bittiming(struct net_device *dev)
 	int err = 0;
 	struct mttcan_priv *priv = netdev_priv(dev);
 	const struct can_bittiming *bt = &priv->can.bittiming;
+#if defined(NV_CAN_PRIV_STRUCT_HAS_STRUCT_DATA_BITTIMING_PARAMS) /* Linux v6.16 */
+	const struct can_bittiming *dbt = &priv->can.fd.data_bittiming;
+#else
 	const struct can_bittiming *dbt = &priv->can.data_bittiming;
+#endif
 
 	memcpy(&priv->ttcan->bt_config.nominal, bt,
 		sizeof(struct can_bittiming));
@@ -1197,7 +1201,11 @@ static struct net_device *alloc_mttcan_dev(void)
 
 	priv->dev = dev;
 	priv->can.bittiming_const = &mttcan_normal_bittiming_const;
+#if defined(NV_CAN_PRIV_STRUCT_HAS_STRUCT_DATA_BITTIMING_PARAMS) /* Linux v6.16 */
+	priv->can.fd.data_bittiming_const = &mttcan_data_bittiming_const;
+#else
 	priv->can.data_bittiming_const = &mttcan_data_bittiming_const;
+#endif
 	priv->can.do_set_bittiming = mttcan_do_set_bittiming;
 	priv->can.do_set_mode = mttcan_set_mode;
 	priv->can.do_get_berr_counter = mttcan_get_berr_counter;
