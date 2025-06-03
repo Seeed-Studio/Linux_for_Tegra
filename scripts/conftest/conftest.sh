@@ -8060,6 +8060,22 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PLATFORM_MSI_DOMAIN_ALLOC_IRQS_PRESENT" "" "functions"
         ;;
 
+        page_struct_has___folio_index)
+            #
+            # Determine if the 'page' structure has '__folio_index' member.
+            #
+            # This change was made in Linux v6.16 by commit ("acc53a0b4c15 mm:
+            # rename page->index to page->__folio_index").
+            #
+            CODE="
+            #include <linux/mm_types.h>
+            int conftest_page_struct_has___folio_index(void) {
+                return offsetof(struct page, __folio_index);
+            }"
+
+            compile_check_conftest "$CODE" "NV_PAGE_STRUCT_HAS___FOLIO_INDEX" "" "types"
+        ;;
+
         platform_msi_domain_free_irqs)
             #
             # Determine if the platform_msi_domain_free_irqs() API available or not.

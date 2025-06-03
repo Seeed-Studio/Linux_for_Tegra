@@ -184,6 +184,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_chip_struct_has_of_node_present
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_device_find
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_device_get_chip
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += of_property_for_each_u32_removed_internal_args
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += page_struct_has___folio_index
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += pde_data
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += platform_msi_domain_alloc_irqs
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += platform_msi_domain_free_irqs
