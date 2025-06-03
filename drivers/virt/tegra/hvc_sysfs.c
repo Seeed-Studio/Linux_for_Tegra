@@ -88,7 +88,12 @@ static int nvlog_buffer_mmap(struct file *fp, struct kobject *ko,
 }
 
 static ssize_t nvlog_region_size_read(struct file *fp, struct kobject *ko,
-	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
+#if defined(NV_BIN_ATTRIBUTE_STRUCT_READWRITE_HAS_CONST_BIN_ATTRIBUTE_ARG)
+	const struct bin_attribute *attr,
+#else
+	struct bin_attribute *attr,
+#endif
+	char *buf, loff_t pos, size_t size)
 {
 	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, region_size_attr);
 
@@ -97,7 +102,12 @@ static ssize_t nvlog_region_size_read(struct file *fp, struct kobject *ko,
 }
 
 static ssize_t nvlog_buffer_size_read(struct file *fp, struct kobject *ko,
-	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
+#if defined(NV_BIN_ATTRIBUTE_STRUCT_READWRITE_HAS_CONST_BIN_ATTRIBUTE_ARG)
+	const struct bin_attribute *attr,
+#else
+	struct bin_attribute *attr,
+#endif
+	char *buf, loff_t pos, size_t size)
 {
 	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, buf_size_attr);
 
@@ -106,7 +116,12 @@ static ssize_t nvlog_buffer_size_read(struct file *fp, struct kobject *ko,
 }
 
 static ssize_t nvlog_buffer_count_read(struct file *fp, struct kobject *ko,
-	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
+#if defined(NV_BIN_ATTRIBUTE_STRUCT_READWRITE_HAS_CONST_BIN_ATTRIBUTE_ARG)
+	const struct bin_attribute *attr,
+#else
+	struct bin_attribute *attr,
+#endif
+	char *buf, loff_t pos, size_t size)
 {
 	struct nvlog_shmem_info *info = container_of(attr, struct nvlog_shmem_info, buf_count_attr);
 
@@ -296,7 +311,12 @@ static int hvc_create_sysfs(
 }
 
 static ssize_t log_mask_read(struct file *fp, struct kobject *ko,
-	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
+#if defined(NV_BIN_ATTRIBUTE_STRUCT_READWRITE_HAS_CONST_BIN_ATTRIBUTE_ARG)
+	const struct bin_attribute *attr,
+#else
+	struct bin_attribute *attr,
+#endif
+	char *buf, loff_t pos, size_t size)
 {
 	uint64_t value = 0;
 
@@ -312,7 +332,12 @@ static ssize_t log_mask_read(struct file *fp, struct kobject *ko,
 }
 
 static ssize_t log_mask_write(struct file *fp, struct kobject *ko,
-	struct bin_attribute *attr, char *buf, loff_t pos, size_t size)
+#if defined(NV_BIN_ATTRIBUTE_STRUCT_READWRITE_HAS_CONST_BIN_ATTRIBUTE_ARG)
+	const struct bin_attribute *attr,
+#else
+	struct bin_attribute *attr,
+#endif
+	char *buf, loff_t pos, size_t size)
 {
 	uint64_t type, value;
 

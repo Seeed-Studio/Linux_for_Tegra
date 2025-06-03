@@ -6588,6 +6588,26 @@ compile_test() {
                     "NV_BIN_ATTRIBUTE_STRUCT_MMAP_HAS_CONST_BIN_ATTRIBUTE_ARG" "" "types"
         ;;
 
+        bin_attribute_struct_readwrite_has_const_bin_attribute_arg)
+            #
+            # Determine if the 'bin_attribute' structure 'read' and 'write'
+            # function pointers have a const 'struct bin_attribute' argument.
+            #
+            # This change was made in Linux v6.16 by commit 97d06802d10a
+            # ("sysfs: constify bin_attribute argument of bin_attribute::read/write()").
+            #
+            CODE="
+            #include <linux/sysfs.h>
+            void conftest(struct bin_attribute *attr) {
+                    ssize_t (*fn)(struct file *, struct kobject *,
+                                  const struct bin_attribute *,
+                                  char *, loff_t, size_t) = attr->read;
+            }"
+
+            compile_check_conftest "$CODE" \
+                    "NV_BIN_ATTRIBUTE_STRUCT_READWRITE_HAS_CONST_BIN_ATTRIBUTE_ARG" "" "types"
+        ;;
+
         blk_execute_rq_has_no_gendisk_arg)
             #
             # Determine if the function blk_execute_rq() has an argument of
