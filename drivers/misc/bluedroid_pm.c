@@ -134,10 +134,13 @@ static void bluedroid_pm_gpio_set_value(struct gpio_desc *gpio, int value)
  */
 static void bluedroid_pm_timer_expire(struct timer_list *timer)
 {
-
-	struct bluedroid_pm_data *bluedroid_pm =
-				from_timer(bluedroid_pm, timer,
-						bluedroid_pm_timer);
+#if defined(timer_container_of) /* Linux v6.16 */
+	struct bluedroid_pm_data *bluedroid_pm = timer_container_of(bluedroid_pm,
+						timer, bluedroid_pm_timer);
+#else
+	struct bluedroid_pm_data *bluedroid_pm = from_timer(bluedroid_pm,
+						timer, bluedroid_pm_timer);
+#endif
 
 	/*
 	 * if bluedroid_pm data is NULL or timer is deleted with TX busy.

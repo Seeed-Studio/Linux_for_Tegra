@@ -2114,7 +2114,12 @@ static void wch_ser_set_termios(struct ser_port *port, struct WCHTERMIOS *termio
 
 static void wch_ser_timeout(struct timer_list *t)
 {
+#if defined(timer_container_of) /* Linux v6.16 */
+    struct wch_ser_port *sp = timer_container_of(sp, t, timer);
+#else
     struct wch_ser_port *sp = from_timer(sp, t, timer);
+#endif
+
     unsigned int timeout;
     unsigned int iir;
     iir = READ_UART_IIR(sp);

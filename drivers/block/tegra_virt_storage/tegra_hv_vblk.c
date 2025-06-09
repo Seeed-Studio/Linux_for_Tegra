@@ -2369,7 +2369,11 @@ static irqreturn_t ivc_irq_handler(int irq, void *data)
  */
 static void bio_request_timeout_callback(struct timer_list *timer)
 {
+#if defined(timer_container_of) /* Linux v6.16 */
+	struct vsc_request *req = timer_container_of(req, timer, timer);
+#else
 	struct vsc_request *req = from_timer(req, timer, timer);
+#endif
 
 	dev_err(req->vblkdev->device, "Request id %d timed out. curr ctr: %llu sched ctr: %llu\n",
 						req->id, _arch_counter_get_cntvct(), req->time);

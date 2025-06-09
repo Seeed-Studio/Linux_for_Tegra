@@ -287,7 +287,12 @@ static irqreturn_t nvpps_gpio_isr(int irq, void *data)
 
 static void tsc_timer_callback(struct timer_list *t)
 {
-	struct nvpps_device_data *pdev_data = (struct nvpps_device_data *)from_timer(pdev_data, t, tsc_timer);
+	struct nvpps_device_data *pdev_data =
+#if defined(timer_container_of) /* Linux v6.16 */
+		timer_container_of(pdev_data, t, tsc_timer);
+#else
+		from_timer(pdev_data, t, tsc_timer);
+#endif
 
 	if (pdev_data->soc_data.ops->ptp_tsc_get_is_locked_fn) {
 		/* check and trigger sync if PTP-TSC is unlocked */
@@ -305,7 +310,12 @@ static void tsc_timer_callback(struct timer_list *t)
 
 static void nvpps_timer_callback(struct timer_list *t)
 {
-	struct nvpps_device_data        *pdev_data = (struct nvpps_device_data *)from_timer(pdev_data, t, timer);
+	struct nvpps_device_data *pdev_data =
+#if defined(timer_container_of) /* Linux v6.16 */
+		timer_container_of(pdev_data, t, timer);
+#else
+		from_timer(pdev_data, t, timer);
+#endif
 
 	/* get timestamps for this event */
 	nvpps_get_ts(pdev_data, 0);
