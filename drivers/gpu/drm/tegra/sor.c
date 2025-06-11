@@ -2712,7 +2712,11 @@ static void tegra_sor_dp_disable(struct drm_encoder *encoder)
 	 * the AUX transactions would just be timing out.
 	 */
 	if (output->connector.status != connector_status_disconnected) {
+#if defined(NV_DRM_DP_LINK_POWER_UP_PRESENT) /* Linux v6.16 */
+		err = drm_dp_link_power_down(sor->aux, sor->link.revision);
+#else
 		err = drm_dp_link_power_down(sor->aux, &sor->link);
+#endif
 		if (err < 0)
 			dev_err(sor->dev, "failed to power down link: %d\n",
 				err);
@@ -2928,7 +2932,11 @@ static void tegra_sor_dp_enable(struct drm_encoder *encoder)
 	else
 		dev_dbg(sor->dev, "link training succeeded\n");
 
+#if defined(NV_DRM_DP_LINK_POWER_UP_PRESENT) /* Linux v6.16 */
+	err = drm_dp_link_power_up(sor->aux, sor->link.revision);
+#else
 	err = drm_dp_link_power_up(sor->aux, &sor->link);
+#endif
 	if (err < 0)
 		dev_err(sor->dev, "failed to power up DP link: %d\n", err);
 

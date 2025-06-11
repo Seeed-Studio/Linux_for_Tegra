@@ -7217,6 +7217,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DRM_DISPLAY_INFO_STRUCT_HAS_SOURCE_PHYSICAL_ADDRESS" "" "types"
         ;;
 
+        drm_dp_link_power_up)
+            #
+            # Determine if the function drm_dp_link_power_up is present
+            #
+            # This change was made in Linux v6.16 by commit 09cdda7a60f4 ("drm/dp: Pull
+            # drm_dp_link_power_up/down from Tegra to common drm_dp_helper").
+            #
+            CODE="
+            #undef CONFIG_ACPI
+            #include <drm/display/drm_dp_helper.h>
+            int conftest_drm_dp_link_power_up(void) {
+                drm_dp_link_power_up();
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_DP_LINK_POWER_UP_PRESENT" "" "functions"
+        ;;
+
         drm_driver_has_fbdev_probe)
             #
             # Determine if the 'drm_driver' structure has an 'fbdev_probe'

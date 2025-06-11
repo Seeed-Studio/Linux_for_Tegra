@@ -263,6 +263,7 @@ int drm_dp_link_probe(struct drm_dp_aux *aux, struct drm_dp_link *link)
 	return 0;
 }
 
+#if !defined(NV_DRM_DP_LINK_POWER_UP_PRESENT) /* Linux v6.16 */
 /**
  * drm_dp_link_power_up() - power up a DisplayPort link
  * @aux: DisplayPort AUX channel
@@ -329,6 +330,7 @@ int drm_dp_link_power_down(struct drm_dp_aux *aux, struct drm_dp_link *link)
 
 	return 0;
 }
+#endif /* NV_DRM_DP_LINK_POWER_UP_PRESENT */
 
 /**
  * drm_dp_link_configure() - configure a DisplayPort link
