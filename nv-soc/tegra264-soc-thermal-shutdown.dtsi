@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
 	thermal-zones {
 		cpu-thermal {
 			trips {
 				cpu_sw_shutdown: cpu-sw-shutdown {
-					temperature = <113000>;
+					temperature = <114500>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -16,7 +16,7 @@
 		gpu-thermal {
 			trips {
 				gpu_sw_shutdown: gpu-sw-shutdown {
-					temperature = <113000>;
+					temperature = <114500>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -26,7 +26,7 @@
 		soc012-thermal {
 			trips {
 				soc012_sw_shutdown: soc012-sw-shutdown {
-					temperature = <113000>;
+					temperature = <114500>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -36,7 +36,7 @@
 		soc345-thermal {
 			trips {
 				soc345_sw_shutdown: soc345-sw-shutdown {
-					temperature = <113000>;
+					temperature = <114500>;
 					hysteresis = <0>;
 					type = "critical";
 				};
@@ -46,7 +46,7 @@
 		tj-thermal {
 			trips {
 				tj_sw_shutdown: tj-sw-shutdown {
-					temperature = <113000>;
+					temperature = <114500>;
 					hysteresis = <0>;
 					type = "critical";
 				};

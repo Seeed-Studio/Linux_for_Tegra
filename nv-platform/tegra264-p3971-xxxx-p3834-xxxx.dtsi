@@ -6,6 +6,10 @@
 		cooling-levels = <66 215 255>;
 	};
 
+	thermal-shutdown-alert {
+		status = "disabled";
+	};
+
 	thermal-zones {
 		tj-thermal {
 			trips {
