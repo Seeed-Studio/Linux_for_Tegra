@@ -1115,6 +1115,8 @@
 									};
 								};
 							};
+						};
+						i2c@2 {
 							ar0234_e@34 {
 								compatible = "nvidia,ar0234_hawk_owl";
 								reg = <0x34>;
@@ -1251,6 +1253,8 @@
 									};
 								};
 							};
+						};
+						i2c@3 {
 							ar0234_g@36 {
 								compatible = "nvidia,ar0234_hawk_owl";
 								reg = <0x36>;
@@ -1503,7 +1507,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6a0000/virtual_i2c_mux@50/i2c@1/ar0234_e@34";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6a0000/virtual_i2c_mux@50/i2c@2/ar0234_e@34";
 							status = "okay";
 						};
 					};
@@ -1514,7 +1518,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6a0000/virtual_i2c_mux@50/i2c@1/ar0234_f@35";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6a0000/virtual_i2c_mux@50/i2c@2/ar0234_f@35";
 							status = "okay";
 						};
 					};
@@ -1525,7 +1529,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6a0000/virtual_i2c_mux@50/i2c@1/ar0234_g@36";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6a0000/virtual_i2c_mux@50/i2c@3/ar0234_g@36";
 							status = "okay";
 						};
 					};
@@ -1536,7 +1540,7 @@
 						status = "okay";
 						drivernode0 {
 							pcl_id = "v4l2_sensor";
-							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6a0000/virtual_i2c_mux@50/i2c@1/ar0234_h@37";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6a0000/virtual_i2c_mux@50/i2c@3/ar0234_h@37";
 							status = "okay";
 						};
 					};

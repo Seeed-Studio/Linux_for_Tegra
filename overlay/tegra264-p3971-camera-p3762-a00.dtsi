@@ -203,6 +203,12 @@
 								pwdn-gpios = <&gpio_main CAM0_PWDN GPIO_ACTIVE_HIGH>;
 								/* pwr-gpios = <&gpio_main PWR_EN GPIO_ACTIVE_HIGH>; */
 							};
+						};
+						i2c@2 {
+							reg = <2>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
 							ar0234_e@34 {
 								status = "disabled";
 								def-addr = <0x10>;
@@ -235,6 +241,12 @@
 								pwdn-gpios = <&gpio_main CAM0_PWDN GPIO_ACTIVE_HIGH>;
 								/* pwr-gpios = <&gpio_main PWR_EN GPIO_ACTIVE_HIGH>; */
 							};
+						};
+						i2c@3 {
+							reg = <3>;
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
 							ar0234_g@36 {
 								status = "disabled";
 								def-addr = <0x10>;

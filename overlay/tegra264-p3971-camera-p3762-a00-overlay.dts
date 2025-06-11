@@ -58,12 +58,16 @@
 							ar0234_d@33 {
 								status = "okay";
 							};
+						};
+						i2c@2 {
 							ar0234_e@34 {
 								status = "okay";
 							};
 							ar0234_f@35 {
 								status = "okay";
 							};
+						};
+						i2c@3 {
 							ar0234_g@36 {
 								status = "okay";
 							};
