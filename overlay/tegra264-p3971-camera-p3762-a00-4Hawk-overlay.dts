@@ -1,0 +1,169 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+/dts-v1/;
+/plugin/;
+
+#include "tegra264-p3971-camera-p3762-a00.dtsi"
+
+#define JETSON_COMPATIBLE	"nvidia,p3971-0089+p3834-0008", "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264"
+
+/ {
+	overlay-name = "Jetson Camera 4-Hawk p3762 module";
+	jetson-header-name = "Jetson AGX CSI Connector";
+	compatible = JETSON_COMPATIBLE;
+
+	fragment-camera-hawk-owl@0 {
+		target-path = "/";
+		__overlay__ {
+			tegra-capture-vi {
+				num-channels = <8>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						status = "okay";
+					};
+					port@1 {
+						status = "okay";
+					};
+					port@2 {
+						status = "okay";
+					};
+					port@3 {
+						status = "okay";
+					};
+					port@4 {
+						status = "okay";
+					};
+					port@5 {
+						status = "okay";
+					};
+					port@6 {
+						status = "okay";
+					};
+					port@7 {
+						status = "okay";
+					};
+					port@8 {
+						status = "disabled";
+					};
+					port@9 {
+						status = "disabled";
+					};
+					port@10 {
+						status = "disabled";
+					};
+					port@11 {
+						status = "disabled";
+					};
+				};
+			};
+			bus@0 {
+				host1x@8181200000 {
+					nvcsi@8188000000 {
+						num-channels = <8>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						channel@0 {
+							status = "okay";
+						};
+						channel@1 {
+							status = "okay";
+						};
+						channel@2 {
+							status = "okay";
+						};
+						channel@3 {
+							status = "okay";
+						};
+						channel@4 {
+							status = "okay";
+						};
+						channel@5 {
+							status = "okay";
+						};
+						channel@6 {
+							status = "okay";
+						};
+						channel@7 {
+							status = "okay";
+						};
+						channel@8 {
+							status = "disabled";
+						};
+						channel@9 {
+							status = "disabled";
+						};
+						channel@10 {
+							status = "disabled";
+						};
+						channel@11 {
+							status = "disabled";
+						};
+					};
+				};
+				i2c@810c6d0000 {
+					max96712_b@62 {
+						status = "disabled";
+					};
+					ar0234_i@30 {
+						status = "disabled";
+					};
+					ar0234_j@32 {
+						status = "disabled";
+					};
+					ar0234_k@34 {
+						status = "disabled";
+					};
+					ar0234_l@36 {
+						status = "disabled";
+					};
+				};
+				i2c@810c6a0000 {
+					max96712_a@62 {
+						status = "okay";
+					};
+					virtual_i2c_mux@50 {
+						status = "okay";
+						i2c@0 {
+							bmi088_a@69 {
+								status = "okay";
+							};
+							ar0234_a@30 {
+								status = "okay";
+							};
+							ar0234_b@31 {
+								status = "okay";
+							};
+						};
+						i2c@1 {
+							ar0234_c@32 {
+								status = "okay";
+							};
+							ar0234_d@33 {
+								status = "okay";
+							};
+						};
+						i2c@2 {
+							ar0234_e@34 {
+								status = "okay";
+							};
+							ar0234_f@35 {
+								status = "okay";
+							};
+						};
+						i2c@3 {
+							ar0234_g@36 {
+								status = "okay";
+							};
+							ar0234_h@37 {
+								status = "okay";
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};

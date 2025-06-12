@@ -9,6 +9,7 @@
 #include "tegra264-camera-imx390-a00.dtsi"
 #include "tegra264-camera-imx185-a00.dtsi"
 #include "tegra264-camera-imx274-dual.dtsi"
+#include "tegra264-camera-ar0234-a00.dtsi"
 
 #define CAM0_RST_L	TEGRA264_MAIN_GPIO(V, 2)
 #define CAM0_PWDN	TEGRA264_MAIN_GPIO(AL, 1)

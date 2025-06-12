@@ -17,6 +17,11 @@ dtbo-y += tegra264-p3971-camera-e3333-overlay.dtbo
 dtbo-y += tegra264-p3971-camera-imx185-overlay.dtbo
 dtbo-y += tegra264-p3971-camera-imx390-overlay.dtbo
 dtbo-y += tegra264-p3971-camera-imx390-addr-0x21-overlay.dtbo
+dtbo-y += tegra264-p3971-camera-p3762-a00-1Hawk-overlay.dtbo
+dtbo-y += tegra264-p3971-camera-p3762-a00-2Hawk-overlay.dtbo
+dtbo-y += tegra264-p3971-camera-p3762-a00-3Hawk-3Owl-overlay.dtbo
+dtbo-y += tegra264-p3971-camera-p3762-a00-4Hawk-overlay.dtbo
+dtbo-y += tegra264-p3971-camera-p3762-a00-4Owl-overlay.dtbo
 dtbo-y += tegra264-p3971-camera-p3762-a00-overlay.dtbo
 
 ifneq ($(dtb-y),)
