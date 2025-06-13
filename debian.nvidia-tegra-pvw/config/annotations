@@ -66,8 +66,17 @@ CONFIG_IP6_NF_MATCH_HL                          note<'EMBARGOED'>
 CONFIG_IP6_NF_MATCH_RT                          policy<{'arm64': 'm'}>
 CONFIG_IP6_NF_MATCH_RT                          note<'EMBARGOED'>
 
+CONFIG_IP_ADVANCED_ROUTER                       policy<{'arm64': 'y'}>
+CONFIG_IP_ADVANCED_ROUTER                       note<'EMBARGOED'>
+
+CONFIG_IP_MULTIPLE_TABLES                       policy<{'arm64': 'y'}>
+CONFIG_IP_MULTIPLE_TABLES                       note<'EMBARGOED'>
+
 CONFIG_IP_NF_TARGET_REDIRECT                    policy<{'arm64': 'm'}>
 CONFIG_IP_NF_TARGET_REDIRECT                    note<'EMBARGOED'>
+
+CONFIG_IP_SCTP                                  policy<{'arm64': 'm'}>
+CONFIG_IP_SCTP                                  note<'EMBARGOED'>
 
 CONFIG_LOGO                                     policy<{'arm64': 'n'}>
 CONFIG_LOGO                                     note<'EMBARGOED'>
