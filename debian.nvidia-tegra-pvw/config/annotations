@@ -126,6 +126,9 @@ CONFIG_PSTORE_RAM                               note<'EMBARGOED'>
 CONFIG_QFMT_V2                                  policy<{'arm64': 'm'}>
 CONFIG_QFMT_V2                                  note<'EMBARGOED'>
 
+CONFIG_SENSORS_INA238                           policy<{'arm64': 'm'}>
+CONFIG_SENSORS_INA238                           note<'EMBARGOED'>
+
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 policy<{'arm64': 'y'}>
 CONFIG_SYSTEM_BLACKLIST_KEYRING                 note<'EMBARGOED'>
 
