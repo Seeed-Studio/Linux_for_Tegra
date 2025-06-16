@@ -433,6 +433,7 @@
 				reg = <0x44>;
 				shunt-resistor = <2000>;
 				status = "disabled";
+				label = "VIN";
 			};
 		};
 	};
