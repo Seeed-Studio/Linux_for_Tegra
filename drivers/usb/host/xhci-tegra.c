@@ -2166,18 +2166,18 @@ static int tegra_xhci_padctl_notify(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
-static void tegra_xusb_setup_wakeup(struct platform_device *pdev, struct tegra_xusb *tegra)
+static int tegra_xusb_setup_wakeup(struct platform_device *pdev, struct tegra_xusb *tegra)
 {
 	int i;
 
 	if (device_property_read_bool(tegra->dev, "disable-wake"))
-		return;
+		return 0;
 
 	tegra->wake_irqs = devm_kcalloc(tegra->dev,
 				tegra->soc->num_wakes,
 				sizeof(*tegra->wake_irqs), GFP_KERNEL);
 	if (!tegra->wake_irqs)
-		return;
+		return -ENOMEM;
 
 	for (i = 0; i < tegra->soc->num_wakes; i++) {
 		char irq_name[] = "wakeX";
@@ -2186,19 +2186,16 @@ static void tegra_xusb_setup_wakeup(struct platform_device *pdev, struct tegra_x
 		snprintf(irq_name, sizeof(irq_name), "wake%d", i);
 		tegra->wake_irqs[i] = platform_get_irq_byname(pdev, irq_name);
 		if (tegra->wake_irqs[i] < 0)
-			goto error;
+			continue;
 		data = irq_get_irq_data(tegra->wake_irqs[i]);
-		if (!data)
-			goto error;
+		if (!data) {
+			irq_dispose_mapping(tegra->wake_irqs[i]);
+			tegra->wake_irqs[i] = -ENXIO;
+			continue;
+		}
 		irq_set_irq_type(tegra->wake_irqs[i], irqd_get_trigger_type(data));
 	}
-	return;
-
-error:
-	for (i = 0; i < tegra->soc->num_wakes && tegra->wake_irqs[i] >= 0; i++)
-		irq_dispose_mapping(tegra->wake_irqs[i]);
-	devm_kfree(tegra->dev, tegra->wake_irqs);
-	tegra->wake_irqs = NULL;
+	return 0;
 }
 
 static int tegra_xusb_probe(struct platform_device *pdev)
@@ -2260,8 +2257,11 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	if (IS_ERR(tegra->padctl))
 		return PTR_ERR(tegra->padctl);
 
-	if (tegra->soc->num_wakes && !tegra->soc->is_xhci_vf)
-		tegra_xusb_setup_wakeup(pdev, tegra);
+	if (tegra->soc->num_wakes && !tegra->soc->is_xhci_vf) {
+		err = tegra_xusb_setup_wakeup(pdev, tegra);
+		if (err)
+			goto put_padctl;
+	}
 
 	np = of_parse_phandle(pdev->dev.of_node, "nvidia,xusb-padctl", 0);
 	if (!np) {
@@ -2652,7 +2652,8 @@ static void tegra_xusb_remove(struct platform_device *pdev)
 		pm_runtime_disable(&pdev->dev);
 
 	for (i = 0; i < tegra->soc->num_wakes && tegra->wake_irqs; i++)
-		irq_dispose_mapping(tegra->wake_irqs[i]);
+		if (tegra->wake_irqs[i] >= 0)
+			irq_dispose_mapping(tegra->wake_irqs[i]);
 
 	pm_runtime_put(&pdev->dev);
 
@@ -3130,7 +3131,8 @@ out:
 			if (enable_irq_wake(tegra->padctl_irq))
 				dev_err(dev, "failed to enable padctl wakes\n");
 			for (i = 0; i < tegra->soc->num_wakes && tegra->wake_irqs; i++)
-				enable_irq_wake(tegra->wake_irqs[i]);
+				if (tegra->wake_irqs[i] >= 0)
+					enable_irq_wake(tegra->wake_irqs[i]);
 		}
 	}
 
@@ -3163,7 +3165,8 @@ static __maybe_unused int tegra_xusb_resume(struct device *dev)
 		if (disable_irq_wake(tegra->padctl_irq))
 			dev_err(dev, "failed to disable padctl wakes\n");
 		for (i = 0; i < tegra->soc->num_wakes && tegra->wake_irqs; i++)
-			disable_irq_wake(tegra->wake_irqs[i]);
+			if (tegra->wake_irqs[i] >= 0)
+				disable_irq_wake(tegra->wake_irqs[i]);
 	}
 	tegra->suspended = false;
 	mutex_unlock(&tegra->lock);
