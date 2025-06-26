@@ -9283,6 +9283,23 @@ compile_test() {
             compile_check_conftest "$CODE" \
                     "NV_V4L2_SUBDEV_PAD_OPS_STRUCT_HAS_DV_TIMINGS" "" "types"
         ;;
+
+        work_on_cpu_key)
+            #
+            # Determine if the function work_on_cpu_key() is present.
+            #
+            # In Linux v6. , commit 265f3ed07703 ("workqueue: Provide one lock class
+            # key per work_on_cpu() callsite") added the function work_on_cpu_key().
+            #
+            CODE="
+            #include <linux/workqueue.h>
+            void conftest_work_on_cpu_key(void) {
+                work_on_cpu_key();
+            }"
+
+            compile_check_conftest "$CODE" "NV_WORK_ON_CPU_KEY_PRESENT" "" "functions"
+        ;;
+
         crypto_engine_ctx_struct_removed_test)
             #
             # Determine if struct 'crypto_engine_ctx' is removed in linux kernel.

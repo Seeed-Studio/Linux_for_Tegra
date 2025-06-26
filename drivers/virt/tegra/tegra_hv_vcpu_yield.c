@@ -11,6 +11,11 @@
 #include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
+#if defined(NV_LINUX_CPUHPLOCK_H_PRESENT)
+#include <linux/cpuhplock.h>
+#else
+#include <linux/cpu.h>
+#endif
 #include <linux/slab.h>
 #include <linux/hrtimer.h>
 #include <linux/kthread.h>
@@ -21,6 +26,7 @@
 #include <linux/sched.h>
 #include <uapi/linux/tegra_hv_vcpu_yield_ioctl.h>
 #include <linux/interrupt.h>
+#include <linux/workqueue.h>
 #include <soc/tegra/virt/hv-ivc.h>
 
 
@@ -173,6 +179,9 @@ static long tegra_hv_vcpu_yield_ioctl(struct file *filp, unsigned int cmd,
 	struct vcpu_yield_dev *data =
 		(struct vcpu_yield_dev *)filp->private_data;
 	struct vcpu_yield_start_ctl yield_start_ctl_data;
+#if defined(NV_WORK_ON_CPU_KEY_PRESENT) /* Linux v6.7 */
+	static struct lock_class_key __key;
+#endif
 
 	switch (cmd) {
 	case VCPU_YIELD_START_IOCTL:
@@ -201,8 +210,16 @@ static long tegra_hv_vcpu_yield_ioctl(struct file *filp, unsigned int cmd,
 			if (data->timeout_us > max_timeout_us)
 				data->timeout_us = max_timeout_us;
 
+#if defined(NV_WORK_ON_CPU_KEY_PRESENT) /* Linux v6.7 */
+			cpus_read_lock();
+			if (cpu_online(data->vcpu))
+				ret = work_on_cpu_key(data->vcpu, vcpu_yield_func,
+						(void *)data, &__key);
+			cpus_read_unlock();
+#else
 			ret = work_on_cpu_safe(data->vcpu, vcpu_yield_func,
 					(void *)data);
+#endif
 			if (ret)
 				pr_err("work_on_cpu_safe Failed :%d\n", ret);
 		}
