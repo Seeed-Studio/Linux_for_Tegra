@@ -321,6 +321,7 @@ static struct device *g_rtcpu_dev = NULL;
 static void *g_rx_descr_mem_area = NULL;
 static dma_addr_t g_rxdesc_mem_dma_rce;
 static struct sg_table g_rxdesc_rce_sgt;
+static int32_t g_rx_descr_mem_refcount;
 
 static inline struct coe_channel_state *coe_channel_arr_find_free(u32 * const arr_idx)
 {
@@ -1556,6 +1557,8 @@ static int coe_alloc_rx_descr_mem_area(struct coe_state * const s)
 			dev_err(&s->pdev->dev, "Multiple RCE CPUs not supported\n");
 			return -ENOTSUPP;
 		}
+		/* Memory already allocated, just increment reference count */
+		g_rx_descr_mem_refcount++;
 	} else {
 		g_rx_descr_mem_area = dma_alloc_coherent(s->rtcpu_dev,
 							alloc_size,
@@ -1599,6 +1602,7 @@ static int coe_alloc_rx_descr_mem_area(struct coe_state * const s)
 		}
 
 		g_rtcpu_dev = s->rtcpu_dev;
+		g_rx_descr_mem_refcount = 1;
 
 		dev_info(&s->pdev->dev, "Rx descr RCE addr=0x%llx len=%lu\n",
 			g_rxdesc_mem_dma_rce, alloc_size);
@@ -1620,6 +1624,18 @@ static int coe_alloc_rx_descr_mem_area(struct coe_state * const s)
 					   pib_start_offset, pktinfo_size_per_mgbe);
 	if (ret) {
 		dev_err(&s->pdev->dev, "Failed to map Pktinfo ret=%d\n", ret);
+		/* Decrement refcount on failure */
+		mutex_lock(&coe_device_list_lock);
+		g_rx_descr_mem_refcount--;
+		if (g_rx_descr_mem_refcount <= 0) {
+			sg_free_table(&g_rxdesc_rce_sgt);
+			dma_free_coherent(g_rtcpu_dev, alloc_size,
+					  g_rx_descr_mem_area, g_rxdesc_mem_dma_rce);
+			g_rx_descr_mem_area = NULL;
+			g_rtcpu_dev = NULL;
+			g_rx_descr_mem_refcount = 0;
+		}
+		mutex_unlock(&coe_device_list_lock);
 		return ret;
 	}
 
@@ -1640,6 +1656,27 @@ static int coe_alloc_rx_descr_mem_area(struct coe_state * const s)
 	}
 
 	return 0;
+}
+
+static void coe_free_rx_descr_mem_area(void)
+{
+	mutex_lock(&coe_device_list_lock);
+
+	if (g_rx_descr_mem_area != NULL) {
+		g_rx_descr_mem_refcount--;
+		if (g_rx_descr_mem_refcount <= 0) {
+			const size_t alloc_size = COE_TOTAL_RXDESCR_MEM_SIZE;
+
+			sg_free_table(&g_rxdesc_rce_sgt);
+			dma_free_coherent(g_rtcpu_dev, alloc_size,
+					  g_rx_descr_mem_area, g_rxdesc_mem_dma_rce);
+			g_rx_descr_mem_area = NULL;
+			g_rtcpu_dev = NULL;
+			g_rx_descr_mem_refcount = 0;
+		}
+	}
+
+	mutex_unlock(&coe_device_list_lock);
 }
 
 static int32_t coe_mgbe_parse_dt_dmachans(struct coe_state * const s,
@@ -1702,6 +1739,30 @@ static int32_t coe_mgbe_parse_dt_dmachans(struct coe_state * const s,
 	return ret;
 }
 
+static void coe_destroy_channels(struct platform_device *pdev)
+{
+	struct coe_channel_state *ch;
+	u32 ch_id;
+
+	mutex_lock(&coe_channels_arr_lock);
+	for (ch_id = 0U; ch_id < ARRAY_SIZE(coe_channels_arr); ch_id++) {
+		ch = &coe_channels_arr[ch_id];
+
+		/*
+		 * Find all channel devices that are children of the platform
+		 * device being removed and destroy them. This cleans up all
+		 * channels, whether they were opened or not.
+		 */
+		if (ch->dev != NULL && ch->dev->parent == &pdev->dev) {
+			coe_channel_close(ch);
+			device_destroy(coe_channel_class, ch->devt);
+			ch->dev = NULL;
+			ch->devt = 0U;
+		}
+	}
+	mutex_unlock(&coe_channels_arr_lock);
+}
+
 static int camrtc_coe_probe(struct platform_device *pdev)
 {
 	struct coe_state *s;
@@ -1727,13 +1788,15 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 	s->mgbe_dev = camrtc_coe_get_linked_device(dev,
 					"nvidia,eth_controller", 0U);
 	if (s->mgbe_dev == NULL) {
-		return -ENOENT;
+		ret = -ENOENT;
+		goto err_put_rtcpu;
 	}
 
 	num_coe_channels = coe_mgbe_parse_dt_dmachans(s, dma_chans_arr,
 						      ARRAY_SIZE(dma_chans_arr));
 	if (num_coe_channels < 0) {
-		return num_coe_channels;
+		ret = num_coe_channels;
+		goto err_put_devices;
 	}
 
 	platform_set_drvdata(pdev, s);
@@ -1746,7 +1809,7 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 	ret = register_netdevice_notifier(&s->netdev_nb);
 	if (ret != 0) {
 		dev_err(dev, "CoE failed to register notifier\n");
-		return ret;
+		goto err_put_devices;
 	}
 
 	/* TODO take from DT?  */
@@ -1763,7 +1826,8 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 
 	if (s->rx_ring_size > COE_MGBE_MAX_RXDESC_NUM) {
 		dev_err(dev, "Invalid Rx ring size %u\n", s->rx_ring_size);
-		return -ENOSPC;
+		ret = -ENOSPC;
+		goto err_unregister_notifier;
 	}
 
 	if (s->rx_pktinfo_ring_size != 256U &&
@@ -1771,21 +1835,36 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 	    s->rx_pktinfo_ring_size != 2048U &&
 	    s->rx_pktinfo_ring_size != 4096U) {
 		dev_err(dev, "Invalid pktinfo ring size %u\n", s->rx_pktinfo_ring_size);
-		return -ENOSPC;
+		ret = -ENOSPC;
+		goto err_unregister_notifier;
 	}
 
 	if (s->mgbe_id >= MAX_NUM_COE_DEVICES) {
 		dev_err(dev, "Invalid MGBE ID %u\n", s->mgbe_id);
-		return -EBADFD;
+		ret = -EBADFD;
+		goto err_unregister_notifier;
 	}
+
+	mutex_lock(&coe_device_list_lock);
+	list_for_each_entry(check_state, &coe_device_list, device_entry) {
+		if (s->mgbe_id == check_state->mgbe_id) {
+			mutex_unlock(&coe_device_list_lock);
+			dev_err(dev, "Device already exists for mgbe_id=%u\n",
+				s->mgbe_id);
+			ret = -EEXIST;
+			goto err_unregister_notifier;
+		}
+	}
+	list_add(&s->device_entry, &coe_device_list);
+	mutex_unlock(&coe_device_list_lock);
 
 	ret = coe_mgbe_init_pdmas(s);
 	if (ret)
-		return ret;
+		goto err_del_from_list;
 
 	ret = coe_alloc_rx_descr_mem_area(s);
 	if (ret)
-		return ret;
+		goto err_del_from_list;
 
 	for (u32 ch = 0U; ch < num_coe_channels; ch++) {
 		u32 arr_idx;
@@ -1798,17 +1877,18 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 		if (chan == NULL) {
 			dev_err(dev, "No free channel slots ch=%u\n", ch);
 			mutex_unlock(&coe_channels_arr_lock);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto err_destroy_channels;
 		}
 
 		chan->devt = MKDEV(coe_channel_major, arr_idx);
-		chan->dev = device_create(coe_channel_class, NULL, chan->devt, NULL,
+		chan->dev = device_create(coe_channel_class, dev, chan->devt, NULL,
 					"coe-chan-%u", arr_idx);
 		if (IS_ERR(chan->dev)) {
 			ret = PTR_ERR(chan->dev);
 			chan->dev = NULL;
 			mutex_unlock(&coe_channels_arr_lock);
-			return ret;
+			goto err_destroy_channels;
 		}
 
 		mutex_unlock(&coe_channels_arr_lock);
@@ -1833,52 +1913,53 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 			 dma_chans_arr[ch], s->vdma2pdma_map[dma_chans_arr[ch]]);
 	}
 
-	mutex_lock(&coe_device_list_lock);
-	list_for_each_entry(check_state, &coe_device_list, device_entry) {
-		if (s->mgbe_id == check_state->mgbe_id) {
-			mutex_unlock(&coe_device_list_lock);
-			dev_err(dev, "Device already exists for mgbe_id=%u\n",
-				s->mgbe_id);
-			return -EEXIST;
-		}
-	}
-
-	list_add(&s->device_entry, &coe_device_list);
-	mutex_unlock(&coe_device_list_lock);
-
 	dev_info(dev, "Camera Over Eth controller %s num_chans=%u IRQ=%u\n",
 		 dev_name(s->mgbe_dev), num_coe_channels, s->mgbe_irq_id);
 
 	return 0;
+
+err_destroy_channels:
+	coe_destroy_channels(pdev);
+	dma_unmap_sg(s->mgbe_dev, s->rx_pktinfo_mgbe_sgt.sgl,
+		     s->rx_pktinfo_mgbe_sgt.orig_nents, DMA_BIDIRECTIONAL);
+	sg_free_table(&s->rx_pktinfo_mgbe_sgt);
+	/* Decrement global memory reference count on error */
+	coe_free_rx_descr_mem_area();
+err_del_from_list:
+	mutex_lock(&coe_device_list_lock);
+	list_del(&s->device_entry);
+	mutex_unlock(&coe_device_list_lock);
+err_unregister_notifier:
+	unregister_netdevice_notifier(&s->netdev_nb);
+err_put_devices:
+	put_device(s->mgbe_dev);
+err_put_rtcpu:
+	put_device(s->rtcpu_dev);
+	return ret;
 }
 
 static int camrtc_coe_remove(struct platform_device *pdev)
 {
 	struct coe_state * const s = platform_get_drvdata(pdev);
-	struct coe_channel_state *ch;
-	struct coe_channel_state *ch_tmp;
 
 	dev_dbg(&pdev->dev, "tegra-camrtc-capture-coe remove\n");
 
+	coe_destroy_channels(pdev);
+
 	unregister_netdevice_notifier(&s->netdev_nb);
-
-	mutex_lock(&coe_channels_arr_lock);
-
-	list_for_each_entry_safe(ch, ch_tmp, &s->channels, list_entry) {
-		coe_channel_close(ch);
-		if (ch->dev != NULL)
-			device_destroy(coe_channel_class, ch->devt);
-		ch->dev = NULL;
-		ch->devt = 0U;
-	}
-
-	mutex_unlock(&coe_channels_arr_lock);
 
 	if (s->rx_pktinfo_mgbe_sgt.sgl != NULL) {
 		dma_unmap_sg(s->mgbe_dev, s->rx_pktinfo_mgbe_sgt.sgl,
 			     s->rx_pktinfo_mgbe_sgt.orig_nents, DMA_BIDIRECTIONAL);
 		sg_free_table(&s->rx_pktinfo_mgbe_sgt);
 	}
+
+	mutex_lock(&coe_device_list_lock);
+	list_del(&s->device_entry);
+	mutex_unlock(&coe_device_list_lock);
+
+	/* Decrement reference count and free global memory if last device */
+	coe_free_rx_descr_mem_area();
 
 	if (s->mgbe_dev != NULL) {
 		put_device(s->mgbe_dev);
@@ -1940,6 +2021,10 @@ static int __init capture_coe_init(void)
 
 static void __exit capture_coe_exit(void)
 {
+	platform_driver_unregister(&capture_coe_driver);
+
+	/* Clean up any remaining global resources if they still exist */
+	mutex_lock(&coe_device_list_lock);
 	if (g_rx_descr_mem_area != NULL) {
 		const size_t alloc_size = COE_TOTAL_RXDESCR_MEM_SIZE;
 
@@ -1949,17 +2034,25 @@ static void __exit capture_coe_exit(void)
 		g_rx_descr_mem_area = NULL;
 		g_rtcpu_dev = NULL;
 	}
+	/* Reset reference count for clean module reload */
+	g_rx_descr_mem_refcount = 0;
+	mutex_unlock(&coe_device_list_lock);
 
+	/* Clean up any remaining channel devices in the global array */
+	mutex_lock(&coe_channels_arr_lock);
 	for (u32 ch_id = 0U; ch_id < ARRAY_SIZE(coe_channels_arr); ch_id++) {
 		struct coe_channel_state * const ch = &coe_channels_arr[ch_id];
 
-		if (ch->dev != NULL)
+		if (ch->dev != NULL) {
 			device_destroy(coe_channel_class, ch->devt);
-		ch->dev = NULL;
-		ch->devt = 0U;
+			ch->dev = NULL;
+			ch->devt = 0U;
+		}
+		/* Reset all channel state for clean module reload */
+		memset(ch, 0, sizeof(*ch));
 	}
+	mutex_unlock(&coe_channels_arr_lock);
 
-	platform_driver_unregister(&capture_coe_driver);
 	unregister_chrdev(coe_channel_major, "capture-coe-channel");
 	class_destroy(coe_channel_class);
 }
