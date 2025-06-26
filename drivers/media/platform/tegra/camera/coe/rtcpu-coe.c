@@ -66,6 +66,12 @@
 /** Maximum number of descriptors in a Rx packet info ring for a single channel */
 #define COE_MGBE_MAX_PKTINFO_NUM	4096U
 
+/** Buffer offset field in CoE header is 28 bits wide (bits 0-27) */
+#define COE_MGBE_MAX_BUF_SIZE		(1U << 28U)
+
+/** Mask for the Rx frame buffer address. Must be 4K aligned. */
+#define COE_MGBE_RXFRAMEBUF_MASK	0x0000FFFFFFFFF000ULL
+
 /**
  * @brief Invalid CoE channel ID; the channel is not initialized.
  */
@@ -73,7 +79,7 @@
 
 #define CAPTURE_COE_CHAN_INVALID_HW_ID	U8_C(0xFF)
 
-#define COE_CHAN_CAPTURE_QUEUE_LEN	32U
+#define COE_CHAN_CAPTURE_QUEUE_LEN	16U
 /** Max number of physical DMA channel for each Eth controller */
 #define COE_MGBE_MAX_NUM_PDMA_CHANS	10U
 #define COE_MGBE_PDMA_CHAN_INVALID	COE_MGBE_MAX_NUM_PDMA_CHANS
@@ -502,6 +508,7 @@ static int coe_channel_open_on_rce(struct coe_channel_state *ch,
 	config->rxmem_size = COE_TOTAL_RXDESCR_MEM_SIZE;
 
 	config->vlan_enable = vlan_enable;
+	config->rx_queue_depth = ARRAY_SIZE(ch->capq_inhw);
 
 	mutex_lock(&ch->rce_msg_lock);
 
@@ -594,8 +601,14 @@ static int coe_ioctl_handle_capture_req(struct coe_channel_state * const ch,
 {
 	uint64_t mgbe_iova;
 	uint64_t buf_max_size;
+	uint32_t alloc_size_min;
 	int ret;
 	struct capture_common_unpins *unpins = NULL;
+
+	if (req->buf_size == 0U || req->buf_size >= COE_MGBE_MAX_BUF_SIZE) {
+		dev_err(ch->dev, "CAPTURE_REQ: bad buf size %u\n", req->buf_size);
+		return -EINVAL;
+	}
 
 	mutex_lock(&ch->capq_inhw_lock);
 
@@ -624,18 +637,41 @@ static int coe_ioctl_handle_capture_req(struct coe_channel_state * const ch,
 		goto error;
 	}
 
-	if (req->buf_size > buf_max_size) {
+	if ((mgbe_iova & ~COE_MGBE_RXFRAMEBUF_MASK) != 0U) {
+		dev_err(ch->dev, "CAPTURE_REQ: bad buf iova 0x%llx\n", mgbe_iova);
+		ret = -ERANGE;
+		goto error;
+	}
+
+	/* Hardware can limit memory access within a range of powers of two only.
+	 * Make sure DMA buffer allocation is large enough to at least cover the memory
+	 * up to the next closest power of two boundary to eliminate a risk of a malformed
+	 * incoming network packet triggerring invalid memory access.
+	 */
+	alloc_size_min = roundup_pow_of_two(req->buf_size);
+
+	if (alloc_size_min > buf_max_size) {
 		dev_err(ch->dev, "CAPTURE_REQ: capture too long %u\n", req->buf_size);
 		ret = -ENOSPC;
 		goto error;
 	}
 
+	/* Scratch buffer is used as a scratch space to receive incoming images into buffer
+	 * slots which were not yet initialized with an application image buffer pointers.
+	 * There is no way of knowing which buffer slots will be used first as it is
+	 * controlled by an external sender. Make sure scratch space is large enough to fit
+	 * an image of expected size, if needed.
+	 */
 	if (req->buf_size > ch->rx_dummy_buf.buf->size) {
 		dev_err(ch->dev, "CAPTURE_REQ: buf size > scratch buf %u\n", req->buf_size);
 		ret = -ENOSPC;
 		goto error;
 	}
 
+	/* All buffer pointer slots in CoE hardware share the same highest 32 bits of IOVA
+	 * address register.
+	 * Make sure all buffers IOVA registered by application have the same MSB 32 bits.
+	 */
 	if ((mgbe_iova >> 32U) != (ch->rx_dummy_buf.iova >> 32U)) {
 		dev_err(ch->dev, "Capture buf IOVA MSB 32 bits != scratch buf IOVA\n"
 			"0x%x != 0x%x\n",

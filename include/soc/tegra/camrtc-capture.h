@@ -872,7 +872,7 @@ struct capture_coe_channel_config {
 	/**
 	 * Numerical instance ID of an ethernet controller for the channel
 	 */
-	uint32_t mgbe_instance_id;
+	uint16_t mgbe_instance_id;
 	/**
 	 * Virtual DMA channel number for this capture channel
 	 */
@@ -885,6 +885,10 @@ struct capture_coe_channel_config {
 	 * Hardware IRQ ID which will be asserted for events on that DMA channel
 	 */
 	uint16_t mgbe_irq_num;
+	/**
+	 * Maximum number of capture requests in the requests queue [1, 16].
+	 */
+	uint16_t rx_queue_depth;
 	/**
 	 * Ethernet address of a camera module which will us the channel
 	 */
