@@ -170,6 +170,17 @@ static int nvhost_pod_target_freq(struct devfreq *df, unsigned long *freq)
 	unsigned int down_threshold;
 	int index, err;
 
+	/*
+	 * NOTE:
+	 * Since "cancel_delayed_work_sync(&devfreq->work)" is not synchronized
+	 * by the devfreq->lock mutex lock in the devfreq_monitor_stop function
+	 * in the devfreq core, the condition check here is necessary due to
+	 * out-of-order execution even though devfreq timer has stopped and the
+	 * df->governor_data is already freed in the nvhost_pod_exit handler.
+	 */
+	if (!podgov)
+		return -ENOENT;
+
 	err = devfreq_update_stats(df);
 	if (err)
 		return err;
@@ -273,10 +284,6 @@ static int nvhost_pod_init(struct devfreq *df)
 	if (err)
 		goto unregister_notifier;
 
-	if (!pm_runtime_suspended(df->dev.parent)) {
-		devfreq_monitor_start(df);
-	}
-
 	return 0;
 
 unregister_notifier:
@@ -291,7 +298,6 @@ static void nvhost_pod_exit(struct devfreq *df)
 {
 	struct podgov_data *podgov = df->governor_data;
 
-	devfreq_monitor_stop(df);
 	sysfs_remove_group(&df->dev.kobj, &dev_attr_group);
 	devfreq_unregister_notifier(df, &podgov->nb, DEVFREQ_TRANSITION_NOTIFIER);
 
@@ -320,10 +326,16 @@ static int nvhost_pod_event_handler(struct devfreq *df,
 
 	switch (event) {
 	case DEVFREQ_GOV_START:
+		mutex_lock(&df->lock);
 		ret = nvhost_pod_init(df);
+		mutex_unlock(&df->lock);
+		devfreq_monitor_start(df);
 		break;
 	case DEVFREQ_GOV_STOP:
+		devfreq_monitor_stop(df);
+		mutex_lock(&df->lock);
 		nvhost_pod_exit(df);
+		mutex_unlock(&df->lock);
 		break;
 	case DEVFREQ_GOV_UPDATE_INTERVAL:
 		devfreq_update_interval(df, (unsigned int *)data);
