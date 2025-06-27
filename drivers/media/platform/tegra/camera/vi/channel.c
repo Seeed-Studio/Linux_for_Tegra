@@ -761,11 +761,12 @@ tegra_channel_queue_setup(struct vb2_queue *vq,
 	 * of the requested image size. Although this did not harm the
 	 * flow, according to "v4l2-compliance", we need to check if
 	 * the requested size is invalid.
+	 * Printing this error as info, to avoid kernel error/warning failure.
 	 */
 	if (*nplanes) {
 		if (sizes[0] < chan->format.sizeimage) {
-			dev_err(chan->vi->dev, "sizes[0] = %d chan->format.sizeimage = %d ...\n"
-					, sizes[0], chan->format.sizeimage);
+			dev_info(chan->vi->dev, "sizes[0] = %d chan->format.sizeimage = %d, for num_planes = %d ...\n"
+					, sizes[0], chan->format.sizeimage, *nplanes);
 			return -EINVAL;
 		}
 	} else {
