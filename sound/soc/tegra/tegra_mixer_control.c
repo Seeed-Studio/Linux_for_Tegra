@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra_mixer_control.c - Override DAI PCM parameters
 
@@ -348,6 +348,14 @@ static void tegra_dai_fixup(struct snd_soc_dai *dai,
 		channels->min = channels->max = d_channels;
 
 	if (d_sample_bits) {
+		/*
+		 * Skip format update when S24_LE is requested and DAI sample_bits is 32.
+		 * This handles the case where dai->sample_bits represents the physical
+		 * width for S24_LE format, which is 32 bits.
+		 */
+		if (d_sample_bits == 32 && snd_mask_test(mask, SNDRV_PCM_FORMAT_S24_LE))
+			return;
+
 		snd_mask_none(mask);
 
 		switch (d_sample_bits) {
