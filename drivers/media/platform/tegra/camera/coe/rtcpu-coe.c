@@ -63,8 +63,6 @@
 
 /** Maximum number of Rx descriptors in a Rx ring for a single channel */
 #define COE_MGBE_MAX_RXDESC_NUM		16384U
-/** Maximum number of descriptors in a Rx packet info ring for a single channel */
-#define COE_MGBE_MAX_PKTINFO_NUM	4096U
 
 /** Buffer offset field in CoE header is 28 bits wide (bits 0-27) */
 #define COE_MGBE_MAX_BUF_SIZE		(1U << 28U)
@@ -86,14 +84,14 @@
 
 /** Total max size of all Rx descriptors rings for all possible channels */
 #define COE_TOTAL_RXDESCR_MEM_SIZE	roundup_pow_of_two( \
-	(COE_MGBE_MAX_RXDESC_NUM * MAX_ACTIVE_COE_CHANNELS * MGBE_RXDESC_SIZE) + \
-	 (COE_MGBE_MAX_PKTINFO_NUM * COE_MGBE_MAX_NUM_PDMA_CHANS * MAX_NUM_COE_DEVICES * \
-	  MGBE_PKTINFO_DESC_SIZE))
+	(COE_MGBE_MAX_RXDESC_NUM * MAX_ACTIVE_COE_CHANNELS * MGBE_RXDESC_SIZE))
 
 /** State associated with a physical DMA channel of an Eth controller */
 struct coe_pdma_state {
-	/* Rx packet info memory DMA address for MGBE engine */
-	dma_addr_t rx_pktinfo_dma_mgbe;
+	/* Virtual pointer to Eth packet info memory */
+	void *rx_pktinfo;
+	/** MGBE DMA mapping of a memory area for Rx packet info descriptors */
+	struct sg_table pktinfo_mgbe_sgt;
 	/* Rx packet info memory DMA address for RCE engine */
 	dma_addr_t rx_pktinfo_dma_rce;
 };
@@ -122,9 +120,6 @@ struct coe_state {
 	u16 rx_ring_size;
 	/* Number of Rx Packet Info descriptors */
 	u16 rx_pktinfo_ring_size;
-
-	/** MGBE DMA mapping of a memory area for Rx descriptors */
-	struct sg_table rx_pktinfo_mgbe_sgt;
 
 	/* Bitmap indicating which DMA channels of the device are used for camera */
 	DECLARE_BITMAP(dmachans_map, MAX_HW_CHANS_PER_DEVICE);
@@ -498,7 +493,8 @@ static int coe_channel_open_on_rce(struct coe_channel_state *ch,
 	config->rx_pkthdr_iova_mgbe = ch->rx_pkt_hdrs_dma_mgbe;
 	config->rx_pkthdr_mem_size = ch->parent->rx_ring_size * COE_MAX_PKT_HEADER_SIZE;
 
-	config->rx_pktinfo_iova_mgbe = ch->parent->pdmas[ch->pdma_id].rx_pktinfo_dma_mgbe;
+	config->rx_pktinfo_iova_mgbe =
+		sg_dma_address(ch->parent->pdmas[ch->pdma_id].pktinfo_mgbe_sgt.sgl);
 	config->rx_pktinfo_iova_rce = ch->parent->pdmas[ch->pdma_id].rx_pktinfo_dma_rce;
 	config->rx_pktinfo_mem_size = ch->parent->rx_pktinfo_ring_size * MGBE_PKTINFO_DESC_SIZE;
 
@@ -897,7 +893,8 @@ coe_ioctl_handle_setup_channel(struct coe_channel_state * const ch,
 	}
 
 	pdma_chan = parent->vdma2pdma_map[dma_chan];
-	if (pdma_chan >= ARRAY_SIZE(parent->pdmas)) {
+	if ((pdma_chan >= ARRAY_SIZE(parent->pdmas)) ||
+	    (parent->pdmas[pdma_chan].rx_pktinfo == NULL)) {
 		dev_err(&parent->pdev->dev, "Bad PDMA chan %u\n", pdma_chan);
 		put_device(find_dev);
 		return -EFAULT;
@@ -1452,7 +1449,7 @@ static struct device *camrtc_coe_get_linked_device(
 	return &pdev->dev;
 }
 
-static int coe_mgbe_init_pdmas(struct coe_state * const s)
+static int coe_parse_dt_pdma_info(struct coe_state * const s)
 {
 	struct device_node *vm_node;
 	struct device_node *temp;
@@ -1542,12 +1539,6 @@ static int coe_alloc_rx_descr_mem_area(struct coe_state * const s)
 {
 	const size_t alloc_size = COE_TOTAL_RXDESCR_MEM_SIZE;
 	int ret;
-	dma_addr_t mgbe_addr;
-	dma_addr_t rce_addr;
-	dma_addr_t alloc_align_offset;
-	dma_addr_t pib_base_offset;
-	size_t pktinfo_size_per_mgbe;
-	dma_addr_t pib_start_offset;
 
 	mutex_lock(&coe_device_list_lock);
 
@@ -1609,51 +1600,6 @@ static int coe_alloc_rx_descr_mem_area(struct coe_state * const s)
 	}
 
 	mutex_unlock(&coe_device_list_lock);
-
-	/* Offset from the beginning of allocated Rx descr area where RCE MPU region starts */
-	alloc_align_offset = ALIGN(g_rxdesc_mem_dma_rce, alloc_size) - g_rxdesc_mem_dma_rce;
-	/* Offset from start of Rx mem area where PktInfo bufs portion begins */
-	pib_base_offset = alloc_align_offset +
-		(MAX_ACTIVE_COE_CHANNELS * COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE);
-	pktinfo_size_per_mgbe = COE_MGBE_MAX_PKTINFO_NUM *
-		COE_MGBE_MAX_NUM_PDMA_CHANS * MGBE_PKTINFO_DESC_SIZE;
-	/* Offset to Rx mem aread dedicated to Rx PackeInfo bufs for the specific MGBE ID */
-	pib_start_offset = pib_base_offset + s->mgbe_id * pktinfo_size_per_mgbe;
-
-	ret = coe_helper_map_rcebuf_to_dev(s->mgbe_dev, &s->rx_pktinfo_mgbe_sgt,
-					   pib_start_offset, pktinfo_size_per_mgbe);
-	if (ret) {
-		dev_err(&s->pdev->dev, "Failed to map Pktinfo ret=%d\n", ret);
-		/* Decrement refcount on failure */
-		mutex_lock(&coe_device_list_lock);
-		g_rx_descr_mem_refcount--;
-		if (g_rx_descr_mem_refcount <= 0) {
-			sg_free_table(&g_rxdesc_rce_sgt);
-			dma_free_coherent(g_rtcpu_dev, alloc_size,
-					  g_rx_descr_mem_area, g_rxdesc_mem_dma_rce);
-			g_rx_descr_mem_area = NULL;
-			g_rtcpu_dev = NULL;
-			g_rx_descr_mem_refcount = 0;
-		}
-		mutex_unlock(&coe_device_list_lock);
-		return ret;
-	}
-
-	mgbe_addr = sg_dma_address(s->rx_pktinfo_mgbe_sgt.sgl);
-	rce_addr = g_rxdesc_mem_dma_rce + pib_start_offset;
-
-	dev_info(&s->pdev->dev, "Rx pktinfo MGBE addr=0x%llx nentr=%u\n",
-		 mgbe_addr, s->rx_pktinfo_mgbe_sgt.nents);
-
-	/* Initialize addresses for all Physical DMA channels */
-	for (u32 pdma_id = 0U; pdma_id < ARRAY_SIZE(s->pdmas); pdma_id++) {
-		struct coe_pdma_state * const pdma = &s->pdmas[pdma_id];
-
-		pdma->rx_pktinfo_dma_rce = rce_addr;
-		pdma->rx_pktinfo_dma_mgbe = mgbe_addr;
-		rce_addr += COE_MGBE_MAX_PKTINFO_NUM * MGBE_PKTINFO_DESC_SIZE;
-		mgbe_addr += COE_MGBE_MAX_PKTINFO_NUM * MGBE_PKTINFO_DESC_SIZE;
-	}
 
 	return 0;
 }
@@ -1763,6 +1709,140 @@ static void coe_destroy_channels(struct platform_device *pdev)
 	mutex_unlock(&coe_channels_arr_lock);
 }
 
+/**
+ * Calculate total size of contiguous DMA memory in scatterlist
+ * @sgl: scatterlist to examine
+ * @nents: number of entries in scatterlist
+ *
+ * Contiguous means that for every entry in scatterlist,
+ * sg_dma_address(sg) + sg_dma_len(sg) of current entry must be equal to
+ * sg_dma_address(sg) of the next element.
+ *
+ * Returns: size of contiguous memory region starting from first entry,
+ *          0 if scatterlist is empty or invalid
+ */
+static size_t coe_calc_contiguous_dma_size(struct scatterlist *sgl, unsigned int nents)
+{
+	struct scatterlist *sg;
+	size_t total_size = 0;
+	dma_addr_t next_addr;
+	unsigned int i;
+
+	if (!sgl || nents == 0)
+		return 0;
+
+	for_each_sg(sgl, sg, nents, i) {
+		if (i > 0 && sg_dma_address(sg) != next_addr)
+			break;
+
+		total_size += sg_dma_len(sg);
+		next_addr = sg_dma_address(sg) + sg_dma_len(sg);
+	}
+
+	return total_size;
+}
+
+/**
+ * Deallocate resources for all enabled Physical DMA channels
+ * @s: CoE state
+ */
+static void coe_pdma_dealloc_resources(struct coe_state * const s)
+{
+	for (u32 pdma_id = 0U; pdma_id < ARRAY_SIZE(s->pdmas); pdma_id++) {
+		struct coe_pdma_state * const pdma = &s->pdmas[pdma_id];
+
+		if (pdma->rx_pktinfo == NULL)
+			continue;
+
+		if (pdma->pktinfo_mgbe_sgt.sgl != NULL) {
+			dma_unmap_sg(s->mgbe_dev, pdma->pktinfo_mgbe_sgt.sgl,
+				     pdma->pktinfo_mgbe_sgt.orig_nents,
+				     DMA_BIDIRECTIONAL);
+			sg_free_table(&pdma->pktinfo_mgbe_sgt);
+		}
+
+		dma_free_coherent(s->rtcpu_dev,
+				 s->rx_pktinfo_ring_size * MGBE_PKTINFO_DESC_SIZE,
+				pdma->rx_pktinfo, pdma->rx_pktinfo_dma_rce);
+		pdma->rx_pktinfo = NULL;
+	}
+}
+
+/**
+ * Allocate resources for all enabled Physical DMA channels
+ * @s: CoE state
+ * @pdmachans_map: Bitmap indicating which PDMA channels of the device are active
+ *
+ * Returns: 0 on success, negative error code on failure
+ */
+static int coe_pdma_alloc_resources(struct coe_state * const s,
+				    const unsigned long * const pdmachans_map)
+{
+	int ret;
+	const size_t ring_size = s->rx_pktinfo_ring_size * MGBE_PKTINFO_DESC_SIZE;
+
+	/* Initialize addresses for all enabled Physical DMA channels */
+	for (u32 pdma_id = 0U; pdma_id < ARRAY_SIZE(s->pdmas); pdma_id++) {
+		struct coe_pdma_state * const pdma = &s->pdmas[pdma_id];
+		size_t real_size;
+
+		if (!test_bit(pdma_id, pdmachans_map))
+			continue;
+
+		pdma->rx_pktinfo = dma_alloc_coherent(s->rtcpu_dev,
+					ring_size,
+					&pdma->rx_pktinfo_dma_rce,
+					GFP_KERNEL | __GFP_ZERO);
+		if (pdma->rx_pktinfo == NULL) {
+			dev_err(&s->pdev->dev, "Pktinfo alloc failed PDMA%u\n", pdma_id);
+			return -ENOMEM;
+		}
+
+		ret = dma_get_sgtable(s->rtcpu_dev, &pdma->pktinfo_mgbe_sgt,
+				      pdma->rx_pktinfo, pdma->rx_pktinfo_dma_rce,
+				      ring_size);
+		if (ret < 0) {
+			dma_free_coherent(s->rtcpu_dev, ring_size,
+				      pdma->rx_pktinfo, pdma->rx_pktinfo_dma_rce);
+			pdma->rx_pktinfo = NULL;
+			dev_err(&s->pdev->dev,
+				"Pktinfo get_sgtable failed PDMA%u ret=%d\n",
+				pdma_id, ret);
+			return ret;
+		}
+
+		ret = dma_map_sg(s->mgbe_dev, pdma->pktinfo_mgbe_sgt.sgl,
+				 pdma->pktinfo_mgbe_sgt.orig_nents,
+				 DMA_BIDIRECTIONAL);
+		if (ret <= 0) {
+			sg_free_table(&pdma->pktinfo_mgbe_sgt);
+			dma_free_coherent(s->rtcpu_dev, ring_size,
+				      pdma->rx_pktinfo, pdma->rx_pktinfo_dma_rce);
+			pdma->rx_pktinfo = NULL;
+			dev_err(&s->pdev->dev, "Pktinfo map_sg failed PDMA%u ret=%d\n",
+				pdma_id, ret);
+			return -ENOEXEC;
+		}
+
+		pdma->pktinfo_mgbe_sgt.nents = ret;
+
+		/* MGBE can only handle contiguous PKTINFO ring buffer */
+		real_size = coe_calc_contiguous_dma_size(pdma->pktinfo_mgbe_sgt.sgl,
+						pdma->pktinfo_mgbe_sgt.nents);
+
+		if (real_size < ring_size) {
+			dev_err(&s->pdev->dev,
+				"Pktinfo non-contiguous PDMA%u\n", pdma_id);
+			/* No need to clean up as this PDMA will be released in
+			 * coe_pdma_dealloc_resources()
+			 */
+			return -ENOMEM;
+		}
+	}
+
+	return 0;
+}
+
 static int camrtc_coe_probe(struct platform_device *pdev)
 {
 	struct coe_state *s;
@@ -1771,6 +1851,8 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 	u32 dma_chans_arr[MAX_HW_CHANS_PER_DEVICE];
 	int num_coe_channels;
 	const struct coe_state *check_state;
+	/* Bitmap indicating which PDMA channels of the device are used for camera */
+	DECLARE_BITMAP(pdmachans_map, COE_MGBE_MAX_NUM_PDMA_CHANS);
 
 	dev_dbg(dev, "tegra-camrtc-capture-coe probe\n");
 
@@ -1858,7 +1940,7 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 	list_add(&s->device_entry, &coe_device_list);
 	mutex_unlock(&coe_device_list_lock);
 
-	ret = coe_mgbe_init_pdmas(s);
+	ret = coe_parse_dt_pdma_info(s);
 	if (ret)
 		goto err_del_from_list;
 
@@ -1908,10 +1990,15 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 		chan->rx_desc_dma_rce = g_rxdesc_mem_dma_rce + offset;
 
 		set_bit(dma_chans_arr[ch], s->dmachans_map);
+		set_bit(s->vdma2pdma_map[dma_chans_arr[ch]], pdmachans_map);
 
 		dev_info(&s->pdev->dev, "Ch%u->PDMA%u\n",
 			 dma_chans_arr[ch], s->vdma2pdma_map[dma_chans_arr[ch]]);
 	}
+
+	ret = coe_pdma_alloc_resources(s, pdmachans_map);
+	if (ret)
+		goto err_destroy_channels;
 
 	dev_info(dev, "Camera Over Eth controller %s num_chans=%u IRQ=%u\n",
 		 dev_name(s->mgbe_dev), num_coe_channels, s->mgbe_irq_id);
@@ -1919,10 +2006,8 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 	return 0;
 
 err_destroy_channels:
+	coe_pdma_dealloc_resources(s);
 	coe_destroy_channels(pdev);
-	dma_unmap_sg(s->mgbe_dev, s->rx_pktinfo_mgbe_sgt.sgl,
-		     s->rx_pktinfo_mgbe_sgt.orig_nents, DMA_BIDIRECTIONAL);
-	sg_free_table(&s->rx_pktinfo_mgbe_sgt);
 	/* Decrement global memory reference count on error */
 	coe_free_rx_descr_mem_area();
 err_del_from_list:
@@ -1944,20 +2029,14 @@ static int camrtc_coe_remove(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "tegra-camrtc-capture-coe remove\n");
 
-	coe_destroy_channels(pdev);
-
 	unregister_netdevice_notifier(&s->netdev_nb);
-
-	if (s->rx_pktinfo_mgbe_sgt.sgl != NULL) {
-		dma_unmap_sg(s->mgbe_dev, s->rx_pktinfo_mgbe_sgt.sgl,
-			     s->rx_pktinfo_mgbe_sgt.orig_nents, DMA_BIDIRECTIONAL);
-		sg_free_table(&s->rx_pktinfo_mgbe_sgt);
-	}
+	coe_destroy_channels(pdev);
 
 	mutex_lock(&coe_device_list_lock);
 	list_del(&s->device_entry);
 	mutex_unlock(&coe_device_list_lock);
 
+	coe_pdma_dealloc_resources(s);
 	/* Decrement reference count and free global memory if last device */
 	coe_free_rx_descr_mem_area();
 
