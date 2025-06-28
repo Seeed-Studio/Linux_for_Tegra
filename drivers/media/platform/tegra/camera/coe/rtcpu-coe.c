@@ -28,6 +28,8 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/dma-buf.h>
+#include <linux/scatterlist.h>
+#include <linux/err.h>
 
 #include <linux/tegra-capture-ivc.h>
 #include <soc/tegra/nvethernet-public.h>
@@ -38,7 +40,6 @@
 #include <media/fusa-capture/capture-common.h>
 
 #define ETHER_PACKET_HDR_SIZE	64U
-
 
 /** Helper macros to get the lower and higher 32bits of 64bit address */
 #define L32(data)       ((uint32_t)((data) & 0xFFFFFFFFU))
@@ -81,10 +82,6 @@
 /** Max number of physical DMA channel for each Eth controller */
 #define COE_MGBE_MAX_NUM_PDMA_CHANS	10U
 #define COE_MGBE_PDMA_CHAN_INVALID	COE_MGBE_MAX_NUM_PDMA_CHANS
-
-/** Total max size of all Rx descriptors rings for all possible channels */
-#define COE_TOTAL_RXDESCR_MEM_SIZE	roundup_pow_of_two( \
-	(COE_MGBE_MAX_RXDESC_NUM * MAX_ACTIVE_COE_CHANNELS * MGBE_RXDESC_SIZE))
 
 /** State associated with a physical DMA channel of an Eth controller */
 struct coe_pdma_state {
@@ -193,6 +190,8 @@ struct coe_channel_state {
 	/**< Completion for capture-control IVC response */
 	struct completion capture_resp_ready;
 
+	/* Virtual pointer to Rx descriptor ring memory */
+	void *rx_desc_ring_va;
 	/* Rx descriptor ring memory DMA address for MGBE engine */
 	struct sg_table rx_desc_mgbe_sgt;
 	/* Rx descriptor ring memory DMA address for RCE engine */
@@ -300,23 +299,6 @@ static struct class *coe_channel_class;
 static int coe_channel_major;
 static struct coe_channel_state coe_channels_arr[MAX_ACTIVE_COE_CHANNELS];
 static DEFINE_MUTEX(coe_channels_arr_lock);
-
-/* RCE CPU manages Rx descriptors ring. RCE has Dcache and all access to Rx
- * descriptors would require cache management on RCE side.
- * Since single descriptor may not fill entire CACHELINE_SIZE - it's possible
- * that descriptors are unintentianally correupted when RCE handles other
- * descriptors on the same cache line.
- * To avoid that RCE would use unacched access to descriptors. However, uncached
- * mapping region can be configured only in chunks of power of two sizes and
- * number of such mapping regions is very limited.
- * Allocate a single large buffer to contain descriptor rings for all possible
- * channels.
- */
-static struct device *g_rtcpu_dev = NULL;
-static void *g_rx_descr_mem_area = NULL;
-static dma_addr_t g_rxdesc_mem_dma_rce;
-static struct sg_table g_rxdesc_rce_sgt;
-static int32_t g_rx_descr_mem_refcount;
 
 static inline struct coe_channel_state *coe_channel_arr_find_free(u32 * const arr_idx)
 {
@@ -500,9 +482,6 @@ static int coe_channel_open_on_rce(struct coe_channel_state *ch,
 
 	config->dummy_buf_dma = ch->rx_dummy_buf.iova;
 	config->dummy_buf_dma_size = ch->rx_dummy_buf.buf->size;
-
-	config->rxmem_base = g_rxdesc_mem_dma_rce;
-	config->rxmem_size = COE_TOTAL_RXDESCR_MEM_SIZE;
 
 	config->vlan_enable = vlan_enable;
 	config->rx_queue_depth = ARRAY_SIZE(ch->capq_inhw);
@@ -763,75 +742,110 @@ static int coe_ioctl_handle_capture_status(struct coe_channel_state * const ch,
 	return 0;
 }
 
-static int coe_helper_map_rcebuf_to_dev(struct device * const dev,
-					struct sg_table * const sgt,
-					const size_t map_offset,
-					const size_t map_size)
+/**
+ * Calculate total size of contiguous DMA memory in scatterlist
+ * @sgl: scatterlist to examine
+ * @nents: number of entries in scatterlist
+ *
+ * Contiguous means that for every entry in scatterlist,
+ * sg_dma_address(sg) + sg_dma_len(sg) of current entry must be equal to
+ * sg_dma_address(sg) of the next element.
+ *
+ * Returns: size of contiguous memory region starting from first entry,
+ *          0 if scatterlist is empty or invalid
+ */
+static size_t coe_calc_contiguous_dma_size(struct scatterlist *sgl, unsigned int nents)
 {
 	struct scatterlist *sg;
-	u32 i;
-	int ret;
-	size_t remaining;
+	size_t total_size = 0;
+	dma_addr_t next_addr;
+	unsigned int i;
 
-	ret = sg_alloc_table(sgt, 1U, GFP_KERNEL);
-	if (ret) {
-		dev_err(dev, "sg_alloc_table failed ret=%d\n", ret);
-		return ret;
-	}
+	if (!sgl || nents == 0)
+		return 0;
 
-	remaining = map_offset;
-	for_each_sg(g_rxdesc_rce_sgt.sgl, sg, g_rxdesc_rce_sgt.orig_nents, i) {
-		if (sg->length > remaining) {
-			const size_t start = remaining;
-			const size_t sg_size = sg->length - start;
-
-			/* For now support only the case when entire per-MGBE pktinfo
-			 SG is located in one sg entry */
-			if (sg_size < map_size) {
-				dev_err(dev,
-					"Not enough space for mapping len=%zu\n", sg_size);
-				sg_free_table(sgt);
-				return -ENOSPC;
-			}
-
-			sg_set_page(&sgt->sgl[0], sg_page(sg), map_size, sg->offset + start);
+	for_each_sg(sgl, sg, nents, i) {
+		if (i > 0 && sg_dma_address(sg) != next_addr)
 			break;
-		}
 
-		remaining -= sg->length;
+		total_size += sg_dma_len(sg);
+		next_addr = sg_dma_address(sg) + sg_dma_len(sg);
 	}
 
-	ret = dma_map_sg(dev, sgt->sgl, sgt->orig_nents, DMA_BIDIRECTIONAL);
-	if (ret <= 0) {
-		dev_err(dev, "dma_map_sg failed ret=%d\n", ret);
-		sg_free_table(sgt);
-		return -ENOEXEC;
-	}
-
-	sgt->nents = ret;
-
-	dma_sync_sg_for_device(dev, sgt->sgl, sgt->nents, DMA_BIDIRECTIONAL);
-
-	return 0;
+	return total_size;
 }
 
-static int coe_chan_map_descr_to_mgbe(struct coe_channel_state * const ch)
+static void coe_unmap_and_free_dma_buf(
+	struct coe_state * const s,
+	size_t size,
+	void *va,
+	dma_addr_t dma_handle,
+	struct sg_table *sgt)
 {
-	const size_t rxring_size_per_chan = COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE;
-	const size_t rxring_start_offset = MINOR(ch->devt) * rxring_size_per_chan;
-	int ret;
-
-	ret = coe_helper_map_rcebuf_to_dev(ch->parent->mgbe_dev, &ch->rx_desc_mgbe_sgt,
-					   rxring_start_offset, rxring_size_per_chan);
-	if (ret) {
-		dev_err(ch->dev, "Failed to map Rx descr ret=%d\n", ret);
-		return ret;
+	if (sgt->sgl) {
+		dma_unmap_sg(s->mgbe_dev, sgt->sgl, sgt->orig_nents, DMA_BIDIRECTIONAL);
+		sg_free_table(sgt);
 	}
 
-	dev_info(ch->dev, "Rx descr MGBE addr=0x%llx nentr=%u\n",
-		 sg_dma_address(ch->rx_desc_mgbe_sgt.sgl), ch->rx_desc_mgbe_sgt.nents);
+	if (va)
+		dma_free_coherent(s->rtcpu_dev, size, va, dma_handle);
+}
 
-	return 0;
+static void *coe_alloc_and_map_dma_buf(
+	struct coe_state * const s,
+	size_t size,
+	dma_addr_t *dma_handle,
+	struct sg_table *sgt)
+{
+	void *va;
+	int ret;
+	size_t real_size;
+
+	va = dma_alloc_coherent(s->rtcpu_dev, size, dma_handle, GFP_KERNEL | __GFP_ZERO);
+	if (!va)
+		return ERR_PTR(-ENOMEM);
+
+	ret = dma_get_sgtable(s->rtcpu_dev, sgt, va, *dma_handle, size);
+	if (ret < 0) {
+		dev_err(&s->pdev->dev, "Failed to get SGT ret=%d\n", ret);
+		goto err_free_dma;
+	}
+
+	ret = dma_map_sg(s->mgbe_dev, sgt->sgl, sgt->orig_nents, DMA_BIDIRECTIONAL);
+	if (ret <= 0) {
+		dev_err(&s->pdev->dev, "Failed to map SG table ret=%d\n", ret);
+		ret = ret ? : -EFAULT;
+		goto err_free_sgt;
+	}
+	sgt->nents = ret;
+
+	real_size = coe_calc_contiguous_dma_size(sgt->sgl, sgt->nents);
+	if (real_size < size) {
+		dev_err(&s->pdev->dev, "buffer not contiguous\n");
+		ret = -ENOMEM;
+		goto err_unmap_sg;
+	}
+
+	return va;
+
+err_unmap_sg:
+	dma_unmap_sg(s->mgbe_dev, sgt->sgl, sgt->orig_nents, DMA_BIDIRECTIONAL);
+err_free_sgt:
+	sg_free_table(sgt);
+err_free_dma:
+	dma_free_coherent(s->rtcpu_dev, size, va, *dma_handle);
+	return ERR_PTR(ret);
+}
+
+static void coe_chan_rxring_release(struct coe_channel_state * const ch)
+{
+	size_t rx_ring_alloc_size = ch->parent->rx_ring_size * MGBE_RXDESC_SIZE;
+
+	coe_unmap_and_free_dma_buf(ch->parent,
+				   rx_ring_alloc_size,
+				   ch->rx_desc_ring_va, ch->rx_desc_dma_rce,
+				   &ch->rx_desc_mgbe_sgt);
+	ch->rx_desc_ring_va = NULL;
 }
 
 static int
@@ -916,14 +930,22 @@ coe_ioctl_handle_setup_channel(struct coe_channel_state * const ch,
 	list_add(&ch->list_entry, &parent->channels);
 	reinit_completion(&ch->capture_resp_ready);
 
-	ret = coe_chan_map_descr_to_mgbe(ch);
-	if (ret != 0)
-		return ret;
+	ch->rx_desc_ring_va = coe_alloc_and_map_dma_buf(ch->parent,
+					 ch->parent->rx_ring_size * MGBE_RXDESC_SIZE,
+					 &ch->rx_desc_dma_rce,
+					 &ch->rx_desc_mgbe_sgt);
+	if (IS_ERR(ch->rx_desc_ring_va)) {
+		dev_err(ch->dev, "Failed to alloc Rx ring\n");
+		ret = PTR_ERR(ch->rx_desc_ring_va);
+		ch->rx_desc_ring_va = NULL;
+		goto err_list_del;
+	}
 
 	ch->buf_ctx = create_buffer_table(ch->parent->mgbe_dev);
 	if (ch->buf_ctx == NULL) {
 		dev_err(ch->dev, "Failed to alloc buffers table\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_unmap_ring;
 	}
 
 	g_coe_cfg.coe_enable = COE_ENABLE;
@@ -958,26 +980,27 @@ coe_ioctl_handle_setup_channel(struct coe_channel_state * const ch,
 		GFP_KERNEL | __GFP_ZERO);
 	if (ch->rx_pkt_hdrs == NULL) {
 		dev_err(ch->dev, "Rx pkt headers alloc failed\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_destroy_buf_table;
 	}
 	ch->rx_desc_shdw = dma_alloc_coherent(ch->parent->rtcpu_dev,
-					      COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE,
+					      ch->parent->rx_ring_size * MGBE_RXDESC_SIZE,
 					      &ch->rx_desc_shdw_dma_rce,
 					      GFP_KERNEL);
 	if (ch->rx_desc_shdw == NULL) {
 		dev_err(ch->dev, "Rx desc shadow ring alloc failed\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_free_pkt_hdrs;
 	}
 
 	/* Pre-fill the shadow Rx desc ring with the header buffers */
 	rx_desc_shdw_ring = (struct mgbe_rx_desc *) ch->rx_desc_shdw;
-	for (uint32_t i = 0; i < COE_MGBE_MAX_RXDESC_NUM; i++) {
+	for (uint32_t i = 0; i < ch->parent->rx_ring_size; i++) {
 		rx_desc_shdw_ring[i].rdes0 = L32(ch->rx_pkt_hdrs_dma_mgbe + (i * ETHER_PACKET_HDR_SIZE));
 		rx_desc_shdw_ring[i].rdes1 = H32(ch->rx_pkt_hdrs_dma_mgbe + (i * ETHER_PACKET_HDR_SIZE));
 		rx_desc_shdw_ring[i].rdes2 = 0U;
 		rx_desc_shdw_ring[i].rdes3 = 0U;
 		rx_desc_shdw_ring[i].rdes3 |= RDES3_OWN;
-
 	}
 
 	/* pin the capture descriptor ring buffer */
@@ -986,17 +1009,44 @@ coe_ioctl_handle_setup_channel(struct coe_channel_state * const ch,
 					&ch->rx_dummy_buf);
 	if (ret < 0) {
 		dev_err(ch->dev, "Rx dummy buf map failed: %d\n", ret);
-		return ret;
+		goto err_free_rx_desc_shdw;
 	}
 
 	ret = coe_channel_open_on_rce(ch, setup->sensor_mac_addr, setup->vlan_enable);
 	if (ret)
-		return ret;
+		goto err_unpin_dummy;
 
 	dev_info(&parent->pdev->dev, "CoE chan added %s dmachan=%u num_desc=%u\n",
 		 netdev_name(ndev), ch->dma_chan, ch->parent->rx_ring_size);
 
 	return 0;
+
+err_unpin_dummy:
+	capture_common_unpin_memory(&ch->rx_dummy_buf);
+err_free_rx_desc_shdw:
+	dma_free_coherent(ch->parent->rtcpu_dev,
+			  ch->parent->rx_ring_size * MGBE_RXDESC_SIZE,
+			  ch->rx_desc_shdw,
+			  ch->rx_desc_shdw_dma_rce);
+	ch->rx_desc_shdw = NULL;
+err_free_pkt_hdrs:
+	dma_free_coherent(ch->parent->mgbe_dev,
+			  ch->parent->rx_ring_size * COE_MAX_PKT_HEADER_SIZE,
+			  ch->rx_pkt_hdrs, ch->rx_pkt_hdrs_dma_mgbe);
+	ch->rx_pkt_hdrs = NULL;
+err_destroy_buf_table:
+	destroy_buffer_table(ch->buf_ctx);
+	ch->buf_ctx = NULL;
+err_unmap_ring:
+	coe_chan_rxring_release(ch);
+err_list_del:
+	list_del(&ch->list_entry);
+	set_bit(ch->dma_chan, ch->parent->dmachans_map);
+	ch->parent = NULL;
+	ch->netdev = NULL;
+	ch->dma_chan = CAPTURE_COE_CHAN_INVALID_HW_ID;
+	put_device(find_dev);
+	return ret;
 }
 
 static long coe_fop_channel_ioctl(
@@ -1325,31 +1375,27 @@ static int coe_channel_close(struct coe_channel_state *ch)
 
 	capture_common_unpin_memory(&ch->rx_dummy_buf);
 
-	if (ch->rx_pkt_hdrs != NULL) {
-		dma_free_coherent(ch->parent->mgbe_dev,
-				  ch->parent->rx_ring_size * COE_MAX_PKT_HEADER_SIZE,
-				  ch->rx_pkt_hdrs, ch->rx_pkt_hdrs_dma_mgbe);
-		ch->rx_pkt_hdrs = NULL;
-	}
-
-	if (ch->rx_desc_shdw != NULL) {
-		dma_free_coherent(ch->parent->rtcpu_dev,
-				  COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE,
-				  ch->rx_desc_shdw, ch->rx_desc_shdw_dma_rce);
-	}
-
 	if (ch->netdev) {
 		put_device(&ch->netdev->dev);
 		ch->netdev = NULL;
 	}
 
-	if (ch->rx_desc_mgbe_sgt.sgl != NULL) {
-		dma_unmap_sg(ch->parent->mgbe_dev, ch->rx_desc_mgbe_sgt.sgl,
-			     ch->rx_desc_mgbe_sgt.orig_nents, DMA_BIDIRECTIONAL);
-		sg_free_table(&ch->rx_desc_mgbe_sgt);
-	}
-
 	if (ch->parent) {
+		if (ch->rx_pkt_hdrs != NULL) {
+			dma_free_coherent(ch->parent->mgbe_dev,
+					  ch->parent->rx_ring_size * COE_MAX_PKT_HEADER_SIZE,
+					  ch->rx_pkt_hdrs, ch->rx_pkt_hdrs_dma_mgbe);
+			ch->rx_pkt_hdrs = NULL;
+		}
+
+		if (ch->rx_desc_shdw != NULL) {
+			dma_free_coherent(ch->parent->rtcpu_dev,
+					  ch->parent->rx_ring_size * MGBE_RXDESC_SIZE,
+					  ch->rx_desc_shdw, ch->rx_desc_shdw_dma_rce);
+			ch->rx_desc_shdw = NULL;
+		}
+
+		coe_chan_rxring_release(ch);
 		device_move(ch->dev, NULL, DPM_ORDER_NONE);
 		set_bit(ch->dma_chan, ch->parent->dmachans_map);
 		list_del(&ch->list_entry);
@@ -1535,96 +1581,6 @@ static int coe_parse_dt_pdma_info(struct coe_state * const s)
 	return 0;
 }
 
-static int coe_alloc_rx_descr_mem_area(struct coe_state * const s)
-{
-	const size_t alloc_size = COE_TOTAL_RXDESCR_MEM_SIZE;
-	int ret;
-
-	mutex_lock(&coe_device_list_lock);
-
-	if (g_rx_descr_mem_area != NULL) {
-		if (g_rtcpu_dev != s->rtcpu_dev) {
-			mutex_unlock(&coe_device_list_lock);
-			dev_err(&s->pdev->dev, "Multiple RCE CPUs not supported\n");
-			return -ENOTSUPP;
-		}
-		/* Memory already allocated, just increment reference count */
-		g_rx_descr_mem_refcount++;
-	} else {
-		g_rx_descr_mem_area = dma_alloc_coherent(s->rtcpu_dev,
-							alloc_size,
-							&g_rxdesc_mem_dma_rce,
-							GFP_KERNEL);
-		if (g_rx_descr_mem_area == NULL) {
-			mutex_unlock(&coe_device_list_lock);
-			dev_err(&s->pdev->dev, "Failed to allocate RX descriptor memory\n");
-			return -ENOMEM;
-		}
-
-		/* Allocation must be aligned to a region size and must be power of two.
-		 * TODO in case this check fails - need to allocate twice as much
-		 * memory (alloc_size + alloc_size - 1) and then align base RCE address
-		 * to a required boundary.
-		 */
-		if (g_rxdesc_mem_dma_rce != ALIGN(g_rxdesc_mem_dma_rce, alloc_size)) {
-			dma_free_coherent(s->rtcpu_dev, alloc_size,
-					  g_rx_descr_mem_area,
-					  g_rxdesc_mem_dma_rce);
-			g_rx_descr_mem_area = NULL;
-			mutex_unlock(&coe_device_list_lock);
-			dev_err(&s->pdev->dev,
-				"Wrong RCE Rx desc addr alignment 0x%llx size=%lu\n",
-				g_rxdesc_mem_dma_rce, alloc_size);
-			return -EFAULT;
-		}
-
-		ret = dma_get_sgtable(s->rtcpu_dev, &g_rxdesc_rce_sgt,
-				g_rx_descr_mem_area,
-				g_rxdesc_mem_dma_rce,
-				alloc_size);
-		if (ret < 0) {
-			dma_free_coherent(s->rtcpu_dev, alloc_size,
-					  g_rx_descr_mem_area,
-					  g_rxdesc_mem_dma_rce);
-			g_rx_descr_mem_area = NULL;
-			mutex_unlock(&coe_device_list_lock);
-			dev_err(&s->pdev->dev, "dma_get_sgtable for RCE failed ret=%d\n", ret);
-			return ret;
-		}
-
-		g_rtcpu_dev = s->rtcpu_dev;
-		g_rx_descr_mem_refcount = 1;
-
-		dev_info(&s->pdev->dev, "Rx descr RCE addr=0x%llx len=%lu\n",
-			g_rxdesc_mem_dma_rce, alloc_size);
-	}
-
-	mutex_unlock(&coe_device_list_lock);
-
-	return 0;
-}
-
-static void coe_free_rx_descr_mem_area(void)
-{
-	mutex_lock(&coe_device_list_lock);
-
-	if (g_rx_descr_mem_area != NULL) {
-		g_rx_descr_mem_refcount--;
-		if (g_rx_descr_mem_refcount <= 0) {
-			const size_t alloc_size = COE_TOTAL_RXDESCR_MEM_SIZE;
-
-			sg_free_table(&g_rxdesc_rce_sgt);
-			dma_free_coherent(g_rtcpu_dev, alloc_size,
-					  g_rx_descr_mem_area, g_rxdesc_mem_dma_rce);
-			g_rx_descr_mem_area = NULL;
-			g_rtcpu_dev = NULL;
-			g_rx_descr_mem_refcount = 0;
-		}
-	}
-
-	mutex_unlock(&coe_device_list_lock);
-}
-
 static int32_t coe_mgbe_parse_dt_dmachans(struct coe_state * const s,
 					  u32 * const vm_chans,
 					  size_t max_num_chans)
@@ -1710,39 +1666,6 @@ static void coe_destroy_channels(struct platform_device *pdev)
 }
 
 /**
- * Calculate total size of contiguous DMA memory in scatterlist
- * @sgl: scatterlist to examine
- * @nents: number of entries in scatterlist
- *
- * Contiguous means that for every entry in scatterlist,
- * sg_dma_address(sg) + sg_dma_len(sg) of current entry must be equal to
- * sg_dma_address(sg) of the next element.
- *
- * Returns: size of contiguous memory region starting from first entry,
- *          0 if scatterlist is empty or invalid
- */
-static size_t coe_calc_contiguous_dma_size(struct scatterlist *sgl, unsigned int nents)
-{
-	struct scatterlist *sg;
-	size_t total_size = 0;
-	dma_addr_t next_addr;
-	unsigned int i;
-
-	if (!sgl || nents == 0)
-		return 0;
-
-	for_each_sg(sgl, sg, nents, i) {
-		if (i > 0 && sg_dma_address(sg) != next_addr)
-			break;
-
-		total_size += sg_dma_len(sg);
-		next_addr = sg_dma_address(sg) + sg_dma_len(sg);
-	}
-
-	return total_size;
-}
-
-/**
  * Deallocate resources for all enabled Physical DMA channels
  * @s: CoE state
  */
@@ -1750,20 +1673,17 @@ static void coe_pdma_dealloc_resources(struct coe_state * const s)
 {
 	for (u32 pdma_id = 0U; pdma_id < ARRAY_SIZE(s->pdmas); pdma_id++) {
 		struct coe_pdma_state * const pdma = &s->pdmas[pdma_id];
+		const size_t ring_size =
+			s->rx_pktinfo_ring_size * MGBE_PKTINFO_DESC_SIZE;
 
 		if (pdma->rx_pktinfo == NULL)
 			continue;
 
-		if (pdma->pktinfo_mgbe_sgt.sgl != NULL) {
-			dma_unmap_sg(s->mgbe_dev, pdma->pktinfo_mgbe_sgt.sgl,
-				     pdma->pktinfo_mgbe_sgt.orig_nents,
-				     DMA_BIDIRECTIONAL);
-			sg_free_table(&pdma->pktinfo_mgbe_sgt);
-		}
-
-		dma_free_coherent(s->rtcpu_dev,
-				 s->rx_pktinfo_ring_size * MGBE_PKTINFO_DESC_SIZE,
-				pdma->rx_pktinfo, pdma->rx_pktinfo_dma_rce);
+		coe_unmap_and_free_dma_buf(s,
+					   ring_size,
+					   pdma->rx_pktinfo,
+					   pdma->rx_pktinfo_dma_rce,
+					   &pdma->pktinfo_mgbe_sgt);
 		pdma->rx_pktinfo = NULL;
 	}
 }
@@ -1778,66 +1698,26 @@ static void coe_pdma_dealloc_resources(struct coe_state * const s)
 static int coe_pdma_alloc_resources(struct coe_state * const s,
 				    const unsigned long * const pdmachans_map)
 {
-	int ret;
 	const size_t ring_size = s->rx_pktinfo_ring_size * MGBE_PKTINFO_DESC_SIZE;
+	void *va;
 
 	/* Initialize addresses for all enabled Physical DMA channels */
 	for (u32 pdma_id = 0U; pdma_id < ARRAY_SIZE(s->pdmas); pdma_id++) {
 		struct coe_pdma_state * const pdma = &s->pdmas[pdma_id];
-		size_t real_size;
 
 		if (!test_bit(pdma_id, pdmachans_map))
 			continue;
 
-		pdma->rx_pktinfo = dma_alloc_coherent(s->rtcpu_dev,
-					ring_size,
-					&pdma->rx_pktinfo_dma_rce,
-					GFP_KERNEL | __GFP_ZERO);
-		if (pdma->rx_pktinfo == NULL) {
-			dev_err(&s->pdev->dev, "Pktinfo alloc failed PDMA%u\n", pdma_id);
-			return -ENOMEM;
+		va = coe_alloc_and_map_dma_buf(s,
+					      ring_size,
+					      &pdma->rx_pktinfo_dma_rce,
+					      &pdma->pktinfo_mgbe_sgt);
+		if (IS_ERR(va)) {
+			dev_err(&s->pdev->dev, "Pktinfo alloc failed PDMA%u\n",
+				pdma_id);
+			return PTR_ERR(va);
 		}
-
-		ret = dma_get_sgtable(s->rtcpu_dev, &pdma->pktinfo_mgbe_sgt,
-				      pdma->rx_pktinfo, pdma->rx_pktinfo_dma_rce,
-				      ring_size);
-		if (ret < 0) {
-			dma_free_coherent(s->rtcpu_dev, ring_size,
-				      pdma->rx_pktinfo, pdma->rx_pktinfo_dma_rce);
-			pdma->rx_pktinfo = NULL;
-			dev_err(&s->pdev->dev,
-				"Pktinfo get_sgtable failed PDMA%u ret=%d\n",
-				pdma_id, ret);
-			return ret;
-		}
-
-		ret = dma_map_sg(s->mgbe_dev, pdma->pktinfo_mgbe_sgt.sgl,
-				 pdma->pktinfo_mgbe_sgt.orig_nents,
-				 DMA_BIDIRECTIONAL);
-		if (ret <= 0) {
-			sg_free_table(&pdma->pktinfo_mgbe_sgt);
-			dma_free_coherent(s->rtcpu_dev, ring_size,
-				      pdma->rx_pktinfo, pdma->rx_pktinfo_dma_rce);
-			pdma->rx_pktinfo = NULL;
-			dev_err(&s->pdev->dev, "Pktinfo map_sg failed PDMA%u ret=%d\n",
-				pdma_id, ret);
-			return -ENOEXEC;
-		}
-
-		pdma->pktinfo_mgbe_sgt.nents = ret;
-
-		/* MGBE can only handle contiguous PKTINFO ring buffer */
-		real_size = coe_calc_contiguous_dma_size(pdma->pktinfo_mgbe_sgt.sgl,
-						pdma->pktinfo_mgbe_sgt.nents);
-
-		if (real_size < ring_size) {
-			dev_err(&s->pdev->dev,
-				"Pktinfo non-contiguous PDMA%u\n", pdma_id);
-			/* No need to clean up as this PDMA will be released in
-			 * coe_pdma_dealloc_resources()
-			 */
-			return -ENOMEM;
-		}
+		pdma->rx_pktinfo = va;
 	}
 
 	return 0;
@@ -1944,13 +1824,8 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_del_from_list;
 
-	ret = coe_alloc_rx_descr_mem_area(s);
-	if (ret)
-		goto err_del_from_list;
-
 	for (u32 ch = 0U; ch < num_coe_channels; ch++) {
 		u32 arr_idx;
-		size_t offset;
 		struct coe_channel_state *chan;
 
 		mutex_lock(&coe_channels_arr_lock);
@@ -1986,9 +1861,6 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 		chan->pdma_id = COE_MGBE_PDMA_CHAN_INVALID;
 		chan->dma_chan = CAPTURE_COE_CHAN_INVALID_HW_ID;
 
-		offset = arr_idx * COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE;
-		chan->rx_desc_dma_rce = g_rxdesc_mem_dma_rce + offset;
-
 		set_bit(dma_chans_arr[ch], s->dmachans_map);
 		set_bit(s->vdma2pdma_map[dma_chans_arr[ch]], pdmachans_map);
 
@@ -2008,8 +1880,6 @@ static int camrtc_coe_probe(struct platform_device *pdev)
 err_destroy_channels:
 	coe_pdma_dealloc_resources(s);
 	coe_destroy_channels(pdev);
-	/* Decrement global memory reference count on error */
-	coe_free_rx_descr_mem_area();
 err_del_from_list:
 	mutex_lock(&coe_device_list_lock);
 	list_del(&s->device_entry);
@@ -2037,8 +1907,6 @@ static int camrtc_coe_remove(struct platform_device *pdev)
 	mutex_unlock(&coe_device_list_lock);
 
 	coe_pdma_dealloc_resources(s);
-	/* Decrement reference count and free global memory if last device */
-	coe_free_rx_descr_mem_area();
 
 	if (s->mgbe_dev != NULL) {
 		put_device(s->mgbe_dev);
@@ -2101,21 +1969,6 @@ static int __init capture_coe_init(void)
 static void __exit capture_coe_exit(void)
 {
 	platform_driver_unregister(&capture_coe_driver);
-
-	/* Clean up any remaining global resources if they still exist */
-	mutex_lock(&coe_device_list_lock);
-	if (g_rx_descr_mem_area != NULL) {
-		const size_t alloc_size = COE_TOTAL_RXDESCR_MEM_SIZE;
-
-		sg_free_table(&g_rxdesc_rce_sgt);
-		dma_free_coherent(g_rtcpu_dev, alloc_size,
-				  g_rx_descr_mem_area, g_rxdesc_mem_dma_rce);
-		g_rx_descr_mem_area = NULL;
-		g_rtcpu_dev = NULL;
-	}
-	/* Reset reference count for clean module reload */
-	g_rx_descr_mem_refcount = 0;
-	mutex_unlock(&coe_device_list_lock);
 
 	/* Clean up any remaining channel devices in the global array */
 	mutex_lock(&coe_channels_arr_lock);

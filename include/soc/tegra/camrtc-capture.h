@@ -938,14 +938,6 @@ struct capture_coe_channel_config {
 	 */
 	uint64_t dummy_buf_dma_size;
 	/**
-	 * IOVA for Rx descriptors memory area base address
-	 */
-	iova_t rxmem_base;
-	/**
-	 * Size of RX descriptors memory area. Must be power of two.
-	 */
-	uint64_t rxmem_size;
-	/**
 	 * VLAN enable value. 1 - VLAN enabled, 0 - VLAN disabled
 	 */
 	uint8_t vlan_enable;
