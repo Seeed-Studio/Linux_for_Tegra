@@ -63,6 +63,10 @@ sudo ./apply_binaries.sh
    ```
    sudo apt-get update
    sudo apt-get install build-essential flex bison libssl-dev
+   sudo apt-get install sshpass
+   sudo apt-get install abootimg
+   sudo apt-get install nfs-kernel-server
+   sudo apt-get install libxml2-utils
    ```
 * if You do not have qemu, install it using command
    ```
