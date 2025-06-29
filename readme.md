@@ -59,10 +59,15 @@ cp -r github/Linux_for_Tegra/* Linux_for_Tegra/
 cd Linux_for_Tegra
 sudo ./apply_binaries.sh
 ```
-make sure system have required libraries (ex: ubuntu-20)
-```
-apt-get update && apt-get install build-essential flex bison libssl-dev
-```
+* make sure system have required libraries (ex: ubuntu-20)
+   ```
+   sudo apt-get update
+   sudo apt-get install build-essential flex bison libssl-dev
+   ```
+* if You do not have qemu, install it using command
+   ```
+   sudo apt-get install qemu-user-static
+   ```
 
 6. prepare work for kernel build
 ```
