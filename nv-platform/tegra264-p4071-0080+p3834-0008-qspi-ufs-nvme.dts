@@ -10,7 +10,7 @@
 	compatible = "nvidia,p4071-0080+p3834-0008", "nvidia,p4071-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
 
 	pwm-fan {
-		cooling-levels = <0 77 102 140 192 255>;
+		cooling-levels = <77 102 140 192 255>;
 	};
 
 	thermal-shutdown-alert {
@@ -21,30 +21,24 @@
 		tj-thermal {
 			trips {
 				tj_trip_active0: active-0 {
-					temperature = <70000>;
-					hysteresis = <0>;
-					type = "active";
-				};
-
-				tj_trip_active1: active-1 {
 					temperature = <80000>;
 					hysteresis = <0>;
 					type = "active";
 				};
 
-				tj_trip_active2: active-2 {
+				tj_trip_active1: active-1 {
 					temperature = <86000>;
 					hysteresis = <0>;
 					type = "active";
 				};
 
-				tj_trip_active3: active-3 {
+				tj_trip_active2: active-2 {
 					temperature = <91000>;
 					hysteresis = <0>;
 					type = "active";
 				};
 
-				tj_trip_active4: active-4 {
+				tj_trip_active3: active-3 {
 					temperature = <100000>;
 					hysteresis = <0>;
 					type = "active";
@@ -70,11 +64,6 @@
 				map-active-3 {
 					cooling-device = <&soc_fan 3 4>;
 					trip = <&tj_trip_active3>;
-				};
-
-				map-active-4 {
-					cooling-device = <&soc_fan 4 5>;
-					trip = <&tj_trip_active4>;
 				};
 			};
 		};
