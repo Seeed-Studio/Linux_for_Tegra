@@ -438,34 +438,16 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 		bluedroid_pm->rfkill = rfkill;
 	}
 
-	if (IS_ERR(bluedroid_pm->host_wake))
-		BDP_DBG("gpio_host_wake not registered\n");
-	else
+	if (!IS_ERR(bluedroid_pm->ext_wake) && !IS_ERR(bluedroid_pm->host_wake)) {
 		/* configure host_wake as input */
 		gpiod_direction_input(bluedroid_pm->host_wake);
 
-	if (bluedroid_pm->host_wake_irq > -1) {
-		BDP_DBG("found host_wake irq\n");
-		ret = request_irq(bluedroid_pm->host_wake_irq,
-					bluedroid_pm_hostwake_isr,
-					IRQF_TRIGGER_RISING,
-					"bluetooth hostwake", bluedroid_pm);
-		if (ret) {
-			BDP_ERR("Failed to get host_wake irq\n");
-			goto free_host_wake;
-		}
-	} else
-		BDP_DBG("host_wake not registered\n");
-
-	if (IS_ERR(bluedroid_pm->ext_wake)) {
-		BDP_DBG("host_wake not registered\n");
-	} else {
 		/* configure ext_wake as output mode*/
 		gpiod_direction_output(bluedroid_pm->ext_wake, 1);
 
 		if (create_bt_proc_interface(bluedroid_pm)) {
 			BDP_ERR("Failed to create proc interface");
-			goto free_ext_wake;
+			goto free_host_wake;
 		}
 		/* initialize wake lock */
 		bluedroid_pm->wake_lock = wakeup_source_register(&pdev->dev,
@@ -480,6 +462,20 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 				bluedroid_pm_timer_expire, 0);
 	}
 
+	if (bluedroid_pm->host_wake_irq > -1) {
+		BDP_DBG("found host_wake irq\n");
+		ret = request_irq(bluedroid_pm->host_wake_irq,
+					bluedroid_pm_hostwake_isr,
+					IRQF_TRIGGER_RISING,
+					"bluetooth hostwake", bluedroid_pm);
+		if (ret) {
+			BDP_ERR("Failed to get host_wake irq\n");
+			goto free_host_wake;
+		}
+	} else {
+		BDP_DBG("host_wake not registered\n");
+	}
+
 	INIT_WORK(&bluedroid_pm->work, bluedroid_work);
 	spin_lock_init(&bluedroid_pm->lock);
 
@@ -491,9 +487,6 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 
 free_bt_proc:
 	remove_bt_proc_interface();
-free_ext_wake:
-	if (bluedroid_pm->host_wake_irq > -1)
-		free_irq(bluedroid_pm->host_wake_irq, bluedroid_pm);
 free_host_wake:
 	if (bluedroid_pm->rfkill)
 		rfkill_unregister(bluedroid_pm->rfkill);
