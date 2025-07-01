@@ -140,11 +140,15 @@ Configuration parameters:
 #define GMSL_MAX96712_COMPAT "maxim,max96712"
 #define GMSL_MAX9296A_COMPAT "maxim,max9296a"
 #define GMSL_OX03A_INCLUDE "gmsl-ox03a.dtsi"
+#define GMSL_AR0820C_INCLUDE "gmsl-ar0820c.dtsi"
+#define GMSL_AR0233C_INCLUDE "gmsl-ar0233c.dtsi"
 #define GMSL_IMX219_INCLUDE "gmsl-imx219.dtsi"
 #define GMSL_IMX390_INCLUDE "gmsl-imx390.dtsi"
 #define GMSL_OX03A_OVERLAY_INCLUDE "gmsl-ox03a-overlay.dtsi"
 #define GMSL_IMX219_OVERLAY_INCLUDE "gmsl-imx219-overlay.dtsi"
 #define GMSL_IMX390_OVERLAY_INCLUDE "gmsl-imx390-overlay.dtsi"
+#define GMSL_AR0820C_OVERLAY_INCLUDE "gmsl-ar0820c-overlay.dtsi"
+#define GMSL_AR0233C_OVERLAY_INCLUDE "gmsl-ar0233c-overlay.dtsi"
 
 
 #if GMSL_CAMERA_NUM >= 1
@@ -243,6 +247,10 @@ Configuration parameters:
 #define GMSL_CAM_0_INCLUDE		GMSL_IMX219_INCLUDE
 #elif defined(GMSL_CAM_0_TEGRA_IMX390)
 #define GMSL_CAM_0_INCLUDE		GMSL_IMX390_INCLUDE
+#elif defined(GMSL_CAM_0_TEGRA_AR0820C)
+#define GMSL_CAM_0_INCLUDE		GMSL_AR0820C_INCLUDE
+#elif defined(GMSL_CAM_0_TEGRA_AR0233C)
+#define GMSL_CAM_0_INCLUDE		GMSL_AR0233C_INCLUDE
 #else
 #error
 #endif
@@ -255,6 +263,10 @@ Configuration parameters:
 #define GMSL_CAM_0_OVERLAY_INCLUDE		GMSL_IMX219_OVERLAY_INCLUDE
 #elif defined(GMSL_CAM_0_TEGRA_IMX390)
 #define GMSL_CAM_0_OVERLAY_INCLUDE		GMSL_IMX390_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_0_TEGRA_AR0820C)
+#define GMSL_CAM_0_OVERLAY_INCLUDE		GMSL_AR0820C_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_0_TEGRA_AR0233C)
+#define GMSL_CAM_0_OVERLAY_INCLUDE		GMSL_AR0233C_OVERLAY_INCLUDE
 #endif
 #endif
 
@@ -303,6 +315,12 @@ Configuration parameters:
 #define GMSL_CAM_1_INCLUDE		GMSL_OX03A_INCLUDE
 #elif defined(GMSL_CAM_1_TEGRA_IMX219)
 #define GMSL_CAM_1_INCLUDE		GMSL_IMX219_INCLUDE
+#elif defined(GMSL_CAM_1_TEGRA_IMX390)
+#define GMSL_CAM_1_INCLUDE		GMSL_IMX390_INCLUDE
+#elif defined(GMSL_CAM_1_TEGRA_AR0820C)
+#define GMSL_CAM_1_INCLUDE		GMSL_AR0820C_INCLUDE
+#elif defined(GMSL_CAM_1_TEGRA_AR0233C)
+#define GMSL_CAM_1_INCLUDE		GMSL_AR0233C_INCLUDE
 #else
 #error
 #endif
@@ -313,6 +331,12 @@ Configuration parameters:
 #define GMSL_CAM_1_OVERLAY_INCLUDE		GMSL_OX03A_OVERLAY_INCLUDE
 #elif defined(GMSL_CAM_1_TEGRA_IMX219)
 #define GMSL_CAM_1_OVERLAY_INCLUDE		GMSL_IMX219_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_1_TEGRA_IMX390)
+#define GMSL_CAM_1_OVERLAY_INCLUDE		GMSL_IMX390_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_1_TEGRA_AR0820C)
+#define GMSL_CAM_1_OVERLAY_INCLUDE		GMSL_AR0820C_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_1_TEGRA_AR0233C)
+#define GMSL_CAM_1_OVERLAY_INCLUDE		GMSL_AR0233C_OVERLAY_INCLUDE
 #endif
 #endif
 
@@ -361,6 +385,12 @@ Configuration parameters:
 #define GMSL_CAM_2_INCLUDE		GMSL_OX03A_INCLUDE
 #elif defined(GMSL_CAM_2_TEGRA_IMX219)
 #define GMSL_CAM_2_INCLUDE		GMSL_IMX219_INCLUDE
+#elif defined(GMSL_CAM_2_TEGRA_IMX390)
+#define GMSL_CAM_2_INCLUDE		GMSL_IMX390_INCLUDE
+#elif defined(GMSL_CAM_2_TEGRA_AR0820C)
+#define GMSL_CAM_2_INCLUDE		GMSL_AR0820C_INCLUDE
+#elif defined(GMSL_CAM_2_TEGRA_AR0233C)
+#define GMSL_CAM_2_INCLUDE		GMSL_AR0233C_INCLUDE
 #else
 #error
 #endif
@@ -371,6 +401,12 @@ Configuration parameters:
 #define GMSL_CAM_2_OVERLAY_INCLUDE		GMSL_OX03A_OVERLAY_INCLUDE
 #elif defined(GMSL_CAM_2_TEGRA_IMX219)
 #define GMSL_CAM_2_OVERLAY_INCLUDE		GMSL_IMX219_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_2_TEGRA_IMX390)
+#define GMSL_CAM_2_OVERLAY_INCLUDE		GMSL_IMX390_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_2_TEGRA_AR0820C)
+#define GMSL_CAM_2_OVERLAY_INCLUDE		GMSL_AR0820C_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_2_TEGRA_AR0233C)
+#define GMSL_CAM_2_OVERLAY_INCLUDE		GMSL_AR0233C_OVERLAY_INCLUDE
 #endif
 #endif
 
@@ -419,6 +455,12 @@ Configuration parameters:
 #define GMSL_CAM_3_INCLUDE		GMSL_OX03A_INCLUDE
 #elif defined(GMSL_CAM_3_TEGRA_IMX219)
 #define GMSL_CAM_3_INCLUDE		GMSL_IMX219_INCLUDE
+#elif defined(GMSL_CAM_3_TEGRA_IMX390)
+#define GMSL_CAM_3_INCLUDE		GMSL_IMX390_INCLUDE
+#elif defined(GMSL_CAM_3_TEGRA_AR0820C)
+#define GMSL_CAM_3_INCLUDE		GMSL_AR0820C_INCLUDE
+#elif defined(GMSL_CAM_3_TEGRA_AR0233C)
+#define GMSL_CAM_3_INCLUDE		GMSL_AR0233C_INCLUDE
 #else
 #error
 #endif
@@ -429,6 +471,12 @@ Configuration parameters:
 #define GMSL_CAM_3_OVERLAY_INCLUDE		GMSL_OX03A_OVERLAY_INCLUDE
 #elif defined(GMSL_CAM_3_TEGRA_IMX219)
 #define GMSL_CAM_3_OVERLAY_INCLUDE		GMSL_IMX219_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_3_TEGRA_IMX390)
+#define GMSL_CAM_3_OVERLAY_INCLUDE		GMSL_IMX390_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_3_TEGRA_AR0820C)
+#define GMSL_CAM_3_OVERLAY_INCLUDE		GMSL_AR0820C_OVERLAY_INCLUDE
+#elif defined(GMSL_CAM_3_TEGRA_AR0233C)
+#define GMSL_CAM_3_OVERLAY_INCLUDE		GMSL_AR0233C_OVERLAY_INCLUDE
 #endif
 #endif
 
@@ -472,23 +520,28 @@ Configuration parameters:
 
 #endif
 
+
+
 &GMSL_DES_I2C_LABEL {
 	status = "okay";
-
 	des: gmsl-deserializer@GMSL_DES_HEX_ADDR {
 		#address-cells = <1>;
 		#size-cells = <0>;
-
 
 		compatible = GMSL_DES_COMPATIBLE;
 		reset-gpios = <&gpio TEGRA234_MAIN_GPIO(H, 6) GPIO_ACTIVE_HIGH>;
 		reg = <GMSL_DES_HEX_ADDR>;
 		status = "okay";
+#if defined(GMSL_MODE_3G)
+		maxim,speed-mode = <0x00>;
+#elif defined(GMSL_MODE_6G)
+		maxim,speed-mode = <0x01>;
+#else
+	#error "please define gmsl2 mode"
+#endif
 	};
+
 };
-
-
-
 
 
 
@@ -563,10 +616,36 @@ ser_2_i2c_bus: &des_i2c_2 {};
 ser_3_i2c_bus: &des_i2c_3 {};
 #endif
 
-
 &des {
 	phy@GMSL_DES_PHY {
 		reg = <GMSL_DES_PHY>;
+	};
+
+
+
+	pipe@0 {
+		reg = <0x00>;
+		maxim,phy-id = <GMSL_DES_PHY>;
+		maxim,stream-id = <0x00>;
+		maxim,link-id = <0x00>;
+	};
+	pipe@1 {
+		reg = <0x01>;
+		maxim,phy-id = <GMSL_DES_PHY>;
+		maxim,stream-id = <0x01>;
+		maxim,link-id = <0x01>;
+	};
+	pipe@2 {
+		reg = <0x02>;
+		maxim,phy-id = <GMSL_DES_PHY>;
+		maxim,stream-id = <0x02>;
+		maxim,link-id = <0x02>;
+	};
+	pipe@3 {
+		reg = <0x03>;
+		maxim,phy-id = <GMSL_DES_PHY>;
+		maxim,stream-id = <0x03>;
+		maxim,link-id = <0x03>;
 	};
 
 #if defined(GMSL_CAMERA_0)
@@ -681,7 +760,11 @@ cam_3_i2c_bus: &ser_3_i2c_0 {};
 	#define SER_INDEX 0
 	#define SER_CH_INDEX 0
 	#define CAM_HEX_REG GMSL_CAM_0_DEFAULT_HEX_ADDR
+	#define GMSL_TEGRA_PORT 2
+	#undef GMSL_TEGRA_LANE_POLARITY_SWAP
+	#define AR0820C
 	#include GMSL_CAM_0_INCLUDE
+	#undef AR0820C
 };
 
 #if defined(GMSL_CAM_0_OVERLAY_INCLUDE)
@@ -697,7 +780,11 @@ cam_3_i2c_bus: &ser_3_i2c_0 {};
 	#define SER_INDEX 1
 	#define SER_CH_INDEX 0
 	#define CAM_HEX_REG GMSL_CAM_1_DEFAULT_HEX_ADDR
+	#define GMSL_TEGRA_PORT 2
+	#undef GMSL_TEGRA_LANE_POLARITY_SWAP
+	#define CAM_AR0233C 
 	#include GMSL_CAM_1_INCLUDE
+	#undef CAM_AR0233C
 };
 
 #if defined(GMSL_CAM_1_OVERLAY_INCLUDE)
@@ -713,7 +800,12 @@ cam_3_i2c_bus: &ser_3_i2c_0 {};
 	#define SER_INDEX 2
 	#define SER_CH_INDEX 0
 	#define CAM_HEX_REG GMSL_CAM_2_DEFAULT_HEX_ADDR
+	#define GMSL_TEGRA_PORT 2
+	#undef GMSL_TEGRA_LANE_POLARITY_SWAP
+	#define CAM_IMX390 
 	#include GMSL_CAM_2_INCLUDE
+	#undef CAM_IMX390 
+	
 };
 
 #if defined(GMSL_CAM_2_OVERLAY_INCLUDE)
@@ -729,7 +821,11 @@ cam_3_i2c_bus: &ser_3_i2c_0 {};
 	#define SER_INDEX 3
 	#define SER_CH_INDEX 0
 	#define CAM_HEX_REG GMSL_CAM_3_DEFAULT_HEX_ADDR
+	#define GMSL_TEGRA_PORT 2
+	#undef GMSL_TEGRA_LANE_POLARITY_SWAP
+	#define ISX_031
 	#include GMSL_CAM_3_INCLUDE
+	#undef ISX_031
 };
 #endif
 
@@ -781,6 +877,21 @@ cam_3_i2c_bus: &ser_3_i2c_0 {};
 #undef GMSL_CAM_1_TEGRA_IMX219
 #undef GMSL_CAM_2_TEGRA_IMX219
 #undef GMSL_CAM_3_TEGRA_IMX219
+
+#undef GMSL_CAM_0_TEGRA_AR0820C
+#undef GMSL_CAM_1_TEGRA_AR0820C
+#undef GMSL_CAM_2_TEGRA_AR0820C
+#undef GMSL_CAM_3_TEGRA_AR0820C
+
+#undef GMSL_CAM_0_TEGRA_AR0233C
+#undef GMSL_CAM_1_TEGRA_AR0233C
+#undef GMSL_CAM_2_TEGRA_AR0233C
+#undef GMSL_CAM_3_TEGRA_AR0233C
+
+#undef GMSL_CAM_0_TEGRA_IMX390
+#undef GMSL_CAM_1_TEGRA_IMX390
+#undef GMSL_CAM_2_TEGRA_IMX390
+#undef GMSL_CAM_3_TEGRA_IMX390
 
 #undef GMSL_SER_0_HEX_ADDR
 #undef GMSL_SER_1_HEX_ADDR

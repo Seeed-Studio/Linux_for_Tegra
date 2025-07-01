@@ -35,6 +35,24 @@
 					label = "cam0-pwdn", "mfp9", "mfp10";
 				};
 			};
+			
+			i2c@318000 {
+				status = "okay";
+
+				tca9548@70 {
+					compatible = "nxp,pca9548"; 
+					reg = <0x70>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					i2c-mux-idle-disconnect = <0>;
+
+					i2c@0 {
+						reg = <0>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+					};
+				};
+			};
 			/* I2C configuration */
 			// i2c@3180000 {
 			// 	status = "okay";
@@ -64,14 +82,14 @@
 			// 	};
 			// };
 
-	// 	gpio@c2f0000 {
-	// 		camera-control-output-high2 {
-	// 			gpio-hog;
-	// 			output-high;
-	// 			gpios = <CAM0_RST_L 0>;
-	// 			label = "cam0-rst";
-	// 		};
-	// 	};                
+		gpio@c2f0000 {
+			camera-control-output-high2 {
+				gpio-hog;
+				output-high;
+				gpios = <CAM0_RST_L 0>;
+				label = "cam0-rst";
+			};
+		};                
      };
 };
 
@@ -80,7 +98,7 @@
 
 #define GMSL_TEGRA_PORT                 2
 
-#define GMSL_DES_PHY                    2
+#define GMSL_DES_PHY                    1
 #define GMSL_DES_PHY_NUM_LANES          4
 
 // #define GMSL_TEGRA_PORT                      1
@@ -91,17 +109,24 @@
 
 #define GMSL_CAMERA_NUM                 4
 #define GMSL_DES_MAX96712
-// #define GMSL_SER_0_MAX9295A
-#define GMSL_SER_0_MAX96717
-#define GMSL_SER_1_MAX96717
-#define GMSL_SER_2_MAX96717
-#define GMSL_SER_3_MAX96717
+
+// #define GMSL_MODE_3G
+#define GMSL_MODE_6G
+
+#define GMSL_SER_0_MAX9295A
+#define GMSL_SER_1_MAX9295A
+#define GMSL_SER_2_MAX9295A
+#define GMSL_SER_3_MAX9295A
+
+// #define GMSL_SER_0_MAX96717
+// #define GMSL_SER_1_MAX96717
+// #define GMSL_SER_2_MAX96717
+// #define GMSL_SER_3_MAX96717
 
 #define GMSL_CAM_0_TEGRA_OX03A
 #define GMSL_CAM_1_TEGRA_OX03A
 #define GMSL_CAM_2_TEGRA_OX03A
 #define GMSL_CAM_3_TEGRA_OX03A
-
 
 // #define GMSL_CAM_0_TEGRA_IMX219
 // #define GMSL_TEGRA_LANE_POLARITY_SWAP
@@ -123,9 +148,9 @@
 // #endif
 #define GMSL_DES_I2C_LABEL  cam_i2c
 
-#if GMSL_TEGRA_PORT == 1
+// #if GMSL_TEGRA_PORT == 1
 #define GMSL_TEGRA_LANE_POLARITY_SWAP
-#endif
+// #endif
 
 // &GMSL_DES_I2C_LABEL {
 //         clock-frequency = <100000>;
