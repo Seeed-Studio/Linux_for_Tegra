@@ -168,17 +168,17 @@ static int bluedroid_pm_rfkill_set_power(void *data, bool blocked)
 
 	mdelay(100);
 	if (blocked) {
-		if (bluedroid_pm->gpio_shutdown)
+		if (!IS_ERR(bluedroid_pm->gpio_shutdown))
 			bluedroid_pm_gpio_set_value(
 				bluedroid_pm->gpio_shutdown, 0);
-		if (bluedroid_pm->gpio_reset)
+		if (!IS_ERR(bluedroid_pm->gpio_reset))
 			bluedroid_pm_gpio_set_value(
 				bluedroid_pm->gpio_reset, 0);
 		if (bluedroid_pm->vdd_3v3)
 			ret |= regulator_disable(bluedroid_pm->vdd_3v3);
 		if (bluedroid_pm->vdd_1v8)
 			ret |= regulator_disable(bluedroid_pm->vdd_1v8);
-		if (bluedroid_pm->ext_wake)
+		if (!IS_ERR(bluedroid_pm->ext_wake))
 			__pm_relax(bluedroid_pm->wake_lock);
 		if (bluedroid_pm->resume_min_frequency)
 			cpu_latency_qos_remove_request(&bluedroid_pm->resume_cpu_freq_req);
@@ -187,10 +187,10 @@ static int bluedroid_pm_rfkill_set_power(void *data, bool blocked)
 			ret |= regulator_enable(bluedroid_pm->vdd_3v3);
 		if (bluedroid_pm->vdd_1v8)
 			ret |= regulator_enable(bluedroid_pm->vdd_1v8);
-		if (bluedroid_pm->gpio_shutdown)
+		if (!IS_ERR(bluedroid_pm->gpio_shutdown))
 			bluedroid_pm_gpio_set_value(
 				bluedroid_pm->gpio_shutdown, 1);
-		if (bluedroid_pm->gpio_reset)
+		if (!IS_ERR(bluedroid_pm->gpio_reset))
 			bluedroid_pm_gpio_set_value(
 				bluedroid_pm->gpio_reset, 1);
 		if (bluedroid_pm->resume_min_frequency)
@@ -403,22 +403,22 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 	of_property_read_u32(node, "resume_min_frequency",
 			     &bluedroid_pm->resume_min_frequency);
 
-	if (bluedroid_pm->gpio_reset)
-		gpiod_direction_output(bluedroid_pm->gpio_reset, enable);
-	else
+	if (IS_ERR(bluedroid_pm->gpio_reset))
 		BDP_DBG("Reset gpio not registered.\n");
-
-	if (bluedroid_pm->gpio_shutdown)
-		gpiod_direction_output(bluedroid_pm->gpio_shutdown, enable);
 	else
+		gpiod_direction_output(bluedroid_pm->gpio_reset, enable);
+
+	if (IS_ERR(bluedroid_pm->gpio_shutdown))
 		BDP_DBG("shutdown gpio not registered\n");
+	else
+		gpiod_direction_output(bluedroid_pm->gpio_shutdown, enable);
 
 	/*
 	 * make sure at-least one of the GPIO or regulators avaiable to
 	 * register with rfkill is defined
 	 */
-	if ((bluedroid_pm->gpio_reset) ||
-		(bluedroid_pm->gpio_shutdown) ||
+	if (!IS_ERR(bluedroid_pm->gpio_reset) ||
+		!IS_ERR(bluedroid_pm->gpio_shutdown) ||
 		bluedroid_pm->vdd_1v8 || bluedroid_pm->vdd_3v3) {
 		rfkill = rfkill_alloc(pdev->name, &pdev->dev,
 				RFKILL_TYPE_BLUETOOTH, &bluedroid_pm_rfkill_ops,
@@ -438,11 +438,11 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 		bluedroid_pm->rfkill = rfkill;
 	}
 
-	if (bluedroid_pm->host_wake) {
+	if (IS_ERR(bluedroid_pm->host_wake))
+		BDP_DBG("gpio_host_wake not registered\n");
+	else
 		/* configure host_wake as input */
 		gpiod_direction_input(bluedroid_pm->host_wake);
-	} else
-		BDP_DBG("gpio_host_wake not registered\n");
 
 	if (bluedroid_pm->host_wake_irq > -1) {
 		BDP_DBG("found host_wake irq\n");
@@ -457,9 +457,12 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 	} else
 		BDP_DBG("host_wake not registered\n");
 
-	if (bluedroid_pm->ext_wake) {
+	if (IS_ERR(bluedroid_pm->ext_wake)) {
+		BDP_DBG("host_wake not registered\n");
+	} else {
 		/* configure ext_wake as output mode*/
 		gpiod_direction_output(bluedroid_pm->ext_wake, 1);
+
 		if (create_bt_proc_interface(bluedroid_pm)) {
 			BDP_ERR("Failed to create proc interface");
 			goto free_ext_wake;
@@ -470,10 +473,7 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 		/* Initialize timer */
 		timer_setup(&bluedroid_pm->bluedroid_pm_timer,
 				bluedroid_pm_timer_expire, 0);
-
-	} else
-		BDP_DBG("gpio_ext_wake not registered\n");
-
+	}
 
 	INIT_WORK(&bluedroid_pm->work, bluedroid_work);
 	spin_lock_init(&bluedroid_pm->lock);
@@ -509,7 +509,7 @@ static int bluedroid_pm_remove(struct platform_device *pdev)
 	cancel_work_sync(&bluedroid_pm->work);
 	if (bluedroid_pm->host_wake_irq > -1)
 		free_irq(bluedroid_pm->host_wake_irq, bluedroid_pm);
-	if ((bluedroid_pm->ext_wake)) {
+	if (!IS_ERR(bluedroid_pm->ext_wake)) {
 		wakeup_source_unregister(bluedroid_pm->wake_lock);
 		remove_bt_proc_interface();
 #if defined(NV_TIMER_DELETE_PRESENT) /* Linux v6.15 */
@@ -518,8 +518,8 @@ static int bluedroid_pm_remove(struct platform_device *pdev)
 		del_timer(&bluedroid_pm->bluedroid_pm_timer);
 #endif
 	}
-	if (((bluedroid_pm->gpio_reset)) ||
-		((bluedroid_pm->gpio_shutdown)) ||
+	if (!IS_ERR(bluedroid_pm->gpio_reset) ||
+		!IS_ERR(bluedroid_pm->gpio_shutdown) ||
 		bluedroid_pm->vdd_1v8 || bluedroid_pm->vdd_3v3) {
 		rfkill_unregister(bluedroid_pm->rfkill);
 		rfkill_destroy(bluedroid_pm->rfkill);
@@ -539,7 +539,7 @@ static int bluedroid_pm_suspend(struct platform_device *pdev,
 	unsigned long flags;
 	int ret = 0;
 
-	if (bluedroid_pm->host_wake) {
+	if (!IS_ERR(bluedroid_pm->host_wake)) {
 		if (!bluedroid_pm->is_blocked || !bluedroid_pm_blocked) {
 			ret = enable_irq_wake(bluedroid_pm->host_wake_irq);
 			if (ret < 0) {
@@ -563,7 +563,7 @@ static int bluedroid_pm_resume(struct platform_device *pdev)
 	struct bluedroid_pm_data *bluedroid_pm = platform_get_drvdata(pdev);
 	unsigned long flags;
 
-	if (bluedroid_pm->host_wake)
+	if (!IS_ERR(bluedroid_pm->host_wake))
 		if (!bluedroid_pm->is_blocked || !bluedroid_pm_blocked)
 			disable_irq_wake(bluedroid_pm->host_wake_irq);
 
@@ -581,10 +581,10 @@ static void bluedroid_pm_shutdown(struct platform_device *pdev)
 
 	cancel_work_sync(&bluedroid_pm->work);
 
-	if ((bluedroid_pm->gpio_shutdown))
+	if (!IS_ERR(bluedroid_pm->gpio_shutdown))
 		bluedroid_pm_gpio_set_value(
 			bluedroid_pm->gpio_shutdown, 0);
-	if ((bluedroid_pm->gpio_reset))
+	if (!IS_ERR(bluedroid_pm->gpio_reset))
 		bluedroid_pm_gpio_set_value(
 			bluedroid_pm->gpio_reset, 0);
 	if (bluedroid_pm->vdd_3v3)
