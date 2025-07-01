@@ -472,7 +472,7 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 							dev_name(&pdev->dev));
 		if (!bluedroid_pm->wake_lock) {
 			BDP_ERR("Failed to register wakeup source");
-			goto free_ext_wake;
+			goto free_bt_proc;
 		}
 
 		/* Initialize timer */
@@ -489,6 +489,8 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 
 	return 0;
 
+free_bt_proc:
+	remove_bt_proc_interface();
 free_ext_wake:
 	if (bluedroid_pm->host_wake_irq > -1)
 		free_irq(bluedroid_pm->host_wake_irq, bluedroid_pm);
