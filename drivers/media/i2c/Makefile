@@ -36,6 +36,7 @@ obj-m += max929x.o
 obj-m += max96712_tpg.o
 obj-m += max96726_tpg.o
 obj-m += nv_cam.o
+obj-m += maxim-serdes/
 endif
 
 obj-m += pca9570.o
