@@ -54,6 +54,16 @@ job-xavier-nx-industrial-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-xavier-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/xavier-nx-seeed-industry.dtbo  kernel/dtb/
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial  external
@@ -68,7 +78,7 @@ job-xavier-nx-industrial-16g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
@@ -114,6 +124,16 @@ job-xavier-nx-industrial-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-xavier-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/xavier-nx-seeed-industry.dtbo  kernel/dtb/
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0003 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-industrial  external
@@ -128,7 +148,7 @@ job-xavier-nx-industrial-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
@@ -174,6 +194,16 @@ job-xavier-nx-devkit-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-xavier-nx-16g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0001 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-devkit  external
          - mkdir -p deploy
@@ -222,6 +252,16 @@ job-xavier-nx-devkit-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-xavier-nx-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo ADDITIONAL_DTB_OVERLAY_OPT="BootOrderNvme.dtbo"  BOARDID=3668 BOARDSKU=0003 FAB=301  BOARDREV=B.0 ./tools/kernel_flash/l4t_initrd_flash.sh  -p "-c bootloader/t186ref/cfg/flash_l4t_t194_qspi_p3668.xml --no-systemimg"   --no-flash  --massflash 5 --network usb0 recomputer-xavier-nx-devkit  external
          - mkdir -p deploy
@@ -271,6 +311,16 @@ job-orin-nx-industrial-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo  kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D4 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
@@ -285,7 +335,7 @@ job-orin-nx-industrial-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -324,6 +374,16 @@ job-orin-nx-reserver-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_reserver-orin-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo  kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D4 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
@@ -338,7 +398,7 @@ job-orin-nx-reserver-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - cp extra_scripts/reserver_industrial/tegra234-p3767-0000-p3509-a02.dtb kernel/dtb/
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
@@ -378,6 +438,16 @@ job-orin-nx-devkit-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D4  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
          - mkdir -p deploy
@@ -427,6 +497,16 @@ job-orin-nx-industrial-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D3 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
@@ -441,7 +521,7 @@ job-orin-nx-industrial-16g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -480,6 +560,16 @@ job-orin-nx-reserver-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_reserver-orin-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo  kernel/dtb/
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3  CHIP_SKU=00:00:00:D3 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external
@@ -494,7 +584,7 @@ job-orin-nx-reserver-16g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - cp extra_scripts/reserver_industrial/tegra234-p3767-0000-p3509-a02.dtb kernel/dtb/
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
@@ -534,6 +624,16 @@ job-orin-nx-devkit-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=M.3 CHIP_SKU=00:00:00:D3 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
          - mkdir -p deploy
@@ -583,6 +683,16 @@ job-orin-nano-industrial-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo kernel/dtb
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6 CHIP_SKU=00:00:00:D5 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
@@ -597,7 +707,7 @@ job-orin-nano-industrial-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -637,6 +747,16 @@ job-orin-nano-reserver-8g:
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_reserver-orin-nano-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo kernel/dtb
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6 CHIP_SKU=00:00:00:D5  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  reserver-orin-industrial external 
          - mkdir -p deploy
@@ -650,7 +770,7 @@ job-orin-nano-reserver-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - cp extra_scripts/reserver_industrial/tegra234-p3767-0003-p3509-a02.dtb kernel/dtb/
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
@@ -690,6 +810,16 @@ job-orin-nano-devkit-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6 CHIP_SKU=00:00:00:D5  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
          - mkdir -p deploy
@@ -739,6 +869,16 @@ job-orin-nano-industrial-4g:
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo kernel/dtb
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2   CHIP_SKU=00:00:00:D6 ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin-industrial external 
@@ -753,7 +893,7 @@ job-orin-nano-industrial-4g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
@@ -792,6 +932,16 @@ job-orin-nano-reserver-4g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_reserver-orin-nano-4g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo kernel/dtb
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
@@ -807,7 +957,7 @@ job-orin-nano-reserver-4g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - cp extra_scripts/reserver_industrial/tegra234-p3767-0004-p3509-a02.dtb kernel/dtb/
         #  - cp extra_kernel_modules/lan743x.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/ethernet/microchip/lan743x.ko
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
@@ -847,6 +997,16 @@ job-orin-nano-devkit-4g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2  CHIP_SKU=00:00:00:D6  ./tools/kernel_flash/l4t_initrd_flash.sh   -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0  recomputer-orin external 
@@ -897,6 +1057,16 @@ job-orin-nx-j40mini-8g:
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
          - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_mini/orin-seeed-j40mini.dtbo  kernel/dtb/
          - cp extra_scripts/recomputer_mini/tegra234-p3767-0000-p3768-0000-a0.dtb  kernel/dtb/
@@ -915,7 +1085,7 @@ job-orin-nx-j40mini-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
          - mkdir -p rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
          - cp extra_kernel_modules/mcp251xfd/*.ko rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
@@ -958,6 +1128,16 @@ job-orin-nx-j40mini-16g:
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
          - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_mini/orin-seeed-j40mini.dtbo kernel/dtb/
          - cp extra_scripts/recomputer_mini/tegra234-p3767-0000-p3768-0000-a0.dtb  kernel/dtb/
@@ -976,7 +1156,7 @@ job-orin-nx-j40mini-16g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
          - mkdir -p rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
          - cp extra_kernel_modules/mcp251xfd/*.ko rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
@@ -1019,6 +1199,16 @@ job-orin-nano-j40mini-4g:
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
          - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
          - cp extra_scripts/recomputer_mini/orin-seeed-j40mini.dtbo kernel/dtb/
@@ -1037,9 +1227,9 @@ job-orin-nano-j40mini-4g:
          - mount --bind /dev/pts ./rootfs/dev/pts
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
          - mkdir -p rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
          - cp extra_kernel_modules/mcp251xfd/*.ko rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
@@ -1082,6 +1272,16 @@ job-orin-nano-j40mini-8g:
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
          - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
+         - wget https://developer.nvidia.com/embedded/jetson-linux/bootlin-toolchain-gcc-93
+         - mkdir -p l4t-gcc
+         - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
+         - export ARCH=arm64
+         - export CROSS_COMPILE_AARCH64_PATH=`realpath .`/l4t-gcc
+         - cd source/
+         - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+         - ./nvbuild.sh -i -r ${INSTALL_MOD_PATH}
+         - ./do_copy.sh
+         - cd ..
          #  - ./tools/l4t_flash_prerequisites.sh
          - cp extra_scripts/recomputer_mini/orin-seeed-j40mini.dtbo kernel/dtb/
          - cp extra_scripts/recomputer_mini/tegra234-p3767-0000-p3768-0000-a0.dtb  kernel/dtb/
@@ -1100,7 +1300,7 @@ job-orin-nano-j40mini-8g:
          - mount --bind /proc ./rootfs/proc
          - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
          - cp extra_scripts/rootfs_magic.sh rootfs
-         - cp extra_scripts/Image kernel/
+        #  - cp extra_scripts/Image kernel/
          - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
          - mkdir -p rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
          - cp extra_kernel_modules/mcp251xfd/*.ko rootfs/lib/modules/$KER_NUM/kernel/drivers/net/can/spi/mcp251xfd/
