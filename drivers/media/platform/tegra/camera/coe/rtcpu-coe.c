@@ -30,6 +30,7 @@
 #include <linux/dma-buf.h>
 #include <linux/scatterlist.h>
 #include <linux/err.h>
+#include <linux/limits.h>
 
 #include <linux/tegra-capture-ivc.h>
 #include <soc/tegra/nvethernet-public.h>
@@ -82,6 +83,9 @@
 /** Max number of physical DMA channel for each Eth controller */
 #define COE_MGBE_MAX_NUM_PDMA_CHANS	10U
 #define COE_MGBE_PDMA_CHAN_INVALID	COE_MGBE_MAX_NUM_PDMA_CHANS
+
+/** To indicate non-registered buffer slots */
+#define COE_BUFFER_IDX_INVALID	(-1)
 
 /** State associated with a physical DMA channel of an Eth controller */
 struct coe_pdma_state {
@@ -215,6 +219,8 @@ struct coe_channel_state {
 
 	/**< Surface buffer management table */
 	struct capture_buffer_table *buf_ctx;
+	/** Tracks buffers registered by userspace to be used for capture requests */
+	int32_t registered_bufs[COE_BUFFER_IDX_MAX_NUM];
 
 	/**< Queue of capture requests waiting for capture completion from RCE */
 	struct coe_capreq_state_inhw capq_inhw[COE_CHAN_CAPTURE_QUEUE_LEN];
@@ -580,29 +586,44 @@ static int coe_ioctl_handle_capture_req(struct coe_channel_state * const ch,
 	uint32_t alloc_size_min;
 	int ret;
 	struct capture_common_unpins *unpins = NULL;
+	int32_t mem_fd;
 
 	if (req->buf_size == 0U || req->buf_size >= COE_MGBE_MAX_BUF_SIZE) {
-		dev_err(ch->dev, "CAPTURE_REQ: bad buf size %u\n", req->buf_size);
+		dev_err_ratelimited(ch->dev, "CAPTURE_REQ: bad buf size %u\n",
+				    req->buf_size);
 		return -EINVAL;
+	}
+
+	if (req->buffer_idx >= ARRAY_SIZE(ch->registered_bufs)) {
+		dev_err_ratelimited(ch->dev, "CAPTURE_REQ: bad buf index %u\n",
+				    req->buffer_idx);
+		return -EINVAL;
+	}
+
+	mem_fd = ch->registered_bufs[req->buffer_idx];
+	if (mem_fd < 0) {
+		dev_err_ratelimited(ch->dev, "CAPTURE_REQ: buf not registered %u\n",
+				    req->buffer_idx);
+		return -EBADFD;
 	}
 
 	mutex_lock(&ch->capq_inhw_lock);
 
 	if (ch->capq_inhw_pending >= ARRAY_SIZE(ch->capq_inhw)) {
-		dev_err(ch->dev, "CAPTURE_REQ: Rx queue is full\n");
+		dev_warn_ratelimited(ch->dev, "CAPTURE_REQ: Rx queue is full\n");
 		ret = -EAGAIN;
 		goto error;
 	}
 
 	if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
-		dev_err(ch->dev, "CAPTURE_REQ: chan not opened\n");
+		dev_warn_ratelimited(ch->dev, "CAPTURE_REQ: chan not opened\n");
 		ret = -ENOTCONN;
 		goto error;
 	}
 
 	unpins = &ch->capq_inhw[ch->capq_inhw_wr].unpins;
 	ret = capture_common_pin_and_get_iova(ch->buf_ctx,
-					      req->mem_fd,
+					      (uint32_t)mem_fd,
 					      req->mem_fd_offset,
 					      &mgbe_iova,
 					      &buf_max_size,
@@ -848,8 +869,71 @@ static void coe_chan_rxring_release(struct coe_channel_state * const ch)
 	ch->rx_desc_ring_va = NULL;
 }
 
-static int
-coe_ioctl_handle_setup_channel(struct coe_channel_state * const ch,
+static int coe_ioctl_handle_buffer_op(struct coe_channel_state * const ch,
+				      const struct coe_ioctl_data_buffer_op * const req)
+{
+	int ret;
+	const bool is_adding = req->flag & BUFFER_ADD;
+	int32_t memfd;
+
+	if (req->buffer_idx >= ARRAY_SIZE(ch->registered_bufs)) {
+		dev_err(ch->dev, "BUFFER_OP: invalid index %u\n", req->buffer_idx);
+		return -EINVAL;
+	}
+
+	mutex_lock(&ch->channel_lock);
+
+	if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
+		dev_err(ch->dev, "BUFFER_OP: chan not opened\n");
+		ret = -ENOTCONN;
+		goto unlock_and_return;
+	}
+
+	if (is_adding) {
+		if (req->mem > S32_MAX) {
+			dev_err(ch->dev, "BUFFER_OP: invalid buf %u\n", req->mem);
+			ret = -EINVAL;
+			goto unlock_and_return;
+		}
+
+		if (ch->registered_bufs[req->buffer_idx] >= 0) {
+			dev_err(ch->dev, "BUFFER_OP: buffer idx busy %u\n",
+				req->buffer_idx);
+			ret = -EBUSY;
+			goto unlock_and_return;
+		}
+
+		memfd = req->mem;
+	} else {
+		memfd = ch->registered_bufs[req->buffer_idx];
+		if (memfd < 0) {
+			dev_err(ch->dev, "BUFFER_OP: buffer idx not registered %u\n",
+				req->buffer_idx);
+			ret = -EBADFD;
+			goto unlock_and_return;
+		}
+	}
+
+	ret = capture_buffer_request(ch->buf_ctx, memfd, req->flag);
+	if (ret < 0) {
+		dev_err(ch->dev, "BUFFER_OP: failed flag=0x%x idx=%u: %d\n",
+			req->flag, req->buffer_idx, ret);
+		goto unlock_and_return;
+	}
+
+	// Update buffer state on success
+	ch->registered_bufs[req->buffer_idx] =
+		is_adding ? (int32_t)req->mem : COE_BUFFER_IDX_INVALID;
+
+	dev_dbg(ch->dev, "BUFFER_OP: OK flag=0x%x idx=%u\n",
+		req->flag, req->buffer_idx);
+
+unlock_and_return:
+	mutex_unlock(&ch->channel_lock);
+	return ret;
+}
+
+static int coe_ioctl_handle_setup_channel(struct coe_channel_state * const ch,
 			       struct coe_ioctl_data_capture_setup *setup)
 {
 	struct nvether_coe_cfg g_coe_cfg;
@@ -1092,24 +1176,7 @@ static long coe_fop_channel_ioctl(
 		if (ret != 0)
 			return ret;
 
-		mutex_lock(&ch->channel_lock);
-		if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
-			dev_err(ch->dev, "BUFFER_OP: chan not opened\n");
-			mutex_unlock(&ch->channel_lock);
-			return -ENOTCONN;
-		}
-
-		ret = capture_buffer_request(ch->buf_ctx, req.mem, req.flag);
-		if (ret < 0) {
-			dev_err(ch->dev, "CoE buffer op failed flag=0x%x: %ld\n",
-				req.flag, ret);
-			mutex_unlock(&ch->channel_lock);
-			return ret;
-		}
-
-		mutex_unlock(&ch->channel_lock);
-
-		dev_dbg(ch->dev, "CoE buffer op OK flag=0x%x\n", req.flag);
+		ret = coe_ioctl_handle_buffer_op(ch, &req);
 		break;
 	}
 	case _IOC_NR(COE_IOCTL_CAPTURE_REQ):
@@ -1207,6 +1274,9 @@ static int coe_fop_channel_open(
 
 	file->private_data = ch;
 	ch->opened = true;
+
+	for (uint32_t i = 0U; i < ARRAY_SIZE(ch->registered_bufs); i++)
+		ch->registered_bufs[i] = COE_BUFFER_IDX_INVALID;
 
 	ret = nonseekable_open(inode, file);
 
@@ -1367,6 +1437,13 @@ static int coe_channel_close(struct coe_channel_state *ch)
 	complete_all(&ch->capture_resp_ready);
 
 	mutex_unlock(&ch->capq_appreport_lock);
+
+	for (uint32_t i = 0U; i < ARRAY_SIZE(ch->registered_bufs); i++) {
+		ch->registered_bufs[i] = COE_BUFFER_IDX_INVALID;
+		/* Any buffers which were not unregistered by userspace will
+		 * be unmapped and released by destroying ch->buf_ctx next
+		 */
+	}
 
 	if (ch->buf_ctx != NULL) {
 		destroy_buffer_table(ch->buf_ctx);

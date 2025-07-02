@@ -29,6 +29,11 @@
 #define __COE_CAPTURE_ALIGN __aligned(8)
 
 /**
+ * @brief Maximum number of buffers indexes that can be registered with the CoE channel.
+ */
+#define COE_BUFFER_IDX_MAX_NUM	4U
+
+/**
  * @brief CoE channel setup config (COE_IOCTL_CAPTURE_SETUP payload).
  *
  */
@@ -42,10 +47,15 @@ struct coe_ioctl_data_capture_setup {
 
 /**
  * @brief CoE channel buffer operation (COE_IOCTL_BUFFER_OP payload).
+ *
+ * Register/unregister a buffer with the CoE channel. Buffer index must be below
+ * @ref COE_BUFFER_IDX_MAX_NUM.
  */
 struct coe_ioctl_data_buffer_op {
 	uint32_t mem; /**< handle to a buffer. */
 	uint32_t flag; /**< Buffer @ref CAPTURE_BUFFER_OPS bitmask. */
+	uint32_t buffer_idx; /**< Buffer index to identify the buffer for capture requests. */
+	uint8_t reserved[4U]; /**< Reserved for future use. */
 } __COE_CAPTURE_ALIGN;
 
 /**
@@ -61,9 +71,9 @@ struct coe_ioctl_data_buffer_op {
  * is returned by the driver in coe_ioctl_data_capture_status when capture is completed.
  */
 struct coe_ioctl_data_capture_req {
-	uint32_t mem_fd; /**< handle to a buffer. */
+	uint32_t buffer_idx; /**< Index of a buffer which is registered with COE_IOCTL_BUFFER_OP. */
 	uint32_t buf_size; /**< capture image size in bytes */
-	uint32_t mem_fd_offset; /**< offset from the beginning of a mem_fd */
+	uint32_t mem_fd_offset; /**< offset from the beginning of a buffer */
 	uint32_t capture_number; /**< capture number for a tracking by userspace */
 } __COE_CAPTURE_ALIGN;
 
