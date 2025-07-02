@@ -39,7 +39,6 @@
  */
 struct coe_ioctl_data_capture_setup {
 	char if_name[IFNAMSIZ];  /**< Net interface through which the camera is accessible */
-	int32_t scratchBufMem; /**< Memory handle of a scratch buffer allocated by a user */
 	uint8_t sensor_mac_addr[ETH_ALEN]; /**< Ethernet MAC address of a camera */
 	uint8_t vlan_enable; /**< VLAN enable value. 1 - VLAN enabled, 0 - VLAN disabled */
 	uint8_t reserved[1U];

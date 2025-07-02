@@ -211,9 +211,6 @@ struct coe_channel_state {
 	/* Rx desc shadow ring address for RCE engine */
 	dma_addr_t rx_desc_shdw_dma_rce;
 
-	/** "dummy" buffer which RCE can use as a scratch space */
-	struct capture_common_buf rx_dummy_buf;
-
 	/** A PDMA channel which services this CoE channel */
 	u8 pdma_id;
 
@@ -486,9 +483,6 @@ static int coe_channel_open_on_rce(struct coe_channel_state *ch,
 	config->rx_pktinfo_iova_rce = ch->parent->pdmas[ch->pdma_id].rx_pktinfo_dma_rce;
 	config->rx_pktinfo_mem_size = ch->parent->rx_pktinfo_ring_size * MGBE_PKTINFO_DESC_SIZE;
 
-	config->dummy_buf_dma = ch->rx_dummy_buf.iova;
-	config->dummy_buf_dma_size = ch->rx_dummy_buf.buf->size;
-
 	config->vlan_enable = vlan_enable;
 	config->rx_queue_depth = ARRAY_SIZE(ch->capq_inhw);
 
@@ -650,31 +644,6 @@ static int coe_ioctl_handle_capture_req(struct coe_channel_state * const ch,
 	if (alloc_size_min > buf_max_size) {
 		dev_err(ch->dev, "CAPTURE_REQ: capture too long %u\n", req->buf_size);
 		ret = -ENOSPC;
-		goto error;
-	}
-
-	/* Scratch buffer is used as a scratch space to receive incoming images into buffer
-	 * slots which were not yet initialized with an application image buffer pointers.
-	 * There is no way of knowing which buffer slots will be used first as it is
-	 * controlled by an external sender. Make sure scratch space is large enough to fit
-	 * an image of expected size, if needed.
-	 */
-	if (req->buf_size > ch->rx_dummy_buf.buf->size) {
-		dev_err(ch->dev, "CAPTURE_REQ: buf size > scratch buf %u\n", req->buf_size);
-		ret = -ENOSPC;
-		goto error;
-	}
-
-	/* All buffer pointer slots in CoE hardware share the same highest 32 bits of IOVA
-	 * address register.
-	 * Make sure all buffers IOVA registered by application have the same MSB 32 bits.
-	 */
-	if ((mgbe_iova >> 32U) != (ch->rx_dummy_buf.iova >> 32U)) {
-		dev_err(ch->dev, "Capture buf IOVA MSB 32 bits != scratch buf IOVA\n"
-			"0x%x != 0x%x\n",
-			(uint32_t)(mgbe_iova >> 32U),
-			(uint32_t)(ch->rx_dummy_buf.iova >> 32U));
-		ret = -EIO;
 		goto error;
 	}
 
@@ -1087,26 +1056,15 @@ static int coe_ioctl_handle_setup_channel(struct coe_channel_state * const ch,
 		rx_desc_shdw_ring[i].rdes3 |= RDES3_OWN;
 	}
 
-	/* pin the capture descriptor ring buffer */
-	ret = capture_common_pin_memory(ch->parent->mgbe_dev,
-					setup->scratchBufMem,
-					&ch->rx_dummy_buf);
-	if (ret < 0) {
-		dev_err(ch->dev, "Rx dummy buf map failed: %d\n", ret);
-		goto err_free_rx_desc_shdw;
-	}
-
 	ret = coe_channel_open_on_rce(ch, setup->sensor_mac_addr, setup->vlan_enable);
 	if (ret)
-		goto err_unpin_dummy;
+		goto err_free_rx_desc_shdw;
 
 	dev_info(&parent->pdev->dev, "CoE chan added %s dmachan=%u num_desc=%u\n",
 		 netdev_name(ndev), ch->dma_chan, ch->parent->rx_ring_size);
 
 	return 0;
 
-err_unpin_dummy:
-	capture_common_unpin_memory(&ch->rx_dummy_buf);
 err_free_rx_desc_shdw:
 	dma_free_coherent(ch->parent->rtcpu_dev,
 			  ch->parent->rx_ring_size * MGBE_RXDESC_SIZE,
@@ -1449,8 +1407,6 @@ static int coe_channel_close(struct coe_channel_state *ch)
 		destroy_buffer_table(ch->buf_ctx);
 		ch->buf_ctx = NULL;
 	}
-
-	capture_common_unpin_memory(&ch->rx_dummy_buf);
 
 	if (ch->netdev) {
 		put_device(&ch->netdev->dev);

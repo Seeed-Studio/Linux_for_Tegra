@@ -930,14 +930,6 @@ struct capture_coe_channel_config {
 	 */
 	uint64_t rx_pktinfo_mem_size;
 	/**
-	 * IOVA for RX scratch buffer memory area for MGBE access
-	 */
-	iova_t dummy_buf_dma;
-	/**
-	 * Size of RX scratch buffer memory area
-	 */
-	uint64_t dummy_buf_dma_size;
-	/**
 	 * VLAN enable value. 1 - VLAN enabled, 0 - VLAN disabled
 	 */
 	uint8_t vlan_enable;
