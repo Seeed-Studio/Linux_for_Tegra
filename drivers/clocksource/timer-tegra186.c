@@ -57,6 +57,8 @@
 #define WDTUR 0x00c
 #define  WDTUR_UNLOCK_PATTERN 0x0000c45a
 
+#define WDT_DEFAULT_TIMEOUT 120
+
 struct tegra186_timer_soc {
 	unsigned int num_timers;
 	unsigned int num_wdts;
@@ -74,6 +76,7 @@ struct tegra186_wdt {
 
 	void __iomem *regs;
 	unsigned int index;
+	bool enable_irq;
 	bool locked;
 
 	struct tegra186_tmr *tmr;
@@ -174,6 +177,16 @@ static void tegra186_wdt_enable(struct tegra186_wdt *wdt)
 		value &= ~WDTCR_PERIOD_MASK;
 		value |= WDTCR_PERIOD(1);
 
+		/*
+		 * If enable_irq is set then enable the watchdog IRQ for kernel
+		 * petting, otherwise userspace is responsible for petting the
+		 * watchdog.
+		 */
+		if (wdt->enable_irq)
+			value |= WDTCR_LOCAL_INT_ENABLE;
+		else
+			value &= ~WDTCR_LOCAL_INT_ENABLE;
+
 		/* enable system POR reset */
 		value |= WDTCR_SYSTEM_POR_RESET_ENABLE;
 
@@ -204,6 +217,10 @@ static int tegra186_wdt_stop(struct watchdog_device *wdd)
 static int tegra186_wdt_ping(struct watchdog_device *wdd)
 {
 	struct tegra186_wdt *wdt = to_tegra186_wdt(wdd);
+
+	/* Disable the watchdog IRQ now userspace is taking over. */
+	if (wdt->enable_irq)
+		wdt->enable_irq = false;
 
 	tegra186_wdt_disable(wdt);
 	tegra186_wdt_enable(wdt);
@@ -320,6 +337,8 @@ static struct tegra186_wdt *tegra186_wdt_create(struct tegra186_timer *tegra,
 	if (value & WDTCR_LOCAL_INT_ENABLE)
 		wdt->locked = true;
 
+	wdt->enable_irq = true;
+
 	source = value & WDTCR_TIMER_SOURCE_MASK;
 
 	wdt->tmr = tegra186_tmr_create(tegra, source);
@@ -423,10 +442,21 @@ static int tegra186_timer_usec_init(struct tegra186_timer *tegra)
 	return clocksource_register_hz(&tegra->usec, USEC_PER_SEC);
 }
 
+static irqreturn_t tegra186_timer_irq(int irq, void *data)
+{
+	struct tegra186_timer *tegra = data;
+
+	tegra186_wdt_disable(tegra->wdt);
+	tegra186_wdt_enable(tegra->wdt);
+
+	return IRQ_HANDLED;
+}
+
 static int tegra186_timer_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct tegra186_timer *tegra;
+	int irq;
 	int err;
 
 	tegra = devm_kzalloc(dev, sizeof(*tegra), GFP_KERNEL);
@@ -444,6 +474,15 @@ static int tegra186_timer_probe(struct platform_device *pdev)
 	err = platform_get_irq(pdev, 0);
 	if (err < 0)
 		return err;
+
+	irq = err;
+
+	err = devm_request_irq(dev, irq, tegra186_timer_irq, 0,
+			       "tegra186-timer", tegra);
+	if (err < 0) {
+		dev_err(dev, "failed to request IRQ#%u: %d\n", irq, err);
+		return err;
+	}
 
 	/* create a watchdog using a preconfigured timer */
 	tegra->wdt = tegra186_wdt_create(tegra, 0);
@@ -470,6 +509,13 @@ static int tegra186_timer_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to register USEC counter: %d\n", err);
 		goto unregister_osc;
 	}
+
+	/*
+	 * Start the watchdog to recover the system if it crashes before
+	 * userspace initialize the WDT.
+	 */
+	tegra186_wdt_set_timeout(&tegra->wdt->base, WDT_DEFAULT_TIMEOUT);
+	tegra186_wdt_start(&tegra->wdt->base);
 
 	return 0;
 
