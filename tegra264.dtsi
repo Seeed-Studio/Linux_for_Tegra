@@ -7917,6 +7917,14 @@
 			iommu-addresses = <&adsp1 0x0 0x00000000 0x0 0x20000000>,
 					  <&adsp1 0x0 0x40000000 0xffffffff 0xbfffffff>;
 		};
+
+		fb0_reserved: framebuffer@0,0 {
+			compatible = "framebuffer";
+			reg = <0x00 0x00 0x00 0x00>;
+			iommu-addresses = <&nvdisplay 0x0 0x0 0x0 0x0>;
+			no-map;
+			status = "disabled";
+		};
 	};
 
 	tegra-carveouts {
@@ -9866,6 +9874,120 @@
 			status = "disabled";
 		};
 	};
+
+	chosen {
+		framebuffer {
+			compatible = "simple-framebuffer";
+			status = "disabled";
+			memory-region = <&fb0_reserved>;
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_DISP>;
+			#power-domain-cells = <1>;
+			clocks =	<&bpmp TEGRA264_CLK_HUB>,
+					<&bpmp TEGRA264_CLK_DISP>,
+					<&bpmp TEGRA264_CLK_RG0_DIV>,
+					<&bpmp TEGRA264_CLK_RG1_DIV>,
+					<&bpmp TEGRA264_CLK_RG2_DIV>,
+					<&bpmp TEGRA264_CLK_RG3_DIV>,
+					<&bpmp TEGRA264_CLK_RG4_DIV>,
+					<&bpmp TEGRA264_CLK_RG5_DIV>,
+					<&bpmp TEGRA264_CLK_RG6_DIV>,
+					<&bpmp TEGRA264_CLK_RG7_DIV>,
+					<&bpmp TEGRA264_CLK_FUSE>,
+					<&bpmp TEGRA264_CLK_SPPLL0_CLKOUT1A>,
+					<&bpmp TEGRA264_CLK_SPPLL0_CLKOUT2A>,
+					<&bpmp TEGRA264_CLK_SPPLL0_CLKOUT270>,
+					<&bpmp TEGRA264_CLK_SPPLL1_CLKOUT270>,
+					<&bpmp TEGRA264_CLK_SPPLL0_CLKOUT100>,
+					<&bpmp TEGRA264_CLK_SPPLL1_CLKOUT100>,
+					<&bpmp TEGRA264_CLK_VPLL0>,
+					<&bpmp TEGRA264_CLK_VPLL1>,
+					<&bpmp TEGRA264_CLK_VPLL2>,
+					<&bpmp TEGRA264_CLK_VPLL3>,
+					<&bpmp TEGRA264_CLK_VPLL4>,
+					<&bpmp TEGRA264_CLK_VPLL5>,
+					<&bpmp TEGRA264_CLK_VPLL6>,
+					<&bpmp TEGRA264_CLK_VPLL7>,
+					<&bpmp TEGRA264_CLK_RG0>,
+					<&bpmp TEGRA264_CLK_RG1>,
+					<&bpmp TEGRA264_CLK_RG2>,
+					<&bpmp TEGRA264_CLK_RG3>,
+					<&bpmp TEGRA264_CLK_RG4>,
+					<&bpmp TEGRA264_CLK_RG5>,
+					<&bpmp TEGRA264_CLK_RG6>,
+					<&bpmp TEGRA264_CLK_RG7>,
+					<&bpmp TEGRA264_CLK_DISPPLL>,
+					<&bpmp TEGRA264_CLK_PRE_SOR0>,
+					<&bpmp TEGRA264_CLK_PRE_SOR1>,
+					<&bpmp TEGRA264_CLK_PRE_SOR2>,
+					<&bpmp TEGRA264_CLK_PRE_SOR3>,
+					<&bpmp TEGRA264_CLK_DP_LINKA_REF>,
+					<&bpmp TEGRA264_CLK_DP_LINKB_REF>,
+					<&bpmp TEGRA264_CLK_DP_LINKC_REF>,
+					<&bpmp TEGRA264_CLK_DP_LINKD_REF>,
+					<&bpmp TEGRA264_CLK_SOR_LINKA_INPUT>,
+					<&bpmp TEGRA264_CLK_SOR_LINKB_INPUT>,
+					<&bpmp TEGRA264_CLK_SOR_LINKC_INPUT>,
+					<&bpmp TEGRA264_CLK_SOR_LINKD_INPUT>,
+					<&bpmp TEGRA264_CLK_SOR_LINKA_AFIFO>,
+					<&bpmp TEGRA264_CLK_SOR_LINKB_AFIFO>,
+					<&bpmp TEGRA264_CLK_SOR_LINKC_AFIFO>,
+					<&bpmp TEGRA264_CLK_SOR_LINKD_AFIFO>,
+					<&bpmp TEGRA264_CLK_SOR0>,
+					<&bpmp TEGRA264_CLK_SOR1>,
+					<&bpmp TEGRA264_CLK_SOR2>,
+					<&bpmp TEGRA264_CLK_SOR3>,
+					<&bpmp TEGRA264_CLK_LINKA_SYM>,
+					<&bpmp TEGRA264_CLK_LINKB_SYM>,
+					<&bpmp TEGRA264_CLK_LINKC_SYM>,
+					<&bpmp TEGRA264_CLK_LINKD_SYM>,
+					<&bpmp TEGRA264_CLK_SOR0_PAD>,
+					<&bpmp TEGRA264_CLK_SOR1_PAD>,
+					<&bpmp TEGRA264_CLK_SOR2_PAD>,
+					<&bpmp TEGRA264_CLK_SOR3_PAD>,
+					<&bpmp TEGRA264_CLK_SF0>,
+					<&bpmp TEGRA264_CLK_SF1>,
+					<&bpmp TEGRA264_CLK_SF2>,
+					<&bpmp TEGRA264_CLK_SF3>,
+					<&bpmp TEGRA264_CLK_SF4>,
+					<&bpmp TEGRA264_CLK_SF5>,
+					<&bpmp TEGRA264_CLK_SF6>,
+					<&bpmp TEGRA264_CLK_SF7>,
+					<&bpmp TEGRA264_CLK_SOR0_PLL_REF>,
+					<&bpmp TEGRA264_CLK_SOR1_PLL_REF>,
+					<&bpmp TEGRA264_CLK_SOR2_PLL_REF>,
+					<&bpmp TEGRA264_CLK_SOR3_PLL_REF>,
+					<&bpmp TEGRA264_CLK_SOR0_REF>,
+					<&bpmp TEGRA264_CLK_SOR1_REF>,
+					<&bpmp TEGRA264_CLK_SOR2_REF>,
+					<&bpmp TEGRA264_CLK_SOR3_REF>,
+					<&bpmp TEGRA264_CLK_OSC>,
+					<&bpmp TEGRA264_CLK_DSC>,
+					<&bpmp TEGRA264_CLK_MAUD>,
+					<&bpmp TEGRA264_CLK_AZA_2XBIT>,
+					<&bpmp TEGRA264_CLK_DISP_ROOT>,
+					<&bpmp TEGRA264_CLK_VPLLX_SOR0_MUXED>,
+					<&bpmp TEGRA264_CLK_VPLLX_SOR1_MUXED>,
+					<&bpmp TEGRA264_CLK_VPLLX_SOR2_MUXED>,
+					<&bpmp TEGRA264_CLK_VPLLX_SOR3_MUXED>,
+					<&bpmp TEGRA264_CLK_SF0_SOR>,
+					<&bpmp TEGRA264_CLK_SF1_SOR>,
+					<&bpmp TEGRA264_CLK_SF2_SOR>,
+					<&bpmp TEGRA264_CLK_SF3_SOR>,
+					<&bpmp TEGRA264_CLK_SF4_SOR>,
+					<&bpmp TEGRA264_CLK_SF5_SOR>,
+					<&bpmp TEGRA264_CLK_SF6_SOR>,
+					<&bpmp TEGRA264_CLK_SF7_SOR>,
+					<&bpmp TEGRA264_CLK_DPAUX>,
+					<&bpmp TEGRA264_CLK_EMC>;
+
+			width  = <0>;
+			height = <0>;
+			stride = <0>;
+			format = "x8b8g8r8";
+			display = <&nvdisplay>;
+		};
+	};
+
 	nvdisplay: display@8808c00000 {
 		compatible = "nvidia,tegra264-display";
 		power-domains = <&bpmp TEGRA264_POWER_DOMAIN_DISP>;
@@ -10106,6 +10228,7 @@
 		interconnect-names = "read-1";
 
 		status = "disabled";
+		memory-region = <&fb0_reserved>;
 
 		/*
 		 * We're currently using the legacy scheme of assigning a single
