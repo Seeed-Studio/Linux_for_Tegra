@@ -83,6 +83,7 @@ struct nv_cam {
 
 	struct nv_cam_mode		*modes;
 	unsigned int			num_modes;
+	bool need_cmd;
 };
 
 static const struct regmap_config sensor_regmap_config = {
@@ -134,27 +135,27 @@ static inline int nv_cam_write_reg(struct camera_common_data *s_data,
 	return 0;
 }
 
-// static int nv_cam_write_cmd(struct nv_cam *priv, struct nv_cam_cmd *cmd)
-// {
-// 	unsigned int i;
-// 	int ret;
+static int nv_cam_write_cmd(struct nv_cam *priv, struct nv_cam_cmd *cmd)
+{
+	unsigned int i;
+	int ret;
 
-// 	for (i = 0; i < cmd->len;) {
-// 		if (cmd->data[i] == priv->wait_ms_cmd) {
-// 			msleep_range(cmd->data[i + 1]);
+	for (i = 0; i < cmd->len;) {
+		if (cmd->data[i] == priv->wait_ms_cmd) {
+			msleep_range(cmd->data[i + 1]);
 
-// 			i += 2;
-// 		} else {
-// 			ret = nv_cam_write_reg(priv->s_data, cmd->data[i], cmd->data[i + 1]);
-// 			if (ret)
-// 				return ret;
+			i += 2;
+		} else {
+			ret = nv_cam_write_reg(priv->s_data, cmd->data[i], cmd->data[i + 1]);
+			if (ret)
+				return ret;
 
-// 			i += 2;
-// 		}
-// 	}
+			i += 2;
+		}
+	}
 
-// 	return 0;
-// }
+	return 0;
+}
 
 static int nv_cam_set_group_hold(struct tegracam_device *tc_dev, bool val)
 {
@@ -621,32 +622,36 @@ static int nv_cam_set_mode(struct tegracam_device *tc_dev)
 
 static int nv_cam_start_streaming(struct tegracam_device *tc_dev)
 {
-	// struct nv_cam *priv = tegracam_get_privdata(tc_dev);
-	// struct device *dev = &priv->i2c_client->dev;
-	// int ret;
+	struct nv_cam *priv = tegracam_get_privdata(tc_dev);
+	struct device *dev = &priv->i2c_client->dev;
+	int ret;
 	
+	if(priv->need_cmd != true)
+		return 0;
 
-
-	// ret = nv_cam_write_cmd(priv, &priv->start_stream_cmd);
-	// if (ret) {
-	// 	dev_err(dev, "Failed to write start stream cmd: %d\n", ret);
-	// 	return ret;
-	// }
+	ret = nv_cam_write_cmd(priv, &priv->start_stream_cmd);
+	if (ret) {
+		dev_err(dev, "Failed to write start stream cmd: %d\n", ret);
+		return ret;
+	}
 
 	return 0;
 }
 
 static int nv_cam_stop_streaming(struct tegracam_device *tc_dev)
 {
-	// struct nv_cam *priv = tegracam_get_privdata(tc_dev);
-	// struct device *dev = &priv->i2c_client->dev;
-	// int ret;
+	struct nv_cam *priv = tegracam_get_privdata(tc_dev);
+	struct device *dev = &priv->i2c_client->dev;
+	int ret;
 
-	// ret = nv_cam_write_cmd(priv, &priv->stop_stream_cmd);
-	// if (ret) {
-	// 	dev_err(dev, "Failed to write stop stream cmd: %d\n", ret);
-	// 	return ret;
-	// }
+	if(priv->need_cmd != true)
+		return 0;
+
+	ret = nv_cam_write_cmd(priv, &priv->stop_stream_cmd);
+	if (ret) {
+		dev_err(dev, "Failed to write stop stream cmd: %d\n", ret);
+		return ret;
+	}
 
 	return 0;
 }
@@ -666,30 +671,30 @@ static struct camera_common_sensor_ops nv_cam_common_ops = {
 
 static int __nv_cam_check_id(struct nv_cam *priv, unsigned int i)
 {
-	// struct camera_common_data *s_data = priv->s_data;
-	// struct device *dev = s_data->dev;
+	struct camera_common_data *s_data = priv->s_data;
+	struct device *dev = s_data->dev;
 	unsigned int reg, mask, val;
-	// u8 reg_val;
-	// int ret;
+	u8 reg_val;
+	int ret;
 	
-
+	
 	reg = priv->chip_id_regs[i];
 	mask = priv->chip_id_masks[i];
 	val = priv->chip_id_vals[i];
 
-	// ret = nv_cam_read_reg(s_data, reg, &reg_val);
-	// if (ret)
-	// 	return ret;
+	ret = nv_cam_read_reg(s_data, reg, &reg_val);
+	if (ret)
+		return ret;
 		
 
-	// val &= mask;
-	// reg_val &= mask;
+	val &= mask;
+	reg_val &= mask;
 
-	// if (reg_val != val) {
-	// 	dev_err(dev, "Invalid chip id 0x%x, expected 0x%x\n",
-	// 		reg_val, val);
-	// 	return -EINVAL;
-	// }
+	if (reg_val != val) {
+		dev_err(dev, "Invalid chip id 0x%x, expected 0x%x\n",
+			reg_val, val);
+		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -701,8 +706,11 @@ static int __nv_cam_check_ids(struct nv_cam *priv)
 
 	for (i = 0; i < priv->num_chip_id_regs; i++) {
 		ret = __nv_cam_check_id(priv, i);
-		if (ret)
+		if (ret){
+			dev_warn(priv->s_data->dev,"can not check id");
 			return ret;
+		}
+
 	}
 
 	return 0;
@@ -712,6 +720,9 @@ static int nv_cam_check_ids(struct nv_cam *priv)
 {
 	int retry = 100;
 	int ret;
+
+	if(priv->need_cmd != true)
+		return 0;
 
 retry:
 	ret = __nv_cam_check_ids(priv);
@@ -1072,6 +1083,11 @@ static int nv_cam_parse_dt_extra(struct nv_cam *priv)
 	struct device *dev = &priv->i2c_client->dev;
 	int ret;
 	u32 val;
+
+	val = 0;
+	ret = device_property_read_u32(dev, "must_need_cmd", &val);
+	if (!ret && val != 0)
+		priv->need_cmd = true;
 
 	val = 8;
 	ret = device_property_read_u32(dev, "nv,reg-bits", &val);
