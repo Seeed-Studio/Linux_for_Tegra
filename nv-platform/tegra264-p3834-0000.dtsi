@@ -6,6 +6,8 @@
 #include "nv-soc/tegra264-soc-thermal.dtsi"
 
 / {
+	skip_hugetlbfs_configuration;
+
 	bus@0 {
 		efuse-helper {
 			status = "okay";
