@@ -73,7 +73,12 @@ dtbo-y += tegra234-camera-g300-nomtd-overlay.dtbo  # orbbec add
 dtbo-y += tegra234-camera-g300-pwm-overlay.dtbo  # orbbec add
 dtbo-y += tegra234-camera-g300-xc-overlay.dtbo  # orbbec add
 dtbo-y += tegra234-camera-g300-nomtd-xc-overlay.dtbo  # orbbec add
-dtbo-y += tegra234-camera-g300-leopard-overlay.dtbo  # orbbec add
+dtbo-y += tegra234-camera-g300-leopard-overlay.dtbo	# orbbec add
+
+dtbo-y += tegra234-seeed-gmsl1x4-3g-overlay.dtbo  
+dtbo-y += tegra234-seeed-gmsl1x4-6g-overlay.dtbo  
+dtbo-y += tegra234-seeed-gmsl2x4-3g-overlay.dtbo  
+
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
