@@ -2,7 +2,7 @@
 /*
  * Copyright (c) 2021, LGE Inc. All rights reserved.
  *
- * SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1462,6 +1462,8 @@ static int fusb301_probe(struct i2c_client *client,
 		dev_err(cdev, "could not create devices\n");
 		goto destroy_workqueue;
 	}
+
+	device_disable_async_suspend(cdev);
 
 	enable_irq_wake(client->irq);
 
