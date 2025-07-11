@@ -7,7 +7,7 @@
 #include <dt-bindings/clock/tegra264-clk.h>
 #include <dt-bindings/gpio/tegra264-gpio.h>
 
-#define IO_EXP_RST	TEGRA264_MAIN_GPIO(AC, 1)
+#define IO_EXP_RST	TEGRA264_MAIN_GPIO(Q, 3)
 #define MIPICFG0	TEGRA264_MAIN_GPIO(V, 2)
 #define MIPICFG1	TEGRA264_MAIN_GPIO(AL, 1)
 #define MIPICFG2	TEGRA264_MAIN_GPIO(Q, 2)
@@ -37,7 +37,7 @@
 						status = "okay";
 					};
 				};
-				i2c@810c6a0000 {
+				i2c@c600000 {
 					#address-cells = <1>;
 					#size-cells = <0>;
 					tca6424_22: tca6424@22 {
@@ -45,7 +45,7 @@
 						gpio-controller;
 						#gpio-cells = <2>;
 						reg = <0x22>;
-						//reset-gpios = <&gpio_main IO_EXP_RST GPIO_ACTIVE_LOW>;
+						reset-gpios = <&gpio_main IO_EXP_RST GPIO_ACTIVE_LOW>;
 						status = "okay";
 					};
 				};
