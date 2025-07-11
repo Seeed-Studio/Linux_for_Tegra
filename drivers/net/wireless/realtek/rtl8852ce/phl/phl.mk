@@ -11,10 +11,10 @@ endif
 
 ifeq ($(CONFIG_PHL_ARCH), y)
 phl_path := phl/
-phl_path_d1 := $(src)/phl/$(HAL)
+phl_path_d1 := $(SOURCETREE)/phl/$(HAL)
 else
 phl_path :=
-phl_path_d1 := $(src)/$(HAL)
+phl_path_d1 := $(SOURCETREE)/$(HAL)
 endif
 
 _PHL_FILES := $(phl_path)phl_init.o \
