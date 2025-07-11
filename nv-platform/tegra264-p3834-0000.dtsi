@@ -574,8 +574,4 @@
 	replicator_soc@10060000 {
 		status = "okay";
 	};
-
-	etr_soc@10050000 {
-		status = "okay";
-	};
 };
