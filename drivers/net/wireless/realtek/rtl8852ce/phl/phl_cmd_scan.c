@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2019 - 2020 Realtek Corporation.
- *
+ * SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -343,14 +343,14 @@ next_ch:
 		goto next_ch;
 	}
 	else {
-		printk("%s: scan done\n", __func__);
+		PHL_INFO("%s: scan done\n", __func__);
 		return NULL;
 	}
 
 	param->done_num = param->ch_num - sctrl->chlist.cnt;
-	printk("%s:[%d] idx=%d, r=%d, ch=%d, p=%d\n", __func__,
-		band_idx, sctrl->ch_idx, sctrl->chlist.cnt, sctrl->scan_ch->channel,
-		phl_get_passing_time_ms(param->start_time));
+	PHL_INFO("%s:[%d] idx=%d, r=%d, ch=%d, p=%d\n", __func__,
+		  band_idx, sctrl->ch_idx, sctrl->chlist.cnt, sctrl->scan_ch->channel,
+		  phl_get_passing_time_ms(param->start_time));
 
 	return sctrl->scan_ch;
 }

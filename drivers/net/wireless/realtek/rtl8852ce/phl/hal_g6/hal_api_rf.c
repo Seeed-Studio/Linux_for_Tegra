@@ -198,9 +198,9 @@ enum rtw_hal_status rtw_hal_rf_read_pwr_table_ru(
 {
 	int ret = RTW_HAL_STATUS_SUCCESS;
 	struct hal_info_t *hal_info = (struct hal_info_t *)hal_com->hal_priv;
+	u8 band = hal_com->band[HW_PHY_0].cur_chandef.band;
 
 	PHL_INFO("[MP HAL API] %s \n", __FUNCTION__);
-	u8 band = hal_com->band[HW_PHY_0].cur_chandef.band;
 	*get_item = halrf_get_power_by_rate_and_limit_ru_smaller(hal_info->rf,
 			rf_path, rate, dcm,offset, bandwidth, beamforming, channel, band);
 

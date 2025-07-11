@@ -103,7 +103,7 @@ _CORE_FILES +=	core/rtw_phl.o \
 		core/rtw_phl_rate.o \
 		core/rtw_phl_cmd.o
 
-EXTRA_CFLAGS += -I$(src)/core/crypto
+EXTRA_CFLAGS += -I$(SOURCETREE)/core/crypto
 _CORE_FILES += core/crypto/aes-internal.o \
 		core/crypto/aes-internal-enc.o \
 		core/crypto/aes-gcm.o \

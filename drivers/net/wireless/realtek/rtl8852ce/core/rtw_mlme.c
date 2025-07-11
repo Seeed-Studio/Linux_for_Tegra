@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2024 Realtek Corporation.
- *
+ * SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -177,8 +177,8 @@ sint	_rtw_init_mlme_priv(_adapter *padapter)
 #else
 #define RTW_ROAM_SCAN_RESULT_EXP_MS (10*1000)
 #endif
-#define RTW_ROAM_SCAN_INTERVAL (5)    /* 5*(2 second)*/
-#define RTW_ROAM_RSSI_THRESHOLD 30
+#define RTW_ROAM_SCAN_INTERVAL (2)    /* 5*(2 second)*/
+#define RTW_ROAM_RSSI_THRESHOLD 40
 
 #define RTW_ROAM_RSSI_IDLE_TH RTW_ROAM_RSSI_THRESHOLD
 #define RTW_ROAM_RSSI_BUSY_TH RTW_ROAM_RSSI_THRESHOLD + 5
