@@ -326,6 +326,9 @@ static int nvhost_pod_event_handler(struct devfreq *df,
 
 	switch (event) {
 	case DEVFREQ_GOV_START:
+		if (!try_module_get(THIS_MODULE))
+			return -ENODEV;
+
 		mutex_lock(&df->lock);
 		ret = nvhost_pod_init(df);
 		mutex_unlock(&df->lock);
@@ -336,6 +339,7 @@ static int nvhost_pod_event_handler(struct devfreq *df,
 		mutex_lock(&df->lock);
 		nvhost_pod_exit(df);
 		mutex_unlock(&df->lock);
+		module_put(THIS_MODULE);
 		break;
 	case DEVFREQ_GOV_UPDATE_INTERVAL:
 		devfreq_update_interval(df, (unsigned int *)data);

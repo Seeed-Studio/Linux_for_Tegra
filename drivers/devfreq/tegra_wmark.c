@@ -531,6 +531,9 @@ static int devfreq_tegra_wmark_event_handler(struct devfreq *df,
 
 	switch (event) {
 	case DEVFREQ_GOV_START:
+		if (!try_module_get(THIS_MODULE))
+			return -ENODEV;
+
 		err = tegra_wmark_init(df);
 		if (err)
 			return err;
@@ -542,6 +545,7 @@ static int devfreq_tegra_wmark_event_handler(struct devfreq *df,
 		wmark_config.lower_wmark_enabled = 0;
 		drvdata->update_wmark_threshold(df, &wmark_config);
 		tegra_wmark_exit(df);
+		module_put(THIS_MODULE);
 		break;
 	case DEVFREQ_GOV_SUSPEND:
 		wmark_config.upper_wmark_enabled = 0;
