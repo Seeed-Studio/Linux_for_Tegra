@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2022 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2025 NVIDIA Corporation.  All rights reserved.
  */
 
 /**
@@ -155,6 +155,19 @@ struct isp_capture_progress_status_req {
 struct isp_buffer_req {
 	uint32_t mem; /**< NvRm handle to buffer */
 	uint32_t flag; /**< Buffer @ref CAPTURE_BUFFER_OPS bitmask */
+} __ISP_CAPTURE_ALIGN;
+
+/**
+ * @brief ISP hardware capabilities query response structure
+ *
+ * This structure contains dynamic hardware capabilities that can only
+ * be determined at runtime by querying the actual hardware configuration
+ * and driver state.
+ */
+struct isp_capabilities_info {
+	uint32_t num_isp_units;    /**< Number of available ISP units after floorsweeping */
+	uint32_t isp_unit_mask;    /**< Bitmask of available ISP units (bit N set = ISP N available) */
+	uint32_t reserved[6];      /**< Reserved for future expansion */
 } __ISP_CAPTURE_ALIGN;
 
 /**
@@ -373,5 +386,21 @@ int isp_capture_set_progress_status_notifier(
 int isp_capture_buffer_request(
 	struct tegra_isp_channel *chan,
 	struct isp_buffer_req *req);
+
+/**
+ * @brief Query ISP hardware capabilities.
+ *
+ * This function queries dynamic ISP hardware capabilities including
+ * the number of ISP units available, channels per ISP, and hardware
+ * fusing status.
+ *
+ * @param[in]	chan	ISP channel context
+ * @param[out]	caps	ISP capabilities information
+ *
+ * @returns		0 (success), neg. errno (failure)
+ */
+int isp_capture_get_capabilities(
+	struct tegra_isp_channel *chan,
+	struct isp_capabilities_info *caps);
 
 #endif /* __FUSA_CAPTURE_ISP_H__ */

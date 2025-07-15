@@ -321,7 +321,7 @@ struct CAPTURE_MSG_HEADER {
  * @par Response
  * - @ref CAPTURE_COE_CHANNEL_RESET_RESP
  */
-#define CAPTURE_COE_CHANNEL_RESET_REQ		MK_U32(0x26)
+#define CAPTURE_COE_CHANNEL_RESET_REQ		MK_U32(0x28)
 
 /**
  * @brief CoE capture channel reset response.
@@ -341,7 +341,7 @@ struct CAPTURE_MSG_HEADER {
  * @par Payload
  * - @ref CAPTURE_COE_CHANNEL_RESET_RESP_MSG
  */
-#define CAPTURE_COE_CHANNEL_RESET_RESP		MK_U32(0x27)
+#define CAPTURE_COE_CHANNEL_RESET_RESP		MK_U32(0x29)
 
 /**
  * @brief CoE capture channel release request.
@@ -365,7 +365,7 @@ struct CAPTURE_MSG_HEADER {
  * @par Response
  * - @ref CAPTURE_COE_CHANNEL_RELEASE_RESP
  */
-#define CAPTURE_COE_CHANNEL_RELEASE_REQ		MK_U32(0x28)
+#define CAPTURE_COE_CHANNEL_RELEASE_REQ		MK_U32(0x2A)
 
 /**
  * @brief CoE capture channel release response.
@@ -385,7 +385,7 @@ struct CAPTURE_MSG_HEADER {
  * @par Payload
  * - @ref CAPTURE_COE_CHANNEL_RELEASE_RESP_MSG
  */
-#define CAPTURE_COE_CHANNEL_RELEASE_RESP	MK_U32(0x29)
+#define CAPTURE_COE_CHANNEL_RELEASE_RESP	MK_U32(0x2B)
 /** @} */
 
 /**
@@ -530,6 +530,49 @@ struct CAPTURE_MSG_HEADER {
  * - @ref CAPTURE_CHANNEL_ISP_RELEASE_RESP_MSG
  */
 #define CAPTURE_CHANNEL_ISP_RELEASE_RESP	MK_U32(0x25)
+
+/**
+ * @brief ISP fuse register query request.
+ *
+ * This is a @ref CapCtrlMsgType "capture control message" to
+ * query the ISP fuse register value from RCE firmware. This
+ * message is used to determine which ISP units are enabled
+ * or disabled based on hardware fusing.
+ *
+ * @pre The capture-control IVC channel has been set up during
+ *      boot using the @ref CAMRTC_HSP_CH_SETUP command.
+ *
+ * @par Header
+ * - @ref CAPTURE_CONTROL_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_ISP_FUSE_QUERY_REQ
+ *   - @ref CAPTURE_MSG_HEADER::transaction "transaction" = <em>unique ID</em>
+ *
+ * @par Payload
+ * - @ref CAPTURE_ISP_FUSE_QUERY_REQ_MSG
+ *
+ * @par Response
+ * - @ref CAPTURE_ISP_FUSE_QUERY_RESP
+ */
+#define CAPTURE_ISP_FUSE_QUERY_REQ		MK_U32(0x26)
+
+/**
+ * @brief ISP fuse register query response.
+ *
+ * This is a @ref CapCtrlMsgType "capture control message" received in
+ * response to a @ref CAPTURE_ISP_FUSE_QUERY_REQ message.
+ *
+ * @pre A @ref CAPTURE_ISP_FUSE_QUERY_REQ message has been sent.
+ *
+ * @par Header
+ * - @ref CAPTURE_CONTROL_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_ISP_FUSE_QUERY_RESP
+ *   - @ref CAPTURE_MSG_HEADER::transaction "transaction" =
+ *     @ref CAPTURE_ISP_FUSE_QUERY_REQ@b::@ref CAPTURE_MSG_HEADER "header"@b::@ref CAPTURE_MSG_HEADER::transaction "transaction"
+ *
+ * @par Payload
+ * - @ref CAPTURE_ISP_FUSE_QUERY_RESP_MSG
+ */
+#define CAPTURE_ISP_FUSE_QUERY_RESP		MK_U32(0x27)
 /** @} */
 /** @} */
 
@@ -1968,6 +2011,32 @@ struct CAPTURE_CHANNEL_ISP_RELEASE_RESP_MSG {
 	uint32_t pad__;
 } CAPTURE_IVC_ALIGN;
 
+/** @brief Message data for @ref CAPTURE_ISP_FUSE_QUERY_REQ message */
+struct CAPTURE_ISP_FUSE_QUERY_REQ_MSG {
+	/** Reserved - no parameters needed for fuse query */
+	uint32_t pad__;
+
+	/** Reserved */
+	uint32_t pad2__;
+} CAPTURE_IVC_ALIGN;
+
+/** @brief Message data for @ref CAPTURE_ISP_FUSE_QUERY_RESP message */
+struct CAPTURE_ISP_FUSE_QUERY_RESP_MSG {
+	/**
+	 * ISP availability mask calculated from fuse register:
+	 * Each bit represents an ISP unit (bit 0 = ISP0, bit 1 = ISP1, etc.)
+	 * 1 = ISP available, 0 = ISP fused off
+	 * Examples:
+	 *   0x3: Both ISP0 and ISP1 available
+	 *   0x2: Only ISP1 available (ISP0 fused off)
+	 *   0x1: Only ISP0 available (ISP1 fused off)
+	 */
+	uint32_t isp_available_mask;
+
+	/** Request result code. See @ref CapErrorCodes "result codes". */
+	capture_result result;
+} CAPTURE_IVC_ALIGN;
+
 /**
  * @brief Message frame for capture-control IVC channel.
  *
@@ -2155,6 +2224,13 @@ struct CAPTURE_CONTROL_MSG {
 		/** @anon_union_member */
 		/** Message data for @ref CAPTURE_HSM_CHANSEL_ERROR_MASK_RESP message */
 		struct CAPTURE_HSM_CHANSEL_ERROR_MASK_RESP_MSG hsm_chansel_mask_resp;
+
+		/** @anon_union_member */
+		/** Message data for @ref CAPTURE_ISP_FUSE_QUERY_REQ message */
+		struct CAPTURE_ISP_FUSE_QUERY_REQ_MSG isp_fuse_query_req;
+		/** @anon_union_member */
+		/** Message data for @ref CAPTURE_ISP_FUSE_QUERY_RESP message */
+		struct CAPTURE_ISP_FUSE_QUERY_RESP_MSG isp_fuse_query_resp;
 	};
 } CAPTURE_IVC_ALIGN;
 

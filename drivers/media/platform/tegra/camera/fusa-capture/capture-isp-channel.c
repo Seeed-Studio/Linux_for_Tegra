@@ -193,6 +193,16 @@ struct isp_channel_drv {
 #define ISP_CAPTURE_BUFFER_REQUEST \
 	_IOW('I', 11, struct isp_buffer_req)
 
+/**
+ * @brief Get the ISP hardware capabilities.
+ *
+ * @param[in]	ptr	Pointer to a struct @ref isp_capabilities_info
+ *
+ * @returns	0 (success), neg. errno (failure)
+ */
+#define ISP_CAPTURE_GET_CAPABILITIES \
+	_IOW('I', 12, struct isp_capabilities_info)
+
 /** @} */
 
 static struct isp_channel_drv *chdrv_;
@@ -453,6 +463,7 @@ static long isp_channel_ioctl(
 
 		if (copy_from_user(&setup, ptr, sizeof(setup)))
 			break;
+
 		isp_get_nvhost_device(chan, &setup);
 		if (chan->isp_dev == NULL) {
 			dev_err(&chan->isp_capture_pdev->dev,
@@ -578,6 +589,21 @@ static long isp_channel_ioctl(
 		err = isp_capture_buffer_request(chan, &req);
 		if (err < 0)
 			dev_err(chan->isp_dev, "isp buffer req failed\n");
+		break;
+	}
+	case _IOC_NR(ISP_CAPTURE_GET_CAPABILITIES): {
+		struct isp_capabilities_info caps = {0};
+
+		err = isp_capture_get_capabilities(chan, &caps);
+		if (err < 0) {
+			dev_err(chan->isp_dev, "isp get capabilities failed\n");
+			break;
+		}
+
+		if (copy_to_user(ptr, &caps, sizeof(caps)) != 0UL) {
+			err = -EFAULT;
+			dev_err(chan->isp_dev, "failed to copy capabilities to user\n");
+		}
 		break;
 	}
 	default: {

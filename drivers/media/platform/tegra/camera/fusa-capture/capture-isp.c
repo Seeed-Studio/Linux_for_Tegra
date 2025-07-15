@@ -23,6 +23,8 @@
 
 #include <linux/completion.h>
 #include <linux/nospec.h>
+#include <linux/limits.h>
+#include <linux/bitops.h>
 /*
  * The host1x-next.h header must be included before the nvhost.h
  * header, as the nvhost.h header includes the host1x.h header,
@@ -39,6 +41,7 @@
 #include <linux/iosys-map.h>
 #include <linux/dma-buf.h>
 #include <linux/of.h>
+#include <linux/mutex.h>
 #include <asm/arch_timer.h>
 #include <soc/tegra/fuse.h>
 
@@ -82,6 +85,14 @@
 #define MAX_ISP_INPUT_PREFENCES	U32_C(14)
 
 /**
+ * @brief Cached ISP fuse register information.
+ */
+struct isp_fuse_cache {
+	bool initialized;        /**< Whether fuse cache is initialized */
+	uint32_t available_mask; /**< Cached available ISP mask from RCE */
+};
+
+/**
  * @brief The Capture-ISP standalone driver context.
  */
 struct tegra_capture_isp_data {
@@ -89,6 +100,9 @@ struct tegra_capture_isp_data {
 	struct platform_device *isp_pdevices[MAX_ISP_UNITS];
 	uint32_t max_isp_channels;
 		/**< Maximum number of ISP capture channel devices */
+	struct isp_fuse_cache fuse_cache; /**< Cached fuse register information */
+	struct mutex hw_assignment_lock; /**< Mutex for thread-safe HW ISP assignment */
+	uint32_t sw_to_hw_map[MAX_ISP_UNITS]; /**< SW unit ID → HW unit ID mapping (UINT32_MAX = unassigned) */
 };
 
 /**
@@ -1464,6 +1478,35 @@ static void isp_capture_ivc_control_callback(
 	}
 }
 
+static void isp_capture_ivc_probe_control_callback(
+	const void *ivc_resp,
+	const void *pcontext)
+{
+	const struct CAPTURE_CONTROL_MSG *control_msg = ivc_resp;
+	struct isp_capture *capture = (struct isp_capture *)pcontext;
+
+	if (unlikely(control_msg == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
+		return;
+	}
+
+	if (unlikely(capture == NULL)) {
+		pr_err("%s: invalid context\n", __func__);
+		return;
+	}
+
+	switch (control_msg->header.msg_id) {
+	case CAPTURE_ISP_FUSE_QUERY_RESP:
+		memcpy(&capture->control_resp_msg, control_msg,
+				sizeof(*control_msg));
+		complete(&capture->control_resp);
+		break;
+	default:
+		pr_err("%s: unknown capture isp probe control resp", __func__);
+		break;
+	}
+}
+
 /**
  * @brief Initializes the ISP capture channel.
  *
@@ -1585,47 +1628,172 @@ void isp_capture_shutdown(
 }
 
 /**
+ * @brief Find the first available ISP unit from a bitmask.
+ *
+ * This implements a simple "first available" redirection strategy.
+ * Future: Consider load-balancing or affinity-based strategies.
+ *
+ * @param[in]  available_mask  Bitmask of available ISP units.
+ *
+ * @retval ISP unit ID of the first available ISP (0-based).
+ * @retval UINT32_MAX if no ISP units are available.
+ */
+static uint32_t isp_capture_find_first_available(uint32_t available_mask)
+{
+	uint32_t i;
+
+	for (i = 0; i < MAX_ISP_UNITS; i++) {
+		if (available_mask & (1U << i)) {
+			return i;
+		}
+	}
+	return U32_MAX;
+}
+
+/**
  * @brief Initializes the NvHost device for the ISP capture channel.
  *
  * This function performs the following operations:
  * - Retrieves driver data using @ref platform_get_drvdata().
  * - Validates the ISP capture setup structure by checking if @a setup is non-NULL.
- * - Extracts the ISP unit index from the setup structure.
- * - Checks if the ISP unit index is within the valid range.
+ * - Validates that ISP unit ID from setup is within configured bounds.
+ * - Performs SW-to-HW ISP unit mapping based on floorsweeping configuration:
+ *   - Checks if the SW unit ID already has a HW assignment
+ *   - If not, assigns the next available HW ISP unit
+ *   - Maintains thread-safe mapping using hw_assignment_lock
+ * - Modifies setup->isp_unit to contain the assigned HW ISP unit ID
  * - Assigns the NvHost device and corresponding node to the ISP channel.
  *
- * @param[in]  chan          Pointer to the @ref tegra_isp_channel structure.
- *                           Valid value: non-NULL.
- * @param[in]  setup         Pointer to the @ref isp_capture_setup structure.
- *                           Valid value: non-NULL.
+ * @param[in]     chan          Pointer to the @ref tegra_isp_channel structure.
+ *                              Valid value: non-NULL.
+ * @param[in,out] setup         Pointer to the @ref isp_capture_setup structure.
+ *                              Valid value: non-NULL.
+ *                              NOTE: The isp_unit field will be modified to contain
+ *                              the assigned HW ISP unit ID after floorsweeping.
  */
 void isp_get_nvhost_device(
 	struct tegra_isp_channel *chan,
 	struct isp_capture_setup *setup)
 {
-	uint32_t isp_inst = 0U;
-	struct tegra_capture_isp_data *info =
-		platform_get_drvdata(chan->isp_capture_pdev);
+	uint32_t hw_isp_unit;
+	uint32_t sw_isp_unit;
+	uint32_t available_mask;
+	uint32_t assigned_mask;
+	uint32_t unassigned_mask;
+	uint32_t i;
+	struct tegra_capture_isp_data *info;
+
+	if (chan == NULL) {
+		pr_err("%s: invalid channel context\n", __func__);
+		return;
+	}
+
+	if (chan->isp_capture_pdev == NULL) {
+		pr_err("%s: invalid platform device in channel\n", __func__);
+		return;
+	}
 
 	if (setup == NULL) {
-		pr_err("%s: Invalid ISP capture request\n", __func__);
+		dev_err(&chan->isp_capture_pdev->dev, "%s: Invalid ISP capture request\n", __func__);
 		return;
 	}
 
-	isp_inst = setup->isp_unit;
+	info = platform_get_drvdata(chan->isp_capture_pdev);
 
-	if (isp_inst >= MAX_ISP_UNITS) {
-		pr_err("%s: ISP unit index is out of bound\n", __func__);
+	if (info == NULL) {
+		dev_err(&chan->isp_capture_pdev->dev, "%s: failed to get driver data\n", __func__);
 		return;
 	}
 
-	if (info->isp_pdevices[isp_inst] == NULL) {
-		pr_err("%s:ISP devices[%u] is NULL\n", __func__, isp_inst);
+	sw_isp_unit = setup->isp_unit;
+
+	if (info->fuse_cache.initialized == false) {
+		dev_err(&chan->isp_capture_pdev->dev, "%s: Cache not initialized during probe\n", __func__);
 		return;
 	}
-	chan->isp_dev = &info->isp_pdevices[isp_inst]->dev;
-	chan->ndev = info->isp_pdevices[isp_inst];
+
+	/* Validate SW unit ID is within bounds */
+	if (sw_isp_unit >= MAX_ISP_UNITS) {
+		dev_err(&chan->isp_capture_pdev->dev,
+			"%s: SW ISP unit ID %u is out of bounds (max=%u)\n",
+			__func__, sw_isp_unit, MAX_ISP_UNITS);
+		return;
+	}
+
+	/* Thread-safe SW-to-HW mapping lookup and assignment */
+	mutex_lock(&info->hw_assignment_lock);
+
+	/* Check if this SW unit ID already has a mapping */
+	if (info->sw_to_hw_map[sw_isp_unit] != U32_MAX) {
+		/* Existing mapping found - use it */
+		hw_isp_unit = info->sw_to_hw_map[sw_isp_unit];
+
+	} else {
+		/* Get available HW ISP units from probe-time cache */
+		available_mask = info->fuse_cache.available_mask;
+
+		/* Build assigned mask from current mappings */
+		assigned_mask = 0;
+		for (i = 0; i < MAX_ISP_UNITS; i++) {
+			if (info->sw_to_hw_map[i] != U32_MAX) {
+				assigned_mask |= (1U << info->sw_to_hw_map[i]);
+			}
+		}
+
+		/* Find unassigned HW ISP units */
+		unassigned_mask = available_mask & (~assigned_mask);
+
+		if (unassigned_mask == 0) {
+			mutex_unlock(&info->hw_assignment_lock);
+			dev_err(&chan->isp_capture_pdev->dev,
+				"%s: No unassigned HW ISP units available (available=0x%x, assigned=0x%x)\n",
+				__func__, available_mask, assigned_mask);
+			return;
+		}
+
+		/* Assign next available HW ISP unit */
+		hw_isp_unit = isp_capture_find_first_available(unassigned_mask);
+		if (hw_isp_unit == U32_MAX) {
+			mutex_unlock(&info->hw_assignment_lock);
+			dev_err(&chan->isp_capture_pdev->dev,
+				"%s: Failed to find unassigned HW ISP unit from mask 0x%x\n",
+				__func__, unassigned_mask);
+			return;
+		}
+
+		/* Create mapping: sw_to_hw_map[SW_ID] = HW_ID */
+		info->sw_to_hw_map[sw_isp_unit] = hw_isp_unit;
+
+	}
+
+	mutex_unlock(&info->hw_assignment_lock);
+
+	/* Update setup structure to reflect assigned HW unit, as the RCE requires the HW unit ID */
+	setup->isp_unit = hw_isp_unit;
+
+	if (hw_isp_unit >= MAX_ISP_UNITS) {
+		dev_err(&chan->isp_capture_pdev->dev,
+			"%s: HW ISP unit index %u is out of bound (max=%u)\n",
+			__func__, hw_isp_unit, MAX_ISP_UNITS);
+		return;
+	}
+
+	if (info->isp_pdevices[hw_isp_unit] == NULL) {
+		dev_err(&chan->isp_capture_pdev->dev,
+			"%s: ISP devices[%u] is NULL\n",
+			__func__, hw_isp_unit);
+		return;
+	}
+
+	chan->isp_dev = &info->isp_pdevices[hw_isp_unit]->dev;
+	chan->ndev = info->isp_pdevices[hw_isp_unit];
+
+	dev_dbg(&chan->isp_capture_pdev->dev,
+		"%s: Success - assigned chan->isp_dev=%p, chan->ndev=%p for HW unit %u\n",
+		__func__, chan->isp_dev, chan->ndev, hw_isp_unit);
 }
+
+
 
 /**
  * @brief Initializes capture descriptors for the ISP channel.
@@ -1823,6 +1991,170 @@ static int setup_program_descriptors(
 }
 
 /**
+ * @brief Query ISP availability mask during probe (without full channel context).
+ *
+ * This function creates a minimal context for IVC communication during probe time
+ * to query the ISP availability mask from RCE firmware. This allows the mask to be
+ * cached at driver initialization rather than during first channel setup.
+ *
+ * The mask is validated against the number of ISP devices found in device tree to
+ * ensure consistency between hardware configuration (reported by RCE) and device
+ * tree configuration.
+ *
+ * @param[in]  pdev               Platform device for the ISP driver.
+ * @param[in]  num_isp_devices    Number of ISP devices found in device tree.
+ * @param[out] available_mask     Pointer to store the ISP availability mask.
+ *
+ * @retval 0           On successful mask query and validation.
+ * @retval -ENODEV     If RTCPU device is not found.
+ * @retval -ENOMEM     If memory allocation fails.
+ * @retval -EINVAL     If mask validation fails (mask has bits set beyond num_isp_devices).
+ * @retval -(ERRNO)    Other errors from IVC communication.
+ */
+static int isp_capture_query_availability_mask_probe(
+	struct platform_device *pdev,
+	uint32_t num_isp_devices,
+	uint32_t *available_mask)
+{
+	struct device_node *node;
+	struct platform_device *rtc_pdev;
+	struct isp_capture *temp_capture;
+	struct CAPTURE_CONTROL_MSG control_msg;
+	uint32_t transaction;
+	unsigned long timeout;
+	int err;
+
+	if (pdev == NULL || available_mask == NULL) {
+		pr_err("%s: invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Find RTCPU device */
+	node = of_find_node_by_path("tegra-camera-rtcpu");
+	if (node == NULL) {
+		dev_err(&pdev->dev, "failed to find tegra-camera-rtcpu node\n");
+		return -ENODEV;
+	}
+
+	rtc_pdev = of_find_device_by_node(node);
+	of_node_put(node);
+	if (rtc_pdev == NULL) {
+		dev_err(&pdev->dev, "failed to find tegra-camera-rtcpu device\n");
+		return -ENODEV;
+	}
+
+	temp_capture = kzalloc(sizeof(*temp_capture), GFP_KERNEL);
+	if (unlikely(temp_capture == NULL)) {
+		dev_err(&pdev->dev, "failed to allocate capture channel\n");
+		put_device(&rtc_pdev->dev);
+		return -ENOMEM;
+	}
+
+	/* Create minimal temporary capture context for IVC */
+	temp_capture->rtcpu_dev = &rtc_pdev->dev;
+	temp_capture->isp_channel = NULL;  /* No channel context during probe */
+	init_completion(&temp_capture->control_resp);
+	mutex_init(&temp_capture->control_msg_lock);
+
+	/* Register control callback for fuse query */
+	err = tegra_capture_ivc_register_control_cb(
+			&isp_capture_ivc_probe_control_callback,
+			&transaction, temp_capture);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to register control callback\n");
+		goto cleanup;
+	}
+
+	/* Fill in control config msg to be sent over ctrl ivc chan to RTCPU */
+	memset(&control_msg, 0, sizeof(control_msg));
+	control_msg.header.msg_id = CAPTURE_ISP_FUSE_QUERY_REQ;
+	control_msg.header.transaction = transaction;
+
+	/* Send control message and wait for response */
+	mutex_lock(&temp_capture->control_msg_lock);
+	err = tegra_capture_ivc_control_submit(&control_msg, sizeof(control_msg));
+	if (err < 0) {
+		dev_err(&pdev->dev, "control message submit failed\n");
+		mutex_unlock(&temp_capture->control_msg_lock);
+		goto unregister_callback;
+	}
+
+	/* Wait for response with timeout */
+	timeout = wait_for_completion_timeout(&temp_capture->control_resp, HZ);
+	if (timeout == 0) {
+		dev_err(&pdev->dev, "Available mask query timed out\n");
+		mutex_unlock(&temp_capture->control_msg_lock);
+		err = -ETIMEDOUT;
+		goto unregister_callback;
+	}
+
+	/* Check response */
+	if (temp_capture->control_resp_msg.header.msg_id != CAPTURE_ISP_FUSE_QUERY_RESP) {
+		dev_err(&pdev->dev, "unexpected response for fuse query\n");
+		mutex_unlock(&temp_capture->control_msg_lock);
+		err = -EIO;
+		goto unregister_callback;
+	}
+
+	*available_mask = temp_capture->control_resp_msg.isp_fuse_query_resp.isp_available_mask;
+	mutex_unlock(&temp_capture->control_msg_lock);
+
+	dev_dbg(&pdev->dev, "%s: ISP availability mask from RCE = 0x%x\n",
+		__func__, *available_mask);
+
+	/* Validate availability mask against device tree configuration */
+	/* The mask should only have bits set for ISP units that exist in device tree */
+	if (num_isp_devices > 0) {
+		uint32_t valid_mask;
+
+		/* Prevent shift overflow: num_isp_devices must be < bits in mask type */
+		if (num_isp_devices > BITS_PER_TYPE(*available_mask)) {
+			dev_err(&pdev->dev,
+				"num_isp_devices=%u exceeds mask bit width (%zu bits)\n",
+				num_isp_devices, BITS_PER_TYPE(*available_mask));
+			err = -EINVAL;
+			goto unregister_callback;
+		}
+
+		valid_mask = (1U << num_isp_devices) - 1;
+
+		if (*available_mask & ~valid_mask) {
+			dev_err(&pdev->dev,
+				"Invalid ISP availability mask 0x%x from RCE: "
+				"bits set beyond num_isp_devices=%u (valid_mask=0x%x)\n",
+				*available_mask, num_isp_devices, valid_mask);
+			err = -EINVAL;
+			goto unregister_callback;
+		}
+
+		if (*available_mask == 0) {
+			dev_err(&pdev->dev,
+				"Invalid ISP availability mask 0x%x from RCE: "
+				"no ISP units available\n",
+				*available_mask);
+			err = -EINVAL;
+			goto unregister_callback;
+		}
+	}
+
+	/* Success path - clean up and return */
+	tegra_capture_ivc_unregister_control_cb(transaction);
+	mutex_destroy(&temp_capture->control_msg_lock);
+	kfree(temp_capture);
+	put_device(&rtc_pdev->dev);
+	return 0;
+
+unregister_callback:
+	tegra_capture_ivc_unregister_control_cb(transaction);
+
+cleanup:
+	mutex_destroy(&temp_capture->control_msg_lock);
+	kfree(temp_capture);
+	put_device(&rtc_pdev->dev);
+	return err;
+}
+
+/**
  * @brief Initializes the ISP capture setup for the given channel.
  *
  * This function performs the following operations:
@@ -1935,8 +2267,13 @@ int isp_capture_setup(
 	if (setup->channel_flags == 0 ||
 			setup->queue_depth == 0 ||
 			setup->request_size == 0 ||
-			setup->isp_unit >= info->num_isp_devices)
+			setup->isp_unit >= info->num_isp_devices) {
+		dev_err(chan->isp_dev,
+			"%s: Invalid setup parameters - flags=%u, depth=%u, size=%u, unit=%u (max=%u)\n",
+			__func__, setup->channel_flags, setup->queue_depth,
+			setup->request_size, setup->isp_unit, info->num_isp_devices);
 		return -EINVAL;
+	}
 
 	buffer_ctx = create_buffer_table(chan->isp_dev);
 	if (unlikely(buffer_ctx == NULL)) {
@@ -2484,6 +2821,76 @@ int isp_capture_get_info(
 }
 
 /**
+ * @brief Query ISP hardware capabilities from the driver and hardware.
+ *
+ * This function retrieves dynamic ISP capabilities including:
+ * - Number of ISP units available (considering floorsweeping)
+ * - Number of channels per ISP unit
+ * - Chip and ISP version information
+ * - Hardware fusing status
+ *
+ * @param[in]  chan   Pointer to the ISP channel context.
+ * @param[out] caps   Pointer to store the capabilities information.
+ *
+ * @retval 0           On successful query of capabilities.
+ * @retval -ENODEV     If channel context is invalid.
+ * @retval -EINVAL     If caps pointer is NULL.
+ * @retval -(ERRNO)    Other errors from hardware queries.
+ */
+int isp_capture_get_capabilities(
+	struct tegra_isp_channel *chan,
+	struct isp_capabilities_info *caps)
+{
+	struct tegra_capture_isp_data *isp_info;
+	struct isp_fuse_cache *cache;
+	uint32_t num_isp_units = 0;
+	uint32_t isp_unit_mask = 0;
+
+	if (chan == NULL) {
+		pr_err("%s: invalid channel context\n", __func__);
+		return -ENODEV;
+	}
+
+	if (caps == NULL) {
+		dev_err(chan->isp_dev, "%s: invalid caps pointer\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Use probe-time cached fuse information */
+	isp_info = platform_get_drvdata(chan->isp_capture_pdev);
+	if (isp_info == NULL) {
+		dev_err(chan->isp_dev, "%s: failed to get driver data\n", __func__);
+		return -ENODEV;
+	}
+
+	cache = &isp_info->fuse_cache;
+
+	if (!cache->initialized) {
+		dev_err(chan->isp_dev, "%s: Cache not initialized during probe\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Initialize capabilities structure */
+	memset(caps, 0, sizeof(*caps));
+
+	isp_unit_mask = cache->available_mask;
+	num_isp_units = hweight32(isp_unit_mask);
+
+	dev_dbg(chan->isp_dev, "%s: Using probe-time cached mask=0x%x\n",
+		__func__, cache->available_mask);
+
+	/* Fill in the capabilities structure */
+	caps->num_isp_units = num_isp_units;
+	caps->isp_unit_mask = isp_unit_mask;
+
+	dev_dbg(chan->isp_dev,
+		"%s: num_units=%u, mask=0x%x\n",
+		__func__, caps->num_isp_units, caps->isp_unit_mask);
+
+	return 0;
+}
+
+/**
  * @brief Pins and maps ISP capture request buffers and save IOVA boundaries.
  *
  * This function performs the following operations:
@@ -2759,6 +3166,7 @@ int isp_capture_request(
 	struct CAPTURE_MSG capture_msg;
 	uint32_t request_offset;
 	int err = 0;
+
 	if (chan == NULL) {
 		pr_err("%s: invalid context\n", __func__);
 		return -ENODEV;
@@ -3486,6 +3894,7 @@ static int capture_isp_probe(struct platform_device *pdev)
 
 	info->num_isp_devices = 0;
 
+	/* Validate device tree node before proceeding */
 	if (dev->of_node == NULL) {
 		dev_err(dev, "No device tree node found\n");
 		return -EINVAL;
@@ -3494,23 +3903,26 @@ static int capture_isp_probe(struct platform_device *pdev)
 	err = of_property_read_u32(dev->of_node, "nvidia,isp-max-channels",
 			&info->max_isp_channels);
 	if (err < 0) {
-		err = -EINVAL;
-		goto cleanup;
+		dev_err(dev, "Failed to read nvidia,isp-max-channels\n");
+		return -EINVAL;
 	}
 	if (isp_capture_is_t26x(dev->of_node)) {
 		if (info->max_isp_channels > NUM_ISP_CHANNELS_T26x) {
-			err = -EINVAL;
-			goto cleanup;
+			dev_err(dev, "Invalid max_isp_channels for T26x: %u\n",
+				info->max_isp_channels);
+			return -EINVAL;
 		}
 	} else {
 		if ((info->max_isp_channels == 0) || (info->max_isp_channels > NUM_ISP_CHANNELS)) {
-			err = -EINVAL;
-			goto cleanup;
+			dev_err(dev, "Invalid max_isp_channels: %u\n",
+				info->max_isp_channels);
+			return -EINVAL;
 		}
 	}
 
 	memset(info->isp_pdevices, 0, sizeof(info->isp_pdevices));
 
+	/* Enumerate ISP devices from device tree */
 	i = 0U;
 	do {
 		struct device_node *node;
@@ -3523,7 +3935,8 @@ static int capture_isp_probe(struct platform_device *pdev)
 		if (info->num_isp_devices >= ARRAY_SIZE(info->isp_pdevices)) {
 			of_node_put(node);
 			err = -EINVAL;
-			goto cleanup;
+			dev_err(dev, "Too many ISP devices in device tree\n");
+			goto cleanup_devices;
 		}
 
 		ispdev = of_find_device_by_node(node);
@@ -3532,25 +3945,60 @@ static int capture_isp_probe(struct platform_device *pdev)
 		if (ispdev == NULL) {
 			dev_warn(dev, "isp node %u has no device\n", i);
 			err = -ENODEV;
-			goto cleanup;
+			goto cleanup_devices;
 		}
 
 		info->isp_pdevices[i] = ispdev;
 		info->num_isp_devices++;
 	} while (!check_add_overflow(i, 1U, &i));
 
-	if (info->num_isp_devices < 1)
+	if (info->num_isp_devices < 1) {
+		dev_err(dev, "No ISP devices found in device tree\n");
 		return -EINVAL;
+	}
+
+	/* Initialize SW-to-HW mapping array and mutex */
+	mutex_init(&info->hw_assignment_lock);
+	for (i = 0; i < MAX_ISP_UNITS; i++) {
+		info->sw_to_hw_map[i] = U32_MAX;  /* U32_MAX = unassigned */
+	}
+
+	/* Query ISP availability mask during probe and cache it */
+	/* This must be done after determining num_isp_devices for validation */
+	{
+		uint32_t available_mask;
+
+		err = isp_capture_query_availability_mask_probe(pdev,
+			info->num_isp_devices, &available_mask);
+		if (err < 0) {
+			dev_err(dev,
+				"%s: Failed to query availability mask from RCE during probe (err=%d)\n",
+				__func__, err);
+			mutex_destroy(&info->hw_assignment_lock);
+			goto cleanup_devices;
+		}
+
+		info->fuse_cache.available_mask = available_mask;
+		info->fuse_cache.initialized = true;
+
+		dev_info(dev,
+			"%s: Probe-time fuse cache initialized - mask=0x%x, num_devices=%u\n",
+			__func__, available_mask, info->num_isp_devices);
+	}
 
 	platform_set_drvdata(pdev, info);
 
 	err = isp_channel_drv_register(pdev, info->max_isp_channels);
-	if (err)
-		goto cleanup;
+	if (err) {
+		dev_err(dev, "Failed to register ISP channel driver\n");
+		goto cleanup_mutex;
+	}
 
 	return 0;
 
-cleanup:
+cleanup_mutex:
+	mutex_destroy(&info->hw_assignment_lock);
+cleanup_devices:
 	for (i = 0; i < info->num_isp_devices; i++)
 		put_device(&info->isp_pdevices[i]->dev);
 
@@ -3586,6 +4034,20 @@ static int capture_isp_remove(struct platform_device *pdev)
 
 	for (i = 0; i < info->num_isp_devices; i++)
 		put_device(&info->isp_pdevices[i]->dev);
+
+	/* Clean up SW-to-HW mapping array with lock held to prevent race */
+	mutex_lock(&info->hw_assignment_lock);
+	for (i = 0; i < MAX_ISP_UNITS; i++) {
+		if (info->sw_to_hw_map[i] != U32_MAX) {
+			dev_dbg(dev, "%s: Clearing mapping SW %u → HW %u\n",
+				__func__, i, info->sw_to_hw_map[i]);
+			info->sw_to_hw_map[i] = U32_MAX;
+		}
+	}
+	mutex_unlock(&info->hw_assignment_lock);
+
+	/* Clean up SW-to-HW mapping mutex */
+	mutex_destroy(&info->hw_assignment_lock);
 
 	return 0;
 }
