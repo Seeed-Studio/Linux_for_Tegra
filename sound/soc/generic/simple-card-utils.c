@@ -364,7 +364,8 @@ void simple_util_shutdown(struct snd_pcm_substream *substream)
 	for_each_prop_dai_cpu(props, i, dai) {
 		struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, i);
 
-		if (props->mclk_fs && !dai->clk_fixed && !snd_soc_dai_active(cpu_dai))
+		if (!priv->ignore_zero_clk_rate_req && props->mclk_fs && !dai->clk_fixed
+		    && !snd_soc_dai_active(cpu_dai))
 			snd_soc_dai_set_sysclk(cpu_dai,
 					       0, 0, SND_SOC_CLOCK_OUT);
 
@@ -373,7 +374,8 @@ void simple_util_shutdown(struct snd_pcm_substream *substream)
 	for_each_prop_dai_codec(props, i, dai) {
 		struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, i);
 
-		if (props->mclk_fs && !dai->clk_fixed && !snd_soc_dai_active(codec_dai))
+		if (!priv->ignore_zero_clk_rate_req && props->mclk_fs && !dai->clk_fixed
+		    && !snd_soc_dai_active(codec_dai))
 			snd_soc_dai_set_sysclk(codec_dai,
 					       0, 0, SND_SOC_CLOCK_IN);
 

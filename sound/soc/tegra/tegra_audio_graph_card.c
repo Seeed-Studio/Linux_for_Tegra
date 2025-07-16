@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // tegra_audio_graph_card.c - Audio Graph based Tegra Machine Driver
 
@@ -300,6 +300,7 @@ static int tegra_audio_graph_probe(struct platform_device *pdev)
 	if (!of_property_read_bool(dev->of_node, "nvidia,ahub-c2c-links")) {
 		card->component_chaining = 1;
 		priv->simple.force_dpcm = 1;
+		priv->simple.ignore_zero_clk_rate_req = 1;
 	}
 
 	ret = devm_snd_soc_register_component(dev, &tegra_dummy_component,
