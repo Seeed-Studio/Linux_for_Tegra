@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * NVIDIA Tegra Video Input Device
  */
@@ -205,8 +205,7 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	 * different. Aligned width also may force a sensor mode change other
 	 * than the requested one
 	 */
-	*height = clamp(*height, 1U /*TEGRA_MIN_HEIGHT*/, TEGRA_MAX_HEIGHT);
-
+	*height = clamp(*height, TEGRA_MIN_HEIGHT, TEGRA_MAX_HEIGHT);
 
 	/* Clamp the requested bytes per line value. If the maximum bytes per
 	 * line value is zero, the module doesn't support user configurable line
@@ -472,7 +471,6 @@ void tegra_channel_init_ring_buffer(struct tegra_channel *chan)
 	chan->capture_descr_index = 0;
 	chan->capture_descr_sequence = 0;
 	chan->queue_error = false;
-	chan->capture_reqs_enqueued = 0;
 }
 EXPORT_SYMBOL(tegra_channel_init_ring_buffer);
 
@@ -704,12 +702,11 @@ tegra_channel_queue_setup(struct vb2_queue *vq,
 	 * of the requested image size. Although this did not harm the
 	 * flow, according to "v4l2-compliance", we need to check if
 	 * the requested size is invalid.
-	 * Printing this error as info, to avoid kernel error/warning failure.
 	 */
 	if (*nplanes) {
 		if (sizes[0] < chan->format.sizeimage) {
-			pr_info("%s: sizes[0] = %d, chan->format.sizeimage = %d, for num_planes = %d ...\n"
-					, __func__, sizes[0], chan->format.sizeimage, *nplanes);
+			pr_err("%s: sizes[0] = %d chan->format.sizeimage = %d ...\n"
+					,__func__,sizes[0],chan->format.sizeimage);
 			return -EINVAL;
 		}
 	} else {
@@ -1020,7 +1017,6 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 
 	if (vi->fops) {
 		vi->fops->vi_stop_streaming(vq);
-		atomic_set(&chan->is_streaming, DISABLE);
 		vi->fops->vi_power_off(chan);
 	}
 
@@ -1051,8 +1047,7 @@ tegra_channel_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
 
 	cap->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 	cap->device_caps |= V4L2_CAP_EXT_PIX_FORMAT;
-	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS |
-			V4L2_CAP_META_CAPTURE;
+	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS;
 
 	len = strscpy(cap->driver, "tegra-video", sizeof(cap->driver));
 	if (len < 0)
@@ -1922,7 +1917,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	int len = 0;
 
 	/* set_stream of CSI */
-#if defined(NV_MEDIA_ENTITY_REMOTE_PAD_PRESENT) /* Linux 6.0 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 	pad = media_entity_remote_pad(&chan->pad);
 #else
 	pad = media_pad_remote_pad_first(&chan->pad);
@@ -1953,7 +1948,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 			continue;
 		}
 
-#if defined(NV_MEDIA_ENTITY_REMOTE_PAD_PRESENT) /* Linux 6.0 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 		pad = media_entity_remote_pad(pad);
 #else
 		pad = media_pad_remote_pad_first(pad);
@@ -2525,331 +2520,6 @@ static int tegra_channel_csi_init(struct tegra_channel *chan)
 	return ret;
 }
 
-static int tegra_metadata_open(struct file *fp)
-{
-	struct video_device *vdev = video_devdata(fp);
-	struct tegra_channel *chan = video_get_drvdata(vdev);
-	int ret;
-
-	mutex_lock(&chan->embedded.lock);
-	ret = v4l2_fh_open(fp);
-	mutex_unlock(&chan->embedded.lock);
-
-	return ret;
-}
-
-static int tegra_metadata_close(struct file *fp)
-{
-	struct video_device *vdev = video_devdata(fp);
-	struct tegra_channel *chan = video_get_drvdata(vdev);
-	int ret = _vb2_fop_release(fp, &chan->embedded.lock);
-
-	return ret;
-}
-
-static const struct v4l2_file_operations tegra_metadata_fops = {
-	.owner          = THIS_MODULE,
-	.unlocked_ioctl = video_ioctl2,
-	.open           = tegra_metadata_open,
-	.release        = tegra_metadata_close,
-	.read           = vb2_fop_read,
-	.poll           = vb2_fop_poll,
-	.mmap           = vb2_fop_mmap,
-};
-
-static int tegra_metadata_querycap(struct file *file, void *fh,
-                                 struct v4l2_capability *cap)
-{
-	struct v4l2_fh *vfh = file->private_data;
-	struct tegra_channel *chan = video_drvdata(file);
-
-	/* FIXME: why do Device Caps show V4L2_CAP_EXT_PIX_FORMAT? */
-	cap->device_caps = V4L2_CAP_META_CAPTURE | V4L2_CAP_STREAMING;
-	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS |
-			V4L2_CAP_EXT_PIX_FORMAT | V4L2_CAP_VIDEO_CAPTURE;
-
-	strlcpy(cap->driver, "tegra-embedded", sizeof(cap->driver));
-	strlcpy(cap->card, vfh->vdev->name, sizeof(cap->card));
-	snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s:%u",
-			dev_name(chan->vi->dev), chan->port[0]);
-
-	return 0;
-}
-
-static int tegra_metadata_enum_format(struct file *file, void *fh,
-                                     struct v4l2_fmtdesc *f)
-{
-	if (f->index)
-		return -EINVAL;
-
-	f->pixelformat = V4L2_META_FMT_G300;
-	strlcpy(f->description, "G300 metadata format", sizeof(f->description));
-
-	return 0;
-}
-
-static int tegra_metadata_get_format(struct file *file, void *fh,
-                                    struct v4l2_format *format)
-{
-	struct v4l2_fh *vfh = file->private_data;
-	struct v4l2_meta_format *fmt = &format->fmt.meta;
-
-	if (format->type != vfh->vdev->queue->type)
-		return -EINVAL;
-
-	memset(fmt, 0, sizeof(*fmt));
-
-	fmt->dataformat = V4L2_META_FMT_G300;
-	fmt->buffersize = 96; //255, orbbec modify
-
-	return 0;
-}
-static int tegra_metadata_set_format(struct file *file, void *fh,
-                                    struct v4l2_format *format)
-{
-   return 0;
-}
-
-static int tegra_metadata_try_format(struct file *file, void *fh,
-                                    struct v4l2_format *format)
-{
-    return 0;
-}
-static const struct v4l2_ioctl_ops tegra_metadata_ioctl_ops = {
-	.vidioc_querycap                = tegra_metadata_querycap,
-	.vidioc_enum_fmt_meta_cap       = tegra_metadata_enum_format,
-	.vidioc_g_fmt_meta_cap          = tegra_metadata_get_format,
-	.vidioc_s_fmt_meta_cap          = tegra_metadata_set_format,
-	.vidioc_try_fmt_meta_cap        = tegra_metadata_try_format,
-	.vidioc_reqbufs                 = vb2_ioctl_reqbufs,
-	.vidioc_querybuf                = vb2_ioctl_querybuf,
-	.vidioc_qbuf                    = vb2_ioctl_qbuf,
-	.vidioc_dqbuf                   = vb2_ioctl_dqbuf,
-	.vidioc_create_bufs             = vb2_ioctl_create_bufs,
-	.vidioc_expbuf                  = vb2_ioctl_expbuf,
-	.vidioc_streamon                = vb2_ioctl_streamon,
-	.vidioc_streamoff               = vb2_ioctl_streamoff,
-};
-
-static int tegra_metadata_queue_setup(struct vb2_queue *vq,
-                    unsigned int *nbuffers, unsigned int *nplanes,
-                    unsigned int sizes[], struct device *alloc_devs[])
-{
-	struct tegra_channel *chan = vb2_get_drv_priv(vq);
-
-	if (*nplanes) {
-		if (*nplanes != 1)
-			return -EINVAL;
-
-		if (sizes[0] < 96) //255, orbbec modify
-			return -EINVAL;
-
-		return 0;
-	}
-
-	*nplanes = 1;
-	sizes[0] = 96; //255, orbbec modify
-	alloc_devs[0] = chan->vi->dev;
-
-
-	return 0;
-}
-
-static int tegra_metadata_buffer_prepare(struct vb2_buffer *vb)
-{
-	if (vb->num_planes != 1)
-		return -EINVAL;
-
-	if (vb2_plane_size(vb, 0) < 96) //255, orbbec modify
-		return -EINVAL;
-
-	return 0;
-}
-
-static void tegra_metadata_buffer_queue(struct vb2_buffer *vb)
-{
-	struct tegra_channel *chan = vb2_get_drv_priv(vb->vb2_queue);
-
-	spin_lock(&chan->embedded.spin_lock);
-	if (chan->embedded.num_buffers < 16) {
-		chan->embedded.buffers[chan->embedded.head] = vb;
-		chan->embedded.head++;
-		if (chan->embedded.head > 15)
-			chan->embedded.head = chan->embedded.head - 16;
-		chan->embedded.num_buffers++;
-	}
-	spin_unlock(&chan->embedded.spin_lock);
-}
-
-static int tegra_metadata_start_streaming(struct vb2_queue *vq, unsigned int count)
-{
-	return 0;
-}
-
-static void tegra_metadata_stop_streaming(struct vb2_queue *vq)
-{
-	struct tegra_channel *chan = vb2_get_drv_priv(vq);
-	int i = 0;
-
-	spin_lock(&chan->embedded.spin_lock);
-	for (i = 0; i < chan->embedded.num_buffers; i++) {
-		struct vb2_buffer *evb;
-		evb = chan->embedded.buffers[chan->embedded.tail];
-		chan->embedded.buffers[chan->embedded.tail] = NULL;
-		chan->embedded.tail++;
-		if (chan->embedded.tail > 15)
-			chan->embedded.tail = chan->embedded.tail - 16;
-		vb2_buffer_done(evb, VB2_BUF_STATE_ERROR);
-	}
-	spin_unlock(&chan->embedded.spin_lock);
-
-	chan->embedded.head = 0;
-	chan->embedded.tail = 0;;
-	chan->embedded.num_buffers = 0;
-}
-
-static const struct vb2_ops tegra_metadata_qops = {
-	.queue_setup            = tegra_metadata_queue_setup,
-	.buf_prepare            = tegra_metadata_buffer_prepare,
-	.buf_queue              = tegra_metadata_buffer_queue,
-	.wait_prepare           = vb2_ops_wait_prepare,
-	.wait_finish            = vb2_ops_wait_finish,
-	.start_streaming        = tegra_metadata_start_streaming,
-	.stop_streaming         = tegra_metadata_stop_streaming,
-};
-
-int tegra_channel_init_video_embedded(struct tegra_channel *chan)
-{
-	struct video_device *video;
-	struct vb2_queue *queue = &chan->embedded.queue;
-	struct tegra_mc_vi *vi = chan->vi;
-	int ret;
-
-	mutex_init(&chan->embedded.lock);
-	spin_lock_init(&chan->embedded.spin_lock);
-
-	video = chan->embedded.video = video_device_alloc();
-	chan->embedded.pad.flags = MEDIA_PAD_FL_SINK;
-
-	ret = tegra_media_entity_init(&video->entity, 1,
-									&chan->embedded.pad, false, false);
-	if (ret < 0) {
-		video_device_release(video);
-		dev_err(vi->dev, "%s(): metadata entity init: %d\n",
-				__func__, ret);
-		return ret;
-	}
-
-	ret = v4l2_ctrl_handler_init(&chan->embedded.ctrl_handler,
-									MAX_CID_CONTROLS);
-	if (chan->embedded.ctrl_handler.error) {
-		dev_err(&video->dev, "failed to init control handler\n");
-		return ret;
-	}
-
-	video->fops = &tegra_metadata_fops;
-	video->v4l2_dev = &vi->v4l2_dev;
-	video->queue = queue;
-	snprintf(video->name, sizeof(video->name), "%s-metadata-%u",
-			dev_name(vi->dev), chan->port[0]);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-	video->vfl_type = VFL_TYPE_GRABBER;
-#else
-	video->vfl_type = VFL_TYPE_VIDEO;
-	video->device_caps = V4L2_CAP_META_CAPTURE | V4L2_CAP_STREAMING;
-#endif
-	video->vfl_dir = VFL_DIR_RX;
-	video->release = video_device_release_empty;
-	video->ioctl_ops = &tegra_metadata_ioctl_ops;
-	video->ctrl_handler = &chan->embedded.ctrl_handler;
-	video->lock = &chan->embedded.lock;
-
-	video_set_drvdata(video, chan);
-
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
-	/* get the buffers queue... */
-	ret = tegra_vb2_dma_init(vi->dev, &chan->embedded.alloc_ctx,
-					SZ_64K, &vi->vb2_dma_alloc_refcnt);
-	if (ret < 0)
-		goto ctx_alloc_error;
-
-#endif
-//#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
-	/* get the buffers queue... */
-//     chan->embedded.alloc_ctx = vb2_dma_contig_init_ctx(vi->dev);
-//     if (IS_ERR(chan->embedded.alloc_ctx)) {
-//             dev_err(vi->dev, "%s(): vb2 buffer init: %ld\n", __func__,
-//                     PTR_ERR(chan->embedded.alloc_ctx));
-//             goto ctx_alloc_error;
-//     }
-//#endif
-
-	queue->type = V4L2_BUF_TYPE_META_CAPTURE;
-	queue->io_modes = VB2_MMAP | VB2_DMABUF | VB2_READ | VB2_USERPTR;
-	queue->lock = &chan->embedded.lock;
-	queue->drv_priv = chan;
-	queue->buf_struct_size = sizeof(struct tegra_channel_buffer);
-	queue->ops = &tegra_metadata_qops;
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
-	queue->mem_ops = &vb2_dma_contig_memops;
-#endif
-	queue->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
-			V4L2_BUF_FLAG_TSTAMP_SRC_EOF;
-	ret = vb2_queue_init(queue);
-	if (ret < 0) {
-		dev_err(vi->dev, "%s(): metadata queue initialize: %d\n",
-				__func__, ret);
-		goto vb2_queue_error;
-	}
-
-	return 0;
-
-vb2_queue_error:
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
-	tegra_vb2_dma_cleanup(vi->dev, chan->embedded.alloc_ctx,
-			&vi->vb2_dma_alloc_refcnt);
-ctx_alloc_error:
-#endif
-	media_entity_cleanup(&video->entity);
-
-	return ret;
-}
-
-int tegra_channel_cleanup_video_embedded(struct tegra_channel *chan)
-{
-	struct video_device *video = chan->embedded.video;
-	struct vb2_queue *queue = &chan->embedded.queue;
-	struct device *vi_unit_dev = tegra_channel_get_vi_unit(chan);
-
-	if (!video)
-		return -EINVAL;
-
-	video_unregister_device(video);
-
-	/* release embedded data buffer */
-	if (chan->emb_buf_size > 0) {
-		dma_free_coherent(vi_unit_dev,
-				chan->emb_buf_size,
-				chan->emb_buf_addr, chan->emb_buf);
-		chan->emb_buf_size = 0;
-		vb2_queue_release(queue);
-#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
-		tegra_vb2_dma_cleanup(vi_unit_dev, chan->embedded.alloc_ctx,
-						&chan->vi->vb2_dma_alloc_refcnt);
-#endif
-	}
-
-	v4l2_ctrl_handler_free(&chan->embedded.ctrl_handler);
-
-#if defined(CONFIG_MEDIA_CONTROLLER)
-	media_entity_cleanup(&video->entity);
-#endif
-
-	video_device_release(video);
-
-	return 0;
-}
-
 int tegra_channel_init_video(struct tegra_channel *chan)
 {
 	struct tegra_mc_vi *vi = chan->vi;
@@ -3036,13 +2706,6 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 			chan->emb_buf_size,
 			chan->emb_buf_addr, chan->emb_buf);
 		chan->emb_buf_size = 0;
-		vb2_queue_release(&chan->embedded.queue);
-#if IS_ENABLED(CONFIG_VIDEOBUF2_DMA_CONTIG)
-		tegra_vb2_dma_cleanup(vi_unit_dev, chan->embedded.alloc_ctx,
-			&chan->vi->vb2_dma_alloc_refcnt);
-		//vb2_dma_contig_cleanup_ctx(chan->embedded.alloc_ctx);
-#endif
-		media_entity_cleanup(&chan->embedded.video->entity);
 	}
 
 	tegra_channel_dealloc_buffer_queue(chan);

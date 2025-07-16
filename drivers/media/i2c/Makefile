@@ -5,6 +5,14 @@ subdir-ccflags-y += -Werror
 
 obj-m += max9295.o
 obj-m += max9296.o
+
+## orbbec max9296/max96712+ max9295d + G300
+obj-m += obc_max9296.o
+obj-m += obc_max96712.o
+subdir-ccflags-y += -DCONFIG_TEGRA_CAMERA_PLATFORM
+obj-m += g300.o
+g300-objs := obc_g300_seri.o obc_g300_ctrl.o obc_g300.o
+
 ifeq ($(findstring ack_src,$(NV_BUILD_KERNEL_OPTIONS)),)
 obj-m += max96712.o
 
