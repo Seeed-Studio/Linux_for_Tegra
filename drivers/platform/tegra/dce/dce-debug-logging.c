@@ -46,9 +46,8 @@ static int dbg_dce_log_fops_show(struct seq_file *s, void *data)
 	int ret = 0;
 	uint32_t offset;
 	uint64_t bytes_written;
-	uint32_t cur_buf_idx;
-	struct tegra_dce *d				= s->private;
-	char *base_addr					= (char *)d->dce_log_buff.cpu_base;
+	struct tegra_dce *d			= s->private;
+	char *base_addr				= (char *)d->dce_log_buff.cpu_base;
 	uint32_t log_buf_size			= d->dce_log_buff.size;
 	struct dce_ipc_message *msg		= NULL;
 	struct dce_admin_ipc_resp *resp_msg;
@@ -72,36 +71,20 @@ static int dbg_dce_log_fops_show(struct seq_file *s, void *data)
 	resp_msg = (struct dce_admin_ipc_resp *) (msg->rx.data);
 
 	bytes_written	= resp_msg->args.log.get_log_info.bytes_written;
-	offset			= resp_msg->args.log.get_log_info.offset;
+	offset		= resp_msg->args.log.get_log_info.offset;
 
 	/** If complete buffer size is zero then buffer is invalid */
 	if (log_buf_size == 0) {
-		seq_printf(s, "%s", "Invalid log buffer\n");
+		dce_os_err(d, "%s", "Invalid log buffer\n");
 		goto out;
 	}
 
 	if (bytes_written == 0U || (log_buf_size <= offset)) {
-		seq_printf(s, "%.*s", offset, base_addr);
+		dce_os_err(d, "%.*s", offset, base_addr);
 		goto out;
 	}
-
-	/** Find total bytes written currently in circular region of buffer */
-	cur_buf_idx = (bytes_written)%(log_buf_size - offset);
-
-	/** If circular buffer is not yet wrapped around */
-	if (bytes_written <= log_buf_size - offset) {
-		seq_printf(s, "%.*s", offset, base_addr);
-		seq_printf(s, "%.*s", cur_buf_idx, base_addr + offset);
-		goto out;
-	}
-
-	/** If circular buffer region has been overwritten */
-	/** Print initial logs till offset */
-	seq_printf(s, "%.*s", offset, base_addr);
-	/** Print logs stored in circular buffer region */
-	seq_printf(s, "%.*s", log_buf_size - cur_buf_idx - offset, base_addr + offset + cur_buf_idx);
-	seq_printf(s, "%.*s", cur_buf_idx, base_addr + offset);
-
+	/** Write buffer content to file in binary format */
+	seq_write(s, base_addr, bytes_written);
 out:
 	if (msg)
 		dce_admin_channel_client_buffer_put(d, msg);
