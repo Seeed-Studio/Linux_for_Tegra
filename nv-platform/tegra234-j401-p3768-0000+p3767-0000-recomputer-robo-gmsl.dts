@@ -55,6 +55,7 @@
 				i2c@0{
 					#address-cells = <1>;
 					#size-cells = <0>;
+					reg = <0>;
 				};
 			}; 
 		};
