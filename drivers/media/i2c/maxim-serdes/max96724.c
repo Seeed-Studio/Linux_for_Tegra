@@ -512,10 +512,6 @@ static int max96724_init_phy(struct max_des_priv *des_priv,
     if (ret)
         return ret;
 
-    ret = max96724_update_bits(priv, 0x8a0, 0x20, 0x20);
-    if (ret)
-        return ret;
-
     /* Enable PHY. */
     shift = 4;
     if (num_hw_data_lanes == 4)
@@ -801,6 +797,12 @@ static int max96724_probe(struct i2c_client *client)
     if (ret)
         return ret;
 
+    if(priv->info->num_pipes == 8){
+        // for 96712,set DPHY0 enable as MIPI clock
+        ret = max96724_update_bits(priv, 0x8a0, 0x20, 0x20);
+        if (ret)
+            return ret;
+    }
     // debug:  set MAX96712_LINK_AB_RATE_ADDR  bit: 5:4, bit 1:0 to 0b01  3Gbps
     // debug:  set MAX96712_LINK_CD_RATE_ADDR  bit: 5:4, bit 1:0 to 0b01  3Gbps
     //  ret = max96724_write(priv, MAX96712_LINK_AB_RATE_ADDR, 0x11);
