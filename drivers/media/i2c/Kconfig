@@ -30,7 +30,7 @@ comment "audio, video and radio I2C drivers auto-selected by 'Autoselect ancilla
 #
 # Encoder / Decoder module configuration
 #
-source "drivers/media/i2c/maxim-serdes/Kconfig"
+
 
 menu "Audio decoders, processors and mixers"
 	visible if !MEDIA_HIDE_ANCILLARY_SUBDRV
