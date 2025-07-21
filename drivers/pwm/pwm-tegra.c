@@ -77,6 +77,7 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/math64.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/pm_opp.h>
@@ -147,7 +148,7 @@ static inline void pwm_writel_mask32(struct tegra_pwm_chip *pc,
 }
 
 static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
-			    int duty_ns, int period_ns)
+			    u64 duty_ns, u64 period_ns)
 {
 	struct tegra_pwm_chip *pc = to_tegra_pwm_chip(chip);
 	unsigned long channel_o = pc->soc->channel_offset;
@@ -157,6 +158,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	unsigned long scale_s = pc->soc->scale_shift;
 	unsigned long required_clk_rate;
 	u32 pwm_f, pfm_f;
+	u64 val;
 	int err;
 
 	/*
@@ -170,8 +172,11 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 * per (1 + pc->pwm_depth) cycles and make sure to round to the
 	 * nearest integer during division.
 	 */
-	pwm_f = (u32)DIV_ROUND_CLOSEST_ULL(duty_ns * (1 + pc->pwm_depth),
-					   period_ns);
+	val = mul_u64_u64_div_u64(duty_ns, 1 + pc->pwm_depth, period_ns);
+	if (val > U32_MAX)
+		return -EINVAL;
+
+	pwm_f = (u32)val;
 
 	/* Avoid overflow on 100% duty cycle */
 	if (pwm_f == 1 + pc->pwm_depth)
@@ -182,8 +187,11 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 * required_clk_rate is a reference rate for source clock and
 	 * it is derived based on user requested period.
 	 */
-	required_clk_rate = DIV_ROUND_UP_ULL(
-		(u64)NSEC_PER_SEC * (1 + pc->pwm_depth), period_ns);
+	val = mul_u64_u64_div_u64(NSEC_PER_SEC, 1 + pc->pwm_depth, period_ns);
+	if (val > U32_MAX)
+		return -EINVAL;
+
+	required_clk_rate = (u32)val;
 	pc->clk_rate = clk_get_rate(pc->clk);
 	if (pc->clk_rate < required_clk_rate)
 		return -EINVAL;
