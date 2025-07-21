@@ -25,6 +25,16 @@
 /* signature code for HSP pm notify data */
 #define PM_STATE_UNI_CODE	0xFDEF
 
+/* Timestamp validation constants */
+#define TIMESTAMP_CNT_PERIOD	0x100000000ULL  /* 32-bit SoC TSC counter period (2^32) */
+
+/* This value is derived from the DOS FDTI (100ms) - EPL propagation delay (10ms) */
+#define TIMESTAMP_VALID_RANGE	90000000ULL  /* 90ms in nanoseconds */
+
+/* Timestamp resolution constants (in nanoseconds) */
+#define TEGRA234_TIMESTAMP_RESOLUTION_NS	32U
+#define TEGRA264_TIMESTAMP_RESOLUTION_NS	1U
+
 /* State Management */
 #define EPS_DOS_INIT                0U
 #define EPS_DOS_SUSPEND             3U
@@ -60,6 +70,9 @@ struct epl_misc_sw_err_cfg {
 /* Error index offset in mission status register */
 static uint32_t error_index_offset = 3;
 
+/* Timestamp resolution for current SoC (in nanoseconds) */
+static uint32_t timestamp_resolution_ns = TEGRA264_TIMESTAMP_RESOLUTION_NS;
+
 static int device_file_major_number;
 static const char device_name[] = "epdaemon";
 
@@ -79,6 +92,21 @@ static const int default_handshake_retry_count = 25;
 static uint32_t handshake_retry_count;
 
 static bool enable_deinit_notify;
+
+/* Helper function to SoC TSC timestamp */
+static inline uint32_t epl_get_current_timestamp(void)
+{
+	uint32_t timestamp;
+
+	asm volatile("mrs %0, cntvct_el0" : "=r" (timestamp));
+	return timestamp;
+}
+
+/* Helper function to convert SoC TSC timestamp ticks to nanoseconds */
+static inline uint64_t epl_ticks_to_ns(uint64_t ticks)
+{
+	return ticks * timestamp_resolution_ns;
+}
 
 static void tegra_hsp_tx_empty_notify(struct mbox_client *cl,
 					 void *data, int empty_value)
@@ -113,21 +141,21 @@ static int tegra_hsp_mb_init(struct device *dev)
 static ssize_t device_file_ioctl(
 			struct file *fp, unsigned int cmd, unsigned long arg)
 {
-	uint32_t lData[MAX_LEN];
+	struct epl_error_report_frame error_frame;
 	int ret;
 
-	if (copy_from_user(lData, (void __user *)arg,
-				 MAX_LEN * sizeof(uint32_t)))
+	/* Validate input parameters */
+	if (!arg)
+		return -EINVAL;
+
+	if (copy_from_user(&error_frame, (void __user *)arg,
+				 sizeof(error_frame)))
 		return -EACCES;
 
 	switch (cmd) {
 
 	case EPL_REPORT_ERROR_CMD:
-		if (hs_state == HANDSHAKE_DONE)
-			ret = mbox_send_message(epl_hsp_v->tx.chan, (void *) lData);
-		else
-			ret = -ENODEV;
-
+		ret = epl_report_error(error_frame);
 		break;
 	default:
 		return -EINVAL;
@@ -146,6 +174,10 @@ int epl_get_misc_ec_err_status(struct device *dev, uint8_t err_number, bool *sta
 		const char *dev_str;
 
 		if (miscerr_cfg[err_number].dev_configured == NULL || isAddrMappOk == false)
+			return -ENODEV;
+
+		/* Validate mission error status register mapping */
+		if (!mission_err_status_va)
 			return -ENODEV;
 
 		dev_str = dev_driver_string(dev);
@@ -182,6 +214,10 @@ int epl_report_misc_ec_error(struct device *dev, uint8_t err_number,
 	if (status == false)
 		return -EAGAIN;
 
+	/* Validate register mappings before writing */
+	if (!miscerr_cfg[err_number].err_code_va || !miscerr_cfg[err_number].err_assert_va)
+		return -ENODEV;
+
 	/* Updating error code */
 	writel(sw_error_code, miscerr_cfg[err_number].err_code_va);
 
@@ -195,9 +231,39 @@ EXPORT_SYMBOL_GPL(epl_report_misc_ec_error);
 int epl_report_error(struct epl_error_report_frame error_report)
 {
 	int ret = -EINVAL;
+	uint64_t current_timestamp_64;
+	uint64_t reported_timestamp_64;
 
-	if (epl_hsp_v == NULL || hs_state != HANDSHAKE_DONE) {
+	/* Validate input parameters */
+	if (epl_hsp_v == NULL || hs_state != HANDSHAKE_DONE)
 		return -ENODEV;
+
+	/* Validate HSP channel */
+	if (!epl_hsp_v->tx.chan)
+		return -ENODEV;
+
+	/* Plausibility check for timestamp - only if timestamp is not zero */
+	if (error_report.timestamp != 0) {
+		/* Get current timestamp (32-bit LSB) and convert to 64-bit for calculations */
+		current_timestamp_64 = (uint64_t)epl_get_current_timestamp();
+		reported_timestamp_64 = (uint64_t)error_report.timestamp;
+
+		/* Check for timestamp overflow */
+		/* If current timestamp is less than reported timestamp, assume overflow occurred */
+		if (current_timestamp_64 < reported_timestamp_64)
+			current_timestamp_64 += TIMESTAMP_CNT_PERIOD;
+
+		/* Validate timestamp range - reject if difference is more than ~90ms */
+		/* Convert 90ms to counter ticks based on current resolution */
+		uint64_t valid_range_ticks = TIMESTAMP_VALID_RANGE / timestamp_resolution_ns;
+
+		if ((current_timestamp_64 - reported_timestamp_64) > valid_range_ticks) {
+			dev_warn(&epl_hsp_v->dev, "epl_report_error: Invalid timestamp - difference %llu ticks (%llu ns) exceeds valid range (%llu ticks)\n",
+				current_timestamp_64 - reported_timestamp_64,
+				epl_ticks_to_ns(current_timestamp_64 - reported_timestamp_64),
+				valid_range_ticks);
+			return -EINVAL;
+		}
 	}
 
 	ret = mbox_send_message(epl_hsp_v->tx.chan, (void *)&error_report);
@@ -211,12 +277,16 @@ static int epl_client_fsi_pm_notify(u32 state)
 	int ret;
 	u32 pdata[4];
 
+	/* Validate state parameter */
+	if (state > EPS_DOS_UNKNOWN)
+		return -EINVAL;
+
 	pdata[0] = PM_STATE_UNI_CODE;
 	pdata[1] = state;
 	pdata[2] = state;
 	pdata[3] = PM_STATE_UNI_CODE;
 
-	if (hs_state == HANDSHAKE_DONE)
+	if (hs_state == HANDSHAKE_DONE && epl_hsp_v && epl_hsp_v->tx.chan)
 		ret = mbox_send_message(epl_hsp_v->tx.chan, (void *) pdata);
 	else
 		ret = -ENODEV;
@@ -228,7 +298,7 @@ static int epl_client_fsi_handshake(void *arg)
 {
 	uint8_t count = 0;
 
-	if (epl_hsp_v) {
+	if (epl_hsp_v && epl_hsp_v->tx.chan) {
 		int ret;
 		const uint32_t handshake_data[] = {0x45504C48, 0x414E4453, 0x48414B45,
 			0x44415441};
@@ -244,12 +314,15 @@ static int epl_client_fsi_handshake(void *arg)
 				break;
 			}
 		} while (count < handshake_retry_count);
+	} else {
+		hs_state = HANDSHAKE_FAILED;
+		dev_warn(&pdev_local->dev, "epl_client: handshake failed - no valid HSP channel\n");
 	}
 
 	if (hs_state == HANDSHAKE_FAILED)
-		pr_warn("epl_client: handshake with FSI failed\n");
+		dev_warn(&pdev_local->dev, "epl_client: handshake with FSI failed\n");
 	else
-		pr_info("epl_client: handshake done with FSI, try %u\n", count);
+		dev_info(&pdev_local->dev, "epl_client: handshake done with FSI, try %u\n", count);
 
 	return 0;
 }
@@ -257,10 +330,14 @@ static int epl_client_fsi_handshake(void *arg)
 static int __maybe_unused epl_client_suspend(struct device *dev)
 {
 	int ret = 0;
-	pr_debug("tegra-epl: suspend called\n");
 
-	if (enable_deinit_notify)
+	dev_dbg(dev, "tegra-epl: suspend called\n");
+
+	if (enable_deinit_notify) {
 		ret = epl_client_fsi_pm_notify(EPS_DOS_SUSPEND);
+		if (ret < 0)
+			dev_warn(dev, "tegra-epl: suspend notification failed: %d\n", ret);
+	}
 	hs_state = HANDSHAKE_PENDING;
 
 	return ret;
@@ -268,10 +345,26 @@ static int __maybe_unused epl_client_suspend(struct device *dev)
 
 static int __maybe_unused epl_client_resume(struct device *dev)
 {
-	pr_debug("tegra-epl: resume called\n");
+	int ret;
 
-	(void)epl_client_fsi_handshake(NULL);
-	return epl_client_fsi_pm_notify(EPS_DOS_RESUME);
+	dev_dbg(dev, "tegra-epl: resume called\n");
+
+	ret = epl_client_fsi_handshake(NULL);
+	if (ret < 0) {
+		dev_warn(dev, "tegra-epl: handshake failed during resume: %d\n", ret);
+		return ret;
+	}
+
+	/* Only send PM notify if handshake was successful */
+	if (hs_state == HANDSHAKE_DONE) {
+		ret = epl_client_fsi_pm_notify(EPS_DOS_RESUME);
+		if (ret < 0)
+			dev_warn(dev, "tegra-epl: resume notification failed: %d\n", ret);
+	} else {
+		dev_warn(dev, "tegra-epl: skipping resume notification - handshake not successful\n");
+	}
+
+	return ret;
 }
 static SIMPLE_DEV_PM_OPS(epl_client_pm, epl_client_suspend, epl_client_resume);
 
@@ -300,6 +393,7 @@ static int epl_register_device(void)
 		return result;
 	}
 	device_file_major_number = result;
+
 	dev_class = class_create(device_name);
 	if (dev_class == NULL) {
 		pr_err("%s> Could not create class for device\n", device_name);
@@ -338,15 +432,26 @@ static int epl_client_probe(struct platform_device *pdev)
 
 	hs_state = HANDSHAKE_PENDING;
 
-	epl_register_device();
+	ret = epl_register_device();
+	if (ret < 0) {
+		dev_err(dev, "Failed to register device: %d\n", ret);
+		return ret;
+	}
+
 	ret = tegra_hsp_mb_init(dev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to initialize HSP mailbox: %d\n", ret);
+		epl_unregister_device();
+		return ret;
+	}
+
 	pdev_local = pdev;
 
 	for (iterator = 0; iterator < NUM_SW_GENERIC_ERR; iterator++) {
 		name[26] = (char)(iterator+48U);
 		name[27] = '\0';
 		if (of_property_read_string(np, name, &miscerr_cfg[iterator].dev_configured) == 0) {
-			pr_info("Misc Sw Generic Err #%d configured to client %s\n",
+			dev_info(dev, "Misc Sw Generic Err #%d configured to client %s\n",
 					iterator, miscerr_cfg[iterator].dev_configured);
 
 			/* Mapping registers to process address space */
@@ -365,7 +470,8 @@ static int epl_client_probe(struct platform_device *pdev)
 				is_misc_ec_mapped = true;
 			}
 		} else {
-			pr_info("Misc Sw Generic Err %d not configured for any client\n", iterator);
+			dev_info(dev, "Misc Sw Generic Err %d not configured for any client\n",
+				 iterator);
 		}
 	}
 
@@ -380,10 +486,12 @@ static int epl_client_probe(struct platform_device *pdev)
 
 	if (of_device_is_compatible(np, "nvidia,tegra234-epl-client")) {
 		error_index_offset = 24;
+		timestamp_resolution_ns = TEGRA234_TIMESTAMP_RESOLUTION_NS;
 	} else if (of_device_is_compatible(np, "nvidia,tegra264-epl-client")) {
 		error_index_offset = 3;
+		timestamp_resolution_ns = TEGRA264_TIMESTAMP_RESOLUTION_NS;
 	} else {
-		pr_err("tegra-epl: valid dt compatible string not found\n");
+		dev_err(dev, "tegra-epl: valid dt compatible string not found\n");
 		ret = -1;
 	}
 
@@ -397,8 +505,20 @@ static int epl_client_probe(struct platform_device *pdev)
 	}
 
 	if (ret == 0) {
-		(void) epl_client_fsi_handshake(NULL);
-		return epl_client_fsi_pm_notify(EPS_DOS_INIT);
+		ret = epl_client_fsi_handshake(NULL);
+		if (ret < 0) {
+			dev_warn(dev, "tegra-epl: handshake failed during probe: %d\n", ret);
+			return ret;
+		}
+
+		/* Only send PM notify if handshake was successful */
+		if (hs_state == HANDSHAKE_DONE) {
+			ret = epl_client_fsi_pm_notify(EPS_DOS_INIT);
+			if (ret < 0)
+				dev_warn(dev, "tegra-epl: init notification failed: %d\n", ret);
+		} else {
+			dev_warn(dev, "tegra-epl: skipping init notification - handshake not successful\n");
+		}
 	}
 
 	return ret;
@@ -406,11 +526,15 @@ static int epl_client_probe(struct platform_device *pdev)
 
 static void epl_client_shutdown(struct platform_device *pdev)
 {
-	pr_debug("tegra-epl: shutdown called\n");
+	int ret;
 
-	if (enable_deinit_notify)
-		if (epl_client_fsi_pm_notify(EPS_DOS_DEINIT) < 0)
-			pr_err("Unable to send notification to fsi\n");
+	dev_dbg(&pdev->dev, "tegra-epl: shutdown called\n");
+
+	if (enable_deinit_notify) {
+		ret = epl_client_fsi_pm_notify(EPS_DOS_DEINIT);
+		if (ret < 0)
+			dev_err(&pdev->dev, "Unable to send notification to fsi: %d\n", ret);
+	}
 
 	hs_state = HANDSHAKE_PENDING;
 
