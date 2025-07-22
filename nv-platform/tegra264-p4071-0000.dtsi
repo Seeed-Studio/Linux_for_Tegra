@@ -224,6 +224,7 @@
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
+			nvidia,if-name = "mgbe0_0";
 
 			fixed-link {
 				full-duplex;
@@ -240,6 +241,7 @@
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
+			nvidia,if-name = "mgbe1_0";
 
 			fixed-link {
 				full-duplex;
@@ -256,6 +258,7 @@
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
+			nvidia,if-name = "mgbe2_0";
 
 			fixed-link {
 				full-duplex;
@@ -272,6 +275,7 @@
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
+			nvidia,if-name = "mgbe3_0";
 
 			fixed-link {
 				full-duplex;
