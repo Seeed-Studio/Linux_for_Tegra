@@ -58,7 +58,6 @@ kernel_module(
         "drivers/block/tegra_virt_storage/tegra_vblk.ko",
         "drivers/bluetooth/realtek/rtk_btusb.ko",
         "drivers/bus/tegra-aocluster.ko",
-        "drivers/cpuidle/cpuidle-cg-disable-t264.ko",
         "drivers/cpuidle/cpuidle-debugfs.ko",
         "drivers/cpuidle/cpuidle-tegra-auto.ko",
         "drivers/crypto/tegra-hv-vse-safety.ko",
