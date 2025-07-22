@@ -224,7 +224,6 @@
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
-			nvidia,macsec-enable = <0>;
 
 			fixed-link {
 				full-duplex;
@@ -241,7 +240,6 @@
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
-			nvidia,macsec-enable = <0>;
 
 			fixed-link {
 				full-duplex;
@@ -258,7 +256,6 @@
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
-			nvidia,macsec-enable = <0>;
 
 			fixed-link {
 				full-duplex;
@@ -275,7 +272,6 @@
 			nvidia,max-platform-mtu = <9000>;
 			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
-			nvidia,macsec-enable = <0>;
 
 			fixed-link {
 				full-duplex;
