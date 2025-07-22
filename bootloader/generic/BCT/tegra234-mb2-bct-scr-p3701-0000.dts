@@ -1,0 +1,23 @@
+/dts-v1/;
+
+#include "tegra234-chip.dtsi"
+#include "tegra234-mb2-bct-scr-p3701-0000-override.dts"
+
+/ {
+    tfc {
+	reg@322 { /* GPIO_M_SCR_00_0 */
+		exclusion-info = <2>;
+		value = <0x38009696>;
+	};
+
+        reg@5138 { /* CBB_CENTRAL_CBB_FIREWALL_QSPI0_BLF, READ_CTL */
+            exclusion-info = <2>;
+            value = <0x00100009>;
+        };
+
+        reg@5139 { /* CBB_CENTRAL_CBB_FIREWALL_QSPI0_BLF, WRITE_CTL */
+            exclusion-info = <2>;
+            value = <0x00100009>;
+        };
+    };
+};
