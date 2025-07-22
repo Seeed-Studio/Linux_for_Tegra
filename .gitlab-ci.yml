@@ -1,0 +1,1001 @@
+variables:
+  CONFIG: "" 
+  BOARDID: ""
+  BOARDSKU: ""
+  FAB: ""
+  BOARDREV: ""
+  CHIP_SKU: ""
+  IS_CUSTOM: "0" #disable custom image build by default
+  START_TASK: ""
+  INSTALL_NV_JP: "1" #enable install nvidia-jetpack by default
+  BUILD_QSPI_IMG: "1" #enable image build for qspi flash by default
+  JETPACKVER: "6.2.1"
+  JETSONVER: "36.4.4"
+  ROOTFS_NAME: "Tegra_Linux_Sample-Root-Filesystem_r36.4.4_aarch64.tbz2"
+  UPDATE_DRV_DEPEND: "1"
+
+stages:
+  - reserver-industrial-orin-nano-4g-j401
+  - reserver-industrial-orin-nano-8g-j401
+  - reserver-industrial-orin-nx-16g-j401
+  - reserver-industrial-orin-nx-8g-j401
+  - recomputer-industrial-orin-nano-4g-j201
+  - recomputer-industrial-orin-nano-8g-j201
+  - recomputer-industrial-orin-nx-16g-j201
+  - recomputer-industrial-orin-nx-8g-j201
+  - recomputer-orin-nano-4g-j401
+  - recomputer-orin-nano-8g-j401
+  - recomputer-orin-nx-16g-j401
+  - recomputer-orin-nx-8g-j401
+  - reserver-agx-orin-32g-j501
+  - reserver-agx-orin-32g-j501-gmsl
+  - reserver-agx-orin-64g-j501
+  - reserver-agx-orin-64g-j501-gmsl
+  - recomputer-mini-orin-nx-8g-j40
+  - recomputer-mini-orin-nx-16g-j40
+  - recomputer-mini-orin-nano-4g-j40
+  - recomputer-mini-orin-nano-8g-j40
+  - recomputer-super-orin-nx-8g-j401
+  - recomputer-super-orin-nx-16g-j401
+  - recomputer-super-orin-nano-4g-j401
+  - recomputer-super-orin-nano-8g-j401
+
+  - recomputer-robo-orin-nx-8g-j401
+  - recomputer-robo-orin-nx-8g-j401-gmsl
+  - recomputer-robo-orin-nx-16g-j401
+  - recomputer-robo-orin-nx-16g-j401-gmsl
+  - recomputer-robo-orin-nano-4g-j401
+  - recomputer-robo-orin-nano-4g-j401-gmsl
+  - recomputer-robo-orin-nano-8g-j401
+  - recomputer-robo-orin-nano-8g-j401-gmsl
+
+  - custom-firmware
+
+# common code of building target image
+.build_image: &build_image_script
+  - > 
+    if [ -z "$CONFIG" ]; then echo "Error: CONFIG variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - > 
+    if [ -z "$BOARDID" ]; then echo "Error: BOARDID variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - > 
+    if [ -z "$BOARDSKU" ]; then echo "Error: BOARDSKU variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - > 
+    if [ -z "$FAB" ]; then echo "Error: FAB variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - > 
+    if [ -z "$BOARDREV" ]; then echo "Error: BOARDREV variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - > 
+    if [ -z "$CHIP_SKU" ]; then echo "Error: CHIP_SKU variable is empty, Please setup it before enable this CI!"; exit 1; fi
+  - echo "config details, CONFIG $CONFIG,BOARDID $BOARDID,BOARDSKU $BOARDSKU,FAB $FAB,BOARDREV $BOARDREV,CHIP_SKU $CHIP_SKU,INSTALL_NV_JP $INSTALL_NV_JP"
+  - git submodule sync
+  - git submodule update --init --recursive
+  - id 
+  - export DATE_STR=$(TZ='Asia/Hong_Kong' date +%Y-%m-%d)
+  # clean the rootfs for every image
+  - ls rootfs/ -l
+  - rm -rf rootfs/*
+  - wget  http://192.168.1.77/jetson/$ROOTFS_NAME -q
+  - tar xpf $ROOTFS_NAME -C rootfs
+  # this is special for jetson orin nano 4g
+  - >
+    if [[ $BOARDID == "3767" && $BOARDSKU == "0004" ]]; then
+      cp -v extra_scripts/chip_info.bin_bak bootloader/chip_info.bin_bak
+    fi
+  # apply necessary changes to rootfs
+  - ./apply_binaries.sh
+  # record the system image name and commit info of seeed to target rootfs.
+  - echo "# Seeed Image Name mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
+  - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
+  - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
+  # reconfigure the kernel log level
+  - >
+    if [ -f rootfs/etc/sysctl.conf ]; then
+      sed -i '/^kernel\.printk/s/^/#/' rootfs/etc/sysctl.conf
+      echo "kernel.printk = 5 6 1 7" >> rootfs/etc/sysctl.conf
+    fi
+  # prepare the compile toolchains
+  - wget  http://192.168.1.77/jetson/aarch64--glibc--stable-2022.08-1.tar.bz2 -q
+  - mkdir -p l4t-gcc
+  - tar xf aarch64--glibc--stable-2022.08-1.tar.bz2 -C ./l4t-gcc
+  - export ARCH=arm64
+  - export CROSS_COMPILE=`realpath .`/l4t-gcc/aarch64--glibc--stable-2022.08-1/bin/aarch64-buildroot-linux-gnu-
+  # build the kernel
+  - cd source/
+  - ./nvbuild.sh
+  # deploy new kernel and dtb
+  - ./do_copy.sh
+  # deploy new kernel drviers
+  - export INSTALL_MOD_PATH=`realpath ../rootfs/`
+  - ./nvbuild.sh -i
+  - cd ..
+  # copy overlay file
+  - cp kernel/dtb/tegra234-seeed-gmsl* rootfs/boot/
+  - cp kernel/dtb/tegra234-seeed-orbbec-335lg-overlay.dtbo rootfs/boot/
+  - cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo rootfs/boot/
+  - cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-quad-seeed.dtbo rootfs/boot/
+  - cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo rootfs/boot/
+  - >
+    if [ $BUILD_QSPI_IMG == "1" ]; then
+      # package the image for qspi flash
+      sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB BOARDREV=$BOARDREV CHIP_SKU=$CHIP_SKU ./tools/kernel_flash/l4t_initrd_flash.sh -p "-c bootloader/generic/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash --massflash 5 --network usb0 $CONFIG external
+      md5sum mfi_$CONFIG.tar.gz > chksum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt
+      sha256sum mfi_$CONFIG.tar.gz >> chksum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt
+      # upload image of qspi
+      mkdir -p deploy
+      mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
+      cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-qspiflash-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz || true
+      cp chksum-$CI_JOB_STAGE-qspiflash-$DATE_STR.txt deploy/ || true
+      umount deploy
+    fi
+  # install user custom package(optional)
+  - sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+  - sudo sed -i 's|^ExecStart=/usr/lib/bluetooth/bluetoothd -d --noplugin=audio,a2dp,avrcp$|ExecStart=/usr/lib/bluetooth/bluetoothd -d|' rootfs/lib/systemd/system/bluetooth.service.d/nv-bluetooth-service.conf
+  - mount --bind /sys ./rootfs/sys
+  - mount --bind /dev ./rootfs/dev
+  - mount --bind /dev/pts ./rootfs/dev/pts
+  - mount --bind /proc ./rootfs/proc
+  - cp -r extra_scripts/glib/ rootfs/
+  - cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
+  - cp extra_scripts/rootfs_magic.sh rootfs
+  - cp extra_scripts/bluetooth-auto-trust_1.0-1.deb rootfs
+  - chroot rootfs dpkg -i bluetooth-auto-trust_1.0-1.deb || true
+  - >
+    if [ $INSTALL_NV_JP == "1" ]; then
+      chroot rootfs /rootfs_magic.sh || true
+    fi
+  #update kernel module dependencies
+  - KER_NUM=`basename $(find ./rootfs/lib/modules -mindepth 1 -maxdepth 1 -type d)`
+  - >
+    if [ $UPDATE_DRV_DEPEND == "1" ]; then
+      echo "current kernel number $KER_NUM"
+      sudo chroot rootfs depmod -a  $KER_NUM
+    fi
+  - umount ./rootfs/sys
+  - umount ./rootfs/dev/pts
+  - umount ./rootfs/dev
+  - umount ./rootfs/proc
+  - rm rootfs/rootfs_magic.sh
+  - rm rootfs/usr/bin/qemu-aarch64-static
+  - rm rootfs/bluetooth-auto-trust_1.0-1.deb
+  - rm rootfs/glib -rf
+  # package the image for qspi & nvme flash
+  - sudo BOARDID=$BOARDID BOARDSKU=$BOARDSKU FAB=$FAB BOARDREV=$BOARDREV CHIP_SKU=$CHIP_SKU ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB -p "-c bootloader/generic/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash --massflash 5 --network usb0 $CONFIG external
+  - md5sum mfi_$CONFIG.tar.gz > chksum-$CI_JOB_STAGE-$DATE_STR.txt
+  - sha256sum mfi_$CONFIG.tar.gz >> chksum-$CI_JOB_STAGE-$DATE_STR.txt
+  # upload image of qspi & nvme ssd
+  - mkdir -p deploy
+  - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=`id -u`,gid=`id -g`,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy 
+  - cp mfi_$CONFIG.tar.gz deploy/mfi_$CI_JOB_STAGE-$JETPACKVER-$JETSONVER-$DATE_STR.tar.gz || true
+  - cp chksum-$CI_JOB_STAGE-$DATE_STR.txt deploy/ || true
+  - umount deploy
+
+build-reserver-industrial-orin-nano-4g-j401:
+  stage: reserver-industrial-orin-nano-4g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "reserver-industrial-orin"'
+      when: on_success
+    - if: '$START_TASK == "reserver-industrial-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-industrial-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0004"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-reserver-industrial-orin-nano-8g-j401:
+  stage: reserver-industrial-orin-nano-8g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "reserver-industrial-orin"'
+      when: on_success
+    - if: '$START_TASK == "reserver-industrial-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-industrial-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0003"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-reserver-industrial-orin-nx-16g-j401:
+  stage: reserver-industrial-orin-nx-16g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "reserver-industrial-orin"'
+      when: on_success
+    - if: '$START_TASK == "reserver-industrial-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-industrial-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0000"
+    FAB: "300"
+    BOARDREV: "G.3"
+    CHIP_SKU: "00:00:00:D3"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-reserver-industrial-orin-nx-8g-j401:
+  stage: reserver-industrial-orin-nx-8g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "reserver-industrial-orin"'
+      when: on_success
+    - if: '$START_TASK == "reserver-industrial-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-industrial-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0001"
+    FAB: "300"
+    BOARDREV: "M.3"
+    CHIP_SKU: "00:00:00:D4"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-industrial-orin-nano-4g-j201:
+  stage: recomputer-industrial-orin-nano-4g-j201 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-industrial-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-industrial-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-industrial-orin-j201"
+    BOARDID: "3767"
+    BOARDSKU: "0004"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-industrial-orin-nano-8g-j201:
+  stage: recomputer-industrial-orin-nano-8g-j201 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-industrial-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-industrial-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-industrial-orin-j201"
+    BOARDID: "3767"
+    BOARDSKU: "0003"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-industrial-orin-nx-16g-j201:
+  stage: recomputer-industrial-orin-nx-16g-j201 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-industrial-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-industrial-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-industrial-orin-j201"
+    BOARDID: "3767"
+    BOARDSKU: "0000"
+    FAB: "300"
+    BOARDREV: "G.3"
+    CHIP_SKU: "00:00:00:D3"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-industrial-orin-nx-8g-j201:
+  stage: recomputer-industrial-orin-nx-8g-j201 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-industrial-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-industrial-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-industrial-orin-j201"
+    BOARDID: "3767"
+    BOARDSKU: "0001"
+    FAB: "300"
+    BOARDREV: "M.3"
+    CHIP_SKU: "00:00:00:D4"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-orin-nano-4g-j401:
+  stage: recomputer-orin-nano-4g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0004"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-orin-nano-8g-j401:
+  stage: recomputer-orin-nano-8g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0003"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-orin-nx-16g-j401:
+  stage: recomputer-orin-nx-16g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0000"
+    FAB: "300"
+    BOARDREV: "G.3"
+    CHIP_SKU: "00:00:00:D3"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-orin-nx-8g-j401:
+  stage: recomputer-orin-nx-8g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0001"
+    FAB: "300"
+    BOARDREV: "M.3"
+    CHIP_SKU: "00:00:00:D4"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+reserver-agx-orin-32g-j501:
+  stage: reserver-agx-orin-32g-j501
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - if: '$START_TASK == "reserver-agx-orin"'
+      when: on_success
+    - if: '$START_TASK == "reserver-agx-orin-32g"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-agx-orin-j501x"
+    BOARDID: "3701"
+    BOARDSKU: "0004"
+    FAB: "500"
+    BOARDREV: "J.0"
+    CHIP_SKU: "00:00:00:D2"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+reserver-agx-orin-32g-j501-gmsl:
+  stage: reserver-agx-orin-32g-j501-gmsl
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - if: '$START_TASK == "reserver-agx-orin"'
+      when: on_success
+    - if: '$START_TASK == "reserver-agx-orin-32g"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-agx-orin-j501x-gmsl"
+    BOARDID: "3701"
+    BOARDSKU: "0004"
+    FAB: "500"
+    BOARDREV: "J.0"
+    CHIP_SKU: "00:00:00:D2"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+reserver-agx-orin-64g-j501:
+  stage: reserver-agx-orin-64g-j501
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - if: '$START_TASK == "reserver-agx-orin"'
+      when: on_success
+    - if: '$START_TASK == "reserver-agx-orin-64g"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-agx-orin-j501x"
+    BOARDID: "3701"
+    BOARDSKU: "0005"
+    FAB: "500"
+    BOARDREV: "M.0"
+    CHIP_SKU: "00:00:00:D0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+reserver-agx-orin-64g-j501-gmsl:
+  stage: reserver-agx-orin-64g-j501-gmsl
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - if: '$START_TASK == "reserver-agx-orin"'
+      when: on_success
+    - if: '$START_TASK == "reserver-agx-orin-64g"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "reserver-agx-orin-j501x-gmsl"
+    BOARDID: "3701"
+    BOARDSKU: "0005"
+    FAB: "500"
+    BOARDREV: "M.0"
+    CHIP_SKU: "00:00:00:D0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+build-recomputer-mini-orin-nano-4g-j40:
+  stage: recomputer-mini-orin-nano-4g-j40 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-j40mini"
+    BOARDID: "3767"
+    BOARDSKU: "0004"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-mini-orin-nano-8g-j40:
+  stage: recomputer-mini-orin-nano-8g-j40
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-j40mini"
+    BOARDID: "3767"
+    BOARDSKU: "0003"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-mini-orin-nx-16g-j40:
+  stage: recomputer-mini-orin-nx-16g-j40
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-j40mini"
+    BOARDID: "3767"
+    BOARDSKU: "0000"
+    FAB: "300"
+    BOARDREV: "G.3"
+    CHIP_SKU: "00:00:00:D3"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-mini-orin-nx-8g-j40:
+  stage: recomputer-mini-orin-nx-8g-j40
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-j40mini"
+    BOARDID: "3767"
+    BOARDSKU: "0001"
+    FAB: "300"
+    BOARDREV: "M.3"
+    CHIP_SKU: "00:00:00:D4"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+build-recomputer-super-orin-nano-4g-j401:
+  stage: recomputer-super-orin-nano-4g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-super-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-super-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-super-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0004"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-super-orin-nano-8g-j401:
+  stage: recomputer-super-orin-nano-8g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-super-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-super-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-super-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0003"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-super-orin-nx-16g-j401:
+  stage: recomputer-super-orin-nx-16g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-super-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-super-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-super-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0000"
+    FAB: "300"
+    BOARDREV: "G.3"
+    CHIP_SKU: "00:00:00:D3"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-super-orin-nx-8g-j401:
+  stage: recomputer-super-orin-nx-8g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-super-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-super-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-super-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0001"
+    FAB: "300"
+    BOARDREV: "M.3"
+    CHIP_SKU: "00:00:00:D4"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-robo-orin-nano-4g-j401:
+  stage: recomputer-robo-orin-nano-4g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-robotics-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0004"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-robo-orin-nano-8g-j401:
+  stage: recomputer-robo-orin-nano-8g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-robotics-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0003"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-robo-orin-nx-16g-j401:
+  stage: recomputer-robo-orin-nx-16g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-robotics-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0000"
+    FAB: "300"
+    BOARDREV: "G.3"
+    CHIP_SKU: "00:00:00:D3"
+    UPDATE_DRV_DEPEND: "0"
+
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-robo-orin-nx-8g-j401:
+  stage: recomputer-robo-orin-nx-8g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-robotics-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0001"
+    FAB: "300"
+    BOARDREV: "M.3"
+    CHIP_SKU: "00:00:00:D4"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+
+build-recomputer-robo-orin-nx-8g-j401-gmsl:
+  stage: recomputer-robo-orin-nx-8g-j401-gmsl
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin-gmsl"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-robotics-j401-gmsl"
+    BOARDID: "3767"
+    BOARDSKU: "0001"
+    FAB: "300"
+    BOARDREV: "M.3"
+    CHIP_SKU: "00:00:00:D4"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+
+build-recomputer-robo-orin-nx-16g-j401-gmsl:
+  stage: recomputer-robo-orin-nx-16g-j401-gmsl
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin-gmsl"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-robotics-j401-gmsl"
+    BOARDID: "3767"
+    BOARDSKU: "0000"
+    FAB: "300"
+    BOARDREV: "G.3"
+    CHIP_SKU: "00:00:00:D3"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+
+build-recomputer-robo-orin-nano-4g-j401-gmsl:
+  stage: recomputer-robo-orin-nano-4g-j401-gmsl 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin-gmsl"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-robotics-j401-gmsl"
+    BOARDID: "3767"
+    BOARDSKU: "0004"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+build-recomputer-robo-orin-nano-8g-j401-gmsl:
+  stage: recomputer-robo-orin-nano-8g-j401-gmsl
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-robo-orin-gmsl"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-orin-robotics-j401-gmsl"
+    BOARDID: "3767"
+    BOARDSKU: "0003"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+build-custom-firmare:
+   stage: custom-firmware
+   rules:
+     - if: '$IS_CUSTOM == "1"'
+       when: on_success 
+     - if: '$CI_COMMIT_TAG'
+       when: never 
+   tags:
+     - x86-shell
+
+   script:
+    - echo "Building custom image for $CONFIG"
+    - *build_image_script
+
