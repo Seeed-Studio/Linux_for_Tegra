@@ -8,7 +8,7 @@
 
 # Linux_for_Tegra
 
-This software is the source code of the default shipping firmware of Seeed Jetson reComputer, reServer and other products. It is built on NVIDIA Jetpack 6.0. On this basis, additional hardware drivers and boards are added, which is convenient for users to develop their own software and build other Jetson systems, such as Yocto, buildroot, etc.
+This software is the source code of the default shipping firmware of Seeed Jetson reComputer, reServer and other products. It is built on NVIDIA Jetpack 6.2.1. On this basis, additional hardware drivers and boards are added, which is convenient for users to develop their own software and build other Jetson systems, such as Yocto, buildroot, etc.
 
 ## Supported hardware 
 
@@ -24,6 +24,8 @@ This software is the source code of the default shipping firmware of Seeed Jetso
 - orin-nano-industrial-4g - [reComputer Industrial J3010](https://www.seeedstudio.com/reComputer-Industrial-J3010-p-5686.html)
 - orin-nano-reserver-4g - [reServer Industrial J3010](https://www.seeedstudio.com/reServer-industrial-J3010-p-5749.html)
 - orin-nano-devkit-4g - [reComputer J3010](https://www.seeedstudio.com/reComputer-J3010-p-5589.html)
+- reComputer super series - [reComputer Super J3011](https://www.seeedstudio.com/reComputer-Super-J3011-p-6444.html)
+- reComputer Robotics series - [reComputer Robotics J401](https://www.seeedstudio.com/reComputer-Robotics-J401-Carrier-Board-optional-accessories.html)
 
 Please pay attention to keywords such as **reComputer**, **Industrial**, **reServer**, etc. If there is only reComputer in the product name, it represents a carrier board based on NVIDIA Jetson DevKit. The form of the product is the same as the official devkit. If the product name is reComputer + Industrial, it represents [this](https://wiki.seeedstudio.com/reComputer_Industrial_Getting_Started/) form of product. If the product name is reServer + Industrial, it represents [this](https://wiki.seeedstudio.com/reServer_Industrial_Getting_Started/) form of product.
 
@@ -31,26 +33,26 @@ Please pay attention to keywords such as **reComputer**, **Industrial**, **reSer
 
 1. Download and prepare the Linux_for_Tegra source code
 ```
-wget https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/release/Jetson_Linux_r36.4.3_aarch64.tbz2
-tar xf Jetson_Linux_r36.4.3_aarch64.tbz2
+wget https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.4/release/Jetson_Linux_r36.4.4_aarch64.tbz2
+tar xf Jetson_Linux_r36.4.4_aarch64.tbz2
 ```
 
 2. Download and prepare sample root file system
 ```
-wget https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/release/Tegra_Linux_Sample-Root-Filesystem_r36.4.3_aarch64.tbz2
-sudo tar xpf Tegra_Linux_Sample-Root-Filesystem_r36.4.3_aarch64.tbz2 -C Linux_for_Tegra/rootfs/
+wget https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.4/release/Tegra_Linux_Sample-Root-Filesystem_r36.4.4_aarch64.tbz2
+sudo tar xpf Tegra_Linux_Sample-Root-Filesystem_r36.4.4_aarch64.tbz2 -C Linux_for_Tegra/rootfs/
 ```
 
 3. sync the source code for compiling
 ```
 cd Linux_for_Tegra/source/
-./source_sync.sh -t jetson_36.4.3
+./source_sync.sh -t jetson_36.4.4
 ```
 4. clone this repo and overwrite the original source code
 ```
 cd ../..
 mkdir -p github/Linux_for_Tegra
-git clone https://github.com/Seeed-Studio/Linux_for_Tegra.git -b r36.4.3 --depth=1 github/Linux_for_Tegra
+git clone https://github.com/Seeed-Studio/Linux_for_Tegra.git -b r36.4.4 --depth=1 github/Linux_for_Tegra
 cp -r github/Linux_for_Tegra/* Linux_for_Tegra/
 ```
 
