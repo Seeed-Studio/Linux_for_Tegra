@@ -559,5 +559,9 @@ int add_msg_controller_list(struct ttcan_controller *ttcan,
 int add_event_controller_list(struct ttcan_controller *ttcan,
 				struct mttcan_tx_evt_element *txevt,
 				struct list_head *evt_q);
+#if defined(NV_CYCLECOUNTER_STRUCT_READ_HAS_CONST_CYCLECOUNTER_ARG)
 u64 ttcan_read_ts_cntr(const struct cyclecounter *ccnt);
+#else
+u64 ttcan_read_ts_cntr(struct cyclecounter *ccnt);
+#endif
 #endif

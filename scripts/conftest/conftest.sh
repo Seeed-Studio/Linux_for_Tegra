@@ -6945,6 +6945,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_CLK_HW_DETERMINE_RATE_NO_REPARENT_PRESENT" "" "functions"
         ;;
 
+        cyclecounter_struct_read_has_const_cyclecounter_arg)
+            #
+            # Determine if the 'cyclecounter' structure 'read' function pointer
+            # has a const 'struct cyclecounter' argument.
+            #
+            # The const qualifier was dropped in Linux v6.17 by commit e78f70bad29c
+            # ("time/timecounter: Fix the lie that struct cyclecounter is const")
+            #
+            CODE="
+            #include <linux/timecounter.h>
+            void conftest(struct cyclecounter *cc) {
+                    u64 (*fn)(const struct cyclecounter *) = cc->read;
+            }"
+
+            compile_check_conftest "$CODE" \
+                    "NV_CYCLECOUNTER_STRUCT_READ_HAS_CONST_CYCLECOUNTER_ARG" "" "types"
+        ;;
+
         define_semaphore_has_number_arg)
             #
             # Determine if the macro DEFINE_SEMAPHORE has a number argument.
