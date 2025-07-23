@@ -5854,6 +5854,9 @@
 			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
 				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
 				      "rx-pcs-m", "utmi_pll1_clk", "pll_bpmpcam", "tx_ser", "rx_ser";
+
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_MGBE0>;
+
 			nvidia,num-dma-chans = <4>;
 			nvidia,dma-chans = <0 1 2 3>;
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE0_VF0>;
@@ -5927,6 +5930,9 @@
 			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
 				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
 				      "rx-pcs-m", "utmi_pll1_clk", "pll_bpmpcam", "tx_ser", "rx_ser";
+
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_MGBE1>;
+
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE1_VF0>;
 			nvidia,num-dma-chans = <4>;
 			nvidia,dma-chans = <0 1 2 3>;
@@ -5999,6 +6005,9 @@
 			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
 				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
 				      "rx-pcs-m", "utmi_pll1_clk", "pll_bpmpcam", "tx_ser", "rx_ser";
+
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_MGBE2>;
+
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE2_VF0>;
 			nvidia,num-dma-chans = <4>;
 			nvidia,dma-chans = <0 1 2 3>;
@@ -6071,6 +6080,9 @@
 			clock-names = "mac", "tx", "mgbe", "macsec", "tx-pcs", "ptp-ref",
 				      "rx-input", "rx-pcs-input", "tx-m", "rx-input-m",
 				      "rx-pcs-m", "utmi_pll1_clk", "pll_bpmpcam", "tx_ser", "rx_ser";
+
+			power-domains = <&bpmp TEGRA264_POWER_DOMAIN_MGBE3>;
+
 			iommus = <&smmu0_mmu TEGRA_SID_MGBE3_VF0>;
 			nvidia,num-dma-chans = <4>;
 			nvidia,dma-chans = <0 1 2 3>;
