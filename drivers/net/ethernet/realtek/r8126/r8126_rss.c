@@ -5,7 +5,7 @@
 # r8126 is the Linux device driver released for Realtek 5 Gigabit Ethernet
 # controllers with PCI-Express interface.
 #
-# Copyright(c) 2024 Realtek Semiconductor Corp. All rights reserved.
+# Copyright(c) 2025 Realtek Semiconductor Corp. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -91,8 +91,6 @@ int rtl8126_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *cmd,
         struct rtl8126_private *tp = netdev_priv(dev);
         int ret = -EOPNOTSUPP;
 
-        netif_info(tp, drv, tp->dev, "rss get rxnfc\n");
-
         if (!(dev->features & NETIF_F_RXHASH))
                 return ret;
 
@@ -158,8 +156,6 @@ static int rtl8126_set_rss_hash_opt(struct rtl8126_private *tp,
                                     struct ethtool_rxnfc *nfc)
 {
         u32 rss_flags = tp->rss_flags;
-
-        netif_info(tp, drv, tp->dev, "rss set hash\n");
 
         /*
          * RSS does not support anything other than hashing
@@ -271,8 +267,6 @@ int rtl8126_set_rxnfc(struct net_device *dev, struct ethtool_rxnfc *cmd)
         struct rtl8126_private *tp = netdev_priv(dev);
         int ret = -EOPNOTSUPP;
 
-        netif_info(tp, drv, tp->dev, "rss set rxnfc\n");
-
         if (!(dev->features & NETIF_F_RXHASH))
                 return ret;
 
@@ -296,8 +290,6 @@ u32 rtl8126_get_rxfh_key_size(struct net_device *dev)
 {
         struct rtl8126_private *tp = netdev_priv(dev);
 
-        netif_info(tp, drv, tp->dev, "rss get key size\n");
-
         if (!(dev->features & NETIF_F_RXHASH))
                 return 0;
 
@@ -307,8 +299,6 @@ u32 rtl8126_get_rxfh_key_size(struct net_device *dev)
 u32 rtl8126_rss_indir_size(struct net_device *dev)
 {
         struct rtl8126_private *tp = netdev_priv(dev);
-
-        netif_info(tp, drv, tp->dev, "rss get indir tbl size\n");
 
         if (!(dev->features & NETIF_F_RXHASH))
                 return 0;
@@ -369,8 +359,6 @@ int rtl8126_get_rxfh(struct net_device *dev, struct ethtool_rxfh_param *rxfh)
 {
         struct rtl8126_private *tp = netdev_priv(dev);
 
-        netif_info(tp, drv, tp->dev, "rss get rxfh\n");
-
         if (!(dev->features & NETIF_F_RXHASH))
                 return -EOPNOTSUPP;
 
@@ -391,8 +379,6 @@ int rtl8126_set_rxfh(struct net_device *dev, struct ethtool_rxfh_param *rxfh,
         struct rtl8126_private *tp = netdev_priv(dev);
         int i;
         u32 reta_entries = rtl8126_rss_indir_tbl_entries(tp);
-
-        netif_info(tp, drv, tp->dev, "rss set rxfh\n");
 
         /* We require at least one supported parameter to be changed and no
          * change in any of the unsupported parameters
@@ -429,8 +415,6 @@ int rtl8126_get_rxfh(struct net_device *dev, u32 *indir, u8 *key,
 {
         struct rtl8126_private *tp = netdev_priv(dev);
 
-        netif_info(tp, drv, tp->dev, "rss get rxfh\n");
-
         if (!(dev->features & NETIF_F_RXHASH))
                 return -EOPNOTSUPP;
 
@@ -452,8 +436,6 @@ int rtl8126_set_rxfh(struct net_device *dev, const u32 *indir,
         struct rtl8126_private *tp = netdev_priv(dev);
         int i;
         u32 reta_entries = rtl8126_rss_indir_tbl_entries(tp);
-
-        netif_info(tp, drv, tp->dev, "rss set rxfh\n");
 
         /* We require at least one supported parameter to be changed and no
          * change in any of the unsupported parameters

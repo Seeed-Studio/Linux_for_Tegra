@@ -5,7 +5,7 @@
 # r8126 is the Linux device driver released for Realtek 5 Gigabit Ethernet
 # controllers with PCI-Express interface.
 #
-# Copyright(c) 2024 Realtek Semiconductor Corp. All rights reserved.
+# Copyright(c) 2025 Realtek Semiconductor Corp. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -39,8 +39,10 @@
 #include <linux/ethtool.h>
 #include <linux/interrupt.h>
 #include <linux/version.h>
-#include "r8126_dash.h"
 #include "r8126_realwow.h"
+#ifdef ENABLE_FIBER_SUPPORT
+#include "r8126_fiber.h"
+#endif /* ENABLE_FIBER_SUPPORT */
 #ifdef ENABLE_PTP_SUPPORT
 #include "r8126_ptp.h"
 #endif
@@ -52,8 +54,6 @@
 #ifndef fallthrough
 #define fallthrough
 #endif
-
-void netdev_sw_irq_coalesce_default_on(struct net_device *dev);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 #define netif_xmit_stopped netif_tx_queue_stopped
@@ -202,6 +202,32 @@ static inline void netdev_tx_completed_queue(struct netdev_queue *dev_queue,
 static inline void netdev_tx_reset_queue(struct netdev_queue *q) {}
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0)
+static inline void fsleep(unsigned long usecs)
+{
+        if (usecs <= 10)
+                udelay(usecs);
+        else if (usecs <= 20000)
+                usleep_range(usecs, 2 * usecs);
+        else
+                msleep(DIV_ROUND_UP(usecs, 1000));
+}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0) */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,4,92)
+/* Iterate through singly-linked GSO fragments of an skb. */
+#define skb_list_walk_safe(first, skb, next_skb)                               \
+	for ((skb) = (first), (next_skb) = (skb) ? (skb)->next : NULL; (skb);  \
+	     (skb) = (next_skb), (next_skb) = (skb) ? (skb)->next : NULL)
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5,4,92) */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,217)
+static inline void skb_mark_not_on_list(struct sk_buff *skb)
+{
+        skb->next = NULL;
+}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,14,217) */
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,2,0)
 #define netdev_xmit_more() (0)
 #endif
@@ -210,6 +236,10 @@ static inline void netdev_tx_reset_queue(struct netdev_queue *q) {}
 #define netif_testing_on(dev)
 #define netif_testing_off(dev)
 #endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,2,0)
+#define netdev_sw_irq_coalesce_default_on(dev)
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(6,2,0) */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 typedef int netdev_tx_t;
@@ -360,6 +390,14 @@ do { \
 #undef RTL_BUILD_SKB_INTR
 #define RTL_BUILD_SKB_INTR(data, frag_size) napi_build_skb(data, frag_size)
 #endif
+#endif
+
+#ifdef CONFIG_R8126_NAPI
+#define r8126_spin_lock(lock, flags)  (void)flags;spin_lock_bh(lock)
+#define r8126_spin_unlock(lock, flags)  (void)flags;spin_unlock_bh(lock)
+#else
+#define r8126_spin_lock(lock, flags)  spin_lock_irqsave(lock, flags)
+#define r8126_spin_unlock(lock, flags)  spin_unlock_irqrestore(lock, flags)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
@@ -578,12 +616,10 @@ static inline u32 rtl8126_ethtool_adv_to_mmd_eee_adv_cap2_t(u32 adv)
 #else
 #define NAPI_SUFFIX ""
 #endif
-#if defined(ENABLE_DASH_PRINTER_SUPPORT)
-#define DASH_SUFFIX "-PRINTER"
-#elif defined(ENABLE_DASH_SUPPORT)
-#define DASH_SUFFIX "-DASH"
+#ifdef ENABLE_REALWOW_SUPPORT
+#define REALWOW_SUFFIX "-REALWOW"
 #else
-#define DASH_SUFFIX ""
+#define REALWOW_SUFFIX ""
 #endif
 
 #if defined(ENABLE_REALWOW_SUPPORT)
@@ -604,12 +640,12 @@ static inline u32 rtl8126_ethtool_adv_to_mmd_eee_adv_cap2_t(u32 adv)
 #define RSS_SUFFIX ""
 #endif
 
-#define RTL8126_VERSION "10.013.00" NAPI_SUFFIX DASH_SUFFIX REALWOW_SUFFIX PTP_SUFFIX RSS_SUFFIX
+#define RTL8126_VERSION "10.016.00" NAPI_SUFFIX REALWOW_SUFFIX PTP_SUFFIX RSS_SUFFIX
 #define MODULENAME "r8126"
 #define PFX MODULENAME ": "
 
 #define GPL_CLAIM "\
-r8126  Copyright (C) 2024 Realtek NIC software team <nicfae@realtek.com> \n \
+r8126  Copyright (C) 2025 Realtek NIC software team <nicfae@realtek.com> \n \
 This program comes with ABSOLUTELY NO WARRANTY; for details, please see <http://www.gnu.org/licenses/>. \n \
 This is free software, and you are welcome to redistribute it under certain conditions; see <http://www.gnu.org/licenses/>. \n"
 
@@ -725,7 +761,9 @@ This is free software, and you are welcome to redistribute it under certain cond
 #endif
 
 #define R8126_MAX_TX_QUEUES (2)
-#define R8126_MAX_RX_QUEUES (4)
+#define R8126_MAX_RX_QUEUES_V2 (4)
+#define R8126_MAX_RX_QUEUES_V3 (16)
+#define R8126_MAX_RX_QUEUES R8126_MAX_RX_QUEUES_V3
 #define R8126_MAX_QUEUES R8126_MAX_RX_QUEUES
 
 #define OCP_STD_PHY_BASE	0xa400
@@ -855,6 +893,10 @@ This is free software, and you are welcome to redistribute it under certain cond
 #ifndef SPEED_5000
 #define SPEED_5000		5000
 #endif
+
+#define R8126_LINK_STATE_OFF 0
+#define R8126_LINK_STATE_ON 1
+#define R8126_LINK_STATE_UNKNOWN 2
 
 /*****************************************************************************/
 
@@ -1616,6 +1658,7 @@ enum RTL8126_register_content {
         RxBufEmpty = 0x01,
 
         /* Cfg9346Bits */
+        Cfg9346_EEM_MASK = 0xC0,
         Cfg9346_Lock = 0x00,
         Cfg9346_Unlock = 0xC0,
         Cfg9346_EEDO = (1 << 0),
@@ -1632,6 +1675,7 @@ enum RTL8126_register_content {
         AcceptMulticast = 0x04,
         AcceptMyPhys = 0x02,
         AcceptAllPhys = 0x01,
+        AcceppVlanPhys = 0x8000,
 
         /* Transmit Priority Polling*/
         HPQ = 0x80,
@@ -1709,8 +1753,11 @@ enum RTL8126_register_content {
 
         /* rtl8126_PHYstatus */
         PowerSaveStatus = 0x80,
+        _1000bpsL = 0x80000,
         _5000bpsF = 0x1000,
+        _5000bpsL = 0x800,
         _2500bpsF = 0x400,
+        _2500bpsL = 0x200,
         TxFlowCtrl = 0x40,
         RxFlowCtrl = 0x20,
         _1000bpsF = 0x10,
@@ -1858,6 +1905,10 @@ enum _DescStatusBit {
         LargeSend   = (1 << 27), /* TCP Large Send Offload (TSO) */
         GiantSendv4 = (1 << 26), /* TCP Giant Send Offload V4 (GSOv4) */
         GiantSendv6 = (1 << 25), /* TCP Giant Send Offload V6 (GSOv6) */
+        GiantSendEn_V3 = (1 << 16), /* Giant Send Offload Enable V3 */
+        GiantSendv4_V3 = (1 << 29), /* IPv4 Giant Send Offload V3 */
+        GiantSendv6_V3 = (0), /* IPv6 Giant Send Offload V3 */
+        GiantSendTCP_V3 = (1 << 30), /* TCP Giant Send Offload V3 */
         LargeSend_DP = (1 << 16), /* TCP Large Send Offload (TSO) */
         MSSShift    = 16,        /* MSS value position */
         MSSMask     = 0x7FFU,    /* MSS value 11 bits */
@@ -2011,14 +2062,11 @@ enum efuse {
 #define RsvdMaskV3  0x3fff8000
 #define RsvdMaskV4  RsvdMaskV3
 
+/* Tx desc V3 */
 struct TxDesc {
         u32 opts1;
         u32 opts2;
         u64 addr;
-        u32 reserved0;
-        u32 reserved1;
-        u32 reserved2;
-        u32 reserved3;
 };
 
 struct RxDesc {
@@ -2148,6 +2196,7 @@ enum r8126_flag {
         R8126_FLAG_TASK_RESET_PENDING,
         R8126_FLAG_TASK_ESD_CHECK_PENDING,
         R8126_FLAG_TASK_LINKCHG_CHECK_PENDING,
+        R8126_FLAG_TASK_LINK_CHECK_PENDING,
         R8126_FLAG_MAX
 };
 
@@ -2519,8 +2568,8 @@ struct rtl8126_private {
         u16 cp_cmd;
         u32 intr_mask;
         u32 timer_intr_mask;
-        u16 isr_reg[R8126_MAX_QUEUES];
-        u16 imr_reg[R8126_MAX_QUEUES];
+        u16 isr_reg[R8126_MAX_MSIX_VEC];
+        u16 imr_reg[R8126_MAX_MSIX_VEC];
         int phy_auto_nego_reg;
         int phy_1000_ctrl_reg;
         int phy_2500_ctrl_reg;
@@ -2558,10 +2607,12 @@ struct rtl8126_private {
         struct work_struct reset_task;
         struct work_struct esd_task;
         struct work_struct linkchg_task;
+        struct work_struct link_task;
 #else
         struct delayed_work reset_task;
         struct delayed_work esd_task;
         struct delayed_work linkchg_task;
+        struct delayed_work link_task;
 #endif
         DECLARE_BITMAP(task_flags, R8126_FLAG_MAX);
         unsigned features;
@@ -2604,7 +2655,6 @@ struct rtl8126_private {
 
         u32 HwFiberModeVer;
         u32 HwFiberStat;
-        u8 HwSwitchMdiToFiber;
 
         u16 NicCustLedValue;
 
@@ -2646,83 +2696,7 @@ struct rtl8126_private {
         struct rtl8126_fw *rtl_fw;
         u32 ocp_base;
 
-        //Dash+++++++++++++++++
-        u8 HwSuppDashVer;
-        u8 DASH;
-        u8 dash_printer_enabled;
         u8 HwPkgDet;
-        u8 AllowAccessDashOcp;
-        void __iomem *mapped_cmac_ioaddr; /* mapped cmac memory map physical address */
-        void __iomem *cmac_ioaddr; /* cmac memory map physical address */
-
-#ifdef ENABLE_DASH_SUPPORT
-        u16 AfterRecvFromFwBufLen;
-        u8 AfterRecvFromFwBuf[RECV_FROM_FW_BUF_SIZE];
-        u16 AfterSendToFwBufLen;
-        u8 AfterSendToFwBuf[SEND_TO_FW_BUF_SIZE];
-        u16 SendToFwBufferLen;
-        u32 SizeOfSendToFwBuffer;
-        u32 SizeOfSendToFwBufferMemAlloc;
-        u32 NumOfSendToFwBuffer;
-
-        u8 OobReq;
-        u8 OobAck;
-        u32 OobReqComplete;
-        u32 OobAckComplete;
-
-        u8 RcvFwReqSysOkEvt;
-        u8 RcvFwDashOkEvt;
-        u8 SendFwHostOkEvt;
-
-        u8 DashFwDisableRx;
-
-        void *UnalignedSendToFwBufferVa;
-        void *SendToFwBuffer;
-        u64 SendToFwBufferPhy;
-        u8 SendingToFw;
-        dma_addr_t UnalignedSendToFwBufferPa;
-        PTX_DASH_SEND_FW_DESC TxDashSendFwDesc;
-        u64 TxDashSendFwDescPhy;
-        u8 *UnalignedTxDashSendFwDescVa;
-        u32 SizeOfTxDashSendFwDescMemAlloc;
-        u32 SizeOfTxDashSendFwDesc;
-        u32 NumTxDashSendFwDesc;
-        u32 CurrNumTxDashSendFwDesc;
-        u32 LastSendNumTxDashSendFwDesc;
-        dma_addr_t UnalignedTxDashSendFwDescPa;
-
-        u32 NumRecvFromFwBuffer;
-        u32 SizeOfRecvFromFwBuffer;
-        u32 SizeOfRecvFromFwBufferMemAlloc;
-        void *RecvFromFwBuffer;
-        u64 RecvFromFwBufferPhy;
-
-        void *UnalignedRecvFromFwBufferVa;
-        dma_addr_t UnalignedRecvFromFwBufferPa;
-        PRX_DASH_FROM_FW_DESC RxDashRecvFwDesc;
-        u64 RxDashRecvFwDescPhy;
-        u8 *UnalignedRxDashRecvFwDescVa;
-        u32 SizeOfRxDashRecvFwDescMemAlloc;
-        u32 SizeOfRxDashRecvFwDesc;
-        u32 NumRxDashRecvFwDesc;
-        u32 CurrNumRxDashRecvFwDesc;
-        dma_addr_t UnalignedRxDashRecvFwDescPa;
-        u8 DashReqRegValue;
-        u16 HostReqValue;
-
-        u32 CmacResetIsrCounter;
-        u8 CmacResetIntr;
-        u8 CmacResetting;
-        u8 CmacOobIssueCmacReset;
-        u32 CmacResetbyFwCnt;
-
-#if defined(ENABLE_DASH_PRINTER_SUPPORT)
-        struct completion fw_ack;
-        struct completion fw_req;
-        struct completion fw_host_ok;
-#endif
-        //Dash-----------------
-#endif //ENABLE_DASH_SUPPORT
 
         //Realwow++++++++++++++
         u8 HwSuppKCPOffloadVer;
@@ -2757,7 +2731,6 @@ struct rtl8126_private {
 
         u8 HwSuppPtpVer;
         u8 EnablePtp;
-        u8 ptp_master_mode;
 #ifdef ENABLE_PTP_SUPPORT
         u32 tx_hwtstamp_timeouts;
         u32 tx_hwtstamp_skipped;
@@ -2785,6 +2758,8 @@ struct rtl8126_private {
 
         u8 HwSuppMacMcuVer;
         u16 MacMcuPageSize;
+        u64 hw_mcu_patch_code_ver;
+        u64 bin_mcu_patch_code_ver;
 
         u8 HwSuppTcamVer;
 
@@ -2858,8 +2833,7 @@ enum eetype {
 };
 
 enum mcfg {
-        CFG_METHOD_1=1,
-        CFG_METHOD_2,
+        CFG_METHOD_2=2,
         CFG_METHOD_3,
         CFG_METHOD_DEFAULT,
         CFG_METHOD_MAX
@@ -2893,7 +2867,7 @@ enum mcfg {
 //Ram Code Version
 #define NIC_RAMCODE_VERSION_CFG_METHOD_1 (0x0023)
 #define NIC_RAMCODE_VERSION_CFG_METHOD_2 (0x0033)
-#define NIC_RAMCODE_VERSION_CFG_METHOD_3 (0x0051)
+#define NIC_RAMCODE_VERSION_CFG_METHOD_3 (0x0060)
 
 //hwoptimize
 #define HW_PATCH_SOC_LAN (BIT_0)
@@ -2912,13 +2886,7 @@ void rtl8126_mac_ocp_write(struct rtl8126_private *tp, u16 reg_addr, u16 value);
 u16 rtl8126_mac_ocp_read(struct rtl8126_private *tp, u16 reg_addr);
 void rtl8126_clear_eth_phy_bit(struct rtl8126_private *tp, u8 addr, u16 mask);
 void rtl8126_set_eth_phy_bit(struct rtl8126_private *tp,  u8  addr, u16  mask);
-void rtl8126_ocp_write(struct rtl8126_private *tp, u16 addr, u8 len, u32 data);
-void rtl8126_oob_notify(struct rtl8126_private *tp, u8 cmd);
 void rtl8126_init_ring_indexes(struct rtl8126_private *tp);
-void rtl8126_oob_mutex_lock(struct rtl8126_private *tp);
-u32 rtl8126_ocp_read(struct rtl8126_private *tp, u16 addr, u8 len);
-u32 rtl8126_ocp_read_with_oob_base_address(struct rtl8126_private *tp, u16 addr, u8 len, u32 base_address);
-u32 rtl8126_ocp_write_with_oob_base_address(struct rtl8126_private *tp, u16 addr, u8 len, u32 value, u32 base_address);
 u32 rtl8126_eri_read(struct rtl8126_private *tp, int addr, int len, int type);
 u32 rtl8126_eri_read_with_oob_base_address(struct rtl8126_private *tp, int addr, int len, int type, u32 base_address);
 int rtl8126_eri_write(struct rtl8126_private *tp, int addr, int len, u32 value, int type);
@@ -2927,11 +2895,6 @@ u16 rtl8126_ephy_read(struct rtl8126_private *tp, int RegAddr);
 void rtl8126_wait_txrx_fifo_empty(struct net_device *dev);
 void rtl8126_enable_now_is_oob(struct rtl8126_private *tp);
 void rtl8126_disable_now_is_oob(struct rtl8126_private *tp);
-void rtl8126_oob_mutex_unlock(struct rtl8126_private *tp);
-void rtl8126_dash2_disable_tx(struct rtl8126_private *tp);
-void rtl8126_dash2_enable_tx(struct rtl8126_private *tp);
-void rtl8126_dash2_disable_rx(struct rtl8126_private *tp);
-void rtl8126_dash2_enable_rx(struct rtl8126_private *tp);
 void rtl8126_hw_disable_mac_mcu_bps(struct net_device *dev);
 void rtl8126_mark_to_asic(struct rtl8126_private *tp, struct RxDesc *desc, u32 rx_buf_sz);
 void rtl8126_mark_as_last_descriptor(struct rtl8126_private *tp, struct RxDesc *desc);
@@ -2978,7 +2941,7 @@ rtl8126_enable_hw_interrupt_v2(struct rtl8126_private *tp, u32 message_id)
 int rtl8126_open(struct net_device *dev);
 int rtl8126_close(struct net_device *dev);
 void rtl8126_hw_config(struct net_device *dev);
-void rtl8126_hw_set_timer_int_8125(struct rtl8126_private *tp, u32 message_id, u8 timer_intmiti_val);
+void rtl8126_hw_set_timer_int(struct rtl8126_private *tp, u32 message_id, u8 timer_intmiti_val);
 void rtl8126_set_rx_q_num(struct rtl8126_private *tp, unsigned int num_rx_queues);
 void rtl8126_set_tx_q_num(struct rtl8126_private *tp, unsigned int num_tx_queues);
 void rtl8126_enable_mcu(struct rtl8126_private *tp, bool enable);
@@ -2997,9 +2960,10 @@ void rtl8126_mdio_direct_write_phy_ocp(struct rtl8126_private *tp, u16 RegAddr,u
 u32 rtl8126_mdio_direct_read_phy_ocp(struct rtl8126_private *tp, u16 RegAddr);
 void rtl8126_clear_and_set_eth_phy_ocp_bit(struct rtl8126_private *tp, u16 addr, u16 clearmask, u16 setmask);
 void rtl8126_clear_eth_phy_ocp_bit(struct rtl8126_private *tp, u16 addr, u16 mask);
-void rtl8126_set_eth_phy_ocp_bit(struct rtl8126_private *tp,  u16 addr, u16 mask);
+void rtl8126_set_eth_phy_ocp_bit(struct rtl8126_private *tp, u16 addr, u16 mask);
 
-void rtl8126_clear_mac_ocp_bit(struct rtl8126_private *tp, u16   addr, u16   mask);
+void rtl8126_clear_mac_ocp_bit(struct rtl8126_private *tp, u16 addr, u16 mask);
+void rtl8126_set_mac_ocp_bit(struct rtl8126_private *tp, u16 addr, u16 mask);
 
 #ifndef ENABLE_LIB_SUPPORT
 static inline void rtl8126_lib_reset_prepare(struct rtl8126_private *tp) { }
