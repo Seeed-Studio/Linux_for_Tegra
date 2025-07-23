@@ -6,7 +6,7 @@ set -euo pipefail
 # 主仓库（GitLab URL）
 MAIN_REPO_URL="http://192.168.1.77:1080/awesome-se/jetson/jetpack/Linux_for_Tegra.git"
 MAIN_BRANCH="R36.4.4"
-MAIN_START="069611fc024898bda7898bfc6ebab6b52f6d14a3"
+MAIN_START="49eebd48bcce09c8c0628389d49a9fc30fc8792f"
 
 # 需要 subtree 合并的三个子模块配置
 OOT_REPO_URL="http://192.168.1.77:1080/awesome-se/jetson/jetpack/nvidia-oot"
