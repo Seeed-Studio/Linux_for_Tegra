@@ -20,21 +20,21 @@
 
 		led_red {
 			label = "on-board:red";
-			gpios = <&gpio TEGRA234_AON_GPIO(CC, 3) GPIO_ACTIVE_LOW>;
+			gpios = <&gpio_aon TEGRA234_AON_GPIO(CC, 3) GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "none";
 			default-state = "off";
 		};
 
 		led_green {
 			label = "on-board:green";
-			gpios = <&gpio TEGRA234_AON_GPIO(CC, 2) GPIO_ACTIVE_LOW>;
+			gpios = <&gpio_aon TEGRA234_AON_GPIO(CC, 2) GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "none";
 			default-state = "off";
 		};
 
 		led_blue {
 			label = "on-board:blue";
-			gpios = <&gpio TEGRA234_MAIN_GPIO(AC, 2) GPIO_ACTIVE_LOW>;
+			gpios = <&gpio TEGRA234_MAIN_GPIO(AC, 2) GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "none";
 			default-state = "off";
 		};
