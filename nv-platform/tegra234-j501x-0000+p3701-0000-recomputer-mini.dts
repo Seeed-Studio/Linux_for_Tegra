@@ -1,0 +1,103 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-j501x-0000+p3701-0000.dts"
+#include "tegra234-p3737-0000+p3701-xxxx-nv-common.dtsi"
+#include "tegra234-p3701-0000.dtsi"
+#include "tegra234-dcb-j501x-0000-p3701-0000.dtsi"
+
+#include <dt-bindings/net/ti-dp83867.h>
+/ {
+	aliases {
+		serial4 = "/bus@0/serial@3140000";
+	};
+
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+
+		led_red {
+			label = "on-board:red";
+			gpios = <&gpio TEGRA234_AON_GPIO(CC, 3) GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led_green {
+			label = "on-board:green";
+			gpios = <&gpio TEGRA234_AON_GPIO(CC, 2) GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led_blue {
+			label = "on-board:blue";
+			gpios = <&gpio TEGRA234_MAIN_GPIO(AC, 2) GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+	};
+
+	bus@0 {
+
+		//Gigabit Ethernet
+		ethernet@2310000 {
+			status = "okay";
+			nvidia,mac-addr-idx = <1>;
+			nvidia,max-platform-mtu = <8000>;
+			nvidia,pause_frames = <0>;
+			nvidia,phy-reset-gpio = <&gpio TEGRA234_MAIN_GPIO(G, 5) 0>;
+			phy-handle = <&phy>;
+			phy-mode = "rgmii-id";		
+		
+			mdio {
+				compatible = "nvidia,eqos-mdio";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				phy: phy@0 {
+					reg = <0>;
+					compatible = "ethernet-phy-ieee802.3-c22";
+					tx-fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+					rx-fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+					ti,max-output-impedance;
+				//	ti,clk-output-sel = <DP83867_CLK_O_SEL_CHN_A_RCLK>;
+					ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_75_NS>;
+					ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_75_NS>;
+					interrupt-parent = <&gpio>;
+					interrupts = <TEGRA234_MAIN_GPIO(G, 4) IRQ_TYPE_LEVEL_LOW>; //<TODO> Need to check
+				};			
+			};
+		};
+		
+		pcie@14180000 {
+					status = "okay";
+					phys = <&p2u_hsio_0>;
+					phy-names = "p2u-0";
+		};
+
+		//CAN0
+		mttcan@c310000 {
+			// 3V3-supply  = <&vdd_3v3_sd>;
+			status = "okay";
+		};
+
+		//CAN1
+		mttcan@c320000 {
+			// 3V3-supply = <&vdd_3v3_sd>;
+			status = "okay";
+		};
+
+		/// ttyTHS4
+		serial@3140000 {
+			compatible = "nvidia,tegra194-hsuart";
+			reset-names = "serial";
+			rs485-de-gpios = <&gpio TEGRA234_MAIN_GPIO(Y, 7) GPIO_ACTIVE_HIGH>;
+			status = "okay";
+		};
+
+		//ttyTHS0 for M.2 KEY-B (4G/5G)
+		//no need config
+	};
+};
