@@ -20,7 +20,33 @@
 	fragment-camera-imx219@0 {
 		target-path = "/";
 		__overlay__ {
+
+			tegra-capture-vi  {
+				ports {
+					port@0{
+						endpoint {
+							port-index = <0>;
+						};
+					};
+				};
+			};
+
 			bus@0 {
+				host1x@13e00000 {
+					nvcsi@15a00000 {
+						channel@0 {
+							ports {
+								port@0 {
+									endpoint@0 {
+										port-index = <0>;
+									};
+								};
+							};
+						};
+					};
+				};
+
+
 				cam_i2cmux{
 					status = "okay";
 					compatible = "i2c-mux-gpio";
@@ -50,6 +76,14 @@
 							mode4 {
 								tegra_sinterface = "serial_a";
 							};
+							ports{
+								port@0{
+									endpoint{
+										status = "okay";
+										port-index = <0>;
+									};
+								};
+							};
 						};
 					};
 					i2c@1 {
@@ -73,4 +107,5 @@
 			};
 		};
 	};
+
 };

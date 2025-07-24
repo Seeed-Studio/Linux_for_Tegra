@@ -7,15 +7,18 @@
 #include <dt-bindings/clock/tegra234-clock.h>
 #include <dt-bindings/gpio/tegra234-gpio.h>
 #include <dt-bindings/tegra234-p3737-0000+p3701-0000.h>
+#include <dt-bindings/pinctrl/pinctrl-tegra.h> 
 
+#define CAM0_PWDN	TEGRA234_MAIN_GPIO(H, 6)  //Pin93 --- UART4_CTS L49/397 - MAX9296_1 PWDN
+#define CAM1_PWDN	TEGRA234_MAIN_GPIO(H, 3)  //Pin95 --- UART4_TX L5/394 - MAX9296_2 PWDN
+#define CAM2_PWDN	TEGRA234_MAIN_GPIO(AC, 0) //Pin90 --- GPIO15 F10/486 - MAX9296_3 PWDN
+#define CAM3_PWDN	TEGRA234_MAIN_GPIO(AC, 1) //Pin92 --- GPIO16 E9/487 - MAX9296_4 PWDN
+#define CAM12V_POC	TEGRA234_MAIN_GPIO(AC, 7) //Pin119 --- GPIO12 E10 CAM_VDD_SYS_EN/493 Low enable
+#define CAM_SYNCALL	TEGRA234_AON_GPIO(CC, 0)  //E61/SPI2_CLK CAM_INT1/328 -- MAX9296x4 MFP6
 
-#define CAM0_RST_L	TEGRA234_MAIN_GPIO(H, 6) //0x3e
-#define CAM1_RST_L	TEGRA234_MAIN_GPIO(AC, 0) //0x3b
+#define SYNC_IN    TEGRA234_AON_GPIO(BB, 0) //(BB, 0)
 
-#define SYNC_OUT  TEGRA234_MAIN_GPIO(H, 1) //(H, 1)
-#define SYNC_IN   TEGRA234_MAIN_GPIO(AC, 4) //(AC, 4)
-
-#define PPS_TRIGGER   TEGRA234_MAIN_GPIO(P, 4) //(P, 4)
+#define PPS_TRIGGER  TEGRA234_AON_GPIO(BB, 2)//(BB, 2)
 
 #define CAMERA_I2C_MUX_BUS(x) (0x1E + x)
 
@@ -84,7 +87,7 @@
 						status = "okay";
 						g300_vi_in4: endpoint {
 							status = "okay";
-							vc-id = <2>;
+							vc-id = <3>;
 							port-index = <0>; //1
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out4>;
@@ -95,7 +98,7 @@
 						status = "okay";
 						g300_vi_in5: endpoint {
 							status = "okay";
-							vc-id = <3>;
+							vc-id = <2>;
 							port-index = <0>; //1
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out5>;
@@ -106,7 +109,7 @@
 						status = "okay";
 						g300_vi_in6: endpoint {
 							status = "okay";
-							vc-id = <0>;
+							vc-id = <1>;
 							port-index = <0>; //1
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out6>;
@@ -117,7 +120,7 @@
 						status = "okay";
 						g300_vi_in7: endpoint {
 							status = "okay";
-							vc-id = <1>;
+							vc-id = <0>;
 							port-index = <0>; //1
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out7>;
@@ -174,7 +177,7 @@
 						status = "okay";
 						g300_vi_in12: endpoint {
 							status = "okay";
-							vc-id = <2>;
+							vc-id = <3>;
 							port-index = <2>; //3
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out12>;
@@ -185,7 +188,7 @@
 						status = "okay";
 						g300_vi_in13: endpoint {
 							status = "okay";
-							vc-id = <3>;
+							vc-id = <2>;
 							port-index = <2>; //3
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out13>;
@@ -196,7 +199,7 @@
 						status = "okay";
 						g300_vi_in14: endpoint {
 							status = "okay";
-							vc-id = <0>;
+							vc-id = <1>;
 							port-index = <2>; //3
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out14>;
@@ -207,7 +210,7 @@
 						status = "okay";
 						g300_vi_in15: endpoint {
 							status = "okay";
-							vc-id = <1>;
+							vc-id = <0>;
 							port-index = <2>; //3
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out15>;
@@ -264,7 +267,7 @@
 						status = "okay";
 						g300_vi_in20: endpoint {
 							status = "okay";
-							vc-id = <2>;
+							vc-id = <3>;
 							port-index = <4>; //1
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out20>;
@@ -275,7 +278,7 @@
 						status = "okay";
 						g300_vi_in21: endpoint {
 							status = "okay";
-							vc-id = <3>;
+							vc-id = <2>;
 							port-index = <4>; //1
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out21>;
@@ -286,7 +289,7 @@
 						status = "okay";
 						g300_vi_in22: endpoint {
 							status = "okay";
-							vc-id = <0>;
+							vc-id = <1>;
 							port-index = <4>; //1
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out22>;
@@ -297,7 +300,7 @@
 						status = "okay";
 						g300_vi_in23: endpoint {
 							status = "okay";
-							vc-id = <1>;
+							vc-id = <0>;
 							port-index = <4>; //1
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out23>;
@@ -354,7 +357,7 @@
 						status = "okay";
 						g300_vi_in28: endpoint {
 							status = "okay";
-							vc-id = <2>;
+							vc-id = <3>;
 							port-index = <5>; //3
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out28>;
@@ -365,7 +368,7 @@
 						status = "okay";
 						g300_vi_in29: endpoint {
 							status = "okay";
-							vc-id = <3>;
+							vc-id = <2>;
 							port-index = <5>; //3
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out29>;
@@ -376,7 +379,7 @@
 						status = "okay";
 						g300_vi_in30: endpoint {
 							status = "okay";
-							vc-id = <0>;
+							vc-id = <1>;
 							port-index = <5>; //3
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out30>;
@@ -387,7 +390,7 @@
 						status = "okay";
 						g300_vi_in31: endpoint {
 							status = "okay";
-							vc-id = <1>;
+							vc-id = <0>;
 							port-index = <5>; //3
 							bus-width = <4>;
 							remote-endpoint = <&g300_csi_out31>;
@@ -406,7 +409,7 @@
 				isp_peak_byte_per_pixel = <5>;
 				isp_bw_margin_pct = <25>;
 				status = "okay";
-				
+
 				modules {
 					status = "okay";
 					module0 {
@@ -691,9 +694,22 @@
 
 			obc_cam_sync {
 				compatible = "orbbec,obc_cam_sync";
-				sync-in-gpios = <&gpio_aon SYNC_IN GPIO_ACTIVE_HIGH>;
-				sync-out-gpios = <&gpio SYNC_OUT GPIO_ACTIVE_HIGH>;  //Use hrtimer to generate trigger signals
+				ranges = <0x0 0x0 0xc6a0000 0x10000>;
+				reg = <0x0 0xc6a0000 0x0 0x18>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				status = "okay";
+				//sync-in-gpios = <&gpio_aon SYNC_IN GPIO_ACTIVE_HIGH>;
+				//sync-out-gpios = <&gpio_aon CAM_SYNCALL GPIO_ACTIVE_HIGH>;  //Use hrtimer to generate trigger signals
 				pwms = <&pwm8 0 33333333>; //Use PWM to generate trigger signals, Default PWM mode, if use hrtimer comment out this line
+				/* EDGE_OUT #3 */
+				generator@500 {
+					reg = <0x500 0x80>;
+					freq_hz = <30>;
+					duty_cycle = <10>;
+					offset_ms = <0>;
+					status = "okay";
+				};
 			};
 
 			bus@0 {
@@ -1579,21 +1595,29 @@
 				};
 
 				gpio@2200000 {
-					camera-control-output-low {
+					/*
+					camera-control-output-high {
 						gpio-hog;
 						output-high;
-						gpios = <CAM0_RST_L 1 CAM1_RST_L 1>; // CAM2_RST_L 1 CAM3_RST_L 1>;
-						label = "cam0-pwdn", "cam1-pwdn"; //, "cam2-pwdn", "cam3-pwdn";
+						gpios = <CAM0_PWDN 0 CAM1_PWDN 0 CAM2_RST_L 0 CAM3_RST_L 0>;
+						label = "cam0-pwdn", "cam1-pwdn", "cam2-pwdn", "cam3-pwdn";
+					};
+					*/
+					cam-poc-high {
+						gpio-hog;
+						output-high;
+						gpios = <CAM12V_POC 0>;
+						label = "cam12-poc";
 					};
 				};
 
-				i2c@31e0000 {
+				i2c@3180000 {
 					status = "okay";
 					clock-frequency = <400000>;
-					tca9544@72 {
+					tca9546@70 {
 						status = "okay";
-						reg = <0x72>;
-						compatible = "nxp,pca9544";
+						reg = <0x70>;
+						compatible = "nxp,pca9546";
 						#address-cells = <1>;
 						#size-cells = <0>;
 						skip_mux_detect = "yes";
@@ -1601,59 +1625,211 @@
 						/*vcc-pullup-supply = <&battery_reg>;*/
 						force_bus_start = <CAMERA_I2C_MUX_BUS(0)>;
 						vcc_lp = "vcc";
-						i2c@3 {
-							reg = <3>; // line 4 of the I2C switch
+						i2c@0 {
+							reg = <0>; // line 4 of the I2C switch
 							i2c-mux,deselect-on-exit;
 							#address-cells = <1>;
 							#size-cells = <0>;
 
-							dser0: max9296@48 {
+							g2m1_3: g2m3@6D {
 								status = "okay";
-								reg = <0x48>;
-								compatible = "maxim,max9296";
-								csi-mode = "2x4";
-								max-src = <2>;
-								reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
-								fsync_mfp_index = <7>;
-								pps_mfp_index = <9>;
-							};
+								reg = <0x6D>;
+								compatible = "orbbec,g300";
+								use_sensor_mode_id = "true";
+								vcc-supply = <&vdd_1v8_ls>;
+								cam-type = "IR_R";
+								dser-link-port = "b";
+								st-vc = <3>;
+								vc-id = <0>;
+								orbbec_cam_num = <1>;
+								nvidia,gmsl-dser-device = <&dser0>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								ports {
+									#address-cells = <1>;
+									#size-cells = <0>;
 
-							ser0_a: max9295_a@42 {
-								status = "okay";
-								compatible = "maxim,max9295";
-								reg = <0x42>;
-								ser-prim-device = <&ser_prim0>;
-								maxim,gmsl-dser-device = <&dser0>;
+									port@0 {
+										reg = <0>;
+										g2m1_3_out: endpoint {
+											vc-id = <0>;
+											port-index = <0>;
+											bus-width = <4>;
+											remote-endpoint = <&g300_csi_in7>;
+										};
+									};
+								};
+								mode0 {
+									pixel_t = "grey_y8";
+									num_lanes = "4";
+									csi_pixel_bit_depth = "8";
+									active_w = "1280";
+									active_h = "720";
+									tegra_sinterface = "serial_a";
+									mclk_khz = "24000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
+									discontinuous_clk = "no";
+									dpcm_enable = "false";
+									cil_settletime = "0";
+									line_length = "1280";
+									mclk_multiplier = "15.625";
+									embedded_metadata_height = "0";
+									vc_id = "0";
+								};
 							};
-
-							ser0_b: max9295_b@60 {
+							g2m1_2: g2m2@6C {
 								status = "okay";
-								compatible = "maxim,max9295";
-								reg = <0x60>;
-								ser-prim-device = <&ser_prim0>;
-								maxim,gmsl-dser-device = <&dser0>;
+								reg = <0x6C>;
+								compatible = "orbbec,g300";
+								use_sensor_mode_id = "true";
+								vcc-supply = <&vdd_1v8_ls>;
+								cam-type = "IR_L";
+								dser-link-port = "b";
+								st-vc = <2>;
+								vc-id = <1>;
+								orbbec_cam_num = <1>;
+								nvidia,gmsl-dser-device = <&dser0>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								ports {
+									#address-cells = <1>;
+									#size-cells = <0>;
+
+									port@0 {
+										reg = <0>;
+										g2m1_2_out: endpoint {
+											vc-id = <1>;
+											port-index = <0>;
+											bus-width = <4>;
+											remote-endpoint = <&g300_csi_in6>;
+										};
+									};
+								};
+								mode0 {
+									pixel_t = "grey_y8";
+									num_lanes = "4";
+									csi_pixel_bit_depth = "8";
+									active_w = "1280";
+									active_h = "720";
+									tegra_sinterface = "serial_a";
+									mclk_khz = "24000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
+									discontinuous_clk = "no";
+									dpcm_enable = "false";
+									cil_settletime = "0";
+									line_length = "1280";
+									mclk_multiplier = "15.625";
+									embedded_metadata_height = "0";
+									vc_id = "1";
+								};
 							};
-
-							ser_prim0: max9295_prim@40 {
+							g2m1_1: g2m1@6B {
 								status = "okay";
-								reg = <0x40>;
-								compatible = "maxim,max9295";
-								is-prim-ser;
+								reg = <0x6B>;
+								compatible = "orbbec,g300";
+								use_sensor_mode_id = "true";
+								vcc-supply = <&vdd_1v8_ls>;
+								cam-type = "RGB";
+								dser-link-port = "b";
+								st-vc = <1>;
+								vc-id = <2>;
+								orbbec_cam_num = <1>;
+								nvidia,gmsl-dser-device = <&dser0>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								ports {
+									#address-cells = <1>;
+									#size-cells = <0>;
+
+									port@0 {
+										reg = <0>;
+										g2m1_1_out: endpoint {
+											vc-id = <2>;
+											port-index = <0>;
+											bus-width = <4>;
+											remote-endpoint = <&g300_csi_in5>;
+										};
+									};
+								};
+								mode0 {
+									pixel_t = "yuv_yvyu16";
+									num_lanes = "4";
+									csi_pixel_bit_depth = "16";
+									active_w = "1280";
+									active_h = "720";
+									tegra_sinterface = "serial_a";
+									mclk_khz = "24000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
+									discontinuous_clk = "no";
+									dpcm_enable = "false";
+									cil_settletime = "0";
+									line_length = "1280";
+									mclk_multiplier = "15.625";
+									embedded_metadata_height = "0";
+									vc_id = "2";
+								};
+							};
+							g2m1_0: g2m0@6A {
+								status = "okay";
+								reg = <0x6A>;
+								compatible = "orbbec,g300";
+								use_sensor_mode_id = "true";
+								vcc-supply = <&vdd_1v8_ls>;
+								cam-type = "Depth";
+								dser-link-port = "b";
+								st-vc = <0>;
+								vc-id = <3>;
+								orbbec_cam_num = <1>;
+								nvidia,gmsl-dser-device = <&dser0>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								ports {
+									#address-cells = <1>;
+									#size-cells = <0>;
+
+									port@0 {
+										reg = <0>;
+										g2m1_0_out: endpoint {
+											vc-id = <3>;
+											port-index = <0>;
+											bus-width = <4>;
+											remote-endpoint = <&g300_csi_in4>;
+										};
+									};
+								};
+								mode0 {
+									pixel_t = "yuv_yvyu16";
+									num_lanes = "4";
+									csi_pixel_bit_depth = "16";
+									active_w = "1280";
+									active_h = "720";
+									tegra_sinterface = "serial_a";
+									mclk_khz = "24000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
+									discontinuous_clk = "no";
+									dpcm_enable = "false";
+									cil_settletime = "0";
+									line_length = "1280";
+									mclk_multiplier = "15.625";
+									embedded_metadata_height = "0";
+									vc_id = "2";
+								};
 							};
 
 							/* IR_R */
 							g2m0_3: g2m3@69 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x69>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_R";
+								dser-link-port = "a";
+								st-vc = <3>;
+								vc-id = <3>;
 								orbbec_cam_num = <0>;
-								nvidia,gmsl-ser-device = <&ser0_a>;
 								nvidia,gmsl-dser-device = <&dser0>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -1676,39 +1852,31 @@
 									active_h = "720";
 									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "3";
-								};
-								gmsl-link {
-									src-csi-port = "b"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <3>;
-									vc-id = <3>;
-									num-lanes = <4>;
 								};
 							};
 							/* IR_L */
 							g2m0_2: g2m2@68 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x68>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_L";
+								dser-link-port = "a";
+								st-vc = <2>;
+								vc-id = <2>;
 								orbbec_cam_num = <0>;
-								nvidia,gmsl-ser-device = <&ser0_a>;
 								nvidia,gmsl-dser-device = <&dser0>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -1731,39 +1899,31 @@
 									active_h = "720";
 									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "2";
-								};
-								gmsl-link {
-									src-csi-port = "a"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <2>;
-									vc-id = <2>;
-									num-lanes = <4>;
 								};
 							};
 							/* RGB */
 							g2m0_1: g2m1@67 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x67>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "RGB";
+								dser-link-port = "a";
+								st-vc = <1>;
+								vc-id = <1>;
 								orbbec_cam_num = <0>;
-								nvidia,gmsl-ser-device = <&ser0_a>;
 								nvidia,gmsl-dser-device = <&dser0>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -1786,24 +1946,15 @@
 									active_h = "720";
 									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1"; 
+									embedded_metadata_height = "0"; 
 									vc_id = "1";
-								};
-								gmsl-link {
-									src-csi-port = "b"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <1>;
-									vc-id = <1>;
-									num-lanes = <4>;
 								};
 							};
 							/* Depth */
@@ -1815,10 +1966,12 @@
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "Depth";
+								dser-link-port = "a";
+								st-vc = <0>;   				/**< Default sensor virtual channel. */
+								vc-id = <0>;				/**< Destination virtual channel (user-defined). */
 								orbbec_cam_num = <0>;
-								nvidia,gmsl-ser-device = <&ser0_a>;
 								nvidia,gmsl-dser-device = <&dser0>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -1841,51 +1994,64 @@
 									active_h = "720";
 									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1"; 
+									embedded_metadata_height = "0"; 
 									vc_id = "0";
-								};
-								gmsl-link {
-									/* a = depth + ir_l, b = rgb + ir_r */
-									src-csi-port = "a";  		/**< Sensor to serializer CSI port connection. */
-									dst-csi-port = "a";			/**< Deserializer to Jetson CSI port connection. */
-									serdes-csi-link = "a";		/**< GMSL link between serializer and deserializer devices. */
-									csi-mode = "1x4";			/**< Deserializer CSI mode. */
-									st-vc = <0>;   				/**< Default sensor virtual channel. */
-									vc-id = <0>;				/**< Destination virtual channel (user-defined). */
-									num-lanes = <4>;			/**< Sensor's CSI lane configuration. */
 								};
 							};
 
-							g2m1_3: g2m3@6D {
+							dser0: max9296@48 {
 								status = "okay";
-								def-addr = <0x66>;
+								reg = <0x48>; //0x90>>1
+								compatible = "maxim,obc_max9296";
+								index = <0>;
+								csi-mode = "2x4"; //2*4lane
+								seri-addr = <0x50>; //serializer start address, LinkA serializer i2c address,LINK B + 1
+								proxy-addr = <0x1a>; //camera proxy address, LinkA g300 i2c address,LINK B + 1,LINK C + 2,LINK D + 3
+								real-addr = <0x66>; //camera real address
+								reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+								fsync_mfp_index = <6>;
+								pps_mfp_index = <9>;
+								is-fg96-8ch-v2.1;
+							};
+						};
+						i2c@1 {
+							status = "okay";
+							reg = <1>; // line 4 of the I2C switch
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							g2m3_3: g2m3@6D {
+								status = "okay";
 								reg = <0x6D>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_R";
-								orbbec_cam_num = <1>;
-								nvidia,gmsl-ser-device = <&ser0_b>;
-								nvidia,gmsl-dser-device = <&dser0>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <3>;
+								vc-id = <0>;
+								orbbec_cam_num = <3>;
+								nvidia,gmsl-dser-device = <&dser1>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m1_3_out: endpoint {
-											vc-id = <1>;
-											port-index = <0>;
+										g2m3_3_out: endpoint {
+											vc-id = <0>;
+											port-index = <2>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in7>;
+											remote-endpoint = <&g300_csi_in15>;
 										};
 									};
 								};
@@ -1895,51 +2061,43 @@
 									csi_pixel_bit_depth = "8";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_a";
+									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "1";
-								};
-								gmsl-link {
-									src-csi-port = "b"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <3>;
-									vc-id = <1>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0";
+									vc_id = "0";
 								};
 							};
-							g2m1_2: g2m2@6C {
+							g2m3_2: g2m2@6C {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6C>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_L";
-								orbbec_cam_num = <1>;
-								nvidia,gmsl-ser-device = <&ser0_b>;
-								nvidia,gmsl-dser-device = <&dser0>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <2>;
+								vc-id = <1>;
+								orbbec_cam_num = <3>;
+								nvidia,gmsl-dser-device = <&dser1>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m1_2_out: endpoint {
-											vc-id = <0>;
-											port-index = <0>;
+										g2m3_2_out: endpoint {
+											vc-id = <1>;
+											port-index = <2>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in6>;
+											remote-endpoint = <&g300_csi_in14>;
 										};
 									};
 								};
@@ -1949,51 +2107,43 @@
 									csi_pixel_bit_depth = "8";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_a";
+									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "0";
-								};
-								gmsl-link {
-									src-csi-port = "a"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <2>;
-									vc-id = <0>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0";
+									vc_id = "1";
 								};
 							};
-							g2m1_1: g2m1@6B {
+							g2m3_1: g2m1@6B {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6B>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "RGB";
-								orbbec_cam_num = <1>;
-								nvidia,gmsl-ser-device = <&ser0_b>;
-								nvidia,gmsl-dser-device = <&dser0>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <1>;
+								vc-id = <2>;
+								orbbec_cam_num = <3>;
+								nvidia,gmsl-dser-device = <&dser1>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m1_1_out: endpoint {
-											vc-id = <3>;
-											port-index = <0>;
+										g2m3_1_out: endpoint {
+											vc-id = <2>;
+											port-index = <2>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in5>;
+											remote-endpoint = <&g300_csi_in13>;
 										};
 									};
 								};
@@ -2003,51 +2153,43 @@
 									csi_pixel_bit_depth = "16";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_a";
+									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "3";
-								};
-								gmsl-link {
-									src-csi-port = "b"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <1>;
-									vc-id = <3>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0"; 
+									vc_id = "2";
 								};
 							};
-							g2m1_0: g2m0@6A {
+							g2m3_0: g2m0@6A {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6A>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "Depth";
-								orbbec_cam_num = <1>;
-								nvidia,gmsl-ser-device = <&ser0_b>;
-								nvidia,gmsl-dser-device = <&dser0>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <0>;
+								vc-id = <3>;
+								orbbec_cam_num = <3>;
+								nvidia,gmsl-dser-device = <&dser1>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m1_0_out: endpoint {
-											vc-id = <2>;
-											port-index = <0>;
+										g2m3_0_out: endpoint {
+											vc-id = <3>;
+											port-index = <2>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in4>;
+											remote-endpoint = <&g300_csi_in12>;
 										};
 									};
 								};
@@ -2057,82 +2199,33 @@
 									csi_pixel_bit_depth = "16";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_a";
+									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "2";
+									embedded_metadata_height = "0"; 
+									vc_id = "3";
 								};
-								gmsl-link {
-									src-csi-port = "a"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <0>;
-									vc-id = <2>;
-									num-lanes = <4>;
-								};
-							};
-						};
-						i2c@2 {
-							status = "okay";
-							reg = <2>; // line 4 of the I2C switch
-							i2c-mux,deselect-on-exit;
-							#address-cells = <1>;
-							#size-cells = <0>;
-
-							dser1: max9296@48 {
-								status = "okay";
-								reg = <0x48>;
-								compatible = "maxim,max9296";
-								csi-mode = "2x4";
-								max-src = <2>;
-								reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
-								fsync_mfp_index = <7>;
-								pps_mfp_index = <9>;
-							};
-
-							ser1_a: max9295_a@42 {
-								status = "okay";
-								compatible = "maxim,max9295";
-								reg = <0x42>;
-								ser-prim-device = <&ser_prim1>;
-								maxim,gmsl-dser-device = <&dser1>;
-							};
-
-							ser1_b: max9295_b@60 {
-								status = "okay";
-								compatible = "maxim,max9295";
-								reg = <0x60>;
-								ser-prim-device = <&ser_prim1>;
-								maxim,gmsl-dser-device = <&dser1>;
-							};
-
-							ser_prim1: max9295_prim@40 {
-								status = "okay";
-								reg = <0x40>;
-								compatible = "maxim,max9295";
-								is-prim-ser;
 							};
 
 							g2m2_3: g2m3@69 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x69>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_R";
+								dser-link-port = "a";
+								st-vc = <3>;
+								vc-id = <3>;
 								orbbec_cam_num = <2>;
-								nvidia,gmsl-ser-device = <&ser1_a>;
 								nvidia,gmsl-dser-device = <&dser1>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -2155,38 +2248,30 @@
 									active_h = "720";
 									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "3";
-								};
-								gmsl-link {
-									src-csi-port = "b";
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <3>;
-									vc-id = <3>;
-									num-lanes = <4>;
 								};
 							};
 							g2m2_2: g2m2@68 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x68>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_L";
+								dser-link-port = "a";
+								st-vc = <2>;
+								vc-id = <2>;
 								orbbec_cam_num = <2>;
-								nvidia,gmsl-ser-device = <&ser1_a>;
 								nvidia,gmsl-dser-device = <&dser1>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -2209,38 +2294,30 @@
 									active_h = "720";
 									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "2";
-								};
-								gmsl-link {
-									src-csi-port = "a";
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <2>;
-									vc-id = <2>;
-									num-lanes = <4>;
 								};
 							};
 							g2m2_1: g2m1@67 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x67>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "RGB";
+								dser-link-port = "a";
+								st-vc = <1>;
+								vc-id = <1>;
 								orbbec_cam_num = <2>;
-								nvidia,gmsl-ser-device = <&ser1_a>;
 								nvidia,gmsl-dser-device = <&dser1>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -2263,38 +2340,30 @@
 									active_h = "720";
 									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "1";
-								};
-								gmsl-link {
-									src-csi-port = "b";
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <1>;
-									vc-id = <1>;
-									num-lanes = <4>;
 								};
 							};
 							g2m2_0: g2m0@66 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x66>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "Depth";
+								dser-link-port = "a";
+								st-vc = <0>;   				/**< Default sensor virtual channel. */
+								vc-id = <0>;				/**< Destination virtual channel (user-defined). */
 								orbbec_cam_num = <2>;
-								nvidia,gmsl-ser-device = <&ser1_a>;
 								nvidia,gmsl-dser-device = <&dser1>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -2317,50 +2386,64 @@
 									active_h = "720";
 									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "0";
-								};
-								gmsl-link {
-									src-csi-port = "a";  		/**< Sensor to serializer CSI port connection. */
-									dst-csi-port = "a";			/**< Deserializer to Jetson CSI port connection. */
-									serdes-csi-link = "a";		/**< GMSL link between serializer and deserializer devices. */
-									csi-mode = "1x4";			/**< Deserializer CSI mode. */
-									st-vc = <0>;   				/**< Default sensor virtual channel. */
-									vc-id = <0>;				/**< Destination virtual channel (user-defined). */
-									num-lanes = <4>;			/**< Sensor's CSI lane configuration. */
 								};
 							};
 
-							g2m3_3: g2m3@6D {
+							dser1: max9296@48 {
 								status = "okay";
-								def-addr = <0x66>;
+								reg = <0x48>; //0x90>>1
+								compatible = "maxim,obc_max9296";
+								index = <1>;
+								csi-mode = "2x4"; //2*4lane
+								seri-addr = <0x50>; //serializer start address, LinkA serializer i2c address,LINK B + 1
+								proxy-addr = <0x1a>; //camera proxy address, LinkA g300 i2c address,LINK B + 1,LINK C + 2,LINK D + 3
+								real-addr = <0x66>;  //camera real address
+								reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
+								fsync_mfp_index = <6>;
+								pps_mfp_index = <9>;
+								is-fg96-8ch-v2.1;
+							};
+						};
+
+						i2c@2 {
+							reg = <2>; // line 4 of the I2C switch
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							g2m5_3: g2m3@6D {
+								status = "okay";
 								reg = <0x6D>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_R";
-								orbbec_cam_num = <3>;
-								nvidia,gmsl-ser-device = <&ser1_b>;
-								nvidia,gmsl-dser-device = <&dser1>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <3>;
+								vc-id = <0>;
+								orbbec_cam_num = <5>;
+								nvidia,gmsl-dser-device = <&dser2>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m3_3_out: endpoint {
-											vc-id = <1>;
-											port-index = <2>;
+										g2m5_3_out: endpoint {
+											vc-id = <0>;
+											port-index = <4>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in15>;
+											remote-endpoint = <&g300_csi_in23>;
 										};
 									};
 								};
@@ -2370,51 +2453,43 @@
 									csi_pixel_bit_depth = "8";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_c";
+									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "1";
-								};
-								gmsl-link {
-									src-csi-port = "b";
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <3>;
-									vc-id = <1>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0";
+									vc_id = "0";
 								};
 							};
-							g2m3_2: g2m2@6C {
+							g2m5_2: g2m2@6C {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6C>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_L";
-								orbbec_cam_num = <3>;
-								nvidia,gmsl-ser-device = <&ser1_b>;
-								nvidia,gmsl-dser-device = <&dser1>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <2>;
+								vc-id = <1>;
+								orbbec_cam_num = <5>;
+								nvidia,gmsl-dser-device = <&dser2>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m3_2_out: endpoint {
-											vc-id = <0>;
-											port-index = <2>;
+										g2m5_2_out: endpoint {
+											vc-id = <1>;
+											port-index = <4>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in14>;
+											remote-endpoint = <&g300_csi_in22>;
 										};
 									};
 								};
@@ -2424,51 +2499,43 @@
 									csi_pixel_bit_depth = "8";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_c";
+									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "0";
-								};
-								gmsl-link {
-									src-csi-port = "a";
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <2>;
-									vc-id = <0>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0";
+									vc_id = "1";
 								};
 							};
-							g2m3_1: g2m1@6B {
+							g2m5_1: g2m1@6B {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6B>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "RGB";
-								orbbec_cam_num = <3>;
-								nvidia,gmsl-ser-device = <&ser1_b>;
-								nvidia,gmsl-dser-device = <&dser1>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <1>;
+								vc-id = <2>;
+								orbbec_cam_num = <5>;
+								nvidia,gmsl-dser-device = <&dser2>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m3_1_out: endpoint {
-											vc-id = <3>;
-											port-index = <2>;
+										g2m5_1_out: endpoint {
+											vc-id = <2>;
+											port-index = <4>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in13>;
+											remote-endpoint = <&g300_csi_in21>;
 										};
 									};
 								};
@@ -2478,51 +2545,43 @@
 									csi_pixel_bit_depth = "16";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_c";
+									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1"; 
-									vc_id = "3";
-								};
-								gmsl-link {
-									src-csi-port = "b";
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <1>;
-									vc-id = <3>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0";
+									vc_id = "2";
 								};
 							};
-							g2m3_0: g2m0@6A {
+							g2m5_0: g2m0@6A {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6A>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "Depth";
-								orbbec_cam_num = <3>;
-								nvidia,gmsl-ser-device = <&ser1_b>;
-								nvidia,gmsl-dser-device = <&dser1>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <0>;
+								vc-id = <3>;
+								orbbec_cam_num = <5>;
+								nvidia,gmsl-dser-device = <&dser2>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m3_0_out: endpoint {
-											vc-id = <2>;
-											port-index = <2>;
+										g2m5_0_out: endpoint {
+											vc-id = <3>;
+											port-index = <4>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in12>;
+											remote-endpoint = <&g300_csi_in20>;
 										};
 									};
 								};
@@ -2532,83 +2591,34 @@
 									csi_pixel_bit_depth = "16";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_c";
+									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1"; 
-									vc_id = "2";
-								};
-								gmsl-link {
-									src-csi-port = "a";
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <0>;
-									vc-id = <2>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0";
+									vc_id = "3";
 								};
 							};
-						};
-
-						i2c@1 {
-							reg = <1>; // line 4 of the I2C switch
-							i2c-mux,deselect-on-exit;
-							#address-cells = <1>;
-							#size-cells = <0>;
-
-							dser2: max9296@48 {
-								status = "okay";
-								reg = <0x48>;
-								compatible = "maxim,max9296";
-								csi-mode = "2x4";
-								max-src = <2>;
-								reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
-								fsync_mfp_index = <7>;
-								pps_mfp_index = <9>;
-							};
-
-							ser2_a: max9295_a@42 {
-								status = "okay";
-								compatible = "maxim,max9295";
-								reg = <0x42>;
-								ser-prim-device = <&ser_prim2>;
-								maxim,gmsl-dser-device = <&dser2>;
-							};
-
-							ser2_b: max9295_b@60 {
-								status = "okay";
-								compatible = "maxim,max9295";
-								reg = <0x60>;
-								ser-prim-device = <&ser_prim2>;
-								maxim,gmsl-dser-device = <&dser2>;
-							};
-
-							ser_prim2: max9295_prim@40 {
-								status = "okay";
-								reg = <0x40>;
-								compatible = "maxim,max9295";
-								is-prim-ser;
-							};
-
+							
 							/* IR_R */
 							g2m4_3: g2m3@69 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x69>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_R";
+								dser-link-port = "a";
+								st-vc = <3>;
+								vc-id = <3>;
 								orbbec_cam_num = <4>;
-								nvidia,gmsl-ser-device = <&ser2_a>;
 								nvidia,gmsl-dser-device = <&dser2>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -2631,39 +2641,31 @@
 									active_h = "720";
 									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "3";
-								};
-								gmsl-link {
-									src-csi-port = "b"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <3>;
-									vc-id = <3>;
-									num-lanes = <4>;
 								};
 							};
 							/* IR_L */
 							g2m4_2: g2m2@68 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x68>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_L";
+								dser-link-port = "a";
+								st-vc = <2>;
+								vc-id = <2>;
 								orbbec_cam_num = <4>;
-								nvidia,gmsl-ser-device = <&ser2_a>;
 								nvidia,gmsl-dser-device = <&dser2>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -2686,39 +2688,31 @@
 									active_h = "720";
 									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "2";
-								};
-								gmsl-link {
-									src-csi-port = "a"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <2>;
-									vc-id = <2>;
-									num-lanes = <4>;
 								};
 							};
 							/* RGB */
 							g2m4_1: g2m1@67 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x67>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "RGB";
+								dser-link-port = "a";
+								st-vc = <1>;
+								vc-id = <1>;
 								orbbec_cam_num = <4>;
-								nvidia,gmsl-ser-device = <&ser2_a>;
 								nvidia,gmsl-dser-device = <&dser2>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -2741,39 +2735,31 @@
 									active_h = "720";
 									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1"; 
+									embedded_metadata_height = "0"; 
 									vc_id = "1";
-								};
-								gmsl-link {
-									src-csi-port = "b"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <1>;
-									vc-id = <1>;
-									num-lanes = <4>;
 								};
 							};
 							/* Depth */
 							g2m4_0: g2m0@66 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x66>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "Depth";
+								dser-link-port = "a";
+								st-vc = <0>;   				/**< Default sensor virtual channel. */
+								vc-id = <0>;				/**< Destination virtual channel (user-defined). */
 								orbbec_cam_num = <4>;
-								nvidia,gmsl-ser-device = <&ser2_a>;
 								nvidia,gmsl-dser-device = <&dser2>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -2796,51 +2782,64 @@
 									active_h = "720";
 									tegra_sinterface = "serial_a";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1"; 
+									embedded_metadata_height = "0"; 
 									vc_id = "0";
-								};
-								gmsl-link {
-									/* a = depth + ir_l, b = rgb + ir_r */
-									src-csi-port = "a";  		/**< Sensor to serializer CSI port connection. */
-									dst-csi-port = "a";			/**< Deserializer to Jetson CSI port connection. */
-									serdes-csi-link = "a";		/**< GMSL link between serializer and deserializer devices. */
-									csi-mode = "1x4";			/**< Deserializer CSI mode. */
-									st-vc = <0>;   				/**< Default sensor virtual channel. */
-									vc-id = <0>;				/**< Destination virtual channel (user-defined). */
-									num-lanes = <4>;			/**< Sensor's CSI lane configuration. */
 								};
 							};
 
-							g2m5_3: g2m3@6D {
+							dser2: max9296@48 {
 								status = "okay";
-								def-addr = <0x66>;
+								reg = <0x48>; //0x90>>1
+								compatible = "maxim,obc_max9296";
+								index = <2>;
+								csi-mode = "2x4"; //2*4lane
+								seri-addr = <0x50>;  //serializer start address, LinkA serializer i2c address,LINK B + 1
+								proxy-addr = <0x1a>; //camera proxy address, LinkA g300 i2c address,LINK B + 1,LINK C + 2,LINK D + 3
+								real-addr = <0x66>; //camera real address
+								reset-gpios = <&gpio CAM2_PWDN GPIO_ACTIVE_HIGH>;
+								fsync_mfp_index = <6>;
+								pps_mfp_index = <9>;
+								is-fg96-8ch-v2.1;
+							};
+						};
+						i2c@3 {
+							status = "okay";
+							reg = <3>; // line 4 of the I2C switch
+							i2c-mux,deselect-on-exit;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							g2m7_3: g2m3@6D {
+								status = "okay";
 								reg = <0x6D>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_R";
-								orbbec_cam_num = <5>;
-								nvidia,gmsl-ser-device = <&ser2_b>;
-								nvidia,gmsl-dser-device = <&dser2>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <3>;
+								vc-id = <0>;
+								orbbec_cam_num = <7>;
+								nvidia,gmsl-dser-device = <&dser3>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m5_3_out: endpoint {
-											vc-id = <1>;
-											port-index = <4>;
+										g2m7_3_out: endpoint {
+											vc-id = <0>;
+											port-index = <6>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in23>;
+											remote-endpoint = <&g300_csi_in31>;
 										};
 									};
 								};
@@ -2850,51 +2849,43 @@
 									csi_pixel_bit_depth = "8";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_a";
+									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "1";
-								};
-								gmsl-link {
-									src-csi-port = "b"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <3>;
-									vc-id = <1>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0";
+									vc_id = "0";
 								};
 							};
-							g2m5_2: g2m2@6C {
+							g2m7_2: g2m2@6C {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6C>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_L";
-								orbbec_cam_num = <5>;
-								nvidia,gmsl-ser-device = <&ser2_b>;
-								nvidia,gmsl-dser-device = <&dser2>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <2>;
+								vc-id = <1>;
+								orbbec_cam_num = <7>;
+								nvidia,gmsl-dser-device = <&dser3>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m5_2_out: endpoint {
-											vc-id = <0>;
-											port-index = <4>;
+										g2m7_2_out: endpoint {
+											vc-id = <1>;
+											port-index = <6>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in22>;
+											remote-endpoint = <&g300_csi_in30>;
 										};
 									};
 								};
@@ -2904,51 +2895,43 @@
 									csi_pixel_bit_depth = "8";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_a";
+									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "0";
-								};
-								gmsl-link {
-									src-csi-port = "a"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <2>;
-									vc-id = <0>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0";
+									vc_id = "1";
 								};
 							};
-							g2m5_1: g2m1@6B {
+							g2m7_1: g2m1@6B {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6B>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "RGB";
-								orbbec_cam_num = <5>;
-								nvidia,gmsl-ser-device = <&ser2_b>;
-								nvidia,gmsl-dser-device = <&dser2>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <1>;
+								vc-id = <2>;
+								orbbec_cam_num = <7>;
+								nvidia,gmsl-dser-device = <&dser3>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m5_1_out: endpoint {
-											vc-id = <3>;
-											port-index = <4>;
+										g2m7_1_out: endpoint {
+											vc-id = <2>;
+											port-index = <6>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in21>;
+											remote-endpoint = <&g300_csi_in29>;
 										};
 									};
 								};
@@ -2958,51 +2941,43 @@
 									csi_pixel_bit_depth = "16";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_a";
+									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "3";
-								};
-								gmsl-link {
-									src-csi-port = "b"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <1>;
-									vc-id = <3>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0"; 
+									vc_id = "2";
 								};
 							};
-							g2m5_0: g2m0@6A {
+							g2m7_0: g2m0@6A {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x6A>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "Depth";
-								orbbec_cam_num = <5>;
-								nvidia,gmsl-ser-device = <&ser2_b>;
-								nvidia,gmsl-dser-device = <&dser2>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								dser-link-port = "b";
+								st-vc = <0>;
+								vc-id = <3>;
+								orbbec_cam_num = <7>;
+								nvidia,gmsl-dser-device = <&dser3>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
 
 									port@0 {
 										reg = <0>;
-										g2m5_0_out: endpoint {
-											vc-id = <2>;
-											port-index = <4>;
+										g2m7_0_out: endpoint {
+											vc-id = <3>;
+											port-index = <6>;
 											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in20>;
+											remote-endpoint = <&g300_csi_in28>;
 										};
 									};
 								};
@@ -3012,82 +2987,33 @@
 									csi_pixel_bit_depth = "16";
 									active_w = "1280";
 									active_h = "720";
-									tegra_sinterface = "serial_a";
+									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "2";
-								};
-								gmsl-link {
-									src-csi-port = "a"; //a = depth + ir_l, b = rgb + ir_r
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <0>;
-									vc-id = <2>;
-									num-lanes = <4>;
+									embedded_metadata_height = "0"; 
+									vc_id = "3";
 								};
 							};
-						};
-						i2c@0 {
-							status = "okay";
-							reg = <0>; // line 4 of the I2C switch
-							i2c-mux,deselect-on-exit;
-							#address-cells = <1>;
-							#size-cells = <0>;
-
-							dser3: max9296@48 {
-								status = "okay";
-								reg = <0x48>;
-								compatible = "maxim,max9296";
-								csi-mode = "2x4";
-								max-src = <2>;
-								reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
-								fsync_mfp_index = <7>;
-								pps_mfp_index = <9>;
-							};
-
-							ser3_a: max9295_a@42 {
-								status = "okay";
-								compatible = "maxim,max9295";
-								reg = <0x42>;
-								ser-prim-device = <&ser_prim3>;
-								maxim,gmsl-dser-device = <&dser3>;
-							};
-
-							ser3_b: max9295_b@60 {
-								status = "okay";
-								compatible = "maxim,max9295";
-								reg = <0x60>;
-								ser-prim-device = <&ser_prim3>;
-								maxim,gmsl-dser-device = <&dser3>;
-							};
-
-							ser_prim3: max9295_prim@40 {
-								status = "okay";
-								reg = <0x40>;
-								compatible = "maxim,max9295";
-								is-prim-ser;
-							};
-
+							
 							g2m6_3: g2m3@69 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x69>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_R";
+								dser-link-port = "a";
+								st-vc = <3>;
+								vc-id = <3>;
 								orbbec_cam_num = <6>;
-								nvidia,gmsl-ser-device = <&ser3_a>;
 								nvidia,gmsl-dser-device = <&dser3>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -3110,38 +3036,30 @@
 									active_h = "720";
 									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "3";
-								};
-								gmsl-link {
-									src-csi-port = "b";
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <3>;
-									vc-id = <3>;
-									num-lanes = <4>;
 								};
 							};
 							g2m6_2: g2m2@68 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x68>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "IR_L";
+								dser-link-port = "a";
+								st-vc = <2>;
+								vc-id = <2>;
 								orbbec_cam_num = <6>;
-								nvidia,gmsl-ser-device = <&ser3_a>;
 								nvidia,gmsl-dser-device = <&dser3>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -3164,38 +3082,30 @@
 									active_h = "720";
 									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
+									pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000
+									serdes_pix_clk_hz = "750000000";  //4lane:750000000 ,2lane:375000000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "2";
-								};
-								gmsl-link {
-									src-csi-port = "a";
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <2>;
-									vc-id = <2>;
-									num-lanes = <4>;
 								};
 							};
 							g2m6_1: g2m1@67 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x67>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "RGB";
+								dser-link-port = "a";
+								st-vc = <1>;
+								vc-id = <1>;
 								orbbec_cam_num = <6>;
-								nvidia,gmsl-ser-device = <&ser3_a>;
 								nvidia,gmsl-dser-device = <&dser3>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -3218,38 +3128,30 @@
 									active_h = "720";
 									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "1";
-								};
-								gmsl-link {
-									src-csi-port = "b";
-									dst-csi-port = "a";
-									serdes-csi-link = "a";
-									csi-mode = "1x4";
-									st-vc = <1>;
-									vc-id = <1>;
-									num-lanes = <4>;
 								};
 							};
 							g2m6_0: g2m0@66 {
 								status = "okay";
-								def-addr = <0x66>;
 								reg = <0x66>;
 								compatible = "orbbec,g300";
 								use_sensor_mode_id = "true";
 								vcc-supply = <&vdd_1v8_ls>;
 								cam-type = "Depth";
+								dser-link-port = "a";
+								st-vc = <0>;   				/**< Default sensor virtual channel. */
+								vc-id = <0>;				/**< Destination virtual channel (user-defined). */
 								orbbec_cam_num = <6>;
-								nvidia,gmsl-ser-device = <&ser3_a>;
 								nvidia,gmsl-dser-device = <&dser3>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
+								pps-gpios = <&gpio_aon PPS_TRIGGER GPIO_ACTIVE_LOW>;
 								ports {
 									#address-cells = <1>;
 									#size-cells = <0>;
@@ -3272,242 +3174,31 @@
 									active_h = "720";
 									tegra_sinterface = "serial_c";
 									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
+									pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000
+									serdes_pix_clk_hz = "375000000";  //4lane:375000000,2lane:187500000 
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
 									cil_settletime = "0";
 									line_length = "1280";
 									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
+									embedded_metadata_height = "0";
 									vc_id = "0";
 								};
-								gmsl-link {
-									src-csi-port = "a";  		/**< Sensor to serializer CSI port connection. */
-									dst-csi-port = "a";			/**< Deserializer to Jetson CSI port connection. */
-									serdes-csi-link = "a";		/**< GMSL link between serializer and deserializer devices. */
-									csi-mode = "1x4";			/**< Deserializer CSI mode. */
-									st-vc = <0>;   				/**< Default sensor virtual channel. */
-									vc-id = <0>;				/**< Destination virtual channel (user-defined). */
-									num-lanes = <4>;			/**< Sensor's CSI lane configuration. */
-								};
 							};
 
-							g2m7_3: g2m3@6D {
+							dser3: max9296@48 {
 								status = "okay";
-								def-addr = <0x66>;
-								reg = <0x6D>;
-								compatible = "orbbec,g300";
-								use_sensor_mode_id = "true";
-								vcc-supply = <&vdd_1v8_ls>;
-								cam-type = "IR_R";
-								orbbec_cam_num = <7>;
-								nvidia,gmsl-ser-device = <&ser3_b>;
-								nvidia,gmsl-dser-device = <&dser3>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
-								ports {
-									#address-cells = <1>;
-									#size-cells = <0>;
-
-									port@0 {
-										reg = <0>;
-										g2m7_3_out: endpoint {
-											vc-id = <1>;
-											port-index = <6>;
-											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in31>;
-										};
-									};
-								};
-								mode0 {
-									pixel_t = "grey_y8";
-									num_lanes = "4";
-									csi_pixel_bit_depth = "8";
-									active_w = "1280";
-									active_h = "720";
-									tegra_sinterface = "serial_c";
-									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
-									discontinuous_clk = "no";
-									dpcm_enable = "false";
-									cil_settletime = "0";
-									line_length = "1280";
-									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "1";
-								};
-								gmsl-link {
-									src-csi-port = "b";
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <3>;
-									vc-id = <1>;
-									num-lanes = <4>;
-								};
-							};
-							g2m7_2: g2m2@6C {
-								status = "okay";
-								def-addr = <0x66>;
-								reg = <0x6C>;
-								compatible = "orbbec,g300";
-								use_sensor_mode_id = "true";
-								vcc-supply = <&vdd_1v8_ls>;
-								cam-type = "IR_L";
-								orbbec_cam_num = <7>;
-								nvidia,gmsl-ser-device = <&ser3_b>;
-								nvidia,gmsl-dser-device = <&dser3>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
-								ports {
-									#address-cells = <1>;
-									#size-cells = <0>;
-
-									port@0 {
-										reg = <0>;
-										g2m7_2_out: endpoint {
-											vc-id = <0>;
-											port-index = <6>;
-											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in30>;
-										};
-									};
-								};
-								mode0 {
-									pixel_t = "grey_y8";
-									num_lanes = "4";
-									csi_pixel_bit_depth = "8";
-									active_w = "1280";
-									active_h = "720";
-									tegra_sinterface = "serial_c";
-									mclk_khz = "24000";
-									pix_clk_hz = "750000000";
-									serdes_pix_clk_hz = "750000000";
-									discontinuous_clk = "no";
-									dpcm_enable = "false";
-									cil_settletime = "0";
-									line_length = "1280";
-									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1";
-									vc_id = "0";
-								};
-								gmsl-link {
-									src-csi-port = "a";
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <2>;
-									vc-id = <0>;
-									num-lanes = <4>;
-								};
-							};
-							g2m7_1: g2m1@6B {
-								status = "okay";
-								def-addr = <0x66>;
-								reg = <0x6B>;
-								compatible = "orbbec,g300";
-								use_sensor_mode_id = "true";
-								vcc-supply = <&vdd_1v8_ls>;
-								cam-type = "RGB";
-								orbbec_cam_num = <7>;
-								nvidia,gmsl-ser-device = <&ser3_b>;
-								nvidia,gmsl-dser-device = <&dser3>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
-								ports {
-									#address-cells = <1>;
-									#size-cells = <0>;
-
-									port@0 {
-										reg = <0>;
-										g2m7_1_out: endpoint {
-											vc-id = <3>;
-											port-index = <6>;
-											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in29>;
-										};
-									};
-								};
-								mode0 {
-									pixel_t = "yuv_yvyu16";
-									num_lanes = "4";
-									csi_pixel_bit_depth = "16";
-									active_w = "1280";
-									active_h = "720";
-									tegra_sinterface = "serial_c";
-									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
-									discontinuous_clk = "no";
-									dpcm_enable = "false";
-									cil_settletime = "0";
-									line_length = "1280";
-									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1"; 
-									vc_id = "3";
-								};
-								gmsl-link {
-									src-csi-port = "b";
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <1>;
-									vc-id = <3>;
-									num-lanes = <4>;
-								};
-							};
-							g2m7_0: g2m0@6A {
-								status = "okay";
-								def-addr = <0x66>;
-								reg = <0x6A>;
-								compatible = "orbbec,g300";
-								use_sensor_mode_id = "true";
-								vcc-supply = <&vdd_1v8_ls>;
-								cam-type = "Depth";
-								orbbec_cam_num = <7>;
-								nvidia,gmsl-ser-device = <&ser3_b>;
-								nvidia,gmsl-dser-device = <&dser3>;
-								pps-gpios = <&gpio PPS_TRIGGER GPIO_ACTIVE_LOW>;
-								ports {
-									#address-cells = <1>;
-									#size-cells = <0>;
-
-									port@0 {
-										reg = <0>;
-										g2m7_0_out: endpoint {
-											vc-id = <2>;
-											port-index = <6>;
-											bus-width = <4>;
-											remote-endpoint = <&g300_csi_in28>;
-										};
-									};
-								};
-								mode0 {
-									pixel_t = "yuv_yvyu16";
-									num_lanes = "4";
-									csi_pixel_bit_depth = "16";
-									active_w = "1280";
-									active_h = "720";
-									tegra_sinterface = "serial_c";
-									mclk_khz = "24000";
-									pix_clk_hz = "375000000";
-									serdes_pix_clk_hz = "375000000";
-									discontinuous_clk = "no";
-									dpcm_enable = "false";
-									cil_settletime = "0";
-									line_length = "1280";
-									mclk_multiplier = "15.625";
-									embedded_metadata_height = "1"; 
-									vc_id = "2";
-								};
-								gmsl-link {
-									src-csi-port = "a";
-									dst-csi-port = "a";
-									serdes-csi-link = "b";
-									csi-mode = "1x4";
-									st-vc = <0>;
-									vc-id = <2>;
-									num-lanes = <4>;
-								};
+								reg = <0x48>; //0x90>>1
+								compatible = "maxim,obc_max9296";
+								index = <3>;
+								csi-mode = "2x4"; //2*4lane
+								seri-addr = <0x50>; //serializer start address, LinkA serializer i2c address,LINK B + 1
+								proxy-addr = <0x1a>; //camera proxy address, LinkA g300 i2c address,LINK B + 1,LINK C + 2,LINK D + 3
+								real-addr = <0x66>;  //camera real address
+								reset-gpios = <&gpio CAM3_PWDN GPIO_ACTIVE_HIGH>;
+								fsync_mfp_index = <6>;
+								pps_mfp_index = <9>;
+								is-fg96-8ch-v2.1;
 							};
 						};
 					};

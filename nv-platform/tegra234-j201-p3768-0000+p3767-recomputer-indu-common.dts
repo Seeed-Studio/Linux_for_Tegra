@@ -9,6 +9,10 @@
 
 / {
         bus@0 {
+				serial@3100000 {
+					rs485-de-gpios = <&gpio TEGRA234_MAIN_GPIO(R, 4) GPIO_ACTIVE_HIGH>;
+				};
+
                 i2c@c240000 {
                         gpio_xten: gpio_xten@21 {
                                 compatible = "nxp,pca9535";

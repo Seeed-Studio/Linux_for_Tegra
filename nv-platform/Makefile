@@ -58,17 +58,14 @@ dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer-robo.dtb
 dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer-robo.dtb
 dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer-robo.dtb
 dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer-robo.dtb
-dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer-robo-1x4-gmsl.dtb
-dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer-robo-1x4-gmsl.dtb
-dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer-robo-1x4-gmsl.dtb
-dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer-robo-1x4-gmsl.dtb
-dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer-robo-2x4-gmsl.dtb
-dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer-robo-2x4-gmsl.dtb
-dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer-robo-2x4-gmsl.dtb
-dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer-robo-2x4-gmsl.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0000-recomputer-robo-gmsl.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0001-recomputer-robo-gmsl.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0003-recomputer-robo-gmsl.dtb
+dtb-y += tegra234-j401-p3768-0000+p3767-0004-recomputer-robo-gmsl.dtb
 dtb-y += tegra234-j501x-0000+p3701-0000-recomputer-mini.dtb
 dtb-y += tegra234-j501x-0000+p3701-0004-recomputer-mini.dtb
 dtb-y += tegra234-j501x-0000+p3701-0005-recomputer-mini.dtb
+
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))

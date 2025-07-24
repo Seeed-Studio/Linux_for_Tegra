@@ -48,6 +48,7 @@ dtbo-y += tegra234-p3737-camera-imx185-overlay.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-dual.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-quad-seeed.dtbo
+dtbo-y += tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-dual.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-dual-4lane.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-imx219.dtbo
@@ -67,13 +68,17 @@ dtbo-y += tegra234-p3767-camera-p3768-imx219-A.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-imx477.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-C.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-A.dtbo
-dtbo-y += tegra234-camera-g300-overlay.dtbo  # orbbec add
-dtbo-y += tegra234-camera-g300-cti-overlay.dtbo  # orbbec add
-dtbo-y += tegra234-camera-g300-nomtd-overlay.dtbo  # orbbec add
-dtbo-y += tegra234-camera-g300-pwm-overlay.dtbo  # orbbec add
-dtbo-y += tegra234-camera-g300-xc-overlay.dtbo  # orbbec add
-dtbo-y += tegra234-camera-g300-nomtd-xc-overlay.dtbo  # orbbec add
-dtbo-y += tegra234-camera-g300-leopard-overlay.dtbo  # orbbec add
+
+dtbo-y += tegra234-p3737-camera-g300-fg96-overlay.dtbo  # orbbec add
+dtbo-y += tegra234-p3737-camera-g300-nomtd-fg96-overlay.dtbo  # orbbec add
+dtbo-y += tegra234-p3737-camera-g300-leopard-overlay.dtbo  # orbbec add
+dtbo-y += tegra234-p3767-camera-p3768-g300-fg96-overlay.dtbo # orbbec add
+dtbo-y += tegra234-p3737-camera-g300-mic-fg-8g-overlay.dtbo		# orbbec add
+
+dtbo-y += tegra234-seeed-gmsl1x4-3g-overlay.dtbo  
+dtbo-y += tegra234-seeed-gmsl1x4-6g-overlay.dtbo  
+dtbo-y += tegra234-seeed-gmsl2x4-3g-overlay.dtbo  
+dtbo-y += tegra234-seeed-orbbec-335lg-overlay.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
