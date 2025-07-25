@@ -134,7 +134,11 @@ static int tegra_fbdev_probe(struct drm_fb_helper *helper,
 		return PTR_ERR(info);
 	}
 
-	fb = tegra_fb_alloc(drm, &cmd, &bo, 1);
+	fb = tegra_fb_alloc(drm,
+#if defined(NV_DRM_HELPER_MODE_FILL_FB_STRUCT_HAS_INFO_ARG) /* Linux v6.17 */
+			    drm_get_format_info(drm, cmd.pixel_format, cmd.modifier[0]),
+#endif
+			    &cmd, &bo, 1);
 	if (IS_ERR(fb)) {
 		err = PTR_ERR(fb);
 		dev_err(drm->dev, "failed to allocate DRM framebuffer: %d\n",

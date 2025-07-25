@@ -7442,6 +7442,27 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DRM_FB_HELPER_UNREGISTER_INFO_PRESENT" "" "functions"
         ;;
 
+        drm_helper_mode_fill_fb_struct_has_info_arg)
+            #
+            # Determine if the function 'drm_helper_mode_fill_fb_struct' has the
+            # argument 'info'.
+            #
+            # Commit a34cc7bf1034 ("drm: Allow the caller to pass in the format
+            # info to drm_helper_mode_fill_fb_struct()") made this change in
+            # Linux v6.17.
+            #
+            CODE="
+            #undef CONFIG_ACPI
+            #include <drm/drm_modeset_helper.h>
+            void conftest(struct drm_device *dev, struct drm_framebuffer *fb,
+                          const struct drm_format_info *info,
+                          const struct drm_mode_fb_cmd2 *mode_cmd) {
+                    drm_helper_mode_fill_fb_struct(dev, fb, info, mode_cmd);
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_HELPER_MODE_FILL_FB_STRUCT_HAS_INFO_ARG" "" "types"
+        ;;
+
         drm_mode_config_struct_has_fb_base_arg)
             #
             # Determine if the 'drm_mode_config' structure has the 'fb_base' argument.
@@ -7456,6 +7477,24 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_DRM_MODE_CONFIG_STRUCT_HAS_FB_BASE_ARG" "" "types"
+        ;;
+
+        drm_mode_config_funcs_struct_fb_create_has_info_arg)
+            #
+            # Determine if the 'fb_create' function pointer has an 'info' argument.
+            #
+            # Commit 81112eaac559 ("drm: Pass the format info to .fb_create()")
+            # made this change in Linux v6.17.
+            #
+            CODE="
+            #include <drm/drm_mode_config.h>
+            void conftest(struct drm_mode_config_funcs *f) {
+                    struct drm_framebuffer *(*fn)(struct drm_device *, struct drm_file *,
+                                                  const struct drm_format_info *,
+                                                  const struct drm_mode_fb_cmd2 *) = f->fb_create;
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_MODE_CONFIG_FUNCS_STRUCT_FB_CREATE_HAS_INFO_ARG" "" "types"
         ;;
 
         drm_plane_helper_funcs_struct_atomic_async_check_has_bool_arg)

@@ -216,11 +216,17 @@ bool tegra_fb_is_bottom_up(struct drm_framebuffer *framebuffer);
 int tegra_fb_get_tiling(struct drm_framebuffer *framebuffer,
 			struct tegra_bo_tiling *tiling);
 struct drm_framebuffer *tegra_fb_alloc(struct drm_device *drm,
+#if defined(NV_DRM_HELPER_MODE_FILL_FB_STRUCT_HAS_INFO_ARG) /* Linux v6.17 */
+					const struct drm_format_info *info,
+#endif
 				       const struct drm_mode_fb_cmd2 *mode_cmd,
 				       struct tegra_bo **planes,
 				       unsigned int num_planes);
 struct drm_framebuffer *tegra_fb_create(struct drm_device *drm,
 					struct drm_file *file,
+#if defined(NV_DRM_MODE_CONFIG_FUNCS_STRUCT_FB_CREATE_HAS_INFO_ARG) /* Linux v6.17 */
+					const struct drm_format_info *info,
+#endif
 					const struct drm_mode_fb_cmd2 *cmd);
 
 #if defined(NV_DRM_DRIVER_HAS_FBDEV_PROBE) /* Linux v6.13 */
