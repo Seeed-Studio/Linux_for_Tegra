@@ -58,7 +58,7 @@ job-xavier-nx-industrial-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-xavier-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -128,7 +128,7 @@ job-xavier-nx-industrial-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-xavier-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -198,7 +198,7 @@ job-xavier-nx-devkit-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-xavier-nx-16g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -256,7 +256,7 @@ job-xavier-nx-devkit-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-xavier-nx-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -315,7 +315,7 @@ job-orin-nx-industrial-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -378,7 +378,7 @@ job-orin-nx-reserver-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_reserver-orin-nx-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -442,7 +442,7 @@ job-orin-nx-devkit-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -501,7 +501,7 @@ job-orin-nx-industrial-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -564,7 +564,7 @@ job-orin-nx-reserver-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_reserver-orin-nx-16g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -628,7 +628,7 @@ job-orin-nx-devkit-16g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -687,7 +687,7 @@ job-orin-nano-industrial-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -751,7 +751,7 @@ job-orin-nano-reserver-8g:
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_reserver-orin-nano-8g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - cp extra_scripts/reserver_industrial/orin-nx-seeed-reserver.dtbo kernel/dtb
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -814,7 +814,7 @@ job-orin-nano-devkit-8g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -873,7 +873,7 @@ job-orin-nano-industrial-4g:
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - cp extra_scripts/recomputer_industrial/orin-nx-seeed-industry.dtbo kernel/dtb
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -936,7 +936,7 @@ job-orin-nano-reserver-4g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_reserver-orin-nano-4g-industrial-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -1001,7 +1001,7 @@ job-orin-nano-devkit-4g:
          - tar xpf tegra_linux_sample-root-filesystem_r35.5.0_aarch64.tbz2 -C rootfs
          - ./apply_binaries.sh
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-devkit-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -1061,7 +1061,7 @@ job-orin-nx-j40mini-8g:
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-8g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
          - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -1132,7 +1132,7 @@ job-orin-nx-j40mini-16g:
          - echo "# Seeed Image Name mfi_recomputer-orin-nx-16g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
          - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -1203,7 +1203,7 @@ job-orin-nano-j40mini-4g:
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-4g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
          - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -1276,7 +1276,7 @@ job-orin-nano-j40mini-8g:
          - echo "# Seeed Image Name mfi_recomputer-orin-nano-8g-j40mini-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
          - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
          - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
-         - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+         - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
          - mkdir -p l4t-gcc
          - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
          - export ARCH=arm64
@@ -1349,7 +1349,7 @@ reserver-agx-orin-32g-j501:
       - echo "# Seeed Image Name mfi_reserver-agx-orin-32g-j501-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
       - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
       - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
-      - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+      - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
       - mkdir -p l4t-gcc
       - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
       - export ARCH=arm64
@@ -1411,7 +1411,7 @@ reserver-agx-orin-32g-j501-gmsl:
       - echo "# Seeed Image Name mfi_reserver-agx-orin-32g-j501-gmsl-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
       - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
       - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
-      - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+      - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
       - mkdir -p l4t-gcc
       - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
       - export ARCH=arm64
@@ -1472,7 +1472,7 @@ reserver-agx-orin-64g-j501:
       - echo "# Seeed Image Name mfi_reserver-agx-orin-64g-j501-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
       - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
       - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
-      - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+      - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
       - mkdir -p l4t-gcc
       - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
       - export ARCH=arm64
@@ -1532,7 +1532,7 @@ reserver-agx-orin-64g-j501-gmsl:
       - echo "# Seeed Image Name mfi_reserver-agx-orin-64g-j501-gmsl-5.1-35.5.0-$DATE_STR.tar.gz" >> ./rootfs/etc/nv_tegra_release
       - echo "# branch $CI_COMMIT_REF_NAME" >> ./rootfs/etc/nv_tegra_release
       - echo "# commit ID $CI_COMMIT_SHA" >> ./rootfs/etc/nv_tegra_release
-      - wget wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
+      - wget http://192.168.1.77/jetson/bootlin-toolchain-gcc-93
       - mkdir -p l4t-gcc
       - tar xf bootlin-toolchain-gcc-93 -C ./l4t-gcc
       - export ARCH=arm64
