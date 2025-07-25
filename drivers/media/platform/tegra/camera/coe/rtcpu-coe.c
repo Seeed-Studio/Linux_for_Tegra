@@ -639,7 +639,12 @@ static int coe_ioctl_handle_capture_req(struct coe_channel_state * const ch,
 	 * up to the next closest power of two boundary to eliminate a risk of a malformed
 	 * incoming network packet triggerring invalid memory access.
 	 */
+#define L4T7463
+#ifndef L4T7463
 	alloc_size_min = roundup_pow_of_two(req->buf_size);
+#else
+	alloc_size_min = req->buf_size;
+#endif
 
 	if (alloc_size_min > buf_max_size) {
 		dev_err(ch->dev, "CAPTURE_REQ: capture too long %u\n", req->buf_size);
