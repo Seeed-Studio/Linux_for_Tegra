@@ -25,6 +25,7 @@
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/fuse-helper.h>
 #include <soc/tegra/virt/hv-ivc.h>
+#include <soc/tegra/nvethernet-public.h>
 #include <linux/time.h>
 
 #ifdef CONFIG_DEBUG_FS
@@ -2053,6 +2054,11 @@ static int ether_request_irqs(struct ether_priv_data *pdata)
 					"unexpected irq name index received (%d)\n", j);
 				goto err_chan_irq;
 			}
+
+			if (osi_core->irq_data[i].is_coe == 1U) {
+				continue;
+			}
+
 			snprintf(pdata->irq_names[j], ETHER_IRQ_NAME_SZ, "%s.vm%d",
 				 netdev_name(pdata->ndev), i);
 			ret = devm_request_irq(pdata->dev, pdata->vm_irqs[i],
@@ -2169,6 +2175,41 @@ static void ether_napi_enable(struct ether_priv_data *pdata)
 	}
 }
 
+static void ether_free_coe_resource(struct ether_priv_data *pdata)
+{
+	int i;
+
+	for (i = 0; i < OSI_MGBE_COE_NUM_RX_FRAMES; i++) {
+		dma_unmap_single(pdata->dev, pdata->mgbe_coe.rx_fb_addr_phys[i], PAGE_SIZE, DMA_FROM_DEVICE);
+		free_page(pdata->mgbe_coe.rx_fb_addr[i]);
+	}
+	dma_free_coherent(pdata->dev, sizeof(struct osi_mgbe_coe_pib) * pdata->mgbe_coe.rx_pib_sz,
+			  (void *)pdata->mgbe_coe.rx_pib_addr, pdata->mgbe_coe.rx_pib_addr_phys);
+}
+
+
+static int ether_allocate_coe_resource(struct ether_priv_data *pdata)
+{
+	int i;
+
+	for (i = 0; i < OSI_MGBE_COE_NUM_RX_FRAMES; i++) {
+		pdata->mgbe_coe.rx_fb_addr[i] = __get_free_page(GFP_DMA);
+		pdata->mgbe_coe.rx_fb_addr_phys[i] = dma_map_single(pdata->dev,
+							(void *)pdata->mgbe_coe.rx_fb_addr[i],
+							PAGE_SIZE, DMA_FROM_DEVICE);
+		pr_err("%s: rx_fb_addr[%d]: virt: %#llx phys: %#llx\n", __func__, i,
+			pdata->mgbe_coe.rx_fb_addr[i],
+			pdata->mgbe_coe.rx_fb_addr_phys[i]);
+	}
+	pdata->mgbe_coe.rx_pib_addr = (u64) dma_alloc_coherent(pdata->dev,
+					sizeof(struct osi_mgbe_coe_pib) * pdata->mgbe_coe.rx_pib_sz,
+					(dma_addr_t *) &pdata->mgbe_coe.rx_pib_addr_phys,
+					GFP_KERNEL | __GFP_ZERO);
+	pr_err("%s: rx_pib_addr: virt: %#llx phys: %#llx\n", __func__, pdata->mgbe_coe.rx_pib_addr, pdata->mgbe_coe.rx_pib_addr_phys);
+
+	return 0;
+}
+
 /**
  * @brief Free receive skbs
  *
@@ -2257,6 +2298,10 @@ static void free_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 			pdata->page_pool[chan] = NULL;
 		}
 #endif
+		if (i == pdata->mgbe_coe.vdma && pdata->coe_enable) {
+			pr_err("%s: Freeing COE DMA resources for vdma %d\n", __func__, i);
+			ether_free_coe_resource(pdata);
+		}
 	}
 }
 
@@ -2428,6 +2473,7 @@ static int ether_page_pool_create_per_chan(struct ether_priv_data *pdata,
 }
 #endif
 
+
 /**
  * @brief Allocate Receive DMA channel ring resources.
  *
@@ -2448,6 +2494,7 @@ static int ether_allocate_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 	unsigned int chan;
 	unsigned int i;
 	int ret = 0;
+	struct osi_ioctl ioctl_data = {};
 	const nveu32_t max_dma_chan[OSI_MAX_MAC_IP_TYPES] = {
 		OSI_EQOS_MAX_NUM_CHANS,
 		OSI_MGBE_T23X_MAX_NUM_CHANS,
@@ -2477,6 +2524,22 @@ static int ether_allocate_rx_dma_resources(struct osi_dma_priv_data *osi_dma,
 							chan);
 			if (ret < 0) {
 				goto exit;
+			}
+			if (pdata->coe_enable && chan == pdata->mgbe_coe.vdma) {
+				pr_err("%s: Allocating COE DMA resources for vdma %d\n", __func__, chan);
+				ret = ether_allocate_coe_resource(pdata);
+				if (ret < 0) {
+					goto exit;
+				}
+				/* Program the buffers in HW */
+				memcpy(&ioctl_data.data.mgbe_coe, &pdata->mgbe_coe, sizeof(struct osi_mgbe_coe));
+				ioctl_data.cmd = OSI_CMD_GMSL_COE_CONFIG;
+				ret = osi_handle_ioctl(pdata->osi_core, &ioctl_data);
+				if (ret < 0) {
+					dev_err(pdata->dev, "Enabling MAC COE in HW failed\n");
+				} else {
+					dev_info(pdata->dev, "MAC COE enabled in HW\n");
+				}
 			}
 		}
 	}
@@ -2665,6 +2728,10 @@ static void ether_init_invalid_chan_ring(struct osi_dma_priv_data *osi_dma)
 
 	for (i = osi_dma->num_dma_chans; i < max_dma_chan[osi_dma->mac]; i++) {
 		osi_dma->dma_chans[i] = ETHER_INVALID_CHAN_NUM;
+	}
+
+	for (i = osi_dma->num_dma_chans_coe; i < max_dma_chan[osi_dma->mac]; i++) {
+		osi_dma->dma_chans_coe[i] = ETHER_INVALID_CHAN_NUM;
 	}
 }
 
@@ -3126,6 +3193,14 @@ int ether_open(struct net_device *dev)
 	}
 
 	/* initialize MAC/MTL/DMA Common registers */
+	/** If COE is enabled, disable RIWT so that IOC is set for all desc. */
+	if (pdata->coe_enable) {
+		pdata->osi_dma->use_riwt = OSI_DISABLE;
+		pdata->osi_dma->coe_enable = pdata->coe_enable;
+		pdata->osi_dma->mgbe_coe = pdata->mgbe_coe;
+		pdata->osi_core->coe_enable = pdata->coe_enable;
+		pdata->osi_core->mgbe_coe = pdata->mgbe_coe;
+	}
 	ret = osi_hw_core_init(pdata->osi_core);
 	if (ret < 0) {
 		dev_err(pdata->dev,
@@ -3901,8 +3976,8 @@ unsigned short ether_select_queue(struct net_device *dev,
 	if ((osi_core->pre_sil == OSI_ENABLE) && (pdata->tx_queue_select != 0U)) {
 		txqueue_select = pdata->tx_queue_select;
 	} else {
-		for (i = 0; i < osi_core->num_mtl_queues; i++) {
-			mtlq = osi_core->mtl_queues[i];
+		for (i = 0; i < osi_core->num_dma_chans; i++) {
+			mtlq = osi_core->dma_chans[i];
 			if (pdata->txq_prio[mtlq] == priority) {
 				txqueue_select = (unsigned short)i;
 				break;
@@ -4982,6 +5057,26 @@ static void ether_set_vm_irq_chan_mask(struct ether_vm_irq_data *vm_irq_data,
 }
 
 /**
+ * @brief ether_set_coe_chan_mask - Set CoE channels bitmap
+ *
+ * @param[in] osi_dma: DMA data
+ * @param[in] num_vm_chan: Number of VM DMA channels
+ * @param[in] vm_chans: Pointer to list of VM DMA channels
+ *
+ * @retval None.
+ */
+static void ether_set_coe_chan_mask(struct osi_dma_priv_data *osi_dma,
+				    unsigned int num_vm_chan,
+				    unsigned int *vm_chans)
+{
+	osi_dma->num_dma_chans_coe = num_vm_chan;
+
+	for (u32 i = 0; i < num_vm_chan; i++) {
+		osi_dma->dma_chans_coe[i] = vm_chans[i];
+	}
+}
+
+/**
  * @brief ether_get_rx_riit - Get the rx_riit value for speed.
  *
  * Algorimthm: Parse DT to get rx_riit value
@@ -5205,6 +5300,8 @@ static int ether_get_vm_irq_data(struct platform_device *pdev,
 
 	child_id = 0;
 	for_each_child_of_node(vm_node, temp) {
+		bool is_coe;
+
 		ret = of_property_read_u32(temp, "nvidia,vm-irq-id", &vm_irq_id);
 		if (ret != 0) {
 			vm_irq_id = child_id;
@@ -5246,15 +5343,35 @@ static int ether_get_vm_irq_data(struct platform_device *pdev,
 			}
 		}
 
+		is_coe = of_property_read_bool(temp, "nvidia,camera-over-eth");
+		if (is_coe) {
+			osi_core->irq_data[node].is_coe = 1U;
+			dev_info(&pdev->dev, "VM IRQ is handled by Camera CPU: %u\n",
+				 node);
+		} else {
+			osi_core->irq_data[node].is_coe = 0U;
+		}
+
 		/* Assuming there would not be more than 0xFFFF nodes */
 		child_id &= MAX_CHILD_NODES;
 		child_id++;
 	}
 
 	for (node = 0; node < osi_core->num_vm_irqs; node++) {
-		ether_set_vm_irq_chan_mask(&pdata->vm_irq_data[node],
+		if (osi_core->irq_data[node].is_coe) {
+			if (pdata->osi_dma->num_dma_chans_coe != 0) {
+				dev_err(&pdev->dev, "Only one CoE IRQ allowed\n");
+				return -EINVAL;
+			}
+			/* CoE channels IRQ will be handled by camera CPU */
+			ether_set_coe_chan_mask(pdata->osi_dma,
+				osi_core->irq_data[node].num_vm_chans,
+				osi_core->irq_data[node].vm_chans);
+		} else {
+			ether_set_vm_irq_chan_mask(&pdata->vm_irq_data[node],
 					   osi_core->irq_data[node].num_vm_chans,
 					   osi_core->irq_data[node].vm_chans);
+		}
 
 		pdata->vm_irq_data[node].pdata = pdata;
 	}
@@ -7690,6 +7807,103 @@ void ether_shutdown(struct platform_device *pdev)
 		dev_err(pdata->dev, "Failure in ether_close");
 }
 
+int nvether_coe_config(struct net_device *ndev,
+		       struct nvether_coe_cfg *ether_coe_cfg)
+{
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct macsec_priv_data *macsec_pdata = pdata->macsec_pdata;
+	struct osi_macsec_lut_config lut_config;
+	int ret = -ENOENT;
+
+	/* If macsec not enabled, enable it.
+	 * FIXME: Need a lock to protect any concurrent macsec configuration outside this API from supplicant for ex. */
+	if (macsec_pdata == NULL) {
+		dev_err(pdata->dev, "macsec is not supported in platform, COE config failed\n");
+		return ret;
+	}
+	if (macsec_pdata->enabled != OSI_ENABLE) {
+		ret = macsec_open(macsec_pdata, NULL);
+		if (ret < 0) {
+			dev_err(pdata->dev, "macsec_open failure, COE config failed\n");
+			return ret;
+		}
+	}
+	if (macsec_pdata->coe.enable == OSI_ENABLE) {
+		return 0;
+	}
+
+	/* Program the COE LUT classifier for AVTP COE packets */
+	memset(&lut_config, 0, sizeof(lut_config));
+	lut_config.table_config.ctlr_sel = OSI_CTLR_SEL_RX;
+	lut_config.table_config.index = 0U;
+	if (ether_coe_cfg->vlan_enable == COE_VLAN_ENABLE) {
+		// 16B offset for AV ethtype with VLAN,
+		// divided by 2 as HW expects offset in multiple of 2.
+		lut_config.coe_lut_inout.offset = 8U;
+	}
+	else if (ether_coe_cfg->vlan_enable == COE_VLAN_DISABLE) {
+		// 12B offset for AV ethtype without VLAN,
+		// divided by 2 as HW expects offset in multiple of 2.
+		lut_config.coe_lut_inout.offset = 6U;
+	}
+	else {
+		dev_err(pdata->dev, "Invalid VLAN enable value\n");
+		return -EINVAL;
+	}
+	lut_config.coe_lut_inout.byte_pattern_mask = 0xF;
+	lut_config.coe_lut_inout.byte_pattern[1] = (unsigned char) 0x22;
+	lut_config.coe_lut_inout.byte_pattern[0] = (unsigned char) 0xF0;
+	lut_config.lut_sel = OSI_LUT_SEL_COE;
+	lut_config.table_config.rw = OSI_LUT_WRITE;
+	ret = osi_macsec_config_lut(osi_core, &lut_config);
+	if (ret < 0) {
+		dev_err(pdata->dev, "%s: Failed to config COE LUT\n", __func__);
+		return ret;
+	}
+
+	/* Program the COE header offset and enable COE engine */
+	ret = macsec_coe_config(macsec_pdata, ether_coe_cfg->coe_enable,
+				ether_coe_cfg->coe_hdr_offset);
+	if (ret < 0) {
+		dev_err(pdata->dev, "COE config in macsec controller failed\n");
+		return ret;
+	} else {
+		macsec_pdata->coe.enable = ether_coe_cfg->coe_enable;
+		macsec_pdata->coe.hdr_offset = ether_coe_cfg->coe_hdr_offset;
+		dev_info(pdata->dev, "COE config success\n");
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(nvether_coe_config);
+
+int nvether_coe_chan_config(struct net_device *ndev,
+			    u32 dmachan,
+			    struct nvether_per_coe_cfg *p_coe_cfg)
+{
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct macsec_priv_data *macsec_pdata = pdata->macsec_pdata;
+	int ret;
+
+	if (macsec_pdata == NULL) {
+		dev_err(pdata->dev, "macsec is not supported in platform, COE config failed\n");
+		return -ENONET;
+	}
+
+	if (macsec_pdata->coe.enable != OSI_ENABLE) {
+		dev_err(pdata->dev, "COE not enabled\n");
+		return -EIO;
+	}
+
+	ret = macsec_coe_lc(macsec_pdata, dmachan,
+			p_coe_cfg->lc1,
+			p_coe_cfg->lc2);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(nvether_coe_chan_config);
+
 #ifdef CONFIG_PM
 static s32 ether_handle_rx_buffers(struct ether_priv_data *pdata,
 				   uint32_t suspend)
@@ -7885,6 +8099,16 @@ int ether_suspend_noirq(struct device *dev)
 
 	for (i = 0; i < osi_dma->num_dma_chans; i++) {
 		chan = osi_dma->dma_chans[i];
+		osi_handle_dma_intr(osi_dma, chan,
+				    OSI_DMA_CH_TX_INTR,
+				    OSI_DMA_INTR_DISABLE);
+		osi_handle_dma_intr(osi_dma, chan,
+				    OSI_DMA_CH_RX_INTR,
+				    OSI_DMA_INTR_DISABLE);
+	}
+
+	for (i = 0; i < osi_dma->num_dma_chans_coe; i++) {
+		chan = osi_dma->dma_chans_coe[i];
 		osi_handle_dma_intr(osi_dma, chan,
 				    OSI_DMA_CH_TX_INTR,
 				    OSI_DMA_INTR_DISABLE);

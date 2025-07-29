@@ -206,6 +206,20 @@ struct nvpkcs_data {
 };
 
 /**
+ * @brief MACsec COE private data structure
+ */
+struct macsec_coe {
+	/** Macsec COE state */
+	unsigned int enable;
+	/** Macsec COE hdr offset */
+	unsigned int hdr_offset;
+	/** Macsec COE line counter threshold 1 */
+	unsigned int lc1_threshold[OSI_MGBE_MAX_NUM_CHANS];
+	/** Macsec COE line counter threshold 2 */
+	unsigned int lc2_threshold[OSI_MGBE_MAX_NUM_CHANS];
+};
+
+/**
  * @brief MACsec private data structure
  */
 struct macsec_priv_data {
@@ -259,9 +273,15 @@ struct macsec_priv_data {
 	unsigned int macsec_tx_an_map;
 	/** Macsec RX currently enabled AN */
 	unsigned int macsec_rx_an_map;
+	/** Macsec COE instance */
+	struct macsec_coe coe;
 };
 
 int macsec_probe(struct ether_priv_data *pdata);
+int macsec_coe_config(struct macsec_priv_data *macsec_pdata,
+		uint32_t coe_enable, uint32_t coe_hdr_offset);
+int macsec_coe_lc(struct macsec_priv_data *macsec_pdata,
+		uint32_t ch, uint32_t lc1, uint32_t lc2);
 void macsec_remove(struct ether_priv_data *pdata);
 int macsec_open(struct macsec_priv_data *macsec_pdata,
 		void *const genl_info);

@@ -755,6 +755,10 @@ struct ether_priv_data {
 	/** tx bandwidth pkt work queue */
 	struct workqueue_struct *tx_bw_wq;
 #endif
+	/** COE mode enabled */
+	u32 coe_enable;
+	/** OSI instance of COE */
+	struct osi_mgbe_coe mgbe_coe;
 };
 
 /**

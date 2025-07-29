@@ -19,11 +19,7 @@ endif
 ccflags-y += -DLINUX_OS -DNET30 -DNVPKCS_MACSEC -DLINUX_IVC -mno-outline-atomics -Werror \
 	     -I$(srctree.nvidia-oot)/drivers/net/ethernet/nvidia/nvethernet/nvethernetrm/include
 
-ifdef CONFIG_KASAN
 ccflags-y += -Wframe-larger-than=4096
-else
-ccflags-y += -Wframe-larger-than=2048
-endif
 
 #ccflags-y += -DOSI_DEBUG -DMACSEC_SUPPORT -DDEBUG_MACSEC -DMACSEC_KEY_PROGRAM
 ccflags-y += -DMACSEC_SUPPORT

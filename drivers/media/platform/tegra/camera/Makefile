@@ -51,5 +51,8 @@ obj-m += tests/
 tegra-capture-isp-objs += fusa-capture/capture-isp-channel.o
 tegra-capture-isp-objs += fusa-capture/capture-isp.o
 obj-m += tegra-capture-isp.o
+
+tegra-capture-coe-objs += coe/rtcpu-coe.o
+obj-m += tegra-capture-coe.o
 endif
 endif

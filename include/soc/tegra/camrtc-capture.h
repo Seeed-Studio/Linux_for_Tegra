@@ -1,6 +1,16 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2016-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  */
 
 /**
@@ -850,6 +860,95 @@ struct capture_channel_config {
 	 */
 	uint64_t stop_on_error_notify_bits;
 
+} CAPTURE_IVC_ALIGN;
+
+/** Length of Ethernet MAC address */
+#define COE_ETH_ALEN   6U
+
+/**
+ * @brief Describes RTCPU CoE resources for a capture pipe-line.
+ */
+struct capture_coe_channel_config {
+	/**
+	 * Numerical instance ID of an ethernet controller for the channel
+	 */
+	uint32_t mgbe_instance_id;
+	/**
+	 * Virtual DMA channel number for this capture channel
+	 */
+	uint16_t dma_chan;
+	/**
+	 * Physical DMA which services the CoE channel
+	 */
+	uint16_t pdma_chan_id;
+	/**
+	 * Hardware IRQ ID which will be asserted for events on that DMA channel
+	 */
+	uint16_t mgbe_irq_num;
+	/**
+	 * Ethernet address of a camera module which will us the channel
+	 */
+	uint8_t mac_addr[COE_ETH_ALEN];
+	/**
+	 * IOVA for RX descriptors for MGBE access
+	 */
+	iova_t rx_desc_ring_iova_mgbe;
+	/**
+	 * IOVA for RX descriptors for RCE access
+	 */
+	iova_t rx_desc_ring_iova_rce;
+	/**
+	 * IOVA for RX descriptors shadown ring for RCE access
+	 */
+	iova_t rx_desc_shdw_iova_rce;
+	/**
+	 * Size of Rx descr ring buffer memory area
+	 */
+	uint64_t rx_desc_ring_mem_size;
+	/**
+	 * IOVA for RX packet headers memory area for MGBE access
+	 */
+	iova_t rx_pkthdr_iova_mgbe;
+	/**
+	 * Size of Rx packet headers memory area
+	 */
+	uint64_t rx_pkthdr_mem_size;
+	/**
+	 * IOVA for RX Packet Info descriptors memory area for MGBE access
+	 */
+	iova_t rx_pktinfo_iova_mgbe;
+	/**
+	 * IOVA for RX Packet Info descriptors memory area for RCE access
+	 */
+	iova_t rx_pktinfo_iova_rce;
+	/**
+	 * Size of RX Packet Info descriptors memory area
+	 */
+	uint64_t rx_pktinfo_mem_size;
+	/**
+	 * IOVA for RX scratch buffer memory area for MGBE access
+	 */
+	iova_t dummy_buf_dma;
+	/**
+	 * Size of RX scratch buffer memory area
+	 */
+	uint64_t dummy_buf_dma_size;
+	/**
+	 * IOVA for Rx descriptors memory area base address
+	 */
+	iova_t rxmem_base;
+	/**
+	 * Size of RX descriptors memory area. Must be power of two.
+	 */
+	uint64_t rxmem_size;
+	/**
+	 * VLAN enable value. 1 - VLAN enabled, 0 - VLAN disabled
+	 */
+	uint8_t vlan_enable;
+	/**
+	 * Padding to make the structure size a multiple of 8 bytes
+	 */
+	uint8_t _padding[7];
 } CAPTURE_IVC_ALIGN;
 
 /**

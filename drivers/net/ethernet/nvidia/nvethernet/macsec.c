@@ -211,6 +211,38 @@ int macsec_close(struct macsec_priv_data *macsec_pdata)
 	return ret;
 }
 
+int macsec_coe_config(struct macsec_priv_data *macsec_pdata,
+		uint32_t coe_enable, uint32_t coe_hdr_offset)
+{
+	int ret = 0;
+	struct ether_priv_data *pdata = macsec_pdata->ether_pdata;
+	struct device *dev = pdata->dev;
+
+	/* Input is already validated */
+	ret = osi_macsec_coe_config(pdata->osi_core, coe_enable,
+			coe_hdr_offset);
+	if (ret < 0) {
+		dev_err(dev, "osi_macsec_coe_config failed, %d\n", ret);
+	}
+	return ret;
+}
+
+int macsec_coe_lc(struct macsec_priv_data *macsec_pdata,
+		uint32_t ch, uint32_t lc1, uint32_t lc2)
+{
+	int ret = 0;
+	struct ether_priv_data *pdata = macsec_pdata->ether_pdata;
+	struct device *dev = pdata->dev;
+
+	/* Input is already validated */
+	ret = osi_macsec_coe_lc(pdata->osi_core, ch, lc1, lc2);
+	if (ret < 0) {
+		dev_err(dev, "osi_macsec_coe_lc failed, %d\n", ret);
+	}
+	return ret;
+
+}
+
 int macsec_open(struct macsec_priv_data *macsec_pdata,
 		void *const genl_info)
 {

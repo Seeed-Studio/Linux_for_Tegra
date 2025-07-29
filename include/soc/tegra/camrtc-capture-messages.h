@@ -1,6 +1,16 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+/* SPDX-FileCopyrightText: Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  */
 
 /**
@@ -121,12 +131,14 @@ struct CAPTURE_MSG_HEADER {
 #define CAPTURE_CHANNEL_SETUP_REQ		MK_U32(0x1E)
 
 /**
- * @brief VI capture channel setup response.
+ * @brief VI or CoE capture channel setup response.
  *
  * This is a @ref CapCtrlMsgType "capture control message" received in
- * response to a @ref CAPTURE_CHANNEL_SETUP_REQ message.
+ * response to a @ref CAPTURE_CHANNEL_SETUP_REQ or @ref CAPTURE_COE_CHANNEL_SETUP_REQ
+ * message.
  *
- * @pre A @ref CAPTURE_CHANNEL_SETUP_REQ message has been sent.
+ * @pre A @ref CAPTURE_CHANNEL_SETUP_REQ or @ref CAPTURE_COE_CHANNEL_SETUP_REQ message
+ *      has been sent.
  *
  * @par Header
  * - @ref CAPTURE_CONTROL_MSG@b::@ref CAPTURE_MSG_HEADER "header"
@@ -250,6 +262,130 @@ struct CAPTURE_MSG_HEADER {
 #define CAPTURE_SYNCGEN_ENABLE_RESP		MK_U32(0x1B)
 #define CAPTURE_SYNCGEN_DISABLE_REQ		MK_U32(0x1C)
 #define CAPTURE_SYNCGEN_DISABLE_RESP		MK_U32(0x1D)
+/** @} */
+
+/**
+ * @defgroup CoeCapCtrlMsgType Message types for CoE capture channel control messages
+ *
+ * Capture channel control messages are used to set up, reset, and release
+ * channels for capturing images from an Ethernet imaging stream source, as well as
+ * execute other control operations on the CoE capture channel.
+ *
+ * @{
+ */
+
+/**
+ * @brief CoE capture channel setup request.
+ *
+ * This is a "capture control message" to allocate a CoE capture channel and
+ * associated resources.
+ *
+ * @pre The capture-control IVC channel has been set up during
+ *      boot using the @ref CAMRTC_HSP_CH_SETUP command.
+ *
+ * @par Header
+ * - @ref CAPTURE_CONTROL_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_COE_CHANNEL_SETUP_REQ
+ *   - @ref CAPTURE_MSG_HEADER::transaction "transaction" = <em>unique ID</em>
+ *
+ * @par Payload
+ * - @ref CAPTURE_COE_CHANNEL_SETUP_REQ_MSG
+ *
+ * @par Response
+ * - @ref CAPTURE_CHANNEL_SETUP_RESP
+ */
+#define CAPTURE_COE_CHANNEL_SETUP_REQ		MK_U32(0x1F)
+
+/**
+ * @brief CoE capture channel reset request.
+ *
+ * This is a @ref CapCtrlMsgType "capture control message" to
+ * reset a CoE capture channel.
+ *
+ * When RCE FW receives the @ref CAPTURE_COE_CHANNEL_RESET_REQ message, it
+ * will cancel all capture requests in the channel queue. The response is sent
+ * after the RCE side channel cleanup is complete.
+ *
+ * @pre A CoE capture channel has been set up with
+ *      @ref CAPTURE_COE_CHANNEL_SETUP_REQ.
+ *
+ * @par Header
+ * - @ref CAPTURE_CONTROL_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_COE_CHANNEL_RESET_REQ
+ *   - @ref CAPTURE_MSG_HEADER::channel_id "channel_id" =
+ *     @ref CAPTURE_COE_CHANNEL_SETUP_RESP_MSG@b::@ref CAPTURE_MSG_HEADER "header"@b::@ref CAPTURE_MSG_HEADER::channel_id "channel_id"
+ *
+ * @par Payload
+ * - @ref CAPTURE_COE_CHANNEL_RESET_REQ_MSG
+ *
+ * @par Response
+ * - @ref CAPTURE_COE_CHANNEL_RESET_RESP
+ */
+#define CAPTURE_COE_CHANNEL_RESET_REQ		MK_U32(0x26)
+
+/**
+ * @brief CoE capture channel reset response.
+ *
+ * This is a @ref CapCtrlMsgType "capture control message" received in
+ * response to a @ref CAPTURE_COE_CHANNEL_RESET_REQ message.
+ *
+ * @pre A @ref CAPTURE_COE_CHANNEL_RESET_REQ message has been sent to the
+ *      logical channel.
+ *
+ * @par Header
+ * - @ref CAPTURE_CONTROL_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_COE_CHANNEL_RESET_RESP
+ *   - @ref CAPTURE_MSG_HEADER::channel_id "channel_id" =
+ *     @ref CAPTURE_COE_CHANNEL_RESET_REQ_MSG@b::@ref CAPTURE_MSG_HEADER "header"@b::@ref CAPTURE_MSG_HEADER::channel_id "channel_id"
+ *
+ * @par Payload
+ * - @ref CAPTURE_COE_CHANNEL_RESET_RESP_MSG
+ */
+#define CAPTURE_COE_CHANNEL_RESET_RESP		MK_U32(0x27)
+
+/**
+ * @brief CoE capture channel release request.
+ *
+ * This is a @ref CapCtrlMsgType "capture control message" to
+ * release a CoE capture channel. Cancels all pending capture
+ * requests.
+ *
+ * @pre A CoE capture channel has been set up with
+ *     @ref CAPTURE_COE_CHANNEL_SETUP_REQ.
+ *
+ * @par Header
+ * - @ref CAPTURE_CONTROL_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_COE_CHANNEL_RELEASE_REQ
+ *   - @ref CAPTURE_MSG_HEADER::channel_id "channel_id" =
+ *     @ref CAPTURE_COE_CHANNEL_SETUP_RESP_MSG@b::@ref CAPTURE_MSG_HEADER "header"@b::@ref CAPTURE_MSG_HEADER::channel_id "channel_id"
+ *
+ * @par Payload
+ * - @ref CAPTURE_COE_CHANNEL_RELEASE_REQ_MSG
+ *
+ * @par Response
+ * - @ref CAPTURE_COE_CHANNEL_RELEASE_RESP
+ */
+#define CAPTURE_COE_CHANNEL_RELEASE_REQ		MK_U32(0x28)
+
+/**
+ * @brief CoE capture channel release response.
+ *
+ * This is a @ref CapCtrlMsgType "capture control message" received in
+ * response to a @ref CAPTURE_COE_CHANNEL_RELEASE_REQ message.
+ *
+ * @pre A @ref CAPTURE_COE_CHANNEL_RELEASE_REQ message has been sent to the
+ *      logical channel.
+ *
+ * @par Header
+ * - @ref CAPTURE_CONTROL_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_COE_CHANNEL_RELEASE_RESP
+ *   - @ref CAPTURE_MSG_HEADER::channel_id "channel_id" =
+ *     @ref CAPTURE_COE_CHANNEL_RELEASE_REQ_MSG@b::@ref CAPTURE_MSG_HEADER "header"@b::@ref CAPTURE_MSG_HEADER::channel_id "channel_id"
+ *
+ * @par Payload
+ * - @ref CAPTURE_COE_CHANNEL_RELEASE_RESP_MSG
+ */
+#define CAPTURE_COE_CHANNEL_RELEASE_RESP	MK_U32(0x29)
 /** @} */
 
 /**
@@ -761,6 +897,66 @@ struct CAPTURE_MSG_HEADER {
 /** @} */
 
 /**
+ * @defgroup CoeCapMsgType Message types for CoE capture request messages and indications.
+ *
+ * Capture channel messages are used to submit capture requests and to
+ * receive status indications pertaining to submitted requests.
+ *
+ * @{
+ */
+
+/**
+ * @brief Submit a new capture request on a CoE capture channel.
+ *
+ * This is a @ref CapMsgType "capture channel message" to
+ * submit a CoE capture request. The capture request provides all the information
+ * needed to submit a capture request to the Ethernet engine, like DMA address of the buffer,
+ * buffer size, etc.
+ *
+ * The capture request is sent asynchronously and is queued by RCE for execution.
+ * Status of the request is indicated with @ref CAPTURE_COE_STATUS_IND message.
+ *
+ * @pre A CoE capture channel has been set up with
+ *     @ref CAPTURE_COE_CHANNEL_SETUP_REQ.
+ *
+ * @par Header
+ * - @ref CAPTURE_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_COE_REQUEST
+ *   - @ref CAPTURE_MSG_HEADER::channel_id "channel_id" =
+ *     @ref CAPTURE_CHANNEL_SETUP_RESP_MSG@b::@ref CAPTURE_MSG_HEADER
+ *          "header"@b::@ref CAPTURE_MSG_HEADER::channel_id "channel_id"
+ *
+ * @par Payload
+ * - @ref CAPTURE_COE_REQUEST_MSG
+ *
+ * @par Response
+ * - @ref CAPTURE_COE_STATUS_IND (asynchronous)
+ */
+#define CAPTURE_COE_REQUEST			MK_U32(0x0A)
+
+/**
+ * @brief Capture status indication for CoE capture channel.
+ *
+ * This is a @ref CapMsgType "capture channel message"
+ * received in response to a @ref CAPTURE_COE_REQUEST message
+ * when the capture request has been completed.
+ * It is sent asynchronously whenever capture request completion is signalled by a HW.
+ *
+ * @pre A @ref CAPTURE_COE_REQUEST has been sent.
+ *
+ * @par Header
+ * - @ref CAPTURE_MSG@b::@ref CAPTURE_MSG_HEADER "header"
+ *   - @ref CAPTURE_MSG_HEADER::msg_id "msg_id" = @ref CAPTURE_COE_STATUS_IND
+ *   - @ref CAPTURE_MSG_HEADER::channel_id "channel_id" =
+ *     @ref CAPTURE_COE_REQUEST_MSG@b::@ref CAPTURE_MSG_HEADER "header"@b::@ref CAPTURE_MSG_HEADER::channel_id "channel_id"
+ *
+ * @par Payload
+ * - @ref CAPTURE_COE_STATUS_IND_MSG
+ */
+#define CAPTURE_COE_STATUS_IND      MK_U32(0x0B)
+/** @} */
+
+/**
  * @brief Invalid message type. This can be used to respond to an invalid request.
  */
 #define CAPTURE_MSG_ID_INVALID			MK_U32(0xFFFFFFFF)
@@ -818,6 +1014,22 @@ struct CAPTURE_CHANNEL_SETUP_RESP_MSG {
 	uint64_t vi_channel_mask;
 } CAPTURE_IVC_ALIGN;
 
+/** @brief Message data for @ref CAPTURE_COE_CHANNEL_SETUP_REQ message */
+struct CAPTURE_COE_CHANNEL_SETUP_REQ_MSG {
+	/** Capture channel configuration. */
+	struct capture_coe_channel_config channel_config;
+} CAPTURE_IVC_ALIGN;
+
+/** @brief Message data for @ref CAPTURE_COE_REQUEST message. */
+struct CAPTURE_COE_REQUEST_MSG {
+	/** Index of the buffer to be captured, for tacking by KMD. */
+	uint32_t buffer_index;
+	/** Length of the buffer to be captured. */
+	uint32_t buf_len;
+	/** DMA address of the buffer to be captured. */
+	iova_t buf_mgbe_iova;
+} CAPTURE_IVC_ALIGN;
+
 /**
  * @defgroup CapResetFlags VI Capture channel reset flags
  * @{
@@ -837,6 +1049,42 @@ struct CAPTURE_CHANNEL_RESET_REQ_MSG {
 
 /** @brief Message data for @ref CAPTURE_CHANNEL_RESET_RESP message */
 struct CAPTURE_CHANNEL_RESET_RESP_MSG {
+	/** Request result code. See @ref CapErrorCodes "result codes". */
+	capture_result result;
+
+	/** Reserved */
+	uint32_t pad__;
+} CAPTURE_IVC_ALIGN;
+
+/** @brief Message data for @ref CAPTURE_CHANNEL_RESET_REQ message */
+struct CAPTURE_COE_CHANNEL_RESET_REQ_MSG {
+	/** Placeholder. Unused */
+	uint32_t reset_flags;
+
+	/** Reserved */
+	uint32_t pad__;
+} CAPTURE_IVC_ALIGN;
+
+/** @brief Message data for @ref CAPTURE_CHANNEL_RESET_RESP message */
+struct CAPTURE_COE_CHANNEL_RESET_RESP_MSG {
+	/** Request result code. See @ref CapErrorCodes "result codes". */
+	capture_result result;
+
+	/** Reserved */
+	uint32_t pad__;
+} CAPTURE_IVC_ALIGN;
+
+/** @brief Message data for @ref CAPTURE_CHANNEL_RELEASE_REQ message */
+struct CAPTURE_COE_CHANNEL_RELEASE_REQ_MSG {
+	/** Placeholder. Unused */
+	uint32_t reset_flags;
+
+	/** Reserved */
+	uint32_t pad__;
+} CAPTURE_IVC_ALIGN;
+
+/** @brief Message data for @ref CAPTURE_CHANNEL_RELEASE_RESP message */
+struct CAPTURE_COE_CHANNEL_RELEASE_RESP_MSG {
 	/** Request result code. See @ref CapErrorCodes "result codes". */
 	capture_result result;
 
@@ -1740,11 +1988,26 @@ struct CAPTURE_CONTROL_MSG {
 		/** Message data for @ref CAPTURE_CHANNEL_SETUP_RESP message */
 		struct CAPTURE_CHANNEL_SETUP_RESP_MSG channel_setup_resp;
 		/** @anon_union_member */
+		/** Message data for @ref CAPTURE_COE_CHANNEL_SETUP_RESP message */
+		struct CAPTURE_COE_CHANNEL_SETUP_REQ_MSG channel_coe_setup_req;
+		/** @anon_union_member */
 		/** Message data for @ref CAPTURE_CHANNEL_RESET_REQ message */
 		struct CAPTURE_CHANNEL_RESET_REQ_MSG channel_reset_req;
 		/** @anon_union_member */
 		/** Message data for @ref CAPTURE_CHANNEL_RESET_RESP message */
 		struct CAPTURE_CHANNEL_RESET_RESP_MSG channel_reset_resp;
+		/** @anon_union_member */
+		/** Message data for @ref CAPTURE_COE_CHANNEL_RESET_REQ message */
+		struct CAPTURE_COE_CHANNEL_RESET_REQ_MSG channel_coe_reset_req;
+		/** @anon_union_member */
+		/** Message data for @ref CAPTURE_COE_CHANNEL_RESET_RESP message */
+		struct CAPTURE_COE_CHANNEL_RESET_RESP_MSG channel_coe_reset_resp;
+		/** @anon_union_member */
+		/** Message data for @ref CAPTURE_COE_CHANNEL_RELEASE_REQ message */
+		struct CAPTURE_COE_CHANNEL_RELEASE_REQ_MSG channel_coe_release_req;
+		/** @anon_union_member */
+		/** Message data for @ref CAPTURE_COE_CHANNEL_RELEASE_RESP message */
+		struct CAPTURE_COE_CHANNEL_RELEASE_RESP_MSG channel_coe_release_resp;
 		/** @anon_union_member */
 		/** Message data for @ref CAPTURE_CHANNEL_RELEASE_REQ message */
 		struct CAPTURE_CHANNEL_RELEASE_REQ_MSG channel_release_req;
@@ -1923,6 +2186,54 @@ struct CAPTURE_STATUS_IND_MSG {
 	uint32_t pad__;
 } CAPTURE_IVC_ALIGN;
 
+/** @brief Message data for @ref CAPTURE_COE_STATUS_IND message. */
+struct CAPTURE_COE_STATUS_IND_MSG {
+	/**
+	 * Buffer index to match against capture request to which
+	 * this completion corresponds to.
+	 */
+	uint32_t buffer_index;
+/**
+ * CoE capture error indicating some Ethernet packets carrying image data were lost.
+ */
+#define CAPTURE_STATUS_COE_PACKET_LOSS		MK_U32(2)
+
+/**
+ * CoE capture error indicating Start Of Frame packet was never received.
+ */
+#define CAPTURE_STATUS_COE_SOF_MISSED		MK_U32(3)
+
+/**
+ * CoE capture error indicating a frame with an unexpected sequence number was received.
+ * Could be caused by losing EOF packet as an example.
+ */
+#define CAPTURE_STATUS_COE_DISCONTINUITY	MK_U32(4)
+
+/**
+ * CoE capture error indicating SW has aborted the capture (did not wait for all
+ * network packets carrying the frame data to be received).
+ */
+#define CAPTURE_STATUS_COE_ABORTED		MK_U32(5)
+
+	/** Capture status to indicate to the host
+	 *  Valid range: [ @ref CAPTURE_STATUS_UNKNOWN,
+	 *                 @ref CAPTURE_STATUS_SUCCESS,
+	 *                 @ref CAPTURE_STATUS_COE_*]
+	 */
+	uint32_t capture_status;
+
+	/**
+	 * Timestamp of the SOF event in nanoseconds.
+	 * Valid range: [0, UINT64_MAX].
+	 */
+	uint64_t timestamp_sof_ns;
+
+	/**
+	 * Timestamp of the EOF event in nanoseconds.
+	 * Valid range: [0, UINT64_MAX].
+	 */
+	uint64_t timestamp_eof_ns;
+} CAPTURE_IVC_ALIGN;
 
 /** @brief Message data for @ref CAPTURE_ISP_REQUEST_REQ message. */
 struct CAPTURE_ISP_REQUEST_REQ_MSG {
@@ -2020,7 +2331,11 @@ struct CAPTURE_MSG {
 		/** @anon_union_member */
 		struct CAPTURE_REQUEST_REQ_MSG capture_request_req;
 		/** @anon_union_member */
+		struct CAPTURE_COE_REQUEST_MSG capture_coe_req;
+		/** @anon_union_member */
 		struct CAPTURE_STATUS_IND_MSG capture_status_ind;
+		/** @anon_union_member */
+		struct CAPTURE_COE_STATUS_IND_MSG capture_coe_status_ind;
 
 		/** @anon_union_member */
 		CAPTURE_ISP_REQUEST_REQ_MSG capture_isp_request_req;

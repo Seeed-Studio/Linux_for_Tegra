@@ -533,6 +533,336 @@ static DEVICE_ATTR(macsec_enable, (S_IRUGO | S_IWUSR),
 		   macsec_enable_show,
 		   macsec_enable_store);
 
+#define MACSEC_COE_LC_INPUT_LEN 3
+extern int macsec_coe_config(struct macsec_priv_data *macsec_pdata,
+		uint32_t coe_enable, uint32_t coe_hdr_offset);
+/**
+ * @brief Shows the current COE setting of MACsec controllers enabled
+ *
+ * Algorithm: Display the current COE settings for MACsec controllers.
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to store the current COE setting
+ */
+static ssize_t macsec_coe_enable_show(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct macsec_priv_data *macsec_pdata = pdata->macsec_pdata;
+	unsigned int coe_enable;
+	unsigned int coe_hdr_offset;
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+	if ((macsec_pdata == NULL)) {
+		dev_err(pdata->dev, "Not Allowed. MACSec is not supported on this platform\n");
+		return 0;
+	}
+	if (macsec_pdata->enabled != OSI_ENABLE) {
+		dev_err(pdata->dev, "Not Allowed. MACSec is not enabled on the controller\n");
+		return 0;
+	}
+
+	coe_enable = macsec_pdata->coe.enable;
+	coe_hdr_offset = macsec_pdata->coe.hdr_offset;
+
+	if (OSI_ENABLE == coe_enable) {
+		return scnprintf(buf, PAGE_SIZE, "COE enabled, COE hdr offset: %u\n",
+			 coe_hdr_offset);
+	} else {
+		return scnprintf(buf, PAGE_SIZE, "COE disabled\n");
+	}
+}
+
+/**
+ * @brief Set the MACsec controller COE logic enabled (Rx only)
+ *
+ * Algorithm: This is used to set the Rx MACsec controller COE logic enabled.
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer which contains the user settings of MACsec COE enable
+ * @param[in] size: size of buffer
+ *
+ * @return size of buffer.
+ */
+static ssize_t macsec_coe_enable_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t size)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct macsec_priv_data *macsec_pdata = pdata->macsec_pdata;
+	uint32_t coe_enable, coe_hdr_offset;
+	int ret = 0, i;
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return size;
+	}
+	if ((macsec_pdata == NULL)) {
+		dev_err(pdata->dev, "Not Allowed. MACSec is not supported on this platform\n");
+		return size;
+	}
+	if (macsec_pdata->enabled != OSI_ENABLE) {
+		dev_err(pdata->dev, "Not Allowed. MACSec is not enabled on the controller\n");
+		return size;
+	}
+
+	/* Read user inputs and validate it */
+	i = sscanf(buf, "%u %u", &coe_enable, &coe_hdr_offset);
+	if ((coe_enable != OSI_ENABLE) && (coe_enable != OSI_DISABLE)) {
+		dev_err(pdata->dev, "Invalid value %u for coe_enable\n", coe_enable);
+		return size;
+	}
+	if ((coe_hdr_offset < 16) || (coe_hdr_offset > 56)) {
+		dev_err(pdata->dev, "Invalid value %u for coe_hdr_offset\n", coe_hdr_offset);
+		return size;
+	}
+
+	/* Configure COE */
+	if (coe_enable == OSI_ENABLE) {
+	        if (macsec_pdata->coe.enable == OSI_ENABLE) {
+			dev_err(pdata->dev, "COE already enabled\n");
+			return size;
+		}
+	} else {
+	        if (macsec_pdata->coe.enable == OSI_DISABLE) {
+			dev_err(pdata->dev, "COE already disabled\n");
+			return size;
+		}
+	}
+	ret = macsec_coe_config(macsec_pdata, coe_enable, coe_hdr_offset);
+	if (0 == ret) {
+		macsec_pdata->coe.enable = coe_enable;
+		macsec_pdata->coe.hdr_offset = coe_hdr_offset;
+	}
+	return size;
+}
+
+/**
+ * @brief Sysfs attribute for MACsec COE enable
+ *
+ */
+static DEVICE_ATTR(macsec_coe_enable, (S_IRUGO | S_IWUSR),
+		   macsec_coe_enable_show,
+		   macsec_coe_enable_store);
+
+
+/**
+ * @brief Shows the current COE setting of MAC controllers enabled
+ *
+ * Algorithm: Display the current COE settings for MAC controllers.
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to store the current COE setting for the MAC
+ */
+static ssize_t mac_coe_enable_show(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	char *p = buf;
+	int i, j;
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+
+	if (OSI_ENABLE == pdata->coe_enable) {
+		p += scnprintf(p, PAGE_SIZE, "MGBE COE mode enabled\n");
+		p += scnprintf(p, PAGE_SIZE, "\t vdma: %d\n", pdata->mgbe_coe.vdma);
+		p += scnprintf(p, PAGE_SIZE, "\t pdma: %d\n", pdata->mgbe_coe.pdma);
+		p += scnprintf(p, PAGE_SIZE, "\t PIB size: %d\n", pdata->mgbe_coe.rx_pib_sz);
+		for (j = 0; j < OSI_MGBE_COE_NUM_RX_FRAMES; j++) {
+			p += scnprintf(p, PAGE_SIZE, "\t FB[%d]:\n", j);
+			for (i = 0; i < 200; i++) {
+				p += scnprintf(p, PAGE_SIZE - i, "%02x", *(((unsigned char *)(pdata->mgbe_coe.rx_fb_addr[j])) + i));
+			}
+			p += scnprintf(p, PAGE_SIZE - i, "\n");
+		}
+		p += scnprintf(p, PAGE_SIZE, "\t PIB:\n");
+		for (i = 0; i < 200; i++) {
+			p += scnprintf(p, PAGE_SIZE - i, "%02x", *(((unsigned char *)pdata->mgbe_coe.rx_pib_addr) + i));
+		}
+		return p - buf;
+	} else {
+		return scnprintf(buf, PAGE_SIZE, "MGBE COE mode disabled\n");
+	}
+}
+
+/**
+ * @brief Set the MAC controller COE logic enabled (Rx only)
+ *
+ * Algorithm: This is used to set the Rx MAC controller  COE logic enabled.
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer which contains the user settings of MAC COE enable
+ * @param[in] size: size of buffer
+ *
+ * @return size of buffer.
+ */
+static ssize_t mac_coe_enable_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t size)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	int32_t coe_enable, vdma, pdma, rx_pib_sz;
+
+	if (netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not down\n");
+		return size;
+	}
+
+	/* Read user inputs and validate it */
+	sscanf(buf, "%d %d %d %d", &coe_enable, &vdma, &pdma, &rx_pib_sz);
+	if ((coe_enable != OSI_ENABLE) && (coe_enable != OSI_DISABLE)) {
+		dev_err(pdata->dev, "Invalid value %u for coe_enable\n", coe_enable);
+		return size;
+	}
+	if ((rx_pib_sz != 256) &&
+	    (rx_pib_sz != 512) &&
+	    (rx_pib_sz != 2048) &&
+	    (rx_pib_sz != 4096)) {
+		dev_err(pdata->dev, "Invalid value %d for rx_pib_sz\n", rx_pib_sz);
+		return size;
+	}
+
+	/* Configure COE */
+	pdata->coe_enable = coe_enable;
+	pdata->mgbe_coe.vdma = vdma;
+	pdata->mgbe_coe.pdma = pdma;
+	pdata->mgbe_coe.rx_pib_sz = rx_pib_sz;
+
+	return size;
+}
+
+/**
+ * @brief Sysfs attribute for MAC COE enable
+ *
+ */
+static DEVICE_ATTR(mac_coe_enable, (S_IRUGO | S_IWUSR),
+		   mac_coe_enable_show,
+		   mac_coe_enable_store);
+
+extern int macsec_coe_lc(struct macsec_priv_data *macsec_pdata,
+		uint32_t ch, uint32_t lc1, uint32_t lc2);
+/**
+ * @brief Shows the current COE Line counter thresholds.
+ *
+ * Algorithm: Loop through the current COE Line counter thresholds per VDMA
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to store the current LC thresholds
+ */
+static ssize_t macsec_coe_lc_show(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct macsec_priv_data *macsec_pdata = pdata->macsec_pdata;
+	unsigned int i;
+	char *start = buf;
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+	if ((macsec_pdata == NULL)) {
+		dev_err(pdata->dev, "Not Allowed. MACSec is not supported on this platform\n");
+		return 0;
+	}
+	if (macsec_pdata->enabled != OSI_ENABLE) {
+		dev_err(pdata->dev, "Not Allowed. MACSec is not enabled on the controller\n");
+		return 0;
+	}
+
+	for (i = 0U; i < OSI_MGBE_MAX_NUM_CHANS; i++) {
+		buf += scnprintf(buf, PAGE_SIZE, "ch: %u lc1: %u lc2: %u\n", i,
+				macsec_pdata->coe.lc1_threshold[i],
+				macsec_pdata->coe.lc2_threshold[i]);
+	}
+	return (buf - start);
+}
+
+/**
+ * @brief Set the MACsec controller COE line counter thresholds
+ *
+ * Algorithm: This is used to set threshold per VDMA Rx MACsec COE line counter
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer which contains the user settings of MACsec COE LC
+ * @param[in] size: size of buffer
+ *
+ * @return size of buffer.
+ */
+static ssize_t macsec_coe_lc_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t size)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct macsec_priv_data *macsec_pdata = pdata->macsec_pdata;
+	uint32_t ch, lc1, lc2;
+	int ret = 0, i;
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return size;
+	}
+	if ((macsec_pdata == NULL)) {
+		dev_err(pdata->dev, "Not Allowed. MACSec is not supported on this platform\n");
+		return size;
+	}
+	if (macsec_pdata->enabled != OSI_ENABLE) {
+		dev_err(pdata->dev, "Not Allowed. MACSec is not enabled on the controller\n");
+		return size;
+	}
+
+	/* Read user inputs and validate it */
+	i = sscanf(buf, "%u %u %u", &ch, &lc1, &lc2);
+	if (i != MACSEC_COE_LC_INPUT_LEN) {
+		pr_err("%s: Invalid COE LC inputs(read %d)", __func__, i);
+		return size;
+	}
+	if (ch >= OSI_MGBE_MAX_NUM_CHANS) {
+		dev_err(pdata->dev, "Invalid value %u for channel\n", ch);
+		return size;
+	}
+	if ((lc1 > OSI_MACSEC_COE_MAX_LC) || (lc2 > OSI_MACSEC_COE_MAX_LC)) {
+		dev_err(pdata->dev, "Line counter threshold has to be < %x\n", OSI_MACSEC_COE_MAX_LC);
+		return size;
+	}
+
+	/* Configure COE LC threshold */
+	ret = macsec_coe_lc(macsec_pdata, ch, lc1, lc2);
+	if (ret != 0) {
+		dev_err(pdata->dev, "Line counter threshold config failed\n");
+	} else {
+		macsec_pdata->coe.lc1_threshold[ch] = lc1;
+		macsec_pdata->coe.lc2_threshold[ch] = lc2;
+	}
+	return size;
+}
+
+/**
+ * @brief Sysfs attribute for MACsec COE LC threshold
+ *
+ */
+static DEVICE_ATTR(macsec_coe_lc, (S_IRUGO | S_IWUSR),
+		   macsec_coe_lc_show,
+		   macsec_coe_lc_store);
+
 /**
  * @brief Shows the current setting of MACsec cipther set
  *
@@ -1725,6 +2055,162 @@ exit:
 static DEVICE_ATTR(macsec_sci_lut, (S_IRUGO | S_IWUSR),
 		   NULL,
 		   macsec_sci_lut_store);
+
+/**
+ * @brief Shows the current COE LUT configuration
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer to print the current COE LUT configuration
+ */
+static ssize_t macsec_coe_lut_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct macsec_priv_data *macsec_pdata = pdata->macsec_pdata;
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_macsec_lut_config lut_config = {0};
+	struct osi_coe_lut_inout coe_lut_inout = {0};
+	int i;
+	char *start = buf;
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return 0;
+	}
+	if (!macsec_pdata) {
+		dev_err(pdata->dev, "Not Allowed. MACsec is not supported in platform\n");
+		return 0;
+	}
+
+	for (i = 0; i < OSI_COE_LUT_MAX_INDEX; i++) {
+		memset(&lut_config, OSI_NONE, sizeof(lut_config));
+		lut_config.table_config.ctlr_sel = OSI_CTLR_SEL_RX;
+		lut_config.lut_sel = OSI_LUT_SEL_COE;
+		lut_config.table_config.rw = OSI_LUT_READ;
+		lut_config.table_config.index = i;
+		if (osi_macsec_config_lut(osi_core, &lut_config) < 0) {
+			dev_err(dev, "%s: Failed to read COE LUT\n", __func__);
+			goto exit;
+		} else {
+			buf += scnprintf(buf, PAGE_SIZE, "%d.\t", i);
+			if (lut_config.coe_lut_inout.valid != OSI_COE_LUT_ENTRY_VALID) {
+				buf += scnprintf(buf, PAGE_SIZE, "Invalid\n");
+				continue;
+			}
+			coe_lut_inout = lut_config.coe_lut_inout;
+			/* HW design expects offset to be divided by 2.
+			 * So multiply for actual byte offset.
+			 */
+			buf += scnprintf(buf, PAGE_SIZE, "Offset: %u ",
+					coe_lut_inout.offset * 2);
+			buf += scnprintf(buf, PAGE_SIZE, "Mask: %#x ",
+					coe_lut_inout.byte_pattern_mask);
+			buf += scnprintf(buf, PAGE_SIZE, "Pattern: 0x%x%x\n",
+					 coe_lut_inout.byte_pattern[1],
+					 coe_lut_inout.byte_pattern[0]);
+		}
+	}
+
+exit:
+	return (buf - start);
+}
+
+#define COE_LUT_INPUTS 5
+
+/**
+ * @brief Set the COE LUT configuration
+ *
+ * @param[in] dev: Device data.
+ * @param[in] attr: Device attribute
+ * @param[in] buf: Buffer which contains the desired LUT configuration
+ * @param[in] size: size of buffer
+ *
+ * @return size of buffer.
+ */
+static ssize_t macsec_coe_lut_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
+{
+	struct net_device *ndev = (struct net_device *)dev_get_drvdata(dev);
+	struct ether_priv_data *pdata = netdev_priv(ndev);
+	struct macsec_priv_data *macsec_pdata = pdata->macsec_pdata;
+	struct osi_core_priv_data *osi_core = pdata->osi_core;
+	struct osi_macsec_lut_config lut_config;
+	int ret, temp[OSI_COE_LUT_BYTE_PATTERN_MAX];
+	int i;
+
+	if (!netif_running(ndev)) {
+		dev_err(pdata->dev, "Not Allowed. Ether interface is not up\n");
+		return size;
+	}
+	if (!macsec_pdata) {
+		dev_err(pdata->dev, "Not Allowed. MACsec is not supported on platform\n");
+		return size;
+	}
+
+	memset(&lut_config, 0, sizeof(lut_config));
+	lut_config.table_config.ctlr_sel = OSI_CTLR_SEL_RX;
+
+	ret = sscanf(buf, "%hu %u %x %x%x",
+		     &lut_config.table_config.index,
+		     &lut_config.coe_lut_inout.offset,
+		     &lut_config.coe_lut_inout.byte_pattern_mask,
+		     &temp[1],
+		     &temp[0]);
+	if (ret != COE_LUT_INPUTS) {
+		dev_err(pdata->dev, "Failed to parse COE LUT arguments");
+		goto exit;
+	}
+
+	if (lut_config.coe_lut_inout.offset % 2 != 0) {
+		dev_err(pdata->dev, "Offset field is not multiple of 2");
+		goto exit;
+	} else {
+		/* HW is expecting offset to be divided by 2 */
+		lut_config.coe_lut_inout.offset /= 2;
+	}
+
+	for (i = OSI_COE_LUT_BYTE_PATTERN_MAX - 1; i >= 0; i--) {
+		if (temp[i] > 0xFF) {
+			dev_err(pdata->dev, "Invalid byte pattern %d\n", temp[i]);
+		}
+		lut_config.coe_lut_inout.byte_pattern[i] = (unsigned char)temp[i];
+	}
+	lut_config.lut_sel = OSI_LUT_SEL_COE;
+	lut_config.table_config.rw = OSI_LUT_WRITE;
+	/* Rest of LUT attributes are filled by parse_inputs() */
+	if (lut_config.table_config.index >= OSI_COE_LUT_MAX_INDEX) {
+		dev_err(dev, "%s: Index can't be >= %d\n", __func__,
+			OSI_COE_LUT_MAX_INDEX);
+		goto exit;
+	}
+	if (lut_config.coe_lut_inout.offset > OSI_COE_LUT_OFFSET_MAX) {
+		dev_err(dev, "%s: COE offset can't be > %d\n", __func__,
+			OSI_COE_LUT_MAX_INDEX);
+		goto exit;
+	}
+
+	if (osi_macsec_config_lut(osi_core, &lut_config) < 0) {
+		dev_err(dev, "%s: Failed to config COE LUT\n", __func__);
+		goto exit;
+	} else {
+		dev_err(dev, "%s: Added COE LUT idx: %d", __func__,
+			lut_config.table_config.index);
+	}
+
+exit:
+	return size;
+}
+
+/**
+ * @brief Sysfs attribute for MACsec COE LUT config
+ *
+ */
+static DEVICE_ATTR(macsec_coe_lut, (S_IRUGO | S_IWUSR),
+		   macsec_coe_lut_show,
+		   macsec_coe_lut_store);
 
 #ifdef MACSEC_KEY_PROGRAM
 static void dump_kt(char **buf_p, unsigned short ctlr_sel,
@@ -3487,6 +3973,7 @@ static DEVICE_ATTR(hsi_enable, 0644,
 #endif
 #endif /* OSI_STRIPPED_LIB */
 
+
 /**
  * @brief Attributes for nvethernet sysfs
  */
@@ -3529,6 +4016,10 @@ static struct attribute *ether_sysfs_attrs[] = {
 	&dev_attr_macsec_sc_param_rx_lut.attr,
 	&dev_attr_macsec_cipher.attr,
 	&dev_attr_macsec_enable.attr,
+	&dev_attr_macsec_coe_enable.attr,
+	&dev_attr_macsec_coe_lc.attr,
+	&dev_attr_macsec_coe_lut.attr,
+	&dev_attr_mac_coe_enable.attr,
 	&dev_attr_macsec_an_status.attr,
 	&dev_attr_macsec_mmc_counters_tx.attr,
 	&dev_attr_macsec_mmc_counters_rx.attr,

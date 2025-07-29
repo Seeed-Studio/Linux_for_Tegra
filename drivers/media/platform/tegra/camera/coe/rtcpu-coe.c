@@ -1,0 +1,1936 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include <nvidia/conftest.h>
+
+#include <linux/device.h>
+#include <linux/dev_printk.h>
+#include <linux/printk.h>
+#include <linux/types.h>
+#include <linux/if_ether.h>
+#include <linux/etherdevice.h>
+#include <linux/notifier.h>
+#include <linux/completion.h>
+#include <linux/netdevice.h>
+#include <linux/of.h>
+#include <linux/of_platform.h>
+#include <linux/platform_device.h>
+#include <linux/dma-buf.h>
+
+#include <linux/tegra-capture-ivc.h>
+#include <soc/tegra/nvethernet-public.h>
+#include <soc/tegra/camrtc-capture-messages.h>
+#include <soc/tegra/camrtc-capture.h>
+
+#include <media/fusa-capture/capture-coe.h>
+#include <media/fusa-capture/capture-common.h>
+
+#define ETHER_PACKET_HDR_SIZE	64U
+
+
+/** Helper macros to get the lower and higher 32bits of 64bit address */
+#define L32(data)       ((uint32_t)((data) & 0xFFFFFFFFU))
+#define H32(data)       ((uint32_t)(((data) & 0xFFFFFFFF00000000UL) >> 32UL))
+
+/** HW OWN bit for the Rx desciptor in MGBE */
+#define RDES3_OWN	BIT(31)
+
+/** Corresponds to max number of Virtual DMA channels in MGBE device HW */
+#define MAX_HW_CHANS_PER_DEVICE	48U
+/** How many capture channels can actually be opened on each MGBE device */
+#define MAX_ACTIVE_CHANS_PER_DEVICE	8U
+#define MAX_NUM_COE_DEVICES	4U
+#define MAX_ACTIVE_COE_CHANNELS	(MAX_ACTIVE_CHANS_PER_DEVICE * MAX_NUM_COE_DEVICES)
+
+/** Size of a single Rx descriptor */
+#define MGBE_RXDESC_SIZE		16U
+/** Size of a Packet Info descriptor */
+#define MGBE_PKTINFO_DESC_SIZE		16U
+/** Max size of a buffer to be used to store Ethernet packet header (stripped from data payload) */
+#define COE_MAX_PKT_HEADER_SIZE		64U
+
+/** Maximum number of Rx descriptors in a Rx ring for a single channel */
+#define COE_MGBE_MAX_RXDESC_NUM		16384U
+/** Maximum number of descriptors in a Rx packet info ring for a single channel */
+#define COE_MGBE_MAX_PKTINFO_NUM	4096U
+
+/**
+ * @brief Invalid CoE channel ID; the channel is not initialized.
+ */
+#define CAPTURE_COE_CHANNEL_INVALID_ID	U32_C(0xFFFFFFFF)
+
+#define CAPTURE_COE_CHAN_INVALID_HW_ID	U8_C(0xFF)
+
+#define COE_CHAN_CAPTURE_QUEUE_LEN	32U
+/** Max number of physical DMA channel for each Eth controller */
+#define COE_MGBE_MAX_NUM_PDMA_CHANS	10U
+#define COE_MGBE_PDMA_CHAN_INVALID	COE_MGBE_MAX_NUM_PDMA_CHANS
+
+/** Total max size of all Rx descriptors rings for all possible channels */
+#define COE_TOTAL_RXDESCR_MEM_SIZE	roundup_pow_of_two( \
+	(COE_MGBE_MAX_RXDESC_NUM * MAX_ACTIVE_COE_CHANNELS * MGBE_RXDESC_SIZE) + \
+	 (COE_MGBE_MAX_PKTINFO_NUM * COE_MGBE_MAX_NUM_PDMA_CHANS * MAX_NUM_COE_DEVICES * \
+	  MGBE_PKTINFO_DESC_SIZE))
+
+/** State associated with a physical DMA channel of an Eth controller */
+struct coe_pdma_state {
+	/* Rx packet info memory DMA address for MGBE engine */
+	dma_addr_t rx_pktinfo_dma_mgbe;
+	/* Rx packet info memory DMA address for RCE engine */
+	dma_addr_t rx_pktinfo_dma_rce;
+};
+
+/** Rx descriptor shadow ring for MGBE */
+struct mgbe_rx_desc {
+	uint32_t rdes0;
+	uint32_t rdes1;
+	uint32_t rdes2;
+	uint32_t rdes3;
+};
+
+struct coe_state {
+	struct platform_device *pdev;
+
+	struct device *rtcpu_dev;
+	/* Platform device object for MGBE controller (not a netdevice) */
+	struct device *mgbe_dev;
+	/** An ID of a corresponding mgbe_dev */
+	u32 mgbe_id;
+
+	struct notifier_block netdev_nb;
+
+	struct list_head channels;
+	/* Number of Rx descriptors in a descriptors ring for each channel */
+	u16 rx_ring_size;
+	/* Number of Rx Packet Info descriptors */
+	u16 rx_pktinfo_ring_size;
+
+	/** MGBE DMA mapping of a memory area for Rx descriptors */
+	struct sg_table rx_pktinfo_mgbe_sgt;
+
+	/* Bitmap indicating which DMA channels of the device are used for camera */
+	DECLARE_BITMAP(dmachans_map, MAX_HW_CHANS_PER_DEVICE);
+	/** Track how VDMAs map to physical DMA (PDMA) */
+	u8 vdma2pdma_map[MAX_HW_CHANS_PER_DEVICE];
+	/* List entry in a global list of probed devices */
+	struct list_head device_entry;
+
+	/** State of PDMA channels */
+	struct coe_pdma_state pdmas[COE_MGBE_MAX_NUM_PDMA_CHANS];
+
+	/** Protect access to the state object */
+	struct mutex access_lock;
+
+	/** MGBE IRQ ID which must be handled by camera CPU */
+	u8 mgbe_irq_id;
+};
+
+struct coe_capreq_state_inhw {
+	struct capture_common_unpins unpins;
+	/**< Capture number passed with coe_ioctl_data_capture_req, assigned by a user
+	 * to track the capture number in userspace.
+	 * Valid range: [0, UINT32_MAX].
+	 */
+	u32 user_capture_id;
+};
+
+struct coe_capreq_state_unreported {
+	u32 capture_status;
+	u32 user_capture_id;
+	u64 eofTimestamp;
+	u64 sofTimestamp;
+	u32 errData;
+};
+
+/* State of a single CoE (Camera Over Ethernet) capture channel */
+struct coe_channel_state {
+	/* Device object for the channel, from device_create */
+	struct device *dev;
+	/* Pointer to a parent platform device */
+	struct coe_state *parent;
+	/* List entry to allow parent platform device to keep track of its channels */
+	struct list_head list_entry;
+	/* Network device servicing the channel (child of a &parent) */
+	struct net_device *netdev;
+
+	/* Serialize operations on the channel */
+	struct mutex channel_lock;
+
+	/* Ethernet engine HW DMA channel ID which services memory accesses for
+	 * that CoE channel */
+	u8 dma_chan;
+	/* Minor device ID, as registered with kernel (under /dev/ path) */
+	dev_t devt;
+	/* Channel ID assigned by RCE */
+	u32 rce_chan_id;
+
+	u8 sensor_mac_addr[ETH_HLEN];
+
+	/* Flag indicating whether the channel has been open()'ed by userspace */
+	bool opened;
+
+	/* Scratch space to store a response from RCE */
+	struct CAPTURE_CONTROL_MSG rce_resp_msg;
+	/* Serialize accessing RCE response rce_resp_msg */
+	struct mutex rce_msg_lock;
+	/* Indication that RCE has responded to a command and response data
+	 * is avaialble in rce_resp_msg
+	 */
+	struct completion rce_resp_ready;
+	/**< Completion for capture-control IVC response */
+	struct completion capture_resp_ready;
+
+	/* Rx descriptor ring memory DMA address for MGBE engine */
+	struct sg_table rx_desc_mgbe_sgt;
+	/* Rx descriptor ring memory DMA address for RCE engine */
+	dma_addr_t rx_desc_dma_rce;
+
+	/* Virtual pointer to Eth packet header memory, for each Rx descriptor */
+	void *rx_pkt_hdrs;
+	/* Rx packet headers memory DMA address for MGBE engine */
+	dma_addr_t rx_pkt_hdrs_dma_mgbe;
+
+	/* Virtual pointer to 'Prefilled' Eth shadow Rx ring memory */
+	void *rx_desc_shdw;
+	/* Rx desc shadow ring address for RCE engine */
+	dma_addr_t rx_desc_shdw_dma_rce;
+
+	/** "dummy" buffer which RCE can use as a scratch space */
+	struct capture_common_buf rx_dummy_buf;
+
+	/** A PDMA channel which services this CoE channel */
+	u8 pdma_id;
+
+	/**< Surface buffer management table */
+	struct capture_buffer_table *buf_ctx;
+
+	/**< Queue of capture requests waiting for capture completion from RCE */
+	struct coe_capreq_state_inhw capq_inhw[COE_CHAN_CAPTURE_QUEUE_LEN];
+	/**< Protect capq_inhw access */
+	struct mutex capq_inhw_lock;
+	/**< number of elements in capq_inhw */
+	u16 capq_inhw_pending;
+	/**< Next write index in capq_inhw */
+	u16 capq_inhw_wr;
+	/**< Next read index in capq_inhw */
+	u16 capq_inhw_rd;
+
+	/**< Captures reported by RCE, waiting to be reported to an app */
+	struct coe_capreq_state_unreported capq_appreport[COE_CHAN_CAPTURE_QUEUE_LEN];
+	/**< Protect capq_appreport access */
+	struct mutex capq_appreport_lock;
+	/**< number of elements in capq_appreport */
+	u16 capq_appreport_pending;
+	/**< Next write index in capq_appreport */
+	u16 capq_appreport_wr;
+	/**< Next read index in capq_appreport */
+	u16 capq_appreport_rd;
+};
+
+/**
+ * @brief Set up CoE channel resources and request FW channel allocation in RCE.
+ *
+ * @param[in]	ptr	Pointer to a struct @ref coe_ioctl_data_capture_setup
+ *
+ * @returns	0 (success), neg. errno (failure)
+ */
+#define COE_IOCTL_CAPTURE_SETUP \
+	_IOW('I', 1, struct coe_ioctl_data_capture_setup)
+
+/**
+ * @brief Perform an operation on the buffer as specified in IOCTL
+ * payload.
+ *
+ * @param[in]	ptr	Pointer to a struct @ref coe_ioctl_data_buffer_op
+ * @returns	0 (success), neg. errno (failure)
+ */
+#define COE_IOCTL_BUFFER_OP \
+	_IOW('I', 2, struct coe_ioctl_data_buffer_op)
+
+/**
+ * @brief Enqueue a capture request
+ *
+ * @param[in]	ptr	Pointer to a struct @ref coe_ioctl_data_capture_req
+ * @returns	0 (success), neg. errno (failure)
+ */
+#define COE_IOCTL_CAPTURE_REQ \
+	_IOW('I', 3, struct coe_ioctl_data_capture_req)
+
+/**
+ * Wait on the next completion of an enqueued frame, signalled by RCE.
+ *
+ * @note This call completes for the frame at the head of the FIFO queue, and is
+ * not necessarily for the most recently enqueued capture request.
+ *
+ * @param[in,out]	ptr	Pointer to a struct @ref coe_ioctl_data_capture_status
+ *
+ * @returns	0 (success), neg. errno (failure)
+ */
+#define COE_IOCTL_CAPTURE_STATUS \
+	_IOWR('I', 4, struct coe_ioctl_data_capture_status)
+
+/**
+ * @brief Get information about an open channel.
+ *
+ * @param[out]	ptr	Pointer to a struct @ref coe_ioctl_data_get_info
+ * @returns	0 (success), neg. errno (failure)
+ */
+#define COE_IOCTL_GET_INFO \
+	_IOR('I', 5, struct coe_ioctl_data_get_info)
+
+/* List of all CoE platform devices which were successfully probed */
+static LIST_HEAD(coe_device_list);
+/* Lock to protect the list of CoE platform devices */
+static DEFINE_MUTEX(coe_device_list_lock);
+
+static struct class *coe_channel_class;
+static int coe_channel_major;
+static struct coe_channel_state coe_channels_arr[MAX_ACTIVE_COE_CHANNELS];
+static DEFINE_MUTEX(coe_channels_arr_lock);
+
+/* RCE CPU manages Rx descriptors ring. RCE has Dcache and all access to Rx
+ * descriptors would require cache management on RCE side.
+ * Since single descriptor may not fill entire CACHELINE_SIZE - it's possible
+ * that descriptors are unintentianally correupted when RCE handles other
+ * descriptors on the same cache line.
+ * To avoid that RCE would use unacched access to descriptors. However, uncached
+ * mapping region can be configured only in chunks of power of two sizes and
+ * number of such mapping regions is very limited.
+ * Allocate a single large buffer to contain descriptor rings for all possible
+ * channels.
+ */
+static struct device *g_rtcpu_dev = NULL;
+static void *g_rx_descr_mem_area = NULL;
+static dma_addr_t g_rxdesc_mem_dma_rce;
+static struct sg_table g_rxdesc_rce_sgt;
+
+static inline struct coe_channel_state *coe_channel_arr_find_free(u32 * const arr_idx)
+{
+	u32 i;
+
+	for (i = 0U; i < ARRAY_SIZE(coe_channels_arr); i++) {
+		if (coe_channels_arr[i].dev == NULL) {
+			*arr_idx = i;
+			return &coe_channels_arr[i];
+		}
+	}
+
+	return NULL;
+}
+
+/*
+ * A callback to process RCE responses to commands issued through capture-control
+ * IVC channel (struct CAPTURE_CONTROL_MSG).
+ */
+static void coe_rce_cmd_control_response_cb(const void *ivc_resp, const void *pcontext)
+{
+	const struct CAPTURE_CONTROL_MSG *r = ivc_resp;
+	struct coe_channel_state * const ch = (struct coe_channel_state *)pcontext;
+
+	switch (r->header.msg_id) {
+	case CAPTURE_CHANNEL_SETUP_RESP:
+	case CAPTURE_COE_CHANNEL_RESET_RESP:
+	case CAPTURE_COE_CHANNEL_RELEASE_RESP:
+		ch->rce_resp_msg = *r;
+		complete(&ch->rce_resp_ready);
+		break;
+	default:
+		dev_err(ch->dev, "unknown RCE control resp 0x%x",
+			r->header.msg_id);
+		break;
+	}
+}
+
+static inline void coe_chan_buf_release(struct capture_buffer_table * const buf_ctx,
+					struct coe_capreq_state_inhw * const buf)
+{
+	struct capture_common_unpins * const unpins = &buf->unpins;
+
+	for (u32 i = 0U; i < unpins->num_unpins; i++) {
+		if (buf_ctx != NULL && unpins->data[i] != NULL)
+			put_mapping(buf_ctx, unpins->data[i]);
+		unpins->data[i] = NULL;
+	}
+	unpins->num_unpins = 0U;
+}
+
+/*
+ * A callback to process RCE responses to commands issued through capture
+ * IVC channel (struct CAPTURE_MSG).
+ */
+static void coe_rce_cmd_capture_response_cb(const void *ivc_resp,
+					    const void *pcontext)
+{
+	struct CAPTURE_MSG *msg = (struct CAPTURE_MSG *)ivc_resp;
+	struct coe_channel_state * const ch = (struct coe_channel_state *)pcontext;
+
+	if (ch == NULL || msg == NULL) {
+		pr_err_ratelimited("Invalid RCE msg\n");
+		return;
+	}
+
+	switch (msg->header.msg_id) {
+	case CAPTURE_COE_STATUS_IND:
+	{
+		struct coe_capreq_state_unreported *unrep;
+		u32 buf_idx;
+		u32 capture_status;
+		u32 user_capture_id;
+
+		buf_idx = msg->capture_coe_status_ind.buffer_index;
+		capture_status = msg->capture_coe_status_ind.capture_status;
+
+		mutex_lock(&ch->capq_inhw_lock);
+
+		if (ch->capq_inhw_pending == 0U) {
+			mutex_unlock(&ch->capq_inhw_lock);
+			return;
+		}
+
+		if (ch->capq_inhw_rd != buf_idx) {
+			dev_warn_ratelimited(ch->dev, "Unexpected capture buf %u (expected %u)",
+					    buf_idx, ch->capq_inhw_rd);
+			mutex_unlock(&ch->capq_inhw_lock);
+			return;
+		}
+
+		user_capture_id = ch->capq_inhw[buf_idx].user_capture_id;
+		coe_chan_buf_release(ch->buf_ctx, &ch->capq_inhw[buf_idx]);
+
+		ch->capq_inhw_pending--;
+		ch->capq_inhw_rd = (ch->capq_inhw_rd + 1U) % ARRAY_SIZE(ch->capq_inhw);
+
+		mutex_unlock(&ch->capq_inhw_lock);
+
+		mutex_lock(&ch->capq_appreport_lock);
+
+		if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
+			/* Channel was closed */
+			mutex_unlock(&ch->capq_appreport_lock);
+			return;
+		}
+
+		if (ch->capq_appreport_pending >= ARRAY_SIZE(ch->capq_appreport)) {
+			dev_warn_ratelimited(ch->dev, "No space to report capture %u",
+					     buf_idx);
+			mutex_unlock(&ch->capq_appreport_lock);
+			return;
+		}
+
+		unrep = &ch->capq_appreport[ch->capq_appreport_wr];
+		unrep->capture_status = capture_status;
+		unrep->user_capture_id = user_capture_id;
+		unrep->eofTimestamp = msg->capture_coe_status_ind.timestamp_eof_ns;
+		unrep->sofTimestamp = msg->capture_coe_status_ind.timestamp_sof_ns;
+		unrep->errData = 0U;
+
+		ch->capq_appreport_pending++;
+		ch->capq_appreport_wr =
+			(ch->capq_appreport_wr + 1U) % ARRAY_SIZE(ch->capq_appreport);
+
+		mutex_unlock(&ch->capq_appreport_lock);
+
+		complete(&ch->capture_resp_ready);
+
+		break;
+	}
+	default:
+		dev_err_ratelimited(ch->dev, "unknown RCE msg %u", msg->header.msg_id);
+		break;
+	}
+}
+
+static int coe_channel_open_on_rce(struct coe_channel_state *ch,
+		uint8_t sensor_mac_addr[ETH_ALEN],
+		uint8_t vlan_enable)
+{
+	struct CAPTURE_CONTROL_MSG control_desc;
+	struct capture_coe_channel_config *config =
+		&control_desc.channel_coe_setup_req.channel_config;
+	struct CAPTURE_CONTROL_MSG const * const resp = &ch->rce_resp_msg;
+	int ret;
+	u32 transaction;
+	unsigned long timeout = HZ;
+	u32 rce_chan_id = CAPTURE_COE_CHANNEL_INVALID_ID;
+
+	ret = tegra_capture_ivc_register_control_cb(&coe_rce_cmd_control_response_cb,
+						    &transaction, ch);
+	if (ret < 0) {
+		dev_err(ch->dev, "failed to register control callback: %d\n", ret);
+		return ret;
+	}
+
+	memset(&control_desc, 0, sizeof(control_desc));
+	control_desc.header.msg_id = CAPTURE_COE_CHANNEL_SETUP_REQ;
+	control_desc.header.transaction = transaction;
+
+	config->mgbe_instance_id = ch->parent->mgbe_id;
+	config->mgbe_irq_num = ch->parent->mgbe_irq_id;
+	config->dma_chan = ch->dma_chan;
+	config->pdma_chan_id = ch->pdma_id;
+	memcpy(config->mac_addr, sensor_mac_addr, ETH_ALEN);
+
+	config->rx_desc_ring_iova_mgbe = sg_dma_address(ch->rx_desc_mgbe_sgt.sgl);
+	config->rx_desc_ring_iova_rce = ch->rx_desc_dma_rce;
+	config->rx_desc_ring_mem_size = ch->parent->rx_ring_size * MGBE_RXDESC_SIZE;
+
+	config->rx_desc_shdw_iova_rce = ch->rx_desc_shdw_dma_rce;
+
+	config->rx_pkthdr_iova_mgbe = ch->rx_pkt_hdrs_dma_mgbe;
+	config->rx_pkthdr_mem_size = ch->parent->rx_ring_size * COE_MAX_PKT_HEADER_SIZE;
+
+	config->rx_pktinfo_iova_mgbe = ch->parent->pdmas[ch->pdma_id].rx_pktinfo_dma_mgbe;
+	config->rx_pktinfo_iova_rce = ch->parent->pdmas[ch->pdma_id].rx_pktinfo_dma_rce;
+	config->rx_pktinfo_mem_size = ch->parent->rx_pktinfo_ring_size * MGBE_PKTINFO_DESC_SIZE;
+
+	config->dummy_buf_dma = ch->rx_dummy_buf.iova;
+	config->dummy_buf_dma_size = ch->rx_dummy_buf.buf->size;
+
+	config->rxmem_base = g_rxdesc_mem_dma_rce;
+	config->rxmem_size = COE_TOTAL_RXDESCR_MEM_SIZE;
+
+	config->vlan_enable = vlan_enable;
+
+	mutex_lock(&ch->rce_msg_lock);
+
+	ret = tegra_capture_ivc_control_submit(&control_desc, sizeof(control_desc));
+	if (ret < 0) {
+		dev_err(ch->dev, "IVC control submit failed\n");
+		goto err;
+	}
+
+	timeout = wait_for_completion_timeout(&ch->rce_resp_ready, timeout);
+	if (timeout <= 0) {
+		dev_err(ch->dev, "capture control message timed out\n");
+		ret = -ETIMEDOUT;
+
+		goto err;
+	}
+
+	if (resp->header.msg_id != CAPTURE_CHANNEL_SETUP_RESP ||
+	    resp->header.transaction != transaction) {
+		dev_err(ch->dev, "%s: wrong msg id 0x%x transaction %u!\n", __func__,
+				resp->header.msg_id, resp->header.transaction);
+		ret = -EINVAL;
+		goto err;
+	};
+
+	if (resp->channel_setup_resp.result != CAPTURE_OK) {
+		dev_err(ch->dev, "%s: control failed, errno %d", __func__,
+			resp->channel_setup_resp.result);
+		ret = -EINVAL;
+		goto err;
+	}
+
+	rce_chan_id = resp->channel_setup_resp.channel_id;
+
+	mutex_unlock(&ch->rce_msg_lock);
+
+	ret = tegra_capture_ivc_notify_chan_id(rce_chan_id, transaction);
+	if (ret != 0) {
+		dev_err(ch->dev, "failed to update control callback\n");
+		tegra_capture_ivc_unregister_control_cb(transaction);
+		return ret;
+	}
+
+	ret = tegra_capture_ivc_register_capture_cb(
+			&coe_rce_cmd_capture_response_cb,
+			rce_chan_id, ch);
+	if (ret != 0) {
+		dev_err(ch->dev, "failed to register capture callback\n");
+		tegra_capture_ivc_unregister_control_cb(rce_chan_id);
+		return ret;
+	}
+
+	ch->rce_chan_id = rce_chan_id;
+
+	return 0;
+
+err:
+	mutex_unlock(&ch->rce_msg_lock);
+
+	tegra_capture_ivc_unregister_control_cb(transaction);
+
+	return ret;
+}
+
+static int coe_chan_rce_capture_req(struct coe_channel_state * const ch,
+				    u16 const buf_idx,
+				    u64 const buf_mgbe_iova,
+				    u32 const buf_len)
+{
+	struct CAPTURE_MSG rce_desc = {0U};
+	int ret;
+
+	rce_desc.header.msg_id = CAPTURE_COE_REQUEST;
+	rce_desc.header.channel_id = ch->rce_chan_id;
+	rce_desc.capture_coe_req.buffer_index = buf_idx;
+	rce_desc.capture_coe_req.buf_mgbe_iova = buf_mgbe_iova;
+	rce_desc.capture_coe_req.buf_len = buf_len;
+
+	ret = tegra_capture_ivc_capture_submit(&rce_desc, sizeof(rce_desc));
+	if (ret < 0) {
+		dev_err(ch->dev, "IVC capture submit failed\n");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int coe_ioctl_handle_capture_req(struct coe_channel_state * const ch,
+					const struct coe_ioctl_data_capture_req * const req)
+{
+	uint64_t mgbe_iova;
+	uint64_t buf_max_size;
+	int ret;
+	struct capture_common_unpins *unpins = NULL;
+
+	mutex_lock(&ch->capq_inhw_lock);
+
+	if (ch->capq_inhw_pending >= ARRAY_SIZE(ch->capq_inhw)) {
+		dev_err(ch->dev, "CAPTURE_REQ: Rx queue is full\n");
+		ret = -EAGAIN;
+		goto error;
+	}
+
+	if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
+		dev_err(ch->dev, "CAPTURE_REQ: chan not opened\n");
+		ret = -ENOTCONN;
+		goto error;
+	}
+
+	unpins = &ch->capq_inhw[ch->capq_inhw_wr].unpins;
+	ret = capture_common_pin_and_get_iova(ch->buf_ctx,
+					      req->mem_fd,
+					      req->mem_fd_offset,
+					      &mgbe_iova,
+					      &buf_max_size,
+					      unpins);
+
+	if (ret) {
+		dev_err(ch->dev, "get buf iova failed: %d\n", ret);
+		goto error;
+	}
+
+	if (req->buf_size > buf_max_size) {
+		dev_err(ch->dev, "CAPTURE_REQ: capture too long %u\n", req->buf_size);
+		ret = -ENOSPC;
+		goto error;
+	}
+
+	if (req->buf_size > ch->rx_dummy_buf.buf->size) {
+		dev_err(ch->dev, "CAPTURE_REQ: buf size > scratch buf %u\n", req->buf_size);
+		ret = -ENOSPC;
+		goto error;
+	}
+
+	if ((mgbe_iova >> 32U) != (ch->rx_dummy_buf.iova >> 32U)) {
+		dev_err(ch->dev, "Capture buf IOVA MSB 32 bits != scratch buf IOVA\n"
+			"0x%x != 0x%x\n",
+			(uint32_t)(mgbe_iova >> 32U),
+			(uint32_t)(ch->rx_dummy_buf.iova >> 32U));
+		ret = -EIO;
+		goto error;
+	}
+
+	ret = coe_chan_rce_capture_req(ch, ch->capq_inhw_wr, mgbe_iova, req->buf_size);
+	if (ret)
+		goto error;
+
+	ch->capq_inhw[ch->capq_inhw_wr].user_capture_id = req->capture_number;
+	ch->capq_inhw_pending++;
+	ch->capq_inhw_wr = (ch->capq_inhw_wr + 1U) % ARRAY_SIZE(ch->capq_inhw);
+
+	mutex_unlock(&ch->capq_inhw_lock);
+
+	return 0;
+
+error:
+	if (unpins && unpins->num_unpins != 0) {
+		u32 i;
+
+		for (i = 0U; i < unpins->num_unpins; i++) {
+			if (ch->buf_ctx != NULL && unpins->data[i] != NULL)
+				put_mapping(ch->buf_ctx, unpins->data[i]);
+		}
+		(void)memset(unpins, 0U, sizeof(*unpins));
+	}
+
+	mutex_unlock(&ch->capq_inhw_lock);
+
+	return ret;
+}
+
+static int coe_ioctl_handle_capture_status(struct coe_channel_state * const ch,
+					   struct coe_ioctl_data_capture_status * const req)
+{
+	int ret;
+	const s32 timeout_ms = (s32)req->timeout_ms;
+
+	if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
+		dev_err(ch->dev, "CAPTURE_STATUS: chan not opened\n");
+		return -ENOTCONN;
+	}
+
+	dev_dbg_ratelimited(ch->dev, "CAPTURE_STATUS num=%u timeout:%d ms\n",
+			    req->capture_number, timeout_ms);
+
+	/* negative timeout means wait forever */
+	if (timeout_ms < 0) {
+		ret = wait_for_completion_interruptible(&ch->capture_resp_ready);
+		if (ret == -ERESTARTSYS) {
+			dev_dbg_ratelimited(ch->dev, "capture status interrupted\n");
+			return -ETIMEDOUT;
+		}
+	} else {
+		ret = wait_for_completion_timeout(
+				&ch->capture_resp_ready,
+				msecs_to_jiffies(timeout_ms));
+		if (ret == 0) {
+			dev_dbg_ratelimited(ch->dev, "capture status timed out\n");
+			return -ETIMEDOUT;
+		}
+	}
+
+	if (ret < 0) {
+		dev_err_ratelimited(ch->dev, "wait for capture status failed\n");
+		return ret;
+	}
+
+	mutex_lock(&ch->capq_appreport_lock);
+
+	if (ch->capq_appreport_pending == 0) {
+		dev_warn_ratelimited(ch->dev, "No captures pending\n");
+		mutex_unlock(&ch->capq_appreport_lock);
+		return -ENODATA;
+	}
+
+	req->capture_status = ch->capq_appreport[ch->capq_appreport_rd].capture_status;
+	req->capture_number = ch->capq_appreport[ch->capq_appreport_rd].user_capture_id;
+	req->eofTimestamp = ch->capq_appreport[ch->capq_appreport_rd].eofTimestamp;
+	req->sofTimestamp = ch->capq_appreport[ch->capq_appreport_rd].sofTimestamp;
+	req->errData = ch->capq_appreport[ch->capq_appreport_rd].errData;
+	ch->capq_appreport_pending--;
+	ch->capq_appreport_rd = (ch->capq_appreport_rd + 1U) % ARRAY_SIZE(ch->capq_appreport);
+
+	mutex_unlock(&ch->capq_appreport_lock);
+
+	return 0;
+}
+
+static int coe_helper_map_rcebuf_to_dev(struct device * const dev,
+					struct sg_table * const sgt,
+					const size_t map_offset,
+					const size_t map_size)
+{
+	struct scatterlist *sg;
+	u32 i;
+	int ret;
+	size_t remaining;
+
+	ret = sg_alloc_table(sgt, 1U, GFP_KERNEL);
+	if (ret) {
+		dev_err(dev, "sg_alloc_table failed ret=%d\n", ret);
+		return ret;
+	}
+
+	remaining = map_offset;
+	for_each_sg(g_rxdesc_rce_sgt.sgl, sg, g_rxdesc_rce_sgt.orig_nents, i) {
+		if (sg->length > remaining) {
+			const size_t start = remaining;
+			const size_t sg_size = sg->length - start;
+
+			/* For now support only the case when entire per-MGBE pktinfo
+			 SG is located in one sg entry */
+			if (sg_size < map_size) {
+				dev_err(dev,
+					"Not enough space for mapping len=%zu\n", sg_size);
+				sg_free_table(sgt);
+				return -ENOSPC;
+			}
+
+			sg_set_page(&sgt->sgl[0], sg_page(sg), map_size, sg->offset + start);
+			break;
+		}
+
+		remaining -= sg->length;
+	}
+
+	ret = dma_map_sg(dev, sgt->sgl, sgt->orig_nents, DMA_BIDIRECTIONAL);
+	if (ret <= 0) {
+		dev_err(dev, "dma_map_sg failed ret=%d\n", ret);
+		sg_free_table(sgt);
+		return -ENOEXEC;
+	}
+
+	sgt->nents = ret;
+
+	dma_sync_sg_for_device(dev, sgt->sgl, sgt->nents, DMA_BIDIRECTIONAL);
+
+	return 0;
+}
+
+static int coe_chan_map_descr_to_mgbe(struct coe_channel_state * const ch)
+{
+	const size_t rxring_size_per_chan = COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE;
+	const size_t rxring_start_offset = MINOR(ch->devt) * rxring_size_per_chan;
+	int ret;
+
+	ret = coe_helper_map_rcebuf_to_dev(ch->parent->mgbe_dev, &ch->rx_desc_mgbe_sgt,
+					   rxring_start_offset, rxring_size_per_chan);
+	if (ret) {
+		dev_err(ch->dev, "Failed to map Rx descr ret=%d\n", ret);
+		return ret;
+	}
+
+	dev_info(ch->dev, "Rx descr MGBE addr=0x%llx nentr=%u\n",
+		 sg_dma_address(ch->rx_desc_mgbe_sgt.sgl), ch->rx_desc_mgbe_sgt.nents);
+
+	return 0;
+}
+
+static int
+coe_ioctl_handle_setup_channel(struct coe_channel_state * const ch,
+			       struct coe_ioctl_data_capture_setup *setup)
+{
+	struct nvether_coe_cfg g_coe_cfg;
+	struct nvether_per_coe_cfg per_coe_cfg;
+	struct net_device *ndev;
+	struct mgbe_rx_desc *rx_desc_shdw_ring;
+	struct coe_state *parent;
+	struct device *find_dev = NULL;
+	uint32_t dma_chan;
+	u8 pdma_chan;
+	int ret;
+
+	if (ch->rce_chan_id != CAPTURE_COE_CHANNEL_INVALID_ID ||
+		ch->buf_ctx != NULL) {
+		dev_err(ch->dev, "Chan already opened\n");
+		return -EBUSY;
+	}
+
+	if (MINOR(ch->devt) >= ARRAY_SIZE(coe_channels_arr)) {
+		dev_err(ch->dev, "Bad chan Minor\n");
+		return -EFAULT;
+	}
+
+	mutex_lock(&coe_device_list_lock);
+	list_for_each_entry(parent, &coe_device_list, device_entry) {
+		find_dev = device_find_child_by_name(parent->mgbe_dev,
+						     setup->if_name);
+		if (find_dev != NULL)
+			break;
+
+	}
+	mutex_unlock(&coe_device_list_lock);
+
+	if (find_dev == NULL) {
+		dev_err(ch->dev, "Can't find netdev %s\n", setup->if_name);
+		return -ENODEV;
+	}
+
+	ndev = to_net_dev(find_dev);
+
+	/* Check if the network interface is UP */
+	if (!netif_running(ndev)) {
+		dev_err(ch->dev, "Network interface %s is not UP\n",
+			netdev_name(ndev));
+		put_device(find_dev);
+		return -ENETDOWN;
+	}
+
+	dma_chan = find_first_bit(parent->dmachans_map, MAX_HW_CHANS_PER_DEVICE);
+	if (dma_chan >= MAX_HW_CHANS_PER_DEVICE) {
+		dev_err(&parent->pdev->dev,
+			"No DMA chans left %s\n", setup->if_name);
+		put_device(find_dev);
+		return -ENOENT;
+	}
+
+	pdma_chan = parent->vdma2pdma_map[dma_chan];
+	if (pdma_chan >= ARRAY_SIZE(parent->pdmas)) {
+		dev_err(&parent->pdev->dev, "Bad PDMA chan %u\n", pdma_chan);
+		put_device(find_dev);
+		return -EFAULT;
+	}
+
+	ret = device_move(ch->dev, &parent->pdev->dev, DPM_ORDER_NONE);
+	if (ret) {
+		dev_err(ch->dev, "Can't move state\n");
+		put_device(find_dev);
+		return ret;
+	}
+
+	ch->parent = parent;
+	/* Store netdev reference - it will be released in coe_channel_close() */
+	ch->netdev = ndev;
+	ch->dma_chan = dma_chan;
+	ch->pdma_id = pdma_chan;
+	clear_bit(dma_chan, parent->dmachans_map);
+	list_add(&ch->list_entry, &parent->channels);
+	reinit_completion(&ch->capture_resp_ready);
+
+	ret = coe_chan_map_descr_to_mgbe(ch);
+	if (ret != 0)
+		return ret;
+
+	ch->buf_ctx = create_buffer_table(ch->parent->mgbe_dev);
+	if (ch->buf_ctx == NULL) {
+		dev_err(ch->dev, "Failed to alloc buffers table\n");
+		return -ENOMEM;
+	}
+
+	g_coe_cfg.coe_enable = COE_ENABLE;
+
+	if (setup->vlan_enable == COE_VLAN_ENABLE) {
+		g_coe_cfg.vlan_enable = COE_VLAN_ENABLE;
+		g_coe_cfg.coe_hdr_offset = COE_MACSEC_HDR_OFFSET;
+	} else {
+		g_coe_cfg.vlan_enable = COE_VLAN_DISABLE;
+		g_coe_cfg.coe_hdr_offset = COE_MACSEC_HDR_VLAN_DISABLE_OFFSET;
+	}
+
+	ret = nvether_coe_config(ndev, &g_coe_cfg);
+	if (ret != 0) {
+		dev_err(ch->dev, "COE config failed for ch %u\n", ch->dma_chan);
+		return ret;
+	}
+
+	per_coe_cfg.lc1 = COE_MACSEC_SFT_LC1;
+	per_coe_cfg.lc2 = COE_MACSEC_SFT_LC2;
+	ret = nvether_coe_chan_config(ndev, ch->dma_chan, &per_coe_cfg);
+	if (ret != 0) {
+		dev_err(ch->dev, "Failed to setup line counters %u\n", ch->dma_chan);
+		return ret;
+	}
+
+	ether_addr_copy(ch->sensor_mac_addr, setup->sensor_mac_addr);
+
+	ch->rx_pkt_hdrs = dma_alloc_coherent(ch->parent->mgbe_dev,
+		ch->parent->rx_ring_size * COE_MAX_PKT_HEADER_SIZE,
+		&ch->rx_pkt_hdrs_dma_mgbe,
+		GFP_KERNEL | __GFP_ZERO);
+	if (ch->rx_pkt_hdrs == NULL) {
+		dev_err(ch->dev, "Rx pkt headers alloc failed\n");
+		return -ENOMEM;
+	}
+	ch->rx_desc_shdw = dma_alloc_coherent(ch->parent->rtcpu_dev,
+					      COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE,
+					      &ch->rx_desc_shdw_dma_rce,
+					      GFP_KERNEL);
+	if (ch->rx_desc_shdw == NULL) {
+		dev_err(ch->dev, "Rx desc shadow ring alloc failed\n");
+		return -ENOMEM;
+	}
+
+	/* Pre-fill the shadow Rx desc ring with the header buffers */
+	rx_desc_shdw_ring = (struct mgbe_rx_desc *) ch->rx_desc_shdw;
+	for (uint32_t i = 0; i < COE_MGBE_MAX_RXDESC_NUM; i++) {
+		rx_desc_shdw_ring[i].rdes0 = L32(ch->rx_pkt_hdrs_dma_mgbe + (i * ETHER_PACKET_HDR_SIZE));
+		rx_desc_shdw_ring[i].rdes1 = H32(ch->rx_pkt_hdrs_dma_mgbe + (i * ETHER_PACKET_HDR_SIZE));
+		rx_desc_shdw_ring[i].rdes2 = 0U;
+		rx_desc_shdw_ring[i].rdes3 = 0U;
+		rx_desc_shdw_ring[i].rdes3 |= RDES3_OWN;
+
+	}
+
+	/* pin the capture descriptor ring buffer */
+	ret = capture_common_pin_memory(ch->parent->mgbe_dev,
+					setup->scratchBufMem,
+					&ch->rx_dummy_buf);
+	if (ret < 0) {
+		dev_err(ch->dev, "Rx dummy buf map failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = coe_channel_open_on_rce(ch, setup->sensor_mac_addr, setup->vlan_enable);
+	if (ret)
+		return ret;
+
+	dev_info(&parent->pdev->dev, "CoE chan added %s dmachan=%u num_desc=%u\n",
+		 netdev_name(ndev), ch->dma_chan, ch->parent->rx_ring_size);
+
+	return 0;
+}
+
+static long coe_fop_channel_ioctl(
+	struct file *file,
+	unsigned int cmd,
+	unsigned long arg)
+{
+	struct coe_channel_state *ch = file->private_data;
+	void __user *ptr = (void __user *)arg;
+	long ret;
+
+	if (ch == NULL || ch->dev == NULL) {
+		pr_err("CoE IOCTL invalid channel\n");
+		return -EINVAL;
+	}
+
+	if (_IOC_NR(cmd) != _IOC_NR(COE_IOCTL_CAPTURE_SETUP)) {
+		if (ch->parent == NULL || ch->netdev == NULL) {
+			dev_err(ch->dev, "CoE channel is not set up\n");
+			return -ENOTCONN;
+		}
+	}
+
+	switch (_IOC_NR(cmd)) {
+	case _IOC_NR(COE_IOCTL_CAPTURE_SETUP):
+	{
+		struct coe_ioctl_data_capture_setup setup;
+
+		if (copy_from_user(&setup, ptr, sizeof(setup))) {
+			return -EFAULT;
+		}
+
+		ret = coe_ioctl_handle_setup_channel(ch, &setup);
+		if (ret != 0)
+			return ret;
+		break;
+	}
+	case _IOC_NR(COE_IOCTL_BUFFER_OP):
+	{
+		struct coe_ioctl_data_buffer_op req;
+
+		ret = copy_from_user(&req, ptr, sizeof(req));
+		if (ret != 0)
+			return ret;
+
+		mutex_lock(&ch->channel_lock);
+		if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
+			dev_err(ch->dev, "BUFFER_OP: chan not opened\n");
+			mutex_unlock(&ch->channel_lock);
+			return -ENOTCONN;
+		}
+
+		ret = capture_buffer_request(ch->buf_ctx, req.mem, req.flag);
+		if (ret < 0) {
+			dev_err(ch->dev, "CoE buffer op failed flag=0x%x: %ld\n",
+				req.flag, ret);
+			mutex_unlock(&ch->channel_lock);
+			return ret;
+		}
+
+		mutex_unlock(&ch->channel_lock);
+
+		dev_dbg(ch->dev, "CoE buffer op OK flag=0x%x\n", req.flag);
+		break;
+	}
+	case _IOC_NR(COE_IOCTL_CAPTURE_REQ):
+	{
+		struct coe_ioctl_data_capture_req req;
+
+		ret = copy_from_user(&req, ptr, sizeof(req));
+		if (ret != 0)
+			return ret;
+
+		ret = coe_ioctl_handle_capture_req(ch, &req);
+		break;
+	}
+	case _IOC_NR(COE_IOCTL_CAPTURE_STATUS):
+	{
+		struct coe_ioctl_data_capture_status req;
+
+		ret = copy_from_user(&req, ptr, sizeof(req));
+		if (ret != 0)
+			return ret;
+
+		ret = coe_ioctl_handle_capture_status(ch, &req);
+		if (ret < 0) {
+			dev_err(ch->dev, "CoE capture status failed: %ld\n",
+				ret);
+			return ret;
+		}
+
+		ret = copy_to_user(ptr, &req, sizeof(req));
+		if (ret != 0)
+			return ret;
+
+		break;
+	}
+	case _IOC_NR(COE_IOCTL_GET_INFO):
+	{
+		struct coe_ioctl_data_get_info ret_info = {0U};
+
+		if (ch->dma_chan == CAPTURE_COE_CHAN_INVALID_HW_ID) {
+			dev_err(ch->dev, "CoE chan HW ID not set yet\n");
+			return -EAGAIN;
+		}
+
+		ret_info.channel_number = ch->dma_chan;
+		ret = copy_to_user(ptr, &ret_info, sizeof(ret_info));
+		if (ret != 0)
+			return ret;
+		break;
+	}
+	default:
+		dev_err(ch->dev, "Unknown IOCTL 0x%x\n", _IOC_NR(cmd));
+		ret = -EIO;
+		break;
+	}
+
+	return ret;
+}
+
+static int coe_fop_channel_open(
+	struct inode *inode,
+	struct file *file)
+{
+	struct coe_channel_state *ch;
+	unsigned int chan_id = iminor(inode);
+	int ret;
+
+	if (chan_id >= ARRAY_SIZE(coe_channels_arr)) {
+		pr_err("CoE: open chan invalid minor %u\n", chan_id);
+		return -ENXIO;
+	}
+
+	if (mutex_lock_interruptible(&coe_channels_arr_lock))
+		return -ERESTARTSYS;
+
+	ch = &coe_channels_arr[chan_id];
+
+	if (ch->devt != inode->i_rdev) {
+		pr_err("CoE: open chan mismatch devt %u!=%u\n",
+			ch->devt, inode->i_rdev);
+		ret = -ENXIO;
+		goto mutex_unlock;
+	}
+
+	if (ch->dev == NULL) {
+		pr_err("CoE: open chan bad state\n");
+		ret = -EFAULT;
+		goto mutex_unlock;
+	}
+
+	if (ch->opened) {
+		dev_dbg(ch->dev, "CoE channel is busy\n");
+		ret = -EBUSY;
+		goto mutex_unlock;
+	}
+
+	file->private_data = ch;
+	ch->opened = true;
+
+	ret = nonseekable_open(inode, file);
+
+mutex_unlock:
+	mutex_unlock(&coe_channels_arr_lock);
+	return ret;
+}
+
+static int coe_channel_reset_rce(struct coe_channel_state *ch)
+{
+	struct CAPTURE_CONTROL_MSG control_desc;
+	struct CAPTURE_CONTROL_MSG const * const resp = &ch->rce_resp_msg;
+	///@todo A capture reset barrier ind message is also needed
+	///      This would be similar to how both VI and ISP handle reset
+	int ret;
+	unsigned long timeout = HZ;
+
+	if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
+		dev_dbg(ch->dev, "%s: CoE channel not set up\n", __func__);
+		return 0;
+	}
+
+	dev_info(ch->dev, "Reset CoE chan rce %u, rce_chan_id %u\n",
+			MINOR(ch->devt), ch->rce_chan_id);
+
+	memset(&control_desc, 0, sizeof(control_desc));
+	control_desc.header.msg_id = CAPTURE_COE_CHANNEL_RESET_REQ;
+	control_desc.header.channel_id = ch->rce_chan_id;
+
+	mutex_lock(&ch->rce_msg_lock);
+
+	ret = tegra_capture_ivc_control_submit(&control_desc, sizeof(control_desc));
+	if (ret < 0) {
+		dev_info(ch->dev, "IVC control submit failed\n");
+		goto mutex_unlock;
+	}
+
+	timeout = wait_for_completion_timeout(&ch->rce_resp_ready, timeout);
+	if (timeout <= 0) {
+		dev_info(ch->dev, "capture control message timed out\n");
+		ret = -ETIMEDOUT;
+		goto mutex_unlock;
+	}
+
+	if (resp->header.msg_id != CAPTURE_COE_CHANNEL_RESET_RESP) {
+		dev_info(ch->dev, "%s: wrong msg id 0x%x\n", __func__, resp->header.msg_id);
+		ret = -EINVAL;
+		goto mutex_unlock;
+	};
+
+	if (resp->channel_coe_reset_resp.result != CAPTURE_OK) {
+		dev_info(ch->dev, "%s: control failed, errno %d", __func__,
+			resp->channel_coe_reset_resp.result);
+		ret = -EINVAL;
+		goto mutex_unlock;
+	}
+
+mutex_unlock:
+	mutex_unlock(&ch->rce_msg_lock);
+
+	return ret;
+}
+
+///@todo refactor reset and release to use common code to send IVC
+static int coe_channel_release_rce(struct coe_channel_state *ch)
+{
+	struct CAPTURE_CONTROL_MSG control_desc;
+	struct CAPTURE_CONTROL_MSG const * const resp = &ch->rce_resp_msg;
+	int ret;
+	unsigned long timeout = HZ;
+
+	if (ch->rce_chan_id == CAPTURE_COE_CHANNEL_INVALID_ID) {
+		dev_dbg(ch->dev, "%s: CoE channel not set up\n", __func__);
+		return 0;
+	}
+
+	dev_info(ch->dev, "Release CoE chan rce %u, rce_chan_id %u\n",
+		 MINOR(ch->devt), ch->rce_chan_id);
+
+	memset(&control_desc, 0, sizeof(control_desc));
+	control_desc.header.msg_id = CAPTURE_COE_CHANNEL_RELEASE_REQ;
+	control_desc.header.channel_id = ch->rce_chan_id;
+
+	mutex_lock(&ch->rce_msg_lock);
+
+	ret = tegra_capture_ivc_control_submit(&control_desc, sizeof(control_desc));
+	if (ret < 0) {
+		dev_info(ch->dev, "IVC control submit failed\n");
+		goto mutex_unlock;
+	}
+
+	timeout = wait_for_completion_timeout(&ch->rce_resp_ready, timeout);
+	if (timeout <= 0) {
+		dev_info(ch->dev, "capture control message timed out\n");
+		ret = -ETIMEDOUT;
+		goto mutex_unlock;
+	}
+
+	if (resp->header.msg_id != CAPTURE_COE_CHANNEL_RELEASE_RESP) {
+		dev_info(ch->dev, "%s: wrong msg id 0x%x\n", __func__, resp->header.msg_id);
+		ret = -EINVAL;
+		goto mutex_unlock;
+	};
+
+	if (resp->channel_coe_release_resp.result != CAPTURE_OK) {
+		dev_info(ch->dev, "%s: control failed, errno %d", __func__,
+			resp->channel_coe_reset_resp.result);
+		ret = -EINVAL;
+		goto mutex_unlock;
+	}
+
+mutex_unlock:
+	mutex_unlock(&ch->rce_msg_lock);
+
+	return ret;
+}
+
+static int coe_channel_close(struct coe_channel_state *ch)
+{
+	if (!ch->opened)
+		return 0;
+
+	dev_info(ch->dev, "Closing CoE chan %u\n", MINOR(ch->devt));
+
+	mutex_lock(&ch->channel_lock);
+	mutex_lock(&ch->capq_inhw_lock);
+
+	coe_channel_reset_rce(ch);
+
+	for (u32 buf_idx = 0U; buf_idx < ARRAY_SIZE(ch->capq_inhw); buf_idx++) {
+		coe_chan_buf_release(ch->buf_ctx, &ch->capq_inhw[buf_idx]);
+	}
+
+	ch->capq_inhw_pending = 0U;
+	ch->capq_inhw_wr = 0U;
+	ch->capq_inhw_rd = 0U;
+
+	coe_channel_release_rce(ch);
+
+	if (ch->rce_chan_id != CAPTURE_COE_CHANNEL_INVALID_ID) {
+		tegra_capture_ivc_unregister_capture_cb(ch->rce_chan_id);
+		tegra_capture_ivc_unregister_control_cb(ch->rce_chan_id);
+
+		ch->rce_chan_id = CAPTURE_COE_CHANNEL_INVALID_ID;
+	}
+
+	mutex_unlock(&ch->capq_inhw_lock);
+
+	mutex_lock(&ch->capq_appreport_lock);
+
+	for (u32 buf_idx = 0U; buf_idx < ARRAY_SIZE(ch->capq_appreport); buf_idx++) {
+		ch->capq_appreport[buf_idx].capture_status = CAPTURE_STATUS_UNKNOWN;
+	}
+
+	ch->capq_appreport_pending = 0U;
+	ch->capq_appreport_rd = 0U;
+	ch->capq_appreport_wr = 0U;
+	complete_all(&ch->capture_resp_ready);
+
+	mutex_unlock(&ch->capq_appreport_lock);
+
+	if (ch->buf_ctx != NULL) {
+		destroy_buffer_table(ch->buf_ctx);
+		ch->buf_ctx = NULL;
+	}
+
+	capture_common_unpin_memory(&ch->rx_dummy_buf);
+
+	if (ch->rx_pkt_hdrs != NULL) {
+		dma_free_coherent(ch->parent->mgbe_dev,
+				  ch->parent->rx_ring_size * COE_MAX_PKT_HEADER_SIZE,
+				  ch->rx_pkt_hdrs, ch->rx_pkt_hdrs_dma_mgbe);
+		ch->rx_pkt_hdrs = NULL;
+	}
+
+	if (ch->rx_desc_shdw != NULL) {
+		dma_free_coherent(ch->parent->rtcpu_dev,
+				  COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE,
+				  ch->rx_desc_shdw, ch->rx_desc_shdw_dma_rce);
+	}
+
+	if (ch->netdev) {
+		put_device(&ch->netdev->dev);
+		ch->netdev = NULL;
+	}
+
+	if (ch->rx_desc_mgbe_sgt.sgl != NULL) {
+		dma_unmap_sg(ch->parent->mgbe_dev, ch->rx_desc_mgbe_sgt.sgl,
+			     ch->rx_desc_mgbe_sgt.orig_nents, DMA_BIDIRECTIONAL);
+		sg_free_table(&ch->rx_desc_mgbe_sgt);
+	}
+
+	if (ch->parent) {
+		device_move(ch->dev, NULL, DPM_ORDER_NONE);
+		set_bit(ch->dma_chan, ch->parent->dmachans_map);
+		list_del(&ch->list_entry);
+		ch->parent = NULL;
+		ch->dma_chan = CAPTURE_COE_CHAN_INVALID_HW_ID;
+	}
+
+	ch->opened = false;
+	mutex_unlock(&ch->channel_lock);
+
+	return 0;
+}
+
+static int coe_fop_channel_release(
+	struct inode *inode,
+	struct file *file)
+{
+	struct coe_channel_state *ch = file->private_data;
+
+	file->private_data = NULL;
+
+	if (ch == NULL || ch->dev == NULL) {
+		return 0;
+	}
+
+	dev_info(ch->dev, "%s\n", __func__);
+
+	return coe_channel_close(ch);
+}
+
+static const struct file_operations coe_channel_fops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.unlocked_ioctl = coe_fop_channel_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = coe_fop_channel_ioctl,
+#endif
+	.open = coe_fop_channel_open,
+	.release = coe_fop_channel_release,
+};
+
+static void coe_netdev_event_handle(struct coe_state * const s,
+		unsigned long event, struct net_device *event_dev)
+{
+	dev_info(&s->pdev->dev, "netdev event %lu dev %s\n",
+		event, netdev_name(event_dev));
+
+	switch (event) {
+	case NETDEV_UP:
+		/* TODO can do sensor discovery here */
+		break;
+	case NETDEV_DOWN:
+		break;
+	default:
+		break;
+	}
+}
+
+static int rtcpu_coe_netdev_event(struct notifier_block *this,
+			     unsigned long event, void *ptr)
+{
+	struct net_device *event_dev;
+	struct coe_state * const s =
+			container_of(this, struct coe_state, netdev_nb);
+
+	if (ptr == NULL)
+		return NOTIFY_DONE;
+
+	event_dev = netdev_notifier_info_to_dev(ptr);
+	if (event_dev == NULL)
+		return NOTIFY_DONE;
+
+	if (s->mgbe_dev == event_dev->dev.parent)
+		coe_netdev_event_handle(s, event, event_dev);
+
+	return NOTIFY_DONE;
+}
+
+static struct device *camrtc_coe_get_linked_device(
+	const struct device *dev, char const *name, int index)
+{
+	struct device_node *np;
+	struct platform_device *pdev;
+
+	np = of_parse_phandle(dev->of_node, name, index);
+	if (np == NULL)
+		return NULL;
+
+	pdev = of_find_device_by_node(np);
+	of_node_put(np);
+
+	if (pdev == NULL) {
+		dev_warn(dev, "%s[%u] node has no device\n", name, index);
+		return NULL;
+	}
+
+	return &pdev->dev;
+}
+
+static int coe_mgbe_init_pdmas(struct coe_state * const s)
+{
+	struct device_node *vm_node;
+	struct device_node *temp;
+	u32 num_of_pdma;
+	int ret;
+	unsigned int node = 0;
+
+	vm_node = of_parse_phandle(s->mgbe_dev->of_node,
+				   "nvidia,vm-vdma-config", 0);
+	if (vm_node == NULL) {
+		dev_err(&s->pdev->dev, "failed to found VDMA configuration\n");
+		return -ENOMEM;
+	}
+
+	ret = of_property_read_u32(vm_node, "nvidia,pdma-num", &num_of_pdma);
+	if (ret != 0) {
+		dev_err(&s->pdev->dev, "failed to get number of PDMA (%d)\n",
+			ret);
+		dev_info(&s->pdev->dev, "Using number of PDMA as 1\n");
+		num_of_pdma = 1U;
+	}
+
+	if (num_of_pdma > COE_MGBE_MAX_NUM_PDMA_CHANS) {
+		dev_err(&s->pdev->dev, "Invalid Num. of PDMA's %u\n", num_of_pdma);
+		return -EINVAL;
+	}
+
+	ret = of_get_child_count(vm_node);
+	if (ret != (int)num_of_pdma) {
+		dev_err(&s->pdev->dev,
+			"Mismatch in num_of_pdma and VDMA config DT nodes\n");
+		return ret;
+	}
+
+	for_each_child_of_node(vm_node, temp) {
+		u32 pdma_chan;
+		u32 num_vdma_chans;
+		u32 vdma_chans[MAX_HW_CHANS_PER_DEVICE];
+
+		if (node == num_of_pdma)
+			break;
+
+		ret = of_property_read_u32(temp, "nvidia,pdma-chan", &pdma_chan);
+		if (ret != 0) {
+			dev_err(&s->pdev->dev, "failed to read PDMA ID\n");
+			return ret;
+		}
+
+		if (pdma_chan >= ARRAY_SIZE(s->pdmas)) {
+			dev_err(&s->pdev->dev, "Invalid PDMA ID %u\n", pdma_chan);
+			return -EINVAL;
+		}
+
+		ret = of_property_read_u32(temp, "nvidia,num-vdma-channels", &num_vdma_chans);
+		if (ret != 0) {
+			dev_err(&s->pdev->dev,
+				"failed to read number of VDMA channels\n");
+			return ret;
+		}
+
+		if (num_vdma_chans >= ARRAY_SIZE(vdma_chans)) {
+			dev_err(&s->pdev->dev, "Invalid num of VDMAs %u\n", num_vdma_chans);
+			return -EINVAL;
+		}
+
+		ret = of_property_read_u32_array(temp, "nvidia,vdma-channels",
+						 vdma_chans, num_vdma_chans);
+		if (ret != 0) {
+			dev_err(&s->pdev->dev, "failed to get VDMA channels\n");
+			return ret;
+		}
+
+		for (u32 i = 0U; i < num_vdma_chans; i++) {
+			if (vdma_chans[i] >= ARRAY_SIZE(s->vdma2pdma_map)) {
+				dev_err(&s->pdev->dev, "Bad VDMA ID %u\n", vdma_chans[i]);
+				return -EINVAL;
+			}
+
+			s->vdma2pdma_map[vdma_chans[i]] = pdma_chan;
+		}
+	}
+
+	return 0;
+}
+
+static int coe_alloc_rx_descr_mem_area(struct coe_state * const s)
+{
+	const size_t alloc_size = COE_TOTAL_RXDESCR_MEM_SIZE;
+	int ret;
+	dma_addr_t mgbe_addr;
+	dma_addr_t rce_addr;
+	dma_addr_t alloc_align_offset;
+	dma_addr_t pib_base_offset;
+	size_t pktinfo_size_per_mgbe;
+	dma_addr_t pib_start_offset;
+
+	mutex_lock(&coe_device_list_lock);
+
+	if (g_rx_descr_mem_area != NULL) {
+		if (g_rtcpu_dev != s->rtcpu_dev) {
+			mutex_unlock(&coe_device_list_lock);
+			dev_err(&s->pdev->dev, "Multiple RCE CPUs not supported\n");
+			return -ENOTSUPP;
+		}
+	} else {
+		g_rx_descr_mem_area = dma_alloc_coherent(s->rtcpu_dev,
+							alloc_size,
+							&g_rxdesc_mem_dma_rce,
+							GFP_KERNEL);
+		if (g_rx_descr_mem_area == NULL) {
+			mutex_unlock(&coe_device_list_lock);
+			dev_err(&s->pdev->dev, "Failed to allocate RX descriptor memory\n");
+			return -ENOMEM;
+		}
+
+		/* Allocation must be aligned to a region size and must be power of two.
+		 * TODO in case this check fails - need to allocate twice as much
+		 * memory (alloc_size + alloc_size - 1) and then align base RCE address
+		 * to a required boundary.
+		 */
+		if (g_rxdesc_mem_dma_rce != ALIGN(g_rxdesc_mem_dma_rce, alloc_size)) {
+			dma_free_coherent(s->rtcpu_dev, alloc_size,
+					  g_rx_descr_mem_area,
+					  g_rxdesc_mem_dma_rce);
+			g_rx_descr_mem_area = NULL;
+			mutex_unlock(&coe_device_list_lock);
+			dev_err(&s->pdev->dev,
+				"Wrong RCE Rx desc addr alignment 0x%llx size=%lu\n",
+				g_rxdesc_mem_dma_rce, alloc_size);
+			return -EFAULT;
+		}
+
+		ret = dma_get_sgtable(s->rtcpu_dev, &g_rxdesc_rce_sgt,
+				g_rx_descr_mem_area,
+				g_rxdesc_mem_dma_rce,
+				alloc_size);
+		if (ret < 0) {
+			dma_free_coherent(s->rtcpu_dev, alloc_size,
+					  g_rx_descr_mem_area,
+					  g_rxdesc_mem_dma_rce);
+			g_rx_descr_mem_area = NULL;
+			mutex_unlock(&coe_device_list_lock);
+			dev_err(&s->pdev->dev, "dma_get_sgtable for RCE failed ret=%d\n", ret);
+			return ret;
+		}
+
+		g_rtcpu_dev = s->rtcpu_dev;
+
+		dev_info(&s->pdev->dev, "Rx descr RCE addr=0x%llx len=%lu\n",
+			g_rxdesc_mem_dma_rce, alloc_size);
+	}
+
+	mutex_unlock(&coe_device_list_lock);
+
+	/* Offset from the beginning of allocated Rx descr area where RCE MPU region starts */
+	alloc_align_offset = ALIGN(g_rxdesc_mem_dma_rce, alloc_size) - g_rxdesc_mem_dma_rce;
+	/* Offset from start of Rx mem area where PktInfo bufs portion begins */
+	pib_base_offset = alloc_align_offset +
+		(MAX_ACTIVE_COE_CHANNELS * COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE);
+	pktinfo_size_per_mgbe = COE_MGBE_MAX_PKTINFO_NUM *
+		COE_MGBE_MAX_NUM_PDMA_CHANS * MGBE_PKTINFO_DESC_SIZE;
+	/* Offset to Rx mem aread dedicated to Rx PackeInfo bufs for the specific MGBE ID */
+	pib_start_offset = pib_base_offset + s->mgbe_id * pktinfo_size_per_mgbe;
+
+	ret = coe_helper_map_rcebuf_to_dev(s->mgbe_dev, &s->rx_pktinfo_mgbe_sgt,
+					   pib_start_offset, pktinfo_size_per_mgbe);
+	if (ret) {
+		dev_err(&s->pdev->dev, "Failed to map Pktinfo ret=%d\n", ret);
+		return ret;
+	}
+
+	mgbe_addr = sg_dma_address(s->rx_pktinfo_mgbe_sgt.sgl);
+	rce_addr = g_rxdesc_mem_dma_rce + pib_start_offset;
+
+	dev_info(&s->pdev->dev, "Rx pktinfo MGBE addr=0x%llx nentr=%u\n",
+		 mgbe_addr, s->rx_pktinfo_mgbe_sgt.nents);
+
+	/* Initialize addresses for all Physical DMA channels */
+	for (u32 pdma_id = 0U; pdma_id < ARRAY_SIZE(s->pdmas); pdma_id++) {
+		struct coe_pdma_state * const pdma = &s->pdmas[pdma_id];
+
+		pdma->rx_pktinfo_dma_rce = rce_addr;
+		pdma->rx_pktinfo_dma_mgbe = mgbe_addr;
+		rce_addr += COE_MGBE_MAX_PKTINFO_NUM * MGBE_PKTINFO_DESC_SIZE;
+		mgbe_addr += COE_MGBE_MAX_PKTINFO_NUM * MGBE_PKTINFO_DESC_SIZE;
+	}
+
+	return 0;
+}
+
+static int32_t coe_mgbe_parse_dt_dmachans(struct coe_state * const s,
+					  u32 * const vm_chans,
+					  size_t max_num_chans)
+{
+	struct device_node *vm_node;
+	struct device_node *temp;
+	u32 vm_irq_id = 0U;
+	int ret = 0;
+	u32 num_vm_chans;
+
+	vm_node = of_parse_phandle(s->mgbe_dev->of_node,
+				   "nvidia,vm-irq-config", 0);
+	if (vm_node == NULL) {
+		dev_err(&s->pdev->dev, "failed to found VM IRQ config\n");
+		return -ENOMEM;
+	}
+
+	for_each_child_of_node(vm_node, temp) {
+		bool isCoE;
+
+		isCoE = of_property_read_bool(temp, "nvidia,camera-over-eth");
+		if (!isCoE) {
+			continue;
+		}
+
+		ret = of_property_read_u32(temp, "nvidia,vm-num", &vm_irq_id);
+		if (ret != 0) {
+			dev_err(&s->pdev->dev, "failed to read VM Number\n");
+			break;
+		}
+
+		ret = of_property_read_u32(temp, "nvidia,num-vm-channels",
+					&num_vm_chans);
+		if (ret != 0) {
+			dev_err(&s->pdev->dev,
+				"failed to read number of VM channels\n");
+			break;
+		}
+
+		if (num_vm_chans > max_num_chans) {
+			dev_warn(&s->pdev->dev, "Too many CoE channels\n");
+			ret = -E2BIG;
+			break;
+		}
+
+		ret = of_property_read_u32_array(temp, "nvidia,vm-channels",
+						 vm_chans, num_vm_chans);
+		if (ret != 0) {
+			dev_err(&s->pdev->dev, "failed to get VM channels\n");
+			break;
+		}
+
+		s->mgbe_irq_id = vm_irq_id;
+		ret = num_vm_chans;
+		break;
+	}
+
+	return ret;
+}
+
+static int camrtc_coe_probe(struct platform_device *pdev)
+{
+	struct coe_state *s;
+	struct device *dev = &pdev->dev;
+	int ret;
+	u32 dma_chans_arr[MAX_HW_CHANS_PER_DEVICE];
+	int num_coe_channels;
+	const struct coe_state *check_state;
+
+	dev_dbg(dev, "tegra-camrtc-capture-coe probe\n");
+
+	s = devm_kzalloc(dev, sizeof(*s), GFP_KERNEL);
+	if (s == NULL)
+		return -ENOMEM;
+
+	s->rtcpu_dev = camrtc_coe_get_linked_device(dev,
+			"nvidia,cam_controller", 0U);
+	if (s->rtcpu_dev == NULL) {
+		dev_err(dev, "No CoE controller found\n");
+		return -ENOENT;
+	}
+
+	s->mgbe_dev = camrtc_coe_get_linked_device(dev,
+					"nvidia,eth_controller", 0U);
+	if (s->mgbe_dev == NULL) {
+		return -ENOENT;
+	}
+
+	num_coe_channels = coe_mgbe_parse_dt_dmachans(s, dma_chans_arr,
+						      ARRAY_SIZE(dma_chans_arr));
+	if (num_coe_channels < 0) {
+		return num_coe_channels;
+	}
+
+	platform_set_drvdata(pdev, s);
+	INIT_LIST_HEAD(&s->channels);
+	INIT_LIST_HEAD(&s->device_entry);
+	mutex_init(&s->access_lock);
+	s->pdev = pdev;
+
+	s->netdev_nb.notifier_call = rtcpu_coe_netdev_event;
+	ret = register_netdevice_notifier(&s->netdev_nb);
+	if (ret != 0) {
+		dev_err(dev, "CoE failed to register notifier\n");
+		return ret;
+	}
+
+	/* TODO take from DT?  */
+	s->rx_ring_size = 16384U;
+	s->rx_pktinfo_ring_size = 4096U; /* Can only be 256, 512, 2048 or 4096 */
+
+	ret = of_property_read_u32(s->mgbe_dev->of_node,
+				   "nvidia,instance_id", &s->mgbe_id);
+	if (ret != 0) {
+		dev_info(dev,
+			"DT instance_id missing, setting default to MGBE0\n");
+		s->mgbe_id = 0U;
+	}
+
+	if (s->rx_ring_size > COE_MGBE_MAX_RXDESC_NUM) {
+		dev_err(dev, "Invalid Rx ring size %u\n", s->rx_ring_size);
+		return -ENOSPC;
+	}
+
+	if (s->rx_pktinfo_ring_size != 256U &&
+	    s->rx_pktinfo_ring_size != 512U &&
+	    s->rx_pktinfo_ring_size != 2048U &&
+	    s->rx_pktinfo_ring_size != 4096U) {
+		dev_err(dev, "Invalid pktinfo ring size %u\n", s->rx_pktinfo_ring_size);
+		return -ENOSPC;
+	}
+
+	if (s->mgbe_id >= MAX_NUM_COE_DEVICES) {
+		dev_err(dev, "Invalid MGBE ID %u\n", s->mgbe_id);
+		return -EBADFD;
+	}
+
+	ret = coe_mgbe_init_pdmas(s);
+	if (ret)
+		return ret;
+
+	ret = coe_alloc_rx_descr_mem_area(s);
+	if (ret)
+		return ret;
+
+	for (u32 ch = 0U; ch < num_coe_channels; ch++) {
+		u32 arr_idx;
+		size_t offset;
+		struct coe_channel_state *chan;
+
+		mutex_lock(&coe_channels_arr_lock);
+
+		chan = coe_channel_arr_find_free(&arr_idx);
+		if (chan == NULL) {
+			dev_err(dev, "No free channel slots ch=%u\n", ch);
+			mutex_unlock(&coe_channels_arr_lock);
+			return -ENOMEM;
+		}
+
+		chan->devt = MKDEV(coe_channel_major, arr_idx);
+		chan->dev = device_create(coe_channel_class, NULL, chan->devt, NULL,
+					"coe-chan-%u", arr_idx);
+		if (IS_ERR(chan->dev)) {
+			ret = PTR_ERR(chan->dev);
+			chan->dev = NULL;
+			mutex_unlock(&coe_channels_arr_lock);
+			return ret;
+		}
+
+		mutex_unlock(&coe_channels_arr_lock);
+
+		INIT_LIST_HEAD(&chan->list_entry);
+		mutex_init(&chan->rce_msg_lock);
+		mutex_init(&chan->channel_lock);
+		mutex_init(&chan->capq_inhw_lock);
+		mutex_init(&chan->capq_appreport_lock);
+		init_completion(&chan->rce_resp_ready);
+		init_completion(&chan->capture_resp_ready);
+		chan->rce_chan_id = CAPTURE_COE_CHANNEL_INVALID_ID;
+		chan->pdma_id = COE_MGBE_PDMA_CHAN_INVALID;
+		chan->dma_chan = CAPTURE_COE_CHAN_INVALID_HW_ID;
+
+		offset = arr_idx * COE_MGBE_MAX_RXDESC_NUM * MGBE_RXDESC_SIZE;
+		chan->rx_desc_dma_rce = g_rxdesc_mem_dma_rce + offset;
+
+		set_bit(dma_chans_arr[ch], s->dmachans_map);
+
+		dev_info(&s->pdev->dev, "Ch%u->PDMA%u\n",
+			 dma_chans_arr[ch], s->vdma2pdma_map[dma_chans_arr[ch]]);
+	}
+
+	mutex_lock(&coe_device_list_lock);
+	list_for_each_entry(check_state, &coe_device_list, device_entry) {
+		if (s->mgbe_id == check_state->mgbe_id) {
+			mutex_unlock(&coe_device_list_lock);
+			dev_err(dev, "Device already exists for mgbe_id=%u\n",
+				s->mgbe_id);
+			return -EEXIST;
+		}
+	}
+
+	list_add(&s->device_entry, &coe_device_list);
+	mutex_unlock(&coe_device_list_lock);
+
+	dev_info(dev, "Camera Over Eth controller %s num_chans=%u IRQ=%u\n",
+		 dev_name(s->mgbe_dev), num_coe_channels, s->mgbe_irq_id);
+
+	return 0;
+}
+
+static int camrtc_coe_remove(struct platform_device *pdev)
+{
+	struct coe_state * const s = platform_get_drvdata(pdev);
+	struct coe_channel_state *ch;
+	struct coe_channel_state *ch_tmp;
+
+	dev_dbg(&pdev->dev, "tegra-camrtc-capture-coe remove\n");
+
+	unregister_netdevice_notifier(&s->netdev_nb);
+
+	mutex_lock(&coe_channels_arr_lock);
+
+	list_for_each_entry_safe(ch, ch_tmp, &s->channels, list_entry) {
+		coe_channel_close(ch);
+		if (ch->dev != NULL)
+			device_destroy(coe_channel_class, ch->devt);
+		ch->dev = NULL;
+		ch->devt = 0U;
+	}
+
+	mutex_unlock(&coe_channels_arr_lock);
+
+	if (s->rx_pktinfo_mgbe_sgt.sgl != NULL) {
+		dma_unmap_sg(s->mgbe_dev, s->rx_pktinfo_mgbe_sgt.sgl,
+			     s->rx_pktinfo_mgbe_sgt.orig_nents, DMA_BIDIRECTIONAL);
+		sg_free_table(&s->rx_pktinfo_mgbe_sgt);
+	}
+
+	if (s->mgbe_dev != NULL) {
+		put_device(s->mgbe_dev);
+		s->mgbe_dev = NULL;
+	}
+
+	if (s->rtcpu_dev != NULL) {
+		put_device(s->rtcpu_dev);
+		s->rtcpu_dev = NULL;
+	}
+
+	return 0;
+}
+
+static const struct of_device_id camrtc_coe_of_match[] = {
+	{ .compatible = "nvidia,tegra-camrtc-capture-coe" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, camrtc_coe_of_match);
+
+static struct platform_driver capture_coe_driver = {
+	.probe = camrtc_coe_probe,
+	.remove = camrtc_coe_remove,
+	.driver = {
+		.name = "camrtc-coe",
+		.owner = THIS_MODULE,
+		.of_match_table = camrtc_coe_of_match,
+	},
+};
+
+static int __init capture_coe_init(void)
+{
+	int err;
+
+#if defined(NV_CLASS_CREATE_HAS_NO_OWNER_ARG) /* Linux v6.4 */
+	coe_channel_class = class_create("capture-coe-channel");
+#else
+	coe_channel_class = class_create(THIS_MODULE, "capture-coe-channel");
+#endif
+	if (IS_ERR(coe_channel_class))
+		return PTR_ERR(coe_channel_class);
+
+	coe_channel_major = register_chrdev(0, "capture-coe-channel",
+					    &coe_channel_fops);
+	if (coe_channel_major < 0) {
+		class_destroy(coe_channel_class);
+		return coe_channel_major;
+	}
+
+	err = platform_driver_register(&capture_coe_driver);
+	if (err) {
+		unregister_chrdev(coe_channel_major, "capture-coe-channel");
+		class_destroy(coe_channel_class);
+		return err;
+	}
+
+	return 0;
+}
+
+static void __exit capture_coe_exit(void)
+{
+	if (g_rx_descr_mem_area != NULL) {
+		const size_t alloc_size = COE_TOTAL_RXDESCR_MEM_SIZE;
+
+		sg_free_table(&g_rxdesc_rce_sgt);
+		dma_free_coherent(g_rtcpu_dev, alloc_size,
+				  g_rx_descr_mem_area, g_rxdesc_mem_dma_rce);
+		g_rx_descr_mem_area = NULL;
+		g_rtcpu_dev = NULL;
+	}
+
+	for (u32 ch_id = 0U; ch_id < ARRAY_SIZE(coe_channels_arr); ch_id++) {
+		struct coe_channel_state * const ch = &coe_channels_arr[ch_id];
+
+		if (ch->dev != NULL)
+			device_destroy(coe_channel_class, ch->devt);
+		ch->dev = NULL;
+		ch->devt = 0U;
+	}
+
+	platform_driver_unregister(&capture_coe_driver);
+	unregister_chrdev(coe_channel_major, "capture-coe-channel");
+	class_destroy(coe_channel_class);
+}
+
+module_init(capture_coe_init);
+module_exit(capture_coe_exit);
+
+MODULE_AUTHOR("Igor Mitsyanko <imitsyanko@nvidia.com>");
+MODULE_DESCRIPTION("NVIDIA Tegra Camera Over Ethernet driver");
+MODULE_LICENSE("GPL v2");
