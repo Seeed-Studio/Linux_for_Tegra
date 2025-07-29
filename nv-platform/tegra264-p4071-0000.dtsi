@@ -68,10 +68,6 @@
 				status = "okay";
 			};
 
-			tsec@8188150000 {
-				status = "okay";
-			};
-
 			vi0-thi@8188700000 {
 				status = "okay";
 			};
@@ -591,7 +587,6 @@
 	};
 
 	display@8808c00000 {
-		hdcp_enabled;
 		status = "okay";
 		os_gpio_hotplug_a = <&gpio_main TEGRA264_MAIN_GPIO(F, 4) GPIO_ACTIVE_LOW>;
 		nvdisplay-niso {
