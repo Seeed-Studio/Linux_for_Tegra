@@ -160,15 +160,13 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	tegra_pmc_reset_sysfs_init(pmc);
-
 	err = tegra_pmc_pinctrl_init(pmc);
 	if (err)
-		goto cleanup_sysfs;
+		return err;
 
 	err = tegra_pmc_irq_init(pmc);
 	if (err < 0)
-		goto cleanup_sysfs;
+		return err;
 
 	/* Some wakes require specific filter configuration */
 	if (pmc->soc->set_wake_filters)
@@ -177,11 +175,6 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pmc);
 
 	return 0;
-
-cleanup_sysfs:
-	tegra_pmc_reset_sysfs_remove(pmc);
-
-	return err;
 }
 
 static int __maybe_unused tegra_pmc_resume(struct device *dev)
@@ -202,10 +195,6 @@ static int  __maybe_unused tegra_pmc_suspend(struct device *dev)
 
 static const struct dev_pm_ops tegra_pmc_pm_ops = {
 	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(tegra_pmc_suspend, tegra_pmc_resume)
-};
-
-static const char * const tegra264_reset_levels[] = {
-	"L0", "L1", "L2", "WARM"
 };
 
 #define TEGRA264_IO_PAD(_id, _dpd, _request, _status, _has_int_reg, _e_reg06, _e_reg18, _voltage, _e_33v_ctl, _name)	\
@@ -262,11 +251,6 @@ static const struct pinctrl_pin_desc tegra264_pin_descs[] = {
 
 static const struct tegra_pmc_regs tegra264_pmc_regs = {
 	.scratch0 = 0x684,
-	.rst_status = 0x4,
-	.rst_source_shift = 0x2,
-	.rst_source_mask = 0x1fc,
-	.rst_level_shift = 0x0,
-	.rst_level_mask = 0x3,
 	.aowake_cntrl = 0x0,
 	.aowake_mask_w = 0x200,
 	.aowake_status_w = 0x410,
@@ -276,97 +260,6 @@ static const struct tegra_pmc_regs tegra264_pmc_regs = {
 	.aowake_sw_status = 0x628,
 	.aowake_latch_sw = 0x620,
 	.aowake_ctrl = 0x68c,
-};
-
-static const char * const tegra264_reset_sources[] = {
-	"SYS_RESET_N",		/* 0 */
-	"CSDC_RTC_XTAL",
-	"VREFRO_POWER_BAD",
-	"SCPM_SOC_XTAL",
-	"SCPM_RTC_XTAL",
-	"FMON_32K",
-	"FMON_OSC",
-	"POD_RTC",
-	"POD_IO",
-	"POD_PLUS_IO_SPLL",
-	"POD_PLUS_SOC",		/* 10 */
-	"VMON_PLUS_UV",
-	"VMON_PLUS_OV",
-	"FUSECRC_FAULT",
-	"OSC_FAULT",
-	"BPMP_BOOT_FAULT",
-	"SCPM_BPMP_CORE_CLK",
-	"SCPM_PSC_SE_CLK",
-	"VMON_SOC_MIN",
-	"VMON_SOC_MAX",
-	"VMON_MSS_MIN",		/* 20 */
-	"VMON_MSS_MAX",
-	"POD_PLUS_IO_U4_TSENSE",
-	"SOC_THERM_FAULT",
-	"FSI_THERM_FAULT",
-	"PSC_TURTLE_MODE",
-	"SCPM_OESP_SE_CLK",
-	"SCPM_SB_SE_CLK",
-	"POD_CPU",
-	"POD_GPU",
-	"DCLS_GPU",		/* 30 */
-	"POD_MSS",
-	"FSI_FMON",
-	"VMON_FSI_MIN",
-	"VMON_FSI_MAX",
-	"VMON_CPU_MIN",
-	"VMON_CPU_MAX",
-	"NVJTAG_SEL_MONITOR",
-	"BPMP_FMON",
-	"AO_WDT_POR",
-	"BPMP_WDT_POR",		/* 40 */
-	"AO_TKE_WDT_POR",
-	"RCE0_WDT_POR",
-	"RCE1_WDT_POR",
-	"DCE_WDT_POR",
-	"PVA_0_WDT_POR",
-	"FSI_R5_WDT_POR",
-	"FSI_R52_0_WDT_POR",
-	"FSI_R52_1_WDT_POR",
-	"FSI_R52_2_WDT_POR",
-	"FSI_R52_3_WDT_POR",	/* 50 */
-	"TOP_0_WDT_POR",
-	"TOP_1_WDT_POR",
-	"TOP_2_WDT_POR",
-	"APE_C0_WDT_POR",
-	"APE_C1_WDT_POR",
-	"GPU_TKE_WDT_POR",
-	"OESP_WDT_POR",
-	"SB_WDT_POR",
-	"PSC_WDT_POR",
-	"SW_MAIN",		/* 60 */
-	"L0L1_RST_OUT_N",
-	"FSI_HSM",
-	"CSITE_SW",
-	"AO_WDT_DBG",
-	"BPMP_WDT_DBG",
-	"AO_TKE_WDT_DBG",
-	"RCE0_WDT_DBG",
-	"RCE1_WDT_DBG",
-	"DCE_WDT_DBG",
-	"PVA_0_WDT_DBG",	/* 70 */
-	"FSI_R5_WDT_DBG",
-	"FSI_R52_0_WDT_DBG",
-	"FSI_R52_1_WDT_DBG",
-	"FSI_R52_2_WDT_DBG",
-	"FSI_R52_3_WDT_DBG",
-	"TOP_0_WDT_DBG",
-	"TOP_1_WDT_DBG",
-	"TOP_2_WDT_DBG",
-	"APE_C0_WDT_DBG",
-	"APE_C1_WDT_DBG",	/* 80 */
-	"SB_WDT_DBG",
-	"OESP_WDT_DBG",
-	"PSC_WDT_DBG",
-	"TSC_0_WDT_DBG",
-	"TSC_1_WDT_DBG",
-	"L2_RST_OUT_N",
-	"SC7",			/* 87 */
 };
 
 static const struct tegra_wake_event tegra264_wake_events[] = {
@@ -403,10 +296,10 @@ static const struct tegra_pmc_soc tegra264_pmc_soc = {
 	.set_wake_filters = tegra186_pmc_set_wake_filters,
 	.irq_set_wake = tegra186_pmc_irq_set_wake,
 	.irq_set_type = tegra186_pmc_irq_set_type,
-	.reset_sources = tegra264_reset_sources,
-	.num_reset_sources = ARRAY_SIZE(tegra264_reset_sources),
-	.reset_levels = tegra264_reset_levels,
-	.num_reset_levels = ARRAY_SIZE(tegra264_reset_levels),
+	.reset_sources = NULL,
+	.num_reset_sources = 0,
+	.reset_levels = NULL,
+	.num_reset_levels = 0,
 	.num_wake_events = ARRAY_SIZE(tegra264_wake_events),
 	.wake_events = tegra264_wake_events,
 	.max_wake_events = 128,
