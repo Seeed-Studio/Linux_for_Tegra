@@ -456,7 +456,7 @@
 				compatible = "ti,ina238";
 				reg = <0x44>;
 				shunt-resistor = <2000>;
-				status = "disabled";
+				status = "okay";
 				label = "VIN";
 			};
 		};
