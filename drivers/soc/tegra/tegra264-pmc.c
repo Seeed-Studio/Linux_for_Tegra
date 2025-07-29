@@ -30,7 +30,6 @@
 #include <dt-bindings/pinctrl/pinctrl-tegra-io-pad.h>
 #include <dt-bindings/gpio/tegra264-gpio.h>
 
-
 static int tegra_pmc_reboot_notify(struct notifier_block *this,
 				   unsigned long action, void *data)
 {
@@ -175,6 +174,17 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pmc);
 
+	tegra_pmc_scratch_sysfs_init(pmc);
+
+	return 0;
+}
+
+static int tegra_pmc_remove(struct platform_device *pdev)
+{
+	struct tegra_pmc *pmc = platform_get_drvdata(pdev);
+
+	tegra_pmc_scratch_sysfs_remove(pmc);
+
 	return 0;
 }
 
@@ -252,6 +262,8 @@ static const struct pinctrl_pin_desc tegra264_pin_descs[] = {
 
 static const struct tegra_pmc_regs tegra264_pmc_regs = {
 	.scratch0 = 0x684,
+	.scratch_l0_1_0 = 0x67C,
+	.scratch_l0_21_0 = 0x6cc,
 	.aowake_cntrl = 0x0,
 	.aowake_mask_w = 0x200,
 	.aowake_status_w = 0x410,
@@ -325,6 +337,7 @@ static struct platform_driver tegra_pmc_driver = {
 		.pm = &tegra_pmc_pm_ops,
 	},
 	.probe = tegra_pmc_probe,
+	.remove = tegra_pmc_remove,
 };
 builtin_platform_driver(tegra_pmc_driver);
 

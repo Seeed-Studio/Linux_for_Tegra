@@ -167,6 +167,8 @@ struct tegra_io_pad_soc {
 
 struct tegra_pmc_regs {
 	unsigned int scratch0;
+	unsigned int scratch_l0_1_0;
+	unsigned int scratch_l0_21_0;
 	unsigned int rst_status;
 	unsigned int rst_source_shift;
 	unsigned int rst_source_mask;
@@ -401,6 +403,9 @@ int tegra186_pmc_suspend(struct tegra_pmc *pmc);
 
 void tegra_pmc_reset_sysfs_init(struct tegra_pmc *pmc);
 void tegra_pmc_reset_sysfs_remove(struct tegra_pmc *pmc);
+
+void tegra_pmc_scratch_sysfs_init(struct tegra_pmc *pmc);
+void tegra_pmc_scratch_sysfs_remove(struct tegra_pmc *pmc);
 
 int tegra_pmc_pinctrl_init(struct tegra_pmc *pmc);
 

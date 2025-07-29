@@ -186,6 +186,29 @@
 #define  TEGRA_SMC_PMC_READ	0xaa
 #define  TEGRA_SMC_PMC_WRITE	0xbb
 
+/* Bit field definitions for scratch registers */
+#define BR_FAIL_BITMAP_MASK		0xF
+#define BR_FAIL_BITMAP_SHIFT		0
+#define BR_ACTIVE_CHAIN_MASK		0x3
+#define BR_ACTIVE_CHAIN_SHIFT		4
+#define BOOT_CHAIN_STATUS_A_MASK	0x1
+#define BOOT_CHAIN_STATUS_A_SHIFT	7
+#define BOOT_CHAIN_STATUS_B_MASK	0x1
+#define BOOT_CHAIN_STATUS_B_SHIFT	8
+#define BOOT_CHAIN_CURRENT_MASK		0x3
+#define BOOT_CHAIN_CURRENT_SHIFT	11
+#define LAST_BOOT_CHAIN_FAILED_MASK	0x1
+#define LAST_BOOT_CHAIN_FAILED_SHIFT	13
+
+#define ROOTFS_SR_MAGIC_MASK		0xFFFF
+#define ROOTFS_SR_MAGIC_SHIFT		0
+#define ROOTFS_CURRENT_MASK		0x3
+#define ROOTFS_CURRENT_SHIFT		16
+#define ROOTFS_RETRY_COUNT_B_MASK	0x3
+#define ROOTFS_RETRY_COUNT_B_SHIFT	18
+#define ROOTFS_RETRY_COUNT_A_MASK	0x3
+#define ROOTFS_RETRY_COUNT_A_SHIFT	20
+
 struct pmc_clk {
 	struct clk_hw	hw;
 	unsigned long	offs;
@@ -2093,6 +2116,156 @@ void tegra_pmc_reset_sysfs_remove(struct tegra_pmc *pmc)
 
 	device_remove_file(dev, &dev_attr_reset_reason);
 	device_remove_file(dev, &dev_attr_reset_level);
+}
+
+/* Helper macros for scratch sysfs attributes */
+#define TEGRA_PMC_SCRATCH_ATTR_RW(name, reg_field, mask, shift, min_val, max_val) \
+static ssize_t name##_show(struct device *dev, struct device_attribute *attr, char *buf) \
+{ \
+	struct tegra_pmc *pmc = dev_get_drvdata(dev); \
+	u32 value; \
+	if (!pmc->scratch || !pmc->soc->regs->reg_field) \
+		return -ENODEV; \
+	value = tegra_pmc_scratch_readl(pmc, pmc->soc->regs->reg_field); \
+	value = (value >> shift) & mask; \
+	return sprintf(buf, "%u\n", value); \
+} \
+static ssize_t name##_store(struct device *dev, struct device_attribute *attr, \
+			    const char *buf, size_t count) \
+{ \
+	struct tegra_pmc *pmc = dev_get_drvdata(dev); \
+	unsigned long value; \
+	u32 reg_val; \
+	int ret; \
+	if (!pmc->scratch || !pmc->soc->regs->reg_field) \
+		return -ENODEV; \
+	ret = kstrtoul(buf, 0, &value); \
+	if (ret) \
+		return ret; \
+	if (value < min_val || value > max_val) \
+		return -EINVAL; \
+	reg_val = tegra_pmc_scratch_readl(pmc, pmc->soc->regs->reg_field); \
+	reg_val &= ~(mask << shift); \
+	reg_val |= (value & mask) << shift; \
+	tegra_pmc_scratch_writel(pmc, reg_val, pmc->soc->regs->reg_field); \
+	return count; \
+} \
+static DEVICE_ATTR_RW(name)
+
+#define TEGRA_PMC_SCRATCH_ATTR_RO(name, reg_field, mask, shift) \
+static ssize_t name##_show(struct device *dev, struct device_attribute *attr, char *buf) \
+{ \
+	struct tegra_pmc *pmc = dev_get_drvdata(dev); \
+	u32 value; \
+	if (!pmc->scratch || !pmc->soc->regs->reg_field) \
+		return -ENODEV; \
+	value = tegra_pmc_scratch_readl(pmc, pmc->soc->regs->reg_field); \
+	value = (value >> shift) & mask; \
+	return sprintf(buf, "%u\n", value); \
+} \
+static DEVICE_ATTR_RO(name)
+
+/* Scratch register sysfs attributes */
+TEGRA_PMC_SCRATCH_ATTR_RW(br_fail_bitmap, scratch_l0_1_0,
+			  BR_FAIL_BITMAP_MASK, BR_FAIL_BITMAP_SHIFT, 0, 0xF);
+TEGRA_PMC_SCRATCH_ATTR_RW(br_active_chain, scratch_l0_1_0,
+			  BR_ACTIVE_CHAIN_MASK, BR_ACTIVE_CHAIN_SHIFT, 0, 3);
+TEGRA_PMC_SCRATCH_ATTR_RW(boot_chain_status_a, scratch_l0_1_0,
+			  BOOT_CHAIN_STATUS_A_MASK, BOOT_CHAIN_STATUS_A_SHIFT, 0, 1);
+TEGRA_PMC_SCRATCH_ATTR_RW(boot_chain_status_b, scratch_l0_1_0,
+			  BOOT_CHAIN_STATUS_B_MASK, BOOT_CHAIN_STATUS_B_SHIFT, 0, 1);
+TEGRA_PMC_SCRATCH_ATTR_RO(boot_chain_current, scratch_l0_1_0,
+			  BOOT_CHAIN_CURRENT_MASK, BOOT_CHAIN_CURRENT_SHIFT);
+TEGRA_PMC_SCRATCH_ATTR_RO(last_boot_chain_failed, scratch_l0_1_0,
+			  LAST_BOOT_CHAIN_FAILED_MASK, LAST_BOOT_CHAIN_FAILED_SHIFT);
+
+TEGRA_PMC_SCRATCH_ATTR_RW(rootfs_sr_magic, scratch_l0_21_0,
+			  ROOTFS_SR_MAGIC_MASK, ROOTFS_SR_MAGIC_SHIFT, 0, 0xFFFF);
+TEGRA_PMC_SCRATCH_ATTR_RW(rootfs_current, scratch_l0_21_0,
+			  ROOTFS_CURRENT_MASK, ROOTFS_CURRENT_SHIFT, 0, 1);
+TEGRA_PMC_SCRATCH_ATTR_RW(rootfs_retry_count_b, scratch_l0_21_0,
+			  ROOTFS_RETRY_COUNT_B_MASK, ROOTFS_RETRY_COUNT_B_SHIFT, 0, 3);
+TEGRA_PMC_SCRATCH_ATTR_RW(rootfs_retry_count_a, scratch_l0_21_0,
+			  ROOTFS_RETRY_COUNT_A_MASK, ROOTFS_RETRY_COUNT_A_SHIFT, 0, 3);
+
+void tegra_pmc_scratch_sysfs_init(struct tegra_pmc *pmc)
+{
+	struct device *dev = pmc->dev;
+	int err;
+
+	if (!pmc->scratch) {
+		dev_warn(dev, "scratch registers not available, skipping sysfs init\n");
+		return;
+	}
+
+	/* Only create attributes if the register fields are defined */
+	if (pmc->soc->regs->scratch_l0_1_0) {
+		err = device_create_file(dev, &dev_attr_br_fail_bitmap);
+		if (err)
+			dev_warn(dev, "failed to create br_fail_bitmap sysfs: %d\n", err);
+
+		err = device_create_file(dev, &dev_attr_br_active_chain);
+		if (err)
+			dev_warn(dev, "failed to create br_active_chain sysfs: %d\n", err);
+
+		err = device_create_file(dev, &dev_attr_boot_chain_status_a);
+		if (err)
+			dev_warn(dev, "failed to create boot_chain_status_a sysfs: %d\n", err);
+
+		err = device_create_file(dev, &dev_attr_boot_chain_status_b);
+		if (err)
+			dev_warn(dev, "failed to create boot_chain_status_b sysfs: %d\n", err);
+
+		err = device_create_file(dev, &dev_attr_boot_chain_current);
+		if (err)
+			dev_warn(dev, "failed to create boot_chain_current sysfs: %d\n", err);
+
+		err = device_create_file(dev, &dev_attr_last_boot_chain_failed);
+		if (err)
+			dev_warn(dev, "failed to create last_boot_chain_failed sysfs: %d\n", err);
+	}
+
+	if (pmc->soc->regs->scratch_l0_21_0) {
+		err = device_create_file(dev, &dev_attr_rootfs_sr_magic);
+		if (err)
+			dev_warn(dev, "failed to create rootfs_sr_magic sysfs: %d\n", err);
+
+		err = device_create_file(dev, &dev_attr_rootfs_current);
+		if (err)
+			dev_warn(dev, "failed to create rootfs_current sysfs: %d\n", err);
+
+		err = device_create_file(dev, &dev_attr_rootfs_retry_count_b);
+		if (err)
+			dev_warn(dev, "failed to create rootfs_retry_count_b sysfs: %d\n", err);
+
+		err = device_create_file(dev, &dev_attr_rootfs_retry_count_a);
+		if (err)
+			dev_warn(dev, "failed to create rootfs_retry_count_a sysfs: %d\n", err);
+	}
+}
+
+void tegra_pmc_scratch_sysfs_remove(struct tegra_pmc *pmc)
+{
+	struct device *dev = pmc->dev;
+
+	if (!pmc->scratch)
+		return;
+
+	if (pmc->soc->regs->scratch_l0_1_0) {
+		device_remove_file(dev, &dev_attr_br_fail_bitmap);
+		device_remove_file(dev, &dev_attr_br_active_chain);
+		device_remove_file(dev, &dev_attr_boot_chain_status_a);
+		device_remove_file(dev, &dev_attr_boot_chain_status_b);
+		device_remove_file(dev, &dev_attr_boot_chain_current);
+		device_remove_file(dev, &dev_attr_last_boot_chain_failed);
+	}
+
+	if (pmc->soc->regs->scratch_l0_21_0) {
+		device_remove_file(dev, &dev_attr_rootfs_sr_magic);
+		device_remove_file(dev, &dev_attr_rootfs_current);
+		device_remove_file(dev, &dev_attr_rootfs_retry_count_b);
+		device_remove_file(dev, &dev_attr_rootfs_retry_count_a);
+	}
 }
 
 static int tegra_pmc_irq_translate(struct irq_domain *domain,
