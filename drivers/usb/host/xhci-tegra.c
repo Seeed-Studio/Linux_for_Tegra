@@ -2,7 +2,7 @@
 /*
  * NVIDIA Tegra xHCI host controller driver
  *
- * SPDX-FileCopyrightText: Copyright (c) 2014-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (C) 2014 Google, Inc.
  */
 
@@ -257,7 +257,6 @@ struct tegra_xusb_soc {
 	unsigned int num_supplies;
 	const struct tegra_xusb_phy_type *phy_types;
 	unsigned int num_types;
-	unsigned int num_wakes;
 	const struct tegra_xusb_context_soc *context;
 
 	struct {
@@ -319,7 +318,6 @@ struct tegra_xusb {
 	int xhci_irq;
 	int mbox_irq;
 	int padctl_irq;
-	int *wake_irqs;
 
 	void __iomem *ipfs_base;
 	void __iomem *fpci_base;
@@ -2166,41 +2164,6 @@ static int tegra_xhci_padctl_notify(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
-static void tegra_xusb_setup_wakeup(struct platform_device *pdev, struct tegra_xusb *tegra)
-{
-	int i;
-
-	if (device_property_read_bool(tegra->dev, "disable-wake"))
-		return;
-
-	tegra->wake_irqs = devm_kcalloc(tegra->dev,
-				tegra->soc->num_wakes,
-				sizeof(*tegra->wake_irqs), GFP_KERNEL);
-	if (!tegra->wake_irqs)
-		return;
-
-	for (i = 0; i < tegra->soc->num_wakes; i++) {
-		char irq_name[] = "wakeX";
-		struct irq_data *data;
-
-		snprintf(irq_name, sizeof(irq_name), "wake%d", i);
-		tegra->wake_irqs[i] = platform_get_irq_byname(pdev, irq_name);
-		if (tegra->wake_irqs[i] < 0)
-			goto error;
-		data = irq_get_irq_data(tegra->wake_irqs[i]);
-		if (!data)
-			goto error;
-		irq_set_irq_type(tegra->wake_irqs[i], irqd_get_trigger_type(data));
-	}
-	return;
-
-error:
-	for (i = 0; i < tegra->soc->num_wakes && tegra->wake_irqs[i] >= 0; i++)
-		irq_dispose_mapping(tegra->wake_irqs[i]);
-	devm_kfree(tegra->dev, tegra->wake_irqs);
-	tegra->wake_irqs = NULL;
-}
-
 static int tegra_xusb_probe(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra;
@@ -2259,9 +2222,6 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	tegra->padctl = tegra_xusb_padctl_get(&pdev->dev);
 	if (IS_ERR(tegra->padctl))
 		return PTR_ERR(tegra->padctl);
-
-	if (tegra->soc->num_wakes && !tegra->soc->is_xhci_vf)
-		tegra_xusb_setup_wakeup(pdev, tegra);
 
 	np = of_parse_phandle(pdev->dev.of_node, "nvidia,xusb-padctl", 0);
 	if (!np) {
@@ -2628,7 +2588,6 @@ static void tegra_xusb_remove(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
 	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
-	unsigned int i;
 
 	if (tegra->soc->is_xhci_vf)
 		tegra_xusb_padctl_event_unregister(tegra->padctl, &tegra->padctl_nb);
@@ -2650,9 +2609,6 @@ static void tegra_xusb_remove(struct platform_device *pdev)
 
 	if (tegra->padctl_irq)
 		pm_runtime_disable(&pdev->dev);
-
-	for (i = 0; i < tegra->soc->num_wakes && tegra->wake_irqs; i++)
-		irq_dispose_mapping(tegra->wake_irqs[i]);
 
 	pm_runtime_put(&pdev->dev);
 
@@ -3125,12 +3081,8 @@ out:
 		pm_runtime_disable(dev);
 
 		if (tegra->padctl_irq && device_may_wakeup(dev)) {
-			unsigned int i;
-
 			if (enable_irq_wake(tegra->padctl_irq))
 				dev_err(dev, "failed to enable padctl wakes\n");
-			for (i = 0; i < tegra->soc->num_wakes && tegra->wake_irqs; i++)
-				enable_irq_wake(tegra->wake_irqs[i]);
 		}
 	}
 
@@ -3158,12 +3110,8 @@ static __maybe_unused int tegra_xusb_resume(struct device *dev)
 	}
 
 	if (tegra->padctl_irq && device_may_wakeup(dev)) {
-		unsigned int i;
-
 		if (disable_irq_wake(tegra->padctl_irq))
 			dev_err(dev, "failed to disable padctl wakes\n");
-		for (i = 0; i < tegra->soc->num_wakes && tegra->wake_irqs; i++)
-			disable_irq_wake(tegra->wake_irqs[i]);
 	}
 	tegra->suspended = false;
 	mutex_unlock(&tegra->lock);
@@ -3493,7 +3441,6 @@ static const struct tegra_xusb_soc tegra264_soc = {
 	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
 	.phy_types = tegra194_phy_types,
 	.num_types = ARRAY_SIZE(tegra194_phy_types),
-	.num_wakes = 8,
 	.context = &tegra186_xusb_context,
 	.ports = {
 		.usb3 = { .offset = 0, .count = 4, },
