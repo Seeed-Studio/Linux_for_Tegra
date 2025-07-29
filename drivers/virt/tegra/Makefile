@@ -15,7 +15,9 @@ obj-m		+= tegra_hv.o
 tegra_hv-objs := tegra_hv_dummy.o
 endif
 obj-m		+= tegra_hv_pm_ctl.o
+ifneq ($(NV_OOT_HVC_SYSFS_SKIP_BUILD),y)
 obj-m		+= hvc_sysfs.o
+endif
 obj-m		+= ivc-cdev.o
 obj-m		+= userspace_ivc_mempool.o
 obj-m		+= tegra_hv_vcpu_yield.o
