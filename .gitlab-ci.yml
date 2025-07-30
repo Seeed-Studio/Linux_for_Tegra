@@ -49,6 +49,9 @@ stages:
   - recomputer-robo-orin-nano-8g-j401
   - recomputer-robo-orin-nano-8g-j401-gmsl
 
+  - recomputer-mini-agx-orin-32g-j501
+  - recomputer-mini-agx-orin-64g-j501
+
   - custom-firmware
 
 # common code of building target image
@@ -979,6 +982,58 @@ build-recomputer-robo-orin-nano-8g-j401-gmsl:
     BOARDREV: "N.2"
     CHIP_SKU: "00:00:00:D6"
     UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+recomputer-mini-agx-orin-32g-j501:
+  stage: recomputer-mini-agx-orin-32g-j501
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-agx-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-agx-orin-32g"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-mini-agx-orin-j501x"
+    BOARDID: "3701"
+    BOARDSKU: "0004"
+    FAB: "500"
+    BOARDREV: "J.0"
+    CHIP_SKU: "00:00:00:D2"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+
+recomputer-mini-agx-orin-64g-j501:
+  stage: recomputer-mini-agx-orin-64g-j501
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-agx-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-mini-agx-orin-64g"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-mini-agx-orin-j501x"
+    BOARDID: "3701"
+    BOARDSKU: "0005"
+    FAB: "500"
+    BOARDREV: "M.0"
+    CHIP_SKU: "00:00:00:D0"
 
   script:
     - echo "Building for $CONFIG"

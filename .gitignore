@@ -206,6 +206,9 @@ source/kernel/kernel-jammy-src/rust-project.json
 !kernel/dtb/tegra234-j401-p3768-0000+p3767-0001-recomputer-robo.dtb
 !kernel/dtb/tegra234-j401-p3768-0000+p3767-0003-recomputer-robo.dtb
 !kernel/dtb/tegra234-j401-p3768-0000+p3767-0004-recomputer-robo.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0004-recomputer-mini.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0005-recomputer-mini.dtb
+!kernel/dtb/tegra234-j501x-0000+p3701-0000-recomputer-mini.dtb
 
 #CI file
 !.gitlab-ci.yml
