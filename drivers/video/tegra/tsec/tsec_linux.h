@@ -34,5 +34,6 @@
 #endif
 #include <linux/sizes.h>                   /* for SZ_* size macros */
 #include <vdso/bits.h>                     /* for BIT(x) macro */
+#include <linux/suspend.h>                 /* for suspend APIs */
 
 #endif /* TSEC_LINUX_H */

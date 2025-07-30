@@ -338,7 +338,18 @@ int tsec_poweroff(struct device *dev)
 
 static int tsec_module_suspend(struct device *dev)
 {
-	return tsec_poweroff(dev);
+	struct tsec_device_data *pdata = dev_get_drvdata(dev);
+
+	switch (pdata->soc) {
+	case TSEC_ON_T26x:
+		/*
+		 * If TSEC is on T26x, we don't need to power off TSEC.
+		 */
+		return 0;
+	default:
+		return tsec_poweroff(dev);
+	}
+
 }
 
 static int tsec_module_resume(struct device *dev)
@@ -346,6 +357,12 @@ static int tsec_module_resume(struct device *dev)
 	struct tsec_device_data *pdata = dev_get_drvdata(dev);
 	switch (pdata->soc) {
 	case TSEC_ON_T26x:
+		/*
+		 * If the system resumed from suspend to idle, we don't need to resume TSEC.
+		 * This is because TSEC is already powered on and running.
+		 */
+		if (pm_suspend_target_state == PM_SUSPEND_TO_IDLE)
+			return 0;
 		return tsec_t264_init(to_platform_device(dev));
 	default:
 		return tsec_poweron(dev);
