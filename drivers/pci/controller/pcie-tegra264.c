@@ -10,6 +10,7 @@
 
 #include <linux/delay.h>
 #include <linux/kernel.h>
+#include <linux/interconnect.h>
 #include <linux/init.h>
 #include <linux/iopoll.h>
 #include <linux/of_address.h>
@@ -37,6 +38,8 @@ extern int of_get_pci_domain_nr(struct device_node *node);
 #define XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS		0x58
 #define XTL_RC_PCIE_CFG_LINK_CONTROL_STATUS_DLL_ACTIVE	BIT(29)
 
+#define XTL_RC_PCIE_CFG_LINK_STATUS		0x5a
+
 #define XTL_RC_MGMT_PERST_CONTROL		0x218
 #define XTL_RC_MGMT_PERST_CONTROL_PERST_O_N	BIT(0)
 
@@ -48,6 +51,7 @@ struct tegra264_pcie {
 	struct pci_config_window *cfg;
 	struct pci_host_bridge *bridge;
 	struct gpio_desc *pex_wake_gpiod;
+	struct icc_path *icc_path;
 	unsigned int pex_wake_irq;
 	void __iomem *xtl_pri_base;
 	void __iomem *ecam_base;
@@ -123,6 +127,28 @@ static void tegra264_pcie_bpmp_set_rp_state(struct tegra264_pcie *pcie)
 #endif
 }
 
+#define PCIE_SPEED2MBS(speed) \
+	((speed) == 5 ? 32000*128/130 : \
+	 (speed) == 4 ? 16000*128/130 : \
+	 (speed) == 3 ? 8000*128/130 : \
+	 (speed) == 2 ? 5000*8/10 : \
+	 (speed) == 1 ? 2500*8/10 : \
+	 0)
+
+static void tegra264_pcie_icc_set(struct tegra264_pcie *pcie)
+{
+	u32 val, speed, width;
+
+	val = readw(pcie->ecam_base + XTL_RC_PCIE_CFG_LINK_STATUS);
+	speed = FIELD_GET(PCI_EXP_LNKSTA_CLS, val);
+	width = FIELD_GET(PCI_EXP_LNKSTA_NLW, val);
+
+	val = width * (PCIE_SPEED2MBS(speed) / BITS_PER_BYTE);
+
+	if (icc_set_bw(pcie->icc_path, MBps_to_icc(val), MBps_to_icc(val)))
+		dev_err(pcie->dev, "can't set bw[%u]\n", val);
+}
+
 static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 {
 	u32 val;
@@ -161,6 +187,7 @@ static void tegra264_pcie_init(struct tegra264_pcie *pcie)
 		dev_info(pcie->dev, "PCIe Controller-%d Link is UP (Speed: %d)\n",
 			 pcie->ctl_id, (val & 0xf0000) >> 16);
 		pcie->link_state = true;
+		tegra264_pcie_icc_set(pcie);
 	} else {
 		dev_info(pcie->dev, "PCIe Controller-%d Link is DOWN\r\n", pcie->ctl_id);
 		val = readl(pcie->xtl_pri_base + XTL_RC_MGMT_CLOCK_CONTROL);
@@ -253,6 +280,13 @@ static int tegra264_pcie_probe(struct platform_device *pdev)
 	if (!res) {
 		dev_err(dev, "failed to get ecam resource\n");
 		return -ENXIO;
+	}
+
+	pcie->icc_path = devm_of_icc_get(&pdev->dev, "write");
+	ret = PTR_ERR_OR_ZERO(pcie->icc_path);
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret, "failed to get write interconnect\n");
+		return ret;
 	}
 
 	/* Parse BPMP property only for non VDK, as interaction with BPMP not needed for VDK */
