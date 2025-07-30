@@ -5342,6 +5342,11 @@
 			dma-coherent;
 			msi-map = <0x0 &its 0x110000 0x10000>;
 
+			interconnects =
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE1R &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE1W &emc>;
+			interconnect-names = "dma-mem", "write";
+
 			bus-range = <0x0 0xff>;
 			ranges = <0x82000000 0x00 0x28000000 0x00 0x28000000 0x0 0x08000000	/* Non-Prefetchable memory */
 				  0xc3000000 0xa8 0xc0000000 0xa8 0xc0000000 0x7 0xc0000000	/* Prefetchable memory */
@@ -5378,6 +5383,11 @@
 			dma-coherent;
 			msi-map = <0x0 &its 0x120000 0x10000>;
 
+			interconnects =
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE2AR &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE2AW &emc>;
+			interconnect-names = "dma-mem", "write";
+
 			bus-range = <0x0 0xff>;
 			ranges = <0x82000000 0x00 0x30000000 0x00 0x30000000 0x0 0x08000000	/* Non-Prefetchable memory */
 				  0xc3000000 0xb0 0xc0000000 0xb0 0xc0000000 0x7 0xc0000000	/* Prefetchable memory */
@@ -5412,6 +5422,11 @@
 			dma-coherent;
 			msi-parent = <&its 0x120000>;
 
+			interconnects =
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE2AR &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE2AW &emc>;
+			interconnect-names = "dma-mem", "write";
+
 			linux,pci-domain = <0x2>;
 			nvidia,bpmp = <&bpmp 0x2>;
 		};
@@ -5442,6 +5457,11 @@
 			iommu-map = <0x0 &smmu1_mmu 0x30000 0x10000>;
 			dma-coherent;
 			msi-map = <0x0 &its 0x130000 0x10000>;
+
+			interconnects =
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE3R &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE3W &emc>;
+			interconnect-names = "dma-mem", "write";
 
 			bus-range = <0x0 0xff>;
 			ranges = <0x82000000 0x00 0x38000000 0x00 0x38000000 0x0 0x08000000	/* Non-Prefetchable memory */
@@ -5479,6 +5499,11 @@
 			dma-coherent;
 			msi-map = <0x0 &its 0x140000 0x10000>;
 
+			interconnects =
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE4R &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE4W &emc>;
+			interconnect-names = "dma-mem", "write";
+
 			bus-range = <0x0 0xff>;
 			ranges = <0x82000000 0x00 0x40000000 0x00 0x40000000 0x0 0x08000000	/* Non-Prefetchable memory */
 				  0xc3000000 0xc0 0xc0000000 0xc0 0xc0000000 0x7 0xc0000000	/* Prefetchable memory */
@@ -5513,6 +5538,11 @@
 			dma-coherent;
 			msi-parent = <&its 0x140000>;
 
+			interconnects =
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE4R &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE4W &emc>;
+			interconnect-names = "dma-mem", "write";
+
 			linux,pci-domain = <0x4>;
 			nvidia,bpmp = <&bpmp 0x4>;
 		};
@@ -5544,6 +5574,11 @@
 			iommu-map = <0x0 &smmu1_mmu 0x50000 0x10000>;
 			dma-coherent;
 			msi-map = <0x0 &its 0x150000 0x10000>;
+
+			interconnects =
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE5R &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE5W &emc>;
+			interconnect-names = "dma-mem", "write";
 
 			bus-range = <0x0 0xff>;
 			ranges = <0x82000000 0x00 0x48000000 0x00 0x48000000 0x0 0x08000000	/* Non-Prefetchable memory */
@@ -5578,6 +5613,11 @@
 			iommus = <&smmu1_mmu 0x50000>;
 			dma-coherent;
 			msi-parent = <&its 0x150000>;
+
+			interconnects =
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE5R &emc>,
+				<&mc TEGRA264_MEMORY_CLIENT_PCIE5W &emc>;
+			interconnect-names = "dma-mem", "write";
 
 			linux,pci-domain = <0x5>;
 			nvidia,bpmp = <&bpmp 0x5>;
