@@ -560,20 +560,4 @@
 	trbe {
 		status = "okay";
 	};
-
-	stm@10070000 {
-		status = "okay";
-	};
-
-	funnel_major@10080000 {
-		status = "okay";
-	};
-
-	etf_soc@10040000 {
-		status = "okay";
-	};
-
-	replicator_soc@10060000 {
-		status = "okay";
-	};
 };
