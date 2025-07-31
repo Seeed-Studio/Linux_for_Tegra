@@ -7,7 +7,7 @@
 
 / {
 	model = "NVIDIA Jetson AGX Thor Developer Kit";
-	compatible = "nvidia,p4071-0080+p3834-0008", "nvidia,p4071-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+	compatible = "nvidia,p4071-0000+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
 
 	pwm-fan {
 		cooling-levels = <77 102 140 192 255>;

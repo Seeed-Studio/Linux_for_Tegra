@@ -738,8 +738,4 @@
 	tegra-capture-coe3 {
 		status = "okay";
 	};
-
-	ufshci@a80b8d0000 {
-		status = "okay";
-	};
 };

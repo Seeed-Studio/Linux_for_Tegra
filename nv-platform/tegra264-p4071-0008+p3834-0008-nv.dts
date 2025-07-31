@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+/dts-v1/;
+
+#include "tegra264-p4071-0000+p3834-0008-nv.dts"
+
+/ {
+	model = "NVIDIA Jetson AGX Thor Developer Kit";
+	compatible = "nvidia,p4071-0008+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+
+	ufshci@a80b8d0000 {
+		status = "okay";
+	};
+};
