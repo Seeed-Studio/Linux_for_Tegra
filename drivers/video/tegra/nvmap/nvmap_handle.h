@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only
- * SPDX-FileCopyrightText: Copyright (c) 2009-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2009-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * GPU memory management driver for Tegra
  */
@@ -7,6 +7,7 @@
 #ifndef _NVMAP_HANDLE_H_
 #define _NVMAP_HANDLE_H_
 
+#include <nvidia/conftest.h>
 #include <linux/nvscierror.h>
 #include <linux/nvsciipc_interface.h>
 
@@ -72,6 +73,7 @@ struct nvmap_handle {
 	int numa_id;
 	u64 serial_id;
 	bool has_hugetlbfs_pages;
+	u64 anon_count;
 };
 
 struct nvmap_handle_info {
@@ -90,6 +92,8 @@ struct nvmap_handle_ref {
 	struct rb_node	node;
 	atomic_t	dupes;	/* number of times to free on file close */
 	bool is_ro;
+	struct mm_struct *mm;
+	u64 anon_count;
 };
 
 struct handles_range {
@@ -380,6 +384,10 @@ void *__nvmap_mmap(struct nvmap_handle *h);
 
 void __nvmap_munmap(struct nvmap_handle *h, void *addr);
 
+struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *c,
+						 struct nvmap_handle *h,
+						 bool is_ro);
+
 #ifdef NVMAP_CONFIG_SCIIPC
 int nvmap_sci_ipc_init(void);
 void nvmap_sci_ipc_exit(void);
@@ -426,4 +434,12 @@ static inline struct dma_buf *nvmap_id_array_id_release(struct xarray *xarr, u32
 }
 #endif /* NVMAP_CONFIG_HANDLE_AS_ID */
 
+static inline void nvmap_add_mm_counter(struct mm_struct *mm, int member, long value)
+{
+#if defined(NV_MM_STRUCT_STRUCT_HAS_PERCPU_COUNTER_RSS_STAT) /* Linux v6.2 */
+	percpu_counter_add(&mm->rss_stat[member], value);
+#else
+	atomic_long_add_return(value, &mm->rss_stat.count[member]);
+#endif
+}
 #endif /* _NVMAP_HANDLE_H_ */

@@ -270,6 +270,17 @@ static void destroy_client(struct nvmap_client *client)
 		if (ref->handle->owner == client)
 			ref->handle->owner = NULL;
 
+		/*
+		 * When a reference is freed, decrement rss counter of the process corresponding
+		 * to this ref and do mmput so that mm_struct can be freed, if required.
+		 */
+		if (ref->mm != NULL && ref->anon_count != 0) {
+			nvmap_add_mm_counter(ref->mm, MM_ANONPAGES, -ref->anon_count);
+			mmput(ref->mm);
+			ref->mm = NULL;
+			ref->anon_count = 0;
+		}
+
 		if (ref->is_ro)
 			dma_buf_put(ref->handle->dmabuf_ro);
 		else

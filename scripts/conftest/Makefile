@@ -171,6 +171,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += kthread_complete_and_exit
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += mii_bus_struct_has_read_c45
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += mii_bus_struct_has_write_c45
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += media_entity_remote_pad
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += mm_struct_struct_has_percpu_counter_rss_stat
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += module_import_ns_calls_stringify
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += mrq_pcie_request_struct_present
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += msi_get_virq

@@ -197,7 +197,7 @@ static inline void nvmap_lru_del(struct nvmap_handle *h)
  *
  * Note: to call this function make sure you own the client ref lock.
  */
-static struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *c,
+struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *c,
 						 struct nvmap_handle *h,
 						 bool is_ro)
 {
@@ -588,17 +588,31 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 
 	atomic_set(&ref->dupes, 1);
 	ref->handle = h;
+
+	/*
+	 * When a new reference is created to the handle, save mm, anon_count in ref and
+	 * increment ref count of mm.
+	 */
+	ref->mm = current->mm;
+	ref->anon_count = h->anon_count;
 	add_handle_ref(client, ref);
+
+	if (ref->anon_count != 0 && ref->mm != NULL) {
+		if (!mmget_not_zero(ref->mm))
+			goto exit;
+
+		nvmap_add_mm_counter(ref->mm, MM_ANONPAGES, ref->anon_count);
+	}
 
 	if (is_ro) {
 		ref->is_ro = true;
 		if (!h->dmabuf_ro)
-			goto exit;
+			goto exit_mm;
 		get_dma_buf(h->dmabuf_ro);
 	} else {
 		ref->is_ro = false;
 		if (!h->dmabuf)
-			goto exit;
+			goto exit_mm;
 		get_dma_buf(h->dmabuf);
 	}
 
@@ -606,6 +620,14 @@ out:
 	NVMAP_TAG_TRACE(trace_nvmap_duplicate_handle,
 		NVMAP_TP_ARGS_CHR(client, h, ref));
 	return ref;
+
+exit_mm:
+	if (ref->anon_count != 0 && ref->mm != NULL) {
+		nvmap_add_mm_counter(ref->mm, MM_ANONPAGES, -ref->anon_count);
+		mmput(ref->mm);
+		ref->mm = NULL;
+		ref->anon_count = 0;
+	}
 
 exit:
 	remove_handle_ref(client, ref);
@@ -775,6 +797,17 @@ void nvmap_free_handle(struct nvmap_client *client,
 
 	if (h->owner == client)
 		h->owner = NULL;
+
+	/*
+	 * When a reference is freed, decrement rss counter of the process corresponding
+	 * to this ref and do mmput so that mm_struct can be freed, if required.
+	 */
+	if (ref->mm != NULL && ref->anon_count != 0) {
+		nvmap_add_mm_counter(ref->mm, MM_ANONPAGES, -ref->anon_count);
+		mmput(ref->mm);
+		ref->mm = NULL;
+		ref->anon_count = 0;
+	}
 
 	if (is_ro)
 		dma_buf_put(ref->handle->dmabuf_ro);

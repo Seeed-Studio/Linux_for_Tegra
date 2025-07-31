@@ -8,7 +8,7 @@
 
 #define DMA_ERROR_CODE	(~(dma_addr_t)0)
 
-#define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN)
+#define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN | __GFP_ACCOUNT | __GFP_NORETRY)
 
 #ifdef CONFIG_ARM64_4K_PAGES
 #define NVMAP_PP_BIG_PAGE_SIZE           (0x10000)

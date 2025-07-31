@@ -17,6 +17,7 @@
 #include <linux/rtmutex.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#include <linux/mm.h>
 #include "nvmap_stats.h"
 #include "nvmap_dev.h"
 #include "nvmap_alloc.h"
@@ -112,6 +113,8 @@ static int handle_page_alloc(struct nvmap_client *client,
 	int pages_per_big_pg = 0;
 #endif
 #endif /* CONFIG_ARM64_4K_PAGES */
+	struct mm_struct *mm = current->mm;
+	struct nvmap_handle_ref *ref;
 
 	if (check_mul_overflow(nr_page, sizeof(*pages), &tot_size))
 		return -EOVERFLOW;
@@ -119,6 +122,13 @@ static int handle_page_alloc(struct nvmap_client *client,
 	pages = nvmap_altalloc(tot_size);
 	if (!pages)
 		return -ENOMEM;
+
+	/*
+	 * Get refcount on mm_struct, so that it won't be freed until
+	 * nvmap reduces refcount after it reduces the RSS counter.
+	 */
+	if (!mmget_not_zero(mm))
+		goto page_free;
 
 	if (contiguous) {
 		struct page *page;
@@ -199,6 +209,12 @@ static int handle_page_alloc(struct nvmap_client *client,
 	nvmap_total_page_allocs = result;
 
 	/*
+	 * Increment the RSS counter of the allocating process by number of pages allocated.
+	 */
+	h->anon_count = nr_page;
+	nvmap_add_mm_counter(mm, MM_ANONPAGES, nr_page);
+
+	/*
 	 * Make sure any data in the caches is cleaned out before
 	 * passing these pages to userspace. Many nvmap clients assume that
 	 * the buffers are clean as soon as they are allocated. nvmap
@@ -211,11 +227,28 @@ static int handle_page_alloc(struct nvmap_client *client,
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
 	atomic_set(&h->pgalloc.ndirty, 0);
+
+	nvmap_ref_lock(client);
+	ref = __nvmap_validate_locked(client, h, false);
+	if (ref) {
+		ref->mm = mm;
+		ref->anon_count = h->anon_count;
+	} else {
+		nvmap_add_mm_counter(mm, MM_ANONPAGES, -nr_page);
+		mmput(mm);
+	}
+
+	nvmap_ref_unlock(client);
 	return 0;
 
 fail:
 	while (i--)
 		__free_page(pages[i]);
+
+	/* Incase of failure, release the reference on mm_struct. */
+	mmput(mm);
+
+page_free:
 	nvmap_altfree(pages, tot_size);
 	wmb();
 	return -ENOMEM;
@@ -679,9 +712,18 @@ void nvmap_alloc_free(struct page **pages, unsigned int nr_page, bool from_va,
 		pages[i] = nvmap_to_page(pages[i]);
 
 #ifdef NVMAP_CONFIG_PAGE_POOLS
-	if (!from_va && !is_subhandle)
-		page_index = nvmap_page_pool_fill_lots(nvmap_dev->pool,
+	if (!from_va && !is_subhandle) {
+		/*
+		 * When the process is exiting with kill signal pending, don't release the memory
+		 * back into page pool. So that memory would be released back to the kernel and OOM
+		 * killer would be able to actually free the memory.
+		 */
+		if (fatal_signal_pending(current) == 0 &&
+			sigismember(&current->signal->shared_pending.signal, SIGKILL) == 0) {
+			page_index = nvmap_page_pool_fill_lots(nvmap_dev->pool,
 							pages, nr_page);
+		}
+	}
 #endif
 
 	for (i = page_index; i < nr_page; i++) {
