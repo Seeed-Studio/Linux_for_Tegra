@@ -35,7 +35,7 @@
 #ifndef __R8126_H
 #define __R8126_H
 
-//#include <linux/pci.h>
+#include <linux/pci.h>
 #include <linux/ethtool.h>
 #include <linux/interrupt.h>
 #include <linux/version.h>

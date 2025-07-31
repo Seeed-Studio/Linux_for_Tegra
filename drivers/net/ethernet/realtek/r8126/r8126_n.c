@@ -14405,6 +14405,9 @@ rtl8126_init_one(struct pci_dev *pdev,
         tp = netdev_priv(dev);
         assert(ioaddr != NULL);
 
+	/* Disable LTR_EN bit in DevCtl2 register of RTL Endpoint */
+	pcie_capability_clear_word(pdev, PCI_EXP_DEVCTL2, PCI_EXP_DEVCTL2_LTR_EN);
+
         spin_lock_init(&tp->phy_lock);
 
         tp->set_speed = rtl8126_set_speed_xmii;
