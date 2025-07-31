@@ -7,18 +7,25 @@ ifeq ($(CONFIG_TEGRA_KLEAF_BUILD),y)
 include $(this_makefile_path)/Makefile.kleaf
 endif
 
+$(info ) # blank line
+$(info === nvidia-oot config variables)
+
 # Include kernel specific config
+$(info kernel_name = $(kernel_name))
 ifneq ($(kernel_name),)
 kernel_config := $(this_makefile_path)/configs/Makefile.config.$(kernel_name)
 ifneq ($(wildcard $(kernel_config)),)
+$(info kernel_config = $(kernel_config))
 include $(kernel_config)
 endif
 endif
 
 # Include system specific config
+$(info system_type = $(system_type))
 ifneq ($(system_type),)
 system_config := $(this_makefile_path)/configs/Makefile.config.$(system_type)
 ifneq ($(wildcard $(system_config)),)
+$(info system_config = $(system_config))
 include $(system_config)
 endif
 endif
