@@ -155,7 +155,7 @@
  
 bool reset_de_flag;
 bool de_statue;
- static void tegra_uart_start_next_tx(struct tegra_uart_port *tup);
+ static int tegra_uart_start_next_tx(struct tegra_uart_port *tup);
  static int tegra_uart_start_rx_dma(struct tegra_uart_port *tup);
  static void tegra_uart_dma_channel_free(struct tegra_uart_port *tup,
 					 bool dma_to_memory);
@@ -180,16 +180,20 @@ bool de_statue;
 
  static inline void tegra_uart_rs485_de_assert(struct tegra_uart_port *tup)
  {
-	 if (tup->rs485_de_gpio)
-		 gpiod_set_value(tup->rs485_de_gpio, 0);
-		 tup->rs_485_gpio_statu = true;
+	 if (tup->rs485_de_gpio){
+		gpiod_set_value(tup->rs485_de_gpio, 0);
+		tup->rs_485_gpio_statu = true;
+	 }
+
  }
  
  static inline void tegra_uart_rs485_de_deassert(struct tegra_uart_port *tup)
  {
-	 if (tup->rs485_de_gpio)
-		 gpiod_set_value(tup->rs485_de_gpio, 1); 
-		 tup->rs_485_gpio_statu = false;
+	 if (tup->rs485_de_gpio){
+		gpiod_set_value(tup->rs485_de_gpio, 1); 
+		tup->rs_485_gpio_statu = false;
+	 }
+
  }
 
  
@@ -542,6 +546,8 @@ bool de_statue;
 	 struct dma_tx_state state;
 	 unsigned long flags;
 	 unsigned int count;
+	 printk("in tegra_uart_tx_dma_complete\r\n");
+
 	 dmaengine_tx_status(tup->tx_dma_chan, tup->tx_cookie, &state);
 	 count = tup->tx_bytes_requested - state.residue;
 	 async_tx_ack(tup->tx_dma_desc);
@@ -591,19 +597,19 @@ bool de_statue;
 	 return 0;
  }
  
- static void tegra_uart_start_next_tx(struct tegra_uart_port *tup)
+ static int tegra_uart_start_next_tx(struct tegra_uart_port *tup)
  {
 	 unsigned long tail;
 	 unsigned long count;
 	 struct circ_buf *xmit = &tup->uport.state->xmit;
 	 printk("in tegra_uart_start_next_tx\r\n");
 	 if (!tup->current_baud)
-		 return;
+		 return 0;
  
 	 tail = (unsigned long)&xmit->buf[xmit->tail];
 	 count = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
 	 if (!count){
-		 return;
+		 return 1;
 	 }
 
 	 if (tup->use_tx_pio || count < TEGRA_UART_MIN_DMA)
@@ -612,6 +618,8 @@ bool de_statue;
 		 tegra_uart_start_pio_tx(tup, BYTES_TO_ALIGN(tail));
 	 else
 		 tegra_uart_start_tx_dma(tup, count);
+		
+	return 0;
  }
  
  /* Called by serial core driver with u->lock taken. */
@@ -668,7 +676,11 @@ bool de_statue;
 		uart_write_wakeup(&tup->uport);
 	 }
 
-	 tegra_uart_start_next_tx(tup);
+	 if(1 == tegra_uart_start_next_tx(tup)){
+		if (tup->rs485_de_gpio) {
+			hrtimer_start(&tup->rs485_de_timer, ns_to_ktime(10000), HRTIMER_MODE_REL);
+		}
+	 }
  }
  
  static void tegra_uart_handle_rx_pio(struct tegra_uart_port *tup,
@@ -913,9 +925,6 @@ bool de_statue;
 			 tegra_uart_write(tup, tup->ier_shadow, UART_IER);
 			 tegra_uart_handle_tx_pio(tup);
 
-			 if (tup->rs485_de_gpio) {
-				hrtimer_start(&tup->rs485_de_timer, ns_to_ktime(100000), HRTIMER_MODE_REL); // 100μs
-			}
 			 break;
  
 		 case 4: /* End of data */
@@ -1628,7 +1637,7 @@ bool de_statue;
 	}
 
 	// 没发完，继续轮询
-	hrtimer_forward_now(timer, ns_to_ktime(100000));  // 延迟 100μs
+	hrtimer_forward_now(timer, ns_to_ktime(10000)); 
 	return HRTIMER_RESTART;
 }
 
