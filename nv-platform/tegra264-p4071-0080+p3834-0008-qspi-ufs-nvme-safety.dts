@@ -10,6 +10,22 @@
 	compatible = "nvidia,p4071-0080+p3834-0008", "safety", "nvidia,p4071-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
 
 	bus@0 {
+		mttcan@81102f0000 {
+			status = "disabled";
+		};
+
+		mttcan@8110300000 {
+			status = "disabled";
+		};
+
+		mttcan@8110330000 {
+			status = "disabled";
+		};
+
+		mttcan@8110340000 {
+			status = "disabled";
+		};
+
 		spi@810c440000 {
 			status = "okay";
 			compatible = "nvidia,tegra264-spi-slave";
