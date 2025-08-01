@@ -70,22 +70,15 @@
 				};			
 			};
 		};
-		
-		pcie@14180000 {
-					status = "okay";
-					phys = <&p2u_hsio_0>;
-					phy-names = "p2u-0";
-		};
+
 
 		//CAN0
 		mttcan@c310000 {
-			// 3V3-supply  = <&vdd_3v3_sd>;
 			status = "okay";
 		};
 
 		//CAN1
 		mttcan@c320000 {
-			// 3V3-supply = <&vdd_3v3_sd>;
 			status = "okay";
 		};
 
@@ -93,11 +86,10 @@
 		serial@3140000 {
 			compatible = "nvidia,tegra194-hsuart";
 			reset-names = "serial";
-			rs485-de-gpios = <&gpio TEGRA234_MAIN_GPIO(Y, 7) GPIO_ACTIVE_HIGH>;
-			status = "okay";
+			rs485-de-gpios = <&gpio TEGRA234_MAIN_GPIO(Y, 7) GPIO_ACTIVE_LOW>;
+			status = "okay";	
+			/delete-property/ dmas;
+			/delete-property/ dma-names;
 		};
-
-		//ttyTHS0 for M.2 KEY-B (4G/5G)
-		//no need config
 	};
 };
