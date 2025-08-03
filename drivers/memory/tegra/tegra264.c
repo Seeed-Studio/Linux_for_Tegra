@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2024-2025, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <soc/tegra/mc.h>
@@ -457,6 +457,8 @@ static const struct tegra_mc_client tegra264_mc_clients[] = {
 	}, {
 		.id = TEGRA264_MEMORY_CLIENT_DISPR,
 		.name = "dispr",
+		.bpmp_id = TEGRA264_BWMGR_DISPLAY,
+		.type = TEGRA_ICC_ISO_DISPLAY,
 	}, {
 		.id = TEGRA264_MEMORY_CLIENT_MSSSEQR,
 		.name = "mssseqr",
