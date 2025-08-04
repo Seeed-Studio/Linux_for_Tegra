@@ -22,5 +22,14 @@ sudo tar xpf tegra_linux_sample-root-filesystem_r32.7.6_aarch64.tbz2 -C rootfs/
 sudo ./apply_binaries.sh
 ```
 
-3. package the image for qspi & nvme flash
+3. package the image 
+```
 sudo BOARDID=3448 BOARDSKU=0002 FAB=400 FUSELEVEL=fuselevel_production ./nvmassflashgen.sh jetson-nano-devkit-emmc mmcblk0p1
+```
+This will generate a compressed file named ``mfi_jetson-nano-devkit-emmc.tbz2``
+4、flash
+```
+tar -xpf mfi_jetson-nano-devkit-emmc.tbz2
+sudo ./nvmflash.sh --showlogs
+```
+
