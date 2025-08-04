@@ -2205,15 +2205,17 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	if (err)
 		goto release_rpm;
 
-	/* Register error reporting callback */
-	err = hsierrrpt_reg_cb(IP_I2C, i2c_dev->adapter.nr, i2c_inject_err_fsi, i2c_dev);
+	/* Register error reporting callback if a reporter ID is registered */
+	if (i2c_dev->epl_reporter_id) {
+		err = hsierrrpt_reg_cb(IP_I2C, i2c_dev->adapter.nr, i2c_inject_err_fsi, i2c_dev);
 
-	if (err != 0)
-		dev_info(i2c_dev->dev, "Err inj callback registration failed: %d", err);
-	/* Continue init despite err inj utility
-	 * registration failure, as the err inj support
-	 * is meant only for debug purposes.
-	 */
+		/* Continue init despite err inj utility
+		 * registration failure, as the err inj support
+		 * is meant only for debug purposes.
+		 */
+		if (err != 0)
+			dev_info(i2c_dev->dev, "Err inj callback registration failed: %d", err);
+	}
 
 	return 0;
 
