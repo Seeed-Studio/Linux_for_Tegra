@@ -62,7 +62,6 @@ int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 	uint32_t stride, num_syncpts;
 	uint32_t syncpt_page_size;
 	dma_addr_t sp_start;
-	int count;
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
 	struct nvpva_device_data *props = device_data->pva_device_properties;
@@ -91,9 +90,9 @@ int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 	}
 
 	all_syncpt_size = stride * num_syncpts;
-	syncpt_page_size = nvpva_syncpt_unit_interface_get_byte_offset_ext(1);
+	syncpt_page_size = stride;
 	sp_start = dma_map_resource(dev, syncpt_phys_base, all_syncpt_size,
-				    DMA_TO_DEVICE, DMA_ATTR_SKIP_CPU_SYNC);
+				    DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
 	if (dma_mapping_error(dev, sp_start)) {
 		dev_err(dev, "Failed to map RO syncpoints");
 		goto err_out;
@@ -103,17 +102,14 @@ int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 	pva->syncpt_page_size = syncpt_page_size;
 	pva->num_ro_syncpts = num_syncpts;
 
-	dev_info(dev, "PVA RO syncpt iova: %llx, size: %lx\n",
-		 pva->ro_syncpt_base_iova, all_syncpt_size);
+	pva->rw_syncpt_base_iova = sp_start;
+	pva->rw_syncpt_region_size = all_syncpt_size;
 
-	// Create a scatterlist to store all physical addresses of syncpts.
-	// They may be non-contiguous so we prepare one scatterlist entry per syncpt.
-	// Later, we map the scatterlist into a contiguous IOVA region.
-	sg_init_table(device_data->syncpt_sg, PVA_NUM_RW_SYNCPTS);
+	dev_info(dev, "PVA syncpt (RO & RW) iova: %llx, size: %lx\n",
+		 pva->ro_syncpt_base_iova, all_syncpt_size);
 
 	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
 		uint32_t syncpt_id;
-		phys_addr_t syncpt_phys_addr;
 
 		syncpt_id = nvpva_get_syncpt_client_managed(props->pdev,
 							    "pva_syncpt");
@@ -124,58 +120,10 @@ int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 		}
 
 		pva->rw_syncpts[i].syncpt_id = syncpt_id;
-
-		syncpt_phys_addr = safe_addu64(
-			syncpt_phys_base,
-			nvpva_syncpt_unit_interface_get_byte_offset_ext(
-				syncpt_id));
-		//Store the syncpt physical address in the scatterlist. Since the
-		//scatterlist API only takes struct page as input, so we first convert
-		//the physical address to a struct page address.
-		sg_set_page(&device_data->syncpt_sg[i],
-			    phys_to_page(syncpt_phys_addr), syncpt_page_size,
-			    0);
-	}
-
-	count = dma_map_sg_attrs(dev, device_data->syncpt_sg,
-				 PVA_NUM_RW_SYNCPTS, DMA_BIDIRECTIONAL,
-				 DMA_ATTR_SKIP_CPU_SYNC);
-	ASSERT(count > 0);
-	{
-		//Validate that syncpt IOVAs are contiguous
-		//This is an assertion and should never fail
-		uint64_t prev_iova = 0;
-		uint64_t prev_len = 0;
-		for (uint32_t i = 0; i < count; i++) {
-			if (prev_iova != 0) {
-				if (safe_addu64(prev_iova, prev_len) !=
-				    sg_dma_address(
-					    &device_data->syncpt_sg[i])) {
-					dev_err(dev,
-						"RW syncpt IOVAs are not contiguous. This should never happen!");
-					err = -EFAULT;
-					goto free_syncpts;
-				}
-				prev_iova = sg_dma_address(
-					&device_data->syncpt_sg[i]);
-				prev_len =
-					sg_dma_len(&device_data->syncpt_sg[i]);
-			}
-		}
-	}
-
-	pva->rw_syncpt_base_iova = sg_dma_address(&device_data->syncpt_sg[0]);
-	pva->rw_syncpt_region_size =
-		safe_mulu32(syncpt_page_size, PVA_NUM_RW_SYNCPTS);
-
-	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
 		pva->rw_syncpts[i].syncpt_iova =
 			safe_addu64(pva->rw_syncpt_base_iova,
-				    safe_mulu32(i, syncpt_page_size));
+				    safe_mulu32(syncpt_id, syncpt_page_size));
 	}
-
-	dev_info(dev, "PVA RW syncpt iova: %llx, size: %x\n",
-		 pva->rw_syncpt_base_iova, pva->rw_syncpt_region_size);
 
 	return 0;
 

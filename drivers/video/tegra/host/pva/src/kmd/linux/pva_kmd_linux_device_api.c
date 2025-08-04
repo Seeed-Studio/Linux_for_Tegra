@@ -21,10 +21,6 @@
 #include "pva_kmd_silicon_utils.h"
 #include "pva_kmd_linux_device_api.h"
 
-/* SYNCPT_PAGE_SIZE and SYNCPT_SHIM_SIZE are same for T234 and T264*/
-#define SYNCPT_PAGE_SIZE 0x10000
-#define SYNCPT_SHIM_SIZE 0x04000000
-
 #define NVPVA_NUM_CDEV 1
 
 uint32_t nvpva_get_syncpt_client_managed(struct platform_device *pdev,
@@ -68,11 +64,6 @@ int nvpva_syncpt_read_ext_check(struct platform_device *pdev, uint32_t id,
 	return 0;
 }
 
-uint32_t nvpva_syncpt_unit_interface_get_byte_offset_ext(uint32_t syncpt_id)
-{
-	return safe_mulu32(syncpt_id, SYNCPT_PAGE_SIZE);
-}
-
 int nvpva_syncpt_unit_interface_init(struct platform_device *pdev)
 {
 	struct nvpva_device_data *pdata = platform_get_drvdata(pdev);
@@ -93,7 +84,7 @@ int nvpva_syncpt_unit_interface_init(struct platform_device *pdev)
 	}
 	syncpt_if->size = stride * num_syncpts;
 
-	syncpt_if->page_size = SYNCPT_PAGE_SIZE;
+	syncpt_if->page_size = stride;
 
 	/* If IOMMU is enabled, map it into the device memory */
 	if (iommu_get_domain_for_dev(&pdev->dev)) {
