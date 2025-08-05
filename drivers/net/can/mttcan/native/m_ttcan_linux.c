@@ -1055,20 +1055,12 @@ static void mttcan_controller_config(struct net_device *dev)
 }
 
 /* Adjust the timer by resetting the timecounter structure periodically */
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,15,0)
 static void mttcan_timer_cb(struct timer_list *timer)
-#else
-static void mttcan_timer_cb(unsigned long data)
-#endif
 {
 	unsigned long flags;
 	u64 tref;
 	int ret = 0;
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,15,0)
 	struct mttcan_priv *priv = container_of(timer, struct mttcan_priv, timer);
-#else
-	struct mttcan_priv *priv = (struct mttcan_priv *)data;
-#endif
 
 	raw_spin_lock_irqsave(&priv->tc_lock, flags);
 	ret = nvpps_get_ptp_ts(&tref);
@@ -1564,11 +1556,7 @@ static const struct net_device_ops mttcan_netdev_ops = {
 	.ndo_stop = mttcan_close,
 	.ndo_start_xmit = mttcan_start_xmit,
 	.ndo_change_mtu = mttcan_change_mtu,
-#if KERNEL_VERSION(5, 15, 0) <= LINUX_VERSION_CODE
 	.ndo_eth_ioctl = mttcan_ioctl,
-#else
-	.ndo_do_ioctl = mttcan_ioctl,
-#endif
 };
 
 static int register_mttcan_dev(struct net_device *dev)
@@ -1925,11 +1913,7 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (ret)
 		goto exit_unreg_candev;
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,15,0)
 	timer_setup(&priv->timer, mttcan_timer_cb, 0);
-#else
-	setup_timer(&priv->timer, mttcan_timer_cb, (unsigned long)priv);
-#endif
 
 	dev_info(&dev->dev, "%s device registered (regs=%p, irq=%d)\n",
 		 KBUILD_MODNAME, priv->ttcan->base, dev->irq);

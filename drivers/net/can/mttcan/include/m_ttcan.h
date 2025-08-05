@@ -1,12 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #ifndef __M_TTCAN_DEF
 #define __M_TTCAN_DEF
-
-#include <linux/version.h>
 
 #include "m_ttcan_regdef.h"
 #include "m_ttcan_linux.h"
@@ -561,9 +559,5 @@ int add_msg_controller_list(struct ttcan_controller *ttcan,
 int add_event_controller_list(struct ttcan_controller *ttcan,
 				struct mttcan_tx_evt_element *txevt,
 				struct list_head *evt_q);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 u64 ttcan_read_ts_cntr(const struct cyclecounter *ccnt);
-#else
-cycle_t ttcan_read_ts_cntr(const struct cyclecounter *ccnt);
-#endif
 #endif
