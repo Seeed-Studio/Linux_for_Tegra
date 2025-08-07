@@ -470,7 +470,7 @@ int nvmap_get_user_pages(ulong vaddr,
 
 	if (user_pages != nr_page) {
 		ret = user_pages < 0 ? user_pages : -ENOMEM;
-		pr_err("get_user_pages requested/got: %zu/%ld]\n", nr_page,
+		pr_debug("get_user_pages requested/got: %zu/%ld]\n", nr_page,
 				user_pages);
 		while (--user_pages >= 0)
 			put_page(pages[user_pages]);
