@@ -344,6 +344,8 @@ job-orin-nx-industrial-8g:
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
         #  - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
+         - cp -r extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.192-tegra/kernel/drivers/net/wireless/
+         - chroot rootfs depmod -a 5.10.192-tegra
          - chroot rootfs /rootfs_magic.sh
          - umount ./rootfs/sys
          - umount ./rootfs/dev/pts
@@ -530,6 +532,8 @@ job-orin-nx-industrial-16g:
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
         #  - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
+         - cp -r extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.192-tegra/kernel/drivers/net/wireless/
+         - chroot rootfs depmod -a 5.10.192-tegra
          - chroot rootfs /rootfs_magic.sh
          - umount ./rootfs/sys
          - umount ./rootfs/dev/pts
@@ -716,6 +720,8 @@ job-orin-nano-industrial-8g:
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
         #  - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
+         - cp -r extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.192-tegra/kernel/drivers/net/wireless/
+         - chroot rootfs depmod -a 5.10.192-tegra
          - chroot rootfs /rootfs_magic.sh
          - umount ./rootfs/sys
          - umount ./rootfs/dev/pts
@@ -902,6 +908,8 @@ job-orin-nano-industrial-4g:
         #  - cp extra_kernel_modules/spi-tegra114.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/spi/spi-tegra114.ko
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
         #  - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
+         - cp -r extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.192-tegra/kernel/drivers/net/wireless/
+         - chroot rootfs depmod -a 5.10.192-tegra
          - chroot rootfs /rootfs_magic.sh
          - umount ./rootfs/sys
          - umount ./rootfs/dev/pts
