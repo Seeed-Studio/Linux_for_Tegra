@@ -18,7 +18,7 @@
 
 
 / {
-	overlay-name = "Seeed GMSL 2X1X4 3G";
+	overlay-name = "Seeed GMSL 2X1X4 6G";
 	jetson-header-name = "Jetson AGX CSI Connector";
 	compatible = JETSON_COMPATIBLE;
 	
@@ -301,7 +301,7 @@
 						// reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 						reg = <0x29>;
 						status = "okay";
-						maxim,speed-mode = <0x00>;
+						maxim,speed-mode = <0x01>;// 6G
 						
 						phy@1 {
 							reg = <0x01>;
@@ -467,7 +467,7 @@
 								ser_0: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -765,7 +765,7 @@
 								ser_1: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -1062,7 +1062,7 @@
 								ser_2: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -1359,7 +1359,7 @@
 								ser_3: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -1675,7 +1675,7 @@
 						// reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 						reg = <0x29>;
 						status = "okay";
-						maxim,speed-mode = <0x00>;
+						maxim,speed-mode = <0x01>;// 6G
 						
 						phy@1 {
 							reg = <0x01>;
@@ -1833,7 +1833,7 @@
 								ser_4: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -2131,7 +2131,7 @@
 								ser_5: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -2428,7 +2428,7 @@
 								ser_6: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
@@ -2725,7 +2725,7 @@
 								ser_7: gmsl-serializer@0x40 {
 									#address-cells = <1>;
 									#size-cells = <0>;
-									compatible = "maxim,max96717";
+									compatible = "maxim,max9295a";
 									reg = <0x40>;
 									gpio-controller;
 									#gpio-cells = <2>;
