@@ -2951,6 +2951,12 @@ phl_mr_chandef_sync(struct phl_info_t *phl_info, struct hw_band_ctl_t *band_ctrl
 				if (rlink->hw_band == band_ctrl->id)
 					break;
 			}
+
+			if (rlink == NULL) {
+				PHL_ERR("ridx :%d rlink == NULL\n", ridx);
+				continue;
+			}
+
 			if (role_num == 0) {
 				band_ret = rlink->chandef.band;
 				ch_ret = rlink->chandef.chan;

@@ -715,8 +715,8 @@ static void push_back_wait_req(struct cmd_dispatcher *obj,
 {
 	void *d = phl_to_drvpriv(obj->phl_info);
 
-	pq_push(d, &(obj->token_req_wait_q), &(req->list), _tail, _bh);
 	SET_STATUS_FLAG(req->status, REQ_STATUS_ENQ);
+	pq_push(d, &(obj->token_req_wait_q), &(req->list), _tail, _bh);
 }
 
 static void clear_wating_req(struct cmd_dispatcher *obj)

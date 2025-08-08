@@ -1783,12 +1783,6 @@ u8 _rtw_sitesurvey_condition_check(const char *caller, _adapter *adapter, bool c
 	}
 #endif /* RTW_BUSY_DENY_SCAN */
 
-	if (adapter_to_pwrctl(adapter)->bInSuspend == _TRUE) {
-		RTW_INFO("%s bInSuspend scan abort!\n", __func__);
-		ss_condition = SS_DENY_BLOCK_SCAN;
-		goto _exit;
-	}
-
 _exit:
 	return ss_condition;
 }

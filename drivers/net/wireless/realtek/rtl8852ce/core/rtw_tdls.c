@@ -532,13 +532,17 @@ void rtw_tdls_process_ht_cap(_adapter *padapter, struct sta_info *ptdls_sta, PND
 		/* AMPDU Parameters field */
 
 		/* Get MIN of MAX AMPDU Length Exp */
-		max_AMPDU_len = GET_HT_CAP_ELE_MAX_AMPDU_LEN_EXP(pIE->data);
-		max_AMPDU_len = rtw_min((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3), max_AMPDU_len);
-
+		if ((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3) > (*(pIE->data + 2) & 0x3))
+			max_AMPDU_len = (*(pIE->data + 2) & 0x3);
+		else
+			max_AMPDU_len = (pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3);
 		/* Get MAX of MIN MPDU Start Spacing */
-		min_MPDU_spacing = GET_HT_CAP_ELE_MIN_MPDU_S_SPACE(pIE->data);
-		min_MPDU_spacing = rtw_max((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c), min_MPDU_spacing);
+		if ((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c) > (*(pIE->data + 2) & 0x1c))
+			min_MPDU_spacing = (pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c);
+		else
+			min_MPDU_spacing = (*(pIE->data + 2) & 0x1c);
 		ptdls_sta->ampdu_priv.rx_ampdu_min_spacing = max_AMPDU_len | min_MPDU_spacing;
+
 
 		/* Check if sta support s Short GI 20M */
 		if ((phtpriv->sgi_20m == _TRUE) && (ptdls_sta->htpriv.ht_cap.cap_info & cpu_to_le16(IEEE80211_HT_CAP_SGI_20)))

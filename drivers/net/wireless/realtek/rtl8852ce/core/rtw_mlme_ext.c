@@ -7393,18 +7393,17 @@ void _issue_assocreq(_adapter *padapter, u8 is_reassoc)
 #endif
 
 	pattrib->last_txcmdsz = pattrib->pktlen;
+	rtw_buf_update(&padapter->mlmepriv.assoc_req, &padapter->mlmepriv.assoc_req_len, (u8 *)pwlanhdr, pattrib->pktlen);
+#ifdef CONFIG_RTW_WNM
+	if (is_reassoc == _TRUE)
+		rtw_wnm_update_reassoc_req_ie(padapter);
+#endif
 	dump_mgntframe(padapter, pmgntframe);
 
 	ret = _SUCCESS;
 
 exit:
-	if (ret == _SUCCESS) {
-		rtw_buf_update(&padapter->mlmepriv.assoc_req, &padapter->mlmepriv.assoc_req_len, (u8 *)pwlanhdr, pattrib->pktlen);
-	#ifdef CONFIG_RTW_WNM
-		if (is_reassoc == _TRUE)
-			rtw_wnm_update_reassoc_req_ie(padapter);
-	#endif
-	} else
+	if (ret == _FAIL) 
 		rtw_buf_free(&padapter->mlmepriv.assoc_req, &padapter->mlmepriv.assoc_req_len);
 
 	return;

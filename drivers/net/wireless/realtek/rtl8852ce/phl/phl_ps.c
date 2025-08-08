@@ -221,11 +221,7 @@ _ps_ps_cfg_int(struct phl_info_t *phl_info, u8 ps_mode, enum phl_ps_ps_int_cfg_s
 		 * 1. disable imr
 		 * 2. stop datapath
 		 */
-		#ifdef CONFIG_SYNC_INTERRUPT
-		evt_ops->set_interrupt_caps(phlcom_to_drvpriv(phl_info->phl_com), false);
-		#else
-		rtw_hal_disable_interrupt(phl_info->phl_com, phl_info->hal);
-		#endif /* CONFIG_SYNC_INTERRUPT */
+		rtw_phl_disable_interrupt_sync(phl_info->phl_com);
 
 		_phl_ps_ctrl_datapath(phl_info, true);
 		break;
@@ -240,22 +236,14 @@ _ps_ps_cfg_int(struct phl_info_t *phl_info, u8 ps_mode, enum phl_ps_ps_int_cfg_s
 		if (ps_mode == PS_MODE_LPS)
 			_phl_ps_ctrl_datapath(phl_info, false);
 
-		#ifdef CONFIG_SYNC_INTERRUPT
-		evt_ops->set_interrupt_caps(phlcom_to_drvpriv(phl_info->phl_com), true);
-		#else
-		rtw_hal_enable_interrupt(phl_info->phl_com, phl_info->hal);
-		#endif /* CONFIG_SYNC_INTERRUPT */
+		rtw_phl_enable_interrupt_sync(phl_info->phl_com);
 		break;
 	case PS_LEAVE_CFG_INT_PRE_PHASE:
 		/**
 		 * 1. disable imr
 		 * 2. stop datapath
 		 */
-		#ifdef CONFIG_SYNC_INTERRUPT
-		evt_ops->set_interrupt_caps(phlcom_to_drvpriv(phl_info->phl_com), false);
-		#else
-		rtw_hal_disable_interrupt(phl_info->phl_com, phl_info->hal);
-		#endif /* CONFIG_SYNC_INTERRUPT */
+		rtw_phl_disable_interrupt_sync(phl_info->phl_com);
 
 		if (ps_mode == PS_MODE_LPS)
 			_phl_ps_ctrl_datapath(phl_info, true);
@@ -270,11 +258,7 @@ _ps_ps_cfg_int(struct phl_info_t *phl_info, u8 ps_mode, enum phl_ps_ps_int_cfg_s
 
 		_phl_ps_ctrl_datapath(phl_info, false);
 
-		#ifdef CONFIG_SYNC_INTERRUPT
-		evt_ops->set_interrupt_caps(phlcom_to_drvpriv(phl_info->phl_com), true);
-		#else
-		rtw_hal_enable_interrupt(phl_info->phl_com, phl_info->hal);
-		#endif /* CONFIG_SYNC_INTERRUPT */
+		rtw_phl_enable_interrupt_sync(phl_info->phl_com);
 		break;
 	default:
 		PHL_ERR("%s(): unknown step!\n", __func__);

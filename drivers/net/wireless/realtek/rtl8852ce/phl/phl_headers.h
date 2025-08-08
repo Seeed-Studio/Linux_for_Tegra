@@ -150,4 +150,5 @@
 #ifdef CONFIG_WIFI_7
 #endif
 
+#include "phl_int.h"
 #endif /*_PHL_HEADERS_H_*/

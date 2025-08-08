@@ -401,7 +401,7 @@ void rtw_hal_restore_interrupt(struct rtw_phl_com_t *phl_com, void *h)
 		hal_ops->restore_interrupt(hal);
 }
 
-void rtw_hal_restore_rx_interrupt(void *h)
+void rtw_hal_restore_rx_imr_mask(void *h)
 {
 	struct hal_info_t *hal = (struct hal_info_t *)h;
 	struct hal_ops_t *hal_ops = hal_get_ops(hal);

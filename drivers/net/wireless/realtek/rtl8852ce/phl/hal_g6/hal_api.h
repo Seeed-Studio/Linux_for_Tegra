@@ -60,7 +60,7 @@ void rtw_hal_clear_interrupt(void *h);
 void rtw_hal_restore_interrupt(struct rtw_phl_com_t *phl_com, void *h);
 
 u32 rtw_hal_interrupt_handler(void *h);
-void rtw_hal_restore_rx_interrupt(void *h);
+void rtw_hal_restore_rx_imr_mask(void *h);
 #ifdef PHL_RXSC_ISR
 u16 rtw_hal_rpq_isr_check(void *hal, u8 dma_ch);
 #endif

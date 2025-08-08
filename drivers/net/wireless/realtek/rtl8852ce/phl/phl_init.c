@@ -428,6 +428,9 @@ static enum rtw_phl_status phl_hci_init(struct phl_info_t *phl_info,
 		phl_status = RTW_PHL_STATUS_RESOURCE;
 		goto error_hci_mem;
 	}
+#ifdef CONFIG_PCI_HCI
+	_os_spinlock_init(phl_info->phl_com->drv_priv, &phl_info->hci->int_hdl_lock);
+#endif
 #ifdef CONFIG_USB_HCI
 	phl_info->hci->usb_bulkout_size = ic_info->usb_info.usb_bulkout_size;
 #endif
@@ -470,9 +473,13 @@ static void phl_hci_deinit(struct phl_info_t *phl_info, struct hci_info_t *hci)
 {
 
 	/* deinit variable or stop mechanism. */
-	if (hci)
+	if (hci) {
+		#ifdef CONFIG_PCI_HCI
+		_os_spinlock_free(phl_info->phl_com->drv_priv, &hci->int_hdl_lock);
+		#endif
 		_os_mem_free(phl_to_drvpriv(phl_info), hci,
 						sizeof(struct hci_info_t));
+	}
 }
 
 static enum rtw_phl_status _phl_hci_ops_check(struct phl_info_t *phl_info)
@@ -1612,9 +1619,6 @@ enum rtw_phl_status rtw_phl_start(void *phl)
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
 	enum rtw_phl_status phl_status = RTW_PHL_STATUS_FAILURE;
 	enum rtw_hal_status hal_status = RTW_HAL_STATUS_SUCCESS;
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *evt_ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
 #ifdef CONFIG_POWER_SAVE
 	struct rtw_ps_cap_t *ps_cap = _get_ps_sw_cap(phl_info);
 #endif
@@ -1677,11 +1681,8 @@ enum rtw_phl_status rtw_phl_start(void *phl)
 	/* NOT enable interrupt here to avoid system hang during WiFi up
 		move interrupt enable to end of hw_iface init */
 #else
-#ifdef CONFIG_SYNC_INTERRUPT
-	evt_ops->set_interrupt_caps(phl_to_drvpriv(phl_info), true);
-#else
-	rtw_hal_enable_interrupt(phl_info->phl_com, phl_info->hal);
-#endif /* CONFIG_SYNC_INTERRUPT */
+		rtw_phl_enable_interrupt_sync(phl_info->phl_com);
+
 #endif /* RTW_WKARD_98D_INTR_EN_TIMING */
 #ifdef CONFIG_POWER_SAVE
 	}
@@ -1717,21 +1718,9 @@ error_hal_start:
 
 static void _phl_interrupt_stop(struct phl_info_t *phl_info)
 {
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *evt_ops = &phl_info->phl_com->evt_ops;
-
-	do {
-		if (false == TEST_STATUS_FLAG(phl_info->phl_com->dev_state,
-		                              RTW_DEV_SURPRISE_REMOVAL))
-			evt_ops->set_interrupt_caps(phl_to_drvpriv(phl_info), false);
-	} while (false);
-#else
-	do {
-		if (false == TEST_STATUS_FLAG(phl_info->phl_com->dev_state,
-		                              RTW_DEV_SURPRISE_REMOVAL))
-			rtw_hal_disable_interrupt(phl_info->phl_com, phl_info->hal);
-	} while (false);
-#endif /* CONFIG_SYNC_INTERRUPT */
+	if (false == TEST_STATUS_FLAG(phl_info->phl_com->dev_state,
+				      RTW_DEV_SURPRISE_REMOVAL))
+		rtw_phl_disable_interrupt_sync(phl_info->phl_com);
 }
 
 static enum rtw_phl_status _phl_cmd_send_msg_phy_on(struct phl_info_t *phl_info)
@@ -1809,9 +1798,7 @@ enum rtw_phl_status phl_wow_start(struct phl_info_t *phl_info, struct rtw_phl_st
 #ifdef CONFIG_WOWLAN
 	enum rtw_phl_status pstatus = RTW_PHL_STATUS_FAILURE;
 	struct phl_wow_info *wow_info = phl_to_wow_info(phl_info);
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *evt_ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
+
 #ifdef DBG_MONITOR_TIME
 	u32 start_t = 0;
 
@@ -1884,11 +1871,7 @@ enum rtw_phl_status phl_wow_start(struct phl_info_t *phl_info, struct rtw_phl_st
 
 end:
 	if (RTW_PHL_STATUS_SUCCESS != pstatus) {
-		#ifdef CONFIG_SYNC_INTERRUPT
-		evt_ops->set_interrupt_caps(phl_to_drvpriv(phl_info), false);
-		#else
-		rtw_hal_disable_interrupt(phl_info->phl_com, phl_info->hal);
-		#endif /* CONFIG_SYNC_INTERRUPT */
+		rtw_phl_disable_interrupt_sync(phl_info->phl_com);
 		phl_role_suspend(phl_info, PHL_ROLE_SUSPEND_RSN_DEV_SUSP);
 		phl_datapath_stop_sw(phl_info, PHL_MDL_PHY_MGNT);
 		phl_datapath_stop_hw(phl_info);
@@ -1916,17 +1899,10 @@ end:
 static void _wow_stop_reinit(struct phl_info_t *phl_info)
 {
 	enum rtw_phl_status pstatus = RTW_PHL_STATUS_FAILURE;
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *evt_ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
 
 	PHL_WARN("%s : reset hw!\n", __func__);
 	phl_role_suspend(phl_info, PHL_ROLE_SUSPEND_RSN_DEV_SUSP);
-	#ifdef CONFIG_SYNC_INTERRUPT
-	evt_ops->set_interrupt_caps(phl_to_drvpriv(phl_info), false);
-	#else
-	rtw_hal_disable_interrupt(phl_info->phl_com, phl_info->hal);
-	#endif /* CONFIG_SYNC_INTERRUPT */
+	rtw_phl_disable_interrupt_sync(phl_info->phl_com);
 	phl_module_stop(phl_info);
 	phl_datapath_stop_sw(phl_info, PHL_MDL_PHY_MGNT);
 	phl_datapath_stop_hw(phl_info);
@@ -2039,9 +2015,6 @@ enum rtw_phl_status rtw_phl_rf_on(void *phl)
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
 	enum rtw_phl_status phl_status = RTW_PHL_STATUS_FAILURE;
 	enum rtw_hal_status hal_status = RTW_HAL_STATUS_SUCCESS;
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *evt_ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
 
 	PHL_INFO("%s\n", __func__);
 
@@ -2065,11 +2038,7 @@ enum rtw_phl_status rtw_phl_rf_on(void *phl)
 	phl_datapath_start_hw(phl_info);
 	phl_datapath_start_sw(phl_info, PHL_MDL_POWER_MGNT);
 
-#ifdef CONFIG_SYNC_INTERRUPT
-	evt_ops->set_interrupt_caps(phl_to_drvpriv(phl_info), true);
-#else
-	rtw_hal_enable_interrupt(phl_info->phl_com, phl_info->hal);
-#endif /* CONFIG_SYNC_INTERRUPT */
+	rtw_phl_enable_interrupt_sync(phl_info->phl_com);
 
 	phl_role_recover(phl_info);
 
@@ -2082,19 +2051,11 @@ error_hal_start:
 enum rtw_phl_status rtw_phl_rf_off(void *phl)
 {
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *evt_ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
 
 	PHL_INFO("%s\n", __func__);
 
 	phl_role_suspend(phl_info, PHL_ROLE_SUSPEND_RSN_RF_OFF);
-
-#ifdef CONFIG_SYNC_INTERRUPT
-	evt_ops->set_interrupt_caps(phl_to_drvpriv(phl_info), false);
-#else
-	rtw_hal_disable_interrupt(phl_info->phl_com, phl_info->hal);
-#endif /* CONFIG_SYNC_INTERRUPT */
+	rtw_phl_disable_interrupt_sync(phl_info->phl_com);
 
 	phl_datapath_stop_sw(phl_info, PHL_MDL_POWER_MGNT);
 	phl_datapath_stop_hw(phl_info);
@@ -2219,14 +2180,8 @@ enum rtw_phl_status rtw_phl_pnp_stop(void *phl)
 #ifdef CONFIG_PCI_HCI
 	struct phl_hci_trx_ops *trx_ops = phl_info->hci_trx_ops;
 #endif
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *ops = &phl_info->phl_com->evt_ops;
 
-	ops->set_interrupt_caps(phl_to_drvpriv(phl_info), false);
-#else
-	rtw_hal_disable_interrupt(phl_info->phl_com, phl_info->hal);
-#endif /* CONFIG_SYNC_INTERRUPT */
-
+	rtw_phl_disable_interrupt_sync(phl_info->phl_com);
 	rtw_hal_cfg_txhci(phl_info->hal, false);
 	rtw_hal_cfg_rxhci(phl_info->hal, false);
 #ifdef CONFIG_PCI_HCI
@@ -2489,6 +2444,7 @@ void rtw_phl_write_rfreg(void *phl,
 void rtw_phl_restore_interrupt(void *phl)
 {
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
+
 	rtw_hal_restore_interrupt(phl_info->phl_com, phl_info->hal);
 }
 
@@ -2513,9 +2469,6 @@ enum rtw_phl_status rtw_phl_interrupt_handler(void *phl)
 	enum rtw_phl_status phl_status = RTW_PHL_STATUS_SUCCESS;
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
 	u32 int_hdler_msk = 0x0;
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
 	struct gtimer_ctx *gt_ctx = (struct gtimer_ctx *)&phl_info->gt3_ctx;
 	u8 skip_tx = 0;
 
@@ -2593,9 +2546,8 @@ enum rtw_phl_status rtw_phl_interrupt_handler(void *phl)
 
 end:
 
-#ifdef CONFIG_SYNC_INTERRUPT
-	ops->interrupt_restore(phl_to_drvpriv(phl_info), false);
-#endif
+	phl_restore_interrupt_sync(phl_info->phl_com, false, false);
+
 	return phl_status;
 }
 
@@ -2629,6 +2581,33 @@ void rtw_phl_clear_interrupt(void *phl)
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
 
 	rtw_hal_clear_interrupt(phl_info->hal);
+}
+
+enum rtw_phl_status rtw_phl_interrupt_request_handler(void *phl)
+{
+	enum rtw_phl_status psts = RTW_PHL_STATUS_FAILURE;
+
+#if defined(CONFIG_PCI_HCI)
+	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
+	void *drv = phl_to_drvpriv(phl_info);
+	struct hci_info_t *hci_info = (struct hci_info_t *)phl_info->hci;
+	_os_spinlockfg sp_flags;
+
+	_os_spinlock(drv, &hci_info->int_hdl_lock, _irq, &sp_flags);
+	if (hci_info->int_disabled == true)
+		PHL_ERR("%s int_disabled ...\n", __func__);
+
+	rtw_phl_disable_interrupt_isr(phl_info);/* Disable Layer 1 IMR */
+	if (rtw_phl_recognize_interrupt(phl_info)) {
+		rtw_phl_clear_interrupt(phl_info);/* clear isr when recognized */
+		psts = rtw_phl_interrupt_handler(phl_info);
+	} else {
+		rtw_phl_restore_interrupt(phl_info);
+		psts = RTW_PHL_STATUS_SUCCESS;
+	}
+	_os_spinunlock(drv, &hci_info->int_hdl_lock, _irq, &sp_flags);
+#endif
+	return psts;
 }
 
 enum rtw_phl_status rtw_phl_msg_hub_register_recver(void* phl,

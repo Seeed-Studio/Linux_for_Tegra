@@ -39,6 +39,7 @@ void rtw_phl_disable_interrupt(void *phl);
 bool rtw_phl_recognize_interrupt(void *phl);
 void rtw_phl_clear_interrupt(void *phl);
 void rtw_phl_restore_interrupt(void *phl);
+enum rtw_phl_status rtw_phl_interrupt_request_handler(void *phl);
 
 enum rtw_phl_status
 rtw_phl_cmd_cfg_hw_seq(void *phl,

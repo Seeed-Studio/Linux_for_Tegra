@@ -33,9 +33,12 @@ struct hci_info_t {
 #endif
 	void *wd_dma_pool;
 	void *h2c_dma_pool;
+	_os_lock int_hdl_lock;
+	bool int_disabled;
 #elif defined(CONFIG_USB_HCI)
 	u16 usb_bulkout_size;
 	bool usb_in_rx_start;
+
 #elif defined(CONFIG_SDIO_HCI)
 	u32 tx_drop_cnt;	/* bit31 means overflow or not */
 #ifdef SDIO_TX_THREAD
@@ -49,7 +52,6 @@ struct hci_info_t {
 #endif /* CONFIG_PHL_SDIO_TX_CB_THREAD */
 #endif /* SDIO_TX_THREAD */
 #endif
-
 	u8 *wd_ring;
 	u8 *txbuf_pool;
 	u8 *rxbuf_pool;

@@ -2784,9 +2784,6 @@ static void _phl_rx_callback_pcie(void *context)
 	struct phl_hci_trx_ops *hci_trx_ops = phl_info->hci_trx_ops;
 	void *drvpriv = phl_to_drvpriv(phl_info);
 	bool rx_pause = false;
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
 
 	FUNCIN_WSTS(pstatus);
 
@@ -2813,10 +2810,8 @@ static void _phl_rx_callback_pcie(void *context)
 
 end:
 	/* restore int mask of rx */
-	rtw_hal_restore_rx_interrupt(phl_info->hal);
-#ifdef CONFIG_SYNC_INTERRUPT
-	ops->interrupt_restore(phl_to_drvpriv(phl_info), true);
-#endif /* CONFIG_SYNC_INTERRUPT */
+	rtw_hal_restore_rx_imr_mask(phl_info->hal);
+	phl_restore_interrupt_sync(phl_info->phl_com, true, true);
 
 	FUNCOUT_WSTS(pstatus);
 

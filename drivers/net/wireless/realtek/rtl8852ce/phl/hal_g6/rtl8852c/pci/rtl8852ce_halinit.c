@@ -882,16 +882,6 @@ bool hal_recognize_int_8852ce(struct hal_info_t *hal)
 	struct rtw_hal_com_t *hal_com = hal->hal_com;
 	bool recognized = false;
 
-#ifndef CONFIG_SYNC_INTERRUPT
-	/**
-	 * We call hal_disable_int_isr_8852ce only instead of hal_disable_int_8852ce
-	 * which will only disable imr of indicator. Otherwise, if we disable imr
-	 * of wlan mac. ISR of indicator will be auto cleared due to imr & isr is '0'
-	 * in wlan mac.
-	 */
-	hal_disable_int_isr_8852ce(hal);
-#endif /* CONFIG_SYNC_INTERRUPT */
-
 	/* check isr of indicator */
 	if (hal_com->_intr_ind[0].en) {
 		hal_com->_intr_ind[0].val = hal_read32(hal_com, R_AX_PCIE_HISR00_V1);
@@ -902,13 +892,6 @@ bool hal_recognize_int_8852ce(struct hal_info_t *hal)
 		hal_disable_int_rmn_8852ce(hal);
 	} else {
 		/* if isr is not recognized, go to end */
-#if 1
-		PHL_WARN("%s: unknown isr\n", __func__);
-		hal_com->_intr[0].val = 0;
-		hal_com->_intr[1].val = 0;
-		hal_com->_intr[2].val = 0;
-		hal_com->_intr[3].val = 0;
-#endif
 		goto end;
 	}
 
@@ -962,13 +945,6 @@ bool hal_recognize_int_8852ce(struct hal_info_t *hal)
 	}
 
 end:
-#ifndef CONFIG_SYNC_INTERRUPT
-	/* clear isr */
-	hal_clear_int_8852ce(hal);
-	/* restore imr */
-	hal_restore_int_8852ce(hal);
-#endif /* CONFIG_SYNC_INTERRUPT */
-
 	/*if (!recognized)
 		HAL_DUMP_INT_8852CE(hal, true, true, true);*/
 
@@ -995,12 +971,6 @@ static u32 hal_rx_handler_8852ce(struct hal_info_t *hal, u32 *handled)
 	/* disable rx related IMR, rx thread will restore them */
 	hal_com->_intr[0].mask &= ~rx_handle_irq_imr;
 	hal_com->_intr[3].mask &= ~rx_handle_irq_lps_imr;
-#ifndef CONFIG_SYNC_INTERRUPT
-	if (hal_com->_intr[0].en)
-		hal_write32(hal_com, R_AX_PCIE_HIMR00, hal_com->_intr[0].mask);
-	if (hal_com->_intr[3].en)
-		hal_write32(hal_com, R_AX_HIMR1, hal_com->_intr[3].mask);
-#endif /* CONFIG_SYNC_INTERRUPT */
 #ifdef PHL_RXSC_ISR
 	hal_com->rx_int_array = handled0;
 #endif
@@ -1037,12 +1007,6 @@ static u32 hal_rp_handler_8852ce(struct hal_info_t *hal, u32 *handled)
 	/* disable rx related IMR, rx thread will restore them */
 	hal_com->_intr[0].mask &= ~rp_handle_irq_imr;
 	hal_com->_intr[3].mask &= ~rx_handle_irq_lps_imr;
-#ifndef CONFIG_SYNC_INTERRUPT
-	if (hal_com->_intr[0].en)
-		hal_write32(hal_com, R_AX_PCIE_HIMR00, hal_com->_intr[0].mask);
-	if (hal_com->_intr[3].en)
-		hal_write32(hal_com, R_AX_HIMR1, hal_com->_intr[3].mask);
-#endif /* CONFIG_SYNC_INTERRUPT */
 #ifdef PHL_RXSC_ISR
 	hal_com->rx_int_array = handled0;
 #endif
@@ -1159,25 +1123,10 @@ u32 hal_int_hdler_8852ce(struct hal_info_t *hal)
 void hal_rx_int_restore_8852ce(struct hal_info_t *hal)
 {
 	struct rtw_hal_com_t *hal_com = hal->hal_com;
-#ifndef CONFIG_SYNC_INTERRUPT
-	_os_spinlockfg sp_flags;
-
-	_os_spinlock(hal->phl_com->drv_priv, &hal->phl_com->imr_lock, _irq, &sp_flags);
-#endif
 
 	hal_com->_intr[0].mask |= (B_AX_RXDMA_INT_EN | B_AX_RPQDMA_INT_EN |
 							 B_AX_RDU_INT_EN | B_AX_RPQBD_FULL_INT_EN);
 	hal_com->_intr[3].mask |= B_AX_GPIO18_INT_EN;
-#ifndef CONFIG_SYNC_INTERRUPT
-	if (hal_com->_intr[0].en) {
-		hal_write32(hal_com, R_AX_PCIE_HIMR00, hal_com->_intr[0].mask);
-	}
-	if (hal_com->_intr[3].en) {
-		hal_write32(hal_com, R_AX_HIMR1, hal_com->_intr[3].mask);
-	}
-	_os_spinunlock(hal->phl_com->drv_priv, &hal->phl_com->imr_lock, _irq, &sp_flags);
-#endif /* CONFIG_SYNC_INTERRUPT */
-
 }
 
 enum rtw_hal_status

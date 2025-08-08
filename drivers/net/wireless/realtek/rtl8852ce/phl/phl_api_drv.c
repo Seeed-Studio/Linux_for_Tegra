@@ -260,8 +260,20 @@ void rtw_phl_enable_interrupt_sync(struct rtw_phl_com_t* phl_com)
 	evt_ops->set_interrupt_caps(phl_com->drv_priv, true);
 #else
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl_com->phl_priv;
+	#if defined(CONFIG_PCI_HCI)
+	void *drv = phl_to_drvpriv(phl_info);
+	struct hci_info_t *hci_info = (struct hci_info_t *)phl_info->hci;
+	_os_spinlockfg sp_flags;
+
+	_os_spinlock(drv, &hci_info->int_hdl_lock, _irq, &sp_flags);
+	#endif
 
 	rtw_hal_enable_interrupt(phl_com, phl_info->hal);
+
+	#if defined(CONFIG_PCI_HCI)
+	hci_info->int_disabled = false;
+	_os_spinunlock(drv, &hci_info->int_hdl_lock, _irq, &sp_flags);
+	#endif
 #endif /* CONFIG_SYNC_INTERRUPT */
 }
 
@@ -273,11 +285,21 @@ void rtw_phl_disable_interrupt_sync(struct rtw_phl_com_t* phl_com)
 	evt_ops->set_interrupt_caps(phl_com->drv_priv, false);
 #else
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl_com->phl_priv;
+	#if defined(CONFIG_PCI_HCI)
+	void *drv = phl_to_drvpriv(phl_info);
+	struct hci_info_t *hci_info = (struct hci_info_t *)phl_info->hci;
+	_os_spinlockfg sp_flags;
+
+	_os_spinlock(drv, &hci_info->int_hdl_lock, _irq, &sp_flags);
+	hci_info->int_disabled = true;
+	#endif
 
 	rtw_hal_disable_interrupt(phl_com, phl_info->hal);
+	#if defined(CONFIG_PCI_HCI)
+	_os_spinunlock(drv, &hci_info->int_hdl_lock, _irq, &sp_flags);
+	#endif
 #endif /* CONFIG_SYNC_INTERRUPT */
 }
-
 
 #ifdef CONFIG_PHL_FW_DUMP_EFUSE
 void rtw_phl_fw_dump_efuse_precfg(struct rtw_phl_com_t* phl_com)

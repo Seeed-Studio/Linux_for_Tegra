@@ -1027,17 +1027,29 @@ void HT_caps_handler(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
 
 	pmlmeinfo->HT_caps_enable = 1;
 
-	for (i = 0; i < (pIE->Length); i++)
-		pmlmeinfo->HT_caps.u.HT_cap[i] &= *(pIE->data + i);
+	for (i = 0; i < (pIE->Length); i++) {
+		if (i != 2) {
+			/*	Commented by Albert 2010/07/12 */
+			/*	Got the endian issue here. */
+			pmlmeinfo->HT_caps.u.HT_cap[i] &= *(pIE->data + i);
+		} else {
+			/* AMPDU Parameters field */
 
-	/* Get MIN of MAX AMPDU Length Exp */
-	max_AMPDU_len = GET_HT_CAP_ELE_MAX_AMPDU_LEN_EXP(pIE->data);
-	max_AMPDU_len = rtw_min((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3), max_AMPDU_len);
+			/* Get MIN of MAX AMPDU Length Exp */
+			if ((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3) > (*(pIE->data + i) & 0x3))
+				max_AMPDU_len = (*(pIE->data + i) & 0x3);
+			else
+				max_AMPDU_len = (pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3);
 
-	/* Get MAX of MIN MPDU Start Spacing */
-	min_MPDU_spacing = GET_HT_CAP_ELE_MIN_MPDU_S_SPACE(pIE->data);
-	min_MPDU_spacing = rtw_max((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c), min_MPDU_spacing);
-	pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para = max_AMPDU_len | min_MPDU_spacing;
+			/* Get MAX of MIN MPDU Start Spacing */
+			if ((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c) > (*(pIE->data + i) & 0x1c))
+				min_MPDU_spacing = (pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c);
+			else
+				min_MPDU_spacing = (*(pIE->data + i) & 0x1c);
+
+			pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para = max_AMPDU_len | min_MPDU_spacing;
+		}
+	}
 
 	/*	Commented by Albert 2010/07/12 */
 	/*	Have to handle the endian issue after copying. */

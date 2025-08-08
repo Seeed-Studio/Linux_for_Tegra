@@ -1216,16 +1216,9 @@ enum rtw_phl_status phl_wow_init_postcfg(struct phl_wow_info *wow_info)
 	struct phl_info_t *phl_info = wow_info->phl_info;
 	struct phl_hci_trx_ops *trx_ops = phl_info->hci_trx_ops;
 	struct rtw_phl_stainfo_t *sta = wow_info->sta;
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *evt_ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
 
 	/* disable interrupt */
-#ifdef CONFIG_SYNC_INTERRUPT
-	evt_ops->set_interrupt_caps(phl_to_drvpriv(phl_info), false);
-#else
-	rtw_hal_disable_interrupt(phl_info->phl_com, phl_info->hal);
-#endif /* CONFIG_SYNC_INTERRUPT */
+	rtw_phl_disable_interrupt_sync(phl_info->phl_com);
 
 	_wow_stop_datapath(phl_info, PHL_CTRL_RX);
 
@@ -1251,17 +1244,8 @@ enum rtw_phl_status phl_wow_init_postcfg(struct phl_wow_info *wow_info)
 
 static void _wow_initialize_interrupt(struct phl_info_t *phl_info)
 {
-#ifdef CONFIG_SYNC_INTERRUPT
-	struct rtw_phl_evt_ops *evt_ops = &phl_info->phl_com->evt_ops;
-#endif /* CONFIG_SYNC_INTERRUPT */
-
 	rtw_hal_init_int_default_value(phl_info->phl_com, phl_info->hal, INT_SET_OPT_HAL_INIT);
-
-#ifdef CONFIG_SYNC_INTERRUPT
-	evt_ops->set_interrupt_caps(phlcom_to_drvpriv(phl_info->phl_com), true);
-#else
-	rtw_hal_enable_interrupt(phl_info->phl_com, phl_info->hal);
-#endif /* CONFIG_SYNC_INTERRUPT */
+	rtw_phl_enable_interrupt_sync(phl_info->phl_com);
 }
 
 enum rtw_phl_status phl_wow_init(struct phl_wow_info *wow_info)

@@ -4542,9 +4542,6 @@ void stop_ap_mode(_adapter *padapter)
 		rtw_warn_on(1);
 
 	pmlmepriv->update_bcn = _FALSE;
-	/*pmlmeext->bstart_bss = _FALSE;*/
-	padapter->netif_up = _FALSE;
-	/* _rtw_spinlock_free(&pmlmepriv->bcn_update_lock); */
 
 	/* reset and init security priv , this can refine with rtw_reset_securitypriv */
 	_rtw_memset((unsigned char *)&padapter->securitypriv, 0, sizeof(struct security_priv));
@@ -7806,8 +7803,14 @@ bool rtw_add_del_sta_cmd_check(struct _ADAPTER *padapter, unsigned char *MacAddr
 
 	if (padapter->ap_add_del_sta_cmd_state == ADD_DEL_STA_ST_IDLE) {
 		status = rtw_ap_add_del_sta_cmd(padapter);
-		if (status == RTW_PHL_STATUS_SUCCESS)
+		if (status == RTW_PHL_STATUS_SUCCESS) {
 			padapter->ap_add_del_sta_cmd_state = ADD_DEL_STA_ST_REQUESTING;
+		} else {
+			rtw_list_delete(&add_del_sta_obj->list);
+			pstapriv->add_sta_list_cnt--;
+			rtw_mfree(add_del_sta_obj, sizeof(struct rtw_add_del_sta_obj));
+			add_del_sta_obj = NULL;
+		}
 	} else {
 		RTW_INFO(FUNC_ADPT_FMT": reuse token\n", FUNC_ADPT_ARG(padapter));
 	}
