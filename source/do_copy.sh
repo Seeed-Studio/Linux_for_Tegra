@@ -44,6 +44,8 @@ cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-p3767-camera-p3768-i
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl2x4-3g-overlay.dtbo ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl1x4-6g-overlay.dtbo ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl1x4-3g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl2x1x4-3g-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl2x1x4-6g-overlay.dtbo ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-orbbec-335lg-overlay.dtbo ../kernel/dtb/
 
 
@@ -53,6 +55,12 @@ cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p376
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0004-recomputer-robo-gmsl.dtb ../kernel/dtb/
 
 
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0000-recomputer-mini.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0004-recomputer-mini.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0005-recomputer-mini.dtb ../kernel/dtb/
 
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0000-recomputer-mini.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0004-recomputer-mini.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0005-recomputer-mini.dtb ../kernel/dtb/
 
 cp  ./kernel_out/kernel/kernel-jammy-src/arch/arm64/boot/Image ../kernel/Image
