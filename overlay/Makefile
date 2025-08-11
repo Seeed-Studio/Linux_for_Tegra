@@ -78,6 +78,8 @@ dtbo-y += tegra234-p3737-camera-g300-mic-fg-8g-overlay.dtbo		# orbbec add
 dtbo-y += tegra234-seeed-gmsl1x4-3g-overlay.dtbo  
 dtbo-y += tegra234-seeed-gmsl1x4-6g-overlay.dtbo  
 dtbo-y += tegra234-seeed-gmsl2x4-3g-overlay.dtbo  
+dtbo-y += tegra234-seeed-gmsl2x1x4-3g-overlay.dtbo
+dtbo-y += tegra234-seeed-gmsl2x1x4-6g-overlay.dtbo
 dtbo-y += tegra234-seeed-orbbec-335lg-overlay.dtbo
 
 ifneq ($(dtb-y),)
