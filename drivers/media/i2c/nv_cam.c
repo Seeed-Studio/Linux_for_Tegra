@@ -18,6 +18,121 @@
 #include <media/tegra_v4l2_camera.h>
 #include <media/tegracam_core.h>
 
+/* —— FourCC -> media bus code 映射 —— */
+static __u32 map_fourcc_to_mbus_code(__u32 fourcc)
+{
+	/* RAW Bayer 8-bit */
+#ifdef V4L2_PIX_FMT_SRGGB8
+	if (fourcc == V4L2_PIX_FMT_SRGGB8) return MEDIA_BUS_FMT_SRGGB8_1X8;
+#endif
+#ifdef V4L2_PIX_FMT_SGRBG8
+	if (fourcc == V4L2_PIX_FMT_SGRBG8) return MEDIA_BUS_FMT_SGRBG8_1X8;
+#endif
+#ifdef V4L2_PIX_FMT_SGBRG8
+	if (fourcc == V4L2_PIX_FMT_SGBRG8) return MEDIA_BUS_FMT_SGBRG8_1X8;
+#endif
+#ifdef V4L2_PIX_FMT_SBGGR8
+	if (fourcc == V4L2_PIX_FMT_SBGGR8) return MEDIA_BUS_FMT_SBGGR8_1X8;
+#endif
+
+	/* RAW Bayer 10-bit */
+#ifdef V4L2_PIX_FMT_SRGGB10
+	if (fourcc == V4L2_PIX_FMT_SRGGB10) return MEDIA_BUS_FMT_SRGGB10_1X10;
+#endif
+#ifdef V4L2_PIX_FMT_SGRBG10
+	if (fourcc == V4L2_PIX_FMT_SGRBG10) return MEDIA_BUS_FMT_SGRBG10_1X10;
+#endif
+#ifdef V4L2_PIX_FMT_SGBRG10
+	if (fourcc == V4L2_PIX_FMT_SGBRG10) return MEDIA_BUS_FMT_SGBRG10_1X10;
+#endif
+#ifdef V4L2_PIX_FMT_SBGGR10
+	if (fourcc == V4L2_PIX_FMT_SBGGR10) return MEDIA_BUS_FMT_SBGGR10_1X10;
+#endif
+
+	/* RAW Bayer 12-bit */
+#ifdef V4L2_PIX_FMT_SRGGB12
+	if (fourcc == V4L2_PIX_FMT_SRGGB12) return MEDIA_BUS_FMT_SRGGB12_1X12;
+#endif
+#ifdef V4L2_PIX_FMT_SGRBG12
+	if (fourcc == V4L2_PIX_FMT_SGRBG12) return MEDIA_BUS_FMT_SGRBG12_1X12;
+#endif
+#ifdef V4L2_PIX_FMT_SGBRG12
+	if (fourcc == V4L2_PIX_FMT_SGBRG12) return MEDIA_BUS_FMT_SGBRG12_1X12;
+#endif
+#ifdef V4L2_PIX_FMT_SBGGR12
+	if (fourcc == V4L2_PIX_FMT_SBGGR12) return MEDIA_BUS_FMT_SBGGR12_1X12;
+#endif
+
+	/* RAW Bayer 16-bit */
+#ifdef V4L2_PIX_FMT_SRGGB16
+	if (fourcc == V4L2_PIX_FMT_SRGGB16) return MEDIA_BUS_FMT_SRGGB16_1X16;
+#endif
+#ifdef V4L2_PIX_FMT_SGRBG16
+	if (fourcc == V4L2_PIX_FMT_SGRBG16) return MEDIA_BUS_FMT_SGRBG16_1X16;
+#endif
+#ifdef V4L2_PIX_FMT_SGBRG16
+	if (fourcc == V4L2_PIX_FMT_SGBRG16) return MEDIA_BUS_FMT_SGBRG16_1X16;
+#endif
+#ifdef V4L2_PIX_FMT_SBGGR16
+	if (fourcc == V4L2_PIX_FMT_SBGGR16) return MEDIA_BUS_FMT_SBGGR16_1X16;
+#endif
+
+	/* YUV 4:2:2 8-bit（常见打包） */
+#ifdef V4L2_PIX_FMT_YUYV
+	if (fourcc == V4L2_PIX_FMT_YUYV) return MEDIA_BUS_FMT_YUYV8_1X16;
+#endif
+#ifdef V4L2_PIX_FMT_UYVY
+	if (fourcc == V4L2_PIX_FMT_UYVY) return MEDIA_BUS_FMT_UYVY8_1X16;
+#endif
+
+	return 0;
+}
+
+
+static inline void make_subdev_format_from_props(const struct sensor_image_properties *p,
+						 struct v4l2_subdev_format *out)
+{
+	memset(out, 0, sizeof(*out));
+
+	out->format.width  = p->width;
+	out->format.height = p->height;
+	out->format.code   = map_fourcc_to_mbus_code(p->pixel_format);
+
+	out->format.field  = V4L2_FIELD_NONE;
+
+}
+
+static int first_source_pad(const struct v4l2_subdev *sd)
+{
+    unsigned int i;
+    for (i = 0; i < sd->entity.num_pads; i++)
+        if (sd->entity.pads[i].flags & MEDIA_PAD_FL_SOURCE)
+            return i;
+    return -1;
+}
+
+static struct v4l2_subdev *
+get_enabled_remote_sd(struct v4l2_subdev *sd,
+                      unsigned int local_pad,
+                      unsigned int *remote_pad_idx)
+{
+    struct media_pad *pad = &sd->entity.pads[local_pad];
+    struct media_link *lnk;
+
+    list_for_each_entry(lnk, &sd->entity.links, list) {
+        if (!(lnk->flags & MEDIA_LNK_FL_ENABLED))
+            continue;
+        if (lnk->source == pad &&
+            is_media_entity_v4l2_subdev(lnk->sink->entity)) {
+            if (remote_pad_idx)
+                *remote_pad_idx = lnk->sink->index;
+            return media_entity_to_v4l2_subdev(lnk->sink->entity);
+        }
+    }
+    return NULL;
+}
+
+
 static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_GAIN,
 	TEGRA_CAMERA_CID_HDR_EN,
@@ -580,13 +695,16 @@ static int nv_cam_set_mode(struct tegracam_device *tc_dev)
 	struct nv_cam *priv = tegracam_get_privdata(tc_dev);
 	struct camera_common_data *s_data = tc_dev->s_data;
 	struct device *dev = tc_dev->dev;
+	struct v4l2_subdev_format to_s_fmt;
+	int cam_src,ser_src;
+	struct v4l2_subdev *ser = NULL, *des = NULL;
+	unsigned int ser_sink = 0, des_sink = 0;
 	struct sensor_mode_properties *mode =
 	 	&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
 
+	
 	//u16 link_speed = 0;
 	u16 lane_rate = 0;
-
-
 
 	if (s_data->mode < 0 || s_data->mode > priv->num_modes){
 		dev_err(dev, "s_data->mode: %d   priv->num_modes: %d\n", s_data->mode, priv->num_modes);
@@ -605,17 +723,43 @@ static int nv_cam_set_mode(struct tegracam_device *tc_dev)
 			mode->signal_properties.mipi_clock.val);
 
 
-	// ret = nv_cam_write_cmd(priv, &priv->mode_common_cmd);
-	// if (ret) {
-	// 	dev_err(dev, "Failed to write common mode cmd: %d\n", ret);
-	// 	return ret;
-	// }
+	dev_info(dev, "pixel_phase=%p4cc (0x%08x) active_w=%u active_h=%u\n",
+         &mode->image_properties.pixel_format, mode->image_properties.pixel_format, mode->image_properties.width, mode->image_properties.height);
 
-	// ret = nv_cam_write_cmd(priv, &priv->modes[s_data->mode].mode_cmd);
-	// if (ret) {
-	// 	dev_err(dev, "Failed to write mode cmd: %d\n", ret);
-	// 	return ret;
-	// }
+	make_subdev_format_from_props(&mode->image_properties,&to_s_fmt);
+
+    /* —— 从 nv_cam 出发，依次找到 ser 与 des —— */
+	cam_src = first_source_pad(&s_data->subdev);
+	/* hop 1: nv_cam(src 0) -> ser(sink ?) */
+	ser = get_enabled_remote_sd(&s_data->subdev, cam_src, &ser_sink);
+	if (!ser) {
+		dev_dbg(dev, "no downstream serializer found\n");
+		goto out_done;
+	}
+
+	if(ser->ops->pad->set_fmt !=NULL){
+		dev_info(dev,"will set  %s fmt",ser->entity.name);
+		to_s_fmt.pad = 1;
+		ser->ops->pad->set_fmt(ser,NULL,&to_s_fmt);
+	}
+
+	/* hop 2: ser(src ?) -> des(sink ?) */
+	
+	ser_src = first_source_pad(ser);
+	if (ser_src >= 0) {
+		des = get_enabled_remote_sd(ser, ser_src, &des_sink);
+		if (des) {
+			printk("des not null media_entity name is %s\r\n",des->entity.name);
+			if(des->ops->pad->set_fmt !=NULL){
+				dev_info(dev,"will set  %s fmt",des->entity.name);
+				to_s_fmt.pad = 0;
+				des->ops->pad->set_fmt(des,NULL,&to_s_fmt);
+			}
+		}
+	}
+        
+    
+out_done:
 
 	return 0;
 }
