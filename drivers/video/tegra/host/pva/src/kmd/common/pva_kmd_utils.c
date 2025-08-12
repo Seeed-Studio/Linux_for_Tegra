@@ -19,3 +19,8 @@ void pva_kmd_log_err_u64(const char *msg, uint64_t val)
 {
 	pva_kmd_print_str_u64(msg, val);
 }
+
+void pva_kmd_log_err_hex32(const char *msg, uint32_t val)
+{
+	pva_kmd_print_str_hex32(msg, val);
+}

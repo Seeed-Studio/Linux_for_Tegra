@@ -29,6 +29,12 @@ struct pva_resource_entry {
 	uint32_t size_lo;
 };
 
+struct pva_resource_aux_info {
+	// Serial ID of NvRM memory resources
+	uint32_t serial_id_hi;
+	uint32_t serial_id_lo;
+};
+
 struct pva_cmd_init_resource_table {
 #define PVA_CMD_OPCODE_INIT_RESOURCE_TABLE (0U | PVA_CMD_PRIV_OPCODE_FLAG)
 	struct pva_cmd_header header;
@@ -55,6 +61,7 @@ struct pva_cmd_update_resource_table {
 	uint8_t pad[3];
 	uint32_t resource_id;
 	struct pva_resource_entry entry;
+	struct pva_resource_aux_info aux_info;
 };
 
 struct pva_cmd_init_queue {
@@ -129,10 +136,10 @@ struct pva_cmd_deinit_shared_dram_buffer {
 	uint8_t interface;
 	uint8_t pad[3];
 };
-struct pva_cmd_set_debug_log_level {
-#define PVA_CMD_OPCODE_SET_DEBUG_LOG_LEVEL (12U | PVA_CMD_PRIV_OPCODE_FLAG)
+struct pva_cmd_set_trace_level {
+#define PVA_CMD_OPCODE_SET_TRACE_LEVEL (12U | PVA_CMD_PRIV_OPCODE_FLAG)
 	struct pva_cmd_header header;
-	uint32_t log_level;
+	uint32_t trace_level;
 };
 
 struct pva_cmd_set_profiling_level {
@@ -141,7 +148,15 @@ struct pva_cmd_set_profiling_level {
 	uint32_t level;
 };
 
-#define PVA_CMD_PRIV_OPCODE_COUNT 14U
+struct pva_cmd_get_version {
+#define PVA_CMD_OPCODE_GET_VERSION (14U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint8_t buffer_iova_hi;
+	uint8_t pad[3];
+	uint32_t buffer_iova_lo;
+};
+
+#define PVA_CMD_PRIV_OPCODE_COUNT 15U
 
 struct pva_fw_prefence {
 	uint8_t offset_hi;
@@ -221,9 +236,9 @@ static inline uint32_t pva_fw_queue_count(uint32_t head, uint32_t tail,
 					  uint32_t size)
 {
 	if (tail >= head) {
-		return safe_subu32(tail, head);
+		return tail - head;
 	} else {
-		return safe_addu32(safe_subu32(size, head), tail);
+		return sat_sub32(size, head - tail);
 	}
 }
 
@@ -237,21 +252,10 @@ static inline uint32_t pva_fw_queue_space(uint32_t head, uint32_t tail,
 /* CCQ commands: KMD -> R5, through CCQ FIFO */
 
 /*
- * Most CCQ commands are meant to be used at init time.
- * During runtime, only use PVA_FW_CCQ_OP_UPDATE_TAIL
+ * CCQ commands are meant to be used at init time.
  */
 #define PVA_FW_CCQ_OPCODE_MSB 63
 #define PVA_FW_CCQ_OPCODE_LSB 60
-
-/*
- * tail value bit field: 31 - 0
- * queue id bit field: 40 - 32
- */
-#define PVA_FW_CCQ_OP_UPDATE_TAIL 0
-#define PVA_FW_CCQ_TAIL_MSB 31
-#define PVA_FW_CCQ_TAIL_LSB 0
-#define PVA_FW_CCQ_QUEUE_ID_MSB 40
-#define PVA_FW_CCQ_QUEUE_ID_LSB 32
 
 /*
  * resource table IOVA addr bit field: 39 - 0
@@ -435,6 +439,7 @@ struct pva_kmd_fw_buffer_msg_header {
 #define PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE 1
 #define PVA_KMD_FW_BUF_MSG_TYPE_FENCE_TRACE 2
 #define PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG 3
+#define PVA_KMD_FW_BUF_MSG_TYPE_FW_TRACEPOINT 4
 	uint32_t type : 8;
 	// Size of payload in bytes. Includes the size of the header.
 	uint32_t size : 24;
@@ -475,8 +480,7 @@ struct pva_kmd_fw_msg_fence_trace {
 	uint64_t fence_id;
 	// 'offset' is the offset into the semaphore memory where the value is stored
 	// This is only valid for semaphore fences
-	// Note: Trace APIs in KMD only support 32-bit offset
-	uint32_t offset;
+	uint64_t offset;
 	uint32_t value;
 	uint8_t ccq_id;
 	uint8_t queue_id;
@@ -505,5 +509,102 @@ struct pva_kmd_fw_tegrastats {
 #define PVA_TEST_MODE_MAX_CMDBUF_CHUNK_LEN 256
 #define PVA_TEST_MODE_MAX_CMDBUF_CHUNK_SIZE                                    \
 	(sizeof(uint32_t) * PVA_TEST_MODE_MAX_CMDBUF_CHUNK_LEN)
+
+#define PVA_FW_TP_LVL_NONE 0U
+#define PVA_FW_TP_LVL_CMD_BUF PVA_BIT8(0)
+#define PVA_FW_TP_LVL_VPU PVA_BIT8(1)
+#define PVA_FW_TP_LVL_DMA PVA_BIT8(2)
+#define PVA_FW_TP_LVL_L2SRAM PVA_BIT8(3)
+#define PVA_FW_TP_LVL_PPE PVA_BIT8(4)
+#define PVA_FW_TP_LVL_ALL                                                      \
+	(PVA_FW_TP_LVL_CMD_BUF | PVA_FW_TP_LVL_VPU | PVA_FW_TP_LVL_DMA |       \
+	 PVA_FW_TP_LVL_PPE | PVA_FW_TP_LVL_L2SRAM)
+
+/* Tracepoint Flags for PVA */
+/** @brief Macro to define flag field for a normal checkpoint*/
+#define PVA_FW_TP_FLAG_NONE (0U)
+/** @brief Macro to define a checkpoint's flag field to indicate start of an operation */
+#define PVA_FW_TP_FLAG_START (1U)
+/** @brief Macro to define a checkpoint's flag field to indicate end of an operation */
+#define PVA_FW_TP_FLAG_END (2U)
+/** @brief Macro to define a checkpoint's flag field to indicate error */
+#define PVA_FW_TP_FLAG_ERROR (3U)
+
+struct pva_fw_tracepoint {
+	uint32_t type : 3;
+	uint32_t flags : 2;
+	uint32_t slot_id : 2;
+	uint32_t ccq_id : 3;
+	uint32_t queue_id : 3;
+	uint32_t engine_id : 1;
+	uint32_t arg1 : 2;
+	uint32_t arg2 : 16;
+};
+
+static inline const char *pva_fw_tracepoint_type_to_string(uint32_t type)
+{
+	switch (type) {
+	case PVA_FW_TP_LVL_NONE:
+		return "NONE";
+	case PVA_FW_TP_LVL_CMD_BUF:
+		return "CMD_BUF";
+	case PVA_FW_TP_LVL_VPU:
+		return "VPU";
+	case PVA_FW_TP_LVL_DMA:
+		return "DMA";
+	case PVA_FW_TP_LVL_L2SRAM:
+		return "L2SRAM";
+	case PVA_FW_TP_LVL_PPE:
+		return "PPE";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+static inline const char *pva_fw_tracepoint_flags_to_string(uint32_t flags)
+{
+	switch (flags) {
+	case PVA_FW_TP_FLAG_NONE:
+		return "NONE";
+	case PVA_FW_TP_FLAG_START:
+		return "START";
+	case PVA_FW_TP_FLAG_END:
+		return "END";
+	case PVA_FW_TP_FLAG_ERROR:
+		return "ERROR";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+static inline const char *pva_fw_tracepoint_slot_id_to_string(uint32_t slot_id)
+{
+	switch (slot_id) {
+	case 0:
+		return "PRIV_SLOT";
+	case 1:
+		return "USER_SLOT_1";
+	case 2:
+		return "USER_SLOT_2";
+	case 3:
+		return "USER_PRIV_SLOT";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+#define PVA_R5_OCD_TYPE_MMIO_READ 1
+#define PVA_R5_OCD_TYPE_MMIO_WRITE 2
+#define PVA_R5_OCD_TYPE_REG_READ 3
+#define PVA_R5_OCD_TYPE_REG_WRITE 4
+
+#define PVA_R5_OCD_MAX_DATA_SIZE FW_TRACE_BUFFER_SIZE
+
+struct pva_r5_ocd_request {
+	uint32_t type;
+	uint32_t addr;
+	uint32_t size;
+	//followed by data if any
+};
 
 #endif // PVA_FW_H

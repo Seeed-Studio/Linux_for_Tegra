@@ -14,7 +14,6 @@
 
 void pva_kmd_queue_init(struct pva_kmd_queue *queue, struct pva_kmd_device *pva,
 			uint8_t ccq_id, uint8_t queue_id,
-			pva_kmd_mutex_t *ccq_lock,
 			struct pva_kmd_device_memory *queue_memory,
 			uint32_t max_num_submit)
 {
@@ -24,7 +23,6 @@ void pva_kmd_queue_init(struct pva_kmd_queue *queue, struct pva_kmd_device *pva,
 	queue->queue_id = queue_id;
 	queue->max_num_submit = max_num_submit;
 	queue->queue_header = queue_memory->va;
-	queue->ccq_lock = ccq_lock;
 }
 
 uint32_t pva_kmd_queue_space(struct pva_kmd_queue *queue)
@@ -42,8 +40,6 @@ pva_kmd_queue_submit(struct pva_kmd_queue *queue,
 	uint32_t head = queue->queue_header->cb_head;
 	uint32_t tail = queue->queue_header->cb_tail;
 	uint32_t size = queue->max_num_submit;
-	uint64_t ccq_entry;
-	enum pva_error err;
 	struct pva_fw_cmdbuf_submit_info *items = pva_offset_pointer(
 		queue->queue_header, sizeof(*queue->queue_header));
 
@@ -55,25 +51,11 @@ pva_kmd_queue_submit(struct pva_kmd_queue *queue,
 
 	/* Update tail  */
 	tail = wrap_add(tail, 1, size);
-	ccq_entry =
-		PVA_INSERT64(PVA_FW_CCQ_OP_UPDATE_TAIL, PVA_FW_CCQ_OPCODE_MSB,
-			     PVA_FW_CCQ_OPCODE_LSB) |
-		PVA_INSERT64(queue->queue_id, PVA_FW_CCQ_QUEUE_ID_MSB,
-			     PVA_FW_CCQ_QUEUE_ID_LSB) |
-		PVA_INSERT64(tail, PVA_FW_CCQ_TAIL_MSB, PVA_FW_CCQ_TAIL_LSB);
+	queue->queue_header->cb_tail = tail;
+	__sync_synchronize();
+	pva_kmd_ccq_push(queue->pva, queue->ccq_id, queue->queue_id);
 
-	pva_kmd_mutex_lock(queue->ccq_lock);
-	/* TODO: memory write barrier is needed here */
-	err = pva_kmd_ccq_push_with_timeout(queue->pva, queue->ccq_id,
-					    ccq_entry,
-					    PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-					    PVA_KMD_WAIT_FW_TIMEOUT_US);
-	if (err == PVA_SUCCESS) {
-		queue->queue_header->cb_tail = tail;
-	}
-	pva_kmd_mutex_unlock(queue->ccq_lock);
-
-	return err;
+	return PVA_SUCCESS;
 }
 static enum pva_error notify_fw_queue_deinit(struct pva_kmd_context *ctx,
 					     struct pva_kmd_queue *queue)
@@ -124,8 +106,7 @@ enum pva_error pva_kmd_queue_create(struct pva_kmd_context *ctx,
 	}
 
 	pva_kmd_queue_init(queue, ctx->pva, ctx->ccq_id, *queue_id,
-			   &ctx->ccq_lock, submission_mem_kmd,
-			   in_args->max_submission_count);
+			   submission_mem_kmd, in_args->max_submission_count);
 
 	/* Get device mapped IOVA to share with FW */
 	err = pva_kmd_device_memory_iova_map(submission_mem_kmd, ctx->pva,

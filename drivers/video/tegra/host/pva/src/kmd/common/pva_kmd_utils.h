@@ -15,6 +15,7 @@
 
 void pva_kmd_log_err(const char *msg);
 void pva_kmd_log_err_u64(const char *msg, uint64_t val);
+void pva_kmd_log_err_hex32(const char *msg, uint32_t val);
 void *pva_kmd_zalloc_nofail(uint64_t size);
 
 #endif // PVA_KMD_UTILS_H

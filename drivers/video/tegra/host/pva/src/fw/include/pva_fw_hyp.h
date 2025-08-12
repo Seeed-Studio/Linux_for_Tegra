@@ -88,6 +88,7 @@
 #define PVA_RO_SYNC_BASE_SEMA 1U
 #define PVA_RW_SYNC_BASE_SEMA 2U
 #define PVA_RW_SYNC_SIZE_SEMA 3U
+#define PVA_SEMA_MAX 4U
 
 /**
  * @brief This macro has the value to be set by KMD in the shared semaphores

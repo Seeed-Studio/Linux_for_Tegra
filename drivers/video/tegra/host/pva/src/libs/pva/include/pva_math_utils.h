@@ -4,7 +4,6 @@
 #ifndef PVA_MATH_UTILS_H
 #define PVA_MATH_UTILS_H
 #include "pva_plat_faults.h"
-
 typedef enum {
 	MATH_OP_SUCCESS,
 	MATH_OP_ERROR,
@@ -766,26 +765,6 @@ MAX_DEFINE(a, b, u64, uint64_t)
 MAX_DEFINE(a, b, s32, int32_t)
 MAX_DEFINE(a, b, s64, int64_t)
 
-static inline uint64_t tsc_to_ns(uint64_t tsc)
-{
-	return safe_mulu64(tsc, 32);
-}
-
-static inline uint64_t tsc_to_us(uint64_t tsc)
-{
-	return tsc_to_ns(tsc) / 1000;
-}
-
-static inline uint64_t ns_to_tsc(uint64_t ns)
-{
-	return ns / 32;
-}
-
-static inline uint64_t us_to_tsc(uint64_t us)
-{
-	return ns_to_tsc(safe_mulu64(us, 1000));
-}
-
 /**
  * @brief Generates a 64-bit mask based on the specified start position, count, and density.
  *
@@ -921,6 +900,39 @@ static inline uint64_t pva_pl_to_bl_offset(uint64_t pl_offset,
 	gobBase = addu32(gobBase, gobX, math_error);
 
 	return addu64((uint64_t)gobBase, gobOffset, math_error);
+}
+
+static inline int syncobj_reached_threshold(uint32_t value, uint32_t threshold)
+{
+	/*
+	* We're interested in "value >= threshold" but need to take wraparound
+	* into account. Ideally signed arithmetic of (value - threshold) >= 0
+	* should do, which can handle max wrap difference of half the uint
+	* range.
+	*/
+	uint32_t a = threshold;
+	uint32_t b = value;
+	uint32_t two_pow_31 = 0x80000000u;
+	uint32_t c = 0u;
+	uint32_t distance_ab;
+	uint32_t distance_ac;
+
+	if (a < two_pow_31) {
+		c = a + two_pow_31;
+	} else {
+		c = a & 0x7FFFFFFFu;
+	}
+
+	/* If we imagine numbers between 0 and (1<<32)-1 placed along a circle,
+	* then a-b is exactly the distance from b to a along the circle moving
+	* clockwise. This test checks that the distance between a and b is
+	* strictly smaller than the distance between a and c.
+	*/
+
+	/* Underflow of unsigned value, if happens, is intentional. */
+	distance_ab = b - a;
+	distance_ac = c - a;
+	return (distance_ab < distance_ac);
 }
 
 #endif

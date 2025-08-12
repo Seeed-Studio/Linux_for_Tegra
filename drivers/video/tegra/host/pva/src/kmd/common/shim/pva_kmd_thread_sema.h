@@ -11,11 +11,25 @@
 #include <linux/semaphore.h>
 typedef struct semaphore pva_kmd_sema_t;
 
+#include <linux/atomic.h>
+typedef atomic_t pva_kmd_atomic_t;
+
 #else /* For user space code, including QNX KMD */
 
 #include <semaphore.h>
 /* Mutex */
 typedef sem_t pva_kmd_sema_t;
+
+// clang-format off
+#ifdef __cplusplus
+#include <atomic>
+// The strange format is to make kernel patch check script happy
+typedef std::atomic < int > pva_kmd_atomic_t;
+#else
+#include <stdatomic.h>
+typedef atomic_int pva_kmd_atomic_t;
+#endif
+// clang-format on
 
 #endif
 
@@ -57,5 +71,10 @@ void pva_kmd_sema_post(pva_kmd_sema_t *sem);
  * @param sem Pointer to the semaphore.
  */
 void pva_kmd_sema_deinit(pva_kmd_sema_t *sem);
+
+void pva_kmd_atomic_store(pva_kmd_atomic_t *atomic_val, int val);
+int pva_kmd_atomic_fetch_add(pva_kmd_atomic_t *atomic_val, int val);
+int pva_kmd_atomic_fetch_sub(pva_kmd_atomic_t *atomic_val, int val);
+int pva_kmd_atomic_load(pva_kmd_atomic_t *atomic_val);
 
 #endif // PVA_KMD_THREAD_SEMA_H

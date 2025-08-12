@@ -98,6 +98,8 @@ static long int debugfs_node_write(struct file *file, const char *data,
 }
 
 static const struct file_operations pva_linux_debugfs_fops = {
+	// Prevent KMD from being unloaded while file is open
+	.owner = THIS_MODULE,
 	.open = debugfs_node_open,
 	.read = debugfs_node_read,
 	.write = debugfs_node_write,

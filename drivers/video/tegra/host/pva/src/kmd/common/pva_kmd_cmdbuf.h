@@ -195,7 +195,8 @@ pva_kmd_set_cmd_deinit_queue(struct pva_cmd_deinit_queue *cmd, uint8_t ccq_id,
 
 static inline void pva_kmd_set_cmd_update_resource_table(
 	struct pva_cmd_update_resource_table *cmd, uint32_t resource_table_id,
-	uint32_t resource_id, struct pva_resource_entry const *entry)
+	uint32_t resource_id, struct pva_resource_entry const *entry,
+	struct pva_resource_aux_info const *aux_info)
 {
 	memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_UPDATE_RESOURCE_TABLE;
@@ -203,6 +204,9 @@ static inline void pva_kmd_set_cmd_update_resource_table(
 	cmd->resource_table_id = resource_table_id;
 	cmd->resource_id = resource_id;
 	cmd->entry = *entry;
+	if (aux_info) {
+		cmd->aux_info = *aux_info;
+	}
 }
 
 static inline void
@@ -249,13 +253,13 @@ static inline void pva_kmd_set_cmd_get_tegra_stats(
 }
 
 static inline void
-pva_kmd_set_cmd_set_debug_log_level(struct pva_cmd_set_debug_log_level *cmd,
-				    uint32_t log_level)
+pva_kmd_set_cmd_set_trace_level(struct pva_cmd_set_trace_level *cmd,
+				uint32_t trace_level)
 {
 	memset(cmd, 0, sizeof(*cmd));
-	cmd->header.opcode = PVA_CMD_OPCODE_SET_DEBUG_LOG_LEVEL;
+	cmd->header.opcode = PVA_CMD_OPCODE_SET_TRACE_LEVEL;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
-	cmd->log_level = log_level;
+	cmd->trace_level = trace_level;
 }
 
 static inline void pva_kmd_set_cmd_suspend_fw(struct pva_cmd_suspend_fw *cmd)
@@ -302,6 +306,16 @@ pva_kmd_set_cmd_set_profiling_level(struct pva_cmd_set_profiling_level *cmd,
 	cmd->header.opcode = PVA_CMD_OPCODE_SET_PROFILING_LEVEL;
 	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
 	cmd->level = level;
+}
+
+static inline void pva_kmd_set_cmd_get_version(struct pva_cmd_get_version *cmd,
+					       uint64_t buffer_iova)
+{
+	memset(cmd, 0, sizeof(*cmd));
+	cmd->header.opcode = PVA_CMD_OPCODE_GET_VERSION;
+	cmd->header.len = sizeof(*cmd) / sizeof(uint32_t);
+	cmd->buffer_iova_hi = iova_hi(buffer_iova);
+	cmd->buffer_iova_lo = iova_lo(buffer_iova);
 }
 
 #define CMD_LEN(cmd_type) (sizeof(cmd_type) / sizeof(uint32_t))

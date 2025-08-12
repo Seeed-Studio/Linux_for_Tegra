@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* SPDX-FileCopyrightText: Copyright (c) 2016-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+
 #ifndef PVA_CHECKPOINT_H
 #define PVA_CHECKPOINT_H
 
@@ -110,124 +111,76 @@
 #define PVA_ABORT_FALLTHRU (0x02U)
 
 /**
+ * @brief Minor code for abort in case of un-supported SID read.
+ */
+#define PVA_ABORT_UNSUPPORTED (0x03U)
+
+/**
  * @brief Minor code for abort in case of fatal IRQ.
  */
-#define PVA_ABORT_IRQ (0x05U)
+#define PVA_ABORT_IRQ (0x04U)
 
 /**
  * @brief Minor code for abort in case of MPU failure.
  */
-#define PVA_ABORT_MPU (0x06U)
+#define PVA_ABORT_MPU (0x05U)
 
 /**
  * @brief Minor code for abort in case of ARM exception.
  */
-#define PVA_ABORT_EXCEPTION (0x07U)
-
-/**
- * @brief Minor code for abort in case of un-supported SID read.
- */
-#define PVA_ABORT_UNSUPPORTED (0x09U)
-
-/**
- * @brief Minor code for abort in case of DMA failures.
- */
-#define PVA_ABORT_DMA_TASK (0x0cU)
+#define PVA_ABORT_EXCEPTION (0x06U)
 
 /**
  * @brief Minor code for abort in case of WDT failures.
- * Note: This code is not reported to HSM.
  */
-#define PVA_ABORT_WATCHDOG (0x0eU)
-
-//! @endcond
+#define PVA_ABORT_WATCHDOG (0x07U)
 
 /**
  * @brief Minor code for abort in case of VPU init failures.
  */
-#define PVA_ABORT_VPU (0x0fU)
+#define PVA_ABORT_VPU (0x08U)
 
 /**
  * @brief Minor code for abort in case of DMA MISR setup failures.
  */
-#define PVA_ABORT_DMA (0x10U)
-
-//! @cond DISABLE_DOCUMENTATION
-/**
- * @brief Minor code for abort in case of Mbox errors.
- * Note: This is used only in T19x
- */
-#define PVA_ABORT_MBOX_WAR (0x12U)
-//! @endcond
-
-/**
- * @brief Minor code for abort in case of AISR errors.
- */
-#define PVA_ABORT_AISR_QUEUE (0x14U)
-
-/**
- * @brief Minor code for abort in case of bad task.
- */
-#define PVA_ABORT_BAD_TASK (0x15U)
-
-//! @cond DISABLE_DOCUMENTATION
-/**
- * @brief Minor code for abort in case of PPE init failures.
- * Note: This is only used in T26x
- */
-#define PVA_ABORT_PPE (0x16U)
-//! @endcond
+#define PVA_ABORT_DMA (0x09U)
 
 /**
  * @brief Minor code for abort in case of RAMIC failures.
  */
-#define PVA_ABORT_RAMIC (0x20U)
+#define PVA_ABORT_RAMIC (0x10U)
+
+/**
+ * @brief Minor code for abort in case of firewall decode error.
+ */
+#define PVA_ABORT_L2SRAM_FWDEC (0x11U)
+
+/**
+ * @brief Minor code for abort in case of FSP abort.
+ */
+#define PVA_ABORT_FSP (0x12U)
+
+/**
+ * @brief Minor code for abort in case of kernel panic.
+ */
+#define PVA_ABORT_KERNEL_PANIC (0x13U)
+
+/**
+ * @brief Minor code for abort in case of boot failure.
+ */
+#define PVA_ABORT_BOOT (0x14U)
 
 /**
  * @brief Minor Code for SEC for safety errors.
  * Note: This code is not reported to HSM.
  */
-#define PVA_ABORT_SEC_SERR (0x21U)
+#define PVA_ABORT_SEC_SERR (0x15U)
 
 /**
  * @brief Minor Code for SEC for functional errors.
  * Note: This code is not reported to HSM.
  */
-#define PVA_ABORT_SEC_FERR (0x22U)
-
-/**
- * @brief Minor code for abort in case of firewall decode error.
- */
-#define PVA_ABORT_L2SRAM_FWDEC (0x23U)
-
-/**
- * @brief Minor code for abort in case of kernel panic.
- */
-#define PVA_ABORT_KERNEL_PANIC (0x30U)
-
-/**
- * @brief Minor code for abort in case of Batch Timeout.
- */
-#define PVA_ABORT_BATCH_TIMEOUT (0x40U)
-
-/**
- * @brief Minor code for abort in case of DMA Transfer Timeout.
- * while in launch phase for the VPU)
- */
-#define PVA_ABORT_DMA_SETUP_TIMEOUT (0x41U)
-
-//! @cond DISABLE_DOCUMENTATION
-/**
- * @brief Minor code used when NOC BIST is run.
- * Note: This is only used in T19x
- */
-#define PVA_ABORT_NOC_BIST (0xfcU)
-//! @endcond
-
-/**
- * @brief Minor code for abort in case of FSP abort.
- */
-#define PVA_ABORT_FSP 0x42U
+#define PVA_ABORT_SEC_FERR (0x16U)
 
 /** @} */
 
@@ -335,5 +288,47 @@
  * @brief Minor Code for Unknown FSP aborts
  */
 #define PVA_ABORT_FSP_UNKNOWN (0xE005U)
+/** @} */
+
+/**
+ * @brief Minor Code for Unhandled SVC
+ */
+#define PVA_ABORT_SVC_UNHANDLED (0xE006U)
+
+/**
+ * @defgroup PVA_ABORT_ARGUMENTS_BOOT Argument to pva_abort() for BOOT operations
+ * @ingroup PVA_ABORT_ARGUMENTS
+ * @{
+ */
+
+/**
+ * @brief Minor code for boot abort due to invalid code IOVA
+ */
+#define PVA_ABORT_BOOT_BAD_CODE_IOVA (0xE001U)
+
+/**
+ * @brief Minor code for boot abort due to invalid addresses
+ */
+#define PVA_ABORT_BOOT_BAD_ADDRS (0xE002U)
+
+/**
+ * @brief Minor code for boot abort due to invalid descriptor start
+ */
+#define PVA_ABORT_BOOT_BAD_DESC_START (0xE003U)
+
+/**
+ * @brief Minor code for boot abort due to invalid descriptor end
+ */
+#define PVA_ABORT_BOOT_BAD_DESC_END (0xE004U)
+
+/**
+ * @brief Minor code for boot abort due to invalid descriptor ID
+ */
+#define PVA_ABORT_BOOT_BAD_DESC_ID (0xE005U)
+
+/**
+ * @brief Minor code for boot abort due to invalid platform
+ */
+#define PVA_ABORT_BOOT_INVALID_PLATFORM (0xE006U)
 /** @} */
 #endif

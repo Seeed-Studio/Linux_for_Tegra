@@ -4,6 +4,8 @@
 #include "pva_kmd_utils.h"
 #include "pva_kmd_thread_sema.h"
 #include "pva_kmd_device_memory.h"
+#include "pva_kmd_device.h"
+#include "pva_kmd_shim_init.h"
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
@@ -138,4 +140,36 @@ free_mem:
 	pva_kmd_device_memory_free(mem);
 err_out:
 	return NULL;
+}
+
+void pva_kmd_atomic_store(pva_kmd_atomic_t *atomic_val, int val)
+{
+	atomic_store(atomic_val, val);
+}
+
+int pva_kmd_atomic_fetch_add(pva_kmd_atomic_t *atomic_val, int val)
+{
+	return atomic_fetch_add(atomic_val, val);
+}
+
+int pva_kmd_atomic_fetch_sub(pva_kmd_atomic_t *atomic_val, int val)
+{
+	return atomic_fetch_sub(atomic_val, val);
+}
+
+int pva_kmd_atomic_load(pva_kmd_atomic_t *atomic_val)
+{
+	return atomic_load(atomic_val);
+}
+
+bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva)
+{
+	bool device_on = false;
+
+	pva_kmd_mutex_lock(&pva->powercycle_lock);
+	if (pva->refcount > 0) {
+		device_on = true;
+	}
+	pva_kmd_mutex_unlock(&pva->powercycle_lock);
+	return device_on;
 }

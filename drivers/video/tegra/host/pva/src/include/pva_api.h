@@ -217,7 +217,7 @@ enum pva_error pva_memory_import_id_destroy(uint64_t import_id);
 #define PVA_SYSSW_MAJOR_VERSION (2U)
 
 /** \brief Specifies the PVA system software minor version. */
-#define PVA_SYSSW_MINOR_VERSION (7U)
+#define PVA_SYSSW_MINOR_VERSION (8U)
 
 #ifdef __cplusplus
 }

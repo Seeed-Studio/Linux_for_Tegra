@@ -142,6 +142,13 @@ enum pva_error pva_kmd_submitter_wait(struct pva_kmd_submitter *submitter,
 	uint32_t time_spent = 0;
 	struct pva_kmd_device *pva = submitter->queue->pva;
 
+#if (PVA_BUILD_MODE == PVA_BUILD_MODE_L4T) ||                                  \
+	(PVA_BUILD_MODE == PVA_BUILD_MODE_QNX)
+	if (!pva->is_silicon) {
+		timeout_us = safe_mulu32(timeout_us,
+					 PVA_KMD_WAIT_FW_TIMEOUT_SCALER_SIM);
+	}
+#endif
 	while (*fence_addr < fence_val) {
 		if (pva->recovery) {
 			return PVA_ERR_FW_ABORTED;
@@ -150,7 +157,7 @@ enum pva_error pva_kmd_submitter_wait(struct pva_kmd_submitter *submitter,
 		time_spent = safe_addu32(time_spent, poll_interval_us);
 		if (time_spent >= timeout_us) {
 			pva_kmd_log_err("pva_kmd_submitter_wait Timed out");
-			pva_kmd_abort_fw(submitter->queue->pva);
+			pva_kmd_abort_fw(submitter->queue->pva, PVA_TIMEDOUT);
 			return PVA_TIMEDOUT;
 		}
 	}

@@ -60,6 +60,8 @@ pva_kmd_resource_table_init(struct pva_kmd_resource_table *res_table,
 
 	size = (uint64_t)safe_mulu32(
 		n_entries, (uint32_t)sizeof(struct pva_resource_entry));
+	size += (uint64_t)safe_mulu32(
+		n_entries, (uint32_t)sizeof(struct pva_resource_aux_info));
 	res_table->table_mem = pva_kmd_device_memory_alloc_map(
 		size, pva, PVA_ACCESS_RW, PVA_R5_SMMU_CONTEXT_ID);
 	if (res_table->table_mem == NULL) {

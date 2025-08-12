@@ -12,8 +12,8 @@ struct pva_kmd_fw_print_buffer {
 	char const *content;
 };
 
-enum pva_error pva_kmd_notify_fw_set_debug_log_level(struct pva_kmd_device *pva,
-						     uint32_t log_level);
+enum pva_error pva_kmd_notify_fw_set_trace_level(struct pva_kmd_device *pva,
+						 uint32_t trace_level);
 
 enum pva_error pva_kmd_notify_fw_set_profiling_level(struct pva_kmd_device *pva,
 						     uint32_t level);

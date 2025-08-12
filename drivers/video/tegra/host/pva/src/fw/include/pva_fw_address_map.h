@@ -123,6 +123,9 @@
  * programmed by Hypervisor.
  * @{
  */
+
+#define PVA_SCR_LOCK PVA_BIT(29)
+
 /**
  * @brief EVP SCR firewall to enable only CCPLEX read/write access.
  */
@@ -142,6 +145,7 @@
  * @brief Status Ctl SCR firewall to enable only CCPLEX read access and R5 read/write access.
  */
 #define PVA_STATUS_CTL_SCR_VAL 0x1f008082
+#define PVA_STATUS_CTL_SCR_VAL_SIM 0x1f008282
 /** @} */
 
 /**

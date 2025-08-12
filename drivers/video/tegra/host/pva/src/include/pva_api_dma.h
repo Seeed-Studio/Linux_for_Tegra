@@ -131,7 +131,7 @@ struct pva_dma_descriptor {
 	 * - 0: transfer true completion disabled
 	 * - 1: transfer true completion enabled
 	 */
-	uint8_t trans_true_completion;
+	uint8_t trigger_completion;
 	uint8_t prefetch_enable;
 
 	uint16_t tx;

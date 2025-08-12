@@ -94,6 +94,7 @@ struct pva_ops_memory_register {
 	uint64_t import_id; /**< Import ID of the memory */
 	uint64_t offset; /**< Offset into the memory */
 	uint64_t size; /**< Size of memory to register */
+	uint64_t serial_id; /**< Serial ID of the memory */
 };
 
 /**

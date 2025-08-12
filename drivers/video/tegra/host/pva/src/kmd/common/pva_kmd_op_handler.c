@@ -66,6 +66,7 @@ pva_kmd_op_memory_register_async(struct pva_kmd_context *ctx,
 	struct pva_kmd_device_memory *dev_mem;
 	struct pva_cmd_update_resource_table *update_cmd;
 	struct pva_resource_entry entry = { 0 };
+	struct pva_resource_aux_info aux_info = { 0 };
 	uint8_t smmu_ctx_id;
 	uint32_t resource_id = 0;
 
@@ -118,8 +119,13 @@ pva_kmd_op_memory_register_async(struct pva_kmd_context *ctx,
 		goto free_cmdbuf;
 	}
 
-	pva_kmd_set_cmd_update_resource_table(
-		update_cmd, ctx->resource_table_id, resource_id, &entry);
+	// Prepare aux info for the resource
+	aux_info.serial_id_hi = PVA_HI32(args->serial_id);
+	aux_info.serial_id_lo = PVA_LOW32(args->serial_id);
+
+	pva_kmd_set_cmd_update_resource_table(update_cmd,
+					      ctx->resource_table_id,
+					      resource_id, &entry, &aux_info);
 
 	out_args.error = PVA_SUCCESS;
 	out_args.resource_id = resource_id;
@@ -212,7 +218,7 @@ static enum pva_error pva_kmd_op_executable_register_async(
 	ASSERT(err == PVA_SUCCESS);
 
 	pva_kmd_set_cmd_update_resource_table(
-		update_cmd, ctx->resource_table_id, resource_id, &entry);
+		update_cmd, ctx->resource_table_id, resource_id, &entry, NULL);
 
 	out_args.error = PVA_SUCCESS;
 	out_args.resource_id = resource_id;
@@ -267,7 +273,7 @@ static enum pva_error pva_kmd_op_dma_register_async(
 	ASSERT(err == PVA_SUCCESS);
 
 	pva_kmd_set_cmd_update_resource_table(
-		update_cmd, ctx->resource_table_id, resource_id, &entry);
+		update_cmd, ctx->resource_table_id, resource_id, &entry, NULL);
 
 	out_args.error = PVA_SUCCESS;
 	out_args.resource_id = resource_id;

@@ -27,17 +27,17 @@
 #include "pva_kmd_shared_buffer.h"
 
 #include "pva_kmd_abort.h"
+#include "pva_version.h"
+
 /**
  * @brief Send address and size of the resource table to FW through CCQ.
  *
  * Initialization through CCQ is only intended for KMD's own resource table (the
  * first resource table created).
  */
-static enum pva_error pva_kmd_send_resource_table_info_by_ccq(
+static void pva_kmd_send_resource_table_info_by_ccq(
 	struct pva_kmd_device *pva, struct pva_kmd_resource_table *res_table)
 {
-	enum pva_error err;
-
 	uint64_t addr = res_table->table_mem->iova;
 	uint32_t n_entries = res_table->n_entries;
 	uint64_t ccq_entry =
@@ -48,13 +48,11 @@ static enum pva_error pva_kmd_send_resource_table_info_by_ccq(
 		PVA_INSERT64(n_entries, PVA_FW_CCQ_RESOURCE_TABLE_N_ENTRIES_MSB,
 			     PVA_FW_CCQ_RESOURCE_TABLE_N_ENTRIES_LSB);
 
-	pva_kmd_mutex_lock(&pva->ccq0_lock);
-	err = pva_kmd_ccq_push_with_timeout(pva, PVA_PRIV_CCQ_ID, ccq_entry,
-					    PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-					    PVA_KMD_WAIT_FW_TIMEOUT_US);
-	pva_kmd_mutex_unlock(&pva->ccq0_lock);
+	uint32_t ccq_entry_lo = PVA_EXTRACT64(ccq_entry, 31, 0, uint32_t);
+	uint32_t ccq_entry_hi = PVA_EXTRACT64(ccq_entry, 63, 32, uint32_t);
 
-	return err;
+	pva_kmd_ccq_push(pva, PVA_PRIV_CCQ_ID, ccq_entry_lo);
+	pva_kmd_ccq_push(pva, PVA_PRIV_CCQ_ID, ccq_entry_hi);
 }
 
 /**
@@ -63,11 +61,9 @@ static enum pva_error pva_kmd_send_resource_table_info_by_ccq(
  * Initialization through CCQ is only intended for KMD's own queue (the first
  * queue created).
  */
-static enum pva_error
-pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
-			       struct pva_kmd_queue *queue)
+static void pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
+					   struct pva_kmd_queue *queue)
 {
-	enum pva_error err;
 	uint64_t addr = queue->queue_memory->iova;
 	uint32_t max_submit = queue->max_num_submit;
 	uint64_t ccq_entry =
@@ -77,13 +73,12 @@ pva_kmd_send_queue_info_by_ccq(struct pva_kmd_device *pva,
 			     PVA_FW_CCQ_QUEUE_ADDR_LSB) |
 		PVA_INSERT64(max_submit, PVA_FW_CCQ_QUEUE_N_ENTRIES_MSB,
 			     PVA_FW_CCQ_QUEUE_N_ENTRIES_LSB);
-	pva_kmd_mutex_lock(&pva->ccq0_lock);
-	err = pva_kmd_ccq_push_with_timeout(pva, PVA_PRIV_CCQ_ID, ccq_entry,
-					    PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
-					    PVA_KMD_WAIT_FW_TIMEOUT_US);
-	pva_kmd_mutex_unlock(&pva->ccq0_lock);
 
-	return err;
+	uint32_t ccq_entry_lo = PVA_EXTRACT64(ccq_entry, 31, 0, uint32_t);
+	uint32_t ccq_entry_hi = PVA_EXTRACT64(ccq_entry, 63, 32, uint32_t);
+
+	pva_kmd_ccq_push(pva, PVA_PRIV_CCQ_ID, ccq_entry_lo);
+	pva_kmd_ccq_push(pva, PVA_PRIV_CCQ_ID, ccq_entry_hi);
 }
 
 /**
@@ -111,8 +106,8 @@ static void pva_kmd_device_init_submission(struct pva_kmd_device *pva)
 	ASSERT(pva->queue_memory != NULL);
 
 	pva_kmd_queue_init(&pva->dev_queue, pva, PVA_PRIV_CCQ_ID,
-			   0 /* KMD's queue ID is 0 */, &pva->ccq0_lock,
-			   pva->queue_memory, PVA_KMD_MAX_NUM_KMD_SUBMITS);
+			   0 /* KMD's queue ID is 0 */, pva->queue_memory,
+			   PVA_KMD_MAX_NUM_KMD_SUBMITS);
 
 	/* Init KMD's resource table */
 	err = pva_kmd_resource_table_init(&pva->dev_resource_table, pva,
@@ -195,7 +190,6 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 	pva->is_hv_mode = true;
 	pva->max_n_contexts = PVA_MAX_NUM_USER_CONTEXTS;
 	pva_kmd_mutex_init(&pva->powercycle_lock);
-	pva_kmd_mutex_init(&pva->ccq0_lock);
 	pva_kmd_sema_init(&pva->fw_boot_sema, 0);
 	size = safe_mulu32((uint32_t)sizeof(struct pva_kmd_context),
 			   pva->max_n_contexts);
@@ -224,13 +218,9 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 	err = pva_kmd_init_vpu_app_auth(pva, app_authenticate);
 	ASSERT(err == PVA_SUCCESS);
 
-	pva->is_suspended = false;
+	pva->fw_inited = false;
 
-#if PVA_IS_DEBUG == 1
-	pva->fw_debug_log_level = 255U;
-#else
-	pva->fw_debug_log_level = 0U;
-#endif
+	pva->fw_trace_level = PVA_FW_TP_LVL_NONE;
 
 	return pva;
 }
@@ -256,11 +246,11 @@ static void pva_kmd_wait_for_active_contexts(struct pva_kmd_device *pva)
 void pva_kmd_device_destroy(struct pva_kmd_device *pva)
 {
 	pva_kmd_wait_for_active_contexts(pva);
+
 	pva_kmd_device_deinit_submission(pva);
 	pva_kmd_device_plat_deinit(pva);
 	pva_kmd_block_allocator_deinit(&pva->context_allocator);
 	pva_kmd_free(pva->context_mem);
-	pva_kmd_mutex_deinit(&pva->ccq0_lock);
 	pva_kmd_mutex_deinit(&pva->powercycle_lock);
 	pva_kmd_deinit_vpu_app_auth(pva);
 	pva_kmd_free(pva);
@@ -275,9 +265,8 @@ static enum pva_error config_fw_by_cmds(struct pva_kmd_device *pva)
 		goto err_out;
 	}
 
-	/* Set FW debug log level */
-	err = pva_kmd_notify_fw_set_debug_log_level(pva,
-						    pva->fw_debug_log_level);
+	/* Set FW trace level */
+	err = pva_kmd_notify_fw_set_trace_level(pva, pva->fw_trace_level);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
 	}
@@ -293,7 +282,44 @@ err_out:
 	return err;
 }
 
-enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva)
+/**
+ * @brief Print PVA firmware and KMD version information
+ *
+ * @param pva PVA device instance
+ */
+static void pva_kmd_print_version_info(struct pva_kmd_device *pva)
+{
+	enum pva_error err;
+	char fw_version[PVA_VERSION_BUFFER_SIZE];
+	char kmd_version[PVA_VERSION_BUFFER_SIZE];
+
+	/* Query and print firmware version */
+	const char *prefix = "PVA FW version: ";
+	const char *kmd_prefix = "PVA KMD version: ";
+	uint32_t prefix_len = strlen(prefix);
+	uint32_t kmd_prefix_len = strlen(kmd_prefix);
+	/* Store initial string */
+	(void)memcpy(fw_version, prefix, prefix_len);
+
+	/* Get actual firmware version - write directly after the prefix */
+	err = pva_kmd_query_fw_version(pva, fw_version + prefix_len,
+				       safe_subu32(PVA_VERSION_BUFFER_SIZE,
+						   prefix_len));
+	if (err == PVA_SUCCESS) {
+		pva_kmd_log_err(fw_version);
+	} else {
+		pva_kmd_log_err("Failed to query firmware version");
+	}
+
+	/* Print PVA KMD version */
+	(void)memcpy(kmd_version, kmd_prefix, kmd_prefix_len);
+	(void)memcpy(kmd_version + kmd_prefix_len, PVA_SYSSW_COMMIT_ID,
+		     sizeof(PVA_SYSSW_COMMIT_ID));
+	kmd_version[kmd_prefix_len + sizeof(PVA_SYSSW_COMMIT_ID)] = '\0';
+	pva_kmd_log_err(kmd_version);
+}
+
+static enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva)
 {
 	enum pva_error err = PVA_SUCCESS;
 
@@ -301,15 +327,8 @@ enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva)
 	pva->dev_queue.queue_header->cb_head = 0;
 	pva->dev_queue.queue_header->cb_tail = 0;
 
-	err = pva_kmd_send_resource_table_info_by_ccq(pva,
-						      &pva->dev_resource_table);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-	err = pva_kmd_send_queue_info_by_ccq(pva, &pva->dev_queue);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
+	pva_kmd_send_resource_table_info_by_ccq(pva, &pva->dev_resource_table);
+	pva_kmd_send_queue_info_by_ccq(pva, &pva->dev_queue);
 
 	err = pva_kmd_shared_buffer_init(pva, PVA_PRIV_CCQ_ID,
 					 PVA_KMD_FW_BUF_ELEMENT_SIZE,
@@ -327,116 +346,124 @@ enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva)
 		goto err_out;
 	}
 
+	pva_kmd_print_version_info(pva);
+
 err_out:
 	return err;
 }
 
-enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
+enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
 {
 	enum pva_error err = PVA_SUCCESS;
 
-	pva_kmd_mutex_lock(&pva->powercycle_lock);
-	if (pva->refcount == 0) {
-		pva_kmd_allocate_syncpts(pva);
-
-		err = pva_kmd_power_on(pva);
-		if (err != PVA_SUCCESS) {
-			goto unlock;
-		}
-
-		err = pva_kmd_init_fw(pva);
-		if (err != PVA_SUCCESS) {
-			goto poweroff;
-		}
-
-		err = pva_kmd_config_fw_after_boot(pva);
-		if (err != PVA_SUCCESS) {
-			goto deinit_fw;
-		}
-	} else {
-		// Once firwmare is aborted, we no longer allow incrementing PVA
-		// refcount. This makes sure refcount will eventually reach 0 and allow
-		// device to be powered off.
-		if (pva->recovery) {
-			pva_kmd_log_err_u64(
-				"PVA firmware aborted. "
-				"Waiting for active PVA uses to finish. Remaining",
-				pva->refcount);
-			err = PVA_ERR_FW_ABORTED;
-			goto unlock;
-		}
+	err = pva_kmd_load_fw(pva);
+	if (err != PVA_SUCCESS) {
+		goto err_out;
 	}
 
-	pva->refcount = safe_addu32(pva->refcount, 1U);
-	pva_kmd_mutex_unlock(&pva->powercycle_lock);
+	err = pva_kmd_config_fw_after_boot(pva);
+	if (err != PVA_SUCCESS) {
+		goto unload_fw;
+	}
+	pva->fw_inited = true;
 	return PVA_SUCCESS;
 
-deinit_fw:
-	pva_kmd_deinit_fw(pva);
-poweroff:
-	pva_kmd_power_off(pva);
-unlock:
-	pva_kmd_mutex_unlock(&pva->powercycle_lock);
+unload_fw:
+	pva_kmd_unload_fw(pva);
+err_out:
 	return err;
 }
 
-void pva_kmd_device_idle(struct pva_kmd_device *pva)
+void pva_kmd_add_deferred_context_free(struct pva_kmd_device *pva,
+				       uint8_t ccq_id)
+{
+	uint32_t index = (uint32_t)pva_kmd_atomic_fetch_add(
+		&pva->n_deferred_context_free, 1);
+
+	ASSERT(index < PVA_MAX_NUM_USER_CONTEXTS);
+	pva->deferred_context_free_ids[index] = ccq_id;
+}
+
+static void free_deferred_contexts(struct pva_kmd_device *pva)
+{
+	uint32_t n_deferred_context_free =
+		(uint32_t)pva_kmd_atomic_load(&pva->n_deferred_context_free);
+
+	for (uint32_t i = 0; i < n_deferred_context_free; i++) {
+		uint8_t ccq_id = pva->deferred_context_free_ids[i];
+		struct pva_kmd_context *ctx = pva_kmd_get_context(pva, ccq_id);
+		ASSERT(ctx != NULL);
+		pva_kmd_free_context(ctx);
+	}
+
+	pva_kmd_atomic_store(&pva->n_deferred_context_free, 0);
+}
+
+enum pva_error pva_kmd_deinit_fw(struct pva_kmd_device *pva)
 {
 	enum pva_error err = PVA_SUCCESS;
 
-	pva_kmd_mutex_lock(&pva->powercycle_lock);
-	ASSERT(pva->refcount > 0);
-	pva->refcount--;
-	if (pva->refcount == 0) {
-		err = pva_kmd_notify_fw_disable_profiling(pva);
-		if (err != PVA_SUCCESS) {
-			pva_kmd_log_err(
-				"pva_kmd_notify_fw_disable_profiling failed during device idle");
-		}
-		err = pva_kmd_shared_buffer_deinit(pva, PVA_PRIV_CCQ_ID);
-		if (err != PVA_SUCCESS) {
-			pva_kmd_log_err(
-				"pva_kmd_shared_buffer_deinit failed during device idle");
-		}
-		pva_kmd_deinit_fw(pva);
-		pva_kmd_power_off(pva);
+	err = pva_kmd_notify_fw_disable_profiling(pva);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"pva_kmd_notify_fw_disable_profiling failed during device idle");
 	}
-	pva_kmd_mutex_unlock(&pva->powercycle_lock);
+	err = pva_kmd_shared_buffer_deinit(pva, PVA_PRIV_CCQ_ID);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"pva_kmd_shared_buffer_deinit failed during device idle");
+	}
+	pva_kmd_unload_fw(pva);
+	free_deferred_contexts(pva);
+
+	/* No longer in recovery state */
+	pva->recovery = false;
+	pva->fw_inited = false;
+	return err;
 }
 
-enum pva_error pva_kmd_ccq_push_with_timeout(struct pva_kmd_device *pva,
-					     uint8_t ccq_id, uint64_t ccq_entry,
-					     uint64_t sleep_interval_us,
-					     uint64_t timeout_us)
+enum pva_error pva_kmd_query_fw_version(struct pva_kmd_device *pva,
+					char *version_buffer,
+					uint32_t buffer_size)
 {
-	/* spin until we have space or timeout reached */
-	while (pva_kmd_get_ccq_space(pva, ccq_id) == 0) {
-		if (timeout_us == 0) {
-			pva_kmd_log_err(
-				"pva_kmd_ccq_push_with_timeout Timed out");
-			pva_kmd_abort_fw(pva);
-			return PVA_TIMEDOUT;
-		}
-		if (pva->recovery) {
-			return PVA_ERR_FW_ABORTED;
-		}
-		pva_kmd_sleep_us(sleep_interval_us);
-		timeout_us = sat_sub64(timeout_us, sleep_interval_us);
+	enum pva_error err = PVA_SUCCESS;
+	struct pva_kmd_device_memory *device_memory;
+	struct pva_cmd_get_version get_version_cmd = { 0 };
+	uint32_t version_buffer_size = PVA_VERSION_BUFFER_SIZE;
+
+	if (version_buffer == NULL || buffer_size <= 1) {
+		return PVA_INVAL;
 	}
-	/* TODO: memory write barrier is needed here */
-	pva_kmd_ccq_push(pva, ccq_id, ccq_entry);
 
-	return PVA_SUCCESS;
-}
-
-bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva)
-{
-	bool device_on = false;
-
-	pva_kmd_mutex_lock(&pva->powercycle_lock);
-	if (pva->refcount > 0) {
-		device_on = true;
+	/* Allocate device memory for version string */
+	device_memory = pva_kmd_device_memory_alloc_map(version_buffer_size,
+							pva, PVA_ACCESS_RW,
+							PVA_R5_SMMU_CONTEXT_ID);
+	if (device_memory == NULL) {
+		return PVA_NOMEM;
 	}
-	pva_kmd_mutex_unlock(&pva->powercycle_lock);
-	return device_on;
+
+	/* Clear the buffer */
+	memset(device_memory->va, 0, version_buffer_size);
+
+	/* Set up the command */
+	pva_kmd_set_cmd_get_version(&get_version_cmd, device_memory->iova);
+
+	/* Submit the command synchronously */
+	err = pva_kmd_submit_cmd_sync(&pva->submitter, &get_version_cmd,
+				      sizeof(get_version_cmd),
+				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				      PVA_KMD_WAIT_FW_TIMEOUT_US);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Failed to submit get_version command");
+		goto free_memory;
+	}
+
+	(void)memcpy(version_buffer, (char *)device_memory->va,
+		     (buffer_size - 1));
+	version_buffer[buffer_size - 1] = '\0'; /* Ensure null termination */
+
+free_memory:
+	pva_kmd_device_memory_free(device_memory);
+	return err;
 }

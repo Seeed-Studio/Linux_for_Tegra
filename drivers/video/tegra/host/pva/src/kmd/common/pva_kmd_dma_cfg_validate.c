@@ -384,12 +384,6 @@ pva_kmd_validate_dma_config(struct pva_dma_config const *dma_config,
 		return err;
 	}
 
-	err = validate_descriptors(dma_config);
-	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err("Bad Descriptors");
-		return err;
-	}
-
 	if (dma_config->header.num_hwseq_words != 0U) {
 		err = validate_hwseq(dma_config, hw_consts, access_sizes,
 				     hw_dma_descs_mask);
@@ -397,6 +391,12 @@ pva_kmd_validate_dma_config(struct pva_dma_config const *dma_config,
 			pva_kmd_log_err("Bad HW Sequencer Blob");
 			return err;
 		}
+	}
+
+	err = validate_descriptors(dma_config);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Bad Descriptors");
+		return err;
 	}
 
 	return err;
@@ -612,7 +612,6 @@ static void write_one_reloc(uint8_t ch_index, uint32_t desc_index,
 
 	info->relocs[reloc_id].desc_index = desc_index;
 	info->relocs[reloc_id].field = reloc_field;
-
 	info->reloc_off[slot_id] = safe_addu8(info->reloc_off[slot_id], 1U);
 }
 
@@ -641,7 +640,6 @@ static void write_relocs(const struct pva_dma_config *dma_cfg,
 	uint16_t start_idx = 0U;
 	const struct pva_dma_descriptor *desc = NULL;
 	uint8_t ch_index = 0U;
-
 	for (i = 0U; i < rel_info->dyn_slot.num_slots; i++) {
 		rel_info->dyn_slot.slots[i].reloc_start_idx = start_idx;
 		start_idx = safe_addu16(

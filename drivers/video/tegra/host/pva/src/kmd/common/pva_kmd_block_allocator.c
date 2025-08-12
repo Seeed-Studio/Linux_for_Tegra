@@ -24,6 +24,8 @@ pva_kmd_block_allocator_init(struct pva_kmd_block_allocator *allocator,
 		sizeof(*allocator->slot_in_use) * max_num_blocks);
 	if (!allocator->slot_in_use) {
 		err = PVA_NOMEM;
+		pva_kmd_log_err(
+			"pva_kmd_block_allocator_init slot_in_use NULL");
 		goto err_out;
 	}
 	pva_kmd_mutex_init(&allocator->allocator_lock);

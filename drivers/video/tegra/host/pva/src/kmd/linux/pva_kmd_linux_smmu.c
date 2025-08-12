@@ -34,21 +34,30 @@ atomic_t g_num_smmu_ctxs = ATOMIC_INIT(0);
 atomic_t g_num_smmu_probing_done = ATOMIC_INIT(0);
 bool g_smmu_probing_done = false;
 
-static uint32_t pva_kmd_device_get_sid(struct platform_device *pdev)
+static int pva_kmd_device_get_sid(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
+	uint32_t sid;
 
-	ASSERT(fwspec != NULL);
-	ASSERT(fwspec->num_ids != 0);
+	if (fwspec == NULL) {
+		dev_err(&pdev->dev, "SMMU fwspec is NULL");
+		return -ENOENT;
+	}
+	if (fwspec->num_ids == 0) {
+		dev_err(&pdev->dev, "SMMU fwspec has no IDs");
+		return -EINVAL;
+	}
 
-	return fwspec->ids[0] & 0xffff;
+	sid = fwspec->ids[0] & 0xffff;
+	return (int)sid;
 }
 
 static int pva_kmd_linux_device_smmu_context_probe(struct platform_device *pdev)
 {
 	int idx;
 	int new_idx;
+	int sid_or_err;
 
 	if (!iommu_get_domain_for_dev(&pdev->dev)) {
 		dev_err(&pdev->dev,
@@ -73,12 +82,17 @@ static int pva_kmd_linux_device_smmu_context_probe(struct platform_device *pdev)
 	idx = new_idx;
 
 	g_smmu_ctxs[idx].pdev = pdev;
-	g_smmu_ctxs[idx].sid = pva_kmd_device_get_sid(pdev);
+	sid_or_err = pva_kmd_device_get_sid(pdev);
+	if (sid_or_err < 0) {
+		dev_err(&pdev->dev, "Failed to get SID: %d", sid_or_err);
+		atomic_dec(&g_num_smmu_ctxs);
+		return sid_or_err;
+	}
+	g_smmu_ctxs[idx].sid = (uint32_t)sid_or_err;
 
 	atomic_add(1, &g_num_smmu_probing_done);
 
-	dev_info(&pdev->dev, "initialized (streamid=%d)",
-		 pva_kmd_device_get_sid(pdev));
+	dev_info(&pdev->dev, "initialized (streamid=%u)", g_smmu_ctxs[idx].sid);
 	return 0;
 }
 

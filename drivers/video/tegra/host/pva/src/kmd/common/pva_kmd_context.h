@@ -40,8 +40,6 @@ struct pva_kmd_context {
 
 	/** Privileged queue owned by the context */
 	struct pva_kmd_queue ctx_queue;
-	/** Pointer to the ccq0 lock owned by device*/
-	pva_kmd_mutex_t *ccq0_lock_ptr;
 
 	/** memory needed for submission: including command buffer chunks and fences */
 	struct pva_kmd_device_memory *submit_memory;
@@ -56,10 +54,6 @@ struct pva_kmd_context {
 	void *queue_allocator_mem;
 	struct pva_kmd_block_allocator queue_allocator;
 
-	/** This lock protects the context's own CCQ access. We don't really use
-	 * it because we don't do user queue submission in KMD.
-	 */
-	pva_kmd_mutex_t ccq_lock;
 	void *plat_data;
 	uint64_t ccq_shm_handle;
 
@@ -73,8 +67,20 @@ struct pva_kmd_context *pva_kmd_context_create(struct pva_kmd_device *pva);
 
 /**
  * @brief Destroy a KMD context.
+ *
+ * This function first notify FW of context destruction. If successful, it
+ * calls pva_kmd_free_context() to free the context. Otherwise, the
+ * free is deferred until PVA is powered off.
  */
 void pva_kmd_context_destroy(struct pva_kmd_context *client);
+
+/**
+ * @brief Free a KMD context.
+ *
+ * This function frees the context without notifying FW. We need to make sure FW
+ * will not access any context resources before calling this function.
+ */
+void pva_kmd_free_context(struct pva_kmd_context *ctx);
 
 /**
  * @brief Initialize a KMD context.
@@ -84,8 +90,6 @@ void pva_kmd_context_destroy(struct pva_kmd_context *client);
  */
 enum pva_error pva_kmd_context_init(struct pva_kmd_context *ctx,
 				    uint32_t res_table_capacity);
-
-void pva_kmd_context_deinit(struct pva_kmd_context *ctx);
 
 struct pva_kmd_context *pva_kmd_get_context(struct pva_kmd_device *pva,
 					    uint8_t alloc_id);

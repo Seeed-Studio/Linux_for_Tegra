@@ -39,6 +39,17 @@ void pva_kmd_print_str(const char *str);
 void pva_kmd_print_str_u64(const char *str, uint64_t n);
 
 /**
+ * @brief Print a string followed by a 32-bit unsigned number in hex format.
+ *
+ * This function is used for logging errors, enabled even in safety environment.
+ * For debug print, use pva_dbg_printf.
+ *
+ * @param str The string to print.
+ * @param n The number to print.
+ */
+void pva_kmd_print_str_hex32(const char *str, uint32_t n);
+
+/**
  * @brief Fault KMD.
  *
  * Abort KMD due to critical unrecoverable error.

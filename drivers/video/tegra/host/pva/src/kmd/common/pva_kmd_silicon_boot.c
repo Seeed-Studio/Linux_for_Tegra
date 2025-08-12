@@ -10,6 +10,7 @@
 #include "pva_kmd_silicon_isr.h"
 #include "pva_kmd_silicon_boot.h"
 #include "pva_kmd_shim_silicon.h"
+#include "pva_kmd_utils.h"
 
 static inline void pva_kmd_set_sema(struct pva_kmd_device *pva,
 				    uint32_t sema_idx, uint32_t val)
@@ -108,10 +109,21 @@ void pva_kmd_config_evp_seg_regs(struct pva_kmd_device *pva)
 
 void pva_kmd_config_scr_regs(struct pva_kmd_device *pva)
 {
-	pva_kmd_write(pva, PVA_REG_EVP_SCR_ADDR, PVA_EVP_SCR_VAL);
-	pva_kmd_write(pva, PVA_CFG_SCR_STATUS_CNTL, PVA_STATUS_CTL_SCR_VAL);
-	pva_kmd_write(pva, PVA_CFG_SCR_PRIV, PVA_PRIV_SCR_VAL);
-	pva_kmd_write(pva, PVA_CFG_SCR_CCQ_CNTL, PVA_CCQ_SCR_VAL);
+	uint32_t scr_lock_mask = pva->is_silicon ? 0xFFFFFFFF : (~PVA_SCR_LOCK);
+
+	pva_kmd_write(pva, PVA_REG_EVP_SCR_ADDR,
+		      PVA_EVP_SCR_VAL & scr_lock_mask);
+	if (pva->is_silicon) {
+		pva_kmd_write(pva, PVA_CFG_SCR_STATUS_CNTL,
+			      PVA_STATUS_CTL_SCR_VAL & scr_lock_mask);
+	} else {
+		pva_kmd_write(pva, PVA_CFG_SCR_STATUS_CNTL,
+			      PVA_STATUS_CTL_SCR_VAL_SIM & scr_lock_mask);
+	}
+
+	pva_kmd_write(pva, PVA_CFG_SCR_PRIV, PVA_PRIV_SCR_VAL & scr_lock_mask);
+	pva_kmd_write(pva, PVA_CFG_SCR_CCQ_CNTL,
+		      PVA_CCQ_SCR_VAL & scr_lock_mask);
 }
 
 void pva_kmd_config_sid(struct pva_kmd_device *pva)
@@ -169,12 +181,14 @@ static uint32_t get_syncpt_offset(struct pva_kmd_device *pva,
 	}
 }
 
-enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
+enum pva_error pva_kmd_load_fw(struct pva_kmd_device *pva)
 {
 	uint64_t seg_reg_value;
 	uint32_t debug_data_size;
 	uint32_t boot_sema = 0;
 	enum pva_error err = PVA_SUCCESS;
+	uint32_t checkpoint;
+	uint32_t scr_lock_mask = pva->is_silicon ? 0xFFFFFFFF : (~PVA_SCR_LOCK);
 
 	/* Load firmware */
 	if (!pva->load_from_gsc) {
@@ -192,14 +206,18 @@ enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
 		debug_data_size, pva, PVA_ACCESS_RW, PVA_R5_SMMU_CONTEXT_ID);
 	if (pva->fw_debug_mem == NULL) {
 		err = PVA_NOMEM;
+		pva_kmd_log_err(
+			"pva_kmd_device_memory_alloc_map failed in pva_kmd_load_fw");
 		goto free_fw_mem;
 	}
 	init_fw_print_buffer(&pva->fw_print_buffer, pva->fw_debug_mem->va);
+	pva->debugfs_context.r5_ocd_stage_buffer = pva->fw_debug_mem->va;
 
 	/* Program SCRs */
 	pva_kmd_write(pva, PVA_SEC_SCR_SECEXT_INTR_EVENT,
-		      PVA_SEC_SCR_SECEXT_INTR_EVENT_VAL);
-	pva_kmd_write(pva, PVA_PROC_SCR_PROC, PVA_PROC_SCR_PROC_VAL);
+		      (PVA_SEC_SCR_SECEXT_INTR_EVENT_VAL & scr_lock_mask));
+	pva_kmd_write(pva, PVA_PROC_SCR_PROC,
+		      (PVA_PROC_SCR_PROC_VAL & scr_lock_mask));
 
 	pva_kmd_config_evp_seg_scr_regs(pva);
 
@@ -271,9 +289,14 @@ enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva)
 
 	if (err != PVA_SUCCESS) {
 		pva_kmd_log_err("Waiting for FW boot timed out.");
+		/* show checkpoint value here*/
+		checkpoint = pva_kmd_read(
+			pva, pva->regspec.ccq_regs[PVA_PRIV_CCQ_ID]
+				     .status[PVA_REG_CCQ_STATUS6_IDX]);
+		pva_kmd_log_err_hex32("Checkpoint value:", checkpoint);
+		pva_kmd_report_error_fsi(pva, err);
 		goto free_sec_lic;
 	}
-	pva->recovery = false;
 
 	return err;
 
@@ -309,7 +332,7 @@ void pva_kmd_freeze_fw(struct pva_kmd_device *pva)
 	pva_kmd_set_reset_line(pva);
 }
 
-void pva_kmd_deinit_fw(struct pva_kmd_device *pva)
+void pva_kmd_unload_fw(struct pva_kmd_device *pva)
 {
 	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
 	pva_kmd_drain_fw_print(&pva->fw_print_buffer);

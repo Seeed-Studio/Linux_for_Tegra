@@ -6,12 +6,9 @@
 #include "pva_math_utils.h"
 
 void pva_kmd_ccq_push(struct pva_kmd_device *pva, uint8_t ccq_id,
-		      uint64_t ccq_entry)
+		      uint32_t ccq_entry)
 {
-	pva_kmd_write(pva, pva->regspec.ccq_regs[ccq_id].fifo,
-		      PVA_EXTRACT64(ccq_entry, 31, 0, uint32_t));
-	pva_kmd_write(pva, pva->regspec.ccq_regs[ccq_id].fifo,
-		      PVA_EXTRACT64(ccq_entry, 63, 32, uint32_t));
+	pva_kmd_write(pva, pva->regspec.ccq_regs[ccq_id].fifo, ccq_entry);
 }
 
 uint32_t pva_kmd_get_ccq_space(struct pva_kmd_device *pva, uint8_t ccq_id)

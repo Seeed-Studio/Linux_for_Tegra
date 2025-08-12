@@ -75,10 +75,10 @@ void pva_kmd_shim_add_trace_fence(
 					   trace_info->value);
 		} else if (trace_info->type ==
 			   PVA_KMD_FW_BUF_MSG_FENCE_TYPE_SEMAPHORE) {
-			trace_job_prefence_semaphore(job_id,
-						     trace_info->fence_id,
-						     trace_info->offset,
-						     trace_info->value);
+			trace_job_prefence_semaphore(
+				job_id, trace_info->fence_id,
+				PVA_LOW32(trace_info->offset),
+				trace_info->value);
 		}
 	} else if (trace_info->action ==
 		   PVA_KMD_FW_BUF_MSG_FENCE_ACTION_SIGNAL) {
@@ -87,10 +87,10 @@ void pva_kmd_shim_add_trace_fence(
 					    trace_info->value);
 		} else if (trace_info->type ==
 			   PVA_KMD_FW_BUF_MSG_FENCE_TYPE_SEMAPHORE) {
-			trace_job_postfence_semaphore(job_id,
-						      trace_info->fence_id,
-						      trace_info->offset,
-						      trace_info->value);
+			trace_job_postfence_semaphore(
+				job_id, trace_info->fence_id,
+				PVA_LOW32(trace_info->offset),
+				trace_info->value);
 		}
 	}
 }

@@ -79,7 +79,6 @@ struct pva_kmd_device {
 	pva_kmd_mutex_t submit_lock;
 	struct pva_kmd_device_memory *queue_memory;
 	struct pva_kmd_queue dev_queue;
-	pva_kmd_mutex_t ccq0_lock;
 
 	/** memory needed for submission: including command buffer chunks and fences */
 	struct pva_kmd_device_memory *submit_memory;
@@ -111,7 +110,7 @@ struct pva_kmd_device {
 	// FW and Hypervisor
 	struct pva_kmd_shared_buffer kmd_fw_buffers[PVA_MAX_NUM_CCQ];
 
-	uint32_t fw_debug_log_level;
+	uint32_t fw_trace_level;
 	struct pva_kmd_fw_print_buffer fw_print_buffer;
 
 	struct pva_kmd_device_memory *tegra_stats_memory;
@@ -120,6 +119,7 @@ struct pva_kmd_device {
 
 	bool load_from_gsc;
 	bool is_hv_mode;
+	bool is_silicon;
 	struct pva_kmd_debugfs_context debugfs_context;
 	/** Sector packing format for block linear surfaces */
 	uint8_t bl_sector_pack_format;
@@ -137,15 +137,20 @@ struct pva_kmd_device {
 	bool support_hwseq_frame_linking;
 
 	void *plat_data;
-	void *fw_handle;
 
 	struct pva_vpu_auth *pva_auth;
-	bool is_suspended;
+	bool fw_inited;
 
 	/** Carveout info for FW */
 	struct pva_co_info fw_carveout;
 
 	bool test_mode;
+
+	pva_kmd_atomic_t n_deferred_context_free;
+	uint32_t deferred_context_free_ids[PVA_MAX_NUM_USER_CONTEXTS];
+
+	uint64_t tsc_to_ns_multiplier; /**< TSC to nanoseconds multiplier */
+	bool r5_ocd_on;
 };
 
 struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
@@ -155,17 +160,17 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 
 void pva_kmd_device_destroy(struct pva_kmd_device *pva);
 
-enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva);
-void pva_kmd_device_idle(struct pva_kmd_device *pva);
+void pva_kmd_add_deferred_context_free(struct pva_kmd_device *pva,
+				       uint8_t ccq_id);
 
-enum pva_error pva_kmd_ccq_push_with_timeout(struct pva_kmd_device *pva,
-					     uint8_t ccq_id, uint64_t ccq_entry,
-					     uint64_t sleep_interval_us,
-					     uint64_t timeout_us);
-
-enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva);
+enum pva_error pva_kmd_init_fw(struct pva_kmd_device *pva);
+enum pva_error pva_kmd_deinit_fw(struct pva_kmd_device *pva);
 
 bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva);
+
+enum pva_error pva_kmd_query_fw_version(struct pva_kmd_device *pva,
+					char *version_buffer,
+					uint32_t buffer_size);
 
 static inline uint32_t pva_kmd_get_device_class_id(struct pva_kmd_device *pva)
 {
@@ -184,5 +189,18 @@ pva_kmd_get_max_cmdbuf_chunk_size(struct pva_kmd_device *pva)
 	} else {
 		return PVA_MAX_CMDBUF_CHUNK_SIZE;
 	}
+}
+
+static inline uint64_t pva_kmd_tsc_to_ns(struct pva_kmd_device *pva,
+					 uint64_t tsc)
+{
+	// Convert TSC to nanoseconds using the multiplier
+	return safe_mulu64(tsc, pva->tsc_to_ns_multiplier);
+}
+static inline uint64_t pva_kmd_tsc_to_us(struct pva_kmd_device *pva,
+					 uint64_t tsc)
+{
+	// Convert TSC to microseconds using the multiplier
+	return safe_mulu64(tsc, pva->tsc_to_ns_multiplier) / 1000;
 }
 #endif // PVA_KMD_DEVICE_H

@@ -22,6 +22,17 @@
 #include "pva_kmd_silicon_boot.h"
 #include "pva_kmd_linux_device_api.h"
 
+#define HVC_NR_PVA_CONFIG_REGS_CALL 0x8136U
+
+__attribute__((no_sanitize_address)) static inline bool
+hyp_pva_config_regs(void)
+{
+	uint64_t args[4] = { 0U, 0U, 0U, 0U };
+	hyp_call44(HVC_NR_PVA_CONFIG_REGS_CALL, args);
+
+	return (args[0] == 0U);
+}
+
 struct nvpva_device_data *
 pva_kmd_linux_device_get_properties(struct platform_device *pdev)
 {
@@ -140,10 +151,6 @@ err_out:
 	return err;
 }
 
-void pva_kmd_allocate_syncpts(struct pva_kmd_device *pva)
-{
-}
-
 void pva_kmd_linux_host1x_deinit(struct pva_kmd_device *pva)
 {
 	int err = 0;
@@ -203,38 +210,74 @@ void pva_kmd_device_plat_deinit(struct pva_kmd_device *pva)
 	pva_kmd_free(pva_kmd_linux_device_get_data(pva));
 }
 
-enum pva_error pva_kmd_power_on(struct pva_kmd_device *pva)
+enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 {
 	int err = 0;
+	enum pva_error pva_err = PVA_SUCCESS;
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
 	struct nvpva_device_data *props = device_data->pva_device_properties;
+
+	pva_kmd_mutex_lock(&pva->powercycle_lock);
+
+	// Once firmware is aborted, we no longer allow incrementing PVA
+	// refcount. This makes sure refcount will eventually reach 0 and allow
+	// device to be powered off.
+	if (pva->recovery) {
+		pva_kmd_log_err(
+			"PVA firmware aborted. Waiting for active PVA uses to finish");
+		pva_err = PVA_ERR_FW_ABORTED;
+		goto unlock;
+	}
 
 	err = pm_runtime_get_sync(&props->pdev->dev);
 	if (err < 0) {
 		pm_runtime_put_noidle(&props->pdev->dev);
-		goto out;
+		pva_kmd_log_err_u64(
+			"pva_kmd_device_busy pm_runtime_get_sync failed",
+			(uint64_t)(-err));
+		goto convert_err;
 	}
 
-	/* Power management operation is asynchronous. PVA may not be power
-	 * cycled between power_off -> power_on call. Therefore, we need to
-	 * reset it here to make sure it is in a clean state. */
-	reset_control_acquire(props->reset_control);
-	reset_control_reset(props->reset_control);
-	reset_control_release(props->reset_control);
+	pva->refcount = safe_addu32(pva->refcount, 1);
 
-out:
-	return kernel_err2pva_err(err);
+convert_err:
+	pva_err = kernel_err2pva_err(err);
+unlock:
+	pva_kmd_mutex_unlock(&pva->powercycle_lock);
+	return pva_err;
 }
 
-void pva_kmd_power_off(struct pva_kmd_device *pva)
+void pva_kmd_device_idle(struct pva_kmd_device *pva)
 {
 	struct pva_kmd_linux_device_data *device_data =
 		pva_kmd_linux_device_get_data(pva);
 	struct nvpva_device_data *props = device_data->pva_device_properties;
+	int err = 0;
+
+	pva_kmd_mutex_lock(&pva->powercycle_lock);
+
+	pva->refcount = safe_subu32(pva->refcount, 1);
+
+	if (pva->refcount == 0 && pva->recovery) {
+		/*
+		 * At this point, there are no active PVA users (refcount=0).
+		 * Since PVA needs recovery (recovery=true), perform a forced
+		 * power cycle to recover it.
+		 */
+		err = pm_runtime_force_suspend(&props->pdev->dev);
+		if (err == 0) {
+			err = pm_runtime_force_resume(&props->pdev->dev);
+		}
+		if (err < 0) {
+			pva_kmd_log_err("Failed to recover PVA");
+		}
+	}
 
 	pm_runtime_mark_last_busy(&props->pdev->dev);
 	pm_runtime_put(&props->pdev->dev);
+
+	pva_kmd_mutex_unlock(&pva->powercycle_lock);
 }
 
 void pva_kmd_set_reset_line(struct pva_kmd_device *pva)
@@ -353,22 +396,46 @@ unsigned long pva_kmd_strtol(const char *str, int base)
 	return val;
 }
 
-/* TODO: Enable HVC call once HVC fix is available on dev-main */
-//static void pva_kmd_config_regs(void)
-//{
-//bool hv_err = true;
-//hv_err = hyp_pva_config_regs();
-//ASSERT(hv_err == true);
-//ASSERT(false);
-//}
+static void pva_kmd_config_regs(void)
+{
+	bool hv_err = true;
+	hv_err = hyp_pva_config_regs();
+	ASSERT(hv_err == true);
+}
 
 void pva_kmd_config_evp_seg_scr_regs(struct pva_kmd_device *pva)
 {
-	pva_kmd_config_evp_seg_regs(pva);
-	pva_kmd_config_scr_regs(pva);
+	if (pva->load_from_gsc && pva->is_hv_mode) {
+		/* HVC Call to program EVP, Segment config registers and SCR registers */
+		pva_kmd_config_regs();
+	} else {
+		pva_kmd_config_evp_seg_regs(pva);
+		pva_kmd_config_scr_regs(pva);
+	}
 }
 
 void pva_kmd_config_sid_regs(struct pva_kmd_device *pva)
 {
-	pva_kmd_config_sid(pva);
+	if (!(pva->load_from_gsc && pva->is_hv_mode)) {
+		pva_kmd_config_sid(pva);
+	}
+}
+
+bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva)
+{
+	struct pva_kmd_linux_device_data *device_data =
+		pva_kmd_linux_device_get_data(pva);
+	struct nvpva_device_data *device_props =
+		device_data->pva_device_properties;
+	struct device *dev = &device_props->pdev->dev;
+
+	if (pm_runtime_active(dev)) {
+		return true;
+	} else {
+		return false;
+	}
+}
+void pva_kmd_report_error_fsi(struct pva_kmd_device *pva, uint32_t error_code)
+{
+	//TODO: Implement FSI error reporting once available for Linux
 }

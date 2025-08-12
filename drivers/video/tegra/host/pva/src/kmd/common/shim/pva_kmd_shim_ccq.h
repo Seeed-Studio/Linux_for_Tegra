@@ -14,7 +14,8 @@ struct pva_kmd_device;
  *
  */
 void pva_kmd_ccq_push(struct pva_kmd_device *pva, uint8_t ccq_id,
-		      uint64_t ccq_entry);
+		      uint32_t ccq_entry);
+
 /**
  * @brief Get the number of available spaces in the CCQ.
  *

@@ -78,6 +78,11 @@ typedef uint32_t pva_vpu_syscall_id_t;
 #define PVA_FW_PE_SYSCALL_ID_PERFMON_SAMPLE (5U)
 
 /**
+ * @brief VPU Syscall id for checking DMA active after VPU exit
+ */
+#define PVA_FW_PE_SYSCALL_ID_ALLOW_DMA_ACTIVE_AFTER_VPU_EXIT (6U)
+
+/**
  * @brief PPE Syscall id for ppe printf write.
  */
 #define PVA_FW_PPE_SYSCALL_ID_WRITE (1U)

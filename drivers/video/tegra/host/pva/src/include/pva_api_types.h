@@ -128,6 +128,13 @@
 	ACT(PVA_ERR_MISR_NOT_DONE)                                             \
 	ACT(PVA_ERR_MISR_ADDR_DATA)                                            \
 	ACT(PVA_ERR_MISR_TIMEOUT)                                              \
+	ACT(PVA_ERR_DMA_ACTIVE_AFTER_VPU_EXIT)                                 \
+	ACT(PVA_ERR_CCQ_TIMEOUT)                                               \
+	ACT(PVA_ERR_WDT_TIMEOUT)                                               \
+	ACT(PVA_ERR_HOST1X_ERR)                                                \
+	ACT(PVA_ERR_GOLDEN_REG_MISMATCH)                                       \
+	ACT(PVA_ERR_CRITICAL_REG_MISMATCH)                                     \
+	ACT(PVA_ERR_CONFIG_REG_MISMATCH)                                       \
 	ACT(PVA_ERR_CODE_COUNT)
 
 enum pva_error {

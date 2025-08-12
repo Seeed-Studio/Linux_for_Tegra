@@ -24,6 +24,7 @@ void pva_kmd_device_init_t23x(struct pva_kmd_device *pva)
 	pva->hw_consts.n_vmem_regions = PVA_VMEM_REGION_COUNT_T23X;
 	pva->support_hwseq_frame_linking = false;
 	pva->vmem_regions_tab = vmem_regions_tab_t23x;
+
 	pva->reg_phy_base[PVA_KMD_APERTURE_PVA_CLUSTER] =
 		PVA_KMD_PVA0_T23x_REG_BASE;
 	pva->reg_size[PVA_KMD_APERTURE_PVA_CLUSTER] =
@@ -77,4 +78,6 @@ void pva_kmd_device_init_t23x(struct pva_kmd_device *pva)
 #else
 	pva->bl_sector_pack_format = PVA_BL_TEGRA_RAW;
 #endif
+
+	pva->tsc_to_ns_multiplier = PVA_NS_PER_TSC_TICK_T23X;
 }

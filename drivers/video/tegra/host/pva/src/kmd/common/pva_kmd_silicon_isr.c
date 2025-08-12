@@ -47,14 +47,14 @@ void pva_kmd_hyp_isr(void *data, enum pva_kmd_intr_line intr_line)
 		/* Clear interrupt status */
 		pva_kmd_write(pva, pva->regspec.sec_lic_intr_status, wdt_val);
 		pva_kmd_log_err("PVA watchdog timeout!");
-		pva_kmd_abort_fw(pva);
+		pva_kmd_abort_fw(pva, PVA_ERR_WDT_TIMEOUT);
 	}
 
 	if (h1x_val != 0) {
 		pva_kmd_log_err_u64("Host1x errors", h1x_val);
 		/* Clear interrupt status */
 		pva_kmd_write(pva, pva->regspec.sec_lic_intr_status, h1x_val);
-		pva_kmd_abort_fw(pva);
+		pva_kmd_abort_fw(pva, PVA_ERR_HOST1X_ERR);
 	}
 
 	if (hsp_val != 0) {

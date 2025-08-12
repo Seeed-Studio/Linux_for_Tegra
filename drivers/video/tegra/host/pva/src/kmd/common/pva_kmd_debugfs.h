@@ -35,11 +35,17 @@ struct pva_kmd_debugfs_context {
 	void *data_hwpm;
 	struct pva_kmd_file_ops vpu_ocd_fops[NUM_VPU_BLOCKS];
 	struct pva_kmd_fw_profiling_config g_fw_profiling_config;
-	struct pva_kmd_file_ops fw_debug_log_level_fops;
+	struct pva_kmd_file_ops fw_trace_level_fops;
 	struct pva_kmd_file_ops simulate_sc7_fops;
+	struct pva_kmd_file_ops r5_ocd_fops;
+	void *r5_ocd_stage_buffer;
 };
 
 enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *dev);
 void pva_kmd_debugfs_destroy_nodes(struct pva_kmd_device *dev);
+
+uint64_t pva_kmd_read_from_buffer_to_user(void *to, uint64_t count,
+					  uint64_t offset, const void *from,
+					  uint64_t available);
 
 #endif //PVA_KMD_DEBUGFS_H

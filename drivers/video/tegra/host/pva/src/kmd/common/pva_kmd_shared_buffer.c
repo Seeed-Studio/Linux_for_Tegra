@@ -130,6 +130,7 @@ static void shared_buffer_process_msg(struct pva_kmd_device *pva,
 	struct pva_kmd_context *ctx = NULL;
 	void *msg_body;
 	uint32_t msg_size;
+	struct pva_fw_tracepoint tracepoint;
 
 	ASSERT(msg != NULL);
 
@@ -153,6 +154,12 @@ static void shared_buffer_process_msg(struct pva_kmd_device *pva,
 		if (err != PVA_SUCCESS) {
 			pva_kmd_log_err("Failed to process FW event");
 		}
+		break;
+	}
+	case PVA_KMD_FW_BUF_MSG_TYPE_FW_TRACEPOINT: {
+		ASSERT(msg_size == sizeof(struct pva_fw_tracepoint));
+		memcpy(&tracepoint, msg_body, sizeof(tracepoint));
+		pva_kmd_process_fw_tracepoint(pva, &tracepoint);
 		break;
 	}
 	case PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE: {
@@ -237,7 +244,7 @@ void pva_kmd_shared_buffer_process(void *pva_dev, uint8_t interface)
 			// Note that ideally this should never happen as the buffer is expected to be
 			// the same size as the resource table.
 			// TODO: abort only the user context, not the device.
-			pva_kmd_abort_fw(pva);
+			pva_kmd_abort_fw(pva, PVA_BUF_OUT_OF_RANGE);
 		}
 
 		// Buffer corresponding to CCQ 0 is used for sending messages common to a VM.

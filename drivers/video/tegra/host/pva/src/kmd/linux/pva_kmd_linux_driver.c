@@ -21,6 +21,7 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <linux/dma-mapping.h>
+#include <soc/tegra/fuse-helper.h>
 
 #if KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE
 #include <linux/tegra-ivc.h>
@@ -62,11 +63,7 @@ struct nvpva_device_data t23x_pva0_props = {
 	.version = PVA_CHIP_T23X,
 	.ctrl_ops = &tegra_pva_ctrl_ops,
 	.class = NV_PVA0_CLASS_ID,
-	/* We should not enable autosuspend here as this logic is handled in
-	 * common code. When poweroff is called, common code expects PVA to be
-	 * _really_ powered off. If we enable autosuspend, PVA will stay on for
-	 * a while. */
-	.autosuspend_delay = 0,
+	.autosuspend_delay = 500,
 	.firmware_name = PVA_KMD_LINUX_T23X_FIRMWARE_NAME
 };
 
@@ -74,11 +71,7 @@ struct nvpva_device_data t26x_pva0_props = {
 	.version = PVA_CHIP_T26X,
 	.ctrl_ops = &tegra_pva_ctrl_ops,
 	.class = NV_PVA0_CLASS_ID,
-	/* We should not enable autosuspend here as this logic is handled in
-	 * common code. When poweroff is called, common code expects PVA to be
-	 * _really_ powered off. If we enable autosuspend, PVA will stay on for
-	 * a while. */
-	.autosuspend_delay = 0,
+	.autosuspend_delay = 500,
 	.firmware_name = PVA_KMD_LINUX_T26X_FIRMWARE_NAME
 };
 
@@ -265,6 +258,9 @@ static bool pva_kmd_in_test_mode(struct device *dev, bool param_test_mode)
 {
 	const char *dt_test_mode = NULL;
 
+	if (!tegra_platform_is_silicon())
+		return true;
+
 	if (of_property_read_string(dev->of_node, "nvidia,test_mode_enable",
 				    &dt_test_mode)) {
 		return param_test_mode;
@@ -362,8 +358,14 @@ static int pva_probe(struct platform_device *pdev)
 		pva_props->version, 0, app_authenticate, pva_enter_test_mode);
 
 	pva_device->is_hv_mode = is_tegra_hypervisor_mode();
+	pva_device->is_silicon = tegra_platform_is_silicon();
 
-	pva_device->load_from_gsc = load_from_gsc;
+	if (!pva_device->is_silicon) {
+		pva_device->load_from_gsc = false;
+	} else {
+		pva_device->load_from_gsc = load_from_gsc;
+	}
+
 	pva_device->stream_ids[pva_device->r5_image_smmu_context_id] =
 		pva_get_gsc_priv_hwid(pdev);
 
@@ -488,6 +490,17 @@ static int __exit pva_remove(struct platform_device *pdev)
 	struct kobj_attribute *attr = NULL;
 	int i;
 
+	/* Make sure PVA is powered off here by disabling auto suspend */
+	pm_runtime_dont_use_autosuspend(&pdev->dev);
+	/* At this point, PVA should be suspended in L4T. However, for AV+L,
+	 * PVA will still be powered on since the system took an additional
+	 * reference count. We need to temporary drop it to suspend and then
+	 * restore the reference count. */
+	if (pm_runtime_active(&pdev->dev)) {
+		pm_runtime_put_sync(&pdev->dev);
+		pm_runtime_get_noresume(&pdev->dev);
+	}
+
 	if (pva_props->clk_cap_attrs) {
 		for (i = 0; i < pva_props->num_clks; i++) {
 			attr = &pva_props->clk_cap_attrs[i];
@@ -511,40 +524,59 @@ static int __exit pva_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int pva_kmd_linux_device_runtime_resume(struct device *dev)
+static int runtime_resume(struct device *dev)
 {
 	int err;
 	struct nvpva_device_data *props = dev_get_drvdata(dev);
+	struct pva_kmd_device *pva = props->private_data;
+	enum pva_error pva_err = PVA_SUCCESS;
 
-	dev_info(dev, "PVA: Calling runtime resume");
-	reset_control_acquire(props->reset_control);
+	dev_info(dev, "Start runtime resume");
 
 	err = clk_bulk_prepare_enable(props->num_clks, props->clks);
 	if (err < 0) {
-		reset_control_release(props->reset_control);
-		dev_err(dev, "failed to enabled clocks: %d\n", err);
-		return err;
+		dev_err(dev, "Runtime resume failed to enabled clocks: %d\n",
+			err);
+		goto err_out;
 	}
 
+	reset_control_acquire(props->reset_control);
 	reset_control_reset(props->reset_control);
 	reset_control_release(props->reset_control);
 
+	pva_err = pva_kmd_init_fw(pva);
+	if (pva_err != PVA_SUCCESS) {
+		err = -EIO;
+		dev_info(dev, "Runtime resume failed to init fw");
+		goto disable_clocks;
+	}
+
+	dev_info(dev, "Runtime resume succeeded");
 	return 0;
+
+disable_clocks:
+	clk_bulk_disable_unprepare(props->num_clks, props->clks);
+err_out:
+	return err;
 }
 
-static int pva_kmd_linux_device_runtime_suspend(struct device *dev)
+static int runtime_suspend(struct device *dev)
 {
 	struct nvpva_device_data *props = dev_get_drvdata(dev);
+	struct pva_kmd_device *pva = props->private_data;
+	enum pva_error pva_err = PVA_SUCCESS;
 
-	dev_info(dev, "PVA: Calling runtime suspend");
+	dev_info(dev, "Start runtime suspend");
 
-	reset_control_acquire(props->reset_control);
-	reset_control_assert(props->reset_control);
+	pva_err = pva_kmd_deinit_fw(pva);
+	if (pva_err != PVA_SUCCESS) {
+		//These might be errors if PVA is aborted. It's safe to ignore them.
+		dev_err(dev, "Failed to deinit firmware");
+	}
 
 	clk_bulk_disable_unprepare(props->num_clks, props->clks);
 
-	reset_control_release(props->reset_control);
-
+	dev_info(dev, "Runtime suspend complete");
 	return 0;
 }
 #if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
@@ -560,111 +592,75 @@ static int __exit pva_remove_wrapper(struct platform_device *pdev)
 }
 #endif
 
-static int pva_kmd_linux_device_resume(struct device *dev)
+static int system_resume(struct device *dev)
 {
-	enum pva_error status = PVA_SUCCESS;
 	int err = 0;
 	struct nvpva_device_data *props = dev_get_drvdata(dev);
 	struct pva_kmd_device *pva_device = props->private_data;
+	enum pva_error pva_err = PVA_SUCCESS;
 
-	if (pva_device->is_suspended == false) {
-		dev_warn(dev, "PVA is not in suspend state.\n");
-		goto fail_not_in_suspend;
-	}
-
-	dev_info(dev, "PVA: Calling resume");
+	dev_info(dev, "System resume");
 	err = pm_runtime_force_resume(dev);
-
 	if (err != 0) {
-		goto fail_runtime_resume;
+		dev_err(dev, "Force resume failed");
+		goto out;
 	}
 
-	if (pva_device->refcount != 0u) {
-		status = pva_kmd_init_fw(pva_device);
+	/* Even after force resume, the PVA may still be powered off if the usage count is 0.
+	 * Therefore, we need to skip restoring firmware state in this case.
+	 */
+	if (!pm_runtime_active(dev)) {
+		dev_info(dev, "No active PVA users. Skipping resume.");
+		goto out;
 	}
 
-	if (status != PVA_SUCCESS) {
-		err = -EINVAL;
-		goto fail_init_fw;
+	pva_err = pva_kmd_complete_resume(pva_device);
+	if (pva_err != PVA_SUCCESS) {
+		dev_err(dev, "Complete resume failed");
+		err = -EIO;
+		goto out;
 	}
 
-fail_init_fw:
-fail_runtime_resume:
-fail_not_in_suspend:
+out:
+	dev_info(dev, "Resume from system suspend completed: %d\n", err);
 	return err;
 }
 
-static int pva_kmd_linux_device_suspend(struct device *dev)
+static int system_suspend(struct device *dev)
 {
 	int err = 0;
 	struct nvpva_device_data *props = dev_get_drvdata(dev);
 	struct pva_kmd_device *pva_device = props->private_data;
+	enum pva_error pva_err = PVA_SUCCESS;
 
-	if (pva_device->refcount != 0u) {
-		pva_kmd_deinit_fw(pva_device);
+	dev_info(dev, "System suspend");
+
+	// Synchornize with runtime suspend/resume calls
+	pm_runtime_barrier(dev);
+
+	// Now it's safe to check runtime status
+	if (!pm_runtime_active(dev)) {
+		dev_info(
+			dev,
+			"PVA is powered off. Nothing to do for system suspend.");
+		goto out;
 	}
 
-	dev_info(dev, "PVA: Calling suspend");
+	pva_err = pva_kmd_prepare_suspend(pva_device);
+	if (pva_err != PVA_SUCCESS) {
+		dev_err(dev, "Prepare system suspend failed");
+		err = -EBUSY;
+		goto out;
+	}
+
 	err = pm_runtime_force_suspend(dev);
 	if (err != 0) {
-		dev_err(dev, "(FAIL) PM suspend\n");
-		goto fail_nvhost_module_suspend;
+		dev_err(dev, "Force suspend failed");
+		goto out;
 	}
 
-	pva_device->is_suspended = true;
-
-fail_nvhost_module_suspend:
+out:
 	return err;
-}
-
-static int pva_kmd_linux_device_prepare_suspend(struct device *dev)
-{
-	struct nvpva_device_data *props = dev_get_drvdata(dev);
-	struct pva_kmd_device *pva_device = props->private_data;
-	enum pva_error status = PVA_SUCCESS;
-	int err = 0;
-
-	dev_info(dev, "PVA: Preparing to suspend");
-	if (pva_device->is_suspended == true) {
-		dev_info(dev, "PVA device already suspended");
-		goto fail_already_in_suspend;
-	}
-
-	status = pva_kmd_prepare_suspend(pva_device);
-	if (status != PVA_SUCCESS) {
-		dev_info(dev, "PVA: Suspend FAIL");
-		err = -EBUSY;
-		goto fail;
-	}
-
-fail_already_in_suspend:
-fail:
-	return err;
-}
-
-static void pva_kmd_linux_device_complete_resume(struct device *dev)
-{
-	enum pva_error status = PVA_SUCCESS;
-	struct nvpva_device_data *props = dev_get_drvdata(dev);
-	struct pva_kmd_device *pva_device = props->private_data;
-
-	dev_info(dev, "PVA: Completing resume");
-	if (pva_device->is_suspended == false) {
-		dev_info(dev, "PVA device not in suspend state");
-		goto done;
-	}
-
-	status = pva_kmd_complete_resume(pva_device);
-	if (status != PVA_SUCCESS) {
-		dev_err(dev, "PVA: Resume failed");
-		goto done;
-	}
-
-	dev_info(dev, "PVA: Resume complete");
-
-done:
-	pva_device->is_suspended = false;
-	return;
 }
 
 enum pva_error pva_kmd_simulate_enter_sc7(struct pva_kmd_device *pva)
@@ -682,12 +678,7 @@ enum pva_error pva_kmd_simulate_enter_sc7(struct pva_kmd_device *pva)
 	// we need to emulate this behavior as well.
 	pm_runtime_get_noresume(dev);
 
-	ret = pva_kmd_linux_device_prepare_suspend(dev);
-	if (ret != 0) {
-		pva_kmd_log_err("SC7 simulation: prepare suspend failed");
-		return PVA_INTERNAL;
-	}
-	ret = pva_kmd_linux_device_suspend(dev);
+	ret = system_suspend(dev);
 	if (ret != 0) {
 		pva_kmd_log_err("SC7 simulation: suspend failed");
 		return PVA_INTERNAL;
@@ -705,14 +696,13 @@ enum pva_error pva_kmd_simulate_exit_sc7(struct pva_kmd_device *pva)
 	struct device *dev = &device_props->pdev->dev;
 	int ret;
 
-	ret = pva_kmd_linux_device_resume(dev);
+	dev_info(dev, "SC7 simulation: resume");
+
+	ret = system_resume(dev);
 	if (ret != 0) {
 		pva_kmd_log_err("SC7 simulation: resume failed");
 		return PVA_INTERNAL;
 	}
-
-	pva_kmd_linux_device_complete_resume(dev);
-
 	// The PM core decreases the device usage count after calling complete, so
 	// we need to emulate this behavior as well.
 	pm_runtime_put(dev);
@@ -721,12 +711,8 @@ enum pva_error pva_kmd_simulate_exit_sc7(struct pva_kmd_device *pva)
 }
 
 static const struct dev_pm_ops pva_kmd_linux_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(pva_kmd_linux_device_suspend,
-				pva_kmd_linux_device_resume)
-		SET_RUNTIME_PM_OPS(pva_kmd_linux_device_runtime_suspend,
-				   pva_kmd_linux_device_runtime_resume, NULL)
-			.prepare = pva_kmd_linux_device_prepare_suspend,
-	.complete = pva_kmd_linux_device_complete_resume
+	SET_SYSTEM_SLEEP_PM_OPS(system_suspend, system_resume)
+		SET_RUNTIME_PM_OPS(runtime_suspend, runtime_resume, NULL)
 };
 
 static struct platform_driver pva_platform_driver = {

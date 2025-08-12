@@ -53,11 +53,46 @@ struct pva_dma_misr {
 
 struct pva_user_dma_allowance {
 #define PVA_USER_DMA_ALLOWANCE_ADB_STEP_SIZE 8
+	/*desc start index and descriptor count should be multiple of 4*/
 	uint32_t channel_idx : 4;
 	uint32_t desc_start_idx : 7;
 	uint32_t desc_count : 7;
 	uint32_t adb_start_idx : 6;
 	uint32_t adb_count : 6;
+};
+
+/**
+ * @brief Parameter array structure for pva_cmd_set_vpu_parameter_array command
+ *
+ * Memory layout: [pva_vpu_parameter_array][parameter_data][next_array]...
+ * Parameter data must be 4-byte aligned. Each data_size is rounded up to 4-byte boundary.
+ */
+struct pva_vpu_parameter_array {
+	uint16_t data_size;
+	uint8_t pad[2];
+	uint32_t symbol_id;
+	uint32_t vmem_offset;
+};
+
+/*struct for set_vpu_array_parameter_with_address*/
+struct pva_vpu_parameter_with_address_array {
+	uint8_t flags; /**< Control flags: 0x1=legacy, 0=modern (default) */
+	uint8_t dram_offset_hi;
+	uint8_t pad[2];
+	uint32_t symbol_id;
+	uint32_t dram_resource_id;
+	uint32_t dram_offset_lo;
+};
+
+/*struct for set_vpu_array_parameter_with_buffer*/
+struct pva_vpu_parameter_with_buffer_array {
+	uint8_t src_dram_offset_hi;
+	uint8_t pad[3];
+	uint32_t data_size;
+	uint32_t dst_symbol_id;
+	uint32_t dst_vmem_offset;
+	uint32_t src_dram_resource_id;
+	uint32_t src_dram_offset_lo;
 };
 
 /* Basic Commands */
@@ -109,7 +144,7 @@ struct pva_cmd_acquire_engine {
 };
 
 /** Release all PVE systems acquired. It is legal to release engine when engine
- * is still running. The released engine won’t be available to be acquired until
+ * is still running. The released engine won't be available to be acquired until
  * it finishes and becomes idle again. */
 struct pva_cmd_release_engine {
 #define PVA_CMD_OPCODE_RELEASE_ENGINE 4U
@@ -126,7 +161,7 @@ struct pva_cmd_set_current_engine {
 };
 
 /** This command specifies the executable to use for the following VPU launches.
- * It doesn’t do anything other than setting the context for the following
+ * It doesn't do anything other than setting the context for the following
  * commands.
  *
  * Note: This command cannot be initiated if any of the DMA sets (that access
@@ -169,7 +204,7 @@ struct pva_cmd_prefetch_vpu_code {
 
 /** Run the VPU program from the specified entry point until finish. The
  * lifetime of this command covers the entire VPU program execution. Since this
- * command is asynchronous, it doesn’t block the following commands from
+ * command is asynchronous, it doesn't block the following commands from
  * execution. */
 struct pva_cmd_run_vpu {
 #define PVA_CMD_OPCODE_RUN_VPU 10U
@@ -225,8 +260,8 @@ struct pva_cmd_set_vpu_parameter_with_address {
  * hardware, allowing FW to continue using user channels for data transfer after
  * its execution. This command only uses channel 0 to fetch the DMA
  * configuration. However, user can still help speed up the process by
- * providing additional ADBs. This command will block if there’s no TCM scratch
- * available. If there’s no pending commands AND there’s no TCM scratch, then it
+ * providing additional ADBs. This command will block if there's no TCM scratch
+ * available. If there's no pending commands AND there's no TCM scratch, then it
  * means we encountered a dead lock, the command buffer will be aborted. */
 struct pva_cmd_fetch_dma_configuration {
 #define PVA_CMD_OPCODE_FETCH_DMA_CONFIGURATION 14U
@@ -268,7 +303,7 @@ struct pva_cmd_run_dma {
 };
 
 /** This command specifies the executable to use for the following PPE launches.
- * It doesn’t do anything other than setting the context for the following
+ * It doesn't do anything other than setting the context for the following
  * commands. */
 struct pva_cmd_set_ppe_executable {
 #define PVA_CMD_OPCODE_SET_PPE_EXECUTABLE 17U
@@ -515,6 +550,30 @@ struct pva_cmd_setup_misr {
 	struct pva_dma_misr misr_params;
 };
 
-#define PVA_CMD_OPCODE_MAX 36U
+struct pva_cmd_set_vpu_parameter_array {
+#define PVA_CMD_OPCODE_SET_VPU_PARAMETER_ARRAY 36U
+	struct pva_cmd_header header;
+	uint16_t param_count;
+	uint16_t pad;
+};
+
+struct pva_cmd_set_vpu_parameter_with_address_array {
+#define PVA_CMD_OPCODE_SET_VPU_PARAMETER_WITH_ADDRESS_ARRAY 37U
+	struct pva_cmd_header header;
+	uint16_t param_count;
+	uint16_t pad;
+	/*Followed by param_count number of struct pva_vpu_parameter_with_address_array*/
+};
+
+struct pva_cmd_set_vpu_parameter_with_buffer_array {
+#define PVA_CMD_OPCODE_SET_VPU_PARAMETER_WITH_BUFFER_ARRAY 38U
+	struct pva_cmd_header header;
+	uint16_t param_count;
+	uint16_t pad;
+	struct pva_user_dma_allowance user_dma;
+	/*Followed by param_count number of struct pva_vpu_parameter_with_buffer_array*/
+};
+
+#define PVA_CMD_OPCODE_MAX 39U
 
 #endif // PVA_API_CMDBUF_H

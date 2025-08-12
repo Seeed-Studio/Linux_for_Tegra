@@ -63,15 +63,15 @@ pva_objs += \
     $(PVA_SYS_DIR)/src/kmd/linux/pva_kmd_linux_vpu_app_auth.o \
 
 pva_inc_flags += \
-    -I$(PVA_SYS_ABSDIR)/src/fw/baremetal/include \
-    -I$(PVA_SYS_ABSDIR)/src/fw/include \
-    -I$(PVA_SYS_ABSDIR)/src/include \
+    -I$(PVA_SYS_ABSDIR)/src/kmd/include \
     -I$(PVA_SYS_ABSDIR)/src/kmd/common \
     -I$(PVA_SYS_ABSDIR)/src/kmd/common/shim \
-    -I$(PVA_SYS_ABSDIR)/src/kmd/include \
     -I$(PVA_SYS_ABSDIR)/src/kmd/linux/include \
     -I$(PVA_SYS_ABSDIR)/src/libs/pva/include \
+    -I$(PVA_SYS_ABSDIR)/src/include \
     -I$(PVA_SYS_ABSDIR)/src/private_api \
+    -I$(PVA_SYS_ABSDIR)/src/fw/include \
+    -I$(PVA_SYS_ABSDIR)/src/fw/baremetal/include \
 
 pva_def_flags += \
     -DPVA_BUILD_MODE=PVA_BUILD_MODE_L4T \
@@ -82,6 +82,7 @@ pva_def_flags += \
     -DPVA_BUILD_MODE_SIM=4 \
     -DPVA_DEV_MAIN_COMPATIBLE=1 \
     -DPVA_ENABLE_CUDA=1 \
+    -DPVA_ENABLE_R5_OCD=0 \
     -DPVA_IS_DEBUG=0 \
     -DPVA_SAFETY=0 \
     -DPVA_SKIP_SYMBOL_TYPE_CHECK \

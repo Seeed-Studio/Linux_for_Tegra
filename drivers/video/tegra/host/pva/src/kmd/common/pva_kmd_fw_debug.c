@@ -13,11 +13,11 @@
 #include "pva_kmd_constants.h"
 #include "pva_utils.h"
 
-enum pva_error pva_kmd_notify_fw_set_debug_log_level(struct pva_kmd_device *pva,
-						     uint32_t log_level)
+enum pva_error pva_kmd_notify_fw_set_trace_level(struct pva_kmd_device *pva,
+						 uint32_t trace_level)
 {
-	struct pva_cmd_set_debug_log_level cmd = { 0 };
-	pva_kmd_set_cmd_set_debug_log_level(&cmd, log_level);
+	struct pva_cmd_set_trace_level cmd = { 0 };
+	pva_kmd_set_cmd_set_trace_level(&cmd, trace_level);
 
 	return pva_kmd_submit_cmd_sync(&pva->submitter, &cmd, sizeof(cmd),
 				       PVA_KMD_WAIT_FW_POLL_INTERVAL_US,

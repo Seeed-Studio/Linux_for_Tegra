@@ -95,7 +95,7 @@ static void write_dma_descriptor(struct pva_dma_descriptor const *desc,
 		PVA_INSERT(desc->py_direction, 3, 3) |
 		PVA_INSERT(desc->boundary_pixel_extension, 4, 4) |
 		PVA_INSERT(desc->tts, 5, 5) |
-		PVA_INSERT(desc->trans_true_completion, 7, 7);
+		PVA_INSERT(desc->trigger_completion, 7, 7);
 	/* DMA_DESC_TRANS CNTL2 */
 	fw_desc->transfer_control2 = PVA_INSERT(desc->prefetch_enable, 0, 0) |
 				     PVA_INSERT(desc->dst.cb_enable, 1, 1) |

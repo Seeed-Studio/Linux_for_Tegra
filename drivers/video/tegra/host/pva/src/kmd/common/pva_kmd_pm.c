@@ -18,13 +18,6 @@ enum pva_error pva_kmd_prepare_suspend(struct pva_kmd_device *pva)
 	enum pva_error err = PVA_SUCCESS;
 	struct pva_cmd_suspend_fw cmd = { 0 };
 
-	pva_kmd_mutex_lock(&pva->powercycle_lock);
-	if (pva->refcount == 0u) {
-		pva_dbg_printf("PVA: Nothing to prepare for suspend");
-		err = PVA_SUCCESS;
-		goto err_out;
-	}
-
 	pva_kmd_set_cmd_suspend_fw(&cmd);
 
 	err = pva_kmd_submit_cmd_sync(&pva->submitter, &cmd, sizeof(cmd),
@@ -36,7 +29,6 @@ enum pva_error pva_kmd_prepare_suspend(struct pva_kmd_device *pva)
 	}
 
 err_out:
-	pva_kmd_mutex_unlock(&pva->powercycle_lock);
 	return err;
 }
 
@@ -52,19 +44,6 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 	uint32_t fence_val;
 	struct pva_kmd_queue *queue;
 	const struct pva_syncpt_rw_info *syncpt_info;
-
-	pva_kmd_mutex_lock(&pva->powercycle_lock);
-	if (pva->refcount == 0u) {
-		pva_dbg_printf(
-			"PVA : Nothing to check for completion in resume");
-		err = PVA_SUCCESS;
-		goto err_out;
-	}
-
-	err = pva_kmd_config_fw_after_boot(pva);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
 
 	err = pva_kmd_submitter_prepare(dev_submitter, &builder);
 	if (err != PVA_SUCCESS) {
@@ -201,13 +180,11 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 		goto cancel_builder;
 	}
 
-	pva_kmd_mutex_unlock(&pva->powercycle_lock);
 	return PVA_SUCCESS;
 
 cancel_builder:
 	pva_kmd_cmdbuf_builder_cancel(&builder);
 
 err_out:
-	pva_kmd_mutex_unlock(&pva->powercycle_lock);
 	return err;
 }

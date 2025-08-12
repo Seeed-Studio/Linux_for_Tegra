@@ -253,3 +253,21 @@ enum pva_error pva_kmd_process_fw_event(struct pva_kmd_device *pva,
 
 	return PVA_SUCCESS;
 }
+
+void pva_kmd_process_fw_tracepoint(struct pva_kmd_device *pva,
+				   struct pva_fw_tracepoint *tp)
+{
+	char msg_string[200] = { '\0' };
+
+	snprintf(
+		msg_string, sizeof(msg_string),
+		"pva fw tracepoint: type=%s flags=%s slot=%s ccq=%u queue=%u engine=%u arg1=0x%x arg2=0x%x",
+		pva_fw_tracepoint_type_to_string(PVA_BIT(tp->type)),
+		pva_fw_tracepoint_flags_to_string(tp->flags),
+		pva_fw_tracepoint_slot_id_to_string(tp->slot_id),
+		(uint32_t)tp->ccq_id, (uint32_t)tp->queue_id,
+		(uint32_t)tp->engine_id, (uint32_t)tp->arg1,
+		(uint32_t)tp->arg2);
+
+	pva_kmd_print_str(msg_string);
+}

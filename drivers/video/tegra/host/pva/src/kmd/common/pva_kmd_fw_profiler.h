@@ -5,7 +5,7 @@
 #include "pva_kmd_device.h"
 #include "pva_kmd_shared_buffer.h"
 
-#define PVA_KMD_FW_PROFILING_BUF_NUM_ELEMENTS (4096)
+#define PVA_KMD_FW_PROFILING_BUF_NUM_ELEMENTS (4096 * 100)
 
 struct pva_kmd_fw_profiling_config {
 	uint32_t filter;
@@ -20,6 +20,9 @@ void pva_kmd_device_deinit_profiler(struct pva_kmd_device *pva);
 
 enum pva_error pva_kmd_process_fw_event(struct pva_kmd_device *pva,
 					uint8_t *data, uint32_t data_size);
+
+void pva_kmd_process_fw_tracepoint(struct pva_kmd_device *pva,
+				   struct pva_fw_tracepoint *tp);
 
 enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva);
 

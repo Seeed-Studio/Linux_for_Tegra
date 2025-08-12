@@ -40,6 +40,7 @@ pva_kmd_device_memory_alloc_map(uint64_t size, struct pva_kmd_device *pva,
 
 	mem_impl = pva_kmd_zalloc(sizeof(struct pva_kmd_device_memory_impl));
 	if (mem_impl == NULL) {
+		pva_kmd_log_err("pva_kmd_zalloc failed");
 		goto err_out;
 	}
 

@@ -26,12 +26,17 @@ void pva_kmd_free(void *ptr)
 
 void pva_kmd_print_str(const char *str)
 {
-	printk(KERN_INFO "%s", str);
+	printk(KERN_INFO "%s\n", str);
 }
 
 void pva_kmd_print_str_u64(const char *str, uint64_t n)
 {
-	printk(KERN_INFO "%s:%llu", str, n);
+	printk(KERN_INFO "%s:%llu\n", str, n);
+}
+
+void pva_kmd_print_str_hex32(const char *str, uint32_t n)
+{
+	printk("%s: 0x%08x\n", str, n);
 }
 
 enum pva_error pva_kmd_mutex_init(pva_kmd_mutex_t *m)
@@ -103,4 +108,24 @@ uint64_t pva_kmd_get_time_tsc(void)
 	timestamp = arch_counter_get_cntvct();
 #endif
 	return timestamp;
+}
+
+void pva_kmd_atomic_store(pva_kmd_atomic_t *atomic_val, int val)
+{
+	atomic_set(atomic_val, val);
+}
+
+int pva_kmd_atomic_fetch_add(pva_kmd_atomic_t *atomic_val, int val)
+{
+	return atomic_fetch_add(val, atomic_val);
+}
+
+int pva_kmd_atomic_fetch_sub(pva_kmd_atomic_t *atomic_val, int val)
+{
+	return atomic_fetch_sub(val, atomic_val);
+}
+
+int pva_kmd_atomic_load(pva_kmd_atomic_t *atomic_val)
+{
+	return atomic_read(atomic_val);
 }
