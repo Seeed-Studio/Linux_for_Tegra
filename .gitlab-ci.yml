@@ -333,6 +333,7 @@ job-orin-nx-industrial-8g:
          - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/mfi_recomputer-orin-nx-8g-industrial-qspiflash-5.1-35.5.0-$DATE_STR.tar.gz || true 
          - umount deploy
          - sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+         - sed -i 's|^ExecStart=/usr/lib/bluetooth/bluetoothd -d --noplugin=audio,a2dp,avrcp$|ExecStart=/usr/lib/bluetooth/bluetoothd -d|' rootfs/lib/systemd/system/bluetooth.service.d/nv-bluetooth-service.conf
          - mount --bind /sys ./rootfs/sys
          - mount --bind /dev ./rootfs/dev
          - mount --bind /dev/pts ./rootfs/dev/pts
@@ -345,6 +346,8 @@ job-orin-nx-industrial-8g:
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
         #  - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
          - cp -r extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.192-tegra/kernel/drivers/net/wireless/
+         - cp extra_kernel_modules/bluetooth-auto-trust_1.0-1.deb rootfs
+         - chroot rootfs dpkg -i bluetooth-auto-trust_1.0-1.deb || true
          - chroot rootfs depmod -a 5.10.192-tegra
          - chroot rootfs /rootfs_magic.sh
          - umount ./rootfs/sys
@@ -353,6 +356,7 @@ job-orin-nx-industrial-8g:
          - umount ./rootfs/proc
          - rm rootfs/rootfs_magic.sh
          - rm rootfs/usr/bin/qemu-aarch64-static
+         - rm rootfs/bluetooth-auto-trust_1.0-1.deb
          - sudo  BOARDID=3767 BOARDSKU=0001 FAB=300  BOARDREV=G.0 CHIP_SKU=00:00:00:D4 ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0 --erase-all  recomputer-orin-industrial  external 
          - mkdir -p deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
@@ -521,6 +525,7 @@ job-orin-nx-industrial-16g:
          - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/mfi_recomputer-orin-nx-16g-industrial-qspiflash-5.1-35.5.0-$DATE_STR.tar.gz || true 
          - umount deploy
          - sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+         - sed -i 's|^ExecStart=/usr/lib/bluetooth/bluetoothd -d --noplugin=audio,a2dp,avrcp$|ExecStart=/usr/lib/bluetooth/bluetoothd -d|' rootfs/lib/systemd/system/bluetooth.service.d/nv-bluetooth-service.conf
          - mount --bind /sys ./rootfs/sys
          - mount --bind /dev ./rootfs/dev
          - mount --bind /dev/pts ./rootfs/dev/pts
@@ -533,6 +538,8 @@ job-orin-nx-industrial-16g:
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
         #  - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
          - cp -r extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.192-tegra/kernel/drivers/net/wireless/
+         - cp extra_kernel_modules/bluetooth-auto-trust_1.0-1.deb rootfs
+         - chroot rootfs dpkg -i bluetooth-auto-trust_1.0-1.deb || true
          - chroot rootfs depmod -a 5.10.192-tegra
          - chroot rootfs /rootfs_magic.sh
          - umount ./rootfs/sys
@@ -541,6 +548,7 @@ job-orin-nx-industrial-16g:
          - umount ./rootfs/proc
          - rm rootfs/rootfs_magic.sh
          - rm rootfs/usr/bin/qemu-aarch64-static
+         - rm rootfs/bluetooth-auto-trust_1.0-1.deb
          - sudo  BOARDID=3767 BOARDSKU=0000 FAB=300  BOARDREV=G.0 CHIP_SKU=00:00:00:D3 ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0 --erase-all    recomputer-orin-industrial  external 
          - mkdir -p deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
@@ -709,6 +717,7 @@ job-orin-nano-industrial-8g:
          - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/mfi_recomputer-orin-nano-8g-industrial-qspiflash-5.1-35.5.0-$DATE_STR.tar.gz || true 
          - umount deploy
          - sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+         - sed -i 's|^ExecStart=/usr/lib/bluetooth/bluetoothd -d --noplugin=audio,a2dp,avrcp$|ExecStart=/usr/lib/bluetooth/bluetoothd -d|' rootfs/lib/systemd/system/bluetooth.service.d/nv-bluetooth-service.conf
          - mount --bind /sys ./rootfs/sys
          - mount --bind /dev ./rootfs/dev
          - mount --bind /dev/pts ./rootfs/dev/pts
@@ -721,6 +730,8 @@ job-orin-nano-industrial-8g:
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
         #  - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
          - cp -r extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.192-tegra/kernel/drivers/net/wireless/
+         - cp extra_kernel_modules/bluetooth-auto-trust_1.0-1.deb rootfs
+         - chroot rootfs dpkg -i bluetooth-auto-trust_1.0-1.deb || true
          - chroot rootfs depmod -a 5.10.192-tegra
          - chroot rootfs /rootfs_magic.sh
          - umount ./rootfs/sys
@@ -729,6 +740,7 @@ job-orin-nano-industrial-8g:
          - umount ./rootfs/proc
          - rm rootfs/rootfs_magic.sh
          - rm rootfs/usr/bin/qemu-aarch64-static
+         - rm rootfs/bluetooth-auto-trust_1.0-1.deb
          - sudo  BOARDID=3767 BOARDSKU=0003 FAB=RC1  BOARDREV=B.6 CHIP_SKU=00:00:00:D5 ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0 --erase-all  recomputer-orin-industrial external 
          - mkdir -p deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
@@ -897,6 +909,7 @@ job-orin-nano-industrial-4g:
          - cp  mfi_recomputer-orin-industrial.tar.gz  deploy/mfi_recomputer-orin-nano-4g-industrial-qspiflash-5.1-35.5.0-$DATE_STR.tar.gz || true 
          - umount deploy
          - sed -i "s/<SOC>/t234/g" rootfs/etc/apt/sources.list.d/nvidia-l4t-apt-source.list
+         - sed -i 's|^ExecStart=/usr/lib/bluetooth/bluetoothd -d --noplugin=audio,a2dp,avrcp$|ExecStart=/usr/lib/bluetooth/bluetoothd -d|' rootfs/lib/systemd/system/bluetooth.service.d/nv-bluetooth-service.conf
          - mount --bind /sys ./rootfs/sys
          - mount --bind /dev ./rootfs/dev
          - mount --bind /dev/pts ./rootfs/dev/pts
@@ -909,6 +922,8 @@ job-orin-nano-industrial-4g:
         #  - cp extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.104-tegra/kernel/drivers/net/wireless/realtek/rtl8xxxu/8723du.ko
         #  - cp extra_kernel_modules/tpm/ rootfs/lib/modules/5.10.104-tegra/kernel/drivers/char/ -rf
          - cp -r extra_kernel_modules/8723du.ko rootfs/lib/modules/5.10.192-tegra/kernel/drivers/net/wireless/
+         - cp extra_kernel_modules/bluetooth-auto-trust_1.0-1.deb rootfs
+         - chroot rootfs dpkg -i bluetooth-auto-trust_1.0-1.deb || true
          - chroot rootfs depmod -a 5.10.192-tegra
          - chroot rootfs /rootfs_magic.sh
          - umount ./rootfs/sys
@@ -917,6 +932,7 @@ job-orin-nano-industrial-4g:
          - umount ./rootfs/proc
          - rm rootfs/rootfs_magic.sh
          - rm rootfs/usr/bin/qemu-aarch64-static
+         - rm rootfs/bluetooth-auto-trust_1.0-1.deb
          - sudo  BOARDID=3767 BOARDSKU=0004 FAB=300  BOARDREV=N.2  CHIP_SKU=00:00:00:D6  ./tools/kernel_flash/l4t_initrd_flash.sh --external-device nvme0n1p1 -c tools/kernel_flash/flash_l4t_nvme.xml -S 80GiB  -p "-c bootloader/t186ref/cfg/flash_t234_qspi.xml --no-systemimg" --no-flash  --massflash 5  --network usb0 --erase-all  recomputer-orin-industrial external 
          - mkdir -p deploy
          - mount -t cifs -o username=$SMB_USER,password=$SMB_PWD,vers=3.0,uid=1000,gid=1000,rw,file_mode=0664 //192.168.1.77/red_2t/jetson deploy
