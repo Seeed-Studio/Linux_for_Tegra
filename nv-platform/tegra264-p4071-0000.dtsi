@@ -213,7 +213,6 @@
 
 		/* MGBE 0 */
 		mgbe0: ethernet@a808a10000 {
-			status = "okay";
 			nvidia,mac-addr-idx = <1>;
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
@@ -230,7 +229,6 @@
 
 		/* MGBE 1 */
 	        mgbe1: ethernet@a808b10000 {
-			status = "okay";
 			nvidia,mac-addr-idx = <2>;
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
@@ -247,7 +245,6 @@
 
 		/* MGBE 2 */
 	        mgbe2: ethernet@a808d10000 {
-			status = "okay";
 			nvidia,mac-addr-idx = <3>;
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
@@ -264,7 +261,6 @@
 
 		/* MGBE 3 */
 	        mgbe3: ethernet@a808e10000 {
-			status = "okay";
 			nvidia,mac-addr-idx = <4>;
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
