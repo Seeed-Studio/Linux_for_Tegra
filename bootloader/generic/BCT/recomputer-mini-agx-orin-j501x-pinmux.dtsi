@@ -312,16 +312,6 @@
 				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
 			};
 
-			dp_aux_ch0_hpd_pm0 {
-				nvidia,pins = "dp_aux_ch0_hpd_pm0";
-				nvidia,function = "dp";
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
-				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				nvidia,io-high-voltage = <TEGRA_PIN_DISABLE>;
-				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
-			};
-
 			dp_aux_ch1_p_pn3 {
 				nvidia,pins = "dp_aux_ch1_p_pn3";
 				nvidia,function = "i2c4";
@@ -1310,6 +1300,16 @@
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+
+			dp_aux_ch0_hpd_pm0 {
+				nvidia,pins = "dp_aux_ch0_hpd_pm0";
+				nvidia,function = "rsvd1";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_DISABLE>;
 				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
 			};
 
