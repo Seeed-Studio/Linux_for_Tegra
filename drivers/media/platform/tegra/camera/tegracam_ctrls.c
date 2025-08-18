@@ -183,6 +183,17 @@ static struct v4l2_ctrl_config ctrl_cfg_list[] = {
 		.max = CTRL_U8_MAX,
 		.step = 1,
 	},
+	{
+		.ops = &tegracam_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_TRIG_MODE_ID,
+		.name = "Trig Mode",
+		.type = V4L2_CTRL_TYPE_U32,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = CTRL_U32_MIN,
+		.max = 3,
+		.def = CTRL_U32_MIN,
+		.step = 1,
+	},
 };
 
 static int tegracam_get_ctrl_index(u32 cid)
@@ -310,6 +321,9 @@ static int tegracam_set_ctrls(struct tegracam_ctrl_handler *handler,
 		return 0;
 	case TEGRA_CAMERA_CID_HDR_EN:
 		return 0;
+	case TEGRA_CAMERA_CID_TRIG_MODE_ID:
+		err = ops->set_trig_mode(tc_dev, *ctrl->p_new.p_u32);
+		return err;
 	}
 
 	if (v4l2_subdev_call(&s_data->subdev, video,
@@ -424,6 +438,9 @@ static int tegracam_set_ctrls_ex(struct tegracam_ctrl_handler *handler,
 		s_data->sensor_mode_id = (int) (*ctrl->p_new.p_s64);
 		break;
 	case TEGRA_CAMERA_CID_HDR_EN:
+		break;
+	case TEGRA_CAMERA_CID_TRIG_MODE_ID:
+		err = ops->set_trig_mode(tc_dev, *ctrl->p_new.p_u32);
 		break;
 	default:
 		pr_err("%s: unknown ctrl id.\n", __func__);
@@ -846,6 +863,7 @@ static int tegracam_check_ctrl_ops(
 		/* The below controls are handled by framework */
 		case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
 		case TEGRA_CAMERA_CID_HDR_EN:
+		case TEGRA_CAMERA_CID_TRIG_MODE_ID:
 			if (check_add_overflow(mode_ops, 1, &mode_ops))
 				return -EOVERFLOW;
 			break;

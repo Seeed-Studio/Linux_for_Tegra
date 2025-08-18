@@ -621,6 +621,42 @@ static unsigned int max96717_phy_id(struct max96717_priv *priv,
 	return priv->info->phy_hw_ids[phy->index];
 }
 
+static int max96717_fsync_set(struct max_ser_priv *ser_priv,int status)
+{
+	struct max96717_priv *priv = ser_to_priv(ser_priv);
+	int err = 0;
+	if(status == 1){
+		// /* MFP7, fsync, RX */
+		err = max96717_write(priv, 0x2D3, 0x84);// RES_CFG[7]: 0->40K, 1->1M; GPIO_RX_EN[2]; GPIO_TX_EN[1], GPIO_OUT[4]; GPIO_IN[3]，GPIO_OUT_DIS[0]:Disables GPIO output driver 0->enale,1->disable; 
+		if (err == 0)
+			dev_info(priv->dev, "%s 0x2D3 done\n", __func__);
+		else
+			dev_err(priv->dev, "%s 0x2D3 failed, err %d\n", __func__, err);
+
+		err = max96717_write(priv, 0x2D4, 0xA0);// PULL_UPDN_SEL[7:6]: 0->7no pullup, 1->Pullup, 2->Pulldown; OUT_TYPE[5]: 1->Push-pull, 0->Open-drain; GPIO_TX_ID[4:0]
+		if (err == 0)
+			dev_info(priv->dev, "%s 0x2D4 done\n", __func__);
+		else
+			dev_err(priv->dev, "%s 0x2D4 failed, err %d\n", __func__, err);
+		err = max96717_write(priv, 0x2D5, 0x02);// GPIO_RX_ID[4:0]
+
+		if (err == 0)
+			dev_info(priv->dev, "%s 0x2D5 done\n", __func__);
+		else
+			dev_err(priv->dev, "%s  0x2D5 failed, err %d\n", __func__, err);
+	}else{
+		// /* MFP7, fsync, RX */
+		err = max96717_write(priv, 0x2D3, 0x9a);// RES_CFG[7]: 0->40K, 1->1M; GPIO_RX_EN[2]; GPIO_TX_EN[1], GPIO_OUT[4]; GPIO_IN[3]，GPIO_OUT_DIS[0]:Disables GPIO output driver 0->enale,1->disable; 
+		if (err == 0)
+			dev_info(priv->dev, "%s 0x2D3 done\n", __func__);
+		else
+			dev_err(priv->dev, "%s 0x2D3 failed, err %d\n", __func__, err);
+	}
+
+	return err;
+}
+
+
 static int max96717_set_pipe_enable(struct max_ser_priv *ser_priv,
 				    struct max_ser_pipe *pipe, bool enable)
 {
@@ -862,6 +898,9 @@ static int max96717_init_pipe_stream_id(struct max96717_priv *priv,
 
 	return max96717_write(priv, 0x53 + 0x4 * index, pipe->stream_id);
 }
+
+
+
 
 static int max96717_init_pipe(struct max_ser_priv *ser_priv,
 			      struct max_ser_pipe *pipe)
@@ -1147,6 +1186,7 @@ static const struct max_ser_ops max96717_ops = {
 	.init_phy = max96717_init_phy,
 	.init_pipe = max96717_init_pipe,
 	.post_init = max96717_post_init,
+	.fsync_set = max96717_fsync_set,
 };
 
 static int max96717_probe(struct i2c_client *client)
