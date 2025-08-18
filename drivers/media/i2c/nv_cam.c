@@ -18,6 +18,10 @@
 #include <media/tegra_v4l2_camera.h>
 #include <media/tegracam_core.h>
 
+#include "../../misc/obc_cam_sync.h"
+
+
+
 /* —— FourCC -> media bus code 映射 —— */
 static __u32 map_fourcc_to_mbus_code(__u32 fourcc)
 {
@@ -116,9 +120,13 @@ get_enabled_remote_sd(struct v4l2_subdev *sd,
                       unsigned int local_pad,
                       unsigned int *remote_pad_idx)
 {
-    struct media_pad *pad = &sd->entity.pads[local_pad];
-    struct media_link *lnk;
+	struct media_pad *pad;
+	struct media_link *lnk;
 
+	if (list_empty(&sd->entity.links)){
+		return NULL;
+	}
+	pad= &sd->entity.pads[local_pad];
     list_for_each_entry(lnk, &sd->entity.links, list) {
         if (!(lnk->flags & MEDIA_LNK_FL_ENABLED))
             continue;
@@ -140,6 +148,7 @@ static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_EXPOSURE_SHORT,
 	TEGRA_CAMERA_CID_FRAME_RATE,
 	TEGRA_CAMERA_CID_SENSOR_MODE_ID,
+	TEGRA_CAMERA_CID_TRIG_MODE_ID,
 };
 
 #define MAX_CHIP_ID_REGS		3
@@ -199,6 +208,8 @@ struct nv_cam {
 	struct nv_cam_mode		*modes;
 	unsigned int			num_modes;
 	bool need_cmd;
+	int fsync_type;		// 0: no fsync 1:external fsync 2: internal fsync
+	cs_param_t fsync_param;
 };
 
 static const struct regmap_config sensor_regmap_config = {
@@ -375,6 +386,13 @@ static int nv_cam_set_exposure_short(struct tegracam_device *tc_dev, s64 val)
 	return 0;
 }
 
+static int nv_cam_set_trig_mode(struct tegracam_device *tc_dev, u32 val)
+{
+	struct nv_cam *priv = tegracam_get_privdata(tc_dev);
+	priv->fsync_type = val;
+    return 0;
+}
+
 static struct tegracam_ctrl_ops nv_cam_ctrl_ops = {
 	.numctrls = ARRAY_SIZE(ctrl_cid_list),
 	.ctrl_cid_list = ctrl_cid_list,
@@ -383,6 +401,7 @@ static struct tegracam_ctrl_ops nv_cam_ctrl_ops = {
 	.set_exposure_short = nv_cam_set_exposure_short,
 	.set_frame_rate = nv_cam_set_frame_rate,
 	.set_group_hold = nv_cam_set_group_hold,
+	.set_trig_mode = nv_cam_set_trig_mode,
 };
 
 static int nv_cam_power_on(struct camera_common_data *s_data)
@@ -757,7 +776,32 @@ static int nv_cam_set_mode(struct tegracam_device *tc_dev)
 			}
 		}
 	}
-        
+
+	/* set frame sync */
+    
+	switch (priv->fsync_type)
+	{
+	case 0:
+		dev_info(dev,"set no frame sync\r\n");
+		if(ser->ops->core->command !=NULL){
+			ser->ops->core->command(ser,priv->fsync_type,NULL);
+		}
+		break;
+	case 1:
+		dev_info(dev,"set external frame sync\r\n");
+		if(ser->ops->core->command !=NULL){
+			ser->ops->core->command(ser,priv->fsync_type,NULL);
+		}
+		break;
+	case 2:
+		dev_info(dev,"set internal frame sync\r\n");
+		if(ser->ops->core->command !=NULL){
+			ser->ops->core->command(ser,priv->fsync_type,NULL);
+		}
+		break;
+	default:
+		break;
+	}
     
 out_done:
 
@@ -770,6 +814,13 @@ static int nv_cam_start_streaming(struct tegracam_device *tc_dev)
 	struct device *dev = &priv->i2c_client->dev;
 	int ret;
 	
+	if(priv->fsync_type == 1 ){
+		if(use_fsycn_single_device_number == 0){
+			cam_sync_ioctl_for_kernel(CAM_SYNC_START, priv->fsync_param);
+		}
+		use_fsycn_single_device_number++;
+	}
+
 	if(priv->need_cmd != true)
 		return 0;
 
@@ -787,6 +838,14 @@ static int nv_cam_stop_streaming(struct tegracam_device *tc_dev)
 	struct nv_cam *priv = tegracam_get_privdata(tc_dev);
 	struct device *dev = &priv->i2c_client->dev;
 	int ret;
+
+	if(priv->fsync_type == 1 ){
+		use_fsycn_single_device_number--;
+		if(use_fsycn_single_device_number == 0){
+			cam_sync_ioctl_for_kernel(CAM_SYNC_STOP, priv->fsync_param);
+		}
+	}
+
 
 	if(priv->need_cmd != true)
 		return 0;
@@ -1284,6 +1343,10 @@ static int nv_cam_probe(struct i2c_client *client,
 	ret = nv_cam_parse_dt_extra(priv);
 	if (ret)
 		return ret;
+
+	priv->fsync_param.mode = MODE_SYNC_OUT;	 
+	priv->fsync_param.fps = 30 * FPS_SCALE; // defualt fsync fps = 30FPS
+
 
 	regmap_config = sensor_regmap_config;
 	regmap_config.reg_bits = priv->reg_bits;

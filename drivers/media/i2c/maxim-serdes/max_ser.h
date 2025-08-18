@@ -89,6 +89,7 @@ struct max_ser_ops {
 	int (*init_phy)(struct max_ser_priv *priv, struct max_ser_phy *phy);
 	int (*init_pipe)(struct max_ser_priv *priv, struct max_ser_pipe *pipe);
 	int (*post_init)(struct max_ser_priv *priv);
+	int (*fsync_set)(struct max_ser_priv *priv,int status);
 };
 
 struct max_ser_priv {

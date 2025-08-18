@@ -396,12 +396,23 @@
  }
  #endif
  
+ static long max_ser_fsync_command(struct v4l2_subdev *sd, unsigned int cmd, void *arg){
+	struct max_ser_subdev_priv *sd_priv = v4l2_get_subdevdata(sd);
+	struct max_ser_priv *priv = sd_priv->priv;
+
+	dev_info(priv->dev,"set max_ser fsync mode %d !!\r\n",cmd);
+	priv->ops->fsync_set(priv,cmd);
+
+	return 0;
+ }
+
  static const struct v4l2_subdev_core_ops max_ser_core_ops = {
 	 .log_status = max_ser_log_status,
  #ifdef CONFIG_VIDEO_ADV_DEBUG
 	 .g_register = max_ser_g_register,
 	 .s_register = max_ser_s_register,
  #endif
+	.command = max_ser_fsync_command,
  };
  
  static const struct v4l2_subdev_video_ops max_ser_video_ops = {

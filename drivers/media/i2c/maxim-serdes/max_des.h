@@ -139,6 +139,7 @@ struct max_des_priv {
 	struct max_des_link *links;
 	struct max_des_subdev_priv *sd_privs;
 	bool speed_mode; // 0 is 3G,1 is 6G
+	int fsync_mfp_x;
 };
 
 int max_des_probe(struct max_des_priv *priv);
