@@ -201,6 +201,7 @@ struct tegracam_ctrl_ops {
 			struct sensor_blob *blob, s64 val);
 	int (*set_group_hold_ex)(struct tegracam_device *tc_dev,
 			struct sensor_blob *blob, bool val);
+	int (*set_trig_mode)(struct tegracam_device *tc_dev, u32 val); // add by seeed
 };
 
 struct tegracam_ctrl_handler {

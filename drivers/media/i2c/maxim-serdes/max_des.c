@@ -598,6 +598,8 @@ static int max_des_s_register(struct v4l2_subdev *sd, const struct v4l2_dbg_regi
 }
 #endif
 
+
+
 static const struct v4l2_subdev_core_ops max_des_core_ops = {
 	.log_status = max_des_log_status,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
@@ -1010,6 +1012,13 @@ static int max_des_parse_dt(struct max_des_priv *priv)
 	if (!ret && val != 0)
 		priv->speed_mode = true;
 
+	ret = device_property_read_u32(priv->dev, "fsync_mfp_index", &val);
+	if (ret < 0) {
+		priv->fsync_mfp_x = 2;
+		dev_err(priv->dev, "No fsync_mfp_index info\n");
+	} else {
+		priv->fsync_mfp_x = val;
+	}
 
 	val = device_property_read_bool(priv->dev, "maxim,pipe-stream-autoselect");
 	if (val && !priv->ops->supports_pipe_stream_autoselect) {
