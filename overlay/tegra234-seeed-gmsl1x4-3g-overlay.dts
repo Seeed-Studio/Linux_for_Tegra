@@ -9,7 +9,10 @@
 #define MFP9 TEGRA234_MAIN_GPIO(AC, 0)
 #define MFP10  TEGRA234_MAIN_GPIO(Z, 7)
 
+#define SYNC_OUT	TEGRA234_MAIN_GPIO(G, 6)
+
 #include <dt-bindings/tegra234-p3767-0000-common.h>
+
 
 
 / {
@@ -20,6 +23,26 @@
 	fragment@0 {
 		target-path = "/";
 		__overlay__ {
+
+			obc_cam_sync {
+				compatible = "orbbec,obc_cam_sync";
+				ranges = <0x0 0x0 0xc6a0000 0x10000>;
+				reg = <0x0 0xc6a0000 0x0 0x18>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				status = "okay";
+				//sync-in-gpios = <&gpio_aon SYNC_IN GPIO_ACTIVE_HIGH>;
+				sync-out-gpios = <&gpio SYNC_OUT GPIO_ACTIVE_HIGH>;  //Use hrtimer to generate trigger signals
+				// pwms = <&sync_pwm 0 33333333>; //Use PWM to generate trigger signals, Default PWM mode, if use hrtimer comment out this line
+				/* EDGE_OUT #3 */
+				generator@500 {
+					reg = <0x500 0x80>;
+					freq_hz = <30>;
+					duty_cycle = <10>;
+					offset_ms = <0>;
+					status = "disable";
+				};
+			};
 
             bus@0{
                 host1x@13e00000 {
@@ -152,6 +175,8 @@
                         reg = <0x29>;
                         status = "okay";
                         maxim,speed-mode = <0x00>;
+                        fsync_mfp_in = <2>;
+                        fsync_mfp_out = <10>;
 
                         phy@1 {
                             reg = <0x01>;
@@ -402,7 +427,8 @@
                                                     csi_pixel_bit_depth = "16";
                                                     dynamic_pixel_bit_depth = "16";
                                                     mode_type = "yuv";
-                                                    pixel_phase = "uyvy";
+                                                    pixel_phase = "yuyv";
+                                                    
                                                     line_length = "2200";
                                                     inherent_gain = "1";
                                                     pix_clk_hz = "200000000"; 
@@ -453,7 +479,7 @@
                                                 csi_pixel_bit_depth = "16";
                                                 dynamic_pixel_bit_depth = "16";
                                                 mode_type = "yuv";
-                                                pixel_phase = "uyvy";
+                                                pixel_phase = "yuyv";
                                                 line_length = "2200";
                                                 inherent_gain = "1";
                                                 pix_clk_hz = "200000000"; 
@@ -501,7 +527,7 @@
                                                 csi_pixel_bit_depth = "16";
                                                 dynamic_pixel_bit_depth = "16";
                                                 mode_type = "yuv";
-                                                pixel_phase = "uyvy";
+                                                pixel_phase = "yuyv";
                                                 line_length = "2200";
                                                 inherent_gain = "1";
                                                 pix_clk_hz = "200000000"; 
@@ -699,7 +725,7 @@
                                                     csi_pixel_bit_depth = "16";
                                                     dynamic_pixel_bit_depth = "16";
                                                     mode_type = "yuv";
-                                                    pixel_phase = "uyvy";
+                                                    pixel_phase = "yuyv";
                                                     line_length = "2200";
                                                     inherent_gain = "1";
                                                     pix_clk_hz = "200000000"; 
@@ -750,7 +776,7 @@
                                                 csi_pixel_bit_depth = "16";
                                                 dynamic_pixel_bit_depth = "16";
                                                 mode_type = "yuv";
-                                                pixel_phase = "uyvy";
+                                                pixel_phase = "yuyv";
                                                 line_length = "2200";
                                                 inherent_gain = "1";
                                                 pix_clk_hz = "200000000"; 
@@ -798,7 +824,7 @@
                                                 csi_pixel_bit_depth = "16";
                                                 dynamic_pixel_bit_depth = "16";
                                                 mode_type = "yuv";
-                                                pixel_phase = "uyvy";
+                                                pixel_phase = "yuyv";
                                                 line_length = "2200";
                                                 inherent_gain = "1";
                                                 pix_clk_hz = "200000000"; 
@@ -996,7 +1022,7 @@
                                                     csi_pixel_bit_depth = "16";
                                                     dynamic_pixel_bit_depth = "16";
                                                     mode_type = "yuv";
-                                                    pixel_phase = "uyvy";
+                                                    pixel_phase = "yuyv";
                                                     line_length = "2200";
                                                     inherent_gain = "1";
                                                     pix_clk_hz = "200000000"; 
@@ -1047,7 +1073,7 @@
                                                 csi_pixel_bit_depth = "16";
                                                 dynamic_pixel_bit_depth = "16";
                                                 mode_type = "yuv";
-                                                pixel_phase = "uyvy";
+                                                pixel_phase = "yuyv";
                                                 line_length = "2200";
                                                 inherent_gain = "1";
                                                 pix_clk_hz = "200000000"; 
@@ -1095,7 +1121,7 @@
                                                 csi_pixel_bit_depth = "16";
                                                 dynamic_pixel_bit_depth = "16";
                                                 mode_type = "yuv";
-                                                pixel_phase = "uyvy";
+                                                pixel_phase = "yuyv";
                                                 line_length = "2200";
                                                 inherent_gain = "1";
                                                 pix_clk_hz = "200000000"; 
@@ -1293,7 +1319,7 @@
                                                     csi_pixel_bit_depth = "16";
                                                     dynamic_pixel_bit_depth = "16";
                                                     mode_type = "yuv";
-                                                    pixel_phase = "uyvy";
+                                                    pixel_phase = "yuyv";
                                                     line_length = "2200";
                                                     inherent_gain = "1";
                                                     pix_clk_hz = "200000000"; 
@@ -1344,7 +1370,7 @@
                                                 csi_pixel_bit_depth = "16";
                                                 dynamic_pixel_bit_depth = "16";
                                                 mode_type = "yuv";
-                                                pixel_phase = "uyvy";
+                                                pixel_phase = "yuyv";
                                                 line_length = "2200";
                                                 inherent_gain = "1";
                                                 pix_clk_hz = "200000000"; 
@@ -1392,7 +1418,7 @@
                                                 csi_pixel_bit_depth = "16";
                                                 dynamic_pixel_bit_depth = "16";
                                                 mode_type = "yuv";
-                                                pixel_phase = "uyvy";
+                                                pixel_phase = "yuyv";
                                                 line_length = "2200";
                                                 inherent_gain = "1";
                                                 pix_clk_hz = "200000000"; 
