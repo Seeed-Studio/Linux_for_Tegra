@@ -124,6 +124,33 @@ static int max96724_reset(struct max96724_priv *priv)
     return 0;
 }
 
+
+static int max96724_post_init(struct max_des_priv *des_priv)
+{
+	struct max96724_priv *priv = des_to_priv(des_priv);
+	int err = 0;
+
+    /* MFP2 fsync out */
+    /* Set Internal FSYNC off, GPIO is used for FSYNC, type = GMSL2 */
+    err = max96724_write(priv, 0x04A0, 0x08);
+    err = max96724_write(priv, 0x04AF, 0x9F);
+    /* Config MAX96712/722 MFP2 to receive external FSYNC signal for each link */
+    err = max96724_write(priv, 0x300 + priv->des_priv.fsync_mfp_x * 3 + priv->des_priv.fsync_mfp_x / 5, 0x83);// RES_CFG[7]: 0->40K, 1->1M; GPIO_RX_EN[2]; GPIO_TX_EN[1], GPIO_OUT[4]; GPIO_IN[3]; GPIO_OUT_DIS[0]: 1->disable
+    err = max96724_write(priv, (0x300 + priv->des_priv.fsync_mfp_x * 3 + priv->des_priv.fsync_mfp_x / 5) + 1, 0xA2);// PULL_UPDN_SEL[7:6]: 0->no pullup, 1->Pullup, 2->Pulldown; OUT_TYPE[5]: 1->Push-pull, 0->Open-drain; GPIO_TX_ID[4:0]
+    err = max96724_write(priv, 0x337 + priv->des_priv.fsync_mfp_x  * 3 + (priv->des_priv.fsync_mfp_x + 2) / 5, 0x22);
+    err = max96724_write(priv, 0x36D + priv->des_priv.fsync_mfp_x  * 3 + (priv->des_priv.fsync_mfp_x  + 4) / 5, 0x22);
+    err = max96724_write(priv, 0x3A4 + priv->des_priv.fsync_mfp_x  * 3 + (priv->des_priv.fsync_mfp_x  + 1) / 5, 0x22);
+
+	if (err == 0)
+		dev_info(priv->dev, "%s done\n", __func__);
+	else
+		dev_err(priv->dev, "%s failed, err %d\n", __func__, err);
+
+	return err;
+}
+// EXPORT_SYMBOL(max96724_init_tx_gpio);
+
+
 static int max96724_log_pipe_status(struct max_des_priv *des_priv,
                                     struct max_des_pipe *pipe, const char *name)
 {
@@ -741,6 +768,7 @@ static const struct max_des_ops max96724_ops = {
     .set_pipe_stream_id = max96724_set_pipe_stream_id,
     .update_pipe_remaps = max96724_update_pipe_remaps,
     .select_links = max96724_select_links,
+    .post_init = max96724_post_init,
 };
 
 static const struct max96724_chip_info max96724_info = {
