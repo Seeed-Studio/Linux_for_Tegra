@@ -511,8 +511,8 @@
 
 			soc_gpio21_ph0 {
 				nvidia,pins = "soc_gpio21_ph0";
-				nvidia,function = "gp";
-				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+				nvidia,function = "rsvd0";
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
 				nvidia,lpdr = <TEGRA_PIN_DISABLE>;

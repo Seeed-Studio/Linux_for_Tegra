@@ -105,6 +105,7 @@
 				TEGRA234_MAIN_GPIO(AC, 2)
 				TEGRA234_MAIN_GPIO(A, 1)
 				TEGRA234_MAIN_GPIO(A, 2)
+				TEGRA234_MAIN_GPIO(H, 0)
 				>;
 			gpio-output-high = <
 				TEGRA234_MAIN_GPIO(Y, 0)
