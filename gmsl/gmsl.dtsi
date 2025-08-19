@@ -769,7 +769,7 @@ Configuration parameters:
 	des0: gmsl-deserializer@GMSL_DES_HEX_ADDR0 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-
+		fsync_mfp_index = <0>;
 		compatible = GMSL_DES_COMPATIBLE;
 		// reset-gpios = <&gpio TEGRA234_MAIN_GPIO(H, 6) GPIO_ACTIVE_LOW>;
 		reg = <GMSL_DES_HEX_ADDR0>;
@@ -783,7 +783,7 @@ Configuration parameters:
 	des1: gmsl-deserializer@GMSL_DES_HEX_ADDR1 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-
+		fsync_mfp_index = <0>;
 		compatible = GMSL_DES_COMPATIBLE;
 		// reset-gpios = <&gpio TEGRA234_MAIN_GPIO(AC, 0) GPIO_ACTIVE_LOW>;
 		reg = <GMSL_DES_HEX_ADDR1>;

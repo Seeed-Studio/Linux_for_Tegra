@@ -157,7 +157,7 @@ CAM_LABEL: ox03a@CAM_HEX_REG {
 		csi_pixel_bit_depth = "16";
 		dynamic_pixel_bit_depth = "16";
 		mode_type = "yuv";
-		pixel_phase = "uyvy";
+		pixel_phase = "yuyv";
 
 
 		line_length = "2200";
