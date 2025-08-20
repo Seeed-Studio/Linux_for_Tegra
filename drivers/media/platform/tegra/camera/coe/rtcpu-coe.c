@@ -1466,7 +1466,9 @@ static int coe_fop_channel_release(
 
 static const struct file_operations coe_channel_fops = {
 	.owner = THIS_MODULE,
+#if defined(NV_NO_LLSEEK_PRESENT)
 	.llseek = no_llseek,
+#endif
 	.unlocked_ioctl = coe_fop_channel_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = coe_fop_channel_ioctl,
@@ -1959,6 +1961,18 @@ static int camrtc_coe_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(NV_PLATFORM_DRIVER_STRUCT_REMOVE_RETURNS_VOID) /* Linux v6.11 */
+static void camrtc_coe_remove_wrapper(struct platform_device *pdev)
+{
+	camrtc_coe_remove(pdev);
+}
+#else
+static int camrtc_coe_remove_wrapper(struct platform_device *pdev)
+{
+	return camrtc_coe_remove(pdev);
+}
+#endif
+
 static const struct of_device_id camrtc_coe_of_match[] = {
 	{ .compatible = "nvidia,tegra-camrtc-capture-coe" },
 	{},
@@ -1967,7 +1981,7 @@ MODULE_DEVICE_TABLE(of, camrtc_coe_of_match);
 
 static struct platform_driver capture_coe_driver = {
 	.probe = camrtc_coe_probe,
-	.remove = camrtc_coe_remove,
+	.remove = camrtc_coe_remove_wrapper,
 	.driver = {
 		.name = "camrtc-coe",
 		.owner = THIS_MODULE,
