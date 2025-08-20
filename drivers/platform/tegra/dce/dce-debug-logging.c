@@ -12,6 +12,7 @@
 #include <dce-os-log.h>
 #include <dce-logging.h>
 #include <dce.h>
+#include <interface/dce-log-header.h>
 
 static int dbg_dce_log_help_fops_show(struct seq_file *s, void *data)
 {
@@ -43,52 +44,51 @@ int dbg_dce_log_help_fops_open(struct inode *inode, struct file *file)
 
 static int dbg_dce_log_fops_show(struct seq_file *s, void *data)
 {
-	int ret = 0;
-	uint32_t offset;
-	uint64_t bytes_written;
-	struct tegra_dce *d			= s->private;
-	char *base_addr				= (char *)d->dce_log_buff.cpu_base;
-	uint32_t log_buf_size			= d->dce_log_buff.size;
-	struct dce_ipc_message *msg		= NULL;
-	struct dce_admin_ipc_resp *resp_msg;
+	uint64_t bytes_written 						= 0U;
+	struct tegra_dce *d							= s->private;
+	char *base_addr								= (char *)(d->dce_log_buff.cpu_base);
+	char *buff_start_addr						= NULL;
+	uint32_t log_buf_size						= d->dce_log_buff.size;
+	uint32_t circ_buf_size						= 0U;
+	struct dce_log_buffer_header *header_info	= NULL;
+	uint32_t cur_buf_idx						= 0U;
 
-	msg = dce_admin_channel_client_buffer_get(d, DCE_ADMIN_CH_CL_DBG_BUFF,
-		0 /* reserved flags */);
-
-	if (!msg) {
-		ret = -1;
-		dce_os_err(d, "IPC msg allocation failed");
-		goto out;
-	}
-
-	/** Retrieve logging info */
-	ret = dce_admin_get_log_info(d, msg);
-	if (ret) {
-		dce_os_err(d, "Failed to retrieve logging info, ret = 0x%x", ret);
-		goto out;
-	}
-
-	resp_msg = (struct dce_admin_ipc_resp *) (msg->rx.data);
-
-	bytes_written	= resp_msg->args.log.get_log_info.bytes_written;
-	offset		= resp_msg->args.log.get_log_info.offset;
+	header_info = (struct dce_log_buffer_header *)base_addr;
+	bytes_written = header_info->total_bytes_written;
+	buff_start_addr = (char *)(header_info->buff);
+	circ_buf_size = header_info->circ_buf_size;
 
 	/** If complete buffer size is zero then buffer is invalid */
-	if (log_buf_size == 0) {
+	if ((log_buf_size == 0) || (circ_buf_size == 0U)) {
 		dce_os_err(d, "%s", "Invalid log buffer\n");
 		goto out;
 	}
 
-	if (bytes_written == 0U || (log_buf_size <= offset)) {
-		dce_os_err(d, "%.*s", offset, base_addr);
+	cur_buf_idx = (bytes_written % circ_buf_size);
+
+	if (bytes_written == 0U) {
+		dce_os_err(d, "No logs available!\n");
 		goto out;
 	}
-	/** Write buffer content to file in binary format */
-	seq_write(s, base_addr, bytes_written);
+
+	if (header_info->is_encoded_log) {
+		/** Write buffer content to file in binary format */
+		seq_write(s, buff_start_addr, bytes_written);
+	} else {
+		/** If circular buffer is not yet wrapped around */
+		if (bytes_written <= circ_buf_size) {
+			seq_printf(s, "%.*s", cur_buf_idx, buff_start_addr);
+			goto out;
+		}
+
+		/** If circular buffer region has been overwritten */
+		/** Print logs stored in circular buffer region */
+		seq_printf(s, "%.*s", log_buf_size - cur_buf_idx, buff_start_addr + cur_buf_idx);
+		seq_printf(s, "%.*s", cur_buf_idx, buff_start_addr);
+	}
+
 out:
-	if (msg)
-		dce_admin_channel_client_buffer_put(d, msg);
-	return ret;
+	return 0;
 }
 
 int dbg_dce_log_fops_open(struct inode *inode, struct file *file)
