@@ -32,6 +32,8 @@
  *  US6,570,884, US6,115,776, and US6,327,625.
  ***********************************************************************************/
 
+#include <nvidia/conftest.h>
+
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/pci.h>
@@ -751,8 +753,13 @@ void rtl8126_ptp_init(struct rtl8126_private *tp)
 
         /* init a hrtimer for pps */
         tp->pps_enable = 0;
+#if defined(NV_HRTIMER_SETUP_PRESENT) /* Linux v6.13 */
+        hrtimer_setup(&tp->pps_timer, rtl8126_hrtimer_for_pps, CLOCK_MONOTONIC,
+                      HRTIMER_MODE_REL);
+#else
         hrtimer_init(&tp->pps_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
         tp->pps_timer.function = rtl8126_hrtimer_for_pps;
+#endif
 
         /* reset the PTP related hardware bits */
         rtl8126_ptp_reset(tp);
