@@ -6522,7 +6522,6 @@
 			reg-names = "base", "fpci", "bar2", "rst", "pinmux";
                         interrupts-extended = <&gic 0 952 IRQ_TYPE_LEVEL_HIGH>,
                                      <&gic 2 0 IRQ_TYPE_LEVEL_HIGH>,
-                                     <&gic 2 5 IRQ_TYPE_LEVEL_HIGH>,
                                      <&pmc 79 IRQ_TYPE_LEVEL_HIGH>,
                                      <&pmc 80 IRQ_TYPE_LEVEL_HIGH>,
                                      <&pmc 81 IRQ_TYPE_LEVEL_HIGH>,
@@ -6535,7 +6534,7 @@
                         wake0, wake1, wake2, wake3 are for USB3.0 ports
                         wake4, wake5, wake6, wake7 are for USB2.0 ports
                         */
-                        interrupt-names = "xhci", "mbox", "padctl",
+                        interrupt-names = "xhci", "mbox",
                                   "wake0", "wake1", "wake2", "wake3",
                                   "wake4", "wake5", "wake6", "wake7";
 			clocks = <&bpmp TEGRA264_CLK_XUSB1_CORE_HOST>,
