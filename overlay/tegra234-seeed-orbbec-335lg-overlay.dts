@@ -843,8 +843,8 @@
 				};
 
 				i2c@3180000 { //8-6a
-					cam_i2cmux@70{
-						i2c@0{
+					// cam_i2cmux@70{
+						// i2c@0{
 							g2m3_3: g2m3@75 {
 								status = "okay";
 								reg = <0x75>;
@@ -1613,8 +1613,8 @@
 								fsync_mfp_index = <2>;
 								pps_mfp_index = <9>;
 							};
-						};
-					};
+						// };
+					// };
 
 				};
 			};
