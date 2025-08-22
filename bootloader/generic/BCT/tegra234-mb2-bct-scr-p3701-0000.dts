@@ -5,11 +5,12 @@
 
 / {
     tfc {
-	reg@322 { /* GPIO_M_SCR_00_0 */
-		exclusion-info = <2>;
-		value = <0x38009696>;
-	};
 
+        reg@322 { /* GPIO_M_SCR_00_0 */
+            exclusion-info = <2>;
+            value = <0x38009494>;
+        };
+        
         reg@5138 { /* CBB_CENTRAL_CBB_FIREWALL_QSPI0_BLF, READ_CTL */
             exclusion-info = <2>;
             value = <0x00100009>;
