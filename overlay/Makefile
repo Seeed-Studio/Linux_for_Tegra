@@ -12,6 +12,7 @@ makefile-path := t23x/nv-public/overlay
 dtbo-y += tegra-optee.dtbo
 dtbo-y += tegra234-audio-overlay.dtbo
 dtbo-y += tegra234-carveouts.dtbo
+dtbo-y += tegra234-dcb-p3701-0000-hdmi.dtbo
 dtbo-y += tegra234-dcb-p3767-0000-hdmi.dtbo
 dtbo-y += tegra234-p3737-0000+p3701-0000-as-p3701-0004.dtbo
 dtbo-y += tegra234-p3737-0000+p3701-0000-as-p3767-0000.dtbo

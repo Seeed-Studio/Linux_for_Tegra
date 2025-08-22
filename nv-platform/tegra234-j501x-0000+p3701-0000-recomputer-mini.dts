@@ -6,7 +6,6 @@
 #include "tegra234-j501x-0000+p3701-0000.dts"
 #include "tegra234-p3737-0000+p3701-xxxx-nv-common.dtsi"
 #include "tegra234-p3701-0000.dtsi"
-#include "tegra234-dcb-j501x-0000-p3701-0000.dtsi"
 
 #include <dt-bindings/net/ti-dp83867.h>
 / {
