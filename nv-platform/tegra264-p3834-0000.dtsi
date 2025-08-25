@@ -7,6 +7,15 @@
 #include "nv-soc/tegra264-soc-thermal-trip-event.dtsi"
 
 / {
+	bpmp {
+		i2c {
+			thermal-sensor@4c {
+				interrupt-parent = <&gpio_main>;
+				interrupts = <TEGRA264_MAIN_GPIO(P, 1) IRQ_TYPE_LEVEL_LOW>;
+			};
+		};
+	};
+
 	nvtherm-oc-event {
 		status = "okay";
 	};
