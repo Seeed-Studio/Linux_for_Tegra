@@ -10,6 +10,22 @@
 	compatible = "nvidia,p4071-0000+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
 
 	bus@0 {
+		mttcan@81102f0000 {
+			status = "okay";
+		};
+
+		mttcan@8110300000 {
+			status = "okay";
+		};
+
+		mttcan@8110330000 {
+			status = "okay";
+                };
+
+		mttcan@8110340000 {
+			status = "okay";
+		};
+
 		mgbe0: ethernet@a808a10000 {
 			status = "okay";
 		};
