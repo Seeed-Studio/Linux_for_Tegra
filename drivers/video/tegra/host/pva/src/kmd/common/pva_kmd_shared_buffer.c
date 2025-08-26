@@ -124,7 +124,9 @@ static void shared_buffer_process_msg(struct pva_kmd_device *pva,
 {
 	enum pva_error err = PVA_SUCCESS;
 	struct pva_kmd_fw_buffer_msg_header header;
-	struct pva_kmd_fw_msg_vpu_trace vpu_trace;
+	struct pva_kmd_fw_msg_cmdbuf_trace cmdbuf_trace;
+	struct pva_kmd_fw_msg_vpu_exec_trace vpu_trace;
+	struct pva_kmd_fw_msg_engine_acquire_trace engine_acquire_trace;
 	struct pva_kmd_fw_msg_fence_trace fence_trace;
 	struct pva_kmd_fw_msg_res_unreg unreg_data;
 	struct pva_kmd_context *ctx = NULL;
@@ -162,19 +164,34 @@ static void shared_buffer_process_msg(struct pva_kmd_device *pva,
 		pva_kmd_process_fw_tracepoint(pva, &tracepoint);
 		break;
 	}
+	case PVA_KMD_FW_BUF_MSG_TYPE_CMD_BUF_TRACE: {
+		ASSERT(msg_size == sizeof(struct pva_kmd_fw_msg_cmdbuf_trace));
+		memcpy(&cmdbuf_trace, msg_body, sizeof(cmdbuf_trace));
+		pva_kmd_nsys_cmdbuf_trace(pva, &cmdbuf_trace);
+		break;
+	}
 	case PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE: {
-		ASSERT(msg_size == sizeof(struct pva_kmd_fw_msg_vpu_trace));
+		ASSERT(msg_size ==
+		       sizeof(struct pva_kmd_fw_msg_vpu_exec_trace));
 		memcpy(&vpu_trace, msg_body, sizeof(vpu_trace));
 		// We do not check the profiling level here. FW checks profiling level while logging
 		// the trace event. If the profiling level was high enough for FW to log the event,
 		// KMD should trace it. The profiling level might have changed since FW logged the event.
-		pva_kmd_shim_add_trace_vpu_exec(pva, &vpu_trace);
+		pva_kmd_nsys_vpu_exec_trace(pva, &vpu_trace);
 		break;
 	}
 	case PVA_KMD_FW_BUF_MSG_TYPE_FENCE_TRACE: {
 		ASSERT(msg_size == sizeof(struct pva_kmd_fw_msg_fence_trace));
 		memcpy(&fence_trace, msg_body, sizeof(fence_trace));
-		pva_kmd_shim_add_trace_fence(pva, &fence_trace);
+		pva_kmd_nsys_fence_trace(pva, &fence_trace);
+		break;
+	}
+	case PVA_KMD_FW_BUF_MSG_TYPE_ENGINE_ACQUIRE_TRACE: {
+		ASSERT(msg_size ==
+		       sizeof(struct pva_kmd_fw_msg_engine_acquire_trace));
+		memcpy(&engine_acquire_trace, msg_body,
+		       sizeof(engine_acquire_trace));
+		pva_kmd_nsys_engine_acquire_trace(pva, &engine_acquire_trace);
 		break;
 	}
 	case PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG: {

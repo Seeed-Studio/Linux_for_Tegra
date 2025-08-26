@@ -212,7 +212,17 @@ struct pva_fw_cmdbuf_submit_info {
 	uint32_t execution_timeout_ms;
 	struct pva_fw_memory_addr output_statuses[PVA_MAX_NUM_OUTPUT_STATUS];
 	struct pva_fw_postfence postfences[PVA_MAX_NUM_POSTFENCES];
+
+	/*
+	 * The following fields are used for tracing by Nsight Systems (Nsys)
+	 */
+	// ID of the submission provided by the user
 	uint64_t submit_id;
+	// Timestamp of the command buffer submission
+	uint64_t timestamp_submit;
+	// Process ID of the command buffer submission
+	// Used by Nsys to identify the process that submitted the command buffer
+	int32_t process_id;
 };
 
 /* This is the header of the circular buffer */
@@ -419,7 +429,7 @@ enum pva_fw_timestamp_t {
  * message. KMD can further parse these messages to extract the exact size of the
  * message.
  */
-#define PVA_KMD_FW_BUF_ELEMENT_SIZE sizeof(struct pva_kmd_fw_msg_vpu_trace)
+#define PVA_KMD_FW_BUF_ELEMENT_SIZE sizeof(struct pva_kmd_fw_msg_cmdbuf_trace)
 
 // TODO: remove element size and buffer size fields from this struct.
 //	 This struct is shared between KMD and FW. FW should not be able to change
@@ -436,45 +446,57 @@ struct pva_fw_shared_buffer_header {
 
 struct pva_kmd_fw_buffer_msg_header {
 #define PVA_KMD_FW_BUF_MSG_TYPE_FW_EVENT 0
-#define PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE 1
-#define PVA_KMD_FW_BUF_MSG_TYPE_FENCE_TRACE 2
-#define PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG 3
-#define PVA_KMD_FW_BUF_MSG_TYPE_FW_TRACEPOINT 4
+#define PVA_KMD_FW_BUF_MSG_TYPE_CMD_BUF_TRACE 1
+#define PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE 2
+#define PVA_KMD_FW_BUF_MSG_TYPE_FENCE_TRACE 3
+#define PVA_KMD_FW_BUF_MSG_TYPE_ENGINE_ACQUIRE_TRACE 4
+#define PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG 5
+#define PVA_KMD_FW_BUF_MSG_TYPE_FW_TRACEPOINT 6
 	uint32_t type : 8;
 	// Size of payload in bytes. Includes the size of the header.
 	uint32_t size : 24;
 };
 
-// Tracing information for NSIGHT
-struct pva_kmd_fw_msg_vpu_trace {
-	// VPU ID on which the job was executed
-	uint8_t engine_id;
-	// CCQ ID through which the job was submitted
-	uint8_t ccq_id;
-	// Queue ID through which the job was submitted
-	// This is not relative to a context. It ranges from 0 to 55
+// Tracing information for Nsight Systems (Nsys)
+struct pva_kmd_fw_msg_cmdbuf_trace {
+	// FW assigns each command buffer a unique ID.
+	// This is used by Nsys to associate different traces with a command buffer.
+	uint64_t cmdbuf_id;
+	uint64_t submit_id;
+	uint64_t cmdbuf_submit_time;
+	uint64_t cmdbuf_start_time;
+	uint64_t cmdbuf_end_time;
+	int32_t process_id;
+	int32_t thread_id;
+	uint8_t context_id;
 	uint8_t queue_id;
-	// Number of prefences in the cmdbuf
-	uint8_t num_prefences;
-	// Program ID of the VPU program executed.
+	uint8_t status;
+};
+
+struct pva_kmd_fw_msg_vpu_exec_trace {
+	uint64_t cmdbuf_id;
+	// Identification of the VPU kernel executed.
 	// Not supported today as CUPVA does not fully support this yet.
 	// The intent is to for user applications to be able to assign
 	// an identification to a VPU kernel. This ID will then be forwarded
 	// by the FW to the KMD for tracing.
-	uint64_t prog_id;
-	// Start time of the VPU execution
+	uint64_t exec_id;
 	uint64_t vpu_start_time;
-	// End time of the VPU execution
 	uint64_t vpu_end_time;
-	// Submit ID of the cmdbuf
-	// User applications can assign distinct identifiers to command buffers.
-	// FW will forward this identifier to the KMD for tracing.
-	uint64_t submit_id;
+	uint8_t engine_id;
+	uint8_t status;
+};
+
+struct pva_kmd_fw_msg_engine_acquire_trace {
+	uint64_t cmdbuf_id;
+	uint64_t engine_acquire_time;
+	uint64_t engine_release_time;
+	uint8_t engine_id;
 };
 
 struct pva_kmd_fw_msg_fence_trace {
-	uint64_t submit_id;
-	uint64_t timestamp;
+	uint64_t cmdbuf_id;
+	uint64_t fence_timestamp;
 	// For syncpt fences, fence_id is the syncpt index
 	// For semaphore fences, fence_id is the serial ID of the semaphore NvRM memory
 	uint64_t fence_id;
@@ -482,8 +504,6 @@ struct pva_kmd_fw_msg_fence_trace {
 	// This is only valid for semaphore fences
 	uint64_t offset;
 	uint32_t value;
-	uint8_t ccq_id;
-	uint8_t queue_id;
 #define PVA_KMD_FW_BUF_MSG_FENCE_ACTION_WAIT 0U
 #define PVA_KMD_FW_BUF_MSG_FENCE_ACTION_SIGNAL 1U
 	uint8_t action;
