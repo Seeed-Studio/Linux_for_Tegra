@@ -274,6 +274,4 @@ int tegra_hv_ivc_get_info(struct tegra_hv_ivc_cookie *ivck, uint64_t *pa,
  */
 void tegra_hv_ivc_notify(struct tegra_hv_ivc_cookie *ivck);
 
-struct tegra_ivc *tegra_hv_ivc_convert_cookie(struct tegra_hv_ivc_cookie *ivck);
-
 #endif /* __TEGRA_HV_IVC_H */

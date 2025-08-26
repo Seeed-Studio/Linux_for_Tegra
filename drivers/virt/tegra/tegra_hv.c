@@ -930,12 +930,6 @@ int tegra_hv_ivc_read_advance(struct tegra_hv_ivc_cookie *ivck)
 }
 EXPORT_SYMBOL(tegra_hv_ivc_read_advance);
 
-struct tegra_ivc *tegra_hv_ivc_convert_cookie(struct tegra_hv_ivc_cookie *ivck)
-{
-	return &cookie_to_ivc_dev(ivck)->ivc;
-}
-EXPORT_SYMBOL(tegra_hv_ivc_convert_cookie);
-
 struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(unsigned id)
 {
 	uint32_t i;

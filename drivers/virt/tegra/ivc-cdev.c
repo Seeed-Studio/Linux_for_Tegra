@@ -90,7 +90,6 @@ static int ivc_dev_open(struct inode *inode, struct file *filp)
 	struct ivc_dev *ivcd = container_of(cdev, struct ivc_dev, cdev);
 	int ret;
 	struct tegra_hv_ivc_cookie *ivck;
-	struct tegra_ivc *ivcq;
 
 	/*
 	 * If we can reserve the corresponding IVC device successfully, then
@@ -101,7 +100,6 @@ static int ivc_dev_open(struct inode *inode, struct file *filp)
 		return PTR_ERR(ivck);
 
 	ivcd->ivck = ivck;
-	ivcq = tegra_hv_ivc_convert_cookie(ivck);
 
 	/* request our irq */
 	ret = devm_request_threaded_irq(ivcd->device, ivck->irq,
@@ -164,11 +162,9 @@ static ssize_t ivc_dev_write(struct file *filp, const char __user *buf,
 static __poll_t ivc_dev_poll(struct file *filp, poll_table *wait)
 {
 	struct ivc_dev *ivcd = filp->private_data;
-	struct tegra_ivc *ivc;
 	__poll_t mask = 0;
 
 	WARN_ON(!ivcd);
-	ivc = tegra_hv_ivc_convert_cookie(ivcd->ivck);
 
 	poll_wait(filp, &ivcd->wq, wait);
 
