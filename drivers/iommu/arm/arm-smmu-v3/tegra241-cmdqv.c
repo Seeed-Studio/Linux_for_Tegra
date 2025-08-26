@@ -82,8 +82,10 @@
 #define  VCMDQ_ADDR			GENMASK(47, 5)
 #define  VCMDQ_LOG2SIZE			GENMASK(4, 0)
 
-#define TEGRA241_VCMDQ_BASE		0x00000
-#define TEGRA241_VCMDQ_CONS_INDX_BASE	0x00008
+#define TEGRA241_VCMDQ_BASE			0x00000
+#define TEGRA241_VCMDQ_BASE_H			0x00004
+#define TEGRA241_VCMDQ_CONS_INDX_BASE		0x00008
+#define TEGRA241_VCMDQ_CONS_INDX_BASE_H		0x0000C
 
 /* VINTF logical-VCMDQ pages */
 #define TEGRA241_VINTFi_PAGE0(i)	(TEGRA241_VINTF_PAGE_BASE + SZ_128K*(i))
@@ -367,8 +369,10 @@ static void tegra241_vcmdq_hw_deinit(struct tegra241_vcmdq *vcmdq)
 	}
 	writel_relaxed(0, REG_VCMDQ_PAGE0(vcmdq, PROD));
 	writel_relaxed(0, REG_VCMDQ_PAGE0(vcmdq, CONS));
-	writeq_relaxed(0, REG_VCMDQ_PAGE1(vcmdq, BASE));
-	writeq_relaxed(0, REG_VCMDQ_PAGE1(vcmdq, CONS_INDX_BASE));
+	writel_relaxed(0, REG_VCMDQ_PAGE1(vcmdq, BASE_H));
+	writel_relaxed(0, REG_VCMDQ_PAGE1(vcmdq, BASE));
+	writel_relaxed(0, REG_VCMDQ_PAGE1(vcmdq, CONS_INDX_BASE_H));
+	writel_relaxed(0, REG_VCMDQ_PAGE1(vcmdq, CONS_INDX_BASE));
 
 	gerrorn = readl_relaxed(REG_VCMDQ_PAGE0(vcmdq, GERRORN));
 	gerror = readl_relaxed(REG_VCMDQ_PAGE0(vcmdq, GERROR));
@@ -390,7 +394,8 @@ static int tegra241_vcmdq_hw_init(struct tegra241_vcmdq *vcmdq)
 	tegra241_vcmdq_hw_deinit(vcmdq);
 
 	/* Configure and enable VCMDQ */
-	writeq_relaxed(vcmdq->cmdq.q.q_base, REG_VCMDQ_PAGE1(vcmdq, BASE));
+	writel_relaxed(upper_32_bits(vcmdq->cmdq.q.q_base), REG_VCMDQ_PAGE1(vcmdq, BASE_H));
+	writel_relaxed(lower_32_bits(vcmdq->cmdq.q.q_base), REG_VCMDQ_PAGE1(vcmdq, BASE));
 
 	ret = vcmdq_write_config(vcmdq, VCMDQ_EN);
 	if (ret) {
