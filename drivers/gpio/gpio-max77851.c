@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * Maxim MAX77851 GPIO driver
  */
@@ -199,8 +199,11 @@ static int max77851_gpio_set_debounce(struct max77851_gpio *mgpio,
 	return ret;
 }
 
-static void max77851_gpio_set(struct gpio_chip *gc, unsigned int offset,
-			      int value)
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+static int max77851_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
+#else
+static void max77851_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
+#endif
 {
 	struct max77851_gpio *mgpio = gpiochip_get_data(gc);
 	u8 val;
@@ -212,6 +215,10 @@ static void max77851_gpio_set(struct gpio_chip *gc, unsigned int offset,
 				GPIO_CFG1_OUTPUT, val);
 	if (ret < 0)
 		dev_err(mgpio->dev, "CNFG_GPIO_OUT update failed: %d\n", ret);
+
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+	return ret;
+#endif
 }
 
 static int max77851_gpio_set_config(struct gpio_chip *gc, unsigned int offset,

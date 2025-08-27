@@ -7744,6 +7744,24 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_GENDPD_XLATE_T_HAS_CONST_OF_PHANDLE_ARGS" "" "types"
         ;;
 
+        gpio_chip_struct_set_returns_int)
+            #
+            # Determine if the 'gpio_chip' structure's 'set' callback function
+            # return an integer value.
+            #
+            # Commit d9d87d90cc0b ("treewide: rename GPIO set callbacks back to
+            # their original names") made this change in Linux v6.17.
+            #
+            CODE="
+            #include <linux/gpio/driver.h>
+            #include <uapi/linux/ethtool.h>
+            void conftest_gpio_chip_struct_set_returns_int(struct gpio_chip *gc) {
+                int (*fn)(struct gpio_chip *, unsigned int offset, int value) = gc->set;
+            }"
+
+            compile_check_conftest "$CODE" "NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT" "" "types"
+        ;;
+
         gpio_device_find)
             #
             # Determine if function gpio_device_find() present and if it is

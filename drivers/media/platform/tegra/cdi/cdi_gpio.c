@@ -193,7 +193,11 @@ static int cdi_gpio_get_value(struct gpio_chip *gc, unsigned int off)
 	return gpio_val;
 }
 
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+static int cdi_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
+#else
 static void cdi_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
+#endif
 {
 	int idx;
 	struct gpio_chip *tgc = NULL;
@@ -203,7 +207,11 @@ static void cdi_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
 
 	cdi_gpio = gpiochip_get_data(gc);
 	if (!cdi_gpio)
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+		return -EINVAL;
+#else
 		return;
+#endif
 
 	mutex_lock(&cdi_gpio->mutex);
 
@@ -213,7 +221,11 @@ static void cdi_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
 	idx = cdi_gpio_get_index(dev, cdi_gpio, off);
 	if (idx < 0) {
 		mutex_unlock(&cdi_gpio->mutex);
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+		return idx;
+#else
 		return;
+#endif
 	}
 	idx = array_index_nospec(idx, cdi_gpio->pdata.max_gpio);
 
@@ -242,6 +254,10 @@ static void cdi_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
 	}
 
 	mutex_unlock(&cdi_gpio->mutex);
+
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+	return 0;
+#endif
 }
 
 static int cdi_gpio_probe(struct platform_device *pdev)

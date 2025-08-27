@@ -184,6 +184,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += netif_napi_add_weight
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += no_llseek
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += of_get_named_gpio_flags
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_chip_struct_has_of_node_present
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_chip_struct_set_returns_int
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_device_find
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_device_get_chip
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += of_property_for_each_u32_removed_internal_args

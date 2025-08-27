@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 #include <nvidia/conftest.h>
 
@@ -194,7 +194,11 @@ static int isc_gpio_get_value(struct gpio_chip *gc, unsigned int off)
 	return gpio_val;
 }
 
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+static int isc_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
+#else
 static void isc_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
+#endif
 {
 	int idx;
 	struct gpio_chip *tgc = NULL;
@@ -204,7 +208,11 @@ static void isc_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
 
 	isc_gpio = gpiochip_get_data(gc);
 	if (!isc_gpio)
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+		return -EINVAL;
+#else
 		return;
+#endif
 
 	mutex_lock(&isc_gpio->mutex);
 
@@ -214,7 +222,11 @@ static void isc_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
 	idx = isc_gpio_get_index(dev, isc_gpio, off);
 	if (idx < 0) {
 		mutex_unlock(&isc_gpio->mutex);
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+		return idx;
+#else
 		return;
+#endif
 	}
 	idx = array_index_nospec(idx, isc_gpio->pdata.max_gpio);
 
@@ -243,6 +255,10 @@ static void isc_gpio_set_value(struct gpio_chip *gc, unsigned int off, int val)
 	}
 
 	mutex_unlock(&isc_gpio->mutex);
+
+#if defined(NV_GPIO_CHIP_STRUCT_SET_RETURNS_INT) /* Linux v6.17 */
+	return 0;
+#endif
 }
 
 static int isc_gpio_probe(struct platform_device *pdev)
