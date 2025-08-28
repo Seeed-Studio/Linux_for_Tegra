@@ -2173,11 +2173,15 @@ pl011_set_termios(struct uart_port *port, struct ktermios *termios,
 	else
 		clkdiv = 16;
 
-	/*
-	 * Ask the core to calculate the divisor for us.
-	 */
-	baud = uart_get_baud_rate(port, termios, old, 0,
-				  port->uartclk / clkdiv);
+	if (uap->vendor->enable_car) {
+		baud = tty_termios_baud_rate(termios);
+		clk_set_rate(uap->clk, baud * clkdiv);
+	}
+	else {
+		baud = uart_get_baud_rate(port, termios, old, 0,
+					  port->uartclk / clkdiv);
+	}
+
 #ifdef CONFIG_DMA_ENGINE
 	/*
 	 * Adjust RX DMA polling rate with baud rate if not specified.
@@ -2186,10 +2190,12 @@ pl011_set_termios(struct uart_port *port, struct ktermios *termios,
 		uap->dmarx.poll_rate = DIV_ROUND_UP(10000000, baud);
 #endif
 
-	if (baud > port->uartclk / 16)
-		quot = DIV_ROUND_CLOSEST(port->uartclk * 8, baud);
-	else
-		quot = DIV_ROUND_CLOSEST(port->uartclk * 4, baud);
+	if (!uap->vendor->enable_car) {
+		if (baud > port->uartclk / 16)
+			quot = DIV_ROUND_CLOSEST(port->uartclk * 8, baud);
+		else
+			quot = DIV_ROUND_CLOSEST(port->uartclk * 4, baud);
+	}
 
 	switch (termios->c_cflag & CSIZE) {
 	case CS5:
@@ -2261,22 +2267,23 @@ pl011_set_termios(struct uart_port *port, struct ktermios *termios,
 			old_cr &= ~ST_UART011_CR_OVSFACT;
 	}
 
-	/*
-	 * Workaround for the ST Micro oversampling variants to
-	 * increase the bitrate slightly, by lowering the divisor,
-	 * to avoid delayed sampling of start bit at high speeds,
-	 * else we see data corruption.
-	 */
-	if (uap->vendor->oversampling) {
-		if (baud >= 3000000 && baud < 3250000 && quot > 1)
-			quot -= 1;
-		else if (baud > 3250000 && quot > 2)
-			quot -= 2;
+	if (!uap->vendor->enable_car) {
+		/*
+		* Workaround for the ST Micro oversampling variants to
+		* increase the bitrate slightly, by lowering the divisor,
+		* to avoid delayed sampling of start bit at high speeds,
+		* else we see data corruption.
+		*/
+		if (uap->vendor->oversampling) {
+			if (baud >= 3000000 && baud < 3250000 && quot > 1)
+				quot -= 1;
+			else if (baud > 3250000 && quot > 2)
+				quot -= 2;
+		}
+		/* Set baud rate */
+		pl011_write(quot & 0x3f, uap, REG_FBRD);
+		pl011_write(quot >> 6, uap, REG_IBRD);
 	}
-	/* Set baud rate */
-	pl011_write(quot & 0x3f, uap, REG_FBRD);
-	pl011_write(quot >> 6, uap, REG_IBRD);
-
 	/*
 	 * ----------v----------v----------v----------v-----
 	 * NOTE: REG_LCRH_TX and REG_LCRH_RX MUST BE WRITTEN AFTER
