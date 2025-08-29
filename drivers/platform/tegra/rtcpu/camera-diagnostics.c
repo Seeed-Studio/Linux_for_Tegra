@@ -1174,6 +1174,13 @@ static const struct attribute_group camera_diag_attr_group = {
 	.attrs = camera_diag_attrs,
 };
 
+static void camera_diag_ivc_channel_release(struct device *dev)
+{
+	/*
+	 * This callback is required by the driver core even if there is
+	 * nothing to do otherwise a WARNING message is generated.
+	 */
+}
 
 /**
  * @brief Probe function for camera-diagnostics driver.
@@ -1205,6 +1212,7 @@ static int camera_diag_probe(struct tegra_ivc_channel *chan)
 	dev_set_name(&ch->dev, "camera-diag");
 	ch->dev.parent = &chan->dev;
 	ch->dev.type = &tegra_ivc_channel_type;
+	ch->dev.release = camera_diag_ivc_channel_release;
 	ch->ivc = chan;
 
 	/* Set driver data */
