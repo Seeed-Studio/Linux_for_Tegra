@@ -58,6 +58,9 @@ cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p376
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0000-recomputer-mini.dtb ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0004-recomputer-mini.dtb ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0005-recomputer-mini.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0000-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0004-recomputer-robo.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0005-recomputer-robo.dtb ../kernel/dtb/
 
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-dcb-p3701-0000-hdmi.dtbo ../kernel/dtb/
 
