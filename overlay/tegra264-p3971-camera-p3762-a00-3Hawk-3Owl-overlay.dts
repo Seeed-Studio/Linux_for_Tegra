@@ -6,7 +6,7 @@
 
 #include "tegra264-p3971-camera-p3762-a00.dtsi"
 
-#define JETSON_COMPATIBLE	"nvidia,p3971-0089+p3834-0008", "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264"
+#define JETSON_COMPATIBLE	"nvidia,p3971-0089+p3834-0008", "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008"
 
 / {
 	overlay-name = "Jetson Camera 3-Hawk 3-Owl p3762 module";

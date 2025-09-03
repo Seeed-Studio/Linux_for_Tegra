@@ -11,7 +11,7 @@
 / {
 	overlay-name = "Jetson Camera Hawk-Owl p3762 module";
 	jetson-header-name = "Jetson AGX CSI Connector";
-	compatible = "nvidia,p3971-0089+p3834-0008", "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
+	compatible = "nvidia,p3971-0089+p3834-0008", "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008";
 
 	fragment-camera-hawk-owl@0 {
 		target-path = "/";
