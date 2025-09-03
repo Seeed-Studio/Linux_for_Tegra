@@ -8699,6 +8699,19 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_TEGRA_IVC_USE_IVC_EXT_DRIVER" "" "types"
+	;;
+
+        tegra264_bwmgr_debug_macro)
+            #
+            # Determine if the 'TEGRA264_BWMGR_DEBUG' macro present or not
+            #
+            CODE="
+            #include <linux/tegra264-bwmgr.h>
+            int conftest_tegra264_bwmgr_debug_macro() {
+                    return TEGRA264_BWMGR_DEBUG;
+            }"
+
+            compile_check_conftest "$CODE" "NV_TEGRA264_BWMGR_DEBUG_MACRO_PRESENT" "" "macros"
         ;;
 
         thermal_zone_device_priv)

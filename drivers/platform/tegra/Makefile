@@ -5,6 +5,9 @@ tegra-bootloader-debug-objs := tegra_bootloader_debug.o
 obj-m += tegra-bootloader-debug.o
 
 obj-m += tegra-cactmon-mc-all.o
+ifdef CONFIG_PM_DEVFREQ
+obj-m += tegra-bpmp-bwmgr.o
+endif
 obj-m += tegra-fsicom.o
 
 obj-m += mce/

@@ -255,6 +255,7 @@ NV_CONFTEST_GENERIC_COMPILE_TESTS += is_export_symbol_present_drm_gem_prime_hand
 NV_CONFTEST_GENERIC_COMPILE_TESTS += is_export_symbol_present_queue_limits_set
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += crypto_engine_ctx_struct_removed_test
 NV_CONFTEST_MACRO_COMPILE_TESTS ?=
+NV_CONFTEST_MACRO_COMPILE_TESTS += tegra264_bwmgr_debug_macro
 NV_CONFTEST_SYMBOL_COMPILE_TESTS ?=
 
 $(eval $(call NV_GENERATE_COMPILE_TEST_HEADER,functions,$(NV_CONFTEST_FUNCTION_COMPILE_TESTS)))

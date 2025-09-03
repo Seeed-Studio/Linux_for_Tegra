@@ -137,6 +137,7 @@ kernel_module(
         "drivers/platform/tegra/nvadsp/nvadsp.ko",
         "drivers/platform/tegra/psc/tegra23x_psc.ko",
         "drivers/platform/tegra/tegra-bootloader-debug.ko",
+        "drivers/platform/tegra/tegra-bpmp-bwmgr.ko",
         "drivers/platform/tegra/tegra-cactmon-mc-all.ko",
         "drivers/platform/tegra/tegra-fsicom.ko",
         "drivers/platform/tegra/tegra-hv-xhci.ko",
