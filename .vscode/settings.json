@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "chrono": "c",
-        "variant": "c",
-        "sgtl5000.h": "c"
-    }
-}
