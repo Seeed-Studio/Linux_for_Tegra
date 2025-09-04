@@ -1021,6 +1021,7 @@ static int proc_get_driver_variable(struct seq_file *m, void *v)
         seq_printf(m, "HwIcVerUnknown\t0x%x\n", tp->HwIcVerUnknown);
         seq_printf(m, "NotWrRamCodeToMicroP\t0x%x\n", tp->NotWrRamCodeToMicroP);
         seq_printf(m, "NotWrMcuPatchCode\t0x%x\n", tp->NotWrMcuPatchCode);
+        seq_printf(m, "hw_has_mac_mcu_patch_code\t0x%x\n", tp->hw_has_mac_mcu_patch_code);
         seq_printf(m, "HwHasWrRamCodeToMicroP\t0x%x\n", tp->HwHasWrRamCodeToMicroP);
         seq_printf(m, "sw_ram_code_ver\t0x%x\n", tp->sw_ram_code_ver);
         seq_printf(m, "hw_ram_code_ver\t0x%x\n", tp->hw_ram_code_ver);
@@ -1745,6 +1746,7 @@ static int proc_get_driver_variable(char *page, char **start,
                         "HwIcVerUnknown\t0x%x\n"
                         "NotWrRamCodeToMicroP\t0x%x\n"
                         "NotWrMcuPatchCode\t0x%x\n"
+                        "hw_has_mac_mcu_patch_code\t0x%x\n"
                         "HwHasWrRamCodeToMicroP\t0x%x\n"
                         "sw_ram_code_ver\t0x%x\n"
                         "hw_ram_code_ver\t0x%x\n"
@@ -1872,6 +1874,7 @@ static int proc_get_driver_variable(char *page, char **start,
                         tp->HwIcVerUnknown,
                         tp->NotWrRamCodeToMicroP,
                         tp->NotWrMcuPatchCode,
+                        tp->hw_has_mac_mcu_patch_code,
                         tp->HwHasWrRamCodeToMicroP,
                         tp->sw_ram_code_ver,
                         tp->hw_ram_code_ver,
@@ -2969,9 +2972,11 @@ static ssize_t testmode_show(struct device *dev,
         struct net_device *netdev = to_net_dev(dev);
         struct rtl8126_private *tp = netdev_priv(netdev);
 
-        sprintf(buf, "%u\n", tp->testmode);
-
-        return strlen(buf);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,4,103)
+        return sprintf(buf, "%u\n", tp->testmode);
+#else
+        return sysfs_emit(buf, "%u\n", tp->testmode);
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5,4,103) */
 }
 
 static ssize_t testmode_store(struct device *dev,
@@ -4057,8 +4062,7 @@ static bool
 rtl8126_vec_2_tx_q_num(
         struct rtl8126_private *tp,
         u32 messageId,
-        u32 *qnum
-)
+        u32 *qnum)
 {
         u32 whichQ = 0xffffffff;
         bool rc = false;
@@ -4109,8 +4113,7 @@ static bool
 rtl8126_vec_2_rx_q_num(
         struct rtl8126_private *tp,
         u32 messageId,
-        u32 *qnum
-)
+        u32 *qnum)
 {
         u32 whichQ = 0xffffffff;
         bool rc = false;
@@ -6957,6 +6960,9 @@ rtl8126_wait_phy_ups_resume(struct net_device *dev, u16 PhyState)
 static void
 rtl8126_set_mcu_d3_stack(struct rtl8126_private *tp)
 {
+        if (!tp->hw_has_mac_mcu_patch_code)
+                return;
+
         switch (tp->mcfg) {
         case CFG_METHOD_2:
                 rtl8126_mac_ocp_write(tp, 0xD018, 0xD116);
@@ -7216,8 +7222,8 @@ rtl8126_set_mac_mcu_8126a_2(struct net_device *dev)
 
         rtl8126_mac_ocp_write(tp, 0xFC26, 0x8000);
 
-        //rtl8126_mac_ocp_write(tp, 0xFC28, 0x00FE);
-        //rtl8126_mac_ocp_write(tp, 0xFC2A, 0x4A14);
+        rtl8126_mac_ocp_write(tp, 0xFC28, 0x00FE);
+        rtl8126_mac_ocp_write(tp, 0xFC2A, 0x4A14);
         rtl8126_mac_ocp_write(tp, 0xFC2C, 0x2360);
         rtl8126_mac_ocp_write(tp, 0xFC2E, 0x14A4);
         rtl8126_mac_ocp_write(tp, 0xFC30, 0x415E);
@@ -7225,7 +7231,7 @@ rtl8126_set_mac_mcu_8126a_2(struct net_device *dev)
         rtl8126_mac_ocp_write(tp, 0xFC34, 0x4280);
         rtl8126_mac_ocp_write(tp, 0xFC36, 0x234A);
 
-        rtl8126_mac_ocp_write(tp, 0xFC48, 0x00FC);
+        rtl8126_mac_ocp_write(tp, 0xFC48, 0x00FF);
 }
 
 static void
@@ -7281,8 +7287,8 @@ rtl8126_set_mac_mcu_8126a_3(struct net_device *dev)
 
         rtl8126_mac_ocp_write(tp, 0xFC26, 0x8000);
 
-        //rtl8126_mac_ocp_write(tp, 0xFC28, 0x00FE);
-        //rtl8126_mac_ocp_write(tp, 0xFC2A, 0x55DE);
+        rtl8126_mac_ocp_write(tp, 0xFC28, 0x00FE);
+        rtl8126_mac_ocp_write(tp, 0xFC2A, 0x55DE);
         rtl8126_mac_ocp_write(tp, 0xFC2C, 0x14A4);
         rtl8126_mac_ocp_write(tp, 0xFC2E, 0x4176);
         rtl8126_mac_ocp_write(tp, 0xFC30, 0x41FC);
@@ -7292,13 +7298,15 @@ rtl8126_set_mac_mcu_8126a_3(struct net_device *dev)
         //rtl8126_mac_ocp_write(tp, 0xFC38, 0x2382);
         rtl8126_mac_ocp_write(tp, 0xFC3A, 0x234A);
 
-        rtl8126_mac_ocp_write(tp, 0xFC48, 0x023C);
+        rtl8126_mac_ocp_write(tp, 0xFC48, 0x023F);
 }
 
 static void
 rtl8126_hw_mac_mcu_config(struct net_device *dev)
 {
         struct rtl8126_private *tp = netdev_priv(dev);
+
+        tp->hw_has_mac_mcu_patch_code = FALSE;
 
         if (tp->NotWrMcuPatchCode == TRUE)
                 return;
@@ -7315,7 +7323,11 @@ rtl8126_hw_mac_mcu_config(struct net_device *dev)
         case CFG_METHOD_3:
                 rtl8126_set_mac_mcu_8126a_3(dev);
                 break;
+        default:
+                return;
         }
+
+        tp->hw_has_mac_mcu_patch_code = TRUE;
 }
 #endif
 
@@ -7350,6 +7362,8 @@ static void rtl8126_apply_firmware(struct rtl8126_private *tp)
                 tp->hw_ram_code_ver = rtl8126_get_hw_phy_mcu_code_ver(tp);
                 tp->sw_ram_code_ver = tp->hw_ram_code_ver;
                 tp->HwHasWrRamCodeToMicroP = TRUE;
+
+                tp->hw_has_mac_mcu_patch_code = TRUE;
 
                 r8126_spin_unlock(&tp->phy_lock, flags);
         }
@@ -16374,10 +16388,6 @@ static void rtl8126_shutdown(struct pci_dev *pdev)
                 tp->wol_enabled = WOL_DISABLED;
 
         rtl8126_close(dev);
-
-        if (netif_running(dev))
-                netif_device_detach(dev);
-
         rtl8126_disable_msi(pdev, tp);
 
         rtnl_unlock();

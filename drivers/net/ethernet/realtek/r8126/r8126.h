@@ -1584,6 +1584,7 @@ enum RTL8126_registers {
         PTP_Time_SHIFTER_S_8125      = 0x6856,
         PPS_RISE_TIME_NS_8125        = 0x68A0,
         PPS_RISE_TIME_S_8125         = 0x68A4,
+        PTP_DUMMY_REG                = 0XC070,
         PTP_EGRESS_TIME_BASE_NS_8125 = 0XCF20,
         PTP_EGRESS_TIME_BASE_S_8125  = 0XCF24,
         PTP_CTL                 = 0xE400,
@@ -2760,6 +2761,7 @@ struct rtl8126_private {
         u16 MacMcuPageSize;
         u64 hw_mcu_patch_code_ver;
         u64 bin_mcu_patch_code_ver;
+        u8 hw_has_mac_mcu_patch_code;
 
         u8 HwSuppTcamVer;
 

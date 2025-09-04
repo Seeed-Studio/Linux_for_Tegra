@@ -560,8 +560,6 @@ static void rtl8126_ptp_tx_hwtstamp(struct rtl8126_private *tp)
         struct skb_shared_hwtstamps shhwtstamps = { 0 };
         struct timespec64 ts64;
 
-        rtl8126_mdio_direct_write_phy_ocp(tp, PTP_INSR, TX_TX_INTR);
-
         rtl8126_ptp_egresstime(tp, &ts64);
 
         /* Upper 32 bits contain s, lower 32 bits contain ns. */
@@ -592,31 +590,28 @@ static void rtl8126_ptp_tx_work(struct work_struct *work)
         if (!tp->ptp_tx_skb)
                 return;
 
+        rtnl_lock();
+        if (rtl8126_mac_ocp_read(tp, PTP_DUMMY_REG) & TX_TS_INTR) {
+                tx_intr = true;
+                rtl8126_mac_ocp_write(tp, PTP_DUMMY_REG, TX_TS_INTR);
+        } else
+                tx_intr = false;
+        rtnl_unlock();
+
         if (time_is_before_jiffies(tp->ptp_tx_start +
                                    RTL8126_PTP_TX_TIMEOUT)) {
                 dev_kfree_skb_any(tp->ptp_tx_skb);
                 tp->ptp_tx_skb = NULL;
                 clear_bit_unlock(__RTL8126_PTP_TX_IN_PROGRESS, &tp->state);
                 tp->tx_hwtstamp_timeouts++;
-                /* Clear the tx valid bit in TSYNCTXCTL register to enable
-                 * interrupt
-                 */
-                r8126_spin_lock(&tp->phy_lock, flags);
-                rtl8126_mdio_direct_write_phy_ocp(tp, PTP_INSR, TX_TX_INTR);
-                r8126_spin_unlock(&tp->phy_lock, flags);
                 return;
         }
 
-        r8126_spin_lock(&tp->phy_lock, flags);
-        if (rtl8126_mdio_direct_read_phy_ocp(tp, PTP_INSR) & TX_TX_INTR) {
-                tx_intr = true;
+        if (tx_intr) {
+                r8126_spin_lock(&tp->phy_lock, flags);
                 rtl8126_ptp_tx_hwtstamp(tp);
+                r8126_spin_unlock(&tp->phy_lock, flags);
         } else {
-                tx_intr = false;
-        }
-        r8126_spin_unlock(&tp->phy_lock, flags);
-
-        if (!tx_intr) {
                 /* reschedule to check later */
                 schedule_work(&tp->ptp_tx_work);
         }
@@ -626,26 +621,28 @@ static int rtl8126_hwtstamp_enable(struct rtl8126_private *tp, bool enable)
 {
         unsigned long flags;
 
+        ASSERT_RTNL();
+
         r8126_spin_lock(&tp->phy_lock, flags);
 
+        /* trx timestamp interrupt disable */
+        rtl8126_clear_eth_phy_ocp_bit(tp, PTP_INER, RX_TS_INTR | TX_TS_INTR);
+
+        //clear ptp isr
+        rtl8126_mac_ocp_write(tp, PTP_DUMMY_REG, 0xffff);
+
         if (enable) {
-                //trx timestamp interrupt enable
-                rtl8126_set_eth_phy_ocp_bit(tp, PTP_INER, BIT_2 | BIT_3);
+                //tx timestamp interrupt enable
+                rtl8126_set_eth_phy_ocp_bit(tp, PTP_INER, TX_TS_INTR);
 
-                //set isr clear mode
-                rtl8126_set_eth_phy_ocp_bit(tp, PTP_GEN_CFG, BIT_0);
-
-                //clear ptp isr
-                rtl8126_mdio_direct_write_phy_ocp(tp, PTP_INSR, 0xFFFF);
+                //set isr clear mode to read clear
+                rtl8126_clear_eth_phy_ocp_bit(tp, PTP_GEN_CFG, BIT_0);
 
                 //enable ptp
                 rtl8126_ptp_enable_config(tp);
 
                 //rtl8126_set_local_time(tp);
         } else {
-                /* trx timestamp interrupt disable */
-                rtl8126_clear_eth_phy_ocp_bit(tp, PTP_INER, BIT_2 | BIT_3);
-
                 /* disable ptp */
                 rtl8126_clear_eth_phy_ocp_bit(tp, PTP_SYNCE_CTL, BIT_0);
                 rtl8126_clear_eth_phy_ocp_bit(tp, PTP_CTL, BIT_0);
