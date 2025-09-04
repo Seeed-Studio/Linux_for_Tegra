@@ -1,0 +1,10 @@
+Updating prebuilts and/or headers 
+
+464f6823a2241ec38d94c786e23d13dd4b4e2a14 - gst-nvdrmvideosink/Makefile
+5335db7375d2cee2cf0c02c68879205293dc63e1 - gst-nvdrmvideosink/gstnvdrmvideosink.c
+444ba0e5976368618bd65182f9618af35e0b7946 - gst-nvdrmvideosink/LICENSE.libgstnvdrmvideosink
+15e77cc11e0be2e813a2a51eaa4256b1026dd16b - gst-nvdrmvideosink/gstnvdrmvideosink.h
+c318d575f2c7cd3e805b4283f48da5547b152fd6 - gst-nvdrmvideosink/util/vt_switch.c
+31762975c758c9a6c0a0f2a811d6850440f347b6 - gst-nvdrmvideosink/util/vt_switch.h
+ffd00e6dfee167cbf1a33f34d4b2c94269bd21b3 - gst-nvdrmvideosink/util/drmutil.c
+ef0f0a9b3cfbf3d5f2359e9185a75d258201e20a - gst-nvdrmvideosink/util/drmutil.h

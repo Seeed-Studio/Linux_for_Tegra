@@ -1,0 +1,75 @@
+**********************************************************************
+                           Linux for Tegra
+                      OP-TEE hwkey-agent sample app
+                                README
+**********************************************************************
+This README provides an overview of the hwkey-app and how to
+compile and use it.
+
+----------------------------------------------------------------------
+hwkey-app Overview
+----------------------------------------------------------------------
+
+The CA sample program named 'hwkey-app' that is intended to work with
+the 'hwkey-agent' TA to provide encryption and decryption function
+with the keys provided by TA. 
+
+Using the user-defined key in EKB:
+The CA must use the TEE Client API to communicate with the TA and send
+the request with payload to TA to perform the crypto operation. Once
+TA receives the request, it processes the data and uses the crypto
+library to perform the operations with the user-defined key. This is a
+software-based crypto operation provided by TA.
+
+Hardware-based RNG (Random Number Generator):
+The CA can be used to query random numbers from the TA. The TA handles
+the HW RNG to extract random numbers and return them to the CA.
+
+----------------------------------------------------------------------
+How to compile
+----------------------------------------------------------------------
+The build depends on the build result of optee_os and optee_client.
+
+* Cross compiling on host machine
+The input variables of the Makefile:
+CROSS_COMPILE: The cross compiler.
+TA_DEV_KIT_DIR: The base directory of the TA-devkit.
+OPTEE_CLIENT_EXPORT: The base directory points to optee client's
+                     header files and libraries
+O: The base directory for build objects filetree.
+
+
+An example of cross compiling on host machine.
+$ make CROSS_COMPILE=$(CROSS_COMPILE) \
+       TA_DEV_KIT_DIR=$(TA_DEV_KIT_DIR) \
+       OPTEE_CLIENT_EXPORT=$(OPTEE_CLIENT_EXPORT) \
+       O=$(O)
+
+----------------------------------------------------------------------
+How to use hwkey-app
+----------------------------------------------------------------------
+Check the command usage with "--help" parameter.
+$ nvhwkey-app --help
+Usage: nvhwkey-app [OPTION...] -e [-d] -i <file> -o <out-file>
+       or
+       nvhwkey-app -r <random size>
+
+  -d                         Decryption mode
+  -e                         Encryption mode
+  -i, --in=file              Input file for encrypt/decrypt
+  -o, --out=outfile          Output file
+  -r, --get_random=len       Get random number (input random number length)
+  -?, --help                 Give this help list
+      --usage                Give a short usage message
+
+----------------------------------------------------------------------
+Example
+----------------------------------------------------------------------
+An example of a file encryption.
+$ nvhwkey-app -e -i <input_file> -o <output_file>
+
+An example of a file decryption.
+$ nvhwkey-app -d -i <input_file> -o <output_file>
+
+An example of getting random numbers from secure RNG.
+$ nvhwkey-app -r 16

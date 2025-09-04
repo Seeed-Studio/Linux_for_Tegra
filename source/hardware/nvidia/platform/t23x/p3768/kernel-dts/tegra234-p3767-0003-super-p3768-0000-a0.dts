@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0
+// SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-p3767-0003-p3768-0000-a0.dts"
+
+/ {
+	nvidia,dtsfilename = __FILE__;
+	nvidia,dtbbuildtime = __DATE__, __TIME__;
+	compatible = "nvidia,p3768-0000+p3767-0003-super", "nvidia,p3767-0003", "nvidia,tegra234";
+	model = "NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super";
+};

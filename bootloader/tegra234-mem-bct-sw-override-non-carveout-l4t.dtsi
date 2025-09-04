@@ -1,0 +1,6 @@
+// NOTE: Overrides for non-carveout properties that are common across
+// platforms MUST be added below.
+McSidStreamidSecurityConfigNvdisplayr = <0x00010101>;
+McSidStreamidOverrideConfigNvdisplayr = <0x0000007f>;
+McSidStreamidSecurityConfigNvdisplayr1 = <0x00010101>;
+McSidStreamidOverrideConfigNvdisplayr1 = <0x0000007f>;

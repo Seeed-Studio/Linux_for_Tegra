@@ -1,0 +1,5 @@
+'gst-jpeg' is a GStreamer plug-in that is compiled against IJG libjpeg header files
+modified to achieve Tegra acceleration.
+
+IJG code is used to accelerate libjpeg codec.
+

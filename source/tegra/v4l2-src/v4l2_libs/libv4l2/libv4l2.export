@@ -1,0 +1,13 @@
+# Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+v4l2_close
+v4l2_dup
+v4l2_fd_open
+v4l2_get_control
+v4l2_ioctl
+v4l2_log_file
+v4l2_mmap
+v4l2_munmap
+v4l2_open
+v4l2_read
+v4l2_set_control
+v4l2_write

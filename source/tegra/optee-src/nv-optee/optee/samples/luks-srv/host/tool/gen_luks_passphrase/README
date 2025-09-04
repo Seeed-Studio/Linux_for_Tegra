@@ -1,0 +1,67 @@
+**********************************************************************
+                           Linux for Tegra
+                     Tool: gen_luks_passphrase.py
+                                README
+**********************************************************************
+This README provides an overview of the "gen_luks_passphrase.py"
+script to generate a passphrase for creating disk image, which is then
+flashed onto the device. It uses the same procedures with the TA in
+the OP-TEE, so the passphrase is identical on both sides.
+
+----------------------------------------------------------------------
+Dependency
+----------------------------------------------------------------------
+
+This script depends on a Python cryptography module,
+"pyca/cryptography". You can install that via "apt" or "pip" command
+on your Linux host machine.
+
+$> apt-get install python3-cryptography
+or
+$> pip install cryptography
+
+----------------------------------------------------------------------
+Tool: gen_luks_passphrase.py overview
+----------------------------------------------------------------------
+The script shows how to generate a passphrase based on the key source
+from EKB. You can reference the steps below. Note that you can define
+the procedures like key source or KDF (Key Derivation Function) for
+the passphrase generation and implement the same in the Trusty TA.
+
+The steps of passphrase generation:
+ 1. Derive the LUKS key:
+    luks_key = KDF(ekb_key,
+                   label_str="luks-srv-ecid",
+                   context_str="${ECID}")
+ 2. Generate the passphrase:
+    passphrase = KDF(luks_key,
+                     label_str="luks-srv-passphrase",
+                     context_str="device's UUID or user's input str")
+The KDF (Key Derivation Function) is the NIST-SP-800-108.
+
+----------------------------------------------------------------------
+How to use the script
+----------------------------------------------------------------------
+To view usage:
+$ python3 gen_luks_passphrase.py --help
+
+The input options:
+  -h, --help            Show this help message and exit.
+  -c CONTEXT_STRING, --context-string CONTEXT_STRING
+                        The context string (max 40 byts) for
+                        generating passphrase.
+  -e ECID, --ecid ECID  The ECID (Embedded chip ID) of the chip.
+  -k KEY_FILE, --key-file KEY_FILE
+                        The key (16 bytes) file in hex format.
+  -u, --unique-pass     Generate a unique passphrase.
+
+The command example:
+$ python3 gen_luks_passphrase.py -k ekb.key \
+                                 -u \
+                                 -e "${ECID}" \
+                                 -c "${DISK_UUID}"
+
+Use with cryptsetup to create encryption disk or to unlock disk:
+$ gen_luks_passphrase.ph ... | cryptsetup ... luksFormat ...
+or
+$ gen_luks_passphrase.ph ... | cryptsetup ... luksOpen ...

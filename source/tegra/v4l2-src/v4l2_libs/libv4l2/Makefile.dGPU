@@ -1,0 +1,36 @@
+###############################################################################
+#
+# Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA Corporation and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA Corporation is strictly prohibited.
+#
+###############################################################################
+CC:=gcc
+TARGET_NAME:= libnvv4l2.so
+
+SRCS := libv4l2.c log.c v4l2convert.c v4l2-plugin.c
+
+INC_PATHS := ./ ../include   ../../include
+
+CFLAGS := -fPIC
+CFLAGS += -DLIBV4L2_PLUGIN_DIR_PATH_X86
+
+IGNORE_DS_PACKAGE_NAMING:=1
+
+LDFLAGS:= -shared
+LIBS:= -lv4lconvert -ldl -Wl,-soname,libv4l2.so.0
+
+#IS_V4L2_LIB:=1
+PACKAGE_BINARY_IN_DS:=1
+
+BUILD_DIR:=../../../../deepstream/sdk/build/libs/libv4l/
+
+include ../../../../deepstream/sdk/Rules.mk
+
+install::
+	ln -sf $(INSTALL_DIR)/$(TARGET_NAME) /usr/lib/x86_64-linux-gnu/libv4l2.so.0.0.99999
+	ldconfig

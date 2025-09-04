@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) 2021-2022, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+/*
+# CFG Version 1.0
+# This File contains the configuration of multiple rails.
+*/
+/dts-v1/;
+
+/ {
+/* Placeholder currently. Data must be populated once available */
+    prod {
+        major = <1>;
+        minor = <0>;
+        addr-mask-data =     <0x02430014 0x0001f000 0x0001f000>,
+			     <0x0243001C 0x0001f000 0x0001f000>,
+			     <0x0243003C 0x0001f000 0x0001f000>,
+			     <0x02430044 0x0001f000 0x0001f000>,
+			     <0x0243402C 0x0001f000 0x0001f000>,
+			     <0x02434034 0x0001f000 0x0001f000>,
+			     <0x02440054 0x0001f000 0x0001f000>,
+			     <0x0244005C 0x0001f000 0x0001f000>,
+			     <0x02440064 0x0001f000 0x0001f000>,
+			     <0x0244006C 0x0001f000 0x0001f000>,
+			     <0x02440074 0x0001f000 0x0001f000>,
+			     <0x0244007C 0x0001f000 0x0001f000>,
+			     <0x0C30201C 0x0001f000 0x0001f000>,
+			     <0x0C302024 0x0001f000 0x0001f000>,
+			     <0x0C302034 0x0001f000 0x0001f000>,
+			     <0x0C302044 0x0001f000 0x0001f000>,
+			     /* NV_THERM_FAN_TACH0 and NV_THERM_FAN_TACH1 */
+			     <0x02430050 0x00001000 0x00001000>,
+			     <0x02448000 0x00001000 0x00001000>;
+    };
+};
+

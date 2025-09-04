@@ -1,0 +1,9 @@
+/dts-v1/;
+
+
+/ {
+    uphy-lane {
+            lane-owner-map = <2 0 1>, /* 2-instance 0 lane 1-pcie owner x2 mode for GBE Uphy */
+                             <2 1 1>; /* 2-instance 1 lane 1-pcie owner x2 mode for GBE Uphy */
+    };
+};

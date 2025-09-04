@@ -1,0 +1,52 @@
+*****************************************************************************
+ * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+*****************************************************************************
+
+LIBV4L2_NVARGUS API is a V4L2 API interface written over Libargus Camera to support
+capture and record v4l2 camera application development.
+
+API_NOTE:
+    1. For V4L2 DMABUF Memory buffers, additional VIDIOC_QUERYBUF ioctl is also required
+       to have proper mapping between application allocated buffers to Libargus buffers.
+
+LIBV4L2_NVARGUS API includes:
+    1. Source files of the written V4L2 interface, where respective v4l2_ioctl calls
+       are mapped to LibArgus calls.
+    2. README
+
+Pre-requisites:
+    1. Install "jetson_multimedia_api" package from latest Jetpack release.
+    2. Install below packages:
+        $ sudo apt-get install autoconf automake libtool curl make g++ unzip \
+        pkg-config libx11-dev libgtk-3-dev libjpeg-dev libgstreamer1.0-dev
+
+Steps for copying sources on target:
+    1. Copy the tar file libv4l2_nvargus_src.tbz2 to the booted Jetson device.
+    2. Run the following command on the Jetson device to install sources:
+        $ sudo tar -xpf libv4l2_nvargus_src.tbz2 -C .
+
+Steps to build sources:
+    $ cd libv4l2_nvargus_src
+    $ make [-jN] # Optional flag -jN for parallel build where N is the job count
+    $ sudo make install
+    NOTE: above command will install libv4l2_nvargus.so at "/usr/lib/aarch64-linux-gnu/tegra/"
+    To install at different location run "$ sudo INSTALL_DIR=<your_path> make install"

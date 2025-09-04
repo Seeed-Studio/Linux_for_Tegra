@@ -1,0 +1,6 @@
+Updating prebuilts and/or headers 
+
+7d8cfb5596b00c49ca01c4d59ee74c8b88059909 - 19_argus_camera_sw_encode/Makefile
+0237b5299525c072e55e721dcedbfd3d06e182ca - 19_argus_camera_sw_encode/FFMPEG-LICENSE.md
+de91caa771262821be9e97cfe54154efd19b3741 - 19_argus_camera_sw_encode/argus_camera_sw_encode_main.cpp
+7b299759a546d9c7ed36d7ab0db92bcd15eb5892 - 19_argus_camera_sw_encode/argus_camera_sw_encode.h

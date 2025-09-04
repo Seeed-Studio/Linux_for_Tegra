@@ -1,0 +1,354 @@
+/*
+ * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
+
+NvGstPlayer Usage (command: ./nvgstplayer-1.0 --help)
+Gstreamer Version used (command: ./nvgstplayer-1.0 --version)
+=======
+=> PREREQUISITES:
+
+1. You must install GStreamer-1.0 on the target board using apt-get, as follows:
+
+   sudo apt-get install gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-plugins-bad gstreamer1.0-libav
+
+2. Execute the following commands on the target board's Ubuntu command line before starting the player:
+
+   export DISPLAY=:0
+   xinit &
+
+NvGstPlayer Usage
+-----------------------------------------------
+Run the nvgstplayer application with the following basic syntax:
+
+./nvgstaplayer-1.0 -i <uri>
+
+  nvgstplayer application support following options:
+
+  -u, --urifile                     Path of the file containing the URIs
+  -i, --uri                         input URI
+  -r, --gst_script                  Path of the file containing the Script to be used
+  --automotive                      Enter the AutoMotive Mode, to support GstMediaPlayer functionalities in NvGstPlayer
+  -e, --elemfile                    Element(s) (Properties) file
+  -x, --cxpr                        Command sequence expression
+  -n, --loop                        Number of times to play the media
+  -c, --audio-track                 If stream have multiple audio tracks, play stream with given track no
+  -v, --video-track                 If stream have multiple video tracks, play stream with given track no
+  -a, --start                       Start of the segment in media in seconds
+  -d, --duration                    Play duration of the segment in media in seconds
+  --no-sync                         Disable AV Sync
+  --disable-dpms                    Unconditionally Disable DPMS/ScreenBlanking during operation and re-enable upon exit
+  --stealth                         Operate in stealth mode, alive even when no media is playing
+  --bg                              Operate in background mode, keyboard input will be entirely ignored
+  --use-playbin                     Use Playbin
+  --no-audio                        Disable audio
+  --no-video                        Disable video
+  --disable-anative                 Disable native audio rendering
+  --disable-vnative                 Disable native video rendering
+  --use-buffering                   Use Buffering
+  -l, --low-percent                 Low threshold for buffering to start, in %
+  -j, --high-percent                High threshold for buffering to finish, in %
+  --loop-forever                    Play the URI(s) in loop forever
+  -t, --max-size-time               Max. amount of time in the queue (0=automatic)
+  -y, --max-size-bytes              Max. amount of bytes in the queue (0=automatic)
+  -b, --max-size-buffers            Max. amount of buffers in the queue (0=automatic)
+  --window-x                        X coordinate for player window (for non overlay rendering)
+  --window-y                        Y coordinate for player window (for non overlay rendering)
+  --window-width                    Window width (for non overlay rendering)
+  --window-height                   Window height (for non overlay rendering)
+  --disable-fullscreen              Play video in non fullscreen mode (for nvxvimagesink)
+  -h, --drop-threshold-pct          Permittable frames drop percentage, to be used with --stats (only for development purpose)
+  -k, --image-display-time          Image display time in seconds
+  --show-tags                       shows tags (metadata), if available
+  --smartdimmer                     Enable smart dimmer for power saving
+  --stats                           shows stream statistics, if enabled
+  --stats-file                      File to dump stream statistics, if enabled
+  --svd                             (=) chain for video decoding
+  --sad                             (=) chain for audio decoding
+  --svc                             (=) chain for video postprocessing
+  --sac                             (=) chain for audio postprocessing
+  --svs                             (=) chain for video rendering
+  --sas                             (=) chain for audio rendering
+  --shttp                           (=) chain for http source
+  --srtsp                           (=) chain for rtsp source
+  --sudp                            (=) chain for udp source
+  --sfsrc                           (=) chain for file source
+
+Runtime Commands:
+   q                                quit the application
+   h                                print help
+   Up Key, ]                        goto next track
+   c                                restart current track
+   Down Key, [                      goto previous track
+   spos                             query for position
+   sdur                             query for duration
+   s<val>                           seek to <val> position in seconds, eg "s5.120"
+   v<val>                           seek to <val> percent of the duration, eg "v54"
+   f<val>                           seek by <val> seconds, relative to current position eg "f23.901"
+   Left Key, <                      seek backwards by 10 seconds
+   Right Key, >                     seek forward by 10 seconds
+   p                                pause playback
+   r                                start/resume the playback
+   z                                stop the playback
+   i:<val>                          enter a single URI
+
+The nvgstplayer application supports local file playback, and playback from RTSP, HTTP and UDP streams.
+
+For example:
+
+./nvgstplayer-1.0 -i /home/test.mp4
+./nvgstplayer-1.0 -i file:///home/test.mp4
+./nvgstplayer-1.0 -i udp://192.168.2.5:123
+
+The nvgstplayer application operates in two modes, Playbin (--use-playbin) and Decodebin. Decodebin
+allows you to choose elements.
+Currently only Decodebin is operational.
+
+A subset of options is documented below. For a complete description of available options use the --help option.
+
+
+Audio/Video Decoder Chain (--sad/--svd)
+---------------------------------------
+Specify a desired decode chain for a particular URI using --sad or --svd, with the -i option or using a URI file with the -u option.
+
+For example:
+
+  --sad=”avdec_mp3”
+  --sad=”avdec_amrnb# variant=1 ! audioresample ! audioconvert”
+  --sad=”aacparse ! faad# min-latency=4000000”
+  --svd=”avdec_h264# prop=val# prop2=val2”
+
+Note the ‘#’  and  ‘!’  character after every token.
+
+
+Audio/Video PostProcess Chain (--sac/--svc)
+------------------------------------------
+Specify a desired postprocess chain for a particular URI using --sac or --svc, with the -i option or using a URI file with the -u option.
+
+For example:
+
+  --sac=”audioconvert ! audioresample”
+  --svc= “my_video_postprocess# prop1=val1 ! videoconvert ! videoscale”
+
+Note the ‘#’  and  ‘!’  character after every token. To include this in your pipeline
+use the -–disable-anative/--disable-vnative options, or, in a URI a file,
+native_video=0/native_audio=0.
+
+Audio/Video Render Chain (--sas/--svs)
+--------------------------------------
+Specify a desired render chain for a particular URI using --sas or --svs with the -i option or using a URI file with the -u option.
+
+For example:
+
+  --sas=”alsasink# device=hw:0,0”
+  --sas=”audioconvert ! alsasink”
+  --svs= “xvimagesink”
+  --svs = “videoconvert ! videoscale ! ximagesink# sync=0”
+
+Note the ‘#’  and  ‘!’  character after every token.
+
+
+Elements file (--elemfile/-e)
+-----------------------------
+Specfy with --elemfile (or -e) an input file containing the sources, decoders, parsers, postprocess, and sinks that you want to use.
+
+
+Decoders/Parsers Chain Format
+-----------------------------
+[capabilties]
+type=<val>, val = ‘sad’, ‘svd’
+pipe=<my_chain>
+
+
+Post Process/Render chain Format
+-------------------------------
+[type]
+pipe=<my_chain>
+
+For example:
+
+[video/x-h264]
+type=svd
+pipe=h264parse ! my_h264_dec# prop1=val1
+
+[svs]
+pipe=xvimagesink
+
+[sas]
+pipe=audioconvert ! osssink# device=/dev/dsp1# latency-time=20000#
+
+[video/mpeg, mpegversion=4]
+type=svd
+pipe= ffdec_mpeg4
+
+[audio/mpeg, mpegversion=1, layer=3]
+type=sad
+pipe= mp3parse ! mad
+
+[audio/mpeg, mpegversion=4]
+type=sad
+pipe=faad
+
+[svc]
+pipe= videoconvert# qos=0 ! videoscale
+
+
+Command Sequence Expression (--cxpr/-x)
+---------------------------------------
+Use the --cxpr (or -x) option (as a string) to provide a series of commands in an expression format.
+The following commands can be inserted in an expression:
+
+r<val>    play for <val> seconds until next command in the expression
+p<val>    pause for <val> seconds until next command in the expression
+z<val>    stop for <val> seconds until next command in the expression
+w<val>    do nothing for <val> seconds until next command in the expression
+s<val>    seek to absolute time <val> seconds
+v<val>    seek to absolute time <val> in % of duration
+f<val>    seek to relative time <val> seconds from current position
+>         seek forward by 10 seconds
+<         seek behind by 10 seconds
+]         goto next track
+[         goto previous track
+c         reset current track
+
+For example:
+
+r10.5,s80,w5,p7,r
+2{p10,r,w7,s90.55,w2,p,w10,r2} <will iterate the expression 2 times>
+2{r20,s10,w5,p10, 2{s10,w6,r9}, 3{r10, p20}}
+5{r8, p10, s90, w10}, 8{s10, w2, p20}
+
+Random cxpr:
+------------
+A random command sequence expression can be generated by giving cxpr as "*"
+
+For example:
+
+./nvgstplayer-1.0 -i <uri> --cxpr=*
+
+This will generate a random command sequence expression (up to 100 characters).
+
+
+URI File (--urifile/-u)
+-----------------------
+Use the --urifile (or -u) option to specify a list of URIs. The player plays all URIs listed in the file. Any options for the URI specified in the file take precedence over the same options set by application command line arguments for that particular URI.
+
+Format of the URI file and the options for the URI
+------------------------------------------------
+[uri1]
+option1=val1
+option2=val2
+.......
+........
+
+[uri2]
+option1=val1
+..........
+..........
+
+List of all possible options for URIs inside URI file
+-----------------------------------------------------
+cxpr=<val>                       command expression for the URI
+nop=<val>                        if  '1' , will disable the global cxpr (if given as command line arg)
+start=<val>                      start playback time in seconds/ or percentage of URI duration
+startper=<val>                   '1' indicating that the 'start' option will be % value
+duration=<val>                   desired playback time in seconds
+repeats=<val>                    playback iterations
+audio=<val>                      0/1 to disable/enable audio in the URI
+video=<val>                      0/1 to disable/enable video in the URI
+native_video=<val>               0/1 to disable/enable native video rendering
+native_audio=<val>               0/1 to disable/enable native audio rendering
+sync=<val>                       1/0 to enabling/disabling AV sync
+use-buffering=<val>              1/0 to enable/disable buffering
+low-percent=<val>                low threshold for buffering in %
+high-percent=<val>               high threshold for buffering in %
+max-size-bytes=<val>             max size of bytes in queue for buffering
+max-size-buffers=<val>           max size of buffers in queue for buffering
+max-size-time=<val>              max size time in queue  for buffering
+image-display-time=<val>         image display time in seconds (if URI is an image file)
+tags=<val>                       0/1 disable/enable tags print
+svd=<val>                        video decoding chain
+sad=<val>                        audio decoding chain
+svc=<val>                        video post-precessing chain
+sac=<val>                        audio post-precessing chain
+svs=<val>                        video rendering chain
+sas=<val>                        audio rendering chain
+shttp=<val>                      http source chain
+srtsp=<val>                      rtsp source chain
+sudp=<val>                       udp source chain
+sfsrc=<val>                      file source chain
+
+
+For example, use the following as a URI file with the syntax "./nvgstplayer-1.0 -u TestURIfile":
+
+TestURIfile
+
+[/home/user/test.avi]
+cxpr=2{p5, r, w10, s20.5, w6.6, p3, 2 {r, w10, p4}}
+start=10.45
+repeats=3
+audio=0
+native_video=0
+svd=my_h264dec
+svc=videoconvert ! my_pp# prop1=shuba# prop2=val2# ! videoscale
+
+[/home/user/test.mp3]
+sas=audioconvert ! alsasink
+
+[/home/user/test.mp4]
+nop=1
+video=0
+
+
+NOTES:
+
+1. Elements to use can be provided in several different ways:
+
+   a. Provided in an elements file.
+
+   b. Provided as command-line arguments applicable to all the streams in the URI file, with the –I option. Elements provided in this way override values (if present) inside an elements file.
+
+   c. Provided in a URI file, specific for each URI, if desired. Elements provided in this way override any elements provided at the command-line or in an elements file.
+
+2. For Laguna-ERSS on K3.10, no amixer settings are required to enable/disable internal speaker as internal speaker is not present on the board.
+
+   a. To enable audio through Headphones, use:
+
+      amixer cset name="Int Spk Switch" 0
+      amixer cset name='Headphone Jack Switch' 1
+
+   b. To disable audio through Headphones, use:
+
+      amixer cset name='Headphone Jack Switch' 0
+
+   By default, audio is enabled through Headphones.
+
+3. The URI list can be looped forever by providing --loop-forever option:
+
+   ./nvgstplayer-1.0 -u <uri_file> --loop-forever
+
+4. To enable hw accelerated jpeg decoding use following command:
+
+   ./nvgstplayer-1.0 -i <filename.jpg> --svd=nvjpegdec --svs=nvoverlaysink
+
+5. nvhdmioverlaysink has been deprecated. Use nvoverlaysink with display-id property instead.
+
+   ./nvgstplayer-1.0 -i <filename> --svs="nvoverlaysink # display-id=<value>"

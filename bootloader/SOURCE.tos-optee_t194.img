@@ -1,0 +1,4 @@
+atf_src.tbz2
+nvidia-jetson-optee-source.tbz2
+nv-tegra.nvidia.com/tegra/optee-src/atf.git
+nv-tegra.nvidia.com/tegra/optee-src/nv-optee.git

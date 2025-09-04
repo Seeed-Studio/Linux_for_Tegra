@@ -1,0 +1,65 @@
+**********************************************************************
+                           Linux for Tegra
+                     OP-TEE luks-srv sample app
+                                README
+**********************************************************************
+This README provides an overview of the luks-srv sample TA/CA and how
+to compile and use it.
+
+----------------------------------------------------------------------
+luks-srv-app CA Overview
+----------------------------------------------------------------------
+
+The luks-srv-app is a sample CA program that can be used to query the
+hardware-based passphrase from the TA. Then the third party OSS LUKS
+utility e.g. "cryptsetup" can use the passphrase to unlock the
+encrypted disks during the boot process. Once the boot process is done
+, the CA can send LUKS_SRV_TA_CMD_SRV_DOWN command to TA. This command
+tells the luks-srv TA not to respond to any LUKS_GET passphrase command
+again until reboot. This allows the passphrase to be extracted during
+boot (e.g. in initrd) but then prevents any form of later
+attack/malicious-code that attempts to obtain the passphrase again.
+
+----------------------------------------------------------------------
+How to compile
+----------------------------------------------------------------------
+The build depends on the build result of optee_os and optee_client.
+
+* Cross compiling on host machine
+The input variables of the Makefile:
+CROSS_COMPILE: The cross compiler.
+TA_DEV_KIT_DIR: The base directory of the TA-devkit.
+OPTEE_CLIENT_EXPORT: The base directory points to optee client's
+                     header files and libraries
+O: The base directory for build objects filetree.
+
+
+An example of cross compiling on host machine.
+$ make CROSS_COMPILE=$(CROSS_COMPILE) \
+       TA_DEV_KIT_DIR=$(TA_DEV_KIT_DIR) \
+       OPTEE_CLIENT_EXPORT=$(OPTEE_CLIENT_EXPORT) \
+       O=$(O)
+
+----------------------------------------------------------------------
+How to use luks-srv-app
+----------------------------------------------------------------------
+Check the command usage with "--help" parameter.
+$ nvluks-srv-app --help
+Usage: nvluks-srv-app [OPTION...] -c <context string> -u | -n
+
+  -c, --context-string=CONTEXT STRING
+                             The context string for passphrase
+                             generation (Max length: 40).
+  -n, --no-pass-response     No passphrase response after this command.
+  -u, --get-unique-pass      Get unique passphrase.
+  -?, --help                 Give this help list.
+      --usage                Give a short usage message.
+
+----------------------------------------------------------------------
+Example
+----------------------------------------------------------------------
+An example of querying a unique per-device passphrase.
+$ luks-srv-app -u -c "${DISK_UUID}"
+
+An example of sending NO_PASS_RESPONSE command
+$ luks-srv-app -n

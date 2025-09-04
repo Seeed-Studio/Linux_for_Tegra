@@ -1,0 +1,23 @@
+# Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+v4lconvert_get_default_dev_ops
+v4lconvert_create
+v4lconvert_create_with_dev_ops
+v4lconvert_destroy
+v4lconvert_supported_dst_fmt_only
+v4lconvert_try_format
+v4lconvert_enum_fmt
+v4lconvert_needs_conversion
+v4lconvert_convert
+v4lconvert_get_error_message
+v4lconvert_enum_framesizes
+v4lconvert_enum_frameintervals
+v4lconvert_vidioc_queryctrl
+v4lconvert_vidioc_g_ctrl
+v4lconvert_vidioc_s_ctrl
+v4lconvert_vidioc_g_ext_ctrls
+v4lconvert_vidioc_try_ext_ctrls
+v4lconvert_vidioc_s_ext_ctrls
+v4lconvert_supported_dst_format
+v4lconvert_get_fps
+v4lconvert_set_fps
+v4lconvert_fixup_fmt

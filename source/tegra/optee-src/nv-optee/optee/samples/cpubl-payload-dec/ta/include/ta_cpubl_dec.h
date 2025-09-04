@@ -1,0 +1,16 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
+/* Copyright (c) 2018, Linaro Limited
+ * Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.
+ * */
+
+#ifndef __TA_CPUBL_PAYLOAD_DECRYPTION_H
+#define __TA_CPUBL_PAYLOAD_DECRYPTION_H
+
+#define TA_CPUBL_PAYLOAD_DECRYPTION_UUID { 0x0e35e2c9, 0xb329, 0x4ad9, \
+		      { 0xa2, 0xf5, 0x8c, 0xa9, 0xbb, 0xbd, 0x77, 0x13 } }
+
+#define CPUBL_PAYLOAD_DECRYPTION_CMD_IS_USER_KEY_EXISTS		0
+
+#define CPUBL_PAYLOAD_DECRYPTION_CMD_DECRYPT_IMAGE		1
+
+#endif /* __TA_CPUBL_PAYLOAD_DECRYPTION_H */

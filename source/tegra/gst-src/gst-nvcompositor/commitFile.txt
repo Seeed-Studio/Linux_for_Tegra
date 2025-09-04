@@ -1,0 +1,7 @@
+Updating prebuilts and/or headers 
+
+64a687b23361046fec268bde45a41e2fcce12823 - gst-nvcompositor/Makefile
+1b3eb34d54720b0ec6252b60dfa6651f7ab7e755 - gst-nvcompositor/gstnvcompositor.c
+bbf1372c3dcafed0074ce94daa3e4d92584f9ca9 - gst-nvcompositor/3rdpartyheaders.tbz2
+6b201b4017e6c36aaf4b06f0359e68918a99cb83 - gst-nvcompositor/gstnvcompositor.h
+a86cdef2fe7c358debaeb17cf3ac6bca48083915 - gst-nvcompositor/gstnvcompositorpad.h

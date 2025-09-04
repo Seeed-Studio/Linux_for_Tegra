@@ -1,0 +1,29 @@
+=======================================================================
+                    README-tegra-secure-storage
+                          Linux for Tegra
+=======================================================================
+
+Tegra Secure Storage is based on RPMB Secure Storage[1] of OP-TEE. It
+adds few customizations to be compatible with Tegra product design.
+
+-----------------------------------------------------------------------
+Enable Tegra Secure Storage
+-----------------------------------------------------------------------
+On Tegra we assume the RPMB key has been provisioned during
+manufacturing. To enable Tegra Secure Storage you need to make sure the
+configurations in optee_os below are set:
+* CFG_RPMB_FS
+* CFG_RPMB_KEY_HAS_PROVISIONED
+And make the configurations in optee_os below are un-set:
+* CFG_RPMB_WRITE_KEY
+* CFG_RPMB_TESTKEY
+
+Reach your Nvidia contact for how to provision RPMB key with Nvidia
+utility.
+
+You also need to set RPMB_EMU as 0 in optee_client/tee-supplicant/Makefile
+to disable RPMB ioctl emulation, so that all the RPMB operations can
+really reach the hardware.
+
+
+[1] https://optee.readthedocs.io/en/latest/architecture/secure_storage.html

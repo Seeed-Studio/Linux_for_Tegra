@@ -1,0 +1,65 @@
+################################### tell Emacs this is a -*- makefile-gmake -*-
+#
+# Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+#
+# tmake for SW Mobile component makefile
+#
+# adaptor makefile for libgstnvjpeg.so build system
+#
+###############################################################################
+
+ifdef NV_COMPONENT_FLAG_SHARED_LIBRARY_SECTION
+include $(NV_BUILD_START_COMPONENT)
+
+_source_dir                          := $(NV_SOURCE)/3rdparty/gst/gst-jpeg
+include $(NV_SOURCE)/3rdparty/gst/gst-v4l2/Makefile.gstreamer-1.0_common.tmk
+
+ifeq ($(NV_TARGET_ARCH),l4t_64)
+	_private_source_dir                  := $(_source_dir)/gst-jpeg-1.0/.nvtegra/pre-gen-source_64
+else
+	_private_source_dir                  := $(_source_dir)/gst-jpeg-1.0/.nvtegra/pre-gen-source
+endif
+
+NV_COMPONENT_NAME                    := gstnvjpeg
+
+NV_COMPONENT_SOURCES                 := \
+	$(_source_dir)/gst-jpeg-1.0/ext/jpeg/gstjpeg.c \
+	$(_source_dir)/gst-jpeg-1.0/ext/jpeg/gstjpegdec.c \
+	$(_source_dir)/gst-jpeg-1.0/ext/jpeg/gstjpegenc.c
+
+NV_COMPONENT_OWN_INTERFACE_DIR       := .
+
+NV_COMPONENT_INCLUDES                += \
+	$(_private_source_dir) \
+	$(_source_dir)/gst-jpeg-1.0/gst-libs \
+	$(NV_SOURCE)/external/jpeg/libjpeg-8b \
+	$(NV_SOURCE)/multimedia/nvgstreamer/gst-nvexifmeta
+
+NV_COMPONENT_NEEDED_INTERFACE_DIRS   += \
+	$(NV_SOURCE)/external/jpeg/libjpeg-8b \
+	$(NV_SOURCE)/l4t/3rdpartystub/glib-2.0 \
+	$(NV_SOURCE)/l4t/3rdpartystub/gobject-2.0 \
+	$(NV_SOURCE)/l4t/3rdpartystub/gstbase-1.0 \
+	$(NV_SOURCE)/l4t/3rdpartystub/gstreamer-1.0 \
+	$(NV_SOURCE)/l4t/3rdpartystub/gstvideo-1.0 \
+	$(NV_SOURCE)/multimedia/nvgstreamer/gst-nvexifmeta
+
+NV_COMPONENT_CFLAGS                  += \
+	-DHAVE_CONFIG_H -DG_THREADS_MANDATORY -DG_DISABLE_DEPRECATED -DUSE_TARGET_TEGRA -DHAVE_EXIFMETA -DTEGRA_ACCELERATE -g -ggdb -O0
+
+NV_COMPONENT_SYSTEMIMAGE_DIR         := $(NV_SYSTEMIMAGE_GSTREAMER_DIR)/gstreamer-1.0
+
+include $(NV_BUILD_SHARED_LIBRARY)
+endif
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 8
+# End:
+# vi: set tabstop=8 noexpandtab:
