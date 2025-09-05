@@ -3196,6 +3196,15 @@ static void arm_smmu_setup_msis(struct arm_smmu_device *smmu)
 	int ret, nvec = ARM_SMMU_MAX_MSIS;
 	struct device *dev = smmu->dev;
 
+	/* Clear the MSI address regs */
+	writeq_relaxed(0, smmu->base + ARM_SMMU_GERROR_IRQ_CFG0);
+	writeq_relaxed(0, smmu->base + ARM_SMMU_EVTQ_IRQ_CFG0);
+
+	if (smmu->features & ARM_SMMU_FEAT_PRI)
+		writeq_relaxed(0, smmu->base + ARM_SMMU_PRIQ_IRQ_CFG0);
+	else
+		nvec--;
+
 	if (!(smmu->features & ARM_SMMU_FEAT_MSI))
 		return;
 
@@ -3203,9 +3212,6 @@ static void arm_smmu_setup_msis(struct arm_smmu_device *smmu)
 		dev_info(smmu->dev, "msi_domain absent - falling back to wired irqs\n");
 		return;
 	}
-
-	if (!(smmu->features & ARM_SMMU_FEAT_PRI))
-		nvec--;
 
 	/* Allocate MSIs for evtq, gerror and priq. Ignore cmdq */
 	ret = platform_msi_domain_alloc_irqs(dev, nvec, arm_smmu_write_msi_msg);
@@ -3268,9 +3274,9 @@ static void arm_smmu_setup_unique_irqs(struct arm_smmu_device *smmu)
 	}
 }
 
-static int arm_smmu_reset_irqs(struct arm_smmu_device *smmu)
+static int arm_smmu_setup_irqs(struct arm_smmu_device *smmu)
 {
-	int ret;
+	int ret, irq;
 	u32 irqen_flags = IRQ_CTRL_EVTQ_IRQEN | IRQ_CTRL_GERROR_IRQEN;
 
 	/* Disable IRQs first */
@@ -3281,35 +3287,7 @@ static int arm_smmu_reset_irqs(struct arm_smmu_device *smmu)
 		return ret;
 	}
 
-	if (!smmu->combined_irq) {
-		/*
-		 * Clear the MSI address regs. These registers will be reset
-		 * in arm_smmu_write_msi_msg callback function by irq_domain
-		 * upon a new MSI message.
-		 */
-		writeq_relaxed(0, smmu->base + ARM_SMMU_GERROR_IRQ_CFG0);
-		writeq_relaxed(0, smmu->base + ARM_SMMU_EVTQ_IRQ_CFG0);
-
-		if (smmu->features & ARM_SMMU_FEAT_PRI)
-			writeq_relaxed(0, smmu->base + ARM_SMMU_PRIQ_IRQ_CFG0);
-	}
-
-	if (smmu->features & ARM_SMMU_FEAT_PRI)
-		irqen_flags |= IRQ_CTRL_PRIQ_IRQEN;
-
-	/* Enable interrupt generation on the SMMU */
-	ret = arm_smmu_write_reg_sync(smmu, irqen_flags,
-				      ARM_SMMU_IRQ_CTRL, ARM_SMMU_IRQ_CTRLACK);
-	if (ret)
-		dev_warn(smmu->dev, "failed to enable irqs\n");
-
-	return ret;
-}
-
-static int arm_smmu_setup_irqs(struct arm_smmu_device *smmu)
-{
-	int ret = 0, irq = smmu->combined_irq;
-
+	irq = smmu->combined_irq;
 	if (irq) {
 		/*
 		 * Cavium ThunderX2 implementation doesn't support unique irq
@@ -3325,7 +3303,16 @@ static int arm_smmu_setup_irqs(struct arm_smmu_device *smmu)
 	} else
 		arm_smmu_setup_unique_irqs(smmu);
 
-	return ret;
+	if (smmu->features & ARM_SMMU_FEAT_PRI)
+		irqen_flags |= IRQ_CTRL_PRIQ_IRQEN;
+
+	/* Enable interrupt generation on the SMMU */
+	ret = arm_smmu_write_reg_sync(smmu, irqen_flags,
+				      ARM_SMMU_IRQ_CTRL, ARM_SMMU_IRQ_CTRLACK);
+	if (ret)
+		dev_warn(smmu->dev, "failed to enable irqs\n");
+
+	return 0;
 }
 
 static int arm_smmu_device_disable(struct arm_smmu_device *smmu)
@@ -3339,7 +3326,7 @@ static int arm_smmu_device_disable(struct arm_smmu_device *smmu)
 	return ret;
 }
 
-static int arm_smmu_device_reset(struct arm_smmu_device *smmu)
+static int arm_smmu_device_reset(struct arm_smmu_device *smmu, bool bypass)
 {
 	int ret;
 	u32 reg, enables;
@@ -3447,9 +3434,9 @@ static int arm_smmu_device_reset(struct arm_smmu_device *smmu)
 		}
 	}
 
-	ret = arm_smmu_reset_irqs(smmu);
+	ret = arm_smmu_setup_irqs(smmu);
 	if (ret) {
-		dev_err(smmu->dev, "failed to reset irqs\n");
+		dev_err(smmu->dev, "failed to setup irqs\n");
 		return ret;
 	}
 
@@ -3457,7 +3444,7 @@ static int arm_smmu_device_reset(struct arm_smmu_device *smmu)
 		enables &= ~(CR0_EVTQEN | CR0_PRIQEN);
 
 	/* Enable the SMMU interface, or ensure bypass */
-	if (!smmu->bypass || disable_bypass) {
+	if (!bypass || disable_bypass) {
 		enables |= CR0_SMMUEN;
 	} else {
 		ret = arm_smmu_update_gbpa(smmu, 0, GBPA_ABORT);
@@ -3920,6 +3907,7 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	resource_size_t ioaddr;
 	struct arm_smmu_device *smmu;
 	struct device *dev = &pdev->dev;
+	bool bypass;
 
 	smmu = devm_kzalloc(dev, sizeof(*smmu), GFP_KERNEL);
 	if (!smmu)
@@ -3934,7 +3922,7 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 			return ret;
 	}
 	/* Set bypass mode according to firmware probing result */
-	smmu->bypass = !!ret;
+	bypass = !!ret;
 
 	smmu = arm_smmu_impl_probe(smmu);
 	if (IS_ERR(smmu))
@@ -4001,12 +3989,8 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	/* Check for RMRs and install bypass STEs if any */
 	arm_smmu_rmr_install_bypass_ste(smmu);
 
-	ret = arm_smmu_setup_irqs(smmu);
-	if (ret)
-		return ret;
-
 	/* Reset the device */
-	ret = arm_smmu_device_reset(smmu);
+	ret = arm_smmu_device_reset(smmu, bypass);
 	if (ret)
 		goto err_disable;
 
@@ -4071,22 +4055,10 @@ static void arm_smmu_driver_unregister(struct platform_driver *drv)
 	platform_driver_unregister(drv);
 }
 
-static int __maybe_unused arm_smmu_runtime_resume(struct device *dev)
-{
-	struct arm_smmu_device *smmu = dev_get_drvdata(dev);
-
-	return arm_smmu_device_reset(smmu);
-}
-
-static const struct dev_pm_ops arm_smmu_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(NULL, arm_smmu_runtime_resume)
-};
-
 static struct platform_driver arm_smmu_driver = {
 	.driver	= {
 		.name			= "arm-smmu-v3",
 		.of_match_table		= arm_smmu_of_match,
-		.pm			= &arm_smmu_pm_ops,
 		.suppress_bind_attrs	= true,
 	},
 	.probe	= arm_smmu_device_probe,
