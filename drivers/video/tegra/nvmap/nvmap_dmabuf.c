@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2012-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2012-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * dma_buf exporter for nvmap
  */
@@ -410,6 +410,7 @@ static int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 		nvmap_handle_put(h);
 		return -ENOMEM;
 	}
+	mutex_init(&priv->vma_lock);
 	priv->handle = h;
 
 #if defined(NV_VM_AREA_STRUCT_HAS_CONST_VM_FLAGS) /* Linux v6.3 */

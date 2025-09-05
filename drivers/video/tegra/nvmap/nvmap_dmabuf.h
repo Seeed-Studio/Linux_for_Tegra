@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+/* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 #ifndef __NVMAP_DMABUF_H
 #define __NVMAP_DMABUF_H
 
@@ -54,6 +54,9 @@ struct nvmap_vma_priv {
 	struct nvmap_handle *handle;
 	size_t		offs;
 	atomic_t	count;	/* number of processes cloning the VMA */
+	u64 map_rss_count;
+	struct mm_struct *mm;
+	struct mutex vma_lock;
 };
 
 int is_nvmap_vma(struct vm_area_struct *vma);
