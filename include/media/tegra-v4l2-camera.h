@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
+/* SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * TEGRA_V4L2_CAMERA.h - utilities for tegra camera driver
@@ -110,7 +110,9 @@ struct sensor_signal_properties {
 	__u32 mclk_freq;
 	union __u64val pixel_clock;
 	__u32 cil_settletime;
+	__u32 cil_clksettletime;
 	__u32 lane_polarity;
+	__u32 lane_polarities[4];
 	__u32 discontinuous_clk;
 	__u32 dpcm_enable;
 	__u32 tegra_sinterface;
@@ -119,6 +121,12 @@ struct sensor_signal_properties {
 	__u32 deskew_periodic_enable;
 	union __u64val serdes_pixel_clock;
 	union __u64val mipi_clock;
+
+	__u32 shmoo_enable;
+	/** @a afe_hf_gain [0,16] */
+	__u32 afe_hf_gain;
+	/** @a edge_delay [-10,9] */
+	__s32 edge_delay;
 };
 
 struct sensor_image_properties {

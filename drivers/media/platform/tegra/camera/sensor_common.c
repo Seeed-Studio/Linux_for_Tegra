@@ -67,6 +67,7 @@ static int sensor_common_parse_signal_props(
 	int depth;
 	u64 lane_rate;
 	u64 symbol_rate;
+	int len = 0;
 
 	err = of_property_read_string(node, "phy_mode", &temp_str);
 	if (err) {
@@ -84,6 +85,9 @@ static int sensor_common_parse_signal_props(
 			return -EINVAL;
 		}
 	}
+
+	dev_dbg(dev, "%s: signal->phy_mode = %d(0: DPHY, 1: CPHY, 2: SLVS)\n",
+						__func__, signal->phy_mode);
 
 	/* Do not report error for these properties yet */
 	err = read_property_u32(node, "readout_orientation", &value);
@@ -176,6 +180,20 @@ static int sensor_common_parse_signal_props(
 	else
 		signal->lane_polarity = value;
 
+	len = of_property_count_u32_elems(node, "lane_polarities");
+	if (len > 0 && len <= 4) {
+		unsigned int lane_polarity_cphy[4] = {0};
+		int err = of_property_read_u32_array(node, "lane_polarities",
+							lane_polarity_cphy, len);
+		if (!err) {
+			for (int i = 0; i < len; i++) {
+				signal->lane_polarities[i] = lane_polarity_cphy[i] & 0x7;
+				dev_dbg(dev, "lane_polarities: lane_polarity[%d] = %d\n",
+						i, signal->lane_polarities[i]);
+			}
+		}
+	}
+
 	/* initialize default if this prop not available */
 	err = of_property_read_string(node, "discontinuous_clk", &temp_str);
 	if (!err)
@@ -191,6 +209,35 @@ static int sensor_common_parse_signal_props(
 			!strncmp(temp_str, "true", sizeof("true"));
 	else
 		signal->dpcm_enable = 0;
+
+	/* initialize default if this prop not available */
+	err = of_property_read_string(node, "shmoo_enable", &temp_str);
+	if (!err)
+		signal->shmoo_enable =
+			!strncmp(temp_str, "true", sizeof("true"));
+	else
+		signal->shmoo_enable = 0;
+
+	if (signal->shmoo_enable) {
+		err = read_property_u32(node, "afe_hf_gain", &value);
+		if (err)
+			signal->afe_hf_gain = 0;
+		else
+			signal->afe_hf_gain = value;
+
+		err = read_property_u32(node, "edge_delay", &value);
+		if (err)
+			signal->edge_delay = 0;
+		else
+			signal->edge_delay = value;
+	}
+
+	err = read_property_u32(node, "cil_clksettletime", &value);
+	if (err)
+		signal->cil_clksettletime = 0;
+	else
+		signal->cil_clksettletime = value;
+
 
 	/* initialize default if this prop not available */
 	err = of_property_read_string(node,
