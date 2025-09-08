@@ -47,6 +47,7 @@ cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl1x4-3g-ove
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl2x1x4-3g-overlay.dtbo ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl2x1x4-6g-overlay.dtbo ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-orbbec-335lg-overlay.dtbo ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl2x4-orbbec-335lg-overlay.dtbo ../kernel/dtb/
 
 
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0000-recomputer-robo-gmsl.dtb ../kernel/dtb/
