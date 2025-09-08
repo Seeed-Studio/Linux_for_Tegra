@@ -292,6 +292,11 @@ static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 	struct tegra_channel *chan =
 		container_of(notifier, struct tegra_channel, notifier);
 	struct tegra_vi_graph_entity *entity;
+	struct camera_common_data *s_data;
+	struct device_node *node;
+	struct sensor_mode_properties *sensor_mode = NULL;
+	int idx;
+
 	int ret;
 
 	dev_dbg(chan->vi->dev, "notify complete, all subdevs registered\n");
@@ -325,16 +330,46 @@ static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 	if (ret < 0)
 		goto graph_error;
 
+	/* Init embedded channel only if embedded is set in DT*/
+	s_data = to_camera_common_data(chan->subdev_on_csi->dev);
+	node = chan->subdev_on_csi->dev->of_node;
+	if (s_data && node) {
+		idx = s_data->mode_prop_idx;
+		if (idx < s_data->sensor_props.num_modes)
+			sensor_mode = &s_data->sensor_props.sensor_modes[idx];
+	}
+
+	if (sensor_mode &&
+		sensor_mode->image_properties.embedded_metadata_height > 0) {
+		ret = tegra_channel_init_video_embedded(chan);
+		if (ret < 0) {
+			dev_err(chan->vi->dev,
+					"failed to initialize embedded channel\n");
+			goto register_embedded_device_error;
+		}
+		ret = video_register_device(chan->embedded.video, VFL_TYPE_VIDEO, -1);
+		if (ret < 0) {
+			dev_err(&chan->video->dev, "failed to register embedded %s: %d\n",
+					chan->embedded.video->name, ret);
+			goto register_embedded_device_error;
+		}
+	}
+
+
 	ret = v4l2_device_register_subdev_nodes(&chan->vi->v4l2_dev);
 	if (ret < 0) {
 		dev_err(chan->vi->dev, "failed to register subdev nodes\n");
-		goto graph_error;
+		goto register_nodes_error;
 	}
 
 	chan->link_status++;
 
 	return 0;
 
+register_nodes_error:
+	video_unregister_device(chan->embedded.video);
+register_embedded_device_error:
+	tegra_vi_graph_remove_links(chan);
 graph_error:
 	video_unregister_device(chan->video);
 register_device_error:
@@ -398,6 +433,7 @@ static void tegra_vi_graph_notify_unbind(struct v4l2_async_notifier *notifier,
 
 	/* cleanup for complete */
 	if (chan->link_status) {
+		tegra_channel_cleanup_video_embedded(chan);
 		tegra_vi_graph_remove_links(chan);
 		tegra_channel_cleanup_video(chan);
 		chan->link_status--;

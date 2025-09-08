@@ -35,11 +35,18 @@
 
 #define GMSL_SERDES_CSI_LINK_A 0x1
 #define GMSL_SERDES_CSI_LINK_B 0x2
+#define GMSL_SERDES_CSI_LINK_AUTO 0x3
 
 /* Didn't find kernel defintions, for now adding here */
 #define GMSL_CSI_DT_RAW_12 0x2C
 #define GMSL_CSI_DT_UED_U1 0x30
 #define GMSL_CSI_DT_EMBED 0x12
+#define GMSL_CSI_DT_YUV422_8 0x1E
+#define GMSL_CSI_DT_RGB_888 0x24
+#define GMSL_CSI_DT_RAW_8 0x2A
+/* orbbec add */
+#define GMSL_CSI_DT_RAW_10 0x2B
+#define GMSL_CSI_DT_RAW_14 0x2D
 
 #define GMSL_ST_ID_UNUSED 0xFF
 

@@ -17,3 +17,5 @@ endif
 obj-m += bluedroid_pm.o
 obj-m += nvscic2c-pcie/
 obj-m += ioctl_example.o
+
+obj-m += obc_cam_sync.o
