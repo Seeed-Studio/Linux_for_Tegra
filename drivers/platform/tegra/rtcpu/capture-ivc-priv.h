@@ -26,7 +26,6 @@ struct tegra_capture_ivc_cb_ctx {
 	tegra_capture_ivc_cb_func cb_func;
 	/** Private context of a VI/ISP capture context */
 	const void *priv_context;
-	struct semaphore sem_ch;
 };
 
 /**
