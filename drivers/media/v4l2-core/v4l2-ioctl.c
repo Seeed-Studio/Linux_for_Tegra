@@ -1258,7 +1258,6 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
 	case V4L2_PIX_FMT_GREY:		descr = "8-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y4:		descr = "4-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y6:		descr = "6-bit Greyscale"; break;
-	case V4L2_PIX_FMT_Y8:       descr = "Y8-bit Greyscale"; break; //orbbec add
 	case V4L2_PIX_FMT_Y10:		descr = "10-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y12:		descr = "12-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y14:		descr = "14-bit Greyscale"; break;
@@ -1268,7 +1267,6 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
 	case V4L2_PIX_FMT_Y10P:		descr = "10-bit Greyscale (MIPI Packed)"; break;
 	case V4L2_PIX_FMT_Y8I:		descr = "Interleaved 8-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y12I:		descr = "Interleaved 12-bit Greyscale"; break;
-	case V4L2_PIX_FMT_Y16I:		descr = "Interleaved 16-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Z16:		descr = "16-bit Depth"; break;
 	case V4L2_PIX_FMT_INZI:		descr = "Planar 10:16 Greyscale Depth"; break;
 	case V4L2_PIX_FMT_CNF4:		descr = "4-bit Depth Confidence (Packed)"; break;
@@ -1398,18 +1396,9 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
 	case V4L2_META_FMT_VSP1_HGT:	descr = "R-Car VSP1 2-D Histogram"; break;
 	case V4L2_META_FMT_UVC:		descr = "UVC Payload Header Metadata"; break;
 	case V4L2_META_FMT_D4XX:	descr = "Intel D4xx UVC Metadata"; break;
-	case V4L2_META_FMT_G300:	descr = "Orbbec G2xx UVC Metadata"; break; //orbbec modify
 	case V4L2_META_FMT_VIVID:       descr = "Vivid Metadata"; break;
 	case V4L2_META_FMT_RK_ISP1_PARAMS:	descr = "Rockchip ISP1 3A Parameters"; break;
 	case V4L2_META_FMT_RK_ISP1_STAT_3A:	descr = "Rockchip ISP1 3A Statistics"; break;
-	/* Librealsense formats*/
-	case V4L2_PIX_FMT_RW16:		descr = "16-bit Raw data"; break;
-	case V4L2_PIX_FMT_W10:		descr = "10-bit packed 8888[2222]"; break;
-	case V4L2_PIX_FMT_CONFIDENCE_MAP:	descr = "Packed [44] confidence data"; break;
-	case V4L2_PIX_FMT_FG:		descr = "Frame Grabber (FG  )"; break;
-	case V4L2_PIX_FMT_INZC:		descr = "Planar Depth/Confidence (INZC)"; break;
-	case V4L2_PIX_FMT_PAIR:		descr = "Relative IR (PAIR)"; break;
-	case V4L2_PIX_FMT_Z16H:		descr = "Z16 Huffman Compression"; break;
 
 	default:
 		/* Compressed formats */
