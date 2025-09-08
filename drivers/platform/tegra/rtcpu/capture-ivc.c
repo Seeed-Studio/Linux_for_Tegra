@@ -25,10 +25,6 @@
 #include <trace/events/tegra_capture.h>
 
 #include "capture-ivc-priv.h"
-#include <linux/semaphore.h>
-
-/* Timeout for acquiring channel-id */
-#define TIMEOUT_ACQUIRE_CHANNEL_ID 120
 
 /* Timeout for acquiring channel-id */
 #define TIMEOUT_ACQUIRE_CHANNEL_ID 120
@@ -293,8 +289,6 @@ int tegra_capture_ivc_unregister_control_cb(uint32_t id)
 	civc = __scivc_control;
 
 	mutex_lock(&civc->cb_ctx_lock);
-
-	up(&civc->cb_ctx[id].sem_ch);
 
 	if (WARN(civc->cb_ctx[id].cb_func == NULL,
 			"control channel %u is idle", id)) {
