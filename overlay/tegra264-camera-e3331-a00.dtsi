@@ -160,12 +160,12 @@
 									tegra_sinterface = "serial_a";
 									discontinuous_clk = "no";
 									dpcm_enable = "false";
-									cil_settletime = "30";
+									cil_settletime = "0";
 
 									active_w = "5488";
 									active_h = "4112";
 									mode_type = "bayer";
-									pixel_phase = "bggr";
+									pixel_phase = "rggb";
 									csi_pixel_bit_depth = "10";
 									readout_orientation = "0";
 									line_length = "5488";

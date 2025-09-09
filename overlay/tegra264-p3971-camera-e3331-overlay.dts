@@ -35,6 +35,8 @@
 						status = "okay";
 						endpoint {
 							status = "okay";
+							port-index = <0>;
+							bus-width = <3>;
 							remote-endpoint = <&e3331_csi_out0>;
 						};
 					};
@@ -78,6 +80,8 @@
 									status = "okay";
 									endpoint@0 {
 										status = "okay";
+										port-index = <0>;
+										bus-width = <3>;
 										remote-endpoint = <&e3331_imx318_out0>;
 									};
 								};
@@ -123,6 +127,8 @@
 										reg = <0>;
 										endpoint {
 											status = "okay";
+											port-index = <0>;
+											bus-width = <3>;
 											remote-endpoint = <&e3331_csi_in0>;
 										};
 									};
