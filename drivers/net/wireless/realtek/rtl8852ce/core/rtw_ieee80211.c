@@ -502,7 +502,7 @@ u8 rtw_ies_update_ie(u8 *ies, uint *ies_len, uint ies_offset, u8 eid, const u8 *
 	search_len = *ies_len - ies_offset;
 
 	target_ie = rtw_get_ie(start, eid, &target_ielen, search_len);
-	if (target_ie && target_ielen) {
+	if (target_ie) {
 		if (target_ielen != content_len) {
 			remain_ies = target_ie + 2 + target_ielen;
 			remain_len = search_len - (remain_ies - start);

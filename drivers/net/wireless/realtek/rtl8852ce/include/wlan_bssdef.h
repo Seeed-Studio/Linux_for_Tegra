@@ -16,7 +16,7 @@
 #define __WLAN_BSSDEF_H__
 
 
-#define MAX_IE_SZ	768
+#define MAX_IE_SZ	1840 /* mbssid in beacon defined in WIFI Alliance */
 
 
 #ifdef PLATFORM_LINUX

@@ -1146,6 +1146,12 @@ struct rf_ctl_t {
 #define RFCTL_REG_EN_11BE(rfctl) false
 #endif
 
+#ifdef CONFIG_80211D
+#define RFCTL_GET_CIS_MAJORITY(rfctl) (((rfctl)->cis_flags & CISF_ENV_BSS_MAJ) ? CIS_SCAN_STAT_GET_MAJORITY(&(rfctl)->cis_scan_stat) : NULL)
+#else
+#define RFCTL_GET_CIS_MAJORITY(rfctl) NULL
+#endif
+
 #if defined(CONFIG_80211D) && CONFIG_IEEE80211_BAND_6GHZ
 #define RFCTL_RECV_6G_REG_INFO(rfctl, iface_id, alink_id) ((rfctl)->recv_6g_reg_info[iface_id][alink_id])
 #else

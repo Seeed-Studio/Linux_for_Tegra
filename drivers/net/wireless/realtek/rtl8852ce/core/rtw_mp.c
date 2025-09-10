@@ -559,7 +559,7 @@ static void init_mp_data(_adapter *padapter)
 
 u32 mp_join(_adapter *padapter, u8 mode)
 {
-	WLAN_BSSID_EX bssid;
+	WLAN_BSSID_EX *bssid;
 	struct sta_info *psta;
 	u32 length;
 	s32 res = _SUCCESS;
@@ -577,31 +577,37 @@ u32 mp_join(_adapter *padapter, u8 mode)
 	void *phl = GET_PHL_INFO(adapter_to_dvobj(padapter));
 
 	/* 1. initialize a new WLAN_BSSID_EX */
-	_rtw_memset(&bssid, 0, sizeof(WLAN_BSSID_EX));
+	bssid = (WLAN_BSSID_EX *)rtw_zmalloc(sizeof(WLAN_BSSID_EX));
+	if (!bssid) {
+		RTW_ERR(FUNC_ADPT_FMT" buffer alloc fail\n", FUNC_ADPT_ARG(padapter));
+		res = _FAIL;
+		return res;
+	}
+
 	RTW_INFO("%s ,pmppriv->network_macaddr=%x %x %x %x %x %x\n", __func__,
 		pmppriv->network_macaddr[0], pmppriv->network_macaddr[1], pmppriv->network_macaddr[2], pmppriv->network_macaddr[3], pmppriv->network_macaddr[4],
 		 pmppriv->network_macaddr[5]);
-	_rtw_memcpy(bssid.MacAddress, pmppriv->network_macaddr, ETH_ALEN);
+	_rtw_memcpy(bssid->MacAddress, pmppriv->network_macaddr, ETH_ALEN);
 
 	if (mode == WIFI_FW_ADHOC_STATE) {
-		bssid.Ssid.SsidLength = strlen("mp_pseudo_adhoc");
-		_rtw_memcpy(bssid.Ssid.Ssid, (u8 *)"mp_pseudo_adhoc", bssid.Ssid.SsidLength);
-		bssid.InfrastructureMode = Ndis802_11IBSS;
-		bssid.IELength = 0;
-		bssid.Configuration.DSConfig = pmppriv->channel;
+		bssid->Ssid.SsidLength = strlen("mp_pseudo_adhoc");
+		_rtw_memcpy(bssid->Ssid.Ssid, (u8 *)"mp_pseudo_adhoc", bssid->Ssid.SsidLength);
+		bssid->InfrastructureMode = Ndis802_11IBSS;
+		bssid->IELength = 0;
+		bssid->Configuration.DSConfig = pmppriv->channel;
 
 	} else if (mode == WIFI_FW_STATION_STATE) {
-		bssid.Ssid.SsidLength = strlen("mp_pseudo_STATION");
-		_rtw_memcpy(bssid.Ssid.Ssid, (u8 *)"mp_pseudo_STATION", bssid.Ssid.SsidLength);
-		bssid.InfrastructureMode = Ndis802_11Infrastructure;
-		bssid.IELength = 0;
+		bssid->Ssid.SsidLength = strlen("mp_pseudo_STATION");
+		_rtw_memcpy(bssid->Ssid.Ssid, (u8 *)"mp_pseudo_STATION", bssid->Ssid.SsidLength);
+		bssid->InfrastructureMode = Ndis802_11Infrastructure;
+		bssid->IELength = 0;
 	}
 
-	length = get_WLAN_BSSID_EX_sz(&bssid);
+	length = get_WLAN_BSSID_EX_sz(bssid);
 	if (length % 4)
-		bssid.Length = ((length >> 2) + 1) << 2; /* round up to multiple of 4 bytes. */
+		bssid->Length = ((length >> 2) + 1) << 2; /* round up to multiple of 4 bytes. */
 	else
-		bssid.Length = length;
+		bssid->Length = length;
 
 	_rtw_spinlock_bh(&pmlmepriv->lock);
 
@@ -642,14 +648,14 @@ u32 mp_join(_adapter *padapter, u8 mode)
 	if (psta)
 		rtw_free_mld_stainfo(padapter, psta->phl_sta->mld);
 	/* ToDo CONFIG_RTW_MLD: MLD MAC Address */
-	pmld = rtw_phl_alloc_mld(GET_PHL_INFO(adapter_to_dvobj(padapter)), padapter->phl_role, bssid.MacAddress, DTYPE);
+	pmld = rtw_phl_alloc_mld(GET_PHL_INFO(adapter_to_dvobj(padapter)), padapter->phl_role, bssid->MacAddress, DTYPE);
 	if (pmld == NULL) {
 		init_fwstate(pmlmepriv, pmppriv->prev_fw_state);
 		res = _FAIL;
 		goto end_of_mp_start_test;
 	}
 	/* main_id is don't care for self */
-	psta = rtw_alloc_stainfo(&padapter->stapriv, bssid.MacAddress, DTYPE, 0, padapter_link->wrlink->id, PHL_CMD_DIRECTLY);
+	psta = rtw_alloc_stainfo(&padapter->stapriv, bssid->MacAddress, DTYPE, 0, padapter_link->wrlink->id, PHL_CMD_DIRECTLY);
 	if (psta == NULL) {
 		/*pmlmepriv->fw_state = pmppriv->prev_fw_state;*/
 		init_fwstate(pmlmepriv, pmppriv->prev_fw_state);
@@ -664,7 +670,7 @@ u32 mp_join(_adapter *padapter, u8 mode)
 	tgt_network->join_res = 1;
 	tgt_network->aid = psta->phl_sta->aid = 1;
 
-	_rtw_memcpy(&padapter->registrypriv.dev_network, &bssid, length);
+	_rtw_memcpy(&padapter->registrypriv.dev_network, bssid, length);
 	rtw_update_registrypriv_dev_network(padapter);
 	_rtw_memcpy(&tgt_network->network, &padapter->registrypriv.dev_network, padapter->registrypriv.dev_network.Length);
 	_rtw_memcpy(pnetwork, &padapter->registrypriv.dev_network, padapter->registrypriv.dev_network.Length);
@@ -693,6 +699,7 @@ end_of_mp_start_test:
 		}
 	}
 
+	rtw_mfree((void *)bssid, sizeof(WLAN_BSSID_EX));
 	return res;
 }
 /* This function initializes the DUT to the MP test mode */

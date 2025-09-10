@@ -1487,12 +1487,13 @@ static const enum rtw_env_t _reg_info_to_env[] = {
 #define reg_info_to_env(reg_info) (((reg_info) >= CIS_6G_REG_NUM) ? _reg_info_to_env[CIS_6G_REG_NUM] : _reg_info_to_env[(reg_info)])
 #endif
 
-static void cis_scan_stat_clr(struct cis_scan_stat_t *stat)
+static void cis_scan_stat_clr(struct cis_scan_stat_t *stat, bool lock)
 {
 	_list *list, *head;
 	struct cis_scan_stat_ent *ent;
 
-	_rtw_mutex_lock(&stat->lock);
+	if (lock)
+		_rtw_mutex_lock(&stat->lock);
 
 	head = &stat->ent;
 	list = get_next(head);
@@ -1506,7 +1507,8 @@ static void cis_scan_stat_clr(struct cis_scan_stat_t *stat)
 	stat->ent_num = 0;
 	CIS_SCAN_STAT_SET_MAJORITY(stat, NULL);
 
-	_rtw_mutex_unlock(&stat->lock);
+	if (lock)
+		_rtw_mutex_unlock(&stat->lock);
 }
 
 static void cis_scan_stat_add(struct cis_scan_stat_t *stat, const struct country_ie_slave_record *cisr)
@@ -1559,12 +1561,12 @@ check_order:
 }
 
 #if CONFIG_80211D_ENV_BSS_MAJORITY
-static struct cis_scan_stat_ent *cis_scan_stat_update_majority(struct cis_scan_stat_t *stat, bool disable)
+static void cis_scan_stat_update_majority(struct cis_scan_stat_t *stat)
 {
 	_list *list, *head;
 	struct cis_scan_stat_ent *ent, *m = NULL;
 
-	if (stat->ent_num == 0 || disable)
+	if (stat->ent_num == 0)
 		goto update;
 
 	head = &stat->ent;
@@ -1581,7 +1583,6 @@ static struct cis_scan_stat_ent *cis_scan_stat_update_majority(struct cis_scan_s
 
 update:
 	CIS_SCAN_STAT_SET_MAJORITY(stat, m);
-	return CIS_SCAN_STAT_GET_MAJORITY(stat);
 }
 #endif
 
@@ -1595,14 +1596,18 @@ static void cis_scan_stat_init(struct cis_scan_stat_t *stat)
 
 static void cis_scan_stat_deinit(struct cis_scan_stat_t *stat)
 {
-	cis_scan_stat_clr(stat);
+	cis_scan_stat_clr(stat, true);
 	_rtw_mutex_free(&stat->lock);
 }
 
-static void dump_cis_scan_stat(void *sel, struct cis_scan_stat_t *stat)
+static void dump_cis_scan_stat(void *sel, struct rf_ctl_t *rfctl)
 {
+	struct cis_scan_stat_t *stat = &rfctl->cis_scan_stat;
 	_list *list, *head;
 	struct cis_scan_stat_ent *ent;
+
+	RTW_PRINT_SEL(sel, "ENV_BSS (updated %u sec ago)\n"
+		, rtw_get_passing_time_ms(rfctl->cis_scan_last_complete_time) / 1000);
 
 	_rtw_mutex_lock(&stat->lock);
 
@@ -1612,7 +1617,7 @@ static void dump_cis_scan_stat(void *sel, struct cis_scan_stat_t *stat)
 		ent = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
 		list = get_next(list);
 		RTW_PRINT_SEL(sel, "%c"ALPHA2_FMT" %u\n"
-			, stat->majority == ent ? '*' : ' '
+			, RFCTL_GET_CIS_MAJORITY(rfctl) == ent ? '*' : ' '
 			, ALPHA2_ARG(ent->cisr.alpha2), ent->count);
 	}
 
@@ -1682,8 +1687,8 @@ void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_
 #endif
 
 	if (rfctl->cis_flags & CISF_ENV_BSS) {
-		RTW_PRINT_SEL(sel, "\nENV_BSS\n");
-		dump_cis_scan_stat(sel, &rfctl->cis_scan_stat);
+		RTW_PRINT_SEL(sel, "\n");
+		dump_cis_scan_stat(sel, rfctl);
 	}
 }
 
@@ -2511,7 +2516,7 @@ static bool rtw_rfctl_update_extra_alpha2_req(struct rf_ctl_t *rfctl, const char
 
 static bool rtw_rfctl_extra_alpha2_req_needed(struct rf_ctl_t *rfctl)
 {
-	if (CIS_SCAN_STAT_GET_MAJORITY(&rfctl->cis_scan_stat))
+	if (RFCTL_GET_CIS_MAJORITY(rfctl))
 		return false;
 
 	if (rfctl->regd_src == REGD_SRC_RTK_PRIV) {
@@ -3368,60 +3373,28 @@ static bool rtw_regd_req_list_add_country_ie_req_from_per_link_cisr(struct rf_ct
 	return effected;
 }
 
-static bool rtw_regd_req_list_add_country_ie_req_from_scanned_network_cisr(_adapter *adapter)
+static bool rtw_regd_req_list_add_country_ie_req_from_scan_stat_cisr(struct rf_ctl_t *rfctl)
 {
-	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
-	struct mlme_priv *mlme = &adapter->mlmepriv;
-	_queue *queue = &mlme->scanned_queue;
-	_list *list, *head;
-	struct wlan_network *scanned;
-	bool effected = false;
 	struct cis_scan_stat_t *stat = &rfctl->cis_scan_stat;
-#if CONFIG_80211D_ENV_BSS_MAJORITY
-	struct cis_scan_stat_ent *majority;
-#endif
+	_list *list, *head;
+	struct cis_scan_stat_ent *ent;
+	bool effected = false;
 
 	_rtw_mutex_lock(&stat->lock);
 
-	_rtw_spinlock_bh(&queue->lock);
-
-	/* loop scan queue for stat */
-	head = get_list_head(queue);
+	/* follow all ENV BSS */
+	head = &stat->ent;
 	list = get_next(head);
 	while (!rtw_end_of_queue_search(head, list)) {
-		scanned = LIST_CONTAINOR(list, struct wlan_network, list);
+		ent = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
 		list = get_next(list);
 
-		if (scanned->cisr.status == COUNTRY_IE_SLAVE_NOCOUNTRY
-			|| scanned->cisr.status == COUNTRY_IE_SLAVE_UNKNOWN)
+		if (ent->cisr.status == COUNTRY_IE_SLAVE_NOCOUNTRY
+			|| ent->cisr.status == COUNTRY_IE_SLAVE_UNKNOWN)
 			continue;
 
-		cis_scan_stat_add(stat, &scanned->cisr);
+		effected |= rtw_regd_req_list_add_country_ie_req(rfctl, &ent->cisr, false);
 	}
-#if CONFIG_80211D_ENV_BSS_MAJORITY
-	majority = cis_scan_stat_update_majority(stat, !(rfctl->cis_flags & CISF_ENV_BSS_MAJ));
-	if (majority) {
-		/* single majority exist, follow */
-		effected |= rtw_regd_req_list_add_country_ie_req(rfctl, &majority->cisr, false);
-	} else
-#endif
-	{
-		/* follow all ENV BSS */
-		head = get_list_head(queue);
-		list = get_next(head);
-		while (!rtw_end_of_queue_search(head, list)) {
-			scanned = LIST_CONTAINOR(list, struct wlan_network, list);
-			list = get_next(list);
-
-			if (scanned->cisr.status == COUNTRY_IE_SLAVE_NOCOUNTRY
-				|| scanned->cisr.status == COUNTRY_IE_SLAVE_UNKNOWN)
-				continue;
-
-			effected |= rtw_regd_req_list_add_country_ie_req(rfctl, &scanned->cisr, false);
-		}
-	}
-
-	_rtw_spinunlock_bh(&queue->lock);
 
 	_rtw_mutex_unlock(&stat->lock);
 
@@ -3500,15 +3473,16 @@ static bool rtw_chplan_rtk_priv_req_prehdl_country_ie(_adapter *adapter, struct 
 	}
 
 	if (rfctl->regd_src == REGD_SRC_RTK_PRIV) {
-		cis_scan_stat_clr(&rfctl->cis_scan_stat);
-
 		rtw_regd_req_list_clear_ref_cnt_by_inr(rfctl, RTW_REGD_SET_BY_COUNTRY_IE);
 
 		if (rfctl->cis_enabled) {
-			if (rfctl->cis_flags & CISF_ENV_BSS)
-				effected |= rtw_regd_req_list_add_country_ie_req_from_scanned_network_cisr(adapter);
-			if (!CIS_SCAN_STAT_GET_MAJORITY(&rfctl->cis_scan_stat))
+			if (RFCTL_GET_CIS_MAJORITY(rfctl))
+				effected |= rtw_regd_req_list_add_country_ie_req(rfctl, &RFCTL_GET_CIS_MAJORITY(rfctl)->cisr, false);
+			else {
 				effected |= rtw_regd_req_list_add_country_ie_req_from_per_link_cisr(rfctl);
+				if (rfctl->cis_flags & CISF_ENV_BSS)
+					effected |= rtw_regd_req_list_add_country_ie_req_from_scan_stat_cisr(rfctl);
+			}
 		}
 
 		effected |= rtw_regd_req_list_clear_zero_ref_req_by_inr(rfctl, RTW_REGD_SET_BY_COUNTRY_IE);
@@ -5010,11 +4984,52 @@ void rtw_cis_scan_idle_check(struct rf_ctl_t *rfctl)
 	}
 }
 
+static bool rtw_cis_scan_stat_update(_adapter *adapter)
+{
+	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+	struct mlme_priv *mlme = &adapter->mlmepriv;
+	_queue *queue = &mlme->scanned_queue;
+	_list *list, *head;
+	struct wlan_network *scanned;
+	bool effected = false;
+	struct cis_scan_stat_t *stat = &rfctl->cis_scan_stat;
+
+	_rtw_mutex_lock(&stat->lock);
+
+	cis_scan_stat_clr(stat, false);
+
+	_rtw_spinlock_bh(&queue->lock);
+
+	/* loop scan queue for stat */
+	head = get_list_head(queue);
+	list = get_next(head);
+	while (!rtw_end_of_queue_search(head, list)) {
+		scanned = LIST_CONTAINOR(list, struct wlan_network, list);
+		list = get_next(list);
+
+		if (scanned->cisr.status == COUNTRY_IE_SLAVE_NOCOUNTRY
+			|| scanned->cisr.status == COUNTRY_IE_SLAVE_UNKNOWN)
+			continue;
+
+		cis_scan_stat_add(stat, &scanned->cisr);
+	}
+#if CONFIG_80211D_ENV_BSS_MAJORITY
+	cis_scan_stat_update_majority(stat);
+#endif
+
+	_rtw_spinunlock_bh(&queue->lock);
+
+	_rtw_mutex_unlock(&stat->lock);
+
+	return effected;
+}
+
 void rtw_cis_scan_complete_hdl(_adapter *adapter)
 {
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
 
 	if (rfctl->cis_enabled && (rfctl->cis_flags & CISF_ENV_BSS)) {
+		rtw_cis_scan_stat_update(adapter);
 		rfctl->cis_scan_last_complete_time = rtw_get_current_time();
 
 		/* 802.11d scan has done complete, trigger regulation selection */

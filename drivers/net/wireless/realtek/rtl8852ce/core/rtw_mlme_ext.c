@@ -5797,8 +5797,15 @@ u8 *rtw_build_probersp_ies(_adapter *padapter, struct _ADAPTER_LINK *padapter_li
 			u8 *ssid_ie;
 			sint ssid_ielen;
 			sint ssid_ielen_diff;
-			u8 buf[MAX_IE_SZ];
+			u8 *buf;
 			u8 *ies = pframe_start;
+
+			buf = rtw_zmalloc(MAX_IE_SZ);
+			if(!buf) {
+				RTW_ERR(FUNC_ADPT_FMT" buffer alloc fail\n",
+					FUNC_ADPT_ARG(padapter));
+				return NULL;
+			}
 
 			ssid_ie = rtw_get_ie(ies + _FIXED_IE_LENGTH_, _SSID_IE_, &ssid_ielen,
 				     (pframe - ies) - _FIXED_IE_LENGTH_);
@@ -5824,6 +5831,7 @@ u8 *rtw_build_probersp_ies(_adapter *padapter, struct _ADAPTER_LINK *padapter_li
 				pframe += ssid_ielen_diff;
 				pattrib->pktlen += ssid_ielen_diff;
 			}
+			rtw_mfree((void *)buf, MAX_IE_SZ);
 		}
 
 #ifdef CONFIG_APPEND_VENDOR_IE_ENABLE
@@ -9738,7 +9746,7 @@ void report_survey_event(_adapter *padapter, union recv_frame *precv_frame)
 	struct cmd_priv *pcmdpriv;
 	struct survey_event *psurvey_evt;
 #else
-	struct survey_event psurvey_evt;
+	struct survey_event *psurvey_evt;
 #endif
 	WLAN_BSSID_EX *bssid;
 	struct mlme_ext_priv *pmlmeext;
@@ -9790,13 +9798,21 @@ void report_survey_event(_adapter *padapter, union recv_frame *precv_frame)
 	psurvey_evt = (struct survey_event *)(pevtcmd + sizeof(struct rtw_evt_header));
 	bssid = (WLAN_BSSID_EX *)&psurvey_evt->bss;
 #else
-	bssid = (WLAN_BSSID_EX *)&psurvey_evt.bss;
+	psurvey_evt = (struct survey_event *)rtw_zmalloc(sizeof(struct survey_event));
+	if (!psurvey_evt) {
+		RTW_ERR(FUNC_ADPT_FMT" buffer alloc fail\n", FUNC_ADPT_ARG(padapter));
+		return;
+	}
+
+	bssid = (WLAN_BSSID_EX *)&psurvey_evt->bss;
 #endif
 
 	if (collect_bss_info(padapter, precv_frame, bssid) == _FAIL) {
 #ifdef CONFIG_SCAN_REPORT_ENQUEUE
 		rtw_mfree((u8 *)pcmd_obj, sizeof(struct cmd_obj));
 		rtw_mfree((u8 *)pevtcmd, cmdsz);
+#else
+		rtw_mfree((void *)psurvey_evt, sizeof(struct survey_event));
 #endif
 		return;
 	}
@@ -9839,6 +9855,7 @@ void report_survey_event(_adapter *padapter, union recv_frame *precv_frame)
 	rtw_enqueue_cmd(pcmdpriv, pcmd_obj);
 #else
 	rtw_survey_event_callback(padapter, (u8 *)bssid);
+	rtw_mfree((void *)psurvey_evt, sizeof(struct survey_event));
 #endif
 
 	pmlmeext->sitesurvey_res.bss_cnt++;

@@ -1304,6 +1304,7 @@ struct rtw_regulatory {
 	LE_BITS_TO_1BYTE((_pEleStart) + 2, 0, 8)
 
 #define MBSSID_MAX_BSSID_INDICATOR_OFFSET 3
+#define MBSSID_MAX_CNT 10
 
 #define GET_MULTIPLE_BSSID_IDX_INDEX(_pEleStart) \
 	LE_BITS_TO_1BYTE((_pEleStart) + 2, 0, 8)

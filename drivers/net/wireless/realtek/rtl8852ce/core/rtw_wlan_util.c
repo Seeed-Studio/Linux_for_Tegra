@@ -1519,8 +1519,14 @@ void rtw_absorb_ssid_ifneed(_adapter *padapter, WLAN_BSSID_EX *bssid, u8 *pframe
 	u8 *mac;
 	sint ssid_len_ori;
 	u32 remain_len = 0;
-	u8 backupIE[MAX_IE_SZ];
+	u8 *backupIE;
 	u16 subtype;
+
+	backupIE = rtw_zmalloc(MAX_IE_SZ);
+	if(!backupIE) {
+		RTW_ERR(FUNC_ADPT_FMT" buffer alloc fail\n", FUNC_ADPT_ARG(padapter));
+		return;
+	}
 
 	mac = get_addr2_ptr(pframe);
 	subtype = get_frame_sub_type(pframe);
@@ -1545,6 +1551,7 @@ void rtw_absorb_ssid_ifneed(_adapter *padapter, WLAN_BSSID_EX *bssid, u8 *pframe
 	_rtw_spinlock_bh(&padapter->mlmepriv.scanned_queue.lock);
 	scanned = _rtw_find_network(&padapter->mlmepriv.scanned_queue, mac);
 	if (!scanned) {
+		rtw_mfree((void *)backupIE, MAX_IE_SZ);
 		_rtw_spinunlock_bh(&padapter->mlmepriv.scanned_queue.lock);
 		return;
 	}
@@ -1554,6 +1561,7 @@ void rtw_absorb_ssid_ifneed(_adapter *padapter, WLAN_BSSID_EX *bssid, u8 *pframe
 	if (hidden_ssid_ap(snetwork) && !hidden_ssid_ap(bssid)) {
 		p = rtw_get_ie(snetwork->IEs+ie_offset, _SSID_IE_, &ssid_len_ori, snetwork->IELength-ie_offset);
 		if (!p) {
+			rtw_mfree((void *)backupIE, MAX_IE_SZ);
 			_rtw_spinunlock_bh(&padapter->mlmepriv.scanned_queue.lock);
 			return;
 		}
@@ -1569,6 +1577,7 @@ void rtw_absorb_ssid_ifneed(_adapter *padapter, WLAN_BSSID_EX *bssid, u8 *pframe
 		_rtw_memcpy(p+2+bssid->Ssid.SsidLength, backupIE, remain_len);
 		snetwork->IELength += bssid->Ssid.SsidLength;
 	}
+	rtw_mfree((void *)backupIE, MAX_IE_SZ);
 	_rtw_spinunlock_bh(&padapter->mlmepriv.scanned_queue.lock);
 }
 
