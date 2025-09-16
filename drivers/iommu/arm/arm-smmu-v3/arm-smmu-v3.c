@@ -3452,6 +3452,14 @@ static int arm_smmu_device_reset(struct arm_smmu_device *smmu, bool bypass)
 		return ret;
 	}
 
+	if (smmu->impl_ops && smmu->impl_ops->device_reset) {
+		ret = smmu->impl_ops->device_reset(smmu);
+		if (ret) {
+			dev_err(smmu->dev, "failed to reset impl\n");
+			return ret;
+		}
+	}
+
 	return 0;
 }
 
@@ -4033,14 +4041,6 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(dev, "Failed to register iommu\n");
 		goto err_free_sysfs;
-	}
-
-	if (smmu->impl_ops && smmu->impl_ops->device_reset) {
-		ret = smmu->impl_ops->device_reset(smmu);
-		if (ret) {
-			dev_err(smmu->dev, "failed to reset impl\n");
-			return ret;
-		}
 	}
 
 	return 0;
