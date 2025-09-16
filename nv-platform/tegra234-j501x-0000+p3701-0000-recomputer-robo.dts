@@ -69,8 +69,14 @@
 				};
 			};
 		};
-		
-		i2c@c240000 {
+
+		pcie@14180000 {
+			status = "okay";
+			phys = <&p2u_hsio_0>;
+			phy-names = "p2u-0";
+		};
+
+		i2c@3160000 {
 			status = "okay";
 			gpio_xten: gpio_xten@21 {
 				compatible = "nxp,pca9535";
@@ -101,7 +107,13 @@
 					output-high;
 					line-name = "UART1_EN";
 				};
-				
+
+                PCIe_M2B_RST {
+                    gpios = <&gpio_xten 7 GPIO_ACTIVE_LOW>;
+                    output-high;
+                    line-name = "PCIe_M2B_RST";
+                };
+
 				CAN1_120R_EN {
 					gpios = <&gpio_xten 8 GPIO_ACTIVE_HIGH>;
 					output-high;
@@ -119,7 +131,13 @@
 					output-high;
 					line-name = "CAN2_120R_EN";
 				};
-				
+
+				PCIe_SWITCH_RST {
+                    gpios = <&gpio_xten 11 GPIO_ACTIVE_LOW>;
+                    output-high;
+                    line-name = "PCIe_SWITCH_RST";
+                };
+
 				CAN3_120R_EN {
 					gpios = <&gpio_xten 12 GPIO_ACTIVE_HIGH>;
 					output-high;
@@ -213,4 +231,12 @@
 			/delete-property/ dma-names;
 		};
 	};
+};
+
+&vdd_3v3_pcie {
+	/delete-property/ gpio;
+};
+
+&vdd_12v_pcie {
+	/delete-property/ gpio;
 };
