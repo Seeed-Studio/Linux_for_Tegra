@@ -7371,6 +7371,16 @@
 		clock-names = "emc";
 	};
 
+	bwmgr {
+		compatible = "nvidia,tegra264-bpmp-bwmgr";
+
+		clocks = <&bpmp TEGRA264_CLK_EMC>;
+		clock-names = "emc";
+
+		nvidia,bpmp = <&bpmp>;
+		status = "disabled";
+	};
+
 	pmu {
 		compatible = "arm,armv8-pmuv3";
 		status = "disabled";
