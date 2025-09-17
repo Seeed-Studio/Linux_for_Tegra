@@ -761,6 +761,8 @@ struct ether_priv_data {
 	struct osi_mgbe_coe mgbe_coe;
 	/** Flag to retry restart_lane_bringup logic */
 	u32 force_restart_lane_bringup;
+	/** MDIO lock for OSI function calls **/
+	struct mutex osi_mdio_lock;
 };
 
 /**

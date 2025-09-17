@@ -2963,15 +2963,18 @@ static int ether_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 {
 	struct net_device *ndev = bus->priv;
 	struct ether_priv_data *pdata = netdev_priv(ndev);
+	int ret = 0;
 
 	if (!pdata->clks_enable) {
 		dev_err(pdata->dev,
 			"%s:No clks available, skipping PHY write\n", __func__);
 		return -ENODEV;
 	}
+	mutex_lock(&pdata->osi_mdio_lock);
+	ret = osi_write_phy_reg(pdata->osi_core, (unsigned int)phyaddr, (unsigned int)phyreg, phydata);
+	mutex_unlock(&pdata->osi_mdio_lock);
 
-	return osi_write_phy_reg(pdata->osi_core, (unsigned int)phyaddr,
-				 (unsigned int)phyreg, phydata);
+	return ret;
 }
 
 /**
@@ -2993,15 +2996,18 @@ static int ether_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 {
 	struct net_device *ndev = bus->priv;
 	struct ether_priv_data *pdata = netdev_priv(ndev);
+	int ret = 0;
 
 	if (!pdata->clks_enable) {
 		dev_err(pdata->dev,
 			"%s:No clks available, skipping PHY read\n", __func__);
 		return -ENODEV;
 	}
+	mutex_lock(&pdata->osi_mdio_lock);
+	ret = osi_read_phy_reg(pdata->osi_core, (unsigned int)phyaddr, (unsigned int)phyreg);
+	mutex_unlock(&pdata->osi_mdio_lock);
 
-	return osi_read_phy_reg(pdata->osi_core, (unsigned int)phyaddr,
-				(unsigned int)phyreg);
+	return ret;
 }
 
 #if defined(NV_MII_BUS_STRUCT_HAS_WRITE_C45) /* Linux v6.3 */
@@ -4395,7 +4401,9 @@ static int ether_handle_priv_rmdio_ioctl(struct ether_priv_data *pdata,
 	dev_dbg(pdata->dev, "%s: phy_id:%d regadd: %d devaddr:%d\n",
 		__func__, mii_data->phy_id, prtad, devad);
 
+	mutex_lock(&pdata->osi_mdio_lock);
 	ret = osi_read_phy_reg(pdata->osi_core, prtad, devad);
+	mutex_unlock(&pdata->osi_mdio_lock);
 	if (ret < 0) {
 		dev_err(pdata->dev, "%s: Data read failed\n", __func__);
 		return -EFAULT;
@@ -4423,6 +4431,7 @@ static int ether_handle_priv_wmdio_ioctl(struct ether_priv_data *pdata,
 {
 	struct mii_ioctl_data *mii_data = if_mii(ifr);
 	unsigned int prtad, devad;
+	int ret = 0;
 
 	if (mdio_phy_id_is_c45(mii_data->phy_id)) {
 		prtad = mdio_phy_id_prtad(mii_data->phy_id);
@@ -4436,8 +4445,11 @@ static int ether_handle_priv_wmdio_ioctl(struct ether_priv_data *pdata,
 	dev_dbg(pdata->dev, "%s: phy_id:%d regadd: %d devaddr:%d val:%d\n",
 		__func__, mii_data->phy_id, prtad, devad, mii_data->val_in);
 
-	return osi_write_phy_reg(pdata->osi_core, prtad, devad,
-				 mii_data->val_in);
+	mutex_lock(&pdata->osi_mdio_lock);
+	ret = osi_write_phy_reg(pdata->osi_core, prtad, devad, mii_data->val_in);
+	mutex_unlock(&pdata->osi_mdio_lock);
+
+	return ret;
 }
 
 int ether_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
@@ -7527,6 +7539,8 @@ int ether_probe(struct platform_device *pdev)
 	pdata->osi_dma = osi_dma;
 	osi_core->osd = pdata;
 	osi_dma->osd = pdata;
+
+	mutex_init(&pdata->osi_mdio_lock);
 
 	osi_core->num_mtl_queues = num_mtl_queues;
 	osi_dma->num_dma_chans = num_dma_chans;
