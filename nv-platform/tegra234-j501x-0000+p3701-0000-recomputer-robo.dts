@@ -177,16 +177,19 @@
 		spi@3210000 {
 			#address-cells = <0x01>;
 			#size-cells = <0x00>;
-			
 			status = "okay";
-			
-			can@2 {
+
+			/delete-node/ spi@0;
+			/delete-node/ spi@1;
+
+			can@0 {
 				compatible = "microchip,mcp2518fd";
 				reg = <0x0>;
-				spi-max-frequency = <2000000>;
+				spi-max-frequency = <20000000>;
 				interrupt-parent = <&gpio>;
 				interrupts = <TEGRA234_MAIN_GPIO(H, 7) IRQ_TYPE_LEVEL_LOW>;
 				clocks = <&can_clock>;
+				clock-names = "osc";
 				nvidia,enable-hw-based-cs;
 				controller-data {
 					nvidia,enable-hw-based-cs;
@@ -194,14 +197,15 @@
 					nvidia,tx-clk-tap-delay = <0x0>;
 				};
 			};
-			
-			can@3 {
+
+			can@1 {
 				compatible = "microchip,mcp2518fd";
 				reg = <0x1>;
-				spi-max-frequency = <2000000>;
+				spi-max-frequency = <20000000>;
 				interrupt-parent = <&gpio>;
 				interrupts = <TEGRA234_MAIN_GPIO(I, 0) IRQ_TYPE_LEVEL_LOW>;
 				clocks = <&can_clock>;
+				clock-names = "osc";
 				nvidia,enable-hw-based-cs;
 				controller-data {
 					nvidia,enable-hw-based-cs;
