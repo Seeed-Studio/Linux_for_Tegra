@@ -10,6 +10,10 @@
 	compatible = "nvidia,p4071-0008+p3834-0008", "safety", "nvidia,p3834-0008", "nvidia,tegra264";
 
 	bus@0 {
+		tegra-hsp@8d00000 {
+			status = "okay";
+		};
+
 		mttcan@81102f0000 {
 			status = "disabled";
 		};
@@ -30,6 +34,10 @@
 			status = "okay";
 			compatible = "nvidia,tegra264-spi-slave";
 		};
+	};
+
+	safetyservices_epl_client@110000 {
+		status = "okay";
 	};
 
 	thermal-shutdown-alert {
