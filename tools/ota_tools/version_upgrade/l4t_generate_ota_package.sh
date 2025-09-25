@@ -78,6 +78,11 @@ SUPPORTED_EXTERNAL_DEVICES=(
 	'jetson-agx-orin-devkit:nvme0n1'
 	'jetson-agx-orin-devkit-industrial:nvme0n1'
 	'jetson-orin-nano-devkit:nvme0n1'
+	'recomputer-orin-j40mini:nvme0n1'
+	'recomputer-orin-j401:nvme0n1'
+	'recomputer-industrial-orin-j201:nvme0n1'
+	'reserver-industrial-orin-j401:nvme0n1'
+	'reserver-agx-orin-j501x:nvme0n1'
 )
 T234_NVME_CFG="${LINUX_BASE_DIR}/tools/kernel_flash/flash_l4t_t234_nvme.xml"
 T234_NVME_ROOTFS_AB_CFG="${LINUX_BASE_DIR}/tools/kernel_flash/flash_l4t_t234_nvme_rootfs_ab.xml"
@@ -127,7 +132,7 @@ function usage()
 {
 	echo -ne "Usage: sudo $0 [options] <target board> <bsp version>\n"
 	echo -ne "\tWhere,\n"
-	echo -ne "\t\t<target board>: target board. Supported boards: jetson-agx-orin-devkit, jetson-agx-orin-devkit-industrial, jetson-orin-nano-devkit.\n"
+	echo -ne "\t\t<target board>: target board. Supported boards: jetson-agx-orin-devkit, jetson-agx-orin-devkit-industrial, jetson-orin-nano-devkit, recomputer-orin-j40mini, recomputer-orin-j401, recomputer-industrial-orin-j201, reserver-industrial-orin-j401, reserver-agx-orin-j501x.\n"
 	echo -ne "\t\t<bsp version>: the version of the base BSP. Supported versions: R35-5, R35-6, R36-3, R36-4.\n"
 	echo -ne "\toptions:\n"
 	echo -ne "\t\t-u <PKC key file>: PKC key used for odm fused board\n"
@@ -200,7 +205,7 @@ function construct_board_spec_name()
 
 	# For jetson-agx-orin-devkit, set the boardver to null if boardsku is 0004,
 	# or 0005.
-	# For jetson-orin-nano-devkit, set the boardver to null if boardsku is 0001,
+	# For jetson-orin-nano-devkit, recomputer-orin-j40mini set the boardver to null if boardsku is 0001,
 	# 0003, 0004 or 0005.
 	# For jetson-agx-orin-devkit-industrial, set the boardver to null if boardsku
 	# is 0008.
@@ -212,6 +217,24 @@ function construct_board_spec_name()
 		'jetson-orin-nano-devkit:0004'
 		'jetson-orin-nano-devkit:0005'
 		'jetson-agx-orin-devkit-industrial:0008'
+		'recomputer-orin-j40mini:0001'
+		'recomputer-orin-j40mini:0003'
+		'recomputer-orin-j40mini:0004'
+		'recomputer-orin-j40mini:0005'
+		'recomputer-orin-j401:0001'
+		'recomputer-orin-j401:0003'
+		'recomputer-orin-j401:0004'
+		'recomputer-orin-j401:0005'
+		'recomputer-industrial-orin-j201:0001'
+		'recomputer-industrial-orin-j201:0003'
+		'recomputer-industrial-orin-j201:0004'
+		'recomputer-industrial-orin-j201:0005'
+		'reserver-industrial-orin-j401:0001'
+		'reserver-industrial-orin-j401:0003'
+		'reserver-industrial-orin-j401:0004'
+		'reserver-industrial-orin-j401:0005'
+		'reserver-agx-orin-j501x:0004'
+		'reserver-agx-orin-j501x:0005'
 	)
 	local temp="${board}:${boardsku}"
 	local entry=
@@ -1079,8 +1102,7 @@ function construct_board_spec_entry()
 		# entries as it only includes entries fo external device.
 		# For other devices, only keep the board spec entry for
 		# internal device.
-		if [[ "${item}" =~ jetson-orin-nano-devkit ]] \
-			|| [[ "${item}" =~ internal ]]; then
+		if [[ "${item}" =~ "jetson-orin-nano-devkit" ]] || [[ "${item}" =~ "re" ]] || [[ "${item}" == "internal" ]]; then
 			echo "'${item}'" >>"${tmp_board_spec_file}"
 		fi
 	done
@@ -1856,7 +1878,7 @@ fi
 if [ -n "${external_device}" ]; then
 	check_external_device
 else
-	if [ "${TARGET_BOARD}" == "jetson-orin-nano-devkit" ]; then
+	if [[ "${TARGET_BOARD}" == "jetson-orin-nano-devkit" || "${TARGET_BOARD}" =~ "re" ]]; then
 		echo "The External device must be specified for ${TARGET_BOARD}"
 		usage
 	fi
