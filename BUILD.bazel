@@ -75,6 +75,7 @@ kernel_module(
         "drivers/gpu/host1x-fence/host1x-fence.ko",
         "drivers/gpu/host1x/host1x.ko",
         "drivers/gpu/host1x-nvhost/host1x-nvhost.ko",
+        "drivers/gpu/power/tegra/nv-gpu-static-pg.ko",
         "drivers/hwmon/f75308.ko",
         "drivers/hwmon/ina232.ko",
         "drivers/i2c/busses/i2c-nvvrs11.ko",
