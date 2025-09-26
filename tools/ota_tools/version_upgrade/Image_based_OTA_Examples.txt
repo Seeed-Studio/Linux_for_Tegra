@@ -1,0 +1,155 @@
+************************************************************************
+             Examples of How to Use Image-Based OTA Update
+************************************************************************
+This file provides several examples of how to use an image-based OTA update for
+specific use cases.
+
+1. Generating OTA payload package for different cases.
+The following examples show you how to generate an OTA payload package for
+different cases.
+
+- An OTA update from R35.2.1 to R35 latest version on the jetson-agx-orin-devkit.
+Currently the R35 latest version is R35.5.0.
+$ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    jetson-agx-orin-devkit R35-2
+
+- An OTA update from R35.2.1 to R35 latest version on the jetson-agx-xavier-devkit with
+rootfs A/B enabled:
+$ sudo ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    jetson-agx-xavier-devkit R35-2
+
+- An OTA update from R35.2.1 to R35 latest version on jetson-xavier-nx-devkit-emmc with
+booting from NVMe. The size of APP partition on NVMe device is 14GiB.
+$ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    --external-device nvme0n1 -S 14GiB jetson-xavier-nx-devkit-emmc R35-2
+
+- An OTA update bootloader only from R35.2.1 to R35 latest version on jetson-agx-xavier-industrial:
+$ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    -b jetson-agx-xavier-industrial R35-2
+
+- An OTA update rootfs only from R35.2.1 to R35 latest version on jetson-agx-orin-devkit:
+$ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    -r jetson-agx-orin-devkit R35-2
+
+- An OTA update from R32.7.3 to R35 latest version on jetson-agx-xavier-industrial:
+$ sudo ./tools/ota_tools/version_upgrade/build_base_recovery_image.sh \
+   jetson-agx-xavier-industrial R32-7 \
+   <R32.7.3>/Linux_for_Tegra \
+   <R32.7.3>/Linux_for_Tegra/rootfs \
+   <R35.5.0>/Linux_for_Tegra \
+$ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    jetson-agx-xavier-industrial R32-7
+
+- An OTA update from R32.5.2 to R35 latest version on the jetson-agx-xavier-devkit with
+rootfs A/B enabled:
+$ sudo ./tools/ota_tools/version_upgrade/build_base_recovery_image.sh \
+   jetson-agx-xavier-devkit R32-5 \
+   <R32.5.2>/Linux_for_Tegra \
+   <R32.5.2>/Linux_for_Tegra/rootfs \
+   <R35.5.0>/Linux_for_Tegra \
+$ sudo ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    jetson-agx-xavier-devkit R32-5
+
+- An OTA update from R32.6.1 to R35 latest version on jetson-xavier-nx-devkit-emmc with
+booting from NVMe and rootfs A/B enabled. The size of APP or APP_b partition on
+NVMe device is 14GiB.
+$ sudo ./tools/ota_tools/version_upgrade/build_base_recovery_image.sh \
+   jetson-xavier-nx-devkit-emmc R32-6 \
+   <R32.6.1>/Linux_for_Tegra \
+   <R32.6.1>/Linux_for_Tegra/rootfs \
+   <R35.5.0>/Linux_for_Tegra \
+$ sudo ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    --external-device nvme0n1 -S 14GiB jetson-xavier-nx-devkit-emmc R32-6
+
+- An OTA update from R35.2.1 to R35 latest version on the jetson-agx-xavier-devkit with
+booting from NVMe.
+$ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    --external-device nvme0n1 jetson-agx-xavier-devkit R35-2
+
+- An OTA update from R35.4.1 to R35 latest version on the jetson-agx-orin-devkit with
+booting from NVMe and rootfs A/B enabled.
+$ sudo ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    --external-device nvme0n1 jetson-agx-orin-devkit R35-4
+
+- An OTA update from R35.2.1 to R35 latest version on the jetson-agx-xavier-devkit with
+disk encryption enabled:
+$ sudo ROOTFS_ENC=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    -i ./ekb.key jetson-agx-xavier-devkit R35-2
+The "ekb.key" is the key used for disk encryption.
+
+- An OTA update from R35.2.1 to R35 latest version on the jetson-agx-orin-devkit with
+disk encryption and rootfs A/B enabled:
+$ sudo ROOTFS_ENC=1 ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    -i ./ekb.key jetson-agx-orin-devkit R35-2
+
+- An OTA update from R35.4.1 to R35 latest version on jetson-orin-nano-devkit booting
+from NVMe device with disk encryption and rootfs A/B enabled:
+$ sudo ROOTFS_ENC=1 ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+    -i ./ekb.key --external-device nvme0n1 jetson-orin-nano-devkit R35-4
+
+2. Using golden image in OTA update.
+Customers might flash a device with the latest released BSP and then make a golden image
+dependent on this device. They can deploy the golden image on other devices that were
+flashed with the previously released BSP through an OTA update.
+
+The "l4t_generate_ota_package.sh" script includes the "-f" and "-o" options so that
+customers can use their own rootfs updater and update the rootfs partition with their
+own rootfs image (for example, a golden image).
+
+However, for some customers, the golden image is a raw partition image that is
+directly obtained from rootfs partition. (These customers might not
+want to write their own rootfs updater.)
+
+The following examples provide the steps for using this golden image in an image-based OTA.
+
+- With rootfs A/B disabled, complete the following steps:
+  a. Put the target device into recovery mode.
+  b. Boot the device to initrd by running the following command:
+     $ sudo ./tools/kernel_flash/l4t_initrd_flash.sh --initrd <target board> mmcblk0p1
+  c. Enter bash shell on the target device.
+  d. Mount a USB drive or network storage on the target device.
+  e. Generate golden image in the mounted storage device by running the
+     following command:
+     $ sudo dd if=<rootfs partition> of=<mount ponint>/golden.img.raw
+     The "<rootfs partition>" is /dev/mmcblk0p1 for the internal eMMC storage device
+     or /dev/nvme0n1p1 for the external NVMe storage device.
+  f. Copy the golden images into the TARGET_BSP directory on the host machine by running
+     the following command:
+     $ sudo cp golden.img.raw ${TARGET_BSP}/bootloader/system.img.raw
+  g. Add the "-s" option when generating the OTA payload package.
+     For the internal eMMC storage device, running the following command:
+     $ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+     -s <target board> <base version>
+     For the external NVMe storage device, running the following command:
+     $ sudo ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+     -s --external-device nvme0n1 -S <rootfs size > <target board> <base version>
+
+- With rootfs A/B enabled, complete the following steps:
+  a. Put the target device into recovery mode.
+  b. Boot the device to initrd by running the following command:
+     $ sudo ./tools/kernel_flash/l4t_initrd_flash.sh --initrd <target board> mmcblk0p1
+  c. Enter bash shell on the target device.
+  d. Mount a USB drive or network storage on the target device.
+  e. Generate golden images in the mounted storage device by running the
+     following commands:
+     $ sudo dd if=<rootfs partition A> of=<mount ponint>/golden_a.img.raw
+     $ sudo dd if=<rootfs partition B> of=<mount ponint>/golden_b.img.raw
+     The "<rootfs partition A>" is /dev/mmcblk0p1 for the internal eMMC storage
+     device or /dev/nvme0n1p1 for the external NVMe storage device, and the "<rootfs partition B>"
+     is /dev/mmcblk0p2 for the internal eMMC storage device or /dev/nvme0n1p2 for the external NVMe
+     storage device.
+  f. Copy the golden images into the TARGET_BSP directory on the host machine by running
+     the following commands:
+     $ sudo cp golden_a.img.raw ${TARGET_BSP}/bootloader/system.img.raw
+     $ sudo cp golden_b.img.raw ${TARGET_BSP}/bootloader/system.img_b.raw
+  g. Add the "-s" option when generating the OTA payload package.
+     For the internal eMMC storage device, running the following command:
+     $ sudo ROOTFSA_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+     -s <target board> <base version>
+     For the external NVMe storage device, running the following command
+     $ sudo ROOTFS_AB=1 ./tools/ota_tools/version_upgrade/l4t_generate_ota_package.sh \
+     -s --external-device nvme0n1 -S <rootfs size> <target board> <base version>
+
+The content of golden image is now packed into the OTA payload package and then extracted
+into the corresponding rootfs partition by the default rootfs updater provided by NVIDIA
+during the OTA update.

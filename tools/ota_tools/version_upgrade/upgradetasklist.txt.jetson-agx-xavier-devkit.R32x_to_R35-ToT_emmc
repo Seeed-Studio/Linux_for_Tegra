@@ -1,0 +1,191 @@
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+# This is the control file that determines what partitions and what
+# sequence to be updated. This file is parsed by "l4t_update_partitions.sh".
+
+# Each line in control file includes 5 elements which are:
+# <task_stage>:<action>:<device>:<partition>:<index file>
+
+# Where
+#
+#  <task_stage>: Update_A, Update_B, Update_B1, Update_B2, ...
+#
+#  <action>: Write, Write_BCT_A_1, Write_BCT_B_1, Write_BCT_A_2, Write_BCT_B_2, Fill_BCT_A, Write_APP, Write_APP_b, Clean, Clean_BCT1, Read, Set_Boot_Normal_Mode, Set_Boot_Recovery_Mode, Set_Boot_Slot_A, Set_Boot_Slot_B
+#
+#  <device>: qspi, sdmmc_user
+#
+#  <partition>: BCT, mb1, mb1_b, MB1_BCT, MB1_BCT_b, dram-ecc-fw, badpage-fw, badpage-fw_b, spe-fw, spe-fw_b, mb2, mb2_b, mts-preboot, mts-preboot_b, secondary_gpt, master_boot_record, primary_gpt, APP, mts-bootpack, mts-bootpack_b, cpu-bootloader, cpu-bootloader_b, bootloader-dtb, bootloader-dtb_b, secure-os, secure-os_b, eks, adsp-fw, adsp-fw_b, bpmp-fw, bpmp-fw_b, bpmp-fw-dtb, bpmp-fw-dtb_b, sce-fw, sce-fw_b, sc7, sc7_b, FBNAME, BMP, BMP_b, recovery, recovery-dtb, kernel-bootctrl, kernel-bootctrl_b, kernel, kernel_b, kernel-dtb, kernel-dtb_b, secondary_gpt
+#
+#  <index file>: <directory of images>/<index file name>, such as R32-ToT/flash.idx, R32_1_2-R32i/flash.idx
+
+
+# Task list for upgrading from R32x to R35-ToT on Jetson-AGX-Xavier
+# R32x includes R32.7
+
+# Update resigned R32 mb1 image
+Update_B1:Write:sdmmc_boot:mb1:R32x-R35i/flash.idx
+
+# Setup backup boot path
+Update_B1:Write:sdmmc_boot:mb1_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_boot:MB1_BCT_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_boot:MEM_BCT_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_boot:spe-fw_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_boot:mb2_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_boot:mts-preboot_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:mts-mce_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:mts-proper_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:cpu-bootloader_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:bootloader-dtb_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:secure-os_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:eks_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:bpmp-fw_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:bpmp-fw-dtb_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:xusb-fw_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:rce-fw_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:adsp-fw_b:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:sc7_b:R32x-R35i/flash.idx
+
+# Common
+Update_B1:Write:sdmmc_user:recovery:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:recovery-dtb:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:esp:R32x-R35i/flash.idx
+# Erase uefi_variables partition
+Update_B1:Clean:sdmmc_user:uefi_variables:R32x-R35i/flash.idx
+
+Update_B1:Write:sdmmc_boot:secondary_gpt_backup:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_boot:secondary_gpt:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:master_boot_record:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:primary_gpt:R32x-R35i/flash.idx
+Update_B1:Write:sdmmc_user:secondary_gpt:R32x-R35i/flash.idx
+
+# Switch to the backup B path
+# Write BCT image for booting from chain B into the secondary
+# erasable block of the BCT partition.
+Update_B1:Write_BCT_B_2:sdmmc_boot:BCT:R32x-R35i/flash.idx
+Update_B1:Clean_BCT1:sdmmc_boot:BCT:R32x-R35i/flash.idx
+# Set SR-BR register to make it boot from chain B after reboot
+Update_B1:Set_Boot_Slot_B:sdmmc_boot:BCT:R32x-R35i/flash.idx
+
+# Setup A path
+Update_A1:Write:sdmmc_boot:mb1:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_boot:MB1_BCT:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_boot:MEM_BCT:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_boot:spe-fw:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_boot:mb2:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_boot:mts-preboot:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:mts-mce:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:mts-proper:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:cpu-bootloader:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:bootloader-dtb:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:secure-os:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:eks:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:bpmp-fw:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:bpmp-fw-dtb:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:xusb-fw:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:rce-fw:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:adsp-fw:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:sc7:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:kernel:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:kernel-dtb:R35A-R35i/flash.idx
+
+# Common
+Update_A1:Write:sdmmc_user:recovery:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:recovery-dtb:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:esp:R35A-R35i/flash.idx
+
+Update_A1:Write:sdmmc_boot:secondary_gpt_backup:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_boot:secondary_gpt:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:master_boot_record:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:primary_gpt:R35A-R35i/flash.idx
+Update_A1:Write:sdmmc_user:secondary_gpt:R35A-R35i/flash.idx
+
+# Switch to the A path
+# Write BCT image for booting from chain A into the first
+# erasable block of the BCT partition.
+Update_A1:Write_BCT_A_1:sdmmc_boot:BCT:R35A-R35i/flash.idx
+# Set SR-BR register to make it boot from chain A after reboot
+Update_A1:Set_Boot_Slot_A:sdmmc_boot:BCT:R35A-R35i/flash.idx
+
+# Write APP
+Update_A1:Write_APP:sdmmc_user:APP:R35A-R35i/flash.idx
+
+# Setup final layout
+Update_B2:Write:sdmmc_boot:mb1_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_boot:MB1_BCT_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:mts-mce_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:mts-proper_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:cpu-bootloader_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:bootloader-dtb_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:secure-os_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:eks_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:bpmp-fw_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:bpmp-fw-dtb_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:xusb-fw_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:rce-fw_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:adsp-fw_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:sc7_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:kernel_b:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:kernel-dtb_b:R35-ToT/flash.idx
+
+Update_B2:Write:sdmmc_boot:secondary_gpt_backup:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_boot:secondary_gpt:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:master_boot_record:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:primary_gpt:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:secondary_gpt:R35-ToT/flash.idx
+
+# Common
+Update_B2:Write:sdmmc_boot:BCT-boot-chain_backup:R35-ToT/flash.idx
+
+# Write multiple copies of BCT image for booting from chain A
+# into the BCT partition.
+Update_B2:Fill_BCT_A:sdmmc_boot:BCT:R35-ToT/flash.idx
+
+# Write APP_b
+#<ROOTFS_B>Update_B2:Write_APP_b:sdmmc_user:APP_b:R35-ToT/flash.idx
+
+# Switch to B path to re-flash MB1_BCT and then switch
+# back to A path
+Update_B2:Write_BCT_B_1:sdmmc_boot:BCT:R35-ToT/flash.idx
+Update_B2:Set_Boot_Slot_B:sdmmc_boot:BCT:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_boot:MB1_BCT:R35-ToT/flash.idx
+Update_B2:Write_BCT_A_1:sdmmc_boot:BCT:R35-ToT/flash.idx
+Update_B2:Set_Boot_Slot_A:sdmmc_boot:BCT:R35-ToT/flash.idx
+
+# Write NVMe device if it exists
+#<EXTERNAL>Update_B2:Write:nvme:kernel:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:kernel_b:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:kernel-dtb:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:kernel-dtb_b:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:recovery:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:recovery-dtb:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:esp:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:master_boot_record:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:primary_gpt:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write:nvme:secondary_gpt:R35-ToT/flash.idx
+#<EXTERNAL>Update_B2:Write_APP:nvme:APP:R35-ToT/flash.idx
+#<ROOTFS_B>#<EXTERNAL>Update_B2:Write_APP_b:nvme:APP_b:R35-ToT/flash.idx
+
+# Switch to the default boot mode
+Update_B2:Write:sdmmc_user:bootloader-dtb:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:cpu-bootloader:R35-ToT/flash.idx
+Update_B2:Clean:sdmmc_user:uefi_variables:R35-ToT/flash.idx
+Update_B2:Write:sdmmc_user:esp:R35-ToT/flash.idx
