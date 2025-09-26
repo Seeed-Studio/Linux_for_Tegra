@@ -1,8 +1,20 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/*
+/* SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved.
+ *
  * NVIDIA Tegra Video Input Device Driver Core Helpers
  *
- * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __TEGRA_CORE_H__
@@ -51,6 +63,7 @@ enum tegra_image_dt {
 	TEGRA_IMAGE_DT_RAW10,
 	TEGRA_IMAGE_DT_RAW12,
 	TEGRA_IMAGE_DT_RAW14,
+	TEGRA_IMAGE_DT_RAW16,
 };
 
 /* Supported CSI to VI Data Formats */
@@ -61,6 +74,7 @@ enum tegra_vf_code {
 	TEGRA_VF_RAW10,
 	TEGRA_VF_RAW12,
 	TEGRA_VF_RAW14,
+	TEGRA_VF_RAW16,
 	TEGRA_VF_EMBEDDED8,
 	TEGRA_VF_RGB565,
 	TEGRA_VF_RGB555,

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only
- * SPDX-FileCopyrightText: Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES.
+ * SPDX-FileCopyrightText: Copyright (c) 2017-2025 NVIDIA CORPORATION & AFFILIATES.
  * All rights reserved.
  *
  * NVIDIA Tegra Video Input Device Driver VI5 formats
@@ -126,6 +126,16 @@ static const struct tegra_video_format vi5_video_formats[] = {
 				RAW12, SGBRG12, "GBGB.. RGRG.."),
 	TEGRA_VIDEO_FORMAT(RAW12, 12, SBGGR12_1X12, 2, 1, T_R16,
 				RAW12, SBGGR12, "BGBG.. GRGR.."),
+
+	/* RAW 16 */
+	TEGRA_VIDEO_FORMAT(RAW16, 16, SRGGB16_1X16, 2, 1, T_R16,
+				RAW16, SRGGB16, "RGRG.. GBGB.."),
+	TEGRA_VIDEO_FORMAT(RAW16, 16, SGRBG16_1X16, 2, 1, T_R16,
+				RAW16, SGRBG16, "GRGR.. BGBG.."),
+	TEGRA_VIDEO_FORMAT(RAW16, 16, SGBRG16_1X16, 2, 1, T_R16,
+				RAW16, SGBRG16, "GBGB.. RGRG.."),
+	TEGRA_VIDEO_FORMAT(RAW16, 16, SBGGR16_1X16, 2, 1, T_R16,
+				RAW16, SBGGR16, "BGBG.. GRGR.."),
 
 	/* RGB888 */
 	TEGRA_VIDEO_FORMAT(RGB888, 24, RGB888_1X24, 4, 1, T_A8R8G8B8,

@@ -286,6 +286,15 @@ static void tegra_channel_update_format(struct tegra_channel *chan,
 	u32 scaled_width = 0;
 	u32 bytesperline = 0;
 
+	if (!chan)
+		return;
+
+	if (!chan->video) {
+		dev_dbg(chan->vi->dev, "%s: chan->video NULL pointer\n",
+			__func__);
+		return;
+	}
+
 	if (__builtin_umul_overflow(width, numerator, &scaled_width)) {
 		dev_err(&chan->video->dev, "%s: update format failed due to an overflow\n",
 			__func__);
@@ -1358,9 +1367,16 @@ tegra_channel_dv_timings_cap(struct file *file, void *fh,
 
 int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 {
-	struct tegra_channel *chan = container_of(ctrl->handler,
-				struct tegra_channel, ctrl_handler);
+	struct tegra_channel *chan;
 	int err = 0;
+
+	if (!ctrl)
+		return -EINVAL;
+
+	chan = container_of(ctrl->handler, struct tegra_channel, ctrl_handler);
+
+	if (!chan)
+		return -EINVAL;
 
 	switch (ctrl->id) {
 	case TEGRA_CAMERA_CID_GAIN_TPG:

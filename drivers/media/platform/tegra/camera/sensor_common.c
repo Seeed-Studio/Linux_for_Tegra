@@ -295,7 +295,11 @@ static int extract_pixel_format(
 {
 	size_t size = strnlen(pixel_t, OF_MAX_STR_LEN);
 
-	if (strncmp(pixel_t, "bayer_bggr10", size) == 0)
+	if (strncmp(pixel_t, "RAW16", size) == 0)
+		*format = V4L2_PIX_FMT_SBGGR16;
+	else if (strncmp(pixel_t, "RAW10", size) == 0)
+		*format = V4L2_PIX_FMT_SBGGR10;
+	else if (strncmp(pixel_t, "bayer_bggr10", size) == 0)
 		*format = V4L2_PIX_FMT_SBGGR10;
 	else if (strncmp(pixel_t, "bayer_rggb10", size) == 0)
 		*format = V4L2_PIX_FMT_SRGGB10;
@@ -946,6 +950,7 @@ int sensor_common_init_sensor_properties(
 				temp_str);
 			goto fail;
 		}
+
 		of_node_put(node);
 	}
 
