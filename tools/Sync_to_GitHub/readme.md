@@ -255,7 +255,7 @@ sudo ./nv_ota_start.sh /ota/ota_payload_package.tar.gz
 ```
 If there is no error after executing here, restart Jetson.
 
-### 保留OTA之前的文件
+### Keep the files before OTA
 After OTA is completed, the system will be replaced with the system in `TARGET_BSP`, and the files in the original board will be lost. If you want to keep some files in the original system, please use the `nv_ota_preserve_data.sh` script in the OTA tool, which is located in the `Linux_for_Tegra/tools/ota_tools/version_upgrade/` directory. This script reads the content of `ota_backup_files_list.txt` and selects the files to be saved by editing the `ota_backup_files_list.txt` file:
 
 ```
