@@ -84,6 +84,10 @@ SUPPORTED_EXTERNAL_DEVICES=(
 	'reserver-industrial-orin-j401:nvme0n1'
 	'reserver-agx-orin-j501x:nvme0n1'
 	'reserver-agx-orin-j501x-gmsl:nvme0n1'
+
+	'recomputer-orin:nvme0n1'
+	'recomputer-orin-industrial:nvme0n1'
+	'reserver-orin-industrial:nvme0n1'
 )
 T234_NVME_CFG="${LINUX_BASE_DIR}/tools/kernel_flash/flash_l4t_t234_nvme.xml"
 T234_NVME_ROOTFS_AB_CFG="${LINUX_BASE_DIR}/tools/kernel_flash/flash_l4t_t234_nvme_rootfs_ab.xml"
@@ -238,6 +242,19 @@ function construct_board_spec_name()
 		'reserver-agx-orin-j501x:0005'
 		'reserver-agx-orin-j501x-gmsl:0004'
 		'reserver-agx-orin-j501x-gmsl:0005'
+
+		'recomputer-orin:0001'
+		'recomputer-orin:0003'
+		'recomputer-orin:0004'
+		'recomputer-orin:0005'
+		'recomputer-orin-industrial:0001'
+		'recomputer-orin-industrial:0003'
+		'recomputer-orin-industrial:0004'
+		'recomputer-orin-industrial:0005'
+		'reserver-orin-industrial:0001'
+		'reserver-orin-industrial:0003'
+		'reserver-orin-industrial:0004'
+		'reserver-orin-industrial:0005'
 	)
 	local temp="${board}:${boardsku}"
 	local entry=
