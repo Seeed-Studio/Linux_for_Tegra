@@ -197,7 +197,7 @@ Note that **192.168.1.77** is the internal server of Seeed, which functions as a
 
 
 ## OTA
-For versions of ProjectPack 5.1.3 and later, you can directly OTA to the current version. According to NVIDIA's official tool description, the OTA process is mainly divided into two steps:
+For versions of jectPack 5.1.3 and later, you can directly OTA to the current version.For versions earlier than jectPack 5.1.3, please first OTA to 5.1.3, and then OTA to this version. According to NVIDIA's official tool description, the OTA process is mainly divided into two steps:
 - Generate OTA package
 - OTA on Jetson devices
 ### Generate OTA package
