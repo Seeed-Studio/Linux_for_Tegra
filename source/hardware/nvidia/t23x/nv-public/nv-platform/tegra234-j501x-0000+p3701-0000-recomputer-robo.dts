@@ -1,0 +1,246 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-j501x-0000+p3701-0000.dts"
+#include "tegra234-p3737-0000+p3701-xxxx-nv-common.dtsi"
+#include "tegra234-p3701-0000.dtsi"
+
+#include <dt-bindings/net/ti-dp83867.h>
+/ {
+	aliases {
+		serial4 = "/bus@0/serial@3140000";
+	};
+	
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+		
+		led_red {
+			label = "on-board:red";
+			gpios = <&gpio_xten 4 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+		
+		led_green {
+			label = "on-board:green";
+			gpios = <&gpio_xten 3 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+		
+		led_blue {
+			label = "on-board:blue";
+			gpios = <&gpio_xten 2 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+	};
+	
+	bus@0 {
+		
+		//Gigabit Ethernet
+		ethernet@2310000 {
+			status = "okay";
+			nvidia,mac-addr-idx = <1>;
+			nvidia,max-platform-mtu = <8000>;
+			nvidia,pause_frames = <0>;
+			nvidia,phy-reset-gpio = <&gpio TEGRA234_MAIN_GPIO(G, 5) 0>;
+			phy-handle = <&phy>;
+			phy-mode = "rgmii-id";
+			
+			mdio {
+				compatible = "nvidia,eqos-mdio";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				phy: phy@0 {
+					reg = <0>;
+					compatible = "ethernet-phy-ieee802.3-c22";
+					tx-fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+					rx-fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+					ti,max-output-impedance;
+					//	ti,clk-output-sel = <DP83867_CLK_O_SEL_CHN_A_RCLK>;
+					ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_75_NS>;
+					ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_75_NS>;
+					interrupt-parent = <&gpio>;
+					interrupts = <TEGRA234_MAIN_GPIO(G, 4) IRQ_TYPE_LEVEL_LOW>;//<TODO> Need to check
+				};
+			};
+		};
+
+		pcie@14180000 {
+			status = "okay";
+			phys = <&p2u_hsio_0>;
+			phy-names = "p2u-0";
+		};
+
+		i2c@3160000 {
+			status = "okay";
+			gpio_xten: gpio_xten@21 {
+				compatible = "nxp,pca9535";
+				reg = <0x21>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				
+				interrupt-controller;
+				#interrupt-cells=<2>;
+				
+				interrupt-parent = <&gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(AC, 5) IRQ_TYPE_EDGE_FALLING>;
+				
+				gpio-line-names =
+				"UART1_EN"			,"M2B_P_OFF_N",
+				"USR_LED_BLUE"		,"USR_LED_GREEN",
+				"USR_LED_RED"		,"CAM1_VDD_EN",
+				"M2B_W_DIS1_N"		,"M2B_PCIe_RST_N",
+				"CAN1_120R_EN"		,"CAN0_120R_EN",
+				"CAN2_120R_EN"		,"PCIe_ETH_RST",
+				"CAN3_120R_EN"		,"USB_HUB_RST_N",
+				"CAM0_VDD_EN"		,"UART2_EN";
+				
+				gpio-line-offsets = <0>, <1>, <2>, <3>, <4>, <5>, <6>, <7>, <8>, <9>, <10>, <11>, <12>, <13>, <14>, <15>;
+				
+				UART1_EN {
+					gpios = <&gpio_xten 0 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "UART1_EN";
+				};
+
+                PCIe_M2B_RST {
+                    gpios = <&gpio_xten 7 GPIO_ACTIVE_LOW>;
+                    output-high;
+                    line-name = "PCIe_M2B_RST";
+                };
+
+				CAN1_120R_EN {
+					gpios = <&gpio_xten 8 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "CAN1_120R_EN";
+				};
+				
+				CAN0_120R_EN {
+					gpios = <&gpio_xten 9 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "CAN0_120R_EN";
+				};
+				
+				CAN2_120R_EN {
+					gpios = <&gpio_xten 10 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "CAN2_120R_EN";
+				};
+
+				PCIe_SWITCH_RST {
+                    gpios = <&gpio_xten 11 GPIO_ACTIVE_LOW>;
+                    output-high;
+                    line-name = "PCIe_SWITCH_RST";
+                };
+
+				CAN3_120R_EN {
+					gpios = <&gpio_xten 12 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "CAN3_120R_EN";
+				};
+				
+				UART2_EN {
+					gpios = <&gpio_xten 15 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "UART2_EN";
+				};
+			};
+			
+			at24c256: eeprom@57 {
+				compatible = "atmel,24c256";
+				reg = <0x57>;
+			};
+		};
+		
+		//CAN0
+		mttcan@c310000 {
+			status = "okay";
+		};
+		
+		//CAN1
+		mttcan@c320000 {
+			status = "okay";
+		};
+		
+		can_clock: can_clock {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <40000000>;
+			clock-accuracy = <100>;
+		};
+		
+		spi@3210000 {
+			#address-cells = <0x01>;
+			#size-cells = <0x00>;
+			status = "okay";
+
+			/delete-node/ spi@0;
+			/delete-node/ spi@1;
+
+			can@0 {
+				compatible = "microchip,mcp2518fd";
+				reg = <0x0>;
+				spi-max-frequency = <20000000>;
+				interrupt-parent = <&gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(H, 7) IRQ_TYPE_LEVEL_LOW>;
+				clocks = <&can_clock>;
+				clock-names = "osc";
+				nvidia,enable-hw-based-cs;
+				controller-data {
+					nvidia,enable-hw-based-cs;
+					nvidia,rx-clk-tap-delay = <0x10>;
+					nvidia,tx-clk-tap-delay = <0x0>;
+				};
+			};
+
+			can@1 {
+				compatible = "microchip,mcp2518fd";
+				reg = <0x1>;
+				spi-max-frequency = <20000000>;
+				interrupt-parent = <&gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(I, 0) IRQ_TYPE_LEVEL_LOW>;
+				clocks = <&can_clock>;
+				clock-names = "osc";
+				nvidia,enable-hw-based-cs;
+				controller-data {
+					nvidia,enable-hw-based-cs;
+					nvidia,rx-clk-tap-delay = <0x10>;
+					nvidia,tx-clk-tap-delay = <0x0>;
+				};
+			};
+		};
+		
+		/// ttyTHS1
+		serial@3100000 {
+			compatible = "nvidia,tegra194-hsuart";
+			reset-names = "serial";
+			rs485-de-gpios = <&gpio TEGRA234_MAIN_GPIO(R, 4) GPIO_ACTIVE_LOW>;
+			status = "okay";
+			/delete-property/ dmas;
+			/delete-property/ dma-names;
+		};
+		
+		/// ttyTHS4
+		serial@3140000 {
+			compatible = "nvidia,tegra194-hsuart";
+			reset-names = "serial";
+			rs485-de-gpios = <&gpio TEGRA234_MAIN_GPIO(Y, 7) GPIO_ACTIVE_LOW>;
+			status = "okay";
+			/delete-property/ dmas;
+			/delete-property/ dma-names;
+		};
+	};
+};
+
+&vdd_3v3_pcie {
+	/delete-property/ gpio;
+};
+
+&vdd_12v_pcie {
+	/delete-property/ gpio;
+};
