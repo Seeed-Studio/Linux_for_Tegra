@@ -8,7 +8,7 @@
 
 # Linux_for_Tegra
 
-This software is the source code of the default shipping firmware of Seeed Jetson reComputer, reServer and other products. It is built on NVIDIA Jetpack 6.0. On this basis, additional hardware drivers and boards are added, which is convenient for users to develop their own software and build other Jetson systems, such as Yocto, buildroot, etc.
+This software is the source code of the default shipping firmware of Seeed Jetson reComputer, reServer and other products. It is built on NVIDIA Jetpack 6.2. On this basis, additional hardware drivers and boards are added, which is convenient for users to develop their own software and build other Jetson systems, such as Yocto, buildroot, etc.
 
 ## Supported hardware 
 
@@ -194,6 +194,77 @@ job-orin-nano-reserver-8g:
 ```
 
 Note that **192.168.1.77** is the internal server of Seeed, which functions as a Samba and Http file server.
+
+
+## OTA
+For versions of ProjectPack 5.1.3 and later, you can directly OTA to the current version. According to NVIDIA's official tool description, the OTA process is mainly divided into two steps:
+- Generate OTA package
+- OTA on Jetson devices
+### Generate OTA package
+We provide a `start_generate_ota_pkg.sh` script to easily generate OTA packages. The following is an example of generating an OTA package:
+1.Prepare the `BASE_BSP` source code. `BASE_BSP` is the `Linux_for_Tegra` source code before executing OTA. You can download it on our github
+2.Prepare the source code of `TARGET_BSP`. `TARGET_BSP` is the `Linux_for_Tegra` source code after executing OTA. You can download it from our github. After downloading, be sure to set up the rootfs and the system configuration you want. For details, see the readme of the corresponding version.
+3.Go to the `Linux_for_Tegra/tools/ota_tools` directory and execute `start_generate_ota_pkg.sh`. It will ask you to enter the path of `BASE_BSP`, the path of `TARGET_BSP`, the name of the carrier board to be OTA, and the jectapck version number before OTA. Then it will generate `ota_payload_package.tar.gz` in the bootloader directory.
+
+```
+cd ~/JP6.2/Linux_for_Tegra/tools/ota_tools/
+./start_generate_ota_pkg.sh
+
+=== OTA Environment Initialization ===
+Enter q at any prompt to quit
+
+Enter BASE_BSP path: /home/pss/mydisk/D/jetson/JP5.1.3/Linux_for_Tegra
+Enter TARGET_BSP path: /home/pss/mydisk/D/jetson/JP6.2/Linux_for_Tegra
+Enter target_board name: recomputer-orin-j40mini
+Enter bsp_version (Rmm-n): R35-5
+...
+...
+SUCCESS: generate OTA package at "/home/pss/mydisk/D/jetson/JP6.2/Linux_for_Tegra/bootloader/recomputer-orin/ota_payload_package.tar.gz"
+
+```
+
+### OTA on Jetson devices
+1.Install dependent software
+```
+sudo apt-get update
+sudo apt-get install efibootmgr nvme-cli
+```
+2.Create a directory to store the files generated during the OTA update process and set the `WORKDIR` environment variable to the full pathname of this directory.
+```
+mkdir temp
+export WORKDIR=/home/user/temp/
+```
+3.Put the OTA tool in the ${WORKDIR}/Linux_for_Tegra/tools/ directory. This OTA tool can copy the tools on the host, for example:
+```
+cd ${WORKDIR} 
+mkdir -p Linux_for_Tegra/tools/
+cd ${WORKDIR}/Linux_for_Tegra/tools/
+scp -r pss@192.168.100.200:/home/pss/mydisk/D/jetson/JP6.2/Linux_for_Tegra/tools/ota_tools .
+```
+4.Create a /ota/ directory and place the `ota_payload_package.tar.gz` OTA payload package in the /ota/ directory.
+```
+mkdir /ota/
+cd /ota/
+sudo scp pss@192.168.100.200:/home/pss/mydisk/D/jetson/JP6.2/Linux_for_Tegra/bootloader/recomputer-orin/ota_payload_package.tar.gz .
+```
+5.Start OTA. 
+```
+cd ${WORKDIR}/Linux_for_Tegra/tools/ota_tools/version_upgrade
+sudo ./nv_ota_start.sh /ota/ota_payload_package.tar.gz
+
+```
+If there is no error after executing here, restart Jetson.
+
+### 保留OTA之前的文件
+After OTA is completed, the system will be replaced with the system in `TARGET_BSP`, and the files in the original board will be lost. If you want to keep some files in the original system, please use the `nv_ota_preserve_data.sh` script in the OTA tool, which is located in the `Linux_for_Tegra/tools/ota_tools/version_upgrade/` directory. This script reads the content of `ota_backup_files_list.txt` and selects the files to be saved by editing the `ota_backup_files_list.txt` file:
+
+```
+# All the files or directories should be listed with absolute path
+# Example:
+ etc/passwd
+ opt/nvidia
+ ...
+```
 
 ## Summary
 
