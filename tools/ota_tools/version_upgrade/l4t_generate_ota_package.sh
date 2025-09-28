@@ -83,6 +83,7 @@ SUPPORTED_EXTERNAL_DEVICES=(
 	'recomputer-industrial-orin-j201:nvme0n1'
 	'reserver-industrial-orin-j401:nvme0n1'
 	'reserver-agx-orin-j501x:nvme0n1'
+	'reserver-agx-orin-j501x-gmsl:nvme0n1'
 )
 T234_NVME_CFG="${LINUX_BASE_DIR}/tools/kernel_flash/flash_l4t_t234_nvme.xml"
 T234_NVME_ROOTFS_AB_CFG="${LINUX_BASE_DIR}/tools/kernel_flash/flash_l4t_t234_nvme_rootfs_ab.xml"
@@ -132,7 +133,7 @@ function usage()
 {
 	echo -ne "Usage: sudo $0 [options] <target board> <bsp version>\n"
 	echo -ne "\tWhere,\n"
-	echo -ne "\t\t<target board>: target board. Supported boards: jetson-agx-orin-devkit, jetson-agx-orin-devkit-industrial, jetson-orin-nano-devkit, recomputer-orin-j40mini, recomputer-orin-j401, recomputer-industrial-orin-j201, reserver-industrial-orin-j401, reserver-agx-orin-j501x.\n"
+	echo -ne "\t\t<target board>: target board. Supported boards: jetson-agx-orin-devkit, jetson-agx-orin-devkit-industrial, jetson-orin-nano-devkit, recomputer-orin-j40mini, recomputer-orin-j401, recomputer-industrial-orin-j201, reserver-industrial-orin-j401, reserver-agx-orin-j501x, reserver-agx-orin-j501x-gmsl.\n"
 	echo -ne "\t\t<bsp version>: the version of the base BSP. Supported versions: R35-5, R35-6, R36-3, R36-4.\n"
 	echo -ne "\toptions:\n"
 	echo -ne "\t\t-u <PKC key file>: PKC key used for odm fused board\n"
@@ -235,6 +236,8 @@ function construct_board_spec_name()
 		'reserver-industrial-orin-j401:0005'
 		'reserver-agx-orin-j501x:0004'
 		'reserver-agx-orin-j501x:0005'
+		'reserver-agx-orin-j501x-gmsl:0004'
+		'reserver-agx-orin-j501x-gmsl:0005'
 	)
 	local temp="${board}:${boardsku}"
 	local entry=
