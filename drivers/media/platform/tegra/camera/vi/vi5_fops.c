@@ -617,10 +617,14 @@ static void vi5_capture_dequeue(struct tegra_channel *chan,
 
 uncorr_err:
 	spin_lock_irqsave(&chan->capture_state_lock, flags);
-	chan->capture_state = CAPTURE_ERROR;
+	if (err == -ETIMEDOUT) {
+		chan->capture_state = CAPTURE_TIMEOUT;
+		buf->vb2_state = VB2_BUF_STATE_QUEUED;
+	} else {
+		chan->capture_state = CAPTURE_ERROR;
+		buf->vb2_state = VB2_BUF_STATE_ERROR;
+	}
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
-
-	buf->vb2_state = VB2_BUF_STATE_ERROR;
 
 rel_buf:
 	vi5_release_buffer(chan, buf);
@@ -683,7 +687,10 @@ static int vi5_channel_error_recover(struct tegra_channel *chan,
 		buf = dequeue_dequeue_buffer(chan);
 		if (!buf)
 			break;
-		buf->vb2_state = VB2_BUF_STATE_ERROR;
+		if (chan->capture_state == CAPTURE_TIMEOUT)
+			buf->vb2_state = VB2_BUF_STATE_QUEUED;
+		else
+			buf->vb2_state = VB2_BUF_STATE_ERROR;
 		vi5_capture_dequeue(chan, buf);
 	}
 
