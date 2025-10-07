@@ -63,17 +63,7 @@ pva_kmd_notify_fw_get_tegra_stats(struct pva_kmd_device *pva,
 	uint64_t buffer_offset = 0U;
 	enum pva_error err = PVA_SUCCESS;
 	struct pva_kmd_fw_tegrastats fw_tegra_stats = { 0 };
-	bool stats_enabled = pva->debugfs_context.stats_enable;
 	uint64_t duration = 0U;
-
-	if (stats_enabled == false) {
-		pva_kmd_log_err("Tegra stats are disabled");
-		goto err_out;
-	}
-
-	if (!pva_kmd_device_maybe_on(pva)) {
-		goto out;
-	}
 
 	/* Power on PVA if not already */
 	err = pva_kmd_device_busy(pva);
@@ -85,7 +75,7 @@ pva_kmd_notify_fw_get_tegra_stats(struct pva_kmd_device *pva,
 
 	pva_kmd_set_cmd_get_tegra_stats(&cmd, pva->tegra_stats_resource_id,
 					pva->tegra_stats_buf_size,
-					buffer_offset, stats_enabled);
+					buffer_offset, true);
 
 	err = pva_kmd_submit_cmd_sync(&pva->submitter, &cmd, sizeof(cmd),
 				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
@@ -100,7 +90,6 @@ pva_kmd_notify_fw_get_tegra_stats(struct pva_kmd_device *pva,
 
 	pva_kmd_device_idle(pva);
 
-out:
 	duration = sat_sub64(fw_tegra_stats.window_end_time,
 			     fw_tegra_stats.window_start_time);
 

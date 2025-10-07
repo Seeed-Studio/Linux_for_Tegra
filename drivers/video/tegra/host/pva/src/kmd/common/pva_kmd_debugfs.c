@@ -143,7 +143,8 @@ static int64_t get_vpu_stats(struct pva_kmd_device *dev, void *file_data,
 	kmd_tegra_stats.average_vpu_utilization[0] = 0;
 	kmd_tegra_stats.average_vpu_utilization[1] = 0;
 
-	pva_kmd_notify_fw_get_tegra_stats(dev, &kmd_tegra_stats);
+	if (pva_kmd_device_maybe_on(dev))
+		pva_kmd_notify_fw_get_tegra_stats(dev, &kmd_tegra_stats);
 
 	return print_vpu_stats(&kmd_tegra_stats, out_buffer, offset, size);
 }
