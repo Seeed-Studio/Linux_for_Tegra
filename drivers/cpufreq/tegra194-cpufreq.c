@@ -615,8 +615,6 @@ static int tegra_cpufreq_init_cpufreq_table(struct cpufreq_policy *policy,
 static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct tegra194_cpufreq_data *data = cpufreq_get_driver_data();
-	int maxcpus_per_clock = data->soc->maxcpus_per_cluster *
-		data->soc->clusters_per_clk;
 	u32 clusterid = data->cpu_data[policy->cpu].clusterid;
 	struct cpufreq_frequency_table *freq_table;
 	struct cpufreq_frequency_table *bpmp_lut;
