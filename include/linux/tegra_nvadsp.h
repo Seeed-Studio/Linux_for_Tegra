@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /**
- * Copyright (c) 2014-2024, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2025, NVIDIA CORPORATION. All rights reserved.
  */
 
 #ifndef __LINUX_TEGRA_NVADSP_H
@@ -90,11 +90,11 @@ struct nvadsp_mbox {
  */
 typedef struct _msgq_message_t {
 	int32_t size;		/* size of payload in words */
-	int32_t payload[1];	/* variable length payload */
+	int32_t payload[];	/* variable length payload */
 } msgq_message_t;
 
 #define MSGQ_MESSAGE_HEADER_SIZE \
-	(sizeof(msgq_message_t) - sizeof(((msgq_message_t *)0)->payload))
+	(sizeof(msgq_message_t))
 #define MSGQ_MESSAGE_HEADER_WSIZE \
 	(MSGQ_MESSAGE_HEADER_SIZE / sizeof(int32_t))
 
@@ -102,10 +102,10 @@ typedef struct _msgq_t {
 	int32_t size;		/* queue size in words */
 	int32_t write_index;	/* queue write index */
 	int32_t read_index;	/* queue read index */
-	int32_t queue[1];	/* variable length queue */
+	int32_t queue[];	/* variable length queue */
 } msgq_t;
 
-#define MSGQ_HEADER_SIZE	(sizeof(msgq_t) - sizeof(((msgq_t *)0)->queue))
+#define MSGQ_HEADER_SIZE	(sizeof(msgq_t))
 #define MSGQ_HEADER_WSIZE	(MSGQ_HEADER_SIZE / sizeof(int32_t))
 #define MSGQ_MAX_QUEUE_WSIZE	(8192 - MSGQ_HEADER_WSIZE)
 #define MSGQ_MSG_WSIZE(x) \
