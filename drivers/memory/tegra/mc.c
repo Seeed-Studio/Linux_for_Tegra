@@ -987,8 +987,6 @@ static int tegra_mc_probe(struct platform_device *pdev)
 	}
 
 	if (mc->soc->has_chiplet_arch) {
-		unsigned long intstat;
-
 		/* Unmask MCF interrupts */
 		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->mcf_intmask, MCF_INTMASK_0);
 		mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->mcf_intmask, MCF_INTPRIORITY_0);
