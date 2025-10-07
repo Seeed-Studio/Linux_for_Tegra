@@ -117,6 +117,7 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 
 	pmc->soc = of_device_get_match_data(&pdev->dev);
 	pmc->dev = &pdev->dev;
+	mutex_init(&pmc->powergates_lock);
 
 	/* take over the memory region from the early initialization */
 	pmc->base = devm_platform_ioremap_resource(pdev, 0);
