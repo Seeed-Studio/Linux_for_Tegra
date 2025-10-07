@@ -1137,7 +1137,6 @@ static struct phy_driver realtek_drvs[] = {
 		.get_wol        = &rtl8211f_get_wol,
                 .set_wol        = &rtl8211f_set_wol,
 		.suspend	= rtl821x_suspend,
-		.suspend	= genphy_suspend,
 		.resume		= rtl821x_resume,
 		.read_page	= rtl821x_read_page,
 		.write_page	= rtl821x_write_page,
