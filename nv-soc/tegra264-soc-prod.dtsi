@@ -671,7 +671,89 @@
 			};
 		};
 
-	
+		mttcan@81102f0000 {
+			prod-settings {
+				#prod-cells = <4>;
+				prod_c_can_2m_1m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00000000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000000>;            //M_TTCAN_CORE_TDCR_0
+				};
+				prod_c_can_5m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00800000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000600>;            //M_TTCAN_CORE_TDCR_0
+				};
+				prod_c_can_8m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00800000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000400>;            //M_TTCAN_CORE_TDCR_0
+				};
+			};
+		};
+
+		mttcan@8110300000 {
+			prod-settings {
+				#prod-cells = <4>;
+				prod_c_can_2m_1m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00000000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000000>;            //M_TTCAN_CORE_TDCR_0
+				};
+				prod_c_can_5m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00800000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000600>;            //M_TTCAN_CORE_TDCR_0
+				};
+				prod_c_can_8m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00800000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000400>;            //M_TTCAN_CORE_TDCR_0
+				};
+			};
+		};
+
+		mttcan@8110330000 {
+			prod-settings {
+				#prod-cells = <4>;
+				prod_c_can_2m_1m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00000000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000000>;            //M_TTCAN_CORE_TDCR_0
+				};
+				prod_c_can_5m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00800000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000600>;            //M_TTCAN_CORE_TDCR_0
+				};
+				prod_c_can_8m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00800000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000400>;            //M_TTCAN_CORE_TDCR_0
+				};
+			};
+		};
+
+		mttcan@8110340000 {
+			prod-settings {
+				#prod-cells = <4>;
+				prod_c_can_2m_1m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00000000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000000>;            //M_TTCAN_CORE_TDCR_0
+				};
+				prod_c_can_5m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00800000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000600>;            //M_TTCAN_CORE_TDCR_0
+				};
+				prod_c_can_8m {
+					prod = <
+						0 0x0000000c 0x00800000 0x00800000              //M_TTCAN_CORE_DBTP_0
+						0 0x00000048 0x00007f00 0x00000400>;            //M_TTCAN_CORE_TDCR_0
+				};
+			};
+		};
 
 		qspi@db50000 {
 			prod-settings {
