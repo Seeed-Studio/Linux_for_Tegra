@@ -5259,6 +5259,20 @@
 			disable-clk-gate;
 		};
 
+		tachometer@810c5d0000 {
+			compatible = "nvidia,pwm-tegra264-tachometer";
+			status = "disabled";
+			reg = <0x81 0x0c5d0000 0x0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&bpmp TEGRA264_CLK_CLK1M>;
+			resets = <&bpmp TEGRA264_RESET_TACH1>;
+			clock-names = "tach";
+			reset-names = "tach";
+			pulse-per-rev = <2>;
+			capture-window-length = <2>;
+			disable-clk-gate;
+                 };
+
 		rce_hsp0: tegra-hsp@8189100000 {
 			compatible = "nvidia,tegra264-hsp",
 				     "nvidia,tegra234-hsp",
