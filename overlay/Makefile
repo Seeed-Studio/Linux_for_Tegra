@@ -83,6 +83,7 @@ dtbo-y += tegra234-seeed-gmsl2x1x4-3g-overlay.dtbo
 dtbo-y += tegra234-seeed-gmsl2x1x4-6g-overlay.dtbo
 dtbo-y += tegra234-seeed-orbbec-335lg-overlay.dtbo
 dtbo-y += tegra234-seeed-gmsl2x4-orbbec-335lg-overlay.dtbo
+dtbo-y += tegra234-seeed-gmsl-recomputer-robo-overlay.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
