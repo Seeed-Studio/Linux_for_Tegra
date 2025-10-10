@@ -99,7 +99,7 @@ static int tegra264_pcie_parse_dt(struct tegra264_pcie *pcie)
 
 static void tegra264_pcie_bpmp_set_rp_state(struct tegra264_pcie *pcie)
 {
-#if defined(NV_MRQ_PCIE_REQUEST_STRUCT_PRESENT) && defined(CMD_PCIE_RP_CONTROLLER_OFF)
+#if defined(NV_MRQ_PCIE_REQUEST_STRUCT_PRESENT) && defined(NV_CMD_PCIE_RP_CONTROLLER_OFF_ENUM_PRESENT)
 	struct tegra_bpmp_message msg;
 	struct mrq_pcie_request req;
 	int err;

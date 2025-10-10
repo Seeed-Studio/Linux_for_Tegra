@@ -6945,6 +6945,23 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_CLK_HW_DETERMINE_RATE_NO_REPARENT_PRESENT" "" "functions"
         ;;
 
+        cmd_pcie_rp_controller_off_enum_present)
+            #
+            # Determine if the enum mrq_pcie_cmd defines the values
+            # CMD_PCIE_RP_CONTROLLER_OFF.
+            #
+            # This is only defined in NVIDIA kernels at the moment.
+            #
+            CODE="
+            #include <linux/types.h>
+            #include <soc/tegra/bpmp-abi.h>
+            int conftest_cmd_pcie_rp_controller_off_enum_present(void) {
+                return CMD_PCIE_RP_CONTROLLER_OFF;
+            }"
+
+            compile_check_conftest "$CODE" "NV_CMD_PCIE_RP_CONTROLLER_OFF_ENUM_PRESENT" "" "types"
+        ;;
+
         cyclecounter_struct_read_has_const_cyclecounter_arg)
             #
             # Determine if the 'cyclecounter' structure 'read' function pointer
