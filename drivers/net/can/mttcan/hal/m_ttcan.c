@@ -10,7 +10,8 @@
 #define MTTCAN_INIT_TIMEOUT 1000
 
 #define MTTCAN_SPEED_5MBPS  5000000
-#define MTTCAN_SPEED_8MBPS  8333333
+#define MTTCAN_SPEED_8MBPS_40MHZ  8000000  /* Exact 8 Mbps for 40MHz clock */
+#define MTTCAN_SPEED_8MBPS_50MHZ  8333333  /* Closest to 8 Mbps for 50MHz clock */
 
 void ttcan_print_version(struct ttcan_controller *ttcan)
 {
@@ -302,7 +303,8 @@ static void tegra_mttcan_config_prod_settings(struct mttcan_priv *priv)
 	case MTTCAN_SPEED_5MBPS:
 		prod_name = "prod_c_can_5m";
 		break;
-	case MTTCAN_SPEED_8MBPS:
+	case MTTCAN_SPEED_8MBPS_40MHZ:
+	case MTTCAN_SPEED_8MBPS_50MHZ:
 		prod_name = "prod_c_can_8m";
 		break;
 	default:
