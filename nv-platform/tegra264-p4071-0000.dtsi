@@ -174,11 +174,11 @@
 			status = "okay";
 		};
 
-		serial@810c500000 {
+		serial@810c510000 {
 			status = "okay";
 		};
 
-		serial@810c510000 {
+		serial@810c530000 {
 			status = "okay";
 		};
 
