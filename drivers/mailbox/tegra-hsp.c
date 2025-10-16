@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2025, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -835,7 +835,6 @@ static int tegra_hsp_request_shared_irq(struct tegra_hsp *hsp)
 {
 	unsigned int i, irq = 0;
 	unsigned int default_si = hsp->num_si;
-	unsigned int value;
 	int err;
 
 	for (i = 0; i < hsp->num_si; i++) {
@@ -852,13 +851,6 @@ static int tegra_hsp_request_shared_irq(struct tegra_hsp *hsp)
 		}
 
 		hsp->shared_irqs[i].enabled = true;
-
-		value = tegra_hsp_readl(hsp, HSP_INT_IE(i));
-		if (value && !hsp->soc->virtualized) {
-			dev_warn(hsp->dev,
-				 "disabling interrupts for si: %d\n", i);
-			tegra_hsp_writel(hsp, 0, HSP_INT_IE(i));
-		}
 
 		/* Use first available interrupt as default. */
 		if (default_si == hsp->num_si)
