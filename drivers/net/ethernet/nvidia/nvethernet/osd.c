@@ -875,15 +875,15 @@ static void osd_core_printf(struct osi_core_priv_data *osi_core,
 void ether_restart_lane_bringup_task(struct tasklet_struct *t)
 {
 	struct ether_priv_data *pdata = from_tasklet(pdata, t, lane_restart_task);
-	struct osi_core_priv_data *osi_core = pdata->osi_core;
 
 	if (pdata->osi_core->mac == OSI_MAC_HW_MGBE_T26X) {
 		/**
-		 *  Don't skip restart_lane_bringup_task for Jedha platform
-		 *  as this has fixed link and lane bringup has to be executed every time
+		 *  Force restart_lane_bringup_task for the platforms
+		 *  that has force-restart-lane-bringup flag in their DT.
+		 *  And lane bringup will gets executed every time
 		 *  on link change at link partner side.
 		 */
-		if (!osi_core->pcs_rx_eq_sw_ovrd_en) {
+		if (pdata->force_restart_lane_bringup == OSI_DISABLE) {
 			netdev_info(pdata->ndev, "Ignoring restart_lane_bringup_task!!!\n");
 			return;
 		}

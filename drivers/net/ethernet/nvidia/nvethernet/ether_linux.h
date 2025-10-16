@@ -759,6 +759,8 @@ struct ether_priv_data {
 	u32 coe_enable;
 	/** OSI instance of COE */
 	struct osi_mgbe_coe mgbe_coe;
+	/** Flag to retry restart_lane_bringup logic */
+	u32 force_restart_lane_bringup;
 };
 
 /**

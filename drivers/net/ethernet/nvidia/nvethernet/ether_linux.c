@@ -7193,12 +7193,19 @@ static int ether_parse_dt(struct ether_priv_data *pdata)
 		osi_core->mdc_cr = def_mdc_cr[osi_core->mac];
 	}
 
-	ret_val = of_property_read_u32(np, "nvidia,pcs-rx-eq-sw-ovrd", &osi_core->pcs_rx_eq_sw_ovrd_en);
-	if (ret_val < 0 || osi_core->pcs_rx_eq_sw_ovrd_en != OSI_RX_EQ_SW_OVRD) {
-		dev_info(dev, "failed to read or invalid RX EQ SW override - default to 0\n");
-		osi_core->pcs_rx_eq_sw_ovrd_en = 0;
+	ret_val = of_property_read_u32(np, "nvidia,pcs-rx-eq-sw-ovrd",
+				       &pdata->force_restart_lane_bringup);
+	if ((ret_val == 0) && (pdata->force_restart_lane_bringup == OSI_ENABLE)) {
+		pdata->force_restart_lane_bringup = 1;
 	} else {
-		osi_core->pcs_rx_eq_sw_ovrd_en = 1;
+		ret_val = of_property_read_u32(np, "nvidia,force-restart-lane-bringup",
+					       &pdata->force_restart_lane_bringup);
+		if ((ret_val == 0) && (pdata->force_restart_lane_bringup == OSI_ENABLE)) {
+			pdata->force_restart_lane_bringup = 1;
+		} else {
+			dev_info(dev, "failed to read or invalid force-restart-lane-bringup - default to 0\n");
+			pdata->force_restart_lane_bringup = 0;
+		}
 	}
 
 exit:
