@@ -217,9 +217,9 @@
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
-			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
 			nvidia,if-name = "mgbe0_0";
+			nvidia,force-restart-lane-bringup = <1>;
 
 			fixed-link {
 				full-duplex;
@@ -233,9 +233,9 @@
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
-			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
 			nvidia,if-name = "mgbe1_0";
+			nvidia,force-restart-lane-bringup = <1>;
 
 			fixed-link {
 				full-duplex;
@@ -249,9 +249,9 @@
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
-			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
 			nvidia,if-name = "mgbe2_0";
+			nvidia,force-restart-lane-bringup = <1>;
 
 			fixed-link {
 				full-duplex;
@@ -265,9 +265,9 @@
 			nvidia,uphy-gbe-mode = <1>;
 			nvidia,phy-iface-mode = <0x0>;
 			nvidia,max-platform-mtu = <9000>;
-			nvidia,pcs-rx-eq-sw-ovrd = <1>;
 			nvidia,pps_op_ctrl = <8>;
 			nvidia,if-name = "mgbe3_0";
+			nvidia,force-restart-lane-bringup = <1>;
 
 			fixed-link {
 				full-duplex;
