@@ -343,6 +343,18 @@
 		};
 
 		usb@a80aa10000 {
+			interrupts-extended = <&gic 0 952 IRQ_TYPE_LEVEL_HIGH>,
+				<&gic 2 0 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 79 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 80 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 82 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 83 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 84 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 85 IRQ_TYPE_LEVEL_HIGH>,
+				<&pmc 86 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "xhci", "mbox",
+					"wake0", "wake1", "wake2", "wake3",
+					"wake4", "wake5", "wake6";
 			phys = <&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-1}>,
 				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-2}>,
 				<&{/bus@0/padctl@a808680000/pads/usb2/lanes/usb2-3}>,
