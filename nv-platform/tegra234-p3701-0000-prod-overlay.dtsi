@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 
 / {
 	bus@0 {
@@ -227,7 +227,7 @@
 					nvidia,qspi-comp-pad-drv-up-ovr = <0x0a>;
 					board {
 						prod = <
-							0 0x00000004 0x00007cff 0x00000010              //QSPI_COMMAND2_0
+							0 0x00000004 0x00007cff 0x00000004              //QSPI_COMMAND2_0
 							0 0x000001ec 0x01f1f000 0x00a0a000>;            //QSPI_QSPI_COMP_CONTROL_0
 					};
 				};
