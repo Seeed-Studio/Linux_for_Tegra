@@ -22,6 +22,14 @@
 #define NVMAP_IVM_ALIGNMENT    (SZ_32K)
 #define NVMAP_IVM_INVALID_PEER		(-1)
 
+#ifndef nth_page
+#if defined(CONFIG_SPARSEMEM) && !defined(CONFIG_SPARSEMEM_VMEMMAP)
+#define nth_page(page, n) pfn_to_page(page_to_pfn((page)) + (n))
+#else
+#define nth_page(page, n) ((page) + (n))
+#endif /* CONFIG_SPARSEMEM && !CONFIG_SPARSEMEM_VMEMMAP */
+#endif /* nth_page */
+
 struct nvmap_heap;
 struct debugfs_info;
 struct nvmap_carveout_node;
