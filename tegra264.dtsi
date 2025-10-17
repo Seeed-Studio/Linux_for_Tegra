@@ -10239,6 +10239,10 @@
 				"emc_clk";
 
 		nvidia,disp-sw-soc-chip-id = <0x2650>;
+		nvidia,max-disp-clk-rate-khz = <0 0>;
+		nvidia,max-hub-clk-rate-khz = <0>;
+		nvidia,iso-bandwidth-kbps = <0>;
+		nvidia,dram-floor-kbps = <0>;
 
 		resets = <&bpmp TEGRA264_RESET_DPAUX>;
 		reset-names = "dpaux0_reset";
