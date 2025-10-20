@@ -18,8 +18,8 @@ CAM4_GPI3_PWDN  L48 PH.04
 CAM0_GPIO_RST  L5 PH.03
 CAM1_GPIO_RST  F9 PAC.01
 
-CAM0_GPIO_PWR_EN  P16 
-CAM1_GPI1_PWR_EN P05 
+CAM0_GPIO_PWR_EN  P16
+CAM1_GPI1_PWR_EN P05
 */
 
 
@@ -61,7 +61,7 @@ CAM1_GPI1_PWR_EN P05
 				#size-cells = <1>;
 				status = "okay";
 				//sync-in-gpios = <&gpio_aon SYNC_IN GPIO_ACTIVE_HIGH>;
-				sync-out-gpios = <&gpio SYNC_OUT GPIO_ACTIVE_HIGH>;  //Use hrtimer to generate trigger signals
+				sync-out-gpios = <&gpio SYNC_OUT GPIO_ACTIVE_HIGH>;//Use hrtimer to generate trigger signals
 				// pwms = <&sync_pwm 0 33333333>; //Use PWM to generate trigger signals, Default PWM mode, if use hrtimer comment out this line
 				/* EDGE_OUT #3 */
 				generator@500 {
@@ -71,6 +71,24 @@ CAM1_GPI1_PWR_EN P05
 					offset_ms = <0>;
 					status = "disable";
 				};
+			};
+
+			cam0_vdd {
+				compatible = "regulator-fixed";
+				regulator-name = "cam0-vdd";
+				gpio = <&gpio_xten CAM0_VDD GPIO_ACTIVE_HIGH>;
+				enable-active-high;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			cam1_vdd {
+				compatible = "regulator-fixed";
+				regulator-name = "cam1-vdd";
+				gpio = <&gpio_xten CAM1_VDD GPIO_ACTIVE_HIGH>;
+				enable-active-high;
+				regulator-boot-on;
+				regulator-always-on;
 			};
 
 			bus@0{
@@ -83,16 +101,7 @@ CAM1_GPI1_PWR_EN P05
 						label = "cam0-rst", "cam1-rst", "cam0-pwdn", "cam1-pwdn", "cam2-pwdn", "cam3-pwdn";
 					};
 				};
-				
-				gpio_xten@21 {
-					camera-control-output-high2 {
-						gpio-hog;
-						output-high;
-						gpios = <&gpio_xten CAM0_VDD GPIO_ACTIVE_HIGH
-									&gpio_xten CAM1_VDD GPIO_ACTIVE_HIGH>;
-						label = "cam0-vdd", "cam1-vdd";
-					};
-				};
+
 
 				host1x@13e00000 {
 					nvcsi@15a00000 {
@@ -326,7 +335,7 @@ CAM1_GPI1_PWR_EN P05
 				};
 				
 				
-				i2c@3190000{					
+				i2c@3190000{
 					des0: gmsl-deserializer0@0x29{
 						#address-cells = <1>;
 						#size-cells = <0>;
@@ -337,7 +346,7 @@ CAM1_GPI1_PWR_EN P05
 						status = "okay";
 						maxim,speed-mode = <0x00>;
 						fsync_mfp_in = <2>;
-
+						
 						phy@1 {
 							reg = <0x01>;
 							maxim,alt-mem-map8;
@@ -399,7 +408,7 @@ CAM1_GPI1_PWR_EN P05
 							};
 							
 						};
-
+						
 						
 						channel@1{
 							reg = <0x01>;

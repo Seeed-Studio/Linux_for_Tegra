@@ -70,6 +70,24 @@ CAM1_GPI1_PWR_EN P05
 				};
 			};
 
+			cam0_vdd {
+				compatible = "regulator-fixed";
+				regulator-name = "cam0-vdd";
+				gpio = <&gpio_xten CAM0_VDD GPIO_ACTIVE_HIGH>;
+				enable-active-high;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			cam1_vdd {
+				compatible = "regulator-fixed";
+				regulator-name = "cam1-vdd";
+				gpio = <&gpio_xten CAM1_VDD GPIO_ACTIVE_HIGH>;
+				enable-active-high;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
 			bus@0{
 				/* GPIO configuration */
 				gpio@2200000 {
@@ -78,16 +96,6 @@ CAM1_GPI1_PWR_EN P05
 						output-high;
 						gpios = <CAM0_RST_L 0 CAM1_RST_L 0 CAM0_PWDN 0 CAM1_PWDN 0 CAM2_PWDN 0 CAM3_PWDN 0>;
 						label = "cam0-rst", "cam1-rst", "cam0-pwdn", "cam1-pwdn", "cam2-pwdn", "cam3-pwdn";
-					};
-				};
-				
-				gpio_xten@21 {
-					camera-control-output-high2 {
-						gpio-hog;
-						output-high;
-						gpios = <&gpio_xten CAM0_VDD GPIO_ACTIVE_HIGH
-									&gpio_xten CAM1_VDD GPIO_ACTIVE_HIGH>;
-						label = "cam0-vdd", "cam1-vdd";
 					};
 				};
 				
