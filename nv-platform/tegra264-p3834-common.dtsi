@@ -307,6 +307,10 @@
 		status = "okay";
 	};
 
+	nv-gpu-static-pg {
+		status = "okay";
+	};
+
 	bwmgr {
 		status = "okay";
 	};

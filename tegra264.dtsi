@@ -7402,6 +7402,12 @@
 		clock-names = "emc";
 	};
 
+	nv-gpu-static-pg {
+		compatible = "nvidia,gpu-static-pg";
+		status = "disabled";
+		nvidia,bpmp = <&bpmp>;
+	};
+
 	bwmgr {
 		compatible = "nvidia,tegra264-bpmp-bwmgr";
 
