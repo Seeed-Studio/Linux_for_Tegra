@@ -189,8 +189,8 @@ static int tegra_bpmp_bwmgr_devfreq_register(struct tegra_bpmp_bwmgr *bwmgr)
 						 bwmgr->devfreq_profile,
 						 DEVFREQ_GOV_BWMGR, NULL);
 	if (IS_ERR(bwmgr->devfreq)) {
-		dev_pm_opp_remove_all_dynamic(bwmgr->dev);
-		return PTR_ERR(bwmgr->devfreq);
+		ret = PTR_ERR(bwmgr->devfreq);
+		goto devfreq_add_dev_err;
 	}
 
 	if (!bwmgr->mrq_valid || !bwmgr->enabled) {
@@ -209,12 +209,16 @@ static int tegra_bpmp_bwmgr_devfreq_register(struct tegra_bpmp_bwmgr *bwmgr)
 	ret = dev_pm_qos_add_notifier(bwmgr->dev,
 				      &bwmgr->max_freq_nb,
 				      DEV_PM_QOS_MAX_FREQUENCY);
-	if (ret < 0) {
-		devm_devfreq_remove_device(bwmgr->dev, bwmgr->devfreq);
-		dev_pm_opp_remove_all_dynamic(bwmgr->dev);
-		return ret;
-	}
+	if (ret < 0)
+		goto devfreq_add_notifier_err;
 
+	return 0;
+
+devfreq_add_notifier_err:
+	devm_devfreq_remove_device(bwmgr->dev, bwmgr->devfreq);
+devfreq_add_dev_err:
+	dev_pm_opp_remove_all_dynamic(bwmgr->dev);
+	kfree(bwmgr->devfreq_profile);
 	return ret;
 #else
 	return -EOPNOTSUPP;
@@ -229,6 +233,7 @@ static void tegra_bpmp_bwmgr_devfreq_unregister(struct tegra_bpmp_bwmgr *bwmgr)
 				   DEV_PM_QOS_MAX_FREQUENCY);
 	devm_devfreq_remove_device(bwmgr->dev, bwmgr->devfreq);
 	dev_pm_opp_remove_all_dynamic(bwmgr->dev);
+	kfree(bwmgr->devfreq_profile);
 #endif
 }
 
@@ -245,12 +250,16 @@ static int tegra_bpmp_bwmgr_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	bwmgr->clk = devm_clk_get(&pdev->dev, "emc");
-	if (IS_ERR(bwmgr->clk))
-		return PTR_ERR(bwmgr->clk);
+	if (IS_ERR(bwmgr->clk)) {
+		err = PTR_ERR(bwmgr->clk);
+		goto devm_clk_get_err;
+	}
 
 	bwmgr->bpmp = tegra_bpmp_get(&pdev->dev);
-	if (IS_ERR(bwmgr->bpmp))
-		return PTR_ERR(bwmgr->bpmp);
+	if (IS_ERR(bwmgr->bpmp)) {
+		err = PTR_ERR(bwmgr->bpmp);
+		goto bpmp_get_err;
+	}
 
 	bwmgr->mrq_valid = tegra_bpmp_mrq_is_supported(bwmgr->bpmp, MRQ_BWMGR_INT);
 	if (bwmgr->mrq_valid) {
@@ -285,16 +294,26 @@ static int tegra_bpmp_bwmgr_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"fail to register devfreq governor %s: %d\n",
 			DEVFREQ_GOV_BWMGR, err);
-		return err;
+		goto add_gov_err;
 	}
 
 	err = tegra_bpmp_bwmgr_devfreq_register(bwmgr);
 	if (err) {
 		dev_err(&pdev->dev, "fail to register devfreq device: %d\n", err);
-		return err;
+		goto devfreq_register_err;
 	}
 
 	return 0;
+
+devfreq_register_err:
+	devfreq_remove_governor(&devfreq_gov_bwmgr);
+add_gov_err:
+	tegra_bpmp_put(bwmgr->bpmp);
+bpmp_get_err:
+	devm_clk_put(&pdev->dev, bwmgr->clk);
+devm_clk_get_err:
+	kfree(bwmgr);
+	return err;
 }
 
 static int tegra_bpmp_bwmgr_remove(struct platform_device *pdev)
@@ -303,6 +322,9 @@ static int tegra_bpmp_bwmgr_remove(struct platform_device *pdev)
 
 	tegra_bpmp_bwmgr_devfreq_unregister(bwmgr);
 	devfreq_remove_governor(&devfreq_gov_bwmgr);
+	tegra_bpmp_put(bwmgr->bpmp);
+	devm_clk_put(&pdev->dev, bwmgr->clk);
+	kfree(bwmgr);
 
 	return 0;
 }
