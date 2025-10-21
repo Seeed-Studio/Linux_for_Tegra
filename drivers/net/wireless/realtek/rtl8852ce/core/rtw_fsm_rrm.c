@@ -594,37 +594,45 @@ int rm_en_cap_chk_and_set(struct rrm_obj *prm, enum rm_cap_en en)
 
 static u8 rm_get_ch_set(u8 op_class, struct rtw_ieee80211_channel *pch_set, u8 pch_num)
 {
-	int i, array_idx;
-	const struct op_class_t *opc = get_global_op_class_by_id(op_class);
+	int i;
+	const struct op_class_t *opc = get_opc_by_op_class(NULL, op_class);
 
-	if (opc < global_op_class
-		|| (((u8 *)opc) - ((u8 *)global_op_class)) % sizeof(struct op_class_t)
-	) {
-		RTW_ERR("Invalid opc pointer:%p (global_op_class:%p, sizeof(struct op_class_t):%zu, %zu)\n"
-			, opc, global_op_class, sizeof(struct op_class_t),
-			(((u8 *)opc) - ((u8 *)global_op_class)) % sizeof(struct op_class_t));
+	if (!opc) {
+		RTW_INFO("%s can't get opc with id:%u\n", __func__, op_class);
 		return 0;
 	}
 
-	array_idx = (((u8 *)opc) - ((u8 *)global_op_class)) / sizeof(struct op_class_t);
-	if (pch_num < OPC_CH_LIST_LEN(global_op_class[array_idx])) {
+	if (pch_num < OPC_CH_LIST_LEN(opc)) {
 		RTW_ERR("Invalid pch len %d < %d\n",pch_num,
-			OPC_CH_LIST_LEN(global_op_class[array_idx]));
+			OPC_CH_LIST_LEN(opc));
 		return 0;
 	}
 
-	for (i = 0; i < OPC_CH_LIST_LEN(global_op_class[array_idx]); i++) {
-		pch_set[i].hw_value = OPC_CH_LIST_CH(global_op_class[array_idx], i);
-		pch_set[i].band = global_op_class[array_idx].band;
+	for (i = 0; i < OPC_CH_LIST_LEN(opc); i++) {
+		pch_set[i].hw_value = OPC_CH_LIST_CH(opc, i);
+		pch_set[i].band = opc->band;
 	}
 
 	return i;
 }
 
+static enum band_type rm_get_band_by_opc(_adapter *padapter, u8 op_class)
+{
+	struct _ADAPTER_LINK *padapter_link = GET_PRIMARY_LINK(padapter);
+	struct link_mlme_ext_priv *pmlmeext = &padapter_link->mlmeextpriv;
+	char *alpha2 = NULL;
+
+	if (is_alpha(pmlmeext->country[0]) != _FALSE &&
+	    is_alpha(pmlmeext->country[1]) != _FALSE)
+		alpha2 = pmlmeext->country;
+
+	return  rtw_get_band_by_op_class(alpha2, op_class);
+}
 
 static u8 rm_get_ch_set_from_bcn_req_opt(struct rrm_obj *prm, struct bcn_req_opt *opt,
 	struct rtw_ieee80211_channel *pch_set, u8 pch_num)
 {
+	_adapter *a = obj2adp(prm);
 	int i,j,k,sz;
 	struct _RT_OPERATING_CLASS *ap_ch_rpt;
 	enum band_type band;
@@ -636,7 +644,7 @@ static u8 rm_get_ch_set_from_bcn_req_opt(struct rrm_obj *prm, struct bcn_req_opt
 			break;
 
 		ap_ch_rpt = opt->ap_ch_rpt[i];
-		band = rtw_get_band_by_op_class(ap_ch_rpt->global_op_class);
+		band = rm_get_band_by_opc(a, ap_ch_rpt->global_op_class);
 
 		if (band >= BAND_MAX) {
 			FSM_WARN(prm, "%s: skip unknown opc:%d\n", __func__, ap_ch_rpt->global_op_class);
@@ -1409,16 +1417,16 @@ static int rrm_parse_bcn_req_s_elemm(struct rrm_obj *prm, u8 *pbody, int req_len
 
 static int rrm_parse_meas_req(struct rrm_obj *prm, u8 *pbody)
 {
+	_adapter *a = obj2adp(prm);
 	int p; /* position */
 	int req_len;
-
 
 	req_len = (int)pbody[1];
 	p = 5;
 
 	prm->q.op_class = pbody[p++];
 	prm->q.ch_num = pbody[p++];
-	prm->q.band = (prm->q.op_class)?rtw_get_band_by_op_class(prm->q.op_class):BAND_MAX;
+	prm->q.band = (prm->q.op_class)?rm_get_band_by_opc(a, prm->q.op_class):BAND_MAX;
 
 	if (prm->q.band >= BAND_MAX) {
 		FSM_WARN(prm, "%s: unknown opc:%d\n", __func__, prm->q.op_class);
@@ -3492,7 +3500,7 @@ int rm_send_bcn_reqs(_adapter *padapter, u8 *sta_addr, u8 op_class, u8 ch,
 	prm->q.e_id = _MEAS_REQ_IE_; /* 38 */
 	prm->q.ch_num = ch;
 	prm->q.op_class = op_class;
-	prm->q.band = rtw_get_band_by_op_class(op_class);
+	prm->q.band = rm_get_band_by_opc(padapter, op_class);
 	if (prm->q.band >= BAND_MAX) {
 		FSM_WARN(prm, "%s: unknow opc:%d\n", __func__, op_class);
 		return -4;
@@ -4379,7 +4387,6 @@ int rtw_rrm_reg_fsm(struct fsm_priv *fsmpriv)
 		return _SUCCESS;
 	return _FAIL;
 }
-#endif /* CONFIG_RTW_FSM_RRM */
 
 /* parse neighbor report */
 u32 rrm_parse_nb_list(struct rrm_nb_rpt *pnb_rpt, u8 *ie, u32 ie_len)
@@ -4473,15 +4480,16 @@ void rrm_sort_nb_list(struct rrm_nb_rpt *pnb_rpt)
 
 static void rrm_upd_nb_ch_list(struct rrm_obj *prm, struct rrm_nb_rpt *pnb_rpt)
 {
+	_adapter *a = obj2adp(prm);
 	struct rtw_ieee80211_channel tmp_ch[RTW_CHANNEL_SCAN_AMOUNT] = {0};
 	const struct op_class_t *opc;
 	int i, j, tmp_ch_num = 0;
-	u8 ch, band, op_class, *pch;
+	u8 ch, band, op_class;
 
 	for (i = 0; i < pnb_rpt->nb_list_num; i++) {
 		ch = pnb_rpt->nb_list[i].ent.ch_num;
 		op_class = pnb_rpt->nb_list[i].ent.reg_class;
-		band = rtw_get_band_by_op_class(op_class);
+		band = rm_get_band_by_opc(a, op_class);
 
 		if (band >= BAND_MAX) {
 			FSM_WARN(prm, "%s: skip unknown opc:%d\n", __func__, op_class);
@@ -4490,14 +4498,13 @@ static void rrm_upd_nb_ch_list(struct rrm_obj *prm, struct rrm_nb_rpt *pnb_rpt)
 
 		if (ch == 0) {
 			/* get all channels in this op class */
-			opc = get_global_op_class_by_id(op_class);
+			opc = get_opc_by_op_class(NULL, op_class);
 
 			if (!opc)
 				continue;
 
-			pch = opc->len_ch_attr;
-			for (j = 0; j < pch[0]; j++) {
-				tmp_ch[tmp_ch_num].hw_value = pch[j+1];
+			for (j = 0; j < OPC_CH_LIST_LEN(opc); j++) {
+				tmp_ch[tmp_ch_num].hw_value = OPC_CH_LIST_CH(opc, j);
 				tmp_ch[tmp_ch_num].band = band;
 				if (++tmp_ch_num == RTW_CHANNEL_SCAN_AMOUNT)
 					goto full;
@@ -4538,3 +4545,4 @@ full:
 	}
 #endif
 }
+#endif /* CONFIG_RTW_FSM_RRM */

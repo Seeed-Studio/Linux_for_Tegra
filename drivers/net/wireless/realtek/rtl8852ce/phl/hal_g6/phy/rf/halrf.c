@@ -73,32 +73,34 @@ enum rtw_hal_status halrf_chl_rfk_trigger_traditional(void *rf_void,
 		halrf_set_power(rf, phy_idx, PWR_BY_RATE);
 		/*DBCC check*/
 		is_reload = halrf_chlk_reload_check(rf, phy_idx);
-		/*get mcc info*/
-		halrf_mcc_get_ch_info(rf, phy_idx);
-		
-		/*[RX Gain K]*/
-		halrf_do_rx_gain_k(rf, phy_idx);
 
-		/*[TX GAP K]*/
-		halrf_gapk_trigger(rf, phy_idx, true);
-		
-		/*[RX dck]*/
-		halrf_rx_dck_trigger(rf, phy_idx, true);
+		if(!is_reload){
+			/*get mcc info*/
+			halrf_mcc_get_ch_info(rf, phy_idx);
+			
+			/*[RX Gain K]*/
+			halrf_do_rx_gain_k(rf, phy_idx);
 
-		/*[LOK, IQK]*/
-		halrf_iqk_trigger(rf, phy_idx, rfk_tri_typ);
+			/*[TX GAP K]*/
+			halrf_gapk_trigger(rf, phy_idx, true);
+			
+			/*[RX dck]*/
+			halrf_rx_dck_trigger(rf, phy_idx, true);
 
-		/*[TSSI Trk]*/
-		halrf_tssi_trigger(rf, phy_idx, true);
+			/*[LOK, IQK]*/
+			halrf_iqk_trigger(rf, phy_idx, rfk_tri_typ);
 
-		/*[DPK]*/
-		halrf_dpk_trigger(rf, phy_idx, rfk_tri_typ);
+			/*[TSSI Trk]*/
+			halrf_tssi_trigger(rf, phy_idx, true);
 
-		halrf_bb_reset_trigger(rf, phy_idx);
+			/*[DPK]*/
+			halrf_dpk_trigger(rf, phy_idx, rfk_tri_typ);
 
-		if(!is_reload)
+			halrf_bb_reset_trigger(rf, phy_idx);
+
 			halrf_chlk_backup_dbcc(rf, phy_idx);
-
+		}
+			
 		halrf_fw_ntfy(rf, phy_idx);
 	}
 	halrf_tmac_tx_pause(rf, phy_idx, false);
@@ -358,10 +360,6 @@ enum rtw_hal_status halrf_thermal_rx_dck_trigger(void *rf_void,
 	halrf_btc_rfk_ntfy(rf, (BIT(phy_idx) << 4), RF_BTC_RXDCK, RFK_START);
 	halrf_tmac_tx_pause(rf, phy_idx, true);
 
-	if (phl_is_mp_mode(rf->phl_com)) {
-		halrf_mutex_lock(rf, &rf->rf_lock);
-		lock = true;
-	}
 	halrf_reset_io_count(rf);
 
 	switch (rf->ic_type) {
@@ -424,8 +422,7 @@ enum rtw_hal_status halrf_thermal_rx_dck_trigger(void *rf_void,
 	RF_DBG(rf, DBG_RF_FW, "[FW]RX_DCK w=%d r=%d, fw_w=%d, h2c=%d\n",
 		rf->w_count, rf->r_count, rf->fw_w_count, rf->sw_trigger_count);
 	rx_dck->rxdck_time = HALRF_ABS(finish_time, start_time) / 1000;
-	if (lock)
-		halrf_mutex_unlock(rf, &rf->rf_lock);
+
 	return RTW_HAL_STATUS_SUCCESS;
 }
 
@@ -4364,7 +4361,7 @@ void halrf_watchdog(void *rf_void)
 	halrf_rpt_rt_rfk_info(rf, HW_PHY_0, 2);
 #endif
 	/*halrf_op5k_tracking(rf);*/
-	/*halrf_set_tpe_control(rf);*/
+	halrf_set_tpe_control(rf);
 	if (lock)
 		halrf_mutex_unlock(rf, &rf->rf_lock);
 }
@@ -5714,6 +5711,20 @@ u8 halrf_fcs_get_thermal_index(void *rf_void)
 	return idx;
 }
 
+void halrf_roaming_disconnect_notify(void *rf_void, struct rtw_chan_def *chandef, struct rtw_chan_def *chandef_new)
+{
+	struct rf_info *rf = (struct rf_info *)rf_void;
+
+#ifdef RF_8852C_SUPPORT
+	if (rf->ic_type == RF_RTL8852C) {
+		halrf_roaming_disconnect_notify_8852c(rf, chandef, chandef_new);
+		halrf_set_power_8852c(rf, HW_PHY_0, (PWR_LIMIT | PWR_LIMIT_RU));
+	}
+#endif
+
+	return;
+}
+
 void halrf_disconnect_notify(void *rf_void, struct rtw_chan_def *chandef )
 {
 	struct rf_info *rf = (struct rf_info *)rf_void;
@@ -5736,8 +5747,10 @@ void halrf_disconnect_notify(void *rf_void, struct rtw_chan_def *chandef )
 		 halrf_disconnect_notify_8852bpt(rf, chandef);
 #endif
 #ifdef RF_8852C_SUPPORT
-	if (rf->ic_type == RF_RTL8852C)
-		 halrf_disconnect_notify_8852c(rf, chandef);
+	if (rf->ic_type == RF_RTL8852C) {
+		halrf_disconnect_notify_8852c(rf, chandef);
+		halrf_set_power_8852c(rf, HW_PHY_0, (PWR_LIMIT | PWR_LIMIT_RU));
+	}
 #endif
 #ifdef RF_8842A_SUPPORT
 	if (rf->ic_type == RF_RTL8842A)

@@ -1212,7 +1212,7 @@ void halbb_bb_cmd_notify(struct bb_info *bb_0, void *bb_cmd, enum phl_phy_idx ph
 	}
 }
 
-u8 halbb_wifi_event_notify(struct bb_info *bb_0, enum phl_msg_evt_id event, enum phl_phy_idx phy_idx)
+u8 halbb_wifi_event_notify(struct bb_info *bb_0, enum phl_msg_evt_id event, enum phl_phy_idx phy_idx, u8 rssi)
 {
 	struct bb_info *bb = bb_0;
 	struct rtw_hw_band *hw_band = &bb->hal_com->band[phy_idx];
@@ -1235,7 +1235,18 @@ u8 halbb_wifi_event_notify(struct bb_info *bb_0, enum phl_msg_evt_id event, enum
 
 	if (event == MSG_EVT_SCAN_START || event == MSG_EVT_CONNECT_START) {
 		/* Set target PD TH to lowest power */
-		val[0] = RSSI_MAX;
+		if (event == MSG_EVT_CONNECT_START) {
+			if (rssi == 0xFF) {
+				val[0] = RSSI_MAX;
+				BB_TRACE("%s: connect start: rssi=0xFF, set to RSSI_MAX\n", __func__);
+			} else {
+				BB_TRACE("%s: connect start: rssi=%d\n", __func__, rssi);
+				val[0]= rssi + 16 - 5;
+			}
+			BB_TRACE("%s: connect start: PDth=%d\n", __func__, val[0]);
+		} else {
+			val[0] = RSSI_MAX;
+		}
 		if (hw_band->cur_chandef.band == BAND_ON_24G)
 			val[1] = PAUSE_OFDM_CCK;
 		else

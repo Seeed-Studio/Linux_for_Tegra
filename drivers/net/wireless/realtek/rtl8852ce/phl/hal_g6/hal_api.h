@@ -1292,6 +1292,7 @@ void rtw_hal_disconnect_notify(void *hal, struct rtw_chan_def *chandef);
 bool rtw_hal_check_ch_rfk(void *hal, struct rtw_chan_def *chandef);
 enum rtw_hal_status rtw_hal_ppdu_sts_cfg(void *hal, u8 band_idx, bool en);
 void rtw_hal_notification(void *hal, enum phl_msg_evt_id event, u8 hw_idx);
+void rtw_hal_notification_rssi(void *hal, enum phl_msg_evt_id event, u8 hw_idx, u8 rssi);
 void rtw_hal_notification_ex(void *hal, enum phl_msg_evt_id event,
 			     bool to_bb, bool to_mac, bool to_rf, u8 hw_idx);
 
@@ -1362,6 +1363,11 @@ enum rtw_hal_status rtw_hal_set_pwr_constraint(void *hal, u8 band_idx, u16 mb);
 
 enum rtw_hal_status rtw_hal_set_tx_power(void *hal, u8 band_idx,
 					enum phl_pwr_table pwr_table);
+
+enum rtw_hal_status rtw_hal_set_tpe_control(void *hal);
+
+bool rtw_hal_tpe_is_required(struct rtw_tpe_info_t *tpe_info);
+bool rtw_hal_check_tpe_allow(void *hal, struct rtw_tpe_info_t *tpe_info);
 
 enum rtw_hal_status rtw_hal_get_txinfo_power(
 	void *hal, s16 *txinfo_power_dbm);

@@ -53,6 +53,7 @@ struct bb_spatial_reuse_info {
 	struct rtw_mac_ax_sr_info ax_sr_info;
 	bool need_update;
 	u8 txpwr_ref;
+	u32 r2t_origin; //AX SR WA
 };
 
 

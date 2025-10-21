@@ -59,6 +59,7 @@ void halrf_rfc_reg_backup_8852c(struct rf_info *rf);
 bool halrf_rfc_reg_check_fail_8852c(struct rf_info *rf);
 void halrf_rfk_reg_reload_8852c(struct rf_info *rf);
 void halrf_disconnect_notify_8852c(struct rf_info *rf, struct rtw_chan_def *chandef);
+void halrf_roaming_disconnect_notify_8852c(struct rf_info *rf, struct rtw_chan_def *chandef, struct rtw_chan_def *chandef_new);
 bool halrf_check_mcc_ch_8852c(struct rf_info *rf, struct rtw_chan_def *chandef);
 void halrf_fw_ntfy_8852c(struct rf_info *rf, enum phl_phy_idx phy_idx);
 void halrf_lck_8852c(struct rf_info *rf);

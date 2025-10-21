@@ -896,12 +896,9 @@ static bool rtw_sta_get_ecsa_setting(struct _ADAPTER *a)
 	ecsa_param->new_chan_def.offset = req_offset;
 
 	/* bw/offset is limited by SW capability */
-	if (rtw_adjust_bchbw(a, ecsa_param->new_chan_def.band,
-		ecsa_param->new_chan_def.chan,
-		(u8 *)&ecsa_param->new_chan_def.bw,
-		(u8 *)&ecsa_param->new_chan_def.offset)) {
-			RTW_INFO("CSA : "FUNC_ADPT_FMT" limit by cap bw (%u) to (%u)\n",
-				FUNC_ADPT_ARG(a), req_bw, ecsa_param->new_chan_def.bw);
+	if (rtw_adjust_chdef_bw(a, &ecsa_param->new_chan_def)) {
+		RTW_INFO("CSA : "FUNC_ADPT_FMT" limit by cap bw (%u) to (%u)\n",
+			FUNC_ADPT_ARG(a), req_bw, ecsa_param->new_chan_def.bw);
 	}
 
 	return true;
@@ -1030,10 +1027,7 @@ static struct _ADAPTER *rtw_scc_sta_ap_init_ap_role(struct _ADAPTER *sta_iface)
 			ap_new_chan_def->offset = lmlmeext->chandef.offset;
 
 			/* adjust bw according registery and hw cap*/
-			rtw_adjust_bchbw(ap_iface, ap_new_chan_def->band,
-						ap_new_chan_def->chan,
-						(u8 *)&ap_new_chan_def->bw,
-						(u8 *)&ap_new_chan_def->offset);
+			rtw_adjust_chdef_bw(ap_iface, ap_new_chan_def);
 
 			/* adjust bw and offset according chanctx to avoid wrong offset */
 			rtw_phl_adjust_chandef(d->phl, alink->wrlink, ap_new_chan_def);
@@ -1120,8 +1114,11 @@ bool rtw_trigger_phl_ecsa_start(struct _ADAPTER *trigger_iface,
 
 			/* Use AP interface to execute ECSA FG */
 			execute_iface = rtw_scc_sta_ap_init_ap_role(trigger_iface);
-			if (execute_iface == NULL)
+			if (execute_iface == NULL) {
+				/* reset param of trigger_iface */
+				execute_iface = trigger_iface;
 				goto err_hdl;
+			}
 			break;
 
 		case ECSA_MR_UNSUPPORTED:

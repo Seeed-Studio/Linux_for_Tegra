@@ -2811,6 +2811,11 @@ struct rtw_wifi_role_t {
 	struct phl_queue assoc_mld_queue;
 	u8 rlink_num;
 	struct rtw_wifi_role_link_t rlink[RTW_RLINK_MAX];
+
+	u8 reg_ap_type;
+	u8 reg_ap_tx_power;
+	u8 reg_ap_tx_power_tpe_gap;
+	u8 reg_fix_ap_tx_power;
 };
 
 #define TXTP_CALC_DIFF_MS 1000
@@ -4152,12 +4157,14 @@ struct rtw_r_tpe_ele_t { /* reduced tpe element */
 enum regu_info_var { /* regulatory info */
 	REGU_INFO_UNDEFINED = 0,
 	REGU_INFO_INDOOR_AP = 1,
-	REGU_INFO_STANDARD_PWR_AP = 2
+	REGU_INFO_STANDARD_PWR_AP = 2,
+	REGU_INFO_VLP_AP = 3,
 };
 
 #define MAX_TPE_ELE_CNT 4
 struct rtw_tpe_info_t { /* tpe info */
 	struct rtw_chan_def rx_chdef;
+	char country_code[2];
 	enum regu_info_var ap_type;
 	struct rtw_r_tpe_ele_t r_tpe[MAX_TPE_ELE_CNT];
 	u8 valid_tpe_cnt;
@@ -4363,6 +4370,8 @@ struct rtw_phl_com_t {
 	u32 func_latency[PHL_TIME_FLAGS_SZ];
 #endif
 };
+
+#define PHL_COM_GET_TPE_INFO(phl_com) &((phl_com)->tpe_info)
 
 struct phl_sec_param_h {
 	u8 keyid;

@@ -191,6 +191,22 @@ enum rtw_hal_status rtw_hal_rf_read_pwr_table(
 	return ret;
 }
 
+enum rtw_hal_status rtw_hal_rf_read_pwr_table_ru(
+	struct rtw_hal_com_t *hal_com, u8 rf_path, u16 rate,
+	u8 bandwidth, u8 channel, u8 offset, u8 dcm,
+	u8 beamforming, s16 *get_item)
+{
+	int ret = RTW_HAL_STATUS_SUCCESS;
+	struct hal_info_t *hal_info = (struct hal_info_t *)hal_com->hal_priv;
+
+	PHL_INFO("[MP HAL API] %s \n", __FUNCTION__);
+	u8 band = hal_com->band[HW_PHY_0].cur_chandef.band;
+	*get_item = halrf_get_power_by_rate_and_limit_ru_smaller(hal_info->rf,
+			rf_path, rate, dcm,offset, bandwidth, beamforming, channel, band);
+
+	return ret;
+}
+
 enum rtw_hal_status rtw_hal_rf_wlan_tx_power_control(struct rtw_hal_com_t *hal_com,
 	enum phl_phy_idx phy, enum phl_pwr_ctrl pwr_ctrl_idx, u32 tx_power_val, bool enable)
 {
@@ -673,6 +689,9 @@ rtw_hal_rf_set_power(struct hal_info_t *hal_info, enum phl_phy_idx phy,
 	if (phy >= HW_PHY_MAX)
 		goto exit;
 
+	FUNCIN();
+	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "%s(): pwr_table = %d\n", __func__, pwr_table);
+
 	if (halrf_set_power(hal_info->rf, phy, pwr_table))
 		hal_status = RTW_HAL_STATUS_SUCCESS;
 
@@ -696,6 +715,25 @@ rtw_hal_rf_set_power_constraint(struct hal_info_t *hal_info, enum phl_phy_idx ph
 
 exit:
 	return hal_status;
+}
+
+enum rtw_hal_status
+rtw_hal_rf_set_tpe_control(struct hal_info_t *hal_info)
+{
+	halrf_set_tpe_control(hal_info->rf);
+	return RTW_HAL_STATUS_SUCCESS;
+}
+
+bool
+rtw_hal_rf_tpe_is_required(struct rtw_tpe_info_t *tpe_info)
+{
+	return halrf_tpe_is_required(tpe_info);
+}
+
+bool
+rtw_hal_rf_check_tpe_allow(struct hal_info_t *hal_info, struct rtw_tpe_info_t *tpe_info)
+{
+	return halrf_check_tpe_allow(hal_info->rf, tpe_info);
 }
 
 enum rtw_hal_status rtw_hal_rf_set_gain_offset(struct hal_info_t *hal_info, u8 cur_phy_idx,
@@ -1410,6 +1448,24 @@ rtw_hal_rf_set_power_constraint(struct hal_info_t *hal_info, enum phl_phy_idx ph
 					u16 mb)
 {
 	return RTW_HAL_STATUS_SUCCESS;
+}
+
+enum rtw_hal_status
+rtw_hal_rf_set_tpe_control(struct hal_info_t *hal_info)
+{
+	return RTW_HAL_STATUS_SUCCESS;
+}
+
+bool
+rtw_hal_rf_tpe_is_required(struct rtw_tpe_info_t *tpe_info)
+{
+	return false;
+}
+
+bool
+rtw_hal_rf_check_tpe_allow(struct hal_info_t *hal_info, struct rtw_tpe_info_t *tpe_info)
+{
+	return false;
 }
 
 enum rtw_hal_status rtw_hal_rf_set_gain_offset(struct hal_info_t *hal_info, u8 cur_phy_idx,

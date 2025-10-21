@@ -109,11 +109,11 @@ const struct ieee80211_channel rtw_6ghz_channels[MAX_CHANNEL_NUM_6G] = {
 const enum nl80211_band _rtw_band_to_nl80211_band[] = {
 	[BAND_ON_24G]	= NL80211_BAND_2GHZ,
 	[BAND_ON_5G]	= NL80211_BAND_5GHZ,
-	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)) && CONFIG_IEEE80211_BAND_6GHZ
 	[BAND_ON_6G]	= NL80211_BAND_6GHZ,
-	#else
+#else
 	[BAND_ON_6G]	= NUM_NL80211_BANDS,
-	#endif
+#endif
 };
 static_assert(ARRAY_SIZE(_rtw_band_to_nl80211_band) >= BAND_MAX);
 

@@ -708,7 +708,6 @@ typedef	enum _ELEMENT_ID {
 	EID_WAPI					= 68,
 	EID_VHTCapability 			= 191, /* Based on 802.11ac D2.0 */
 	EID_VHTOperation 			= 192, /* Based on 802.11ac D2.0 */
-	EID_VHTTransmitPower 		= 195,
 	EID_OpModeNotification		= 199, /* Based on 802.11ac D3.0 */
 } ELEMENT_ID, *PELEMENT_ID;
 

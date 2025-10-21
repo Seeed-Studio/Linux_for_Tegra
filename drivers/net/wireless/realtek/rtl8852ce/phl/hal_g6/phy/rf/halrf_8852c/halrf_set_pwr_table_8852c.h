@@ -36,6 +36,12 @@ bool halrf_set_power_limit_to_mac_8852c(struct rf_info *rf,
 void halrf_set_ref_power_to_struct_8852c(struct rf_info *rf,
 						enum phl_phy_idx phy);
 
+bool halrf_set_power_by_rate_to_struct_8852c(struct rf_info *rf, enum phl_phy_idx phy);
+
+bool halrf_set_power_limit_to_struct_8852c(struct rf_info *rf, enum phl_phy_idx phy);
+
+bool halrf_set_power_limit_ru_to_struct_8852c(struct rf_info *rf, enum phl_phy_idx phy);
+
 bool halrf_set_power_8852c(struct rf_info *rf, enum phl_phy_idx phy,
 	enum phl_pwr_table pwr_table);
 

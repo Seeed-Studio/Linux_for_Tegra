@@ -24,6 +24,7 @@
 #include <basic_types.h>
 #include <osdep_service.h>
 #include <rtw_byteorder.h>
+#include "../phl/phl_version.h"
 #include "../phl/rtw_general_def.h"
 #include <wlan_bssdef.h>
 #include <wifi.h>
@@ -39,8 +40,11 @@ struct _ADAPTER_LINK;
 
 #include <rtw_debug.h>
 #include <rtw_rf.h>
+#include "../core/rtw_ch_utils.h"
 #include "../core/rtw_chset.h"
 #include "../core/rtw_chplan.h"
+#include "../core/rtw_opc_utils.h"
+#include "../core/rtw_opc_pref.h"
 
 #include "../phl/phl_headers_core.h"
 
@@ -77,6 +81,7 @@ struct _ADAPTER_LINK;
 #include "rtw_phl_cmd.h"
 #include "phl_api_tmp.h"
 #include "rtw_phl.h"
+#include "rtw_phl_rate.h"
 
 /*GEORGIA_TODO_FIXIT*/
 #include "_hal_rate.h"
@@ -1007,10 +1012,10 @@ struct rf_ctl_t {
 	bool collect_network_cisr;
 
 	/* per link cis status */
-	u8 *recv_country_ie[CONFIG_IFACE_NUMBER][RTW_RLINK_MAX];
-	u32 recv_country_ie_len[CONFIG_IFACE_NUMBER][RTW_RLINK_MAX];
+	u8 recv_country_str[CONFIG_IFACE_NUMBER][RTW_RLINK_MAX][3];
 	#if CONFIG_IEEE80211_BAND_6GHZ
 	enum country_ie_slave_6g_reg_info recv_6g_reg_info[CONFIG_IFACE_NUMBER][RTW_RLINK_MAX];
+	struct rtw_tpe_t recv_tpes[CONFIG_IFACE_NUMBER][RTW_RLINK_MAX];
 	#endif
 	struct country_ie_slave_record cisr[CONFIG_IFACE_NUMBER][RTW_RLINK_MAX];
 
@@ -1019,11 +1024,11 @@ struct rf_ctl_t {
 	struct cis_scan_stat_t cis_scan_stat; /* env BSS scan result statistics data */
 
 	#if CONFIG_IEEE80211_BAND_6GHZ
-	u8 default_chplan_cate_6g_map; /* bitmap of CHPLAN_6G_CATE_XXX */
+	enum txpwr_lmt_6g_cate_t force_txpwr_lmt_6g_cate;
 
-	/* txpwr_lmt_6g_cate_map intersection of links */
-	u8 txpwr_lmt_6g_cate_map_int_link_num;
-	u8 txpwr_lmt_6g_cate_map_int_all_link;
+	/* txpwr_lmt_6g_cate_map of links */
+	u8 txpwr_lmt_link_6g_cate_map_applied_num;
+	u8 txpwr_lmt_link_6g_cate_map;
 	#endif
 #endif
 
@@ -1055,7 +1060,7 @@ struct rf_ctl_t {
 	u8 tpc_mode;
 	u16 tpc_manual_constraint; /* mB */
 
-	bool ch_sel_within_same_band;
+	u8 ch_sel_within_same_band; /* RTW_CHSEL_BAND_XXX */
 
 	u8 edcca_mode_2g;
 #if CONFIG_IEEE80211_BAND_5GHZ
@@ -1154,8 +1159,10 @@ struct rf_ctl_t {
 
 #if defined(CONFIG_80211D) && CONFIG_IEEE80211_BAND_6GHZ
 #define RFCTL_RECV_6G_REG_INFO(rfctl, iface_id, alink_id) ((rfctl)->recv_6g_reg_info[iface_id][alink_id])
+#define RFCTL_RECV_TPES(rfctl, iface_id, alink_id) (&(rfctl)->recv_tpes[iface_id][alink_id])
 #else
 #define RFCTL_RECV_6G_REG_INFO(rfctl, iface_id, alink_id) CIS_6G_REG_RSVD
+#define RFCTL_RECV_TPES(rfctl, iface_id, alink_id) NULL
 #endif
 
 #ifdef CONFIG_DFS_MASTER

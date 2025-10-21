@@ -53,7 +53,8 @@ static u8 _rtw_btc_trxss_chg_hdl_go(_adapter *padapter, u8 ss_chg_to, u8 hdl_tx,
 {
 	struct sta_priv *stapriv = NULL;
 	struct sta_info *sta = NULL;
-	u32 i, stainfo_offset;
+	u32 i;
+	s32 stainfo_offset;
 	_list *plist, *phead;
 	u8 chk_num = 0;
 	u8 chk_list[NUM_STA];

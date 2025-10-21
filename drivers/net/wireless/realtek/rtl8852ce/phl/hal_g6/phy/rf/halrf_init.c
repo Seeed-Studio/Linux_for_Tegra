@@ -408,7 +408,7 @@ void halrf_rfability_init(struct rf_info *rf)
 			HAL_RF_TSSI_TRIM |
 			/*HAL_RF_XTAL_TRACK |*/
 			HAL_RF_TX_SHAPE |
-			/*HAL_RF_TPE_CTRL |*/
+			HAL_RF_TPE_CTRL |
 			HAL_RF_RXDCK_TRACK |
 			HAL_RF_WATCHDOG |
 			0;

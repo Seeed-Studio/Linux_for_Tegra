@@ -404,6 +404,16 @@ void rtw_wnm_reset_btm_cache(_adapter *padapter)
 	struct btm_rpt_cache *pcache = &(pnb->btm_cache);
 	u8 flag = 0;
 
+#ifdef CONFIG_RTW_80211R
+#ifndef CONFIG_RTW_FSM_BTM
+	if (rtw_ft_chk_flags(padapter, RTW_FT_BTM_ROAM))
+#endif
+	{
+		pmlmepriv->need_to_roam = _FALSE;
+		rtw_set_to_roam(padapter, 0);
+		RTW_WNM_INFO("%s : disabled roaming\n", __func__);
+	}
+#endif
 	flag |= BIT(0);
 	if (rtw_wnm_btm_candidate_validity(pcache, flag))
 		return;
@@ -413,14 +423,6 @@ void rtw_wnm_reset_btm_cache(_adapter *padapter)
 	_rtw_memset(pmlmepriv->roam_from_addr, 0, ETH_ALEN);
 	pcache->validity_time = wnm_defualt_validity_time;
 	pcache->disassoc_time= wnm_default_disassoc_time;
-
-#ifdef CONFIG_RTW_80211R
-	if (rtw_ft_chk_flags(padapter, RTW_FT_BTM_ROAM)) {
-		pmlmepriv->need_to_roam = _FALSE;
-		rtw_set_to_roam(padapter, 0);
-		RTW_WNM_INFO("%s : disabled roaming\n", __func__);
-	}
-#endif
 }
 
 void rtw_wnm_reset_btm_state(_adapter *padapter)
@@ -646,7 +648,8 @@ void rtw_wnm_build_btm_req_ies(_adapter *padapter,
 
 
 #ifdef CONFIG_RTW_MBO
-	rtw_mbo_build_wnm_btmreq_reason_ies(padapter, pframe, pattrib);
+	rtw_mbo_build_wnm_btmreq_reason_ies(padapter,
+		pattrib->adapter_link, pframe, &pattrib->pktlen);
 #endif
 }
 
@@ -764,7 +767,7 @@ void rtw_wnm_issue_action(_adapter *padapter, struct roam_nb_info *pnb,
 
 #else
 			rtw_mbo_build_trans_reject_reason_attr(padapter,
-				&pframe, pattrib, &mbo_trans_rej_res);
+				&pframe, &pattrib->pktlen, &mbo_trans_rej_res);
 #endif /* PRIVATE_R */
 #endif
 
@@ -782,7 +785,7 @@ void rtw_wnm_issue_action(_adapter *padapter, struct roam_nb_info *pnb,
 					&(mbo_notif_req_type),
 					&(pattrib->pktlen));
 			rtw_mbo_build_wnm_notification(padapter,
-					&pframe, pattrib);
+					&pframe, &pattrib->pktlen);
 			RTW_INFO("WNM: Notification request sent\n");
 #endif
 			break;
@@ -833,7 +836,7 @@ void rtw_wnm_update_reassoc_req_ie(_adapter *padapter)
 		_rtw_memcpy(pdup, pmlmepriv->assoc_req, offset);
 		_rtw_memcpy(pdup + offset,
 				pmlmepriv->assoc_req + offset + ETH_ALEN,
-				pmlmepriv->assoc_req_len - offset);
+				pmlmepriv->assoc_req_len - offset - ETH_ALEN);
 		rtw_buf_update(&pmlmepriv->assoc_req,
 			&pmlmepriv->assoc_req_len, pdup, dup_len);
 		rtw_mfree(pdup, dup_len);
@@ -1050,17 +1053,26 @@ static u8 rtw_wnm_candidates_sorting(
 }
 
 static void rtw_wnm_nb_info_update(
+	_adapter *padapter,
 	u32 nb_rpt_entries, u8 from_btm,
 	struct roam_nb_info *pnb,
 	struct wnm_btm_cant *pcandidates,
 	u8 *nb_rpt_is_same)
 {
+	struct _ADAPTER_LINK *padapter_link = GET_PRIMARY_LINK(padapter);
+	struct link_mlme_ext_priv *pmlmeext = &padapter_link->mlmeextpriv;
+	char *alpha2 = NULL;
+
 	u8 is_found;
 	u32 i, j;
 	struct wnm_btm_cant *pcand;
 
 	if (!pnb)
 		return;
+
+	if (is_alpha(pmlmeext->country[0]) != _FALSE &&
+	    is_alpha(pmlmeext->country[1]) != _FALSE)
+		alpha2 = pmlmeext->country;
 
 	pnb->nb_rpt.ch_list_num = 0;
 	for (i=0; i<nb_rpt_entries; i++) {
@@ -1096,7 +1108,8 @@ static void rtw_wnm_nb_info_update(
 			pnb->nb_rpt.ch_list[pnb->nb_rpt.ch_list_num].hw_value =\
 				pnb->nb_rpt.nb_list[i].ent.ch_num;
 			pnb->nb_rpt.ch_list[pnb->nb_rpt.ch_list_num].band =
-				rtw_get_band_by_op_class(pnb->nb_rpt.nb_list[i].ent.reg_class);
+				rtw_get_band_by_op_class((const char *)alpha2,
+					pnb->nb_rpt.nb_list[i].ent.reg_class);
 			/* error handling */
 			if (pnb->nb_rpt.ch_list[pnb->nb_rpt.ch_list_num].band == BAND_MAX)
 				pnb->nb_rpt.ch_list[pnb->nb_rpt.ch_list_num].band = BAND_ON_24G;
@@ -1231,7 +1244,7 @@ u32 rtw_wnm_btm_candidates_survey(
 				nb_rpt_entries, pcandidate_list);
 		}
 
-		rtw_wnm_nb_info_update(
+		rtw_wnm_nb_info_update(padapter,
 			nb_rpt_entries, from_btm,
 			pnb, pcandidate_list, &nb_rpt_is_same);
 	}

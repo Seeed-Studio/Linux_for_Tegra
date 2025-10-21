@@ -552,8 +552,12 @@ static void rtw_ethtool_get_drvinfo(struct net_device *dev, struct ethtool_drvin
 		strlcpy(info->fw_version, "N/A", sizeof(info->fw_version));
 	}
 
-	strlcpy(info->bus_info, dev_name(wiphy_dev(wdev->wiphy)),
-		sizeof(info->bus_info));
+	if (wdev) {
+		strlcpy(info->bus_info, dev_name(wiphy_dev(wdev->wiphy)),
+			sizeof(info->bus_info));
+	} else {
+		strlcpy(info->bus_info, "N/A", sizeof(info->bus_info));
+	}
 }
 
 static const char rtw_ethtool_gstrings_sta_stats[][ETH_GSTRING_LEN] = {
@@ -1920,14 +1924,17 @@ _exit:
 static void rtw_drv_stop_vir_if(_adapter *padapter)
 {
 	struct net_device *pnetdev = NULL;
-	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
-	struct pwrctrl_priv *pwrctl = adapter_to_pwrctl(padapter);
+	struct mlme_priv *pmlmepriv;
+	struct pwrctrl_priv *pwrctl;
 
 	if (padapter == NULL)
 		return;
+
 	RTW_INFO(FUNC_ADPT_FMT" enter\n", FUNC_ADPT_ARG(padapter));
 
 	pnetdev = padapter->pnetdev;
+	pmlmepriv = &padapter->mlmepriv;
+	pwrctl = adapter_to_pwrctl(padapter);
 
 	if (check_fwstate(pmlmepriv, WIFI_ASOC_STATE) == _TRUE)
 		rtw_disassoc_cmd(padapter, 0, RTW_CMDF_DIRECTLY|RTW_CMDF_WAIT_ACK);
@@ -2959,7 +2966,7 @@ int rtw_suspend_free_assoc_resource(_adapter *padapter)
 
 		/* s2-3.  indicate disconnect to os */
 		if (MLME_IS_STA(padapter)) {
-			rtw_indicate_disconnect(padapter, 0, _FALSE);
+			rtw_indicate_disconnect(padapter, 3, _TRUE);
 			pmlmeinfo->disconnect_occurred_time = rtw_systime_to_ms(rtw_get_current_time());
 			pmlmeinfo->disconnect_code = DISCONNECTION_BY_SYSTEM_DUE_TO_SYSTEM_IN_SUSPEND;
 			pmlmeinfo->wifi_reason_code = WLAN_REASON_DEAUTH_LEAVING;

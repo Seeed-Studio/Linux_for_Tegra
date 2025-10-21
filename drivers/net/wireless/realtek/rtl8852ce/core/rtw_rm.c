@@ -689,8 +689,22 @@ static int rm_parse_bcn_req_s_elem(struct rm_obj *prm, u8 *pbody, int req_len)
 	return _SUCCESS;
 }
 
+static enum band_type rm_get_band_by_opc(_adapter *padapter, u8 op_class)
+{
+	struct _ADAPTER_LINK *padapter_link = GET_PRIMARY_LINK(padapter);
+	struct link_mlme_ext_priv *pmlmeext = &padapter_link->mlmeextpriv;
+	char *alpha2 = NULL;
+
+	if (is_alpha(pmlmeext->country[0]) != _FALSE &&
+	    is_alpha(pmlmeext->country[1]) != _FALSE)
+		alpha2 = pmlmeext->country;
+
+	return  rtw_get_band_by_op_class(alpha2, op_class);
+}
+
 static int rm_parse_meas_req(struct rm_obj *prm, u8 *pbody)
 {
+	_adapter *a = prm->psta->padapter;
 	int p; /* position */
 	int req_len;
 
@@ -700,7 +714,7 @@ static int rm_parse_meas_req(struct rm_obj *prm, u8 *pbody)
 
 	prm->q.op_class = pbody[p++];
 	prm->q.ch_num = pbody[p++];
-	prm->q.band = rtw_get_band_by_op_class(prm->q.op_class);
+	prm->q.band = rm_get_band_by_opc(a, prm->q.op_class);
 	/* error handling */
 	if (prm->q.band == BAND_MAX)
 		prm->q.band = BAND_ON_24G;
@@ -2670,7 +2684,7 @@ int rm_send_bcn_reqs(_adapter *padapter, u8 *sta_addr, u8 op_class, u8 ch,
 	prm->q.e_id = _MEAS_REQ_IE_; /* 38 */
 	prm->q.ch_num = ch;
 	prm->q.op_class = op_class;
-	prm->q.band = rtw_get_band_by_op_class(op_class);
+	prm->q.band = rm_get_band_by_opc(padapter, op_class);
 	/* error handling */
 	if (prm->q.band == BAND_MAX)
 		prm->q.band = BAND_ON_24G;

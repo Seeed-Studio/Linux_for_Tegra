@@ -1437,7 +1437,7 @@ u32 process_probe_req_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pframe, uint l
 
 }
 
-u32 process_assoc_req_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pframe, uint len, struct sta_info *psta)
+u32 process_assoc_req_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pframe, uint frame_len, struct sta_info *psta)
 {
 	u8 status_code = P2P_STATUS_SUCCESS;
 	u8 *pbuf, *pattr_content = NULL;
@@ -1459,7 +1459,7 @@ u32 process_assoc_req_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pframe, uint l
 		ie_offset = _REASOCREQ_IE_OFFSET_;
 
 	ies = pframe + WLAN_HDR_A3_LEN + ie_offset;
-	ies_len = len - WLAN_HDR_A3_LEN - ie_offset;
+	ies_len = frame_len - WLAN_HDR_A3_LEN - ie_offset;
 
 	p2p_ie = rtw_get_p2p_ie(ies , ies_len , NULL, &p2p_ielen);
 

@@ -1006,8 +1006,12 @@ static void _rtw_free_phl_stainfo(_adapter *adapter, struct sta_info *sta, u8 on
 	bool alloc = _FALSE, only_hw = _FALSE;
 
 	if (sta != NULL) {
-		if (sta->phl_sta)
-			_rtw_memcpy(hwaddr, sta->phl_sta->mac_addr, ETH_ALEN);
+		if (sta->phl_sta == NULL) {
+			RTW_WARN(FUNC_ADPT_FMT ": phl_sta is NULL\n", FUNC_ADPT_ARG(adapter));
+			return;
+		}
+
+		_rtw_memcpy(hwaddr, sta->phl_sta->mac_addr, ETH_ALEN);
 		if (only_free_sw)
 			pstaus = rtw_phl_free_stainfo_sw(phl, sta->phl_sta);
 		else
@@ -1550,7 +1554,7 @@ void rtw_stapriv_asoc_list_unlock(struct sta_priv *stapriv)
 
 void rtw_stapriv_asoc_list_add(struct sta_priv *stapriv, struct sta_info *sta)
 {
-	rtw_warn_on(!_rtw_spin_is_locked(&stapriv->asoc_list_lock));
+	_rtw_spin_warn_locked(&stapriv->asoc_list_lock, false);
 	rtw_list_insert_tail(&sta->asoc_list, &stapriv->asoc_list);
 	stapriv->asoc_list_cnt++;
 #ifdef CONFIG_RTW_TOKEN_BASED_XMIT
@@ -1561,7 +1565,7 @@ void rtw_stapriv_asoc_list_add(struct sta_priv *stapriv, struct sta_info *sta)
 
 void rtw_stapriv_asoc_list_del(struct sta_priv *stapriv, struct sta_info *sta)
 {
-	rtw_warn_on(!_rtw_spin_is_locked(&stapriv->asoc_list_lock));
+	_rtw_spin_warn_locked(&stapriv->asoc_list_lock, false);
 	rtw_list_delete(&sta->asoc_list);
 	stapriv->asoc_list_cnt--;
 #ifdef CONFIG_RTW_TOKEN_BASED_XMIT
@@ -1690,6 +1694,7 @@ void dump_macaddr_acl(void *sel, _adapter *adapter)
 		RTW_PRINT_SEL(sel, "period:%s(%d)\n", acl_period_str(j), j);
 
 		acl = &stapriv->acl_list[j];
+		_rtw_spinlock_bh(&(acl->acl_node_q.lock));
 		RTW_PRINT_SEL(sel, "mode:%s(%d)\n", acl_mode_str(acl->mode), acl->mode);
 		RTW_PRINT_SEL(sel, "num:%d/%d\n", acl->num, NUM_ACL);
 		for (i = 0; i < NUM_ACL; i++) {
@@ -1697,6 +1702,7 @@ void dump_macaddr_acl(void *sel, _adapter *adapter)
 				continue;
 			RTW_PRINT_SEL(sel, MAC_FMT"\n", MAC_ARG(acl->aclnode[i].addr));
 		}
+		_rtw_spinunlock_bh(&(acl->acl_node_q.lock));
 		RTW_PRINT_SEL(sel, "\n");
 	}
 }

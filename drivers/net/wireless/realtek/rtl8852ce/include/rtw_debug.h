@@ -468,6 +468,8 @@ ssize_t proc_set_bw_ctl(struct file *file, const char __user *buffer, size_t cou
 int proc_get_rx_cnt_dump(struct seq_file *m, void *v);
 ssize_t proc_set_rx_cnt_dump(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 #endif
+int proc_get_bss_color_ctl(struct seq_file *m, void *v);
+ssize_t proc_set_bss_color_ctl(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 
 #ifdef CONFIG_AP_MODE
 int proc_get_bmc_tx_rate(struct seq_file *m, void *v);

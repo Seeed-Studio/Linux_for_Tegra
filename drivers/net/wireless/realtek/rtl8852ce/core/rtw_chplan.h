@@ -176,14 +176,15 @@ extern const REGULATION_TXPWR_LMT _txpwr_lmt_alternate[];
 
 #define TXPWR_LMT_ALTERNATE_DEFINED(txpwr_lmt) (txpwr_lmt_alternate(txpwr_lmt) != txpwr_lmt)
 
-#if CONFIG_IEEE80211_BAND_6GHZ
 enum txpwr_lmt_6g_cate_t {
 	TXPWR_LMT_6G_CATE_VLP,
 	TXPWR_LMT_6G_CATE_LPI,
 	TXPWR_LMT_6G_CATE_STD,
 	TXPWR_LMT_6G_CATE_NUM,
+	TXPWR_LMT_6G_CATE_NONE = 0xFF, /* used by force_txpwr_lmt_6g_cate to clear setting */
 };
 
+#if CONFIG_IEEE80211_BAND_6GHZ
 extern const char *const _txpwr_lmt_6g_cate_str[];
 #define txpwr_lmt_6g_cate_str(cate) (((cate) >= TXPWR_LMT_6G_CATE_NUM) ? _txpwr_lmt_6g_cate_str[TXPWR_LMT_6G_CATE_NUM] : _txpwr_lmt_6g_cate_str[(cate)])
 
@@ -229,9 +230,10 @@ void rtw_txpwr_update_cur_lmt_regs(struct dvobj_priv *dvobj, bool req_lock);
 #define CONFIG_CHPLAN_PROTO_EN
 #endif
 
-#define CHPLAN_6G_CATE_VLP	BIT0
-#define CHPLAN_6G_CATE_LPI	BIT1
-#define CHPLAN_6G_CATE_STD	BIT2
+#define CHPLAN_6G_CATE_VLP	0	/* certified as VLP device */
+#define CHPLAN_6G_CATE_LPI	1	/* certified as LPI client */
+#define CHPLAN_6G_CATE_STD	2	/* certified as STD client */
+#define CHPLAN_6G_CATE_NUM	3
 
 struct country_chplan {
 	char alpha2[2];
@@ -283,13 +285,23 @@ struct country_chplan {
 #endif
 
 #define CHPLAN_6G_CATE_MAP____	0
-#define CHPLAN_6G_CATE_MAP___V	CHPLAN_6G_CATE_VLP
-#define CHPLAN_6G_CATE_MAP__I_	CHPLAN_6G_CATE_LPI
-#define CHPLAN_6G_CATE_MAP__IV	(CHPLAN_6G_CATE_LPI | CHPLAN_6G_CATE_VLP)
-#define CHPLAN_6G_CATE_MAP_S__	CHPLAN_6G_CATE_STD
-#define CHPLAN_6G_CATE_MAP_S_V	(CHPLAN_6G_CATE_STD | CHPLAN_6G_CATE_VLP)
-#define CHPLAN_6G_CATE_MAP_SI_	(CHPLAN_6G_CATE_STD | CHPLAN_6G_CATE_LPI)
-#define CHPLAN_6G_CATE_MAP_SIV	(CHPLAN_6G_CATE_STD | CHPLAN_6G_CATE_LPI | CHPLAN_6G_CATE_VLP)
+#ifdef CONFIG_6G_LPI_ONLY
+#define CHPLAN_6G_CATE_MAP___V	0
+#define CHPLAN_6G_CATE_MAP__I_	BIT(CHPLAN_6G_CATE_LPI)
+#define CHPLAN_6G_CATE_MAP__IV	BIT(CHPLAN_6G_CATE_LPI)
+#define CHPLAN_6G_CATE_MAP_S__	0
+#define CHPLAN_6G_CATE_MAP_S_V	0
+#define CHPLAN_6G_CATE_MAP_SI_	BIT(CHPLAN_6G_CATE_LPI)
+#define CHPLAN_6G_CATE_MAP_SIV	BIT(CHPLAN_6G_CATE_LPI)
+#else
+#define CHPLAN_6G_CATE_MAP___V	BIT(CHPLAN_6G_CATE_VLP)
+#define CHPLAN_6G_CATE_MAP__I_	BIT(CHPLAN_6G_CATE_LPI)
+#define CHPLAN_6G_CATE_MAP__IV	(BIT(CHPLAN_6G_CATE_LPI) | BIT(CHPLAN_6G_CATE_VLP))
+#define CHPLAN_6G_CATE_MAP_S__	BIT(CHPLAN_6G_CATE_STD)
+#define CHPLAN_6G_CATE_MAP_S_V	(BIT(CHPLAN_6G_CATE_STD) | BIT(CHPLAN_6G_CATE_VLP))
+#define CHPLAN_6G_CATE_MAP_SI_	(BIT(CHPLAN_6G_CATE_STD) | BIT(CHPLAN_6G_CATE_LPI))
+#define CHPLAN_6G_CATE_MAP_SIV	(BIT(CHPLAN_6G_CATE_STD) | BIT(CHPLAN_6G_CATE_LPI) | BIT(CHPLAN_6G_CATE_VLP))
+#endif
 
 #if CONFIG_IEEE80211_BAND_6GHZ
 #define COUNTRY_CHPLAN_ASSIGN_CHPLAN_6G(_val) , .domain_code_6g = (_val)
@@ -417,23 +429,41 @@ enum country_ie_slave_6g_reg_info {
 
 #define IS_6G_REG_INFO_RSVD(reg) ((reg) >= CIS_6G_REG_NUM)
 
+#define TPE_TXPWR_MAX_CNT 8 /* up to 160MHz */
+
+struct rtw_tpe_ele_t {
+	u8 intp;
+	u8 cate;
+	s8 max_tx_pwr[TPE_TXPWR_MAX_CNT];
+	u8 pwr_cnt;
+};
+
+#define TPE_ELE_MAX_CNT 8
+
+struct rtw_tpe_t {
+	struct rtw_tpe_ele_t ele[TPE_ELE_MAX_CNT];
+	u8 cnt;
+};
+
 enum country_ie_slave_status {
 	COUNTRY_IE_SLAVE_NOCOUNTRY	= 0, /* no country IE or 'XX' alpha2 */
 	COUNTRY_IE_SLAVE_APPLICABLE	= 1,
 	COUNTRY_IE_SLAVE_UNKNOWN	= 2, /* unknown country */
 	COUNTRY_IE_SLAVE_OPCH_NOEXIST	= 3, /* bss's op ch not exist */
 	COUNTRY_IE_SLAVE_CATE_6G_NS	= 4, /* 6G category not support */
+	COUNTRY_IE_SLAVE_TPE_FORBID	= 5, /* TPE can't fulfill */
 
 	COUNTRY_IE_SLAVE_STATUS_NUM,
 };
 
 struct country_ie_slave_record {
-	char alpha2[2]; /* country code get from connected AP of STA ifaces, "\x00\x00" is not set */
+	u8 country_str[3]; /* country str get from connected AP of STA ifaces, "\x00\x00\x00" is not set */
 	enum band_type band;
 	u8 opch;
 #if CONFIG_IEEE80211_BAND_6GHZ
 	enum rtw_env_t env;
 	enum country_ie_slave_6g_reg_info reg_info;
+	struct rtw_tpe_t tpes;
 #endif
 	enum country_ie_slave_status status;
 	struct country_chplan chplan;
@@ -470,8 +500,11 @@ struct cis_scan_stat_t {
 extern const char _rtw_env_char[];
 #define rtw_env_char(e) (((e) >= RTW_ENV_NUM) ? _rtw_env_char[RTW_ENV_ANY] : _rtw_env_char[e])
 
-void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_noset);
+#if CONFIG_IEEE80211_BAND_6GHZ
+u8 cisr_get_largest_chplan_6g_cate(const struct country_ie_slave_record *cisr);
 #endif
+void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_noset, bool lock);
+#endif /* CONFIG_80211D */
 
 void dump_country_chplan(void *sel, const struct country_chplan *ent, bool regd_info);
 void dump_country_chplan_map(void *sel, bool regd_info);
@@ -498,6 +531,7 @@ struct regd_req_t {
 	enum rtw_env_t env;
 	enum country_ie_slave_6g_reg_info reg_info;
 	u8 txpwr_lmt_6g_cate_map;
+	u8 _pre_txpwr_lmt_6g_cate_map; /* to judge if txpwr_lmt_6g_cate_map changed */
 #endif
 
 	struct country_chplan chplan;
@@ -513,6 +547,12 @@ enum channel_width alink_adjust_linking_bw_by_regd(struct _ADAPTER_LINK *alink
 	, enum band_type band, u8 ch, enum channel_width bw, enum chan_offset offset);
 enum channel_width adapter_adjust_linking_bw_by_regd(_adapter *adapter
 	, enum band_type band, u8 ch, enum channel_width bw, enum chan_offset offset);
+#ifdef CONFIG_AP_MODE
+enum channel_width alink_adjust_slave_m_bw_by_regd(struct _ADAPTER_LINK *alink
+	, enum band_type band, u8 ch, enum channel_width bw, enum chan_offset offset);
+enum channel_width adapter_adjust_slave_m_bw_by_regd(_adapter *adapter
+	, enum band_type band, u8 ch, enum channel_width bw, enum chan_offset offset);
+#endif
 
 void rtw_rfctl_decide_init_chplan(struct rf_ctl_t *rfctl,
 	const char *hw_alpha2, u8 hw_chplan, u8 hw_chplan_6g, u8 hw_force_chplan);
@@ -578,6 +618,7 @@ struct SetChannelPlan_param {
 #if CONFIG_IEEE80211_BAND_6GHZ
 	u8 channel_plan_6g;
 	enum rtw_env_t env;
+	enum txpwr_lmt_6g_cate_t force_txpwr_lmt_6g_cate;
 #endif
 	/* used for regd_src == RTK_PRIV and inr == USER, bitmap of  RTW_PRIV_USER_SET_XXX */
 	u8 priv_user_set_bmp;
@@ -605,12 +646,17 @@ u8 rtw_set_country_cmd(_adapter *adapter, int flags, const char *country_code
 #if CONFIG_IEEE80211_BAND_6GHZ
 u8 rtw_set_env_cmd(_adapter *adapter, int flags, enum rtw_env_t env
 	, enum regd_src_t regd_src, enum rtw_regd_inr inr);
+u8 rtw_set_force_txpwr_lmt_6g_cate_cmd(_adapter *adapter, int flags
+	, enum txpwr_lmt_6g_cate_t force_txpwr_lmt_6g_cate
+	, enum regd_src_t regd_src, enum rtw_regd_inr inr);
 #endif
 #ifdef CONFIG_80211D
-u8 rtw_alink_apply_recv_regu_ies_cmd(struct _ADAPTER_LINK *alink, int flags, enum band_type band,u8 opch
-	, const u8 *country_ie, enum country_ie_slave_6g_reg_info reg_info);
-u8 rtw_apply_recv_regu_ies_cmd(_adapter *adapter, int flags, enum band_type band,u8 opch
-	, const u8 *country_ie, enum country_ie_slave_6g_reg_info reg_info);
+u8 rtw_alink_apply_recv_regu_parm_cmd(struct _ADAPTER_LINK *alink, int flags, enum band_type band,u8 opch
+	, const u8 *country_str, enum country_ie_slave_6g_reg_info reg_info, struct rtw_tpe_t *tpes);
+u8 rtw_apply_recv_regu_parm_cmd(_adapter *adapter, int flags, enum band_type band,u8 opch
+	, const u8 *country_str, enum country_ie_slave_6g_reg_info reg_info, struct rtw_tpe_t *tpes);
+u8 rtw_alink_clear_recv_regu_cmd(struct _ADAPTER_LINK *alink, int flags);
+u8 rtw_clear_recv_regu_cmd(_adapter *adapter, int flags);
 u8 rtw_apply_scan_network_country_ie_cmd(_adapter *adapter, int flags);
 #endif
 #ifdef CONFIG_REGD_SRC_FROM_OS
@@ -630,6 +676,7 @@ struct get_chplan_resp {
 #if CONFIG_IEEE80211_BAND_6GHZ
 	u8 chplan_6g;
 	u8 env_bmp;
+	enum txpwr_lmt_6g_cate_t force_txpwr_lmt_6g_cate;
 #endif
 
 #if CONFIG_TXPWR_LIMIT
@@ -667,7 +714,15 @@ void rtw_get_chplan_callback(_adapter *adapter, struct cmd_obj *cmdobj);
 u8 rtw_get_chplan_cmd(_adapter *adapter, int flags, struct get_chplan_resp **chplan);
 void rtw_free_get_chplan_resp(struct get_chplan_resp *chplan);
 
-bool rtw_network_chk_opch_status(struct rf_ctl_t *rfctl, struct wlan_network *network);
+enum network_opch_status {
+	NETWORK_OPCH_USABLE	= 0, /* bss's op ch usable */
+	NETWORK_OPCH_DISABLE	= 1, /* bss's op ch disable */
+	NETWORK_OPCH_NOCP	= 2, /* bss's op ch under non-ocp */
+};
+
+bool rtw_network_chk_opch_status_rsn(const struct rf_ctl_t *rfctl, const struct wlan_network *network
+	, enum network_opch_status *rsn);
+#define rtw_network_chk_opch_status(rfctl, network) rtw_network_chk_opch_status_rsn(rfctl, network, NULL)
 
 #ifdef CONFIG_80211D
 void rtw_alink_joinbss_update_regulatory(struct _ADAPTER_LINK *alink, const WLAN_BSSID_EX *network);
@@ -680,8 +735,10 @@ void rtw_leavebss_update_regulatory(_adapter *adapter);
 void rtw_csa_update_regulatory(_adapter *adapter, enum band_type req_band, u8 req_ch);
 void process_regu_ies(_adapter *adapter, u8 *ies, uint ies_len);
 
-bool rtw_update_scanned_network_cisr(struct rf_ctl_t *rfctl, struct wlan_network *network);
-bool rtw_network_chk_regu_ies(struct rf_ctl_t *rfctl, struct wlan_network *network);
+void rtw_update_scanned_network_cisr(struct rf_ctl_t *rfctl, struct wlan_network *network);
+bool rtw_network_chk_regu_ies_rsn(const struct rf_ctl_t *rfctl, const struct wlan_network *network
+	, enum country_ie_slave_status *rsn);
+#define rtw_network_chk_regu_ies(rfctl, network) rtw_network_chk_regu_ies_rsn(rfctl, network, NULL)
 
 bool rtw_cis_scan_needed(struct rf_ctl_t *rfctl, bool *urgent);
 void rtw_cis_scan_idle_check(struct rf_ctl_t *rfctl);
@@ -689,6 +746,14 @@ void rtw_cis_scan_complete_hdl(_adapter *adapter);
 void rtw_rfctl_cis_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty);
 void rtw_rfctl_cis_deinit(struct rf_ctl_t *rfctl);
 #else
+static inline bool rtw_network_chk_regu_ies_rsn(const struct rf_ctl_t *rfctl, const struct wlan_network *network
+	, enum country_ie_slave_status *rsn)
+{
+	if (rsn)
+		*rsn = COUNTRY_IE_SLAVE_NOCOUNTRY;
+	return true;
+}
+
 #define rtw_network_chk_regu_ies(rfctl, network) true
 #endif /* CONFIG_80211D */
 

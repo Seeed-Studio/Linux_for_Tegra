@@ -583,9 +583,14 @@ int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 #ifdef CONFIG_IOCTL_CFG80211
 	case ANDROID_WIFI_CMD_SET_AP_WPS_P2P_IE: {
 		int skip = strlen(android_wifi_cmd_str[ANDROID_WIFI_CMD_SET_AP_WPS_P2P_IE]) + 3;
-		bytes_written = rtw_cfg80211_set_mgnt_wpsp2pie(net, command + skip, priv_cmd.total_len - skip, *(command + skip - 2) - '0');
 
-		adapter_to_dvobj(padapter)->wpas_type = RTW_WPAS_ANDROID;
+		if (priv_cmd.total_len < skip) {
+			RTW_WARN("command %s is too short - ignored\n", command);
+		}
+		else {
+			bytes_written = rtw_cfg80211_set_mgnt_wpsp2pie(net, command + skip, priv_cmd.total_len - skip, *(command + skip - 2) - '0');
+			adapter_to_dvobj(padapter)->wpas_type = RTW_WPAS_ANDROID;
+		}
 		break;
 	}
 #endif /* CONFIG_IOCTL_CFG80211 */

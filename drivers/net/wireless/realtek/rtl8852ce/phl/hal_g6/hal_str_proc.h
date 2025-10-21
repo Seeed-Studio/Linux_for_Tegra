@@ -19,10 +19,6 @@
 
 bool hal_is_comment_string(char *szStr);
 
-bool hal_is_alpha(char ch_tmp);
-
-bool hal_ishexdigit(char chTmp);
-
 bool hal_get_hexvalue_fromstring(char	*szStr, u32 *pu4bVal, u32 *pu4bMove);
 
 bool hal_get_fractionvalue_fromstring(

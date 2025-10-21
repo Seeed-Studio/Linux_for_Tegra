@@ -2108,6 +2108,7 @@ _mrc_module_msg_post_hdl(void *dispr,
 	struct rtw_phl_stainfo_t *sta = NULL;
 	struct rtw_wifi_role_link_t *rlink = NULL;
 	bool (*core_issue_null_data)(void *, u8, u8, bool, u8) = NULL;
+	u8 rssi;
 
 	u8 *cmd = NULL;
 	u32 cmd_len;
@@ -2299,6 +2300,8 @@ _mrc_module_msg_post_hdl(void *dispr,
 			}
 
 			role = (struct rtw_wifi_role_t *)msg->inbuf;
+			rssi = (u8)msg->rsvd[1].value;
+
 			if(role == NULL) {
 				PHL_TRACE(COMP_PHL_DBG, _PHL_WARNING_,
 					  "%s: role is NULL\n", __FUNCTION__);
@@ -2332,8 +2335,8 @@ _mrc_module_msg_post_hdl(void *dispr,
 					break;
 				}
 
-				rtw_hal_notification(phl_info->hal, MSG_EVT_ID_FIELD(msg->msg_id),
-						     hw_band);
+				rtw_hal_notification_rssi(phl_info->hal, MSG_EVT_ID_FIELD(msg->msg_id),
+						     hw_band, rssi);
 				ret = MDL_RET_SUCCESS;
 			}
 #endif

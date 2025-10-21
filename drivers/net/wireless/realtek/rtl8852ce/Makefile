@@ -14,9 +14,6 @@ EXTRA_CFLAGS += -Wno-unused-label
 #EXTRA_CFLAGS += -Wno-unused-function
 EXTRA_CFLAGS += -Wno-unused
 #EXTRA_CFLAGS += -Wno-uninitialized
-EXTRA_CFLAGS += -Wno-missing-prototypes
-EXTRA_CFLAGS += -Wno-missing-declarations
-EXTRA_CFLAGS += -Wno-enum-conversion
 
 ############ ANDROID COMMON KERNEL ############
 # clang
@@ -38,8 +35,7 @@ ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-SOURCETREE = $(srctree.nvidia-oot)/drivers/net/wireless/realtek/rtl8852ce
-EXTRA_CFLAGS += -I$(SOURCETREE)/include
+EXTRA_CFLAGS += -I$(src)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -98,7 +94,7 @@ CONFIG_RTW_CHPLAN_6G = 0xFFFF
 ########################## 802.11d (country IE slave) ##########################
 CONFIG_80211D = y
 # 0: disable, 1: enable, 2: enable when INIT/USER set world wide mode
-CONFIG_RTW_COUNTRY_IE_SLAVE_EN_MODE = 2
+CONFIG_RTW_COUNTRY_IE_SLAVE_EN_MODE = 1
 # BIT0: deprecated BIT
 # BIT1: consider all environment BSSs, otherwise associated BSSs only
 # BIT2: consider all environment BSSs with majority selection (implys BIT1)
@@ -126,7 +122,7 @@ CONFIG_RTW_NETIF_SG = n
 CONFIG_RTW_IPCAM_APPLICATION = n
 CONFIG_ICMP_VOQ = n
 CONFIG_IP_R_MONITOR = n #arp VOQ and high rate
-# user priority mapping rule : tos, dscp
+# user priority mapping rule for ipv4 : tos, dscp
 CONFIG_RTW_UP_MAPPING_RULE = tos
 
 CONFIG_PHL_ARCH = y
@@ -165,8 +161,8 @@ endif
 CONFIG_RTW_DEBUG = y
 # default log level is _DRV_INFO_ = 4,
 # please refer to "How_to_set_driver_debug_log_level.doc" to set the available level.
-CONFIG_RTW_LOG_LEVEL = 0
-CONFIG_RTW_PHL_LOG_LEVEL = 0
+CONFIG_RTW_LOG_LEVEL = 4
+CONFIG_RTW_PHL_LOG_LEVEL = 3
 
 # CONFIG_RTW_APPEND_LOGLEVEL decide if append kernel log level to each messages.
 # default "n" for don't append.
@@ -241,9 +237,14 @@ CONFIG_ROAMING_FLAG = 0x3f
 # 2:2G, 5:5G, 6:6G, 52:5G-2G, 526:5G-2G-6G, 562:5G-6G-2G, ...
 CONFIG_ROAM_SCAN_ORDER = 526
 
+#### Trigger bcn comparison or disconnect after N consecutive mismatched beacons ####
+CONFIG_BCN_CNT_CONFIRM_HDL = y
+# Number of consecutive mismatched beacon keys before beacon comparison and disconnect
+# CONFIG_BCN_NEW_MAX_CNT = 0 will skip the beacon check
+CONFIG_BCN_NEW_MAX_CNT = 3
+
 ###################### Platform Related #######################
-CONFIG_PLATFORM_TEGRA = y
-CONFIG_PLATFORM_I386_PC = n
+CONFIG_PLATFORM_I386_PC = y
 CONFIG_PLATFORM_RTL8198D = n
 CONFIG_PLATFORM_ANDROID_X86 = n
 CONFIG_PLATFORM_ANDROID_INTEL_X86 = n
@@ -605,6 +606,11 @@ EXTRA_CFLAGS += -DCONFIG_RTW_SDIO_PM_KEEP_POWER
 endif
 endif
 
+ifeq ($(CONFIG_BCN_CNT_CONFIRM_HDL), y)
+EXTRA_CFLAGS += -DCONFIG_BCN_CNT_CONFIRM_HDL
+EXTRA_CFLAGS += -DRTW_BCN_NEW_MAX_CNT=$(CONFIG_BCN_NEW_MAX_CNT)
+endif
+
 ifeq ($(CONFIG_LAYER2_ROAMING), y)
 	EXTRA_CFLAGS += -DCONFIG_LAYER2_ROAMING -DCONFIG_ROAMING_FLAG=$(CONFIG_ROAMING_FLAG)
 	EXTRA_CFLAGS += -DCONFIG_ROAM_SCAN_ORDER=$(CONFIG_ROAM_SCAN_ORDER)
@@ -773,16 +779,6 @@ ifeq ($(CONFIG_DBG_AX_CAM), y)
 EXTRA_CFLAGS += -DCONFIG_DBG_AX_CAM
 endif
 
-ifeq ($(CONFIG_PLATFORM_TEGRA), y)
-ARCH = arm64
-KVER := $(shell uname -r)
-KSRC := /lib/modules/$(KVER)/build
-EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
-EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
-EXTRA_CFLAGS += -Wno-error=date-time
-MODULE_NAME = rtl8852ce
-endif
-
 ifeq ($(CONFIG_I386_BUILD_VERIFY), y)
 EXTRA_CFLAGS += -DCONFIG_I386_BUILD_VERIFY
 endif
@@ -799,18 +795,8 @@ endif
 include $(wildcard $(DRV_PATH)/platform/*.mk)
 
 # Import platform specific compile options
-EXTRA_CFLAGS += -I$(SOURCETREE)/platform
+EXTRA_CFLAGS += -I$(src)/platform
 #_PLATFORM_FILES := platform/platform_ops.o
-ifeq ($(CONFIG_PCI_HCI), y)
-EXTRA_CFLAGS += -DCONFIG_PLATFORM_OPS
-_PLATFORM_FILES := platform/platform_linux_pc_pci.o
-OBJS += $(_PLATFORM_FILES)
-# Core Config
-CONFIG_MSG_NUM = 128
-EXTRA_CFLAGS += -DCONFIG_MSG_NUM=$(CONFIG_MSG_NUM)
-#EXTRA_CFLAGS += -DCONFIG_TX_SKB_ORPHAN
-endif
-_PLATFORM_FILES += platform/platform_ops.o
 OBJS += $(_PLATFORM_FILES)
 
 ########### CUSTOMER ################################
@@ -830,7 +816,7 @@ endif
 
 ifneq ($(KERNELRELEASE),)
 ########### COMMON #################################
-include $(SOURCETREE)/common.mk
+include $(src)/common.mk
 
 EXTRA_CFLAGS += -DPHL_PLATFORM_LINUX
 EXTRA_CFLAGS += -DCONFIG_PHL_ARCH
@@ -851,10 +837,11 @@ ifeq ($(DIRTY_FOR_WORK), y)
 EXTRA_CFLAGS += -DDIRTY_FOR_WORK
 endif
 
-include $(SOURCETREE)/phl/phl.mk
+include $(src)/phl/phl.mk
 
-obj-m := $(MODULE_NAME).o
 
+obj-$(CONFIG_RTL8852CE) := $(MODULE_NAME).o
+obj-$(CONFIG_RTL8852CE) := $(MODULE_NAME).o
 $(MODULE_NAME)-y = $(OBJS)
 
 ############# MEMORY MANAGMENT #############

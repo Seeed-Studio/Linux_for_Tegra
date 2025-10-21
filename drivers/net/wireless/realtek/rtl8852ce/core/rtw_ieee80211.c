@@ -1463,6 +1463,7 @@ u8 *rtw_get_wps_ie(const u8 *in_ie, uint in_len, u8 *wps_ie, uint *wps_ielen)
 	uint cnt;
 	const u8 *wpsie_ptr = NULL;
 	u8 eid, wps_oui[4] = {0x00, 0x50, 0xf2, 0x04};
+	uint ie_len;
 
 	if (wps_ielen)
 		*wps_ielen = 0;
@@ -1488,11 +1489,17 @@ u8 *rtw_get_wps_ie(const u8 *in_ie, uint in_len, u8 *wps_ie, uint *wps_ielen)
 		if (eid == WLAN_EID_VENDOR_SPECIFIC && _rtw_memcmp(&in_ie[cnt + 2], wps_oui, 4) == _TRUE) {
 			wpsie_ptr = in_ie + cnt;
 
+			ie_len = in_ie[cnt + 1] + 2;
+			if (ie_len > MAX_WPS_IE_LEN) {
+				RTW_WARN("%s: ie_len %d is too big\n", __func__, ie_len);
+				ie_len = MAX_WPS_IE_LEN;
+			}
+
 			if (wps_ie)
-				_rtw_memcpy(wps_ie, &in_ie[cnt], in_ie[cnt + 1] + 2);
+				_rtw_memcpy(wps_ie, &in_ie[cnt], ie_len);
 
 			if (wps_ielen)
-				*wps_ielen = in_ie[cnt + 1] + 2;
+				*wps_ielen = ie_len;
 
 			break;
 		} else
@@ -1850,29 +1857,181 @@ static int rtw_ieee802_11_parse_vendor_specific(u8 *pos, uint elen,
 
 }
 
-static int rtw_ieee802_11_parse_ext_elems(u8 *start, uint elen, struct rtw_ieee802_11_elems *elems)
+static int rtw_ieee802_11_elems_get_pos(struct rtw_ieee802_11_elems *elems, u8 id, u8 ***pos, u8 **len)
 {
-	u8 *pos = start;
-	u8 id = *pos;
-
 	switch (id) {
-	case WLAN_EID_EXTENSION_HE_CAPABILITY:
-		elems->he_capabilities = pos;
-		elems->he_capabilities_len = elen;
+	case WLAN_EID_SSID:
+		*pos = &elems->ssid;
+		*len = &elems->ssid_len;
 		return 0;
-	case WLAN_EID_EXTENSION_HE_OPERATION:
-		elems->he_operation = pos;
-		elems->he_operation_len = elen;
+	case WLAN_EID_SUPP_RATES:
+		*pos = &elems->supp_rates;
+		*len = &elems->supp_rates_len;
 		return 0;
-#if CONFIG_IEEE80211_BAND_6GHZ
-	case WLAN_EID_EXT_HE_6G_CAP:
-		elems->he_6g_band_cap = pos;
-		elems->he_6g_band_cap_len = elen;
+	case WLAN_EID_FH_PARAMS:
+		*pos = &elems->fh_params;
+		*len = &elems->fh_params_len;
+		return 0;
+	case WLAN_EID_DS_PARAMS:
+		*pos = &elems->ds_params;
+		*len = &elems->ds_params_len;
+		return 0;
+	case WLAN_EID_CF_PARAMS:
+		*pos = &elems->cf_params;
+		*len = &elems->cf_params_len;
+		return 0;
+	case WLAN_EID_TIM:
+		*pos = &elems->tim;
+		*len = &elems->tim_len;
+		return 0;
+	case WLAN_EID_IBSS_PARAMS:
+		*pos = &elems->ibss_params;
+		*len = &elems->ibss_params_len;
+		return 0;
+	case WLAN_EID_CHALLENGE:
+		*pos = &elems->challenge;
+		*len = &elems->challenge_len;
+		return 0;
+	case WLAN_EID_ERP_INFO:
+		*pos = &elems->erp_info;
+		*len = &elems->erp_info_len;
+		return 0;
+	case WLAN_EID_EXT_SUPP_RATES:
+		*pos = &elems->ext_supp_rates;
+		*len = &elems->ext_supp_rates_len;
+		return 0;
+	case WLAN_EID_RSN:
+		*pos = &elems->rsn_ie;
+		*len = &elems->rsn_ie_len;
+		return 0;
+	case WLAN_EID_PWR_CAPABILITY:
+		*pos = &elems->power_cap;
+		*len = &elems->power_cap_len;
+		return 0;
+	case WLAN_EID_SUPPORTED_CHANNELS:
+		*pos = &elems->supp_channels;
+		*len = &elems->supp_channels_len;
+		return 0;
+	case WLAN_EID_MOBILITY_DOMAIN:
+		*pos = &elems->mdie;
+		*len = &elems->mdie_len;
+		return 0;
+	case WLAN_EID_FAST_BSS_TRANSITION:
+		*pos = &elems->ftie;
+		*len = &elems->ftie_len;
+		return 0;
+	case WLAN_EID_TIMEOUT_INTERVAL:
+		*pos = &elems->timeout_int;
+		*len = &elems->timeout_int_len;
+		return 0;
+	case WLAN_EID_HT_CAP:
+		*pos = &elems->ht_capabilities;
+		*len = &elems->ht_capabilities_len;
+		return 0;
+	case WLAN_EID_HT_OPERATION:
+		*pos = &elems->ht_operation;
+		*len = &elems->ht_operation_len;
+		return 0;
+	case WLAN_EID_VHT_CAPABILITY:
+		*pos = &elems->vht_capabilities;
+		*len = &elems->vht_capabilities_len;
+		return 0;
+	case WLAN_EID_VHT_OPERATION:
+		*pos = &elems->vht_operation;
+		*len = &elems->vht_operation_len;
+		return 0;
+	case WLAN_EID_VHT_OP_MODE_NOTIFY:
+		*pos = &elems->vht_op_mode_notify;
+		*len = &elems->vht_op_mode_notify_len;
+		return 0;
+	case _EID_RRM_EN_CAP_IE_:
+		*pos = &elems->rm_en_cap;
+		*len = &elems->rm_en_cap_len;
+		return 0;
+	case WLAN_EID_AP_CHANNEL_RPT:
+		*pos = &elems->ap_channel_rpt;
+		*len = &elems->ap_channel_rpt_len;
+		return 0;
+	case WLAN_EID_COUNTRY:
+		*pos = &elems->country_info;
+		*len = &elems->country_info_len;
+		return 0;
+#ifdef CONFIG_RTW_MESH
+	case WLAN_EID_PREQ:
+		*pos = &elems->preq;
+		*len = &elems->preq_len;
+		return 0;
+	case WLAN_EID_PREP:
+		*pos = &elems->prep;
+		*len = &elems->prep_len;
+		return 0;
+	case WLAN_EID_PERR:
+		*pos = &elems->perr;
+		*len = &elems->perr_len;
+		return 0;
+	case WLAN_EID_RANN:
+		*pos = &elems->rann;
+		*len = &elems->rann_len;
+		return 0;
+#endif
+#ifdef CONFIG_STA_MULTIPLE_BSSID
+	case WLAN_EID_MULTIPLE_BSSID:
+		*pos = &elems->mbssid;
+		*len = &elems->mbssid_len;
+		return 0;
+	case WLAN_EID_NON_TX_BSSID_CAP:
+		*pos = &elems->non_tx_bssid_cap;
+		*len = &elems->non_tx_bssid_cap_len;
 		return 0;
 #endif
 	default:
 		return -1;
 	}
+}
+
+static int rtw_ieee802_11_elems_get_ext_pos(struct rtw_ieee802_11_elems *elems, u8 id, u8 ***pos, u8 **len)
+{
+	switch (id) {
+	case WLAN_EID_EXTENSION_HE_CAPABILITY:
+		*pos = &elems->he_capabilities;
+		*len = &elems->he_capabilities_len;
+		return 0;
+	case WLAN_EID_EXTENSION_HE_OPERATION:
+		*pos = &elems->he_operation;
+		*len = &elems->he_operation_len;
+		return 0;
+#ifdef CONFIG_STA_MULTIPLE_BSSID
+	case WLAN_EID_EXT_NON_INHERITANCE:
+		*pos = &elems->non_inheritance;
+		*len = &elems->non_inheritance_len;
+		return 0;
+#endif
+#if CONFIG_IEEE80211_BAND_6GHZ
+	case WLAN_EID_EXT_HE_6G_CAP:
+		*pos = &elems->he_6g_band_cap;
+		*len = &elems->he_6g_band_cap_len;
+		return 0;
+#endif
+	default:
+		return -1;
+	}
+}
+
+static int rtw_ieee802_11_parse_ext_elems(u8 *start, uint elen, struct rtw_ieee802_11_elems *elems)
+{
+	u8 *pos = start;
+	u8 id = *pos;
+	u8 **elem_cont;
+	u8 *elem_len;
+	int ret;
+
+	ret = rtw_ieee802_11_elems_get_ext_pos(elems, id, &elem_cont, &elem_len);
+	if (ret == 0) {
+		*elem_cont = pos;
+		*elem_len = elen;
+	}
+
+	return ret;
 }
 
 static ParseRes _rtw_ieee802_11_parse_elems(u8 *start, uint len,
@@ -1881,6 +2040,8 @@ static ParseRes _rtw_ieee802_11_parse_elems(u8 *start, uint len,
 {
 	uint left = len;
 	u8 *pos = start;
+	u8 **elem_cont;
+	u8 *elem_len;
 	int unknown = 0;
 
 	if (reset)
@@ -1904,45 +2065,8 @@ static ParseRes _rtw_ieee802_11_parse_elems(u8 *start, uint len,
 		}
 
 		switch (id) {
-		case WLAN_EID_SSID:
-			elems->ssid = pos;
-			elems->ssid_len = elen;
-			break;
-		case WLAN_EID_SUPP_RATES:
-			elems->supp_rates = pos;
-			elems->supp_rates_len = elen;
-			break;
-		case WLAN_EID_FH_PARAMS:
-			elems->fh_params = pos;
-			elems->fh_params_len = elen;
-			break;
-		case WLAN_EID_DS_PARAMS:
-			elems->ds_params = pos;
-			elems->ds_params_len = elen;
-			break;
-		case WLAN_EID_CF_PARAMS:
-			elems->cf_params = pos;
-			elems->cf_params_len = elen;
-			break;
-		case WLAN_EID_TIM:
-			elems->tim = pos;
-			elems->tim_len = elen;
-			break;
-		case WLAN_EID_IBSS_PARAMS:
-			elems->ibss_params = pos;
-			elems->ibss_params_len = elen;
-			break;
-		case WLAN_EID_CHALLENGE:
-			elems->challenge = pos;
-			elems->challenge_len = elen;
-			break;
-		case WLAN_EID_ERP_INFO:
-			elems->erp_info = pos;
-			elems->erp_info_len = elen;
-			break;
-		case WLAN_EID_EXT_SUPP_RATES:
-			elems->ext_supp_rates = pos;
-			elems->ext_supp_rates_len = elen;
+		case WLAN_EID_EXTENSION:
+			rtw_ieee802_11_parse_ext_elems(pos, elen, elems);
 			break;
 		case WLAN_EID_VENDOR_SPECIFIC:
 			if (rtw_ieee802_11_parse_vendor_specific(pos, elen,
@@ -1950,100 +2074,18 @@ static ParseRes _rtw_ieee802_11_parse_elems(u8 *start, uint len,
 					show_errors))
 				unknown++;
 			break;
-		case WLAN_EID_RSN:
-			elems->rsn_ie = pos;
-			elems->rsn_ie_len = elen;
-			break;
-		case WLAN_EID_PWR_CAPABILITY:
-			elems->power_cap = pos;
-			elems->power_cap_len = elen;
-			break;
-		case WLAN_EID_SUPPORTED_CHANNELS:
-			elems->supp_channels = pos;
-			elems->supp_channels_len = elen;
-			break;
-		case WLAN_EID_MOBILITY_DOMAIN:
-			elems->mdie = pos;
-			elems->mdie_len = elen;
-			break;
-		case WLAN_EID_FAST_BSS_TRANSITION:
-			elems->ftie = pos;
-			elems->ftie_len = elen;
-			break;
-		case WLAN_EID_TIMEOUT_INTERVAL:
-			elems->timeout_int = pos;
-			elems->timeout_int_len = elen;
-			break;
-		case WLAN_EID_HT_CAP:
-			elems->ht_capabilities = pos;
-			elems->ht_capabilities_len = elen;
-			break;
-		case WLAN_EID_HT_OPERATION:
-			elems->ht_operation = pos;
-			elems->ht_operation_len = elen;
-			break;
-		case WLAN_EID_VHT_CAPABILITY:
-			elems->vht_capabilities = pos;
-			elems->vht_capabilities_len = elen;
-			break;
-		case WLAN_EID_VHT_OPERATION:
-			elems->vht_operation = pos;
-			elems->vht_operation_len = elen;
-			break;
-		case WLAN_EID_VHT_OP_MODE_NOTIFY:
-			elems->vht_op_mode_notify = pos;
-			elems->vht_op_mode_notify_len = elen;
-			break;
-		case _EID_RRM_EN_CAP_IE_:
-			elems->rm_en_cap = pos;
-			elems->rm_en_cap_len = elen;
-			break;
-		case WLAN_EID_AP_CHANNEL_RPT:
-			elems->ap_channel_rpt= pos;
-			elems->ap_channel_rpt_len = elen;
-			break;
-		case WLAN_EID_COUNTRY:
-			elems->country_info= pos;
-			elems->country_info_len = elen;
-			break;
-#ifdef CONFIG_RTW_MESH
-		case WLAN_EID_PREQ:
-			elems->preq = pos;
-			elems->preq_len = elen;
-			break;
-		case WLAN_EID_PREP:
-			elems->prep = pos;
-			elems->prep_len = elen;
-			break;
-		case WLAN_EID_PERR:
-			elems->perr = pos;
-			elems->perr_len = elen;
-			break;
-		case WLAN_EID_RANN:
-			elems->rann = pos;
-			elems->rann_len = elen;
-			break;
-#endif
-#ifdef CONFIG_STA_MULTIPLE_BSSID
-		case WLAN_EID_MULTIPLE_BSSID:
-			elems->mbssid = pos;
-			elems->mbssid_len = elen;
-			break;
-		case WLAN_EID_NON_TX_BSSID_CAP:
-			elems->non_tx_bssid_cap = pos;
-			elems->non_tx_bssid_cap_len = elen;
-			break;
-#endif
-		case WLAN_EID_EXTENSION:
-			rtw_ieee802_11_parse_ext_elems(pos, elen, elems);
-			break;
 		default:
-			unknown++;
-			if (!show_errors)
-				break;
-			RTW_DBG("IEEE 802.11 element parse "
-				"ignored unknown element (id=%d elen=%d)\n",
-				id, elen);
+			if (rtw_ieee802_11_elems_get_pos(elems, id, &elem_cont, &elem_len) == 0) {
+				*elem_cont = pos;
+				*elem_len = elen;
+			} else {
+				unknown++;
+				if (!show_errors)
+					break;
+				RTW_DBG("IEEE 802.11 element parse "
+					"ignored unknown element (id=%d elen=%d)\n",
+					id, elen);
+			}
 			break;
 		}
 
@@ -2074,7 +2116,7 @@ ParseRes rtw_ieee802_11_parse_elems(u8 *start, uint len,
 }
 
 #ifdef CONFIG_STA_MULTIPLE_BSSID
-static bool rtw_mbssid_ntbssid_profile_match_id(u8 *profile, uint len, u8 mbssid_idx)
+static u8 rtw_mbssid_ntbssid_profile_get_id(u8 *profile, uint len)
 {
 	uint left = len;
 	u8 *pos = profile;
@@ -2091,9 +2133,7 @@ static bool rtw_mbssid_ntbssid_profile_match_id(u8 *profile, uint len, u8 mbssid
 
 		switch (id) {
 		case WLAN_EID_MULTI_BSSID_IDX:
-			if (GET_MULTIPLE_BSSID_IDX_INDEX(pos - 2) == mbssid_idx)
-				return true;
-			break;
+			return GET_MULTIPLE_BSSID_IDX_INDEX(pos - 2);
 		default:
 			break;
 		}
@@ -2102,25 +2142,17 @@ static bool rtw_mbssid_ntbssid_profile_match_id(u8 *profile, uint len, u8 mbssid
 		pos += elen;
 	}
 
-	return false;
+	return 0;
 }
 
-/**
- * rtw_ieee802_11_override_elems_by_mbssid - override information elements in management frames
- * @mbssid_ie: Pointer to the start of mbssid IE
- * @mbssid_ie_len: Length of IE buffer in octets
- * @mbssid_idx: the specific mbssid index to get for override
- * @elems: Data structure for parsed elements
- * @show_errors: Whether to show parsing errors in debug log
- * Returns: Parsing result
- */
-ParseRes rtw_ieee802_11_override_elems_by_mbssid(
-	u8 *mbssid_ie, uint mbssid_ie_len, u8 mbssid_idx, struct rtw_ieee802_11_elems *elems
-	, int show_errors)
+static ParseRes rtw_ieee802_11_override_elems_by_mbssid_single(
+	u8 *mbssid_ie, uint mbssid_ie_len, u8 tgt_mbssid_idx, bool *last_id_match
+	, struct rtw_ieee802_11_elems *elems, int show_errors)
 {
 	uint left = mbssid_ie_len;
 	u8 *pos = mbssid_ie;
 	u8 max_bssid_indicator;
+	u8 mbssid_idx;
 	ParseRes ret = ParseOK;
 
 	if (left < 3) {
@@ -2129,8 +2161,8 @@ ParseRes rtw_ieee802_11_override_elems_by_mbssid(
 	}
 
 	max_bssid_indicator = GET_MBSSID_MAX_BSSID_INDOCATOR(pos);
-	if (mbssid_idx >= (1 << max_bssid_indicator)) {
-		RTW_WARN("%s mbssid_idx >= max_bssid_indicator(%u)\n"
+	if (tgt_mbssid_idx >= (1 << max_bssid_indicator)) {
+		RTW_WARN("%s tgt_mbssid_idx >= max_bssid_indicator(%u)\n"
 			, __func__, 1 << max_bssid_indicator);
 		return ParseFailed;
 	}
@@ -2155,8 +2187,14 @@ ParseRes rtw_ieee802_11_override_elems_by_mbssid(
 
 		switch (id) {
 		case MBSSID_NONTRANSMITTED_BSSID_PROFILE_ID:
-			if (rtw_mbssid_ntbssid_profile_match_id(pos, elen, mbssid_idx))
+			mbssid_idx = rtw_mbssid_ntbssid_profile_get_id(pos, elen);
+			if ((mbssid_idx && mbssid_idx == tgt_mbssid_idx) /* has idx and match */
+				|| (!mbssid_idx && *last_id_match) /* no idx, follow last matching status */
+			) {
 				ret = _rtw_ieee802_11_parse_elems(pos, elen, elems, show_errors, false);
+			}
+			if (mbssid_idx)
+				*last_id_match = mbssid_idx == tgt_mbssid_idx;
 			break;
 		default:
 			break;
@@ -2169,7 +2207,131 @@ ParseRes rtw_ieee802_11_override_elems_by_mbssid(
 		return ParseFailed;
 
 	return ret;
+}
 
+static void rtw_ieee802_11_clear_elems(u8 *ids, u8 id_num, struct rtw_ieee802_11_elems *elems)
+{
+	u8 **elem_cont;
+	u8 *elem_len;
+	u8 i;
+
+	for (i = 0; i < id_num; i++) {
+		if (rtw_ieee802_11_elems_get_pos(elems, ids[i], &elem_cont, &elem_len) == 0) {
+			*elem_cont = NULL;
+			*elem_len = 0;
+		}
+	}
+}
+
+static void rtw_ieee802_11_clear_ext_elems(u8 *ids, u8 id_num, struct rtw_ieee802_11_elems *elems)
+{
+	u8 **elem_cont;
+	u8 *elem_len;
+	u8 i;
+
+	for (i = 0; i < id_num; i++) {
+		if (rtw_ieee802_11_elems_get_ext_pos(elems, ids[i], &elem_cont, &elem_len) == 0) {
+			*elem_cont = NULL;
+			*elem_len = 0;
+		}
+	}
+}
+
+static void rtw_ieee802_11_update_elems_by_non_inheritance(struct rtw_ieee802_11_elems *elems, int show_errors)
+{
+#define MIN_NON_INHERITANCE_CONT_LEN 3 /* ext_id, 0, 0 */
+
+	if (elems->non_inheritance
+		&& elems->non_inheritance_len > MIN_NON_INHERITANCE_CONT_LEN
+	) {
+		u8 *pos = elems->non_inheritance + 1, *ids, *ext_ids;
+		u8 id_num, ext_id_num;
+
+		/* list of element ids */
+		id_num = *(pos++);
+		if (id_num) {
+			if (pos + id_num + 1 > elems->non_inheritance + elems->non_inheritance_len) { /* 1 for room of ext_id_num */
+				if (show_errors)
+					RTW_INFO("%s parse failed (elen=%d id_num=%d)\n"
+						, __func__, elems->non_inheritance_len, id_num);
+				return;
+			}
+			ids = pos;
+			pos += id_num;
+		}
+
+		/* list of element id extensions */
+		ext_id_num = *(pos++);
+		if (ext_id_num) {
+			if (pos + ext_id_num > elems->non_inheritance + elems->non_inheritance_len) {
+				if (show_errors)
+					RTW_INFO("%s parse failed (elen=%d id_num=%d ext_id_num=%d)\n"
+						, __func__, elems->non_inheritance_len, id_num, ext_id_num);
+				return;
+			}
+			ext_ids = pos;
+		}
+
+		if (id_num)
+			rtw_ieee802_11_clear_elems(ids, id_num, elems);
+		if (ext_id_num)
+			rtw_ieee802_11_clear_ext_elems(ext_ids, ext_id_num, elems);
+	}
+}
+
+/**
+ * rtw_ieee802_11_override_elems_by_mbssid - override information elements in management frames
+ * @start: Pointer to the start of IEs
+ * @len: Length of IE buffer in octets
+ * @tgt_mbssid_idx: the specific mbssid index to get for override
+ * @elems: Data structure for parsed elements
+ * @show_errors: Whether to show parsing errors in debug log
+ * Returns: Parsing result
+ */
+ParseRes rtw_ieee802_11_override_elems_by_mbssid(u8 *start, uint len
+	, u8 tgt_mbssid_idx, struct rtw_ieee802_11_elems *elems, int show_errors)
+{
+	uint left = len;
+	u8 *pos = start;
+	bool last_id_match = false;
+	ParseRes ret = ParseOK;
+
+	/* loop for multiple mbssid_ie */
+	while (left >= 2) {
+		u8 id, elen;
+
+		id = *pos++;
+		elen = *pos++;
+		left -= 2;
+
+		if (elen > left) {
+			if (show_errors) {
+				RTW_INFO("%s parse failed (id=%d elen=%d left=%lu)\n"
+					, __func__, id, elen, (unsigned long) left);
+			}
+			return ParseFailed;
+		}
+
+		switch (id) {
+		case WLAN_EID_MULTIPLE_BSSID:
+			ret = rtw_ieee802_11_override_elems_by_mbssid_single(pos - 2, elen + 2
+				, tgt_mbssid_idx, &last_id_match, elems, show_errors);
+			break;
+		default:
+			break;
+		}
+
+		left -= elen;
+		pos += elen;
+	}
+
+	if (left)
+		return ParseFailed;
+
+	if (tgt_mbssid_idx)
+		rtw_ieee802_11_update_elems_by_non_inheritance(elems, show_errors);
+
+	return ret;
 }
 #endif /* CONFIG_STA_MULTIPLE_BSSID */
 
@@ -2468,29 +2630,28 @@ u8 *rtw_ies_get_he_6g_op_info_ie(u8 *ies, int ies_len)
 #endif /* CONFIG_80211AX_HE && CONFIG_IEEE80211_BAND_6GHZ */
 
 /**
- * rtw_ies_get_chbw - get operation ch, bw, offset from IEs of BSS.
+ * _rtw_ies_get_ch_settings - get operation ch, bw, offset from IEs of BSS.
  * @ies: pointer of the first tlv IE
  * @ies_len: length of @ies
+ * @band: pointer os band, used as output
  * @ch: pointer of ch, used as output
  * @bw: pointer of bw, used as output
  * @offset: pointer of offset, used as output
+ * @freq0: pointer of freq0, used as output
+ * @freq1: pointer of freq1, used as output
  * @ht: check HT IEs
  * @vht: check VHT IEs, if true imply ht is true
+ * @he: check HE IEs
+ * @eht: check EHT IEs
  */
-#if CONFIG_ALLOW_FUNC_2G_5G_ONLY
-RTW_FUNC_2G_5G_ONLY inline void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht)
+static void _rtw_ies_get_ch_settings(u8 *ies, int ies_len, enum band_type *band, u8 *ch, u8 *bw,
+	u8 *offset, u8 *freq0, u8 *freq1, u8 ht, u8 vht, u8 he, u8 eht)
 {
-	rtw_ies_get_bchbw(ies, ies_len, NULL, ch, bw, offset, NULL, NULL, ht, vht, 0);
-}
-#endif
-
-void rtw_ies_get_bchbw(u8 *ies, int ies_len, enum band_type *band, u8 *chan, u8 *bw,
-	u8 *offset, u8 *freq0, u8 *freq1, u8 ht, u8 vht, u8 he)
-{
+	enum band_type b = BAND_MAX;
 	u8 *p;
-	int	ie_len;
+	int ie_len;
 
-	*chan = 0;
+	*ch = 0;
 	*bw = CHANNEL_WIDTH_20;
 	*offset = CHAN_OFFSET_NO_EXT;
 	if (freq0)
@@ -2498,11 +2659,34 @@ void rtw_ies_get_bchbw(u8 *ies, int ies_len, enum band_type *band, u8 *chan, u8 
 	if (freq1)
 		*freq1 = 0;
 
+#ifdef CONFIG_80211AX_HE
+#if CONFIG_IEEE80211_BAND_6GHZ
+	if (he) {
+		u8 *_6g_op_info_ie = NULL;
+
+		_6g_op_info_ie = rtw_ies_get_he_6g_op_info_ie(ies, ies_len);
+
+		if (_6g_op_info_ie) {
+			*ch = GET_HE_OP_INFO_PRIMARY_CHAN(_6g_op_info_ie);
+			*bw = GET_HE_OP_INFO_CHAN_WIDTH(_6g_op_info_ie);
+			if (freq0)
+				*freq0 = GET_HE_OP_INFO_CHAN_CTR_FREQ_SEG0(_6g_op_info_ie);
+			if (freq1)
+				*freq1 = GET_HE_OP_INFO_CHAN_CTR_FREQ_SEG1(_6g_op_info_ie);
+			b = BAND_ON_6G;
+			if (rtw_get_offset_by_bchbw(BAND_ON_6G, *ch, *bw, offset))
+				goto bypass_ht_vht;
+			RTW_INFO("%s get 6ghz channel offset fail, chan=%u, bw=%u\n",
+				__func__, *ch, *bw);
+		}
+	}
+#endif /* CONFIG_IEEE80211_BAND_6GHZ */
+#endif /* CONFIG_80211AX_HE */
+
 	p = rtw_get_ie(ies, _DSSET_IE_, &ie_len, ies_len);
 	if (p && ie_len > 0) {
-		*chan = *(p + 2);
-		if (band)
-			*band = *chan > 14 ? BAND_ON_5G : BAND_ON_24G;
+		*ch = *(p + 2);
+		b = *ch > 14 ? BAND_ON_5G : BAND_ON_24G;
 	}
 
 #ifdef CONFIG_80211N_HT
@@ -2518,13 +2702,12 @@ void rtw_ies_get_bchbw(u8 *ies, int ies_len, enum band_type *band, u8 *chan, u8 
 
 		ht_op_ie = rtw_get_ie(ies, EID_HTInfo, &ht_op_ielen, ies_len);
 		if (ht_op_ie && ht_op_ielen) {
-			if (*chan == 0) {
-				*chan = GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2);
-				if(band)
-					*band = (*chan > 14) ? BAND_ON_5G : BAND_ON_24G;
-			} else if (*chan != 0 && *chan != GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2)) {
+			if (*ch == 0) {
+				*ch = GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2);
+				b = *ch > 14 ? BAND_ON_5G : BAND_ON_24G;
+			} else if (*ch != 0 && *ch != GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2)) {
 				RTW_INFO("%s ch inconsistent, DSSS:%u, HT primary:%u\n"
-					, __func__, *chan, GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2));
+					, __func__, *ch, GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2));
 			}
 
 			if (!GET_HT_OP_ELE_STA_CHL_WIDTH(ht_op_ie + 2))
@@ -2558,6 +2741,14 @@ void rtw_ies_get_bchbw(u8 *ies, int ies_len, enum band_type *band, u8 *chan, u8 
 								  vht_cap_ie,
 								  vht_op_ie,
 								  *bw);
+					/*
+					Correcting offset if *offset==HAL_PRIME_CHNL_OFFSET_DONT_CARE.
+					AP may support BW 80 for VHT, but only support BW 20 for HT, resulting in no offset being set.
+					*/
+					if (*offset == CHAN_OFFSET_NO_EXT && !rtw_get_offset_by_bchbw(b, *ch, *bw, offset)) {
+						RTW_INFO("%s get channel offset fail, band=%u, chan=%u, bw=%u\n",
+							__func__, b, *ch, *bw);
+					}
 				}
 			}
 		}
@@ -2567,35 +2758,36 @@ void rtw_ies_get_bchbw(u8 *ies, int ies_len, enum band_type *band, u8 *chan, u8 
 
 #ifdef CONFIG_80211AX_HE
 #if CONFIG_IEEE80211_BAND_6GHZ
-	if (he) {
-		u8 *_6g_op_info_ie = NULL;
-
-		_6g_op_info_ie = rtw_ies_get_he_6g_op_info_ie(ies, ies_len);
-
-		if (_6g_op_info_ie) {
-			*chan = GET_HE_OP_INFO_PRIMARY_CHAN(_6g_op_info_ie);
-			*bw = GET_HE_OP_INFO_CHAN_WIDTH(_6g_op_info_ie);
-			if (freq0)
-				*freq0 = GET_HE_OP_INFO_CHAN_CTR_FREQ_SEG0(_6g_op_info_ie);
-			if (freq1)
-				*freq1 = GET_HE_OP_INFO_CHAN_CTR_FREQ_SEG1(_6g_op_info_ie);
-			if (band)
-				*band = BAND_ON_6G;
-			if (!rtw_get_offset_by_bchbw(BAND_ON_6G, *chan, *bw, offset)) {
-				RTW_INFO("%s get 6ghz channel offset fail, chan=%u, bw=%u\n",
-					__func__, *chan, *bw);
-			}
-		}
-	}
-#endif
+bypass_ht_vht:
+#endif /* CONFIG_IEEE80211_BAND_6GHZ */
 #endif /* CONFIG_80211AX_HE */
+
+	if (band)
+		*band = b;
+	return;
 }
 
-void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, enum band_type *band, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht, u8 he)
+#if CONFIG_ALLOW_FUNC_2G_5G_ONLY
+RTW_FUNC_2G_5G_ONLY void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht)
 {
-	rtw_ies_get_bchbw(bss->IEs + _FIXED_IE_LENGTH_
-		, bss->IELength - _FIXED_IE_LENGTH_
-		, band, ch, bw, offset, NULL, NULL, ht, vht, he);
+	_rtw_ies_get_ch_settings(ies, ies_len, NULL, ch, bw, offset, NULL, NULL, ht, vht, false, false);
+}
+
+RTW_FUNC_2G_5G_ONLY void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht)
+{
+	rtw_bss_get_bchbw(bss, NULL, ch, bw, offset, ht, vht, false, false);
+}
+#endif
+
+void rtw_ies_get_bchbw(u8 *ies, int ies_len, enum band_type *band, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht, u8 he, u8 eht)
+{
+	_rtw_ies_get_ch_settings(ies, ies_len, band, ch, bw, offset, NULL, NULL, ht, vht, he, eht);
+}
+
+void rtw_bss_get_bchbw(WLAN_BSSID_EX *bss, enum band_type *band, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht, u8 he, u8 eht)
+{
+	_rtw_ies_get_ch_settings(BSS_EX_TLV_IES(bss), BSS_EX_TLV_IES_LEN(bss)
+		, band, ch, bw, offset, NULL, NULL, ht, vht, he, eht);
 
 	if (*ch == 0) {
 		*ch = bss->Configuration.DSConfig;
@@ -2608,6 +2800,50 @@ void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, enum band_type *band, u8 *ch, u8 *bw, 
 		*band = bss->Configuration.Band;
 		rtw_warn_on(1);
 	}
+}
+
+void rtw_ies_get_chdef(u8 *ies, int ies_len, struct rtw_chan_def *chdef, u8 ht, u8 vht, u8 he, u8 eht)
+{
+	enum band_type band;
+	u8 ch, bw, offset, freq0, freq1;
+
+	_rtw_ies_get_ch_settings(ies, ies_len
+		, &band, &ch, &bw, &offset, &freq0, &freq1, ht, vht, he, eht);
+
+	chdef->band = band;
+	chdef->chan = ch;
+	chdef->bw = bw;
+	chdef->offset = offset;
+	chdef->center_freq1 = freq0;
+	chdef->center_freq2 = freq1;
+}
+
+void rtw_bss_get_chdef(WLAN_BSSID_EX *bss, struct rtw_chan_def *chdef, u8 ht, u8 vht, u8 he, u8 eht)
+{
+	enum band_type band;
+	u8 ch, bw, offset, freq0, freq1;
+
+	_rtw_ies_get_ch_settings(BSS_EX_TLV_IES(bss), BSS_EX_TLV_IES_LEN(bss)
+		, &band, &ch, &bw, &offset, &freq0, &freq1, ht, vht, he, eht);
+
+	if (ch == 0) {
+		ch = bss->Configuration.DSConfig;
+		band = bss->Configuration.Band;
+	}
+	else if (ch != bss->Configuration.DSConfig) {
+		RTW_INFO("inconsistent ch - ies:%u bss->Configuration.DSConfig:%u\n"
+			 , ch, bss->Configuration.DSConfig);
+		ch = bss->Configuration.DSConfig;
+		band = bss->Configuration.Band;
+		rtw_warn_on(1);
+	}
+
+	chdef->band = band;
+	chdef->chan = ch;
+	chdef->bw = bw;
+	chdef->offset = offset;
+	chdef->center_freq1 = freq0;
+	chdef->center_freq2 = freq1;
 }
 
 /**
@@ -2715,6 +2951,7 @@ u8 *rtw_get_p2p_ie(const u8 *in_ie, int in_len, u8 *p2p_ie, uint *p2p_ielen)
 	uint cnt;
 	const u8 *p2p_ie_ptr = NULL;
 	u8 eid, p2p_oui[4] = {0x50, 0x6F, 0x9A, 0x09};
+	uint ie_len;
 
 	if (p2p_ielen)
 		*p2p_ielen = 0;
@@ -2740,11 +2977,17 @@ u8 *rtw_get_p2p_ie(const u8 *in_ie, int in_len, u8 *p2p_ie, uint *p2p_ielen)
 		if (eid == WLAN_EID_VENDOR_SPECIFIC && _rtw_memcmp(&in_ie[cnt + 2], p2p_oui, 4) == _TRUE) {
 			p2p_ie_ptr = in_ie + cnt;
 
+			ie_len = in_ie[cnt + 1] + 2;
+			if (ie_len > MAX_P2P_IE_LEN) {
+				RTW_WARN("%s: ie_len %d is too big\n", __func__, ie_len);
+				ie_len = MAX_P2P_IE_LEN;
+			}
+
 			if (p2p_ie)
-				_rtw_memcpy(p2p_ie, &in_ie[cnt], in_ie[cnt + 1] + 2);
+				_rtw_memcpy(p2p_ie, &in_ie[cnt], ie_len);
 
 			if (p2p_ielen)
-				*p2p_ielen = in_ie[cnt + 1] + 2;
+				*p2p_ielen = ie_len;
 
 			break;
 		} else
@@ -2760,6 +3003,7 @@ u8 *rtw_get_vendor_ie(const u8 *in_ie, int in_len, u8 *vendor_ie, uint *vendor_i
 	uint cnt;
 	const u8 *vendor_ie_ptr = NULL;
 	u8 eid, vendor_oui[4] = {0xC8, 0x3A, 0x6B, 0x01};
+	uint ie_len;
 
 	if (vendor_ielen)
 		*vendor_ielen = 0;
@@ -2785,11 +3029,17 @@ u8 *rtw_get_vendor_ie(const u8 *in_ie, int in_len, u8 *vendor_ie, uint *vendor_i
 		if (eid == WLAN_EID_VENDOR_SPECIFIC && _rtw_memcmp(&in_ie[cnt + 2], vendor_oui, 4) == _TRUE) {
 			vendor_ie_ptr = in_ie + cnt;
 
+			ie_len = in_ie[cnt + 1] + 2;
+			if (ie_len > MAX_VENDOR_IE_LEN) {
+				RTW_WARN("%s: ie_len %d is too big\n", __func__, ie_len);
+				ie_len = MAX_VENDOR_IE_LEN;
+			}
+
 			if (vendor_ie)
-				_rtw_memcpy(vendor_ie, &in_ie[cnt], in_ie[cnt + 1] + 2);
+				_rtw_memcpy(vendor_ie, &in_ie[cnt], ie_len);
 
 			if (vendor_ielen)
-				*vendor_ielen = in_ie[cnt + 1] + 2;
+				*vendor_ielen = ie_len;
 
 			break;
 		} else
@@ -3135,6 +3385,7 @@ u8 *rtw_get_wfd_ie(const u8 *in_ie, int in_len, u8 *wfd_ie, uint *wfd_ielen)
 	uint cnt;
 	const u8 *wfd_ie_ptr = NULL;
 	u8 eid, wfd_oui[4] = {0x50, 0x6F, 0x9A, 0x0A};
+	uint ie_len;
 
 	if (wfd_ielen)
 		*wfd_ielen = 0;
@@ -3160,11 +3411,17 @@ u8 *rtw_get_wfd_ie(const u8 *in_ie, int in_len, u8 *wfd_ie, uint *wfd_ielen)
 		if (eid == WLAN_EID_VENDOR_SPECIFIC && _rtw_memcmp(&in_ie[cnt + 2], wfd_oui, 4) == _TRUE) {
 			wfd_ie_ptr = in_ie + cnt;
 
+			ie_len = in_ie[cnt + 1] + 2;
+			if (ie_len > MAX_WFD_IE_LEN) {
+				RTW_WARN("%s: ie_len %d is too big\n", __func__, ie_len);
+				ie_len = MAX_WFD_IE_LEN;
+			}
+
 			if (wfd_ie)
-				_rtw_memcpy(wfd_ie, &in_ie[cnt], in_ie[cnt + 1] + 2);
+				_rtw_memcpy(wfd_ie, &in_ie[cnt], ie_len);
 
 			if (wfd_ielen)
-				*wfd_ielen = in_ie[cnt + 1] + 2;
+				*wfd_ielen = ie_len;
 
 			break;
 		} else

@@ -413,6 +413,12 @@ void halbb_pwr_ctrl_per_sta(struct bb_info *bb, u16 macid)
 		//BB_DBG(bb, DBG_PWR_CTRL, "NULL PHL STA info\n");
 		return;
 	}
+
+	if (!bb->sta_exist[macid]) {
+		BB_DBG(bb, DBG_PWR_CTRL, "STA not exist!!Don't update DTP_lv\n");
+		return;
+	}
+	
 	if (is_sta_active(sta)) {
 		rssi = (sta->hal_sta->rssi_stat.rssi) >> 1;
 		lst_pwr_lv = dtp->last_pwr_lvl;

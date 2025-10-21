@@ -824,7 +824,43 @@ int rtw_set_env(_adapter *adapter, enum rtw_env_t env, enum rtw_regd_inr inr)
 		, REGSTY_REGD_SRC_FROM_OS(adapter_to_regsty(adapter)) ? REGD_SRC_OS : REGD_SRC_RTK_PRIV
 		, inr);
 }
-#endif
+
+/*
+* rtw_set_force_txpwr_lmt_6g_cate -
+* @adapter: pointer to _adapter structure
+* @force_txpwr_lmt_6g_cate: the forced value, TXPWR_LMT_6G_CATE_NONE to clear
+*
+* Return _SUCCESS or _FAIL
+*/
+int rtw_set_force_txpwr_lmt_6g_cate(_adapter *adapter
+	, enum txpwr_lmt_6g_cate_t force_txpwr_lmt_6g_cate)
+{
+	return rtw_set_force_txpwr_lmt_6g_cate_cmd(adapter, RTW_CMDF_WAIT_ACK, force_txpwr_lmt_6g_cate
+		, REGD_SRC_RTK_PRIV, RTW_REGD_SET_BY_USER);
+}
+
+/*
+* rtw_get_force_txpwr_lmt_6g_cate -
+* @adapter: pointer to _adapter structure
+*
+* Return TXPWR_LMT_6G_CATE_NUM  for error case
+*        TXPWR_LMT_6G_CATE_NONE for auto mode
+*                        others for specific forced value
+*/
+enum txpwr_lmt_6g_cate_t rtw_get_force_txpwr_lmt_6g_cate(_adapter *adapter)
+{
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	struct get_chplan_resp *chplan;
+	enum txpwr_lmt_6g_cate_t cate;
+
+	if (rtw_get_chplan_cmd(dvobj_get_primary_adapter(dvobj), RTW_CMDF_WAIT_ACK, &chplan) == _FAIL)
+		return TXPWR_LMT_6G_CATE_NUM;
+
+	cate = chplan->force_txpwr_lmt_6g_cate;
+	rtw_free_get_chplan_resp(chplan);
+	return cate;
+}
+#endif /* CONFIG_IEEE80211_BAND_6GHZ */
 
 /*
 * rtw_set_band -

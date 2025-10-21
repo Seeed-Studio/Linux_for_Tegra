@@ -179,6 +179,9 @@ enum rtw_hal_status rtw_hal_set_tx_power(void *hal, u8 band_idx,
 {
 	struct hal_info_t *hal_info = (struct hal_info_t *)hal;
 
+	FUNCIN();
+	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "%s(): pwr_table = %d\n", __func__, pwr_table);
+
 	if (hal_info->hal_com->dbcc_en || band_idx == HW_BAND_0) {
 		enum phl_phy_idx phy_idx = rtw_hal_hw_band_to_phy_idx(band_idx);
 
@@ -186,6 +189,25 @@ enum rtw_hal_status rtw_hal_set_tx_power(void *hal, u8 band_idx,
 	}
 
 	return RTW_HAL_STATUS_SUCCESS;
+}
+
+enum rtw_hal_status rtw_hal_set_tpe_control(void *hal)
+{
+	struct hal_info_t *hal_info = (struct hal_info_t *)hal;
+
+	return rtw_hal_rf_set_tpe_control(hal_info);
+}
+
+bool rtw_hal_tpe_is_required(struct rtw_tpe_info_t *tpe_info)
+{
+	return rtw_hal_rf_tpe_is_required(tpe_info);
+}
+
+bool rtw_hal_check_tpe_allow(void *hal, struct rtw_tpe_info_t *tpe_info)
+{
+	struct hal_info_t *hal_info = (struct hal_info_t *)hal;
+
+	return rtw_hal_rf_check_tpe_allow(hal_info, tpe_info);
 }
 
 enum rtw_hal_status rtw_hal_get_txinfo_power(void *hal,

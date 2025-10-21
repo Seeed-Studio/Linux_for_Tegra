@@ -318,9 +318,11 @@ void dump_drv_cfg(void *sel)
 #endif
 
 
+#ifdef CONFIG_PCIE_HCI
 	RTW_PRINT_SEL(sel, "CORE_TXBD_NUM = %d\n", CORE_TXBD_NUM);
 	RTW_PRINT_SEL(sel, "CORE_RXBD_NUM = %d\n", CORE_RXBD_NUM);
 	RTW_PRINT_SEL(sel, "CONFIG_RPQ_AGG_NUM = %d\n", CONFIG_RPQ_AGG_NUM);
+#endif
 	RTW_PRINT_SEL(sel, "MAX_PHL_TX_RING_ENTRY_NUM = %d\n", MAX_PHL_TX_RING_ENTRY_NUM);
 	RTW_PRINT_SEL(sel, "MAX_PHL_RX_RING_ENTRY_NUM = %d\n", MAX_PHL_RX_RING_ENTRY_NUM);
 #ifdef CORE_TX_AMSDU_AGG_NUM
@@ -1914,16 +1916,15 @@ int proc_get_trx_info(struct seq_file *m, void *v)
 
 static const char *rtw_data_rate_str(enum rtw_data_rate rate)
 {
-	if (rate >= RTW_DATA_RATE_CCK1 && rate <= RTW_DATA_RATE_CCK11) {
+	if (rate <= RTW_DATA_RATE_CCK11) {
 		switch (rate) {
 #define CASE_CCK_RATE(cck)	case RTW_DATA_RATE_CCK ## cck: return "CCK_" # cck "M"
 		CASE_CCK_RATE(1);
 		CASE_CCK_RATE(2);
 		CASE_CCK_RATE(5_5);
-		CASE_CCK_RATE(11);
 #undef CASE_CCK_RATE
-		default:
-			return "CCK_UNKNOWN";
+		default: /*CASE_CCK_RATE(11)*/
+			return "CCK_11M";
 		}
 	} else if (rate >= RTW_DATA_RATE_OFDM6 && rate <= RTW_DATA_RATE_OFDM54) {
 		switch (rate) {
@@ -1935,10 +1936,9 @@ static const char *rtw_data_rate_str(enum rtw_data_rate rate)
 		CASE_OFDM_RATE(24);
 		CASE_OFDM_RATE(36);
 		CASE_OFDM_RATE(48);
-		CASE_OFDM_RATE(54);
 #undef CASE_OFDM_RATE
-		default:
-			return "OFDM_UNKNOWN";
+		default: /*CASE_OFDM_RATE(54)*/
+			return "OFDM_54M";
 		}
 	} else if (rate >= RTW_DATA_RATE_MCS0 && rate <= RTW_DATA_RATE_MCS31) {
 		switch (rate) {
@@ -1974,10 +1974,9 @@ static const char *rtw_data_rate_str(enum rtw_data_rate rate)
 		CASE_HT_RATE(28);
 		CASE_HT_RATE(29);
 		CASE_HT_RATE(30);
-		CASE_HT_RATE(31);
 #undef CASE_HT_RATE
-		default:
-			return "HT_UNKNOWN";
+		default: /*CASE_HT_RATE(31)*/
+			return "MCS_31";
 		}
 	} else if (rate >= RTW_DATA_RATE_VHT_NSS1_MCS0 && rate <= RTW_DATA_RATE_VHT_NSS4_MCS9) {
 		switch (rate) {
@@ -2021,10 +2020,9 @@ static const char *rtw_data_rate_str(enum rtw_data_rate rate)
 		CASE_VHT_RATE(4, 6);
 		CASE_VHT_RATE(4, 7);
 		CASE_VHT_RATE(4, 8);
-		CASE_VHT_RATE(4, 9);
 #undef CASE_VHT_RATE
-		default:
-			return "VHT_UNKNOWN";
+		default: /*CASE_VHT_RATE(4, 9)*/
+			return "VHT_SS4_MCS9";
 		}
 	} else if (rate >= RTW_DATA_RATE_HE_NSS1_MCS0 && rate <= RTW_DATA_RATE_HE_NSS4_MCS11) {
 		switch (rate) {
@@ -2076,10 +2074,9 @@ static const char *rtw_data_rate_str(enum rtw_data_rate rate)
 		CASE_HE_RATE(4, 8);
 		CASE_HE_RATE(4, 9);
 		CASE_HE_RATE(4, 10);
-		CASE_HE_RATE(4, 11);
 #undef CASE_HE_RATE
-		default:
-			return "HE_UNKNOWN";
+		default: /*CASE_HE_RATE(4, 11)*/
+			return "HE_SS4_MCS11";
 		}
 	}
 
@@ -2144,6 +2141,122 @@ ssize_t proc_set_rate_ctl(struct file *file, const char __user *buffer, size_t c
 		}
 		if (num >= 2)
 			adapter->data_fb = data_fb ? 1 : 0;
+	}
+
+	return count;
+}
+
+int proc_get_bss_color_ctl(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct dvobj_priv *dvobj = adapter->dvobj;
+	u16 bk_cnt = 0;
+	u32 val32 = 0;
+	u8 en_bk = 0, color_en = 0, bss_color = 0;
+
+	en_bk = (rtw_phl_read32(dvobj->phl, 0x10d4c) & BIT(27)) >> 27;
+
+	val32 = rtw_phl_read32(dvobj->phl, 0x143ac);
+	color_en = (val32 & BIT(28)) >> 28;
+	bss_color = (val32 & 0xFC00000) >> 22;
+
+	RTW_PRINT_SEL(m, "BSS color = 0x%02x\n", bss_color);
+	RTW_PRINT_SEL(m, "%s CCA color break\n", en_bk ? "Enable" : "Disable");
+
+	if (!color_en || !en_bk)
+		goto cca_count;
+
+	/* read CCA break counter */
+	/* write 0x10d14[7:0] = 0x4D to enable */
+	/* read 0x11a0c[15:0] to get the resule */
+	val32 = rtw_phl_read32(dvobj->phl, 0x10d14);
+	val32 &= ~0xFF;
+	val32 |= 0x4D; //DEC(77)
+	rtw_phl_write32(dvobj->phl, 0x10d14, val32);
+	val32 = rtw_phl_read32(dvobj->phl, 0x11a0c);
+	bk_cnt = val32 & 0xffff;
+
+	RTW_PRINT_SEL(m, "CCA break count = %d\n", bk_cnt);
+
+cca_count:
+	/* read CCA counter */
+	/* 0x1A24[15:0] cnt_OFDM_CCA */
+	val32 = rtw_phl_read32(dvobj->phl, 0x11A24);
+	bk_cnt = val32 & 0xffff;
+	RTW_PRINT_SEL(m, "CCA count - OFDM = %d\n", bk_cnt);
+	/* 0x1710[15:0] cnt_cck_cca */
+	val32 = rtw_phl_read32(dvobj->phl, 0x11710);
+	bk_cnt = val32 & 0xffff;
+	RTW_PRINT_SEL(m, "CCA count - CCK = %d\n", bk_cnt);
+
+	return 0;
+}
+
+ssize_t proc_set_bss_color_ctl(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct dvobj_priv *dvobj = adapter->dvobj;
+	char tmp[32];
+	u8 bss_color = 0, bk_en = 0;
+	u32 val32;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+		int num = sscanf(tmp, "%hhu %hhu", &bss_color, &bk_en);
+
+		if (num < 1 || num > 2) {
+			printk("cmd : echo bss_color bss_color_break_en > bss_color");
+			return -EFAULT;
+		}
+
+		printk("bss_color = %d, bk_en = %d\n", bss_color, bk_en);
+
+		if (bss_color & 0xC0) { /* Disable BSS color */
+			printk("%s: Disable BSS color\n",__func__);
+
+			/* 0x143ac[28:22] = 0, reset bss_en, color */
+			val32 = rtw_phl_read32(dvobj->phl, 0x143ac);
+			val32 &= ~0x1FC00000;
+			rtw_phl_write32(dvobj->phl, 0x143ac, val32);
+
+		} else {
+			printk("%s: BSS color = 0x%02x)\n",__func__, bss_color);
+
+			/* 0x143ac[28] = bss color en */
+			/* 0x143ac[27:22] = bss color */
+			val32 = rtw_phl_read32(dvobj->phl, 0x143ac);
+			val32 &= ~0x1FC00000;
+			val32 |= bss_color << 22;
+			val32 |= BIT(28);
+			rtw_phl_write32(dvobj->phl, 0x143ac, val32);
+		}
+
+		if (num >= 2) {
+			if (bk_en == 0) {
+				/* disable BSS color break */
+				/* 0x10d4c[27] = 0, reset bss color break en */
+				printk("%s: Disable BSS color break\n",__func__);
+				val32 = rtw_phl_read32(dvobj->phl, 0x10d4c);
+				val32 &= ~BIT(27);
+				rtw_phl_write32(dvobj->phl, 0x10d4c, val32);
+			} else {
+				/* enable BSS color break */
+				/* 0x10d4c[27] = 1, enable color break en */
+				printk("%s: Enable BSS color break\n",__func__);
+				val32 = rtw_phl_read32(dvobj->phl, 0x10d4c);
+				val32 |= BIT(27);
+				rtw_phl_write32(dvobj->phl, 0x10d4c, val32);
+			}
+		}
 	}
 
 	return count;
@@ -3225,14 +3338,14 @@ ssize_t proc_set_tx_ampdu_num(struct file *file, const char __user *buffer
 		int num = sscanf(tmp, "%hhu %u", &hw_band_idx, &tx_ampdu_num);
 
 		if (padapter && (num == 2)) {
-			if (hw_band_idx < HW_BAND_MAX && hw_band_idx >= HW_BAND_0) {
+			if (hw_band_idx < HW_BAND_MAX) {
 				phl_com = GET_PHL_COM(adapter_to_dvobj(padapter));
 				phl_com->phy_cap[hw_band_idx].txagg_num = tx_ampdu_num;
 				RTW_INFO("[HW Band %d] set phy_cap tx ampdu num = %u\n",
 					 hw_band_idx, tx_ampdu_num);
-                        } else {
+			} else {
 				RTW_INFO("The input of HW Band index (%u) is invalid !\n",
-                                         hw_band_idx);
+					 hw_band_idx);
 			}
 		}
 	}
@@ -5178,6 +5291,35 @@ int proc_get_p2p_wowlan_info(struct seq_file *m, void *v)
 }
 #endif /* CONFIG_P2P_WOWLAN */
 
+#ifdef CONFIG_BCN_CNT_CONFIRM_HDL
+int proc_get_new_bcn_max(struct seq_file *m, void *v)
+{
+	extern int new_bcn_max;
+
+	RTW_PRINT_SEL(m, "%d\n", new_bcn_max);
+	return 0;
+}
+
+ssize_t proc_set_new_bcn_max(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	char tmp[32];
+	extern int new_bcn_max;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count))
+		sscanf(tmp, "%d ", &new_bcn_max);
+
+	return count;
+}
+#endif
+
 #ifdef CONFIG_POWER_SAVE
 int proc_get_ps_info(struct seq_file *m, void *v)
 {
@@ -6964,7 +7106,7 @@ ssize_t proc_set_mr_test(struct file *file, const char __user *buffer, size_t co
 					__func__, org_port, new_port);
 		}
 		else if (mode == 11) {
-			rtw_phl_get_addr_cam(dvobj->phl, param, NULL, 0);
+			/*rtw_phl_get_addr_cam(dvobj->phl, param, NULL, 0);*/
 		}
 		else if (mode == 12) {
 			struct link_mlme_priv *pmlmepriv = &padapter_link->mlmepriv;

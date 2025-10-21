@@ -538,7 +538,7 @@ parse_reg_exc_config(void *drv_priv,
 
 		/* check if all hex */
 		for (j = i_val_s; j < i_val_e; j++)
-			if (hal_ishexdigit(sz_line[j]) == false)
+			if (_is_hexdigit(sz_line[j]) == false)
 				return false;
 
 		/* get value from hex string */
@@ -562,7 +562,7 @@ parse_reg_exc_config(void *drv_priv,
 
 		/* check if all alpha */
 		for (j = i_val_s; j < i_val_e; j++)
-			if (hal_is_alpha(sz_line[j]) == false)
+			if (_is_alpha(sz_line[j]) == false)
 				return false;
 
 		country = sz_line + i_val_s;

@@ -535,6 +535,21 @@ void rtw_rfctl_force_update_non_ocp_ms(struct rf_ctl_t *rfctl, enum band_type ba
 	}
 }
 
+static bool rtw_is_long_cac_range(u32 hi, u32 lo, u8 dfs_region)
+{
+	return dfs_region == RTW_DFS_REGD_ETSI && rtw_is_range_overlap(hi, lo, 5650, 5600);
+}
+
+static bool rtw_is_long_cac_bch(enum band_type band, u8 ch, u8 bw, u8 offset, u8 dfs_region)
+{
+	u32 hi, lo;
+
+	if (rtw_bchbw_to_freq_range(band, ch, bw, offset, &hi, &lo) == _FALSE)
+		return false;
+
+	return rtw_is_long_cac_range(hi, lo, dfs_region);
+}
+
 static u32 _rtw_get_ch_waiting_ms(struct rf_ctl_t *rfctl, enum band_type band, u8 ch, u8 bw, u8 offset, bool in_self_rd_range, u32 *r_non_ocp_ms, u32 *r_cac_ms)
 {
 	struct rtw_chset *chset = &rfctl->chset;
@@ -639,11 +654,11 @@ u32 rtw_force_stop_cac(struct rf_ctl_t *rfctl, u32 timeout_ms)
 
 static void rtw_dfs_ch_switch_hdl(struct dvobj_priv *dvobj, u8 band_idx)
 {
-	_adapter *m_iface = rtw_mi_get_ap_mesh_iface_by_hwband(dvobj, band_idx);
+	struct _ADAPTER_LINK *m_iflink = rtw_mi_get_ap_mesh_iflink_by_hwband(dvobj, band_idx);
 	u8 ifbmp_m;
 	u8 ifbmp_s;
 
-	if (!m_iface) {
+	if (!m_iflink) {
 		RTW_WARN(FUNC_HWBAND_FMT" can't get ap/mesh iface\n", FUNC_HWBAND_ARG(band_idx));
 		rtw_warn_on(1);
 		return;
@@ -658,14 +673,14 @@ static void rtw_dfs_ch_switch_hdl(struct dvobj_priv *dvobj, u8 band_idx)
 	if (ifbmp_m) {
 		RTW_INFO(FUNC_HWBAND_FMT" ch sel by AP/MESH ifaces\n", FUNC_HWBAND_ARG(band_idx));
 		/* trigger channel selection with consideraton of asoc STA ifaces */
-		rtw_change_bss_bchbw_cmd(m_iface, RTW_CMDF_DIRECTLY
+		rtw_change_bss_bchbw_cmd(m_iflink->adapter, RTW_CMDF_DIRECTLY
 			, ifbmp_m, ifbmp_s, REQ_BAND_NONE, REQ_CH_NONE, REQ_BW_ORI, REQ_OFFSET_NONE);
 	}
 #endif
 
 	rtw_dfs_hal_csa_mg_tx_pause(dvobj, band_idx, false);
 
-	rtw_mi_os_xmit_schedule(m_iface);
+	rtw_mi_os_xmit_schedule(m_iflink->adapter);
 }
 
 u8 rtw_dfs_rd_hdl(struct dvobj_priv *dvobj, enum phl_band_idx hwband, u8 radar_cch, enum channel_width radar_bw)
@@ -731,27 +746,26 @@ cac_status_chk:
 			|| !IS_CH_WAITING(rfctl)
 			)
 	) {
-		_adapter *m_iface;
+		struct _ADAPTER_LINK *m_iflink;
 
 		rfctl->cac_start_time = rfctl->cac_end_time = RTW_CAC_STOPPED;
 		rtw_chset_update_cac_state_by_cch(&rfctl->chset
 			, rfctl->radar_detect_cch[hwband], rfctl->radar_detect_bw[hwband], true);
 		rtw_dfs_hal_set_cac_status(dvobj, hwband, false);
 
-		m_iface = rtw_mi_get_ap_mesh_iface_by_hwband(dvobj, hwband);
-		if (m_iface) {
-			if (!rtw_mi_check_fwstate_by_hwband(dvobj, hwband, WIFI_UNDER_LINKING|WIFI_UNDER_SURVEY)) {
-				struct _ADAPTER_LINK *alink = rtw_get_adapter_link_by_hwband(m_iface, hwband);
+		if (!rtw_mi_check_link_fwstate_by_hwband(dvobj, hwband, WIFI_UNDER_LINKING | WIFI_UNDER_SURVEY)) {
+			m_iflink = rtw_mi_get_ap_mesh_iflink_by_hwband(dvobj, hwband);
+			if (m_iflink) {
 				enum band_type u_band;
 				u8 u_ch, u_bw, u_offset;
 
 				if (rtw_mi_get_bch_setting_union_by_hwband(dvobj, hwband, &u_band, &u_ch, &u_bw, &u_offset))
-					set_bch_bwmode(m_iface, alink, u_band, u_ch, u_offset, u_bw, RFK_TYPE_FORCE_DO);
+					set_bch_bwmode(m_iflink->adapter, m_iflink, u_band, u_ch, u_offset, u_bw, RFK_TYPE_FORCE_DO);
 				else
 					rtw_warn_on(1);
-			}
-		} else
-			RTW_ERR(FUNC_HWBAND_FMT" can't get ap/mesh iface\n", FUNC_HWBAND_ARG(hwband));
+			} else
+				RTW_ERR(FUNC_HWBAND_FMT" can't get ap/mesh iface\n", FUNC_HWBAND_ARG(hwband));
+		}
 
 		rtw_os_indicate_cac_finished(rfctl, hwband, 0xFF
 			, rfctl->radar_detect_cch[hwband], rfctl->radar_detect_bw[hwband]);
@@ -1190,7 +1204,9 @@ static void rtw_dfs_rd_en_decision(struct dvobj_priv *dvobj, enum phl_band_idx h
 				u8 offset = ALINK_GET_OFFSET(alink_by_hwband);
 
 				if (u_ch) {
-					if (!MLME_IS_OPCH_SW(adapter) && CHK_MLME_STATE(adapter, WIFI_UNDER_LINKING | WIFI_ASOC_STATE)) {
+					if (!LINK_MLME_IS_OPCH_SW(alink_by_hwband)
+						&& CHK_LINK_MLME_STATE(alink_by_hwband, WIFI_ASOC_STATE | WIFI_UNDER_LINKING)
+					) {
 						if (!rtw_is_bchbw_grouped(band, ch, bw, offset, u_band, u_ch, u_bw, u_offset)) {
 							RTW_WARN(FUNC_HWBAND_FMT" "ADPT_FMT" can't sync %u,%u,%u,%u with %u,%u,%u,%u\n"
 								, FUNC_HWBAND_ARG(band_idx), ADPT_ARG(adapter)
@@ -1230,23 +1246,23 @@ apply:
 		else {
 			rtw_dfs_rd_disable(rfctl, band_idx, u_ch, u_bw, u_offset, rd_freq_hi, rd_freq_lo, lgd_sta_in_dfs);
 			if (needed) {
-				_adapter *m_iface = rtw_mi_get_ap_mesh_iface_by_hwband(dvobj, band_idx);
+				struct _ADAPTER_LINK *m_iflink = rtw_mi_get_ap_mesh_iflink_by_hwband(dvobj, band_idx);
 				u8 ifbmp_m = rtw_mi_get_ap_mesh_ifbmp_by_hwband(dvobj, band_idx);
 				u8 ifbmp_s = rtw_mi_get_lgd_sta_ifbmp_by_hwband(dvobj, band_idx);
 
 				RTW_INFO(FUNC_HWBAND_FMT" radart detect for this region not supported\n", FUNC_HWBAND_ARG(band_idx));
 
-				if (!m_iface) {
+				if (!m_iflink) {
 					rtw_warn_on(1);
 					return;
 				}
 
-				if (rtw_hal_is_csa_support(m_iface) && !rtw_mr_is_ecsa_running(m_iface)) {
-					if (!rtw_hal_dfs_trigger_csa(m_iface, CSA_STA_DISCONNECT_ON_DFS,
+				if (rtw_hal_is_csa_support(m_iflink->adapter) && !rtw_mr_is_ecsa_running(m_iflink->adapter)) {
+					if (!rtw_hal_dfs_trigger_csa(m_iflink->adapter, CSA_STA_DISCONNECT_ON_DFS,
 											band_idx, u_ch, u_bw, u_offset))
 						RTW_ERR(FUNC_HWBAND_FMT" trigger ECSA fail", FUNC_HWBAND_ARG(band_idx));
 				} else {
-					rtw_change_bss_bchbw_cmd(m_iface, RTW_CMDF_DIRECTLY
+					rtw_change_bss_bchbw_cmd(m_iflink->adapter, RTW_CMDF_DIRECTLY
 						, ifbmp_m, ifbmp_s, REQ_BAND_NONE, REQ_CH_NONE, REQ_BW_ORI, REQ_OFFSET_NONE);
 				}
 			}
@@ -1414,7 +1430,7 @@ static bool rtw_choose_shortest_waiting_ch(struct rf_ctl_t *rfctl
 	int i, j;
 	u32 min_waiting_ms = 0;
 	u16 int_factor_c = 0;
-	bool within_same_band = rfctl->ch_sel_within_same_band;
+	u8 within_same_band = rfctl->ch_sel_within_same_band;
 
 	if (!dec_ch || !dec_bw || !dec_offset) {
 		rtw_warn_on(1);
@@ -1430,9 +1446,10 @@ static bool rtw_choose_shortest_waiting_ch(struct rf_ctl_t *rfctl
 		goto exit;
 	if (sel_band == BAND_MAX && within_same_band && rtw_rfctl_is_regu_forbid_bss(rfctl, cur_band)) {
 		RTW_INFO("%s: cancel within_sb because REGU_FORBID for %s BSS", __func__, band_str(cur_band));
-		within_same_band = false;
+		within_same_band = RTW_CHSEL_BAND_ALL;
 	}
 
+choose:
 	/* full search and narrow bw judegement first to avoid potetial judegement timing issue */
 	for (bw = CHANNEL_WIDTH_20; bw <= max_bw; bw++) {
 		if (!rtw_hw_is_bw_support(dvobj, bw))
@@ -1553,8 +1570,11 @@ exit:
 		return _TRUE;
 	} else {
 		RTW_INFO("%s: not found\n", __func__);
-		if (d_flags == 0)
-			rtw_warn_on(1);
+		if (sel_band == BAND_MAX && within_same_band == RTW_CHSEL_BAND_SAME_FIRST) {
+			RTW_INFO("%s: cancel within_sb and choose again", __func__);
+			within_same_band = RTW_CHSEL_BAND_ALL;
+			goto choose;
+		}
 	}
 
 	return _FALSE;
@@ -1636,7 +1656,7 @@ RTW_FUNC_2G_5G_ONLY bool rtw_rfctl_choose_chbw(struct rf_ctl_t *rfctl, u8 sel_ch
 
 void rtw_rfctl_dfs_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty)
 {
-	rfctl->ch_sel_within_same_band = 1;
+	rfctl->ch_sel_within_same_band = RTW_CHSEL_BAND_SAME_FIRST;
 
 #ifdef CONFIG_DFS_MASTER
 	rfctl->dfs_region_domain = regsty->dfs_region_domain;

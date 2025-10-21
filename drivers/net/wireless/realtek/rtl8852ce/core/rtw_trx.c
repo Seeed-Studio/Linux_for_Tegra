@@ -66,6 +66,8 @@ s32 rtw_mgnt_xmit(_adapter *adapter, struct xmit_frame *pmgntframe)
 #endif /* CONFIG_DRV_FAKE_AP */
 
 	ret = rtw_core_tx_mgmt(adapter, pmgntframe);
+	if (ret == _FAIL)
+		core_tx_free_xmitframe(adapter, pmgntframe);
 	return ret;
 }
 

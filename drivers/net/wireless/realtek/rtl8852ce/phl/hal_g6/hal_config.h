@@ -43,6 +43,18 @@
 	#define DRV_BB_TIMER_SUPPORT_DISABLE
 #endif
 
+/* HALMAC Features */
+/*
+ * CONFIG_HAL_MAC_DBG - HALMAC debug function is supported or not
+ *
+ * HALMAC would check this flag to decide debug code would be included or not.
+ * If debug feature doesn't be needed for stable/release version, undef this
+ * flag could help to reduce code size.
+ */
+#ifndef CONFIG_CORE_DBG_NONE
+#define CONFIG_HAL_MAC_DBG
+#endif
+
 /* Compile flag for fw for different cut versions.
 * This should be wrapped with the compile flags from core, and need to be discussed
 */

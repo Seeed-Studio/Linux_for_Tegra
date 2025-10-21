@@ -20,7 +20,8 @@ rtw_phl_connect_prepare(void *phl,
                         enum phl_band_idx band_idx,
                         struct rtw_wifi_role_t *wrole,
                         struct rtw_wifi_role_link_t *rlink,
-                        u8 *addr)
+                        u8 *addr,
+			u8 rssi)
 {
 	enum rtw_phl_status phl_status = RTW_PHL_STATUS_FAILURE;
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
@@ -36,6 +37,7 @@ rtw_phl_connect_prepare(void *phl,
 	msg.band_idx = band_idx;
 	msg.inbuf = (u8 *)wrole;
 	msg.rsvd[0].ptr = (u8 *)rlink;
+	msg.rsvd[1].value = (long) rssi;
 
 	phl_status = phl_disp_eng_send_msg(phl_info, &msg, &attr, NULL);
 	if(phl_status != RTW_PHL_STATUS_SUCCESS){

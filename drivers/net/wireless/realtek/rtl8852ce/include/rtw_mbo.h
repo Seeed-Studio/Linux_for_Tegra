@@ -140,21 +140,21 @@ void rtw_mbo_fill_non_prefer_channel_list(_adapter *padapter, struct mbo_priv *m
 
 
 void rtw_mbo_build_cell_data_cap_attr(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+	_adapter *padapter, u8 **pframe, u32 *pktlen);
 
 void rtw_mbo_update_ie_data(
 	_adapter *padapter, u8 *pie, u32 ie_len);
 
 void rtw_mbo_build_npref_ch_rpt_attr(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+	_adapter *padapter, u8 **pframe, u32 *pktlen);
 
 void rtw_mbo_build_trans_reject_reason_attr(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib, u8 *pres);
+	_adapter *padapter, u8 **pframe, u32 *pktlen, u8 *pres);
 
 u8 rtw_mbo_disallowed_network(struct wlan_network *pnetwork);
 
-void rtw_mbo_build_extended_cap(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+void rtw_mbo_build_extended_cap(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
+	u8 **pframe, u32 *patlen);
 
 ssize_t rtw_mbo_proc_non_pref_chans_set(
 	struct file *pfile, const char __user *buffer,
@@ -181,30 +181,30 @@ void rtw_mbo_wnm_notification_parsing(
 	_adapter *padapter, const u8 *pdata, size_t data_len);
 
 void rtw_mbo_build_wnm_notification(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+	_adapter *padapter, u8 **pframe, u32 *pktlen);
 
-void rtw_mbo_build_probe_req_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+void rtw_mbo_build_probe_req_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen);
 
 void rtw_mbo_build_assoc_req_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+	_adapter *padapter, u8 **pframe, u32 *pktlen);
 
 void rtw_mbo_attr_info_init(_adapter *padapter);
 
 void rtw_mbo_process_assoc_req(
         _adapter *padapter, u8 *pie, int ie_len);
 
-void rtw_mbo_build_beacon_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+void rtw_mbo_build_beacon_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen);
 
-void rtw_mbo_build_probe_rsp_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+void rtw_mbo_build_probe_rsp_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen);
 
-void rtw_mbo_build_assoc_rsp_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+void rtw_mbo_build_assoc_rsp_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen);
 
-void rtw_mbo_build_wnm_btmreq_reason_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib);
+void rtw_mbo_build_wnm_btmreq_reason_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen);
 
 #endif /* _RTW_MBO_H_ */
 

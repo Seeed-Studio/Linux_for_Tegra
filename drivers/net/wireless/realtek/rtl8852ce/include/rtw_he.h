@@ -1100,7 +1100,9 @@ u32 rtw_build_he_6g_band_cap_ie_by_proto(_adapter *padapter, enum role_type role
 
 u32 rtw_restructure_he_ie(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
 				u8 *in_ie, u8 *out_ie, uint in_len, uint *pout_len, enum band_type band);
+#if 0
 void HEOnAssocRsp(_adapter *padapter);
+#endif
 void rtw_he_ies_attach(_adapter *padapter, struct _ADAPTER_LINK *padapter_link, WLAN_BSSID_EX *pnetwork, enum band_type band);
 void rtw_he_ies_detach(_adapter *padapter, struct _ADAPTER_LINK *padapter_link, WLAN_BSSID_EX *pnetwork);
 u8 rtw_he_htc_en(_adapter *padapter, struct sta_info *psta);

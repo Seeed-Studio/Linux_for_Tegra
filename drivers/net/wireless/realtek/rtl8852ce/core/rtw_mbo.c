@@ -312,19 +312,19 @@ static u32 rtw_mbo_attr_sz_get(
 }
 
 static void rtw_mbo_build_mbo_ie_hdr(
-	u8 **pframe, struct pkt_attrib *pattrib, u8 payload_len)
+	u8 **pframe, u32 *pktlen, u8 payload_len)
 {
 	u8 eid = RTW_MBO_EID;
 	u8 len = payload_len + 4;
 
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &eid, &(pattrib->pktlen));
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &len, &(pattrib->pktlen));
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &eid, pktlen);
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &len, pktlen);
 	*pframe = rtw_mbo_set_4byte_ie(*pframe,
-			wfa_mbo_oui, &(pattrib->pktlen));
+			wfa_mbo_oui, pktlen);
 }
 
 void rtw_mbo_build_cell_data_cap_attr(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+	_adapter *padapter, u8 **pframe, u32 *pktlen)
 {
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	u8 attr_id = RTW_MBO_ATTR_CELL_DATA_CAP_ID;
@@ -338,31 +338,28 @@ void rtw_mbo_build_cell_data_cap_attr(
 		cell_data_con = *pmlmepriv->pcell_data_cap_ie;
 	}
 
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, &(pattrib->pktlen));
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, &(pattrib->pktlen));
-	*pframe = rtw_mbo_set_1byte_ie(*pframe,
-			&cell_data_con, &(pattrib->pktlen));
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, pktlen);
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, pktlen);
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &cell_data_con, pktlen);
 }
 
 
 static void rtw_mbo_build_ap_cap_Indication_attr(
-	_adapter *padapter, u8 **pframe,
-	struct pkt_attrib *pattrib, u8 cap_ind)
+	_adapter *padapter, u8 **pframe, u32 *pktlen, u8 cap_ind)
 {
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	u8 attr_id = RTW_MBO_ATTR_AP_CAP_ID;
 	u8 attr_len = 1;
 	u8 ap_cap_ind = cap_ind;
 
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, &(pattrib->pktlen));
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, &(pattrib->pktlen));
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, pktlen);
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, pktlen);
 	*pframe = rtw_mbo_set_1byte_ie(*pframe,
-			&ap_cap_ind, &(pattrib->pktlen));
+			&ap_cap_ind, pktlen);
 }
 
 static void rtw_mbo_build_ap_disallowed_attr(
-	_adapter *padapter, u8 **pframe,
-	struct pkt_attrib *pattrib, u8 code)
+	_adapter *padapter, u8 **pframe, u32 *pktlen, u8 code)
 {
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	u8 attr_id = RTW_MBO_ATTR_ASSOC_DISABLED_ID;
@@ -371,18 +368,14 @@ static void rtw_mbo_build_ap_disallowed_attr(
 
 	if (code > 0) {
 		reason = code;
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&attr_id, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&attr_len, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&reason, &(pattrib->pktlen));
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &reason, pktlen);
 	}
 }
 
 static void rtw_mbo_build_ap_trans_reason_attr(
-	_adapter *padapter, u8 **pframe,
-	struct pkt_attrib *pattrib, u8 code)
+	_adapter *padapter, u8 **pframe, u32 *pktlen, u8 code)
 {
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	u8 attr_id = RTW_MBO_ATTR_TRANS_RES_ID;
@@ -390,17 +383,13 @@ static void rtw_mbo_build_ap_trans_reason_attr(
 	u8 reason = 0;
 
 	reason = code;
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&attr_id, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&attr_len, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&reason, &(pattrib->pktlen));
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &reason, pktlen);
 	}
 
 static void rtw_mbo_build_ap_assoc_retry_delay_attr(
-	_adapter *padapter, u8 **pframe,
-	struct pkt_attrib *pattrib, u16 code)
+	_adapter *padapter, u8 **pframe, u32 *pktlen, u16 code)
 {
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	u8 attr_id = RTW_MBO_ATTR_ASSOC_RETRY_DELAY_ID;
@@ -408,10 +397,9 @@ static void rtw_mbo_build_ap_assoc_retry_delay_attr(
 	u16 delay = 0;
 
 	delay = code;
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, &(pattrib->pktlen));
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, &(pattrib->pktlen));
-	*pframe = rtw_mbo_set_2byte_ie(*pframe,
-			(u8 *)&delay, &(pattrib->pktlen));
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, pktlen);
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, pktlen);
+	*pframe = rtw_mbo_set_2byte_ie(*pframe, (u8 *)&delay, pktlen);
 }
 
 static void rtw_mbo_update_cell_data_cap(
@@ -484,7 +472,7 @@ static u8 rtw_mbo_construct_npref_ch_rpt_attr(
 }
 
 void rtw_mbo_build_npref_ch_rpt_attr(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+	_adapter *padapter, u8 **pframe,  u32 *pktlen)
 {
 	struct rf_ctl_t *prfctl = adapter_to_rfctl(padapter);
 	struct npref_ch_rtp *prpt = &(prfctl->ch_rtp);
@@ -503,15 +491,13 @@ void rtw_mbo_build_npref_ch_rpt_attr(
 	}
 
 	RTW_MBO_DUMP("Non-preferred Channel Report :", ptmp, body_len);
-	*pframe = rtw_mbo_set_nbyte_ie(*pframe, body_len,
-			ptmp, &(pattrib->pktlen));
+	*pframe = rtw_mbo_set_nbyte_ie(*pframe, body_len, ptmp, pktlen);
 
 	rtw_mfree(ptmp, tmp_sz);
 }
 
 void rtw_mbo_build_trans_reject_reason_attr(
-	_adapter *padapter, u8 **pframe,
-	struct pkt_attrib *pattrib, u8 *pres)
+	_adapter *padapter, u8 **pframe, u32 *pktlen, u8 *pres)
 {
 	u8 attr_id = RTW_MBO_ATTR_TRANS_REJ_ID;
 	u8 attr_len = 1;
@@ -524,10 +510,10 @@ void rtw_mbo_build_trans_reject_reason_attr(
 		return;
 	}
 
-	rtw_mbo_build_mbo_ie_hdr(pframe, pattrib, len);
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, &(pattrib->pktlen));
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, &(pattrib->pktlen));
-	*pframe = rtw_mbo_set_1byte_ie(*pframe, pres, &(pattrib->pktlen));
+	rtw_mbo_build_mbo_ie_hdr(pframe, pktlen, len);
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_id, pktlen);
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, &attr_len, pktlen);
+	*pframe = rtw_mbo_set_1byte_ie(*pframe, pres, pktlen);
 }
 
 u8 rtw_mbo_disallowed_network(struct wlan_network *pnetwork)
@@ -555,10 +541,9 @@ exit:
 	return disallow;
 }
 
-void rtw_mbo_build_extended_cap(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+void rtw_mbo_build_extended_cap(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen)
 {
-	struct _ADAPTER_LINK *padapter_link = pattrib->adapter_link;
 	struct link_mlme_priv *pmlmepriv = &(padapter_link->mlmepriv);
 
 	rtw_wnm_add_btm_ext_cap(pmlmepriv->ext_capab_ie_data,
@@ -569,7 +554,7 @@ void rtw_mbo_build_extended_cap(
 				WLAN_EID_EXT_CAP,
 				pmlmepriv->ext_capab_ie_len,
 				pmlmepriv->ext_capab_ie_data,
-				&(pattrib->pktlen));
+				pktlen);
 }
 
 static void rtw_mbo_non_pref_chans_dump(struct npref_ch* pch)
@@ -1263,7 +1248,7 @@ void rtw_mbo_wnm_notification_parsing(
 }
 
 void rtw_mbo_build_wnm_notification(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+	_adapter *padapter, u8 **pframe, u32 *pktlen)
 {
 	struct rf_ctl_t *prfctl = adapter_to_rfctl(padapter);
 	struct npref_ch_rtp *prpt = &(prfctl->ch_rtp);
@@ -1272,33 +1257,35 @@ void rtw_mbo_build_wnm_notification(
 	u8 non_pref_ch_oui[] = {0x50, 0x6F, 0x9A, 0x2};
 	u8 cell_data_cap_oui[] = {0x50, 0x6F, 0x9A, 0x3};
 	u8 cell_data_con = rtw_mbo_cell_data_conn;
-	u8 len, cell_data_con_len = 0, *pcont = *pframe;
+	u8 len, cell_data_con_len = 0;
+#if RTW_MBO_DBG
+	u8 *pcont = *pframe;
+#endif
 	int i;
 
 	if (rtw_mbo_cell_data_conn > 0) {
 		len = 0x5;
 		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&subelem_id, &(pattrib->pktlen));
+				&subelem_id, pktlen);
 		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&len, &(pattrib->pktlen));
+				&len, pktlen);
 		*pframe = rtw_mbo_set_4byte_ie(*pframe,
-				cell_data_cap_oui, &(pattrib->pktlen));
+				cell_data_cap_oui, pktlen);
 		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&cell_data_con, &(pattrib->pktlen));
+				&cell_data_con, pktlen);
 		RTW_MBO_INFO("%s : Cellular Data Capabilities subelemen\n",
 				__func__);
+#if RTW_MBO_DBG
 		RTW_MBO_DUMP(":", pcont, len + 2);
 		pcont += len + 2 ;
+#endif
 	}
 
 	if (prpt->nm_of_rpt == 0) {
 		len = 0x4;
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&subelem_id, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&len, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_4byte_ie(*pframe,
-				non_pref_ch_oui, &(pattrib->pktlen));
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &subelem_id, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &len, pktlen);
+		*pframe = rtw_mbo_set_4byte_ie(*pframe, non_pref_ch_oui, pktlen);
 		RTW_MBO_INFO("%s :Non-preferred Channel Report subelement"
 				" without data\n", __func__);
 		return;
@@ -1309,33 +1296,28 @@ void rtw_mbo_build_wnm_notification(
 		/* OUI(3B)  + OUT-type(1B) + op-class(1B) + ch list(nB)
 			+ Preference(1B) + reason(1B) */
 		len = pch->nm_of_ch + 7;
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&subelem_id, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&len, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_4byte_ie(*pframe,
-				non_pref_ch_oui, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&pch->op_class, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_nbyte_ie(*pframe,
-				pch->nm_of_ch, pch->chs, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&pch->preference, &(pattrib->pktlen));
-		*pframe = rtw_mbo_set_1byte_ie(*pframe,
-				&pch->reason, &(pattrib->pktlen));
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &subelem_id, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &len, pktlen);
+		*pframe = rtw_mbo_set_4byte_ie(*pframe, non_pref_ch_oui, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &pch->op_class, pktlen);
+		*pframe = rtw_mbo_set_nbyte_ie(*pframe, pch->nm_of_ch, pch->chs, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &pch->preference, pktlen);
+		*pframe = rtw_mbo_set_1byte_ie(*pframe, &pch->reason, pktlen);
 		RTW_MBO_INFO("%s :Non-preferred Channel Report"
 				" subelement\n", __func__);
+#if RTW_MBO_DBG
 		RTW_MBO_DUMP(":", pcont, len);
 		pcont = *pframe;
+#endif
 	}
 }
 
-void rtw_mbo_build_probe_req_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+void rtw_mbo_build_probe_req_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen)
 {
 	u32 len =0;
 
-	rtw_mbo_build_extended_cap(padapter, pframe, pattrib);
+	rtw_mbo_build_extended_cap(padapter, padapter_link, pframe, pktlen);
 
 	len = rtw_mbo_attr_sz_get(padapter, RTW_MBO_ATTR_CELL_DATA_CAP_ID);
 	if ((len == 0) || (len > 3)) {
@@ -1344,12 +1326,12 @@ void rtw_mbo_build_probe_req_ies(
 		return;
 	}
 
-	rtw_mbo_build_mbo_ie_hdr(pframe, pattrib, len);
-	rtw_mbo_build_cell_data_cap_attr(padapter, pframe, pattrib);
+	rtw_mbo_build_mbo_ie_hdr(pframe, pktlen, len);
+	rtw_mbo_build_cell_data_cap_attr(padapter, pframe, pktlen);
 }
 
 void rtw_mbo_build_assoc_req_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+	_adapter *padapter, u8 **pframe, u32 *pktlen)
 {
 	u32 len = 0;
 
@@ -1360,16 +1342,14 @@ void rtw_mbo_build_assoc_req_ies(
 		return;
 	}
 
-	rtw_mbo_build_mbo_ie_hdr(pframe, pattrib, len);
-	rtw_mbo_build_cell_data_cap_attr(padapter, pframe, pattrib);
-	rtw_mbo_build_npref_ch_rpt_attr(padapter, pframe, pattrib);
+	rtw_mbo_build_mbo_ie_hdr(pframe, pktlen, len);
+	rtw_mbo_build_cell_data_cap_attr(padapter, pframe, pktlen);
+	rtw_mbo_build_npref_ch_rpt_attr(padapter, pframe, pktlen);
 }
 
-static void rtw_mbo_build_ap_capability(
-	_adapter *padapter, u8 **pframe,
-	struct pkt_attrib *pattrib)
+static void rtw_mbo_build_ap_capability(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen)
 {
-	struct _ADAPTER_LINK *padapter_link = pattrib->adapter_link;
 	struct link_mlme_ext_priv *pmlmeext = &(padapter_link->mlmeextpriv);
 	struct link_mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
 	WLAN_BSSID_EX *cur_network = &(pmlmeinfo->network);
@@ -1389,13 +1369,13 @@ static void rtw_mbo_build_ap_capability(
 		flen += rtw_mbo_attr_sz_get(padapter,
 				RTW_MBO_ATTR_ASSOC_DISABLED_ID);
 	if (flen > 0) {
-		rtw_mbo_build_mbo_ie_hdr(pframe, pattrib, flen);
+		rtw_mbo_build_mbo_ie_hdr(pframe, pktlen, flen);
 		rtw_mbo_build_ap_cap_Indication_attr(padapter, pframe,
-				pattrib, pmbo_attr->ap_cap_ind);
+				pktlen, pmbo_attr->ap_cap_ind);
 
 		if (pmbo_attr->assoc_disallow > 0) {
 			rtw_mbo_build_ap_disallowed_attr(padapter, pframe,
-				pattrib, pmbo_attr->assoc_disallow);
+				pktlen, pmbo_attr->assoc_disallow);
 		}
 	} /*  end of if (flen > 0) */
 
@@ -1472,22 +1452,21 @@ void rtw_mbo_process_assoc_req(
 
 }
 
-void rtw_mbo_build_beacon_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+void rtw_mbo_build_beacon_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen)
 {
-	rtw_mbo_build_ap_capability(padapter, pframe, pattrib);
+	rtw_mbo_build_ap_capability(padapter, padapter_link, pframe, pktlen);
 }
 
-void rtw_mbo_build_probe_rsp_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+void rtw_mbo_build_probe_rsp_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen)
 {
-	rtw_mbo_build_ap_capability(padapter, pframe, pattrib);
+	rtw_mbo_build_ap_capability(padapter, padapter_link, pframe, pktlen);
 }
 
-void rtw_mbo_build_assoc_rsp_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+void rtw_mbo_build_assoc_rsp_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen)
 {
-	struct _ADAPTER_LINK *padapter_link = pattrib->adapter_link;
 	struct link_mlme_ext_priv *pmlmeext = &(padapter_link->mlmeextpriv);
 	struct link_mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
 	WLAN_BSSID_EX *cur_network = &(pmlmeinfo->network);
@@ -1510,21 +1489,20 @@ void rtw_mbo_build_assoc_rsp_ies(
 			RTW_MBO_ATTR_ASSOC_DISABLED_ID);
 
 	if (len > 0) {
-		rtw_mbo_build_mbo_ie_hdr(pframe, pattrib, len);
+		rtw_mbo_build_mbo_ie_hdr(pframe, pktlen, len);
 		rtw_mbo_build_ap_cap_Indication_attr(
-			padapter, pframe, pattrib, pmbo_attr->ap_cap_ind);
+			padapter, pframe, pktlen, pmbo_attr->ap_cap_ind);
 		if (pmbo_attr->assoc_disallow > 0) {
 			rtw_mbo_build_ap_disallowed_attr(padapter, pframe,
-				pattrib, pmbo_attr->assoc_disallow);
+				pktlen, pmbo_attr->assoc_disallow);
 		}
 	}
 
 }
 
-void rtw_mbo_build_wnm_btmreq_reason_ies(
-	_adapter *padapter, u8 **pframe, struct pkt_attrib *pattrib)
+void rtw_mbo_build_wnm_btmreq_reason_ies(_adapter *padapter,
+	struct _ADAPTER_LINK *padapter_link, u8 **pframe, u32 *pktlen)
 {
-	struct _ADAPTER_LINK *padapter_link = pattrib->adapter_link;
 	struct link_mlme_ext_priv *pmlmeext = &(padapter_link->mlmeextpriv);
 	struct link_mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
 	WLAN_BSSID_EX *cur_network = &(pmlmeinfo->network);
@@ -1541,15 +1519,14 @@ void rtw_mbo_build_wnm_btmreq_reason_ies(
 	len += rtw_mbo_attr_sz_get(padapter, RTW_MBO_ATTR_TRANS_RES_ID);
 	len += rtw_mbo_attr_sz_get(padapter, RTW_MBO_ATTR_ASSOC_RETRY_DELAY_ID);
 
-	rtw_mbo_build_mbo_ie_hdr(pframe, pattrib, len);
+	rtw_mbo_build_mbo_ie_hdr(pframe, pktlen, len);
 
 	rtw_mbo_build_ap_cap_Indication_attr(
-			padapter, pframe, pattrib, pmbo_attr->ap_cap_ind);
+			padapter, pframe, pktlen, pmbo_attr->ap_cap_ind);
 
-	rtw_mbo_build_ap_trans_reason_attr(padapter, pframe,
-			pattrib, pmbo_attr->reason);
+	rtw_mbo_build_ap_trans_reason_attr(padapter, pframe, pktlen, pmbo_attr->reason);
 
 	rtw_mbo_build_ap_assoc_retry_delay_attr(padapter, pframe,
-			pattrib, pmbo_attr->delay);
+			pktlen, pmbo_attr->delay);
 }
 #endif /* CONFIG_RTW_MBO */

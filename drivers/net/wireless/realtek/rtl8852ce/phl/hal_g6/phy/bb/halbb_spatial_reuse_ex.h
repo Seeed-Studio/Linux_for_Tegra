@@ -41,8 +41,10 @@
 
 /*@--------------------------[Prptotype]-------------------------------------*/
 
-void halbb_spatial_reuse_en(struct bb_info *bb, bool sr_en);
-bool halbb_spatial_reuse_is_en(struct bb_info *bb);
+void halbb_spatial_reuse_en(struct bb_info *bb, bool sr_en);// to be removed
+bool halbb_spatial_reuse_is_en(struct bb_info *bb);// to be removed
+void halbb_spatial_reuse_en_cmn(struct bb_info *bb_0, bool sr_en, enum phl_phy_idx phy_idx);
+bool halbb_spatial_reuse_is_en_cmn(struct bb_info *bb_0, enum phl_phy_idx phy_idx);
 
 #endif
 

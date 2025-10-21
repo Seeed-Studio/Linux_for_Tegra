@@ -80,25 +80,6 @@ bool hal_get_fractionvalue_fromstring(
 	return true;
 }
 
-bool hal_is_alpha(char ch_tmp)
-{
-	if ((ch_tmp >= 'a' && ch_tmp <= 'z') ||
-		(ch_tmp >= 'A' && ch_tmp <= 'Z'))
-		return true;
-	else
-		return false;
-}
-
-bool hal_ishexdigit(char ch_tmp)
-{
-	if ((ch_tmp >= '0' && ch_tmp <= '9') ||
-		(ch_tmp >= 'a' && ch_tmp <= 'f') ||
-		(ch_tmp >= 'A' && ch_tmp <= 'F'))
-		return true;
-	else
-		return false;
-}
-
 bool hal_get_hexvalue_fromstring(
 		char			*szStr,
 		u32			*pu4bVal,
@@ -132,7 +113,7 @@ bool hal_get_hexvalue_fromstring(
 
 	/* Check if szScan is now pointer to a character for hex digit, */
 	/* if not, it means this is not a valid hex number. */
-	if (!hal_ishexdigit(*szScan))
+	if (!_is_hexdigit(*szScan))
 		return false;
 
 	/* Parse each digit. */
@@ -142,7 +123,7 @@ bool hal_get_hexvalue_fromstring(
 
 		szScan++;
 		(*pu4bMove)++;
-	} while (hal_ishexdigit(*szScan));
+	} while (_is_hexdigit(*szScan));
 
 	return true;
 }

@@ -26,12 +26,22 @@ enum rtw_hal_status rtw_hal_mp_txpwr_read_table(
 	PHL_INFO("%s: rate = %d\n", __FUNCTION__, arg->rate);
 	PHL_INFO("%s: bandwidth = %d\n", __FUNCTION__, arg->bandwidth);
 	PHL_INFO("%s: channel = %d\n", __FUNCTION__, arg->channel);
+	PHL_INFO("%s: ru = %d\n", __FUNCTION__, arg->tx_ru_on);
 
-	hal_status = rtw_hal_rf_read_pwr_table(hal_info->hal_com, arg->rfpath,
-					       arg->rate, arg->bandwidth,
-					       arg->channel, arg->offset,
-					       arg->dcm, arg->beamforming,
-					       &arg->table_item);
+	if (arg->tx_ru_on) {
+		hal_status = rtw_hal_rf_read_pwr_table_ru(hal_info->hal_com, arg->rfpath,
+						arg->rate, arg->bandwidth,
+						arg->channel, arg->offset,
+						arg->dcm, arg->beamforming,
+						&arg->table_item);
+
+	} else {
+		hal_status = rtw_hal_rf_read_pwr_table(hal_info->hal_com, arg->rfpath,
+				arg->rate, arg->bandwidth,
+				arg->channel, arg->offset,
+				arg->dcm, arg->beamforming,
+				&arg->table_item);
+	}
 	PHL_INFO("%s: status = %d\n", __FUNCTION__, hal_status);
 
 	return hal_status;

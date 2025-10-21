@@ -468,7 +468,7 @@ static int btm_nb_req_st_hdl(void *obj, u16 event, void *param)
 	case FSM_EV_STATE_OUT:
 		rtw_fsm_cancel_alarm(pbtm);
 		for (i = 0; i < pbtm->pnb.nb_rpt.nb_list_num; i++) {
-			band = rtw_get_band_by_op_class(pbtm->pnb.nb_rpt.nb_list[i].ent.reg_class);
+			band = rtw_get_band_by_op_class(NULL, pbtm->pnb.nb_rpt.nb_list[i].ent.reg_class);
 			FSM_INFO(pbtm, "roam list "MAC_FMT" opc:%3d, ch:%3d-%s\n",
 				MAC_ARG(pbtm->pnb.nb_rpt.nb_list[i].ent.bssid),
 				pbtm->pnb.nb_rpt.nb_list[i].ent.reg_class,

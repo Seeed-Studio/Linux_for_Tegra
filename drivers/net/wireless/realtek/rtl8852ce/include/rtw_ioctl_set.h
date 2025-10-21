@@ -34,6 +34,9 @@ int rtw_set_country(_adapter *adapter, const char *country_code
 	, enum rtw_env_t env, enum rtw_regd_inr inr);
 #if CONFIG_IEEE80211_BAND_6GHZ
 int rtw_set_env(_adapter *adapter, enum rtw_env_t env, enum rtw_regd_inr inr);
+int rtw_set_force_txpwr_lmt_6g_cate(_adapter *adapter
+	, enum txpwr_lmt_6g_cate_t force_txpwr_lmt_6g_cate);
+enum txpwr_lmt_6g_cate_t rtw_get_force_txpwr_lmt_6g_cate(_adapter *adapter);
 #endif
 int rtw_set_band(_adapter *adapter, u8 band);
 

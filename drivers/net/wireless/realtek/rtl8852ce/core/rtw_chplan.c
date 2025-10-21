@@ -598,22 +598,28 @@ u8 _rtw_env_to_txpwr_lmt_6g_cate_map[RTW_ENV_NUM] = {
 
 #define rtw_env_to_txpwr_lmt_6g_cate_map(env) (((env) >= RTW_ENV_NUM) ? 0 : _rtw_env_to_txpwr_lmt_6g_cate_map[(env)])
 
-u8 _reg_info_to_txpwr_lmt_6g_cate_map[] = {
-	[CIS_6G_REG_IN_AP]	= BIT(TXPWR_LMT_6G_CATE_VLP) | BIT(TXPWR_LMT_6G_CATE_LPI),
-	[CIS_6G_REG_SP_AP]	= BIT(TXPWR_LMT_6G_CATE_VLP) | BIT(TXPWR_LMT_6G_CATE_LPI) | BIT(TXPWR_LMT_6G_CATE_STD),
-	[CIS_6G_REG_VLP_AP]	= BIT(TXPWR_LMT_6G_CATE_VLP),
-	[CIS_6G_REG_IN_EN_AP]	= BIT(TXPWR_LMT_6G_CATE_VLP) | BIT(TXPWR_LMT_6G_CATE_LPI),
-	[CIS_6G_REG_IN_SP_AP]	= BIT(TXPWR_LMT_6G_CATE_VLP) | BIT(TXPWR_LMT_6G_CATE_LPI) | BIT(TXPWR_LMT_6G_CATE_STD),
+const char *const _chplan_6g_cate_str[] = {
+	[CHPLAN_6G_CATE_VLP]	= "VLP",
+	[CHPLAN_6G_CATE_LPI]	= "LPI",
+	[CHPLAN_6G_CATE_STD]	= "STD",
 };
 
-#define reg_info_to_txpwr_lmt_6g_cate_map(reg_info) (((reg_info) >= CIS_6G_REG_NUM) ? 0 : _reg_info_to_txpwr_lmt_6g_cate_map[(reg_info)])
+#define chplan_6g_cate_str(cate) (((cate) >= CHPLAN_6G_CATE_NUM) ? "-" : _chplan_6g_cate_str[(cate)])
+
+u8 _chplan_6g_cate_to_txpwr_lmt_6g_cate_map[] = {
+	[CHPLAN_6G_CATE_VLP]	= BIT(TXPWR_LMT_6G_CATE_VLP),
+	[CHPLAN_6G_CATE_LPI]	= BIT(TXPWR_LMT_6G_CATE_VLP) | BIT(TXPWR_LMT_6G_CATE_LPI),
+	[CHPLAN_6G_CATE_STD]	= BIT(TXPWR_LMT_6G_CATE_VLP) | BIT(TXPWR_LMT_6G_CATE_LPI) | BIT(TXPWR_LMT_6G_CATE_STD),
+};
+
+#define chplan_6g_cate_to_txpwr_lmt_6g_cate_map(cate) (((cate) >= CHPLAN_6G_CATE_NUM) ? 0 : _chplan_6g_cate_to_txpwr_lmt_6g_cate_map[(cate)])
 
 u8 _reg_info_to_chplan_6g_cate_map[] = {
-	[CIS_6G_REG_IN_AP]	= CHPLAN_6G_CATE_LPI,
-	[CIS_6G_REG_SP_AP]	= CHPLAN_6G_CATE_STD,
-	[CIS_6G_REG_VLP_AP]	= CHPLAN_6G_CATE_VLP,
-	[CIS_6G_REG_IN_EN_AP]	= CHPLAN_6G_CATE_LPI,
-	[CIS_6G_REG_IN_SP_AP]	= CHPLAN_6G_CATE_STD,
+	[CIS_6G_REG_IN_AP]	= BIT(CHPLAN_6G_CATE_VLP) | BIT(CHPLAN_6G_CATE_LPI),
+	[CIS_6G_REG_SP_AP]	= BIT(CHPLAN_6G_CATE_VLP) | BIT(CHPLAN_6G_CATE_STD),
+	[CIS_6G_REG_VLP_AP]	= BIT(CHPLAN_6G_CATE_VLP),
+	[CIS_6G_REG_IN_EN_AP]	= BIT(CHPLAN_6G_CATE_VLP) | BIT(CHPLAN_6G_CATE_LPI),
+	[CIS_6G_REG_IN_SP_AP]	= BIT(CHPLAN_6G_CATE_VLP) | BIT(CHPLAN_6G_CATE_STD),
 };
 #define reg_info_to_chplan_6g_cate_map(reg_info) (((reg_info) >= CIS_6G_REG_NUM) ? 0 : _reg_info_to_chplan_6g_cate_map[(reg_info)])
 #endif /* CONFIG_IEEE80211_BAND_6GHZ */
@@ -777,6 +783,11 @@ static void rtw_edcca_mode_update_by_regd_reqs(struct dvobj_priv *dvobj, bool re
 		#if CONFIG_IEEE80211_BAND_6GHZ
 		tmp_mode = COUNTRY_CHPLAN_EDCCA_6G_OVERRIDE(chplan) != RTW_EDCCA_DEF ? COUNTRY_CHPLAN_EDCCA_6G_OVERRIDE(chplan) :
 			rtw_regd_to_edcca_mode_6g(rtw_chplan_get_default_regd_6g(chplan->domain_code_6g));
+		if (tmp_mode == RTW_EDCCA_CBP) {
+			/* STD category needs no CBP */
+			if (req->txpwr_lmt_6g_cate_map & BIT(TXPWR_LMT_6G_CATE_STD))
+				tmp_mode = RTW_EDCCA_NORM;
+		}
 		mode[BAND_ON_6G] = rtw_edcca_mode_get_strictest(mode[BAND_ON_6G], tmp_mode);
 		#endif
 	}
@@ -881,19 +892,15 @@ char *rtw_get_txpwr_lmt_name_of_bands_str(char *buf, const char *name_of_band[],
 	)
 
 #define BOOL_TO_S8(b) ((b) ? 1 : 0)
-#define BOOL_S_NONE (-1)
-#define BOOL_S_DIFF (-2)
-#define BOOL_S_SEQ_COMPARE(result, operand) ( \
-	(result) == BOOL_S_NONE ? BOOL_TO_S8(operand) : \
-	(result) != BOOL_TO_S8(operand) ? BOOL_S_DIFF : (result) \
-	)
+#define BOOL_S_DIFF (-1)
+#define BOOL_S_SEQ_COMPARE(result, operand) ((result) != BOOL_TO_S8(operand) ? BOOL_S_DIFF : (result))
 
-	const char *name = NULL;
-	s8 unknown = BOOL_S_NONE;
+	const char *name;
+	s8 unknown;
 	char *pos = buf;
 
-	name = NAME_SEQ_COMPARE(name, name_of_band[BAND_ON_24G]);
-	unknown = BOOL_S_SEQ_COMPARE(unknown, !!(unknown_bmp & BIT(BAND_ON_24G)));
+	name = name_of_band[BAND_ON_24G];
+	unknown = BOOL_TO_S8(!!(unknown_bmp & BIT(BAND_ON_24G)));
 #if CONFIG_IEEE80211_BAND_5GHZ
 	name = NAME_SEQ_COMPARE(name, name_of_band[BAND_ON_5G]);
 	unknown = BOOL_S_SEQ_COMPARE(unknown, !!(unknown_bmp & BIT(BAND_ON_5G)));
@@ -1326,6 +1333,35 @@ void rtw_get_chplan_worldwide(struct country_chplan *ent)
 	_rtw_memcpy(ent, &world_wide_chplan, sizeof(*ent));
 }
 
+struct alpha2_alternate_t {
+	char alpha2[2];
+	char alt[2];
+};
+
+#define ALPHA2_ALT_ENT(_alpha2, _alt) {.alpha2 = _alpha2, .alt = _alt}
+
+static const struct alpha2_alternate_t alpha2_alt_map[] = {
+	ALPHA2_ALT_ENT("EU", "DE"),
+};
+
+static bool rtw_get_chplan_from_alpha2_alt(const char *code, struct country_chplan *ent)
+{
+	int i;
+	bool ret = false;
+
+	for (i = 0; i < ARRAY_SIZE(alpha2_alt_map); i++) {
+		if (code[0] == alpha2_alt_map[i].alpha2[0]
+			&& code[1] == alpha2_alt_map[i].alpha2[1]
+		) {
+			ret = regdb_ops.get_chplan_from_alpha2(alpha2_alt_map[i].alt, ent);
+			if (ret)
+				break;
+		}
+	}
+
+	return ret;
+}
+
 /*
 * rtw_get_chplan_from_country -
 * @country_code: string of country code
@@ -1336,6 +1372,7 @@ void rtw_get_chplan_worldwide(struct country_chplan *ent)
 bool rtw_get_chplan_from_country(const char *country_code, struct country_chplan *ent)
 {
 	char code[2];
+	bool ret;
 
 	if (!is_alpha(country_code[0]) || !is_alpha(country_code[1]))
 		return false;
@@ -1343,7 +1380,11 @@ bool rtw_get_chplan_from_country(const char *country_code, struct country_chplan
 	code[0] = alpha_to_upper(country_code[0]);
 	code[1] = alpha_to_upper(country_code[1]);
 
-	return regdb_ops.get_chplan_from_alpha2(code, ent);
+	ret = regdb_ops.get_chplan_from_alpha2(code, ent);
+	if (!ret)
+		ret = rtw_get_chplan_from_alpha2_alt(code, ent);
+
+	return ret;
 }
 
 void rtw_chplan_ioctl_input_mapping(u16 *chplan, u16 *chplan_6g)
@@ -1452,6 +1493,7 @@ static const char *const _cis_status_str[] = {
 	[COUNTRY_IE_SLAVE_UNKNOWN]	= "UNKNOWN",
 	[COUNTRY_IE_SLAVE_OPCH_NOEXIST]	= "OPCH_NOEXIST",
 	[COUNTRY_IE_SLAVE_CATE_6G_NS]	= "CATE_6G_NS",
+	[COUNTRY_IE_SLAVE_TPE_FORBID]	= "TPE_FORBID",
 	[COUNTRY_IE_SLAVE_STATUS_NUM]	= "INVALID",
 };
 
@@ -1485,7 +1527,101 @@ static const enum rtw_env_t _reg_info_to_env[] = {
 };
 
 #define reg_info_to_env(reg_info) (((reg_info) >= CIS_6G_REG_NUM) ? _reg_info_to_env[CIS_6G_REG_NUM] : _reg_info_to_env[(reg_info)])
+
+static const char *_tpe_max_txpwr_intp_str[] = {
+	[TPE_ELE_MAX_TXPWR_INTP_L_EIRP]		= "L_EIRP",
+	[TPE_ELE_MAX_TXPWR_INTP_L_EIRP_PSD]	= "L_EIRP_PSD",
+	[TPE_ELE_MAX_TXPWR_INTP_RC_EIRP]	= "RC_EIPR",
+	[TPE_ELE_MAX_TXPWR_INTP_RC_EIRP_PSD]	= "RC_EIRP_PSD",
+	[TPE_ELE_MAX_TXPWR_INTP_NUM]		= "RSVD",
+};
+
+#define tpe_max_txpwr_intp_str(intp) (intp) >= TPE_ELE_MAX_TXPWR_INTP_NUM ? _tpe_max_txpwr_intp_str[TPE_ELE_MAX_TXPWR_INTP_NUM] : _tpe_max_txpwr_intp_str[intp]
+
+static const char *_tpe_max_txpwr_cate_str[] = {
+	[TPE_ELE_MAX_TXPWR_CATE_DEF]	= "DEF",
+	[TPE_ELE_MAX_TXPWR_CATE_SUB]	= "SUB",
+	[TPE_ELE_MAX_TXPWR_CATE_NUM]	= "RSVD",
+};
+
+#define tpe_max_txpwr_cate_str(cate) (cate) >= TPE_ELE_MAX_TXPWR_CATE_NUM ? _tpe_max_txpwr_cate_str[TPE_ELE_MAX_TXPWR_CATE_NUM] : _tpe_max_txpwr_cate_str[cate]
+
+static bool rtw_rfctl_cisr_has_valid_link_6g_cate(const struct rf_ctl_t *rfctl, const struct country_ie_slave_record *cisr)
+{
+#if CONFIG_80211D_ENV_BSS_MAJORITY
+	struct cis_scan_stat_ent *m;
 #endif
+
+	if (cisr->band != BAND_ON_6G
+		|| cisr->status == COUNTRY_IE_SLAVE_NOCOUNTRY)
+		return false;
+#if CONFIG_80211D_ENV_BSS_MAJORITY
+	m = RFCTL_GET_CIS_MAJORITY(rfctl);
+	if (m) {
+		char alpha2[2] = {
+			cisr->country_str[0],
+			cisr->country_str[1],
+		};
+
+		/* skip country not same as majority */
+		if (m->cisr.chplan.alpha2[0] != alpha2[0]
+			|| m->cisr.chplan.alpha2[1] != alpha2[1])
+			return false;
+	}
+#endif
+	if (!rfctl->cis_enabled) {
+		char alpha2[2] = {
+			cisr->country_str[0],
+			cisr->country_str[1],
+		};
+
+		/* skip country not same as INIT/USER */
+		if (rfctl->user_req) {
+			if (rfctl->user_req->chplan.alpha2[0] != alpha2[0]
+				|| rfctl->user_req->chplan.alpha2[1] != alpha2[1])
+				return false;
+		} else {
+			if (rfctl->init_req.chplan.alpha2[0] != alpha2[0]
+				|| rfctl->init_req.chplan.alpha2[1] != alpha2[1])
+				return false;
+		}
+	}
+	return true;
+}
+
+static void max_txpwr_get_dbm_str(s8 idx, char dbm_str[], u8 dbm_str_len)
+{
+	if (idx > -2 && idx < 0) /* -0.5 */
+		snprintf(dbm_str, dbm_str_len, " -0.5");
+	else if (idx % 2) /* d.5 */
+		snprintf(dbm_str, dbm_str_len, "%3d.5", idx / 2);
+	else /* d */
+		snprintf(dbm_str, dbm_str_len, "%5d", idx / 2);
+}
+
+static bool dump_tpes(void *sel, u8 indent, bool fl_indent, struct rtw_tpe_t *tpes)
+{
+	u8 i, j;
+	char dbm_str[6]; /* "-xx.x" is longest str */
+
+	for (i = 0; i < tpes->cnt; i++) {
+		if (i > 0 || fl_indent) {
+			for (j = 0; j < indent; j++)
+				_RTW_PRINT_SEL(sel, " ");
+		}
+		_RTW_PRINT_SEL(sel, " %-11s %-4s"
+			, tpe_max_txpwr_intp_str(tpes->ele[i].intp)
+			, tpe_max_txpwr_cate_str(tpes->ele[i].cate));
+		for (j = 0; j < tpes->ele[i].pwr_cnt; j++) {
+			max_txpwr_get_dbm_str(tpes->ele[i].max_tx_pwr[j], dbm_str, ARRAY_SIZE(dbm_str));
+			_RTW_PRINT_SEL(sel, " %s", dbm_str);
+		}
+		_RTW_PRINT_SEL(sel, "\n");
+	}
+
+	return i > 0;
+}
+#endif /* CONFIG_IEEE80211_BAND_6GHZ */
 
 static void cis_scan_stat_clr(struct cis_scan_stat_t *stat, bool lock)
 {
@@ -1521,7 +1657,7 @@ static void cis_scan_stat_add(struct cis_scan_stat_t *stat, const struct country
 	while (!rtw_end_of_queue_search(head, list)) {
 		ent = LIST_CONTAINOR(list, struct cis_scan_stat_ent, list);
 
-		if (ent->cisr.alpha2[0] == cisr->alpha2[0] && ent->cisr.alpha2[1] == cisr->alpha2[1]) {
+		if (ent->cisr.country_str[0] == cisr->country_str[0] && ent->cisr.country_str[1] == cisr->country_str[1]) {
 			ent->count++;
 			inc = ent;
 			goto check_order;
@@ -1618,33 +1754,45 @@ static void dump_cis_scan_stat(void *sel, struct rf_ctl_t *rfctl)
 		list = get_next(list);
 		RTW_PRINT_SEL(sel, "%c"ALPHA2_FMT" %u\n"
 			, RFCTL_GET_CIS_MAJORITY(rfctl) == ent ? '*' : ' '
-			, ALPHA2_ARG(ent->cisr.alpha2), ent->count);
+			, ALPHA2_ARG(ent->cisr.country_str), ent->count);
 	}
 
 	_rtw_mutex_unlock(&stat->lock);
 }
 
-void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_noset)
+void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_noset, bool lock)
 {
 #define CISR_TITLE_FMT "%-6s %-4s %-4s"
 #define CISR_TITLE_ARG , "alpha2", "band", "opch"
 #define CISR_VALUE_FMT "     "ALPHA2_FMT" %4s %4u"
-#define CISR_VALUE_ARG , ALPHA2_ARG(cisr->alpha2), band_str(cisr->band), cisr->opch
+#define CISR_VALUE_ARG , ALPHA2_ARG(cisr->country_str), band_str(cisr->band), cisr->opch
+#define CISR_INDENT 16
 #if CONFIG_IEEE80211_BAND_6GHZ
-#define CISR_TITLE_FMT_6G " %-3s %-8s"
-#define CISR_TITLE_ARG_6G , "env", "6g_reg_i"
-#define CISR_VALUE_FMT_6G " %3c %8s"
-#define CISR_VALUE_ARG_6G , rtw_env_char(cisr->env), cisr->band == BAND_ON_6G ? cis_6g_reg_info_str(cisr->reg_info) : ""
+#define CISR_TITLE_FMT_6G " %-3s %-8s %-7s"
+#define CISR_TITLE_ARG_6G , "env", "6g_reg_i", "6g_cate"
+#define CISR_VALUE_FMT_6G " %3c %8s %7s"
+#define CISR_VALUE_ARG_6G , rtw_env_char(cisr->env), cisr->band == BAND_ON_6G ? cis_6g_reg_info_str(cisr->reg_info) : "" \
+	, rtw_rfctl_cisr_has_valid_link_6g_cate(rfctl, cisr) ? chplan_6g_cate_str(cisr_get_largest_chplan_6g_cate(cisr)) : "-"
+#define CISR_INDENT_6G 21
 #else
 #define CISR_TITLE_FMT_6G ""
-#define CISR_VALUE_FMT_6G ""
 #define CISR_TITLE_ARG_6G
+#define CISR_VALUE_FMT_6G ""
 #define CISR_VALUE_ARG_6G
+#define CISR_INDENT_6G 0
 #endif
-#define CISR_TITLE_FMT_STATUS " %s"
-#define CISR_VALUE_FMT_STATUS " %s"
+#define CISR_TITLE_FMT_STATUS " %-12s"
+#define CISR_VALUE_FMT_STATUS " %-12s"
 #define CISR_TITLE_ARG_STATUS , "status"
 #define CISR_VALUE_ARG_STATUS , cis_status_str(cisr->status)
+#define CISR_INDENT_STATUS 13
+#if CONFIG_IEEE80211_BAND_6GHZ
+#define CISR_TITLE_FMT_TPES " %-4s"
+#define CISR_TITLE_ARG_TPES , "tpes"
+#else
+#define CISR_TITLE_FMT_TPES ""
+#define CISR_TITLE_ARG_TPES
+#endif
 
 	struct country_ie_slave_record *cisr;
 	int i, j;
@@ -1654,16 +1802,21 @@ void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_
 		CISR_TITLE_FMT
 		CISR_TITLE_FMT_6G
 		CISR_TITLE_FMT_STATUS
+		CISR_TITLE_FMT_TPES
 		"\n"
 		CISR_TITLE_ARG
 		CISR_TITLE_ARG_6G
 		CISR_TITLE_ARG_STATUS
+		CISR_TITLE_ARG_TPES
 	);
+
+	if (lock)
+		_rtw_mutex_lock_interruptible(&rfctl->regd_req_mutex);
 
 	for (i = 0; i < CONFIG_IFACE_NUMBER; i++) {
 		for (j = 0; j < RTW_RLINK_MAX; j++) {
 			cisr = &rfctl->cisr[i][j];
-			if (skip_noset && strncmp(cisr->alpha2, "\x00\x00", 2) == 0)
+			if (skip_noset && is_all_null(cisr->country_str, 3))
 				continue;
 
 			RTW_PRINT_SEL(sel,
@@ -1671,25 +1824,57 @@ void dump_country_ie_slave_records(void *sel, struct rf_ctl_t *rfctl, bool skip_
 				CISR_VALUE_FMT
 				CISR_VALUE_FMT_6G
 				CISR_VALUE_FMT_STATUS
-				"\n"
 				, i, j
 				CISR_VALUE_ARG
 				CISR_VALUE_ARG_6G
 				CISR_VALUE_ARG_STATUS
 			);
+
+			#if CONFIG_IEEE80211_BAND_6GHZ
+			if (!dump_tpes(sel, 4 + CISR_INDENT + CISR_INDENT_6G + CISR_INDENT_STATUS, false, &cisr->tpes))
+			#endif
+				_RTW_PRINT_SEL(sel, "\n");
+
 		}
 	}
 
 #if CONFIG_IEEE80211_BAND_6GHZ
 	RTW_PRINT_SEL(sel, "\n");
-	RTW_PRINT_SEL(sel, "6g_cate_map_int_link_num:%u\n", rfctl->txpwr_lmt_6g_cate_map_int_link_num);
-	RTW_PRINT_SEL(sel, "6g_cate_map_int_all_link:0x%02x\n", rfctl->txpwr_lmt_6g_cate_map_int_all_link);
+	RTW_PRINT_SEL(sel, "link_6g_cate_map_applied_num:%u\n", rfctl->txpwr_lmt_link_6g_cate_map_applied_num);
+	RTW_PRINT_SEL(sel, "link_6g_cate_map:");
+	for (i = TXPWR_LMT_6G_CATE_NUM - 1; i >= TXPWR_LMT_6G_CATE_VLP ; i--) {
+		if (!(rfctl->txpwr_lmt_link_6g_cate_map & BIT(i)))
+			continue;
+		_RTW_PRINT_SEL(sel, "%s ", txpwr_lmt_6g_cate_str(i));
+	}
+	_RTW_PRINT_SEL(sel, "\n");
 #endif
 
 	if (rfctl->cis_flags & CISF_ENV_BSS) {
 		RTW_PRINT_SEL(sel, "\n");
 		dump_cis_scan_stat(sel, rfctl);
 	}
+
+	if (lock)
+		_rtw_mutex_unlock(&rfctl->regd_req_mutex);
+}
+
+static void rtw_ies_get_country_str(const u8 *ies, uint ies_len, u8 *country_str)
+{
+	const u8 *country_ie;
+	sint country_ie_len;
+
+	country_ie = rtw_get_ie(ies, WLAN_EID_COUNTRY, &country_ie_len, ies_len);
+	if (country_ie && country_ie_len >= 3) {
+		country_str[0] = country_ie[2];
+		country_str[1] = country_ie[3];
+		country_str[2] = country_ie[4];
+		return;
+	}
+
+	country_str[0] = 0;
+	country_str[1] = 0;
+	country_str[2] = 0;
 }
 
 #if CONFIG_IEEE80211_BAND_6GHZ
@@ -1708,36 +1893,124 @@ static enum rtw_env_t country_str_get_env(const char *country_str)
 	}
 	return RTW_ENV_ANY;
 }
-#endif
 
-static enum country_ie_slave_status rtw_get_cisr_from_recv_regu_ies(struct rf_ctl_t *rfctl
-		, enum band_type band, u8 opch
-		, const u8 *country_ie, enum country_ie_slave_6g_reg_info reg_info
-		, struct country_ie_slave_record *cisr)
+static enum country_ie_slave_6g_reg_info rtw_ies_get_6g_reg_info(const u8 *ies, uint ies_len)
 {
-	const char *country_code = country_ie ? country_ie + 2 : NULL;
+	const u8 *he_op_ie;
+	sint he_op_ielen;
+
+	he_op_ie = rtw_get_ext_ie(ies, WLAN_EID_EXTENSION_HE_OPERATION, &he_op_ielen, ies_len);
+	if (he_op_ie && he_op_ielen >= 1 + HE_OPER_PARAMS_LEN && GET_HE_OP_PARA_6GHZ_OP_INFO_PRESENT(he_op_ie + 3)) {
+		u8 offset = HE_OPER_PARAMS_LEN + HE_OPER_BSS_COLOR_INFO_LEN + HE_OPER_BASIC_MCS_LEN
+			+ (GET_HE_OP_PARA_VHT_OP_INFO_PRESENT(he_op_ie + 3) ? HE_OPER_VHT_OPER_INFO_LEN : 0)
+			+ (GET_HE_OP_PARA_CO_HOSTED_BSS(he_op_ie + 3) ? HE_OPER_MAX_COHOST_BSSID_LEN : 0);
+
+		if (he_op_ielen >= offset)
+			return GET_HE_OP_INFO_REG_INFO(he_op_ie + 3 + offset);
+	}
+	return CIS_6G_REG_RSVD;
+}
+
+static bool rtw_parse_tpe_ie(const u8 *cont, u8 len, struct rtw_tpe_ele_t *tpe)
+{
+	u8 intp, cate, cnt, i;
+
+	/* info & at least one max tx power */
+	if (len < 2)
+		return false;
+
+	intp = GET_TPE_ELE_MAX_TXPWR_INTP(cont);
+	if (intp >= TPE_ELE_MAX_TXPWR_INTP_NUM)
+		return false;
+
+	cate = GET_TPE_ELE_MAX_TXPWR_CATE(cont);
+	if (cate >= TPE_ELE_MAX_TXPWR_CATE_NUM)
+		return false;
+
+	cnt = GET_TPE_ELE_MAX_TXPWR_CNT(cont);
+
+	switch (intp) {
+	case TPE_ELE_MAX_TXPWR_INTP_L_EIRP:
+	case TPE_ELE_MAX_TXPWR_INTP_RC_EIRP:
+		if (cnt >= 4)
+			return false;
+		cnt = cnt + 1;
+		break;
+
+	case TPE_ELE_MAX_TXPWR_INTP_L_EIRP_PSD:
+	case TPE_ELE_MAX_TXPWR_INTP_RC_EIRP_PSD:
+		if (cnt >= 5)
+			return false;
+		if (cnt == 0)
+			cnt = 1;
+		else
+			cnt = BIT(cnt - 1);
+		break;
+	}
+
+	if (len < 1 + cnt)
+		cnt = len - 1; /* adjust cnt according to ie len */
+
+	tpe->intp = intp;
+	tpe->cate = cate;
+	tpe->pwr_cnt = cnt;
+	_rtw_memset(tpe->max_tx_pwr, 0, TPE_TXPWR_MAX_CNT);
+	for (i = 0; i < cnt; i++)
+		tpe->max_tx_pwr[i] = GET_TPE_ELE_MAX_TXPWR_VAL(cont, i);
+
+	return true;
+}
+
+static u8 rtw_ies_get_tpes(const u8 *ies, uint ies_len, struct rtw_tpe_t *tpes)
+{
+	const u8 *tpe_ie;
+	sint tpe_ielen;
+	u8 cnt = 0;
+
+	tpe_ie = rtw_get_ie(ies, WLAN_EID_TX_POWER_ENVELOPE, &tpe_ielen, ies_len);
+	while (tpe_ie) {
+		if (cnt >= ARRAY_SIZE(tpes->ele)) {
+			struct rtw_tpe_ele_t tmp;
+
+			if (rtw_parse_tpe_ie(tpe_ie + 2, tpe_ielen, &tmp)) {
+				RTW_WARN("%s array size of ele not enough\n", __func__);
+				break;
+			}
+		}
+		if (rtw_parse_tpe_ie(tpe_ie + 2, tpe_ielen, &tpes->ele[cnt]))
+			cnt++;
+		if ((tpe_ie + 2 + tpe_ielen) - ies >= ies_len - 2)
+			break;
+		tpe_ie = rtw_get_ie(tpe_ie + 2 + tpe_ielen, WLAN_EID_TX_POWER_ENVELOPE, &tpe_ielen, ies_len);
+	}
+
+	tpes->cnt = cnt;
+	return cnt;
+}
+#endif /* CONFIG_IEEE80211_BAND_6GHZ */
+
+static void rtw_cisr_update_chplan_status(struct rf_ctl_t *rfctl, struct country_ie_slave_record *cisr)
+{
 	u8 domain_code_6g = RTW_CHPLAN_6G_NULL;
 	struct country_chplan *ent = &cisr->chplan;
-	enum country_ie_slave_status ret;
-
-	_rtw_memcpy(cisr->alpha2, country_code ? country_code : "\x00\x00", 2);
-	cisr->band = band;
-	cisr->opch = opch;
+	enum country_ie_slave_status status;
 
 #if CONFIG_IEEE80211_BAND_6GHZ
-	cisr->env = country_str_get_env(country_code);
-	cisr->reg_info = reg_info;
+	cisr->env = country_str_get_env(cisr->country_str);
 #endif
 
 	_rtw_memset(ent, 0, sizeof(*ent));
 
-	if (!country_code || strncmp(country_code, "XX", 2) == 0) {
-		ret = COUNTRY_IE_SLAVE_NOCOUNTRY;
+	if (is_all_null(cisr->country_str, 3)
+		|| (cisr->country_str[0] == 'X'
+			&& cisr->country_str[1] == 'X')
+	) {
+		status = COUNTRY_IE_SLAVE_NOCOUNTRY;
 		goto exit;
 	}
 
-	if (!rtw_get_chplan_from_country(country_code, ent)) {
-		ret = COUNTRY_IE_SLAVE_UNKNOWN;
+	if (!rtw_get_chplan_from_country(cisr->country_str, ent)) {
+		status = COUNTRY_IE_SLAVE_UNKNOWN;
 		goto exit;
 	}
 
@@ -1745,27 +2018,82 @@ static enum country_ie_slave_status rtw_get_cisr_from_recv_regu_ies(struct rf_ct
 	domain_code_6g = ent->domain_code_6g;
 	#endif
 
-	if (!rtw_chplan_is_bchbw_valid(ent->domain_code, domain_code_6g, band, opch
+	if ((cisr->band == BAND_ON_5G && !COUNTRY_CHPLAN_EN_11A(ent))
+		|| !rtw_chplan_is_bchbw_valid(ent->domain_code, domain_code_6g, cisr->band, cisr->opch
 			, CHANNEL_WIDTH_20, CHAN_OFFSET_NO_EXT, 1, 1, rfctl)
 	) {
-		ret = COUNTRY_IE_SLAVE_OPCH_NOEXIST;
+		status = COUNTRY_IE_SLAVE_OPCH_NOEXIST;
 		goto exit;
 	}
 
 #if CONFIG_IEEE80211_BAND_6GHZ
-	if (cisr->band == BAND_ON_6G
-		&& !(ent->cate_6g_map & reg_info_to_chplan_6g_cate_map(reg_info))
-	) {
-		ret = COUNTRY_IE_SLAVE_CATE_6G_NS;
-		goto exit;
+	if (cisr->band == BAND_ON_6G) {
+		if (!(ent->cate_6g_map & reg_info_to_chplan_6g_cate_map(cisr->reg_info))) {
+			status = COUNTRY_IE_SLAVE_CATE_6G_NS;
+			goto exit;
+		}
+		if (!rtw_txpwr_hal_tpe_allow(rfctl_to_dvobj(rfctl), cisr)) {
+			status = COUNTRY_IE_SLAVE_TPE_FORBID;
+			goto exit;
+		}
 	}
 #endif
-	ret = COUNTRY_IE_SLAVE_APPLICABLE;
+	status = COUNTRY_IE_SLAVE_APPLICABLE;
 
 exit:
-	cisr->status = ret;
+	cisr->status = status;
+}
 
-	return ret;
+static void rtw_get_cisr_from_regu_settings(struct rf_ctl_t *rfctl
+	, enum band_type band, u8 opch
+	, const u8 *country_str, enum country_ie_slave_6g_reg_info reg_info
+	, struct rtw_tpe_t *tpes
+	, struct country_ie_slave_record *cisr)
+{
+	if (country_str) {
+		cisr->country_str[0] = country_str[0];
+		cisr->country_str[1] = country_str[1];
+		cisr->country_str[2] = country_str[2];
+	} else {
+		cisr->country_str[0] = 0;
+		cisr->country_str[1] = 0;
+		cisr->country_str[2] = 0;
+	}
+	cisr->band = band;
+	cisr->opch = opch;
+
+#if CONFIG_IEEE80211_BAND_6GHZ
+	cisr->reg_info = reg_info;
+	if (tpes)
+		cisr->tpes = *tpes;
+	else
+		cisr->tpes.cnt = 0;
+#endif
+
+	rtw_cisr_update_chplan_status(rfctl, cisr);
+}
+
+static void rtw_get_cisr_from_regu_ies(struct rf_ctl_t *rfctl
+	, enum band_type band, u8 opch
+	, const u8 *ies, uint ies_len, bool country_str
+	, struct country_ie_slave_record *cisr)
+{
+	rtw_ies_get_country_str(ies, country_str ? ies_len : 0, cisr->country_str);
+
+	cisr->band = band;
+	cisr->opch = opch;
+
+#if CONFIG_IEEE80211_BAND_6GHZ
+	if (band == BAND_ON_6G) {
+		cisr->reg_info = rtw_ies_get_6g_reg_info(ies, ies_len);
+		rtw_ies_get_tpes(ies, ies_len, &cisr->tpes);
+	} else {
+		cisr->reg_info = CIS_6G_REG_RSVD;
+		cisr->tpes.cnt = 0;
+	}
+#endif
+
+	rtw_cisr_update_chplan_status(rfctl, cisr);
 }
 #endif /* CONFIG_80211D */
 
@@ -1821,9 +2149,9 @@ void dump_country_chplan(void *sel, const struct country_chplan *ent, bool regd_
 
 	#if CONFIG_IEEE80211_BAND_6GHZ
 	_RTW_PRINT_SEL(sel, " %c%c%c"
-		, (ent->cate_6g_map & CHPLAN_6G_CATE_STD) ? 'S' : '_'
-		, (ent->cate_6g_map & CHPLAN_6G_CATE_LPI) ? 'I' : '_'
-		, (ent->cate_6g_map & CHPLAN_6G_CATE_VLP) ? 'V' : '_'
+		, (ent->cate_6g_map & BIT(CHPLAN_6G_CATE_STD)) ? 'S' : '_'
+		, (ent->cate_6g_map & BIT(CHPLAN_6G_CATE_LPI)) ? 'I' : '_'
+		, (ent->cate_6g_map & BIT(CHPLAN_6G_CATE_VLP)) ? 'V' : '_'
 	);
 	#endif
 
@@ -2204,7 +2532,7 @@ bool rtw_regd_watchdog_hdl(struct dvobj_priv *dvobj)
 	return ret;
 }
 
-static enum channel_width rtw_regd_adjust_linking_bw(struct rf_ctl_t *rfctl
+static enum channel_width rtw_regd_adjust_op_bw(struct rf_ctl_t *rfctl, bool slave_m
 	, enum band_type band, u8 ch, enum channel_width bw, enum chan_offset offset)
 {
 #ifndef DBG_REGD_ADJUST_LINKING_BW
@@ -2229,7 +2557,9 @@ static enum channel_width rtw_regd_adjust_linking_bw(struct rf_ctl_t *rfctl
 			continue;
 		}
 
-		if (!rtw_chset_is_bchbw_valid(chset, band, ch, bw, offset, true, true)) {
+		/* TODO: slave_m downgrade bw to avoid not covered by master of STA link */
+
+		if (!rtw_chset_is_bchbw_valid(chset, band, ch, bw, offset, !slave_m , !slave_m)) {
 			#if DBG_REGD_ADJUST_LINKING_BW
 			RTW_INFO("%s %s ch:%u,%u,%u not allowed by chset\n", __func__, band_str(band), ch, bw, offset);
 			#endif
@@ -2255,7 +2585,7 @@ enum channel_width alink_adjust_linking_bw_by_regd(struct _ADAPTER_LINK *alink
 	_adapter *adapter = alink->adapter;
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
 
-	return rtw_regd_adjust_linking_bw(rfctl, band, ch, bw, offset);
+	return rtw_regd_adjust_op_bw(rfctl, false, band, ch, bw, offset);
 }
 
 enum channel_width adapter_adjust_linking_bw_by_regd(_adapter *adapter
@@ -2263,8 +2593,27 @@ enum channel_width adapter_adjust_linking_bw_by_regd(_adapter *adapter
 {
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
 
-	return rtw_regd_adjust_linking_bw(rfctl, band, ch, bw, offset);
+	return rtw_regd_adjust_op_bw(rfctl, false, band, ch, bw, offset);
 }
+
+#ifdef CONFIG_AP_MODE
+enum channel_width alink_adjust_slave_m_bw_by_regd(struct _ADAPTER_LINK *alink
+	, enum band_type band, u8 ch, enum channel_width bw, enum chan_offset offset)
+{
+	_adapter *adapter = alink->adapter;
+	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+
+	return rtw_regd_adjust_op_bw(rfctl, true, band, ch, bw, offset);
+}
+
+enum channel_width adapter_adjust_slave_m_bw_by_regd(_adapter *adapter
+	, enum band_type band, u8 ch, enum channel_width bw, enum chan_offset offset)
+{
+	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+
+	return rtw_regd_adjust_op_bw(rfctl, true, band, ch, bw, offset);
+}
+#endif
 
 static void rtw_chplan_rtk_priv_domain_code_get_country_chplan(struct country_chplan *chplan
 	, u8 domain_code, u8 domain_code_6g)
@@ -2352,13 +2701,13 @@ static void rtw_rfctl_regd_status_update_by_req(struct rf_ctl_t *rfctl, struct r
 }
 
 #ifdef CONFIG_80211D
-static bool rtw_rfctl_is_init_user_req_world_wide(struct rf_ctl_t *rfctl)
+static bool rtw_rfctl_is_init_user_req_world_wide(const struct rf_ctl_t *rfctl)
 {
 	return (!rfctl->user_req && IS_ALPHA2_WORLDWIDE(rfctl->init_req.chplan.alpha2)) /* INIT is WW (when no USER) */
 		|| (rfctl->user_req && IS_ALPHA2_WORLDWIDE(rfctl->user_req->chplan.alpha2)); /* USER is WW */
 }
 
-static bool rtw_rfctl_should_cis_enable(struct rf_ctl_t *rfctl)
+static bool rtw_rfctl_should_cis_enable(const struct rf_ctl_t *rfctl)
 {
 	if (rtw_rfctl_is_disable_sw_channel_plan(rfctl_to_dvobj(rfctl)))
 		return false;
@@ -2381,18 +2730,16 @@ static bool rtw_rfctl_update_cis_enabled(struct rf_ctl_t *rfctl, bool init, cons
 	return false;
 }
 
-static bool rtw_rfctl_forbid_unknown_country_opch(bool cis_enable, bool init_user_ww, bool regd_src_os)
+static bool rtw_rfctl_forbid_unknown_country_opch(const struct rf_ctl_t *rfctl)
 {
-	return (cis_enable || init_user_ww) && !regd_src_os;
+	return !RFCTL_REGD_SRC_FROM_OS(rfctl);
 }
 
 static void rtw_rfctl_update_cisr_collect_mode(struct rf_ctl_t *rfctl, bool init, const char *caller)
 {
 	bool collect_link_cisr;
 	bool collect_network_cisr;
-	bool forbid_unknown_country_opch = rtw_rfctl_forbid_unknown_country_opch(
-		rfctl->cis_enabled, rtw_rfctl_is_init_user_req_world_wide(rfctl),
-		RFCTL_REGD_SRC_FROM_OS(rfctl));
+	bool forbid_unknown_country_opch = rtw_rfctl_forbid_unknown_country_opch(rfctl);
 
 	collect_link_cisr = (rfctl->cis_enabled && !RFCTL_REGD_SRC_FROM_OS(rfctl))
 		|| rtw_chset_has_6g_enabled(&rfctl->chset);
@@ -2412,24 +2759,6 @@ static void rtw_rfctl_update_cisr_collect_mode(struct rf_ctl_t *rfctl, bool init
 }
 
 #if CONFIG_IEEE80211_BAND_6GHZ
-static void rtw_rfctl_update_default_chplan_cate_6g_map(struct rf_ctl_t *rfctl, bool init, const char *caller)
-{
-	struct regd_req_t *user_req = rfctl->user_req;
-	u8 bmp = 0xFF;
-
-	if (user_req)
-		bmp &= user_req->chplan.cate_6g_map;
-	if (!user_req || rfctl->init_regd_always_apply)
-		bmp &= rfctl->init_req.chplan.cate_6g_map;
-
-	if (init || rfctl->default_chplan_cate_6g_map != bmp) {
-		rfctl->default_chplan_cate_6g_map = bmp;
-		RTW_INFO("%s set default_chplan_cate_6g_map to 0x%02x\n", caller, bmp);
-		if (!bmp && !rfctl->cis_enabled && rtw_txpwr_hal_is_txpwr_limit_needed(rfctl_to_dvobj(rfctl)))
-			RTW_INFO("%s !cis_enabled, 6G connection not allowed\n", caller);
-	}
-}
-
 /* 
 * Update txpwr_lmt_6g_cate_map for 
 * a. REGD_SRC_RTK_PRIV's INIT/USER/EXTRA req
@@ -2453,8 +2782,8 @@ static void rtw_rfctl_update_regd_req_txpwr_6g_cate_map(struct rf_ctl_t *rfctl)
 				continue;
 		}
 
-		if (rfctl->txpwr_lmt_6g_cate_map_int_link_num) /* from per_link cisr */
-			req->txpwr_lmt_6g_cate_map = rfctl->txpwr_lmt_6g_cate_map_int_all_link;
+		if (rfctl->txpwr_lmt_link_6g_cate_map_applied_num) /* from per_link cisr */
+			req->txpwr_lmt_6g_cate_map = rfctl->txpwr_lmt_link_6g_cate_map;
 		else {
 			if (req->inr == RTW_REGD_SET_BY_COUNTRY_IE) /* REGD_SRC_OS, without 6G link */
 				req->txpwr_lmt_6g_cate_map = BIT(TXPWR_LMT_6G_CATE_VLP);
@@ -2715,7 +3044,6 @@ void rtw_rfctl_apply_init_chplan(struct rf_ctl_t *rfctl, bool req_lock)
 	rtw_rfctl_update_cisr_collect_mode(rfctl, true, __func__);
 	rfctl->init_user_req_is_ww = rtw_rfctl_is_init_user_req_world_wide(rfctl);
 	#if CONFIG_IEEE80211_BAND_6GHZ
-	rtw_rfctl_update_default_chplan_cate_6g_map(rfctl, true, __func__);
 	rtw_rfctl_update_regd_req_txpwr_6g_cate_map(rfctl);
 	#endif
 #endif
@@ -2745,7 +3073,7 @@ static void get_str_of_set_chplan_keys(char *buf, u8 buf_len, struct SetChannelP
 				CHPLAN_KEYS_FMT_80211D_6G
 				" %s"
 				, param->cisr_alink_id >= RTW_RLINK_MAX ? '-' : '0' + param->cisr_alink_id
-				, ALPHA2_ARG(param->cisr.alpha2)
+				, ALPHA2_ARG(param->cisr.country_str)
 				CHPLAN_KEYS_ARG_80211D_6G
 				, cis_status_str(param->cisr.status));
 		} else
@@ -2756,15 +3084,11 @@ static void get_str_of_set_chplan_keys(char *buf, u8 buf_len, struct SetChannelP
 		if (param->has_country)
 			pos += snprintf(pos, buf_len - (pos - buf), "alpha2:"ALPHA2_FMT, ALPHA2_ARG(param->country_ent.alpha2));
 		else {
-			if (param->channel_plan == RTW_CHPLAN_UNSPECIFIED)
-				pos += snprintf(pos, buf_len - (pos - buf), "chplan:UNSPEC");
-			else
+			if (param->channel_plan != RTW_CHPLAN_UNSPECIFIED)
 				pos += snprintf(pos, buf_len - (pos - buf), "chplan:0x%02X", param->channel_plan);
 
 			#if CONFIG_IEEE80211_BAND_6GHZ
-			if (param->channel_plan_6g == RTW_CHPLAN_6G_UNSPECIFIED)
-				pos += snprintf(pos, buf_len - (pos - buf), " chplan_6g:UNSPEC");
-			else
+			if (param->channel_plan_6g != RTW_CHPLAN_6G_UNSPECIFIED)
 				pos += snprintf(pos, buf_len - (pos - buf), " chplan_6g:0x%02X", param->channel_plan_6g);
 			#endif
 		}
@@ -2772,8 +3096,11 @@ static void get_str_of_set_chplan_keys(char *buf, u8 buf_len, struct SetChannelP
 		#if CONFIG_IEEE80211_BAND_6GHZ
 		if (param->env < RTW_ENV_NUM)
 			pos += snprintf(pos, buf_len - (pos - buf), " env:%s", env_str(param->env));
-		else
-			pos += snprintf(pos, buf_len - (pos - buf), " env:UNSPEC");
+		if (param->force_txpwr_lmt_6g_cate < TXPWR_LMT_6G_CATE_NUM)
+			pos += snprintf(pos, buf_len - (pos - buf), " force_txpwr_lmt_6g_cate:%s"
+				, txpwr_lmt_6g_cate_str(param->force_txpwr_lmt_6g_cate));
+		if (param->force_txpwr_lmt_6g_cate == TXPWR_LMT_6G_CATE_NONE)
+			pos += snprintf(pos, buf_len - (pos - buf), " force_txpwr_lmt_6g_cate:AUTO");
 		#endif
 	}
 }
@@ -2800,10 +3127,11 @@ static char *get_str_of_u8_array(char *buf, size_t buf_len, u8 array[], size_t a
 }
 #endif
 
-#define RTW_PRIV_USER_SET_DOMAIN	BIT0
-#define RTW_PRIV_USER_SET_DOMAIN_6G	BIT1
-#define RTW_PRIV_USER_SET_COUNTRY	BIT2
-#define RTW_PRIV_USER_SET_ENV		BIT3
+#define RTW_PRIV_USER_SET_DOMAIN		BIT0
+#define RTW_PRIV_USER_SET_DOMAIN_6G		BIT1
+#define RTW_PRIV_USER_SET_COUNTRY		BIT2
+#define RTW_PRIV_USER_SET_ENV			BIT3
+#define RTW_PRIV_USER_SET_TXPWR_LMT_6G_CATE	BIT4
 
 static int rtw_chplan_rtk_priv_req_prehdl_domain_code(struct rf_ctl_t *rfctl, struct SetChannelPlan_param *param, const char *caller)
 {
@@ -3087,6 +3415,9 @@ static bool rtw_chplan_rtk_priv_req_prehdl_user(struct rf_ctl_t *rfctl, struct S
 		param->priv_user_set_bmp |= RTW_PRIV_USER_SET_DOMAIN_6G;
 	if (param->env < RTW_ENV_NUM)
 		param->priv_user_set_bmp |= RTW_PRIV_USER_SET_ENV;
+	if (param->force_txpwr_lmt_6g_cate < TXPWR_LMT_6G_CATE_NUM
+		|| param->force_txpwr_lmt_6g_cate == TXPWR_LMT_6G_CATE_NONE)
+		param->priv_user_set_bmp |= RTW_PRIV_USER_SET_TXPWR_LMT_6G_CATE;
 #endif
 
 	if (!param->priv_user_set_bmp && !param->confs.set_types) {
@@ -3139,6 +3470,16 @@ static bool rtw_chplan_rtk_priv_req_prehdl_user(struct rf_ctl_t *rfctl, struct S
 		}
 	}
 
+#if CONFIG_IEEE80211_BAND_6GHZ
+	if (param->priv_user_set_bmp & RTW_PRIV_USER_SET_TXPWR_LMT_6G_CATE) {
+		if (rfctl->force_txpwr_lmt_6g_cate != param->force_txpwr_lmt_6g_cate) {
+			rfctl->force_txpwr_lmt_6g_cate = param->force_txpwr_lmt_6g_cate;
+			effected = true;
+		} else
+			param->priv_user_set_bmp &= ~RTW_PRIV_USER_SET_TXPWR_LMT_6G_CATE;
+	}
+#endif
+
 	/* check and update confs */
 	rtw_chplan_rtk_priv_req_prehdl_confs(rfctl, &param->confs, caller);
 
@@ -3148,11 +3489,31 @@ exit:
 
 #ifdef CONFIG_80211D
 #if CONFIG_IEEE80211_BAND_6GHZ
-static u8 cisr_get_txpwr_lmt_6g_cate_map(struct country_ie_slave_record *cisr)
+u8 cisr_get_largest_chplan_6g_cate(const struct country_ie_slave_record *cisr)
+{
+	u8 cate_6g_map = cisr->chplan.cate_6g_map & reg_info_to_chplan_6g_cate_map(cisr->reg_info);
+
+	if (cate_6g_map) {
+		int i;
+
+		for (i = CHPLAN_6G_CATE_NUM - 1; i >= 0; i--)
+			if (cate_6g_map & BIT(i))
+				break;
+		if (i >= 0)
+			return i;
+	}
+	return CHPLAN_6G_CATE_NUM;
+}
+
+static u8 cisr_get_txpwr_lmt_6g_cate_map(const struct country_ie_slave_record *cisr)
 {
 	if (cisr->band == BAND_ON_6G) {
-		if (!IS_6G_REG_INFO_RSVD(cisr->reg_info))
-			return reg_info_to_txpwr_lmt_6g_cate_map(cisr->reg_info);
+		if (!IS_6G_REG_INFO_RSVD(cisr->reg_info)) {
+			u8 chplan_6g_cate = cisr_get_largest_chplan_6g_cate(cisr);
+
+			if (chplan_6g_cate < CHPLAN_6G_CATE_NUM)
+				return chplan_6g_cate_to_txpwr_lmt_6g_cate_map(chplan_6g_cate);
+		}
 		return BIT(TXPWR_LMT_6G_CATE_VLP);
 	}
 	return 0;
@@ -3161,17 +3522,18 @@ static u8 cisr_get_txpwr_lmt_6g_cate_map(struct country_ie_slave_record *cisr)
 
 enum cisr_match {
 	CISR_MATCH		= 0, /* identically match */
-	CISR_MATCH_CHPLAN	= 1, /* same chplan result (including txpwr_lmt_6g_cate_bmp) */
+	CISR_MATCH_CHPLAN	= 1, /* same chplan result (including txpwr_lmt_6g_cate_bmp, tpes) */
 	CISR_DIFF		/* different (not above cases) */
 };
 
-static enum cisr_match rtw_cisr_compare(struct country_ie_slave_record *a, struct country_ie_slave_record *b)
+static enum cisr_match rtw_cisr_compare(const struct country_ie_slave_record *a, const struct country_ie_slave_record *b)
 {
 	if (_rtw_memcmp(a, b, sizeof(*a)) == true)
 		return CISR_MATCH;
 	if (_rtw_memcmp(&a->chplan, &b->chplan, sizeof(a->chplan)) == true
 		#if CONFIG_IEEE80211_BAND_6GHZ
 		&& cisr_get_txpwr_lmt_6g_cate_map(a) == cisr_get_txpwr_lmt_6g_cate_map(b)
+		&& _rtw_memcmp(&a->tpes, &b->tpes, sizeof(a->tpes)) == true
 		#endif
 	)
 		return CISR_MATCH_CHPLAN;
@@ -3179,39 +3541,30 @@ static enum cisr_match rtw_cisr_compare(struct country_ie_slave_record *a, struc
 }
 
 #if CONFIG_IEEE80211_BAND_6GHZ
-static void rtw_rfctl_update_6g_cate_map_int_all_link(struct rf_ctl_t *rfctl)
+static void rtw_rfctl_update_link_6g_cate_map(struct rf_ctl_t *rfctl)
 {
-	int i, j;
-	u8 bmp;
-	u8 applied_link_num;
-	bool include_nocountry = !rfctl->cis_enabled; /* if cis is not enabled, include nocountry directly */
+	if (rfctl->force_txpwr_lmt_6g_cate == TXPWR_LMT_6G_CATE_NONE) {
+		int i, j;
+		u8 bmp = 0;
+		u8 applied_link_num = 0;
 
-search:
-	bmp = 0;
-	applied_link_num = 0;
-	for (i = 0; i < CONFIG_IFACE_NUMBER; i++) {
-		for (j = 0; j < RTW_RLINK_MAX; j++) {
-			if (rfctl->cisr[i][j].band != BAND_ON_6G
-				|| (!include_nocountry && rfctl->cisr[i][j].status == COUNTRY_IE_SLAVE_NOCOUNTRY))
-				continue;
-
-			if (bmp == 0)
-				bmp = cisr_get_txpwr_lmt_6g_cate_map(&rfctl->cisr[i][j]);
-			else
-				bmp &= cisr_get_txpwr_lmt_6g_cate_map(&rfctl->cisr[i][j]);
-
-			applied_link_num++;
+		for (i = 0; i < CONFIG_IFACE_NUMBER; i++) {
+			for (j = 0; j < RTW_RLINK_MAX; j++) {
+				if (!rtw_rfctl_cisr_has_valid_link_6g_cate(rfctl, &rfctl->cisr[i][j]))
+					continue;
+				bmp |= cisr_get_txpwr_lmt_6g_cate_map(&rfctl->cisr[i][j]);
+				applied_link_num++;
+			}
 		}
+
+		rfctl->txpwr_lmt_link_6g_cate_map = bmp;
+		rfctl->txpwr_lmt_link_6g_cate_map_applied_num = applied_link_num;
+		return;
 	}
 
-	if (!applied_link_num && !include_nocountry) {
-		/* if no applied link, include 6G link with NOCOUNTRY status*/
-		include_nocountry = true;
-		goto search;
-	}
-
-	rfctl->txpwr_lmt_6g_cate_map_int_all_link = bmp;
-	rfctl->txpwr_lmt_6g_cate_map_int_link_num = applied_link_num;
+	/* below is for force_txpwr_lmt_6g_cate case */
+	rfctl->txpwr_lmt_link_6g_cate_map = BIT(rfctl->force_txpwr_lmt_6g_cate);
+	rfctl->txpwr_lmt_link_6g_cate_map_applied_num = 255;
 }
 
 static void rtw_rfctl_get_txpwr_lmt_6g_cate_map_from_init_user(struct rf_ctl_t *rfctl
@@ -3283,7 +3636,7 @@ static bool rtw_chplan_update_per_link_cisr(struct rf_ctl_t *rfctl, u8 iface_id
 	}
 
 #if CONFIG_IEEE80211_BAND_6GHZ
-	rtw_rfctl_update_6g_cate_map_int_all_link(rfctl);
+	rtw_rfctl_update_link_6g_cate_map(rfctl);
 #endif
 
 	effected = true;
@@ -3310,10 +3663,10 @@ static bool rtw_regd_req_list_add_country_ie_req(struct rf_ctl_t *rfctl
 		txpwr_lmt_6g_cate_map = cisr_get_txpwr_lmt_6g_cate_map(cisr);
 	} else {
 		/*  ENV_BSS doesn't affect env and reg_info, assign value acording to per link status or init/user req */
-		if (rfctl->txpwr_lmt_6g_cate_map_int_link_num) {
+		if (rfctl->txpwr_lmt_link_6g_cate_map_applied_num) {
 			env = RTW_ENV_NUM;
 			reg_info = CIS_6G_REG_RSVD;
-			txpwr_lmt_6g_cate_map = rfctl->txpwr_lmt_6g_cate_map_int_all_link;
+			txpwr_lmt_6g_cate_map = rfctl->txpwr_lmt_link_6g_cate_map;
 		} else {
 			rtw_rfctl_get_txpwr_lmt_6g_cate_map_from_init_user(rfctl
 				, &env, &reg_info, &txpwr_lmt_6g_cate_map);
@@ -3327,11 +3680,15 @@ static bool rtw_regd_req_list_add_country_ie_req(struct rf_ctl_t *rfctl
 		req = LIST_CONTAINOR(cur, struct regd_req_t, list);
 		if (req->inr == RTW_REGD_SET_BY_COUNTRY_IE
 			&& _rtw_memcmp(&req->chplan, chplan, sizeof(*chplan)) == true
-			#if CONFIG_IEEE80211_BAND_6GHZ
-			/* only compare txpwr_lmt_6g_cate_map */
-			&& req->txpwr_lmt_6g_cate_map == txpwr_lmt_6g_cate_map
-			#endif
 		) {
+			#if CONFIG_IEEE80211_BAND_6GHZ
+			/* same chplan, take union of txpwr_lmt_6g_cate_map */
+			if (req->ref_cnt == 0) {
+				req->_pre_txpwr_lmt_6g_cate_map = req->txpwr_lmt_6g_cate_map;
+				req->txpwr_lmt_6g_cate_map = txpwr_lmt_6g_cate_map;
+			} else
+				req->txpwr_lmt_6g_cate_map |= txpwr_lmt_6g_cate_map;
+			#endif
 			req->ref_cnt++;
 			break;
 		}
@@ -3436,6 +3793,26 @@ static bool rtw_regd_req_list_clear_zero_ref_req_by_inr(struct rf_ctl_t *rfctl, 
 	return del;
 }
 
+#if CONFIG_IEEE80211_BAND_6GHZ
+static bool rtw_regd_req_list_chk_txpwr_lmt_6g_cate_map_changed(struct rf_ctl_t *rfctl, enum rtw_regd_inr inr)
+{
+	struct regd_req_t *req;
+	_list *cur, *head;
+
+	head = &rfctl->regd_req_list;
+	cur = get_next(head);
+	while (rtw_end_of_queue_search(head, cur) == _FALSE) {
+		req = LIST_CONTAINOR(cur, struct regd_req_t, list);
+		cur = get_next(cur);
+		if (req->inr != inr)
+			continue;
+		if (req->_pre_txpwr_lmt_6g_cate_map != req->txpwr_lmt_6g_cate_map)
+			return true;
+	}
+	return false;
+}
+#endif
+
 static bool rtw_chplan_rtk_priv_req_prehdl_country_ie(_adapter *adapter, struct SetChannelPlan_param *param, const char *caller)
 {
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
@@ -3450,7 +3827,7 @@ static bool rtw_chplan_rtk_priv_req_prehdl_country_ie(_adapter *adapter, struct 
 		#ifdef CONFIG_RTW_DEBUG
 		if (rtw_drv_log_level >= _DRV_DEBUG_) {
 			RTW_PRINT("%s cisr before\n", __func__);
-			dump_country_ie_slave_records(RTW_DBGDUMP, rfctl, 0);
+			dump_country_ie_slave_records(RTW_DBGDUMP, rfctl, false, false);
 		}
 		#endif
 
@@ -3467,7 +3844,7 @@ static bool rtw_chplan_rtk_priv_req_prehdl_country_ie(_adapter *adapter, struct 
 		#ifdef CONFIG_RTW_DEBUG
 		if (rtw_drv_log_level >= _DRV_DEBUG_) {
 			RTW_PRINT("%s cisr after\n", __func__);
-			dump_country_ie_slave_records(RTW_DBGDUMP, rfctl, 0);
+			dump_country_ie_slave_records(RTW_DBGDUMP, rfctl, false, false);
 		}
 		#endif
 	}
@@ -3482,10 +3859,13 @@ static bool rtw_chplan_rtk_priv_req_prehdl_country_ie(_adapter *adapter, struct 
 				effected |= rtw_regd_req_list_add_country_ie_req_from_per_link_cisr(rfctl);
 				if (rfctl->cis_flags & CISF_ENV_BSS)
 					effected |= rtw_regd_req_list_add_country_ie_req_from_scan_stat_cisr(rfctl);
-			}
+			}	
 		}
 
 		effected |= rtw_regd_req_list_clear_zero_ref_req_by_inr(rfctl, RTW_REGD_SET_BY_COUNTRY_IE);
+		#if CONFIG_IEEE80211_BAND_6GHZ
+		effected |= rtw_regd_req_list_chk_txpwr_lmt_6g_cate_map_changed(rfctl, RTW_REGD_SET_BY_COUNTRY_IE);
+		#endif
 	}
 	confs->set_types &= ~apply_confs_bmp;
 
@@ -3663,7 +4043,7 @@ exit:
 #ifdef CONFIG_80211D
 	rfctl->init_user_req_is_ww = rtw_rfctl_is_init_user_req_world_wide(rfctl);
 	#if CONFIG_IEEE80211_BAND_6GHZ
-	rtw_rfctl_update_default_chplan_cate_6g_map(rfctl, false, caller);
+	rtw_rfctl_update_link_6g_cate_map(rfctl);
 	rtw_rfctl_update_regd_req_txpwr_6g_cate_map(rfctl);
 	#endif
 #endif
@@ -3811,17 +4191,17 @@ static void rtw_bss_regu_status_update(struct rf_ctl_t *rfctl)
 
 		if (!sta_link) {
 			/* no sta link, trigger bss ch select to get out of forbid status */
-			_adapter *m_iface = rtw_mi_get_ap_mesh_iface_by_hwband(dvobj, band_idx);
+			struct _ADAPTER_LINK *m_iflink = rtw_mi_get_ap_mesh_iflink_by_hwband(dvobj, band_idx);
 			u8 ifbmp_s = rtw_mi_get_lgd_sta_ifbmp_by_hwband(dvobj, band_idx);
 
 			RTW_INFO(FUNC_HWBAND_FMT" trigger ch select for forbid bss\n", FUNC_HWBAND_ARG(band_idx));
 
-			if (!m_iface) {
+			if (!m_iflink) {
 				rtw_warn_on(1);
 				continue;
 			}
 
-			rtw_change_bss_bchbw_cmd(m_iface, RTW_CMDF_DIRECTLY
+			rtw_change_bss_bchbw_cmd(m_iflink->adapter, RTW_CMDF_DIRECTLY
 				, ifbmp_m, ifbmp_s, REQ_BAND_NONE, REQ_CH_NONE, REQ_BW_ORI, REQ_OFFSET_NONE);
 		}
 	}
@@ -3853,6 +4233,9 @@ u8 rtw_set_chplan_hdl(_adapter *adapter, u8 *pbuf)
 
 #if CONFIG_TXPWR_LIMIT
 	rtw_txpwr_update_cur_lmt_regs(dvobj, false);
+	#if CONFIG_IEEE80211_BAND_6GHZ
+	rtw_txpwr_hal_set_tpe_infos(dvobj);
+	#endif
 #endif
 
 	rtw_edcca_mode_update(dvobj, false);
@@ -3893,7 +4276,8 @@ exit:
 
 static u8 _rtw_set_chplan_cmd(_adapter *adapter, int flags
 	, u8 chplan, u8 chplan_6g, const struct country_chplan *country_ent
-	, enum rtw_env_t env, enum regd_src_t regd_src, enum rtw_regd_inr inr
+	, enum rtw_env_t env, enum txpwr_lmt_6g_cate_t force_txpwr_lmt_6g_cate
+	, enum regd_src_t regd_src, enum rtw_regd_inr inr
 	, const struct country_ie_slave_record *cisr, u8 cisr_alink_id
 	, struct chplan_confs *confs)
 {
@@ -3936,6 +4320,7 @@ static u8 _rtw_set_chplan_cmd(_adapter *adapter, int flags
 #if CONFIG_IEEE80211_BAND_6GHZ
 	parm->channel_plan_6g = chplan_6g;
 	parm->env = env;
+	parm->force_txpwr_lmt_6g_cate = force_txpwr_lmt_6g_cate;
 #endif
 #ifdef CONFIG_80211D
 	if (cisr) {
@@ -4007,6 +4392,7 @@ static u8 _rtw_set_chplan_cmd(_adapter *adapter, int flags
 			#if CONFIG_IEEE80211_BAND_6GHZ
 			parm->channel_plan_6g = chplan_6g;
 			parm->env = env;
+			parm->force_txpwr_lmt_6g_cate = force_txpwr_lmt_6g_cate;
 			#endif
 			#ifdef CONFIG_80211D
 			if (cisr) {
@@ -4037,7 +4423,8 @@ u8 rtw_set_chplan_cmd(_adapter *adapter, int flags, u8 chplan, u8 chplan_6g
 	, enum rtw_env_t env, enum rtw_regd_inr inr)
 {
 	return _rtw_set_chplan_cmd(adapter, flags
-		, chplan, chplan_6g, NULL, env
+		, chplan, chplan_6g, NULL
+		, env, TXPWR_LMT_6G_CATE_NUM
 		, REGD_SRC_RTK_PRIV, inr
 		, NULL, RTW_RLINK_MAX
 		, NULL);
@@ -4069,7 +4456,8 @@ cmd:
 	RTW_PRINT("%s country_code:\"%c%c\"\n", __func__, country_code[0], country_code[1]);
 
 	return _rtw_set_chplan_cmd(adapter, flags
-		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, &ent, env
+		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, &ent
+		, env, TXPWR_LMT_6G_CATE_NUM
 		, REGD_SRC_RTK_PRIV, inr
 		, NULL, RTW_RLINK_MAX
 		, NULL);
@@ -4080,17 +4468,31 @@ u8 rtw_set_env_cmd(_adapter *adapter, int flags, enum rtw_env_t env
 	, enum regd_src_t regd_src, enum rtw_regd_inr inr)
 {
 	return _rtw_set_chplan_cmd(adapter, flags
-		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL, env
+		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL
+		, env, TXPWR_LMT_6G_CATE_NUM
 		, regd_src, inr
 		, NULL, RTW_RLINK_MAX
 		, NULL);
 }
-#endif
+
+u8 rtw_set_force_txpwr_lmt_6g_cate_cmd(_adapter *adapter, int flags
+	, enum txpwr_lmt_6g_cate_t force_txpwr_lmt_6g_cate
+	, enum regd_src_t regd_src, enum rtw_regd_inr inr)
+{
+	return _rtw_set_chplan_cmd(adapter, flags
+		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL
+		, RTW_ENV_NUM, force_txpwr_lmt_6g_cate
+		, regd_src, inr
+		, NULL, RTW_RLINK_MAX
+		, NULL);
+}
+#endif /* CONFIG_IEEE80211_BAND_6GHZ */
 
 u8 rtw_set_chplan_confs_cmd(_adapter *adapter, int flags, struct chplan_confs *confs)
 {
 	return _rtw_set_chplan_cmd(adapter, flags
-		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL, RTW_ENV_NUM
+		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL
+		, RTW_ENV_NUM, TXPWR_LMT_6G_CATE_NUM
 		, REGD_SRC_RTK_PRIV, RTW_REGD_SET_BY_USER
 		, NULL, RTW_RLINK_MAX
 		, confs);
@@ -4304,42 +4706,77 @@ u16 rtw_parse_chplan_confs_cmd_str(struct chplan_confs *confs, char *str)
 #endif /* CONFIG_PROC_DEBUG */
 
 #ifdef CONFIG_80211D
-u8 rtw_alink_apply_recv_regu_ies_cmd(struct _ADAPTER_LINK *alink, int flags, enum band_type band,u8 opch
-	, const u8 *country_ie, enum country_ie_slave_6g_reg_info reg_info)
+static u8 rtw_alink_apply_recv_cisr_cmd(struct _ADAPTER_LINK *alink, int flags, struct country_ie_slave_record *cisr)
 {
-	struct country_ie_slave_record cisr;
-
-	rtw_get_cisr_from_recv_regu_ies(adapter_to_rfctl(alink->adapter), band, opch
-		, country_ie, reg_info
-		, &cisr);
-
 	return _rtw_set_chplan_cmd(alink->adapter, flags
-		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL, RTW_ENV_NUM
+		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL
+		, RTW_ENV_NUM, TXPWR_LMT_6G_CATE_NUM
 		, REGD_SRC_RTK_PRIV, RTW_REGD_SET_BY_COUNTRY_IE
-		, &cisr, rtw_adapter_link_get_id(alink)
+		, cisr, rtw_adapter_link_get_id(alink)
 		, NULL);
 }
 
-u8 rtw_apply_recv_regu_ies_cmd(_adapter *adapter, int flags, enum band_type band,u8 opch
-	, const u8 *country_ie, enum country_ie_slave_6g_reg_info reg_info)
+static u8 rtw_apply_recv_cisr_cmd(_adapter *adapter, int flags, struct country_ie_slave_record *cisr)
+{
+	return _rtw_set_chplan_cmd(adapter, flags
+		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL
+		, RTW_ENV_NUM, TXPWR_LMT_6G_CATE_NUM
+		, REGD_SRC_RTK_PRIV, RTW_REGD_SET_BY_COUNTRY_IE
+		, cisr, RTW_RLINK_MAX
+		, NULL);
+}
+
+u8 rtw_alink_apply_recv_regu_parm_cmd(struct _ADAPTER_LINK *alink, int flags, enum band_type band,u8 opch
+	, const u8 *country_str, enum country_ie_slave_6g_reg_info reg_info, struct rtw_tpe_t *tpes)
 {
 	struct country_ie_slave_record cisr;
 
-	rtw_get_cisr_from_recv_regu_ies(adapter_to_rfctl(adapter), band, opch
-		, country_ie, reg_info
+	rtw_get_cisr_from_regu_settings(adapter_to_rfctl(alink->adapter), band, opch
+		, country_str, reg_info, tpes
 		, &cisr);
 
-	return _rtw_set_chplan_cmd(adapter, flags
-		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL, RTW_ENV_NUM
-		, REGD_SRC_RTK_PRIV, RTW_REGD_SET_BY_COUNTRY_IE
-		, &cisr, RTW_RLINK_MAX
-		, NULL);
+	return rtw_alink_apply_recv_cisr_cmd(alink, flags, &cisr);
+}
+
+u8 rtw_apply_recv_regu_parm_cmd(_adapter *adapter, int flags, enum band_type band,u8 opch
+	, const u8 *country_str, enum country_ie_slave_6g_reg_info reg_info, struct rtw_tpe_t *tpes)
+{
+	struct country_ie_slave_record cisr;
+
+	rtw_get_cisr_from_regu_settings(adapter_to_rfctl(adapter), band, opch
+		, country_str, reg_info, tpes
+		, &cisr);
+
+	return rtw_apply_recv_cisr_cmd(adapter, flags, &cisr);
+}
+
+u8 rtw_alink_clear_recv_regu_cmd(struct _ADAPTER_LINK *alink, int flags)
+{
+	struct country_ie_slave_record cisr;
+
+	rtw_get_cisr_from_regu_settings(adapter_to_rfctl(alink->adapter), 0, 0
+		, NULL, CIS_6G_REG_RSVD, NULL
+		, &cisr);
+
+	return rtw_alink_apply_recv_cisr_cmd(alink, flags, &cisr);
+}
+
+u8 rtw_clear_recv_regu_cmd(_adapter *adapter, int flags)
+{
+	struct country_ie_slave_record cisr;
+
+	rtw_get_cisr_from_regu_settings(adapter_to_rfctl(adapter), 0, 0
+		, NULL, CIS_6G_REG_RSVD, NULL
+		, &cisr);
+
+	return rtw_apply_recv_cisr_cmd(adapter, flags, &cisr);
 }
 
 u8 rtw_apply_scan_network_country_ie_cmd(_adapter *adapter, int flags)
 {
 	return _rtw_set_chplan_cmd(adapter, flags
-		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL, RTW_ENV_NUM
+		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, NULL
+		, RTW_ENV_NUM, TXPWR_LMT_6G_CATE_NUM
 		, REGD_SRC_RTK_PRIV, RTW_REGD_SET_BY_COUNTRY_IE
 		, NULL, RTW_RLINK_MAX
 		, NULL);
@@ -4389,7 +4826,8 @@ u8 rtw_sync_os_regd_cmd(_adapter *adapter, int flags, const char *country_code
 	/* TODO: dfs_region */
 
 	return _rtw_set_chplan_cmd(adapter, flags
-		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, &ent, env
+		, RTW_CHPLAN_UNSPECIFIED, RTW_CHPLAN_6G_UNSPECIFIED, &ent
+		, env, TXPWR_LMT_6G_CATE_NUM
 		, REGD_SRC_OS, inr
 		, NULL, RTW_RLINK_MAX
 		, NULL);
@@ -4436,6 +4874,7 @@ u8 rtw_get_chplan_hdl(_adapter *adapter, u8 *pbuf)
 #if CONFIG_IEEE80211_BAND_6GHZ
 	chplan->chplan_6g = rfctl->domain_code_6g;
 	chplan->env_bmp = rfctl->env_bmp;
+	chplan->force_txpwr_lmt_6g_cate = rfctl->force_txpwr_lmt_6g_cate;
 #endif
 #if CONFIG_TXPWR_LIMIT
 	chplan->txpwr_lmt_names_len_total = tl_reg_names_len_total;
@@ -4589,23 +5028,31 @@ void rtw_free_get_chplan_resp(struct get_chplan_resp *chplan)
 	rtw_vmfree(chplan, sz);
 }
 
-bool rtw_network_chk_opch_status(struct rf_ctl_t *rfctl
-	, struct wlan_network *network)
+bool rtw_network_chk_opch_status_rsn(const struct rf_ctl_t *rfctl, const struct wlan_network *network
+	, enum network_opch_status *rsn)
 {
 	RT_CHANNEL_INFO *chinfo;
+	enum network_opch_status status = NETWORK_OPCH_USABLE;
 	bool ret = false;
 
 	chinfo = rtw_chset_get_chinfo_by_bch(&rfctl->chset
 		, BSS_EX_OP_BAND(&network->network), BSS_EX_OP_CH(&network->network), false);
-	if (!chinfo)
+	if (!chinfo) {
+		status = NETWORK_OPCH_DISABLE;
 		goto exit;
+	}
 
-	if (CH_IS_NON_OCP(chinfo))
+	if (CH_IS_NON_OCP(chinfo)) {
+		status = NETWORK_OPCH_NOCP;
 		goto exit;
+	}
 
 	ret = true;
 
 exit:
+	if (rsn)
+		*rsn = status;
+
 	return ret;
 }
 
@@ -4628,95 +5075,80 @@ static bool rtw_iface_accept_country_ie(_adapter *adapter)
 	return true;
 }
 
-#if CONFIG_IEEE80211_BAND_6GHZ
-static enum country_ie_slave_6g_reg_info rtw_ies_get_6g_reg_info(const u8 *ies, uint ies_len)
+static bool rtw_rfctl_link_recv_regu_infos_not_empty(struct rf_ctl_t *rfctl, u8 iface_id, u8 alink_id)
 {
-	const u8 *he_op_ie;
-	sint he_op_ielen;
-
-	he_op_ie = rtw_get_ext_ie(ies, WLAN_EID_EXTENSION_HE_OPERATION, &he_op_ielen, ies_len);
-	if (he_op_ie && he_op_ielen >= 1 + HE_OPER_PARAMS_LEN && GET_HE_OP_PARA_6GHZ_OP_INFO_PRESENT(he_op_ie + 3)) {
-		u8 offset = HE_OPER_PARAMS_LEN + HE_OPER_BSS_COLOR_INFO_LEN + HE_OPER_BASIC_MCS_LEN
-			+ (GET_HE_OP_PARA_VHT_OP_INFO_PRESENT(he_op_ie + 3) ? HE_OPER_VHT_OPER_INFO_LEN : 0)
-			+ (GET_HE_OP_PARA_CO_HOSTED_BSS(he_op_ie + 3) ? HE_OPER_MAX_COHOST_BSSID_LEN : 0);
-
-		if (he_op_ielen >= offset)
-			return GET_HE_OP_INFO_REG_INFO(he_op_ie + 3 + offset);
-	}
-	return CIS_6G_REG_RSVD;
+	return rfctl->recv_country_str[iface_id][alink_id][0] != 0
+		|| rfctl->recv_country_str[iface_id][alink_id][1] != 0
+		|| rfctl->recv_country_str[iface_id][alink_id][2] != 0
+		#if CONFIG_IEEE80211_BAND_6GHZ
+		|| rfctl->recv_6g_reg_info[iface_id][alink_id] != CIS_6G_REG_RSVD
+		|| rfctl->recv_tpes[iface_id][alink_id].cnt != 0
+		#endif
+		;
 }
-#endif
+
+static void rtw_rfctl_reset_link_recv_regu_infos(struct rf_ctl_t *rfctl, u8 iface_id, u8 alink_id)
+{
+	rfctl->recv_country_str[iface_id][alink_id][0] = 0;
+	rfctl->recv_country_str[iface_id][alink_id][1] = 0;
+	rfctl->recv_country_str[iface_id][alink_id][2] = 0;
+	#if CONFIG_IEEE80211_BAND_6GHZ
+	rfctl->recv_6g_reg_info[iface_id][alink_id] = CIS_6G_REG_RSVD;
+	rfctl->recv_tpes[iface_id][alink_id].cnt = 0;
+	#endif
+}
 
 void rtw_alink_joinbss_update_regulatory(struct _ADAPTER_LINK *alink, const WLAN_BSSID_EX *network)
 {
 	_adapter *adapter = alink->adapter;
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+	u8 iface_id = adapter->iface_id;
+	u8 alink_id = rtw_adapter_link_get_id(alink);
 
 	if (rfctl->collect_link_cisr) {
-		u8 iface_id = adapter->iface_id;
-		u8 alink_id = rtw_adapter_link_get_id(alink);
-		const u8 *country_ie = NULL;
-		sint country_ie_len = 0;
-		enum country_ie_slave_6g_reg_info reg_info = CIS_6G_REG_RSVD;
-
-		if (rtw_iface_accept_country_ie(adapter)) {
-			country_ie = rtw_get_ie(BSS_EX_TLV_IES(network)
-				, WLAN_EID_COUNTRY, &country_ie_len, BSS_EX_TLV_IES_LEN(network));
-			if (country_ie) {
-				if (country_ie_len < 3) {
-					country_ie = NULL;
-					country_ie_len = 0;
-				} else
-					country_ie_len += 2;
-			}
-		}
-
+		struct country_ie_slave_record cisr;
 		#if CONFIG_IEEE80211_BAND_6GHZ
-		if (BSS_EX_OP_BAND(network) == BAND_ON_6G)
-			reg_info = rtw_ies_get_6g_reg_info(BSS_EX_TLV_IES(network), BSS_EX_TLV_IES_LEN(network));
+		u8 i;
 		#endif
 
-		if (country_ie) {
-			rtw_buf_update(&rfctl->recv_country_ie[iface_id][alink_id]
-				, &rfctl->recv_country_ie_len[iface_id][alink_id], country_ie, country_ie_len);
-		} else {
-			rtw_buf_free(&rfctl->recv_country_ie[iface_id][alink_id]
-				, &rfctl->recv_country_ie_len[iface_id][alink_id]);
-		}
+		rtw_get_cisr_from_regu_ies(rfctl, BSS_EX_OP_BAND(network), BSS_EX_OP_CH(network)
+			, BSS_EX_TLV_IES(network), BSS_EX_TLV_IES_LEN(network), rtw_iface_accept_country_ie(adapter)
+			, &cisr);
 
+		rfctl->recv_country_str[iface_id][alink_id][0] = cisr.country_str[0];
+		rfctl->recv_country_str[iface_id][alink_id][1] = cisr.country_str[1];
+		rfctl->recv_country_str[iface_id][alink_id][2] = cisr.country_str[2];
 		#if CONFIG_IEEE80211_BAND_6GHZ
-		rfctl->recv_6g_reg_info[iface_id][alink_id] = reg_info;
+		rfctl->recv_6g_reg_info[iface_id][alink_id] = cisr.reg_info;
+		for (i = 0; i < cisr.tpes.cnt; i++)
+			rfctl->recv_tpes[iface_id][alink_id].ele[i] = cisr.tpes.ele[i];
+		rfctl->recv_tpes[iface_id][alink_id].cnt = cisr.tpes.cnt;
 		#endif
 
-		if (rtw_alink_apply_recv_regu_ies_cmd(alink, RTW_CMDF_DIRECTLY
-			, BSS_EX_OP_BAND(network), BSS_EX_OP_CH(network), country_ie, reg_info) != _SUCCESS)
-			RTW_WARN(FUNC_ADPT_FMT" id:%u rtw_alink_apply_recv_regu_ies_cmd() fail\n", FUNC_ADPT_ARG(adapter), alink_id);
+		if (rtw_alink_apply_recv_cisr_cmd(alink, RTW_CMDF_DIRECTLY, &cisr) != _SUCCESS)
+			RTW_WARN(FUNC_ADPT_FMT" id:%u rtw_alink_apply_recv_cisr_cmd() fail\n", FUNC_ADPT_ARG(adapter), alink_id);
+	} else {
+		rtw_rfctl_reset_link_recv_regu_infos(rfctl, iface_id, alink_id);
+
+		if (rtw_alink_apply_recv_regu_parm_cmd(alink, RTW_CMDF_DIRECTLY
+				, BSS_EX_OP_BAND(network), BSS_EX_OP_CH(network)
+				, rfctl->recv_country_str[iface_id][alink_id]
+				, RFCTL_RECV_6G_REG_INFO(rfctl, iface_id, alink_id)
+				, RFCTL_RECV_TPES(rfctl, iface_id, alink_id)) != _SUCCESS)
+			RTW_WARN(FUNC_ADPT_FMT" id:%u rtw_alink_apply_recv_regu_parm_cmd() fail\n", FUNC_ADPT_ARG(adapter), alink_id);
 	}
 }
 
 static void _rtw_alink_leavebss_update_regulatory(_adapter *adapter, u8 alink_id)
 {
-	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+	if (alink_id < RTW_RLINK_MAX) {
+		struct _ADAPTER_LINK * alink = GET_LINK(adapter, alink_id);
 
-	if (rfctl->collect_link_cisr) {
-		u8 iface_id = adapter->iface_id;
-
-		if (alink_id < RTW_RLINK_MAX) {
-			struct _ADAPTER_LINK * alink = GET_LINK(adapter, alink_id);
-
-			rtw_buf_free(&rfctl->recv_country_ie[iface_id][alink_id]
-				, &rfctl->recv_country_ie_len[iface_id][alink_id]);
-			if (rtw_alink_apply_recv_regu_ies_cmd(alink, RTW_CMDF_DIRECTLY, 0, 0, NULL, CIS_6G_REG_RSVD) != _SUCCESS)
-				RTW_WARN(FUNC_ADPT_FMT" id:%u rtw_alink_apply_recv_regu_ies_cmd() fail\n", FUNC_ADPT_ARG(adapter), alink_id);
-		} else {
-			u8 i;
-
-			for (i = 0; i < RTW_RLINK_MAX; i++)
-				rtw_buf_free(&rfctl->recv_country_ie[iface_id][i]
-				, &rfctl->recv_country_ie_len[iface_id][i]);
-			if (rtw_apply_recv_regu_ies_cmd(adapter, RTW_CMDF_DIRECTLY, 0, 0, NULL, CIS_6G_REG_RSVD) != _SUCCESS)
-				RTW_WARN(FUNC_ADPT_FMT" rtw_apply_recv_regu_ies_cmd() fail\n", FUNC_ADPT_ARG(adapter));
-		}
+		if (rtw_alink_clear_recv_regu_cmd(alink, RTW_CMDF_DIRECTLY) != _SUCCESS)
+			RTW_WARN(FUNC_ADPT_FMT" id:%u rtw_alink_clear_recv_regu_cmd() fail\n", FUNC_ADPT_ARG(adapter), alink_id);
+	} else {
+		if (rtw_clear_recv_regu_cmd(adapter, RTW_CMDF_DIRECTLY) != _SUCCESS)
+			RTW_WARN(FUNC_ADPT_FMT" rtw_clear_recv_regu_cmd() fail\n", FUNC_ADPT_ARG(adapter));
 	}
 }
 
@@ -4729,16 +5161,17 @@ void rtw_alink_csa_update_regulatory(struct _ADAPTER_LINK *alink, enum band_type
 {
 	_adapter *adapter = alink->adapter;
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+	u8 iface_id = adapter->iface_id;
+	u8 alink_id = rtw_adapter_link_get_id(alink);
 
-	if (rfctl->collect_link_cisr) {
-		u8 iface_id = adapter->iface_id;
-		u8 alink_id = rtw_adapter_link_get_id(alink);
+	if (!rfctl->collect_link_cisr)
+		rtw_rfctl_reset_link_recv_regu_infos(rfctl, iface_id, alink_id);
 
-		if (rtw_alink_apply_recv_regu_ies_cmd(alink, RTW_CMDF_DIRECTLY
-				, req_band, req_ch, rfctl->recv_country_ie[iface_id][alink_id]
-				, RFCTL_RECV_6G_REG_INFO(rfctl, iface_id, alink_id)) != _SUCCESS)
-			RTW_WARN(FUNC_ADPT_FMT" id:%u rtw_alink_apply_recv_regu_ies_cmd() fail\n", FUNC_ADPT_ARG(adapter), alink_id);
-	}
+	if (rtw_alink_apply_recv_regu_parm_cmd(alink, RTW_CMDF_DIRECTLY
+			, req_band, req_ch, rfctl->recv_country_str[iface_id][alink_id]
+			, RFCTL_RECV_6G_REG_INFO(rfctl, iface_id, alink_id)
+			, RFCTL_RECV_TPES(rfctl, iface_id, alink_id)) != _SUCCESS)
+		RTW_WARN(FUNC_ADPT_FMT" id:%u rtw_alink_apply_recv_regu_parm_cmd() fail\n", FUNC_ADPT_ARG(adapter), alink_id);
 }
 
 void alink_process_regu_ies(struct _ADAPTER_LINK *alink, u8 *ies, uint ies_len)
@@ -4758,82 +5191,75 @@ void alink_process_regu_ies(struct _ADAPTER_LINK *alink, u8 *ies, uint ies_len)
 	alink_id = rtw_adapter_link_get_id(alink);
 
 	if (rfctl->collect_link_cisr) {
-		const u8 *country_ie = NULL;
-		sint country_ie_len = 0;
-		bool country_ie_changed;
+		struct country_ie_slave_record cisr;
 		bool country_str_changed = false;
 		#if CONFIG_IEEE80211_BAND_6GHZ
-		enum country_ie_slave_6g_reg_info reg_info = CIS_6G_REG_RSVD;
 		bool reg_info_changed = false;
+		bool tpe_changed = false;
+		u8 i;
 		#endif
 
-		if (rtw_iface_accept_country_ie(adapter)) {
-			country_ie = rtw_get_ie(ies, WLAN_EID_COUNTRY, &country_ie_len, ies_len);
-			if (country_ie) {
-				if (country_ie_len < 3) {
-					country_ie = NULL;
-					country_ie_len = 0;
-				} else
-					country_ie_len += 2;
-			}
-		}
-		country_ie_changed = ((!!rfctl->recv_country_ie[iface_id][alink_id]) ^ (!!country_ie))
-			|| rfctl->recv_country_ie_len[iface_id][alink_id] != country_ie_len
-			|| _rtw_memcmp(rfctl->recv_country_ie[iface_id][alink_id], country_ie, country_ie_len) == _FALSE;
+		rtw_get_cisr_from_regu_ies(rfctl, ALINK_GET_BAND(alink), ALINK_GET_CH(alink)
+			, ies, ies_len, rtw_iface_accept_country_ie(adapter)
+			, &cisr);
 
+		country_str_changed = _rtw_memcmp(rfctl->recv_country_str[iface_id][alink_id], cisr.country_str, 3) == _FALSE;
 		#if CONFIG_IEEE80211_BAND_6GHZ
-		if (ALINK_GET_BAND(alink) == BAND_ON_6G)
-			reg_info = rtw_ies_get_6g_reg_info(ies, ies_len);
-		reg_info_changed = rfctl->recv_6g_reg_info[iface_id][alink_id] != reg_info;
+		reg_info_changed = rfctl->recv_6g_reg_info[iface_id][alink_id] != cisr.reg_info;
+		if (rfctl->recv_tpes[iface_id][alink_id].cnt == cisr.tpes.cnt) {
+			struct rtw_tpe_t *recv_tpes = &rfctl->recv_tpes[iface_id][alink_id];
+
+			for (i = 0; i < cisr.tpes.cnt; i++) {
+				if (_rtw_memcmp(&recv_tpes->ele[i], &cisr.tpes.ele[i], sizeof(cisr.tpes.ele[i])) == _FALSE) {
+					tpe_changed = true;
+					break;
+				}
+			}
+		} else
+			tpe_changed = true;
 		#endif
 
-		if (!country_ie_changed
+		if (!country_str_changed
 			#if CONFIG_IEEE80211_BAND_6GHZ
 			&& !reg_info_changed
+			&& !tpe_changed
 			#endif
 		)
 			return;
 
-		if (country_ie_changed) {
-			country_str_changed = ((!!rfctl->recv_country_ie[iface_id][alink_id]) ^ (!!country_ie))
-				|| (country_ie && _rtw_memcmp(rfctl->recv_country_ie[iface_id][alink_id] + 2, country_ie + 2, 3));
-			if (!country_ie) {
-				rtw_buf_free(&rfctl->recv_country_ie[iface_id][alink_id]
-					, &rfctl->recv_country_ie_len[iface_id][alink_id]);
-			} else {
-				rtw_buf_update(&rfctl->recv_country_ie[iface_id][alink_id]
-					, &rfctl->recv_country_ie_len[iface_id][alink_id], country_ie, country_ie_len);
-			}
+		if (country_str_changed) {
+			rfctl->recv_country_str[iface_id][alink_id][0] = cisr.country_str[0];
+			rfctl->recv_country_str[iface_id][alink_id][1] = cisr.country_str[1];
+			rfctl->recv_country_str[iface_id][alink_id][2] = cisr.country_str[2];
 		}
-
 		#if CONFIG_IEEE80211_BAND_6GHZ
-		rfctl->recv_6g_reg_info[iface_id][alink_id] = reg_info;
+		if (reg_info_changed)
+			rfctl->recv_6g_reg_info[iface_id][alink_id] = cisr.reg_info;
+		if (tpe_changed) {
+			for (i = 0; i < cisr.tpes.cnt; i++)
+				rfctl->recv_tpes[iface_id][alink_id].ele[i] = cisr.tpes.ele[i];
+			rfctl->recv_tpes[iface_id][alink_id].cnt = cisr.tpes.cnt;
+		}
 		#endif
 
-		if (country_str_changed /* for now only country str is used */
+		RTW_INFO(FUNC_ADPT_FMT" id:%u%s%s%s changed\n", FUNC_ADPT_ARG(adapter), alink_id
+			, country_str_changed ? " country_str" : ""
 			#if CONFIG_IEEE80211_BAND_6GHZ
-			|| reg_info_changed
+			, reg_info_changed ? " 6g_reg_info" : ""
+			, tpe_changed ? " tpe" : ""
+			#else
+			, "", ""
 			#endif
-		) {
-			RTW_INFO(FUNC_ADPT_FMT" id:%u%s%s changed\n", FUNC_ADPT_ARG(adapter), alink_id
-				, country_str_changed ? " country_str" : ""
-				#if CONFIG_IEEE80211_BAND_6GHZ
-				, reg_info_changed ? " 6g_reg_info" : ""
-				#else
-				, ""
-				#endif
-				);
-			rtw_alink_apply_recv_regu_ies_cmd(alink, 0, ALINK_GET_BAND(alink), ALINK_GET_CH(alink)
-				, rfctl->recv_country_ie[iface_id][alink_id], RFCTL_RECV_6G_REG_INFO(rfctl, iface_id, alink_id));
-		}
+			);
+		rtw_alink_apply_recv_cisr_cmd(alink, 0, &cisr);
 	}
-	else if (rfctl->recv_country_ie[iface_id][alink_id]) {
-		rtw_buf_free(&rfctl->recv_country_ie[iface_id][alink_id]
-			, &rfctl->recv_country_ie_len[iface_id][alink_id]);
-		#if CONFIG_IEEE80211_BAND_6GHZ
-		rfctl->recv_6g_reg_info[iface_id][alink_id] = CIS_6G_REG_RSVD;
-		#endif
-		rtw_alink_apply_recv_regu_ies_cmd(alink, 0, ALINK_GET_BAND(alink), ALINK_GET_CH(alink), NULL, CIS_6G_REG_RSVD);
+	else if (rtw_rfctl_link_recv_regu_infos_not_empty(rfctl, iface_id, alink_id)) {
+		rtw_rfctl_reset_link_recv_regu_infos(rfctl, iface_id, alink_id);
+
+		rtw_alink_apply_recv_regu_parm_cmd(alink, 0, ALINK_GET_BAND(alink), ALINK_GET_CH(alink)
+			, rfctl->recv_country_str[iface_id][alink_id]
+			, RFCTL_RECV_6G_REG_INFO(rfctl, iface_id, alink_id)
+			, RFCTL_RECV_TPES(rfctl, iface_id, alink_id));
 	}
 }
 
@@ -4857,52 +5283,28 @@ void process_regu_ies(_adapter *adapter, u8 *ies, uint ies_len)
 	alink_process_regu_ies(GET_PRIMARY_LINK(adapter), ies, ies_len);
 }
 
-bool rtw_update_scanned_network_cisr(struct rf_ctl_t *rfctl, struct wlan_network *network)
+void rtw_update_scanned_network_cisr(struct rf_ctl_t *rfctl, struct wlan_network *network)
 {
+	struct country_ie_slave_record *cisr = &network->cisr;
+	enum band_type band = BSS_EX_OP_BAND(&network->network);
+	u8 opch = BSS_EX_OP_CH(&network->network);
+
 	if (rfctl->collect_network_cisr) {
-		const u8 *country_ie = NULL;
-		sint country_ie_len = 0;
-		enum country_ie_slave_6g_reg_info reg_info = CIS_6G_REG_RSVD;
-		struct country_ie_slave_record *cisr = &network->cisr;
-		struct country_chplan *chplan = &network->cisr.chplan;
-		struct country_chplan ori_chplan;
-
-		_rtw_memcpy(&ori_chplan, chplan, sizeof(*chplan));
-
-		country_ie = rtw_get_ie(BSS_EX_TLV_IES(&network->network), WLAN_EID_COUNTRY, &country_ie_len, BSS_EX_TLV_IES_LEN(&network->network));
-		if (country_ie) {
-			if (country_ie_len < 3)
-				country_ie = NULL;
-		}
-
-		#if CONFIG_IEEE80211_BAND_6GHZ
-		if (BSS_EX_OP_BAND(&network->network) == BAND_ON_6G)
-			reg_info = rtw_ies_get_6g_reg_info(BSS_EX_TLV_IES(&network->network), BSS_EX_TLV_IES_LEN(&network->network));
-		#endif
-
-		rtw_get_cisr_from_recv_regu_ies(rfctl
-			, BSS_EX_OP_BAND(&network->network), BSS_EX_OP_CH(&network->network)
-			, country_ie, reg_info, cisr);
-
-		return _rtw_memcmp(&ori_chplan, chplan, sizeof(*chplan)) == _TRUE ? false : true;
+		rtw_get_cisr_from_regu_ies(rfctl, band, opch
+			, BSS_EX_TLV_IES(&network->network), BSS_EX_TLV_IES_LEN(&network->network), true
+			, cisr);
 	}
-	else if (network->cisr.alpha2[0] != '\0' || network->cisr.alpha2[1] != '\0') {
-		network->cisr.alpha2[0] = network->cisr.alpha2[1] = '\0';
-		network->cisr.band = BSS_EX_OP_BAND(&network->network);
-		network->cisr.opch = BSS_EX_OP_CH(&network->network);
-		#if CONFIG_IEEE80211_BAND_6GHZ
-		network->cisr.reg_info = CIS_6G_REG_RSVD;
-		#endif
-		network->cisr.status = COUNTRY_IE_SLAVE_NOCOUNTRY;
-		return true;
+	else {
+		rtw_get_cisr_from_regu_ies(rfctl, band, opch
+			, NULL, 0, true
+			, cisr);
 	}
-
-	return false;
 }
 
-bool rtw_network_chk_regu_ies(struct rf_ctl_t *rfctl, struct wlan_network *network)
+bool rtw_network_chk_regu_ies_rsn(const struct rf_ctl_t *rfctl, const struct wlan_network *network
+	, enum country_ie_slave_status *rsn)
 {
-	bool forbid_unknown_country_opch;
+	enum country_ie_slave_status status = network->cisr.status;
 	bool ret = false;
 
 	if (!rtw_txpwr_hal_is_txpwr_limit_needed(rfctl_to_dvobj(rfctl)))
@@ -4910,29 +5312,16 @@ bool rtw_network_chk_regu_ies(struct rf_ctl_t *rfctl, struct wlan_network *netwo
 
 #if CONFIG_IEEE80211_BAND_6GHZ
 	if (network->cisr.band == BAND_ON_6G) {
-		/* forbid before std-client ready  */
-		if (network->cisr.reg_info == CIS_6G_REG_SP_AP
-			|| network->cisr.reg_info == CIS_6G_REG_IN_SP_AP)
+		if (status == COUNTRY_IE_SLAVE_CATE_6G_NS)
 			goto exit;
-
-		if (!rfctl->cis_enabled
-			|| network->cisr.status == COUNTRY_IE_SLAVE_NOCOUNTRY
-			|| network->cisr.status == COUNTRY_IE_SLAVE_UNKNOWN
-		) {
-			if (!(rfctl->default_chplan_cate_6g_map & reg_info_to_chplan_6g_cate_map(network->cisr.reg_info)))
-				goto exit;
-		} else {
-			if (network->cisr.status == COUNTRY_IE_SLAVE_CATE_6G_NS)
-				goto exit;
-		}
+		if (status == COUNTRY_IE_SLAVE_TPE_FORBID)
+			goto exit;
 	}
 #endif
 
-	forbid_unknown_country_opch = rtw_rfctl_forbid_unknown_country_opch(
-		rfctl->cis_enabled, rfctl->init_user_req_is_ww, RFCTL_REGD_SRC_FROM_OS(rfctl));
-	if (forbid_unknown_country_opch) {
-		if (network->cisr.status == COUNTRY_IE_SLAVE_UNKNOWN
-			|| network->cisr.status == COUNTRY_IE_SLAVE_OPCH_NOEXIST)
+	if (rtw_rfctl_forbid_unknown_country_opch(rfctl)) {
+		if (status == COUNTRY_IE_SLAVE_UNKNOWN
+			|| status == COUNTRY_IE_SLAVE_OPCH_NOEXIST)
 			goto exit;
 	}
 
@@ -4940,6 +5329,9 @@ bypass:
 	ret = true;
 
 exit:
+	if (rsn)
+		*rsn = status;
+
 	return ret;
 }
 
@@ -5067,6 +5459,8 @@ void rtw_rfctl_cis_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty)
 	cis_scan_stat_init(&rfctl->cis_scan_stat);
 
 #if CONFIG_IEEE80211_BAND_6GHZ
+	rfctl->force_txpwr_lmt_6g_cate = TXPWR_LMT_6G_CATE_NONE;
+
 	for (i = 0; i < CONFIG_IFACE_NUMBER; i++) {
 		for (j = 0; j < RTW_RLINK_MAX; j++) {
 			rfctl->recv_6g_reg_info[i][j] = CIS_6G_REG_RSVD;
@@ -5078,13 +5472,7 @@ void rtw_rfctl_cis_init(struct rf_ctl_t *rfctl, struct registry_priv *regsty)
 
 void rtw_rfctl_cis_deinit(struct rf_ctl_t *rfctl)
 {
-	int i, j;
-
 	cis_scan_stat_deinit(&rfctl->cis_scan_stat);
-
-	for (i = 0; i < CONFIG_IFACE_NUMBER; i++)
-		for (j = 0; j < RTW_RLINK_MAX; j++)
-			rtw_buf_free(&rfctl->recv_country_ie[i][j], &rfctl->recv_country_ie_len[i][j]);
 }
 #endif /* CONFIG_80211D */
 

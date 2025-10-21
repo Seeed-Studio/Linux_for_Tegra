@@ -176,6 +176,11 @@ enum rtw_hal_status rtw_hal_rf_read_pwr_table(
 	u8 bandwidth, u8 channel, u8 offset, u8 dcm,
 	u8 beamforming, s16 *get_item);
 
+enum rtw_hal_status rtw_hal_rf_read_pwr_table_ru(
+	struct rtw_hal_com_t *hal_com, u8 rf_path, u16 rate,
+	u8 bandwidth, u8 channel, u8 offset, u8 dcm,
+	u8 beamforming, s16 *get_item);
+
 enum rtw_hal_status rtw_hal_rf_wlan_tx_power_control(
 	struct rtw_hal_com_t *hal_com,
 	enum phl_phy_idx phy, enum phl_pwr_ctrl pwr_ctrl_idx, u32 tx_power_val, bool enable);

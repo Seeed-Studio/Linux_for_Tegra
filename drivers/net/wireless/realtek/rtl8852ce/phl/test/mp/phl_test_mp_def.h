@@ -553,6 +553,7 @@ struct mp_txpwr_arg {
 	bool pwr_lmt_en;
 	u8 sharp_id;
 	u8 cur_phy;
+	u8 tx_ru_on;
 };
 
 struct mp_cal_arg {

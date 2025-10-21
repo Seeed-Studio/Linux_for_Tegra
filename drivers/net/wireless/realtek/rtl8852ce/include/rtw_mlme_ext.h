@@ -34,6 +34,7 @@
 #define REAUTH_TO		(240)
 #define REASSOC_TO		(240)
 #endif
+#define SAE_AUTH_TIMEOUT	(2400)
 /* #define DISCONNECT_TO	(3000) */
 #define ADDBA_TO			(2000)
 
@@ -429,12 +430,14 @@ struct mlme_ext_priv {
 	/* struct fw_priv 	fwpriv; */
 
 	unsigned char	dev_cur_wireless_mode;	/* NETWORK_TYPE */
+	int cr_timer_cnt;
 
 	struct ss_res		sitesurvey_res;
 	struct mlme_ext_info	mlmext_info;/* for sta/adhoc mode, including current scanning/connecting/connected related info.
                                                       * for ap mode, network includes ap's cap_info */
 	/*_timer		survey_timer;*/
 	_timer		link_timer;
+	_timer		cr_timer;
 
 #ifdef CONFIG_RTW_80211R
 	_timer		ft_link_timer;
@@ -866,6 +869,7 @@ void rtw_collect_bcn_info(_adapter *adapter, struct _ADAPTER_LINK *adapter_link)
 void _linked_info_dump(_adapter *padapter);
 
 void link_timer_hdl(void *ctx);
+void cr_timer_hdl(void *ctx);
 void addba_timer_hdl(void *ctx);
 #ifdef CONFIG_RTW_TOKEN_BASED_XMIT
 void rtw_tbtx_xmit_timer_hdl(void *ctx);

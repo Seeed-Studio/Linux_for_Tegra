@@ -1,1 +1,1 @@
-#define DRIVERVERSION	"v1.19.16_nv-126-16-gbf1934e39.20250910_Certified_Module_beta"
+#define DRIVERVERSION	"v1.19.16_nv-277-9-0-g3c314be22.20251020_Certified_Module"

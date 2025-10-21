@@ -20,28 +20,23 @@
 
 u8 rm_get_ch_set(u8 op_class, struct rtw_ieee80211_channel *pch_set, u8 pch_num)
 {
-	int i, array_idx;
-	const struct op_class_t *opc = get_global_op_class_by_id(op_class);
+	int i;
+	const struct op_class_t *opc = get_opc_by_op_class(NULL, op_class);
 
-	if (opc < global_op_class
-		|| (((u8 *)opc) - ((u8 *)global_op_class)) % sizeof(struct op_class_t)
-	) {
-		RTW_ERR("Invalid opc pointer:%p (global_op_class:%p, sizeof(struct op_class_t):%zu, %zu)\n"
-			, opc, global_op_class, sizeof(struct op_class_t),
-			(((u8 *)opc) - ((u8 *)global_op_class)) % sizeof(struct op_class_t));
+	if (!opc) {
+		RTW_INFO("%s can't get opc with id:%u\n", __func__, op_class);
 		return 0;
 	}
 
-	array_idx = (((u8 *)opc) - ((u8 *)global_op_class)) / sizeof(struct op_class_t);
-	if (pch_num < OPC_CH_LIST_LEN(global_op_class[array_idx])) {
+	if (pch_num < OPC_CH_LIST_LEN(opc)) {
 		RTW_ERR("Invalid pch len %d < %d\n",pch_num,
-			OPC_CH_LIST_LEN(global_op_class[array_idx]));
+			OPC_CH_LIST_LEN(opc));
 		return 0;
 	}
 
-	for (i = 0; i < OPC_CH_LIST_LEN(global_op_class[array_idx]); i++) {
-		pch_set[i].hw_value = OPC_CH_LIST_CH(global_op_class[array_idx], i);
-		pch_set[i].band = global_op_class[array_idx].band;
+	for (i = 0; i < OPC_CH_LIST_LEN(opc); i++) {
+		pch_set[i].hw_value = OPC_CH_LIST_CH(opc, i);
+		pch_set[i].band = opc->band;
 	}
 
 	return i;
@@ -62,7 +57,7 @@ u8 rm_get_ch_set_from_bcn_req_opt(struct bcn_req_opt *opt,
 			break;
 
 		ap_ch_rpt = opt->ap_ch_rpt[i];
-		band = rtw_get_band_by_op_class(ap_ch_rpt->global_op_class);
+		band = rtw_get_band_by_op_class(NULL, ap_ch_rpt->global_op_class);
 		/* error handling */
 		if (band == BAND_MAX)
 			band = BAND_ON_24G;

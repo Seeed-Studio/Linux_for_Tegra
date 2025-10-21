@@ -1333,7 +1333,7 @@ void rtw_phl_rx_bar(void *phl, struct rtw_phl_stainfo_t *sta, u8 tid, u16 seq)
 
 	if (seq_less(seq, r->head_seq_num)) {
 		_os_spinunlock(drv_priv, &sta->tid_rx_lock, _bh, NULL);
-		PHL_TRACE(COMP_PHL_RECV, _PHL_WARNING_, "%s: bar seq 0x%03x, preceding head 0x%03x (tid=%u)\n",
+		PHL_TRACE(COMP_PHL_RECV, _PHL_INFO_, "%s: bar seq 0x%03x, preceding head 0x%03x (tid=%u)\n",
 				  __func__, seq, r->head_seq_num, tid);
 		return;
 	}

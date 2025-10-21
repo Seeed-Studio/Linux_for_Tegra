@@ -470,7 +470,10 @@ int rtw_mp_stop(struct net_device *dev,
 	u8 status = 0;
 	_adapter *padapter = rtw_netdev_priv(dev);
 	struct mp_priv *pmppriv = &padapter->mppriv;
-
+#if CONFIG_IEEE80211_BAND_6GHZ
+	if (!rtw_set_force_txpwr_lmt_6g_cate(padapter, TXPWR_LMT_6G_CATE_NONE))
+		RTW_INFO("MP Rollback 6g cate setting Error !!!!\n");
+#endif
 
 	if (rtw_mp_cmd(padapter, MP_STOP, RTW_CMDF_DIRECTLY) != _SUCCESS)
 		ret = -EPERM;
@@ -771,7 +774,7 @@ int rtw_mp_txpower(struct net_device *dev,
 	char pout_str_buf[7];
 	u8		input[RTW_IWD_MAX_LEN];
 	u8 rfpath_i = 0;
-	u16 agc_cw_val = 0;
+	s16 agc_cw_val = 0;
 	_adapter *padapter = rtw_netdev_priv(dev);
 	struct _ADAPTER_LINK *padapter_link = GET_PRIMARY_LINK(padapter);
 	struct mp_priv *pmppriv = &padapter ->mppriv;
@@ -832,13 +835,15 @@ int rtw_mp_txpower(struct net_device *dev,
 				goto invalid_param_format;
 			}
 
-			pset = int_num * TX_POWER_BASE + ((dec_num * TX_POWER_BASE) / 100);
-			RTW_INFO("%s: pset=%d\n", __func__, pset);
-			pset = ((pset < 0 || signed_flag == 1) ? -pset : pset);
-
-
 			pextra += sprintf(pextra, "Set power dbm :%d.%d\n", int_num, dec_num);
+			dec_num = ((dec_num * TX_POWER_BASE) / 100);
+
+			if (signed_flag == 1 && dec_num > 0)
+				dec_num = -dec_num;
+
+			pset = int_num * TX_POWER_BASE + dec_num;
 			pmppriv->txpowerdbm = pset;
+			RTW_INFO("%s: pmppriv->txpowerdbm=%d\n", __func__, pmppriv->txpowerdbm);
 			pmppriv->bSetTxPower = 1;
 		} else {
 			pextra += sprintf(pextra, "Invalid format on line %s\n", input);
@@ -1942,6 +1947,47 @@ int rtw_mp_lck(struct net_device *dev,
 
 	rtw_mp_trigger_lck(padapter);
 
+	return 0;
+}
+
+int rtw_mp_6gcate(struct net_device *dev,
+			struct iw_request_info *info,
+			struct iw_point *wrqu, char *extra)
+{
+#if CONFIG_IEEE80211_BAND_6GHZ
+	u8 input[RTW_IWD_MAX_LEN];
+	enum txpwr_lmt_6g_cate_t mp_6g_cate = TXPWR_LMT_6G_CATE_NONE;
+	_adapter *padapter = rtw_netdev_priv(dev);
+
+	if (rtw_do_mp_iwdata_len_chk(__func__, (wrqu->length + 1)))
+		return -EFAULT;
+
+	_rtw_memset(input, 0, sizeof(input));
+
+	if (copy_from_user(input, wrqu->pointer, wrqu->length))
+		return -EFAULT;
+	input[wrqu->length] = '\0';
+	RTW_INFO("%s: input='%s'\n", __func__, input);
+
+	if (strncmp(input, "VLP", 3) == 0) {
+		mp_6g_cate = TXPWR_LMT_6G_CATE_VLP;
+	} else if (strncmp(input, "LPI", 3) == 0) {
+		mp_6g_cate = TXPWR_LMT_6G_CATE_LPI;
+	} else if (strncmp(input, "STD", 3) == 0) {
+		mp_6g_cate = TXPWR_LMT_6G_CATE_STD;
+	}
+	RTW_INFO("%s: mp_6g_cate = %d\n", __func__, mp_6g_cate);
+	if (rtw_set_force_txpwr_lmt_6g_cate(padapter, mp_6g_cate)) {
+		sprintf(extra, "set 6g cate = %s\n",
+			(mp_6g_cate == TXPWR_LMT_6G_CATE_VLP)? "VLP" :\
+			(mp_6g_cate == TXPWR_LMT_6G_CATE_LPI) ?"LPI": \
+			(mp_6g_cate == TXPWR_LMT_6G_CATE_STD)? "STD":"NONE");
+	} else {
+		sprintf(extra, "set set 6g cate FAIL !\n");
+
+	}
+	wrqu->length = strlen(extra);
+#endif
 	return 0;
 }
 
@@ -3289,9 +3335,9 @@ int rtw_mp_tx_plcp_tx_user(struct net_device *dev,
 		u32 txuser = 0;
 
 		if (sscanf(extra, "txuser=%d", &txuser) > 0) {
-				RTW_INFO("%s: Sel User idx=%d\n", __func__, txuser);
+				RTW_INFO("%s: config Tx User Num=%d\n", __func__, txuser);
 				_rtw_memset(extra, 0, wrqu->data.length);
-				sprintf(extra, "config Tx User %d to %d", mpprv->rtw_mp_plcp_tx_user, txuser);
+				sprintf(extra, "config Tx User Num %d to %d", mpprv->rtw_mp_plcp_tx_user, txuser);
 				mpprv->rtw_mp_plcp_tx_user = txuser;
 		} else {
 			_rtw_memset(extra, 0, wrqu->data.length);
@@ -3320,6 +3366,18 @@ int rtw_mp_tx_plcp_tx_user(struct net_device *dev,
 				sprintf(extra, "Config Tx Len:%d", mpprv->mp_plcp_user[user_idx].plcp_txlen);
 		}
 
+	} else if ((strncmp(extra, "txbf", 4) == 0)) {
+		u32 txbf = 0;
+
+		if (sscanf(extra, "txbf=%d", &txbf) > 0) {
+			RTW_INFO("%s: config txbf =%d\n", __func__, txbf);
+			_rtw_memset(extra, 0, wrqu->data.length);
+			sprintf(extra, "config Txbf %d to %d", mpprv->mp_plcp_user[user_idx].txbf, txbf);
+			mpprv->mp_plcp_user[user_idx].txbf = txbf;
+		} else {
+			_rtw_memset(extra, 0, wrqu->data.length);
+			sprintf(extra, "Error!!!\tinput , [txbf=0/1]");
+		}
 	} else {
 		u8 *pstr = extra;
 		_rtw_memset(pstr, 0, wrqu->data.length);
@@ -3329,6 +3387,7 @@ int rtw_mp_tx_plcp_tx_user(struct net_device *dev,
 		\t user=%%d\n\
 		\t mcs=%%d\n\
 		\t dcm=%%d,\n\
+		\t txbf=%%d,\n\
 		\t coding=%%d\n\
 		\t ru_alloc=%%d\n");
 	}
@@ -4250,6 +4309,10 @@ int rtw_priv_mp_get(struct net_device *dev,
 	case MP_MAC_IOTEST:
 		RTW_INFO("set case MP_MAC_IOTEST\n");
 		status = rtw_mp_mac_iotest(dev, info, wdata, extra);
+		break;
+	case MP_6G_CATE:
+		RTW_INFO("set case MP_6G_CATE\n");
+		status = rtw_mp_6gcate(dev, info, wrqu, extra);
 		break;
 	default:
 		status = -EIO;

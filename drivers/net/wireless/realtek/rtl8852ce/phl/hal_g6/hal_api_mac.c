@@ -3457,6 +3457,7 @@ _hal_fw_dbg_dump(struct hal_info_t *hal_info, u8 *buffer, u16 bufsize)
 enum rtw_hal_status
 rtw_hal_mac_dump_fw_rsvd_ple(struct hal_info_t *hal_info)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 	u8 *buffer = NULL;
 	u16 bufSize = FW_PLE_SIZE;
@@ -3483,6 +3484,11 @@ rtw_hal_mac_dump_fw_rsvd_ple(struct hal_info_t *hal_info)
 	}
 
 	return RTW_HAL_STATUS_SUCCESS;
+#else /* !CONFIG_HAL_MAC_DBG */
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+
+	return RTW_HAL_STATUS_NOT_SUPPORT;
+#endif /* !CONFIG_HAL_MAC_DBG */
 }
 
 
@@ -6379,7 +6385,11 @@ void rtw_hal_mac_dbg_status_dump(struct hal_info_t *hal, struct hal_mac_dbg_dump
 	PHL_INFO("%s: dle_dbg %d, dmac_dbg %d, cmac_dbg %d\n", __func__, pkg_en.dle_dbg, pkg_en.dmac_dbg, pkg_en.cmac_dbg);
 	PHL_INFO("%s: mac_dbg_port %d, plersvd_dbg %d, tx_flow_dbg %d\n", __func__, pkg_en.mac_dbg_port, pkg_en.plersvd_dbg, pkg_en.tx_flow_dbg);
 
+#ifdef CONFIG_HAL_MAC_DBG
 	mac->ops->dbg_status_dump(mac, &pkg, &pkg_en);
+#else
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+#endif
 }
 
 #ifdef CONFIG_PHL_DFS
@@ -7269,6 +7279,7 @@ rtw_hal_mac_set_xsi(struct rtw_hal_com_t *hal_com, u8 offset, u8 val)
 enum rtw_hal_status
 rtw_hal_mac_fw_dbg_dump(struct hal_info_t *hal_info)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 	u8 *buffer = NULL;
 	u16 bufSize = FW_PLE_SIZE;
@@ -7304,6 +7315,12 @@ rtw_hal_mac_fw_dbg_dump(struct hal_info_t *hal_info)
 		_os_mem_free(hal_info->hal_com->drv_priv, buffer, bufSize);
 
 	return RTW_HAL_STATUS_SUCCESS;
+#else /* !CONFIG_HAL_MAC_DBG */
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+
+	return RTW_HAL_STATUS_NOT_SUPPORT;
+#endif /* !CONFIG_HAL_MAC_DBG */
+
 }
 
 enum rtw_fw_status rtw_hal_mac_get_fw_status(struct hal_info_t *hal_info)
@@ -7558,7 +7575,9 @@ rtw_hal_mac_get_tx_cnt(struct hal_info_t *hal, enum phl_band_idx bidx, u8 sel)
 }
 
 enum rtw_hal_status
-rtw_hal_mac_get_rx_cnt(struct hal_info_t *hal_info, u8 cur_phy_idx, u8 type_idx, u32 *ret_value){
+rtw_hal_mac_get_rx_cnt(struct hal_info_t *hal_info, u8 cur_phy_idx, u8 type_idx, u32 *ret_value)
+{
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 	struct mac_ax_ops *ops = mac->ops;
 	enum rtw_hal_status ret = RTW_HAL_STATUS_SUCCESS;
@@ -7587,6 +7606,11 @@ rtw_hal_mac_get_rx_cnt(struct hal_info_t *hal_info, u8 cur_phy_idx, u8 type_idx,
 	}
 
 	return ret;
+#else /* !CONFIG_HAL_MAC_DBG */
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+
+	return RTW_HAL_STATUS_NOT_SUPPORT;
+#endif /* !CONFIG_HAL_MAC_DBG */
 }
 
 void
@@ -7600,6 +7624,7 @@ enum rtw_hal_status
 rtw_hal_mac_get_rx_cnt_by_idx(struct hal_info_t *hal_info, u8 cur_phy_idx,
 			      u8 cnt_idx, u16 *ret_value)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 	struct mac_ax_ops *ops = mac->ops;
 	struct mac_ax_rx_cnt rx_cnt = {0};
@@ -7623,11 +7648,17 @@ rtw_hal_mac_get_rx_cnt_by_idx(struct hal_info_t *hal_info, u8 cur_phy_idx,
 	}
 
 	return ret;
+#else /* !CONFIG_HAL_MAC_DBG */
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+
+	return RTW_HAL_STATUS_NOT_SUPPORT;
+#endif /* !CONFIG_HAL_MAC_DBG */
 }
 
 enum rtw_hal_status
 rtw_hal_mac_set_reset_rx_cnt(struct hal_info_t *hal_info, u8 cur_phy_idx)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 	struct mac_ax_ops *ops = mac->ops;
 	enum rtw_hal_status ret = RTW_HAL_STATUS_SUCCESS;
@@ -7647,6 +7678,11 @@ rtw_hal_mac_set_reset_rx_cnt(struct hal_info_t *hal_info, u8 cur_phy_idx)
 	}
 
 	return ret;
+#else /* !CONFIG_HAL_MAC_DBG */
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+
+	return RTW_HAL_STATUS_NOT_SUPPORT;
+#endif /* !CONFIG_HAL_MAC_DBG */
 }
 
 enum rtw_hal_status
@@ -8660,10 +8696,14 @@ void
 rtw_hal_mac_get_buffer_data(struct rtw_hal_com_t *hal_com, u32 strt_addr,
 			    u8 *buf, u32 len, u32 dbg_path)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct hal_info_t *hal_info = hal_com->hal_priv;
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 
 	mac_mem_dump(mac, MAC_AX_MEM_SHARED_BUF, strt_addr, buf, len, dbg_path);
+#else
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+#endif
 }
 
 enum rtw_hal_status rtw_hal_mac_ctrl_ser(struct rtw_hal_com_t *hal_com,
@@ -10413,6 +10453,7 @@ _error:
 enum rtw_hal_status
 rtw_hal_mac_get_sec_cam(struct hal_info_t *hal_info, u16 num, u8 *buf, u16 size)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 	int i = 0;
 	/* ToDO: fix the magic number later */
@@ -10438,6 +10479,11 @@ rtw_hal_mac_get_sec_cam(struct hal_info_t *hal_info, u16 num, u8 *buf, u16 size)
 				, buf + (i*sec_cam_offset_sz), sec_cam_offset_sz, 1);
 	}
 	return RTW_HAL_STATUS_SUCCESS;
+#else /* !CONFIG_HAL_MAC_DBG */
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+
+	return RTW_HAL_STATUS_NOT_SUPPORT;
+#endif /* !CONFIG_HAL_MAC_DBG */
 }
 
 /**
@@ -10455,6 +10501,7 @@ rtw_hal_mac_get_sec_cam(struct hal_info_t *hal_info, u16 num, u8 *buf, u16 size)
 enum rtw_hal_status
 rtw_hal_mac_get_addr_cam(struct hal_info_t *hal_info, u16 num, u8 *buf, u16 size)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 	int i = 0;
 	/* ToDO: fix the magic number later */
@@ -10481,6 +10528,11 @@ rtw_hal_mac_get_addr_cam(struct hal_info_t *hal_info, u16 num, u8 *buf, u16 size
 
 	}
 	return RTW_HAL_STATUS_SUCCESS;
+#else /* !CONFIG_HAL_MAC_DBG */
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+
+	return RTW_HAL_STATUS_NOT_SUPPORT;
+#endif /* !CONFIG_HAL_MAC_DBG */
 }
 
 enum rtw_hal_status rtw_hal_mac_get_tsf(struct hal_info_t *hal,
@@ -11406,9 +11458,13 @@ void rtw_hal_mac_notification(struct hal_info_t *hal_info,
                               enum phl_msg_evt_id event,
                               u8 band)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 
 	mac->ops->event_notify(mac, event, band);
+#else
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+#endif
 }
 
 void rtw_hal_mac_cmd_notification(struct hal_info_t *hal_info,
@@ -11991,6 +12047,7 @@ rtw_hal_mac_sr_update(struct rtw_hal_com_t *hal_com,
 enum rtw_hal_status
 rtw_hal_mac_set_aspm_test(struct hal_info_t *hal_info)
 {
+#ifdef CONFIG_HAL_MAC_DBG
 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
 	enum rtw_hal_status hal_status = RTW_HAL_STATUS_SUCCESS;
 	u32 mac_err = MACSUCCESS;
@@ -12035,6 +12092,11 @@ rtw_hal_mac_set_aspm_test(struct hal_info_t *hal_info)
 	}
 
 	return RTW_HAL_STATUS_SUCCESS;
+#else /* !CONFIG_HAL_MAC_DBG */
+	PHL_WARN("%s: CONFIG_HAL_MAC_DBG not support!\n", __func__);
+
+	return RTW_HAL_STATUS_NOT_SUPPORT;
+#endif /* !CONFIG_HAL_MAC_DBG */
 }
 
 enum rtw_hal_status rtw_hal_mac_usr_frame_to_act(

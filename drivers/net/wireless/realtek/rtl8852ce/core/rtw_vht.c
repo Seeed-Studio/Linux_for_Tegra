@@ -1564,7 +1564,6 @@ void rtw_vht_ies_detach(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
 
 	rtw_remove_bcn_ie(padapter, pnetwork, EID_VHTCapability);
 	rtw_remove_bcn_ie(padapter, pnetwork, EID_VHTOperation);
-	rtw_remove_bcn_ie(padapter, pnetwork, EID_VHTTransmitPower);
 
 	pmlmepriv->vhtpriv.vht_option = _FALSE;
 }
@@ -1574,8 +1573,8 @@ void rtw_check_for_vht20(_adapter *adapter, u8 *ies, int ies_len)
 	u8 ht_ch, ht_bw, ht_offset;
 	u8 vht_ch, vht_bw, vht_offset;
 
-	rtw_ies_get_bchbw(ies, ies_len, NULL, &ht_ch, &ht_bw, &ht_offset, NULL, NULL, 1, 0, 0);
-	rtw_ies_get_bchbw(ies, ies_len, NULL, &vht_ch, &vht_bw, &vht_offset, NULL, NULL, 1, 1, 0);
+	rtw_ies_get_bchbw(ies, ies_len, NULL, &ht_ch, &ht_bw, &ht_offset, 1, 0, 0, 0);
+	rtw_ies_get_bchbw(ies, ies_len, NULL, &vht_ch, &vht_bw, &vht_offset, 1, 1, 0, 0);
 
 	if (ht_bw == CHANNEL_WIDTH_20 && vht_bw >= CHANNEL_WIDTH_80) {
 		u8 *vht_op_ie;
@@ -1617,7 +1616,8 @@ void rtw_check_vht_ies(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
 
 	vht_op_ie = rtw_get_ie(ies, EID_VHTOperation, &ie_len, ies_len);
 
-	rtw_update_drv_vht_cap(padapter, padapter_link, vht_cap_ie);
+	if (vht_cap_ie != NULL)
+		rtw_update_drv_vht_cap(padapter, padapter_link, vht_cap_ie);
 
 	rtw_add_ext_cap_info(pmlmepriv->ext_capab_ie_data, &(pmlmepriv->ext_capab_ie_len), OP_MODE_NOTIFICATION);
 	rtw_update_ext_cap_ie(pmlmepriv->ext_capab_ie_data, pmlmepriv->ext_capab_ie_len, pnetwork->IEs \
@@ -1629,9 +1629,6 @@ void rtw_check_vht_ies(_adapter *padapter, struct _ADAPTER_LINK *padapter_link,
 
 	if (vht_op_ie != NULL)
 		_rtw_memcpy(pvhtpriv->vht_op_ie_backup, vht_op_ie + 2, VHT_OP_IE_LEN);
-
-	/* TODO : We don't handle this IE like before, so remove it */
-	rtw_remove_bcn_ie(padapter, pnetwork, EID_VHTTransmitPower);
 }
 
 void rtw_update_probe_rsp_vht_cap(struct _ADAPTER *a, u8 *ies, sint ies_len)

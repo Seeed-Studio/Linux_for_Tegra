@@ -15,6 +15,8 @@
 #ifndef _PHL_TXPWR_H_
 #define _PHL_TXPWR_H_
 
+#define PHL_MAX_TPE_ELE 4
+
 /*
  * This struct is for dynamic antenna gain feature.
  * Using antenna gain compensation to modify RF table of related regulatory.

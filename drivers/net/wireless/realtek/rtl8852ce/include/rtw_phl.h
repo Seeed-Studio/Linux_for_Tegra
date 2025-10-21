@@ -203,6 +203,10 @@ enum txpwr_lmt_reg_exc_match rtw_txpwr_hal_lmt_reg_exc_6g_search(struct dvobj_pr
 bool rtw_txpwr_hal_lmt_reg_search(struct dvobj_priv* dvobj, enum band_type band, const char *name);
 void rtw_txpwr_hal_set_current_lmt_regs_by_name(struct dvobj_priv* dvobj, char *names_of_band[], int names_len_of_band[]);
 void rtw_txpwr_hal_get_current_lmt_regs_name(struct dvobj_priv* dvobj, char *names_of_band[], int names_len_of_band[]);
+#if CONFIG_IEEE80211_BAND_6GHZ
+bool rtw_txpwr_hal_tpe_allow(struct dvobj_priv *dvobj, struct country_ie_slave_record *cisr);
+void rtw_txpwr_hal_set_tpe_infos(struct dvobj_priv *dvobj);
+#endif
 void dump_txpwr_lmt(void *sel, _adapter *adapter);
 #ifdef CONFIG_80211AX_HE
 void dump_txpwr_lmt_ru(void *sel, _adapter *adapter);

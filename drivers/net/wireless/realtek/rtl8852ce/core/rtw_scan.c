@@ -1090,47 +1090,48 @@ static struct wlan_network *add_network(_adapter *adapter, WLAN_BSSID_EX *bss)
 
 void dump_scanned_queue(void *sel, _adapter *adapter)
 {
-#ifdef CONFIG_80211D
+#define DUMP_SURVEY_INFO_80211D (1 && defined(CONFIG_80211D))
 
-#if CONFIG_IEEE80211_BAND_6GHZ
-#define SURVEY_INFO_TITLE_FMT_80211D_6G "  "
-#define SURVEY_INFO_TITLE_ARG_80211D_6G
+#if DUMP_SURVEY_INFO_80211D
+#define DUMP_SURVEY_INFO_80211D_6G (1 && CONFIG_IEEE80211_BAND_6GHZ)
+
+#if DUMP_SURVEY_INFO_80211D_6G
+#define SURVEY_INFO_TITLE_FMT_80211D_6G " %-1s %-1s"
+#define SURVEY_INFO_TITLE_ARG_80211D_6G , "e", "6"
 #define SURVEY_INFO_VALUE_FMT_80211D_6G " %c %c"
 #define SURVEY_INFO_VALUE_ARG_80211D_6G	, show_cisr ? rtw_env_char(pnetwork->cisr.env) : ' ' \
 	, (show_cisr && pnetwork->cisr.reg_info < CIS_6G_REG_RSVD) ? '0' + pnetwork->cisr.reg_info : '-'
 #else
 #define SURVEY_INFO_TITLE_FMT_80211D_6G ""
 #define SURVEY_INFO_TITLE_ARG_80211D_6G
-#define SURVEY_INFO_VALUE_FMT_80211D_6G "  "
+#define SURVEY_INFO_VALUE_FMT_80211D_6G ""
 #define SURVEY_INFO_VALUE_ARG_80211D_6G
-#endif
+#endif /* DUMP_SURVEY_INFO_80211D_6G */
 
-#define SURVEY_INFO_TITLE_FMT_80211D " %-7s"SURVEY_INFO_TITLE_FMT_80211D_6G
-#define SURVEY_INFO_TITLE_ARG_80211D , "rg_info"SURVEY_INFO_TITLE_ARG_80211D_6G
-#define SURVEY_INFO_VALUE_FMT_80211D " "ALPHA2_FMT""SURVEY_INFO_VALUE_FMT_80211D_6G" %u%c"
+#define SURVEY_INFO_TITLE_FMT_80211D " %-2s"SURVEY_INFO_TITLE_FMT_80211D_6G
+#define SURVEY_INFO_TITLE_ARG_80211D , "cc"SURVEY_INFO_TITLE_ARG_80211D_6G
+#define SURVEY_INFO_VALUE_FMT_80211D " "ALPHA2_FMT""SURVEY_INFO_VALUE_FMT_80211D_6G
 #define SURVEY_INFO_VALUE_ARG_80211D \
-	, show_cisr && is_alpha(pnetwork->cisr.alpha2[0]) ? pnetwork->cisr.alpha2[0] : '-' \
-	, show_cisr && is_alpha(pnetwork->cisr.alpha2[1]) ? pnetwork->cisr.alpha2[1] : '-' \
-	SURVEY_INFO_VALUE_ARG_80211D_6G \
-	, show_cisr ? pnetwork->cisr.status : COUNTRY_IE_SLAVE_NOCOUNTRY \
-	, rtw_network_chk_regu_ies(rfctl, pnetwork) ? ' ' : 'x'
+	, show_cisr && is_alpha(pnetwork->cisr.country_str[0]) ? pnetwork->cisr.country_str[0] : '-' \
+	, show_cisr && is_alpha(pnetwork->cisr.country_str[1]) ? pnetwork->cisr.country_str[1] : '-' \
+	SURVEY_INFO_VALUE_ARG_80211D_6G
 #else
 #define SURVEY_INFO_TITLE_FMT_80211D ""
-#define SURVEY_INFO_VALUE_FMT_80211D ""
 #define SURVEY_INFO_TITLE_ARG_80211D
+#define SURVEY_INFO_VALUE_FMT_80211D ""
 #define SURVEY_INFO_VALUE_ARG_80211D
-#endif /* CONFIG_80211D */
+#endif /* DUMP_SURVEY_INFO_80211D */
 
-#ifdef CONFIG_80211D
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
-	bool show_cisr = rfctl->collect_network_cisr;
-#endif
 	struct mlme_priv *mlme = &adapter->mlmepriv;
 	_queue *queue = &mlme->scanned_queue;
 	/* ToDo CONFIG_RTW_MLD: [currently primary link only] */
 	struct _ADAPTER_LINK *alink = GET_PRIMARY_LINK(adapter);
 	struct link_mlme_priv *lmlme = &(alink->mlmepriv);
 	struct wlan_network *pnetwork = NULL;
+	bool opch_deny, regu_deny;
+	enum network_opch_status opch_deny_rsn;
+	enum country_ie_slave_status regu_deny_rsn;
 	_list *plist, *phead;
 	s32 notify_signal;
 	s16 notify_noise = 0;
@@ -1142,6 +1143,7 @@ void dump_scanned_queue(void *sel, _adapter *adapter)
 	int ielen = 0;
 	u32 wpsielen = 0;
 	u32 akm;
+	bool show_cisr = false;
 #ifdef CONFIG_RTW_MESH
 	const char *ssid_title_str = "ssid/mesh_id";
 #else
@@ -1154,12 +1156,16 @@ void dump_scanned_queue(void *sel, _adapter *adapter)
 
 	RTW_PRINT_SEL(sel, "%-5s %-17s %-4s %-3s %-4s %-4s %-5s"
 		SURVEY_INFO_TITLE_FMT_80211D
-		" %-5s %-32s %s\n"
+		" %-6s %-5s %-32s %s\n"
 		, "index", "bssid", "band", "ch", "RSSI", "SdBm", "Noise"
 		SURVEY_INFO_TITLE_ARG_80211D
-		, "age", "flag", ssid_title_str);
+		, "status", "age", "flag", ssid_title_str);
 
 	_rtw_spinlock_bh(&queue->lock);
+
+#ifdef CONFIG_80211D
+	show_cisr = rfctl->collect_network_cisr;
+#endif
 
 	phead = get_list_head(queue);
 	plist = get_next(phead);
@@ -1195,6 +1201,9 @@ void dump_scanned_queue(void *sel, _adapter *adapter)
 		ie_cap = rtw_get_capability(&pnetwork->network);
 		ie_wps = rtw_get_wps_ie(&pnetwork->network.IEs[12], pnetwork->network.IELength - 12, NULL, &wpsielen);
 		ie_p2p = rtw_get_p2p_ie(&pnetwork->network.IEs[12], pnetwork->network.IELength - 12, NULL, &ielen);
+		regu_deny = !rtw_network_chk_regu_ies_rsn(rfctl, pnetwork, &regu_deny_rsn);
+		opch_deny = !rtw_network_chk_opch_status_rsn(rfctl, pnetwork, &opch_deny_rsn);
+
 		sprintf(flag_str, "%s%s%s%s%s%s%s%s%s",
 			(ie_wpa) ? "[WPA]" : "",
 			(ie_wpa2) ? "[WPA2]" : "",
@@ -1210,7 +1219,7 @@ void dump_scanned_queue(void *sel, _adapter *adapter)
 
 		RTW_PRINT_SEL(sel, "%5d "MAC_FMT" %4s %3d %4d %4d %5d"
 			SURVEY_INFO_VALUE_FMT_80211D
-			" %5d %-32s %s\n"
+			"   %u %u%c %5d %-32s %s\n"
 			, ++index
 			, MAC_ARG(pnetwork->network.MacAddress)
 			, band_str(BSS_EX_OP_BAND(&pnetwork->network))
@@ -1219,6 +1228,8 @@ void dump_scanned_queue(void *sel, _adapter *adapter)
 			, notify_signal
 			, notify_noise
 			SURVEY_INFO_VALUE_ARG_80211D
+			, show_cisr ? regu_deny_rsn : COUNTRY_IE_SLAVE_NOCOUNTRY
+			, opch_deny_rsn, (opch_deny || regu_deny) ? 'x' : ' '
 			, rtw_get_passing_time_ms(pnetwork->last_scanned)
 			, flag_str
 			, pnetwork->network.InfrastructureMode == Ndis802_11_mesh ? pnetwork->network.mesh_id.Ssid : pnetwork->network.Ssid.Ssid
@@ -1769,7 +1780,7 @@ void rtw_surveydone_event_callback(_adapter *adapter, u8 *pbuf)
 	else {
 		if (rtw_chk_roam_flags(adapter, RTW_ROAM_ACTIVE)
                 #if (defined(CONFIG_RTW_WNM) && defined(CONFIG_RTW_80211R))
-                        || rtw_ft_chk_flags((adapter), RTW_FT_BTM_ROAM)
+                        || adapter->mlmepriv.need_to_roam == _TRUE
                 #endif
 		) {
 			if (MLME_IS_STA(adapter)
@@ -2010,6 +2021,33 @@ void sitesurvey_set_offch_state(_adapter *adapter, u8 scan_state)
 
 	_rtw_mutex_unlock(&rfctl->offch_mutex);
 }
+
+static u8 rtw_scan_sparse_update_ch(struct rtw_ieee80211_channel *ch, u8 ch_num, u8 max_allow_ch)
+{
+	static u8 token = 255;
+	u8 scan_division_num;
+	int i;
+	int k = 0;
+
+	scan_division_num = (ch_num / max_allow_ch) + ((ch_num % max_allow_ch) ? 1 : 0);
+	token = (token + 1) % scan_division_num;
+
+	if (0)
+		RTW_INFO("scan_division_num:%u, token:%u\n", scan_division_num, token);
+
+	for (i = 0; i < ch_num; i++) {
+		if (ch[i].hw_value && (i % scan_division_num) == token) {
+			if (i != k)
+				_rtw_memcpy(&ch[k], &ch[i], sizeof(struct rtw_ieee80211_channel));
+			k++;
+		}
+	}
+
+	_rtw_memset(&ch[k], 0, sizeof(struct rtw_ieee80211_channel));
+
+	return k;
+}
+
 static u8 rtw_scan_sparse(_adapter *adapter, struct rtw_ieee80211_channel *ch, u8 ch_num)
 {
 	/* interval larger than this is treated as backgroud scan */
@@ -2026,13 +2064,11 @@ static u8 rtw_scan_sparse(_adapter *adapter, struct rtw_ieee80211_channel *ch, u
 
 #define SCAN_SPARSE_CH_NUM_INVALID 255
 
-	static u8 token = 255;
 	u32 interval;
 	bool busy_traffic = _FALSE;
 	bool miracast_enabled = _FALSE;
 	bool bg_scan = _FALSE;
 	u8 max_allow_ch = SCAN_SPARSE_CH_NUM_INVALID;
-	u8 scan_division_num;
 	u8 ret_num = ch_num;
 	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
 
@@ -2063,29 +2099,8 @@ static u8 rtw_scan_sparse(_adapter *adapter, struct rtw_ieee80211_channel *ch, u
 		max_allow_ch = rtw_min(max_allow_ch, RTW_SCAN_SPARSE_CH_NUM_BG);
 #endif
 
-
 	if (max_allow_ch != SCAN_SPARSE_CH_NUM_INVALID) {
-		int i;
-		int k = 0;
-
-		scan_division_num = (ch_num / max_allow_ch) + ((ch_num % max_allow_ch) ? 1 : 0);
-		token = (token + 1) % scan_division_num;
-
-		if (0)
-			RTW_INFO("scan_division_num:%u, token:%u\n", scan_division_num, token);
-
-		for (i = 0; i < ch_num; i++) {
-			if (ch[i].hw_value && (i % scan_division_num) == token
-			   ) {
-				if (i != k)
-					_rtw_memcpy(&ch[k], &ch[i], sizeof(struct rtw_ieee80211_channel));
-				k++;
-			}
-		}
-
-		_rtw_memset(&ch[k], 0, sizeof(struct rtw_ieee80211_channel));
-
-		ret_num = k;
+		ret_num = rtw_scan_sparse_update_ch(ch, ch_num, max_allow_ch);
 		mlmeext->last_scan_time = rtw_get_current_time();
 	}
 

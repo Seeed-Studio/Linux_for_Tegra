@@ -67,9 +67,12 @@ _CORE_FILES :=	core/rtw_fsm.o \
 		core/rtw_eht.o \
 		core/rtw_pwrctrl.o \
 		core/rtw_rf.o \
+		core/rtw_ch_utils.o \
 		core/rtw_chplan.o \
 		core/regdb/rtw_regdb_$(CONFIG_RTW_REGDB).o \
 		core/rtw_chset.o \
+		core/rtw_opc_utils.o \
+		core/rtw_opc_pref.o \
 		core/rtw_dfs.o \
 		core/rtw_txpwr.o \
 		core/monitor/rtw_radiotap.o \
@@ -97,9 +100,10 @@ _CORE_FILES :=	core/rtw_fsm.o \
 		#core/efuse/rtw_efuse.o
 
 _CORE_FILES +=	core/rtw_phl.o \
+		core/rtw_phl_rate.o \
 		core/rtw_phl_cmd.o
 
-EXTRA_CFLAGS += -I$(SOURCETREE)/core/crypto
+EXTRA_CFLAGS += -I$(src)/core/crypto
 _CORE_FILES += core/crypto/aes-internal.o \
 		core/crypto/aes-internal-enc.o \
 		core/crypto/aes-gcm.o \

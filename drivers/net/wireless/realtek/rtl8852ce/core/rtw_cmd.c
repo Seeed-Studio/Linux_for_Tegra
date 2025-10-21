@@ -678,7 +678,7 @@ inline u8 rtw_change_bss_bchbw_cmd(_adapter *adapter, int flags
 	/* single link only */
 	return rtw_createbss_cmd(adapter, flags
 		, 0
-		, iflbmp_to_ifbmp(iflbmp), iflbmp_to_ifbmp(excl_iflbmp), req_band
+		, IFLBMP_TO_IFBMP(iflbmp), IFLBMP_TO_IFBMP(excl_iflbmp), req_band
 		, req_ch, req_bw, req_offset
 		, _TRUE
 	);
@@ -920,7 +920,11 @@ u8 rtw_stop_ap_cmd(_adapter *adapter, u8 flags)
 
 		if (flags & RTW_CMDF_WAIT_ACK) {
 			cmdobj->sctx = &sctx;
+#ifdef PRIVATE_V
+			rtw_sctx_init(&sctx, 10000);
+#else
 			rtw_sctx_init(&sctx, 2000);
+#endif
 		}
 
 		res = rtw_enqueue_cmd(pcmdpriv, cmdobj);

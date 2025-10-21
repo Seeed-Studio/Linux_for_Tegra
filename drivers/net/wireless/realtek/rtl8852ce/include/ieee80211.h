@@ -237,9 +237,9 @@ struct wpa_eapol_key {
 	u8 key_iv[16];
 	u8 key_rsc[WPA_KEY_RSC_LEN];
 	u8 key_id[8]; /* Reserved in IEEE 802.11i/RSN */
-	u8 key_mic[16];
-	u8 key_data_length[2]; /* big endian */
-	/* followed by key_data_length bytes of key_data */
+	/* variable length Key MIC field */
+	/* big endian 2-octet Key Data Length field */
+	/* followed by Key Data Length bytes of Key Data */
 };
 
 #define is_legacy_only(net_type)  ((net_type) == ((net_type) & (WLAN_MD_11BG | WLAN_MD_11A)))
@@ -265,7 +265,7 @@ typedef struct ieee_param {
 		struct {
 			u32 len;
 			u8 reserved[32];
-			u8 data[0];
+			u8 data[];
 		} wpa_ie;
 		struct {
 			int command;
@@ -278,7 +278,7 @@ typedef struct ieee_param {
 			u8 idx;
 			u8 seq[8]; /* sequence counter (set: RX, get: TX) */
 			u16 key_len;
-			u8 key[0];
+			u8 key[];
 		} crypt;
 #ifdef CONFIG_AP_MODE
 		struct {
@@ -290,7 +290,7 @@ typedef struct ieee_param {
 		} add_sta;
 		struct {
 			u8	reserved[2];/* for set max_num_sta */
-			u8	buf[0];
+			u8	buf[];
 		} bcn_ie;
 #endif
 
@@ -301,7 +301,7 @@ typedef struct ieee_param {
 typedef struct ieee_param_ex {
 	u32 cmd;
 	u8 sta_addr[ETH_ALEN];
-	u8 data[0];
+	u8 data[];
 } ieee_param_ex;
 
 struct sta_data {
@@ -705,7 +705,7 @@ struct ieee80211_snap_hdr {
 #define WLAN_EID_VHT_CAPABILITY 191
 #define WLAN_EID_VHT_OPERATION 192
 #define WLAN_EID_VHT_WIDE_BW_CHSWITCH 194
-#define WLAN_EID_VHT_TX_POWER_ENVELOPE 195
+#define WLAN_EID_TX_POWER_ENVELOPE 195
 #define WLAN_EID_CHANNEL_SWITCH_WRAPPER 196
 #define WLAN_EID_VHT_OP_MODE_NOTIFY 199
 #define WLAN_EID_RSNX 244
@@ -716,6 +716,7 @@ struct ieee80211_snap_hdr {
 #define WLAN_EID_EXTENSION_HE_CAPABILITY	35
 #define WLAN_EID_EXTENSION_HE_OPERATION	36
 #define WLAN_EID_EXTENSION_HE_MU_EDCA	38
+#define WLAN_EID_EXT_NON_INHERITANCE 56
 #define WLAN_EID_EXT_HE_6G_CAP 59
 
 #define WLAN_EID_EXT_CAP_MAX_LEN 10
@@ -1254,7 +1255,7 @@ struct ieee80211_info_element_hdr {
 struct ieee80211_info_element {
 	u8 id;
 	u8 len;
-	u8 data[0];
+	u8 data[];
 } __attribute__((packed));
 #endif
 
@@ -1352,6 +1353,7 @@ struct ieee80211_txb {
 #define MAX_P2P_IE_LEN (256)
 #define MAX_WFD_IE_LEN (128)
 #define MAX_RSNX_IE_LEN (16)
+#define MAX_VENDOR_IE_LEN (255)
 
 #define NETWORK_EMPTY_ESSID (1<<0)
 #define NETWORK_HAS_OFDM    (1<<1)
@@ -1813,9 +1815,9 @@ struct rtw_ieee802_11_elems {
 	u8 *he_capabilities;
 	u8 he_capabilities_len;
 	u8 *he_operation;
+	u8 he_operation_len;
 	u8 *he_6g_band_cap;
 	u8 he_6g_band_cap_len;
-	u8 he_operation_len;
 	u8 *rm_en_cap;
 	u8 rm_en_cap_len;
 #ifdef CONFIG_RTW_MESH
@@ -1837,12 +1839,14 @@ struct rtw_ieee802_11_elems {
 	u8 *country_info;
 	u8 country_info_len;
 #ifdef CONFIG_STA_MULTIPLE_BSSID
-	u8 *mbssid;
+	u8 *mbssid; /* possible multiple ie, used for checking existence */
 	u8 mbssid_len;
 
 	/* exist in nontransmitted bssid profile */
 	u8 *non_tx_bssid_cap;
 	u8 non_tx_bssid_cap_len;
+	u8 *non_inheritance;
+	u8 non_inheritance_len;
 #endif
 };
 
@@ -1853,9 +1857,8 @@ ParseRes rtw_ieee802_11_parse_elems(u8 *start, uint len,
 				int show_errors);
 
 #ifdef CONFIG_STA_MULTIPLE_BSSID
-ParseRes rtw_ieee802_11_override_elems_by_mbssid(
-	u8 *mbssid_ie, uint mbssid_ie_len, u8 mbssid_idx, struct rtw_ieee802_11_elems *elems
-	, int show_errors);
+ParseRes rtw_ieee802_11_override_elems_by_mbssid(u8 *start, uint len
+	, u8 tgt_mbssid_idx, struct rtw_ieee802_11_elems *elems, int show_errors);
 #endif
 
 u8 *rtw_set_fixed_ie(unsigned char *pbuf, unsigned int len, unsigned char *source, unsigned int *frlen);
@@ -1980,11 +1983,16 @@ void dump_ht_cap_ie_content(void *sel, const u8 *buf, u32 buf_len);
 
 void dump_wps_ie(void *sel, const u8 *ie, u32 ie_len);
 
-RTW_FUNC_2G_5G_ONLY void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht);
 u8 *rtw_ies_get_he_6g_op_info_ie(u8 *ies, int ies_len);
-void rtw_ies_get_bchbw(u8 *ies, int ies_len, enum band_type *band, u8 *chan, u8 *bw,
-	u8 *offset, u8 *freq0, u8 *freq1, u8 ht, u8 vht, u8 he);
-void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, enum band_type *band, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht, u8 he);
+
+RTW_FUNC_2G_5G_ONLY void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht);
+RTW_FUNC_2G_5G_ONLY void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht);
+void rtw_ies_get_bchbw(u8 *ies, int ies_len, enum band_type *band, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht, u8 he, u8 eht);
+void rtw_bss_get_bchbw(WLAN_BSSID_EX *bss, enum band_type *band, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht, u8 he, u8 eht);
+
+struct rtw_chan_def;
+void rtw_ies_get_chdef(u8 *ies, int ies_len, struct rtw_chan_def *chdef, u8 ht, u8 vht, u8 he, u8 eht);
+void rtw_bss_get_chdef(WLAN_BSSID_EX *bss, struct rtw_chan_def *chdef, u8 ht, u8 vht, u8 he, u8 eht);
 
 u32 rtw_get_p2p_merged_ies_len(u8 *in_ie, u32 in_len);
 int rtw_p2p_merge_ies(u8 *in_ie, u32 in_len, u8 *merge_ie);
@@ -2059,5 +2067,25 @@ int wifirate2_ratetbl_inx(unsigned char rate);
 /*void rtw_set_spp_amsdu_mode(u8 mode, u8 *rsn_ie, int rsn_ie_len);*/
 u8 rtw_check_amsdu_disable(u8 mode, u8 spp_opt);
 
+/* Transmit Power Envelop element */
+#define TPE_ELE_MAX_TXPWR_INTP_L_EIRP		0 /* Local EIRP */
+#define TPE_ELE_MAX_TXPWR_INTP_L_EIRP_PSD	1 /* Local EIRP PSD (power spectral density) */
+#define TPE_ELE_MAX_TXPWR_INTP_RC_EIRP		2 /* Regulatory client EIRP */
+#define TPE_ELE_MAX_TXPWR_INTP_RC_EIRP_PSD	3 /* Regulatory client EIRP PSD */
+#define TPE_ELE_MAX_TXPWR_INTP_NUM		4
+
+#define TPE_ELE_MAX_TXPWR_CATE_DEF	0
+#define TPE_ELE_MAX_TXPWR_CATE_SUB	1 /* subordinate device */
+#define TPE_ELE_MAX_TXPWR_CATE_NUM	2
+
+#define SET_TPE_ELE_MAX_TXPWR_CNT(_pEleStart, _val)	SET_BITS_TO_LE_1BYTE(_pEleStart, 0, 3, _val)
+#define SET_TPE_ELE_MAX_TXPWR_INTP(_pEleStart, _val)	SET_BITS_TO_LE_1BYTE(_pEleStart, 3, 3, _val)
+#define SET_TPE_ELE_MAX_TXPWR_CATE(_pEleStart, _val)	SET_BITS_TO_LE_1BYTE(_pEleStart, 6, 2, _val)
+#define SET_TPE_ELE_MAX_TXPWR_VAL(_pEleStart, i, _val)	SET_BITS_TO_LE_1BYTE((_pEleStart) + 1 + i, 0, 8, _val)
+
+#define GET_TPE_ELE_MAX_TXPWR_CNT(_pEleStart)		LE_BITS_TO_1BYTE(_pEleStart, 0, 3)
+#define GET_TPE_ELE_MAX_TXPWR_INTP(_pEleStart)		LE_BITS_TO_1BYTE(_pEleStart, 3, 3)
+#define GET_TPE_ELE_MAX_TXPWR_CATE(_pEleStart)		LE_BITS_TO_1BYTE(_pEleStart, 6, 2)
+#define GET_TPE_ELE_MAX_TXPWR_VAL(_pEleStart, i)	LE_BITS_TO_1BYTE((_pEleStart) + 1 + i, 0, 8)
 
 #endif /* IEEE80211_H */

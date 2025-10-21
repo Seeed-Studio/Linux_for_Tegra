@@ -32,6 +32,10 @@
 #define RADIO_TO_FW_PAGE_SIZE 6
 #define RADIO_TO_FW_DATA_SIZE 500
 
+#define HALRF_TPE_TORRANCE_ANTGAIN 13	/* 6.5 dBm, unit: 0.5 dBm (multiply by 2). 1.5dB torrace for each sample, antenna gain 5dBi */
+#define HALRF_TPE_2TX_COMBINE 6	/* 2TX combine 3dB, unit: 0.5 dBm (multiply by 2).*/
+#define HALRF_TPE_TSSI_LOW_PWR_TORRACE 4	/* TSSI low power 0dBm torrace, 2 dBm, unit: 0.5 dBm (multiply by 2). */
+
 #ifndef PW_LMT_MAX_REGULATION_EXT_NUM
 #define PW_LMT_MAX_REGULATION_EXT_NUM 5
 #endif
@@ -483,6 +487,7 @@ struct halrf_pwr_info {
 	s8 ant_gain_5g_oft[PW_LMT_MAX_REGULATION_NUM];
 	s8 ant_gain_6g_oft[PW_LMT_MAX_6G_REGULATION_NUM];
 	u8 ant_type;
+	s32 tpe_max_tx_pwr[HW_PHY_MAX][MAX_TPE_ELE_CNT][MAX_TPE_TX_PWR_CNT];
 };
 
 #define TX_NUM 2		/*1TX, 2TX*/

@@ -744,7 +744,7 @@ bool halrf_chlk_reload_check_8852c(struct rf_info *rf, enum phl_phy_idx phy)
 {
 	struct halrf_dbcc_info *dbcc_info = &rf->dbcc_info;
 	struct halrf_mcc_info *mcc_info = &rf->mcc_info;
-	u8 path, i, j, idx, kpath, kch, kband;
+	u8 path, i, idx, kpath, kch, kband;
 	bool reload = false;
 	u8 get_empty_table = false;
 
@@ -754,6 +754,7 @@ bool halrf_chlk_reload_check_8852c(struct rf_info *rf, enum phl_phy_idx phy)
 	kband = rf->hal_com->band[phy].cur_chandef.band;
 	idx = dbcc_info->table_idx;
 	RF_DBG(rf, DBG_RF_RFK, "[DBCC]dbcc_en=%d  prek_is_dbcc=%d\n", rf->hal_com->dbcc_en, dbcc_info->prek_is_dbcc);
+
 	if (rf->hal_com->dbcc_en || dbcc_info->prek_is_dbcc) {
 		//try reload
 		for(i = 0; i < 2; i++) {
@@ -762,6 +763,7 @@ bool halrf_chlk_reload_check_8852c(struct rf_info *rf, enum phl_phy_idx phy)
 					kch == dbcc_info->ch[i][0] && kband == dbcc_info->band[i][0]) {
 					idx = i;
 					reload = true;
+					break;
 				}
 			} else {
 				if (kpath == RF_A)
@@ -771,9 +773,11 @@ bool halrf_chlk_reload_check_8852c(struct rf_info *rf, enum phl_phy_idx phy)
 				if (kch == dbcc_info->ch[i][path] && kband == dbcc_info->band[i][path]) {
 					idx = i;
 					reload = true;
+					break;
 				}
 			}
 		}
+
 		if (reload) {
 			halrf_chlk_reload_dbcc(rf, phy, idx);
 			rf->chlk_map = 0xffffffff & (~HAL_RF_IQK) & (~HAL_RF_DPK);
@@ -785,10 +789,16 @@ bool halrf_chlk_reload_check_8852c(struct rf_info *rf, enum phl_phy_idx phy)
 			return reload;
 		}
 	}
-	//force K
-	for  (i = 0;  i < 2; i++)
+
+	// get index
+	for  (i = 0; i < 2; i++)
 		if (dbcc_info->ch[i][0] == 0 && dbcc_info->ch[i][1] == 0)
 			break;
+
+	idx = i;
+
+	//force K
+#if 0
 	if (i < 2) {
 		idx = i;
 	} else {
@@ -808,8 +818,7 @@ bool halrf_chlk_reload_check_8852c(struct rf_info *rf, enum phl_phy_idx phy)
 					idx = 0;
 				}
 			}
-		}
-		else {
+		} else {
 			for  (j = 0;  j < 2; j++)
 				if (dbcc_info->ch[j][0] != dbcc_info->ch[j][1] ||
 					dbcc_info->band[j][0] != dbcc_info->band[j][1])
@@ -823,10 +832,13 @@ bool halrf_chlk_reload_check_8852c(struct rf_info *rf, enum phl_phy_idx phy)
 			}
 		}
 	}
+#endif
+
 	rf->chlk_map = 0xffffffff;
 	dbcc_info->prek_is_dbcc = rf->hal_com->dbcc_en;
 	dbcc_info->table_idx = idx;
 	mcc_info->table_idx = idx;
+
 	for (path = 0; path < 2; path++) {
 		if (kpath & BIT(path)) {
 			dbcc_info->ch[idx][path] = kch;
@@ -839,6 +851,7 @@ bool halrf_chlk_reload_check_8852c(struct rf_info *rf, enum phl_phy_idx phy)
 	RF_DBG(rf, DBG_RF_RFK, "[DBCC]band00=%d band01=%d band10=%d band10=%d\n",
 		dbcc_info->band[0][0], dbcc_info->band[0][1], dbcc_info->band[1][0], dbcc_info->band[1][1]);
 	RF_DBG(rf, DBG_RF_RFK, "[DBCC] mcc_info->table_idx=%d\n", mcc_info->table_idx);
+
 	return reload;
 }
 #endif

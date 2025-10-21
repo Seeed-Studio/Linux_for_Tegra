@@ -130,6 +130,9 @@ s16 halrf_get_power(void *rf_void,
 s16 halrf_get_band_power(void *rf_void, enum phl_phy_idx phy,
 	u8 rf_path, u16 rate, u8 dcm, u8 offset, u8 bandwidth,
 	u8 beamforming, u8 channel);
+s16 halrf_get_power_by_rate_and_limit_ru_smaller(void *rf_void,
+	u8 rf_path, u16 rate, u8 dcm, u8 offset, u8 bandwidth,
+	u8 beamforming, u8 channel, u8 band);
 u8 halrf_get_thermal(void *rf_void, u8 rf_path);
 u32 halrf_get_tssi_de(void *rf_void, enum phl_phy_idx phy_idx, u8 path);
 s32 halrf_get_online_tssi_de(void *rf_void, enum phl_phy_idx phy_idx, u8 path, s32 dbm, s32 puot);
@@ -197,6 +200,12 @@ void halrf_dack_recover(void *rf_void,
 
 bool halrf_set_power(struct rf_info *rf, enum phl_phy_idx phy,
 	enum phl_pwr_table pwr_table);
+
+bool halrf_get_efuse_power_table_switch(struct rf_info *rf, enum phl_phy_idx phy_idx);
+
+void halrf_set_power_limit_to_struct(struct rf_info *rf, enum phl_phy_idx phy);
+
+void halrf_set_power_limit_ru_to_struct(struct rf_info *rf, enum phl_phy_idx phy);
 
 bool halrf_get_efuse_power_table_switch(struct rf_info *rf, enum phl_phy_idx phy_idx);
 
@@ -271,6 +280,7 @@ void halrf_get_tssi_trk_info(struct rf_info *rf, char input[][16], u32 *_used,
 void halrf_set_tx_shape(struct rf_info *rf, u8 tx_shape_idx);
 
 void halrf_disconnect_notify(void *rf_void, struct rtw_chan_def *chandef);
+void halrf_roaming_disconnect_notify(void *rf_void, struct rtw_chan_def *chandef, struct rtw_chan_def *chandef_new);
 bool  halrf_check_mcc_ch(void *rf_void, struct rtw_chan_def *chandef );
 void halrf_ctl_bw(void *rf_void, enum phl_phy_idx phy, enum channel_width bw);
 void halrf_ctl_ch(void *rf_void, enum phl_phy_idx phy, u8 central_ch, enum band_type band);
@@ -355,6 +365,10 @@ void halrf_op5k_trigger_by_bw(void *rf_void, enum channel_width bw);
 void halrf_set_tpe_control(struct rf_info *rf);
 
 void halrf_set_tpe_control_dbcc(struct rf_info *rf, enum phl_phy_idx phy);
+
+bool halrf_tpe_is_required(struct rtw_tpe_info_t *tpe_info);
+
+bool halrf_check_tpe_allow(struct rf_info *rf, struct rtw_tpe_info_t *tpe_info);
 
 u32 halrf_get_iqk_times(void *rf_void);
 

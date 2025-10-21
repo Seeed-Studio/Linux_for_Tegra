@@ -1397,9 +1397,9 @@ static int _mcc_get_setting(void *priv, struct rtw_phl_mcc_setting_info *param)
 	}
 
 	if (MLME_IS_GO(a) || MLME_IS_GC(a))
-		param->dur = 50;
+		param->dur = 70;
 	else
-		param->dur = 50;
+		param->dur = 30;
 
 	if (MLME_IS_STA(a) || MLME_IS_GC(a))
 		param->tx_null_early = 5;
@@ -1414,7 +1414,9 @@ exit:
 
 struct rtw_phl_mcc_ops rtw_mcc_ops = {
 	.priv = NULL,
+#ifdef CONFIG_P2P_PS
 	.mcc_update_noa = _mcc_update_noa,
+#endif
 	.mcc_get_setting = _mcc_get_setting,
 };
 #endif
@@ -4126,6 +4128,133 @@ void rtw_txpwr_hal_get_current_lmt_regs_name(struct dvobj_priv* dvobj, char *nam
 	rtw_phl_free_pw_lmt_regu_info(GET_PHL_INFO(dvobj), hal_info);
 }
 
+#if CONFIG_IEEE80211_BAND_6GHZ
+static const enum regu_info_var _chplan_6g_cate_to_hal[] = {
+	[CHPLAN_6G_CATE_VLP]	= REGU_INFO_VLP_AP,
+	[CHPLAN_6G_CATE_LPI]	= REGU_INFO_INDOOR_AP,
+	[CHPLAN_6G_CATE_STD]	= REGU_INFO_STANDARD_PWR_AP,
+};
+
+#define chplan_6g_cate_to_hal(cate) (((cate) > CHPLAN_6G_CATE_STD) ? REGU_INFO_UNDEFINED : _chplan_6g_cate_to_hal[(cate)])
+
+static bool rtw_txpwr_hal_get_tpe_info(struct rtw_tpe_info_t *hinfo, const struct country_ie_slave_record *cisr)
+{
+	const struct rtw_tpe_t *tpes = &cisr->tpes;
+	const struct rtw_tpe_ele_t *tpe;
+	struct rtw_r_tpe_ele_t rtpe;
+	u8 i, j;
+
+	_rtw_memset(hinfo, 0, sizeof(*hinfo));
+
+	for (i = 0, j = 0; i < tpes->cnt; i++) {
+		tpe = &tpes->ele[i];
+
+		if (tpe->cate != TPE_ELE_MAX_TXPWR_CATE_DEF) /* TODO: subordinate */
+			continue;
+
+		switch (tpe->intp) {
+		case TPE_ELE_MAX_TXPWR_INTP_L_EIRP:
+		case TPE_ELE_MAX_TXPWR_INTP_RC_EIRP:
+			rtpe.pwr_intpn = PWR_INTPN_EIRP;
+			break;
+
+		case TPE_ELE_MAX_TXPWR_INTP_L_EIRP_PSD:
+		case TPE_ELE_MAX_TXPWR_INTP_RC_EIRP_PSD:
+			rtpe.pwr_intpn = PWR_INTPN_EIRP_PSD;
+			break;
+		default:
+			RTW_WARN("%s unknown intp:%u\n", __func__, tpe->intp);
+			continue;
+		}
+
+		if (tpe->pwr_cnt > MAX_TPE_TX_PWR_CNT) {
+			RTW_WARN("%s exceed MAX_TPE_TX_PWR_CNT\n", __func__);
+			rtpe.valid_pwr_cnt = MAX_TPE_TX_PWR_CNT;
+		} else
+			rtpe.valid_pwr_cnt = tpe->pwr_cnt;
+		_rtw_memcpy(rtpe.max_tx_pwr, tpe->max_tx_pwr, rtpe.valid_pwr_cnt);
+
+		if (j == MAX_TPE_ELE_CNT) {
+			RTW_WARN("%s exceed MAX_TPE_ELE_CNT\n", __func__);
+			break;
+		}
+		hinfo->r_tpe[j++] = rtpe;
+	}
+
+	if (j > 0) {
+		hinfo->country_code[0] = cisr->country_str[0];
+		hinfo->country_code[1] = cisr->country_str[1];
+		hinfo->rx_chdef.band = cisr->band;
+		hinfo->rx_chdef.chan = cisr->opch;
+		hinfo->ap_type = chplan_6g_cate_to_hal(cisr_get_largest_chplan_6g_cate(cisr));
+		hinfo->valid_tpe_cnt = j;
+		return true;
+	}
+
+	return false;
+}
+
+bool rtw_txpwr_hal_tpe_allow(struct dvobj_priv *dvobj, struct country_ie_slave_record *cisr)
+{
+	struct rtw_tpe_info_t hinfo;
+
+	if (rtw_txpwr_hal_get_tpe_info(&hinfo, cisr))
+		return rtw_phl_check_tpe_allow(GET_PHL_INFO(dvobj), &hinfo);
+
+	return true; /* can't get valid hal tpe info, return allow */
+}
+
+void rtw_txpwr_hal_set_tpe_infos(struct dvobj_priv *dvobj)
+{
+	struct rf_ctl_t *rfctl = dvobj_to_rfctl(dvobj);
+	_adapter *iface;
+	struct _ADAPTER_LINK *alink, *link_set = NULL;
+	struct rtw_tpe_info_t hinfo;
+	int i, j;
+
+	for (i = 0; i < dvobj->iface_nums; i++) {
+		iface = dvobj->padapters[i];
+		if (!iface)
+			continue;
+		for (j = 0; j < iface->adapter_link_num; j++) {
+			alink = GET_LINK(iface, j);
+			if (!alink->wrlink)
+				continue;
+			if (!rtw_txpwr_hal_get_tpe_info(&hinfo, &rfctl->cisr[i][j])
+				|| !rtw_phl_tpe_is_required(&hinfo)
+				|| !rtw_phl_check_tpe_allow(GET_PHL_INFO(dvobj), &hinfo))
+				continue;
+			if (link_set) {
+				RTW_WARN("%s tpe_info already set by "ADPT_FMT" link:%u, skip "ADPT_FMT" link:%u\n"
+					, __func__, ADPT_ARG(link_set->adapter), rtw_adapter_link_get_id(link_set)
+					, ADPT_ARG(iface), j);
+				continue;
+			}
+			rtw_phl_cmd_tpe_update(alink->wrlink, &hinfo, false, 0);
+			link_set = alink;
+		}
+	}
+
+	if (!link_set) {
+		/* clear tpe info in PHL */
+		_rtw_memset(&hinfo, 0, sizeof(hinfo));
+		for (i = 0; i < dvobj->iface_nums; i++) {
+			iface = dvobj->padapters[i];
+			if (!iface)
+				continue;
+			for (j = 0; j < iface->adapter_link_num; j++) {
+				alink = GET_LINK(iface, j);
+				if (!alink->wrlink)
+					continue;
+				rtw_phl_cmd_tpe_update(alink->wrlink, &hinfo, false, 0);
+				i = dvobj->iface_nums;
+				break;
+			}
+		}
+	}
+}
+#endif /* CONFIG_IEEE80211_BAND_6GHZ */
+
 #define TXPWR_LMT_RS_CCK	0
 #define TXPWR_LMT_RS_OFDM	1
 #define TXPWR_LMT_RS_HT		2
@@ -4197,6 +4326,7 @@ void dump_txpwr_lmt(void *sel, _adapter *adapter)
 		max_regd_num = rtw_phl_get_regulation_max_num(GET_PHL_INFO(devob), band);
 
 		for (bw = 0; bw < TXPWR_LMT_MAX_BANDWIDTH_NUM; bw++) {
+			u8 (*center_chs_num)(u8);
 			u8 (*center_chs)(u8, u8);
 
 			if (!rtw_hw_is_bw_support(devob, bw))
@@ -4204,12 +4334,16 @@ void dump_txpwr_lmt(void *sel, _adapter *adapter)
 			if (band == BAND_ON_24G && bw >= CHANNEL_WIDTH_80)
 				break;
 
-			ch_num = center_chs_num_of_band[band](bw);
+			center_chs_num = center_chs_num_of_band[band];
+			center_chs = center_chs_of_band[band];
+			if (!center_chs_num || !center_chs)
+				break;
+
+			ch_num = center_chs_num(bw);
 			if (ch_num == 0) {
 				rtw_warn_on(1);
 				break;
 			}
-			center_chs = center_chs_of_band[band];
 
 			for (tlrs = TXPWR_LMT_RS_CCK; tlrs < TXPWR_LMT_RS_NUM; tlrs++) {
 
@@ -4324,14 +4458,19 @@ void dump_txpwr_lmt_ru(void *sel, _adapter *adapter)
 		max_regd_num = rtw_phl_get_regulation_max_num(GET_PHL_INFO(devob), band);
 
 		for (bw = 0; bw < TXPWR_LMT_RU_NUM; bw++) {
+			u8 (*center_chs_num)(u8);
 			u8 (*center_chs)(u8, u8);
 
-			ch_num = center_chs_num_of_band[band](CHANNEL_WIDTH_20);
+			center_chs_num = center_chs_num_of_band[band];
+			center_chs = center_chs_of_band[band];
+			if (!center_chs_num || !center_chs)
+				break;
+
+			ch_num = center_chs_num(CHANNEL_WIDTH_20);
 			if (ch_num == 0) {
 				rtw_warn_on(1);
 				break;
 			}
-			center_chs = center_chs_of_band[band];
 
 			for (tlrs = TXPWR_LMT_RS_HE; tlrs < TXPWR_LMT_RS_NUM; tlrs++) {
 

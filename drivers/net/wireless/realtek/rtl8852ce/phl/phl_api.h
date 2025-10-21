@@ -1186,6 +1186,8 @@ bool rtw_phl_get_pwr_lmt_en(void *phl, u8 band_idx);
 struct txpwr_regu_info_t *rtw_phl_get_pw_lmt_regu_info(void *phl);
 void rtw_phl_free_pw_lmt_regu_info(void *phl, struct txpwr_regu_info_t *info);
 bool rtw_phl_is_current_pwr_lmt_regu(void *phl, enum band_type band, u8 regu);
+bool rtw_phl_tpe_is_required(struct rtw_tpe_info_t *tpe_info);
+bool rtw_phl_check_tpe_allow(void *phl, struct rtw_tpe_info_t *tpe_info);
 
 enum rtw_phl_status
 rtw_phl_cmd_txpwr_ctl(void *phl, struct txpwr_ctl_param *args

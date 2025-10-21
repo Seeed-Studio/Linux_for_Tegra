@@ -15,6 +15,9 @@
 #ifndef __RTW_MI_H_
 #define __RTW_MI_H_
 
+#define IFBMP_TO_IFLBMP(ifbmp) (ifbmp) /* this driver has single link only */
+#define IFLBMP_TO_IFBMP(iflbmp) (iflbmp & 0xFF) /* this driver has single link only */
+
 int rtw_mi_get_ch_setting_union_by_ifbmp(_adapter *adapter, u8 ifbmp, enum band_type *band, u8 *ch, u8 *bw, u8 *offset);
 int rtw_mi_get_ch_setting_union(_adapter *adapter, enum band_type *band, u8 *ch, u8 *bw, u8 *offset);
 int rtw_mi_get_ch_setting_union_no_self(_adapter *adapter, enum band_type *band, u8 *ch, u8 *bw, u8 *offset);
@@ -185,6 +188,7 @@ u8 rtw_mi_buddy_check_mlmeinfo_state(_adapter *padapter, u32 state);
 u8 rtw_mi_check_fwstate(_adapter *padapter, sint state);
 u8 rtw_mi_buddy_check_fwstate(_adapter *padapter, sint state);
 u8 rtw_mi_check_fwstate_by_hwband(struct dvobj_priv *dvobj, u8 band_idx, sint state);
+#define rtw_mi_check_link_fwstate_by_hwband(dvobj, band_idx, state) rtw_mi_check_fwstate_by_hwband(dvobj, band_idx, state)
 
 enum {
 	MI_LINKED,
@@ -252,15 +256,29 @@ _adapter *rtw_get_iface_by_macddr(_adapter *padapter, const u8 *mac_addr);
 
 void rtw_mi_buddy_clone_bcmc_packet(_adapter *padapter, union recv_frame *precvframe);
 
-u8 rtw_mi_get_ifbmp_by_hwband(struct dvobj_priv *dvobj, u8 band_idx);
-_adapter *rtw_mi_get_iface_by_hwband(struct dvobj_priv *dvobj, u8 band_idx);
-u8 rtw_mi_get_ld_sta_ifbmp(_adapter *adapter);
-u8 rtw_mi_get_ld_sta_ifbmp_by_hwband(struct dvobj_priv *dvobj, u8 band_idx);
-u8 rtw_mi_get_lgd_sta_ifbmp(_adapter *adapter);
-u8 rtw_mi_get_lgd_sta_ifbmp_by_hwband(struct dvobj_priv *dvobj, u8 band_idx);
-u8 rtw_mi_get_ap_mesh_ifbmp(_adapter *adapter);
-u8 rtw_mi_get_ap_mesh_ifbmp_by_hwband(struct dvobj_priv *dvobj, u8 band_idx);
-_adapter *rtw_mi_get_ap_mesh_iface_by_hwband(struct dvobj_priv *dvobj, u8 band_idx);
+u8 rtw_mi_get_ifbmp_mlme(struct dvobj_priv *dvobj, _adapter *adapter, u8 band_idx, u32 role_sbmp, u32 mlme_sbmp);
+_adapter *rtw_mi_get_iface_mlme(struct dvobj_priv *dvobj, _adapter *adapter, u8 band_idx, u32 role_sbmp, u32 mlme_sbmp);
+
+#define rtw_mi_get_ifbmp_by_hwband(dvobj, band_idx) rtw_mi_get_ifbmp_mlme(dvobj, NULL, band_idx, WIFI_NULL_STATE, 0)
+#define rtw_mi_get_iface_by_hwband(dvobj, band_idx) rtw_mi_get_iface_mlme(dvobj, NULL, band_idx, WIFI_NULL_STATE, 0)
+
+#define rtw_mi_get_ld_sta_ifbmp_by_hwband(dvobj, band_idx) rtw_mi_get_ifbmp_mlme(dvobj, NULL, band_idx, WIFI_STATION_STATE, WIFI_ASOC_STATE)
+#define rtw_mi_get_ld_sta_iflbmp_by_hwband(dvobj, band_idx) IFBMP_TO_IFLBMP(rtw_mi_get_ld_sta_ifbmp_by_hwband(dvobj, band_idx))
+#define rtw_mi_get_ld_sta_ifbmp(adapter) rtw_mi_get_ifbmp_mlme(adapter_to_dvobj(adapter), adapter, HW_BAND_MAX, WIFI_STATION_STATE, WIFI_ASOC_STATE)
+#define rtw_mi_get_ld_sta_iflbmp(adapter_link) IFBMP_TO_IFLBMP(rtw_mi_get_ld_sta_ifbmp(adapter_link->adapter))
+
+#define rtw_mi_get_lgd_sta_ifbmp_by_hwband(dvobj, band_idx) rtw_mi_get_ifbmp_mlme(dvobj, NULL, band_idx, WIFI_STATION_STATE, WIFI_UNDER_LINKING | WIFI_ASOC_STATE)
+#define rtw_mi_get_lgd_sta_iflbmp_by_hwband(dvobj, band_idx) IFBMP_TO_IFLBMP(rtw_mi_get_lgd_sta_ifbmp_by_hwband(dvobj, band_idx))
+#define rtw_mi_get_lgd_sta_ifbmp(adapter) rtw_mi_get_ifbmp_mlme(adapter_to_dvobj(adapter), adapter, HW_BAND_MAX, WIFI_STATION_STATE, WIFI_UNDER_LINKING | WIFI_ASOC_STATE)
+#define rtw_mi_get_lgd_sta_iflbmp(adapter_link) IFBMP_TO_IFLBMP(rtw_mi_get_lgd_sta_ifbmp(adapter_link->adapter))
+
+#define rtw_mi_get_ap_mesh_ifbmp_by_hwband(dvobj, band_idx) rtw_mi_get_ifbmp_mlme(dvobj, NULL, band_idx, WIFI_AP_STATE | WIFI_MESH_STATE, WIFI_ASOC_STATE)
+#define rtw_mi_get_ap_mesh_iflbmp_by_hwband(dvobj, band_idx) IFBMP_TO_IFLBMP(rtw_mi_get_ap_mesh_ifbmp_by_hwband(dvobj, band_idx))
+#define rtw_mi_get_ap_mesh_ifbmp(adapter) rtw_mi_get_ifbmp_mlme(adapter_to_dvobj(adapter), adapter, HW_BAND_MAX, WIFI_AP_STATE | WIFI_MESH_STATE, WIFI_ASOC_STATE)
+#define rtw_mi_get_ap_mesh_iflbmp(adapter_link) IFBMP_TO_IFLBMP(rtw_mi_get_ap_mesh_ifbmp(adapter_link->adapter))
+#define rtw_mi_get_ap_mesh_iface_by_hwband(dvobj, band_idx) rtw_mi_get_iface_mlme(dvobj, NULL, band_idx, WIFI_AP_STATE | WIFI_MESH_STATE, WIFI_ASOC_STATE)
+#define rtw_mi_get_ap_mesh_iflink_by_hwband(dvobj, band_idx) ({_adapter *_a = rtw_mi_get_ap_mesh_iface_by_hwband(dvobj, band_idx); struct _ADAPTER_LINK *_al = _a ? GET_PRIMARY_LINK(_a) : NULL; _al;})
+
 #ifdef	PHL_MR_PROC_CMD
 u8 rtw_mi_dump_mac_addr(_adapter *adapter);
 #endif
@@ -272,8 +290,5 @@ bool rtw_iface_is_operate_at_hwband(_adapter *adapter, u8 band_idx);
 bool rtw_iface_at_same_hwband(_adapter *adapter, _adapter *iface);
 
 u8 rtw_mi_get_hw_port(_adapter *adapter, struct _ADAPTER_LINK *adapter_link);
-
-u32 ifbmp_to_iflbmp(u8 ifbmp);
-u8 iflbmp_to_ifbmp(u32 iflbmp);
 
 #endif /*__RTW_MI_H_*/

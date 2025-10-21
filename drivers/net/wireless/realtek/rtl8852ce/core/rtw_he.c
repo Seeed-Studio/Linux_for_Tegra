@@ -1455,6 +1455,7 @@ u32 rtw_restructure_he_ie(_adapter *padapter,
 #if CONFIG_IEEE80211_BAND_6GHZ
 	u8 *he_6g_bcap_ie;
 	u8 he_6g_bcap_eid_ext = WLAN_EID_EXT_HE_6G_CAP;
+	u8 *he_6g_op_info;
 #endif
 
 	rtw_he_use_default_setting(padapter, padapter_link);
@@ -1467,6 +1468,21 @@ u32 rtw_restructure_he_ie(_adapter *padapter,
 	he_op_ie = rtw_get_ie_ex(in_ie + 12, in_len - 12, WLAN_EID_EXTENSION, &he_op_eid_ext, 1, out_ie + *pout_len, &ielen);
 	if (!he_op_ie || (ielen > (HE_OPER_ELE_MAX_LEN + 2)))
 		goto exit;
+#if CONFIG_IEEE80211_BAND_6GHZ
+	if (band == BAND_ON_6G) {
+		he_6g_op_info = rtw_ies_get_he_6g_op_info_ie(out_ie + *pout_len, ielen);
+		if (he_6g_op_info) {
+			/* try downgrade bw to fit in channel plan setting */
+			u8 ch = GET_HE_OP_INFO_PRIMARY_CHAN(he_6g_op_info);
+			u8 bw = GET_HE_OP_INFO_CHAN_WIDTH(he_6g_op_info);
+			u8 offset;
+
+			rtw_get_offset_by_bchbw(band, ch, bw, &offset);
+			bw = alink_adjust_linking_bw_by_regd(padapter_link, band, ch, bw, offset);
+			SET_HE_OP_INFO_CHAN_WIDTH(he_6g_op_info, bw);
+		}
+	}
+#endif
 	*pout_len += ielen;
 
 	phepriv->he_option = _TRUE;
@@ -1616,6 +1632,7 @@ u32	rtw_build_he_operation_ie(_adapter *padapter,
 	return len;
 }
 
+#if 0
 void HEOnAssocRsp(_adapter *padapter)
 {
 	struct _ADAPTER_LINK *padapter_link = GET_PRIMARY_LINK(padapter);
@@ -1635,6 +1652,7 @@ void HEOnAssocRsp(_adapter *padapter)
 
 	/* AMPDU related settings here ? */
 }
+#endif
 
 void rtw_he_ies_attach(_adapter *padapter, struct _ADAPTER_LINK *padapter_link, WLAN_BSSID_EX *pnetwork, enum band_type band)
 {

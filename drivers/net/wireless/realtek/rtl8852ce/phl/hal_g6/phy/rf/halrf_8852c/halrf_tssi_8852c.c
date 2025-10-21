@@ -4918,9 +4918,8 @@ void halrf_get_tssi_info_8852c(struct rf_info *rf,
 		char input[][16], u32 *_used, char *output, u32 *_out_len)
 {
 	struct halrf_tssi_info *tssi_info = &rf->tssi;
-	u32 tmp, tmp1, pg_ther, cur_ther;
-	s32 delta_tssi;
-	s32 diff_ther;
+	u32 tmp, pg_ther, cur_ther;
+	s32 delta_tssi, diff_ther, s_tmp[2] = {0};
 	s32 int_tmp[TSSI_PATH_MAX_8852C], float_tmp[TSSI_PATH_MAX_8852C];
 	s8 txagc_offset[TSSI_PATH_MAX_8852C] = {0};
 
@@ -4979,12 +4978,14 @@ void halrf_get_tssi_info_8852c(struct rf_info *rf,
 		 "TSSI DCK A / B", halrf_rreg(rf, 0x1c04, 0x00FFF000),
 		 halrf_rreg(rf, 0x3c04, 0x00FFF000));
 
-	tmp = halrf_rreg(rf, 0x1c78, 0x1ff);
-	tmp1 = halrf_rreg(rf, 0x3c78, 0x1ff);
-	RF_DBG_CNSL(*_out_len, *_used, output + *_used, *_out_len - *_used, " %-25s = %d.%d / %d.%d\n",
+	s_tmp[0] = halrf_rreg(rf, 0x1c78, 0x1ff);
+	(s_tmp[0] & BIT(8)) ? (s_tmp[0] | 0xfffffe00) : 0;
+	s_tmp[1] = halrf_rreg(rf, 0x3c78, 0x1ff);
+	(s_tmp[1] & BIT(8)) ? (s_tmp[1] | 0xfffffe00) : 0;
+	RF_DBG_CNSL(*_out_len, *_used, output + *_used, *_out_len - *_used, " %-30s = %d.%d / %d.%d\n",
 		 "T-MAC xdbm A / B",
-		 tmp / 4, tmp * 100 / 4 % 100,
-		 tmp1 / 4, tmp1 * 100 / 4 % 100);
+		 s_tmp[0] / 4, (s_tmp[0] > 0) ? (((s_tmp[0] * 100) / 4) % 100) : (((-1 * s_tmp[0] * 100) / 4) % 100),
+		 s_tmp[1] / 4, (s_tmp[1] > 0) ? (((s_tmp[1] * 100) / 4) % 100) : (((-1 * s_tmp[1] * 100) / 4) % 100));
 
 	halrf_wreg(rf, 0x58b4, 0x0000001f, 0x7);
 	tmp = halrf_rreg(rf, 0x1c00, 0x0ffc0000);

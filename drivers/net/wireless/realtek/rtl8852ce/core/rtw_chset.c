@@ -62,23 +62,29 @@ int rtw_chset_init(struct rtw_chset *chset, u8 band_bmp)
 {
 	u8 ch_num = 0;
 	int band, i;
+	u8 (*center_chs_num)(u8);
+	u8 (*center_chs)(u8, u8);
+	u8 cch_num;
 
 	_rtw_memset(chset->chs, 0, sizeof(RT_CHANNEL_INFO) * MAX_CHANNEL_NUM);
 
 	for (band = 0; band < BAND_MAX; band++) {
-		u8 center_ch_num;
-		u8 (*center_chs)(u8, u8);
-
 		if (!(band_bmp & band_to_band_cap(band)))
 			continue;
 
-		center_ch_num = center_chs_num_of_band[band](CHANNEL_WIDTH_20);
+		center_chs_num = center_chs_num_of_band[band];
 		center_chs = center_chs_of_band[band];
+		if (!center_chs_num || !center_chs) {
+			rtw_warn_on(1);
+			continue;
+		}
 
 		chset->chs_of_band[band] = &chset->chs[ch_num];
+		chset->chs_offset_of_band[band] = ch_num;
 		chset->chs_len_of_band[band] = 0;
 
-		for (i = 0; i < center_ch_num; i++) {
+		cch_num = center_chs_num(CHANNEL_WIDTH_20);
+		for (i = 0; i < cch_num; i++) {
 			chset->chs[ch_num].band = band;
 			chset->chs[ch_num].ChannelNum = center_chs(CHANNEL_WIDTH_20, i);
 			chset->chs_len_of_band[band]++;;
@@ -91,41 +97,6 @@ int rtw_chset_init(struct rtw_chset *chset, u8 band_bmp)
 	return _SUCCESS;
 }
 
-#if CONFIG_ALLOW_FUNC_2G_5G_ONLY
-/*
- * Search enabled channel with the @param ch in given @param ch_set
- * @ch_set: the given channel set
- * @ch: the given channel number
- *
- * return the index of channel_num in channel_set, -1 if not found
- */
-RTW_FUNC_2G_5G_ONLY static int _rtw_chset_search_ch(const struct rtw_chset *chset, u32 ch, bool include_dis)
-{
-	int i;
-
-	if (ch == 0)
-		return -1;
-
-	for (i = 0; i < chset->chs_len; i++) {
-		if (ch == chset->chs[i].ChannelNum
-			&& (include_dis || !(chset->chs[i].flags & RTW_CHF_DIS)))
-			return i;
-	}
-
-	return -1;
-}
-
-RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch(const struct rtw_chset *chset, u32 ch)
-{
-	return _rtw_chset_search_ch(chset, ch, false);
-}
-
-RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch_include_dis(const struct rtw_chset *chset, u32 ch)
-{
-	return _rtw_chset_search_ch(chset, ch, true);
-}
-#endif
-
 /*
  * Search enabled channel with the @param ch of @param band in given @param ch_set
  * @ch_set: the given channel set
@@ -136,16 +107,26 @@ RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch_include_dis(const struct rtw_chset *
  */
 static int _rtw_chset_search_bch(const struct rtw_chset *chset, enum band_type band, u32 ch, bool include_dis)
 {
-	int i;
+	int idx_of_band = 255;
 
-	if (ch == 0)
+	if (band >= BAND_MAX || !chset->chs_of_band[band] || ch == 0)
 		return -1;
 
-	for (i = 0; i < chset->chs_len; i++) {
-		if (band == chset->chs[i].band && ch == chset->chs[i].ChannelNum
-			&& (include_dis || !(chset->chs[i].flags & RTW_CHF_DIS)))
-			return i;
-	}
+	if (band == BAND_ON_24G)
+		idx_of_band = ch_to_cch_2g_idx(ch);
+#if CONFIG_IEEE80211_BAND_5GHZ
+	else if (band == BAND_ON_5G)
+		idx_of_band = ch_to_cch_5g_20m_idx(ch);
+#endif
+#if CONFIG_IEEE80211_BAND_6GHZ
+	else if (band == BAND_ON_6G)
+		idx_of_band = ch_to_cch_6g_20m_idx(ch);
+#endif
+	if (idx_of_band == 255)
+		return -1;
+
+	if (include_dis || !(chset->chs_of_band[band][idx_of_band].flags & RTW_CHF_DIS))
+		return chset->chs_offset_of_band[band] + idx_of_band;
 
 	return -1;
 }
@@ -160,12 +141,24 @@ int rtw_chset_search_bch_include_dis(const struct rtw_chset *chset, enum band_ty
 	return _rtw_chset_search_bch(chset, band, ch, true);
 }
 
-RT_CHANNEL_INFO *rtw_chset_get_chinfo_by_bch(struct rtw_chset *chset, enum band_type band, u32 ch, bool include_dis)
+RT_CHANNEL_INFO *rtw_chset_get_chinfo_by_bch(const struct rtw_chset *chset, enum band_type band, u32 ch, bool include_dis)
 {
 	int i = _rtw_chset_search_bch(chset, band, ch, include_dis);
 
-	return i >= 0 ? &chset->chs[i] : NULL;
+	return i >= 0 ? (RT_CHANNEL_INFO *)&chset->chs[i] : NULL;
 }
+
+#if CONFIG_ALLOW_FUNC_2G_5G_ONLY
+RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch(const struct rtw_chset *chset, u32 ch)
+{
+	return _rtw_chset_search_bch(chset, rtw_is_2g_ch(ch) ? BAND_ON_24G : BAND_ON_5G, ch, false);
+}
+
+RTW_FUNC_2G_5G_ONLY int rtw_chset_search_ch_include_dis(const struct rtw_chset *chset, u32 ch)
+{
+	return _rtw_chset_search_bch(chset, rtw_is_2g_ch(ch) ? BAND_ON_24G : BAND_ON_5G, ch, true);
+}
+#endif
 
 /*
  * Check if the @param ch, bw, offset is valid for the given @param ch_set
@@ -298,12 +291,12 @@ RTW_FUNC_2G_5G_ONLY void rtw_chset_sync_chbw(const struct rtw_chset *chset, u8 *
 }
 #endif
 
-u8 *rtw_chset_set_spt_chs_ie(struct rtw_chset *chset, u8 *buf_pos, uint *buf_len)
+u8 *rtw_chset_set_spt_chs_ie(const struct rtw_chset *chset, u8 *buf_pos, uint *buf_len)
 {
 	u8 i = 0;
 	u8 fch = 0, lch = 0, ch;
 	u8 *cont = buf_pos + 2;
-	RT_CHANNEL_INFO *chinfo;
+	const RT_CHANNEL_INFO *chinfo;
 
 	while (i < chset->chs_len) {
 		chinfo = &chset->chs[i++];
@@ -390,3 +383,104 @@ void dump_chinfos(void *sel, const RT_CHANNEL_INFO *chinfos, u8 chinfo_num)
 	RTW_PRINT_SEL(sel, "total ch number:%d\n", enable_ch_num);
 }
 #endif /* CONFIG_PROC_DEBUG */
+
+#ifdef CONFIG_RTW_CHSET_DEV
+static bool dump_chset_init_test(void *sel, u8 band_bmp)
+{
+	struct rtw_chset *chset;
+	RT_CHANNEL_INFO *chinfo;
+	int band, i, j;
+	u8 (*center_chs_num)(u8);
+	u8 (*center_chs)(u8, u8);
+	u8 cch_num;
+	bool ret = true, valid, match;
+
+	chset = rtw_malloc(sizeof(*chset));
+	if (!chset) {
+		RTW_PRINT_SEL(sel, "alloc chset fail\n");
+		ret = false;
+		goto exit;
+	}
+
+	rtw_chset_init(chset, band_bmp);
+
+	for (band = 0; band < BAND_MAX; band++) {
+		if (!(band_bmp & band_to_band_cap(band)))
+			continue;
+
+		center_chs_num = center_chs_num_of_band[band];
+		center_chs = center_chs_of_band[band];
+		if (!center_chs_num || !center_chs) {
+			rtw_warn_on(1);
+			continue;
+		}
+
+		cch_num = center_chs_num(CHANNEL_WIDTH_20);
+		for (i = 0; i <= 255 ; i++) {
+			for (j = 0; j < cch_num; j++)
+				if (i == center_chs(CHANNEL_WIDTH_20, j))
+					break;
+			match = j < cch_num;
+			chinfo = rtw_chset_get_chinfo_by_bch(chset, band, i, true);
+			valid = (match && chinfo && band == chinfo->band && i == chinfo->ChannelNum) || (!match && !chinfo);
+			if (!valid)
+				RTW_PRINT_SEL(sel, "band:%u(%d) ch:%u(%d) fail\n"
+					, band, chinfo ? chinfo->band : -1
+					, i, chinfo ? chinfo->ChannelNum : -1);
+			ret &= valid;
+		}
+	}
+
+exit:
+	return ret;
+}
+
+static void dump_chset_search_time_test(void *sel, struct rtw_chset *chset, enum band_type band, u8 *ch_array, size_t ch_array_sz, u32 times)
+{
+	u32 round = times / ch_array_sz;
+	u32 i, r;
+	sysptime start, end;
+
+	start = rtw_sptime_get_raw();
+
+	for (r = 0; r < round; r++)
+		for (i = 0; i < ch_array_sz; i++)
+			rtw_chset_get_chinfo_by_bch(chset, band, ch_array[i], true);
+
+	end = rtw_sptime_get_raw();
+
+	RTW_PRINT_SEL(sel, "%s\t%10u\t%10u\t%10lld\n", band_str(band), times, round, rtw_sptime_diff_ns(start, end));
+}
+
+void dump_chset_test(void *sel)
+{
+	struct rtw_chset *chset;
+	u8 bmp;
+
+	for (bmp = 0; bmp <= BIT(BAND_MAX) - 1; bmp++) {
+		if (!dump_chset_init_test(sel, bmp))
+			return;
+	}
+
+	chset = rtw_malloc(sizeof(*chset));
+	if (!chset) {
+		RTW_PRINT_SEL(sel, "alloc chset fail\n");
+		return;
+	}
+
+	bmp = BIT(BAND_MAX) - 1;
+	rtw_chset_init(chset, bmp);
+
+	RTW_PRINT_SEL(sel, "band\ttimes\tround\tns\n");
+
+	dump_chset_search_time_test(sel, chset, BAND_ON_24G, center_ch_2g, ARRAY_SIZE(center_ch_2g), 100000);
+	dump_chset_search_time_test(sel, chset, BAND_ON_24G, center_ch_2g, 1, 100000);
+
+	dump_chset_search_time_test(sel, chset, BAND_ON_5G, center_ch_5g_20m, ARRAY_SIZE(center_ch_5g_20m), 100000);
+	dump_chset_search_time_test(sel, chset, BAND_ON_5G, center_ch_5g_20m, 1, 100000);
+
+	dump_chset_search_time_test(sel, chset, BAND_ON_6G, center_ch_6g_20m, ARRAY_SIZE(center_ch_6g_20m), 100000);
+	dump_chset_search_time_test(sel, chset, BAND_ON_6G, center_ch_6g_20m, 1, 100000);
+}
+#endif /* CONFIG_RTW_CHSET_DEV */
+

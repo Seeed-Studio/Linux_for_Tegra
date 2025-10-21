@@ -381,10 +381,19 @@ void halrf_wifi_event_notify(void *rf_void,
 			halrf_config_power_limit_6g(rf, HW_PHY_0);
 			halrf_config_power_limit_ru_6g(rf, HW_PHY_0);
 			if (rf->hal_com->dbcc_en)
-				halrf_set_power(rf, HW_PHY_1, (PWR_LIMIT & PWR_LIMIT_RU));
-			halrf_set_power(rf, HW_PHY_0, (PWR_LIMIT & PWR_LIMIT_RU));
+				halrf_set_power(rf, HW_PHY_1, (PWR_LIMIT | PWR_LIMIT_RU));
+			halrf_set_power(rf, HW_PHY_0, (PWR_LIMIT | PWR_LIMIT_RU));
 		break;
 #endif
+		case MSG_EVT_DISCONNECT_END:
+			halrf_set_power(rf, HW_PHY_0, (PWR_LIMIT | PWR_LIMIT_RU));
+		break;
+		case MSG_EVT_CONNECT_END:
+			halrf_set_power(rf, HW_PHY_0, (PWR_LIMIT | PWR_LIMIT_RU));
+		break;
+		case MSG_EVT_TPE_INFO_UPDATE:
+			halrf_set_tpe_control(rf);
+		break;
 		default:
 		break;
 	}

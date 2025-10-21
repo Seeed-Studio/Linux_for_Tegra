@@ -190,7 +190,7 @@ void halbb_watchdog_io_saving_en(struct bb_info *bb_0, bool en, enum phl_phy_idx
 void halbb_watchdog_reset(struct bb_info *bb);
 void halbb_watchdog(struct bb_info *bb, enum bb_watchdog_mode_t mode,
 		    enum phl_phy_idx phy_idx);
-u8 halbb_wifi_event_notify(struct bb_info *bb, enum phl_msg_evt_id event, enum phl_phy_idx phy_idx);
+u8 halbb_wifi_event_notify(struct bb_info *bb, enum phl_msg_evt_id event, enum phl_phy_idx phy_idx, u8 rssi);
 void halbb_bb_cmd_notify(struct bb_info *bb, void *bb_cmd, enum phl_phy_idx phy_idx);
 u8 halbb_pause_func(struct bb_info *bb, enum habb_fun_t pause_func,
 		    enum halbb_pause_type pause_type,

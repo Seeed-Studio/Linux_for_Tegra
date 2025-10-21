@@ -2015,7 +2015,7 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 	int group_cipher, pairwise_cipher, gmcs;
 	u32 akm;
 	u8 mfp_opt = MFP_NO;
-	u8 channel = 0, network_type;
+	u8 network_type;
 	u8 OUI1[] = {0x00, 0x50, 0xf2, 0x01};
 	u8 WMM_PARA_IE[] = {0x00, 0x50, 0xf2, 0x02, 0x01, 0x01};
 	u8 WIFI_ALLIANCE_OUI[] = {0x50, 0x6f, 0x9a};
@@ -2033,7 +2033,6 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 	struct link_mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(padapter);
 	struct rtw_chan_def chandef = {0};
-	enum band_type band = BAND_ON_24G;
 	u8 rf_num = 0;
 	int ret_rm;
 	/* SSID */
@@ -2116,14 +2115,15 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 		, pbss_network->IELength, _BEACON_IE_OFFSET_);
 
 	/* channel and band */
-	rtw_ies_get_bchbw(ie + _BEACON_IE_OFFSET_, pbss_network->IELength - _BEACON_IE_OFFSET_,
-		&chandef.band, &chandef.chan, (u8 *)&chandef.bw, (u8 *)&chandef.offset,
-		(u8 *)&chandef.center_freq1, (u8 *)&chandef.center_freq2, 1, 1, 1);
-
+	rtw_ies_get_chdef(ie + _BEACON_IE_OFFSET_, pbss_network->IELength - _BEACON_IE_OFFSET_, &chandef, 1, 1, 1, 1);
 	if (chandef.chan != 0) {
-		pbss_network->Configuration.Band = band = chandef.band;
-		pbss_network->Configuration.DSConfig = channel = chandef.chan;
-	}
+		pbss_network->Configuration.Band = chandef.band;
+		pbss_network->Configuration.DSConfig = chandef.chan;
+	} else if (pbss_network->Configuration.DSConfig != 0) {
+		chandef.band = pbss_network->Configuration.Band;
+		chandef.chan = pbss_network->Configuration.DSConfig;
+	} else
+		rtw_warn_on(1);
 
 	if (pbss_network->Configuration.Band == BAND_ON_6G)
 		/* DSSET uses in 2.4G and 5G band; Remove DSSET when using 6G band */
@@ -2461,15 +2461,8 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 
 		/* parsing HT_INFO_IE */
 		p = rtw_get_ie(ie + _BEACON_IE_OFFSET_, _HT_ADD_INFO_IE_, &ie_len, (pbss_network->IELength - _BEACON_IE_OFFSET_));
-		if (p && ie_len > 0) {
+		if (p && ie_len > 0)
 			pHT_info_ie = p;
-			if (channel == 0)
-				pbss_network->Configuration.DSConfig = GET_HT_OP_ELE_PRI_CHL(pHT_info_ie + 2);
-			else if (channel != GET_HT_OP_ELE_PRI_CHL(pHT_info_ie + 2)) {
-				RTW_INFO(FUNC_ADPT_FMT" ch inconsistent, DSSS:%u, HT primary:%u\n"
-					, FUNC_ADPT_ARG(padapter), channel, GET_HT_OP_ELE_PRI_CHL(pHT_info_ie + 2));
-			}
-		}
 	}
 #endif /* CONFIG_80211N_HT */
 	pmlmepriv->cur_network.network_type = network_type;
@@ -2501,6 +2494,9 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 #endif
 
 	pmlmepriv->upper_layer_setting = _FALSE;
+
+	rtw_ies_remove_ie(BSS_EX_IES(pbss_network), &BSS_EX_IES_LEN(pbss_network), _BEACON_IE_OFFSET_
+		, WLAN_EID_TX_POWER_ENVELOPE, NULL, 0);
 
 #ifdef CONFIG_80211AC_VHT
 	pmlmepriv->vhtpriv.vht_option = _FALSE;
@@ -2547,9 +2543,9 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 	if (REGSTY_IS_11AX_ENABLE(pregistrypriv)
 		&& is_supported_he(pregistrypriv->wireless_mode)
 		&& RFCTL_REG_EN_11AX(rfctl)
-		&& ((band == BAND_ON_5G && pmlmepriv->vhtpriv.vht_option == _TRUE)
-		|| (band == BAND_ON_24G && pmlmepriv->htpriv.ht_option == _TRUE)
-		|| (band == BAND_ON_6G))) {
+		&& ((chandef.band == BAND_ON_5G && pmlmepriv->vhtpriv.vht_option == _TRUE)
+		|| (chandef.band == BAND_ON_24G && pmlmepriv->htpriv.ht_option == _TRUE)
+		|| (chandef.band == BAND_ON_6G))) {
 		u8 he_cap = _FALSE;
 		u8 he_cap_eid_ext = WLAN_EID_EXTENSION_HE_CAPABILITY;
 
@@ -2569,7 +2565,7 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 			rtw_update_he_ies(padapter, padapter_link, pbss_network, &chandef);
 		} else if (REGSTY_IS_11AX_AUTO(pregistrypriv)) {
 			rtw_he_ies_detach(padapter, padapter_link, pbss_network);
-			rtw_he_ies_attach(padapter, padapter_link, pbss_network, band);
+			rtw_he_ies_attach(padapter, padapter_link, pbss_network, chandef.band);
 		}
 	}
 	if (pmlmepriv->hepriv.he_option == _FALSE)
@@ -2656,15 +2652,7 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 
 	pbss_network->Length = get_WLAN_BSSID_EX_sz((WLAN_BSSID_EX *)pbss_network);
 
-	rtw_ies_get_bchbw(pbss_network->IEs + _BEACON_IE_OFFSET_,
-		pbss_network->IELength - _BEACON_IE_OFFSET_,
-		&pmlmepriv->ori_chandef.band,
-		&pmlmepriv->ori_chandef.chan,
-		(u8 *)&pmlmepriv->ori_chandef.bw,
-		(u8 *)&pmlmepriv->ori_chandef.offset,
-		(u8 *)&pmlmepriv->ori_chandef.center_freq1,
-		(u8 *)&pmlmepriv->ori_chandef.center_freq2,
-		1, 1, 1);
+	rtw_bss_get_chdef(pbss_network, &pmlmepriv->ori_chandef, 1, 1, 1, 1);
 
 	rtw_warn_on(pmlmepriv->ori_chandef.chan == 0);
 
@@ -2741,12 +2729,12 @@ static void _rtw_macaddr_acl_deinit(_adapter *adapter, u8 period, bool clear_onl
 			acl->num--;
 		}
 	}
+	rtw_warn_on(acl->num);
 	_rtw_spinunlock_bh(&(acl_node_q->lock));
 
 	if (!clear_only)
 		_rtw_spinlock_free(&(acl_node_q->lock));
 
-	rtw_warn_on(acl->num);
 	acl->mode = RTW_ACL_MODE_DISABLED;
 }
 
@@ -2842,10 +2830,9 @@ release_lock:
 	if (!existed && (i < 0 || i >= NUM_ACL))
 		ret = -1;
 
-	RTW_INFO(FUNC_ADPT_FMT" p=%u "MAC_FMT" %s (acl_num=%d)\n"
-		 , FUNC_ADPT_ARG(adapter), period, MAC_ARG(addr)
-		, (existed ? "existed" : ((i < 0 || i >= NUM_ACL) ? "no room" : "added"))
-		 , acl->num);
+	RTW_INFO(FUNC_ADPT_FMT" p=%u "MAC_FMT" %s\n"
+		, FUNC_ADPT_ARG(adapter), period, MAC_ARG(addr)
+		, (existed ? "existed" : ((i < 0 || i >= NUM_ACL) ? "no room" : "added")));
 exit:
 	return ret;
 }
@@ -2890,10 +2877,9 @@ int rtw_acl_remove_sta(_adapter *adapter, u8 period, const u8 *addr)
 
 	_rtw_spinunlock_bh(&(acl_node_q->lock));
 
-	RTW_INFO(FUNC_ADPT_FMT" p=%u "MAC_FMT" %s (acl_num=%d)\n"
+	RTW_INFO(FUNC_ADPT_FMT" p=%u "MAC_FMT" %s\n"
 		 , FUNC_ADPT_ARG(adapter), period, MAC_ARG(addr)
-		 , is_baddr ? "clear all" : (match ? "match" : "no found")
-		 , acl->num);
+		 , is_baddr ? "clear all" : (match ? "match" : "no found"));
 
 exit:
 	return ret;
@@ -4730,6 +4716,11 @@ void rtw_ap_update_bss_bchbw(_adapter *adapter, struct _ADAPTER_LINK *adapter_li
 				SET_VHT_OPERATION_ELE_CHL_WIDTH(vht_op_ie + 2, CH_WIDTH_80_160M);
 				SET_VHT_OPERATION_ELE_CHL_CENTER_FREQ1(vht_op_ie + 2, center_freq);
 				SET_VHT_OPERATION_ELE_CHL_CENTER_FREQ2(vht_op_ie + 2, 0);
+			} else if (chandef->bw == CHANNEL_WIDTH_160) {
+				RTW_INFO(FUNC_ADPT_FMT" update VHT 160M, center_freq = %u\n", FUNC_ADPT_ARG(adapter), chandef->center_freq1);
+				SET_VHT_OPERATION_ELE_CHL_WIDTH(vht_op_ie + 2, CH_WIDTH_80_160M);
+				SET_VHT_OPERATION_ELE_CHL_CENTER_FREQ1(vht_op_ie + 2, chandef->center_freq1);
+				SET_VHT_OPERATION_ELE_CHL_CENTER_FREQ2(vht_op_ie + 2, chandef->center_freq2);
 			} else {
 				RTW_ERR(FUNC_ADPT_FMT" unsupported BW:%u\n", FUNC_ADPT_ARG(adapter), chandef->bw);
 				rtw_warn_on(1);
@@ -4951,8 +4942,6 @@ u8 rtw_ap_bchbw_decision(_adapter *adapter, u8 ifbmp, u8 excl_ifbmp, s8 req_band
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
 	bool ch_avail = _FALSE;
 	enum band_type cur_ie_band[CONFIG_IFACE_NUMBER] = {BAND_ON_24G};
-	u8 cur_ie_freq0[CONFIG_IFACE_NUMBER] = {0};
-	u8 cur_ie_freq1[CONFIG_IFACE_NUMBER] = {0};
 	u8 cur_ie_ch[CONFIG_IFACE_NUMBER] = {0};
 	u8 cur_ie_bw[CONFIG_IFACE_NUMBER] = {0};
 	u8 cur_ie_offset[CONFIG_IFACE_NUMBER] = {0};
@@ -5011,9 +5000,8 @@ u8 rtw_ap_bchbw_decision(_adapter *adapter, u8 ifbmp, u8 excl_ifbmp, s8 req_band
 		network = &(mlmeext->mlmext_info.network);
 
 		/* get current IE channel settings */
-		rtw_ies_get_bchbw(BSS_EX_TLV_IES(network), BSS_EX_TLV_IES_LEN(network)
-			, &cur_ie_band[i] , &cur_ie_ch[i] , &cur_ie_bw[i]
-			, &cur_ie_offset[i], &cur_ie_freq0[i], &cur_ie_freq1[i], 1, 1, 1);
+		rtw_bss_get_bchbw(network, &cur_ie_band[i], &cur_ie_ch[i]
+			, &cur_ie_bw[i], &cur_ie_offset[i], 1, 1, 1, 1);
 
 		/* prepare temporary channel setting decision */
 		if (req_ch == 0) {
@@ -5131,11 +5119,11 @@ u8 rtw_ap_bchbw_decision(_adapter *adapter, u8 ifbmp, u8 excl_ifbmp, s8 req_band
 			}
 			#endif /* CONFIG_MCC_MODE */
 
-			rtw_adjust_bchbw(iface, u_band, u_ch, &dec_bw[i], &dec_offset[i]);
 			#ifdef CONFIG_RTW_MESH
-			if (MLME_IS_MESH(iface))
-				rtw_mesh_adjust_bchbw(u_band, u_ch, &dec_bw[i], &dec_offset[i]);
+			if (MLME_IS_MESH(iface) && u_band == BAND_ON_24G)
+				dec_bw[i] = rtw_mesh_adjust_2g_bw(u_ch, dec_bw[i], dec_offset[i]);
 			#endif
+			rtw_adjust_bchbw(iface, u_band, u_ch, &dec_bw[i], &dec_offset[i]);
 
 			if (req_ch == 0 && dec_bw[i] > u_bw
 				&& rtw_chset_is_dfs_bchbw(chset, u_band, u_ch, u_bw, u_offset)
@@ -5195,8 +5183,11 @@ u8 rtw_ap_bchbw_decision(_adapter *adapter, u8 ifbmp, u8 excl_ifbmp, s8 req_band
 
 		#ifdef CONFIG_RTW_MESH
 		/* if ifbmp are all mesh, apply bw restriction */
-		if (ifbmp_all_mesh)
-			rtw_mesh_adjust_bchbw(u_band, u_ch, &u_bw, &u_offset);
+		if (ifbmp_all_mesh && u_band == BAND_ON_24G) {
+			u_bw = rtw_mesh_adjust_2g_bw(u_ch, u_bw, u_offset);
+			if (u_bw == CHANNEL_WIDTH_20)
+				u_offset = CHAN_OFFSET_NO_EXT;
+		}
 		#endif
 
 		RTW_INFO("%s ifbmp:0x%02x tmp union:%u,%u,%u,%u\n", __func__, ifbmp, u_band, u_ch, u_bw, u_offset);
@@ -5300,15 +5291,14 @@ update_bss_chbw:
 			dec_band[i] = u_band;
 			if (dec_bw[i] > u_bw)
 				dec_bw[i] = u_bw;
+			#ifdef CONFIG_RTW_MESH
+			if (MLME_IS_MESH(iface) && dec_band[i] == BAND_ON_24G)
+				dec_bw[i] = rtw_mesh_adjust_2g_bw(dec_ch[i], dec_bw[i], dec_offset[i]);
+			#endif
 			if (dec_bw[i] == CHANNEL_WIDTH_20)
 				dec_offset[i] = CHAN_OFFSET_NO_EXT;
 			else
 				dec_offset[i] = u_offset;
-
-			#ifdef CONFIG_RTW_MESH
-			if (MLME_IS_MESH(iface))
-				rtw_mesh_adjust_bchbw(dec_band[i], dec_ch[i], &dec_bw[i], &dec_offset[i]);
-			#endif
 		}
 
 		set_u_ch = _TRUE;
@@ -7257,17 +7247,16 @@ int rtw_ap_stop_wait(struct _ADAPTER *a)
 	if (!rtw_is_adapter_up(a))
 		return err;
 
-	if (a->ap_stop_state == AP_STOP_ST_IDLE)
-		return err;
-
 	msg_i = timeout / 10;	/* at most print 10 msg in whole waiting time */
 
 	_rtw_spinlock_bh(&a->ap_stop_st_lock);
+	if (a->ap_stop_state == AP_STOP_ST_IDLE)
+		goto _exit;
+
 	start_t = rtw_get_current_time();
 	while (a->ap_stop_state != AP_STOP_ST_DONE) {
 		if (!rtw_is_adapter_up(a))
 			break;
-
 		if (pass_t >= msg_t) {
 			RTW_INFO(FUNC_ADPT_FMT ": ap stop st=%u, %u ms/%u pass...\n",
 				 FUNC_ADPT_ARG(a), a->ap_stop_state, pass_t, timeout);
@@ -7289,6 +7278,7 @@ int rtw_ap_stop_wait(struct _ADAPTER *a)
 
 		_rtw_spinlock_bh(&a->ap_stop_st_lock);
 	}
+_exit:
 	_rtw_spinunlock_bh(&a->ap_stop_st_lock);
 
 	return err;
@@ -7438,7 +7428,7 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_acquired(void *dispr, void *pri
 	if (add_del_sta_obj->is_add_sta)
 		status = rtw_phl_connect_prepare(adapter_to_dvobj(padapter)->phl,
 				padapter_link->wrlink->hw_band, padapter->phl_role,
-				padapter_link->wrlink, psta->phl_sta->mac_addr);
+				padapter_link->wrlink, psta->phl_sta->mac_addr, 0xFF);
 	else
 		status = rtw_phl_disconnect(adapter_to_dvobj(padapter)->phl,
 				padapter_link->wrlink->hw_band,
@@ -7517,13 +7507,11 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 
 	add_del_sta_obj = rtw_ap_get_stainfo_by_add_sta_list(padapter);
 	if (!add_del_sta_obj || !add_del_sta_obj->sta) {
-		_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 		RTW_ERR(FUNC_ADPT_FMT": add_del_sta_obj or psta is null\n",
 			FUNC_ADPT_ARG(padapter));
 		goto free_token;
 	}
 	psta = add_del_sta_obj->sta;
-	_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 
 	RTW_INFO("[AP_STA] %s("ADPT_FMT") aid=%d\n",
 		ap_get_evt_str(MSG_EVT_ID_FIELD(msg->msg_id)), ADPT_ARG(padapter), add_del_sta_obj->aid);
@@ -7538,8 +7526,10 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 	case MSG_EVT_CONNECT_START:
 #if defined(CONFIG_AP_MODE) && defined (CONFIG_NATIVEAP_MLME)
 
+		_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 		rtw_alloc_stainfo_hw(&padapter->stapriv, psta);
 		rtw_hw_connected_apmode(padapter, psta);
+		_rtw_spinlock_bh(&padapter->ap_add_del_sta_lock);
 
 		RTW_INFO("indicate_sta_assoc_event to upper layer - hostapd\n");
 
@@ -7576,7 +7566,6 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 		break;
 
 	case MSG_EVT_DISCONNECT_PREPARE:
-
 		rtw_wfd_st_switch(psta, 0);
 		psta->hw_decrypted = _FALSE;
 		#ifdef CONFIG_IOCTL_CFG80211
@@ -7587,9 +7576,10 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 		#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 37)) || defined(CONFIG_CFG80211_FORCE_COMPATIBLE_2_6_37_UNDER) */
 		#endif /* CONFIG_IOCTL_CFG80211 */
 
+		_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 		rtw_hw_disconnect(padapter, psta);
-
 		rtw_free_mld_stainfo(padapter, psta->phl_sta->mld);
+		_rtw_spinlock_bh(&padapter->ap_add_del_sta_lock);
 
 		status = rtw_phl_disconnect(adapter_to_dvobj(padapter)->phl,
 					padapter_link->wrlink->hw_band,
@@ -7602,9 +7592,6 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 #endif
 	case MSG_EVT_CONNECT_END:
 	case MSG_EVT_DISCONNECT:
-
-		_rtw_spinlock_bh(&padapter->ap_add_del_sta_lock);
-
 		rtw_list_delete(&add_del_sta_obj->list);
 		pstapriv->add_sta_list_cnt--;
 		rtw_mfree(add_del_sta_obj, sizeof(struct rtw_add_del_sta_obj));
@@ -7613,7 +7600,6 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 		if (pstapriv->add_sta_list_cnt > 0) {	/* token extend */
 			add_del_sta_obj = rtw_ap_get_stainfo_by_add_sta_list(padapter);
 			if (!add_del_sta_obj || !add_del_sta_obj->sta) {
-				_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 				RTW_ERR(FUNC_ADPT_FMT": add_del_sta_obj or psta is null\n",
 					FUNC_ADPT_ARG(padapter));
 				goto free_token;
@@ -7626,7 +7612,7 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 								padapter_link->wrlink->hw_band,
 								padapter->phl_role,
 								padapter_link->wrlink,
-								psta->phl_sta->mac_addr);
+								psta->phl_sta->mac_addr, 0xFF);
 			else
 				status = rtw_phl_disconnect(adapter_to_dvobj(padapter)->phl,
 								padapter_link->wrlink->hw_band,
@@ -7634,7 +7620,6 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 								_TRUE);
 
 			if (status != RTW_PHL_STATUS_SUCCESS) {
-				_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 				RTW_ERR("%s :: [%s] rtw_phl_send_msg_to_dispr failed\n",
 					__func__,
 					(MSG_EVT_ID_FIELD(msg->msg_id) == MSG_EVT_CONNECT_END) ?
@@ -7643,12 +7628,10 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 			}
 
 		} else {
-			_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 			/* no more STA */
 			status = RTW_PHL_STATUS_SUCCESS;
 			goto free_token;
 		}
-		_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 		break;
 
 	default:
@@ -7656,20 +7639,20 @@ static enum phl_mdl_ret_code _ap_add_del_sta_req_ev_hdlr(void *dispr, void *priv
 		RTW_ERR("%s :: [0x%04x] unknown state\n", __func__, MSG_EVT_ID_FIELD(msg->msg_id));
 		break;
 	}
+	_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 
 	return MDL_RET_SUCCESS;
 
 free_token:
-	_rtw_spinlock_bh(&padapter->ap_add_del_sta_lock);
 	if (add_del_sta_obj) {
 		rtw_list_delete(&add_del_sta_obj->list);
 		pstapriv->add_sta_list_cnt--;
 		rtw_mfree(add_del_sta_obj, sizeof(struct rtw_add_del_sta_obj));
 		add_del_sta_obj = NULL;
 	}
+	_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 
 	_ap_add_del_sta_cmd_done(padapter); /* free token */
-	_rtw_spinunlock_bh(&padapter->ap_add_del_sta_lock);
 	return status;
 }
 

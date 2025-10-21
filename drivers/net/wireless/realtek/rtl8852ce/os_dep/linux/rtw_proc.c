@@ -240,11 +240,27 @@ static int proc_get_chplan_ver(struct seq_file *m, void *v)
 	return 0;
 }
 
+#ifdef CONFIG_RTW_CHSET_DEV
+static int proc_get_chset_test(struct seq_file *m, void *v)
+{
+	dump_chset_test(m);
+	return 0;
+}
+#endif
+
 static int proc_get_global_op_class(struct seq_file *m, void *v)
 {
 	dump_global_op_class(m);
 	return 0;
 }
+
+#ifdef CONFIG_RTW_OPCLASS_DEV
+static int proc_get_opc_test(struct seq_file *m, void *v)
+{
+	dump_opc_test(m);
+	return 0;
+}
+#endif
 
 extern void rtw_hal_get_version(char *str, u32 len);
 
@@ -283,7 +299,13 @@ const struct rtw_proc_hdl drv_proc_hdls[] = {
 	RTW_PROC_HDL_SSEQ("chplan_test", proc_get_chplan_test, NULL),
 #endif
 	RTW_PROC_HDL_SSEQ("chplan_ver", proc_get_chplan_ver, NULL),
+#ifdef CONFIG_RTW_CHSET_DEV
+	RTW_PROC_HDL_SSEQ("chset_test", proc_get_chset_test, NULL),
+#endif
 	RTW_PROC_HDL_SSEQ("global_op_class", proc_get_global_op_class, NULL),
+#ifdef CONFIG_RTW_OPCLASS_DEV
+	RTW_PROC_HDL_SSEQ("opc_test", proc_get_opc_test, NULL),
+#endif
 	RTW_PROC_HDL_SSEQ("hal_info", proc_get_hal_info, NULL),
 #ifdef CONFIG_RTKM
 	RTW_PROC_HDL_SSEQ("rtkm", proc_get_rtkm_info, proc_set_rtkm_info),
@@ -2264,8 +2286,8 @@ static ssize_t proc_set_ch_sel_policy(struct file *file, const char __user *buff
 		goto exit;
 
 	num = sscanf(tmp, "%hhu", &within_sb);
-	if (num >=	1)
-		rfctl->ch_sel_within_same_band = within_sb ? 1 : 0;
+	if (num >= 1 && within_sb < RTW_CHSEL_BAND_NUM)
+		rfctl->ch_sel_within_same_band = within_sb;
 
 exit:
 	return count;
@@ -2278,7 +2300,7 @@ static int proc_get_country_ie_slave_records(struct seq_file *m, void *v)
 	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
 	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
 
-	dump_country_ie_slave_records(m, rfctl, 0);
+	dump_country_ie_slave_records(m, rfctl, false, true);
 
 	return 0;
 }
@@ -5505,6 +5527,7 @@ const struct rtw_proc_hdl adapter_proc_hdls[] = {
 	RTW_PROC_HDL_SSEQ("trx_info", proc_get_trx_info, proc_reset_trx_info),
 	RTW_PROC_HDL_SSEQ("tx_power_offset", proc_get_tx_power_offset, proc_set_tx_power_offset),
 	RTW_PROC_HDL_SSEQ("rate_ctl", proc_get_rate_ctl, proc_set_rate_ctl),
+	RTW_PROC_HDL_SSEQ("bss_color", proc_get_bss_color_ctl, proc_set_bss_color_ctl),
 	RTW_PROC_HDL_SSEQ("bw_ctl", proc_get_bw_ctl, proc_set_bw_ctl),
 	RTW_PROC_HDL_SSEQ("mac_qinfo", proc_get_mac_qinfo, NULL),
 	/*RTW_PROC_HDL_SSEQ("macid_info", proc_get_macid_info, NULL), */
@@ -5715,6 +5738,9 @@ const struct rtw_proc_hdl adapter_proc_hdls[] = {
 	#if CONFIG_DFS_SLAVE_WITH_RADAR_DETECT
 	RTW_PROC_HDL_SSEQ("dfs_slave_with_rd", proc_get_dfs_slave_with_rd, proc_set_dfs_slave_with_rd),
 	#endif
+#endif
+#ifdef CONFIG_BCN_CNT_CONFIRM_HDL
+	RTW_PROC_HDL_SSEQ("new_bcn_max", proc_get_new_bcn_max, proc_set_new_bcn_max),
 #endif
 	RTW_PROC_HDL_SSEQ("sink_udpport", proc_get_udpport, proc_set_udpport),
 #ifdef DBG_RX_COUNTER_DUMP

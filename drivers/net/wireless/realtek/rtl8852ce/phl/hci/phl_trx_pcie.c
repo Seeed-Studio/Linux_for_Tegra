@@ -4383,10 +4383,10 @@ static enum rtw_phl_status phl_rx_pcie(struct phl_info_t *phl_info)
 							 &rx_buf_ring[ch]);
 
 		if (idle_rxbuf_cnt == 0) {
-			PHL_WARN("%s, idle rxbuf is empty. (ch = %d)\n",
+			PHL_WARN_LMT("%s, idle rxbuf is empty. (ch = %d)\n",
 				 __func__, ch);
 			phl_dump_all_sta_rx_info(phl_info);
-			PHL_INFO("phl_rx_ring stored rx number = %d\n",
+			PHL_INFO_LMT("phl_rx_ring stored rx number = %d\n",
 				 rtw_phl_query_new_rx_num(phl_info));
 #ifdef PHL_RX_BATCH_IND
 			if (ch == 0)
@@ -4407,7 +4407,7 @@ static enum rtw_phl_status phl_rx_pcie(struct phl_info_t *phl_info)
 
 		/* only handle affordable amount of rxpkt */
 		if (rxcnt > idle_rxbuf_cnt) {
-			PHL_WARN("rxcnt %d is lager than idle rxbuf cnt %d.\n", rxcnt, idle_rxbuf_cnt);
+			PHL_WARN_LMT("rxcnt %d is lager than idle rxbuf cnt %d.\n", rxcnt, idle_rxbuf_cnt);
 			rxcnt = idle_rxbuf_cnt;
 		}
 
@@ -4435,7 +4435,7 @@ static enum rtw_phl_status phl_rx_pcie(struct phl_info_t *phl_info)
 							&rxbd[ch], ch, rxcnt);
 
 		if (RTW_PHL_STATUS_RESOURCE == pstatus)
-			PHL_WARN("%s, rxcnt is not refilled %d.\n", __func__ , rxcnt);
+			PHL_WARN_LMT("%s, rxcnt is not refilled %d.\n", __func__ , rxcnt);
 
 		if (RTW_PHL_STATUS_SUCCESS != pstatus)
 			continue;

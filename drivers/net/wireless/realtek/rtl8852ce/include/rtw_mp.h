@@ -316,6 +316,7 @@ enum {
 	MP_BAND,
 	MP_MACLOOPBK,
 	MP_MAC_IOTEST,
+	MP_6G_CATE,
 	MP_NULL,
 #ifdef CONFIG_APPEND_VENDOR_IE_ENABLE
 	VENDOR_IE_SET ,
@@ -1267,6 +1268,7 @@ struct rtw_mp_txpwr_arg {
 	bool pwr_lmt_en;
 	u8 sharp_id;
 	u8 cur_phy;
+	u8 tx_ru_on;
 };
 
 struct rtw_mp_cal_arg {
@@ -1658,24 +1660,9 @@ int rtw_mp_mac_loopbk(struct net_device *dev,
 int rtw_mp_mac_iotest(struct net_device *dev,
 			 struct iw_request_info *info,
 			 union iwreq_data *wrqu, char *extra);
-#if 0
-int rtw_efuse_mask_file(struct net_device *dev,
-		struct iw_request_info *info,
-		union iwreq_data *wrqu, char *extra);
-int rtw_bt_efuse_mask_file(struct net_device *dev,
-		struct iw_request_info *info,
-		union iwreq_data *wrqu, char *extra);
-
-int rtw_efuse_file_map(struct net_device *dev,
-		struct iw_request_info *info,
-		union iwreq_data *wrqu, char *extra);
-int rtw_efuse_file_map_store(struct net_device *dev,
-		struct iw_request_info *info,
-		union iwreq_data *wrqu, char *extra);
-int rtw_bt_efuse_file_map(struct net_device *dev,
-		struct iw_request_info *info,
-		union iwreq_data *wrqu, char *extra);
-#endif
+int rtw_mp_6gcate(struct net_device *dev,
+			struct iw_request_info *info,
+			struct iw_point *wrqu, char *extra);
 
 int rtw_mp_SetBT(struct net_device *dev,
 		struct iw_request_info *info,

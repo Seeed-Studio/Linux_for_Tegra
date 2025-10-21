@@ -170,6 +170,14 @@ enum rtw_hal_status rtw_hal_rf_watchdog(struct hal_info_t *hal_info);
 enum rtw_hal_status
 rtw_hal_rf_set_power(struct hal_info_t *hal_info, enum phl_phy_idx phy,
 				enum phl_pwr_table pwr_table);
+enum rtw_hal_status
+rtw_hal_rf_set_tpe_control(struct hal_info_t *hal_info);
+
+bool
+rtw_hal_rf_tpe_is_required(struct rtw_tpe_info_t *tpe_info);
+
+bool
+rtw_hal_rf_check_tpe_allow(struct hal_info_t *hal_info, struct rtw_tpe_info_t *tpe_info);
 
 enum rtw_hal_status
 rtw_hal_rf_set_power_constraint(struct hal_info_t *hal_info, enum phl_phy_idx phy,

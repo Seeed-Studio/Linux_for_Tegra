@@ -32,7 +32,8 @@ rtw_phl_connect_prepare(void *phl,
                         enum phl_band_idx band_idx,
                         struct rtw_wifi_role_t *wrole,
                         struct rtw_wifi_role_link_t *rlink,
-                        u8 *addr);
+                        u8 *addr, 
+			u8 rssi);
 
 /**
  * rtw_phl_connect_linked() - update media status

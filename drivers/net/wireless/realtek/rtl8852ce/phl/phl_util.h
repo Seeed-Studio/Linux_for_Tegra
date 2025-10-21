@@ -101,6 +101,25 @@ static inline void _and_bitmaps( u8* ref_bitmap, u8* _bitmap, u32 len)
 		_bitmap[k] &= ref_bitmap[k];
 }
 
+/* char utils */
+static inline bool _is_alpha(char ch_tmp)
+{
+	if ((ch_tmp >= 'a' && ch_tmp <= 'z') ||
+		(ch_tmp >= 'A' && ch_tmp <= 'Z'))
+		return true;
+	else
+		return false;
+}
+
+static inline bool _is_hexdigit(char ch_tmp)
+{
+	if ((ch_tmp >= '0' && ch_tmp <= '9') ||
+		(ch_tmp >= 'a' && ch_tmp <= 'f') ||
+		(ch_tmp >= 'A' && ch_tmp <= 'F'))
+		return true;
+	else
+		return false;
+}
 
 /*phl_queue*/
 struct phl_queue {

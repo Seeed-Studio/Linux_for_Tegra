@@ -22,6 +22,11 @@
 #define RTW_CAC_STOPPED 0 /* used by cac_start_time, cac_end_time time stamps */
 #define RTW_NON_OCP_STOPPED 0 /* used by non_ocp_end_time time stamps */
 
+#define RTW_CHSEL_BAND_ALL		0
+#define RTW_CHSEL_BAND_SAME_ONLY	1
+#define RTW_CHSEL_BAND_SAME_FIRST	2
+#define RTW_CHSEL_BAND_NUM		3
+
 bool rtw_chset_is_dfs_range(const struct rtw_chset *chset, u32 hi, u32 lo);
 RTW_FUNC_2G_5G_ONLY bool rtw_chset_is_dfs_ch(const struct rtw_chset *chset, u8 ch);
 RTW_FUNC_2G_5G_ONLY bool rtw_chset_is_dfs_chbw(const struct rtw_chset *chset, u8 ch, u8 bw, u8 offset);

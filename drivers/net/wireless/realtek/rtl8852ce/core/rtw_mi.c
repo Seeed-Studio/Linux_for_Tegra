@@ -1426,40 +1426,7 @@ void rtw_mi_buddy_clone_bcmc_packet(_adapter *padapter,
 	}
 }
 
-u8 rtw_mi_get_ifbmp_by_hwband(struct dvobj_priv *dvobj, u8 band_idx)
-{
-	int i;
-	_adapter *iface;
-	u8 ifbmp = 0;
-
-	for (i = 0; i < dvobj->iface_nums; i++) {
-		iface = dvobj->padapters[i];
-		if (!iface)
-			continue;
-		if (!rtw_iface_is_operate_at_hwband(iface, band_idx))
-			continue;
-		ifbmp |= BIT(i);
-	}
-
-	return ifbmp;
-}
-
-_adapter *rtw_mi_get_iface_by_hwband(struct dvobj_priv *dvobj, u8 band_idx)
-{
-	u8 ifbmp = rtw_mi_get_ifbmp_by_hwband(dvobj, band_idx);
-
-	if (ifbmp) {
-		int i;
-
-		for (i = 0; i < dvobj->iface_nums; i++) {
-			if ((ifbmp & BIT(i)) && dvobj->padapters[i])
-				return dvobj->padapters[i];
-		}
-	}
-	return NULL;
-}
-
-static u8 _rtw_mi_get_sta_ifbmp_by_hwband(struct dvobj_priv *dvobj, _adapter *adapter, u8 band_idx, u32 mlme_sbmp)
+u8 rtw_mi_get_ifbmp_mlme(struct dvobj_priv *dvobj, _adapter *adapter, u8 band_idx, u32 role_sbmp, u32 mlme_sbmp)
 {
 	int i;
 	_adapter *iface;
@@ -1477,42 +1444,20 @@ static u8 _rtw_mi_get_sta_ifbmp_by_hwband(struct dvobj_priv *dvobj, _adapter *ad
 				continue;
 		}
 
-		if (MLME_IS_STA(iface) && (!mlme_sbmp || CHK_MLME_STATE(iface, mlme_sbmp)))
+		if (role_sbmp != WIFI_NULL_STATE && !CHK_MLME_STATE(iface, role_sbmp))
+			continue;
+
+		if (!mlme_sbmp || CHK_MLME_STATE(iface, mlme_sbmp))
 			ifbmp |= BIT(i);
 	}
 
 	return ifbmp;
 }
 
-u8 rtw_mi_get_ld_sta_ifbmp(_adapter *adapter)
-{
-	return _rtw_mi_get_sta_ifbmp_by_hwband(adapter_to_dvobj(adapter), adapter, HW_BAND_MAX
-		, WIFI_ASOC_STATE);
-}
-
-u8 rtw_mi_get_ld_sta_ifbmp_by_hwband(struct dvobj_priv *dvobj, u8 band_idx)
-{
-	return _rtw_mi_get_sta_ifbmp_by_hwband(dvobj, NULL, band_idx
-		, WIFI_ASOC_STATE);
-}
-
-u8 rtw_mi_get_lgd_sta_ifbmp(_adapter *adapter)
-{
-	return _rtw_mi_get_sta_ifbmp_by_hwband(adapter_to_dvobj(adapter), adapter, HW_BAND_MAX
-		, WIFI_UNDER_LINKING | WIFI_ASOC_STATE);
-}
-
-u8 rtw_mi_get_lgd_sta_ifbmp_by_hwband(struct dvobj_priv *dvobj, u8 band_idx)
-{
-	return _rtw_mi_get_sta_ifbmp_by_hwband(dvobj, NULL, band_idx
-		, WIFI_UNDER_LINKING | WIFI_ASOC_STATE);
-}
-
-static u8 _rtw_mi_get_ap_mesh_ifbmp_by_hwband(struct dvobj_priv *dvobj, _adapter *adapter, u8 band_idx)
+_adapter *rtw_mi_get_iface_mlme(struct dvobj_priv *dvobj, _adapter *adapter, u8 band_idx, u32 role_sbmp, u32 mlme_sbmp)
 {
 	int i;
 	_adapter *iface;
-	u8 ifbmp = 0;
 
 	for (i = 0; i < dvobj->iface_nums; i++) {
 		iface = dvobj->padapters[i];
@@ -1526,36 +1471,13 @@ static u8 _rtw_mi_get_ap_mesh_ifbmp_by_hwband(struct dvobj_priv *dvobj, _adapter
 				continue;
 		}
 
-		if (CHK_MLME_STATE(iface, WIFI_AP_STATE | WIFI_MESH_STATE)
-			&& MLME_IS_ASOC(iface))
-			ifbmp |= BIT(i);
+		if (role_sbmp != WIFI_NULL_STATE && !CHK_MLME_STATE(iface, role_sbmp))
+			continue;
+
+		if (!mlme_sbmp || CHK_MLME_STATE(iface, mlme_sbmp))
+			return iface;
 	}
 
-	return ifbmp;
-}
-
-u8 rtw_mi_get_ap_mesh_ifbmp(_adapter *adapter)
-{
-	return _rtw_mi_get_ap_mesh_ifbmp_by_hwband(adapter_to_dvobj(adapter), adapter, HW_BAND_MAX);
-}
-
-u8 rtw_mi_get_ap_mesh_ifbmp_by_hwband(struct dvobj_priv *dvobj, u8 band_idx)
-{
-	return _rtw_mi_get_ap_mesh_ifbmp_by_hwband(dvobj, NULL, band_idx);
-}
-
-_adapter *rtw_mi_get_ap_mesh_iface_by_hwband(struct dvobj_priv *dvobj, u8 band_idx)
-{
-	u8 ifbmp = rtw_mi_get_ap_mesh_ifbmp_by_hwband(dvobj, band_idx);
-
-	if (ifbmp) {
-		int i;
-
-		for (i = 0; i < dvobj->iface_nums; i++) {
-			if ((ifbmp & BIT(i)) && dvobj->padapters[i])
-				return dvobj->padapters[i];
-		}
-	}
 	return NULL;
 }
 
@@ -1594,31 +1516,5 @@ u8 rtw_mi_get_hw_port(_adapter *adapter, struct _ADAPTER_LINK *adapter_link)
 	if (rtw_is_adapter_up(adapter))
 		return adapter_link->wrlink->hw_port;
 	return 0xFF;
-}
-
-u32 ifbmp_to_iflbmp(u8 ifbmp)
-{
-	u8 i, j;
-	u32 iflbmp = 0;
-
-	for (i = 0; i < CONFIG_IFACE_NUMBER; i++) {
-		for (j = 0; j < RTW_RLINK_MAX; j++) {
-			iflbmp |= (ifbmp & BIT(i)) << (j * CONFIG_IFACE_NUMBER);
-		}
-	}
-	return iflbmp;
-}
-
-u8 iflbmp_to_ifbmp(u32 iflbmp)
-{
-	u8 i, j;
-	u8 ifbmp = 0;
-
-	for (i = 0; i < CONFIG_IFACE_NUMBER; i++) {
-		for (j = 0; j < RTW_RLINK_MAX; j++) {
-			ifbmp |= (iflbmp >> (j * CONFIG_IFACE_NUMBER)) & BIT(i);
-		}
-	}
-	return ifbmp;
 }
 

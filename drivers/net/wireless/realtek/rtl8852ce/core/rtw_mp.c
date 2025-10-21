@@ -988,8 +988,8 @@ u16 rtw_mp_txpower_dbm(_adapter *adapter, u8 rf_path)
 {
 	struct mp_priv *pmppriv = &adapter->mppriv;
 	struct rtw_mp_txpwr_arg	ptxpwr_arg;
-	u16 tmp_power_ref = 0;
-	u16 agc_cw_val = 0;
+	s16 tmp_power_ref = 0;
+	s16 agc_cw_val = 0;
 	s16 pre_pwr_refcw_idx = 0;
 	u8 rfpath_i = 0;
 	struct _ADAPTER_LINK *padapter_link = GET_PRIMARY_LINK(adapter);
@@ -1453,6 +1453,7 @@ u8 rtw_phl_mp_tx_cmd(_adapter *padapter, enum rtw_mp_tx_cmd cmdid,
 			tx_arg.ru_alloc = pmppriv->mp_plcp_user[user_idx].ru_alloc *2;
 			tx_arg.nss = pmppriv->mp_plcp_user[user_idx].plcp_nss + 1;
 			tx_arg.pwr_boost_db = pmppriv->mp_plcp_user[user_idx].pwr_boost_db;
+			tx_arg.txbf = pmppriv->mp_plcp_user[user_idx].txbf;
 
 			RTW_INFO("%s,SET MP_TX_CONFIG_PLCP_USER_INFO\n", __func__);
 			RTW_INFO("%s plcp_usr_idx = %d\n", __func__, tx_arg.plcp_usr_idx);
@@ -1464,6 +1465,7 @@ u8 rtw_phl_mp_tx_cmd(_adapter *padapter, enum rtw_mp_tx_cmd cmdid,
 			RTW_INFO("%s apep = %d\n", __func__, tx_arg.apep);
 			RTW_INFO("%s ru_alloc = %d\n", __func__, tx_arg.ru_alloc);
 			RTW_INFO("%s nss = %d\n", __func__, tx_arg.nss);
+			RTW_INFO("%s txbf = %d\n", __func__, tx_arg.txbf);
 			break;
 		case RTW_MP_TX_CHECK_TX_IDLE:
 			RTW_INFO("%s,GET RTW_MP_TX_CHECK_TX_IDLE !\n", __func__);
@@ -3152,9 +3154,10 @@ u32 mpt_get_tx_power_finalabs_val(_adapter *padapter, u8 rf_path)
 	ptxpwr_arg.bandwidth = pmppriv->bandwidth;
 	ptxpwr_arg.rate = pmppriv->rateidx;
 	ptxpwr_arg.rfpath = rf_path;
-	ptxpwr_arg.beamforming = 0;
-	ptxpwr_arg.dcm = 0;
+	ptxpwr_arg.beamforming = pmppriv->mp_plcp_user[pmppriv->mp_plcp_useridx].txbf;
+	ptxpwr_arg.dcm = pmppriv->rtw_mp_he_sigb_dcm;
 	ptxpwr_arg.offset = 0;
+	ptxpwr_arg.tx_ru_on = (pmppriv->rtw_mp_pmact_ppdu_type >= RTW_MP_TYPE_HE_MU_OFDMA) ? 1:0;
 
 	rtw_mp_set_phl_cmd(padapter, (void*)&ptxpwr_arg, sizeof(struct rtw_mp_txpwr_arg));
 

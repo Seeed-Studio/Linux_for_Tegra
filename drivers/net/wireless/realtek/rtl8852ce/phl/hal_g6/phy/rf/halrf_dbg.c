@@ -1653,10 +1653,10 @@ void halrf_pwr_table_dbg_cmd(struct rf_info *rf, char input[][16], u32 *_used,
 			 char *output, u32 *_out_len)
 {
 	struct halrf_pwr_info *pwr = &rf->pwr_info;
-	char *cmd[17] = {"-h", "rate", "limit", "limit_ru", "set_default",
+	char *cmd[18] = {"-h", "rate", "limit", "limit_ru", "set_default",
 			"set", "txshape", "constraint", "coex", "force_reg",
 			"rate_pwr_ctl", "pwr_lmt_6g", "antgain", "ant", "max_rate_pwr",
-			"add_rate_pwr", "dpk_by_rate"};
+			"add_rate_pwr", "dpk_by_rate", "tpe"};
 	u32 used = *_used;
 	u32 out_len = *_out_len;
 	u32 val = 0;
@@ -1665,7 +1665,7 @@ void halrf_pwr_table_dbg_cmd(struct rf_info *rf, char input[][16], u32 *_used,
 	s32 stmp;
 
 	if (_os_strcmp(input[1], cmd[0]) == 0) {
-		for (i = 1; i < 17; i++)
+		for (i = 1; i < 18; i++)
 			RF_DBG_CNSL(out_len, used, output + used, out_len - used,
 				 "  %s\n", cmd[i]);
 	} else if (_os_strcmp(input[1], cmd[1]) == 0) {
@@ -1968,7 +1968,44 @@ void halrf_pwr_table_dbg_cmd(struct rf_info *rf, char input[][16], u32 *_used,
 		RF_DBG_CNSL(out_len, used, output + used, out_len - used,
 			"vector_index=%d   rate_index=%d   ======> dpk_by_rate_off = %d\n",
 			vector_index, rate_index, dpk_by_rate_on_off);
-	}  else
+	} else if (_os_strcmp(input[1], cmd[17]) == 0) {
+		struct rtw_tpe_info_t *tpe = &rf->phl_com->tpe_info;
+		u32 tmp[4] = {0};
+#if 0
+		tpe->valid_tpe_cnt = 1;
+		tpe->r_tpe[0].pwr_intpn = PWR_INTPN_EIRP;
+		tpe->r_tpe[0].valid_pwr_cnt = 1;
+		tpe->r_tpe[0].max_tx_pwr[0] = 20;
+	
+		tpe->valid_tpe_cnt = 1;
+		tpe->r_tpe[0].pwr_intpn = PWR_INTPN_EIRP_PSD;
+		tpe->r_tpe[0].valid_pwr_cnt = 0;
+		tpe->r_tpe[0].max_tx_pwr[0] = 0xf0;
+	
+		tpe->valid_tpe_cnt = 1;
+		tpe->r_tpe[0].pwr_intpn = PWR_INTPN_EIRP_PSD;
+		tpe->r_tpe[0].valid_pwr_cnt = 2;
+		tpe->r_tpe[0].max_tx_pwr[0] = 0xf0;
+		tpe->r_tpe[0].max_tx_pwr[1] = 0x2;
+#endif
+
+		_os_sscanf(input[2], "%d", &tmp[0]);
+		_os_sscanf(input[3], "%d", &tmp[1]);
+		_os_sscanf(input[4], "%d", &tmp[2]);
+		_os_sscanf(input[5], "%d", &tmp[3]);
+		_os_sscanf(input[6], "%d", &tmp[4]);
+
+		tpe->valid_tpe_cnt = (u8)tmp[0];
+		tpe->r_tpe[0].pwr_intpn = tmp[1];
+		tpe->r_tpe[0].valid_pwr_cnt = (u8)tmp[2];
+		tpe->r_tpe[0].max_tx_pwr[0] = (u8)tmp[3];
+		tpe->r_tpe[0].max_tx_pwr[1] = (u8)tmp[4];
+
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used,
+			"valid_tpe_cnt=%d   pwr_intpn=%d   valid_pwr_cnt=%d   max_tx_pwr[0]=%d   max_tx_pwr[1]=%d\n",
+			tpe->valid_tpe_cnt, tpe->r_tpe[0].pwr_intpn, tpe->r_tpe[0].valid_pwr_cnt,
+			tpe->r_tpe[0].max_tx_pwr[0], tpe->r_tpe[0].max_tx_pwr[1]);
+	} else 
 		RF_DBG_CNSL(out_len, used, output + used, out_len - used,
 				 " No CMD find!!\n");
 

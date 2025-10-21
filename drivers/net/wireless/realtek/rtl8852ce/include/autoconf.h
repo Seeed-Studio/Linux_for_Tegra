@@ -340,6 +340,8 @@
 #ifdef PRIVATE_N
 /* scan 2G & 5G only */
 #define CONFIG_RTW_COUNTRY_IE_SLAVE_SCAN_BAND_BMP 0x03
+/* 6G LPI only */
+#define CONFIG_6G_LPI_ONLY
 #endif
 
 

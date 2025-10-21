@@ -1263,15 +1263,14 @@ void dump_mesh_networks(void *sel, _adapter *adapter)
 	rtw_vmfree(mesh_networks, mlme->max_bss_cnt * sizeof(struct wlan_network *));
 }
 
-void rtw_mesh_adjust_bchbw(enum band_type req_band, u8 req_ch, u8 *req_bw, u8 *req_offset)
+u8 rtw_mesh_adjust_2g_bw(u8 ch, u8 bw, u8 offset)
 {
-	if (req_band == BAND_ON_24G && req_ch >= 5 && req_ch <= 9) {
+	if (ch >= 5 && ch <= 9) {
 		/* prevent secondary channel offset mismatch */
-		if (*req_bw > CHANNEL_WIDTH_20) {
-			*req_bw = CHANNEL_WIDTH_20;
-			*req_offset = CHAN_OFFSET_NO_EXT;
-		}
+		if (bw > CHANNEL_WIDTH_20)
+			bw = CHANNEL_WIDTH_20;
 	}
+	return bw;
 }
 
 void rtw_mesh_sae_check_frames(_adapter *adapter, const u8 *buf, u32 len, u8 tx, u16 alg, u16 seq, u16 status)

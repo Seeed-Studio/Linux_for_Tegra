@@ -562,6 +562,18 @@ rtw_phl_cmd_set_tx_power(void *phl, enum phl_band_idx band_idx
 		, cmd_type, cmd_timeout);
 }
 
+bool rtw_phl_tpe_is_required(struct rtw_tpe_info_t *tpe_info)
+{
+	return rtw_hal_tpe_is_required(tpe_info);
+}
+
+bool rtw_phl_check_tpe_allow(void *phl, struct rtw_tpe_info_t *tpe_info)
+{
+	struct phl_info_t *phl_info = phl;
+
+	return rtw_hal_check_tpe_allow(phl_info->hal, tpe_info);
+}
+
 enum rtw_phl_status rtw_phl_get_txinfo_pwr(void *phl, s16 *pwr_dbm)
 {
 	struct phl_info_t *phl_info = phl;
@@ -619,21 +631,82 @@ rtw_phl_cmd_get_txinfo_pwr(void *phl, s16 *pwr_dbm,
 }
 #endif
 
+void _phl_dump_tpe_info(struct rtw_tpe_info_t *tpe_info)
+{
+	u8 i = 0, j = 0, pwr_cnt = 0;
+
+	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_,
+		"%s(): country_code = %c%c, ap_type = %d, tpe_ele_cnt = %d\n", __func__,
+		_is_alpha(tpe_info->country_code[0]) ? tpe_info->country_code[0] : '?',
+		_is_alpha(tpe_info->country_code[1]) ? tpe_info->country_code[1] : '?',
+		tpe_info->ap_type, tpe_info->valid_tpe_cnt);
+
+	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_,
+			"[Dump Notify TPE] band(%d), bw(%d), chan(%d), c_ch(%d), offset(%d), hw_value(%d), center_freq1(%d), center_freq2(%d), is_dfs(%d)\n",
+			tpe_info->rx_chdef.band,
+			tpe_info->rx_chdef.bw,
+			tpe_info->rx_chdef.chan,
+			tpe_info->rx_chdef.center_ch,
+			tpe_info->rx_chdef.offset,
+			tpe_info->rx_chdef.hw_value,
+			tpe_info->rx_chdef.center_freq1,
+			tpe_info->rx_chdef.center_freq2,
+			tpe_info->rx_chdef.is_dfs);
+
+	for (i = 0; i < tpe_info->valid_tpe_cnt; i++) {
+		if (i >= PHL_MAX_TPE_ELE)
+			break;
+		PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_,
+			"[Dump TPE] TPE IE(%d), intpn(%d), valid_cnt(%d)\n",
+			i,
+			tpe_info->r_tpe[i].pwr_intpn,
+			tpe_info->r_tpe[i].valid_pwr_cnt);
+
+		pwr_cnt = tpe_info->r_tpe[i].valid_pwr_cnt;
+
+		for (j = 0; j < pwr_cnt; j++) {
+			PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_,
+				"[Dump TPE] TPE IE(%d), pwr[%d]=(0x%X)\n",
+				i, j, tpe_info->r_tpe[i].max_tx_pwr[j]);
+		}
+	}
+}
+
+
 static enum rtw_phl_status
 _update_tpe_info(void *phl,
-	struct rtw_tpe_info_t *tpe_info)
+	struct rtw_tpe_info_t *tpe_info, bool *updated)
 {
 	struct phl_info_t *phl_info = (struct phl_info_t *)phl;
+
+	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "[TPE] ======>%s \n",
+		__func__);
+
 	if (_os_mem_cmp(phl_to_drvpriv(phl_info),
 			&phl_info->phl_com->tpe_info,
 			tpe_info,
 			sizeof(struct rtw_tpe_info_t)) != 0) {
 		/* Update tpe info if contents are not the same */
+		*updated = true;
+
+		PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "[TPE] ======>%s(): dest phl_com->tpe_info \n",
+		__func__);
+		_phl_dump_tpe_info(&phl_info->phl_com->tpe_info);
+
+		PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "[TPE] ======>%s(): src tpe_info \n",
+		__func__);
+		_phl_dump_tpe_info(tpe_info);
+
 		_os_mem_cpy(phl_to_drvpriv(phl_info),
 			&phl_info->phl_com->tpe_info,
 			tpe_info,
 			sizeof(struct rtw_tpe_info_t));
+
 	}
+
+	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "[TPE] <======%s(): updated = %d \n",
+		__func__, *updated);
+
 	return RTW_PHL_STATUS_SUCCESS;
 }
 
@@ -642,7 +715,19 @@ enum rtw_phl_status
 phl_cmd_tpe_update_hdl(void *phl, u8 *param)
 {
 	struct rtw_tpe_info_t *tpe_info = (struct rtw_tpe_info_t *)param;
-	return _update_tpe_info(phl, tpe_info);
+	bool updated = false;
+	struct phl_info_t *phl_info = phl;
+
+	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "[TPE] ======>%s \n",
+		__func__);
+
+	_update_tpe_info(phl, tpe_info, &updated);
+
+	if(updated)
+		return rtw_hal_set_tpe_control(phl_info->hal);
+	else
+		return RTW_PHL_STATUS_SUCCESS;
+
 }
 
 static void

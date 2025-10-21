@@ -1424,6 +1424,8 @@ bool _halrf_set_power_8852c(struct rf_info *rf, enum phl_phy_idx phy,
 			return false;
 		}
 
+		halrf_set_tpe_control_dbcc(rf, phy);
+
 		halrf_modify_pwr_table_bitmask(rf, phy, pwr_table);
 		halrf_mac_write_pwr_limit_reg(rf, phy);
 
@@ -1441,6 +1443,8 @@ bool _halrf_set_power_8852c(struct rf_info *rf, enum phl_phy_idx phy,
 			RF_DBG(rf, DBG_RF_POWER, "halrf_set_power_limit_ru_to_struct_8852c return fail\n");
 			return false;
 		}
+
+		halrf_set_tpe_control_dbcc(rf, phy);
 
 		halrf_modify_pwr_table_bitmask(rf, phy, pwr_table);
 		halrf_mac_write_pwr_limit_rua_reg(rf, phy);
@@ -1911,6 +1915,7 @@ void halrf_pwr_limit_info_8852c(struct rf_info *rf,
 {
 	struct halrf_pwr_info *pwr = &rf->pwr_info;
 	struct rtw_tpu_info *tpu = &rf->hal_com->band[phy].rtw_tpu_i;
+	struct rtw_tpe_info_t *tpe = &rf->phl_com->tpe_info;
 	u8 channel = rf->hal_com->band[phy].cur_chandef.center_ch;
 	u8 txsc_ch = rf->hal_com->band[phy].cur_chandef.chan;
 	u32 bw =  rf->hal_com->band[phy].cur_chandef.bw;
@@ -1919,7 +1924,8 @@ void halrf_pwr_limit_info_8852c(struct rf_info *rf,
 	s32 s_cck_ref, s_ofdm_ref, diff_20m, diff_40m, diff_80m, diff_160m;
 	s32 int_tmp[2], float_tmp[2];
 	u32 power_constraint = pwr->power_constraint[phy];
-	s32 tmp[2] = {0}, tmp1[2] = {0};
+	s32 tmp[8] = {0}, tmp1[2] = {0};
+	u32 i;
 
 	u32 used = *_used;
 	u32 out_len = *_out_len;
@@ -2015,6 +2021,50 @@ void halrf_pwr_limit_info_8852c(struct rf_info *rf,
 		pwr->set_tx_ptrn_shap_idx[PW_LMT_BAND_2_4G][TX_SHAPE_OFDM],
 		pwr->set_tx_ptrn_shap_idx[PW_LMT_BAND_5G][TX_SHAPE_OFDM]);
 
+	for (i = 0; i < tpe->valid_tpe_cnt; i++) {
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %s\n",
+			"TPE Method",
+			(tpe->r_tpe[i].pwr_intpn == PWR_INTPN_UNDEFINED) ? "UNDEFINED" :
+			((tpe->r_tpe[i].pwr_intpn == PWR_INTPN_EIRP) ? "EIRP" : "EIRP_PSD"));
+
+		if ((tpe->r_tpe[i].pwr_intpn == PWR_INTPN_EIRP_PSD) && (tpe->r_tpe[i].valid_pwr_cnt == 0))
+			RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d, only use max tx power [0]\n",
+				"TPE Cnt", tpe->r_tpe[i].valid_pwr_cnt);
+		else
+			RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d\n",
+				"TPE Cnt", tpe->r_tpe[i].valid_pwr_cnt);
+
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d\n",
+			"TPE Power Offset",
+			(-1 * HALRF_TPE_TORRANCE_ANTGAIN) / 2, ((HALRF_TPE_TORRANCE_ANTGAIN % 2) * 10 / 2));
+
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d\n",
+			"TPE TX Power <= 3dBm",
+			(-1 * HALRF_TPE_TSSI_LOW_PWR_TORRACE) / 2, ((HALRF_TPE_TSSI_LOW_PWR_TORRACE % 2) * 10 / 2));
+
+		(pwr->tpe_max_tx_pwr[phy][i][0] > 0) ? (tmp[0] = pwr->tpe_max_tx_pwr[phy][i][0]) : (tmp[0] = -1 * pwr->tpe_max_tx_pwr[phy][i][0]);
+		(pwr->tpe_max_tx_pwr[phy][i][1] > 0) ? (tmp[1] = pwr->tpe_max_tx_pwr[phy][i][1]) : (tmp[1] = -1 * pwr->tpe_max_tx_pwr[phy][i][1]);
+		(pwr->tpe_max_tx_pwr[phy][i][2] > 0) ? (tmp[2] = pwr->tpe_max_tx_pwr[phy][i][2]) : (tmp[2] = -1 * pwr->tpe_max_tx_pwr[phy][i][2]);
+		(pwr->tpe_max_tx_pwr[phy][i][3] > 0) ? (tmp[3] = pwr->tpe_max_tx_pwr[phy][i][3]) : (tmp[3] = -1 * pwr->tpe_max_tx_pwr[phy][i][3]);
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d / %d.%d / %d.%d / %d.%d\n",
+			"TPE TX Power 0 ~ 3",
+			pwr->tpe_max_tx_pwr[phy][i][0] / 2, ((tmp[0] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][1] / 2, ((tmp[1] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][2] / 2, ((tmp[2] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][3] / 2, ((tmp[3] % 2) * 10 / 2));
+
+		(pwr->tpe_max_tx_pwr[phy][i][4] > 0) ? (tmp[4] = pwr->tpe_max_tx_pwr[phy][i][4]) : (tmp[4] = -1 * pwr->tpe_max_tx_pwr[phy][i][4]);
+		(pwr->tpe_max_tx_pwr[phy][i][5] > 0) ? (tmp[5] = pwr->tpe_max_tx_pwr[phy][i][5]) : (tmp[5] = -1 * pwr->tpe_max_tx_pwr[phy][i][5]);
+		(pwr->tpe_max_tx_pwr[phy][i][6] > 0) ? (tmp[6] = pwr->tpe_max_tx_pwr[phy][i][6]) : (tmp[6] = -1 * pwr->tpe_max_tx_pwr[phy][i][6]);
+		(pwr->tpe_max_tx_pwr[phy][i][7] > 0) ? (tmp[7] = pwr->tpe_max_tx_pwr[phy][i][7]) : (tmp[7] = -1 * pwr->tpe_max_tx_pwr[phy][i][7]);
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d / %d.%d / %d.%d / %d.%d\n",
+			"TPE TX Power 4 ~ 7",
+			pwr->tpe_max_tx_pwr[phy][i][4] / 2, ((tmp[4] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][5] / 2, ((tmp[5] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][6] / 2, ((tmp[6] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][7] / 2, ((tmp[7] % 2) * 10 / 2));
+	}
+
 	RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %s\n",
 		"TX ext Power Stats",
 		tpu->ext_pwr_lmt_en ? "Enable" : "Disable");
@@ -2046,6 +2096,15 @@ void halrf_pwr_limit_info_8852c(struct rf_info *rf,
 		tmp1[RF_PATH_B] / 4,
 		((tmp1[RF_PATH_B] * 100) / 4) % 100
 		);
+
+	tmp[0] = halrf_rreg(rf, 0x1c78, 0x1ff);
+	(tmp[0] & BIT(8)) ? (tmp[0] = tmp[0] | 0xfffffe00) : 0;
+	tmp[1] = halrf_rreg(rf, 0x3c78, 0x1ff);
+	(tmp[1] & BIT(8)) ? (tmp[1] = tmp[1] | 0xfffffe00) : 0;
+	RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d / %d.%d\n",
+		 "T-MAC xdbm A / B",
+		 tmp[0] / 4, (tmp[0] > 0) ? (((tmp[0] * 100) / 4) % 100) : (((-1 * tmp[0] * 100) / 4) % 100),
+		 tmp[1] / 4, (tmp[1] > 0) ? (((tmp[1] * 100) / 4) % 100) : (((-1 * tmp[1] * 100) / 4) % 100));
 
 	RF_DBG_CNSL(out_len, used, output + used, out_len - used, "1TX\n");
 
@@ -2163,6 +2222,7 @@ void halrf_pwr_limit_ru_info_8852c(struct rf_info *rf,
 {
 	struct halrf_pwr_info *pwr = &rf->pwr_info;
 	struct rtw_tpu_info *tpu = &rf->hal_com->band[phy].rtw_tpu_i;
+	struct rtw_tpe_info_t *tpe = &rf->phl_com->tpe_info;
 	u8 channel = rf->hal_com->band[phy].cur_chandef.center_ch;
 	u32 bw =  rf->hal_com->band[phy].cur_chandef.bw;
 	u32 band = rf->hal_com->band[phy].cur_chandef.band;
@@ -2170,7 +2230,8 @@ void halrf_pwr_limit_ru_info_8852c(struct rf_info *rf,
 	s32 s_cck_ref, s_ofdm_ref;
 	s32 int_tmp[2], float_tmp[2];
 	u32 power_constraint = pwr->power_constraint[phy];
-	s32 tmp[2] = {0}, tmp1[2] = {0};
+	s32 tmp[8] = {0}, tmp1[2] = {0};
+	u32 i;
 
 	u32 used = *_used;
 	u32 out_len = *_out_len;
@@ -2237,6 +2298,46 @@ void halrf_pwr_limit_ru_info_8852c(struct rf_info *rf,
 		pwr->set_tx_ptrn_shap_idx[PW_LMT_BAND_2_4G][TX_SHAPE_OFDM],
 		pwr->set_tx_ptrn_shap_idx[PW_LMT_BAND_5G][TX_SHAPE_OFDM]);
 
+	for (i = 0; i < tpe->valid_tpe_cnt; i++) {
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %s\n",
+			"TPE Method",
+			(tpe->r_tpe[i].pwr_intpn == PWR_INTPN_UNDEFINED) ? "UNDEFINED" :
+			((tpe->r_tpe[i].pwr_intpn == PWR_INTPN_EIRP) ? "EIRP" : "EIRP_PSD"));
+
+		if ((tpe->r_tpe[i].pwr_intpn == PWR_INTPN_EIRP_PSD) && (tpe->r_tpe[i].valid_pwr_cnt == 0))
+			RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d, only use max tx power [0]\n",
+				"TPE Cnt", tpe->r_tpe[i].valid_pwr_cnt);
+		else
+			RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d\n",
+				"TPE Cnt", tpe->r_tpe[i].valid_pwr_cnt);
+
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d\n",
+			"TPE Power Offset",
+			(-1 * HALRF_TPE_TORRANCE_ANTGAIN) / 2, ((HALRF_TPE_TORRANCE_ANTGAIN % 2) * 10 / 2));
+
+		(pwr->tpe_max_tx_pwr[phy][i][0] > 0) ? (tmp[0] = pwr->tpe_max_tx_pwr[phy][i][0]) : (tmp[0] = -1 * pwr->tpe_max_tx_pwr[phy][i][0]);
+		(pwr->tpe_max_tx_pwr[phy][i][1] > 0) ? (tmp[1] = pwr->tpe_max_tx_pwr[phy][i][1]) : (tmp[1] = -1 * pwr->tpe_max_tx_pwr[phy][i][1]);
+		(pwr->tpe_max_tx_pwr[phy][i][2] > 0) ? (tmp[2] = pwr->tpe_max_tx_pwr[phy][i][2]) : (tmp[2] = -1 * pwr->tpe_max_tx_pwr[phy][i][2]);
+		(pwr->tpe_max_tx_pwr[phy][i][3] > 0) ? (tmp[3] = pwr->tpe_max_tx_pwr[phy][i][3]) : (tmp[3] = -1 * pwr->tpe_max_tx_pwr[phy][i][3]);
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d / %d.%d / %d.%d / %d.%d\n",
+			"TPE TX Power 0 ~ 3",
+			pwr->tpe_max_tx_pwr[phy][i][0] / 2, ((tmp[0] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][1] / 2, ((tmp[1] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][2] / 2, ((tmp[2] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][3] / 2, ((tmp[3] % 2) * 10 / 2));
+
+		(pwr->tpe_max_tx_pwr[phy][i][4] > 0) ? (tmp[4] = pwr->tpe_max_tx_pwr[phy][i][4]) : (tmp[4] = -1 * pwr->tpe_max_tx_pwr[phy][i][4]);
+		(pwr->tpe_max_tx_pwr[phy][i][5] > 0) ? (tmp[5] = pwr->tpe_max_tx_pwr[phy][i][5]) : (tmp[5] = -1 * pwr->tpe_max_tx_pwr[phy][i][5]);
+		(pwr->tpe_max_tx_pwr[phy][i][6] > 0) ? (tmp[6] = pwr->tpe_max_tx_pwr[phy][i][6]) : (tmp[6] = -1 * pwr->tpe_max_tx_pwr[phy][i][6]);
+		(pwr->tpe_max_tx_pwr[phy][i][7] > 0) ? (tmp[7] = pwr->tpe_max_tx_pwr[phy][i][7]) : (tmp[7] = -1 * pwr->tpe_max_tx_pwr[phy][i][7]);
+		RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d / %d.%d / %d.%d / %d.%d\n",
+			"TPE TX Power 4 ~ 7",
+			pwr->tpe_max_tx_pwr[phy][i][4] / 2, ((tmp[4] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][5] / 2, ((tmp[5] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][6] / 2, ((tmp[6] % 2) * 10 / 2),
+			pwr->tpe_max_tx_pwr[phy][i][7] / 2, ((tmp[7] % 2) * 10 / 2));
+	}
+
 	RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %s\n",
 		"TX ext Power Stats",
 		tpu->ext_pwr_lmt_en ? "Enable" : "Disable");
@@ -2269,6 +2370,14 @@ void halrf_pwr_limit_ru_info_8852c(struct rf_info *rf,
 		((tmp1[RF_PATH_B] * 100) / 4) % 100
 		);
 
+	tmp[0] = halrf_rreg(rf, 0x1c78, 0x1ff);
+	(tmp[0] & BIT(8)) ? (tmp[0] = tmp[0] | 0xfffffe00) : 0;
+	tmp[1] = halrf_rreg(rf, 0x3c78, 0x1ff);
+	(tmp[1] & BIT(8)) ? (tmp[1] = tmp[1] | 0xfffffe00) : 0;
+	RF_DBG_CNSL(out_len, used, output + used, out_len - used, " %-30s = %d.%d / %d.%d\n",
+		 "T-MAC xdbm A / B",
+		 tmp[0] / 4, (tmp[0] > 0) ? (((tmp[0] * 100) / 4) % 100) : (((-1 * tmp[0] * 100) / 4) % 100),
+		 tmp[1] / 4, (tmp[1] > 0) ? (((tmp[1] * 100) / 4) % 100) : (((-1 * tmp[1] * 100) / 4) % 100));
 
 	RF_DBG_CNSL(out_len, used, output + used, out_len - used, "1TX\n");
 

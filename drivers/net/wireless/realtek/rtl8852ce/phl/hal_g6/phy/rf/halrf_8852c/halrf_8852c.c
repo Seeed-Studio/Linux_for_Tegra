@@ -1052,11 +1052,51 @@ void halrf_rxbb_bw_8852c(struct rf_info *rf, enum phl_phy_idx phy, enum channel_
 	halrf_write_fwofld_end(rf);		/*FW Offload End*/
 }
 
+void halrf_roaming_disconnect_notify_8852c(struct rf_info *rf, struct rtw_chan_def *chandef, struct rtw_chan_def *chandef_new){
+
+	struct halrf_gapk_info *txgapk_info = &rf->gapk;
+	struct halrf_mcc_info *mcc_info = &rf->mcc_info;
+	struct halrf_dbcc_info *dbcc_info = &rf->dbcc_info;
+	u8 ch;
+	u8 tbl_path, tbl;
+	
+	RF_DBG(rf, DBG_RF_RFK, "[IQK]===>%s\n", __func__);
+
+	// make sure roaming ch/band/bw
+	if((chandef->center_ch != chandef_new->center_ch) || (chandef->band != chandef_new->band) || (chandef->bw != chandef_new->bw)){
+
+		/*TXGAPK*/
+		for (ch = 0; ch < 2; ch++) {		
+			if (txgapk_info->txgapk_mcc_ch[ch] == chandef->center_ch)
+					txgapk_info->txgapk_mcc_ch[ch] = 0x0;
+		}
+
+		/*mcc info*/
+		for (ch = 0; ch < 2; ch++) {		
+			if ((mcc_info->ch[ch] == chandef->center_ch) && (mcc_info->band[ch] == chandef->band)) {
+				mcc_info->ch[ch] = 0x0;
+				mcc_info->band[ch] = 0x0;
+			}
+		}
+
+		for (tbl = 0; tbl < 2; tbl ++) {
+			for(tbl_path = 0 ; tbl_path < 2; tbl_path++) {
+				if ((dbcc_info->ch[tbl][tbl_path] == chandef->center_ch) && (dbcc_info->band[tbl][tbl_path] == chandef->band)) {
+					dbcc_info->ch[tbl][tbl_path] = 0x0;
+					dbcc_info->band[tbl][tbl_path] = 0x0;
+				}
+			}
+		}
+	}
+}
+
 void halrf_disconnect_notify_8852c(struct rf_info *rf, struct rtw_chan_def *chandef) {
 
 	struct halrf_gapk_info *txgapk_info = &rf->gapk;
 	struct halrf_mcc_info *mcc_info = &rf->mcc_info;
+	struct halrf_dbcc_info *dbcc_info = &rf->dbcc_info;
 	u8 ch;
+	u8 tbl_path, tbl;
 	
 	RF_DBG(rf, DBG_RF_RFK, "[IQK]===>%s\n", __func__);
 #if 0
@@ -1081,7 +1121,15 @@ void halrf_disconnect_notify_8852c(struct rf_info *rf, struct rtw_chan_def *chan
 			mcc_info->ch[ch] = 0x0;
 			mcc_info->band[ch] = 0x0;
 		}
-				
+	}
+
+	for (tbl = 0; tbl < 2; tbl ++) {
+		for(tbl_path = 0 ; tbl_path < 2; tbl_path++) {
+			if ((dbcc_info->ch[tbl][tbl_path] == chandef->center_ch) && (dbcc_info->band[tbl][tbl_path] == chandef->band)) {
+				dbcc_info->ch[tbl][tbl_path] = 0x0;
+				dbcc_info->band[tbl][tbl_path] = 0x0;
+			}
+		}
 	}
 	
 }

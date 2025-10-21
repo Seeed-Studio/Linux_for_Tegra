@@ -1605,7 +1605,7 @@ static void fsm_ucast_msg(struct fsm_priv *fsmpriv,
 		list_for_each_entry(obj, &fsm->obj_queue.q, list) {
 			if (obj->psta == psta) {
 				obj_ary[obj_num++] = obj;
-				if (obj_num > MAX_OBJ_NUM) {
+				if (obj_num >= MAX_OBJ_NUM) {
 					FSM_WARN_(obj->fsm, "obj num exceed, event %04x(%s)\n",
 						event, fsm_evt_name(obj->fsm, event));
 					_rtw_spinunlock_bh(&fsm->obj_queue.lock);

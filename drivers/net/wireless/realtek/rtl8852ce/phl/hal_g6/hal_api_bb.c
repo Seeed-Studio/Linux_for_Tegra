@@ -2205,7 +2205,14 @@ void rtw_hal_bb_notification(struct hal_info_t *hal_info,
                              enum phl_msg_evt_id event,
                              enum phl_phy_idx phy_idx)
 {
-	halbb_wifi_event_notify(hal_info->bb, event, phy_idx);
+	halbb_wifi_event_notify(hal_info->bb, event, phy_idx, 0xFF);
+}
+
+void rtw_hal_bb_notification_rssi(struct hal_info_t *hal_info,
+                             enum phl_msg_evt_id event,
+                             enum phl_phy_idx phy_idx, u8 rssi)
+{
+	halbb_wifi_event_notify(hal_info->bb, event, phy_idx, rssi);
 }
 
 void rtw_hal_bb_cmd_notification(struct hal_info_t *hal_info,

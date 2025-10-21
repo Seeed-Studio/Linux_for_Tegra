@@ -374,7 +374,6 @@ int _issue_nulldata_to_TDLS_peer_STA(_adapter *padapter, struct sta_info *sta,
 	pattrib->qos_en = _TRUE;
 	pattrib->eosp = 1;
 	pattrib->ack_policy = 0;
-	pattrib->mdata = 0;
 	pattrib->retry_ctrl = _FALSE;
 
 	_rtw_memset(pmgntframe->buf_addr, 0, WLANHDR_OFFSET + TXDESC_OFFSET);
@@ -2755,6 +2754,7 @@ int On_TDLS_Peer_Traffic_Rsp(_adapter *padapter, union recv_frame *precv_frame, 
 	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
 	struct rx_pkt_attrib	*pattrib = &precv_frame->u.hdr.attrib;
 	struct sta_priv *pstapriv = &padapter->stapriv;
+	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 	u8 wmmps_ac = 0;
 	/* u8 state=TDLS_check_ch_state(ptdls_sta->tdls_sta_state); */
 	int i;
@@ -2773,6 +2773,7 @@ int On_TDLS_Peer_Traffic_Rsp(_adapter *padapter, union recv_frame *precv_frame, 
 			_list	*xmitframe_plist, *xmitframe_phead;
 			struct xmit_frame *pxmitframe = NULL;
 
+			_rtw_spinlock_bh(&pxmitpriv->lock);
 			_rtw_spinlock_bh(&ptdls_sta->sleep_q.lock);
 
 			xmitframe_phead = get_list_head(&ptdls_sta->sleep_q);
@@ -2806,6 +2807,7 @@ int On_TDLS_Peer_Traffic_Rsp(_adapter *padapter, union recv_frame *precv_frame, 
 			}
 
 			_rtw_spinunlock_bh(&ptdls_sta->sleep_q.lock);
+			_rtw_spinunlock_bh(&pxmitpriv->lock);
 
 		}
 

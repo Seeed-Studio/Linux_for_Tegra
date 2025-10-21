@@ -2881,7 +2881,7 @@ void halbb_cmn_dbg(struct bb_info *bb, char input[][16], u32 *_used,
 			 "[Now]==================\n");
 	} else if (_os_strcmp(input[1], "event") == 0) {
 		HALBB_SCAN(input[2], DCMD_DECIMAL, &val[0]);
-		halbb_wifi_event_notify(bb, (enum phl_msg_evt_id)val[0], bb->bb_phy_idx);
+		halbb_wifi_event_notify(bb, (enum phl_msg_evt_id)val[0], bb->bb_phy_idx, 0xFF);
 		BB_DBG_CNSL(*_out_len, *_used, output + *_used, *_out_len - *_used,
 			    "phl_evt_id=%d\n", val[0]);
 	} else if (_os_strcmp(input[1], "period") == 0) {

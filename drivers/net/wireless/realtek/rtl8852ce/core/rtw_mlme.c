@@ -1,7 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2023 Realtek Corporation.
- * SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright(c) 2007 - 2024 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -178,8 +177,8 @@ sint	_rtw_init_mlme_priv(_adapter *padapter)
 #else
 #define RTW_ROAM_SCAN_RESULT_EXP_MS (10*1000)
 #endif
-#define RTW_ROAM_SCAN_INTERVAL (2)    /* 5*(2 second)*/
-#define RTW_ROAM_RSSI_THRESHOLD 45
+#define RTW_ROAM_SCAN_INTERVAL (5)    /* 5*(2 second)*/
+#define RTW_ROAM_RSSI_THRESHOLD 30
 
 #define RTW_ROAM_RSSI_IDLE_TH RTW_ROAM_RSSI_THRESHOLD
 #define RTW_ROAM_RSSI_BUSY_TH RTW_ROAM_RSSI_THRESHOLD + 5
@@ -2950,9 +2949,6 @@ static void _stadel_posthandle_sta(struct _ADAPTER *a,
 	    && rtw_ft_chk_flags(a, RTW_FT_BTM_ROAM)) {
 		roam = _TRUE;
 		roam_target = mlme->roam_network;
-#ifdef CONFIG_RTW_FSM_BTM
-		rtw_set_to_roam(a, 2);
-#endif
 	}
 #endif
 	if (roam == _TRUE) {
@@ -2982,6 +2978,7 @@ static void _stadel_posthandle_sta(struct _ADAPTER *a,
 void rtw_stadel_event_callback(_adapter *adapter, u8 *pbuf)
 {
 	struct sta_info *psta;
+	struct rtw_phl_mld_t *pmld = NULL;
 	struct wlan_network *pwlan = NULL;
 	WLAN_BSSID_EX    *pdev_network = NULL;
 	u8 *pibss = NULL;
@@ -3005,10 +3002,11 @@ void rtw_stadel_event_callback(_adapter *adapter, u8 *pbuf)
 	if (psta) {
 		rtw_wfd_st_switch(psta, 0);
 		psta->hw_decrypted = _FALSE;
+		pmld = psta->phl_sta->mld;
 	}
 
 	if (MLME_IS_MESH(adapter)) {
-		rtw_free_mld_stainfo(adapter, psta->phl_sta->mld);
+		rtw_free_mld_stainfo(adapter, pmld);
 		goto exit;
 	}
 
@@ -3136,6 +3134,13 @@ void rtw_join_timeout_handler(void *ctx)
 	if (RTW_CANNOT_RUN(adapter_to_dvobj(adapter)))
 		return;
 
+	/* SAE auth timeout, send association request to force trigger disconnected by AP */
+	if ((check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE) &&
+	    (pmlmeinfo->state & WIFI_FW_AUTH_STATE) &&
+	    rtw_sec_chk_auth_type(adapter, MLME_AUTHTYPE_SAE)) {
+		RTW_INFO("%s: issue_assocreq due to SAE auth timeout.\n", __FUNCTION__);
+		issue_assocreq(adapter);
+	}
 
 	_rtw_spinlock_bh(&pmlmepriv->lock);
 #ifdef CONFIG_STA_CMD_DISPR
@@ -5759,20 +5764,26 @@ bool rtw_adjust_bchbw(_adapter *adapter, enum band_type req_band, u8 req_ch, u8 
 		allowed_bw = REGSTY_BW_2G(regsty);
 
 	allowed_bw = rtw_hw_largest_bw(adapter_to_dvobj(adapter), allowed_bw);
+	if (allowed_bw < *req_bw) {
+		*req_bw = allowed_bw;
+		if (*req_bw == CHANNEL_WIDTH_20)
+			*req_offset = CHAN_OFFSET_NO_EXT;
+		return true;
+	}
 
-	if (allowed_bw == CHANNEL_WIDTH_160 && *req_bw > CHANNEL_WIDTH_160)
-		*req_bw = CHANNEL_WIDTH_160;
-	else if (allowed_bw == CHANNEL_WIDTH_80 && *req_bw > CHANNEL_WIDTH_80)
-		*req_bw = CHANNEL_WIDTH_80;
-	else if (allowed_bw == CHANNEL_WIDTH_40 && *req_bw > CHANNEL_WIDTH_40)
-		*req_bw = CHANNEL_WIDTH_40;
-	else if (allowed_bw == CHANNEL_WIDTH_20 && *req_bw > CHANNEL_WIDTH_20) {
-		*req_bw = CHANNEL_WIDTH_20;
-		*req_offset = CHAN_OFFSET_NO_EXT;
-	} else
-		return _FALSE;
+	return false;
+}
 
-	return _TRUE;
+bool rtw_adjust_chdef_bw(_adapter *adapter, struct rtw_chan_def *chdef)
+{
+	u8 bw = chdef->bw, offset = chdef->offset;
+	bool ret = rtw_adjust_bchbw(adapter, chdef->band, chdef->chan, &bw, &offset);
+
+	if (ret) {
+		chdef->bw = bw;
+		chdef->offset = offset;
+	}
+	return ret;
 }
 
 sint rtw_linked_check(_adapter *padapter)
@@ -6024,16 +6035,7 @@ static enum rtw_phl_status _connect_abort_notify(struct _ADAPTER *a)
 
 static void _connect_swch_done_notify_cb(void *priv, struct phl_msg *msg)
 {
-	struct _ADAPTER *a = (struct _ADAPTER *)priv;
-
-
-	RTW_DBG(FUNC_ADPT_FMT ": connect_st=%u\n",
-		FUNC_ADPT_ARG(a), a->connect_state);
-
-	if (msg->inbuf) {
-		rtw_vmfree(msg->inbuf, msg->inlen);
-		msg->inbuf = NULL;
-	}
+	rtw_vmfree(msg->inbuf, msg->inlen);
 }
 
 static enum rtw_phl_status
@@ -6156,6 +6158,7 @@ static enum phl_mdl_ret_code _connect_acquired(void* dispr, void *priv)
 	struct dvobj_priv *d = adapter_to_dvobj(a);
 	struct _WLAN_BSSID_EX *network = &a->mlmeextpriv.mlmext_info.dev_network;
 	struct _ADAPTER_LINK *alink = GET_PRIMARY_LINK(a);
+	u8 rssi;
 
 	RTW_DBG(FUNC_ADPT_FMT ": +\n", FUNC_ADPT_ARG(a));
 
@@ -6167,9 +6170,18 @@ static enum phl_mdl_ret_code _connect_acquired(void* dispr, void *priv)
 	a->connect_bidx = alink->wrlink->hw_band;
 	_rtw_spinunlock_bh(&a->connect_st_lock);
 
+#if 0	
+	RTW_INFO("%s: rssi = %d\n", __func__, network->PhyInfo.rssi);
+	rssi = rtw_abs(network->PhyInfo.rssi);
+	if (rssi > PHL_MAX_RSSI)
+		rssi = 0xFF;
+#else
+	rssi = 0xFF;
+#endif
+
 	/*rtw_hw_prepare_connect(a, NULL, network->MacAddress);*/
 	rtw_phl_connect_prepare(GET_PHL_INFO(d), a->connect_bidx, a->phl_role,
-				alink->wrlink, network->MacAddress);
+				alink->wrlink, network->MacAddress, rssi);
 
 	RTW_DBG(FUNC_ADPT_FMT ": -\n", FUNC_ADPT_ARG(a));
 
@@ -6214,8 +6226,11 @@ static enum phl_mdl_ret_code _connect_abort(void* dispr, void *priv)
 		_rtw_spinunlock_bh(&a->mlmepriv.lock);
 	}
 
+	_rtw_spinlock_bh(&a->connect_st_lock);
 	if (a->connect_state == CONNECT_ST_ACQUIRED)
 		phl_status = _connect_abort_notify(a);
+	_rtw_spinunlock_bh(&a->connect_st_lock);
+
 	a->connect_token = 0; /* framework will free this token later */
 	if (phl_status != RTW_PHL_STATUS_SUCCESS) {
 		/* No callback function, everything should be done here */
@@ -6609,8 +6624,8 @@ enum rtw_phl_status rtw_connect_cmd(struct _ADAPTER *a,
 	struct _ADAPTER_LINK *alink = NULL;
 	struct rtw_wifi_role_link_t *rlink = NULL;
 
-	RTW_DBG(FUNC_ADPT_FMT ": st=%u\n",
-		FUNC_ADPT_ARG(a), a->connect_state);
+
+	RTW_DBG(FUNC_ADPT_FMT ": +\n", FUNC_ADPT_ARG(a));
 
 	/* ref: top half of rtw_join_cmd_hdl(), software only */
 	/* Todo: disconnect before connecting */
@@ -6660,6 +6675,8 @@ enum rtw_phl_status rtw_connect_cmd(struct _ADAPTER *a,
 	}
 
 	_rtw_spinlock_bh(&a->connect_st_lock);
+	RTW_DBG(FUNC_ADPT_FMT ": st=%u\n",
+		FUNC_ADPT_ARG(a), a->connect_state);
 
 	if (a->connect_state != CONNECT_ST_IDLE) {
 		status = RTW_PHL_STATUS_SUCCESS;
@@ -6687,10 +6704,10 @@ enum rtw_phl_status rtw_connect_cmd(struct _ADAPTER *a,
 	status = RTW_PHL_STATUS_SUCCESS;
 
 exit:
+	RTW_DBG(FUNC_ADPT_FMT ": - st=%u ret=%u token=%#010x\n",
+		FUNC_ADPT_ARG(a), a->connect_state, status, a->connect_token);
 	_rtw_spinunlock_bh(&a->connect_st_lock);
 
-	RTW_DBG(FUNC_ADPT_FMT ": - st=%u ret=%u\n",
-		FUNC_ADPT_ARG(a), a->connect_state, status);
 	return status;
 }
 

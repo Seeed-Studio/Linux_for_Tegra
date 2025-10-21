@@ -7591,6 +7591,8 @@ static const struct iw_priv_args rtw_mp_private_args[] = {
 				IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mac_loopbk" },
 	{ MP_MAC_IOTEST, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK,
 				IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mac_io_test" },
+	{ MP_6G_CATE, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK,
+				IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mp_6gcate" },
 #ifdef CONFIG_RTW_CUSTOMER_STR
 	{ MP_CUSTOMER_STR, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK,
 				IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "customer_str" },

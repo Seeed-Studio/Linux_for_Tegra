@@ -81,6 +81,32 @@ void rtw_hal_notification(void *hal, enum phl_msg_evt_id event, u8 hw_idx)
 	}
 }
 
+void rtw_hal_notification_rssi(void *hal, enum phl_msg_evt_id event, u8 hw_idx, u8 rssi)
+{
+	struct hal_info_t *hal_info = (struct hal_info_t *)hal;
+	u8 idx = 0;
+
+	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "%s: event(%d), hw_idx(%d)\n",
+	          __func__, event, hw_idx);
+	if (!hal_info->hal_com->is_hal_init) {
+		PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_, "%s:hal is not started!\n",
+				__func__);
+		return;
+	}
+
+	if (hw_idx == HW_BAND_MAX) {
+		for (idx = 0; idx < hw_idx; idx++) {
+			rtw_hal_bb_notification_rssi(hal_info, event, idx, rssi);
+			rtw_hal_mac_notification(hal_info, event, idx);
+			rtw_hal_rf_notification(hal_info, event, idx);
+		}
+	} else {
+		rtw_hal_bb_notification_rssi(hal_info, event, hw_idx, rssi);
+		rtw_hal_mac_notification(hal_info, event, hw_idx);
+		rtw_hal_rf_notification(hal_info, event, hw_idx);
+	}
+}
+
 
 void rtw_hal_cmd_notification(void *hal,
                                enum phl_msg_evt_id event,

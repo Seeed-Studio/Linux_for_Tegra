@@ -505,7 +505,6 @@ struct	wlan_network {
 
 #ifdef PRIVATE_R
 #define MAX_VENDOR_IE_NUM 10
-#define MAX_VENDOR_IE_LEN 255
 #define MAX_VENDOR_IE_PARAM_LEN MAX_VENDOR_IE_LEN + 2	/* vendor ie filter index + content maximum length */
 
 #define MAX_NUM_DIS_BCN_INFO 3
@@ -524,6 +523,10 @@ struct link_mlme_priv {
 
 	/* bcn check info */
 	struct beacon_keys cur_beacon_keys; /* save current beacon keys */
+#ifdef CONFIG_BCN_CNT_CONFIRM_HDL
+	struct beacon_keys new_beacon_keys; /* save new beacon keys */
+	u8 new_beacon_cnts; /* if new_beacon_cnts >= threshold, ap beacon is changed */
+#endif
 #ifdef PRIVATE_R
 	_queue idle_dis_bcn_queue;
 	_queue busy_dis_bcn_queue;
@@ -993,14 +996,14 @@ static inline void up_scanned_network(struct mlme_priv *pmlmepriv)
 	_rtw_spinunlock_bh(&pmlmepriv->lock);
 }
 u8 rtw_is_adapter_up(_adapter *padapter);
-
+/*
 __inline static void down_scanned_network(struct mlme_priv *pmlmepriv)
 {
 	_rtw_spinlock_bh(&pmlmepriv->lock);
 	pmlmepriv->num_of_scanned--;
 	_rtw_spinunlock_bh(&pmlmepriv->lock);
 }
-
+*/
 __inline static void set_scanned_network_val(struct mlme_priv *pmlmepriv, sint val)
 {
 	_rtw_spinlock_bh(&pmlmepriv->lock);
@@ -1178,6 +1181,7 @@ int rtw_check_roaming_candidate(struct mlme_priv *mlme, struct wlan_network **ca
 
 RTW_FUNC_2G_5G_ONLY bool rtw_adjust_chbw(_adapter *adapter, u8 req_ch, u8 *req_bw, u8 *req_offset);
 bool rtw_adjust_bchbw(_adapter *adapter, enum band_type req_band, u8 req_ch, u8 *req_bw, u8 *req_offset);
+bool rtw_adjust_chdef_bw(_adapter *adapter, struct rtw_chan_def *chdef);
 
 #ifdef CONFIG_RTW_MULTI_AP
 void rtw_map_config_monitor_act_non(_adapter *adapter);

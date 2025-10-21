@@ -113,6 +113,9 @@ bool rtw_is_basic_rate_mix(u8 rate)
 			return 1;
 	return 0;
 }
+#ifdef CONFIG_BCN_CNT_CONFIRM_HDL
+int new_bcn_max = RTW_BCN_NEW_MAX_CNT;
+#endif
 int cckrates_included(unsigned char *rate, int ratelen)
 {
 	int	i;
@@ -1626,7 +1629,7 @@ static int _rtw_get_bcn_keys(u8 *cap_info, u32 buf_len, u8 def_ch
 {
 	int left;
 	u16 capability;
-	unsigned char *pos;
+	u8 *pos;
 	struct rtw_ieee802_11_elems elems;
 
 	_rtw_memset(recv_beacon, 0, sizeof(*recv_beacon));
@@ -1662,7 +1665,7 @@ static int _rtw_get_bcn_keys(u8 *cap_info, u32 buf_len, u8 def_ch
 
 #ifdef CONFIG_STA_MULTIPLE_BSSID
 	if (elems.mbssid && mbssid_idx) {
-		if (rtw_ieee802_11_override_elems_by_mbssid(elems.mbssid - 2, elems.mbssid_len + 2, mbssid_idx, &elems, 1) == ParseFailed)
+		if (rtw_ieee802_11_override_elems_by_mbssid(pos, left, mbssid_idx, &elems, 1) == ParseFailed)
 			return _FALSE;
 		if (elems.non_tx_bssid_cap) {
 			if (elems.non_tx_bssid_cap_len != 2)
@@ -1694,7 +1697,7 @@ static int _rtw_get_bcn_keys(u8 *cap_info, u32 buf_len, u8 def_ch
 		recv_beacon->proto_cap |= PROTO_CAP_11AX;
 
 	/* check bw and channel offset */
-	rtw_ies_get_bchbw(pos, left, &recv_beacon->band, &recv_beacon->ch, &recv_beacon->bw, &recv_beacon->offset, NULL, NULL, 1, 1, 1);
+	rtw_ies_get_bchbw(pos, left, &recv_beacon->band, &recv_beacon->ch, &recv_beacon->bw, &recv_beacon->offset, 1, 1, 1, 1);
 	if (!recv_beacon->ch)
 		recv_beacon->ch = def_ch;
 
@@ -1874,6 +1877,7 @@ int rtw_check_bcn_info(_adapter *adapter, struct _ADAPTER_LINK *adapter_link,
 {
 	u8 *pbssid = GetAddr3Ptr(pframe);
 	struct mlme_priv *pmlmepriv = &adapter->mlmepriv;
+	struct link_mlme_priv *lmlmepriv = 	&adapter_link->mlmepriv;
 	struct beacon_keys *cur_beacon = &adapter_link->mlmepriv.cur_beacon_keys;
 	struct beacon_keys recv_beacon;
 	int ret = 0;
@@ -1985,9 +1989,7 @@ int rtw_check_bcn_info(_adapter *adapter, struct _ADAPTER_LINK *adapter_link,
 			plmlmeext->chandef.offset = bcn_offset;
 		}
 
-		if (rtw_adjust_bchbw(adapter, plmlmeext->chandef.band,
-		    plmlmeext->chandef.chan, (u8*)&(plmlmeext->chandef.bw),
-		    (u8*)&(plmlmeext->chandef.offset))) {
+		if (rtw_adjust_chdef_bw(adapter, &plmlmeext->chandef)) {
 			RTW_INFO("csa : limit bandwith by SW capability\n");
 			bw_offset_changed = true;
 		}
@@ -2036,12 +2038,40 @@ int rtw_check_bcn_info(_adapter *adapter, struct _ADAPTER_LINK *adapter_link,
 	}
 #endif /* CONFIG_ECSA_PHL */
 
-	if (_rtw_memcmp(&recv_beacon, cur_beacon, sizeof(recv_beacon)) == _FALSE) {
+#ifdef CONFIG_BCN_CNT_CONFIRM_HDL
+	if (_rtw_memcmp(&recv_beacon, cur_beacon, sizeof(recv_beacon)) == _TRUE)
+		lmlmepriv->new_beacon_cnts = 0;
+	else if ((lmlmepriv->new_beacon_cnts == 0) ||
+		_rtw_memcmp(&recv_beacon, &lmlmepriv->new_beacon_keys, sizeof(recv_beacon)) == _FALSE) {
+		RTW_DBG("%s: start new beacon (seq=%d)\n", __func__, GetSequence(pframe));
+
+		if (lmlmepriv->new_beacon_cnts == 0) {
+			RTW_ERR("%s: cur beacon key\n", __func__);
+			RTW_DBG_EXPR(rtw_dump_bcn_keys(RTW_DBGDUMP, cur_beacon));
+		}
+
+		RTW_DBG("%s: new beacon key\n", __func__);
+		RTW_DBG_EXPR(rtw_dump_bcn_keys(RTW_DBGDUMP, &recv_beacon));
+
+		_rtw_memcpy(&lmlmepriv->new_beacon_keys, &recv_beacon, sizeof(recv_beacon));
+		lmlmepriv->new_beacon_cnts = 1;
+	} else {
+		RTW_DBG("%s: new beacon again (seq=%d)\n", __func__, GetSequence(pframe));
+		lmlmepriv->new_beacon_cnts++;
+	}
+
+	/* if counter >= max, it means beacon is changed really */
+	if ((new_bcn_max != 0) && (lmlmepriv->new_beacon_cnts >= new_bcn_max))
+#else
+	if (_rtw_memcmp(&recv_beacon, cur_beacon, sizeof(recv_beacon)) == _FALSE)
+#endif
+	{
 		if (check_fwstate(pmlmepriv, WIFI_CSA_SKIP_CHECK_BEACON)) {
 			RTW_INFO(FUNC_ADPT_FMT" CSA : skip new beacon key before switching channel\n",
 				 FUNC_ADPT_ARG(adapter));
 			goto exit_success;
 		}
+
 		RTW_INFO(FUNC_ADPT_FMT" new beacon occur!!\n", FUNC_ADPT_ARG(adapter));
 		RTW_INFO(FUNC_ADPT_FMT" cur beacon key:\n", FUNC_ADPT_ARG(adapter));
 		rtw_dump_bcn_keys(RTW_DBGDUMP, cur_beacon);
@@ -2076,6 +2106,9 @@ int rtw_check_bcn_info(_adapter *adapter, struct _ADAPTER_LINK *adapter_link,
 			goto exit;
 
 		_rtw_memcpy(cur_beacon, &recv_beacon, sizeof(recv_beacon));
+#ifdef CONFIG_BCN_CNT_CONFIRM_HDL
+		lmlmepriv->new_beacon_cnts = 0;
+#endif
 	}
 
 exit_success:
@@ -2241,7 +2274,7 @@ void process_csa_ie(_adapter *padapter, u8 *ies, uint ies_len)
 		u8 csa_bw = 0; /* handle at ECSA function, fill 0 here */
 
 		if (ecsa_op_class)
-			csa_band = rtw_get_band_by_op_class(ecsa_op_class);
+			csa_band = rtw_get_band_by_op_class(NULL, ecsa_op_class);
 
 		/* legacy CSA, backward compatiable; NOT happen on 6G channel */
 		if (csa_band == BAND_MAX)
@@ -2260,7 +2293,8 @@ enum eap_type parsing_eapol_packet(_adapter *padapter, u8 *key_payload, struct s
 	struct security_priv *psecuritypriv = &(padapter->securitypriv);
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
-	u16 key_info, key_data_length;
+	u16 key_info;
+	u8 key_nonce[WPA_NONCE_LEN] = {0};	/* key_nonce is only empty in EAPOL 4/4 */
 	char *trx_msg = trx_type ? "send" : "recv";
 	enum eap_type eapol_type;
 
@@ -2279,7 +2313,6 @@ enum eap_type parsing_eapol_packet(_adapter *padapter, u8 *key_payload, struct s
 
 	key = (struct wpa_eapol_key *) (hdr + 1);
 	key_info = be16_to_cpu(*((u16 *)(key->key_info)));
-	key_data_length = be16_to_cpu(*((u16 *)(key->key_data_length)));
 
 	if (!(key_info & WPA_KEY_INFO_KEY_TYPE)) { /* WPA group key handshake */
 		if (key_info & WPA_KEY_INFO_ACK) {
@@ -2294,12 +2327,12 @@ enum eap_type parsing_eapol_packet(_adapter *padapter, u8 *key_payload, struct s
 				psta->state &= (~WIFI_UNDER_KEY_HANDSHAKE);
 		}
 	} else if (key_info & WPA_KEY_INFO_MIC) {
-		if (key_data_length == 0) {
-			RTW_PRINT("%s eapol packet 4/4\n", trx_msg);
-			eapol_type = EAPOL_4_4;
-		} else if (key_info & WPA_KEY_INFO_ACK) {
+		if (key_info & WPA_KEY_INFO_ACK) {
 			RTW_PRINT("%s eapol packet 3/4\n", trx_msg);
 			eapol_type = EAPOL_3_4;
+		} else if (_rtw_memcmp(key_nonce, key->key_nonce, WPA_NONCE_LEN)) {
+			RTW_PRINT("%s eapol packet 4/4\n", trx_msg);
+			eapol_type = EAPOL_4_4;
 		} else {
 			RTW_PRINT("%s eapol packet 2/4\n", trx_msg);
 			eapol_type = EAPOL_2_4;
