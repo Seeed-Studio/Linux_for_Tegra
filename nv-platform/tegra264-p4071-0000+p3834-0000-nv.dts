@@ -35,25 +35,25 @@
 		tj-thermal {
 			trips {
 				tj_trip_active0: active-0 {
-					temperature = <80000>;
+					temperature = <74000>;
 					hysteresis = <0>;
 					type = "active";
 				};
 
 				tj_trip_active1: active-1 {
-					temperature = <86000>;
+					temperature = <80000>;
 					hysteresis = <0>;
 					type = "active";
 				};
 
 				tj_trip_active2: active-2 {
-					temperature = <91000>;
+					temperature = <85000>;
 					hysteresis = <0>;
 					type = "active";
 				};
 
 				tj_trip_active3: active-3 {
-					temperature = <100000>;
+					temperature = <94000>;
 					hysteresis = <0>;
 					type = "active";
 				};
