@@ -28,6 +28,7 @@
 #include <linux/iopoll.h>
 #include <linux/irqdomain.h>
 #include <linux/irq.h>
+#include <linux/irq_work.h>
 #include <linux/kernel.h>
 #include <linux/of_address.h>
 #include <linux/of_clk.h>
@@ -1795,8 +1796,58 @@ static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 	return 0;
 }
 
+/* translate sc7 wake sources back into IRQs to catch edge triggered wakeups */
+static void tegra186_pmc_wake_irq_work_handler(struct irq_work *work)
+{
+	struct tegra_pmc *pmc = container_of(work, struct tegra_pmc,
+					      pending_wake_irq_work);
+	unsigned int i, wake;
+
+	for (i = 0; i < pmc->soc->max_wake_vectors; i++) {
+		for_each_set_bit(wake,
+				 (unsigned long *)&pmc->pending_wake_status[i],
+				 32) {
+			irq_hw_number_t hwirq = wake + (i * 32);
+			struct irq_desc *desc;
+			unsigned int irq;
+
+			irq = irq_find_mapping(pmc->domain, hwirq);
+			if (!irq) {
+				dev_warn(pmc->dev, "No IRQ found for WAKE%lu!\n",
+					 hwirq);
+				continue;
+			}
+
+			dev_dbg(pmc->dev,
+				"Resume caused by WAKE%lu mapped to IRQ %d\n",
+				hwirq, irq);
+
+			desc = irq_to_desc(irq);
+			if (!desc) {
+				dev_warn(pmc->dev,
+					"No descriptor found for IRQ %d\n",
+					irq);
+				continue;
+			}
+
+			if (!desc->action || !desc->action->name)
+				continue;
+
+			generic_handle_irq(irq);
+		}
+
+		pmc->pending_wake_status[i] = 0;
+	}
+}
+
 int tegra_pmc_init(struct tegra_pmc *pmc)
 {
+	if (pmc->soc->max_wake_vectors > TEGRA_PMC_MAX_WAKE_VECTORS) {
+		dev_err(pmc->dev, "max_wake_vectors (%u) exceeds maximum (%u)\n",
+			pmc->soc->max_wake_vectors, TEGRA_PMC_MAX_WAKE_VECTORS);
+		return -EINVAL;
+	}
+
 	if (pmc->soc->max_wake_events > 0) {
 		pmc->wake_type_level_map = bitmap_zalloc(pmc->soc->max_wake_events, GFP_KERNEL);
 		if (!pmc->wake_type_level_map)
@@ -1813,6 +1864,12 @@ int tegra_pmc_init(struct tegra_pmc *pmc)
 		pmc->wake_cntrl_level_map = bitmap_zalloc(pmc->soc->max_wake_events, GFP_KERNEL);
 		if (!pmc->wake_cntrl_level_map)
 			return -ENOMEM;
+
+		/* Initialize IRQ work for processing wake IRQs
+		 * Must use HARD_IRQ variant to run in hard IRQ context on PREEMPT_RT
+		 * because we call generic_handle_irq() which requires hard IRQ context.
+		 */
+		pmc->pending_wake_irq_work = IRQ_WORK_INIT_HARD(tegra186_pmc_wake_irq_work_handler);
 	}
 
 	if (pmc->soc->init)
@@ -3185,49 +3242,38 @@ static void wke_clear_wake_status(struct tegra_pmc *pmc)
 	}
 }
 
-/* translate sc7 wake sources back into IRQs to catch edge triggered wakeups */
-static void tegra186_pmc_process_wake_events(struct tegra_pmc *pmc, unsigned int index,
-					     unsigned long status)
-{
-	unsigned int wake;
-
-	dev_dbg(pmc->dev, "Wake[%d:%d]  status=%#lx\n", (index * 32) + 31, index * 32, status);
-
-	for_each_set_bit(wake, &status, 32) {
-		irq_hw_number_t hwirq = wake + 32 * index;
-		struct irq_desc *desc;
-		unsigned int irq;
-
-		irq = irq_find_mapping(pmc->domain, hwirq);
-
-		desc = irq_to_desc(irq);
-		if (!desc || !desc->action || !desc->action->name) {
-			dev_dbg(pmc->dev, "Resume caused by WAKE%ld, IRQ %d\n", hwirq, irq);
-			continue;
-		}
-
-		dev_dbg(pmc->dev, "Resume caused by WAKE%ld, %s\n", hwirq, desc->action->name);
-		generic_handle_irq(irq);
-	}
-}
-
 void tegra186_pmc_resume(struct tegra_pmc *pmc)
 {
-	u32 status, mask;
+	u32 mask;
 	unsigned int i;
 
 	for (i = 0; i < pmc->soc->max_wake_vectors; i++) {
 		mask = readl(pmc->wake +
 				get_offset_aowake_tier2_routing(pmc, i));
-		status = readl(pmc->wake +
+		/* Must read wake status before any client driver calls
+		 * tegra186_pmc_irq_set_wake() which clears the wake status
+		 * registers. This ensures we capture wake events before they
+		 * are cleared.
+		 */
+		pmc->pending_wake_status[i] = readl(pmc->wake +
 				get_offset_aowake_status_r(pmc, i)) & mask;
-
-		tegra186_pmc_process_wake_events(pmc, i, status);
 	}
+
+	/* Schedule IRQ work to process wake IRQs (if any) */
+	irq_work_queue(&pmc->pending_wake_irq_work);
 }
 
 int tegra186_pmc_suspend(struct tegra_pmc *pmc)
 {
+	unsigned int i;
+
+	/* Check if there are unhandled wake IRQs */
+	for (i = 0; i < pmc->soc->max_wake_vectors; i++)
+		if (pmc->pending_wake_status[i])
+			dev_warn(pmc->dev,
+				 "Unhandled wake IRQs pending vector[%u]: 0x%x\n",
+				 i, pmc->pending_wake_status[i]);
+
 	wke_read_sw_wake_status(pmc);
 
 	/* flip the wakeup trigger for dual-edge triggered pads

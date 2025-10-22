@@ -13,6 +13,7 @@
 #include <linux/reboot.h>
 #include <linux/irqdomain.h>
 #include <linux/irq.h>
+#include <linux/irq_work.h>
 #include <linux/syscore_ops.h>
 
 #include <soc/tegra/pm.h>
@@ -228,6 +229,8 @@ struct tegra_wake_event {
 		},					\
 	}
 
+#define TEGRA_PMC_MAX_WAKE_VECTORS	4
+
 struct tegra_pmc_soc {
 	unsigned int num_powergates;
 	const char *const *powergates;
@@ -363,6 +366,10 @@ struct tegra_pmc {
 	unsigned long *wake_sw_status_map;
 	unsigned long *wake_cntrl_level_map;
 	struct syscore_ops syscore;
+
+	/* Pending wake IRQ processing */
+	u32 pending_wake_status[TEGRA_PMC_MAX_WAKE_VECTORS];
+	struct irq_work pending_wake_irq_work;
 };
 
 /* deprecated, use TEGRA_IO_PAD_{HDMI,LVDS} instead */
