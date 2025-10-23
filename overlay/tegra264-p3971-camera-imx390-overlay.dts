@@ -28,11 +28,29 @@
 					port@0 {
 						status ="okay";
 						reg = <0>;
-						endpoint {
+						liimx390_vi_in0: endpoint {
 							status ="okay";
 							port-index = <0>;
 							bus-width = <4>;
 							remote-endpoint = <&liimx390_csi_out0>;
+						};
+					};
+				};
+			};
+			tegra-camera-platform {
+				modules {
+					status = "okay";
+					module0 {
+						badge = "imx390_rear_liimx390";
+						position = "rear";
+						orientation = "1";
+						status = "okay";
+						drivernode0 {
+							status = "okay";
+							/* Declare PCL support driver (classically known as guid) */
+							pcl_id = "v4l2_sensor";
+							/* Declare the device-tree hierarchy to driver instance */
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@810c6d0000/tca9546@70/i2c@0/imx390_a@21";
 						};
 					};
 				};
@@ -54,7 +72,7 @@
 								port@0 {
 									reg = <0>;
 									status ="okay";
-									endpoint@0 {
+									liimx390_csi_in0: endpoint@0 {
 										status ="okay";
 										port-index = <0>;
 										bus-width = <4>;
@@ -64,7 +82,7 @@
 								port@1 {
 									reg = <1>;
 									status ="okay";
-									endpoint@1 {
+									liimx390_csi_out0: endpoint@1 {
 										status ="okay";
 										remote-endpoint = <&liimx390_vi_in0>;
 									};
@@ -108,6 +126,12 @@
 									status = "okay";
 									port@0 {
 										status = "okay";
+										liimx390_imx390_out0: endpoint {
+											status = "okay";
+											port-index = <0>;
+											bus-width = <4>;
+											remote-endpoint = <&liimx390_csi_in0>;
+										};
 									};
 								};
 							};
