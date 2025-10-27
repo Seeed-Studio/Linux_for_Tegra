@@ -507,6 +507,8 @@
 		};
 
 		spi@3240000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
@@ -517,6 +519,8 @@
 		};
 
 		spi@3250000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
 			prod-settings {
 				#prod-cells = <4>;
 				prod {
