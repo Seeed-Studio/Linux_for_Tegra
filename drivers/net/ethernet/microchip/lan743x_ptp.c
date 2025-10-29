@@ -29,7 +29,7 @@ int lan743x_gpio_init(struct lan743x_adapter *adapter)
 {
 	struct lan743x_gpio *gpio = &adapter->gpio;
 	
-	uint32_t val = 0;
+	uint32_t led_mode = 0, led_behavior = 0;
 
 	spin_lock_init(&gpio->gpio_lock);
 
@@ -42,17 +42,21 @@ int lan743x_gpio_init(struct lan743x_adapter *adapter)
 	lan743x_csr_write(adapter, GPIO_CFG2, gpio->gpio_cfg2);
 	lan743x_csr_write(adapter, GPIO_CFG3, gpio->gpio_cfg3);
 
-	//configure LED
-	val = lan743x_csr_read(adapter, 0x0010);
-	val |= 0x00300004;
-	lan743x_csr_write(adapter, 0x0010, val);
-
-	val = lan743x_csr_read(adapter, 0x0018);
-	val &= 0xFFFFFF00;
-	val |= 0x00000018;
-	lan743x_csr_write(adapter, 0x0018, val);
-
-		
+	led_mode = lan743x_csr_read(adapter, LED_MODE);
+	led_behavior = lan743x_csr_read(adapter, LED_BEHAVIOR);
+#ifdef CONFIG_LAN743X_FLIP_LED
+	led_mode &= 0xFFFFFF00;
+	led_mode |= 0x0000000D;
+	led_behavior &= 0xFFFFFFF0;
+	led_behavior |= 0x000000001;
+#else
+	led_mode &= 0xFFFFFF00;
+	led_mode |= 0x00000050;
+	led_behavior &= 0xFFFFFFF0;
+	led_behavior |= 0x00000002;
+#endif
+	lan743x_csr_write(adapter, LED_MODE, led_mode);
+	lan743x_csr_write(adapter, LED_BEHAVIOR, led_behavior);
 	return 0;
 }
 

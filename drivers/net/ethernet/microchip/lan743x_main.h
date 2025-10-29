@@ -45,6 +45,9 @@
 #define PMT_CTL_ETH_PHY_WAKE_EN_		BIT(2)
 #define PMT_CTL_WUPS_MASK_			(0x00000003)
 
+#define LED_MODE				(0x018)
+#define LED_BEHAVIOR			(0x1C)
+
 #define DP_SEL				(0x024)
 #define DP_SEL_DPRDY_			BIT(31)
 #define DP_SEL_MASK_			(0x0000001F)
