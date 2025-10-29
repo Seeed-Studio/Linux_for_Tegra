@@ -37,6 +37,13 @@
 			linux,default-trigger = "none";
 			default-state = "off";
 		};
+
+		ssd_act {
+			label = "ssd-activity";
+			gpios = <&gpio TEGRA234_MAIN_GPIO(Q, 6) GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "disk-activity";
+			default-state = "off";
+		};
 	};
 	
 	bus@0 {
