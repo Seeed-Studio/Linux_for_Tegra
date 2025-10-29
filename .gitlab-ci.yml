@@ -13,6 +13,7 @@ variables:
   JETSONVER: "36.4.4"
   ROOTFS_NAME: "Tegra_Linux_Sample-Root-Filesystem_r36.4.4_aarch64.tbz2"
   UPDATE_DRV_DEPEND: "1"
+  KCFLAGS: ""
 
 stages:
   - reserver-industrial-orin-nano-4g-j401
@@ -699,6 +700,7 @@ build-recomputer-super-orin-nano-4g-j401:
     BOARDREV: "N.2"
     CHIP_SKU: "00:00:00:D6"
     UPDATE_DRV_DEPEND: "0"
+    KCFLAGS: "-DCONFIG_LAN743X_FLIP_LED"
 
   script:
     - echo "Building for $CONFIG"
@@ -725,6 +727,7 @@ build-recomputer-super-orin-nano-8g-j401:
     BOARDREV: "N.2"
     CHIP_SKU: "00:00:00:D6"
     UPDATE_DRV_DEPEND: "0"
+    KCFLAGS: "-DCONFIG_LAN743X_FLIP_LED"
 
   script:
     - echo "Building for $CONFIG"
@@ -751,6 +754,7 @@ build-recomputer-super-orin-nx-16g-j401:
     BOARDREV: "G.3"
     CHIP_SKU: "00:00:00:D3"
     UPDATE_DRV_DEPEND: "0"
+    KCFLAGS: "-DCONFIG_LAN743X_FLIP_LED"
 
   script:
     - echo "Building for $CONFIG"
@@ -777,6 +781,7 @@ build-recomputer-super-orin-nx-8g-j401:
     BOARDREV: "M.3"
     CHIP_SKU: "00:00:00:D4"
     UPDATE_DRV_DEPEND: "0"
+    KCFLAGS: "-DCONFIG_LAN743X_FLIP_LED"
 
   script:
     - echo "Building for $CONFIG"
