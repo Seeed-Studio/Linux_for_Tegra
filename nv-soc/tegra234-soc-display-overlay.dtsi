@@ -5,6 +5,8 @@
 
 / {
 	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
 		fb0_reserved: framebuffer@0,0 {
 			compatible = "framebuffer";
 			reg = <0x00 0x00 0x00 0x00>;

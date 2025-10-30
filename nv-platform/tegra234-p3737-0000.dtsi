@@ -115,7 +115,6 @@
 
 	hdr40_vdd_3v3: regulator@3 {
 		compatible = "regulator-fixed";
-		reg = <3>;
 		regulator-name = "vdd-3v3-sys";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
