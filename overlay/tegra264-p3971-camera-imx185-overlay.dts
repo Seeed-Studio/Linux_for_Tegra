@@ -52,7 +52,7 @@
 					status = "okay";
 					module0 {
 						status = "okay";
-						badge = "imx185_bottom";
+						badge = "imx185_bottom_liimx185";
 						position = "bottom";
 						orientation = "1";
 						drivernode0 {
