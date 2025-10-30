@@ -91,12 +91,14 @@
 	};
 
 	fragment@3 {
-		target = <&i2s2_dap>;
+		target = <&i2s2_port>;
 		__overlay__ {
-			dai-format = "dsp_a";
-			bitclock-master;
-			frame-master;
-			remote-endpoint = <&ac108_ep>;
+			endpoint {
+				dai-format = "dsp_a";
+				bitclock-master;
+				frame-master;
+				remote-endpoint = <&ac108_ep>;
+			};
 		};
 	};
 };

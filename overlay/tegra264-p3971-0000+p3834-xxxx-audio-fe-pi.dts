@@ -117,11 +117,13 @@
 	};
 
 	fragment@4 {
-		target = <&i2s2_dap>;
+		target = <&i2s2_port>;
 		__overlay__ {
-			bitclock-master;
-			frame-master;
-			remote-endpoint = <&sgtl5000_ep>;
+			endpoint {
+				bitclock-master;
+				frame-master;
+				remote-endpoint = <&sgtl5000_ep>;
+			};
 		};
 	};
 };

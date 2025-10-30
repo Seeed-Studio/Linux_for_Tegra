@@ -470,7 +470,6 @@
 
 	SRC_FET_cvb: regulator-vcc-src-fet {
 		compatible = "regulator-fixed";
-		reg = <1>;
 		regulator-name = "VCC_SRC_FET";
 		regulator-min-microvolt = <20000000>;
 		regulator-max-microvolt = <20000000>;
@@ -480,7 +479,6 @@
 
 	vdd_5v_cvb: vdd_5v_ao_cvb: regulator-vdd-5v-ao {
 		compatible = "regulator-fixed";
-		reg = <2>;
 		regulator-name = "VDD_5V_AO";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
@@ -489,7 +487,6 @@
 
 	vdd_3v3_cvb: regulator-vdd-3v3 {
 		compatible = "regulator-fixed";
-		reg = <3>;
 		regulator-name = "VDD_3V3";
 		vcc-supply = <&vdd_5v_cvb>;
 		regulator-min-microvolt = <3300000>;
@@ -498,7 +495,6 @@
 
 	vdd_3v3_ao_cvb: regulator-vdd-3v3-ao {
 		compatible = "regulator-fixed";
-		reg = <4>;
 		regulator-name = "VDD_3V3_AO";
 		vcc-supply = <&vdd_5v_ao_cvb>;
 		regulator-min-microvolt = <3300000>;
@@ -508,7 +504,6 @@
 
 	vdd_1v8_cvb: regulator-vdd-1v8 {
 		compatible = "regulator-fixed";
-		reg = <5>;
 		regulator-name = "VDD_1V8";
 		vcc-supply = <&vdd_3v3_cvb>;
 		regulator-min-microvolt = <1800000>;
@@ -517,7 +512,6 @@
 
 	vdd_12v_cvb: regulator-vdd-12v {
 		compatible = "regulator-fixed";
-		reg = <6>;
 		regulator-name = "VDD_12V";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
@@ -530,7 +524,6 @@
 
 	vdd_5v0_hdmi_cvb: regulator-vdd-5v0-hdmi {
 		compatible = "regulator-fixed";
-		reg = <7>;
 		regulator-name = "VDD_5V0_HDMI";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
@@ -542,7 +535,6 @@
 
 	vdd_3v3_dp_cvb: regulator-vdd-3v3-dp {
 		compatible = "regulator-fixed";
-		reg = <8>;
 		regulator-name = "VDD_3V3_DP";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
