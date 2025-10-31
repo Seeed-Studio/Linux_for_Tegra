@@ -14,7 +14,7 @@
 #include <linux/pm.h>
 
 /* Timeout in milliseconds */
-#define TIMEOUT		5U
+#define TIMEOUT		13U
 
 /* 32bit data Length */
 #define MAX_LEN	4
