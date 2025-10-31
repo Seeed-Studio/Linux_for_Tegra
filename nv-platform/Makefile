@@ -14,6 +14,7 @@ dtb-y += tegra264-p3971-0050+p3834-0005-qspi-nvme.dtb
 dtb-y += tegra264-p3971-0080+p3834-0008-qspi-nvme.dtb
 dtb-y += tegra264-p3971-0089+p3834-0008-qspi-ufs.dtb
 dtb-y += tegra264-p3740-0002+p3834-0008-qspi-nvme.dtb
+dtb-y += tegra264-p3740-0002+p3834-0008-qspi-nv-safety.dtb
 dtb-y += tegra264-p4071-0000+p3834-0000-nv.dtb
 dtb-y += tegra264-p4071-0000+p3834-0008-nv.dtb
 dtb-y += tegra264-p4071-0008+p3834-0008-nv.dtb
