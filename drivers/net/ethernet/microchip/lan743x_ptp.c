@@ -29,7 +29,7 @@ int lan743x_gpio_init(struct lan743x_adapter *adapter)
 {
 	struct lan743x_gpio *gpio = &adapter->gpio;
 	
-	uint32_t led_mode = 0, led_behavior = 0;
+	uint32_t hw_cfg = 0, led_mode = 0, led_behavior = 0;
 
 	spin_lock_init(&gpio->gpio_lock);
 
@@ -42,14 +42,22 @@ int lan743x_gpio_init(struct lan743x_adapter *adapter)
 	lan743x_csr_write(adapter, GPIO_CFG2, gpio->gpio_cfg2);
 	lan743x_csr_write(adapter, GPIO_CFG3, gpio->gpio_cfg3);
 
+	// enable LED0 and LED1
+	hw_cfg = lan743x_csr_read(adapter, HW_CFG);
+	hw_cfg |= 0x00300004;
+	lan743x_csr_write(adapter, HW_CFG, hw_cfg);
+
+	// configure LED0 and LED1 behavior
 	led_mode = lan743x_csr_read(adapter, LED_MODE);
 	led_behavior = lan743x_csr_read(adapter, LED_BEHAVIOR);
 #ifdef CONFIG_LAN743X_FLIP_LED
+	// set LED0 to 1000Mbps, LED1 to link/activity
 	led_mode &= 0xFFFFFF00;
 	led_mode |= 0x0000000D;
 	led_behavior &= 0xFFFFFFF0;
 	led_behavior |= 0x000000001;
 #else
+	// set LED0 to link/activity, LED1 to 1000Mbps
 	led_mode &= 0xFFFFFF00;
 	led_mode |= 0x00000050;
 	led_behavior &= 0xFFFFFFF0;
