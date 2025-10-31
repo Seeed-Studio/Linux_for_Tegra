@@ -1157,6 +1157,7 @@
 							status = "okay";
 							port-index = <0>;
 							bus-width = <CAM_LANES>;
+							vc-id = <0>;
 							remote-endpoint = <&ecam_csi_out0>;
 						};
 					};
@@ -1167,6 +1168,7 @@
 							status = "okay";
 							port-index = <2>;
 							bus-width = <CAM_LANES>;
+							vc-id = <0>;
 							remote-endpoint = <&ecam_csi_out1>;
 						};
 					};
@@ -1177,6 +1179,7 @@
 							status = "okay";
 							port-index = <4>;
 							bus-width = <CAM_LANES>;
+							vc-id = <0>;
 							remote-endpoint = <&ecam_csi_out2>;
 						};
 					};
@@ -1187,6 +1190,7 @@
 							status = "okay";
 							port-index = <5>;
 							bus-width = <CAM_LANES>;
+							vc-id = <0>;
 							remote-endpoint = <&ecam_csi_out3>;
 						};
 					};

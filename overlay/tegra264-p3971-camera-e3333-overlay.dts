@@ -40,6 +40,7 @@
 							status = "okay";
 							port-index = <0>;
 							bus-width = <2>;
+							vc-id = <0>;
 							remote-endpoint = <&e3333_csi_out0>;
 						};
 					};
@@ -49,6 +50,7 @@
 							status = "okay";
 							port-index = <1>;
 							bus-width = <2>;
+							vc-id = <0>;
 							remote-endpoint = <&e3333_csi_out1>;
 						};
 					};
@@ -58,6 +60,7 @@
 							status = "okay";
 							port-index = <2>;
 							bus-width = <2>;
+							vc-id = <0>;
 							remote-endpoint = <&e3333_csi_out2>;
 						};
 					};
@@ -67,6 +70,7 @@
 							status = "okay";
 							port-index = <3>;
 							bus-width = <2>;
+							vc-id = <0>;
 							remote-endpoint = <&e3333_csi_out3>;
 						};
 					};
@@ -76,6 +80,7 @@
 							status = "okay";
 							port-index = <4>;
 							bus-width = <2>;
+							vc-id = <0>;
 							remote-endpoint = <&e3333_csi_out4>;
 						};
 					};
@@ -85,6 +90,7 @@
 							status = "okay";
 							port-index = <5>;
 							bus-width = <2>;
+							vc-id = <0>;
 							remote-endpoint = <&e3333_csi_out5>;
 						};
 					};

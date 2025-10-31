@@ -42,6 +42,7 @@
 							status = "okay";
 							port-index = <0>;
 							bus-width = <4>;
+							vc-id = <0>;
 							remote-endpoint = <&liimx274_csi_out0>;
 						};
 					};
@@ -51,6 +52,7 @@
 							status = "okay";
 							port-index = <2>;
 							bus-width = <4>;
+							vc-id = <0>;
 							remote-endpoint = <&liimx274_csi_out1>;
 						};
 					};
