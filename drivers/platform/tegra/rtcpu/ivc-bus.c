@@ -758,6 +758,11 @@ static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
 		if (drv != NULL) {
 			rcu_read_lock();
 			ops = rcu_dereference(chan->ops);
+			if (ops == NULL) {
+				dev_warn(dev, "channel ops not set\n");
+				rcu_read_unlock();
+				return 0;
+			}
 			if (ops->ready != NULL)
 				ops->ready(chan, is_ready);
 			rcu_read_unlock();
