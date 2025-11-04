@@ -6175,7 +6175,7 @@ rtl8126_get_ethtool_stats(struct net_device *dev,
 
         counters = tp->tally_vaddr;
         paddr = tp->tally_paddr;
-        if (!counters)
+	if (!counters || test_bit(R8126_FLAG_SHUTDOWN, tp->task_flags))
                 return;
 
         rtl8126_dump_tally_counter(tp, paddr);
@@ -12686,7 +12686,7 @@ rtl8126_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
         struct rtl8126_counters *counters = tp->tally_vaddr;
         dma_addr_t paddr = tp->tally_paddr;
 
-        if (!counters)
+	if (!counters || test_bit(R8126_FLAG_SHUTDOWN, tp->task_flags))
                 return;
 
         netdev_stats_to_stats64(stats, &dev->stats);
@@ -16378,6 +16378,8 @@ static void rtl8126_shutdown(struct pci_dev *pdev)
         struct rtl8126_private *tp = netdev_priv(dev);
 
         rtnl_lock();
+
+	set_bit(R8126_FLAG_SHUTDOWN, tp->task_flags);
 
         rtl8126_disable_pci_offset_180(tp);
 
