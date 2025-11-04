@@ -12,7 +12,7 @@
 
 / {
 	overlay-name = "Jetson AGX CSI Connector";
-	compatible = "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3971-0089+p3834-0008";
+	compatible = "nvidia,p3971-0050+p3834-0005", "nvidia,p3971-0080+p3834-0008", "nvidia,p3971-0089+p3834-0008", "nvidia,p3971-0080+p3834-0000";
 
 	p3737-0000_p3701-0000-csi@0 {
 		target = <&padctl_main>;
