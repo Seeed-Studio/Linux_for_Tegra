@@ -1,14 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved. */
-
-/*
- * This header provides constants for binding nvidia,tegra264-gpio*.
- *
- * The first cell in Tegra's GPIO specifier is the GPIO ID. The macros below
- * provide names for this.
- *
- * The second cell contains standard flag values specified in gpio.h.
- */
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause) */
+/* SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 
 #ifndef _DT_BINDINGS_GPIO_TEGRA264_GPIO_H
 #define _DT_BINDINGS_GPIO_TEGRA264_GPIO_H
