@@ -1741,8 +1741,12 @@ void rtw_surveydone_event_callback(_adapter *adapter, u8 *pbuf)
 				RTW_INFO("try_to_join, but select scanning queue fail, to_roam:%d\n", rtw_to_roam(adapter));
 
 #ifdef CONFIG_RTW_FSM_BTM
-				if (rtw_to_roam(adapter) == 0)
+				if (rtw_to_roam(adapter) == 0) {
 					rtw_indicate_disconnect(adapter, 0, _FALSE);
+#ifdef CONFIG_IOCTL_CFG80211
+					rtw_cfg80211_indicate_disconnect(adapter, 0, _FALSE);
+#endif
+				}
 				_clr_fwstate_(pmlmepriv, WIFI_UNDER_LINKING);
 #else
 				if (rtw_to_roam(adapter) != 0) {
