@@ -26,14 +26,14 @@
 #define __PHL_GIT_INFO_H__
  /*@--------------------------[Define] ---------------------------------------*/
 
-#define RTK_CORE_SHA1   "3c314be228d652d0184490210bb4add19d730fa8"
+#define RTK_CORE_SHA1   "ffa42c96d0976a0c1acca4323d8c2d20b490ecc3"
 #define RTK_PHL_SHA1    "6048a181360ad851e05d6eacb227ace5b0adc5b2"
 #define RTK_HALMAC_SHA1 "a8003e258e7ceec767c2e329732e7e3b63934473"
 #define RTK_HALBB_SHA1  "92a03ddae85d8138c9705a9552dee1b9e31c0c64"
 #define RTK_HALRF_SHA1  "bb8bf83e65f756e2ae3ccd9ec0dc41ee50948b2b"
 #define RTK_BTC_SHA1    "33bcdb9f10f24aa8b92ee86a7076f89faf6ccbed"
 
-#define RTK_CORE_TAGINFO     "v1.19.16_nv-277-9-0-g3c314be22"
+#define RTK_CORE_TAGINFO     "v1.19.16_nv-277-9-5-gffa42c96d"
 #define RTK_PHL_TAGINFO      "PHL_1_19_111_0100-109-g6048a1813"
 #define RTK_HALMAC_TAGINFO   "HALMAC_0_29_95_0-1-ga8003e258e"
 #define RTK_HALBB_TAGINFO    "HALBB_029_167_15-8-g92a03ddae"
