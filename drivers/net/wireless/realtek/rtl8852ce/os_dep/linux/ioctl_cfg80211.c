@@ -81,7 +81,9 @@
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(4, 11, 12))
 #ifdef CONFIG_RTW_80211R
 #define WLAN_AKM_SUITE_FT_8021X		0x000FAC03
-#define WLAN_AKM_SUITE_FT_PSK			0x000FAC04
+#define WLAN_AKM_SUITE_FT_PSK		0x000FAC04
+#define WLAN_AKM_SUITE_FT_OVER_SAE	0x000FAC09
+#define WLAN_AKM_SUITE_FT_FILS_SHA256	0x000FAC16
 #endif
 #endif
 
@@ -3865,6 +3867,12 @@ static int rtw_cfg80211_set_key_mgt(struct security_priv *psecuritypriv, u32 key
 	} else if (key_mgt == WLAN_AKM_SUITE_FT_PSK) {
 		psecuritypriv->dot11AuthAlgrthm = dot11AuthAlgrthm_8021X;
 		psecuritypriv->rsn_akm_suite_type = 4;
+	} else if ((key_mgt == WLAN_AKM_SUITE_FT_OVER_SAE)
+		|| (key_mgt == WLAN_AKM_SUITE_FT_FILS_SHA256)
+		) {
+		RTW_INFO("FT-SAE key mgt: 0x%x\n", key_mgt);
+		if (key_mgt == WLAN_AKM_SUITE_FT_OVER_SAE)
+			psecuritypriv->rsn_akm_suite_type = 9;
 	}
 #endif
 	else {
@@ -4301,6 +4309,9 @@ static bool rtw_check_connect_sae_compat(struct cfg80211_connect_params *sme)
 	struct rtw_ieee802_11_elems elems;
 	struct rsne_info info;
 	u8 AKM_SUITE_SAE[] = {0x00, 0x0f, 0xac, 8};
+#ifdef CONFIG_RTW_80211R
+	u8 AKM_SUITE_FTSAE[] = { 0x00, 0x0f, 0xac, 9 };
+#endif
 	int i;
 
 	if (sme->auth_type != (int)MLME_AUTHTYPE_SHARED_KEY)
@@ -4316,9 +4327,14 @@ static bool rtw_check_connect_sae_compat(struct cfg80211_connect_params *sme)
 	if (rtw_rsne_info_parse(elems.rsn_ie - 2, elems.rsn_ie_len + 2, &info) == _FAIL)
 		return false;
 
-	for (i = 0; i < info.akm_cnt; i++)
-		if (_rtw_memcmp(info.akm_list + i * RSN_SELECTOR_LEN,
+	for (i = 0; i < info.akm_cnt; i++) {
+		if ((_rtw_memcmp(info.akm_list + i * RSN_SELECTOR_LEN,
 				AKM_SUITE_SAE, RSN_SELECTOR_LEN) == _TRUE)
+#ifdef CONFIG_RTW_80211R
+			|| (_rtw_memcmp(info.akm_list + i * RSN_SELECTOR_LEN,
+                           AKM_SUITE_FTSAE, RSN_SELECTOR_LEN) == 0)
+#endif
+		)
 			return true;
 
 	return false;

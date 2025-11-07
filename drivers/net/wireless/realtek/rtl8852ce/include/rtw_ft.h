@@ -96,7 +96,7 @@ enum rtw_ft_capability {
 
 #define rtw_ft_valid_akm(a, t)	\
 	((rtw_ft_chk_flags(a, RTW_FT_EN)) && \
-	(((t) == 3) || ((t) == 4)))
+	(((t) == 3) || ((t) == 4) || ((t) == 9)))
 
 /* allow OTD while driver disconnect with current AP */
 #define rtw_ft_otd_roam_en(a)	\
