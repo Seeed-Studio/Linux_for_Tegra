@@ -2375,13 +2375,6 @@ static int scan_probe_6g_cb(void *priv, struct rtw_phl_scan_param *param, u8 sct
 	if (scan_ch->band != BAND_ON_6G)
 		return 0;
 
-	if (!Is6GHzPreferScanChannel(scan_ch->channel))
-		return 0;
-
-	/* send probe request after first 20ms interval */
-	if ((scan_ch->pass_t / SCAN_6G_TIME_UNIT) != 1)
-		return 0;
-
 	if (wrole == NULL) {
 		rtw_warn_on(1);
 		return 0;
