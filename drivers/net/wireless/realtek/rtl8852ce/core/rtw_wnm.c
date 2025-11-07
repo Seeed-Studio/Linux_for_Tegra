@@ -1506,7 +1506,16 @@ void rtw_wnm_start_clnt_join(_adapter *padapter, struct _ADAPTER_LINK *al)
 	struct	mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 #ifdef CONFIG_RTW_80211R
 	struct ft_roam_info *pft_roam = &(pmlmepriv->ft_roam);
+#endif
 
+	/* update beacon_key */
+	if (pmlmepriv->roam_network->bcn_keys_valid)
+		_rtw_memcpy(&al->mlmepriv.cur_beacon_keys,
+			&pmlmepriv->roam_network->bcn_keys, sizeof(struct beacon_keys));
+	else
+		RTW_WARN("WNM : invalid beacon key!!\n");
+
+#ifdef CONFIG_RTW_80211R
 	if (rtw_ft_otd_roam(padapter)) {
 		pmlmeinfo->state = WIFI_FW_AUTH_SUCCESS | WIFI_FW_STATION_STATE;
 		pft_roam->ft_event.ies =
@@ -1523,13 +1532,6 @@ void rtw_wnm_start_clnt_join(_adapter *padapter, struct _ADAPTER_LINK *al)
 		return;
 	}
 #endif
-	/* update beacon_key */
-	if (pmlmepriv->roam_network->bcn_keys_valid)
-		_rtw_memcpy(&al->mlmepriv.cur_beacon_keys,
-			&pmlmepriv->roam_network->bcn_keys, sizeof(struct beacon_keys));
-	else
-		RTW_WARN("WNM : invalid beacon key!!\n");
-
 	pmlmeinfo->state = WIFI_FW_AUTH_NULL | WIFI_FW_STATION_STATE;
 	start_clnt_auth(padapter);
 }

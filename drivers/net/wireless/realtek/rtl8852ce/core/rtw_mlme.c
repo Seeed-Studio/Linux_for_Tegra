@@ -3974,7 +3974,7 @@ struct wlan_network *rtw_select_roaming_candidate(struct mlme_priv *mlme)
 		RTW_INFO("%s: %s("MAC_FMT", ch:%u-%s)\n", __FUNCTION__,
 			candidate->network.Ssid.Ssid, MAC_ARG(candidate->network.MacAddress),
 			 candidate->network.Configuration.DSConfig,
-			 rtw_band_str(candidate->network.Configuration.DSConfig));
+			 rtw_band_str(candidate->network.Configuration.Band));
 		mlme->roam_network = candidate;
 
 		if (_rtw_memcmp(candidate->network.MacAddress, mlme->roam_tgt_addr, ETH_ALEN) == _TRUE)
