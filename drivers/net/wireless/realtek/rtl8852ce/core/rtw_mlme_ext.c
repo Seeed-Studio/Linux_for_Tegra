@@ -11358,10 +11358,24 @@ void link_timer_hdl(void *ctx)
 		if (rtw_sec_chk_auth_type(padapter, MLME_AUTHTYPE_SAE)) {
 			RTW_INFO("link_timer_hdl: SAE auth timeout.\n");
 			if (pmlmeinfo->auth_status) {
+				if (pmlmeinfo->auth_status == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY) {
+					/* Receive status 30, send association request to force trigger disconnected by AP */
+					RTW_INFO("%s: issue_assocreq due to receive auth frame with"
+						 "status 30.\n", __FUNCTION__);
+					issue_assocreq(padapter);
+					#ifdef CONFIG_RTW_ANDROID
+					pmlmeinfo->auth_status = WLAN_STATUS_AUTH_TIMEOUT;
+					RTW_INFO("%s SAE WKRD auth reject, change status code: %d\n",
+					         __func__, pmlmeinfo->auth_status);
+					#endif /*CONFIG_RTW_ANDROID*/
+				}
 				report_join_res(padapter, -1, pmlmeinfo->auth_status);
 				pmlmeinfo->auth_status = 0; /* reset */
 			} else {
 				report_join_res(padapter, -1, WLAN_STATUS_AUTH_TIMEOUT);
+				/* SAE auth timeout, send association request to force trigger disconnected by AP */
+				RTW_INFO("%s: issue_assocreq due to SAE auth timeout.\n", __FUNCTION__);
+				issue_assocreq(padapter);
 			}
 			return;
 		}

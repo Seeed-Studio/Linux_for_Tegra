@@ -3134,14 +3134,6 @@ void rtw_join_timeout_handler(void *ctx)
 	if (RTW_CANNOT_RUN(adapter_to_dvobj(adapter)))
 		return;
 
-	/* SAE auth timeout, send association request to force trigger disconnected by AP */
-	if ((check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE) &&
-	    (pmlmeinfo->state & WIFI_FW_AUTH_STATE) &&
-	    rtw_sec_chk_auth_type(adapter, MLME_AUTHTYPE_SAE)) {
-		RTW_INFO("%s: issue_assocreq due to SAE auth timeout.\n", __FUNCTION__);
-		issue_assocreq(adapter);
-	}
-
 	_rtw_spinlock_bh(&pmlmepriv->lock);
 #ifdef CONFIG_STA_CMD_DISPR
 	if (check_fwstate(pmlmepriv, WIFI_UNDER_LINKING) == _TRUE)
