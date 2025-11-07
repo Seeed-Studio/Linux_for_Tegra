@@ -22,7 +22,7 @@ u8 rtw_set_802_11_disassociate(_adapter *padapter);
 u8 rtw_set_802_11_infrastructure_mode(_adapter *padapter, NDIS_802_11_NETWORK_INFRASTRUCTURE networktype, u8 flags);
 u8 rtw_set_802_11_ssid(_adapter *padapter, NDIS_802_11_SSID *ssid);
 u8 rtw_set_802_11_connect(_adapter *padapter, const u8 *bssid, NDIS_802_11_SSID *ssid,
-			  u16 ch, enum band_type band);
+			  u16 ch, enum band_type band, const u8 *prev_bssid);
 
 u8 rtw_validate_bssid(const u8 *bssid);
 u8 rtw_validate_ssid(NDIS_802_11_SSID *ssid);

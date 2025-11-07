@@ -4469,6 +4469,7 @@ static int cfg80211_rtw_connect(struct wiphy *wiphy, struct net_device *ndev,
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	u16 ch_hw_vlue = 0;
 	enum band_type ch_band = BAND_MAX;
+	const u8 *prev_bssid = NULL;
 
 #if (RTW_CFG80211_BLOCK_STA_DISCON_EVENT & RTW_CFG80211_BLOCK_DISCON_WHEN_CONNECT)
 	rtw_wdev_set_not_indic_disco(pwdev_priv, 1);
@@ -4556,6 +4557,13 @@ static int cfg80211_rtw_connect(struct wiphy *wiphy, struct net_device *ndev,
 	}
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0))
+	if (sme->prev_bssid) {
+		RTW_INFO("prev_bssid="MAC_FMT"\n", MAC_ARG(sme->prev_bssid));
+		prev_bssid = sme->prev_bssid;
+	}
+#endif
+
 	ret = rtw_set_security(padapter, sme);
 	if (ret < 0)
 		goto exit;
@@ -4575,7 +4583,7 @@ static int cfg80211_rtw_connect(struct wiphy *wiphy, struct net_device *ndev,
 	}
 
 	if (rtw_set_802_11_connect(padapter, bssid, &ndis_ssid,
-				   ch_hw_vlue, ch_band) == _FALSE) {
+				   ch_hw_vlue, ch_band, prev_bssid) == _FALSE) {
 		ret = -1;
 		goto exit;
 	}

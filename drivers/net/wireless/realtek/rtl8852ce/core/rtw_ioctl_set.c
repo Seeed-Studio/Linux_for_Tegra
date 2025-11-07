@@ -116,6 +116,7 @@ u8 rtw_do_join(_adapter *padapter)
 
 		if (pmlmepriv->LinkDetectInfo.bBusyTraffic == _FALSE
 		    || rtw_to_roam(padapter) > 0
+		    || (pmlmepriv->assoc_by_bssid && !is_zero_mac_addr(pmlmepriv->assoc_prev_bssid))
 		   ) {
 			u8 ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
 
@@ -178,6 +179,7 @@ u8 rtw_do_join(_adapter *padapter)
 				/* we try to issue sitesurvey firstly			 */
 				if (pmlmepriv->LinkDetectInfo.bBusyTraffic == _FALSE
 				    || rtw_to_roam(padapter) > 0
+				    || (pmlmepriv->assoc_by_bssid && !is_zero_mac_addr(pmlmepriv->assoc_prev_bssid))
 				   ) {
 					u8 ssc_chk = rtw_sitesurvey_condition_check(padapter, _FALSE);
 
@@ -390,13 +392,12 @@ exit:
 }
 
 u8 rtw_set_802_11_connect(_adapter *padapter, const u8 *bssid, NDIS_802_11_SSID *ssid,
-			  u16 ch, enum band_type band)
+			  u16 ch, enum band_type band, const u8 *prev_bssid)
 {
 	u8 status = _SUCCESS;
 	bool bssid_valid = _TRUE;
 	bool ssid_valid = _TRUE;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
-
 
 	if (!ssid || rtw_validate_ssid(ssid) == _FALSE)
 		ssid_valid = _FALSE;
@@ -434,9 +435,15 @@ handle_tkip_countermeasure:
 
 	if (bssid && bssid_valid) {
 		_rtw_memcpy(&pmlmepriv->assoc_bssid, bssid, ETH_ALEN);
+		if (prev_bssid)
+			_rtw_memcpy(&pmlmepriv->assoc_prev_bssid, prev_bssid, ETH_ALEN);
+		else
+			_rtw_memset(&pmlmepriv->assoc_prev_bssid, 0, ETH_ALEN);
 		pmlmepriv->assoc_by_bssid = _TRUE;
-	} else
+	} else {
+		_rtw_memset(&pmlmepriv->assoc_prev_bssid, 0, ETH_ALEN);
 		pmlmepriv->assoc_by_bssid = _FALSE;
+	}
 
 	pmlmepriv->assoc_ch = ch;
 	pmlmepriv->assoc_band = band;

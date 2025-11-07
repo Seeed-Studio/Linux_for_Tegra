@@ -658,6 +658,7 @@ struct mlme_priv {
 	u8	assoc_bssid[6];
 	u16	assoc_ch;		/* 0 reserved for no specific channel */
 	enum band_type	assoc_band;
+	u8	assoc_prev_bssid[6];
 
 	struct wlan_network	dev_cur_network;
 	struct wlan_network *cur_network_scanned;
