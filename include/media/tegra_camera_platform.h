@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * SPDX-FileCopyrightText: Copyright (C) 2015-2023 NVIDIA CORPORATION.  All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (C) 2015-2025 NVIDIA CORPORATION.  All rights reserved.
  */
 
 #ifndef _TEGRA_CAMERA_PLATFORM_H_
@@ -90,8 +90,6 @@ struct tegra_camera_dev_info {
 };
 
 int tegra_camera_update_isobw(void);
-int tegra_camera_emc_clk_enable(void);
-int tegra_camera_emc_clk_disable(void);
 int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info,
 					void *priv);
 int tegra_camera_device_unregister(void *priv);

@@ -1107,22 +1107,12 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 
 int tegra_vi5_enable(struct tegra_mc_vi *vi)
 {
-	int ret;
-
-	ret = tegra_camera_emc_clk_enable();
-	if (ret)
-		goto err_emc_enable;
-
 	return 0;
-
-err_emc_enable:
-	return ret;
 }
 
 void tegra_vi5_disable(struct tegra_mc_vi *vi)
 {
 	tegra_channel_ec_close(vi);
-	tegra_camera_emc_clk_disable();
 }
 
 static int vi5_power_on(struct tegra_channel *chan)

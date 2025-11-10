@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2015-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2015-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  */
 
 #include <nvidia/conftest.h>
@@ -91,46 +91,6 @@ static int tegra_camera_isomgr_request(
 	return 0;
 }
 
-int tegra_camera_emc_clk_enable(void)
-{
-	struct tegra_camera_info *info;
-	int ret = 0;
-
-	info = dev_get_drvdata(tegra_camera_misc.parent);
-	if (!info)
-		return -EINVAL;
-	ret = clk_prepare_enable(info->emc);
-	if (ret) {
-		dev_err(info->dev, "Cannot enable camera.emc\n");
-		return ret;
-	}
-
-	ret = clk_prepare_enable(info->iso_emc);
-	if (ret) {
-		dev_err(info->dev, "Cannot enable camera_iso.emc\n");
-		goto err_iso_emc;
-	}
-
-	return 0;
-err_iso_emc:
-	clk_disable_unprepare(info->emc);
-	return ret;
-}
-EXPORT_SYMBOL(tegra_camera_emc_clk_enable);
-
-int tegra_camera_emc_clk_disable(void)
-{
-	struct tegra_camera_info *info;
-
-	info = dev_get_drvdata(tegra_camera_misc.parent);
-	if (!info)
-		return -EINVAL;
-	clk_disable_unprepare(info->emc);
-	clk_disable_unprepare(info->iso_emc);
-	return 0;
-}
-EXPORT_SYMBOL(tegra_camera_emc_clk_disable);
-
 static int tegra_camera_open(struct inode *inode, struct file *file)
 {
 	struct tegra_camera_info *info;
@@ -140,7 +100,7 @@ static int tegra_camera_open(struct inode *inode, struct file *file)
 	info = dev_get_drvdata(mdev->parent);
 	file->private_data = info;
 
-	return tegra_camera_emc_clk_enable();
+	return 0;
 }
 
 static int tegra_camera_release(struct inode *inode, struct file *file)
@@ -148,7 +108,7 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 	struct tegra_camera_info *info;
 
 	info = file->private_data;
-	tegra_camera_emc_clk_disable();
+
 	return 0;
 }
 
