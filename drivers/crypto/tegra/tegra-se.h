@@ -540,18 +540,18 @@
 #define TEGRA_AES_RESERVED_KSLT			14
 #define TEGRA_XTS_RESERVED_KSLT			15
 
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-#define CRYPTO_REGISTER(alg, x) \
-		crypto_engine_register_##alg(x)
-#else
-#define CRYPTO_REGISTER(alg, x) \
-		crypto_register_##alg(x)
+#if NV_IS_EXPORT_SYMBOL_PRESENT_crypto_engine_register_aead /* Linux v6.6 */
+#define NV_CRYPTO_ENGINE_OPS_PRESENT
 #endif
 
-#ifdef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
+#ifdef NV_CRYPTO_ENGINE_OPS_PRESENT
+#define CRYPTO_REGISTER(alg, x) \
+		crypto_engine_register_##alg(x)
 #define CRYPTO_UNREGISTER(alg, x) \
 		crypto_engine_unregister_##alg(x)
 #else
+#define CRYPTO_REGISTER(alg, x) \
+		crypto_register_##alg(x)
 #define CRYPTO_UNREGISTER(alg, x) \
 		crypto_unregister_##alg(x)
 #endif
@@ -609,14 +609,14 @@ struct tegra_se_alg {
 	const char *alg_base;
 
 	union {
-#ifndef NV_CONFTEST_REMOVE_STRUCT_CRYPTO_ENGINE_CTX
-		struct skcipher_alg skcipher;
-		struct aead_alg aead;
-		struct ahash_alg ahash;
-#else
+#ifdef NV_CRYPTO_ENGINE_OPS_PRESENT
 		struct skcipher_engine_alg skcipher;
 		struct aead_engine_alg aead;
 		struct ahash_engine_alg ahash;
+#else
+		struct skcipher_alg skcipher;
+		struct aead_alg aead;
+		struct ahash_alg ahash;
 #endif
 	} alg;
 };
