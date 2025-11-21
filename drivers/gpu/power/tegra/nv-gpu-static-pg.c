@@ -64,7 +64,7 @@ static ssize_t bpmp_set_gpu_pg_mask(struct tegra_bpmp *bpmp, uint32_t gpu_pg_mas
 	ret = tegra_bpmp_transfer(bpmp, &msg);
 
 	if (ret != 0)
-		ret = -EINVAL;
+		ret = -EIO;
 
 	return ret;
 }
@@ -221,6 +221,7 @@ static int gpu_static_pg_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to allocate gpu_pg_profile_drv_data!\n");
 		return -ENOMEM;
 	}
+	platform_set_drvdata(pdev, gpu_pg_profile_drv_data);
 
 	/* Get the corresponding BPMP instance */
 	bpmp = tegra_bpmp_get(&pdev->dev);
@@ -247,7 +248,6 @@ static int gpu_static_pg_probe(struct platform_device *pdev)
 		goto put_kobject;
 	}
 
-	platform_set_drvdata(pdev, gpu_pg_profile_drv_data);
 
 	return ret;
 
