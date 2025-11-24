@@ -10,7 +10,6 @@ dtbo-y :=
 makefile-path := t264/nv-public/overlay
 
 dtbo-y += tegra264-ftpm.dtbo
-dtbo-y += tegra264-fuse-handler.dtbo
 dtbo-y += tegra264-p3971-camera-dual-hawk-ar0234-p3762-overlay.dtbo
 dtbo-y += tegra264-p3971-camera-dual-imx274-overlay.dtbo
 dtbo-y += tegra264-p3971-camera-eCAM130A-overlay.dtbo
