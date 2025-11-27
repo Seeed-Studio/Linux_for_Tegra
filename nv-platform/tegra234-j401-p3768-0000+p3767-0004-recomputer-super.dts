@@ -6,8 +6,8 @@
 #include "tegra234-j401-p3768-0000+p3767-recomputer-super-common.dts"
 
 / {
-        compatible = "nvidia,p3768-0000+p3767-0004-super", "nvidia,p3767-0004", "nvidia,tegra234";
-        model = "NVIDIA Jetson Orin Nano Seeed recomputer classic Super";
+        compatible = "nvidia,p3768-0000+p3767-0004", "nvidia,p3767-0004", "nvidia,tegra234";
+        model = "NVIDIA Jetson Orin NX Engineering Reference Developer Kit";
 };
 
 /delete-node/ &{/opp-table-cluster0/opp-1510400000};
