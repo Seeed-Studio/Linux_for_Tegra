@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 /*
  * PCI/PCIe to serial driver(pre) for ch351/352/353/355/356/357/358/359/382/384, etc.
  * This driver only needs to be used when the system does not assign an interrupt number for device.
@@ -14,20 +16,6 @@
  * Update Log:
  * V1.00 - initial version
  */
-
-/*
- * Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- */
-
 
 #include <linux/module.h>
 #include <linux/pci.h>
@@ -91,8 +79,10 @@
  */
 static int wch_probe(struct pci_dev *dev, const struct pci_device_id *ent)
 {
+#if WCH_DBG
     printk("\n====================WCH Device Driver(pre) Module probe====================\n");
     printk("Probe Device VID: %4x, PID: 0x%4x\n", dev->vendor, dev->device);
+#endif
 
     wch_35x_init();
     return 0;
@@ -100,8 +90,10 @@ static int wch_probe(struct pci_dev *dev, const struct pci_device_id *ent)
 
 static void wch_remove(struct pci_dev *dev)
 {
+#if WCH_DBG
     printk("\n====================WCH Device Driver(pre) Module exit====================\n");
     printk("Remove Device VID: %4x, PID: 0x%4x\n", dev->vendor, dev->device);
+#endif
     wch_35x_exit();
 }
 

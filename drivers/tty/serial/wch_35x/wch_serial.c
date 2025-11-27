@@ -2539,8 +2539,10 @@ extern int wch_ser_register_ports(struct ser_driver *drv)
                 return ret;
             }
         }
+#if WCH_DBG
         printk("Setup ttyWCH%d - PCIe port: port %lx, irq %d, type %d\n", sp->port.line, sp->port.iobase, sp->port.irq,
                sp->port.iotype);
+#endif
     }
 
     return 0;

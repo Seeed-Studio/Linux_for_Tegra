@@ -258,13 +258,19 @@ static int wch_pci_board_probe(void)
         for (i = 0; i < WCH_BOARDS_MAX; i++) {
             sb = &wch_board_table[i];
             if (sb->board_enum > 0) {
+#if WCH_DBG
                 printk("\n");
+#endif
                 if ((sb->pb_info.num_serport) > 0) {
+#if WCH_DBG
                     printk("WCH Info : Found WCH %s Series Board (%dS),\n", sb->pb_info.board_name,
                            sb->pb_info.num_serport);
+#endif
                 }
 
+#if WCH_DBG
                 printk("           bus number:%d, device number:%d\n\n", sb->bus_number, sb->dev_number);
+#endif
             }
         }
     }
@@ -834,12 +840,14 @@ int wch_35x_init(void)
 {
     int status = 0;
 
+#if WCH_DBG
     printk("\n\n");
     printk("=====================  WCH Device Driver Module Install  =====================\n");
     printk("\n");
     printk("WCH Info : Loading WCH Multi-I/O Board Driver Module\n");
     printk("                                                       -- Date : %s\n", WCH_DRIVER_DATE);
     printk("                                                       -- Version : %s\n\n", WCH_DRIVER_VERSION);
+#endif
 
     wch_ser_port_total_cnt = 0;
 
@@ -847,36 +855,48 @@ int wch_35x_init(void)
     if (status != 0) {
         goto step1_fail;
     }
+#if WCH_DBG
     printk("------------------->pci board probe success\n");
+#endif
     status = wch_get_pci_board_conf();
     if (status != 0) {
         goto step1_fail;
     }
+#if WCH_DBG
     printk("------------------->pci board conf success\n");
+#endif
 
     status = wch_assign_resource();
     if (status != 0) {
         goto step1_fail;
     }
+#if WCH_DBG
     printk("------------------->pci assign success\n");
+#endif
 
     status = wch_ser_port_table_init();
     if (status != 0) {
         goto step1_fail;
     }
+#if WCH_DBG
     printk("------------------->ser port table init success\n");
+#endif
 
     status = wch_register_irq();
     if (status != 0) {
         goto step1_fail;
     }
+#if WCH_DBG
     printk("------------------->pci register irq success\n");
+#endif
 
     status = wch_ser_register_driver(&wch_ser_reg);
     if (status != 0) {
         goto step2_fail;
     }
+#if WCH_DBG
     printk("------------------->ser register driver success\n");
+#endif
 
     status = wch_ser_register_ports(&wch_ser_reg);
     if (status != 0) {
@@ -888,7 +908,9 @@ int wch_35x_init(void)
 //	ch365_32s_test();
 #endif
 
+#if WCH_DBG
     printk("================================================================================\n");
+#endif
     return status;
 
 step3_fail:
