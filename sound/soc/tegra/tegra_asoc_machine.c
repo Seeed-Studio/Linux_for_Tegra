@@ -52,17 +52,19 @@ static int dpcm_runtime_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
 #else
 	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
 #endif
-	struct snd_soc_dapm_widget_list *list;
+	struct snd_soc_dapm_widget_list *list = NULL;
 	int stream = SNDRV_PCM_STREAM_PLAYBACK;
 	struct snd_soc_pcm_runtime *be;
 	struct snd_soc_dapm_widget *widget;
-	int i, ret;
+	int i, ret = 0;
 
 	/* nothing to be done if it is a normal sound card */
 	if (!rtd->card->component_chaining)
 		return 0;
 
-	snd_soc_dapm_dai_get_connected_widgets(dai, stream, &list, NULL);
+	ret = snd_soc_dapm_dai_get_connected_widgets(dai, stream, &list, NULL);
+	if (ret < 0)
+		return ret;
 
 	for_each_dapm_widgets(list, i, widget) {
 		if (widget->id != snd_soc_dapm_dai_in &&
@@ -75,10 +77,12 @@ static int dpcm_runtime_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
 
 		ret = snd_soc_runtime_set_dai_fmt(be, fmt);
 		if (ret < 0)
-			return ret;
+			goto out;
 	}
 
-	return 0;
+out:
+	snd_soc_dapm_dai_free_widgets(&list);
+	return ret;
 }
 
 static int tegra_machine_codec_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
