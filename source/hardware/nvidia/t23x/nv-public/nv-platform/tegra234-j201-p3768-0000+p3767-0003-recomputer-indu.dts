@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-j201-p3768-0000+p3767-recomputer-indu-common.dts"
+
+/ {
+        compatible = "nvidia,p3768-0000+p3767-0003", "nvidia,p3767-0003", "nvidia,tegra234";
+        model = "NVIDIA Jetson Orin NX Engineering Reference Developer Kit";
+
+	bus@0 {
+		host1x@13e00000 {
+			nvdla0@15880000 {
+				status = "disabled";
+			};
+
+			nvdla1@158c0000 {
+				status = "disabled";
+			};
+
+			pva0@16000000 {
+				status = "disabled";
+			};
+		};
+	};
+};
+
