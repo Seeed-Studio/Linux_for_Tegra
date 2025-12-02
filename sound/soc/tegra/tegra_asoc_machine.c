@@ -82,7 +82,7 @@ static int dpcm_runtime_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
 
 out:
 	snd_soc_dapm_dai_free_widgets(&list);
-	return ret;
+	return (ret < 0) ? ret : 0;
 }
 
 static int tegra_machine_codec_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
