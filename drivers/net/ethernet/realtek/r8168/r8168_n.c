@@ -28664,7 +28664,7 @@ rtl8168_init_one(struct pci_dev *pdev,
 
         rtl8168_sysfs_init(dev);
 
-        printk("%s", GPL_CLAIM);
+	printk(KERN_INFO "%s", GPL_CLAIM);
 
 out:
         return rc;
