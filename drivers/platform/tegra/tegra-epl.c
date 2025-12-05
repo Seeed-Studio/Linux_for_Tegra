@@ -117,14 +117,25 @@ static void tegra_hsp_tx_empty_notify(struct mbox_client *cl,
 static int tegra_hsp_mb_init(struct device *dev)
 {
 	int err;
+	u32 timeout_ms = TIMEOUT;
+	int prop_ret = -EINVAL;
 
 	epl_hsp_v = devm_kzalloc(dev, sizeof(*epl_hsp_v), GFP_KERNEL);
 	if (!epl_hsp_v)
 		return -ENOMEM;
 
+	/* Allow DT to override mailbox TX timeout (in ms) */
+	if (dev->of_node) {
+		prop_ret = of_property_read_u32(dev->of_node, "nvidia,tx-timeout-ms", &timeout_ms);
+		if (!prop_ret)
+			dev_info(dev, "tegra-epl: mailbox tx timeout set to %u ms from DT\n", timeout_ms);
+		else
+			dev_info(dev, "tegra-epl: mailbox tx timeout not provided; using default %u ms\n", timeout_ms);
+	}
+
 	epl_hsp_v->tx.client.dev = dev;
 	epl_hsp_v->tx.client.tx_block = true;
-	epl_hsp_v->tx.client.tx_tout = TIMEOUT;
+	epl_hsp_v->tx.client.tx_tout = timeout_ms;
 	epl_hsp_v->tx.client.tx_done = tegra_hsp_tx_empty_notify;
 
 	epl_hsp_v->tx.chan = mbox_request_channel_byname(&epl_hsp_v->tx.client,
