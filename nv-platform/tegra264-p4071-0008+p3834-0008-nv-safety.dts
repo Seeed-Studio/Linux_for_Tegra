@@ -39,6 +39,7 @@
 	};
 
 	safetyservices_epl_client@110000 {
+		nvidia,tx-timeout-ms = <13>;
 		status = "okay";
 	};
 
