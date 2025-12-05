@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -58,9 +58,9 @@
 #define TEGRA264_RESET_SPI3			38U
 #define TEGRA264_RESET_SPI4			39U
 #define TEGRA264_RESET_SPI5			40U
-#define TEGRA264_RESET_SPI7			41U
-#define TEGRA264_RESET_SPI8			42U
-#define TEGRA264_RESET_SPI9			43U
+#define TEGRA264_RESET_DCE_ALL			41U
+#define TEGRA264_RESET_TACH1			42U
+/* RESERVED 43 */
 #define TEGRA264_RESET_TACH0			44U
 #define TEGRA264_RESET_TSEC			45U
 #define TEGRA264_RESET_VI			46U
@@ -96,14 +96,15 @@
 #define TEGRA264_RESET_APE			76U
 #define TEGRA264_RESET_XUSB1_PADCTL		77U
 #define TEGRA264_RESET_AON_CPU_ALL		78U
-#define TEGRA264_RESET_AON_HSP			79U
+/* RESERVED 79 */
 #define TEGRA264_RESET_UART4			80U
 #define TEGRA264_RESET_UART5			81U
 #define TEGRA264_RESET_UART9			82U
 #define TEGRA264_RESET_UART10			83U
 #define TEGRA264_RESET_UART8			84U
+#define TEGRA264_RESET_ADSPCSITEPTM		85U
 
-#define TEGRA264_MAX_PUBLIC_RESET_ID		173U
+#define TEGRA264_MAX_PUBLIC_RESET_ID		85U
 
 /** @} */
 

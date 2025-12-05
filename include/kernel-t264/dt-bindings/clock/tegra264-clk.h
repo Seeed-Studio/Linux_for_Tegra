@@ -459,17 +459,32 @@
 #define TEGRA264_CLK_APE_SOUNDWIRE_DATA_EN_SHAPER 447U
 #define TEGRA264_CLK_AO_SOUNDWIRE_MSRC0         448U
 #define TEGRA264_CLK_AO_SOUNDWIRE_DATA_EN_SHAPER 449U
-#define TEGRA264_CLK_MGBE0_TX_SER		459U
-#define TEGRA264_CLK_MGBE1_TX_SER		460U
-#define TEGRA264_CLK_MGBE2_TX_SER		461U
-#define TEGRA264_CLK_MGBE3_TX_SER		462U
-#define TEGRA264_CLK_MGBE0_RX_SER		463U
-#define TEGRA264_CLK_MGBE1_RX_SER		464U
-#define TEGRA264_CLK_MGBE2_RX_SER		465U
-#define TEGRA264_CLK_MGBE3_RX_SER		466U
-#define TEGRA264_CLK_DPAUX			467U
+#define TEGRA264_CLK_MUX_CPU_SLC_JTAG_REG      450U
+#define TEGRA264_CLK_PLLX_RIST                 451U
+#define TEGRA264_CLK_NAFLL_AON                 452U
+#define TEGRA264_CLK_SMMU                      453U
+#define TEGRA264_CLK_PLLHUB1                   454U
+#define TEGRA264_CLK_MCF                       455U
+#define TEGRA264_CLK_SCF                       456U
+#define TEGRA264_CLK_MPHY_L0_TX_SYMB_M         457U
+#define TEGRA264_CLK_MPHY_L0_RX_SYMB_M         458U
+#define TEGRA264_CLK_MGBE0_TX_SER              459U
+#define TEGRA264_CLK_MGBE1_TX_SER              460U
+#define TEGRA264_CLK_MGBE2_TX_SER              461U
+#define TEGRA264_CLK_MGBE3_TX_SER              462U
+#define TEGRA264_CLK_MGBE0_RX_SER              463U
+#define TEGRA264_CLK_MGBE1_RX_SER              464U
+#define TEGRA264_CLK_MGBE2_RX_SER              465U
+#define TEGRA264_CLK_MGBE3_RX_SER              466U
+#define TEGRA264_CLK_DPAUX                     467U
+#define TEGRA264_CLK_NAFLL_MCF                 468U
+#define TEGRA264_CLK_NAFLL_SCF                 469U
+#define TEGRA264_CLK_MPHY_L0_UPHY_TX_FIFO_M    470U
+#define TEGRA264_CLK_MPHY_L0_RX_ANA_M          471U
+#define TEGRA264_CLK_MPHY_L1_RX_ANA_M          472U
+
 /** @brief Largest supported public clock identifier for this platform */
-#define TEGRA264_MAX_PUBLIC_CLK_ID              500U
+#define TEGRA264_MAX_PUBLIC_CLK_ID              472U
 
 /** @} */
 
