@@ -21,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-/* Kernel version compatibility checks */
-#include <linux/version.h>
+#include <nvidia/conftest.h>
+
 #include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
@@ -605,7 +605,12 @@ static const struct v4l2_subdev_internal_ops max96712_subdev_internal_ops = {
 	.open = max96712_open,
 };
 
+#if defined(NV_I2C_DRIVER_STRUCT_PROBE_WITHOUT_I2C_DEVICE_ID_ARG) /* Linux 6.3 */
 static int max96712_probe(struct i2c_client *client)
+#else
+static int max96712_probe(struct i2c_client *client,
+			  const struct i2c_device_id *id)
+#endif
 {
 	struct device *dev = &client->dev;
 	struct device_node *node = dev->of_node;
