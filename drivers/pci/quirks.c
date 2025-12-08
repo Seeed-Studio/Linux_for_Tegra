@@ -6304,3 +6304,50 @@ static void pci_fixup_d3cold_delay_1sec(struct pci_dev *pdev)
 	pdev->d3cold_delay = 1000;
 }
 DECLARE_PCI_FIXUP_FINAL(0x5555, 0x0004, pci_fixup_d3cold_delay_1sec);
+
+/*
+ * Realtek RTL8126 NIC reports AER correctable receiver errors when connected
+ * to NVIDIA Tegra 264 PCIe root port with ASPM enabled.
+ *
+ * After transmitting EIOS (Electrical Idle Ordered Set), the Tegra 264 PCIe
+ * controller may send some invalid data before putting lanes into electrical idle.
+ * The Realtek RTL8126 NIC reports these as receiver errors after link resumes
+ * to L0 state.
+ *
+ * Per PCIe Spec 6.0.1-1.0, Table 4-48 "Link Status Mapped to the LTSSM", once
+ * EIOS is received, the receiver should treat this as equivalent to entering
+ * L1 state and should not report Receiver Errors. The low power entry sequence
+ * is: DLLPs handshake -> EDS -> EIOS. After EDS/EIOS transmission, no RX errors
+ * should be sampled by the endpoint.
+ *
+ * Mask the receiver error reporting in AER correctable error mask register
+ * to avoid flooding the kernel log with these non-fatal errors.
+ */
+#define PCI_DEVICE_ID_NVIDIA_TEGRA264_PCIE	0x22d8
+#define PCI_DEVICE_ID_REALTEK_RTL8126		0x8126
+
+static void quirk_realtek_mask_aer_rcv_err(struct pci_dev *dev)
+{
+	struct pci_dev *root_port;
+	int aer_pos;
+	u32 val;
+
+	root_port = pcie_find_root_port(dev);
+	if (!root_port)
+		return;
+
+	/* Apply quirk only if connected to NVIDIA Tegra 264 root port */
+	if (root_port->vendor != PCI_VENDOR_ID_NVIDIA ||
+	    root_port->device != PCI_DEVICE_ID_NVIDIA_TEGRA264_PCIE)
+		return;
+
+	aer_pos = pci_find_ext_capability(dev, PCI_EXT_CAP_ID_ERR);
+	if (!aer_pos)
+		return;
+
+	pci_read_config_dword(dev, aer_pos + PCI_ERR_COR_MASK, &val);
+	val |= PCI_ERR_COR_RCVR;
+	pci_write_config_dword(dev, aer_pos + PCI_ERR_COR_MASK, val);
+}
+DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_REALTEK, PCI_DEVICE_ID_REALTEK_RTL8126,
+			quirk_realtek_mask_aer_rcv_err);
