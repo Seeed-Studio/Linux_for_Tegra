@@ -34,6 +34,10 @@
 			status = "okay";
 			compatible = "nvidia,tegra264-spi-slave";
 		};
+
+		pcie@a808440000 {
+			status = "disabled";
+		};
 	};
 
 	safetyservices_epl_client@110000 {
