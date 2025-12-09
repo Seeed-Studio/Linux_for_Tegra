@@ -8,7 +8,7 @@
 #include "pva_constants.h"
 #include "pva_math_utils.h"
 
-#define PVA_OPS_PRIVATE_OPCODE_FLAG (1U << 31U)
+#define PVA_OPS_PRIVATE_OPCODE_FLAG (1UL << 31U)
 
 /* KMD API: context init */
 struct pva_ops_context_init {
@@ -16,6 +16,7 @@ struct pva_ops_context_init {
 	struct pva_ops_header header;
 	uint32_t resource_table_capacity;
 	uint32_t pad;
+	uint64_t status_shm_hdl;
 };
 
 struct pva_ops_response_context_init {
@@ -113,6 +114,22 @@ struct pva_ops_unregister {
 	struct pva_ops_header header; /**< Operation header */
 	uint32_t resource_id; /**< ID of resource to unregister */
 	uint32_t pad; /**< Padding for 8 bytes alignment */
+};
+
+/**
+ * @brief Structure for PFSD resource registration operation.
+ */
+struct pva_ops_pfsd_register {
+#define PVA_OPS_OPCODE_PFSD_REGISTER (8U | PVA_OPS_PRIVATE_OPCODE_FLAG)
+	struct pva_ops_header header; /**< Operation header */
+};
+
+/**
+ * @brief Response structure for PFSD resource registration operation.
+ */
+struct pva_ops_response_pfsd_register {
+	enum pva_error error; /**< Operation result status */
+	uint32_t pfsd_cmd_resource_id; /**< PFSD command resource id */
 };
 
 /**

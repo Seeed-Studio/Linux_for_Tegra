@@ -12,8 +12,8 @@
 #include "pva_math_utils.h"
 
 /**
- *  enum to identify different segments of VPU ELF
- */
+  *  enum to identify different segments of VPU ELF
+  */
 enum pva_elf_seg_type {
 	/** Code segment in VPU ELF */
 	PVA_SEG_VPU_CODE = 0U,
@@ -26,16 +26,16 @@ enum pva_elf_seg_type {
 };
 
 /** Maximum number of characters in symbol name */
-#define ELF_MAXIMUM_SYMBOL_LENGTH 64U
+#define PVA_ELF_MAXIMUM_SYMBOL_LENGTH 64U
 
 /** Maximum number of characters in section name */
-#define ELF_MAXIMUM_SECTION_NAME 64
+#define PVA_ELF_MAXIMUM_SECTION_NAME 64
 
 /** Section name of EXPORTS section */
-#define ELF_EXPORTS_SECTION "EXPORTS"
+#define PVA_ELF_EXPORTS_SECTION "EXPORTS"
 
 /** Section name of EXPORTS section name length */
-#define ELF_EXPORTS_SECTION_NAME_LENGTH 7
+#define PVA_ELF_EXPORTS_SECTION_NAME_LENGTH 7
 
 /** Alignment needed for Data section of ELFs */
 #define DATA_SECTION_ALIGNMENT 32U
@@ -44,7 +44,7 @@ enum pva_elf_seg_type {
 #define TEXT_SECTION_ALIGNMENT 128U
 
 /** VPU icache size: 16KB */
-#define VPU_ICACHE_SIZE (16U * 1024U)
+#define VPU_ICACHE_SIZE (16UL * 1024UL)
 
 /** This value indicates the that current symbol can be ignored in the VPU ELF */
 #define SYM_IGNORE 1
@@ -62,9 +62,9 @@ static uint32_t change_byte_order(uint32_t word)
 }
 
 /*
- * Define mapping from VPU data, rodata and program sections into
- * corresponding segment types.
- */
+  * Define mapping from VPU data, rodata and program sections into
+  * corresponding segment types.
+  */
 static const struct pack_rule {
 	const char *elf_sec_name;
 	int32_t pva_type;
@@ -82,14 +82,14 @@ static const struct pack_rule {
 		   } };
 
 /**
-* \brief Compares the \a section_name with all
-* vpu elf section names until it finds a match and
-* then return corresponding segment type.
-* If the segment type is \ref PVA_SEG_VPU_DATA, then it further
-* checks if its PVA_SEG_VPU_IN_PARAMS.
-* \param[in] section_name Name of the section to be searched for, in VPU ELF
-* \return returns corresponding value from enum pva_elf_seg_type.
-*/
+ * \brief Compares the \a section_name with all
+ * vpu elf section names until it finds a match and
+ * then return corresponding segment type.
+ * If the segment type is \ref PVA_SEG_VPU_DATA, then it further
+ * checks if its PVA_SEG_VPU_IN_PARAMS.
+ * \param[in] section_name Name of the section to be searched for, in VPU ELF
+ * \return returns corresponding value from enum pva_elf_seg_type.
+ */
 static int32_t find_pva_ucode_segment_type(const char *section_name)
 {
 	uint32_t i;
@@ -105,14 +105,14 @@ static int32_t find_pva_ucode_segment_type(const char *section_name)
 	}
 	if (ret == (int32_t)PVA_SEG_VPU_DATA) {
 		uint64_t section_name_len =
-			strnlen(section_name, ELF_MAXIMUM_SECTION_NAME);
+			strnlen(section_name, PVA_ELF_MAXIMUM_SECTION_NAME);
 		uint64_t exports_section_name_len =
-			ELF_EXPORTS_SECTION_NAME_LENGTH;
+			PVA_ELF_EXPORTS_SECTION_NAME_LENGTH;
 		// Check Export section present in DATA segment. Only support export sections.
 		if ((section_name_len >= exports_section_name_len) &&
 		    (strncmp((section_name +
 			      (section_name_len - exports_section_name_len)),
-			     ELF_EXPORTS_SECTION,
+			     PVA_ELF_EXPORTS_SECTION,
 			     (size_t)exports_section_name_len)) == 0) {
 			ret = (int32_t)PVA_SEG_VPU_IN_PARAMS;
 		}
@@ -149,8 +149,8 @@ static int32_t validate_symbol(elf_parser_ctx elf, uint32_t symbol_entry_id,
 
 	*sym = elf_symbol(elf, symbol_entry_id);
 	if ((*sym == NULL) || ((*sym)->size == 0U) ||
-	    (ELF_ST_BIND(*sym) != STB_GLOBAL) ||
-	    (ELF_ST_TYPE(*sym) == STT_FUNC)) {
+	    (PVA_ELF_ST_BIND(*sym) != STB_GLOBAL) ||
+	    (PVA_ELF_ST_TYPE(*sym) == STT_FUNC)) {
 		err = SYM_IGNORE;
 		goto end;
 	}
@@ -218,19 +218,19 @@ done:
 }
 
 /**
- * @brief updates symbol information (type, addr and size) from
- * VPU ELF PVA_SEG_VPU_IN_PARAMS segment.
- *
- * Data about symbol information in EXPORTS section of ELF is present as follows.
- * typedef struct {
- *   uint32_t type; From VMEM_TYPE enums
- *   uint32_t addr_offset; Offset from VMEM base
- *   uint32_t size; Size of VMEM region in bytes
- * };
- * @param[in] elf pointer to const image of elf file.
- * @param[in] section_header pointer to VPU ELF PVA_SEG_VPU_IN_PARAMS section header
- * @param[in, out] symbol_info pointer to ELF image symbol which needs to be updated.
-*/
+  * @brief updates symbol information (type, addr and size) from
+  * VPU ELF PVA_SEG_VPU_IN_PARAMS segment.
+  *
+  * Data about symbol information in EXPORTS section of ELF is present as follows.
+  * typedef struct {
+  *   uint32_t type; From VMEM_TYPE enums
+  *   uint32_t addr_offset; Offset from VMEM base
+  *   uint32_t size; Size of VMEM region in bytes
+  * };
+  * @param[in] elf pointer to const image of elf file.
+  * @param[in] section_header pointer to VPU ELF PVA_SEG_VPU_IN_PARAMS section header
+  * @param[in, out] symbol_info pointer to ELF image symbol which needs to be updated.
+ */
 static enum pva_error
 update_exports_symbol(elf_parser_ctx elf,
 		      const elfSectionHeader *section_header,
@@ -240,12 +240,19 @@ update_exports_symbol(elf_parser_ctx elf,
 	uint32_t symOffset = 0U;
 	enum pva_error err = PVA_SUCCESS;
 	pva_math_error math_err = MATH_OP_SUCCESS;
+	uint32_t symbol_end;
+	uint32_t section_end;
+
+	/* Calculate symbol end address */
+	symbol_end = addu32(symbol_info->vmem_addr,
+			    (uint32_t)SIZE_EXPORTS_TABLE_ENTRY, &math_err);
+	/* Calculate section end address */
+	section_end =
+		addu32(section_header->addr, section_header->size, &math_err);
 
 	if ((section_header == NULL) ||
 	    (symbol_info->vmem_addr < section_header->addr) ||
-	    (addu32(symbol_info->vmem_addr, (uint32_t)SIZE_EXPORTS_TABLE_ENTRY,
-		    &math_err) >
-	     addu32(section_header->addr, section_header->size, &math_err))) {
+	    (symbol_end > section_end)) {
 		err = PVA_INVAL;
 		goto done;
 	} else {
@@ -258,9 +265,10 @@ update_exports_symbol(elf_parser_ctx elf,
 		err = PVA_INVAL;
 		goto done;
 	}
-	symbol_info->symbol_type = *(uint8_t *)((uintptr_t)&data[symOffset]);
-	if ((symbol_info->symbol_type == (uint8_t)PVA_SYM_TYPE_INVALID) ||
-	    (symbol_info->symbol_type >= (uint8_t)PVA_SYM_TYPE_MAX)) {
+	symbol_info->symbol_type = (enum pva_symbol_type)(
+		*(uint8_t *)((uintptr_t)&data[symOffset]));
+	if ((symbol_info->symbol_type == PVA_SYM_TYPE_INVALID) ||
+	    (symbol_info->symbol_type >= PVA_SYM_TYPE_MAX)) {
 		pva_kmd_log_err("Invalid symbol type found");
 		err = PVA_INVAL;
 		goto done;
@@ -403,10 +411,10 @@ done:
 }
 
 /**
- * The simplify caller's life: the input ptr should always be considered freed
- * after this call. The returned new ptr should always be considered a new
- * allocation and it needs to be freed if not NULL.
- */
+  * The simplify caller's life: the input ptr should always be considered freed
+  * after this call. The returned new ptr should always be considered a new
+  * allocation and it needs to be freed if not NULL.
+  */
 static void *pva_realloc(void *ptr, uint32_t old_size, uint32_t new_size)
 {
 	void *new_buffer;
@@ -424,7 +432,7 @@ static void *pva_realloc(void *ptr, uint32_t old_size, uint32_t new_size)
 		goto out;
 	}
 
-	memcpy(new_buffer, ptr, old_size);
+	(void)memcpy(new_buffer, ptr, old_size);
 
 out:
 	pva_kmd_free(ptr);
@@ -439,6 +447,7 @@ static void *copy_text_section(const elf_parser_ctx elf,
 	uint32_t const *word;
 	uint32_t *dst_word;
 	uint32_t wi;
+	char *base;
 	/* The load address in section header is in words (uint32_t) */
 	uint32_t load_addr_bytes =
 		safe_mulu32(section_header->addr, (uint32_t)sizeof(uint32_t));
@@ -464,9 +473,14 @@ static void *copy_text_section(const elf_parser_ctx elf,
 		return NULL;
 	}
 
-	word = (uint32_t const *)elf_data;
+	word = (uint32_t const *)(void const *)elf_data;
 
-	dst_word = (uint32_t *)((uintptr_t)out_buffer + load_addr_bytes);
+	ASSERT(((uintptr_t)(void *)out_buffer % sizeof(uint32_t)) == 0U);
+	ASSERT((load_addr_bytes % sizeof(uint32_t)) == 0U);
+
+	/* Use byte pointer arithmetic to avoid INT36-C violation */
+	base = (char *)out_buffer;
+	dst_word = (uint32_t *)(void *)(base + load_addr_bytes);
 	for (wi = 0; wi < (section_header->size / sizeof(uint32_t)); wi++) {
 		dst_word[wi] = change_byte_order(word[wi]);
 	}
@@ -475,16 +489,16 @@ static void *copy_text_section(const elf_parser_ctx elf,
 }
 
 /**
- * @brief Aggregate all text sections into a single, dynamically
- * allocated buffer.
- *
- * The placement of text sections needs to take into account of the loading
- * addresses.
- *
- * The endianness of text section needs to be changed.
- *
- * Caller is responsible for freeing the returned buffer.
- */
+  * @brief Aggregate all text sections into a single, dynamically
+  * allocated buffer.
+  *
+  * The placement of text sections needs to take into account of the loading
+  * addresses.
+  *
+  * The endianness of text section needs to be changed.
+  *
+  * Caller is responsible for freeing the returned buffer.
+  */
 static void *aggregate_text_sections(const elf_parser_ctx elf,
 				     uint32_t *out_size)
 {
@@ -548,7 +562,7 @@ static void copy_data_section(const elf_parser_ctx elf,
 
 	ASSERT(elf_data != NULL);
 
-	memcpy(dst, elf_data, section_header->size);
+	(void)memcpy(dst, (const void *)elf_data, section_header->size);
 
 	*buffer_offset = safe_addu32(*buffer_offset, aligned_size);
 }
@@ -601,14 +615,14 @@ out:
 }
 
 /**
- * @brief Aggregate all data sections into a single, dynamically
- * allocated buffer.
- *
- * The offset of each data section must be aligned to DATA_SEGMENT_ALIGNMENT.
- *
- * The caller must free the returned data buffer and out_section_infos.
- *
- */
+  * @brief Aggregate all data sections into a single, dynamically
+  * allocated buffer.
+  *
+  * The offset of each data section must be aligned to DATA_SEGMENT_ALIGNMENT.
+  *
+  * The caller must free the returned data buffer and out_section_infos.
+  *
+  */
 static void *
 aggregate_data_sections(const elf_parser_ctx elf, uint32_t n_data_sections,
 			uint32_t total_sections_size,
@@ -664,12 +678,12 @@ err_out:
 }
 
 /**
- * @brief layout text and data sections in a single continuous buffer that is
- * mapped to PVA IOVA space (user SID).
- *
- * We need to pad text size by an entire VPU icache size to avoid SMMU fault
- * when prefetching.
- */
+  * @brief layout text and data sections in a single continuous buffer that is
+  * mapped to PVA IOVA space (user SID).
+  *
+  * We need to pad text size by an entire VPU icache size to avoid SMMU fault
+  * when prefetching.
+  */
 static struct pva_kmd_device_memory *
 load_sections(struct pva_kmd_device *pva, uint8_t smmu_id,
 	      const void *text_section_buf, uint32_t text_size,
@@ -683,19 +697,19 @@ load_sections(struct pva_kmd_device *pva, uint8_t smmu_id,
 
 	ASSERT(TEXT_SECTION_ALIGNMENT >= DATA_SECTION_ALIGNMENT);
 	/* This is guaranteed to be true as TEXT_SECTION_ALIGNMENT is more strict */
-	ASSERT(data_begin % DATA_SECTION_ALIGNMENT == 0);
+	ASSERT(data_begin % DATA_SECTION_ALIGNMENT == 0U);
 
 	/* Map it as read-only. TODO: when VPU debugger is supported, we may
-	 * need to map text as READ_WRITE conditionally. */
+	  * need to map text as READ_WRITE conditionally. */
 	dev_mem = pva_kmd_device_memory_alloc_map(alloc_size, pva,
 						  PVA_ACCESS_RO, smmu_id);
 	if (dev_mem == NULL) {
 		goto out;
 	}
 
-	memcpy(dev_mem->va, text_section_buf, text_size);
-	memcpy(pva_offset_pointer(dev_mem->va, data_begin), data_section_buf,
-	       data_size);
+	(void)memcpy(dev_mem->va, text_section_buf, text_size);
+	(void)memcpy(pva_offset_pointer(dev_mem->va, data_begin),
+		     data_section_buf, data_size);
 
 	*out_data_begin_offset = data_begin;
 out:
@@ -744,14 +758,17 @@ load_metainfo(struct pva_kmd_device *pva, uint64_t section_iova,
 		iova_hi(addu64(section_iova, data_begin_off, &math_err));
 	metainfo->data_section_addr_lo =
 		iova_lo(addu64(section_iova, data_begin_off, &math_err));
-	metainfo->num_data_sections = n_data_sections;
+	/* CERT INT31-C: n_data_sections is constrained by ELF structure,
+	 * practically always fits in uint8_t, safe to cast */
+	metainfo->num_data_sections = (uint8_t)n_data_sections;
 	metainfo->num_vmem_buffers = n_symbols;
 
 	data_sections_mem = pva_offset_pointer(metainfo, sizeof(*metainfo));
 	if (n_data_sections > 0U && section_infos != NULL) {
-		memcpy(data_sections_mem, section_infos,
-		       mulu32(n_data_sections, (uint32_t)sizeof(*section_infos),
-			      &math_err));
+		(void)memcpy(data_sections_mem, section_infos,
+			     mulu32(n_data_sections,
+				    (uint32_t)sizeof(*section_infos),
+				    &math_err));
 	}
 
 	vmem_buffers_mem = pva_offset_pointer(
@@ -776,6 +793,77 @@ out:
 	return dev_mem;
 }
 
+/**
+  * Validate ELF, count symbols and allocate symbol table
+  */
+static enum pva_error
+validate_and_prepare_symbols(elf_parser_ctx elf,
+			     struct pva_kmd_exec_symbol_table *out_symbol_table)
+{
+	enum pva_error err = PVA_SUCCESS;
+	pva_math_error math_err = MATH_OP_SUCCESS;
+	uint32_t num_symbols = 0;
+
+	err = validate_elf(elf);
+	if (err != PVA_SUCCESS) {
+		goto out;
+	}
+
+	err = count_symbols(elf, &num_symbols);
+	if (err != PVA_SUCCESS) {
+		goto out;
+	}
+
+	out_symbol_table->n_symbols = num_symbols;
+	if (num_symbols > 0U) {
+		out_symbol_table->symbols = pva_kmd_zalloc(
+			mulu32((uint32_t)sizeof(struct pva_symbol_info),
+			       num_symbols, &math_err));
+		if (out_symbol_table->symbols == NULL) {
+			err = PVA_NOMEM;
+			goto out;
+		}
+		if (math_err != MATH_OP_SUCCESS) {
+			err = PVA_ERR_MATH_OP;
+			pva_kmd_log_err(
+				"pva_kmd_load_executable: validate_and_prepare_symbols math error");
+		}
+	}
+
+out:
+	return err;
+}
+
+/**
+  * Process data sections and prepare data section buffer
+  */
+static enum pva_error
+process_data_sections(elf_parser_ctx elf, uint32_t *n_data_sections,
+		      uint32_t *total_data_section_size,
+		      void **data_section_buf,
+		      struct pva_fw_data_section_info **section_infos)
+{
+	enum pva_error err = PVA_SUCCESS;
+
+	err = count_data_sections(elf, n_data_sections,
+				  total_data_section_size);
+	if (err != PVA_SUCCESS) {
+		goto out;
+	}
+
+	/* It's OK to not have data sections */
+	if (*total_data_section_size != 0U) {
+		*data_section_buf =
+			aggregate_data_sections(elf, *n_data_sections,
+						*total_data_section_size,
+						section_infos);
+		ASSERT(*data_section_buf != NULL);
+	}
+
+out:
+	return err;
+}
+
 enum pva_error
 pva_kmd_load_executable(const void *executable_data, uint32_t executable_size,
 			struct pva_kmd_device *pva, uint8_t dma_smmu_id,
@@ -784,9 +872,7 @@ pva_kmd_load_executable(const void *executable_data, uint32_t executable_size,
 			struct pva_kmd_device_memory **out_sections)
 {
 	enum pva_error err = PVA_SUCCESS;
-	pva_math_error math_err = MATH_OP_SUCCESS;
 	elf_parser_ctx elf = { 0 };
-	uint32_t num_symbols = 0;
 	uint32_t n_data_sections;
 	uint32_t total_data_section_size = 0;
 	struct pva_fw_data_section_info *section_infos = NULL;
@@ -799,30 +885,10 @@ pva_kmd_load_executable(const void *executable_data, uint32_t executable_size,
 
 	elf.elf_file = executable_data;
 	elf.size = executable_size;
-	err = validate_elf(elf);
+
+	err = validate_and_prepare_symbols(elf, out_symbol_table);
 	if (err != PVA_SUCCESS) {
 		goto err_out;
-	}
-
-	err = count_symbols(elf, &num_symbols);
-	if (err != PVA_SUCCESS) {
-		goto err_out;
-	}
-
-	out_symbol_table->n_symbols = num_symbols;
-	if (num_symbols > 0) {
-		out_symbol_table->symbols = pva_kmd_zalloc(
-			mulu32((uint32_t)sizeof(struct pva_symbol_info),
-			       num_symbols, &math_err));
-		if (out_symbol_table->symbols == NULL) {
-			err = PVA_NOMEM;
-			goto err_out;
-		}
-		if (math_err != MATH_OP_SUCCESS) {
-			err = PVA_ERR_MATH_OP;
-			pva_kmd_log_err("pva_kmd_load_executable math error");
-			goto err_out;
-		}
 	}
 
 	err = fill_symbol_table(elf, out_symbol_table,
@@ -837,23 +903,15 @@ pva_kmd_load_executable(const void *executable_data, uint32_t executable_size,
 	/* Must have text sections */
 	if (text_section_buf == NULL) {
 		pva_kmd_log_err(
-			"pva_kmd_load_executable aggregate_text_sections error");
+			"pva_kmd_load_executable: aggregate_text_sections error");
 		goto free_syms;
 	}
 
-	err = count_data_sections(elf, &n_data_sections,
-				  &total_data_section_size);
+	err = process_data_sections(elf, &n_data_sections,
+				    &total_data_section_size, &data_section_buf,
+				    &section_infos);
 	if (err != PVA_SUCCESS) {
 		goto free_text_buf;
-	}
-
-	/* It's OK to not have data sections */
-	if (total_data_section_size != 0) {
-		data_section_buf =
-			aggregate_data_sections(elf, n_data_sections,
-						total_data_section_size,
-						&section_infos);
-		ASSERT(data_section_buf != NULL);
 	}
 
 	sections_mem = load_sections(pva, dma_smmu_id, text_section_buf,
@@ -863,29 +921,23 @@ pva_kmd_load_executable(const void *executable_data, uint32_t executable_size,
 		goto free_data_buf;
 	}
 
-	metainfo_mem =
-		load_metainfo(pva, sections_mem->iova, total_text_section_size,
-			      data_begin_off, total_data_section_size,
-			      section_infos, n_data_sections,
-			      out_symbol_table->symbols, num_symbols);
+	metainfo_mem = load_metainfo(pva, sections_mem->iova,
+				     total_text_section_size, data_begin_off,
+				     total_data_section_size, section_infos,
+				     n_data_sections, out_symbol_table->symbols,
+				     out_symbol_table->n_symbols);
 	if (metainfo_mem == NULL) {
 		goto free_sec_mem;
 	}
-	/* Success. Now clean up temporary allocations */
-	if (data_section_buf != NULL) {
-		pva_kmd_free(data_section_buf);
-	}
-	if (section_infos != NULL) {
-		pva_kmd_free(section_infos);
-	}
-	pva_kmd_free(text_section_buf);
 
+	/* Success - set outputs and fall through to cleanup */
 	*out_metainfo = metainfo_mem;
 	*out_sections = sections_mem;
+	goto free_data_buf;
 
-	return PVA_SUCCESS;
 free_sec_mem:
 	pva_kmd_device_memory_free(sections_mem);
+
 free_data_buf:
 	if (data_section_buf != NULL) {
 		pva_kmd_free(data_section_buf);
@@ -896,7 +948,9 @@ free_data_buf:
 free_text_buf:
 	pva_kmd_free(text_section_buf);
 free_syms:
-	pva_kmd_free(out_symbol_table->symbols);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_free(out_symbol_table->symbols);
+	}
 err_out:
 	return err;
 }

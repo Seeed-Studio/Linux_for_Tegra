@@ -51,17 +51,26 @@ pva_kmd_resource_table_init(struct pva_kmd_resource_table *res_table,
 	uint32_t max_dma_config_size = get_max_dma_config_size(pva);
 	enum pva_error err;
 	uint64_t size;
+	uint32_t size_u32;
 
 	res_table->pva = pva;
-	res_table->n_entries = n_entries;
+	res_table->n_entries = safe_addu32(n_entries, PVA_MAX_PRIV_RES_ID);
 	res_table->user_smmu_ctx_id = user_smmu_ctx_id;
-	pva_kmd_sema_init(&res_table->resource_semaphore, n_entries);
-	pva_kmd_mutex_init(&res_table->resource_table_lock);
+	pva_kmd_sema_init(&res_table->resource_semaphore, res_table->n_entries);
+	err = pva_kmd_mutex_init(&res_table->resource_table_lock);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"pva_kmd_resource_table_init mutex_init failed");
+		return err;
+	}
 
 	size = (uint64_t)safe_mulu32(
-		n_entries, (uint32_t)sizeof(struct pva_resource_entry));
-	size += (uint64_t)safe_mulu32(
-		n_entries, (uint32_t)sizeof(struct pva_resource_aux_info));
+		res_table->n_entries,
+		(uint32_t)sizeof(struct pva_resource_entry));
+	size = safe_addu64(
+		size, (uint64_t)safe_mulu32(
+			      res_table->n_entries,
+			      (uint32_t)sizeof(struct pva_resource_aux_info)));
 	res_table->table_mem = pva_kmd_device_memory_alloc_map(
 		size, pva, PVA_ACCESS_RW, PVA_R5_SMMU_CONTEXT_ID);
 	if (res_table->table_mem == NULL) {
@@ -69,9 +78,10 @@ pva_kmd_resource_table_init(struct pva_kmd_resource_table *res_table,
 		goto deinit_locks;
 	}
 
-	size = (uint64_t)safe_mulu32(sizeof(struct pva_kmd_resource_record),
-				     n_entries);
-	res_table->records_mem = pva_kmd_zalloc(size);
+	size_u32 = safe_mulu32((uint32_t)sizeof(struct pva_kmd_resource_record),
+			       res_table->n_entries);
+	res_table->records_mem =
+		(struct pva_kmd_resource_record *)pva_kmd_zalloc(size_u32);
 
 	if (res_table->records_mem == NULL) {
 		err = PVA_NOMEM;
@@ -79,11 +89,24 @@ pva_kmd_resource_table_init(struct pva_kmd_resource_table *res_table,
 	}
 
 	err = pva_kmd_block_allocator_init(
-		&res_table->resource_record_allocator, res_table->records_mem,
-		PVA_RESOURCE_ID_BASE, sizeof(struct pva_kmd_resource_record),
-		n_entries);
+		&res_table->priv_resource_record_allocator,
+		res_table->records_mem, PVA_RESOURCE_ID_BASE,
+		(uint32_t)sizeof(struct pva_kmd_resource_record),
+		PVA_MAX_PRIV_RES_ID);
 	if (err != PVA_SUCCESS) {
 		goto free_records_mem;
+	}
+
+	err = pva_kmd_block_allocator_init(
+		&res_table->resource_record_allocator,
+		(uint8_t *)res_table->records_mem +
+			safe_mulu32(PVA_MAX_PRIV_RES_ID,
+				    (uint32_t)sizeof(
+					    struct pva_kmd_resource_record)),
+		PVA_USER_RESOURCE_ID_BASE,
+		(uint32_t)sizeof(struct pva_kmd_resource_record), n_entries);
+	if (err != PVA_SUCCESS) {
+		goto free_priv_resource_record_allocator;
 	}
 
 	err = pva_kmd_devmem_pool_init(&res_table->dma_config_pool, pva,
@@ -98,6 +121,9 @@ pva_kmd_resource_table_init(struct pva_kmd_resource_table *res_table,
 
 free_resource_record_allocator:
 	pva_kmd_block_allocator_deinit(&res_table->resource_record_allocator);
+free_priv_resource_record_allocator:
+	pva_kmd_block_allocator_deinit(
+		&res_table->priv_resource_record_allocator);
 free_records_mem:
 	pva_kmd_free(res_table->records_mem);
 free_table_mem:
@@ -110,7 +136,7 @@ deinit_locks:
 
 static struct pva_kmd_resource_record *
 pva_kmd_alloc_resource_id(struct pva_kmd_resource_table *resource_table,
-			  uint32_t *out_resource_id)
+			  uint32_t *out_resource_id, bool priv)
 {
 	enum pva_error err;
 	struct pva_kmd_resource_record *rec = NULL;
@@ -129,9 +155,21 @@ pva_kmd_alloc_resource_id(struct pva_kmd_resource_table *resource_table,
 		goto out;
 	}
 
-	rec = (struct pva_kmd_resource_record *)pva_kmd_zalloc_block(
-		&resource_table->resource_record_allocator, out_resource_id);
-	ASSERT(rec != NULL);
+	if (priv) {
+		rec = (struct pva_kmd_resource_record *)pva_kmd_zalloc_block(
+			&resource_table->priv_resource_record_allocator,
+			out_resource_id);
+	} else {
+		rec = (struct pva_kmd_resource_record *)pva_kmd_zalloc_block(
+			&resource_table->resource_record_allocator,
+			out_resource_id);
+	}
+	if (rec == NULL) {
+		pva_kmd_log_err(
+			"pva_kmd_alloc_resource_id: No available resource slots");
+		pva_kmd_sema_post(&resource_table->resource_semaphore);
+		goto out;
+	}
 
 out:
 	return rec;
@@ -143,8 +181,15 @@ pva_kmd_free_resource_id(struct pva_kmd_resource_table *resource_table,
 {
 	enum pva_error err;
 
-	err = pva_kmd_free_block(&resource_table->resource_record_allocator,
-				 resource_id);
+	if (resource_id <= PVA_MAX_PRIV_RES_ID) {
+		err = pva_kmd_free_block(
+			&resource_table->priv_resource_record_allocator,
+			resource_id);
+	} else {
+		err = pva_kmd_free_block(
+			&resource_table->resource_record_allocator,
+			resource_id);
+	}
 	ASSERT(err == PVA_SUCCESS);
 
 	pva_kmd_sema_post(&resource_table->resource_semaphore);
@@ -154,9 +199,8 @@ static void
 pva_kmd_release_resource(struct pva_kmd_resource_table *resource_table,
 			 uint32_t resource_id, bool drop_dma_reference)
 {
-	struct pva_kmd_resource_record *rec = pva_kmd_get_block_unsafe(
-		&resource_table->resource_record_allocator, resource_id);
-
+	struct pva_kmd_resource_record *rec =
+		pva_kmd_peek_resource(resource_table, resource_id);
 	ASSERT(rec != NULL);
 
 	switch (rec->type) {
@@ -180,6 +224,7 @@ pva_kmd_release_resource(struct pva_kmd_resource_table *resource_table,
 
 	default:
 		FAULT("Unsupported resource type");
+		/* NOTREACHED */
 	}
 
 	pva_kmd_free_resource_id(resource_table, resource_id);
@@ -188,13 +233,14 @@ pva_kmd_release_resource(struct pva_kmd_resource_table *resource_table,
 enum pva_error
 pva_kmd_add_dram_buffer_resource(struct pva_kmd_resource_table *resource_table,
 				 struct pva_kmd_device_memory *dev_mem,
-				 uint32_t *out_resource_id)
+				 uint32_t *out_resource_id, bool priv)
 {
-	struct pva_kmd_resource_record *rec =
-		pva_kmd_alloc_resource_id(resource_table, out_resource_id);
+	struct pva_kmd_resource_record *rec = pva_kmd_alloc_resource_id(
+		resource_table, out_resource_id, priv);
 
 	if (rec == NULL) {
-		pva_kmd_log_err("No more resource id");
+		pva_kmd_log_err(
+			"pva_kmd_add_dram_buffer_resource No more resource id");
 		return PVA_NO_RESOURCE_ID;
 	}
 
@@ -237,8 +283,13 @@ void pva_kmd_update_fw_resource_table(struct pva_kmd_resource_table *res_table)
 	for (id = PVA_RESOURCE_ID_BASE; id <= max_resource_id; id++) {
 		struct pva_resource_entry *entry =
 			get_fw_resource(res_table, id);
-		rec = pva_kmd_get_block_unsafe(
-			&res_table->resource_record_allocator, id);
+		if (id <= PVA_MAX_PRIV_RES_ID) {
+			rec = pva_kmd_get_block_unsafe(
+				&res_table->priv_resource_record_allocator, id);
+		} else {
+			rec = pva_kmd_get_block_unsafe(
+				&res_table->resource_record_allocator, id);
+		}
 		if (rec == NULL) {
 			continue;
 		}
@@ -251,13 +302,17 @@ void pva_kmd_update_fw_resource_table(struct pva_kmd_resource_table *res_table)
 			entry->size_lo = iova_lo(rec->dram.mem->size);
 			entry->size_hi = iova_hi(rec->dram.mem->size);
 			entry->smmu_context_id = rec->dram.mem->smmu_ctx_idx;
-			entry->access_flags = rec->dram.mem->iova_access_flags;
+			/* CERT INT31-C: iova_access_flags limited to PVA_ACCESS_* values (1,2,3),
+		     * always fits in uint8_t, safe to cast */
+			entry->access_flags =
+				(uint8_t)rec->dram.mem->iova_access_flags;
 			break;
 		case PVA_RESOURCE_TYPE_INVALID:
 			break;
 		default:
 			pva_kmd_log_err("Unsupported resource type");
 			pva_kmd_fault();
+			/* NOTREACHED */
 		}
 	}
 }
@@ -266,9 +321,8 @@ struct pva_kmd_resource_record *
 pva_kmd_use_resource_unsafe(struct pva_kmd_resource_table *res_table,
 			    uint32_t resource_id)
 {
-	struct pva_kmd_resource_record *rec = pva_kmd_get_block_unsafe(
-		&res_table->resource_record_allocator, resource_id);
-
+	struct pva_kmd_resource_record *rec =
+		pva_kmd_peek_resource(res_table, resource_id);
 	if (rec == NULL) {
 		return NULL;
 	}
@@ -283,9 +337,8 @@ pva_kmd_use_resource(struct pva_kmd_resource_table *res_table,
 {
 	struct pva_kmd_resource_record *rec;
 	pva_kmd_mutex_lock(&res_table->resource_table_lock);
-	rec = pva_kmd_get_block_unsafe(&res_table->resource_record_allocator,
-				       resource_id);
 
+	rec = pva_kmd_peek_resource(res_table, resource_id);
 	if (rec == NULL) {
 		pva_kmd_mutex_unlock(&res_table->resource_table_lock);
 		return NULL;
@@ -301,8 +354,15 @@ struct pva_kmd_resource_record *
 pva_kmd_peek_resource(struct pva_kmd_resource_table *res_table,
 		      uint32_t resource_id)
 {
-	struct pva_kmd_resource_record *rec = pva_kmd_get_block_unsafe(
-		&res_table->resource_record_allocator, resource_id);
+	struct pva_kmd_resource_record *rec;
+	if (resource_id <= PVA_MAX_PRIV_RES_ID) {
+		rec = pva_kmd_get_block_unsafe(
+			&res_table->priv_resource_record_allocator,
+			resource_id);
+	} else {
+		rec = pva_kmd_get_block_unsafe(
+			&res_table->resource_record_allocator, resource_id);
+	}
 
 	return rec;
 }
@@ -318,10 +378,8 @@ void pva_kmd_drop_resource(struct pva_kmd_resource_table *resource_table,
 void pva_kmd_drop_resource_unsafe(struct pva_kmd_resource_table *resource_table,
 				  uint32_t resource_id)
 {
-	struct pva_kmd_resource_record *rec;
-
-	rec = pva_kmd_get_block_unsafe(
-		&resource_table->resource_record_allocator, resource_id);
+	struct pva_kmd_resource_record *rec =
+		pva_kmd_peek_resource(resource_table, resource_id);
 
 	if (rec == NULL) {
 		pva_kmd_log_err_u64("Unexpected resource ID drop", resource_id);
@@ -329,7 +387,7 @@ void pva_kmd_drop_resource_unsafe(struct pva_kmd_resource_table *resource_table,
 	}
 
 	rec->ref_count = safe_subu32(rec->ref_count, 1U);
-	if (rec->ref_count == 0) {
+	if (rec->ref_count == 0U) {
 		pva_kmd_release_resource(resource_table, resource_id, true);
 	}
 }
@@ -337,15 +395,17 @@ void pva_kmd_drop_resource_unsafe(struct pva_kmd_resource_table *resource_table,
 enum pva_error
 pva_kmd_add_vpu_bin_resource(struct pva_kmd_resource_table *resource_table,
 			     const void *executable, uint32_t executable_size,
-			     uint32_t *out_resource_id)
+			     uint32_t *out_resource_id, bool priv)
 {
 	uint32_t res_id;
 	struct pva_kmd_resource_record *rec =
-		pva_kmd_alloc_resource_id(resource_table, &res_id);
+		pva_kmd_alloc_resource_id(resource_table, &res_id, priv);
 	enum pva_error err;
 	struct pva_kmd_vpu_bin_resource *vpu_bin;
 
 	if (rec == NULL) {
+		pva_kmd_log_err(
+			"pva_kmd_add_vpu_bin_resource No more resource id");
 		err = PVA_NO_RESOURCE_ID;
 		goto err_out;
 	}
@@ -395,7 +455,9 @@ pva_kmd_make_resource_entry(struct pva_kmd_resource_table *resource_table,
 		entry->size_lo = iova_lo(rec->dram.mem->size);
 		entry->size_hi = iova_hi(rec->dram.mem->size);
 		entry->smmu_context_id = rec->dram.mem->smmu_ctx_idx;
-		entry->access_flags = rec->dram.mem->iova_access_flags;
+		/* CERT INT31-C: iova_access_flags limited to PVA_ACCESS_* values (1,2,3),
+		 * always fits in uint8_t, safe to cast */
+		entry->access_flags = (uint8_t)rec->dram.mem->iova_access_flags;
 		break;
 	case PVA_RESOURCE_TYPE_EXEC_BIN:
 		entry->type = rec->type;
@@ -419,6 +481,7 @@ pva_kmd_make_resource_entry(struct pva_kmd_resource_table *resource_table,
 	default:
 		pva_kmd_log_err("Unsupported resource type");
 		pva_kmd_fault();
+		/* NOTREACHED */
 	}
 
 	pva_kmd_drop_resource(resource_table, resource_id);
@@ -428,7 +491,7 @@ pva_kmd_make_resource_entry(struct pva_kmd_resource_table *resource_table,
 enum pva_error pva_kmd_add_dma_config_resource(
 	struct pva_kmd_resource_table *resource_table,
 	const struct pva_ops_dma_config_register *dma_cfg_hdr,
-	uint32_t dma_config_size, uint32_t *out_resource_id)
+	uint32_t dma_config_size, uint32_t *out_resource_id, bool priv)
 {
 	enum pva_error err = PVA_SUCCESS;
 	uint32_t fw_fetch_size;
@@ -437,6 +500,7 @@ enum pva_error pva_kmd_add_dma_config_resource(
 	struct pva_kmd_resource_record *rec;
 	uint32_t res_id;
 	struct pva_kmd_devmem_element dma_cfg_mem = { 0 };
+	bool skip_validation = false;
 
 	err = pva_kmd_devmem_pool_zalloc(&resource_table->dma_config_pool,
 					 &dma_cfg_mem);
@@ -445,9 +509,7 @@ enum pva_error pva_kmd_add_dma_config_resource(
 	}
 	fw_dma_cfg = pva_kmd_get_devmem_va(&dma_cfg_mem);
 
-	// Must satisfy alignment requirement for converting to struct
-	// pva_dma_config_resource*
-	ASSERT(((uintptr_t)fw_dma_cfg) % sizeof(uint64_t) == 0);
+	ASSERT(((uintptr_t)(void *)fw_dma_cfg) % sizeof(uint64_t) == 0UL);
 
 	dma_aux = pva_kmd_zalloc(sizeof(struct pva_kmd_dma_resource_aux));
 	if (dma_aux == NULL) {
@@ -456,16 +518,17 @@ enum pva_error pva_kmd_add_dma_config_resource(
 	}
 	dma_aux->res_table = resource_table;
 
+	skip_validation = (priv || resource_table->pva->test_mode);
 	pva_kmd_mutex_lock(&resource_table->resource_table_lock);
 	err = pva_kmd_load_dma_config(resource_table, dma_cfg_hdr,
 				      dma_config_size, dma_aux, fw_dma_cfg,
-				      &fw_fetch_size);
+				      &fw_fetch_size, skip_validation);
 	pva_kmd_mutex_unlock(&resource_table->resource_table_lock);
 	if (err != PVA_SUCCESS) {
 		goto free_dma_aux;
 	}
 
-	rec = pva_kmd_alloc_resource_id(resource_table, &res_id);
+	rec = pva_kmd_alloc_resource_id(resource_table, &res_id, priv);
 	if (rec == NULL) {
 		err = PVA_NO_RESOURCE_ID;
 		goto unload_dma;
@@ -521,8 +584,10 @@ pva_kmd_release_all_resources(struct pva_kmd_resource_table *res_table)
 
 void pva_kmd_resource_table_deinit(struct pva_kmd_resource_table *res_table)
 {
-	pva_kmd_release_all_resources(res_table);
+	(void)pva_kmd_release_all_resources(res_table);
 	pva_kmd_block_allocator_deinit(&res_table->resource_record_allocator);
+	pva_kmd_block_allocator_deinit(
+		&res_table->priv_resource_record_allocator);
 	pva_kmd_free(res_table->records_mem);
 	pva_kmd_devmem_pool_deinit(&res_table->dma_config_pool);
 	pva_kmd_mutex_deinit(&res_table->resource_table_lock);
@@ -535,7 +600,10 @@ void pva_kmd_resource_table_lock(struct pva_kmd_device *pva,
 {
 	struct pva_kmd_context *ctx = pva_kmd_get_context(pva, res_table_id);
 
-	pva_kmd_mutex_lock(&ctx->ctx_resource_table.resource_table_lock);
+	if (ctx != NULL) {
+		pva_kmd_mutex_lock(
+			&ctx->ctx_resource_table.resource_table_lock);
+	}
 }
 
 void pva_kmd_resource_table_unlock(struct pva_kmd_device *pva,
@@ -543,5 +611,8 @@ void pva_kmd_resource_table_unlock(struct pva_kmd_device *pva,
 {
 	struct pva_kmd_context *ctx = pva_kmd_get_context(pva, res_table_id);
 
-	pva_kmd_mutex_unlock(&ctx->ctx_resource_table.resource_table_lock);
+	if (ctx != NULL) {
+		pva_kmd_mutex_unlock(
+			&ctx->ctx_resource_table.resource_table_lock);
+	}
 }

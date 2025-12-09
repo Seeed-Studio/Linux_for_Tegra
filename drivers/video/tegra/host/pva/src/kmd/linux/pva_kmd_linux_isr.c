@@ -9,11 +9,11 @@
 static struct pva_kmd_isr_data *get_isr(struct pva_kmd_device *pva,
 					enum pva_kmd_intr_line intr_line)
 {
-	struct pva_kmd_linux_device_data *plat_data =
-		pva_kmd_linux_device_get_data(pva);
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
 	struct pva_kmd_isr_data *isr_data;
+
 	ASSERT(intr_line < PVA_KMD_INTR_LINE_COUNT);
-	isr_data = &plat_data->isr[intr_line];
+	isr_data = &pdata->isr[intr_line];
 	if (!isr_data->binded) {
 		return NULL;
 	}
@@ -35,15 +35,13 @@ enum pva_error pva_kmd_bind_intr_handler(struct pva_kmd_device *pva,
 					 void *data)
 {
 	int err = 0;
-	struct pva_kmd_linux_device_data *plat_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct pva_kmd_isr_data *isr_data = &plat_data->isr[intr_line];
-	struct nvpva_device_data *props = plat_data->pva_device_properties;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	struct pva_kmd_isr_data *isr_data = &pdata->isr[intr_line];
 	enum pva_error pva_err = PVA_SUCCESS;
 	int irq;
 
 	ASSERT(isr_data->binded == false);
-	irq = platform_get_irq(props->pdev, intr_line);
+	irq = platform_get_irq(pdata->pdev, intr_line);
 	if (irq < 0) {
 		pva_kmd_log_err("Failed to get irq number");
 		pva_err = kernel_err2pva_err(irq);

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_t26x.h"
 #include "pva_kmd_constants.h"
+#include "pva_kmd_pfsd.h"
 
 struct vmem_region vmem_regions_tab_t26x[PVA_VMEM_REGION_COUNT_T26X] = {
 	{ .start = T26x_VMEM0_START, .end = T26x_VMEM0_END },
@@ -17,7 +18,7 @@ void pva_kmd_device_init_t26x(struct pva_kmd_device *pva)
 
 	pva->hw_consts.hw_gen = PVA_HW_GEN3;
 	pva->hw_consts.n_smmu_contexts = PVA_NUM_SMMU_CONTEXTS_T26X;
-	pva->r5_image_smmu_context_id = PVA_NUM_SMMU_CONTEXTS_T26X - 1;
+	pva->r5_image_smmu_context_id = PVA_NUM_SMMU_CONTEXTS_T26X - 1U;
 	pva->hw_consts.n_dma_descriptors = PVA_NUM_DMA_DESC_T26X;
 	pva->hw_consts.n_user_dma_channels = PVA_DMA_NUM_CHANNELS_T26X - 1U;
 	pva->hw_consts.n_hwseq_words = PVA_NUM_HWSEQ_WORDS_T26X;
@@ -30,8 +31,10 @@ void pva_kmd_device_init_t26x(struct pva_kmd_device *pva)
 		PVA_KMD_PVA0_T26x_REG_BASE;
 	pva->reg_size[PVA_KMD_APERTURE_PVA_CLUSTER] =
 		PVA_KMD_PVA0_T26x_REG_SIZE;
-	pva->reg_phy_base[PVA_KMD_APERTURE_VPU_DEBUG] = TEGRA_PVA0_VPU_DBG_BASE;
-	pva->reg_size[PVA_KMD_APERTURE_VPU_DEBUG] = TEGRA_PVA0_VPU_DBG_SIZE;
+	pva->reg_phy_base[PVA_KMD_APERTURE_VPU_DEBUG] =
+		TEGRA_PVA0_VPU_DBG_BASE_T26X;
+	pva->reg_size[PVA_KMD_APERTURE_VPU_DEBUG] =
+		TEGRA_PVA0_VPU_DBG_SIZE_T26X;
 
 	pva->regspec.sec_lic_intr_enable = 0x28064;
 	pva->regspec.sec_lic_intr_status = 0x2806C;
@@ -75,4 +78,11 @@ void pva_kmd_device_init_t26x(struct pva_kmd_device *pva)
 	}
 	pva->bl_sector_pack_format = PVA_BL_TEGRA_RAW;
 	pva->tsc_to_ns_multiplier = PVA_NS_PER_TSC_TICK_T26X;
+
+	pva->pfsd_info.vpu_elf_data = pva_pfsd_vpu_elf_t26x;
+	pva->pfsd_info.vpu_elf_size = PVA_ALIGN8(PVA_PFSD_VPU_ELF_SIZE_T26X);
+	pva->pfsd_info.ppe_elf_data = pva_pfsd_ppe_elf_t26x;
+	pva->pfsd_info.ppe_elf_size = PVA_ALIGN8(PVA_PFSD_PPE_ELF_SIZE_T26X);
+	pva->pfsd_info.pfsd_dma_cfg = pfsd_dma_cfg_t26x;
+	pva->pfsd_info.register_cmd_buffer = &pva_kmd_pfsd_t26x_register_cmdbuf;
 }

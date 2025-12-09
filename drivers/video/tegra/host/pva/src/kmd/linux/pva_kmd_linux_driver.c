@@ -56,8 +56,10 @@ static bool pva_test_mode; //false by default
 module_param(load_from_gsc, bool, 0);
 MODULE_PARM_DESC(load_from_gsc, "Load V3 FW from GSC");
 
+#if SYSTEM_TESTS_ENABLED == 1
 module_param(pva_test_mode, bool, 0);
 MODULE_PARM_DESC(pva_test_mode, "Enable test mode");
+#endif
 
 struct nvpva_device_data t23x_pva0_props = {
 	.version = PVA_CHIP_T23X,
@@ -148,7 +150,8 @@ static ssize_t clk_cap_store(struct kobject *kobj, struct kobj_attribute *attr,
 	ret = kstrtoul(buf, 0, &freq_cap);
 	if (ret)
 		return -EINVAL;
-	/* Remove previous freq cap to get correct rounted rate for new cap */
+
+	/* Remove previous freq cap to get correct rounded rate for new cap */
 	ret = clk_set_max_rate(clk, UINT_MAX);
 	if (ret < 0)
 		return ret;
@@ -157,13 +160,14 @@ static ssize_t clk_cap_store(struct kobject *kobj, struct kobj_attribute *attr,
 	if (freq_cap_signed < 0)
 		return -EINVAL;
 	freq_cap = (unsigned long)freq_cap_signed;
+
 	/* Apply new freq cap */
 	ret = clk_set_max_rate(clk, freq_cap);
 	if (ret < 0)
 		return ret;
 
 	/* Update the clock rate */
-	clk_set_rate(clks->clk, freq_cap);
+	ret = clk_set_rate(clks->clk, freq_cap);
 	if (ret < 0)
 		return ret;
 
@@ -194,8 +198,8 @@ static enum pva_error pva_kmd_get_co_info(struct platform_device *pdev)
 	const char *status = NULL;
 	uint32_t reg[4] = { 0 };
 	enum pva_error err = PVA_SUCCESS;
-	struct nvpva_device_data *pva_props = platform_get_drvdata(pdev);
-	struct pva_kmd_device *pva = pva_props->private_data;
+	struct nvpva_device_data *pdata = platform_get_drvdata(pdev);
+	struct pva_kmd_device *pva = pdata->pva_kmd_dev;
 
 	np = of_find_compatible_node(NULL, NULL, "nvidia,pva-carveout");
 	if (np == NULL) {
@@ -245,8 +249,9 @@ err_out:
 
 static void pva_kmd_free_co_mem(struct platform_device *pdev)
 {
-	struct nvpva_device_data *pva_props = platform_get_drvdata(pdev);
-	struct pva_kmd_device *pva = pva_props->private_data;
+	struct nvpva_device_data *pdata = platform_get_drvdata(pdev);
+	struct pva_kmd_device *pva = pdata->pva_kmd_dev;
+
 	if (iommu_get_domain_for_dev(&pdev->dev)) {
 		dma_unmap_resource(&pdev->dev, pva->fw_carveout.base_va,
 				   pva->fw_carveout.size, DMA_BIDIRECTIONAL,
@@ -256,6 +261,7 @@ static void pva_kmd_free_co_mem(struct platform_device *pdev)
 
 static bool pva_kmd_in_test_mode(struct device *dev, bool param_test_mode)
 {
+#if SYSTEM_TESTS_ENABLED == 1
 	const char *dt_test_mode = NULL;
 
 	if (!tegra_platform_is_silicon())
@@ -271,6 +277,9 @@ static bool pva_kmd_in_test_mode(struct device *dev, bool param_test_mode)
 	}
 
 	return true;
+#else
+	return false;
+#endif
 }
 
 static struct kobj_type nvpva_kobj_ktype = {
@@ -308,31 +317,38 @@ static bool pva_kmd_linux_read_vpu_auth(const struct device *dev)
 	return auth_enabled;
 }
 
+/**
+ * @brief Optimized PVA device probe function with unified device management
+ *
+ * @param pdev Platform device being probed
+ * @return 0 on success, negative error code on failure
+ */
 static int pva_probe(struct platform_device *pdev)
 {
-	int err = 0U;
+	int err = 0;
 	struct device *dev = &pdev->dev;
-	struct pva_kmd_linux_device_data *pva_device_data;
-	struct nvpva_device_data *pva_props;
+	struct nvpva_device_data *pdata;
 	const struct of_device_id *device_id;
+	const struct nvpva_device_data *device_props_template;
 	struct pva_kmd_device *pva_device;
 	struct kobj_attribute *attr = NULL;
 	int j = 0;
 	struct clk_bulk_data *clks;
 	struct clk *c;
-
 	bool pva_enter_test_mode = false;
 	bool app_authenticate;
 
+	/* Match device tree entry */
 	device_id = of_match_device(tegra_pva_of_match, dev);
 	if (!device_id) {
 		dev_err(dev, "no match for pva dev\n");
 		return -ENODATA;
 	}
 
-	pva_props = (struct nvpva_device_data *)device_id->data;
-	WARN_ON(!pva_props);
-	if (!pva_props) {
+	device_props_template =
+		(const struct nvpva_device_data *)device_id->data;
+	WARN_ON(!device_props_template);
+	if (!device_props_template) {
 		dev_info(dev, "no platform data\n");
 		return -ENODATA;
 	}
@@ -343,155 +359,192 @@ static int pva_probe(struct platform_device *pdev)
 	of_platform_default_populate(dev->of_node, NULL, dev);
 
 	/* Before probing PVA device, all of PVA's logical context devices
-	 * must have been probed
-	 */
-	if (!pva_kmd_linux_smmu_contexts_initialized(pva_props->version)) {
+	 * must have been probed */
+	if (!pva_kmd_linux_smmu_contexts_initialized(
+		    device_props_template->version)) {
 		dev_warn(dev,
 			 "nvpva cntxt was not initialized, deferring probe.");
 		return -EPROBE_DEFER;
 	}
 
-	pva_props->pdev = pdev;
-	mutex_init(&pva_props->lock);
-	pva_enter_test_mode = pva_kmd_in_test_mode(dev, pva_test_mode);
-	pva_device = pva_kmd_device_create(
-		pva_props->version, 0, app_authenticate, pva_enter_test_mode);
-
-	pva_device->is_hv_mode = is_tegra_hypervisor_mode();
-	pva_device->is_silicon = tegra_platform_is_silicon();
-
-	if (!pva_device->is_silicon) {
-		pva_device->load_from_gsc = false;
-	} else {
-		pva_device->load_from_gsc = load_from_gsc;
+	/* Allocate unified device data structure */
+	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata) {
+		dev_err(dev, "Failed to allocate device data\n");
+		return -ENOMEM;
 	}
 
+	/* Initialize device data from template */
+	pdata->pdev = pdev;
+	pdata->version = device_props_template->version;
+	pdata->class = device_props_template->class;
+	pdata->ctrl_ops = device_props_template->ctrl_ops;
+	pdata->autosuspend_delay = device_props_template->autosuspend_delay;
+	pdata->firmware_name = device_props_template->firmware_name;
+	mutex_init(&pdata->lock);
+
+	/* Set as platform driver data early for use by helper functions */
+	platform_set_drvdata(pdev, pdata);
+
+	/* Create common KMD device, passing platform data for early linking */
+	pva_enter_test_mode = pva_kmd_in_test_mode(dev, pva_test_mode);
+	pva_device = pva_kmd_device_create(pdata->version, 0, app_authenticate,
+					   pva_enter_test_mode, pdata);
+	if (!pva_device) {
+		dev_err(dev, "Failed to create PVA KMD device\n");
+		err = -ENOMEM;
+		goto err_create_device;
+	}
+
+	/* Store back-reference to common device */
+	pdata->pva_kmd_dev = pva_device;
+
+	/* Configure device properties */
+	pva_device->is_hv_mode = is_tegra_hypervisor_mode();
+	pva_device->is_silicon = tegra_platform_is_silicon();
+	pva_device->load_from_gsc =
+		pva_device->is_silicon ? load_from_gsc : false;
 	pva_device->stream_ids[pva_device->r5_image_smmu_context_id] =
 		pva_get_gsc_priv_hwid(pdev);
 
-	pva_props->private_data = pva_device;
-	platform_set_drvdata(pdev, pva_props);
-
-	/*
-	 * pva_kmd_device_create allocates space for the platform data
-	 * of this device. Update its property field to point to the platform
-	 * data read using of_* APIs
-	 */
-	pva_device_data = pva_device->plat_data;
-	pva_device_data->pva_device_properties = pva_props;
-
-	/* Map MMIO range to kernel space */
+	/* Map MMIO ranges to kernel space */
 	err = nvpva_device_get_resources(pdev);
 	if (err < 0) {
 		dev_err(dev, "nvpva_device_get_resources failed\n");
 		goto err_get_resources;
 	}
 
-	/* Get clocks */
+	/* Initialize clocks and power management */
 	err = nvpva_module_init(pdev);
 	if (err < 0) {
 		dev_err(dev, "nvpva_module_init failed\n");
 		goto err_get_car;
 	}
 
-	/*
-	 * Add this to nvhost device list, initialize scaling,
-	 * setup memory management for the device, create dev nodes
-	 */
+	/* Initialize character device nodes */
 	err = nvpva_device_init(pdev);
 	if (err < 0) {
-		dev_err(dev, "nvpva_client_device_init failed\n");
+		dev_err(dev, "nvpva_device_init failed\n");
 		goto err_cdev_init;
 	}
 
+	/* Initialize host1x syncpoint integration */
 	err = pva_kmd_linux_host1x_init(pva_device);
 	if (err < 0) {
 		dev_err(dev, "pva_kmd_linux_host1x_init failed\n");
-		goto err_cdev_init;
+		goto err_host1x_init;
 	}
 
+	/* Create debugfs nodes */
 	err = pva_kmd_debugfs_create_nodes(pva_device);
 	if (err != PVA_SUCCESS) {
 		dev_err(dev, "debugfs creation failed\n");
-		goto err_cdev_init;
+		goto err_debugfs;
 	}
 
+	/* Register with HWPM (Hardware Performance Monitor) */
 	err = pva_kmd_linux_register_hwpm(pva_device);
 	if (err != PVA_SUCCESS) {
 		dev_err(dev, "pva_kmd_linux_register_hwpm failed\n");
-		goto err_cdev_init;
+		goto err_hwpm;
 	}
 
+	/* Get carveout info if loading from GSC */
 	if (!pva_device->is_hv_mode && pva_device->load_from_gsc) {
 		err = pva_kmd_get_co_info(pdev);
 		if (err != PVA_SUCCESS) {
 			dev_err(dev, "Failed to get CO info\n");
-			goto err_cdev_init;
+			goto err_co_info;
 		}
 	}
 
-	if (pva_props->num_clks > 0) {
-		err = kobject_init_and_add(&pva_props->clk_cap_kobj,
+	/* Create clock cap sysfs entries */
+	if (pdata->num_clks > 0) {
+		err = kobject_init_and_add(&pdata->clk_cap_kobj,
 					   &nvpva_kobj_ktype, &pdev->dev.kobj,
 					   "%s", "clk_cap");
 		if (err) {
 			dev_err(dev, "Could not add dir 'clk_cap'\n");
-			goto err_cdev_init;
+			goto err_sysfs_init;
 		}
 
-		pva_props->clk_cap_attrs = devm_kcalloc(
-			dev, pva_props->num_clks, sizeof(*attr), GFP_KERNEL);
-		if (!pva_props->clk_cap_attrs)
+		pdata->clk_cap_attrs = devm_kcalloc(dev, pdata->num_clks,
+						    sizeof(*attr), GFP_KERNEL);
+		if (!pdata->clk_cap_attrs) {
+			err = -ENOMEM;
 			goto err_cleanup_sysfs;
+		}
 
-		for (j = 0; j < pva_props->num_clks; ++j) {
-			clks = &pva_props->clks[j];
+		for (j = 0; j < pdata->num_clks; ++j) {
+			clks = &pdata->clks[j];
 			c = clks->clk;
 			if (!c)
 				continue;
 
-			attr = &pva_props->clk_cap_attrs[j];
+			attr = &pdata->clk_cap_attrs[j];
 			attr->attr.name = __clk_get_name(c);
-			/* octal permission is preferred nowadays */
 			attr->attr.mode = 0644;
 			attr->show = clk_cap_show;
 			attr->store = clk_cap_store;
 			sysfs_attr_init(&attr->attr);
-			if (sysfs_create_file(&pva_props->clk_cap_kobj,
-					      &attr->attr)) {
+
+			err = sysfs_create_file(&pdata->clk_cap_kobj,
+						&attr->attr);
+			if (err) {
 				dev_err(dev,
 					"Could not create sysfs attribute %s\n",
 					__clk_get_name(c));
-				err = -EIO;
 				goto err_cleanup_sysfs;
 			}
 		}
 	}
-	/* return 0 as we would have jumped over this if an error was seen */
+
+	dev_info(dev, "PVA probe completed successfully\n");
 	return 0;
 
+	/* Error handling with proper cleanup order */
 err_cleanup_sysfs:
-	/* kobj of nvpva_kobj_ktype cleans up sysfs entries automatically */
-	kobject_put(&pva_props->clk_cap_kobj);
-err_cdev_init:
+	kobject_put(&pdata->clk_cap_kobj);
+err_sysfs_init:
+	if (!pva_device->is_hv_mode && pva_device->load_from_gsc)
+		pva_kmd_free_co_mem(pdev);
+err_co_info:
+	pva_kmd_linux_unregister_hwpm(pva_device);
+err_hwpm:
+	pva_kmd_debugfs_destroy_nodes(pva_device);
+err_debugfs:
+	pva_kmd_linux_host1x_deinit(pva_device);
+err_host1x_init:
 	nvpva_device_release(pdev);
-err_get_car:
+err_cdev_init:
 	nvpva_module_deinit(pdev);
+err_get_car:
 err_get_resources:
 	pva_kmd_device_destroy(pva_device);
-
+err_create_device:
+	platform_set_drvdata(pdev, NULL);
 	return err;
 }
 
+/**
+ * @brief Remove PVA device with proper cleanup
+ *
+ * @details Performs orderly cleanup of all resources in reverse order of
+ * initialization using the unified device structure
+ *
+ * @param pdev Platform device being removed
+ * @return 0 on success
+ */
 static int __exit pva_remove(struct platform_device *pdev)
 {
-	struct nvpva_device_data *pva_props = platform_get_drvdata(pdev);
-	struct pva_kmd_device *pva_device = pva_props->private_data;
+	struct nvpva_device_data *pdata = platform_get_drvdata(pdev);
+	struct pva_kmd_device *pva_device = pdata->pva_kmd_dev;
 	struct kobj_attribute *attr = NULL;
 	int i;
 
 	/* Make sure PVA is powered off here by disabling auto suspend */
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
+
 	/* At this point, PVA should be suspended in L4T. However, for AV+L,
 	 * PVA will still be powered on since the system took an additional
 	 * reference count. We need to temporary drop it to suspend and then
@@ -501,25 +554,28 @@ static int __exit pva_remove(struct platform_device *pdev)
 		pm_runtime_get_noresume(&pdev->dev);
 	}
 
-	if (pva_props->clk_cap_attrs) {
-		for (i = 0; i < pva_props->num_clks; i++) {
-			attr = &pva_props->clk_cap_attrs[i];
-			sysfs_remove_file(&pva_props->clk_cap_kobj,
-					  &attr->attr);
+	/* Clean up clock cap sysfs entries */
+	if (pdata->clk_cap_attrs) {
+		for (i = 0; i < pdata->num_clks; i++) {
+			attr = &pdata->clk_cap_attrs[i];
+			sysfs_remove_file(&pdata->clk_cap_kobj, &attr->attr);
 		}
-
-		kobject_put(&pva_props->clk_cap_kobj);
+		kobject_put(&pdata->clk_cap_kobj);
 	}
 
-	if (!pva_device->is_hv_mode && pva_device->load_from_gsc) {
+	/* Free carveout memory if applicable */
+	if (!pva_device->is_hv_mode && pva_device->load_from_gsc)
 		pva_kmd_free_co_mem(pdev);
-	}
 
-	nvpva_device_release(pdev);
-	pva_kmd_debugfs_destroy_nodes(pva_device);
+	/* Cleanup in reverse order of initialization */
 	pva_kmd_linux_unregister_hwpm(pva_device);
+	pva_kmd_debugfs_destroy_nodes(pva_device);
+	pva_kmd_linux_host1x_deinit(pva_device);
+	nvpva_device_release(pdev);
 	nvpva_module_deinit(pdev);
 	pva_kmd_device_destroy(pva_device);
+
+	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
@@ -527,22 +583,27 @@ static int __exit pva_remove(struct platform_device *pdev)
 static int runtime_resume(struct device *dev)
 {
 	int err;
-	struct nvpva_device_data *props = dev_get_drvdata(dev);
-	struct pva_kmd_device *pva = props->private_data;
+	struct nvpva_device_data *pdata = dev_get_drvdata(dev);
+	struct pva_kmd_device *pva = pdata->pva_kmd_dev;
 	enum pva_error pva_err = PVA_SUCCESS;
 
 	dev_info(dev, "Start runtime resume");
 
-	err = clk_bulk_prepare_enable(props->num_clks, props->clks);
+	err = clk_bulk_prepare_enable(pdata->num_clks, pdata->clks);
 	if (err < 0) {
-		dev_err(dev, "Runtime resume failed to enabled clocks: %d\n",
+		dev_err(dev, "Runtime resume failed to enable clocks: %d\n",
 			err);
 		goto err_out;
 	}
 
-	reset_control_acquire(props->reset_control);
-	reset_control_reset(props->reset_control);
-	reset_control_release(props->reset_control);
+	err = reset_control_acquire(pdata->reset_control);
+	if (err < 0) {
+		dev_err(dev, "Runtime resume failed to acquire reset: %d\n",
+			err);
+		goto disable_clocks;
+	}
+	reset_control_reset(pdata->reset_control);
+	reset_control_release(pdata->reset_control);
 
 	pva_err = pva_kmd_init_fw(pva);
 	if (pva_err != PVA_SUCCESS) {
@@ -555,26 +616,26 @@ static int runtime_resume(struct device *dev)
 	return 0;
 
 disable_clocks:
-	clk_bulk_disable_unprepare(props->num_clks, props->clks);
+	clk_bulk_disable_unprepare(pdata->num_clks, pdata->clks);
 err_out:
 	return err;
 }
 
 static int runtime_suspend(struct device *dev)
 {
-	struct nvpva_device_data *props = dev_get_drvdata(dev);
-	struct pva_kmd_device *pva = props->private_data;
+	struct nvpva_device_data *pdata = dev_get_drvdata(dev);
+	struct pva_kmd_device *pva = pdata->pva_kmd_dev;
 	enum pva_error pva_err = PVA_SUCCESS;
 
 	dev_info(dev, "Start runtime suspend");
 
 	pva_err = pva_kmd_deinit_fw(pva);
 	if (pva_err != PVA_SUCCESS) {
-		//These might be errors if PVA is aborted. It's safe to ignore them.
+		/* These might be errors if PVA is aborted. It's safe to ignore them. */
 		dev_err(dev, "Failed to deinit firmware");
 	}
 
-	clk_bulk_disable_unprepare(props->num_clks, props->clks);
+	clk_bulk_disable_unprepare(pdata->num_clks, pdata->clks);
 
 	dev_info(dev, "Runtime suspend complete");
 	return 0;
@@ -595,8 +656,8 @@ static int __exit pva_remove_wrapper(struct platform_device *pdev)
 static int system_resume(struct device *dev)
 {
 	int err = 0;
-	struct nvpva_device_data *props = dev_get_drvdata(dev);
-	struct pva_kmd_device *pva_device = props->private_data;
+	struct nvpva_device_data *pdata = dev_get_drvdata(dev);
+	struct pva_kmd_device *pva_device = pdata->pva_kmd_dev;
 	enum pva_error pva_err = PVA_SUCCESS;
 
 	dev_info(dev, "System resume");
@@ -629,16 +690,16 @@ out:
 static int system_suspend(struct device *dev)
 {
 	int err = 0;
-	struct nvpva_device_data *props = dev_get_drvdata(dev);
-	struct pva_kmd_device *pva_device = props->private_data;
+	struct nvpva_device_data *pdata = dev_get_drvdata(dev);
+	struct pva_kmd_device *pva_device = pdata->pva_kmd_dev;
 	enum pva_error pva_err = PVA_SUCCESS;
 
 	dev_info(dev, "System suspend");
 
-	// Synchornize with runtime suspend/resume calls
+	/* Synchronize with runtime suspend/resume calls */
 	pm_runtime_barrier(dev);
 
-	// Now it's safe to check runtime status
+	/* Now it's safe to check runtime status */
 	if (!pm_runtime_active(dev)) {
 		dev_info(
 			dev,
@@ -665,17 +726,12 @@ out:
 
 enum pva_error pva_kmd_simulate_enter_sc7(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_linux_device_data *device_data;
-	struct nvpva_device_data *device_props;
-	struct device *dev;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	struct device *dev = &pdata->pdev->dev;
 	int ret;
 
-	device_data = pva_kmd_linux_device_get_data(pva);
-	device_props = device_data->pva_device_properties;
-	dev = &device_props->pdev->dev;
-
-	// The PM core increases the device usage count before calling prepare, so
-	// we need to emulate this behavior as well.
+	/* The PM core increases the device usage count before calling prepare, so
+	 * we need to emulate this behavior as well. */
 	pm_runtime_get_noresume(dev);
 
 	ret = system_suspend(dev);
@@ -689,11 +745,8 @@ enum pva_error pva_kmd_simulate_enter_sc7(struct pva_kmd_device *pva)
 
 enum pva_error pva_kmd_simulate_exit_sc7(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *device_props =
-		device_data->pva_device_properties;
-	struct device *dev = &device_props->pdev->dev;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	struct device *dev = &pdata->pdev->dev;
 	int ret;
 
 	dev_info(dev, "SC7 simulation: resume");
@@ -703,8 +756,9 @@ enum pva_error pva_kmd_simulate_exit_sc7(struct pva_kmd_device *pva)
 		pva_kmd_log_err("SC7 simulation: resume failed");
 		return PVA_INTERNAL;
 	}
-	// The PM core decreases the device usage count after calling complete, so
-	// we need to emulate this behavior as well.
+
+	/* The PM core decreases the device usage count after calling complete, so
+	 * we need to emulate this behavior as well. */
 	pm_runtime_put(dev);
 
 	return PVA_SUCCESS;
@@ -753,7 +807,7 @@ static int __init nvpva_init(void)
 	if (err < 0)
 		goto unreg_smmu_drv;
 
-	printk(KERN_INFO "nvpva_init completed: %d. GSC boot: %d", err,
+	printk(KERN_INFO "nvpva_init completed: %d. GSC boot: %d\n", err,
 	       load_from_gsc);
 
 	return err;

@@ -33,33 +33,14 @@ hyp_pva_config_regs(void)
 	return (args[0] == 0U);
 }
 
-struct nvpva_device_data *
-pva_kmd_linux_device_get_properties(struct platform_device *pdev)
-{
-	struct nvpva_device_data *props = platform_get_drvdata(pdev);
-	return props;
-}
-
-struct pva_kmd_linux_device_data *
-pva_kmd_linux_device_get_data(struct pva_kmd_device *device)
-{
-	return (struct pva_kmd_linux_device_data *)device->plat_data;
-}
-
-void pva_kmd_linux_device_set_data(struct pva_kmd_device *device,
-				   struct pva_kmd_linux_device_data *data)
-{
-	device->plat_data = (void *)data;
-}
+/* Accessor functions moved to inline functions in pva_kmd_linux_device.h */
 
 void pva_kmd_read_syncpt_val(struct pva_kmd_device *pva, uint32_t syncpt_id,
 			     uint32_t *syncpt_value)
 {
 	int err = 0;
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
-	err = nvpva_syncpt_read_ext_check(props->pdev, syncpt_id, syncpt_value);
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	err = nvpva_syncpt_read_ext_check(pdata->pdev, syncpt_id, syncpt_value);
 	if (err < 0) {
 		FAULT("Failed to read syncpoint value\n");
 	}
@@ -73,11 +54,8 @@ int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 	uint32_t stride, num_syncpts;
 	uint32_t syncpt_page_size;
 	dma_addr_t sp_start;
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
-	struct device *dev =
-		&device_data->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	struct device *dev = &pdata->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
 
 	if (iommu_get_domain_for_dev(dev) == NULL) {
 		dev_err(dev, "Cannot use syncpt without IOMMU");
@@ -85,15 +63,15 @@ int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 		goto err_out;
 	}
 
-	props->host1x = nvpva_device_to_host1x(props->pdev);
+	pdata->host1x = nvpva_device_to_host1x(pdata->pdev);
 
-	err = nvpva_syncpt_unit_interface_init(props->pdev);
+	err = nvpva_syncpt_unit_interface_init(pdata->pdev);
 	if (err < 0) {
 		dev_err(dev, "Failed syncpt unit interface init");
 		goto err_out;
 	}
 
-	err = host1x_syncpt_get_shim_info(props->host1x, &syncpt_phys_base,
+	err = host1x_syncpt_get_shim_info(pdata->host1x, &syncpt_phys_base,
 					  &stride, &num_syncpts);
 	if (err < 0) {
 		dev_err(dev, "Failed to get syncpt shim_info");
@@ -122,7 +100,7 @@ int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
 		uint32_t syncpt_id;
 
-		syncpt_id = nvpva_get_syncpt_client_managed(props->pdev,
+		syncpt_id = nvpva_get_syncpt_client_managed(pdata->pdev,
 							    "pva_syncpt");
 		if (syncpt_id == 0) {
 			dev_err(dev, "Failed to allocate RW syncpt");
@@ -141,7 +119,7 @@ int pva_kmd_linux_host1x_init(struct pva_kmd_device *pva)
 free_syncpts:
 	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
 		if (pva->rw_syncpts[i].syncpt_id != 0) {
-			nvpva_syncpt_put_ref_ext(props->pdev,
+			nvpva_syncpt_put_ref_ext(pdata->pdev,
 						 pva->rw_syncpts[i].syncpt_id);
 			pva->rw_syncpts[i].syncpt_id = 0;
 		}
@@ -157,18 +135,15 @@ void pva_kmd_linux_host1x_deinit(struct pva_kmd_device *pva)
 	phys_addr_t base;
 	size_t size;
 	uint32_t stride, num_syncpts;
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
-	struct device *dev =
-		&device_data->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	struct device *dev = &pdata->smmu_contexts[PVA_R5_SMMU_CONTEXT_ID]->dev;
 
 	if (iommu_get_domain_for_dev(dev) == NULL) {
 		dev_err(dev, "Cannot use syncpt without IOMMU");
 		return;
 	}
 
-	err = host1x_syncpt_get_shim_info(props->host1x, &base, &stride,
+	err = host1x_syncpt_get_shim_info(pdata->host1x, &base, &stride,
 					  &num_syncpts);
 	if (err < 0) {
 		dev_err(dev, "Failed to get syncpt shim_info when deiniting");
@@ -179,44 +154,35 @@ void pva_kmd_linux_host1x_deinit(struct pva_kmd_device *pva)
 	dma_unmap_resource(dev, pva->ro_syncpt_base_iova, size, DMA_TO_DEVICE,
 			   DMA_ATTR_SKIP_CPU_SYNC);
 
-	dma_unmap_sg_attrs(dev, device_data->syncpt_sg, PVA_NUM_RW_SYNCPTS,
-			   DMA_BIDIRECTIONAL, DMA_ATTR_SKIP_CPU_SYNC);
-
 	for (uint32_t i = 0; i < PVA_NUM_RW_SYNCPTS; i++) {
-		nvpva_syncpt_put_ref_ext(props->pdev,
+		nvpva_syncpt_put_ref_ext(pdata->pdev,
 					 pva->rw_syncpts[i].syncpt_id);
 		pva->rw_syncpts[i].syncpt_id = 0;
 		pva->rw_syncpts[i].syncpt_iova = 0;
 	}
 	pva->ro_syncpt_base_iova = 0;
 	pva->syncpt_page_size = 0;
-	nvpva_syncpt_unit_interface_deinit(props->pdev);
+	nvpva_syncpt_unit_interface_deinit(pdata->pdev);
 }
 
 void pva_kmd_device_plat_init(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_linux_device_data *plat_data =
-		pva_kmd_zalloc_nofail(sizeof(struct pva_kmd_linux_device_data));
-
-	pva_kmd_linux_device_set_data(pva, plat_data);
-
 	/* Get SMMU context devices that were probed earlier and their SIDs */
 	pva_kmd_linux_device_smmu_contexts_init(pva);
 }
 
 void pva_kmd_device_plat_deinit(struct pva_kmd_device *pva)
 {
-	pva_kmd_linux_host1x_deinit(pva);
-	pva_kmd_free(pva_kmd_linux_device_get_data(pva));
+	/* Platform data (nvpva_device_data) is owned by platform device
+	 * and will be freed when platform device is destroyed */
+	/* Note: SMMU contexts initialized in plat_init need no explicit cleanup */
 }
 
 enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 {
 	int err = 0;
 	enum pva_error pva_err = PVA_SUCCESS;
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
 
 	pva_kmd_mutex_lock(&pva->powercycle_lock);
 
@@ -230,9 +196,9 @@ enum pva_error pva_kmd_device_busy(struct pva_kmd_device *pva)
 		goto unlock;
 	}
 
-	err = pm_runtime_get_sync(&props->pdev->dev);
+	err = pm_runtime_get_sync(&pdata->pdev->dev);
 	if (err < 0) {
-		pm_runtime_put_noidle(&props->pdev->dev);
+		pm_runtime_put_noidle(&pdata->pdev->dev);
 		pva_kmd_log_err_u64(
 			"pva_kmd_device_busy pm_runtime_get_sync failed",
 			(uint64_t)(-err));
@@ -250,9 +216,7 @@ unlock:
 
 void pva_kmd_device_idle(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
 	int err = 0;
 
 	pva_kmd_mutex_lock(&pva->powercycle_lock);
@@ -265,48 +229,49 @@ void pva_kmd_device_idle(struct pva_kmd_device *pva)
 		 * Since PVA needs recovery (recovery=true), perform a forced
 		 * power cycle to recover it.
 		 */
-		err = pm_runtime_force_suspend(&props->pdev->dev);
+		err = pm_runtime_force_suspend(&pdata->pdev->dev);
 		if (err == 0) {
-			err = pm_runtime_force_resume(&props->pdev->dev);
+			err = pm_runtime_force_resume(&pdata->pdev->dev);
 		}
 		if (err < 0) {
 			pva_kmd_log_err("Failed to recover PVA");
 		}
 	}
 
-	pm_runtime_mark_last_busy(&props->pdev->dev);
-	pm_runtime_put(&props->pdev->dev);
+	pm_runtime_mark_last_busy(&pdata->pdev->dev);
+	pm_runtime_put(&pdata->pdev->dev);
 
 	pva_kmd_mutex_unlock(&pva->powercycle_lock);
 }
 
 void pva_kmd_set_reset_line(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
+	int err;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
 
 	/* FW Reset recovery operation is asynchronous.
 	 * we need to free memories after this call.
 	 * Therefore, we assert the reset line to stop PVA from any
 	 * further activity. */
-	reset_control_acquire(props->reset_control);
-	reset_control_assert(props->reset_control);
-	reset_control_release(props->reset_control);
+	err = reset_control_acquire(pdata->reset_control);
+	if (err < 0) {
+		dev_err(&pdata->pdev->dev,
+			"Failed to acquire reset control: %d\n", err);
+		return;
+	}
+	reset_control_assert(pdata->reset_control);
+	reset_control_release(pdata->reset_control);
 }
 
 enum pva_error pva_kmd_read_fw_bin(struct pva_kmd_device *pva)
 {
 	enum pva_error err = PVA_SUCCESS;
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *device_props =
-		device_data->pva_device_properties;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
 	struct pva_kmd_device_memory *fw_bin_mem;
 
 	const struct firmware *fw_ucode;
-	int kerr = request_firmware(&fw_ucode, device_props->firmware_name,
-				    &device_props->pdev->dev);
+	int kerr = request_firmware(&fw_ucode, pdata->firmware_name,
+				    &pdata->pdev->dev);
 	if (kerr < 0) {
 		err = kernel_err2pva_err(kerr);
 		goto out;
@@ -333,12 +298,8 @@ void pva_kmd_aperture_write(struct pva_kmd_device *pva,
 			    enum pva_kmd_reg_aperture aperture, uint32_t reg,
 			    uint32_t val)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *device_props =
-		device_data->pva_device_properties;
-
-	void __iomem *addr = device_props->aperture[aperture] + reg;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	void __iomem *addr = pdata->aperture[aperture] + reg;
 
 	writel(val, addr);
 }
@@ -346,12 +307,8 @@ void pva_kmd_aperture_write(struct pva_kmd_device *pva,
 uint32_t pva_kmd_aperture_read(struct pva_kmd_device *pva,
 			       enum pva_kmd_reg_aperture aperture, uint32_t reg)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *device_props =
-		device_data->pva_device_properties;
-
-	void __iomem *addr = device_props->aperture[aperture] + reg;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	void __iomem *addr = pdata->aperture[aperture] + reg;
 
 	return readl(addr);
 }
@@ -423,11 +380,8 @@ void pva_kmd_config_sid_regs(struct pva_kmd_device *pva)
 
 bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *device_props =
-		device_data->pva_device_properties;
-	struct device *dev = &device_props->pdev->dev;
+	struct nvpva_device_data *pdata = pva_kmd_linux_device_get_data(pva);
+	struct device *dev = &pdata->pdev->dev;
 
 	if (pm_runtime_active(dev)) {
 		return true;

@@ -8,8 +8,8 @@
 #include "pva_bit.h"
 
 #define PVA_ROUND_UP(val, align) ((((val) + ((align)-1U)) / (align)) * (align))
-#define PVA_ALIGN4(n) PVA_ROUND_UP(n, 4)
-#define PVA_ALIGN8(n) PVA_ROUND_UP(n, 8)
+#define PVA_ALIGN4(n) PVA_ROUND_UP(n, 4U)
+#define PVA_ALIGN8(n) PVA_ROUND_UP(n, 8U)
 
 static inline uint64_t assemble_addr(uint8_t hi, uint32_t lo)
 {
@@ -28,13 +28,37 @@ static inline uint8_t iova_hi(uint64_t iova)
 
 static inline void *pva_offset_pointer(void *ptr, uintptr_t offset)
 {
-	return (void *)((uintptr_t)ptr + offset);
+	return (void *)((uint8_t *)ptr + offset);
 }
 
 static inline void const *pva_offset_const_ptr(void const *ptr,
 					       uintptr_t offset)
 {
-	return (void const *)((uintptr_t)ptr + offset);
+	return (void const *)((uint8_t const *)ptr + offset);
+}
+
+/* Convert pointer to uintptr_t (MISRA C-2023 Rule 11.6 compliant) */
+static inline uintptr_t pva_ptr_to_uintptr(void const *ptr)
+{
+	union {
+		void const *ptr;
+		uintptr_t addr;
+	} converter;
+
+	converter.ptr = ptr;
+	return converter.addr;
+}
+
+/* Convert uintptr_t to pointer (MISRA C-2023 Rule 11.6 compliant) */
+static inline void *pva_uintptr_to_ptr(uintptr_t addr)
+{
+	union {
+		void *ptr;
+		uintptr_t addr;
+	} converter;
+
+	converter.addr = addr;
+	return converter.ptr;
 }
 
 static inline uint64_t pack64(uint32_t hi, uint32_t lo)
@@ -46,12 +70,12 @@ static inline uint64_t pack64(uint32_t hi, uint32_t lo)
 
 static inline bool pva_is_64B_aligned(uint64_t addr)
 {
-	return (addr & 0x3f) == 0;
+	return (addr & 0x3fULL) == 0U;
 }
 
 static inline bool pva_is_512B_aligned(uint64_t addr)
 {
-	return (addr & 0x1ff) == 0;
+	return (addr & 0x1ffULL) == 0U;
 }
 
 static inline bool pva_is_reserved_desc(uint8_t desc_id)
@@ -68,7 +92,7 @@ static inline bool pva_is_reserved_desc(uint8_t desc_id)
  * - Linux kernel (via printk)
  * - User space with c runtime (via printf)
  */
-#if PVA_IS_DEBUG == 1
+#if PVA_ENABLE_DEBUG_PRINTS == 1
 	/* For debug build, we allow printf */
 	#if defined(__KERNEL__)
 		/* Linux kernel */

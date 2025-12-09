@@ -9,14 +9,14 @@
 #include <linux/fdtable.h>
 
 static struct device *get_context_device(struct pva_kmd_device *pva_device,
-					 uint32_t smmu_ctx_idx)
+					 uint8_t smmu_ctx_idx)
 {
-	struct pva_kmd_linux_device_data *device_data =
+	struct nvpva_device_data *pdata =
 		pva_kmd_linux_device_get_data(pva_device);
 
 	ASSERT(smmu_ctx_idx < pva_device->hw_consts.n_smmu_contexts);
 
-	return &device_data->smmu_contexts[smmu_ctx_idx]->dev;
+	return &pdata->smmu_contexts[smmu_ctx_idx]->dev;
 }
 
 struct pva_kmd_device_memory_impl {
@@ -31,7 +31,7 @@ struct pva_kmd_device_memory_impl {
 struct pva_kmd_device_memory *
 pva_kmd_device_memory_alloc_map(uint64_t size, struct pva_kmd_device *pva,
 				uint32_t iova_access_flags,
-				uint32_t smmu_ctx_idx)
+				uint8_t smmu_ctx_idx)
 {
 	struct device *dev = get_context_device(pva, smmu_ctx_idx);
 	dma_addr_t pa = 0U;
@@ -170,7 +170,7 @@ void pva_kmd_device_memory_cpu_unmap(struct pva_kmd_device_memory *memory)
 enum pva_error
 pva_kmd_device_memory_iova_map(struct pva_kmd_device_memory *memory,
 			       struct pva_kmd_device *pva,
-			       uint32_t access_flags, uint32_t smmu_ctx_idx)
+			       uint32_t access_flags, uint8_t smmu_ctx_idx)
 {
 	pva_math_error math_err = MATH_OP_SUCCESS;
 	struct pva_kmd_device_memory_impl *mem_impl = container_of(

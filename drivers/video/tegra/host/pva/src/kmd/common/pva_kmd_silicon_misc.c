@@ -23,7 +23,7 @@ uint32_t pva_kmd_get_ccq_space(struct pva_kmd_device *pva, uint8_t ccq_id)
 
 void pva_kmd_disable_all_interrupts_nosync(struct pva_kmd_device *pva)
 {
-	for (int i = 0; i < PVA_KMD_INTR_LINE_COUNT; i++) {
+	for (uint8_t i = 0; i < (uint8_t)PVA_KMD_INTR_LINE_COUNT; i++) {
 		pva_kmd_disable_intr_nosync(pva, (enum pva_kmd_intr_line)i);
 	}
 }

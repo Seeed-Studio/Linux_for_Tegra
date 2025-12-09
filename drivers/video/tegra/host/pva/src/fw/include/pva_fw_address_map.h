@@ -30,36 +30,36 @@
 /**
  * @brief R5 address of reset exception vector
  */
-#define EVP_RESET_VECTOR 0x60040C00
+#define PVA_EVP_RESET_VECTOR 0x60040C00
 /**
  * @brief R5 address of undefined instruction exception vector
  */
-#define EVP_UNDEFINED_INSTRUCTION_VECTOR (EVP_RESET_VECTOR + 0x400 * 1)
+#define PVA_EVP_UNDEFINED_INSTRUCTION_VECTOR (PVA_EVP_RESET_VECTOR + 0x400 * 1)
 /**
  * @brief R5 address of svc exception vector
  */
-#define EVP_SVC_VECTOR (EVP_RESET_VECTOR + 0x400 * 2)
+#define PVA_EVP_SVC_VECTOR (PVA_EVP_RESET_VECTOR + 0x400 * 2)
 /**
  * @brief R5 address of prefetch abort exception vector
  */
-#define EVP_PREFETCH_ABORT_VECTOR (EVP_RESET_VECTOR + 0x400 * 3)
+#define PVA_EVP_PREFETCH_ABORT_VECTOR (PVA_EVP_RESET_VECTOR + 0x400 * 3)
 /**
  * @brief R5 address of data abort exception vector
  */
-#define EVP_DATA_ABORT_VECTOR (EVP_RESET_VECTOR + 0x400 * 4)
+#define PVA_EVP_DATA_ABORT_VECTOR (PVA_EVP_RESET_VECTOR + 0x400 * 4)
 /**
  * @brief R5 address of reserved exception vector.
  * It points to a dummy handler.
  */
-#define EVP_RESERVED_VECTOR (EVP_RESET_VECTOR + 0x400 * 5)
+#define PVA_EVP_RESERVED_VECTOR (PVA_EVP_RESET_VECTOR + 0x400 * 5)
 /**
  * @brief R5 address of IRQ exception vector
  */
-#define EVP_IRQ_VECTOR (EVP_RESET_VECTOR + 0x400 * 6)
+#define PVA_EVP_IRQ_VECTOR (PVA_EVP_RESET_VECTOR + 0x400 * 6)
 /**
  * @brief R5 address of FIQ exception vector
  */
-#define EVP_FIQ_VECTOR (EVP_RESET_VECTOR + 0x400 * 7)
+#define PVA_EVP_FIQ_VECTOR (PVA_EVP_RESET_VECTOR + 0x400 * 7)
 /** @} */
 
 /**
@@ -129,23 +129,23 @@
 /**
  * @brief EVP SCR firewall to enable only CCPLEX read/write access.
  */
-#define PVA_EVP_SCR_VAL 0x19000202
+#define PVA_EVP_SCR_VAL 0x19000202U
 
 /**
  * @brief PRIV SCR firewall to enable only CCPLEX and R5 read/write access.
  */
-#define PVA_PRIV_SCR_VAL 0x1F008282
+#define PVA_PRIV_SCR_VAL 0x1F008282U
 
 /**
  * @brief CCQ SCR firewall to enable only CCPLEX write access and R5 read access.
  */
-#define PVA_CCQ_SCR_VAL 0x19000280
+#define PVA_CCQ_SCR_VAL 0x19000280U
 
 /**
  * @brief Status Ctl SCR firewall to enable only CCPLEX read access and R5 read/write access.
  */
-#define PVA_STATUS_CTL_SCR_VAL 0x1f008082
-#define PVA_STATUS_CTL_SCR_VAL_SIM 0x1f008282
+#define PVA_STATUS_CTL_SCR_VAL 0x1f008082U
+#define PVA_STATUS_CTL_SCR_VAL_SIM 0x1f008282U
 /** @} */
 
 /**

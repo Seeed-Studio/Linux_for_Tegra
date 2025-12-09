@@ -14,6 +14,7 @@
 #define PVA_CMD_PRIV_OPCODE_FLAG (1U << 7U)
 
 #define PVA_RESOURCE_ID_BASE 1U
+
 struct pva_resource_entry {
 	uint8_t access_flags : 2; // 1: RO, 2: WO, 3: RW
 	uint8_t reserved : 4;
@@ -42,9 +43,11 @@ struct pva_cmd_init_resource_table {
 	 * 1-7 are users'. */
 	uint8_t resource_table_id;
 	uint8_t resource_table_addr_hi;
-	uint8_t pad[2];
+	uint8_t ctx_status_addr_hi;
+	uint8_t pad[1];
 	uint32_t resource_table_addr_lo;
 	uint32_t max_n_entries;
+	uint32_t ctx_status_addr_lo;
 };
 
 struct pva_cmd_deinit_resource_table {
@@ -156,7 +159,13 @@ struct pva_cmd_get_version {
 	uint32_t buffer_iova_lo;
 };
 
-#define PVA_CMD_PRIV_OPCODE_COUNT 15U
+struct pva_cmd_set_pfsd_cmd_buffer_size {
+#define PVA_CMD_OPCODE_SET_PFSD_CMD_BUFFER_SIZE (15U | PVA_CMD_PRIV_OPCODE_FLAG)
+	struct pva_cmd_header header;
+	uint32_t cmd_buffer_size;
+};
+
+#define PVA_CMD_PRIV_OPCODE_COUNT 16U
 
 struct pva_fw_prefence {
 	uint8_t offset_hi;
@@ -172,7 +181,7 @@ struct pva_fw_postfence {
 /** Privileged user queue may need to trigger fence that exists in user's own
  * resource table. Set this flags to tell FW to use user's resource table when
  * writing this post fence. This also applies to timestamp resource ID. */
-#define PVA_FW_POSTFENCE_FLAGS_USER_FENCE (1 << 0)
+#define PVA_FW_POSTFENCE_FLAGS_USER_FENCE (1U << 0U)
 	uint8_t flags;
 	uint8_t pad0;
 	uint32_t offset_lo;
@@ -306,42 +315,42 @@ static inline uint32_t pva_fw_queue_space(uint32_t head, uint32_t tail,
  * msg[4] = STATUS6
  * msg[5] = STATUS7
  */
-#define PVA_FW_MSG_STATUS_BASE 3
-#define PVA_FW_MSG_STATUS_LAST 8
+#define PVA_FW_MSG_STATUS_BASE 3U
+#define PVA_FW_MSG_STATUS_LAST 8U
 
-#define PVA_FW_MSG_TYPE_MSB 30
-#define PVA_FW_MSG_TYPE_LSB 25
-#define PVA_FW_MSG_LEN_MSB 24
-#define PVA_FW_MSG_LEN_LSB 22
+#define PVA_FW_MSG_TYPE_MSB 30U
+#define PVA_FW_MSG_TYPE_LSB 25U
+#define PVA_FW_MSG_LEN_MSB 24U
+#define PVA_FW_MSG_LEN_LSB 22U
 /* The remaining bits (0 - 21) of msg[0] can be used for message specific
  * payload */
 
 /* Message types: R5 -> CCPLEX */
-#define PVA_FW_MSG_TYPE_ABORT 1
-#define PVA_FW_MSG_TYPE_BOOT_DONE 2
-#define PVA_FW_MSG_TYPE_FLUSH_PRINT 3
-#define PVA_FW_MSG_TYPE_RESOURCE_UNREGISTER 3
+#define PVA_FW_MSG_TYPE_ABORT 1U
+#define PVA_FW_MSG_TYPE_BOOT_DONE 2U
+#define PVA_FW_MSG_TYPE_FLUSH_PRINT 3U
+#define PVA_FW_MSG_TYPE_FAST_RESET_FAILURE 4U
 
 /* Message types: CCPLEX -> R5 */
-#define PVA_FW_MSG_TYPE_UPDATE_TAIL 32
+#define PVA_FW_MSG_TYPE_UPDATE_TAIL 32U
 
 /* Parameters for message ABORT
  * ABORT message contains a short string (up to 22 chars).
  * The first two charactors are in the message header (bit 15 - 0).
  */
-#define PVA_FW_MSG_ABORT_STR_MAX_LEN 22
+#define PVA_FW_MSG_ABORT_STR_MAX_LEN 22U
 
 /* Parameters for message BOOT_DONE */
-#define PVA_FW_MSG_R5_START_TIME_LO_IDX 1
-#define PVA_FW_MSG_R5_START_TIME_HI_IDX 2
-#define PVA_FW_MSG_R5_READY_TIME_LO_IDX 3
-#define PVA_FW_MSG_R5_READY_TIME_HI_IDX 4
+#define PVA_FW_MSG_R5_START_TIME_LO_IDX 1U
+#define PVA_FW_MSG_R5_START_TIME_HI_IDX 2U
+#define PVA_FW_MSG_R5_READY_TIME_LO_IDX 3U
+#define PVA_FW_MSG_R5_READY_TIME_HI_IDX 4U
 
-#define PVA_MAX_DEBUG_LOG_MSG_CHARACTERS 100
+#define PVA_MAX_DEBUG_LOG_MSG_CHARACTERS 100U
 /* Parameters for message FLUSH PRINT */
 struct pva_fw_print_buffer_header {
-#define PVA_FW_PRINT_BUFFER_OVERFLOWED (1 << 0)
-#define PVA_FW_PRINT_FAILURE (1 << 1)
+#define PVA_FW_PRINT_BUFFER_OVERFLOWED (1U << 0U)
+#define PVA_FW_PRINT_FAILURE (1U << 1U)
 	uint32_t flags;
 	uint32_t head;
 	uint32_t tail;
@@ -351,8 +360,8 @@ struct pva_fw_print_buffer_header {
 
 /* Parameters for message resource unregister */
 /* Table ID is stored in msg[0], bit: 0 - 7 */
-#define PVA_FW_MSG_RESOURCE_TABLE_ID_MSB 7
-#define PVA_FW_MSG_RESOURCE_TABLE_ID_LSB 0
+#define PVA_FW_MSG_RESOURCE_TABLE_ID_MSB 7U
+#define PVA_FW_MSG_RESOURCE_TABLE_ID_LSB 0U
 /* Followed by up to 5 resource IDs. The actual number of resource ID is
  * indicated by the message length. */
 
@@ -388,35 +397,45 @@ struct pva_fw_event_message {
 
 // Each event is one of the following types. This should fit within 3 bits
 enum pva_fw_events_type {
-	EVENT_TRY = 0U,
-	EVENT_START,
-	EVENT_YIELD,
-	EVENT_DONE,
-	EVENT_ERROR,
-	EVENT_TYPE_MAX = 7U
+	PVA_EVENT_CMD_ATTEMPTING = 0U,
+	PVA_EVENT_CMD_STARTED,
+	PVA_EVENT_CMD_YIELDED,
+	PVA_EVENT_CMD_COMPLETED,
+	PVA_EVENT_CMD_FAILED,
+	PVA_EVENT_TYPE_MAX = 7U
 };
 
 static inline const char *event_type_to_string(enum pva_fw_events_type status)
 {
+	const char *result = "";
+
 	switch (status) {
-	case EVENT_TRY:
-		return "TRY";
-	case EVENT_START:
-		return "START";
-	case EVENT_YIELD:
-		return "YIELD";
-	case EVENT_DONE:
-		return "DONE";
-	case EVENT_ERROR:
-		return "ERROR";
+	case PVA_EVENT_CMD_ATTEMPTING:
+		result = "TRY";
+		break;
+	case PVA_EVENT_CMD_STARTED:
+		result = "START";
+		break;
+	case PVA_EVENT_CMD_YIELDED:
+		result = "YIELD";
+		break;
+	case PVA_EVENT_CMD_COMPLETED:
+		result = "DONE";
+		break;
+	case PVA_EVENT_CMD_FAILED:
+		result = "ERROR";
+		break;
 	default:
-		return "";
+		result = "";
+		break;
 	}
+
+	return result;
 }
 
 enum pva_fw_timestamp_t {
-	TIMESTAMP_TYPE_TSE = 0,
-	TIMESTAMP_TYPE_CYCLE_COUNT = 1
+	TIMESTAMP_TYPE_TSE = 0U,
+	TIMESTAMP_TYPE_CYCLE_COUNT = 1U
 };
 /* End of PVA FW Event profiling definitions */
 
@@ -436,8 +455,8 @@ enum pva_fw_timestamp_t {
 //	 buffer size properties as KMD might use this for validation of buffer accesses.
 //	 If FW somehow corrupts 'size', KMD might end up accessing out of bounds.
 struct pva_fw_shared_buffer_header {
-#define PVA_KMD_FW_BUF_FLAG_OVERFLOW (1 << 0)
-#define PVA_KMD_FW_BUF_FLAG_ERROR (1 << 1)
+#define PVA_KMD_FW_BUF_FLAG_OVERFLOW (1U << 0U)
+#define PVA_KMD_FW_BUF_FLAG_ERROR (1U << 1U)
 	uint32_t flags;
 	uint32_t element_size;
 	uint32_t head;
@@ -445,13 +464,13 @@ struct pva_fw_shared_buffer_header {
 };
 
 struct pva_kmd_fw_buffer_msg_header {
-#define PVA_KMD_FW_BUF_MSG_TYPE_FW_EVENT 0
-#define PVA_KMD_FW_BUF_MSG_TYPE_CMD_BUF_TRACE 1
-#define PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE 2
-#define PVA_KMD_FW_BUF_MSG_TYPE_FENCE_TRACE 3
-#define PVA_KMD_FW_BUF_MSG_TYPE_ENGINE_ACQUIRE_TRACE 4
-#define PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG 5
-#define PVA_KMD_FW_BUF_MSG_TYPE_FW_TRACEPOINT 6
+#define PVA_KMD_FW_BUF_MSG_TYPE_FW_EVENT 0U
+#define PVA_KMD_FW_BUF_MSG_TYPE_CMD_BUF_TRACE 1U
+#define PVA_KMD_FW_BUF_MSG_TYPE_VPU_TRACE 2U
+#define PVA_KMD_FW_BUF_MSG_TYPE_FENCE_TRACE 3U
+#define PVA_KMD_FW_BUF_MSG_TYPE_ENGINE_ACQUIRE_TRACE 4U
+#define PVA_KMD_FW_BUF_MSG_TYPE_RES_UNREG 5U
+#define PVA_KMD_FW_BUF_MSG_TYPE_FW_TRACEPOINT 6U
 	uint32_t type : 8;
 	// Size of payload in bytes. Includes the size of the header.
 	uint32_t size : 24;
@@ -523,10 +542,10 @@ struct pva_kmd_fw_tegrastats {
 	uint64_t total_utilization[PVA_NUM_PVE];
 };
 
-#define PVA_MAX_CMDBUF_CHUNK_LEN 1024
+#define PVA_MAX_CMDBUF_CHUNK_LEN 1024U
 #define PVA_MAX_CMDBUF_CHUNK_SIZE (sizeof(uint32_t) * PVA_MAX_CMDBUF_CHUNK_LEN)
 
-#define PVA_TEST_MODE_MAX_CMDBUF_CHUNK_LEN 256
+#define PVA_TEST_MODE_MAX_CMDBUF_CHUNK_LEN 256U
 #define PVA_TEST_MODE_MAX_CMDBUF_CHUNK_SIZE                                    \
 	(sizeof(uint32_t) * PVA_TEST_MODE_MAX_CMDBUF_CHUNK_LEN)
 
@@ -563,60 +582,89 @@ struct pva_fw_tracepoint {
 
 static inline const char *pva_fw_tracepoint_type_to_string(uint32_t type)
 {
+	const char *result = "UNKNOWN";
+
 	switch (type) {
 	case PVA_FW_TP_LVL_NONE:
-		return "NONE";
+		result = "NONE";
+		break;
 	case PVA_FW_TP_LVL_CMD_BUF:
-		return "CMD_BUF";
+		result = "CMD_BUF";
+		break;
 	case PVA_FW_TP_LVL_VPU:
-		return "VPU";
+		result = "VPU";
+		break;
 	case PVA_FW_TP_LVL_DMA:
-		return "DMA";
+		result = "DMA";
+		break;
 	case PVA_FW_TP_LVL_L2SRAM:
-		return "L2SRAM";
+		result = "L2SRAM";
+		break;
 	case PVA_FW_TP_LVL_PPE:
-		return "PPE";
+		result = "PPE";
+		break;
 	default:
-		return "UNKNOWN";
+		result = "UNKNOWN";
+		break;
 	}
+
+	return result;
 }
 
 static inline const char *pva_fw_tracepoint_flags_to_string(uint32_t flags)
 {
+	const char *result = "UNKNOWN";
+
 	switch (flags) {
 	case PVA_FW_TP_FLAG_NONE:
-		return "NONE";
+		result = "NONE";
+		break;
 	case PVA_FW_TP_FLAG_START:
-		return "START";
+		result = "START";
+		break;
 	case PVA_FW_TP_FLAG_END:
-		return "END";
+		result = "END";
+		break;
 	case PVA_FW_TP_FLAG_ERROR:
-		return "ERROR";
+		result = "ERROR";
+		break;
 	default:
-		return "UNKNOWN";
+		result = "UNKNOWN";
+		break;
 	}
+
+	return result;
 }
 
 static inline const char *pva_fw_tracepoint_slot_id_to_string(uint32_t slot_id)
 {
+	const char *result = "UNKNOWN";
+
 	switch (slot_id) {
 	case 0:
-		return "PRIV_SLOT";
+		result = "PRIV_SLOT";
+		break;
 	case 1:
-		return "USER_SLOT_1";
+		result = "USER_SLOT_1";
+		break;
 	case 2:
-		return "USER_SLOT_2";
+		result = "USER_SLOT_2";
+		break;
 	case 3:
-		return "USER_PRIV_SLOT";
+		result = "USER_PRIV_SLOT";
+		break;
 	default:
-		return "UNKNOWN";
+		result = "UNKNOWN";
+		break;
 	}
+
+	return result;
 }
 
-#define PVA_R5_OCD_TYPE_MMIO_READ 1
-#define PVA_R5_OCD_TYPE_MMIO_WRITE 2
-#define PVA_R5_OCD_TYPE_REG_READ 3
-#define PVA_R5_OCD_TYPE_REG_WRITE 4
+#define PVA_R5_OCD_TYPE_MMIO_READ 1U
+#define PVA_R5_OCD_TYPE_MMIO_WRITE 2U
+#define PVA_R5_OCD_TYPE_REG_READ 3U
+#define PVA_R5_OCD_TYPE_REG_WRITE 4U
 
 #define PVA_R5_OCD_MAX_DATA_SIZE FW_TRACE_BUFFER_SIZE
 
@@ -625,6 +673,13 @@ struct pva_r5_ocd_request {
 	uint32_t addr;
 	uint32_t size;
 	//followed by data if any
+};
+
+#define PVA_FW_ASYNC_ERROR_STR_MAX_LEN (1024 * 3)
+struct pva_fw_async_error {
+	struct pva_async_error error_info;
+	uint32_t failure_reason_str_len;
+	char failure_reason[PVA_FW_ASYNC_ERROR_STR_MAX_LEN];
 };
 
 #endif // PVA_FW_H

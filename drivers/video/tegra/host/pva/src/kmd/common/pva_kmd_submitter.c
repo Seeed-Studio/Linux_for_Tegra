@@ -5,6 +5,7 @@
 #include "pva_api_types.h"
 #include "pva_kmd_utils.h"
 #include "pva_kmd_abort.h"
+#include "pva_kmd_limits.h"
 
 void pva_kmd_submitter_init(struct pva_kmd_submitter *submitter,
 			    struct pva_kmd_queue *queue,
@@ -150,7 +151,7 @@ enum pva_error pva_kmd_submitter_wait(struct pva_kmd_submitter *submitter,
 	}
 #endif
 	while (*fence_addr < fence_val) {
-		if (pva->recovery) {
+		if (pva->fw_aborted) {
 			return PVA_ERR_FW_ABORTED;
 		}
 		pva_kmd_sleep_us(poll_interval_us);
@@ -180,7 +181,13 @@ enum pva_error pva_kmd_submit_cmd_sync(struct pva_kmd_submitter *submitter,
 		goto err_out;
 	}
 
-	cmd_dst = pva_kmd_reserve_cmd_space(&builder, size);
+	/* Validate that size fits in uint16_t before casting */
+	if (size > (uint64_t)U16_MAX) {
+		pva_kmd_log_err("Command size exceeds UINT16_MAX");
+		err = PVA_INVAL;
+		goto cancel_builder;
+	}
+	cmd_dst = pva_kmd_reserve_cmd_space(&builder, (uint16_t)size);
 	if (cmd_dst == NULL) {
 		err = PVA_INVAL;
 		pva_kmd_log_err(
@@ -188,7 +195,7 @@ enum pva_error pva_kmd_submit_cmd_sync(struct pva_kmd_submitter *submitter,
 		goto cancel_builder;
 	}
 
-	memcpy(cmd_dst, cmds, size);
+	(void)memcpy(cmd_dst, cmds, size);
 	err = pva_kmd_submitter_submit(submitter, &builder, &fence_val);
 	if (err != PVA_SUCCESS) {
 		goto cancel_builder;

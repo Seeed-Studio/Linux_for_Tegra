@@ -3,6 +3,9 @@
 
 #ifndef PVA_MATH_UTILS_H
 #define PVA_MATH_UTILS_H
+#if !defined(__KERNEL__)
+#include <stdbool.h>
+#endif
 #include "pva_plat_faults.h"
 typedef enum {
 	MATH_OP_SUCCESS,
@@ -31,14 +34,14 @@ typedef enum {
 	pva_safe_roundup_u8((val), (align), __FILE__, __LINE__)
 
 /**
- * @brief Rounds up a uint64_t value to the nearest multiple of a power-of-two align.
- *
- * @param val   The value to round up.
- * @param align The alignment factor (must be a power of two).
- * @param file  The source file (for assertion messages).
- * @param line  The line number (for assertion messages).
- * @return uint64_t The rounded-up value.
- */
+* @brief Rounds up a uint64_t value to the nearest multiple of a power-of-two align.
+*
+* @param val   The value to round up.
+* @param align The alignment factor (must be a power of two).
+* @param file  The source file (for assertion messages).
+* @param line  The line number (for assertion messages).
+* @return uint64_t The rounded-up value.
+*/
 static inline uint64_t pva_safe_roundup_u64(uint64_t val, uint64_t align,
 					    const char *file, uint32_t line)
 {
@@ -56,14 +59,14 @@ static inline uint64_t pva_safe_roundup_u64(uint64_t val, uint64_t align,
 }
 
 /**
- * @brief Rounds up a uint32_t value to the nearest multiple of a power-of-two align.
- *
- * @param val   The value to round up.
- * @param align The alignment factor (must be a power of two).
- * @param file  The source file (for assertion messages).
- * @param line  The line number (for assertion messages).
- * @return uint32_t The rounded-up value.
- */
+* @brief Rounds up a uint32_t value to the nearest multiple of a power-of-two align.
+*
+* @param val   The value to round up.
+* @param align The alignment factor (must be a power of two).
+* @param file  The source file (for assertion messages).
+* @param line  The line number (for assertion messages).
+* @return uint32_t The rounded-up value.
+*/
 static inline uint32_t pva_safe_roundup_u32(uint32_t val, uint32_t align,
 					    const char *file, uint32_t line)
 {
@@ -82,14 +85,14 @@ static inline uint32_t pva_safe_roundup_u32(uint32_t val, uint32_t align,
 }
 
 /**
- * @brief Rounds up a uint16_t value to the nearest multiple of a power-of-two align.
- *
- * @param val   The value to round up.
- * @param align The alignment factor (must be a power of two).
- * @param file  The source file (for assertion messages).
- * @param line  The line number (for assertion messages).
- * @return uint16_t The rounded-up value.
- */
+* @brief Rounds up a uint16_t value to the nearest multiple of a power-of-two align.
+*
+* @param val   The value to round up.
+* @param align The alignment factor (must be a power of two).
+* @param file  The source file (for assertion messages).
+* @param line  The line number (for assertion messages).
+* @return uint16_t The rounded-up value.
+*/
 static inline uint16_t pva_safe_roundup_u16(uint16_t val, uint16_t align,
 					    const char *file, uint32_t line)
 {
@@ -109,14 +112,14 @@ static inline uint16_t pva_safe_roundup_u16(uint16_t val, uint16_t align,
 }
 
 /**
- * @brief Rounds up a uint8_t value to the nearest multiple of a power-of-two align.
- *
- * @param val   The value to round up.
- * @param align The alignment factor (must be a power of two).
- * @param file  The source file (for assertion messages).
- * @param line  The line number (for assertion messages).
- * @return uint8_t The rounded-up value.
- */
+* @brief Rounds up a uint8_t value to the nearest multiple of a power-of-two align.
+*
+* @param val   The value to round up.
+* @param align The alignment factor (must be a power of two).
+* @param file  The source file (for assertion messages).
+* @param line  The line number (for assertion messages).
+* @return uint8_t The rounded-up value.
+*/
 static inline uint8_t pva_safe_roundup_u8(uint8_t val, uint8_t align,
 					  const char *file, uint32_t line)
 {
@@ -340,6 +343,39 @@ static inline int32_t safe_get_signed_s32(uint32_t value, const char *file,
 
 #define convert_to_signed_s32(value)                                           \
 	safe_get_signed_s32((value), __FILE__, __LINE__)
+
+static inline uint8_t safe_cast_u32_to_u8(uint32_t value, const char *file,
+					  uint32_t line)
+{
+	ASSERT_WITH_LOC(value <= MAX_UINT8, file, line);
+	return (uint8_t)value;
+}
+
+static inline uint16_t safe_cast_u32_to_u16(uint32_t value, const char *file,
+					    uint32_t line)
+{
+	ASSERT_WITH_LOC(value <= MAX_UINT16, file, line);
+	return (uint16_t)value;
+}
+
+static inline uint8_t safe_cast_u16_to_u8(uint16_t value, const char *file,
+					  uint32_t line)
+{
+	ASSERT_WITH_LOC(value <= MAX_UINT8, file, line);
+	return (uint8_t)value;
+}
+
+static inline uint32_t safe_cast_u64_to_u32(uint64_t value, const char *file,
+					    uint32_t line)
+{
+	ASSERT_WITH_LOC(value <= MAX_UINT32, file, line);
+	return (uint32_t)value;
+}
+
+#define safe_u32_to_u8(value) safe_cast_u32_to_u8((value), __FILE__, __LINE__)
+#define safe_u32_to_u16(value) safe_cast_u32_to_u16((value), __FILE__, __LINE__)
+#define safe_u16_to_u8(value) safe_cast_u16_to_u8((value), __FILE__, __LINE__)
+#define safe_u64_to_u32(value) safe_cast_u64_to_u32((value), __FILE__, __LINE__)
 
 static inline uint64_t addu64(uint64_t addend1, uint64_t addend2,
 			      pva_math_error *math_flag)
@@ -570,29 +606,72 @@ static inline uint8_t mulu8(uint8_t operand1, uint8_t operand2,
 	return (uint8_t)(product);
 }
 
+/* Checks if int64_t multiplication would overflow/underflow based on operand signs */
+static inline bool perform_overflow_check(int64_t operand1, int64_t operand2,
+					  bool both_positive,
+					  bool both_negative)
+{
+	bool result = false;
+
+	/* Handle special cases first - multiplication by 0 never overflows */
+	if ((operand1 == 0) || (operand2 == 0)) {
+		result = false;
+		goto out;
+	}
+
+	/* Special case: MIN_INT64 * -1 would overflow (or -1 * MIN_INT64) */
+	if (((operand1 == MIN_INT64) && (operand2 == -1)) ||
+	    ((operand1 == -1) && (operand2 == MIN_INT64))) {
+		result = true;
+		goto out;
+	}
+
+	/* Now safe to do division checks since we've handled 0 and MIN_INT64/-1 cases */
+	if (both_positive) {
+		if (operand1 > (MAX_INT64 / operand2)) {
+			result = true;
+		}
+		goto out;
+	}
+
+	if (both_negative) {
+		if (operand1 < (MAX_INT64 / operand2)) {
+			result = true;
+		}
+		goto out;
+	}
+
+	/* Mixed signs - check for underflow */
+	if (operand1 < 0) {
+		if (operand1 < (MIN_INT64 / operand2)) {
+			result = true;
+		}
+	} else {
+		if (operand2 < (MIN_INT64 / operand1)) {
+			result = true;
+		}
+	}
+
+out:
+	return result;
+}
+
+static inline bool check_multiplication_overflow(int64_t operand1,
+						 int64_t operand2)
+{
+	bool both_positive = (operand1 > 0) && (operand2 > 0);
+	bool both_negative = (operand1 < 0) && (operand2 < 0);
+
+	return perform_overflow_check(operand1, operand2, both_positive,
+				      both_negative);
+}
+
 static inline int64_t muls64(int64_t operand1, int64_t operand2,
 			     pva_math_error *math_flag)
 {
-	/* Handle special cases first */
-	if ((operand1 == 0) || (operand2 == 0)) {
-		return 0;
-	}
-
-	/* Check for overflow/underflow */
-	if ((operand1 > 0 && operand2 > 0 &&
-	     operand1 > (MAX_INT64 / operand2)) ||
-	    (operand1 < 0 && operand2 < 0 &&
-	     operand1 < (MAX_INT64 / operand2)) ||
-	    (operand1 < 0 && operand2 > 0 &&
-	     operand1 < (MIN_INT64 / operand2)) ||
-	    (operand1 > 0 && operand2 < 0 &&
-	     operand2 < (MIN_INT64 / operand1))) {
-		*math_flag = MATH_OP_ERROR;
-		return 0;
-	}
-
-	// Special case for MIN_INT64
-	if (operand1 == MIN_INT64 && operand2 == -1) {
+	/* Check for multiplication overflow - handles all special cases including
+	 * zero operands and MIN_INT64 * -1 internally */
+	if (check_multiplication_overflow(operand1, operand2)) {
 		*math_flag = MATH_OP_ERROR;
 		return 0;
 	}
@@ -635,7 +714,11 @@ static inline uint8_t wrap_add_u8(uint8_t a, uint8_t b, uint8_t size)
 /* size must be 2^n */
 static inline uint8_t wrap_add_pow2(uint8_t a, uint8_t b, uint8_t size)
 {
-	return (a + b) & (size - 1);
+	uint32_t result;
+	ASSERT(size > (uint8_t)0);
+	result = ((uint32_t)a + (uint32_t)b) & ((uint32_t)size - 1U);
+	/*Fix for CERT INT31-C*/
+	return (uint8_t)(result & 0xFFU);
 }
 
 static inline uint64_t wraparound_sub_u64(uint64_t minuend, uint64_t subtrahend)
@@ -649,14 +732,14 @@ static inline uint64_t wraparound_sub_u64(uint64_t minuend, uint64_t subtrahend)
 }
 
 /**
- * @brief Simple counter increment with wrap-around to zero when reaching UINT32_MAX.
- *
- * This function safely increments a counter by 1 with wrap-around to zero
- * when reaching UINT32_MAX.
- *
- * @param counter The current counter value.
- * @return uint32_t The incremented counter value with wrap-around if needed.
- */
+* @brief Simple counter increment with wrap-around to zero when reaching UINT32_MAX.
+*
+* This function safely increments a counter by 1 with wrap-around to zero
+* when reaching UINT32_MAX.
+*
+* @param counter The current counter value.
+* @return uint32_t The incremented counter value with wrap-around if needed.
+*/
 static inline uint32_t safe_wraparound_inc_u32(uint32_t counter)
 {
 	uint64_t result;
@@ -667,14 +750,14 @@ static inline uint32_t safe_wraparound_inc_u32(uint32_t counter)
 }
 
 /**
- * @brief Simple counter decrement with wrap-around to UINT32_MAX when reaching zero.
- *
- * This function safely decrements a counter by 1 with wrap-around to UINT32_MAX
- * when reaching zero.
- *
- * @param counter The current counter value.
- * @return uint32_t The decremented counter value with wrap-around if needed.
- */
+* @brief Simple counter decrement with wrap-around to UINT32_MAX when reaching zero.
+*
+* This function safely decrements a counter by 1 with wrap-around to UINT32_MAX
+* when reaching zero.
+*
+* @param counter The current counter value.
+* @return uint32_t The decremented counter value with wrap-around if needed.
+*/
 static inline uint32_t safe_wraparound_dec_u32(uint32_t counter)
 {
 	uint32_t result;
@@ -709,22 +792,23 @@ static inline uint32_t safe_wrap_mul_u32(uint32_t a, uint32_t b)
 		type result;                                                   \
 		result = (a) + (b);                                            \
 		if ((result) < (a)) {                                          \
-			result = (type)-1;                                     \
+			result = ~((type)0);                                   \
 		}                                                              \
 		return result;                                                 \
 	}
-#define SAT_ADD_DEFINE_CUSTOM(a, b, name, type)                                \
+#define SAT_ADD_DEFINE_CUSTOM(a, b, name, type, maxval)                        \
 	static inline type sat_add##name(type a, type b)                       \
 	{                                                                      \
 		uint32_t result;                                               \
+		uint32_t max_val = (maxval);                                   \
 		result = (uint32_t)(a) + (uint32_t)(b);                        \
-		if ((result) > ((type)-1)) {                                   \
-			result = (type)-1;                                     \
+		if ((result) > max_val) {                                      \
+			result = max_val;                                      \
 		}                                                              \
 		return (type)result;                                           \
 	}
-SAT_ADD_DEFINE_CUSTOM(a, b, 8, uint8_t)
-SAT_ADD_DEFINE_CUSTOM(a, b, 16, uint16_t)
+SAT_ADD_DEFINE_CUSTOM(a, b, 8, uint8_t, 0xFFU)
+SAT_ADD_DEFINE_CUSTOM(a, b, 16, uint16_t, 0xFFFFU)
 SAT_ADD_DEFINE(a, b, 32, uint32_t)
 SAT_ADD_DEFINE(a, b, 64, uint64_t)
 
@@ -766,34 +850,38 @@ MAX_DEFINE(a, b, s32, int32_t)
 MAX_DEFINE(a, b, s64, int64_t)
 
 /**
- * @brief Generates a 64-bit mask based on the specified start position, count, and density.
- *
- * This function computes a mask from 'lsb' to 'msb' by grouping elements together based on 'density'.
- * Each bit in the mask will represent 'density' number of elements. For example, if density is 4
- * and count is 12, a total of 3 bits will be set in the produced mask starting at index 'start / 4'.
- *
+* @brief Generates a 64-bit mask based on the specified start position, count, and density.
+*
+* This function computes a mask from 'lsb' to 'msb' by grouping elements together based on 'density'.
+* Each bit in the mask will represent 'density' number of elements. For example, if density is 4
+* and count is 12, a total of 3 bits will be set in the produced mask starting at index 'start / 4'.
+*
 
- * @param start The starting bit position for the mask.
- * @param count The number of bits to include in the mask starting from the start position.
- * @param density The density factor, assumed to be a power of 2, represents group size.
- *
- * @return A 64-bit integer representing the mask with bits set between the calculated msb and lsb.
- */
+* @param start The starting bit position for the mask.
+* @param count The number of bits to include in the mask starting from the start position.
+* @param density The density factor, assumed to be a power of 2, represents group size.
+*
+* @return A 64-bit integer representing the mask with bits set between the calculated msb and lsb.
+*/
 
 static inline uint64_t pva_mask64(uint16_t start, uint16_t count,
 				  uint16_t density)
 {
-	int shift;
 	uint32_t lsb, msb;
 	uint64_t lower_mask, upper_mask;
+	uint32_t shift, start_32;
 
 	if (count == 0U) {
 		return 0U;
 	}
 
-	shift = __builtin_ctz(density);
-	lsb = (((uint32_t)start >> shift) & UINT64_MAX_SHIFT_BITS);
-	msb = ((((uint32_t)start + (uint32_t)count - 1U) >> shift) &
+	shift = (uint32_t)__builtin_ctz(density);
+	if (shift >= 32U) {
+		return 0U;
+	}
+	start_32 = (uint32_t)start;
+	lsb = ((start_32 >> shift) & UINT64_MAX_SHIFT_BITS);
+	msb = (((start_32 + (uint32_t)count - 1U) >> shift) &
 	       UINT64_MAX_SHIFT_BITS);
 
 	lower_mask = ~safe_subu64((uint64_t)((1ULL << lsb)), 1U);
@@ -803,19 +891,26 @@ static inline uint64_t pva_mask64(uint16_t start, uint16_t count,
 }
 
 /**
- * The size of a block linear surface must be a multiple of RoB (row of blocks).
- * Therefore, the maximum block linear surface size that a buffer can store
- * needs to be rounded down accordingly.
- */
+* The size of a block linear surface must be a multiple of RoB (row of blocks).
+* Therefore, the maximum block linear surface size that a buffer can store
+* needs to be rounded down accordingly.
+*/
 static inline uint64_t pva_max_bl_surface_size(uint64_t buffer_size,
 					       uint8_t log2_block_height,
 					       uint32_t line_pitch,
 					       pva_math_error *math_error)
 {
 	uint64_t max_bl_surface_size = 0u;
-	uint64_t alignment =
-		mulu64(((uint64_t)1U << (uint64_t)log2_block_height),
-		       (uint64_t)line_pitch, math_error);
+	uint64_t alignment;
+	/* Validate shift amount to prevent CERT-C INT34-C violation */
+	if (log2_block_height >= 64U) {
+		if (math_error != NULL) {
+			*math_error = MATH_OP_ERROR;
+		}
+		return 0u;
+	}
+	alignment = mulu64(((uint64_t)1ULL << (uint64_t)log2_block_height),
+			   (uint64_t)line_pitch, math_error);
 
 	if (alignment != 0u) {
 		max_bl_surface_size = mulu64((buffer_size / alignment),
@@ -838,8 +933,8 @@ static inline uint64_t pva_get_goboffset(uint32_t const x, uint32_t const y,
 	uint32_t const BL_GOB_SUBPACK_HOR_MASK = BL_GOB_SEC_SZ >> 1;
 	uint32_t const BL_GOB_SUBPACK_VER_STRIDE = 32;
 	uint32_t const BL_GOB_SUBPACK_HOR_STRIDE = 2;
-	uint32_t const BL_GOB_SEC_VER_MASK = BL_GOB_SECH - 1;
-	uint32_t const BL_GOB_SEC_HOR_MASK = BL_GOB_SECW - 1;
+	uint32_t const BL_GOB_SEC_VER_MASK = BL_GOB_SECH - 1U;
+	uint32_t const BL_GOB_SEC_HOR_MASK = BL_GOB_SECW - 1U;
 	uint32_t const BL_GOB_SEC_VER_STRIDE = 16;
 
 	uint32_t const maskedXPack = (x & BL_GOB_PACK_MASK);
@@ -868,41 +963,88 @@ static inline uint64_t pva_get_goboffset(uint32_t const x, uint32_t const y,
 }
 
 /** Convert pitch linear offset to block linear offset
- *
- * @param pl_offset Pitch linear offset in bytes
- * @param line_pitch Surface line pitch in bytes
- * @param log2_block_height Log2 of block height
- * */
+*
+* @param pl_offset Pitch linear offset in bytes
+* @param line_pitch Surface line pitch in bytes
+* @param log2_block_height Log2 of block height
+* */
 static inline uint64_t pva_pl_to_bl_offset(uint64_t pl_offset,
 					   uint32_t line_pitch,
 					   uint32_t log2_block_height,
 					   pva_math_error *math_error)
 {
-	uint32_t const x = pl_offset % line_pitch;
-	uint32_t const y = (uint32_t)(pl_offset / line_pitch);
+	/* Validate that pl_offset division result fits in uint32_t */
+	uint64_t const y_64 = pl_offset / line_pitch;
+	uint64_t const x_64 = pl_offset % line_pitch;
+	uint32_t x;
+	uint32_t y;
 	uint32_t const BL_GOBW_LOG2 = 6;
 	uint32_t const BL_GOBH = 8;
 	uint32_t const BL_GOBH_LOG2 = 3;
 	uint32_t const BL_GOB_SZ_LOG2 = BL_GOBW_LOG2 + BL_GOBH_LOG2;
-	uint32_t const widthInGobs = line_pitch >> BL_GOBW_LOG2;
-	uint32_t const blockSizeLog2 =
-		addu32(BL_GOB_SZ_LOG2, log2_block_height, math_error);
-	uint32_t const linesPerBlock = BL_GOBH << log2_block_height;
-	uint32_t const linesPerBlockLog2 =
-		addu32(BL_GOBH_LOG2, log2_block_height, math_error);
-	uint32_t const maskedY = y & subu32(linesPerBlock, 1, math_error);
-	uint32_t const gobRowbase = (maskedY >> BL_GOBH_LOG2) << BL_GOB_SZ_LOG2;
-	uint32_t const gobX = (x >> BL_GOBW_LOG2) << blockSizeLog2;
-	uint32_t const gobY = (y >> linesPerBlockLog2) << blockSizeLog2;
-	uint64_t gobOffset = pva_get_goboffset(x, y, math_error);
-	uint32_t gobBase = mulu32(gobY, widthInGobs, math_error);
+	uint32_t widthInGobs;
+	uint32_t blockSizeLog2;
+	uint32_t linesPerBlock;
+	uint32_t linesPerBlockLog2;
+	uint32_t maskedY;
+	uint32_t gobRowbase;
+	uint32_t gobX;
+	uint32_t gobY;
+	uint64_t gobOffset;
+	uint32_t gobBase;
+
+	/* Validate that pl_offset division result fits in uint32_t */
+	if (y_64 > UINT32_MAX) {
+		if (math_error != NULL) {
+			*math_error = MATH_OP_ERROR;
+		}
+		return 0;
+	}
+
+	if (x_64 > UINT32_MAX) {
+		if (math_error != NULL) {
+			*math_error = MATH_OP_ERROR;
+		}
+		return 0;
+	}
+
+	x = (uint32_t)x_64;
+	y = (uint32_t)y_64;
+
+	/* Validate shift amount to prevent CERT-C INT34-C violation */
+	if (log2_block_height >= 32U) {
+		if (math_error != NULL) {
+			*math_error = MATH_OP_ERROR;
+		}
+		return 0;
+	}
+
+	widthInGobs = line_pitch >> BL_GOBW_LOG2;
+	blockSizeLog2 = addu32(BL_GOB_SZ_LOG2, log2_block_height, math_error);
+	linesPerBlock = BL_GOBH << log2_block_height;
+	linesPerBlockLog2 = addu32(BL_GOBH_LOG2, log2_block_height, math_error);
+
+	if ((blockSizeLog2 >= 32U) || (linesPerBlockLog2 >= 32U)) {
+		if (math_error != NULL) {
+			*math_error = MATH_OP_ERROR;
+		}
+		return 0;
+	}
+
+	maskedY = y & subu32(linesPerBlock, 1, math_error);
+	gobRowbase = (maskedY >> BL_GOBH_LOG2) << BL_GOB_SZ_LOG2;
+	gobX = (x >> BL_GOBW_LOG2) << blockSizeLog2;
+	gobY = (y >> linesPerBlockLog2) << blockSizeLog2;
+
+	gobOffset = pva_get_goboffset(x, y, math_error);
+	gobBase = mulu32(gobY, widthInGobs, math_error);
 	gobBase = addu32(gobBase, gobRowbase, math_error);
 	gobBase = addu32(gobBase, gobX, math_error);
 
 	return addu64((uint64_t)gobBase, gobOffset, math_error);
 }
 
-static inline int syncobj_reached_threshold(uint32_t value, uint32_t threshold)
+static inline bool syncobj_reached_threshold(uint32_t value, uint32_t threshold)
 {
 	/*
 	* We're interested in "value >= threshold" but need to take wraparound

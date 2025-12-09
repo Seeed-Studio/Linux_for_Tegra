@@ -105,8 +105,8 @@
  * msg[0] = mailbox 1 -> generate interrupt to R5
  * msg[1] = mailbox 0
  */
-#define PVA_FW_MBOX_TO_R5_BASE 0
-#define PVA_FW_MBOX_TO_R5_LAST 1
+#define PVA_FW_MBOX_TO_R5_BASE 0U
+#define PVA_FW_MBOX_TO_R5_LAST 1U
 
 /* When R5 send messages to hypervisor through mailboxes, we use mailbox 2 - 7
  * msg[0] = mailbox 7 -> generate interrupt to hypervisor
@@ -116,8 +116,8 @@
  * msg[4] = mailbox 5
  * msg[5] = mailbox 6
  */
-#define PVA_FW_MBOX_TO_HYP_BASE 2
-#define PVA_FW_MBOX_TO_HYP_LAST 7
+#define PVA_FW_MBOX_TO_HYP_BASE 2U
+#define PVA_FW_MBOX_TO_HYP_LAST 7U
 
 #define PVA_FW_MBOX_FULL_BIT PVA_BIT(31)
 

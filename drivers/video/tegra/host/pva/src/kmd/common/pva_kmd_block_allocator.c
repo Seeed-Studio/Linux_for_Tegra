@@ -4,31 +4,36 @@
 #include "pva_kmd_utils.h"
 #include "pva_api.h"
 
-#define INVALID_ID 0xFFFFFFFF
+#define INVALID_ID 0xFFFFFFFFU
 enum pva_error
 pva_kmd_block_allocator_init(struct pva_kmd_block_allocator *allocator,
-			     void *block_mem, uint32_t base_id,
-			     uint32_t block_size, uint32_t max_num_blocks)
+			     void *chunk_mem, uint32_t base_id,
+			     uint32_t chunk_size, uint32_t max_num_chunks)
 {
 	enum pva_error err = PVA_SUCCESS;
 
 	allocator->free_slot_head = INVALID_ID;
 	allocator->next_free_slot = 0;
-	allocator->max_num_blocks = max_num_blocks;
-	allocator->block_size = block_size;
+	allocator->max_num_blocks = max_num_chunks;
+	allocator->block_size = chunk_size;
 	allocator->base_id = base_id;
 
-	allocator->blocks = block_mem;
+	allocator->blocks = chunk_mem;
 
 	allocator->slot_in_use = pva_kmd_zalloc(
-		sizeof(*allocator->slot_in_use) * max_num_blocks);
-	if (!allocator->slot_in_use) {
+		sizeof(*allocator->slot_in_use) * max_num_chunks);
+	if (allocator->slot_in_use == NULL) {
 		err = PVA_NOMEM;
 		pva_kmd_log_err(
 			"pva_kmd_block_allocator_init slot_in_use NULL");
 		goto err_out;
 	}
-	pva_kmd_mutex_init(&allocator->allocator_lock);
+	err = pva_kmd_mutex_init(&allocator->allocator_lock);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"pva_kmd_block_allocator_init mutex_init failed");
+		goto err_out;
+	}
 	return PVA_SUCCESS;
 err_out:
 	return err;
@@ -43,9 +48,11 @@ void pva_kmd_block_allocator_deinit(struct pva_kmd_block_allocator *allocator)
 static inline void *get_block(struct pva_kmd_block_allocator *allocator,
 			      uint32_t slot)
 {
-	uintptr_t base = (uintptr_t)allocator->blocks;
-	uintptr_t addr = base + (slot * allocator->block_size);
-	return (void *)addr;
+	uintptr_t base = (uintptr_t)(void *)allocator->blocks;
+	uint64_t offset =
+		safe_mulu64((uint64_t)slot, (uint64_t)allocator->block_size);
+	uint64_t addr = safe_addu64((uint64_t)base, offset);
+	return (void *)(uintptr_t)addr;
 }
 
 static inline uint32_t next_slot(struct pva_kmd_block_allocator *allocator,

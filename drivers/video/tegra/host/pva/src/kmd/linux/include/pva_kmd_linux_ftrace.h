@@ -1,5 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
+
+/* This is here just to prevent header guard warnings */
+/* Since define_trace.h file included at the bottom of this file needs to
+ * include this file, we can't use header guards in this file.
+ */
 #ifndef PVA_KMD_LINUX_FTRACE_H
 #define PVA_KMD_LINUX_FTRACE_H
 #endif

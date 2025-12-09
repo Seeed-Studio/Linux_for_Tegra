@@ -19,6 +19,27 @@ void pva_kmd_nsys_engine_acquire_trace(
 	struct pva_kmd_device *pva,
 	struct pva_kmd_fw_msg_engine_acquire_trace const *trace_info);
 
+/**
+ * @brief Add fence trace event to the trace system.
+ *
+ * @details This function performs the following operations:
+ * - Records fence synchronization timing information
+ * - Adds trace event to the platform's trace collection system
+ * - Captures synchronization metrics for fence operations
+ * - Enables profiling and analysis of synchronization behavior
+ * - Uses platform-appropriate trace event mechanisms
+ *
+ * This function is called when fence synchronization events occur
+ * to record timing and synchronization information. The trace data
+ * helps analyze synchronization overhead and identify potential
+ * performance bottlenecks in fence operations.
+ *
+ * @param[in, out] pva        Pointer to @ref pva_kmd_device structure
+ *                            Valid value: non-null
+ * @param[in] trace_info      Pointer to fence trace information structure
+ *                            Valid value: non-null pointer to
+ *                            @ref pva_kmd_fw_msg_fence_trace
+ */
 void pva_kmd_nsys_fence_trace(
 	struct pva_kmd_device *pva,
 	struct pva_kmd_fw_msg_fence_trace const *trace_info);

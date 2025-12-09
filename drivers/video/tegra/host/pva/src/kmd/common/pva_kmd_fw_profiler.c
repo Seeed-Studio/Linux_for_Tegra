@@ -60,7 +60,8 @@ static const char *priv_cmd_names[PVA_CMD_PRIV_OPCODE_COUNT] = {
 	CMD(ENABLE_FW_PROFILING),
 	CMD(DISABLE_FW_PROFILING),
 	CMD(SUSPEND_FW),
-	CMD(RESUME_FW)
+	CMD(RESUME_FW),
+	CMD(SET_PFSD_CMD_BUFFER_SIZE),
 };
 
 static inline const char *pva_fw_get_cmd_name(uint32_t opcode)
@@ -91,13 +92,13 @@ static inline const char *pva_fw_get_cmd_name(uint32_t opcode)
 
 void pva_kmd_device_init_profiler(struct pva_kmd_device *pva)
 {
-	pva->debugfs_context.g_fw_profiling_config.enabled = false;
+	pva->debugfs_context.g_fw_profiling_config.enabled = (uint8_t) false;
 	pva->debugfs_context.g_fw_profiling_config.filter = 0x0;
 }
 
 void pva_kmd_device_deinit_profiler(struct pva_kmd_device *pva)
 {
-	pva->debugfs_context.g_fw_profiling_config.enabled = false;
+	pva->debugfs_context.g_fw_profiling_config.enabled = (uint8_t) false;
 }
 
 enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
@@ -105,8 +106,11 @@ enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
 	struct pva_kmd_submitter *dev_submitter = &pva->submitter;
 	struct pva_cmd_enable_fw_profiling cmd = { 0 };
 	uint32_t filter = 0U;
-	uint8_t timestamp_type = TIMESTAMP_TYPE_CYCLE_COUNT;
+	uint8_t timestamp_type = (uint8_t)TIMESTAMP_TYPE_CYCLE_COUNT;
 	enum pva_error err = PVA_SUCCESS;
+	enum pva_fw_timestamp_t tse_type = TIMESTAMP_TYPE_TSE;
+	uint8_t size_8 = (uint8_t)8U;
+	uint8_t size_4 = (uint8_t)4U;
 
 	struct pva_kmd_shared_buffer *profiling_buffer =
 		&pva->kmd_fw_buffers[PVA_PRIV_CCQ_ID];
@@ -124,7 +128,8 @@ enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
 
 	pva_kmd_set_cmd_enable_fw_profiling(&cmd, filter, timestamp_type);
 
-	err = pva_kmd_submit_cmd_sync(dev_submitter, &cmd, sizeof(cmd),
+	err = pva_kmd_submit_cmd_sync(dev_submitter, &cmd,
+				      (uint32_t)sizeof(cmd),
 				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
@@ -132,15 +137,19 @@ enum pva_error pva_kmd_notify_fw_enable_profiling(struct pva_kmd_device *pva)
 		goto out;
 	}
 
-	pva->debugfs_context.g_fw_profiling_config.enabled = true;
+	pva->debugfs_context.g_fw_profiling_config.enabled = (uint8_t) true;
 	pva->debugfs_context.g_fw_profiling_config.filter = filter;
 	pva->debugfs_context.g_fw_profiling_config.timestamp_type =
 		timestamp_type;
-	pva->debugfs_context.g_fw_profiling_config.timestamp_size =
-		(pva->debugfs_context.g_fw_profiling_config.timestamp_type ==
-		 TIMESTAMP_TYPE_TSE) ?
-			      8 :
-			      4;
+
+	if (pva->debugfs_context.g_fw_profiling_config.timestamp_type ==
+	    tse_type) {
+		pva->debugfs_context.g_fw_profiling_config.timestamp_size =
+			size_8;
+	} else {
+		pva->debugfs_context.g_fw_profiling_config.timestamp_size =
+			size_4;
+	}
 
 out:
 	return err;
@@ -161,7 +170,7 @@ enum pva_error pva_kmd_notify_fw_disable_profiling(struct pva_kmd_device *pva)
 		goto err_out;
 	}
 
-	pva->debugfs_context.g_fw_profiling_config.enabled = false;
+	pva->debugfs_context.g_fw_profiling_config.enabled = (uint8_t) false;
 	pva->debugfs_context.g_fw_profiling_config.filter = 0x0;
 
 	return PVA_SUCCESS;
@@ -173,36 +182,54 @@ err_out:
 static void decode_and_print_event(unsigned long walltime,
 				   unsigned long relative_time,
 				   struct pva_fw_event_message message,
-				   char *msg_string)
+				   char *msg_string, size_t msg_size)
 {
+	int ret;
 	switch (PVA_BIT(message.event)) {
 	case PVA_FW_EVENT_DO_CMD: {
-		sprintf(msg_string,
+		ret = snprintf(
+			msg_string, msg_size,
 			"pva_fw@%lu: [%8lu] event=%-12s type=%-7s slot=%u  idx=%-5u    opcode=%s",
 			walltime, relative_time, "DO_CMD",
 			event_type_to_string(message.type), message.arg2,
 			message.arg3, pva_fw_get_cmd_name(message.arg1));
+		if (ret < 0 || (size_t)ret >= msg_size) {
+			pva_kmd_log_err("snprintf failed or truncated");
+		}
 	} break;
 	case PVA_FW_EVENT_SCAN_QUEUES: {
-		sprintf(msg_string,
+		ret = snprintf(
+			msg_string, msg_size,
 			"pva_fw@%lu: [%8lu] event=%-12s type=%-7s found=%u ccq_id=%-5u queue_id=%u",
 			walltime, relative_time, "SCAN_QUEUES",
 			event_type_to_string(message.type), message.arg1,
 			message.arg2, message.arg3);
+		if (ret < 0 || (size_t)ret >= msg_size) {
+			pva_kmd_log_err("snprintf failed or truncated");
+		}
 	} break;
 	case PVA_FW_EVENT_SCAN_SLOTS: {
-		sprintf(msg_string,
+		ret = snprintf(
+			msg_string, msg_size,
 			"pva_fw@%lu: [%8lu] event=%-12s type=%-7s state=%u slot=%u",
 			walltime, relative_time, "SCAN_SLOTS",
 			event_type_to_string(message.type), message.arg1,
 			message.arg2);
+		if (ret < 0 || (size_t)ret >= msg_size) {
+			pva_kmd_log_err("snprintf failed or truncated");
+		}
 	} break;
 	case PVA_FW_EVENT_RUN_VPU: {
-		sprintf(msg_string,
+		ret = snprintf(
+			msg_string, msg_size,
 			"pva_fw@%lu: [%8lu] event=%-12s type=%-7s slot=%u  idx=%-5u    opcode=%s",
 			walltime, relative_time, "RUN_VPU",
-			event_type_to_string(message.type), message.arg2,
-			message.arg3, pva_fw_get_cmd_name(message.arg1));
+			event_type_to_string(message.type),
+			(unsigned int)message.arg2, (unsigned int)message.arg3,
+			pva_fw_get_cmd_name(message.arg1));
+		if (ret < 0 || (size_t)ret >= msg_size) {
+			pva_kmd_log_err("snprintf failed or truncated");
+		}
 	} break;
 	default:
 		pva_dbg_printf("Unknown event type\n");
@@ -210,8 +237,8 @@ static void decode_and_print_event(unsigned long walltime,
 	}
 }
 
-enum pva_error pva_kmd_process_fw_event(struct pva_kmd_device *pva,
-					uint8_t *data, uint32_t data_size)
+static enum pva_error process_fw_event(struct pva_kmd_device *pva,
+				       uint8_t *data, uint32_t data_size)
 {
 	uint64_t timestamp = 0;
 	char msg_string[200] = { '\0' };
@@ -247,27 +274,28 @@ enum pva_error pva_kmd_process_fw_event(struct pva_kmd_device *pva,
 				      0U :
 				      safe_subu64(walltime, prev_walltime);
 	decode_and_print_event(walltime, relative_time, event_header,
-			       &msg_string[0]);
-	pva_kmd_print_str(msg_string);
+			       &msg_string[0], sizeof(msg_string));
+	pva_kmd_log_info(msg_string);
 	prev_walltime = walltime;
 
 	return PVA_SUCCESS;
 }
 
-void pva_kmd_process_fw_tracepoint(struct pva_kmd_device *pva,
-				   struct pva_fw_tracepoint *tp)
+void pva_kmd_process_fw_event(struct pva_kmd_device *pva, uint8_t *msg_body,
+			      uint32_t msg_size)
 {
-	char msg_string[200] = { '\0' };
+	enum pva_error err = PVA_SUCCESS;
 
-	snprintf(
-		msg_string, sizeof(msg_string),
-		"pva fw tracepoint: type=%s flags=%s slot=%s ccq=%u queue=%u engine=%u arg1=0x%x arg2=0x%x",
-		pva_fw_tracepoint_type_to_string(PVA_BIT(tp->type)),
-		pva_fw_tracepoint_flags_to_string(tp->flags),
-		pva_fw_tracepoint_slot_id_to_string(tp->slot_id),
-		(uint32_t)tp->ccq_id, (uint32_t)tp->queue_id,
-		(uint32_t)tp->engine_id, (uint32_t)tp->arg1,
-		(uint32_t)tp->arg2);
+	// TODO: This must be updated once profiler config is exposed through debugfs.
+	//	 KMD must use the same timestamp size as the FW. It is possible that the user
+	//	 changes the timestamp size through debugfs after FW logged the event.
+	//	 FW must log the type of timestamp it used to capture the event.
+	ASSERT(msg_size == sizeof(struct pva_fw_event_message) +
+				   pva->debugfs_context.g_fw_profiling_config
+					   .timestamp_size);
 
-	pva_kmd_print_str(msg_string);
+	err = process_fw_event(pva, msg_body, msg_size);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err("Failed to process FW event");
+	}
 }

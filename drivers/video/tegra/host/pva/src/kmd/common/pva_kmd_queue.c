@@ -11,6 +11,7 @@
 #include "pva_utils.h"
 #include "pva_kmd_device.h"
 #include "pva_kmd_constants.h"
+#include "pva_kmd_limits.h"
 
 void pva_kmd_queue_init(struct pva_kmd_queue *queue, struct pva_kmd_device *pva,
 			uint8_t ccq_id, uint8_t queue_id,
@@ -43,7 +44,7 @@ pva_kmd_queue_submit(struct pva_kmd_queue *queue,
 	struct pva_fw_cmdbuf_submit_info *items = pva_offset_pointer(
 		queue->queue_header, sizeof(*queue->queue_header));
 
-	if (pva_fw_queue_space(head, tail, size) == 0) {
+	if (pva_fw_queue_space(head, tail, size) == 0U) {
 		return PVA_QUEUE_FULL;
 	}
 
@@ -65,7 +66,8 @@ static enum pva_error notify_fw_queue_deinit(struct pva_kmd_context *ctx,
 
 	pva_kmd_set_cmd_deinit_queue(&cmd, queue->ccq_id, queue->queue_id);
 
-	err = pva_kmd_submit_cmd_sync(&ctx->submitter, &cmd, sizeof(cmd),
+	err = pva_kmd_submit_cmd_sync(&ctx->submitter, &cmd,
+				      (uint32_t)sizeof(cmd),
 				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
@@ -105,7 +107,16 @@ enum pva_error pva_kmd_queue_create(struct pva_kmd_context *ctx,
 		goto err_free_queue;
 	}
 
-	pva_kmd_queue_init(queue, ctx->pva, ctx->ccq_id, *queue_id,
+	/* Validate queue_id fits in uint8_t */
+	/* MISRA C-2023 Rule 10.4: Both operands must have same essential type */
+	if (*queue_id > (uint32_t)U8_MAX) {
+		pva_kmd_log_err("Queue ID exceeds U8_MAX");
+		err = PVA_INVAL;
+		goto err_free_queue;
+	}
+
+	/* CERT INT31-C: queue_id validated to fit in uint8_t, safe to cast */
+	pva_kmd_queue_init(queue, ctx->pva, ctx->ccq_id, (uint8_t)*queue_id,
 			   submission_mem_kmd, in_args->max_submission_count);
 
 	/* Get device mapped IOVA to share with FW */
@@ -124,7 +135,8 @@ enum pva_error pva_kmd_queue_create(struct pva_kmd_context *ctx,
 				   syncpt_info->syncpt_id,
 				   syncpt_info->syncpt_iova);
 
-	err = pva_kmd_submit_cmd_sync(&ctx->submitter, &cmd, sizeof(cmd),
+	err = pva_kmd_submit_cmd_sync(&ctx->submitter, &cmd,
+				      (uint32_t)sizeof(cmd),
 				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
@@ -182,9 +194,15 @@ const struct pva_syncpt_rw_info *
 pva_kmd_queue_get_rw_syncpt_info(struct pva_kmd_device *pva, uint8_t ccq_id,
 				 uint8_t queue_id)
 {
-	uint8_t ctx_offset =
-		safe_mulu32(ccq_id, PVA_NUM_RW_SYNCPTS_PER_CONTEXT);
-	uint32_t syncpt_index = safe_addu32(ctx_offset, queue_id);
+	uint8_t ctx_offset;
+	uint8_t syncpt_index_u8;
+	uint32_t syncpt_index;
+
+	/* Use uint8_t arithmetic - all values fit in uint8_t range */
+	ctx_offset =
+		safe_mulu8(ccq_id, (uint8_t)PVA_NUM_RW_SYNCPTS_PER_CONTEXT);
+	syncpt_index_u8 = safe_addu8(ctx_offset, queue_id);
+	syncpt_index = (uint32_t)syncpt_index_u8;
 
 	ASSERT(syncpt_index < PVA_NUM_RW_SYNCPTS);
 	return &pva->rw_syncpts[syncpt_index];

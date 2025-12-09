@@ -190,7 +190,7 @@ int nvpva_module_init(struct platform_device *pdev)
 		return PTR_ERR(pdata->reset_control);
 	}
 
-	reset_control_acquire(pdata->reset_control);
+	err = reset_control_acquire(pdata->reset_control);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to acquire reset: %d\n", err);
 		return err;

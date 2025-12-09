@@ -26,7 +26,7 @@ struct pva_ops_memory {
  * until memory->size is reached.
  */
 struct pva_ops_buffer {
-	struct pva_ops_memory *memory; /**< Pointer to buffer memory */
+	struct pva_ops_memory *mem_ptr; /**< Pointer to buffer memory */
 	uint64_t start_offset; /**< Start offset in buffer memory */
 	uint64_t end_offset; /**< End offset (exclusive) in buffer memory */
 };

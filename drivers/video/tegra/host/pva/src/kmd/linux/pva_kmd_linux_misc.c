@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 #include <linux/slab.h>
 #include <linux/gfp.h>
 #include <linux/delay.h>
@@ -24,19 +25,34 @@ void pva_kmd_free(void *ptr)
 	kvfree(ptr);
 }
 
+void pva_kmd_log_err(const char *msg)
+{
+	printk(KERN_ERR "%s\n", msg);
+}
+
+void pva_kmd_log_err_u64(const char *msg, uint64_t val)
+{
+	printk(KERN_ERR "%s: %llu\n", msg, val);
+}
+
+void pva_kmd_log_err_hex32(const char *msg, uint32_t val)
+{
+	printk(KERN_ERR "%s: 0x%08x\n", msg, val);
+}
+
+void pva_kmd_log_info(const char *msg)
+{
+	printk(KERN_INFO "%s\n", msg);
+}
+
+void pva_kmd_log_info_u64(const char *str, uint64_t n)
+{
+	printk(KERN_INFO "%s: %llu\n", str, n);
+}
+
 void pva_kmd_print_str(const char *str)
 {
 	printk(KERN_INFO "%s\n", str);
-}
-
-void pva_kmd_print_str_u64(const char *str, uint64_t n)
-{
-	printk(KERN_INFO "%s:%llu\n", str, n);
-}
-
-void pva_kmd_print_str_hex32(const char *str, uint32_t n)
-{
-	printk("%s: 0x%08x\n", str, n);
 }
 
 enum pva_error pva_kmd_mutex_init(pva_kmd_mutex_t *m)
@@ -128,4 +144,9 @@ int pva_kmd_atomic_fetch_sub(pva_kmd_atomic_t *atomic_val, int val)
 int pva_kmd_atomic_load(pva_kmd_atomic_t *atomic_val)
 {
 	return atomic_read(atomic_val);
+}
+
+bool pva_kmd_is_ops_allowed(struct pva_kmd_context *ctx, uint64_t opcode)
+{
+	return true;
 }

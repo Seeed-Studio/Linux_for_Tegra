@@ -18,13 +18,13 @@
 #include "pva_kmd_regs.h"
 #include "pva_kmd_device_memory.h"
 #include "pva_kmd_fw_profiler.h"
-#include "pva_kmd_fw_debug.h"
 #include "pva_kmd_vpu_app_auth.h"
 #include "pva_utils.h"
 #include "pva_kmd_debugfs.h"
 #include "pva_kmd_tegra_stats.h"
 #include "pva_kmd_shim_silicon.h"
 #include "pva_kmd_shared_buffer.h"
+#include "pva_kmd_fw_tracepoints.h"
 
 #include "pva_kmd_abort.h"
 #include "pva_version.h"
@@ -130,22 +130,27 @@ static void pva_kmd_device_init_submission(struct pva_kmd_device *pva)
 	/* Add submit memory to resource table */
 	err = pva_kmd_add_dram_buffer_resource(&pva->dev_resource_table,
 					       pva->submit_memory,
-					       &pva->submit_memory_resource_id);
+					       &pva->submit_memory_resource_id,
+					       false);
 	ASSERT(err == PVA_SUCCESS);
 	pva_kmd_update_fw_resource_table(&pva->dev_resource_table);
 
 	/* Init chunk pool */
-	pva_kmd_cmdbuf_chunk_pool_init(
+	err = pva_kmd_cmdbuf_chunk_pool_init(
 		&pva->chunk_pool, pva->submit_memory_resource_id, 0,
-		chunk_mem_size, pva_kmd_get_max_cmdbuf_chunk_size(pva),
+		(uint32_t)chunk_mem_size,
+		pva_kmd_get_max_cmdbuf_chunk_size(pva),
 		PVA_KMD_MAX_NUM_KMD_CHUNKS, pva->submit_memory->va);
+	ASSERT(err == PVA_SUCCESS);
 
 	/* Init fence */
 	pva->fence_offset = chunk_mem_size;
 
 	/* Init submitter */
-	pva_kmd_mutex_init(&pva->submit_lock);
-	pva_kmd_mutex_init(&pva->chunk_pool_lock);
+	err = pva_kmd_mutex_init(&pva->submit_lock);
+	ASSERT(err == PVA_SUCCESS);
+	err = pva_kmd_mutex_init(&pva->chunk_pool_lock);
+	ASSERT(err == PVA_SUCCESS);
 	post_fence.resource_id = pva->submit_memory_resource_id;
 	post_fence.offset_lo = iova_lo(pva->fence_offset);
 	post_fence.offset_hi = iova_hi(pva->fence_offset);
@@ -153,7 +158,8 @@ static void pva_kmd_device_init_submission(struct pva_kmd_device *pva)
 	pva_kmd_submitter_init(
 		&pva->submitter, &pva->dev_queue, &pva->submit_lock,
 		&pva->chunk_pool, &pva->chunk_pool_lock,
-		pva_offset_pointer(pva->submit_memory->va, pva->fence_offset),
+		(uint32_t *)pva_offset_pointer(pva->submit_memory->va,
+					       pva->fence_offset),
 		&post_fence);
 }
 
@@ -172,14 +178,14 @@ static void pva_kmd_device_deinit_submission(struct pva_kmd_device *pva)
 struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 					     uint32_t device_index,
 					     bool app_authenticate,
-					     bool test_mode)
+					     bool test_mode, void *plat_data)
 {
 	struct pva_kmd_device *pva;
 	enum pva_error err;
 	uint32_t size;
 
 	if (test_mode) {
-		pva_kmd_log_err("Test mode is enabled");
+		pva_kmd_log_info("Test mode is enabled");
 	}
 
 	pva = pva_kmd_zalloc_nofail(sizeof(*pva));
@@ -189,18 +195,23 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 	pva->load_from_gsc = false;
 	pva->is_hv_mode = true;
 	pva->max_n_contexts = PVA_MAX_NUM_USER_CONTEXTS;
-	pva_kmd_mutex_init(&pva->powercycle_lock);
+	err = pva_kmd_mutex_init(&pva->powercycle_lock);
+	if (err != PVA_SUCCESS) {
+		pva_kmd_log_err(
+			"pva_kmd_device_init powercycle_lock init failed");
+		pva_kmd_free(pva);
+		return NULL;
+	}
 	pva_kmd_sema_init(&pva->fw_boot_sema, 0);
 	size = safe_mulu32((uint32_t)sizeof(struct pva_kmd_context),
 			   pva->max_n_contexts);
 	pva->context_mem = pva_kmd_zalloc(size);
 	ASSERT(pva->context_mem != NULL);
 
-	err = pva_kmd_block_allocator_init(&pva->context_allocator,
-					   pva->context_mem,
-					   PVA_KMD_USER_CONTEXT_ID_BASE,
-					   sizeof(struct pva_kmd_context),
-					   pva->max_n_contexts);
+	err = pva_kmd_block_allocator_init(
+		&pva->context_allocator, pva->context_mem,
+		PVA_KMD_USER_CONTEXT_ID_BASE,
+		(uint32_t)sizeof(struct pva_kmd_context), pva->max_n_contexts);
 	ASSERT(err == PVA_SUCCESS);
 
 	if (chip_id == PVA_CHIP_T23X) {
@@ -211,6 +222,8 @@ struct pva_kmd_device *pva_kmd_device_create(enum pva_chip_id chip_id,
 		FAULT("SOC not supported");
 	}
 
+	/* Set platform data before calling platform init */
+	pva->plat_data = plat_data;
 	pva_kmd_device_plat_init(pva);
 
 	pva_kmd_device_init_submission(pva);
@@ -236,7 +249,7 @@ static void pva_kmd_wait_for_active_contexts(struct pva_kmd_device *pva)
 
 		ctx = pva_kmd_alloc_block(&pva->context_allocator, &unused_id);
 		if (ctx != NULL) {
-			allocated = safe_addu32(allocated, 1U);
+			allocated = safe_addu8(allocated, 1U);
 		} else {
 			pva_kmd_sleep_us(1000);
 		}
@@ -256,29 +269,48 @@ void pva_kmd_device_destroy(struct pva_kmd_device *pva)
 	pva_kmd_free(pva);
 }
 
+#if PVA_ENABLE_NSYS_PROFILING == 1
+enum pva_error pva_kmd_notify_fw_set_profiling_level(struct pva_kmd_device *pva,
+						     uint32_t level)
+{
+	struct pva_cmd_set_profiling_level cmd = { 0 };
+	pva_kmd_set_cmd_set_profiling_level(&cmd, level);
+
+	return pva_kmd_submit_cmd_sync(&pva->submitter, &cmd,
+				       (uint32_t)sizeof(cmd),
+				       PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
+				       PVA_KMD_WAIT_FW_TIMEOUT_US);
+}
+#endif
+
 static enum pva_error config_fw_by_cmds(struct pva_kmd_device *pva)
 {
 	enum pva_error err = PVA_SUCCESS;
 
+#if PVA_ENABLE_FW_PROFILING == 1
 	err = pva_kmd_notify_fw_enable_profiling(pva);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		return err;
 	}
+#endif
 
+#if PVA_ENABLE_FW_TRACEPOINTS == 1
 	/* Set FW trace level */
 	err = pva_kmd_notify_fw_set_trace_level(pva, pva->fw_trace_level);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		return err;
 	}
+#endif
 
+#if PVA_ENABLE_NSYS_PROFILING == 1
 	// If the user had set profiling level before power-on, send the update to FW
 	err = pva_kmd_notify_fw_set_profiling_level(
 		pva, pva->debugfs_context.profiling_level);
 	if (err != PVA_SUCCESS) {
-		goto err_out;
+		return err;
 	}
+#endif
 
-err_out:
 	return err;
 }
 
@@ -296,8 +328,8 @@ static void pva_kmd_print_version_info(struct pva_kmd_device *pva)
 	/* Query and print firmware version */
 	const char *prefix = "PVA FW version: ";
 	const char *kmd_prefix = "PVA KMD version: ";
-	uint32_t prefix_len = strlen(prefix);
-	uint32_t kmd_prefix_len = strlen(kmd_prefix);
+	uint32_t prefix_len = (uint32_t)strlen(prefix);
+	uint32_t kmd_prefix_len = (uint32_t)strlen(kmd_prefix);
 	/* Store initial string */
 	(void)memcpy(fw_version, prefix, prefix_len);
 
@@ -306,7 +338,7 @@ static void pva_kmd_print_version_info(struct pva_kmd_device *pva)
 				       safe_subu32(PVA_VERSION_BUFFER_SIZE,
 						   prefix_len));
 	if (err == PVA_SUCCESS) {
-		pva_kmd_log_err(fw_version);
+		pva_kmd_log_info(fw_version);
 	} else {
 		pva_kmd_log_err("Failed to query firmware version");
 	}
@@ -316,7 +348,7 @@ static void pva_kmd_print_version_info(struct pva_kmd_device *pva)
 	(void)memcpy(kmd_version + kmd_prefix_len, PVA_SYSSW_COMMIT_ID,
 		     sizeof(PVA_SYSSW_COMMIT_ID));
 	kmd_version[kmd_prefix_len + sizeof(PVA_SYSSW_COMMIT_ID)] = '\0';
-	pva_kmd_log_err(kmd_version);
+	pva_kmd_log_info(kmd_version);
 }
 
 static enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva)
@@ -331,7 +363,7 @@ static enum pva_error pva_kmd_config_fw_after_boot(struct pva_kmd_device *pva)
 	pva_kmd_send_queue_info_by_ccq(pva, &pva->dev_queue);
 
 	err = pva_kmd_shared_buffer_init(pva, PVA_PRIV_CCQ_ID,
-					 PVA_KMD_FW_BUF_ELEMENT_SIZE,
+					 (uint32_t)PVA_KMD_FW_BUF_ELEMENT_SIZE,
 					 PVA_KMD_FW_PROFILING_BUF_NUM_ELEMENTS,
 					 NULL, NULL);
 	if (err != PVA_SUCCESS) {
@@ -386,10 +418,15 @@ void pva_kmd_add_deferred_context_free(struct pva_kmd_device *pva,
 
 static void free_deferred_contexts(struct pva_kmd_device *pva)
 {
-	uint32_t n_deferred_context_free =
-		(uint32_t)pva_kmd_atomic_load(&pva->n_deferred_context_free);
+	uint32_t n_deferred_context_free;
+	uint32_t i;
+	int n_deferred;
 
-	for (uint32_t i = 0; i < n_deferred_context_free; i++) {
+	n_deferred = pva_kmd_atomic_load(&pva->n_deferred_context_free);
+	ASSERT(n_deferred >= 0);
+	n_deferred_context_free = (uint32_t)n_deferred;
+
+	for (i = 0; i < n_deferred_context_free; i++) {
 		uint8_t ccq_id = pva->deferred_context_free_ids[i];
 		struct pva_kmd_context *ctx = pva_kmd_get_context(pva, ccq_id);
 		ASSERT(ctx != NULL);
@@ -419,6 +456,7 @@ enum pva_error pva_kmd_deinit_fw(struct pva_kmd_device *pva)
 	/* No longer in recovery state */
 	pva->recovery = false;
 	pva->fw_inited = false;
+	pva->fw_aborted = false;
 	return err;
 }
 
@@ -431,7 +469,7 @@ enum pva_error pva_kmd_query_fw_version(struct pva_kmd_device *pva,
 	struct pva_cmd_get_version get_version_cmd = { 0 };
 	uint32_t version_buffer_size = PVA_VERSION_BUFFER_SIZE;
 
-	if (version_buffer == NULL || buffer_size <= 1) {
+	if (version_buffer == NULL || buffer_size <= 1U) {
 		return PVA_INVAL;
 	}
 
@@ -444,14 +482,14 @@ enum pva_error pva_kmd_query_fw_version(struct pva_kmd_device *pva,
 	}
 
 	/* Clear the buffer */
-	memset(device_memory->va, 0, version_buffer_size);
+	(void)memset(device_memory->va, 0, version_buffer_size);
 
 	/* Set up the command */
 	pva_kmd_set_cmd_get_version(&get_version_cmd, device_memory->iova);
 
 	/* Submit the command synchronously */
 	err = pva_kmd_submit_cmd_sync(&pva->submitter, &get_version_cmd,
-				      sizeof(get_version_cmd),
+				      (uint32_t)sizeof(get_version_cmd),
 				      PVA_KMD_WAIT_FW_POLL_INTERVAL_US,
 				      PVA_KMD_WAIT_FW_TIMEOUT_US);
 	if (err != PVA_SUCCESS) {
@@ -460,8 +498,8 @@ enum pva_error pva_kmd_query_fw_version(struct pva_kmd_device *pva,
 	}
 
 	(void)memcpy(version_buffer, (char *)device_memory->va,
-		     (buffer_size - 1));
-	version_buffer[buffer_size - 1] = '\0'; /* Ensure null termination */
+		     (size_t)buffer_size - 1U);
+	version_buffer[buffer_size - 1U] = '\0'; /* Ensure null termination */
 
 free_memory:
 	pva_kmd_device_memory_free(device_memory);

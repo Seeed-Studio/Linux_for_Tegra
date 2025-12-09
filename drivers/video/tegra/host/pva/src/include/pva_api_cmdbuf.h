@@ -52,7 +52,7 @@ struct pva_dma_misr {
 };
 
 struct pva_user_dma_allowance {
-#define PVA_USER_DMA_ALLOWANCE_ADB_STEP_SIZE 8
+#define PVA_USER_DMA_ALLOWANCE_ADB_STEP_SIZE (uint16_t)8
 	/*desc start index and descriptor count should be multiple of 4*/
 	uint32_t channel_idx : 4;
 	uint32_t desc_start_idx : 7;
@@ -253,7 +253,7 @@ struct pva_cmd_set_vpu_parameter_with_address {
 	uint32_t dram_offset_lo;
 };
 
-#define PVA_MAX_DMA_SETS_PER_DMA_ENGINE 4
+#define PVA_MAX_DMA_SETS_PER_DMA_ENGINE 4U
 
 /** This command first acquires the TCM scratch and then fetches DMA configuration
  * into the scratch. The command does not modify DMA

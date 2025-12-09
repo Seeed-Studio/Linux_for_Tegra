@@ -10,24 +10,33 @@
 #include "pva_kmd_vpu_app_auth.h"
 #include "pva_kmd_shared_buffer.h"
 #include "pva_kmd_r5_ocd.h"
+#include "pva_kmd_fw_tracepoints.h"
+#include "pva_kmd_limits.h"
 
-uint64_t pva_kmd_read_from_buffer_to_user(void *to, uint64_t count,
-					  uint64_t offset, const void *from,
-					  uint64_t available)
+int64_t pva_kmd_read_from_buffer_to_user(void *to, uint64_t count,
+					 uint64_t offset, const void *from,
+					 uint64_t available)
 {
-	if (offset >= available || !count) {
+	uint64_t bytes_copied;
+
+	if ((offset >= available) || (count == 0U)) {
 		return 0;
 	}
 	if (count > available - offset) {
 		count = available - offset;
 	}
-	if (pva_kmd_copy_data_to_user(to, (uint8_t *)from + offset, count)) {
+	if (pva_kmd_copy_data_to_user(to, (const uint8_t *)from + offset,
+				      count) != 0UL) {
 		pva_kmd_log_err("failed to copy read buffer to user");
 		return 0;
 	}
-	return count;
+	bytes_copied = count;
+	/* Ensure result fits in int64_t for debugfs interface */
+	ASSERT(bytes_copied <= (uint64_t)S64_MAX);
+	return (int64_t)bytes_copied;
 }
 
+#if PVA_ENABLE_NSYS_PROFILING == 1
 static int64_t profiling_level_read(struct pva_kmd_device *dev, void *file_data,
 				    uint8_t *out_buffer, uint64_t offset,
 				    uint64_t size)
@@ -46,7 +55,8 @@ static int64_t profiling_level_read(struct pva_kmd_device *dev, void *file_data,
 	formatted_len++; // Account for null terminator
 
 	return pva_kmd_read_from_buffer_to_user(out_buffer, size, offset,
-						kernel_buffer, formatted_len);
+						kernel_buffer,
+						(uint64_t)formatted_len);
 }
 
 static int64_t profiling_level_write(struct pva_kmd_device *dev,
@@ -91,120 +101,84 @@ static int64_t profiling_level_write(struct pva_kmd_device *dev,
 		}
 	}
 
-	return size;
+	return (int64_t)size;
 }
-
-static int64_t print_vpu_stats(struct pva_kmd_tegrastats *kmd_tegra_stats,
-			       uint8_t *out_buffer, uint64_t offset,
-			       uint64_t len)
-{
-	char kernel_buffer[256];
-	int64_t formatted_len;
-
-	formatted_len = snprintf(
-		kernel_buffer, sizeof(kernel_buffer),
-		"%llu\n%llu\n%llu\n%llu\n",
-		(long long unsigned int)(kmd_tegra_stats->window_start_time),
-		(long long unsigned int)(kmd_tegra_stats->window_end_time),
-		(long long unsigned int)
-			kmd_tegra_stats->average_vpu_utilization[0],
-		(long long unsigned int)
-			kmd_tegra_stats->average_vpu_utilization[1]);
-
-	if (formatted_len <= 0) {
-		return 0;
-	}
-
-	formatted_len++; //accounting for null terminating character
-
-	if (len < (uint64_t)formatted_len) {
-		return 0;
-	}
-
-	// Copy the formatted string from kernel buffer to user buffer
-	return pva_kmd_read_from_buffer_to_user(out_buffer, len, offset,
-						kernel_buffer, formatted_len);
-}
-
-static int64_t get_vpu_stats(struct pva_kmd_device *dev, void *file_data,
-			     uint8_t *out_buffer, uint64_t offset,
-			     uint64_t size)
-{
-	struct pva_kmd_tegrastats kmd_tegra_stats;
-
-	// We don't support partial reads for vpu stats because we cannot mix two
-	// reads at different times together.
-	if (offset != 0) {
-		return 0;
-	}
-
-	kmd_tegra_stats.window_start_time = 0;
-	kmd_tegra_stats.window_end_time = 0;
-	kmd_tegra_stats.average_vpu_utilization[0] = 0;
-	kmd_tegra_stats.average_vpu_utilization[1] = 0;
-
-	if (pva_kmd_device_maybe_on(dev))
-		pva_kmd_notify_fw_get_tegra_stats(dev, &kmd_tegra_stats);
-
-	return print_vpu_stats(&kmd_tegra_stats, out_buffer, offset, size);
-}
+#endif
 
 static int64_t get_vpu_allowlist_enabled(struct pva_kmd_device *pva,
 					 void *file_data, uint8_t *out_buffer,
 					 uint64_t offset, uint64_t size)
 {
-	// 1 byte for '0' or '1' and another 1 byte for the Null character
-	char out_str[2];
+	char out_str[2]; // 1 byte for '0' or '1' and another 1 byte for the Null character
+	int ret;
+
 	pva_kmd_mutex_lock(&(pva->pva_auth->allow_list_lock));
-	snprintf(out_str, sizeof(out_str), "%d",
-		 (int)pva->pva_auth->pva_auth_enable);
+	ret = snprintf(out_str, sizeof(out_str), "%d",
+		       (int)pva->pva_auth->pva_auth_enable);
 	pva_kmd_mutex_unlock(&(pva->pva_auth->allow_list_lock));
 
+	if ((ret < 0) || ((size_t)ret >= sizeof(out_str))) {
+		pva_kmd_log_err("snprintf failed or truncated");
+		return (int64_t)PVA_INVAL;
+	}
+
 	// Copy the formatted string from kernel buffer to user buffer
-	return pva_kmd_read_from_buffer_to_user(out_buffer, size, offset,
-						out_str, sizeof(out_str));
+	return pva_kmd_read_from_buffer_to_user(
+		out_buffer, size, offset, out_str, (uint64_t)sizeof(out_str));
 }
 
 static int64_t update_vpu_allowlist(struct pva_kmd_device *pva, void *file_data,
 				    const uint8_t *in_buffer, uint64_t offset,
 				    uint64_t size)
 {
-	char strbuf[2]; // 1 byte for '0' or '1' and another 1 byte for the Null character
+	char input_buf
+		[2]; // 1 byte for '0' or '1' and another 1 byte for the Null character
 	uint32_t base = 10;
 	uint32_t pva_auth_enable;
 	unsigned long retval;
+	unsigned long strtol_result;
 
-	if (size == 0) {
+	if (size == 0U) {
 		pva_kmd_log_err("Write failed, no data provided");
 		return -1;
 	}
 
 	// Copy a single character, ignore the rest
-	retval = pva_kmd_copy_data_from_user(strbuf, in_buffer + offset, 1);
-	if (retval != 0u) {
+	retval = pva_kmd_copy_data_from_user(input_buf, in_buffer + offset, 1);
+	if (retval != 0UL) {
 		pva_kmd_log_err("Failed to copy write buffer from user");
 		return -1;
 	}
 
 	// Explicitly null terminate the string for conversion
-	strbuf[1] = '\0';
-	pva_auth_enable = pva_kmd_strtol(strbuf, base);
+	input_buf[1] = '\0';
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
+	strtol_result = pva_kmd_strtol(input_buf, (int32_t)base);
+	/* Validate result fits in uint32_t */
+	if (strtol_result > U32_MAX) {
+		pva_kmd_log_err("pva_kmd_debugfs: Value exceeds U32_MAX");
+		return -1;
+	}
+	/* CERT INT31-C: strtol_result validated to fit in uint32_t, safe to cast */
+	pva_auth_enable = (uint32_t)strtol_result;
 
 	pva_kmd_mutex_lock(&(pva->pva_auth->allow_list_lock));
-	pva->pva_auth->pva_auth_enable = (pva_auth_enable == 1) ? true : false;
+	pva->pva_auth->pva_auth_enable = (pva_auth_enable == 1U) ? true : false;
 
-	if (pva->pva_auth->pva_auth_enable)
+	if (pva->pva_auth->pva_auth_enable) {
 		pva->pva_auth->pva_auth_allow_list_parsed = false;
+	}
 
 	pva_kmd_mutex_unlock(&(pva->pva_auth->allow_list_lock));
-	return size;
+	return (int64_t)size;
 }
 
 static int64_t get_vpu_allowlist_path(struct pva_kmd_device *pva,
 				      void *file_data, uint8_t *out_buffer,
 				      uint64_t offset, uint64_t size)
 {
-	uint64_t len;
+	int64_t len;
+
 	pva_kmd_mutex_lock(&(pva->pva_auth->allow_list_lock));
 	len = pva_kmd_read_from_buffer_to_user(
 		out_buffer, size, offset,
@@ -223,7 +197,7 @@ static int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva,
 	char buffer[ALLOWLIST_FILE_LEN];
 	unsigned long retval;
 
-	if (size == 0) {
+	if (size == 0U) {
 		return 0;
 	}
 
@@ -235,7 +209,7 @@ static int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva,
 	}
 
 	retval = pva_kmd_copy_data_from_user(buffer, in_buffer, size);
-	if (retval != 0u) {
+	if (retval != 0UL) {
 		pva_kmd_log_err("Failed to copy write buffer from user");
 		return -1;
 	}
@@ -247,79 +221,7 @@ static int64_t update_vpu_allowlist_path(struct pva_kmd_device *pva,
 	pva_kmd_update_allowlist_path(pva, buffer);
 	pva_kmd_mutex_unlock(&(pva->pva_auth->allow_list_lock));
 
-	return size;
-}
-
-static int64_t update_fw_trace_level(struct pva_kmd_device *pva,
-				     void *file_data, const uint8_t *in_buffer,
-				     uint64_t offset, uint64_t size)
-{
-	uint32_t trace_level;
-	unsigned long retval;
-	size_t copy_size;
-	uint32_t base = 10;
-	char strbuf[11]; // 10 bytes for the highest 32bit value and another 1 byte for the Null character
-	strbuf[10] = '\0';
-
-	if (size == 0) {
-		pva_kmd_log_err("Write failed, no data provided");
-		return -1;
-	}
-
-	/* Copy minimum of buffer size and input size */
-	copy_size = (size < (sizeof(strbuf) - 1)) ? size : (sizeof(strbuf) - 1);
-
-	retval = pva_kmd_copy_data_from_user(strbuf, in_buffer + offset,
-					     copy_size);
-	if (retval != 0u) {
-		pva_kmd_log_err("Failed to copy write buffer from user");
-		return -1;
-	}
-
-	trace_level = pva_kmd_strtol(strbuf, base);
-
-	pva->fw_trace_level = trace_level;
-
-	/* If device is on, busy the device and set the debug log level */
-	if (pva_kmd_device_maybe_on(pva) == true) {
-		enum pva_error err;
-		err = pva_kmd_device_busy(pva);
-		if (err != PVA_SUCCESS) {
-			pva_kmd_log_err(
-				"pva_kmd_device_busy failed when submitting set debug log level cmd");
-			goto err_end;
-		}
-
-		err = pva_kmd_notify_fw_set_trace_level(pva, trace_level);
-
-		pva_kmd_device_idle(pva);
-
-		if (err != PVA_SUCCESS) {
-			pva_kmd_log_err(
-				"Failed to notify FW about debug log level change");
-		}
-	}
-err_end:
-	return copy_size;
-}
-
-static int64_t get_fw_trace_level(struct pva_kmd_device *dev, void *file_data,
-				  uint8_t *out_buffer, uint64_t offset,
-				  uint64_t size)
-{
-	char print_buffer[64];
-	int formatted_len;
-
-	formatted_len = snprintf(print_buffer, sizeof(print_buffer), "%u\n",
-				 dev->fw_trace_level);
-
-	if (formatted_len <= 0) {
-		return -1;
-	}
-
-	return pva_kmd_read_from_buffer_to_user(out_buffer, size, offset,
-						print_buffer,
-						(uint64_t)formatted_len);
+	return (int64_t)size;
 }
 
 static int64_t write_simulate_sc7(struct pva_kmd_device *pva, void *file_data,
@@ -330,32 +232,32 @@ static int64_t write_simulate_sc7(struct pva_kmd_device *pva, void *file_data,
 	enum pva_error err;
 	unsigned long ret;
 
-	if ((offset != 0) || (size < 1)) {
+	if ((offset != 0U) || (size < 1U)) {
 		return -EINVAL;
 	}
 
 	ret = pva_kmd_copy_data_from_user(&buf, in_buffer, 1);
-	if (ret != 0) {
+	if (ret != 0U) {
 		pva_kmd_log_err(
 			"SC7 simulation: failed to copy data from user");
 		return -EFAULT;
 	}
 
-	if (buf == '1') {
-		if (pva->debugfs_context.entered_sc7 == 0) {
+	if (buf == (uint8_t)'1') {
+		if (pva->debugfs_context.entered_sc7 == false) {
 			err = pva_kmd_simulate_enter_sc7(pva);
 			if (err != PVA_SUCCESS) {
 				return -EFAULT;
 			}
-			pva->debugfs_context.entered_sc7 = 1;
+			pva->debugfs_context.entered_sc7 = true;
 		}
-	} else if (buf == '0') {
-		if (pva->debugfs_context.entered_sc7 == 1) {
+	} else if (buf == (uint8_t)'0') {
+		if (pva->debugfs_context.entered_sc7 == true) {
 			err = pva_kmd_simulate_exit_sc7(pva);
 			if (err != PVA_SUCCESS) {
 				return -EFAULT;
 			}
-			pva->debugfs_context.entered_sc7 = 0;
+			pva->debugfs_context.entered_sc7 = false;
 		}
 	} else {
 		pva_kmd_log_err(
@@ -363,7 +265,7 @@ static int64_t write_simulate_sc7(struct pva_kmd_device *pva, void *file_data,
 		return -EINVAL;
 	}
 
-	return size;
+	return (int64_t)size;
 }
 
 static int64_t read_simulate_sc7(struct pva_kmd_device *pva, void *file_data,
@@ -374,20 +276,15 @@ static int64_t read_simulate_sc7(struct pva_kmd_device *pva, void *file_data,
 	buf = pva->debugfs_context.entered_sc7 ? '1' : '0';
 
 	return pva_kmd_read_from_buffer_to_user(out_buffer, size, offset, &buf,
-						1);
+						(uint64_t)1);
 }
 
 enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
 {
-	static const char *vpu_ocd_names[NUM_VPU_BLOCKS] = { "ocd_vpu0_v3",
-							     "ocd_vpu1_v3" };
-	struct pva_kmd_file_ops *profiling_fops;
 	enum pva_error err;
 
-	pva_kmd_debugfs_create_bool(pva, "stats_enabled",
-				    &pva->debugfs_context.stats_enable);
-	pva_kmd_debugfs_create_bool(pva, "vpu_debug",
-				    &pva->debugfs_context.vpu_debug);
+#if PVA_ENABLE_NSYS_PROFILING == 1
+	struct pva_kmd_file_ops *profiling_fops;
 
 	// Create profiling_level file operations
 	profiling_fops = &pva->debugfs_context.profiling_level_fops;
@@ -396,6 +293,7 @@ enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
 	profiling_fops->open = NULL;
 	profiling_fops->release = NULL;
 	profiling_fops->pdev = pva;
+
 	err = pva_kmd_debugfs_create_file(pva, "profiling_level",
 					  profiling_fops);
 	if (err != PVA_SUCCESS) {
@@ -403,37 +301,17 @@ enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
 			"Failed to create profiling_level debugfs file");
 		return err;
 	}
+#endif
 
-	pva->debugfs_context.vpu_fops.read = &get_vpu_stats;
-	pva->debugfs_context.vpu_fops.write = NULL;
-	pva->debugfs_context.vpu_fops.pdev = pva;
-	err = pva_kmd_debugfs_create_file(pva, "vpu_stats",
-					  &pva->debugfs_context.vpu_fops);
+	err = pva_kmd_tegrastats_init_debugfs(pva);
 	if (err != PVA_SUCCESS) {
-		pva_kmd_log_err("Failed to create vpu_stats debugfs file");
+		pva_kmd_log_err("Failed to create tegrastats debugfs file");
 		return err;
 	}
 
-	for (uint32_t i = 0; i < NUM_VPU_BLOCKS; i++) {
-		pva->debugfs_context.vpu_ocd_fops[i].open =
-			&pva_kmd_vpu_ocd_open;
-		pva->debugfs_context.vpu_ocd_fops[i].release =
-			&pva_kmd_vpu_ocd_release;
-		pva->debugfs_context.vpu_ocd_fops[i].read =
-			&pva_kmd_vpu_ocd_read;
-		pva->debugfs_context.vpu_ocd_fops[i].write =
-			&pva_kmd_vpu_ocd_write;
-		pva->debugfs_context.vpu_ocd_fops[i].pdev = pva;
-		pva->debugfs_context.vpu_ocd_fops[i].file_data =
-			(void *)&pva->regspec.vpu_dbg_instr_reg_offset[i];
-		err = pva_kmd_debugfs_create_file(
-			pva, vpu_ocd_names[i],
-			&pva->debugfs_context.vpu_ocd_fops[i]);
-		if (err != PVA_SUCCESS) {
-			pva_kmd_log_err(
-				"Failed to create vpu_ocd debugfs file");
-			return err;
-		}
+	err = pva_kmd_vpu_ocd_init_debugfs(pva);
+	if (err != PVA_SUCCESS) {
+		return err;
 	}
 
 	pva->debugfs_context.allowlist_ena_fops.read =
@@ -461,12 +339,7 @@ enum pva_error pva_kmd_debugfs_create_nodes(struct pva_kmd_device *pva)
 		return err;
 	}
 
-	pva->debugfs_context.fw_trace_level_fops.write = &update_fw_trace_level;
-	pva->debugfs_context.fw_trace_level_fops.read = &get_fw_trace_level;
-	pva->debugfs_context.fw_trace_level_fops.pdev = pva;
-	err = pva_kmd_debugfs_create_file(
-		pva, "fw_trace_level",
-		&pva->debugfs_context.fw_trace_level_fops);
+	err = pva_kmd_fw_tracepoints_init_debugfs(pva);
 	if (err != PVA_SUCCESS) {
 		pva_kmd_log_err("Failed to create fw_trace_level debugfs file");
 		return err;

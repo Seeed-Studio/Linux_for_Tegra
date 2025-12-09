@@ -11,6 +11,7 @@
 #include "pva_kmd_silicon_boot.h"
 #include "pva_kmd_shim_silicon.h"
 #include "pva_kmd_utils.h"
+#include "pva_kmd_limits.h"
 
 static inline void pva_kmd_set_sema(struct pva_kmd_device *pva,
 				    uint32_t sema_idx, uint32_t val)
@@ -18,21 +19,6 @@ static inline void pva_kmd_set_sema(struct pva_kmd_device *pva,
 	uint32_t gap = PVA_REG_HSP_SS1_SET_ADDR - PVA_REG_HSP_SS0_SET_ADDR;
 	gap = safe_mulu32(gap, sema_idx);
 	pva_kmd_write(pva, safe_addu32(PVA_REG_HSP_SS0_SET_ADDR, gap), val);
-}
-
-static void init_fw_print_buffer(struct pva_kmd_fw_print_buffer *print_buffer,
-				 void *debug_buffer_va)
-{
-	print_buffer->buffer_info = pva_offset_pointer(
-		debug_buffer_va,
-		FW_TRACE_BUFFER_SIZE + FW_CODE_COVERAGE_BUFFER_SIZE);
-	print_buffer->buffer_info->size =
-		FW_DEBUG_LOG_BUFFER_SIZE - sizeof(*print_buffer->buffer_info);
-	print_buffer->buffer_info->head = 0;
-	print_buffer->buffer_info->tail = 0;
-	print_buffer->buffer_info->flags = 0;
-	print_buffer->content = pva_offset_pointer(
-		print_buffer->buffer_info, sizeof(*print_buffer->buffer_info));
 }
 
 static void disable_sec_mission_error_reporting(struct pva_kmd_device *pva)
@@ -55,16 +41,17 @@ void pva_kmd_config_evp_seg_regs(struct pva_kmd_device *pva)
 {
 	uint64_t seg_reg_value;
 	/* EVP */
-	pva_kmd_write(pva, PVA_REG_EVP_RESET_ADDR, EVP_RESET_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_RESET_ADDR, PVA_EVP_RESET_VECTOR);
 	pva_kmd_write(pva, PVA_REG_EVP_UNDEF_ADDR,
-		      EVP_UNDEFINED_INSTRUCTION_VECTOR);
-	pva_kmd_write(pva, PVA_REG_EVP_SWI_ADDR, EVP_SVC_VECTOR);
+		      PVA_EVP_UNDEFINED_INSTRUCTION_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_SWI_ADDR, PVA_EVP_SVC_VECTOR);
 	pva_kmd_write(pva, PVA_REG_EVP_PREFETCH_ABORT_ADDR,
-		      EVP_PREFETCH_ABORT_VECTOR);
-	pva_kmd_write(pva, PVA_REG_EVP_DATA_ABORT_ADDR, EVP_DATA_ABORT_VECTOR);
-	pva_kmd_write(pva, PVA_REG_EVP_RSVD_ADDR, EVP_RESERVED_VECTOR);
-	pva_kmd_write(pva, PVA_REG_EVP_IRQ_ADDR, EVP_IRQ_VECTOR);
-	pva_kmd_write(pva, PVA_REG_EVP_FIQ_ADDR, EVP_FIQ_VECTOR);
+		      PVA_EVP_PREFETCH_ABORT_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_DATA_ABORT_ADDR,
+		      PVA_EVP_DATA_ABORT_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_RSVD_ADDR, PVA_EVP_RESERVED_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_IRQ_ADDR, PVA_EVP_IRQ_VECTOR);
+	pva_kmd_write(pva, PVA_REG_EVP_FIQ_ADDR, PVA_EVP_FIQ_VECTOR);
 	/* R5 regions are defined as:
 	 * - PRIV1 region for firmware code and data.
 	 * - PRIV2 region for debug printf data.
@@ -109,7 +96,8 @@ void pva_kmd_config_evp_seg_regs(struct pva_kmd_device *pva)
 
 void pva_kmd_config_scr_regs(struct pva_kmd_device *pva)
 {
-	uint32_t scr_lock_mask = pva->is_silicon ? 0xFFFFFFFF : (~PVA_SCR_LOCK);
+	uint32_t scr_lock_mask =
+		pva->is_silicon ? 0xFFFFFFFFU : (~PVA_SCR_LOCK);
 
 	pva_kmd_write(pva, PVA_REG_EVP_SCR_ADDR,
 		      PVA_EVP_SCR_VAL & scr_lock_mask);
@@ -133,8 +121,11 @@ void pva_kmd_config_sid(struct pva_kmd_device *pva)
 	uint32_t offset;
 	uint8_t priv1_sid;
 	uint8_t priv_sid;
-	priv_sid = pva->stream_ids[PVA_R5_SMMU_CONTEXT_ID] & 0xFF;
-	priv1_sid = pva->stream_ids[pva->r5_image_smmu_context_id] & 0xFF;
+	priv_sid = (uint8_t)(pva->stream_ids[PVA_R5_SMMU_CONTEXT_ID] &
+			     (uint8_t)U8_MAX);
+	priv1_sid = (uint8_t)(pva->stream_ids[pva->r5_image_smmu_context_id] &
+			      (uint8_t)U8_MAX);
+
 	/* Priv SIDs */
 	if (pva->load_from_gsc) {
 		pva_kmd_write(pva, pva->regspec.cfg_priv_sid,
@@ -159,7 +150,7 @@ void pva_kmd_config_sid(struct pva_kmd_device *pva)
 	}
 	/* User SIDs */
 	offset = 0;
-	for (i = 1; i < pva->hw_consts.n_smmu_contexts - 1; i++) {
+	for (i = 1U; i < (pva->hw_consts.n_smmu_contexts - 1U); i++) {
 		addr = safe_addu32(pva->regspec.cfg_user_sid_base, offset);
 		pva_kmd_write(pva, addr, pva->stream_ids[i]);
 		offset = safe_addu32(offset, 4U);
@@ -173,7 +164,7 @@ static uint32_t get_syncpt_offset(struct pva_kmd_device *pva,
 		uint64_t offset;
 		offset = safe_subu64(syncpt_iova, pva_kmd_get_r5_iova_start());
 
-		ASSERT(offset <= UINT32_MAX);
+		ASSERT(offset <= U32_MAX);
 		return (uint32_t)offset;
 	} else {
 		// This is only for SIM mode where syncpoints are not supported.
@@ -188,7 +179,8 @@ enum pva_error pva_kmd_load_fw(struct pva_kmd_device *pva)
 	uint32_t boot_sema = 0;
 	enum pva_error err = PVA_SUCCESS;
 	uint32_t checkpoint;
-	uint32_t scr_lock_mask = pva->is_silicon ? 0xFFFFFFFF : (~PVA_SCR_LOCK);
+	uint32_t scr_lock_mask =
+		pva->is_silicon ? 0xFFFFFFFFU : (~PVA_SCR_LOCK);
 
 	/* Load firmware */
 	if (!pva->load_from_gsc) {
@@ -210,7 +202,7 @@ enum pva_error pva_kmd_load_fw(struct pva_kmd_device *pva)
 			"pva_kmd_device_memory_alloc_map failed in pva_kmd_load_fw");
 		goto free_fw_mem;
 	}
-	init_fw_print_buffer(&pva->fw_print_buffer, pva->fw_debug_mem->va);
+	pva_kmd_init_fw_print_buffer(pva, pva->fw_debug_mem->va);
 	pva->debugfs_context.r5_ocd_stage_buffer = pva->fw_debug_mem->va;
 
 	/* Program SCRs */
@@ -253,9 +245,11 @@ enum pva_error pva_kmd_load_fw(struct pva_kmd_device *pva)
 	if (pva->bl_sector_pack_format == PVA_BL_XBAR_RAW) {
 		boot_sema = PVA_BOOT_SEMA_USE_XBAR_RAW;
 	}
+#if SYSTEM_TESTS_ENABLED == 1
 	if (pva->test_mode) {
 		boot_sema |= PVA_BOOT_SEMA_TEST_MODE;
 	}
+#endif
 	pva_kmd_set_sema(pva, PVA_BOOT_SEMA, boot_sema);
 
 	pva_kmd_set_sema(pva, PVA_RO_SYNC_BASE_SEMA,
@@ -294,7 +288,7 @@ enum pva_error pva_kmd_load_fw(struct pva_kmd_device *pva)
 			pva, pva->regspec.ccq_regs[PVA_PRIV_CCQ_ID]
 				     .status[PVA_REG_CCQ_STATUS6_IDX]);
 		pva_kmd_log_err_hex32("Checkpoint value:", checkpoint);
-		pva_kmd_report_error_fsi(pva, err);
+		pva_kmd_report_error_fsi(pva, (uint32_t)err);
 		goto free_sec_lic;
 	}
 
@@ -303,7 +297,7 @@ enum pva_error pva_kmd_load_fw(struct pva_kmd_device *pva)
 free_sec_lic:
 	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
 free_fw_debug_mem:
-	pva_kmd_drain_fw_print(&pva->fw_print_buffer);
+	pva_kmd_drain_fw_print(pva);
 	pva_kmd_freeze_fw(pva);
 	pva_kmd_device_memory_free(pva->fw_debug_mem);
 free_fw_mem:
@@ -335,7 +329,7 @@ void pva_kmd_freeze_fw(struct pva_kmd_device *pva)
 void pva_kmd_unload_fw(struct pva_kmd_device *pva)
 {
 	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_SEC_LIC);
-	pva_kmd_drain_fw_print(&pva->fw_print_buffer);
+	pva_kmd_drain_fw_print(pva);
 
 	// FW so that we can free memory
 	pva_kmd_freeze_fw(pva);

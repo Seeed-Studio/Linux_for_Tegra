@@ -110,7 +110,7 @@
 /**
  * @brief Macro to set a given bit position in a 32 bit number.
  */
-#define PVA_BIT(_b_) ((uint32_t)(((uint32_t)1U << (_b_)) & 0xffffffffu))
+#define PVA_BIT(_b_) (((uint32_t)1U << (_b_)) & 0xffffffffU)
 
 /**
  * @brief Macro to mask a range(MSB to LSB) of bit positions in a 32 bit number.

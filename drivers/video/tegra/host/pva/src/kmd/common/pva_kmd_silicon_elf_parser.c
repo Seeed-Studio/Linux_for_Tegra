@@ -3,13 +3,10 @@
 
 #include "pva_kmd_silicon_elf_parser.h"
 #include "pva_kmd_utils.h"
+#include "pva_kmd_limits.h"
 
 #ifndef max
 #define max(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-
-#ifndef UINT8_MAX
-#define UINT8_MAX 0xFF
 #endif
 
 // CERT complains about casts from const uint8_t*, so do intermediate cast to void*
@@ -21,8 +18,8 @@ static inline const void *uint_8_to_void(const uint8_t *const p)
 bool elf_header_check(const elf_ct e)
 {
 	const elfFileHeader *efh = (const elfFileHeader *)e;
-	if ((ELFCLASS32 == efh->oclass) &&
-	    (ELFMAGIC_LSB == *(const elfWord *)e)) {
+	if ((PVA_ELFCLASS32 == efh->oclass) &&
+	    (PVA_ELFMAGIC_LSB == *(const elfWord *)e)) {
 		return true;
 	}
 	return false;
@@ -217,8 +214,8 @@ static const char *elf_string_at_offset(const elf_parser_ctx e,
 					const elfSectionHeader *eshstr,
 					unsigned int offset)
 {
-	const char *strtab;
-	elfOff stroffset;
+	const char *string_table;
+	elfOff string_offset;
 
 	if (SHT_STRTAB != eshstr->type) {
 		return NULL;
@@ -226,13 +223,14 @@ static const char *elf_string_at_offset(const elf_parser_ctx e,
 	if (offset >= eshstr->size) {
 		return NULL;
 	}
-	strtab = (const char *)e.elf_file;
-	stroffset = eshstr->offset + offset;
-	if (stroffset < eshstr->offset) { // check that stroffset doesn't wrap
+	string_table = (const char *)e.elf_file;
+	string_offset = eshstr->offset + offset;
+	if (string_offset <
+	    eshstr->offset) { // check that string_offset doesn't wrap
 		return NULL;
 	}
-	strtab = &strtab[stroffset];
-	return strtab;
+	string_table = &string_table[string_offset];
+	return string_table;
 }
 
 const char *elf_section_name(const elf_parser_ctx e,
@@ -345,7 +343,7 @@ const elfSymbol *elf_symbol(const elf_parser_ctx e, unsigned int index)
 	if (index >= (esh->size / esh->entsize)) {
 		return NULL;
 	}
-	if (esh->addralign <= (uint8_t)UINT8_MAX) {
+	if (esh->addralign <= (uint8_t)U8_MAX) {
 		align = (uint8_t)esh->addralign;
 	} else {
 		return NULL;
@@ -387,7 +385,7 @@ const char *elf_symbol_name(const elf_parser_ctx e, const elfSectionHeader *esh,
 		return NULL;
 	}
 	p = (const char *)e.elf_file;
-	if (esh->addralign <= (uint8_t)UINT8_MAX) {
+	if (esh->addralign <= (uint8_t)U8_MAX) {
 		align = (uint8_t)esh->addralign;
 	} else {
 		return NULL;

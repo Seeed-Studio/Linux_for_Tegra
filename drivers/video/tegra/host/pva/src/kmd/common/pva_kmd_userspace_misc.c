@@ -45,7 +45,9 @@ void *pva_kmd_zalloc(uint64_t size)
 
 void pva_kmd_free(void *ptr)
 {
-	free(ptr);
+	if (ptr != NULL) {
+		free(ptr);
+	}
 }
 
 void pva_kmd_fault(void)
@@ -71,8 +73,12 @@ enum pva_error pva_kmd_sema_wait_timeout(pva_kmd_sema_t *sem,
 	ASSERT(ret == 0);
 
 	/* Add timeout (specified in milliseconds) to the current time */
-	ts.tv_sec += timeout_ms / 1000;
-	ts.tv_nsec += (timeout_ms % 1000) * 1000000;
+	{
+		uint32_t sec_part = timeout_ms / 1000U;
+		uint32_t nsec_part = (timeout_ms % 1000U) * 1000000U;
+		ts.tv_sec += (time_t)sec_part;
+		ts.tv_nsec += (long)nsec_part;
+	}
 
 	/* Handle case where nanoseconds exceed 1 second */
 	if (ts.tv_nsec >= 1000000000) {
@@ -82,11 +88,12 @@ enum pva_error pva_kmd_sema_wait_timeout(pva_kmd_sema_t *sem,
 
 wait_again:
 	ret = sem_timedwait(sem, &ts);
-	if (ret != 0) {
-		if (errno == ETIMEDOUT) {
+	if (ret == -1) {
+		int saved_errno = errno;
+		if (saved_errno == ETIMEDOUT) {
 			pva_kmd_log_err("pva_kmd_sema_wait_timeout Timed out");
 			return PVA_TIMEDOUT;
-		} else if (errno == EINTR) {
+		} else if (saved_errno == EINTR) {
 			goto wait_again;
 		} else {
 			FAULT("Unexpected sem_timedwait error");
@@ -111,7 +118,7 @@ void pva_kmd_sema_post(pva_kmd_sema_t *sem)
 struct pva_kmd_device_memory *
 pva_kmd_device_memory_alloc_map(uint64_t size, struct pva_kmd_device *pva,
 				uint32_t iova_access_flags,
-				uint32_t smmu_ctx_idx)
+				uint8_t smmu_ctx_idx)
 {
 	struct pva_kmd_device_memory *mem;
 	enum pva_error err;
@@ -142,24 +149,30 @@ err_out:
 	return NULL;
 }
 
-void pva_kmd_atomic_store(pva_kmd_atomic_t *atomic_val, int val)
+void pva_kmd_atomic_store(pva_kmd_atomic_t *a_var, int val)
 {
-	atomic_store(atomic_val, val);
+	atomic_store(a_var, val);
 }
 
-int pva_kmd_atomic_fetch_add(pva_kmd_atomic_t *atomic_val, int val)
+int pva_kmd_atomic_fetch_add(pva_kmd_atomic_t *a_var, int val)
 {
-	return atomic_fetch_add(atomic_val, val);
+	/* MISRA Deviation: Atomic to non-atomic conversion is required for return value */
+	int result = (int)atomic_fetch_add(a_var, val);
+	return result;
 }
 
-int pva_kmd_atomic_fetch_sub(pva_kmd_atomic_t *atomic_val, int val)
+int pva_kmd_atomic_fetch_sub(pva_kmd_atomic_t *a_var, int val)
 {
-	return atomic_fetch_sub(atomic_val, val);
+	/* MISRA Deviation: Atomic to non-atomic conversion is required for return value */
+	int result = (int)atomic_fetch_sub(a_var, val);
+	return result;
 }
 
-int pva_kmd_atomic_load(pva_kmd_atomic_t *atomic_val)
+int pva_kmd_atomic_load(pva_kmd_atomic_t *a_var)
 {
-	return atomic_load(atomic_val);
+	/* MISRA Deviation: Atomic to non-atomic conversion is required for return value */
+	int result = (int)atomic_load(a_var);
+	return result;
 }
 
 bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva)
@@ -167,7 +180,7 @@ bool pva_kmd_device_maybe_on(struct pva_kmd_device *pva)
 	bool device_on = false;
 
 	pva_kmd_mutex_lock(&pva->powercycle_lock);
-	if (pva->refcount > 0) {
+	if (pva->refcount > 0U) {
 		device_on = true;
 	}
 	pva_kmd_mutex_unlock(&pva->powercycle_lock);

@@ -105,15 +105,17 @@ enum pva_error pva_memory_cpu_unmap(struct pva_memory *mem, void *va);
 void pva_memory_free(struct pva_memory *mem);
 
 /**
- * @brief Wait for a syncpoint to reach a value.
+ * @brief Wait for a PVA-owned syncpoint to reach a value.
+ *
+ * This function does not work for imported syncpoints.
  *
  * @param[in] ctx Pointer to the context.
- * @param[in] syncpiont_id Syncpoint ID to wait on.
+ * @param[in] syncpoint_id Syncpoint ID to wait on.
  * @param[in] value Value to wait for.
  * @param[in] timeout_us Timeout in microseconds. PVA_SUBMIT_TIMEOUT_INF for infinite.
  */
 enum pva_error pva_syncpoint_wait(struct pva_context *ctx,
-				  uint32_t syncpiont_id, uint32_t value,
+				  uint32_t syncpoint_id, uint32_t value,
 				  uint64_t timeout_us);
 
 /**
@@ -213,11 +215,70 @@ enum pva_error pva_memory_import_id_create(struct pva_context *ctx,
  */
 enum pva_error pva_memory_import_id_destroy(uint64_t import_id);
 
+/**
+ * @brief Get the asynchronous error for a context.
+ *
+ * Note that other fields are valid only if out_error->error is not PVA_SUCCESS.
+ *
+ * @param[in] ctx Pointer to the context.
+ * @param[out] out_error Pointer to the asynchronous error.
+ * @param[out] out_failure_reason Pointer to a null-terminated string describing the failure reason.
+ */
+enum pva_error pva_get_async_error(struct pva_context *ctx,
+				   struct pva_async_error *out_error,
+				   const char **out_failure_reason);
+
+/**
+ * @brief Query runtime policy for API usage restrictions.
+ *
+ * Returns the current policy for which categories of the public PVA API are
+ * permitted. Implementations may consult an underlying system-state facility to
+ * determine whether certain API categories (for example, initialization flows)
+ * should be restricted in the current state. If such a facility exists, the
+ * implementation sets  api_restrictions accordingly. If no facility exists
+ * or it is unsupported, the implementation returns @ref PVA_API_ALL_ALLOWED.
+ *
+ * @param[out] api_restrictions Pointer that receives the API restriction flags.
+ *                              On success, set to one of: PVA_API_ALL_ALLOWED
+ *                              or PVA_API_INIT_NOT_ALLOWED.
+ * @return enum pva_error
+ *         - PVA_SUCCESS: Query succeeded and @p api_restrictions is valid
+ *         - PVA_ERR_DVMS_GET_VM_STATE_FAILED: Underlying state facility query
+ *           failed (when such a facility is used by the implementation)
+ *         - PVA_INTERNAL: Internal error when hardware version is not supported
+ */
+enum pva_error pva_get_api_restrictions(uint32_t *api_restrictions);
+
+/**
+ * @brief Get the number of PFSD tests supported by PVA system SW.
+ *
+ * PFSD is not supported on T19x and Linux platforms; in these cases, the function
+ * will indicate that PFSD is not supported by returning zero.
+ * On other supported platforms, it will return the number of PFSD tests supported.
+ *
+ * @param[in] ctx Pointer to the PVA context.
+ * @param[out] pfsd_test_count Pointer to uint32_t to receive the test count.
+ * @return enum pva_error Error status.
+ */
+enum pva_error pva_get_pfsd_test_count(struct pva_context *ctx,
+				       uint32_t *test_count);
+
+/**
+ * @brief Register a PFSD command buffer.
+ *
+ * @param[in] ctx Pointer to the PVA context.
+ * @param[in] test_id Test ID. From 0 to test_count - 1.
+ * @param[out] cmd_buffer_resource_id Command buffer resource ID.
+ * @return enum pva_error Error status.
+ */
+enum pva_error pva_get_pfsd_info(struct pva_context *ctx, uint32_t test_id,
+				 uint32_t *cmd_buffer_resource_id);
+
 /** \brief Specifies the PVA system software major version. */
 #define PVA_SYSSW_MAJOR_VERSION (2U)
 
 /** \brief Specifies the PVA system software minor version. */
-#define PVA_SYSSW_MINOR_VERSION (8U)
+#define PVA_SYSSW_MINOR_VERSION (9U)
 
 #ifdef __cplusplus
 }

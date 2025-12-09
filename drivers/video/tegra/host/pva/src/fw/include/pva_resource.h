@@ -88,7 +88,8 @@ static inline uint32_t get_slot_size(struct pva_fw_dma_slot const *slot)
 		return size;
 	}
 	tmp_size = slot->end_addr - slot->start_addr;
-	if (tmp_size > (int64_t)UINT32_MAX) {
+	/* Check for both negative (overflow) and too large values */
+	if ((tmp_size < 0) || (tmp_size > (int64_t)UINT32_MAX)) {
 		return size;
 	}
 	size = (uint32_t)tmp_size;
@@ -198,7 +199,7 @@ pva_dma_resource_map_add_triggers(struct pva_dma_resource_map *map)
 	// If an application is running on VPU, it has access to all the triggers
 	// Only FW and DMA-only workloads can initiate transfers in parallel to
 	// a running VPU application, but they do not require triggers.
-	map->triggers |= 1;
+	map->triggers |= 1U;
 }
 
 static inline void
@@ -299,36 +300,38 @@ static inline struct pva_fw_dma_slot *
 pva_dma_config_get_slots(struct pva_dma_config_resource *dma_config)
 {
 	return (struct pva_fw_dma_slot
-			*)((uint8_t *)dma_config +
-			   sizeof(struct pva_dma_config_resource));
+			*)(uintptr_t)((uint8_t *)dma_config +
+				      sizeof(struct pva_dma_config_resource));
 }
 
 static inline struct pva_fw_dma_reloc *
 pva_dma_config_get_relocs(struct pva_dma_config_resource *dma_config)
 {
 	return (struct pva_fw_dma_reloc
-			*)((uint8_t *)pva_dma_config_get_slots(dma_config) +
-			   sizeof(struct pva_fw_dma_slot) *
-				   dma_config->num_dynamic_slots);
+			*)(uintptr_t)((uint8_t *)pva_dma_config_get_slots(
+					      dma_config) +
+				      sizeof(struct pva_fw_dma_slot) *
+					      dma_config->num_dynamic_slots);
 }
 
 static inline struct pva_fw_dma_channel *
 pva_dma_config_get_channels(struct pva_dma_config_resource *dma_config)
 {
-	return (struct pva_fw_dma_channel *)((uint8_t *)
-						     pva_dma_config_get_relocs(
-							     dma_config) +
-					     sizeof(struct pva_fw_dma_reloc) *
-						     dma_config->num_relocs);
+	return (struct pva_fw_dma_channel
+			*)(uintptr_t)((uint8_t *)pva_dma_config_get_relocs(
+					      dma_config) +
+				      sizeof(struct pva_fw_dma_reloc) *
+					      dma_config->num_relocs);
 }
 
 static inline struct pva_fw_dma_descriptor *
 pva_dma_config_get_descriptors(struct pva_dma_config_resource *dma_config)
 {
 	return (struct pva_fw_dma_descriptor
-			*)((uint8_t *)pva_dma_config_get_channels(dma_config) +
-			   sizeof(struct pva_fw_dma_channel) *
-				   dma_config->num_channels);
+			*)(uintptr_t)((uint8_t *)pva_dma_config_get_channels(
+					      dma_config) +
+				      sizeof(struct pva_fw_dma_channel) *
+					      dma_config->num_channels);
 }
 
 #endif // PVA_RESOURCE_H

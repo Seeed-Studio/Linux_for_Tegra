@@ -73,12 +73,12 @@ static inline uint8_t get_head_desc_did(struct pva_hwseq_priv const *hwseq)
 	return hwseq->dma_descs[0].did;
 }
 
-static inline enum pva_error check_adv_params(int32_t adv1, int32_t adv2,
-					      int32_t adv3, uint8_t rpt1,
+static inline enum pva_error check_adv_params(uint32_t adv1, uint32_t adv2,
+					      uint32_t adv3, uint8_t rpt1,
 					      uint8_t rpt2, uint8_t rpt3,
 					      bool has_dim3)
 {
-	if (!has_dim3 && ((adv1 != 0) || (adv2 != 0) || (adv3 != 0) ||
+	if (!has_dim3 && ((adv1 != 0U) || (adv2 != 0U) || (adv3 != 0U) ||
 			  ((rpt1 + rpt2 + rpt3) != 0U))) {
 		return PVA_INVAL;
 	}
@@ -114,13 +114,10 @@ validate_adv_params(struct pva_dma_transfer_attr const *attr, bool has_dim3)
 		pva_kmd_log_err("descriptor source tile looping not allowed");
 		return err;
 	}
-	if (attr->adv1 < 0) {
-		pva_kmd_log_err(
-			"source advance amount on dim1 can not be negative");
-		return PVA_INVAL;
-	}
 
-	if ((attr->adv1 * ((int32_t)(attr->rpt1) + 1)) != attr->adv2) {
+	/* Use 64-bit arithmetic to avoid overflow in multiplication */
+	if (((uint64_t)attr->adv1 * ((uint64_t)attr->rpt1 + 1ULL)) !=
+	    (uint64_t)attr->adv2) {
 		pva_kmd_log_err(
 			"Invalid source advance amount on dim1 or dim2");
 		return PVA_INVAL;
@@ -260,7 +257,7 @@ check_vmem_setup(struct pva_dma_transfer_attr const *attr,
 		 uint32_t vmem_tile_count, bool has_dim3)
 {
 	if ((!has_dim3) && (vmem_tile_count > 1U) &&
-	    ((attr->adv1 != 0) || (attr->adv2 != 0) || (attr->adv3 != 0))) {
+	    ((attr->adv1 != 0U) || (attr->adv2 != 0U) || (attr->adv3 != 0U))) {
 		return PVA_INVAL;
 	}
 	return PVA_SUCCESS;
@@ -426,11 +423,6 @@ static enum pva_error validate_dst_vmem(struct pva_hwseq_priv *hwseq,
 			return PVA_INVAL;
 		}
 
-		if (head_desc->src.adv1 < 0) {
-			pva_kmd_log_err("Source adv1 can not be negative");
-			return PVA_INVAL;
-		}
-
 		tx = maxu32(head_desc->tx, tail_desc->tx);
 		ty = maxu32(head_desc->ty, tail_desc->ty);
 		end_addr =
@@ -438,9 +430,10 @@ static enum pva_error validate_dst_vmem(struct pva_hwseq_priv *hwseq,
 			       subs64((int64_t)ty, 1LL, &math_err), &math_err);
 
 		end_addr = adds64(end_addr, (int64_t)tx, &math_err);
-		end_addr = adds64(muls64((int64_t)head_desc->src.rpt1,
-					 head_desc->dst.adv1, &math_err),
-				  end_addr, &math_err);
+		end_addr =
+			adds64(muls64((int64_t)head_desc->src.rpt1,
+				      (int64_t)head_desc->dst.adv1, &math_err),
+			       end_addr, &math_err);
 
 		end_addr = adds64(muls64(end_addr, num_bytes, &math_err),
 				  offset, &math_err);
@@ -573,9 +566,10 @@ static enum pva_error validate_src_vmem(struct pva_hwseq_priv *hwseq,
 			return PVA_INVAL;
 		}
 
-		end_addr = adds64(muls64((int64_t)head_desc->dst.rpt1,
-					 head_desc->src.adv1, &math_err),
-				  end_addr, &math_err);
+		end_addr =
+			adds64(muls64((int64_t)head_desc->dst.rpt1,
+				      (int64_t)head_desc->src.adv1, &math_err),
+			       end_addr, &math_err);
 
 		end_addr = adds64(muls64(end_addr, num_bytes, &math_err),
 				  offset, &math_err);
@@ -986,9 +980,12 @@ validate_frame_buffer_addr(struct pva_hwseq_priv *hwseq,
 	uint8_t head_desc_id = get_head_desc_did(hwseq);
 	const struct pva_dma_descriptor *head_desc = hwseq->head_desc;
 	pva_math_error math_err = MATH_OP_SUCCESS;
-
-	frame_plane_size =
+	uint32_t adv_value =
 		sequencing_to_vmem ? head_desc->src.adv1 : head_desc->dst.adv1;
+
+	/* adv1 is uint32_t but limited to 24-bit range (max 0xFFFFFF < INT32_MAX) */
+	ASSERT(adv_value <= 0x7FFFFFFFU);
+	frame_plane_size = (int32_t)adv_value;
 	frame_buffer_start =
 		adds64(muls64(frame_info->start_y, (int64_t)frame_line_pitch,
 			      &math_err),
@@ -1061,12 +1058,12 @@ static void get_sequencing_and_dim3(struct pva_hwseq_priv *hwseq,
 	*has_dim3 = ((head_desc->src.rpt1 == head_desc->dst.rpt1) &&
 		     (head_desc->src.rpt2 == head_desc->dst.rpt2));
 	*has_dim3 = *has_dim3 &&
-		    ((*sequencing_to_vmem) ? ((head_desc->src.adv1 > 0) &&
-					      (head_desc->src.adv2 > 0) &&
-					      (head_desc->dst.adv1 > 0)) :
-						   ((head_desc->dst.adv1 > 0) &&
-					      (head_desc->dst.adv2 > 0) &&
-					      (head_desc->src.adv1 > 0)));
+		    ((*sequencing_to_vmem) ? ((head_desc->src.adv1 > 0U) &&
+					      (head_desc->src.adv2 > 0U) &&
+					      (head_desc->dst.adv1 > 0U)) :
+						   ((head_desc->dst.adv1 > 0U) &&
+					      (head_desc->dst.adv2 > 0U) &&
+					      (head_desc->src.adv1 > 0U)));
 }
 
 /**
@@ -1147,6 +1144,48 @@ validate_dma_boundaries(struct pva_hwseq_priv *hwseq,
 	return err;
 }
 
+static enum pva_error
+process_frame_descriptors(struct pva_hwseq_priv *hwseq_info,
+			  struct pva_dma_hwseq_desc_entry *desc_entries,
+			  uint32_t num_descs, uint64_t *hw_dma_descs_mask)
+{
+	enum pva_error err = PVA_SUCCESS;
+	const struct pva_dma_hwseq_desc_entry *desc_entry = NULL;
+	uint32_t i;
+
+	for (i = 0; i < num_descs; i++) {
+		desc_entry = (const struct pva_dma_hwseq_desc_entry
+				      *)(read_hwseq_blob(
+			&hwseq_info->blob,
+			(uint32_t)sizeof(struct pva_dma_hwseq_desc_entry)));
+
+		if (validate_desc_entry(
+			    desc_entry,
+			    safe_addu8(hwseq_info->dma_config->header
+					       .base_descriptor,
+				       hwseq_info->dma_config->header
+					       .num_descriptors)) !=
+		    PVA_SUCCESS) {
+			pva_kmd_log_err("Invalid DMA Descriptor Entry");
+			err = PVA_INVAL;
+			goto out;
+		}
+		desc_entries[i].did = desc_entry->did - 1U;
+		//TODO enable nv_array_index_no_speculate later
+		// desc_entries[i].did = (uint8_t) nv_array_index_no_speculate_u32(
+		// 	desc_entries[i].did, max_num_descs);
+
+		desc_entries[i].dr = desc_entry->dr;
+		hw_dma_descs_mask[(desc_entries[i].did / 64ULL)] |=
+			1ULL << (desc_entries[i].did & MAX_DESC_ID);
+
+		hwseq_info->tiles_per_packet += ((uint32_t)desc_entry->dr + 1U);
+	}
+
+out:
+	return err;
+}
+
 /**
  * \brief Validates the HW Sequener when it is in Frame Addressing Mode
  *
@@ -1184,10 +1223,8 @@ validate_dma_boundaries(struct pva_hwseq_priv *hwseq,
 static enum pva_error validate_frame_mode(struct pva_hwseq_priv *hwseq_info,
 					  uint64_t *hw_dma_descs_mask)
 {
-	struct pva_dma_hwseq_desc_entry *desc_entry = NULL;
 	struct pva_dma_hwseq_desc_entry *desc_entries = hwseq_info->dma_descs;
 	uint32_t num_descs = 0U;
-	uint32_t i = 0U;
 	uint32_t num_cr = 0U;
 	enum pva_error err = PVA_SUCCESS;
 	struct pva_hwseq_per_frame_info fr_info = { 0 };
@@ -1197,21 +1234,22 @@ static enum pva_error validate_frame_mode(struct pva_hwseq_priv *hwseq_info,
 		pva_kmd_log_err_u64(
 			"Cannot have more than 1 col/row header in GEN2",
 			hwseq_info->hdr->nocr);
-		return PVA_INVAL;
+		err = PVA_INVAL;
+		goto out;
 	}
 
 	for (num_cr = 0; num_cr <= hwseq_info->hdr->nocr; num_cr++) {
 		hwseq_info->tiles_per_packet = 0;
-		hwseq_info->colrow =
-			(struct pva_dma_hwseq_colrow_hdr *)(read_hwseq_blob(
-				&hwseq_info->blob,
-				(uint32_t)sizeof(
-					struct pva_dma_hwseq_colrow_hdr)));
+		hwseq_info->colrow = (const struct pva_dma_hwseq_colrow_hdr
+					      *)(read_hwseq_blob(
+			&hwseq_info->blob,
+			(uint32_t)sizeof(struct pva_dma_hwseq_colrow_hdr)));
 
 		if (hwseq_info->colrow == NULL) {
 			pva_kmd_log_err(
 				"Cannot read HW sequencer col/row header");
-			return PVA_INVAL;
+			err = PVA_INVAL;
+			goto out;
 		}
 
 		num_descs = hwseq_info->colrow->dec + (uint32_t)1U;
@@ -1219,39 +1257,17 @@ static enum pva_error validate_frame_mode(struct pva_hwseq_priv *hwseq_info,
 		if (num_descs > 2U) {
 			pva_kmd_log_err(
 				"Cannot have more than 2 descriptors in HW Sequencer");
-			return PVA_INVAL;
+			err = PVA_INVAL;
+			goto out;
 		}
 
-		for (i = 0; i < num_descs; i++) {
-			desc_entry = (struct pva_dma_hwseq_desc_entry
-					      *)(read_hwseq_blob(
-				&hwseq_info->blob,
-				(uint32_t)sizeof(
-					struct pva_dma_hwseq_desc_entry)));
-
-			if (validate_desc_entry(
-				    desc_entry,
-				    safe_addu8(hwseq_info->dma_config->header
-						       .base_descriptor,
-					       hwseq_info->dma_config->header
-						       .num_descriptors)) !=
-			    PVA_SUCCESS) {
-				pva_kmd_log_err("Invalid DMA Descriptor Entry");
-				return PVA_INVAL;
-			}
-			desc_entries[i].did = desc_entry->did - 1U;
-			//TODO enable nv_array_index_no_speculate later
-			// desc_entries[i].did = (uint8_t) nv_array_index_no_speculate_u32(
-			// 	desc_entries[i].did, max_num_descs);
-
-			desc_entries[i].dr = desc_entry->dr;
-			hw_dma_descs_mask[(desc_entries[i].did / 64ULL)] |=
-				1ULL << (desc_entries[i].did & MAX_DESC_ID);
-
-			hwseq_info->tiles_per_packet +=
-				((uint32_t)desc_entry->dr + 1U);
+		err = process_frame_descriptors(hwseq_info, desc_entries,
+						num_descs, hw_dma_descs_mask);
+		if (err != PVA_SUCCESS) {
+			goto out;
 		}
-		if ((i == num_descs) && ((i % 2U) != 0U)) {
+
+		if ((num_descs % 2U) != 0U) {
 			(void)read_hwseq_blob(
 				&hwseq_info->blob,
 				(uint32_t)sizeof(
@@ -1275,17 +1291,18 @@ static enum pva_error validate_frame_mode(struct pva_hwseq_priv *hwseq_info,
 
 		err = validate_dma_boundaries(hwseq_info, &fr_info, num_cr);
 		if (err != PVA_SUCCESS) {
-			return err;
+			goto out;
 		}
 	}
 
+out:
 	return err;
 }
 
 static enum pva_error validate_rra_mode(struct pva_hwseq_priv *hwseq_info,
 					uint64_t *hw_dma_descs_mask)
 {
-	const uint8_t *column = 0U;
+	const uint8_t *column = NULL;
 	uint32_t i = 0U;
 	uint32_t num_columns = 0U;
 	uint32_t end = hwseq_info->entry.ch->hwseq_end;
@@ -1306,24 +1323,31 @@ static enum pva_error validate_rra_mode(struct pva_hwseq_priv *hwseq_info,
 		return PVA_INVAL;
 	}
 
-	if (hwseq_info->hdr->fr != 0) {
+	if (hwseq_info->hdr->fr != 0U) {
 		pva_kmd_log_err("Invalid HWSEQ repetition factor");
 		return PVA_INVAL;
 	}
 
-	num_columns = hwseq_info->hdr->nocr + 1U;
+	num_columns = (uint32_t)hwseq_info->hdr->nocr + 1U;
 	column = hwseq_info->blob.data + sizeof(struct pva_dma_hwseq_hdr);
 
 	// Ensure there are sufficient CRO and Desc ID entries in the HWSEQ blob
-	if (((blob_end - column) / column_entry_size) < num_columns) {
-		pva_kmd_log_err("HWSEQ Program does not have enough columns");
-		return PVA_INVAL;
+	{
+		ptrdiff_t blob_diff = blob_end - column;
+		size_t blob_size = (blob_diff >= 0) ? (size_t)blob_diff : 0U;
+		if ((blob_end < column) ||
+		    ((blob_size / (size_t)column_entry_size) < num_columns)) {
+			pva_kmd_log_err(
+				"HWSEQ Program does not have enough columns");
+			return PVA_INVAL;
+		}
 	}
 
 	for (i = 0U; i < num_columns; i++) {
 		struct pva_dma_hwseq_desc_entry desc_entry;
-		uint32_t *desc_read_data = (uint32_t *)(read_hwseq_blob(
-			&hwseq_info->blob, column_entry_size));
+		const uint32_t *desc_read_data =
+			(const uint32_t *)(read_hwseq_blob(&hwseq_info->blob,
+							   column_entry_size));
 		if (desc_read_data == NULL) {
 			pva_kmd_log_err(
 				"Failed to read descriptor data from HWSEQ blob");
@@ -1335,9 +1359,13 @@ static enum pva_error validate_rra_mode(struct pva_hwseq_priv *hwseq_info,
 		// In RRA mode, each HWSEQ column has only 1 descriptor
 		// Hence, we validate the first descriptor and ignore the second
 		// descriptor in each column
-		desc_entry.did = (desc_read_data[1U] & 0x000000FFU);
-		desc_entry.dr = ((desc_read_data[1U] & 0x0000FF00U) >> 8U);
-		if (validate_desc_entry(&desc_entry, PVA_MAX_NUM_DMA_DESC) !=
+		desc_entry.did = (uint8_t)(desc_read_data[1U] & 0x000000FFU);
+		desc_entry.dr =
+			(uint8_t)((desc_read_data[1U] & 0x0000FF00U) >> 8U);
+		/* CERT INT31-C: PVA_MAX_NUM_DMA_DESC is compile-time constant <= 96,
+		 * always fits in uint8_t, safe to cast */
+		if (validate_desc_entry(&desc_entry,
+					(uint8_t)PVA_MAX_NUM_DMA_DESC) !=
 		    PVA_SUCCESS) {
 			pva_kmd_log_err(
 				"Invalid Descriptor ID found in HW Sequencer");
@@ -1348,7 +1376,7 @@ static enum pva_error validate_rra_mode(struct pva_hwseq_priv *hwseq_info,
 			1ULL << (desc_entry.did & MAX_DESC_ID);
 	}
 
-	return 0;
+	return PVA_SUCCESS;
 }
 
 /**
@@ -1436,21 +1464,27 @@ check_for_valid_hwseq_type(struct pva_hwseq_priv *hwseq_info,
 {
 	enum pva_error err = PVA_SUCCESS;
 	//Populate hwseq_info header
-	hwseq_info->hdr = (struct pva_dma_hwseq_hdr *)(read_hwseq_blob(
+	hwseq_info->hdr = (const struct pva_dma_hwseq_hdr *)(read_hwseq_blob(
 		&hwseq_info->blob, (uint32_t)sizeof(struct pva_dma_hwseq_hdr)));
 	if (hwseq_info->hdr == NULL) {
 		pva_kmd_log_err("HW sequencer buffer does not contain header");
 		return PVA_INVAL;
 	}
 
-	if ((hwseq_info->hdr->fr != 0U) || (hwseq_info->hdr->fo != 0U)) {
+	if ((hwseq_info->hdr->fr != 0U) || (hwseq_info->hdr->fo != 0)) {
 		return PVA_INVAL;
 	}
 
 	if (hwseq_info->hdr->fid == (uint16_t)PVA_DMA_HWSEQ_DESC_MODE) {
 		err = validate_desc_mode(hwseq_info);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err("Descriptor mode validation failed");
+		}
 	} else if (hwseq_info->hdr->fid == (uint16_t)PVA_DMA_HWSEQ_FRAME_MODE) {
 		err = validate_frame_mode(hwseq_info, hw_dma_descs_mask);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err("Frame mode validation failed");
+		}
 	} else if (hwseq_info->hdr->fid == (uint16_t)PVA_DMA_HWSEQ_RRA_MODE) {
 		if (hwseq_info->hw_gen < PVA_HW_GEN3) {
 			pva_kmd_log_err(
@@ -1458,6 +1492,9 @@ check_for_valid_hwseq_type(struct pva_hwseq_priv *hwseq_info,
 			return PVA_INVAL;
 		}
 		err = validate_rra_mode(hwseq_info, hw_dma_descs_mask);
+		if (err != PVA_SUCCESS) {
+			pva_kmd_log_err("RRA mode validation failed");
+		}
 	} else {
 		pva_kmd_log_err("Invalid Header in HW Sequencer Blob");
 		return PVA_INVAL;
@@ -1517,7 +1554,7 @@ validate_channel_accesses(const struct pva_dma_channel *ch,
 	entry->hwseq_end = ch->hwseq_end;
 	entry->num_frames = 1U;
 	if (hw_gen == PVA_HW_GEN3) {
-		entry->num_frames = ch->hwseq_frame_count + 1U;
+		entry->num_frames = (uint32_t)ch->hwseq_frame_count + 1U;
 	}
 	entry->ch = ch;
 	return PVA_SUCCESS;
@@ -1542,7 +1579,7 @@ enum pva_error validate_hwseq(struct pva_dma_config const *dma_config,
 
 	for (i = 0U; i < num_channels; i++) {
 		ch = &dma_config->channels[i];
-		if (ch->hwseq_enable == 1) {
+		if (ch->hwseq_enable == 1U) {
 			err = validate_channel_accesses(ch, &dma_config->header,
 							hwseq_info.hw_gen,
 							&entries[num_hwseqs]);
@@ -1555,13 +1592,15 @@ enum pva_error validate_hwseq(struct pva_dma_config const *dma_config,
 
 	for (i = 0U; i < num_hwseqs; i++) {
 		uint32_t start_index = entries[i].hwseq_start;
-		uint32_t end_index = entries[i].hwseq_end + 1U;
+		uint32_t end_index = (uint32_t)entries[i].hwseq_end + 1U;
 		uint32_t curr_offset = start_index << 2U;
 		uint32_t len = 0U;
+		const uint8_t *base;
+
 		//Populate hwseq blob
-		hwseq_info.blob.data =
-			(uint8_t *)((uintptr_t)(dma_config->hwseq_words) +
-				    (curr_offset));
+		/* Use byte pointer arithmetic for offset calculation */
+		base = (const uint8_t *)dma_config->hwseq_words;
+		hwseq_info.blob.data = base + curr_offset;
 
 		len = safe_subu32(end_index, start_index);
 		hwseq_info.blob.bytes_left = (len << 2U);

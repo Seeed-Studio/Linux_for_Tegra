@@ -33,7 +33,7 @@ enum pva_error pva_kmd_init_vpu_app_auth(struct pva_kmd_device *pva, bool ena)
 	err = pva_kmd_mutex_init(&pva_auth->allow_list_lock);
 	if (err != PVA_SUCCESS) {
 		pva_kmd_log_err("Failed to initialize allow list lock");
-		goto free;
+		goto cleanup_free;
 	}
 
 	default_path_len = strnlen(default_path, ALLOWLIST_FILE_LEN);
@@ -45,7 +45,7 @@ enum pva_error pva_kmd_init_vpu_app_auth(struct pva_kmd_device *pva, bool ena)
 
 	return PVA_SUCCESS;
 
-free:
+cleanup_free:
 	pva_kmd_free(pva_auth);
 error:
 	pva->pva_auth = NULL;
@@ -62,7 +62,7 @@ error:
  * \ref PVA_SUCCESS Success. Passed in key matched wth calculated key.
  * \ref -EACCES. Passed in Key doesn't match with calcualted key.
  */
-static enum pva_error is_key_match(uint8_t *dataptr, size_t size,
+static enum pva_error is_key_match(const uint8_t *dataptr, size_t size,
 				   struct shakey key)
 {
 	enum pva_error err = PVA_SUCCESS;
@@ -108,8 +108,8 @@ static enum pva_error is_key_match(uint8_t *dataptr, size_t size,
  * - -EACCES if no match found.
  */
 static enum pva_error
-check_all_keys_for_match(struct shakey *pallkeys, uint8_t *dataptr, size_t size,
-			 const struct vpu_hash_vector *match_hash)
+check_all_keys_for_match(struct shakey *pallkeys, const uint8_t *dataptr,
+			 size_t size, const struct vpu_hash_vector *match_hash)
 {
 	enum pva_error err = PVA_SUCCESS;
 	uint32_t idx;
@@ -172,7 +172,7 @@ static int32_t compare_hash_value(const struct vpu_hash_vector *pkey,
  * @param[in] len length (in bytes) of data at @ref buf.
  * @retval value of calculated crc32.
  */
-static uint32_t pva_crc32(uint32_t crc, uint8_t *buf, size_t len)
+static uint32_t pva_crc32(uint32_t crc, const uint8_t *buf, size_t len)
 {
 	int32_t k;
 	size_t count;
@@ -233,7 +233,7 @@ binary_search(const struct vpu_hash_vector *key,
 
 static enum pva_error
 pva_kmd_vpu_check_sha256_key(struct vpu_hash_key_pair *vpu_hash_keys,
-			     uint8_t *dataptr, size_t size)
+			     const uint8_t *dataptr, size_t size)
 {
 	enum pva_error err = PVA_SUCCESS;
 	struct vpu_hash_vector cal_Hash;
@@ -287,8 +287,7 @@ enum pva_error pva_kmd_verify_exectuable_hash(struct pva_kmd_device *pva,
 
 		if (err == PVA_SUCCESS) {
 			err = pva_kmd_vpu_check_sha256_key(
-				pva_auth->vpu_hash_keys, (uint8_t *)dataptr,
-				size);
+				pva_auth->vpu_hash_keys, dataptr, size);
 			if (err == PVA_SUCCESS) {
 				pva_dbg_printf(
 					"App authentication successfull\n");
@@ -382,12 +381,14 @@ void pva_kmd_deinit_vpu_app_auth(struct pva_kmd_device *pva)
 {
 	struct pva_vpu_auth *pva_auth;
 
-	if (pva == NULL)
+	if (pva == NULL) {
 		return;
+	}
 
 	pva_auth = pva->pva_auth;
-	if (pva_auth == NULL)
+	if (pva_auth == NULL) {
 		return;
+	}
 
 	pva_kmd_allowlist_destroy(pva_auth);
 	pva_kmd_mutex_deinit(&pva_auth->allow_list_lock);

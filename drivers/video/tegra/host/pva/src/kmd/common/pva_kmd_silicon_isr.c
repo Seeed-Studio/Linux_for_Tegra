@@ -6,6 +6,7 @@
 #include "pva_fw_hyp.h"
 #include "pva_kmd_msg.h"
 #include "pva_kmd_abort.h"
+#include "pva_kmd_limits.h"
 
 struct pva_fw_msg {
 	uint8_t len;
@@ -20,9 +21,9 @@ static void read_hyp_msg(struct pva_kmd_device *pva, struct pva_fw_msg *msg)
 	msg->len = PVA_EXTRACT(msg->data[0], PVA_FW_MSG_LEN_MSB,
 			       PVA_FW_MSG_LEN_LSB, uint8_t);
 	ASSERT(msg->len <= PVA_ARRAY_SIZE(msg->data));
-	for (i = 1; i < msg->len; i++) {
+	for (i = 1U; i < msg->len; i++) {
 		msg->data[i] = pva_kmd_read_mailbox(
-			pva, PVA_FW_MBOX_TO_HYP_BASE + i - 1);
+			pva, PVA_FW_MBOX_TO_HYP_BASE + i - 1U);
 	}
 }
 
@@ -43,21 +44,21 @@ void pva_kmd_hyp_isr(void *data, enum pva_kmd_intr_line intr_line)
 	h1x_val = PVA_EXTRACT(intr_status, PVA_REG_SEC_LIC_INTR_H1X_MSB,
 			      PVA_REG_SEC_LIC_INTR_H1X_LSB, uint32_t);
 
-	if (wdt_val != 0) {
+	if (wdt_val != 0U) {
 		/* Clear interrupt status */
 		pva_kmd_write(pva, pva->regspec.sec_lic_intr_status, wdt_val);
 		pva_kmd_log_err("PVA watchdog timeout!");
 		pva_kmd_abort_fw(pva, PVA_ERR_WDT_TIMEOUT);
 	}
 
-	if (h1x_val != 0) {
+	if (h1x_val != 0U) {
 		pva_kmd_log_err_u64("Host1x errors", h1x_val);
 		/* Clear interrupt status */
 		pva_kmd_write(pva, pva->regspec.sec_lic_intr_status, h1x_val);
 		pva_kmd_abort_fw(pva, PVA_ERR_HOST1X_ERR);
 	}
 
-	if (hsp_val != 0) {
+	if (hsp_val != 0U) {
 		struct pva_fw_msg msg = { 0 };
 
 		read_hyp_msg(pva, &msg);
@@ -90,7 +91,15 @@ void pva_kmd_isr(void *data, enum pva_kmd_intr_line intr_line)
 {
 	struct pva_kmd_device *pva = data;
 	uint32_t intr_status;
-	uint8_t intr_interface = intr_line - PVA_KMD_INTR_LINE_CCQ0;
+	uint8_t intr_interface;
+
+	/* Convert interrupt line to interface index (CCQ0=1 -> interface=0, etc.) */
+	if (intr_line >= PVA_KMD_INTR_LINE_CCQ0) {
+		intr_interface = (uint8_t)((uint8_t)intr_line -
+					   (uint8_t)PVA_KMD_INTR_LINE_CCQ0);
+	} else {
+		intr_interface = 0U; /* Fallback for invalid input */
+	}
 
 	intr_status = read_ccq_status(pva, intr_interface, 2) &
 		      PVA_REG_CCQ_STATUS2_INTR_ALL_BITS;
@@ -100,7 +109,7 @@ void pva_kmd_isr(void *data, enum pva_kmd_intr_line intr_line)
 	 */
 	write_ccq_status(pva, intr_interface, 2, intr_status);
 
-	if (intr_status & PVA_REG_CCQ_STATUS2_INTR_STATUS8_BIT) {
+	if ((intr_status & PVA_REG_CCQ_STATUS2_INTR_STATUS8_BIT) != 0U) {
 		pva_kmd_shared_buffer_process(pva, intr_interface);
 	}
 }
@@ -109,12 +118,16 @@ enum pva_error pva_kmd_bind_shared_buffer_handler(void *pva_dev,
 						  uint8_t interface, void *data)
 {
 	struct pva_kmd_device *pva = (struct pva_kmd_device *)pva_dev;
+	uint8_t base_line = (uint8_t)PVA_KMD_INTR_LINE_CCQ0;
+	uint8_t target_line = safe_addu8(base_line, interface);
 	return pva_kmd_bind_intr_handler(
-		pva, PVA_KMD_INTR_LINE_CCQ0 + interface, pva_kmd_isr, data);
+		pva, (enum pva_kmd_intr_line)target_line, pva_kmd_isr, data);
 }
 
 void pva_kmd_release_shared_buffer_handler(void *pva_dev, uint8_t interface)
 {
 	struct pva_kmd_device *pva = (struct pva_kmd_device *)pva_dev;
-	pva_kmd_free_intr(pva, PVA_KMD_INTR_LINE_CCQ0 + interface);
+	uint8_t base_line = (uint8_t)PVA_KMD_INTR_LINE_CCQ0;
+	uint8_t target_line = safe_addu8(base_line, interface);
+	pva_kmd_free_intr(pva, (enum pva_kmd_intr_line)target_line);
 }

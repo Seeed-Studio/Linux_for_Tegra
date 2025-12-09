@@ -114,19 +114,16 @@ static const struct file_operations pva_linux_debugfs_fops = {
 void pva_kmd_debugfs_create_bool(struct pva_kmd_device *pva, const char *name,
 				 bool *pdata)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *props = pva_kmd_linux_device_get_data(pva);
 	struct dentry *de = props->debugfs;
 
 	debugfs_create_bool(name, 0644, de, pdata);
 }
+
 void pva_kmd_debugfs_create_u32(struct pva_kmd_device *pva, const char *name,
 				uint32_t *pdata)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *props = pva_kmd_linux_device_get_data(pva);
 	struct dentry *de = props->debugfs;
 
 	debugfs_create_u32(name, 0644, de, pdata);
@@ -136,9 +133,7 @@ enum pva_error pva_kmd_debugfs_create_file(struct pva_kmd_device *pva,
 					   const char *name,
 					   struct pva_kmd_file_ops *pvafops)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *props = pva_kmd_linux_device_get_data(pva);
 	struct dentry *de = props->debugfs;
 	struct file_operations *fops =
 		(struct file_operations *)&pva_linux_debugfs_fops;
@@ -155,9 +150,7 @@ enum pva_error pva_kmd_debugfs_create_file(struct pva_kmd_device *pva,
 
 void pva_kmd_debugfs_remove_nodes(struct pva_kmd_device *pva)
 {
-	struct pva_kmd_linux_device_data *device_data =
-		pva_kmd_linux_device_get_data(pva);
-	struct nvpva_device_data *props = device_data->pva_device_properties;
+	struct nvpva_device_data *props = pva_kmd_linux_device_get_data(pva);
 	struct dentry *de = props->debugfs;
 
 	debugfs_lookup_and_remove("stats_enabled", de);

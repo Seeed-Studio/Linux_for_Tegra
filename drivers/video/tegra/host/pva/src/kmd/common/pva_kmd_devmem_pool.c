@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #include "pva_kmd_devmem_pool.h"
+#include "pva_kmd_limits.h"
 #include "pva_kmd_utils.h"
+#include "pva_kmd_limits.h"
 #include "pva_api.h"
 #include "pva_utils.h"
 
@@ -86,10 +88,11 @@ enum pva_error pva_kmd_devmem_pool_init(struct pva_kmd_devmem_pool *pool,
 	enum pva_error err = PVA_SUCCESS;
 
 	/* Initialize the pool structure */
-	memset(pool, 0, sizeof(*pool));
+	(void)memset(pool, 0, sizeof(*pool));
 	pool->smmu_ctx_idx = smmu_ctx_idx;
-	pool->element_size =
-		safe_pow2_roundup_u32(element_size, sizeof(uint64_t));
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
+	pool->element_size = (uint32_t)safe_pow2_roundup_u32(
+		element_size, (uint32_t)sizeof(uint64_t));
 	pool->n_element_incr = ele_incr_count;
 	pool->n_free_element = 0;
 	pool->segment_list_head = NULL;
@@ -121,13 +124,14 @@ pva_kmd_devmem_pool_alloc(struct pva_kmd_devmem_pool *pool,
 {
 	struct pva_kmd_devmem_pool_segment *segment = NULL;
 	struct pva_kmd_devmem_pool_segment *new_segment = NULL;
-	uint32_t ele_idx = (uint32_t)-1;
+	/* Use U32_MAX instead of casting -1 */
+	uint32_t ele_idx = U32_MAX;
 	enum pva_error err = PVA_SUCCESS;
 
 	pva_kmd_mutex_lock(&pool->pool_lock);
 
 	/* Check if we have any free elements */
-	if (pool->n_free_element == 0) {
+	if (pool->n_free_element == 0U) {
 		/* Need to allocate a new segment */
 		new_segment = allocate_segment(pool);
 		if (new_segment == NULL) {
@@ -169,7 +173,7 @@ enum pva_error pva_kmd_devmem_pool_zalloc(struct pva_kmd_devmem_pool *pool,
 		return err;
 	}
 
-	memset(pva_kmd_get_devmem_va(devmem), 0, pool->element_size);
+	(void)memset(pva_kmd_get_devmem_va(devmem), 0, pool->element_size);
 	return PVA_SUCCESS;
 }
 
@@ -216,12 +220,14 @@ void pva_kmd_devmem_pool_free(struct pva_kmd_devmem_element *devmem)
 	struct pva_kmd_devmem_pool *pool = devmem->segment->owner_pool;
 	struct pva_kmd_devmem_pool_segment *current_segment = devmem->segment;
 	uint32_t threshold;
+	enum pva_error tmp_err;
 
 	pva_kmd_mutex_lock(&pool->pool_lock);
 
 	/* Free the element */
-	pva_kmd_free_block_unsafe(&current_segment->elem_allocator,
-				  devmem->ele_idx);
+	tmp_err = pva_kmd_free_block_unsafe(&current_segment->elem_allocator,
+					    devmem->ele_idx);
+	ASSERT(tmp_err == PVA_SUCCESS);
 	pool->n_free_element = safe_addu32(pool->n_free_element, 1);
 	current_segment->n_free_ele =
 		safe_addu32(current_segment->n_free_ele, 1);

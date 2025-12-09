@@ -85,7 +85,7 @@ static long pva_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	op_err = pva_kmd_ops_handler(ocb->kmd_ctx, hdr->mode, &hdr->postfence,
 				     ocb->req_buffer, hdr->request.size,
 				     ocb->resp_buffer, hdr->response.size,
-				     &resp_size);
+				     &resp_size, false);
 
 	if (op_err != PVA_SUCCESS) {
 		if (op_err == PVA_NO_RESOURCE_ID || op_err == PVA_NOMEM) {
@@ -110,7 +110,7 @@ static int pva_open(struct inode *inode, struct file *file)
 
 	struct nvpva_device_data *props = container_of(
 		inode->i_cdev, struct nvpva_device_data, ctrl_cdev);
-	struct pva_kmd_device *kmd_device = props->private_data;
+	struct pva_kmd_device *kmd_device = props->pva_kmd_dev;
 	struct pva_kmd_linux_ocb *ocb = NULL;
 
 	ocb = pva_kmd_zalloc(sizeof(*ocb));

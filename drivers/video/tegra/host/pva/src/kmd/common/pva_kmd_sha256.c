@@ -107,14 +107,14 @@ static void sha256_transform(struct sha256_ctx *ctx, const void *data_in)
 void sha256_init(struct sha256_ctx *ctx)
 {
 	ctx->bitlen = 0;
-	ctx->state[0] = U32(0x6a09e667);
-	ctx->state[1] = U32(0xbb67ae85);
-	ctx->state[2] = U32(0x3c6ef372);
-	ctx->state[3] = U32(0xa54ff53a);
-	ctx->state[4] = U32(0x510e527f);
-	ctx->state[5] = U32(0x9b05688c);
-	ctx->state[6] = U32(0x1f83d9ab);
-	ctx->state[7] = U32(0x5be0cd19);
+	ctx->state[0] = U32(0x6a09e667U);
+	ctx->state[1] = U32(0xbb67ae85U);
+	ctx->state[2] = U32(0x3c6ef372U);
+	ctx->state[3] = U32(0xa54ff53aU);
+	ctx->state[4] = U32(0x510e527fU);
+	ctx->state[5] = U32(0x9b05688cU);
+	ctx->state[6] = U32(0x1f83d9abU);
+	ctx->state[7] = U32(0x5be0cd19U);
 }
 
 void sha256_update(struct sha256_ctx *ctx, const void *data, size_t len)
@@ -122,7 +122,7 @@ void sha256_update(struct sha256_ctx *ctx, const void *data, size_t len)
 	uint32_t i;
 
 	for (i = 0; i < len; i += U32(64)) {
-		ctx->bitlen &= U32(0xffffffff);
+		ctx->bitlen &= U32(0xffffffffU);
 		sha256_transform(ctx, ((const uint8_t *)data) + i);
 		ctx->bitlen =
 			safe_wrap_add_u32((uint32_t)ctx->bitlen, U32(512));
@@ -141,8 +141,8 @@ void sha256_finalize(struct sha256_ctx *ctx, const void *input,
 	void *p = data;
 	uint32_t t;
 
-	input_size &= U32(0xffffffff);
-	ctx->bitlen &= U32(0xffffffff);
+	input_size &= U32(0xffffffffU);
+	ctx->bitlen &= U32(0xffffffffU);
 
 	/* the false of this condition is illegal for this API agreement */
 	/* this check is here only for Coverity INT30-C */

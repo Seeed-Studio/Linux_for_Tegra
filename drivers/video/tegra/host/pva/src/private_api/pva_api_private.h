@@ -6,7 +6,7 @@
 #include "pva_api.h"
 
 //For legacy support not exposed by public API
-#define PVA_CMD_FLAGS_USE_LEGACY_POINTER 0x1
+#define PVA_CMD_FLAGS_USE_LEGACY_POINTER 0x1U
 struct pva_fw_vpu_legacy_ptr_symbol {
 	uint64_t base;
 	uint32_t offset;
@@ -46,6 +46,18 @@ struct pva_cmd_gr_check {
 	struct pva_cmd_header header;
 };
 
-#define PVA_CMD_OPCODE_COUNT (PVA_CMD_OPCODE_MAX + 3U)
+struct pva_cmd_dump_coverage {
+#define PVA_CMD_OPCODE_DUMP_COVERAGE (PVA_CMD_OPCODE_MAX + 3U)
+	struct pva_cmd_header header;
+	uint32_t resource_id;
+};
+
+#define PVA_CMD_OPCODE_COUNT (PVA_CMD_OPCODE_MAX + 4U)
+
+/* Set this flag in cmdbuf_submit_info->engine_affinity to force a command buffer failure
+ * to trigger a context error. This flag is intended only for testing context error handling.
+ * Once all tests are updated to support context errors, this flag will be removed and
+ * context error will always be enabled. */
+#define PVA_SET_CONTEXT_ERROR (1U << 7U)
 
 #endif // PVA_API_PRIVATE_H

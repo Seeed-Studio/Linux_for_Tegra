@@ -2,12 +2,18 @@
 /* SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved. */
 #ifndef PVA_API_TYPES_H
 #define PVA_API_TYPES_H
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if !defined(__KERNEL__)
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <string.h>
+/* Use offsetof to avoid INT36-C violation from NULL pointer arithmetic */
 #define container_of(ptr, type, member)                                        \
-	(type *)((char *)(ptr) - (char *)&((type *)0)->member)
+	((type *)((char *)(ptr)-offsetof(type, member)))
 #else
 #include <linux/ioctl.h>
 #include <linux/types.h>
@@ -15,10 +21,6 @@
 #include <linux/string.h>
 #define UINT64_MAX U64_MAX
 #define UINT32_MAX U32_MAX
-#endif
-
-#ifndef NULL
-#define NULL ((void *)0)
 #endif
 
 #define FOREACH_ERR(ACT)                                                       \
@@ -135,6 +137,11 @@
 	ACT(PVA_ERR_GOLDEN_REG_MISMATCH)                                       \
 	ACT(PVA_ERR_CRITICAL_REG_MISMATCH)                                     \
 	ACT(PVA_ERR_CONFIG_REG_MISMATCH)                                       \
+	ACT(PVA_ERR_BAD_CONTEXT)                                               \
+	ACT(PVA_ERR_BAD_DEVICE)                                                \
+	ACT(PVA_ERR_FAST_RESET_FAILURE)                                        \
+	ACT(PVA_ERR_DVMS_GET_VM_STATE_FAILED)                                  \
+	ACT(PVA_ERR_INVALID_VPU_SYSCALL)                                       \
 	ACT(PVA_ERR_CODE_COUNT)
 
 enum pva_error {
@@ -155,6 +162,20 @@ enum pva_hw_gen {
 	PVA_HW_GEN2,
 	PVA_HW_GEN3,
 };
+
+/**
+ * @brief API restriction flags reported by @ref pva_get_api_restrictions.
+ *
+ * These flags indicate which categories of the public API are permitted by the
+ * current platform/runtime policy. Implementations currently set exactly one
+ * of the flags below, but the type is defined as bit-flags for forward
+ * compatibility.
+ */
+/** No restrictions: all API categories are permitted. */
+#define PVA_API_ALL_ALLOWED (0U)
+/** Initialization-related APIs are not permitted in the current state.
+ *  Callers must defer creation/initialization flows until allowed. */
+#define PVA_API_INIT_NOT_ALLOWED (1U)
 
 /* Opaque API data types */
 struct pva_context;
@@ -282,10 +303,10 @@ struct pva_symbol_info {
 // unify timeout to uint64_t, in microseconds
 #define PVA_SUBMIT_TIMEOUT_INF UINT64_MAX /**< Infinite timeout */
 
-#define PVA_MAX_NUM_INPUT_STATUS 2 /**< Maximum number of input statuses */
-#define PVA_MAX_NUM_OUTPUT_STATUS 2 /**< Maximum number of output statuses */
-#define PVA_MAX_NUM_PREFENCES 2 /**< Maximum number of pre-fences */
-#define PVA_MAX_NUM_POSTFENCES 2 /**< Maximum number of post-fences */
+#define PVA_MAX_NUM_INPUT_STATUS 2U /**< Maximum number of input statuses */
+#define PVA_MAX_NUM_OUTPUT_STATUS 2U /**< Maximum number of output statuses */
+#define PVA_MAX_NUM_PREFENCES 2U /**< Maximum number of pre-fences */
+#define PVA_MAX_NUM_POSTFENCES 2U /**< Maximum number of post-fences */
 /** Maximum number of timestamps */
 #define PVA_MAX_NUM_TIMESTAMPS PVA_MAX_NUM_POSTFENCES
 
@@ -296,8 +317,8 @@ struct pva_cmdbuf_submit_info {
 	uint8_t num_output_status;
 	uint8_t num_timestamps;
 #define PVA_ENGINE_AFFINITY_NONE 0
-#define PVA_ENGINE_AFFINITY_ENGINE0 (1 << 0)
-#define PVA_ENGINE_AFFINITY_ENGINE1 (1 << 1)
+#define PVA_ENGINE_AFFINITY_ENGINE0 (1U << 0)
+#define PVA_ENGINE_AFFINITY_ENGINE1 (1U << 1)
 #define PVA_ENGINE_AFFINITY_ANY                                                \
 	(PVA_ENGINE_AFFINITY_ENGINE0 | PVA_ENGINE_AFFINITY_ENGINE1)
 	uint8_t engine_affinity;
@@ -311,7 +332,7 @@ struct pva_cmdbuf_submit_info {
 	uint64_t first_chunk_offset;
 /** Execution timeout is in ms */
 #define PVA_EXEC_TIMEOUT_INF UINT32_MAX
-#define PVA_EXEC_TIMEOUT_REUSE (UINT32_MAX - 1)
+#define PVA_EXEC_TIMEOUT_REUSE (UINT32_MAX - 1U)
 	/** Execution Timeout */
 	uint32_t execution_timeout_ms;
 	struct pva_fence prefences[PVA_MAX_NUM_PREFENCES];
@@ -355,8 +376,8 @@ struct pva_characteristics {
  * !!!! DO NOT MODIFY !!!!!!
  * These values are defined as per DriveOS guidelines
  */
-#define PVA_INPUT_STATUS_SUCCESS (0)
-#define PVA_INPUT_STATUS_INVALID (0xFFFF)
+#define PVA_INPUT_STATUS_SUCCESS ((uint16_t)(0))
+#define PVA_INPUT_STATUS_INVALID ((uint16_t)(0xFFFF))
 
 /**
  * @brief Context attribute keys.
@@ -373,5 +394,17 @@ enum pva_attr {
 struct pva_ctx_attr_max_cmdbuf_chunk_size {
 	uint16_t max_size;
 };
+
+struct pva_async_error {
+	uint32_t error;
+	uint32_t queue_id;
+	uint32_t cmd_idx;
+	int32_t vpu_retcode;
+	uint64_t submit_id;
+};
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PVA_API_TYPES_H

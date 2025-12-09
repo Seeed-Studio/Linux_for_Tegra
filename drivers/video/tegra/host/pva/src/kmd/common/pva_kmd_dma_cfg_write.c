@@ -16,48 +16,55 @@ static void write_dma_channel(struct pva_dma_channel const *ch,
 			      bool support_hwseq_frame_linking)
 {
 	/* DMA_CHANNEL_CNTL0_CHSDID: DMA_CHANNEL_CNTL0[0] = descIndex + 1;*/
-	fw_ch->cntl0 =
-		(((ch->desc_index + base_desc_index + 1U) & 0xFFU) << 0U);
+	uint8_t desc_sum_u8 =
+		safe_addu8(safe_addu8(ch->desc_index, base_desc_index), 1U);
+	uint8_t cntl1_val;
+	uint16_t hwseqcntl_val;
+
+	fw_ch->cntl0 = (uint32_t)desc_sum_u8;
 
 	/* DMA_CHANNEL_CNTL0_CHVMEMOREQ */
-	fw_ch->cntl0 |= ((ch->vdb_count & 0xFFU) << 8U);
+	fw_ch->cntl0 |= (((uint32_t)ch->vdb_count & 0xFFU) << 8U);
 
 	/* DMA_CHANNEL_CNTL0_CHBH */
-	fw_ch->cntl0 |= ((ch->adb_count & 0x1FFU) << 16U);
+	fw_ch->cntl0 |= (((uint32_t)ch->adb_count & 0x1FFU) << 16U);
 
 	/* DMA_CHANNEL_CNTL0_CHPREF */
-	fw_ch->cntl0 |= ((ch->prefetch_enable & 1U) << 30U);
+	fw_ch->cntl0 |= (((uint32_t)ch->prefetch_enable & 1U) << 30U);
 
 	/* DMA_CHANNEL_CNTL1_CHPWT */
-	fw_ch->cntl1 = ((ch->req_per_grant & 0x7U) << 2U);
+	cntl1_val = (ch->req_per_grant & 0x7U) << 2U;
+	fw_ch->cntl1 = (uint32_t)cntl1_val;
 
 	/* DMA_CHANNEL_CNTL1_CHVDBSTART */
-	fw_ch->cntl1 |= ((ch->vdb_offset & 0x7FU) << 16U);
+	fw_ch->cntl1 |= (((uint32_t)ch->vdb_offset & 0x7FU) << 16U);
 
 	/* DMA_CHANNEL_CNTL1_CHADBSTART */
-	fw_ch->cntl1 |= ((ch->adb_offset & 0x1FFU) << 23U);
+	fw_ch->cntl1 |= (((uint32_t)ch->adb_offset & 0x1FFU) << 23U);
 
 	fw_ch->boundary_pad = ch->pad_value;
 
-	fw_ch->cntl1 |= ((ch->ch_rep_factor & 0x7U) << 8U);
+	fw_ch->cntl1 |= (((uint32_t)ch->ch_rep_factor & 0x7U) << 8U);
 
 	/* DMA_CHANNEL_HWSEQCNTL_CHHWSEQSTART */
-	fw_ch->hwseqcntl = ((ch->hwseq_start & 0x1FFU) << 0U);
+	hwseqcntl_val = (ch->hwseq_start & 0x1FFU) << 0U;
+	fw_ch->hwseqcntl = (uint32_t)hwseqcntl_val;
 
 	/* DMA_CHANNEL_HWSEQCNTL_CHHWSEQEND */
-	fw_ch->hwseqcntl |= ((ch->hwseq_end & 0x1FFU) << 12U);
+	fw_ch->hwseqcntl |= (((uint32_t)ch->hwseq_end & 0x1FFU) << 12U);
 
 	/* DMA_CHANNEL_HWSEQCNTL_CHHWSEQTD */
-	fw_ch->hwseqcntl |= ((ch->hwseq_trigger_done & 0x3U) << 24U);
+	fw_ch->hwseqcntl |= (((uint32_t)ch->hwseq_trigger_done & 0x3U) << 24U);
 
 	/* DMA_CHANNEL_HWSEQCNTL_CHHWSEQTS */
-	fw_ch->hwseqcntl |= ((ch->hwseq_tx_select & 0x1U) << 27U);
+	fw_ch->hwseqcntl |= (((uint32_t)ch->hwseq_tx_select & 0x1U) << 27U);
 
 	/* DMA_CHANNEL_HWSEQCNTL_CHHWSEQTO */
-	fw_ch->hwseqcntl |= ((ch->hwseq_traversal_order & 0x1U) << 30U);
+	fw_ch->hwseqcntl |=
+		(((uint32_t)ch->hwseq_traversal_order & 0x1U) << 30U);
 
 	/* DMA_CHANNEL_HWSEQCNTL_CHHWSEQEN */
-	fw_ch->hwseqcntl |= ((ch->hwseq_enable & 0x1U) << 31U);
+	fw_ch->hwseqcntl |= (((uint32_t)ch->hwseq_enable & 0x1U) << 31U);
 
 	/* DMA_CHANNEL_HWSEQFSCNTL_CHHWSEQFCNT*/
 	fw_ch->hwseqfscntl |=
@@ -86,20 +93,24 @@ static void write_dma_descriptor(struct pva_dma_descriptor const *desc,
 	fw_desc->dst_adr1 = iova_hi(desc->dst.offset);
 
 	/* DMA_DESC_TRANS CNTL0 */
-	fw_desc->transfer_control0 = PVA_INSERT(desc->src.transfer_mode, 2, 0) |
-				     PVA_INSERT(desc->dst.transfer_mode, 6, 4);
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
+	fw_desc->transfer_control0 =
+		(uint8_t)(PVA_INSERT((uint8_t)desc->src.transfer_mode, 2, 0) |
+			  PVA_INSERT((uint8_t)desc->dst.transfer_mode, 6, 4));
 	/* DMA_DESC_TRANS CNTL1 */
 	fw_desc->transfer_control1 =
-		PVA_INSERT(desc->log2_pixel_size, 1, 0) |
-		PVA_INSERT(desc->px_direction, 2, 2) |
-		PVA_INSERT(desc->py_direction, 3, 3) |
-		PVA_INSERT(desc->boundary_pixel_extension, 4, 4) |
-		PVA_INSERT(desc->tts, 5, 5) |
-		PVA_INSERT(desc->trigger_completion, 7, 7);
+		(uint8_t)(PVA_INSERT((uint8_t)desc->log2_pixel_size, 1, 0) |
+			  PVA_INSERT((uint8_t)desc->px_direction, 2, 2) |
+			  PVA_INSERT((uint8_t)desc->py_direction, 3, 3) |
+			  PVA_INSERT((uint8_t)desc->boundary_pixel_extension, 4,
+				     4) |
+			  PVA_INSERT((uint8_t)desc->tts, 5, 5) |
+			  PVA_INSERT((uint8_t)desc->trigger_completion, 7, 7));
 	/* DMA_DESC_TRANS CNTL2 */
-	fw_desc->transfer_control2 = PVA_INSERT(desc->prefetch_enable, 0, 0) |
-				     PVA_INSERT(desc->dst.cb_enable, 1, 1) |
-				     PVA_INSERT(desc->src.cb_enable, 2, 2);
+	fw_desc->transfer_control2 =
+		(uint8_t)(PVA_INSERT((uint8_t)desc->prefetch_enable, 0, 0) |
+			  PVA_INSERT((uint8_t)desc->dst.cb_enable, 1, 1) |
+			  PVA_INSERT((uint8_t)desc->src.cb_enable, 2, 2));
 
 	fw_desc->link_did = desc->link_desc_id;
 
@@ -111,71 +122,85 @@ static void write_dma_descriptor(struct pva_dma_descriptor const *desc,
 	fw_desc->dlp_adv = desc->dst.line_pitch;
 	/* DMA_DESC_SLP_ADV */
 	fw_desc->slp_adv = desc->src.line_pitch;
-	/* DMA_DESC_DB_START */
-	fw_desc->db_start = desc->dst.cb_start;
-	/* DMA_DESC_DB_SIZE */
-	fw_desc->db_size = desc->dst.cb_size;
-	/* DMA_DESC_SB_START */
-	fw_desc->sb_start = desc->src.cb_start;
-	/* DMA_DESC_SB_SIZE */
-	fw_desc->sb_size = desc->src.cb_size;
+	/* DMA_DESC_DB_START - lower 16 bits, bit 16 stored in cb_ext */
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
+	fw_desc->db_start = (uint16_t)(desc->dst.cb_start & 0xFFFFU);
+
+	/* DMA_DESC_DB_SIZE - lower 16 bits, bit 16 stored in cb_ext */
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
+	fw_desc->db_size = (uint16_t)(desc->dst.cb_size & 0xFFFFU);
+
+	/* DMA_DESC_SB_START - lower 16 bits, bit 16 stored in cb_ext */
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
+	fw_desc->sb_start = (uint16_t)(desc->src.cb_start & 0xFFFFU);
+
+	/* DMA_DESC_SB_SIZE - lower 16 bits, bit 16 stored in cb_ext */
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
+	fw_desc->sb_size = (uint16_t)(desc->src.cb_size & 0xFFFFU);
 	/* DMA_DESC_TRIG_CH */
 	/* Channel events are not supported */
 	fw_desc->trig_ch_events = 0U;
 	/* DMA_DESC_HW_SW_TRIG */
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
 	fw_desc->hw_sw_trig_events =
-		PVA_INSERT(desc->trig_event_mode, 1, 0) |
-		PVA_INSERT(desc->trig_vpu_events, 5, 2) |
-		PVA_INSERT(desc->desc_reload_enable, 12, 12);
+		(uint16_t)(PVA_INSERT((uint8_t)desc->trig_event_mode, 1, 0) |
+			   PVA_INSERT((uint8_t)desc->trig_vpu_events, 5, 2) |
+			   PVA_INSERT((uint8_t)desc->desc_reload_enable, 12,
+				      12));
 	/* DMA_DESC_PX */
 	fw_desc->px = desc->px;
 	/* DMA_DESC_PY */
 	fw_desc->py = desc->py;
 	/* DMA_DESC_FRDA */
-	fw_desc->frda = ((desc->dst2_offset >> 6U) & 0x7FFF);
+	fw_desc->frda = (uint16_t)((desc->dst2_offset >> 6U) & 0x7FFFU);
 
 	/* DMA_DESC_NDTM_CNTL0 */
-	fw_desc->cb_ext = (((desc->src.cb_start >> 16) & 0x1) << 0) |
-			  (((desc->dst.cb_start >> 16) & 0x1) << 2) |
-			  (((desc->src.cb_size >> 16) & 0x1) << 4) |
-			  (((desc->dst.cb_size >> 16) & 0x1) << 6);
+	fw_desc->cb_ext = (uint8_t)((((desc->src.cb_start >> 16) & 0x1U) << 0) |
+				    (((desc->dst.cb_start >> 16) & 0x1U) << 2) |
+				    (((desc->src.cb_size >> 16) & 0x1U) << 4) |
+				    (((desc->dst.cb_size >> 16) & 0x1U) << 6));
 
 	/* DMA_DESC_NS1_ADV & DMA_DESC_ST1_ADV */
+	/* adv fields are signed int32_t, cast to uint32_t for bit packing */
 	fw_desc->srcpt1_cntl =
-		assemble_rpt_cntl(desc->src.rpt1, desc->src.adv1);
+		assemble_rpt_cntl(desc->src.rpt1, (uint32_t)desc->src.adv1);
 	fw_desc->srcpt2_cntl =
-		assemble_rpt_cntl(desc->src.rpt2, desc->src.adv2);
+		assemble_rpt_cntl(desc->src.rpt2, (uint32_t)desc->src.adv2);
 	fw_desc->srcpt3_cntl =
-		assemble_rpt_cntl(desc->src.rpt3, desc->src.adv3);
+		assemble_rpt_cntl(desc->src.rpt3, (uint32_t)desc->src.adv3);
 	fw_desc->dstpt1_cntl =
-		assemble_rpt_cntl(desc->dst.rpt1, desc->dst.adv1);
+		assemble_rpt_cntl(desc->dst.rpt1, (uint32_t)desc->dst.adv1);
 	fw_desc->dstpt2_cntl =
-		assemble_rpt_cntl(desc->dst.rpt2, desc->dst.adv2);
+		assemble_rpt_cntl(desc->dst.rpt2, (uint32_t)desc->dst.adv2);
 	fw_desc->dstpt3_cntl =
-		assemble_rpt_cntl(desc->dst.rpt3, desc->dst.adv3);
+		assemble_rpt_cntl(desc->dst.rpt3, (uint32_t)desc->dst.adv3);
 }
 
 static void write_triggers(struct pva_dma_config const *dma_cfg,
 			   struct pva_dma_config_resource *fw_cfg,
 			   struct pva_dma_resource_map *dma_resource_map)
 {
-	uint32_t i, j;
+	uint8_t i, j;
 	bool trigger_required = false;
 
-	memset(fw_cfg->output_enable, 0, sizeof(fw_cfg->output_enable));
+	(void)memset(fw_cfg->output_enable, 0, sizeof(fw_cfg->output_enable));
 
 	for (i = 0; i < dma_cfg->header.num_channels; i++) {
-		struct pva_dma_channel const *ch = &dma_cfg->channels[i];
-		uint8_t ch_num = i + dma_cfg->header.base_channel;
+		struct pva_dma_channel const *ch;
+		uint8_t ch_num;
 		uint32_t mask;
 
+		ch = &dma_cfg->channels[i];
+		/* CERT INT31-C: Hardware constraints ensure num_channels and base_channel
+		 * are bounded such that their sum always fits in uint8_t, safe to cast */
+		ch_num = safe_addu8(i, dma_cfg->header.base_channel);
 		mask = ch->output_enable_mask;
 		/* READ/STORE triggers */
-		for (j = 0; j < 7; j++) {
+		for (j = 0U; j < 7U; j++) {
 			fw_cfg->output_enable[j] |=
-				(((mask >> 2 * j) & 1U) << ch_num);
+				(((mask >> (2U * j)) & 1U) << ch_num);
 			fw_cfg->output_enable[j] |=
-				(((mask >> (2 * j + 1)) & 1U)
+				(((mask >> ((2U * j) + 1U)) & 1U)
 				 << (ch_num + 16U));
 		}
 
@@ -186,7 +211,7 @@ static void write_triggers(struct pva_dma_config const *dma_cfg,
 		fw_cfg->output_enable[8] |=
 			(((mask >> 16) & 1U) << (ch_num + 16U));
 
-		if (mask != 0) {
+		if (mask != 0U) {
 			trigger_required = true;
 		}
 	}
@@ -208,7 +233,7 @@ void pva_kmd_write_fw_dma_config(struct pva_dma_config const *dma_cfg,
 	struct pva_dma_resource_map *dma_resource_map;
 	uint32_t *hwseq_words;
 	uintptr_t offset;
-	uint32_t i;
+	uint8_t i;
 
 	hdr = fw_dma_config;
 	hdr->base_channel = dma_cfg->header.base_channel;
@@ -235,8 +260,8 @@ void pva_kmd_write_fw_dma_config(struct pva_dma_config const *dma_cfg,
 	offset = sizeof(*hdr);
 	fw_slots = pva_offset_pointer(fw_dma_config, offset);
 
-	if (hdr->num_dynamic_slots > 0) {
-		last_slot = &fw_slots[hdr->num_dynamic_slots - 1];
+	if (hdr->num_dynamic_slots > 0U) {
+		last_slot = &fw_slots[hdr->num_dynamic_slots - 1U];
 
 		hdr->num_relocs = safe_addu16(last_slot->reloc_start_idx,
 					      last_slot->reloc_count);
@@ -251,37 +276,41 @@ void pva_kmd_write_fw_dma_config(struct pva_dma_config const *dma_cfg,
 	}
 
 	fw_channels = pva_offset_pointer(fw_dma_config, offset);
-	offset += sizeof(*fw_channels) * hdr->num_channels;
+	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
+	offset += (uint32_t)(sizeof(*fw_channels) * hdr->num_channels);
 
 	fw_descs = pva_offset_pointer(fw_dma_config, offset);
 	offset += sizeof(*fw_descs) * hdr->num_descriptors;
 
 	/* Do not include fields beyond descriptors as they are not fetched to
-	 * TCM */
-	*out_fw_fetch_size = offset;
+	  * TCM */
+	*out_fw_fetch_size = (uint32_t)offset;
 
-	for (i = 0; i < hdr->num_channels; i++) {
+	for (i = 0U; i < hdr->num_channels; i++) {
 		write_dma_channel(&dma_cfg->channels[i],
 				  dma_cfg->header.base_descriptor,
 				  &fw_channels[i], dma_resource_map,
 				  support_hwseq_frame_linking);
 	}
 
-	for (i = 0; i < dma_cfg->header.num_descriptors; i++) {
-		if (pva_is_reserved_desc(i)) {
+	for (i = 0U; i < dma_cfg->header.num_descriptors; i++) {
+		if (pva_is_reserved_desc(
+			    safe_addu8(i, dma_cfg->header.base_descriptor))) {
 			// skip over the reserved descriptor range
-			i = PVA_RESERVED_DESCRIPTORS_END;
+			i = safe_subu8(PVA_RESERVED_DESCRIPTORS_END,
+				       dma_cfg->header.base_descriptor);
 			continue;
 		}
 		write_dma_descriptor(&dma_cfg->descriptors[i], &fw_descs[i]);
 	}
 
-	write_triggers(dma_cfg, fw_dma_config, dma_resource_map);
+	write_triggers(dma_cfg, (struct pva_dma_config_resource *)fw_dma_config,
+		       dma_resource_map);
 
 	hwseq_words = pva_offset_pointer(fw_dma_config, offset);
 
-	memcpy(hwseq_words, dma_cfg->hwseq_words,
-	       sizeof(*hwseq_words) * hdr->num_hwseq_words);
+	(void)memcpy(hwseq_words, dma_cfg->hwseq_words,
+		     sizeof(*hwseq_words) * hdr->num_hwseq_words);
 
 	/*TODO: write hdr->common_config for hwseq and MISR*/
 }

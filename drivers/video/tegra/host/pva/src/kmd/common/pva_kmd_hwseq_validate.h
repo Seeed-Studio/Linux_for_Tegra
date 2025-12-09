@@ -6,320 +6,536 @@
 #include "pva_api_dma.h"
 #include "pva_kmd_device.h"
 
+/**
+ * @brief Maximum number of column/row descriptors in RRA mode
+ *
+ * @details Maximum allowed value for Number of Column/Row descriptors
+ * in RRA (Rectangular Region Access) addressing mode.
+ * This constant defines the upper bound for column/row descriptor
+ * validation in hardware sequencer configurations.
+ */
 #define PVA_HWSEQ_RRA_MAX_NOCR 31U
+
+/**
+ * @brief Maximum frame count in hardware sequencer
+ *
+ * @details Maximum allowed frame count for hardware sequencer operations.
+ * This limits the number of frames that can be processed in a single
+ * hardware sequencer configuration to ensure proper resource management
+ * and validation.
+ */
 #define PVA_HWSEQ_RRA_MAX_FRAME_COUNT 63U
 
 /**
- * List of valid Addressing Modes in HW Sequencer Header
+ * @brief Enumeration of hardware sequencer addressing modes
+ *
+ * @details This enumeration defines the valid addressing modes supported
+ * by the hardware sequencer for DMA operations. Each mode uses a specific
+ * Frame ID (FID) value to identify the addressing type in the hardware
+ * sequencer header. The addressing mode determines how the hardware
+ * sequencer processes and organizes DMA operations.
  */
 enum pva_dma_hwseq_fid {
-	PVA_DMA_HWSEQ_RRA_MODE = 0xC0DA, /*!< RRA addressing */
-	PVA_DMA_HWSEQ_FRAME_MODE = 0xC0DE, /*!< frame addressing */
-	PVA_DMA_HWSEQ_DESC_MODE = 0xDEAD /*!< descriptor addressing */
+	/** @brief RRA (Rectangular Region Access) addressing mode */
+	PVA_DMA_HWSEQ_RRA_MODE = 0xC0DA,
+	/** @brief Frame-based addressing mode */
+	PVA_DMA_HWSEQ_FRAME_MODE = 0xC0DE,
+	/** @brief Descriptor-based addressing mode */
+	PVA_DMA_HWSEQ_DESC_MODE = 0xDEAD
 };
 
 /**
- * Combine three headers common in HW Sequencer
+ * @brief Hardware sequencer header structure
  *
- * ----------------------------------------------------------------------------
- * |        | byte 3        | byte 2       | byte 1          | byte 0         |
- * |--------|---------------|--------------|-----------------|----------------|
- * | Head 1 | NOCR          | FR           | FID1            | FID0           |
- * | Head 2 | FO in LP 15:8 | FO in LP 7:0 | TO in P/LP 15:8 | TO in P/LP 7:0 |
- * | Head 3 | padB          | padL         | padT            | padR           |
- * ----------------------------------------------------------------------------
- **/
+ * @details This structure contains the header information for hardware
+ * sequencer configurations. The header defines addressing type, repetition
+ * factors, offsets, and padding values that control DMA operation patterns.
+ * The structure provides the necessary metadata for hardware sequencer
+ * operation configuration and validation.
+ */
 struct pva_dma_hwseq_hdr {
-	//hdr_1
-	uint16_t fid; /*!< addressing type: frame or descriptor */
-	uint8_t fr; /*!< frame repetition factor */
-	uint8_t nocr; /*!< number of descriptor column/row */
-	//hdr_2
-	int16_t to; /*!< tile offset in pixel/Line Pitch */
-	int16_t fo; /*!< frame offset in Line Pitch */
-	//hdr_3
-	uint8_t padr; /*!< pad right */
-	uint8_t padt; /*!< pad top */
-	uint8_t padl; /*!< pad left */
-	uint8_t padb; /*!< pad bottom */
+	/**
+	 * @brief Frame ID indicating addressing type
+	 * Valid values: @ref pva_dma_hwseq_fid enumeration values
+	 */
+	uint16_t fid;
+
+	/**
+	 * @brief Frame repetition factor
+	 * Valid range: [1 .. 255]
+	 */
+	uint8_t fr;
+
+	/**
+	 * @brief Number of descriptor columns/rows
+	 * Valid range: [0 .. PVA_HWSEQ_RRA_MAX_NOCR]
+	 */
+	uint8_t nocr;
+
+	/**
+	 * @brief Tile offset in pixels or line pitch
+	 * Valid range: [INT16_MIN .. INT16_MAX]
+	 */
+	int16_t to;
+
+	/**
+	 * @brief Frame offset in line pitch
+	 * Valid range: [INT16_MIN .. INT16_MAX]
+	 */
+	int16_t fo;
+
+	/**
+	 * @brief Padding for right edge
+	 * Valid range: [0 .. 255]
+	 */
+	uint8_t padr;
+
+	/**
+	 * @brief Padding for top edge
+	 * Valid range: [0 .. 255]
+	 */
+	uint8_t padt;
+
+	/**
+	 * @brief Padding for left edge
+	 * Valid range: [0 .. 255]
+	 */
+	uint8_t padl;
+
+	/**
+	 * @brief Padding for bottom edge
+	 * Valid range: [0 .. 255]
+	 */
+	uint8_t padb;
 };
 
 /**
- * A struct which represents Column/Row Header in HW Sequencer
+ * @brief Hardware sequencer column/row header structure
+ *
+ * @details This structure represents the column/row header information
+ * in hardware sequencer configurations. It controls descriptor entry
+ * counts, repetition factors, and offset values for column/row operations
+ * within the hardware sequencer processing pipeline.
  */
 struct pva_dma_hwseq_colrow_hdr {
-	uint8_t dec; /*!< descriptor entry count */
-	uint8_t crr; /*!< col/row repetition factor */
-	int16_t cro; /*!< col/row ofst in pixel/line pitch */
+	/**
+	 * @brief Descriptor entry count
+	 * Valid range: [1 .. 255]
+	 */
+	uint8_t dec;
+
+	/**
+	 * @brief Column/row repetition factor
+	 * Valid range: [1 .. 255]
+	 */
+	uint8_t crr;
+
+	/**
+	 * @brief Column/row offset in pixels or line pitch
+	 * Valid range: [INT16_MIN .. INT16_MAX]
+	 */
+	int16_t cro;
 };
 
 /**
- * A struct which represents a DMA Descriptor Header in HW Sequencer
+ * @brief Hardware sequencer DMA descriptor entry
+ *
+ * @details This structure represents a single DMA descriptor entry
+ * in the hardware sequencer. It contains the descriptor ID and its
+ * repetition count for the DMA operation, enabling efficient
+ * descriptor reuse and pattern-based DMA processing.
  */
 struct pva_dma_hwseq_desc_entry {
-	uint8_t did; /*!< desc id */
-	uint8_t dr; /*!< desc repetition */
+	/**
+	 * @brief Descriptor ID referencing a DMA descriptor
+	 * Valid range: [0 .. MAX_DESC_ID]
+	 */
+	uint8_t did;
+
+	/**
+	 * @brief Descriptor repetition count
+	 * Valid range: [1 .. 255]
+	 */
+	uint8_t dr;
 };
 
 /**
- * A struct which represents a Column/Row Header Entry in HW Sequencer
+ * @brief Hardware sequencer column/row entry header
+ *
+ * @details This structure wraps the column/row header to represent
+ * a complete column/row entry in the hardware sequencer configuration.
+ * It provides structural organization for column/row operations
+ * within the hardware sequencer processing pipeline.
  */
 struct pva_dma_hwseq_colrow_entry_hdr {
-	struct pva_dma_hwseq_colrow_hdr hdr; /*!< Col/Row Header */
+	/** @brief Column/row header information */
+	struct pva_dma_hwseq_colrow_hdr hdr;
 };
 
 /**
- * A struct representing Grid Information
+ * @brief Hardware sequencer grid information structure
+ *
+ * @details This structure contains comprehensive grid information for
+ * hardware sequencer operations. It includes tile coordinates, padding
+ * values, grid dimensions, and processing modes. The interpretation
+ * of coordinates varies between different processing modes to support
+ * various data layout patterns and access patterns.
  */
 struct pva_hwseq_grid_info {
 	/**
-	 * tile co-ordinates
-	 * In Raster Mode:
-	 * 	- tile_x[0] = Tile width of the first tile in HW Seq DMA Transfer
-	 * 	- tile_x[1] = Tile width of the last tile in HW Seq DMA Transfer
-	 * In Vertical Mining Mode:
-	 * 	- tile_x[0] = Tile height of the first tile in HW Seq DMA Transfer
-	 * 	- tile_x[1] = Tile height of the last tile in HW Seq DMA Transfer
+	 * @brief Tile X-coordinates for first and last tiles
+	 *
+	 * @details Interpretation varies by processing mode:
+	 * - Raster Mode: tile_x[0] = first tile width, tile_x[1] = last tile width
+	 * - Vertical Mining Mode: tile_x[0] = first tile height, tile_x[1] = last tile height
+	 * Valid range for each element: [INT32_MIN .. INT32_MAX]
 	 */
 	int32_t tile_x[2];
+
 	/**
-	 * tile co-ordinates
-	 * In Raster Mode:
-	 * 	- tile_y[0] = Tile height of the first tile in HW Seq DMA Transfer
-	 * 	- tile_y[1] = Tile height of the last tile in HW Seq DMA Transfer
-	 * In Vertical Mining Mode:
-	 * 	- tile_y[0] = Tile width of the first tile in HW Seq DMA Transfer
-	 * 	- tile_y[1] = Tile width of the last tile in HW Seq DMA Transfer
+	 * @brief Tile Y-coordinates for first and last tiles
+	 *
+	 * @details Interpretation varies by processing mode:
+	 * - Raster Mode: tile_y[0] = first tile height, tile_y[1] = last tile height
+	 * - Vertical Mining Mode: tile_y[0] = first tile width, tile_y[1] = last tile width
+	 * Valid range for each element: [INT32_MIN .. INT32_MAX]
 	 */
 	int32_t tile_y[2];
+
 	/**
-	 * tile co-ordinates
-	 * In Tensor Data Flow Mode:
+	 * @brief Tile Z-coordinate for Tensor Data Flow Mode
+	 * Valid range: [INT32_MIN .. INT32_MAX]
 	 */
 	int32_t tile_z;
+
 	/**
-	 * Padding values
-	 * In Raster Mode:
-	 * 	- pad_x[0] = Left Padding
-	 * 	- pad_x[1] = Right Padding
-	 * In Vertical Mining Mode:
-	 * 	- pad_x[0] = Top Padding
-	 * 	- pad_x[1] = Bottom Padding
+	 * @brief X-direction padding values
+	 *
+	 * @details Interpretation varies by processing mode:
+	 * - Raster Mode: pad_x[0] = left padding, pad_x[1] = right padding
+	 * - Vertical Mining Mode: pad_x[0] = top padding, pad_x[1] = bottom padding
+	 * Valid range for each element: [0 .. INT32_MAX]
 	 */
 	int32_t pad_x[2];
+
 	/**
-	 * Padding values
-	 * In Raster Mode:
-	 * 	- pad_y[0] = Top Padding
-	 * 	- pad_y[1] = Bottom Padding
-	 * In Vertical Mining Mode:
-	 * 	- pad_y[0] = Left Padding
-	 * 	- pad_y[1] = Right Padding
+	 * @brief Y-direction padding values
+	 *
+	 * @details Interpretation varies by processing mode:
+	 * - Raster Mode: pad_y[0] = top padding, pad_y[1] = bottom padding
+	 * - Vertical Mining Mode: pad_y[0] = left padding, pad_y[1] = right padding
+	 * Valid range for each element: [0 .. INT32_MAX]
 	 */
 	int32_t pad_y[2];
+
 	/**
-	 * Tiles per packet. Grid size in X dimension
+	 * @brief Grid size in X dimension (tiles per packet)
+	 * Valid range: [1 .. UINT32_MAX]
 	 */
 	uint32_t grid_size_x;
+
 	/**
-	 * Repeat Count
+	 * @brief Grid size in Y dimension (repeat count)
+	 * Valid range: [1 .. UINT32_MAX]
 	 */
 	uint32_t grid_size_y;
+
 	/**
-	 * Grid Size in Z dimension for Tensor Data Flow
+	 * @brief Grid size in Z dimension for Tensor Data Flow
+	 * Valid range: [1 .. UINT32_MAX]
 	 */
 	uint32_t grid_size_z;
+
 	/**
-	 * Tile Offset as specified in the HW Sequencer Header
+	 * @brief Tile offset as specified in hardware sequencer header
+	 * Valid range: [INT32_MIN .. INT32_MAX]
 	 */
 	int32_t grid_step_x;
+
 	/**
-	 * Col/Row Offset as specified in the HW Sequencer Col/Row Header
+	 * @brief Column/row offset as specified in hardware sequencer header
+	 * Valid range: [INT32_MIN .. INT32_MAX]
 	 */
 	int32_t grid_step_y;
+
 	/**
-	 * Repetition factor for Head Descriptor in HW Sequencer Blob
+	 * @brief Repetition factor for head descriptor in hardware sequencer
+	 * Valid range: [1 .. UINT32_MAX]
 	 */
 	uint32_t head_tile_count;
+
 	/**
-	 * Boolean value to indicate if HW Sequencer has split padding
+	 * @brief Flag indicating if hardware sequencer has split padding
+	 * Valid values: true (has split padding), false (no split padding)
 	 */
 	bool is_split_padding;
 };
 
 /**
- * A struct representing a valid Frame Information
+ * @brief Hardware sequencer frame information structure
+ *
+ * @details This structure represents the valid frame information including
+ * start and end coordinates in three-dimensional space. It defines the
+ * bounding box of the frame being processed by the hardware sequencer,
+ * enabling proper frame boundary validation and processing.
  */
 struct pva_hwseq_frame_info {
 	/**
-	 * X co-ordinate of start of Frame
+	 * @brief X-coordinate of frame start
+	 * Valid range: [INT64_MIN .. INT64_MAX]
 	 */
 	int64_t start_x;
+
 	/**
-	 * Y co-ordinate of start of Frame
+	 * @brief Y-coordinate of frame start
+	 * Valid range: [INT64_MIN .. INT64_MAX]
 	 */
 	int64_t start_y;
+
 	/**
-	 * Z co-ordinates of starte of Frame
+	 * @brief Z-coordinate of frame start
+	 * Valid range: [INT64_MIN .. INT64_MAX]
 	 */
 	int64_t start_z;
+
 	/**
-	 * X co-ordinate of end of Frame
+	 * @brief X-coordinate of frame end
+	 * Valid range: [start_x .. INT64_MAX]
 	 */
 	int64_t end_x;
+
 	/**
-	 * Y co-ordinate of end of Frame
+	 * @brief Y-coordinate of frame end
+	 * Valid range: [start_y .. INT64_MAX]
 	 */
 	int64_t end_y;
+
 	/**
-	 * Z co-ordinate of end of Frame
+	 * @brief Z-coordinate of frame end
+	 * Valid range: [start_z .. INT64_MAX]
 	 */
 	int64_t end_z;
 };
 
 /**
- * Struct which holds the HW Sequencer Buffer as received from User Space
+ * @brief Hardware sequencer buffer structure
+ *
+ * @details This structure holds the hardware sequencer buffer data
+ * as received from user space. It provides access to the raw sequencer
+ * blob data and tracks the remaining bytes to be processed during
+ * hardware sequencer parsing and validation operations.
  */
 struct pva_hwseq_buffer {
 	/**
-	 * Pointer to HW Sequencer Blob in Buffer
+	 * @brief Pointer to hardware sequencer blob data
+	 * Valid value: non-null if bytes_left > 0
 	 */
 	const uint8_t *data;
+
 	/**
-	 * Number of bytes left to be read from the data buffer
+	 * @brief Number of bytes remaining in the buffer
+	 * Valid range: [0 .. UINT32_MAX]
 	 */
 	uint32_t bytes_left;
 };
 
 /**
- * @struct hw_seq_blob_entry
- * @brief Structure to hold information about a hardware sequence blob entry.
+ * @brief Hardware sequence blob entry information structure
  *
- * This structure is used to store the details of a DMA channel and the range of hardware sequencer
- * associated with it, along with the number of frames involved.
+ * @details This structure stores information about a hardware sequence blob entry,
+ * including the associated DMA channel, hardware sequencer range, and frame count.
+ * It provides the necessary context for processing hardware sequencer operations
+ * within a specific DMA channel configuration.
  */
 struct hw_seq_blob_entry {
 	/**
-	 * Pointer to a const \ref pva_dma_channel which holds the current DMA Channel Information
-	 * in which current HW Sequencer Blob is present
+	 * @brief Pointer to DMA channel containing this hardware sequencer blob
 	 */
 	struct pva_dma_channel const *ch;
+
 	/**
-	 * The starting index of the hardware sequencer.
+	 * @brief Starting index of the hardware sequencer range
+	 * Valid range: [0 .. UINT16_MAX]
 	 */
 	uint16_t hwseq_start;
+
 	/**
-	 * The ending index of the hardware sequencer.
+	 * @brief Ending index of the hardware sequencer range
+	 * Valid range: [hwseq_start .. UINT16_MAX]
 	 */
 	uint16_t hwseq_end;
+
 	/**
-	 * The number of frames associated with the hardware sequencer.
+	 * @brief Number of frames associated with the hardware sequencer
+	 * Valid range: [1 .. UINT32_MAX]
 	 */
 	uint32_t num_frames;
 };
 
 /**
- * TODO: Separate out pva_hwseq_priv to be more modular
+ * @brief Hardware sequencer private data structure
  *
- * Items in pva_hwseq_main
- * 	- dma_config
- * 	- hw_gen
- * 	- blob
- * 	- num_hwseq_words
- * Items per segment of main i.e. pva_hwseq_segment
- * 	- hwseq_start, hwseq_end
- * 	- channel id
- * 	- hwseq_header,
- *  - desc_count
- * 	- num_frames
- * 	- head_desc, tail_desc
- * 	- is_split_padding
- * 	- is_raster_scan
- */
-
-/**
- * A struct holding private data to HW Sequencer Blob being parsed
+ * @details This structure holds comprehensive private data for hardware sequencer
+ * blob parsing and validation. It contains descriptor counts, tile information,
+ * blob entry details, parsing state, mode flags, and references to related
+ * DMA configuration data. This structure enables thorough validation and
+ * processing of hardware sequencer operations while maintaining proper
+ * abstraction from hardware-specific implementation details.
  */
 struct pva_hwseq_priv {
 	/**
-	 * Number of descriptors in the HW Sequencer Blob
+	 * @brief Number of descriptors in the hardware sequencer blob
+	 * Valid range: [1 .. UINT32_MAX]
 	 */
 	uint32_t desc_count;
+
 	/**
-	 * Number of tiles in the packet
-	 * This is the sum total of descriptor repetition factors
-	 * present in the HW Sequencer Blob
+	 * @brief Total number of tiles in the packet
+	 *
+	 * @details Sum total of descriptor repetition factors present in the
+	 * hardware sequencer blob, representing the total tile processing load.
+	 * Valid range: [1 .. UINT32_MAX]
 	 */
 	uint32_t tiles_per_packet;
+
+	/**
+	 * @brief Maximum tile X coordinate
+	 * Valid range: [INT32_MIN .. INT32_MAX]
+	 */
 	int32_t max_tx;
+
+	/**
+	 * @brief Maximum tile Y coordinate
+	 * Valid range: [INT32_MIN .. INT32_MAX]
+	 */
 	int32_t max_ty;
 
 	/**
-	 * Struct that holds the entry info of HW Sequencer Blob
+	 * @brief Hardware sequencer blob entry information
 	 */
 	struct hw_seq_blob_entry entry;
 
 	/**
-	 * Struct that holds HW Sequencer Blob to be read
+	 * @brief Hardware sequencer buffer for blob parsing
 	 */
 	struct pva_hwseq_buffer blob;
 
 	/**
-	 * Boolean to indicate if split padding is present in the HW Sequener Blob
+	 * @brief Flag indicating presence of split padding
+	 * Valid values: true (split padding present), false (no split padding)
 	 */
 	bool is_split_padding;
+
 	/**
-	 * Bool to indicate if HW Sequencer uses raster scan or Vertical mining
-	 * TRUE: Raster Scan
-	 * FALSE: Vertical Mining
+	 * @brief Flag indicating scan mode type
+	 *
+	 * @details Indicates hardware sequencer scan mode:
+	 * - true: Raster scan mode
+	 * - false: Vertical mining mode
 	 */
 	bool is_raster_scan;
 
 	/**
-	 * @brief Indicates the generation of PVA HW.
-	 * Allowed values: 0 (GEN 1), 1 (GEN 2), 2 (GEN 3)
+	 * @brief PVA hardware generation
+	 *
+	 * @details Hardware generation identifier for platform-specific
+	 * behavior adaptation
+	 * Valid values: @ref pva_hw_gen enumeration values
 	 */
 	enum pva_hw_gen hw_gen;
 
 	/**
-	 * @brief Pointer to the DMA configuration header.
+	 * @brief Pointer to DMA configuration header
 	 */
 	const struct pva_dma_config *dma_config;
 
 	/**
-	 * Pointer to \ref pva_dma_hwseq_hdr_t which holds the HW Sequencer Header
+	 * @brief Pointer to hardware sequencer header
 	 */
 	const struct pva_dma_hwseq_hdr *hdr;
+
 	/**
-	 * Pointer to \ref pva_dma_hwseq_colrow_hdr_t which holds the Header of the
-	 * Col/Row inside HW Sequencer
+	 * @brief Pointer to column/row header in hardware sequencer
 	 */
 	const struct pva_dma_hwseq_colrow_hdr *colrow;
 
 	/**
-	 * Pointer to the Head Descriptor of type \ref nvpva_dma_descriptor in the HW Sequencer
+	 * @brief Pointer to head descriptor in the hardware sequencer
 	 */
 	const struct pva_dma_descriptor *head_desc;
+
 	/**
-	 * Pointer to the Tail Descriptor of type \ref nvpva_dma_descriptor in the HW Sequencer
+	 * @brief Pointer to tail descriptor in the hardware sequencer
 	 */
 	const struct pva_dma_descriptor *tail_desc;
+
 	/**
-	 * DMA Descriptor information obtained from HW Sequencer Blob of type
-	 * \ref pva_dma_hwseq_desc_entry_t
+	 * @brief Array of DMA descriptor entries from hardware sequencer blob
 	 */
 	struct pva_dma_hwseq_desc_entry dma_descs[2];
+
 	/**
-	 * Access Sizes are calculated and stored here from HW Sequencer Blob
+	 * @brief Pointer to calculated access sizes from hardware sequencer blob
 	 */
 	struct pva_kmd_dma_access *access_sizes;
 };
 
+/**
+ * @brief Per-frame information for hardware sequencer processing
+ *
+ * @details This structure contains frame-specific information for hardware
+ * sequencer operations, including sequence tile counts and VMEM tile
+ * requirements per frame. It enables proper resource allocation and
+ * validation for frame-based processing operations.
+ */
 struct pva_hwseq_per_frame_info {
+	/**
+	 * @brief Number of tiles in the sequence for this frame
+	 * Valid range: [1 .. UINT32_MAX]
+	 */
 	uint32_t seq_tile_count;
+
+	/**
+	 * @brief Number of VMEM tiles required per frame
+	 * Valid range: [1 .. UINT32_MAX]
+	 */
 	uint32_t vmem_tiles_per_frame;
 };
 
+/**
+ * @brief Validate hardware sequencer configuration
+ *
+ * @details This function performs comprehensive validation of hardware sequencer
+ * configurations including:
+ * - Parsing and validating hardware sequencer blob structure
+ * - Checking descriptor references and repetition factors
+ * - Validating frame boundaries and addressing modes
+ * - Computing memory access patterns and requirements
+ * - Ensuring hardware constraints are satisfied
+ * - Building descriptor usage masks for resource tracking
+ * - Verifying grid parameters and tile arrangements
+ *
+ * The validation ensures that the hardware sequencer configuration is
+ * safe for execution and will not violate hardware constraints or
+ * memory protection boundaries. The function provides platform-agnostic
+ * validation that can be adapted to different hardware implementations.
+ *
+ * @param[in]  dma_config         Pointer to DMA configuration containing hardware sequencer
+ *                                Valid value: non-null
+ * @param[in]  hw_consts          Pointer to hardware constants for validation
+ *                                Valid value: non-null
+ * @param[out] access_sizes       Array to store computed access size information
+ *                                Valid value: non-null, min size PVA_MAX_NUM_DMA_DESC
+ * @param[out] hw_dma_descs_mask  Bitmask for tracking hardware descriptor usage
+ *                                Valid value: non-null
+ *
+ * @retval PVA_SUCCESS                  Hardware sequencer blob validated successfully
+ * @retval PVA_ERR_HWSEQ_INVALID        Invalid hardware sequencer configuration
+ * @retval PVA_ERANGE                   Hardware sequencer configuration exceeds bounds or limits
+ * @retval PVA_INVAL                    Invalid descriptor reference in hardware sequencer
+ * @retval PVA_BAD_PARAMETER_ERROR      Invalid grid parameters in hardware sequencer
+ * @retval PVA_INVALID_RESOURCE         Invalid input parameters
+ */
 enum pva_error validate_hwseq(struct pva_dma_config const *dma_config,
 			      struct pva_kmd_hw_constants const *hw_consts,
 			      struct pva_kmd_dma_access *access_sizes,

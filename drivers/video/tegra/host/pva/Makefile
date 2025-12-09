@@ -27,11 +27,15 @@ pva_objs += \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_dma_cfg_binding.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_dma_cfg_validate.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_dma_cfg_write.o \
-    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_fw_debug.o \
-    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_fw_profiler.o \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_fw_debug_printf.o \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_fw_tracepoints.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_hwseq_validate.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_msg.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_op_handler.o \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_pfsd.o \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_pfsd_data.o \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_pfsd_t23x_dma_cfg.o \
+    $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_pfsd_t26x_dma_cfg.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_pm.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_queue.o \
     $(PVA_SYS_DIR)/src/kmd/common/pva_kmd_resource_table.o \
@@ -82,12 +86,22 @@ pva_def_flags += \
     -DPVA_BUILD_MODE_SIM=4 \
     -DPVA_DEV_MAIN_COMPATIBLE=1 \
     -DPVA_ENABLE_CUDA=1 \
+    -DPVA_ENABLE_DEBUG_ASSERT=0 \
+    -DPVA_ENABLE_DEBUG_PRINTS=0 \
+    -DPVA_ENABLE_FW_PROFILING=0 \
+    -DPVA_ENABLE_FW_TRACEPOINTS=1 \
+    -DPVA_ENABLE_GOLDEN_REGISTER_CHECKS=1 \
+    -DPVA_ENABLE_HWPM=1 \
     -DPVA_ENABLE_NSYS_PROFILING=1 \
     -DPVA_ENABLE_R5_OCD=0 \
-    -DPVA_IS_DEBUG=0 \
+    -DPVA_ENABLE_TEGRASTATS=1 \
+    -DPVA_ENABLE_VPU_OCD=1 \
+    -DPVA_ENABLE_VPU_PRINTFS=1 \
+    -DPVA_ERR_INJECT=0 \
     -DPVA_SAFETY=0 \
-    -DPVA_SKIP_SYMBOL_TYPE_CHECK \
     -DPVA_SUPPORT_XBAR_RAW=1 \
+    -DPVA_VCAST=0 \
+    -DSYSTEM_TESTS_ENABLED=1 \
     -Dpva_kmd_linux_dummy_EXPORTS \
 
 ###### End generated section ######

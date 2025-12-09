@@ -82,19 +82,19 @@ struct pva_dma_transfer_attr {
 	/** When dynamic slot flag is set, it means the memory location will be
 	* relocated by commands.
 	*/
-#define PVA_DMA_DYNAMIC_SLOT (1 << 15)
-#define PVA_DMA_STATIC_SLOT (1 << 14)
+#define PVA_DMA_DYNAMIC_SLOT ((uint16_t)1U << 15)
+#define PVA_DMA_STATIC_SLOT ((uint16_t)1U << 14)
 #define PVA_DMA_SLOT_INVALID 0
-#define PVA_DMA_SLOT_ID_MASK 0xFF
+#define PVA_DMA_SLOT_ID_MASK 0xFFU
 #define PVA_DMA_MAX_NUM_SLOTS 256
 	uint16_t slot;
 	/** Line pitch in pixels */
 	uint16_t line_pitch;
 	uint32_t cb_start;
 	uint32_t cb_size;
-	int32_t adv1;
-	int32_t adv2;
-	int32_t adv3;
+	uint32_t adv1;
+	uint32_t adv2;
+	uint32_t adv3;
 	uint64_t offset;
 };
 
@@ -225,7 +225,7 @@ enum pva_dma_static_binding_type {
 };
 
 /** Max block height is 32 GOB */
-#define PVA_DMA_MAX_LOG2_BLOCK_HEIGHT 5
+#define PVA_DMA_MAX_LOG2_BLOCK_HEIGHT 5U
 
 struct pva_dma_dram_binding {
 	/** enum pva_surface_format */
