@@ -6,7 +6,7 @@
  * Author: Johnson Leung <r58129@freescale.com>
  *
  * Copyright (c) 2004 Freescale Semiconductor, Inc.
- * Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2020-2025, NVIDIA CORPORATION. All rights reserved.
  */
 #include <linux/bitops.h>
 #include <linux/of.h>
@@ -450,12 +450,6 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 			ERR_PTR(ret));
 		return ret;
 	}
-
-	/* CLKOUT Enable bit is NA for RTL8211F_VD phy IC
-	 * keeping programming as it is, since no effect in new phy IC
-	 */
-	val = phy_read_paged(phydev, 0xa43, RTL8211F_PHYCR2);
-	phy_modify_paged_changed(phydev, 0xa43, RTL8211F_PHYCR2, 0, (val & ~BIT(0)));
 
 	switch (phydev->interface) {
 	case PHY_INTERFACE_MODE_RGMII:
