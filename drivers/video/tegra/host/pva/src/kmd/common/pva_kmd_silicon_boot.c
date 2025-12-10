@@ -121,10 +121,9 @@ void pva_kmd_config_sid(struct pva_kmd_device *pva)
 	uint32_t offset;
 	uint8_t priv1_sid;
 	uint8_t priv_sid;
-	priv_sid = (uint8_t)(pva->stream_ids[PVA_R5_SMMU_CONTEXT_ID] &
-			     (uint8_t)U8_MAX);
-	priv1_sid = (uint8_t)(pva->stream_ids[pva->r5_image_smmu_context_id] &
-			      (uint8_t)U8_MAX);
+	priv_sid = pva->stream_ids[PVA_R5_SMMU_CONTEXT_ID] & (uint8_t)0xFFU;
+	priv1_sid =
+		pva->stream_ids[pva->r5_image_smmu_context_id] & (uint8_t)0xFFU;
 
 	/* Priv SIDs */
 	if (pva->load_from_gsc) {

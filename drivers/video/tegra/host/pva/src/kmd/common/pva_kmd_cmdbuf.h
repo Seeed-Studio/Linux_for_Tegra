@@ -545,7 +545,7 @@ static inline void pva_kmd_set_cmd_update_resource_table(
 	cmd->header.opcode = PVA_CMD_OPCODE_UPDATE_RESOURCE_TABLE;
 	cmd->header.len = (uint8_t)(sizeof(*cmd) / sizeof(uint32_t));
 	/* resource_table_id field is uint8_t - bounded by CCQ ID (max 7) */
-	ASSERT(resource_table_id <= (uint32_t)U8_MAX);
+	ASSERT(resource_table_id <= U8_MAX);
 	cmd->resource_table_id = (uint8_t)resource_table_id;
 	cmd->resource_id = resource_id;
 	cmd->entry = *entry;
@@ -623,16 +623,14 @@ static inline void pva_kmd_set_cmd_resume_fw(struct pva_cmd_resume_fw *cmd)
 
 static inline void pva_kmd_set_cmd_init_shared_dram_buffer(
 	struct pva_cmd_init_shared_dram_buffer *cmd, uint8_t interface,
-	uint64_t buffer_iova, uint64_t buffer_size)
+	uint32_t buffer_iova, uint32_t buffer_size)
 {
 	(void)memset(cmd, 0, sizeof(*cmd));
 	cmd->header.opcode = PVA_CMD_OPCODE_INIT_SHARED_DRAM_BUFFER;
 	cmd->header.len = (uint8_t)(sizeof(*cmd) / sizeof(uint32_t));
 	cmd->buffer_iova_hi = iova_hi(buffer_iova);
 	cmd->buffer_iova_lo = iova_lo(buffer_iova);
-	/* CERT INT31-C: Hardware constrains buffer sizes to 32-bit address space */
-	ASSERT(buffer_size <= U32_MAX);
-	cmd->buffer_size = (uint32_t)buffer_size;
+	cmd->buffer_size = buffer_size;
 	cmd->interface = interface;
 }
 

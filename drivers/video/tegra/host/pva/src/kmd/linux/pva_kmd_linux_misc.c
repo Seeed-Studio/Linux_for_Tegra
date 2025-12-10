@@ -146,7 +146,7 @@ int pva_kmd_atomic_load(pva_kmd_atomic_t *atomic_val)
 	return atomic_read(atomic_val);
 }
 
-bool pva_kmd_is_ops_allowed(struct pva_kmd_context *ctx, uint64_t opcode)
+bool pva_kmd_is_ops_allowed(struct pva_kmd_context *ctx, uint32_t opcode)
 {
 	return true;
 }

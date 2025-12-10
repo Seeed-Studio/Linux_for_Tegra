@@ -236,6 +236,6 @@ static inline uint32_t array_index_nospec(uint32_t index, uint32_t size)
 uint64_t pva_kmd_get_time_tsc(void);
 
 /* Shim function with platform-specific implementations (QNX, Linux, Native) */
-bool pva_kmd_is_ops_allowed(struct pva_kmd_context *ctx, uint64_t opcode);
+bool pva_kmd_is_ops_allowed(struct pva_kmd_context *ctx, uint32_t opcode);
 
 #endif // PVA_KMD_SHIM_UTILS_H

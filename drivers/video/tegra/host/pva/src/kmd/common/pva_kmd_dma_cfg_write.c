@@ -16,12 +16,8 @@ static void write_dma_channel(struct pva_dma_channel const *ch,
 			      bool support_hwseq_frame_linking)
 {
 	/* DMA_CHANNEL_CNTL0_CHSDID: DMA_CHANNEL_CNTL0[0] = descIndex + 1;*/
-	uint8_t desc_sum_u8 =
-		safe_addu8(safe_addu8(ch->desc_index, base_desc_index), 1U);
-	uint8_t cntl1_val;
-	uint16_t hwseqcntl_val;
-
-	fw_ch->cntl0 = (uint32_t)desc_sum_u8;
+	uint32_t desc_sum = ch->desc_index + base_desc_index + 1U;
+	fw_ch->cntl0 = (desc_sum & 0xFFU) << 0U;
 
 	/* DMA_CHANNEL_CNTL0_CHVMEMOREQ */
 	fw_ch->cntl0 |= (((uint32_t)ch->vdb_count & 0xFFU) << 8U);
@@ -33,8 +29,7 @@ static void write_dma_channel(struct pva_dma_channel const *ch,
 	fw_ch->cntl0 |= (((uint32_t)ch->prefetch_enable & 1U) << 30U);
 
 	/* DMA_CHANNEL_CNTL1_CHPWT */
-	cntl1_val = (ch->req_per_grant & 0x7U) << 2U;
-	fw_ch->cntl1 = (uint32_t)cntl1_val;
+	fw_ch->cntl1 = (ch->req_per_grant & 0x7U) << 2U;
 
 	/* DMA_CHANNEL_CNTL1_CHVDBSTART */
 	fw_ch->cntl1 |= (((uint32_t)ch->vdb_offset & 0x7FU) << 16U);
@@ -47,8 +42,7 @@ static void write_dma_channel(struct pva_dma_channel const *ch,
 	fw_ch->cntl1 |= (((uint32_t)ch->ch_rep_factor & 0x7U) << 8U);
 
 	/* DMA_CHANNEL_HWSEQCNTL_CHHWSEQSTART */
-	hwseqcntl_val = (ch->hwseq_start & 0x1FFU) << 0U;
-	fw_ch->hwseqcntl = (uint32_t)hwseqcntl_val;
+	fw_ch->hwseqcntl = (ch->hwseq_start & 0x1FFU) << 0U;
 
 	/* DMA_CHANNEL_HWSEQCNTL_CHHWSEQEND */
 	fw_ch->hwseqcntl |= (((uint32_t)ch->hwseq_end & 0x1FFU) << 12U);
@@ -123,19 +117,12 @@ static void write_dma_descriptor(struct pva_dma_descriptor const *desc,
 	/* DMA_DESC_SLP_ADV */
 	fw_desc->slp_adv = desc->src.line_pitch;
 	/* DMA_DESC_DB_START - lower 16 bits, bit 16 stored in cb_ext */
-	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
 	fw_desc->db_start = (uint16_t)(desc->dst.cb_start & 0xFFFFU);
-
 	/* DMA_DESC_DB_SIZE - lower 16 bits, bit 16 stored in cb_ext */
-	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
 	fw_desc->db_size = (uint16_t)(desc->dst.cb_size & 0xFFFFU);
-
 	/* DMA_DESC_SB_START - lower 16 bits, bit 16 stored in cb_ext */
-	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
 	fw_desc->sb_start = (uint16_t)(desc->src.cb_start & 0xFFFFU);
-
 	/* DMA_DESC_SB_SIZE - lower 16 bits, bit 16 stored in cb_ext */
-	/* MISRA C-2023 Rule 10.3: Explicit cast for narrowing conversion */
 	fw_desc->sb_size = (uint16_t)(desc->src.cb_size & 0xFFFFU);
 	/* DMA_DESC_TRIG_CH */
 	/* Channel events are not supported */
@@ -180,7 +167,7 @@ static void write_triggers(struct pva_dma_config const *dma_cfg,
 			   struct pva_dma_config_resource *fw_cfg,
 			   struct pva_dma_resource_map *dma_resource_map)
 {
-	uint8_t i, j;
+	uint32_t i, j;
 	bool trigger_required = false;
 
 	(void)memset(fw_cfg->output_enable, 0, sizeof(fw_cfg->output_enable));
@@ -193,7 +180,7 @@ static void write_triggers(struct pva_dma_config const *dma_cfg,
 		ch = &dma_cfg->channels[i];
 		/* CERT INT31-C: Hardware constraints ensure num_channels and base_channel
 		 * are bounded such that their sum always fits in uint8_t, safe to cast */
-		ch_num = safe_addu8(i, dma_cfg->header.base_channel);
+		ch_num = i + dma_cfg->header.base_channel;
 		mask = ch->output_enable_mask;
 		/* READ/STORE triggers */
 		for (j = 0U; j < 7U; j++) {
@@ -284,7 +271,7 @@ void pva_kmd_write_fw_dma_config(struct pva_dma_config const *dma_cfg,
 
 	/* Do not include fields beyond descriptors as they are not fetched to
 	  * TCM */
-	*out_fw_fetch_size = (uint32_t)offset;
+	*out_fw_fetch_size = offset;
 
 	for (i = 0U; i < hdr->num_channels; i++) {
 		write_dma_channel(&dma_cfg->channels[i],
@@ -294,8 +281,9 @@ void pva_kmd_write_fw_dma_config(struct pva_dma_config const *dma_cfg,
 	}
 
 	for (i = 0U; i < dma_cfg->header.num_descriptors; i++) {
-		if (pva_is_reserved_desc(
-			    safe_addu8(i, dma_cfg->header.base_descriptor))) {
+		uint8_t desc_id =
+			safe_addu8((uint8_t)i, dma_cfg->header.base_descriptor);
+		if (pva_is_reserved_desc(desc_id)) {
 			// skip over the reserved descriptor range
 			i = safe_subu8(PVA_RESERVED_DESCRIPTORS_END,
 				       dma_cfg->header.base_descriptor);

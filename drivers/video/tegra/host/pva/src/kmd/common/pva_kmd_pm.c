@@ -47,8 +47,7 @@ init_context_resources(struct pva_kmd_cmdbuf_builder *builder,
 	enum pva_error err = PVA_SUCCESS;
 
 	/**Initialize resource table */
-	res_cmd =
-		pva_kmd_reserve_cmd_space(builder, (uint16_t)sizeof(*res_cmd));
+	res_cmd = pva_kmd_reserve_cmd_space(builder, sizeof(*res_cmd));
 	if (res_cmd == NULL) {
 		pva_kmd_log_err(
 			"PVA: Memory alloc for context registration in FW resume command failed\n");
@@ -63,8 +62,7 @@ init_context_resources(struct pva_kmd_cmdbuf_builder *builder,
 		ctx->ctx_resource_table.table_mem->iova,
 		ctx->ctx_resource_table.n_entries, ctx->status_mem->iova);
 
-	queue_cmd = pva_kmd_reserve_cmd_space(builder,
-					      (uint16_t)sizeof(*queue_cmd));
+	queue_cmd = pva_kmd_reserve_cmd_space(builder, sizeof(*queue_cmd));
 	if (queue_cmd == NULL) {
 		pva_kmd_log_err(
 			"PVA: Memory alloc for queue registration in FW resume command failed\n");
@@ -73,8 +71,8 @@ init_context_resources(struct pva_kmd_cmdbuf_builder *builder,
 	}
 
 	/* Initialize shared buffer */
-	shared_buf_cmd = pva_kmd_reserve_cmd_space(
-		builder, (uint16_t)sizeof(*shared_buf_cmd));
+	shared_buf_cmd =
+		pva_kmd_reserve_cmd_space(builder, sizeof(*shared_buf_cmd));
 	if (shared_buf_cmd == NULL) {
 		pva_kmd_log_err(
 			"PVA: Memory alloc for shared buffer registration in FW resume command failed\n");
@@ -136,7 +134,7 @@ static enum pva_error init_context_user_queues(
 				"PVA: Resume queue for context %d, queue %d\n",
 				queue->ccq_id, queue->queue_id);
 			queue_cmd = pva_kmd_reserve_cmd_space(
-				builder, (uint16_t)sizeof(*queue_cmd));
+				builder, sizeof(*queue_cmd));
 			if (queue_cmd == NULL) {
 				pva_kmd_log_err(
 					"PVA: Memory alloc for queue registration in FW resume command failed\n");
@@ -204,8 +202,7 @@ enum pva_error pva_kmd_complete_resume(struct pva_kmd_device *pva)
 		goto err_out;
 	}
 
-	fw_resume = pva_kmd_reserve_cmd_space(&builder,
-					      (uint16_t)sizeof(*fw_resume));
+	fw_resume = pva_kmd_reserve_cmd_space(&builder, sizeof(*fw_resume));
 	if (fw_resume == NULL) {
 		pva_kmd_log_err(
 			"PVA: Memory alloc for FW resume command failed\n");

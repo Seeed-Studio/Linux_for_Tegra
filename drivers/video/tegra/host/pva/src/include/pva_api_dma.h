@@ -82,8 +82,8 @@ struct pva_dma_transfer_attr {
 	/** When dynamic slot flag is set, it means the memory location will be
 	* relocated by commands.
 	*/
-#define PVA_DMA_DYNAMIC_SLOT ((uint16_t)1U << 15)
-#define PVA_DMA_STATIC_SLOT ((uint16_t)1U << 14)
+#define PVA_DMA_DYNAMIC_SLOT (1U << 15)
+#define PVA_DMA_STATIC_SLOT (1U << 14)
 #define PVA_DMA_SLOT_INVALID 0
 #define PVA_DMA_SLOT_ID_MASK 0xFFU
 #define PVA_DMA_MAX_NUM_SLOTS 256

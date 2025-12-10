@@ -240,19 +240,12 @@ update_exports_symbol(elf_parser_ctx elf,
 	uint32_t symOffset = 0U;
 	enum pva_error err = PVA_SUCCESS;
 	pva_math_error math_err = MATH_OP_SUCCESS;
-	uint32_t symbol_end;
-	uint32_t section_end;
-
-	/* Calculate symbol end address */
-	symbol_end = addu32(symbol_info->vmem_addr,
-			    (uint32_t)SIZE_EXPORTS_TABLE_ENTRY, &math_err);
-	/* Calculate section end address */
-	section_end =
-		addu32(section_header->addr, section_header->size, &math_err);
 
 	if ((section_header == NULL) ||
 	    (symbol_info->vmem_addr < section_header->addr) ||
-	    (symbol_end > section_end)) {
+	    (addu32(symbol_info->vmem_addr, (uint32_t)SIZE_EXPORTS_TABLE_ENTRY,
+		    &math_err) >
+	     addu32(section_header->addr, section_header->size, &math_err))) {
 		err = PVA_INVAL;
 		goto done;
 	} else {
@@ -562,7 +555,7 @@ static void copy_data_section(const elf_parser_ctx elf,
 
 	ASSERT(elf_data != NULL);
 
-	(void)memcpy(dst, (const void *)elf_data, section_header->size);
+	(void)memcpy(dst, elf_data, section_header->size);
 
 	*buffer_offset = safe_addu32(*buffer_offset, aligned_size);
 }

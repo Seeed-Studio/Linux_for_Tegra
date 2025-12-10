@@ -16,7 +16,7 @@ int pva_kmd_hwpm_ip_reg_op(void *ip_dev, uint32_t reg_op,
 {
 	struct pva_kmd_device *pva = ip_dev;
 
-	if (reg_offset > U32_MAX)
+	if (reg_offset > UINT32_MAX)
 		return PVA_INVAL;
 
 	switch (reg_op) {

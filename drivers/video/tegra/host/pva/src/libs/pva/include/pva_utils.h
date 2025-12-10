@@ -8,8 +8,8 @@
 #include "pva_bit.h"
 
 #define PVA_ROUND_UP(val, align) ((((val) + ((align)-1U)) / (align)) * (align))
-#define PVA_ALIGN4(n) PVA_ROUND_UP(n, 4U)
-#define PVA_ALIGN8(n) PVA_ROUND_UP(n, 8U)
+#define PVA_ALIGN4(n) PVA_ROUND_UP(n, 4)
+#define PVA_ALIGN8(n) PVA_ROUND_UP(n, 8)
 
 static inline uint64_t assemble_addr(uint8_t hi, uint32_t lo)
 {

@@ -78,7 +78,7 @@ enum pva_error pva_kmd_shared_buffer_init(struct pva_kmd_device *pva,
 	/* CERT INT31-C: iova and size validated to fit in uint32_t, safe to cast */
 	pva_kmd_set_cmd_init_shared_dram_buffer(&init_cmd, (uint8_t)interface,
 						device_memory->iova,
-						device_memory->size);
+						(uint32_t)device_memory->size);
 
 	err = pva_kmd_submit_cmd_sync(&pva->submitter, &init_cmd,
 				      (uint32_t)sizeof(init_cmd),
@@ -211,9 +211,7 @@ static void process_res_unreg_msg(struct pva_kmd_device *pva, uint8_t interface,
 	struct pva_kmd_context *ctx = NULL;
 
 	ASSERT(msg_size == sizeof(struct pva_kmd_fw_msg_res_unreg));
-	/* MISRA C-2023 Rule 11.5: msg_body is void*, explicit cast needed for type safety */
-	(void)memcpy(&unreg_data,
-		     (const struct pva_kmd_fw_msg_res_unreg *)msg_body,
+	(void)memcpy((void *)&unreg_data, (const void *)msg_body,
 		     sizeof(unreg_data));
 	ctx = pva_kmd_get_context(pva, interface);
 
@@ -236,8 +234,7 @@ static void shared_buffer_process_msg(struct pva_kmd_device *pva,
 	ASSERT(msg != NULL);
 
 	// Copy the header
-	(void)memcpy(&header, (const struct pva_kmd_fw_buffer_msg_header *)msg,
-		     sizeof(header));
+	(void)memcpy((void *)&header, (const void *)msg, sizeof(header));
 	msg_size = safe_subu32(header.size, (uint32_t)sizeof(header));
 	msg_body = (uint8_t *)msg + sizeof(header);
 
@@ -319,7 +316,8 @@ void pva_kmd_shared_buffer_process(void *pva_dev, uint8_t interface)
 			// Note that ideally this should never happen as the buffer is expected to be
 			// the same size as the resource table.
 			// TODO: abort only the user context, not the device.
-			pva_kmd_abort_fw(pva, PVA_BUF_OUT_OF_RANGE);
+			pva_kmd_abort_fw(pva,
+					 (enum pva_error)PVA_BUF_OUT_OF_RANGE);
 		}
 
 		// Buffer corresponding to CCQ 0 is used for sending messages common to a VM.

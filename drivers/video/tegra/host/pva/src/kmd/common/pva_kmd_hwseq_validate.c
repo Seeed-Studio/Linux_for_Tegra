@@ -1302,7 +1302,7 @@ out:
 static enum pva_error validate_rra_mode(struct pva_hwseq_priv *hwseq_info,
 					uint64_t *hw_dma_descs_mask)
 {
-	const uint8_t *column = NULL;
+	const uint8_t *column = 0U;
 	uint32_t i = 0U;
 	uint32_t num_columns = 0U;
 	uint32_t end = hwseq_info->entry.ch->hwseq_end;

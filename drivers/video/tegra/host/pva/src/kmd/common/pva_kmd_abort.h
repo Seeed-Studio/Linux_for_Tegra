@@ -27,6 +27,6 @@
  * @param[in] error_code      Error code indicating the reason for abort
  *                            Valid range: [0 .. UINT32_MAX]
  */
-void pva_kmd_abort_fw(struct pva_kmd_device *pva, enum pva_error error_code);
+void pva_kmd_abort_fw(struct pva_kmd_device *pva, uint32_t error_code);
 
 #endif //PVA_KMD_ABORT_H
