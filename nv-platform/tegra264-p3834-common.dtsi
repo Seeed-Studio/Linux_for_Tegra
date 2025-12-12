@@ -160,6 +160,26 @@
 			status = "okay";
 		};
 
+		cmdqv@8105200000 {
+			status = "okay";
+		};
+
+		cmdqv@8106200000 {
+			status = "okay";
+		};
+
+		cmdqv@810a200000 {
+			status = "okay";
+		};
+
+		cmdqv@810b200000 {
+			status = "okay";
+		};
+
+		cmdqv@8806200000 {
+			status = "okay";
+		};
+
 		pmc@c800000 {
 			nvidia,invert-interrupt;
 			status = "okay";
