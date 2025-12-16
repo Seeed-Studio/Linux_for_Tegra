@@ -40,6 +40,10 @@ stages:
   - recomputer-super-orin-nx-16g-j401
   - recomputer-super-orin-nano-4g-j401
   - recomputer-super-orin-nano-8g-j401
+  - recomputer-rugged-orin-nx-8g-j401
+  - recomputer-rugged-orin-nx-16g-j401
+  - recomputer-rugged-orin-nano-4g-j401
+  - recomputer-rugged-orin-nano-8g-j401
 
   - recomputer-robo-orin-nx-8g-j401
   - recomputer-robo-orin-nx-8g-j401-gmsl
@@ -784,6 +788,110 @@ build-recomputer-super-orin-nx-8g-j401:
     CHIP_SKU: "00:00:00:D4"
     UPDATE_DRV_DEPEND: "0"
     KCFLAGS: "-DCONFIG_LAN743X_FLIP_LED"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-rugged-orin-nano-4g-j401:
+  stage: recomputer-rugged-orin-nano-4g-j401 
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-rugged-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-rugged-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-rugged-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0004"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-rugged-orin-nano-8g-j401:
+  stage: recomputer-rugged-orin-nano-8g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-rugged-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-rugged-orin-nano"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-rugged-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0003"
+    FAB: "300"
+    BOARDREV: "N.2"
+    CHIP_SKU: "00:00:00:D6"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-rugged-orin-nx-16g-j401:
+  stage: recomputer-rugged-orin-nx-16g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-rugged-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-rugged-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-rugged-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0000"
+    FAB: "300"
+    BOARDREV: "G.3"
+    CHIP_SKU: "00:00:00:D3"
+    UPDATE_DRV_DEPEND: "0"
+
+  script:
+    - echo "Building for $CONFIG"
+    - *build_image_script
+
+build-recomputer-rugged-orin-nx-8g-j401:
+  stage: recomputer-rugged-orin-nx-8g-j401
+  rules:
+    - if: '$CI_COMMIT_TAG' 
+      when: on_success
+    - if: '$START_TASK == "recomputer-rugged-orin"'
+      when: on_success
+    - if: '$START_TASK == "recomputer-rugged-orin-nx"'
+      when: on_success
+    - if: '$START_TASK == $CI_JOB_STAGE'
+      when: on_success
+  tags:
+    - x86-shell
+  variables:
+    CONFIG: "recomputer-rugged-orin-j401"
+    BOARDID: "3767"
+    BOARDSKU: "0001"
+    FAB: "300"
+    BOARDREV: "M.3"
+    CHIP_SKU: "00:00:00:D4"
+    UPDATE_DRV_DEPEND: "0"
 
   script:
     - echo "Building for $CONFIG"

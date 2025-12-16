@@ -56,6 +56,10 @@ cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p376
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0003-recomputer-robo-gmsl.dtb ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0004-recomputer-robo-gmsl.dtb ../kernel/dtb/
 
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0000-recomputer-rugged.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0001-recomputer-rugged.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0003-recomputer-rugged.dtb ../kernel/dtb/
+cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p3767-0004-recomputer-rugged.dtb ../kernel/dtb/
 
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0000-recomputer-mini.dtb ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j501x-0000+p3701-0004-recomputer-mini.dtb ../kernel/dtb/
