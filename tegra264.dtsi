@@ -4278,7 +4278,7 @@
 
 		gpio_main: gpio@810c300000 {
 			reg-names = "security", "gpio";
-			compatible = "nvidia,tegra264-gpio-main";
+			compatible = "nvidia,tegra264-gpio", "nvidia,tegra264-gpio-main";
 			status = "disabled";
 
 			reg =   <0x81 0x0c300000 0x0 0x4000>,
