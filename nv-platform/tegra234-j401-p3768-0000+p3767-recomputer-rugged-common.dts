@@ -9,6 +9,11 @@
 
 / {
 	bus@0 {
+
+		serial@3100000 {
+			rs485-de-gpios = <&gpio TEGRA234_MAIN_GPIO(R, 4) GPIO_ACTIVE_HIGH>;
+		};
+		
 		i2c@c240000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -27,13 +32,13 @@
 				
 				gpio-line-names =
 				"PSE_PG"	,"PSE_INTB",
-				"gpio_pin2"	,"gpio_pin3",
-				"pcie_wake_3v3"	,"pcie_sx1261_rst_3v3",
-				"spi0_rst_3v3"	,"uart1_en_3v3",
-				"can_120R_en"	,"M2B_PCIe_rst",
+				"CAN0_120R_EN"	,"CAN1_120R_EN",
+				"M2E_WIFI_DISABLE_N"	,"M2E_BT_DISABLE_N",
+				"TP85_i2c_to_gpio6"	,"UART1_EN_3V3",
+				"TP86_i2c_to_gpio10"	,"M2B_PCIe_rst",
 				"USB_HUB_rst"	,"PCIe_ETH_rst",
-				"M2B_WOWWAN"	,"M2B_DPR_3V3",
-				"SIM_MUX_SEL"	,"PSE_PWR_EN";
+				"M2B_WOWWAN_3V3"	,"M2B_DPR_3V3",
+				"TP87_i2c_to_gpio16"	,"PSE_PWR_EN";
 				
 				gpio-line-offsets = <0>, <1>, <2>, <3>, <4>, <5>, <6>, <7>, <8>, <9>, <10>, <11>, <12>, <13>, <14>, <15>;
 			};
@@ -55,6 +60,36 @@
 			};
 		};
 		
+
+		can_clock: can_clock {
+				compatible = "fixed-clock";
+				#clock-cells = <0>;
+				clock-frequency = <40000000>;
+				clock-accuracy = <100>;
+		};
+
+		spi@3230000 {
+        	        #address-cells = <0x01>;
+        	        #size-cells = <0x00>;
+
+        	        status = "okay";
+
+			spi@0 {
+				compatible = "microchip,mcp2518fd";
+				reg = <0x0>;
+				spi-max-frequency = <2000000>;
+				interrupt-parent = <&gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(P, 6) IRQ_TYPE_LEVEL_LOW>;
+				clocks = <&can_clock>;
+				nvidia,enable-hw-based-cs;
+				controller-data {
+					nvidia,enable-hw-based-cs;
+					nvidia,rx-clk-tap-delay = <0x10>;
+					nvidia,tx-clk-tap-delay = <0x0>;
+				};
+			};
+		};
+
 		spi@3210000 {
 			#address-cells = <0x01>;
 			#size-cells = <0x00>;
@@ -64,26 +99,13 @@
 			num-cs = <1>;
 			
 			spi@0 {
-				status = "disabled";
+				status = "okay";
 			};
 			
 			spi@1 {
 				status = "disabled";
 			};
-			
-			slb9670@0 {
-				compatible = "infineon,slb9670";
-				status = "okay";
-				reg = <0x0>;
-				spi-max-frequency = <10000000>;
-				controller-data {
-					nvidia,cs-setup-clk-count = <0x1e>;
-					nvidia,cs-hold-clk-count = <0x1e>;
-					nvidia,rx-clk-tap-delay = <0x7>;
-					nvidia,tx-clk-tap-delay = <0x0>;
-					nvidia,cs-inactive-cycles = <0x6>;
-				};
-			};
+
 		};
 		
 		serial@3110000 {
@@ -115,21 +137,16 @@
 			};
 		};
 		
-		spi0_rst_3v3: gpio_xten_pin@6 {
-			compatible = "regulator-fixed";
-			regulator-name = "spi0_rst_3v3";
-			gpios = <&gpio_xten 6 GPIO_ACTIVE_HIGH>;
-			enable-active-low;
-			regulator-always-on;
-		};
 		
-		gpio_pin7: gpio_xten_pin@7 {
+		UART1_EN_3V3: gpio_xten_pin@7 {
 			compatible = "regulator-fixed";
-			regulator-name = "gpio_pin7";
+			regulator-name = "UART1_EN_3V3";
 			gpios = <&gpio_xten 7 GPIO_ACTIVE_HIGH>;
 			enable-active-low;
 			regulator-always-on;
 		};
+
+
 		USB_HUB_rst: gpio_xten_pin@10 {
 			compatible = "regulator-fixed";
 			regulator-name = "USB_HUB_rst";
