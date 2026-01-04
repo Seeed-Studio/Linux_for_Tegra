@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+/dts-v1/;
+
+#include "tegra234-super-j401-p3768-0000+p3767-0000.dts"
+#include "tegra234-p3768-0000+p3767-xxxx-nv-common.dtsi"
+#include <dt-bindings/tegra234-p3767-0000-common.h>
+
+/ {
+        bus@0 {
+                i2c@3160000 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        eeprom@57 {
+                                compatible = "atmel,24c256";
+                                reg = <0x57>;
+                                /*16 bit*/
+                                address-width = <0x10>;
+                                /*32768 bytes */
+                                size = <0x8000>;
+				/delete-property/ read-only;
+                        };
+
+			seeed_io_exp:io_exp@38 {
+				compatible = "nxp,pca9554";
+				reg = <0x38>;
+				status = "okay";
+				gpio-controller;
+				#gpio-cells = <2>;
+
+				interrupt-parent = <&gpio>;
+				interrupts = <TEGRA234_MAIN_GPIO(AG, 4) IRQ_TYPE_LEVEL_LOW>;
+
+				gpio-line-names =
+				"CSI3_PWDN"	,"CAM_MUX1_SEL",
+				"M2B_PCIe_Reset","PCIe_ETH_Reset",
+				"CSI1_PWDN"	,"not_used",
+				"not_used"	,"not_used";
+			};
+                };
+        };
+};
