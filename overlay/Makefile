@@ -53,6 +53,7 @@ dtbo-y += tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-dual.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-dual-4lane.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-imx219.dtbo
+dtbo-y += tegra234-p3767-camera-p3768-imx477-imx219-seeed.dtbo
 dtbo-y += tegra234-p3737-camera-eCAM130A-overlay.dtbo
 dtbo-y += tegra234-p3737-camera-dual-hawk-ar0234-e3653-overlay.dtbo
 dtbo-y += tegra234-p3737-camera-imx390-overlay.dtbo
@@ -67,6 +68,7 @@ dtbo-y += tegra234-p3740-camera-p3783-a00-overlay.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-C.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-A.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx219-imx477.dtbo
+dtbo-y += tegra234-p3767-camera-p3768-imx219-imx477-seeed.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-C.dtbo
 dtbo-y += tegra234-p3767-camera-p3768-imx477-A.dtbo
 
