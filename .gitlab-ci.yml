@@ -113,6 +113,8 @@ stages:
   - cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo rootfs/boot/
   - cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-quad-seeed.dtbo rootfs/boot/
   - cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo rootfs/boot/
+  - cp kernel/dtb/tegra234-p3767-camera-p3768-imx219-imx477.dtbo rootfs/boot/
+  - cp kernel/dtb/tegra234-p3767-camera-p3768-imx477-imx219.dtbo rootfs/boot/
   - >
     if [ $BUILD_QSPI_IMG == "1" ]; then
       # package the image for qspi flash
