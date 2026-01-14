@@ -40,8 +40,6 @@ cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-j401-p3768-0000+p376
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-p3767-camera-p3768-imx219-dual-seeed.dtbo ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-p3767-camera-p3768-imx219-quad-seeed.dtbo ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-p3767-camera-p3768-imx477-dual-seeed.dtbo ../kernel/dtb/
-cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-p3767-camera-p3768-imx219-imx477-seeed.dtbo ../kernel/dtb/
-cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-p3767-camera-p3768-imx477-imx219-seeed.dtbo ../kernel/dtb/
 
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl2x4-3g-overlay.dtbo ../kernel/dtb/
 cp ./kernel_out/kernel-devicetree/generic-dts/dtbs/tegra234-seeed-gmsl1x4-6g-overlay.dtbo ../kernel/dtb/
