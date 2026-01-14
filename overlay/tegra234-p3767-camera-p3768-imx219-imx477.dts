@@ -12,7 +12,7 @@
 #include <dt-bindings/tegra234-p3767-0000-common.h>
 
 / {
-	overlay-name = "Camera IMX219-A and IMX477-C Seeed";
+	overlay-name = "Camera IMX219-A and IMX477-C";
 	jetson-header-name = "Jetson 24pin CSI Connector";
 	compatible = JETSON_COMPATIBLE_P3768;
 	/* IMX219 connected on CAM1 (serial_a) and IMX477 connected on CAM0 (serial_c) */
